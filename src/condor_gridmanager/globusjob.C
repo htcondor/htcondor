@@ -1294,8 +1294,11 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 		 new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ||
 		 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ||
 		 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ||
+		 ( new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_IN &&
+		   globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED) ||
 		 ( new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING &&
-		   globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) ) {
+		   globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED &&
+		   globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_IN) ) {
 		allow_transition = false;
 	}
 
