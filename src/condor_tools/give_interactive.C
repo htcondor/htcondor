@@ -134,6 +134,8 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 		}
 		
 		// the candidate offer and request must match
+		mad.RemoveRightAd( );
+		mad.ReplaceRightAd( candidate );
 		mad.EvaluateAttr( "symmetricMatch", result );
 		if( result.IsBooleanValue( match ) && match == false ) {
 			continue;
@@ -247,6 +249,8 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 	}
 	startdAds.Close ();
 	
+	mad.RemoveLeftAd( );	// NAC
+	mad.RemoveRightAd( );	// NAC
 
 	// this is the best match
 	return bestSoFar;
