@@ -53,7 +53,7 @@
 #include <sys/stat.h>
 #endif
 #include "my_hostname.h"
-#include "get_full_hostname.h"
+#include "get_daemon_addr.h"
 #include "condor_qmgr.h"
 
 #ifdef __GNUG__
@@ -77,7 +77,8 @@ char	*OperatingSystem;
 char	*Architecture;
 char	*Spool;
 char	*Flavor;
-char	*ThisHost;
+char	*ScheddName = NULL;
+char	*ScheddAddr = NULL;
 char	*My_fs_domain;
 char    JobRequirements[2048];
 char    JobRootdir[_POSIX_PATH_MAX];
@@ -96,7 +97,6 @@ int     JobUniverse;
 int		Remote=0;
 int		ClusterCreated = FALSE;
 int		ActiveQueueConnection = FALSE;
-char	*queue_file = NULL;
 bool	NewExecutable = false;
 bool	UserLogSpecified = false;
 
@@ -187,11 +187,7 @@ void	InsertJobExpr (char *expr);
 extern char **environ;
 
 extern "C" {
-
 int SetSyscalls( int foo );
-int	get_machine_name(char*);
-char *get_schedd_addr(char *);
-
 }
 
 struct SubmitRec {
@@ -211,7 +207,7 @@ main( int argc, char *argv[] )
 	char	**ptr;
 	char	*cmd_file = NULL;
 	int dag_pause = 0;
-	char	*fullhost;
+	char	*scheddname;
 	
 	setbuf( stdout, NULL );
 
@@ -227,26 +223,47 @@ main( int argc, char *argv[] )
 
 	for( ptr=argv+1; *ptr; ptr++ ) {
 		if( ptr[0][0] == '-' ) {
-			if( ptr[0][1] == 'v' ) {
+			switch( ptr[0][1] ) {
+			case 'v': 
 				Quiet = 0;
-			} else 
-			if( ptr[0][1] == 'p' ) {
+				break;
+			case 'p':
                // the -p option will cause condor_submit to pause for about
                // 4 seconds upon completion.  this prevents 'Broken Pipe'
                // messages when condor_submit is called from DagMan on
                // platforms with crappy popen(), like IRIX - Todd T, 2/97
                dag_pause = 1;
-			} else
-			if ( ptr[0][1] == 'r' ) {
+			   break;
+			case 'r':
 				Remote++;
 				ptr++;
-				if( !(fullhost = get_full_hostname(*ptr)) ) {
+				if( ! *ptr ) {
+					fprintf( stderr, "%s: -r requires another argument\n", 
+							 MyName );
+					exit(1);
+				}					
+				if( !(scheddname = get_daemon_name(*ptr)) ) {
 					fprintf( stderr, "%s: unknown host %s\n", 
-							 MyName, *ptr );
+							 MyName, get_host_part(*ptr) );
 					exit(1);
 				}
-				queue_file = strdup(fullhost);
-			} else {
+				ScheddName = strdup(scheddname);
+				break;
+			case 'n':
+				ptr++;
+				if( ! *ptr ) {
+					fprintf( stderr, "%s: -n requires another argument\n", 
+							 MyName );
+					exit(1);
+				}					
+				if( !(scheddname = get_daemon_name(*ptr)) ) {
+					fprintf( stderr, "%s: unknown host %s\n", 
+							 MyName, get_host_part(*ptr) );
+					exit(1);
+				}
+				ScheddName = strdup(scheddname);
+				break;
+			default:
 				usage();
 			}
 		} else {
@@ -258,16 +275,17 @@ main( int argc, char *argv[] )
 	job.SetMyTypeName (JOB_ADTYPE);
 	job.SetTargetTypeName (STARTD_ADTYPE);
 
-	DebugFlags |= D_EXPR;
-
 	if( cmd_file == NULL ) {
 		usage();
 	}
 
-	if (Remote) {
-		ThisHost = queue_file;
-	} else {
-		ThisHost = my_full_hostname();
+	if( !(ScheddAddr = get_schedd_addr(ScheddName)) ) {
+		if( ScheddName ) {
+			fprintf( stderr, "Can't find address of schedd %s\n", ScheddName );
+		} else {
+			fprintf( stderr, "Can't find address of local schedd\n" );
+		}
+		exit(1);
 	}
 
 	// open submit file
@@ -277,8 +295,13 @@ main( int argc, char *argv[] )
 	}
 
 	// connect to the schedd
-	if (ConnectQ(queue_file) == 0) {
-		fprintf(stderr, "Failed to connect to qmgr\n");
+	if (ConnectQ(ScheddAddr) == 0) {
+		if( ScheddName ) {
+			fprintf( stderr, "Failed to connect to queue manager %s\n",
+					 ScheddName );
+		} else {
+			fprintf( stderr, "Failed to connect to local queue manager\n" );
+		}
 		exit(1);
 	}
 
@@ -378,18 +401,12 @@ void
 reschedule()
 {
 	int			cmd;
-	char		*scheddAddr;
-
-	if ((scheddAddr = get_schedd_addr(ThisHost)) == NULL)
-	{
-		EXCEPT("Can't find schedd address on %s\n", ThisHost);
-	}
 
 	/* Connect to the schedd */
-	ReliSock sock(scheddAddr, SCHED_PORT);
+	ReliSock sock(ScheddAddr, SCHED_PORT);
 	if(sock.get_file_desc() < 0) {
 		EXCEPT( "Can't connect to condor scheduler (%s)\n",
-				scheddAddr );
+				ScheddAddr );
 	}
 
 	sock.encode();
@@ -1485,7 +1502,12 @@ check_open( char *name, int flags )
 void
 usage()
 {
-	fprintf( stderr, "Usage: %s [-q] [-v] [-r \"hostname\"] cmdfile\n", MyName );
+	fprintf( stderr, "Usage: %s [options] cmdfile\n", MyName );
+	fprintf( stderr, "   Valid options:\n" );
+	fprintf( stderr, "   -v\t\t\tverbose output\n" );
+	fprintf( stderr, "   -n schedd_name\tsubmit to the specified schedd\n" );
+	fprintf( stderr, 
+			 "   -r schedd_name\tsubmit to the specified remote schedd\n" );
 	exit( 1 );
 }
 
@@ -1499,7 +1521,7 @@ DoCleanup()
 		// DoCleanup().  This lead to infinite recursion which is bad.
 		ClusterCreated = 0;
 		if (!ActiveQueueConnection) {
-			ActiveQueueConnection = (ConnectQ(queue_file) != 0);
+			ActiveQueueConnection = (ConnectQ(ScheddAddr) != 0);
 		}
 		if (ActiveQueueConnection) {
 			DestroyCluster( ClusterId );
@@ -1561,11 +1583,8 @@ init_params()
 	}
 
 	My_fs_domain = param( "FILESYSTEM_DOMAIN" );
-	if ( My_fs_domain == NULL ) {
-		My_fs_domain = (char*)malloc(150);
-		My_fs_domain[0] = '\0';
-		get_machine_name( My_fs_domain );
-	}
+		// Will always return something, since config() will put in a
+		// value (full hostname) if it's not in the config file.  
 }
 
 int
@@ -1630,7 +1649,7 @@ log_submit()
 	if (Quiet) fprintf(stdout, "Logging submit event(s)");
 
 	job.LookupString (ATTR_OWNER, owner);
-	strcpy (jobSubmit.submitHost, ThisHost);
+	strcpy (jobSubmit.submitHost, ScheddName);
 
 	for (int i=0; i <= CurrentSubmitInfo; i++) {
 
