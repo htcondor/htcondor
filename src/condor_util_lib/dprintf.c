@@ -512,7 +512,7 @@ preserve_log_file(int debug_level)
 		Sleep(500);
 		unlink(old);
 		if ( rename(DebugFile[debug_level],old) < 0) {
-			/* Crap.  Some bonehead must be keeping one of the files
+			/* Feh.  Some bonehead must be keeping one of the files
 			 * open for an extended period.  Win32 will not permit an
 			 * open file to be unlinked or renamed.  So, here we copy
 			 * the file over (instead of renaming it) and then truncate

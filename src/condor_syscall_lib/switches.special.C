@@ -1026,8 +1026,8 @@ _condor_s_stat_convert( int version, const struct stat *source,
 			*/
 		break;
 	case _STAT64_VER:
-		/* XXX do nothing right now*/
-		/* This crap don't work... */
+		/* XXX do nothing right now */
+		/* This stuff unfortunately doesn't work... */
 		dprintf(D_FULLDEBUG, "_condor_s_stat_convert() did as instructed\n");
 		break;
 #endif

@@ -156,7 +156,7 @@ _condor_vfprintf_va( int fd, char* fmt, va_list args )
 		/* *i is a '%' at this point in the algorithm */
 
 		/* if it is a conversion character delimiter, then deal with it.
-			XXX skip all of the justifying and precision crap for now, if
+			XXX skip all of the justifying and precision stuff for now, if
 			we need it, we can add it later */
 
 		switch(*++i)

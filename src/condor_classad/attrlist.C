@@ -36,7 +36,7 @@
 
 extern void evalFromEnvironment (const char *, EvalResult *);
 
-// ugly, crappy hack.  remove for v6.1.9 -Todd
+// ugly, ugly hack.  remove for v6.1.9 -Todd
 extern char* mySubSystem;
 
 ////////////////////////////////////////////////////////////////////////////////

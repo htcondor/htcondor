@@ -777,7 +777,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
     DWORD dwStatus;  // return status of fn. calls
 
 /* Note to whom it may concern:  we DO NOT need to set_root_priv here!
-   NT makes this shit available to any old process.  I've left this
+   NT makes this stuff available to any old process.  I've left this
    in and commented out for demonstration purposes, and have removed
    the rest of the priv stuff from the NT code. */
 //	priv_state priv = set_root_priv();
@@ -2614,7 +2614,7 @@ void ProcAPI::sprog1 ( pid_t *childlist, int numkids, int f ) {
       for ( j = 0 ; j < 1024*(i+1)*f ; j++ ) {
         big[j] = new char[1024];
         if ( big[j] == NULL ) {
-          printf("Shit, new failed in child %i.  j=%i\n", i, j);
+          printf("New failed in child %i.  j=%i\n", i, j);
         }
       }
 
@@ -2667,7 +2667,7 @@ void ProcAPI::sprog2( int numkids, int f ) {
     for ( j = 0 ; j < 1024*i*f ; j++ ) {
       big[j] = new char[1024];
       if ( big[j] == NULL ) {
-        printf("Shit, new failed in child %i.  j=%i\n", i, j);
+        printf("New failed in child %i.  j=%i\n", i, j);
       }
     }
 

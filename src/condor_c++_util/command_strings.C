@@ -20,7 +20,6 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-/* condor legal shit */
 
 #include "condor_common.h"
 #include "command_strings.h"

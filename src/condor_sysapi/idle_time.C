@@ -523,7 +523,7 @@ dev_idle_time( char *path, time_t now )
 	if ( !path || path[0]=='\0' ||
 		 strncmp(path,"unix:",5) == 0 ) {
 		// we don't have a valid path, or it is
-		// a bullshit path setup by the X server
+		// a nonuseful/fake path setup by the X server
 		return now;
 	}
 

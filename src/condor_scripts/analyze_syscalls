@@ -10,7 +10,7 @@
 SYSCALL_LIB='../condor_syscall_lib/libcondorsyscall.a'
 
 ######################################################################
-# Figure out the platform-specific crap:
+# Figure out the platform-specific junk:
 ######################################################################
 
 # Don't forget that IRIX's uname might be "IRIX64" on 64 bit

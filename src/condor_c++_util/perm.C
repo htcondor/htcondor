@@ -689,7 +689,7 @@ int perm::set_acls( const char *filename )
 	ACCESS_ALLOWED_ACE *pace,*pace2;
 	
 	// If this is not on an NTFS volume, we're done.  In fact, we'll
-	// likely crash if we try all the below ACL crap on a volume which
+	// likely crash if we try all the below ACL junk on a volume which
 	// does not support ACLs. Dooo!
 	if ( !volume_has_acls(filename) ) 
 	{

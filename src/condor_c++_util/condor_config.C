@@ -953,7 +953,7 @@ reinsert_specials( char* host )
 
 	// Insert values for "pid" and "ppid".  Use static values since
 	// this is expensive to re-compute on Windows.
-	// Note: we have to resort to ifdef WIN32 crap even though 
+	// Note: we have to resort to ifdef WIN32 junk even though 
 	// DaemonCore can nicely give us this information.  We do this
 	// because the config code is used by the tools as well as daemons.
 	if (!reinsert_pid) {

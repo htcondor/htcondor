@@ -641,7 +641,7 @@ Scheduler::count_jobs()
 	ad->InsertOrUpdate(tmp);
 
 
-		// Make another owners array that is independent of X509 proxy crap.
+		// Make another owners array that is independent of X509 proxy stuff.
 	int numSubmittingOwners = 0;
 	for (i=0;i<N_Owners;i++) {
 		bool already_done = false;

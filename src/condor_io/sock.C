@@ -938,7 +938,7 @@ char * Sock::serializeCryptoInfo(char * buf)
 
     // kserial may be a problem since reli_sock also has stuff after
     // it. As a result, kserial may contains not just the key, but
-    // other crap from reli_sock as well. Hence the code below. Hao
+    // other junk from reli_sock as well. Hence the code below. Hao
     ASSERT(ptmp);
 
     sscanf(ptmp, "%d*", &encoded_len);
@@ -991,7 +991,7 @@ char * Sock::serializeMdInfo(char * buf)
 
     // kmd may be a problem since reli_sock also has stuff after
     // it. As a result, kmd may contains not just the key, but
-    // other crap from reli_sock as well. Hence the code below. Hao
+    // other junk from reli_sock as well. Hence the code below. Hao
     ASSERT(ptmp);
 
     sscanf(ptmp, "%d*", &encoded_len);

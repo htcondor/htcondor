@@ -711,7 +711,7 @@ readEventOld(ULogEvent *& event)
 	if (!retval1 || !retval2)
 	{	
 		// we could end up here if file locking did not work for
-		// whatever reason (crappy NFS bugs, whatever).  so here
+		// whatever reason (usual NFS bugs, whatever).  so here
 		// try to wait a second until the current partially-written
 		// event has benn completely written.  the algorithm is
 		// wait a second, rewind to our initial position (in case a
@@ -719,8 +719,8 @@ readEventOld(ULogEvent *& event)
 		// again try to synchronize the log
 		// 
 		// NOTE: this code is important, so don't remove or "fix"
-		// it unless you *really* know what you're doing and test
-		// the crap out of it...
+		// it unless you *really* know what you're doing and test it
+		// extermely well
 		if( !is_locked ) {
 			lock->release();
 		}
