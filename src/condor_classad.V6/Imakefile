@@ -86,7 +86,7 @@ template_inst( coll-client-inst.C,coll-client-inst.o) 	/* collection client*/
 template_inst( exp-inst.C, exp-inst.o )					/* experimental */
 
 /* Standalone distribution of classads/collections */
-DISTRIBUTION_DIR = classads_0.9.6-beta
+DISTRIBUTION_DIR = classads_0.9.6
 
 DIST_FILES = attrrefs.C attrrefs.h classad.C classad.h					\
 classad_functional_tester.C classad_functional_tester.h					\
