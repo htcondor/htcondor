@@ -72,6 +72,7 @@ extern void	Init();
 
 extern "C"
 {
+	int		FileExists(const char *, const char *);
 	int	 	calc_virt_memory();
 	int	 	getdtablesize();
 	char* 	gen_ckpt_name(char*, int, int, int);
@@ -1714,7 +1715,7 @@ send_vacate(match_rec* match,int cmd)
 		return;
 	}
 
-    if( !sock.code(match->id) ) {
+    if( !sock.put(match->id) ) {
         dprintf( D_ALWAYS, "Can't initialize sock to %s\n", match->peer);
 		return;
 	}
