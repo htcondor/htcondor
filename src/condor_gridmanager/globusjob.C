@@ -55,6 +55,7 @@
 #define GM_CLEAR_REQUEST		19
 #define GM_HOLD					20
 #define GM_PROXY_EXPIRED		21
+#define GM_CLEAN_JOBMANAGER		22
 
 char *GMStateNames[] = {
 	"GM_INIT",
@@ -78,7 +79,8 @@ char *GMStateNames[] = {
 	"GM_DELETE",
 	"GM_CLEAR_REQUEST",
 	"GM_HOLD",
-	"GM_PROXY_EXPIRED"
+	"GM_PROXY_EXPIRED",
+	"GM_CLEAN_JOBMANAGER"
 };
 
 // TODO: once we can set the jobmanager's proxy timeout, we should either
@@ -287,8 +289,10 @@ int GlobusJob::doEvaluateState()
 			if ( resourceStateKnown == false ) {
 				break;
 			}
-			if ( jobContact == NULL || wantResubmit ) {
+			if ( jobContact == NULL ) {
 				gmState = GM_CLEAR_REQUEST;
+			} else if ( wantResubmit ) {
+				gmState = GM_CLEAN_JOBMANAGER;
 			} else {
 				if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING ||
 					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE ||
@@ -1010,6 +1014,56 @@ int GlobusJob::doEvaluateState()
 			}
 			addScheddUpdateAction( this, schedd_actions, GM_DELETE );
 			// This object will be deleted when the update occurs
+			break;
+		case GM_CLEAN_JOBMANAGER:
+			// Tell the jobmanager to cleanup an un-restartable job submission
+
+			// Once RequestSubmit() is called at least once, you must
+			// CancelRequest() once you're done with the request call
+			char cleanup_rsl[1024];
+			char *dummy_job_contact;
+			if ( myResource->RequestSubmit(this) == false ) {
+				break;
+			}
+			snprintf( cleanup_rsl, sizeof(rsl), "&(cleanup=%s)", jobContact );
+			rc = gahp.globus_gram_client_job_request( 
+										myResource->ResourceName(), 
+										cleanup_rsl,
+										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
+										gramCallbackContact,
+										&dummy_job_contact );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+			myResource->CancelSubmit(this);
+			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
+				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
+				connect_failure = true;
+				break;
+			}
+			if ( rc == GLOBUS_SUCCESS ||
+				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_CANCEL_FAILED ) {
+				rehashJobContact( this, jobContact, NULL );
+				free( jobContact );
+				jobContact = NULL;
+				gmState = GM_CLEAR_REQUEST;
+			} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_UNDEFINED_EXE ) {
+				// Jobmanager doesn't support cleanup attribute.
+				rehashJobContact( this, jobContact, NULL );
+				free( jobContact );
+				jobContact = NULL;
+				gmState = GM_CLEAR_REQUEST;
+			} else {
+				// unhandled error
+				LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
+				dprintf(D_ALWAYS,"    RSL='%s'\n", rsl);
+				globusError = rc;
+				rehashJobContact( this, jobContact, NULL );
+				free( jobContact );
+				jobContact = NULL;
+				gmState = GM_CLEAR_REQUEST;
+			}
 			break;
 		case GM_CLEAR_REQUEST:
 			// Remove all knowledge of any previous or present job
