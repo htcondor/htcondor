@@ -577,6 +577,13 @@ open_write_stream( const char * ckpt_file, size_t n_bytes )
 	int		fd;
 	unsigned short	port;
 
+	dprintf( D_ALWAYS, "Entering open_write_stream()\n" );
+
+	if( (fd=try_via_afs(ckpt_file,O_CREAT|O_WRONLY,0664)) >= 0 ) {
+		dprintf( D_ALWAYS, "Checkpoint AFS Connection Ready, fd = %d\n", fd );
+		return fd;
+	}
+
 		/*
 		Get the hostname and port number of a process to which we
 		can send the checkpoint data.
@@ -593,6 +600,36 @@ open_write_stream( const char * ckpt_file, size_t n_bytes )
 }
 
 int
+try_via_afs( remote, mode, perm )
+char *remote;
+int mode;
+int perm;
+{
+	int		fd;
+	int		scm;
+
+	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+
+	dprintf( D_ALWAYS, "Attempting to access \"%s\" via AFS\n",  remote );
+
+	if( strncmp("/afs",remote,4) != MATCH ) {
+		dprintf( D_ALWAYS, "Not an AFS file\n" );
+		SetSyscalls( scm );
+		return -1;
+	}
+
+	if( (fd = open(remote,mode,perm)) < 0 ) {
+		dprintf( D_ALWAYS, "\"%s\" is an AFS file, but open failed\n", remote );
+		SetSyscalls( scm );
+		return -1;
+	}
+
+	dprintf( D_ALWAYS, "Opened \"%s\" via AFS\n", remote );
+	SetSyscalls( scm );
+	return fd;
+}
+
+int
 open_read_stream( const char *path )
 {
 	int		st;
@@ -601,6 +638,13 @@ open_read_stream( const char *path )
 	char	hostname[ 1024 ];
 	int		fd;
 
+	dprintf( D_ALWAYS, "Entering open_read_stream()\n" );
+
+
+	if( (fd=try_via_afs(path,O_RDONLY,0)) >= 0 ) {
+		dprintf( D_ALWAYS, "Checkpoint AFS Connection Ready, fd = %d\n", fd );
+		return fd;
+	}
 
 		/*
 		Get the hostname and port number of a process which will
@@ -617,6 +661,7 @@ open_read_stream( const char *path )
 
 	return fd;
 }
+
 
 void
 report_image_size( int kbytes )
