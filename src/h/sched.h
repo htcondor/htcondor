@@ -78,6 +78,15 @@ typedef struct {
 	int		umbilical;
 } SHADOW_REC;
 
+typedef struct {        /* record sent by startd to shadow */
+	int		version_num;/* always negative */
+	PORTS	ports;
+	int     ip_addr;    /* internet addressof executing machine */
+	char*   server_name;/* name of executing machine */
+} StartdRec;
+	/* Startd version numbers : always negative  */
+#define VERSION_FOR_FLOCK   -1
+
 	/* Scheduler Commands */
 /*
 **	Scheduler version number
