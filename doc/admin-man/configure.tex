@@ -2649,10 +2649,19 @@ These settings affect the \Condor{starter}.
   the command-line parameters to pass to the user job.
   This wrapper program must ultimately replace its image with the user job;
   in other words, it must \Term{exec()} the user job, not \Term{fork()} it.
-  For instance, if the wrapper program is a Bourne/C/Korn shell script, the
+  For instance, if the wrapper program is a C/Korn shell script, the
   last line of execution should be:
 \begin{verbatim}
         exec $*
+\end{verbatim}
+  This can potentially lose information about the arguments.
+  Any argument with embedded whitespace will be split into multiple
+  arguments.
+  For example the argument "argument one" will become the two arguments
+  "argument" and "one".
+  For Bourne shells, the following preserves the arguments:
+\begin{verbatim}
+           exec "$@"
 \end{verbatim}
 
 \end{description}
