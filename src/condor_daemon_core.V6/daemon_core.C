@@ -48,6 +48,7 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 #include "condor_commands.h"
 #include "condor_config.h"
 #include "condor_attributes.h"
+#include "strupr.h"
 #ifdef WIN32
 #include "exphnd.WIN32.h"
 typedef unsigned (__stdcall *CRT_THREAD_HANDLER) (void *);
@@ -157,6 +158,13 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	inheritedSocks[0] = NULL;
 	inServiceCommandSocket_flag = FALSE;
 	
+		// Initialize our array of StringLists used to authorize
+		// condor_config_val -set and friends.
+	int i;
+	for( i=0; i<LAST_PERM; i++ ) {
+		SettableAttrsLists[i] = NULL;
+	}
+
 	Default_Priv_State = PRIV_CONDOR;
 }
 
@@ -235,6 +243,12 @@ DaemonCore::~DaemonCore()
 		if ( pid_entry ) delete pid_entry;
 	}
 	delete pidTable;
+
+	for( i=0; i<LAST_PERM; i++ ) {
+		if( SettableAttrsLists[i] ) {
+			delete SettableAttrsLists[i];
+		}
+	}
 
 	t.CancelAllTimers();
 }
@@ -4840,13 +4854,9 @@ DaemonCore::Register_Priv_State( priv_state priv )
 	return old_priv;
 }
 
-
-
-
-
 int
-DaemonCore::getAuthBitmask ( char * methods ) {
-
+DaemonCore::getAuthBitmask ( char * methods )
+{
 	if (methods) {
 		dprintf ( D_SECURITY, "GETAUTHBITMASK: in getAuthBitmask('%s')\n", methods);
 	} else {
@@ -4859,7 +4869,7 @@ DaemonCore::getAuthBitmask ( char * methods ) {
 	int retval = 0;
 
 	server.rewind();
-	while ( tmp = server.next() ) {
+	while( (tmp = server.next()) ) {
 		if ( !stricmp( tmp, "GSS_AUTHENTICATION" ) ) {
 			dprintf ( D_SECURITY, "GETAUTHBITMASK: added CAUTH_GSS\n");
 			retval |= CAUTH_GSS;
@@ -4883,3 +4893,167 @@ DaemonCore::getAuthBitmask ( char * methods ) {
 
 	return retval;
 }
+
+
+bool
+DaemonCore::CheckConfigSecurity( const char* config, Sock* sock ) 
+{
+	char *name, *tmp;
+	char* ip_str;
+	int i;
+
+	if( ! (name = strdup(config)) ) {
+		EXCEPT( "Out of memory!" );
+	}
+	tmp = strchr( name, '=' );
+	if( ! tmp ) {
+		tmp = strchr( name, ':' );
+	}
+	if( tmp ) {
+			// someone's trying to set something, so we should trim
+			// off the value they want to set it to and any whitespace
+			// so we can just look at the attribute name.
+		*tmp = ' ';
+		while( isspace(*tmp) ) {
+			*tmp = '\0';
+			tmp--;
+		}
+	} 
+
+#if (DEBUG_SETTABLE_ATTR_LISTS)
+		dprintf( D_ALWAYS, "CheckConfigSecurity: name is: %s\n", name );
+#endif
+
+		// Now, name should point to a NULL-terminated version of the
+		// attribute name we're trying to set.  This is what we must
+		// compare against our SettableAttrsLists.  We need to iterate
+		// through all the possible permission levels, and for each
+		// one, see if we find the given attribute in the
+		// corresponding SettableAttrsList.
+	for( i=0; i<LAST_PERM; i++ ) {
+
+			// skip permission levels we know we don't want to trust
+		if( i == ALLOW || i == IMMEDIATE_FAMILY ) {
+			continue;
+		}
+
+		if( ! SettableAttrsLists[i] ) { 
+				// there's no list for this perm level, skip it. 
+			continue;
+		}
+
+			// if we're here, we might allow someone to set something
+			// if they qualify for the perm level we're considering.
+			// so, now see if the connection qualifies for this access
+			// level.
+		if( Verify((DCpermission)i, sock->endpoint()) ) {
+				// now we can see if the specific attribute they're
+				// trying to set is in our list.
+			if( (SettableAttrsLists[i])->
+				contains_anycase_withwildcard(name) ) {
+					// everything's cool.  allow this.
+
+#if (DEBUG_SETTABLE_ATTR_LISTS)
+				dprintf( D_ALWAYS, "CheckConfigSecurity: "
+						 "found %s at perm level %s\n", name,
+						 PermString((DCpermission)i) );
+#endif
+
+				free( name );
+				return true;
+			}
+		}
+	} // end of for()
+
+		// If we're still here, someone is trying to set something
+		// they're not allowed to set.  print this out into the log so
+		// folks can see that things are failing due to permissions. 
+
+		// Grab a pointer to this string, since it's a little bit
+		// expensive to re-compute.
+	ip_str = sock->endpoint_ip_str();
+		// Upper-case-ify the string for everything we print out.
+	strupr(name);
+
+		// First, log it.
+	dprintf( D_ALWAYS,
+			 "WARNING: Someone at %s is trying to modify \"%s\"\n",
+			 ip_str, name );
+	dprintf( D_ALWAYS, 
+			 "WARNING: Potential security problem, request refused\n" );
+
+	free( name );
+	return false;
+}
+
+
+void
+DaemonCore::InitSettableAttrsLists( void )
+{
+	int i;
+
+		// First, clean out anything that might be there already. 
+	for( i=0; i<LAST_PERM; i++ ) {
+		if( SettableAttrsLists[i] ) {
+			delete SettableAttrsLists[i];
+			SettableAttrsLists[i] = NULL;
+		}
+	}
+
+		// Now, for each permission level we care about, see if
+		// there's an entry in the config file.  We first check for
+		// "<SUBSYS>_SETTABLE_ATTRS_<PERM-LEVEL>", if that's not
+		// there, we just check for "SETTABLE_ATTRS_<PERM-LEVEL>".
+	for( i=0; i<LAST_PERM; i++ ) {
+			// skip permission levels we know we don't want to trust
+		if( i == ALLOW || i == IMMEDIATE_FAMILY ) {
+			continue;
+		}
+		if( InitSettableAttrsList(mySubSystem, i) ) {
+				// that worked, move on to the next perm level
+			continue;
+		} 
+			// there's no subsystem-specific one, just try the generic
+			// version.  if this doesn't work either, we just leave
+			// this StringList NULL and will ignore cmds from it. 
+		InitSettableAttrsList( NULL, i );
+	}
+
+#if (DEBUG_SETTABLE_ATTR_LISTS)
+		// Just for debugging, print out everything
+	char* tmp;
+	for( i=0; i<LAST_PERM; i++ ) {
+		if( SettableAttrsLists[i] ) {
+			tmp = (SettableAttrsLists[i])->print_to_string();
+			dprintf( D_ALWAYS, "SettableAttrList[%s]: %s\n",
+					 PermString((DCpermission)i), tmp );
+			free( tmp );
+		}
+	}
+#endif
+}
+
+
+bool
+DaemonCore::InitSettableAttrsList( const char* subsys, int i ) 
+{
+	MyString param_name;
+	char* tmp;
+
+	if( subsys ) {
+		param_name = subsys;
+		param_name += "_SETTABLE_ATTRS_";
+	} else {
+		param_name = "SETTABLE_ATTRS_";
+	}
+	param_name += PermString((DCpermission)i);
+	tmp = param( param_name.GetCStr() );
+	if( tmp ) {
+		SettableAttrsLists[i] = new StringList;
+		(SettableAttrsLists[i])->initializeFromString( tmp );
+		free( tmp );
+		return true;
+	}
+	return false;
+}
+	
