@@ -409,6 +409,7 @@ send_classad_to_sock( int cmd, Daemon * d, ClassAd* pubCA, ClassAd*
     if (! d->startCommand(cmd, sock)) {
 		dprintf( D_ALWAYS, "Can't send command\n");
 		sock->end_of_message();
+		delete sock;
 		return FALSE;
 	}
 
@@ -416,6 +417,7 @@ send_classad_to_sock( int cmd, Daemon * d, ClassAd* pubCA, ClassAd*
 		if( ! pubCA->put( *sock ) ) {
 			dprintf( D_ALWAYS, "Can't send public classad\n");
 			sock->end_of_message();
+			delete sock;
 			return FALSE;
 		}
 	}
@@ -423,13 +425,17 @@ send_classad_to_sock( int cmd, Daemon * d, ClassAd* pubCA, ClassAd*
 		if( ! privCA->put( *sock ) ) {
 			dprintf( D_ALWAYS, "Can't send private classad\n");
 			sock->end_of_message();
+			delete sock;
 			return FALSE;
 		}
 	}
 	if( ! sock->end_of_message() ) {
 		dprintf( D_ALWAYS, "Can't send end_of_message\n");
+		delete sock;
 		return FALSE;
 	}
+
+	delete sock;
 	return TRUE;
 }
 
