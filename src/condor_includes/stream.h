@@ -201,7 +201,6 @@ public:
 	inline stream_code representation() const { return _code; }
     ///
 	inline void set_representation(stream_code c) { _code = c; }
-    //@}
 
     ///
 	inline void encode() { _coding = stream_encode; }
