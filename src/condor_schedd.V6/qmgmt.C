@@ -397,7 +397,7 @@ handle_q(Service *, int, Stream *sock)
 		rval = do_Q_request( (ReliSock *)sock );
 	} while(rval >= 0);
 	FreeConnection();
-	dprintf(D_ALWAYS, "QMGR Connection closed\n");
+	dprintf(D_FULLDEBUG, "QMGR Connection closed\n");
 
 	// Abort any uncompleted transaction.  The transaction should
 	// be committed in CloseConnection().
@@ -430,7 +430,7 @@ InitializeConnection( char *owner, char *tmp_file )
 #endif
 	active_owner = strdup( owner );
 	rendevous_file = strdup( tmp_file );
-	dprintf(D_ALWAYS, "QMGR InitializeConnection returning 0 (%s)\n",
+	dprintf(D_FULLDEBUG, "QMGR InitializeConnection returning 0 (%s)\n",
 			tmp_file);
 	return 0;
 }
@@ -466,7 +466,7 @@ NewProc(int cluster_id)
 	if (CheckConnection() < 0) {
 		return -1;
 	}
-	if (cluster_id != active_cluster_num) {
+	if ((cluster_id != active_cluster_num) || (cluster_id < 1)) {
 #if !defined(WIN32)
 		errno = EACCES;
 #endif
