@@ -85,7 +85,8 @@ public:
 	bool  					invalidateHost(const char * sin);
     void                    invalidateExpiredCache();
 
-	ClassAd *				CreateSecurityPolicyAd(const char *auth_level, bool otherside_can_neg = true);
+	bool	FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
+									bool otherside_can_neg = true);
 	ClassAd * 				ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad);
 	bool 					ReconcileSecurityDependency (sec_req &a, sec_req &b);
 	SecMan::sec_feat_act	ReconcileSecurityAttribute(const char* attr, ClassAd &cli_ad, ClassAd &srv_ad);
