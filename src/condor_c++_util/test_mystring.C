@@ -307,9 +307,14 @@ int main (int argc, char **argv)
 
 
 	MyString b2;
-	// What effect should this actually have?!?  wenger 2003-04-28.
-	b2[0] = 'a';
-	printf("OK: operator[] assignment worked in line %d.\n", __LINE__);
+	// Note: this should not actually change the string.
+	b2.setChar(0, 'a');
+	if ( b2 == "" && b2.Length() == 0 ) {
+		printf("OK: setChar worked in line %d.\n", __LINE__);
+	} else {
+	    printf("FAILED: setChar error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
 
 	MyString b3a, b3b;
 	b3a += b3b;
@@ -334,19 +339,15 @@ int main (int argc, char **argv)
 	}
 
 
-/*
-	// ---- Assignment of '\0' into the middle of the string buffer --
-	// causes problems as of 2003-04-29.  wenger
     b3a = "Eddy Merckx";
-	b3a[5] = '\0';
+	b3a.setChar(5, '\0');
 	if (b3a.Length() == (int)strlen(b3a.GetCStr())) {
-	    printf("OK: operator[] assignment worked in line %d.\n", __LINE__);
+	    printf("OK: setChar worked in line %d.\n", __LINE__);
 	} else {
-	    printf("FAILED: operator[] assignment produces length conflict "
+	    printf("FAILED: setChar produces length conflict "
 				"in line %d.\n", __LINE__);
 		everythingOkay = false;
 	}
-*/
 
     // ---- Test making a string *shorter* with reserve().
 	b3a = "Miguel Indurain";

@@ -206,7 +206,7 @@ ReliSock*
 NewConnection( int id )
 {
 	int 	portno;
-	int		syscall = CONDOR_new_connection;
+	int		syscall_number = CONDOR_new_connection;
 	ReliSock* reli = new ReliSock();
 	char 	addr[128], *tmp;
 	memset( addr, '\0', 128 );
@@ -214,7 +214,7 @@ NewConnection( int id )
 	SyscallStream->encode();
 
 		// Send the request
-	if( !SyscallStream->code(syscall) ) {
+	if( !SyscallStream->code(syscall_number) ) {
 		EXCEPT( "Can't send CONDOR_new_connection request" );
 	}
 	if( !SyscallStream->code(id) ) {

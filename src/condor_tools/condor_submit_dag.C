@@ -340,7 +340,7 @@ void getJobLogFilenameFromSubmitFiles(SubmitDagOptions &opts)
 		// this internal loop is for '/' line continuation
 		while (strLine[strLine.Length()-1] == '\\')
 		{
-			strLine[strLine.Length()-1] = 0;
+			strLine.setChar(strLine.Length()-1, 0);
 			psLine = listLines.next();
 			if (psLine)
 				strLine += psLine;

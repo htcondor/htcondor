@@ -24,22 +24,29 @@
 #ifndef _CONDOR_NFS_H
 #define _CONDOR_NFS_H
 
+#if defined(AIX)
+#include <rpcsvc/mount.h>
+#else
 #include <sys/mount.h>
+#endif
 
 #if defined(LINUX)
 #	include <linux/nfs.h>
 #	include <linux/ipc.h>
 #	include <dirent.h>
     typedef struct fhandle fhandle_t;
+
 #elif !defined(IRIX)
 #	include <rpc/rpc.h>
+
 #if defined(Darwin)
 #       include <nfs/rpcv2.h>
 #endif
 #	include <nfs/nfs.h>
-#if !defined(OSF1) && !defined(Solaris) && !defined(HPUX11) && !defined(Darwin)
+#if defined(LINUX) || defined(IRIX) || defined(HPUX10) 
 #	include <nfs/export.h>
 #endif
+
 #endif
 
 #endif /* _CONDOR_NFS_H */

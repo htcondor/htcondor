@@ -52,6 +52,7 @@ template class HashBucket<HashKey, GlobusResource *>;
 
 HashTable <HashKey, GlobusResource *> ResourcesByName( HASH_TABLE_SIZE,
 													   hashFunction );
+static unsigned int g_MonitorUID = 0;
 
 GlobusResource::GlobusResource( const char *resource_name )
 	: BaseResource( resource_name )
@@ -72,8 +73,6 @@ GlobusResource::GlobusResource( const char *resource_name )
 
 	checkMonitorTid = TIMER_UNSET;
 	monitorActive = false;
-
-	monitorUID = 0;
 
 	monitorJobStatusFile = 0;
 	monitorLogFile = 0;
@@ -670,16 +669,16 @@ GlobusResource::SubmitMonitorJob()
 	
 	/* Create monitor file names */
 	{
-		monitorUID++;
+		g_MonitorUID++;
 		MyString buff;
 
 		buff.sprintf( "%s/grid-monitor-job-status.%s.%d.%d",
 		              GridmanagerScratchDir,
-		              resourceName, getpid(), monitorUID );
+		              resourceName, getpid(), g_MonitorUID );
 		monitorJobStatusFile = strdup( buff.Value() );
 
-		buff.sprintf( "%s/grid-monitor-log.%s.%d.%d", GridmanagerScratchDir,
-					  resourceName, getpid(), monitorUID );
+		buff.sprintf( "%s/grid-monitor-log.%s.%d.%u", GridmanagerScratchDir,
+					  resourceName, getpid(), g_MonitorUID );
 		monitorLogFile = strdup( buff.Value() );
 	}
 
@@ -787,6 +786,11 @@ GlobusResource::ReadMonitorJobStatusFile()
 	}
 
 	if ( fgets( buff, sizeof(buff), fp ) == NULL ) {
+		if( feof(fp) ) {
+			dprintf( D_FULLDEBUG, "GridMonitor job status file empty (%s), treating as partial.\n",
+					 monitorJobStatusFile );
+			return RFS_PARTIAL;
+		}
 		dprintf( D_ALWAYS, "Can't read GridMonitor job status file %s\n",
 				 monitorJobStatusFile );
 		fclose( fp );

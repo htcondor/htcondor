@@ -332,7 +332,7 @@ pseudo_getwd( char *path )
 }
 
 int
-pseudo_send_file( const char *path, mode_t mode )
+pseudo_send_a_file( const char *path, mode_t mode )
 {
 	char	buf[ CONDOR_IO_BUF_SIZE ];
 	int rval = 0;
@@ -343,7 +343,7 @@ pseudo_send_file( const char *path, mode_t mode )
 	int	len, nbytes;
 	mode_t omask;
 
-	dprintf(D_SYSCALLS, "\tpseudo_send_file(%s,0%o)\n", path, mode );
+	dprintf(D_SYSCALLS, "\tpseudo_send_a_file(%s,0%o)\n", path, mode );
 
 		// Want to make sure our umask is reasonable, since the user
 		// job might have called umask(), which goes remote and
@@ -2488,13 +2488,24 @@ pseudo_register_syscall_version( const char *version )
 int
 pseudo_statfs( const char *path, struct statfs *buf )
 {
+	int ret;
+	char *str;
+
+	/* This idiocy is because you can't pass a const char * to a function
+		that expects a char * and type casting away the const seems wrong to 
+		 me. */
+	str = strdup(path);
+
 #if defined(Solaris) || defined(IRIX)
-	return statfs( path, buf, 0, 0);
+	ret = statfs( str, buf, 0, 0);
 #elif defined DUX5
-	return _F64_statfs( (char *) path, buf );
+	ret = _F64_statfs( str, buf );
 #else
-	return statfs( path, buf );
+	ret = statfs( str, buf );
 #endif
+
+	free(str);
+	return ret;
 }
 
 /*

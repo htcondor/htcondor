@@ -237,10 +237,8 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	set_priv( priv );
 	return rval;
 
-#endif /* defined(Solaris251) || defined(IRIX) || defined(OSF1) */
-
+#elif defined(Solaris26) || defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
 // This is the version of getProcInfo for Solaris 2.6 and 2.7 and 2.8 and 2.9
-#if defined(Solaris26) || defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
 
 	char path[64];
 	int fd, rval = 0;
@@ -342,11 +340,10 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	set_priv( priv );
 	return 0;
 
-#endif /* Solaris26 || Solaris27 || Solaris28 || Solaris29 */
+#elif defined(LINUX)
 
 // This is the Linux version of getProcInfo.  Everything is easier and
 // actually seems to work in Linux...nice, but annoyingly different.
-#ifdef LINUX
 
 	char path[64];
 	FILE *fp;
@@ -591,7 +588,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	set_priv( priv );
 	return 0;
 
-#endif /* Linux */
+#elif defined(HPUX)
 
 /* Here's getProcInfo for HPUX.  Calling this a /proc interface is a lie, 
    because there IS NO /PROC for the HPUX's.  I'm using pstat_getproc().
@@ -600,7 +597,6 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
    that pid is returned in buf.  The bonus is, everything works...and
    you can get info on every process.
 */
-#ifdef HPUX
 
 	struct pst_status buf;
 	int rval = 0;
@@ -667,10 +663,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	set_priv( priv );
 	return 0;
 
-#endif /* HPUX */
-
-#ifdef Darwin
-
+#elif defined(Darwin)
 
 	// First, let's get the BSD task info for this stucture. This
 	// will tell us things like the pid, ppid, etc. 
@@ -733,8 +726,9 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	mach_port_deallocate(mach_task_self(), task);
 	free(kp);
 	return 0;
-#endif
-#ifdef WIN32
+
+#elif defined(WIN32)
+
 /* Danger....WIN32 code follows....
    The getProcInfo call for WIN32 actually gets *all* the information
    on all the processes, but that's not preventable using only
@@ -871,7 +865,43 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 
     return 0;
 
-#endif  // WIN32 getProcInfo
+#elif defined(AIX)
+
+	struct procentry64 pent;
+	struct fdsinfo64 fent;
+	int retval;
+	pid_t my_pid;
+
+	/* I do this so the getprocs64() call doesn't affect what we passed in */
+	my_pid = pid;
+
+	/* Ask the OS for this one process entry, based on the pid */
+	retval = getprocs64(&pent, sizeof(struct procentry64), &fent, 
+				sizeof(struct fdsinfo64), &my_pid, 1);
+	if (retval == -1)
+	{
+		/* some odd problem with getprocs64(), let the caller figure it out */
+		return -1;
+	}
+
+	initpi( pi );
+	pi->imgsize = pent.pi_size * getpagesize();
+	pi->rssize = pent.pi_drss + pent.pi_trss; /* XXX not really right */
+	pi->minfault = pent.pi_minflt;
+	pi->majfault = pent.pi_majflt;
+	pi->user_time = pent.pi_ru.ru_utime.tv_usec; /* XXX fixme microseconds */
+	pi->sys_time = pent.pi_ru.ru_stime.tv_usec; /* XXX fixme microseconds */
+	pi->age = secsSinceEpoch() - pent.pi_start;
+	pi->pid = pent.pi_pid;
+	pi->ppid = pent.pi_ppid;
+	pi->creation_time = pent.pi_start;
+
+	pi->cpuusage = 0.0; /* XXX fixme compute it */
+
+	return 0;
+#else
+#error Please define ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) for this platform!
+#endif
 
 } // 500+ lines later, the closing brace of getProcInfo! (Whew!)
 
@@ -1056,7 +1086,7 @@ ProcAPI::do_usage_sampling( piPTR& pi,
    returned for total & available mem are consistent with the numbers
    reported by top.  */
 
-#if ( defined(Solaris)  )
+#if defined(Solaris)
 int
 ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 	if( pagesize == 0 ) {
@@ -1066,9 +1096,7 @@ ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 	availmem = sysconf(_SC_AVPHYS_PAGES) * pagesize;
 	return 0;
 }
-#endif /* Solaris */
-
-#ifdef LINUX
+#elif defined(LINUX)
 int
 ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
   
@@ -1093,9 +1121,7 @@ ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 	}
 	return 0;
 }
-#endif /* LINUX */
-
-#ifdef OSF1
+#elif defined(OSF1)
 int
 ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 
@@ -1115,9 +1141,7 @@ ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 	availmem = v.free_count * pagesize;
 	return 0;
 }
-#endif /* OSF1 */
-
-#ifdef IRIX
+#elif defined(IRIX)
 int
 ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
   
@@ -1135,9 +1159,7 @@ ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 	availmem = rmi.freemem * pagesize;
 	return 0;
 }
-#endif /* IRIX */
-
-#ifdef HPUX
+#elif defined(HPUX)
 int
 ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 
@@ -1163,9 +1185,9 @@ ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 	}
 	return 0;
 }
-#endif /* HPUX */
 
-#if ( defined(Darwin)  )
+#elif defined(Darwin)
+
 int
 ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 	
@@ -1184,17 +1206,30 @@ ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 	i = sysctl(mib, 2, &availmem, &oldlen, NULL, 0);
 	return 0;
 }
-#endif /* Solaris */
-
+#elif defined(WIN32)
 /* This version for windows is obviously broken. :-) */
-#ifdef WIN32
 int
 ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
     totalmem = 0;
     availmem = 0;
     return 0;
 }
-#endif /* WIN32 */
+#elif defined(AIX)
+int
+ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
+
+/* Found on the web... 
+	-From a C program, you can call the "odm_get_obj" subroutine
+	for class "CuAt" with argument "name=sys0 AND attribute=realmem"- */
+
+	/* XXX obviously, this is not correct */
+	availmem = 0;
+	totalmem = 0;
+	return 0;
+}
+#else
+#error You need to define ProcAPI::getMemInfo(int &, int&) for this platform!
+#endif
 
 #ifndef WIN32
 /* getProcSetInfo returns the sum of the procInfo structs for a set

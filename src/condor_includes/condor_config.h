@@ -47,6 +47,8 @@ typedef struct bucket {
 	extern MyString global_root_config_file;
 	extern MyString local_config_files;
 
+    int param_integer( const char *name, int default_value,
+					   int min_value = INT_MIN, int max_value = INT_MAX );
 	bool param_boolean( const char *name, const bool default_value );
 	bool param_get_location(const char *parameter, MyString &filename,
 							int &line_number);
@@ -74,7 +76,6 @@ BEGIN_C_DECLS
 
 	char * get_tilde();
 	char * param ( const char *name );
-	int param_integer( const char *name, int default_value );
 	void insert ( const char *name, const char *value, BUCKET *table[], int table_size );
 	char * lookup_macro ( const char *name, BUCKET *table[], int table_size );
 	char * macro_expand ( const char *name );

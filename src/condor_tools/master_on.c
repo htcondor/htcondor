@@ -38,11 +38,17 @@
 extern int errno;
 
 static char* master_path = "/unsup/condor/sbin/condor_master";
+static char* config_val_path = "/unsup/condor/bin/condor_config_val master";
 
 int
 main( int argc, char* argv[], char *env[] )
 {
-    int errcode;
+	int errcode, i;
+	FILE *config_val;
+	char *path_from_config_val;
+	char *master_path;
+	size_t count;
+
 
 	// Shed our "invoker's" AFS tokens
     if ( syscall(AFS_SYSCALL, AFSCALL_SETPAG) < 0 ) {
@@ -54,6 +60,43 @@ main( int argc, char* argv[], char *env[] )
 
 	// Flush my environment
 	*env = NULL;
+
+	// Now, we've ditched our environment, so we'll pick up the default
+	// config file for the machine.
+
+	// Ask this machine what condor_master it should run, ala the startup
+	// script...
+
+	path_from_config_val = (char *)calloc(1, (_POSIX_PATH_MAX + 1));
+	if(path_from_config_val == NULL ) {
+		fprintf( stderr, "error: Couldn't allocate memory for path!\n");
+		exit(1);
+	}
+	
+	config_val = popen(config_val_path, "r");
+	if(config_val == NULL) {
+		fprintf( stderr, "warning: Can't popen config_val"
+				 " errno: %d (%s)\n",
+				 errno, strerror(errno) );
+		master_path = static_master_path;
+	} else {
+		count = fread( path_from_config_val, 1, _POSIX_PATH_MAX, config_val);
+		if( count > 0 ) {
+			path_from_config_val[_POSIX_PATH_MAX] = 0; // Null terminate it
+			for(i = 0; i < count; i++) {
+				if(path_from_config_val[i] == '\n') {
+					path_from_config_val[i] = 0;
+				}
+			}
+			master_path = path_from_config_val;
+		} else {
+			fprintf(stderr, "Unable to read config entry, using hard-coded ");
+			fprintf(stderr, "default of /unsup/condor/sbin/condor_master\n ");
+			master_path = static_master_path;
+		}
+		pclose(config_val);
+	}
+				
 
 	// Here we go!
 	if( setuid(0) < 0 ) {

@@ -20,24 +20,6 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-/****************************************************************
-Author:
-	Michael Greger, August 1, 1996
-
-Purpose:
-	Look for a "core" file at a given location.  Return TRUE if it exists
-	and appears complete and correct, and FALSE otherwise.
-
-	This code requires a *correct* libbfd, liberty, bfd.h and ansidecl.h.
-	The code has been tested with libbfd.so.2.6.0.12.  Correct versions
-	of the heasers and libraries should be included with this distribution.
-
-Addendum:
-	Ripped out libbfd usage. Also, don't even check the core for validity
-	beyond its existance. Let the user figure it out when they 
-	use gdb on it. -psilord 4/22/2002
-******************************************************************/
-
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_constants.h"
@@ -47,15 +29,30 @@ core_is_valid( char *core_fn )
 {
 	struct stat buf;
 
-	if (stat(core_fn, &buf) < 0)
+	/* be cognizant of the file that we are checking isn't a
+		symlink. If it is, then the user is most likely trying
+		to perform an exploit to have Condor retrieve any file
+		on the system. Condor must return the core file via root
+		privledges because a user doesn't have search permissions
+		to the sand box of the execute directory where the core
+		file will end up */
+
+	if (lstat(core_fn, &buf) == 0)
 	{
-		return FALSE;
+		/* Hmm... Something is here, make sure it isn't a symlink */
+		if ( ! S_ISLNK(buf.st_mode) )
+		{
+			/* looks like something real.  If it turns out the file is
+				corrupt, then let the user figure it out when it they
+				inspect it. This is no different than if the core file was
+				corrupt to begin with and created outside of Condor 
+				altogether. */
+			return TRUE;
+		}
 	}
 
-	/* if the OS gave us something, we should give it to the user and let
-		THEM figure out if it was corrupt or not. */
-
-	return TRUE;
+	/* If this file was a symlink or not present, mark it as not valid. */
+	return FALSE;
 }
 
 

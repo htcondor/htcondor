@@ -2969,9 +2969,11 @@ MyString *GlobusJob::buildSubmitRSL()
 		*rsl += buff;
 	}
 
+	int commit_timeout = param_integer("GRIDMANAGER_GLOBUS_COMMIT_TIMEOUT", JM_COMMIT_TIMEOUT);
+
 	buff.sprintf( ")(save_state=yes)(two_phase=%d)"
 				  "(remote_io_url=$(GRIDMANAGER_GASS_URL))",
-				  JM_COMMIT_TIMEOUT );
+				  commit_timeout);
 	*rsl += buff;
 
 	if ( rsl_suffix != NULL ) {
@@ -2979,7 +2981,7 @@ MyString *GlobusJob::buildSubmitRSL()
 		free( rsl_suffix );
 	}
 
-	dprintf( D_ALWAYS, "Final RSL: %s\n", rsl->GetCStr() );
+	dprintf( D_FULLDEBUG, "Final RSL: %s\n", rsl->GetCStr() );
 	return rsl;
 }
 

@@ -48,7 +48,7 @@ REMOTE_CONDOR_work_request(ClassAd *ad, char *a_out, char *targ, char *orig,
 #endif
 
 int
-REMOTE_CONDOR_send_file(char *local, char *remote, mode_t mode)
+REMOTE_CONDOR_send_a_file(char *local, char *remote, mode_t mode)
 {
 	int		loc_fd;
 	int		read_status = 0, write_status;
@@ -65,7 +65,7 @@ REMOTE_CONDOR_send_file(char *local, char *remote, mode_t mode)
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	omask = _condor_signals_disable();
 
-	CurrentSysCall = CONDOR_send_file;
+	CurrentSysCall = CONDOR_send_a_file;
 
 		/* Do the local open */
 	if( (loc_fd = open(local,O_RDONLY)) < 0 ) {

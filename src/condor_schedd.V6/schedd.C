@@ -892,19 +892,19 @@ count( ClassAd *job )
 	int		max_hosts;
 	int		universe;
 
-	if (job->LookupInteger(ATTR_JOB_STATUS, status) < 0) {
+	if (job->LookupInteger(ATTR_JOB_STATUS, status) == 0) {
 		dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n",
 				ATTR_JOB_STATUS);
 		return 0;
 	}
 
-	if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) < 0) {
+	if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) == 0) {
 		cur_hosts = ((status == RUNNING) ? 1 : 0);
 	}
-	if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) < 0) {
+	if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) == 0) {
 		max_hosts = ((status == IDLE || status == UNEXPANDED) ? 1 : 0);
 	}
-	if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) < 0) {
+	if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) == 0) {
 		universe = CONDOR_UNIVERSE_STANDARD;
 	}
 
@@ -7557,6 +7557,7 @@ Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, ClassAd* my_match_ad,
 		  Derek Wright <wright@cs.wisc.edu>
 		*/
 	if( (addr = string_to_ipstr(peer)) ) {
+		daemonCore->AddAllowHost( addr, WRITE );
 		daemonCore->AddAllowHost( addr, DAEMON );
 	} else {
 		dprintf( D_ALWAYS, "ERROR: Can't convert \"%s\" to an IP address!\n", 

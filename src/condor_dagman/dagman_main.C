@@ -83,24 +83,36 @@ void touch (const char * filename) {
 //---------------------------------------------------------------------------
 
 
+Dagman::Dagman() :
+	dag (NULL),
+	maxJobs (0),
+	maxPreScripts (0),
+	maxPostScripts (0),
+	rescue_file (NULL),
+	paused (false),
+	submit_delay (0),
+	max_submit_attempts (0),
+	datafile (NULL)
+{
+}
+
+
+Dagman::~Dagman()
+{
+	delete dag;
+}
+
+
 bool
 Dagman::Config()
 {
-	const char* submit_delay_attr = "DAGMAN_SUBMIT_DELAY";
-	char* submit_delay_str = param( submit_delay_attr );
-	char* endptr = NULL;
-	if( submit_delay_str ) {
-		dagman.submit_delay = strtol( submit_delay_str, &endptr, 10 );
-		if( !endptr || *endptr != '\0' || dagman.submit_delay < 0 ) {
-			debug_printf( DEBUG_NORMAL, "ERROR: invalid %s: \"%s\"\n",
-						  submit_delay_attr, submit_delay_str );
-			dagman.submit_delay = 0;
-		}
-	}
-	debug_printf( DEBUG_NORMAL, "%s = %d (\"%s\")\n", submit_delay_attr,
-				  dagman.submit_delay, submit_delay_str ? submit_delay_str :
-				  "UNDEFINED" );
-	free( submit_delay_str );
+	dagman.submit_delay = param_integer( "DAGMAN_SUBMIT_DELAY", 0, 0, 60 );
+	dagman.max_submit_attempts =
+		param_integer( "DAGMAN_MAX_SUBMIT_ATTEMPTS", 6, 1, 10 );
+	dagman.startup_cycle_detect =
+		param_boolean( "DAGMAN_STARTUP_CYCLE_DETECT", false );
+	dagman.max_submits_per_interval =
+		param_integer( "DAGMAN_MAX_SUBMITS_PER_INTERVAL", 5, 1, 1000 );
 	return true;
 }
 
@@ -433,7 +445,7 @@ int main_init (int argc, char ** const argv) {
     }
 
 #ifndef NOT_DETECT_CYCLE
-	if( dagman.dag->isCycle() )
+	if( dagman.startup_cycle_detect && dagman.dag->isCycle() )
 	{
 		debug_error (1, DEBUG_QUIET, "ERROR: a cycle exists in the dag, plese check input\n");
 	}
@@ -562,7 +574,7 @@ void condor_event_timer () {
     //------------------------------------------------------------------------
 
 	if( dagman.paused == true ) {
-		debug_printf( DEBUG_VERBOSE, "(DAGMan paused)\n" );
+		debug_printf( DEBUG_DEBUG_1, "(DAGMan paused)\n" );
 		return;
 	}
 
@@ -575,9 +587,10 @@ void condor_event_timer () {
 
 	int justSubmitted;
 	justSubmitted = dagman.dag->SubmitReadyJobs();
-	debug_printf( DEBUG_DEBUG_1, "Just submitted %d jobs this cycle...\n",
-				  justSubmitted );
-
+	if( justSubmitted ) {
+		debug_printf( DEBUG_VERBOSE, "Just submitted %d job%s this cycle...\n",
+					  justSubmitted, justSubmitted == 1 ? "" : "s" );
+	}
 
     // If the log has grown
     if( dagman.dag->DetectCondorLogGrowth() ) {

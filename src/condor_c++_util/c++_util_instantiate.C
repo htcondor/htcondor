@@ -35,6 +35,9 @@
 #include "file_transfer.h"
 #include "extra_param_info.h"
 #include "daemon.h"
+#include "condor_cred_base.h"
+#include "condor_credential.h"
+
 #include "passwd_cache.h"
 
 template class List<char>; 		template class Item<char>;
@@ -65,4 +68,5 @@ template class HashTable<MyString, ExtraParamInfo *>;
 template class HashTable<MyString, group_entry*>;
 template class HashTable<MyString, uid_entry*>;
 template class SimpleList<Daemon*>;
+template class HashTable<Credential_t, Condor_Credential_B*>;
 

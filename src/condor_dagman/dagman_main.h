@@ -27,14 +27,8 @@
 
 class Dagman {
   public:
-    inline Dagman ():
-        dag          (NULL),
-        maxJobs      (0),
-        maxPreScripts (0),
-        maxPostScripts (0),
-        rescue_file  (NULL),
-		paused (false),
-        datafile     (NULL) {}
+	Dagman();
+	~Dagman();
     inline void CleanUp () { delete dag; }
     Dag * dag;
     int maxJobs;  // Maximum number of Jobs to run at once
@@ -45,8 +39,17 @@ class Dagman {
 	// number of seconds to wait before consecutive calls to
 	// condor_submit (or dap_submit, etc.)
     int submit_delay;
+		// number of times in a row to attempt to execute
+		// condor_submit (or dap_submit) before giving up
+    int max_submit_attempts;
+		// maximum number of jobs to submit in a single periodic timer
+		// interval
+    int max_submits_per_interval;
     char *datafile;
 	StringList condorLogFiles;
+		// whether to peform expensive cycle-detection at startup
+		// (note: we perform run-time cycle-detection regardless)
+	bool startup_cycle_detect;
 
     bool Config();
 };

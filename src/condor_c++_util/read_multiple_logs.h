@@ -105,6 +105,27 @@ private:
 	    /** Read the entire contents of the given file into a MyString.
 		 */
     static MyString readFileToString(const MyString &strFilename);
+
+		/**
+		 * Get the given parameter if it is defined in the given submit file
+		 * line.
+		 * @param The submit file line.
+		 * @param The name of the parameter to get.
+		 * @return The parameter value defined in that line, or "" if the
+		 *   parameter is not defined.
+		 */
+	static MyString getParamFromSubmitLine(MyString submitLine,
+			const char *paramName);
+
+		/**
+		 * Combine input ("physical") lines that end with the given
+		 * continuation character into "logical" lines.
+		 * @param Input string list of "physical" lines.
+		 * @param Continuation character.
+		 * @param Output string list of "logical" lines.
+		 */
+	static MyString CombineLines(StringList &listIn, char continuation,
+			StringList &listOut);
 };
 
 #endif

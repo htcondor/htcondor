@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "read_multiple_logs.h"
+#include "condor_string.h" // for strnewp()
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -314,36 +315,48 @@ ReadMultipleUserLogs::loadLogFileNameFromSubFile(const MyString &strSubFilename)
 {
 	MyString strSubFile = readFileToString(strSubFilename);
 	
-	// Note: StringList constructor removes leading whitespace from lines.
-	StringList listLines( strSubFile.Value(), "\r\n");
+		// Split the node submit file string into lines.
+		// Note: StringList constructor removes leading whitespace from lines.
+	StringList physicalLines( strSubFile.Value(), "\r\n");
+	physicalLines.rewind();
 
-	listLines.rewind();
-	const char *psLine;
-	MyString strPreviousLogFilename;
-	while( (psLine = listLines.next()) ) {
-		MyString strLine = psLine;
-		if (!stricmp(strLine.Substr(0, 2).Value(), "log")) {
-			int iEqPos = strLine.FindChar('=',0);
-			if (iEqPos == -1) {
-				return "";
-			}
+		// Combine lines with continuation characters.
+	StringList	logicalLines;
+	MyString	combineResult = CombineLines(physicalLines, '\\', logicalLines);
+	if ( combineResult != "" ) {
+		return combineResult;
+	}
+	logicalLines.rewind();
 
-			iEqPos++;
-			while (iEqPos < strLine.Length() && (strLine[iEqPos] == ' ' ||
-					strLine[iEqPos] == '\t')) {
-				iEqPos++;
-			}
+	MyString	logFileName("");
+	MyString	initialDir("");
 
-			if (iEqPos >= strLine.Length()) {
-				return "";
-			}
+		// Now look through the submit file logical lines to find the
+		// log file and initial directory (if specified) and combine
+		// them into a path to the log file that's either absolute or
+		// relative to the DAG submit directory.
+	const char *logicalLine;
+	while( (logicalLine = logicalLines.next()) != NULL ) {
+		MyString	submitLine(logicalLine);
+		MyString	tmpLogName = getParamFromSubmitLine(submitLine, "log");
+		if ( tmpLogName != "" ) {
+			logFileName = tmpLogName;
+		}
 
-			MyString strToReturn = strLine.Substr(iEqPos, strLine.Length());
-
-			return strToReturn;
+		MyString	tmpInitialDir = getParamFromSubmitLine(submitLine,
+				"initialdir");
+		if ( tmpInitialDir != "" ) {
+			initialDir = tmpInitialDir;
 		}
 	}
-	return "";
+
+		// Prepend initialdir to log file name if log file name is not
+		// an absolute path.
+	if ( initialDir != "" && logFileName[0] != '/' ) {
+		logFileName = initialDir + "/" + logFileName;
+	}
+
+	return logFileName;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -357,64 +370,132 @@ ReadMultipleUserLogs::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 		return "Unable to read DAG file";
 	}
 
-	StringList listLines( strDagFileContents.Value(), "\r\n");
-	listLines.rewind();
-	const char *psLine;
-	while( (psLine = listLines.next()) ) {
-		MyString strLine = psLine;
-		
-		// this internal loop is for '\' line continuation
-		while (strLine[strLine.Length()-1] == '\\') {
-			strLine[strLine.Length()-1] = 0;
-			psLine = listLines.next();
-			if (psLine) {
-				strLine += psLine;
-			}
-		}
+		// Split the DAG submit file string into lines.
+		// Note: StringList constructor removes leading whitespace from lines.
+	StringList physicalLines(strDagFileContents.Value(), "\r\n");
+	physicalLines.rewind();
 
-		if (strLine.Length() <= 3) {
-			continue;
-		}
+		// Combine lines with continuation characters.
+	StringList	logicalLines;
+	MyString	combineResult = CombineLines(physicalLines, '\\', logicalLines);
+	if ( combineResult != "" ) {
+		return combineResult;
+	}
+	logicalLines.rewind();
 
-		MyString strFirstThree = strLine.Substr(0, 2);
-		if (!stricmp(strFirstThree.Value(), jobKeyword.Value())) {
+	const char *	logicalLine;
+	while ( (logicalLine = logicalLines.next()) ) {
 
-                // Format of a job line should be:
-				// JOB <name> <script> [DONE]
-			StringList tokens (strLine.Value(), " \t");
+		if ( logicalLine && strcmp(logicalLine, "") ) {
+
+				// Note: StringList constructor removes leading
+				// whitespace from lines.
+			StringList	tokens(logicalLine, " \t");
 			tokens.rewind();
-			tokens.next(); // Skip JOB
-			tokens.next(); // Skip <name>
-			const char *submitFile = tokens.next();
-			if( !submitFile ) {
-			    return "Improperly-formatted DAG file";
-			}
-			MyString strSubFile(submitFile);
 
+			if ( !stricmp(tokens.next(), jobKeyword.Value()) ) {
 
-			// get the log= value from the sub file
-
-			MyString strLogFilename = loadLogFileNameFromSubFile(strSubFile);
-
-			if (strLogFilename == "") {
-				return "No 'log =' found in submit file " + strSubFile;
-			}
-			
-			listLogFilenames.rewind();
-			char *psLogFilename;
-			bool bAlreadyInList = false;
-			while ( (psLogFilename = listLogFilenames.next()) ) {
-				if (psLogFilename == strLogFilename) {
-					bAlreadyInList = true;
+					// Get the node submit file name.
+				tokens.next(); // Skip <name>
+				const char *submitFile = tokens.next();
+				if( !submitFile ) {
+			    	return "Improperly-formatted DAG file: submit file "
+							"missing from job line";
 				}
-			}
+				MyString strSubFile(submitFile);
 
-			if (!bAlreadyInList) {
-				// Note: append copies the string here.
-				listLogFilenames.append(strLogFilename.Value());
+					// get the log = value from the sub file
+				MyString strLogFilename = loadLogFileNameFromSubFile(strSubFile);
+				if (strLogFilename == "") {
+					return "No 'log =' value found in submit file " +
+							strSubFile;
+				}
+			
+					// Add the log file we just found to the log file list
+					// (if it's not already in the list -- we don't want
+					// duplicates).
+				listLogFilenames.rewind();
+				char *psLogFilename;
+				bool bAlreadyInList = false;
+				while ( (psLogFilename = listLogFilenames.next()) ) {
+					if (psLogFilename == strLogFilename) {
+						bAlreadyInList = true;
+					}
+				}
+
+				if (!bAlreadyInList) {
+						// Note: append copies the string here.
+					listLogFilenames.append(strLogFilename.Value());
+				}
 			}
 		}
 	}	
 
 	return "";
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+MyString
+ReadMultipleUserLogs::getParamFromSubmitLine(MyString submitLine,
+		const char *paramName)
+{
+	MyString	logFileName("");
+
+		// We need to copy the string here because strtok modifies its
+		// argument...
+	char *		lineBuf = strnewp(submitLine.Value());
+	const char *DELIM = " \t";
+
+	char *		token = strtok(lineBuf, DELIM);
+	if ( token && !strcasecmp(token, paramName) ) {
+		token = strtok(NULL, DELIM);
+		if ( token && !strcasecmp(token, "=") ) {
+			token = strtok(NULL, DELIM);
+			if ( token ) {
+				logFileName = token;
+			}
+		}
+	}
+
+	delete [] lineBuf;
+
+	return logFileName;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+MyString
+ReadMultipleUserLogs::CombineLines(StringList &listIn, char continuation,
+		StringList &listOut)
+{
+	listIn.rewind();
+
+		// Physical line is one line in the file.
+	const char	*physicalLine;
+	while ( (physicalLine = listIn.next()) != NULL ) {
+
+			// Logical line is physical lines combined as needed by
+			// continuation characters (backslash).
+		MyString	logicalLine(physicalLine);
+
+		while ( logicalLine[logicalLine.Length()-1] == continuation ) {
+
+				// Remove the continuation character.
+			logicalLine.setChar(logicalLine.Length()-1, '\0');
+
+				// Append the next physical line.
+			physicalLine = listIn.next();
+			if ( physicalLine ) {
+				logicalLine += physicalLine;
+			} else {
+				return "Improper DAG file: continuation character "
+						"with no trailing line!";
+			}
+		}
+
+		listOut.append(logicalLine.Value());
+	}
+
+	return ""; // blank means okay
 }

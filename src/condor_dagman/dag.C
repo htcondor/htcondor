@@ -360,6 +360,18 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 					  break;
 				  }
 
+				  if( job->_Status == Job::STATUS_ERROR ) {
+						  // sometimes condor prints *both* a
+						  // termination and an abort event for a job;
+						  // in such cases, we need to make sure not
+						  // to process both...
+					  debug_printf( DEBUG_NORMAL,
+									"WARNING: Job %s already marked %s; "
+									"ignoring job aborted event...\n",
+									job->GetJobName(), job->GetStatusName() );
+					  break;
+				  }
+
                   _numJobsSubmitted--;
                   ASSERT( _numJobsSubmitted >= 0 );
 
@@ -732,10 +744,14 @@ Dag::SubmitReadyJobs()
 #if defined(BUILD_HELPER)
 	Helper helperObj;
 #endif
+
+	int numSubmitsThisCycle = 0;
+	while( numSubmitsThisCycle < dagman.max_submits_per_interval ) {
+
 //	PrintReadyQ( DEBUG_DEBUG_4 );
 	// no jobs ready to submit
     if( _readyQ->IsEmpty() ) {
-        return 0;
+        return numSubmitsThisCycle;
     }
     // max jobs already submitted
     if( _maxJobsSubmitted && _numJobsSubmitted >= _maxJobsSubmitted ) {
@@ -744,7 +760,7 @@ Dag::SubmitReadyJobs()
 					  "deferring submission of %d ready job%s.\n",
                       _maxJobsSubmitted, _readyQ->Number(),
 					  _readyQ->Number() == 1 ? "" : "s" );
-        return 0;
+        return numSubmitsThisCycle;
     }
 
 	// remove & submit first job from ready queue
@@ -772,7 +788,12 @@ Dag::SubmitReadyJobs()
 	}
 
 		// sleep for a specified time before submitting
-	sleep( dagman.submit_delay );
+	if( dagman.submit_delay ) {
+		debug_printf( DEBUG_VERBOSE, "Sleeping for %d s "
+					  "(DAGMAN_SUBMIT_DELAY) to throttle submissions...\n",
+					  dagman.submit_delay );
+		sleep( dagman.submit_delay );
+	}
 
 	debug_printf( DEBUG_VERBOSE, "Submitting %s Job %s ...\n",
 				  job->JobTypeString(), job->GetJobName() );
@@ -799,7 +820,7 @@ Dag::SubmitReadyJobs()
 	free( helper );
 	helper = NULL;
 	// the problem might be specific to that job, so keep submitting...
-	return SubmitReadyJobs();
+	continue;  // while( numSubmitsThisCycle < max_submits_per_interval )
       }
       debug_printf( DEBUG_VERBOSE,
 		    "  using new submit file (%s) from helper\n",
@@ -818,7 +839,7 @@ Dag::SubmitReadyJobs()
 	_numJobsFailed++;
 	sprintf( job->error_text, "Job submit failed" );
 	// the problem might be specific to that job, so keep submitting...
-	return SubmitReadyJobs();
+	continue;  // while( numSubmitsThisCycle < max_submits_per_interval )
       }
     } //job ==  condor_job
     
@@ -830,7 +851,7 @@ Dag::SubmitReadyJobs()
 	_numJobsFailed++;
 	sprintf( job->error_text, "Job submit failed" );
 	// the problem might be specific to that job, so keep submitting...
-	return SubmitReadyJobs();
+	continue;  // while( numSubmitsThisCycle < max_submits_per_interval )
       }
     }
 
@@ -852,7 +873,9 @@ Dag::SubmitReadyJobs()
 	debug_printf( DEBUG_VERBOSE, "\tassigned %s ID (%d.%d)\n",
 				  job->JobTypeString(), condorID._cluster, condorID._proc );
     
-    return SubmitReadyJobs() + 1;
+    numSubmitsThisCycle++;
+	}
+	return numSubmitsThisCycle;
 }
 
 //---------------------------------------------------------------------------

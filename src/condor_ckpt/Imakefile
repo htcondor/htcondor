@@ -114,7 +114,11 @@ OBJ =	image.o machdep.$(OS).o tmp_stack.o syscall_mode.o \
 
 #else /* !DOES_CHECKPOINTING */
 
+#if IS_AIX5
+OBJ =	syscall_mode.o
+#else
 OBJ =	syscall_mode.o shared_utils.o
+#endif
 
 #endif
 
@@ -242,15 +246,15 @@ uppercase_target($(SIMPLE_LIBC),pipe.o,PIPE.o,pipe,PIPE)
 uppercase_target($(SIMPLE_LIBC),__pipe.o,__PIPE.o,__pipe,__PIPE)
 
 #if IS_SOLARIS
-program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) MMAP.o SYSCALL.o fake_util_lib.o, )
+program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) MMAP.o SYSCALL.o fake_util_lib.o,$(NULL))
 #else
-program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) fake_util_lib.o, )
+program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) fake_util_lib.o,$(NULL))
 #endif
 
 ToUpper.o: ToUpper.c
 	gcc $(C_FLAGS) -c ToUpper.c
 
-c_plus_target_complex(ToUpper,ToUpper.o,$(TOUPPER_C_PLUS_FLAGS), $(ALL_LDFLAGS), $(NULL))
+program_target_complex(ToUpper,ToUpper.o,$(NULL),$(NULL),$(NULL))
 
 clean::
 	rm -f ToUpper ToUpper.o

@@ -26,6 +26,7 @@
 //
 // Local DAGMan includes
 //
+#include "dagman_main.h"
 #include "dag.h"
 #include "submit.h"
 #include "util.h"
@@ -140,7 +141,7 @@ submit_submit( const char* cmdFile, CondorID& condorID,
 	debug_printf(DEBUG_VERBOSE, "submitting: %s\n", command.Value());
   
 	bool success = false;
-	const int tries = 6;
+	const int tries = dagman.max_submit_attempts;
 	int wait = 1;
 
 	success = submit_try( exe, command.Value(), condorID );
@@ -257,7 +258,7 @@ dap_submit( const char* cmdFile, CondorID& condorID,
   //  dprintf( D_ALWAYS, "submit command is: %s\n", command );
 
   bool success = false;
-  const int tries = 6;
+  const int tries = dagman.max_submit_attempts;
   int wait = 1;
   
   success = dap_try( exe, command, condorID );

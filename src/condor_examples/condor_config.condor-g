@@ -597,10 +597,6 @@ SHADOW_RENICE_INCREMENT	= 10
 ##  default.  Set to 0 to disable.)
 #WALL_CLOCK_CKPT_INTERVAL = 3600
 
-##  Do you want to allow remote machines to be able to submit jobs to
-##  this queue as user "nobody"?
-#ALLOW_REMOTE_SUBMIT	= False
-
 ##  What users do you want to grant super user access to this job
 ##  queue?  (These users will be able to remove other user's jobs). 
 ##  By default, this only includes root.

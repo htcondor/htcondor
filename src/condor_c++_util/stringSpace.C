@@ -143,7 +143,7 @@ getCanonical (char* &str, StringSpaceAdoptionMethod adopt)
 	// if case insensitive, convert to lower case
 	if( !caseSensitive ) {
 		for( int i = myStr.Length(); i >= 0 ; i-- ) {
-			myStr[i] = tolower( myStr[i] );
+			myStr.setChar(i, tolower( myStr[i] ));
 		}
 	}
 

@@ -42,7 +42,7 @@ extern int REMOTE_CONDOR_getwd(char *path_name);
 ** Transfer a local file to a remote machine.
 */
 int
-send_file( const char *local, const char *remote, int perm )
+send_a_file( const char *local, const char *remote, int perm )
 {
 
 	int		remote_fd, local_fd;
@@ -51,7 +51,8 @@ send_file( const char *local, const char *remote, int perm )
 	size_t	len;
 	double	start, finish;
 
-	dprintf( D_ALWAYS, "Entering send_file( %s, %s, 0%o )\n",local,remote,perm);
+	dprintf( D_ALWAYS, "Entering send_a_file( %s, %s, 0%o )\n",
+		local,remote,perm);
 
 		/* Start timing the transfer */
 	start = get_time();

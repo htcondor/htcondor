@@ -96,7 +96,11 @@ class MyString
 
 	/** Returns a single character from the string. Returns 0
 	 *  if out of bounds. */
-	char& operator[](int pos);
+	const char& operator[](int pos);
+
+	/** Sets the character at the given position to the given value,
+	 *  if the position is within the string. */
+	void setChar(int pos, char value);
 
 	//@}
 
@@ -299,7 +303,9 @@ private:
     void init();
 
   char* Data;	// array containing the C string of this MyString's value
-  char dummy;	// used for '\0' char in operator[] (dangerous)
+  char dummy;	// used for '\0' char in operator[] when the index
+  				// is past the end of the string (effectively it's
+				// a const, but compiler doesn't like that)
   int Len;		// the length of the string
   int capacity;	// capacity of the data array, not counting null terminator
   

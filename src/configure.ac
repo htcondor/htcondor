@@ -256,7 +256,20 @@ elif test $os = "AIX" ; then
   _cv_opsys="AIX"
   if test "$osversion" = "5" ; then
     _cv_opsys_vers="AIX5"
-    _cv_sysname="ppc_aix5"
+	if test "$osrelease" = "1" ; then
+      _cv_sysname="ppc_aix51"
+	elif test "$osrelease" = "2" ; then
+      _cv_sysname="ppc_aix52"
+	else
+      _cv_sysname="ppc_aix5unknown"
+      AC_MSG_WARN([Unrecognised AIX version])
+      AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
+	fi
+  else
+    _cv_opsys_vers="AIXUNKNOWN"
+    _cv_sysname="ppc_aixunknown"
+    AC_MSG_WARN([Unrecognised AIX version])
+    AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
   fi
 
 elif test $os = "Darwin" ; then
@@ -636,37 +649,47 @@ AC_MSG_NOTICE([checking what gcc flag forces $gcc_ld_prog into static mode])
 echo "main() { return 0; }" > static_test.c
 gcc -c static_test.c > /dev/null 2>&1
 gcc_static_ld_flag=""
-#####
-# -Bstatic is GNU ld
-# -B,static is Solaris ld
-# -a,archive is HPUX ld
-# -no_so is DUX ld
-#####
-for arg in "-Bstatic" "-B,static" "-a,archive" "-no_so" ; do
-  # we always want to prepend "-Wl,"
-  arg="-Wl,$arg"
-  AC_MSG_CHECKING([$arg])    
-  _test_output=`gcc -o static_test $arg static_test.o 2>&1`
-  _test_status=$?
-  if test $_test_status -eq 0 && test "x$_test_output" = "x"; then 
-    gcc_static_ld_flag=$arg
-    AC_MSG_RESULT([yes])
-    break
-  else
-    AC_MSG_RESULT([no])
+# determine the flags...
+if test $os = "AIX" ; then
+  # AIX static linking with respect to Condor is not pretty. In effect,
+  # we must perform a dynamic link ALWAYS, except in the case of the 
+  # C++ compiler support libraries, which must be linked in statically
+  # so the executables can be run on machines that they weren't built on.
+  AC_MSG_NOTICE([using a pre-determined AIX static linking algorithm])
+  rm -f static_test.c static_test.o static_test > /dev/null 2>&1
+else
+  #####
+  # -Bstatic is GNU ld
+  # -B,static is Solaris ld
+  # -a,archive is HPUX ld
+  # -no_so is DUX ld
+  #####
+  for arg in "-Bstatic" "-B,static" "-a,archive" "-no_so" ; do
+    # we always want to prepend "-Wl,"
+    arg="-Wl,$arg"
+    AC_MSG_CHECKING([$arg])    
+    _test_output=`gcc -o static_test $arg static_test.o 2>&1`
+    _test_status=$?
+    if test $_test_status -eq 0 && test "x$_test_output" = "x"; then 
+      gcc_static_ld_flag=$arg
+      AC_MSG_RESULT([yes])
+      break
+    else
+      AC_MSG_RESULT([no])
+    fi
+  done
+  rm -f static_test.c static_test.o static_test > /dev/null 2>&1
+  if test "x$gcc_static_ld_flag" = "x" ; then
+    msg="can not find appropriate flags for $gcc_ld_prog!"
+    if test $os = "SunOS" ; then
+      # on Solaris, this is fatal, since we depend on this info
+      AC_MSG_ERROR([$msg])
+    else
+      AC_MSG_WARN([$msg])
+    fi
+  else 
+    AC_SUBST([gcc_static_ld_flag],[$gcc_static_ld_flag])
   fi
-done
-rm -f static_test.c static_test.o static_test > /dev/null 2>&1
-if test "x$gcc_static_ld_flag" = "x" ; then
-  msg="can not find appropriate flags for $gcc_ld_prog!"
-  if test $os = "SunOS" ; then
-    # on Solaris, this is fatal, since we depend on this info
-    AC_MSG_ERROR([$msg])
-  else
-    AC_MSG_WARN([$msg])
-  fi
-else 
-  AC_SUBST([gcc_static_ld_flag],[$gcc_static_ld_flag])
 fi
   
 
@@ -1083,6 +1106,9 @@ case "$os" in
   "Darwin" )
     _cv_has_static=no
     ;;
+  "AIX" )
+    _cv_has_static=no
+    ;;
   * )
     AC_MSG_RESULT([error])
     AC_MSG_ERROR([Unrecognized platform: $os])
@@ -1135,7 +1161,11 @@ fi
 
 
 AC_MSG_CHECKING([kerberos])
+if test "$os" = "AIX" ; then
+_cv_ext_kerberos_version="krb5-1.3.1"
+else
 _cv_ext_kerberos_version="krb5-1.2.5"
+fi
 AC_MSG_RESULT([$_cv_ext_kerberos_version])
 AC_SUBST(ext_kerberos_version,$_cv_ext_kerberos_version)
 
@@ -1153,7 +1183,7 @@ AC_MSG_CHECKING([globus flavor])
 _cv_globus_flavor=gcc32dbg
 if test "$_cv_arch" = "ALPHA" -o "$_cv_arch" = "IA64" ; then
   _cv_globus_flavor=gcc64dbg
-elif test "$_cv_arch" = "SGI" ; then
+elif test "$_cv_arch" = "SGI" -o "$_cv_opsys" = "AIX" ; then
   _cv_globus_flavor=vendorcc32dbg
 fi
 AC_MSG_RESULT([$_cv_globus_flavor])

@@ -267,19 +267,33 @@ these calls manipulate the open file table.
 #if defined(FILE_TABLE)
 	int open( const char *path, OPEN_FLAGS_T flags, ... )
 		: file_table
+		#if defined(AIX)
+			, no_sys_chk
+		#endif
 	{
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
 
-	int close( int fd ) : file_table;
+	int close( int fd ) 
+		: file_table
+		#if defined(AIX)
+			, no_sys_chk
+		#endif
+		;
 
-	int unlink( map_name(const char *path) ) {
+	int unlink( map_name(const char *path) ) 
+		#if defined(AIX)
+			: no_sys_chk
+		#endif
+	{
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
 
-	int rename( map_name(const char *from), map_name_two(const char *to) ) : pseudo {
+	int rename( map_name(const char *from), map_name_two(const char *to) ) 
+		: pseudo 
+	{
 		SEND_PATH( from );
 		SEND_PATH( to );
 		ALLOC_PATH( from );
@@ -895,8 +909,18 @@ starter to figure out what uid/gid to try to run the job as, which is
 why they can't be left inside an !defined(CLIP) block...
 */
 #if defined(REMOTE_SYSCALLS)
-	uid_t getuid()  : pseudo;
-	gid_t getgid()  : pseudo;
+	uid_t getuid() 
+		: pseudo
+		#if defined(AIX)
+			, no_sys_chk
+		#endif
+		;
+	gid_t getgid()  
+		: pseudo
+		#if defined(AIX)
+			, no_sys_chk
+		#endif
+		;
 #endif
 
 
@@ -1334,7 +1358,7 @@ they should be built in the special "clipped" version.
 		involved, it's easier to just code the senders by hand.
 		They are implemented in "senders.epilogue".
 		*/
-		int send_file( const char *name, mode_t mode ) : pseudo {
+		int send_a_file( const char *name, mode_t mode ) : pseudo {
 			SEND_PATH( name );
 			ALLOC_PATH( name );
 		}

@@ -34,8 +34,8 @@
 #define WANT_ORACLE_UNIVERSE   NO
 #define WANT_NORDUGRID_UNIVERSE	NO
 
-
 #define USE_GLOBUS_OPENSSL YES
+#define NEEDS_PRELINKER	NO
 #endif  /* BeforeVendorCF */
 
 #ifdef AfterVendorCF

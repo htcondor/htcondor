@@ -128,7 +128,7 @@ input
 %%
 
 input
-	: stub_spec
+	: stub_spec { }
 	| non_support_list
 	| ignore_list
 	| input stub_spec
@@ -180,9 +180,10 @@ ignore_begin
 	;
 
 stub_list
-	: /* empty */
-	| stub_spec stub_list
+	: stub_spec stub_list
+	{ }
 	| error stub_body
+	| /* empty */
 	;
 
 stub_spec

@@ -3416,7 +3416,7 @@ JobDisconnectedEvent::readEvent( FILE *file )
 	if( line.replaceString("    Trying to reconnect to ", "") ) {
 		int i = line.FindChar( ' ' );
 		if( i > 0 ) {
-			line[i] = '\0';
+			line.setChar( i, '\0' );
 			setStartdName( line.Value() );
 			setStartdAddr( &line[i+1] );
 		} else {
@@ -3428,7 +3428,7 @@ JobDisconnectedEvent::readEvent( FILE *file )
 		}
 		int i = line.FindChar( ' ' );
 		if( i > 0 ) {
-			line[i] = '\0';
+			line.setChar( i, '\0' );
 			setStartdName( line.Value() );
 			setStartdAddr( &line[i+1] );
 		} else {
@@ -3881,7 +3881,7 @@ JobReconnectFailedEvent::readEvent( FILE *file )
 			// now everything until the first ',' will be the name
 		int i = line.FindChar( ',' );
 		if( i > 0 ) {
-			line[i] = '\0';
+			line.setChar( i, '\0' );
 			setStartdName( line.Value() );
 		} else {
 			return 0;
