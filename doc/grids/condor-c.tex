@@ -1,0 +1,214 @@
+\index{Condor-C|(}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:Condor-C}Condor-C}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{grid computing!Condor-C}
+Condor-C allows jobs in one machine's job queue to
+be moved to another machine's job queue.
+These machines may be far removed from each other,
+providing powerful grid computation mechanisms,
+while requiring only Condor software and its configuration.
+
+While jobs reside in a queue,
+outages that affect networks and machines are somewhat
+irrelevant.
+An expected usage
+sets up Personal Condor on a laptop,
+submits some jobs that are sent to a Condor pool,
+waits until the jobs are staged on the pool,
+then turns off the laptop.
+When the laptop reconnects at a later time,
+any results can be pulled back.
+
+Condor-C scales gracefully when compared with Condor's flocking
+mechanism.
+The machine upon which jobs are submitted
+maintains a single process and network connection to a remote machine,
+without regard to the number
+of jobs queued or running.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Condor-C-Config}Condor-C Configuration}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Condor-C!configuration}
+There are two aspects to configuration to enable the
+submission and execution of Condor-C jobs.
+These two aspects correspond to the endpoints of the 
+communication: there is the machine from which jobs are
+submitted, and there is the remote machine upon which the
+jobs are placed in the queue (executed).
+
+Configuration of a machine from which jobs are submitted
+requires two extra configuration variables:
+
+\footnotesize
+\begin{verbatim}
+CONDOR_GAHP=$(SBIN)/condor_c-gahp
+C_GAHP_LOG=$(LOG)/CGAHPLog.$(USERNAME)
+\end{verbatim}
+\normalsize
+
+The acronym GAHP stands for Grid ASCII Helper Protocol.
+A GAHP server provides grid-related services for a
+variety of underlying middle-ware systems.
+The configuration variable \Macro{CONDOR\_GAHP}
+gives a full path to the GAHP server utilized by Condor-C.
+The configuration variable \Macro{C\_GAHP\_LOG} defines
+the location of the log that the Condor GAHP server writes.
+
+A submit machine must also have a \Condor{collector} daemon to which the
+\Condor{schedd} daemon can submit a query.
+The query is for the location (IP address and port)
+of the intended remote machine's \Condor{schedd} daemon.
+This facilitates communication between the two machines.
+
+The machine upon which jobs are executed 
+must also be configuration correctly.
+This machine must be running a \Condor{schedd} daemon.
+Unless specified explicitly in a submit file, 
+\MacroUNI{CONDOR\_HOST} must point to a 
+\Condor{collector} daemon that it can write to,
+and the machine upon which jobs are submitted can read from.
+This facilitates communication between the two machines.
+
+An important aspect of configuration is the security 
+configuration relating to authentication.
+Condor-C on the remote machine relies on an
+authentication protocol to
+know the identity of the user under which to run a job.
+The following is a working example
+of the portion of configuration that sets up authentication.
+
+\footnotesize
+\begin{verbatim}
+SEC_DEFAULT_NEGOTIATION = OPTIONAL
+SEC_DEFAULT_AUTHENTICATION_METHODS = CLAIMTOBE
+\end{verbatim}
+\normalsize
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Condor-C-Submit}Condor-C Job Submission}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Condor-C!job submission}
+\index{universe!grid}
+Job submission of Condor-C jobs is the same as for any Condor job.
+The \Opt{universe} is \Expr{grid},
+and the \Opt{grid\_type} is \Expr{condor}. 
+The remote machine where the job goes is specified in
+the submit description file with \Opt{remote\_schedd}.
+Its value is the same as the machine ClassAd attribute
+\Attr{Name} on the remote machine.
+
+The following represents a minimal submit description file for
+a job.
+
+\footnotesize
+\begin{verbatim}
+   # minimal submit description file for a Condor-C job
+   universe = grid
+   grid_type = condor
+   executable = myjob
+   output = myoutput
+   error = myerror
+   log = mylog
+
+   remote_schedd = joe@remotemachine.example.com
+   +remote_jobuniverse = 5
+   +remote_requirements = True
+   queue
+\end{verbatim}
+\normalsize
+
+The remote machine needs to understand attributes of the job.
+These are specified in the submit description file using the '+'
+syntax, followed by the string \AdStr{remote\_}.
+At a minimum, this will be the job's \Opt{universe} and the job's
+\Opt{requirements}.
+The \Opt{universe} is specified using an integer assigned for
+a job ClassAd \Attr{JobUniverse}. 
+
+As Condor-C is a recent addition to Condor,
+the universes, associated integer assignments,
+and notes about the existence of functionality are given in 
+Table~\ref{working-remote-universes}.
+The note "not yet supported" implies that
+submissions under the given universe have not yet
+been tested.
+They may already work.
+
+% universes, and whether they work in Condor-C
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|l|l|l}
+\textbf{Universe Name} & \textbf{Value} & \textbf{Notes}\\ \hline \hline
+standard  & 1 & not yet supported \\ \hline
+PVM       & 4 & not yet supported \\ \hline
+vanilla   & 5 & works well \\ \hline
+scheduler & 7 & does \emph{not} work \\ \hline
+MPI       & 8 & not yet supported \\ \hline
+grid      & 9 & \\
+ & grid\_type = condor & works well \\
+ & grid\_type = gt2  & not intended to work with Condor-C \\
+ & grid\_type = gt3 & not intended to work with Condor-C \\
+ & grid\_type = nordugrid & not yet supported \\
+ & grid\_type = oracle & not yet supported \\ \hline
+java & 10 & not yet supported \\ \hline
+\end{tabular}
+\caption{\label{working-remote-universes}Functionality of remote job universes with Condor-C}
+\end{table}
+\end{center}
+
+File transfer of a job's executable, \File{stdin}, \File{stdout}, and
+\File{stderr} are automatic.
+%If other files are needed,
+%then . . .
+% FINISH THIS PARAGRAPH!
+
+For communication between \Condor{schedd} daemons on the submit
+and remote machines,
+a location of the remote \Condor{schedd} daemon is needed.
+By default, the submit machine queries its \Condor{collector}
+daemon for the needed information.
+However, a newly defined command for use within the submit
+description file can override the default.
+An example of this submit command is
+\footnotesize
+\begin{verbatim}
+remote_pool = machine1.example.com
+\end{verbatim}
+\normalsize
+When a command such as this appears within the submit description
+for the job,
+it defines a different \Condor{collector} daemon 
+(assumed to be listening at a standard IP address and port)
+to ask for location information about the remote machine.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Condor-C-Limits}Current Limitations in Condor-C}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Condor-C!limitations}
+Submitting jobs to run under the grid universe has not yet
+been perfected.
+The following is a list of known limitations with Condor-C:
+
+\begin{enumerate}
+  \item{Condor-C currently does not work as root.
+  The \Condor{schedd} daemon running on the remote machine can not be
+  executed as root.
+  A permissions problem prevents it from working correctly.  }
+
+  \item{Authentication methods other than
+  \Expr{CLAIMTOBE}, such as \Expr{GSI} and \Expr{KERBEROS}, are 
+  untested, and may not yet work.}
+
+  \item{Platforms that run a Windows operating system
+are not yet supported as either a submit or remote execute
+machine.}
+\end{enumerate}
+
+\index{Condor-C|)}
+
+
