@@ -49,31 +49,85 @@ DaemonCore*	daemonCore;
 static int is_master = 0;
 char*	logDir = NULL;
 char*	pidFile = NULL;
+char*	addrFile = NULL;
 #ifdef WIN32
 int line_where_service_stopped = 0;
 #endif
+
+
+void
+clean_files()
+{
+		// If we created a pid file, remove it.
+	if( pidFile ) {
+		if( unlink(pidFile) < 0 ) {
+			dprintf( D_ALWAYS, 
+					 "DaemonCore: ERROR: Can't delete pid file %s\n",
+					 pidFile );
+		} else {
+			if( DebugFlags & (D_FULLDEBUG | D_DAEMONCORE) ) {
+				dprintf( D_DAEMONCORE, "Removed pid file %s\n", pidFile );
+			}
+		}
+	}
+
+	if( addrFile ) {
+		if( unlink(addrFile) < 0 ) {
+			dprintf( D_ALWAYS, 
+					 "DaemonCore: ERROR: Can't delete address file %s\n",
+					 addrFile );
+		} else {
+			if( DebugFlags & (D_FULLDEBUG | D_DAEMONCORE) ) {
+				dprintf( D_DAEMONCORE, "Removed address file %s\n", 
+						 addrFile );
+			}
+		}
+			// Since we param()'ed for this, we need to free it now.
+		free( addrFile );
+	}
+}
+
+
+// All daemons call this function when they want daemonCore to really
+// exit.  Put any daemon-wide shutdown code in here.   
+void
+DC_Exit( int status )
+{
+		// First, delete any files we might have created, like the
+		// address file or the pid file.
+	clean_files();
+
+		// Now, delete the daemonCore object, since we allocated it. 
+	delete daemonCore;
+
+		// Finally, exit with the status we were given.
+	exit( status );
+}
+
 
 void
 drop_addr_file()
 {
 	FILE	*ADDR_FILE;
 	char	addr_file[100];
-	char	*tmp;
 
 	sprintf( addr_file, "%s_ADDRESS_FILE", mySubSystem );
-	tmp = param( addr_file );
 
-	if( tmp ) {
-		if( (ADDR_FILE = fopen(tmp, "w")) ) {
+	if( addrFile ) {
+		free( addrFile );
+	}
+	addrFile = param( addr_file );
+
+	if( addrFile ) {
+		if( (ADDR_FILE = fopen(addrFile, "w")) ) {
 			fprintf( ADDR_FILE, "%s\n", 
 					 daemonCore->InfoCommandSinfulString() );
 			fclose( ADDR_FILE );
 		} else {
 			dprintf( D_ALWAYS,
 					 "DaemonCore: ERROR: Can't open address file %s\n",
-					 tmp );
+					 addrFile );
 		}
-		free( tmp );
 	}
 }
 
@@ -89,8 +143,7 @@ drop_pid_file()
 	}
 
 	if( (PID_FILE = fopen(pidFile, "w")) ) {
-		fprintf( PID_FILE, "%d\n", 
-				 daemonCore->getpid() );
+		fprintf( PID_FILE, "%d\n", daemonCore->getpid() );
 		fclose( PID_FILE );
 	} else {
 		dprintf( D_ALWAYS,
@@ -116,8 +169,8 @@ do_kill()
 	if( pidFile[0] != '/' ) {
 			// There's no absolute path, append the LOG directory
 		if( (log = param("LOG")) ) {
-			tmp = malloc( (strlen(log) + strlen(pidFile) + 2) *
-						   sizeof(char) );
+			tmp = (char*)malloc( (strlen(log) + strlen(pidFile) + 2) * 
+								 sizeof(char) );
 			sprintf( tmp, "%s/%s", log, pidFile );
 			free( log );
 			pidFile = tmp;
@@ -147,13 +200,6 @@ do_kill()
 			// until that fails.  
 		while( kill(pid, 0) == 0 ) {
 			sleep( 3 );
-		}
-			// The thing has exited, so wipe out the pidfile
-		if( unlink(pidFile) < 0 ) {
-			fprintf( stderr, 
-					 "DaemonCore: ERROR: Can't delete pid file %s\n",
-					 pidFile );
-			exit( 1 );
 		}
 			// Everything's cool, exit normally.
 		exit( 0 );
