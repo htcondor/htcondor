@@ -58,6 +58,7 @@
 /* this works, but is pretty ugly */
 #include <limits.h>
 
+#if defined(CHAS_WILLIAMS) /* sorry - my SunOs 4.1 system defines MB_LEN_MAX*/
 #	ifndef MB_LEN_MAX
 #		define Platform SPARC_SUNOS41
 #		define PlatformIncludeFile <SPARC_SUNOS41.cf>
@@ -65,6 +66,10 @@
 #		define Platform SPARC_SOLARIS2
 #		define PlatformIncludeFile <SPARC_SOLARIS2.cf>
 #	endif
+#else
+#	define Platform SPARC_SUNOS41
+#	define PlatformIncludeFile <SPARC_SUNOS41.cf>
+#endif
 
 #endif
 
