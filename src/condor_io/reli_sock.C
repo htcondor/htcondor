@@ -828,11 +828,6 @@ ReliSock::isAuthenticated()
 }
 
 void
-ReliSock::setGenericAuthentication() {
-	authob->setAuthAny();
-}
-
-void
 ReliSock::unAuthenticate()
 {
 	if ( authob ) {
