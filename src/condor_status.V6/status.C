@@ -203,28 +203,32 @@ main (int argc, char *argv[])
 void
 usage ()
 {
-	fprintf (stderr,"Usage: %s [options]\n"
-		"    where [options] are zero or more of\n"
-		"\t[-avail]\t\tPrint information about available resources\n"
-		"\t[-ckptsrvr]\t\tDisplay checkpoint server attributes\n"
-		"\t[-claimed]\t\tPrint information about claimed resources\n"
-//		"\t[-collector]\t\tSame as -world\n"
-		"\t[-constraint <const>]\tAdd constraint on classads\n"
-		"\t[-diagnose]\t\tPrint out query ad without performing query\n"
-		"\t[-format <fmt> <attr>]\tRegister display format and attribute\n"
-		"\t[-help]\t\t\tThis screen\n"
-		"\t[-long]\t\t\tDisplay entire classads\n"
-		"\t[-master]\t\tDisplay daemon master attributes\n"
-		"\t[-pool <name>]\t\tGet information from collector <name>\n"
-		"\t[-run]\t\t\tSame as -claimed [deprecated]\n"
-		"\t[-schedd]\t\tDisplay attributes of schedds\n"
-		"\t[-server]\t\tDisplay important attributes of resources\n"
-		"\t[-startd]\t\tDisplay resource attributes\n"
-		"\t[-state]\t\tDisplay state of resources\n"
-		"\t[-submittors]\tDisplay information about request submittors\n"
-		"\t[-total]\t\tDisplay totals only\n"
-		"\t[-verbose]\t\tSame as -long\n",
-//		"\t[-world]\t\tDisplay all pools reporting to UW collector\n", 
+	fprintf (stderr,"Usage: %s [help-opt] [query-opt] [display-opt] "
+		"[custom-opts ...] [hostname ...]\n"
+		"    where [help-opt] is one of\n"
+		"\t-help\t\t\tThis screen\n"
+		"\t-diagnose\t\tPrint out query ad without performing query\n"
+		"    and [query-opt] is one of\n"
+		"\t-avail\t\t\tPrint information about available resources\n"
+		"\t-ckptsrvr\t\tDisplay checkpoint server attributes\n"
+		"\t-claimed\t\tPrint information about claimed resources\n"
+//		"\t-collector\t\tSame as -world\n"
+		"\t-master\t\t\tDisplay daemon master attributes\n"
+		"\t-pool <name>\t\tGet information from collector <name>\n"
+		"\t-run\t\t\tSame as -claimed [deprecated]\n"
+		"\t-schedd\t\t\tDisplay attributes of schedds\n"
+		"\t-server\t\t\tDisplay important attributes of resources\n"
+		"\t-startd\t\t\tDisplay resource attributes\n"
+		"\t-state\t\t\tDisplay state of resources\n"
+		"\t-submitters\t\tDisplay information about request submitters\n"
+//		"\t-world\t\t\tDisplay all pools reporting to UW collector\n", 
+		"    and [display-opt] is one of\n"
+		"\t-long\t\t\tDisplay entire classads\n"
+		"\t-total\t\t\tDisplay totals only\n"
+		"\t-verbose\t\tSame as -long\n" 
+		"    and [custom-opts ...] are one or more of\n"
+		"\t-constraint <const>\tAdd constraint on classads\n"
+		"\t-format <fmt> <attr>\tRegister display format and attribute\n",
 		myName);
 }
 
@@ -282,7 +286,7 @@ firstPass (int argc, char *argv[])
 		if (matchPrefix (argv[i], "-schedd")) {
 			setMode (MODE_SCHEDD_NORMAL, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-submittors")) {
+		if (matchPrefix (argv[i], "-submitters")) {
 			setMode (MODE_SCHEDD_SUBMITTORS, i, argv[i]);
 		} else
 		if (matchPrefix (argv[i], "-master")) {
