@@ -223,7 +223,7 @@ SYSCALL_SUPPORT_OBJ=senders.o receivers.o syscall_mode.o syscall_connect.o remot
 UTIL_OBJ =  $(FLOCK_OBJ) dprintf_common.o except.o update_rusage.o \
 	internet.o $(PLATFORM_UTIL_OBJ) mkargv.o filename_tools.o
 
-CPP_UTIL_OBJ = condor_version.o condor_md.o
+CPP_UTIL_OBJ = condor_version.o 
 
 CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o errno_num.o
 
@@ -239,20 +239,21 @@ IO_OBJ = stream.o sock.o safe_sock.o reli_sock.o buffers.o $(CONDOR_TYPE_OBJ) co
    CONDOR_BLOWFISH_OBJ = condor_crypt_blowfish.o
 #endif /* CONDOR_BLOWFISH_ENCRYPTION */
 
-OPENSSL_MD_OBJ = md5_dgst.o md5_one.o rand_lib.o md_rand.o sha1dgst.o cryptlib.o buffer.o stack.o err.o lhash.o mem.o rand_win.o mem_dbg.o b_print.o bio_lib.o bss_file.o ex_data.o
-
-#if defined( PlatformMdObj ) 
-PLATFORM_MD_OBJ = PlatformMdObj
-#else
-#error YOU MUST DEFINE PlatformMdObj IF YOU WANT TO USE ENCRYPTION
-#endif
-CONDOR_MD_OBJ = $(OPENSSL_MD_OBJ) $(PLATFORM_MD_OBJ)
-
-CONDOR_CRYPT_OBJ = condor_crypt.o ../condor_util_lib/get_random_num.o $(CONDOR_DES_OBJ) $(CONDOR_BLOWFISH_OBJ) $(CONDOR_MD_OBJ)
-
 #endif /* CONDOR_ENCRYPTION */
 
-SPECIAL_IO_OBJ = authentication.o CryptKey.o $(CONDOR_CRYPT_OBJ)
+OPENSSL_OBJ = md5_dgst.o md5_one.o rand_lib.o md_rand.o sha1dgst.o cryptlib.o \
+	buffer.o stack.o err.o lhash.o mem.o rand_win.o mem_dbg.o b_print.o \
+	bio_lib.o bss_file.o ex_data.o
+
+#if defined(CONDOR_ENCRYPTION) || defined(CONDOR_MD)
+CONDOR_CRYPT_OBJ = CryptKey.o condor_crypt.o condor_md.o ../condor_util_lib/get_random_num.o \
+	$(CONDOR_DES_OBJ) $(CONDOR_BLOWFISH_OBJ) $(OPENSSL_OBJ)
+#else 
+CONDOR_CRYPT_OBJ = CryptKey.o condor_crypt.o condor_md.o ../condor_util_lib/get_random_num.o \
+	$(CONDOR_DES_OBJ) $(CONDOR_BLOWFISH_OBJ) 
+#endif
+
+SPECIAL_IO_OBJ = authentication.o $(CONDOR_CRYPT_OBJ)
 
 SPECIAL_OBJ = special_stubs.o
 
@@ -615,5 +616,5 @@ remote_syscall.C switches.special.C syscall_connect.C xfer_file.c
 depend_source_target($(DEPEND_SRC))
 
 #if CONDOR_ENCRYPTION
-obj_extract( $(OPENSSL_MD_LIB), $(PLATFORM_MD_OBJ) $(OPENSSL_MD_OBJ) )
+obj_extract( $(OPENSSL_MD_LIB), $(OPENSSL_OBJ) )
 #endif
