@@ -274,6 +274,7 @@ print STDERR "	Valid options:\n"
 . "                            [default on remote host: <basedir>/local]\n"
 . "   -contactfile <file>     Specify file from which to read Globus contacts\n"
 . "   -setuponly|-runonly     Setup and exit  |  No setup, just run\n"
+. "   -forcesetup             During setup, force copying of files\n"
 . "   -queue <queue>          Queue to use on Globus scheduler\n"
 . "   -project <project>      Project to use on Globus resource\n"
 . "   -memory <Mbytes>        Amount of memory to request\n"
@@ -311,6 +312,7 @@ sub parse_command_line() {
 		"contactfile=s" => \$contactfile,
 		"setuponly" => \$setuponly,
 		"runonly" => \$runonly,
+		"forcesetup" => \$force_setup,
 		"queue=s" => \$queue,
 		"project=s" => \$project,
 		"memory=i" => \$memory,
@@ -341,6 +343,10 @@ sub parse_command_line() {
 
 	if ( $setuponly && $runonly ) {
 		return( "ERROR: $NAME --setuponly and --runonly are mutually exclusive");
+	}
+
+	if ( ! $force_setup ) {
+		$force_setup = 0;
 	}
 
 	if ( $globus_run_time ) {
@@ -595,6 +601,7 @@ sub do_remote_setup() {
 	LOCALDIR=\$4
 	GASS_SERVER=\$5
 	TARBALL_SERVER=\$6
+	FORCE=\$7
 
 	CONFIG=\$BASEDIR/$config
 
@@ -608,18 +615,18 @@ sub do_remote_setup() {
 		fi
 	done
 
-	if [ ! -f \$CONFIG -o -h \$CONFIG ];
+	if [ \$FORCE -ne 0 -o ! -f \$CONFIG ];
 		then \$GLOBUS_LOCATION/bin/globus-url-copy \$GASS_SERVER/$config file:\$BASEDIR/$config 
 	fi
 
 	cd \$ARCHDIR
 	GETFILES=0
 	for needexec in $DAEMONS; do
-		if [ ! -f \$needexec -o -h \$needexec ];
+		if [ ! -f \$needexec ];
 			then GETFILES=1;
 		fi
 	done
-	if [ \$GETFILES -eq 1 ]; then
+	if [ \$FORCE -ne 0 -o \$GETFILES -ne 0 ]; then
 		\$GLOBUS_LOCATION/bin/globus-url-copy \$TARBALL_SERVER/\$ARCH.tar.gz file:\$ARCHDIR/\$ARCH.tar.gz;
 		if [ \$? != 0 -o ! -f \$ARCHDIR/\$ARCH.tar.gz ]; then
 			echo "Error: unable to retrieve \$TARBALL_SERVER/\$ARCH.tar.gz"
@@ -635,7 +642,7 @@ sub do_remote_setup() {
 
 EOF
 	close( REM_SETUP );
-	$SYSTEM = "$G_RUN -s -r '$CONTACT_SETUP' '&(executable=\$(GLOBUS_LOCATION)/bin/globus-sh-exec)(arguments=\$(GLOBUSRUN_GASS_URL)$REM_SETUP $basedir $archdir $arch $localdir \$(GLOBUSRUN_GASS_URL)$remotedir gsiftp://$SERVER_NAME$SERVER_DIR)(queue=$CONTACT_SETUP_QUEUE)'";
+	$SYSTEM = "$G_RUN -s -r '$CONTACT_SETUP' '&(executable=\$(GLOBUS_LOCATION)/bin/globus-sh-exec)(arguments=\$(GLOBUSRUN_GASS_URL)$REM_SETUP $basedir $archdir $arch $localdir \$(GLOBUSRUN_GASS_URL)$remotedir gsiftp://$SERVER_NAME$SERVER_DIR $force_setup)(queue=$CONTACT_SETUP_QUEUE)'";
 
 	$err = system( $SYSTEM );
 
