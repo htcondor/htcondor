@@ -703,7 +703,7 @@ format_mbps (float wall_clock, AttrList *ad)
 	float bytes_sent=0.0, bytes_recvd=0.0, total_mbits;
 	ad->LookupFloat(ATTR_BYTES_SENT, bytes_sent);
 	ad->LookupFloat(ATTR_BYTES_RECVD, bytes_recvd);
-	total_mbits = (bytes_sent+bytes_recvd)/131072.0;
+	total_mbits = (bytes_sent+bytes_recvd)/(1024*1024*8); // bytes to mbits
 	if (total_mbits <= 0) return " [????]";
 	sprintf(result, " %6.2f", total_mbits/wall_clock);
 	return result;
