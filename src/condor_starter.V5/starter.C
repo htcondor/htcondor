@@ -23,6 +23,8 @@
 
 #include "condor_common.h"
 #include "starter_common.h"
+#include "condor_attributes.h"
+#include "condor_version.h"
 
 #include "proto.h"
 #include "name_tab.h"
@@ -104,6 +106,16 @@ void init_environment_info();
 void determine_user_ids( uid_t &requested_uid, gid_t &requested_gid );
 StateMachine	*condor_starter_ptr;
 
+void
+printClassAd( void )
+{
+	printf( "%s = False\n", ATTR_IS_DAEMON_CORE );
+	printf( "%s = True\n", ATTR_HAS_REMOTE_SYSCALLS );
+	printf( "%s = True\n", ATTR_HAS_CHECKPOINTING );
+	printf( "%s = \"%s\"\n", ATTR_VERSION, CondorVersion() );
+}
+
+
 /*
   Main routine for condor_starter.  DEBUGGING can be turned on if we
   need to attach a debugger at run time.  Everything is driven by the
@@ -112,6 +124,11 @@ StateMachine	*condor_starter_ptr;
 int
 main( int argc, char *argv[] )
 {
+	if( argc == 2 && strcmp(argv[1], "-classad") == MATCH ) {
+		printClassAd();
+		exit( 0 );
+	}
+
 	StateMachine condor_starter( StateTab, TransTab, EventSigs, START, END );
 
 #define DEBUGGING FALSE
