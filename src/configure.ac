@@ -655,8 +655,8 @@ AC_MSG_NOTICE([checking for vendor compilers (used by Condor test suites)])
 
 # we always look for g77, since we should have at least this,
 # regardless of what platform we are...
-AC_PATH_PROG([_cv_gnu_g77],[g77],[none],[$PATH])
-if test "$_cv_gnu_g77" = "none" ; then
+AC_PATH_PROG([_cv_gnu_g77],[g77],[no],[$PATH])
+if test "$_cv_gnu_g77" = "no" ; then
   _cv_has_gnu_g77="NO"
 else
   _cv_has_gnu_g77="YES"
@@ -682,16 +682,16 @@ else
   else
     _vendor_cc_PATH="$PATH:/opt/SUNWspro/bin:/usr/ucb"
   fi
-  AC_PATH_PROG([_cv_vendor_cc],[cc],[none],[$_vendor_cc_PATH])
-  if test "$_cv_vendor_cc" = "none" ; then
+  AC_PATH_PROG([_cv_vendor_cc],[cc],[no],[$_vendor_cc_PATH])
+  if test "$_cv_vendor_cc" = "no" ; then
     _cv_has_vendor_cc="NO"
   else
     _cv_has_vendor_cc="YES"
   fi
 
-  AC_PATH_PROGS([_cv_vendor_cplus],[CC cxx],[none],
+  AC_PATH_PROGS([_cv_vendor_cplus],[CC cxx],[no],
                 [$PATH:/opt/SUNWspro/bin:/usr/ucb])
-  if test "$_cv_vendor_cplus" = "none" ; then
+  if test "$_cv_vendor_cplus" = "no" ; then
     _cv_has_vendor_cplus="NO"
   else
     _cv_has_vendor_cplus="YES"
@@ -699,16 +699,16 @@ else
       AC_SUBST([_cv_vendor_cplus_name],[$_cv_vendor_cplus_name])
   fi
 
-  AC_PATH_PROG([_cv_vendor_f77],[f77],[none],[$PATH])
-  if test "$_cv_vendor_f77" = "none" ; then
+  AC_PATH_PROG([_cv_vendor_f77],[f77],[no],[$PATH])
+  if test "$_cv_vendor_f77" = "no" ; then
     _cv_has_vendor_f77="NO"
   else
     _cv_has_vendor_f77="YES"
   fi
 
-  AC_PATH_PROG([_cv_vendor_f90],[f90],[none],
+  AC_PATH_PROG([_cv_vendor_f90],[f90],[no],
                [$PATH:/opt/SUNWspro/bin:/usr/ucb])
-  if test "$_cv_vendor_f90" = "none" ; then
+  if test "$_cv_vendor_f90" = "no" ; then
     _cv_has_vendor_f90="NO"
   else
     _cv_has_vendor_f90="YES"
@@ -730,7 +730,7 @@ if test $_cv_make_is_gnu = no; then
    AC_MSG_ERROR( [GNU make is required] )
 fi
 
-AC_CHECK_PROG(ac_patch,patch,yes,no)
+AC_CHECK_PROG(ac_patch,patch,patch,no)
 if test $ac_patch = no; then
     AC_MSG_ERROR( [patch is required] )
 fi
@@ -786,7 +786,7 @@ fi
 
 # ar is used for numerous libraries in Condor, and for extracting
 # objects from the system libc.a for the Condor syscall library.
-AC_CHECK_PROG(ac_ar,ar,yes,no)
+AC_CHECK_PROG(ac_ar,ar,ar,no)
 if test $ac_ar = no; then
     AC_MSG_ERROR( [ar is required] )
 fi
@@ -824,7 +824,7 @@ fi
 # also, some sites have different GNU tar installed under a different
 # name, so we've got to do some magic to handle that, too.
 AC_CACHE_CHECK([for GNU tar],_cv_gnu_tar,
- [_cv_gnu_tar="not found" ;
+ [_cv_gnu_tar="no" ;
   for a in "$TAR" tar gtar gnutar ; do
     if test -z "$a" ; then continue ; fi ;
     if ( sh -c "$a --version" 2> /dev/null | grep GNU  2>&1 > /dev/null );
@@ -835,7 +835,7 @@ AC_CACHE_CHECK([for GNU tar],_cv_gnu_tar,
   done;
  ]
 )
-if test "$_cv_gnu_tar" = "not found" ; then
+if test "$_cv_gnu_tar" = "no" ; then
    AC_MSG_ERROR([GNU tar is required])
 fi
 # if we got this far, we found a version of GNU tar.  now, see what
@@ -876,8 +876,8 @@ AC_SUBST(TarCmd,$TarCmd)
 # platforms doesn't recognize "-L".  So, we just do some tests here to
 # figure out what flags get the behavior we want, and pass that on to
 # the places that need it via the Makefiles.
-AC_PATH_PROG([_cv_cp],[cp],[none],[$PATH])
-if test "$_cv_cp" = "none" ; then
+AC_PATH_PROG([_cv_cp],[cp],[no],[$PATH])
+if test "$_cv_cp" = "no" ; then
   AC_MSG_ERROR([no cp in your PATH! Either fix your PATH or your machine])
 fi
 AC_CACHE_CHECK([what options to cp recursively copy and follow symlinks],
@@ -898,19 +898,19 @@ else
 fi  
 
 # gzip is required for packaging up Condor releases. 
-AC_CHECK_PROG(ac_gzip,gzip,yes,no)
+AC_CHECK_PROG(ac_gzip,gzip,gzip,no)
 if test $ac_gzip = no; then
     AC_MSG_ERROR( [gzip is required] )
 fi
 
 # m4 is used to build PVM
-AC_CHECK_PROG(ac_m4prog,m4,yes,no)
+AC_CHECK_PROG(ac_m4prog,m4,m4,no)
 if test $ac_m4prog = no; then
     AC_MSG_ERROR( [m4 is required] )
 fi
 
-AC_CHECK_PROG(ac_purify,purify,yes,no)
-if test "$ac_purify" = yes; then
+AC_CHECK_PROG(ac_purify,purify,purify,no)
+if test "$ac_purify" = "purify"; then
    AC_MSG_CHECKING([purify cache directory ($ac_cv_purecachedir)])
    if test -d $ac_cv_purecachedir && test -w $ac_cv_purecachedir ; then
       AC_MSG_RESULT( exists )
