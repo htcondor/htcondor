@@ -18,16 +18,17 @@ run and potentially how it is displayed.
 DEFINING TEST CLASSES
 ----------------------------------------------------------------------
 
-To define a test class, all you have to do is pick a name and start
-adding tests to it.  To add a test to a given class, you add a
-"TESTCLASS()" imake rule for that test and class to the appropriate
-Imakefile.  For help with imake files and rules, see "README.imake". 
-You don't have to seperately declare the class names or define them
-anywhere, you just start using them.  The Condor imake build system is
-smart enough to generate a file called "<classname>_list" that
-contains all the testnames that belong to the given classname.
-Additionally, it generates a file called "class_list", which contains
-the names of all the valid test classes currently in use.
+To define a test class, you need to add a "TESTCLASS_DECL()" rule to
+Imakefile.common which declares the name you want to use.  This rule
+allows our Makefiles to support "make [testclass]", such that all
+tests you add to the given testclass will be built.  To add a test to
+a given class, you add a "TESTCLASS()" imake rule for that test and
+class to the appropriate Imakefile.  For help with imake files and
+rules, see "README.imake".  The Condor imake build system is smart
+enough to generate a file called "<classname>_list" that contains all
+the testnames that belong to the given classname.  Additionally, it
+generates a file called "class_list", which contains the names of all
+the valid test classes currently in use.
 
 
 ----------------------------------------------------------------------
