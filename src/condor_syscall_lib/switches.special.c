@@ -197,18 +197,6 @@ store_working_directory()
   where it has run in the past.
 */
 
-/*
-#if defined(IRIX53)
-
-int
-getrusage( int who, struct rusage *rusage )
-{ 
-	dprintf(D_ALWAYS, "Aborting on getrusage\n"); 
-	abort(); 
-	return(0);
-}
-*/
-
 #if !defined(Solaris) && !defined(IRIX53)
 int
 getrusage( int who, struct rusage *rusage )
@@ -678,14 +666,6 @@ __getwd( char *path_name )
 	return getwd(path_name);
 }
 
-char *getcwd ( char *buffer, size_t size )
-{
-	if (buffer == NULL) {
-		buffer = (char *)malloc(size);
-	}
-	return getwd( buffer );
-}	
-
 #if defined( SYS_ftruncate )
 int
 ftruncate( int fd, off_t length )
@@ -719,6 +699,54 @@ ftruncate( int fd, off_t length )
 
 #endif /* defined(OSF1) */
 #endif /* !defined(HPUX9) */
+
+#if defined(OSF1) || defined(IRIX53)
+char *getcwd ( char *buffer, size_t size )
+{
+	if (buffer == NULL) {
+		buffer = (char *)malloc(size);
+	}
+	fprintf(stderr, "getcwd called\n");
+	return getwd( buffer );
+}	
+#endif
+
+#if defined(IRIX53)
+char *_getcwd ( char *buffer, size_t size )
+{
+	fprintf(stderr, "_getcwd called\n");
+	return getcwd(buffer, size);
+}
+
+int
+fstat( int fd, struct stat *buf )
+{
+	int	rval;
+	int	user_fd;
+	int use_local_access = FALSE;
+
+	if( (user_fd=MapFd(fd)) < 0 ) {
+		return (int)-1;
+	}
+	if( LocalAccess(fd) ) {
+		use_local_access = TRUE;
+	}
+
+	if( LocalSysCalls() || use_local_access ) {
+		rval = fxstat( 2, user_fd, buf );
+	} else {
+		rval = REMOTE_syscall( CONDOR_fstat, user_fd, buf );
+	}
+
+	return rval;
+}
+
+int
+_fstat( int fd, struct stat *buf )
+{
+	return fstat( fd, buf );
+}
+#endif
 
 /* fork() and sigaction() are not in fork.o or sigaction.o on Solaris 2.5
    but instead are only in the threads libraries.  We access the old
