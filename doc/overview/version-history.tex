@@ -22,6 +22,20 @@ being added, many bugs fixed, etc.
 
 \begin{itemize}
 
+\item Changed the way that \Condor{master} spawns daemons and
+\Condor{preen} which allows you to specify command line arguments for
+any of them, though a \Macro{SUBSYS\_ARGS} setting.
+Previously, when you specified \Macro{PREEN}, you added the command
+line arguments directly to that setting, but that caused some
+problems, and only worked for \Condor{preen}.
+\Bold{Once you upgrade to version 6.1.6, if you continue to use your
+old \File{condor\_config} files, you must change the \Macro{PREEN}
+setting to remove any arguments you have defined and place those
+arguments into a seperate config setting, \Macro{PREEN\_ARGS}.}
+See section~\ref{sec:Master-Config-File-Entries}, ``\condor{master}
+Config File Entries'', on
+page~\pageref{sec:Master-Config-File-Entries} for more details.
+
 \item Fixed a very serious bug in the Condor library linked in with
 \Condor{compile} to create standard jobs that was causing
 checkpointing to fail in many cases.  
