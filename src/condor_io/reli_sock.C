@@ -161,8 +161,9 @@ ReliSock::accept( ReliSock	&c )
 	int on = 1;
 	c.setsockopt(SOL_SOCKET, SO_KEEPALIVE, (char*)&on, sizeof(on));
 
-	dprintf( D_NETWORK, "ACCEPT %s ", sock_to_string(_sock) );
-	dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string(c.endpoint()) );
+	dprintf( D_NETWORK, "ACCEPT src=%s fd=%d dst=%s\n", 
+					sock_to_string(_sock), _sock, 
+					sin_to_string(c.endpoint()) );
 	
 	return TRUE;
 }

@@ -544,9 +544,8 @@ bool Sock::do_connect_finish()
 {
 	if (test_connection()) {
 		_state = sock_connect;
-		dprintf( D_NETWORK, "CONNECT %s ",
-				 sock_to_string(_sock) );
-		dprintf( D_NETWORK|D_NOHEADER, "%s\n",
+		dprintf( D_NETWORK, "CONNECT src=%s fd=%d dst=%s\n",
+				 sock_to_string(_sock), _sock,
 				 sin_to_string(&_who) );
 		if ( connect_state.non_blocking_flag ) {
 			timeout(connect_state.old_timeout_value);			
@@ -587,8 +586,9 @@ bool Sock::do_connect_tryit()
 {
 	if (::connect(_sock, (sockaddr *)&_who, sizeof(sockaddr_in)) == 0) {
 		_state = sock_connect;
-		dprintf( D_NETWORK, "CONNECT %s ", sock_to_string(_sock) );
-		dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string(&_who) );
+		dprintf( D_NETWORK, "CONNECT src=%s fd=%d dst=%s\n", 
+						sock_to_string(_sock) , _sock ,
+						sin_to_string(&_who) );
 		if ( connect_state.non_blocking_flag ) {
 			timeout(connect_state.old_timeout_value);			
 		}
@@ -695,7 +695,8 @@ int Sock::close()
 	if (_state == sock_virgin) return FALSE;
 
 	if (type() == Stream::reli_sock) {
-		dprintf( D_NETWORK, "CLOSE %s\n", sock_to_string(_sock) );
+		dprintf( D_NETWORK, "CLOSE %s fd=%d\n", 
+						sock_to_string(_sock), _sock );
 	}
 
 	if (::closesocket(_sock) < 0) return FALSE;
