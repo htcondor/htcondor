@@ -51,6 +51,7 @@ class CondorCronMgr
 
 	// Private member functions
 	int ParseJobList( const char *JobListString );
+	char *NextTok( char *cur, const char *tok );
 	char *GetParam( const char *paramName, 
 					const char *paramName2 = NULL );
 };
