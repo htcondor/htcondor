@@ -96,7 +96,7 @@ GahpClient::~GahpClient()
 void
 GahpClient::write_line(const char *command)
 {
-dprintf(D_FULLDEBUG,"sending '%s'\n", command );
+dprintf(D_FULLDEBUG,"GAHP <- '%s'\n", command );
 	if ( !command || m_gahp_writefd == -1 ) {
 		return;
 	}
@@ -120,8 +120,8 @@ GahpClient::write_line(const char *command, int req, const char *args)
 	write(m_gahp_writefd,buf,strlen(buf));
 	if ( args ) {
 		write(m_gahp_writefd,args,strlen(args));
-dprintf(D_FULLDEBUG,"sending '%s%s%s'\n", command, buf, args );
-}else{dprintf(D_FULLDEBUG,"sending '%s%s'\n", command, buf );
+dprintf(D_FULLDEBUG,"GAHP <- '%s%s%s'\n", command, buf, args );
+}else{dprintf(D_FULLDEBUG,"GAHP <- '%s%s'\n", command, buf );
 	}
 	write(m_gahp_writefd,"\r\n",2);
 
@@ -185,6 +185,7 @@ Gahp_Args::read_argv(int readfd)
 	argv = (char**)calloc(argv_size, sizeof(char*));
 
 	if ( readfd == -1 ) {
+dprintf(D_FULLDEBUG,"GAHP -> (no pipe)\n");
 		return argv;
 	}
 
@@ -212,6 +213,7 @@ Gahp_Args::read_argv(int readfd)
 				argv[i] = NULL;
 			}
 			argc = 0;
+dprintf(D_FULLDEBUG,"GAHP -> EOF\n");
 			return argv;
 		}
 
@@ -266,6 +268,16 @@ Gahp_Args::read_argv(int readfd)
 				continue;	// go back to the top of the for loop
 			}
 
+buf[0]='\0';
+if(argc>0){
+strcat(buf,"'");
+for(int i=0;i<argc;i++){
+if(i!=0)strcat(buf,"' '");
+if(argv[i])strcat(buf,argv[i]);
+}
+strcat(buf,"'");
+}
+dprintf(D_FULLDEBUG,"GAHP -> %s\n",buf);
 			return argv;
 		}
 
