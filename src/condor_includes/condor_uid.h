@@ -75,6 +75,7 @@ HANDLE priv_state_get_handle();
 
 const char *get_user_loginname(); 
 void _condor_disable_uid_switching();
+void clear_passwd_cache();
 void init_condor_ids();
 void uninit_user_ids();
 int init_user_ids(const char username[], const char domain[]);
