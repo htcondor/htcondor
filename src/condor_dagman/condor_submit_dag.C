@@ -26,6 +26,10 @@
 #include "string_list.h"
 #include "condor_distribution.h"
 #include "env.h"
+#include "read_multiple_logs.h"
+
+// Just so we can link in the ReadMultipleUserLogs class.
+MULTI_LOG_HASH_INSTANCE;
 
 struct SubmitDagOptions
 {
@@ -111,8 +115,6 @@ int main(int argc, char *argv[])
 // utility fcns for submitDag
 void ensureOutputFilesExist(const SubmitDagOptions &opts);
 void writeSubmitFile(const SubmitDagOptions &opts);
-void getJobLogFilenameFromSubmitFiles(SubmitDagOptions &opts);
-MyString loadLogFileNameFromSubFile(const MyString &strSubFile, const SubmitDagOptions &opts);
 
 void submitDag(SubmitDagOptions &opts)
 {
@@ -139,11 +141,21 @@ void submitDag(SubmitDagOptions &opts)
 	}
 	else
 	{
-		printf("Checking all your submit files for a consistent log file name.\n");
+		printf("Checking all your submit files for log file names.\n");
 		printf("This might take a while... \n");
-		getJobLogFilenameFromSubmitFiles(opts);
-		if (opts.strJobLog == "")
+		StringList	logFiles;
+		MyString msg = ReadMultipleUserLogs::getJobLogsFromSubmitFiles(
+				opts.strDagFile, "job", logFiles);
+		if ( msg != "" ) {
+			printf("Error getting job log files: %s; job not submitted\n",
+					msg.Value());
 			return;
+		} else if ( logFiles.number() < 1 ) {
+			printf("No job log files found; job not submitted\n");
+			return;
+		}
+		logFiles.rewind();
+		opts.strJobLog = logFiles.next();
 		printf("Done.\n");
 	}
 
@@ -348,59 +360,6 @@ void writeSubmitFile(const SubmitDagOptions &opts)
 	
 }
 
-void getJobLogFilenameFromSubmitFiles(SubmitDagOptions &opts)
-{
-
-	MyString strDagFile;
-	bool status = readFileToString(opts.strDagFile, strDagFile);
-	if (status == false)
-	{
-		printf("Unable to read dag file %s\n", opts.strDagFile.Value());
-		exit(2);
-	}
-
-	StringList listLines( strDagFile.Value(), "\n");
-	listLines.rewind();
-	const char *psLine;
-	MyString strPreviousLogFilename;
-	while( (psLine = listLines.next()) )
-	{
-		MyString strLine = psLine;
-		
-		// this loop is for '/' line continuation
-		while (strLine[strLine.Length()-1] == '\\')
-		{
-			strLine.setChar( strLine.Length()-1, '\0' );
-			psLine = listLines.next();
-			if (psLine)
-				strLine += psLine;
-		}
-
-        strLine.Tokenize();
-        const char *token;
-        token = strLine.GetNextToken("\t ", true);
-        if (token != NULL && strcasecmp(token, "job") == 0) {
-            const char *jobname;
-            const char *submit_filename;
-
-            jobname = strLine.GetNextToken("\t ", true);
-            if (jobname != NULL) {
-                submit_filename = strLine.GetNextToken("\t ", true);
-
-                MyString strSubFile = submit_filename;
-
-                // get the log= value from the sub file
-                MyString strLogFilename = loadLogFileNameFromSubFile(strSubFile, opts);
-
-                if (opts.strJobLog == "") {
-                    opts.strJobLog = strLogFilename;
-                }
-            }
-		}
-	}	
-
-}
-
 void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 {
 	int iArg;
@@ -533,65 +492,3 @@ int printUsage()
     printf("         See the condor_submit man page for details.)\n");
 	exit(1);
 }
-
-MyString loadLogFileNameFromSubFile(const MyString &strSubFilename, 
-	const SubmitDagOptions &opts)
-{
-	MyString strSubFile;
-    MyString strLogFileName;
-	bool status = false;
-
-    strLogFileName = "";
-	status = readFileToString(strSubFilename, strSubFile);
-
-	if ( status == false ) {
-		printf( "\nCan't open command file %s for reading: %s\n"
-			"Either create %s or re-run with the \"-log\" option.\n", 
-			strSubFilename.Value(), strerror(errno), strSubFilename.Value());
-		if( ! opts.bVerbose ) {
-			printf( "Use the \"-verbose\" option for a more verbose error message.\n");
-			exit( 1 );
-		}
-		printf("If all the command files in your DAG don't exist now, consider running\n"
-			"condor_submit_dag with the \"-log filename\" option to specify the log file\n"
-			"shared by all jobs in your DAG.  This avoids this check.\n"
-			"If you do so, you must be sure those files are created when they are needed,\n"
-			"probably by using the PRE and POST directives in your DAG file.\n"
-			"See the DAGMan manual for more details.\n");
-		exit( 1 );		
-	}
-	
-	StringList listLines( strSubFile.Value(), "\r\n");
-	listLines.rewind();
-	const char *psLine;
-	MyString strPreviousLogFilename;
-	while( (psLine = listLines.next()) )
-	{
-		MyString strLine = psLine;
-        const char *token;
-
-		// Get continuations
-		while (strLine[strLine.Length()-1] == '\\')
-		{
-			strLine.setChar( strLine.Length()-1, '\0' );
-			psLine = listLines.next();
-			if (psLine)
-				strLine += psLine;
-		}
-
-        strLine.Tokenize();
-        token = strLine.GetNextToken("\t ", true);
-        if (token != NULL && strcasecmp(token, "log") == 0) {
-            token = strLine.GetNextToken("\t ", true);
-            if (token != NULL && strcasecmp(token, "=") == 0) {
-                token = strLine.GetNextToken("\t ", true);
-                if (token != NULL) {
-                    strLogFileName = token;
-                    break;
-                }
-            }
-        }
-    }
-    return strLogFileName;
-}
-
