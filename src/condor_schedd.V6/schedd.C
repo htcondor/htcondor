@@ -302,14 +302,7 @@ Scheduler::count_jobs()
 	  dprintf (D_ALWAYS, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
-	  // the nice-owner is not per uid domain, so don't decorate it with
-	  // the "@uidDomain"
-	  if( strcmp( Owners[i].Name, NiceUserName ) == 0 ) {
-		sprintf( tmp, "%s = \"%s.%s@%s\"", ATTR_NAME, NiceUserName, Owners[i].Name, UidDomain);
-	  } else {
-	  	sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, Owners[i].Name, UidDomain);
-	  }
-
+	  sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, Owners[i].Name, UidDomain);
 	  dprintf (D_ALWAYS, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
@@ -325,22 +318,19 @@ Scheduler::count_jobs()
 	sprintf(tmp, "%s = 0", ATTR_IDLE_JOBS);
 	ad->InsertOrUpdate(tmp);
 
+ 	// send ads for owner that don't have jobs idle
+	// This is fone by looking at the old owners list and searching for owners
+	// that are not in the current list (the current list has only owners w/ idle jobs)
 	for ( i=0; i<Old_N_Owners; i++) {
 
-	  // the nice-owner is not per uid domain, so don't decorate it with
-	  // the "@uidDomain"
-	  if( strcmp( OldOwners[i].Name, NiceUserName ) == 0 ) {
-		sprintf( tmp, "%s = \"%s.%s@%s\"", ATTR_NAME, NiceUserName, Owners[i].Name, UidDomain);
-	  } else {
-	  	sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, OldOwners[i].Name, UidDomain);
-	  }
+	  sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, OldOwners[i].Name, UidDomain);
 
       // check that the old name is not in the new list
       int k;
       for(k=0; k<N_Owners;k++) {
         if (!strcmp(OldOwners[i].Name,Owners[k].Name)) break;
       }
-		  // Now that we've finished using OldOwners[i].Name, we can
+	  // Now that we've finished using OldOwners[i].Name, we can
 		  // free it.
       FREE( OldOwners[i].Name );
 
@@ -1578,7 +1568,7 @@ Scheduler::display_shadow_recs()
 
 	dprintf( D_FULLDEBUG, "\n");
 	dprintf( D_FULLDEBUG, "..................\n" );
-	dprintf( D_FULLDEBUG, ".. Shadow Recs (%d)\n", numShadows );
+	dprintf( D_FULLDEBUG, ".. Shadow Recs (%d/%d)\n", numShadows, numMatches );
 	shadowsByPid->startIterations();
 	while (shadowsByPid->iterate(r) == 1) {
 
@@ -2158,6 +2148,9 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 				case JOB_BAD_STATUS:
 					EXCEPT("shadow exited because job status != RUNNING");
 					break;
+				case JOB_EXITED:
+					SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, ATTR_JOB_STATUS, COMPLETED);
+					break;
 				}
             } else if( WIFSIGNALED(status) ) {
                 dprintf( D_FULLDEBUG, "Shadow pid %d died with signal %d\n",
@@ -2216,6 +2209,9 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
         dprintf(D_ALWAYS,"ERROR fetching job status in check_zombie !\n");
 		return;
     }
+
+	// set cur-hosts to zero
+	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 0);
 
     switch( status ) {
         case RUNNING:

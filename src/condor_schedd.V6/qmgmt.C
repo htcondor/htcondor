@@ -1116,15 +1116,24 @@ int get_job_prio(ClassAd *job)
     int job_status;
     PROC_ID id;
     int     q_date;
-    char    buf[100], *owner;
+    char    buf[100];
+	char	owner[100]="";
     int     cur_hosts;
     int     max_hosts;
+	int 	niceUser;
 
     job->LookupInteger(ATTR_JOB_STATUS, job_status);
     job->LookupInteger(ATTR_JOB_PRIO, job_prio);
     job->LookupInteger(ATTR_Q_DATE, q_date);
+
+	if( job->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
+		strcpy(owner,NiceUserName);
+		strcat(owner,".");
+	}
+
     job->LookupString(ATTR_OWNER, buf);
-    owner = buf;
+	strcat(owner,buf);
+
 	job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
 	job->LookupInteger(ATTR_PROC_ID, id.proc);
     if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) == 0) {
