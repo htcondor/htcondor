@@ -1,0 +1,25 @@
+#!/usr/bin/env perl
+
+use CondorTest;
+
+$cmd = 'job_rsc_fgets_std.cmd';
+$testname = 'Fgets Test';
+
+$input = 'x_data.in';
+open(INPUT, "<$input") || die "Can't open $input: $!\n";
+while(<INPUT>)
+{
+    $lineno++;
+    push(@CondorTest::expected_output, "Read a line ($lineno)");
+}
+push(@CondorTest::expected_output, "All done.");
+
+CondorTest::RegisterExitedSuccess( $testname,
+				   \&CondorTest::DefaultOutputTest );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+    print "$testname: SUCCESS\n";
+    exit(0);
+} else {
+    die "$testname: CondorTest::RunTest() failed\n";
+}
