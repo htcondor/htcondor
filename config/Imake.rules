@@ -354,10 +354,9 @@ $(STATIC_DIR)/##dir##/##dest##: src			@@\
 
 #ifndef strip_full_tarball
 #define strip_full_tarball( name, files, type )		@@\
-public::  stripped_##name				@@\
-##name##:: stripped_##name				@@\
+##name##:: strip_##type##/##name			@@\
 							@@\
-stripped_##name##: stripped				@@\
+strip_##type##/##name##: stripped			@@\
 	/bin/rm -f strip_##type##/##name		@@\
 	cd strip_##type##; tar -cvf name files
 #endif /* strip_full_tarball */
@@ -365,10 +364,9 @@ stripped_##name##: stripped				@@\
 #ifndef static_full_tarball
 #if HAS_STATIC
 #define static_full_tarball( name, files, type )	@@\
-public::  static_##name					@@\
-##name##:: static_##name				@@\
+##name##:: static_##type##/##name			@@\
 							@@\
-static_##name##: static					@@\
+static_##type##/##name##: static			@@\
 	/bin/rm -f static_##type##/##name		@@\
 	cd static_##type##; tar -cvf name files
 #else 
@@ -385,10 +383,9 @@ static_##name##: static					@@\
 
 #ifndef strip_both_tarball
 #define strip_both_tarball( name, files, contribfiles )		@@\
-public::  stripped_##name					@@\
-##name##:: stripped_##name					@@\
+##name##:: strip_dir/##name					@@\
 								@@\
-stripped_##name##: stripped					@@\
+strip_dir/##name##: stripped					@@\
 	/bin/rm -f strip_dir/##name				@@\
 	for file in contribfiles; \				@@\
 	    do cp -f strip_contrib/$$file strip_dir/$$file; \	@@\
@@ -402,11 +399,10 @@ stripped_##name##: stripped					@@\
 #ifndef static_both_tarball
 #if HAS_STATIC
 #define static_both_tarball( name, files, contribfiles )	@@\
-public::  static_##name						@@\
-##name##:: static_##name					@@\
+##name##:: static_dir/##name					@@\
 								@@\
-static_##name##: static						@@\
-	/bin/rm -f static_##type##/##name			@@\
+static_dir/##name##: static					@@\
+	/bin/rm -f static_dir/##name				@@\
 	for file in contribfiles; \				@@\
 	    do cp -f static_contrib/$$file static_dir/$$file; \	@@\
 	done;							@@\
