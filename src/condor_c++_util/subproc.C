@@ -1,3 +1,5 @@
+#define _POSIX_SOURCE
+
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
@@ -7,6 +9,8 @@
 #include <stdlib.h>
 #include "subproc.h"
 #include "condor_string.h"
+#include "condor_constants.h"
+#include <limits.h>
 
 static char * search( const char *targ, char *buf );
 static char * grab_substr( const char *left, const char *right, char *buf );
