@@ -21,7 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
 
 #include <stdio.h>
 #include <string.h>
@@ -31,6 +30,8 @@
 #include "condor_sys.h"
 #include "ckpt_file.h"
 #include "debug.h"
+
+#include "condor_macros.h"
 
 #if defined(Solaris)
 #include <sys/fcntl.h>
@@ -42,9 +43,6 @@ extern int	Syscalls;
 
 #define CHUNK_SIZE 4096
 
-#if defined(LINUX) || defined(Solaris)
-#define MIN(a,b)	((a)<(b)?(a):(b))
-#endif
 
 /*
 ** Transfer a local file to a remote machine.
