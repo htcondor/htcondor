@@ -433,6 +433,9 @@ Claim::beginActivation( time_t now )
 		// COD job.  So, if we *are* cod, just return now, since we've
 		// got everything we need...
 	if( c_is_cod ) {
+		if (remote_user != NULL) {
+			free(remote_user);
+		}
 		return;
 	}
 
@@ -455,6 +458,10 @@ Claim::beginActivation( time_t now )
 
 	if( universe == CONDOR_UNIVERSE_STANDARD ) {
 		c_last_pckpt = (int)now;
+	}
+
+	if (remote_user != NULL) {
+		free(remote_user);
 	}
 }
 
