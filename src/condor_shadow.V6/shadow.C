@@ -163,10 +163,11 @@ struct rusage AccumRusage;
 int ChildPid;
 int ExitReason = JOB_EXITED;		/* Schedd counts on knowing exit reason */
 int JobExitStatus = 0;                 /* the job's exit status */
+int MaxDiscardedRunTime = 3600;
 
 extern "C" int ExceptCleanup();
 int Termlog;
-
+time_t	RunTime;
 ReliSock	*sock_RSC1, *RSC_ShadowInit(int rscsock, int errsock);
 ReliSock	*RSC_MyShadowInit(int rscsock, int errsock);;
 int HandleLog();
@@ -215,6 +216,7 @@ main(int argc, char *argv[], char *envp[])
 	char	*host, *cluster, *proc;
 	char	*my_cell, *my_fs_domain, *my_uid_domain, *use_afs, *use_nfs;
 	char	*use_ckpt_server, *ckpt_server_host;
+	char	*max_discarded_run_time;
 	char	*capability;
 	int		i;
 
@@ -238,6 +240,8 @@ main(int argc, char *argv[], char *envp[])
 #if !defined(WIN32)
 	install_sig_handler(SIGPIPE, (SIG_HANDLER)SIG_IGN );
 #endif
+
+	RunTime = time(NULL);
 
 	if( argc > 1 ) {
 		if( strcmp("-t",argv[1]) == MATCH ) {
@@ -370,6 +374,13 @@ main(int argc, char *argv[], char *envp[])
 		UseCkptServer = TRUE;
 	} else {
 		UseCkptServer = FALSE;
+	}
+
+	max_discarded_run_time = param( "MAX_DISCARDED_RUN_TIME" );
+	if (max_discarded_run_time) {
+		MaxDiscardedRunTime = atoi(max_discarded_run_time);
+	} else {
+		MaxDiscardedRunTime = 3600;
 	}
 
 	MailerPgm = param( "MAIL" );
@@ -760,9 +771,18 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 	int		status = -1;
 	float utime = 0.0;
 	float stime = 0.0;
+	time_t	new_time;
+	float	accum_time=0.0;
 
 	ConnectQ(schedd);
 	GetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS, &status);
+	GetAttributeFloat(Proc->id.cluster, Proc->id.proc,
+					ATTR_JOB_REMOTE_WALL_CLOCK, &accum_time);
+	new_time = time(NULL);
+	accum_time += (float)(new_time - RunTime);
+	RunTime = new_time;
+	SetAttributeFloat(Proc->id.cluster, Proc->id.proc,
+					ATTR_JOB_REMOTE_WALL_CLOCK, accum_time);
 
 	if( status == REMOVED ) {
 		dprintf( D_ALWAYS, "update_job_status(): Job %d.%d has been removed by condor_rm\n",
