@@ -1,0 +1,45 @@
+\begin{ManPage}{\Condor{q}}{1}{Display information about jobs in queue}
+\label{man-condor-q}
+\Synopsis \SynProg{\Condor{q}}
+\oOpt{-help} \oOpt{-global} \oOptArg{-submittor}{submittor}
+\oOptArg{-pool}{hostname}
+\oOpt{-analyze}
+\oOptArg{-name}{name} \oOptArg{-constraint}{expression} \oOpt{-long}
+\oArg{cluster $\mid$ cluster.process $\mid$ owner}
+
+\Description
+\Condor{q} displays information about jobs in the local condor job queue.
+If a \Arg{cluster} and a \Arg{process} are both specified, \Condor{q}
+displays information about the specified process. If a \Arg{cluster} is
+specified without a \Arg{process}, \Condor{q} displays information about
+all processes belonging to the specified cluster. With no arguments
+\Condor{q} displays information about all condor jobs in the local queue.
+\Condor{q} displays a one line summary of information about specified
+processes as follows:
+
+\begin{description}
+\item[ID] The cluster/process id of the condor job. 
+\item[OWNER] The owner of the job. 
+\item[SUBMITTED] The month, day, hour, and minute the job was submitted to the queue. 
+\item[CPU\_USAGE] Remote CPU time accumulated by the job to date in days, hours, minutes, and seconds.
+If the job is currently running, time accumulated during the current run is not shown. 
+\item[ST] Current status of the job. U = unexpanded (never been run), R = running, I = idle (waiting for a machine to execute
+     on), C = completed, and X = removed. 
+\item[PRI] User specified priority of the job, ranges from -20 to +20, with higher numbers corresponding to greater priority. 
+\item[SIZE] The virtual image size of the executable in megabytes. 
+\item[CMD] The name of the executable. 
+\end{description}
+
+\begin{Options}
+    \OptItem{\Opt{-help}}{Get a brief description of the supported options}
+    \OptItem{\Opt{-global}}{Get the ``global queue,'' (i.e., get the jobs of
+    all the submittors in the system)}
+	\OptItem{\OptArg{-submittor}{submittor}}{List jobs of specific submittor from all the job queues in the pool}
+	\OptItem{\OptArg{-pool}{hostname}}{Use host as the central manager to query}
+	\OptItem{\Opt{-analyze}}{Display an analysis showing how many resources are available to run the requested jobs}
+	\OptItem{\OptArg{-name}{name}}{Show only the job queue of the named schedd}
+	\OptItem{\OptArg{-constraint}{expression}}{Show only jobs that satisfy the constraint}
+	\OptItem{\Opt{-long}}{Display job ads in long format}
+\end{Options}
+
+\end{ManPage}

@@ -1,0 +1,40 @@
+\begin{ManPage}{\Condor{status}}{1}{display the status of machines participating in a Condor pool}
+\label{man-condor-status}
+\Synopsis \SynProg{\Condor{status}}
+\oOpt{-server $\mid$ -state $\mid$ -startd $\mid$ -avail $\mid$ -claimed $\mid$ -schedd $\mid$ -ckptsrvr $\mid$ -master $\mid$ -submittors}
+\oOptArg{-constraint}{const}
+\oOptArg{-format}{fmt attr}
+\oOpt{-diagnose}
+\oOpt{-total}
+\oOpt{-verbose $\mid$ -long}
+\oOptArg{-pool}{hostname}
+\oOpt{-help}
+\oArg{hostname ...}
+
+\Description
+\Condor{status} reports the current status of machines participating in the pool, as well summarizing the current overall pool
+usage information.
+Without any coomand-line arguments \Condor{status} will do a resource query which displays all the machines in the pool and some of their attributes, such as their architecture, operating system, load average and state. Command line options can be used to control which attributes are displayed.
+Other kind of queries are schedd queries, submittor query, master query, and checkpoint server query.
+\Condor{status} will also display summary information for each query. If one or more hostnames appear on the command line, only their attributes will be displayed.
+
+\begin{Options}
+    \OptItem{\Opt{-help}}{Display usage information}
+    \OptItem{\OptArg{-pool}{hostname}}{Query the specified central mananger}
+    \OptItem{\Opt{-server}}{Display important attributes of resources}
+    \OptItem{\Opt{-state}}{Display state of resources}
+    \OptItem{\Opt{-startd}}{Display resource attributes}
+    \OptItem{\Opt{-avail}}{Print information about available resources}
+    \OptItem{\Opt{-claimed}}{Print information about claimed resources}
+    \OptItem{\Opt{-schedd}}{Display attributes of schedds}
+    \OptItem{\Opt{-ckptsrvr}}{Display checkpoint server attributes}
+    \OptItem{\Opt{-master}}{Display daemon master attributes}
+    \OptItem{\Opt{-submittors}}{Display information about request submittors}
+    \OptItem{\OptArg{-constraint}{const}}{Add constraint on classads}
+    \OptItem{\OptArg{-format}{fmt attr}}{Register display format and attribute}
+    \OptItem{\Opt{-verbose $\mid$ -long}}{Display entire classads}
+    \OptItem{\Opt{-total}}{Display totals only}
+    \OptItem{\Opt{-diagnose}}{Print out query ad without performing query}
+\end{Options}
+
+\end{ManPage}

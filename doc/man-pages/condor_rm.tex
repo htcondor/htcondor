@@ -1,0 +1,18 @@
+\begin{ManPage}{\Condor{rm}}{1}{remove jobs from the condor queue}
+\label{man-condor-rm}
+\Synopsis \SynProg{\Condor{rm}}
+\oOptArg{-n}{schedd\_name}
+\Arg{cluster $\mid$ cluster.process $\mid$ username $\mid$ -a}
+
+\Description
+\Condor{rm} removes one or more jobs from the condor queue. If a cluster\_id and a process\_id are both specified,
+\Condor{rm} attempts to remove the specified process from the queue. If a cluster\_id is specified without a process\_id,
+\Condor{rm} attempts to remove all processes belonging to the specified cluster. If a username is specified, \Condor{rm}
+attempts to remove all jobs belonging to that user. Only the owner of a job, user condor, or user root can remove it. 
+
+\begin{Options}
+    \OptItem{\OptArg{-n}{schedd\_name}}{Remove jobs in the queue of the specified schedd}
+    \OptItem{\Opt{-a}}{Remove all the jobs in the queue}
+\end{Options}
+
+\end{ManPage}

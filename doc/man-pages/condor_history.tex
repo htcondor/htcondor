@@ -1,0 +1,35 @@
+\begin{ManPage}{\Condor{history}}{1}{View log of condor jobs completed to date}
+\label{man-condor-history}
+\Synopsis \SynProg{\Condor{history}}
+\oOpt{-help} \oOpt{-l} \oOptArg{-f}{filename}
+\oArg{cluster $\mid$ cluster.process $\mid$ owner}
+
+\Description
+\Condor{history} displays a summary of all condor jobs listed in the
+specified history files.  If no history files are specified (with the \Opt{-f} option), the local
+history file as specified in Condor's configuration file
+(~condor/spool/history by default) is read.  The default listing
+summarizes each job on a single line, and  contains the following items:
+
+\begin{description}
+\item[ID] The cluster/process id of the condor job. 
+\item[OWNER] The owner of the job. 
+\item[SUBMITTED] The month, day, hour, and minute the job was submitted to the queue. 
+\item[CPU\_USAGE] Remote CPU time accumulated by the job to date in days, hours, minutes, and seconds.
+\item[ST] Completion status of the job (C = completed and X = removed).
+\item[COMPLETED] The time the job was completed.
+\item[PRI] User specified priority of the job, ranges from -20 to +20, with higher numbers corresponding to greater priority. 
+\item[SIZE] The virtual image size of the executable in megabytes. 
+\item[CMD] The name of the executable. 
+\end{description}
+
+If a job ID (in the form of cluster\_id or cluster\_id.proc\_id) or an owner is provided, 
+output will be restricted only to jobs with the specified IDs and/or submitted by the specified owner.
+
+\begin{Options}
+    \OptItem{\Opt{-help}}{Get a brief description of the supported options}
+    \OptItem{\OptArg{-f}{filename}}{Use the specified file instead of the default history file}
+    \OptItem{\Opt{-l}}{Display job ads in long format}
+\end{Options}
+
+\end{ManPage}
