@@ -48,7 +48,7 @@ int init_params(int);
 int main_config();
 int main_shutdown_fast();
 int main_shutdown_graceful();
-int do_cleanup();
+extern "C" int do_cleanup();
 void reaper_loop();
 int	handle_dc_sigchld( Service*, int );
 int	shutdown_sigchld( Service*, int ); 
@@ -365,7 +365,6 @@ shutdown_sigchld( Service*, int )
 	} 
 	return TRUE;
 }
-
 
 int
 do_cleanup()
