@@ -46,11 +46,7 @@ REMOTE_SYSCALL_LIB = \
 	$(UTIL_LIB) \
 	$(IO_LIB) 
 
-#if IS_SGI_IRIX62
 LIB = $(REMOTE_SYSCALL_LIB) ../condor_procapi/libprocapi.a
-#else
-LIB = $(REMOTE_SYSCALL_LIB)
-#endif
 
 #if (IS_I386_LINUX)
 LDFLAGS = KernLib RpcLib MldLib -lbfd -liberty
@@ -58,11 +54,7 @@ LDFLAGS = KernLib RpcLib MldLib -lbfd -liberty
 LDFLAGS = KernLib SocketLib RpcLib MldLib 
 #endif
 
-#if IS_SGI_IRIX62
 LIBDIRS = ../condor_util_lib ../condor_io ../condor_procapi
-#else
-LIBDIRS = ../condor_util_lib ../condor_io
-#endif
 
 TOY_SRC = state_machine_driver.C signals.C name_tab.C starter.toy.C \
 	alarm.C

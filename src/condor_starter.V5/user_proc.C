@@ -110,11 +110,9 @@ UserProc::~UserProc()
 	delete [] local_dir;
 	delete [] cur_ckpt;
 	delete [] core_name;
-#ifdef IRIX62
 	if ( family ) {
 		delete family;
 	}
-#endif
 }
 
 void
@@ -598,12 +596,10 @@ UserProc::execute()
 	delete [] tmp;
 	state = EXECUTING;
 
-#ifdef IRIX62
 	if ( job_class == VANILLA ) {
 		family = new ProcFamily(pid,PRIV_USER);
 		family->takesnapshot();
 	}
-#endif
 }
 
 // inline void
@@ -697,13 +693,10 @@ UserProc::handle_termination( int exit_st )
 	}
 	pid = 0;
 
-#ifdef IRIX62
 	// the parent process exited; make certain kids are all gone as well
 	if ( job_class == VANILLA ) {
 		family->hardkill();
 	}
-#endif // of IRIX62
-
 
 	priv_state priv;
 
@@ -761,7 +754,6 @@ UserProc::send_sig( int sig )
 		// slow, does popen and runs /bin/ps, etc.  Thus it is not re-enterant.
 		// -Todd Tannenbaum, 5/9/95
 		switch (sig) {
-#ifdef IRIX62
 		case SIGTERM:
 			family->softkill(sig);
 			break;
@@ -774,14 +766,6 @@ UserProc::send_sig( int sig )
 		case SIGKILL:
 			family->hardkill();
 			break;
-#else
-		case SIGTERM:
-		case SIGSTOP:
-		case SIGCONT:
-		case SIGKILL:
-			killkids(pid,sig);
-			break;
-#endif // of else ifdef IRIX62
 		default:
 			if (kill(pid,SIGCONT) < 0) {
 				EXCEPT( "kill(%d,SIGCONT)", pid );
@@ -792,9 +776,7 @@ UserProc::send_sig( int sig )
 		}
 	}
 
-#ifdef IRIX62
 	if ( job_class != VANILLA )
-#endif
 	if( sig != SIGCONT ) {
 		if( kill(pid,SIGCONT) < 0 ) {
 			set_priv(priv);
@@ -809,9 +791,7 @@ UserProc::send_sig( int sig )
 		dprintf( D_ALWAYS, "Sent signal SIGCONT to user job %d\n", pid);
 	}
 
-#ifdef IRIX62
 	if ( job_class != VANILLA )
-#endif
 	if( kill(pid,sig) < 0 ) {
 		set_priv(priv);
 		if( errno == ESRCH ) {	// User proc already exited
@@ -1195,9 +1175,7 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 	coredump_limit_exists = s.coredump_limit_exists;
 	coredump_limit = s.coredump_limit;
 
-#ifdef IRIX62
 	family = NULL;
-#endif
 }
 
 void

@@ -28,9 +28,7 @@
 
 #include "environ.h"
 
-#ifdef IRIX62
 #include "killfamily.h"
-#endif
 
 #define EXECFAILED 129 // exit status if call to execv() fails
 
@@ -211,9 +209,7 @@ private:
 	clock_t	guaranteed_user_time;
 	clock_t	guaranteed_sys_time;
 
-#ifdef IRIX62
 	ProcFamily *family;
-#endif
 
 };
 
