@@ -13,14 +13,14 @@ static const int    MAX_LENGTH = 255;
 static const unsigned int numSigs = 2;
 
 static const char * SigString[numSigs] = {
-    "### DAGMan 6.1.0",
-    "### DAGMan 6.1.1",
+    "### DAGMan 1.0",
+    "### DAGMan 1.1",
 };
 
 enum SigIndex {
     SigInvalid   = -1,
-    DAGMAN_610,
-    DAGMAN_611
+    DAGMAN_1_0,
+    DAGMAN_1_1
 };
 
 //-----------------------------------------------------------------------------
@@ -173,7 +173,7 @@ bool parse (char *filename, Dag *dag) {
         //
         // Example Syntax is:  SCRIPT (PRE|POST) JobName ScriptName Args ...
         //
-        else if (sigIndex == DAGMAN_611 &&
+        else if (sigIndex == DAGMAN_1_1 &&
                  strcasecmp(token, "SCRIPT") == 0) {
             const char * example = "SCRIPT (PRE|POST) JobName Script Args ...";
             Job * job = NULL;
@@ -340,7 +340,7 @@ bool parse (char *filename, Dag *dag) {
             debug_println (DEBUG_QUIET,
                            "%s(%d): Expected JOB %sor PARENT token",
                            filename, lineNumber,
-                           sigIndex == DAGMAN_611 ? ", SCRIPT, " : "");
+                           sigIndex == DAGMAN_1_1 ? ", SCRIPT, " : "");
             fclose(fp);
             return false;
         }
