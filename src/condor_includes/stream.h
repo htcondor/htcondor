@@ -225,6 +225,11 @@ public:
 	int code(long long &);
     ///
 	int code(unsigned long long &);
+#else
+	 // windows
+	int code( LONGLONG &);
+	///
+	int code( ULONGLONG &);
 #endif
     ///
 	int code(short &);
@@ -381,6 +386,10 @@ public:
 #ifndef WIN32
 	int put(long long);
 	int put(unsigned long long);
+#else
+	// Windows
+	int put(LONGLONG);
+	int put(ULONGLONG);
 #endif
 	int put(short);
 	int put(unsigned short);
@@ -402,6 +411,10 @@ public:
 #ifndef WIN32
 	int get(long long &);
 	int get(unsigned long long &);
+#else
+	// Windows
+	int get(LONGLONG &);
+	int get(ULONGLONG &);
 #endif
 	int get(short &);
 	int get(unsigned short &);
