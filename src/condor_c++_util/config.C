@@ -24,7 +24,6 @@
  
 
 #include "condor_common.h"
-#include "expr.h"
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_classad.h"
