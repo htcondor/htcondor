@@ -86,6 +86,14 @@ submitted as a non-Administrator user.
 \item Fixed a bug that would cause Condor to occasionally kill processes
 that didn't belong to it during job eviction or daemon restarts.
 
+\item On startup, the \Condor{master} would occasionally fail to add the
+daemons to the Windows XP firewall exception list because of a race with
+the Windows SharedAccess service. This bug has been fixed.
+
+\item If a user submitted a job with an invalid executable, the starter
+would often wedge until the job was preempted. Now, the starter attempts
+to detect invalid executables and prevent wedging.
+
 \end{itemize}
 
 \item Starting with RedHat 9, newer versions of Linux began to produce
