@@ -7,9 +7,7 @@
 static char *_FileName_ = __FILE__;
 
 //----------------------------------------------------------------------------------
-/** Constructor (initialization)
- input: filename - the name of the log file
-*/
+// Constructor (initialization)
 //----------------------------------------------------------------------------------
 
 ClassAdCollection::ClassAdCollection(const char* filename) 
@@ -29,7 +27,18 @@ ClassAdCollection::ClassAdCollection(const char* filename)
 }
 
 //----------------------------------------------------------------------------------
-/// Destructor - frees the memory used by the collections
+// Constructor (initialization)
+//----------------------------------------------------------------------------------
+
+ClassAdCollection::ClassAdCollection() 
+  : Collections(97, HashFunc), ClassAdLog()
+{
+  LastCoID=0;
+  Collections.insert(LastCoID,new ExplicitCollection(-1,"",true));
+}
+
+//----------------------------------------------------------------------------------
+// Destructor - frees the memory used by the collections
 //----------------------------------------------------------------------------------
 
 ClassAdCollection::~ClassAdCollection() {
@@ -49,10 +58,35 @@ Output: true on success, false otherwise
 */
 //----------------------------------------------------------------------------------
 
-bool ClassAdCollection::NewClassAd(const char *key, const char *mytype, const char *targettype)
+bool ClassAdCollection::NewClassAd(const char* key, const char* mytype, const char* targettype)
 {
   LogRecord* log=new LogNewClassAd(key,mytype,targettype);
   ClassAdLog::AppendLog(log);
+  return AddClassAd(0,key);
+}
+
+//----------------------------------------------------------------------------------
+
+bool ClassAdCollection::NewClassAd(const char* key, ClassAd* ad)
+{
+  LogRecord* log=new LogNewClassAd(key,ad->GetMyTypeName(),ad->GetTargetTypeName());
+  ClassAdLog::AppendLog(log);
+  ExprTree* expr;
+  ExprTree* L_expr;
+  ExprTree* R_expr;
+  char name[1000];
+  char value[10000];
+  ad->ResetExpr();
+  while ((expr=ad->NextExpr())!=NULL) {
+    strcpy(name,"");
+    strcpy(value,"");
+    L_expr=expr->LArg();
+    L_expr->PrintToStr(name);
+    R_expr=expr->RArg();
+    R_expr->PrintToStr(value);
+    LogRecord* log=new LogSetAttribute(key,name,value);
+    ClassAdLog::AppendLog(log);
+  }
   return AddClassAd(0,key);
 }
 

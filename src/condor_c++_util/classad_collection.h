@@ -39,6 +39,13 @@ public:
   */
   //@{
 
+  /** Constructor (initialization). No logging is done if the log
+      filename is not given using this constructor. We start with an
+      empty repository.
+    @return nothing
+  */
+  ClassAdCollection();
+
   /** Constructor (initialization). It reads the log file and initializes
       the class-ads (that are read from the log file) in memory.
     @param filename the name of the log file.
@@ -103,6 +110,14 @@ public:
       @return true on success, false otherwise.
   */
   bool NewClassAd(const char* key, const char* mytype, const char* targettype);
+
+  /** Insert a new class-ad with the specified key.
+      The new class-ad will be a copy of the ad supplied.
+      @param key The class-ad's key.
+      @param ad The class-ad to copy into the repository.
+      @return true on success, false otherwise.
+  */
+  bool NewClassAd(const char* key, ClassAd* ad);
 
   /** Destroy the class-ad with the specified key.
       @param key The class-ad's key.
