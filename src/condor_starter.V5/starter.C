@@ -54,6 +54,10 @@
 
 #include <sys/stat.h>
 
+#if defined(AIX32)
+#	include <sys/id.h>
+#endif
+
 extern "C" {
 #include <sys/utsname.h>
 int free_fs_blocks(const char *);
@@ -1195,8 +1199,13 @@ get_job_info()
 	uid = NOBODY;
 	gid = NOBODY;
 #else
-	uid = REMOTE_syscall( CONDOR_geteuid );
-	gid = REMOTE_syscall( CONDOR_getegid );
+#	if defined(AIX32)
+		uid = REMOTE_syscall( CONDOR_getuidx, ID_EFFECTIVE );
+		gid = REMOTE_syscall( CONDOR_getgidx, ID_EFFECTIVE );
+#	else
+		uid = REMOTE_syscall( CONDOR_geteuid );
+		gid = REMOTE_syscall( CONDOR_getegid );
+#	endif
 #endif
 
 	if( uid == 0 ) {
