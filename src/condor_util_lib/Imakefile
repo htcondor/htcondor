@@ -55,7 +55,8 @@ INET_NTOA_OBJ = inet_ntoa.o
 #endif
 
 #define ObjectFiles \
-	blankline.o do_connect.o dprintf.o dprintf_config.o except.o \
+	blankline.o do_connect.o except.o \
+	dprintf.o dprintf_common.o dprintf_config.o \
 	ltrunc.o mkargv.o proc.o signames.o killkids.o \
 	stricmp.o perror.o condor_errlst.o \
 	ctrace.o detach.o update_rusage.o cronos.o \
