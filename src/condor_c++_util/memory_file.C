@@ -24,6 +24,9 @@
 #include "condor_common.h"
 #include "memory_file.h"
 
+static const int DEFAULT_BUFFER_SIZE=1024;
+static const int COMPARE_BUFFER_SIZE=10000;   
+
 memory_file::memory_file()
 {
 	buffer = new char[DEFAULT_BUFFER_SIZE];

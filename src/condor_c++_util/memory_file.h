@@ -77,9 +77,6 @@ private:
 
 	void ensure( int size );
 
-	static const int DEFAULT_BUFFER_SIZE=1024;
-	static const int COMPARE_BUFFER_SIZE=10000;
-
 	char *buffer;		// Pointer to the file data
 	off_t pointer;		// Current seek pointer
 	off_t filesize;		// Size of the simulated file
