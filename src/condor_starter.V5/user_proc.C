@@ -748,7 +748,11 @@ UserProc::send_sig( int sig )
 		return;
 	}
 
-	priv = set_root_priv();
+//	priv = set_root_priv();
+
+		// We don't want to be root going around killing things or we
+		// might do something we'll regret in the morning. -Derek 8/29/97
+	priv = set_user_priv();  
 
 	if ( job_class == VANILLA ) {
 		// Here we call killkids() to forward the signal to all of our
