@@ -49,6 +49,13 @@ extern "C" {
 extern "C" {
 	int statfs( char*, struct statfs*, int );
 	int flock( int, int );
+	int fstatfs ( int fd, struct statfs *buf, int len );
+	int getdirentries ( int fd, struct dirent *buf, size_t nbytes, off_t *basep );
+	int getfsstat ( struct statfs buf[], long bufsize, int flags );
+	int table ( int id, int index, char *addr, int nel, unsigned int lel );
+	int getdomainname ( char *name, int namelen );
+	int getaddressconf ( struct addressconf *buf, size_t length );
+	int uswitch ( int cmd, int value ); 
 }
 #endif
 
