@@ -304,15 +304,13 @@ class DaemonCore : public Service
 	
 		fd_set				readfds; 
 
-		// m_timer is the timeout structure passed by the Driver()
-		// method to select().  it needs to be volatile so that we 
-		// can set the select timeout to zero in Send_Signal so that
-		// real posix/unix signal handlers that call Send_Signal do not
-		// have delivery of their daemon core signal delayed.  Whew....
-		volatile struct timeval		m_timer;	
-
 #ifdef WIN32
 		DWORD	dcmainThreadId;		// the thread id of the thread running the main daemon core
+#endif
+
+#ifndef WIN32
+		int async_pipe[2];  // 0 for reading, 1 for writing
+		volatile int async_sigs_unblocked;
 #endif
 
 		// these need to be in thread local storage someday

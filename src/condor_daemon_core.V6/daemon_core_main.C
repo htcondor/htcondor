@@ -218,6 +218,17 @@ int main( int argc, char** argv )
 	dprintf(D_ALWAYS,"** PID = %lu\n",daemonCore->getpid());
 	dprintf(D_ALWAYS,"******************************************************\n");
 
+#ifndef WIN32
+	// Now that logging is setup, create a pipe to deal with unix
+	// async signals.  We do this after logging is setup so that
+	// we can EXCEPT (and really log something) on failure...
+	if ( pipe(daemonCore->async_pipe) == -1 ||
+		 fcntl(daemonCore->async_pipe[0],F_SETFL,O_NONBLOCK) == -1 ||
+		 fcntl(daemonCore->async_pipe[1],F_SETFL,O_NONBLOCK) == -1 ) {
+			EXCEPT("Failed to create async pipe");
+	}
+#endif
+
 	// we want argv[] stripped of daemoncore options
 	ptmp = argv[0];			// save a temp pointer to argv[0]
 	argv = --ptr;			// make space for argv[0]

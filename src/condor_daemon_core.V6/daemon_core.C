@@ -113,8 +113,13 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,int SocSize,int Reap
 
 	curr_dataptr = NULL;
 	curr_regdataptr = NULL;
+
 #ifdef WIN32
 	dcmainThreadId = ::GetCurrentThreadId();
+#endif
+
+#ifndef WIN32
+	async_sigs_unblocked = FALSE;
 #endif
 }
 
@@ -123,6 +128,11 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,int SocSize,int Reap
 DaemonCore::~DaemonCore()
 {
 	int		i;	
+
+#ifndef WIN32
+	close(async_pipe[1]);
+	close(async_pipe[0]);
+#endif 
 
 	if (comTable != NULL )
 	{
@@ -842,12 +852,15 @@ void DaemonCore::Driver()
 	int			rv;					// return value from select
 	int			i;
 	int			tmpErrno;
+	struct timeval	timer;
+	struct timeval *ptimer;
 	int temp;
 	int result;
 #ifndef WIN32
 	sigset_t fullset, emptyset;
 	sigfillset( &fullset );
 	sigemptyset( &emptyset );
+	char asyncpipe_buf[10];
 #endif
 
 	for(;;)
@@ -877,6 +890,12 @@ void DaemonCore::Driver()
 				}
 			}
 		}
+#ifndef WIN32
+		// Drain our async_pipe; we must do this before we unblock unix signals...
+		// Just keep reading while something is there.  async_pipe is set to 
+		// non-blocking more via fcntl, so the read below will not block.
+		while( read(async_pipe[0],asyncpipe_buf,8) > 0 );
+#endif
 
 		// Prepare to enter main select()
 		
@@ -892,11 +911,12 @@ void DaemonCore::Driver()
 		temp = t.Timeout();
 		if ( sent_signal == TRUE )
 			temp = 0;
-		m_timer.tv_usec = 0;
+		timer.tv_sec = temp;
+		timer.tv_usec = 0;
 		if ( temp < 0 )
-			m_timer.tv_sec = 1000000;	// no timers pending; sleep a long time...
+			ptimer = NULL;
 		else
-			m_timer.tv_sec = temp;	
+			ptimer = &timer;		// no timeout on the select() desired
 		
 
 		// Setup what socket descriptors to select on.  We recompute this
@@ -910,6 +930,17 @@ void DaemonCore::Driver()
 
 		
 #if !defined(WIN32)
+		// Add the read side of async_pipe to the list of file descriptors to
+		// select on.  We write to async_pipe if a unix async signal is delivered
+		// after we unblock signals and before we block on select.
+		FD_SET(async_pipe[0],&readfds);
+
+		// Set aync_sigs_unblocked flag to true so that Send_Signal()
+		// knows to put info onto the async_pipe in order to wake up select().
+		// We _must_ set this flag to TRUE before we unblock async signals, and
+		// set it to FALSE after we block the signals again.
+		async_sigs_unblocked = TRUE;
+
 		// Unblock all signals so that we can get them during the
 		// select.
 		sigprocmask( SIG_SETMASK, &emptyset, NULL );
@@ -918,9 +949,9 @@ void DaemonCore::Driver()
 		errno = 0;
 
 #if defined(HPUX9)
-		rv = select(FD_SETSIZE, (int *) &readfds, NULL, NULL, (const struct timeval *)&m_timer);
+		rv = select(FD_SETSIZE, (int *) &readfds, NULL, NULL, ptimer);
 #else
-		rv = select(FD_SETSIZE, &readfds, NULL, NULL, (const struct timeval *)&m_timer);
+		rv = select(FD_SETSIZE, &readfds, NULL, NULL, ptimer);
 #endif
 		
 		tmpErrno = errno;
@@ -931,6 +962,11 @@ void DaemonCore::Driver()
 		// Block all signals until next select so that we don't
 		// get confused.
 		sigprocmask( SIG_SETMASK, &fullset, NULL );
+
+		// We _must_ set async_sigs_unblocked flag to TRUE 
+		// before we unblock async signals, and
+		// set it to FALSE after we block the signals again.
+		async_sigs_unblocked = FALSE;
 
 		if(rv < 0) {
 			if(tmpErrno != EINTR)
@@ -1252,7 +1288,16 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 			// no need to go via UDP/TCP, just call HandleSig directly.
 			HandleSig(_DC_RAISESIGNAL,sig);
 			sent_signal = TRUE;
-			m_timer.tv_sec = 0;		// set select() timeout to zero
+#ifndef WIN32
+			// On UNIX, if async_sigs_unblocked == TRUE, we are being invoked
+			// from inside of a unix signal handler.  So we also need to write
+			// something to the async_pipe.  It does not matter what we write, we
+			// just need to write something to ensure that the select() in Driver()
+			// does not block.
+			if ( async_sigs_unblocked == TRUE ) {
+				write(async_pipe[1],"!",1);
+			}
+#endif
 			return TRUE;
 		} else {
 			// send signal to same process, different thread.
