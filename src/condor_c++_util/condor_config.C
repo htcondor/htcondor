@@ -81,6 +81,8 @@ void check_params();
 
 // External variables
 extern int	ConfigLineNo;
+}  /* End extern "C" */
+
 extern char* mySubSystem;
 
 // Global variables
@@ -632,14 +634,11 @@ public:
 	char *config;
 };
 
-}  // Extern C cannot have templates
-
 #include "extArray.h"
 template class ExtArray<RuntimeConfigItem>;
 
 static ExtArray<RuntimeConfigItem> rArray;
 
-extern "C" { // Begin Extern C
 static char toplevel_runtime_config[_POSIX_PATH_MAX] = { '\0' };
 
 static void
@@ -945,5 +944,3 @@ process_runtime_configs(ClassAd *classAd)
 }
 
 /* End code for runtime support for modifying a daemon's config file. */
-
-} /* extern "C" */
