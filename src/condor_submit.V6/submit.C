@@ -2636,7 +2636,9 @@ queue(int num)
 			if(proxy_file == NULL) proxy_file = proxy_env_var;
 
 			char *rm_contact = condor_param( GlobusScheduler );
+
 			if ( check_x509_proxy(proxy_file) != 0 ) {
+				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
 				exit( 1 );
 			}
 			
