@@ -33,11 +33,11 @@ void CondorError::init() {
 
 void CondorError::clear() {
 	if (_subsys) {
-		delete _subsys;
+		free( _subsys );
 		_subsys = 0;
 	}
 	if (_message) {
-		delete _message;
+		free( _message );
 		_message = 0;
 	}
 	if (_next) {
