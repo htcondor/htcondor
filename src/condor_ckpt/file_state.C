@@ -121,6 +121,7 @@ OpenFileTable::Display()
 		dprintf( D_ALWAYS, "%4d ", i );
 		file[i].Display();
 	}
+	dprintf( D_ALWAYS, "CWD = \"%s\"\n", cwd );
 
 	SetSyscalls( scm );
 }
@@ -414,6 +415,7 @@ OpenFileTable::Save()
 	off_t	pos;
 	File	*f;
 
+	getwd( cwd );
 	for( i=0; i<MaxOpenFiles; i++ ) {
 		f = &file[i];
 		if( f->isOpen() && !f->isDup() ) {
@@ -468,6 +470,7 @@ OpenFileTable::Restore()
 	}
 
 
+	chdir( cwd );
 	for( i=0; i<MaxOpenFiles; i++ ) {
 		f = &file[i];
 		if( f->isOpen() && !f->isDup() && !f->isPreOpened() ) {

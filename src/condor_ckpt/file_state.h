@@ -86,6 +86,7 @@ public:
 private:
 	int		find_avail( int start );
 	void	fix_dups( int user_fd );
+	char	cwd[ _POSIX_PATH_MAX ];
 	File	*file;		// array allocated at run time
 };
 
