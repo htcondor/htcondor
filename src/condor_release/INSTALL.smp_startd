@@ -25,13 +25,13 @@ directions for the SMP-Startd module.
    particular, you should read the first few sections that discuss
    release directories, pool layout, and so on. 
    
-   To install the SMP-startd from the separate contrib module, you must
-   first download the appropriate binary modules for each of your
-   platforms. Once you uncompress and untar the module, you will have a
-   directory with an smp.tar file, a README, and so on. The smp.tar acts
-   much like the release.tar file for a main release. It contains all the
-   binaries and supporting files you would install in your release
-   directory:
+   To install the SMP-startd from the separate contrib module, you
+   must first download the appropriate binary modules for each of your
+   platforms. Once you uncompress and untar the module, you will have
+   a directory with an smp_startd.tar file, a README, and so on. The
+   smp_startd.tar acts much like the release.tar file for a main
+   release. It contains all the binaries and supporting files you
+   would install in your release directory:
 
         sbin/condor_startd
         sbin/condor_starter
@@ -69,12 +69,12 @@ directions for the SMP-Startd module.
    move the existing condor_startd, condor_starter, condor_preen out of
    the way (for example, to ``condor_startd.old'') in the sbin directory,
    and move condor_status out of the way in bin.
-   
-   You can simply untar the smp.tar file into your release directory, and
-   it will install the new versions (and overwrite your existing binaries
-   if you haven't moved them out of the way). Once the new binaries are
-   in place, all you need to do is add the new settings for the SMP
-   startd to your global config file.
+
+   You can simply untar the smp_startd.tar file into your release
+   directory, and it will install the new versions (and overwrite your
+   existing binaries if you haven't moved them out of the way). Once
+   the new binaries are in place, all you need to do is add the new
+   settings for the SMP startd to your global config file.
    
    Once the binaries and config settings are in place, you can restart
    your pool, as described in section 3.8.1 ``Restarting Your Condor
@@ -83,16 +83,17 @@ directions for the SMP-Startd module.
   Installing Only on SMP Machines
   
    If you only want to run the new startd on your SMP machines, you
-   should untar the smp.tar file into some temporary location. Copy the
-   sbin/condor_startd file into <release_dir>/sbin/condor_startd.smp. You
-   can simply overwrite <release_dir>/sbin/condor_preen and
-   <release_dir>/bin/condor_status with the new versions. In case you
-   have any currently running condor_starter processes, you should move
-   the existing binary to condor_starter.old with ``mv'' so that you
-   don't get starters that crash with SIGILL or SIGBUS. Once you have
-   moved the existing starter out of the way, you can install the new
-   version from your scratch directory.
-   
+   should untar the smp_startd.tar file into some temporary
+   location. Copy the sbin/condor_startd file into
+   <release_dir>/sbin/condor_startd.smp. You can simply overwrite
+   <release_dir>/sbin/condor_preen and <release_dir>/bin/condor_status
+   with the new versions. In case you have any currently running
+   condor_starter processes, you should move the existing binary to
+   condor_starter.old with ``mv'' so that you don't get starters that
+   crash with SIGILL or SIGBUS. Once you have moved the existing
+   starter out of the way, you can install the new version from your
+   scratch directory.
+
    Once you've got all the new binaries installed, all you need to do is
    edit the local config file for each SMP host in your pool to add the
    SMP-specific settings described below. In addition, you will need to
