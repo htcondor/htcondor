@@ -24,8 +24,8 @@
 #define CONDOR_SYS_IRIX_H
 
 
-#define _XOPEN_SOURCE
-#define _BSD_COMPAT
+#define _XOPEN_SOURCE 1
+#define _BSD_COMPAT 1
 
 /* While we want _BSD_TYPES defined, we can't just define it ourself,
    since we include rpc/types.h later, and that defines _BSD_TYPES
