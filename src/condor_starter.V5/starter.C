@@ -185,8 +185,7 @@ initial_bookeeping( int argc, char *argv[] )
 	init_logging();
 
 		/* Now if we have an error, we can print a message */
-	if( argc != 2 ) {
-// printf("argc is %d",argc);
+	if( argc != 2 && argc != 3 ) {
 		usage( argv[0] );	/* usage() exits */
 	}
 
@@ -304,7 +303,7 @@ susp_self()
 void
 usage( char *my_name )
 {
-	dprintf( D_ALWAYS, "Usage: %s ( -pipe | initiating_host)\n", my_name );
+	dprintf( D_ALWAYS, "Usage: %s ( -pipe | initiating_host) [<STARTD_IP:STARTD_PORT>]\n", my_name );
 	exit( 0 );
 }
 
