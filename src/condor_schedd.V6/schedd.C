@@ -198,6 +198,7 @@ Scheduler::Scheduler()
 	aliveFrequency = 0;
 	aliveInterval = 0;
 	port = 0;
+	ExitWhenDone = 0;
 }
 
 Scheduler::~Scheduler()
@@ -1781,43 +1782,31 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
                                                             pid, errno );
             break;
         }
-		if((mrec = FindMrecByPid(pid)))
-		{
-			if(WIFEXITED(status))
-            {
+		if((mrec = FindMrecByPid(pid))) {
+			if(WIFEXITED(status)) {
                 dprintf(D_FULLDEBUG, "agent pid %d exited with status %d\n",
                         pid, WEXITSTATUS(status) );
-                if(WEXITSTATUS(status) == EXITSTATUS_NOTOK)
-                {
+                if(WEXITSTATUS(status) == EXITSTATUS_NOTOK) {
                     dprintf(D_ALWAYS, "capability rejected by startd\n");
                     DelMrec(mrec);
-                }
-                else
-                {
+                } else {
                     dprintf(D_ALWAYS, "Agent contacting startd successful\n");
 					mrec->status = M_ACTIVE;
                 }
-            }
-            else if(WIFSIGNALED(status))
-            {
+            } else if(WIFSIGNALED(status)) {
                 dprintf(D_ALWAYS, "Agent pid %d died with signal %d\n",
                         pid, WTERMSIG(status));
                 DelMrec(mrec);
             }
-		}
-		else if ((srec = FindSrecByPid(pid)) != NULL && srec->match == NULL)
-		{
-			if(WIFEXITED(status))
-			{
+		} else if ((srec = FindSrecByPid(pid)) != NULL && srec->match == NULL) {
+			if(WIFEXITED(status)) {
 				dprintf(D_FULLDEBUG,
 						"scheduler universe job (%d.%d) pid %d "
 						"exited with status %d\n", srec->job_id.cluster,
 						srec->job_id.proc, pid, WEXITSTATUS(status) );
 				NotifyUser(srec, "exited with status ",
 						   WEXITSTATUS(status) );
-			}
-			else if(WIFSIGNALED(status))
-			{
+			} else if(WIFSIGNALED(status)) {
 				dprintf(D_ALWAYS,
 						"scheduler universe job (%d.%d) pid %d died "
 						"with signal %d\n", srec->job_id.cluster,
@@ -1832,9 +1821,7 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 						srec->job_id.proc);
 			}
 			delete_shadow_rec( pid );
-		}
-        else
-        {
+		} else {
             if( WIFEXITED(status) ) {
                 dprintf( D_FULLDEBUG, "Shadow pid %d exited with status %d\n",
                                                 pid, WEXITSTATUS(status) );
@@ -1855,6 +1842,10 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
     if( sig == 0 ) {
         dprintf( D_ALWAYS, "***********  End Extra Checking ********\n" );
     }
+	if( ExitWhenDone && NShadowRecs == 0 ) {
+		dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
+		exit(0);
+	}
 	unblock_signal(SIGALRM);
 }
 
@@ -1937,21 +1928,16 @@ Scheduler::Init()
 	char					tmpExpr[200];
 
 	// set the name of the schedd
-	if(ScheddName)
-	{
+	if(ScheddName) {
 		sprintf(tmpExpr, "SCHEDD__%s_PORT", Name); 
 		tmp = param(tmpExpr);
-		if(tmp)
-		{
+		if(tmp) {
 			port = atoi(tmp);
 			free(tmp);
 		}
-	}
-	else
-	{
+	} else {
 		tmp = param("SCHEDD_PORT");
-		if(tmp)
-		{
+		if(tmp) {
 			port = atoi(tmp);
 			free(tmp);
 		}
@@ -1983,14 +1969,6 @@ Scheduler::Init()
         free( tmp );
     }
 
-	/* I don't think this is necessary. dprintf_config uses D_ALWAYS by default
-	 * Weiru
-    if( (tmp=param("SCHEDD_DEBUG")) == NULL ) {
-        EXCEPT( "\"SCHEDD_DEBUG\" not specified" );
-    }
-    free( tmp );
-	*/
-
     if( (Shadow=param("SHADOW")) == NULL ) {
         EXCEPT( "SHADOW not specified in config file\n" );
     }
@@ -2017,7 +1995,7 @@ Scheduler::Init()
     }
 
     if( (tmp=param("SHADOW_SIZE_ESTIMATE")) == NULL ) {
-        ShadowSizeEstimate =  128;          /* 128 K bytes */
+        ShadowSizeEstimate = DEFAULT_SHADOW_SIZE;
     } else {
         ShadowSizeEstimate = atoi( tmp );   /* Value specified in kilobytes */
         free( tmp );
@@ -2028,17 +2006,24 @@ Scheduler::Init()
     }
 
     /* parameters for UPDOWN alogorithm */
-    tmp = param( "SCHEDD_SCALING_FACTOR" );
-    if( tmp == NULL ) ScheddScalingFactor = 60;
-     else ScheddScalingFactor = atoi( tmp );
-    if ( ScheddScalingFactor == 0 )
-          ScheddScalingFactor = 60;
+	if( (tmp = param( "SCHEDD_SCALING_FACTOR" )) == NULL ) {
+		ScheddScalingFactor = 60;
+	} else {
+		ScheddScalingFactor = atoi( tmp );
+		free( tmp );
+	}
+    if( ScheddScalingFactor == 0 ) {
+		ScheddScalingFactor = 60;
+	}
 
-    tmp = param( "SCHEDD_HEAVY_USER_TIME" );
-    if( tmp == NULL )  ScheddHeavyUserTime = 120;
-     else ScheddHeavyUserTime = atoi( tmp );
+    if( (tmp = param( "SCHEDD_HEAVY_USER_TIME" )) == NULL ) {
+		ScheddHeavyUserTime = 120;
+	} else {
+		ScheddHeavyUserTime = atoi( tmp );
+		free( tmp );
+	}
 
-    Step                    =  SchedDInterval/ScheddScalingFactor;
+    Step                    = SchedDInterval/ScheddScalingFactor;
     ScheddHeavyUserPriority = Step * ScheddHeavyUserTime;
 
     upDown_SetParameters(Step,ScheddHeavyUserPriority); /* UPDOWN */
@@ -2054,21 +2039,15 @@ Scheduler::Init()
     }
 
 	tmp = param("ALIVE_FREQUENCY");
-    if(!tmp)
-    {
+    if(!tmp) {
 		aliveFrequency = SchedDInterval;
-    }
-    else
-    {
+    } else {
         aliveFrequency = atoi(tmp);
         free(tmp);
 	}
-	if(aliveFrequency < SchedDInterval)
-	{
+	if(aliveFrequency < SchedDInterval) {
 		aliveInterval = 1;
-	}
-	else
-	{
+	} else {
 		aliveInterval = aliveFrequency / SchedDInterval;
 	}
 }
@@ -2092,6 +2071,8 @@ Scheduler::Register(DaemonCore* core)
 	core->Register(this, SIGCHLD, (void*)reaper, SIGNAL);
 	core->Register(this, SIGINT, (void*)sigint_handler, SIGNAL);
 	core->Register(this, SIGHUP, (void*)sighup_handler, SIGNAL);
+	core->Register(this, SIGQUIT, (void*)sigquit_handler, SIGNAL);
+	core->Register(this, SIGTERM, (void*)sigterm_handler, SIGNAL);
 	// Daemon_core doesn't handle SIG_IGN, properly, just use the
 	// system for signal handling in this case. -Derek 6/27/97
 	install_sig_handler(SIGPIPE, SIG_IGN);
@@ -2155,7 +2136,7 @@ Scheduler::sigint_handler()
 void
 Scheduler::sighup_handler()
 {
-    dprintf( D_ALWAYS, "Re reading config file\n" );
+    dprintf( D_ALWAYS, "Re-reading config file\n" );
 
     configAd( myName, ad );
 
@@ -2163,6 +2144,33 @@ Scheduler::sighup_handler()
 	::Init();
     timeout();
 }
+
+
+// Perform graceful shutdown.
+void
+Scheduler::sigterm_handler()
+{
+	block_signal(SIGCHLD);
+    dprintf( D_ALWAYS, "Performing graceful shut down.\n" );
+	MaxJobsRunning = 0;
+	ExitWhenDone = 1;
+	preempt( NShadowRecs );
+	unblock_signal(SIGCHLD);
+}
+
+// Perform fast shutdown.
+void
+Scheduler::sigquit_handler()
+{
+	int i;
+	dprintf( D_ALWAYS, "Performing fast shut down.\n" );
+	for(i=0; i < NShadowRecs; i++) {
+		kill( ShadowRecs[i].pid, SIGKILL );
+	}
+	dprintf( D_ALWAYS, "All shadows have been killed, exiting.\n" );
+	exit(0);
+}
+
 
 void
 Scheduler::reschedule_negotiator(ReliSock*, struct sockaddr_in*)
