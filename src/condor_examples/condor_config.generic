@@ -608,6 +608,9 @@ EXECUTE		= $(LOCAL_DIR)/execute
 BIN		= $(RELEASE_DIR)/bin
 LIB		= $(RELEASE_DIR)/lib
 SBIN		= $(RELEASE_DIR)/sbin
+
+## If you leave HISTORY undefined (comment it out), no history file
+## will be created. 
 HISTORY		= $(SPOOL)/history
 
 ##  Log files
@@ -626,9 +629,13 @@ SHADOW_LOCK	= $(LOCK)/ShadowLock
 
 ##  In most cases, your condor_collector and condor_negotiator are 
 ##  going to run on the same machine.  If for some reason, this isn't 
-##  the case, here's where you'd change it:
-COLLECTOR_HOST	= $(CONDOR_HOST)
-NEGOTIATOR_HOST	= $(CONDOR_HOST)
+##  the case, here's where you'd change it. Also, you can change the
+##  port that the collector and negotiator run on. By default, the
+##  collector uses port 9618 and the negotiator uses port 9614, but
+##  you can set the port with a ":port", such as:
+## COLLECTOR_HOST = foo.example.com:1234
+COLLECTOR_HOST  = $(CONDOR_HOST)
+NEGOTIATOR_HOST = $(CONDOR_HOST)
 
 ##  How long are you willing to let daemons try their graceful
 ##  shutdown methods before they do a hard shutdown? (30 minutes)
@@ -673,6 +680,17 @@ RESERVED_DISK		= 5
 ##  defined, this feature is disabled by default.
 #UPDATE_COLLECTOR_WITH_TCP = True
 
+## HIGHPORT and LOWPORT let you set the range of ports that Condor
+## will use. This may be useful if you are behind a firewall. By
+## default, Condor uses port 9618 for the collector, 9614 for the
+## negotiator, and system-assigned (apparently random) ports for
+## everything else. HIGHPORT and LOWPORT only affect these
+## system-assigned ports, but will restrict them to the range you
+## specify here. If you want to change the well-known ports for the
+## collector or negotiator, see COLLECTOR_HOST or NEGOTIATOR_HOST.
+## Note that both LOWPORT and HIGHPORT must be at least 1024. 
+#HIGHPORT = 9700 
+#LOWPORT = 9600
 
 ######################################################################
 ##  Daemon-specific settings:
