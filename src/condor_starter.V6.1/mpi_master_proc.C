@@ -62,7 +62,8 @@ MPIMasterProc::JobExit( int pid, int status )
 		priv_state priv;
 		priv = set_user_priv();
 		if( unlink( port_file ) < 0 ) {
-			dprintf( D_ALWAYS, "unlink(%s) failed!\n", port_file );
+			dprintf( D_ALWAYS, "unlink(%s) failed: %s\n", port_file,
+					 strerror(errno) ); 
 		}
 		set_priv( priv );
 	}
@@ -313,6 +314,9 @@ MPIMasterProc::checkPortFile( void )
 	if( fp ) {
 			// check if there's anything there...
 		rval = fgets( buf, 100, fp );
+			// No matter what happened with the fgets(), we want to
+			// close the file now, so we don't leak an FD
+		fclose( fp );
 		if( rval ) {
 				// cool, we read something.  stash the port in our
 				// local variable
