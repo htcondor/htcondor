@@ -132,6 +132,7 @@
 #include "condor_debug.h"
 #include "condor_error.h"
 #include "condor_version.h"
+#include "../condor_ckpt/gtodc.h"
 
 enum result { NOT_OK = 0, OK = 1, END };
 
@@ -424,6 +425,9 @@ MAIN( int argc, char *argv[], char **envp )
 		argv[i] = user_argv[i];
 	}
 
+	/* initialize the cache for gettimeofday */
+	_condor_gtodc_init(_condor_global_gtodc);
+
 	/* If a command fd is given, we are doing remote system calls. */
 
 	if( cmd_fd>=0 ) {
@@ -478,6 +482,7 @@ MAIN( int argc, char *argv[], char **envp )
 	}
 
 	InRestart = FALSE;
+
 
 	#if defined(HPUX)
 		exit(_start( argc, argv, envp ));
