@@ -14,15 +14,20 @@
 #include <sys/wait.h>
 #include <iomanip.h>
 
+
 #define _POSIX_SOURCE
 
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
+#include "xfer_summary.h"
+
 
 
 #define DEBUG
 
+
+XferSummary	xfer_summary;
 
 Server server;
 Alarm  rt_alarm;
@@ -276,10 +281,10 @@ void Server::Execute()
 	time_t         start_interval_time;
 	struct timeval poll;
 	
-	poll.tv_sec = 0;
-	poll.tv_usec = 0;
 	start_interval_time = time(NULL);
 	while (more) {                          // Continues until SIGUSR2 signal
+		poll.tv_sec = RECLAIM_INTERVAL;
+		poll.tv_usec = 0;
 		errno = 0;
 		FD_ZERO(&req_sds);
 		FD_SET(store_req_sd, &req_sds);
@@ -289,12 +294,13 @@ void Server::Execute()
 		//   request comes in (change the &poll argument to NULL).  The 
 		//   philosophy is that one does not need to reclaim a child process
 		//   until another is ready to start
-#if 0
+#if 1
 		while ((more) && ((num_sds_ready=select(max_req_sd_plus1, &req_sds, 
 												NULL, NULL, &poll)) > 0)) {
-#endif
+#else
 		while ((more) && ((num_sds_ready=select(max_req_sd_plus1, &req_sds, 
 												NULL, NULL, NULL)) > 0)) {
+#endif
 			if (FD_ISSET(service_req_sd, &req_sds))
 				HandleRequest(service_req_sd, SERVICE_REQ);
 			if (FD_ISSET(store_req_sd, &req_sds))
@@ -323,6 +329,7 @@ void Server::Execute()
 			transfers.Reclaim(current_time);
 			UnblockSignals();
 			start_interval_time = time(NULL);
+			xfer_summary.time_out(current_time);
 		}
     }
 	close(service_req_sd);
@@ -1259,7 +1266,7 @@ void Server::ProcessRestoreReq(int             req_id,
 			  num_restore_xfers++;
 			  transfers.Insert(child_pid, req_id, shadow_IP, 
 							   restore_req.filename, restore_req.owner,
-							   restore_reply.file_size, restore_req.key,
+							   chkpt_file_status.st_size, restore_req.key,
 							   restore_req.priority, XMIT);
 			  Log(req_id, "Request to restore checkpoint file GRANTED");
 		  } else {
@@ -1386,111 +1393,114 @@ void Server::ChildComplete()
 			exit(BAD_TRANSFER_LIST);
 		}
 		switch (xfer_type) {
-		case RECV:
-			num_store_xfers--;
-			imds.Unlock(ptr->shadow_addr, ptr->owner, ptr->filename);
-			if (exit_code == CHILDTERM_SUCCESS)
-				Log(ptr->req_id, "File successfully received");
-			else if ((exit_code == CHILDTERM_KILLED) && 
-					 (ptr->override == OVERRIDE)) {
-				Log(ptr->req_id, "File successfully received; kill signal");
-				Log("overridden");
-			} else {
-				if (exit_code == CHILDTERM_SIGNALLED) {
+		    case RECV:
+			    num_store_xfers--;
+				imds.Unlock(ptr->shadow_addr, ptr->owner, ptr->filename);
+				if (exit_code == CHILDTERM_SUCCESS)
+					Log(ptr->req_id, "File successfully received");
+				else if ((exit_code == CHILDTERM_KILLED) && 
+						 (ptr->override == OVERRIDE)) {
+					Log(ptr->req_id, "File successfully received; kill signal");
+					Log("overridden");
+				} else {
+					if (exit_code == CHILDTERM_SIGNALLED) {
+						sprintf(log_msg, 
+								"File transfer terminated due to signal #%d",
+								WTERMSIG(exit_status));
+						Log(ptr->req_id, log_msg);
+						if (WTERMSIG(exit_status) == SIGKILL)
+							Log("User killed the peer process");
+					}
+					else if (exit_code == CHILDTERM_KILLED) {
+						Log(ptr->req_id, 
+							"File reception terminated by reclamation process");
+					} else {
+						sprintf(log_msg, 
+								"File reception self-terminated; error #%d",
+								exit_code);
+						Log(ptr->req_id, log_msg);
+						Log("occurred during file reception");
+					}
+					sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX,
+							inet_ntoa(ptr->shadow_addr), ptr->owner,
+							ptr->filename);
+					// Attempt to remove file
+					if (remove(pathname) != 0)
+						Log("Unable to remove file from physical storage");
+					else
+						Log("Partial file removed from physical storage");
+					// Remove file information from in-memory data structure
+					if ((temp=imds.RemoveFile(ptr->shadow_addr, ptr->owner, 
+											  ptr->filename)) != REMOVED_FILE){
+						sprintf(log_msg,
+								"Unable to remove file from imds (%d)",
+								temp);
+						Log(log_msg);
+					}
+				}
+				break;
+			case XMIT:
+				num_restore_xfers--;
+				imds.Unlock(ptr->shadow_addr, ptr->owner, ptr->filename);
+				if (exit_code == CHILDTERM_SUCCESS)
+					Log(ptr->req_id, "File successfully transmitted");
+				else if ((exit_code == CHILDTERM_KILLED) && 
+						 (ptr->override == OVERRIDE)) {
+					Log(ptr->req_id,
+						"File successfully transmitted; kill signal");
+					Log("overridden");
+				} else if (exit_code == CHILDTERM_SIGNALLED) {
 					sprintf(log_msg, 
 							"File transfer terminated due to signal #%d",
 							WTERMSIG(exit_status));
 					Log(ptr->req_id, log_msg);
-					if (WTERMSIG(exit_status) == SIGKILL)
+					if (WTERMSIG(exit_status) == SIGPIPE)
+						Log("Socket on receiving end closed");
+					else if (WTERMSIG(exit_status) == SIGKILL)
 						Log("User killed the peer process");
-				}
-				else if (exit_code == CHILDTERM_KILLED) {
+				} else if (exit_code == CHILDTERM_KILLED) {
 					Log(ptr->req_id, 
-						"File reception terminated by reclamation process");
+						"File transmission terminated by reclamation");
+					Log("process");
 				} else {
 					sprintf(log_msg, 
-							"File reception self-terminated; error #%d",
+							"File transmission self-terminated; error #%d", 
 							exit_code);
 					Log(ptr->req_id, log_msg);
-					Log("occurred during file reception");
+					Log("occurred during file transmission");
 				}
-				sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX,
-						inet_ntoa(ptr->shadow_addr), ptr->owner,
-						ptr->filename);
-				// Attempt to remove file
-				if (remove(pathname) != 0)
-					Log("Unable to remove file from physical storage");
-				else
-					Log("Partial file removed from physical storage");
-				// Remove file information from in-memory data structure
-				if ((temp=imds.RemoveFile(ptr->shadow_addr, ptr->owner, 
-										  ptr->filename)) != REMOVED_FILE) {
-					sprintf(log_msg, "Unable to remove file from imds (%d)",
-							temp);
-					Log(log_msg);
+				break;
+			case FILE_STATUS:
+				if (exit_code == CHILDTERM_SUCCESS)
+					Log(ptr->req_id, "Server status successfully transmitted");
+				else if (exit_code == CHILDTERM_KILLED)
+					Log(ptr->req_id, 
+						"Server status terminated by reclamation process");
+				else if (exit_code == CHILDTERM_SIGNALLED) {
+					sprintf(log_msg, 
+							"File transfer terminated due to signal #%d",
+							WTERMSIG(exit_status));
+					Log(ptr->req_id, log_msg);
+					if (WTERMSIG(exit_status) == SIGPIPE)
+						Log("Socket on receiving end closed");
+					else if (WTERMSIG(exit_status) == SIGKILL)
+						Log("User killed the peer process");
+				} else {
+					sprintf(log_msg, 
+							"Server status self-terminated; error #%d",
+							exit_code);
+					Log(ptr->req_id, log_msg);
+					Log("occurred during status transmission");
 				}
+				break;
+			default:
+				cerr << endl << "ERROR:" << endl;
+				cerr << "ERROR:" << endl;
+				cerr<<"ERROR: illegal transfer type used; terminating" << endl;
+				cerr << "ERROR:" << endl;
+				cerr << "ERROR:" << endl << endl;
+				exit(BAD_RETURN_CODE);	  
 			}
-			break;
-		case XMIT:
-			num_restore_xfers--;
-			imds.Unlock(ptr->shadow_addr, ptr->owner, ptr->filename);
-			if (exit_code == CHILDTERM_SUCCESS)
-				Log(ptr->req_id, "File successfully transmitted");
-			else if ((exit_code == CHILDTERM_KILLED) && 
-					 (ptr->override == OVERRIDE)) {
-				Log(ptr->req_id, "File successfully transmitted; kill signal");
-				Log("overridden");
-			} else if (exit_code == CHILDTERM_SIGNALLED) {
-				sprintf(log_msg, 
-						"File transfer terminated due to signal #%d",
-						WTERMSIG(exit_status));
-				Log(ptr->req_id, log_msg);
-				if (WTERMSIG(exit_status) == SIGPIPE)
-					Log("Socket on receiving end closed");
-				else if (WTERMSIG(exit_status) == SIGKILL)
-					Log("User killed the peer process");
-			} else if (exit_code == CHILDTERM_KILLED) {
-				Log(ptr->req_id, 
-					"File transmission terminated by reclamation");
-				Log("process");
-			} else {
-				sprintf(log_msg, 
-						"File transmission self-terminated; error #%d", 
-						exit_code);
-				Log(ptr->req_id, log_msg);
-				Log("occurred during file transmission");
-			}
-			break;
-		case FILE_STATUS:
-			if (exit_code == CHILDTERM_SUCCESS)
-				Log(ptr->req_id, "Server status successfully transmitted");
-			else if (exit_code == CHILDTERM_KILLED)
-				Log(ptr->req_id, 
-					"Server status terminated by reclamation process");
-			else if (exit_code == CHILDTERM_SIGNALLED) {
-				sprintf(log_msg, 
-						"File transfer terminated due to signal #%d",
-						WTERMSIG(exit_status));
-				Log(ptr->req_id, log_msg);
-				if (WTERMSIG(exit_status) == SIGPIPE)
-					Log("Socket on receiving end closed");
-				else if (WTERMSIG(exit_status) == SIGKILL)
-					Log("User killed the peer process");
-			} else {
-				sprintf(log_msg, "Server status self-terminated; error #%d",
-						exit_code);
-				Log(ptr->req_id, log_msg);
-				Log("occurred during status transmission");
-			}
-			break;
-		default:
-			cerr << endl << "ERROR:" << endl;
-			cerr << "ERROR:" << endl;
-			cerr << "ERROR: illegal transfer type used; terminating" << endl;
-			cerr << "ERROR:" << endl;
-			cerr << "ERROR:" << endl << endl;
-			exit(BAD_RETURN_CODE);	  
-		}
 		transfers.Delete(child_pid);
     }
 	UnblockSignals();
@@ -1729,7 +1739,7 @@ int main(int   argc,
 
 	/* Consume a '-f' flag which the condor_master always gives to its
 	   children */
-	if (argv[1][0] == '-' && argv[1][1] == 'f') {
+	if (argc > 1 && argv[1][0] == '-' && argv[1][1] == 'f') {
 		argc--;
 		argv++;
 	}

@@ -49,19 +49,19 @@ typedef enum xfer_type
 
 typedef struct transferinfo
 {
-  int            req_id;
-  int            child_pid;
-  time_t         start_time;
-  u_lint         file_size;
-  xfer_type      status;
-  int            priority;
-  int            key;
-  u_short        override;
-  transferinfo*  prev;
-  transferinfo*  next;
-  struct in_addr shadow_addr;
-  char           filename[MAX_CONDOR_FILENAME_LENGTH];
-  char           owner[MAX_NAME_LENGTH];
+	int            req_id;
+	int            child_pid;
+	time_t         start_time;
+	u_lint         file_size;
+	xfer_type      status;
+	int            priority;
+	int            key;
+	u_short        override;
+	transferinfo*  prev;
+	transferinfo*  next;
+	struct in_addr shadow_addr;
+	char           filename[MAX_CONDOR_FILENAME_LENGTH];
+	char           owner[MAX_NAME_LENGTH];
 } transferinfo;
 
 
