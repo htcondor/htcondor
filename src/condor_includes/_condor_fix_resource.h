@@ -40,6 +40,16 @@ struct	rusage {
 };
 #endif /* HPUX9 */
 
+#if defined(ULTRIX43)
+#if defined(__STDC__) || defined(__cplusplus)
+	int getrlimit( int resource, struct rlimit *rlp );
+	int setrlimit( int resource, const struct rlimit *rlp );
+#else
+	int getrlimit();
+	int setrlimit();
+#endif
+#endif /* ULTRIX43 */
+
 #if defined(__cplusplus)
 }
 #endif
