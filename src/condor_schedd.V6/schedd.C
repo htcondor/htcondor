@@ -168,6 +168,7 @@ Scheduler::Scheduler()
 	timeoutid = -1;
 	startjobsid = -1;
 
+	reschedule_request_pending = false;
 	startJobsDelayBit = FALSE;
 	numRegContacts = 0;
 #ifndef WIN32
@@ -876,10 +877,17 @@ Scheduler::negotiate(int, Stream* s)
 			for (int a=0; !match && (addr = hent->h_addr_list[a]); a++) {
 				if (memcmp(addr, &endpoint_addr, sizeof(struct in_addr)) == 0){
 					match = true;
+						// since we now know we have heard back from our 
+						// local negotiator, we must clear the reschedule_request_pending
+						// flag permit subsequent reschedule commands to occur.
+					reschedule_request_pending = false;
 				}
 			}
 		}
-		// if it isn't our local negotiator, check the FlockHosts list
+		// if it isn't our local negotiator, check the FlockHosts list.
+		// note we do _not_ clear the reschedule_request_pending flag here, since
+		// a reschedule event means we want to hear from our local negotiator, not
+		// a flocking negotiator.
 		if (!match) {
 			char *host;
 			int n;
@@ -3332,24 +3340,32 @@ Scheduler::reschedule_negotiator(int, Stream *)
 
 	timeout();							// update the central manager now
 
-	ReliSock sock;
+		// only send reschedule command to negotiator if there is not a
+		// reschedule request already pending.
+	if ( !reschedule_request_pending ) {
+		ReliSock sock;
 
-	if (!sock.connect(Negotiator->addr(), 0)) {
-		dprintf( D_ALWAYS, "failed to connect to negotiator %s\n",
+		if (!sock.connect(Negotiator->addr(), 0)) {
+			dprintf( D_ALWAYS, "failed to connect to negotiator %s\n",
 				 Negotiator->addr() );
-		return;
+			return;
+		}
+
+		sock.encode();
+		if (!sock.code(cmd)) {
+			dprintf( D_ALWAYS,
+				"failed to send RESCHEDULE command to negotiator\n");
+			return;
+		}
+		if (!sock.eom()) {
+			dprintf( D_ALWAYS,
+				"failed to send RESCHEDULE command to negotiator\n");
+			return;
+		}
 	}
 
-	sock.encode();
-	if (!sock.code(cmd)) {
-		dprintf( D_ALWAYS,
-				"failed to send RESCHEDULE command to negotiator\n");
-		return;
-	}
-	if (!sock.eom()) {
-		dprintf( D_ALWAYS,
-				"failed to send RESCHEDULE command to negotiator\n");
-	}
+		// if made it here, we have told to negotiator to contact us
+	reschedule_request_pending = true;
 
 	if (SchedUniverseJobsIdle > 0) {
 		StartSchedUniverseJobs();

@@ -209,6 +209,8 @@ class Scheduler : public Service
 	Daemon*			Collector;
 	Daemon*			Negotiator;
 
+	bool reschedule_request_pending;
+
 	// connection variables
 	struct sockaddr_in	From;
 	int					Len; 
