@@ -132,7 +132,7 @@ CondorVersionInfo::built_since_version(int MajorVer, int MinorVer,
 	int Scalar = MajorVer * 1000000 + MinorVer * 1000 
 					+ SubMinorVer;
 
-	return ( Scalar >= myversion.Scalar );
+	return ( myversion.Scalar >= Scalar );
 }
 
 bool
