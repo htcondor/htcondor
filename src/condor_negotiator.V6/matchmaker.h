@@ -65,7 +65,10 @@ class Matchmaker : public Service
 		int  NegotiatorInterval;	// interval between negotiation cycles
 		int  NegotiatorTimeout;		// timeouts for communication
 		ExprTree *PreemptionHold;	// do not preempt if this expr evals to true
-		
+		time_t PreemptionInterval;	// time between preemptions
+
+		time_t LastPreemptionTime;	// time of last preemption
+
 		// rank condition on matches
 		ExprTree *rankCondStd;;		// non-preemption (Rank > CurrentRank)
 		ExprTree *rankCondPreempt;;	// preemption (Rank >= CurrentRank)
