@@ -141,6 +141,18 @@ Note that this feature is incompatible with the new feature described
 above where the shadow and starter can reconnect in certain
 circumstances. 
 
+\item Added support for vanilla jobs to be mirrored on a second
+  \Condor{schedd}. The jobs are submitted to the second \Condor{schedd}
+  on hold and will be released if the second \Condor{schedd} hasn't
+  heard from the first \Condor{schedd} (actually, a \Condor{gridmanager}
+  running under the first \Condor{schedd}) for a configurable amount of
+  time. Once the second \Condor{schedd} releases the jobs, the first
+  \Condor{schedd} acts as a mirror, reflecting the state of the jobs on
+  the second \Condor{schedd}.
+  To use this mirroring feature, jobs must be submitted
+  with a \Attr{mirror\_schedd} parameter in the submit file and require
+  no file transfer.
+
 \end{itemize}
 
 
