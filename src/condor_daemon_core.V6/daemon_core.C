@@ -44,6 +44,7 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 #include "get_daemon_addr.h"
 #include "condor_uid.h"
 #include "condor_commands.h"
+#include "condor_config.h"
 
 
 extern "C" 
@@ -52,7 +53,6 @@ extern "C"
 }
 
 extern char* mySubSystem;	// the subsys ID, such as SCHEDD
-
 
 TimerManager DaemonCore::t;
 
@@ -136,6 +136,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,int SocSize,int Reap
 
 	curr_dataptr = NULL;
 	curr_regdataptr = NULL;
+
+	send_child_alive_timer = -1;
 
 #ifdef WIN32
 	dcmainThreadId = ::GetCurrentThreadId();
@@ -941,6 +943,8 @@ DaemonCore::ReInit()
 {
 	char *addr;
 	struct sockaddr_in sin;
+	char *tmp;
+	char buf[50];
 	static tid = -1;
 
 	// Fetch the negotiator address for the Verify method to use
@@ -969,6 +973,34 @@ DaemonCore::ReInit()
 	} else {
 		daemonCore->Reset_Timer( tid, 8*60*60, 0 );
 	}
+
+	// Setup a timer to send child keepalives to our parent, if we have 
+	// a daemon core parent.
+	if ( ppid ) {
+		max_hang_time = 0;
+		sprintf(buf,"%s_NOT_RESPONDING_TIMEOUT",mySubSystem);
+		if ( !(tmp=param(buf)) ) {
+			tmp = param("NOT_RESPONDING_TIMEOUT");
+		}
+		if ( tmp ) {
+			max_hang_time = atoi(tmp);
+			free(tmp);
+		} 
+		if ( !max_hang_time ) {
+			max_hang_time = 60 * 60;	// default to 1 hour
+		}
+		int send_update = (max_hang_time / 3) - 30;
+		if ( send_update < 1 )
+			send_update = 1;
+		if ( send_child_alive_timer == -1 ) {
+			send_child_alive_timer = Register_Timer(1, (unsigned)send_update, 
+					(TimerHandlercpp)&DaemonCore::SendAliveToParent,
+					"DaemonCore::SendAliveToParent", this );
+		} else {
+			Reset_Timer(send_child_alive_timer, 1, send_update);
+		}
+	}
+
 	return TRUE;
 }
 
@@ -1365,6 +1397,9 @@ int DaemonCore::HandleReq(int socki)
 				sin_to_string(stream->endpoint()) );
 		dprintf(D_ALWAYS,"DaemonCore: received unregistered command request %d !\n",req);
 		result = 0;		// make result != to KEEP_STREAM, so we blow away this socket below
+		// if UDP, consume the rest of this message to try to stay "in-sync"
+		if ( !is_tcp)
+			stream->end_of_message();
 	}
 
 	if ( reqFound == TRUE ) {
@@ -1413,6 +1448,7 @@ int DaemonCore::HandleReq(int socki)
 	else
 		return TRUE;
 }
+
 
 int DaemonCore::HandleSigCommand(int command, Stream* stream)
 {
@@ -2391,9 +2427,7 @@ int DaemonCore::Create_Process(
 	PROCESS_INFORMATION piProcess;
 	SECURITY_ATTRIBUTES sa;
 	SECURITY_DESCRIPTOR sd;
-
-	// Change semicolons into nulls.
-	env = ParseEnvArgsString(env, 1, true);
+	char *newenv = NULL;
 
 	// prepare a STARTUPINFO structure for the new process
 	ZeroMemory(&si,sizeof(si));
@@ -2459,20 +2493,32 @@ int DaemonCore::Create_Process(
 	if ( new_process_group == TRUE )
 		new_process_group = CREATE_NEW_PROCESS_GROUP;
 	else
-		new_process_group =  0;
+		new_process_group =  0;	
 
-	// Place inheritbuf into the environment as env variable CONDOR_INHERIT
-	if( !SetEnv("CONDOR_INHERIT", inheritbuf) ) {
-		dprintf(D_ALWAYS, "Create_Process: Failed to set "
-				"CONDOR_INHERIT env.\n");
-		return FALSE;
+	// Place inheritbuf into the environment as env variable CONDOR_INHERIT.
+	// Add it to the user-specified environment if one specified, else add
+	// it to our environment (which will then be inherited by our child).
+	// Rememer to free newenv if not NULL; it was malloced.
+	newenv = ParseEnvArgsString(env,inheritbuf);
+	if ( !newenv ) {
+		if( !SetEnv("CONDOR_INHERIT", inheritbuf) ) {
+			dprintf(D_ALWAYS, "Create_Process: Failed to set "
+					"CONDOR_INHERIT env.\n");
+			return FALSE;
+		}
 	}
 
 	if ( !::CreateProcess(name,args,NULL,NULL,inherit_handles,
 			new_process_group,env,cwd,&si,&piProcess) ) {
 		dprintf(D_ALWAYS,
 			"Create_Process: CreateProcess failed, errno=%d\n",GetLastError());
+		if ( newenv ) {
+			free(newenv);
+		}
 		return FALSE;
+	}
+	if ( newenv ) {
+		free(newenv);
 	}
 
 	// save pid info out of piProcess 
@@ -2693,6 +2739,8 @@ int DaemonCore::Create_Process(
 	pidtmp->is_local = TRUE;
 	pidtmp->parent_is_local = TRUE;
 	pidtmp->reaper_id = reaper_id;
+	pidtmp->hung_tid = -1;
+	pidtmp->was_not_responding = FALSE;
 #ifdef WIN32
 	pidtmp->hProcess = piProcess.hProcess;
 	pidtmp->hThread = piProcess.hThread;
@@ -2774,6 +2822,8 @@ DaemonCore::Inherit( ReliSock* &rsock, SafeSock* &ssock )
 		pidtmp->is_local = TRUE;
 		pidtmp->parent_is_local = TRUE;
 		pidtmp->reaper_id = 0;
+		pidtmp->hung_tid = -1;
+		pidtmp->was_not_responding = FALSE;
 #ifdef WIN32
 		pidtmp->hProcess = ::OpenProcess( SYNCHRONIZE | PROCESS_QUERY_INFORMATION | STANDARD_RIGHTS_REQUIRED , FALSE, ppid );
 		assert(pidtmp->hProcess);
@@ -3026,6 +3076,46 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 
 	return TRUE;
 }
+
+#define EXCEPTION( x ) case EXCEPTION_##x: return 0;
+int 
+WIFEXITED(DWORD stat) 
+{
+	switch (stat) {
+		EXCEPTION( ACCESS_VIOLATION )
+        EXCEPTION( DATATYPE_MISALIGNMENT )        
+		EXCEPTION( BREAKPOINT )
+        EXCEPTION( SINGLE_STEP )        
+		EXCEPTION( ARRAY_BOUNDS_EXCEEDED )
+        EXCEPTION( FLT_DENORMAL_OPERAND )        
+		EXCEPTION( FLT_DIVIDE_BY_ZERO )
+        EXCEPTION( FLT_INEXACT_RESULT )
+        EXCEPTION( FLT_INVALID_OPERATION )        
+		EXCEPTION( FLT_OVERFLOW )
+        EXCEPTION( FLT_STACK_CHECK )        
+		EXCEPTION( FLT_UNDERFLOW )
+        EXCEPTION( INT_DIVIDE_BY_ZERO )        
+		EXCEPTION( INT_OVERFLOW )
+        EXCEPTION( PRIV_INSTRUCTION )        
+		EXCEPTION( IN_PAGE_ERROR )
+        EXCEPTION( ILLEGAL_INSTRUCTION )
+        EXCEPTION( NONCONTINUABLE_EXCEPTION )        
+		EXCEPTION( STACK_OVERFLOW )
+        EXCEPTION( INVALID_DISPOSITION )        
+		EXCEPTION( GUARD_PAGE )
+        EXCEPTION( INVALID_HANDLE )
+	}
+	return 1;
+}
+
+int 
+WIFSIGNALED(DWORD stat) 
+{
+	if ( WIFEXITED(stat) )
+		return 0;
+	else
+		return 1;
+}
 #endif  // of WIN32
 
 int DaemonCore::HandleProcessExitCommand(int command, Stream* stream)
@@ -3145,6 +3235,11 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	::CloseHandle(pidentry->hThread);
 	::CloseHandle(pidentry->hProcess);
 #endif
+	// cancel the hung timer if we have one
+	if ( pidentry->hung_tid != -1 ) {
+		Cancel_Timer(pidentry->hung_tid);
+	}
+	// and delete the pidentry
 	delete pidentry;
 
 	// Finally, some hard-coded logic.  If the pid that exited was our parent,
@@ -3158,15 +3253,139 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	return TRUE;
 }
 
-#ifdef WIN32
-char *DaemonCore::ParseEnvArgsString(char *incoming, bool sep_flag)
+int DaemonCore::HandleChildAliveCommand(int command, Stream* stream)
 {
+	pid_t child_pid;
+	unsigned int timeout_secs;
+	PidEntry *pidentry;
+	int ret_value;
+
+	if (!stream->code(child_pid) ||
+		!stream->code(timeout_secs) ||
+		!stream->end_of_message()) {
+		dprintf(D_ALWAYS,"Failed to read ChildAlive packet\n");
+		return FALSE;
+	}
+
+	if ((pidTable->lookup(child_pid, pidentry) < 0)) {
+		// we have no information on this pid
+		dprintf(D_ALWAYS,
+			"Received child alive command from unknown pid %d\n",child_pid);
+		return FALSE;
+	}
+
+	if ( pidentry->hung_tid != -1 ) {
+		ret_value = daemonCore->Reset_Timer( pidentry->hung_tid, timeout_secs );
+		ASSERT( ret_value != -1 );
+	} else {
+		pidentry->hung_tid = 
+			Register_Timer(timeout_secs,(Eventcpp) &DaemonCore::HungChildTimeout,
+			"DaemonCore::HungChildTimeout", this);
+		ASSERT( pidentry->hung_tid != -1 );
+		Register_DataPtr( (void *)child_pid );
+	}	
+
+	dprintf(D_DAEMONCORE,
+		"received childalive, pid=%d, secs=%d\n",child_pid,timeout_secs);
+
+	return TRUE;
+
+}
+
+int DaemonCore::HungChildTimeout()
+{
+	pid_t hung_child_pid;
+	PidEntry *pidentry;
+
+	hung_child_pid = (pid_t) GetDataPtr();
+
+	if ((pidTable->lookup(hung_child_pid, pidentry) < 0)) {
+		// we have no information on this pid, it must have exited
+		return FALSE;
+	}
+
+	dprintf(D_ALWAYS,"ERROR: Child pid %d appears hung! Killing it hard.\n",
+		hung_child_pid);
+
+	// set a flag in the PidEntry so a reaper can discover it was killed
+	// because it was hung.
+	pidentry->was_not_responding = TRUE;
+
+	// and hardkill the bastard!
+	Shutdown_Fast(hung_child_pid);
+
+	return TRUE;
+}
+
+int DaemonCore::Was_Not_Responding(pid_t pid)
+{
+	PidEntry *pidentry;
+
+	if ((pidTable->lookup(pid, pidentry) < 0)) {
+		// we have no information on this pid, assume the safe
+		// case.
+		return FALSE;
+	}
+
+	return pidentry->was_not_responding;
+}
+
+
+int DaemonCore::SendAliveToParent()
+{
+	SafeSock *sock;
+	char *parent_sinfull_string;
+	int alive_command = DC_CHILDALIVE;
+
+	dprintf(D_FULLDEBUG,"in SendAliveToParent\n");
+	parent_sinfull_string = InfoCommandSinfulString(ppid);	
+	if (!parent_sinfull_string ) {
+		return FALSE;
+	}
 	
-	char *answer = strdup(incoming);
+	sock = new SafeSock(parent_sinfull_string, 0);
+	if (!sock) {
+		return FALSE;
+	}
+	
+	dprintf(D_DAEMONCORE,"sending alive to %s\n",parent_sinfull_string);
+	sock->encode();
+	sock->code(alive_command);
+	sock->code(mypid);
+	sock->code(max_hang_time);
+	sock->end_of_message();
+
+	delete sock;	
+
+	return TRUE;
+}
+	
+#ifdef WIN32
+char *DaemonCore::ParseEnvArgsString(char *incoming, char *inheritbuf)
+{
+	int len;
+	char *answer;
+
+	if ( incoming == NULL )
+		return NULL;
+
+	if ( inheritbuf ) {
+		len = strlen(incoming) + strlen(inheritbuf) + 20;
+		answer = (char *)malloc(len);
+		strcpy(answer,incoming);
+		strcat(answer,";CONDOR_INHERIT=");
+		strcat(answer,inheritbuf);
+	} else {
+		len = strlen(incoming) + 2;
+		answer = (char *)malloc(len);
+		strcpy(answer,incoming);		
+	}
+	answer[ strlen(answer)+1 ] = '\0';
+
 	char *temp = answer;
-	while( (temp = strchr(temp, sep_flag?';':' ') ) )
+	while( (temp = strchr(temp, ';') ) )
 	{
-		temp = 0;
+		*temp = '\0';
 	}
 	return answer;
 }

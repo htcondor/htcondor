@@ -65,13 +65,13 @@ typedef int		(Service::*SocketHandlercpp)(Stream*);
 typedef int		(*ReaperHandler)(Service*,int pid,int exit_status);
 typedef int		(Service::*ReaperHandlercpp)(int pid,int exit_status);
 
-// other typedefs and macros needed on WIN32
+// other macros and protos needed on WIN32 for exit status
 #ifdef WIN32
-#define WIFEXITED(stat) ((int)(1))
 #define WEXITSTATUS(stat) ((int)(stat))
-#define WIFSIGNALED(stat) ((int)(0))
-#define WTERMSIG(stat) ((int)(0))
+#define WTERMSIG(stat) ((int)(stat))
 #define WIFSTOPPED(stat) ((int)(0))
+int WIFEXITED(DWORD stat);
+int WIFSIGNALED(DWORD stat);
 #endif  // of ifdef WIN32
 
 // some constants for HandleSig().
@@ -90,6 +90,8 @@ typedef int		(Service::*ReaperHandlercpp)(int pid,int exit_status);
 /** helper function for finding available port for both 
 	TCP and UDP command socket */
 int BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock);
+
+extern "C" char *mySubSystem;
 
 /** This class badly needs documentation, doesn't it? 
 	This file contains the definition for class DaemonCore. This is the
@@ -169,7 +171,7 @@ class DaemonCore : public Service
 					char *event_descrip, Service* s);
 		int		Cancel_Timer( int id );
 		int		Reset_Timer( int id, unsigned when, unsigned period = 0 );
-
+		
 		void	Dump(int, char* = NULL );
 
 		inline	pid_t getpid() { return mypid; };
@@ -270,9 +272,12 @@ class DaemonCore : public Service
 		// NULL terminated array of inherited sockets
 		Stream **GetInheritedSocks() { return (Stream **)inheritedSocks; }
 
+		// see if process was killed because it was hung
+		int Was_Not_Responding(pid_t pid);
+
+
 #ifdef FUTURE		
 		int		Create_Thread()
-		int		Kill_Process()
 		int		Kill_Thread()
 #endif
 
@@ -391,6 +396,8 @@ class DaemonCore : public Service
 			int is_local;
 			int parent_is_local;
 			int	reaper_id;
+			int hung_tid;	// Timer to detect hung processes
+			int was_not_responding;
 		};
 		typedef HashTable <pid_t, PidEntry *> PidHashTable;
 		PidHashTable* pidTable;
@@ -438,6 +445,13 @@ class DaemonCore : public Service
 
 		Stream *inheritedSocks[MAX_SOCKS_INHERITED+1];
 
+		// methods to detect and kill hung processes
+		int HandleChildAliveCommand(int command, Stream* stream);
+		int HungChildTimeout();
+		int SendAliveToParent();
+		unsigned int max_hang_time;
+		int send_child_alive_timer;
+
 		// these need to be in thread local storage someday
 		void **curr_dataptr;
 		void **curr_regdataptr;
@@ -445,7 +459,7 @@ class DaemonCore : public Service
 		// end of thread local storage
 		
 #ifdef WIN32
-	static char *ParseEnvArgsString(char *env, bool sep_flag);
+	static char *ParseEnvArgsString(char *env, char *inheritbuf);
 #else
 	static char **ParseEnvArgsString(char *env, bool env);
 #endif
