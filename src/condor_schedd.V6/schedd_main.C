@@ -144,7 +144,7 @@ main_init(int argc, char* argv[])
 	}
 	
 	ClassAd *ScheddClassad = new ClassAd();
-	config( ScheddClassad );
+	config( ScheddClassad, mySubSystem );
 
 	Init();
 	
