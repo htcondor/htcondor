@@ -27,9 +27,9 @@
 #include "condor_config.h"
 
 	// Define a "standard" StatBuf type
-#if defined HAS_STAT64
+#if HAVE_STAT64
 typedef struct stat64 StatStructType;
-#elif defined HAS__STATI64
+#elif HAVE__STATI64
 typedef struct _stati64 StatStructType;
 #else
 typedef struct stat StatStructType;

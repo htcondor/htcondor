@@ -69,10 +69,10 @@ StatWrapper::Retry( void )
 int
 StatWrapper::DoStat( const char *path )
 {
-#if defined HAS_STAT64
+#if HAVE_STAT64
 	name = "stat64";
 	status = ::stat64( path, &buf );
-#elif defined HAS__STATI64
+#elif HAVE__STATI64
 	name = "_stati64";
 	status = ::_stati64( path, &buf );
 #else
@@ -87,10 +87,10 @@ StatWrapper::DoStat( const char *path )
 int
 StatWrapper::DoStat( int fd )
 {
-#if defined HAS_STAT64
+#if HAVE_STAT64
 	name = "fstat64";
 	status = ::fstat64( fd, &buf );
-#elif defined HAS__STATI64
+#elif HAVE__STATI64
 	name = "_fstati64";
 	status = ::_fstati64( fd, &buf );
 #else
