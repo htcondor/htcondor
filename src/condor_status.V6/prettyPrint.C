@@ -399,7 +399,7 @@ printCkptSrvrNormal(ClassAd *ad)
 					"AvailDisk", ATTR_SUBNET);
 			pm.registerFormat("%-20.20s ", ATTR_NAME, "[??????????????????]");
 			pm.registerFormat("%9d ", ATTR_DISK, "[?????]");
-			pm.registerFormat("%11s\n", ATTR_SUBNET, "[?????]\n");
+			pm.registerFormat("%-11s\n", ATTR_SUBNET, "[?????]\n");
 			first = false;
 		}
 	}
