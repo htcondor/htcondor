@@ -1,12 +1,16 @@
-#define OperatingSystem OSF1
-#define Architecture ALPHA
+#define OperatingSystem	OSF1
+#define Architecture	ALPHA
 
 #define ImakeOpsysFlag	-DIS_DUX4
 
-#define Platform	ALPHA_OSF1
+#define Platform	ALPHA_DUX4
 #define GccArch		alpha-dec-osf4.0
 
 #define PlatformFlags	-DDUX
+
+#define IS_ALPHA_OSF1	YES
+#define IS_DUX		YES
+#define IS_DUX4		YES
 
 #define Tilde /**/
 #define RpcLib /**/
@@ -24,7 +28,6 @@
 
 #define DebugFlag -ggdb
 
-#define IS_ALPHA_OSF1			YES
 #define IS_V5				YES
 
 #define DOES_CHECKPOINTING		YES
@@ -87,7 +90,6 @@
 #define syscall_lib syscall_lib
 #define PsAllFlag /bin/ps -e				/* "Ps" flag when you want everything */
 #define PsAwkProg '{ print $1 }'	/* Pick out pid from "ps" output */
-#define CompatFlags /**/
 
 #ifndef Ctags
 #define Ctags ctags -t
