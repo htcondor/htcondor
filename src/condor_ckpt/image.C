@@ -18,6 +18,8 @@ static char *_FileName_ = __FILE__;
 #include <signal.h>
 #endif
 
+extern int errno;
+
 const int KILO = 1024;
 
 extern "C" int open_write_stream( const char * ckpt_file, size_t n_bytes );
@@ -358,17 +360,22 @@ Image::Write( const char *ckpt_file )
 	}
 
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-	status = Write( fd );
+	if( Write(fd) < 0 ) {
+		return -1;
+	}
 
 		// In remote mode, our peer will send back the actual
 		// number of bytes transferred as a check
 	if( MyImage.GetMode() == REMOTE ) {
 		bytes_read = read( fd, &nbytes, sizeof(nbytes) );
 		nbytes = ntohl( nbytes );
-		dprintf( D_ALWAYS, "USER PROC: CHECKPOINT IMAGE SENT OK\n" );
 	}
 
-	(void)close( fd );
+	if( close(fd) < 0 ) {
+		return -1;
+	}
+
+	dprintf( D_ALWAYS, "USER PROC: CHECKPOINT IMAGE SENT OK\n" );
 	SetSyscalls( scm );
 
 
@@ -377,9 +384,7 @@ Image::Write( const char *ckpt_file )
 		report_image_size( (MyImage.GetLen() + KILO - 1) / KILO );
 	}
 
-
-
-	return status;
+	return 0;
 }
 
 /*
@@ -647,6 +652,7 @@ terminate_with_sig( int sig )
 	act.sa_handler = (SIG_HANDLER)SIG_DFL;
 	sigemptyset( &act.sa_mask );
 	act.sa_flags = 0;
+	errno = 0;
 	if( sigaction(sig,&act,0) < 0 ) {
 		EXCEPT( "sigaction" );
 	}
