@@ -646,6 +646,8 @@ unblock_signals()
 #	define LIM (170 * UNIT)
 #elif defined(HPPAR)
 #	define LIM (260 * UNIT)
+#elif defined(LINUX)
+#	define LIM (200 * UNIT)
 #endif
 
 #if 1
