@@ -680,6 +680,18 @@ server, shadow, and starter, none of which use DaemonCore yet).
   IP/host-based security in Condor for details on these
   macros and how to configure them.
 
+\item[\Macro{SETTABLE\_ATTRS\Dots}] \label{param:SettableAttrs} All
+  macros that begin with \Macro{SETTABLE\_ATTRS} or
+  \Macro{SUBSYS\_SETTABLE\_ATTRS} are settings used to restrict what 
+  configuration values can be changed with the \Condor{config\_val} 
+  tool's \Arg{-set} and related options.
+  See section~\ref{sec:Host-Security} on Setting up
+  IP/host-based security in Condor for details on these
+  macros and how to configure them.  
+  In particular, you should read section~\ref{sec:Config-Val-Security}
+  on page~\pageref{sec:Config-Val-Security} for details specific to
+  these macros.
+
 \item[\Macro{SHUTDOWN\_GRACEFUL\_TIMEOUT}]
   \label{param:ShutdownGracefulTimeout} Determines how long
   Condor will allow daemons try their graceful shutdown methods
