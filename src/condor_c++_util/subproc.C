@@ -70,8 +70,8 @@ SubProc::display()
 SubProc::~SubProc()
 {
 	terminate();
-	delete name;
-	delete args;
+	delete [] name;
+	delete [] args;
 }
 
 FILE *
