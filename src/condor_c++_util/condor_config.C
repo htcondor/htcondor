@@ -70,9 +70,11 @@ char* find_global();
 char* find_local();
 char* find_global_root();
 char* find_local_root();
-char* find_file();
+char* find_file( const char*, const char*);
 void init_tilde();
 void fill_attributes(ClassAd*);
+void init_config();
+void clear_config();
 
 // External variables
 extern int	ConfigLineNo;
