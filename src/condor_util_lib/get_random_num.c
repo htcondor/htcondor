@@ -28,11 +28,13 @@
 */ 
 
 #include <time.h>
+#if !defined(WIN32)
 #include <values.h>
+#endif
 #include <stdlib.h>
 
 /* srand48, lrand48, and drand48 seem to be available on all Condor
-   platforms.  -Jim B. */
+   platforms except WIN32.  -Jim B. */
 
 static char initialized = 0;
 
@@ -44,7 +46,11 @@ int set_seed(int seed)
 		seed = time(0);
 	}
 
+#if defined(WIN32)
+	srand(seed);
+#else
 	srand48(seed);
+#endif
 	initialized = 1;
 
 	return seed;
@@ -58,7 +64,11 @@ int get_random_int()
 		set_seed(0);
 	}
 
+#if defined(WIN32)
+	return rand();
+#else
 	return (int) (lrand48() & MAXINT);
+#endif
 }
 
 /* returns a random floating point number between 0.0 and 1.0, trying
@@ -69,5 +79,9 @@ float get_random_float()
 		set_seed(0);
 	}
 
+#if defined(WIN32)
+	return (float)rand()/(float)RAND_MAX;
+#else
 	return (float) drand48();
+#endif
 }
