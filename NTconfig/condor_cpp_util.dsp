@@ -62,7 +62,8 @@ LIB32=link.exe -lib
 # PROP Intermediate_Dir "../src/condor_c++_util"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /Z7 /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /FR /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
+# ADD CPP /nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
+# SUBTRACT CPP /Fr
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
@@ -78,11 +79,27 @@ LIB32=link.exe -lib
 # Name "condor_cpp_util - Win32 Debug"
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\access.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\access.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\ad_printmask.C"
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\ad_printmask.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\classad_collection.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\classad_collection.h"
 # End Source File
 # Begin Source File
 
@@ -116,6 +133,10 @@ SOURCE=..\src\condor_includes\condor_config.h
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\condor_event.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\condor_event.h"
 # End Source File
 # Begin Source File
 
@@ -168,6 +189,10 @@ SOURCE="..\src\condor_c++_util\environ.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\extArray.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\file_lock.C"
 # End Source File
 # Begin Source File
@@ -193,6 +218,14 @@ SOURCE="..\src\condor_c++_util\get_daemon_addr.h"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\get_full_hostname.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\killfamily.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\killfamily.h"
 # End Source File
 # Begin Source File
 
@@ -229,6 +262,14 @@ SOURCE="..\src\condor_c++_util\my_subsystem.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\ntsysinfo.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\ntsysinfo.h"
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\h\proc.h
 # End Source File
 # Begin Source File
@@ -262,6 +303,10 @@ SOURCE="..\src\condor_c++_util\usagemon.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\user_log.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\user_log.c++.h"
 # End Source File
 # End Target
 # End Project

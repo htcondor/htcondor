@@ -56,6 +56,7 @@ CLEAN :"condor_procapi - Win32 ReleaseCLEAN"
 !ELSE 
 CLEAN :
 !ENDIF 
+	-@erase "$(INTDIR)\ntsysinfo.obj"
 	-@erase "$(INTDIR)\testprocapi.obj"
 	-@erase "$(INTDIR)\vc50.idb"
 	-@erase "$(OUTDIR)\condor_procapi_test.exe"
@@ -80,6 +81,7 @@ LINK32_FLAGS=ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib\
  /pdb:"$(OUTDIR)\condor_procapi_test.pdb" /machine:I386\
  /out:"$(OUTDIR)\condor_procapi_test.exe" 
 LINK32_OBJS= \
+	"$(INTDIR)\ntsysinfo.obj" \
 	"$(INTDIR)\testprocapi.obj" \
 	"$(OUTDIR)\condor_procapi.lib"
 
@@ -98,12 +100,11 @@ OutDir=.\..\src\condor_procapi
 
 !IF "$(RECURSE)" == "0" 
 
-ALL : "$(OUTDIR)\condor_procapi_test.exe" "$(OUTDIR)\condor_procapi_test.bsc"
+ALL : "$(OUTDIR)\condor_procapi_test.exe"
 
 !ELSE 
 
-ALL : "condor_procapi - Win32 Debug" "$(OUTDIR)\condor_procapi_test.exe"\
- "$(OUTDIR)\condor_procapi_test.bsc"
+ALL : "condor_procapi - Win32 Debug" "$(OUTDIR)\condor_procapi_test.exe"
 
 !ENDIF 
 
@@ -112,10 +113,9 @@ CLEAN :"condor_procapi - Win32 DebugCLEAN"
 !ELSE 
 CLEAN :
 !ENDIF 
+	-@erase "$(INTDIR)\ntsysinfo.obj"
 	-@erase "$(INTDIR)\testprocapi.obj"
-	-@erase "$(INTDIR)\testprocapi.sbr"
 	-@erase "$(INTDIR)\vc50.idb"
-	-@erase "$(OUTDIR)\condor_procapi_test.bsc"
 	-@erase "$(OUTDIR)\condor_procapi_test.exe"
 	-@erase "$(OUTDIR)\condor_procapi_test.ilk"
 	-@erase "$(OUTDIR)\condor_procapi_test.pdb"
@@ -125,20 +125,14 @@ CLEAN :
 
 CPP_PROJ=/nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes"\
  /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS"\
- /FR"$(INTDIR)\\" /Fp"..\src\condor_c++_util/condor_common.pch"\
- /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
+ /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h"\
+ /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 CPP_OBJS=..\src\condor_procapi/
-CPP_SBRS=..\src\condor_procapi/
+CPP_SBRS=.
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_procapi_test.bsc" 
 BSC32_SBRS= \
-	"$(INTDIR)\testprocapi.sbr"
-
-"$(OUTDIR)\condor_procapi_test.bsc" : "$(OUTDIR)" $(BSC32_SBRS)
-    $(BSC32) @<<
-  $(BSC32_FLAGS) $(BSC32_SBRS)
-<<
-
+	
 LINK32=link.exe
 LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
  advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib\
@@ -147,6 +141,7 @@ LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
  /incremental:yes /pdb:"$(OUTDIR)\condor_procapi_test.pdb" /debug /machine:I386\
  /out:"$(OUTDIR)\condor_procapi_test.exe" /pdbtype:sept 
 LINK32_OBJS= \
+	"$(INTDIR)\ntsysinfo.obj" \
 	"$(INTDIR)\testprocapi.obj" \
 	"$(OUTDIR)\condor_procapi.lib"
 
@@ -221,25 +216,41 @@ LINK32_OBJS= \
 
 !ENDIF 
 
+SOURCE="..\src\condor_c++_util\ntsysinfo.C"
+DEP_CPP_NTSYS=\
+	"..\src\condor_c++_util\ntsysinfo.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\h\fake_flock.h"\
+	"..\src\h\file_lock.h"\
+	{$(INCLUDE)}"condor_constants.h"\
+	{$(INCLUDE)}"condor_file_lock.h"\
+	{$(INCLUDE)}"condor_fix_assert.h"\
+	{$(INCLUDE)}"condor_fix_string.h"\
+	{$(INCLUDE)}"condor_header_features.h"\
+	{$(INCLUDE)}"condor_hpux_64bit_types.h"\
+	{$(INCLUDE)}"condor_macros.h"\
+	{$(INCLUDE)}"condor_sys_dux.h"\
+	{$(INCLUDE)}"condor_sys_hpux.h"\
+	{$(INCLUDE)}"condor_sys_irix.h"\
+	{$(INCLUDE)}"condor_sys_linux.h"\
+	{$(INCLUDE)}"condor_sys_nt.h"\
+	{$(INCLUDE)}"condor_sys_solaris.h"\
+	{$(INCLUDE)}"condor_system.h"\
+	{$(INCLUDE)}"sys\stat.h"\
+	{$(INCLUDE)}"sys\types.h"\
+	
+
+"$(INTDIR)\ntsysinfo.obj" : $(SOURCE) $(DEP_CPP_NTSYS) "$(INTDIR)"\
+ "..\src\condor_c++_util\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
 SOURCE=..\src\condor_procapi\testprocapi.C
-
-!IF  "$(CFG)" == "condor_procapi_test - Win32 Release"
-
 
 "$(INTDIR)\testprocapi.obj" : $(SOURCE) "$(INTDIR)"\
  "..\src\condor_c++_util\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
-
-!ELSEIF  "$(CFG)" == "condor_procapi_test - Win32 Debug"
-
-
-"$(INTDIR)\testprocapi.obj"	"$(INTDIR)\testprocapi.sbr" : $(SOURCE) "$(INTDIR)"\
- "..\src\condor_c++_util\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-!ENDIF 
 
 
 !ENDIF 

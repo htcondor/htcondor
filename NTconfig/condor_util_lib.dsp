@@ -62,7 +62,8 @@ LIB32=link.exe -lib
 # PROP Intermediate_Dir "..\src\condor_util_lib"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /Z7 /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FR /Fp"..\src\condor_util_lib/condor_common.pch" /Yu"condor_common.h" /FD /c
+# ADD CPP /nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"..\src\condor_util_lib/condor_common.pch" /Yu"condor_common.h" /FD /c
+# SUBTRACT CPP /Fr
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
@@ -95,6 +96,10 @@ SOURCE=..\src\condor_util_lib\condor_common.C
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_includes\condor_email.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_util_lib\condor_errlst.c
 # End Source File
 # Begin Source File
@@ -111,6 +116,14 @@ SOURCE=..\src\condor_util_lib\dprintf_config.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_util_lib\email.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_util_lib\email_file.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_util_lib\escapes.c
 # ADD CPP /Yu
 # End Source File
@@ -121,6 +134,14 @@ SOURCE=..\src\condor_util_lib\except.c
 # Begin Source File
 
 SOURCE=..\src\h\except.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_util_lib\fdprintf.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_includes\fdprintf.h
 # End Source File
 # Begin Source File
 
@@ -172,8 +193,31 @@ SOURCE=..\src\condor_util_lib\signames.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_util_lib\uids.c
+SOURCE=..\src\condor_util_lib\strcmp_until.c
+
+!IF  "$(CFG)" == "condor_util_lib - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
+
 # SUBTRACT CPP /YX /Yc /Yu
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_util_lib\uids.c
+
+!IF  "$(CFG)" == "condor_util_lib - Win32 Release"
+
+# SUBTRACT CPP /YX /Yc /Yu
+
+!ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
+
+# ADD CPP /Yu
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 

@@ -30,6 +30,8 @@ NULL=
 NULL=nul
 !ENDIF 
 
+CPP=cl.exe
+
 !IF  "$(CFG)" == "condor_daemon_core - Win32 Release"
 
 OUTDIR=.\..\src\condor_daemon_core.V6
@@ -52,6 +54,7 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_ipverify.obj"
 	-@erase "$(INTDIR)\daemon_core.obj"
 	-@erase "$(INTDIR)\daemon_core_main.obj"
+	-@erase "$(INTDIR)\exphnd.WIN32.obj"
 	-@erase "$(INTDIR)\timer_manager.obj"
 	-@erase "$(INTDIR)\vc50.idb"
 	-@erase "$(OUTDIR)\condor_daemon_core.lib"
@@ -59,44 +62,12 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP=cl.exe
 CPP_PROJ=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I\
  "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS"\
  /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h"\
  /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 CPP_OBJS=..\src\condor_daemon_core.V6/
 CPP_SBRS=.
-
-.c{$(CPP_OBJS)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(CPP_OBJS)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(CPP_OBJS)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.c{$(CPP_SBRS)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(CPP_SBRS)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(CPP_SBRS)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_daemon_core.bsc" 
 BSC32_SBRS= \
@@ -107,6 +78,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\condor_ipverify.obj" \
 	"$(INTDIR)\daemon_core.obj" \
 	"$(INTDIR)\daemon_core_main.obj" \
+	"$(INTDIR)\exphnd.WIN32.obj" \
 	"$(INTDIR)\timer_manager.obj"
 
 "$(OUTDIR)\condor_daemon_core.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
@@ -124,37 +96,51 @@ OutDir=.\..\src\condor_daemon_core.V6
 
 !IF "$(RECURSE)" == "0" 
 
-ALL : "$(OUTDIR)\condor_daemon_core.lib" "$(OUTDIR)\condor_daemon_core.bsc"
+ALL : "$(OUTDIR)\condor_daemon_core.lib"
 
 !ELSE 
 
-ALL : "$(OUTDIR)\condor_daemon_core.lib" "$(OUTDIR)\condor_daemon_core.bsc"
+ALL : "$(OUTDIR)\condor_daemon_core.lib"
 
 !ENDIF 
 
 CLEAN :
 	-@erase "$(INTDIR)\condor_ipverify.obj"
-	-@erase "$(INTDIR)\condor_ipverify.sbr"
 	-@erase "$(INTDIR)\daemon_core.obj"
-	-@erase "$(INTDIR)\daemon_core.sbr"
 	-@erase "$(INTDIR)\daemon_core_main.obj"
-	-@erase "$(INTDIR)\daemon_core_main.sbr"
+	-@erase "$(INTDIR)\exphnd.WIN32.obj"
 	-@erase "$(INTDIR)\timer_manager.obj"
-	-@erase "$(INTDIR)\timer_manager.sbr"
 	-@erase "$(INTDIR)\vc50.idb"
-	-@erase "$(OUTDIR)\condor_daemon_core.bsc"
 	-@erase "$(OUTDIR)\condor_daemon_core.lib"
 
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP=cl.exe
 CPP_PROJ=/nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes"\
  /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_WINDOWS"\
- /FR"$(INTDIR)\\" /Fp"..\src\condor_c++_util/condor_common.pch"\
- /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
+ /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h"\
+ /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 CPP_OBJS=..\src\condor_daemon_core.V6/
-CPP_SBRS=..\src\condor_daemon_core.V6/
+CPP_SBRS=.
+BSC32=bscmake.exe
+BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_daemon_core.bsc" 
+BSC32_SBRS= \
+	
+LIB32=link.exe -lib
+LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_daemon_core.lib" 
+LIB32_OBJS= \
+	"$(INTDIR)\condor_ipverify.obj" \
+	"$(INTDIR)\daemon_core.obj" \
+	"$(INTDIR)\daemon_core_main.obj" \
+	"$(INTDIR)\exphnd.WIN32.obj" \
+	"$(INTDIR)\timer_manager.obj"
+
+"$(OUTDIR)\condor_daemon_core.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
+    $(LIB32) @<<
+  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS)
+<<
+
+!ENDIF 
 
 .c{$(CPP_OBJS)}.obj::
    $(CPP) @<<
@@ -186,226 +172,202 @@ CPP_SBRS=..\src\condor_daemon_core.V6/
    $(CPP_PROJ) $< 
 <<
 
-BSC32=bscmake.exe
-BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_daemon_core.bsc" 
-BSC32_SBRS= \
-	"$(INTDIR)\condor_ipverify.sbr" \
-	"$(INTDIR)\daemon_core.sbr" \
-	"$(INTDIR)\daemon_core_main.sbr" \
-	"$(INTDIR)\timer_manager.sbr"
-
-"$(OUTDIR)\condor_daemon_core.bsc" : "$(OUTDIR)" $(BSC32_SBRS)
-    $(BSC32) @<<
-  $(BSC32_FLAGS) $(BSC32_SBRS)
-<<
-
-LIB32=link.exe -lib
-LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_daemon_core.lib" 
-LIB32_OBJS= \
-	"$(INTDIR)\condor_ipverify.obj" \
-	"$(INTDIR)\daemon_core.obj" \
-	"$(INTDIR)\daemon_core_main.obj" \
-	"$(INTDIR)\timer_manager.obj"
-
-"$(OUTDIR)\condor_daemon_core.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
-    $(LIB32) @<<
-  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS)
-<<
-
-!ENDIF 
-
 
 !IF "$(CFG)" == "condor_daemon_core - Win32 Release" || "$(CFG)" ==\
  "condor_daemon_core - Win32 Debug"
 SOURCE=..\src\condor_daemon_core.V6\condor_ipverify.C
 DEP_CPP_CONDO=\
+	"..\src\condor_c++_util\HashTable.h"\
+	"..\src\condor_c++_util\list.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
+	"..\src\condor_includes\condor_ast.h"\
+	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_attrlist.h"\
+	"..\src\condor_includes\condor_classad.h"\
+	"..\src\condor_includes\condor_commands.h"\
+	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_config.h"\
+	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_expressions.h"\
+	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\h\expr.h"\
 	"..\src\h\internet.h"\
+	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
 	"..\src\h\startup.h"\
-	{$(INCLUDE)}"condor_ast.h"\
-	{$(INCLUDE)}"condor_astbase.h"\
-	{$(INCLUDE)}"condor_attrlist.h"\
-	{$(INCLUDE)}"condor_classad.h"\
-	{$(INCLUDE)}"condor_commands.h"\
-	{$(INCLUDE)}"condor_common.h"\
-	{$(INCLUDE)}"condor_constants.h"\
-	{$(INCLUDE)}"condor_expressions.h"\
-	{$(INCLUDE)}"condor_exprtype.h"\
-	{$(INCLUDE)}"expr.h"\
-	{$(INCLUDE)}"HashTable.h"\
-	{$(INCLUDE)}"list.h"\
-	{$(INCLUDE)}"proc.h"\
-	{$(INCLUDE)}"stream.h"\
 	
-
-!IF  "$(CFG)" == "condor_daemon_core - Win32 Release"
-
 
 "$(INTDIR)\condor_ipverify.obj" : $(SOURCE) $(DEP_CPP_CONDO) "$(INTDIR)"\
  "..\src\condor_c++_util\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-!ELSEIF  "$(CFG)" == "condor_daemon_core - Win32 Debug"
-
-
-"$(INTDIR)\condor_ipverify.obj"	"$(INTDIR)\condor_ipverify.sbr" : $(SOURCE)\
- $(DEP_CPP_CONDO) "$(INTDIR)" "..\src\condor_c++_util\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-!ENDIF 
-
 SOURCE=..\src\condor_daemon_core.V6\daemon_core.C
 DEP_CPP_DAEMO=\
 	"..\src\condor_c++_util\daemon_types.h"\
+	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\get_daemon_addr.h"\
+	"..\src\condor_c++_util\HashTable.h"\
+	"..\src\condor_c++_util\list.h"\
+	"..\src\condor_c++_util\ntsysinfo.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
+	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\condor_ast.h"\
+	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_attrlist.h"\
+	"..\src\condor_includes\condor_classad.h"\
+	"..\src\condor_includes\condor_commands.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_expressions.h"\
+	"..\src\condor_includes\condor_exprtype.h"\
+	"..\src\condor_includes\condor_io.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_uid.h"\
+	"..\src\condor_includes\reli_sock.h"\
+	"..\src\condor_includes\safe_sock.h"\
+	"..\src\condor_includes\sock.h"\
+	"..\src\condor_includes\sockCache.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\h\expr.h"\
 	"..\src\h\internet.h"\
+	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
 	"..\src\h\startup.h"\
-	{$(INCLUDE)}"buffers.h"\
-	{$(INCLUDE)}"condor_commands.h"\
-	{$(INCLUDE)}"condor_common.h"\
-	{$(INCLUDE)}"condor_constants.h"\
-	{$(INCLUDE)}"condor_expressions.h"\
-	{$(INCLUDE)}"condor_io.h"\
-	{$(INCLUDE)}"expr.h"\
-	{$(INCLUDE)}"HashTable.h"\
-	{$(INCLUDE)}"list.h"\
-	{$(INCLUDE)}"proc.h"\
-	{$(INCLUDE)}"reli_sock.h"\
-	{$(INCLUDE)}"safe_sock.h"\
-	{$(INCLUDE)}"sock.h"\
-	{$(INCLUDE)}"sockCache.h"\
-	{$(INCLUDE)}"stream.h"\
 	
-
-!IF  "$(CFG)" == "condor_daemon_core - Win32 Release"
-
 
 "$(INTDIR)\daemon_core.obj" : $(SOURCE) $(DEP_CPP_DAEMO) "$(INTDIR)"\
  "..\src\condor_c++_util\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-!ELSEIF  "$(CFG)" == "condor_daemon_core - Win32 Debug"
-
-
-"$(INTDIR)\daemon_core.obj"	"$(INTDIR)\daemon_core.sbr" : $(SOURCE)\
- $(DEP_CPP_DAEMO) "$(INTDIR)" "..\src\condor_c++_util\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-!ENDIF 
-
 SOURCE=..\src\condor_daemon_core.V6\daemon_core_main.C
 DEP_CPP_DAEMON=\
 	"..\src\condor_c++_util\condor_version.h"\
+	"..\src\condor_c++_util\extArray.h"\
+	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\limit.h"\
+	"..\src\condor_c++_util\list.h"\
+	"..\src\condor_c++_util\ntsysinfo.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
+	"..\src\condor_daemon_core.V6\exphnd.WIN32.h"\
+	"..\src\condor_includes\basename.h"\
+	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\condor_ast.h"\
+	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_attrlist.h"\
+	"..\src\condor_includes\condor_classad.h"\
+	"..\src\condor_includes\condor_commands.h"\
+	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_config.h"\
+	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_expressions.h"\
+	"..\src\condor_includes\condor_exprtype.h"\
+	"..\src\condor_includes\condor_io.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_uid.h"\
+	"..\src\condor_includes\reli_sock.h"\
+	"..\src\condor_includes\safe_sock.h"\
+	"..\src\condor_includes\sock.h"\
+	"..\src\condor_includes\sockCache.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
+	"..\src\h\sig_install.h"\
 	"..\src\h\startup.h"\
-	{$(INCLUDE)}"buffers.h"\
-	{$(INCLUDE)}"condor_ast.h"\
-	{$(INCLUDE)}"condor_astbase.h"\
-	{$(INCLUDE)}"condor_attrlist.h"\
-	{$(INCLUDE)}"condor_classad.h"\
-	{$(INCLUDE)}"condor_commands.h"\
-	{$(INCLUDE)}"condor_common.h"\
-	{$(INCLUDE)}"condor_constants.h"\
-	{$(INCLUDE)}"condor_expressions.h"\
-	{$(INCLUDE)}"condor_exprtype.h"\
-	{$(INCLUDE)}"condor_io.h"\
-	{$(INCLUDE)}"HashTable.h"\
-	{$(INCLUDE)}"list.h"\
-	{$(INCLUDE)}"proc.h"\
-	{$(INCLUDE)}"reli_sock.h"\
-	{$(INCLUDE)}"safe_sock.h"\
-	{$(INCLUDE)}"sock.h"\
-	{$(INCLUDE)}"sockCache.h"\
-	{$(INCLUDE)}"stream.h"\
 	
-
-!IF  "$(CFG)" == "condor_daemon_core - Win32 Release"
-
 
 "$(INTDIR)\daemon_core_main.obj" : $(SOURCE) $(DEP_CPP_DAEMON) "$(INTDIR)"\
  "..\src\condor_c++_util\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+SOURCE=..\src\condor_daemon_core.V6\exphnd.WIN32.C
+DEP_CPP_EXPHN=\
+	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
+	"..\src\condor_daemon_core.V6\exphnd.WIN32.h"\
+	
+
+!IF  "$(CFG)" == "condor_daemon_core - Win32 Release"
+
+CPP_SWITCHES=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes"\
+ /I "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS"\
+ /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h"\
+ /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
+
+"$(INTDIR)\exphnd.WIN32.obj" : $(SOURCE) $(DEP_CPP_EXPHN) "$(INTDIR)"\
+ "..\src\condor_c++_util\condor_common.pch"
+	$(CPP) @<<
+  $(CPP_SWITCHES) $(SOURCE)
+<<
+
+
 !ELSEIF  "$(CFG)" == "condor_daemon_core - Win32 Debug"
 
+CPP_SWITCHES=/nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I\
+ "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D\
+ "_WINDOWS" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h"\
+ /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 
-"$(INTDIR)\daemon_core_main.obj"	"$(INTDIR)\daemon_core_main.sbr" : $(SOURCE)\
- $(DEP_CPP_DAEMON) "$(INTDIR)" "..\src\condor_c++_util\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
+"$(INTDIR)\exphnd.WIN32.obj" : $(SOURCE) $(DEP_CPP_EXPHN) "$(INTDIR)"\
+ "..\src\condor_c++_util\condor_common.pch"
+	$(CPP) @<<
+  $(CPP_SWITCHES) $(SOURCE)
+<<
 
 
 !ENDIF 
 
 SOURCE=..\src\condor_daemon_core.V6\timer_manager.C
 DEP_CPP_TIMER=\
+	"..\src\condor_c++_util\extArray.h"\
+	"..\src\condor_c++_util\HashTable.h"\
+	"..\src\condor_c++_util\list.h"\
+	"..\src\condor_c++_util\ntsysinfo.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
+	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\condor_ast.h"\
+	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_attrlist.h"\
+	"..\src\condor_includes\condor_classad.h"\
+	"..\src\condor_includes\condor_commands.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_exprtype.h"\
+	"..\src\condor_includes\condor_io.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_uid.h"\
+	"..\src\condor_includes\reli_sock.h"\
+	"..\src\condor_includes\safe_sock.h"\
+	"..\src\condor_includes\sock.h"\
+	"..\src\condor_includes\sockCache.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
 	"..\src\h\startup.h"\
-	{$(INCLUDE)}"buffers.h"\
-	{$(INCLUDE)}"condor_commands.h"\
-	{$(INCLUDE)}"condor_common.h"\
-	{$(INCLUDE)}"condor_constants.h"\
-	{$(INCLUDE)}"condor_io.h"\
-	{$(INCLUDE)}"HashTable.h"\
-	{$(INCLUDE)}"list.h"\
-	{$(INCLUDE)}"proc.h"\
-	{$(INCLUDE)}"reli_sock.h"\
-	{$(INCLUDE)}"safe_sock.h"\
-	{$(INCLUDE)}"sock.h"\
-	{$(INCLUDE)}"sockCache.h"\
-	{$(INCLUDE)}"stream.h"\
 	
-
-!IF  "$(CFG)" == "condor_daemon_core - Win32 Release"
-
 
 "$(INTDIR)\timer_manager.obj" : $(SOURCE) $(DEP_CPP_TIMER) "$(INTDIR)"\
  "..\src\condor_c++_util\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
-
-!ELSEIF  "$(CFG)" == "condor_daemon_core - Win32 Debug"
-
-
-"$(INTDIR)\timer_manager.obj"	"$(INTDIR)\timer_manager.sbr" : $(SOURCE)\
- $(DEP_CPP_TIMER) "$(INTDIR)" "..\src\condor_c++_util\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-!ENDIF 
 
 
 !ENDIF 

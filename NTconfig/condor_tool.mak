@@ -28,6 +28,9 @@ NULL=
 NULL=nul
 !ENDIF 
 
+CPP=cl.exe
+RSC=rc.exe
+
 !IF  "$(CFG)" == "condor_tool - Win32 Release"
 
 OUTDIR=.\../src/condor_tools
@@ -62,45 +65,12 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP=cl.exe
 CPP_PROJ=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I\
  "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS"\
  /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h"\
  /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 CPP_OBJS=../src/condor_tools/
 CPP_SBRS=.
-
-.c{$(CPP_OBJS)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(CPP_OBJS)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(CPP_OBJS)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.c{$(CPP_SBRS)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(CPP_SBRS)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(CPP_SBRS)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_tool.bsc" 
 BSC32_SBRS= \
@@ -132,13 +102,13 @@ OutDir=.\../src/condor_tools
 
 !IF "$(RECURSE)" == "0" 
 
-ALL : "$(OUTDIR)\condor.exe" "$(OUTDIR)\condor_tool.bsc"
+ALL : "$(OUTDIR)\condor.exe"
 
 !ELSE 
 
 ALL : "condor_classad - Win32 Debug" "condor_io - Win32 Debug"\
  "condor_cpp_util - Win32 Debug" "condor_util_lib - Win32 Debug"\
- "$(OUTDIR)\condor.exe" "$(OUTDIR)\condor_tool.bsc"
+ "$(OUTDIR)\condor.exe"
 
 !ENDIF 
 
@@ -150,23 +120,44 @@ CLEAN :"condor_util_lib - Win32 DebugCLEAN"\
 CLEAN :
 !ENDIF 
 	-@erase "$(INTDIR)\tool.obj"
-	-@erase "$(INTDIR)\tool.sbr"
 	-@erase "$(INTDIR)\vc50.idb"
 	-@erase "$(OUTDIR)\condor.exe"
 	-@erase "$(OUTDIR)\condor.ilk"
 	-@erase "$(OUTDIR)\condor.pdb"
-	-@erase "$(OUTDIR)\condor_tool.bsc"
 
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP=cl.exe
 CPP_PROJ=/nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes"\
  /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS"\
- /FR"$(INTDIR)\\" /Fp"..\src\condor_c++_util/condor_common.pch"\
- /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
+ /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h"\
+ /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 CPP_OBJS=../src/condor_tools/
-CPP_SBRS=../src/condor_tools/
+CPP_SBRS=.
+BSC32=bscmake.exe
+BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_tool.bsc" 
+BSC32_SBRS= \
+	
+LINK32=link.exe
+LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
+ advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib\
+ odbccp32.lib ws2_32.lib ../src/condor_c++_util/condor_common.obj\
+ ..\src\condor_util_lib/condor_common.obj /nologo /subsystem:console\
+ /incremental:yes /pdb:"$(OUTDIR)\condor.pdb" /debug /machine:I386\
+ /out:"$(OUTDIR)\condor.exe" /pdbtype:sept 
+LINK32_OBJS= \
+	"$(INTDIR)\tool.obj" \
+	"..\src\condor_c++_util\condor_cpp_util.lib" \
+	"..\src\condor_classad\condor_classad.lib" \
+	"..\src\condor_io\condor_io.lib" \
+	"..\src\condor_util_lib\condor_util.lib"
+
+"$(OUTDIR)\condor.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
+    $(LINK32) @<<
+  $(LINK32_FLAGS) $(LINK32_OBJS)
+<<
+
+!ENDIF 
 
 .c{$(CPP_OBJS)}.obj::
    $(CPP) @<<
@@ -197,38 +188,6 @@ CPP_SBRS=../src/condor_tools/
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
-
-RSC=rc.exe
-BSC32=bscmake.exe
-BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_tool.bsc" 
-BSC32_SBRS= \
-	"$(INTDIR)\tool.sbr"
-
-"$(OUTDIR)\condor_tool.bsc" : "$(OUTDIR)" $(BSC32_SBRS)
-    $(BSC32) @<<
-  $(BSC32_FLAGS) $(BSC32_SBRS)
-<<
-
-LINK32=link.exe
-LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
- advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib\
- odbccp32.lib ws2_32.lib ../src/condor_c++_util/condor_common.obj\
- ..\src\condor_util_lib/condor_common.obj /nologo /subsystem:console\
- /incremental:yes /pdb:"$(OUTDIR)\condor.pdb" /debug /machine:I386\
- /out:"$(OUTDIR)\condor.exe" /pdbtype:sept 
-LINK32_OBJS= \
-	"$(INTDIR)\tool.obj" \
-	"..\src\condor_c++_util\condor_cpp_util.lib" \
-	"..\src\condor_classad\condor_classad.lib" \
-	"..\src\condor_io\condor_io.lib" \
-	"..\src\condor_util_lib\condor_util.lib"
-
-"$(OUTDIR)\condor.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
-    $(LINK32) @<<
-  $(LINK32_FLAGS) $(LINK32_OBJS)
-<<
-
-!ENDIF 
 
 
 !IF "$(CFG)" == "condor_tool - Win32 Release" || "$(CFG)" ==\
@@ -359,6 +318,7 @@ DEP_CPP_TOOL_=\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_includes\condor_config.h"\
 	"..\src\condor_includes\condor_network.h"\
+	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
 	"..\src\h\startup.h"\
 	{$(INCLUDE)}"buffers.h"\
@@ -373,7 +333,6 @@ DEP_CPP_TOOL_=\
 	{$(INCLUDE)}"condor_exprtype.h"\
 	{$(INCLUDE)}"condor_io.h"\
 	{$(INCLUDE)}"daemon_types.h"\
-	{$(INCLUDE)}"proc.h"\
 	{$(INCLUDE)}"reli_sock.h"\
 	{$(INCLUDE)}"safe_sock.h"\
 	{$(INCLUDE)}"sock.h"\
@@ -381,23 +340,10 @@ DEP_CPP_TOOL_=\
 	{$(INCLUDE)}"stream.h"\
 	
 
-!IF  "$(CFG)" == "condor_tool - Win32 Release"
-
-
 "$(INTDIR)\tool.obj" : $(SOURCE) $(DEP_CPP_TOOL_) "$(INTDIR)"\
  "..\src\condor_c++_util\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
-
-!ELSEIF  "$(CFG)" == "condor_tool - Win32 Debug"
-
-
-"$(INTDIR)\tool.obj"	"$(INTDIR)\tool.sbr" : $(SOURCE) $(DEP_CPP_TOOL_)\
- "$(INTDIR)" "..\src\condor_c++_util\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-!ENDIF 
 
 
 !ENDIF 
