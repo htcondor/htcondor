@@ -29,6 +29,7 @@
 #include "url_condor.h"
 
 
+#if 0
 extern URLProtocol FILE_URL;
 extern URLProtocol CBSTP_URL;
 extern URLProtocol HTTP_URL;
@@ -43,5 +44,23 @@ URLProtocol	*protocols[] = {
 	&FILTER_URL,
 	&MAILTO_URL,
 	&CFILTER_URL,
+	0
+	};
+#endif
+
+extern void init_cbstp();
+extern void init_file();
+extern void init_http();
+extern void init_filter();
+extern void init_mailto();
+extern void init_cfilter();
+
+void	(*protocols[])() = {
+	init_cbstp,
+	init_file,
+	init_http,
+	init_filter,
+	init_mailto,
+	init_cfilter,
 	0
 	};

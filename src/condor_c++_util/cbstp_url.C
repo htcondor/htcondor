@@ -95,6 +95,18 @@ int condor_bytes_stream_open_ckpt_file( const char *name, int flags,
 }
 
 
+#if 0
 URLProtocol CBSTP_URL("cbstp", 
 					 "CondorByteStreamProtocol",
 					 condor_bytes_stream_open_ckpt_file);
+#endif
+
+void
+init_cbstp()
+{
+	static URLProtocol	*CBSTP_URL;
+
+	CBSTP_URL = new URLProtocol("cbstp", 
+								"CondorByteStreamProtocol",
+								condor_bytes_stream_open_ckpt_file);
+}

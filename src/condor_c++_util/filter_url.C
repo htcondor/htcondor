@@ -143,4 +143,13 @@ int condor_open_filter( const char *name, int flags, size_t n_bytes )
 }
 
 
-URLProtocol FILTER_URL("filter", "CondorFilterUrl", condor_open_filter);
+
+
+void
+init_filter()
+{
+	static URLProtocol	*FILTER_URL;
+
+	FILTER_URL = new URLProtocol("filter", "CondorFilterUrl", 
+								 condor_open_filter);
+}

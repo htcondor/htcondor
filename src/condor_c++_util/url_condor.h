@@ -17,7 +17,6 @@ public:
 	int		call_open_func(const char *fname, int flags, size_t n_bytes)
 	{ return open_func( fname, flags, n_bytes); }
 	URLProtocol		*get_next() { return next; }
-	void	init() { }
 private:
 	char	*key;
 	char	*name;
@@ -28,4 +27,5 @@ private:
 
 URLProtocol	*FindProtocolByKey(const char *key);
 extern "C" int open_url( const char *name, int flags, size_t n_bytes );
+extern "C" int is_url( const char *name);
 #endif

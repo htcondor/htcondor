@@ -42,4 +42,15 @@ int condor_file_open_ckpt_file( const char *name, int flags,
 }
 
 
+#if 0
 URLProtocol FILE_URL("file", "CondorFileUrl", condor_file_open_ckpt_file);
+#endif
+
+void
+init_file()
+{
+	static URLProtocol	*FILE_URL;
+
+	FILE_URL = new URLProtocol("file", "CondorFileUrl", 
+							   condor_file_open_ckpt_file);
+}

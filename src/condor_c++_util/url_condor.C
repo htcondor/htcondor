@@ -26,7 +26,9 @@
 **
 */ 
 
+#include <stdio.h>
 #include <string.h>
+#include <sys/errno.h>
 #include "url_condor.h"
 #include "condor_debug.h"
 
@@ -44,12 +46,15 @@ URLProtocol::URLProtocol(char *protocol_key, char *protocol_name,
 	open_func = protocol_open_func;
 	next = protocol_list;
 	protocol_list = this;
+	fprintf(stderr, "New URL protocol '%s' (%s)\n", name, key);
 }
 
 
 URLProtocol::~URLProtocol()
 {
 	URLProtocol		*ptr;
+
+	fprintf(stderr, "Deleteing URL protocol '%s' (%s)\n", name, key);
 
 	free(key);
 	free(name);
@@ -74,6 +79,8 @@ FindProtocolByKey(const char *key)
 {
 	URLProtocol		*protocol;
 
+	fprintf(stderr, "Looking for URL key %s\n", key);
+
 	for( protocol = protocol_list; protocol != 0; 
 		protocol = protocol->get_next()) {
 		if (!strcmp(key, protocol->get_key())) {
@@ -84,8 +91,8 @@ FindProtocolByKey(const char *key)
 }
 
 
-extern "C" {
-int open_url( const char *name, int flags, size_t n_bytes )
+static URLProtocol		*
+FindURLProtocolForName(const char *name)
 {
 	char	*ptr;
 	URLProtocol	*this_protocol;
@@ -97,34 +104,59 @@ int open_url( const char *name, int flags, size_t n_bytes )
 	ptr = strchr(name, ':');
 	if (ptr == 0) {
 		/* Just do it the old fashioned way if this isn't a URL */
-		return -1;
+		errno = ENOENT;
+		return 0;
 	}
 
 	*ptr = '\0';
 	this_protocol = FindProtocolByKey(name);
-	ptr++;
+	*ptr = ':';
+	if (this_protocol == 0) {
+		errno = ENXIO;
+	}
+	return this_protocol;
+}
+
+extern "C" {
+int 
+open_url( const char *name, int flags, size_t n_bytes )
+{
+	URLProtocol	*this_protocol;
+	char		*ptr;
+	int			rval;
+
+	this_protocol = FindURLProtocolForName(name);	
 	if (this_protocol) {
+		ptr = strchr(name, ':');
+		ptr++;
 		rval = this_protocol->call_open_func(ptr, flags, n_bytes);
 	} else {
 		rval = -1;
 	}
-	ptr--;
-	*ptr = ':';
 	return rval;
+}
+
+int 
+is_url( const char *name)
+{
+	URLProtocol	*this_protocol;
+
+	this_protocol = FindURLProtocolForName(name);
+
+	return (this_protocol != 0);
 }
 
 } /* extern "C" */
 
 
-extern	URLProtocol	*protocols[];
+extern void	(*protocols[])();
 
 void
 include_urls()
 {
 	int		i;
-	extern	URLProtocol	*protocols[];
 
 	for (i = 0; protocols[i] != 0; i++) {
-		protocols[i]->init();
+		protocols[i]();
 	}
 }
