@@ -1,5 +1,3 @@
-CFLAGS = $(STD_C_FLAGS)
-
 #if HAS_FORTRAN
   TEST_SUITE_F = test_suite_F.V5
 #endif
@@ -21,19 +19,15 @@ CFLAGS = $(STD_C_FLAGS)
    #define PvmDirs
 #endif
 
-#if USE_CONFIG_SERVER
-   CONFIG_SERVER = config_server
-#endif
-
 #define Programs \
-		accountant.V6 ckpt_server $(CONFIG_SERVER) \
+		accountant.V6 ckpt_server \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts shadow.V6 startd.V6 starter.V5 submit.V6 status.V6 \
 		tools kbdd collector.V6 PvmProgs
 
 #define Libraries \
-		util_lib c++_util ckpt io classad daemon_core.V6 \
-		syscall_lib
+		util_lib c++_util io classad daemon_core.V6 \
+		ckpt syscall_lib
 
 #define Directories \
 	release_dir release_dir/bin release_dir/lib release_dir/sbin \
@@ -46,7 +40,7 @@ CFLAGS = $(STD_C_FLAGS)
 	static_dir static_dir/bin static_dir/sbin static_dir/lib \
 	static_dir/etc static_dir/etc/examples
 
-all: h makefiles Directories Libraries Programs examples
+all: h h_all condor_includes makefiles Directories Libraries Programs examples
 release:: all
 stripped:: all
 static:: all
@@ -89,28 +83,13 @@ simple_dir_target(release_dir)
 simple_dir_target(release_dir/bin)
 simple_dir_target(release_dir/lib)
 simple_dir_target(release_dir/sbin)
+
 simple_dir_target(strip_dir)
 simple_dir_target(strip_dir/bin)
 simple_dir_target(strip_dir/lib)
 simple_dir_target(strip_dir/sbin)
 simple_dir_target(strip_dir/etc)
 simple_dir_target(strip_dir/etc/examples)
-#if WANT_PVM && HAS_PVM
-simple_dir_target(strip_pvm)
-simple_dir_target(strip_pvm/sbin)
-simple_dir_target(strip_pvm/lib)
-simple_dir_target(static_pvm)
-simple_dir_target(static_pvm/sbin)
-simple_dir_target(static_pvm/lib)
-#endif
-simple_dir_target(strip_ckpt_server)
-simple_dir_target(strip_ckpt_server/sbin)
-simple_dir_target(strip_ckpt_server/etc)
-simple_dir_target(strip_ckpt_server/etc/examples)
-simple_dir_target(static_ckpt_server)
-simple_dir_target(static_ckpt_server/sbin)
-simple_dir_target(static_ckpt_server/etc)
-simple_dir_target(static_ckpt_server/etc/examples)
 
 simple_dir_target(static_dir)
 simple_dir_target(static_dir/bin)
@@ -119,15 +98,31 @@ simple_dir_target(static_dir/sbin)
 simple_dir_target(static_dir/etc)
 simple_dir_target(static_dir/etc/examples)
 
+#if WANT_PVM && HAS_PVM
+simple_dir_target(strip_pvm)
+simple_dir_target(strip_pvm/sbin)
+simple_dir_target(strip_pvm/lib)
+simple_dir_target(static_pvm)
+simple_dir_target(static_pvm/sbin)
+simple_dir_target(static_pvm/lib)
+#endif
+
+simple_dir_target(strip_ckpt_server)
+simple_dir_target(strip_ckpt_server/sbin)
+simple_dir_target(strip_ckpt_server/etc)
+simple_dir_target(strip_ckpt_server/etc/examples)
+
+simple_dir_target(static_ckpt_server)
+simple_dir_target(static_ckpt_server/sbin)
+simple_dir_target(static_ckpt_server/etc)
+simple_dir_target(static_ckpt_server/etc/examples)
+
 object_target(util_lib)
 object_target(c++_util)
 object_target(tools)
 object_target(examples)
 object_target(accountant.V6)
 object_target(ckpt_server)
-#if USE_CONFIG_SERVER
-   object_target(config_server)
-#endif
 object_target(shadow.V6)
 object_target(starter.V5)
 object_target(startd.V6)
@@ -155,21 +150,22 @@ object_target(daemon_core.V6)
    object_target(starter.jim)
    object_target(shadow.jim)
 #endif
+object_target(prio)
+object_target(scripts)
 
-makefiles:: h/Makefile
-h/Makefile:
+object_dir_target(h)
+object_dir_target(condor_includes)
+
+h_all: h/Makefile h/syscall_numbers.h h/syscall_numbers.o
+
+h/Makefile: h/Imakefile
 	cd h; imake IMAKE_FLAGS
-
-h: h/Makefile h/syscall_numbers.o h/syscall_numbers.h
 
 h/syscall_numbers.h: h/syscall_numbers.tmpl h/Makefile
 	cd h; make syscall_numbers.h
 
 h/syscall_numbers.o: h/syscall_numbers.tmpl h/Makefile
 	cd h; make syscall_numbers.o
-
-object_target(prio)
-object_target(scripts)
 
 check_platform_target
 
