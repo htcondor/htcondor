@@ -59,7 +59,8 @@ NEGOTIATOR	= $(SBIN)/condor_negotiator
 CLASSAD_LIFETIME	= 900
 
 ##  How often should the collector check for machines that don't have
-##  classads from the condor_master and send email about it?
+##  classads from the condor_master and send email about it? (3
+##  hours by default).
 MASTER_CHECK_INTERVAL	= 10800
 
 ##  Network timeout when talking to daemons that are sending an
@@ -83,7 +84,7 @@ NEGOTIATOR_INTERVAL	= 300
 ##  to the schedds and startds?
 NEGOTIATOR_TIMEOUT	= 30
 
-##  What is the halflife of the user priorities?
+##  What is the halflife of the user priorities? (1 day)
 PRIORITY_HALFLIFE	= 86400
 
 ##  If the PREEMPTION_HOLD expression evaluates to true, we won't
