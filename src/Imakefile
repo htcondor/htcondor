@@ -17,7 +17,9 @@
   sbin/condor_shadow.pvm sbin/condor_starter.pvm
 
 #define CondorGFiles sbin/condor_gridmanager sbin/gahp_server \
-    bin/condor_glidein etc/examples/condor_config.local.condor-g
+    bin/condor_glidein 
+
+#define CondorGContribFiles etc/examples/condor_config.local.condor-g
  
 #define DAGManFiles bin/condor_dagman bin/condor_submit_dag \
   bin/condor_submit
@@ -121,7 +123,7 @@ libs:: h h_all condor_includes makefiles Directories Libraries
 public:: strip.tar 
 
 strip.tar: stripped
-	cd strip_dir; rm -f release.tar; tar -cvf release.tar --owner=root --group=root --exclude sbin/condor_gridmanager --exclude sbin/gahp_server --exclude bin/condor_glidein AllFiles
+	cd strip_dir; rm -f release.tar; tar -cvf release.tar --owner=root --group=root AllFiles
 
 afs_release.tar:: afs_strip.tar
 
@@ -134,7 +136,7 @@ public:: static.tar
 afs_release.tar:: afs_static.tar
 
 static.tar: static
-	cd static_dir; rm -f release.tar; tar -cvf release.tar --owner=root --group=root --exclude sbin/condor_gridmanager --exclude sbin/gahp_server --exclude bin/condor_glidein AllFiles
+	cd static_dir; rm -f release.tar; tar -cvf release.tar --owner=root --group=root AllFiles
 
 afs_static.tar: static.tar
 	cp static_dir/release.tar $(PUBLIC_S_TARGET)
@@ -164,7 +166,7 @@ contrib_tarball( pvm.tar, PvmFiles )
 
 #if WANT_CONDOR_G && HAS_GLOBUS
 #define CondorGTar condor-g.tar
-contrib_tarball( condor-g.tar, CondorGFiles )
+both_tarball(condor-g.tar,CondorGFiles,CondorGContribFiles)
 #else
 #define CondorGTar 
 #endif /* Condor-G */
