@@ -39,3 +39,4 @@
 #define LOCAL_CONFIG_TEST	"condor_config_t.local"
 #define MASTER_CONFIG		"condor_config.master"
 #define SERVER_CONFIG		"condor_config.fromserver"
+#define AGGREGATE_CONFIG	"condor_config.aggregate"
