@@ -180,6 +180,20 @@ circumstances:
 	receiver stub should be used for both CONDOR_fstat and for
 	CONDOR_fstat64 remote system calls.
 
+   not_supported
+
+	A number of system calls Condor can simply not service.
+	In this case, the system call is sent remotely, and it becomes
+	the shadow's responsibility to pass the message along to the 
+	user.
+
+    ignored
+
+	This is slightly different than not_supported.  Some system calls
+	(like msync and getsysinfo) should not actually be executed, but
+	should also not give any error indication to the user.  In this
+	case, the call simply returns success.
+
   Some system calls simply must be handled specially.  Examples
   are those system calls which directly affect the open files
   table used for checkpoint/restart.  Unfortunately, this
