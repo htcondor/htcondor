@@ -47,12 +47,15 @@
 #include "starter.h"
 #include "fileno.h"
 #include "ckpt_file.h"
+#include "startup.h"
 #include "user_proc.h"
 #include "alarm.h"
+#include "afs.h"
 
 #include "../condor_c++_util/list.h"
 
 #include <sys/stat.h>
+#include <pwd.h>
 
 #if defined(AIX32)
 #	include <sys/id.h>
@@ -61,6 +64,7 @@
 extern "C" {
 #include <sys/utsname.h>
 int free_fs_blocks(const char *);
+void display_startup_info( const STARTUP_INFO *s, int flags );
 }
 
 #if defined(OSF1)
@@ -99,6 +103,7 @@ char	*Execute;				// Name of directory where user procs execute
 int		MinCkptInterval;		// Use this ckpt interval to start
 int		MaxCkptInterval;		// Don't increase ckpt interval beyond this
 int		DoDelays;				// Insert artificial delays for testing
+char	*UidDomain;				// Machines we share UID space with
 
 Alarm		MyAlarm;			// Don't block forever on user process exits
 CkptTimer	*MyTimer;			// Timer for periodic checkpointing
@@ -123,6 +128,9 @@ void resume_all();
 void req_exit_all();
 void req_ckpt_exit_all();
 int needed_fd( int fd );
+void determine_user_ids( uid_t &requested_uid, gid_t &requested_gid );
+int host_in_domain( const char *domain, const char *hostname );
+void init_environment_info();
 
 extern "C" {
 	void dprintf_config( char *subsys, int logfd );
@@ -265,9 +273,11 @@ int
 init()
 {
 	move_to_execute_directory();
+	init_environment_info();
 	set_resource_limits();
 	close_unused_file_descriptors();
 	MyTimer = new CkptTimer( MinCkptInterval, MaxCkptInterval );
+
 	return DEFAULT;
 }
 
@@ -472,6 +482,19 @@ init_params()
 			DoDelays = FALSE;
 		}
 	}
+
+		// find out domain of machines whose UIDs we honor
+	UidDomain = param( "UID_DOMAIN" );
+
+		// if the domain is null, don't honor any UIDs
+	if( UidDomain == NULL || UidDomain[0] == '\0' ) {
+		UidDomain = "Unknown";
+	}
+
+		// if the domain is "*", honor all UIDs - a dangerous idea
+	if( UidDomain[0] == '*' ) {
+		UidDomain[0] = '\0';
+	}
 }
 
 /*
@@ -485,7 +508,8 @@ get_proc()
 	int	answer;
 	UserProc *new_process;
 
-	// dprintf( D_ALWAYS, "Entering get_proc()\n" );
+	dprintf( D_ALWAYS, "Entering get_proc()\n" );
+
 	if( new_process=get_job_info() ) {
 		UProcList.Append( new_process );
 		return SUCCESS;
@@ -503,7 +527,7 @@ get_exec()
 {
 	UserProc	*new_process;
 
-	// dprintf( D_ALWAYS, "Entering get_exec()\n" );
+	dprintf( D_ALWAYS, "Entering get_exec()\n" );
 
 
 	new_process = UProcList.Current();
@@ -1168,79 +1192,35 @@ send_ckpt_all()
 UserProc *
 get_job_info()
 {
-	char	buf[1024];
+	UserProc		*u_proc;
+	int				cmd = CONDOR_startup_info_request;
+	STARTUP_INFO	s;
 
-		// Set up to receive either a version 2 or a version 3 proc
-	GENERIC_PROC	proc_struct;
-	V2_PROC			&v2_proc = (V2_PROC &)proc_struct;
-	V3_PROC			&v3_proc = (V3_PROC &)proc_struct;
+	dprintf( D_ALWAYS, "Entering get_job_info()\n" );
 
-	char	a_out [ _POSIX_PATH_MAX ];
-	char	orig_file[ _POSIX_PATH_MAX ];
-	char	target_file[ _POSIX_PATH_MAX ];
-	uid_t	uid, gid;
-	int		scm;
-	UserProc	*u_proc;
-	int		cmd = CONDOR_work_request;
-	int		id = -1;
-	int		soft_kill;
+	memset( &s, 0, sizeof(s) );
+	REMOTE_syscall( CONDOR_startup_info_request, &s );
+	display_startup_info( &s, D_ALWAYS );
 
-	// dprintf( D_ALWAYS, "Entering get_job_info()\n" );
+	determine_user_ids( s.uid, s.gid );
+	dprintf( D_ALWAYS, "User uid set to %d\n", s.uid );
+	dprintf( D_ALWAYS, "User uid set to %d\n", s.gid );
 
-	memset( &proc_struct, 0, sizeof(proc_struct) );
-	id = REMOTE_syscall( CONDOR_work_request,
-					&proc_struct, a_out, target_file, orig_file, &soft_kill
-	);
-
-#define NOBODY -2
-#define RUN_AS_NOBODY FALSE
-#if RUN_AS_NOBODY
-	uid = NOBODY;
-	gid = NOBODY;
-#else
-#	if defined(AIX32)
-		uid = REMOTE_syscall( CONDOR_getuidx, ID_EFFECTIVE );
-		gid = REMOTE_syscall( CONDOR_getgidx, ID_EFFECTIVE );
-#	else
-		uid = REMOTE_syscall( CONDOR_geteuid );
-		gid = REMOTE_syscall( CONDOR_getegid );
-#	endif
+	switch( s.job_class ) {
+#if 0
+		case PVMD:
+			u_proc = new PVMdProc( s );
+			break;
+		case PVM:
+			u_proc = new PVMUserProc( s );
+			break;
 #endif
-
-	if( uid == 0 ) {
-		EXCEPT( "Attempt to start user process with root privileges" );
-	}
-
-	switch( v2_proc.version_num ) {
-	  case 2:
-		u_proc = new UserProc( v2_proc, a_out, orig_file, target_file, uid, gid, soft_kill );
-		break;
-	  case 3:
-		switch(v3_proc.universe) {
-#if defined(LINK_PVM)
-		    case PVMD:
-			    u_proc = new PVMdProc( v3_proc, a_out, orig_file, target_file, uid, 
-									  gid, id, soft_kill);
-				break;
-		    case PVM:
-			    u_proc = new PVMUserProc( v3_proc, a_out, orig_file, target_file, 
-										 uid, gid, id, soft_kill);
-				break;
-#endif
-		    default:
-			    u_proc = new UserProc( v3_proc, a_out, orig_file, target_file, uid, 
-									  gid, id, soft_kill);
-				break;
-		}
-		break;
-	  default:
-		EXCEPT( "UNKNOWN Proc Version (%d)", v2_proc.version_num );
+		default:
+			u_proc = new UserProc( s );
+			break;
 	}
 
 	u_proc->display();
-
-	/* N.B. should free up these XDR allocated structures here... */
-
 	return u_proc;
 }
 
@@ -1394,5 +1374,82 @@ needed_fd( int fd )
 
 	  default:
 		return FALSE;
+	}
+}
+
+/*
+  Return true if the given domain contains the given hostname.  For
+  example the domain "cs.wisc.edu" constain the host "padauk.cs.wisc.edu".
+*/
+int
+host_in_domain( const char *domain, const char *hostname )
+{
+	const char	*ptr;
+
+	for( ptr=hostname; *ptr; ptr++ ) {
+		if( strcmp(ptr,domain) == MATCH ) {
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
+/*
+  We've been requested to start the user job with the given UID, but
+  we apply our own rules to determine whether we'll honor that request.
+*/
+void
+determine_user_ids( uid_t &requested_uid, gid_t &requested_gid )
+{
+
+	struct passwd	*pwd_entry;
+
+		// don't allow any root processes
+	if( requested_uid == 0 || requested_gid == 0 ) {
+		EXCEPT( "Attempt to start user process with root privileges" );
+	}
+		
+		// if the submitting machine is in our shared UID domain, honor
+		// the request
+	if( host_in_domain(UidDomain,InitiatingHost) ) {
+		return;
+	}
+
+		// otherwise, we run the process an "nobody"
+	if( (pwd_entry = getpwnam("nobody")) == NULL ) {
+		EXCEPT( "Can't find UID for \"nobody\" in passwd file" );
+	}
+
+	requested_uid = pwd_entry->pw_uid;
+	requested_gid = pwd_entry->pw_gid;
+}
+
+
+/*
+  Find out information about our AFS cell, UID domain, and file sharing
+  domain.  Register this information with the shadow.
+*/
+void
+init_environment_info()
+{
+	AFS_Info	info;
+	char		*my_cell;
+	char 		*my_fs_domain;
+	char		*my_uid_domain;
+
+	my_cell = info.my_cell();
+	if( my_cell ) {
+		REMOTE_syscall( CONDOR_register_afs_cell, my_cell );
+	}
+
+	my_fs_domain = param( "FILESYSTEM_DOMAIN" );
+	if( my_fs_domain ) {
+		REMOTE_syscall( CONDOR_register_fs_domain, my_fs_domain );
+	}
+
+	my_uid_domain = param( "UID_DOMAIN" );
+	if( my_uid_domain ) {
+		REMOTE_syscall( CONDOR_register_uid_domain, my_uid_domain );
 	}
 }
