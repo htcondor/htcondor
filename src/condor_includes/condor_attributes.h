@@ -108,6 +108,7 @@ const char ATTR_GLOBUS_RESOURCE			 [] = "GlobusResource";
 const char ATTR_GLOBUS_RSL				 [] = "GlobusRSL";
 const char ATTR_GLOBUS_STATUS			 [] = "GlobusStatus";
 const char ATTR_X509_USER_PROXY          [] = "x509userproxy";			
+const char ATTR_HAS_FILE_TRANSFER        [] = "HasFileTransfer";
 const char ATTR_HAS_IO_PROXY		[] = "HasIOProxy";
 const char ATTR_HAS_JAVA                [] = "HasJava";
 const char ATTR_HELD_JOBS				 [] = "HeldJobs";
