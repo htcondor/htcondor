@@ -111,6 +111,7 @@
 #include <assert.h>
 
 template <class ObjType> class Item;
+template <class ObjType> class ListIterator;
 
 template <class ObjType>
 class List {
@@ -137,7 +138,10 @@ public:
 	void	DeleteCurrent();
 
 		// Debugging
+#if 0
 	void	Display() const;
+#endif
+
 private:
 	void	RemoveItem( Item<ObjType> * );
 	Item<ObjType>	*dummy;
