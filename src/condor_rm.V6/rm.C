@@ -45,11 +45,14 @@
 #include "condor_config.h"
 #include "condor_jobqueue.h"
 #include "condor_network.h"
+#include "condor_io.h"
 #include "sched.h"
 #include "proc_obj.h"
 #include "alloc.h"
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
+
+extern "C" char *get_schedd_addr(const char *);
 
 #if DBM_QUEUE
 DBM		*Q, *OpenJobQueue();
@@ -225,9 +228,9 @@ init_params()
 void
 notify_schedd( int cluster, int proc )
 {
-	int			sock = -1;
+	ReliSock	*sock;
+	char		*scheddAddr;
 	int			cmd;
-	XDR			xdr, *xdrs = NULL;
 	PROC_ID		job_id;
 
 	job_id.cluster = cluster;
@@ -241,45 +244,48 @@ notify_schedd( int cluster, int proc )
 		}
 	}
 
+	if ((scheddAddr = get_schedd_addr(hostname)) == NULL)
+	{
+		EXCEPT("Can't find schedd address on %s\n", hostname);
+	}
+
 		/* Connect to the schedd */
-	if( (sock = do_connect(hostname, "condor_schedd", SCHED_PORT)) < 0 ) {
+	sock = new ReliSock(scheddAddr, SCHED_PORT);
+	if(sock->get_file_desc() < 0) {
 		if( !TroubleReported ) {
 			dprintf( D_ALWAYS, "Warning: can't connect to condor scheduler\n" );
 			TroubleReported = 1;
 		}
+		delete sock;
 		return;
 	}
-	xdrs = xdr_Init( &sock, &xdr );
-	xdrs->x_op = XDR_ENCODE;
+
+	sock->encode();
 
 	cmd = KILL_FRGN_JOB;
-	if( !xdr_int(xdrs, &cmd) ) {
+	if( !sock->code(cmd) ) {
 		dprintf( D_ALWAYS,
 			"Warning: can't send KILL_JOB command to condor scheduler\n" );
-		xdr_destroy( xdrs );
-		(void)close( sock );
+		delete sock;
 		return;
 	}
 
-	if( !xdr_proc_id(xdrs, &job_id) ) {
+	if( !sock->code(job_id) ) {
 		dprintf( D_ALWAYS,
 			"Warning: can't send proc_id to condor scheduler\n" );
-		xdr_destroy( xdrs );
-		(void)close( sock );
+		delete sock;
 		return;
 	}
 
-	if( !xdrrec_endofrecord(xdrs,TRUE) ) {
+	if( !sock->end_of_message() ) {
 		dprintf( D_ALWAYS,
 			"Warning: can't send endofrecord to condor scheduler\n" );
-		xdr_destroy( xdrs );
-		(void)close( sock );
+		delete sock;
 		return;
 	}
 
 	dprintf( D_FULLDEBUG, "Sent KILL_FRGN_JOB command to condor scheduler\n" );
-	xdr_destroy( xdrs );
-	(void)close( sock );
+	delete sock;
 }
 
 
