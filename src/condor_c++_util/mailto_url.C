@@ -27,15 +27,8 @@
 */ 
 
 #include "condor_common.h"
+#include "condor_config.h"
 #include "url_condor.h"
-
-#define MAIL_PROG "/bin/mail"
-
-#if defined(CONDOR)
-extern "C" char *param(char *);
-#endif
-
-extern char *getenv( const char * );
 
 static
 int condor_open_mailto_url( const char *name, int flags, 
@@ -48,25 +41,13 @@ int condor_open_mailto_url( const char *name, int flags,
 		return -1;
 	} 
 
-	mail_prog = getenv("MAIL");
-
-#if defined(CONDOR)	/* Detect compilation for Condor */
-	if (mail_prog == 0) {
-		mail_prog = param("MAIL");
-	}
-#endif
-
-#if defined(MAIL_PROG)
-	if (mail_prog == 0) {
-		mail_prog = MAIL_PROG;
-	}
-#endif
-
+	mail_prog = param("MAIL");
 	if (mail_prog == 0) {
 		return -1;
 	}
 
 	sprintf(filter_url, "filter:%s %s", mail_prog, name);
+	free(mail_prog);
 	return open_url(filter_url, flags, n_bytes);
 }
 
