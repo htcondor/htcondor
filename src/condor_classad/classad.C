@@ -26,6 +26,12 @@ static char *_FileName_ = __FILE__;         // Used by EXCEPT (see except.h)
 extern "C" int _EXCEPT_(char*, ...);
 extern "C" int xdr_mywrapstring (XDR *, char **);
 
+// useful when debugging (std* are macros)
+FILE *__stdin__  = stdin;
+FILE *__stdout__ = stdout;
+FILE *__stderr__ = stderr;
+
+
 //
 // AdType Constructor.
 //
