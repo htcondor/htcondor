@@ -129,8 +129,9 @@ open_file_stream( const char *file, int flags, size_t *len )
 
 /*
   Open a TCP connection at the given hostname and port number.  This
-  will result in a file descriptor where we can read data (our checkpoint
-  information).
+  will result in a file descriptor where we can read or write the
+  file.  N.B. both the IP address and the port number are given in host
+  byte order.
 */
 int
 open_tcp_stream( unsigned int ip_addr, unsigned short port )
@@ -149,6 +150,7 @@ open_tcp_stream( unsigned int ip_addr, unsigned short port )
 	dprintf( D_FULLDEBUG, "Generated a data socket - fd = %d\n", fd );
 		
 		/* set the address */
+	ip_addr = htonl( ip_addr );
 	memset( &sin, '\0', sizeof sin );
 	memcpy( &sin.sin_addr, &ip_addr, sizeof(ip_addr) );
 	sin.sin_family = AF_INET;
