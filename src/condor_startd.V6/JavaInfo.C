@@ -142,6 +142,7 @@ void JavaInfo::query_create()
 
 	if(reaper_id==-1) {
 		reaper_id = daemonCore->Register_Reaper("JavaInfo::query_reaper",(ReaperHandlercpp)(JavaInfo::query_reaper),"JavaInfo::query_reaper",this);
+
 		if(reaper_id==FALSE) {
 			dprintf( D_ALWAYS, "JavaInfo: Unable to register reaper!\n" );
 			unlink(output_file);
@@ -225,11 +226,11 @@ int JavaInfo::query_reaper( int pid, int status )
 			int is_eof=0, is_error=0, is_empty=0;
 			ClassAd ad(file,"***",is_eof,is_error,is_empty);
 			if(is_error) {
-				dprintf( D_ALWAYS, 
+				dprintf( D_FULLDEBUG, 
 						 "JavaInfo: Query result is not a valid ClassAd.\n" );
 				show_error = true;
 			} else if(is_empty) {
-				dprintf( D_ALWAYS, "JavaInfo: Query result is empty.\n" );
+				dprintf( D_FULLDEBUG, "JavaInfo: Query result is empty.\n" );
 				show_error = true;
 			} else {
 				has_java = true;
@@ -248,12 +249,12 @@ int JavaInfo::query_reaper( int pid, int status )
 			}
 			fclose(file);
 		} else {
-			dprintf( D_ALWAYS, "JavaInfo: Query process did not leave any "
+			dprintf( D_FULLDEBUG, "JavaInfo: Query process did not leave any "
 					 "output in %s\n", output_file );
 			show_error = true;
 		}		
 	} else  {
-			// dprintf( D_ALWAYS, "JavaInfo: Java is not installed.\n" );
+		dprintf( D_FULLDEBUG, "JavaInfo: Java is not installed.\n" );
 		show_error = true;
 	}
 
@@ -261,20 +262,20 @@ int JavaInfo::query_reaper( int pid, int status )
 		char line[ATTRLIST_MAX_EXPRESSION];
 		FILE *file;
 
-			// dprintf(D_ALWAYS,"JavaInfo: Output stream from JVM:\n");
+		dprintf(D_FULLDEBUG,"JavaInfo: Output stream from JVM:\n");
 		file = fopen(output_file,"r");
 		if(file) {
 			while(fgets(line,sizeof(line),file)) {
-					// dprintf(D_ALWAYS,"JavaInfo: %s",line);
+				dprintf(D_FULLDEBUG,"JavaInfo: %s",line);
 			}
 			fclose(file);
 		}
 
-			// dprintf(D_ALWAYS,"JavaInfo: Error stream from JVM:\n");
+		dprintf(D_FULLDEBUG,"JavaInfo: Error stream from JVM:\n");
 		file = fopen(error_file,"r");
 		if(file) {
 			while(fgets(line,sizeof(line),file)) {
-					// dprintf(D_ALWAYS,"JavaInfo: %s",line);
+				dprintf(D_FULLDEBUG,"JavaInfo: %s",line);
 			}
 			fclose(file);
 		}
