@@ -183,7 +183,7 @@ Output: true on success, false otherwise
 
 bool ClassAdCollection::DeleteCollection(int CoID)
 {
-  return TraverseTree(CoID,RemoveCollection);
+  return TraverseTree(CoID,&ClassAdCollection::RemoveCollection);
 }
 
 //----------------------------------------------------------------------------------
@@ -448,7 +448,7 @@ bool ClassAdCollection::TraverseTree(int CoID, bool (ClassAdCollection::*Func)(i
   while (CurrNode->Children.Iterate(ChildCoID)) {
     if (!TraverseTree(ChildCoID,Func)) return false;
   }
-  return Func(CoID,CurrNode);
+  return (this->*Func)(CoID,CurrNode);
 }
 
 //----------------------------------------------------------------------------------
