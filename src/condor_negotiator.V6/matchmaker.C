@@ -147,9 +147,11 @@ reinitialize ()
 
 
 int Matchmaker::
-negotiationTime ()
+RESCHEDULE_commandHandler (int, Stream *)
 {
-	return RESCHEDULE_commandHandler (0, NULL);
+	daemonCore->Reset_Timer(negotiation_timerID,3,
+		NegotiatorInterval);
+	return TRUE;
 }
 
 
@@ -206,7 +208,7 @@ GET_PRIORITY_commandHandler (int, Stream *strm)
 
 
 int Matchmaker::
-RESCHEDULE_commandHandler (int, Stream *)
+negotiationTime ()
 {
 	ClassAdList startdAds;			// 1. get from collector
 	ClassAdList startdPvtAds;		// 2. get from collector
