@@ -80,6 +80,18 @@ hold and send you email explaining what went wrong and what you can do
 about it, (unless you set ``Notification = Never'' in your submit
 file).
 
+\item All Condor daemons and tools now have a CondorPlatform string,
+which shows which platform a given set of Condor binaries was built
+for. 
+In all places that you used to see CondorVersion, you will now see
+both CondorVersion and CondorPlatform, such as in each daemon's
+ClassAd, in the output to a \Opt{version} option (if supported), and
+when running \Prog{ident} on a given Condor binary.
+This string can help identify situations where you are running the 
+wrong version of the Condor binaries for a given platform (for
+example, running binaries built for Solaris 2.5.1 on a Solaris 2.6
+machine).   
+
 \item Added commented-out settings in the default
 \File{condor\_config} file we ship for various SMP-specific settings
 in the \Condor{startd}.
