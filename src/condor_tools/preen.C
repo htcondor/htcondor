@@ -52,6 +52,7 @@
 #include "condor_mach_status.h"
 #include "condor_uid.h"
 #include "proc_obj.h"
+#include "string_list.h"
 #include "directory.h"
 #include "alloc.h"
 
@@ -64,7 +65,7 @@ char *my_hostname();
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
-	// Define this to check for memory leaks
+// Define this to check for memory leaks
 
 int			MaxCkptInterval;	// max time between ckpts on this machine
 char		*Spool;				// dir for condor job queue
@@ -72,14 +73,16 @@ char		*Execute;			// dir for execution of condor jobs
 char		*Log;				// dir for condor program logs
 char		*CondorAdmin;		// who to send mail to in case of trouble
 char		*MyName;			// name this program was invoked by
+char        *ValidSpoolFiles;   // well known files in the spool dir
+char        *ValidLogFiles;     // well known files in the log dir
 BOOLEAN		MailFlag;			// true if we should send mail about problems
 BOOLEAN		VerboseFlag;		// true if we should produce verbose output
 BOOLEAN		RmFlag;				// true if we should remove extraneous files
-List<ProcObj>	*ProcList;		// all processes in current job queue
+List<ProcObj> *ProcList;		// all processes in current job queue
 List<char>	*BadFiles;			// list of files which don't belong
 
 
-	// prototypes of local interest
+// prototypes of local interest
 void usage();
 void send_mail_file();
 void init_params();
@@ -98,74 +101,6 @@ BOOLEAN do_unlink( const char *path );
 BOOLEAN remove_directory( const char *name );
 int do_stat( const char *path, struct stat *buf );
 
-/*
-  This primitive class is used to contain and search arrays of strings.  These
-  are used for the lists of well known files which are legitimate in the
-  various directories we will be checking.
-*/
-class StringList {
-public:
-	StringList( char *foo[] ) { data = foo; }
-	BOOLEAN contains( const char * );
-private:
-	char	**data;
-};
-
-/*
-  Files which are legitimate in the "spool" directory.
-*/
-char *ValidSpoolFiles[] = {
-	"job_queue.dir",
-	"job_queue.pag",
-	"job_queue.log",
-	"history",
-	"UserPrio",
-	"OldFiles",		// AFS backup directory
-	0
-};
-
-
-/*
-  Files which are legitimate in the "log" directory.
-*/
-char *ValidLogFiles[] = {
-	"MasterLog",
-	"MasterLog.old",
-	"NegotiatorLog",
-	"NegotiatorLog.old",
-	"CollectorLog",
-	"CollectorLog.old",
-	"SchedLog",
-	"SchedLog.old",
-	"ShadowLog",
-	"ShadowLog.old",
-	"StartLog",
-	"StartLog.old",
-	"StarterLog",
-	"StarterLog.old",
-	"KbdLog",
-	"KbdLog.old",
-	"GetHistoryLog",
-	"GetHistoryLog.old",
-	"ShadowLock",
-	"ULogLock",
-	"priorities.pag",
-	"priorities.dir",
-	"machine_status",
-	"QueueLock",
-	"CondorViewLog",
-	"CkptServerLog",
-	"CkptServerLog.old",
-	"W_Start_Log",
-	"W_Sched_Log",
-	"W_Start_Log.old",
-	"W_Sched_Log.old",
-	"AccountantLog",
-	"AccountantLog.old",
-	"CLIENTDUMP",
-	"OldFiles",		// AFS backup directory
-	0
-};
 
 /*
   Tell folks how to use this program.
@@ -176,6 +111,7 @@ usage()
 	fprintf( stderr, "Usage: %s [-mail] [-remove] [-verbose]\n", MyName );
 	exit( 1 );
 }
+
 
 int
 main( int argc, char *argv[] )
@@ -295,12 +231,13 @@ produce_output()
 void
 check_spool_dir()
 {
-	char	*f;
-	Directory dir(Spool);
-	StringList well_known_list(ValidSpoolFiles);
-	char	queue_name[_POSIX_PATH_MAX];
+	char	   *f;
+	Directory  dir(Spool);
+	StringList well_known_list;
+	char	   queue_name[_POSIX_PATH_MAX];
 	DBM	*q;
 
+	well_known_list.initializeFromString (ValidSpoolFiles);
 
 		/* Open and lock the job queue */
 	(void)sprintf( queue_name, "%s/job_queue", Spool );
@@ -554,7 +491,9 @@ check_log_dir()
 {
 	char	*f;
 	Directory dir(Log);
-	StringList well_known_list(ValidLogFiles);
+	StringList well_known_list;
+
+	well_known_list.initializeFromString (ValidLogFiles);
 
 	while( f = dir.Next() ) {
 		if( well_known_list.contains(f) ) {
@@ -596,23 +535,15 @@ init_params()
         EXCEPT( "CONDOR_ADMIN not specified in config file" );
     }
 
-}
-
-/*
-  Return TRUE if our string list contains the given string, and FALSE
-  otherwise.
-*/
-StringList::contains( const char *st )
-{
-	char	**ptr;
-
-	for( ptr=data; *ptr; ptr++ ) {
-		if( strcmp(st,*ptr) == MATCH ) {
-			return TRUE;
-		}
+	if( (ValidSpoolFiles = param("VALID_SPOOL_FILES")) == NULL ) {
+		EXCEPT ( "VALID_SPOOL_FILES not specified in config file" );
 	}
-	return FALSE;
+
+	if ( (ValidLogFiles = param("VALID_LOG_FILES")) == NULL ) {
+		EXCEPT ( "VALID_LOG_FILES not specified in config file" );
+	}
 }
+
 
 /*
   Unlink a file we want to get rid of.  If its a simple file, we do
