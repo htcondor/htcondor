@@ -268,11 +268,46 @@ void ExceptionHandler::IntelStackWalk( PCONTEXT pContext ) {
 			break;
     } while ( 1 );
 }
+
+// Note: this function was from MSDN:
+// http://msdn.microsoft.com/code/default.asp?url=/msdn-files/026/001/909/Working%20Set%20Tuner/Source%20Files/CrashHandler_cpp.asp
+BOOL ExceptionHandler::InternalSymGetLineFromAddr ( IN  HANDLE			hProcess, 
+													IN  DWORD			dwAddr, 
+													OUT PDWORD			pdwDisplacement, 
+													OUT PIMAGEHLP_LINE  Line) 
+{ 
+    // The problem is that the symbol engine finds only those source 
+    // line addresses (after the first lookup) that fall exactly on 
+    // a zero displacement. I'll walk backward 100 bytes to 
+    // find the line and return the proper displacement. 
+    DWORD dwTempDis = 0 ; 
+
+    while ( FALSE == _SymGetLineFromAddr(hProcess,dwAddr - dwTempDis,pdwDisplacement,Line)) 
+    { 
+        dwTempDis += 1 ; 
+        if ( 100 == dwTempDis ) 
+        { 
+            return ( FALSE ) ; 
+        } 
+    } 
+
+    // I found the line, and the source line information is correct, so 
+    // change the displacement if I had to search backward to find 
+    // the source line. 
+    if ( 0 != dwTempDis ) 
+    { 
+        *pdwDisplacement = dwTempDis ; 
+    } 
+    return ( TRUE ) ; 
+} 
+
+
 //============================================================
 // Walks the stack, and writes the results to the report file 
 //============================================================
 void ExceptionHandler::ImagehlpStackWalk( PCONTEXT pContext ) {
     _tprintf( _T("\nCall stack:\n") );    
+//	_tprintf( _T(_SymGetLineFromAddr ? "(Line number api available)\n" : "(Line number api not available)\n"));
 	_tprintf( _T("Address   Frame\n") );
     // Could use SymSetOptions here to add the SYMOPT_DEFERRED_LOADS flag
     STACKFRAME sf;    
@@ -314,24 +349,24 @@ void ExceptionHandler::ImagehlpStackWalk( PCONTEXT pContext ) {
 		pSymbol->Name[0] = '\0';
         DWORD symDisplacement = 0;  // Displacement of the input address,
                                     // relative to the start of the symbol
-		
-		int iLineNum = -1; // -1 will mean unknown.  
-		if (_SymGetLineFromAddr) // if this OS has the get linenum function
-		{
-			// call it
-			IMAGEHLP_LINE lineInfo;
-			if (_SymGetLineFromAddr(GetCurrentProcess(), sf.AddrPC.Offset,
-									&symDisplacement, &lineInfo))
-			{
-				iLineNum = lineInfo.LineNumber;
-			}
-		}
 
 		if ( _SymGetSymFromAddr(GetCurrentProcess(), sf.AddrPC.Offset,
-                                &symDisplacement, pSymbol) ) 
+                               &symDisplacement, pSymbol) ) 
 		{
-			if (iLineNum != -1)
-				_tprintf( _T("%hs(%d)+%X\n"), pSymbol->Name, iLineNum, symDisplacement );
+			IMAGEHLP_LINE lineInfo;
+			lineInfo.SizeOfStruct = sizeof(IMAGEHLP_LINE); // Ok m$, if you say so
+			ZeroMemory ( &lineInfo, sizeof (IMAGEHLP_LINE)) ; 
+			bool bGotLineNum = false;
+			if (_SymGetLineFromAddr) // if this OS has the get linenum function
+			{
+				// call it
+				bGotLineNum = InternalSymGetLineFromAddr(GetCurrentProcess(), sf.AddrPC.Offset,
+										&symDisplacement, &lineInfo);
+			}
+			
+			if (bGotLineNum)
+				_tprintf( _T("%hs (%s:%d)\n"), pSymbol->Name, lineInfo.FileName, 
+					lineInfo.LineNumber);
 			else
 				_tprintf( _T("%hs+%X\n"), pSymbol->Name, symDisplacement );
 		} else {
@@ -348,7 +383,7 @@ void ExceptionHandler::ImagehlpStackWalk( PCONTEXT pContext ) {
                                 szModule, sizeof(szModule), section, offset );
             _tprintf( _T("%04X:%08X %s\n"),
                       section, offset, szModule );        
-		}    
+		} 
 	}
 }
 //============================================================================
@@ -401,7 +436,7 @@ BOOL ExceptionHandler::InitImagehlpFunctions( void ) {
 	// avoid calling it if it does not exist.  All the other fcns are required, 
 	// this one is optional.
 	_SymGetLineFromAddr= (SYMGETLINEFROMADDRPROC) GetProcAddress( hModImagehlp,
-														"SymGetSymFromAddr" );
+														"SymGetLineFromAddr" );
 
     if ( !_SymInitialize( GetCurrentProcess(), NULL, TRUE ) )
 		return FALSE;
