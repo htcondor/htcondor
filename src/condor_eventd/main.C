@@ -50,10 +50,12 @@ int
 main_shutdown_fast()
 {
 	DC_Exit(0);
+	return TRUE;
 }
 
 int
 main_shutdown_graceful()
 {
 	DC_Exit(0);
+	return TRUE;
 }
