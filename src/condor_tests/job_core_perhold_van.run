@@ -6,6 +6,12 @@ $testname = 'Condor PERIODIC_HOLD policy test - vanilla U';
 my $nostatus = CondorTest::verbose_system("job_core_perhold-false_van.pl");
 my $willstatus = CondorTest::verbose_system("job_core_perhold-true_van.pl");
 
+my %listoftests;
+$listoftests{"corename"} = "job_core_perhold";
+$listoftests{"tests"} = [ "job_core_perhold-false_van", "job_core_perhold-true_van"];
+$listoftests{"extensions"} = [ ".cmd", ".cmd.out", ".err", ".out", ".log"];
+CondorTest::MergeOutputFiles(\%listoftests);
+
 if($nostatus != 0)
 {
 	print "PERIODIC_HOLD: failed no trigger test\n";

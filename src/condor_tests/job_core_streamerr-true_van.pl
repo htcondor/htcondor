@@ -16,7 +16,8 @@ $execute = sub
 	print "Size 2 of $name is $size2\n";
 	if( $size1 == $size2 )
 	{
-		die "Error size should vary if streaming\n";
+		print "Error size should vary if streaming\n";
+		exit(1);
 	}
 };
 

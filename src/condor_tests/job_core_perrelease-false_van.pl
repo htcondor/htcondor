@@ -17,7 +17,8 @@ $executed = sub
 	%info = @_;
 	$cluster = $info{"cluster"};
 
-	die "Bad. Job submitted on hold and NEVER released by periodic release policy... Should not RUN!\n";
+	print "Bad. Job submitted on hold and NEVER released by periodic release policy... Should not RUN!\n";
+	exit(1);
 };
 
 $success = sub
@@ -25,7 +26,8 @@ $success = sub
 	my %info = @_;
 	my $cluster = $info{"cluster"};
 
-	die "Bad. Job submitted on hold and NEVER released by periodic release policy... Should not Complete!\n";
+	print "Bad. Job submitted on hold and NEVER released by periodic release policy... Should not Complete!\n";
+	exit(1);
 };
 
 $timed = sub
@@ -63,7 +65,8 @@ $submit = sub
 	print "It better be on hold... status is $status(5 is correct)";
 	if($status != HELD)
 	{
-		die "Cluster $cluster failed to go on hold\n";
+		print "Cluster $cluster failed to go on hold\n";
+		exit(1);
 	}
 
 

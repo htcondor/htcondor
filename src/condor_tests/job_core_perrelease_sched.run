@@ -6,6 +6,12 @@ $testname = 'Condor PERIODIC_RELEASE policy test - scheduler U';
 my $nostatus = CondorTest::verbose_system("job_core_perrelease-false_sched.pl");
 my $willstatus = CondorTest::verbose_system("job_core_perrelease-true_sched.pl");
 
+my %listoftests;
+$listoftests{"corename"} = "job_core_perrelease";
+$listoftests{"tests"} = [ "job_core_perrelease-false_van", "job_core_perrelease-true_van"];
+$listoftests{"extensions"} = [ ".cmd", ".cmd.out", ".err", ".out", ".log"];
+CondorTest::MergeOutputFiles(\%listoftests);
+
 if($nostatus != 0)
 {
 	print "PERIODIC_RELEASE: failed no trigger test\n";

@@ -6,6 +6,12 @@ $testname = 'Condor ON_EXIT_REMOVE policy test - scheduler U';
 my $nostatus = CondorTest::verbose_system("job_core_onexitrem-false_sched.pl");
 my $willstatus = CondorTest::verbose_system("job_core_onexitrem-true_sched.pl");
 
+my %listoftests; 
+$listoftests{"corename"} = "job_core_onexitrem_sched";
+$listoftests{"tests"} = [ "job_core_onexitrem-false_sched", "job_core_onexitrem-true_sched"];
+$listoftests{"extensions"} = [ ".cmd", ".cmd.out", ".err", ".out", ".log"];
+CondorTest::MergeOutputFiles(\%listoftests);
+
 if($nostatus != 0)
 {
 	print "ON_EXIT_REMOVE: failed no trigger test\n";
