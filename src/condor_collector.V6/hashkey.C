@@ -91,6 +91,8 @@ makeStartdAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	char buffer [30];
 	char buf2   [64];
 	int  inferred = 0;
+	ClassAdUnParser unp;
+	string buffString;
 
 	// get the name of the startd
 	if (!(tree = ad->Lookup ("Name")))
@@ -102,7 +104,10 @@ makeStartdAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 
 	if (tree)
 	{
-		strcpy (hk.name, ((String *)tree->RArg())->Value());
+		unp.Unparse( buffString, tree );
+//		strcpy (hk.name, ((String *)tree->RArg())->Value());
+		strcpy (hk.name, buffString.c_str( ) );
+		buffString = "";
 	}
 	else
 	{
@@ -119,7 +124,10 @@ makeStartdAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 
 	if (tree)
 	{
-		strcpy (buffer, ((String *)tree->RArg())->Value());
+		unp.Unparse( buffString, tree );
+//		strcpy (buffer, ((String *)tree->RArg())->Value());
+		strcpy (buffer, buffString.c_str( ) );
+		buffString = "";
 	}
 	else
 	{
@@ -145,6 +153,8 @@ makeScheddAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	char buffer [30];
 	char buf2   [64];
 	int  inferred = 0;
+	ClassAdUnParser unp;
+	string buffString;
 
 	// get the name of the startd
 	if (!(tree = ad->Lookup ("Name")))
@@ -156,7 +166,10 @@ makeScheddAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 
 	if (tree)
 	{
-		strcpy (hk.name, ((String *)tree->RArg())->Value());
+		unp.Unparse( buffString, tree );
+//		strcpy (hk.name, ((String *)tree->RArg())->Value());
+		strcpy (hk.name, buffString.c_str( ) );
+		buffString = "";
 	}
 	else
 	{
@@ -173,7 +186,10 @@ makeScheddAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 
 	if (tree)
 	{
-		strcpy (buffer, ((String *)tree->RArg())->Value());
+		unp.Unparse( buffString, tree );
+//		strcpy (buffer, ((String *)tree->RArg())->Value());
+		strcpy (buffer, buffString.c_str( ) );
+		buffString = "";
 	}
 	else
 	{
@@ -200,6 +216,8 @@ makeLicenseAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	char buffer [30];
 	char buf2   [64];
 	int  inferred = 0;
+	ClassAdUnParser unp;
+	string buffString;
 
 	// get the name of the startd
 	if (!(tree = ad->Lookup ("Name")))
@@ -211,7 +229,10 @@ makeLicenseAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 
 	if (tree)
 	{
-		strcpy (hk.name, ((String *)tree->RArg())->Value());
+		unp.Unparse( buffString, tree );
+//		strcpy (hk.name, ((String *)tree->RArg())->Value());
+		strcpy (hk.name, buffString.c_str( ) );
+		buffString = "";
 	}
 	else
 	{
@@ -225,7 +246,10 @@ makeLicenseAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	
 	if (tree)
 	{
-		strcpy (buffer, ((String *)tree->RArg())->Value());
+		unp.Unparse( buffString, tree );
+//		strcpy (buffer, ((String *)tree->RArg())->Value());
+		strcpy (buffer, buffString.c_str( ) );
+		buffString = "";
 	}
 	else
 	{
@@ -249,6 +273,8 @@ bool
 makeMasterAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
 	ExprTree *tree;
+	ClassAdUnParser unp;
+	string buffString;
 
 	if (!(tree = ad->Lookup ("Name")))
 	{
@@ -260,7 +286,10 @@ makeMasterAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 
 	if (tree)
 	{
-		strcpy (hk.name, ((String *)tree->RArg())->Value ());
+		unp.Unparse( buffString, tree );
+//		strcpy (hk.name, ((String *)tree->RArg())->Value ());
+		strcpy (hk.name, buffString.c_str( ) );
+		buffString = "";
 	}
 	else
 	{
