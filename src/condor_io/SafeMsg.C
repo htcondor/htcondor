@@ -97,11 +97,13 @@ bool _condorPacket :: set_encryption_id(const char * keyId)
     if (outgoingEncKeyId_) {
         free(outgoingEncKeyId_);
         outgoingEncKeyId_ = 0;
+        outgoingEidLen_   = 0;
     }
     
     if (keyId) {
         outgoingEncKeyId_ = strdup(keyId);
         outgoingEidLen_   = strlen(outgoingEncKeyId_);
+        dprintf(D_ALWAYS, "seeting key length %d\n", outgoingEidLen_);
         if ( curIndex == 0 ) {
             curIndex += 10;
         }
@@ -128,9 +130,7 @@ bool _condorPacket :: set_encryption_id(const char * keyId)
 bool _condorPacket::init_MD(const char * keyId)
 {
     bool inited = true;
-    if (!empty()) {
-        return false;  // You can not change state in the middle of a packet!
-    }
+    ASSERT(empty());
 
     if (outgoingMD5KeyId_) {
         free(outgoingMD5KeyId_);
@@ -260,7 +260,9 @@ void _condorPacket :: checkHeader(int & len, void *& dta)
             verified_ = false;
         }
         else {
-            dprintf(D_ALWAYS,"Incorrect MD/ENC header information\n");
+            if (flags & MD_IS_ON) {
+                dprintf(D_ALWAYS,"Incorrect MD header information\n");
+            }
         }
 
         if ((flags & ENCRYPTION_IS_ON) && (encKeyIdLen > 0)) {
@@ -269,6 +271,11 @@ void _condorPacket :: checkHeader(int & len, void *& dta)
             memcpy(incomingEncKeyId_, data, encKeyIdLen);
             data += encKeyIdLen;
             length -= encKeyIdLen;
+        }
+        else {
+            if (flags & ENCRYPTION_IS_ON) {
+                dprintf(D_ALWAYS, "Incorrect ENC Header information\n");
+            }
         }
 
         len = length;
@@ -452,12 +459,12 @@ void _condorPacket::addExtendedHeader(unsigned char * mac)
             memcpy(&dataGram[SAFE_MSG_HEADER_SIZE+where], mac, MAC_SIZE);
             where += MAC_SIZE;
         }
-        if (outgoingEncKeyId_) {
-            // stick outgoingEncKeyId_
-            memcpy(&dataGram[SAFE_MSG_HEADER_SIZE+where], 
-                   outgoingEncKeyId_, outgoingEidLen_);
-        }
+    }
 
+    if (outgoingEncKeyId_) {
+        // stick outgoingEncKeyId_
+        memcpy(&dataGram[SAFE_MSG_HEADER_SIZE+where], 
+               outgoingEncKeyId_, outgoingEidLen_);
     }
 }
 
