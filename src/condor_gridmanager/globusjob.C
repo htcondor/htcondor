@@ -434,6 +434,7 @@ int GlobusJob::doEvaluateState()
 			break;
 		case GM_SUBMITTED:
 			if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ) {
+				syncIO();
 				if ( newJM ) {
 					gmState = GM_CHECK_OUTPUT;
 				} else {
@@ -483,7 +484,6 @@ int GlobusJob::doEvaluateState()
 					gmState = GM_DONE_SAVE;
 					break;
 				}
-				syncIO();
 				int output_size = localOutput ? syncedOutputSize : -1;
 				int error_size = localError ? syncedErrorSize : -1;
 				sprintf( size_str, "%d %d", output_size, error_size );

@@ -84,6 +84,7 @@ GM_SUBMITTED
       if (other error)
         gm_state = GM_STOP_AND_RESTART
   DONE
+    sync I/O to disk
     old jm
       gm_state = GM_DONE_SAVE
     new jm
