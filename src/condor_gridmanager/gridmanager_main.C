@@ -11,6 +11,9 @@
 
 char *mySubSystem = "GRIDMANAGER";	// used by Daemon Core
 
+// this appears at the bottom of this file
+extern "C" int display_dprintf_header(FILE *fp);
+
 void
 usage( char *name )
 {
@@ -103,6 +106,9 @@ main_init( int argc, char **argv )
 		i++;
 	}
 
+	// Setup dprintf to display pid
+	DebugId = display_dprintf_header;
+
 	// Activate Globus libraries
 	if ( main_activate_globus() == false ) {
 		dprintf(D_ALWAYS,"Failed to activate Globus Libraries\n");
@@ -154,7 +160,7 @@ display_dprintf_header(FILE *fp)
 		mypid = daemonCore->getpid();
 	}
 
-	fprintf( fp, "[%ld]: ", mypid );
+	fprintf( fp, "[%ld] ", mypid );
 
 	return TRUE;
 }
