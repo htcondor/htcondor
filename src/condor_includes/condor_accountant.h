@@ -74,8 +74,8 @@ private:
   // Private methods Methods
   //--------------------------------------------------------
   
-  void AddMatch(const MyString& CustomerName, const MyString& ResourceName, int T);
-  void RemoveMatch(const MyString& ResourceName, int T);
+  void AddMatch(const MyString& CustomerName, const MyString& ResourceName, time_t T);
+  void RemoveMatch(const MyString& ResourceName, time_t T);
 
   //--------------------------------------------------------
   // Configuration variables
@@ -83,6 +83,8 @@ private:
 
   float MinPriority;        // Minimum priority (if no resources used)
   float NiceUserPriorityFactor;
+  float RemoteUserPriorityFactor;
+  MyString AccountantLocalDomain;
   float HalfLifePeriod;     // The time in sec in which the priority is halved by aging
   MyString LogFileName;      // Name of Log file
 
@@ -121,6 +123,7 @@ private:
   static int IsClaimed(ClassAd* ResourceAd, MyString& CustomerName);
   static int CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& CustomerName);
   static ClassAd* FindResourceAd(const MyString& ResourceName, ClassAdList& ResourceList);
+  static MyString GetDomain(const MyString& CustomerName);
 
   ClassAd* GetClassAd(const MyString& Key);
   bool DeleteClassAd(const MyString& Key);

@@ -25,7 +25,6 @@
 #include <math.h>
 #include <iomanip.h>
 
-#include "TimeClass.h"
 #include "condor_accountant.h"
 #include "condor_debug.h"
 #include "condor_config.h"
@@ -49,15 +48,15 @@ MyString Accountant::LastUpdateTimeAttr="LastUpdateTime";
 MyString Accountant::RemoteUserAttr="RemoteUser";
 MyString Accountant::StartTimeAttr="StartTime";
 
+static char *_FileName_ = __FILE__;
+
 //------------------------------------------------------------------
 // Constructor - One time initialization
 //------------------------------------------------------------------
 
 Accountant::Accountant()
 {
-  HalfLifePeriod=600;
   MinPriority=0.5;
-  NiceUserPriorityFactor=1000000;
   AcctLog=NULL;
 }
 
@@ -76,8 +75,15 @@ Accountant::~Accountant()
 
 void Accountant::Initialize() 
 {
-  // get half life period
+  // Default values
+
   char* tmp;
+  NiceUserPriorityFactor=10000000;
+  RemoteUserPriorityFactor=10000;
+  HalfLifePeriod=600;
+
+  // get half life period
+  
   tmp = param("PRIORITY_HALFLIFE");
   if(tmp) {
 	  HalfLifePeriod=atoi(tmp);
@@ -85,7 +91,39 @@ void Accountant::Initialize()
   }
   dprintf(D_FULLDEBUG,"Accountant::Initialize - HalfLifePeriod=%f\n",HalfLifePeriod);
 
+  // get nice users priority factor
+
+  tmp = param("NICE_USER_PRIO_FACTOR");
+  if(tmp) {
+	  NiceUserPriorityFactor=atoi(tmp);
+	  free(tmp);
+  }
+
+  // get remote users priority factor
+
+  tmp = param("REMOTE_PRIO_FACTOR");
+  if(tmp) {
+	  RemoteUserPriorityFactor=atoi(tmp);
+	  free(tmp);
+  }
+
+  // get accountant local domain
+
+  tmp = param("ACCOUNTANT_LOCAL_DOMAIN");
+  if(tmp) {
+	  AccountantLocalDomain=tmp;
+	  free(tmp);
+  }
+  else {
+      RemoteUserPriorityFactor=1;
+  }
+
+  dprintf(D_FULLDEBUG,"Accountant::Initialize - NiceUserPriorityFactor=%f\n",NiceUserPriorityFactor);
+  dprintf(D_FULLDEBUG,"Accountant::Initialize - RemoteUserPriorityFactor=%f\n",RemoteUserPriorityFactor);
+  dprintf(D_FULLDEBUG,"Accountant::Initialize - AccountantLocalDomain=%s\n",AccountantLocalDomain.Value());
+
   // get log filename
+
   tmp = param("SPOOL");
   MyString OldLogFileName;
   if(tmp) {
@@ -106,8 +144,11 @@ void Accountant::Initialize()
   }
 
   // get last update time
+
   LastUpdateTime=0;
   GetAttributeInt(AcctRecord,LastUpdateTimeAttr,LastUpdateTime);
+
+  // Update priorities
 
   UpdatePriorities();
 }
@@ -134,6 +175,8 @@ float Accountant::GetPriority(const MyString& CustomerName)
   if (PriorityFactor<1) {
     if (strncmp(CustomerName.Value(),NiceUserName,strlen(NiceUserName))==0)
       PriorityFactor=NiceUserPriorityFactor;
+    else if (AccountantLocalDomain!=GetDomain(CustomerName))
+      PriorityFactor=RemoteUserPriorityFactor;
     else
       PriorityFactor=1;
     SetAttributeFloat(CustomerRecord+CustomerName,PriorityFactorAttr,PriorityFactor);
@@ -154,7 +197,7 @@ float Accountant::GetPriority(const MyString& CustomerName)
 void Accountant::ResetAllUsage() 
 {
   dprintf(D_FULLDEBUG,"Accountant::ResetAllUsage\n");
-  int T=Time::Now();
+  time_t T=time(0);
   HashKey HK;
   char key[_POSIX_PATH_MAX];
   ClassAd* ad;
@@ -179,7 +222,7 @@ void Accountant::ResetAccumulatedUsage(const MyString& CustomerName)
 {
   dprintf(D_FULLDEBUG,"Accountant::ResetAccumulatedUsage - CustomerName=%s\n",CustomerName.Value());
   SetAttributeFloat(CustomerRecord+CustomerName,AccumulatedUsageAttr,0);
-  SetAttributeInt(CustomerRecord+CustomerName,BeginUsageTimeAttr,Time::Now());
+  SetAttributeInt(CustomerRecord+CustomerName,BeginUsageTimeAttr,time(0));
 }
 
 //------------------------------------------------------------------
@@ -210,11 +253,11 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
 {
   // Get resource name and the time
   MyString ResourceName=GetResourceName(ResourceAd);
-  int T=Time::Now();
+  time_t T=time(0);
   AddMatch(CustomerName,ResourceName,T);
 }
 
-void Accountant::AddMatch(const MyString& CustomerName, const MyString& ResourceName, int T)
+void Accountant::AddMatch(const MyString& CustomerName, const MyString& ResourceName, time_t T)
 {
   dprintf(D_FULLDEBUG,"Accountant::AddMatch - CustomerName=%s, ResourceName=%s\n",CustomerName.Value(),ResourceName.Value());
 
@@ -248,10 +291,10 @@ void Accountant::AddMatch(const MyString& CustomerName, const MyString& Resource
 
 void Accountant::RemoveMatch(const MyString& ResourceName)
 {
-  RemoveMatch(ResourceName,Time::Now());
+  RemoveMatch(ResourceName,time(0));
 }
 
-void Accountant::RemoveMatch(const MyString& ResourceName, int T)
+void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
 {
   dprintf(D_FULLDEBUG,"Accountant::RemoveMatch - ResourceName=%s\n",ResourceName.Value());
 
@@ -321,7 +364,7 @@ void Accountant::DisplayMatches()
 
 void Accountant::UpdatePriorities() 
 {
-  int T=Time::Now();
+  int T=time(0);
   int TimePassed=T-LastUpdateTime;
   if (TimePassed==0) return;
   float AgingFactor=pow(0.5,float(TimePassed)/HalfLifePeriod);
@@ -372,9 +415,9 @@ void Accountant::UpdatePriorities()
   // Check if the log needs to be truncated
   struct stat statbuf;
   if (stat(LogFileName.Value(),&statbuf)) {
-    EXCEPT ("ERROR in Accountant::UpdatePriorities - can't stat the log file");
+    dprintf(D_ALWAYS,"Warning!! ERROR in Accountant::UpdatePriorities - can't stat the log file");
   }
-  if (statbuf.st_size>300000) {
+  else if (statbuf.st_size>300000) {
     AcctLog->TruncLog();
     dprintf(D_FULLDEBUG,"Accountant::UpdatePriorities - truncating log (prev size=%d)\n",statbuf.st_size);
   }
@@ -687,6 +730,19 @@ ClassAd* Accountant::FindResourceAd(const MyString& ResourceName, ClassAdList& R
   }
   ResourceList.Close();
   return ResourceAd;
+}
+
+//------------------------------------------------------------------
+// Get the users domain
+//------------------------------------------------------------------
+
+MyString Accountant::GetDomain(const MyString& CustomerName)
+{
+  MyString S;
+  int pos=CustomerName.FindChar('@');
+  if (pos==-1) return S;
+  S=CustomerName.Substr(pos+1,CustomerName.Length()-1);
+  return S;
 }
 
 //------------------------------------------------------------------

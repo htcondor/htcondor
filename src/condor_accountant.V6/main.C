@@ -38,6 +38,10 @@ int main_init(int argc, char *argv[])
   accountant.AddMatch("Yuval",Ad5);
   accountant.AddMatch("Yuval",Ad6);
 
+  accountant.AddMatch("localuser@cs.wisc.edu",Ad6);
+  accountant.AddMatch("nice-user.stamuser@cs.wisc.edu",Ad5);
+  accountant.AddMatch("remoteuser@xxx.yyy.zzz",Ad4);
+
   accountant.UpdatePriorities();
 
   // accountant.SetPriority("Arieh",3);
@@ -52,11 +56,15 @@ int main_init(int argc, char *argv[])
   dprintf(D_ALWAYS,"Yuval = %f\n",accountant.GetPriority("Yuval"));
   dprintf(D_ALWAYS,"nice-user.Shlomo = %f\n",accountant.GetPriority("nice-user.Shlomo"));
 
+  dprintf(D_ALWAYS,"localuser@cs.wisc.edu = %f\n",accountant.GetPriority("localuser@cs.wisc.edu"));
+  dprintf(D_ALWAYS,"nice-user.stamuser@cs.wisc.edu = %f\n",accountant.GetPriority("nice-user.stamuser@cs.wisc.edu"));
+  dprintf(D_ALWAYS,"remoteuser@xxx.yyy.zzz = %f\n",accountant.GetPriority("remoteuser@xxx.yyy.zzz"));
+
   // accountant.DisplayLog();
   // accountant.DisplayMatches();
 
   AttrList* AL=accountant.ReportState();
-  AL->fPrint(stdout);
+  // AL->fPrint(stdout);
 
   exit(0);
 
