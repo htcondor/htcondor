@@ -423,7 +423,7 @@ SetPartitionExprs( ClassAdCollection *coll, const string &expr )
 
 		// parse the expression and insert it into ad in left context
 	if( !coll->parser.ParseExpression( expr, exprList ) || 
-			!exprList->GetKind( ) != ExprTree::EXPR_LIST_NODE ) {
+			(exprList->GetKind( ) != ExprTree::EXPR_LIST_NODE) ) {
 		if( exprList ) delete exprList;
 		CondorErrno = ERR_BAD_PARTITION_EXPRS;
 		CondorErrMsg += "; failed to set partition expresssions";
