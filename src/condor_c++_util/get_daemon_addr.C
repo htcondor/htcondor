@@ -54,20 +54,20 @@ get_host_part( const char* name )
 }
 
 
-// Return a pointer to a static buffer that contains the valid daemon
-// name that corresponds with the given name.  Basically, see if
-// there's an '@'.  If so, resolve everything after it as a hostname.
-// If not, resolve what we were passed as a hostname.
+// Return a pointer to a newly allocated string that contains the
+// valid daemon name that corresponds with the given name.  Basically,
+// see if there's an '@'.  If so, resolve everything after it as a
+// hostname.  If not, resolve what we were passed as a hostname.
+// The string is allocated with strnewp() (or it's equivalent), so you
+// should deallocate it with delete [].
 char*
 get_daemon_name( const char* name )
 {
-	char *tmp, *fullname, *tmpname;
-	char daemon_name[256];
-	daemon_name[0] = '\0';
-	tmpname= strdup( name );
-	int had_error = 0;
+	char *tmp, *fullname, *tmpname, *daemon_name = NULL;
+	int size;
 
 		// First, check for a '@' in the name.
+	tmpname = strdup( name );
 	tmp = strchr( tmpname, '@' );
 	if( tmp ) {
 			// There's a '@'.
@@ -79,27 +79,21 @@ get_daemon_name( const char* name )
 			fullname = get_full_hostname( tmp );
 		} else {
 				// There was nothing after the @, use localhost:
-			fullname = my_full_hostname();
+			fullname = strnewp( my_full_hostname() );
 		}
 		if( fullname ) {
+			size = strlen(tmpname) + strlen(fullname) + 2;
+			daemon_name = new char[size];
 			sprintf( daemon_name, "%s@%s", tmpname, fullname );
-		} else {
-			had_error = 1;
-		}
+			delete [] fullname;
+		} 
 	} else {
 			// There's no '@', just try to resolve the hostname.
-		if( (fullname = get_full_hostname(tmpname)) ) {
-			sprintf( daemon_name, "%s", fullname );
-		} else {
-			had_error = 1;
-		}			
+		daemon_name = get_full_hostname( tmpname );
 	}
 	free( tmpname );
-	if( had_error ) {
-		return NULL;
-	} else {
-		return strnewp( daemon_name );
-	}
+		// If there was an error, this will still be NULL.
+	return daemon_name;
 }
 
 
@@ -108,50 +102,51 @@ get_daemon_name( const char* name )
 // it and append my_full_hostname().  If there's no '@', try to
 // resolve what we have and see if it's my_full_hostname.  If so, use
 // it, otherwise, use name@my_full_hostname().  We return the answer
-// in a newly allocated string which should be deallocated w/ delete. 
+// in a string which should be deallocated w/ delete [].
 char*
 build_valid_daemon_name( char* name ) 
 {
-	char *tmp;
-	char daemonName[100];
+	char *tmp, *tmpname, *daemon_name = NULL;
+	int size;
+
+		// This flag determines if we want to just return a copy of
+		// my_full_hostname(), or if we want to append
+		// "@my_full_hostname" to the name we were given.  The name we
+		// were given might include an '@', in which case, we trim off
+		// everything after the '@'.
+	bool just_host = false;
 
 	if( name && *name ) {
-		tmp = strchr( name, '@' );
+		tmpname = strnewp( name );
+		tmp = strchr( tmpname, '@' );
 		if( tmp ) {
-				// name we were passed has an '@'
+				// name we were passed has an '@', ignore everything
+				// after (and including) the '@'.  
 			*tmp = '\0';
-			sprintf( daemonName, "%s@%s", name, my_full_hostname() );
 		} else {
 				// no '@', see if what we have is our hostname
-			if( !strcmp(get_full_hostname(name), my_full_hostname()) ) {
-				sprintf( daemonName, "%s", my_full_hostname() );
-			} else {
-				sprintf( daemonName, "%s@%s", name, my_full_hostname() );
+			if( (tmp = get_full_hostname(name)) ) {
+				if( !strcmp(tmp, my_full_hostname()) ) {
+						// Yup, so just the full hostname.
+					just_host = true;
+				}					
+				delete [] tmp;
 			}
 		}
 	} else {
-		sprintf( daemonName, "%s", my_full_hostname() );
+			// Passed NULL for the name.
+		just_host = true;
 	}
-	return strnewp( daemonName );
-}
 
-
-// Return a newly allocated string which contains the name of the
-// given daemon (specified by subsys string) as configured on the
-// local host.  This string should be deallocated with delete []. 
-char*
-my_daemon_name( const char* subsys )
-{
-	char line [100], *tmp, *my_name;
-	sprintf( line, "%s_NAME", subsys );
-	tmp = param( line );
-	if( tmp ) {
-		my_name = build_valid_daemon_name(tmp);
-		free( tmp );
+	if( just_host ) {
+		daemon_name = strnewp( my_full_hostname() );
 	} else {
-		my_name = strnewp( my_full_hostname() );
+		size = strlen(tmpname) + strlen(my_full_hostname()) + 2; 
+		daemon_name = new char[size];
+		sprintf( daemon_name, "%s@%s", tmpname, my_full_hostname() ); 
+		delete [] tmpname;
 	}
-	return my_name;
+	return daemon_name;
 }
 
 
@@ -160,8 +155,8 @@ get_schedd_addr(const char* name, const char* pool)
 {
 	static char addr[100];
 	Daemon d( DT_SCHEDD, name, pool );
-	if( d.addr() ) {
-		sprintf( addr, "%s", d.addr() );
+	if( d.locate() ) {
+		strncpy( addr, d.addr(), 100 );
 		return addr;
 	} else {
 		return NULL;
@@ -174,8 +169,8 @@ get_startd_addr(const char* name, const char* pool)
 {
 	static char addr[100];
 	Daemon d( DT_STARTD, name, pool );
-	if( d.addr() ) {
-		sprintf( addr, "%s", d.addr() );
+	if( d.locate() ) {
+		strncpy( addr, d.addr(), 100 );
 		return addr;
 	} else {
 		return NULL;
@@ -188,8 +183,8 @@ get_master_addr(const char* name, const char* pool)
 {
 	static char addr[100];
 	Daemon d( DT_MASTER, name, pool );
-	if( d.addr() ) {
-		sprintf( addr, "%s", d.addr() );
+	if( d.locate() ) {
+		strncpy( addr, d.addr(), 100 );
 		return addr;
 	} else {
 		return NULL;
@@ -201,8 +196,8 @@ get_negotiator_addr(const char* name)
 {
 	static char addr[100];
 	Daemon d( DT_COLLECTOR, name );
-	if( d.addr() ) {
-		sprintf( addr, "%s", d.addr() );
+	if( d.locate() ) {
+		strncpy( addr, d.addr(), 100 );
 		return addr;
 	} else {
 		return NULL;
@@ -215,8 +210,8 @@ get_collector_addr(const char* name)
 {
 	static char addr[100];
 	Daemon d( DT_COLLECTOR, name );
-	if( d.addr() ) {
-		sprintf( addr, "%s", d.addr() );
+	if( d.locate() ) {
+		strncpy( addr, d.addr(), 100 );
 		return addr;
 	} else {
 		return NULL;
