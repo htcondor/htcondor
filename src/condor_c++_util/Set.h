@@ -55,11 +55,8 @@ public:
   void RemoveLast();               // remove the last element iterated
   void Insert(const KeyType& Key); // Insert before current node
 
-#ifdef DEBUG_FLAG
-  void PrintSet();
-#endif
-
   void operator=(Set& S);
+  bool operator==(Set& S);
 
 private:
   
@@ -91,7 +88,20 @@ void Set<KeyType>::operator=(Set<KeyType>& S) {
   Clear();
   KeyType Key;
   S.StartIterations();
-  while(S.Iterate(Key)) Add(Key);
+  while(S.Iterate(Key)) Insert(Key);
+}
+
+template <class KeyType>
+bool Set<KeyType>::operator==(Set<KeyType>& S) {
+  Curr=Head;
+  S.StartIterations();
+  KeyType Key;
+  while(Curr) {
+    if (!S.Iterate(Key)) return false;
+    if (Curr->Key!=Key) return false;
+    Curr=Curr->Next;
+  }
+  return (!S.Iterate(Key));
 }
 
 // Constructor
@@ -204,21 +214,6 @@ Set<KeyType>::~Set() {
   }
 }
   
-#ifdef DEBUG_FLAG
-#include "condor_config.h"
-#include "condor_debug.h"
-// Print the Set
-template <class KeyType>
-void Set<KeyType>::PrintSet() {
-  SetElem<KeyType>* N=Head;
-  while(N) {
-    dprintf(D_ALWAYS,"%s ",(const char*) N->Key);
-    N=N->Next;
-  }
-  dprintf(D_ALWAYS,"\n");
-}
-#endif
-
 // Find the element of a key
 template <class KeyType>
 SetElem<KeyType>* Set<KeyType>::Find(const KeyType& Key) {
