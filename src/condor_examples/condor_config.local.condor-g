@@ -38,7 +38,7 @@ GRIDMANAGER_LOG = $(LOG)/GridLogs/GridmanagerLog.$(USERNAME)
 ## The GridManager will shut things down 3 minutes before loosing Contact
 ## because of an expired proxy. 
 ## In seconds, and defaults to 3 minutes
-#GRDIMANAGER_MINIMUM_PROXY_TIME  = 180
+#GRIDMANAGER_MINIMUM_PROXY_TIME  = 180
 
 ## Condor requires that each submitted job be designated to run under a
 ## particular "universe". Condor-G is active when jobs are as marked as
