@@ -35,10 +35,11 @@
 /*
   Return starting address of the data segment
 */
+extern int _fdata[];
 long
 data_start_addr()
 {
-	return USRDATA;
+	return (long)&_fdata;
 }
 
 /*
@@ -177,7 +178,17 @@ segment_bounds( int seg_num, RAW_ADDR &start, RAW_ADDR &end, int &prot )
 	start = (long) my_map[seg_num].pr_vaddr;
 	end = start + my_map[seg_num].pr_size;
 
-	prot = my_map[seg_num].pr_mflags;
+	prot = 0;
+	if (my_map[seg_num].pr_mflags & MA_READ) {
+		prot |= PROT_READ;
+	}
+	if (my_map[seg_num].pr_mflags & MA_WRITE) {
+		prot |= PROT_WRITE;
+	}
+	if (my_map[seg_num].pr_mflags & MA_EXEC) {
+		prot |= PROT_EXEC;
+	}
+
 	if (seg_num == text_loc)
 		return 1;
 	else if (seg_num == stack_loc)
@@ -197,7 +208,8 @@ struct ma_flags {
 				{MA_EXEC, "MA_EXEC"},
 				{MA_SHARED, "MA_SHARED"},
 				{MA_BREAK, "MA_BREAK"},
-				{MA_STACK, "MA_STACK"}};
+				{MA_STACK, "MA_STACK"},
+				{MA_PHYS, "MA_PHYS"}};
 
 /*
   For use in debugging only.  Displays the segment map of the current
