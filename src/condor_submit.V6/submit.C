@@ -142,7 +142,7 @@ char	*Priority		= "priority";
 char	*Notification	= "notification";
 char	*Executable		= "executable";
 char	*Arguments		= "arguments";
-char	*GetEnv			= "getenv";
+char	*GetEnvironment	= "getenv";
 char	*AllowStartupScript = "allow_startup_script";
 char	*Environment	= "environment";
 char	*Input			= "input";
@@ -2688,7 +2688,7 @@ void
 SetEnvironment()
 {
 	char *env = condor_param( Environment, ATTR_JOB_ENVIRONMENT );
-	char *shouldgetenv = condor_param( GetEnv, "get_env" );
+	char *shouldgetenv = condor_param( GetEnvironment, "get_env" );
 	char *allowscripts = condor_param( AllowStartupScript,
 									   "AllowStartupScript" );
 	Env envobject;
