@@ -205,6 +205,22 @@ extern SpawnLIST* SpawnList;
 
 char*		schedd;
 
+volatile int needs_reaper;
+volatile int needs_condor_rm;
+
+void
+unix_sigchld() 
+{ 
+	needs_reaper = TRUE;
+}
+
+void
+unix_sigusr1()
+{
+	needs_condor_rm = TRUE;
+}
+
+
 /*ARGSUSED*/
 main(int argc, char *argv[], char *envp[])
 {
@@ -285,6 +301,7 @@ main(int argc, char *argv[], char *envp[])
 	if( argc != 6 ) {
 		usage();
 	}
+
 
 #ifdef WAIT_FOR_DEBUGGER
 	int x = 1;
@@ -374,8 +391,8 @@ main(int argc, char *argv[], char *envp[])
 		MailerPgm = "/bin/mail";
 	}
 
-	install_sig_handler( SIGCHLD, reaper );
-	install_sig_handler( SIGUSR1, condor_rm ); /* sent by schedd when a */
+	install_sig_handler( SIGCHLD, unix_sigchld );
+	install_sig_handler( SIGUSR1, unix_sigusr1 ); /* sent by schedd when a */
 												/*job is removed */
 
 	/* Here we block the async signals.  We do this mainly because on HPUX,
@@ -384,6 +401,9 @@ main(int argc, char *argv[], char *envp[])
 	 * during before select(), which is where we spend most of our time. */
 	block_signal(SIGCHLD);
 	block_signal(SIGUSR1);      
+
+	needs_reaper = FALSE; 
+	needs_condor_rm = FALSE;
 
 	HandleSyscalls();
 
@@ -398,6 +418,8 @@ main(int argc, char *argv[], char *envp[])
 	dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
 	exit( ExitReason );
 }
+
+
 
 void
 HandleSyscalls()
@@ -465,6 +487,16 @@ HandleSyscalls()
 			 (fd_set *) 0, &select_to);
 		block_signal(SIGCHLD);
 		block_signal(SIGUSR1);
+
+		if( needs_reaper ) {
+			needs_reaper = FALSE;
+			reaper();
+		}
+
+		if( needs_condor_rm ) {
+			needs_condor_rm = FALSE;
+			condor_rm();
+		}
 
 		if (cnt <= 0) /* means timer expiration or interrupt got */
 		  continue;
@@ -601,9 +633,6 @@ v			      ((tempproc->next != plist)&&(ProcList != plist));
 
 		unblock_signal(SIGCHLD);
 		unblock_signal(SIGUSR1);
-#if defined(AIX31) || defined(AIX32)
-		errno = EINTR; /* Shouldn't need to do this... */ 
-#endif
 #if defined(LINUX) || defined(IRIX62) || defined(Solaris)
 		cnt = select(nfds, &readfds, (fd_set *)0, (fd_set *)0,
 					 (struct timeval *)0);
@@ -617,7 +646,18 @@ v			      ((tempproc->next != plist)&&(ProcList != plist));
 		if( cnt < 0 && errno != EINTR ) {
 			EXCEPT("HandleSyscalls: select: errno=%d, rsc_sock=%d, client_log=%d",errno,RSC_SOCK,CLIENT_LOG);
 		}
-		
+
+		if( needs_reaper ) {
+			needs_reaper = FALSE;
+			reaper();
+		}
+
+		if( needs_condor_rm ) {
+			needs_condor_rm = FALSE;
+			condor_rm();
+		}
+
+
 		if( FD_ISSET(CLIENT_LOG, &readfds) ) {
 			if( HandleLog() < 0 ) {
 				EXCEPT( "Peer went away" );
@@ -701,7 +741,7 @@ Wrapup( )
      * Qmgr *before* the job status is updated (i.e., classad is dequeued).
      */
 #ifndef DBM_QUEUE
-    ConnectQ (NULL);
+    ConnectQ (schedd);
     if (-1 == GetAttributeString (Proc->id.cluster,Proc->id.proc,"NotifyUser",
                 email_addr))
     {
@@ -1189,7 +1229,6 @@ open_named_pipe( const char *name, int mode, int target_fd )
 	}
 }
 
-
 void
 reaper()
 {
@@ -1199,22 +1238,15 @@ reaper()
 	SpawnLIST* sp_prev;
 	int found;
 #endif
-#if defined(AIX32)
-	int 		status;
-#else
+
 	int			status;
-#endif
 
 #ifdef HPUX9
 #undef _BSD
 #endif
 
 	for(;;) {
-#if defined(AIX32)
-		pid = waitpid( -1, &status.w_status, WNOHANG );
-#else
 		pid = waitpid( -1, &status, WNOHANG );
-#endif
 
 		if( pid == 0 || pid == -1 ) {
 			break;
@@ -1266,6 +1298,7 @@ reaper()
 
 #else
 
+#if 1
 		if( WIFEXITED(status) ) {
 			dprintf( D_ALWAYS,
 				"Reaped child status - pid %d exited with status %d\n",
@@ -1277,6 +1310,7 @@ reaper()
 				pid, WTERMSIG(status)
 			);
 		}
+#endif
 			
 	}
 
