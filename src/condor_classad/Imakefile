@@ -29,7 +29,7 @@ SYSPARAM = sysparam_linux
 #endif
 
 
-IO_OBJ = stream.o buffers.o reli_sock.o sock.o
+IO_OBJ = stream.o buffers.o reli_sock.o safe_sock.o sock.o
 
 SRC = ast.C astbase.C buildtable.C parser.C scanner.C registration.C \
 	  attrlist.C classad.C classifiedjobs.C classad_util.C
