@@ -1,0 +1,24 @@
+#!/bin/sh
+#  THIS SCRIPT IS BEST VIEWED WITH TAB STOPS IN YOUR EDITOR AT 4 SPACES
+#	Author Derek Wright, 6/99
+#	Copyright 1999 by the Condor Team, All Rights Reserved.
+#	mailto:condor-admin@cs.wisc.edu  http://www.cs.wisc.edu/condor
+#
+#  On platforms where Condor does not support checkpointing and remote
+#  system calls, condor_compile shouldn't be used (since its only role
+#  is to relink user jobs with our libraries which provide
+#  checkpointing and remote system calls... the libraries that don't
+#  exist on these "clipped-wing Condor" platforms).  
+#  
+# --------------------------------------------------
+
+cat <<!
+
+This version of Condor does not support checkpointing and remote
+system calls on this platform.  You may only submit "vanilla" jobs.
+Therefore, you do not need to use condor_compile.  In fact,
+condor_compile can't work, since there are no libraries to re-link
+your job with.  Please see the Condor Manual for details, which can be
+found at http://www.cs.wisc.edu/condor/manual.
+
+!
