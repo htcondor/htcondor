@@ -4,6 +4,14 @@ package edu.wisc.cs.condor.chirp;
 import java.io.*;
 import java.net.*;
 
+/**
+A ChirpClient object represents the connection between a client and
+a Chirp server.  The methods of this object correspond to RPCs in
+the Chirp protocol, and are very similar to standard UNIX I/O operations.
+Those looking for a more Java-style stream interface to Chirp should
+see the ChirpInputStream and ChirpOutputStream objects.
+*/
+
 public class ChirpClient {
 
 	private Socket socket=null;
@@ -14,6 +22,8 @@ public class ChirpClient {
 	/**
 	Connect and authenticate to the default Chirp server.
 	Determine the "default" from a variety of environmental concerns.
+	If running within Condor, then Condor will set up the environment
+	to proxy I/O through the starter back to the submit site.
 	@throws IOException
 	*/
 
@@ -33,6 +43,7 @@ public class ChirpClient {
 	/**
 	Connect to a given Chirp server.
 	The caller must still pass a cookie before using any other methods.
+	Condor users should use the no-argument constructor instead.
 	@param host The server host.
 	@param port The server port.
 	@throws IOException
@@ -56,7 +67,7 @@ public class ChirpClient {
 	This call must be done before any other Chirp calls.
 	If it is not, other methods are likely to throw exceptions indicating "not authenticated."
 	@param c The cookie to present.
-	@throws IOException, ChirpError
+	@throws IOException
 	*/
 
 	public void cookie( String c ) throws IOException {
@@ -85,9 +96,9 @@ public class ChirpClient {
 		<li> c - create if it does not exist, succeed otherwise
 		<li> x - modifies 'c' to fail if the file already exists
 		<li> a - modifies 'w' to always append
-		<ul>
+		</ul>
 	@param mode If created , the initial UNIX access mode.
-	@throws IOException, ChirpError
+	@throws IOException
 	*/
 
 	public int open( String path, String flags, int mode ) throws IOException {
@@ -107,7 +118,7 @@ public class ChirpClient {
 	/**
 	Close a file.
 	@param fd The file descriptor to close.
-	@throws IOException, ChirpError
+	@throws IOException
 	*/
 
 	public void close( int fd ) throws IOException {
@@ -131,7 +142,7 @@ public class ChirpClient {
 	@param pos The position in the buffer to start.
 	@param length The maximum number of elements to read.
 	@returns The number of elements actually read.
-	@throws IOException, ChirpError
+	@throws IOException
 	*/
 
 	public int read( int fd, byte [] buffer, int pos, int length ) throws IOException {
@@ -161,7 +172,7 @@ public class ChirpClient {
 	@param pos The position in the buffer to start.
 	@param length The maximum number of elements to write.
 	@returns The number of elements actually written.
-	@throws IOException, ChirpError
+	@throws IOException
 	*/
 
 	public int write( int fd, byte [] buffer, int pos, int length ) throws IOException {
@@ -180,8 +191,13 @@ public class ChirpClient {
 		return returnOrThrow(response);
 	}
 
+	/** Seek from the beginning of a file. */
 	public static final int SEEK_SET=0;
+
+	/** Seek from the current position. */
 	public static final int SEEK_CUR=1;
+
+	/** Seek from the end of a file. */
 	public static final int SEEK_END=2;
 
 	/**	
@@ -190,10 +206,10 @@ public class ChirpClient {
 	@param offset The number of bytes to change.
 	@param whence The source of the seek: SEEK_SET, SEEK_CUR, or SEEK_END.
 	@returns The new file position, measured from the beginning of the file.
-	@throws IOException, ChirpError
+	@throws IOException
 	*/
 
-	public int lseek( int fd, int offset, String whence ) throws IOException {
+	public int lseek( int fd, int offset, int whence ) throws IOException {
 		int response;
 		try {	
 			String line ="seek "+fd+" "+offset+" "+whence+"\n";
@@ -210,7 +226,7 @@ public class ChirpClient {
 	/**	
 	Delete a file.
 	@param name The name of the file.
-	@throws IOException, ChirpError
+	@throws IOException
 	*/
 
 	public void unlink( String name ) throws IOException {
@@ -231,7 +247,7 @@ public class ChirpClient {
 	Rename a file.
 	@param name The old name.
 	@param newname The new name.
-	@throws IOException, ChirpError
+	@throws IOException
 	*/
 
 	public void rename( String name, String newname ) throws IOException {
