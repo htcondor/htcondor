@@ -37,8 +37,15 @@
 #endif
 
 #if defined( IS_LINUX )
-#	define PlatformIncludeFile <I386_LINUX.cf>
+#	define PlatformIncludeFile <LINUX.cf>
 #	undef IS_LINUX
+#	if defined( IS_I386 ) 
+#		define ArchIncludeFile <LINUX_I386.cf>
+#		undef IS_I386
+#	elif defined( IS_ALPHA )
+#		define ArchIncludeFile <LINUX_ALPHA.cf>
+#		undef IS_ALPHA
+#	endif
 #endif
 
 #if defined( IS_IRIX6 )
