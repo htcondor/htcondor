@@ -352,7 +352,8 @@ SOAP_SRC = Concat(soapname(daemon),C).C Concat(soapname(daemon),Server).C Concat
 
 /* given a daemon name, and a service, use the soap compiler to produce a 
 	set of interface files in a temporary directory and then copy the files
-	to the current working directory.  
+	to the current working directory, and also copy the generated
+	wsdl files into the proper release directories if requestred.
 */
 #define gen_soapfiles(daemon,service) @@\
 soapfiles:: gsoapname(daemon).h @@\
@@ -367,6 +368,11 @@ soapfiles:: gsoapname(daemon).h @@\
 	cp junkdir(daemon)/service.wsdl . @@\
 	/bin/rm -rf junkdir(daemon) @@\
 	touch soapfiles @@\
+	@@\
+release_copy_target(service.wsdl,lib/webservice,service.wsdl,TEXT_MODE) @@\
+strip_copy_target(service.wsdl,lib/webservice,service.wsdl,TEXT_MODE) @@\
+static_copy_target(service.wsdl,lib/webservice,service.wsdl,TEXT_MODE) @@\
+	@@\
 clean:: @@\
 	/bin/rm -f service.nsmap Concat(soapname(daemon),H).h Concat(soapname(daemon),Stub).h service.wsdl Concat(soapname(daemon),C).C Concat(soapname(daemon),Server).C soapfiles @@\
 XCOMM Specifically add a dependancy from the generated .C files to the @@\
