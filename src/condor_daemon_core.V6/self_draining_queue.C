@@ -28,7 +28,9 @@
 #include "self_draining_queue.h"
 
 
-SelfDrainingQueue::SelfDrainingQueue( const char* queue_name, int period )
+SelfDrainingQueue::SelfDrainingQueue( const char* queue_name, int period,
+									  ServiceDataCompare fn_ptr )
+	: queue( 32, fn_ptr )
 {
 	if( queue_name ) {
 		name = strdup( queue_name );
@@ -41,6 +43,7 @@ SelfDrainingQueue::SelfDrainingQueue( const char* queue_name, int period )
 
 	handler_fn = NULL;
 	handlercpp_fn = NULL;
+	this->compare_fn = fn_ptr;
 	service_ptr = NULL;
 
 	this->period = period;
@@ -92,8 +95,27 @@ SelfDrainingQueue::registerHandlercpp( ServiceDataHandlercpp
 
 
 bool
-SelfDrainingQueue::enqueue( ServiceData* data )
+SelfDrainingQueue::registerCompareFunc( ServiceDataCompare compare_fn )
 {
+	this->compare_fn = compare_fn;
+	return true;
+}
+
+
+bool
+SelfDrainingQueue::enqueue( ServiceData* data, bool allow_dups )
+{
+	if( ! allow_dups ) {
+		if( ! compare_fn ) {
+			EXCEPT( "SelfDrainingQueue::enqueue() called with allow_dups == "
+					"FALSE but no comparision function registered!" );
+		}
+		if( queue.IsMember(data) ) {
+			dprintf( D_FULLDEBUG, "SelfDrainingQueue::enqueue() "
+					 "refusing duplicate data\n" );
+			return false;
+		}
+	}
 	queue.enqueue(data);
 	dprintf( D_FULLDEBUG,
 			 "Added data to SelfDrainingQueue %s, now has %d element(s)\n",

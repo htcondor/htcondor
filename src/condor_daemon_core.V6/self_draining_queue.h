@@ -45,22 +45,29 @@
    @see ServiceData
 */
 
+
+
 class SelfDrainingQueue : public Service
 {
 public:
-	SelfDrainingQueue( const char* name = NULL, int period = 0 );
+	SelfDrainingQueue( const char* name = NULL, int period = 0,
+					   ServiceDataCompare compare_fn = NULL );
 	~SelfDrainingQueue();
+
 	bool registerHandler( ServiceDataHandler handler_fn );
 	bool registerHandlercpp( ServiceDataHandlercpp handlercpp_fn, 
 							 Service* service_ptr );
+	bool registerCompareFunc( ServiceDataCompare compare_fn );
 
-	bool enqueue( ServiceData* data );
+	bool enqueue( ServiceData* data, bool allow_dups = true );
 	bool setPeriod( int new_period );
 
 private:
 	Queue<ServiceData*> queue;
 	ServiceDataHandler handler_fn;
 	ServiceDataHandlercpp handlercpp_fn;
+	ServiceDataCompare compare_fn;
+
 	Service* service_ptr;
 	int tid;
 	int period;
