@@ -90,8 +90,8 @@ int pclose(FILE *stream);
 /****************************************
 ** Condor-specific system definitions
 ****************************************/
-#define HAS_U_TYPES
-#define NO_VOID_SIGNAL_RETURN
+#define HAS_U_TYPES				1
+#define NO_VOID_SIGNAL_RETURN	1
 
 
 #endif /* CONDOR_SYS_IRIX_H */

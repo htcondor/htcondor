@@ -26,7 +26,7 @@
 #define _XPG4_EXTENDED
 
 #include <sys/types.h>
-#define HAS_U_TYPES
+
 #include <unistd.h>
 /* Want stdarg.h before stdio.h so we get GNU's va_list defined */
 #include <stdarg.h>
@@ -51,5 +51,12 @@
 #if !defined(WCOREFLG)
 #	define WCOREFLG 0x0200
 #endif
+
+
+/****************************************
+** Condor-specific system definitions
+****************************************/
+#define HAS_U_TYPES				1
+#define SIGISMEMBER_IS_BROKEN	1
 
 #endif /* CONDOR_SYS_HPUX_H */

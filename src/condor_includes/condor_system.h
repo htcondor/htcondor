@@ -77,7 +77,11 @@
 #endif
 
 #if !defined(NO_VOID_SIGNAL_RETURN)
-#	define VOID_SIGNAL_RETURN	YES
+#	define VOID_SIGNAL_RETURN	1
+#endif
+
+#if !defined(SIGISMEMBER_IS_BROKEN)
+#	define SIGISMEMBER_IS_BROKEN 0
 #endif
 
 #if !defined(NBBY)
