@@ -431,7 +431,7 @@ parse_script(
 		debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): "
 					  "failed to add %s script to node %s: %s\n",
 					  filename, lineNumber, post ? "POST" : "PRE",
-					  jobName, whynot );
+					  jobName, whynot.Value() );
 		return false;
 	}
 
