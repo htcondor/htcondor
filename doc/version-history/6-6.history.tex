@@ -39,6 +39,15 @@ conditions with a standard universe job, there would be a cycle of an
 execute event followed by a termination event in the user log when the
 job had not actually ran.
 
+\item Fixed bugs in some Condor tools that failed to locate
+  \Condor{startd} daemons that contained multiple \verb%@% signs in
+  their \Attr{Name} attribute.
+  For example, a virtual machine from a multiple-CPU \Condor{startd}
+  spawned using ``glide-in'' would have the name:
+  \verb%vm1@[pid]@[hostname]%.
+  All Condor tools that need to communicate with a \Condor{startd}
+  like this will now succeed.
+
 \item Removed a fixed-length buffer in the code that handled the
   \Macro{SUBSYS\_EXPRS} config file setting.
   Previously, if any attributes referred to were larger than
