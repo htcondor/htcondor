@@ -147,6 +147,7 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 		// Gather the info we care about
 	family->get_cpu_usage( sys_time, user_time );
 	family->get_max_imagesize( max_image );
+	num_pids = family->size();
 
 		// Publish it into the ad.
 	sprintf( buf, "%s=%lu", ATTR_JOB_REMOTE_SYS_CPU, sys_time );
@@ -174,6 +175,7 @@ VanillaProc::JobCleanup(int pid, int status)
 	}
 	snapshot_tid = -1;
 
+		// This will reset num_pids for us, too.
 	return OsProc::JobCleanup( pid, status );
 }
 
