@@ -50,6 +50,8 @@ enum { _MM_ERROR, MM_NO_MATCH, MM_GOOD_MATCH, MM_BAD_MATCH };
 
 typedef int (*lessThanFunc)(AttrList*, AttrList*, void*);
 
+static bool want_simple_matching = false;
+
 Matchmaker::
 Matchmaker ()
 {
@@ -74,6 +76,14 @@ Matchmaker ()
 	stashedAds = new AdHash(1000, HashFunc);
 
 	Collectors = NULL;
+	
+	MatchList = NULL;
+	cachedAutoCluster = -1;
+	cachedName = NULL;
+	cachedAddr = NULL;
+
+	want_simple_matching = false;
+	want_matchlist_caching = false;
 }
 
 
@@ -91,6 +101,11 @@ Matchmaker::
 	if (Collectors) {
 		delete Collectors;
 	}
+	if (MatchList) {
+		delete MatchList;
+	}
+	if ( cachedName ) free(cachedName);
+	if ( cachedAddr ) free(cachedAddr);
 }
 
 
@@ -242,6 +257,9 @@ reinitialize ()
 		delete Collectors;
 	}
 	Collectors = CollectorList::createForNegotiator();
+
+	want_simple_matching = param_boolean("NEGOTIATOR_SIMPLE_MATCHING",false);
+	want_matchlist_caching = param_boolean("NEGOTIATOR_MATCHLIST_CACHING",false);
 
 	// done
 	return TRUE;
@@ -461,6 +479,10 @@ static ClassAd * lookup_global( const char *constraint, void *arg )
 	ClassAd *ad;
 	ClassAd queryAd;
 
+	if ( want_simple_matching ) {
+		return 0;
+	}
+
 	CondorQuery query(ANY_AD);
 	query.addANDConstraint(constraint);
 	query.getQueryAd(queryAd);
@@ -545,7 +567,9 @@ negotiationTime ()
 
 	// Register a lookup function that passes through the list of all ads.
 
+	
 	ClassAdLookupRegister( lookup_global, &allAds );
+	
 
 	// ----- Recalculate priorities for schedds
 	dprintf( D_ALWAYS, "Phase 2:  Performing accounting ...\n" );
@@ -654,11 +678,11 @@ negotiationTime ()
 
 			// initialize reasons for match failure; do this now
 			// in case we never actually call negotiate() below.
-			rejForNetwork = false;
-			rejForNetworkShare = false;
-			rejPreemptForPrio = false;
-			rejPreemptForPolicy = false;
-			rejPreemptForRank = false;
+			rejForNetwork = 0;
+			rejForNetworkShare = 0;
+			rejPreemptForPrio = 0;
+			rejPreemptForPolicy = 0;
+			rejPreemptForRank = 0;
 
 			// Optimizations: 
 			// If number of idle jobs = 0, don't waste time with negotiate.
@@ -729,6 +753,11 @@ negotiationTime ()
 	return TRUE;
 }
 
+static int
+matchingAlgorithmComparisonFunction (AttrList *ad1, AttrList *ad2, void *m)
+{
+	Matchmaker *mm = (Matchmaker *) m;
+}
 
 static int
 comparisonFunction (AttrList *ad1, AttrList *ad2, void *m)
@@ -787,7 +816,6 @@ obtainAdsFromCollector (
 						ClassAdList &scheddAds, 
 						ClassAdList &startdPvtAds )
 {
-	CondorQuery publicQuery(ANY_AD);
 	CondorQuery privateQuery(STARTD_PVT_AD);
 	QueryResult result;
 	ClassAd *ad, *oldAd;
@@ -795,6 +823,39 @@ obtainAdsFromCollector (
 	int newSequence, oldSequence, reevaluate_ad;
 	char    remoteHost[MAXHOSTNAMELEN];
 
+	if ( want_simple_matching ) {
+		CondorQuery publicQuery(STARTD_AD);
+		CondorQuery submittorQuery(SUBMITTOR_AD);
+
+		dprintf(D_ALWAYS, "  Getting all startd ads ...\n");
+		result = Collectors->query(publicQuery,startdAds);
+		if( result!=Q_OK ) {
+			dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
+			return false;
+		}
+
+		dprintf(D_ALWAYS, "  Getting all submittor ads ...\n");
+		result = Collectors->query(submittorQuery,scheddAds);
+		if( result!=Q_OK ) {
+			dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
+			return false;
+		}
+
+		dprintf(D_ALWAYS,"  Getting startd private ads ...\n");
+		result = Collectors->query(privateQuery,startdPvtAds);
+		if( result!=Q_OK ) {
+			dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
+			return false;
+		}
+
+		dprintf(D_ALWAYS, 
+			"Got ads (simple matching): %d startd, %d submittor, %d private\n",
+	        startdAds.MyLength(),scheddAds.MyLength(),startdPvtAds.MyLength());
+
+		return true;
+	}
+
+	CondorQuery publicQuery(ANY_AD);
 	dprintf(D_ALWAYS, "  Getting all public ads ...\n");
 	result = Collectors->query (publicQuery, allAds);
 	if( result!=Q_OK ) {
@@ -1209,8 +1270,6 @@ EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
 	return rank;
 }
 
-	// the order of values in this enumeration is important!
-enum PreemptState {PRIO_PREEMPTION,RANK_PREEMPTION,NO_PREEMPTION};
 
 ClassAd *Matchmaker::
 matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
@@ -1227,6 +1286,7 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 	PreemptState	candidatePreemptState;
 		// to store the best candidate so far
 	ClassAd 		*bestSoFar = NULL;	
+	ClassAd 		*cached_bestSoFar = NULL;	
 	double			bestRankValue = -(FLT_MAX);
 	double			bestPreJobRankValue = -(FLT_MAX);
 	double			bestPostJobRankValue = -(FLT_MAX);
@@ -1237,6 +1297,54 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 	char			remoteUser[256];
 	EvalResult		result;
 	float			tmp;
+		// request attributes
+	int				requestAutoCluster = -1;
+
+	request.LookupInteger(ATTR_AUTO_CLUSTER_ID, requestAutoCluster);
+
+		// If this incoming job is from the same user, same schedd,
+		// and is in the same autocluster, and we have a MatchList cache,
+		// then we can just pop off
+		// the top entry in our MatchList if we have one.  The 
+		// MatchList is essentially just a sorted cache of the machine
+		// ads that match jobs of this type (i.e. same autocluster).
+	if ( MatchList &&
+		 cachedAutoCluster != -1 &&
+		 cachedAutoCluster == requestAutoCluster &&
+		 strcmp(cachedName,scheddName)==0 &&
+		 strcmp(cachedAddr,scheddAddr)==0 )
+	{
+		// we can use cached information.  pop off the best
+		// candidate from our sorted list.
+		cached_bestSoFar = MatchList->pop_candidate();
+		if ( ! cached_bestSoFar ) {
+				// if we don't have a candidate, fill in
+				// all the rejection reason counts.
+			MatchList->get_diagnostics(
+				rejForNetwork,
+				rejForNetworkShare,
+				rejPreemptForPrio,
+				rejPreemptForPolicy,
+				rejPreemptForRank);
+		}
+			//  TODO  - compare results, reserve net bandwidth
+		return cached_bestSoFar;
+	}
+
+		// Create a new MatchList cache if desired via config file,
+		// and if this job request if from an autocluster not already
+		// cached.
+	if ( (want_matchlist_caching) && (requestAutoCluster != -1) ) {
+			// create a new MatchList cache.
+		if ( MatchList ) delete MatchList;
+		MatchList = new MatchListType( startdAds.Length() );
+		cachedAutoCluster = requestAutoCluster;
+		if ( cachedName ) free(cachedName);
+		if ( cachedAddr ) free(cachedAddr);
+		cachedName = strdup(scheddName);
+		cachedAddr = strdup(scheddAddr);
+	}
+	
 
 #ifdef WANT_NETMAN
 	// initialize network information for this request
@@ -1288,11 +1396,11 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 #endif
 
 	// initialize reasons for match failure
-	rejForNetwork = false;
-	rejForNetworkShare = false;
-	rejPreemptForPrio = false;
-	rejPreemptForPolicy = false;
-	rejPreemptForRank = false;
+	rejForNetwork = 0;
+	rejForNetworkShare = 0;
+	rejPreemptForPrio = 0;
+	rejPreemptForPolicy = 0;
+	rejPreemptForRank = 0;
 
 	// scan the offer ads
 	startdAds.Open ();
@@ -1355,7 +1463,7 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 				if (PreemptionReq && 
 						!(PreemptionReq->EvalTree(candidate,&request,&result) &&
 						result.type == LX_INTEGER && result.i == TRUE) ) {
-					rejPreemptForPolicy = true;
+					rejPreemptForPolicy++;
 					continue;
 				}
 					// (2) we need to make sure that the machine ranks the job
@@ -1364,7 +1472,7 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 				if(!(rankCondPrioPreempt->EvalTree(candidate,&request,&result)&&
 						result.type == LX_INTEGER && result.i == TRUE ) ) {
 						// machine doesn't like this job as much -- find another
-					rejPreemptForRank = true;
+					rejPreemptForRank++;
 					continue;
 				}
 			} else {
@@ -1373,7 +1481,7 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 				if (strcmp(remoteUser, scheddName)) {
 						// only set rejPreemptForPrio if we aren't trying to
 						// preempt one of our own jobs!
-					rejPreemptForPrio = true;
+					rejPreemptForPrio++;
 				}
 				continue;
 			}
@@ -1386,10 +1494,10 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 										   executableSize, lastCkptServerIP,
 										   ckptSize, request, *candidate);
 		if (rval == 1) {
-			rejForNetworkShare = true;
+			rejForNetworkShare++;
 			continue;
 		} else if (rval == 0) {
-			rejForNetwork = true;
+			rejForNetwork++;
 			continue;
 		}
 #endif
@@ -1415,6 +1523,26 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 			  request,candidate);
 		}
 
+		if ( MatchList ) {
+			MatchList->add_candidate(
+					candidate,
+					candidateRankValue,
+					candidatePreJobRankValue,
+					candidatePostJobRankValue,
+					candidatePreemptRankValue,
+					candidatePreemptState
+					);
+		}
+
+		// NOTE!!!   IF YOU CHANGE THE LOGIC OF THE BELOW LEXICOGRAPHIC
+		// SORT, YOU MUST ALSO CHANGE THE LOGIC IN METHOD
+   		//     Matchmaker::MatchListType::sort_compare() !!!
+		// THIS STATE OF AFFAIRS IS TEMPORARY.  ONCE WE ARE CONVINVED
+		// THAT THE MatchList LOGIC IS WORKING PROPERLY, AND AUTOCLUSTERS
+		// ARE AUTOMATIC, THEN THE MatchList SORTING WILL ALWAYS BE USED
+		// AND THE LEXICOGRAPHIC SORT BELOW WILL BE REMOVED.
+		// - Todd Tannenbaum <tannenba@cs.wisc.edu> 10/2004
+		// ----------------------------------------------------------
 		// the quality of a match is determined by a lexicographic sort on
 		// the following values, but more is better for each component
 		//  1. negotiator pre job rank
@@ -1456,6 +1584,19 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 		}
 	}
 	startdAds.Close ();
+
+	if ( MatchList ) {
+		MatchList->set_diagnostics(rejForNetwork, rejForNetworkShare, 
+			rejPreemptForPrio, rejPreemptForPolicy, rejPreemptForRank);
+		dprintf(D_FULLDEBUG,"Start of sorting MatchList (len=%d)\n",
+			MatchList->length());
+		MatchList->sort();
+		dprintf(D_FULLDEBUG,"Finished sorting MatchList\n");
+		// compare
+		ClassAd *bestCached = MatchList->pop_candidate();
+		// TODO - do bestCached and bestSoFar refer to the same
+		// machine preference? (sanity check)
+	}
 
 #if WANT_NETMAN
 	if (bestSoFar) {
@@ -1731,3 +1872,162 @@ int Matchmaker::HashFunc(const MyString &Key, int TableSize) {
 	return Key.Hash() % TableSize;
 }
 
+Matchmaker::MatchListType::
+MatchListType(int maxlen)
+{
+	AdListArray = new AdListEntry[maxlen];
+	ASSERT(AdListArray);
+	adListLen = 0;
+	adListHead = 0;
+	m_rejForNetwork = 0; 
+	m_rejForNetworkShare = 0;
+	m_rejPreemptForPrio = 0;
+	m_rejPreemptForPolicy = 0; 
+	m_rejPreemptForRank = 0;
+}
+
+Matchmaker::MatchListType::
+~MatchListType()
+{
+	if (AdListArray) {
+		delete [] AdListArray;
+	}
+}
+
+ClassAd* Matchmaker::MatchListType::
+pop_candidate()
+{
+	ClassAd* candidate = NULL;
+
+	while ( adListHead < adListLen && !candidate ) {
+		candidate = AdListArray[adListHead].ad;
+		adListHead++;
+	}
+
+	return candidate;
+}
+
+
+void Matchmaker::MatchListType::
+get_diagnostics(int & rejForNetwork,
+					int & rejForNetworkShare,
+					int & rejPreemptForPrio,
+					int & rejPreemptForPolicy,
+					int & rejPreemptForRank)
+{
+	rejForNetwork = m_rejForNetwork;
+	rejForNetworkShare = m_rejForNetworkShare;
+	rejPreemptForPrio = m_rejPreemptForPrio;
+	rejPreemptForPolicy = m_rejPreemptForPolicy;
+	rejPreemptForRank = m_rejPreemptForRank;
+}
+
+void Matchmaker::MatchListType::
+set_diagnostics(int rejForNetwork,
+					int rejForNetworkShare,
+					int rejPreemptForPrio,
+					int rejPreemptForPolicy,
+					int rejPreemptForRank)
+{
+	m_rejForNetwork = rejForNetwork;
+	m_rejForNetworkShare = rejForNetworkShare;
+	m_rejPreemptForPrio = rejPreemptForPrio;
+	m_rejPreemptForPolicy = rejPreemptForPolicy;
+	m_rejPreemptForRank = rejPreemptForRank;
+}
+
+void Matchmaker::MatchListType::
+add_candidate(ClassAd * candidate,
+					double candidateRankValue,
+					double candidatePreJobRankValue,
+					double candidatePostJobRankValue,
+					double candidatePreemptRankValue,
+					PreemptState candidatePreemptState)
+{
+	ASSERT(AdListArray);
+	
+	AdListArray[adListLen].ad = candidate;
+	AdListArray[adListLen].RankValue = candidateRankValue;
+	AdListArray[adListLen].PreJobRankValue = candidatePreJobRankValue;
+	AdListArray[adListLen].PostJobRankValue = candidatePostJobRankValue;
+	AdListArray[adListLen].PreemptRankValue = candidatePreemptRankValue;
+	AdListArray[adListLen].PreemptStateValue = candidatePreemptState;
+
+	adListLen++;
+}
+
+int Matchmaker::MatchListType::
+sort_compare(const void* elem1, const void* elem2)
+{
+	AdListEntry* Elem1 = (AdListEntry*) elem1;
+	AdListEntry* Elem2 = (AdListEntry*) elem2;
+
+	double			candidateRankValue = Elem1->RankValue;
+	double			candidatePreJobRankValue = Elem1->PreJobRankValue;
+	double			candidatePostJobRankValue = Elem1->PostJobRankValue;
+	double			candidatePreemptRankValue = Elem1->PreemptRankValue;
+	PreemptState	candidatePreemptState = Elem1->PreemptStateValue;
+
+	double			bestRankValue = Elem2->RankValue;
+	double			bestPreJobRankValue = Elem2->PreJobRankValue;
+	double			bestPostJobRankValue = Elem2->PostJobRankValue;
+	double			bestPreemptRankValue = Elem2->PreemptRankValue;
+	PreemptState	bestPreemptState = Elem2->PreemptStateValue;
+
+	if ( candidateRankValue == bestRankValue &&
+		 candidatePreJobRankValue == bestPreJobRankValue &&
+		 candidatePostJobRankValue == bestPostJobRankValue &&
+		 candidatePreemptRankValue == bestPreemptRankValue &&
+		 candidatePreemptState == bestPreemptState )
+	{
+		return 0;
+	}
+
+	// the quality of a match is determined by a lexicographic sort on
+	// the following values, but more is better for each component
+	//  1. negotiator pre job rank
+	//  1. job rank of offer 
+	//  2. negotiator post job rank
+	//	3. preemption state (2=no preempt, 1=rank-preempt, 0=prio-preempt)
+	//  4. preemption rank (if preempting)
+
+	bool newBestFound = false;
+
+	if(candidatePreJobRankValue < bestPreJobRankValue);
+	else if(candidatePreJobRankValue > bestPreJobRankValue) {
+		newBestFound = true;
+	}
+	else if(candidateRankValue < bestRankValue);
+	else if(candidateRankValue > bestRankValue) {
+		newBestFound = true;
+	}
+	else if(candidatePostJobRankValue < bestPostJobRankValue);
+	else if(candidatePostJobRankValue > bestPostJobRankValue) {
+		newBestFound = true;
+	}
+	else if(candidatePreemptState < bestPreemptState);
+	else if(candidatePreemptState > bestPreemptState) {
+		newBestFound = true;
+	}
+	//NOTE: if NO_PREEMPTION, PreemptRank is a constant
+	else if(candidatePreemptRankValue < bestPreemptRankValue);
+	else if(candidatePreemptRankValue > bestPreemptRankValue) {
+		newBestFound = true;
+	}
+
+	if ( newBestFound ) {
+		// candidate is better: candidate is elem1, and qsort man page
+		// says return < 0 is elem1 is less than elem2
+		return -1;
+	} else {
+		return 1;
+	}
+}
+			
+void Matchmaker::MatchListType::
+sort()
+{
+	// Note: since we must use static members, sort() is
+	// _NOT_ thread safe!!!
+	qsort(AdListArray,adListLen,sizeof(AdListEntry),sort_compare);
+}

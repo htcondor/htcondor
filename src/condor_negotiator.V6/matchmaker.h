@@ -68,6 +68,9 @@ class Matchmaker : public Service
 		// timeout handler (for periodic negotiations)
 		int negotiationTime ();
 
+			// the order of values in this enumeration is important!
+		enum PreemptState {PRIO_PREEMPTION,RANK_PREEMPTION,NO_PREEMPTION};
+
 
 	private:
 
@@ -103,11 +106,12 @@ class Matchmaker : public Service
 		ExprTree *PreemptionRank; 	// rank preemption candidates
 		ExprTree *NegotiatorPreJobRank;  // rank applied before job rank
 		ExprTree *NegotiatorPostJobRank; // rank applied after job rank
+		bool want_matchlist_caching;	// should we cache matches per autocluster?
 
 		CollectorList* Collectors;
 
 		typedef HashTable<MyString, MapEntry*> AdHash;
-		AdHash *stashedAds;	
+		AdHash *stashedAds;			
 		
 #ifdef WANT_NETMAN
 		// allocate network capacity
@@ -115,13 +119,6 @@ class Matchmaker : public Service
 		bool allocNetworkShares;
 #endif
 
-		// diagnostics
-									// did we reject the last match b/c of
-		bool rejForNetwork; 		//   - limited network capacity?
-		bool rejForNetworkShare;	//   - limited network fair-share?
-		bool rejPreemptForPrio;		//   - insufficient prio to preempt?
-		bool rejPreemptForPolicy; 	//   - PREEMPTION_REQUIREMENTS == False?
-		bool rejPreemptForRank;		//   - startd RANKs new job lower?
 
 		// rank condition on matches
 		ExprTree *rankCondStd;// no preemption or machine rank-preemption 
@@ -137,6 +134,93 @@ class Matchmaker : public Service
 		// DaemonCore Timer ID for periodic negotiations
 		int negotiation_timerID;
 		bool GotRescheduleCmd;
+
+		// diagnostics
+		// did we reject the last match b/c of...
+		int rejForNetwork; 		//   - limited network capacity?
+		int rejForNetworkShare;	//   - limited network fair-share?
+		int rejPreemptForPrio;	//   - insufficient prio to preempt?
+		int rejPreemptForPolicy; //   - PREEMPTION_REQUIREMENTS == False?
+		int rejPreemptForRank;	//   - startd RANKs new job lower?
+
+
+		// Class used to store each individual entry in the
+		// 'Match List' --- see class MatchListType below.
+		class AdListEntry
+		{
+		public:
+			AdListEntry() {
+				RankValue = -(FLT_MAX);
+				PreJobRankValue = -(FLT_MAX);
+				PostJobRankValue = -(FLT_MAX);
+				PreemptRankValue = -(FLT_MAX);
+				PreemptStateValue = (Matchmaker::PreemptState)-1;
+				ad = NULL;
+			}			  
+			double			RankValue;
+			double			PreJobRankValue;
+			double			PostJobRankValue;
+			double			PreemptRankValue;
+			PreemptState	PreemptStateValue;
+			ClassAd *ad;
+		};
+
+		// List of matches.
+		// This list is essentially a list of sorted matching
+		// machine ads for a job ad of a given autocluster from
+		// a given user and schedd.
+		// When a job ad arrives, we store all machine ads that
+		// match into this object --- a 'match list'.   We then
+		// sort this list, and 'pop' off the top candidate.
+		// Then if the next job the negotiator considers is the
+		// same autocluster, we can just pop the next candidate
+		// off of this list instead of traversing through all the
+		// machine ads and resorting.
+		class MatchListType
+		{
+		public:
+
+			ClassAd* pop_candidate();
+			void get_diagnostics(int & rejForNetwork,
+					int & rejForNetworkShare,
+					int & rejPreemptForPrio,
+					int & rejPreemptForPolicy,
+					int & rejPreemptForRank);
+			void set_diagnostics(int rejForNetwork,
+					int rejForNetworkShare,
+					int rejPreemptForPrio,
+					int rejPreemptForPolicy,
+					int rejPreemptForRank);
+			void add_candidate(ClassAd* candidate,
+					double candidateRankValue,
+					double candidatePreJobRankValue,
+					double candidatePostJobRankValue,
+					double candidatePreemptRankValue,
+					PreemptState candidatePreemptState);
+			void sort();
+			int length() { return adListLen - adListHead; }
+
+			MatchListType(int maxlen);
+			~MatchListType();
+
+		private:
+			static int sort_compare(const void*, const void*);
+			AdListEntry* AdListArray;			
+			int adListLen;
+			int adListHead;
+			// rejection reasons
+			int m_rejForNetwork; 		//   - limited network capacity?
+			int m_rejForNetworkShare;	//   - limited network fair-share?
+			int m_rejPreemptForPrio;	//   - insufficient prio to preempt?
+			int m_rejPreemptForPolicy; //   - PREEMPTION_REQUIREMENTS == False?
+			int m_rejPreemptForRank;	//   - startd RANKs new job lower?
+			
+		};
+		MatchListType* MatchList;
+		int cachedAutoCluster;
+		char* cachedName;
+		char* cachedAddr;
+		
 };
 
 
