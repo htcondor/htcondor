@@ -9,7 +9,7 @@ OBJ = network2.o gen_lib.o fileinfo2.o fileindex2.o imds2.o xferstat2.o \
 
 UTIL_LIB = ../condor_util_lib/util_lib.a
 
-LIB = $(UTIL_LIB) -lm
+LIB = $(UTIL_LIB) -lm SocketLib
 
 SERVER_STAT_OBJ = server_stat.o gen_lib.o network2.o
 

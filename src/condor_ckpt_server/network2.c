@@ -42,7 +42,8 @@
 #include <unistd.h>
 #include <errno.h>
 
-
+/* P R O T O T Y P E S */
+char *param();
 
 
 char* GetIPName(struct in_addr machine_IP)

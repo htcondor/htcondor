@@ -231,7 +231,7 @@ int Server::SetUpPort(u_short port)
       Log(0, "ERROR: cannot open a server request socket");
       exit(SOCKET_ERROR);
   }
-  bzero((char*) &socket_addr, sizeof(struct sockaddr_in));
+  memset((char*) &socket_addr, 0, sizeof(struct sockaddr_in));
   socket_addr.sin_family = AF_INET;
   socket_addr.sin_port = htons(port);
   memcpy((char*) &socket_addr.sin_addr, (char*) &server_addr, 
@@ -566,7 +566,7 @@ void Server::ProcessServiceReq(int             req_id,
 					close(req_sd);
 					return;
 				}
-				bzero((char*) &server_sa, sizeof(server_sa));
+				memset((char*) &server_sa, 0, sizeof(server_sa));
 				server_sa.sin_family = AF_INET;
 				server_sa.sin_addr = server_addr;
 				server_sa.sin_port = htons(0);
@@ -927,7 +927,7 @@ void Server::ProcessStoreReq(int            req_id,
 			return;
 		}
 
-		bzero((char*) &server_sa, sizeof(server_sa));
+		memset((char*) &server_sa, 0, sizeof(server_sa));
 		server_sa.sin_family = AF_INET;
 		server_sa.sin_port = htons(0);
 		server_sa.sin_addr = server_addr;
@@ -1202,7 +1202,7 @@ void Server::ProcessRestoreReq(int             req_id,
 		  close(req_sd);
 		  return;
 	  }
-      bzero((char*) &server_sa, sizeof(server_sa));
+      memset((char*) &server_sa, 0, sizeof(server_sa));
       server_sa.sin_family = AF_INET;
       server_sa.sin_port = htons(0);
       server_sa.sin_addr = server_addr;

@@ -18,7 +18,11 @@ typedef unsigned long int u_lint;
 
 
 
+#if defined(Solairs)
+typedef void (*SIG_HANDLER)();
+#else
 typedef void (*SIG_HANDLER)(int);
+#endif
 
 
 
