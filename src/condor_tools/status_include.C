@@ -4,7 +4,7 @@
 #endif
 #include "status_include.h"
 
-#if defined(Solaris) || defined(IRIX53) || defined(OSF1) || defined(LINUX)
+#if defined(Solaris) || defined(IRIX53) || defined(OSF1) || defined(LINUX) || defined (HPUX9)
 void SERVER_REC::print_rec( FILE *fp )
 #else
 virtual void SERVER_REC::print_rec( FILE *fp )
