@@ -137,6 +137,16 @@ int JavaProc::StartJob()
 	length = strlen(job_args);
 	job_args[length-1] = '\0'; // destroy last quote
 
+	char *vm_args = NULL;
+
+	JobAd->LookupString(ATTR_JOB_JAVA_VM_ARGS, &vm_args);
+
+		// If no VM args, just pass empty string
+	if (vm_args == NULL) {
+		vm_args = (char *)malloc(1);
+		vm_args[0] = '\000';
+	}
+
 	/*
 	We really need to be passing these arguments through an
 	argv-like interface to DaemonCore.  However, we don't have
@@ -148,15 +158,16 @@ int JavaProc::StartJob()
 	
 	sprintf(tmp,
 #ifdef WIN32
-		"%s=\"%s -Dchirp.config=\\\"%s%cchirp.config\\\" CondorJavaWrapper \\\"%s\\\" \\\"%s\\\" %s\"",
+		"%s=\"%s -Dchirp.config=\\\"%s%cchirp.config\\\" %s CondorJavaWrapper \\\"%s\\\" \\\"%s\\\" %s\"",
 #else
-		"%s=\"%s -Dchirp.config=%s%cchirp.config CondorJavaWrapper %s %s %s\"",
+		"%s=\"%s -Dchirp.config=%s%cchirp.config %s CondorJavaWrapper %s %s %s\"",
 #endif
 
 		ATTR_JOB_ARGUMENTS,
 		java_args,
 		execute_dir,
 		DIR_DELIM_CHAR,
+		vm_args,
 		startfile,
 		endfile,
 		job_args);
@@ -164,6 +175,8 @@ int JavaProc::StartJob()
 	JobAd->InsertOrUpdate(tmp);
 	
 	free(tmp_args);
+
+	free(vm_args);
 
 	dprintf(D_ALWAYS,"JavaProc: Cmd=%s\n",java_cmd);
 	dprintf(D_ALWAYS,"JavaProc: Args=%s\n",tmp);

@@ -230,6 +230,7 @@ char	*DAGManJobId = "dagman_job_id";
 char	*LogNotesCommand = "submit_event_notes";
 char	*UserNotesCommand = "submit_event_user_notes";
 char	*JarFiles = "jar_files";
+char	*JavaVMArgs = "java_vm_args";
 
 char    *ParallelScriptShadow  = "parallel_script_shadow";  
 char    *ParallelScriptStarter = "parallel_script_starter"; 
@@ -314,6 +315,7 @@ void SetDAGManJobId();
 void SetLogNotes();
 void SetUserNotes();
 void SetJarFiles();
+void SetJavaVMArgs();
 void SetParallelStartupScripts(); //JDB
 void SetMaxJobRetirementTime();
 bool mightTransfer( int universe );
@@ -2008,6 +2010,19 @@ SetJarFiles()
 	value = condor_param( JarFiles, ATTR_JAR_FILES );
 	if(value) {
 		sprintf(buffer,"%s = \"%s\"",ATTR_JAR_FILES,value);
+		InsertJobExpr (buffer);
+	}
+}
+
+void
+SetJavaVMArgs()
+{
+	char buffer[ATTRLIST_MAX_EXPRESSION];
+	char *value;
+
+	value = condor_param( JavaVMArgs, ATTR_JOB_JAVA_VM_ARGS );
+	if(value) {
+		sprintf(buffer,"%s = \"%s\"",ATTR_JOB_JAVA_VM_ARGS, value);
 		InsertJobExpr (buffer);
 	}
 }
@@ -3952,6 +3967,7 @@ queue(int num)
 		SetDAGNodeName();
 		SetDAGManJobId();
 		SetJarFiles();
+		SetJavaVMArgs();
 		SetParallelStartupScripts(); //JDB
 
 		rval = SaveClassAd();
