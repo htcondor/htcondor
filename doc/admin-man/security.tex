@@ -59,9 +59,22 @@ and GID.
 This ensures that as the job executes,
 it can access only files that its owner could access if the job
 were running locally, without Condor.
+
 On the machine where the job executes, the 
-job runs as user nobody, to help ensure that the job cannot access
-local resources or do harm.  
+job runs either as the submitting user or as user nobody,
+to help ensure that the job cannot access local resources or do harm.  
+If the \Macro{UID\_DOMAIN} matches,
+and the user exists as the same UID in password files
+on both the submitting machine and on the execute machine,
+the job will run as the submitting user.
+However, if the user does not exist in the execute machine's
+password file and \Macro{SOFT\_UID\_DOMAIN} is True,
+then Condor will choose the submitting user's UID on the
+execute machine.
+If \MacroNI{SOFT\_UID\_DOMAIN} is False,
+and \MacroNI{UID\_DOMAIN} matches,
+and the user is not in the execute machine's password file,
+then the job will run as user nobody.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:norootaccess}What if Condor is not run as root?}
