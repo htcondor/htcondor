@@ -1541,17 +1541,17 @@ SetStdFile( int which_file )
 	{
 	case 0:
 		generic_name = Input;
-		macro_value = condor_param( TransferInput );
+		macro_value = condor_param( TransferInput, ATTR_TRANSFER_INPUT );
 		break;
 	case 1:
 		generic_name = Output;
-		macro_value = condor_param( TransferOutput );
-		macro_value2 = condor_param( StreamOutput );
+		macro_value = condor_param( TransferOutput, ATTR_TRANSFER_OUTPUT );
+		macro_value2 = condor_param( StreamOutput, ATTR_STREAM_OUTPUT );
 		break;
 	case 2:
 		generic_name = Error;
-		macro_value = condor_param( TransferError );
-		macro_value2 = condor_param( StreamError );
+		macro_value = condor_param( TransferError, ATTR_TRANSFER_ERROR );
+		macro_value2 = condor_param( StreamError, ATTR_STREAM_ERROR );
 		break;
 	default:
 		fprintf( stderr, "\nERROR: Unknown standard file descriptor (%d)\n",
