@@ -42,7 +42,7 @@ static int TimeLine(const MyString& Name,int FromDate, int ToDate, int Res);
 
 static void Usage(char* name) 
 {
-  fprintf(stderr, "Usage: %s [-f filename] [-orgformat] [-pool hostname] [-lastday | -lastweek | -lastmonth | -lasthours h | -from m d y [-to m d y]] {-resourcequery <name> | -resourcelist | -resgroupquery <name> | -resgrouplist | -userquery <name> | -userlist | -ckptquery | -ckptlist}\n",name);
+  fprintf(stderr, "Usage: %s [-f filename] [-orgformat] [-pool hostname] [-lastday | -lastweek | -lastmonth | -lasthours h | -from m d y [-to m d y]] {-resourcequery <name> | -resourcelist | -resgroupquery <name> | -resgrouplist | -userquery <name> | -userlist | -usergroupquery <name> | -usergrouplist | -ckptquery | -ckptlist}\n",name);
   exit(1);
 }
 
