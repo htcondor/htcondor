@@ -103,21 +103,6 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 }
 
 
-/* 
-   This is called by the dprintf_init() linked in with the user job in
-   case of fatal error.  The regular _condor_dprintf_exit() has many
-   more concerns.  We can just exit, though we want to use Suicide()
-   so we send ourselves SIGKILL, instead of actually exiting.  If we
-   exit, we leave the job queue, which isn't what we want.  Hopefully,
-   we'll never get here.
-*/
-void
-_condor_dprintf_exit( void )
-{
-	Suicide();
-}
-
-
 int get_port_range(int *low_port, int *high_port)
 {
 	char *low = NULL, *high = NULL;
