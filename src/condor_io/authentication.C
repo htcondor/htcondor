@@ -508,7 +508,7 @@ int Authentication::default_auth_methods() {
 		SecMan s;
 
 		bitmask = s.getAuthBitmask(methods);
-		delete methods;
+		free( methods );
 	} else {
 
 		// try whatever we support
