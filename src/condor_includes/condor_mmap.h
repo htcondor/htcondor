@@ -35,8 +35,9 @@
 #	else
 #		define MMAP_T void*
 #	endif
-#define MAP_FAILED ((MMAP_T)-1)
-
+#	if !defined(MAP_FAILED)
+#		define MAP_FAILED ((MMAP_T)-1)
+#	endif
 #elif defined(IRIX62)
 
 #	define MA_SHARED	0x0008	/* mapping is a shared or mapped object */
