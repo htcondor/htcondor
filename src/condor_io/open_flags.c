@@ -69,5 +69,8 @@ int open_flags_decode(int old_flags)
 			new_flags |= FlagList[i].system_flag;
 		}
 	}
+#if defined(WIN32)
+	new_flags |= _O_BINARY;	// always open in binary mode
+#endif
 	return new_flags;
 }
