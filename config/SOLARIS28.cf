@@ -1,0 +1,36 @@
+/* Things that are specific to Solaris 2.8 */
+
+#define		IS_SOLARIS28		YES
+#define		ImakeOpsysFlag		-DIS_SOLARIS28
+
+#define NEEDS_64BIT_SYSCALLS    YES
+#define NEEDS_64BIT_STRUCTS YES
+#define HAS_PVM	NO
+
+
+#if IS_X86
+#define		IS_X86_SOLARIS28	YES
+#define		GccArch			i386-pc-solaris2.8
+#define		Platform		INTEL-SOLARIS28
+#define IS_EGCS_BUILD	YES
+#define EgcsPath /usr/local/lib/gcc-lib/i386-pc-solaris2.8/2.95.2 
+#endif
+
+#if IS_SUN4X
+#define		IS_SUN4X_SOLARIS28	YES
+#define		Platform		SUN4X-SOLARIS28
+#define		GccArch			sparc-sun-solaris2.8
+#define IS_EGCS_BUILD	YES
+#define EgcsPath /usr/local/lib/gcc-lib/sparc-sun-solaris2.8/2.95.2 
+#endif
+
+#ifndef SC_VERS
+#define SC_VERS SC5.0
+#endif
+
+#define IS_CLIPPED NO
+
+#define PlatformFlags	-DSolaris28=Solaris28
+
+#define PlatformLdFlags -ldl -lkstat -lelf -lsocket -lnsl -lm -lc \
+  -Xlinker -B -Xlinker static -lstdc++ -lgcc 
