@@ -111,13 +111,13 @@ MPIShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 	rr->setMachineName( host );
     ClassAd *temp = new ClassAd( *(getJobAd() ) );
 
-    sprintf ( buf, "%s = %s", ATTR_MPI_IS_MASTER, "TRUE" );
-    if ( !temp->Insert( buf )) {
-        dprintf ( D_ALWAYS, "Failed to insert %s into jobAd.\n", buf );
-        shutDown ( JOB_NOT_STARTED, 0 );
+    sprintf( buf, "%s = %s", ATTR_MPI_IS_MASTER, "TRUE" );
+    if( !temp->Insert(buf) ) {
+        dprintf( D_ALWAYS, "Failed to insert %s into jobAd.\n", buf );
+        shutDown( JOB_NOT_STARTED, 0 );
     }
 
-	replaceNode ( temp, 0 );
+	replaceNode( temp, 0 );
 	rr->setNode( 0 );
 	sprintf( buf, "%s = 0", ATTR_NODE );
 	temp->InsertOrUpdate( buf );
@@ -334,11 +334,12 @@ MPIShadow::startMaster()
 
         // first we open up the procgroup file (in working dir of job)
     char pgfilename[128];
-    sprintf ( pgfilename, "%s/procgroup.%d.%d", getIwd(), getCluster(), getProc() );
-    if ( (pg=fopen( pgfilename, "w" )) == NULL ) {
-        dprintf (D_ALWAYS, "Failure to open %s for writing, errno %d\n", 
+    sprintf( pgfilename, "%s/procgroup.%d.%d", getIwd(), getCluster(), 
+			 getProc() );
+    if( (pg=fopen( pgfilename, "w" )) == NULL ) {
+        dprintf( D_ALWAYS, "Failure to open %s for writing, errno %d\n", 
                  pgfilename, errno );
-        shutdown( JOB_NOT_STARTED, 0 );
+        shutDown( JOB_NOT_STARTED, 0 );
     }
         
         // get the machine name (using string_to_sin and sin_to_hostname)
@@ -726,17 +727,18 @@ MPIShadow::shutDown( int exitReason, int exitStatus ) {
 		   to kill others.... */
 	int i;
 
-	if ( !shutDownLogic( exitReason, exitStatus ) ) {
+	if( !shutDownLogic( exitReason, exitStatus ) ) {
 		return;  // leave if we're not *really* ready to shut down.
 	}
 
         // unlink the procgroup file:
     char pgfilename[128];
-    sprintf( pgfilename, "%s/procgroup.%d.%d", getIwd(), getCluster(), getProc() );
-    if ( unlink( pgfilename ) == -1 ) {
-        if ( errno != ENOENT ) {
-            dprintf ( D_ALWAYS, "Problem removing %s: errno %d.\n", 
-                      pgfilename, errno );
+    sprintf( pgfilename, "%s/procgroup.%d.%d", getIwd(), getCluster(), 
+			 getProc() );
+    if( unlink( pgfilename ) == -1 ) {
+        if( errno != ENOENT ) {
+            dprintf( D_ALWAYS, "Problem removing %s: errno %d.\n", 
+					 pgfilename, errno );
         }
     }
 
