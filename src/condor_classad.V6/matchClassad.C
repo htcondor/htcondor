@@ -8,6 +8,7 @@ MatchClassAd()
 {
 	lCtx = rCtx = NULL;
 	lad = rad = NULL;
+	ladParent = radParent = NULL;
 	InitMatchClassAd( NULL, NULL );
 }
 
@@ -16,6 +17,7 @@ MatchClassAd::
 MatchClassAd( ClassAd *adl, ClassAd *adr ) : ClassAd()
 {
 	lad = rad = lCtx = rCtx = NULL;
+	ladParent = radParent = NULL;
 	InitMatchClassAd( adl, adr );
 }
 
@@ -48,6 +50,10 @@ InitMatchClassAd( ClassAd *adl, ClassAd *adr )
 	Insert( "rightMatchesLeft", "adcl.ad.requirements" );
 	Insert( "leftRankValue", "adcl.ad.rank" );
 	Insert( "rightRankValue", "adcr.ad.rank" );
+
+		// stash parent scopes
+	ladParent = adl ? adl->GetParentScope( ) : (ClassAd*)NULL;
+	radParent = adr ? adr->GetParentScope( ) : (ClassAd*)NULL;
 
 		// the left context
 	src.SetSource( "[other=.adcr.ad;my=ad;target=other;super=other;ad=[]]" );
@@ -95,6 +101,7 @@ bool MatchClassAd::
 ReplaceLeftAd( ClassAd *ad )
 {
 	lad = ad;
+	ladParent = lad ? lad->GetParentScope( ) : (ClassAd*)NULL;
 	return( lCtx->Insert( "ad", ad ) );
 }
 
@@ -103,6 +110,7 @@ bool MatchClassAd::
 ReplaceRightAd( ClassAd *ad )
 {
 	rad = ad;
+	radParent = rad ? rad->GetParentScope( ) : (ClassAd*)NULL;
 	return( rCtx->Insert( "ad", ad ) );
 }
 
@@ -138,16 +146,28 @@ GetRightContext( )
 ClassAd *MatchClassAd::
 RemoveLeftAd( )
 {
+	ClassAd *ad = lad;
 	lCtx->Remove( "ad" );
-	return( lad );
+	if( lad ) {
+		lad->SetParentScope( ladParent );
+	}
+	ladParent = NULL;
+	lad = NULL;
+	return( ad );
 }
 
 
 ClassAd *MatchClassAd::
 RemoveRightAd( )
 {
+	ClassAd	*ad = rad;
 	rCtx->Remove( "ad" );
-	return( rad );
+	if( rad ) {
+		rad->SetParentScope( radParent );
+	}
+	radParent = NULL;
+	rad = NULL;
+	return( ad );
 }
 
 END_NAMESPACE // classad
