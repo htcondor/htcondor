@@ -279,7 +279,7 @@ short_print(
 	int image_size,
 	const char *cmd
 	) {
-	printf( "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %-18s\n",
+	printf( "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %-18.18s\n",
 		cluster,
 		proc,
 		owner,
