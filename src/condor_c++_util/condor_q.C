@@ -169,7 +169,7 @@ fetchQueueFromHost (ClassAdList &list, char *host)
 int CondorQ::
 getAndFilterAds (ClassAd &queryad, ClassAdList &list)
 {
-	char		constraint[_POSIX_PATH_MAX];	/* yuk! */
+	char		constraint[ATTRLIST_MAX_EXPRESSION]; /* yuk! */
 	ExprTree	*tree;
 	ClassAd		*ad;
 
