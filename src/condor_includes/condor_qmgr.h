@@ -41,42 +41,154 @@ extern "C" {
 
 int InitializeConnection(const char * );
 int InitializeReadOnlyConnection(const char * );
-int NewCluster();
-int NewProc( int );
-int DestroyProc(int, int);
-int DestroyCluster(int);
-// int DestroyClusterByConstraint(const char*); 
-int SetAttributeByConstraint(const char *, const char *, char *);
-int SetAttributeIntByConstraint(const char *, const char *, int);
-int SetAttributeFloatByConstraint(const char *, const char *, float);
-int SetAttributeStringByConstraint(const char *, const char *, char *);
-int SetAttribute(int, int, const char *, char *);
-int SetAttributeInt(int, int, const char *, int);
-int SetAttributeFloat(int, int, const char *, float);
-int SetAttributeString(int, int, const char *, char *);
+
+/** Initiate connection to schedd job queue and begin transaction.
+	@param qmgr_location can be the name or sinful string of a schedd or
+	       NULL to connect to the local schedd
+    @param timeout specifies the maximum time (in seconds) to wait for TCP
+	       connection establishment
+    @param read_only can be set to true to skip the potentially slow
+	       authenticate step for connections which don't modify the queue
+	@return opaque Qmgr_connection structure
+*/		 
+Qmgr_connection *ConnectQ(char *qmgr_location, int timeout=0, 
+				bool read_only=false );
+/** Commit all operations in the transaction and close the connection
+	to the schedd job queue.
+	@param qmgr pointer to Qmgr_connection object returned by ConnectQ
+	@return true if commit was successful; false if transaction was aborted
+*/
+bool DisconnectQ(Qmgr_connection *qmgr);
+
+/** Start a new job cluster.  This cluster becomes the
+	active cluster, and jobs may only be submitted to this cluster.
+	@return -1 on failure; the new cluster id on success
+*/
+int NewCluster(void);
+/** Signal the start of a new job description (a new job process).
+	@param cluster_id cluster id of the active job cluster (from NewCluster())
+	@return -1 on failure; the new proc id on success
+*/
+int NewProc( int cluster_id);
+/** Remove job with cluster_id and proc_id from the queue.  This is a
+	low-level mechanism.  Normally, to remove jobs from the queue, set the
+	job status to REMOVED and send a KILL_FRGN_JOB command to the schedd.
+	@return -1 on failure, 0 on success
+*/
+int DestroyProc(int cluster_id, int proc_id);
+/** Remove a cluster of jobs from the queue.
+*/
+int DestroyCluster(int cluster_id);
+/** For all jobs in the queue for which constraint evaluates to true, set
+	attr = value.  The value should be a valid ClassAd value (strings
+	should be surrounded by quotes).
+	@return -1 on failure; 0 on success
+*/
+int SetAttributeByConstraint(const char *constraint, const char *attr,
+							 char *value);
+/** For all jobs in the queue for which constraint evaluates to true, set
+	attr = value.  The value should be a valid ClassAd value (strings
+	should be surrounded by quotes).
+	@return -1 on failure; 0 on success
+*/
+int SetAttributeIntByConstraint(const char *constraint, const char *attr,
+								int value);
+/** For all jobs in the queue for which constraint evaluates to true, set
+	attr = value.  The value should be a valid ClassAd value (strings
+	should be surrounded by quotes).
+	@return -1 on failure; 0 on success
+*/
+int SetAttributeFloatByConstraint(const char *constraing, const char *attr,
+								  float value);
+/** For all jobs in the queue for which constraint evaluates to true, set
+	attr = value.  The value should be a valid ClassAd value (strings
+	should be surrounded by quotes).
+	@return -1 on failure; 0 on success
+*/
+int SetAttributeStringByConstraint(const char *constraint, const char *attr,
+								   char *value);
+/** Set attr = value for job with specified cluster and proc.  The value
+	should be a valid ClassAd value (strings should be surrounded by
+	quotes)
+	@return -1 on failure; 0 on success
+*/
+int SetAttribute(int cluster, int proc, const char *attr, char *value);
+/** Set attr = value for job with specified cluster and proc.  The value
+	should be a valid ClassAd value (strings should be surrounded by
+	quotes)
+	@return -1 on failure; 0 on success
+*/
+int SetAttributeInt(int cluster, int proc, const char *attr, int value);
+/** Set attr = value for job with specified cluster and proc.  The value
+	should be a valid ClassAd value (strings should be surrounded by
+	quotes)
+	@return -1 on failure; 0 on success
+*/
+int SetAttributeFloat(int cluster, int proc, const char *attr, float value);
+/** Set attr = value for job with specified cluster and proc.  The value
+	should be a valid ClassAd value (strings should be surrounded by
+	quotes)
+	@return -1 on failure; 0 on success
+*/
+int SetAttributeString(int cluster, int proc, const char *attr, char *value);
+
 int CloseConnection();
 
-int GetAttributeFloat(int, int, const char *, float *);
-int GetAttributeInt(int, int, const char *, int *);
-int GetAttributeString(int, int, const char *, char *);
-int GetAttributeExpr(int, int, const char *, char *);
-int DeleteAttribute(int, int, const char *);
+/** Get value of attr for job with specified cluster and proc.
+	@return -1 on failure; 0 on success
+*/
+int GetAttributeFloat(int cluster, int proc, const char *attr, float *value);
+/** Get value of attr for job with specified cluster and proc.
+	@return -1 on failure; 0 on success
+*/
+int GetAttributeInt(int cluster, int proc, const char *attr, int *value);
+/** Get value of attr for job with specified cluster and proc.
+	@return -1 on failure; 0 on success
+*/
+int GetAttributeString(int cluster, int proc, const char *attr, char *value);
+/** Get value of attr for job with specified cluster and proc.
+	@return -1 on failure; 0 on success
+*/
+int GetAttributeExpr(int cluster, int proc, const char *attr, char *value);
+/** Delete specified attribute for job with specified cluster and proc.
+	@return -1 on failure; 0 on success
+*/
+int DeleteAttribute(int cluster, int proc, const char *attr);
 
-/* These functions return NULL on failure, and return the
-   job ClassAd on success.  The caller MUST call FreeJobAd
-   when the ad is no longer in use. */
+/** Efficiently get the entire job ClassAd.
+	The caller MUST call FreeJobAd when the ad is no longer in use. 
+	@return NULL on failure; the job ClassAd on success
+*/
 ClassAd *GetJobAd(int cluster_id, int proc_id);
+/** Efficiently get the first job ClassAd which matches the constraint.
+	@return NULL on failure; the job ClassAd on success
+*/
 ClassAd *GetJobByConstraint(const char *constraint);
+/** Iterate over all jobs in the queue.
+	The caller MUST call FreeJobAd when the ad is no longer in use. 
+	@param initScan should be non-zero on first call to initialize the iterator
+	@return NULL on failure or when done iterating; the job ClassAd on success
+*/
 ClassAd *GetNextJob(int initScan);
+/** Iterate over jobs in the queue which match the specified constraint.
+	The caller MUST call FreeJobAd when the ad is no longer in use. 
+*/
 ClassAd *GetNextJobByConstraint(const char *constraint, int initScan);
+/** De-allocate job ClassAd allocated by GetJobAd, GetJobAdByConstraint,
+	GetNextJob, or GetNextJobByConstraint.
+*/
 void FreeJobAd(ClassAd *&ad);
 
-int SendSpoolFile(char *filename);		/* prepare for file xfer */
-int SendSpoolFileBytes(char *filename); /* actually do file xfer */
+/** Initiate transfer of job's initial checkpoint file (the executable).
+	Follow with a call to SendSpoolFileBytes.
+	@param filename Name of initial checkpoint file destination
+	@return -1 on failure; 0 on success
+*/
+int SendSpoolFile(char *filename);
+/** Actually transfer the initial checkpoint file (the executable).
+	@param filename Name of initial checkpoint file source.
+int SendSpoolFileBytes(char *filename);
 
-Qmgr_connection *ConnectQ(char *qmgr_location, int timeout=0, 
-				bool read_only=FALSE );
-bool DisconnectQ(Qmgr_connection *);
 void WalkJobQueue(scan_func);
 
 void InitQmgmt();
