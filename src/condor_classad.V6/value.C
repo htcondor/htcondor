@@ -450,11 +450,13 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
 {
     bool                could_convert;
 	string	            buf;
+    char                *end;
 	int		            ivalue;
 	time_t	            rtvalue;
 	abstime_t           atvalue;
 	bool	            bvalue;
 	double	            rvalue;
+	Value::NumberFactor nf;
 
 	switch(value.GetType()) {
 		case Value::UNDEFINED_VALUE:
@@ -470,10 +472,26 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
             break;
 
 		case Value::STRING_VALUE:
-			value.IsStringValue(buf);
-			ivalue = atoi(buf.c_str());
-            could_convert = true;
-            integerValue.SetIntegerValue(ivalue);
+			value.IsStringValue( buf );
+			ivalue = (int) strtod( buf.c_str( ), (char**) &end);
+			if( end == buf && ivalue == 0 ) {
+				// strtol() returned an error
+				integerValue.SetErrorValue( );
+				return( true );
+			}
+			switch( toupper( *end ) ) {
+				case 'B': nf = Value::B_FACTOR; break;
+				case 'K': nf = Value::K_FACTOR; break;
+				case 'M': nf = Value::M_FACTOR; break;
+				case 'G': nf = Value::G_FACTOR; break;
+				case 'T': nf = Value::T_FACTOR; break;
+			        case '\0': nf = Value::NO_FACTOR; break;
+				default:  
+					integerValue.SetErrorValue( );
+					return( true );
+			}
+		
+			integerValue.SetIntegerValue((int) (ivalue*Value::ScaleFactor[nf]));
             break;
 
 		case Value::BOOLEAN_VALUE:
