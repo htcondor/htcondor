@@ -144,6 +144,7 @@ char	*ImageSize		= "image_size";
 char	*Universe		= "universe";
 char	*MachineCount	= "machine_count";
 char	*NotifyUser		= "notify_user";
+char	*ExitRequirements = "exit_requirements";
 char	*UserLogFile	= "log";
 char	*CoreSize		= "coresize";
 char	*NiceUser		= "nice_user";
@@ -180,6 +181,7 @@ void 	SetStdFile( int which_file );
 void 	SetPriority();
 void 	SetNotification();
 void 	SetNotifyUser ();
+void	SetExitRequirements();
 void 	SetArguments();
 void 	SetEnvironment();
 #if !defined(WIN32)
@@ -1341,6 +1343,23 @@ SetNotifyUser()
 		free(who);
 	}
 }
+
+void
+SetExitRequirements()
+{
+	char *who = condor_param(ExitRequirements);
+
+	if( ! who ) {
+			// If "exit_requirements" isn't there, try "ExitRequirements" 
+		who = condor_param( "ExitRequirements" );
+	}
+
+	if (who) {
+		(void) sprintf (buffer, "%s = %s", ATTR_JOB_EXIT_REQUIREMENTS, who);
+		InsertJobExpr (buffer);
+		free(who);
+	}
+}
 	
 void
 SetArguments()
@@ -2163,6 +2182,7 @@ queue(int num)
 		SetEnvironment();
 		SetNotification();
 		SetNotifyUser();
+		SetExitRequirements();
 		SetUserLog();
 		SetCoreSize();
 #if !defined(WIN32)
