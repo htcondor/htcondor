@@ -919,13 +919,13 @@ ScheduledShutdownEvent::UpdateSchedule()
 static const char ShutdownConfig[] =
 "EndDownTime = %d\n"
 "Shutdown = (CurrentTime < EndDownTime)\n"
-"START : ($(START)) && ($(Shutdown) == False)\n"
+"START = ($(START)) && ($(Shutdown) == False)\n"
 "STARTD_EXPRS = $(STARTD_EXPRS), EndDownTime\n";
 
 static const char StandardShutdownConfig[] =
 "EndDownTime = %d\n"
 "Shutdown = (CurrentTime < EndDownTime)\n"
-"START : ($(START)) && (($(Shutdown) == False) || (TARGET.JobUniverse != 1))\n"
+"START = ($(START)) && (($(Shutdown) == False) || (TARGET.JobUniverse != 1))\n"
 "STARTD_EXPRS = $(STARTD_EXPRS), EndDownTime\n";
 
 static const char ShutdownAdminId[] = "eventd_shutdown";
