@@ -761,6 +761,7 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 {
 	ClassAdList jobs; 
 	ClassAd		*job;
+	static bool	setup_mask = false;
 
 		// fetch queue from schedd	
 	if( Q.fetchQueueFromHost(jobs, scheddAddr) != Q_OK ) {
@@ -813,47 +814,58 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 			summarize = false;
 			printf( " %-7s %-14s %-7s %-8s %-18s  %-18s\n", 
 				"ID", "OWNER", "STATUS", "MANAGER", "HOST", "EXECUTABLE" );
-			mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
-			mask.registerFormat ("%-3d ", ATTR_PROC_ID);
-			mask.registerFormat ( (StringCustomFmt) format_owner,
-								  ATTR_OWNER, "[????????????] " );
-			mask.registerFormat( "%7s ", "GlobusStatus" );
-			mask.registerFormat( (StringCustomFmt) format_globusHostJMAndExec,
-									"GlobusArgs", "[?????] [?????]\n" );
+			if (!setup_mask) {
+				mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
+				mask.registerFormat ("%-3d ", ATTR_PROC_ID);
+				mask.registerFormat ( (StringCustomFmt) format_owner,
+									  ATTR_OWNER, "[????????????] " );
+				mask.registerFormat( "%7s ", "GlobusStatus" );
+				mask.registerFormat( (StringCustomFmt)
+									 format_globusHostJMAndExec,
+									 "GlobusArgs", "[?????] [?????]\n" );
+				setup_mask = true;
+			}
 			mask.display( stdout, &jobs );
 		} else if ( run || goodput ) {
 			summarize = false;
 			printf( " %-7s %-14s %11s %12s %-16s\n", "ID", "OWNER",
 					"SUBMITTED", JOB_TIME,
 					run ? "HOST(S)" : "GOODPUT CPU_UTIL   Mb/s" );
-			mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
-			mask.registerFormat ("%-3d ", ATTR_PROC_ID);
-			mask.registerFormat ( (StringCustomFmt) format_owner,
-								  ATTR_OWNER, "[????????????] " );
-			mask.registerFormat(" ", "*bogus*", " ");  // force space
-			mask.registerFormat ( (IntCustomFmt) format_q_date,
-								  ATTR_Q_DATE, "[????????????]");
-			mask.registerFormat(" ", "*bogus*", " ");  // force space
-			mask.registerFormat ( (FloatCustomFmt) format_cpu_time,
-								  ATTR_JOB_REMOTE_USER_CPU, "[??????????]");
-			if ( run ) {
-				mask.registerFormat(" ", "*bogus*", " "); // force space
-				// We send in ATTR_OWNER since we know it is always
-				// defined, and we need to make sure
-				// format_remote_host() is always called. We are
-				// actually displaying ATTR_REMOTE_HOST if defined,
-				// but we play some tricks if it isn't defined.
-				mask.registerFormat ( (StringCustomFmt) format_remote_host,
-									  ATTR_OWNER, "[????????????????]");
-			} else {			// goodput
-				mask.registerFormat ( (FloatCustomFmt) format_goodput,
-									  ATTR_JOB_REMOTE_WALL_CLOCK, " [?????]");
-				mask.registerFormat ( (FloatCustomFmt) format_cpu_util,
-									  ATTR_JOB_REMOTE_USER_CPU, " [??????]");
-				mask.registerFormat ( (FloatCustomFmt) format_mbps,
-									  ATTR_JOB_REMOTE_WALL_CLOCK, " [????]");
+			if (!setup_mask) {
+				mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
+				mask.registerFormat ("%-3d ", ATTR_PROC_ID);
+				mask.registerFormat ( (StringCustomFmt) format_owner,
+									  ATTR_OWNER, "[????????????] " );
+				mask.registerFormat(" ", "*bogus*", " ");  // force space
+				mask.registerFormat ( (IntCustomFmt) format_q_date,
+									  ATTR_Q_DATE, "[????????????]");
+				mask.registerFormat(" ", "*bogus*", " ");  // force space
+				mask.registerFormat ( (FloatCustomFmt) format_cpu_time,
+									  ATTR_JOB_REMOTE_USER_CPU,
+									  "[??????????]");
+				if ( run ) {
+					mask.registerFormat(" ", "*bogus*", " "); // force space
+					// We send in ATTR_OWNER since we know it is always
+					// defined, and we need to make sure
+					// format_remote_host() is always called. We are
+					// actually displaying ATTR_REMOTE_HOST if defined,
+					// but we play some tricks if it isn't defined.
+					mask.registerFormat ( (StringCustomFmt) format_remote_host,
+										  ATTR_OWNER, "[????????????????]");
+				} else {			// goodput
+					mask.registerFormat ( (FloatCustomFmt) format_goodput,
+										  ATTR_JOB_REMOTE_WALL_CLOCK,
+										  " [?????]");
+					mask.registerFormat ( (FloatCustomFmt) format_cpu_util,
+										  ATTR_JOB_REMOTE_USER_CPU,
+										  " [??????]");
+					mask.registerFormat ( (FloatCustomFmt) format_mbps,
+										  ATTR_JOB_REMOTE_WALL_CLOCK,
+										  " [????]");
+				}
+				mask.registerFormat("\n", "*bogus*", "\n");  // force newline
+				setup_mask = true;
 			}
-			mask.registerFormat("\n", "*bogus*", "\n");  // force newline
 			mask.display(stdout, &jobs);
 		} else {
 			short_header();
