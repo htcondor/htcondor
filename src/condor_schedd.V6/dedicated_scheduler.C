@@ -298,8 +298,12 @@ ResTimeNode::satisfyJob( ClassAd* job, int max_hosts,
 	ClassAd* candidate;
 	int req;
 	
-	dprintf( D_FULLDEBUG, "Checking resources available at time %d\n", 
-			 (int)time );
+	if( time == -1 ) {
+		dprintf( D_FULLDEBUG, "Checking unclaimed resources\n" );
+	} else {
+		dprintf( D_FULLDEBUG, "Checking resources available at time %d\n",
+				 (int)time );
+	}
 
 	res_list->Rewind();
 	num_matches = 0;
