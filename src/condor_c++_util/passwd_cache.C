@@ -34,8 +34,9 @@ int compute_user_hash(const MyString &key, int numBuckets) {
 
 passwd_cache::passwd_cache() {
 
-	uid_table = new UidHashTable(10, compute_user_hash);
-	group_table = new GroupHashTable(10, compute_user_hash);
+	uid_table = new UidHashTable(10, compute_user_hash, updateDuplicateKeys);
+	group_table = new 
+		GroupHashTable(10, compute_user_hash, updateDuplicateKeys);
 		/* set the number of seconds until a cache entry expires */
 	Entry_lifetime = param_integer("PASSWD_CACHE_REFRESH", 300);
 }
