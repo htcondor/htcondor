@@ -1905,10 +1905,11 @@ int Scheduler::startdContactSockHandler( Stream *sock )
 		// this id to pull out the actual mrec from our hashtable.
 	char *id = (char *) daemonCore->GetDataPtr();
 	match_rec *mrec = NULL;
-	HashKey key(id);
-	matches->lookup(key, mrec);
-	free(id);	// it was allocated with strdup() when Register_DataPtr was called
-
+	if ( id ) {
+		HashKey key(id);
+		matches->lookup(key, mrec);
+		free(id);	// it was allocated with strdup() when Register_DataPtr was called
+	}
 
 	if ( !mrec ) {
 		// The match record must have been deleted.  Nothing left to do, close
