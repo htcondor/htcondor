@@ -34,6 +34,7 @@
 
 #include "jic_shadow.h"
 #include "jic_local_config.h"
+#include "jic_local_stdin.h"
 
 
 extern "C" int exception_cleanup(int,int,char*);	/* Our function called by EXCEPT */
@@ -61,6 +62,7 @@ usage()
 	dprintf(D_ALWAYS, "                      -job_cluster number\n");
 	dprintf(D_ALWAYS, "                      -job_proc    number\n");
 	dprintf(D_ALWAYS, "                      -job_subproc number\n");
+	dprintf(D_ALWAYS, "   or: condor_starter -job_on_stdin\n");
 //	dprintf(D_ALWAYS, "   or: condor_starter -localfile filename\n");
 	DC_Exit(1);
 }
@@ -203,6 +205,7 @@ parseArgs( int argc, char* argv [] )
 	int job_proc = -1;
 	int job_subproc = -1;
 	char* shadow_host = NULL;
+	bool job_on_stdin = false;
 
 	bool warn_multi_keyword = false;
 	bool warn_multi_cluster = false;
@@ -216,6 +219,7 @@ parseArgs( int argc, char* argv [] )
 	char _jobcluster[] = "-job_cluster";
 	char _jobproc[] = "-job_proc";
 	char _jobsubproc[] = "-job_subproc";
+	char _jobonstdin[] = "-job_on_stdin";
 	char _header[] = "-header";
 	char* target = NULL;
 
@@ -264,6 +268,14 @@ parseArgs( int argc, char* argv [] )
 				invalid( opt );
 			} 
 			target = _jobkeyword;
+			break;
+
+		case 'o':
+			if( strncmp(_jobonstdin, opt, opt_len) ) {
+				invalid( opt );
+			} 
+			job_on_stdin = true;
+			continue;
 			break;
 
 		case 'p':
@@ -373,17 +385,27 @@ parseArgs( int argc, char* argv [] )
 		return jic;
 	}
 
-	if( ! job_keyword ) {
-		dprintf( D_ALWAYS, "ERROR: You must specify '%s'\n",
-				 _jobkeyword ); 
+	if( ! (job_keyword || job_on_stdin) ) {
+		dprintf( D_ALWAYS, "ERROR: You must specify either '%s' or '%s'\n",
+				 _jobkeyword, _jobonstdin ); 
 		usage();
 	}
 
 		// If the user didn't specify it, use -1 for cluster and/or
-		// proc, and the JIC subclasses will know they weren't on
-		// the command-line.
-	jic = new JICLocalConfig( job_keyword, job_cluster, job_proc, 
-							  job_subproc );
+		// proc, and the JIC subclasses will know they weren't on the
+		// command-line.
+	if( job_on_stdin ) {
+		if( job_keyword ) {
+			jic = new JICLocalStdin( job_keyword, job_cluster, job_proc, 
+									 job_subproc );
+		} else {
+			jic = new JICLocalStdin( job_cluster, job_proc, job_subproc );
+		}
+	} else {
+		ASSERT( job_keyword );
+		jic = new JICLocalConfig( job_keyword, job_cluster, job_proc, 
+								  job_subproc );
+	}
 	free( job_keyword );
 	return jic;
 }
