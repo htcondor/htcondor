@@ -35,6 +35,12 @@ access_euid(const char *path, int mode)
 	struct stat buf;
 	int already_stated = 0;
 
+		/* clear errno before we begin, so we can ensure we set it to
+		   the right thing.  if we return without touching it again,
+		   we want it to be 0 (success).
+		*/
+	errno = 0;
+
 	/* are the arguments valid? */
 	if (path == NULL || (mode & ~(R_OK|W_OK|X_OK|F_OK)) != 0) {
 		errno = EINVAL;
@@ -49,6 +55,12 @@ access_euid(const char *path, int mode)
 
 	if ((F_OK == 0) || (mode & F_OK)) {
 		if (stat(path, &buf) < 0) {
+			if( ! errno ) {
+					/* evil!  stat() failed but there's no errno! */
+				dprintf( D_ALWAYS, "WARNING: stat() failed, but "
+						 "errno is still 0!  Beware of misleading "
+						 "error messages\n" );
+			}
 			return -1;
 		}
 		already_stated = 1;
@@ -57,6 +69,11 @@ access_euid(const char *path, int mode)
 	if ((R_OK == 0) || (mode & R_OK)) {
 		f = fopen(path, "r");
 		if (f == NULL) {
+			if( ! errno ) {
+				dprintf( D_ALWAYS, "WARNING: fopen() failed, but "
+						 "errno is still 0!  Beware of misleading "
+						 "error messages\n" );
+			}
 			return -1;
 		}
 		fclose(f);
@@ -65,6 +82,11 @@ access_euid(const char *path, int mode)
 	if ((W_OK == 0) || (mode & W_OK)) {
 		f = fopen(path, "a"); /* don't truncate the file! */
 		if (f == NULL) {
+			if( ! errno ) {
+				dprintf( D_ALWAYS, "WARNING: fopen() failed, but "
+						 "errno is still 0!  Beware of misleading "
+						 "error messages\n" );
+			}
 			return -1;
 		}
 		fclose(f);
@@ -74,10 +96,19 @@ access_euid(const char *path, int mode)
 		if (!already_stated) {
 			/* stats are expensive, so only do it if I have to */
 			if (stat(path, &buf) < 0) {
+				if( ! errno ) {
+					dprintf( D_ALWAYS, "WARNING: stat() failed, but "
+							 "errno is still 0!  Beware of misleading "
+							 "error messages\n" );
+				}
 				return -1;
 			}
 		}
 		if (!(buf.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH))) {
+				/* since() stat worked, errno will still be 0.  that's
+				   no good, since access_euid() is about to return
+				   failure.  set errno here to the right thing. */
+			errno = EACCES;
 			return -1;
 		}
 	}
