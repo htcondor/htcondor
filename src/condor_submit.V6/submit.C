@@ -445,6 +445,9 @@ main( int argc, char *argv[] )
 	(void) sprintf (buffer, "%s = 0", ATTR_NUM_RESTARTS);
 	InsertJobExpr (buffer);
 
+	(void) sprintf (buffer, "%s = 0", ATTR_JOB_COMMITTED_TIME);
+	InsertJobExpr (buffer);
+
 	config_fill_ad( job );
 
 	if (Quiet) {
