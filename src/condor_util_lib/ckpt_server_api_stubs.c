@@ -69,6 +69,14 @@ int RequestRestore(const char*     owner,
 { return -1; }
 
 
+int RequestStore(const char*     owner,
+				 const char*     filename,
+				 u_lint	         len,
+				 struct in_addr* server_IP,
+				 u_short*        port)
+{ return -1; }
+
+
 int RequestService(const char*     owner,
 				   const char*     filename,
 				   const char*     new_filename,
