@@ -568,32 +568,95 @@ RunBenchmarks : (LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
 ##  by commenting out this setting (there is no default).
 STARTD_JOB_EXPRS = ImageSize, JobUniverse
 
-##  In an SMP machine, how many of the virtual machines the startd is
-##  representing should be "connected" to the console (in other words,
-##  notice when there's console activity)?  This defaults to all
-##  virtual machines (N in a machine with N CPUs).  This must be an
-##  integer ("N" isn't a valid setting, that's just used to represent
-##  the default).
+##  If you want to "lie" to Condor about how many CPUs your machine
+##  has, you can use this setting to override Condor's automatic
+##  computation.  If you modify this, you must restart the startd for
+##  the change to take effect (a simple condor_reconfig will not do).
+##  Please read the section on "condor_startd Configuration File
+##  Macros" in the Condor Administrators Manual for a further
+##  discussion of this setting.  Its use is not recommended.  This
+##  must be an integer ("N" isn't a valid setting, that's just used to
+##  represent the default).
+#NUM_CPUS = N
+
+######
+##  SMP startd settings
+##
+##  By default, Condor will evenly divide the resources in an SMP
+##  machine (such as RAM, swap space and disk space) among all the
+##  CPUs, and advertise each CPU as its own "virtual machine" with an
+##  even share of the system resources.  If you want something other
+##  than this, there are a few options available to you.  Please read
+##  the section on "Configuring The Startd for SMP Machines" in the
+##  Condor Administrator's Manual for full details.  The various
+##  settings are only briefly listed and described here.
+######
+
+##  The maximum number of different virtual machine types.
+#MAX_VIRTUAL_MACHINE_TYPES = 10
+
+##  Use this setting to define your own virtual machine types.  This
+##  allows you to divide system resources unevenly among your CPUs.
+##  You must use a different setting for each different type you
+##  define.  The "<N>" in the name of the macro listed below must be
+##  an integer from 1 to MAX_VIRTUAL_MACHINE_TYPES (defined above),
+##  and you use this number to refer to your type.  There are many
+##  different formats these settings can take, so be sure to refer to
+##  the section on "Configuring The Startd for SMP Machines" in the
+##  Condor Administrator's Manual for full details.  In particular,
+##  read the section titled "Defining Virtual Machine Types" to help
+##  understand this setting.  If you modify any of these settings, you
+##  must restart the condor_start for the change to take effect.
+#VIRTUAL_MACHINE_TYPE_<N> = 1/4
+#VIRTUAL_MACHINE_TYPE_<N> = cpus=1, ram=25%, swap=1/4, disk=1/4
+#  For example:
+#VIRTUAL_MACHINE_TYPE_1 = 1/8
+#VIRTUAL_MACHINE_TYPE_2 = 1/4
+
+##  If you define your own virtual machine types, you must specify how
+##  many virtual machines of each type you wish to advertise.  You do
+##  this with the setting below, replacing the "<N>" with the
+##  corresponding integer you used to define the type above.  You can
+##  change the number of a given type being advertised at run-time,
+##  with a simple condor_reconfig.  
+#NUM_VIRTUAL_MACHINES_TYPE_<N> = M
+#  For example:
+#NUM_VIRTUAL_MACHINES_TYPE_1 = 6
+#NUM_VIRTUAL_MACHINES_TYPE_2 = 1
+
+##  The number of evenly-divided virtual machines you want Condor to
+##  report to your pool (if less than the total number of CPUs).  This
+##  setting is only considered if the "type" settings described above
+##  are not in use.  By default, all CPUs are reported.  This setting
+##  must be an integer ("N" isn't a valid setting, that's just used to
+##  represent the default).
+#NUM_VIRTUAL_MACHINES = N
+
+##  How many of the virtual machines the startd is representing should
+##  be "connected" to the console (in other words, notice when there's
+##  console activity)?  This defaults to all virtual machines (N in a
+##  machine with N CPUs).  This must be an integer ("N" isn't a valid
+##  setting, that's just used to represent the default).
 #VIRTUAL_MACHINES_CONNECTED_TO_CONSOLE = N
 
-##  In an SMP machine, how many of the virtual machines the startd is
-##  representing should be "connected" to the keyboard (for remote tty
-##  activity, as well as console activity).  Defaults to 1.
+##  How many of the virtual machines the startd is representing should
+##  be "connected" to the keyboard (for remote tty activity, as well
+##  as console activity).  Defaults to 1.
 #VIRTUAL_MACHINES_CONNECTED_TO_KEYBOARD = 1
 
-##  In an SMP machine, if there are virtual machines that aren't
-##  connected to the keyboard or the console (see the above two
-##  settings), the corresponding idle time reported will be the time
-##  since the startd was spawned, plus the value of this parameter.
-##  It defaults to 20 minutes.  We do this because, if the virtual
-##  machine is configured not to care about keyboard activity, we want
-##  it to be available to Condor jobs as soon as the startd starts up,
-##  instead of having to wait for 15 minutes or more (which is the
-##  default time a machine must be idle before Condor will start a
-##  job).  If you don't want this boost, just set the value to 0.  If
-##  you change your START expression to require more than 15 minutes
-##  before a job starts, but you still want jobs to start right away
-##  on some of your SMP nodes, just increase this parameter.
+##  If there are virtual machines that aren't connected to the
+##  keyboard or the console (see the above two settings), the
+##  corresponding idle time reported will be the time since the startd
+##  was spawned, plus the value of this parameter.  It defaults to 20
+##  minutes.  We do this because, if the virtual machine is configured
+##  not to care about keyboard activity, we want it to be available to
+##  Condor jobs as soon as the startd starts up, instead of having to
+##  wait for 15 minutes or more (which is the default time a machine
+##  must be idle before Condor will start a job).  If you don't want
+##  this boost, just set the value to 0.  If you change your START
+##  expression to require more than 15 minutes before a job starts,
+##  but you still want jobs to start right away on some of your SMP
+##  nodes, just increase this parameter.
 #DISCONNECTED_KEYBOARD_IDLE_BOOST = 1200
 
 ##--------------------------------------------------------------------
