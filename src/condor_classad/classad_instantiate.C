@@ -1,10 +1,11 @@
 #include "condor_classad.h"
 #include "ad_printmask.h"
-#include "HashCache.h"
-#include "MyString.h"
+#include "ListCache.h"
 
 template class List<Formatter>;
 template class Item<Formatter>;
-template class HashCache<MyString,ClassAd*>;
-template class HashCacheEntry<ClassAd*>;
-template class HashTable<MyString,HashCacheEntry<ClassAd*> >;
+template class ListCache<ClassAd>;
+template class ListCacheEntry<ClassAd>;
+template class List<ListCacheEntry<ClassAd> >;
+template class Item<ListCacheEntry<ClassAd> >;
+template class ListIterator<ListCacheEntry<ClassAd> >;

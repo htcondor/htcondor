@@ -29,6 +29,7 @@
 #include "condor_attributes.h"
 #include "condor_api.h"
 #include "condor_classad_lookup.h"
+#include "condor_query.h"
 
 // the comparison function must be declared before the declaration of the
 // matchmaker class in order to preserve its static-ness.  (otherwise, it
@@ -389,23 +390,30 @@ REQUEST_NETWORK_commandHandler (int, Stream *stream)
 #endif
 
 /*
-Look for an ad with Name==name in the table given by arg.
-Return a duplicate.
+Look for an ad matching the given constraint string
+in the table given by arg.  Return a duplicate on success.
+Otherwise, return 0.
 */
 
-static ClassAd * lookup_by_name( const char *name, void *arg )
+static ClassAd * lookup_global( const char *constraint, void *arg )
 {
-	MatchmakerTable *table = ( MatchmakerTable * ) arg;
-	MyString string(name);
+	ClassAdList *list = (ClassAdList*) arg;
 	ClassAd *ad;
+	ClassAd queryAd;
 
-	dprintf(D_ALWAYS,"Looking for ad named %s\n",name);
+	CondorQuery query(ANY_AD);
+	query.addANDConstraint(constraint);
+	query.getQueryAd(queryAd);
+	queryAd.SetTargetTypeName (ANY_ADTYPE);
 
-	if(table->lookup(string,ad)!=-1) {
-		return new ClassAd(*ad);
-	} else {
-		return 0;
+	list->Open();
+	while( ad = list->Next() ) {
+		if(queryAd <= *ad) {
+			return new ClassAd(*ad);
+		}
 	}
+
+	return 0;
 }
 
 int Matchmaker::
@@ -415,9 +423,7 @@ negotiationTime ()
 	ClassAdList startdPvtAds;
 	ClassAdList scheddAds;
 	ClassAdList ClaimedStartdAds;
-
 	ClassAdList allAds;
-	MatchmakerTable allAdsTable;
 
 	ClassAd		*schedd;
 	char		scheddName[80];
@@ -469,7 +475,7 @@ negotiationTime ()
 
 	// ----- Get all required ads from the collector
 	dprintf( D_ALWAYS, "Phase 1:  Obtaining ads from collector ...\n" );
-	if( !obtainAdsFromCollector( allAds, allAdsTable, startdAds, scheddAds,
+	if( !obtainAdsFromCollector( allAds, startdAds, scheddAds,
 		startdPvtAds, ClaimedStartdAds ) )
 	{
 		dprintf( D_ALWAYS, "Aborting negotiation cycle\n" );
@@ -477,10 +483,9 @@ negotiationTime ()
 		return FALSE;
 	}
 
-	// Register a lookup function so that reference-by-name looks
-	// through the allAds hash table.
+	// Register a lookup function that passes through the list of all ads.
 
-	ClassAdLookupRegister( lookup_by_name, &allAdsTable );
+	ClassAdLookupRegister( lookup_global, &allAds );
 
 	// ----- Recalculate priorities for schedds
 	dprintf( D_ALWAYS, "Phase 2:  Performing accounting ...\n" );
@@ -683,7 +688,6 @@ comparisonFunction (ClassAd *ad1, ClassAd *ad2, void *m)
 bool Matchmaker::
 obtainAdsFromCollector (
 						ClassAdList &allAds,
-						MatchmakerTable &allAdsTable,
 						ClassAdList &startdAds, 
 						ClassAdList &scheddAds, 
 						ClassAdList &startdPvtAds,
@@ -693,7 +697,6 @@ obtainAdsFromCollector (
 	CondorQuery privateQuery(STARTD_PVT_AD);
 	QueryResult result;
 	ClassAd *ad;
-	char name[ATTRLIST_MAX_EXPRESSION];
 	char state[ATTRLIST_MAX_EXPRESSION];
 
 	dprintf(D_ALWAYS, "  Getting all public ads ...\n");
@@ -708,16 +711,8 @@ obtainAdsFromCollector (
 	allAds.Open();
 	while( ad=allAds.Next() ) {
 
-		// Insert a ptr into the name table.
-		// The hash does not destruct its elements.
-
-		if( ad->LookupString(ATTR_NAME,name) ) {
-			MyString string(name);
-			allAdsTable.insert(string,ad);
-		}
-
-		// Insert a *copy* into the appropriate list.
-		// The lists *do* destruct their elements.
+		// Insert a *copy* of each into the appropriate list.
+		// This is needed because each list destructs its elements.
 
 		if( !strcmp(ad->GetMyTypeName(),STARTD_ADTYPE) ) {
 			startdAds.Insert(new ClassAd(*ad));

@@ -301,7 +301,6 @@ int Variable::_EvalTreeRecursive( char *name, AttrList* my_classad, AttrList* ta
 	ClassAd *other_classad;
 	char prefix[ATTRLIST_MAX_EXPRESSION];
 	char rest[ATTRLIST_MAX_EXPRESSION];
-	char other_name[ATTRLIST_MAX_EXPRESSION];
 	int fields;
 	int result;
 
@@ -325,8 +324,13 @@ int Variable::_EvalTreeRecursive( char *name, AttrList* my_classad, AttrList* ta
 		} else if(!strcmp(prefix,"TARGET")) {
 			return _EvalTreeRecursive(rest,target_classad,my_classad,val);
 		} else {
-			if(target_classad->LookupString(prefix,other_name)) {
-				other_classad = ClassAdLookupByName(other_name);
+			ExprTree *expr;
+			char expr_string[ATTRLIST_MAX_EXPRESSION];
+			expr = target_classad->Lookup(prefix);
+			if(expr) {
+				expr_string[0] = 0;
+				expr->RArg()->PrintToStr(expr_string);
+				other_classad = ClassAdLookupGlobal(expr_string);
 				if(other_classad) {
 					result = _EvalTreeRecursive(rest,other_classad,other_classad,val);
 					delete other_classad;

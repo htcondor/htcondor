@@ -26,18 +26,10 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_accountant.h"
 #include "condor_io.h"
-#include "HashTable.h"
-#include "MyString.h"
 
 #ifdef WANT_NETMAN
 #include "../condor_netman/netman.h"
 #endif
-
-class MatchmakerTable : public HashTable<MyString,ClassAd*>
-{
-public:
-	MatchmakerTable() : HashTable<MyString,ClassAd*> ( 127, MyStringHash ) {}
-};
 
 class Matchmaker : public Service
 {
@@ -69,7 +61,7 @@ class Matchmaker : public Service
 
 	private:
 		// auxillary functions
-		bool obtainAdsFromCollector (ClassAdList&, MatchmakerTable &, ClassAdList&, ClassAdList&, ClassAdList&, ClassAdList&);	
+		bool obtainAdsFromCollector (ClassAdList&, ClassAdList&, ClassAdList&, ClassAdList&, ClassAdList&);	
 		int  negotiate(char *, char *, double, double, int,
 			ClassAdList &, ClassAdList &, int, bool );
 		ClassAd *matchmakingAlgorithm(char*,char*,ClassAd&,ClassAdList&,

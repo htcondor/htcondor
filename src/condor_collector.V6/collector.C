@@ -12,6 +12,7 @@
 #include "condor_attributes.h"
 #include "condor_email.h"
 #include "condor_classad_lookup.h"
+#include "condor_query.h"
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "../condor_status.V6/status_types.h"
@@ -58,7 +59,7 @@ SafeSock CollectorDaemon::updateSock;
 int CollectorDaemon::UpdateTimerId;
 
 ClassAd *CollectorDaemon::query_any_result;
-char    *CollectorDaemon::query_any_name;
+ClassAd CollectorDaemon::query_any_request;
 
 //---------------------------------------------------------
 
@@ -154,7 +155,7 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
 
 	// ClassAd evaluations use this function to resolve names
-	ClassAdLookupRegister( process_query_by_name, this );
+	ClassAdLookupRegister( process_global_query, this );
 }
 
 int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
@@ -376,34 +377,42 @@ int CollectorDaemon::query_scanFunc (ClassAd *ad)
     return 1;
 }
 
-/* This filter examines the given ad, looking for Name==query_any_name */
-/* Returning 1 causes the scan to continue. */
-/* Returning 0 causes the scan to stop. */
+/*
+Examine the given ad, and see if it satisfies the query.
+If so, return zero, causing the scan to stop.
+Otherwise, return 1.
+*/
 
-int CollectorDaemon::select_by_name( ClassAd *ad )
+int CollectorDaemon::select_by_match( ClassAd *ad )
 {
-	char name[ATTRLIST_MAX_EXPRESSION];
-
 	if(ad<CollectorEngine::THRESHOLD) {
 		return 1;
 	}
 
-	if( ad->LookupString("Name",name) && !strcmp(name,query_any_name) ) {
+	if( query_any_request <= *ad ) {
 		query_any_result = ad;
 		return 0;
 	}
 	return 1;
 }
 
-/* Scan over all ads, using the select-by-name filter */
-/* If walk returns zero, the scan was stopped by a match. */
+/*
+This function is called by the global reference mechanism.
+It convert the constraint string into a query ad, and runs
+a global query, returning a duplicate of the ad matched.
+On failure, it returns 0.
+*/
 
-ClassAd * CollectorDaemon::process_query_by_name( const char *name, void *arg )
+ClassAd * CollectorDaemon::process_global_query( const char *constraint, void *arg )
 {
-	query_any_name = (char*) name;
+	CondorQuery query(ANY_AD);
+
+       	query.addANDConstraint(constraint);
+	query.getQueryAd(query_any_request);
+	query_any_request.SetTargetTypeName (ANY_ADTYPE);
 	query_any_result = 0;
 
-	if(!collector.walkHashTable(ANY_AD,select_by_name)) {
+	if(!collector.walkHashTable(ANY_AD,select_by_match)) {
 		return new ClassAd(*query_any_result);
 	} else {
 		return 0;

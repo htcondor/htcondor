@@ -1,3 +1,25 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_config.h"
@@ -6,13 +28,11 @@
 #include "condor_query.h"
 #include "condor_adtypes.h"
 #include "condor_debug.h"
-
-#include "HashCache.h"
-#include "MyString.h"
+#include "ListCache.h"
 
 static ClassAdLookupFunc lookup_func = 0;
 static void *lookup_arg = 0;
-static HashCache<MyString,ClassAd *> *cache;
+static ListCache<ClassAd> *cache;
 
 /* Please read condor_classad_lookup.h for documentation. */
 
@@ -22,31 +42,31 @@ void ClassAdLookupRegister( ClassAdLookupFunc func, void *arg )
 	lookup_arg = arg;
 }
 
-ClassAd * ClassAdLookupByName( const char *name )
+ClassAd * ClassAdLookupGlobal( const char *constraint )
 {
-	char buffer[ATTRLIST_MAX_EXPRESSION];
 	CondorQuery query(ANY_AD);
 	ClassAdList list;
 	ClassAd *ad;
-	ClassAd *evicted;
+	ClassAd queryAd;
 
 	if(lookup_func) {
-		return lookup_func( name, lookup_arg );
+		return lookup_func( constraint, lookup_arg );
 	}
 
 	if(!cache) {
 		int cache_size = param_integer("CLASSAD_CACHE_SIZE",127);
-		cache = new HashCache<MyString,ClassAd *>(cache_size,MyStringHash);
+		cache = new ListCache<ClassAd>(cache_size);
 	}
 
-	if(cache->lookup(name,ad)==0) {
-		return new ClassAd(*ad);
-	}
+	query.addANDConstraint(constraint);
+	query.getQueryAd(queryAd);
 
-	dprintf(D_ALWAYS,"ClassAd: Contacting collector to find Name==\"%s\"\n",name);
+	queryAd.SetTargetTypeName(ANY_ADTYPE);
 
-	sprintf(buffer,"TARGET.%s == \"%s\"",ATTR_NAME,name);
-	query.addANDConstraint(buffer);
+	ad = cache->lookup_lte(&queryAd);
+	if(ad) return new ClassAd(*ad);
+
+	dprintf(D_ALWAYS,"ClassAd: Contacting collector to find \"%s\"\n",constraint);
 
 	if(query.fetchAds(list)!=Q_OK) {
 		dprintf(D_FULLDEBUG,"ClassAd Warning: couldn't contact collector!\n");
@@ -56,14 +76,12 @@ ClassAd * ClassAdLookupByName( const char *name )
 	list.Open();
 	ad=list.Next();
 	if(!ad) {
-		dprintf(D_FULLDEBUG,"ClassAd Warning: collector has no ad named %s\n",name);
+		dprintf(D_FULLDEBUG,"ClassAd Warning: collector has no ad matching %s\n",constraint);
 		return 0;
 	}
 
-	evicted = 0;
-	int lifetime = param_integer("CLASSAD_CACHE_LIFETIME",60);
-	cache->insert(name,new ClassAd(*ad),lifetime,evicted);
-	if(evicted) delete evicted;
+	int lifetime = param_integer("CLASSAD_CACHE_LIFETIME",300);
+	cache->insert(ad,lifetime);
 
 	return new ClassAd(*ad);
 }

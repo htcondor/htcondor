@@ -27,9 +27,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 #include "condor_collector.h"
-#include "HashTable.h"
 #include "hashkey.h"
-#include "MyString.h"
 
 class CollectorEngine : public Service
 {
