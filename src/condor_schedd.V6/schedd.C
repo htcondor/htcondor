@@ -1195,10 +1195,7 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 	if( GetAttributeStringNew(job_id.cluster, job_id.proc,
 							  ATTR_REMOVE_REASON, &reason) >= 0 ) {
 		event.setReason( reason );
-	} else {
-		dprintf( D_ALWAYS, "In WriteAbortToUserLog for %d.%d: No %s\n", 
-				 job_id.cluster, job_id.proc, ATTR_REMOVE_REASON );
-	}			 
+	}
 		// GetAttributeStringNew always allocates memory, so we free
 		// regardless of the return value.
 	free( reason );
