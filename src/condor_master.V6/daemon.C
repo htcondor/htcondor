@@ -1542,7 +1542,7 @@ Daemons::UpdateCollector()
 			SafeSock s;
 			s.timeout(2);
 			s.encode();
-			Daemon col(collector);
+			DCCollector col(collector);
 			int collector_port = param_get_collector_port();
 			if (!s.connect(collector, collector_port)     || 
                 !col.startCommand(UPDATE_MASTER_AD, &s)   ||
