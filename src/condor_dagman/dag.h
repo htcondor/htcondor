@@ -9,6 +9,9 @@
 #include "HashTable.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
+// for DAGMAN_RUN_POST_ON_FAILURE config setting
+extern bool run_post_on_failure;
+
 // Termination Queue Item (TQI).
 class TQI {
   public:
@@ -218,8 +221,10 @@ class Dag : public Service {
     int _numJobsRunningMax;
 
 	int PreScriptReaper( int pid, int status );
+	int PostScriptReaper( int pid, int status );
 
 	int preScriptReaperId;
+	int postScriptReaperId;
 
 	// hash table to map PRE/POST script pids to their Job*
 	HashTable<int, Job*> *jobScriptPidTable;

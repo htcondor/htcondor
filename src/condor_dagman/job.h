@@ -20,14 +20,15 @@
      The outgoing queue is a list of child jobs that depend on this one.
      Once set, this queue never changes.<p>
 
-     From DAGMan's point of view, a job has five basic states in the
+     From DAGMan's point of view, a job has six basic states in the
      Condor system (refer to the Job::status_t enumeration).  It
      starts out as READY, meaning that it has not yet been submitted.
      If the job has a PRE script defined it changes to PRERUN while
      that script executes.  The job's state changes to SUBMITTED once
-     in the Condor system.  Only one of the remaining states is
-     possible after that.  Either the job is DONE, if I completes
-     successfully, or is in the ERROR if it completes abnormally.<p>
+     in the Condor system.  If it completes successfully and the job
+     has a POST script defined it changes to POSTRUN while that script
+     executes, otherwise if it completes successfully it is DONE, or
+     is in the ERROR state if it completes abnormally.<p>
 
      The DAG class will control the job by modifying and viewing its
      three queues.  Once the WAITING queue becomes empty, the job
@@ -79,6 +80,7 @@ class Job {
         /** Job is ready for submission */ STATUS_READY,
         /** Job waiting for PRE script */  STATUS_PRERUN,
         /** Job has been submitted */      STATUS_SUBMITTED,
+        /** Job waiting for POST script */ STATUS_POSTRUN,
         /** Job is done */                 STATUS_DONE,
         /** Job exited abnormally */       STATUS_ERROR,
     };
@@ -156,6 +158,9 @@ class Job {
     /** */ status_t _Status;
 
     /** */ int _scriptPid;
+
+	// the return code of the job
+	int retval;
   
   private:
   

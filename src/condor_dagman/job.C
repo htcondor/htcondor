@@ -17,6 +17,7 @@ const char * Job::status_t_names[] = {
     "STATUS_READY    ",
     "STATUS_PRERUN   ",
     "STATUS_SUBMITTED",
+	"STATUS_POSTRUN  ",
     "STATUS_DONE     ",
     "STATUS_ERROR    ",
 };

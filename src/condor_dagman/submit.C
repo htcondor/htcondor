@@ -53,11 +53,11 @@ static bool submit_try (const char *exe,
 
   if (1 == sscanf(buffer, "1 job(s) submitted to cluster %d",
                   & condorID._cluster)) {
-    if (DEBUG_LEVEL(DEBUG_DEBUG_2)) {
-      printf ("%s assigned condorID ", exe);
-      condorID.Print();
-      putchar('\n');
-    }
+//    if (DEBUG_LEVEL(DEBUG_DEBUG_2)) {
+//      printf ("%s assigned condorID ", exe);
+//      condorID.Print();
+//      putchar('\n');
+//    }
   }
   
   return true;

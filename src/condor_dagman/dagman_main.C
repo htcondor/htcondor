@@ -1,4 +1,5 @@
 #include "condor_common.h"
+#include "condor_config.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "basename.h"
 #include "dag.h"
@@ -7,6 +8,8 @@
 
 //---------------------------------------------------------------------------
 char* mySubSystem = "DAGMAN";         // used by Daemon Core
+
+bool run_post_on_failure;	// for DAGMAN_RUN_POST_ON_FAILURE config setting
 
 // Required for linking with condor libs
 extern "C" int SetSyscalls() { return 0; }
@@ -56,6 +59,16 @@ void touch (const char * filename) {
 //---------------------------------------------------------------------------
 
 int main_config() { 
+	char* s = param( "DAGMAN_RUN_POST_ON_FAILURE" );
+	if( s != NULL && !strcasecmp( s, "TRUE" ) ) {
+		run_post_on_failure = TRUE;
+	}	
+	else {
+		run_post_on_failure = FALSE;
+	}
+	if( s != NULL ) {
+		free( s );
+	}
     return TRUE;
 }
 
@@ -278,6 +291,12 @@ void main_timer () {
     
     debug_println (DEBUG_DEBUG_2, "%s: Jobs Done: %d/%d", __FUNCTION__,
                    G.dag->NumJobsDone(), G.dag->NumJobs());
+
+	if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
+		printf( "Jobs Total / Running / Failed / Done = %d / %d / %d / %d\n",
+				G.dag->NumJobs(), G.dag->NumJobsRunning(),
+				G.dag->NumJobsFailed(), G.dag->NumJobsDone() );
+	}
     
     // If the log has grown
     if (G.dag->DetectLogGrowth()) {
@@ -309,9 +328,14 @@ void main_timer () {
     // If no jobs are running, but the dag is not complete,
     // then at least one job failed, or a cycle exists.
     // 
-    if (G.dag->NumJobsRunning() == 0 && G.rescue_file != NULL) {
-        debug_println (DEBUG_NORMAL, "Writing Rescue DAG file...");
-        G.dag->Rescue(G.rescue_file, G.datafile);
+    if( G.dag->NumJobsRunning() == 0 ) {
+		if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
+			printf( "ERROR: some jobs failed\n" );
+		}
+		if( G.rescue_file != NULL ) {
+			debug_println (DEBUG_NORMAL, "Writing Rescue DAG file...");
+			G.dag->Rescue(G.rescue_file, G.datafile);
+		}
         G.CleanUp();
         DC_Exit(0);
     }
