@@ -76,6 +76,11 @@ CBUILD($(CC),job_ckpt_signals_std,c)
 RUN(job_ckpt_signals_std)
 #endif /* DOES_SAVE_SIGSTATE */
 
+DESC(job_ckpt_dup_std,"ckpt/restore file table state with dup() calls")
+CBUILD($(CC),job_ckpt_dup_std,c)
+DEPS(job_ckpt_dup_std,x_data.in)
+RUN(job_ckpt_dup_std)
+
 DESC(job_ckpt_getrusage-loop_std,"Does getrusage() work across ckpts?")
 CBUILD_DEP($(CC),job_ckpt_getrusage-loop_std,c,x_waste_second.o)
 /* 
