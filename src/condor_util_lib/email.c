@@ -31,8 +31,24 @@
 #define EMAIL_SUBJECT_PROLOG "[Condor] "
 
 #ifdef WIN32
-static char * EMAIL_FINAL_COMMAND = NULL;
+	static char * EMAIL_FINAL_COMMAND = NULL;
+#	define EMAIL_POPEN_FLAGS "wt"
+#else
+#	define EMAIL_POPEN_FLAGS "w"
 #endif
+
+/* how we actually get the FILE* for our mail program pipe various vastly
+	between NT and unix */
+static FILE *email_open_implementation(char *Mailer,char *final_command);
+
+#if defined(IRIX)
+extern char **_environ;
+#else
+extern char **environ;
+#endif
+
+extern int Termlog;
+extern char *mySubSystem;
 
 FILE *
 email_open( const char *email_addr, const char *subject )
@@ -70,11 +86,8 @@ email_open( const char *email_addr, const char *subject )
 		sprintf(RelayHost,"-relay %s",temp);
 		free(temp);
 	}
-#	define EMAIL_POPEN_FLAGS "wt"
-#else
-#	define EMAIL_POPEN_FLAGS "w"
-#endif
-	
+#endif 	
+
 	/* Take care of the subject. */
 	if ( subject ) {
 		FinalSubject = subject;
@@ -102,17 +115,38 @@ email_open( const char *email_addr, const char *subject )
 		*temp = ' ';
 	}
 
-	/* create the final command to pass to popen */
+	/* create the final command to pass to the code that will open the Mailer */
 	sprintf(final_command,"%s -s \"%s%s\" %s %s",
 		Mailer,EMAIL_SUBJECT_PROLOG,FinalSubject,RelayHost,FinalAddr);
-	dprintf(D_FULLDEBUG,"Sending email using command %s\n",final_command);
+/*	dprintf(D_FULLDEBUG,"Sending email using command %s\n",final_command);*/
+
+/* NEW CODE */
+	/* open a FILE* so that the mail we get will end up from condor,
+		and not from root */
+	mailerstream = email_open_implementation(Mailer, final_command);
+
+	if ( mailerstream ) {
+		fprintf(mailerstream,"This is an automated email from the Condor "
+			"system\non machine \"%s\".  Do not reply.\n\n",my_full_hostname());
+	}
+
+	/* free up everything we strdup-ed and param-ed, and return result */
+	free(Mailer);
+	free(FinalAddr);
+
+	return mailerstream;
+}
+
+#ifdef WIN32
+FILE *
+email_open_implementation(char *Mailer, char *final_command)
+{
+	priv_state priv;
+	int prev_umask;
+	FILE *mailerstream;
 
 	/* Want the letter to come from "condor" if possible */
 	priv = set_condor_priv();
-
-
-	/* finally, open up pipe to the mailer */
-
 	/* there are some oddities with how popen can open a pipe. In some
 		arches, popen will create temp files for locking and they need to
 		be of the correct perms in order to be deleted. So the umask is
@@ -125,8 +159,6 @@ email_open( const char *email_addr, const char *subject )
 	/* Set priv state back */
 	set_priv(priv);
 
-
-#ifdef WIN32
 	if ( mailerstream == NULL ) {
 		/* On NT, the process acting as the service (in this case
 		** the condor_master) fails on popen(), even though we did
@@ -162,22 +194,145 @@ email_open( const char *email_addr, const char *subject )
 			}
 		}
 	}
-#endif
-
 	if ( mailerstream == NULL ) {	
 		dprintf(D_ALWAYS,"Failed to access email program \"%s\"\n",
 			Mailer);
 	}
 
-	/* free up everything we strdup-ed and param-ed, and return result */
-	free(Mailer);
-	free(FinalAddr);
-	if ( mailerstream ) {
-		fprintf(mailerstream,"This is an automated email from the Condor system\n"
-			"on machine \"%s\".  Do not reply.\n\n",my_full_hostname());
-	}
 	return mailerstream;
 }
+
+#else /* unix */
+
+FILE *
+email_open_implementation(char *Mailer, char *final_command)
+{
+	FILE *mailerstream;
+	pid_t pid;
+	int pipefds[2];
+
+	/* The gist of this code is to exec a mailer whose stdin is dup2'ed onto
+		the write end of a pipe. The parent gets the fdopen'ed read end
+		so it looks like a FILE*. The child goes out of its
+		way to set its real uid to condor and prop up the environment so
+		that any mail that gets sent from the condor daemons ends up as
+		comming from the condor account instead of superuser. 
+
+		On some OS'es, the child cannot write to the logs even though the
+		mailer process is ruid condor. So I turned off logging in the
+		child. I have no clue why this behaviour happens.
+
+		-pete 04/14/2000
+	*/
+
+	if (pipe(pipefds) < 0)
+	{
+		dprintf(D_ALWAYS, "Could not open email pipe!\n");
+		return NULL;
+	}
+
+	dprintf(D_FULLDEBUG, "Forking Mailer process...\n");
+	if ((pid = fork()) < 0)
+	{
+		dprintf(D_ALWAYS, "Could not fork email process!\n");
+		return NULL;
+	}
+	else if (pid > 0) /* parent */
+	{
+		/* SIGCLD, SIGPIPE are ignored elsewhere in the code.... */
+
+		/* close read end of pipe */
+		close(pipefds[0]);
+
+		mailerstream = fdopen(pipefds[1], EMAIL_POPEN_FLAGS);
+		if (mailerstream == NULL)
+		{
+			dprintf(D_ALWAYS, "Could not open email FILE*: %s\n", 
+				strerror(errno));
+			return NULL;
+		}
+		return mailerstream;
+	}
+	else /* child mailer process */
+	{
+		static char pe_logname[256]; /* Sorry, putenv wants it this way */
+		static char pe_user[256];
+		const char *condor_name;
+		uid_t condor_uid;
+		gid_t condor_gid;
+		char **envp = NULL;
+
+		/* XXX This must be the FIRST thing in this block of code. For some
+			reason, at least on IRIX65, this forked process
+			will not be able to open the shadow lock file,
+			or be able to use dprintf or do any sort of
+			logging--even if the ruid hasn't changed. I do
+			not know why and this should be investigated. So
+			for now, I've turned off logging for this child
+			process. Thankfully it is a short piece of code
+			before the exec.  -pete 03-05-2000
+		*/
+		Termlog = 1;
+		dprintf_config(mySubSystem,2);
+
+		/* Need to do some OS hackery */
+		#if defined(IRIX)
+			envp = _environ;
+		#else
+			envp = environ;
+		#endif
+
+		/* Change my userid permanently to "condor" */
+		/* WARNING  This code must happen before the close/dup operation. */
+		condor_uid = get_condor_uid();
+		condor_gid = get_condor_gid();
+		set_user_ids( condor_uid, condor_gid );
+		set_user_priv_final();
+
+		/* close write end of pipe */
+		close(pipefds[1]);
+
+		/* connect the write end of the pipe to the stdin of the mailer */
+		if (dup2(pipefds[0], STDIN_FILENO) < 0)
+		{
+			EXCEPT("EMAIL PROCESS: Could not connect stdin to child!\n");
+		}
+
+		/* prop up the environment with goodies to get the Mailer to do the
+			right thing */
+		condor_name = get_condor_username();
+		sprintf(pe_logname,"LOGNAME=%s", condor_name);
+		putenv(pe_logname);
+		sprintf(pe_user,"USER=%s", condor_name);
+		putenv(pe_user);
+
+		/* figure out how to call the mailer */
+		execle("/bin/sh", "sh", "-c", final_command, NULL, envp);
+
+		/* Try the almost conforming popen implementation, I say almost because
+			I added the environ explicitly */
+		execle("/usr/bin/ksh", "ksh", "-c", final_command, NULL, envp);
+
+		/* Try the NON-conforming popen implementation, I added the environ
+			explicitly */
+		execle("/usr/bin/sh", "sh", "-c", final_command, NULL, envp);
+
+		/* To hell with it, just keep trying shells until we get it! */
+		execle("/bin/ksh", "ksh", "-c", final_command, NULL, envp);
+		execle("/sbin/ksh", "ksh", "-c", final_command, NULL, envp);
+		execle("/sbin/sh", "sh", "-c", final_command, NULL, envp);
+		execle("/usr/ucb/ksh", "ksh", "-c", final_command, NULL, envp);
+		execle("/usr/ucb/sh", "sh", "-c", final_command, NULL, envp);
+
+		/* If it gets this far, the rest failed, I hope it gets recorded 
+			somewhere */
+		EXCEPT("EMAIL PROCESS: Could not exec Mailer!\n");
+	}
+
+	/* for completeness */
+	return NULL;
+}
+#endif /* UNIX */
 
 FILE *
 email_admin_open(const char *subject)
@@ -223,10 +378,14 @@ email_close(FILE *mailer)
 {
 	char *temp;
 	int prev_umask;
+	priv_state priv;
 
 	if ( mailer == NULL ) {
 		return;
 	}
+
+	/* Want the letter to come from "condor" if possible */
+	priv = set_condor_priv();
 
 	/* Put a signature on the bottom of the email */
 	if ( (temp = param("CONDOR_ADMIN")) != NULL ) { 
@@ -238,6 +397,7 @@ email_close(FILE *mailer)
 		free(temp);
 	}
 
+	fflush(mailer);
 	/* there are some oddities with how pclose can close a file. In some
 		arches, pclose will create temp files for locking and they need to
 		be of the correct perms in order to be deleted. So the umask is
@@ -276,6 +436,10 @@ email_close(FILE *mailer)
 	(void)fclose( mailer );
 #endif
 	umask(prev_umask);
+
+	/* Set priv state back */
+	set_priv(priv);
+
 }
 
 
