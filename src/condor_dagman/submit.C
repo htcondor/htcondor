@@ -199,10 +199,13 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 	prependLines = prependLines +
 		" -a " + argQuote + "dag_node_name = " + DAGNodeName + argQuote +
-		" -a " + argQuote + "+DAGParentNodeNames = " + innerQuote + DAGParentNodeNames + innerQuote + argQuote +
 		" -a " + argQuote + "+" + DAGManJobIdAttrName + " = " + dm.DAGManJobId._cluster + argQuote +
 		" -a " + argQuote + "submit_event_notes = DAG Node: " + DAGNodeName + argQuote;
 
+	MyString DAGParentNodeNamesStr;
+	DAGParentNodeNamesStr = DAGParentNodeNamesStr + " -a " + argQuote + "+DAGParentNodeNames = " + innerQuote + DAGParentNodeNames + innerQuote + argQuote;
+
+		// set any VARS specified in the DAG file
 	MyString anotherLine;
 	ListIterator<MyString> nameIter(*names);
 	ListIterator<MyString> valIter(*vals);
@@ -211,6 +214,23 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		anotherLine = MyString(" -a ") + argQuote +
 			name + " = " + val + argQuote;
 		prependLines += anotherLine;
+	}
+
+		// how big is the command line so far
+	int cmdLineSize = prependLines.Length();
+		// how big is the DAGParentNodeNames string
+	int DAGParentNodeNamesLen = DAGParentNodeNamesStr.Length();
+		// how many additional chars must we still add to command line
+	int reserveNeeded = strlen( exe ) + strlen( cmdFile ) + 10;
+	int maxCmdLine = _POSIX_ARG_MAX;
+
+		// if we don't have room for DAGParentNodeNames, leave it unset
+	if( cmdLineSize + reserveNeeded + DAGParentNodeNamesLen > maxCmdLine ) {
+		debug_printf( DEBUG_NORMAL, "WARNING: node %s has too many parents "
+					  "to list in its classad; leaving its DAGParentNodeNames "
+					  "attribute undefined\n", DAGNodeName );
+	} else {
+		prependLines = prependLines + DAGParentNodeNamesStr;
 	}
 
 #ifdef WIN32
