@@ -71,7 +71,6 @@ V6_SRC		-a \
 			src/CVS_Tags \
 			src/README.building \
 			src/condor_accountant.V6 \
-			src/condor_bypass \
 			src/condor_c++_util \
 			src/condor_ckpt \
 			src/condor_ckpt_server \
