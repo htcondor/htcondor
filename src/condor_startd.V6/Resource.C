@@ -735,7 +735,16 @@ Resource::compute_condor_load()
 			 getProcSetInfo(r_starter->pidfamily(), 
 							r_starter->pidfamily_size(),  
 							pinfo) < -1) ) {
-			EXCEPT( "Fatal error getting process info for the starter and decendents" ); 
+				// If we failed, it might be b/c our pid family has
+				// stale info, so before we give up for real,
+				// recompute and try once more.
+			r_starter->recompute_pidfamily();
+			if( (resmgr->m_proc->
+				 getProcSetInfo(r_starter->pidfamily(), 
+								r_starter->pidfamily_size(),  
+								pinfo) < -1) ) {
+				EXCEPT( "Fatal error getting process info for the starter and decendents" ); 
+			}
 		}
 		if( !pinfo ) {
 			EXCEPT( "Out of memory!" );
