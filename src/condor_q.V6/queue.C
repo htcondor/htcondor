@@ -991,7 +991,7 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 	if (!output_buffer_empty) {
 		for (int i=0;i<=output_buffer->getlast(); i++) {
 			if ((*output_buffer)[i])
-				printf("[BUFF]%s",((*output_buffer)[i])->string);
+				printf("%s",((*output_buffer)[i])->string);
 		}
 	}
 
