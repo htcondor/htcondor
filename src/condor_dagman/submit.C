@@ -77,8 +77,10 @@ submit_try( const char *exe, const char *command, CondorID &condorID )
   {
     int status = pclose(fp);
     if (status == -1) {
-		debug_printf(DEBUG_NORMAL, "Read from pipe: %s\n", command_output.GetCStr());
-		debug_error( 1, DEBUG_NORMAL, "%s: pclose() in submit_try failed!\n", command );
+		debug_printf(DEBUG_NORMAL, "Read from pipe: %s\n", 
+					 command_output.Value());
+		debug_error( 1, DEBUG_NORMAL, "%s: pclose() in submit_try failed!\n", 
+					 command );
 		return false;
     }
   }
