@@ -20,16 +20,6 @@ STRIP_PVM	=	../strip_pvm
 STATIC_DIR	=	../static_dir
 STATIC_PVM	=	../static_pvm
 
-SSL_DIR		=	/p/condor/workspaces/ssl
-SSL_LIB		=	$(SSL_DIR)/lib
-SSL_INC		=	$(SSL_DIR)/include
-GLOBUS_DIR	=	/p/condor/workspaces/globus
-GLOBUS_LIB	=	$(GLOBUS_DIR)/lib
-GLOBUS_INC	=	$(GLOBUS_DIR)/include
-
-AUTH_LIB	=	-L$(GLOBUS_LIB) -lglobus_gss_assist -lglobus_gss \
-			-L$(SSL_LIB) -lssl -lcrypto \
-			-lresolv
 
 LIB_DIR =		$(RELEASE_DIR)/lib
 CONFIG_DIR =		$(TOP)/config
@@ -131,13 +121,29 @@ DEBUG_FLAG = DebugFlag
 #define ImakeOtherFlag
 #endif
 
-#define ImakeFlags ImakeArchFlag ImakeOpsysFlag ImakeOtherFlag
+#if !defined( GSS_AUTHENTICATION )
+#define GssAuthentication
+#define ImakeGssFlag
+#else
+#define GssAuthentication -DGSS_AUTHENTICATION -I../condor_includes -I$(GLOBUS_DIR)/include -I$(SSL_DIR)/include -z muldefs
+#define ImakeGssFlag -DGSS_AUTHENTICATION
+SSL_DIR = /p/condor/workspaces/ssl
+GLOBUS_DIR = /p/condor/workspaces/globus
+AUTH2_LIB = ../condor_io/libauth_io.a \
+	$(GLOBUS_DIR)/lib/libglobus_gss_assist.a \
+	$(GLOBUS_DIR)/lib/libglobus_gss.a \
+	$(SSL_DIR)/lib/libssl.a $(SSL_DIR)/lib/libcrypto.a 
+#endif
+
+AUTH_FLAGS = GssAuthentication
+
+
+#define ImakeFlags ImakeArchFlag ImakeOpsysFlag ImakeOtherFlag ImakeGssFlag
 #define IMAKE_FLAGS ImakeFlags -I../../config -s Makefile
 
 STD_C_PLUS_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
  -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) \
- $(DEBUG_FLAG) PlatformFlags $(SITE_C_FLAGS) \
- -I$(SSL_INC) -I$(GLOBUS_INC)
+ $(DEBUG_FLAG) PlatformFlags $(SITE_C_FLAGS) $(AUTH_FLAGS)
 
 STD_C_FLAGS = $(STD_C_PLUS_FLAGS)
 

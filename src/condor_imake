@@ -55,4 +55,9 @@ elif [ $os = "IRIX" ] ; then
 
 fi
 
-imake -s Makefile $ArchFlag $Opsys $Other -I../config -I../../config
+GssAuthentication=""
+if [ -f /p/condor/workspaces/globus/lib/libglobus_gss.a ] ; then
+	GssAuth="-DGSS_AUTHENTICATION"
+fi
+
+imake -s Makefile $ArchFlag $Opsys $Other $GssAuth -I../config -I../../config
