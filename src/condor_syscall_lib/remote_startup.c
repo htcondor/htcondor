@@ -415,12 +415,15 @@ MAIN( int argc, char *argv[], char **envp )
 	} else {
 
 		/* This is the checkpointing-only startup */
+		char *wd;
 
 		do_remote_syscalls = 0;
 
 		/* Need to store the cwd in the file table */
-		scm = SetSyscalls( SYS_LOCAL|SYS_MAPPED );
-		chdir( getwd(0) );
+		scm = SetSyscalls( SYS_LOCAL|SYS_UNMAPPED );
+		wd = getwd(0);
+		SetSyscalls( SYS_LOCAL|SYS_MAPPED );
+		chdir( wd );
 		SetSyscalls( scm );
 
 		_condor_prestart( SYS_LOCAL );
