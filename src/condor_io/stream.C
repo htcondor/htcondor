@@ -570,6 +570,7 @@ Stream::code(struct timeval &tv)
 	return TRUE;
 } 
 
+int
 Stream::code(struct utimbuf &ut)
 {
 	STREAM_ASSERT(code(ut.actime));
