@@ -377,7 +377,6 @@ is_valid_network( const char *network, struct in_addr *ip, struct in_addr *mask)
 	// that were optionally passed in.
 	char nmcopy[32];
 	char *tmp;
-	unsigned int tmask;
 	int  numbits;
 	strncpy( nmcopy, network, 31 );
 	nmcopy[31] = '\0';

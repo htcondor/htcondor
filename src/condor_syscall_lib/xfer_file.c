@@ -176,7 +176,6 @@ double
 get_time()
 {
 	struct timeval	tv;
-	int				scm;
 
 	if( gettimeofday( &tv, 0 ) < 0 ) {
 		dprintf( D_ALWAYS, "gettimeofday failed in get_time(): %s\n",
