@@ -5,6 +5,7 @@ CFLAGS = $(STD_C_FLAGS)
 release_copy_target(condor_install,sbin,condor_install,EXECUTABLE_MODE)
 release_copy_target(condor_configure,sbin,condor_configure,EXECUTABLE_MODE)
 release_copy_target(condor_init,sbin,condor_init,EXECUTABLE_MODE)
+release_copy_target(condor_updates_stats,sbin,condor_updates_stats,EXECUTABLE_MODE)
 #if IS_CLIPPED
 release_copy_target(condor_compile.clipped,bin,condor_compile,EXECUTABLE_MODE)
 #else 
