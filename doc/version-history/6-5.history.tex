@@ -60,6 +60,12 @@ The details of each version are described below.
   \Attr{ClientMachine} ClassAd attribute that are normally set to the
   hostname.
 
+\item Process handles would intermittantly be lost on Windows, causing
+  the \Condor{startd} and other daemons to EXCEPT(). This has been fixed.
+
+\item The \Condor{starter} no longer seg-faults when attempting to run
+  a job as nobody on HPUX.
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -195,6 +201,16 @@ is called VARS.
 \item Improved \Opt{-config} option to \Condor{config\_val} to print
       descriptive lines to stderr and filenames to stdout, so that its
       output can be cleanly piped into tools like xargs.
+
+\item On Unix, added the \MacroNI{VMx\_USER} config file parameter for
+specifying an account to run jobs as instead of ``nobody''. (i.e. when
+\Macro{UID\_DOMAIN}s do not match and \Macro{SOFT\_UID\_DOMAIN} =
+false). A different account can be specified for each VM.
+
+\item Added \Macro{EXECUTE\_LOGIN\_IS\_DEDICATED}. When set to True,
+this tells the \Condor{starter} to track job processes by login, instead
+of by process tree, which prevents so-called lurker processes. This is
+turned off by default.
 
 \end{itemize}
 
@@ -561,6 +577,9 @@ Collector Updates'' on page~\pageref{sec:tcp-collector-update} for
 more details and a discussion of when a site would need to enable this 
 functionality.
 
+\item Scheduler Universe has been ported to Windows. This enables
+\Condor{dagman} to run on Windows as well.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -585,6 +604,9 @@ directory is being redefined for some reason, we usually want that to
 apply to the lock files, as well.
 Of course, if the log directory is on NFS, \Macro{LOCK} should still
 be customized to point to a directoy on a local file system.
+
+\item Fixed a bug in the \Condor{schedd} where Scheduler Universe jobs
+  with \Macro{copy\_to\_spool} = false would fail.
 
 \end{itemize}
 
