@@ -950,7 +950,7 @@ matchmakingAlgorithm(char *, ClassAd &request,ClassAdList &startdAds,
 					if (offerRank && candidateRank == bestRank)
 					{
 						float rankOfOffer;
-						if(!request.EvalFloat(ATTR_RANK,candidate,rankOfOffer))
+						if(candidate->EvalFloat(ATTR_RANK,&request,rankOfOffer))
 						{
 							if (rankOfOffer > bestOffer)
 							{
