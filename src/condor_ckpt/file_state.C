@@ -108,7 +108,7 @@ File::Init()
 	open = FALSE;
 	firstBuf = NULL;
 	pathname = 0;
-	ioserversocket=-1;
+	ioserversocket = -1;
 }
 
 extern "C" char *getwd( char * );
@@ -244,7 +244,8 @@ OpenFileTable::DoOpen(
 	file[user_fd].duplicate = FALSE;
 	file[user_fd].pre_opened = FALSE;
 	file[user_fd].remote_access = is_remote;
-	file[user_fd].ioserver_access = (filetype==IS_IOSERVER?1:0);
+	file[user_fd].ioserver_access = FALSE;
+	file[user_fd].ioserversocket = -1;
 	file[user_fd].shadow_sock = FALSE;
 	file[user_fd].offset = 0;
 
@@ -384,6 +385,8 @@ OpenFileTable::PreOpen(
 	file[fd].duplicate = FALSE;
 	file[fd].pre_opened = TRUE;
 	file[fd].remote_access = RemoteSysCalls();
+	file[fd].ioserver_access = FALSE;
+	file[fd].ioserversocket = -1;
 	file[fd].shadow_sock = shadow_connection;
 	file[fd].offset = 0;
 	file[fd].real_fd = fd;
@@ -570,9 +573,10 @@ OpenFileTable::DoSocket(int addr_family, int type, int protocol )
 	file[user_fd].duplicate = FALSE;
 	file[user_fd].pre_opened = TRUE;  /* Make it not be re-opened */
 	file[user_fd].remote_access = RemoteSysCalls();
+	file[user_fd].ioserver_access = FALSE;
+	file[user_fd].ioserversocket = -1;
 	file[user_fd].shadow_sock = FALSE;
 	file[user_fd].offset = 0;
-	file[user_fd].ioserversocket=-1;
 	file[user_fd].real_fd = real_fd;
 	file[user_fd].pathname = (char *) 0;
 	return user_fd;
@@ -616,6 +620,8 @@ OpenFileTable::DoAccept(int s, struct sockaddr *addr, int *addrlen )
 	file[user_fd].duplicate = FALSE;
 	file[user_fd].pre_opened = TRUE;  /* Make it not be re-opened */
 	file[user_fd].remote_access = RemoteSysCalls();
+	file[user_fd].ioserver_access = FALSE;
+	file[user_fd].ioserversocket = -1;
 	file[user_fd].shadow_sock = FALSE;
 	file[user_fd].offset = 0;
 	file[user_fd].real_fd = real_fd;
