@@ -1,0 +1,26 @@
+CFLAGS = $(STD_C_FLAGS)
+EXTRACT = FORK.o KILL.o SIGACTION.o
+STUBS = syscall_stubs.o syscall_special.o
+UTIL = syscall_mode.o remote_syscall.o debug_init.o syscall_senders.o
+LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL)
+all_target(condor_syscall_lib.a)
+
+uppercase_target($(SIMPLE_LIBC),fork.o,FORK.o,fork,FORK)
+uppercase_target($(SIMPLE_LIBC),kill.o,KILL.o,kill,KILL)
+uppercase_target($(SIMPLE_LIBC),sigaction.o,SIGACTION.o,sigaction,SIGACTION)
+library_target(condor_syscall_lib.a,$(LIB_OBJ),release)
+program_target(ToUpper,ToUpper.o,$(NULL),release)
+
+syscall_stubs.c: stubs.tmpl stub_gen
+	stub_gen < stubs.tmpl > syscall_stubs.c
+
+lex.yy.c: stub_gen_lex.l scanner.h y.tab.h
+	lex stub_gen_lex.l
+
+y.tab.c: stub_gen_yacc.y scanner.h
+	yacc -d stub_gen_yacc.y
+
+clean::
+	rm -f lex.yy.c y.tab.c y.tab.h syscall_stubs.c
+
+program_target(stub_gen,y.tab.o lex.yy.o,$(NULL),no_realeas)
