@@ -39,7 +39,7 @@ static char _FileName_[] = __FILE__;
 ReliSock::ReliSock(					/* listen on port		*/
 	int		port
 	)
-	: Sock()
+	: Sock(), ignore_next_encode_eom(FALSE), ignore_next_decode_eom(FALSE)
 {
 	if (!listen(port))
 		dprintf(D_ALWAYS, "failed to listen on port %d!\n", port);
@@ -49,7 +49,7 @@ ReliSock::ReliSock(					/* listen on port		*/
 ReliSock::ReliSock(					/* listen on serv		*/
 	char	*serv
 	)
-	: Sock()
+	: Sock(), ignore_next_encode_eom(FALSE), ignore_next_decode_eom(FALSE)
 {
 	if (!listen(serv))
 		dprintf(D_ALWAYS, "failed to listen on serv %s!\n", serv);
@@ -61,7 +61,7 @@ ReliSock::ReliSock(
 	int		port,
 	int		timeout_val
 	)
-	: Sock()
+	: Sock(), ignore_next_encode_eom(FALSE), ignore_next_decode_eom(FALSE)
 {
 	timeout(timeout_val);
 	if (!connect(host, port))
@@ -75,7 +75,7 @@ ReliSock::ReliSock(
 	char	*serv,
 	int		timeout_val
 	)
-	: Sock()
+	: Sock(), ignore_next_encode_eom(FALSE), ignore_next_decode_eom(FALSE)
 {
 	timeout(timeout_val);
 	if (!Sock::connect(host, serv))
@@ -90,25 +90,35 @@ ReliSock::~ReliSock()
 }
 
 
-int ReliSock::SendFile(char *file, int length)
+int ReliSock::put_bytes_nobuffer(char *buf, int length, int send_size)
 {
 	int i, result;
-	int pagesize = 4096;  // Optimize large writes to be page sized.
-	char *cur = file;
+	int pagesize = 65536;  // Optimize large writes to be page sized.
+	char * cur = buf;
 
-	// Tell peer how big the file is going to be.
+	// Tell peer how big the transfer is going to be, if requested.
+	// Note: send_size param is 1 (true) by default.
 	this->encode();
-	ASSERT( this->code(length) != FALSE );
-	ASSERT( this->end_of_message() != FALSE );
+	if ( send_size ) {
+		ASSERT( this->code(length) != FALSE );
+		ASSERT( this->end_of_message() != FALSE );
+	}
 
-	// Optimize file transfer by writing in pagesized chunks.
+	// First drain outgoing buffers
+	if ( !prepare_for_nobuffering(stream_encode) ) {
+		// error flushing buffers; error message already printed
+		return -1;
+	}
+
+	// Optimize transfer by writing in pagesized chunks.
 	for(i = 0; i < length;)
 	{
 		// If there is less then a page left.
 		if( (length - i) < pagesize ) {
 			result = condor_write(_sock, cur, (length - i), _timeout);
 			if( result < 0 ) {
-				dprintf(D_ALWAYS, "Send file failed.\n");
+				dprintf(D_ALWAYS, 
+					"ReliSock::put_bytes_nobuffer: Send failed.\n");
 				return -1;
 			}
 			cur += (length - i);
@@ -117,7 +127,8 @@ int ReliSock::SendFile(char *file, int length)
 			// Send another page...
 			result = condor_write(_sock, cur, pagesize, _timeout);
 			if( result < 0 ) {
-				dprintf(D_ALWAYS, "Send file failed.\n");
+				dprintf(D_ALWAYS, 
+					"ReliSock::put_bytes_nobuffer: Send failed.\n");
 				return -1;
 			}
 			cur += pagesize;
@@ -127,34 +138,166 @@ int ReliSock::SendFile(char *file, int length)
 	return i;
 }
 
-int ReliSock::RecvFile(char *buffer, int max_length)
+int ReliSock::get_bytes_nobuffer(char *buffer, int max_length,
+								 int receive_size)
 {
-	bool turned_off_buffering = false;
 	int result;
 	int length;
 
 	ASSERT(buffer != NULL);
 	ASSERT(max_length > 0);
 
-	// Find out how big the file is going to be.
+	// Find out how big the file is going to be, if requested.
+	// No receive_size means read max_length bytes.
 	this->decode();
-	ASSERT( this->code(length) != FALSE );
-	ASSERT( this->end_of_message() != FALSE );
+	if ( receive_size ) {
+		ASSERT( this->code(length) != FALSE );
+		ASSERT( this->end_of_message() != FALSE );
+	} else {
+		length = max_length;
+	}
+
+	// First drain incoming buffers
+	if ( !prepare_for_nobuffering(stream_decode) ) {
+		// error draining buffers; error message already printed
+		return -1;
+	}
+
 
 	if( length > max_length ) {
-		dprintf(D_ALWAYS, "File is too large for buffer.\n");
+		dprintf(D_ALWAYS, 
+			"ReliSock::get_bytes_nobuffer: data too large for buffer.\n");
 		return -1;
 	}
 
 	result = condor_read(_sock, buffer, length, _timeout);
 	
 	if( result < 0 ) {
-		dprintf(D_ALWAYS, "Failed to receive file.\n");
+		dprintf(D_ALWAYS, 
+			"ReliSock::get_bytes_nobuffer: Failed to receive file.\n");
 		return -1;
 	} else {
 		return result;
 	}
 }
+
+int
+ReliSock::get_file(const char *destination)
+{
+	int total=0, nbytes, written, fd;
+	char buf[65536];
+	unsigned int filesize;
+
+	if ( !get(filesize) || !end_of_message() ) {
+		dprintf(D_ALWAYS, 
+			"Failed to receive filesize in ReliSock::get_file\n");
+		return FALSE;
+	}
+	dprintf(D_FULLDEBUG,"get_file(): filesize=%d\n",filesize);
+
+#if defined(WIN32)
+	if ((fd = ::open(destination, O_WRONLY | O_CREAT | _O_BINARY, 0644)) < 0)
+#else
+	if ((fd = ::open(destination, O_WRONLY | O_CREAT, 0644)) < 0)
+#endif
+	{
+		dprintf(D_ALWAYS, 
+			"get_file(): Failed to open file %s, errno = %d.\n", destination, errno);
+		return FALSE;
+	}
+
+	while (total < filesize &&
+		   (nbytes = get_bytes_nobuffer(buf, MIN(sizeof(buf),filesize-total),0)) > 0) {
+		dprintf(D_FULLDEBUG, "read %d bytes\n", nbytes);
+		if ((written = ::write(fd, buf, nbytes)) < nbytes) {
+			dprintf(D_ALWAYS, "failed to write %d bytes in ReliSock::get_file "
+					"(only wrote %d, errno=%d)\n", nbytes, written, errno);
+			::close(fd);
+			unlink(destination);
+			return FALSE;
+		}
+		dprintf(D_FULLDEBUG, "wrote %d bytes\n", written);
+		total += written;
+	}
+	dprintf(D_FULLDEBUG, "done with transfer, errno = %d\n", errno);
+	dprintf(D_FULLDEBUG, "wrote %d bytes to file %s\n",
+			total, destination);
+
+	if (::close(fd) < 0) {
+		dprintf(D_ALWAYS, "close failed in ReliSock::get_file\n");
+		return FALSE;
+	}
+
+	if ( total < filesize ) {
+		dprintf(D_ALWAYS,"get_file(): ERROR: received %d bytes, expected %d!\n",
+			total, filesize);
+		unlink(destination);
+		return FALSE;
+	}
+
+	return total;
+}
+
+int
+ReliSock::put_file(const char *source)
+{
+	int total=0, nbytes, nrd, fd;
+	char buf[65536];
+	struct stat filestat;
+	unsigned int filesize;
+
+#if defined(WIN32)
+	if ((fd = ::open(source, O_RDONLY | _O_BINARY | _O_SEQUENTIAL, 0)) < 0)
+#else
+	if ((fd = ::open(source, O_RDONLY, 0)) < 0)
+#endif
+	{
+		dprintf(D_ALWAYS, "Failed to open file %s, errno = %d.\n", source, errno);
+		return FALSE;
+	}
+
+	if (::fstat(fd, &filestat) < 0) {
+		dprintf(D_ALWAYS, "fstat of %s failed\n", source);
+		::close(fd);
+		return FALSE;
+	}
+
+	filesize = filestat.st_size;
+	if ( !put(filesize) || !end_of_message() ) {
+		dprintf(D_ALWAYS, "Failed to send filesize in ReliSock::put_file\n");
+		::close(fd);
+		return FALSE;
+	}
+
+	while (total < filestat.st_size &&
+		(nrd = ::read(fd, buf, sizeof(buf))) > 0) {
+		dprintf(D_FULLDEBUG, "read %d bytes\n", nrd);
+		if ((nbytes = put_bytes_nobuffer(buf, nrd, 0)) < nrd) {
+			dprintf(D_ALWAYS, "failed to put %d bytes in ReliSock::put_file "
+				"(only wrote %d)\n", nrd, nbytes);
+			::close(fd);
+			return FALSE;
+		}
+		// dprintf(D_FULLDEBUG, "wrote %d bytes\n", nbytes);
+		total += nbytes;
+	}
+	dprintf(D_FULLDEBUG, "done with transfer, errno = %d\n", errno);
+	dprintf(D_FULLDEBUG, "sent file %s (%d bytes)\n", source, total);
+
+	if (::close(fd) < 0) {
+		dprintf(D_ALWAYS, "close failed in ReliSock::put_file, errno = %d\n", errno);
+		return FALSE;
+	}
+
+	if (total < filesize) {
+		dprintf(D_ALWAYS,"put_file(): ERROR, only sent %d bytes out of %d\n",
+			total, filesize);
+		return FALSE;
+	}
+
+	return total;
+}
+
 
 int ReliSock::listen()
 {
@@ -279,12 +422,20 @@ int ReliSock::end_of_message()
 
 	switch(_coding){
 		case stream_encode:
+			if ( ignore_next_encode_eom == TRUE ) {
+				ignore_next_encode_eom = FALSE;
+				return TRUE;
+			}
 			if (!snd_msg.buf.empty()) {
 				return snd_msg.snd_packet(_sock, TRUE, _timeout);
 			}
 			break;
 
 		case stream_decode:
+			if ( ignore_next_decode_eom == TRUE ) {
+				ignore_next_decode_eom = FALSE;
+				return TRUE;
+			}
 			if ( rcv_msg.ready ) {
 				if ( rcv_msg.buf.consumed() )
 					ret_val = TRUE;
@@ -314,12 +465,12 @@ int ReliSock::connect(
 
 int ReliSock::put_bytes(const void *dta, int sz)
 {
-	int result;
 	int		tw;
 	int		nw;
 
 	if (!valid()) return -1;
 
+	ignore_next_encode_eom = FALSE;
 
 	for(nw=0;;) {
 		
@@ -345,6 +496,8 @@ int ReliSock::put_bytes(const void *dta, int sz)
 int ReliSock::get_bytes(void *dta, int max_sz)
 {
 	if (!valid()) return -1;
+
+	ignore_next_decode_eom = FALSE;
 
 	while (!rcv_msg.ready) {
 		if (!handle_incoming_packet()){
@@ -558,4 +711,51 @@ char * ReliSock::serialize(char *buf)
 	string_to_sin(sinful_string, &_who);
 
 	return NULL;
+}
+
+int ReliSock::prepare_for_nobuffering(stream_coding direction)
+{
+	int ret_val = TRUE;
+
+	if ( direction == stream_unknown ) {
+		direction = _coding;
+	}
+
+	switch(direction){
+		case stream_encode:
+			if ( ignore_next_encode_eom == TRUE ) {
+				// optimization: if we already prepared for nobuffering,
+				// just return true.
+				return TRUE;
+			}
+			if (!snd_msg.buf.empty()) {
+				ret_val = snd_msg.snd_packet(_sock, TRUE, _timeout);
+			}
+			if ( ret_val ) {
+				ignore_next_encode_eom = TRUE;
+			}
+			break;
+
+		case stream_decode:
+			if ( ignore_next_decode_eom == TRUE ) {
+				// optimization: if we already prepared for nobuffering,
+				// just return true.
+				return TRUE;
+			}
+			if ( rcv_msg.ready ) {
+				if ( !rcv_msg.buf.consumed() )
+					ret_val = FALSE;
+				rcv_msg.ready = FALSE;
+				rcv_msg.buf.reset();
+			}
+			if ( ret_val ) {
+				ignore_next_decode_eom = TRUE;
+			}
+			break;
+
+		default:
+			assert(0);
+	}
+
+	return ret_val;
 }
