@@ -191,10 +191,11 @@ void RemoteResource::printExit( FILE *fp ) {
 	switch ( exitReason ) {
 	case JOB_EXITED: {
 		if ( WIFSIGNALED(exitStatus) ) {
-			fprintf ( fp, "died on signal %d.\n", 
-					  WTERMSIG(exitStatus) );
+			fprintf ( fp, "died on %s.\n", 
+					  daemonCore->GetExceptionString(WTERMSIG(exitStatus)) );
 		}
 		else {
+#ifndef WIN32
 			if ( WEXITSTATUS(exitStatus) == ENOEXEC ) {
 					/* What has happened here is this:  The starter
 					   forked, but the exec failed with ENOEXEC and
@@ -203,7 +204,9 @@ void RemoteResource::printExit( FILE *fp ) {
 					   the user job can exit with a status of 8, we're
 					   hosed.  A better solution should be found. */
 				fprintf( fp, "exited because of an invalid binary.\n" );
-			} else {
+			} else 
+#endif  // of ifndef WIN32
+			{
 				fprintf ( fp, "exited normally with status %d.\n", 
 						  WEXITSTATUS(exitStatus) );
 			}
@@ -212,7 +215,7 @@ void RemoteResource::printExit( FILE *fp ) {
 		break;
 	}
 	case JOB_KILLED: {
-		fprintf ( fp, "was forceably removed by condor.\n" );
+		fprintf ( fp, "was forceably removed with condor_rm.\n" );
 		break;
 	}
 	case JOB_NOT_CKPTED: {
@@ -417,6 +420,40 @@ void RemoteResource::setExitStatus( int status ) {
 	exitStatus = status;
 }
 
+float RemoteResource::bytesSent()
+{
+	float bytes = 0.0;
+
+	// add in bytes sent by transferring files
+	bytes += filetrans.TotalBytesSent();
+
+	// add in bytes sent via remote system calls
+
+	/*** until the day we support syscalls in the new shadow 
+	if (syscall_sock) {
+		bytes += syscall_sock->get_bytes_sent();
+	}
+	****/
+	
+	return bytes;
+}
 
 
+float RemoteResource::bytesRecvd()
+{
+	float bytes = 0.0;
+
+	// add in bytes sent by transferring files
+	bytes += filetrans.TotalBytesReceived();
+
+	// add in bytes sent via remote system calls
+
+	/*** until the day we support syscalls in the new shadow 
+	if (syscall_sock) {
+		bytes += syscall_sock->get_bytes_recvd();
+	}
+	****/
+	
+	return bytes;
+}
 
