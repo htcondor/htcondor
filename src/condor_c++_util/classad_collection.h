@@ -14,6 +14,7 @@
 //--------------------------------------------------------------------------
 
 typedef HashTable<int,BaseCollection*> CollectionHashTable;
+int partitionHashFcn( const MyString &, int );
 
 ///--------------------------------------------------------------------------
 
@@ -31,7 +32,8 @@ typedef HashTable<int,BaseCollection*> CollectionHashTable;
 */
 
 class ClassAdCollection : private ClassAdLog {
-
+friend CollChildIterator;
+friend CollContentIterator;
 public:
 
   //------------------------------------------------------------------------
@@ -61,10 +63,10 @@ public:
   //@}
   //------------------------------------------------------------------------
   /**@name Transaction control methods
-  * Note that when no transaction is active, all persistent operations (creating and
-  * deleting class-ads, changing attributes), are logged immediatly. When a transaction
-  * is active (after BeginTransaction has been called), the changes are saved only
-  * when the transaction is commited.
+  	Note that when no transaction is active, all persistent operations 
+	(creating and deleting class-ads, changing attributes), are logged 
+	immediatly. When a transaction is active (after BeginTransaction has been 
+	called), the changes are saved only when the transaction is commited.
   */
   //@{
 
@@ -84,12 +86,15 @@ public:
   void AbortTransaction() { ClassAdLog::AbortTransaction(); }
 
   /** Lookup an attribute's value in the current transaction. 
-      @param key the key with which the class-ad was inserted into the repository.
+      @param key the key with which the class-ad was inserted into the 
+	  	repository.
       @param name the name of the attribute.
-      @param val the value of the attrinute (output parameter).
+      @param expr the attribute expression (output parameter).
       @return true on success, false otherwise.
   */
-  bool LookupInTransaction(const char *key, const char *name, char *&val) { return (ClassAdLog::LookupInTransaction(key,name,val)==1); }
+  bool LookupInTransaction(const char *key, const char *name, ExprTree *&val) { 
+	 return (ClassAdLog::LookupInTransaction(key,name,val)==1); 
+  }
   
   /** Truncate the log file by creating a new "checkpoint" of the repository
     @return nothing
@@ -103,13 +108,10 @@ public:
   //@{
 
   /** Insert a new empty class-ad with the specified key.
-      Also set it's type and target type attributes.
       @param key The class-ad's key.
-      @param mytype The class-ad's MyType attribute value.
-      @param targettype The class-ad's TargetType attribute value.
       @return true on success, false otherwise.
   */
-  bool NewClassAd(const char* key, const char* mytype, const char* targettype);
+  bool NewClassAd(const char* key);
 
   /** Insert a new class-ad with the specified key.
       The new class-ad will be a copy of the ad supplied.
@@ -128,10 +130,12 @@ public:
   /** Set an attribute in a class-ad.
       @param key The class-ad's key.
       @param name the name of the attribute.
-      @param value the value of the attrinute.
+      @param expr the attribute expression
       @return true on success, false otherwise.
   */
-  bool SetAttribute(const char* key, const char* name, const char* value);
+  bool SetAttribute(const char* key, const char* name, ExprTree* expr);
+  bool SetAttribute(const char* key, const char* name, const char *expr, 
+		  	int len=-1);
 
   /** Delete an attribute in a class-ad.
       @param key The class-ad's key.
@@ -146,7 +150,10 @@ public:
       @param Ad A pointer to the class-ad (output parameter).
       @return true on success, false otherwise.
   */
-  bool LookupClassAd(const char* key, ClassAd*& Ad) { return (table.lookup(HashKey(key), Ad)==0); }
+  bool LookupClassAd(const char* key, ClassAd*& Ad) 
+  { 
+	  return (table.lookup(HashKey(key), Ad)==0); 
+  }
   
   //@}
   //------------------------------------------------------------------------
@@ -156,38 +163,56 @@ public:
   //@{
 
   /** Create an explicit collection, as a child of another collection.
-      An explicit collection can include any subset of ads which are in its parent.
-      The user can actively include and exclude ads from this collection.
+      An explicit collection can include any subset of ads which are in its 
+	  parent.  The user can actively include and exclude ads from this 
+	  collection.
       @param ParentCoID The ID of the parent collection.
-      @param Rank The rank expression. Determines how the ads will be ordered in the collection.
-      @param FullFlag The flag which indicates automatic insertion of class-ads from the parent.
+      @param Rank The rank expression. Determines how the ads will be ordered 
+	  	in the collection.
+      @param FullFlag The flag which indicates automatic insertion of class-ads 
+	  	from the parent.
       @return the ID of the new collection, or -1 in case of failure.
   */
-  int CreateExplicitCollection(int ParentCoID, const MyString& Rank, bool FullFlag=false);
+  int CreateExplicitCollection(int ParentCoID, const MyString& Rank, 
+		  bool FullFlag=false);
+  /// Same as above, but pass in a classad expression for the rank
+  int CreateExplicitCollection(int ParentCoID, ExprTree *Rank, 
+		  bool FullFlag=false);
 
   /** Create a constraint collection, as a child of another collection.
-      A constraint collection always contains the subset of ads from the parent, which
-      match the constraint.
+      A constraint collection always contains the subset of ads from the parent,
+	  which match the constraint.
       @param ParentCoID The ID of the parent collection.
-      @param Rank The rank expression. Determines how the ads will be ordered in the collection.
+      @param Rank The rank expression. Determines how the ads will be ordered 
+	  	in the collection.
       @param Constraint sets the constraint expression for this collection.
       @return the ID of the new collection, or -1 in case of failure.
   */
-  int CreateConstraintCollection(int ParentCoID, const MyString& Rank, const MyString& Constraint);
+  int CreateConstraintCollection(int ParentCoID, const MyString& Rank, 
+		  const MyString& Constraint);
+  /** Same as above, but pass in a classad expression for the rank and 
+  	constraint
+  */
+  int CreateConstraintCollection(int ParentCoID, ExprTree *Rank, 
+		  ExprTree *Constraint);
 
   /** Create a partition collection, as a child of another collection.
-      A partiton collection defines a partition based on a set of attributes. For
-      each distinct set of values (corresponding to these attributes), a new
-      child collection will be created, which will contain all the class-ads from the
-      parent collection that have these values. The partition collection itself doesn't
-      hold any class-ads, only its children do (the iteration methods for getting
-      child collections can be used to retrieve them).
+      A partiton collection defines a partition based on a set of attributes. 
+	  For each distinct set of values (corresponding to these attributes), a new
+      child collection will be created, which will contain all the class-ads 
+	  from the parent collection that have these values. The partition 
+	  collection itself doesn't hold any class-ads, only its children do (the 
+	  iteration methods for getting child collections can be used to retrieve 
+	  them).
       @param ParentCoID The ID of the parent collection.
-      @param Rank The rank expression. Determines how the ads will be ordered in the child collections.
+      @param Rank The rank expression. Determines how the ads will be ordered 
+	  	in the child collections.
       @param AttrList The set of attribute names used to define the partition.
       @return the ID of the new collection, or -1 in case of failure.
   */
-  int CreatePartition(int ParentCoID, const MyString& Rank, StringSet& AttrList);
+  int CreatePartition(int ParentCoID, const MyString& Rank,StringSet& AttrList);
+  int CreatePartition(int ParentCoID, ExprTree *Rank, StringSet& AttrList);
+  int FindPartition(int ParentCoID, ClassAd *representative );
 
   /** Deletes a collection and all of its descendants from the collection tree.
       @param CoID The ID of the collection to be deleted.
@@ -213,17 +238,23 @@ public:
   bool IterateAllCollections(int& CoID);
 
   /** Start iterations on child collections of a specified collection.
-      @param ParentCoID The ID of the parent of the collections to be iterated on.
+      @param ParentCoID The ID of the parent of the collections to be iterated 
+	  	on.
       @return true on success, false otherwise.
   */
   bool StartIterateChildCollections(int ParentCoID);
 
   /** Get the next child of the specified parent collection.
-      @param ParentCoID The ID of the parent of the collections to be iterated on.
+      @param ParentCoID The ID of the parent of the collections to be iterated 
+	  	on.
       @param CoID The ID of the next collection (output parameter).
       @return true on success, false otherwise.
   */
   bool IterateChildCollections(int ParentCoID, int& CoID);
+
+  bool StartIterateClassAds(int CoID);
+  bool IterateClassAds( int CoID, ClassAd *& ad );
+  bool IterateClassAds( int CoID, char *key );
 
   /** Start iterations on all class-ads in the repository.
       @return nothing.
@@ -264,56 +295,23 @@ public:
   //------------------------------------------------------------------------
 
 private:
-
-  /** Start iterations on class-ads in a collection.
-      Returns true on success, false otherwise.
-  */
-  bool StartIterateClassAds(int CoID);
-
-  /** Get the next class-ad and its numeric rank in the collection.
-      Returns true on success, false otherwise.
-  */
-  bool IterateClassAds(int CoID, RankedClassAd& OID);
-
+  bool IterateClassAds( int CoID, RankedClassAd &Ranked );
   //------------------------------------------------------------------------
   // Data Members
   //------------------------------------------------------------------------
-
-  /// The hash table that maps collection IDs to collection objects
   CollectionHashTable Collections;
-
-  /// The last collection ID used
   int LastCoID;
-
   //------------------------------------------------------------------------
   // Methods that are used internally
   //------------------------------------------------------------------------
-
-  ///
   bool AddClassAd(int CoID, const MyString& OID);
-
-  ///
   bool AddClassAd(int CoID, const MyString& OID, ClassAd* ad);
-
-  ///
   bool RemoveClassAd(int CoID, const MyString& OID);
-
-  ///
   bool ChangeClassAd(const MyString& OID);
-
-  ///
   bool RemoveCollection(int CoID, BaseCollection* Coll);
-
-  ///
-  bool TraverseTree(int CoID, bool (ClassAdCollection::*Func)(int,BaseCollection*));
-
-  ///
-  static float GetClassAdRank(ClassAd* Ad, const MyString& RankExpr);
-
-  ///
+  bool TraverseTree(int CoID, 
+		  bool (ClassAdCollection::*Func)(int,BaseCollection*));
   static bool EqualSets(StringSet& S1, StringSet& S2);
-
-  ///
   bool CheckClassAd(BaseCollection* Coll, const MyString& OID, ClassAd* Ad);
 
 };
