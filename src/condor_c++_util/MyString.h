@@ -36,9 +36,10 @@ public:
     return Len;
   }
 
-  int operator==(const MyString& S) const {
-    if (!Data || !S.Data) return -1;
-    if (strcmp(Data,S.Data)==0) return 1;
+  friend int operator==(const MyString& S1, const MyString& S2) {
+    if (!S1.Data && !S2.Data) return 1;
+    if (!S1.Data || !S2.Data) return 0;
+    if (strcmp(S1.Data,S2.Data)==0) return 1;
     return 0;
   }
 
