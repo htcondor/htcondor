@@ -49,6 +49,9 @@ DaemonCore*	daemonCore;
 static int is_master = 0;
 char*	logDir = NULL;
 char*	pidFile = NULL;
+#ifdef WIN32
+int line_where_service_stopped = 0;
+#endif
 
 void
 drop_addr_file()
@@ -100,6 +103,7 @@ drop_pid_file()
 void
 do_kill() 
 {
+#ifndef WIN32
 	FILE	*PID_FILE;
 	int 	pid = 0;
 	char	*log, *tmp;
@@ -130,7 +134,6 @@ do_kill()
 	}
 	if( pid > 0 ) {
 			// We have a valid pid, try to kill it.
-#ifndef WIN32
 		if( kill(pid, SIGTERM) < 0 ) {
 			fprintf( stderr, 
 					 "DaemonCore: ERROR: can't send SIGTERM to pid (%d)\n",  
@@ -139,7 +142,6 @@ do_kill()
 					 "\terrno: %d (%s)\n", errno, strerror(errno) );
 			exit( 1 );
 		} 
-#endif
 			// kill worked, now, make sure the thing is gone.  Keep
 			// trying to send signal 0 (test signal) to the process
 			// until that fails.  
@@ -161,6 +163,7 @@ do_kill()
 				 pid, pidFile );	
 		exit( 1 );
 	}
+#endif  // of ifndef WIN32
 }
 
 
@@ -198,6 +201,7 @@ set_log_dir()
 void
 check_core_files()
 {
+#ifndef WIN32	// no "core" files on NT
 	char* tmp;
 	if( (tmp = param("CREATE_CORE_FILES")) ) {
 		if( *tmp == 't' || *tmp == 'T' ) {
@@ -207,6 +211,7 @@ check_core_files()
 		}
 		free( tmp );
 	}
+#endif
 }
 
 
@@ -352,6 +357,13 @@ handle_dc_sigterm( Service*, int )
 	been_here = TRUE;
 
 	dprintf(D_ALWAYS, "Got SIGTERM. Performing graceful shutdown.\n");
+
+#ifdef WIN32
+	if ( line_where_service_stopped != 0 ) {
+		dprintf(D_ALWAYS,"Line where service stopped = %d\n",
+			line_where_service_stopped);
+	}
+#endif
 
 	int timeout = 30 * MINUTE;
 	char* tmp = param( "SHUTDOWN_GRACEFUL_TIMEOUT" );
@@ -540,6 +552,7 @@ int main( int argc, char** argv )
 				exit( 1 );
 			}				  
 			break;
+#ifndef WIN32
 		case 'k':
 			ptr++;
 			if( ptr && *ptr ) {
@@ -554,6 +567,7 @@ int main( int argc, char** argv )
 				exit( 1 );
 			}
 			break;
+#endif
 		case 'q':
 			wantsQuiet = TRUE;
 			dcargs++;
@@ -749,7 +763,7 @@ int main( int argc, char** argv )
 
 		// now register these new command sockets
 		daemonCore->Register_Command_Socket( (Stream*)rsock );
-		daemonCore->Register_Command_Socket( (Stream*)ssock );
+		daemonCore->Register_Command_Socket( (Stream*)ssock );		
 
 		dprintf( D_ALWAYS,"DaemonCore: Command Socket at %s\n",
 				 daemonCore->InfoCommandSinfulString());
@@ -811,7 +825,7 @@ main( int argc, char** argv)
 	int i;
 
 	// Scan our command line arguments for a "-f".  If we don't find a "-f",
-	// then we want to register as an NT Service.
+	// or a "-v", then we want to register as an NT Service.
 	i = 0;
 	for( ptr = argv + 1; *ptr && (i < argc - 1); ptr++,i++)
 	{
@@ -829,6 +843,13 @@ main( int argc, char** argv)
 			break;
 		  case 'b':		// run in background (default)
 			break;
+		  case 'v':		// version info
+			printf( "%s\n", CondorVersion() );
+			exit(0);
+			break;
+		  case 'l':		// specify log directory
+			 ptr++;
+			 break;
 		  case 'p':		// use well-known port for command socket				
 			ptr++;
 			break;
