@@ -1133,6 +1133,7 @@ parseClassAd( ClassAd &ad , bool full )
 	string				s;
 
 	ad.Clear( );
+	ad.DisableDirtyTracking();
 
 	if( ( tt = lexer.ConsumeToken() ) != Lexer::LEX_OPEN_BOX ) return false;
 	tt = lexer.PeekToken();
@@ -1191,6 +1192,7 @@ parseClassAd( ClassAd &ad , bool full )
 		return false;
 	}
 
+	ad.EnableDirtyTracking();
 	return true;
 }
 
