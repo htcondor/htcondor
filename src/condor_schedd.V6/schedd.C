@@ -52,6 +52,7 @@
 #include "grid_universe.h"
 #include "globus_utils.h"
 #include "env.h"
+#include "dc_schedd.h"  // for JobActionResults class and enums we use  
 
 #define DEFAULT_SHADOW_SIZE 125
 
@@ -978,7 +979,7 @@ static int IsSchedulerUniverse(shadow_rec* srec);
 
 extern "C" {
 void
-abort_job_myself(PROC_ID job_id)
+abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
 {
 	shadow_rec *srec;
 	int mode;
@@ -991,8 +992,11 @@ abort_job_myself(PROC_ID job_id)
 	// If there is no shadow, then simply call DestroyProc() (if we
 	// are removing the job).
 
-    dprintf ( D_FULLDEBUG, "abort_job_myself: %d.%d\n", 
-              job_id.cluster, job_id.proc );
+    dprintf( D_FULLDEBUG, 
+			 "abort_job_myself: %d.%d log_hold: %s notify: %s\n", 
+			 job_id.cluster, job_id.proc, 
+			 log_hold ? "true" : "false",
+			 notify ? "true" : "false" );
 
 	if ( GetAttributeInt(job_id.cluster, job_id.proc, 
                          ATTR_JOB_STATUS, &mode) == -1 ) {
@@ -1009,6 +1013,10 @@ abort_job_myself(PROC_ID job_id)
 	}
 	if (job_universe == CONDOR_UNIVERSE_GLOBUS) {
 		// tell grid manager about the jobs removal, then return.
+		if( ! notify ) {
+				// nothing to do
+			return;
+		}
 		char owner[_POSIX_PATH_MAX];
 		char proxy[_POSIX_PATH_MAX];
 		owner[0] = '\0';
@@ -1034,6 +1042,11 @@ abort_job_myself(PROC_ID job_id)
 		// PVM jobs may not have a match  -Bin
 		if (! IsSchedulerUniverse(srec)) {
             
+			if( ! notify ) {
+					// nothing to do
+				return;
+			}
+
                 /* if there is a match printout the info */
 			if (srec->match) {
 				dprintf( D_FULLDEBUG,
@@ -1102,12 +1115,18 @@ abort_job_myself(PROC_ID job_id)
         
     } else {
 		// We did not find a shadow for this job; just remove it.
-		if (mode == REMOVED) {
-			if (!scheduler.WriteAbortToUserLog(job_id)) {
+		if( mode == REMOVED ) {
+			if( !scheduler.WriteAbortToUserLog(job_id) ) {
 				dprintf( D_ALWAYS, 
 						 "Failed to write abort event to the user log\n" ); 
 			}
-			DestroyProc(job_id.cluster,job_id.proc);
+			DestroyProc( job_id.cluster, job_id.proc );
+		}
+		if( mode == HELD ) {
+			if( log_hold && !scheduler.WriteHoldToUserLog(job_id) ) {
+				dprintf( D_ALWAYS, 
+						 "Failed to write hold event to the user log\n" ); 
+			}
 		}
 	}
 }
@@ -1176,7 +1195,10 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 	if( GetAttributeStringNew(job_id.cluster, job_id.proc,
 							  ATTR_REMOVE_REASON, &reason) >= 0 ) {
 		event.setReason( reason );
-	}
+	} else {
+		dprintf( D_ALWAYS, "In WriteAbortToUserLog for %d.%d: No %s\n", 
+				 job_id.cluster, job_id.proc, ATTR_REMOVE_REASON );
+	}			 
 		// GetAttributeStringNew always allocates memory, so we free
 		// regardless of the return value.
 	free( reason );
@@ -1367,7 +1389,7 @@ Scheduler::abort_job(int, Stream* s)
 					nToRemove);
 				return FALSE;
 			}
-			abort_job_myself(job_id);
+			abort_job_myself(job_id, false, true);
 			nToRemove--;
 		}
 		s->end_of_message();
@@ -1405,7 +1427,7 @@ Scheduler::abort_job(int, Stream* s)
 			if ( (ad->LookupInteger(ATTR_CLUSTER_ID,job_id.cluster) == 1) &&
 				 (ad->LookupInteger(ATTR_PROC_ID,job_id.proc) == 1) ) {
 
-				 abort_job_myself(job_id);
+				 abort_job_myself(job_id, false, true);
 
 			}
 			FreeJobAd(ad);
@@ -1432,6 +1454,383 @@ Scheduler::abort_job(int, Stream* s)
 	}
 
 	return TRUE;
+}
+
+
+int
+Scheduler::actOnJobs(int, Stream* s)
+{
+	ClassAd command_ad;
+	int action = -1;
+	int reply, i;
+	int num_matches = 0;
+	char status_str[16];
+	char buf[256];
+	char *reason = NULL;
+	const char *reason_attr_name = NULL;
+	ReliSock* rsock = (ReliSock*)s;
+	bool notify = true;
+	action_result_type_t result_type = AR_TOTALS;
+
+		// Setup array to hold ids of the jobs we're acting on.
+	ExtArray<PROC_ID> jobs;
+	PROC_ID tmp_id;
+	tmp_id.cluster = -1;
+	tmp_id.proc = -1;
+	jobs.setFiller( tmp_id );
+
+		// make sure this connection is authenticated, and we know who
+		// the user is.  also, set a timeout, since we don't want to
+		// block long trying to read from our client.   
+	rsock->timeout( 10 );  
+	rsock->decode();
+	if( ! rsock->isAuthenticated() ) {
+		rsock->authenticate();
+	}
+
+		// read the command ClassAd + EOM
+	if( ! (command_ad.initFromStream(*rsock) && rsock->eom()) ) {
+		dprintf( D_ALWAYS, "Can't read command ad from tool\n" );
+		refuse( s );
+		return FALSE;
+	}
+
+		// // // // // // // // // // // // // //
+		// Parse the ad to make sure it's valid
+		// // // // // // // // // // // // // //
+
+		/* 
+		   Find out what they want us to do.  This classad should
+		   contain:
+		   ATTR_JOB_ACTION - either JA_HOLD_JOBS, JA_RELEASE_JOBS, or
+		                     JA_REMOVE_JOBS 
+		   ATTR_ACTION_RESULT_TYPE - either AR_TOTALS or AR_LONG
+		   and one of:
+		   ATTR_ACTION_CONSTRAINT - a string with a ClassAd constraint 
+		   ATTR_ACTION_IDS - a string with a comma seperated list of
+		                     job ids to act on
+
+		   In addition, it might also include:
+		   ATTR_NOTIFY_JOB_SCHEDULER (true or false)
+		   and one of: ATTR_REMOVE_REASON, ATTR_RELEASE_REASON, or
+		               ATTR_HOLD_REASON
+
+		*/
+	if( ! command_ad.LookupInteger(ATTR_JOB_ACTION, action) ) {
+		dprintf( D_ALWAYS, 
+				 "actOnJobs(): ClassAd does not contain %s, aborting\n", 
+				 ATTR_JOB_ACTION );
+		refuse( s );
+		return FALSE;
+	}
+		// Make sure we understand the action they requested
+	switch( action ) {
+	case JA_HOLD_JOBS:
+		sprintf( status_str, "%d", HELD );
+		reason_attr_name = ATTR_HOLD_REASON;
+		break;
+	case JA_RELEASE_JOBS:
+		sprintf( status_str, "%d", IDLE );
+		reason_attr_name = ATTR_RELEASE_REASON;
+		break;
+	case JA_REMOVE_JOBS:
+		sprintf( status_str, "%d", REMOVED );
+		reason_attr_name = ATTR_REMOVE_REASON;
+		break;
+	default:
+		dprintf( D_ALWAYS, "actOnJobs(): ClassAd contains invalid "
+				 "%s (%d), aborting\n", ATTR_JOB_ACTION, action );
+		refuse( s );
+		return FALSE;
+	}
+		// Grab the reason string if the command ad gave it to us
+	char *tmp = NULL;
+	const char *owner;
+	command_ad.LookupString( reason_attr_name, &tmp );
+	if( tmp ) {
+			// patch up the reason they gave us to include who did
+			// it. 
+		owner = rsock->getOwner();
+		int size = strlen(tmp) + strlen(owner) + 14;
+		reason = (char*)malloc( size * sizeof(char) );
+		if( ! reason ) {
+			EXCEPT( "Out of memory!" );
+		}
+		sprintf( reason, "\"%s (by user %s)\"", tmp, owner );
+		free( tmp );
+		tmp = NULL;
+	}
+
+	int foo;
+	if( ! command_ad.LookupBool(ATTR_NOTIFY_JOB_SCHEDULER, foo) ) {
+		notify = true;
+	} else {
+		notify = (bool) foo;
+	}
+
+		// Default to summary.  Only give long results if they
+		// specifically ask for it.  If they didn't specify or
+		// specified something that we don't understand, just give
+		// them a summary...
+	result_type = AR_TOTALS;
+	if( command_ad.LookupInteger(ATTR_ACTION_RESULT_TYPE, foo) ) {
+		if( foo == AR_LONG ) {
+			result_type = AR_LONG;
+		}
+	}
+
+		// Now, figure out if they want us to deal w/ a constraint or
+		// with specific job ids.  We don't allow both.
+		char *constraint = NULL;
+	StringList job_ids;
+		// NOTE: ATTR_ACTION_CONSTRAINT needs to be treated as a bool,
+		// not as a string...
+	ExprTree *tree, *rhs;
+	tree = command_ad.Lookup(ATTR_ACTION_CONSTRAINT);
+	if( tree ) {
+		rhs = tree->RArg();
+		if( ! rhs ) {
+				// TODO: deal with this kind of error
+			return false;
+		}
+		rhs->PrintToNewStr( &tmp );
+
+			// we want to tack on another clause to make sure we're
+			// not doing something invalid
+		switch( action ) {
+		case JA_REMOVE_JOBS:
+				// Don't remove removed jobs
+			sprintf( buf, "(%s!=%d) && (", ATTR_JOB_STATUS, REMOVED );
+			break;
+		case JA_HOLD_JOBS:
+				// Don't hold held jobs
+			sprintf( buf, "(%s!=%d) && (", ATTR_JOB_STATUS, HELD );
+			break;
+		case JA_RELEASE_JOBS:
+				// Only release held jobs
+			sprintf( buf, "(%s==%d) && (", ATTR_JOB_STATUS, HELD );
+			break;
+		}
+		int size = strlen(buf) + strlen(tmp) + 3;
+		constraint = (char*) malloc( size * sizeof(char) );
+		if( ! constraint ) {
+			EXCEPT( "Out of memory!" );
+		}
+			// we need to terminate the ()'s after their constraint
+		sprintf( constraint, "%s%s)", buf, tmp );
+	} else {
+		constraint = NULL;
+	}
+	tmp = NULL;
+	if( command_ad.LookupString(ATTR_ACTION_IDS, &tmp) ) {
+		if( constraint ) {
+			dprintf( D_ALWAYS, "actOnJobs(): "
+					 "ClassAd has both %s and %s, aborting\n",
+					 ATTR_ACTION_CONSTRAINT, ATTR_ACTION_IDS );
+			refuse( s );
+			free( tmp );
+			free( constraint );
+			if( reason ) { free( reason ); }
+			return FALSE;
+		}
+		job_ids.initializeFromString( tmp );
+		free( tmp );
+		tmp = NULL;
+	}
+
+		// // // // //
+		// REAL WORK
+		// // // // //
+	
+	JobActionResults results( result_type );
+
+		// Set the Q_SOCK so that qmgmt will perform checking on the
+		// classads it's touching to enforce the owner...
+	setQSock( rsock );
+
+		// begin a transaction for qmgmt operations
+	BeginTransaction();
+
+		// process the jobs to set status (and optionally, reason) 
+	if( constraint ) {
+
+			// SetAttributeByConstraint is clumsy and doesn't really
+			// do what we want.  Instead, we'll just iterate through
+			// the Q ourselves so we know exactly what jobs we hit. 
+
+		ClassAd* ad;
+		ad = GetNextJobByConstraint( constraint, 1 );
+		while( ad ) {
+			if(	ad->LookupInteger(ATTR_CLUSTER_ID,tmp_id.cluster) &&
+				ad->LookupInteger(ATTR_PROC_ID,tmp_id.proc) ) 
+			{
+				if( SetAttribute(tmp_id.cluster, tmp_id.proc,
+								 ATTR_JOB_STATUS, status_str) < 0 ) {
+					results.record( tmp_id, AR_PERMISSION_DENIED );
+					ad = GetNextJobByConstraint( constraint, 0 );
+					continue;
+				}
+				if( reason ) {
+					if( SetAttribute(tmp_id.cluster, tmp_id.proc,
+									 reason_attr_name, reason) < 0 ) {
+							// TODO: record failure in response ad?
+					}
+				}
+				results.record( tmp_id, AR_SUCCESS );
+				jobs[num_matches] = tmp_id;
+				num_matches++;
+			} 
+			ad = GetNextJobByConstraint( constraint, 0 );
+		}
+		free( constraint );
+		constraint = NULL;
+
+	} else {
+
+			// No need to iterate through the queue, just act on the
+			// specific ids we care about...
+
+		job_ids.rewind();
+		while( (tmp=job_ids.next()) ) {
+			tmp_id = getProcByString( tmp );
+			if( tmp_id.cluster < 0 || tmp_id.proc < 0 ) {
+				continue;
+			}
+
+				// Check to make sure the job's status makes sense for
+				// the command we're trying to perform
+			int status;
+			if( GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
+								ATTR_JOB_STATUS, &status) < 0 ) {
+				results.record( tmp_id, AR_NOT_FOUND );
+				continue;
+			}
+			switch( action ) {
+			case JA_RELEASE_JOBS:
+				if( status != HELD ) {
+					results.record( tmp_id, AR_BAD_STATUS );
+					continue;
+				}
+				break;
+			case JA_REMOVE_JOBS:
+				if( status == REMOVED ) {
+					results.record( tmp_id, AR_ALREADY_DONE );
+					continue;
+				}
+				break;
+			case JA_HOLD_JOBS:
+				if( status == HELD ) {
+					results.record( tmp_id, AR_ALREADY_DONE );
+					continue;
+				}
+				break;
+			} 
+
+				// Ok, we're happy, do the deed.
+			if( SetAttribute(tmp_id.cluster, tmp_id.proc,
+							 ATTR_JOB_STATUS, status_str) < 0 ) {
+				results.record( tmp_id, AR_PERMISSION_DENIED );
+				continue;
+			}
+			if( reason ) {
+				SetAttribute( tmp_id.cluster, tmp_id.proc,
+							  reason_attr_name, reason );
+					// TODO: deal w/ failure here, too?
+			}
+			results.record( tmp_id, AR_SUCCESS );
+			jobs[num_matches] = tmp_id;
+			num_matches++;
+		}
+	}
+
+	if( reason ) { free( reason ); }
+
+	ClassAd* response_ad;
+
+	response_ad = results.publishResults();
+
+		// Let them know what action we performed in the reply
+	sprintf( buf, "%s = %d", ATTR_JOB_ACTION, action );
+	response_ad->Insert( buf );
+
+		// Set a single attribute which says if the action succeeded
+		// on at least one job or if it was a total failure
+	sprintf( buf, "%s = %d", ATTR_ACTION_RESULT, num_matches ? 1:0 );
+	response_ad->Insert( buf );
+
+		// Finally, let them know if the user running this command is
+		// a queue super user here
+	sprintf( buf, "%s = %s", ATTR_IS_QUEUE_SUPER_USER,
+			 isQueueSuperUser(rsock->getOwner()) ? "True" : "False" );
+	response_ad->Insert( buf );
+	
+	rsock->encode();
+	if( ! (response_ad->put(*rsock) && rsock->eom()) ) {
+			// Failed to send reply, the client might be dead, so
+			// abort our transaction.
+		dprintf( D_ALWAYS, 
+				 "actOnJobs: couldn't send results to client: aborting\n" );
+		AbortTransaction();
+		unsetQSock();
+		return FALSE;
+	}
+
+	if( num_matches == 0 ) {
+			// We didn't do anything, so we want to bail out now...
+		dprintf( D_FULLDEBUG, 
+				 "actOnJobs: didn't do any work, aborting\n" );
+		AbortTransaction();
+		unsetQSock();
+		return FALSE;
+	}
+
+		// If we told them it's good, try to read the reply to make
+		// sure the tool is still there and happy...
+	rsock->decode();
+	if( ! (rsock->code(reply) && rsock->eom() && reply == OK) ) {
+			// we couldn't get the reply, or they told us to bail
+		dprintf( D_ALWAYS, "actOnJobs: client not responding: aborting\n" );
+		AbortTransaction();
+		unsetQSock();
+		return FALSE;
+	}
+
+	CommitTransaction();
+		
+	unsetQSock();
+
+		// If we got this far, we can tell the tool we're happy,
+		// since if that CommitTransaction failed, we'd EXCEPT()
+	rsock->encode();
+	int answer = OK;
+	rsock->code( answer );
+	rsock->eom();
+
+		// Now that we know the events are logged and commited to
+		// the queue, we can do the final actions for these jobs,
+		// like killing shadows if needed...
+	if( action == JA_HOLD_JOBS || action == JA_REMOVE_JOBS ) {
+		for( i=0; i<num_matches; i++ ) {
+			if( i % 10 == 0 ) {
+				daemonCore->ServiceCommandSocket();
+			}
+			abort_job_myself( jobs[i], true, notify );
+		}
+	} else if( action == JA_RELEASE_JOBS ) {
+		for( i=0; i<num_matches; i++ ) {
+			WriteReleaseToUserLog( jobs[i] );		
+		}
+	}
+	return TRUE;
+}
+
+
+void
+Scheduler::refuse( Stream* s )
+{
+	s->encode();
+	s->put( NOT_OK );
+	s->eom();
 }
 
 
@@ -1508,8 +1907,7 @@ Scheduler::doNegotiate (int i, Stream *s)
    Scheduler::negotiate().  This checks all the various reasons why we
    might not be able to or want to start another shadow
    (MAX_JOBS_RUNNING, swap space problems, etc), and returns true if
-   we can proceed or false if we can't start another shadow.
-*/
+   we can proceed or false if we can't start another shadow.  */
 bool
 Scheduler::canSpawnShadow( int started_jobs, int total_jobs )
 {
@@ -3581,11 +3979,6 @@ Scheduler::delete_shadow_rec(int pid)
 		DeleteAttribute( rec->job_id.cluster,rec->job_id.proc, 
 			ATTR_REMOTE_VIRTUAL_MACHINE_ID );
 
-		if (rec->removed) {
-			if (!WriteAbortToUserLog(rec->job_id)) {
-				dprintf(D_ALWAYS,"Failed to write abort to the user log\n");
-			}
-		}
 		check_zombie( pid, &(rec->job_id) );
 			// If the shadow went away, this match is no longer
 			// "ACTIVE", it's just "CLAIMED"
@@ -4300,8 +4693,8 @@ Scheduler::child_exit(int pid, int status)
 			case JOB_SHOULD_REMOVE:
 				dprintf( D_ALWAYS, "Removing job %d.%d\n",
 						 srec->job_id.cluster, srec->job_id.proc );
-					// set this flag in our shadow record so we treat
-					// this just like a condor_rm
+					// Set this flag in our shadow record so we
+					// treat this just like a condor_rm
 				srec->removed = true;
 					// no break, fall through and do the action
 			case JOB_NO_CKPT_FILE:
@@ -4399,32 +4792,45 @@ void
 Scheduler::check_zombie(int pid, PROC_ID* job_id)
 {
  
-	 int	  status;
-
-	 if (GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS,
-						&status) < 0){
-		  dprintf(D_ALWAYS,"ERROR fetching job status in check_zombie !\n");
+	int	  status;
+	
+	if( GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS,
+						&status) < 0 ) {
+		dprintf(D_ALWAYS,"ERROR fetching job status in check_zombie !\n");
 		return;
-	 }
+	}
 
-	 dprintf( D_FULLDEBUG, "Entered check_zombie( %d, 0x%x, st=%d )\n", pid, job_id, status );
+	dprintf( D_FULLDEBUG, "Entered check_zombie( %d, 0x%x, st=%d )\n", 
+			 pid, job_id, status );
 
 	// set cur-hosts to zero
-	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 0);
+	SetAttributeInt( job_id->cluster, job_id->proc,
+					 ATTR_CURRENT_HOSTS, 0 ); 
 
-	 switch( status ) {
-		  case RUNNING:
-				kill_zombie( pid, job_id );
-				break;
-		  case REMOVED:
-		case COMPLETED:
-				DestroyProc(job_id->cluster,job_id->proc);
-				break;
-		  default:
-				break;
-	 }
-
-	 dprintf( D_FULLDEBUG, "Exited check_zombie( %d, 0x%x )\n", pid, job_id );
+	switch( status ) {
+	case RUNNING:
+		kill_zombie( pid, job_id );
+		break;
+	case HELD:
+		if( !scheduler.WriteHoldToUserLog(*job_id)) {
+			dprintf( D_ALWAYS, 
+					 "Failed to write hold event to the user log\n" ); 
+		}
+		break;
+	case REMOVED:
+		if( !scheduler.WriteAbortToUserLog(*job_id)) {
+			dprintf( D_ALWAYS, 
+					 "Failed to write abort event to the user log\n" ); 
+		}
+			// No break, fall through and do the deed...
+	case COMPLETED:
+		DestroyProc( job_id->cluster, job_id->proc );
+		break;
+	default:
+		break;
+	}
+	dprintf( D_FULLDEBUG, "Exited check_zombie( %d, 0x%x )\n", pid,
+			 job_id );
 }
 
 #ifdef WIN32
@@ -4918,6 +5324,9 @@ Scheduler::Register()
 	 daemonCore->Register_Command(KILL_FRGN_JOB, "KILL_FRGN_JOB", 
 			(CommandHandlercpp)&Scheduler::abort_job, 
 			"abort_job", this, WRITE);
+	 daemonCore->Register_Command(ACT_ON_JOBS, "ACT_ON_JOBS", 
+			(CommandHandlercpp)&Scheduler::actOnJobs, 
+			"actOnJobs", this, WRITE);
 
 	// Command handler for testing file access.  I set this as WRITE as we
 	// don't want people snooping the permissions on our machine.
@@ -5666,5 +6075,4 @@ fixAttrUser( ClassAd *job )
 	job->Insert( user );
 	return 0;
 }
-
 
