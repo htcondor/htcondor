@@ -1,4 +1,4 @@
-#! /top/bin/perl -w
+#! /usr/bin/perl -w
 use strict;
 
 # Update the module include path
@@ -226,7 +226,6 @@ sub Configure {
 ###
 sub RunIt
 {
-
     my $Summary = HawkeyeHash->new( \$Hawkeye, "Summary_" );
     #my $Cmd = "/bin/nice -20 top -b -n 1";
     my $Cmd = "/bin/nice -20 top -b -d $TopTime";
