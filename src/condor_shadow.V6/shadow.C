@@ -698,22 +698,14 @@ v			      ((tempproc->next != plist)&&(ProcList != plist));
 	The user job might exit while there is still unread data in the log.
 	So, select with a timeout of zero, and flush everything from the log.
 	*/
-
-	while(1) {
-		struct timeval tv;
-
-		tv.tv_sec = 0;
-		tv.tv_usec = 0;
-
-		cnt = select(nfds, &readfds, 0, 0, &tv );
-		if( cnt<=0 ) break;
-
-		if( FD_ISSET(CLIENT_LOG, &readfds) ) {
-			if( HandleLog()<0 ) break;
-		} else {
-			break;
-		}
-	}
+		/* 
+		   NOTE: Since HandleLog does it's own loop to make sure it's
+		   read everything, we don't need a loop here, and should only
+		   call HandleLog once.  In fact, if there's a problem w/
+		   select(), a loop here can cause an infinite loop.  
+		   -Derek Wright and Jim Basney, 2/17/99.
+		*/
+	HandleLog();
 	
 		/* Take back normal condor privileges */
 	set_condor_priv();
@@ -729,7 +721,6 @@ v			      ((tempproc->next != plist)&&(ProcList != plist));
 		"Shadow: Job %d.%d exited, termsig = %d, coredump = %d, retcode = %d\n",
 			Proc->id.cluster, Proc->id.proc, WTERMSIG(JobStatus),
 			WCOREDUMP(JobStatus), WEXITSTATUS(JobStatus));
-
 }
 
 void
