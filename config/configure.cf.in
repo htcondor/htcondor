@@ -78,6 +78,9 @@ TMP_DIR = @TMPDIR@
 
 TAR_CMD = @TarCmd@
 
+CP_CMD = @CpCmd@
+
+
 #if HAS_PURIFY
 PURE_CACHE_DIR = @pure_cache_dir@
 #endif
