@@ -404,6 +404,7 @@ Remove( const string &name )
 	}
 	ExprTree *tree = itr->second;
 	attrList.erase( itr );
+	tree->SetParentScope( NULL );
 	return( tree );
 }
 
