@@ -174,6 +174,7 @@ and
 Pre-Defined Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{configuration!pre-defined macros}
 Condor provides pre-defined macros that help configure Condor.
 Pre-defined macros are listed as \MacroUNI{macro\_name}.
 
@@ -277,7 +278,7 @@ Only do so if you know what you are doing.
 Condor-wide Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{configuration file!Condor-wide entries}
+\index{configuration!Condor-wide configuration variables}
 
 This section describes settings which affect all parts of the Condor
 system. 
@@ -591,7 +592,7 @@ system.
 Daemon Logging Config File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{configuration file!daemon logging entries}
+\index{configuration!daemon logging configuration variables}
 These entries control how and where the Condor daemons write their log
 files.  Each of the entries in this section represents multiple
 macros. There is one for each subsystem (listed
@@ -790,6 +791,7 @@ Log files may optionally be specified per debug level as follows:
 DaemonCore Config File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{configuration!DaemonCore configuration variables}
 Please read section~\ref{sec:DaemonCore} for details
 on DaemonCore.  There are certain configuration file settings that
 DaemonCore uses which affect all Condor daemons (except the checkpoint
@@ -893,7 +895,7 @@ server, shadow, and starter, none of which use DaemonCore yet).
   the job ClassAds that \Condor{submit} creates.  This is equivalent
   to the ``+'' syntax in submit files.  See the
   the \Condor{submit} manual page
-  on page~\pageref{man-condor-submit} for details on using the ``+''
+  on page~\pageref{sec:man-condor-submit} for details on using the ``+''
   syntax to add attributes to the job ClassAd.
   Attributes defined in the submit description file with ``+'' will
   override attributes defined in the config file with
@@ -925,6 +927,7 @@ server, shadow, and starter, none of which use DaemonCore yet).
 \subsection{\label{sec:Shared-Filesystem-Config-File-Entries}
 Shared File System Configuration File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{configuration!shared file system configuration variables}
 
 These macros control how Condor interacts with various shared and
 network filesystems.  If you are using AFS as your shared filesystem,
@@ -1053,9 +1056,10 @@ Since each machine will have a different
 they will not be considered to have shared file systems.
 
   
-\item[\Macro{HAS\_AFS}] \label{param:HasAfs} Set this macro to TRUE if
-  all the machines you plan on adding in your pool can all access a
-  common set of AFS fileservers.  Otherwise, set it to FALSE.
+% no longer used, and gone from the sample config file as of 5/30/03.
+%\item[\Macro{HAS\_AFS}] \label{param:HasAfs} Set this macro to TRUE if
+%  all the machines you plan on adding in your pool can all access a
+%  common set of AFS fileservers.  Otherwise, set it to FALSE.
       
 \item[\Macro{RESERVE\_AFS\_CACHE}] \label{param:ReserveAfsCache} If
   your machine is running AFS and the AFS cache lives on the same
@@ -1161,6 +1165,7 @@ they will not be considered to have shared file systems.
 Checkpoint Server Configuration File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{configuration!checkpoint server configuration variables}
 These macros control whether or not Condor uses a checkpoint server.
 If you are using a checkpoint server, this section
 describes the settings that the checkpoint server itself needs
@@ -1220,6 +1225,7 @@ checkpoint server host (see below).
 \condor{master} Configuration File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{configuration!condor\_master configuration variables}
 These macros control the \Condor{master}.
 \begin{description}
   
@@ -1486,6 +1492,7 @@ will not want to change them for any reason.
 \condor{startd} Configuration File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{configuration!condor\_startd configuration variables}
 \Note If you are running Condor on a multi-CPU machine, be sure
 to also read section~\ref{sec:Configuring-SMP} on
 page~\pageref{sec:Configuring-SMP} which describes how to setup and
@@ -1919,6 +1926,7 @@ not in the ``Owner'' state:
 \condor{schedd} Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{configuration!condor\_schedd configuration variables}
 These macros control the \Condor{schedd}.
 \begin{description}
 
@@ -2138,6 +2146,7 @@ These macros control the \Condor{schedd}.
 \condor{shadow} Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{configuration!condor\_shadow configuration variables}
 These settings affect the \Condor{shadow}.
 \begin{description}
 
@@ -2187,6 +2196,7 @@ These settings affect the \Condor{shadow}.
 \condor{shadow.pvm} Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{configuration!condor\_shadow.pvm configuration variables}
 These macros control the \Condor{shadow.pvm}, the special shadow
 that supports PVM jobs inside Condor.  See
 section~\ref{sec:Install-PVM-Condor} on Installing PVM Support in
@@ -2212,6 +2222,7 @@ special shadow.  See section~\ref{sec:Shadow-Config-File-Entries}.
 \condor{starter} Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{configuration!condor\_starter configuration variables}
 These settings affect the \Condor{starter}.
 \begin{description}
 
@@ -2280,6 +2291,7 @@ These settings affect the \Condor{starter}.
 \subsection{\label{sec:Submit-Config-File-Entries}
 \condor{submit} Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{configuration!condor\_submit configuration variables}
 \begin{description}
 \item[\Macro{DEFAULT\_UNIVERSE}] \label{param:DefaultUniverse}
 The universe under which a job is executed may be specified in the submit
@@ -2390,6 +2402,7 @@ as:
 \condor{preen} Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{configuration!condor\_preen configuration variables}
 These macros affect \Condor{preen}.
 
 \begin{description}
@@ -2423,9 +2436,13 @@ These macros affect \Condor{preen}.
 \condor{collector} Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{configuration!condor\_collector configuration variables}
 These macros affect the \Condor{collector}.
 \begin{description}
   
+\item[\Macro{COLLECTOR\_PORT}] \label{param:CollectorPort}
+  The port that the \Condor{collector} uses. Defaults to 9618.
+
 \item[\Macro{CLASSAD\_LIFETIME}] \label{param:ClassadLifetime} This
   macro determines how long a ClassAd can remain in the collector
   before it is discarded as stale information.  The ClassAds sent to
@@ -2471,6 +2488,13 @@ These macros affect the \Condor{collector}.
   It should be about 20 characters long.  For example, the name of the
   UW-Madison Computer Science Condor Pool is ``UW-Madison CS''.  
 
+\item[\Macro{CONDOR\_VIEW\_PORT}] \label{param:CondorViewPort}
+  The port that the Condor View Collector runs on. Defaults to 9618.
+  See section~\ref{sec:CondorView-Client-Install}
+  and
+  section~\ref{sec:Contrib-CondorView-Install}
+  for more information about the Condor View Collector.
+
 \item[\Macro{CONDOR\_DEVELOPERS\_COLLECTOR}]
   \label{param:CondorDevelopersCollector} By default, every pool sends
   periodic updates to a central \Condor{collector} at UW-Madison with
@@ -2482,6 +2506,25 @@ These macros affect the \Condor{collector}.
   By default, they will be sent to condor.cs.wisc.edu.  If you don't want
   these updates to be sent from your pool, set this macro to
   NONE. 
+
+\item[\Macro{CONDOR\_DEVELOPERS\_COLLECTOR\_PORT}]
+  \label{param:CondorDevelopersCollectorPort}
+   The port that the Developers Collector runs on.
+   Defaults to 9618.
+   This is used for the updates to the Condor Developer's collector,
+   which is normally condor.cs.wisc.edu.
+   Configure this to be a different machine with
+   \MacroNI{CONDOR\_DEVELOPERS\_COLLECTOR},
+   and a different port with \MacroNI{CONDOR\_DEVELOPERS\_COLLECTOR\_PORT}.
+   We recommend that you leave both of these alone;
+   they allow the Condor team to get a feeling for how
+   many active Condor pools are in the world,
+   and the team can report this
+   information to funding agencies to convince them to give us more money.
+   Set \MacroNI{CONDOR\_DEVELOPERS\_COLLECTOR} to NONE to
+   eliminate reporting.
+   Theoretically, you could set up your own Developer's Collector,
+   if you had a \Condor{collector} that you set up to monitor several pools.
 
 \item[\Macro{COLLECTOR\_SOCKET\_BUFSIZE}] 
   \label{param:CollectorSocketBufsize} This specifies the buffer size, in
@@ -2600,10 +2643,14 @@ These macros affect the \Condor{collector}.
 \subsection{\label{sec:Negotiator-Config-File-Entries}
 \condor{negotiator} Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{configuration!condor\_negotiator configuration variables}
 
 These macros affect the \Condor{negotiator}.
 \begin{description}
   
+\item[\Macro{NEGOTIATOR\_PORT}] \label{param:NegotiatorPort}
+  The port that the \Condor{negotiator} uses. Defaults to 9614.
+
 \item[\Macro{NEGOTIATOR\_INTERVAL}] \label{param:NegotiatorInterval}
   Sets how often the negotiator starts a negotiation cycle.  It is defined
   in seconds and defaults to 300 (5 minutes).
@@ -2691,6 +2738,7 @@ These macros affect the \Condor{negotiator}.
 \condor{eventd} Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{configuration!condor\_eventd configuration variables}
 These macros affect the Condor Event daemon.  See
 section~\ref{sec:EventD} on page~\pageref{sec:EventD} for an
 introduction.  The eventd is not included in the main Condor binary
@@ -2741,6 +2789,7 @@ is one hour (3600 seconds).
 \condor{gridmanager} Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{configuration!condor\_gridmanager configuration variables}
 These macros affect the \Condor{gridmanager}.
 \begin{description}
 
