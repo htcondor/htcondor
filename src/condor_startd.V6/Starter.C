@@ -168,7 +168,10 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 		return;
 	}
 
-		// only publish attributes that start with "Has"
+		// Attributes that begin with "Has" go in the ClassAd and
+		// also in the StringList.  Attributes that begin with Java
+		// only go into the ClassAd.
+
 	ExprTree *tree, *lhs;
 	char *expr_str = NULL, *lhstr = NULL;
 	s_ad->ResetExpr();
@@ -186,6 +189,8 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 			if( list ) {
 				list->append( lhstr );
 			}
+		} else if( strincmp(lhstr, "Java", 4) == MATCH ) {
+			ad->Insert( expr_str );
 		}
 		free( expr_str );
 		expr_str = NULL;
