@@ -247,4 +247,10 @@ const int INVALIDATE_LICENSE_ADS	= 44;
 #define PW_GETPASS			(PW_BASE+2)
 #define PW_CLEARPASS		(PW_BASE+3)
 
+/*
+*** Commands used by the daemon core Shadow
+*/
+#define DCSHADOW_BASE 71000
+#define SHADOW_UPDATEINFO	(DCSHADOW_BASE+0)
+
 #endif  /* of ifndef _CONDOR_COMMANDS_H */
