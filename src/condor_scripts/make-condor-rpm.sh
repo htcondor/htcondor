@@ -147,7 +147,7 @@ This RPM contains Condor version ${condor_version}.
 %clean
 
 %post
-
+cd \${RPM_INSTALL_PREFIX}
 
 # Figure out the user
 owner="condor"
@@ -164,7 +164,7 @@ rm ./ignore.me
 rm ./release.tar
 
 %postun
-rm -rf \${RPM_INSTALL_PREFIX}
+
 
 %files
 %defattr(-,root,root)
