@@ -5141,7 +5141,7 @@ Scheduler::send_alive()
 			!sock->code(id) || 
 			!sock->end_of_message() ) {
 				// UDP transport out of buffer space!
-			dprintf(D_ALWAYS, "\t(Can't send alive message to %d)\n",
+			dprintf(D_ALWAYS, "\t(Can't send alive message to %s)\n",
 					rec->peer);
 			delete sock;
 			continue;
