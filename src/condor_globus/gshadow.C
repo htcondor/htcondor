@@ -213,10 +213,14 @@ main( int argc, char *argv[] ) {
 		chomp( status );
 
 		rc = pclose( statusfp );
+//globusrun returns 79 when the jobmanager can't be contacted
+//   (i.e. when a job has exitted)
+/*
 		if ( rc ) {
 			fprintf( stderr, "globusrun exited with status %d on job status check\n", rc );
 			exit( 10 );
 		}
+*/
 		//In Globus 1.1.1 and earlier, on certain errors, globusrun will
 		//exit with a false status of 0 (success). In these cases, nothing
 		//is printed to stdout. To work with these versions of Globus, we
