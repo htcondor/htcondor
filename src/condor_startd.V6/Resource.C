@@ -49,6 +49,8 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	r_attr = cap;
 	r_attr->attach( this );
 
+	r_load_num_called = 8;
+
 	kill_tid = -1;
 }
 
@@ -735,22 +737,21 @@ Resource::compute_condor_load()
 	float load;
 	int numcpus = resmgr->num_cpus();
 	procInfo* pinfo = NULL;
-	static int num_called = 8;
 	int i;
 
 	if( r_starter->active() ) { 
-		num_called++;
-		if( num_called >= 10 ) {
+		r_load_num_called++;
+		if( r_load_num_called >= 10 ) {
 			r_starter->recompute_pidfamily();
-			num_called = 0;
+			r_load_num_called = 0;
 		}
 
 		if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
-			dprintf( D_LOAD, "Computing CondorLoad w/ pids: " );
+			dprintf( D_FULLDEBUG, "Computing CondorLoad w/ pids: " );
 			for( i=0; i<r_starter->pidfamily_size(); i++ ) {
-				::dprintf( D_LOAD | D_NOHEADER, "%d ", (r_starter->pidfamily())[i] );	
+				::dprintf( D_FULLDEBUG | D_NOHEADER, "%d ", (r_starter->pidfamily())[i] );	
 			}
-			::dprintf( D_LOAD | D_NOHEADER, "\n" );
+			::dprintf( D_FULLDEBUG | D_NOHEADER, "\n" );
 		}
 
 		if( (resmgr->m_proc->
@@ -763,11 +764,12 @@ Resource::compute_condor_load()
 			r_starter->recompute_pidfamily();
 
 			if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
-				dprintf( D_LOAD, "Failed once, now using pids: " );
+				dprintf( D_FULLDEBUG, "Failed once, now using pids: " );
 				for( i=0; i<r_starter->pidfamily_size(); i++ ) {
-					::dprintf( D_LOAD | D_NOHEADER, "%d ", (r_starter->pidfamily())[i] );	
+					::dprintf( D_FULLDEBUG | D_NOHEADER, "%d ", 
+							   (r_starter->pidfamily())[i] );	
 				}
-				::dprintf( D_LOAD | D_NOHEADER, "\n" );
+				::dprintf( D_FULLDEBUG | D_NOHEADER, "\n" );
 			}
 
 			if( (resmgr->m_proc->
@@ -781,7 +783,7 @@ Resource::compute_condor_load()
 			EXCEPT( "Out of memory!" );
 		}
 		if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
-			dprintf( D_LOAD, "Percent CPU usage for those pids is: %f\n", 
+			dprintf( D_FULLDEBUG, "Percent CPU usage for those pids is: %f\n", 
 					 pinfo->cpuusage );
 		}
 		r_load_queue->push( 1, pinfo->cpuusage );
@@ -793,7 +795,7 @@ Resource::compute_condor_load()
 
 	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
 		r_load_queue->display();
-		dprintf( D_LOAD, 
+		dprintf( D_FULLDEBUG, 
 				 "LoadQueue: Size: %d  Avg value: %f  Share of system load: %f\n", 
 				 r_load_queue->size(), r_load_queue->avg(), avg );
 	}
