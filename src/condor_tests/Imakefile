@@ -238,11 +238,13 @@ TESTCLASS(lib_userlog,lib)
 
 /* runable core coverage tests */
 
+#if ! IS_CLIPPED
 CBUILD($(CC),job_core_compressfiles,c)
 DESC(job_core_compressfiles_std,"Do we handle compressed files made by standard jobs?")
 DEPS(job_core_compressfiles_std,job_core_compressfiles.cndr.exe)
 RUN(job_core_compressfiles_std)
 TESTCLASS(job_core_compressfiles_std,core)
+#endif /* ! IS_CLIPPED */
 
 /* Test needs work as there seems to be a timing influence
 ** and first size of streaming file is not smaller as it should be
