@@ -21,9 +21,11 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#include "startup.h"
  
-
+#if defined( __cplusplus )
 extern "C" { 
+#endif
 
 int pseudo_getppid();
 int pseudo_getpid();
@@ -79,5 +81,15 @@ int pseudo_lseekwrite(int fd, off_t offset, int whence, const void *buf, size_t 
 
 int CONDOR_NotSupported();
 int PERM_ERR(...);
+int SYSCALL(...);
 
+int external_name( const char*, char*, int);
+int free_fs_blocks( const char* );
+void get_local_rusage( struct rusage *bsd_rusage );
+int tcp_accept_timeout( int, struct sockaddr*, int*, int );
+void display_startup_info( const STARTUP_INFO *, int );
+
+#if defined( __cplusplus )
 } /* extern "C" */
+#endif
+
