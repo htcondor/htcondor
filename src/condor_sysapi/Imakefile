@@ -1,0 +1,17 @@
+all_target(libsysapi.a)
+
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+CFLAGS = $(STD_C_FLAGS)
+LIB = $(STD_LIBS)
+
+OBJ = phys_mem.o
+
+library_target(libsysapi.a,$(OBJ))
+
+c_plus_target(sysapi.tester,sysapi.t.o,$(LIB))
+pure_c_plus_target(sysapi.tester.pure,sysapi.t.o,$(LIB))
+
+release:
+stripped:
+static: 
+
