@@ -13,3 +13,4 @@ html:
 release:: all
 stripped:: all
 static:: all
+clean::

@@ -26,8 +26,7 @@ strip_copy_target(condor_install,$(STRIP_DIR)/sbin,condor_install,EXECUTABLE_MOD
 strip_copy_target(condor_init,$(STRIP_DIR)/sbin,condor_init,EXECUTABLE_MODE)
 strip_copy_target(condor_cleanckpts,$(STRIP_CONTRIB)/sbin,condor_cleanckpts,EXECUTABLE_MODE)
 #if IS_CLIPPED
-strip_copy_target(condor_compile.clipped,$(STRIP_DIR)/bin, \
-		condor_compile,EXECUTABLE_MODE)
+strip_copy_target(condor_compile.clipped,$(STRIP_DIR)/bin,condor_compile,EXECUTABLE_MODE)
 #else 
 strip_copy_target(condor_compile,$(STRIP_DIR)/bin,condor_compile,EXECUTABLE_MODE)
 strip_copy_target(ld,$(STRIP_DIR)/lib,ld,EXECUTABLE_MODE)
@@ -38,11 +37,9 @@ static_copy_target(condor_install,$(STATIC_DIR)/sbin,condor_install,EXECUTABLE_M
 static_copy_target(condor_init,$(STATIC_DIR)/sbin,condor_init,EXECUTABLE_MODE)
 static_copy_target(condor_cleanckpts,$(STATIC_CONTRIB)/sbin,condor_cleanckpts,EXECUTABLE_MODE)
 #if IS_CLIPPED
-static_copy_target(condor_compile.clipped,$(STATIC_DIR)/bin, \
-		condor_compile,EXECUTABLE_MODE)
+static_copy_target(condor_compile.clipped,$(STATIC_DIR)/bin,condor_compile,EXECUTABLE_MODE)
 #else 
-static_copy_target(condor_compile,$(STATIC_DIR)/bin,condor_compile, \
-		EXECUTABLE_MODE)
+static_copy_target(condor_compile,$(STATIC_DIR)/bin,condor_compile,EXECUTABLE_MODE)
 static_copy_target(ld,$(STATIC_DIR)/lib,ld,EXECUTABLE_MODE)
 static_link_target($(STATIC_DIR)/lib/ld,lib,real-ld)
 #endif /* IS_CLIPPED */
@@ -133,7 +130,7 @@ release_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
 strip_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
 static_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
 
-#ifdef WANT_MAN_PAGES
+#if WANT_MAN_PAGES
 release_copy_target($(MANDIR)/man1/condor_checkpoint.1,$(RELEASE_DIR)/man/man1,condor_checkpoint.1,OBJECT_MODE)
 static_copy_target($(MANDIR)/man1/condor_checkpoint.1,$(STATIC_DIR)/man/man1,condor_checkpoint.1,OBJECT_MODE)
 strip_copy_target($(MANDIR)/man1/condor_checkpoint.1,$(STRIP_DIR)/man/man1,condor_checkpoint.1,OBJECT_MODE)

@@ -10,9 +10,9 @@ OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o dc_schedd.o
 
 library_target(libdaemonclient.a,$(OBJ))
 
-c_plus_target(daemon.t, daemon.t.o libdaemonclient.a, $(LIB))
-pure_c_plus_target(daemon.t.pure, daemon.t.o libdaemonclient.a, $(LIB))
-purecov_c_plus_target(daemon.t.pc, daemon.t.o libdaemonclient.a, $(LIB))
+c_plus_target(daemon.t,daemon.t.o libdaemonclient.a,$(LIB))
+pure_c_plus_target(daemon.t.pure,daemon.t.o libdaemonclient.a,$(LIB))
+purecov_c_plus_target(daemon.t.pc,daemon.t.o libdaemonclient.a,$(LIB))
 
 release:: all
 stripped:: all

@@ -26,3 +26,4 @@ import(../condor_syscall_lib,receivers.o)
 import(../condor_syscall_lib,extern_path.o)
 #endif
 
+clean::

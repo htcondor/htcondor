@@ -22,6 +22,6 @@ static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
 pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
 purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 
-c_plus_target(qmgr_test, qmgr_test.o libqmgmt.a, $(LIB))
+c_plus_target(qmgr_test,qmgr_test.o libqmgmt.a,$(LIB))
 
 html_target( documentation )

@@ -68,22 +68,22 @@ library_target( liburl.a,$(URL_OBJ))
 library_target( libcondorapi.a,$(CONLIBAPI_OBJ) )
 
 c_plus_target(test_locks,test_locks.o,$(LIB))
-c_plus_target(test_stringSpace, test_stringSpace.o,$(LIB))
-c_plus_target(test_iso_dates, test_iso_dates.o,$(LIB))
-c_plus_target(test_user_job_policy, test_user_job_policy.o,$(LIB))
-c_plus_target(test_classad_support, test_classad_support.o,$(LIB))
-c_plus_target(test_classad_merge, test_classad_merge.o,$(LIB))
-c_plus_target(test_mystring, test_mystring.o, $(LIB))
+c_plus_target(test_stringSpace,test_stringSpace.o,$(LIB))
+c_plus_target(test_iso_dates,test_iso_dates.o,$(LIB))
+c_plus_target(test_user_job_policy,test_user_job_policy.o,$(LIB))
+c_plus_target(test_classad_support,test_classad_support.o,$(LIB))
+c_plus_target(test_classad_merge,test_classad_merge.o,$(LIB))
+c_plus_target(test_mystring,test_mystring.o,$(LIB))
 
-c_plus_target(cat_url, cat_url.o, liburl.a)
-c_plus_target(access.t, access.t.o, $(LIB))
-c_plus_target(killfamily.t, killfamily.t.o, $(LIB))
-pure_c_plus_target(killfamily.t.pure, killfamily.t.o, $(LIB))
-purecov_c_plus_target(killfamily.t.pc, killfamily.t.o, $(LIB))
+c_plus_target(cat_url,cat_url.o,liburl.a)
+c_plus_target(access.t,access.t.o,$(LIB))
+c_plus_target(killfamily.t,killfamily.t.o,$(LIB))
+pure_c_plus_target(killfamily.t.pure,killfamily.t.o,$(LIB))
+purecov_c_plus_target(killfamily.t.pc,killfamily.t.o,$(LIB))
 
-c_plus_target(my_hostname.t, my_hostname.t.o, $(LIB))
-pure_c_plus_target(my_hostname.t.pure, my_hostname.t.o, $(LIB))
-purecov_c_plus_target(my_hostname.t.pc, my_hostname.t.o, $(LIB))
+c_plus_target(my_hostname.t,my_hostname.t.o,$(LIB))
+pure_c_plus_target(my_hostname.t.pure,my_hostname.t.o,$(LIB))
+purecov_c_plus_target(my_hostname.t.pc,my_hostname.t.o,$(LIB))
 
 html_target( documentation )
 
@@ -99,8 +99,8 @@ foo: foo.o user_log.o
 	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o foo foo.o user_log.o $(LIB)
 
 IMPORT_LINKS = ../../config/import_links
-import(../condor_util_lib, mkargv.o)
-import(../condor_daemon_client, $(DAEMON_CLIENT_OBJ))
+import(../condor_util_lib,mkargv.o)
+import(../condor_daemon_client,$(DAEMON_CLIENT_OBJ))
 
 release_library(libcondorapi.a,$(RELEASE_DIR)/lib)
 strip_library(libcondorapi.a,$(STRIP_DIR)/lib)
@@ -122,12 +122,9 @@ release_copy_target(../h/file_lock.h,include,file_lock.h,TEXT_MODE)
 strip_copy_target(../h/file_lock.h,include,file_lock.h,TEXT_MODE)
 static_copy_target(../h/file_lock.h,include,file_lock.h,TEXT_MODE)
 
-release_copy_target(../condor_includes/condor_constants.h,\
-                    include,condor_constants.h,TEXT_MODE)
-strip_copy_target(../condor_includes/condor_constants.h, \
-                  include,condor_constants.h,TEXT_MODE)
-static_copy_target(../condor_includes/condor_constants.h, \
-                   include,condor_constants.h,TEXT_MODE)
+release_copy_target(../condor_includes/condor_constants.h,include,condor_constants.h,TEXT_MODE)
+strip_copy_target(../condor_includes/condor_constants.h,include,condor_constants.h,TEXT_MODE)
+static_copy_target(../condor_includes/condor_constants.h,include,condor_constants.h,TEXT_MODE)
 
 foo.o: user_log.h
 test.o: user_log.h
