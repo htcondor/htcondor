@@ -573,13 +573,13 @@ int ClassAd::IsAMatch(ClassAd* temp)
         return 0;
     }
 
-    if( (GetTargetTypeNumber()==temp->GetMyTypeNumber()) || !strcmp(GetTargetTypeName(),ANY_ADTYPE) ) {
+    if( (GetTargetTypeNumber()==temp->GetMyTypeNumber()) || !stricmp(GetTargetTypeName(),ANY_ADTYPE) ) {
         /* MY.TargetType matches TARGET.MyType */
     } else {
         return 0;
     }
 
-    if( (GetMyTypeNumber()==temp->GetTargetTypeNumber()) || !strcmp(temp->GetTargetTypeName(),ANY_ADTYPE) ) {
+    if( (GetMyTypeNumber()==temp->GetTargetTypeNumber()) || !stricmp(temp->GetTargetTypeName(),ANY_ADTYPE) ) {
         /* TARGET.TargetType matches MY.MyType */
     } else {
         return 0;
@@ -650,7 +650,7 @@ bool operator>= (ClassAd &lhs, ClassAd &rhs)
 	EvalResult *val;	
 	
 	if( (lhs.GetMyTypeNumber()!=rhs.GetTargetTypeNumber()) &&
-	    strcmp(rhs.GetTargetTypeName(),ANY_ADTYPE) )
+	    stricmp(rhs.GetTargetTypeName(),ANY_ADTYPE) )
 	{
 		return false;
 	}
