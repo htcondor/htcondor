@@ -1044,6 +1044,14 @@ These macros control the \Condor{master}.
   special daemon that we can acquire this information on those
   platforms. 
 
+\item[\Macro{DC\_DAEMON\_LIST}] \label{param:DCDaemonList} This macro
+  lists the daemons in \Macro{DAEMON\_LIST} which use the Condor
+  DaemonCore library.  The \Condor{master} must differentiate between
+  daemons that use DaemonCore and those that don't so it uses the
+  appropriate inter-process communication mechanisms.  This list
+  currently includes all Condor daemons except the checkpoint server
+  by default.
+
 \item[\Macro{SUBSYS}] \label{param:SUBSYS} Once you have defined which
   subsystems you want the \Condor{master} to start, you must provide
   it with the full path to each of these binaries.  For example:
