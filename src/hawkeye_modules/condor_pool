@@ -103,6 +103,9 @@ sub Init()
 
     $Tmp = HawkeyeLib::ReadConfig( "_ckpt", "true" );
     $Config{DoCheckpoint} = ( $Tmp =~ /true/i ) ? 1 : 0;
+
+    $Tmp = HawkeyeLib::ReadConfig( "_fping_exe", "" );
+    $Config{FpingExe} = $Tmp if ( $Tmp ne "" );
 }
 
 # Do the real work here...
@@ -149,6 +152,18 @@ sub RunAbsent()
     push( @{$Config{Options}}, "--ping" );
     push( @{$Config{Options}}, "--pingok" );
     push( @{$Config{Options}}, "--bygroup" );
+
+    # Configure it to use fping
+    if ( $Config{FpingExe} ne "" )
+    {
+	push( @{$Config{Options}}, "--fping=$Config{FpingExe}" )
+    }
+    else
+    {
+	push( @{$Config{Options}}, "--fping" )
+    }
+
+    # Now, form the final command & run it...
     my $Cmd = "$Config{PoolProg} $Config{PoolName} ".
 	  join( " ", @{$Config{Options}} );
     print STDERR "Running '$Cmd'\n";

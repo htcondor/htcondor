@@ -79,3 +79,9 @@ parameter: CKPT = false
 CKPT = true/false
 Specify whether to report on the health of the Condor checkpoint
 servers
+
+parameter: FPING_EXE = /usr/local/bin/fping
+FPING_EXE = /path/to/fping
+Specifies a path to fping that condor_pool can run to determine
+which pools are up faster than with standard ping
+
