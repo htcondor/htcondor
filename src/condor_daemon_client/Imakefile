@@ -4,6 +4,8 @@ CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = -Wall $(STD_C_PLUS_FLAGS) -DWANT_DC_PM $(FIX_BROKEN_GCC)
 LIB = $(STD_LIBS)
 
+### NOTE!  If you add anything here, also add it to the
+### DAEMON_CLIENT_OBJ line in condor_c++_util/Imakefile   
 OBJ = daemon.o daemon_types.o
 
 library_target(libdaemonclient.a,$(OBJ))
