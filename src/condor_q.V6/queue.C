@@ -679,13 +679,6 @@ bufferJobShort( ClassAd *ad ) {
 			 (image_size / 1024.0),
 			 buffer );
 
-	switch (status)
-	{
-		case UNEXPANDED: unexpanded++; break;
-		case IDLE:       idle++;       break;
-		case RUNNING:    running++;    break;
-		case HELD:		 held++;	   break;
-	}
 	return return_buff;
 }
 
@@ -1136,10 +1129,21 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 static bool
 process_buffer_line( ClassAd *job )
 {
+	int status = 0;
+
 	clusterProcString * tempCPS = new clusterProcString;
 	(*output_buffer)[output_buffer->getlast()+1] = tempCPS;
 	job->LookupInteger( ATTR_CLUSTER_ID, tempCPS->cluster );
 	job->LookupInteger( ATTR_PROC_ID, tempCPS->proc );
+	job->LookupInteger( ATTR_JOB_STATUS, status );
+
+	switch (status)
+	{
+		case UNEXPANDED: unexpanded++; break;
+		case IDLE:       idle++;       break;
+		case RUNNING:    running++;    break;
+		case HELD:		 held++;	   break;
+	}
 
 	if( analyze ) {
 		tempCPS->string = strnewp( doRunAnalysisToBuffer( job ) );
