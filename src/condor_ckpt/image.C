@@ -26,18 +26,7 @@
 **
 */ 
 
-#if !defined(Solaris)
-#define _POSIX_SOURCE
-#endif
-
-#if defined(IRIX62)
-typedef struct fd_set fd_set;
-#endif 
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <unistd.h>
+#include "condor_common.h"
 
 #if defined(LINUX)
 #include <sys/mman.h>
@@ -49,29 +38,11 @@ extern "C" {
 #if defined(IRIX53)
 #define MA_SHARED	0x0008	/* mapping is a shared or mapped object */
 #include <sys/mman.h>		// for mmap()
-#include <sys/syscall.h>        // for syscall()
-#include <sys/time.h>
-#include <values.h>
 #endif
 #if defined(Solaris)
-#if !defined(Solaris251)
-#include </usr/ucbinclude/sys/rusage.h>	// for rusage
-#endif
 #include <netconfig.h>		// for setnetconfig()
 #include <sys/mman.h>		// for mmap()
-#include <sys/syscall.h>        // for syscall()
-#include <sys/time.h>
-#include <values.h>
-#include <string.h>				// for strerror()
 #endif
-#include <sys/stat.h>
-#include <sys/times.h>
-#if !defined(HPUX9)
-#include "condor_fix_timeval.h"
-#endif
-#include <sys/resource.h>
-#include "fcntl.h"
-#include <string.h>
 #include "condor_syscalls.h"
 #include "condor_sys.h"
 #include "image.h"
@@ -80,11 +51,6 @@ extern "C" {
 #include "condor_debug.h"
 static char *_FileName_ = __FILE__;
 
-#ifndef SIG_DFL
-#include <signal.h>
-#endif
-
-extern int errno;
 extern int _condor_in_file_stream;
 
 const int KILO = 1024;

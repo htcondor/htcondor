@@ -29,24 +29,13 @@
 #ifndef _IMAGE_H
 #define _IMAGE_H
 
-#include <sys/types.h>
-#include <limits.h>
+#include "condor_common.h"
 #include "machdep.h"
+
 
 #define NAME_LEN 64
 typedef unsigned long RAW_ADDR;
 typedef int BOOL;
-
-#if defined(TRUE)
-#	undef TRUE
-#	undef FALSE
-#endif
-
-#include "condor_constants.h"
-
-#if defined(SUNOS41) || defined(ULTRIX42) || defined(ULTRIX43) || defined(IRIX4) || defined(IRIX5)
-typedef int ssize_t; // should be included in <sys/types.h>, but some don't
-#endif
 
 const int MAGIC = 0xfeafea;
 const int SEG_INCR = 25;
