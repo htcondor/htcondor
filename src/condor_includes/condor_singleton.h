@@ -1,5 +1,5 @@
-#ifndef SINGLETON_H
-#define SINGLETON_H
+#ifndef CONDOR_SINGLETON_H
+#define CONDOR_SINGLETON_H
 
 // This declares your class to be a singleton.
 // You are still REQUIRED to make your ctor private
