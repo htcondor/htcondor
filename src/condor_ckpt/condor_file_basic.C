@@ -123,8 +123,17 @@ void CondorFileBasic::suspend()
 
 	// and then close the file
 	int scm = SetSyscalls(syscall_mode);
-	::close(fd);
+	int result = ::close(fd);
 	SetSyscalls(scm);
+
+	// If the file could not be closed, it means
+	// data was not committed.  We _must_ abort
+	// the checkpoint, or an inconsistent state
+	// will result.
+
+	if( result==-1 ) {
+		_condor_error_retry("Unable to commit data to file %s\n",name);
+	}
 
 	// and mark it as suspended
 	fd = -1;
