@@ -38,10 +38,11 @@ class ClassAdBin
     ClassAd     *ad;
 };
 
-typedef classad_hash_map< string, ClassAdBin*, StringHash > CompressedAds;
+typedef classad_hash_map< std::string, ClassAdBin*, StringHash > CompressedAds;
 
-bool MakeSignature( ClassAd *ad, References &refs, string &sig );
+bool MakeSignature( ClassAd *ad, References &refs, std::string &sig );
 bool Compress( ClassAdCollectionServer *server, LocalCollectionQuery *query,
-            const References &refs, CompressedAds& comp, list<ClassAd*> &rest);
+			   const References &refs, CompressedAds& comp, 
+			   std::list<ClassAd*> &rest);
 
 #endif
