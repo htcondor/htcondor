@@ -25,31 +25,62 @@
 #define RECTANGLE_H
 
 #include <map>
+#include <set>
+#include "value.h"
+#include "extArray.h"
 
-struct NumericInterval {
+typedef ExtArray<unsigned int> KeySet;
+const int SUINT = (sizeof(unsigned int)*8);	// in bits
+
+struct Interval {
+	Interval() { key = -1; openLower = openUpper = false; }
 	int		key;
-	double 	lower, upper;
+	Value 	lower, upper;
 	bool	openLower, openUpper;
 };
 
-typedef map<int, NumericInterval> OneDimension;
+
+typedef map<int, int> KeyMap;
+typedef map<string, set<int>, CaseIgnLTStr > DimRectangleMap;
+typedef map<int, Interval> OneDimension;
 typedef map<string, OneDimension, CaseIgnLTStr> AllDimensions;
 
+
 class Rectangles {
-	public:
-		Rectangles( );
-		~Rectangles( );
+public:
+	Rectangles( );
+	~Rectangles( );
 
-		bool AddUpperBound( int key, const string& attr, const double& val, 
-					bool open );
-		bool AddLowerBound( int key, const string& attr, const double& val,
-					bool open );
-		void Display( FILE * );
+	void Clear( );
 
-		AllDimensions boxes;
+	int NewClassAd( int id=-1 );
+	int NewPort( int id=-1 );
+	int NewRectangle( int id=-1 );
+
+	int AddUpperBound(const string&attr,Value& val,bool open, bool constraint,
+				int rkey=-1);
+	int AddLowerBound(const string&attr,Value& val,bool open, bool constraint,
+				int rkey=-1);
+	void AddExportedVerificationRequest( int rkey=-1 );
+	void AddImportedVerificationRequest( const string&, int rkey=-1 );
+	void AddUnexportedDimension( const string&, int rkey=-1 );
+
+	void Typify( const References &exported, int srec, int erec );
+	void Display( FILE * );
+
+	enum { NO_ERROR, INCONSISTENT_TYPE, INCONSISTENT_VALUE };
+
+	KeyMap			rpMap, pcMap, crMap;
+	set<int>		verifyExported;
+	DimRectangleMap	verifyImported;
+	DimRectangleMap unexported, unimported;
+	AllDimensions 	tmpExportedBoxes, tmpImportedBoxes;
+	AllDimensions 	exportedBoxes, importedBoxes;
+	int				cId, pId, rId;
+
+private:
+	static bool NormalizeInterval( Interval&, char );
+	static char GetIndexPrefix( const Value::ValueType );
 };
-
-	// maps rectangle keys to classad keys
-typedef map<int, int> KeyMap;
 
 #endif // RECTANGLE_H
