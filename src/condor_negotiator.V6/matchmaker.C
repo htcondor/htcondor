@@ -710,45 +710,48 @@ matchmakingAlgorithm(char *scheddName, ClassAd &request,ClassAdList &startdAds,
 				matchCriterion->EvalTree(candidate,&request, &result) 	&&
 				(result.type == LX_INTEGER) && (result.i == TRUE)))
 			{
-				// check the rank of the request
-				if (!requestRank)
-				{
-					// requestor doesn't have/use ranks --- use first fit
-					startdAds.Close ();
-					return candidate;
+
+				// at this point, the candidate has met all requirements,
+				// both from the request and the offer.  now we need to
+				// deal with ranks from both sides.  however, we need
+				// to initialize bestSoFar so that if neither request
+				// or offer have a rank attribute, we still 
+				// must produce a match (in this case, first-fit).
+				if ( bestSoFar == NULL ) {
+					bestSoFar = candidate;
+					// bestRank we can leave alone, it is initialized
+					//   to -(FLT_MAX).
 				}
-				else
-				{
+
+				// check the rank of the request
+				candidateRank = -(FLT_MAX);
+				if (requestRank) {
+					// requestor has a rank - evaluate it
 					float temp;
 
 					// calculate the request's rank of the offer
-					if (!request.EvalFloat (ATTR_RANK,candidate,temp))
-					{
-						// could not evaluate; hold old best rank
-						continue;
+					if (request.EvalFloat (ATTR_RANK,candidate,temp)) {
+						candidateRank = (double) temp;
 					}
+				}
 
-					candidateRank = (double) temp;
-
-					// if this rank is the best so far, choose it
-					if (candidateRank > bestRank) 
+				// if this rank is the best so far, choose it
+				if (candidateRank > bestRank) {
+					bestSoFar = candidate;
+					bestRank = candidateRank;
+				}
+				else
+				// break ties on the basis of the best offer rank
+				if (offerRank && candidateRank == bestRank)
+				{
+					float rankOfOffer;
+					if(candidate->EvalFloat(ATTR_RANK,&request,rankOfOffer))
 					{
-						bestSoFar = candidate;
-						bestRank = candidateRank;
-					}
-					else
-					// break ties on the basis of the best offer rank
-					if (offerRank && candidateRank == bestRank)
-					{
-						float rankOfOffer;
-						if(!request.EvalFloat(ATTR_RANK,candidate,rankOfOffer))
+						if (rankOfOffer > bestOffer)
 						{
-							if (rankOfOffer > bestOffer)
-							{
-								bestSoFar = candidate;
-								bestOffer = rankOfOffer;
-								bestRank  = candidateRank;
-							}
+							bestSoFar = candidate;
+							bestOffer = rankOfOffer;
+							bestRank  = candidateRank;
 						}
 					}
 				}
