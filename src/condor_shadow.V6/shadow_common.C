@@ -46,7 +46,8 @@
 #endif
 
 extern "C" {
-	void NotifyUser( char *buf, PROC *proc, char *email_addr );
+	void NotifyUser( char *buf, PROC *proc );
+	void HoldJob( const char* buf );
 	char *d_format_time( double dsecs );
 	int unlink_local_or_ckpt_server( char *file );
 	void rm();
@@ -95,7 +96,7 @@ ClassAd *JobAd = NULL;			// ClassAd which describes this job
 extern char *schedd;
 
 void
-NotifyUser( char *buf, PROC *proc, char *email_addr )
+NotifyUser( char *buf, PROC *proc )
 {
         FILE *mailer;
         char subject[ BUFSIZ ];	
@@ -141,10 +142,10 @@ NotifyUser( char *buf, PROC *proc, char *email_addr )
 		sprintf(subject, "Condor Job %d.%d\n", 
 				proc->id.cluster, proc->id.proc);
 
-        dprintf( D_FULLDEBUG, "Notify user using address: %s, subject: %s",
-			email_addr, subject);
-
-		mailer = email_open(email_addr, subject);
+		if( ! JobAd ) {
+			EXCEPT( "In NotifyUser() w/ NULL JobAd!" );
+		}
+		mailer = email_user_open(JobAd, subject);
         if( mailer == NULL ) {
                 EXCEPT(
                         "Shadow: Cannot notify user( %s, %s, %s )\n",
@@ -247,6 +248,40 @@ NotifyUser( char *buf, PROC *proc, char *email_addr )
 	email_close(mailer);
 
         (void)pclose( mailer );
+}
+
+
+void
+HoldJob( const char* buf )
+{
+    char subject[ BUFSIZ ];	
+	FILE *mailer;
+
+	sprintf( subject, "Condor Job %d.%d put on hold\n", 
+			 Proc->id.cluster, Proc->id.proc );
+
+	if( ! JobAd ) {
+		EXCEPT( "In HoldJob() w/ NULL JobAd!" );
+	}
+	mailer = email_user_open(JobAd, subject);
+	if( ! mailer ) {
+			// User didn't want email, so just exit now with the right
+			// value so the schedd actually puts the job on hold.
+		exit( JOB_SHOULD_HOLD );
+	}
+
+	fprintf( mailer, "Your condor job " );
+	if( Proc->args[0] ) {
+		fprintf( mailer, "%s %s ", Proc->cmd[0], Proc->args[0] );
+	} else {
+		fprintf( mailer, "%s ", Proc->cmd[0] );
+	}
+	fprintf( mailer, "\nis being put on hold.\n\n" );
+	fprintf( mailer, "%s", buf );
+	email_close(mailer);
+
+		// Now that the user knows why, exit with the right code. 
+	exit( JOB_SHOULD_HOLD );
 }
 
 
@@ -822,3 +857,5 @@ MakeProc(ClassAd *ad, PROC *p)
 	
 	return 0;
 }
+
+
