@@ -9961,14 +9961,13 @@ bool
 Scheduler::enqueueFinishedJob( int cluster, int proc )
 {
 	CondorID* id = new CondorID( cluster, proc, -1 );
-	bool rval = job_is_finished_queue.enqueue( id, false );
-	if( rval ) { 
-		dprintf( D_FULLDEBUG, "Job %d.%d is finished\n", cluster, proc );
-	} else {
+	if( job_is_finished_queue.isMember(id) ) { 
 		dprintf( D_FULLDEBUG, "enqueueFinishedJob(): job %d.%d already "
 				 "in queue to run jobIsFinished()\n", cluster, proc );
 		delete id;
 		id = NULL;
+		return false;
 	}
-	return rval;
+	dprintf( D_FULLDEBUG, "Job %d.%d is finished\n", cluster, proc );
+	return job_is_finished_queue.enqueue( id );
 }
