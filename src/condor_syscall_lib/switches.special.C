@@ -92,14 +92,6 @@ syscalls and standalone checkpointing.
 #if defined(LINUX)
 
 /*
-This variable is normally defined in glibc by the various get*id
-functions, however, the symbol seems to get lost in thr process
-of extraction.  So, we just define it with the default value here.
-See the comments int he glibc source for a better understanding.
-*/
-
-int __libc_missing_32bit_uids = -1;                                                        
-/*
 __getdents has a very special switch on Linux.
 There are two distinct problems.
 
