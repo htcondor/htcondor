@@ -99,7 +99,7 @@ GETMNT_OBJ = getmnt.o
 	$(GETPAGESIZE_SRC) $(SETLINEBUF_SRC) $(GETWD_SRC) $(INSQUE_SRC) \
 	$(MALLOC_SRC) disk_req.c env_param.c ckpt_name.c lock_file.NON_POSIX.c \
 	my_popen.c $(GETMNT_SRC) syscall_numbers.c $(VIRT_MEM_SRC) \
-	sig_install.c internet.c startup_info.c get_random_num.c \
+	sig_install.c internet.c startup_info.c get_random_num.c escapes.c\
 	ckpt_server_api_stubs.c ckpt_util.c fdprintf.c setsyscalls.c sleep.c \
 	stub_gen_lex.l \
 	stub_gen_yacc.y \
@@ -116,7 +116,7 @@ GETMNT_OBJ = getmnt.o
 	$(SETEGID_OBJ) $(SETEUID_OBJ) $(GETPAGESIZE_OBJ) $(SETLINEBUF_OBJ) \
 	$(GETWD_OBJ) $(INSQUE_OBJ) disk_req.o env_param.o ckpt_name.o \
 	lock_file.NON_POSIX.o my_popen.o $(GETMNT_OBJ) \
-	syscall_numbers.o sig_install.o internet.o startup_info.o \
+	syscall_numbers.o sig_install.o internet.o startup_info.o escapes.o\
 	ckpt_server_api_stubs.o ckpt_util.o get_random_num.o fdprintf.o \
 	setsyscalls.o match_prefix.o sleep.o
 
