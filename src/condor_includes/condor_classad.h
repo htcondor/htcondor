@@ -64,7 +64,7 @@ class ClassAd : public AttrList
 
 		// Type operations
         void		SetMyTypeName(char *);		// my type name set.
-        char*		GetMyTypeName();			// my type name returned.
+        const char*		GetMyTypeName();			// my type name returned.
         void 		SetTargetTypeName(char *);	// target type name set.
         char*		GetTargetTypeName();		// target type name returned.
         int			GetMyTypeNumber();			// my type number returned.
