@@ -1,3 +1,11 @@
+11/27/03 V6_6-branch-post-redhat80-fullport-checkin
+	This is the state of the V6_6-branch just after I checked in the full
+	port for the redhat 8.0 revision of Linux.
+
+11/27/03 V6_6-branch-pre-redhat80-fullport-checkin
+	This is the state of the V6_6-branch just before I checked in the full
+	port for the redhat 8.0 revision of Linux.
+
 11/14/03 V6_6_0
    The official 6.6.0 release tag!  This is a re-tagging of
    "BUILD-V6_6-branch-2003-11-13" and "BUILD-V6_6_0-2003-11-12" (both
