@@ -28,15 +28,6 @@
 ** included on various platforms. 
 **********************************************************************/
 
-#if defined(SUNOS41)
-#	define read _hide_read
-#	define write _hide_write
-#endif
-
-#if defined(AIX32)
-#	define execv __hide_execv
-#endif
-
 #if defined(IRIX53) && !defined(IRIX62)
 struct timeval;
 #endif
@@ -65,6 +56,13 @@ typedef struct fd_set fd_set;
 #		define _BSD_SOURCE
 #		define CONDOR_BSD_SOURCE
 #	endif
+#endif
+
+#if defined(LINUX) && defined(GLIBC)
+#	define truncate _hide_truncate
+#	define ftruncate _hide_ftruncate
+#	define profil _hide_profil
+#	define daemon _hide_daemon
 #endif
 
 /* Even though we normally have _XOPEN_SOURCE_EXTENDED defined on
@@ -104,15 +102,6 @@ typedef struct fd_set fd_set;
 #	undef _save_BSD_COMPAT
 #endif
 
-#if defined(SUNOS41)
-#	undef read
-#	undef write
-#endif
-
-#if defined(AIX32)
-#	undef execv
-	int execv(const char *path, char *const argv[]);
-#endif
 
 #if defined(LINUX)
 #   undef idle
@@ -122,9 +111,24 @@ typedef struct fd_set fd_set;
 #	endif
 #endif
 
+
+#if defined(LINUX) && defined(GLIBC)
+#	undef truncate
+#	undef ftruncate
+#	undef profil
+#	undef daemon
+#endif
+
+
+/* Only if we set it ourself in this file to we want to undef here */
+#if defined(OSF1) && defined( CONDOR_XOPEN_SOURCE_EXTENDED )
+#	undef CONDOR_XOPEN_SOURCE_EXTENDED
+#	undef _XOPEN_SOURCE_EXTENDED
+#endif
+
 /**********************************************************************
 ** Things that should be defined in unistd.h that for whatever reason
-** aren't defined on various platforms
+** aren't defined on various platforms, or that we hid explicitly.
 **********************************************************************/
 #if defined(__cplusplus)
 extern "C" {
@@ -153,10 +157,10 @@ extern "C" {
 	int getdomainname( char*, size_t );
 #endif
 
-/* Only if we set it ourself in this file to we want to undef here */
-#if defined(OSF1) && defined( CONDOR_XOPEN_SOURCE_EXTENDED )
-#	undef CONDOR_XOPEN_SOURCE_EXTENDED
-#	undef _XOPEN_SOURCE_EXTENDED
+#if defined(LINUX) && defined(GLIBC)
+	int truncate( const char *, size_t );
+	int ftruncate( int, size_t );
+	int profil( char*, int, int, int );
 #endif
 
 #if defined(__cplusplus)
