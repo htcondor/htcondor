@@ -15,30 +15,30 @@
 #include "dap_scheduler.h"
 #include "env.h"
 #include "daemon.h"
+#include "condor_config.h"
 
 #ifndef WANT_NAMESPACES
 #define WANT_NAMESPACES
 #endif
 #include "classad_distribution.h"
+#define DAP_CATALOG_NAMESPACE	"stork."
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
  * These are the default values for some global Stork parameters.                        
  * They will be overwritten by the values in the Stork Config file.                   
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-unsigned long MAX_NUM_JOBS = 10;       //max number of concurrent jobs running
-unsigned long MAX_RETRY = 10;          //max number of times a job will be retried 
-unsigned long MAXDELAY_INMINUTES = 10; //max time a job is allowed to finish
+unsigned long Max_num_jobs;            //max number of concurrent jobs running
+unsigned long Max_retry;               //max number of times a job will be retried 
+unsigned long Max_delayInMinutes;      //max time a job is allowed to finish
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 extern char *logfilename;
 extern char *xmllogfilename;
 extern char *userlogfilename;
-extern char * STORK_CONFIG_FILE;
-char historyfilename[MAXSTR];
-char cred_dir[MAXSTR];
-MyString DAP_CATALOG;
-MyString LOG_DIR;
-MyString ld_library_path;
+char historyfilename[_POSIX_PATH_MAX];
+char *Cred_tmp_dir = NULL;				// temporary credential storage directory
+char *Module_dir = NULL;				// Module directory (DAP Catalog)
+char *Log_dir = NULL;					// LOG directory
 
 int  daemon_std[3];
 int  transfer_dap_reaper_id, reserve_dap_reaper_id, release_dap_reaper_id;
@@ -54,35 +54,67 @@ int listenfd_status;
 int listenfd_remove;
 
 /* ==========================================================================
- * open daemon core file pointers
+ * Open daemon core file pointers.
+ * All modules will inherit these standard I/O file descriptors.
  * results in daemon_std[]
  * ==========================================================================*/
 void open_daemon_core_file_pointers()
 {
-	char fd[3][MAXSTR];
-	const char *stream[3] = { "stdin", "stdout", "stderr" };
-	int ix;
-	int flags = O_CREAT | O_RDWR;
-	mode_t mode = 00777;
-	const char *tmpdir = "/tmp";
-	const char *dap_daemon = "dap_daemon";
-  
-	for ( ix=0; ix<3; ix++ ) {
-		snprintf( fd[ix], sizeof( fd[ix] ), 
-			"%s/%s.%s",
-			tmpdir,
-			dap_daemon,
-			stream[ix]
-		);
-		daemon_std[ix] = open ( fd[ix], flags, mode);	// stdin
-		if ( daemon_std[ix] < 0 ) {
+	const char* log_dir = param("LOG");
+	const char* alt_log_dir = "/tmp";
+	const char* name = "/Stork-module.";
+	const int flags = O_CREAT | O_RDWR;
+	const mode_t mode = 00644;
+	MyString dc_stdin, dc_stderr, dc_stdout;
+
+	if (! log_dir ) log_dir = alt_log_dir;
+
+	// Standard input
+	dc_stdin = NULL_FILE;
+	dprintf(D_ALWAYS, "module standard input redirected from %s\n",
+			dc_stdin.Value() );
+	daemon_std[0] = open ( dc_stdin.Value(), flags, mode);
+	if ( daemon_std[0] < 0 ) {
 			dprintf( D_ALWAYS,
-					"%s:%d: daemoncore stdio fd %d open(%s,%#o,%#o): (%d)%s\n",
-					__FILE__, __LINE__, ix, fd[ix], flags, mode,
+				"ERROR: daemoncore stdin fd %d open(%s,%#o,%#o): (%d)%s\n",
+					0, dc_stdin.Value(), flags, mode,
 					errno, strerror(errno)
 			);
-		}
 	}
+
+	// Standard output
+	dc_stdout = log_dir;
+	dc_stdout += name;
+	dc_stdout += "stdout";
+	dprintf(D_ALWAYS, "module standard output redirected to %s\n",
+			dc_stdout.Value() );
+	daemon_std[1] = open ( dc_stdout.Value(), flags, mode);
+	if ( daemon_std[1] < 0 ) {
+			dprintf( D_ALWAYS,
+				"ERROR: daemoncore stdout fd %d open(%s,%#o,%#o): (%d)%s\n",
+					1, dc_stdout.Value(), flags, mode,
+					errno, strerror(errno)
+			);
+	}
+
+	// Standard error
+	dc_stderr = log_dir;
+	dc_stderr += name;
+	dc_stderr += "stderr";
+	dprintf(D_ALWAYS, "module standard error redirected to %s\n",
+			dc_stderr.Value() );
+	daemon_std[2] = open ( dc_stderr.Value(), flags, mode);
+	if ( daemon_std[2] < 0 ) {
+			dprintf( D_ALWAYS,
+				"ERROR: daemoncore stderr fd %d open(%s,%#o,%#o): (%d)%s\n",
+					2, dc_stderr.Value(), flags, mode,
+					errno, strerror(errno)
+			);
+	}
+
+
+	if (log_dir && strcmp(log_dir, alt_log_dir) ) free( (char *)log_dir);
+	return;
 }
 
 /* ==========================================================================
@@ -90,75 +122,57 @@ void open_daemon_core_file_pointers()
  * ==========================================================================*/
 int read_config_file()
 {
-	char unstripped[MAXSTR], stripped[MAXSTR];
-	ClassAd_Reader configreader(STORK_CONFIG_FILE);
-  
-	dprintf(D_ALWAYS, "Config file: %s\n", STORK_CONFIG_FILE);
-	if ( !configreader.readAd()) {
-		dprintf(
-				D_ALWAYS,
-				"ERROR in parsing the Stork Config file: %s\n",
-				STORK_CONFIG_FILE
+	//get value for Max_num_jobs
+	Max_num_jobs =
+		param_integer(
+			"STORK_MAX_NUM_JOBS",		// name
+			10,							// default
+			1							// minimum value
 		);
-		return FALSE;
-	}
+	dprintf(D_ALWAYS, "STORK_MAX_NUM_JOBS = %ld\n", Max_num_jobs);  
 
-		//get value for MAX_NUM_JOBS
-	if (configreader.getValue("max_num_jobs", unstripped) == DAP_SUCCESS){
-		strncpy(stripped, strip_str(unstripped), MAXSTR);
-		MAX_NUM_JOBS = atol(stripped);
-	}
-	dprintf(D_ALWAYS, "max_num_jobs = %ld\n", MAX_NUM_JOBS);  
+	//get value for Max_retry
+	Max_retry =
+		param_integer(
+			"STORK_MAX_RETRY",		// name
+			10,						// default
+			1						// minimum value
+		);
+	dprintf(D_ALWAYS, "STORK_MAX_RETRY = %ld\n", Max_retry);  
 
+	//get value for Max_delayInMinutes
+	Max_delayInMinutes =
+		param_integer(
+			"STORK_MAXDELAY_INMINUTES",	// name
+			10,						// default
+			1						// minimum value
+		);
+	dprintf(D_ALWAYS, "STORK_MAXDELAY_INMINUTES = %ld\n", Max_delayInMinutes);  
 
-		//get value for MAX_RETRY
-	if (configreader.getValue("max_retry", unstripped) == DAP_SUCCESS){
-		strncpy(stripped, strip_str(unstripped), MAXSTR);
-		MAX_RETRY = atol(stripped);
-	}
-	dprintf(D_ALWAYS, "max_retry = %ld\n", MAX_RETRY);  
+	//get value for STORK_TMP_CRED_DIR
+	if (Cred_tmp_dir) free(Cred_tmp_dir);
+	Cred_tmp_dir = param("STORK_TMP_CRED_DIR");
+	if ( ! Cred_tmp_dir ) Cred_tmp_dir = strdup("/tmp");	// default
+	dprintf(D_ALWAYS, "STORK_TMP_CRED_DIR = %s\n", Cred_tmp_dir);
 
-		//get value for MAXDELAY_INMINUTES
-	if (configreader.getValue("maxdelay_inminutes", unstripped) == DAP_SUCCESS){
-		strncpy(stripped, strip_str(unstripped), MAXSTR);
-		MAXDELAY_INMINUTES = atol(stripped);
+	// get value for STORK_MODULE_DIR
+	if (Module_dir) free(Module_dir);
+	Module_dir = param("STORK_MODULE_DIR");
+	if ( ! Module_dir ) {
+		Module_dir = param("LIBEXEC");
+		if ( ! Module_dir ) {
+			dprintf (D_ALWAYS, "ERROR: STORK_MODULE_DIR not defined in config file!\n");
+			DC_Exit (1);
+		}
 	}
-	dprintf(D_ALWAYS, "maxdelay_inminutes = %ld\n", MAXDELAY_INMINUTES);  
+	dprintf(D_ALWAYS, "STORK_MODULE_DIR = %s\n", Module_dir);
 
-	if (configreader.getValue ("cred_dir", unstripped) == DAP_SUCCESS) {
-		strncpy (cred_dir, strip_str(unstripped), MAXSTR);
-	} else {
-		strcpy (cred_dir, "/tmp/");
-	}
-	dprintf(D_ALWAYS, "cred_dir = %s\n", cred_dir);
-
-		//get value for DAP_CATALOG
-	if (configreader.getValue("dap_catalog", unstripped) == DAP_SUCCESS){
-		DAP_CATALOG = strip_str(unstripped);
-	} else {
-		dprintf (D_ALWAYS, "ERROR: dap_catalog not defined in Stork config file!\n");
-		DC_Exit (1);
-	}
-	dprintf(D_ALWAYS, "dap_catalog = %s\n", DAP_CATALOG.Value());
-
-	if (configreader.getValue("log_dir", unstripped) == DAP_SUCCESS){
-		LOG_DIR = strip_str(unstripped);
-	} else {
-		LOG_DIR = "/tmp/";
-	}
-	dprintf(D_ALWAYS, "log_dir = %s\n", LOG_DIR.Value());
+	// get value for LOG
+	if (Log_dir) free(Log_dir);
+	Log_dir = param("LOG");
+	if ( ! Log_dir ) Log_dir = strdup("/tmp");	// default
+	dprintf(D_ALWAYS, "modules will execute in LOG directory %s\n", Log_dir);
 	     
-	// TODO: This config parm should not be necessary.  Either implicitly
-	// inherit LD_LIBRARY_PATH from the environment, or use
-	// getenv("LD_LIBRARY_PATH").
-	ld_library_path="LD_LIBRARY_PATH=";
-	if (configreader.getValue("ld_library_path", unstripped) == DAP_SUCCESS){
-		ld_library_path += strip_str(unstripped);
-	} else {
-		ld_library_path += "";
-	}
-	dprintf(D_ALWAYS, "%s\n", ld_library_path.Value());
-
 	return TRUE;
 }
 
@@ -276,11 +290,11 @@ int transfer_dap(char *dap_id, char *src_url, char *dest_url, char *arguments, c
 	strcpy(unstripped, arguments);
 	strncpy(arguments, strip_str(unstripped), MAXSTR);  
 
-	snprintf(commandbody, MAXSTR, "DaP.transfer.%s-%s", src_protocol, 
-			 dest_protocol);
+	snprintf(commandbody, MAXSTR, "%stransfer.%s-%s",
+		DAP_CATALOG_NAMESPACE, src_protocol, dest_protocol);
 
 		//create a new process to transfer the files
-	snprintf(command, MAXSTR, "%s/%s", DAP_CATALOG.Value(),commandbody);
+	snprintf(command, MAXSTR, "%s/%s", Module_dir, commandbody);
 	snprintf(argument_str ,MAXSTR, "%s %s %s %s", 
 			 commandbody, src_url, dest_url, arguments);
   
@@ -307,12 +321,6 @@ int transfer_dap(char *dap_id, char *src_url, char *dest_url, char *arguments, c
 	newenv_buff+=cred_file_name;
 	myEnv.Put (newenv_buff.Value());
 
-	MyString newenv;
-	newenv += "STORK_CONFIG_FILE=";
-	newenv += STORK_CONFIG_FILE;
-	myEnv.Put (newenv.Value());
-
-	myEnv.Put (ld_library_path.Value());
 	char *env_string = myEnv.getDelimitedString();	// return string from "new"
 
 	// Create child process via daemoncore
@@ -324,7 +332,7 @@ int transfer_dap(char *dap_id, char *src_url, char *dest_url, char *arguments, c
 		 transfer_dap_reaper_id,		// reaper id
 		 FALSE,							// do not want a command port
 		 env_string,                	// colon seperated environment string
-		 LOG_DIR.Value(),				// current working directory
+		 Log_dir,						// current working directory
 		 FALSE,							// do not create a new process group
 		 NULL,							// list of socks to inherit
 		 daemon_std						// child stdio file descriptors
@@ -357,22 +365,13 @@ void reserve_dap(char *dap_id, char *reserve_id, char *reserve_size, char *durat
 	parse_url(dest_url, dest_protocol, dest_host, dest_file);
   
 		//dynamically create a shell script to execute
-	snprintf(commandbody, MAXSTR, "DaP.reserve.%s", dest_protocol);
+	snprintf(commandbody, MAXSTR, "%sreserve.%s",
+		DAP_CATALOG_NAMESPACE, dest_protocol);
 
 		//create a new process to transfer the files
-	snprintf(command, MAXSTR, "%s/%s", DAP_CATALOG.Value(), commandbody);
+	snprintf(command, MAXSTR, "%s/%s", Module_dir, commandbody);
 	snprintf(argument_str ,MAXSTR, "%s %s %s %s %s", 
 			 commandbody, dest_host, output_file, reserve_size, duration);
-
-	// Add STORK_CONFIG_FILE, LD_LIBRARY_PATH to child process environment
-	MyString newenv;
-	newenv += "STORK_CONFIG_FILE=";
-	newenv += STORK_CONFIG_FILE;
-
-	Env myEnv;
-	myEnv.Put (newenv.Value());
-	myEnv.Put (ld_library_path.Value());
-	char *env_string = myEnv.getDelimitedString();	// return string from "new"
 
 	// Create child process via daemoncore
 	pid =
@@ -382,8 +381,8 @@ void reserve_dap(char *dap_id, char *reserve_id, char *reserve_size, char *durat
 		 PRIV_USER_FINAL,				// privilege state
 		 reserve_dap_reaper_id,			// reaper id
 		 FALSE,							// do not want a command port
-		 env_string,                	// colon seperated environment string
-		 LOG_DIR.Value(),				// current working directory
+		 NULL,  		              	// colon seperated environment string
+		 Log_dir,						// current working directory
 		 FALSE,							// do not create a new process group
 		 NULL,							// list of socks to inherit
 		 daemon_std						// child stdio file descriptors
@@ -391,7 +390,6 @@ void reserve_dap(char *dap_id, char *reserve_id, char *reserve_size, char *durat
 		 								// job_opt_mask = 0
 	);
 
-	if (env_string) delete []env_string;// delete string from "new"
 	dap_queue.insert(dap_id, pid);
 }
 
@@ -445,24 +443,15 @@ void release_dap(char *dap_id, char *reserve_id, char *dest_url)
 	}
 
 		//dynamically create a shell script to execute
-	snprintf(commandbody, MAXSTR, "DaP.release.%s", dest_protocol);
+	snprintf(commandbody, MAXSTR, "%srelease.%s",
+		DAP_CATALOG_NAMESPACE, dest_protocol);
   
 		//dynamically create a shell script to execute
-	snprintf(command, MAXSTR, "%s/%s",  DAP_CATALOG.Value(), commandbody);
+	snprintf(command, MAXSTR, "%s/%s",  Module_dir, commandbody);
   
 		//create a new process to transfer the files
 	snprintf(argument_str ,MAXSTR, "%s %s %s", 
 			 commandbody, dest_host, lot_id);
-
-	// child process will need additional environments
-	Env myEnv;
-	MyString newenv;
-	newenv += "STORK_CONFIG_FILE=";
-	newenv += STORK_CONFIG_FILE;
-	myEnv.Put (newenv.Value());
-
-	myEnv.Put (ld_library_path.Value());
-	char *env_string = myEnv.getDelimitedString();	// return string from "new"
 
 	// Create child process via daemoncore
 	pid =
@@ -472,8 +461,8 @@ void release_dap(char *dap_id, char *reserve_id, char *dest_url)
 		 PRIV_USER_FINAL,				// privilege state
 		 release_dap_reaper_id,			// reaper id
 		 FALSE,							// do not want a command port
-		 env_string,                	// colon seperated environment string
-		 LOG_DIR.Value(),				// current working directory
+		 NULL, 			               	// colon seperated environment string
+		 Log_dir,						// current working directory
 		 FALSE,							// do not create a new process group
 		 NULL,							// list of socks to inherit
 		 daemon_std						// child stdio file descriptors
@@ -481,7 +470,6 @@ void release_dap(char *dap_id, char *reserve_id, char *dest_url)
 		 								// job_opt_mask = 0
 	);
 
-	if (env_string) delete []env_string;// delete string from "new"
 	dap_queue.insert(dap_id, pid);
 	if (constraint_tree != NULL) delete constraint_tree;
 }
@@ -502,22 +490,13 @@ void requestpath_dap(char *dap_id, char *src_url, char *dest_url)
 	parse_url(dest_url, dest_protocol, dest_host, dest_file);
   
 		//dynamically create a shell script to execute
-	snprintf(commandbody, MAXSTR, "DaP.requestpath.%s", src_protocol);
+	snprintf(commandbody, MAXSTR, "%srequestpath.%s",
+		DAP_CATALOG_NAMESPACE, src_protocol);
 
 		//create a new process to transfer the files
-	snprintf(command, MAXSTR, "%s/%s", DAP_CATALOG.Value(), commandbody);
+	snprintf(command, MAXSTR, "%s/%s", Module_dir, commandbody);
 	snprintf(argument_str ,MAXSTR, "%s %s %s", 
 			 commandbody, src_host, dest_host);
-
-	// child process will need additional environments
-	Env myEnv;
-	MyString newenv;
-	newenv += "STORK_CONFIG_FILE=";
-	newenv += STORK_CONFIG_FILE;
-	myEnv.Put (newenv.Value());
-
-	myEnv.Put (ld_library_path.Value());
-	char *env_string = myEnv.getDelimitedString();	// return string from "new"
 
 	// Create child process via daemoncore
 	pid =
@@ -527,8 +506,8 @@ void requestpath_dap(char *dap_id, char *src_url, char *dest_url)
 		 PRIV_USER_FINAL,				// privilege state
 		 requestpath_dap_reaper_id,		// reaper id
 		 FALSE,							// do not want a command port
-		 env_string,                	// colon seperated environment string
-		 LOG_DIR.Value(),				// current working directory
+		 NULL,  		              	// colon seperated environment string
+		 Log_dir,						// current working directory
 		 FALSE,							// do not create a new process group
 		 NULL,							// list of socks to inherit
 		 daemon_std						// child stdio file descriptors
@@ -536,7 +515,6 @@ void requestpath_dap(char *dap_id, char *src_url, char *dest_url)
 		 								// job_opt_mask = 0
 	);
 
-	if (env_string) delete []env_string;// delete string from "new"
 	dap_queue.insert(dap_id, pid);
 }
 
@@ -813,7 +791,7 @@ void regular_check_for_requests_in_process()
 		
 		//  printf("regular check for requests in process..\n");
   
-	maxdelay_inseconds = MAXDELAY_INMINUTES * 60;
+	maxdelay_inseconds = Max_delayInMinutes * 60;
   
 		//set the constraint for the query
 	constraint = "other.status == \"processing_request\"";
@@ -897,7 +875,7 @@ void regular_check_for_requests_in_process()
 		
 								//		string sstatus = "";
 		
-							if (num_attempts + 1 < (int)MAX_RETRY){
+							if (num_attempts + 1 < (int)Max_retry){
 									//		  sstatus = "\"request_rescheduled\"";
 								modify_s += "status = \"request_rescheduled\";";
 							}
@@ -923,7 +901,7 @@ void regular_check_for_requests_in_process()
 							char lognotes[MAXSTR] ;
 							getValue(job_ad, "LogNotes", lognotes);
 		   
-							if (num_attempts + 1 >=  (int)MAX_RETRY){
+							if (num_attempts + 1 >=  (int)Max_retry){
 
 								remove_credential (dap_id);
 
@@ -959,9 +937,9 @@ void regular_check_for_requests_in_process()
 
 					getValue(job_ad, "use_protocol", use_protocol);
 
-					if (dap_queue.get_numjobs() < MAX_NUM_JOBS){
+					if (dap_queue.get_numjobs() < Max_num_jobs){
 		
-						if (num_attempts + 2 < (int)MAX_RETRY){
+						if (num_attempts + 2 < (int)Max_retry){
 							process_request(job_ad);
 						}
 		
@@ -1004,7 +982,7 @@ void startup_check_for_requests_in_process()
 				break;
 			}
 			else{
-				if (dap_queue.get_numjobs() < MAX_NUM_JOBS)
+				if (dap_queue.get_numjobs() < Max_num_jobs)
 					process_request(job_ad);
 			}
 		}while (query.Next(key));
@@ -1039,7 +1017,7 @@ void regular_check_for_rescheduled_requests()
 				break;
 			}
 			else{
-				if (dap_queue.get_numjobs() < MAX_NUM_JOBS)
+				if (dap_queue.get_numjobs() < Max_num_jobs)
 					process_request(job_ad);
 			}
 		}while (query.Next(key));
@@ -1080,15 +1058,21 @@ int initializations()
 		return FALSE;
 	}
 
+	// Module_dir must be a valid directory path.
 	struct stat stat_buff;
-	if (stat (DAP_CATALOG.Value(), &stat_buff) != 0) {
-		dprintf (D_ALWAYS, "Invalid value for DaP catalog %s: %s\n",
-				DAP_CATALOG.Value(),
+	if (stat (Module_dir, &stat_buff) != 0) {
+		dprintf (D_ALWAYS, "Invalid value for STORK_MODULE_DIR %s: %s\n",
+				Module_dir,
 				strerror(errno)
 				);
 		return FALSE;
 	}
-
+	if ( ! S_ISDIR(stat_buff.st_mode) ) {
+		dprintf (D_ALWAYS, "STORK_MODULE_DIR %s is not a directory\n",
+				Module_dir
+				);
+		return FALSE;
+	}
 
 		//initialize dapcollection 
 	initialize_dapcollection();
@@ -1153,7 +1137,7 @@ int call_main()
 				break;
 			}
 			else{
-				if (dap_queue.get_numjobs() < MAX_NUM_JOBS)
+				if (dap_queue.get_numjobs() < Max_num_jobs)
 					process_request(job_ad);
 			}
 		}while (query.Next(key));
@@ -1562,14 +1546,14 @@ int send_dap_status_to_client(ReliSock * sock)
     if (!found_job) {
 		rc = 0;
 		dprintf(D_ALWAYS, 
-				"Unable to get status for job with dap_id: %s\n", 
+				"Unable to get status for job with job id: %s\n", 
 				dap_id);
 		adbuffer = "Couldn't find DaP job: ";
 		adbuffer += dap_id;
     } else {
 		rc = 1;
 		dprintf(D_FULLDEBUG, 
-				"status report for the job with dap_id: %s ==>\n%s\n",
+				"status report for the job with job id: %s ==>\n%s\n",
 				dap_id, 
 				adbuffer.c_str());    
 	}
@@ -1648,20 +1632,20 @@ int remove_requests_from_queue(ReliSock * sock)
 		unsigned int pid;
 
 		if (dap_queue.get_pid(pid, dap_id) == DAP_SUCCESS){
-			dprintf(D_ALWAYS, "Killing process: %d for DaP job: %s\n", pid, dap_id);
+			dprintf(D_ALWAYS, "Killing process: %d for job: %s\n", pid, dap_id);
 			kill(pid, SIGKILL);
 		}
 		else{
-			dprintf(D_ALWAYS, "Corresponding process for DaP job: %s not found\n", dap_id);
+			dprintf(D_ALWAYS, "Corresponding process for job: %s not found\n", dap_id);
 		}
       
       
 		if (dap_queue.remove(dap_id) == DAP_SUCCESS){
-			dprintf(D_ALWAYS, "Removed DaP job: %s\n", dap_id);
+			dprintf(D_ALWAYS, "Removed job: %s\n", dap_id);
 		}
 		else{
-			dprintf(D_ALWAYS, "Error in removing DaP job: %s from dap_queue\n", dap_id);
-			dprintf(D_ALWAYS, "Still deleting DaP job: %s from collection & logs\n", dap_id);
+			dprintf(D_ALWAYS, "Error in removing job: %s from dap_queue\n", dap_id);
+			dprintf(D_ALWAYS, "Still deleting job: %s from collection & logs\n", dap_id);
 		}
 
 		remove_credential (dap_id);
@@ -1692,7 +1676,7 @@ int remove_requests_from_queue(ReliSock * sock)
 		rc = 1;
     }//if
     else {
-		dprintf(D_ALWAYS, "Couldn't find/remove DaP job: %s\n", dap_id);
+		dprintf(D_ALWAYS, "Couldn't find/remove job: %s\n", dap_id);
 		adbuffer += "Couldn't find/remove DaP job: ";
 		adbuffer += dap_id;
 		rc = 0;
@@ -1733,7 +1717,7 @@ int dap_reaper(std::string modify_s, int pid,int exit_status)
   
 	dprintf(D_ALWAYS, "Process %d terminated with exit status %d \n", 
 			pid, exit_status);
-	snprintf(fname, MAXSTR, "%s/out.%d", LOG_DIR.Value(), pid);
+	snprintf(fname, MAXSTR, "%s/out.%d", Log_dir, pid);
 
 	if (dap_queue.get_dapid(pid, dap_id) != DAP_SUCCESS){
 		dprintf(D_ALWAYS, "Process %d not in queue!\n", pid);
@@ -1887,7 +1871,7 @@ int dap_reaper(std::string modify_s, int pid,int exit_status)
 
 			//    string sstatus = "";
     
-		if (num_attempts + 1 < (int)MAX_RETRY){
+		if (num_attempts + 1 < (int)Max_retry){
 				//sstatus = "\"request_rescheduled\"";
 			modify_s += "status = \"request_rescheduled\";";
 		}
@@ -1936,7 +1920,7 @@ int dap_reaper(std::string modify_s, int pid,int exit_status)
       
 			//when request is failed for good, remove it from the collection and 
 			//log it to the history log file..
-		if (num_attempts + 1 >=  (int)MAX_RETRY){
+		if (num_attempts + 1 >=  (int)Max_retry){
 			strncat(linebufstr, linebuf, MAXSTR-2);
 			strcat(linebufstr, "\"");
 
@@ -2031,7 +2015,7 @@ void remove_credential (char * dap_id) {
 
 char * get_credential_filename (char * dap_id) {
 	std::string buff;
-	buff += cred_dir;
+	buff += Cred_tmp_dir;
 	buff += "/";
 	buff += "cred-";
 	buff += dap_id;
