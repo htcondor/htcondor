@@ -34,7 +34,12 @@
 #include "condor_ast.h"
 #include "condor_scanner.h"
 
-static	Token	nextToken;
+Token &nextToken()
+{
+	static Token next_token;
+	return next_token;
+}
+
 static	int		alreadyRead;
 
 extern	void		Scanner(char*&, Token&);
@@ -60,11 +65,11 @@ ReadToken(char*& s)
 {
     if(alreadyRead == TRUE) 
     {
-		nextToken.reset();
-        Scanner(s, nextToken);
+		nextToken().reset();
+        Scanner(s, nextToken());
     }
     alreadyRead = TRUE;
-    return(&nextToken);
+    return(&nextToken());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -76,11 +81,11 @@ LookToken(char*& s)
 {
     if(alreadyRead == TRUE)
     {
-		nextToken.reset();
-        Scanner(s, nextToken);
+		nextToken().reset();
+        Scanner(s, nextToken());
     }
     alreadyRead = FALSE;
-    return(&nextToken);
+    return(&nextToken());
 }
 
 
@@ -97,10 +102,10 @@ Match(LexemeType t, char*& s, int& count)
     count = count + token->length;
     if(t == token->type)
     {
-		nextToken.reset();
+		nextToken().reset();
         return TRUE;
     }
-	nextToken.reset();
+	nextToken().reset();
     return FALSE;
 }
 
@@ -634,7 +639,7 @@ Parse(const char* s, ExprTree*& tree)
     {
 		count = 0;
     }
-	nextToken.reset();
+	nextToken().reset();
 	free(str);
     return count;
 }
@@ -652,10 +657,10 @@ Parse(const char* s, ExprTree*& tree)
     alreadyRead = TRUE;
     if(ParseAssignExpr(tmp, tree, count))
     {
-		nextToken.reset();
+		nextToken().reset();
 		return 0;
     }
-	nextToken.reset();
+	nextToken().reset();
     return count;
 }
 #endif
