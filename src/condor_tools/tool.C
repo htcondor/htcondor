@@ -29,6 +29,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
+#include "condor_version.h"
 #include "condor_io.h"
 #include "my_hostname.h"
 #include "get_daemon_addr.h"
@@ -36,6 +37,7 @@
 extern "C" int strincmp( char*, char*, int );
 
 void do_command( char *name );
+void version();
 
 enum daemonType {MASTER, SCHEDD, STARTD};
 
@@ -54,11 +56,12 @@ usage( char *str )
 {
 	char* tmp = strchr( str, '_' );
 	if( !tmp ) {
-		fprintf( stderr, "Usage: %s [command] [-help] [hostnames]\n", str );
+		fprintf( stderr, "Usage: %s [command] [-help] [-version] [hostnames]\n", str );
 	} else {
-		fprintf( stderr, "Usage: %s [-help] [hostnames]\n", str );
+		fprintf( stderr, "Usage: %s [-help] [version] [hostnames]\n", str );
 	}
 	fprintf( stderr, "  -help gives this usage information.\n" );
+	fprintf( stderr, "  -version prints the version.\n" );
 	fprintf( stderr, "  The given command is sent to all hosts specified.\n" ); 
 	fprintf( stderr, 
 			 "  (if no hostname is specified, the local host is used).\n\n" );
@@ -149,7 +152,7 @@ int
 main( int argc, char *argv[] )
 {
 	char *daemonname, *MyName = argv[0];
-	char *cmd_str; 
+	char *cmd_str, **tmp;
 	int size, did_one = FALSE;
 
 	config( 0 );
@@ -168,8 +171,13 @@ main( int argc, char *argv[] )
 		if( ! argv[1] ) { usage( MyName ); }
 
 			// If argv[1] begins with '-', print usage, don't append.
-		if( argv[1][0] == '-' ) { usage( MyName ); }
-
+		if( argv[1][0] == '-' ) { 
+			if( argv[1][1] == 'v' ) {
+				version();
+			} else {
+				usage( MyName );
+			}
+		}
 		size = strlen( argv[1] );
 		MyName = (char*)malloc( size + 8 );
 		sprintf( MyName, "condor_%s", argv[1] );
@@ -215,16 +223,25 @@ main( int argc, char *argv[] )
 		daemonName = daemonNames[2];
 	} else {
 		fprintf( stderr, "Error: unknown command %s\n", MyName );
-		exit(1);
+		usage( "condor" );
 	}
-
-	for( argv++; *argv; argv++ ) {
-		if( (*argv)[0] == '-' ) {
-			if( (*argv)[1] == 'n' ) {
-				continue;
+	
+		// First, check for -help or -version:
+	tmp = argv;
+	for( tmp++; *tmp; tmp++ ) {
+		if( (*tmp)[0] == '-' ) {
+			if( (*tmp)[1] == 'v' ) {
+				version();
 			} else {
 				usage( MyName );
 			}
+		}
+	}
+
+		// Now, process real args, and ignore - options.
+	for( argv++; *argv; argv++ ) {
+		if( (*argv)[0] == '-' ) {
+			continue;
 		}
 		did_one = TRUE;
 		if( (daemonname = get_daemon_name(*argv)) == NULL ) {
@@ -311,6 +328,15 @@ do_command( char *name )
 				daemonName );
 	}
 }
+
+
+void
+version()
+{
+	printf( "%s\n", CondorVersion() );
+	exit(0);
+}
+
 
 extern "C" int SetSyscalls(){}
 
