@@ -33,31 +33,31 @@ BEGIN_NAMESPACE( classad )
 
 //-------------collection server templates-------------
     // view content
-template class multiset<ViewMember, ViewMemberLT>;
-template class multiset<ViewMember, ViewMemberLT>::iterator;
+template multiset<ViewMember, ViewMemberLT>;
+template multiset<ViewMember, ViewMemberLT>::iterator;
     // list of sub-views
-template class slist<View*>;
+template slist<View*>;
     // view registry
-template class hash_map<string,View*,StringHash>;
-template class hash_map<string,View*,StringHash>::iterator;
+template hash_map<string,View*,StringHash>;
+template hash_map<string,View*,StringHash>::iterator;
     // index
-template class hash_map<string,multiset<ViewMember,ViewMemberLT>::iterator,
+template hash_map<string,multiset<ViewMember,ViewMemberLT>::iterator,
     StringHash>::iterator;
-template class hash_map<string,multiset<ViewMember,ViewMemberLT>::iterator,
+template hash_map<string,multiset<ViewMember,ViewMemberLT>::iterator,
     StringHash>;
     // main classad table
-template class map<string, int>;
-template class hash_map<string,int,StringHash>;
-template class hash_map<string,int,StringHash>::iterator;
+template map<string, int>;
+template hash_map<string,int,StringHash>;
+template hash_map<string,int,StringHash>::iterator;
 
 
-template class hash_map<string, ClassAdProxy, StringHash>;
-template class hash_map<string, ClassAdProxy, StringHash>::iterator;
+template hash_map<string, ClassAdProxy, StringHash>;
+template hash_map<string, ClassAdProxy, StringHash>::iterator;
     // transaction registry
-template class hash_map<string, ServerTransaction*, StringHash>;
-template class hash_map<string, ServerTransaction*, StringHash>::iterator;
+template hash_map<string, ServerTransaction*, StringHash>;
+template hash_map<string, ServerTransaction*, StringHash>::iterator;
     // operations in transaction
-template class list<XactionRecord>;
+template list<XactionRecord>;
 
 END_NAMESPACE
 

@@ -33,8 +33,8 @@ BEGIN_NAMESPACE( classad )
 
 //-------------collection client templates---------------
     // client-side transaction registry
-template class hash_map<string, ClientTransaction*, StringHash>;
-template class hash_map<string, ClientTransaction*, StringHash>::iterator;
+template hash_map<string, ClientTransaction*, StringHash>;
+template hash_map<string, ClientTransaction*, StringHash>::iterator;
 
 END_NAMESPACE
 
