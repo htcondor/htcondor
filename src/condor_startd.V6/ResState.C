@@ -101,6 +101,8 @@ ResState::change( State new_state, Activity new_act )
  	now = (int)time( NULL );
 	if( statechange ) {
 		stime = now;
+			// Also reset activity time
+		atime = now;
 		r_state = new_state;
 		if( r_state == r_destination ) {
 				// We've reached our destination, so we can reset it.
