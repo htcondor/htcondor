@@ -27,6 +27,7 @@
 ResState::ResState( Resource* rip )
 {
 	r_state = owner_state;
+	r_destination = no_state;
 	r_act = idle_act;
 	atime = (int)time(NULL);
 	stime = atime;
@@ -101,6 +102,10 @@ ResState::change( State new_state, Activity new_act )
 	if( statechange ) {
 		stime = now;
 		r_state = new_state;
+		if( r_state == r_destination ) {
+				// We've reached our destination, so we can reset it.
+			r_destination = no_state;
+		}
 	}
 	if( actchange ) {
 		r_act = new_act;
@@ -144,7 +149,7 @@ ResState::change( State new_state )
 
 
 int
-ResState::eval()
+ResState::eval( void )
 {
 		// Recompute attributes needed at every timeout and refresh classad 
 	rip->timeout_classad();
@@ -259,9 +264,7 @@ int
 ResState::leave_action( State s, Activity a, 
 						int statechange, int ) 
 {
-	ClassAd* cp;
 	switch( s ) {
-
 	case preempting_state:
 		if( statechange ) {
 				// If we're leaving the preepting state, we should
@@ -386,6 +389,11 @@ ResState::enter_action( State s, Activity a,
 		}
 		break; 	// preempting_state
 
+	case delete_state:
+		resmgr->deleteResource( rip );
+		return TRUE;
+		break;
+
 	default: 
 		EXCEPT("Unknown state in ResState::enter_action");
 	}
@@ -402,3 +410,37 @@ ResState::dprintf( int flags, char* fmt, ... )
 	va_end( args );
 }
 
+
+void
+ResState::set_destination( State new_state )
+{
+	r_destination = new_state;
+
+	if( r_destination != delete_state ) {
+		EXCEPT( "set_destination() doesn't work with %s state yet", 
+				state_to_string(r_destination) );
+	}
+
+	dprintf( D_ALWAYS, "Set destination state to %s\n", 
+			 state_to_string(new_state) );
+
+		// Now, depending on what state we're in, do what we have to
+		// do to start moving towards our destination.
+	switch( r_state ) {
+	case owner_state:
+	case matched_state:
+	case unclaimed_state:
+		change( r_destination );
+		break;
+	case preempting_state:
+			// Can't do anything else until the starter exits.
+		break;
+	case claimed_state:
+		change( preempting_state );
+		break;
+	default:
+		EXCEPT( "Unexpected state %s in ResState::set_destination",
+				state_to_string(r_state) );
+	}
+
+}

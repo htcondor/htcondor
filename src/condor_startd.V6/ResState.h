@@ -27,17 +27,21 @@ class ResState
 {
 public:
 	ResState(Resource* rip);
-	State	state() {return r_state;};
-	Activity activity() {return r_act;};
+	State	state( void ) { return r_state; };
+	Activity activity( void ) { return r_act; };
 	void	publish( ClassAd*, amask_t );
 	int		change( Activity );
 	int		change( State );
 	int		change( State, Activity );
-	int 	eval();
+	int 	eval( void );
+	void	set_destination( State );
+	State	destination( void ) { return r_destination; };
+
 	void	dprintf( int, char*, ... );
 private:
 	Resource*	rip;
 	State 		r_state;
+	State 		r_destination;
 	Activity	r_act;		
 
 	int		stime;		// time we entered the current state
