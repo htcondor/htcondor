@@ -89,6 +89,19 @@ The details of each version are described below.
 \item Added a (configurable, defaults to off) feature to the \Condor{schedd}
    to allow backup the spool file before doing anything else.
 
+\item The "Continous" option of the \Condor{startd} ``cron'' jobs is
+being depricated.   It's being replaced by two new options which
+control separate aspects of it's behaviour:
+\begin{itemize}
+\item "WaitForExit" specifies the "exit timing" mode
+\item "ReConfig" specifies that the job can handle SIGHUPs, and it should 
+be sent a SIGHUP when the \Condor{startd} is reconfigured.
+\end{itemize}
+
+\item A lot of the items logged by the \Condor{startd} ``cron'' logic,
+changed to D\_FULLDEBUG (from D\_ALWAYS), etc.
+
+
 \end{itemize}
 
 
@@ -96,7 +109,19 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug in the \Condor{startd} ``cron'' logic which caused the
+\Condor{startd} to except when trying to delete a job that could never
+be run (i.e. invalid executable, etc).
+
+\item Fixed a bug in \Condor{startd} ``cron'' logic which caused it to
+not detect when the starting of a ``job'' failed.
+
+\item Fixed several bugs in the reconfiguration handling of the
+\Condor{startd} ``cron'' logic.  In particular, even if the job has
+the "reconfig" option set (or "continuous"), the job(s) won't be sent
+a SIGHUP when the startd first starts, or when the job itself is first
+run (until it output's it's first "output block", defined by the "-"
+separator).
 
 \end{itemize}
 
