@@ -44,17 +44,13 @@ static Qmgr_connection *connection = 0;
 Qmgr_connection *
 ConnectQ(char *qmgr_location )
 {
-	int		rval;
+	int		rval, fd, cmd, ok, is_local = FALSE;
 	char	tmp_file[255];
-	int		fd;
-	int		cmd;
 #if !defined(WIN32)
 	struct  passwd *pwd;
 #endif
 	char*	scheddAddr = get_schedd_addr(0);
 	char*	localScheddAddr = NULL;
-	int		is_local = FALSE;
-
 
 	if( scheddAddr ) {
 		localScheddAddr = strdup( scheddAddr );
@@ -86,21 +82,22 @@ ConnectQ(char *qmgr_location )
 	}
 		
 	if(scheddAddr) {
-		qmgmt_sock = new ReliSock(scheddAddr, QMGR_PORT);
+		qmgmt_sock = new ReliSock();
+		ok = qmgmt_sock->connect(scheddAddr, QMGR_PORT);
+		if( !ok ) {
+			dprintf(D_ALWAYS, "Can't connect to queue manager\n");
+		}
 	} else {
+		ok = FALSE;
 		if( qmgr_location ) {
 			dprintf( D_ALWAYS, "Can't find address of queue manager %s\n", 
 					 qmgr_location );
 		} else {
 			dprintf( D_ALWAYS, "Can't find address of local queue manager\n" );
 		}
-		free(connection);
-		free(localScheddAddr);
-		return 0;
 	}
 
-	if (!qmgmt_sock->ok()) {
-		dprintf(D_ALWAYS, "Can't connect to queue manager\n");
+	if( !ok ) {
 		free(connection);
 		free(localScheddAddr);
 		return 0;
@@ -149,16 +146,17 @@ ConnectQ(char *qmgr_location )
 }
 
 
-void
+bool
 DisconnectQ(Qmgr_connection *conn)
 {
+	int rval;
 	if (conn == 0) {
 		conn = connection;
 	}
 	conn->count--;
 
 	if (conn->count == 0) {
-		CloseConnection();
+		rval = CloseConnection();
 		delete qmgmt_sock;
 		qmgmt_sock = NULL;
 		//this is conn->rendevous_file, not rendevous_file
@@ -172,6 +170,10 @@ DisconnectQ(Qmgr_connection *conn)
 			connection = 0;
 		}
 	}
+	if( rval < 0 ) {
+		return false;
+	}
+	return true;
 }
 
 
