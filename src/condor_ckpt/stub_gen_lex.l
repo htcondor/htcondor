@@ -54,7 +54,6 @@ char *
 strdup( char *orig )
 {
 	char *answer;
-	char *malloc();
 
 	answer = malloc( strlen(orig) + 1 );
 	strcpy( answer, orig );
