@@ -656,7 +656,7 @@ init_classad(int interval)
 	ad->Insert(line);
 
 	if ( interval > 0 ) {
-		sprintf(line,"%s = %d",ATTR_UPDATE_INTERVAL,3*interval);
+		sprintf(line,"%s = %d",ATTR_UPDATE_INTERVAL,24*interval);
 		ad->Insert(line);
 	}
 
