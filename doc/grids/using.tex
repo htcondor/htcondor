@@ -127,6 +127,7 @@ Three ways are listed for obtaining the Globus tools:
 \item{Configure for Condor-G.}
 If you installed Condor using the submit-only option, you will
 need to add the following entries to your configuration file:
+\footnotesize
 \begin{verbatim}
 GRIDMANAGER             = $(SBIN)/condor_gridmanager
 GAHP                    = $(SBIN)/gahp_server
@@ -136,6 +137,7 @@ GRIDMANAGER_LOG         = $(LOG)/GridLogs/GridmanagerLog.$(USERNAME)
 GLIDEIN_SERVER_NAME     = gridftp.cs.wisc.edu
 GLIDEIN_SERVER_DIR      = /p/condor/public/binaries/glidein
 \end{verbatim}
+\normalsize
 
 If Condor-G is installed as root, the file
 set by the configuration variable
@@ -621,9 +623,11 @@ an escaped double quote character may be used.
 The example
 % % what it is supposed to appear as:
 % % arguments = \"don't\" \"mess with\" \"quoting rules\"
+\footnotesize
 \begin{verbatim}
 arguments = \"don't\" \"mess with\" \"quoting rules\"
 \end{verbatim}
+\normalsize
 results in 
 \begin{verbatim}
 argv[1] = don't

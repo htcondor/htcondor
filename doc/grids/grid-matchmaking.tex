@@ -64,6 +64,7 @@ machine, but with a different set of attributes.
 To advertise a grid site, you first need to describe the site in a
 file. Here is a sample ClassAd that describes a grid site:
 
+\footnotesize
 \begin{verbatim}
 # This is a comment
 MyType                = "Machine"
@@ -77,6 +78,7 @@ WantAdRevaluate       = True
 UpdateSequenceNumber  = 4
 CurMatches            = 0
 \end{verbatim}
+\normalsize
 
 Let's look at each line:
 
@@ -105,16 +107,20 @@ This is an attribute that says the grid site (machine) wants to be
 matched with a job. Leave this as it is. 
 
 
+\footnotesize
 \begin{verbatim}
 Name                  = "Example1_Gatekeeper"
 \end{verbatim}
+\normalsize
 
 You will want a unique name for each grid site. Any name is fine, as long as
 it is quoted.
 
+\footnotesize
 \begin{verbatim}
 gatekeeper_url        = "grid.example.com/jobmanager"
 \end{verbatim}
+\normalsize
 
 This is the Globus gatekeeper contact string for your grid site. It is
 probably a machine name followed by a slash followed by the name of
@@ -151,9 +157,11 @@ will assume it is 0.
 Condor will increment this number every time it makes a match against
 a grid site.
 
+\footnotesize
 \begin{verbatim}
 Requirements          = CurMatches < 10
 \end{verbatim}
+\normalsize
 
 These are the requirements that the grid site insists must be trust
 before it will accept a job. These could refer to features of the
@@ -164,10 +172,12 @@ date when jobs finish. Of course, you can edit this statement to have
 different requirements. For example, if you want to accept all jobs,
 you can have ``Requirements = True''. 
 
+\footnotesize
 \begin{verbatim}
 Rank                  = 0.000000
 CurrentRank           = 0.000000
 \end{verbatim}
+\normalsize
 
 This is a numerical ranking that will be assigned to a job. Right now
 it is not used, but should be set to 0. 
@@ -207,9 +217,11 @@ For \Condor{advertise} you will need to specify UPDATE\_STARTD\_AD for
 the update command. For example, if your ClassAd is specified in a
 file named ``grid-ad'' you would do:
 
+\footnotesize
 \begin{verbatim}
     condor_advertise UPDATE_STARTD_AD grid-ad
 \end{verbatim}
+\normalsize
 
 \Condor{advertise} usually uses UDP to transmit your ClassAd. In
 wide-area networks, this may be insufficient. You can use TCP by
@@ -223,17 +235,21 @@ Submitting a job to Condor-G that requires matchmaking is
 straightforward. Instead of specifying a particular scheduler with
 globussheduler like this:
 
+\footnotesize
 \begin{verbatim}
 globusscheduler = grid.example.com/jobmanager
 \end{verbatim}
+\normalsize
 
 you instead specify requirements and tell Condor-G where to find the
 gatekeeper URL in the grid site ClassAd:
 
+\footnotesize
 \begin{verbatim}
 globusscheduler = $$(gatekeeper_url)
 requirements    = true
 \end{verbatim}
+\normalsize
 
 This will allow to run at any grid site, and will extract the
 gatekeeper\_url attribute from the ClassAd. There is no magic meaning
@@ -246,6 +262,7 @@ want to run at a site that has the Bamboozle software installed, and
 the sites that have it installed specify ``HaveBamboozle = True'', as
 described above. A complete job description may look like this:
 
+\footnotesize
 \begin{verbatim}
 universe        = globus
 executable      = analyze_bamboozle_data
@@ -257,6 +274,7 @@ requirements    = HaveBamboozle == True
 leave_in_queue  = jobstatus == 4
 queue
 \end{verbatim}
+\normalsize
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Advanced usage}
@@ -269,10 +287,12 @@ sites that may be bad, but you can give it some assistance. Let's say
 that you want to avoid running at the last grid site you ran at. You
 could add this to your job description:
 
+\footnotesize
 \begin{verbatim}
 match_list_length = 1
 Rank              = TARGET.Name != LastMatchName0
 \end{verbatim}
+\normalsize
 
 This will prefer to run at a grid site that was not just tried, but it
 will allow the job to be run there if there is no other option. 
