@@ -28,8 +28,11 @@
 #include "simplelist.h"
 #include "condor_cronjob.h"
 
+// Pre-define the cronjob
+//class CondorCronJob;
+
 // Define a simple class to run child tasks periodically.
-class CondorCron
+class CondorCron : public Service
 {
   public:
 	CondorCron( );
@@ -39,6 +42,7 @@ class CondorCron
 	int Reconfig( void );
 	int DeleteAll( void );
 	int KillAll( bool force );
+	int NumAliveJobs( void );
 	int AddJob( 
 		const char *	jobName,
 		CondorCronJob	*job

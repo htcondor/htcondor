@@ -79,6 +79,24 @@ CondorCron::KillAll( bool force )
 	return 0;
 }
 
+// Get the number of jobs not ready to shutdown
+int
+CondorCron::NumAliveJobs( void )
+{
+	int				NumAlive = 0;
+	CondorCronJob	*curJob;
+
+	// Walk through the list
+	JobList.Rewind( );
+	while ( JobList.Next( curJob ) ) {
+		if ( curJob->IsAlive( ) ) {
+			NumAlive++;
+		}
+	}
+	return NumAlive;
+	
+}
+
 // Reconfigure all jobs
 int
 CondorCron::Reconfig( )

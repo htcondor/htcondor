@@ -149,6 +149,8 @@ CondorCronJob::CondorCronJob( const char *jobName )
 	killTimer = -1;
 	childFds[0] = childFds[1] = childFds[2] = -1;
 	stdOut = stdErr = -1;
+	eventHandler = NULL;
+	eventService = NULL;
 
 	// Build my output buffers
 	stdOutBuf = new CronJobOut( this );
@@ -276,6 +278,23 @@ CondorCronJob::SetVar( char **var, const char *value, bool allowNull )
 	return ( NULL == *var ) ? -1 : 0;
 }
 
+// Set job died handler
+int
+CondorCronJob::SetEventHandler(
+	CronEventHandler	NewHandler,
+	Service				*s )
+{
+	// No nests, etc.
+	if ( NULL != eventHandler ) {
+		return -1;
+	}
+
+	// Just store 'em & go
+	eventHandler = NewHandler;
+	eventService = s;
+	return 0;
+}
+
 // Set job characteristics
 int
 CondorCronJob::SetPeriod( CronJobMode newMode, unsigned newPeriod )
@@ -354,7 +373,7 @@ CondorCronJob::RunJob( void )
 {
 
 	// Make sure that the job is idle!
-	if ( state != CRON_IDLE ) {
+	if ( ( state != CRON_IDLE ) && ( state != CRON_DEAD ) ) {
 		dprintf( D_ALWAYS, "Cron: Job '%s' is still running!\n", name );
 
 		// If we're not supposed to kill the process, just skip this timer
@@ -456,7 +475,15 @@ CondorCronJob::Reaper( int exitPid, int exitStatus )
 
 		// Huh?  Should never happen
 	case CRON_IDLE:
+	case CRON_DEAD:
+		dprintf( D_ALWAYS, "CronJob::Reaper:: Job %s in state %s: Huh?\n",
+				 name, StateString() );
 		break;							// Do nothing
+
+		// Waiting for it to die...
+	case CRON_TERMSENT:
+	case CRON_KILLSENT:
+		break;		// Do nothing at all
 
 		// We've sent the process a signal, waiting for it to die
 	default:
@@ -483,7 +510,14 @@ CondorCronJob::Reaper( int exitPid, int exitStatus )
 	}
 
 	// Process the output
-	return ProcessOutputQueue( );
+	ProcessOutputQueue( );
+
+	// Finally, notify my manager
+	if ( NULL != eventHandler ) {
+		(eventService->*eventHandler)( this, CONDOR_CRON_JOB_DIED );
+	}
+
+	return 0;
 }
 
 // Publisher
@@ -619,6 +653,11 @@ RunProcess( void )
 
 	// All ok here
 	state = CRON_RUNNING;
+
+	// Finally, notify my manager
+	if ( NULL != eventHandler ) {
+		(eventService->*eventHandler)( this, CONDOR_CRON_JOB_START );
+	}
 
 	// All ok!
 	return 0;
@@ -842,7 +881,7 @@ CondorCronJob::KillJob( bool force )
 	mode = CRON_KILL;
 
 	// Idle?
-	if ( CRON_IDLE == state ) {
+	if ( ( CRON_IDLE == state ) || ( CRON_DEAD == state ) ) {
 		return 0;
 	}
 
@@ -850,7 +889,7 @@ CondorCronJob::KillJob( bool force )
 	if ( ( force ) || ( CRON_TERMSENT == state )  ) {
 		dprintf( D_JOB, "Cron: Killing job '%s' with SIGKILL, pid = %d\n", 
 				 name, pid );
-		if ( daemonCore->Send_Signal( 0 - pid, SIGKILL ) != 0 ) {
+		if ( daemonCore->Send_Signal( pid, SIGKILL ) == 0 ) {
 			dprintf( D_ALWAYS,
 					 "Cron: job '%s': Failed to send SIGKILL to %d\n",
 					 name, pid );
@@ -861,7 +900,7 @@ CondorCronJob::KillJob( bool force )
 	} else if ( CRON_RUNNING == state ) {
 		dprintf( D_JOB, "Cron: Killing job '%s' with SIGTERM, pid = %d\n", 
 				 name, pid );
-		if ( daemonCore->Send_Signal( 0 - pid, SIGTERM ) != 0 ) {
+		if ( daemonCore->Send_Signal( pid, SIGTERM ) == 0 ) {
 			dprintf( D_ALWAYS,
 					 "Cron: job '%s': Failed to send SIGTERM to %d\n",
 					 name, pid );

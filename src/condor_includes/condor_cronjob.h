@@ -72,6 +72,16 @@ typedef enum
 	CRON_ILLEGAL
 } CronJobMode;
 
+// Notification events..
+typedef enum {
+	CONDOR_CRON_JOB_START,
+	CONDOR_CRON_JOB_DIED,
+} CondorCronEvent;
+
+// Cronjob event
+class CondorCronJob;
+typedef int     (Service::*CronEventHandler)(CondorCronJob*,CondorCronEvent);
+
 // Define a Condor 'Cron' job
 class CondorCronJob : public Service
 {
@@ -87,6 +97,19 @@ class CondorCronJob : public Service
 	const char *GetEnv( void ) { return env; };
 	const char *GetCwd( void ) { return cwd; };
 	unsigned GetPeriod( void ) { return period; };
+
+	// State information
+	CronJobState GetState( void ) { return state; };
+	bool IsRunning( void ) 
+		{ return ( CRON_RUNNING == state ? true : false ); };
+	bool IsIdle( void )
+		{ return ( CRON_IDLE == state ? true : false ); };
+	bool IsDead( void ) 
+		{ return ( CRON_DEAD == state ? true : false ); };
+	bool IsAlive( void ) 
+		{ return ( (CRON_IDLE == state)||(CRON_DEAD == state)
+				   ? false : true ); };
+
 	int Reconfig( void );
 
 	int SetName( const char *name );
@@ -106,6 +129,8 @@ class CondorCronJob : public Service
 
 	int ProcessOutputQueue( void );
 	virtual int ProcessOutput( const char *line );
+
+	int SetEventHandler( CronEventHandler handler, Service *s );
 
   private:
 	char			*name;			// Logical name of the job
@@ -127,6 +152,10 @@ class CondorCronJob : public Service
 	CronJobErr		*stdErrBuf;		// Buffer for stderr
 	bool			marked;			// Is this one marked?
 	int				killTimer;		// Make sure it dies
+
+	// Event handler stuff
+	CronEventHandler	eventHandler;	// Handle cron events
+	Service				*eventService;	// Associated service
 
 	// Options
 	bool			optKill;		// Kill the job if before next run?

@@ -28,13 +28,14 @@
 #include "condor_cron.h"
 
 // Define a simple class to run child tasks periodically.
-class CondorCronMgr
+class CondorCronMgr : public Service
 {
   public:
 	CondorCronMgr( const char *name );
 	virtual ~CondorCronMgr( );
 	int Reconfig( void );
 	int KillAll( bool force );
+	bool IsAllIdle( void );
 
   protected:
 	virtual CondorCronJob *NewJob( const char *name );
@@ -54,6 +55,7 @@ class CondorCronMgr
 	char *NextTok( char *cur, const char *tok );
 	char *GetParam( const char *paramName, 
 					const char *paramName2 = NULL );
+
 };
 
 #endif /* _CONDOR_CRONMGR_H */

@@ -129,6 +129,16 @@ CondorCronMgr::KillAll( bool force)
 	return Cron.KillAll( force );
 }
 
+// Check: Are we ready to shutdown?
+bool
+CondorCronMgr::IsAllIdle( void )
+{
+	int		AliveJobs = Cron.NumAliveJobs( );
+
+	dprintf( D_FULLDEBUG, "CronMgr: %d jobs alive\n", AliveJobs );
+	return AliveJobs ? false : true;
+}
+
 // Handle Reconfig
 int
 CondorCronMgr::Reconfig( void )
@@ -440,3 +450,13 @@ CondorCronMgr::NextTok( char *cur, const char *tok )
 	// Done
 	return tmp;
 }
+
+// Handles the death of a child (does nothing for now)
+#if 0
+int
+CondorCronMgr::JobDied( CondorCronJob *DeadJob )
+{
+	(void) DeadJob;
+	return 0;
+}
+#endif
