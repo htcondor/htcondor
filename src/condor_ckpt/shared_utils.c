@@ -256,7 +256,7 @@ _condor_itoa(int quantity, char *out, int base)
 	unsigned char byte, hi, lo;
 	unsigned int hexquant;
 	unsigned int octquant;
-	int numchars;
+	int numchars, maxchars;
 	char *p, *q;
 	int div, sum, mod, neg;
 	unsigned char basemap[16];
@@ -376,7 +376,14 @@ _condor_itoa(int quantity, char *out, int base)
 		}
 		
 			/* create the ASCII representation backwards */
-		for( i = 1; i < 21; i++ ) {
+		if (sizeof(int) == 4) {
+			maxchars = 10;
+		} else if (sizeof(int) == 8) {
+			maxchars = 20;
+		} else {
+			maxchars = 10;		/* use a safe default  */
+		}
+		for( i = 1; i <= maxchars; i++ ) {
 			out[numchars] = 0;
 			div = quantity / sum;
 			sum *= 10;
