@@ -395,25 +395,52 @@ page~\pageref{sec:Configuring-SMP} for a lengthy discussion on
 this topic.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{How do I set up my machines so that only certain user's jobs will run on them?}
+\subsection*{How do I set up my machines so that only specific users' jobs will run on them?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{running a job!on only certain machines}
 
-Restrictions on what jobs will run on a given resource can be easily
-specified in the resource's Requirements statement.
+Restrictions on what jobs will run on a given resource are
+enforced by only starting jobs that meet specific constraints,
+and these constraints are specified as part of the configuration.
 
-To specify that a given machine should only run certain user's jobs,
-for example, you could add the following Requirements entry to the
+To specify that a given machine should only run certain users' jobs,
+and always run the jobs regardless of other activity on the machine,
+load average, etc.,
+place the following entry in the
 machine's Condor configuration file:
 
 \footnotesize
 \begin{verbatim}
-Requirements = (RemoteUser == "userfoo@baz.edu" || RemoteUser == "userbar@baz.edu")
+START = ( (RemoteUser == "userfoo@baz.edu") || \
+          (RemoteUser == "userbar@baz.edu") )
 \end{verbatim}
 \normalsize
 
-To configure multiple machines to do so, simply create a common
-configuration file containing this requirement for them to share.
+A more likely scenario is that the machine is restricted to run
+only specific users' jobs, contingent on the machine not having
+other interactive activity and not being heavily loaded.
+The following entries are in the machine's Condor configuration file. 
+Note that extra configuration variables are defined to make 
+the \MacroNI{START} variable easier to read.
+
+\footnotesize
+\begin{verbatim}
+# Only start jobs if:
+# 1) the job is owned by the allowed users, AND
+# 2) the keyboard has been idle long enough, AND
+# 3) the load average is low enough OR the machine is currently
+#    running a Condor job, and would therefore accept running
+#    a different one
+AllowedUser    = ( (RemoteUser == "userfoo@baz.edu") || \
+                   (RemoteUser == "userbar@baz.edu") )
+KeyboardUnused = (KeyboardIdle > $(StartIdleTime))
+NoOwnerLoad    = ($(CPUIdle) || (State != "Unclaimed" && State != "Owner"))
+START          = $(AllowedUser) && $(KeyboardUnused) && $(NoOwnerLoad)
+\end{verbatim}
+\normalsize
+
+To configure multiple machines to do so, create a common
+configuration file containing this entry for them to share.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{How do I configure Condor to run my jobs only on machines that have the right packages installed?}
@@ -1099,6 +1126,63 @@ The solution to the problem is to synchronize the clocks on
 these machines.
 An administrator can do this using a tool such as \Prog{ntp}.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{The user condor's home directory cannot be found.  Why?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{NIS!Condor must be dynamically linked}
+\index{user condor!home directory not found}
+This problem may be observed after installation, when attempting
+to execute
+\footnotesize
+\begin{verbatim}
+~condor/condor/bin/condor_config_val  -tilde
+\end{verbatim}
+\normalsize
+and there is a user named condor.
+The command prints a message such as
+\footnotesize
+\begin{verbatim}
+     Error: Specified -tilde but can't find condor's home directory
+\end{verbatim}
+\normalsize
+
+In this case, the difficulty stems from 
+using NIS,
+because the Condor daemons fail to communicate properly with NIS to get
+account information.
+To fix the problem, a dynamically linked version of Condor must
+be installed.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Condor commands (including \Condor{q}) are really slow. What is going on?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Condor commands!really slow; why?}
+
+Some Condor programs will react slowly if they expect to find a
+\Condor{collector} daemon, yet cannot contact one.
+Notably, \Condor{q} can be very slow.
+The \Condor{schedd} daemon will also be slow,
+and it will log lots of harmless messages complaining.
+If you are not running a \Condor{collector} daemon and
+\Condor{negotiator} daemon,
+it is important that the configuration variables
+\Macro{COLLECTOR\_HOST} and \Macro{NEGOTIATOR\_HOST} be set to nothing.
+This is typically done by setting \MacroNI{CONDOR\_HOST} with
+\footnotesize
+\begin{verbatim}
+CONDOR_HOST=
+COLLECTOR_HOST=$(CONDOR_HOST)
+NEGOTIATOR_HOST=$(CONDOR_HOST)
+\end{verbatim}
+\normalsize
+or
+\footnotesize
+\begin{verbatim}
+COLLECTOR_HOST=
+NEGOTIATOR_HOST=
+\end{verbatim}
+\normalsize
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Condor on Windows}
@@ -1180,12 +1264,13 @@ using the submit description file command \Opt{transfer\_input\_files}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Why is \Condor{master} failing to start with some error about\\
+\subsection*{Why is the \Condor{master} daemon failing to start, giving an error about\\
    	"In StartServiceCtrlDispatcher, Error number: 1063"?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-On Condor for Windows, the master is started as a service. Therefore,
-starting the master as you would on Unix will not work. You must start
-Condor on Windows machines using:
+In Condor for Windows, the \Condor{master} daemon is started as a service.
+Therefore,
+starting the \Condor{master} daemon as you would on Unix will not work.
+Start Condor on Windows machines using either
 \begin{verbatim}
 	net start condor
 \end{verbatim}
