@@ -244,6 +244,7 @@ V6_6_COMMON_EXT	-a EXT_COMMON \
 		   externals/bundles/glibc/2.2.2 \
 		   externals/bundles/globus/2.2.4 \
 		   externals/bundles/globus/2.4.3 \
+		   externals/bundles/globus/2.4.3.vdt.1.1.14 \
 		   externals/bundles/gpt/3.0 \
 		   externals/bundles/krb5/1.2.5 \
 		   externals/bundles/pvm/3.4.2 \
