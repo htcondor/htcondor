@@ -576,7 +576,7 @@ part_send_job(
     dprintf( D_ALWAYS, "Requesting Standard Starter\n" );
   }
 #else
-  cmd = ACTIVATE_CLAIM;
+  cmd = ACTIVATE_CLAIM; // new protocol in V6 startd
 #endif 
 
   /* Connect to the startd */
@@ -666,6 +666,48 @@ part_send_job(
   
   if( (sd2 = do_connect(host, (char *)0, (u_short)ports.port2)) < 0 ) {
     EXCEPT( "connect to scheduler on \"%s\", port2 = %d", host, ports.port2 );
+  }
+
+  return 0;
+}
+
+// takes sinful address of startd and sends it a cmd
+int
+send_cmd_to_startd(char *sin_host, char *capability, int cmd)
+{
+  int sd;
+  
+  // connect to the startd - when sin_host is given, START_PORT is ignored ?
+  sd = do_connect(sin_host, "condor_startd", START_PORT);
+  if( sd < 0 ) {
+    dprintf( D_ALWAYS, "Shadow: Can't connect to condor_startd on %s\n",
+	     sin_host);
+    return -1;
+  }
+
+  // create a relisock to communicate with startd
+  ReliSock        *sock;
+  sock = new ReliSock();
+  sock->attach_to_file_desc(sd);
+  sock->encode();
+
+  // Send the command
+  if( !sock->code(cmd) ) {
+    dprintf( D_ALWAYS, "sock->code(%d)", cmd );
+    return -2;
+  }
+  
+  // send the capability
+  dprintf(D_FULLDEBUG, "send capability %s\n", capability);
+  if(!sock->put(capability, SIZE_OF_CAPABILITY_STRING)){
+    dprintf( D_ALWAYS, "sock->put()" );
+    return -3;
+  }
+
+  // send end of message
+  if( !sock->end_of_message() ) {
+    dprintf( D_ALWAYS, "end_of_message failed" );
+    return -4;
   }
 
   return 0;

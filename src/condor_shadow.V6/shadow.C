@@ -125,7 +125,7 @@ extern "C" {
 	int count_open_fds( const char *file, int line );
 	void HandleSyscalls();
 	void Wrapup();
-	void send_quit( char *host );
+	void send_quit( char *host, char *capability );
 	void handle_termination( PROC *proc, char *notification,
 				union wait *jobstatus, char *coredir );
 	void get_local_rusage( struct rusage *bsd_rusage );
@@ -151,6 +151,7 @@ extern int getJobAd(int cluster_id, int proc_id, ClassAd *new_ad);
 extern int part_send_job( int test_starter, char *host, int &reason,
 			  char *capability, char *schedd, PROC *proc, int &sd1,
 	      		  int &sd2, char **name);
+extern int send_cmd_to_startd(char *sin_host, char *capability, int cmd);
 
 int do_REMOTE_syscall();
 
@@ -187,6 +188,7 @@ extern "C"  void log_except();
 
 char	*Spool;
 char	*ExecutingHost;
+char	*GlobalCap;
 char	*MailerPgm;
 
 #include "condor_qmgr.h"
@@ -347,6 +349,7 @@ main(int argc, char *argv[], char *envp[])
 		regular_setup( host, cluster, proc, capability );
 	}
 
+	GlobalCap = strdup(capability);
 
 #if 0
 		/* Don't want to share log file lock between child and pnarent */
@@ -552,7 +555,8 @@ HandleSyscalls()
 			{
 			  if( !UsePipes ) 
 			    {
-			      send_quit( plist->hostname );
+			      char *capability; // need to get this somehow
+			      send_quit( plist->hostname, capability );
 			    }
 			  
 			  dprintf(D_ALWAYS,
@@ -686,7 +690,7 @@ v			      ((tempproc->next != plist)&&(ProcList != plist));
 		   won't have a condor_startd running - don't try to send to it.
 		*/
 	if( !UsePipes ) {
-		send_quit( ExecutingHost );
+		send_quit( ExecutingHost, GlobalCap );
 	}
 
 	dprintf(D_ALWAYS,
@@ -1131,18 +1135,9 @@ open_std_files( V2_PROC *proc )
   running jobs.
 */
 void
-send_quit( char *host )
+send_quit( char *host, char *capability )
 {
-	int		cmd = KILL_FRGN_JOB;
-	int		sd;
-	ReliSock	sock(host, 0);
-
-	dprintf( D_FULLDEBUG, "Shadow: Entering send_quit(%s)\n", host );
-
-	sock.encode();
-
-		/* Send the command */
-	if( !sock.code(cmd) || !sock.end_of_message() ) {
+	if (send_cmd_to_startd(host, capability, KILL_FRGN_JOB) < 0) {
 		dprintf( D_ALWAYS, "Shadow: Can't connect to condor_startd on %s\n",
 						host);
 		DoCleanup();
@@ -1163,6 +1158,9 @@ regular_setup( char *host, char *cluster, char *proc, char *capability )
 		EXCEPT( "Spool directory not specified in config file" );
 	}
 
+	if (host[0] != '<') {
+		EXCEPT( "Want sinful string !!" );
+	}
 	ExecutingHost = host;
 	start_job( cluster, proc );
 #ifdef CARMI_OPS
@@ -1341,39 +1339,24 @@ display_uids()
 void
 condor_rm()
 {
+	int retval;
 #ifdef CARMI_OPS
 	ProcLIST*       plist;
 
 	for (plist = ProcList; plist != NULL; plist = ProcList)	{
-		ReliSock	sock(plist->hostname, START_PORT);
+		char *capability; 
+		// need to retrieve capability for that host
+		retval = send_cmd_to_startd(plist->hostname, capability, KILL_FRGN_JOB);
 
 #else
 
-	ReliSock	sock(ExecutingHost, START_PORT);
+	retval = send_cmd_to_startd(ExecutingHost, GlobalCap, KILL_FRGN_JOB);
 
 #endif
 
-	int			cmd;
-
 	dprintf(D_ALWAYS, "Shadow received rm command from Schedd \n");
-
-    sock.encode();
-
-    cmd = KILL_FRGN_JOB;
-    if( !sock.code(cmd) ) {
-		dprintf( D_ALWAYS, "Can't send KILL_FRGN_JOB cmd to schedd on %s\n",
-			ExecutingHost );
+	if (retval < 0) 
 		return;
-	}
-		
-	if( !sock.end_of_message() ) {
-		dprintf( D_ALWAYS, "Can't send end_of_message to schedd on %s\n",
-			ExecutingHost );
-		return;
-	}
-
-    dprintf( D_ALWAYS,"Sent KILL_FRGN_JOB command to startd on %s\n",
-		ExecutingHost);
 
 #ifdef CARMI_OPS
 	 xdr_destroy(ProcList->xdr_RSC1);
