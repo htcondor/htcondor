@@ -79,6 +79,8 @@
 
 #include "condor_exprtype.h"
 
+#define USE_STRING_SPACE_IN_CLASSADS
+
 class AttrList;
 class EvalResult;
 
@@ -146,6 +148,9 @@ class VariableBase : public ExprTree
 		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
 		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
 
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+        int                 stringSpaceIndex;
+#endif 
   		char*               name;
 };
 
@@ -210,7 +215,10 @@ class StringBase : public ExprTree
 		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
 		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
 
-   	char*           value;
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+        int                 stringSpaceIndex;
+#endif 
+		char*           value;
 };
 
 class BooleanBase : public ExprTree
