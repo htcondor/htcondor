@@ -48,7 +48,14 @@ ConnectQ(char *qmgr_location)
 #if !defined(WIN32)
 	struct  passwd *pwd;
 #endif
-	char*	scheddAddr = NULL;
+	char*	scheddAddr = get_schedd_addr(0);
+	char*	localScheddAddr = NULL;
+	int		is_local = FALSE;
+
+	if( scheddAddr ) {
+		localScheddAddr = strdup( scheddAddr );
+		scheddAddr = NULL;
+	} 
 
 	if (connection != 0) {
 		connection->count++;
@@ -61,21 +68,21 @@ ConnectQ(char *qmgr_location)
 	}
 	connection->rendevous_file = 0;
 
-	/* No schedd identified --- use local schedd */
-	if( !qmgr_location || !*qmgr_location ) {
-		scheddAddr = get_schedd_addr( 0 ); 
-	}
-	/* schedd identified by Name, not <xxx.xxx.xxx.xxx:xxxx> */
-	else if(qmgr_location[0] != '<')
-	{
-		/* get schedd's IP address from collector */
-		scheddAddr = get_schedd_addr(qmgr_location);
-	}
 
+	if( !qmgr_location || !*qmgr_location ) {
+			/* No schedd identified --- use local schedd */
+		scheddAddr = localScheddAddr;
+		is_local = TRUE;
+	} else if(qmgr_location[0] != '<') {
+			/* Get schedd's IP address from collector */
+		scheddAddr = get_schedd_addr(qmgr_location);
+	} else {
+			/* We were passed the sinful string already */
+		scheddAddr = qmgr_location;
+	}
+		
 	if(scheddAddr) {
 		qmgmt_sock = new ReliSock(scheddAddr, QMGR_PORT);
-	} else if(qmgr_location && (*qmgr_location == '<') ) {
-		qmgmt_sock = new ReliSock(qmgr_location, QMGR_PORT);
 	} else {
 		if( qmgr_location ) {
 			dprintf( D_ALWAYS, "Can't find address of queue manager %s\n", 
@@ -84,12 +91,24 @@ ConnectQ(char *qmgr_location)
 			dprintf( D_ALWAYS, "Can't find address of local queue manager\n" );
 		}
 		free(connection);
+		free(localScheddAddr);
 		return 0;
 	}
+
 	if (!qmgmt_sock->ok()) {
 		dprintf(D_ALWAYS, "Can't connect to queue manager\n");
 		free(connection);
+		free(localScheddAddr);
 		return 0;
+	}
+
+		/* Figure out if we're trying to connect to a remote queue, in
+		   which case we'll set our username to "nobody" */
+	if( localScheddAddr ) {
+		if( ! is_local && ! strcmp(localScheddAddr, scheddAddr) ) {
+			is_local = TRUE;
+		}
+		free(localScheddAddr);
 	}
 
 	/* Get the schedd to handle Q ops. */
@@ -101,27 +120,37 @@ ConnectQ(char *qmgr_location)
 	qmgmt_sock->end_of_message();
 	*/
 
+
+
 #if defined(WIN32)
 	char username[UNLEN+1];
 	unsigned long usernamelen = UNLEN+1;
-	if (GetUserName(username, &usernamelen) < 0) {
-		free(connection);
-		return 0;
+	username[0] = '\0';
+	if( is_local ) {
+		if (GetUserName(username, &usernamelen) < 0) {
+			free(connection);
+			return 0;
+		}
 	}
-
 #else
-
-	pwd = getpwuid(geteuid());
-	if (pwd == 0) {
-		free(connection);
-		return 0;
+	char *username = NULL;
+	if( is_local ) {
+		pwd = getpwuid(geteuid());
+		if (pwd == 0) {
+			free(connection);
+			return 0;
+		}
+		username = pwd->pw_name;
 	}
-
-	char *username = pwd->pw_name;
 
 #endif
 
-	rval = InitializeConnection(username, tmp_file);
+	if( username && *username ) {
+		rval = InitializeConnection(username, tmp_file);
+	} else {
+		rval = InitializeConnection("nobody", tmp_file);
+	}
+
 	if (rval < 0) {
 		free(connection);
 		return 0;
