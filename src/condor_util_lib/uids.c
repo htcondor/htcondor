@@ -21,21 +21,70 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
+#include "condor_common.h"
+#include "condor_uid.h"
 
 /* See condor_uid.h for description. */
+static char* CondorUserName = NULL;
 
 #if defined(WIN32)
 
-#include "condor_uid.h"
-
+// Lots of functions just stubs on Win NT for now....
 priv_state _set_priv(priv_state s, char file[], int line, int dologging) { return s; }
 void init_user_ids(const char username[]) {}
 void init_condor_ids() {}
+void uninit_user_ids() {}
+void set_user_ids(uid_t uid, gid_t gid) {}
+uid_t get_my_uid() { return 999999; }
+gid_t get_my_gid() { return 999999; }
 
-#else
 
-#include <condor_common.h>
+// This implementation of get_condor_username() for WinNT really 
+// returns the username of the current user.  Until we finish porting
+// over all the priv_state code, root=condor=user, so we may as well
+// just return the identity of the current user.
+char* get_condor_username() 
+{
+	HANDLE hProcess = NULL;
+	HANDLE hAccessToken = NULL;
+	UCHAR InfoBuffer[1000];
+	char szAccountName[200], szDomainName[200];
+	PTOKEN_USER pTokenUser = (PTOKEN_USER)InfoBuffer;
+	DWORD dwInfoBufferSize,dwAccountSize = 200, dwDomainSize = 200;
+	SID_NAME_USE snu;
+	int length;
+
+	if ( CondorUserName )
+		return CondorUserName;
+
+	hProcess = GetCurrentProcess();
+
+	OpenProcessToken(hProcess,TOKEN_READ,&hAccessToken);
+
+	GetTokenInformation(hAccessToken,TokenUser,InfoBuffer,
+		1000, &dwInfoBufferSize);
+
+	szAccountName[0] = '\0';
+	szDomainName[0] = '\0';
+	LookupAccountSid(NULL, pTokenUser->User.Sid, szAccountName,
+		&dwAccountSize,szDomainName, &dwDomainSize, &snu);
+
+	length = strlen(szAccountName) + strlen(szDomainName) + 4;
+	CondorUserName = (char *) malloc(length);
+	if ( CondorUserName ) {
+		sprintf(CondorUserName, "%s/%s",szDomainName,szAccountName);
+	}
+
+	if ( hProcess )
+		CloseHandle(hProcess);
+	if ( hAccessToken )
+		CloseHandle(hAccessToken);
+
+	return CondorUserName;
+} 
+
+#else  // end of ifdef WIN32, now below starts Unix-specific code
+
 #include <grp.h>
 
 #if defined(AIX31) || defined(AIX32)
@@ -74,7 +123,6 @@ char *_FileName_ = __FILE__;
 
 static uid_t CondorUid, UserUid, MyUid, RealCondorUid;
 static gid_t CondorGid, UserGid, MyGid, RealCondorGid;
-static char* CondorUserName = NULL;
 static int CondorIdsInited = FALSE;
 static int UserIdsInited = FALSE;
 static int SwitchIds = TRUE;
