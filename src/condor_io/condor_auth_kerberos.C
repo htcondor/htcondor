@@ -438,7 +438,7 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
     
     // Send out the request
     if ((reply = send_request(&request)) != KERBEROS_MUTUAL) {
-        dprintf(D_ALWAYS, "Could not mutual authenticate server!\n");
+        dprintf(D_ALWAYS, "Could not authenticate!\n");
         return FALSE;
     }
     
@@ -547,7 +547,7 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     //------------------------------------------
     // Now, accept the connection
     //------------------------------------------
-    dprintf(D_ALWAYS, "Accepting connection\n");
+    dprintf(D_SECURITY, "Accepting connection\n");
     
     //------------------------------------------
     // Get te KRB_AP_REQ message
@@ -912,15 +912,6 @@ void Condor_Auth_Kerberos :: initialize_client_data()
                        sizeof (struct in_addr),
                        mySock_->endpoint()->sin_family);
 
-    //------------------------------------------
-    // Setup the host server information
-    //------------------------------------------
-    krb5_sname_to_principal(krb_context_, 
-                            hp->h_name, 
-                            STR_DEFAULT_CONDOR_SERVICE,
-                            KRB5_NT_SRV_HST, 
-                            &server_);
-
     // Now, lets find out the default condor daemon user
     defaultCondor_ = param(STR_CONDOR_SERVER_PRINCIPAL);
     
@@ -929,6 +920,15 @@ void Condor_Auth_Kerberos :: initialize_client_data()
         //defaultCondor_ = strdup(STR_DEFAULT_CONDOR_USER);
         defaultCondor_ = strdup(STR_DEFAULT_CONDOR_SERVICE);
     }
+
+    //------------------------------------------
+    // Setup the host server information
+    //------------------------------------------
+    krb5_sname_to_principal(krb_context_, 
+                            hp->h_name, 
+                            defaultCondor_,
+                            KRB5_NT_SRV_HST, 
+                            &server_);
 }
 
 int Condor_Auth_Kerberos :: forward_tgt_creds(krb5_creds      * cred,
