@@ -1484,7 +1484,7 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 		ClassAd *expanded_ad;
 		int index;
 		char *left,*name,*right,*value,*tvalue;
-		ExprTree *tree = NULL;
+//		ExprTree *tree = NULL;
 		string valueString;
 		ClassAdUnParser unp;
 		bool value_came_from_jobad;
@@ -1524,13 +1524,17 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 		StringList AttrsToExpand;
 		const char * curr_attr_to_expand;
 		AttrsToExpand.append(ATTR_JOB_CMD);
-		ad->ResetName();
-		const char *attr_name = ad->NextNameOriginal();
-		while ( attr_name ) {
-			if ( stricmp(attr_name,ATTR_JOB_CMD) ) { 
-				AttrsToExpand.append(attr_name);
+//		ad->ResetName();
+//		const char *attr_name = ad->NextNameOriginal();
+//		while ( attr_name ) {
+		ClassAd::iterator a;
+		string attr_nameS;
+		for( a = ad->begin( ); a != ad->end( ); a++ ) {
+			unp.Unparse( attr_nameS, a->second );
+			if ( stricmp(attr_nameS.c_str( ),ATTR_JOB_CMD) ) { 
+				AttrsToExpand.append(attr_nameS.c_str( ));
 			}
-			attr_name = ad->NextNameOriginal();
+//			attr_name = ad->NextNameOriginal();
 		}
 
 		index = -1;	
@@ -1562,10 +1566,13 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 			// the mis-leading name PrintTo**NEW**Str.  
 			ExprTree *tree = ad->Lookup(curr_attr_to_expand);
 			if ( tree ) {
-				ExprTree *rhs = tree->RArg();
-				if ( rhs ) {
-					rhs->PrintToNewStr( &attribute_value );
-				}
+//				ExprTree *rhs = tree->RArg();
+//				if ( rhs ) {
+//					rhs->PrintToNewStr( &attribute_value );
+//				}
+				unp.Unparse( valueString, tree );
+				strcpy( attribute_value, valueString.c_str( ) );
+				valueString = "";
 			}
 
 			if ( attribute_value == NULL ) {
