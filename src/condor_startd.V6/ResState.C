@@ -374,8 +374,12 @@ ResState::leave_action( State s, Activity a,
 	case claimed_state:
 		if( a == suspended_act ) {
 			if( rip->r_starter->kill( DC_SIGCONTINUE ) < 0 ) {
-					// Error.  We already have an error message.
-					// Should we do anything else?
+					// If there's an error sending kill, it could only
+					// mean the starter has blown up and we didn't
+					// know about it.  Send SIGKILL to the process
+					// group and go to the owner state.
+				rip->r_starter->killpg( DC_SIGKILL );
+				return this->change( owner_state );
 			}
 		}
 		if( statechange ) {
@@ -423,8 +427,8 @@ ResState::enter_action( State s, Activity a,
 		}
 		if( a == suspended_act ) {
 			if( rip->r_starter->kill( DC_SIGSUSPEND ) < 0 ) {
-					// Error.  We already have an error message.
-					// Should we do anything else?
+				rip->r_starter->killpg( DC_SIGKILL );
+				return this->change( owner_state );
 			}
 		}
 		break;
@@ -470,8 +474,8 @@ ResState::enter_action( State s, Activity a,
 		case killing_act:
 			if( rip->r_starter->active() ) {
 				if( rip->r_starter->kill( DC_SIGHARDKILL ) < 0 ) {
-						// Error.  We already have an error message.
-						// Should we do anything else?
+					rip->r_starter->killpg( DC_SIGKILL );
+					return this->change( owner_state );
 				}
 			} else {
 				return change( idle_act );
@@ -479,10 +483,11 @@ ResState::enter_action( State s, Activity a,
 			break;
 
 		case vacating_act:
+			rip->r_cur->vacate();	// Send a vacate to the client
 			if( rip->r_starter->active() ) {
 				if( rip->r_starter->kill( DC_SIGSOFTKILL ) < 0 ) {
-						// Error.  We already have an error message.
-						// Should we do anything else?
+					rip->r_starter->killpg( DC_SIGKILL );
+					return this->change( owner_state );
 				}
 			} else {
 				return change( idle_act );
