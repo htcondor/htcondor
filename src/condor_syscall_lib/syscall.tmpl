@@ -216,7 +216,6 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_SENDRECV_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_FLAGS_TYPE int
 	#define SOCKET_COUNT_TYPE int
-	#define SOCKET_LISTEN_CONST
 #elif defined(OSF1)
 	#define SOCKET_DATA_TYPE void*
 	#define SOCKET_LENGTH_TYPE int
@@ -230,7 +229,6 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_SENDRECV_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_FLAGS_TYPE int
 	#define SOCKET_COUNT_TYPE int
-	#define SOCKET_LISTEN_CONST const
 #elif defined(HPUX10)
 	#define SOCKET_DATA_TYPE void*
 	#define SOCKET_LENGTH_TYPE size_t
@@ -244,7 +242,6 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_SENDRECV_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_FLAGS_TYPE int
 	#define SOCKET_COUNT_TYPE int
-	#define SOCKET_LISTEN_CONST
 #elif defined(LINUX) && defined(GLIBC)
 	#define SOCKET_DATA_TYPE void*
 	#define SOCKET_LENGTH_TYPE socklen_t
@@ -258,7 +255,6 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_SENDRECV_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_FLAGS_TYPE int
 	#define SOCKET_COUNT_TYPE unsigned int
-	#define SOCKET_LISTEN_CONST
 #elif defined(LINUX) && !defined(GLIBC)
 	#define SOCKET_DATA_TYPE void*
 	#define SOCKET_LENGTH_TYPE int
@@ -272,7 +268,6 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_SENDRECV_LENGTH_TYPE const unsigned int
 	#define SOCKET_FLAGS_TYPE unsigned int
 	#define SOCKET_COUNT_TYPE int
-	#define SOCKET_LISTEN_CONST
 #elif defined(IRIX)
 	#define SOCKET_DATA_TYPE void*
 	#define SOCKET_LENGTH_TYPE int
@@ -286,7 +281,6 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_SENDRECV_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_FLAGS_TYPE int
 	#define SOCKET_COUNT_TYPE int
-	#define SOCKET_LISTEN_CONST
 #else
 	#define SOCKET_DATA_TYPE void*
 	#define SOCKET_LENGTH_TYPE int
@@ -300,7 +294,6 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_SENDRECV_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_FLAGS_TYPE unsigned int
 	#define SOCKET_COUNT_TYPE int
-	#define SOCKET_LISTEN_CONST
 #endif
 
 /*
@@ -652,7 +645,7 @@ version.
 		int option,
 		SOCKET_DATA_TYPE value,
 		SOCKET_LENGTH_TYPE * length) : INDIRECT;
-	SOCKET_LISTEN_CONST int listen(
+	int listen(
 		map(int fd),
 		SOCKET_COUNT_TYPE count) : INDIRECT;
 
