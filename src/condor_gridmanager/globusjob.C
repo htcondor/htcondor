@@ -1523,101 +1523,121 @@ MyString *GlobusJob::buildSubmitRSL()
 {
 	int transfer;
 	MyString *rsl = new MyString;
-	char buff[11000];
-	char buff2[1024];
-	char iwd[_POSIX_PATH_MAX];
+	MyString iwd = "";
+	MyString buff;
+	char *attr_value = NULL;
+	char *rsl_suffix = NULL;
 
-	buff[0] = '\0';
-	ad->LookupString( ATTR_GLOBUS_RSL, buff );
-	if ( buff[0] == '&' ) {
-		*rsl = buff;
+	if ( ad->LookupString( ATTR_GLOBUS_RSL, &rsl_suffix ) &&
+						   rsl_suffix[0] == '&' ) {
+		*rsl = rsl_suffix;
+		free( rsl_suffix );
 		return rsl;
 	}
 
-	iwd[0] = '\0';
-	if ( ad->LookupString(ATTR_JOB_IWD, iwd) && *iwd ) {
-		int len = strlen(iwd);
-		if ( len > 1 && iwd[len - 1] != '/' ) {
-			strcat( iwd, "/" );
+	if ( ad->LookupString(ATTR_JOB_IWD, &attr_value) && *attr_value ) {
+		iwd = attr_value;
+		int len = strlen(attr_value);
+		if ( len > 1 && attr_value[len - 1] != '/' ) {
+			iwd += '/';
 		}
 	} else {
-		strcpy( iwd, "/" );
+		iwd = "/";
+	}
+	if ( attr_value != NULL ) {
+		free( attr_value );
+		attr_value = NULL;
 	}
 
 	//We're assuming all job clasads have a command attribute
-	buff2[0] = '\0';
-	ad->LookupString( ATTR_JOB_CMD, buff );
-	*rsl = "&(executable=";
+	ad->LookupString( ATTR_JOB_CMD, &attr_value );
+	*rsl += "&(executable=";
 	if ( !ad->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer ) || transfer ) {
-		if ( buff[0] != '/' ) {
-			strcat( buff2, iwd );
+		buff = gassServerUrl;
+		if ( attr_value[0] != '/' ) {
+			buff += iwd;
 		}
-		strcat( buff2, buff );
-
-		sprintf( buff, "%s%s", gassServerUrl, buff2 );
+		buff += attr_value;
+	} else {
+		buff = attr_value;
 	}
-	*rsl += rsl_stringify( buff );
+	*rsl += rsl_stringify( buff.Value() );
+	free( attr_value );
+	attr_value = NULL;
 
-	buff[0] = '\0';
-	if ( ad->LookupString(ATTR_JOB_REMOTE_IWD, buff) && *buff ) {
+	if ( ad->LookupString(ATTR_JOB_REMOTE_IWD, &attr_value) && *attr_value ) {
 		*rsl += ")(directory=";
-		*rsl += rsl_stringify( buff );
+		*rsl += rsl_stringify( attr_value );
+	}
+	if ( attr_value != NULL ) {
+		free( attr_value );
+		attr_value = NULL;
 	}
 
-	buff[0] = '\0';
-	if ( ad->LookupString(ATTR_JOB_ARGUMENTS, buff) && *buff ) {
+	if ( ad->LookupString(ATTR_JOB_ARGUMENTS, &attr_value) && *attr_value ) {
 		*rsl += ")(arguments=";
-		*rsl += buff;
+		*rsl += attr_value;
+	}
+	if ( attr_value != NULL ) {
+		free( attr_value );
+		attr_value = NULL;
 	}
 
-	buff[0] = '\0';
-	buff2[0] = '\0';
-	if ( ad->LookupString(ATTR_JOB_INPUT, buff) && *buff &&
-		 strcmp( buff, NULL_FILE ) ) {
+	if ( ad->LookupString(ATTR_JOB_INPUT, &attr_value) && *attr_value &&
+		 strcmp( attr_value, NULL_FILE ) ) {
 		*rsl += ")(stdin=";
 		if ( !ad->LookupBool( ATTR_TRANSFER_INPUT, transfer ) || transfer ) {
-			if ( buff[0] != '/' ) {
-				strcat( buff2, iwd );
+			buff = gassServerUrl;
+			if ( attr_value[0] != '/' ) {
+				buff += iwd;
 			}
-			strcat( buff2, buff );
-
-			sprintf( buff, "%s%s", gassServerUrl, buff2 );
+			buff += attr_value;
+		} else {
+			buff = attr_value;
 		}
-		*rsl += rsl_stringify( buff );
+		*rsl += rsl_stringify( buff.Value() );
+	}
+	if ( attr_value != NULL ) {
+		free( attr_value );
+		attr_value = NULL;
 	}
 
 	if ( localOutput != NULL ) {
 		*rsl += ")(stdout=";
-		sprintf( buff, "%s%s", gassServerUrl, localOutput );
-		*rsl += rsl_stringify( buff );
+		buff.sprintf( "%s%s", gassServerUrl, localOutput );
+		*rsl += rsl_stringify( buff.Value() );
 	} else {
-		buff[0] = '\0';
-		if ( ad->LookupString(ATTR_JOB_OUTPUT, buff) && *buff &&
-			 strcmp( buff, NULL_FILE ) ) {
+		if ( ad->LookupString(ATTR_JOB_OUTPUT, &attr_value) && *attr_value &&
+			 strcmp( attr_value, NULL_FILE ) ) {
 			*rsl += ")(stdout=";
-			*rsl += rsl_stringify( buff );
+			*rsl += rsl_stringify( attr_value );
+		}
+		if ( attr_value != NULL ) {
+			free( attr_value );
+			attr_value = NULL;
 		}
 	}
 
 	if ( localError != NULL ) {
 		*rsl += ")(stderr=";
-		sprintf( buff, "%s%s", gassServerUrl, localError );
-		*rsl += rsl_stringify( buff );
+		buff.sprintf( "%s%s", gassServerUrl, localError );
+		*rsl += rsl_stringify( buff.Value() );
 	} else {
-		buff[0] = '\0';
-		if ( ad->LookupString(ATTR_JOB_ERROR, buff) && *buff &&
-			 strcmp( buff, NULL_FILE ) ) {
+		if ( ad->LookupString(ATTR_JOB_ERROR, &attr_value) && *attr_value &&
+			 strcmp( attr_value, NULL_FILE ) ) {
 			*rsl += ")(stderr=";
-			*rsl += rsl_stringify( buff );
+			*rsl += rsl_stringify( attr_value );
+		}
+		if ( attr_value != NULL ) {
+			free( attr_value );
+			attr_value = NULL;
 		}
 	}
 
-	buff[0] = '\0';
-	if ( ad->LookupString(ATTR_JOB_ENVIRONMENT, buff) && *buff ) {
+	if ( ad->LookupString(ATTR_JOB_ENVIRONMENT, &attr_value) && *attr_value ) {
 		Environ env_obj;
-		env_obj.add_string(buff);
+		env_obj.add_string(attr_value);
 		char **env_vec = env_obj.get_vector();
-		char var[5000];
 		int i = 0;
 		if ( env_vec[0] ) {
 			*rsl += ")(environment=";
@@ -1629,18 +1649,24 @@ MyString *GlobusJob::buildSubmitRSL()
 				continue;
 			}
 			*equals = '\0';
-			sprintf( var, "(%s %s)", env_vec[i], rsl_stringify(equals + 1) );
-			*rsl += var;
+			buff.sprintf( "(%s %s)", env_vec[i],
+							 rsl_stringify(equals + 1) );
+			*rsl += buff;
 			i++;
 		}
 	}
+	if ( attr_value ) {
+		free( attr_value );
+		attr_value = NULL;
+	}
 
-	sprintf( buff, ")(save_state=yes)(two_phase=%d)(remote_io_url=%s)",
-			 JM_COMMIT_TIMEOUT, gassServerUrl );
+	buff.sprintf( ")(save_state=yes)(two_phase=%d)(remote_io_url=%s)",
+					 JM_COMMIT_TIMEOUT, gassServerUrl );
 	*rsl += buff;
 
-	if ( ad->LookupString(ATTR_GLOBUS_RSL, buff) && *buff ) {
-		*rsl += buff;
+	if ( rsl_suffix != NULL ) {
+		*rsl += rsl_suffix;
+		free( rsl_suffix );
 	}
 
 	return rsl;
@@ -1650,7 +1676,7 @@ MyString *GlobusJob::buildRestartRSL()
 {
 	int rc;
 	MyString *rsl = new MyString;
-	char buff[1024];
+	MyString buff;
 	struct stat file_status;
 
 	rsl->sprintf( "&(restart=%s)(remote_io_url=%s)", jobContact,
@@ -1660,9 +1686,10 @@ MyString *GlobusJob::buildRestartRSL()
 		if ( rc < 0 ) {
 			file_status.st_size = 0;
 		}
-		sprintf( buff, "%s%s", gassServerUrl, localOutput );
-		sprintf( buff, "(stdout=%s)(stdout_position=%lu)",
-				 rsl_stringify( buff ), file_status.st_size );
+		*rsl += "(stdout=";
+		buff.sprintf( "%s%s", gassServerUrl, localOutput );
+		*rsl += rsl_stringify( buff.Value() );
+		buff.sprintf( ")(stdout_position=%lu)", file_status.st_size );
 		*rsl += buff;
 	}
 	if ( localError ) {
@@ -1670,9 +1697,10 @@ MyString *GlobusJob::buildRestartRSL()
 		if ( rc < 0 ) {
 			file_status.st_size = 0;
 		}
-		sprintf( buff, "%s%s", gassServerUrl, localError );
-		sprintf( buff, "(stderr=%s)(stderr_position=%lu)",
-				 rsl_stringify( buff ), file_status.st_size );
+		*rsl += "(stderr=";
+		buff.sprintf( "%s%s", gassServerUrl, localError );
+		*rsl += rsl_stringify( buff.Value() );
+		buff.sprintf( ")(stderr_position=%lu)", file_status.st_size );
 		*rsl += buff;
 	}
 
@@ -1683,7 +1711,7 @@ MyString *GlobusJob::buildStdioUpdateRSL()
 {
 	int rc;
 	MyString *rsl;
-	char buff[1024];
+	MyString buff;
 	struct stat file_status;
 
 	rsl->sprintf( "&(remote_io_url=%s)", gassServerUrl );
@@ -1692,9 +1720,10 @@ MyString *GlobusJob::buildStdioUpdateRSL()
 		if ( rc < 0 ) {
 			file_status.st_size = 0;
 		}
-		sprintf( buff, "%s%s", gassServerUrl, localOutput );
-		sprintf( buff, "(stdout=%s)(stdout_position=%lu)",
-				 rsl_stringify( buff ), file_status.st_size );
+		*rsl += "(stdout=";
+		buff.sprintf( "%s%s", gassServerUrl, localOutput );
+		*rsl += rsl_stringify( buff.Value() );
+		buff.sprintf( ")(stdout_position=%lu)", file_status.st_size );
 		*rsl += buff;
 	}
 	if ( localError ) {
@@ -1702,9 +1731,10 @@ MyString *GlobusJob::buildStdioUpdateRSL()
 		if ( rc < 0 ) {
 			file_status.st_size = 0;
 		}
-		sprintf( buff, "%s%s", gassServerUrl, localError );
-		sprintf( buff, "(stderr=%s)(stderr_position=%lu)",
-				 rsl_stringify( buff ), file_status.st_size );
+		*rsl += "(stderr=";
+		buff.sprintf( "%s%s", gassServerUrl, localError );
+		*rsl += rsl_stringify( buff.Value() );
+		buff.sprintf( ")(stderr_position=%lu)", file_status.st_size );
 		*rsl += buff;
 	}
 
