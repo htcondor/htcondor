@@ -27,6 +27,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "globus_utils.h"
 #include "get_port_range.h"
+#include "MyString.h"
 #include "gahp-client.h"
 
 	// Initialize static data members
@@ -532,22 +533,22 @@ GahpClient::setPollInterval(unsigned int interval)
 const char *
 GahpClient::escape(const char * input) 
 {
-	static char output[10000];
+	static MyString output;
 
 	if (!input) return NULL;
 
-	unsigned int i = 0;
-	unsigned int j = 0;
-	for (i=0; i < strlen(input) && j < sizeof(output); i++) {
-		if ( input[i] == ' ' ) {
-			output[j++] = '\\';
-		}
-		output[j++] = input[i];
-	}
-	ASSERT( j != sizeof(output) );
-	output[j] = '\0';
+	output = "";
 
-	return output;
+	unsigned int i = 0;
+	size_t input_len = strlen(input);
+	for (i=0; i < input_len; i++) {
+		if ( input[i] == ' ' ) {
+			output += '\\';
+		}
+		output += input[i];
+	}
+
+	return output.Value();
 }
 
 
