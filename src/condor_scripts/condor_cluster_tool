@@ -195,7 +195,7 @@ sub check_auth()
     $CCCHECK = $CONDOR_HOSTALLOW . $CONDOR_CCALLOW;
 
     $db_auth_hosts = `$DBCHECK`;
-	print "$DBCHECK\n";
+	#print "$DBCHECK\n";
     $cc_auth_hosts = `$CCCHECK`;
     unless( ($cc_auth_hosts =~ /$hostname/ )||(db_auth_hosts =~ /$hostname/)) {
 	print "Error: current host ($hostname) is not authorized ";
@@ -250,7 +250,7 @@ sub start_condor
                     #print " (reserved by $reserver at ";
                     #print "${$nodes{$host}}[0])";
                     #print "$user has $host checked out\n";
-                    #push(@hosts, $host);
+                    push(@hosts, $host);
                 }
             }
          }
