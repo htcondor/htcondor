@@ -28,19 +28,15 @@ my $MachineList = "condor_hostlist";
 
 # Lists
 my @Archs;		# Supported achitectures
-my @ExcludeUsers;	# List of users to exclude
-my @ExcludeHosts;	# No condor on these hosts
-my @ExcludeSponsors;	# No condor for these sponsors
-my @ExcludeRooms;	# No condor in these rooms
 my @ClusterNodes;	# Dedicated cluster nodes
 my @IncludeHosts;	# Other hosts that we're allowwed to run on
 my @DownHosts;		# Machines with problems
 
-# Add a "never match" pattern to all of the exclude lists
-push @ExcludeUsers, "NEVER-MATCH-ME";
-push @ExcludeHosts, "NEVER-MATCH-ME";
-push @ExcludeSponsors, "NEVER-MATCH-ME";
-push @ExcludeRooms, "NEVER-MATCH-ME";
+# Exclusion lists
+my @ExcludeUsers = ( "NEVER-MATCH-ME" );	# List of users to exclude
+my @ExcludeHosts = ( "NEVER-MATCH-ME" );	# No condor on these hosts
+my @ExcludeSponsors = ( "NEVER-MATCH-ME" );	# No condor for these sponsors
+my @ExcludeRooms = ( "NEVER-MATCH-ME" );	# No condor in these rooms
 
 
 # ******************************************************
@@ -139,6 +135,10 @@ while ( <IN> )
     elsif ( /Down\s+=\s+\"(.+?)\"/i )
     {
 	push( @DownHosts, $1 );
+    }
+    elsif ( /PersonalCondor(Users|Hosts|Full)\s+=\s+\"(.+?)\"/i )
+    {
+	# Do nothing
     }
     elsif ( ! /^$/ )
     {

@@ -92,9 +92,16 @@ my $CondorStatusArgs = "-master";
 $CondorStatusArgs = $CondorStatusArgs . " -pool $CondorPool"
     if ( $CondorPool ne "" );
 
+# List of users,hosts,user@hosts to allow as personal condor users
+my %PersonalCondorLists = (
+			   Users	=> [ "NEVER-MATCH-ME" ],
+			   Hosts	=> [ "NEVER-MATCH-ME" ],
+			   Full 	=> [ "NEVER-MATCH-ME" ],
+		      );
+
 # Read the state; all we really need is the "ClusterNodes" list
 my %ClusterNodes;
-my $ClusterCount;
+my $ClusterCount = 0;
 die "can't read '$RosterStateFile'" if (! open ( IN, $RosterStateFile ) );
 while ( <IN> )
 {
@@ -103,24 +110,31 @@ while ( <IN> )
     next if ( $_ eq "" );
     if ( /arch\s+=\s+\"(.+)\"/i )
     {
+	# Do nothing
     }
     elsif ( /ExcludeUser\s+=\s+\"(.+?)\"/i )
     {
+	# Do nothing
     }
     elsif ( /ExcludeSponsor\s+=\s+\"(.+?)\"/i )
     {
+	# Do nothing
     }
     elsif ( /ExcludeRoom\s+=\s+\"(.+?)\"/i )
     {
+	# Do nothing
     }
     elsif ( /ExcludeAll\s+=\s+\"(.+?)\"/i )
     {
+	# Do nothing
     }
     elsif ( /ExcludeHost\s+=\s+\"(.+?)\"/i )
     {
+	# Do nothing
     }
     elsif ( /IncludeHost\s+=\s+\"(.+?)\"/i )
     {
+	# Do nothing
     }
     elsif ( /ClusterNode\s+=\s+\"(.+?)\"/i )
     {
@@ -129,6 +143,11 @@ while ( <IN> )
     }
     elsif ( /Down\s+=\s+\"(.+?)\"/i )
     {
+	# Do nothing
+    }
+    elsif ( /PersonalCondor(Users|Hosts|Full)\s+=\s+\"(.+?)\"/i )
+    {
+	push( @{$PersonalCondorLists{$1}}, $2 );
     }
     elsif ( ! /^$/ )
     {
@@ -152,18 +171,47 @@ close( IN );
 
 
 # This is the actual work: Take the output from condor_status, remove
-# any entries that have an '@' (which are from submit-only nodes to
-# our pool), get just the hostnames, without the domain, and compare
-# it to the roster.  Delete from the %Absent hash each entry found..
+# any entries that have an '@' (which are from personal condors) unless
+# the user listed is in the PersonalCondorUsers list.
+# Delete from the %Absent hash each entry found..
 {
+    # Build a regex of personal condor users
+    my $PersonalUsers =
+	"(" . join( ")|(", @{$PersonalCondorLists{Users}} ) . ")";
+    my $PersonalHosts =
+	"(" . join( ")|(", @{$PersonalCondorLists{Hosts}} ) . ")";
+    my $PersonalFull =
+	"(" . join( ")|(", @{$PersonalCondorLists{Full}} ) . ")";
+
+    # Build & run the condor_status command...
     my $Cmd = "$CondorStatus $CondorStatusArgs";
     die "Can't run '$Cmd'" if ( ! open( IN, "$Cmd|" )  );
     while ( <IN> )
     {
 	chomp;
-	next if ( /@/ );
-	s/\..*//g;
-	delete $Absent{$_};
+	my $Host = $_;
+
+	# Check for personal condor, filter 'em
+	if ( /(.*)@(.*)/ )
+	{
+	    my $User = $1;
+	    $Host = $2;
+	    my $Full = $_;
+	    if ( ( $User =~ /$PersonalUsers/ ) ||
+		 ( $Host =~ /$PersonalHosts/ ) ||
+		 ( $Full =~ /$PersonalFull/ )  )
+	    {
+		# Do nothing
+	    }
+	    else
+	    {
+		next;
+	    }
+	}
+
+	# Ok.  Now clean up the host name & strike it from the absent hash
+	$Host =~ s/\..*//g;
+	delete $Absent{$Host};
     }
     close( IN );
 }
