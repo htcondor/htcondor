@@ -90,7 +90,7 @@ static	ClassAdList startdAds;
 static	ExprTree	*stdRankCondition;
 static	ExprTree	*preemptRankCondition;
 static	ExprTree	*preemptPrioCondition;
-static	ExprTree	*preemptionHold;
+static	ExprTree	*preemptionReq;
 static  ExtArray<PrioEntry> prioTable;
 #ifndef WIN32
 template class ExtArray<PrioEntry>;
@@ -884,7 +884,7 @@ setupAnalysis()
 	CondorQuery	query(STARTD_AD);
 	int			rval;
 	char		buffer[64];
-	char		*phold;
+	char		*preq;
 	ClassAd		*ad;
 	char		remoteUser[128];
 	int			index;
@@ -928,18 +928,18 @@ setupAnalysis()
 			ATTR_SUBMITTOR_PRIO, PriorityDelta );
 	Parse( buffer, preemptPrioCondition ) ;
 
-	// setup preemption hold expression
-	if( !( phold = param( "PREEMPTION_HOLD" ) ) ) {
-		fprintf( stderr, "\nWarning:  No PREEMPTION_HOLD expression in "
-					"config file --- assuming FALSE\n\n" );
-		Parse( "FALSE", preemptionHold );
+	// setup preemption requirements expression
+	if( !( preq = param( "PREEMPTION_REQUIREMENTS" ) ) ) {
+		fprintf( stderr, "\nWarning:  No PREEMPTION_REQUIREMENTS expression in"
+					" config file --- assuming FALSE\n\n" );
+		Parse( "FALSE", preemptionReq );
 	} else {
-		if( Parse( phold , preemptionHold ) ) {
-			fprintf( stderr, "\nError:  Failed parse of PREEMPTION_HOLD "
-				"expression: \n\t%s\n", phold );
+		if( Parse( preq , preemptionReq ) ) {
+			fprintf( stderr, "\nError:  Failed parse of "
+				"PREEMPTION_REQUIREMENTS expression: \n\t%s\n", preq );
 			exit( 1 );
 		}
-		free( phold );
+		free( preq );
 	}
 
 }
@@ -1015,7 +1015,7 @@ doRunAnalysis( ClassAd *request )
 	int		fOffConstraint 	= 0;
 	int		fRankCond		= 0;
 	int		fPreemptPrioCond= 0;
-	int		fPreemptHoldTest= 0;
+	int		fPreemptReqTest	= 0;
 	int		available		= 0;
 	int		totalMachines	= 0;
 
@@ -1104,14 +1104,15 @@ doRunAnalysis( ClassAd *request )
 				if( preemptRankCondition->EvalTree( offer, request, &result ) &&
 					result.type == LX_INTEGER && result.i == TRUE )
 				{
-					// 7.  Tripped on PREEMPTION_HOLD?
-					if( preemptionHold->EvalTree( offer , request , &result ) &&
-						result.type == LX_INTEGER && result.i == TRUE ) 
+					// 7.  Tripped on PREEMPTION_REQUIREMENTS?
+					if( preemptionReq->EvalTree( offer , request , &result ) &&
+						result.type == LX_INTEGER && result.i == FALSE ) 
 					{
-						fPreemptHoldTest++;
+						fPreemptReqTest++;
 						if( verbose ) {
-							printf( "Can preempt %s, but failed PreemptionHold "
-								"test\n", remoteUser);
+							printf( "Can preempt %s, but failed "
+									"PREEMPTION_REQUIREMENTS test\n",
+									remoteUser);
 						}
 						continue;
 					} else {
@@ -1148,8 +1149,8 @@ doRunAnalysis( ClassAd *request )
 	printf( "\t%5d are serving equal or higher priority customers%s\n", 
 					fPreemptPrioCond, niceUser ? "(*)" : "" );
 	printf( "\t%5d do not prefer this job\n", fRankCond );
-	printf( "\t%5d cannot preempt because preemption has been held\n", 
-			fPreemptHoldTest );
+	printf( "\t%5d cannot preempt because PREEMPTION_REQUIREMENTS are false\n",
+			fPreemptReqTest );
 	printf( "\t%5d are available to service your request\n", available );
 
 	if( niceUser ) {
