@@ -10,8 +10,8 @@ static const char *intKeywords[] =
 {
 	ATTR_CLUSTER_ID,
 	ATTR_PROC_ID,
-	"Status",              // ### This should be ATTR_JOB_STATUS
-	"Universe"             // ### This should be ATTR_JOB_UNIVERSE
+	ATTR_JOB_STATUS,
+	ATTR_JOB_UNIVERSE
 };
 
 
