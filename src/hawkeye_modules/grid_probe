@@ -206,6 +206,7 @@ sub RunTest ( $$ )
 
     # Add the contact string & host name (if we can figure it out)
     $Hawkeye->Store( $Label . "Contact", $ContactString );
+    $Fields{"Contact"} = "";
     if ( $Name ne "" )
     {
 	$Hawkeye->Store( $Label . "Name", $Contact );
@@ -214,5 +215,5 @@ sub RunTest ( $$ )
     {
 	$Hawkeye->Store( $Label . "Name", $1 );
     }
-
+    $Fields{"Name"} = "";
 }
