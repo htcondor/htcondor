@@ -51,6 +51,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/param.h>
+#include <values.h>
 
 
 #endif /* System specific stuff */
