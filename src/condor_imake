@@ -82,4 +82,4 @@ if [ $gss = "Y" ]; then
 	fi
 fi
 
-imake -s Makefile $ArchFlag $Opsys $Other $Other2 $GssAuth -I../config -I../../config
+imake -s Makefile $ArchFlag $Opsys $Other $Other2 $GssAuth -I../config -I../../config -I../../../config
