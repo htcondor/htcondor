@@ -32,6 +32,17 @@ specify them properly.
 \noindent Bugs Fixed:
 \begin{itemize}
 
+\item Fixed the default startd policy expressions that are shipped
+with Condor in a few ways:
+\begin{itemize}
+  \item The policy expressions now use \Attr{CpuBusyTime} to avoid
+  problems with faulty values for \Attr{CondorLoadAvg}.
+  \item The policy macros that refered to \Attr{JobUniverse} and
+  \Attr{ImageSize} now use ``TARGET.'' to ensure we're refering to the
+  right ClassAd to find those attributes.
+  \item Added verbose comments to explain the policy in English.
+\end{itemize}
+
 \item If \Condor{compile} can not find the \Condor{config\_val}
 program, \Condor{compile} can not work.
 In previous versions, \Condor{compile}  would try to perform the
