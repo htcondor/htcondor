@@ -142,6 +142,9 @@ DC_Exit( int status )
 	delete daemonCore;
 	daemonCore = NULL;
 
+		// Free up the memory from the config hash table, too.
+	clear_config();
+	
 		// Finally, exit with the status we were given.
 	exit( status );
 }
