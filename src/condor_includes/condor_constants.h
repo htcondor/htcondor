@@ -1,5 +1,5 @@
-#ifndef CONSTANTS_H
-#define CONSTANTS_H
+#ifndef CONDOR_CONSTANTS_H
+#define CONDOR_CONSTANTS_H
 
 #if !defined(__STDC__) && !defined(__cplusplus)
 #define const
@@ -65,4 +65,4 @@ static const char DIR_DELIM_CHAR = '\\';
 static const char DIR_DELIM_CHAR = '/';
 #endif
 
-#endif
+#endif CONDOR_CONSTANTS_H
