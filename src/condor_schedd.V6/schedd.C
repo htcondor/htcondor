@@ -1617,6 +1617,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		}
 			// we need to terminate the ()'s after their constraint
 		sprintf( constraint, "%s%s)", buf, tmp );
+		free( tmp );
 	} else {
 		constraint = NULL;
 	}
