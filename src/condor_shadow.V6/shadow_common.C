@@ -101,7 +101,7 @@ extern char My_UID_Domain[];
 
 ClassAd *JobAd = NULL;			// ClassAd which describes this job
 extern char *schedd, *scheddName;
-extern "C" extern bool JobPreCkptServerScheddNameChange();
+extern "C" bool JobPreCkptServerScheddNameChange();
 
 void
 NotifyUser( char *buf, PROC *proc )
