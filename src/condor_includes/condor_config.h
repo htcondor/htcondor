@@ -32,6 +32,7 @@ extern "C" {
 	char * macro_expand ( char *name );
 	int param_in_pattern ( char *parameter, char *pattern);
 	void init_config ( void );
+	void clear_config ( void );
 	void set_debug_flags( char * );
 #else
 	void config();
@@ -44,6 +45,7 @@ extern "C" {
 	char * macro_expand();
 	int param_in_pattern ();
 	void init_config ();
+	void clear_config ();
 	void set_debug_flags ();
 #endif
 
