@@ -40,12 +40,16 @@ class Condor_MD_MAC;
 
 // Define a 'filesize_t' type and FILESIZE_T_FORMAT printf format string
 #if defined HAS_INT64_T
-  typedef uint64_t filesize_t;
-# define FILESIZE_T_FORMAT "%" PRIu64
+  typedef int64_t filesize_t;
+# define FILESIZE_T_FORMAT "%" PRId64
+
+#elif defined HAS___INT64_T
+  typedef __int64 filesize_t;
+# define FILESIZE_T_FORMAT "%" PRId64
 
 #else
-  typedef unsigned long filesize_t;
-# define FILESIZE_T_FORMAT "%lu"
+  typedef long filesize_t;
+# define FILESIZE_T_FORMAT "%l"
 #endif
 
 class ReliSock : public Sock {
