@@ -72,6 +72,20 @@
 #define D_NOHEADER		(1<<(D_MAXFLAGS-1))
 #define D_ALL			(~(0) & (~(D_NOHEADER)))
 
+/* used by the special_stubs _condor_vfprintf_va call that is linked with the
+	user jobs */
+#define VFPRINTF_LEN 384
+#define DECIMAL 0
+#define HEXADECIMAL 1
+#define OCTAL 2
+/* these are the number or ASCII digits a 64bit quantity needs with a minus
+	sign and stuff */
+#define ASCII64DECIMAL 22
+#define ASCII64HEXADECIMAL 17
+#define ASCII64OCTAL 23
+#define ABS(x) ((x)<0)?((x)*-1):x
+
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
