@@ -71,7 +71,9 @@
 #include <sys/fcntl.h>
 #include <sys/types.h>
 #include <unistd.h>
-#       include </usr/ucbinclude/sys/rusage.h>
+#if !defined(Solaris551)
+#include </usr/ucbinclude/sys/rusage.h>
+#endif
 #endif
 
 #include "except.h"

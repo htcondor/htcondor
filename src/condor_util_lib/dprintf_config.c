@@ -136,6 +136,8 @@ int logfd;		/* The descriptor to use if the log output goes to a tty */
 			((stderr)->_file) = logfd;
 #elif defined(LINUX)
 			stderr->_fileno = logfd;
+#elif defined(Solaris551)
+			stderr->_file = logfd;
 #else
 			fileno(stderr) = logfd;
 #endif

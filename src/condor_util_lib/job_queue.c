@@ -122,7 +122,9 @@ unconditionally in following code */
 #if defined(Solaris) 
 #       include <sys/signal.h> 
 #       include <sys/fcntl.h> 
+#if !defined(Solaris551)
 #       include </usr/ucbinclude/sys/rusage.h> 
+#endif
 #endif 
 
 #ifdef NDBM

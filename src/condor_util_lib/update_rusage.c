@@ -32,7 +32,7 @@
 #include <sys/resource.h>
 #include "condor_debug.h"
 /* Solaris specific change ..dhaval 6/24 */
-#if defined(Solaris)
+#if defined(Solaris) && !defined(Solaris551)
 #include </usr/ucbinclude/sys/rusage.h>
 #endif
 
