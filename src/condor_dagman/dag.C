@@ -278,19 +278,22 @@ bool Dag::ProcessLogEvents (bool recovery) {
                                 termEvent->returnValue == 0)) {
                       job->_Status = Job::STATUS_ERROR;
 					  _numJobsFailed++;
-                      if (DEBUG_LEVEL(DEBUG_QUIET)) {
-                          printf ("Job ");
-                          job_print(job,true);
-                          printf (" terminated with ");
-                          if (termEvent->normal) {
-                              printf ("status %d.", termEvent->returnValue);
-							  job->retval = termEvent->returnValue;
-                          } else {
-                              printf ("signal %d.", termEvent->signalNumber);
-							  job->retval = (0 - termEvent->signalNumber);
-                          }
-                          putchar ('\n');
-                      }
+					  if( termEvent->normal ) {
+						  job->retval = termEvent->returnValue;
+						  sprintf( job->error_text, "Job terminated with "
+								   "status %d.", termEvent->returnValue );
+						  debug_printf( DEBUG_QUIET, "Job %s terminated with "
+										"status %d.\n", job->GetJobName(),
+										termEvent->returnValue );
+					  } else {
+						  job->retval = (0 - termEvent->signalNumber);
+						  sprintf( job->error_text, "Job terminated with "
+								   "signal %d", termEvent->signalNumber );
+						  debug_printf( DEBUG_QUIET, "Job %s terminated with "
+										"signal %d.\n", job->GetJobName(),
+										termEvent->signalNumber );
+					  }
+
 					  if( run_post_on_failure == FALSE ) {
 						  break;
 					  }
@@ -457,8 +460,7 @@ Dag::SubmitCondor( Job* job )
     if (!submit_submit (job->GetCmdFile(), condorID)) {
         job->_Status = Job::STATUS_ERROR;
         _numJobsFailed++;
-		// we need to have some way of recording why this job failed,
-		// so when everything's done the user will know
+		sprintf( job->error_text, "Job submit failed" );
         return true;
     }
 
@@ -486,26 +488,25 @@ Dag::PreScriptReaper( Job* job, int status )
 	assert( job->_Status == Job::STATUS_PRERUN );
 
 	if( WIFSIGNALED( status ) ) {
-		if( DEBUG_LEVEL(DEBUG_QUIET) ) {
-			printf( "PRE Script of Job %s died on %s\n", job->GetJobName(),
-					daemonCore->GetExceptionString(status) );
-		}
+		debug_printf( DEBUG_QUIET, "PRE Script of Job %s died on %s\n",
+					  job->GetJobName(),
+					  daemonCore->GetExceptionString(status) );
 		job->_Status = Job::STATUS_ERROR;
 		_numJobsFailed++;
+		sprintf( job->error_text, "PRE Script died on %s",
+				 daemonCore->GetExceptionString(status) );
 	}
 	else if ( WEXITSTATUS( status ) != 0 ) {
-		if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
-			printf( "PRE Script of Job %s failed with status %d\n",
-					job->GetJobName(), WEXITSTATUS(status) );
-		}
+		debug_printf( DEBUG_QUIET, "PRE Script of Job %s failed with status "
+					  "%d\n", job->GetJobName(), WEXITSTATUS(status) );
 		job->_Status = Job::STATUS_ERROR;
 		_numJobsFailed++;
+		sprintf( job->error_text, "PRE Script failed with status %d",
+				 WEXITSTATUS(status) );
 	}
 	else {
-		if( DEBUG_LEVEL(DEBUG_QUIET) ) {
-			printf( "PRE Script of Job %s completed successfully.\n",
-					job->GetJobName() );
-		}
+		debug_printf( DEBUG_QUIET, "PRE Script of Job %s completed "
+					  "successfully.\n", job->GetJobName() );
 		job->_Status = Job::STATUS_READY;
 		SubmitCondor( job );
 	}
@@ -520,20 +521,21 @@ Dag::PostScriptReaper( Job* job, int status )
 	assert( job->_Status == Job::STATUS_POSTRUN );
 
 	if( WIFSIGNALED( status ) ) {
-		if( DEBUG_LEVEL(DEBUG_QUIET) ) {
-			printf( "POST Script of Job %s died on %s\n", job->GetJobName(),
-					daemonCore->GetExceptionString(status) );
-		}
+        debug_printf( DEBUG_QUIET, "POST Script of Job %s died on %s\n",
+                      job->GetJobName(),
+                      daemonCore->GetExceptionString(status) );
 		job->_Status = Job::STATUS_ERROR;
 		_numJobsFailed++;
+        sprintf( job->error_text, "POST Script died on %s",
+                 daemonCore->GetExceptionString(status) );
 	}
 	else if ( WEXITSTATUS( status ) != 0 ) {
-		if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
-			printf( "POST Script of Job %s failed with status %d\n",
-					job->GetJobName(), WEXITSTATUS(status) );
-		}
-		job->_Status = Job::STATUS_ERROR;
-		_numJobsFailed++;
+        debug_printf( DEBUG_QUIET, "POST Script of Job %s failed with status "
+                      "%d\n", job->GetJobName(), WEXITSTATUS(status) );
+        job->_Status = Job::STATUS_ERROR;
+        _numJobsFailed++;
+        sprintf( job->error_text, "POST Script failed with status %d",
+                 WEXITSTATUS(status) );
 	}
 	else {
 		if( DEBUG_LEVEL(DEBUG_QUIET) ) {
@@ -553,6 +555,7 @@ Dag::PostScriptReaper( Job* job, int status )
 			}
 		}
 		else {
+			// restore STATUS_ERROR if the job had failed
 			job->_Status = Job::STATUS_ERROR;
 		}
 
