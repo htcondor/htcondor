@@ -47,11 +47,6 @@ AttrListElem::AttrListElem(AttrListElem& oldNode)
     next = NULL;
 }
 
-AttrListElem::~AttrListElem()
-{
-    delete tree;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // AttrListAbstract constructor. It is called by its derived classes.
 // AttrListAbstract is a purely virtual class, there is no need for a user to
