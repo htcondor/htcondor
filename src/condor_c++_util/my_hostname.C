@@ -1,6 +1,4 @@
 /* 
-** Copyright 1993 by Miron Livny, and Mike Litzkow
-** 
 ** Permission to use, copy, modify, and distribute this software and its
 ** documentation for any purpose and without fee is hereby granted,
 ** provided that the above copyright notice appear in all copies and that
@@ -27,60 +25,84 @@
 */ 
 
 #include "condor_common.h"
+#include "condor_debug.h"
+static char *_FileName_ = __FILE__;
 
-#if !defined(WIN32)
-#include <netdb.h>
-#endif
-
+static struct hostent *host_ptr = NULL;
+static char hostname[MAXHOSTNAMELEN];
+static char full_hostname[MAXHOSTNAMELEN];
+static unsigned int ip_addr;
+static int hostnames_initialized = 0;
+static void init_hostnames();
 
 // Return our hostname in a static data buffer.
-// If we've already looked up the hostname, just return the answer.
 char *
 my_hostname()
 {
-	static char hostname[1024] = "";
-	char* tmp;
-	if( hostname[0] ) {
-		return hostname;
+	if( ! hostnames_initialized ) {
+		init_hostnames();
 	}
+	return hostname;
+}
+
+
+// Return our full hostname (with domain) in a static data buffer.
+char*
+my_full_hostname()
+{
+	if( ! hostnames_initialized ) {
+		init_hostnames();
+	}
+	return full_hostname;
+}
+
+
+// Return the host-ordered, unsigned int version of our hostname.
+unsigned int
+my_ip_addr()
+{
+	if( ! hostnames_initialized ) {
+		init_hostnames();
+	}
+	return ip_addr;
+}
+
+
+void
+init_hostnames()
+{
+	char* tmp;
+	int len;
+
+		// Get our local hostname, and strip off the domain if
+		// gethostname returns it.
 	if( gethostname(hostname, sizeof(hostname)) == 0 ) {
 		tmp = strchr( hostname, '.' );
 		if( tmp ) {
 			*tmp = '\0';
 		}
-		return hostname;
 	} else {
-		hostname[0] = '\0';
-		return NULL;
+		EXCEPT( "gethostname failed, errno = %d", errno );
 	}
+
+		// Look up our official host information
+	if( (host_ptr = gethostbyname(hostname)) == NULL ) {
+		EXCEPT( "gethostbyname(%s) failed, errno = %d", hostname, errno );
+	}
+
+		// Grab our ip_addr and fully qualified hostname
+	memcpy( &ip_addr, host_ptr->h_addr, (size_t)host_ptr->h_length );
+	ip_addr = ntohl( ip_addr );
+
+	strcpy( full_hostname, host_ptr->h_name );
+		// Make sure we've got a trailing '.' to signify a fully
+		// qualified name.
+	len = strlen( full_hostname );
+	if( full_hostname[len-1] != '.' ) {
+		full_hostname[len] = '.';
+		full_hostname[len+1] = '\0';
+	}		
+	
+	hostnames_initialized = TRUE;
 }
 
-
-// Return our full hostname (with domain) in a static data buffer.
-// If we've already looked up the hostname, just return the answer.
-char*
-my_full_hostname()
-{
-	static char hostname[1024] = "\0";
-	char this_host[1024];
-	struct hostent *host_ptr;
-
-	if( hostname[0] ) {
-		return hostname;
-	}
-		// determine our own host name 
-	if( gethostname(this_host, sizeof(this_host)) < 0 ) {
-		hostname[0] = '\0';
-		return NULL;
-	}
-
-	/* Look up out official host information */
-	if( (host_ptr = gethostbyname(this_host)) == NULL ) {
-		hostname[0] = '\0';
-		return NULL;
-	}
-
-	/* copy out the official hostname */
-	strcpy(hostname, host_ptr->h_name);
-	return hostname;
-}
