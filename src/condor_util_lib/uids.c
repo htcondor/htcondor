@@ -320,7 +320,7 @@ get_user_uid()
 {
 	if( !UserIdsInited ) {
 		dprintf(D_ALWAYS, "get_user_uid() called when UserIds not inited!\n");
-		return -1;
+		return (uid_t)-1;
 	}
 
 	return UserUid;
