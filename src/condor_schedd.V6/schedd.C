@@ -967,11 +967,15 @@ count( ClassAd *job )
 			status = HELD;
 		}
 		// Don't count HELD jobs that have ATTR_JOB_MANAGED set to false.
-		if ( status != HELD || job_managed != 0 ) {
+		if ( (status != HELD && status != COMPLETED && status != REMOVED) 
+					|| job_managed != 0 ) 
+		{
 			needs_management = 1;
 			scheduler.Owners[OwnerNum].GlobusJobs++;
 		}
-		if ( status != HELD && job_managed == 0 ) {
+		if ( status != HELD && status != COMPLETED && status != REMOVED
+					&& job_managed == 0 ) 
+		{
 			scheduler.Owners[OwnerNum].GlobusUnmanagedJobs++;
 		}
 		if ( gridman_per_job ) {
@@ -1634,7 +1638,6 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 {
 	ExtArray<PROC_ID> *jobs;
 	const char *AttrsToModify[] = { 
-		// ATTR_JOB_CMD,  // someday...
 		ATTR_JOB_INPUT,
 		ATTR_JOB_OUTPUT,
 		ATTR_JOB_ERROR,
@@ -1729,9 +1732,13 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			char *old_path_buf;
 			bool changed = false;
 			char *base = NULL;
-			while ( old_path_buf=old_paths.next() ) {
+			char new_path_buf[_POSIX_PATH_MAX];
+			while ( (old_path_buf=old_paths.next()) ) {
 				base = basename(old_path_buf);
 				if ( strcmp(base,old_path_buf)!=0 ) {
+					snprintf(new_path_buf,_POSIX_PATH_MAX,
+						"%s%c%s",SpoolSpace,DIR_DELIM_CHAR,base);
+					base = new_path_buf;
 					changed = true;
 				}
 				new_paths.append(base);
@@ -1740,12 +1747,10 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 					// Backup original value
 				sprintf(new_attr_value,"SUBMIT_%s",AttrsToModify[index]);
 				SetAttributeString(cluster,proc,new_attr_value,buf);
-//				dprintf(D_FULLDEBUG,"TODD set %d.%d %s=%s\n",cluster,proc,new_attr_value,buf);
 					// Store new value
 				char *new_value = new_paths.print_to_string();
 				ASSERT(new_value);
 				SetAttributeString(cluster,proc,AttrsToModify[index],new_value);
-//				dprintf(D_FULLDEBUG,"TODD set %d.%d %s=%s\n",cluster,proc,AttrsToModify[index],new_value);
 				free(new_value);
 			}
 		}
