@@ -24,6 +24,7 @@
 #include "source.h"
 #include "classad.h"
 #include "lexer.h"
+#include "util.h"
 
 using namespace std;
 

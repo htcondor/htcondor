@@ -30,6 +30,13 @@ BEGIN_NAMESPACE( classad )
 // macro for recognising octal digits
 #define isodigit(x) (( (x) - '0' < 8 ) && ((x) - '0' >= 0))
 
+// A structure which represents the Absolute Time Literal
+struct abstime_t 
+{
+	time_t secs;   // seconds from the epoch (UTC) 
+	int    offset; // seconds east of Greenwich 
+};
+
 bool hex_to_double(const std::string &hex, double &number);
 
 // The char buffer must be at least 17 bytes long. 
@@ -43,4 +50,4 @@ void convert_escapes(std::string &text, bool &validStr);
 
 END_NAMESPACE // classad
 
-#endif//__VALUES_H__
+#endif//__UTILS_H__

@@ -24,6 +24,7 @@
 #define __VALUES_H__
 
 #include "common.h"
+#include "util.h"
 
 BEGIN_NAMESPACE( classad )
 

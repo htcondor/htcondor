@@ -77,13 +77,6 @@ using namespace std;
 #include <string>
 #endif
 
-// A structure which represents the Absolute Time Literal
-struct abstime_t {
-  time_t secs;    /* seconds from the epoch (UTC) */
-  int offset;     /* seconds east of Greenwich */
-};
-
-
 BEGIN_NAMESPACE( classad )
 
 static const char ATTR_AD					[]	= "Ad";
