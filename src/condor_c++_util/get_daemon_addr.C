@@ -292,15 +292,15 @@ char*
 get_daemon_addr( daemonType dt, const char* name, const char* pool )
 {
 	switch( dt ) {
-	case MASTER:
+	case DT_MASTER:
 		return get_master_addr( name, pool );
-	case STARTD:
+	case DT_STARTD:
 		return get_startd_addr( name, pool );
-	case SCHEDD:
+	case DT_SCHEDD:
 		return get_schedd_addr( name, pool );
-	case NEGOTIATOR:
+	case DT_NEGOTIATOR:
 		return get_negotiator_addr( name );
-	case COLLECTOR:
+	case DT_COLLECTOR:
 		return get_collector_addr( name );
 	default:
 		return NULL;
