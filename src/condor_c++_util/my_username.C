@@ -8,7 +8,7 @@ my_username( int uuid = 0 ) {
    char username[UNLEN+1];
    unsigned long usernamelen = UNLEN+1;
    if (GetUserName(username, &usernamelen) < 0) {
-      EXCEPT( "GetUserName failed.\n" );
+		return( NULL );
    }
    return strdup(username);
 #else
@@ -18,9 +18,9 @@ my_username( int uuid = 0 ) {
 	if ( !tryUid ) {
 		tryUid = getuid();
 	}
-//   if( (pwd=getpwuid(getuid())) == NULL ) {
+
    if( (pwd=getpwuid(tryUid)) == NULL ) {
-      EXCEPT( "Can't get passwd entry for uid %d\n", tryUid );
+		return( NULL );
    }
    return strdup(pwd->pw_name);
 #endif
