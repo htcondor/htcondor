@@ -72,7 +72,10 @@ EXTRACT = GETEUID.o GETEGID.o GETWD.o
 #if IS_HPPAR_HPUX9
 /* UTIL_EXTRACT = GETWD.o */
 HP_SPECIFIC_FILES = seteuid.o setegid.o
-#endif
+#if !IS_HPPAR_HPUX10
+HP_CKPT = get_reginfo.HPUX.o
+#endif   /* of !IS_HPPAR_HPUX10 */
+#endif   /* of IS_HPPAR_HPUX9   */
 
 #if IS_SGI_IRIX62
 DEP_OS = IRIX62
