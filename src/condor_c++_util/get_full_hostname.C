@@ -137,7 +137,8 @@ get_full_hostname_from_hostent( struct hostent* host_ptr,
 		dprintf( D_HOSTNAME, "Checking alias \"%s\"\n",
 				 host_ptr->h_aliases[i] );
 		if( (tmp = strchr(host_ptr->h_aliases[i], '.')) ) { 
-			dprintf( D_HOSTNAME, "Alias \"%s\" is fully qualified\n" );
+			dprintf( D_HOSTNAME, "Alias \"%s\" is fully qualified\n",
+				host_ptr->h_aliases[i] );
 			return strnewp( host_ptr->h_aliases[i] );
 		}
 	}
