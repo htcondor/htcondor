@@ -881,7 +881,7 @@ ReliSock::setOwner( char *newOwner ) {
 
 const char *
 ReliSock::getOwner() {
-	if ( this && authob ) {
+	if ( authob ) {
 		return( authob->getOwner() );
 	}
 	return NULL;

@@ -45,7 +45,8 @@ Authentication::Authentication( ReliSock *sock )
 	mySock = sock;
 	//start off with socket authenticated, so that queue mgmt stuff works.
 	//this is insecure, but won't work without rewriting queue stuff.
-	auth_status = CAUTH_ANY;
+//	auth_status = CAUTH_ANY;
+	auth_status = CAUTH_NONE;
 	claimToBe = NULL;
 	GSSClientname = NULL;
 	authComms.buffer = NULL;
@@ -386,6 +387,7 @@ Authentication::authenticate_filesystem()
 		mySock->code( new_file );
 		if ( new_file ) {
 			fd = open(new_file, O_RDONLY | O_CREAT | O_TRUNC, 0666);
+dprintf(D_ALWAYS,"auth_filesystem, client open stat: %d\n", fd );
 			::close(fd);
 		}
 		mySock->end_of_message();
