@@ -25,6 +25,8 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CKPT_FLAG) -DNEW_PROC $(PVM_INCLUDE)\
 OS = ULTRIX42
 #elif IS_HPPAR_HPUX9
 OS = HPUX
+#elif IS_SGI_IRIX62
+OS = IRIX62
 #else
 OS = OperatingSystem
 #endif
