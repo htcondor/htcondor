@@ -506,7 +506,46 @@ handle_q(Service *, int, Stream *sock)
 
 	// Abort any uncompleted transaction.  The transaction should
 	// be committed in CloseConnection().
-	JobQueue->AbortTransaction();
+	if ( JobQueue->AbortTransaction() ) {
+		/*	If we made it here, a transaction did exist that was not
+			committed, and we now aborted it.  This would happen if 
+			somebody hit ctrl-c on condor_rm or condor_status, etc,
+			or if any of these client tools bailed out due to a fatal error.
+			Because the removal of ads from the queue has been backed out,
+			we need to "back out" from any changes to the ClusterSizeHashTable,
+			since this may now contain incorrect values.  Ideally, the size of
+			the cluster should just be kept in the cluster ad -- that way, it 
+			gets committed or aborted as part of the transaction.  But alas, 
+			it is not; same goes a bunch of other stuff: removal of ckpt and 
+			ickpt files, appending to the history file, etc.  Sigh.  
+			This should be cleaned up someday, probably with the new schedd.
+			For now, to "back out" from changes to the ClusterSizeHashTable, we
+			use brute force and blow the whole thing away and recompute it. 
+			-Todd 2/2000
+		*/
+		ClusterSizeHashTable->clear();
+		ClassAd *ad;
+		HashKey key;
+		const char *tmp;
+		int 	*numOfProcs = NULL;	
+		int cluster_num;
+		JobQueue->StartIterateAllClassAds();
+		while (JobQueue->IterateAllClassAds(ad,key)) {
+			tmp = key.value();
+			if ( *tmp == '0' ) continue;	// skip cluster & header ads
+			if ( (cluster_num = atoi(tmp)) ) {
+				// count up number of procs in cluster, update ClusterSizeHashTable
+				if ( ClusterSizeHashTable->lookup(cluster_num,numOfProcs) == -1 ) {
+					// First proc we've seen in this cluster; set size to 1
+					ClusterSizeHashTable->insert(cluster_num,1);
+				} else {
+					// We've seen this cluster_num go by before; increment proc count
+					(*numOfProcs)++;
+				}
+
+			}
+		}
+	}	// end of if JobQueue->AbortTransaction == True
 
 	return 0;
 }
