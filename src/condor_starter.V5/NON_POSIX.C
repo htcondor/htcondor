@@ -136,7 +136,7 @@ physical_file_size( char *name )
 	}
 
 
-#if defined(AIX32) || defined(ULTRIX42) || defined(ULTRIX43) || defined(SUNOS41)|| defined(OSF1) || defined(Solaris) /* ..dhaval 6/30 */
+#if defined(AIX32) || defined(ULTRIX42) || defined(ULTRIX43) || defined(SUNOS41)|| defined(OSF1) || defined(Solaris) || defined(IRIX53)
 
 	   /*  On these systems struct stat member st_blocks is
 	       defined, and appears to be in 512 byte blocks. */
@@ -188,6 +188,9 @@ physical_file_size( char *name )
 #elif defined(LINUX)
 #	undef _POSIX_SOURCE
 #	define __USE_BSD
+#	include <sys/wait.h>
+#elif defined(IRIX53)
+#	undef _POSIX_SOURCE
 #	include <sys/wait.h>
 #endif
 

@@ -46,6 +46,9 @@
 #       undef _POSIX_SOURCE
 #       define __USE_BSD
 #       include <sys/wait.h>
+#elif defined(IRIX53)
+#		undef _POSIX_SOURCE
+#		include <sys/wait.h>
 #endif
 
 /*

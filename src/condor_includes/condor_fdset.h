@@ -28,6 +28,8 @@
 #	include <sys/select.h>
 #elif defined( Solaris )
 #       include <sys/select.h>
+#elif defined( IRIX53 )
+#	undef _DEFINE_FD_SET 
 #else
 #	error "Don't know how to build fd_set for this platform"
 #endif

@@ -43,7 +43,10 @@
 #	define setitimer __hide_setitimer
 #	define settimeofday __hide_settimeofday
 #	define profil	__hide_profil
+#elif defined(IRIX53)
+#	define fchmod	__hide_fchmod
 #endif
+
 #include <sys/stat.h>
 
 #include <sys/time.h>
@@ -59,6 +62,9 @@
 	int setitimer( int which,struct itimerval *,struct itimerval * );	
 	int	settimeofday( struct timeval *tp, struct timezone *tzp );
 	void profil( short *buf, unsigned int size, unsigned int ,unsigned int  );
+#elif defined(IRIX53)
+#	undef fchmod
+	int fchmod( int fd, unsigned int mode );
 #endif
 
 #if defined(Solaris)
@@ -72,7 +78,51 @@
 #if defined(HPUX9)
 #undef _PROTOTYPES
 #endif
+
+#if defined(IRIX53)
+#	define sendmsg __hide_sendmsg
+#	define recvfrom __hide_recvfrom
+#	define accept __hide_accept
+#	define getpeername __hide_getpeername
+#	define getsockname __hide_getsockname
+#	define connect __hide_connect
+#	define recv __hide_recv
+#	define bind __hide_bind
+#	define sendto __hide_sendto
+#	define getsockopt __hide_getsockopt
+#	define setsockopt __hide_setsockopt
+#endif
+
 #include <sys/socket.h>
+
+#if defined(IRIX53)
+#	undef sendmsg
+#	undef recvfrom
+#	undef accept
+#	undef getpeername
+#	undef getsockname
+#	undef connect
+#	undef recv
+#	undef bind
+#	undef sendto
+#	undef getsockopt
+#	undef setsockopt
+	int sendmsg( int socket, struct msghdr *message, int flags );
+	int recvfrom( int socket, char *buffer, int length, int flags, 
+				struct sockaddr *address, int *addr_len );
+	int accept( int socket, struct sockaddr *address, int *addr_len );
+	int getpeername( int socket, struct sockaddr *address, int *addr_len );
+	int getsockname( int socket, struct sockaddr *address, int *addr_len );
+	int connect( int sock, struct sockaddr *address, int addr_len );
+	int recv( int socket, char *msg, int length, int flags );
+	int bind( int socket, struct sockaddr *address, int addr_len );
+	int sendto( int sock, char *msg, int msg_len, int flags, 
+				struct sockaddr *dest, int dest_len );
+	int getsockopt( int sock, int level, int opt_name, char *opt_val, 
+				int *opt_len );
+	int setsockopt( int sock, int level, int opt_name, char *opt_val, 
+				int opt_len );
+#endif
 
 #if defined(ULTRIX43)
 #	define uname	__hide_uname
@@ -83,16 +133,21 @@
 	int uname( struct utsname *name );
 #endif
 
+#if defined(IRIX53)
+#	define kill	__hide_kill
+#endif
+
+#if defined(SUNOS41) || defined(IRIX53)
+#	include <signal.h>
+#endif
+
 #if defined(Solaris)
 #	undef uname
 #endif
 
-#if defined(SUNOS41) 
-#	include <signal.h>
-#endif
-
-#if defined(AIX32)
-#	include <signal.h>
+#if defined(IRIX53)
+#	undef kill
+	int kill( pid_t pid, int sig );
 #endif
 
 #if defined(HPUX9)
@@ -131,11 +186,20 @@
 	int semctl(int , int , int , void *);
 #endif
 
+#if defined(IRIX53)
+#	define mount __hide_mount
+#endif
+
 #if defined(ULTRIX42) || defined(ULTRIX43) || defined(OSF1)
 #	include <sys/param.h>
 #	include <sys/mount.h>
 #elif !defined(AIX32)
 #	include <sys/mount.h>
+#endif
+
+#if defined(IRIX53)
+#	undef mount
+	int mount( char *spec, char *dir, int mflag, int fstyp, char *pt, int len );
 #endif
 
 #if defined(HPUX9)
@@ -145,7 +209,20 @@
 #elif defined(ULTRIX43)
 #	define write	__hide_write
 #	define read		__hide_read
+#elif defined(IRIX53)
+#	define select	__hide_select
+#	define readlink __hide_readlink
+#	define setreuid __hide_setreuid
+#	define setregid __hide_setregid
+#	define gethostid __hide_gethostid
+#	define sethostid __hide_sethostid
+#	define profil __hide_profil
+#	define acct __hide_acct
+#	define sethostname __hide_sethostname
+#	define setdomainname __hide_setdomainname
+#	define ptrace __hide_ptrace
 #endif
+
 #include "condor_fix_unistd.h"
 #if defined(Solaris)
 #	undef profil
@@ -164,7 +241,31 @@
 #	undef read
 	ssize_t write( int fd, const void *buf, size_t len );
 	ssize_t read( int fd, void *buf, size_t len );
+#elif defined(IRIX53)
+#	undef select
+#	undef readlink
+#	undef setreuid
+#	undef setregid
+#	undef gethostid
+#	undef sethostid
+#	undef profil
+#	undef acct
+#	undef sethostname
+#	undef setdomainname
+#	undef ptrace
+	int readlink( const char *path, void *buf, int buf_size );
+	int select();
+	int setreuid( int ruid, int euid );
+	int setregid( int rgid, int egid );
+	int gethostid();
+	int sethostid( int hostid );
+	void profil( short *buf, unsigned int size, unsigned int ,unsigned int  );
+	int acct( char *path );
+	int sethostname( char *address, int address_len );
+	int setdomainname( char *name, int namelen );
+	int ptrace( long req, long int process, unsigned long *address, unsigned long data);
 #endif
+
 
 #if defined(HPUX9)
 #	undef _PROTOTYPES
@@ -185,7 +286,7 @@
 	int shmget( key_t key, unsigned int size, unsigned int flags );
 #endif
 
-#if defined(SUNOS41) || defined(HPUX9) || defined(ULTRIX43) || defined(Solaris)
+#if defined(SUNOS41) || defined(HPUX9) || defined(ULTRIX43) || defined(Solaris) || defined(IRIX53)
 #	define TRUE 1
 #	define FALSE 0
 #endif

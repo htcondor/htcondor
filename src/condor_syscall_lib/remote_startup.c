@@ -655,6 +655,8 @@ unblock_signals()
 #	define LIM (200 * UNIT)
 #elif defined(Solaris)
 #	define LIM (260 * UNIT)
+#elif defined(SGI)
+#	define LIM (200 * UNIT)
 #endif
 
 #if 1

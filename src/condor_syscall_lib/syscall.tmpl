@@ -458,7 +458,11 @@ not_supported{
 	}
 	}
 #else 
+#if defined(IRIX53)
+	int fstatfs( map(int fd), struct statfs *buf, int len, int fstyp ) {
+#else
 int fstatfs( map(int fd), struct statfs *buf ) {
+#endif
 	out xdr_statfs( buf );
 		alloc( buf, STATFS_SIZE );
 	}
@@ -601,7 +605,7 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 		alloc( times, TIMEVAL_ARRAY_SIZE );
 	}
 	int gethostid();
-#if defined(HPUX9) || defined(LINUX) || defined(Solaris)
+#if defined(HPUX9) || defined(LINUX) || defined(Solaris) || defined(IRIX53)
 	int setrlimit( int resource, const  struct rlimit *rlp ) {
 #else
 	int setrlimit( int resource, /* const */ struct rlimit *rlp ) {
@@ -631,6 +635,13 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 #elif defined(Solaris)
 	not_supported
 {	int statfs( char *path, struct statfs *buf, int len );
+	}
+#elif defined(IRIX53)
+	int statfs( const char *path, struct statfs *buf, int len, int fstyp ) {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+		out xdr_statfs( buf );
+		alloc( buf, STATFS_SIZE );
 	}
 #else
 	int statfs( char *path, struct statfs *buf, int len ) {
@@ -777,8 +788,10 @@ not_supported {
 	int adjtime( struct timeval *delta, struct timeval *old_delta );
 	int sethostid( int host_id );
 	int async_daemon();
-#	if !defined(SUNOS41)
+#	if !defined(SUNOS41) && !defined(IRIX53)
 		int getfh( map(int fd), fhandle_t *fhp, int exp_fd );
+#	endif
+#	if !defined(SUNOS41)
 		int exportfs( int access, int *record, struct exportfsdata *exdata );
 #	endif
 #if defined(LINUX)

@@ -66,6 +66,11 @@ typedef unsigned long u_long;
 
 extern "C" {
 #include <netinet/in.h>
+
+#if defined(IRIX53)
+int symlink(const char *name1, const char *name2);
+#endif
+
 }
 #include "fileno.h"
 #include "condor_rsc.h"
@@ -1294,7 +1299,8 @@ set_iwd()
 		exit( 4 );
 	}
 	if( chdir(iwd) < 0 ) {
-		sprintf( buf, "Can't open working directory \"%s\"", iwd );
+		sprintf( buf, "Can't open working directory \"%s\", errno = %d", iwd,
+			    errno );
 		REMOTE_syscall( CONDOR_perm_error, buf );
 		exit( 4 );
 	}

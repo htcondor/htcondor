@@ -6,7 +6,7 @@ typedef struct {
 	int		cluster;				/* Condor Cluster # */
 	int		proc;					/* Condor Proc # */
 	int		job_class;				/* STANDARD, VANILLA, PVM, PIPE, ... */
-	uid_t	uid;					/* Execute job under this UID */
+	uid_t	uid;					/* Execute job under this UID */ 
 	gid_t	gid;					/* Execute job under this gid */
 	pid_t	virt_pid;				/* PVM virt pid of this process */
 	int		soft_kill_sig;			/* Use this signal for a soft kill */

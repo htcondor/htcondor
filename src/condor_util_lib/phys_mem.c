@@ -90,7 +90,7 @@ calc_phys_memory()
  
  	return(physmem);
 }
-#elif defined HPUX9  /* Todd figured how to do it on hp's and i added it in here --sami */
+#elif defined(HPUX9) || defined(IRIX53) 
 
 #include <stdio.h>
 #include <nlist.h>
@@ -110,7 +110,13 @@ calc_phys_memory()
   /*
    *   Lookup addresses of variables.
   */
+#if defined(HPUX9) 
   if ((nlist("/hp-ux",memnl) <0) || (memnl[0].n_type ==0)) return(-1); 
+#endif
+
+#if defined(IRIX53)
+  if ((nlist("/unix",memnl) <0) || (memnl[0].n_type ==0)) return(-1); 
+#endif
 
   /*
    *   Open kernel memory and read variables.

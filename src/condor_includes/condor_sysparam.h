@@ -111,4 +111,16 @@ private:
 				const int size, const SysType type);
 };
 
+
+class Irix	: public BaseOs 
+{
+public:
+	Irix();                      // do required initialisation
+private:
+	int  	readSysParam(const SysParamName, char*& buffer, int& size, 
+														SysType& type);
+	void	disSysParam(const SysParamName sys, const char*buffer, 
+									const int size, const SysType type);
+};
+
 extern  BaseOs*     platform ;

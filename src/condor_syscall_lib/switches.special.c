@@ -60,6 +60,7 @@
 #include <sys/resource.h>
 #include <sys/uio.h>
 #include <errno.h>
+#include "debug.h"
 
 static int fake_readv( int fd, const struct iovec *iov, int iovcnt );
 static int fake_writev( int fd, const struct iovec *iov, int iovcnt );
@@ -183,7 +184,20 @@ store_working_directory()
   current machine, and the usages it accumulated on all the machines
   where it has run in the past.
 */
-#if !defined(Solaris)
+
+/*
+#if defined(IRIX53)
+
+int
+getrusage( int who, struct rusage *rusage )
+{ 
+	dprintf(D_ALWAYS, "Aborting on getrusage\n"); 
+	abort(); 
+	return(0);
+}
+*/
+
+#if !defined(Solaris) && !defined(IRIX53)
 int
 getrusage( int who, struct rusage *rusage )
 {

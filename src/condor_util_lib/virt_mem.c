@@ -341,8 +341,29 @@ calc_virt_memory()
 }
 #endif /* of the code for HPUX */
 
+
+#if defined(IRIX53)
+
+#include <sys/stat.h>
+#include <sys/swap.h>
+
+close_kmem() {}
+calc_virt_memory()
+{
+	int freeswap;
+
+	if( swapctl(SC_GETFREESWAP, &freeswap) == -1 ) {
+		return(-1);
+	}
+
+	return( freeswap / 2 );
+
+}
+
+#endif /* of the code for IRIX 53 */
+
 	
-#if !defined(LINUX) && !defined(IRIX331) && !defined(AIX31) && !defined(AIX32) && !defined(SUNOS40) && !defined(SUNOS41) && !defined(CMOS) && !defined(HPUX9) && !defined(OSF1)
+#if !defined(LINUX) && !defined(IRIX331) && !defined(AIX31) && !defined(AIX32) && !defined(SUNOS40) && !defined(SUNOS41) && !defined(CMOS) && !defined(HPUX9) && !defined(OSF1) && !defined(IRIX53)
 /*
 ** Try to determine the swap space available on our own machine.  The answer
 ** is in kilobytes.

@@ -91,6 +91,11 @@
 #	include <sys/statfs.h>		 /* for struct statfs */
 #endif
 
+#if defined(IRIX53)
+#	include <sys/statfs.h>
+#	include <signal.h>
+#endif
+
 #if defined(SUNOS41)
 #	include <sys/vfs.h>
 #endif

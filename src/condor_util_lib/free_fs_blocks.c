@@ -43,7 +43,7 @@
 #include <sys/types.h>
 
 
-#if defined(IRIX331)
+#if defined(IRIX331) || defined(IRIX53)
 #include <sys/statfs.h>
 #elif !defined(OSF1)
 #include <sys/vfs.h>
@@ -245,16 +245,16 @@ char *filename;
 }
 #endif /* VAX && ULTRIX */
 
-#if (defined(I386) && defined(DYNIX)) || (defined(I386) && defined(LINUX)) || (defined(VAX) && defined(BSD43)) || (defined(MC68020) && defined(SUNOS41)) || (defined(IBM032) && defined(BSD43)) || (defined(MC68020) && defined(BSD43)) || (defined(SPARC) && defined(SUNOS41)) || (defined(R6000) && defined(AIX31)) || defined(AIX32) || defined(IRIX331) || (defined(SPARC) && defined(CMOS)) || defined(HPUX9) || defined(OSF1) || defined(Solaris)
+#if (defined(I386) && defined(DYNIX)) || (defined(I386) && defined(LINUX)) || (defined(VAX) && defined(BSD43)) || (defined(MC68020) && defined(SUNOS41)) || (defined(IBM032) && defined(BSD43)) || (defined(MC68020) && defined(BSD43)) || (defined(SPARC) && defined(SUNOS41)) || (defined(R6000) && defined(AIX31)) || defined(AIX32) || defined(IRIX331) || (defined(SPARC) && defined(CMOS)) || defined(HPUX9) || defined(OSF1) || defined(Solaris) || defined(IRIX53)
 
-#if defined(AIX31) || defined(AIX32) || defined(Solaris)
+#if defined(AIX31) || defined(AIX32) || defined(Solaris) || defined(IRIX53)
 #include <sys/statfs.h>
 #elif defined(OSF1)
 #include <sys/mount.h>
 #endif
 
 
-#if defined(IRIX331) || defined(Solaris)
+#if defined(IRIX331) || defined(Solaris) || defined(IRIX53)
 #define f_bavail f_bfree
 #endif
 
@@ -265,7 +265,7 @@ char *filename;
 	struct statfs statfsbuf;
 	int free_kbytes;
 
-#if defined(IRIX331) || defined(Solaris)
+#if defined(IRIX331) || defined(Solaris) || defined(IRIX53)
 	if(statfs(filename, &statfsbuf, sizeof statfsbuf, 0) < 0) {
 #elif defined(OSF1)
 	if(statfs(filename, &statfsbuf, sizeof statfsbuf) < 0) {
@@ -279,7 +279,7 @@ char *filename;
 	}
 
 	/* Convert to kbyte blocks: available blks * blksize / 1k bytes. */
-	free_kbytes = statfsbuf.f_bavail * (statfsbuf.f_bsize / 1024);
+	free_kbytes = statfsbuf.f_bavail * statfsbuf.f_bsize / 1024;
 
 	dprintf(D_FULLDEBUG, "number of kbytes available for filename(%s): %d\n", 
 			filename, free_kbytes);

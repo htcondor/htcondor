@@ -104,7 +104,7 @@
 #include <sys/resource.h>
 #endif
 
-#include "fake_flock.h" /* Solaris
+/* #include "fake_flock.h" */ /* Solaris
 specific change because of the enclosure of this 
 header in HPUX9 definition but is used 
 unconditionally in following code */
@@ -114,7 +114,7 @@ unconditionally in following code */
 #include "trace.h"
 #include "clib.h"
 
-#if defined(HPUX9)
+#if defined(HPUX9) || defined(Solaris)
 #	include "fake_flock.h"
 #endif
 

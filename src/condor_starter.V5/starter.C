@@ -271,6 +271,8 @@ delay( int sec )
 	int		lim = 650000;
 #elif defined(LINUX)
 	int		lim = 300000;
+#elif defined(SGI)
+	int		lim = 300000;
 #endif
 
 
@@ -1526,6 +1528,7 @@ determine_user_ids( uid_t &requested_uid, gid_t &requested_gid )
 
 		// don't allow any root processes
 	if( requested_uid == 0 || requested_gid == 0 ) {
+
 		EXCEPT( "Attempt to start user process with root privileges" );
 	}
 		

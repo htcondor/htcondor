@@ -31,7 +31,7 @@
 #include "syscall.aix.h"
 #endif
 
-#if defined(IRIX331)
+#if defined(IRIX331) || defined(IRIX53)
 #include <sys.s>
 #endif
 
@@ -41,7 +41,7 @@
 #include <sys/syscall.h>
 #endif
 
-#if !defined(AIX31) && !defined(AIX32)  && !defined(IRIX331) && !defined(Solaris) /* Solaris specific change */
+#if !defined(AIX31) && !defined(AIX32)  && !defined(IRIX331) && !defined(Solaris) && !defined(IRIX53)
 #include <syscall.h> 
 #endif
 

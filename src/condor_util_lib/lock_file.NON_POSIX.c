@@ -86,6 +86,10 @@ specific change because of the enclosure of this header in HPUX9 definition but 
 #define USE_FLOCK 0
 #endif
 
+#if defined( IRIX53)
+#define USE_FLOCK 0
+#endif
+
 #if !defined(USE_FLOCK)
 ERROR: DONT KNOW WHETHER TO USE FLOCK or FCNTL
 #endif

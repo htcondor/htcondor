@@ -6,10 +6,12 @@
 	typedef struct  _quad { int val[2]; } quad;
 #endif
 
-#if defined(Solaris)
+#if defined(Solaris) || defined(IRIX53)
 #include "_condor_fix_types.h"
 #include <sys/statfs.h>
+#if !defined(IRIX53)
 #include <nfs/nfs.h>
+#endif
 #endif
 
 #include "condor_common.h"
@@ -59,7 +61,6 @@
         typedef struct fhandle fhandle_t;
 #endif
 
-
 #if defined(OSF1)
 #	define _AES_SOURCE
 #	include <sys/poll.h>
@@ -81,6 +82,10 @@
 	};
 	typedef struct fsid fsid_t;
 #	include <sys/statfs.h>		 /* for struct statfs */
+#endif
+
+#if defined(IRIX53)
+#	include <sys/statfs.h>
 #endif
 
 #if defined(AIX32)

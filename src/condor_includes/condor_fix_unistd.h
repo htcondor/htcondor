@@ -11,6 +11,10 @@
 #	define execv __hide_execv
 #endif
 
+#if defined(IRIX53)
+struct timeval;
+#endif
+
 #include <unistd.h>
 
 #if defined(SUNOS41)
