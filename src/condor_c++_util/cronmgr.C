@@ -215,7 +215,8 @@ CondorCronMgr::ParseJobList( const char *jobString )
 
 		// Verify strdup()
 		if ( NULL == tmpDescr ) {
-			dprintf( D_ALWAYS, "CronMgr: Failed to strdup() job description!" );
+			dprintf( D_ALWAYS, 
+					 "CronMgr: Failed to strdup() job description!" );
 			continue;
 		}
 

@@ -71,7 +71,7 @@ LineBuffer::
 Buffer( char c )
 {
 	if (  ( '\n' == c ) || ( '\0' == c ) || ( bufcount >= bufsize ) ) {
-		return DoOutput( true );
+		return DoOutput( false );
 	} else {
 		*bufptr = c;
 		bufptr++;

@@ -882,7 +882,7 @@ ResMgr::adlist_replace( const char *name, ClassAd *newAd )
 	extra_ads.Rewind( );
 	while ( extra_ads.Next( cur ) ) {
 		if ( ! strcmp( cur->GetName( ), name ) ) {	
-			dprintf( D_FULLDEBUG, "Replacing ClassAd for '%s'\n", name );	
+			dprintf( D_FULLDEBUG, "Replacing ClassAd for '%s'\n", name );
 			cur->ReplaceAd( newAd );
 			return 0;
 		}
@@ -1684,7 +1684,6 @@ NamedClassAd::~NamedClassAd( )
 void
 NamedClassAd::ReplaceAd( ClassAd *newAd )
 {
-	
 	if ( NULL != myClassAd ) {
 		delete myClassAd;
 		myClassAd = NULL;

@@ -37,6 +37,7 @@ class CronJobOut : public LineBuffer
 	virtual int Output( const char *buf, int len );
 	int GetQueueSize( void );
 	char *GetLineFromQueue( void );
+	int FlushQueue( void );
   private:
 	Queue<char *>		lineq;
 	class CondorCronJob	*job;
@@ -153,6 +154,14 @@ class CondorCronJob : public Service
 	int SetTimer( unsigned first, unsigned seconds );
 	int KillTimer( unsigned seconds );
 
+	// Debug / TODO
+	char	*TodoBuffer;
+	int		TodoBufSize;
+	int		TodoBufWrap;
+	int		TodoBufOffset;
+	int		TodoWriteNum;
+	public:
+	void	TodoWrite( void );
 };
 
 #endif /* _CONDOR_CRONJOB_H */

@@ -60,6 +60,25 @@ ProcessOutput( const char *line )
 	if ( NULL == line ) {
 		// Publish it
 		if ( OutputAdCount != 0 ) {
+
+			// Insert the 'LastUpdate' field
+			const char      *prefix = GetPrefix( );
+			if ( prefix ) {
+				MyString    Update( prefix );
+				Update += "LastUpdate = ";
+				char    tmpBuf [ 20 ];
+				sprintf( tmpBuf, "%ld", (long) time( NULL ) );
+				Update += tmpBuf;
+				const char  *UpdateStr = Update.Value( );
+
+				// Add it in
+				if ( ! OutputAd->Insert( UpdateStr ) ) {
+					dprintf( D_ALWAYS, "Can't insert '%s' into '%s' ClassAd\n",
+							 UpdateStr, GetName() );
+					TodoWrite( );
+				}
+			}
+
 			// Replace the old ClassAd now
 			resmgr->adlist_replace( GetName( ), OutputAd );
 
@@ -72,6 +91,7 @@ ProcessOutput( const char *line )
 		if ( ! OutputAd->Insert( line ) ) {
 			dprintf( D_ALWAYS, "Can't insert '%s' into '%s' ClassAd\n",
 					 line, GetName() );
+			TodoWrite( );
 		} else {
 			OutputAdCount++;
 		}

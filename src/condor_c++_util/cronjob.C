@@ -83,6 +83,23 @@ GetQueueSize( void )
 	return lineq.Length( );
 }
 
+// Flush the queue
+int
+CronJobOut::
+FlushQueue( void )
+{
+	int		size = lineq.Length( );
+	char	*line;
+
+	// Flush out the queue
+	while( ! lineq.dequeue( line ) ) {
+		free( line );
+	}
+
+	// Return the size
+	return size;
+}
+
 // Get next queue element
 char *
 CronJobOut::
@@ -136,6 +153,9 @@ CondorCronJob::CondorCronJob( const char *jobName )
 	// Build my output buffers
 	stdOutBuf = new CronJobOut( this );
 	stdErrBuf = new CronJobErr( this );
+	TodoBufSize = 20 * 1024;
+	TodoWriteNum = TodoBufWrap = TodoBufOffset = 0;
+	TodoBuffer = (char *) malloc( TodoBufSize );
 
 	// Store the name, etc.
 	SetName( jobName );
@@ -342,6 +362,11 @@ CondorCronJob::RunJob( void )
 		}
 	}
 
+	// Check output queue!
+	if ( stdOutBuf->FlushQueue( ) ) {
+		dprintf( D_ALWAYS, "Cron: Job '%s': Queue not empty!\n", name );
+	}
+
 	// Job not running, just start it
 	dprintf( D_JOB, "Cron: Running job '%s', path '%s'\n", name, path );
 
@@ -377,6 +402,11 @@ CondorCronJob::StartJob( void )
 	}
 	dprintf( D_JOB, "Cron: Starting job '%s', path '%s'\n", name, path );
 
+	// Check output queue!
+	if ( stdOutBuf->FlushQueue( ) ) {
+		dprintf( D_ALWAYS, "Cron: Job '%s': Queue not empty!\n", name );
+	}
+
 	// Run it
 	return RunProcess( );
 }
@@ -394,6 +424,14 @@ CondorCronJob::Reaper( int exitPid, int exitStatus )
 				 pid, exitPid );
 	}
 	pid = 0;
+
+	// Read the stderr & output
+	if ( stdOut >= 0 ) {
+		StdoutHandler( stdOut );
+	}
+	if ( stdErr >= 0 ) {
+		StderrHandler( stdErr );
+	}
 
 	// Clean up it's file descriptors
 	CleanAll( );
@@ -451,18 +489,35 @@ CondorCronJob::
 ProcessOutputQueue( void )
 {
 	int		status = 0;
+	int		linecount = stdOutBuf->GetQueueSize( );
 
 	// If there's data, process it...
-	if ( stdOutBuf->GetQueueSize() != 0 ) {
+	if ( linecount != 0 ) {
+		dprintf( D_FULLDEBUG, "%s: Queue size %d\n", 
+				 name, linecount );
 		char	*linebuf;
+
+		// Read all of the data from the queue
 		while( ( linebuf = stdOutBuf->GetLineFromQueue( ) ) != NULL ) {
 			int		tmpstatus = ProcessOutput( linebuf );
 			if ( tmpstatus ) {
 				status = tmpstatus;
 			}
 			free( linebuf );
+			linecount--;
 		}
-		ProcessOutput( NULL );
+
+		// Sanity checks
+		int		tmp = stdOutBuf->GetQueueSize( );
+		if ( 0 != linecount ) {
+			dprintf( D_ALWAYS, "%s: %d lines remain!!\n",
+					 name, linecount );
+		} else if ( 0 != tmp ) {
+			dprintf( D_ALWAYS, "%s: Queue reports %d lines remain!\n",
+					 name, tmp );
+		} else {
+			ProcessOutput( NULL );
+		}
 	}
 	return 0;
 }
@@ -567,6 +622,29 @@ RunProcess( void )
 	return 0;
 }
 
+// Debugging
+void
+CondorCronJob::TodoWrite( void )
+{
+	char	fname[1024];
+	FILE	*fp;
+	sprintf( fname, "todo.%s.%06d.%02d", name, getpid(), TodoWriteNum++ );
+	dprintf( D_ALWAYS, "%s: Writing input log '%s'\n", name, fname );
+
+	if ( ( fp = fopen( fname, "w" ) ) != NULL ) {
+		if ( TodoBufWrap ) {
+			fwrite( TodoBuffer + TodoBufOffset,
+					TodoBufSize - TodoBufOffset,
+					1,
+					fp );
+		}
+		fwrite( TodoBuffer, TodoBufOffset, 1, fp );
+		fclose( fp );
+	}
+	TodoBufOffset = 0;
+	TodoBufWrap = 0;
+}
+
 // Data is available on Standard Out.  Read it!
 //  Note that we set the pipe to be non-blocking when we created it
 int
@@ -574,36 +652,61 @@ CondorCronJob::StdoutHandler ( int pipe )
 {
 	char			buf[STDOUT_READBUF_SIZE];
 	int				bytes;
+	int				reads = 0;
 
-	// Read a block from it
-	bytes = read( stdOut, buf, STDOUT_READBUF_SIZE );
+	// Read 'til we suck up all the data (or loop too many times..)
+	while ( ( ++reads < 10 ) && ( stdOut >= 0 ) ) {
 
-	// Zero means it closed
-	if ( bytes == 0 ) {
-		dprintf( D_ALWAYS, "Cron: STDOUT closed for '%s'\n", name );
-		daemonCore->Close_Pipe( stdOut );
-		stdOut = -1;
-	}
+		// Read a block from it
+		bytes = read( stdOut, buf, STDOUT_READBUF_SIZE );
 
-	// Positve value is byte count
-	else if ( bytes > 0 ) {
-		const char	*bptr = buf;
+		// Zero means it closed
+		if ( bytes == 0 ) {
+			dprintf( D_ALWAYS, "Cron: STDOUT closed for '%s'\n", name );
+			daemonCore->Close_Pipe( stdOut );
+			stdOut = -1;
+		}
 
-		// stdOutBuf->Output() returns 1 if it finds '-', otherwise 0,
-		// so that's what Buffer returns, too...
-		while ( stdOutBuf->Buffer( &bptr, &bytes ) > 0 ) {
-			ProcessOutputQueue( );
+		// Positve value is byte count
+		else if ( bytes > 0 ) {
+			const char	*bptr = buf;
+
+			// TODO
+			if ( TodoBuffer ) {
+				char	*OutPtr = TodoBuffer + TodoBufOffset;
+				int		Count = bytes;
+				char	*InPtr = buf;
+				while( Count-- ) {
+					*OutPtr++ = *InPtr++;
+					if ( ++TodoBufOffset >= TodoBufSize ) {
+						TodoBufOffset = 0;
+						TodoBufWrap++;
+						OutPtr = TodoBuffer;
+					}
+				}
+			}
+			// End TODO
+
+			// stdOutBuf->Output() returns 1 if it finds '-', otherwise 0,
+			// so that's what Buffer returns, too...
+			while ( stdOutBuf->Buffer( &bptr, &bytes ) > 0 ) {
+				ProcessOutputQueue( );
+			}
+		}
+
+		// Negative is an error; check for EWOULDBLOCK
+		else if (  ( EWOULDBLOCK == errno ) || ( EAGAIN == errno )  ) {
+			break;			// No more data; break out; we're done
+		}
+
+		// Something bad
+		else {
+			dprintf( D_ALWAYS,
+					 "Cron: read STDOUT failed for '%s' %d: '%s'\n",
+					 name, errno, strerror( errno ) );
+			return -1;
 		}
 	}
-
-	// Negative is an error; check for EWOULDBLOCK
-	else if (  ( errno != EWOULDBLOCK ) && ( errno != EAGAIN )  ) {
-		dprintf( D_ALWAYS,
-				 "Cron: read STDOUT failed for '%s' %d: '%s'\n",
-				 name, errno, strerror( errno ) );
-		return -1;
-	}
-
 	return 0;
 }
 
