@@ -704,7 +704,6 @@ doRunAnalysis( ClassAd *request )
 		// 0.  info from machine
 		remoteUser[0] = '\0';
 		totalMachines++;
-		offer->LookupString( ATTR_REMOTE_USER, remoteUser );
 		offer->LookupString( ATTR_NAME , buffer );
 		if( verbose ) printf( "%-15.15s ", buffer );
 
@@ -723,11 +722,19 @@ doRunAnalysis( ClassAd *request )
 		}	
 
 			
-		// 3. Satisfies preemption priority condition?
+		// 3. Is there a remote user?
+		if( !offer->LookupString( ATTR_REMOTE_USER, remoteUser ) ) {
+			// both sides satisfied and no remote user
+			if( verbose ) printf( "Available\n" );
+			available++;
+			continue;
+		}
+
+		// 4. Satisfies preemption priority condition?
 		if( preemptPrioCondition->EvalTree( offer, request, &result ) &&
 			result.type == LX_INTEGER && result.i == TRUE ) {
 
-			// 4. Satisfies standard rank condition?
+			// 5. Satisfies standard rank condition?
 			if( stdRankCondition->EvalTree( offer , request , &result ) &&
 				result.type == LX_INTEGER && result.i == TRUE )  
 			{
@@ -735,11 +742,11 @@ doRunAnalysis( ClassAd *request )
 				available++;
 				continue;
 			} else {
-				// 5.  Satisfies preemption rank condition?
+				// 6.  Satisfies preemption rank condition?
 				if( preemptRankCondition->EvalTree( offer, request, &result ) &&
 					result.type == LX_INTEGER && result.i == TRUE )
 				{
-					// 6.  Tripped on PREEMPTION_HOLD?
+					// 7.  Tripped on PREEMPTION_HOLD?
 					if( preemptionHold->EvalTree( offer , request , &result ) &&
 						result.type == LX_INTEGER && result.i == TRUE ) 
 					{
@@ -757,7 +764,7 @@ doRunAnalysis( ClassAd *request )
 						available++;
 					}
 				} else {
-					// failed 5 and 4, but satisfies 3; so have priority
+					// failed 6 and 5, but satisfies 4; so have priority
 					// but not better or equally preferred than current
 					// customer
 					fRankCond++;
