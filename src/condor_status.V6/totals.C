@@ -271,7 +271,7 @@ displayHeader(FILE *file)
 void StartdServerTotal::
 displayInfo (FILE *file, int)
 {
-	fprintf (file, "%9d %5d %7d %11d %11d %11d\n", machines, avail, memory,
+	fprintf (file, "%9d %5d %7d %11lu %11d %11d\n", machines, avail, memory,
 					disk, condor_mips, kflops);
 }
 
@@ -564,13 +564,13 @@ update (ClassAd *ad)
 void CkptSrvrNormalTotal::
 displayHeader(FILE *file)
 {
-	fprintf (file, "%8.8s %-9.9s", "Servers", "AvailDisk");
+	fprintf (file, "%8.8s %-11.11s", "Servers", "AvailDisk");
 }
 
 void CkptSrvrNormalTotal::
 displayInfo (FILE *file, int tl)
 {
-	if (tl) fprintf (file, "%8d %9d\n", numServers, disk);
+	if (tl) fprintf (file, "%8d %11lu\n", numServers, disk);
 }
 
 ClassTotal::

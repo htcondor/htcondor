@@ -27,6 +27,7 @@
 
 #include "condor_common.h"
 #include "condor_constants.h"
+#include "condor_debug.h"
 #include "file_lock.h"
 #include <stdio.h>
 
@@ -108,6 +109,10 @@ FileLock::obtain( LOCK_TYPE t )
 
 	if( status == 0 ) {
 		state = t;
+	}
+	if ( status != 0 ) {
+		dprintf( D_ALWAYS, "FileLock::obtain(%d) failed - errno %d (%s)\n",
+	                t, errno, strerror(errno) );
 	}
 	return status == 0;
 }

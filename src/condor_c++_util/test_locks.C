@@ -26,7 +26,7 @@
 
 int open_file( const char *name );
 
-void
+int
 main( int argc, char *argv[] )
 {
 	char	cmd [512];
@@ -92,10 +92,10 @@ main( int argc, char *argv[] )
 			continue;
 		}
 
-
-
 		cout << "Unknown command\n";
 	}
+
+	return 0;
 }
 
 int

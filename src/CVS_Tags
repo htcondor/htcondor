@@ -1,8 +1,28 @@
+09/21/04 V6_7-post_merge-V6_6-merge-21
+   The end of a merge of V6_6-branch into V6_7-branch.
+
+09/21/04 V6_7-pre_merge-V6_6-merge-21
+   The state of the V6_7-branch before yet another merge from V6_6-branch.
+
+09/21/04 V6_6-merge-21
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch. This merges includes: Windows XP SP2 fixes.
+
 09/17/04 V6_7-db_logs-branch
    This branch was created off the V6_7-branch at V6_7-db_logs-root
    and will be used by Profs. DeWitt and Naughton and their
    students. Initially, they will work on putting the Condor logs into
    a database.
+
+09/16/04 V6_6-file_lock_test-branch
+   A branch for testing changes to file locking in the user log code.
+   NOT for release; if the changes work they'll probably make their
+   way into 6.7, but we want to start changing things from a stable
+   point.
+
+09/16/04 V6_6-file_lock_test-root
+   The state of the V6_6-branch for an upcomming V6_6-file_lock_test-branch
+   to test changes to file locking in the user log code.
 
 09/15/04 V6_7-pre_merge-V6_6-cdf-merge-1
    The state of the V6_7-branch before merging in the V6_6-cdf-branch

@@ -98,7 +98,7 @@ ScriptProc::StartJob()
 			// probably transfered it for us and left it with bad
 			// permissions...
 		priv_state old_priv = set_user_priv();
-		int retval = chmod( exe_path.GetCStr(), S_IRWXU|S_IRWXO|S_IRWXG );
+		int retval = chmod( exe_path.GetCStr(), 0755 );
 		set_priv( old_priv );
 		if( retval < 0 ) {
 			dprintf( D_ALWAYS, "Failed to chmod %s: %s (errno %d)\n", 

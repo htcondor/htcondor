@@ -96,7 +96,7 @@ OsProc::StartJob()
 				 DIR_DELIM_CHAR, CONDOR_EXEC );
 
 		priv_state old_priv = set_user_priv();
-		int retval = chmod( JobName, S_IRWXU | S_IRWXO | S_IRWXG );
+		int retval = chmod( JobName, 0755 );
 		set_priv( old_priv );
 		if( retval < 0 ) {
 			dprintf ( D_ALWAYS, "Failed to chmod %s!\n",JobName );

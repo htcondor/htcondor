@@ -64,6 +64,7 @@ static void Usage() {
             "\t\t[-NoPostFail]\n\n"
             "\t\t[-WaitForDebug]\n\n"
             "\t\t[-NoEventChecks]\n\n"
+            "\t\t[-AllowLogError]\n\n"
             "\twherei NAME is the name of your DAG.\n"
             "\twhere N is Maximum # of Jobs to run at once "
             "(0 means unlimited)\n"
@@ -93,7 +94,8 @@ Dagman::Dagman() :
 	submit_delay (0),
 	max_submit_attempts (0),
 	datafile (NULL),
-	doEventChecks (true)
+	doEventChecks (true),
+	allowLogError (false)
 {
 }
 
@@ -328,6 +330,12 @@ int main_init (int argc, char ** const argv) {
         } else if( !strcasecmp( "-NoEventChecks", argv[i] ) ) {
 			dagman.doEventChecks = false;
 
+        } else if( !strcasecmp( "-AllowLogError", argv[i] ) ) {
+			dagman.allowLogError = true;
+
+        } else if( !strcasecmp( "-AllowLogError", argv[i] ) ) {
+			dagman.allowLogError = true;
+
         } else if( !strcasecmp( "-WaitForDebug", argv[i] ) ) {
 			wait_for_debug = 1;
 
@@ -409,9 +417,17 @@ int main_init (int argc, char ** const argv) {
 	MyString msg = ReadMultipleUserLogs::getJobLogsFromSubmitFiles(
 				dagFileName, jobKeyword, dagman.condorLogFiles );
 	if ( msg != "" ) {
-    	debug_printf( DEBUG_VERBOSE, "Possible error when parsing DAG: %s\n",
-				msg.Value());
-		
+    	debug_printf( DEBUG_VERBOSE,
+				"Possible error when parsing DAG: %s ...\n", msg.Value());
+		if ( dagman.allowLogError ) {
+    		debug_printf( DEBUG_VERBOSE,
+					"...continuing anyhow because of -AllowLogError flag\n");
+		} else {
+    		debug_printf( DEBUG_VERBOSE, "...exiting -- try again with "
+					"the '-AllowLogError' flag if you *really* think "
+					"this shouldn't be a fatal error\n");
+			DC_Exit( 1 );
+		}
 	}
 
 		// The "&& !dapLogName" check below is kind of a kludgey fix to allow

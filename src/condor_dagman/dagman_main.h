@@ -52,6 +52,7 @@ class Dagman {
 	bool startup_cycle_detect;
     char* stork_server;
 	bool doEventChecks;
+	bool allowLogError;
 
     bool Config();
 };
