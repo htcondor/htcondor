@@ -1497,7 +1497,12 @@ not_supported {
 	#elif defined(Solaris)
 		pid_t fork1();
 	#endif
+
+	#if defined(LINUX) && ! defined(GLIBC21)
+	pid_t vfork() : EXTRACT;
+	#else
 	pid_t vfork();
+	#endif
 
 	int execve( const char *path, char * const argv[], char * const envp [] );
 
