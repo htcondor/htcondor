@@ -138,7 +138,7 @@ END_C_DECLS
 /* to get the sysinfo() function call */
 #include <sys/sysinfo.h>
 
-#if defined( LINUX ) && defined( I386 )
+#if defined( I386 )
 /* For the i386 execution domains for standard
 	universe executables. Under redhat 9 and later there is a
 	sys/personality.h we could include here as well so we can use
@@ -152,11 +152,11 @@ END_C_DECLS
 #include <sys/syscall.h>
 
 /* Here is where we find the PER_* constants for the personality system call. */
-#if defined(IS_LINUX_RH72) || defined(IS_LINUX_RH80)
+#if HAVE_LINUX_PERSONALITY_H
 /* Warning: this defines a lexical replacement for 'personality()'
 	which is not a function call */ 
 #include <linux/personality.h>
-#else
+#elif HAVE_SYS_PERSONALITY_H
 /* this defines a true function called 'personality()' which changes the
 	execution domain of the process */
 #include <sys/personality.h>
