@@ -185,7 +185,8 @@ Condor environment:
   the new host.  The PVM master can then call \func{pvm\_spawn()} to
   start a worker process on the new host, specifying this machine
   class as the architecture and using the appropriate executable path
-  for this machine class.
+  for this machine class.  Note that the name of the host is given by
+  the startd and may be of the form ``vmN@hostname'' on SMP machines.
     
 
 \item \func{pvm\_notify()}.  Under Condor, there are two additional 
@@ -256,6 +257,11 @@ And that's it. Re-compile, and you're done.
   threshold.
   Having more than one PVM task per node pushes the load
   higher than the threshold.
+
+  Also, Condor only supports starting one copy of the executable with
+  each call to \func{pvm\_spawn()} (i.e., the fifth argument must
+  always be equal to one).  To spawn multiple copies of an executable
+  in Condor, you must call \func{pvm\_spawn()} once for each copy.
 
   A good fault tolerant program will be able to deal with
   \func{pvm\_spawn()} failing.  It happens more often in opportunistic 
@@ -363,26 +369,5 @@ host from any machine class is allocated.
 
 The \func{queue} command should be inserted after the specifications of
 each class.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Restrictions of the Condor-PVM Environment}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-The following restrictions currently apply to the Condor-PVM
-Environment:
-
-\begin{itemize}
-
-\item Each user can submit only one PVM Universe job at a time from a
-given machine.
-
-\item Only one PVM task may execute on each machine, including SMP
-machines.
-
-\end{itemize}
-
-These restrictions are caused by the fact that a user can not normally
-run more than one PVM daemon on a machine.  We are currently
-investigating to see if these restrictions can be removed.
 
 \index{PVM (Parallel Virtual Machine)|)}
