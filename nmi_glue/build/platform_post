@@ -1,7 +1,7 @@
-#!/bin/sh
+#!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_post,v 1.1.2.2 2005-02-11 05:08:06 parag Exp $
+# $Id: platform_post,v 1.1.2.3 2005-02-11 13:42:38 parag Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
@@ -11,7 +11,7 @@
 # the results.  until Condor's file transfer mechanism preserves
 # permissions, we'll have to use this hack. :(
 
-chmod a+r *
+system("chmod a+r *");
 
 print "Submitting test job for platform $ENV{NMI_PLATFORM} ...\n";
 system( "nmi_glue/test_submit/condor_test_submit.pl ".
