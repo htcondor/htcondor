@@ -169,6 +169,7 @@ _Flatten( EvalState &state, Value &, ExprTree *&tree, int* ) const
 ExprListIterator::
 ExprListIterator( )
 {
+	l = NULL;
 }
 
 
