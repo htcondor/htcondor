@@ -388,11 +388,11 @@ select the block that is least recently used, and write it out.
 void CondorFileBuffer::trim()
 {
 	CondorChunk *best_chunk,*i;
-
-	best_chunk = head;
+	int space_used;
 
 	while(1) {
-		int space_used = 0;
+		space_used = 0;
+		best_chunk = head;
 
 		for( i=head; i; i=i->next ) {
 			if( i->last_used < best_chunk->last_used ) {
