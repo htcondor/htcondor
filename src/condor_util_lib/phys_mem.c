@@ -137,6 +137,7 @@ calc_phys_memory()
   physmem/=256; /* *4 /1024 */
 #elif defined(IRIX53)
   physmem = physmem<<2;			/* assumes that a page is 4K */
+  physmem /= 1024;				/* convert from kbytes to mbytes */
 #endif
 
   return(physmem);
