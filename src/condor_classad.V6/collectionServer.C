@@ -144,10 +144,12 @@ OperateInRecoveryMode( ClassAd *logRec )
 			}
 				// FIXME: put the xactionErrCause in CondorErrMsg
 			if( !PlayXactionOp( opType, xactionName, logRec, xaction ) ) {
+				delete logRec;
 				if( xaction ) delete xaction;
 				xactionTable.erase( xactionName );
 				return( false );
 			}
+			delete logRec;
 
 				// if a xaction is being opened, we're done
 			if( opType == ClassAdCollOp_OpenTransaction ) return( true );
@@ -167,7 +169,9 @@ OperateInRecoveryMode( ClassAd *logRec )
 		case ClassAdCollOp_CreatePartition:
 		case ClassAdCollOp_DeleteView:
 		case ClassAdCollOp_SetViewInfo: {
-			return( PlayViewOp( opType, logRec ) );
+			bool rval = PlayViewOp( opType, logRec );
+			delete logRec;
+			return( rval );
 		}
 
 		case ClassAdCollOp_AddClassAd:
@@ -184,7 +188,9 @@ OperateInRecoveryMode( ClassAd *logRec )
 
 			if( !logRec->EvaluateAttrString( "XactionName", xactionName ) ) {
 					// not in xaction; just play the operation
-				return( PlayClassAdOp( opType, logRec ) );
+				bool rval = PlayClassAdOp( opType, logRec );
+				delete logRec;
+				return( rval );
 			}
 				// in transaction; add record to transaction
 			ServerTransaction		*xaction;
@@ -241,6 +247,9 @@ HandleClientRequest( int command, Sock *clientSock )
 
 		// parse the classad
 	buffer = tmp;
+	free( tmp );
+		// the 'rec' classad below is deleted by HandleQuery, HandleReadOnly...,
+		// or OperateInNetworkMode as necessary
 	if( !( rec = parser.ParseClassAd( buffer ) ) ) {
 		CondorErrMsg += "; failed to parse client request";
 		return( -1 );
@@ -293,6 +302,7 @@ OperateInNetworkMode( int opType, ClassAd *logRec, Sock *clientSock )
 			if( !PlayXactionOp( opType, xactionName, logRec, xaction ) ) {
 					// if failed, insert error cause in ack and kill xaction
 				failed = true;
+				delete logRec;
 				ClassAd *errorCause = xaction->ExtractErrorCause( );
 				ack.Insert( "ErrorCause", errorCause );
 				if( xaction ) delete xaction;
@@ -300,12 +310,16 @@ OperateInNetworkMode( int opType, ClassAd *logRec, Sock *clientSock )
 				break;
 			}
 
+				// don't delete logRec just yet --- need it for WriteLogEntry
+				// in ForgetTransaction case below
+
 			if( opType == ClassAdCollOp_CommitTransaction ) {
 				// log transaction if possible (the xaction is logged only
 				// after it is played on the in-memory data structure so that
 				// we make a persistent record of the xaction iff the
 				// in-memory commit succeeds)
 				if( !xaction || !xaction->Log( log_fp, unparser ) ) {
+					delete logRec;
 					CondorErrno = ERR_FATAL_ERROR;
 					CondorErrMsg = "FATAL ERROR: in memory commit succeeded, "
 						"but log failed";
@@ -313,12 +327,17 @@ OperateInNetworkMode( int opType, ClassAd *logRec, Sock *clientSock )
 				}
 			} else if( opType == ClassAdCollOp_ForgetTransaction ) {
 				// no ack for ForgetTransaction
-				return( WriteLogEntry( log_fp, logRec ) );
+				bool rval = WriteLogEntry( log_fp, logRec );
+				delete logRec;
+				return( rval );
 			} else if( opType == ClassAdCollOp_AbortTransaction ) {
 				// no ack for abort transaction, and no logging either
+				delete logRec;
 				return( true );
 			}
-				// done
+				// opType must be OpenTransaction or CommitTransaction here 
+				// (if CommitTransaction, the xaction has also been logged)
+			delete logRec;
 			break;
 		}
 
@@ -329,11 +348,8 @@ OperateInNetworkMode( int opType, ClassAd *logRec, Sock *clientSock )
 		case ClassAdCollOp_SetViewInfo: {
 			ackOpType = ClassAdCollOp_AckViewOp;
 			ack.InsertAttr( ATTR_OP_TYPE, ClassAdCollOp_AckViewOp );
-			if( PlayViewOp( opType, logRec ) ) {
-				if( !WriteLogEntry( log_fp, logRec ) ) {
-					failed = true;
-				}
-			}
+			failed= !PlayViewOp(opType,logRec) || !WriteLogEntry(log_fp,logRec);
+			delete logRec;
 			break;
 		}
 
@@ -353,8 +369,10 @@ OperateInNetworkMode( int opType, ClassAd *logRec, Sock *clientSock )
 
 			if( xactionName == "" ) {
 					// not in xaction; just play the operation
-				PlayClassAdOp( opType, logRec );
-				if( !wantAck ) return( true );
+				failed = !PlayClassAdOp( opType, logRec ) ||
+					!WriteLogEntry(log_fp,logRec );
+				delete logRec;
+				if( !wantAck ) return( !failed );
 				break;
 			}
 				// in transaction; add record to transaction
@@ -724,6 +742,7 @@ HandleReadOnlyCommands( int command, ClassAd *rec, Sock *clientSock )
 	}
 
 		// send reply to client
+	delete rec;
 	clientSock->encode( );
 	if( !clientSock->put((int)ClassAdCollOp_AckReadOp) || 
 			!clientSock->put((char*)buffer.c_str( )) || !clientSock->eom( ) ) {
@@ -750,7 +769,6 @@ PlayXactionOp( int opType, const string &xactionName, ClassAd *logRec,
 			if( xactionTable.find( xactionName ) != xactionTable.end( ) ) {
 				CondorErrno = ERR_TRANSACTION_EXISTS;
 				CondorErrMsg = "xaction " + xactionName + " already exists";
-				delete logRec;
 				return( false );
 			}
 
@@ -758,7 +776,6 @@ PlayXactionOp( int opType, const string &xactionName, ClassAd *logRec,
 			if( !xaction ) {
 				CondorErrno = ERR_MEM_ALLOC_FAILED;
 				CondorErrMsg = "";
-				delete logRec;
 				return( false );
 			}
 
@@ -771,7 +788,6 @@ PlayXactionOp( int opType, const string &xactionName, ClassAd *logRec,
 			xaction->SetCollectionServer( this );
 			xactionTable[xactionName] = xaction;
 			xaction->SetXactionName( xactionName );
-			delete logRec;
 			serverXaction = xaction;
 			return( true );
 		}
@@ -783,12 +799,10 @@ PlayXactionOp( int opType, const string &xactionName, ClassAd *logRec,
 			if( itr == xactionTable.end( ) ) {
 				CondorErrno = ERR_NO_SUCH_TRANSACTION;
 				CondorErrMsg = "transaction" + xactionName + " not found";
-				delete logRec;
 				return( false );
 			}
 				// kill transaction
 			xaction = itr->second;
-			delete logRec;
 			if( xaction ) delete xaction;
 			xactionTable.erase( itr );
 			return( true );
@@ -801,7 +815,6 @@ PlayXactionOp( int opType, const string &xactionName, ClassAd *logRec,
 			if( itr == xactionTable.end( ) ) {
 				CondorErrno = ERR_NO_SUCH_TRANSACTION;
 				CondorErrMsg = "transaction " + xactionName + " not found";
-				delete logRec;
 				return( false );
 			}
 			xaction = itr->second;
@@ -810,7 +823,6 @@ PlayXactionOp( int opType, const string &xactionName, ClassAd *logRec,
 				CondorErrMsg = "transaction already committed";
 				return( false );
 			}
-			delete logRec;
 			serverXaction = xaction;
 			if( !xaction->Commit( ) ) return( false );
 				// if its a local transaction, clear it out
@@ -831,7 +843,6 @@ PlayXactionOp( int opType, const string &xactionName, ClassAd *logRec,
 				CondorErrno = ERR_NO_SUCH_TRANSACTION;
 				CondorErrMsg = "transaction " + xactionName + " doesn't exist"
 					" to be closed";
-				delete logRec;
 				return( false );
 			}
 			xaction = itr->second;
@@ -841,7 +852,6 @@ PlayXactionOp( int opType, const string &xactionName, ClassAd *logRec,
 				delete xaction;
 			}
 			xactionTable.erase( itr );
-			delete logRec;
 			return( true );
 		}
 
@@ -856,12 +866,15 @@ PlayXactionOp( int opType, const string &xactionName, ClassAd *logRec,
 bool ClassAdCollectionServer::
 PlayViewOp( int opType, ClassAd *logRec )
 {
+	ClassAd	*viewInfo;
+
 	switch( opType ) {
 
         case ClassAdCollOp_CreateSubView: {
             ViewRegistry::iterator itr;
             string	parentViewName;
             View    *parentView;
+			ClassAd	*viewInfo;
 
             if( !logRec->EvaluateAttrString(ATTR_PARENT_VIEW_NAME,
 					parentViewName) || 
@@ -873,9 +886,12 @@ PlayViewOp( int opType, ClassAd *logRec )
             }
             parentView = itr->second;
 
-				// hand off the logRec as the viewinfo for the new view
-			logRec->Delete( "OpType" );
-			return( parentView->InsertSubordinateView( this, logRec ) );
+				// make the viewInfo classad --- mostly the logRec itself
+			if( !( viewInfo = logRec->Copy( ) ) ) {
+				return( false );
+			}
+			viewInfo->Delete( "OpType" );
+			return( parentView->InsertSubordinateView( this, viewInfo ) );
         }
 
         case ClassAdCollOp_CreatePartition: {
@@ -901,10 +917,13 @@ PlayViewOp( int opType, ClassAd *logRec )
 			}
             parentView = itr->second;
 
-				// hand off the logRec as the viewinfo for the new view
-			logRec->Delete( "OpType" );
-			logRec->Remove( "Representative" );
-            return( parentView->InsertPartitionedView( this, logRec, rep ) );
+				// make the viewInfo classad --- mostly the logRec itself
+			if( !( viewInfo = logRec->Copy( ) ) ) {
+				return( false );
+			}
+			viewInfo->Delete( "OpType" );
+			viewInfo->Remove( "Representative" );
+            return( parentView->InsertPartitionedView( this, viewInfo, rep ) );
         }
 
         case ClassAdCollOp_DeleteView: {
@@ -932,10 +951,9 @@ PlayViewOp( int opType, ClassAd *logRec )
         case ClassAdCollOp_SetViewInfo: {
             ViewRegistry::iterator itr;
             string	viewName;
-            ClassAd *viewInfo;
+            ClassAd *tmp;
             View    *view;
             Value   cv;
-			bool	rval;
 
             if( !logRec->EvaluateAttrString( ATTR_VIEW_NAME, viewName ) ||
                 	(itr=viewRegistry.find(viewName)) == viewRegistry.end( ) ) {
@@ -945,11 +963,14 @@ PlayViewOp( int opType, ClassAd *logRec )
             }
             view = itr->second;
             if( !logRec->EvaluateAttr( ATTR_VIEW_INFO, cv ) ||
-					!cv.IsClassAdValue(viewInfo)){
+					!cv.IsClassAdValue(tmp)){
 				CondorErrno = ERR_BAD_VIEW_INFO;
 				CondorErrMsg = "view info bad or missing";
 				return( false );
             }
+			if( !( viewInfo = tmp->Copy( ) ) ) {
+				return( false );
+			}
 				// make sure the "root" view always has 'Requirements=true'
 			if( viewName=="root" ) {
 				if( !viewInfo->InsertAttr(ATTR_REQUIREMENTS,true) ) {
@@ -957,11 +978,7 @@ PlayViewOp( int opType, ClassAd *logRec )
 				}
 			}
 				// handoff view info classad to new view
-			logRec->Delete( ATTR_OP_TYPE );
-			logRec->Remove( ATTR_VIEW_INFO );
-			rval = view->SetViewInfo( this, viewInfo );
-			delete logRec;
-			return( rval );
+			return( view->SetViewInfo( this, viewInfo ) );
         }
 
 		default:
@@ -993,6 +1010,8 @@ PlayClassAdOp( int opType, ClassAd *rec )
 				CondorErrMsg = "bad or missing 'ad' attribute";
 				return( false );
 			}
+			newAd->SetParentScope( NULL );
+
 				// check if an ad is already present
 			if( ( itr = classadTable.find( key ) ) != classadTable.end( ) ) {
 					// delete old ad
@@ -1117,11 +1136,14 @@ bool ClassAdCollectionServer::
 CreateSubView( const ViewName &viewName, const ViewName &parentViewName,
 	const string &constraint, const string &rank, const string &partitionExprs )
 {
+	bool rval;
 	ClassAd *rec = _CreateSubView( viewName, parentViewName, 
 			constraint, rank, partitionExprs );
 	if( !rec ) return( false );
-	if( !WriteLogEntry( log_fp, rec ) ) return( false );	
-	return( PlayViewOp( ClassAdCollOp_CreateSubView, rec ) );
+	rval = WriteLogEntry( log_fp, rec ) && 
+			PlayViewOp( ClassAdCollOp_CreateSubView, rec );
+	delete rec;
+	return( rval );
 }
 
 
@@ -1130,21 +1152,27 @@ CreatePartition( const ViewName &viewName, const ViewName &parentViewName,
 	const string &constraint, const string &rank, const string &partitionExprs,
 	ClassAd *rep )
 {
+	bool rval;
 	ClassAd *rec = _CreatePartition( viewName, parentViewName, 
 			constraint, rank, partitionExprs, rep);
 	if( !rec ) return( false );
-	if( !WriteLogEntry( log_fp, rec ) ) return( false );	
-	return( PlayViewOp( ClassAdCollOp_CreatePartition, rec ) );
+	rval = WriteLogEntry( log_fp, rec ) && 
+			PlayViewOp( ClassAdCollOp_CreatePartition, rec );
+	delete rec;
+	return( rval );
 }
 
 
 bool ClassAdCollectionServer::
 DeleteView( const ViewName &viewName ) 
 {
+	bool rval;
 	ClassAd *rec = _DeleteView( viewName );
 	if( !rec ) return( false );
-	if( !WriteLogEntry( log_fp, rec ) ) return( false );	
-	return( PlayViewOp( ClassAdCollOp_DeleteView, rec ) );
+	rval = WriteLogEntry( log_fp, rec ) &&
+			PlayViewOp( ClassAdCollOp_DeleteView, rec );
+	delete rec;
+	return( rval );
 }
 
 
@@ -1152,11 +1180,14 @@ bool ClassAdCollectionServer::
 SetViewInfo( const ViewName &viewName, const string &constraint, 
 	const string &rank, const string &partitionAttrs )
 {
+	bool rval;
 	ClassAd *rec = _SetViewInfo( viewName, constraint, rank,
 			partitionAttrs );
 	if( !rec ) return( false );
-	if( !WriteLogEntry( log_fp, rec ) ) return( false );
-	return( PlayViewOp( ClassAdCollOp_SetViewInfo, rec ) );
+	rval = WriteLogEntry( log_fp, rec ) &&
+			PlayViewOp( ClassAdCollOp_SetViewInfo, rec );
+	delete rec;
+	return( rval );
 }
 
 
@@ -1255,6 +1286,7 @@ AddClassAd( const string &key, ClassAd *newAd )
 		}
 
 		if( !viewTree.ClassAdInserted( this, key, newAd ) ) {
+			delete newAd;
 			return( false );
 		}
 
@@ -1266,6 +1298,8 @@ AddClassAd( const string &key, ClassAd *newAd )
 			ClassAd *rec = _AddClassAd( "", key, newAd );
 			if( !WriteLogEntry( log_fp, rec ) ) {
 				CondorErrMsg += "; failed to log add classad";
+				rec->Remove( ATTR_AD );
+				delete rec;
 				return( false );
 			}
 			rec->Remove( ATTR_AD );
@@ -1301,12 +1335,14 @@ UpdateClassAd( const string &key, ClassAd *updAd )
 		if( itr == classadTable.end( ) ) {
 			CondorErrno = ERR_NO_SUCH_CLASSAD;
 			CondorErrMsg = "classad " + key + " doesn't exist to update";
+			delete updAd;
 			return( false );
 		}
 		ad = itr->second.ad;
 		viewTree.ClassAdPreModify( this, ad );
 		ad->Update( *updAd );
 		if( !viewTree.ClassAdModified( this, key, ad ) ) {
+			delete updAd;
 			return( false );
 		}
 
@@ -1315,9 +1351,9 @@ UpdateClassAd( const string &key, ClassAd *updAd )
 			ClassAd *rec = _UpdateClassAd( "", key, updAd );
 			if( !WriteLogEntry( log_fp, rec ) ) {
 				CondorErrMsg += "; failed to log update classad";
+				delete rec;
 				return( false );
 			}
-			rec->Remove( ATTR_AD );
 			delete rec;
 		}
 	}
@@ -1349,12 +1385,14 @@ ModifyClassAd( const string &key, ClassAd *modAd )
 		if( itr == classadTable.end( ) ) {
 			CondorErrno = ERR_NO_SUCH_CLASSAD;
 			CondorErrMsg = "classad " + key + " doesn't exist to modify";
+			delete modAd;
 			return( false );
 		}
 		ad = itr->second.ad;
 		viewTree.ClassAdPreModify( this, ad );
 		ad->Modify( *modAd );
 		if( !viewTree.ClassAdModified( this, key, ad ) ) {
+			delete modAd;
 			return( false );
 		}
 
@@ -1362,10 +1400,10 @@ ModifyClassAd( const string &key, ClassAd *modAd )
 		if( log_fp ) {
 			ClassAd *rec = _UpdateClassAd( "", key, modAd );
 			if( !WriteLogEntry( log_fp, rec ) ) {
+				delete rec;
 				CondorErrMsg += "; failed to log modify classad";
 				return( false );
 			}
-			rec->Remove( ATTR_AD );
 			delete rec;
 		}
 	}
@@ -1405,6 +1443,7 @@ RemoveClassAd( const string &key )
 		if( log_fp ) {
 			ClassAd *rec = _RemoveClassAd( "", key );
 			if( !WriteLogEntry( log_fp, rec ) ) {
+				delete rec;
 				CondorErrMsg += "; failed to log modify classad";
 				return( false );
 			}
@@ -1425,6 +1464,7 @@ GetClassAd( const string &key )
 		CondorErrMsg = "classad " + key + " not found";
 		return( NULL );
 	} 
+	itr->second.ad->SetParentScope( NULL );
 	return( itr->second.ad );
 }
 
