@@ -61,10 +61,10 @@ public:
 	virtual void Continue();
 
 		/// Send a DC_SIGTERM
-	virtual void ShutdownGraceful();
+	virtual bool ShutdownGraceful();
 
 		/// Send a DC_SIGKILL
-	virtual void ShutdownFast();
+	virtual bool ShutdownFast();
 
 protected:
 
