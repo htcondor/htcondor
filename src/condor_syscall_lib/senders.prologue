@@ -6,6 +6,7 @@
 #include "condor_xdr.h"
 #include "condor_constants.h"
 #include "condor_sys.h"
+#include "xdr_lib.h"
 
 #if defined(ULTRIX42) || defined(ULTRIX43) || defined(OSF1)
 #	include <sys/param.h>

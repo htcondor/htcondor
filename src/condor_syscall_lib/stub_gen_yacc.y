@@ -10,8 +10,11 @@
 %token BOTH
 
 %type <node> stub_spec param_list param simple_param map_param
+%type <node> stub_body transfer_list 
+%type <node> xfer_param xfer_param_list xfer_func
 %type <tok> TYPE_NAME CONST IDENTIFIER UNKNOWN MAP EXTRACT ARRAY
 %type <bool> opt_const opt_ptr opt_ptr_to_const opt_array opt_extract
+%type <bool> opt_reference
 %type <param_mode> use_type
 
 %{
@@ -20,11 +23,15 @@
 #include <assert.h>
 #include "scanner.h"
 extern int yyline;
-struct node *mk_func_node( char *type_name, char *id,
-	struct node *param_list, int is_ptr, int extract );
+struct node *
+mk_func_node( char *type, char *name, struct node * p_list,
+	int is_ptr, int extract, struct node *xfer_list );
+struct node * mk_xfer_func( char *xdr_func, struct node *param_list,
+	int in, int out );
 struct node * mk_param_node( char *type, char *name,
 	int is_const, int is_ptr, int is_const_ptr, int is_array,
 	int is_in, int is_out );
+struct node * mk_xfer_param_node( char *name, int is_ref );
 struct node *set_map_attr( struct node * simple );
 struct node *insert_node( struct node *list, struct node *new_elem );
 void display_node( struct node * );
@@ -40,6 +47,7 @@ void copy_file( FILE *in_fp, FILE *out_fp );
 FILE * open_file( char *name );
 char * mk_upper();
 char * abbreviate( char *type_name );
+void Trace( char *msg );
 
 #define MATCH 0 /* for strcmp() */
 
@@ -48,6 +56,7 @@ char * abbreviate( char *type_name );
 #define RECEIVERS 3
 
 int	Mode = 0;
+int ErrorEncountered = 0;
 
 %}
 
@@ -56,12 +65,14 @@ int	Mode = 0;
 input
 	: /* empty */
 	| input stub_spec
+	| error stub_body
 	;
 
 stub_spec
-	: TYPE_NAME opt_ptr IDENTIFIER '(' param_list ')' opt_extract ';'
+	: TYPE_NAME opt_ptr IDENTIFIER '(' param_list ')' opt_extract stub_body
 		{
-			$$ = mk_func_node( $1.val, $3.val, $5, $2, $7 );
+		  $$ = mk_func_node( $1.val, $3.val, $5, $2, $7, $8 );
+		  if( !ErrorEncountered ) {
 			switch( Mode ) {
 			  case SWITCHES:
 				output_switch( $$ );
@@ -70,11 +81,75 @@ stub_spec
 				output_sender( $$ );
 				break;
 			  case RECEIVERS:
-				fprintf( stderr, "Don't know how to output RECEIVERS - yet\n" );
-				exit( 1 );
+				output_receiver( $$ );
+				break;
 			}
+		  }
 		}
 	;
+
+stub_body
+	: ';'
+		{
+		Trace( "Empty stub body" );
+		$$ = mk_list();
+		}
+	| '{' transfer_list '}'
+		{
+		Trace( "Non-Empty stub body" );
+		$$ = $2;
+		}
+	;
+
+transfer_list
+	:	/* empty */
+		{
+		Trace( "Empty transfer_list" );
+		$$ = mk_list();
+		}
+	|	transfer_list xfer_func
+		{
+		Trace( "added xfer_func to transfer_list" );
+		$$ = insert_node( $1, $2 );
+		}
+	;
+
+xfer_func
+	: use_type IDENTIFIER '(' xfer_param_list ')' ';'
+		{
+		Trace( "xfer_func" );
+		$$ = mk_xfer_func( $2.val, $4, $1.in, $1.out );
+		}
+	;
+
+xfer_param_list
+	: xfer_param
+		{
+		Trace( "xfer_param_list (1)" );
+		$$ = insert_node( mk_list(), $1 );
+		}
+	| xfer_param_list ',' xfer_param
+		{
+		Trace( "xfer_param_list (2)" );
+		$$ = append_node( $1, $3 );
+		}
+	;
+
+xfer_param
+	: opt_reference IDENTIFIER
+		{
+		Trace( "xfer_param" );
+		$$ = mk_xfer_param_node( $2.val, $1 );
+		}
+	;
+
+opt_reference
+	: '&'
+		{ $$ = TRUE; }
+	| /* null */
+		{ $$ = FALSE; }
+	;
+
 
 opt_extract
 	: ':' EXTRACT
@@ -123,21 +198,25 @@ simple_param
 use_type
 	: IN
 		{
+		Trace( "use_type (IN)" );
 		$$.in = TRUE;
 		$$.out = FALSE;
 		}
 	| OUT
 		{
+		Trace( "use_type (OUT)" );
 		$$.in = FALSE;
 		$$.out = TRUE;
 		}
 	| BOTH
 		{
+		Trace( "use_type (BOTH)" );
 		$$.in = TRUE;
 		$$.out = TRUE;
 		}
 	| /* null */
 		{
+		Trace( "use_type (NEITHER)" );
 		$$.in = FALSE;
 		$$.out = FALSE;
 		}
@@ -252,13 +331,20 @@ main( int argc, char *argv[] )
 		copy_file( fp, stdout );
 	}
 
-	exit( 0 );
+	if( ErrorEncountered ) {
+		exit( 1 );
+	} else {
+		exit( 0 );
+	}
 }
 
 yyerror( char * s )
 {
-	fprintf( stderr, "%s on line %d\n", s, yyline );
-	exit( 1 );
+	fprintf( stderr, "%s at \"%s\" on line %d\n", s, yylval.tok.val, yyline );
+	ErrorEncountered = TRUE;
+
+		/* make sure any resulting file won't compile */
+	printf( "------------  Has Errors --------------\n" );
 }
 
 struct node *
@@ -268,7 +354,7 @@ mk_param_node( char *type, char *name,
 {
 	struct node	*answer;
 
-	answer = (struct node *)malloc( sizeof(struct node) );
+	answer = (struct node *)calloc( 1, sizeof(struct node) );
 	answer->node_type = PARAM;
 	answer->type_name = type;
 	answer->id = name;
@@ -289,6 +375,19 @@ mk_param_node( char *type, char *name,
 }
 
 struct node *
+mk_xfer_param_node( char *name, int is_ref )
+{
+	struct node	*answer;
+
+	answer = (struct node *)malloc( sizeof(struct node) );
+	answer->node_type = XFER_PARAM;
+	answer->id = name;
+	answer->is_ref = is_ref;
+
+	return answer;
+}
+
+struct node *
 set_map_attr( struct node * simple )
 {
 	simple->is_mapped = TRUE;
@@ -296,7 +395,8 @@ set_map_attr( struct node * simple )
 }
 
 struct node *
-mk_func_node( char *type, char *name, struct node * p_list, int is_ptr, int extract )
+mk_func_node( char *type, char *name, struct node * p_list,
+	int is_ptr, int extract, struct node *xfer_list )
 {
 	struct node	*answer;
 
@@ -306,11 +406,30 @@ mk_func_node( char *type, char *name, struct node * p_list, int is_ptr, int extr
 	answer->id = name;
 	answer->is_ptr = is_ptr;
 	answer->extract = extract;
-	answer->next = p_list;
+	answer->param_list = p_list;
+	answer->xfer_list = xfer_list;
 
 	return answer;
 }
 
+struct node *
+mk_xfer_func( char *xdr_func, struct node *param_list, int is_in, int is_out )
+{
+	struct node	*answer;
+
+	answer = (struct node *)malloc( sizeof(struct node) );
+	answer->node_type = XFER_FUNC;
+	answer->XDR_FUNC = xdr_func;
+	answer->param_list = param_list;
+	answer->in_param = is_in;
+	answer->out_param = is_out;
+
+	return answer;
+}
+
+/*
+  Insert a new node at the beginning of a list.
+*/
 struct node *
 insert_node( struct node * list, struct node * new_elem )
 {
@@ -319,6 +438,21 @@ insert_node( struct node * list, struct node * new_elem )
 	new_elem->prev = list;
 	list->next->prev = new_elem;
 	list->next = new_elem;
+
+	return list;
+}
+
+/*
+  Append a new node to the end of a list.
+*/
+struct node *
+append_node( struct node * list, struct node * new_elem )
+{
+
+	new_elem->next = list;
+	new_elem->prev = list->prev;
+	list->prev->next = new_elem;
+	list->prev = new_elem;
 
 	return list;
 }
@@ -489,6 +623,7 @@ mk_list()
 	answer = (struct node *)malloc( sizeof(struct node) );
 	answer->next = answer;
 	answer->prev = answer;
+	answer->node_type = DUMMY;
 	answer->type_name = "(dummy)";
 	answer->id = "(dummy)";
 	return answer;
@@ -500,7 +635,7 @@ mk_list()
   code.
 */
 void
-output_mapping( char *func_type_name, struct node *list )
+output_mapping( char *func_type_name, int is_ptr,  struct node *list )
 {
 	struct node	*n;
 	int	found_mapping = 0;
@@ -513,16 +648,149 @@ output_mapping( char *func_type_name, struct node *list )
 	}
 
 	if( found_mapping ) {
+		printf( "\tint use_local_access = FALSE;\n" );
 		printf( "\n" );
 	}
 
 	for( n = list->next; n != list; n = n->next ) {
 		if( n->is_mapped ) {
 			printf( "	if( (user_%s=MapFd(%s)) < 0 ) {\n", n->id, n->id );
-			printf( "		return (%s)-1;\n", func_type_name );
+			printf( "		return (%s%s)-1;\n",
+				func_type_name,
+				is_ptr ? " *" : ""
+			);
 			printf( "	}\n" );
+			printf( "\tif( LocalAccess(%s) ) {\n", n->id );
+			printf( "\t\tuse_local_access = TRUE;\n" );
+			printf( "\t}\n" );
 		}
 	}
+
+	printf( "\n" );
+	if( found_mapping ) {
+		printf( "	if( LocalSysCalls() || use_local_access ) {\n" );
+	} else {
+		printf( "	if( LocalSysCalls() ) {\n" );
+	}
+}
+
+/*
+  Output code for one system call receiver.
+*/
+void
+output_receiver( struct node *n )
+{
+	struct node *param_list = n->param_list;
+	struct node *p, *q;
+
+	assert( n->node_type == FUNC );
+
+	printf( "#if defined( SYS_%s )\n", n->id );
+	printf( "	case CONDOR_%s:\n", n->id );
+	printf( "	  {\n" );
+
+		/* output a local variable decl for each param of the sys call */
+	for( p=param_list->next; p != param_list; p = p->next ) {
+		printf( "\t\t%s %s%s%s;\n",
+			p->type_name,
+			p->is_ptr ? "*" : "",
+			p->is_array ? "*" : "",
+			p->id
+		);
+	}
+	printf( "\t\tint terrno;\n" );
+	printf( "\n" );
+
+
+		/*
+		Receive all call by value parameters - these must be IN parameters
+		to the syscall, since they cannot return a value to the
+		calling routine.
+		*/
+	for( p=param_list->next; p != param_list; p = p->next ) {
+			/* assert( xdr_<type_name>(xdr_syscall,&<id>) ); */
+		if( p->is_ptr || p->is_array ) {
+			continue;
+		}
+		printf( "\t\tassert( xdr_%s(xdr_syscall,&%s) );\n",
+			abbreviate(p->type_name),
+			p->id 
+		);
+	}
+
+		/*
+		Receive other IN parameters - these are the ones with an
+		IN transfer function defined in the template file.
+		*/
+	for( p=n->xfer_list->next; p->node_type != DUMMY; p = p->next ) {
+		assert( p->node_type == XFER_FUNC );
+		if( !p->in_param ) {
+			continue;
+		}
+		printf( "\t\tassert( %s(xdr_syscall,", p->XDR_FUNC );
+		for( q=p->param_list->next; q->node_type != DUMMY; q = q->next ) {
+			assert( q->node_type == XFER_PARAM );
+			printf( "%s%s%s", 
+				q->is_ref ? "&" : "",
+				q->id,
+				q->next->node_type == DUMMY ? "" : ", "
+			);
+		}
+		printf( ") );\n" );
+	}
+
+		/* Invoke the system call */
+	printf( "\n" );
+	printf( "\t\terrno = 0;\n" );
+	printf( "\t\trval = %s( ", n->id );
+	for( p=param_list->next; p != param_list; p = p->next ) {
+		printf( "%s%s ",
+			p->id,
+			p->next == param_list ? "" : ","
+		);
+	}
+	printf( ");\n" );
+	printf( "\t\tterrno = errno;\n" );
+	printf( "\n" );
+
+
+		/* Complete the XDR record, and flush */
+	printf( "\t\txdr_syscall->x_op = XDR_ENCODE;\n" );
+	printf( "\t\tassert( xdr_int(xdr_syscall,&rval) );\n" );
+	printf( "\t\tif( rval < 0 ) {\n" );
+	printf( "\t\t\tassert( xdr_int(xdr_syscall,&terrno) );\n" );
+	printf( "\t\t\tassert( xdrrec_endofrecord(xdr_syscall,TRUE) );;\n" );
+	printf( "\t\t\treturn rval;\n" );
+	printf( "\t\t}\n" );
+
+		/*
+		Send out results in any OUT parameters - these are the ones with an
+		OUT transfer function defined in the template file.
+		*/
+	for( p=n->xfer_list->next; p->node_type != DUMMY; p = p->next ) {
+		assert( p->node_type == XFER_FUNC );
+		if( !p->out_param ) {
+			continue;
+		}
+		printf( "\t\tassert( %s(xdr_syscall,", p->XDR_FUNC );
+		for( q=p->param_list->next; q->node_type != DUMMY; q = q->next ) {
+			assert( q->node_type == XFER_PARAM );
+			printf( "%s%s%s", 
+				q->is_ref ? "&" : "",
+				q->id,
+				q->next->node_type == DUMMY ? "" : ", "
+			);
+		}
+		printf( ") );\n" );
+	}
+
+	printf( "\t\tassert( xdrrec_endofrecord(xdr_syscall,TRUE) );;\n" );
+	printf( "\t\treturn rval;\n" );
+	printf( "\t\tbreak;\n" );
+
+
+	printf( "\t}\n" );
+	printf( "#endif\n\n" );
 }
 
 /*
@@ -531,8 +799,8 @@ output_mapping( char *func_type_name, struct node *list )
 void
 output_sender( struct node *n )
 {
-	struct node *param_list = n->next;
-	struct node *p;
+	struct node *param_list = n->param_list;
+	struct node *p, *q;
 
 	assert( n->node_type == FUNC );
 
@@ -540,9 +808,8 @@ output_sender( struct node *n )
 	printf( "	case SYS_%s:\n", n->id );
 	printf( "	  {\n" );
 
+		/* output a local variable decl for each param of the sys call */
 	for( p=param_list->next; p != param_list; p = p->next ) {
-
-			/* type_name **id; - '*' and '*' are optional */
 		printf( "\t\t%s %s%s%s;\n",
 			p->type_name,
 			p->is_ptr ? "*" : "",
@@ -552,8 +819,10 @@ output_sender( struct node *n )
 	}
 	printf( "\n" );
 
+		/* Set up system call number */
 	printf( "\t\tCurrentSysCall = CONDOR_%s;\n\n", n->id  );
 
+		/* Grab values of local variables using varargs routines */
 	for( p=param_list->next; p != param_list; p = p->next ) {
 			/* id = va_arg( ap, type_name * ); - '*' is optional */
 		printf( "\t\t%s = va_arg( ap, %s %s%s);\n",
@@ -565,17 +834,49 @@ output_sender( struct node *n )
 	}
 	printf( "\n" );
 
+		/* Send system call number */
 	printf( "\t\txdr_syscall->x_op = XDR_ENCODE;\n" );
 	printf( "\t\tassert(xdr_int(xdr_syscall,&CurrentSysCall) );\n" );
 
+		/*
+		Send all call by value parameters - these must be IN parameters
+		to the syscall, since they cannot return a value to the
+		calling routine.
+		*/
 	for( p=param_list->next; p != param_list; p = p->next ) {
 			/* assert( xdr_<type_name>(xdr_syscall,&<id>) ); */
+		if( p->is_ptr || p->is_array ) {
+			continue;
+		}
 		printf( "\t\tassert( xdr_%s(xdr_syscall,&%s) );\n",
 			abbreviate(p->type_name),
 			p->id 
 		);
 	}
-	printf( "\n" );
+
+		/*
+		Send other IN parameters - these are the ones with an
+		IN transfer function defined in the template file.
+		*/
+	for( p=n->xfer_list->next; p->node_type != DUMMY; p = p->next ) {
+		assert( p->node_type == XFER_FUNC );
+		if( !p->in_param ) {
+			continue;
+		}
+		printf( "\t\tassert( %s(xdr_syscall,", p->XDR_FUNC );
+		for( q=p->param_list->next; q->node_type != DUMMY; q = q->next ) {
+			assert( q->node_type == XFER_PARAM );
+			printf( "%s%s%s", 
+				q->is_ref ? "&" : "",
+				q->id,
+				q->next->node_type == DUMMY ? "" : ", "
+			);
+		}
+		printf( ") );\n" );
+	}
+
+		/* Complete the XDR record, and flush */
+	printf( "\t\tassert( xdrrec_endofrecord(xdr_syscall,TRUE) );\n\n" );
 
 	printf( "\t\txdr_syscall->x_op = XDR_DECODE;\n" );
 	printf( "\t\tassert( xdrrec_skiprecord(xdr_syscall) );\n" );
@@ -583,7 +884,30 @@ output_sender( struct node *n )
 	printf( "\t\tif( rval < 0 ) {\n" );
 	printf( "\t\t\tassert( xdr_int(xdr_syscall,&terrno) );\n" );
 	printf( "\t\t\terrno = terrno;\n" );
+	printf( "\t\t\treturn rval;\n" );
 	printf( "\t\t}\n" );
+
+		/*
+		Gather up results in any OUT parameters - these are the ones with an
+		OUT transfer function defined in the template file.
+		*/
+	for( p=n->xfer_list->next; p->node_type != DUMMY; p = p->next ) {
+		assert( p->node_type == XFER_FUNC );
+		if( !p->out_param ) {
+			continue;
+		}
+		printf( "\t\tassert( %s(xdr_syscall,", p->XDR_FUNC );
+		for( q=p->param_list->next; q->node_type != DUMMY; q = q->next ) {
+			assert( q->node_type == XFER_PARAM );
+			printf( "%s%s%s", 
+				q->is_ref ? "&" : "",
+				q->id,
+				q->next->node_type == DUMMY ? "" : ", "
+			);
+		}
+		printf( ") );\n" );
+	}
+
 	printf( "\t\tbreak;\n" );
 
 
@@ -606,19 +930,17 @@ output_switch( struct node *n )
 		printf( "%s\n", n->type_name );
 	}
 	printf( "%s", n->id );
-	output_switch_decl( n->next );
+	output_switch_decl( n->param_list );
 	printf( "{\n" );
 	printf( "	int	rval;\n" );
-	output_mapping( n->type_name, n->next );
-	printf( "\n" );
-	printf( "	if( LocalSysCalls() ) {\n" );
+	output_mapping( n->type_name, n->is_ptr, n->param_list );
 	if( n->extract ) {
-		output_extracted_call( n->id, n->next );
+		output_extracted_call( n->id, n->param_list );
 	} else {
-		output_local_call( n->id, n->next );
+		output_local_call( n->id, n->param_list );
 	}
 	printf( "	} else {\n" );
-	output_remote_call(  n->id, n->next );
+	output_remote_call(  n->id, n->param_list );
 	printf( "	}\n" );
 	if( strcmp(n->type_name,"void") != 0 ) {
 		printf( "\n" );
@@ -656,7 +978,6 @@ copy_file( FILE *in_fp, FILE *out_fp )
 
 
 	while( fgets(buf,sizeof(buf),in_fp) ) {
-		yyline += 1;
 		fputs(buf,out_fp);
 	}
 }
@@ -694,4 +1015,17 @@ abbreviate( char *type_name )
 	} else {
 		return type_name;
 	}
+}
+
+void
+Trace( char *msg )
+{
+#define TRACE 0
+#if TRACE == 0		/* keep quiet */
+	return;
+#elif TRACE == 1	/* trace info to the terminal */
+	fprintf( stderr, "Production: \"%s\"\n", msg );
+#elif TRACE == 2	/* intermix trace info with generated code */
+	printf( "Production: \"%s\"\n", msg );
+#endif
 }

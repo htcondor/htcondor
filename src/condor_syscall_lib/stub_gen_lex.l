@@ -1,5 +1,6 @@
 %{
 #include <stdlib.h>
+#include <ctype.h>
 #include "scanner.h"
 #include "y.tab.h"
 
@@ -9,14 +10,22 @@ extern YYSTYPE yylval;
 int grab(int type);
 char * strdup( char *orig );
 void display_token( int type );
+void reset_yyline();
 
 %}
 
+%START C_Comment
 STR [A-Za-z_][A-Za-z0-9_]*
 WHITE [ \t\n]*
 STRUCT struct[ \t\n]+
 UNSIGNED unsigned[ \t\n]+
 %%
+"/*"				BEGIN C_Comment;
+<C_Comment>\n		yyline++;
+<C_Comment>"*/"		BEGIN 0;
+<C_Comment>.*		;
+"//".*				;	/* C++ Style Comment */
+^#.*				reset_yyline();
 const				return grab( CONST );
 void				return grab( TYPE_NAME );
 char				return grab( TYPE_NAME );
@@ -64,9 +73,14 @@ fd_set				return grab( TYPE_NAME );
 {STRUCT}addressconf	return grab( TYPE_NAME );
 "["{WHITE}"]"		return grab( ARRAY );
 map					return grab( MAP );
+in					return grab( IN );
+out					return grab( OUT );
 extract				return grab( EXTRACT );
 {STR}				return grab( IDENTIFIER );
+"{"					return grab( '{' );
+"}"					return grab( '}' );
 "*"					return grab( '*' );
+"&"					return grab( '&' );
 "("					return grab( '(' );
 ")"					return grab( ')' );
 ","					return grab( ',' );
@@ -94,6 +108,16 @@ grab( int type )
 	return type;
 }
 
+void
+reset_yyline()
+{
+	char *ptr;
+
+	for( ptr=(char *)yytext; !isdigit(*ptr); ptr++ )
+		;
+	yyline = atoi( ptr ) - 1;
+}
+
 char *
 strdup( char *orig )
 {
@@ -107,39 +131,59 @@ strdup( char *orig )
 void
 display_token( int type )
 {
+	fprintf( stderr, "Token: " );
 	switch( type ) {
 	  case CONST:
-		fprintf( stderr, "Grabbed CONST\n" );
+		fprintf( stderr, "CONST" );
 		break;
 	  case TYPE_NAME:
-		fprintf( stderr, "Grabbed TYPE_NAME (%s)\n", (char *)yytext );
+		fprintf( stderr, "TYPE_NAME (%s)", (char *)yytext );
 		break;
 	  case ARRAY:
-		fprintf( stderr, "Grabbed ARRAY\n" );
+		fprintf( stderr, "ARRAY" );
 		break;
 	  case IDENTIFIER:
-		fprintf( stderr, "Grabbed ID (%s)\n", (char *)yytext );
+		fprintf( stderr, "ID (%s)", (char *)yytext );
 		break;
 	  case MAP:
-		fprintf( stderr, "Grabbed MAP\n" );
+		fprintf( stderr, "MAP" );
+		break;
+	  case IN:
+		fprintf( stderr, "IN" );
+		break;
+	  case OUT:
+		fprintf( stderr, "OUT" );
+		break;
+	  case BOTH:
+		fprintf( stderr, "BOTH" );
 		break;
 	  case '(':
-		fprintf( stderr, "Grabbed (\n" );
+		fprintf( stderr, "(" );
 		break;
 	  case ')':
-		fprintf( stderr, "Grabbed )\n" );
+		fprintf( stderr, ")" );
+		break;
+	  case '{':
+		fprintf( stderr, "{" );
+		break;
+	  case '}':
+		fprintf( stderr, "}" );
 		break;
 	  case ',':
-		fprintf( stderr, "Grabbed ,\n" );
+		fprintf( stderr, "," );
 		break;
 	  case '*':
-		fprintf( stderr, "Grabbed *\n" );
+		fprintf( stderr, "*" );
+		break;
+	  case '&':
+		fprintf( stderr, "&" );
 		break;
 	  case ';':
-		fprintf( stderr, "Grabbed ;\n" );
+		fprintf( stderr, ";" );
 		break;
 	  default:
-		fprintf( stderr, "Grabbed (something)\n" );
+		fprintf( stderr, "UNKNOWN (%s)", (char *)yytext );
 		break;
 	}
+	fprintf( stderr, "\n" );
 }

@@ -1,6 +1,8 @@
+#define DUMMY		0
 #define FUNC		1
 #define PARAM		2
-#define PTR_PARAM	3
+#define XFER_FUNC	3
+#define XFER_PARAM	4
 
 struct token {
 	int		tok_type;
@@ -16,12 +18,17 @@ struct node {
 	int		is_const_ptr;
 	int		is_mapped;
 	int		is_array;
+	int		is_ref;
 	int		in_param;
 	int		out_param;
 	int		extract;
 	struct node	*next;
 	struct node *prev;
+	struct node *param_list;
+	struct node *xfer_list;
 };
+
+#define XDR_FUNC id
 
 struct p_mode {
 	int		in;

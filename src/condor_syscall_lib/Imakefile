@@ -3,7 +3,7 @@ EXTRACT = FORK.o KILL.o SIGACTION.o
 STUBS = switches.o switches.special.o
 UTIL = syscall_mode.o remote_syscall.o debug_init.o senders.o
 LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL)
-all_target(condor_syscall_lib.a)
+all_target(condor_syscall_lib.a receivers.c)
 
 uppercase_target($(SIMPLE_LIBC),fork.o,FORK.o,fork,FORK)
 uppercase_target($(SIMPLE_LIBC),kill.o,KILL.o,kill,KILL)
@@ -12,11 +12,19 @@ library_target(condor_syscall_lib.a,$(LIB_OBJ),release)
 program_target(ToUpper,ToUpper.o,$(NULL),release)
 
 switches.c: syscall.tmpl switches.prologue stub_gen
-	stub_gen -mode switches  -p switches.prologue < syscall.tmpl > switches.c
+	/usr/ucb/cpp -DSWITCH < syscall.tmpl | \
+	stub_gen -mode switches  -p switches.prologue \
+	> switches.c
 
 senders.c: syscall.tmpl stub_gen senders.prologue senders.epilogue
+	/usr/ucb/cpp -DSENDER < syscall.tmpl | \
 	stub_gen -mode senders -p senders.prologue -e senders.epilogue \
-	< syscall.tmpl > senders.c
+	> senders.c
+
+receivers.c: syscall.tmpl stub_gen
+	/usr/ucb/cpp -DRECEIVER < syscall.tmpl | \
+	stub_gen -mode receivers \
+	> receivers.c
 
 lex.yy.c: stub_gen_lex.l scanner.h y.tab.h
 	lex stub_gen_lex.l
