@@ -326,11 +326,16 @@ FILE	*fp;
 lower_case( str )
 register char	*str;
 {
-#define ANSI_STYLE 1
+#if defined(AIX32)
+#	define ANSI_STYLE 0
+#else
+#	define ANSI_STYLE 1
+#endif
+
 	for( ; *str; str++ ) {
 		if( *str >= 'A' && *str <= 'Z' )
 #if ANSI_STYLE
-			*str = _tolower( *str );
+			*str = _tolower( (int)(*str) );
 #else
 			*str |= 040;
 #endif
