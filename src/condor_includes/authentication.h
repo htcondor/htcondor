@@ -58,14 +58,16 @@ class Authentication {
 	
 friend class ReliSock;
 
+public:
 	/// States to track status/authentication level
    enum authentication_state { 
 		CAUTH_NONE=0, 
 		CAUTH_ANY=1,
-		CAUTH_GSS=2, 
+		CAUTH_CLAIMTOBE=2,
 		CAUTH_FILESYSTEM=4, 
-		CAUTH_NT=8 
-		//, 16, 32, etc.
+		CAUTH_NTSSPI=8,
+		CAUTH_GSS=16
+		//, 32, 64, etc.
    };
 
 	Authentication( ReliSock *sock );
@@ -74,22 +76,23 @@ friend class ReliSock;
 	int isAuthenticated();
 	void unAuthenticate();
 
+	void setAuthAny();
 	void setAuthType( authentication_state state );
 	int setOwner( char *owner );
 	char *getOwner();
-	int setOwnerUid( int uid );
-	int getOwnerUid();
 
 private:
 	Authentication() {}; //should never be called, make private to help that!
 	int handshake();
+
+	int authenticate_claimtobe();
 #if defined(WIN32)
 	int authenticate_nt();
 #else
 	int authenticate_filesystem();
 #endif
 	int selectAuthenticationType( int clientCanUse );
-	int setupEnv( char *hostAddr );
+	void setupEnv( char *hostAddr );
 
 #if defined (GSS_AUTHENTICATION)
 	int authenticate_gss();
@@ -105,15 +108,13 @@ private:
 
 	/// Track accomplished authentication state.
 	authentication_state auth_status;
-
-	/// Track which methods to try (none, filesystem, gss, etc.)
-//	int canUseFlags;
+	char *serverShouldTry;
 
 	ReliSock *mySock;
 	GSSComms authComms;
 	char *GSSClientname;
 	char *claimToBe;
-	int ownerUid;
+	authentication_state canUseFlags;
 
 };
 #endif

@@ -29,17 +29,20 @@
 
 #include "buffers.h"
 #include "sock.h"
-//#include "authentication.h"
 #include "condor_adtypes.h"
 
 /*
 **	R E L I A B L E    S O C K
 */
 
+#if !defined(SKIP_AUTHENTICATION)
 class Authentication;
+#endif
 
 class ReliSock : public Sock {
+#if !defined(SKIP_AUTHENTICATION)
 	friend class Authentication;
+#endif
 
 //	PUBLIC INTERFACE TO RELIABLE SOCKS
 //
@@ -96,7 +99,6 @@ public:
 	**	Stream protocol
 	*/
 
-//	virtual stream_type type() { return Stream::reli_sock; }
 	virtual stream_type type();
 
 	//	byte operations
@@ -107,16 +109,11 @@ public:
 	virtual int peek(char &);
 
    int authenticate();
-   int isAuthenticated();
+	int isAuthenticated();
 	void unAuthenticate();
    char *getOwner();
-   int setOwner( char *owner );
-   int getOwnerUid();
-   int setOwnerUid( int ownerUid );
+	void setOwner( char * );
 	void setGenericAuthentication();
-	void canTryGSS();
-	void canTryFilesystem();
-	void canTryNT();
 
 	int isClient() { return is_client; };
 
@@ -161,10 +158,11 @@ protected:
 	int	ignore_next_encode_eom;
 	int	ignore_next_decode_eom;
 
+#if !defined(SKIP_AUTHENTICATION)
 	Authentication * authob;
+#endif
 	int is_client;
 	char *hostAddr;
-	int canUseFlags;
 };
 
 #endif
