@@ -69,12 +69,23 @@ held. This has been fixed.
 
 \end{itemize}
 
+\noindent Bugs fixed since 6.2.0
+\begin{itemize}
+
+\item In \Condor{q}, dash-arguments (e.g., -pool, -run, etc.) were being
+parsed incorrectly such that the same arguments specified without a
+dash would be interpreted as if the dash were present, making it
+impossible to specify ``pool'' or ``globus'' or ``run'' as an owner
+argument.
+
+\end{itemize}
+
 \noindent Known Bugs:
 \begin{itemize}
 
 \item \Attr{STARTD\_HAS\_BAD\_UTMP} does not work if set to True on Solaris 
-2.8.  However, since \File{utmpx} support is enabled, you shouldn't need
-to do this normally.
+2.8.  However, since \File{utmpx} support is enabled, you shouldn't
+need to do this normally.
 
 \end{itemize}
 
