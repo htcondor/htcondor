@@ -249,6 +249,12 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 
 	ad = classad;
 
+	// In GM_HOLD, we assme HoldReason to be set only if we set it, so make
+	// sure it's unset when we start.
+	if ( ad->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
+		UpdateJobAd( ATTR_HOLD_REASON, "UNDEFINED" );
+	}
+
 	ad->LookupInteger( ATTR_GLOBUS_GRAM_VERSION, jmVersion );
 
 	buff[0] = '\0';
