@@ -367,7 +367,7 @@ GahpClient::Reaper(Service*,int pid,int status)
 }
 
 bool
-GahpClient::Initialize(const char *proxy_path, const char *input_path)
+GahpClient::Startup(const char *input_path)
 {
 	char *gahp_path = NULL;
 	char *gahp_args = NULL;
@@ -503,11 +503,6 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 		// linked with the GAHP server spit out crap to stdout.
 	use_prefix = command_response_prefix( GAHP_PREFIX );
 	
-		// Give the server our x509 proxy.
-	if ( command_initialize_from_file(proxy_path) == false ) {
-		return false;
-	}
-
 		// try to turn on gahp async notification mode
 	if  ( !command_async_mode_on() ) {
 		// not supported, set a poll interval
@@ -527,6 +522,25 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 		        // temporary kludge to work around gahp server hanging
 		        setPollInterval(m_pollInterval * 12);
 		}
+	}
+		
+	return true;
+}
+
+bool
+GahpClient::Initialize(const char *proxy_path, const char *input_path)
+{
+		// Check if we already have spawned a GAHP server.  
+	if ( m_gahp_pid == -1 ) {
+			// GAHP not running, start it up
+		if ( Startup( input_path ) == false ) {
+			return false;
+		}
+	}
+
+		// Give the server our x509 proxy.
+	if ( command_initialize_from_file(proxy_path) == false ) {
+		return false;
 	}
 		
 	return true;

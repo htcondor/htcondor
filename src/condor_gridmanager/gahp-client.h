@@ -73,6 +73,9 @@ class GahpClient : public Service {
 		//@}
 
 		///
+		bool Startup(const char * gahp_server_path = NULL);
+
+		///
 		bool Initialize(const char * proxy_path,
 						const char * gahp_server_path = NULL);
 
