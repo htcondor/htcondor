@@ -1067,8 +1067,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	ClassAd			*ad;
 	char			alternate_attrname_buf[_POSIX_PATH_MAX];
 
-	// TODO -- Check if Q_SOCK is NULL
-
 	// Only an authenticated user or the schedd itself can set an attribute.
 	if ( Q_SOCK && !(Q_SOCK->isAuthenticated()) ) {
 		return -1;
@@ -1076,15 +1074,15 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 	strcpy(key, IdToStr(cluster_id,proc_id) );
 
-	const char *owner = Q_SOCK->getOwner( );
 	if (JobQueue->LookupClassAd(key, ad)) {
-		if ( Q_SOCK && !OwnerCheck(ad, owner )) {
-			if ( NULL == owner ) {
-				owner = "";
+		if ( Q_SOCK && !OwnerCheck(ad, Q_SOCK->getOwner() )) {
+			const char *owner = Q_SOCK->getOwner( );
+			if ( ! owner ) {
+				owner = "NULL";
 			}
 			dprintf(D_ALWAYS,
 					"OwnerCheck(%s) failed in SetAttribute for job %d.%d\n",
-					owner, cluster_id, proc_id );
+					owner, cluster_id, proc_id);
 			return -1;
 		}
 	} else {
