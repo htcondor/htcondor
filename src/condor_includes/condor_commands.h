@@ -3,13 +3,6 @@
 #ifndef _CONDOR_COMMANDS_H
 #define _CONDOR_COMMANDS_H
 
-/*
-*** Daemon Core Commands
-*/
-#define DC_BASE 60000
-#define DC_RAISESIGNAL (DC_BASE+0)
-#define DC_PROCESSEXIT (DC_BASE+1)
-
 /****
 ** Queue Manager Commands
 ****/
@@ -86,7 +79,7 @@
 #define VACATE_ALL_CLAIMS	(SCHED_VERS+47)
 #define GIVE_STATE			(SCHED_VERS+48)
 #define SET_PRIORITY		(SCHED_VERS+49)		// negotiator(priviliged) cmd 
-
+#define GIVE_CLASSAD		(SCHED_VERS+50)
 
 
 /************
@@ -104,5 +97,53 @@ const int QUERY_MASTER_ADS		= 7;
 const int QUERY_GATEWAY_ADS		= 8;
 const int QUERY_CKPT_SRVR_ADS	= 9;
 const int QUERY_STARTD_PVT_ADS	= 10;
+
+/*
+*** Daemon Core Signals
+*/
+// Generic Unix signals
+// defines for signals; compatibility with traditional UNIX values maintained where possible.
+#define	DC_SIGHUP	1	/* hangup */
+#define	DC_SIGINT	2	/* interrupt (rubout) */
+#define	DC_SIGQUIT	3	/* quit (ASCII FS) */
+#define	DC_SIGILL	4	/* illegal instruction (not reset when caught) */
+#define	DC_SIGTRAP	5	/* trace trap (not reset when caught) */
+#define	DC_SIGIOT	6	/* IOT instruction */
+#define	DC_SIGABRT	6	/* used by abort, replace DC_SIGIOT in the future */
+#define	DC_SIGEMT	7	/* EMT instruction */
+#define	DC_SIGFPE	8	/* floating point exception */
+#define	DC_SIGKILL	9	/* kill (cannot be caught or ignored) */
+#define	DC_SIGBUS	10	/* bus error */
+#define	DC_SIGSEGV	11	/* segmentation violation */
+#define	DC_SIGSYS	12	/* bad argument to system call */
+#define	DC_SIGPIPE	13	/* write on a pipe with no one to read it */
+#define	DC_SIGALRM	14	/* alarm clock */
+#define	DC_SIGTERM	15	/* software termination signal from kill */
+#define	DC_SIGUSR1	16	/* user defined signal 1 */
+#define	DC_SIGUSR2	17	/* user defined signal 2 */
+#define	DC_SIGCLD	18	/* child status change */
+#define	DC_SIGCHLD	18	/* child status change alias (POSIX) */
+#define	DC_SIGPWR	19	/* power-fail restart */
+#define	DC_SIGWINCH 20	/* window size change */
+#define	DC_SIGURG	21	/* urgent socket condition */
+#define	DC_SIGPOLL 22	/* pollable event occured */
+#define	DC_SIGIO	DC_SIGPOLL	/* socket I/O possible (DC_SIGPOLL alias) */
+#define	DC_SIGSTOP 23	/* stop (cannot be caught or ignored) */
+#define	DC_SIGTSTP 24	/* user stop requested from tty */
+#define	DC_SIGCONT 25	/* stopped process has been continued */
+
+// Signals used for Startd -> Starter communication
+#define DC_SIGSUSPEND	100
+#define DC_SIGCONTINUE	101
+#define DC_SIGSOFTKILL	102	// vacate w/ checkpoint
+#define DC_SIGHARDKILL	103 // kill w/o checkpoint
+#define DC_SIGPCKPT		104	// periodic checkpoint
+
+/*
+*** Daemon Core Commands
+*/
+#define DC_BASE 60000
+#define DC_RAISESIGNAL (DC_BASE+0)
+#define DC_PROCESSEXIT (DC_BASE+1)
 
 #endif  /* of ifndef _CONDOR_COMMANDS_H */
