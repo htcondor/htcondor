@@ -635,10 +635,14 @@ doContactSchedd()
 
 		// If the job is marked as REMOVED or HELD on the schedd, don't
 		// change it. Instead, modify our state to match it.
-		if ( job_status_schedd == REMOVED || job_status_schedd == HELD ) {
+		// exception: if job is marked as REMOVED, allow us to place it on hold.
+		if ( (job_status_schedd == REMOVED && (!(curr_action->actions & UA_HOLD_JOB)))
+			 || job_status_schedd == HELD ) {
 			curr_job->UpdateCondorState( job_status_schedd );
 			curr_job->ad->SetDirtyFlag( ATTR_JOB_STATUS, false );
 			curr_job->ad->SetDirtyFlag( ATTR_HOLD_REASON, false );
+			curr_job->ad->SetDirtyFlag( ATTR_HOLD_REASON_CODE, false );
+			curr_job->ad->SetDirtyFlag( ATTR_HOLD_REASON_SUBCODE, false );
 		} else if ( curr_action->actions & UA_HOLD_JOB ) {
 			char *reason = NULL;
 			rc = GetAttributeStringNew( curr_job->procID.cluster,
@@ -658,6 +662,14 @@ doContactSchedd()
 			curr_job->UpdateJobAd( ATTR_RELEASE_REASON, "UNDEFINED" );
 			curr_job->UpdateJobAdInt( ATTR_ENTERED_CURRENT_STATUS,
 									  (int)time(0) );
+				
+				// if the job was in REMOVED state, make certain we return
+				// to the removed state when it is released.
+			if ( job_status_schedd == REMOVED ) {
+				curr_job->UpdateJobAdInt(ATTR_JOB_STATUS_ON_RELEASE,
+					job_status_schedd);
+			}
+
 			int sys_holds = 0;
 			rc=GetAttributeInt(curr_job->procID.cluster, 
 							   curr_job->procID.proc, ATTR_NUM_SYSTEM_HOLDS,
@@ -680,6 +692,8 @@ doContactSchedd()
 			if ( curr_job->condorState == HELD ) {
 				curr_job->ad->SetDirtyFlag( ATTR_JOB_STATUS, false );
 				curr_job->ad->SetDirtyFlag( ATTR_HOLD_REASON, false );
+				curr_job->ad->SetDirtyFlag( ATTR_HOLD_REASON_CODE, false );
+				curr_job->ad->SetDirtyFlag( ATTR_HOLD_REASON_SUBCODE, false );
 			} else {
 					// Finally, if we are just changing from one unintersting state
 					// to another, update the ATTR_ENTERED_CURRENT_STATUS time.
@@ -1061,13 +1075,27 @@ doContactSchedd()
 				if ( curr_status == HELD ) {
 					int rc;
 					char *hold_reason = NULL;
+					int hcode = 0;
+					int hsubcode = 0;
 					rc = GetAttributeStringNew( procID.cluster,
 												procID.proc,
 												ATTR_HOLD_REASON,
 												&hold_reason );
+					rc += GetAttributeInt( procID.cluster,
+												procID.proc,
+												ATTR_HOLD_REASON_CODE,
+												&hcode );
+					rc += GetAttributeInt( procID.cluster,
+												procID.proc,
+												ATTR_HOLD_REASON_SUBCODE,
+												&hsubcode );
 					if ( rc == 0 ) {
 						next_job->UpdateJobAdString( ATTR_HOLD_REASON,
 													 hold_reason );
+						next_job->UpdateJobAdInt( ATTR_HOLD_REASON_CODE,
+													 hcode );
+						next_job->UpdateJobAdInt( ATTR_HOLD_REASON_SUBCODE,
+													 hsubcode );
 					} else if ( rc < 0 && errno == ETIMEDOUT ) {
 						delete next_ad;
 						failure_line_num = __LINE__;
@@ -1668,7 +1696,7 @@ bool
 WriteHoldEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	char holdReason[256];
+	
 	UserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {
 		// User doesn't want a log
@@ -1684,11 +1712,8 @@ WriteHoldEventToUserLog( ClassAd *job_ad )
 
 	JobHeldEvent event;
 
-	holdReason[0] = '\0';
-	job_ad->LookupString( ATTR_HOLD_REASON, holdReason,
-						   sizeof(holdReason) - 1 );
 
-	event.setReason( holdReason );
+	event.initFromClassAd(job_ad);
 
 	int rc = ulog->writeEvent(&event);
 	delete ulog;
