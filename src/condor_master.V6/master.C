@@ -207,12 +207,9 @@ int		Lines;
 
 char	*default_daemon_list[] = {
 	"MASTER",
-	"COLLECTOR",
-	"NEGOTIATOR",
 	"STARTD",
 	"SCHEDD",
 	"KBDD",
-	"CKPT_SERVER",
 	0};
 
 // create an object of class daemons.
@@ -1440,5 +1437,5 @@ void StartConfigServer()
 
 void siggeneric_handler(int sig)
 {
-	EXCEPT("signal (%d) received\n");
+	EXCEPT("signal (%d) received", sig);
 }
