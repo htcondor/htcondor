@@ -193,10 +193,27 @@ Job::AddParent( Job* parent )
 	ASSERT( parent != NULL );
 
 		// we don't currently allow a new parent to be added to a
-		// child that has already been started -- but this restriction
-		// might be lifted in the future once we figure out the right
-		// way for the DAG to respond...
-	assert( _Status == Job::STATUS_READY );
+		// child that has already been started (unless the parent is
+		// already marked STATUS_DONE, e.g., when rebuilding from a
+		// rescue DAG) -- but this restriction might be lifted in the
+		// future once we figure out the right way for the DAG to
+		// respond...
+ 	if( _Status != STATUS_READY && parent->GetStatus() != STATUS_DONE ) {
+ 		debug_printf( DEBUG_QUIET, "ERROR: Job::AddParent(): can't add a new "
+ 					  "%s parent node (%s) to a %s child (%s)!\n",
+ 					  queue_t_names[parent->GetStatus()], parent->GetJobName(),
+ 					  queue_t_names[this->GetStatus()], this->GetJobName() );
+
+			// WARNING: READ & THEN REMOVE THIS COMMENT WHEN MERGING:
+			// There will be a conflict when merging the above lines.
+			// When this happens, please use the V6_5-branch version
+			// of this code, and not the V6_5_0-branch version -- in
+			// other words, use the version that has GetStatusName()
+			// and not the version that has queue_t_names[parent->GetStatus()]
+			// Thanks.  --pfc
+
+ 		return false;
+ 	}
 
 	if( !Add( Job::Q_PARENTS, parent->GetJobID() ) ) {
 		return false;
