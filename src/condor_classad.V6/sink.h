@@ -25,15 +25,12 @@
 #define __DUMPER_H__
 
 #include "common.h"
+#include "exprTree.h"
 #include <vector>
 #include <utility>	// for pair template
 #include <string>
-#include "formatOptions.h"
 
 BEGIN_NAMESPACE( classad )
-
-class ClassAdCollection;
-class View;
 
 class ClassAdUnParser
 {
@@ -47,48 +44,49 @@ class ClassAdUnParser
 		void Unparse( string &buffer, Value &val );
 		void Unparse( string &buffer, ExprTree *expr );
 
-		virtual void Unparse( string &buffer, Value&, NumberFactor );	
-		virtual void Unparse( string &buffer, ExprTree *tree, const string &ref,
-					bool absolute=false );
-		virtual void Unparse( string &buffer, OpKind op, ExprTree *op1, 
+		virtual void UnparseAux( string &buffer,Value&,NumberFactor );	
+		virtual void UnparseAux( string &buffer, ExprTree *tree, 
+					string &ref, bool absolute=false );
+		virtual void UnparseAux( string &buffer, OpKind op, ExprTree *op1, 
 					ExprTree *op2, ExprTree *op3 );
-		virtual void Unparse(string &buffer, const string &fnName, 
+		virtual void UnparseAux(string &buffer, string &fnName, 
 					vector<ExprTree*>& args);
-		virtual void Unparse( string &buffer, vector< pair<string, 
-					ExprTree*> >& attrlist );
-		virtual void Unparse( string &buffer, vector<ExprTree*>& exprs );
+		virtual void UnparseAux( string &buffer, 
+					vector< pair< string, ExprTree*> >& attrlist );
+		virtual void UnparseAux( string &buffer, vector<ExprTree*>& );
 
 		// table of string representation of operators
 		static char *opString[];
+};
 
-		/** Set the format options for the sink
-		 	@param fo Pointer to a FormatOptions object
-			@see FormatOptions
-		*/
-		void SetFormatOptions( FormatOptions *fo ) { pp = fo; }
 
-		/** Get the FormatOptions for this sink
-			@return Pointer to the current FormatOptions object.  This pointer
-				should not be deleted.
-		*/
-		FormatOptions *GetFormatOptions( ) { return pp; }
+class PrettyPrint : public ClassAdUnParser
+{
+    public:
+        PrettyPrint( );
+        virtual ~PrettyPrint( );
 
+        void SetClassAdIndentation( int=4 );
+        int  GetClassAdIndentation( );
+        void SetListIndentation( int=4 );
+        int  GetListIndentation( );
+        void SetWantStringQuotes( bool );
+        bool GetWantStringQuotes( );
+        void SetMinimalParentheses( bool );
+        bool GetMinimalParentheses( );
+
+        virtual void UnparseAux( string &buffer, OpKind op, ExprTree *op1,
+                    ExprTree *op2, ExprTree *op3 );
+        virtual void UnparseAux( string &buffer,
+                    vector< pair< string, ExprTree*> >& attrlist );
+        virtual void UnparseAux( string &buffer, vector<ExprTree*>& );
 
     private:
-		friend class ClassAdList;
-		friend class ClassAd;
-		friend class ExprTree;
-		friend class Value;
-		friend class Literal;
-		friend class AttributeReference;
-		friend class Operation;	
-		friend class FunctionCall;
-		friend class ExprList;
-		friend class FormatOptions;
-		friend class ClassAdCollection;
-		friend class View;
-
-		FormatOptions *pp;
+        int  classadIndent;
+        int  listIndent;
+        bool wantStringQuotes;
+        bool minimalParens;
+        int  indentLevel;
 };
 
 END_NAMESPACE // classad
