@@ -694,7 +694,10 @@ bool dynuser::dump_groups() {
 
 bool dynuser::update_psid() {
 	SID_NAME_USE snu;
-
+	bool result;
+	
+	result = TRUE;
+	
 	sidBufferSize = max_sid_length;
 	domainBufferSize = max_domain_length;
 
@@ -706,29 +709,15 @@ bool dynuser::update_psid() {
 	{
 		// not necessarily bad, since we could be using this method to
 		// check if a user exists, else we create it
-		dprintf(D_FULLDEBUG, "dynuser::update_psid() LookupAccountName(%s) failed!\n", accountname);
-		return FALSE;
-	} else {
-		
-		// Success! However, watchout because the sid we got may be on a 
-		// domain server somewhere (anywhere in the Windows 2000/XP forest
-		// as a matter of fact!) and for now, since we're still not running
-		// as the user, we want to make sure we've got an account on the
-		// Local machine. So we'll call GetComputerName() and make sure it
-		// matches the domainBuffer. -stolley, 9/2002
+		dprintf(D_FULLDEBUG, "dynuser::update_psid() LookupAccountName(%s)"
+			" failed!\n", accountname);
 
-		
-		char computerName[MAX_COMPUTERNAME_LENGTH+1];
-		unsigned long nameLength = MAX_COMPUTERNAME_LENGTH+1;
-		int success = GetComputerName( computerName, &nameLength );
-		
-		if (! success ) {
-			dprintf(D_ALWAYS, "dynuser::GetComputerName failed: (Err: %d)", GetLastError());
-			return FALSE;
-		}
-		
-		return ( 0 == stricmp(computerName, domainBuffer) );
+		result = FALSE;
+	} else {
+		result = TRUE;
 	}
+
+	return result;
 }
 
 

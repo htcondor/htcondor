@@ -288,13 +288,28 @@ ReadMultipleUserLogs::readFileToString(const MyString &strFilename)
 {
 	FILE *pFile = fopen(strFilename.Value(), "r");
 	if (!pFile) {
+		dprintf( D_ALWAYS, "ReadMultipleUserLogs::readFileToString: "
+				"fopen(%s) failed with errno %d (%s)\n", strFilename.Value(),
+				errno, strerror(errno) );
 		return "";
 	}
 
-	fseek(pFile, 0, SEEK_END);
+	if ( fseek(pFile, 0, SEEK_END) != 0 ) {
+		dprintf( D_ALWAYS, "ReadMultipleUserLogs::readFileToString: "
+				"fseek(%s) failed with errno %d (%s)\n", strFilename.Value(),
+				errno, strerror(errno) );
+		return "";
+	}
 	int iLength = ftell(pFile);
+	if ( iLength == -1 ) {
+		dprintf( D_ALWAYS, "ReadMultipleUserLogs::readFileToString: "
+				"ftell(%s) failed with errno %d (%s)\n", strFilename.Value(),
+				errno, strerror(errno) );
+		fclose(pFile);
+		return "";
+	}
 	MyString strToReturn;
-	strToReturn.reserve_at_least(iLength+1);
+	strToReturn.reserve_at_least(iLength);
 
 	fseek(pFile, 0, SEEK_SET);
 	char *psBuf = new char[iLength+1];
@@ -440,7 +455,7 @@ MyString
 ReadMultipleUserLogs::getParamFromSubmitLine(MyString submitLine,
 		const char *paramName)
 {
-	MyString	logFileName("");
+	MyString	paramValue("");
 
 		// We need to copy the string here because strtok modifies its
 		// argument...
@@ -453,14 +468,14 @@ ReadMultipleUserLogs::getParamFromSubmitLine(MyString submitLine,
 		if ( token && !strcasecmp(token, "=") ) {
 			token = strtok(NULL, DELIM);
 			if ( token ) {
-				logFileName = token;
+				paramValue = token;
 			}
 		}
 	}
 
 	delete [] lineBuf;
 
-	return logFileName;
+	return paramValue;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

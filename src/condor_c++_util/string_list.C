@@ -56,7 +56,7 @@ StringList::StringList(const char *s, const char *delim )
 void
 StringList::initializeFromString (const char *s)
 {
-	char *walk_ptr = (char*)s;
+	const char *walk_ptr = s;
 
 	while (*walk_ptr != '\0')
 	{
@@ -66,7 +66,7 @@ StringList::initializeFromString (const char *s)
 			walk_ptr++;
 
 		// mark the beginning of this String in the list.
-		char *begin_ptr = walk_ptr;
+		const char *begin_ptr = walk_ptr;
 
 		// walk to the end of this string
 		while (!isSeparator (*walk_ptr) && *walk_ptr != '\0')

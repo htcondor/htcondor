@@ -278,7 +278,34 @@ int main (int argc, char **argv)
 	if ( retval == false ) {
 		printf("OK: reserve() returned false in line %d.\n", __LINE__);
 	} else {
-		printf("FAILED: reserved() didn't returned false in line %d.\n",
+		printf("FAILED: reserve() didn't return false in line %d.\n",
+			   __LINE__);
+		everythingOkay = false;
+	}
+
+	retval = a.reserve(0);
+	if ( retval == true ) {
+		printf("OK: reserve() returned true in line %d.\n", __LINE__);
+	} else {
+		printf("FAILED: reserve() didn't return true in line %d.\n",
+			   __LINE__);
+		everythingOkay = false;
+	}
+
+	retval = a.reserve_at_least(-1);
+	if ( retval == true ) {
+		printf("OK: reserve_at_least() returned true in line %d.\n", __LINE__);
+	} else {
+		printf("FAILED: reserve_at_least() didn't return true in line %d.\n",
+			   __LINE__);
+		everythingOkay = false;
+	}
+
+	retval = a.reserve_at_least(0);
+	if ( retval == true ) {
+		printf("OK: reserve_at_least() returned true in line %d.\n", __LINE__);
+	} else {
+		printf("FAILED: reserve_at_least() didn't return true in line %d.\n",
 			   __LINE__);
 		everythingOkay = false;
 	}
