@@ -477,6 +477,9 @@ IpVerify::add_host_entry( const char* addr, int mask )
                                         user, mask );
 					}   
 				}
+				if (DebugFlags & D_FULLDEBUG) {
+					dprintf (D_SECURITY, "IPVERIFY: succesfully added %s\n", host);
+				}
 			} else {
 				dprintf (D_SECURITY, "IPVERIFY: unable to resolve %s\n", host);
 			}
@@ -555,6 +558,7 @@ void IpVerify :: split_entry(const char * perm_entry, char ** host, char** user)
     char * slash0;
     char * slash1;
     char * at;
+	char * colon;
     char permbuf[512];
 
 	if (!perm_entry || !*perm_entry) {
@@ -586,6 +590,18 @@ void IpVerify :: split_entry(const char * perm_entry, char ** host, char** user)
 			*host = strdup("*");
 		} else {
 			*user = strdup("*");
+
+			// look for a colon
+			colon = strchr(permbuf, ':');
+			if (colon) {
+				// colon points into permbuf.  permbuf is a local
+				// copy of the data made above, so we can modify it.
+				// drop a null in place of the colon so everything
+				// from the colon and beyond is gone.
+				*colon = 0;
+			}
+
+			// now dup it
 			*host = strdup(permbuf);
 		}
 	} else {
