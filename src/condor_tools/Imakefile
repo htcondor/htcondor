@@ -10,10 +10,9 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LIB = $(STD_LIBS)
 
 c_plus_target(condor_cod,cod_tool.o,$(LIB))
-static_target(condor_cod,cod_tool.o,$(LIB),$(STATIC_CONTRIB)/bin)
 release_target(condor_cod,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
-strip_target(condor_cod,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
-static_target(condor_cod,cod_tool.o,$(LIB),$(STATIC_DIR)/sbin)
+strip_target(condor_cod,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
+static_target(condor_cod,cod_tool.o,$(LIB),$(STATIC_DIR)/bin)
 
 c_plus_target(condor_preen,preen.o,$(LIB))
 release_target(condor_preen,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
