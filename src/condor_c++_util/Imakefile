@@ -30,11 +30,6 @@ library_target( cplus_lib.a,$(OBJ))
 library_target( liburl.a,$(URL_OBJ))
 library_target( libcondorapi.a,$(API_OBJ) file_lock.o ../condor_util_lib/dprintf.o ../condor_util_lib/except.o ../condor_util_lib/lock_file.NON_POSIX.o $(FLOCK_OBJ) ../condor_util_lib/condor_errlst.o ../condor_util_lib/setsyscalls.o ../condor_util_lib/uids.o)
 
-libcondorapi.tar: libcondorapi.a
-	cp ../h/file_lock.h file_lock.h
-	tar cvf libcondorapi.tar user_log.README file_lock.h condor_event.h user_log.c++.h libcondorapi.a
-	rm file_lock.h
-
 c_plus_target(test_locks,test_locks.o,$(LIB))
 
 c_plus_target(cat_url, cat_url.o, liburl.a SocketLib)
@@ -71,6 +66,22 @@ import(../condor_util_lib, mkargv.o)
 release_library(libcondorapi.a,$(RELEASE_DIR)/lib)
 strip_library(libcondorapi.a,$(STRIP_DIR)/lib)
 static_library(libcondorapi.a,$(STATIC_DIR)/lib)
+
+release_copy_target(user_log.README,include,user_log.README,TEXT_MODE)
+strip_copy_target(user_log.README,include,user_log.README,TEXT_MODE)
+static_copy_target(user_log.README,include,user_log.README,TEXT_MODE)
+
+release_copy_target(user_log.c++.h,include,user_log.c++.h,TEXT_MODE)
+strip_copy_target(user_log.c++.h,include,user_log.c++.h,TEXT_MODE)
+static_copy_target(user_log.c++.h,include,user_log.c++.h,TEXT_MODE)
+
+release_copy_target(condor_event.h,include,condor_event.h,TEXT_MODE)
+strip_copy_target(condor_event.h,include,condor_event.h,TEXT_MODE)
+static_copy_target(condor_event.h,include,condor_event.h,TEXT_MODE)
+
+release_copy_target(../h/file_lock.h,include,file_lock.h,TEXT_MODE)
+strip_copy_target(../h/file_lock.h,include,file_lock.h,TEXT_MODE)
+static_copy_target(../h/file_lock.h,include,file_lock.h,TEXT_MODE)
 
 foo.o: user_log.h
 test.o: user_log.h
