@@ -236,6 +236,27 @@ In that case, \AdAttr{RemoteUser} would hold the name of the entity
 currently using the resource, while \AdAttr{RemoteOwner} would hold
 the name of the entity that claimed the resource.
 
+\index{ClassAd machine attribute (in Claimed State)!TotalClaimRunTime}
+\item[\AdAttr{TotalClaimRunTime}] : A running total of the amount of
+time (in seconds) that all jobs (under the same claim) ran
+(have spent in the Claimed/Busy state).
+
+
+\index{ClassAd machine attribute (in Claimed State)!TotalClaimSuspendTime}
+\item[\AdAttr{TotalClaimSuspendTime}] :  A running total of the amount of
+time (in seconds) that all jobs (under the same claim) have been
+suspended (in the Claimed/Suspended state).
+
+\index{ClassAd machine attribute (in Claimed State)!TotalJobRunTime}
+\item[\AdAttr{TotalJobRunTime}] :  A running total of the amount of
+time (in seconds) that a single job ran
+(has spent in the Claimed/Busy state).
+
+\index{ClassAd machine attribute (in Claimed State)!TotalJobSuspendTime}
+\item[\AdAttr{TotalJobSuspendTime}] : A running total of the amount of
+time (in seconds) that a single job has been suspended
+(in the Claimed/Suspended state).
+
 \end{description}
 
 There are a few attributes that are only inserted into the
