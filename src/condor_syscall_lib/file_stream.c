@@ -91,7 +91,6 @@ open_file_stream( const char *file, int flags, size_t *len )
 	}
 
 	if( mode == IS_PRE_OPEN ) {
-		exit( __LINE__ );
 		EXCEPT( "The shadow says a stream file is a pre-opened pipe!\n" );
 	}
 
@@ -172,7 +171,7 @@ open_tcp_stream( unsigned int ip_addr, unsigned short port )
 	status = connect( fd,( struct sockaddr *)&sin, sizeof(sin) );
 	if( status < 0 ) {
 		dprintf( D_ALWAYS, "connect() failed - errno = %d\n", errno );
-		exit( 1 );
+		return -1;
 	}
 	dprintf( D_FULLDEBUG, "Connection completed - returning fd %d\n", fd );
 
