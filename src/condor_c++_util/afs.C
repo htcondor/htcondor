@@ -36,42 +36,38 @@ AFS_Info::AFS_Info()
 {
 	char	*tmp;
 
-	my_cell_name = 0;
+	my_cell_name = NULL;
 
 		// find out if we're running AFS here
-	if( (tmp=param("HAS_AFS")) == NULL ) {
-		has_afs = FALSE;
+	has_afs = FALSE;
+	if( (tmp = param("HAS_AFS")) ) {
+		if( tmp[0] == 't' || tmp[0] == 'T' ) {
+			has_afs = TRUE;
+		} 
+		free( tmp );
+	}
+	if( ! has_afs ) {
 		return;
 	}
-	if( tmp[0] == 't' || tmp[0] == 'T' ) {
-		has_afs = TRUE;
-	} else {
-		free( tmp );	/* BUG FIXED : Ashish */
-		has_afs = FALSE;
-		return;
-	}
-	free( tmp );	/* BUG FIXED : Ashish */
 
 		// get pathname for the "fs" program
 	if( (tmp=param("FS_PATHNAME")) == NULL ) {
 		EXCEPT( "FS_PATHNAME not defined" );
 	}
 	strcpy( fs_pathname, tmp );
-	free( tmp );	 /* BUG FIXED : Ashish */
+	free( tmp );
 
 		// get pathname for the "vos" program
 	if( (tmp=param("VOS_PATHNAME")) == NULL ) {
 		EXCEPT( "VOS_PATHNAME not defined" );
 	}
 	strcpy( vos_pathname, tmp );
-	free( tmp );	/* BUG FIXED : Ashish */
-
-	my_cell_name = 0;
+	free( tmp );
 }
 
 AFS_Info::~AFS_Info()
 {
-	delete [] my_cell_name;
+	if( my_cell_name ) delete [] my_cell_name;
 }
 
 void
@@ -95,11 +91,13 @@ AFS_Info::my_cell()
 {
 	char	*ptr;
 
+	if( !has_afs ) {
+		return NULL;
+	}
 	if( !my_cell_name ) {
-
 			// find out what AFS cell we're in
 		if( (ptr=find_my_cell()) == NULL ) {
-			return NULL;
+			EXCEPT( "Could not find AFS cell." );
 		}
 		my_cell_name = new char[ strlen(ptr) + 1 ];
 		strcpy( my_cell_name, ptr );
@@ -123,6 +121,7 @@ AFS_Info::find_my_cell()
 	if( !has_afs ) {
 		return NULL;
 	}
+
 
 	SubProc	p( fs_pathname, "wscell", "r" );
 	return p.parse_output( "belongs to cell", "'", "'" );

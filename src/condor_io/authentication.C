@@ -304,31 +304,27 @@ Authentication::authenticate_claimtobe() {
 			mySock->code( retval );
 			mySock->code( tmpOwner );
 			setOwner( tmpOwner );
-//			delete [] tmpOwner;
 			free( tmpOwner );
 			mySock->end_of_message();
 			mySock->decode();
 			mySock->code( retval );
-		}
-		else {
+		} else {
 			//send 0
 			mySock->code( retval );
 		}
-	}
-	else { //server side
+	} else { //server side
 		mySock->decode();
 		mySock->code( retval );
 		//if 1, receive owner and send back ok
-		if ( retval == 1 ) {
+		if( retval == 1 ) {
 			mySock->code( tmpOwner );
 			mySock->end_of_message();
 			mySock->encode();
-			if ( tmpOwner ) {
+			if( tmpOwner ) {
 				retval = 1;
 				setOwner( tmpOwner );
-				free( tmpOwner );
-			}
-			else {
+				delete [] tmpOwner;
+			} else {
 				retval = 0;
 			}
 			mySock->code( retval );
@@ -399,7 +395,6 @@ Authentication::authenticate_filesystem()
 		mySock->code( rval );
 		mySock->end_of_message();
 //		dprintf(D_FULLDEBUG,"server determined owner is \"%s\"\n", owner );
-
 		if ( new_file ) {
 			unlink( new_file );
 			free( new_file );
@@ -439,17 +434,14 @@ Authentication::authenticate_filesystem()
 				(S_ISLNK(stat_buf.st_mode)) ) 
 			{
 				retval = -1;
-			}
-			else {
+			} else {
 				//need to lookup username from file and do setOwner()
 				char *tmpOwner = my_username( stat_buf.st_uid );
 				setOwner( tmpOwner );
 				free( tmpOwner );
 			}
 		}
-
-	}
-	else {
+	} else {
 		retval = -1;
 		dprintf( D_ALWAYS, "invalid state in authenticate_filesystem\n" );
 	}

@@ -2595,56 +2595,57 @@ Scheduler::child_exit(int pid, int status)
 						srec->job_id.proc);
 			}
 */
-			delete_shadow_rec( pid );
+		delete_shadow_rec( pid );
 	} else if (srec) {
 		// A real shadow
 		if( WIFEXITED(status) ) {
-				dprintf( D_FULLDEBUG, "Shadow pid %d exited with status %d\n",
-						 pid, WEXITSTATUS(status) );
+			dprintf( D_FULLDEBUG, "Shadow pid %d exited with status %d\n",
+					 pid, WEXITSTATUS(status) );
 			switch( WEXITSTATUS(status) ) {
-				case JOB_NO_MEM:
-					swap_space_exhausted();
-					 case JOB_EXEC_FAILED:
-						  StartJobsFlag=FALSE;
-					break;
-				case JOB_CKPTED:
-				case JOB_NOT_CKPTED:
-				case JOB_NOT_STARTED:
-					if (!srec->removed) {
-						Relinquish(srec->match);
-						DelMrec(srec->match);
-					}
-					break;
-				case JOB_EXCEPTION:
-						// some exception happened in this job --  
-						// record that we had one.  This function will
-						// relinquish the match if we get too many
-						// exceptions 
-					if( !srec->removed ) {
-							// Only if this job wasn't removed, do we
-							// have anything to do. 
-						HadException(srec->match);
-					}
-					break;
-				case JOB_SHADOW_USAGE:
-					EXCEPT("shadow exited with incorrect usage!\n");
-					break;
-				case JOB_BAD_STATUS:
-					EXCEPT("shadow exited because job status != RUNNING");
-					break;
-				case JOB_NO_CKPT_FILE:
-				case JOB_KILLED:
-				case JOB_COREDUMPED:
-					SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
-									ATTR_JOB_STATUS, REMOVED);
-					break;
-				case JOB_EXITED:
-					SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, ATTR_JOB_STATUS, COMPLETED);
-					break;
+			case JOB_NO_MEM:
+				swap_space_exhausted();
+			case JOB_EXEC_FAILED:
+				StartJobsFlag=FALSE;
+				break;
+			case JOB_CKPTED:
+			case JOB_NOT_CKPTED:
+			case JOB_NOT_STARTED:
+				if (!srec->removed) {
+					Relinquish(srec->match);
+					DelMrec(srec->match);
+				}
+				break;
+			case JOB_EXCEPTION:
+					// some exception happened in this job --  
+					// record that we had one.  This function will
+					// relinquish the match if we get too many
+					// exceptions 
+				if( !srec->removed ) {
+						// Only if this job wasn't removed, do we
+						// have anything to do. 
+					HadException(srec->match);
+				}
+				break;
+			case JOB_SHADOW_USAGE:
+				EXCEPT("shadow exited with incorrect usage!\n");
+				break;
+			case JOB_BAD_STATUS:
+				EXCEPT("shadow exited because job status != RUNNING");
+				break;
+			case JOB_NO_CKPT_FILE:
+			case JOB_KILLED:
+			case JOB_COREDUMPED:
+				SetAttributeInt( srec->job_id.cluster, srec->job_id.proc, 
+								 ATTR_JOB_STATUS, REMOVED );
+				break;
+			case JOB_EXITED:
+				SetAttributeInt( srec->job_id.cluster, srec->job_id.proc,
+								 ATTR_JOB_STATUS, COMPLETED );
+				break;
 			}
 	 	} else if( WIFSIGNALED(status) ) {
-					 dprintf( D_FULLDEBUG, "Shadow pid %d died with signal %d\n",
-																pid, WTERMSIG(status) );
+			dprintf( D_ALWAYS, "Shadow pid %d died with signal %d\n",
+					 pid, WTERMSIG(status) );
 		}
 		delete_shadow_rec( pid );
 	} else {

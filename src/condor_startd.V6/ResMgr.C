@@ -29,6 +29,7 @@ ResMgr::ResMgr()
 	coll_sock = NULL;
 	view_sock = NULL;
 	totals_classad = NULL;
+	config_classad = NULL;
 	up_tid = -1;
 	poll_tid = -1;
 
@@ -44,6 +45,8 @@ ResMgr::ResMgr()
 ResMgr::~ResMgr()
 {
 	int i;
+	if( config_classad ) delete config_classad;
+	if( totals_classad ) delete totals_classad;
 	delete m_attr;
 	delete m_avail;
 	delete m_proc;
@@ -64,6 +67,15 @@ ResMgr::~ResMgr()
 	}
 	delete [] type_strings;
 	delete [] type_nums;
+}
+
+
+void
+ResMgr::init_config_classad()
+{
+	if( config_classad ) delete config_classad;
+	config_classad = new ClassAd();
+	config( config_classad );
 }
 
 

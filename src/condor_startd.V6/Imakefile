@@ -10,7 +10,7 @@ all_target( $(NAME) )
 CFLAGS = $(STD_C_FLAGS) -O2 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LDFLAGS = SocketLib RpcLib MldLib KernLib
-LIB= $(STD_LIBS)
+LIB= $(DAEMONCORE_LIB) $(STD_LIBS)
 
 #if IS_ALPHA_OSF1
 #	define LOAD_AVG_OBJ load_avg.OSF1.o

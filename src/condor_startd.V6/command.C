@@ -413,7 +413,7 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 		req_requirements = 0;
 	}
 	if( !mach_requirements || !req_requirements ) {
-	    rip->dprintf( D_ALWAYS, "Preemption request refused.\n" );
+	    rip->dprintf( D_ALWAYS, "Request to claim resource refused.\n" );
 		if( !mach_requirements ) {
 			rip->dprintf( D_ALWAYS, "Machine requirements not satisfied.\n" );
 		}

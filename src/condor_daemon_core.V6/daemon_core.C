@@ -2854,9 +2854,33 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 	assert( sig == DC_SIGCHLD );
 
 	for(;;) {
+		errno = 0;
         if( (pid = waitpid(-1,&status,WNOHANG)) <= 0 ) {
-            dprintf( D_FULLDEBUG, "waitpid() returned %d, errno = %d\n",
-                                                            pid, errno );
+			if( errno == EINTR ) {
+					// Even though we're not supposed to be getting
+					// any signals inside DaemonCore methods,
+					// sometimes we get EINTR here.  In this case, we
+					// want to re-do the waitpid(), not break out of
+					// the loop, to make sure we're not leaving any
+					// zombies lying around.  -Derek Wright 2/26/99
+				continue;
+			}
+#if defined( GLIBC ) && defined( LINUX )
+				// For some weird reason, on GLIBC-LINUX, we get
+				// EAGAIN when there's nothing left to reap.
+			if( errno != EAGAIN ) {
+#else
+				// On every other platform, we're expecting waitpid()
+				// to return ECHILD.
+			if( errno != ECHILD ) {
+#endif
+					// If it's not what we expect, we want D_ALWAYS 
+				dprintf( D_ALWAYS, "waitpid() returned %d, errno = %d\n",
+						 pid, errno );
+			} else {
+				dprintf( D_FULLDEBUG, 
+						 "DaemonCore: No more children processes to reap.\n" ); 
+			}
             break;
         }
 		HandleProcessExit(pid, status);
@@ -2864,6 +2888,7 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 	return TRUE;
 }
 #endif // of ifndef WIN32
+
 
 #ifdef WIN32
 // This function runs in a seperate thread and wathces over children

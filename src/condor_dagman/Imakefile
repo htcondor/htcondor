@@ -4,7 +4,7 @@ all_target($(NAME))
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -Wall
 CFLAGS = $(STD_C_FLAGS) -Wall
 LDFLAGS = SocketLib
-LIB = $(STD_LIBS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
 OBJ = main.o submit.o dag.o job.o util.o parse.o debug.o types.o \
 	script.o instantiate.o

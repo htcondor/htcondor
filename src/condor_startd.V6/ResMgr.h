@@ -119,7 +119,9 @@ public:
 	ProcAPI*		m_proc;		// Info from /proc about this machine 
 
 	ClassAd*	totals_classad;
+	ClassAd*	config_classad;
 
+	void		init_config_classad();
 private:
 	Resource**	resources;		// Array of pointers to resource objects
 	int			nresources;		// Size of the array

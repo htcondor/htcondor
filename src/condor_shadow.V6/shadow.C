@@ -181,7 +181,7 @@ int MaxDiscardedRunTime = 3600;
 extern "C" int ExceptCleanup();
 int Termlog;
 time_t	RunTime;
-ReliSock	*sock_RSC1, *RSC_ShadowInit(int rscsock, int errsock);
+ReliSock	*sock_RSC1 = NULL, *RSC_ShadowInit(int rscsock, int errsock);
 ReliSock	*RSC_MyShadowInit(int rscsock, int errsock);;
 int HandleLog();
 
@@ -401,13 +401,14 @@ main(int argc, char *argv[], char *envp[])
 			UseCkptServer = FALSE;
 		}
 		if (use_ckpt_server) free(use_ckpt_server);
-		tmp = param( "STARTER_CHOOSES_CKPT_SERVER" );
-		if (tmp && (tmp[0] == 'T' || tmp[0] == 't')) {
-			StarterChoosesCkptServer = TRUE;
-		} else {
-			StarterChoosesCkptServer = FALSE;
+
+		StarterChoosesCkptServer = TRUE;
+		if( (tmp = param("STARTER_CHOOSES_CKPT_SERVER")) ) {
+			if( tmp[0] == 'F' || tmp[0] == 'f' ) {
+				StarterChoosesCkptServer = FALSE;
+			}
+			free(tmp);
 		}
-		if (tmp) free(tmp);
 	}
 
 	tmp = param( "MAX_DISCARDED_RUN_TIME" );
@@ -733,22 +734,14 @@ v			      ((tempproc->next != plist)&&(ProcList != plist));
 	The user job might exit while there is still unread data in the log.
 	So, select with a timeout of zero, and flush everything from the log.
 	*/
-
-	while(1) {
-		struct timeval tv;
-
-		tv.tv_sec = 0;
-		tv.tv_usec = 0;
-
-		cnt = select(nfds, &readfds, 0, 0, &tv );
-		if( cnt<=0 ) break;
-
-		if( FD_ISSET(CLIENT_LOG, &readfds) ) {
-			if( HandleLog()<0 ) break;
-		} else {
-			break;
-		}
-	}
+		/* 
+		   NOTE: Since HandleLog does it's own loop to make sure it's
+		   read everything, we don't need a loop here, and should only
+		   call HandleLog once.  In fact, if there's a problem w/
+		   select(), a loop here can cause an infinite loop.  
+		   -Derek Wright and Jim Basney, 2/17/99.
+		*/
+	HandleLog();
 	
 		/* Take back normal condor privileges */
 	set_condor_priv();
@@ -764,7 +757,6 @@ v			      ((tempproc->next != plist)&&(ProcList != plist));
 		"Shadow: Job %d.%d exited, termsig = %d, coredump = %d, retcode = %d\n",
 			Proc->id.cluster, Proc->id.proc, WTERMSIG(JobStatus),
 			WCOREDUMP(JobStatus), WEXITSTATUS(JobStatus));
-
 }
 
 void
@@ -799,9 +791,11 @@ Wrapup( )
 		handle_termination( Proc, notification, &JobStatus, NULL );
 	}
 
-	TotalBytesSent += sock_RSC1->get_bytes_sent() + BytesSent;
-	TotalBytesRecvd += sock_RSC1->get_bytes_recvd() + BytesRecvd;
-	
+	if( sock_RSC1 ) {
+		TotalBytesSent += sock_RSC1->get_bytes_sent() + BytesSent;
+		TotalBytesRecvd += sock_RSC1->get_bytes_recvd() + BytesRecvd;
+	}
+
 	/*
 	 * the job may have an email address to whom the notification message
      * should go.  this info is in the classad, and must be gotten from the
@@ -981,8 +975,8 @@ send_job( V2_PROC *proc, char *host, char *cap)
 	retval = part_send_job(0, host, reason, capability, schedd, proc, sd1, sd2, NULL);
 	if (retval == -1) {
 		DoCleanup();
-                dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
-                exit( reason );
+		dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
+		exit( reason );
 	}
 
 #ifdef CARMI_OPS

@@ -157,7 +157,6 @@ void OpenFileTable::dump()
 			dprintf(D_ALWAYS,"fd: %d offset: %d dups: %d ",
 				i,pointers[i]->get_offset(),
 				pointers[i]->get_use_count());
-
 			pointers[i]->get_file()->dump();
 		}
 		dprintf(D_ALWAYS,"\n");
