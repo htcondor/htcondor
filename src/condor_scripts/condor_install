@@ -32,6 +32,8 @@ $needs_lock=0;
 $fs_domain="";
 $uid_domain="";
 $soft_uid="";
+$java_jvm_path="";
+$java_jvm_maxmem_arg="";
 
 # Print the opening remarks:
 print "\n" x 50, 
@@ -274,7 +276,7 @@ sub configure_submit_only {
     local( $pool, $config_file, $path, %pool_config_file );
 
     print "\n***************************************************************************\n",
-    "\tSTEP 6: Where should public programs be installed?\n",
+    "\tSTEP 7: Where should public programs be installed?\n",
     "***************************************************************************\n";
     print "\n",
     "When I'm done, I'm going to need to install some scripts and links.\n",
@@ -725,6 +727,13 @@ sub customize_config_file {
 	      last SWITCH;
 	  }
 	  if( /^MAIL.*$/ ) { $_ = "MAIL\t\t\t= $mail_path\n"; last SWITCH; }
+	  if( /^JAVA[^_A-Za-z0-9]/ ) { 
+	  	$_ = "JAVA\t= $java_jvm_path\n"; last SWITCH; 
+	  }
+	  if( /^JAVA_MAXHEAP_ARGUMENT[^_A-Za-z0-9]/ ) { 
+	  	$_ = "JAVA_MAXHEAP_ARGUMENT\t= $java_jvm_maxmem_arg\n"; 
+		last SWITCH; 
+	  }
 	  if( $lock && /^LOCK.*$/ ) { $_ = "LOCK\t\t\t= $lock\n"; last SWITCH; }
 	  if( $ckpt && /^#USE_CKPT_SERVER.*$/ ) { 
 	      $_ = "USE_CKPT_SERVER\t\t= True\n"; last SWITCH; 
@@ -1042,8 +1051,20 @@ sub configure_full_install {
     $has_mach = 0;
     $is_cm = 0;
 
+	print "\n***************************************************************************\n",
+    "\tSTEP 6: Java Universe support in Condor.\n",
+    "***************************************************************************\n";
+
+$java_jvm_path = &prompt_java_jvm_path();
+
+print "\nUsing JVM $java_jvm_path for Java universe support.\n" 
+	if ($java_jvm_path ne "");
+
+print "\nPress enter to continue. ";
+$_ = <STDIN>;
+
     print "\n***************************************************************************\n",
-    "\tSTEP 6: Where should public programs be installed?\n",
+    "\tSTEP 7: Where should public programs be installed?\n",
     "***************************************************************************\n";
     $path = "$release_dir/bin";
     print "\n",
@@ -1074,7 +1095,7 @@ sub configure_full_install {
     $_ = <STDIN>;
 
     print "\n***************************************************************************\n",
-    "\tSTEP 7: What machine will be your central manager?\n",
+    "\tSTEP 8: What machine will be your central manager?\n",
     "***************************************************************************\n";
     $cm = &prompt_central_manager( 0 );
     
@@ -1087,7 +1108,7 @@ sub configure_full_install {
     $_ = <STDIN>;
 
     print "\n***************************************************************************\n",
-    "\tSTEP 8: Where will the \"local directory\" go?\n",
+    "\tSTEP 9: Where will the \"local directory\" go?\n",
     "***************************************************************************\n";
     
     if( @machines ) {
@@ -1224,7 +1245,7 @@ sub configure_full_install {
     $_ = <STDIN>;
 
     print "\n***************************************************************************\n",
-    "\tSTEP 9: Where will the local (machine-specific) config files go?\n",
+    "\tSTEP 10: Where will the local (machine-specific) config files go?\n",
     "***************************************************************************\n";
 
     if( @machines ) {
@@ -1258,7 +1279,7 @@ sub configure_full_install {
     }
 
     print "\n***************************************************************************\n",
-    "\tSTEP 10: How do you want Condor to find its config file?\n",
+    "\tSTEP 11: How do you want Condor to find its config file?\n",
     "***************************************************************************\n";
     $has_config=0;
 
@@ -1700,3 +1721,103 @@ sub prompt_fullhost {
 	}
     }
 }
+
+# Search for default locations for java, and then test to see if it is a
+# Sun JVM for the maxheap size argument Java needs in the config files.
+# Do a bunch of stuff to make it interactive friendly too.
+sub prompt_java_jvm_path()
+{
+	my $jvm = "";
+	my @default_jvm_locations = ("/bin/java", "/usr/bin/java", 
+							"/usr/local/bin/java", "/s/std/bin/java");
+	my $java_libdir = "$release_dir/lib";
+	my $exec_result;
+	my $default_jvm_location;
+
+	# Ask if they even want support for java
+	print "\nEnable Java Universe support? [yes] ";
+	chomp($_ = <STDIN>);
+   	if( ! /(^[Yy].*)|^$/ ) {
+		print "Ok, Java Universe will be left unconfigured.\n";
+		return "";
+	}
+
+	# check some default locations for java and pick first valid one
+	foreach $default_jvm_location (@default_jvm_locations) {
+		if ( -f $default_jvm_location && -x $default_jvm_location) {
+			$jvm = $default_jvm_location;
+			last;
+		}
+	}
+
+	# if nothing is found, explain that, otherwise see if they just want to
+	# accept what I found. 
+
+	if ($jvm eq "") {
+		print "\nI wasn't able to find a valid JVM.\n";
+	} else {
+		print "\nI have found a JVM: $jvm.\n\nIs this acceptable? [yes] ";
+    	chop( $_ = <STDIN> );
+    	if( /(^[Yy].*)|^$/ ) {
+			goto JAVA_MEM_CHECK; # sorry....
+		}
+	}
+
+	# If they didn't accept my choice for one reason or another then force
+	# a fully qualified java executable path from them.
+
+    while( 1 ) {
+		print "\nPlease enter the full path to the JVM:\n";
+		chomp($jvm = <STDIN>);    
+		print "\nYou entered: $jvm\n";
+		if( $jvm =~ /^\//) {
+			if ( -f $jvm && -x $jvm) {
+	    		print "Is that right? [no] ";
+	    		chop($_ = <STDIN>);    
+	    		if( /((^y$)|(^yes$))/i ) {
+					last; # break out of while loop
+	    		}
+			} else {
+			print "That executable seems to not be present or executable!\n",
+				"Please try again.\n";
+			}
+		} else {
+	    	print "That path doesn't start with an '/'.\n",
+	    	"Please try again.\n";
+		}
+    }
+
+	# Now that we have an executable JVM, see if it is a Sun jvm because that
+	# JVM it supports the -Xmx argument then, which is used to specify the
+	# maximum size to which the heap can grow.
+
+	JAVA_MEM_CHECK: 
+	print "\nChecking to see if you have a Sun JVM...";
+
+	# execute a program in the condor lib directory that just got installed.
+	# We are going to pass an -Xmx flag to it and see if we have a Sun JVM,
+	# if so, mark that fact for the config file.
+
+	$tmp = $ENV{"CLASSPATH"};
+	$ENV{"CLASSPATH"} = $java_libdir;
+	$exec_result = 0xffff &
+		system("$jvm -Xmx1024m CondorJavaInfo new 0 > /dev/null 2>&1");
+	$ENV{"CLASSPATH"} = $tmp;
+
+	if ($exec_result == 0) {
+		print "yes.\n";
+		$java_jvm_maxmem_arg = "-Xmx"; # Sun JVM max heapsize flag
+		print "\nThe JVM heap size will be allowed to grow up to 1024 Megs.\n";
+	} else {
+		print "no.\n";
+		$java_jvm_maxmem_arg = "";
+		print "\nThe maximum JVM heap size allowable will default to that " .
+			"specified by your\njava vendor.\n";
+	}
+
+	return $jvm;
+}
+
+
+
+
