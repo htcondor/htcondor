@@ -62,7 +62,7 @@ void filename_url_parse( char *input, char *method, char *server, int *port, cha
 
 /* Copy in to out, removing whitespace. */
 
-static void eat_space( char *in, char *out )
+static void eat_space( const char *in, char *out )
 {
 	while(1) {
 		switch(*in) {
@@ -117,7 +117,7 @@ static char * copy_upto( char *in, char *out, char delim, int length )
 }
 
 
-int filename_remap_find( char *input, char *filename, char *output )
+int filename_remap_find( const char *input, const char *filename, char *output )
 {
 	char name[_POSIX_PATH_MAX];
 	char url[_POSIX_PATH_MAX];
@@ -154,7 +154,7 @@ int filename_remap_find( char *input, char *filename, char *output )
 	return 0;
 }
 
-int filename_split( char *path, char *dir, char *file )
+int filename_split( const char *path, char *dir, char *file )
 {
 	char *last_slash;
 

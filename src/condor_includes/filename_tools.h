@@ -15,7 +15,7 @@ Returns false if there was no directory component, but in this case,
 still fills "dir" with "."
 */
 
-int filename_split( char *path, char *dir, char *file );
+int filename_split( const char *path, char *dir, char *file );
 
 /**
 Take an input string in URL form, and split it into its components.
@@ -50,7 +50,7 @@ as a ClassAd within a ClassAd.  However, this will have to wait until
 new ClassAds are deployed.
 */
 
-int filename_remap_find( char *input, char *filename, char *output );
+int filename_remap_find( const char *input, const char *filename, char *output );
 
 END_C_DECLS
 
