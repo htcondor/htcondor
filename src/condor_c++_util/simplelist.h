@@ -83,11 +83,11 @@ SimpleList (): maximum_size(1), size(0)
 
 template <class ObjType>
 SimpleList<ObjType>::
-SimpleList (const SimpleList<ObjType> & list):
-    maximum_size(list.maximum_size), size(list.size), current(list.current)
+SimpleList (const SimpleList<ObjType> & simlist):
+    maximum_size(simlist.maximum_size), size(simlist.size), current(simlist.current)
 {
 	items = new ObjType[maximum_size];
-    memcpy (items, list.items, sizeof (ObjType *) * maximum_size);
+    memcpy (items, simlist.items, sizeof (ObjType *) * maximum_size);
 }
 
 template <class ObjType>
@@ -246,9 +246,9 @@ class SimpleListIterator {
 
 template <class ObjType> 
 void
-SimpleListIterator<ObjType>::Initialize( const SimpleList<ObjType> & list )
+SimpleListIterator<ObjType>::Initialize( const SimpleList<ObjType> & simlist )
 {
-	_list = & list;
+	_list = & simlist;
 	ToBeforeFirst();
 }
 
