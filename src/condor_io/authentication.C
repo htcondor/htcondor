@@ -257,7 +257,7 @@ Condor_Auth_Base * auth = NULL;
 }
 
 
-int Authentication::isAuthenticated() 
+int Authentication::isAuthenticated() const
 {
 #if defined(SKIP_AUTHENTICATION)
     return 0;
@@ -362,12 +362,21 @@ const char * Authentication::getOwner() const
     // memory.  We can always just return claimToBe, since it'll
     // either be NULL or the string we want, which is the old
     // semantics.  -Derek Wright 3/12/99
+	const char *owner;
     if (authenticator_) {
-        return authenticator_->getRemoteUser();
+        owner = authenticator_->getRemoteUser();
     }
     else {
-        return NULL;
+        owner = NULL;
     }
+
+	// If we're authenticated, we should always have a valid owner
+	if ( isAuthenticated() ) {
+		if ( NULL == owner ) {
+			EXCEPT( "Socket is authenticated, but has no owner!!" );
+		}
+	}
+	return owner;
 #endif  
 }               
 

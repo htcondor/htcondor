@@ -1361,7 +1361,7 @@ int Sock :: authenticate(const char * methods, CondorError* errstack)
 	return -1;
 }
 
-int Sock :: isAuthenticated()
+int Sock :: isAuthenticated() const
 {
 	return -1;
 }
