@@ -23,6 +23,7 @@ public:
   double GetPriority(const MyString& CustomerName); // get priority for a customer
   void SetPriority(const MyString& CustomerName, double Priority); // set priority for a customer
 
+  int MatchExist(const MyString& CustomerName, const MyString& ResourceName); // check if a mtch exists
   void AddMatch(const MyString& CustomerName, ClassAd* ResourceAd); // Add new match
   void RemoveMatch(const MyString& ResourceName); // remove a match
 
@@ -100,7 +101,9 @@ private:
   //--------------------------------------------------------
 
   static MyString GetResourceName(ClassAd* Resource);
-  static int NotClaimed(ClassAd* ResourceAd);
+  static int IsClaimed(ClassAd* ResourceAd, MyString& CustomerName);
+  static int CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& CustomerName);
+  static ClassAd* FindResourceAd(const MyString& ResourceName, ClassAdList& ResourceList);
   void AppendLogEntry(const MyString& Action, const MyString& CustomerName, const MyString& ResourceName, double d);
 
 };
