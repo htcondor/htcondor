@@ -36,10 +36,13 @@ class HashBucket {
   HashBucket<Index, Value> *next;            // next node in the hash table
 };
 
-// a generic hash table class
+// forward declaration of iterator
+template<class Index, class Value> class HashTableIterator;
 
+// a generic hash table class
 template <class Index, class Value>
 class HashTable {
+ friend class HashTableIterator<Index,Value>;
  public:
   HashTable(int tableSize,
 	    int (*hashfcn)(const Index &index,
@@ -75,9 +78,33 @@ class HashTable {
   int numElems; // number of elements in the hashtable
 };
 
+
+template <class Index, class Value>
+class HashTableIterator {
+public:
+	HashTableIterator( );
+	~HashTableIterator( );
+
+	void Initialize( const HashTable<Index, Value>& );
+	void ToBeforeFirst( );
+	void ToAfterLast( );
+	bool Next( Index&, Value& );
+	bool Next( Value& );
+	bool Current( Index&, Value& );
+	bool Current( Value& );
+	bool IsBeforeFirst( ) const;
+	bool IsAfterLast( ) const;
+
+private:
+	const HashTable<Index,Value>* hTable;
+	int currentBucket;
+	const HashBucket<Index,Value> *currentItem;
+};
+
+
+
 // Construct hash table. Allocate memory for hash table and
 // initialize its elements.
-
 template <class Index, class Value>
 HashTable<Index,Value>::HashTable(int tableSz,
 				  int (*hashF)(const Index &index,
@@ -237,29 +264,22 @@ int HashTable<Index,Value>::remove(const Index &index)
   	HashBucket<Index, Value> *bucket = ht[idx];
   	HashBucket<Index, Value> *prevBuc = ht[idx];
 
-  	while(bucket) 
-	{
-    	if (bucket->index == index) 
-		{
-      		if (bucket == ht[idx]) 
-			{
+  	while(bucket) {
+    	if (bucket->index == index) {
+      		if (bucket == ht[idx]) {
 				ht[idx] = bucket->next;
 
 				// if the item being deleted is being iterated, ensure that
 				// next iteration returns the object "after" this one
-				if (bucket == currentItem)
-				{
+				if (bucket == currentItem) {
 					currentItem = 0;
 					currentBucket --;
 				}
-			}
-      		else
-			{
+			} else {
 				prevBuc->next = bucket->next;
 
 				// Again, take care of the iterator
-				if (bucket == currentItem)
-				{
+				if (bucket == currentItem) {
 					currentItem = prevBuc;
 				}
 			}
@@ -325,31 +345,26 @@ int HashTable<Index,Value>::
 iterate (Value &v)
 {
     // try to get next item in chain ...
-    if (currentItem)
-    {
+    if (currentItem) {
         currentItem = currentItem->next;
     
         // ... if successful, return OK
-        if (currentItem)
-        {
+        if (currentItem) {
             v = currentItem->value;
             return 1;
-       }
+       	}
     }
 
 	// try next bucket ...
 	currentBucket ++;
 
-	if (currentBucket == chainsUsedLen)
-	{
+	if (currentBucket == chainsUsedLen) {
     	// end of hash table ... no more entries
     	currentBucket = -1;
     	currentItem = 0;
 
     	return 0;
-	}
-	else
-	{
+	} else {
 		currentItem = ht[ chainsUsed[currentBucket] ];
 		v = currentItem->value;
 		return 1;
@@ -371,32 +386,27 @@ int HashTable<Index,Value>::
 iterate (Index &index, Value &v)
 {
     // try to get next item in chain ...
-    if (currentItem)
-    {
+    if (currentItem) {
         currentItem = currentItem->next;
     
         // ... if successful, return OK
-        if (currentItem)
-        {
+        if (currentItem) {
             index = currentItem->index;
             v = currentItem->value;
             return 1;
-       }
+       	}
     }
 
 	// try next bucket ...
 	currentBucket ++;
 
-	if (currentBucket == chainsUsedLen)
-	{
+	if (currentBucket == chainsUsedLen) {
     	// end of hash table ... no more entries
     	currentBucket = -1;
     	currentItem = 0;
 
     	return 0;
-	}
-	else
-	{
+	} else {
 		currentItem = ht[ chainsUsed[currentBucket] ];
 		index = currentItem->index;
 		v = currentItem->value;
@@ -435,5 +445,117 @@ void HashTable<Index,Value>::dump()
   }
 }
 #endif
+
+template <class Index, class Value>
+HashTableIterator<Index,Value>::HashTableIterator( )
+{
+	hTable = NULL;
+	current = NULL;
+	currentBucket = -1;
+}
+
+template <class Index, class Value>
+HashTableIterator<Index,Value>::~HashTableIterator( )
+{
+}
+
+template <class Index, class Value>
+void HashTableIterator<Index,Value>::Initialize(const HashTable<Index,Value>&ht)
+{
+	hTable = &ht;
+	currentItem = NULL;
+	currentBucket = -1;
+}
+
+template <class Index, class Value>
+void HashTableIterator<Index,Value>::ToBeforeFirst( )
+{
+	currentItem = NULL;
+	currentBucket = -1;
+}
+
+template <class Index, class Value>
+void HashTableIterator<Index,Value>::ToAfterLast( )
+{
+	currentItem = NULL;
+	currentBucket = hTable ? hTable->chainsUsedLen : -1;
+}
+
+template <class Index, class Value>
+bool HashTableIterator<Index,Value>::Next( Index& i, Value& v )
+{
+	if( !ht ) return false;
+
+    // try to get next item in chain ...
+    if (currentItem) {
+        currentItem = currentItem->next;
+        // ... if successful, return OK
+        if (currentItem) {
+			i = currentItem->index;
+            v = currentItem->value;
+            return 1;
+       	}
+    }
+
+	// try next bucket ...
+	currentBucket ++;
+
+	if (currentBucket == chainsUsedLen) {
+    	// end of hash table ... no more entries
+    	currentItem = 0;
+    	return false;
+	} else {
+		currentItem = hTable->ht[ hTable->chainsUsed[currentBucket] ];
+		if( !currentItem ) {
+			ToAfterLast( );
+			return( false );
+		}
+		i = currentItem->index;
+		v = currentItem->value;
+		return true;
+	}
+}
+
+template <class Index, class Value>
+bool HashTableIterator<Index,Value>::Next( Value& v )
+{
+	Index i;
+	return( Next( i, v ) );
+}
+
+template <class Index, class Value>
+bool HashTableIterator<Index,Value>::Current( Index& i, Value& v )
+{
+	if( hTable && currentBucket >= 0 && currentBucket < ht->chainsUsedLen ) {
+		if( !currentItem ) {
+			ToAfterLast( );
+			return( false );
+		}
+		i = currentItem->index;
+		v = currentItem->value;
+		return( true );
+	}
+	return( false );
+}
+
+template <class Index, class Value>
+bool HashTableIterator<Index,Value>::Current( Value& v )
+{
+	Index i;
+	return( Current( i, v ) );
+}
+
+template <class Index, class Value>
+bool HashTableIterator<Index,Value>::IsBeforeFirst( ) const
+{
+	return( hTable && currentBucket < 0 );
+}
+
+template <class Index, class Value>
+bool HashTableIterator<Index,Value>::IsAfterLast( ) const
+{
+	return( hTable && currentBucket == hTable->chainsUsedLen );
+}
+
 
 #endif
