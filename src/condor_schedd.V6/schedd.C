@@ -118,7 +118,7 @@ dc_reconfig()
 
 
 match_rec::match_rec(char* i, char* p, PROC_ID* id, ClassAd *match, 
-					 char *the_user)
+					 char *the_user, char *my_pool)
 {
 	strcpy(this->id, i);
 	strcpy(peer, p);
@@ -134,12 +134,14 @@ match_rec::match_rec(char* i, char* p, PROC_ID* id, ClassAd *match,
         // before the Mpi shadow starts.  Used so that we don't try to 
         // start the mpi shadow every time through StartJob()...
     isMatchedMPI = FALSE;
+	pool = my_pool;
 }
 
 match_rec::~match_rec()
 {
 	if (my_match_ad) delete my_match_ad;
 	if (user) free(user);
+	if (pool) free(pool);
 }
 
 Scheduler::Scheduler()
@@ -176,8 +178,9 @@ Scheduler::Scheduler()
 	numMatches = 0;
 	numShadows = 0;
 	IdleSchedUniverseJobIDs = NULL;
-	FlockHosts = NULL;
+	FlockCollectors = FlockNegotiators = FlockViewServers = NULL;
 	MaxFlockLevel = 0;
+	FlockLevel = 0;
 	StartJobTimer=-1;
 	timeoutid = -1;
 	startjobsid = -1;
@@ -246,9 +249,9 @@ Scheduler::~Scheduler()
 	if (shadowsByProcID) {
 		delete shadowsByProcID;
 	}
-	if (FlockHosts) {
-		delete FlockHosts;
-	}
+	if (FlockCollectors) delete FlockCollectors;
+	if (FlockNegotiators) delete FlockNegotiators;
+	if (FlockViewServers) delete FlockViewServers;
 	if ( checkContactQueue_tid != -1 && daemonCore ) {
 		daemonCore->Cancel_Timer(checkContactQueue_tid);
 	}
@@ -320,7 +323,7 @@ Scheduler::count_jobs()
 	WalkJobQueue((int(*)(ClassAd *)) count );
 
 	// set FlockLevel for owners
-	if (FlockHosts) {
+	if (MaxFlockLevel) {
 		for ( i=0; i < N_Owners; i++) {
 			for ( j=0; j < Old_N_Owners; j++) {
 				if (!strcmp(OldOwners[j].Name,Owners[i].Name)) {
@@ -339,6 +342,9 @@ Scheduler::count_jobs()
 				dprintf(D_ALWAYS,
 						"Increasing flock level for %s to %d.\n",
 						Owners[i].Name, Owners[i].FlockLevel);
+			}
+			if (Owners[i].FlockLevel > FlockLevel) {
+				FlockLevel = Owners[i].FlockLevel;
 			}
 		}
 	}
@@ -387,6 +393,18 @@ Scheduler::count_jobs()
 			 "Sent HEART BEAT ad to central mgr: Number of submittors=%d\n",
 			 N_Owners );
 
+	// send the schedd ad to our flock collectors too, so we will
+	// appear in condor_q -global and condor_status -schedd
+	if (FlockCollectors) {
+		FlockCollectors->rewind();
+		char *host = FlockCollectors->next();
+		for (i=0; host && i < FlockLevel; i++) {
+			update_central_mgr( UPDATE_SCHEDD_AD, host,
+								COLLECTOR_UDP_COMM_PORT );
+			host = FlockCollectors->next();
+		}
+	}
+
 	// The per user queue ads should not have NumUsers in them --- only
 	// the schedd ad should.  In addition, they should not have
 	// TotalRunningJobs and TotalIdleJobs
@@ -395,9 +413,6 @@ Scheduler::count_jobs()
 	ad->Delete (ATTR_TOTAL_IDLE_JOBS);
 
 	for ( i=0; i<N_Owners; i++) {
-
-		// TODO: set running job counts with flocking in mind
-
 	  sprintf(tmp, "%s = %d", ATTR_RUNNING_JOBS, Owners[i].JobsRunning);
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
@@ -424,41 +439,84 @@ Scheduler::count_jobs()
 		  // whether you define it or not.  This will cause a seg
 		  // fault if we assume it's defined and use it.  
 		  // -Derek Wright 11/4/98 
-	  if( CondorViewHost ) {
+	  if( CondorViewHost && CondorViewHost[0] != '\0' ) {
 		  update_central_mgr( UPDATE_SUBMITTOR_AD, CondorViewHost,
 							  CONDOR_VIEW_PORT );
 	  }
+	}
 
-	  // Request matches from other pools if FlockLevel > 0
-	  if (FlockHosts && Owners[i].FlockLevel > 0) {
-		  char *host;
-		  for (j=1, FlockHosts->rewind();
-			   j <= Owners[i].FlockLevel && (host = FlockHosts->next());
-			   j++) {
-				  // Port doesn't matter, since we've got the sinful string. 
-			  update_central_mgr( UPDATE_SUBMITTOR_AD, host, 
-								  COLLECTOR_UDP_COMM_PORT );
-		  }
-	  }
+	// update collector and condor-view server of the pools with which
+	// we are flocking, if any
+	if (FlockCollectors && FlockNegotiators) {
+		FlockCollectors->rewind();
+		FlockNegotiators->rewind();
+		if (FlockViewServers) FlockViewServers->rewind();
+		for (int flock_level = 1;
+			 flock_level <= MaxFlockLevel; flock_level++) {
+			char *flock_collector = FlockCollectors->next();
+			char *flock_negotiator = FlockNegotiators->next();
+			char *flock_view_server =
+				(FlockViewServers) ? FlockViewServers->next() : NULL;
+			for (i=0; i < N_Owners; i++) {
+				Owners[i].JobsRunning = 0;
+			}
+			char constraint[100];
+			sprintf(constraint, "%s =?= \"%s\"", ATTR_REMOTE_POOL,
+					flock_negotiator);
+			// compute JobsRunning for each owner for this pool
+			for (ClassAd *jobAd = GetNextJobByConstraint(constraint, true);
+				 jobAd; jobAd = GetNextJobByConstraint(constraint, false)) {
+				int currHosts;
+				char ownerbuf[100], *owner = ownerbuf;
+				int niceUser;
+				if (jobAd->LookupInteger(ATTR_CURRENT_HOSTS, currHosts) &&
+					currHosts > 0 &&
+					jobAd->LookupString(ATTR_OWNER, owner) &&
+					jobAd->LookupInteger(ATTR_NICE_USER, niceUser)) {
+					if (niceUser) {
+						char niceuserbuf[100];
+						strcpy(niceuserbuf, NiceUserName);
+						strcat(niceuserbuf, ".");
+						strcat(niceuserbuf, owner);
+						owner = niceuserbuf;
+					}
+					int OwnerNum = insert_owner( owner );
+					Owners[OwnerNum].JobsRunning += currHosts;
+				}
+			}
+			// update submitter ad in this pool for each owner
+			for (i=0; i < N_Owners; i++) {
+				if (Owners[i].FlockLevel >= flock_level) {
+					sprintf(tmp, "%s = %d", ATTR_IDLE_JOBS,
+							Owners[i].JobsIdle);
+				} else if (Owners[i].OldFlockLevel >= flock_level ||
+						   Owners[i].JobsRunning > 0) {
+					sprintf(tmp, "%s = %d", ATTR_IDLE_JOBS, 0);
+				} else {
+					// if we're no longer flocking with this pool and
+					// we're not running jobs in the pool, then don't send
+					// an update
+					continue;
+				}
+				ad->InsertOrUpdate(tmp);
+				sprintf(tmp, "%s = %d", ATTR_RUNNING_JOBS,
+						Owners[i].JobsRunning);
+				ad->InsertOrUpdate(tmp);
+				sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, Owners[i].Name,
+						UidDomain);
+				ad->InsertOrUpdate(tmp);
+				update_central_mgr( UPDATE_SUBMITTOR_AD, flock_collector,
+									COLLECTOR_UDP_COMM_PORT );
+				if (flock_view_server && flock_view_server[0] != '\0') {
+					update_central_mgr( UPDATE_SUBMITTOR_AD, flock_view_server,
+										CONDOR_VIEW_PORT );
+				}
+			}
+		}
+	}
 
-	  // Cancel requests when FlockLevel decreases
-	  if (Owners[i].OldFlockLevel > Owners[i].FlockLevel) {
-		  char *host;
-		  sprintf(tmp, "%s = 0", ATTR_RUNNING_JOBS);
-		  ad->InsertOrUpdate(tmp);
-		  sprintf(tmp, "%s = 0", ATTR_IDLE_JOBS);
-		  ad->InsertOrUpdate(tmp);
-		  for (j=1, FlockHosts->rewind();
-			   j <= Owners[i].OldFlockLevel && (host = FlockHosts->next());
-			   j++) {
-			  if (j > Owners[i].FlockLevel) {
-				  update_central_mgr( UPDATE_SUBMITTOR_AD, host,
-									  COLLECTOR_UDP_COMM_PORT );
-			  }
-		  }
-	  }
-
-	  Owners[i].OldFlockLevel = Owners[i].FlockLevel;
+	for (i=0; i < N_Owners; i++) {
+		Owners[i].OldFlockLevel = Owners[i].FlockLevel;
 	}
 
 	 // send info about deleted owners
@@ -470,7 +528,7 @@ Scheduler::count_jobs()
 	ad->InsertOrUpdate(tmp);
 
  	// send ads for owner that don't have jobs idle
-	// This is fone by looking at the old owners list and searching for owners
+	// This is done by looking at the old owners list and searching for owners
 	// that are not in the current list (the current list has only owners w/ idle jobs)
 	for ( i=0; i<Old_N_Owners; i++) {
 
@@ -502,10 +560,10 @@ Scheduler::count_jobs()
 	  char *host;
 	  int i;
 	
-	  if (FlockHosts) {
-		 for (i=1, FlockHosts->rewind();
+	  if (FlockCollectors) {
+		 for (i=1, FlockCollectors->rewind();
 			  i <= OldOwners[i].OldFlockLevel &&
-				  (host = FlockHosts->next()); i++) {
+				  (host = FlockCollectors->next()); i++) {
 			 update_central_mgr( UPDATE_SUBMITTOR_AD, host,
 								 COLLECTOR_UDP_COMM_PORT);
 		 }
@@ -554,12 +612,6 @@ count( ClassAd *job )
 				ATTR_JOB_STATUS);
 		return 0;
 	}
-	if (job->LookupString(ATTR_OWNER, buf) < 0) {
-		dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n",
-				ATTR_OWNER);
-		return 0;
-	}
-	owner = buf;
 	if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) < 0) {
 		cur_hosts = ((status == RUNNING) ? 1 : 0);
 	}
@@ -582,8 +634,14 @@ count( ClassAd *job )
 			scheduler.JobsRunning += cur_hosts;
 			scheduler.JobsIdle += (max_hosts - cur_hosts);
 
-			// Per owner info (This is actually *submittor*
-			// information.  With NiceUser's, the number of owners is
+			// Per submittor information.
+			if (job->LookupString(ATTR_OWNER, buf) < 0) {
+				dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n",
+						ATTR_OWNER);
+				return 0;
+			}
+			owner = buf;
+			// With NiceUsers, the number of owners is
 			// not the same as the number of submittors.  So, we first
 			// check if this job is being submitted by a NiceUser, and
 			// if so, insert it as a new entry in the "Owner" table
@@ -595,8 +653,18 @@ count( ClassAd *job )
 			}
 
 			int OwnerNum = scheduler.insert_owner( owner );
-			scheduler.Owners[OwnerNum].JobsRunning += cur_hosts;
 			scheduler.Owners[OwnerNum].JobsIdle += (max_hosts - cur_hosts);
+
+			// We are building up totals for our local pool submitter ad,
+			// so we only want to count jobs which are running in our local
+			// pool (i.e., ATTR_REMOTE_POOL is undefined).
+			if (!job->LookupString(ATTR_REMOTE_POOL, buf)) {
+				scheduler.Owners[OwnerNum].JobsRunning += cur_hosts;
+			}
+			// We've reused buf, so it no longer contains the owner --
+			// We set owner pointer to NULL to be safe, so someone doesn't
+			// add new code below which uses owner.
+			owner = NULL;
 		}
 	}
 	return 0;
@@ -1078,6 +1146,7 @@ Scheduler::negotiate(int, Stream* s)
 	int		shadow_num_increment;
 	int		job_universe;
 	int		which_negotiator = 0; 		// >0 implies flocking
+	char*	negotiator_name = NULL;	// hostname of negotiator when flocking
 	int		serviced_other_commands = 0;	
 	int		owner_num;
 	Sock*	sock = (Sock*)s;
@@ -1087,7 +1156,7 @@ Scheduler::negotiate(int, Stream* s)
 	dprintf( D_FULLDEBUG, "\n" );
 	dprintf( D_FULLDEBUG, "Entered negotiate\n" );
 
-	if (FlockHosts) {
+	if (FlockNegotiators) {
 		// first, check if this is our local negotiator
 		struct in_addr endpoint_addr = (sock->endpoint())->sin_addr;
 		struct hostent *hent;
@@ -1101,12 +1170,12 @@ Scheduler::negotiate(int, Stream* s)
 				}
 			}
 		}
-		// if it isn't our local negotiator, check the FlockHosts list.
+		// if it isn't our local negotiator, check the FlockNegotiators list.
 		if (!match) {
 			char *host;
 			int n;
-			for (n=1, FlockHosts->rewind();
-				 !match && (host = FlockHosts->next());
+			for (n=1, FlockNegotiators->rewind();
+				 !match && (host = FlockNegotiators->next());
 				 n++) {
 				hent = gethostbyname(host);
 				if (hent->h_addrtype == AF_INET) {
@@ -1117,6 +1186,7 @@ Scheduler::negotiate(int, Stream* s)
 									sizeof(struct in_addr)) == 0){
 							match = true;
 							which_negotiator = n;
+							negotiator_name = host;
 						}
 					}
 				}
@@ -1464,6 +1534,11 @@ Scheduler::negotiate(int, Stream* s)
 					args->id.cluster = id.cluster;
 					args->id.proc = id.proc;
 					args->my_match_ad = my_match_ad;
+					if (negotiator_name) {
+						args->pool = strdup(negotiator_name);
+					} else {
+						args->pool = NULL;
+					}
 					if ( startdContactQueue.enqueue( args ) < 0 ) {
 						perm_rval = 0;	// failure
 						dprintf(D_ALWAYS,"Failed to enqueue contactStartd "
@@ -1515,6 +1590,9 @@ Scheduler::negotiate(int, Stream* s)
 						dprintf(D_ALWAYS,
 								"Increasing flock level for %s to %d.\n",
 								owner, Owners[owner_num].FlockLevel);
+						if (JobsStarted == 0) {
+							timeout(); // flock immediately
+						}
 					}
 
 					return KEEP_STREAM;
@@ -1563,10 +1641,14 @@ Scheduler::negotiate(int, Stream* s)
 			Owners[owner_num].FlockLevel++;
 			dprintf(D_ALWAYS, "Increasing flock level for %s to %d.\n",
 					owner, Owners[owner_num].FlockLevel);
+			if (JobsStarted == 0) {
+				timeout(); // flock immediately
+			}
 		}
 	} else {
 		// We are out of jobs.  Stop flocking with less desirable pools.
 		Owners[owner_num].FlockLevel = which_negotiator;
+		timeout();				// invalidate our ads immediately
 
 		dprintf( D_ALWAYS,
 		"Out of jobs - %d jobs matched, %d jobs idle, flock level = %d\n",
@@ -1607,7 +1689,8 @@ Scheduler::vacate_service(int, Stream *sock)
 
 int
 Scheduler::contactStartd( char* capability, char *user, 
-						  char* server, PROC_ID* jobId, ClassAd *my_match_ad)
+						  char* server, PROC_ID* jobId, ClassAd *my_match_ad,
+						  char* pool=NULL)
 {
 	match_rec* mrec;   // match record pointer
 	ReliSock *sock = new ReliSock();
@@ -1620,11 +1703,12 @@ Scheduler::contactStartd( char* capability, char *user,
 		// Note: my_match_ad and user are deleted/free-ed by the
 		// match record destructor.  Thus we should only free them
 		// in the function _if_ AddMrec fails.
-	mrec = AddMrec(capability, server, jobId, my_match_ad, user);
+	mrec = AddMrec(capability, server, jobId, my_match_ad, user, pool);
 	if(!mrec) {
         free( capability );
         free( user );
         free( server );
+		if (pool) free( pool );
 		if (my_match_ad) delete my_match_ad;
         delete sock;
         return 0;
@@ -1798,7 +1882,8 @@ Scheduler::checkContactQueue()
 		dprintf ( D_FULLDEBUG, "In checkContactQueue(), args = %x, host=%s\n", 
 				  args, args->host );
 		contactStartd( args->capability, args->owner,
-							  args->host, &(args->id), args->my_match_ad );	
+					   args->host, &(args->id), args->my_match_ad,
+					   args->pool);	
 		delete args;
 	}
 }
@@ -2848,7 +2933,6 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	}
 
 	dprintf ( D_ALWAYS, "Successfully created sched universe process\n" );
-	// SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, RUNNING);
 	mark_job_running(job_id);
 	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 1);
 	WriteExecuteToUserLog( *job_id );
@@ -2898,7 +2982,13 @@ Scheduler::add_shadow_rec( int pid, PROC_ID* job_id, match_rec* mrec, int fd )
     new_rec->sinfulString = 
         strnewp( daemonCore->InfoCommandSinfulString( pid ) );
 	
-	if (pid) add_shadow_rec(new_rec);
+	if (pid) {
+		add_shadow_rec(new_rec);
+	} else if ( new_rec->match && new_rec->match->pool ) {
+		// need to make sure this gets set immediately
+		SetAttributeString(new_rec->job_id.cluster, new_rec->job_id.proc,
+						   ATTR_REMOTE_POOL, new_rec->match->pool);
+	}
 	return new_rec;
 }
 
@@ -2909,9 +2999,15 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 	shadowsByPid->insert(new_rec->pid, new_rec);
 	shadowsByProcID->insert(new_rec->job_id, new_rec);
 
-	if ( new_rec->match && new_rec->match->peer && new_rec->match->peer[0] ) {
-		SetAttributeString(new_rec->job_id.cluster, new_rec->job_id.proc,
-			ATTR_REMOTE_HOST,new_rec->match->peer);
+	if ( new_rec->match ) {
+		if ( new_rec->match->peer && new_rec->match->peer[0] ) {
+			SetAttributeString(new_rec->job_id.cluster, new_rec->job_id.proc,
+							   ATTR_REMOTE_HOST,new_rec->match->peer);
+		}
+		if ( new_rec->match->pool ) {
+			SetAttributeString(new_rec->job_id.cluster, new_rec->job_id.proc,
+							   ATTR_REMOTE_POOL, new_rec->match->pool);
+		}
 	}
 	int current_time = (int)time(NULL);
 	int job_start_date = 0;
@@ -2967,6 +3063,8 @@ Scheduler::delete_shadow_rec(int pid)
 			SetAttributeString( rec->job_id.cluster,rec->job_id.proc, 
 							ATTR_LAST_REMOTE_HOST, last_host );
 		}
+		DeleteAttribute( rec->job_id.cluster, rec->job_id.proc,
+						 ATTR_REMOTE_POOL );
 
 		if (rec->removed) {
 			if (!WriteAbortToUserLog(rec->job_id)) {
@@ -3064,7 +3162,8 @@ mark_job_stopped(PROC_ID* job_id)
 			SetAttributeInt(job_id->cluster, job_id->proc, ATTR_MAX_HOSTS,
 							orig_max);
 		}
-	
+		DeleteAttribute( job_id->cluster, job_id->proc, ATTR_REMOTE_POOL );
+
 		dprintf( D_FULLDEBUG, "Marked job %d.%d as IDLE\n", job_id->cluster,
 				 job_id->proc );
 	}	
@@ -3928,23 +4027,51 @@ Scheduler::Init()
 											 procIDHash);
 	}
 
-	tmp = param( "FLOCK_HOSTS" );
-	if ( tmp && tmp[0] != '\0') {
-		if (FlockHosts) delete FlockHosts;
-		FlockHosts = new StringList( tmp );
-		MaxFlockLevel = FlockHosts->number();
-	} else if (FlockHosts) {
-		delete FlockHosts;
-		FlockHosts = NULL;
-		MaxFlockLevel = 0;
+	char *flock_collector_hosts, *flock_negotiator_hosts, *flock_view_servers;
+	flock_collector_hosts = param( "FLOCK_COLLECTOR_HOSTS" );
+	if (!flock_collector_hosts) { // backward compatibility
+		flock_collector_hosts = param( "FLOCK_HOSTS" );
 	}
-	if (tmp) free(tmp);
+	flock_negotiator_hosts = param( "FLOCK_NEGOTIATOR_HOSTS" );
+	if (!flock_negotiator_hosts) { // backward compatibility
+		flock_negotiator_hosts = param( "FLOCK_HOSTS" );
+	}
+	flock_view_servers = param( "FLOCK_VIEW_SERVERS" );
+	if (flock_collector_hosts && flock_negotiator_hosts) {
+		if (FlockCollectors) delete FlockCollectors;
+		FlockCollectors = new StringList( flock_collector_hosts );
+		MaxFlockLevel = FlockCollectors->number();
+		if (FlockNegotiators) delete FlockNegotiators;
+		FlockNegotiators = new StringList( flock_negotiator_hosts );
+		if (FlockCollectors->number() != FlockNegotiators->number()) {
+			dprintf(D_ALWAYS, "FLOCK_COLLECTOR_HOSTS and "
+					"FLOCK_NEGOTIATOR_HOSTS lists are not the same size."
+					"Flocking disabled.\n");
+			MaxFlockLevel = 0;
+		}
+		if (flock_view_servers) {
+			if (FlockViewServers) delete FlockViewServers;
+			FlockViewServers = new StringList( flock_view_servers );
+		}
+	} else {
+		MaxFlockLevel = 0;
+		if (!flock_collector_hosts && flock_negotiator_hosts) {
+			dprintf(D_ALWAYS, "FLOCK_NEGOTIATOR_HOSTS defined but "
+					"FLOCK_COLLECTOR_HOSTS undefined.  Flocking disabled.\n");
+		} else if (!flock_negotiator_hosts && flock_collector_hosts) {
+			dprintf(D_ALWAYS, "FLOCK_COLLECTOR_HOSTS defined but "
+					"FLOCK_NEGOTIATOR_HOSTS undefined.  Flocking disabled.\n");
+		}
+	}
+	if (flock_collector_hosts) free(flock_collector_hosts);
+	if (flock_negotiator_hosts) free(flock_negotiator_hosts);
+	if (flock_view_servers) free(flock_view_servers);
 
 	tmp = param( "RESERVED_SWAP" );
 	 if( !tmp ) {
 		  ReservedSwap = 5 * 1024;				/* 5 megabytes */
 	 } else {
-		  ReservedSwap = atoi( tmp ) * 1024;  /* Value specified in megabytes */
+		  ReservedSwap = atoi( tmp ) * 1024; /* Value specified in megabytes */
 		  free( tmp );
 	 }
 
@@ -4257,7 +4384,7 @@ Scheduler::schedd_exit()
 void
 Scheduler::invalidate_ads()
 {
-	int i, FlockLevel=0;
+	int i;
 	char *host;
 	char line[256];
 	GenericQuery query;
@@ -4281,16 +4408,14 @@ Scheduler::invalidate_ads()
 		sprintf( line, "%s == \"%s@%s\"", ATTR_NAME, Owners[i].Name,
 				 UidDomain ); 
 		query.addCustomOR( line );
-		if (Owners[i].FlockLevel > FlockLevel)
-			FlockLevel = Owners[i].FlockLevel;
 	}
 		// This will overwrite the Requirements expression in ad.
 	query.makeQuery( *ad );
 
 	update_central_mgr( INVALIDATE_SUBMITTOR_ADS, Collector->addr(), 0 );
-	if( FlockHosts && FlockLevel > 0 ) {
-		for( i=1, FlockHosts->rewind();
-			 i <= FlockLevel && (host = FlockHosts->next()); i++ ) {
+	if( FlockCollectors && FlockLevel > 0 ) {
+		for( i=1, FlockCollectors->rewind();
+			 i <= FlockLevel && (host = FlockCollectors->next()); i++ ) {
 			update_central_mgr( INVALIDATE_SUBMITTOR_ADS, host, 
 								COLLECTOR_UDP_COMM_PORT );
 		}
@@ -4332,6 +4457,20 @@ Scheduler::reschedule_negotiator(int, Stream *)
 			"failed to send RESCHEDULE command to negotiator\n");
 		return;
 	}
+	sock.close();
+
+	if (FlockNegotiators) {
+		FlockNegotiators->rewind();
+		char *negotiator = FlockNegotiators->next();
+		for (int i=0; negotiator && i < FlockLevel;
+			 negotiator = FlockNegotiators->next(), i++) {
+			if (!sock.connect(negotiator, NEGOTIATOR_PORT) ||
+				!sock.code(cmd) || !sock.eom()) {
+				dprintf(D_ALWAYS, "failed to send RESCHEDULE command to %s\n",
+						negotiator);
+			}
+		}
+	}
 
 	if (SchedUniverseJobsIdle > 0) {
 		StartSchedUniverseJobs();
@@ -4342,7 +4481,7 @@ Scheduler::reschedule_negotiator(int, Stream *)
 
 match_rec*
 Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, ClassAd* my_match_ad,
-				   char *user)
+				   char *user, char *pool)
 {
 	match_rec *rec;
 
@@ -4351,7 +4490,7 @@ Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, ClassAd* my_match_ad,
 		dprintf(D_ALWAYS, "Null parameter --- match not added\n"); 
 		return NULL;
 	} 
-	rec = new match_rec(id, peer, jobId, my_match_ad, user);
+	rec = new match_rec(id, peer, jobId, my_match_ad, user, pool);
 	if(!rec)
 	{
 		EXCEPT("Out of memory!");
@@ -4693,6 +4832,7 @@ Scheduler::dumpState(int, Stream* s) {
 	intoAd ( ad, "AccountantName", AccountantName );
 	intoAd ( ad, "UidDomain", UidDomain );
 	intoAd ( ad, "MaxFlockLevel", MaxFlockLevel );
+	intoAd ( ad, "FlockLevel", FlockLevel );
 	intoAd ( ad, "aliveInterval", aliveInterval );
 	intoAd ( ad, "MaxExceptions", MaxExceptions );
 	

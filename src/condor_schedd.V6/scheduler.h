@@ -75,7 +75,7 @@ struct OwnerData {
 
 struct match_rec
 {
-    match_rec(char*, char*, PROC_ID*, ClassAd*, char*);
+    match_rec(char*, char*, PROC_ID*, ClassAd*, char*, char* pool);
 	~match_rec();
     char    		id[SIZE_OF_CAPABILITY_STRING];
     char    		peer[50];
@@ -88,6 +88,7 @@ struct match_rec
     int             isMatchedMPI;
 	ClassAd*		my_match_ad;
 	char*			user;
+	char*			pool;		// negotiator hostname if flocking; else NULL
 };
 
 enum MrecStatus {
@@ -105,6 +106,7 @@ struct contactStartdArgs {
 	char *host;
 	PROC_ID id;
 	ClassAd *my_match_ad;
+	char *pool;
 };
 
 class Scheduler : public Service
@@ -145,7 +147,7 @@ class Scheduler : public Service
 	void			display_shadow_recs();
 
 	// match managing
-    match_rec*      AddMrec(char*, char*, PROC_ID*, ClassAd*, char*);
+    match_rec*      AddMrec(char*, char*, PROC_ID*, ClassAd*, char*, char*);
     int         	DelMrec(char*);
     int         	DelMrec(match_rec*);
     int         	MarkDel(char*);
@@ -258,11 +260,13 @@ class Scheduler : public Service
 			@param server The startd to contact
 			@param jobId Put in the mrec and used to get the jobAd
 			@param my_match_ad The matching startd ad - put in the mrec
+			@param pool If we are flocking, pool points to the hostname of
+			       negotiator in the remote pool.  Otherwise, it is NULL.
 			@return 0 on failure and 1 on success
 		 */
 	int		 		contactStartd(char *capability , char *user, 
 								  char *server, PROC_ID *jobId,
-								  ClassAd *my_match_ad);
+								  ClassAd *my_match_ad, char *pool);
 
 		/** Registered in contactStartd, this function is called when
 			the startd replies to our request.  If it replies in the 
@@ -302,8 +306,9 @@ class Scheduler : public Service
 	int				numMatches;
 	int				numShadows;
 	List <PROC_ID>	*IdleSchedUniverseJobIDs;
-	StringList		*FlockHosts;
+	StringList		*FlockCollectors, *FlockNegotiators, *FlockViewServers;
 	int				MaxFlockLevel;
+	int				FlockLevel;
     int         	aliveInterval;             // how often to broadcast alive
 	int				MaxExceptions;	 // Max shadow excep. before we relinquish
 	bool			ManageBandwidth;
