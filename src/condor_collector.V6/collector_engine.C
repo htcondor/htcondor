@@ -488,7 +488,7 @@ updateClassAd (CollectorHashTable &hashTable,
 	else
     {
 		// yes ... old ad must be updated
-		dprintf (D_ALWAYS, "%s: Updating ... %s\n", adType, hashString);
+		dprintf (D_FULLDEBUG, "%s: Updating ... %s\n", adType, hashString);
 
 		// check if it has special status (master ads)
 		if (old_ad < THRESHOLD)
