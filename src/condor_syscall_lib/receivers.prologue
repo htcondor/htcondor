@@ -50,7 +50,7 @@ extern "C" {
 # if defined DUX4
 	int statfs( char*, struct statfs*, int );
 	int fstatfs ( int fd, struct statfs *buf, int len );
-# elsif defined DUX5
+# elif defined DUX5
         int _F64_statfs( char*, struct statfs*, ... );
         int fstatfs ( int fd, struct statfs *buf, ... );
 # endif
