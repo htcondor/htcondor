@@ -122,6 +122,7 @@ StatInfo::do_stat( const char *path )
 	modify_time = 0;
 	create_time = 0;
 	isdirectory = false;
+	isexecutable = false;
 
 	struct stat statbuf;	
 
@@ -144,8 +145,12 @@ StatInfo::do_stat( const char *path )
 		file_size = statbuf.st_size;
 #ifndef WIN32
 		isdirectory = S_ISDIR(statbuf.st_mode);
+		// On Unix, if any execute bit is set (user, group, other), we
+		// consider it to be executable.
+		isexecutable = ((statbuf.st_mode & (S_IXUSR|S_IXGRP|S_IXOTH)) != 0 );
 #else
 		isdirectory = ((_S_IFDIR & statbuf.st_mode) != 0);
+		isexecutable = ((_S_IEXEC & statbuf.st_mode) != 0);
 #endif
 		break;
 	default:
