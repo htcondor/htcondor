@@ -67,7 +67,11 @@ extern char RCkptName[];
 extern char *CkptServerHost;
 extern char *LastCkptServer;
 extern int  LastCkptTime;
+extern int  NumCkpts;
+extern int  NumRestarts;
 extern int MaxDiscardedRunTime;
+
+int		LastCkptSig = 0;
 
 char	CurrentWorkingDir[ _POSIX_PATH_MAX ];
 
@@ -81,6 +85,7 @@ void get_host_addr( unsigned int *ip_addr );
 void display_ip_addr( unsigned int addr );
 int has_ckpt_file();
 void update_job_status( struct rusage *localp, struct rusage *remotep );
+void update_job_rusage( struct rusage *localp, struct rusage *remotep );
 
 static char Executing_Filesystem_Domain[ MAX_STRING ];
 static char Executing_UID_Domain[ MAX_STRING ];
@@ -223,10 +228,17 @@ commit_rusage()
 	struct rusage local_rusage;
 
 	get_local_rusage( &local_rusage );
-	update_job_status( &local_rusage, &uncommitted_rusage );
 
-	// log the event
-	log_checkpoint (&local_rusage, &uncommitted_rusage);
+	if (LastCkptSig == SIGUSR2) {
+		// log the periodic checkpoint event
+		log_checkpoint (&local_rusage, &uncommitted_rusage);
+		// update job info to the job queue
+		update_job_status( &local_rusage, &uncommitted_rusage );
+	} else {
+		// no need to update job queue here on a vacate checkpoint, since
+		// we will do it in Wrapup()
+		update_job_rusage( &local_rusage, &uncommitted_rusage );
+	}
 }
 
 int
@@ -517,8 +529,9 @@ pseudo_rename(char *from, char *to)
 			SetCkptServerHost(CkptServerHost);
 		}
 		if (LastCkptServer) free(LastCkptServer);
-		LastCkptServer = strdup(CkptServerHost);
+		if (CkptServerHost) LastCkptServer = strdup(CkptServerHost);
 		LastCkptTime = time(0);
+		NumCkpts++;
 		commit_rusage();
 	}
 
@@ -600,6 +613,8 @@ pseudo_get_file_stream(
 	if (CkptFile || ICkptFile) {
 		priv = set_condor_priv();
 	}
+
+	if (CkptFile) NumRestarts++;
 
 	if( ((file_fd=open(file,O_RDONLY)) < 0) || 
 	   (rval != 1 && rval != 73 && rval != -1 && rval != -121)) {
@@ -1255,6 +1270,7 @@ pseudo_get_ckpt_mode( int sig )
 				 "pseudo_get_ckpt_mode called with unknown signal %d\n", sig );
 		mode = -1;
 	}
+	LastCkptSig = sig;
 	return mode;
 }
 
