@@ -69,6 +69,9 @@ object_target(tools)
 	object_target(test_suite_F.Alpha)
 	object_target(ckpt)
 	object_target(syscall_lib)
+makefiles:: ../doc/Makefile
+../doc/Makefile:
+	cd ../doc; imake -I../config -DTilde=/usr/home/condor -s Makefile
 #else
 	object_target(shadow)
 	object_target(starter)
