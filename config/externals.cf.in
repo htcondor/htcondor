@@ -5,7 +5,7 @@ EXT_INSTALL = $(EXT_ROOT)/install
 EXT_CONFIG_SH = @_cv_ext_config_sh@
 
 
-EXT_KERBEROS_VERSION = @ext_kerberos_version@
+EXT_KERBEROS_VERSION = @ext_krb5_version@
 EXT_GLOBUS_VERSION = @ext_globus_version@
 EXT_GPT_VERSION = @ext_gpt_version@
 EXT_GAHP_VERSION = @ext_gahp_version@
