@@ -928,48 +928,60 @@ or fail with its own error.
 
 int CondorFileTable::fcntl( int fd, int cmd, int arg )
 {
-	struct flock *f;
 
 	if( resume(fd)<0 ) return -1;
 
 	switch(cmd) {
 		#ifdef F_DUPFD
 		case F_DUPFD:
-		#endif
 			return search_dup2(fd,arg);
+			break;
+		#endif
 
 		#ifdef F_DUP2FD
 		case F_DUP2FD:
-		#endif
 			return dup2(fd,arg);
+			break;
+		#endif
 
+		/*
+			A length of zero to FREESP indicates the file
+			should be truncated at the start value.
 
+			Truncation must be handled at this level, and
+			not at an individual object, because the entire
+			chain of objects, e.g.
+			CFBuffer->CFCompress->CFRemote, must all be
+			informed about a truncate in turn. 
+		*/
 		#ifdef F_FREESP
 		case F_FREESP:
+			{
+				struct flock *f = (struct flock *)arg;
+
+				if( (f->l_whence==0) && (f->l_len==0) ) {
+					return FileTab->ftruncate(fd,f->l_start);
+				}
+				return pointers[fd]->file->fcntl(cmd,arg);
+			}
+			break;
 		#endif
 
 		#ifdef F_FREESP64
 		case F_FREESP64:
+			{
+				struct flock64 *f64 = (struct flock64 *)arg;
+
+				if( (f64->l_whence==0) && (f64->l_len==0) ) {
+					return FileTab->ftruncate(fd,f64->l_start);
+				}
+
+				return pointers[fd]->file->fcntl(cmd,arg);
+			}
+			break;
 		#endif
 
-			/*
-			A length of zero to FREESP indicates the file should
-			be truncated at the start value.
-
-			Truncation must be handled at this level, and not at an individual object,
-			because the entire chain of objects, e.g. CFBuffer->CFCompress->CFRemote,
-			must all be informed about a truncate in turn.
-			*/
-
-			f = (struct flock *)arg;
-			if( (f->l_whence==0) && (f->l_len==0) ) {
-				return FileTab->ftruncate(fd,f->l_start);
-			}
-
-			/* Otherwise, fall through here. */
-
 		default:
-			return pointers[fd]->file->fcntl(cmd,arg);
 			break;
 	}
 }
