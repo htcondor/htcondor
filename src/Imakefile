@@ -157,10 +157,10 @@ contrib_tarball( pvm.tar, PvmFiles )
 #define AfsPvmTar 
 #endif 
 
-all_tarballs: view_server.tar ckpt_server.tar eventd.tar PvmTar mpi.tar dagman.tar
+all_tarballs: view_server.tar ckpt_server.tar eventd.tar PvmTar dagman.tar
 
 afs_tarballs: afs_view_server.tar afs_release.tar \
-	afs_ckpt_server.tar AfsEventdTar AfsPvmTar afs_mpi.tar
+	afs_ckpt_server.tar AfsEventdTar AfsPvmTar
 
 public:: all_tarballs
 
