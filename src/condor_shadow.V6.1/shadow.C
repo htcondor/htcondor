@@ -167,7 +167,7 @@ void UniShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 	remRes->setJobAd( jobAd );
 	
 		// yak with startd:
-	if ( remRes->requestIt() == -1 ) {
+	if( ! remRes->requestIt() ) {
 		shutDown( JOB_NOT_STARTED, 0 );
 	}
 
