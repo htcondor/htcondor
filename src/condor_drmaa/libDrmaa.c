@@ -1442,7 +1442,7 @@ int
 drmaa_get_contact(char *contact, size_t contact_len, char *error_diagnosis,
 		  size_t error_diag_len)
 { 
-    snprintf(contact, contact_len, "Condor: condor-admin@cs.wisc.edu");
+    snprintf(contact, contact_len, "Condor");
     return DRMAA_ERRNO_SUCCESS;;
 }
 
