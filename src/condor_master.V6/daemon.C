@@ -119,6 +119,9 @@ daemon::daemon(char *name, bool is_daemon_core)
 	sprintf(buf, "%s_ENVIRONMENT", name);
 	env = param(buf);
 	Env envStrParser;
+	// Note: If [name]_ENVIRONMENT is not specified, env will now be null.
+	// Env::Merge(null) will always return true, so the warning will not be
+	// printed in this case.
 	if( !envStrParser.Merge(env) ) {
 		// this is an invalid env string
 		dprintf(D_ALWAYS, "Warning! Configuration file variable `%s_ENVIRONME"
