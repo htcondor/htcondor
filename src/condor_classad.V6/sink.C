@@ -418,13 +418,27 @@ UnparseAux( string &buffer, vector< pair<string,ExprTree*> >& attrs )
 {
 	vector< pair<string,ExprTree*> >::const_iterator itr;
 
-	buffer += "[ ";
+	string delim;		// NAC
+	if( oldClassAd ) {	// NAC
+		delim = "\n";	// NAC
+	}					// NAC
+	else {				// NAC
+		delim = "; ";	// NAC
+	}					// NAC
+
+	if( !oldClassAd ) {	// NAC
+		buffer += "[ ";
+	}					// NAC
 	for( itr=attrs.begin( ); itr!=attrs.end( ); itr++ ) {
 		buffer += itr->first + " = ";
 		Unparse( buffer, itr->second );
-		if( itr+1 != attrs.end( ) ) buffer += "; ";
+//		if( itr+1 != attrs.end( ) ) buffer += "; ";
+		if( itr+1 != attrs.end( ) ) buffer += delim;	// NAC
+
 	}
-	buffer += " ]";
+	if( !oldClassAd ) {	// NAC
+		buffer += " ]";
+	}					// NAC
 }
 
 
