@@ -291,6 +291,13 @@ CStarter::RegisterStarterInfo( void )
 		starter_info->Insert( tmp );
 		free( tmp );
 
+		tmp_val = CondorVersion();
+ 		size = strlen(tmp_val) + strlen(ATTR_VERSION) + 5;
+		tmp = (char*) malloc( size * sizeof(char) );
+		sprintf( tmp, "%s=\"%s\"", ATTR_VERSION, tmp_val );
+		starter_info->Insert( tmp );
+		free( tmp );
+
 		tmp_val = param( "ARCH" );
 		size = strlen(tmp_val) + strlen(ATTR_ARCH) + 5;
 		tmp = (char*) malloc( size * sizeof(char) );
