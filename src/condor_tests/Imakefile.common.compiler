@@ -4,17 +4,15 @@
 
 LD_DIR = -condor_ld_dir ../../condor_scripts
 LIB_DIR = -condor_lib ../../condor_syscall_lib
-INCLUDE_FLAGS = -I../../condor_includes -I../../h -I../../condor_c++_util
+INCLUDE_FLAGS = -I.. -I../../condor_includes -I../../h -I../../condor_c++_util
 BUILD_FLAGS = dollar_paren(FLAGS_MACRO_NAME)
 
 all_symlink_target(../../condor_scripts/Condor.pm,Condor.pm)
 all_symlink_target(../../condor_scripts/CondorTest.pm,CondorTest.pm)
 all_symlink_target(../../condor_scripts/safe_append.pl,safe_append.pl)
 all_symlink_target(../../condor_scripts/batch_test.pl,batch_test.pl)
-all_symlink_target(../x_fake_ckpt.h,x_fake_ckpt.h)
 all_symlink_target(../x_fake_ckpt.c,x_fake_ckpt.c)
 all_symlink_target(../x_waste_second.c,x_waste_second.c)
-all_symlink_target(../x_waste_second.h,x_waste_second.h)
 all_symlink_target(../x_compute_bogokips.c,x_compute_bogokips.c)
 
 CBUILD_DEP($(CC),x_return-n,c,x_waste_second.o)
