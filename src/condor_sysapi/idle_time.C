@@ -190,7 +190,7 @@ calc_idle_time_cpp( time_t * user_idle, time_t * console_idle)
 			// no keypress detected, test if mouse moved
 			POINT current_pos;
 			if ( ! GetCursorPos(&current_pos) ) {
-				dprintf(D_ALWAYS,"GetCursorPos failed\n");
+				dprintf(D_ALWAYS,"GetCursorPos failed (err=%li)\n", GetLastError());
 			} else {
 				if ( (current_pos.x != previous_pos.x) || 
 					(current_pos.y != previous_pos.y) ) {
