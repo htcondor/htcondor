@@ -66,20 +66,25 @@ calc_virt_memory()
 #elif defined(HPUX)
 
 /* here's the deal:  Using any number in pst_getdynamic seems to be
-   *way* to small for our purposes.  I don't know why.  I have found
-   another way to get a number for virtual memory:  pst_swapinfo.  When
-   this is called, one "pool" of swap space on the system is described.
-   I don't know how many there will be; I don't know how this will vary
-   from system to system.  There are two types of swap pools:
-   Block Device Fields and File System Fields.  I'm going to ignore the
-   File System Fields.  The number I will return is the sum of the
-   pss_nfpgs (number of free pages in pool) * pagesize across all
-   Block Device Fields.  Sound confusing enough?
+   *way* to small for our purposes.  Those silly writers of HPUX return
+   'free memory paging space' (a small region of physical system memory 
+   that can be used for paging if all other swap areas are full 
+   (aka "psuedo-swap")) in the pst_vm field returned in pstat_getdynamic.
+   This number is wrong.  What we *really* want is the sum of the free
+   space in 'dev' (the swap device) and 'localfs' (any file system 
+   swapping set up).  So....
 
-   On the cae HPs, two swap spaces are returned.  One is the FS pool.
+   I can use pstat_getswap for this.  It returns a number of structures, 
+   one for each "swap pool".  These structures will either be 
+   "Block Device Fields" or "File System Fields" (dev or localfs).  I'll
+   sum up their 'pss_nfpgs' fields, multiply by pagesize,  and return.
+
+   On the cae HPs, two swap spaces are returned, one of each type.
+   The localfs 'nfpgs' field is 0 on cae machines.  Grrr.  Hopefully, it
+   might work somewhere else.  Who knows...
 
    For more information, see /usr/include/sys/pstat.h and the
-   pstat manual pages.
+   pstat and swapinfo manual pages.
 
    -Mike Yoder 9-28-98
 */
@@ -103,7 +108,6 @@ calc_virt_memory ()
     return 100000;
   }
 
-
   /* loop until count == 0, will occur when we've got 'em all */
   while ((count = pstat_getswap(pss, sizeof(pss[0]), 10, idx)) > 0) {
     /* got 'count' entries.  process them. */
@@ -112,8 +116,10 @@ calc_virt_memory ()
 
       /* first ensure that it's enabled */
       if ( (pss[i].pss_flags & 1) == 1 ) {
-        /* now make sure it's a SW_BLOCK */
-        if ( (pss[i].pss_flags & 2) == 2 ) {
+        /* now make sure it's a SW_BLOCK or FS_BLOCK*/
+        /* FS_BLOCK has always returned a 0 for pss_nfpgs on cae hpuxs.
+	   Grrr.  It's here in case it works somewhere else. */
+	if (((pss[i].pss_flags & 2) == 2) || ((pss[i].pss_flags & 4) == 4)) {
           /* add free pages to total */
           virt_mem_size += pss[i].pss_nfpgs * pagesize;
         }
