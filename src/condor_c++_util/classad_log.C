@@ -161,7 +161,7 @@ ClassAdLog::BeginTransaction()
 	EmptyTransaction = true;
 }
 
-void
+bool
 ClassAdLog::AbortTransaction()
 {
 	// Sometimes we do an AbortTransaction() when we don't know if there was
@@ -169,7 +169,9 @@ ClassAdLog::AbortTransaction()
 	if (active_transaction) {
 		delete active_transaction;
 		active_transaction = NULL;
+		return true;
 	}
+	return false;
 }
 
 void

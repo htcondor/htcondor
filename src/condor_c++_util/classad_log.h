@@ -69,7 +69,7 @@ public:
 	void TruncLog();				// clean log file on disk
 
 	void BeginTransaction();
-	void AbortTransaction();
+	bool AbortTransaction();
 	void CommitTransaction();
 
 	// returns 1 and sets val if corresponding SetAttribute found

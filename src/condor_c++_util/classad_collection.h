@@ -79,9 +79,9 @@ public:
   void CommitTransaction() { ClassAdLog::CommitTransaction(); }
 
   /** Abort a transaction
-    @return nothing
+    @return true if a transaction aborted, false if no transaction active
   */
-  void AbortTransaction() { ClassAdLog::AbortTransaction(); }
+  bool AbortTransaction() { return ClassAdLog::AbortTransaction(); }
 
   /** Lookup an attribute's value in the current transaction. 
       @param key the key with which the class-ad was inserted into the repository.
