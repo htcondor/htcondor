@@ -33,21 +33,28 @@ require Grid::GPT::Setup;
 
 chdir($gpath);
 
-# Create rumtime directory
+###  Figure out who should own the Condor directories we create.
+$condor_uid = &find_owner();
+
+# Create runtime directory
 
 `mkdir -p $gpath/var/condor`;
+`chown $condor_uid $gpath/var/condor`; 
 `chmod o+x $gpath/var/condor`;
 `chmod g+x $gpath/var/condor`;
 
 `mkdir -p $gpath/var/condor/log`;
+`chown $condor_uid $gpath/var/condor/log`;
 `chmod o+x $gpath/var/condor/log`;
 `chmod g+x $gpath/var/condor/log`;
 
 `mkdir -p $gpath/var/condor/log/GridLogs`;
+`chown $condor_uid $gpath/var/condor/log/GridLogs/`;
 `chmod 1777 $gpath/var/condor/log/GridLogs/`;
 
 `mkdir -p $gpath/var/condor/spool`;
-`chmod 1777 $gpath/var/condor/spool`;
+`chown $condor_id $gpath/var/condor/spool`;
+`chmod 0755 $gpath/var/condor/spool`;
 
 my $globusdir = $ENV{GLOBUS_LOCATION};
 
@@ -155,3 +162,40 @@ sub fixpaths
 }
 
 fixpaths();
+
+sub find_owner {
+    local( $owner );
+    if( $< ) {
+	# Non-root
+	return $<;
+    }
+    # We're root, see who should own the Condor files/directories
+    $_=$ENV{CONDOR_IDS};
+    if( $_ ) {
+	s/(\d*)\.\d*/$1/;
+	$owner = $_;
+	@pwdent = getpwuid($owner);
+	if( ! $pwdent[0] ) {
+	    print "\nuid specified in CONDOR_IDS ($owner) is not valid.  Please ",
+	    "set the\nCONDOR_IDS environment variable to the uid.gid pair ",
+	    "that Condor\nshould use.\n\n";
+	    exit(1);
+	}
+    } 
+
+    ###  Find condor's home directory, if it exists.
+    @pwdent = getpwnam( "condor" );
+    $condor_home=$pwdent[7];
+    $condor_uid=$pwdent[2];
+
+    if( $condor_uid ) {
+	$owner = $condor_uid;
+    } else {
+	print "There's no \"condor\" account on this machine and the CONDOR_IDS ",
+	"environment\nvariable is not set.  Please create a condor account, or ",
+	"set the CONDOR_IDS\nenvironment variable to the uid.gid pair that ",
+	"Condor should use.\n";
+	exit(1);
+    }
+    return $owner;
+}
