@@ -12,7 +12,7 @@ API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	alarm.o alloc.o \
-	directory.o my_hostname.o file_lock.o disk.o up_down.o \
+	directory.o my_hostname.o file_lock.o \
 	environ.o \
 	instantiate.o string_list.o condor_event.o $(URL_OBJ) get_daemon_addr.o \
 	user_log.o config.o condor_config.o stringSpace.o condor_state.o $(API_OBJ)\
