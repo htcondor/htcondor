@@ -54,6 +54,23 @@ class CedarSink : public ByteSink {
 		Stream *strm;
 };
 
+///
+class CedarStream : public ByteStream {
+  public:
+	///
+	CedarStream () {
+		m_src = new CedarSource;
+		m_snk = new CedarSink;
+	}
+	///
+	virtual ~CedarStream () {}
+	///
+	inline void Initialize (Stream * s, int maxlen = -1) {
+		((CedarSource*)m_src)->Initialize (s,maxlen);
+		((CedarSink*)m_snk)->Initialize (s,maxlen);
+	}
+};
+
 } // namespace classad
 
 #endif//CEDAR_IO

@@ -243,6 +243,105 @@ class FileDescSink : public ByteSink {
 		int fd;
 };
 
+//------------------------------------------------------------------------
+/** ByteStream is a container for ByteSource and SyteSink.  It transforms
+    two one-way channels into a single duplex channel.  The public
+    meathods of ByteSource and ByteSink are exposed through this
+    interface, unless it is appriopriate to combine them into one meathod.
+    */
+class ByteStream {
+  public:
+    ///
+    virtual ~ByteStream () { delete m_src; delete m_snk; }
+    ///
+    inline void SetSentinel  (int s = 0)  { m_src->SetSentinel(s); }
+    ///
+    inline void SetTerminal  (int t = 0)  { m_snk->SetTerminal(t); }
+    ///
+    inline void SetLengthSrc (int L = -1) { m_src->SetLength(L); }
+    ///
+    inline void SetLengthSnk (int L = -1) { m_snk->SetLength(L); }
+    ///
+    inline void ResetSrc () { m_src->Reset(); }
+    ///
+    inline void ResetSnk () { m_snk->Reset(); }
+    ///
+    inline bool GetChar  (int & ch) { return m_src->GetChar(ch); }
+    ///
+    inline bool PutBytes (const void * buf, int buflen) {
+        return m_snk->PutBytes(buf,buflen);
+    }
+    ///
+    inline bool Flush () { return m_snk->Flush(); }
+  protected:
+    ///
+    ByteStream () {}
+    ///
+    ByteSource * m_src;
+    ///
+    ByteSink   * m_snk;
+};
+
+///
+class StringStream : public ByteStream {
+  public:
+    ///
+    StringStream () {
+        m_src = new StringSource;
+        m_snk = new StringSink;
+    }
+    ///
+    virtual ~StringStream () {}
+    ///
+    inline void InitSrc (const char *buf, int buflen = -1) {
+        ((StringSource*)m_src)->Initialize (buf,buflen);
+    }
+    ///
+    inline void InitSnk (char *buf, int maxlen) {
+        ((StringSink*)m_snk)->Initialize (buf,maxlen);
+    }
+};
+
+///
+class FileStream : public ByteStream {
+  public:
+    ///
+    FileStream () {
+        m_src = new FileSource;
+        m_snk = new FileSink;
+    }
+    ///
+    virtual ~FileStream () {}
+    ///
+    inline void InitSrc (FILE *fp, int len    = -1) {
+        ((FileSource*)m_src)->Initialize(fp,len);
+    }
+    ///
+    inline void InitSnk (FILE *fp, int maxlen = -1) {
+        ((FileSink*)m_snk)->Initialize(fp,maxlen);
+    }
+};
+
+///
+class FileDescStream : public ByteStream {
+  public:
+    ///
+    FileDescStream () {
+        m_src = new FileDescSource;
+        m_snk = new FileDescSink;
+    }
+    ///
+    virtual ~FileDescStream () {}
+    ///
+    inline void InitSrc (int fd, int len) {
+        ((FileDescSource*) m_src)->Initialize (fd, len);
+    }
+    ///
+    inline void InitSnk (int fd, int maxlen) {
+        ((FileDescSink*) m_snk)->Initialize (fd, maxlen);
+    }
+};
+
 } // namespace classad
 
 #endif
