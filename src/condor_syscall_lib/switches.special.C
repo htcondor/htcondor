@@ -114,13 +114,15 @@ struct condor_kernel_dirent {
 	char            d_name[256]; 
 };
 
+extern "C" int REMOTE_CONDOR_getdents( int, struct dirent*, size_t);
 extern "C" int getdents ( int fd, struct dirent *buf, size_t nbytes )
 {
 	struct condor_kernel_dirent kbuf;
 	int rval,do_local=0;
 	errno = 0;
+	sigset_t omask;
 
-	_condor_signals_disable();
+	omask = _condor_signals_disable();
 
 	if( MappingFileDescriptors() ) {
 		do_local = _condor_is_fd_local( fd );
@@ -149,10 +151,10 @@ extern "C" int getdents ( int fd, struct dirent *buf, size_t nbytes )
 			rval = buf->d_reclen;
 		}       
 	} else {
-		rval = REMOTE_syscall( CONDOR_getdents, fd , buf , nbytes );
+		rval = REMOTE_CONDOR_getdents( fd , buf , nbytes );
 	}
 
-	_condor_signals_enable();
+	_condor_signals_enable(omask);
 
 	return (int  ) rval;
 }
