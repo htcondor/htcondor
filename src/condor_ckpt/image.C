@@ -422,18 +422,6 @@ _condor_prestart( int syscall_mode )
 #endif
 #endif
 
-		/* 
-		   Finally, dprintf() our version string.  This serves many
-		   purposes: 1) it means anything linked with any Condor
-		   library, standalone or regular, will reference the
-		   CondorVersion() symbol, so our magic-ident string will
-		   always be included by the linker, 2) in standard jobs,
-		   we'll actually see (in the ShadowLog) what version of the
-		   libraries the user job is linked with, 3) b/c dprintf() is
-		   stubbed out of standalone jobs, we *won't* get the clutter
-		   there.  -Derek Wright 5/26/99
-		*/
-	dprintf( D_ALWAYS | D_NOHEADER , "User Job - %s\n", CondorVersion() );
 }
 
 extern "C" void
