@@ -55,17 +55,16 @@ Dag::Dag( const char* condorLogName, const int maxJobsSubmitted,
     _dapLogInitialized    (false),             //<--DAP
     _dapLogSize           (0)                  //<--DAP
 {
+	ASSERT( condorLogName || dapLogName );
+	if( condorLogName ) {
+		_condorLogName = strnewp( condorLogName );
+		ASSERT( _condorLogName );
+	}
+	if( dapLogName ) {
+		_dapLogName = strnewp( dapLogName );
+		ASSERT( _dapLogName );
+	}
 
-  if (condorLogName){
-    _condorLogName = strnewp (condorLogName);
-    ASSERT( _condorLogName );
-  }
-  
-  if( dapLogName ) {
-    _dapLogName = strnewp( dapLogName );
-    ASSERT( _dapLogName );
-  }
-  
  	_readyQ = new SimpleList<Job*>;
 	_preScriptQ = new ScriptQ( this );
 	_postScriptQ = new ScriptQ( this );
@@ -91,21 +90,17 @@ Dag::Dag( const char* condorLogName, const int maxJobsSubmitted,
 
 //-------------------------------------------------------------------------
 Dag::~Dag() {
-    if (_condorLogName != NULL) delete [] _condorLogName;
-    if (_dapLogName != NULL) delete [] _dapLogName;  //<--DAP
+		// remember kids, delete is safe *even* if ptr == NULL...
+    delete[] _condorLogName;
+    delete[] _dapLogName;
 
     delete _preScriptQ;
     delete _postScriptQ;
     delete _submitQ;
     delete _readyQ;
 
-    if (_dot_file_name != NULL) {
-      delete _dot_file_name;
-    }
-    if (_dot_include_file_name != NULL) {
-      delete _dot_include_file_name;
-    }
-
+	delete[] _dot_file_name;
+	delete[] _dot_include_file_name;
     
     return;
 }
@@ -119,12 +114,12 @@ bool Dag::Bootstrap (bool recovery) {
     // the DAG input file)
     jobs.ToBeforeFirst();
     while( jobs.Next( job ) ) {
-      if( job->GetStatus() == Job::STATUS_DONE ) {
-	TerminateJob( job, true );
-      }
+		if( job->GetStatus() == Job::STATUS_DONE ) {
+			TerminateJob( job, true );
+		}
     }
     debug_printf( DEBUG_VERBOSE, "Number of pre-completed jobs: %d\n",
-		  NumJobsDone() );
+				  NumJobsDone() );
     
     if (recovery) {
         debug_printf( DEBUG_NORMAL, "Running in RECOVERY mode...\n" );
@@ -135,25 +130,25 @@ bool Dag::Bootstrap (bool recovery) {
 	//<-- DAP
 
 		// all jobs stuck in STATUS_POSTRUN need their scripts run
-	jobs.ToBeforeFirst();
-	while( jobs.Next( job ) ) {
-	  if( job->GetStatus() == Job::STATUS_POSTRUN ) {
-	    _postScriptQ->Run( job->_scriptPost );
-	  }
-	}
+		jobs.ToBeforeFirst();
+		while( jobs.Next( job ) ) {
+			if( job->GetStatus() == Job::STATUS_POSTRUN ) {
+				_postScriptQ->Run( job->_scriptPost );
+			}
+		}
     }
-
+	
     if( DEBUG_LEVEL( DEBUG_DEBUG_2 ) ) {
-      PrintJobList();
-      PrintReadyQ( DEBUG_DEBUG_2 );
+		PrintJobList();
+		PrintReadyQ( DEBUG_DEBUG_2 );
     }	
     
     jobs.ToBeforeFirst();
     while( jobs.Next( job ) ) {
-      if( job->GetStatus() == Job::STATUS_READY &&
-	  job->IsEmpty( Job::Q_WAITING ) ) {
-	StartNode( job );
-      }
+		if( job->GetStatus() == Job::STATUS_READY &&
+			job->IsEmpty( Job::Q_WAITING ) ) {
+			StartNode( job );
+		}
     }
     
     return true;
@@ -186,11 +181,22 @@ Job * Dag::GetJob (const JobID_t jobID) const {
 
 //-------------------------------------------------------------------------
 bool Dag::DetectCondorLogGrowth () {
+	if( !_condorLogName ) {
+		debug_printf( DEBUG_VERBOSE, "WARNING: DetectCondorLogGrowth() called "
+					  "but no Condor log defined\n" );
+		return false;
+	}
     if (!_condorLogInitialized) {
-      if (_condorLog.initialize(_condorLogName))
-        _condorLogInitialized = true;
-      else
-	return 0;
+		_condorLogInitialized = _condorLog.initialize( _condorLogName );
+		if( !_condorLogInitialized ) {
+				// this can be normal before we've actually submitted
+				// any jobs and the log doesn't yet exist, but is
+				// likely a problem if it persists...
+			debug_printf( DEBUG_VERBOSE, "ERROR: failed to initialize condor "
+						  "job log (%s) -- ignore unless error repeats\n",
+						  _condorLogName );
+			return false;
+		}
     }
     
     int fd = _condorLog.getfd();
@@ -198,8 +204,9 @@ bool Dag::DetectCondorLogGrowth () {
     struct stat buf;
     
     if( fstat( fd, &buf ) == -1 ) {
-      //debug_error( 2, DEBUG_QUIET, "Error: can't stat condor log: %s\n", _condorLogName );
-      debug_printf( DEBUG_QUIET, "Error: can't stat dap log : %s\n", _dapLogName );
+		debug_printf( DEBUG_QUIET, "ERROR: can't stat condor log (%s): %s\n",
+					  _condorLogName, strerror( errno ) );
+		return false;
 	}
     
     int oldSize = _condorLogSize;
@@ -213,23 +220,32 @@ bool Dag::DetectCondorLogGrowth () {
 
 //-------------------------------------------------------------------------
 bool Dag::DetectDaPLogGrowth () {
-
-  if (!_dapLogInitialized) {
-    if (_dapLog.initialize(_dapLogName)) 
-      _dapLogInitialized = true;
-    else 
-      return 0;
-  }
-    
+	if( !_dapLogName ) {
+		debug_printf( DEBUG_VERBOSE, "WARNING: DetectDaPLogGrowth() called "
+					  "but no dap log defined\n" );
+		return false;
+	}
+	if( !_dapLogInitialized ) {
+		_dapLogInitialized = _dapLog.initialize( _dapLogName );
+		if( !_dapLogInitialized ) {
+				// this can be normal before we've actually submitted
+				// any jobs and the log doesn't yet exist, but is
+				// likely a problem if it persists...
+			debug_printf( DEBUG_VERBOSE, "ERROR: failed to initialize dap "
+						  "job log (%s) -- ignore unless error repeats\n",
+						  _dapLogName );
+			return false;
+		}
+	}
 
     int fd = _dapLog.getfd();
     assert (fd != 0);
     struct stat buf;
     
     if( fstat( fd, &buf ) == -1 ) {
-      //		debug_error( 2, DEBUG_QUIET, "Error: can't stat dap log : %s\n", _dapLogName );
-      debug_printf( DEBUG_QUIET, "Error: can't stat dap log : %s\n", _dapLogName );
-      return 0;
+		debug_printf( DEBUG_QUIET, "ERROR: can't stat dap log (%s): %s\n",
+					  _dapLogName, strerror (errno ) );
+		return false;
     }
     
     int oldSize = _dapLogSize;
@@ -244,7 +260,6 @@ bool Dag::DetectDaPLogGrowth () {
 //-------------------------------------------------------------------------
 // Developer's Note: returning false tells main_timer to abort the DAG
 bool Dag::ProcessLogEvents (int logsource, bool recovery) {
-    
  if (logsource == CONDORLOG){
     if (!_condorLogInitialized) {
       _condorLogInitialized = _condorLog.initialize(_condorLogName);
@@ -1241,10 +1256,7 @@ Dag::isCycle ()
 void 
 Dag::SetDotFileName(char *dot_file_name)
 {
-	if (_dot_file_name != NULL) {
-		delete _dot_file_name;
-	}
-
+	delete[] _dot_file_name;
 	_dot_file_name = strnewp(dot_file_name);
 	return;
 }
@@ -1263,6 +1275,7 @@ Dag::SetDotFileName(char *dot_file_name)
 void
 Dag::SetDotIncludeFileName(char *include_file_name)
 {
+	delete[] _dot_include_file_name;
 	_dot_include_file_name = strnewp(include_file_name);
 	return;
 }
