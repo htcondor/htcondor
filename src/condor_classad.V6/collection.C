@@ -250,7 +250,7 @@ SetCurrentTransaction( const string &xactionName )
 }
 
 void ClassAdCollectionInterface::
-GetCurrentTransaction( string &xactionName )
+GetCurrentTransaction( string &xactionName ) const
 {
 	xactionName = currentXactionName;
 }

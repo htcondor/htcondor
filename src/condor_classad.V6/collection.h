@@ -25,6 +25,8 @@
 #define COLLECTION_H
 
 #include "view.h"
+#include "source.h"
+#include "sink.h"
 
 BEGIN_NAMESPACE( classad )
 
@@ -81,7 +83,7 @@ public:
 		// Transaction management
 	virtual bool OpenTransaction( const string &xactionName) = 0;
 	bool SetCurrentTransaction( const string &xactionName );
-	void GetCurrentTransaction( string &xactionName );
+	void GetCurrentTransaction( string &xactionName ) const;
 	virtual bool CloseTransaction( const string &xactionName, bool commit,
 				int &outcome )=0;
 
