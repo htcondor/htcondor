@@ -55,7 +55,7 @@ RUN(job_ckpt_f-areauc_std)
 
 DESC(job_ckpt_f-floats_std,"Do Fortran jobs ckpt/restore floating point nums?")
 CBUILD($(Fortran),job_ckpt_f-floats_std,f)
-DEP_SYMLINK_EXT(job_ckpt_f-floats_std.cmd)
+DEP_SYMLINK_EXT(job_ckpt_f-floats_std,cmd)
 RUN(job_ckpt_f-floats_std)
 
 DESC(job_ckpt_f-integers_std,"Do Fortran jobs ckpt/restore integers?")
