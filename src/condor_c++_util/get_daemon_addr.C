@@ -241,7 +241,7 @@ get_daemon_addr( daemon_t dt, const char* name, const char* pool )
 
 
 int
-is_valid_sinful( char *sinful )
+is_valid_sinful( const char *sinful )
 {
 	char* tmp;
 	if( !sinful ) return FALSE;
