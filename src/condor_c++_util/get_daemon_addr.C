@@ -33,6 +33,8 @@
 #include "daemon.h"
 #include "get_full_hostname.h"
 #include "my_hostname.h"
+#include "my_username.h"
+#include "condor_uid.h"
 #include "daemon_types.h"
 
 extern "C" {
@@ -147,6 +149,43 @@ build_valid_daemon_name( char* name )
 		delete [] tmpname;
 	}
 	return daemon_name;
+}
+
+
+/* 
+   Return a string on the heap (must be deallocated with delete()) that 
+   contains the default daemon name for the calling process.  If we're
+   root (additionally, on UNIX, if we're condor), we default to the
+   full hostname.  Otherwise, we default to username@full.hostname.
+*/
+char*
+default_daemon_name( void )
+{
+	if( is_root() ) {
+		return strnewp( my_full_hostname() );
+	}
+#ifndef WIN32
+	if( getuid() == get_real_condor_uid() ) {
+		return strnewp( my_full_hostname() );
+	}
+#endif /* ! LOSE32 */
+	char* name = my_username();
+	if( ! name ) {
+		return NULL;
+	}
+	char* host = my_full_hostname();
+	if( ! host ) {
+		free( name );
+		return NULL;
+	}
+	int size = strlen(name) + strlen(host) + 2;
+	char* ans = new char[size];
+	if( ! ans ) {
+		free( name );
+		return NULL;
+	}
+	sprintf( ans, "%s@%s", name, host );
+	return ans;
 }
 
 
