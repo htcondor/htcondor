@@ -40,6 +40,7 @@
 #include <netdb.h>
 #include <ctype.h>
 #include <string.h>
+#include <time.h>
 #include "debug.h"
 #include "except.h"
 #include "trace.h"
@@ -512,12 +513,25 @@ STATUS_LINE	**ptr1, **ptr2;
 	return strcmp( (*ptr1)->name, (*ptr2)->name );
 }
 
+
+printTimeAndColl()
+{
+  time_t tmp;
+  time(&tmp);
+
+  printf("\nCollector : %s\n", CollectorHost); 
+  printf("Time      : %s\n", ctime(&tmp));
+}
+
+
 typedef struct {
 	char	*arch;
 	char	*op_sys;
 	int		machines;
 	int		jobs;
 	int		running;
+	int     condor;
+	int     sub_machs;
 } SUMMARY;
 
 SUMMARY		*Summary[50];
@@ -536,14 +550,16 @@ STATUS_LINE	*line;
 	Total.machines += 1;
 	Total.jobs += line->tot;
 
-	if( SubmittorDisplay ) {
-		s->running += line->run;
-		Total.running += line->run;
-	} else {
-		if( strncmp(line->state, "Run", 3) == 0 ) {
-			s->running += 1;
-			Total.running += 1;
-		}
+	if(line->tot > 0) {
+	   s->sub_machs++;
+	   Total.sub_machs++;
+	 }
+	s->running += line->run;
+	Total.running += line->run;
+	
+	if( strncmp(line->state, "Run", 3) == 0 ) {
+	  s->condor += 1;
+	  Total.condor += 1;
 	}
 }
 
@@ -573,11 +589,17 @@ display_summaries()
 {
 	int		i;
 
+	printTimeAndColl();
+
+	printf("----------------------------------------------------------\n");
+	printf("ARCH/OS           machines |condor| Machs/jobs  exporting |\n");
+	printf("----------------------------------------------------------|\n");
 	for( i=0; i<N_Summaries; i++ ) {
 		display_summary( Summary[i] );
 	}
+	printf("----------------------------------------------------------|\n");
 	display_summary( &Total );
-
+	printf("----------------------------------------------------------\n");
 }
 
 display_summary( s )
@@ -588,11 +610,11 @@ SUMMARY		*s;
 	if( s->arch ) {
 		(void)sprintf( tmp, "%s/%s", s->arch, s->op_sys );
 	} else {
-		tmp[0] = '\0';
+		strcpy(tmp,"Total");
 	}
 
-	printf( "%-20s %3d machines %3d jobs %3d running\n",
-					tmp, s->machines, s->jobs, s->running );
+	printf( "%-20s  %3d  | %3d  |  %3d /%3d    %3d      | \n",
+		       tmp, s->machines, s->condor, s->sub_machs, s->jobs, s->running );
 }
 
 
