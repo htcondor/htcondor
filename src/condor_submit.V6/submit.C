@@ -738,7 +738,7 @@ SetExecutable()
 	}
 
 		/* MPI REALLY doesn't like these! */
-	if ( JobUniverse != MPI && JobUniverse != PVM ) {
+	if ( JobUniverse != CONDOR_UNIVERSE_MPI && JobUniverse != CONDOR_UNIVERSE_PVM ) {
 		InsertJobExpr ("MinHosts = 1");
 		InsertJobExpr ("MaxHosts = 1");
 	}
@@ -747,24 +747,24 @@ SetExecutable()
 
 	switch(JobUniverse) 
 	{
-	case STANDARD:
+	case CONDOR_UNIVERSE_STANDARD:
 		(void) sprintf (buffer, "%s = TRUE", ATTR_WANT_REMOTE_SYSCALLS);
 		InsertJobExpr (buffer);
 		(void) sprintf (buffer, "%s = TRUE", ATTR_WANT_CHECKPOINT);
 		InsertJobExpr (buffer);
 		break;
-	case PVM:
-	case VANILLA:
-	case SCHED_UNIVERSE:
-	case MPI:  // for now
-	case GLOBUS_UNIVERSE:
+	case CONDOR_UNIVERSE_PVM:
+	case CONDOR_UNIVERSE_VANILLA:
+	case CONDOR_UNIVERSE_SCHEDULER:
+	case CONDOR_UNIVERSE_MPI:  // for now
+	case CONDOR_UNIVERSE_GLOBUS:
 		(void) sprintf (buffer, "%s = FALSE", ATTR_WANT_REMOTE_SYSCALLS);
 		InsertJobExpr (buffer);
 		(void) sprintf (buffer, "%s = FALSE", ATTR_WANT_CHECKPOINT);
 		InsertJobExpr (buffer);
 		break;
 	default:
-		fprintf(stderr, "\nERROR: Unknown universe (%d)\n", JobUniverse );
+		fprintf(stderr, "\nERROR: Unknown universe %d (%s)\n", JobUniverse, CondorUniverseName(JobUniverse) );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
@@ -835,8 +835,8 @@ SetUniverse()
 			exit(1);
 		}
 
-		JobUniverse = PVM;
-		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, PVM);
+		JobUniverse = CONDOR_UNIVERSE_PVM;
+		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_PVM);
 		InsertJobExpr (buffer);
 		InsertJobExpr ("Checkpoint = 0");
 
@@ -845,8 +845,8 @@ SetUniverse()
 	};
 
 	if( univ && stricmp(univ,"scheduler") == MATCH ) {
-		JobUniverse = SCHED_UNIVERSE;
-		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, SCHED_UNIVERSE);
+		JobUniverse = CONDOR_UNIVERSE_SCHEDULER;
+		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_SCHEDULER);
 		InsertJobExpr (buffer);
 		free(univ);
 		return;
@@ -857,8 +857,8 @@ SetUniverse()
 			fprintf( stderr, "This version of Condor doesn't support Globus Universe jobs.\n" );
 			exit( 1 );
 		}
-		JobUniverse = GLOBUS_UNIVERSE;
-		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE);
+		JobUniverse = CONDOR_UNIVERSE_GLOBUS;
+		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS);
 		InsertJobExpr (buffer);
 		free(univ);
 		return;
@@ -866,16 +866,16 @@ SetUniverse()
 #endif  // of !defined(WIN32)
 
 	if( univ && stricmp(univ,"vanilla") == MATCH ) {
-		JobUniverse = VANILLA;
-		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, VANILLA);
+		JobUniverse = CONDOR_UNIVERSE_VANILLA;
+		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_VANILLA);
 		InsertJobExpr (buffer);
 		free(univ);
 		return;
 	};
 
 	if( univ && stricmp(univ,"mpi") == MATCH ) {
-		JobUniverse = MPI;
-		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, MPI);
+		JobUniverse = CONDOR_UNIVERSE_MPI;
+		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_MPI);
 		InsertJobExpr (buffer);
 		InsertJobExpr ("Checkpoint = 0");
 		
@@ -903,8 +903,8 @@ SetUniverse()
 	exit( 1 );
 #endif
 
-	JobUniverse = STANDARD;
-	(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, STANDARD);
+	JobUniverse = CONDOR_UNIVERSE_STANDARD;
+	(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_STANDARD);
 	InsertJobExpr (buffer);
 	if ( univ ) {
 		free(univ);
@@ -919,7 +919,7 @@ SetLanguage()
 	JobLanguage = condor_param(Language);
 
 	if( JobLanguage ) {
-		if( JobUniverse!=VANILLA ) {
+		if( JobUniverse!=CONDOR_UNIVERSE_VANILLA ) {
 			fprintf(stderr,"You can only use language=%s with universe=vanilla.\n",JobLanguage);
 			DoCleanup(0,0,NULL);
 			exit(1);
@@ -937,7 +937,7 @@ SetMachineCount()
 	char	*mach_count;
 	char	*ptr;
 
-	if (JobUniverse == PVM) {
+	if (JobUniverse == CONDOR_UNIVERSE_PVM) {
 
 		mach_count = condor_param( MachineCount, "MachineCount" );
 
@@ -966,7 +966,7 @@ SetMachineCount()
 			InsertJobExpr ("MaxHosts = 1");
 		}
 
-	} else if (JobUniverse == MPI) {
+	} else if (JobUniverse == CONDOR_UNIVERSE_MPI) {
 
 		mach_count = condor_param( MachineCount, "MachineCount" );
 		if( ! mach_count ) { 
@@ -1833,11 +1833,11 @@ SetRank()
 	rank[0] = '\0';
 
 	switch( JobUniverse ) {
-	case STANDARD:
+	case CONDOR_UNIVERSE_STANDARD:
 		default_rank = param( "DEFAULT_RANK_STANDARD" );
 		append_rank = param( "APPEND_RANK_STANDARD" );
 		break;
-	case VANILLA:
+	case CONDOR_UNIVERSE_VANILLA:
 		default_rank = param( "DEFAULT_RANK_VANILLA" );
 		append_rank = param( "APPEND_RANK_VANILLA" );
 		break;
@@ -2106,7 +2106,7 @@ SetGlobusParams()
 	char *globushost;
 	char *tmp;
 
-	if ( JobUniverse != GLOBUS_UNIVERSE )
+	if ( JobUniverse != CONDOR_UNIVERSE_GLOBUS )
 		return;
 
 	if ( !(globushost = condor_param( GlobusScheduler ) ) ) {
@@ -2189,7 +2189,7 @@ SetKillSig()
 		free(sig);
 	} else {
 		switch(JobUniverse) {
-		case STANDARD:
+		case CONDOR_UNIVERSE_STANDARD:
 			signo = SIGTSTP;
 			break;
 		default:
@@ -2535,7 +2535,7 @@ queue(int num)
 			SetExecutable();
 		}
 		SetMachineCount();
-		if ( JobUniverse == GLOBUS_UNIVERSE ) {
+		if ( JobUniverse == CONDOR_UNIVERSE_GLOBUS ) {
 			// Find the X509 user proxy
 			// First, grab the environment. Then param for it.
 			// This lets us override the environ with the submit file
@@ -2573,7 +2573,7 @@ queue(int num)
 			   here so that we don't break the param parser.  In the 
 			   MPI shadow, we'll convert the string into an integer 
 			   corresponding to the mpi node's number. */
-		if ( JobUniverse == MPI ) {
+		if ( JobUniverse == CONDOR_UNIVERSE_MPI ) {
 			set_condor_param ( "NODE", "#MpInOdE#" );
 		}
 
@@ -2695,10 +2695,10 @@ check_requirements( char *orig )
 	}
 
 	switch( JobUniverse ) {
-	case VANILLA:
+	case CONDOR_UNIVERSE_VANILLA:
 		ptr = param( "APPEND_REQ_VANILLA" );
 		break;
-	case STANDARD:
+	case CONDOR_UNIVERSE_STANDARD:
 		ptr = param( "APPEND_REQ_STANDARD" );
 		break;
 	default:
@@ -2801,7 +2801,7 @@ check_requirements( char *orig )
 		}
 	}
 
-	if ( JobUniverse == STANDARD && !has_ckpt_arch ) {
+	if ( JobUniverse == CONDOR_UNIVERSE_STANDARD && !has_ckpt_arch ) {
 		(void)strcat( answer, " && ((CkptArch == Arch) ||" );
 		(void)strcat( answer, " (CkptArch =?= UNDEFINED))" );
 		(void)strcat( answer, " && ((CkptOpSys == OpSys) ||" );
@@ -2816,7 +2816,7 @@ check_requirements( char *orig )
 		(void)strcat( answer, " && ( (Memory * 1024) >= ImageSize )" );
 	}
 
-	if ( JobUniverse == PVM ) {
+	if ( JobUniverse == CONDOR_UNIVERSE_PVM ) {
 		ptr = param("PVM_OLD_PVMD");
 		if (ptr) {
 			if (ptr[0] == 'T' || ptr[0] == 't') {
@@ -2832,7 +2832,7 @@ check_requirements( char *orig )
 		}
 	} 
 
-	if ( JobUniverse == VANILLA ) {
+	if ( JobUniverse == CONDOR_UNIVERSE_VANILLA ) {
 		for( ptr = answer; *ptr; ptr++ ) {
 			if( strincmp("FileSystemDo",ptr,12) == MATCH ) {
 				has_fsdomain = TRUE;
@@ -2902,7 +2902,7 @@ check_open( const char *name, int flags )
 		/* This is only for MPI.  We test for our string that
 		   we replaced "$(NODE)" with, and replace it with "0".  Thus, 
 		   we will really only try and access the 0th file only */
-	if ( JobUniverse == MPI ) {
+	if ( JobUniverse == CONDOR_UNIVERSE_MPI ) {
 		if ( (temp = strstr( pathname, "#MpInOdE#" ) ) != NULL ) {
 			*(temp++) = '0';
 			*temp = '\0';

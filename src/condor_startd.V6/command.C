@@ -1036,7 +1036,7 @@ activate_claim( Resource* rip, Stream* stream )
 
 	if( req_classad->EvalInteger(ATTR_JOB_UNIVERSE,
 								 rip->r_classad, universe) == 0 ) {
-		universe = STANDARD;
+		universe = CONDOR_UNIVERSE_STANDARD;
 		rip->dprintf( D_ALWAYS,
 					  "Default universe (%d) since not in classad \n", 
 					  universe );
@@ -1044,7 +1044,7 @@ activate_claim( Resource* rip, Stream* stream )
 		rip->dprintf( D_ALWAYS, "Got universe (%d) from request classad\n",
 					  universe );
 	}
-	if( universe == VANILLA ) {
+	if( universe == CONDOR_UNIVERSE_VANILLA ) {
 		rip->dprintf( D_ALWAYS, 
 					  "Startd using *_VANILLA control expressions.\n" );
 	} else {

@@ -808,9 +808,9 @@ format_remote_host (char *, AttrList *ad)
 	char* tmp;
 	struct sockaddr_in sin;
 
-	int universe = STANDARD;
+	int universe = CONDOR_UNIVERSE_STANDARD;
 	ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
-	if (universe == SCHED_UNIVERSE &&
+	if (universe == CONDOR_UNIVERSE_SCHEDULER &&
 		string_to_sin(scheddAddr, &sin) == 1) {
 		if( (tmp = sin_to_hostname(&sin, NULL)) ) {
 			strcpy( result, tmp );
@@ -818,7 +818,7 @@ format_remote_host (char *, AttrList *ad)
 		} else {
 			return unknownHost;
 		}
-	} else if (universe == PVM) {
+	} else if (universe == CONDOR_UNIVERSE_PVM) {
 		int current_hosts;
 		if (ad->LookupInteger( ATTR_CURRENT_HOSTS, current_hosts ) == 1) {
 			if (current_hosts == 1) {

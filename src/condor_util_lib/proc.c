@@ -193,10 +193,10 @@ PROC	*proc;
 	printf( "Structure Version: %d\n", proc->version_num );
 	printf( "Id: %d.%d\n", proc->id.cluster, proc->id.proc );
 	switch( proc->universe ) {
-		case STANDARD:
+		case CONDOR_UNIVERSE_STANDARD:
 			printf( "Universe: Standard\n" );
 			break;
-		case PVM:
+		case CONDOR_UNIVERSE_PVM:
 			printf( "Universe: PVM\n" );
 			break;
 		default:
@@ -253,7 +253,7 @@ PROC	*proc;
 		}
 	}
 
-	if ( proc->universe == PVM ) {
+	if ( proc->universe == CONDOR_UNIVERSE_PVM ) {
 		printf("\n");
 		printf("Machine Requirements: %d..", (proc->min_needed));
 		if (proc->max_needed == -1) {

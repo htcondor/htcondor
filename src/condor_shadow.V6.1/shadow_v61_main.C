@@ -119,23 +119,23 @@ main_init(int argc, char *argv[])
 	int universe;
 	if (jobAd->LookupInteger(ATTR_JOB_UNIVERSE, universe) < 0) {
 			// change to standard when they work...
-		universe = VANILLA;
+		universe = CONDOR_UNIVERSE_VANILLA;
 	}
 	
 	switch ( universe ) {
-	case VANILLA:
-	case STANDARD:
+	case CONDOR_UNIVERSE_VANILLA:
+	case CONDOR_UNIVERSE_STANDARD:
 		Shadow = new UniShadow();
 		break;
-	case MPI:
+	case CONDOR_UNIVERSE_MPI:
 		Shadow = new MPIShadow();
 		break;
-	case PVM:
+	case CONDOR_UNIVERSE_PVM:
 		EXCEPT( "PVM...hopefully one day..." );
 //		Shadow = new PVMShadow();
 		break;
 	default:
-		dprintf ( D_ALWAYS, "Unknown universe: %d.\n", universe );
+		dprintf ( D_ALWAYS, "I don't support universe %d (%s)\n", universe, CondorUniverseName(universe) );
 		EXCEPT( "Universe not supported" );
 	}
 

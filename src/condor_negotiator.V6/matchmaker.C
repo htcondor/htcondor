@@ -1050,12 +1050,12 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 	char *scheddIP = scheddIPbuf+1;	// skip the leading '<'
 	int executableSize = 0;
 	request.LookupInteger(ATTR_EXECUTABLE_SIZE, executableSize);
-	int universe = STANDARD;
+	int universe = CONDOR_UNIVERSE_STANDARD;
 	int ckptSize = 0;
 	request.LookupInteger(ATTR_JOB_UNIVERSE, universe);
 	char lastCkptServer[MAXHOSTNAMELEN], lastCkptServerIP[16];
 	lastCkptServerIP[0] = '\0';
-	if (universe == STANDARD) {
+	if (universe == CONDOR_UNIVERSE_STANDARD) {
 		float cputime = 1.0;
 		request.LookupFloat(ATTR_JOB_REMOTE_USER_CPU, cputime);
 		if (cputime > 0.0) {

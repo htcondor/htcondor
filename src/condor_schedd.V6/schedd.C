@@ -810,7 +810,7 @@ count( ClassAd *job )
 		max_hosts = ((status == IDLE || status == UNEXPANDED) ? 1 : 0);
 	}
 	if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) < 0) {
-		universe = STANDARD;
+		universe = CONDOR_UNIVERSE_STANDARD;
 	}
 
 	if(job->LookupString(ATTR_X509_USER_PROXY, buf, _POSIX_PATH_MAX ) == 0) {
@@ -844,14 +844,14 @@ count( ClassAd *job )
 
 	if ( !service_this_universe(universe)  ) 
 	{
-		if ( universe == SCHED_UNIVERSE ) {
+		if ( universe == CONDOR_UNIVERSE_SCHEDULER ) {
 			// don't count REMOVED or HELD jobs
 			if (status == IDLE || status == UNEXPANDED || status == RUNNING) {
 				scheduler.SchedUniverseJobsRunning += cur_hosts;
 				scheduler.SchedUniverseJobsIdle += (max_hosts - cur_hosts);
 			}
 		}
-		if ( universe == GLOBUS_UNIVERSE ) {
+		if ( universe == CONDOR_UNIVERSE_GLOBUS ) {
 			// for Globus, count jobs in G_UNSUBMITTED state by owner.
 			// later we make certain there is a grid manager daemon
 			// per owner.
@@ -862,7 +862,7 @@ count( ClassAd *job )
 				scheduler.Owners[OwnerNum].GlobusUnsubmittedJobs++;
 		}
 			// We want to record the cluster id of all idle MPI jobs  
-		if( universe == MPI && status == IDLE ) {
+		if( universe == CONDOR_UNIVERSE_MPI && status == IDLE ) {
 			int cluster = 0;
 			job->LookupInteger( ATTR_CLUSTER_ID, cluster );
 			dedicated_scheduler.addDedicatedCluster( cluster );
@@ -893,9 +893,9 @@ bool
 service_this_universe(int universe)
 {
 	switch (universe) {
-		case GLOBUS_UNIVERSE:
-		case MPI:
-		case SCHED_UNIVERSE:
+		case CONDOR_UNIVERSE_GLOBUS:
+		case CONDOR_UNIVERSE_MPI:
+		case CONDOR_UNIVERSE_SCHEDULER:
 			return false;
 		default:
 			return true;
@@ -980,13 +980,13 @@ abort_job_myself(PROC_ID job_id)
         return;
     }
 
-	int job_universe = STANDARD;
+	int job_universe = CONDOR_UNIVERSE_STANDARD;
 	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_UNIVERSE,
 					&job_universe);
-	if (job_universe == PVM) {
+	if (job_universe == CONDOR_UNIVERSE_PVM) {
 		job_id.proc = 0;		// PVM shadow is always associated with proc 0
 	}
-	if (job_universe == GLOBUS_UNIVERSE) {
+	if (job_universe == CONDOR_UNIVERSE_GLOBUS) {
 		// tell grid manager about the jobs removal, then return.
 		char owner[_POSIX_PATH_MAX];
 		char proxy[_POSIX_PATH_MAX];
@@ -1760,7 +1760,7 @@ Scheduler::negotiate(int, Stream* s)
 					GetAttributeInt(id.cluster, id.proc, ATTR_JOB_UNIVERSE,
 									&job_universe);
 						// Always negotiate for all PVM job classes! 
-					if ( job_universe != PVM && !NegotiateAllJobsInCluster ) {
+					if ( job_universe != CONDOR_UNIVERSE_PVM && !NegotiateAllJobsInCluster ) {
 						mark_cluster_rejected( cur_cluster );
 					}
 					host_cnt = max_hosts + 1;
@@ -1810,7 +1810,7 @@ Scheduler::negotiate(int, Stream* s)
 					shadow_num_increment = 1;
 					job_universe = 0;
 					ad->LookupInteger(ATTR_JOB_UNIVERSE, job_universe);
-					if( job_universe == PVM ) {
+					if( job_universe == CONDOR_UNIVERSE_PVM ) {
 						PROC_ID temp_id;
 
 						// For PVM jobs, the shadow record is keyed based
@@ -2378,10 +2378,10 @@ find_idle_sched_universe_jobs( ClassAd *job )
 	job->LookupInteger(ATTR_PROC_ID, id.proc);
 
 	if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) != 1) {
-		universe = STANDARD;
+		universe = CONDOR_UNIVERSE_STANDARD;
 	}
 
-	if (universe != SCHED_UNIVERSE) return 0;
+	if (universe != CONDOR_UNIVERSE_SCHEDULER) return 0;
 
 	job->LookupInteger(ATTR_JOB_STATUS, status);
 	if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) != 1) {
@@ -2544,7 +2544,7 @@ Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 {
 	ClassAd request;
 	char buf[256], source[100], dest[100], user[200], *str;
-	int executablesize = 0, universe = VANILLA, vm=1;
+	int executablesize = 0, universe = CONDOR_UNIVERSE_VANILLA, vm=1;
 
 	GetAttributeString( cluster, proc, ATTR_USER, user );
 	sprintf(buf, "%s = \"%s\"", ATTR_USER, user );
@@ -2576,7 +2576,7 @@ Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 	GetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, &universe);
 	float cputime = 1.0;
 	GetAttributeFloat(cluster, proc, ATTR_JOB_REMOTE_USER_CPU, &cputime);
-	if (universe == STANDARD && cputime > 0.0) {
+	if (universe == CONDOR_UNIVERSE_STANDARD && cputime > 0.0) {
 		int ckptsize;
 		GetAttributeInt(cluster, proc, ATTR_IMAGE_SIZE, &ckptsize);
 		ckptsize -= executablesize;	// imagesize = ckptsize + executablesize
@@ -2632,7 +2632,7 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 
 	rval = GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE, 
 							&universe);
-	if (universe == PVM) {
+	if (universe == CONDOR_UNIVERSE_PVM) {
 		return start_pvm(mrec, job_id);
 	} else {
 		if (rval < 0) {
@@ -3306,10 +3306,10 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 							 ATTR_REMOTE_VIRTUAL_MACHINE_ID, vm );
 		}
 	}
-	int universe = STANDARD;
+	int universe = CONDOR_UNIVERSE_STANDARD;
 	GetAttributeInt(new_rec->job_id.cluster, new_rec->job_id.proc,
 					ATTR_JOB_UNIVERSE, &universe);
-	if (universe == PVM) {
+	if (universe == CONDOR_UNIVERSE_PVM) {
 		ClassAd *ad;
 		ad = GetNextJob(1);
 		while (ad != NULL) {
@@ -3397,10 +3397,10 @@ Scheduler::delete_shadow_rec(int pid)
 				"Deleting shadow rec for PID %d, job (%d.%d)\n",
 				pid, rec->job_id.cluster, rec->job_id.proc );
 
-		int universe = STANDARD;
+		int universe = CONDOR_UNIVERSE_STANDARD;
 		GetAttributeInt(rec->job_id.cluster, rec->job_id.proc,
 						ATTR_JOB_UNIVERSE, &universe);
-		if (universe == PVM) {
+		if (universe == CONDOR_UNIVERSE_PVM) {
 			ClassAd *ad;
 			ad = GetNextJob(1);
 			while (ad != NULL) {
@@ -3555,10 +3555,10 @@ _mark_job_stopped(PROC_ID* job_id)
 void
 mark_job_running(PROC_ID* job_id)
 {
-	int universe = STANDARD;
+	int universe = CONDOR_UNIVERSE_STANDARD;
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE,
 					&universe);
-	if (universe == PVM) {
+	if (universe == CONDOR_UNIVERSE_PVM) {
 		ClassAd *ad;
 		ad = GetNextJob(1);
 		while (ad != NULL) {
@@ -3580,10 +3580,10 @@ mark_job_running(PROC_ID* job_id)
 void
 mark_job_stopped(PROC_ID* job_id)
 {
-	int universe = STANDARD;
+	int universe = CONDOR_UNIVERSE_STANDARD;
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE,
 					&universe);
-	if (universe == PVM) {
+	if (universe == CONDOR_UNIVERSE_PVM) {
 		ClassAd *ad;
 		ad = GetNextJob(1);
 		while (ad != NULL) {
@@ -3681,7 +3681,7 @@ Scheduler::preempt(int n)
 			int universe;
 			GetAttributeInt(rec->job_id.cluster, rec->job_id.proc, 
 							ATTR_JOB_UNIVERSE,&universe);
-			if (universe == PVM) {
+			if (universe == CONDOR_UNIVERSE_PVM) {
 				if ( !rec->preempted ) {
 					daemonCore->Send_Signal( rec->pid, DC_SIGTERM );
 				} else {
@@ -3798,7 +3798,7 @@ Scheduler::shadow_prio_recs_consistent()
 			BadProc = srp->job_id.proc;
 			GetAttributeInt(BadCluster, BadProc, ATTR_JOB_UNIVERSE, &universe);
 			GetAttributeInt(BadCluster, BadProc, ATTR_JOB_STATUS, &status);
-			if (status != RUNNING && universe!=PVM && universe!=MPI) {
+			if (status != RUNNING && universe!=CONDOR_UNIVERSE_PVM && universe!=CONDOR_UNIVERSE_MPI) {
 				// display_shadow_recs();
 				// dprintf(D_ALWAYS,"shadow_prio_recs_consistent(): PrioRec %d - id = %d.%d, owner = %s\n",i,PrioRec[i].id.cluster,PrioRec[i].id.proc,PrioRec[i].owner);
 				dprintf( D_ALWAYS, "ERROR: Found a consistency problem!!!\n" );
@@ -3975,9 +3975,9 @@ static int IsSchedulerUniverse(shadow_rec* srec)
 {
 	// dprintf(D_FULLDEBUG,"Scheduler::IsSchedulerUniverse - checking job universe\n");
 	if (srec==NULL || srec->match!=NULL) return FALSE;
-	int universe=STANDARD;
+	int universe=CONDOR_UNIVERSE_STANDARD;
 	GetAttributeInt(srec->job_id.cluster, srec->job_id.proc, ATTR_JOB_UNIVERSE,&universe);
-	if (universe!=SCHED_UNIVERSE) return FALSE;
+	if (universe!=CONDOR_UNIVERSE_SCHEDULER) return FALSE;
 	return TRUE;
 }
 
@@ -4020,9 +4020,9 @@ Scheduler::reaper(int sig)
 void
 set_job_status(int cluster, int proc, int status)
 {
-	int universe = STANDARD;
+	int universe = CONDOR_UNIVERSE_STANDARD;
 	GetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, &universe);
-	if (universe == PVM) {
+	if (universe == CONDOR_UNIVERSE_PVM) {
 		ClassAd *ad;
 		ad = GetNextJob(1);
 		while (ad != NULL) {
@@ -4303,7 +4303,7 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
     char	 ckpt_name[MAXPATHLEN];
 	char	buf[_POSIX_PATH_MAX];
 	char	server[_POSIX_PATH_MAX];
-	int		universe = STANDARD;
+	int		universe = CONDOR_UNIVERSE_STANDARD;
 
 		/* In order to remove from the checkpoint server, we need to know
 		 * the owner's name.  If not passed in, look it up now.
@@ -4318,7 +4318,7 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 
 	// only need to contact the ckpt server for standard universe jobs
 	GetAttributeInt(cluster,proc,ATTR_JOB_UNIVERSE,&universe);
-	if (universe == STANDARD) {
+	if (universe == CONDOR_UNIVERSE_STANDARD) {
 		if (GetAttributeString(cluster, proc, ATTR_LAST_CKPT_SERVER,
 							   server) == 0) {
 			SetCkptServerHost(server);
@@ -4344,7 +4344,7 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 			}
 			rmdir(ckpt_name);
 		} else {
-			if (universe == STANDARD) {
+			if (universe == CONDOR_UNIVERSE_STANDARD) {
 				RemoveLocalOrRemoteFile(owner,Name,ckpt_name);
 				if (JobPreCkptServerScheddNameChange(cluster, proc)) {
 					RemoveLocalOrRemoteFile(owner,NULL,ckpt_name);
@@ -4370,7 +4370,7 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 			}
 			rmdir(ckpt_name);
 		} else {
-			if (universe == STANDARD) {
+			if (universe == CONDOR_UNIVERSE_STANDARD) {
 				RemoveLocalOrRemoteFile(owner,Name,ckpt_name);
 				if (JobPreCkptServerScheddNameChange(cluster, proc)) {
 					RemoveLocalOrRemoteFile(owner,NULL,ckpt_name);
@@ -5301,7 +5301,7 @@ Scheduler::AlreadyMatched(PROC_ID* id)
 		return FALSE;
 	}
 
-	if ( (universe == PVM) || (universe == MPI ) ) 
+	if ( (universe == CONDOR_UNIVERSE_PVM) || (universe == CONDOR_UNIVERSE_MPI ) ) 
 		return FALSE;
 
 	matches->startIterations();

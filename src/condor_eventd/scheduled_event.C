@@ -689,7 +689,7 @@ ScheduledShutdownEvent::UpdateSchedule()
 			}
 			continue;
 		}
-		int CkptSize=0, ExecutableSize=0, JobUniverse = STANDARD;
+		int CkptSize=0, ExecutableSize=0, JobUniverse = CONDOR_UNIVERSE_STANDARD;
 		ad->LookupInteger(ATTR_JOB_UNIVERSE, JobUniverse);
 		ad->LookupInteger(ATTR_IMAGE_SIZE, CkptSize);
 		ad->LookupInteger(ATTR_EXECUTABLE_SIZE, ExecutableSize);
@@ -700,13 +700,13 @@ ScheduledShutdownEvent::UpdateSchedule()
 					ATTR_STARTD_IP_ADDR, startdName);
 			continue;
 		}
-		if (JobUniverse != STANDARD && StandardJobsOnly) continue;
+		if (JobUniverse != CONDOR_UNIVERSE_STANDARD && StandardJobsOnly) continue;
 		// We don't need to get a network reservation to vacate jobs
 		// which don't have checkpoints.  We still need to vacate
 		// these jobs though, so we make sure that UpdateSchedule() is
 		// called at StartTime by Timeout(), and if we have reached
 		// StartTime, we go ahead and vacate the jobs here.
-		if (JobUniverse != STANDARD || CkptSize <= 0) {
+		if (JobUniverse != CONDOR_UNIVERSE_STANDARD || CkptSize <= 0) {
 			if (DeleteRecord(startdName)) {
 				AnyCancelled = true;
 				dprintf(D_FULLDEBUG, "Cancelling pre-scheduled vacate of %s.  "

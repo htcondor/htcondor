@@ -466,7 +466,7 @@ DedicatedScheduler::initialize( void )
 	dummy_job.Insert( buf );
 	sprintf( buf, "%s = \"%s\"", ATTR_SCHEDULER, ds_name );
 	dummy_job.Insert( buf );
-	sprintf( buf, "%s = %d", ATTR_JOB_UNIVERSE, MPI );
+	sprintf( buf, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_MPI );
 	dummy_job.Insert( buf );
 	sprintf( buf, "%s = %d", ATTR_JOB_STATUS, IDLE );
 	dummy_job.Insert( buf );
@@ -2987,10 +2987,10 @@ findAvailTime( match_rec* mrec )
 				// Not defined, assume it's available now
 				// TODO: Allow admin to provide a value for how much
 				// it should "cost" to kill a job?
-			if( universe == VANILLA ) {
+			if( universe == CONDOR_UNIVERSE_VANILLA ) {
 				return now + 15;
 			}
-			if( universe == STANDARD ) {
+			if( universe == CONDOR_UNIVERSE_STANDARD ) {
 				return now + 120;
 			}
 			return now + 60;

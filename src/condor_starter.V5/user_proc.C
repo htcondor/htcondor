@@ -344,7 +344,7 @@ UserProc::linked_for_condor()
 	}
 
 	// Don't look for symbol "MAIN" in vanilla jobs or PVM processes
-	if( job_class != PVM && job_class != VANILLA ) {	
+	if( job_class != CONDOR_UNIVERSE_PVM && job_class !=  CONDOR_UNIVERSE_VANILLA ) {	
 		if( symbol_main_check(cur_ckpt) < 0 ) {
 			state = BAD_LINK;
 			dprintf( D_ALWAYS, "symbol_main_check() failed\n" );
@@ -380,7 +380,7 @@ UserProc::fetch_ckpt()
 
 	switch( job_class ) {
 
-	  case STANDARD:
+	  case CONDOR_UNIVERSE_STANDARD:
 		if( linked_for_condor() ) {
 			state = RUNNABLE;
 			return TRUE;
@@ -388,9 +388,9 @@ UserProc::fetch_ckpt()
 			return FALSE;
 		}
 
-	  case VANILLA:
-	  case PVM:
-	  case PVMD:
+	  case CONDOR_UNIVERSE_VANILLA:
+	  case CONDOR_UNIVERSE_PVM:
+	  case CONDOR_UNIVERSE_PVMD:
 		state = RUNNABLE;
 		return TRUE;
 
@@ -449,7 +449,7 @@ UserProc::execute()
 		// Set up arg vector according to class of job
 	switch( job_class ) {
 
-	  case STANDARD:
+	  case CONDOR_UNIVERSE_STANDARD:
 		if( pipe(pipe_fds) < 0 ) {
 			EXCEPT( "pipe()" );}
 
@@ -473,7 +473,7 @@ UserProc::execute()
 		mkargv( &argc, &argv[3], tmp );
 		break;
 
-	  case PVM:
+	  case CONDOR_UNIVERSE_PVM:
 #if 1
 		EXCEPT( "Don't know how to deal with PVM jobs" );
 #else
@@ -486,7 +486,7 @@ UserProc::execute()
 #endif
 		break;
 
-	  case VANILLA:
+	  case CONDOR_UNIVERSE_VANILLA:
 		argv[0] = shortname;
 		mkargv( &argc, &argv[1], tmp );
 		break;
@@ -504,7 +504,7 @@ UserProc::execute()
 
 		// We may run more than one of these, so each needs its own
 		// remote system call connection to the shadow
-	if( job_class == PVM ) {
+	if( job_class == CONDOR_UNIVERSE_PVM ) {
 		new_reli = NewConnection( v_pid );
 		user_syscall_fd = new_reli->get_file_desc();
 	}
@@ -569,14 +569,14 @@ UserProc::execute()
 
 		switch( job_class ) {
 		  
-		  case STANDARD:
+		  case CONDOR_UNIVERSE_STANDARD:
 			if( chdir(local_dir) < 0 ) {
 				EXCEPT( "chdir(%s)", local_dir );
 			}
 			close( pipe_fds[WRITE_END] );
 			break;
 
-		  case PVM:
+		  case CONDOR_UNIVERSE_PVM:
 			if( chdir(local_dir) < 0 ) {
 				EXCEPT( "chdir(%s)", local_dir );
 			}
@@ -584,7 +584,7 @@ UserProc::execute()
 			dup2( user_syscall_fd, RSC_SOCK );
 			break;
 
-		  case VANILLA:
+		  case CONDOR_UNIVERSE_VANILLA:
 			set_iwd();
 			open_std_file( 0 );
 			open_std_file( 1 );
@@ -619,7 +619,7 @@ UserProc::execute()
 
 		// The parent
 	dprintf( D_ALWAYS, "Started user job - PID = %d\n", pid );
-	if( job_class != VANILLA ) {
+	if( job_class != CONDOR_UNIVERSE_VANILLA ) {
 			// Send the user process its startup environment conditions
 		close( pipe_fds[READ_END] );
 		cmd_fp = fdopen( pipe_fds[WRITE_END], "w" );
@@ -649,7 +649,7 @@ UserProc::execute()
 		delete new_reli;
 	}
 
-	if ( job_class == VANILLA ) {
+	if ( job_class == CONDOR_UNIVERSE_VANILLA ) {
 		family = new ProcFamily(pid,PRIV_USER);
 		family->takesnapshot();
 	}
@@ -695,7 +695,7 @@ UserProc::handle_termination( int exit_st )
 	exit_status_valid = TRUE;
 	accumulate_cpu_time();
 
-	if( exit_requested && job_class == VANILLA ) { // job exited by request
+	if( exit_requested && job_class == CONDOR_UNIVERSE_VANILLA ) { // job exited by request
 		dprintf( D_ALWAYS, "Process exited by request\n" );
 		state = NON_RUNNABLE;
 	} else if( WIFEXITED(exit_status) ) { 
@@ -747,7 +747,7 @@ UserProc::handle_termination( int exit_st )
 	pid = 0;
 
 	// the parent process exited; make certain kids are all gone as well
-	if ( job_class == VANILLA ) {
+	if ( job_class == CONDOR_UNIVERSE_VANILLA ) {
 		family->hardkill();
 	}
 
@@ -800,7 +800,7 @@ UserProc::send_sig( int sig )
 		// might do something we'll regret in the morning. -Derek 8/29/97
 	priv = set_user_priv();  
 
-	if ( job_class == VANILLA ) {
+	if ( job_class == CONDOR_UNIVERSE_VANILLA ) {
 		// Here we call ProcFamily methods to forward the signal to all of our
 		// decendents, since a VANILLA job in condor can fork.  But first,
 		// we block all of our async events, since killkids is relatively
@@ -831,7 +831,7 @@ UserProc::send_sig( int sig )
 		}
 	}
 
-	if ( job_class != VANILLA )
+	if ( job_class != CONDOR_UNIVERSE_VANILLA )
 	if( sig != SIGCONT ) {
 		if( kill(pid,SIGCONT) < 0 ) {
 			set_priv(priv);
@@ -848,7 +848,7 @@ UserProc::send_sig( int sig )
 		dprintf( D_ALWAYS, "Sent signal SIGCONT to user job %d\n", pid);
 	}
 
-	if ( job_class != VANILLA )
+	if ( job_class != CONDOR_UNIVERSE_VANILLA )
 	if( kill(pid,sig) < 0 ) {
 		set_priv(priv);
 		if( errno == ESRCH ) {	// User proc already exited

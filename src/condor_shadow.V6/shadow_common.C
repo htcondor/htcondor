@@ -288,7 +288,7 @@ JobIsStandard()
 	if(!JobAd->LookupInteger(ATTR_JOB_UNIVERSE, universe)) {
 		return 0;
 	} else {
-		return universe==STANDARD;
+		return universe==CONDOR_UNIVERSE_STANDARD;
 	}
 }
 

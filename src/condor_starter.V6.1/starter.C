@@ -289,7 +289,7 @@ CStarter::StartJob()
 		// Now that the scratch dir is setup, we can figure out what
 		// kind of job we're starting up, instantiate the appropriate
 		// userproc class, and actually start the job.
-    int universe = STANDARD;
+    int universe = CONDOR_UNIVERSE_STANDARD;
     if ( jobAd->LookupInteger( ATTR_JOB_UNIVERSE, universe ) < 1 ) {
         dprintf( D_ALWAYS, "No universe attr. in jobAd!\n" );
     }
@@ -298,13 +298,13 @@ CStarter::StartJob()
 
     switch ( universe )  
     {
-        case VANILLA:
-        case STANDARD: { 
+        case CONDOR_UNIVERSE_VANILLA:
+        case CONDOR_UNIVERSE_STANDARD: { 
             dprintf ( D_FULLDEBUG, "Firing up a VanillaProc\n" );
             job = new VanillaProc( jobAd );
             break;
         }
-        case MPI: {
+        case CONDOR_UNIVERSE_MPI: {
             int is_master = FALSE;
             dprintf ( D_FULLDEBUG, "Is master: %s\n", ATTR_MPI_IS_MASTER );
             if ( jobAd->LookupBool( ATTR_MPI_IS_MASTER, is_master ) < 1 ) {
@@ -322,15 +322,10 @@ CStarter::StartJob()
             }
             break;
         }
-        case PVM: {
-            dprintf ( D_ALWAYS, "PVM not (yet) supported\n" );
-            return false;
-        }
-        default: {
-            dprintf ( D_ALWAYS, "What the heck kinda universe is %d?\n", 
-                      universe );
-            return false;
-        }
+	default: {
+		dprintf( D_ALWAYS, "I don't support universe %d (%s)\n",universe,CondorUniverseName(universe));
+		return false;
+	}
     } /* switch */
 
 	if (job->StartJob()) {

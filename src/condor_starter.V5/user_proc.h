@@ -70,11 +70,11 @@ typedef int JOB_CLASS;
 	// N.B. This name table *must* match the above enumerator.
 #if defined(INSERT_TABLES)
 static NAME_VALUE	JobClassNames[] = {
-	{ STANDARD,		"STANDARD"	},
-	{ PVM,			"PVM",		},
-	{ VANILLA,		"VANILLA",	},
-    { PVMD,			"PVMD",		},
-	{ -1,			"(UNKNOWN)"	}
+	{ CONDOR_UNIVERSE_STANDARD, "STANDARD"  },
+	{ CONDOR_UNIVERSE_PVM,      "PVM",      },
+	{ CONDOR_UNIVERSE_VANILLA,  "VANILLA",  },
+	{ CONDOR_UNIVERSE_PVMD,     "PVMD",     },
+	{ -1,                       "(UNKNOWN)" }
 };
 NameTable JobClasses( JobClassNames );
 #endif

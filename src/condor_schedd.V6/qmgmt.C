@@ -22,7 +22,6 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-#define INCLUDE_UNIVERSE_NAME_ARRAY		// for JobUniverseNames[]
 #include "condor_io.h"
 #include "string_list.h"
 #include "condor_debug.h"
@@ -335,7 +334,7 @@ InitJobQueue(const char *job_queue_name)
 				// Make sure ATTR_SCHEDULER is correct.
 				// XXX TODO: Need a better way than hard-coded
 				// universe check to decide if a job is "dedicated" 
-			if( universe == MPI ) {
+			if( universe == CONDOR_UNIVERSE_MPI ) {
 				if( !ad->LookupString(ATTR_SCHEDULER, attr_scheduler) ) { 
 					dprintf( D_FULLDEBUG, "Job %s has no %s attribute.  "
 							 "Inserting one now...\n", tmp,
@@ -752,9 +751,9 @@ int DestroyProc(int cluster_id, int proc_id)
 		cleanup_ckpt_files(cluster_id,proc_id,Q_SOCK->getOwner() );
 	}
 
-	int universe = STANDARD;
+	int universe = CONDOR_UNIVERSE_STANDARD;
 	ad->LookupInteger(ATTR_JOB_UNIVERSE, universe);
-	if (universe == PVM) {
+	if (universe == CONDOR_UNIVERSE_PVM) {
 			// PVM jobs take up a whole cluster.  If we've been ask to
 			// destroy any of the procs in a PVM job cluster, we
 			// should destroy the entire cluster.  This hack lets the
@@ -1954,7 +1953,7 @@ int Runnable(ClassAd *job)
 	if( !service_this_universe(universe) )
 	{
 		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (Universe=%s)\n",
-			JobUniverseNames[universe]);
+			CondorUniverseName(universe) );
 		return FALSE;
 	}
 

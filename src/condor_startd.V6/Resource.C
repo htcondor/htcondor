@@ -623,7 +623,7 @@ Resource::wants_vacate( void )
 		return 1;
 	}
 
-	if( r_cur->universe() == VANILLA ) {
+	if( r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
 		if( r_classad->EvalBool("WANT_VACATE_VANILLA",
 								r_cur->ad(),
 								want_vacate ) ) { 
@@ -665,7 +665,7 @@ Resource::wants_suspend( void )
 {
 	int want_suspend;
 	bool unknown = true;
-	if( r_cur->universe() == VANILLA ) {
+	if( r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
 		if( r_classad->EvalBool("WANT_SUSPEND_VANILLA",
 								r_cur->ad(),
 								want_suspend) ) {  
@@ -691,7 +691,7 @@ Resource::wants_pckpt( void )
 {
 	int want_pckpt; 
 
-	if( r_cur->universe() != STANDARD ) {
+	if( r_cur->universe() != CONDOR_UNIVERSE_STANDARD ) {
 		return FALSE;
 	}
 
@@ -709,7 +709,7 @@ int
 Resource::eval_kill()
 {
 	int tmp;
-	if( r_cur->universe() == VANILLA ) {
+	if( r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
 		if( (r_classad->EvalBool( "KILL_VANILLA",
 									r_cur->ad(), tmp) ) == 0 ) {  
 			if( (r_classad->EvalBool( "KILL",
@@ -733,7 +733,7 @@ int
 Resource::eval_preempt( void )
 {
 	int tmp;
-	if( r_cur->universe() == VANILLA ) {
+	if( r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
 		if( (r_classad->EvalBool( "PREEMPT_VANILLA",
 								   r_cur->ad(), 
 								   tmp)) == 0 ) {
@@ -758,7 +758,7 @@ int
 Resource::eval_suspend( void )
 {
 	int tmp;
-	if( r_cur->universe() == VANILLA ) {
+	if( r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
 		if( (r_classad->EvalBool( "SUSPEND_VANILLA",
 								   r_cur->ad(),
 								   tmp)) == 0 ) {
@@ -783,7 +783,7 @@ int
 Resource::eval_continue( void )
 {
 	int tmp;
-	if( r_cur->universe() == VANILLA ) {
+	if( r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
 		if( (r_classad->EvalBool( "CONTINUE_VANILLA",
 								   r_cur->ad(),
 								   tmp)) == 0 ) {

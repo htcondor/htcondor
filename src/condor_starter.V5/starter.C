@@ -477,7 +477,7 @@ req_exit_all()
 		// Request all the processes to exit
 	UProcList.Rewind();
 	while( proc = UProcList.Next() ) {
-		if ( proc->get_class() != PVMD ) {
+		if ( proc->get_class() != CONDOR_UNIVERSE_PVMD ) {
 			dprintf( D_ALWAYS, "req_exit_all: Proc %d in state %s\n", 
 					proc->get_id(),	ProcStates.get_name(proc->get_state())
 					);
@@ -578,7 +578,7 @@ send_final_status( UserProc *proc )
 
 		// update shadow with it's resource usage and exit status
 	status = proc->bsd_exit_status();
-	if( proc->get_class() == PVM ) {
+	if( proc->get_class() == CONDOR_UNIVERSE_PVM ) {
 		rusage = proc->accumulated_rusage();	// All resource usage
 		id = proc->get_id();
 		(void)REMOTE_CONDOR_subproc_status( (int)id, (int*)status, 
@@ -738,7 +738,7 @@ stop_all()
 
 	UProcList.Rewind();
 	while( proc = UProcList.Next() ) {
-		if( proc->is_running() && proc->get_class() != PVMD ) {
+		if( proc->is_running() && proc->get_class() != CONDOR_UNIVERSE_PVMD ) {
 			proc->suspend();
 			dprintf( D_ALWAYS, "\tRequested user job to suspend\n" );
 		}
@@ -746,7 +746,7 @@ stop_all()
 
 	UProcList.Rewind();
 	while( proc = UProcList.Next() ) {
-		if( proc->is_running() && proc->get_class() == PVMD ) {
+		if( proc->is_running() && proc->get_class() == CONDOR_UNIVERSE_PVMD ) {
 			proc->suspend();
 			dprintf( D_ALWAYS, "\tRequested user job to suspend\n" );
 		}
@@ -766,7 +766,7 @@ resume_all()
 
 	UProcList.Rewind();
 	while( proc = UProcList.Next() ) {
-		if( proc->is_suspended() && proc->get_class() == PVMD ) {
+		if( proc->is_suspended() && proc->get_class() == CONDOR_UNIVERSE_PVMD ) {
 			proc->resume();
 			dprintf( D_ALWAYS, "\tRequested user job to resume\n" );
 		}
@@ -774,7 +774,7 @@ resume_all()
 
 	UProcList.Rewind();
 	while( proc = UProcList.Next() ) {
-		if( proc->is_suspended() && proc->get_class() != PVMD ) {
+		if( proc->is_suspended() && proc->get_class() != CONDOR_UNIVERSE_PVMD ) {
 			proc->resume();
 			dprintf( D_ALWAYS, "\tRequested user job to resume\n" );
 		}
@@ -1063,10 +1063,10 @@ get_job_info()
 
 	switch( s.job_class ) {
 #if 0
-		case PVMD:
+		case CONDOR_UNIVERSE_PVMD:
 			u_proc = new PVMdProc( s );
 			break;
-		case PVM:
+		case CONDOR_UNIVERSE_PVM:
 			u_proc = new PVMUserProc( s );
 			break;
 #endif
@@ -1108,7 +1108,7 @@ cleanup()
 
 	UProcList.Rewind();
 	while( proc = UProcList.Next() ) {
-		if ( proc->get_class() != PVMD ) {
+		if ( proc->get_class() != CONDOR_UNIVERSE_PVMD ) {
 			proc->kill_forcibly();
 			proc->delete_files();
 			UProcList.DeleteCurrent();
@@ -1117,7 +1117,7 @@ cleanup()
 	}
 	UProcList.Rewind();
 	while ( proc = UProcList.Next() ) {
-		if ( proc->get_class() == PVMD ) {
+		if ( proc->get_class() == CONDOR_UNIVERSE_PVMD ) {
 			proc->kill_forcibly();
 			proc->delete_files();
 			UProcList.DeleteCurrent();

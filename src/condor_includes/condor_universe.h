@@ -21,34 +21,37 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#include "condor_common.h"
-#include "condor_constants.h"
-#include "condor_debug.h"
-#include "startup.h"
-#include "proc.h"
+#ifndef CONDOR_UNIVERSE_H
+#define CONDOR_UNIVERSE_H
 
-void
-display_startup_info( const STARTUP_INFO *s, int flags )
-{
-	dprintf( flags, "Startup Info:\n" );
+#include "condor_header_features.h"
 
-	dprintf( flags, "\tVersion Number: %d\n", s->version_num );
-	dprintf( flags, "\tId: %d.%d\n", s->cluster, s->proc );
-	dprintf( flags, "\tJobClass: %s\n", CondorUniverseName(s->job_class) );
-	dprintf( flags, "\tUid: %d\n", s->uid );
-	dprintf( flags, "\tGid: %d\n", s->gid );
-	dprintf( flags, "\tVirtPid: %d\n", s->virt_pid );
-	dprintf( flags, "\tSoftKillSignal: %d\n", s->soft_kill_sig );
-	dprintf( flags, "\tCmd: \"%s\"\n", s->cmd );
-	dprintf( flags, "\tArgs: \"%s\"\n", s->args );
-	dprintf( flags, "\tEnv: \"%s\"\n", s->env );
-	dprintf( flags, "\tIwd: \"%s\"\n", s->iwd );
-	dprintf( flags, "\tCkpt Wanted: %s\n", s->ckpt_wanted ? "TRUE" : "FALSE" );
-	dprintf( flags, "\tIs Restart: %s\n", s->is_restart ? "TRUE" : "FALSE" );
-	dprintf( flags, "\tCore Limit Valid: %s\n",
-		s->coredump_limit_exists ? "TRUE" : "FALSE"
-	);
-	if( s->coredump_limit_exists ) {
-		dprintf( flags, "\tCoredump Limit %ld\n", s->coredump_limit );
-	}
-}
+BEGIN_C_DECLS
+
+/*
+Warning: These symbols must stay in sync
+with the strings in condor_universe.c
+*/
+
+#define CONDOR_UNIVERSE_MIN       0  /* A placeholder, not a universe */
+#define CONDOR_UNIVERSE_STANDARD  1  /* Single process relinked jobs */
+#define CONDOR_UNIVERSE_PIPE      2  /* A placeholder, no longer used */
+#define CONDOR_UNIVERSE_LINDA     3  /* A placeholder, no longer used */
+#define CONDOR_UNIVERSE_PVM       4  /* Parallel Virtual Machine apps */
+#define CONDOR_UNIVERSE_VANILLA   5  /* Single process non-relinked jobs */
+#define CONDOR_UNIVERSE_PVMD      6  /* PVM daemon process */
+#define CONDOR_UNIVERSE_SCHEDULER 7  /* A job run under the schedd */
+#define CONDOR_UNIVERSE_MPI       8  /* Message Passing Interface jobs */
+#define CONDOR_UNIVERSE_GLOBUS    9  /* Jobs managed by condor_gmanager */
+#define CONDOR_UNIVERSE_JAVA      10 /* Jobs for the Java Virtual Machine */
+#define CONDOR_UNIVERSE_MAX       11 /* A placeholder, not a universe. */
+
+/* To get the name of a universe, call this function */
+
+const char *CondorUniverseName( int universe );
+
+END_C_DECLS
+
+#endif
+
+

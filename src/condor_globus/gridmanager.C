@@ -490,10 +490,10 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 	// in case we're recovering from a shutdown/meltdown.
 	if ( grabAllJobs ) {
 		sprintf( expr_buf, "%s  && %s == %d",
-				owner_buf, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE );
+				owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS );
 	} else {
 		sprintf( expr_buf, "%s  && %s == %d && %s == %d",
-			owner_buf, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE,
+			owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
 			ATTR_GLOBUS_STATUS, G_UNSUBMITTED );
 	}
 
@@ -714,7 +714,7 @@ GridManager::REMOVE_JOBS_signalHandler( int signal )
 	}
 
 	sprintf( expr_buf, "%s && %s == %d && %s == %d",
-		owner_buf, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE,
+		owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
 		ATTR_JOB_STATUS, REMOVED );
 
 	// Get all the new Grid job ads

@@ -1213,7 +1213,7 @@ start_job( char *cluster_id, char *proc_id )
 	RemoteUsage = Proc->remote_usage[0];
 	ImageSize = Proc->image_size;
 
-	if (Proc->universe != STANDARD) {
+	if (Proc->universe != CONDOR_UNIVERSE_STANDARD) {
 		strcpy( CkptName, "" );
 		strcpy( TmpCkptName, "" );
 	} else {
