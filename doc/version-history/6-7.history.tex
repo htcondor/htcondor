@@ -48,6 +48,10 @@ if it encounters a double run of the same node job (set the
 \item Fixed a \Condor{dagman} bug that could cause it to leave jobs running
 when aborting a DAG.
 
+\item Fixed a \Condor{dagman} bug which, if its debug level was set to
+zero (silent), could cause it to to improperly recognize persistant
+\Condor{submit} failures.
+
 \item Fixed a bug in Condor's file transfer mechanism that showed up
   when users tried to use streaming output for either STDOUT or
   STDERR.
