@@ -1,3 +1,7 @@
+12/23/04 V6_7-pre_merge-V6_7-dedicated-merge-1
+   The state of the V6_7-branch before merging in the
+   V6_7-dedicated-branch as tagged at V6_7-dedicated-merge-1
+
 12/23/04 V6_7-condorg_gt4-branch
    A branch of getting Condor-G to submit to GT4. Created off V6_7-branch 
 at tag "V6_7-condorg_gt4-root" by ckireyev. Should be merged into 6.7 as 
