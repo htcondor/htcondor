@@ -2528,6 +2528,12 @@ These settings affect the \Condor{starter}.
         exec $*
 \end{verbatim}
 
+\item[\Macro{STARTER\_JOB\_ENVIRONMENT}] \label{param:StarterJobEnvironment}
+This macro sets the default environment inherited by jobs.  The syntax is
+the same as the syntax for environment settings in the job submit file.
+If the same environment variable is assigned by this macro and by the user
+in the submit file, the user's setting takes precedence.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
