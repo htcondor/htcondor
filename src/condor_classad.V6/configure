@@ -23,10 +23,13 @@ print_usage()
 Use: configure [options]
 Where options are:
  --prefix  <dir>           The directory in which to install $project
+ --use-pcre <dir>          The directory to find PCRE in. 
+                           There should be include and lib subdirectories
  --enable-shlib            Allow user functions in shared libraries.
  --enable-namespace        Use the classad namespace
  --enable-flexible-member  Allow member function to be (list, X) or (X, list)
  --help                    Show this message         
+
 Use configure.rerun to rerun configure with previously saved arguments.
 EOF
 	return
@@ -36,6 +39,7 @@ hold_arguments "$@"
 
 project="ClassAds"
 install_dir="/usr/local"
+pcre_dir=""
 enable_shlib=0
 enable_namespace=0
 enable_flexible_member=0
@@ -46,6 +50,10 @@ do
 		--prefix)
 			shift
 			install_dir=$1
+			;;
+		--use-pcre)
+			shift
+			pcre_dir=$1
 			;;
 		--enable-shlib)
 			enable_shlib=1
@@ -79,15 +87,27 @@ cat <<EOF >Makefile.config
 DESTDIR = ${install_dir}
 EOF
 
+if [ -z ${pcre_dir} ]
+then
+echo "REGEX_INCLUDE_FLAGS = -DUSE_POSIX_REGEX" >> Makefile.config
+else
+echo "REGEX_INCLUDE_FLAGS = -DUSE_PCRE -I${pcre_dir}/include" >> Makefile.config
+echo "REGEX_LIB_FLAGS = -L${pcre_dir}/lib -lpcre" >> Makefile.config
+fi
+
 if [ ${enable_shlib} = 1 ]
 then
-echo "EXTRA_LD_FLAGS = -Xlinker --export-dynamic -ldl" >> Makefile.config
+echo "EXTRA_LD_FLAGS = \$(REGEX_LIB_FLAGS) -Xlinker --export-dynamic -ldl" >> Makefile.config
 echo "all:: shared" >> Makefile.config
+else
+echo "EXTRA_LD_FLAGS = \$(REGEX_LIB_FLAGS)" >> Makefile.config
 fi
 
 if [ ${enable_namespace} = 1 ]
 then
-echo "EXTRA_C_PLUS_FLAGS = -DWANT_NAMESPACES" >> Makefile.config
+echo "EXTRA_C_PLUS_FLAGS = \$(REGEX_INCLUDE_FLAGS) -DWANT_NAMESPACES" >> Makefile.config
+else
+echo "EXTRA_C_PLUS_FLAGS = \$(REGEX_INCLUDE_FLAGS)" >> Makefile.config
 fi
 
 echo "Creating classad_features.h..."

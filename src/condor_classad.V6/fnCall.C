@@ -27,8 +27,10 @@
 #include "sink.h"
 #include "util.h"
 
-#ifndef WIN32
-	#include <regex.h>
+#if defined USE_POSIX_REGEX 
+    #include <regex.h>
+#elif defined USE_PCRE
+    #include <pcre.h>
 #endif
 
 #ifdef ENABLE_SHARED_LIBRARY_FUNCTIONS
@@ -75,7 +77,7 @@ FunctionCall( )
 
 			// list membership
 		functionTable["member"		] =	(void*)testMember;
-		functionTable["ismember"	] =	(void*)testMember;
+		functionTable["identicalmember"	] =	(void*)testMember;
 
 		// Some list functions, useful for lists as sets
 		functionTable["size"        ] = (void*)size;
@@ -125,7 +127,9 @@ FunctionCall( )
         functionTable["stricmp"     ] = (void*)compareString;
 
 			// pattern matching (regular expressions) 
+#if defined USE_POSIX_REGEX || defined USE_PCRE
 		functionTable["regexp"		] =	(void*)matchPattern;
+#endif
 
 			// conversion functions
 		functionTable["int"			] =	(void*)convInt;
@@ -551,7 +555,7 @@ testMember(const char *name,const ArgumentList &argList, EvalState &state,
     const ExprTree 	*tree;
 	const ExprList	*el;
 	bool			b;
-	bool			useIS = ( strcasecmp( "ismember", name ) == 0 );
+	bool			useIS = ( strcasecmp( "identicalmember", name ) == 0 );
 
     // need two arguments
     if (argList.size() != 2) {
@@ -2113,7 +2117,7 @@ random( const char* name,const ArgumentList &argList,EvalState &state,
     return true;
 }
 
-#ifndef WIN32
+#if defined USE_POSIX_REGEX || defined USE_PCRE
 bool FunctionCall::
 matchPattern( const char*,const ArgumentList &argList,EvalState &state,
 	Value &result )
@@ -2122,7 +2126,6 @@ matchPattern( const char*,const ArgumentList &argList,EvalState &state,
 	Value 		arg0, arg1, arg2;
 	const char	*pattern=NULL, *target=NULL;
     string      options_string;
-	regex_t		re;
     int         options;
 	int			status;
 
@@ -2174,6 +2177,9 @@ matchPattern( const char*,const ArgumentList &argList,EvalState &state,
 		return( true );
 	}
 
+#if defined (USE_POSIX_REGEX)
+	regex_t		re;
+
     options = REG_EXTENDED | REG_NOSUB;
     if( have_options ){
         if ( !arg2.IsStringValue( options_string ) ) {
@@ -2214,9 +2220,55 @@ matchPattern( const char*,const ArgumentList &argList,EvalState &state,
 		result.SetErrorValue( );
 		return( true );
 	}
+#elif defined (USE_PCRE)
+    const char  *error_message;
+    int         error_offset;
+    pcre        *re;
+
+    options     = 0;
+    if( have_options ){
+        if ( !arg2.IsStringValue( options_string ) ) {
+            result.SetErrorValue( );
+            return( true );
+        } else {
+            // We look for the options we understand, and ignore
+            // any others that we might find, hopefully allowing
+            // forwards compatibility.
+            if ( options_string.find( 'i' ) != string::npos ) {
+                options |= PCRE_CASELESS;
+            } 
+            if ( options_string.find( 'm' ) != string::npos ) {
+                options |= PCRE_MULTILINE;
+            }
+            if ( options_string.find( 's' ) != string::npos ) {
+                options |= PCRE_DOTALL;
+            }
+            if ( options_string.find( 'x' ) != string::npos ) {
+                options |= PCRE_EXTENDED;
+            }
+
+        }
+    }
+
+    re = pcre_compile( pattern, options, &error_message,
+                      &error_offset, NULL );
+    if ( re == NULL ){
+			// error in pattern
+		result.SetErrorValue( );
+    } else {
+        status = pcre_exec(re, NULL, target, strlen(target),
+                           0, 0, NULL, 0);
+        if (status >= 0) {
+            result.SetBooleanValue( true );
+        } else {
+            result.SetBooleanValue( false );
+        }
+    }
+    return true;
+#endif
 }
 
-#endif
+#endif /* defined USE_POSIX_REGEX || defined USE_PCRE */
 
 static bool 
 doSplitTime(const Value &time, ClassAd * &splitClassAd)

@@ -33,4 +33,11 @@
 
 /*#define ENABLE_SHARED_LIBRARY_FUNCTIONS*/
 
+/* Select how we wish to do regular expressions. 
+   USE_POSIX_REGEX will use the regcomp/regexec functions
+   USE_PCRE will use the PCRE library
+*/ 
+#define USE_POSIX_REGEX 
+/* #define USE_PCRE */
+
 #endif 
