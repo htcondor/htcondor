@@ -1,0 +1,49 @@
+* maxjobs may be buggy (see litvin emails)
+
+- document, document, document
+  - condor_submit -a
+  - asynchronous PRE/POST
+  - check CVS logs for more...
+  - update README.txt & code comments
+
+- scalability testing
+- add recovery scenarios to test suite
+- test stupid dags
+  - no ready jobs
+  - cycles
+  - no jobs
+
+? move lockfile handling to dagman_main & unlink only if normal exit
+? back-port 6.3 DAGMan to Condor 6.2
+  - PROBLEM: without new condor_submit, submit-event-matching cannot
+    work reliably b/c of async PRE/POST scripts
+
+
+=== bugs
+
+x dagman needs to return failure if a node fails
+x termq bug
+x segfault bugs
+x recovery broken
+
+
+=== new features
+
+- take a signal to exit & generate a rescue file
+- replace _done kludge in script.C with a new job state?
+
+x support throttling of PRE & POST scripts
+x get rid of GetSubmittedJob() code and replace with a waiting-job
+  list, etc.
+x get DAGMan job id and use in submit_submit() rather than "(-1.-1)"
+
+
+=== Miron Ideas ===
+
+- when you recover the log, every time you see a submit, make sure the
+  waiting queue of that job is empty
+
+- use liberal assert()s
+
+- talk w/Miron about adding a submit API to condor as part of my
+  DAGMan work
