@@ -2897,7 +2897,8 @@ int DaemonCore::HandleReq(int socki)
 				sprintf (buf, "%s=\"%s\"", ATTR_SEC_VALID_COMMANDS, GetCommandsInAuthLevel(comTable[cmd_index].perm).Value());
 				pa_ad.Insert(buf);
 
-				// also put these attributes in the policy classad we are caching.
+				// also put some attributes in the policy classad we are caching.
+				sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_SUBSYSTEM );
 				sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_USER );
 				sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_SID );
 				sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_VALID_COMMANDS );
