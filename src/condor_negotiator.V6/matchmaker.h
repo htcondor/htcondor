@@ -58,7 +58,7 @@ class Matchmaker : public Service
 		char *getCapability (char *, char *, ClassAdList &);
 		void addRemoteUserPrios( ClassAdList& );
 
-		friend static int comparisonFunction (ClassAd *, ClassAd *, void *);
+		friend int comparisonFunction (ClassAd *, ClassAd *, void *);
 
 		// configuration information
 		char *AccountantHost;		// who (if at all) is the accountant?
