@@ -4,17 +4,6 @@
 #include "debug.h"
 #include "parse.h"
 
-#if 0  /* sig_install.h is broken, so I will defined my own installer */
-#include "sig_install.h"
-#else
-//typedef void (*SIG_HANDLER)(int);
-//void install_sig_handler (int sig, SIG_HANDLER handler);
-#endif
-
-#include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h>
-
 // Required for linking with condor libs
 extern "C" int SetSyscalls() { return 0; }
 
