@@ -609,21 +609,26 @@ SetExecutable()
 
 #if !defined(WIN32)
 	if ( JobUniverse == GLOBUS_UNIVERSE ) {
-			//extract "GLOBUSRUN" value from config file
-		char *globusrun;
+			/* the end result of this section is:
+			 * place the "executable" value in submit file in arg list
+			 * find SHADOW_GLOBUS and use it for ename (executable in ClassAd)
+			 */
+		char *globusshadow;
 		struct stat statbuf;
 		char size[32];
-		if ( !(globusrun = param( "GLOBUSRUN" )) ) {
-			fprintf(stderr, "\"GLOBUSRUN\" value not configured in your pool\n" );
+		if ( !(globusshadow = param( "SHADOW_GLOBUS" )) ) {
+			fprintf(stderr, "\"SHADOW_GLOBUS\" value not configured in your pool\n" );
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
 			//check for existence & size of globusrun pgm
-		if ( stat( globusrun, &statbuf ) ) {
-			fprintf(stderr, "cannot get stat() on %s\n", globusrun );
+/*
+		if ( stat( globusshadow, &statbuf ) ) {
+			fprintf(stderr, "cannot get stat() on %s\n", globusshadow );
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
+*/
 			//value in submit file is probably for globus job, not globusrun pgm
 			//so just override it here
 		sprintf(size,"%d", ( statbuf.st_size / 1024 ) + 1 );
@@ -631,8 +636,8 @@ SetExecutable()
 		forcedAttributes.insert( MyString( "MemoryRequirements" ), MyString( size ) );
 
 			//executable named in the submit file should be inserted in the
-			//arguments of the REAL submit file.
-		strcpy( GlobusExec, "&(executable=$(GLOBUSRUN_GASS_URL)" );
+			//arguments list to be passed to the globus shadow
+		strcpy( GlobusExec, "'&(executable=$(GLOBUSRUN_GASS_URL)" );
 		if ( ename[0] != '/' ) {
 			//GLOBUSRUN_GASS_URL notation for CWD
 			strcat( GlobusExec, "./" );
@@ -644,7 +649,7 @@ SetExecutable()
 			//ename wasn't getting freed anywhere, free old value anyway
 		free( ename );
 			//we want (full path to) globusrun placed in the ad as the executable
-		ename = globusrun;
+		ename = globusshadow;
 	}
 #endif !defined(WIN32)
 
@@ -1303,19 +1308,42 @@ SetArguments()
 			DoCleanup(0,0,NULL);
 			exit( 1 );
       }
-			//Globus v1.1 no longer allows these -w -r <host> to be last
-			//on the string, so put them first instead.
-		char *GlobusTmp = new char[strlen(GlobusArgs) + 10 + strlen(globushost)];
-		sprintf( GlobusTmp, "-w -r %s %s", globushost, GlobusArgs );
+			//extract "GLOBUSRUN" value from config file
+		char *globusrun;
+		struct stat statbuf;
+		if ( !(globusrun = param( "GLOBUSRUN" )) ) {
+			fprintf(stderr, "\"GLOBUSRUN\" value not configured in your pool\n" );
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
+		char *GlobusTmp = new char[_POSIX_ARG_MAX + 64];
+			//new arg list: cluster.proc globusrun flags rsl string
+		sprintf( GlobusTmp, "%d.%d %s %s", ClusterId, ProcId, ScheddAddr, 
+				globusrun );
 		sprintf( buffer, "%s = \"%s\"", ATTR_JOB_ARGUMENTS, GlobusTmp );
+		InsertJobExpr (buffer, false );
+
+		sprintf( buffer, "%s = \"%s\"", "GlobusContactString", "X" );
+		InsertJobExpr (buffer, false );
+
+		sprintf( buffer, "%s = %d", "GlobusQueryDelay", 30 );
+		InsertJobExpr (buffer, false );
+
+		sprintf( buffer, "%s = \"%s\"", "GlobusStatus", "UNSUBMITTED" );
+		InsertJobExpr (buffer, false );
+
+			//this is the command line string to pass to globusrun itself
+		sprintf( buffer, "%s = \"-w -r %s %s'\"", "GlobusArgs", globushost, 
+				GlobusArgs );
+		InsertJobExpr (buffer, false );
 		delete [] GlobusTmp;
 	}
 	else 
 #endif
 	{
 		sprintf (buffer, "%s = \"%s\"", ATTR_JOB_ARGUMENTS, args);
+		InsertJobExpr (buffer);
 	}
-	InsertJobExpr (buffer);
 	free(args);
 }
 
@@ -1983,9 +2011,6 @@ queue(int num)
 			}
 			ProcId = -1;
 		}
-		if ( JobUniverse == GLOBUS_UNIVERSE ) {
-			strcpy( GlobusArgs, GlobusExec );
-		}
 
 		if ( ClusterId == -1 ) {
 			fprintf(stderr,
@@ -2041,7 +2066,8 @@ queue(int num)
 		SetImageSize();		// must be called _after_ SetTransferFiles()
 		SetRequirements();	// must be called _after_ SetTransferFiles()
 		SetForcedAttributes();
-		SetArguments(); //this needs to be last for Globus universe args
+			//SetArguments needs to be last for Globus universe args
+		SetArguments(); 
 
 		rval = SaveClassAd();
 
