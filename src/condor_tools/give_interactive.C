@@ -167,10 +167,19 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 		candidateRankValue = tmp;
 
 		// the quality of a match is determined by a lexicographic sort on
-		// the following values, but more is better for each component
+		// the following values, but more is better for each component.  
+		// The standard condor_negotiator works in this order of preference:
 		//  1. job rank of offer 
 		//	2. preemption state (2=no preempt, 1=rank-preempt, 0=prio-preempt)
 		//  3. preemption rank (if preempting)
+		//
+		// But the below code for condor_find_host places the desires of the
+		// system ahead of the desires of the resource requestor.  Thus the code
+		// below works in the following order of preference:
+		//	1. preemption state (2=no preempt, 1=rank-preempt, 0=prio-preempt)
+		//  2. preemption rank (if preempting)
+		//  3. job rank of offer 
+
 		newBestFound = false;
 		candidatePreemptRankValue = -(FLT_MAX);
 		if( candidatePreemptState != NO_PREEMPTION ) {
@@ -184,6 +193,7 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 					"expression to a float.\n");
 			}
 		}
+/**** old negotiator-style code: ***
 		if( ( candidateRankValue > bestRankValue ) || 	// first by job rank
 				( candidateRankValue==bestRankValue && 	// then by preempt state
 				candidatePreemptState > bestPreemptState ) ) {
@@ -196,6 +206,24 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 				newBestFound = true;
 			}
 		} 
+******************************/
+		if( candidatePreemptState > bestPreemptState ) {	// first by preempt state
+			newBestFound = true;
+		} else if( candidatePreemptState==bestPreemptState &&  // then by preempt rank				
+				bestPreemptState != NO_PREEMPTION ) {
+				// check if the preemption rank is better than the best
+			if( candidatePreemptRankValue > bestPreemptRankValue ) {
+				newBestFound = true;
+			}
+		} 
+		if( (candidatePreemptState==bestPreemptState &&
+			( (bestPreemptState == NO_PREEMPTION) ||
+			  ((bestPreemptState != NO_PREEMPTION) && (candidatePreemptRankValue == bestPreemptRankValue))
+			)) 
+			&& (candidateRankValue > bestRankValue) )	// finally by job rank
+		{
+			newBestFound = true;
+		}
 
 		if( newBestFound ) {
 			bestSoFar = candidate;
