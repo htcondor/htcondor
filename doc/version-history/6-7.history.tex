@@ -81,6 +81,11 @@ timeout settings.
   3.0 (as in Condor 6.7.0) is no longer supported. Submitting to pre-WS 
   Globus (2.x) is still supported (\Expr{grid\_type = gt2}).
 
+\item Jobs can now be submitted as ``noop'' jobs. Jobs submitted with
+  \Expr{noop\_job = true} will not be executed by Condor, and instead will
+   immediately have a terminate event written to the job log file and 
+   removed from the queue. This is useful for DAGs where the pre-script
+   determines the job should not run.
 \end{itemize}
 
 \noindent Bugs Fixed:
