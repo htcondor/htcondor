@@ -123,6 +123,7 @@
 #define DAEMON_ON			(SCHED_VERS+69)		// specific daemon, subsys follows 
 #define GIVE_TOTALS_CLASSAD	(SCHED_VERS+70)
 #define DUMP_STATE          (SCHED_VERS+71)		// drop internal vars into classad
+#define REQUEST_NETWORK		(SCHED_VERS+72)		// negotiator network mgmt
 
 /************
 *** Command ids used by the collector 
