@@ -101,7 +101,7 @@ exit 0;
 
 sub generate_cmdfile() {
     my ($tag, $module) = @_;
-
+    my @versions;
     my $release = $tag;
     $release =~ s/BUILD-//;
     my $desc = $release;
