@@ -115,6 +115,7 @@ private:
 char *ValidSpoolFiles[] = {
 	"job_queue.dir",
 	"job_queue.pag",
+	"job_queue.log",
 	"history",
 	"UserPrio",
 	"OldFiles",		// AFS backup directory
@@ -159,6 +160,7 @@ char *ValidLogFiles[] = {
 	"W_Sched_Log.old",
 	"AccountantLog",
 	"AccountantLog.old",
+	"CLIENTDUMP",
 	"OldFiles",		// AFS backup directory
 	0
 };
