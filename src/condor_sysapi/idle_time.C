@@ -322,16 +322,25 @@ time_t
 all_pty_idle_time( time_t now )
 {
 	char	*f;
-	static Directory *dev;
+	static Directory *dev = NULL;
 	time_t	idle_time;
 	time_t	answer = (time_t)INT_MAX;
 
 	if( !dev ) {
+#if defined(Solaris)
+		dev = new Directory( "/devices/pseudo" );
+#else
 		dev = new Directory( "/dev" );
+#endif
 	}
 
 	for( dev->Rewind();  (f = (char*)dev->Next()); ) {
-		if( strncmp("tty",f,3) == MATCH || strncmp("pty",f,3) == MATCH ) {
+#if defined(Solaris)
+		if( strncmp("pts",f,3) == MATCH ) 
+#else
+		if( strncmp("tty",f,3) == MATCH || strncmp("pty",f,3) == MATCH ) 
+#endif
+		{
 			idle_time = dev_idle_time( f, now );
 			if( idle_time < answer ) {
 				answer = idle_time;
