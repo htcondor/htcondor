@@ -125,6 +125,9 @@ a garbage file descriptor to be used in Standard Universe jobs.
 \Condor{install} script.
 The bugs included a typo in one of the questions asked, and incorrect
 handling for the answers of a few different questions.
+Also, if DNS is misconfigured on your system, \Condor{install} will
+try a few ways to find your fully qualified hostname, and if it still
+can't determine the correct hostname, it will prompt the user for it. 
 In addition, we now avoid one installation step in cases were it is
 not needed. 
 
