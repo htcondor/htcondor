@@ -40,6 +40,7 @@
 #define _TIMERMANAGER_H_
 
 #include "condor_constants.h"
+#include <sys/time.h>
 
 const	int		STAR = -1;
 
