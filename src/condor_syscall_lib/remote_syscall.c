@@ -19,7 +19,7 @@ static int RSCSock;
 static int ErrSock;
 static int XDR_BUFSIZ = 4096;
 
-#define USE_PIPES
+int InDebugMode;
 
 
 XDR *
@@ -42,11 +42,11 @@ XDR_Read( int *iohandle, void *buf, size_t len )
 	int cnt;
 	int	fd;
 
-#if defined(USE_PIPES)
-	fd = RPL_SOCK;
-#else
-	fd = *iohandle;
-#endif
+	if( InDebugMode ) {
+		fd = RPL_SOCK;
+	} else {
+		fd = *iohandle;
+	}
 
 	dprintf(D_XDR, "XDR_Read: about to read(%d, 0x%x, %d)\n",
 			fd, buf, len);
@@ -71,11 +71,11 @@ XDR_Write( int *iohandle, void *buf, size_t len )
 	int cnt;
 	int	fd;
 
-#if defined(USE_PIPES)
-	fd = REQ_SOCK;
-#else
-	fd = *iohandle;
-#endif
+	if( InDebugMode ) {
+		fd = REQ_SOCK;
+	} else {
+		fd = *iohandle;
+	}
 
 	dprintf(D_XDR, "XDR_Write: about to write(%d, 0x%x, %d)\n",
 			fd, buf, len);
