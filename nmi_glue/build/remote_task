@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_task,v 1.1.2.5 2005-03-15 05:01:12 parag Exp $
+# $Id: remote_task,v 1.1.2.6 2005-03-15 20:07:40 parag Exp $
 # Perform a given build task, and return the status of that task
 # 0 = success
 # 1 = build failed
@@ -18,12 +18,13 @@ my $PublicDir = "$BaseDir/public";
 if ($ENV{NMI_PLATFORM} eq "x86_winnt_5.1") {
     $BaseDir =~ s/\//\\/g;
     $SrcDir = "$BaseDir\\src";
+    $NTConfigDir = "$BaseDir\\NTconfig";
+    $PublicDir = "$BaseDir\\public";
     $ENV{USERPROFILE} = "c:\\temp";
     $ENV{TMP} = "c:\\temp";
     $ENV{PATH} .= ";\"C:\\Program Files\\Microsoft Visual Studio\\VC98\\Bin\"";
     $ENV{PATH} .= ";\"C:\\Program Files\\Microsoft Platform SDK for Windows XP SP2\\Bin\"";
-    $NTConfigDir = "$BaseDir\\NTconfig";
-    $PublicDir = "$BaseDir\\public";
+    $ENV{PATH} .= ";$NTConfigDir";
 }
 
 # autoflush our STDOUT
