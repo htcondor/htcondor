@@ -63,8 +63,8 @@ specification of an alternate \Condor{dagman} executable.
   another bug) that made it difficult to use a \Condor{master} to
   spawn the Hawkeye daemons.
   Now, if you install Hawkeye on a machine, add \verb@HAWKEYE@ to your
-  \Macro{DAEMON\_LIST}, and define \Macro{HAWKEYE} to be the path to
-  the \Emph{hawkeye\_master} program, the \Condor{master} will spawn
+  \MacroNI{DAEMON\_LIST}, and define \MacroNI{HAWKEYE} to be the path to
+  the \Prog{hawkeye\_master} program, the \Condor{master} will spawn
   everything correctly.
 
 \item PVM: Fixed the \Attr{Environment} attribute in the submit description 
