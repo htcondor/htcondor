@@ -41,10 +41,22 @@ static void calc_idle_time_cpp(time_t * m_idle, time_t * m_console_idle);
 #else /* Not defined WIN32 */
 #include "string_list.h"
 #ifndef Darwin
+/* This struct hold information about the idle time of the keyboard and mouse */
+typedef struct {
+	unsigned long num_key_intr;
+	unsigned long num_mouse_intr;
+	time_t timepoint;
+} idle_t;
+
 static time_t utmp_pty_idle_time( time_t now );
 static time_t all_pty_idle_time( time_t now );
 static time_t dev_idle_time( char *path, time_t now );
 static void calc_idle_time_cpp(time_t & m_idle, time_t & m_console_idle);
+static int is_number(const char *str);
+static int get_keyboard_info(idle_t *fill_me);
+static int get_mouse_info(idle_t *fill_me);
+static int get_keyboard_mouse_info(idle_t *fill_me);
+static time_t km_idle_time(const time_t now);
 #endif
 
 /* we must now use the kstat interface to get this information under later
@@ -111,6 +123,10 @@ calc_idle_time_cpp( time_t * user_idle, time_t * console_idle)
 
 #elif !defined(Darwin) /* !defined(WIN32) -- all UNIX platforms but OS X*/
 
+/* delimiting characters between the numbers in the /proc/interrupts file */
+#define DELIMS " "
+#define BUFFER_SIZE (1024*10)
+
 /* calc_idle_time fills in user_idle and console_idle with the number
  * of seconds since there has been activity detected on any tty or on
  * just the console, respectively.  therefore, console_idle will always
@@ -165,6 +181,15 @@ calc_idle_time_cpp( time_t & m_idle, time_t & m_console_idle )
 		// over the kbdd, so if console_idle is set, leave it alone.
 	if( (m_console_idle == -1) && (_sysapi_last_x_event != 0) ) {
 		m_console_idle = now - _sysapi_last_x_event;
+	}
+
+	/* If we still don't have console idle info, (e.g. atime is not updated
+	   on device files in Linux 2.6 kernel), get keyboard and mouse idle
+	   time via /proc/interrupts.  Update user_idle appropriately too.
+	*/
+	if (m_console_idle == -1){
+	    m_console_idle = km_idle_time(now);
+	    m_idle = MIN(m_console_idle, m_idle);
 	}
 
 	if( (DebugFlags & D_IDLE) && (DebugFlags & D_FULLDEBUG) ) {
@@ -474,6 +499,217 @@ dev_idle_time( char *path, time_t now )
 	}
 
 	return answer;
+}
+
+
+/* Returns true if the string contains only digits (and is not empty) */
+int
+is_number(const char *str)
+{
+	int result = TRUE;
+	int i;
+
+	if (str == NULL)
+	    return FALSE;
+
+	for (i = 0; str[i] != '\0'; i++) {
+		if (!isdigit(str[i])) {
+			result = FALSE;
+			break;
+		}
+	}
+
+	return result;
+}
+
+/* Sets fill_me with info about keyboard idleness */
+int
+get_keyboard_info(idle_t *fill_me)
+{
+	FILE *intr_fs;
+	int result = FALSE;
+	char buf[BUFFER_SIZE], *tok, *tok_loc;
+
+	/* Search /proc/interrupts for either:
+	   1) the first occurrance of "i8042" or 
+	   2) "keyboard".  
+	   Generally, the keyboard will be IRQ 1.
+
+	   The format of /proc/interrupts is:
+	   [Header line]
+	   [IRQ #]:  [# of interrupts at CPU 1] ... [CPU N] [dev type] [dev name]
+	*/
+	
+	if ((intr_fs = fopen("/proc/interrupts", "r")) == NULL) {
+		dprintf(D_ALWAYS, "Failed to open /proc/interrupts\n");
+		return FALSE;
+	}
+
+	fgets(buf, BUFFER_SIZE, intr_fs);  /* Ignore header line */
+	while (!result && (fgets(buf, BUFFER_SIZE, intr_fs) != NULL)) {
+	    if (strstr(buf, "i8042") != NULL || strstr(buf, "keyboard") != NULL){
+
+		dprintf(D_FULLDEBUG, "Keyboard IRQ: %d\n", atoi(buf));
+		tok = strtok_r(buf, DELIMS, &tok_loc);  /* Ignore [IRQ #]: */
+		do {
+		    tok = strtok_r(NULL, DELIMS, &tok_loc);
+		    if (is_number(tok)) {
+			/* It is ok if this overflows */
+			fill_me->num_key_intr += strtoul(tok, NULL, 10);
+			dprintf(D_FULLDEBUG, 
+				"Add %lu keyboard interrupts.  Total: %lu\n",
+				strtoul(tok, NULL, 10), fill_me->num_key_intr);
+		    } else {
+			break;  /* device type column */
+		    }
+		} while (tok != NULL);		
+		result = TRUE;
+	    }
+	}
+
+	fclose(intr_fs);	
+	return result;
+}
+
+/* Sets fill_me with info about the mouse idleness */
+int
+get_mouse_info(idle_t *fill_me)
+{
+	FILE *intr_fs;
+	int result = FALSE, first_i8042 = FALSE;
+	char buf[BUFFER_SIZE], *tok, *tok_loc;
+
+	/* Search /proc/interrupts for:
+	   1) the second occurrance of "i8042", as we assume the first to be 
+		  the keyboard, or
+	   2) "Mouse" or
+	   3) "mouse"
+	   Generally, the mouse will be IRQ 12.
+
+	   The format of /proc/interrupts is:
+	   [Header line]
+	   [IRQ #]:  [# of interrupts at CPU 1] ... [CPU N] [dev type] [dev name]
+	*/
+	if ((intr_fs = fopen("/proc/interrupts", "r")) == NULL) {
+	    dprintf(D_ALWAYS, 
+		    "get_mouse_info(): Failed to open /proc/interrupts\n");
+	    return FALSE;
+	}
+
+	fgets(buf, BUFFER_SIZE, intr_fs);  /* Ignore header line */
+	while (!result && (fgets(buf, BUFFER_SIZE, intr_fs) != NULL)) {
+	    if (strstr(buf, "i8042") && !first_i8042) {
+		first_i8042 = TRUE;
+	    } 
+	    else if ((strstr(buf, "i8042") != NULL && first_i8042) ||
+		     strstr(buf, "Mouse") != NULL || strstr(buf, "mouse") != NULL)  
+		{
+
+		    dprintf(D_FULLDEBUG, "Mouse IRQ: %d\n", atoi(buf));
+		    tok = strtok_r(buf, DELIMS, &tok_loc);  /* Ignore [IRQ #]: */
+		    do {
+			tok = strtok_r(NULL, DELIMS, &tok_loc);
+			if (is_number(tok)) {
+			    /* It is ok if this overflows */
+			    fill_me->num_mouse_intr += strtoul(tok, NULL, 10);
+			    dprintf(D_FULLDEBUG, 
+				    "Add %lu mouse interrupts.  Total: %lu\n",
+				    strtoul(tok, NULL, 10), fill_me->num_mouse_intr);
+			} else {
+			    break;  /* device type column */
+			}
+		    } while (tok != NULL);		    
+		    result = TRUE;
+
+		}
+	}
+	
+	fclose(intr_fs);
+	return result;
+}
+
+/* Returns true if info about the idleness of the keyboard or mouse (or both)
+   has been obtained. */
+int
+get_keyboard_mouse_info(idle_t *fill_me)
+{
+    int r1, r2;
+
+    r1 = get_keyboard_info(fill_me);
+    r2 = get_mouse_info(fill_me);
+	
+    return r1 || r2; 
+}
+
+/* Calculate # of seconds since there has been activity detected on 
+   the keyboard and/or mouse. 
+
+   In order to determine "activity since", we need to measure from a known
+   point in time.  However, when this function is first called, we lack this.
+   Thus, when first called this function assumes that the keyboard/mouse
+   were active immediately prior, ie. returns 0 (seconds since last activity).
+*/
+time_t
+km_idle_time(const time_t now)
+{
+	/* We need to store information about the state of the keyboard
+	   and mouse the last time we saw activity on either of them.  Thus,
+	   last_km_activity is a static variable that is initialized when
+	   this function is first called.  And "once" is a switch that tells 
+	   us if last_km_activity has been initialized or not.
+	*/
+	static int once = FALSE;
+	static idle_t last_km_activity;
+
+	idle_t current = {0, 0, 0};
+
+	/* Initialize, if necessary.  last_km_activity holds information about
+	   the most recently detected activity on the keyboard or mouse. */
+	if (once == FALSE) {	    
+		last_km_activity.num_key_intr = 0;
+		last_km_activity.num_mouse_intr = 0;
+		last_km_activity.timepoint = now;		
+
+		if (!get_keyboard_mouse_info(&last_km_activity)) {
+			dprintf(D_ALWAYS,
+				"Failed to obtain keyboard or mouse idle information.\n");
+			dprintf(D_ALWAYS,
+				"Assuming the keyboard and mouse to be infinitely idle.\n");
+
+
+			/* Here we'll try to initialize it again hoping whatever
+			   the problem was was transient and went away.
+			   
+			   What do we return in this case?
+			   Report infinite idle time 'a la' utmp_pty_idle_time */
+			return (time_t)INT_MAX;
+		}	
+		dprintf(D_FULLDEBUG, "Initialized last_km_activity\n");
+		once = TRUE;
+	}
+
+	/* Take current measurement */
+	if (!get_keyboard_mouse_info(&current)) {
+		dprintf(D_ALWAYS, 
+			"Failed to obtain keyboard or mouse idle information\n");
+		/* Report latest idle time we know about */
+		return now - last_km_activity.timepoint;
+	}
+
+	/* Activity is revealed by higher interrupt sums. In the case of
+	   overflow of an interrupt counter on a single CPU or their sum, I
+	   really only care that at least one interrupt occurred.  Thus, if the
+	   new sum and old sum are different in any way, activity occurred. */
+	if ((current.num_key_intr != last_km_activity.num_key_intr) ||
+	    (current.num_mouse_intr != last_km_activity.num_mouse_intr)) {
+
+		/*  Save info about most recent activity */
+		last_km_activity.num_key_intr = current.num_key_intr;
+		last_km_activity.num_mouse_intr = current.num_mouse_intr;
+		last_km_activity.timepoint = now;
+	}
+
+	return now - last_km_activity.timepoint;
 }
 
 #else /* here's the OS X version of calc_idle_time */

@@ -4319,7 +4319,30 @@ DCFindWinSta(LPTSTR winsta_name, LPARAM p)
 			entry->pid,winsta_name);
 		ret_value = FALSE;
 	} else {
+
+		// Now in a post NT4 world, we have to use a different 
+		// method for searching for console applications (like
+		// batch scripts or anything that isn't GUI). So we'll
+		// do that now before declaring our search for the HWND
+		// a bust.
+
+		HWND hwnd = NULL;
 		ret_value = TRUE;
+		pid_t pid = 0;
+
+		while (hwnd = FindWindowEx(HWND_MESSAGE, hwnd, 
+			"ConsoleWindowClass", NULL)) {
+
+			GetWindowThreadProcessId(hwnd, &pid);
+
+			if (pid == entry->pid) {
+				entry->hWnd = hwnd;	
+				ret_value = FALSE; // stop enumerating...we've got it.
+
+				dprintf(D_PROCFAMILY, "Found console window, pid=%d\n", pid);
+				break;
+			}
+		}
 	}
 
 	CloseDesktop(hdesk);
@@ -4927,8 +4950,28 @@ int DaemonCore::Create_Process(
 
 	}
 	
-	BOOL cp_result;
-	if ( priv != PRIV_USER_FINAL ) {
+	BOOL cp_result, gbt_result;
+	DWORD binType;
+	gbt_result = GetBinaryType(namebuf, &binType);
+
+	// test if the executable is either unexecutable, or if GetBinaryType() 
+	// thinks its a DOS 16-bit app, but in reality the actual binary
+	// image isn't (this happens when the executable is bogus or corrupt).
+	if ( !gbt_result || ( binType == SCS_DOS_BINARY && !bIs16Bit) ) {
+	
+		dprintf(D_ALWAYS, "ERROR: %s is not a valid Windows executable\n",
+			   	namebuf);
+		cp_result = 0;
+
+		if ( newenv ) {
+			delete [] newenv;
+		}
+		goto wrapup;
+	} else {
+		dprintf(D_FULLDEBUG, "GetBinaryType() returned %d\n", binType);
+	}
+
+   	if ( priv != PRIV_USER_FINAL ) {
 		cp_result = ::CreateProcess(bIs16Bit ? NULL : namebuf,(char*)args,NULL,
 			NULL,inherit_handles, new_process_group,newenv,cwd,&si,&piProcess);
 	} else {
@@ -5752,24 +5795,41 @@ DaemonCore::Inherit( void )
 #ifdef WIN32
 		pidtmp->deallocate = 0L;
 
-		// I don't see why we need STANDARD_RIGHTS_REQUIRED, so I'm dropping it
-		// for now since its screwing up DAGman. Ask Colin if you care.
+		pidtmp->hProcess = ::OpenProcess( SYNCHRONIZE |
+				PROCESS_QUERY_INFORMATION, FALSE, ppid );
 
-		pidtmp->hProcess = ::OpenProcess( SYNCHRONIZE | 
-//						PROCESS_QUERY_INFORMATION | STANDARD_RIGHTS_REQUIRED , 
-						PROCESS_QUERY_INFORMATION, 
-						FALSE, ppid );
+		
+		// We want to avoid trying to watch the ppid if it turns out
+		// that we can't open a handle to it because we have insufficient
+		// permissions. In the case of dagman, it runs as a user, which
+		// doesn't necessarily have the perms to open a handle to the
+		// schedd process. If we fail to get the handle for some reason
+		// other than ACCESS_DENIED however, we want to try to watch the
+		// pid, and consequently cause the assert() to blow.
+
+		bool watch_ppid = true;
+
 		if ( pidtmp->hProcess == NULL ) {
-			dprintf(D_ALWAYS, "OpenProcess() failed - Error %d\n", GetLastError());
+			if ( GetLastError() == ERROR_ACCESS_DENIED ) {
+				dprintf(D_FULLDEBUG, "OpenProcess() failed - "
+						"ACCESS DENIED. We can't watch parent process.\n");
+				watch_ppid = false;
+			} else { 
+				dprintf(D_ALWAYS, "OpenProcess() failed - Error %d\n",
+					   	GetLastError());
+			}
 		}
-		assert(pidtmp->hProcess);
+		
 		pidtmp->hThread = NULL;		// do not allow child to suspend parent
 		pidtmp->deallocate = 0L;
 #endif
 		int insert_result = pidTable->insert(ppid,pidtmp);
 		assert( insert_result == 0 );
 #ifdef WIN32
-		WatchPid(pidtmp);
+		if ( watch_ppid ) {
+			assert(pidtmp->hProcess);
+			WatchPid(pidtmp);
+		}
 #endif
 
 		// inherit cedar socks

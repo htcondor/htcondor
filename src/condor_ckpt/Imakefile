@@ -144,7 +144,7 @@ OBJ = signals_control.o syscall_mode.o $(SHARED_OBJ)
   CPP_SUPPORT_LIB = libcondorc++support.a
 #endif /* gcc 3.x or not */
 
-all_target(ToUpper $(CPP_SUPPORT_LIB) condor_rt0.o $(OBJ) $(COMPRESS_LIB) $(RELEASE_OBJ))
+all_target(tmp_dir ToUpper $(CPP_SUPPORT_LIB) condor_rt0.o $(OBJ) $(COMPRESS_LIB) $(RELEASE_OBJ))
 release:: all
 stripped:: all
 static:: all
@@ -158,13 +158,18 @@ static_library(libcondorc++support.a,lib)
 
 #else /* Not DOES_CHECKPOINTING */
 
-all_target($(OBJ) ToUpper)
+all_target(tmp_dir $(OBJ) ToUpper)
 release:: all
 stripped:: all
 static:: all
 
 #endif /* DOES_CHECKPOINTING or not */ 
 
+TMP_DIR = tmp_dir
+tmp_dir:
+	mkdir tmp_dir; chmod 755 tmp_dir
+clean::
+	/bin/rm -rf tmp_dir
 
 #if IS_HPUX
 SIGNAL.o :  $(SIMPLE_LIBC)  ToUpper

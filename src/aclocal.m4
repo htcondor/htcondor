@@ -14,8 +14,8 @@
 #  Sets _cv_<progname>_is_gnu to "yes" or "no" as appropriate
 #######################################################################
 AC_DEFUN( [CHECK_PROG_IS_GNU],
-[AC_CHECK_PROG($1,$2,$2)
- if test "$[$1]" != "$2"; then
+[AC_PATH_PROG($1,$2,no,[$PATH])
+ if test "$[$1]" = "no"; then
    AC_MSG_ERROR( [$2 is required] )
  fi
  AC_CACHE_CHECK( [if $2 is GNU], [_cv_$2_is_gnu],
@@ -49,11 +49,11 @@ dnl
 AC_DEFUN([AC_PROG_PERL_VERSION],[dnl
 # Make sure we have perl
 if test -z "$PERL"; then
-  AC_CHECK_PROG(PERL,perl,perl)
+  AC_PATH_PROG(PERL,perl,no,[$PATH])
 fi
 # Check if version of Perl is sufficient
 ac_perl_version="$1"
-if test "x$PERL" != "x"; then
+if test "$PERL" != "no"; then
   AC_MSG_CHECKING(for perl version greater than or equal to $ac_perl_version)
   # NB: It would be nice to log the error if there is one, but we cannot rely
   # on autoconf internals
@@ -398,4 +398,23 @@ _TESTEOF
    AC_MSG_RESULT([no])
  fi
  rm -f conftest.c conftest1
+])
+
+
+#######################################################################
+# REQUIRE_PATH_PROG by Derek Wright <wright@cs.wisc.edu> 
+# Performs an AC_PATH_PROG, and then makes sure that we found the
+# program we were looking for.
+#
+# Arguments (just the first two you pass to AC_PATH_PROG)
+#  $1 variable name 
+#  $2 program name
+# Side Effects:
+#  Calls AC_PATH_PROG, which does a bunch of stuff for you.
+#######################################################################
+AC_DEFUN([REQUIRE_PATH_PROG],
+[AC_PATH_PROG([$1],[$2],[no],[$PATH])
+ if test "$[$1]" = "no" ; then
+   AC_MSG_ERROR([$2 is required])
+ fi
 ])

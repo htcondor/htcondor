@@ -422,9 +422,25 @@ WindowsFirewallHelper::WindowsFirewallInitialize() {
     hr = fwPolicy->get_CurrentProfile(&fwProf);
     if (FAILED(hr))
     {
-        dprintf(D_ALWAYS, 
-				"WinFirewall: get_CurrentProfile failed: 0x%08lx\n", hr);
-		return false;
+		// Sometimes, this fails at boot time. So, we 
+		// retry five times before throwing in the towel.
+		int i;
+		for (i=0; i<5; i++) {
+    		hr = fwPolicy->get_CurrentProfile(&fwProf);
+    		if (SUCCEEDED(hr)) {
+				break;
+			} else {
+				dprintf(D_FULLDEBUG, "get_CurrentProfile() failed. "
+					   " Retry %d...\n", i);
+				sleep(1);
+			}
+		}
+
+		if ( FAILED(hr) ) {
+	        dprintf(D_ALWAYS, 
+					"WinFirewall: get_CurrentProfile failed: 0x%08lx\n", hr);
+			return false;
+		}
     }
 
     // Retrieve the authorized application collection.

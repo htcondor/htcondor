@@ -107,6 +107,11 @@ TESTCLASS(job_rsc_zero-calloc_std,quick)
  * Checkpointing
  ***************************/
 
+DESC(job_ckpt_combo-sanity_std,"combination of sbrk() and register inspection for overall ckpt sanity")
+CBUILD($(CC),job_ckpt_combo-sanity_std,c)
+DEP_SYMLINK_EXT(job_ckpt_combo-sanity_std,cmd)
+RUN(job_ckpt_combo-sanity_std)
+
 DESC(job_ckpt_io-async_std,"file I/O during async ckpt signals")
 CBUILD($(CC),job_ckpt_io-async_std,c)
 DEP_SYMLINK_EXT(job_ckpt_io-async_std,cmd)

@@ -196,10 +196,6 @@ DC_Exit( int status )
 		// address file or the pid file.
 	clean_files();
 
-		// Log a message
-	dprintf(D_ALWAYS,"**** %s (%s_%s) EXITING WITH STATUS %d\n",
-		myName,myDistro->Get(),mySubSystem,status);
-
 		// Now, delete the daemonCore object, since we allocated it. 
 	delete daemonCore;
 	daemonCore = NULL;
@@ -207,6 +203,18 @@ DC_Exit( int status )
 		// Free up the memory from the config hash table, too.
 	clear_config();
 	
+		/*
+		  Log a message.  We want to do this *AFTER* we delete the
+		  daemonCore object and free up other memory, just to make
+		  sure we don't hit an EXCEPT() or anything in there and end
+		  up exiting with something else after we print this.  all the
+		  dprintf() code has already initialized everything it needs
+		  to know from the config file, so it's ok that we already
+		  cleared out our config hashtable, too.  Derek 2004-11-23
+		*/
+	dprintf( D_ALWAYS, "**** %s (%s_%s) EXITING WITH STATUS %d\n",
+			 myName, myDistro->Get(), mySubSystem, status );
+
 		// Finally, exit with the status we were given.
 	exit( status );
 }

@@ -130,7 +130,8 @@ void store_cred_handler(void *, int i, Stream *s) {
 		);
 		LogonUserError = GetLastError();
 		
-		if (LogonUserError == ERROR_PRIVILEGE_NOT_HELD ) {
+		if ( (LogonUserError == ERROR_PRIVILEGE_NOT_HELD ) || 
+			 (LogonUserError == ERROR_LOGON_TYPE_NOT_GRANTED ) ) {
 			
 			dprintf(D_FULLDEBUG, "NETWORK logon failed. Attempting INTERACTIVE\n");
 

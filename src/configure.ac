@@ -31,6 +31,23 @@ AC_INIT
 AC_CONFIG_HEADERS([config.h])
 
 
+AC_MSG_NOTICE([checking for critical tools used by configure]) 
+AC_PROG_AWK
+REQUIRE_PATH_PROG([GREP],[grep])
+REQUIRE_PATH_PROG([CUT],[cut])
+AC_PATH_PROG([WHICH],[which],[no],[$PATH])
+
+# Condor only requires 5.002, but GPT apparently relies on 5.005_03 or
+# greater.  Unfortunately, GPT doesn't have a configure script or
+# anything, it just lets perl die with a require statement.  So, we
+# test for the right version here and fail in an early and obvious way
+# if there's a problem.  Also, we check for this early, so we can use
+# perl in the rest of the tests in here, if we want it. 
+AC_PROG_PERL_VERSION([5.005_03], [],
+   [AC_MSG_ERROR([perl version 5.005_03 or higher is required])])
+
+AC_MSG_NOTICE([verifying build environment ]) 
+
 # first, if we notice we're being run at UW-Madison CS on a
 # CSL-supported machine, and the PATH doesn't include
 # /p/condor/workspaces/build/bin before /s/std/bin, print an error
@@ -38,7 +55,7 @@ AC_CONFIG_HEADERS([config.h])
 # versions of everything we need, and it's easier to just tell the
 # user right at the start what they need to do to fix it, instead of
 # having the rest of the tests in here fail...
-my_domain=`echo $ac_hostname | cut -f2- -d.`
+my_domain=`echo $ac_hostname | $CUT -f2- -d.`
 _bad_path_dirs="/s/std/bin /usr/local/bin /usr/bin /bin /usr/ccs/bin"
 _found_bad_dir=no
 _which_bad_dir=""
@@ -77,15 +94,6 @@ if test $my_domain = "cs.wisc.edu" && test -d "/s/std/bin" ; then
   fi
   AC_MSG_RESULT([yes])
 fi   
-
-# Condor only requires 5.002, but GPT apparently relies on 5.005_03 or
-# greater.  Unfortunately, GPT doesn't have a configure script or
-# anything, it just lets perl die with a require statement.  So, we
-# test for the right version here and fail in an early and obvious way
-# if there's a problem.  Also, we check for this early, so we can use
-# perl in the rest of the tests in here, if we want it. 
-AC_PROG_PERL_VERSION([5.005_03], [],
-   [AC_MSG_ERROR([perl version 5.005_03 or higher is required])])
 
 
 ############################################################
@@ -165,7 +173,7 @@ elif test $os = "Linux" ; then
 
   # next, figure out what linux distribution this is
   if test -f "/etc/tao-release" ; then 
-    _tao_vers=`cat /etc/tao-release|perl -ne '/.* (.*) \(.*\)/;print $1;'`
+    _tao_vers=`cat /etc/tao-release|$PERL -ne '/.* (.*) \(.*\)/;print $1;'`
     case "$_tao_vers" in
      "1" )
        _cv_linux_distro="TAO1"
@@ -177,7 +185,7 @@ elif test $os = "Linux" ; then
        ;;
     esac
   elif test -f "/etc/redhat-release" ; then 
-    _rh_vers=`cat /etc/redhat-release|perl -ne '/.* (.*) \(.*\)/;print $1;'`
+    _rh_vers=`cat /etc/redhat-release|$PERL -ne '/.* (.*) \(.*\)/;print $1;'`
     case "$_rh_vers" in
      "7.2" )
        _cv_linux_distro="RH72"
@@ -198,7 +206,7 @@ elif test $os = "Linux" ; then
        ;;
     esac
   elif test -f "/etc/SuSE-release" ; then
-    _suse_vers=`cat /etc/SuSE-release | grep VERSION | awk '{print $3}'`
+    _suse_vers=`cat /etc/SuSE-release | grep VERSION | $AWK '{print $3}'`
     case "$_suse_vers" in
      "8.1" )
        _cv_linux_distro="SLES81"
@@ -221,7 +229,7 @@ elif test $os = "Linux" ; then
   fi
   # this perl 1-liner takes all space-delimited input, sticks it
   # together with '_' marks, and lower-cases the whole thing
-  _cv_sysname="`echo $_cv_arch $_cv_linux_distro | perl -ane 'print lc join('_',@F)'`"
+  _cv_sysname="`echo $_cv_arch $_cv_linux_distro | $PERL -ane 'print lc join('_',@F)'`"
   _cv_opsys_vers="LINUX_$_cv_linux_distro"
 
 elif test $os = "SunOS" ; then
@@ -331,19 +339,19 @@ if test "$_cv_opsys" = "LINUX" ; then
   AC_MSG_CHECKING([exact libc version])
   for _libc in "/lib/libc.so.6" "/lib/libc.so.6.1" ; do
     if test -f "$_libc" && test -L "$_libc" ; then 
-      _libc_ver=`echo $_libc|perl -nle '$f=readlink;$f=~/libc-(.*)\.so/;print $1;'`
+      _libc_ver=`echo $_libc|$PERL -nle '$f=readlink;$f=~/libc-(.*)\.so/;print $1;'`
       break;
     elif test -f "$_libc" ; then
       # ugh!  it's not a symlink to a file named with the version, so
       # we try an alternative method.  this is mostly a hack based on
       # crude experimentation.  we run nm on the libc.so, search for
-      # "A" symbols with "GLIBC" in them, and grab the *second to*
+      # "A" symbols with "GLIBC_#.#.#" in them, and grab the *second to*
       # last one we find.  based on testing this method on some
       # versions of glibc where the version was in the filename, this
       # seems to give us the closest match to reality.  it'll
       # certainly work to give us the major + minor number, which is
       # mostly all we care about at this point...
-      _libc_ver=`nm $_libc|grep GLIBC|grep A|tail -2|head -1|awk '{print $3}'|cut -f2 -d_`
+      _libc_ver=`nm $_libc|$PERL -e 'while(<>){if(/.*A GLIBC_(\d)\.(\d)\.(\d)/){$s=$v;$v="$1.$2.$3"}}print "$s\n";'`
       break;
     fi
   done
@@ -353,11 +361,11 @@ if test "$_cv_opsys" = "LINUX" ; then
   fi
   AC_MSG_RESULT([GLIBC $_libc_ver])
   _cv_libc_kind="GLIBC"
-  _cv_libc_major=`echo $_libc_ver | cut -f1 -d.`
-  _cv_libc_minor=`echo $_libc_ver | cut -f2 -d.`
-  _cv_libc_patch=`echo $_libc_ver | cut -f3 -d.`
+  _cv_libc_major=`echo $_libc_ver | $CUT -f1 -d.`
+  _cv_libc_minor=`echo $_libc_ver | $CUT -f2 -d.`
+  _cv_libc_patch=`echo $_libc_ver | $CUT -f3 -d.`
 
-  _cv_libc_full=`echo $_cv_libc_kind $_cv_libc_major $_cv_libc_minor $_cv_libc_patch|perl -ane 'print "#define IS_".join('_',@F)." YES";'`
+  _cv_libc_full=`echo $_cv_libc_kind $_cv_libc_major $_cv_libc_minor $_cv_libc_patch|$PERL -ane 'print "#define IS_".join('_',@F)." YES";'`
   _cv_libc_majmin="#define IS_$_cv_libc_kind$_cv_libc_major$_cv_libc_minor YES"
   _cv_libc_is_kind="#define IS_$_cv_libc_kind YES"
 else
@@ -502,6 +510,15 @@ if test $ac_cv_c_compiler_gnu != yes; then
    AC_MSG_ERROR( [GNU CC (gcc) is required] )
 fi   
 
+AC_MSG_CHECKING([for full path to gcc])
+if test $WHICH != no; then
+  gcc_path=`which gcc`
+  AC_MSG_RESULT([$gcc_path])
+else
+  AC_MSG_RESULT([this platform does not support 'which'])
+fi
+
+
 # Figure out the version of gcc. 
 # This probably seems like a job for a regular expression, not a big
 # case statement.  however, in our experience, there's enough variation
@@ -512,7 +529,7 @@ fi
 # supported gcc version, we might as well catch them here, before they
 # get very far.
 AC_MSG_CHECKING([for exact version of gcc])
-gcc_vers=`gcc -v 2>&1 | tail -1 | perl  -ne '{/.*gcc version\s*(\S*).*/; print "$1\n"}'`
+gcc_vers=`gcc -v 2>&1 |$PERL -ne '{if(/.*gcc version\s*(\S*).*/){ print "$1\n";}}'`
 
 case "$gcc_vers" in
  "egcs-2.91.66" )
@@ -669,6 +686,13 @@ AC_PROG_CXX
 if test $ac_cv_cxx_compiler_gnu != yes; then
    AC_MSG_ERROR( [GNU C++ (g++) is required] )
 fi   
+AC_MSG_CHECKING([for full path to g++])
+if test $WHICH != no; then
+  gpp_path=`which g++`
+  AC_MSG_RESULT([$gpp_path])
+else
+  AC_MSG_RESULT([this platform does not support 'which'])
+fi
 
 #########
 # figure out what linker flags put us in static-link mode
@@ -804,7 +828,7 @@ if test $_cv_make_is_gnu = no; then
    AC_MSG_ERROR( [GNU make is required] )
 fi
 
-AC_CHECK_PROG(ac_patch,patch,patch,no)
+AC_PATH_PROG(ac_patch,patch,no,[$PATH])
 if test $ac_patch = no; then
     AC_MSG_ERROR( [patch is required] )
 fi
@@ -828,7 +852,7 @@ _EOF
 +A TEST
  hello world
 _EOF
-  patch < conftest_patch > /dev/null 2>&1
+  $ac_patch < conftest_patch > /dev/null 2>&1
   _patch_status=$?
   if test $_patch_status -eq 0 ; then
     # patch didn't return failure, but it still might not have
@@ -851,28 +875,36 @@ AC_PROG_LEX
 if test "$LEX" = "no" ; then
     AC_MSG_ERROR( [lex is required] )
 fi
+AC_MSG_CHECKING([for full path to $LEX])
+
+if test $WHICH != no; then
+  lex_path=`which $LEX`
+  AC_MSG_RESULT([$lex_path])
+else
+  AC_MSG_RESULT([this platform does not support 'which'])
+fi
 
 
 # We don't want to do the default AC_PROG_YACC, since it selects
 # "bison -y" if it can find it, and that doesn't work for the yacc
 # input in the Condor build.  So, we just manually check for byacc as
 # our first choice, then regular old yacc...
-AC_CHECK_PROG(ac_byacc,byacc,byacc,no)
-if test $ac_byacc = "byacc"; then
-  YACC=$ac_byacc
-else
-  AC_CHECK_PROG(ac_yacc,yacc,yacc,no)
+AC_PATH_PROG([ac_byacc],[byacc],[no],[$PATH])
+if test $ac_byacc = "no"; then
+  AC_PATH_PROG([ac_yacc],[yacc],[no],[$PATH])
   if test $ac_yacc = no; then
     AC_MSG_ERROR( [byacc or yacc is required] )
   else 
     YACC=$ac_yacc
   fi
+else
+  YACC=$ac_byacc
 fi
 AC_SUBST([YACC],[$YACC])
 
 # ar is used for numerous libraries in Condor, and for extracting
 # objects from the system libc.a for the Condor syscall library.
-AC_CHECK_PROG(ac_ar,ar,ar,no)
+AC_PATH_PROG(ac_ar,ar,no,[$PATH])
 if test $ac_ar = no; then
     AC_MSG_ERROR( [ar is required] )
 fi
@@ -988,7 +1020,11 @@ AC_CACHE_CHECK([for GNU tar],_cv_gnu_tar,
     if test -z "$a" ; then continue ; fi ;
     if ( sh -c "$a --version" 2> /dev/null | grep GNU  2>&1 > /dev/null );
     then
-      _cv_gnu_tar=$a;
+      if test $WHICH != no; then
+        _cv_gnu_tar=`$WHICH $a`;
+      else
+        _cv_gnu_tar="$a";
+      fi
       break;
     fi
   done;
@@ -1057,18 +1093,18 @@ else
 fi  
 
 # gzip is required for packaging up Condor releases. 
-AC_CHECK_PROG(ac_gzip,gzip,gzip,no)
+AC_PATH_PROG(ac_gzip,gzip,no,[$PATH])
 if test $ac_gzip = no; then
     AC_MSG_ERROR( [gzip is required] )
 fi
 
 # m4 is used to build PVM
-AC_CHECK_PROG(ac_m4prog,m4,m4,no)
+AC_PATH_PROG(ac_m4prog,m4,no,[$PATH])
 if test $ac_m4prog = no; then
     AC_MSG_ERROR( [m4 is required] )
 fi
 
-AC_CHECK_PROG(ac_purify,purify,purify,no)
+AC_PATH_PROG(ac_purify,purify,no,[$PATH])
 if test "$ac_purify" = "purify"; then
    AC_MSG_CHECKING([purify cache directory ($ac_cv_purecachedir)])
    if test -d $ac_cv_purecachedir && test -w $ac_cv_purecachedir ; then
