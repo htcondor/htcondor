@@ -458,6 +458,7 @@ Scheduler::update_central_mgr(int command)
 		dprintf(D_ALWAYS, "failed to update central manager!\n");
 }
 
+static int IsSchedulerUniverse(shadow_rec* srec);
 
 extern "C" {
 void
@@ -473,28 +474,40 @@ abort_job_myself(PROC_ID job_id)
 	// If there is no shadow, then simply call DestroyProc().
 
 	if ((srec = scheduler.FindSrecByProcID(job_id)) != NULL) {
-		// We found a shadow for this job
-		if (srec->match) {
-			dprintf( D_ALWAYS,
-					 "Found shadow record for job %d.%d, host = %s\n",
-					 job_id.cluster, job_id.proc, srec->match->peer);
+	     // We found a shadow for this job
+	     //if (srec->match) {
+
+	     // PVM jobs may not have a match  -Bin
+	     if (! IsSchedulerUniverse(srec)) {
+
+		  /* if there is a match printout the info */
+		  if (srec->match)
+		       dprintf( D_ALWAYS,
+				"Found shadow record for job %d.%d, host = %s\n",
+				job_id.cluster, job_id.proc, 
+				srec->match->peer);
+		  else 
+		       dprintf( D_ALWAYS,
+				"This job does not have a match -- It may be a PVM job.\nFound shadow record for job %d.%d\n",
+				job_id.cluster, job_id.proc);
+		  
 #if !defined(WIN32)	/* NEED TO PORT TO WIN32 */
-			if ( kill( srec->pid, SIGUSR1) == -1 )
-				dprintf(D_ALWAYS,
-						"Error in sending SIGUSR1 to %d errno = %d\n",
-						srec->pid, errno);
-			else dprintf(D_ALWAYS, "Send SIGUSR1 to Shadow Pid %d\n",
-						 srec->pid);
+		  if ( kill( srec->pid, SIGUSR1) == -1 )
+		       dprintf(D_ALWAYS,
+			       "Error in sending SIGUSR1 to %d errno = %d\n",
+			       srec->pid, errno);
+		  else dprintf(D_ALWAYS, "Send SIGUSR1 to Shadow Pid %d\n",
+			       srec->pid);
 #endif
-		} else {
-			dprintf( D_ALWAYS,
-					 "Found record for scheduler universe job %d.%d\n",
-					 job_id.cluster, job_id.proc);
+	     } else {
+		  dprintf( D_ALWAYS,
+			   "Found record for scheduler universe job %d.%d\n",
+			   job_id.cluster, job_id.proc);
 #if !defined(WIN32)	/* NEED TO PORT TO WIN32 */
-			kill( srec->pid, SIGKILL );
+		  kill( srec->pid, SIGKILL );
 #endif
-		}
-		srec->removed = TRUE;
+	     }
+	     srec->removed = TRUE;
 	} else {
 		// We did not find a shadow for this job; just remove it.
 		DestroyProc(job_id.cluster,job_id.proc);
