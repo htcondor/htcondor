@@ -69,8 +69,13 @@ Evaluate( Value& val ) const
 {
 	EvalState 	state;
 
-	state.SetScopes( parentScope );
-	return( Evaluate( state, val ) );
+	if (parentScope == NULL) {
+		val.SetErrorValue();
+		return false;
+	} else {
+		state.SetScopes( parentScope );
+		return( Evaluate( state, val ) );
+	}
 }
 
 
@@ -136,6 +141,17 @@ EvalState( )
 EvalState::
 ~EvalState( )
 {
+	/*
+	classad_hash_map< const ExprTree*, Value, ExprHash >::iterator i;
+
+	for (i = cache_to_delete.begin(); i != cache_to_delete.end(); i++) {
+		const ExprTree *tree = i->first;
+		fprintf(stderr, "**** Deleting tree: %x\n", tree);
+		delete tree;
+	}
+
+	*/	
+	return;
 }
 
 void EvalState::

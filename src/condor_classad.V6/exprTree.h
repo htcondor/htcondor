@@ -49,6 +49,15 @@ class EvalState {
 		ClassAd 	*curAd;
 
 		bool		flattenAndInline;	// NAC
+
+		// Cache_to_free are the things in the cache that must be
+		// freed when this gets deleted. The problem is that we put
+		// two kinds of things into the cache: some that must be
+		// freed, and some that must not be freed. We keep track of
+		// the ones that must be freed separately.  Memory managment
+		// is a pain! We should all use languages that do memory
+		// management for you.
+		//EvalCache   cache_to_delete; 
 };
 
 /** A node of the expression tree, which may be a literal, attribute reference,
@@ -116,10 +125,12 @@ class ExprTree
 		// ajr--made public on 4-nov-2002. Needed for user functions.
 		bool Evaluate( EvalState &, Value & ) const; 
 		
+		// This only works if the exprtree is within a ClassAd.
+		bool Evaluate( Value& v ) const;
+
   	protected:
 		ExprTree ();
 
-		bool Evaluate( Value& v ) const;
 		bool Evaluate( Value& v, ExprTree*& t ) const;
 		bool Flatten( Value& val, ExprTree*& tree) const;
 
