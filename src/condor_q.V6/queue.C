@@ -1598,6 +1598,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 	int		index;
 	ClassAd	*offer;
 	MatchClassAd mad;		// NAC
+	ClassAd *request_copy;	// NAC
 	Value	result;			// NAC
 	int		cluster, proc;
 	int		jobState;
@@ -1625,8 +1626,6 @@ doRunAnalysisToBuffer( ClassAd *request )
 	ExprTree *newRankExpr = NULL;
 	request->AddExplicitConditionals( rankExpr, newRankExpr );
 	request->Insert( ATTR_RANK, newRankExpr );
-
-	mad.ReplaceLeftAd( request );	// NAC
 
 	if( !request->EvaluateAttrString( ATTR_OWNER, owner, 128 ) ) {		// NAC
 		return "Nothing here.\n";										// NAC
@@ -1662,6 +1661,9 @@ doRunAnalysisToBuffer( ClassAd *request )
 			proc );
 		return big_return_buff;
 	}
+
+	request_copy = request->Copy( );
+	mad.ReplaceLeftAd( request_copy );	// NAC
 
   	startdAds.Open();
 	while( offer = startdAds.Next( ) ) {
