@@ -44,7 +44,8 @@ statically linked to avoid problems */
 
 #define PlatformFlags		ArchOptimizeFlag GlibCFlag
 
-#define PlatformLdFlags		-lbfd -liberty -lresolv
+/*#define PlatformLdFlags		-lbfd -liberty -lresolv */
+#define PlatformLdFlags		/usr/lib/libbfd.a /usr/lib/libiberty.a /usr/lib/libresolv.a
 
 #define SimpleLibC /usr/lib/libc.a
 #define LibC SimpleLibC
