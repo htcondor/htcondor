@@ -1290,8 +1290,6 @@ GahpClient::poll()
 	int i, result_reqid;
 	GahpClient* entry;
 	ExtArray<Gahp_Args*> result_lines;
-	
-	poll_pending = false;
 
 		// First, send the RESULTS comand to the gahp server
 	write_line("RESULTS");
@@ -1306,6 +1304,7 @@ GahpClient::poll()
 		dprintf(D_ALWAYS,"GAHP command 'RESULTS' failed\n");
 		return 0;
 	} 
+	poll_pending = false;
 	num_results = atoi(argv[1]);
 
 		// Now store each result line in an array.
