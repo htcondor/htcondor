@@ -1,6 +1,11 @@
 #ifndef CLASSAD_SUPPORT_H
 #define CLASSAD_SUPPORT_H
 
+/* This code may or may not be what you want. Please compare it with
+ * the dirty attribute stuff that has been added to Old ClassAds. 
+ * Currently, no one uses it.
+ */
+
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "string_list.h"
