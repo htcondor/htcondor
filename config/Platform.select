@@ -72,6 +72,23 @@
 #	undef IS_IRIX65
 #endif
 
+#if defined( IS_AIX )
+#	define PlatformIncludeFile <AIX.cf>
+#	if defined( IS_PPC )
+#		define ArchIncludeFile <AIX_PPC.cf>
+#		undef IS_PPC
+#	elif defined( IS_IA64 )
+#		define ArchIncludeFile <AIX_IA64.cf>
+#		undef IS_IA64
+#	endif
+#	undef IS_AIX
+#endif
+
+#if defined( IS_AIX5 )
+#	define OSVersionIncludeFile <AIX5.cf>
+#	undef IS_AIX5
+#endif 
+
 /***************************************************************************
 ** Undefine any symbols the compiler might have defined for us since
 ** they may trip us up later.
@@ -86,3 +103,4 @@
 #undef hpux
 #undef linux
 #undef mips
+#undef aix
