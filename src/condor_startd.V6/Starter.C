@@ -78,10 +78,17 @@ Starter::settype( int type )
 		if( tmp = param(buf) ) {
 			s_name = tmp;
 		} else {
-			dprintf( D_ALWAYS, 
-					 "ERROR: Can't find starter binary for type %d\n", type );
-			return FALSE;
+				// Try to be backwards compatible.
+			sprintf( buf, "ALTERNATE_STARTER_%d", type );
+			if( tmp = param(buf) ) {
+				s_name = tmp;
+			}
 		}
+	}
+	if( !s_name ) {
+		dprintf( D_ALWAYS, 
+				 "ERROR: Can't find starter binary for type %d\n", type );
+		return FALSE;
 	}
 
 #if defined( WIN32 ) 
