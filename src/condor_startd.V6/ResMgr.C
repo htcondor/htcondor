@@ -1136,8 +1136,8 @@ ResMgr::start_update_timer( void )
 {
 	up_tid = 
 		daemonCore->Register_Timer( update_interval, update_interval,
-									(TimerHandlercpp)&eval_and_update_all,
-									"eval_and_update_all", this );
+							(TimerHandlercpp)&ResMgr::eval_and_update_all,
+							"eval_and_update_all", this );
 	if( up_tid < 0 ) {
 		EXCEPT( "Can't register DaemonCore timer" );
 	}
@@ -1154,9 +1154,9 @@ ResMgr::start_poll_timer( void )
 	}
 	poll_tid = 
 		daemonCore->Register_Timer( polling_interval,
-									polling_interval, 
-									(TimerHandlercpp)&eval_all,
-									"poll_resources", this );
+							polling_interval, 
+							(TimerHandlercpp)&ResMgr::eval_all,
+							"poll_resources", this );
 	if( poll_tid < 0 ) {
 		EXCEPT( "Can't register DaemonCore timer" );
 	}
