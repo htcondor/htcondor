@@ -91,4 +91,20 @@
 6/14/94 DecAlpha_a6
 	Released to the world as "Condor_5.1a_DecAlpha".
 	
+* 6/22/94 bp_Local_Sun_Dec (Branch Point Tag)
+	This is the code running on our local pool Dec and Suns since around
+	2/11/94.  It is tagged with a "date" option for that date.  This
+	is to become the "local branch" Local_Sun_Dec which is intended to
+	include small improvements and patches to the local code.
+
+6/22/94 Local_Sun_Dec
+	This is the initial version of "latest local code" based on the above
+	bp_Local_Sun_Dec branch.
 	
+6/24/94 Local_Sun_Dec_2
+	Installed on both Sun and Dec in local pool this date.  Includes
+	use of AFS for file transfers, but not user code accesses to
+	data.  File transfers include
+		checkpoint file:		from submitting to executing machine
+		checkpoint file:		from executing machine to submitting machine
+		(abnormal) core file:	from executing machine to submitting machine
