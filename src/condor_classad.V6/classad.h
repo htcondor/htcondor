@@ -476,7 +476,6 @@ class ClassAd : public ExprTree
 		int         EvalFloat (const char *, class ClassAd *, float &);
 		int         EvalBool  (const char *, class ClassAd *, int &);
 
-
 // ClassAd methods
 
         ClassAd(FILE*,char*,int&,int&,int&);	// Constructor, read from file.
@@ -527,7 +526,9 @@ class ClassAd : public ExprTree
 		int LookupInScope( const std::string&, ExprTree*&, EvalState& ) const;
 		AttrList	attrList;
 };
-	
+
+std::ostream& operator<<(std::ostream &os, ClassAd &ad);
+
 END_NAMESPACE // classad
 
 #include "classadItor.h"

@@ -24,6 +24,7 @@
 #include "classad.h"
 #include "classadItor.h"
 #include "source.h"
+#include "sink.h"
 
 using namespace std;
 
@@ -1262,6 +1263,17 @@ isValidIdentifier( const string &str )
 
 		// valid if terminated at end of string
 	return( *ch == '\0' );
+}
+
+ostream& operator<<(ostream &stream, ClassAd &ad)
+{
+	PrettyPrint unparser;
+	string      string_representation;
+
+	unparser.Unparse(string_representation, &ad);
+	stream << string_representation;
+	
+	return stream;
 }
 
 END_NAMESPACE // classad
