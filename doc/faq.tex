@@ -65,6 +65,71 @@ more information on flocking.
 \index{Condor!distribution|)}
 \index{Condor!getting|)}
 
+\subsection{What do I do now? My installation of Condor does not work.}
+
+What to do to get Condor running properly depends on what sort of
+error occurs. 
+One common error category are communication errors.
+Condor daemon log files report a failure to bind.
+Or, the errors in the various log files may be of the form:
+
+\begin{verbatim}
+(date and time) Error sending update to collector(s)
+(date and time) Can't send end_of_message
+(date and time) Error sending UDP update to the collector
+
+(date and time) failed to update central manager
+
+(date and time) Can't send EOM to the collector
+\end{verbatim}
+
+This problem can also be observed by running \Condor{status}.
+It will give a message of the form:
+\begin{verbatim}
+Error:  Could not fetch ads --- error communication error
+\end{verbatim}
+
+To solve this problem, understand that
+Condor uses the first network interface it sees on the machine.
+Since machines often have more than one interface,
+this problem usually implies that the wrong network
+interface is being used.
+
+It is incorrect to use the localhost network interface.
+This has IP address 127.0.0.1 on all machines.
+To check if this incorrect IP address is being used,
+look at the contents of the
+CollectorLog file on the pool's
+your central manager right after it is started.  
+The contents will be of the form:
+
+\begin{verbatim}
+5/25 15:39:33 ******************************************************
+5/25 15:39:33 ** condor_collector (CONDOR_COLLECTOR) STARTING UP
+5/25 15:39:33 ** $CondorVersion: 6.2.0 Mar 16 2001 $
+5/25 15:39:33 ** $CondorPlatform: INTEL-LINUX-GLIBC21 $
+5/25 15:39:33 ** PID = 18658
+5/25 15:39:33 ******************************************************
+5/25 15:39:33 DaemonCore: Command Socket at <128.105.101.15:9618>
+\end{verbatim}
+
+The last line tells the IP address and port the collector has
+bound to and is listening on.
+If the IP address is 127.0.0.1, then Condor is definitely using the wrong
+network interface.
+
+There are two solutions to this problem.
+One solution changes the order of the network interfaces.
+The preferred solution
+sets which network interface Condor should use
+by adding the following parameter to the
+local Condor configuration file:
+
+\begin{verbatim}NETWORK_INTERFACE = machine-ip-address\end{verbatim}
+
+Where \verb@machine-ip-address@ is the IP address of the interface you wish
+Condor to use.
+
 \section{Setting up Condor}
 
 \subsection{How do I get more than one job to run on my SMP machine?}
