@@ -44,7 +44,7 @@ Daemon::Daemon( daemon_t type, const char* name, const char* pool )
 	_is_local = false;
 	memset( (void*)&_sin_addr, '\0', sizeof(struct in_addr) );
 
-	if( name ) {
+	if( name && name[0] ) {
 			// Make sure we fully resolve the hostname
 		_name = get_daemon_name( name );
 	} else {
@@ -297,10 +297,12 @@ Daemon::get_cm_info( const char* subsys, int port )
 		hostp = gethostbyaddr( (char*)&_sin_addr, 
 							   sizeof(struct in_addr), AF_INET ); 
 		if( ! hostp ) {
-				// BADNESS - what to do?
-			return false;
+				// BADNESS - what to do?  
+				// Whatever we do, this should not be a fatal error. -Todd
+			_full_hostname = strnewp(" ");
+		} else {
+			_full_hostname = strnewp( hostp->h_name );
 		}
-		_full_hostname = strnewp( hostp->h_name );
 	} else {
 			// We were given a hostname, not an address.
 		hostp = gethostbyname( host );
