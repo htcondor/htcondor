@@ -1537,32 +1537,34 @@ strCat( const char*, const ArgumentList &argList, EvalState &state,
 
 	for( int i = 0 ; (unsigned)i < argList.size() ; i++ ) {
 		Value  val;
+        Value  stringVal;
 
 		s = "";
 		if( !( rval = argList[i]->Evaluate( state, val ) ) ) {
 			break;
 		}
-		if( val.IsUndefinedValue( ) ) {
-			 undefFlag = true;
-		} else 
-		if( val.IsErrorValue() || val.IsClassAdValue() || val.IsListValue() ) {
-			errorFlag = true;
-			break;
-		} else {
-			if( val.IsStringValue( s ) ) {
-				buf += s;
-			} else {
-				unp.Unparse( s, val );
-				if( val.IsAbsoluteTimeValue() || val.IsRelativeTimeValue() ) {
-					buf += s.substr(1, s.size()-2 );
-				} else {
-					buf += s;
-				}
-			}
-		}
-	}
+
+        if (val.IsStringValue(s)) {
+            buf += s;
+        } else {
+            convertValueToStringValue(val, stringVal);
+            if (stringVal.IsUndefinedValue()) {
+                undefFlag = true;
+                break;
+            } else if (stringVal.IsErrorValue()) {
+                errorFlag = true;
+                result.SetErrorValue();
+                break;
+            } else if (stringVal.IsStringValue(s)) {
+                buf += s;
+            } else {
+                errorFlag = true;
+                break;
+            }
+        }
+    }
 	
-		// failed evaluating some argument
+    // failed evaluating some argument
 	if( !rval ) {
 		result.SetErrorValue( );
 		return( false );
@@ -1586,30 +1588,35 @@ bool FunctionCall::
 changeCase(const char*name,const ArgumentList &argList,EvalState &state,
 	Value &result)
 {
-	Value 		val;
+	Value 		val, stringVal;
 	string		str;
 	bool		lower = ( strcasecmp( name, "tolower" ) == 0 );
 	int			len;
 
-		// only one argument 
+    // only one argument 
 	if( argList.size() != 1 ) {
 		result.SetErrorValue( );
-		return( true );
+		return true;
 	}
 
-		// check for evaluation failure
+    // check for evaluation failure
 	if( !argList[0]->Evaluate( state, val ) ) {
 		result.SetErrorValue( );
-		return( false );
+		return false;
 	}
 
-		// only strings allowed; if so handover string from the object	
-	if( val.IsUndefinedValue( ) ) {
-		result.SetUndefinedValue( );
-		return( true );
-	} else if( !val.IsStringValue( str ) ) {
-		result.SetErrorValue( );
-		return( true );
+    if (!val.IsStringValue(str)) {
+        convertValueToStringValue(val, stringVal);
+        if (stringVal.IsUndefinedValue()) {
+            result.SetUndefinedValue( );
+            return true;
+        } else if (stringVal.IsErrorValue()) {
+            result.SetErrorValue();
+            return false;
+        } else if (!stringVal.IsStringValue(str)) {
+            result.SetErrorValue();
+            return false;
+        }
 	}
 
 	len = str.size( );
@@ -1716,8 +1723,8 @@ compareString( const char*name, const ArgumentList &argList, EvalState &state,
     }
 
     string  s0, s1;
-    if (   valueToString(arg0, arg0_s)
-        && valueToString(arg1, arg1_s)
+    if (   convertValueToStringValue(arg0, arg0_s)
+        && convertValueToStringValue(arg1, arg1_s)
         && arg0_s.IsStringValue(s0)
         && arg1_s.IsStringValue(s1)) {
 
@@ -1797,53 +1804,7 @@ convString(const char*, const ArgumentList &argList, EvalState &state,
 		return( false );
 	}
 
-    return valueToString(arg, result);
-}
-
-bool FunctionCall::valueToString(
-    Value &value,
-    Value &result)
-{
-	switch( value.GetType( ) ) {
-		case Value::UNDEFINED_VALUE:
-			result.SetUndefinedValue( );
-			return( true );
-
-		case Value::ERROR_VALUE:
-		  	result.SetErrorValue( );
-			return( true );
-
-	        case Value::STRING_VALUE:
-			result.CopyFrom( value );
-			return( true );
-
-		case Value::CLASSAD_VALUE:
-		case Value::LIST_VALUE:		  
-		case Value::INTEGER_VALUE:
-		case Value::REAL_VALUE:
-		case Value::BOOLEAN_VALUE:
-			{
-				ClassAdUnParser	unp;
-				string			svalue;
-				unp.Unparse( svalue, value );
-				result.SetStringValue( svalue );
-				return( true );
-			}
-
-		case Value::ABSOLUTE_TIME_VALUE:
-		case Value::RELATIVE_TIME_VALUE:
-			{
-				ClassAdUnParser	unp;
-				string			svalue;
-				unp.Unparse( svalue, value );
-				result.SetStringValue( svalue.substr(1,svalue.size()-2) );
-				return( true );
-			}
-
-		default:
-			EXCEPT( "Should not reach here" );
-	}
-	return( false );
+    return convertValueToStringValue(arg, result);
 }
 
 bool FunctionCall::

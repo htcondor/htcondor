@@ -203,90 +203,23 @@ Unparse( string &buffer, const Value &val )
 			return;
 		}
 		case Value::ABSOLUTE_TIME_VALUE: {
-			struct  tm tms;
-			time_t t;
-			char    TimeBuf[32], sign;
 			abstime_t	asecs;
-			int tzsecs;
-			val.IsAbsoluteTimeValue( asecs );
+			val.IsAbsoluteTimeValue(asecs);
 
 			buffer += "absTime(\"";
-			tzsecs = asecs.offset;  
-			t = asecs.secs;
-			if (tzsecs > 0) { 
-				sign = '+';         // timezone offset's sign
-			} else {
-				sign = '-';
-				tzsecs = -tzsecs;
-			}
-			getGMTime(&t, &tms);
-			strftime(TimeBuf, sizeof(TimeBuf), "%Y-%m-%dT%H:%M:%S", &tms);
-			buffer += TimeBuf;
-			sprintf(TimeBuf, "%c%02d%02d", sign, tzsecs / 3600, (tzsecs / 60) % 60);
-			buffer += TimeBuf;
-			buffer += "\")";
+            absTimeToString(asecs, buffer);
+            buffer += "\")";
 		
 			return;
 		}
 		case Value::RELATIVE_TIME_VALUE: {
-			double  rsecs;
-            double  fractional_seconds;
-			int     days, hrs, mins;
-            double  secs;
-
-			val.IsRelativeTimeValue( rsecs );
-		    
-            fractional_seconds = rsecs - trunc(rsecs);
+            double rsecs;
+            val.IsRelativeTimeValue(rsecs);
 
 			buffer += "relTime(\"";
-			if( rsecs < 0 ) {
-				buffer += "-";
-				rsecs = -rsecs;
-			}
-			days = (int) rsecs;
-			hrs  = days % 86400;
-			mins = hrs  % 3600;
-			secs = (mins % 60) + fractional_seconds;
-			days = days / 86400;
-			hrs  = hrs  / 3600;
-			mins = mins / 60;
-
-			if (days) {
-                if (fractional_seconds == 0) {
-                    sprintf(tempBuf, "%d+%02d:%02d:%02d\")", days, hrs, mins, (int) secs);
-                } else {
-                    sprintf(tempBuf, "%d+%02d:%02d:%02g\")", days, hrs, mins, secs);
-                }
-			  buffer += tempBuf;
-			  return;
-			}
-			if (hrs) {
-                if (fractional_seconds == 0) {
-                    sprintf(tempBuf, "%02d:%02d:%02d\")", hrs, mins, (int) secs);
-                } else {
-                    sprintf(tempBuf, "%02d:%02d:%02g\")", hrs, mins, secs);
-                }
-			  buffer += tempBuf;
-			  return;
-			}	  
-			if (mins) {
-                if (fractional_seconds == 0) {
-                    sprintf(tempBuf, "%02d:%02d\")", mins, (int) secs);
-                } else {
-                    sprintf(tempBuf, "%02d:%02g\")", mins, secs);
-                }
-                buffer += tempBuf;
-                return;
-			}	  
-			else {
-                if (fractional_seconds == 0) {
-                    sprintf(tempBuf, "%02d\")", (int) secs);
-                } else {
-                    sprintf(tempBuf, "%02g\")", secs);
-                }
-			  buffer += tempBuf;
-			}
-		  
+            relTimeToString(rsecs, buffer);
+            buffer += "\")";
+	  
 			return;
 		}
 		case Value::CLASSAD_VALUE: {

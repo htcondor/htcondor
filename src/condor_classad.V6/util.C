@@ -232,6 +232,83 @@ getGMTime(time_t *now, struct tm *gtm)
 	return;
 }
 
+void absTimeToString(const abstime_t &atime, string &buffer)
+{
+    int       tzsecs;
+    time_t    epoch_time;
+    char      timebuf[32], sign;
+    struct tm tms;
+
+    tzsecs = atime.offset;  
+    epoch_time = atime.secs;
+    if (tzsecs > 0) { 
+        sign = '+';         // timezone offset's sign
+    } else {
+        sign = '-';
+        tzsecs = -tzsecs;
+    }
+    getGMTime(&epoch_time, &tms);
+    strftime(timebuf, sizeof(timebuf), "%Y-%m-%dT%H:%M:%S", &tms);
+    buffer += timebuf;
+    sprintf(timebuf, "%c%02d%02d", sign, tzsecs / 3600, (tzsecs / 60) % 60);
+    buffer += timebuf;
+    return;
+}
+
+void relTimeToString(double rsecs, string &buffer)
+{
+    double  fractional_seconds;
+    int     days, hrs, mins;
+    double  secs;
+    char    timebuf[128];
+   
+    fractional_seconds = rsecs - trunc(rsecs);
+    
+    if( rsecs < 0 ) {
+        buffer += "-";
+        rsecs = -rsecs;
+    }
+    days = (int) rsecs;
+    hrs  = days % 86400;
+    mins = hrs  % 3600;
+    secs = (mins % 60) + fractional_seconds;
+    days = days / 86400;
+    hrs  = hrs  / 3600;
+    mins = mins / 60;
+    
+    if (days) {
+        if (fractional_seconds == 0) {
+            sprintf(timebuf, "%d+%02d:%02d:%02d", days, hrs, mins, (int) secs);
+        } else {
+            sprintf(timebuf, "%d+%02d:%02d:%02g", days, hrs, mins, secs);
+        }
+        buffer += timebuf;
+    } else if (hrs) {
+        if (fractional_seconds == 0) {
+            sprintf(timebuf, "%02d:%02d:%02d", hrs, mins, (int) secs);
+        } else {
+            sprintf(timebuf, "%02d:%02d:%02g", hrs, mins, secs);
+        }
+        buffer += timebuf;
+    } else if (mins) {
+        if (fractional_seconds == 0) {
+            sprintf(timebuf, "%02d:%02d", mins, (int) secs);
+        } else {
+            sprintf(timebuf, "%02d:%02g", mins, secs);
+        }
+        buffer += timebuf;
+        return;
+    } else {
+        if (fractional_seconds == 0) {
+            sprintf(timebuf, "%02d", (int) secs);
+        } else {
+            sprintf(timebuf, "%02g", secs);
+        }
+        buffer += timebuf;
+    }
+    return;
+}
+
 #ifdef WIN32
 int classad_isinf(double x) 
 {

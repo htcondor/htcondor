@@ -146,6 +146,8 @@ same stricmp("alain", "roy"), -1
 
 same tolower("ALAIN"), "alain")
 same toupper("alain"), "ALAIN")
+same tolower(true), "true")
+same toupper(true), "TRUE")
 
 same member(1, {1, 2, 3}), true
 same member(4, {1, 2, 3}), false
@@ -189,3 +191,34 @@ same $f, "August Aug"
 eval f = formatTime(splitTime($t), "%H:%M:%S")
 same $f, "15:04:05"
 eval f = formatTime($t)
+
+eval list0 = {}
+same size($list0), 0
+eval list1 = {1}
+same size($list1), 1
+eval list5 = {1, 2, 3, 4, 5}
+same size($list5), 5
+
+same sum($list0), undefined
+same avg($list0), undefined
+same min($list0), undefined
+same max($list0), undefined
+#### Do we really want these to be false and true?
+same anycompare("<", $list0, 3), false
+same allcompare("<", $list0, 3), true
+
+same sum($list1), 1
+same avg($list1), 1.0
+same min($list1), 1
+same max($list1), 1
+same anycompare("<", $list1, 3), true
+same allcompare("<", $list1, 3), true
+
+same sum($list5), 15
+same avg($list5), 3.0
+same min($list5), 1
+same max($list5), 5
+same anycompare("<", $list5, 3), true
+same allcompare("<", $list5, 3), false
+
+

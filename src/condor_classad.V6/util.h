@@ -51,6 +51,9 @@ void convert_escapes(std::string &text, bool &validStr);
 void getLocalTime(time_t *now, struct tm *localtm);
 void getGMTime(time_t *now, struct tm *localtm);
 
+void absTimeToString(const abstime_t &atime, std::string &buffer);
+void relTimeToString(double rtime, std::string &buffer);
+
 int classad_isinf(double x);
 int classad_isnan(double x);
 

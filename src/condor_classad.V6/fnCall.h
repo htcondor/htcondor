@@ -190,7 +190,6 @@ class FunctionCall : public ExprTree
 	static bool convReal(const char*,const ArgumentList&,EvalState&,Value&);
 	static bool convString(const char*,const ArgumentList&,EvalState&,
 						   Value&);
-    static bool valueToString(Value &value, Value &result);
 
 	static bool convBool(const char*,const ArgumentList&,EvalState&,Value&);
 	static bool convTime(const char*,const ArgumentList&,EvalState&,Value&);

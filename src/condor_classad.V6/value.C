@@ -529,4 +529,57 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
     return could_convert;
 }
 
+bool convertValueToStringValue(const Value value, Value &stringValue)
+{
+    bool             could_convert;
+	time_t	         rtvalue;
+	abstime_t        atvalue;
+    string           string_representation;
+    ClassAdUnParser  unparser;
+
+	switch(value.GetType()) {
+		case Value::UNDEFINED_VALUE:
+            stringValue.SetUndefinedValue();
+			could_convert = false;
+            break;
+
+        case Value::ERROR_VALUE:
+			stringValue.SetErrorValue();
+			could_convert = false;
+            break;
+
+        case Value::STRING_VALUE:
+            stringValue.CopyFrom(value);
+            could_convert = true;
+            break;
+
+		case Value::CLASSAD_VALUE:
+		case Value::LIST_VALUE:
+		case Value::BOOLEAN_VALUE:
+		case Value::INTEGER_VALUE:
+		case Value::REAL_VALUE:
+            unparser.Unparse(string_representation, value);
+            stringValue.SetStringValue(string_representation);
+            break;
+
+		case Value::ABSOLUTE_TIME_VALUE:
+			value.IsAbsoluteTimeValue(atvalue);
+            absTimeToString(atvalue, string_representation);
+			stringValue.SetStringValue(string_representation);
+			could_convert = true;
+            break;
+
+		case Value::RELATIVE_TIME_VALUE:
+			value.IsRelativeTimeValue(rtvalue);
+            relTimeToString(rtvalue, string_representation);
+			stringValue.SetStringValue(string_representation);
+			could_convert = true;
+            break;
+
+		default:
+			EXCEPT( "Should not reach here" );
+    }
+    return could_convert;
+}
+
 END_NAMESPACE // classad
