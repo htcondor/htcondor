@@ -438,11 +438,13 @@ daemon::Start()
 		// user (what's defined in CONDOR_IDS, "condor", etc)...
 	bool wants_condor_priv = false;
 	if ( strcmp(name_in_config_file,"COLLECTOR") == 0 ) {
-		command_port = param_get_collector_port();
+		DCCollector d;
+		command_port = d.port();
 		wants_condor_priv = true;
 	}
 	if ( strcmp(name_in_config_file,"NEGOTIATOR") == 0 ) {
-		command_port = param_get_negotiator_port();
+		Daemon d( DT_NEGOTIATOR );
+		command_port = d.port();
 		wants_condor_priv = true;
 	}
 
