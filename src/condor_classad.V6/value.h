@@ -109,12 +109,14 @@ class Value
 		*/
 		void SetErrorValue(void);
 
-		/** Sets an expression list value; previous value discarded.
+		/** Sets an expression list value; previous value discarded. You still own the ExprList:: it 
+            is not owned by the Value class, so it is your responsibility to delete it. 
 			@param l The list value.
 		*/
 		void SetListValue(ExprList* l);
 
-		/** Sets a ClassAd value; previous value discarded.
+		/** Sets a ClassAd value; previous value discarded. You still own the ClassA:, it 
+            is not owned by the Value class, so it is your responsibility to delete it. 
 			@param c The ClassAd value.
 		*/
 		void SetClassAdValue(ClassAd* c);	
@@ -124,7 +126,8 @@ class Value
 		*/
 		void SetStringValue( const std::string &str );
 
-		/** Sets a string value; previous value discarded.
+		/** Sets a string value; previous value discarded. The string is copied
+            so you may feel free to delete the original if you wish. 
 			@param str The string value.
 		*/
 		void SetStringValue( const char *str );
@@ -187,7 +190,7 @@ class Value
 			@return true iff the value is a string.
 		*/
 		bool IsStringValue( const char *&str ) const; 	
-		/** Checks if the value is a string.  
+		/** Checks if the value is a string and provides a copy of it in a buffer you provide
 			@param str A buffer to hold the string value.
 			@param len The size of the buffer.
 			@return true iff the value is a string.
@@ -202,12 +205,16 @@ class Value
 			@return true iff the value is an expression list.
 		*/
 		inline bool IsListValue(const ExprList*& l) const;
-		/** Checks if the value is an expression list.
-			@param l The expression list if the value is an expression list.
+		/** Checks if the value is an expression list. The ExprList returned is 
+            the original list put into the ClassAd, so you only own it if you own 
+            the original.
+			@param l The expression list if the value is an expression list. 
 			@return true iff the value is an expression list.
 		*/
 		inline bool IsListValue(ExprList*& l);
-		/** Checks if the value is an expression list.
+		/** Checks if the value is an expression list. The ExprList returned is 
+            the original list put into the ClassAd, so you only own it if you own 
+            the original.
 			@return true iff the value is an expression list.
 		*/
 		inline bool IsListValue() const;
@@ -216,12 +223,14 @@ class Value
 			@return true iff the value is a ClassAd.
 		*/
 		inline bool IsClassAdValue(const ClassAd *&c) const; 
-		/** Checks if the value is a ClassAd.
+		/** Checks if the value is a ClassAd. The ClassAd returned is 
+            the original list put into the ClassAd, so you only own it if you own 
+            the original.
 			@param c The ClassAd if the value is a ClassAd.
 			@return true iff the value is a ClassAd.
 		*/
 		inline bool IsClassAdValue(ClassAd *&c); 
-		/** Checks if the value is a ClassAd.
+		/** Checks if the value is a ClassAd. 
 			@return true iff the value is a ClassAd value.
 		*/
 		inline bool IsClassAdValue() const;
