@@ -11,7 +11,6 @@
 #include "image.h"
 #include "stubs.h"
 #include "file_table_interf.h"
-#include "condor_syscalls.h"
 
 #ifndef SIG_DFL
 #include <signal.h>

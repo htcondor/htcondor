@@ -25,7 +25,6 @@
 #include <sys/types.h>
 #include "file_state.h"
 #include "condor_constants.h"
-#include "condor_syscalls.h"
 #include "file_table_interf.h"
 
 static const int FI_RSC =			0; 		/* access via remote sys calls   */
