@@ -35,9 +35,6 @@ int _fxstat(int, int, struct stat *);
 int _lxstat(int, const char *, struct stat *);
 #endif
 
-	/* Temporary - need to get real PSEUDO definitions brought in... */
-#define PSEUDO_getwd	1
-
 #include "syscall_numbers.h"
 #include "condor_syscall_mode.h"
 #include "file_table_interf.h"
@@ -48,11 +45,9 @@ int _lxstat(int, const char *, struct stat *);
 #	endif
 #endif
 
-
-
 #include "debug.h"
 
-#if defined(IRIX53)
+#if defined(DL_EXTRACT)
 #   include <dlfcn.h>   /* for dlopen and dlsym */
 #endif
 
@@ -155,11 +150,11 @@ store_working_directory()
 #endif
 
 		/* Get the information */
-	status = getwd( tbuf );
+	status = getcwd( tbuf, sizeof(tbuf) );
 
 		/* This routine returns 0 on error! */
 	if( !status ) {
-		dprintf( D_ALWAYS, "getwd failed in store_working_directory()!\n" );
+		dprintf( D_ALWAYS, "getcwd failed in store_working_directory()!\n" );
 		Suicide();
 	}
 
@@ -475,62 +470,42 @@ ioctl( int fd, int request, caddr_t arg )
 }
 #endif
 
-#if defined(AIX32)
-	char *
-	getwd( char *path )
-	{
-		if( LocalSysCalls() ) {
-			return getcwd( path, _POSIX_PATH_MAX );
-		} else {
-			return (char *)REMOTE_syscall( CONDOR_getwd, path );
-		}
-	}
+int
+#if defined(LINUX)
+ftruncate( int fd, size_t length )
+#else
+ftruncate( int fd, off_t length )
 #endif
+{
+	int	rval;
+	int	user_fd;
+	int use_local_access = FALSE;
 
-#if defined(Solaris)
-char *
-	getwd( char *path )
-	{
-		if( LocalSysCalls() ) {
-			return (char *)GETCWD( path, _POSIX_PATH_MAX );
-		} else {
-			return (char *)REMOTE_syscall( CONDOR_getwd, path );
-		}
+	/* The below length check is a hack to patch an f77 problem on
+	   OSF1.  - Jim B. */
+
+	if (length < 0)
+		return 0;
+
+	if( (user_fd=MapFd(fd)) < 0 ) {
+		return (int)-1;
+	}
+	if( LocalAccess(fd) ) {
+		use_local_access = TRUE;
 	}
 
-	char *
-	getcwd( char *path, size_t size )
-	{
-		if( LocalSysCalls() ) {
-			return (char *)GETCWD( path, size );
-		} else {
-			return (char *)REMOTE_syscall( CONDOR_getwd, path );
-		}
-	}
-
-	int
-	ftruncate( int fd, off_t length )
-	{
-		int	rval;
-		int	user_fd;
-		int use_local_access = FALSE;
-	
-		if( (user_fd=MapFd(fd)) < 0 ) {
-			return (int)-1;
-		}
-		if( LocalAccess(fd) ) {
-			use_local_access = TRUE;
-		}
-	
-		if( LocalSysCalls() || use_local_access ) {
-			rval = FTRUNCATE( user_fd, length );
-		} else {
-			rval = REMOTE_syscall( CONDOR_ftruncate, user_fd, length );
-		}
-	
-		return rval;
-	}
+	if( LocalSysCalls() || use_local_access ) {
+#if defined( SYS_ftruncate )
+		rval = syscall( SYS_ftruncate, user_fd, length );
+#else 
+		rval = FTRUNCATE( user_fd, length );
 #endif
+	} else {
+		rval = REMOTE_syscall( CONDOR_ftruncate, user_fd, length );
+	}
+
+	return rval;
+}
 
 #if defined(AIX32)
 	int
@@ -592,9 +567,8 @@ char *
   are always statically linked, we just make a dummy here to avoid
   the problem.
 */
-
 void ldr_atexit() {}
-#endif
+#endif /* defined OSF1 */
 
 /* This has been added to solve the problem with the printf and fprintf 
 statements on alphas but have not enclosed it in ifdefs since it will not
@@ -603,7 +577,7 @@ harm to other platforms */
 #if !defined(LINUX)
 __write(int fd, char *buf, int size)
 {
-return write(fd,buf,size);
+	return write(fd,buf,size);
 }
 #endif
 
@@ -629,8 +603,8 @@ __read( int fd, void *buf, size_t len )
 {
 	return read(fd,buf,len);
 }
-#endif
-#endif
+#endif /* !defined(LINUX) */
+#endif /* defined(SYS_read) */
 
 #if defined( SYS_lseek )
 off_t
@@ -644,48 +618,9 @@ __lseek( int fd, off_t offset, int whence )
 {
 	return lseek(fd,offset,whence);
 }
-#endif
-#endif
+#endif /* !defined(LINUX) */
+#endif /* defined(SYS_lseek) */
 
-#if defined(OSF1)
-char *
-__getwd( char *path_name )
-{
-	return getwd(path_name);
-}
-
-#if defined( SYS_ftruncate )
-int
-ftruncate( int fd, off_t length )
-{
-	int	rval;
-	int	user_fd;
-	int use_local_access = FALSE;
-
-	/* The below length check is a hack to patch an f77 problem on
-	   OSF1.  - Jim B. */
-
-	if (length < 0)
-		return 0;
-
-	if( (user_fd=MapFd(fd)) < 0 ) {
-		return (int)-1;
-	}
-	if( LocalAccess(fd) ) {
-		use_local_access = TRUE;
-	}
-
-	if( LocalSysCalls() || use_local_access ) {
-		rval = syscall( SYS_ftruncate, user_fd, length );
-	} else {
-		rval = REMOTE_syscall( CONDOR_ftruncate, user_fd, length );
-	}
-
-	return rval;
-}
-#endif /* defined( SYS_ftruncate ) */
-
-#endif /* defined(OSF1) */
 #endif /* !defined(HPUX9) */
 
 #if defined(SYS_prev_stat) && defined(LINUX)
@@ -742,24 +677,6 @@ int _lxstat(int version, const char *path, struct stat *buf)
 }
 #endif
 
-#if defined(OSF1) || defined(IRIX53)
-char *getcwd ( char *buffer, size_t size )
-{
-	if (buffer == NULL) {
-		buffer = (char *)malloc(size);
-	}
-	fprintf(stderr, "getcwd called\n");
-	return getwd( buffer );
-}	
-#endif
-
-#if defined(IRIX53)
-char *_getcwd ( char *buffer, size_t size )
-{
-	fprintf(stderr, "_getcwd called\n");
-	return getcwd(buffer, size);
-}
-#endif
 
 /* fork() and sigaction() are not in fork.o or sigaction.o on Solaris 2.5
    but instead are only in the threads libraries.  We access the old
@@ -877,8 +794,7 @@ getlogin()
 #if defined( SYS_getlogin )
 		loc_rval = (char *) syscall( SYS_getlogin );
 		return loc_rval;
-#else
-#if defined(IRIX53) 
+#elif defined( DL_EXTRACT ) 
 		{
         void *handle;
         char * (*fptr)();
@@ -895,8 +811,7 @@ getlogin()
 #else
 		extern char *GETLOGIN();
 		return (  GETLOGIN() );
-#endif  /* of else part of IRIX53 */
-#endif	/* of else part of defined SYS_getlogin */
+#endif
 	} else {
 		if (loginbuf == NULL)
 			loginbuf = (char *)malloc(35);
@@ -987,3 +902,34 @@ __open64( const char* path, int oflag, ... ) {
 }
 
 #endif /* defined( Solaris26 ) */
+
+
+/* Special kill that allows us to send signals to ourself, but not any
+   other pids.  Written on 7/8 by Derek Wrigh <wright@cs.wisc.edu> */
+int
+kill( pid_t pid, int sig )
+{
+	int rval;
+	pid_t my_pid;	
+
+	if( LocalSysCalls() ) {
+			/* We're in local mode, do exactly what we were told. */
+		rval = SYSCALL( SYS_kill, pid, sig );
+	} else {
+			/* Remote mode.  Only allow signals to be sent to ourself.
+			   Call the same getpid() the user job is calling to see
+			   if it is trying to send a signal to itself */
+		my_pid = getpid();   
+		if( pid == my_pid ) {
+				/* The user job thinks it's sending a signal to
+				   itself... let that work by getting our real pid. */
+			my_pid = SYSCALL( SYS_getpid );
+			rval = SYSCALL( SYS_kill, my_pid, sig );			
+		} else {
+				/* We don't allow you to send signals to anyone else */
+			rval = -1;
+		}
+	}	
+	return rval;
+}
+
