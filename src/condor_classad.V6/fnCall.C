@@ -88,7 +88,7 @@ FunctionCall( )
 	      	functionTable["currenttime"	] =	(void*)currentTime;
 		functionTable["timezoneoffset"] =(void*)timeZoneOffset;
 		functionTable["daytime"		] =	(void*)dayTime;
-		functionTable["makedate"	] =	(void*)makeDate;
+        //functionTable["makedate"	] =	(void*)makeDate;
 		functionTable["getyear"		] =	(void*)getField;
 		functionTable["getmonth"	] =	(void*)getField;
 		functionTable["getdayofyear"] =	(void*)getField;
@@ -1166,6 +1166,7 @@ makeDate( const char*, const ArgumentList &argList, EvalState &state,
 	return( true );
 }
 
+#endif
 
 bool FunctionCall::
 getField(const char* name, const ArgumentList &argList, EvalState &state, 
@@ -1246,8 +1247,6 @@ getField(const char* name, const ArgumentList &argList, EvalState &state,
 	val.SetErrorValue( );
 	return( true );
 }
-
-#endif
 
 
 bool FunctionCall::
