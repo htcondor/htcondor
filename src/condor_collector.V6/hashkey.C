@@ -70,6 +70,7 @@ makeStartdAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	ExprTree *tree;
 	char buffer [30];
 	char buf2   [64];
+	int  inferred = 0;
 
 	// get the name of the startd
 	if (!(tree = ad->Lookup ("Name")))
@@ -91,7 +92,11 @@ makeStartdAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	}
 	
 	// get the IP and port of the startd 
-	tree = ad->Lookup ("STARTD_IP_ADDR");
+	tree = ad->Lookup (ATTR_STARTD_IP_ADDR);
+	
+	// if not there, try to lookup the old style "STARTD_IP_ADDR" string
+	if (!tree) tree = ad->Lookup ("STARTD_IP_ADDR");
+
 	if (tree)
 	{
 		strcpy (buffer, ((String *)tree->RArg())->Value());
@@ -101,12 +106,17 @@ makeStartdAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 		dprintf (D_FULLDEBUG,"Warning: No STARTD_IP_ADDR; inferring address\n");
 		strcpy (buffer, sin_to_string (from));	
 
-		// since we have done the work ...
 		sprintf (buf2, "%s = \"%s\"", "STARTD_IP_ADDR", buffer);
-		ad->Insert(buf2);
+		dprintf (D_FULLDEBUG, "(Inferred address: %s)\n", buf2);
+		inferred = 1;
 	}
 
 	parseIpPort (buffer, hk.ip_addr, hk.port);
+
+	// if the address was inferred, set the port to 0 --- the port is usually
+	// incorrectly inferred
+	if (inferred) 
+		hk.port = 0;
 
 	return true;
 }
@@ -118,6 +128,7 @@ makeScheddAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	ExprTree *tree;
 	char buffer [30];
 	char buf2   [64];
+	int  inferred = 0;
 
 	// get the name of the startd
 	if (!(tree = ad->Lookup ("Name")))
@@ -139,7 +150,11 @@ makeScheddAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	}
 	
 	// get the IP and port of the startd 
-	tree = ad->Lookup ("SCHEDD_IP_ADDR");
+	tree = ad->Lookup (ATTR_SCHEDD_IP_ADDR);
+	
+	if (!tree)
+		tree = ad->Lookup ("SCHEDD_IP_ADDR");
+
 	if (tree)
 	{
 		strcpy (buffer, ((String *)tree->RArg())->Value());
@@ -151,10 +166,14 @@ makeScheddAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 
         // since we have done the work ...
         sprintf (buf2, "%s = \"%s\"", "SCHEDD_IP_ADDR", buffer);
-        ad->Insert(buf2);
+		dprintf (D_FULLDEBUG, "(Inferred address: %s)\n", buf2);
+		inferred = 1;
 	}
 
 	parseIpPort (buffer, hk.ip_addr, hk.port);
+
+	if (inferred)
+		hk.port = 0;
 
 	return true;
 }
