@@ -1624,11 +1624,25 @@ bool SecMan :: invalidateHost(const char * sin)
         if (session_cache) {
             session_cache->key_table->startIterations();
             while (session_cache->key_table->iterate(id, keyEntry)) {
-                char * comp = sin_to_string(keyEntry->addr());
-                if (addr == MyString(comp)) {
-                    remove_commands(keyEntry);
+				char * remote_sinful = sin_to_string(keyEntry->addr());
+				if (addr == MyString(remote_sinful)) {
+					if (DebugFlags & D_FULLDEBUG) {
+						dprintf (D_SECURITY, "KEYCACHE: removing session %s for %s\n", id.Value(), remote_sinful);
+					}
+					remove_commands(keyEntry);
 					session_cache->remove(id.Value());
-                }
+				}
+				char * local_sinful = NULL;
+				keyEntry->policy()->LookupString( ATTR_SEC_SERVER_COMMAND_SOCK, &local_sinful);
+				if (addr == MyString(local_sinful)) {
+					if (DebugFlags & D_FULLDEBUG) {
+						dprintf (D_SECURITY, "KEYCACHE: removing session %s for %s\n", id.Value(), local_sinful);
+					}
+					// remove_commands shouldn't be necessary for incoming connections
+					// remove_commands(keyEntry);
+					session_cache->remove(id.Value());
+				}
+				free(local_sinful);
             }
         }
     }
