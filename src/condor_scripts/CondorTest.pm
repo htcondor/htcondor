@@ -107,6 +107,13 @@ sub RegisterExitedAbnormal
 
     $test{$handle}{"RegisterExitedAbnormal"} = $function_ref;
 }
+sub RegisterAbort
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterAbort"} = $function_ref;
+}
 
 sub DefaultOutputTest
 {
@@ -185,6 +192,18 @@ sub RunTest
 	Condor::RegisterExitAbnormal( sub {
 	    my %info = @_;
 	    die "$handle: FAILURE (got signal $info{'signal'})\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterAbort"} )
+    {
+	Condor::RegisterAbort( $test{$handle}{"RegisterAbort"} );
+    }
+    else
+    {
+	Condor::RegisterExitAbort( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (job aborted by user)\n";
 	} );
     }
 

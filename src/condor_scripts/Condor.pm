@@ -44,6 +44,7 @@ sub Reset
     undef $ExitedSuccessCallback;
     undef $ExitedFailureCallback;
     undef $ExitedAbnormalCallback;
+    undef $AbortCallback;
 }
 
 # submits job/s to condor, recording all variables from the submit
@@ -187,6 +188,11 @@ sub RegisterExitAbnormal
     my $sub = shift || croak "missing argument";
     $ExitedAbnormalCallback = $sub;
 }
+sub RegisterAbort
+{
+    my $sub = shift || croak "missing argument";
+    $AbortCallback = $sub;
+}
 
 sub Wait
 {
@@ -234,7 +240,8 @@ sub Monitor
 	}
 
 	# read line from log (if we're at EOF, wait and re-try)
-	unless( $line = <SUBMIT_LOG> )
+	$line = <SUBMIT_LOG>;
+	if( ! defined $line )
 	{
 #	    debug( "seeing nothing in $submit_info{'log'}, sleeping...\n" );
 	    sleep 1;
@@ -269,6 +276,7 @@ sub Monitor
 
 	    # read next line to see if job was checkpointed (but first
 	    # sleep for 5 seconds to give it a chance to appear)
+	    # [this should really loop like above, not sleep like this...]
 	    sleep 5;
 	    $line = <SUBMIT_LOG>;
 	    chomp $line;
@@ -423,6 +431,10 @@ sub Monitor
 	{
 	    # decrement # of queued jobs so we will know when to exit monitor
 	    $num_active_jobs--;
+	    
+	    # execute callback if one is registered
+	    &$AbortCallback( %info )
+		if defined $AbortCallback;
 	}
     }
     return 1;
