@@ -134,7 +134,11 @@ extern "C" void _condor_prestart( int syscall_mode );
 #include "setjmp.h"
 extern "C" {
 	int SETJMP( jmp_buf env );
+#if defined(LINUX)
+	void LONGJMP( const jmp_buf env, int retval );
+#else
 	void LONGJMP( jmp_buf env, int retval );
+#endif
 }
 
 long data_start_addr();
