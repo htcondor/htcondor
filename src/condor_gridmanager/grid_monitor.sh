@@ -183,6 +183,21 @@ my $username = (getpwuid($>))[0];
 
 my $STATUS_FILE = "$ENV{GLOBUS_LOCATION}/tmp/${GRID_AGENT_NAME}_log.$>";
 
+# Have encountered situations where LD_LIBRARY_PATH isn't set.
+# This shouldn't happen, but it's been seen.
+print "$ENV{LD_LIBRARY_PATH}\n";
+{
+	my $gl = $ENV{GLOBUS_LOCATION};
+	if(exists $ENV{'LD_LIBRARY_PATH'} 
+		and defined $ENV{'LD_LIBRARY_PATH'}
+		and length $ENV{'LD_LIBRARY_PATH'}) {
+		$ENV{'LD_LIBRARY_PATH'} .= ':';
+	} else {
+		$ENV{'LD_LIBRARY_PATH'} = '';
+	}
+	$ENV{'LD_LIBRARY_PATH'} .= "$ENV{GLOBUS_LOCATION}/lib";
+}
+
 my($last_grid_file_timestamp) = 0;
 
 
