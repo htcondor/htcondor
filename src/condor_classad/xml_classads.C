@@ -223,7 +223,9 @@ ClassAdXMLParser::ParseClassAd(FILE *file)
 {
 	FileXMLSource source(file);
 
-	return _ParseClassAd(source);
+	ClassAd *c = _ParseClassAd(source);
+
+	return c;
 }
 
 /**************************************************************************
@@ -242,20 +244,21 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 	XMLToken  *token;
 	ClassAd   *classad;
 	bool      in_classad;
-	bool      in_classads;
 	bool      in_attribute;
+	bool      done;
 	TagName   attribute_type;
 	MyString  attribute_name;
 	MyString  attribute_value;
 
 	classad = new ClassAd();
 
-	in_classad = false;
-	in_classads = false;
+	in_classad   = false;
 	in_attribute = false;
-	attribute_type = tag_NoTag;
+	done         = false;
 
-	while ((token = ReadToken(source)) != NULL) {
+	attribute_type = tag_NoTag;
+	
+	while (!done && (token = ReadToken(source)) != NULL) {
 		bool         is_end_tag;
 		TagName      tag_name;
 		XMLTokenType token_type;
@@ -356,6 +359,9 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 			break;
 		case tag_ClassAd:
 			if (is_end_tag) {
+				if (in_classad) {
+					done = true;
+				}
 				in_classad = false;
 				break;
 			} else {
@@ -384,7 +390,6 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 			break;
 		case tag_Bool:
 			attribute_type = tag_Bool;
-			printf("Got bool.\n");
 			{
 				MyString  to_insert;
 				
@@ -393,9 +398,6 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 
 				MyString bool_attribute_name, bool_attribute_value;
 				token->GetAttribute(bool_attribute_name, bool_attribute_value);
-				printf("name = %s, value = %s\n",
-					   bool_attribute_name.GetCStr(),
-					   bool_attribute_value.GetCStr());
 				if (bool_attribute_name == "v") {
 					if (bool_attribute_value == "t") {
 						to_insert += "TRUE";
@@ -868,7 +870,7 @@ FileXMLSource::FileXMLSource(FILE *file)
 
 /**************************************************************************
  *
- * Function: FileXMLSource desstructor
+ * Function: FileXMLSource destructor
  * Purpose:  
  *
  **************************************************************************/
