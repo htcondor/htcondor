@@ -4,6 +4,8 @@
 %e 2500
 %o 5000
 %{
+#include <string.h>
+#include <ctype.h>
 #include "scanner.h"
 #include "y.tab.h"
 
