@@ -47,11 +47,6 @@ UniShadow::updateFromStarter(int command, Stream *s)
 	ClassAd updateAd;
 	ClassAd *jobad = getJobAd();
 	char buf[300];
-	bool had_change = false;
-	bool disk_change = false;
-	bool image_change = false;
-	bool rusage_change = false;
-	bool state_change = false;
 	int int_val;
 	struct rusage rusage_val;
 	
@@ -72,20 +67,16 @@ UniShadow::updateFromStarter(int command, Stream *s)
 	int prev_image = remRes->getImageSize();
 	int prev_disk = remRes->getDiskUsage();
 	struct rusage prev_rusage = remRes->getRUsage();
-	ResourceState old_state = remRes->getResourceState();
 
 		// Stick everything we care about in our RemoteResource. 
 	remRes->updateFromStarter( &updateAd );
 
-		// First, update our local copy of the job classad for
+		// Now, update our local copy of the job classad for
 		// anything that's changed. 
-
 	int_val = remRes->getImageSize();
 	if( int_val > prev_image ) {
-		had_change = true;
-		image_change = true;
 		sprintf( buf, "%s=%d", ATTR_IMAGE_SIZE, int_val );
-		jobad->InsertOrUpdate( buf );
+		jobad->Insert( buf );
 
 			// also update the User Log with an image size event
 		JobImageSizeEvent event;
@@ -97,89 +88,28 @@ UniShadow::updateFromStarter(int command, Stream *s)
 
 	int_val = remRes->getDiskUsage();
 	if( int_val > prev_disk ) {
-		had_change = true;
-		disk_change = true;
 		sprintf( buf, "%s=%d", ATTR_DISK_USAGE, int_val );
-		jobad->InsertOrUpdate( buf );
+		jobad->Insert( buf );
 	}
 
 	rusage_val = remRes->getRUsage();
-	if( (rusage_val.ru_stime.tv_sec > prev_rusage.ru_stime.tv_sec) ||
-		(rusage_val.ru_utime.tv_sec > prev_rusage.ru_utime.tv_sec) ) {
-		had_change = true;
-		rusage_change = true;
+	if( rusage_val.ru_stime.tv_sec > prev_rusage.ru_stime.tv_sec ) {
+		sprintf( buf, "%s=%f", ATTR_JOB_REMOTE_SYS_CPU,
+				 (float)rusage_val.ru_stime.tv_sec );
+		jobad->Insert( buf );
 	}
-		
-	int total_susp, cumulative_susp, last_susp;
-	if( old_state != remRes->getResourceState() ) {
-			// We don't need to record anything in our classad, since
-			// RemoteResource::updateFromStarter() already did
-			// that.  We've just got to tell the schedd what changed. 
-		had_change = true;
-		state_change = true;
-			// grab the values we'll need, too
-		ClassAd *ad = getJobAd();
-		if( !ad->LookupInteger(ATTR_TOTAL_SUSPENSIONS, total_susp) ) {
-			total_susp = 0;
-		}
-		if( !ad->LookupInteger(ATTR_CUMULATIVE_SUSPENSION_TIME,
-							   cumulative_susp) ) { 
-			cumulative_susp = 0;
-		}
-		if( !ad->LookupInteger(ATTR_LAST_SUSPENSION_TIME, last_susp) ) {
-			last_susp = 0;
-		}
+	if( rusage_val.ru_utime.tv_sec > prev_rusage.ru_utime.tv_sec ) {
+		sprintf( buf, "%s=%f", ATTR_JOB_REMOTE_USER_CPU,
+				 (float)rusage_val.ru_utime.tv_sec );
+		jobad->Insert( buf );
 	}
 
+		// for now, we always try to update the job queue whenever we
+		// get more info from the starter.  in the future, we'll want
+		// to be smarter about this, have a timer, etc.
+	updateJobInQueue( U_PERIODIC );
 
-	if( ! had_change ) {
-			// we're done, no need to connect to the schedd
-		return TRUE;
-	}
-
-		// If we got this far, something changed, so we've got to
-		// connect to the schedd and tell it.
-	if ( ConnectQ(getScheddAddr(), SHADOW_QMGMT_TIMEOUT) ) {
-
-		if( image_change ) {
-			SetAttributeInt( getCluster(), getProc(), ATTR_IMAGE_SIZE,
-							 remRes->getImageSize() );
-		}
-
-		if( disk_change ) {
-			SetAttributeInt( getCluster(), getProc(), ATTR_DISK_USAGE,
-							 remRes->getDiskUsage() );
-		}
-
-		// update remote sys cpu
-		if( rusage_change ) {
-			SetAttributeFloat( getCluster(), getProc(),
-							   ATTR_JOB_REMOTE_SYS_CPU,
-							   rusage_val.ru_stime.tv_sec );
-
-			SetAttributeFloat( getCluster(), getProc(),
-							   ATTR_JOB_REMOTE_USER_CPU, 
-							   rusage_val.ru_utime.tv_sec );
-		}
-
-		if( state_change ) {
-			SetAttributeInt( getCluster(), getProc(),
-							 ATTR_TOTAL_SUSPENSIONS, total_susp ); 
-
-			SetAttributeInt( getCluster(), getProc(),
-							 ATTR_CUMULATIVE_SUSPENSION_TIME,
-							 cumulative_susp ); 
-
-			SetAttributeInt( getCluster(), getProc(),
-							 ATTR_LAST_SUSPENSION_TIME, last_susp ); 
-		}
-
-			// close our connection to the queue
-		DisconnectQ(NULL);
-
-		return TRUE;
-	}		
-	return FALSE;
+	return TRUE;
 }
 
 
@@ -275,20 +205,7 @@ UniShadow::shutDown( int reason )
 			// exit requirements are met; update the classad with
 			// the exit status so it is properly recorded in the
 			// history file.
-			if ( ConnectQ(getScheddAddr(), SHADOW_QMGMT_TIMEOUT) ) {
-				SetAttributeInt(getCluster(),getProc(),ATTR_JOB_EXIT_STATUS,
-					exit_value);
-				if(jobAd->LookupString(ATTR_EXCEPTION_HIERARCHY,buf)) {
-					SetAttributeString(getCluster(),getProc(),ATTR_EXCEPTION_HIERARCHY,buf);
-				}
-				if(jobAd->LookupString(ATTR_EXCEPTION_TYPE,buf)) {
-					SetAttributeString(getCluster(),getProc(),ATTR_EXCEPTION_TYPE,buf);
-				}
-				if(jobAd->LookupString(ATTR_EXCEPTION_NAME,buf)) {
-					SetAttributeString(getCluster(),getProc(),ATTR_EXCEPTION_NAME,buf);
-				}
-				DisconnectQ(NULL);
-			}
+			updateJobInQueue( U_TERMINATE );
 		} else {
 			// exit requirements expression is FALSE! 
 			EXCEPT("Job exited with status %d; failed %s expression",
