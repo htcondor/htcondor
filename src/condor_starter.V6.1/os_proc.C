@@ -526,9 +526,7 @@ OsProc::JobCleanup( int pid, int status )
 		// check to see if the job dropped a core file.  if so, we
 		// want to rename that file so that it won't clobber other
 		// core files back at the submit site.  
-	if( renameCoreFile() ) {
-		dumped_core = true;
-	}
+	checkCoreFile();
 
 	return 1;
 }
@@ -553,51 +551,86 @@ OsProc::JobExit( void )
 }
 
 
+
+void
+OsProc::checkCoreFile( void )
+{
+	MyString new_name;
+	new_name.sprintf( "core.%d.%d", Starter->jic->jobCluster(), 
+					  Starter->jic->jobProc() );
+
+		// Since Linux now writes out "core.pid" by default, we should
+		// search for that.  Try the JobPid of our first child:
+	MyString old_name;
+	old_name.sprintf( "core.%d", JobPid );
+	if( renameCoreFile(old_name.Value(), new_name.Value()) ) {
+			// great, we found it, renameCoreFile() took care of
+			// everything we need to do... we're done.
+		return;
+	}
+
+		// Now, just see if there's a file called "core"
+	if( renameCoreFile("core", new_name.Value()) ) {
+		return;
+	}
+
+		/*
+		  maybe we should check for other possible pids (either by
+		  using a Directory object to scan all the files in the iwd,
+		  or by using the procfamily to test all the known pids under
+		  the job).  also, you can configure linux to drop core files
+		  with other possible values, not just pid.  however, it gets
+		  complicated and it becomes harder and harder to tell if the
+		  core files belong to this job or not in the case of a shared
+		  file system where we might be running in a directory shared
+		  by many jobs...  for now, the above is good enough and will
+		  catch most of the problems we're having.
+		*/
+}
+
+
 bool
-OsProc::renameCoreFile( void )
+OsProc::renameCoreFile( const char* old_name, const char* new_name )
 {
 	bool rval = false;
 	int t_errno = 0;
 
-	priv_state old_priv;
+	MyString old_full;
+	MyString new_full;
 	const char* job_iwd = Starter->jic->jobIWD();
+	old_full.sprintf( "%s%c%s", job_iwd, DIR_DELIM_CHAR, old_name );
+	new_full.sprintf( "%s%c%s", job_iwd, DIR_DELIM_CHAR, new_name );
 
-	char buf[64];
-	sprintf( buf, "core.%d.%d", Starter->jic->jobCluster(), 
-			 Starter->jic->jobProc() );
-
-	MyString old_name( job_iwd );
-	MyString new_name( job_iwd );
-
-	old_name += DIR_DELIM_CHAR;
-	old_name += "core";
-
-	new_name += DIR_DELIM_CHAR;
-	new_name += buf;
+	priv_state old_priv;
 
 		// we need to do this rename as the user...
 	errno = 0;
 	old_priv = set_user_priv();
-	if( rename(old_name.Value(), new_name.Value()) != 0 ) {
-		// rename failed
+	if( rename(old_full.Value(), new_full.Value()) != 0 ) {
+			// rename failed
 		t_errno = errno; // grab errno right away
 		rval = false;
 	} else { 
-		// rename succeeded
+			// rename succeeded
 		rval = true;
    	}
 	set_priv( old_priv );
 
 	if( rval ) {
+		dprintf( D_FULLDEBUG, "Found core file '%s', renamed to '%s'\n",
+				 old_name, new_name );
+		if( dumped_core ) {
+			EXCEPT( "IMPOSSIBLE: inside OsProc::renameCoreFile and "
+					"dumped_core is already TRUE" );
+		}
+		dumped_core = true;
 			// make sure it'll get transfered back, too.
-		Starter->jic->addToOutputFiles( buf );
-		dprintf( D_FULLDEBUG, "Found core file, renamed to %s\n", buf );
+		Starter->jic->addToOutputFiles( new_name );
 	} else if( t_errno != ENOENT ) {
 		dprintf( D_ALWAYS, "Failed to rename(%s,%s): errno %d (%s)\n",
-				 old_name.Value(), new_name.Value(), t_errno,
+				 old_full.Value(), new_full.Value(), t_errno,
 				 strerror(t_errno) );
 	}
-
 	return rval;
 }
 
