@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: condor_clean_checkpoints,v 1.1.2.1.10.1 2004-05-14 16:18:40 weber Exp $
+# $Id: condor_clean_checkpoints,v 1.1.2.1.10.2 2004-05-14 19:01:22 weber Exp $
 
 # make sure to check the sendmail binary a little below in the script.
 # make sure to set up the email address correctly
@@ -30,7 +30,7 @@ $ENV{PATH} = $ENV{PATH} . ":/unsup/condor/bin";
 
 # Globals, constants
 (my $program = $0) =~ s|.*/||; # Name of this program.
-my $id = '$Id: condor_clean_checkpoints,v 1.1.2.1.10.1 2004-05-14 16:18:40 weber Exp $';
+my $id = '$Id: condor_clean_checkpoints,v 1.1.2.1.10.2 2004-05-14 19:01:22 weber Exp $';
 my $usage = qq{
 $program: clean checkpoint server files
 usage: $program  [options]
@@ -40,6 +40,7 @@ usage: $program  [options]
     -days           specify checkpoint file no-access days to preserve [def=70]
     -debug          run in debug,noexecute mode
     -version        print version information and exit
+    -[no]mail       do [not] send email [default = true]
 };
 my @invoke = ($0,@ARGV);	# save our invocation
 my $debug = 0;
@@ -47,13 +48,14 @@ my $days = 70; # ten weeks.
 chomp (my $hostname = `hostname`);
 my $mailhost = $hostname;
 my ($domain) = $hostname =~ /\.(.*)/;
+my $mail = 1;	# do send email
 
 parse();	# parse command line
 
 my ($sender,$recipient);
 my ($user);
+$user = $ENV{USER} || $ENV{LOGNAME};
 if ($debug) {
-	$user = $ENV{USER} || $ENV{LOGNAME};
 	$recipient = $user . '@' . $domain;		# debug recipient
 	$sender = $user . '@' . $domain;		# debug recipient
 } else {
@@ -83,6 +85,10 @@ foreach my $cdir (@cdirs)
 	push @ckpts, `find $cdir -name "cluster*.proc*.subproc*" -atime +$days -type f -print`;
 }
 chomp @ckpts;
+unless (@ckpts) {
+	print "no ckpts accessed in more than $days days.  Exiting\n" if $debug;
+	exit 0;
+}
 
 # make them fully qualified pathnames
 map s/^(.*)/$ckptdir\/$1/, @ckpts;
@@ -108,7 +114,6 @@ foreach my $cfile (@ckpts)
 	if ($debug) {
 		print "$cfile\n";
 	} else {
-		die;
 		unlink $cfile;
 	}
 }
@@ -116,12 +121,18 @@ my $df = `/bin/df -h  $ckptdir`;
 
 
 # send email about what files I removed
+exit 0 unless $mail;
 my $smtp = Net::SMTP->new($mailhost,Debug  => $debug,) or die;
 $smtp->mail($sender) or die;
 $smtp->to($recipient) or die;
 $smtp->data() or die;
 $smtp->datasend("To: $recipient\n") or die;
-$smtp->datasend("Subject: Cleaned Checkpoints: $hostname\n");
+if ($debug) {
+	$smtp->datasend("Subject: TEST: ignore\n");
+} else {
+	$smtp->datasend("Subject: Cleaned Checkpoints: $hostname\n");
+	#$smtp->datasend("Subject: TEST: ignore\n");
+}
 $smtp->datasend("\n") or die;
 #$smtp->datasend("A simple test message\n") or die;
 $smtp->datasend(
@@ -155,26 +166,6 @@ $smtp->datasend("days of ckpt no-access to preserve: $days\n");
 $smtp->datasend("\nEnd of message.\n");
 $smtp->dataend() or die;
 $smtp->quit or die;
-#open(EMAIL, "| $mailprog") or die "Failure to open email";
-#print EMAIL "HELO $hostname.cs.wisc.edu\n";
-#print EMAIL "MAIL FROM: $sender\n";
-#print EMAIL "RCPT TO: $recipient\n";
-#print EMAIL "DATA\n";
-#print EMAIL "Subject: Cleaned Checkpoints\n";
-#print EMAIL "To: $recipient\n";
-#print EMAIL "This is an automated mail from the checkpoint cleaning script.\n";
-#print EMAIL "This script: $0\n";
-#print EMAIL "may be found in root's crontab on $hostname(.cs.wisc.edu)\n\n";
-#print EMAIL "Here are the checkpoints I removed that hadn't been accessed\n";
-#print EMAIL "in $days days, freeing up about $space Megs...\n\n";
-#foreach $cfile (@ckpts)
-#{
-#	print EMAIL "$cfile\n";
-#}
-#print EMAIL "\nEnd of message.\n";
-#print EMAIL ".\n";
-#print EMAIL "QUIT\n";
-#close EMAIL;
 
 exit 0;
 # end of main program ##########################################################
@@ -193,6 +184,7 @@ sub parse() {
         "days=i"        => \$days,
         "version"       => sub { print $id, "\n"; exit 0; },
         "debug!"		=> \$debug,
+        "mail!"			=> \$mail,
     ) or die $usage;
 } # sub parse()
 
