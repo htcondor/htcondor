@@ -821,16 +821,16 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 		// If Matched is undefined, equate it with true.
 		if ( firstScheddContact ) {
 			sprintf( expr_buf, 
-				"(%s) && %s == %d && (%s =!= FALSE || %s =?= TRUE) && ((%s == %d || %s == %d || %s == %d) && %s =!= TRUE) == FALSE",
+				"(%s) && %s == %d && (%s =!= FALSE || %s =?= TRUE) && ((%s == %d || %s == %d || (%s == %d && %s == \"%s\")) && %s =!= TRUE) == FALSE",
 					 ScheddJobConstraint, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS, 
 					 ATTR_JOB_MATCHED, ATTR_JOB_MANAGED, ATTR_JOB_STATUS, HELD,
-					 ATTR_JOB_STATUS, COMPLETED, ATTR_JOB_STATUS, REMOVED, ATTR_JOB_MANAGED );
+					 ATTR_JOB_STATUS, COMPLETED, ATTR_JOB_STATUS, REMOVED, ATTR_GLOBUS_CONTACT_STRING, NULL_JOB_CONTACT, ATTR_JOB_MANAGED );
 		} else {
 			sprintf( expr_buf, 
-				"(%s) && %s == %d && %s =!= FALSE && %s != %d && %s != %d && %s != %d && %s =!= TRUE",
+				"(%s) && %s == %d && %s =!= FALSE && %s != %d && %s != %d && (%s != %d || %s != \"%s\") && %s =!= TRUE",
 					 ScheddJobConstraint, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
 					 ATTR_JOB_MATCHED, ATTR_JOB_STATUS, HELD, 
-					 ATTR_JOB_STATUS, COMPLETED, ATTR_JOB_STATUS, REMOVED, ATTR_JOB_MANAGED );
+					 ATTR_JOB_STATUS, COMPLETED, ATTR_JOB_STATUS, REMOVED, ATTR_GLOBUS_CONTACT_STRING, NULL_JOB_CONTACT, ATTR_JOB_MANAGED );
 		}
 		dprintf( D_FULLDEBUG,"Using constraint %s\n",expr_buf);
 		next_ad = GetNextJobByConstraint( expr_buf, 1 );
