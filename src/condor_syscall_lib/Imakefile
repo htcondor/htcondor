@@ -28,13 +28,8 @@ HAS_64BIT_STRUCTS = -DHAS_64BIT_STRUCTS
 	#endif
 #endif
 
-FILE_TABLE = -DFILE_TABLE
+FILE_TABLE = -DFILE_TABLE -I ZIncludePath
 FILE_TABLE_OBJ = file_state.o condor_file.o condor_file_basic.o condor_file_local.o condor_file_remote.o condor_file_special.o condor_file_agent.o condor_file_buffer.o condor_file_fd.o condor_file_compress.o file_table_interf.o
-
-#if DOES_COMPRESS_CKPT
-FILE_TABLE += -DCOMPRESS_FILES -I/s/zlib/include
-#endif
-
 
 #if IS_IRIX
 /* This silliness is because gcc 2.7.2 on IRIX cannot
@@ -241,7 +236,7 @@ SIMPLE_OBJ = condor_rt0.o extern_path.o xfer_file.o libcondorc++support.a
 SYSCALL_LIB = libcondorsyscall.a
 
 #if DOES_REMOTE_SYSCALLS
-all_target($(SYSCALL_LIB) $(COMPRESS_LIB) receivers.o $(SIMPLE_OBJ) $(AIX_OBJ) syscall-list)
+all_target($(SYSCALL_LIB) $(COMPRESS_LIB) receivers.o $(SIMPLE_OBJ) $(AIX_OBJ) syscall-list libz.a )
 #else 
 all_target($(SYSCALL_SUPPORT_OBJ) extern_path.o file_stream.o)
 #endif
@@ -454,6 +449,12 @@ strip_library(libcondorsyscall.a,$(STRIP_DIR)/lib)
 static_library(libcondorsyscall.a,$(STATIC_DIR)/lib)
 #endif
 
+#if DOES_CHECKPOINTING || DOES_REMOTE_SYSCALLS
+release_library(libz.a, $(RELEASE_DIR)/lib)
+strip_library(libz.a, $(STRIP_DIR)/lib)
+static_library(libz.a, $(STATIC_DIR)/lib)
+#endif
+
 #if DOES_COMPRESS_CKPT
 release_library($(COMPRESS_LIB),$(RELEASE_DIR)/lib)
 strip_library($(COMPRESS_LIB),$(STRIP_DIR)/lib)
@@ -531,6 +532,7 @@ import(../h,syscall_numbers.c)
 import(../condor_util_lib, stub_gen)
 import(../condor_shadow.V6, pseudo_ops.h)
 import(../condor_ckpt,libcondorc++support.a)
+import( ZLibPath , libz.a )
 
 authentication.o: authentication.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
