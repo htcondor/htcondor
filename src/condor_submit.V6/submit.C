@@ -59,7 +59,6 @@
 #include "which.h"
 
 #include "my_username.h"
-#include "config_util.h"
 #include "globus_utils.h"
 
 #include "list.h"
@@ -1668,7 +1667,8 @@ SetNotifyUser()
 			}
 		}
 		if( needs_warning && ! did_warning ) {
-			char* tmp = get_uid_domain();
+            char* tmp = param( "UID_DOMAIN" );
+
 			fprintf( stderr, "\nWARNING: You used \"%s = %s\" in your "
 					 "submit file.\n", NotifyUser, who );
 			fprintf( stderr, "This means notification email will go to "
@@ -3124,7 +3124,7 @@ init_params()
 		Flavor = strdup("none");
 	}
 
-	My_fs_domain = get_file_system_domain();
+	My_fs_domain = param( "FILESYSTEM_DOMAIN" );
 		// Will always return something, since config() will put in a
 		// value (full hostname) if it's not in the config file.  
 }
