@@ -101,6 +101,7 @@ int
 REMOTE_syscall( int syscall_num, ... )
 {
 	int		scm;
+	int		sigscm;
 	int		terrno;
 	int		rval;
 	sigset_t    mask, omask;
@@ -114,12 +115,14 @@ REMOTE_syscall( int syscall_num, ... )
 #if !defined(OSF1)
 		/* Block signals requesting an exit or checkpoint for duration of
 		   system call. */
+	sigscm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	sigemptyset( &mask );
 	sigaddset( &mask, SIGTSTP );
 	sigaddset( &mask, SIGUSR1 );
 	if( sigprocmask(SIG_BLOCK,&mask,&omask) < 0 ) {
 		EXCEPT( "sigprocmask" );
 	}
+	SetSyscalls( sigscm );
 #endif
 
 	switch( syscall_num ) {
