@@ -31,7 +31,7 @@
 #include "classad_collection_types.h"
 #include "MyString.h"
 #include "Set.h"
-
+#include "condor_distribution.h"
 
 template class List<char>; 		template class Item<char>;
 template class List<int>; 		template class Item<int>;
@@ -54,4 +54,6 @@ template class HashBucket<MyString,int>;
 template class HashTable<MyString, MyString>;
 template class HashBucket<MyString, MyString>;
 template class HashTable<MyString, KeyCacheEntry*>;
+template class TransparentSingletonAPI<Distribution>;
+
 
