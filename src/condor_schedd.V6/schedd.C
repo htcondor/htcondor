@@ -3422,7 +3422,7 @@ mark_job_stopped(PROC_ID* job_id)
 			ad = GetNextJob(0);
 		}
 	} else {
-		_mark_job_running(job_id);
+		_mark_job_stopped(job_id);
 	}
 }
 
