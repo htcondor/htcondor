@@ -3,21 +3,12 @@ SRC_DIR = $(SRC_TREE)/condor_classad.V6
 C_PLUS_FLAGS = -Wall $(STD_C_PLUS_FLAGS) -fno-implicit-templates
 CFLAGS = -Wall $(STD_C_FLAGS)
 
-SRC = domain.C operators.C attrrefs.C literals.C exprTree.C classad.C values.C \
-		fnCall.C instantiations.C source.C sink.C exprList.C lexerC
-		
-OBJ = lexer.o domain.o memman.o grammar.o operators.o attrrefs.o \
-		constants.o exprTree.o classad.o evalContext.o arguments.o values.o\
-		fnCall.o functions.o instantiations.o source.o sink.o predefContexts.o \
-		exprList.o classadList.o
+SRC = lexer.C source.C operators.C attrrefs.C fnCall.C literals.C exprTree.C \
+		classad.C exprList.C values.C instantiations.C sink.C domain.C
 
-SRCP = lexer.C source.C operators.C attrrefs.C fnCall.C literals.C exprTree.C \
-		classad.C exprList.C values.C instantiations.C sink.C \
-		testparser.C domain.C
 
-OBJP = lexer.o source.o operators.o attrrefs.o fnCall.o literals.o exprTree.o \
-		classad.o exprList.o values.o instantiations.o sink.o \
-		testparser.o domain.o
+OBJ = lexer.o source.o operators.o attrrefs.o fnCall.o literals.o exprTree.o \
+		classad.o exprList.o values.o instantiations.o sink.o domain.o
 
 LIB =  ./libclassad.a ../condor_c++_util/cplus_lib.a \
       ../condor_util_lib/util_lib.a ../condor_io/libcondor.a \
@@ -30,15 +21,9 @@ ULIB =  ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a \
 all_target(libclassad.a)
 
 library_target(libclassad.a,$(OBJ))
-c_plus_target (testlist, testlist.o, $(LIB))
-c_plus_target (testads, testads.o, $(LIB))
-c_plus_target (testlex, testlexer.o, lexer.o $(ULIB))
-c_plus_target (testp, $(OBJP), $(ULIB))
-pure_c_plus_target(testp.pure, $(OBJP), $(ULIB))
+c_plus_target (testeval, $(OBJ) testeval.o , $(LIB))
+C_target(testeval.C,testeval.o)
+pure_c_plus_target(testp.pure, $(OBJ), $(LIB))
 
 clean::
 	rm -f *.o 
-
-depend_target($(SRC))
-
-release:
