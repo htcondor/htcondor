@@ -1405,13 +1405,13 @@ sync( void )
 /* Solaris has a library entry fsync() which calls the system call fdsync. */
 
 #ifdef SYS_fdsync
-int fdsync( int fd )
+int fdsync( int fd, int flags )
 {
 	int	rval;
-	int	user_fd;
+	int	real_fd;
 	int use_local_access = FALSE;
 
-	if( (user_fd=MapFd(fd)) < 0 ) {
+	if( (real_fd=MapFd(fd)) < 0 ) {
 		return (int)-1;
 	}
 	if( LocalAccess(fd) ) {
@@ -1419,26 +1419,26 @@ int fdsync( int fd )
 	}
 
 	if( LocalSysCalls() || use_local_access ) {
-		rval = syscall( SYS_fdsync, user_fd );
+		rval = syscall( SYS_fdsync, real_fd, flags );
 	} else {
-		rval = REMOTE_syscall( CONDOR_fsync, user_fd );
+		rval = REMOTE_syscall( CONDOR_fsync, real_fd );
 	}
 
 	return rval;
 }
 
-int _fdsync( int fd )
+int _fdsync( int fd, int flags )
 {
-	fdsync(fd);
+	return fdsync(fd,flags);
 }
 
-int __fdsync( int fd )
+int __fdsync( int fd, int flags )
 {
-	fdsync(fd);
+	return fdsync(fd,flags);
 }
 
-int ___fdsync( int fd )
+int ___fdsync( int fd, int flags )
 {
-	fdsync(fd);
+	return fdsync(fd,flags);
 }
 #endif /* SYS_fdsync */
