@@ -22,7 +22,9 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 /* implements a simple cache. Also handles refreshes to keep cache
-elements from getting stale. */
+elements from getting stale. 
+
+IMPORTANT NOTE: Don't dprintf() in here, unless its a fatal error! */
 
 #include "condor_common.h"
 #include "passwd_cache.h"
@@ -236,7 +238,7 @@ passwd_cache::get_groups( const char *user, size_t groupsize, gid_t gid_list[] )
 	}
 
 	if ( cache_entry->gidlist_sz > groupsize ) {
-		dprintf(D_FULLDEBUG, "Inadequate size for gid list!\n");
+		dprintf(D_ALWAYS, "Inadequate size for gid list!\n");
 		return false;
 	}
 
@@ -376,7 +378,6 @@ passwd_cache::lookup_uid(const char *user, uid_entry *&uce) {
 	} else {
 		if ( (time(NULL) - uce->lastupdated) > Entry_lifetime ) {
 			/* time to refresh the entry! */
-			dprintf(D_FULLDEBUG, "uid cache entry expired for user %s\n", user);
 			cache_uid(user);
 			return (uid_table->lookup(user, uce) == 0);
 		} else {
@@ -398,7 +399,6 @@ passwd_cache::lookup_group(const char *user, group_entry *&gce) {
 	} else {
 		if ( (time(NULL) - gce->lastupdated) > Entry_lifetime ) {
 				/* time to refresh the entry! */
-			dprintf(D_FULLDEBUG, "uid cache entry expired for user %s\n", user);
 			cache_groups(user);
 			return (group_table->lookup(user, gce) == 0);
 		} else {
