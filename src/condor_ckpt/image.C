@@ -269,12 +269,12 @@ void
 Image::Save()
 {
 #if !defined(Solaris)
-	RAW_ADDR	data_start, data_end;
 	RAW_ADDR	stack_start, stack_end;
 #else
 	RAW_ADDR	addr_start, addr_end;
 	int             numsegs, prot, rtn, stackseg;
 #endif
+	RAW_ADDR	data_start, data_end;
 	ssize_t		pos;
 	int			i;
 
@@ -294,6 +294,20 @@ Image::Save()
 
 #else
 
+	// Note: the order in which the segments are put into the checkpoint
+	// file is important.  The DATA segment must be first, followed by
+	// all shared library segments, and then followed by the STACK
+	// segment.  There are two reasons for this: (1) restoring the 
+	// DATA segment requires the use of sbrk(), which is in libc.so; if
+	// we mess up libc.so, our calls to sbrk() will fail; (2) we 
+	// restore segments in order, and the STACK segment must be restored
+	// last so that we can immediately return to user code.  - Jim B.
+
+	// data segment is saved and restored as before, using sbrk()
+	data_start = data_start_addr();
+	data_end = data_end_addr();
+	AddSegment( "DATA", data_start, data_end, 0 );
+
 	numsegs = num_segments();
 	for( i=0; i<numsegs; i++ ) {
 		rtn = segment_bounds(i, addr_start, addr_end, prot);
@@ -311,8 +325,7 @@ Image::Save()
 			stackseg = i;	// don't add STACK segment until the end
 			break;
 		case 3:
-			AddSegment( "DATA", addr_start, addr_end, prot);
-			break;
+			break;		// don't add DATA segment again
 		default:
 			EXCEPT( "Internal error, segment_bounds"
 				"returned unrecognized value");
@@ -451,13 +464,23 @@ Image::Restore()
 	exit( 1 );
 }
 
+/* don't assume we have libc.so in a good state right now... - Jim B. */
+static int mystrcmp(const char *str1, const char *str2)
+{
+	while (*str1 != '\0' && *str2 != '\0' && *str1 == *str2) {
+		str1++;
+		str2++;
+	}
+	return (int) *str1 - *str2;
+}
+
 void
 Image::RestoreSeg( const char *seg_name )
 {
 	int		i;
 
 	for( i=0; i<head.N_Segs(); i++ ) {
-		if( strcmp(seg_name,map[i].GetName()) == 0 ) {
+		if( mystrcmp(seg_name,map[i].GetName()) == 0 ) {
 			if( (pos = map[i].Read(fd,pos)) < 0 ) {
 				perror( "SegMap::Read()" );
 				exit( 1 );
@@ -480,7 +503,7 @@ void Image::RestoreAllSegsExceptStack()
 	display_prmap();
 #endif
 	for( i=0; i<head.N_Segs(); i++ ) {
-		if( strcmp("STACK",map[i].GetName()) != 0 ) {
+		if( mystrcmp("STACK",map[i].GetName()) != 0 ) {
 			if( (pos = map[i].Read(fd,pos)) < 0 ) {
 				perror( "SegMap::Read()" );
 				exit( 1 );
@@ -742,13 +765,15 @@ SegMap::Read( int fd, ssize_t pos )
 	char	*ptr;
 	size_t	bytes_to_go;
 	size_t	read_size;
-
+	long	saved_len = len;
+	RAW_ADDR	saved_core_loc = core_loc;
 
 	if( pos != file_loc ) {
 		fprintf( stderr, "Checkpoint sequence error\n" );
 		exit( 1 );
 	}
-	if( strcmp(name,"DATA") == 0 ) {
+
+	if( mystrcmp(name,"DATA") == 0 ) {
 		orig_brk = (char *)sbrk(0);
 		if( orig_brk < (char *)(core_loc + len) ) {
 			brk( (char *)(core_loc + len) );
@@ -757,14 +782,14 @@ SegMap::Read( int fd, ssize_t pos )
 	}
 
 #if defined(Solaris)
-	else if ( strcmp(name,"SHARED LIB") == 0) {
+	else if ( mystrcmp(name,"SHARED LIB") == 0) {
 //		long pageSize = sysconf(_SC_PAGESIZE);
-		int zfd, dllSize = len;
+		int zfd, segSize = len;
 		if ((zfd = SYSCALL(SYS_open, "/dev/zero", O_RDWR)) == -1) {
 			perror("open");
 			exit(2);
 		}
-//		dllSize += pageSize - (dllSize % pageSize);
+//		segSize += pageSize - (segSize % pageSize);
 
 	  /* Some notes about mmap:
 	     - The MAP_FIXED flag will ensure that the memory allocated is
@@ -780,17 +805,17 @@ SegMap::Read( int fd, ssize_t pos )
 	       processes that might be accessing the same library. */
 
 //		fprintf(stderr, "Calling mmap(loc = 0x%lx, size = 0x%lx, "
-//			"prot = %d, fd = %d, offset = 0)\n", core_loc, dllSize,
+//			"prot = %d, fd = %d, offset = 0)\n", core_loc, segSize,
 //			prot|PROT_WRITE, zfd);
 
-		if ((MMAP((caddr_t)core_loc, (size_t)dllSize,
+		if ((MMAP((caddr_t)core_loc, (size_t)segSize,
 				prot|PROT_WRITE,
 				MAP_PRIVATE|MAP_FIXED, zfd,
 				(off_t)0)) == MAP_FAILED) {
 			perror("mmap");
 			fprintf(stderr, "Attempted to mmap /dev/zero at "
 				"address 0x%lx, size 0x%lx\n", core_loc,
-				dllSize);
+				segSize);
 			fprintf(stderr, "Current segmap dump follows\n");
 			display_prmap();
 			exit(3);
@@ -809,8 +834,8 @@ SegMap::Read( int fd, ssize_t pos )
 		// to need to mess with the system call mode, fd mapping tables,
 		// etc. as none of that would work considering we are overwriting
 		// them.
-	bytes_to_go = len;
-	ptr = (char *)core_loc;
+	bytes_to_go = saved_len;
+	ptr = (char *)saved_core_loc;
 	while( bytes_to_go ) {
 		read_size = bytes_to_go > 4096 ? 4096 : bytes_to_go;
 #if defined(Solaris)
