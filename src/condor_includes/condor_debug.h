@@ -59,7 +59,8 @@
 #define D_DAEMONCORE	(1<<18)
 #define D_COMMAND		(1<<19)
 #define D_BANDWIDTH		(1<<20)
-#define D_SECONDS		(1<<21)
+#define D_NETWORK		(1<<21)
+#define D_SECONDS		(1<<(D_MAXFLAGS-2))
 #define D_NOHEADER		(1<<(D_MAXFLAGS-1))
 #define D_ALL			(~(0))
 
