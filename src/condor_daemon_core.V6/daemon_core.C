@@ -6257,7 +6257,15 @@ BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock)
 {
 	for(int i = 0; i < 1000; i++) {
 		if ( !rsock->bind() ) {
-			dprintf(D_ALWAYS, "Failed to bind to command ReliSock -- system network might be misconfigured\n");
+			dprintf(D_ALWAYS, "Failed to bind to command ReliSock");
+
+#ifndef WIN32
+			dprintf(D_ALWAYS, "(Make sure your IP address is correct in /etc/hosts.)");
+#endif
+#ifdef WIN32
+			dprintf(D_ALWAYS, "(Your system network settings might be invalid.)");
+#endif
+
 			return FALSE;
 		}
 		// now open a SafeSock _on the same port_ choosen above
