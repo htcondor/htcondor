@@ -378,8 +378,9 @@ EvalTree(AttrList* my_classad,AttrList* req_classad, EvalResult* val)
 		return TRUE;	
 	}
 
-	// should never reach here
+	// should never reach here  [But it seems that we do. -Derek 11/21/97]
 	val->type = LX_ERROR;	
+	delete [] realName;
 	return TRUE;
 }
 
