@@ -278,7 +278,7 @@ class ProcAPI {
 
       @param pid The pid of the process you want info on.
       @param pi  A pointer to a procInfo structure.
-      @return A -1 is returned on failure, 0 otherwise.
+      @return A 0 on success, and number less than 0 on failure.
       @see procInfo
   */
   static int getProcInfo ( pid_t pid, piPTR& pi );
