@@ -158,6 +158,7 @@ string_to_sin(char *addr, struct sockaddr_in *sin)
 	string[temp] = '\0';
 	string[temp-6] = ':';
 	free(addrCpy);
+	return 1;
 }
 
 
