@@ -405,7 +405,7 @@ CondorFile * CondorFileTable::open_url( char *url, int flags, int mode, int allo
 			f = new CondorFileBuffer(new CondorFileRemote);
 		}
 	} else {
-		_condor_warning("I don't understand url (%s).",url);
+		_condor_warning(CONDOR_WARNING_KIND_BADURL,"I don't understand url (%s).",url);
 		errno = ENOENT;
 		return 0;
 	}
@@ -765,7 +765,7 @@ void CondorFileTable::check_safety( CondorFilePointer *fp )
 {
 	if( fp->info->read_bytes && fp->info->write_bytes && !fp->info->already_warned ) {
 		fp->info->already_warned = 1;
-		_condor_warning("File '%s' used for both reading and writing.  This is not checkpoint-safe.\n",fp->logical_name);
+		_condor_warning(CONDOR_WARNING_KIND_READWRITE,"File '%s' used for both reading and writing.  This is not checkpoint-safe.\n",fp->logical_name);
 	}
 }
 
@@ -1085,7 +1085,7 @@ int CondorFileTable::poll( struct pollfd *fds, int nfds, int timeout )
 			realfds[i].fd = _condor_get_unmapped_fd(fds[i].fd);
 			realfds[i].events = fds[i].events;
 		} else {
-			_condor_warning("poll() is not supported for remote files");
+			_condor_warning(CONDOR_WARNING_KIND_UNSUP,"poll() is not supported for remote files");
 			free(realfds);
 			errno = EINVAL;
 			return -1;
@@ -1138,7 +1138,7 @@ int CondorFileTable::select( int n, fd_set *r, fd_set *w, fd_set *e, struct time
 				if( (r && FD_ISSET(fd,r)) ||
 				    (w && FD_ISSET(fd,w)) ||
 				    (e && FD_ISSET(fd,e)) ) {
-					_condor_warning("select() is not supported for remote files.");
+					_condor_warning(CONDOR_WARNING_KIND_UNSUP,"select() is not supported for remote files.");
 					errno = EINVAL;
 					return -1;
 				}

@@ -200,7 +200,7 @@ MAIN( int argc, char *argv[], char **envp )
 	char	*extra;
 	int		scm;
 	char	*arg;
-	int		i, warning = TRUE;
+	int		i;
 	int	should_restart = FALSE;
 
 	char	ckpt_file[_POSIX_PATH_MAX];
@@ -291,13 +291,29 @@ MAIN( int argc, char *argv[], char **envp )
 		}
 
 			/* 
-			   '-_condor_nowarn' is only used when running a job
-			   linked for Condor outside of Condor to surpress the
-			   opening warning message.
+			   '-_condor_nowarn' is used to disable notice messages.
+			   It is a special case of '-_condor_warning' below and
+			   is kept for backwards compatibility.
 			*/
 		if( (strcmp(arg, "nowarn") == MATCH) ) {
-			_condor_warning_mode_set(0);
-			warning = FALSE;
+			_condor_warning_config(CONDOR_WARNING_KIND_NOTICE,CONDOR_WARNING_MODE_OFF);
+			continue;
+		}
+
+			/*
+			-_condor_warning <kind> <mode> is used to set the display
+			mode of a specific high-level warning message to ON, OFF, or ONCE.
+			*/
+
+		if( (strcmp(arg, "warning") == MATCH) ) {
+			char *kind, *mode;
+
+			kind = argv[++i];
+			mode = argv[++i];
+
+			if( !kind || !mode || !_condor_warning_config_byname(kind,mode) ) {
+				_condor_error_fatal("Bad arguments to -_condor_warning\nFirst must be one of: %s\nSecond must be one of: %s",_condor_warning_kind_choices(),_condor_warning_mode_choices());
+			}
 			continue;
 		}
 
@@ -436,16 +452,11 @@ MAIN( int argc, char *argv[], char **envp )
 		init_image_with_file_name( ckpt_file );
 
 		if( should_restart ) {
-			if( warning ) {
-				fprintf( stderr, "Condor: Will restart from %s\n",ckpt_file);
-			}
+			_condor_warning(CONDOR_WARNING_KIND_NOTICE,"Will restart from %s",ckpt_file);
 			restart();
 		} else {
-			if ( warning ) {
-				fprintf( stderr, "Condor: Will checkpoint to %s\n", ckpt_file );
-				fprintf( stderr, "Condor: Remote system calls disabled.\n");
-			} 
-
+			_condor_warning(CONDOR_WARNING_KIND_NOTICE,"Will checkpoint to %s",ckpt_file);
+			_condor_warning(CONDOR_WARNING_KIND_NOTICE,"Remote system calls disabled.");
 			SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 		}
 	}
