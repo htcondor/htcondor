@@ -133,7 +133,7 @@ OBJ =	syscall_mode.o shared_utils.o
 
     library_target(libcondorc++support.a,$(CPP_SUPPORT_OBJ))
 
-	release_target(libcondorc++support.a,$(RELEASE_DIR)/lib,OBJECT_MODE)
+	release_library(libcondorc++support.a,$(RELEASE_DIR)/lib)
 	strip_library(libcondorc++support.a,$(STRIP_DIR)/lib)
 	static_library(libcondorc++support.a,$(STATIC_DIR)/lib)
 

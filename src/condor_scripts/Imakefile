@@ -2,8 +2,8 @@ all_target(condor_install condor_init condor_compile ld)
 
 CFLAGS = $(STD_C_FLAGS)
 
-release_target(condor_install,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
-release_target(condor_init,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
+release_copy_target(condor_install,$(RELEASE_DIR)/sbin,condor_install,EXECUTABLE_MODE)
+release_copy_target(condor_init,$(RELEASE_DIR)/sbin,condor_init,EXECUTABLE_MODE)
 #if IS_CLIPPED
 release_copy_target(condor_compile.clipped,bin,condor_compile,EXECUTABLE_MODE)
 #else 
