@@ -73,6 +73,12 @@ public:
     return *this;
   }
 
+  friend MyString operator+(const MyString& S1, const MyString& S2) {
+    MyString S=S1;
+    S+=S2;
+    return S;
+  }
+
   const char* Value() const { return Data; }
   operator const char*() const { return Data; }
     
