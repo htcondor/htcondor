@@ -199,8 +199,8 @@ sub RunIt
 
     # Store the fields used
     $Hawkeye->StoreValue( "FIELDS" ,
-			  HawkeyePublish::TypeString,
-			  join( " ", keys %DfFields )  );
+			  join( " ", keys %DfFields ),
+			  HawkeyePublish::TypeString );
 
     # Now, walk through the point point array
     foreach $MountPoint ( keys %DfOut )
@@ -225,14 +225,14 @@ sub RunIt
 	    {
 		$Value = $1;
 		$Hawkeye->StoreValue( $Name,
-				      HawkeyePublish::TypeNumber,
-				      $Value );
+				      $Value,
+				      HawkeyePublish::TypeNumber );
 	    }
 	    else
 	    {
 		$Hawkeye->StoreValue( $Name,
-				      HawkeyePublish::TypeAuto,
-				      $Value );
+				      $Value,
+				      HawkeyePublish::TypeAuto );
 	    }
 	}
     }
