@@ -26,6 +26,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_accountant.h"
 #include "condor_io.h"
+#include "usagemon.h"
 
 class Matchmaker : public Service
 {
@@ -42,6 +43,9 @@ class Matchmaker : public Service
 
 		// command handlers
 		int RESCHEDULE_commandHandler (int, Stream*);
+		int RESET_ALL_USAGE_commandHandler(int, Stream*);
+		int RESET_USAGE_commandHandler(int, Stream*);
+		int SET_PRIORITYFACTOR_commandHandler(int, Stream*);
 		int SET_PRIORITY_commandHandler(int, Stream*);
 		int GET_PRIORITY_commandHandler(int, Stream*);
 
@@ -64,10 +68,11 @@ class Matchmaker : public Service
 		char *AccountantHost;		// who (if at all) is the accountant?
 		int  NegotiatorInterval;	// interval between negotiation cycles
 		int  NegotiatorTimeout;		// timeouts for communication
-		ExprTree *PreemptionHold;	// do not preempt if this expr evals to true
-		time_t PreemptionInterval;	// time between preemptions
+		ExprTree *PreemptionReq;	// only preempt if true
+		ExprTree *PreemptionRank; 	// rank preemption candidates
 
-		time_t LastPreemptionTime;	// time of last preemption
+		// network usage
+		UsageMonitor NetUsage;
 
 		// rank condition on matches
 		ExprTree *rankCondStd;;		// non-preemption (Rank > CurrentRank)
