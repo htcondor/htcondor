@@ -33,6 +33,9 @@ bool AppendEnvVariableSafely( char** env, char* name, char* value );
 // converts unix environ array to a single semicolon-delimited string
 char* environToString( const char** unix_env );
 
+// makes a copy of a unix environ array
+char** environDup( const char** env );
+
 // ********* This is the new world order:
 
 class Env {

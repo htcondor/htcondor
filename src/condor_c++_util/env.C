@@ -60,14 +60,24 @@ char*
 environToString( const char** env ) {
 	// fixed size is bad here but consistent with old code...
 	char *s = new char[ATTRLIST_MAX_EXPRESSION];
+	if( !s ) {
+		return NULL;
+	}
 	s[0] = '\0';
 	int len = 0;
-	for( int i = 0; env[i] && env[i][0] != '\0'; i++ ) {
+	for( int i = 0; env[i] != NULL; i++ ) {
 		len += strlen( env[i] ) + 1;
 		if ( len > ATTRLIST_MAX_EXPRESSION ) {
-			return s;
+			dprintf( D_ALWAYS, "ERROR: environToString(): "
+					 "ATTRLIST_MAX_EXPRESSION too small for env array!\n" );
+			delete[] s;
+			return NULL;
 		}
 		char *old = strdup( s );
+		if( !old ) {
+			delete[] s;
+			return NULL;
+		}
 		sprintf( s, "%s%c%s", old, env_delimiter, env[i] );
 		free( old );
 	}
@@ -76,18 +86,26 @@ environToString( const char** env ) {
 
 char**
 environDup( const char** env ) {
+	if( !env ) {
+		return NULL;
+	}
+
 	char **newEnv;
 	int i;
 
 	int numElements = 0;
-    for( i = 0; env[i] && env[i][0] != '\0'; i++ ) {
+    for( i = 0; env[i] != NULL; i++ ) {
 		 numElements++;
 	}
 
-	newEnv = (char **) malloc( numElements * sizeof( char* ) );
+	newEnv = (char **) malloc( (numElements + 1) * sizeof( char* ) );
+	if( !newEnv ) {
+		return NULL;
+	}
 	for( i = 0; i < numElements; i++ ) {
 		newEnv[i] = strdup( env[i] );
 	}
+	newEnv[i] = NULL;
 
 	return newEnv;
 }
