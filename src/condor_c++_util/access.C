@@ -163,7 +163,7 @@ int attempt_access(char *filename, int mode, int uid, int gid,
 
 	
 
-	Daemon my_schedd(DT_SCHEDD, NULL, NULL);
+	Daemon my_schedd(DT_SCHEDD, scheddAddress, NULL);
 
 	sock = my_schedd.startCommand(cmd, Stream::reli_sock, 0);
 	if( !sock ) {
