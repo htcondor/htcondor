@@ -1,3 +1,8 @@
+01/14/04 V6_6-post_merge-V6_6-full_redhat9_port-merge-1
+	This is state of the V6_6-branch AFTER I had merged in the
+	V6_6-full_redhat9_port-branch into V6_6-branch as tagged at
+	V6_6-full_redhat9_port-merge-1
+
 01/14/04 V6_6-pre_merge-V6_6-full_redhat9_port-merge-1
 	This is the premerge tag on the V6_6-branch which is BEFORE I checked
 	in the merge arena of V6_6-full_redhat9_port-branch into V6_6-branch 
