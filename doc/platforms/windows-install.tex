@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:NT-Install}Installation on Windows NT}
+\subsection{\label{sec:Windows-Install}Installation on Windows}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{installation!Windows NT|(}
@@ -43,7 +43,7 @@ to \Email{majordomo@cs.wisc.edu} with the body:
    subscribe condor-world 
 \end{verbatim}
 
-\subsection{Installation Requirements}
+\subsubsection{Installation Requirements}
 
 \begin{itemize}
 
@@ -58,7 +58,7 @@ disk space could be desired to be able to run jobs with large data files.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:NT-Preparing-to-Install}Preparing to Install
+\subsubsection{\label{sec:NT-Preparing-to-Install}Preparing to Install
 Condor under Windows NT} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -78,8 +78,10 @@ section~\ref{sec:nt-install-procedure} on
 page~\pageref{sec:nt-install-procedure}.
 If you are unsure, read on.
 
+\begin{itemize} 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{What machine will be the central manager?}
+\item{What machine will be the central manager?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 One machine in your pool must be the central manager.
@@ -103,7 +105,7 @@ Install Condor on the central manager before installing
 on the other machines within the pool.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Do I have enough disk space for Condor?}
+\item{Do I have enough disk space for Condor?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{Windows NT!installation!required disk space}
@@ -116,8 +118,11 @@ input files.  If you will be submitting large amounts of jobs,
 you should consider installing Condor on a volume with a large amount
 of free space.
 
+\end{itemize}
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:nt-install-procedure}
+\subsubsection{\label{sec:nt-install-procedure}
 Installation Procedure using the included Setup Program}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -395,7 +400,7 @@ are available.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:NT-Manual-Install}Manual Installation Condor on Windows NT}
+\subsubsection{\label{sec:NT-Manual-Install}Manual Installation Condor on Windows NT}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{Windows NT!manual install|(}
@@ -464,7 +469,7 @@ path is not supported at this time.
 \index{manual installation!Windows NT|)}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{nt-installed-now-what}
+\subsubsection{\label{nt-installed-now-what}
 Condor is installed... now what?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Windows NT!starting the Condor service|(}
@@ -510,7 +515,7 @@ Condor commands, such as \condor{q} and \condor{status}.
 \index{installation!Windows NT|)}
 \index{Windows NT!installation|)}
 
-\subsection{\label{nt-running-now-what}
+\subsubsection{\label{nt-running-now-what}
 Condor is running... now what?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

@@ -9,8 +9,12 @@
 **********************************************************************
 
 06/09/03 V6_5-doc-pre-merge-V6_4-doc-merge-2
-   The state of the doc directory in V6_5-branch just before merging
-   from V6_4-branch as tagged at V6_4-doc-merge-2.
+    The state of the doc directory in V6_5-branch just before merging
+    from V6_4-branch as tagged at V6_4-doc-merge-2.
+
+06/09/03 V6_4-doc-merge-2 
+    the state of the V6_4-branch before merging into V6_5-branch. 
+    This is to pick up the new chapter on platform-specific info. 
 
 04/07/03 V6_5-doc-pre-merge-V6_5_0-doc-merge-1
 	The state of the doc directory in V6_5-branch just before merging
@@ -41,7 +45,6 @@
     separately.  The previous merge that did both source and
     docs was the V6_4-merge-7.
     
-
 03/07/03 V6_4-merge-7
     the state of the V6_4-branch before merging into V6_5_0-branch
     (again).  this includes a few minor but important bug fixes that
