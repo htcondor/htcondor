@@ -38,6 +38,7 @@
 #include "debug.h"
 #include "clib.h"
 #include <string.h>
+#include "dgram_io_handle.h"
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
@@ -142,6 +143,36 @@ char	*host;
 	return sock;
 }
 
+
+
+/* create an unconnected datagram socket and bind(?) --Raghu */
+
+int
+udp_unconnect()
+{
+    int sock;
+    struct sockaddr_in cli_addr;
+
+    if( (sock=socket(AF_INET,SOCK_DGRAM,0)) < 0 ) {
+            dprintf(D_ALWAYS, "unconnected dgram socket()" );
+            EXCEPT("socket");
+        }
+
+    /* Bind */
+
+     bzero( (char *)&cli_addr, sizeof(cli_addr));   /* zero out */
+     cli_addr.sin_family = AF_INET;
+     cli_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+     cli_addr.sin_port = htonl(0);
+
+     if(bind(sock,(struct sockaddr *)&cli_addr, sizeof(cli_addr))<0) {      
+                dprintf(D_ALWAYS, " bind failed in unconnected dgram");
+                exit(1);
+     }
+     return sock;
+}
+
+
 unsigned short
 find_port_num( service_name, dflt_port )
 char	*service_name;
@@ -210,3 +241,22 @@ mk_config_name( const char *service_name )
 
 	return answer;
 }
+
+
+
+fill_dgram_io_handle(DGRAM_IO_HANDLE *handle, char *chost, int sock_fd, int port_num)
+{
+   struct hostent *serv_p;
+   handle->sock = sock_fd;
+
+   if((serv_p = gethostbyname(chost))== NULL) {
+         EXCEPT("gethostbyname()");
+   }
+   
+   bzero((char *)&(handle->addr), sizeof(handle->addr));
+   memcpy((void *) &((handle->addr).sin_addr), serv_p->h_addr, serv_p->h_length);
+   
+   (handle->addr).sin_family = AF_INET;
+   (handle->addr).sin_port = htons(port_num);
+
+ }
