@@ -46,6 +46,7 @@
 #include "except.h"
 #include "exit.h"
 #include "condor_uid.h"
+#include "basename.h"
 
 
 FILE *debug_lock(int debug_level);
@@ -292,8 +293,9 @@ dprintf(int flags, char* fmt, ...)
 FILE *
 debug_lock(int debug_level)
 {
-	int			length;
+	int			length, open_errno, retry = 0;
 	priv_state	priv;
+	char*		dirpath = NULL;
 
 	if ( DebugFP == NULL ) {
 		DebugFP = stderr;
@@ -306,17 +308,57 @@ debug_lock(int debug_level)
 		if( LockFd < 0 ) {
 			LockFd = open(DebugLock,O_CREAT|O_WRONLY,0660);
 			if( LockFd < 0 ) {
-					/* 
-					   if( errno == ENOENT ) { ...
-
-					   We should try creating the parent directory,
-					   both as condor, and as root.  If we can only
-					   create it as root, we should set the ownership
-					   back to condor when we're done.
-					*/
-				fprintf( stderr, "Can't open \"%s\", errno: %d (%s)\n",
-						 DebugLock, errno, strerror(errno) );
-				dprintf_exit();
+				open_errno = errno;
+				if( errno == ENOENT ) {
+						/* 
+						   No directory: Try to create the directory
+						   itself, first as condor, then as root.  If
+						   we created it as root, we need to try to
+						   chown() it to condor.
+						*/ 
+					dirpath = dirname( DebugLock );
+					errno = 0;
+					if( mkdir(dirpath, 0777) < 0 ) {
+						if( errno == EACCES ) {
+								/* Try as root */ 
+							_set_priv(PRIV_ROOT, __FILE__, __LINE__, 0);
+							if( mkdir(dirpath, 0777) < 0 ) {
+								/* We failed, we're screwed */
+								fprintf( stderr, "Can't create lock directory \"%s\", "
+										 "errno: %d (%s)\n", dirpath, errno, 
+ 										 strerror(errno) );
+							} else {
+								/* It worked as root, so chown() the
+								   new directory and set a flag so we
+								   retry the open(). */
+								chown( dirpath, get_condor_uid(),
+									   get_condor_gid() );
+								retry = 1;
+							}
+							_set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
+						} else {
+								/* Some other error than access, give up */ 
+							fprintf( stderr, "Can't create lock directory: \"%s\""
+									 "errno: %d (%s)\n", dirpath, errno, 
+									 strerror(errno) );							
+						}
+					} else {
+							/* We succeeded in creating the directory,
+							   try the open() again */
+						retry = 1;
+					}
+						/* At this point, we're done with this, so
+						   don't leak it. */
+					free( dirpath );
+				}
+				if( retry ) {
+					LockFd = open(DebugLock,O_CREAT|O_WRONLY,0660);
+				}
+				if( LockFd < 0 ) {
+					fprintf( stderr, "Can't open \"%s\", errno: %d (%s)\n",
+							 DebugLock, open_errno, strerror(open_errno) );
+					dprintf_exit();
+				}
 			}
 		}
 
