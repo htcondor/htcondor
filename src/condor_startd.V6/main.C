@@ -60,7 +60,6 @@ char		*log_path=NULL;
 char		*spool_path=NULL;
 char		*exec_path=NULL;
 char		*mail_path=NULL;
-char		*client=NULL;
 char		*AccountantHost=NULL;
 extern char	*uptime_path;
 extern	char	*pstat_path;
