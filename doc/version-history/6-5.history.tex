@@ -6,6 +6,44 @@ This is the development release series of Condor,
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:New-6-5-4}Version 6.5.4}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item The \Condor{startd} will now immediately exit with a fatal error
+  if there is a syntax error in any of the policy expressions
+  (\MacroNI{START}, \MacroNI{SUSPEND}, \MacroNI{PREEMPT}, etc) as
+  defined in the configuration file.
+  Before, the \Condor{startd} might run for a long time before
+  reporting the error, or would silently ignore the expression.
+  For example, if the \MacroNI{START} expression contained a syntax
+  error, the \Condor{startd} would never match against any resources
+  without warning the administrator that the \MacroNI{START}
+  expression could not be parsed.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:New-6-5-3}Version 6.5.3}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
