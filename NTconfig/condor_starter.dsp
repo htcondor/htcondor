@@ -225,6 +225,14 @@ SOURCE=..\src\condor_starter.V6.1\stream_handler.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_starter.V6.1\tool_daemon_proc.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\tool_daemon_proc.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_starter.V6.1\user_proc.C
 # End Source File
 # Begin Source File

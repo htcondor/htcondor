@@ -1,13 +1,6 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_drmaa.mak
 
 ..\src\condor_drmaa\auxDrmaa.c : \
-	"..\..\..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_drmaa\auxDrmaa.h"\
 	"..\src\condor_drmaa\drmaa_common.h"\
 	"..\src\condor_drmaa\lib_condor_drmaa.h"\
@@ -28,13 +21,6 @@
 	
 
 ..\src\condor_drmaa\drmaa_common.c : \
-	"..\..\..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_drmaa\auxDrmaa.h"\
 	"..\src\condor_drmaa\lib_condor_drmaa.h"\
 	"..\src\condor_includes\cedar_enums.h"\
@@ -54,13 +40,6 @@
 	
 
 ..\src\condor_drmaa\libDrmaa.c : \
-	"..\..\..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_drmaa\auxDrmaa.c"\
 	"..\src\condor_drmaa\auxDrmaa.h"\
 	"..\src\condor_drmaa\drmaa_common.h"\
