@@ -9,4 +9,4 @@ condor_vacate
 watch_status
 block_jobs
 condor_customize
-
+condor_jobqueue
