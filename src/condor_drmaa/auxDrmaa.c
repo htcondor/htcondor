@@ -174,6 +174,14 @@ static int generate_unique_file_name(char** fname);
 */
 static int write_job_attr(FILE* fs, const job_attr_t* ja);
 
+/** Handles the DRMAA placeholders:
+      $drmaa_incr_ph$
+      $drmaa_hd_ph$
+      $drmaa_wd_ph$
+    @return newly allocated string with substituted placeholders
+ */
+static char * substitute_placeholders(const char *orig);
+
 /** Writes a given vector job attribute to the opened submit file file stream.
     Assumes that ja is valid.
     @return number of characters written or negative if an error occurred
@@ -793,11 +801,78 @@ generate_unique_file_name(char** fname)
     return SUCCESS;
 }
 
+static char * 
+substitute_placeholders(const char *orig)
+{
+    char *result = NULL, *tmp, *loc;
+    int i, j;
+
+    /* Test if orig contains any placeholders */
+    if (strstr(orig, DRMAA_PLACEHOLDER_INCR) == NULL &&
+	strstr(orig, DRMAA_PLACEHOLDER_HD) == NULL &&
+	strstr(orig, DRMAA_PLACEHOLDER_WD) == NULL){
+
+	result = strdup(orig);
+    }
+    else {
+	result = (char*)malloc(strlen(orig) + 1000);
+	tmp = strdup(orig);
+
+	/* $drmaa_incr_ph$ */	
+	if ((loc = strstr(tmp, DRMAA_PLACEHOLDER_INCR)) != NULL){
+	    for (i=0; &tmp[i] != loc; i++){
+		result[i] = tmp[i];
+	    }
+	    result[i] = '\0';	    
+
+	    strcat(result, "$(Process)");
+	    j = i + strlen("$(Process)");
+	    i += strlen(DRMAA_PLACEHOLDER_INCR);
+
+	    for(; tmp[i] != '\0'; i++, j++){
+		result[j] = tmp[i];
+	    }
+	    result[j] = '\0';
+	    
+	    free(tmp);
+	    tmp = strdup(result);
+	}
+
+	/* $drmaa_hd_ph$ */
+	if ((loc = strstr(tmp, DRMAA_PLACEHOLDER_HD)) != NULL){
+	    for(i=0; &tmp[i] != loc; i++){
+		result[i] = tmp[i];
+	    }
+	    result[i] = '\0';
+
+	    strcat(result, "$ENV(HOME)");  /* TODO: UNIX vs Windows */
+	    j = i + strlen("$ENV(HOME)");
+	    i += strlen(DRMAA_PLACEHOLDER_HD);
+	    
+	    for(; tmp[i] != '\0'; i++, j++){
+		result[j] = tmp[i];
+	    }
+	    result[j] = '\0';
+
+	    free(tmp);
+	    tmp = strdup(result);
+	}
+
+	/* $drmaa_wd_ph$ */
+	// TODO:  may involve initialdir
+
+	free(tmp);
+    }
+
+    return result;
+}
+
 static int 
 write_job_attr(FILE* fs, const job_attr_t* ja)
 {
     int result = FAILURE;
     int num_bw;
+    char *sub_ph;
 
     if (strcmp(ja->name, DRMAA_REMOTE_COMMAND) == 0){
 	num_bw = fprintf(fs, "%-*s= %s\n", SUBMIT_FILE_COL_SIZE, 
@@ -839,19 +914,24 @@ write_job_attr(FILE* fs, const job_attr_t* ja)
     }
     */
     else if (strcmp(ja->name, DRMAA_INPUT_PATH) == 0){
-	// TODO: $drmaa_incr_ph$, $drmaa_hd_ph$, $drmaa_wd_ph$
+	sub_ph = substitute_placeholders(ja->val.value);
 	num_bw = fprintf(fs, "%-*s= %s\n", SUBMIT_FILE_COL_SIZE, 
-			       "Input", ja->val.value);
+			       "Input", sub_ph);
+	free(sub_ph);
     }
     else if (strcmp(ja->name, DRMAA_OUTPUT_PATH) == 0){
 	// TODO: remove this quick and dirty implementation
+	sub_ph = substitute_placeholders(ja->val.value);
 	num_bw = fprintf(fs, "%-*s= %s\n", SUBMIT_FILE_COL_SIZE, 
-			       "Output", ja->val.value);
+			       "Output", sub_ph);
+	free(sub_ph);
     }
     else if (strcmp(ja->name, DRMAA_ERROR_PATH) == 0){
 	// TODO: $drmaa_incr_ph$, $drmaa_hd_ph$, $drmaa_wd_ph$
+	sub_ph = substitute_placeholders(ja->val.value);
 	num_bw = fprintf(fs, "%-*s= %s\n", SUBMIT_FILE_COL_SIZE, 
-			       "Error", ja->val.value);
+			       "Error", sub_ph);
+	free(sub_ph);
     }
     /*
     else if (strcmp(ja->name, DRMAA_JOIN_FILES) == 0){
@@ -904,9 +984,7 @@ write_v_job_attr(FILE* fs, const job_attr_t* ja)
 
 	    fprintf(fs, " ");
 	}
-	
-	if (result > 0)
-	    result = fprintf(fs, "\n");
+	result = fprintf(fs, "\n");
     }
 
     return result;
