@@ -36,7 +36,7 @@
 //------------------------------------------------------------------------
 
 static int CalcTime(int,int,int);
-static int TimeLine(int FromDate, int ToDate, int Res);
+static int TimeLine(const MyString& Name,int FromDate, int ToDate, int Res);
 
 //------------------------------------------------------------------------
 
@@ -93,8 +93,8 @@ main(int argc, char* argv[])
   MyString QueryArg;
 
   MyString FileName;
+  MyString TimeFileName;
   MyString CondorViewHost;
-  int HistoryQueryPort=CONDOR_VIEW_PORT;
 
   for(int i=1; i<argc; i++) {
 
@@ -193,13 +193,17 @@ main(int argc, char* argv[])
       FileName=argv[i+1];
       i++;
     }
+    else if (strcmp(argv[i],"-timedat")==0) {
+      if (argc-i<=1) Usage(argv[0]);
+      TimeFileName=argv[i+1];
+      i++;
+    }
     else if (strcmp(argv[i],"-orgformat")==0) {
       Options=1;
 	}
     else if (strcmp(argv[i],"-pool")==0) {
       if (argc-i<=1) Usage(argv[0]);
       CondorViewHost=argv[i+1];
-      HistoryQueryPort=COLLECTOR_PORT;
       i++;
     }
     else {
@@ -209,14 +213,12 @@ main(int argc, char* argv[])
 
   // Check validity or arguments
   if (QueryType==-1 || FromDate<0 || FromDate>Now || ToDate<FromDate) Usage(argv[0]);
-  if (ToDate>Now) ToDate=Now;
-
-  config( 0 );
+  // if (ToDate>Now) ToDate=Now;
 
   if (CondorViewHost.Length()==0) {
+    config( 0 );
     char* tmp=param("CONDOR_VIEW_HOST");
     if (!tmp) {
-      HistoryQueryPort=COLLECTOR_PORT;
       tmp=param("COLLECTOR_HOST");
       if (!tmp) {
         fprintf(stderr, "No CONDOR_VIEW_HOST or COLLECTOR_HOST  specified in config file\n");
@@ -236,27 +238,20 @@ main(int argc, char* argv[])
   }
   strcpy(LinePtr, QueryArg.Value());
 
-  if (QueryArg.Length()>0) TimeLine(FromDate,ToDate,10);
-  // if (QueryArg=="*") Options=1;
+  if (TimeFileName.Length()>0) TimeLine(TimeFileName,FromDate,ToDate,10);
 
   // Open the output file
   FILE* outfile=stdout;
-  if (FileName.Length()>0) { 
-    outfile=fopen(FileName.Value(),"w");
-    fputs("No Data.\n",outfile);
-    fclose(outfile);
-  }
-  
+  if (FileName.Length()>0) outfile=fopen(FileName.Value(),"w");
+
   int LineCount=0;
 
-  // ReliSock sock((char*) CondorViewHost.Value(), HistoryQueryPort);
   ReliSock sock;
-  if (!sock.connect((char*) CondorViewHost.Value(), HistoryQueryPort)) {
+  if (!sock.connect((char*) CondorViewHost.Value(), COLLECTOR_PORT)) {
     fprintf(stderr, "failed to connect to the CondorView server\n");
+    fputs("No Data.\n",outfile);
     exit(1);
   }
-
-  if (FileName.Length()>0) outfile=fopen(FileName.Value(),"w");
 
   sock.encode();
   if (!sock.code(QueryType) ||
@@ -312,12 +307,12 @@ int CalcTime(int month, int day, int year) {
   return mktime(&time_str);
 }
 
-int TimeLine(int FromDate, int ToDate, int Res)
+int TimeLine(const MyString& TimeFileName,int FromDate, int ToDate, int Res)
 {
   double Interval=double(ToDate-FromDate)/double(Res);
   float RelT;
   time_t T;
-  FILE* TimeFile=fopen("time.dat","w");
+  FILE* TimeFile=fopen(TimeFileName.Value(),"w");
   if (!TimeFile) return -1;
   for (int i=0; i<=Res; i++) {
     T=(time_t)FromDate+((int)Interval*i);
