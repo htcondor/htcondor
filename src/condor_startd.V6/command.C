@@ -27,7 +27,6 @@
 /* XXX fix me */
 #include "../condor_sysapi/sysapi.h"
 
-extern bool ShuttingDown;
 
 int
 command_handler( Service*, int cmd, Stream* stream )
@@ -68,7 +67,12 @@ command_handler( Service*, int cmd, Stream* stream )
 		rval = rip->periodic_checkpoint();
 		break;
 	case REQ_NEW_PROC:
-		rval = rip->request_new_proc();
+		if( resmgr->isShuttingDown() ) {
+			rip->log_shutdown_ignore( cmd );
+			rval = FALSE;
+		} else {
+			rval = rip->request_new_proc();
+		}
 		break;
 	}
 	return rval;
@@ -76,7 +80,7 @@ command_handler( Service*, int cmd, Stream* stream )
 
 
 int
-command_activate_claim( Service*, int, Stream* stream )
+command_activate_claim( Service*, int cmd, Stream* stream )
 {
 	char* cap = NULL;
 	Resource* rip;
@@ -98,9 +102,8 @@ command_activate_claim( Service*, int, Stream* stream )
 	}
 	free( cap );
 
-	if ( ShuttingDown ) {
-		dprintf( D_FULLDEBUG, 
-			 "Activate Claim request ignored - shutting down\n");
+	if ( resmgr->isShuttingDown() ) {
+		rip->log_shutdown_ignore( cmd );
 		stream->end_of_message();
 		reply( stream, NOT_OK );
 		return FALSE;
@@ -209,7 +212,7 @@ command_give_totals_classad( Service*, int, Stream* stream )
 
 
 int
-command_request_claim( Service*, int, Stream* stream ) 
+command_request_claim( Service*, int cmd, Stream* stream ) 
 {
 	char* cap = NULL;
 	Resource* rip;
@@ -221,18 +224,17 @@ command_request_claim( Service*, int, Stream* stream )
 		return FALSE;
 	}
 
-	if ( ShuttingDown ) {
-		dprintf(D_FULLDEBUG,
-				"Ignoring request_claim -- shutting down\n");
-		free( cap );
-		return FALSE;
-	}
-
 	rip = resmgr->get_by_any_cap( cap );
 	if( !rip ) {
 		dprintf( D_ALWAYS, 
 				 "Error: can't find resource with capability (%s)\n",
 				 cap );
+		free( cap );
+		return FALSE;
+	}
+
+	if( resmgr->isShuttingDown() ) {
+		rip->log_shutdown_ignore( cmd );
 		free( cap );
 		return FALSE;
 	}
@@ -306,7 +308,7 @@ command_name_handler( Service*, int cmd, Stream* stream )
 
 
 int
-command_match_info( Service*, int, Stream* stream ) 
+command_match_info( Service*, int cmd, Stream* stream ) 
 {
 	char* cap = NULL;
 	Resource* rip;
@@ -324,6 +326,12 @@ command_match_info( Service*, int, Stream* stream )
 		dprintf( D_ALWAYS, 
 				 "Error: can't find resource with capability (%s)\n",
 				 cap );
+		free( cap );
+		return FALSE;
+	}
+
+	if( resmgr->isShuttingDown() ) {
+		rip->log_shutdown_ignore( cmd );
 		free( cap );
 		return FALSE;
 	}
