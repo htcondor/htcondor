@@ -74,7 +74,13 @@ extern char *DebugFlagNames[];
 #define CALLOC(nelem,size) mycalloc(__FILE__,__LINE__,nelem,size)
 #define REALLOC(ptr,size) myrealloc(__FILE__,__LINE__,ptr,size)
 #define FREE(ptr) myfree(__FILE__,__LINE__,ptr)
+#if defined(__cplusplus)
+extern "C" {
+#endif
 char	*mymalloc(), *myrealloc(), *mycalloc();
+#if defined(__cplusplus)
+}
+#endif
 #else
 #define MALLOC(size) malloc(size)
 #define CALLOC(nelem,size) calloc(nelem,size)
