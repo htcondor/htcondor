@@ -18,8 +18,10 @@
 #endif
 #include <sys/types.h>
 #include <sys/time.h>
+#if defined(USE_XDR)
 #include <rpc/types.h>
 #include <rpc/xdr.h>
+#endif
 #include "condor_io.h"
 #include "condor_fdset.h"
 #if defined(Solaris)
@@ -38,10 +40,12 @@ enum{XDR_SOCK, CONDOR_IO_SOCK};
 
 // these are for internal use.
 typedef int     (*SReqHandler)(Service*, void*, struct sockaddr_in*);
+#if defined(USE_XDR)
 typedef	int	  	(*XDR_SReqHandler)(Service*, XDR*, struct sockaddr_in*); 
+typedef	int	  	(*XDR_ReqHandler)(XDR*, struct sockaddr_in*); 
+#endif
 typedef	int	  	(*IO_SReqHandler)(Service*, Stream*, struct sockaddr_in*);
 typedef int		(*ReqHandler)(void*, struct sockaddr_in*);
-typedef	int	  	(*XDR_ReqHandler)(XDR*, struct sockaddr_in*); 
 typedef	int	  	(*IO_ReqHandler)(Stream*, struct sockaddr_in*);
 typedef	void	(*SSigHandler)(Service*, int, int, void*);
 typedef	void	(*SigHandler)(int, int, void*);
@@ -60,8 +64,8 @@ class DaemonCore
 		void				Register(Service*, void*);
 		void				Delete(int);
 		
-		int					OpenTcp(char*, u_short = 0, int = XDR_SOCK);
-		int					OpenUdp(char*, u_short = 0, int = XDR_SOCK);
+		int					OpenTcp(char*, u_short = 0, int = CONDOR_IO_SOCK);
+		int					OpenUdp(char*, u_short = 0, int = CONDOR_IO_SOCK);
 		
 		void				Dump(int, char*);
 
