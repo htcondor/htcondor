@@ -84,13 +84,13 @@ initialize ()
     // register commands
     daemonCore->Register_Command (RESCHEDULE, "Reschedule", 
             (CommandHandlercpp) RESCHEDULE_commandHandler, 
-			"RESCHEDULE_commandHandler", (Service*) this);
+			"RESCHEDULE_commandHandler", (Service*) this, WRITE);
     daemonCore->Register_Command (SET_PRIORITY, "SetPriority",
             (CommandHandlercpp) SET_PRIORITY_commandHandler, 
-			"SET_PRIORITY_commandHandler", this, NEGOTIATOR);
+			"SET_PRIORITY_commandHandler", this, ADMINISTRATOR);
     daemonCore->Register_Command (GET_PRIORITY, "GetPriority",
             (CommandHandlercpp) GET_PRIORITY_commandHandler, 
-			"GET_PRIORITY_commandHandler", this);
+			"GET_PRIORITY_commandHandler", this, READ);
 
 	// Set a timer to renigotiate.  This timer gets reset to 
 	// Negotiator interval after each negotiation.
