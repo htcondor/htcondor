@@ -1,0 +1,74 @@
+#####################################################################
+##
+##  condor_config.flocking
+##
+##  This is the configuration file that controls Flocking in
+##  Condor (having jobs from one Condor pool run in another).  If
+##  you are not planning on having your jobs run in more than
+##  one pool, you can safely leave these values unchanged.
+##
+######################################################################
+
+##--------------------------------------------------------------------
+##  Flocking: Submitting jobs to more than one pool
+##--------------------------------------------------------------------
+##  Flocking allows you to run your jobs in other pools, or lets
+##  others run jobs in your pool.
+## 
+##  To let others flock to you, define FLOCK_FROM.
+## 
+##  To flock to others, define FLOCK_TO.
+## 
+##  (and if they are running a condor_view server, then you can also
+##  define FLOCK_VIEW_SERVERS).
+
+##  FLOCK_FROM defines the machines where you would like to grant
+##  people access to your pool via flocking. (i.e. you are granting
+##  access to these machines to join your pool).
+FLOCK_FROM = 
+##  An example of this is:
+#FLOCK_FROM = somehost.friendly.domain, anotherhost.friendly.domain
+
+##  FLOCK_TO defines the central managers of the pools that you want
+##  to flock to. (i.e. you are specifying the machines that you
+##  want your jobs to be negotiated at -- thereby specifying the
+##  pools they will run in.)
+FLOCK_TO = 
+##  An example of this is:
+#FLOCK_TO = central_manager.friendly.domain, condor.cs.wisc.edu
+
+##  FLOCK_COLLECTOR_HOSTS should almost always be the same as
+##  FLOCK_NEGOTIATOR_HOSTS (as shown below).  The only reason it would be
+##  different is if the collector and negotiator in the pool that you are
+##  flocking too are running on different machines (not recommended).
+##  The collectors must be specified in the same corresponding order as
+##  the FLOCK_NEGOTIATOR_HOSTS list.
+FLOCK_NEGOTIATOR_HOSTS = $(FLOCK_TO)
+FLOCK_COLLECTOR_HOSTS = $(FLOCK_TO)
+## An example of having the negotiator and the collector on different
+## machines is:
+#FLOCK_NEGOTIATOR_HOSTS = condor.cs.wisc.edu, condor-negotiator.friendly.domain
+#FLOCK_COLLECTOR_HOSTS =  condor.cs.wisc.edu, condor-collector.friendly.domain
+
+##  (optional) FLOCK_VIEW_SERVERS is used if you would like to report
+##  your usage in a remote pool to a remote condor-view server.  If so,
+##  FLOCK_VIEW_SERVERS should contain a list of hostnames where the
+##  condor-view server is running in the pools to which you want your
+##  jobs to flock.  The order of this list must correspond to the
+##  order of the FLOCK_COLLECTOR_HOSTS and FLOCK_NEGOTIATOR_HOSTS
+##  lists.  List items may be empty for pools which don't use a
+##  separate condor-view server.  FLOCK_VIEW_SERVER may be left
+##  undefined if no remote pools use separate condor-view servers.
+##  Note: It is required that the same hostname does not appear twice
+##  in the FLOCK_VIEW_SERVERS list and that the CONDOR_VIEW_HOST does
+##  not appear in the FLOCK_VIEW_SERVERS list.
+#FLOCK_VIEW_SERVERS = condor-view.cs.wisc.edu, condor-view.friendly.domain
+
+##  Flocking Configs.  These are the real things that Condor looks at,
+##  but we set them from the FLOCK_FROM/TO macros above.  It is safe
+##  to leave these unchanged.
+HOSTALLOW_WRITE_COLLECTOR = $(HOSTALLOW_WRITE), $(FLOCK_FROM)
+HOSTALLOW_WRITE_STARTD    = $(HOSTALLOW_WRITE), $(FLOCK_FROM)
+HOSTALLOW_READ_COLLECTOR  = $(HOSTALLOW_READ), $(FLOCK_FROM)
+HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
+

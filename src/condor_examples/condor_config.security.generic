@@ -1,0 +1,82 @@
+#####################################################################
+##
+##  condor_config.security
+##
+##  This file contains the elements of Condor that relate to
+##  securing your Condor installation.  By default security is
+##  not enabled, so you are encouraged to do so.  Please be
+##  sure to read the section entitled "Setting Up IP/Host-Based
+##  Security in Condor", which is an entire chapter in the
+##  Administrators section of the manual.
+##
+######################################################################
+
+##--------------------------------------------------------------------
+##  Host/IP access levels
+##--------------------------------------------------------------------
+##  Please see the administrator's manual for details on these
+##  settings, what they're for, and how to use them.
+
+##  What machines have administrative rights for your pool?  This
+##  defaults to your central manager.  You should set it to the
+##  machine(s) where whoever is the condor administrator(s) works
+##  (assuming you trust all the users who log into that/those
+##  machine(s), since this is machine-wide access you're granting).
+HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST)
+
+##  If there are no machines that should have administrative access 
+##  to your pool (for example, there's no machine where only trusted
+##  users have accounts), you can uncomment this setting.
+##  Unfortunately, this will mean that administering your pool will 
+##  be more difficult.
+#HOSTDENY_ADMINISTRATOR = *
+
+##  What machines should have "owner" access to your machines, meaning
+##  they can issue commands that a machine owner should be able to
+##  issue to their own machine (like condor_vacate).  This defaults to
+##  machines with administrator access, and the local machine.  This
+##  is probably what you want.
+HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
+
+##  Read access.  Machines listed as allow (and/or not listed as deny)
+##  can view the status of your pool, etc.  
+##  NOTE: By default, without either of these entries specified, you
+##  are granting read access to the whole world.  You may want to
+##  restrict that to hosts in your domain.  If possible, please also
+##  grant read access to "*.cs.wisc.edu", so the Condor developers
+##  will be able to view the status of your pool and more easily help
+##  you install, configure or debug your Condor installation.
+##  It is important to have this defined.
+HOSTALLOW_READ =
+#HOSTALLOW_READ = *.your.domain, *.cs.wisc.edu
+#HOSTDENY_READ = *.bad.subnet, bad-machine.your.domain, 144.77.88.*
+
+##  Write access.  Machines listed here can join your pool, submit
+##  jobs, etc.
+##  If you leave it as it is, it will be unspecified, and effectively
+##  it will be allowing anyone to write to your pool.
+HOSTALLOW_WRITE =
+#HOSTALLOW_WRITE = *.your.domain, your-friend's-machine.other.domain
+#HOSTDENY_WRITE = bad-machine.your.domain
+
+##  Negotiator access.  Machines listed here are trusted central
+##  managers.
+#HOSTALLOW_NEGOTIATOR = $(NEGOTIATOR_HOST)
+##  Now, with flocking we need to let the SCHEDD trust the other 
+##  negotiators.
+HOSTALLOW_NEGOTIATOR_SCHEDD = $(NEGOTIATOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
+
+##  Config access.  Machines listed here can use the condor_config_val
+##  tool to modify all daemon configurations except those specified in
+##  the condor_config.root file.  This level of host-wide access
+##  should only be granted with extreme caution.  By default, config
+##  access is denied from all hosts.
+#HOSTALLOW_CONFIG = trusted-host.your.domain
+
+##  Flocking Configs.  These are the real things that Condor looks at,
+##  but we set them from the FLOCK_FROM/TO macros above.  It is safe
+##  to leave these unchanged.
+HOSTALLOW_WRITE_COLLECTOR = $(HOSTALLOW_WRITE), $(FLOCK_FROM)
+HOSTALLOW_WRITE_STARTD    = $(HOSTALLOW_WRITE), $(FLOCK_FROM)
+HOSTALLOW_READ_COLLECTOR  = $(HOSTALLOW_READ), $(FLOCK_FROM)
+HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
