@@ -1023,18 +1023,35 @@ int CondorFileTable::stat( const char *name, struct stat *buf)
 	int fd;
 	int scm, oscm;
 	int ret;
+	int do_local;
+	char newname[_POSIX_PATH_MAX];
 
 	/* See if the file is open, if so, then just do an fstat. If it isn't open
-		then call the normal stat in unmapped mode and hope it gets the right
-		thing */
+		then call the normal stat in unmapped mode with whatever the shadow
+		said the location of the file was. */
 	fd = find_logical_name((char*)name);
 	if (fd == -1)
 	{
 		oscm = scm = GetSyscallMode();
+
+		/* determine where the shadow says to deal with this file. */
+		do_local = _condor_is_file_name_local( name, newname );
+		if (LocalSysCalls() || do_local) {
+			scm |= SYS_LOCAL;		/* turn on SYS_LOCAL */
+			scm &= ~(SYS_REMOTE);	/* turn off SYS_REMOTE */
+		}
+		else {
+			scm |= SYS_REMOTE;		/* Turn on SYS_REMOTE */
+			scm &= ~(SYS_LOCAL);	/* Turn off SYS_LOCAL */
+		}
+
+		/* either way, it needs to be unmapped so we don't recurse into here */
 		scm |= SYS_UNMAPPED; /* turn on SYS_UNMAPPED */
 		scm &= ~(SYS_MAPPED); /* turn off SYS_MAPPED */
+
+		/* invoke it with where the shadow said the file was */
 		SetSyscalls(scm);
-		ret = ::stat(name, buf);
+		ret = ::stat(newname, buf);
 		SetSyscalls(oscm); /* set it back to what it was */
 		
 		return ret;
@@ -1047,18 +1064,34 @@ int CondorFileTable::lstat( const char *name, struct stat *buf)
 	int fd;
 	int scm, oscm;
 	int ret;
+	int do_local;
+	char newname[_POSIX_PATH_MAX];
 
 	/* See if the file is open, if so, then just do an fstat. If it isn't open
-		then call the normal lstat in unmapped mode and hope it gets the right
-		thing */
+		then call the normal lstat in unmapped mode with whatever the shadow
+		said the location of the file was. */
 	fd = find_logical_name((char*)name);
 	if (fd == -1)
 	{
 		oscm = scm = GetSyscallMode();
+
+		/* determine where the shadow says to deal with this file. */
+		do_local = _condor_is_file_name_local( name, newname );
+		if (LocalSysCalls() || do_local) {
+			scm |= SYS_LOCAL;		/* turn on SYS_LOCAL */
+			scm &= ~(SYS_REMOTE);	/* turn off SYS_REMOTE */
+		}
+		else {
+			scm |= SYS_REMOTE;		/* Turn on SYS_REMOTE */
+			scm &= ~(SYS_LOCAL);	/* Turn off SYS_LOCAL */
+		}
+
+		/* either way, it needs to be unmapped so we don't recurse into here */
 		scm |= SYS_UNMAPPED; /* turn on SYS_UNMAPPED */
 		scm &= ~(SYS_MAPPED); /* turn off SYS_MAPPED */
+
 		SetSyscalls(scm);
-		ret = ::lstat(name, buf);
+		ret = ::lstat(newname, buf);
 		SetSyscalls(oscm); /* set it back to what it was */
 		
 		return ret;
