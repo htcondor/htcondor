@@ -420,6 +420,8 @@ checkProxy()
 	// Check if we have a refreshed proxy
 	if ( current_expiration_time > Proxy_Expiration_Time ) {
 		// We have a refreshed proxy!
+		dprintf(D_FULLDEBUG,"New proxy found, valid for %s\n",
+				format_time(seconds_left));
 		Proxy_Expiration_Time = current_expiration_time;
 
 		GahpMain.globus_gram_client_set_credentials( X509Proxy );
