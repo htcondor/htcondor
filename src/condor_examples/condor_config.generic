@@ -272,6 +272,11 @@ MASTER				= $(SBIN)/condor_master
 STARTD				= $(SBIN)/condor_startd
 SCHEDD				= $(SBIN)/condor_schedd
 
+##  When the master starts up, it can place it's address (ip and port)
+##  into a file.  This way, tools running on the local machine don't
+##  need to query the central manager to find the master.
+MASTER_ADDRESS_FILE = $(LOG)/.master_address
+
 ##  Where should the master find the condor_preen binary and how do
 ##  you want preen to behave?  The "-m" means you want email about
 ##  files preen finds that it thinks it should remove.  The "-r" means
@@ -340,6 +345,11 @@ STARTER			= $(SBIN)/condor_starter
 ALTERNATE_STARTER_1	= $(SBIN)/condor_starter.carmi
 ALTERNATE_STARTER_2	= $(SBIN)/condor_starter
 
+##  When the startd starts up, it can place it's address (ip and port)
+##  into a file.  This way, tools running on the local machine don't
+##  need to query the central manager to find the startd.
+STARTD_ADDRESS_FILE	= $(LOG)/.startd_address
+
 ##  When a machine is claimed, how often should we poll the state of
 ##  the machine to see if we need to evict/suspend the job, etc?
 POLLING_INTERVAL        = 5
@@ -363,7 +373,44 @@ KILLING_TIMEOUT		= 30
 BenchmarkTimer = (CurrentTime - LastBenchmark)
 RunBenchmarks : (LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
 
-#KBD_DEVICE   # This line is used by customize, don't delete it.
+##  Normally, when the startd is computing the idle time of all the
+##  users of the machine (both local and remote), it checks the utmp
+##  file to find all the currently active ttys, and only checks access
+##  time of the devices associated with active logins.  Unfortunately,
+##  on some systems, utmp is unreliable, and the startd might miss
+##  keyboard activity by doing this.  So, if your utmp is unreliable,
+##  set this setting to True and the startd will check the access time
+##  on all tty and pty devices.
+#STARTD_HAS_BAD_UTMP = False
+
+##  This entry allows the startd to monitor console (keyboard and
+##  mouse) activity by checking the access times on special files in
+##  /dev.  Activity on these files shows up as "ConsoleIdle" time in
+##  the startd's ClassAd.  Just give a comma-seprated list of the
+##  names of devices you want considered the console, without the
+##  "/dev/" portion of the pathname.
+#CONSOLE_DEVICES = mouse, console
+
+##  This entry allows you to have the startd advertise arbitrary
+##  expressions from the config file in its ClassAd.  Give the
+##  comma-seperated list of entries from the config file you want in
+##  the startd classad.  Note: because of the different syntax of the
+##  config file and ClassAds, you might have to do a little extra work
+##  to get a given entry into the ClassAd.  In particular, ClassAds
+##  require "'s around your strings.  Numeric values can go in
+##  directly, as can boolean expressions.  For example, if you wanted
+##  the startd to advertise its list of console devices, when it's
+##  configured to run benchmarks, and how often it sends updates to
+##  the central manager, you'd have to do the following:
+#MY_CONSOLE_DEVICES = "$(CONSOLE_DEVICES)"
+#STARTD_EXPRS = MY_CONSOLE_DEVICES, RunBenchmarks, UPDATE_INTERVAL
+
+##  When the startd is claimed by a remote user, it can also advertise
+##  arbitrary attributes from the classad of the job its working on.
+##  Just list the attribute names you want advertised.  Note: since
+##  this is already a ClassAd, you don't have to do anything funny
+##  with strings, etc.
+STARTD_JOB_EXPRS = ImageSize, JobUniverse
 
 
 ##--------------------------------------------------------------------
@@ -372,6 +419,11 @@ RunBenchmarks : (LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
 ##  Where are the various shadow binaries installed?
 SHADOW			= $(SBIN)/condor_shadow
 SHADOW_PVM		= $(SBIN)/condor_shadow.carmi
+
+##  When the schedd starts up, it can place it's address (ip and port)
+##  into a file.  This way, tools running on the local machine don't
+##  need to query the central manager to find the schedd.
+SCHEDD_ADDRESS_FILE	= $(LOG)/.schedd_address
 
 ##  How often should the schedd send an update to the central manager?
 ##  (5 minutes)
@@ -473,5 +525,5 @@ PREEN_ADMIN		= $(CONDOR_ADMIN)
 VALID_SPOOL_FILES	= job_queue.log, job_queue.log.tmp, history, Accountant.log
 
 ##  What files should condor_preen leave in the log directory?
-VALID_LOG_FILES		= MasterLog, MasterLog.old, NegotiatorLog, NegotiatorLog.old, CollectorLog, CollectorLog.old, SchedLog, SchedLog.old, ShadowLog, ShadowLog.old, StartLog, StartLog.old, StarterLog, StarterLog.old, KbdLog, KbdLog.old, ShadowLock, ULogLock, SchedLock, CkptServerLog, CkptServerLog.old
+VALID_LOG_FILES		= MasterLog, MasterLog.old, NegotiatorLog, NegotiatorLog.old, CollectorLog, CollectorLog.old, SchedLog, SchedLog.old, ShadowLog, ShadowLog.old, StartLog, StartLog.old, StarterLog, StarterLog.old, KbdLog, KbdLog.old, ShadowLock, ULogLock, SchedLock, CkptServerLog, CkptServerLog.old, .startd_address, .schedd_address, .master_address
 
