@@ -1,27 +1,18 @@
-SRC_DIR = $(SRC_TREE)/condor_eventd
+NAME = condor_eventd
+all_target($(NAME))
 
 CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fno-implicit-templates
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+LDFLAGS = -lm RpcLib SocketLib
+LIB = $(STD_LIBS)
 
-SRC = eventd.C main.C scheduled_event.C
 OBJ = eventd.o main.o scheduled_event.o
 
-LDFLAGS = SocketLib
+c_plus_target($(NAME),$(OBJ),$(LIB))
+release_target($(NAME),$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+strip_target($(NAME),$(STRIP_DIR)/bin,EXECUTABLE_MODE)
+static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/bin)
+pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
+purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 
-LIB = ../condor_daemon_core.V6/daemon_core.a \
-	../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a \
-	../condor_classad/expr_lib.a 
-LIBDIRS= ../condor_util_lib ../condor_classad ../condor_daemon_core.V6
-
-all_target(condor_eventd)
-
-tags_target($(SRC),$(LIBDIRS))
-depend_target($(SRC))
-
-c_plus_target(condor_eventd,$(OBJ),$(LIB))
-release_target(condor_eventd,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
-strip_target(condor_eventd,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
-static_target(condor_eventd,$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
-pure_c_plus_target(condor_eventd.pure,$(OBJ),$(LIB))
-purecov_c_plus_target(condor_eventd.pc,$(OBJ),$(LIB))
-
+html:
