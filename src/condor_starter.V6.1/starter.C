@@ -337,6 +337,8 @@ CStarter::createTempExecuteDir( void )
 				dprintf(D_FULLDEBUG, "cannot get address for EncryptFile()");
 				efs_support = false;
 			}
+
+			FreeLibrary(advapi);
 			
 			if ( efs_support ) {
 				wchar_t *WorkingDir_w = new wchar_t[strlen(WorkingDir)+1];
