@@ -97,6 +97,12 @@ class UniShadow : public BaseShadow
 
 	int getDiskUsage( void );
 
+		/** This function is specifically used for spawning MPI jobs.
+			So, if for some bizzare reason, it gets called for a
+			non-MPI shadow, we should return falure.
+		*/
+	bool setMpiMasterInfo( char* ) { return false; };
+
  private:
 	RemoteResource *remRes;
 
