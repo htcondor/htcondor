@@ -164,28 +164,37 @@
 	int fcntl( int fd, fcntl_cmd_t req, int arg );
 #endif
 
-#if defined( BufferCondorIO )
-	off_t lseek( map(int fd), off_t offset, int whence ); 
-	ssize_t read( map(int fd), void *buf, size_t len ) {
-		out code_bytes_bool( &buf, &rval, len );
-		alloc( buf, len );
-	}
-	
-        ssize_t write( map(int fd), const void *buf, size_t len ) {
-		in code_bytes_bool( &buf, &len, len );
-		alloc( buf, len );
-	}
-
 	int lseekread( map(int fd), off_t offset, int whence, void *buf, size_t len ) : pseudo {
-		out code_bytes_bool( &buf, &rval, len );
+		out code_bytes_bool( &buf, len );
 		alloc( buf, len );
 	}
 
         int lseekwrite( map(int fd), off_t offset, int whence, const void *buf, size_t len ) : pseudo {
-		in code_bytes_bool( &buf, &len, len );
+		in code_bytes_bool( &buf, len );
 		alloc( buf, len );
         }
-#endif /* BufferCondorIO */
+
+	ssize_t write( map(int fd), const void *buf, size_t len ) {
+		in code_bytes_bool( buf, len );
+		alloc( buf, len );
+	}
+
+	ssize_t read( map(int fd), void *buf, size_t len ) {
+		out code_bytes_bool( buf, rval );
+		alloc( buf, len );
+	} 
+
+	off_t lseek( map(int fd), off_t offset, int whence );
+
+	#if HAS_64BIT_SYSCALLS
+		#if defined(Solaris26)
+			offset_t llseek( map(int fd), offset_t offset, int whence );
+			off64_t	lseek64( map(int fd), off64_t offset, int whence ) : extract;
+		#else
+			off64_t	lseek64( map(int fd), off64_t offset, int whence );
+		#endif /* Solaris 2.6 */
+	#endif /* HAS_64BIT_SYSCALLS */
+
 
 #ifdef CARMI_OPS
 
@@ -314,41 +323,6 @@
 		ALLOC_PATH( p1 );
 		ALLOC_PATH( p2 );
 	}
-
-#	if defined(AIX32) && defined(SWITCH)
-		/*
-			not syscalls in aix, so don't build the switches
-		*/
-#	else
-		/*
-			build senders and recievers for everybody, and switches for
-			everybody but AIX
-		*/
-#	    if !defined( BufferCondorIO )
-		ssize_t write( map(int fd), const void *buf, size_t len ) {
-			in code_bytes_bool( buf, len );
-			alloc( buf, len );
-		}
-
-		ssize_t read( map(int fd), void *buf, size_t len ) {
-			out code_bytes_bool( buf, rval );
-			alloc( buf, len );
-		} 
-#	    endif /* BufferCondorIO */
-#	endif /* AIX32 */
-
-#if !defined( BufferCondorIO )
-	off_t lseek( map(int fd), off_t offset, int whence );
-#endif
-
-#if HAS_64BIT_SYSCALLS
-#if defined(Solaris26)
-	offset_t llseek( map(int fd), offset_t offset, int whence );
-	off64_t	lseek64( map(int fd), off64_t offset, int whence ) : extract;
-#else
-	off64_t	lseek64( map(int fd), off64_t offset, int whence );
-#endif /* Solaris 2.6 */
-#endif /* HAS_64BIT_SYSCALLS */
 
 	int access( const char *path, int access_mode ) {
 		SEND_PATH( path );
@@ -496,6 +470,15 @@ int rename( const char *from, const char *to ) : pseudo {
 		out code( pipe_fd );
 		alloc( pipe_fd, INT_SIZE );
 	}
+	int get_buffer_info( int *blocks, int *block_size, int *prefetch_bytes ) :pseudo {
+		out code(blocks);
+		alloc( blocks, INT_SIZE );
+		out code(block_size);
+		alloc( block_size, INT_SIZE );
+		out code(prefetch_bytes);
+		alloc( prefetch_bytes, INT_SIZE );
+	}
+
 	int get_iwd( char *path ) : pseudo {
 		GET_PATH( path );
 		ALLOC_PATH( path );

@@ -147,6 +147,7 @@ URL_OBJ = url_condor.o include_urls.o cbstp_url.o file_url.o http_url.o \
 
 #if DOES_CHECKPOINTING
 CKPT_OBJ =	file_state.o image.o tmp_stack.o machdep.$(DEP_OS).o \
+	buffer_cache.o buffer_glue.o \
 	syscall_mode.o fake_hooks.o $(LONGJMP) $(HP_CKPT) \
 	$(SGI_CKPT) $(SIG_CKPT_OBJS) eprintf.o
 #else

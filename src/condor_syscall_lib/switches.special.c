@@ -66,8 +66,6 @@ int __lxstat(int, const char *, struct stat *);
 
 extern unsigned int _condor_numrestarts;  /* in image.C */
 
-static int fake_readv( int fd, const struct iovec *iov, int iovcnt );
-static int fake_writev( int fd, const struct iovec *iov, int iovcnt );
 char	*getwd( char * );
 void    *malloc();     
 int	_condor_open( const char *path, int flags, va_list ap );
@@ -327,172 +325,73 @@ void _condor_force_isatty( int fd )
 }
 
 /*
-  We don't handle readv directly in remote system calls.  Instead we
-  break the readv up into a series of individual reads.
+We don't handle readv directly in ANY case.  Split up the read
+and pass it through the regular read mechanism to take advantage
+of whatever magic is implemented there.
 */
+
 #if defined(HPUX9) || defined(LINUX) 
-ssize_t
-readv( int fd, const struct iovec *iov, size_t iovcnt )
+ssize_t readv( int fd, const struct iovec *iov, size_t iovcnt )
 #elif defined(IRIX) || defined(OSF1)|| defined(HPUX10) || defined(Solaris26)
-ssize_t
-readv( int fd, const struct iovec *iov, int iovcnt )
+ssize_t readv( int fd, const struct iovec *iov, int iovcnt )
 #else
-int
-readv( int fd, struct iovec *iov, int iovcnt )
+int readv( int fd, struct iovec *iov, int iovcnt )
 #endif
 {
-	int rval;
-	int user_fd;
-
-	if( (user_fd=MapFd(fd)) < 0 ) {
-		return -1;
-	}
-
-	if( LocalSysCalls() ) {
-		rval = syscall( SYS_readv, user_fd, iov, iovcnt );
-	} else {
-		rval = fake_readv( user_fd, iov, iovcnt );
-	}
-
-	return rval;
-}
-
-/*
-  Handle a call to readv which must be done remotely, (not NFS).  Note
-  the user file descriptor has already been mapped by the calling routine,
-  and we already know this is a remote system call.  We handle the call
-  by breaking it up into a series of remote reads.
-*/
-static int
-fake_readv( int fd, const struct iovec *iov, int iovcnt )
-{
-	register int i, rval = 0, cc;
+	int i, rval = 0, cc;
 
 	for( i = 0; i < iovcnt; i++ ) {
-		cc = REMOTE_syscall( CONDOR_read, fd, iov->iov_base, iov->iov_len );
-		if( cc < 0 ) {
-			return cc;
-		}
-
+		cc = read( fd, iov->iov_base, iov->iov_len );
+		if( cc < 0 ) return cc;
 		rval += cc;
-		if( cc != iov->iov_len ) {
-			return rval;
-		}
-
+		if( cc != iov->iov_len ) return rval;
 		iov++;
 	}
 
 	return rval;
 }
 
-#if 0
-/*Fake local readv for Linux						*/
-static int
-linux_fake_readv( int fd, const struct iovec *iov, int iovcnt )
-{
-	register int i, rval = 0, cc;
-
-	for( i = 0; i < iovcnt; i++ ) {
-		cc = syscall( SYS_read, fd, iov->iov_base, iov->iov_len );
-		if( cc < 0 ) {
-			return cc;
-		}
-
-		rval += cc;
-		if( cc != iov->iov_len ) {
-			return rval;
-		}
-
-		iov++;
-	}
-
-	return rval;
-}
-#endif
-
-
 /*
-  We don't handle writev directly in remote system calls.  Instead we
-  break the writev up into a series of individual writes.
+We don't handle writev directly in ANY case.  Split up the write
+and pass it through the regular write mechanism to take advantage
+of whatever magic is implemented there.
 */
+
 #if defined(HPUX9) || defined(LINUX) 
-ssize_t
-writev( int fd, const struct iovec *iov, size_t iovcnt )
+ssize_t writev( int fd, const struct iovec *iov, size_t iovcnt )
 #elif defined(Solaris) || defined(IRIX) || defined(OSF1) || defined(HPUX10)
-ssize_t
-writev( int fd, const struct iovec *iov, int iovcnt )
+ssize_t writev( int fd, const struct iovec *iov, int iovcnt )
 #else
-int
-writev( int fd, struct iovec *iov, int iovcnt )
+int writev( int fd, struct iovec *iov, int iovcnt )
 #endif
 {
-	int rval;
-	int user_fd;
-
-	if( (user_fd=MapFd(fd)) < 0 ) {
-		return -1;
-	}
-
-	if( LocalSysCalls() ) {
-		rval = syscall( SYS_writev, user_fd, iov, iovcnt );
-	} else {
-		rval = fake_writev( user_fd, iov, iovcnt );
-	}
-
-	return rval;
-}
-
-/*
-  Handle a call to writev which must be done remotely, (not NFS).  Note
-  the user file descriptor has already been mapped by the calling routine,
-  and we already know this is a remote system call.  We handle the call
-  by breaking it up into a series of remote writes.
-*/
-static int
-fake_writev( int fd, const struct iovec *iov, int iovcnt )
-{
-	register int i, rval = 0, cc;
+	int i, rval = 0, cc;
 
 	for( i = 0; i < iovcnt; i++ ) {
-		cc = REMOTE_syscall( CONDOR_write, fd, iov->iov_base, iov->iov_len );
-		if( cc < 0 ) {
-			return cc;
-		}
-
+		cc = write( fd, iov->iov_base, iov->iov_len );
+		if( cc < 0 ) return cc;
 		rval += cc;
-		if( cc != iov->iov_len ) {
-			return rval;
-		}
-
+		if( cc != iov->iov_len ) return rval;
 		iov++;
 	}
 
 	return rval;
 }
 
-#if 0
-/*Fake local writev for Linux						*/
-static int
-linux_fake_writev( int fd, const struct iovec *iov, int iovcnt )
+/* Kernel readv and writev for AIX */
+
+#ifdef AIX32
+
+int kwritev( int fd, struct iovec *iov, int iovcnt, int ext )
 {
-	register int i, rval = 0, cc;
-
-	for( i = 0; i < iovcnt; i++ ) {
-		cc = syscall( SYS_write, fd, iov->iov_base, iov->iov_len );
-		if( cc < 0 ) {
-			return cc;
-		}
-
-		rval += cc;
-		if( cc != iov->iov_len ) {
-			return rval;
-		}
-
-		iov++;
-	}
-
-	return rval;
+	return writev(fd,iov,iovcnt);
 }
+
+int kreadv( int fd, struct iovec *iov, int iovcnt, int ext )
+{
+	return readv(fd,iov,iovcnt);
+}
+
 #endif
 
 
@@ -594,58 +493,6 @@ ftruncate( int fd, off_t length )
 
 	return rval;
 }
-
-#if defined(AIX32)
-	int
-	kwritev( int fd, struct iovec *iov, int iovcnt, int ext )
-	{
-		int rval;
-		int user_fd;
-
-		if( ext != 0 ) {
-			errno = ENOSYS;
-			return -1;
-		}
-
-		if( (user_fd=MapFd(fd)) < 0 ) {
-			return -1;
-		}
-
-		if( LocalSysCalls() ) {
-			rval = syscall( SYS_kwritev, user_fd, iov, iovcnt );
-		} else {
-			rval = fake_writev( user_fd, iov, iovcnt );
-		}
-
-		return rval;
-	}
-#endif
-
-#if defined(AIX32)
-	int
-	kreadv( int fd, struct iovec *iov, int iovcnt, int ext )
-	{
-		int rval;
-		int user_fd;
-
-		if( ext != 0 ) {
-			errno = ENOSYS;
-			return -1;
-		}
-
-		if( (user_fd=MapFd(fd)) < 0 ) {
-			return -1;
-		}
-
-		if( LocalSysCalls() ) {
-			rval = syscall( SYS_kreadv, user_fd, iov, iovcnt );
-		} else {
-			rval = fake_readv( user_fd, iov, iovcnt );
-		}
-
-		return rval;
-	}
-#endif
 
 #if defined OSF1
 /*
