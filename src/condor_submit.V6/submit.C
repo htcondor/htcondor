@@ -4248,7 +4248,7 @@ SaveClassAd ()
 	int myprocid = ProcId;
 	ClassAdUnParser unp;
 	unp.SetOldClassAd( true );
-	string rhstring;
+	std::string rhstring;
 	static ClassAd* current_cluster_ad = NULL;
 
 	if ( ProcId > 0 ) {
@@ -4316,7 +4316,7 @@ SaveClassAd ()
 void 
 InsertJobExpr (const char *expr, bool clustercheck)
 {
-	ExprTree *tree = NULL, *lhs = NULL;
+	ExprTree *tree = NULL;//, *lhs = NULL;
 	char      name[128];
 	name[0] = '\0';
 	int unused = 0;
@@ -4324,7 +4324,7 @@ InsertJobExpr (const char *expr, bool clustercheck)
 	MyString hashkey(expr);
 	ClassAdParser parser;
 	ClassAd ad;
-	string adString;
+	std::string adString;
 
 	if ( clustercheck && ProcId > 0 ) {
 		// We are inserting proc 1 or above.  So before we actually stick
@@ -4340,7 +4340,7 @@ InsertJobExpr (const char *expr, bool clustercheck)
 //	int retval = Parse (expr, tree);
 
 //	if (retval)
-	adString = "[" + string( expr ) + "]";
+	adString = "[" + std::string( expr ) + "]";
 	if( !parser.ParseClassAd( adString , ad ) )
 	{
 		fprintf (stderr, "\nERROR: Parse error in expression: \n\t%s\n\t", expr);

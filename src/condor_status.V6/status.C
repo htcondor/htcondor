@@ -216,7 +216,7 @@ main (int argc, char *argv[])
 	// if diagnose was requested, just print the query ad
 	if (diagnose) {
 		ClassAd 	queryAd;
-		string 		buffer;		// NAC
+		std::string buffer;		// NAC
 		PrettyPrint pp;			// NAC
 
 		// print diagnostic information about inferred internal state

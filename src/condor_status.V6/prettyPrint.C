@@ -578,7 +578,7 @@ printAnyNormal(ClassAd *ad)
 	static bool first = true;
 	char name[ATTRLIST_MAX_EXPRESSION];
 //	char *my_type, *target_type;
-	string my_type, target_type;
+	std::string my_type, target_type;
 
 	if (ad)
 	{
@@ -617,7 +617,7 @@ void
 printVerbose (ClassAd *ad)
 {
 //	ad->fPrint (stdout);
-	string 		buffer;		// NAC
+	std::string 	buffer;		// NAC
 	PrettyPrint pp;			// NAC
 
 	pp.Unparse( buffer, ad );	// NAC
@@ -631,7 +631,7 @@ printXML (ClassAd *ad, bool first_ad, bool last_ad)
 {
 	ClassAdXMLUnParser  unparser;
 //	MyString            xml;
-	string				xml;
+	std::string			xml;
 
 //	if (first_ad) {
 //		unparser.AddXMLFileHeader(xml);
