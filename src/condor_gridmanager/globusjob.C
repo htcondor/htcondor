@@ -437,7 +437,6 @@ int GlobusJob::doEvaluateState()
 										myResource->ResourceName(), RSL,
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
 										gramCallbackContact, &job_contact );
-LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -744,7 +743,6 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 										myResource->ResourceName(), rsl,
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
 										gramCallbackContact, &job_contact );
-LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
