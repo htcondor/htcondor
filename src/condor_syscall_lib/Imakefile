@@ -221,7 +221,7 @@ CPP_UTIL_OBJ = condor_version.o
 
 CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o
 
-IO_OBJ = stream.o sock.o safe_sock.o buffers.o $(CONDOR_TYPE_OBJ) condor_rw.o reli_sock.o
+IO_OBJ = stream.o sock.o safe_sock.o buffers.o $(CONDOR_TYPE_OBJ) condor_rw.o reli_sock.o SafeMsg.o ../condor_util_lib/get_random_num.o
 
 SPECIAL_IO_OBJ = authentication.o
 SPECIAL_IO_SRC = authentication.C

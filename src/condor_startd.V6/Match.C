@@ -257,7 +257,7 @@ Match::match_timed_out()
 			// restore our reqexp, and update the CM. 
 		delete rip->r_pre;
 		rip->r_pre = new Match( rip );
-		rip->r_reqexp->pub();
+		rip->r_reqexp->restore();
 		rip->update();
 	}		
 	return TRUE;

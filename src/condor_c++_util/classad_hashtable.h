@@ -30,7 +30,7 @@
 
 #include "HashTable.h"
 
-#include <assert.h>
+#include "condor_fix_assert.h"
 
 class HashKey
 {

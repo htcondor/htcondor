@@ -14,6 +14,7 @@ CondorFileLocal and CondorFileRemote.
 class CondorFileBasic : public CondorFile {
 public:
 	CondorFileBasic( int mode );
+	virtual ~CondorFileBasic();
 
 	virtual int open( const char *url, int flags, int mode );
 	virtual int close();
@@ -24,6 +25,7 @@ public:
 	virtual int ftruncate( size_t s );
 	virtual int fsync();
 	virtual int flush();
+	virtual int fstat( struct stat *buf );
 
 	virtual int	is_readable();
 	virtual int	is_writeable();

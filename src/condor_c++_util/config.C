@@ -31,9 +31,6 @@
 extern "C" {
 #endif
 
-int get_var( register char *value, register char **leftp, 
-			 register char **namep, register char **rightp, char *self=NULL );
-
 char *getline_implementation( FILE *, int );
 
 int		ConfigLineNo;
@@ -56,6 +53,9 @@ condor_isalnum(int c)
 #endif
 
 #define ISOP(c)		(((c) == '=') || ((c) == ':'))
+
+// Magic macro to represent a dollar sign, i.e. $(DOLLAR)="$"
+#define DOLLAR_ID "DOLLAR"
 
 int Read_config( char* config_file, BUCKET** table, 
 				 int table_size, int expand_flag )
@@ -408,6 +408,16 @@ expand_macro( const char *value, BUCKET **table, int table_size, char *self )
 		tmp = rval;
 	}
 
+	// Now, deal with the special $(DOLLAR) macro.
+	if (!self)
+	while( get_var(tmp, &left, &name, &right, DOLLAR_ID) ) {
+		rval = (char *)MALLOC( (unsigned)(strlen(left) + 1 +
+										  strlen(right) + 1));
+		(void)sprintf( rval, "%s$%s", left, right );
+		FREE( tmp );
+		tmp = rval;
+	}
+
 	return( tmp );
 }
 
@@ -416,7 +426,8 @@ expand_macro( const char *value, BUCKET **table, int table_size, char *self )
 */
 int
 get_var( register char *value, register char **leftp, 
-		 register char **namep, register char **rightp, char *self )
+		 register char **namep, register char **rightp, char *self,
+		 bool getdollardollar)
 {
 	char *left, *left_end, *name, *right;
 	char *tvalue;
@@ -427,13 +438,43 @@ get_var( register char *value, register char **leftp,
 
 	for(;;) {
 tryagain:
-		value = (char *)strchr( (const char *)tvalue, '$' );
+		if (tvalue) {
+			value = (char *)strchr( (const char *)tvalue, '$' );
+		}
+		
 		if( value == NULL ) {
 			return( 0 );
 		}
 
+			// Do not treat $$(foo) as a macro unless
+			// getdollardollar = true.  This is for
+			// condor_submit, so it does not try to expand
+			// macros when we do "executable = foo.$$(arch)"
+			// If getdollardollar is true, than only get
+			// macros with two dollar signs, i.e. $$(foo).
+		if ( getdollardollar ) {
+			if ( *++value != '$' ) {
+				// this is not a $$ macro
+				tvalue = value;
+				goto tryagain;
+			}
+		} else {
+			// here getdollardollar is false, so ignore
+			// any $$(foo) macro.
+			if ( (*(value + sizeof(char))) == '$' ) {
+				value++; // skip current $
+				value++; // skip following $
+				tvalue = value;
+				goto tryagain;
+			}
+		}
+
 		if( *++value == '(' ) {
-			left_end = value - 1;
+			if ( getdollardollar ) {
+				left_end = value - 2;
+			} else {
+				left_end = value - 1;
+			}
 			name = ++value;
 			while( *value && *value != ')' ) {
 				char c = *value++;
@@ -451,7 +492,16 @@ tryagain:
 				// identifier.
 				int namelen = value-name;
 				if( !self || ( namelen == selflen &&
-							   strncmp( name, self, namelen ) == MATCH ) ) {
+							   strincmp( name, self, namelen ) == MATCH ) ) {
+						// $(DOLLAR) has special meaning; it is
+						// set to "$" and is _not_ recursively
+						// expanded.  To implement this, we have
+						// get_var() ignore $(DOLLAR) and we then
+						// handle it in expand_macro().
+					if ( !self && strincmp(name,DOLLAR_ID,namelen) == MATCH ) {
+						tvalue = name;
+						goto tryagain;
+					}
 					right = value;
 					break;
 				} else {

@@ -195,9 +195,34 @@ void UniShadow::shutDown( int reason, int exitStatus )
 	}
 	
 		// if we are being called from the exception handler, return
-		// now.
+		// now to prevent infinite loop in case we call EXCEPT below.
 	if ( reason == JOB_EXCEPTION ) {
 		return;
+	}
+
+		// if job exited, check and see if it meets the user's
+		// ExitRequirements, and/or update the job ad in the schedd
+		// so that the exit status is recoreded in the history file.
+	if ( reason == JOB_EXITED ) {
+		char buf[200];
+		sprintf(buf,"%s=%d",ATTR_JOB_EXIT_STATUS,exitStatus);
+		jobAd->InsertOrUpdate(buf);
+		int exit_requirements = TRUE;	// default to TRUE if not specified
+		jobAd->EvalBool(ATTR_JOB_EXIT_REQUIREMENTS,jobAd,exit_requirements);
+		if ( exit_requirements ) {
+			// exit requirements are met; update the classad with
+			// the exit status so it is properly recorded in the
+			// history file.
+			if ( ConnectQ(getScheddAddr(), SHADOW_QMGMT_TIMEOUT) ) {
+				SetAttributeInt(getCluster(),getProc(),ATTR_JOB_EXIT_STATUS,
+					exitStatus);
+				DisconnectQ(NULL);
+			}
+		} else {
+			// exit requirements expression is FALSE! 
+			EXCEPT("Job exited with status %d; failed %s expression",
+				exitStatus,ATTR_JOB_EXIT_REQUIREMENTS);
+		}
 	}
 
 		// write stuff to user log:

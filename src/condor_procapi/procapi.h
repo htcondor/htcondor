@@ -209,6 +209,8 @@ const int PHBUCKETS = 101;  // why 101?  Well...it's slightly greater than
 */
 
 struct procHashNode {
+  /// Ctor
+  procHashNode();
   /// the last time (secs) this data was retrieved.
   double lasttime;
   /// old cpu usage number (raw, not percent)
@@ -225,6 +227,11 @@ struct procHashNode {
   long minfaultrate;
   /// The "time of birth" of this process (in sec)
   long creation_time;
+  /** A pretty good band... no, really, this flag is used by a simple garbage collection sheme
+	  which controls when procHashNodes should be deleted.  First we set garbage to true.  
+	  Then everytime we access this procHashNode we set it to false.  After an hour has passed,
+	  any node which still has garbage set to true is deleted. */
+  bool garbage;
 };
 
 

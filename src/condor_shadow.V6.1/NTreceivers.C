@@ -112,29 +112,6 @@ do_REMOTE_syscall()
 		return 0;
 	}
 
-#if 0	// no longer needed; executable should go via FileTransfer object
-	case CONDOR_get_executable:
-	{
-		char source[_POSIX_PATH_MAX];
-
-		assert( syscall_sock->end_of_message() );
-
-		errno = 0;
-		rval = pseudo_get_executable(source);
-		terrno = errno;
-		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
-
-		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
-		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
-		} else {
-			assert( syscall_sock->put_file(source) > -1 );
-		}
-		assert( syscall_sock->end_of_message() );
-		return 0;
-	}
-#endif
 
 	case CONDOR_job_exit:
 	{

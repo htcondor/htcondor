@@ -29,21 +29,67 @@
 // Externs to Globals
 extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc. 
 
-// The "order" of entries in perm_names and perm_ints must match
+/*
+  The "order" of entries in perm_names and perm_ints must match.
+
+  These arrays are only for use inside condor_ipverify.C, and they
+  include all the permission levels that we want ipverify to handle,
+  not neccessarily all of the permission levels DaemonCore itself
+  cares about (for example, there's nothing in here for
+  "IMMEDIATE_FAMILY").  They can *not* be used to convert DCpermission
+  enums into strings, you need to use PermString() for that.
+*/
 const char* IpVerify::perm_names[] = {"READ","WRITE","ADMINISTRATOR","OWNER","NEGOTIATOR","CONFIG",NULL};
 const int IpVerify::perm_ints[] = {READ,WRITE,ADMINISTRATOR,OWNER,NEGOTIATOR,CONFIG_PERM,-1};  // must end with -1
 
+
+const char*
+PermString( DCpermission perm )
+{
+	switch( perm ) {
+	case ALLOW:
+		return "ALLOW";
+	case READ:
+		return "READ";
+	case WRITE:
+		return "WRITE";
+	case NEGOTIATOR:
+		return "NEGOTIATOR";
+	case IMMEDIATE_FAMILY:
+		return "IMMEDIATE_FAMILY";
+	case ADMINISTRATOR:
+		return "ADMINISTRATOR";
+	case OWNER:
+		return "OWNER";
+	case CONFIG_PERM:
+		return "CONFIG";
+	}
+	return "Unknown";
+};
+
+
 // Hash function for Permission hash table
-static int compute_perm_hash(const struct in_addr &in_addr, int numBuckets)
+static int
+compute_perm_hash(const struct in_addr &in_addr, int numBuckets)
 {
 	unsigned int h = *((unsigned int *)&in_addr);
 	return ( h % numBuckets );
 }
 
+
+// Hash function for AllowHosts hash table
+static int
+compute_host_hash( const MyString & str, int numBuckets )
+{
+	return ( str.Hash() % numBuckets );
+}
+
+
 // == operator for struct in_addr, also needed for hash table template
 bool operator==(const struct in_addr a, const struct in_addr b) {
 	return a.s_addr == b.s_addr;
 }
+
 
 // Constructor
 IpVerify::IpVerify() 
@@ -58,7 +104,9 @@ IpVerify::IpVerify()
 	cache_DNS_results = TRUE;
 
 	PermHashTable = new PermHashTable_t(797, compute_perm_hash);
+	AllowHostsTable = new HostHashTable_t(53, compute_host_hash);
 }
+
 
 // Destructor
 IpVerify::~IpVerify()
@@ -69,12 +117,16 @@ IpVerify::~IpVerify()
 	if (PermHashTable)
 		delete PermHashTable;
 
+	if( AllowHostsTable )
+		delete AllowHostsTable;
+
 	// Clear the Permission Type Array
 	for (i=0;i<IPVERIFY_MAX_PERM_TYPES;i++) {
 		if ( PermTypeArray[i] )
 			delete PermTypeArray[i];
 	}
 }
+
 
 int
 IpVerify::Init()
@@ -118,6 +170,13 @@ IpVerify::Init()
 			sprintf(buf,"HOSTALLOW_%s",perm_names[i]);
 			pAllow = param(buf);
 		}
+
+			// Treat a "*" for HOSTALLOW_XXX as if it's just
+			// undefined. 
+		if( pAllow && !strcmp(pAllow, "*") ) {
+			free( pAllow );
+			pAllow = NULL;
+		}
 	
 		sprintf(buf,"HOSTDENY_%s_%s",perm_names[i],mySubSystem);
 		if ( (pDeny = param(buf)) == NULL ) {
@@ -153,8 +212,13 @@ IpVerify::Init()
 
 	}	// end of for i loop
 
+		// Finally, check to see if we have an allow hosts that have
+		// been added manually, in which case, re-add those.
+	process_allow_hosts();
+
 	return TRUE;
 }
+
 
 int
 IpVerify::add_hash_entry(const struct in_addr & sin_addr,int new_mask)
@@ -183,49 +247,60 @@ IpVerify::add_hash_entry(const struct in_addr & sin_addr,int new_mask)
 		return FALSE;	// error inserting into hash table
 }
 
-int 
-IpVerify::fill_table(StringList *slist, int mask)
+
+// This returns true if we successfully added the given entry to the
+// hash table.  If we didn't, it's because the addr we were passed
+// contains a wildcard, in which case we want to keep that in the
+// string list.
+bool
+IpVerify::add_host_entry( const char* addr, int mask ) 
 {
-	struct in_addr sin_addr;
-	char *addr;
-	int result = TRUE;
 	struct hostent	*hostptr;
+	struct in_addr	sin_addr;
+	bool			result = true;	
 
-	slist->rewind();
-
-	while ( (addr=slist->next()) ) {
-		if ( is_ipaddr(addr,&sin_addr) == TRUE ) {
+	if( is_ipaddr(addr,&sin_addr) == TRUE ) {
 			// This address is an IP addr in numeric form.
 			// Add it into the hash table.
-			if ( add_hash_entry(sin_addr,mask) == FALSE ) {
-				result = FALSE;
-			}
-			// and remove it from the string list, so when we are
-			// done the string list just contains string hostnames.
-			slist->deleteCurrent();
-		} else {
+		add_hash_entry(sin_addr,mask);
+	} else {
 			// This address is a hostname.  If it has no wildcards, resolve to
 			// and IP address here, add it to our hashtable, and remove the entry
 			// (i.e. treat it just like an IP addr).  If it has wildcards, then
 			// leave it in this StringList.
-			if ( strchr(addr,'*') == NULL ) {
+		if ( strchr(addr,'*')  ) {
+				// Contains wildcards, do nothing, and return false so
+				// we leave the host in the string list
+			result = false;
+		} else {
 				// No wildcards; resolve the name
-				if ( (hostptr=gethostbyname(addr)) != NULL) {
-					if ( hostptr->h_addrtype == AF_INET ) {
-						for (int i=0; hostptr->h_addr_list[i]; i++) {
-							if (add_hash_entry((*(struct in_addr *)(hostptr->h_addr_list[i])),mask) == FALSE) {
-								result = FALSE;
-							}
-						}
+			if ( (hostptr=gethostbyname(addr)) != NULL) {
+				if ( hostptr->h_addrtype == AF_INET ) {
+					for (int i=0; hostptr->h_addr_list[i]; i++) {
+						add_hash_entry( (*(struct in_addr *)
+										(hostptr->h_addr_list[i])),
+										mask );
 					}
 				}
-				slist->deleteCurrent();
 			}
 		}
-	}
-
+	}	
 	return result;
 }
+
+
+void
+IpVerify::fill_table(StringList *slist, int mask)
+{
+	char *addr;
+	slist->rewind();
+	while ( (addr=slist->next()) ) {
+		if( add_host_entry(addr, mask) ) {
+            slist->deleteCurrent();
+		}
+	}
+}
+
 
 int
 IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin )
@@ -335,6 +410,62 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin )
 	EXCEPT("IP Verify: could not decide, should never make it here!");
 	return FALSE;
 }
+
+
+void
+IpVerify::process_allow_hosts( void )
+{
+	MyString host;
+	int mask;
+	AllowHostsTable->startIterations();
+	while( AllowHostsTable->iterate(host,mask) ) {
+		add_host_entry( host.Value(), mask );
+	}
+}
+	
+
+bool
+IpVerify::AddAllowHost( const char* host, DCpermission perm )
+{
+	int new_mask = allow_mask(perm);
+	MyString addr(host);
+	int *mask_p = NULL;
+
+	dprintf( D_DAEMONCORE, "Entered IpVerify::AddAllowHost(%s, %s)\n",
+			 host, PermString(perm) );
+
+		// First, see if we already have this host, and if so, we're
+		// done. 
+	if( AllowHostsTable->lookup( addr, mask_p) != -1) {
+			// We found it.  Make sure the mask is cool
+		if( ! (*mask_p & new_mask) ) {
+				// The host was in there, but we need to add more bits
+				// to the mask
+			dprintf( D_DAEMONCORE, 
+					 "IpVerify::AddAllowHost: Changing mask, was %d, adding %d)\n",
+					 *mask_p, new_mask );
+			*mask_p = *mask_p | new_mask;
+		} else {
+			dprintf( D_DAEMONCORE, 
+					 "IpVerify::AddAllowHost: Already have %s with %d\n", 
+					 host, new_mask );
+		}
+		return true;
+	} 
+
+		// If we're still here, it wasn't in our table, so we want to
+		// add it to the real verify hash table, and if that works,
+		// add it to both our table (so we remember it on reconfig).
+	if( add_host_entry(host, new_mask) ) {
+		dprintf( D_DAEMONCORE, "Adding new hostallow (%s) entry for \"%s\"\n",  
+				 PermString(perm), host );
+		AllowHostsTable->insert( addr, new_mask );
+		return true;
+	} else {
+		return false;
+	}
+}
+
 
 #ifdef WANT_STANDALONE_TESTING
 char *mySubSystem = "COLLECTOR";

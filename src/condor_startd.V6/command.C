@@ -251,16 +251,11 @@ command_request_claim( Service*, int cmd, Stream* stream )
 	}
 
 	State s = rip->state();
-	switch( s ) {
-	case claimed_state:
-	case matched_state:
-	case unclaimed_state:
-		rval = request_claim( rip, cap, stream );
-		break;
-	default:
+	if( s == preempting_state ) {
 		rip->log_ignore( REQUEST_CLAIM, s );
 		rval = FALSE;
-		break;
+	} else {
+		rval = request_claim( rip, cap, stream );
 	}
 	free( cap );
 	return rval;
@@ -360,14 +355,14 @@ command_match_info( Service*, int cmd, Stream* stream )
 		return FALSE;
 	}
 
-		// Check resource state.  If we're in claimed or unclaimed,
-		// process the command.  Otherwise, ignore it.  
+		// Check resource state.  Ignore if we're preempting or
+		// matched, otherwise process the command. 
 	State s = rip->state();
-	if( s == claimed_state || s == unclaimed_state ) {
-		rval = match_info( rip, cap );
-	} else {
+	if( s == matched_state || s == preempting_state ) {
 		rip->log_ignore( MATCH_INFO, s );
 		rval = FALSE;
+	} else {
+		rval = match_info( rip, cap );
 	}
 	free( cap );
 	return rval;
@@ -1026,7 +1021,8 @@ match_info( Resource* rip, char* cap )
 	int rval = FALSE;
 	rip->dprintf(D_ALWAYS, "match_info called\n");
 
-	if( rip->state() == claimed_state ) {
+	switch( rip->state() ) {
+	case claimed_state:
 		if( rip->r_cur->cap()->matches(cap) ) {
 				// The capability we got matches the one for the
 				// current match, and we're already claimed.  There's
@@ -1048,8 +1044,9 @@ match_info( Resource* rip, char* cap )
 				// some cap in the first place.
 			EXCEPT( "Should never get here" );
 		}
-	} else {
-		assert( rip->state() == unclaimed_state );
+		break;
+	case unclaimed_state:
+	case owner_state:
 		if( rip->r_cur->cap()->matches(cap) ) {
 			rip->dprintf( D_ALWAYS, "Received match %s\n", cap );
 
@@ -1067,6 +1064,11 @@ match_info( Resource* rip, char* cap )
 					 cap );			
 			rval = FALSE;
 		}
+		break;
+	default:
+		EXCEPT( "match_info() called with unexpected state (%s)", 
+				state_to_string(rip->state()) );
+		break;
 	}
 	return rval;
 }

@@ -80,7 +80,6 @@ extern "C" {
 				int *jobstatus, char *coredir );
 	void get_local_rusage( struct rusage *bsd_rusage );
 	void NotifyUser( char *buf, PROC *proc );
-	void MvTmpCkpt();
 	FILE	*fdopen();
 	int		whoami();
 	void update_job_status( struct rusage *localp, struct rusage *remotep );
@@ -153,6 +152,8 @@ extern "C"  void log_termination(struct rusage *, struct rusage *);
 extern "C"  void log_execute(char *);
 extern "C"  void log_except(char *);
 
+int		TryLogExecute = 0;
+
 char	*Spool = NULL;
 char	*ExecutingHost = NULL;
 char	*GlobalCap = NULL;
@@ -191,12 +192,12 @@ int		InitialJobStatus = -1;
 int JobStatus;
 struct rusage JobRusage;
 struct rusage AccumRusage;
-int ExitReason = JOB_EXITED;		/* Schedd counts on knowing exit reason */
+int ExitReason = JOB_EXCEPTION;		/* Schedd counts on knowing exit reason */
 int JobExitStatus = 0;                 /* the job's exit status */
 int MaxDiscardedRunTime = 3600;
 
 extern "C" int ExceptCleanup(int,int,char*);
-int Termlog;
+extern int Termlog;
 
 time_t	RunTime;
 
@@ -520,7 +521,8 @@ main(int argc, char *argv[], char *envp[])
 
 	Wrapup();
 
-	dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
+	dprintf( D_ALWAYS, "********** Shadow Exiting(%d) **********\n",
+		ExitReason );
 	exit( ExitReason );
 }
 
@@ -580,6 +582,11 @@ HandleSyscalls()
 
 		if( cnt < 0 && errno == EINTR ) {
 			continue;
+		}
+
+		if( TryLogExecute ) {
+			log_execute( ExecutingHost );
+			TryLogExecute = 0;
 		}
 
 		if( FD_ISSET(CLIENT_LOG, &readfds) ) {
@@ -880,7 +887,8 @@ send_job( V2_PROC *proc, char *host, char *cap)
 	retval = part_send_job(0, host, reason, capability, schedd, proc, sd1, sd2, NULL);
 	if (retval == -1) {
 		DoCleanup();
-		dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
+		dprintf( D_ALWAYS, "********** Shadow Exiting(%d) **********\n",
+			reason);
 		exit( reason );
 	}
 	if( sd1 != RSC_SOCK ) {
@@ -936,7 +944,8 @@ start_job( char *cluster_id, char *proc_id )
 	if( Proc->status != RUNNING ) {
 		dprintf( D_ALWAYS, "Shadow: Asked to run proc %d.%d, but status = %d\n",
 							Proc->id.cluster, Proc->id.proc, Proc->status );
-		dprintf(D_ALWAYS, "********** Shadow Exiting **********\n" );
+		dprintf(D_ALWAYS, "********** Shadow Exiting(%d) **********\n",
+			JOB_BAD_STATUS);
 		exit( JOB_BAD_STATUS );	/* don't cleanup here */
 	}
 #endif
@@ -1044,7 +1053,8 @@ send_quit( char *host, char *capability )
 		dprintf( D_ALWAYS, "Shadow: Can't connect to condor_startd on %s\n",
 				 host );
 		DoCleanup();
-		dprintf( D_ALWAYS, "********** Shadow Parent Exiting **********\n" );
+		dprintf( D_ALWAYS, "********** Shadow Parent Exiting(%d) **********\n",
+			JOB_NOT_STARTED);
 		exit( JOB_NOT_STARTED );
 	}
 }
@@ -1146,6 +1156,24 @@ reaper()
 			);
 		}
 	}
+		
+		/* 
+
+		   Set a flag so we try to log a ULOG_EXECUTE event the next
+		   time we return from select().  We do this here because the
+		   only children the shadow has are from the old file transfer
+		   protocol, and the first time one of those children exits is
+		   when the initial checkpoint has been completely transfered
+		   to the remote machine.  Doing it this way, instead ofas
+		   soon as the shadow spawns, gives much more accurate timing
+		   in the UserLog.  The execute event will only happen once,
+		   b/c log_execute() is only called in the parent shadow
+		   process, and it has its own flag to ensure it only logs
+		   once.
+		   Derek Wright <wright@cs.wisc.edu>
+		*/
+	TryLogExecute = 1;
+
 
 #ifdef HPUX
 #define _BSD

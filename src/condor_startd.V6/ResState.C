@@ -180,14 +180,19 @@ ResState::eval( void )
 				return change( busy_act );
 			}
 		}
-		if( (r_act == idle_act) && (rip->r_reqexp->eval() == 0) ) {
-				// STATE TRANSITION #14
+		if( (r_act == idle_act) && (rip->eval_start() == 0) ) {
+				// START evaluates to False, so return to the owner
+				// state.  In this case, we don't need to worry about
+				// START locally evaluating to FALSE due to undefined
+				// job attributes and well-placed meta-operators, b/c
+				// we're in the claimed state, so we'll have a job ad
+				// to evaluate against.
 			return change( preempting_state ); 
 		}
 		if( (r_act == busy_act) && (rip->wants_pckpt()) ) {
 			rip->periodic_checkpoint();
 		}
-		if( rip->r_reqexp->pub() ) {
+		if( rip->r_reqexp->restore() ) {
 				// Our reqexp changed states, send an update
 			rip->update();
 		}
@@ -204,13 +209,13 @@ ResState::eval( void )
 
 	case unclaimed_state:
 		// See if we should be owner or unclaimed
-		if( rip->r_reqexp->eval() == 0 ) {
+		if( rip->eval_is_owner() ) {
 			return change( owner_state );
 		}
 			// Check to see if we should run benchmarks
 		deal_with_benchmarks( rip );
 
-		if( rip->r_reqexp->pub() ) {
+		if( rip->r_reqexp->restore() ) {
 				// Our reqexp changed states, send an update
 			rip->update();
 		}
@@ -218,13 +223,13 @@ ResState::eval( void )
 		break;	
 
 	case owner_state:
-		if( rip->r_reqexp->eval() != 0 ) {
+		if( ! rip->eval_is_owner() ) {
 			change( unclaimed_state );
 		}
 		break;	
 		
 	case matched_state:
-		if( rip->r_reqexp->eval() == 0 ) {
+		if( rip->eval_is_owner() == 0 ) {
 				// STATE TRANSITION #8
 			change( owner_state );
 		}
@@ -322,15 +327,15 @@ ResState::enter_action( State s, Activity a,
 			rip->r_pre = NULL;
 		}
 			// See if we should be in owner or unclaimed state
-		if( rip->r_reqexp->eval() != 0 ) {
+		if( ! rip->eval_is_owner() ) {
 				// Really want to be in unclaimed.
 			return change( unclaimed_state );
 		}
-		rip->r_reqexp->unavail();		
+		rip->r_reqexp->restore();		
 		break;
 
 	case claimed_state:
-		rip->r_reqexp->pub();			
+		rip->r_reqexp->restore();			
 		if( statechange ) {
 			rip->r_cur->start_claim_timer();	
 				// Update important attributes into the classad.
@@ -350,7 +355,7 @@ ResState::enter_action( State s, Activity a,
 		break;
 
 	case unclaimed_state:
-		rip->r_reqexp->pub();
+		rip->r_reqexp->restore();
 		break;
 
 	case matched_state:

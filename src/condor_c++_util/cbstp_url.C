@@ -52,6 +52,7 @@ int condor_bytes_stream_open_ckpt_file( const char *name, int flags,
 	if (status < 0) {
 		fprintf(stderr, "cbstp connect() FAILED, errno = %d\n", errno);
 		fflush(stderr);
+		close( sock_fd );
 		return status;
 	}
 	return sock_fd;

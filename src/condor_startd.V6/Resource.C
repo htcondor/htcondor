@@ -311,6 +311,8 @@ Resource::starter_exited( void )
 void
 Resource::leave_preempting_state( void )
 {
+	int tmp;
+
 	r_cur->vacate();	// Send a vacate to the client of the match
 	delete r_cur;		
 	r_cur = NULL;
@@ -319,7 +321,7 @@ Resource::leave_preempting_state( void )
 	switch( dest ) {
 	case claimed_state:
 			// If the machine is still available....
-		if( r_reqexp->eval() != 0 ) {
+		if( ! eval_is_owner() ) {
 			r_cur = r_pre;
 			r_pre = NULL;
 				// STATE TRANSITION preempting -> claimed
@@ -348,8 +350,19 @@ Resource::leave_preempting_state( void )
  
 		// In english:  "If the machine is available and someone
 		// is waiting for it..." 
-	if( (r_reqexp->eval() != 0) &&
-		r_pre && r_pre->agentstream() ) {
+	bool allow_it = false;
+	if( r_pre && r_pre->agentstream() ) {
+		allow_it = true;
+		if( (r_classad->EvalBool("START", r_pre->ad(), tmp)) 
+			&& !tmp ) {
+				// Only if it's defined and false do we consider the
+				// machine busy.  We have a job ad, so local
+				// evaluation gotchas don't apply here.
+			allow_it = false;
+		}
+	}
+
+	if( allow_it ) {
 		r_cur = r_pre;
 		r_pre = NULL;
 			// STATE TRANSITION preempting -> claimed
@@ -711,6 +724,33 @@ Resource::eval_continue( void )
 								   tmp)) == 0 ) {
 			EXCEPT("Can't evaluate CONTINUE");
 		}
+	}
+	return tmp;
+}
+
+
+int
+Resource::eval_is_owner( void )
+{
+	int tmp;
+	if( (r_classad->EvalBool( ATTR_IS_OWNER, 
+							  r_cur->ad(),
+							  tmp)) == 0 ) {
+		EXCEPT("Can't evaluate %s", ATTR_IS_OWNER);
+	}
+	return tmp;
+}
+
+
+int
+Resource::eval_start( void )
+{
+	int tmp;
+	if( (r_classad->EvalBool( "START", 
+							  r_cur->ad(),
+							  tmp)) == 0 ) {
+			// Undefined
+		return -1;
 	}
 	return tmp;
 }

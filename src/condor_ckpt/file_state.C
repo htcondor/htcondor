@@ -485,7 +485,27 @@ static int needs_reopen( int old_flags, int new_flags )
 }
 
 /*
-Create and open a file object from a logical name.  If either the logical name or url are already in the file table AND the file was previously opened with compatible flags, then share the object.  If not, elevate the flags to a common denominator and open a new object suitable for both purposes.
+Find any pointers to one file and replace it with another.
+*/
+
+void CondorFileTable::replace_file( CondorFile *old_file, CondorFile *new_file )
+{
+	int i;
+
+	for( i=0;i<length; i++ ) {
+		if(pointers[i] && pointers[i]->file==old_file) {
+			pointers[i]->file=new_file;
+		}
+	}
+}
+
+
+/*
+Create and open a file object from a logical name.  If either the logical
+name or url are already in the file table AND the file was previously
+opened with compatible flags, then share the object.  If not, elevate
+the flags to a common denominator and open a new object suitable for
+both purposes.
 */
 
 CondorFile * CondorFileTable::open_file_unique( char *logical_name, int flags, int mode )
@@ -502,6 +522,7 @@ CondorFile * CondorFileTable::open_file_unique( char *logical_name, int flags, i
 	}
 
 	CondorFilePointer *p = pointers[match];
+	CondorFile *old_file;
 
 	if( needs_reopen( p->flags, flags ) ) {
 		flags &= ~(O_RDONLY);
@@ -513,10 +534,11 @@ CondorFile * CondorFileTable::open_file_unique( char *logical_name, int flags, i
 		CondorFile *f = open_url_retry( p->file->get_url(), flags, mode );
 		if(!f) return 0;
 
-		if( p->file->close()!=0 ) return 0;
-		delete p->file;
+		old_file = p->file;
+		if( old_file->close()!=0 ) return 0;
 
-		p->file = f;
+		replace_file( old_file, f );
+		delete old_file;
 	}
 
 	return p->file;
@@ -1016,6 +1038,60 @@ int CondorFileTable::fsync( int fd )
 {
 	if( resume(fd)<0 ) return -1;
 	return pointers[fd]->file->fsync();
+}
+
+int CondorFileTable::fstat( int fd, struct stat *buf)
+{
+	if( resume(fd)<0 ) return -1;
+	return pointers[fd]->file->fstat(buf);
+}
+
+int CondorFileTable::stat( const char *name, struct stat *buf)
+{
+	int fd;
+	int scm, oscm;
+	int ret;
+
+	/* See if the file is open, if so, then just do an fstat. If it isn't open
+		then call the normal stat in unmapped mode and hope it gets the right
+		thing */
+	fd = find_logical_name((char*)name);
+	if (fd == -1)
+	{
+		oscm = scm = GetSyscallMode();
+		scm |= SYS_UNMAPPED; /* turn on SYS_UNMAPPED */
+		scm &= ~(SYS_MAPPED); /* turn off SYS_MAPPED */
+		SetSyscalls(scm);
+		ret = ::stat(name, buf);
+		SetSyscalls(oscm); /* set it back to what it was */
+		
+		return ret;
+	}
+	return fstat(fd, buf);
+}
+
+int CondorFileTable::lstat( const char *name, struct stat *buf)
+{
+	int fd;
+	int scm, oscm;
+	int ret;
+
+	/* See if the file is open, if so, then just do an fstat. If it isn't open
+		then call the normal lstat in unmapped mode and hope it gets the right
+		thing */
+	fd = find_logical_name((char*)name);
+	if (fd == -1)
+	{
+		oscm = scm = GetSyscallMode();
+		scm |= SYS_UNMAPPED; /* turn on SYS_UNMAPPED */
+		scm &= ~(SYS_MAPPED); /* turn off SYS_MAPPED */
+		SetSyscalls(scm);
+		ret = ::lstat(name, buf);
+		SetSyscalls(oscm); /* set it back to what it was */
+		
+		return ret;
+	}
+	return fstat(fd, buf);
 }
 
 /*

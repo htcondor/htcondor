@@ -194,6 +194,28 @@ int CondorFileAgent::flush()
 	return local_copy->flush();
 }
 
+int CondorFileAgent::fstat(struct stat *buf)
+{
+	struct stat local;
+	int ret, ret2;
+
+	ret = original->fstat(buf);
+	if (ret != 0){
+		return ret;
+	}
+
+	ret2 = local_copy->fstat(&local);
+	if (ret2 != 0){
+		return ret2;
+	}
+
+	buf->st_size = local.st_size;
+	buf->st_atime = local.st_atime;
+	buf->st_mtime = local.st_mtime;
+
+	return ret2;
+}
+
 int CondorFileAgent::is_readable()
 {
 	return original->is_readable();

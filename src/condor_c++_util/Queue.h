@@ -23,15 +23,16 @@
 #ifndef QUEUE_H
 #define QUEUE_H
 
+#include <assert.h>
+
 //--------------------------------------------------------------------
 // Queue template
-// Written by Adiel Yoaz (1998)
 //--------------------------------------------------------------------
 
 template <class Value>
 class Queue {
  public:
-  Queue(int tableSize=500);
+  Queue(int tableSize=32);
   ~Queue();
 
   int enqueue(const Value& value);
@@ -72,11 +73,38 @@ Queue<Value>::~Queue()
 template <class Value>
 int Queue<Value>::enqueue(const Value& value)
 {
-  if (IsFull()) return -1;
-  ht[head]=value;
-  head=(head+1)%tableSize;
-  length++;
-  return 0;
+	if (IsFull()) {
+		int new_tableSize = tableSize * 2;
+		Value * new_ht = new Value[new_tableSize];
+		int i=0,j=0;
+
+
+		if (!new_ht) { // out of memory...
+			return -1;
+		}
+
+
+		assert(head==tail);
+
+		// now copy the two parts into the new buffer.
+		for (i = head; i < tableSize; i++ ) {
+			new_ht[j++] = ht[i];
+		}
+		for (i = 0; i < head; i++ ) {
+			new_ht[j++] = ht[i];
+		}
+
+		delete [] ht;
+		ht = new_ht;
+		tail = 0;
+		head = length;
+		tableSize = new_tableSize;
+	}
+
+	ht[head]=value;
+	head=(head+1)%tableSize;
+	length++;
+	return 0;
 }
 
 //--------------------------------------------------------------------

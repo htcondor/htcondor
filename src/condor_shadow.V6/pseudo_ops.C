@@ -56,7 +56,6 @@ extern "C" {
 	int use_compress( char *method, char *path );
 	int use_fetch( char *method, char *path );
 	void HoldJob( const char* buf );
-	void log_execute(char *);
 }
 
 extern int JobStatus;
@@ -146,7 +145,6 @@ pseudo_getpid()
 int
 pseudo_getlogin(char *loginbuf)
 {
-	int		rval;
 	char *temp;
 
 	temp = ((PROC *)Proc)->owner; 
@@ -595,22 +593,13 @@ pseudo_get_file_stream(
 	int		data_sock;
 	int		file_fd;
 	int		bytes_sent;
-	int		bytes_read;
 	pid_t	child_pid;
-#if defined(ALPHA)
-	unsigned int	status;		/* 32 bit unsigned */
-#else
-	unsigned long	status;		/* 32 bit unsigned */
-#endif
 	int		rval;
 	PROC *p = (PROC *)Proc;
 	int		retry_wait;
 	bool	CkptFile = is_ckpt_file(file);
 	bool	ICkptFile = is_ickpt_file(file);
 	priv_state	priv;
-
-		// Should we log an execute event to the user log?  
-	static int NeedsExecuteLog = 1;	
 
 	dprintf( D_ALWAYS, "\tEntering pseudo_get_file_stream\n" );
 	dprintf( D_ALWAYS, "\tfile = \"%s\"\n", file );
@@ -689,35 +678,11 @@ pseudo_get_file_stream(
 			exit(1);
 		}
 
-#if 0	/* For compressed checkpoints, we need to close the socket
-		   so the client knows we are done sending (i.e., so the client's
-		   read will return), so we no longer require this confirmation. */
-			/*
-			  Here we should get a confirmation that our peer was able to
-			  read the same number of bytes we sent, but the starter doesn't
-			  send it, so if our peer just closes his end, we let that go.
-			*/
-		bytes_read = read( data_sock, &status, sizeof(status) );
-		if( bytes_read == 0 ) {
-			exit( 0 );
-		}
-				
-		assert( bytes_read == sizeof(status) );
-		status = ntohl( status );
-		assert( status == *len );
-		dprintf( D_ALWAYS,
-				 "\tSTREAM FILE SENT OK (%d bytes)\n", status );
-#endif
-		if( NeedsExecuteLog ) {
-				// log a ULOG_EXECUTE event
-			log_execute(ExecutingHost);
-		}
 		exit( 0 );
 	default:	/* the parent */
 		close( file_fd );
 		close( connect_sock );
 		if (CkptFile || ICkptFile) set_priv(priv);
-		NeedsExecuteLog = 0;
 		return 0;
 	}
 
@@ -1147,8 +1112,6 @@ char *Strdup( const char *str)
 int
 pseudo_startup_info_request( STARTUP_INFO *s )
 {
-	struct stat	st_buf;
-	char	*env_string;
 	PROC *p = (PROC *)Proc;
 
 	s->version_num = STARTUP_VERSION;
@@ -1467,8 +1430,6 @@ pseudo_get_iwd( char *path )
 int
 pseudo_get_ckpt_name( char *path )
 {
-	PROC	*p = (PROC *)Proc;
-
 	strcpy( path, RCkptName );
 	dprintf( D_SYSCALLS, "\tanswer = \"%s\"\n", path );
 	return 0;
@@ -1516,29 +1477,25 @@ pseudo_get_ckpt_speed()
 int
 pseudo_get_a_out_name( char *path )
 {
-	PROC	*p = (PROC *)Proc;
-	char exec_buf[_POSIX_PATH_MAX], *exec_name=exec_buf;
-	char final_buf[_POSIX_PATH_MAX], *final=final_buf;
-	char *tptr;
-
-	exec_buf[0] = '\0';
-	final_buf[0] = '\0';
 	path[0] = '\0';
+	int result;
 
-	if ( JobAd ) {
-			JobAd->LookupString(ATTR_JOB_CMD,exec_name);
-			if ( (tptr=substr(exec_name,"$$")) ) {
-				JobAd->LookupString(ATTR_JOB_CMDEXT,final);
-				if ( final[0] ) {
-					strcpy(tptr,final);
-					strcpy(path,exec_name);
-				}
-			}
-	}
+	// See if we can find an executable in the spool dir.
+	// Switch to Condor uid first, since ickpt files are 
+	// stored in the SPOOL directory as user Condor.
+	priv_state old_priv = set_condor_priv();
+	result = access(ICkptName,F_OK | X_OK);
+	set_priv(old_priv);
 
-
-	if ( path[0] == '\0' ) {
+	if ( result >= 0 ) {
+			// we can access an executable in the spool dir
 		strcpy( path, ICkptName );
+	} else {
+			// nothing in the spool dir; the executable 
+			// probably has $$(opsys) in it... so use what
+			// the jobad tells us.
+		ASSERT(JobAd);
+		JobAd->LookupString(ATTR_JOB_CMD,path);
 	}
 
 	dprintf( D_SYSCALLS, "\tanswer = \"%s\"\n", path );
@@ -1584,6 +1541,7 @@ pseudo_register_fs_domain( const char *fs_domain )
 {
 	strcpy( Executing_Filesystem_Domain, fs_domain );
 	dprintf( D_SYSCALLS, "\tFS_Domain = \"%s\"\n", fs_domain );
+	return 0;
 }
 
 /*
@@ -1594,6 +1552,7 @@ pseudo_register_uid_domain( const char *uid_domain )
 {
 	strcpy( Executing_UID_Domain, uid_domain );
 	dprintf( D_SYSCALLS, "\tUID_Domain = \"%s\"\n", uid_domain );
+	return 0;
 }
 
 int
@@ -1977,6 +1936,8 @@ pseudo_register_syscall_version( const char *version )
 	char buf[4096];
 	char line[256];
 
+	buf[0] = '\0';
+	line[0] = '\0';
 	strcat( buf, "Since the time that you ran condor_compile to link your job with\n" );
 	strcat( buf, "the Condor libraries, your local Condor administrator has\n" );
 	strcat( buf, "installed a different version of the condor_shadow program.\n" );

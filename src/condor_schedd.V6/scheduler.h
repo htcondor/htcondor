@@ -50,7 +50,7 @@ const 	int			MAX_REJECTED_CLUSTERS = 1024;
 const   int         STARTD_CONTACT_TIMEOUT = 45;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
 
-extern	char**		environ;
+extern	DLL_IMPORT_MAGIC char**		environ;
 
 struct shadow_rec
 {
@@ -81,8 +81,16 @@ struct match_rec
 	~match_rec();
     char    		id[SIZE_OF_CAPABILITY_STRING];
     char    		peer[50];
+	
+		// cluster of the job we used to obtain the match
+	int				origcluster; 
+
+		// if match is currently active, cluster and proc of the
+		// running job associated with this match; otherwise,
+		// cluster==origcluster and proc==-1
     int     		cluster;
     int     		proc;
+
     int     		status;
 	shadow_rec*		shadowRec;
 	int				alive_countdown;
@@ -97,9 +105,7 @@ struct match_rec
 enum MrecStatus {
     M_ACTIVE,
     M_INACTIVE,
-    M_DELETED,
-	M_STARTD_CONTACT_LIMBO,  // after contacting startd; before recv'ing reply
-	M_DELETE_PENDING         // is set if we should delete, but in above state
+	M_STARTD_CONTACT_LIMBO  // after contacting startd; before recv'ing reply
 };
 
 // These are the args to contactStartd that get stored in the queue.
@@ -153,7 +159,6 @@ class Scheduler : public Service
     match_rec*      AddMrec(char*, char*, PROC_ID*, ClassAd*, char*, char*);
     int         	DelMrec(char*);
     int         	DelMrec(match_rec*);
-    int         	MarkDel(char*);
 	shadow_rec*		FindSrecByPid(int);
 	shadow_rec*		FindSrecByProcID(PROC_ID);
 	void			RemoveShadowRecFromMrec(shadow_rec*);
@@ -186,6 +191,7 @@ class Scheduler : public Service
 	int				QueueCleanInterval;
 	int				JobStartDelay;
 	int				MaxJobsRunning;
+	bool			NegotiateAllJobsInCluster;
 	int				JobsStarted; // # of jobs started last negotiating session
 	int				SwapSpace;	 // available at beginning of last session
 	int				ShadowSizeEstimate;	// Estimate of swap needed to run a job
@@ -291,7 +297,6 @@ class Scheduler : public Service
 	void			Relinquish(match_rec*);
 	void 			swap_space_exhausted();
 	void			delete_shadow_rec(int);
-	void			mark_job_running(PROC_ID*);
 	int				is_alive(shadow_rec* srec);
 	void			check_zombie(int, PROC_ID*);
 	void			kill_zombie(int, PROC_ID*);

@@ -44,7 +44,7 @@ static FILE *email_open_implementation(char *Mailer,char *final_command);
 #if defined(IRIX)
 extern char **_environ;
 #else
-extern char **environ;
+extern DLL_IMPORT_MAGIC char **environ;
 #endif
 
 extern int Termlog;
@@ -275,6 +275,12 @@ email_open_implementation(char *Mailer, char *final_command)
 		Termlog = 1;
 		dprintf_config(mySubSystem,2);
 
+		/* this is a simple daemon that if it needs to stat . should be
+			able to. You might not be able to if the shadow's cwd is in the
+			user dir somewhere and not readable by the Condor Account. */
+		chdir("/");
+		umask(0);
+
 		/* Need to do some OS hackery */
 		#if defined(IRIX)
 			envp = _environ;
@@ -295,6 +301,7 @@ email_open_implementation(char *Mailer, char *final_command)
 		/* connect the write end of the pipe to the stdin of the mailer */
 		if (dup2(pipefds[0], STDIN_FILENO) < 0)
 		{
+			/* I hope this EXCEPT gets recorded somewhere */
 			EXCEPT("EMAIL PROCESS: Could not connect stdin to child!\n");
 		}
 
@@ -306,27 +313,12 @@ email_open_implementation(char *Mailer, char *final_command)
 		sprintf(pe_user,"USER=%s", condor_name);
 		putenv(pe_user);
 
-		/* figure out how to call the mailer */
+		/* invoke the mailer */
 		execle("/bin/sh", "sh", "-c", final_command, NULL, envp);
 
-		/* Try the almost conforming popen implementation, I say almost because
-			I added the environ explicitly */
-		execle("/usr/bin/ksh", "ksh", "-c", final_command, NULL, envp);
-
-		/* Try the NON-conforming popen implementation, I added the environ
-			explicitly */
-		execle("/usr/bin/sh", "sh", "-c", final_command, NULL, envp);
-
-		/* To hell with it, just keep trying shells until we get it! */
-		execle("/bin/ksh", "ksh", "-c", final_command, NULL, envp);
-		execle("/sbin/ksh", "ksh", "-c", final_command, NULL, envp);
-		execle("/sbin/sh", "sh", "-c", final_command, NULL, envp);
-		execle("/usr/ucb/ksh", "ksh", "-c", final_command, NULL, envp);
-		execle("/usr/ucb/sh", "sh", "-c", final_command, NULL, envp);
-
-		/* If it gets this far, the rest failed, I hope it gets recorded 
-			somewhere */
-		EXCEPT("EMAIL PROCESS: Could not exec Mailer!\n");
+		/* I hope this EXCEPT gets recorded somewhere */
+		EXCEPT("EMAIL PROCESS: Could not exec mailer with %s because: %s", 
+			"/bin/sh", strerror(errno));
 	}
 
 	/* for completeness */

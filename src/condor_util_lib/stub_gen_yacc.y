@@ -1907,6 +1907,7 @@ find_type_name( char *param_name, struct node *param_list )
 		}
 	}
 	assert( FALSE );
+	return NULL; /* never happens, but removes warning */
 }
 
 

@@ -63,7 +63,6 @@ extern char VirtualMachineName[];  // Virtual machine where we're allocated (SMP
 
 extern "C" {
 	void _updateckpt( char *, char *, char * );
-	void killkids(pid_t, int);
 }
 void open_std_file( int which );
 void set_iwd();
@@ -516,6 +515,18 @@ UserProc::execute()
 			// renice
 		renice_self( "JOB_RENICE_INCREMENT" );
 
+			// make certain the syscall sockets which are being passed
+			// to the user job are setup to be blocking sockets.  this
+			// is done by calling timeout(0) CEDAR method.
+			// we must do this because the syscall lib does _not_ 
+			// expect to see any failures due to errno EAGAIN...
+		if ( SyscallStream ) {
+			SyscallStream->timeout(0);
+		}
+		if ( new_reli ) {
+			new_reli->timeout(0);
+		}
+
 			// child process should have only it's submitting uid, and cannot
 			// switch back to root or some other uid.  
 			// It'd be nice to check for errors here, but
@@ -758,11 +769,11 @@ UserProc::send_sig( int sig )
 	priv = set_user_priv();  
 
 	if ( job_class == VANILLA ) {
-		// Here we call killkids() to forward the signal to all of our
+		// Here we call ProcFamily methods to forward the signal to all of our
 		// decendents, since a VANILLA job in condor can fork.  But first,
 		// we block all of our async events, since killkids is relatively
-		// slow, does popen and runs /bin/ps, etc.  Thus it is not re-enterant.
-		// -Todd Tannenbaum, 5/9/95
+		// slow, could potentially do a  popen and runs /bin/ps, etc.  
+		// Thus it is not re-enterant. -Todd Tannenbaum, 5/9/95
 		switch (sig) {
 		case SIGTERM:
 			family->softkill(sig);

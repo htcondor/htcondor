@@ -1,6 +1,7 @@
 FILES = README condor.generic condor_config.local.central.manager
 
 CONTRIB_FILES = $(FILES) condor_config.local.ckpt.server \
+	condor_config.local.root.ckpt.server \
 	condor_config.local.smp condor_config.local.view_server \
 	condor_config.local.eventd
 

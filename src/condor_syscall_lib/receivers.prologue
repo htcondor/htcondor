@@ -67,7 +67,17 @@ do_REMOTE_syscall()
 
 	syscall_sock->decode();
 
-	ASSERT( syscall_sock->code(condor_sysnum) );
+	rval = syscall_sock->code(condor_sysnum);
+	if(!rval) {
+		char *error;
+		if(errno==0) {
+			error = "disconnected";
+		} else {
+			error = strerror(errno);
+		}
+		dprintf(D_ALWAYS,"Unable to talk to job: %s\n",errno);
+		return -1;
+	}
 
 #if defined(SYSCALL_DEBUG)
 	sprintf( SyscallLabel, "%-6d", condor_sysnum );
@@ -94,15 +104,12 @@ do_REMOTE_syscall(ReliSock *sock, int process)
 	int condor_sysnum;
 	int rval;
 	int	read_ok;
-	extern int SyscallSockClosed;
 
 	syscall_sock->decode();
 
-	/* SyscallSockClosed = FALSE; */
 	read_ok = syscall_sock->code(condor_sysnum);
 
 	if( !read_ok ) {
-		/* ASSERT( SyscallSockClosed ); */
 		dprintf( D_ALWAYS, 
 		"Failed to get syscall_code for proc %d removing..\n", process);
 

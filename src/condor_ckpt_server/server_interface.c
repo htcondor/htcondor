@@ -33,7 +33,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
-#include <assert.h>
+#include "condor_fix_assert.h"
 #include <string.h>
 #if !defined(WIN32)
 #include <unistd.h>

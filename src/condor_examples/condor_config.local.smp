@@ -89,7 +89,7 @@ KILL		: $(ActivityTimer) > $(MaxVacateTime)
 #KILL_VANILLA		: $(ActivityTimer) > $(MaxVacateTime)
 
 ##  Periodic checkpointing, comment out to disable.  For jobs smaller
-##  than 60 megs, we periodic checkpoint every 6 hours.  For larger
+##  than 60 megabytes, we periodic checkpoint every 6 hours.  For larger
 ##  jobs, we only checkpoint every 12 hours.
 PERIODIC_CHECKPOINT	: ( (ImageSize < 60000) && \
 			    ($(LastCkpt) > (6 * $(HOUR))) ) || \ 

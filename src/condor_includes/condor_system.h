@@ -25,6 +25,9 @@
 
 #if defined(WIN32)
 
+/******************************
+** Windows specifics
+******************************/
 #include "condor_sys_nt.h"
 
 #else
@@ -33,7 +36,7 @@
 ** Unix specifics
 ******************************/
 
-/* Things we want defined on all systems */
+/* Things we want defined on all Unix systems */
 
 #ifndef _POSIX_SOURCE
 #define _POSIX_SOURCE

@@ -12,7 +12,7 @@
 ##  should probably leave alone (unless you know what you're doing)
 ##
 ##  Please read the INSTALL file (or the Install chapter in the
-##  Condor Administrator's Manual) for detailed explainations of the 
+##  Condor Administrator's Manual) for detailed explanations of the 
 ##  various settings in here and possible ways to configure your
 ##  pool. 
 ##
@@ -52,7 +52,7 @@ LOCAL_CONFIG_FILE	= $(LOCAL_DIR)/condor_config.local
 ##--------------------------------------------------------------------
 ##  Mail parameters:
 ##--------------------------------------------------------------------
-##  When something goes wrong with condor at your site, who chould get
+##  When something goes wrong with condor at your site, who should get
 ##  the email?
 CONDOR_ADMIN		= condor-admin@your.domain
 
@@ -69,7 +69,7 @@ MAIL			= /usr/bin/mail
 UID_DOMAIN		= your.domain
 #UID_DOMAIN		= $(FULL_HOSTNAME)
 
-##  Internet domain of machines shareing a common file system.
+##  Internet domain of machines sharing a common file system.
 ##  If your machines don't use a network file system, use the second
 ##  entry which specifies that each machine has its own file system. 
 FILESYSTEM_DOMAIN	= your.domain
@@ -171,9 +171,9 @@ HOSTALLOW_NEGOTIATOR = $(NEGOTIATOR_HOST)
 ##  to spawn shadows for?
 #MAX_JOBS_RUNNING	= 200
 
-##  Condor needs to create a few lock files to syncronize access to
+##  Condor needs to create a few lock files to synchronize access to
 ##  various log files.  Because of problems we've had with network
-##  filesystems and file locking over the years, we HIGHLY recomend
+##  filesystems and file locking over the years, we HIGHLY recommend
 ##  that you put these lock files on a local partition on each
 ##  machine.  If you don't have your LOCAL_DIR on a local partition,
 ##  be sure to change this entry.  Whatever user (or group) condor is
@@ -206,7 +206,7 @@ LOCK		= $(LOCAL_DIR)/log
 #CREATE_CORE_FILES	= True
 
 ##--------------------------------------------------------------------
-##  Settings that control the daemon's debuging output:
+##  Settings that control the daemon's debugging output:
 ##--------------------------------------------------------------------
 MAX_SCHEDD_LOG		= 64000
 SCHEDD_DEBUG		=
@@ -287,7 +287,7 @@ DAEMON_LIST			= MASTER, SCHEDD
 MASTER				= $(SBIN)/condor_master
 SCHEDD				= $(SBIN)/condor_schedd
 
-##  When the master starts up, it can place it's address (ip and port)
+##  When the master starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
 ##  need to query the central manager to find the master.  This
 ##  feature can be turned off by commenting out this setting.
@@ -368,7 +368,7 @@ SHADOW			= $(SBIN)/condor_shadow
 SHADOW_PVM		= $(SBIN)/condor_shadow.pvm
 SHADOW_GLOBUS		= $(SBIN)/condor_shadow.globus
 
-##  When the schedd starts up, it can place it's address (ip and port)
+##  When the schedd starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
 ##  need to query the central manager to find the schedd.  This
 ##  feature can be turned off by commenting out this setting.
@@ -406,7 +406,7 @@ SHADOW_RENICE_INCREMENT	= 10
 ######
 ## Queue management settings:
 ######
-##  How often should the schedd truncate it's job queue transation
+##  How often should the schedd truncate it's job queue transaction
 ##  log?  (Specified in seconds, once a day is the default.)
 #QUEUE_CLEAN_INTERVAL	= 86400
 
@@ -455,12 +455,12 @@ PVMGS			= $(SBIN)/condor_pvmgs
 ##  These are default values for the rank expression that are used if
 ##  none are specified in the submit file.  Comment these out to
 ##  disable the feature.
-DEFAULT_RANK_VANILLA	= ((Memory*1024) > Imagesize)
-DEFAULT_RANK_STANDARD	= ((Memory*1024) > Imagesize)
+DEFAULT_RANK_VANILLA	= ((Memory*1024) > ImageSize)
+DEFAULT_RANK_STANDARD	= ((Memory*1024) > ImageSize)
 
 ##  If you want condor_submit to automatically append expressions to
 ##  the job ClassAds it creates, you can uncomment and define the
-##  SUBMIT_EXRP setting.  It works just like the STARTD_EXPRS
+##  SUBMIT_EXPRS setting.  It works just like the STARTD_EXPRS
 ##  described above with respect to ClassAd vs. config file syntax,
 ##  strings, etc.  One common use would be to have the full hostname
 ##  of the machine where a job was submitted placed in the job

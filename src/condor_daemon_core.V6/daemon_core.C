@@ -62,7 +62,8 @@ static int compute_pid_hash(const pid_t &key, int numBuckets)
 
 // DaemonCore constructor. 
 
-DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,int SocSize,int ReapSize)
+DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
+				int SocSize,int ReapSize)
 {
 
 	if(ComSize < 0 || SigSize < 0 || SocSize < 0 || PidSize < 0)
@@ -212,93 +213,132 @@ DaemonCore::~DaemonCore()
 }
 
 /********************************************************
- Here are a bunch of public methods with parameter overloading.  These methods here
- just call the actual method implementation with a default parameter set.
+ Here are a bunch of public methods with parameter overloading.  
+ These methods here just call the actual method implementation with a 
+ default parameter set.
  ********************************************************/
-int	DaemonCore::Register_Command(int command, char* com_descrip, CommandHandler handler, 
-								char* handler_descrip, Service* s, DCpermission perm, int dprintf_flag) {
-	return( Register_Command(command, com_descrip, handler, (CommandHandlercpp)NULL, handler_descrip, s, perm, dprintf_flag, FALSE) );
+int	DaemonCore::Register_Command(int command, char* com_descrip, 
+				CommandHandler handler, char* handler_descrip, Service* s, 
+				DCpermission perm, int dprintf_flag) 
+{
+	return( Register_Command(command, com_descrip, handler, 
+							(CommandHandlercpp)NULL, handler_descrip, s, 
+							perm, dprintf_flag, FALSE) );
 }
 
-int	DaemonCore::Register_Command(int command, char *com_descrip, CommandHandlercpp handlercpp, 
-								char* handler_descrip, Service* s, DCpermission perm, int dprintf_flag) {
-	return( Register_Command(command, com_descrip, NULL, handlercpp, handler_descrip, s, perm, dprintf_flag, TRUE) ); 
+int	DaemonCore::Register_Command(int command, char *com_descrip, 
+				CommandHandlercpp handlercpp, char* handler_descrip, 
+				Service* s, DCpermission perm, int dprintf_flag) 
+{
+	return( Register_Command(command, com_descrip, NULL, handlercpp, 
+							handler_descrip, s, perm, dprintf_flag, TRUE) ); 
 }
 
-int	DaemonCore::Register_Signal(int sig, char* sig_descrip, SignalHandler handler, 
-								char* handler_descrip, Service* s, DCpermission perm) {
-	return( Register_Signal(sig, sig_descrip, handler, (SignalHandlercpp)NULL, handler_descrip, s, perm, FALSE) );
+int	DaemonCore::Register_Signal(int sig, char* sig_descrip, 
+				SignalHandler handler, char* handler_descrip, 
+				Service* s, DCpermission perm) 
+{
+	return( Register_Signal(sig, sig_descrip, handler, 
+							(SignalHandlercpp)NULL, handler_descrip, s, 
+							perm, FALSE) );
 }
 
-int	DaemonCore::Register_Signal(int sig, char *sig_descrip, SignalHandlercpp handlercpp, 
-								char* handler_descrip, Service* s, DCpermission perm) {
-	return( Register_Signal(sig, sig_descrip, NULL, handlercpp, handler_descrip, s, perm, TRUE) ); 
+int	DaemonCore::Register_Signal(int sig, char *sig_descrip, 
+				SignalHandlercpp handlercpp, char* handler_descrip, 
+				Service* s, DCpermission perm) 
+{
+	return( Register_Signal(sig, sig_descrip, NULL, handlercpp, 
+							handler_descrip, s, perm, TRUE) ); 
 }
 
-int	DaemonCore::Register_Socket(Stream* iosock, char* iosock_descrip, SocketHandler handler, 
-								char* handler_descrip, Service* s, DCpermission perm) {
-	return( Register_Socket(iosock, iosock_descrip, handler, (SocketHandlercpp)NULL, handler_descrip, s, perm, FALSE) );
+int	DaemonCore::Register_Socket(Stream* iosock, char* iosock_descrip, 
+				SocketHandler handler, char* handler_descrip, 
+				Service* s, DCpermission perm) 
+{
+	return( Register_Socket(iosock, iosock_descrip, handler, 
+							(SocketHandlercpp)NULL, handler_descrip, s, 
+							perm, FALSE) );
 }
 
-int	DaemonCore::Register_Socket(Stream* iosock, char* iosock_descrip, SocketHandlercpp handlercpp, 
-								char* handler_descrip, Service* s, DCpermission perm) {
-	return( Register_Socket(iosock, iosock_descrip, NULL, handlercpp, handler_descrip, s, perm, TRUE) ); 
+int	DaemonCore::Register_Socket(Stream* iosock, char* iosock_descrip, 
+				SocketHandlercpp handlercpp, char* handler_descrip, 
+				Service* s, DCpermission perm) 
+{
+	return( Register_Socket(iosock, iosock_descrip, NULL, handlercpp, 
+							handler_descrip, s, perm, TRUE) ); 
 }
 
 int	DaemonCore::Register_Reaper(char* reap_descrip, ReaperHandler handler, 
-								char* handler_descrip, Service* s) {
-	return( Register_Reaper(-1, reap_descrip, handler, (ReaperHandlercpp)NULL, handler_descrip, s, FALSE) );
+				char* handler_descrip, Service* s) 
+{
+	return( Register_Reaper(-1, reap_descrip, handler, 
+							(ReaperHandlercpp)NULL, handler_descrip, 
+							s, FALSE) );
 }
 
-int	DaemonCore::Register_Reaper(char* reap_descrip, ReaperHandlercpp handlercpp, 
-								char* handler_descrip, Service* s) {
-	return( Register_Reaper(-1, reap_descrip, NULL, handlercpp, handler_descrip, s, TRUE) ); 
+int	DaemonCore::Register_Reaper(char* reap_descrip, 
+				ReaperHandlercpp handlercpp, char* handler_descrip, Service* s)
+{
+	return( Register_Reaper(-1, reap_descrip, NULL, handlercpp, 
+							handler_descrip, s, TRUE) ); 
 }
 
-int	DaemonCore::Reset_Reaper(int rid, char* reap_descrip, ReaperHandler handler, 
-								char* handler_descrip, Service* s) {
-	return( Register_Reaper(rid, reap_descrip, handler, (ReaperHandlercpp)NULL, handler_descrip, s, FALSE) );
+int	DaemonCore::Reset_Reaper(int rid, char* reap_descrip, 
+				ReaperHandler handler, char* handler_descrip, Service* s) 
+{
+	return( Register_Reaper(rid, reap_descrip, handler, 
+							(ReaperHandlercpp)NULL, handler_descrip, 
+							s, FALSE) );
 }
 
-int	DaemonCore::Reset_Reaper(int rid, char* reap_descrip, ReaperHandlercpp handlercpp, 
-								char* handler_descrip, Service* s) {
-	return( Register_Reaper(rid, reap_descrip, NULL, handlercpp, handler_descrip, s, TRUE) ); 
+int	DaemonCore::Reset_Reaper(int rid, char* reap_descrip, 
+				ReaperHandlercpp handlercpp, char* handler_descrip, Service* s)
+{
+	return( Register_Reaper(rid, reap_descrip, NULL, handlercpp, 
+							handler_descrip, s, TRUE) ); 
 }
 
-int	DaemonCore::Register_Timer(unsigned deltawhen, Event event, char *event_descrip, 
-					   Service* s) {
+int	DaemonCore::Register_Timer(unsigned deltawhen, Event event, 
+				char *event_descrip, Service* s) 
+{
 	return( t.NewTimer(s, deltawhen, event, event_descrip, 0, -1) );
 }
 
-int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period, Event event, char *event_descrip, 
-					   Service* s) {
+int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period, 
+				Event event, char *event_descrip, Service* s) 
+{
 	return( t.NewTimer(s, deltawhen, event, event_descrip, period, -1) );
 }
 
-int	DaemonCore::Register_Timer(unsigned deltawhen, Eventcpp eventcpp, char *event_descrip, 
-					   Service* s) {
+int	DaemonCore::Register_Timer(unsigned deltawhen, Eventcpp eventcpp, 
+				char *event_descrip, Service* s) 
+{
 	return( t.NewTimer(s, deltawhen, eventcpp, event_descrip, 0, -1) );
 }
 
-int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period, Eventcpp event, 
-				   char *event_descrip, Service* s ) {
+int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period, 
+				Eventcpp event, char *event_descrip, Service* s ) 
+{
 	return( t.NewTimer(s, deltawhen, event, event_descrip, period, -1) );
 }
 	
-int	DaemonCore::Cancel_Timer( int id ) {
+int	DaemonCore::Cancel_Timer( int id ) 
+{
 	return( t.CancelTimer(id) );
 }
 
-int DaemonCore::Reset_Timer( int id, unsigned when, unsigned period ) {
+int DaemonCore::Reset_Timer( int id, unsigned when, unsigned period ) 
+{
 	return( t.ResetTimer(id,when,period) );
 }
 
 /************************************************************************/
 
 
-int DaemonCore::Register_Command(int command, char* command_descrip, CommandHandler handler, 
-					CommandHandlercpp handlercpp, char *handler_descrip, Service* s, 
-					DCpermission perm, int dprintf_flag, int is_cpp)
+int DaemonCore::Register_Command(int command, char* command_descrip, 
+				CommandHandler handler, CommandHandlercpp handlercpp, 
+				char *handler_descrip, Service* s, DCpermission perm,
+				int dprintf_flag, int is_cpp)
 {
     int     i;		// hash value
     int     j;		// for linear probing
@@ -330,7 +370,8 @@ int DaemonCore::Register_Command(int command, char* command_descrip, CommandHand
 		// by some other signal, so scan thru the entries to
 		// find the first empty one
         for(j = (i + 1) % maxCommand; j != i; j = (j + 1) % maxCommand) {
-            if ((comTable[j].handler == NULL) && (comTable[j].handlercpp == NULL))
+            if ((comTable[j].handler == NULL) && 
+							(comTable[j].handlercpp == NULL))
             {
 				i = j;
 				break;
@@ -426,9 +467,10 @@ char * DaemonCore::InfoCommandSinfulString(int pid)
 	}
 }
 
-int DaemonCore::Register_Signal(int sig, char* sig_descrip, SignalHandler handler, 
-					SignalHandlercpp handlercpp, char* handler_descrip, Service* s,	
-					DCpermission perm, int is_cpp)
+int DaemonCore::Register_Signal(int sig, char* sig_descrip, 
+				SignalHandler handler, SignalHandlercpp handlercpp, 
+				char* handler_descrip, Service* s,	DCpermission perm, 
+				int is_cpp)
 {
     int     i;		// hash value
     int     j;		// for linear probing
@@ -467,9 +509,9 @@ int DaemonCore::Register_Signal(int sig, char* sig_descrip, SignalHandler handle
         i = sig % maxSig;
     }
 
-	// See if our hash landed on an empty bucket...  We identify an empty bucket 
-	// by checking of there is a handler (or a c++ handler) defined; if there is no
-	// handler, then it is an empty entry.
+	// See if our hash landed on an empty bucket...  We identify an empty 
+	// bucket by checking of there is a handler (or a c++ handler) defined; 
+	// if there is no handler, then it is an empty entry.
     if ( (sigTable[i].handler != NULL) || (sigTable[i].handlercpp != NULL) ) {
 		// occupied...
         if(sigTable[i].num == sig) {
@@ -479,7 +521,8 @@ int DaemonCore::Register_Signal(int sig, char* sig_descrip, SignalHandler handle
 		// by some other signal, so scan thru the entries to
 		// find the first empty one
         for(j = (i + 1) % maxSig; j != i; j = (j + 1) % maxSig) {
-            if ((sigTable[j].handler == NULL) && (sigTable[j].handlercpp == NULL))
+            if ((sigTable[j].handler == NULL) && 
+							(sigTable[j].handlercpp == NULL))
             {
 				i = j;
 				break;
@@ -566,7 +609,9 @@ int DaemonCore::Cancel_Signal( int sig )
 		curr_dataptr = NULL;
 
 	// Log a message and conditionally dump what our table now looks like
-	dprintf(D_DAEMONCORE,"Cancel_Signal: cancelled signal %d <%s>\n",sig,sigTable[found].sig_descrip);
+	dprintf(D_DAEMONCORE,
+					"Cancel_Signal: cancelled signal %d <%s>\n",
+					sig,sigTable[found].sig_descrip);
 	free_descrip( sigTable[found].sig_descrip );
 	sigTable[found].sig_descrip = NULL;
 
@@ -575,15 +620,16 @@ int DaemonCore::Cancel_Signal( int sig )
 	return TRUE;
 }
 
-int DaemonCore::Register_Socket(Stream *iosock, char* iosock_descrip, SocketHandler handler, 
-					SocketHandlercpp handlercpp, char *handler_descrip, Service* s, 
-					DCpermission perm, int is_cpp)
+int DaemonCore::Register_Socket(Stream *iosock, char* iosock_descrip, 
+				SocketHandler handler, SocketHandlercpp handlercpp, 
+				char *handler_descrip, Service* s, DCpermission perm, 
+				int is_cpp)
 {
     int     i;	
     int     j;	
 
-    // In sockTable, unlike the others handler tables, we allow for a NULL handler
-	// and a NULL handlercpp - this means a command socket, so use
+    // In sockTable, unlike the others handler tables, we allow for a NULL 
+	// handler and a NULL handlercpp - this means a command socket, so use
 	// the default daemon core socket handler which strips off the command.
 	// SO, a blank table entry is defined as a NULL iosock field.
 
@@ -616,9 +662,13 @@ int DaemonCore::Register_Socket(Stream *iosock, char* iosock_descrip, SocketHand
 	switch ( iosock->type() ) {
 		case Stream::reli_sock :
 			(*sockTable)[i].sockd = ((ReliSock *)iosock)->get_file_desc();
+			(*sockTable)[i].is_connect_pending = 
+								((ReliSock *)iosock)->is_connect_pending();
 			break;
 		case Stream::safe_sock :
 			(*sockTable)[i].sockd = ((SafeSock *)iosock)->get_file_desc();
+				// SafeSock connect never blocks....
+			(*sockTable)[i].is_connect_pending = false;	
 			break;
 		default:
 			EXCEPT("Adding CEDAR socket of unknown type\n");
@@ -710,17 +760,17 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 	return TRUE;
 }
 
-int DaemonCore::Register_Reaper(int rid, char* reap_descrip, ReaperHandler handler, 
-					ReaperHandlercpp handlercpp, char *handler_descrip, Service* s, 
-					int is_cpp)
+int DaemonCore::Register_Reaper(int rid, char* reap_descrip, 
+				ReaperHandler handler, ReaperHandlercpp handlercpp, 
+				char *handler_descrip, Service* s, int is_cpp)
 {
     int     i;	
     int     j;	
     
-    // In reapTable, unlike the others handler tables, we allow for a NULL handler
-	// and a NULL handlercpp - this means just reap with no handler, so use
-	// the default daemon core reaper handler which reaps the exit status on unix
-	// and frees the handle on Win32.
+    // In reapTable, unlike the others handler tables, we allow for a 
+	// NULL handler and a NULL handlercpp - this means just reap 
+	// with no handler, so use the default daemon core reaper handler 
+	// which reaps the exit status on unix and frees the handle on Win32.
 
 	// An incoming rid of -1 means choose a new rid; otherwise we want to 
 	// replace a table entry, resulting in a new entry with the same rid.
@@ -735,9 +785,10 @@ int DaemonCore::Register_Reaper(int rid, char* reap_descrip, ReaperHandler handl
 		if(nReap >= maxReap) {
 			EXCEPT("# of reaper handlers exceeded specified maximum");
 		}
-		// scan thru table to find a new entry. scan in such a way that we do not
-		// re-use rid's until we have to.
-		for(i = nReap % maxReap, j=0; j < maxReap; j++, i = (i + 1) % maxReap) {
+		// scan thru table to find a new entry. scan in such a way 
+		// that we do not re-use rid's until we have to.
+		for(i = nReap % maxReap, j=0; j < maxReap; j++, i = (i + 1) % maxReap) 
+		{
 			if ( reapTable[i].num == 0 ) {
 				break;
 			} else {
@@ -831,14 +882,17 @@ void DaemonCore::DumpCommandTable(int flag, const char* indent)
 	dprintf(flag, "%sCommands Registered\n", indent);
 	dprintf(flag, "%s~~~~~~~~~~~~~~~~~~~\n", indent);
 	for (i = 0; i < maxCommand; i++) {
-		if ((comTable[i].handler != NULL) || (comTable[i].handlercpp != NULL)) {
+		if ((comTable[i].handler != NULL) || 
+						(comTable[i].handlercpp != NULL)) 
+		{
 			descrip1 = "NULL";
 			descrip2 = descrip1;
 			if ( comTable[i].command_descrip )
 				descrip1 = comTable[i].command_descrip;
 			if ( comTable[i].handler_descrip )
 				descrip2 = comTable[i].handler_descrip;
-			dprintf(flag, "%s%d: %s %s\n", indent, comTable[i].num, descrip1, descrip2);
+			dprintf(flag, "%s%d: %s %s\n", indent, comTable[i].num, 
+							descrip1, descrip2);
 		}
 	}
 	dprintf(flag, "\n");
@@ -864,14 +918,16 @@ void DaemonCore::DumpReapTable(int flag, const char* indent)
 	dprintf(flag, "%sReapers Registered\n", indent);
 	dprintf(flag, "%s~~~~~~~~~~~~~~~~~~~\n", indent);
 	for (i = 0; i < maxReap; i++) {
-		if ((reapTable[i].handler != NULL) || (reapTable[i].handlercpp != NULL)) {
+		if ((reapTable[i].handler != NULL) || 
+						(reapTable[i].handlercpp != NULL)) {
 			descrip1 = "NULL";
 			descrip2 = descrip1;
 			if ( reapTable[i].reap_descrip )
 				descrip1 = reapTable[i].reap_descrip;
 			if ( reapTable[i].handler_descrip )
 				descrip2 = reapTable[i].handler_descrip;
-			dprintf(flag, "%s%d: %s %s\n", indent, reapTable[i].num, descrip1, descrip2);
+			dprintf(flag, "%s%d: %s %s\n", indent, reapTable[i].num, 
+							descrip1, descrip2);
 		}
 	}
 	dprintf(flag, "\n");
@@ -897,15 +953,18 @@ void DaemonCore::DumpSigTable(int flag, const char* indent)
 	dprintf(flag, "%sSignals Registered\n", indent);
 	dprintf(flag, "%s~~~~~~~~~~~~~~~~~~\n", indent);
 	for (i = 0; i < maxSig; i++) {
-		if ( (sigTable[i].handler != NULL) || (sigTable[i].handlercpp != NULL) ) {
+		if ( (sigTable[i].handler != NULL) || 
+						(sigTable[i].handlercpp != NULL) ) 
+		{
 			descrip1 = "NULL";
 			descrip2 = descrip1;
 			if ( sigTable[i].sig_descrip )
 				descrip1 = sigTable[i].sig_descrip;
 			if ( sigTable[i].handler_descrip )
 				descrip2 = sigTable[i].handler_descrip;
-			dprintf(flag, "%s%d: %s %s, Blocked:%d Pending:%d\n", indent, sigTable[i].num, 
-				descrip1, descrip2, sigTable[i].is_blocked, sigTable[i].is_pending);
+			dprintf(flag, "%s%d: %s %s, Blocked:%d Pending:%d\n", indent, 
+							sigTable[i].num, descrip1, descrip2, 
+							sigTable[i].is_blocked, sigTable[i].is_pending);
 		}
 	}
 	dprintf(flag, "\n");
@@ -958,7 +1017,8 @@ DaemonCore::ReInit()
 	addr = get_negotiator_addr(NULL);	// get sinful string of negotiator
 	if ( addr ) {
 		string_to_sin(addr,&sin);
-		memcpy(&negotiator_sin_addr,&(sin.sin_addr),sizeof(negotiator_sin_addr));
+		memcpy(&negotiator_sin_addr,&(sin.sin_addr),
+						sizeof(negotiator_sin_addr));
 	} else {
 		// we failed to get the address of the negotiator
 		memset(&negotiator_sin_addr,'\0',sizeof(negotiator_sin_addr));
@@ -1045,6 +1105,14 @@ DaemonCore::Verify(DCpermission perm, const struct sockaddr_in *sin )
 	return FALSE;
 }
 
+
+int
+DaemonCore::AddAllowHost( const char* host, DCpermission perm )
+{
+	return ipverify.AddAllowHost( host, perm );
+}
+
+
 // This function never returns. It is responsible for monitor signals and
 // incoming messages or requests and invoke corresponding handlers.
 void DaemonCore::Driver()
@@ -1061,7 +1129,7 @@ void DaemonCore::Driver()
 	sigfillset( &fullset );
     // We do not want to block the following signals ----
 		sigdelset(&fullset, SIGSEGV);    // so we get a core right away
-		sigdelset(&fullset, SIGABRT);    // so assert() failures drop core right away
+		sigdelset(&fullset, SIGABRT);    // so assert() drops core right away
 		sigdelset(&fullset, SIGILL);     // so we get a core right away
 		sigdelset(&fullset, SIGBUS);     // so we get a core right away
 		sigdelset(&fullset, SIGFPE);     // so we get a core right away
@@ -1072,8 +1140,6 @@ void DaemonCore::Driver()
 
 	for(;;)
 	{
-		// TODO Call Reaper handlers for exited children
-
 		// call signal handlers for any pending signals
 		sent_signal = FALSE;	// set to True inside Send_Signal()
 		for (i=0;i<maxSig;i++) {
@@ -1085,8 +1151,10 @@ void DaemonCore::Driver()
 					// Update curr_dataptr for GetDataPtr()
 					curr_dataptr = &(sigTable[i].data_ptr);
 					// log a message
-					dprintf(D_DAEMONCORE,"Calling Handler <%s> for Signal %d <%s>\n",
-						sigTable[i].handler_descrip,sigTable[i].num,sigTable[i].sig_descrip);
+					dprintf(D_DAEMONCORE,
+									"Calling Handler <%s> for Signal %d <%s>\n",
+									sigTable[i].handler_descrip,sigTable[i].num,
+									sigTable[i].sig_descrip);
 					// call the handler
 					if ( sigTable[i].is_cpp ) 
 						(sigTable[i].service->*(sigTable[i].handlercpp))(sigTable[i].num);
@@ -1100,7 +1168,7 @@ void DaemonCore::Driver()
 			}
 		}
 #ifndef WIN32
-		// Drain our async_pipe; we must do this before we unblock unix signals...
+		// Drain our async_pipe; we must do this before we unblock unix signals.
 		// Just keep reading while something is there.  async_pipe is set to 
 		// non-blocking mode via fcntl, so the read below will not block.
 		while( read(async_pipe[0],asyncpipe_buf,8) > 0 );
@@ -1116,7 +1184,8 @@ void DaemonCore::Driver()
 		//   a pending signal which we did not service above (likely because
 		//   it was itself raised by a signal handler!).  so if sent_signal is
 		//   TRUE, set the select timeout to zero so that we break thru select
-		//   and service this outstanding signal and yet we do not starve commands...
+		//   and service this outstanding signal and yet we do not 
+		//   starve commands...
 		temp = t.Timeout();
 		if ( sent_signal == TRUE )
 			temp = 0;
@@ -1132,17 +1201,30 @@ void DaemonCore::Driver()
 		// every time because 1) some timeout handler may have removed/added
 		// sockets, and 2) it ain't that expensive....
 		FD_ZERO(&readfds);
+		FD_ZERO(&writefds);
+		FD_ZERO(&exceptfds);
 		for (i = 0; i < nSock; i++) {
 			if ( (*sockTable)[i].iosock ) {	// if a valid entry....
-				FD_SET( (*sockTable)[i].sockd,&readfds);
+				if ( (*sockTable)[i].is_connect_pending ) {
+						// we want to be woken when a non-blocking
+						// connect is ready to write.  when connect
+						// is ready, select will set the writefd set
+						// on success, or the exceptfd set on failure.
+					FD_SET( (*sockTable)[i].sockd,&writefds);
+					FD_SET( (*sockTable)[i].sockd,&exceptfds);
+				} else {
+						// we want to be woken when there is something
+						// to read.
+					FD_SET( (*sockTable)[i].sockd,&readfds);
+				}
             }
 		}
 
 		
 #if !defined(WIN32)
 		// Add the read side of async_pipe to the list of file descriptors to
-		// select on.  We write to async_pipe if a unix async signal is delivered
-		// after we unblock signals and before we block on select.
+		// select on.  We write to async_pipe if a unix async signal 
+		// is delivered after we unblock signals and before we block on select.
 
 		FD_SET(async_pipe[0],&readfds);
 
@@ -1158,7 +1240,8 @@ void DaemonCore::Driver()
 #endif
 
 		errno = 0;
-		rv = select(FD_SETSIZE, (SELECT_FDSET_PTR) &readfds, NULL, NULL, ptimer);
+		rv = select(FD_SETSIZE, (SELECT_FDSET_PTR) &readfds, 
+								&writefds, &exceptfds, ptimer);
 		tmpErrno = errno;
 
 #ifndef WIN32
@@ -1190,13 +1273,58 @@ void DaemonCore::Driver()
 		if (rv > 0) {	// connection requested
 			// scan through the socket table to find which one select() set
 			for(i = 0; i < nSock; i++) {
+				
 				if ( (*sockTable)[i].iosock ) {	// if a valid entry...
-					if (FD_ISSET((*sockTable)[i].sockd, &readfds)) {
+					
+					// figure out if we should call a handler.  to do this,
+					// if the socket was doing a connect(), we check the
+					// writefds and excepfds.  otherwise, check readfds.
+					bool call_handler = false;	
+					if ( (*sockTable)[i].is_connect_pending ) {					
+						if ( (FD_ISSET((*sockTable)[i].sockd, &writefds)) ||
+							 (FD_ISSET((*sockTable)[i].sockd, &exceptfds)) ) 
+						{
+							// a connection pending socket has been set.
+							// only call the handler if CEDAR confirms the
+							// connect algorithm has completed.
+							if ( ((Sock *)(*sockTable)[i].iosock)->
+											do_connect_finish() )
+							{
+								call_handler = true;
+							}
+						}
+					} else {
+						if (FD_ISSET((*sockTable)[i].sockd, &readfds)) 
+						{
+							call_handler = true;
+						}
+					}
+
+					if ( call_handler ) {
 						// ok, select says this socket table entry has new data.
+
+						// if this sock is a safe_sock, then call the method
+						// to enqueue this packet into the buffers.  if a complete
+						// message is not yet ready, then do not yet call a handler.
+						if ( (*sockTable)[i].iosock->type() == Stream::safe_sock ) 
+						{
+							SafeSock* ss = (SafeSock *)(*sockTable)[i].iosock;
+							// call handle_incoming_packet to consume the packet.
+							// it returns true if there is a complete message ready,
+							// otherwise it returns false.
+							if ( !(ss->handle_incoming_packet()) ) {
+								// there is not yet a complete message ready.
+								// so go back to the outer for loop - do not
+								// call the user handler yet.
+								continue;
+							}
+						}
+
 						// if the user provided a handler for this socket, then
-						// call it now.  otherwise, call the daemoncore HandleReq()
-						// handler which strips off the command request number and
-						// calls any registered command handler.
+						// call it now.  otherwise, call the daemoncore 
+						// HandleReq() handler which strips off the command 
+						// request number and calls any registered command 
+						// handler.
 
 						// Update curr_dataptr for GetDataPtr()
 						curr_dataptr = &( (*sockTable)[i].data_ptr);
@@ -1208,8 +1336,9 @@ void DaemonCore::Driver()
 							// a C++ handler
 							result = ((*sockTable)[i].service->*( (*sockTable)[i].handlercpp))((*sockTable)[i].iosock);
 						else
-							// no handler registered, so this is a command socket.  call
-							// the DaemonCore handler which takes care of command sockets.
+							// no handler registered, so this is a command 
+							// socket.  call the DaemonCore handler which 
+							// takes care of command sockets.
 							result = HandleReq(i);
 
 						// Make sure we didn't leak our priv state
@@ -1218,18 +1347,20 @@ void DaemonCore::Driver()
 						// Clear curr_dataptr
 						curr_dataptr = NULL;
 
-						// Check result from socket handler, and if not KEEP_STREAM, then
+						// Check result from socket handler, and if 
+						// not KEEP_STREAM, then
 						// delete the socket and the socket handler.
 						if ( result != KEEP_STREAM ) {
 							// delete the cedar socket
 							delete (*sockTable)[i].iosock;
 							// cancel the socket handler
 							Cancel_Socket( (*sockTable)[i].iosock );
-							// decrement i, since sockTable[i] may now point to a new valid socket
+							// decrement i, since sockTable[i] may now 
+							// point to a new valid socket
 							i--;
 						}
 
-					}	// if FD_ISSET
+					}	// if call_handler is True
 				}	// if valid entry in sockTable
 			}	// for 0 thru nSock
 		}	// if rv > 0
@@ -1339,7 +1470,8 @@ int DaemonCore::HandleReq(int socki)
 			break;
 		default:
 			// unrecognized Stream sock
-			dprintf(D_ALWAYS,"DaemonCore: HandleReq(): unrecognized Stream sock\n");
+			dprintf(D_ALWAYS,
+						"DaemonCore: HandleReq(): unrecognized Stream sock\n");
 			return FALSE;
 	}
 
@@ -1348,11 +1480,13 @@ int DaemonCore::HandleReq(int socki)
 
 		// if the connection was received on a listen socket, do an accept.
 		if ( ((ReliSock *)insock)->_state == Sock::sock_special &&
-			((ReliSock *)insock)->_special_state == ReliSock::relisock_listen ) {
+			((ReliSock *)insock)->_special_state == ReliSock::relisock_listen )
+		{
 			stream = (Stream *) ((ReliSock *)insock)->accept();
 			if ( !stream ) {
 				dprintf(D_ALWAYS, "DaemonCore: accept() failed!");
-				return KEEP_STREAM;		// return KEEP_STEAM cuz insock is a listen socket
+				// return KEEP_STEAM cuz insock is a listen socket
+				return KEEP_STREAM;
 			}
 		} 
 		// if the not a listen socket, then just assign stream to insock
@@ -1367,8 +1501,9 @@ int DaemonCore::HandleReq(int socki)
 		// our "listen sock" is also our "accept" sock, so just
 		// assign stream to the insock. UDP = connectionless, get it?
 		stream = insock;
-		// in UDP we cannot display who the command is from until we read something off 
-		// the socket, so we display who from after we read the command below...
+		// in UDP we cannot display who the command is from until 
+		// we read something off the socket, so we display who from 
+		// after we read the command below...
 	}
 	
 	// read in the command from the stream with a timeout value of 20 seconds
@@ -1383,9 +1518,10 @@ int DaemonCore::HandleReq(int socki)
 			dprintf(D_ALWAYS, "DaemonCore: Command received via TCP from %s\n",
 					sin_to_string(((Sock*)stream)->endpoint()) );
 		}
-		dprintf(D_ALWAYS, "DaemonCore: Can't receive command request (perhaps a timeout?)\n");
-		if ( insock != stream )	{   // delete the stream only if we did an accept
-			delete stream;		   //     
+		dprintf(D_ALWAYS, 
+			"DaemonCore: Can't receive command request (perhaps a timeout?)\n");
+		if ( insock != stream )	{   // delete stream only if we did an accept
+			delete stream;		   
 		} else {
 			stream->end_of_message();
 		}
@@ -1406,7 +1542,7 @@ int DaemonCore::HandleReq(int socki)
 		reqFound = TRUE;
 	} else {
 		// hash did not find it, search for it
-		for (j = (index + 1) % maxCommand; j != index; j = (j + 1) % maxCommand) 
+		for (j = (index + 1) % maxCommand; j != index; j = (j + 1) % maxCommand)
 			if(comTable[j].num == req) {
 				reqFound = TRUE; 
 				index = j;
@@ -1416,14 +1552,16 @@ int DaemonCore::HandleReq(int socki)
 
 	if ( reqFound == TRUE ) {
 		// Check the daemon core permission for this command handler
-		if ( Verify(comTable[index].perm,((Sock*)stream)->endpoint()) == FALSE ) {
+		if ( Verify(comTable[index].perm,((Sock*)stream)->endpoint()) == FALSE )
+		{
 			// Permission check FAILED
 			reqFound = FALSE;	// so we do not call the handler function below
-			result = 0;	// make result != to KEEP_STREAM, so we blow away this socket below
+			// make result != to KEEP_STREAM, so we blow away this socket below
+			result = 0;
 			dprintf( D_ALWAYS,
-					 "DaemonCore: PERMISSION DENIED to host %s for command %d (%s)\n",
-					 sin_to_string(((Sock*)stream)->endpoint()), req,
-					 comTable[index].command_descrip );
+			   "DaemonCore: PERMISSION DENIED to host %s for command %d (%s)\n",
+			   sin_to_string(((Sock*)stream)->endpoint()), req,
+			   comTable[index].command_descrip );
 			// if UDP, consume the rest of this message to try to stay "in-sync"
 			if ( !is_tcp)
 				stream->end_of_message();
@@ -1432,15 +1570,19 @@ int DaemonCore::HandleReq(int socki)
 					"DaemonCore: Command received via %s from %s\n",
 					(is_tcp) ? "TCP" : "UDP",
 					sin_to_string(((Sock*)stream)->endpoint()) );
-			dprintf(comTable[index].dprintf_flag, "DaemonCore: received command %d (%s), calling handler (%s)\n", req,
-			comTable[index].command_descrip, comTable[index].handler_descrip);
+			dprintf(comTable[index].dprintf_flag, 
+				"DaemonCore: received command %d (%s), calling handler (%s)\n",
+				req, comTable[index].command_descrip, 
+				comTable[index].handler_descrip);
 		}
 	} else {
 		dprintf(D_ALWAYS, "DaemonCore: Command received via %s from %s\n",
 				(is_tcp) ? "TCP" : "UDP",
 				sin_to_string(((Sock*)stream)->endpoint()) );
-		dprintf(D_ALWAYS,"DaemonCore: received unregistered command request %d !\n",req);
-		result = 0;		// make result != to KEEP_STREAM, so we blow away this socket below
+		dprintf(D_ALWAYS,
+			"DaemonCore: received unregistered command request %d !\n",req);
+		// make result != to KEEP_STREAM, so we blow away this socket below
+		result = 0;
 		// if UDP, consume the rest of this message to try to stay "in-sync"
 		if ( !is_tcp)
 			stream->end_of_message();
@@ -1467,9 +1609,9 @@ int DaemonCore::HandleReq(int socki)
 	// finalize; the handler is done with the command.  the handler will return
 	// with KEEP_STREAM if we should not touch the stream; otherwise, cleanup
 	// the stream.  On tcp, we just delete it since the stream is the one we got
-	// from accept and our listen socket is still out there.  on udp, however, we
-	// cannot just delete it or we will not be "listening" anymore, so we just do
-	// an eom flush all buffers, etc.
+	// from accept and our listen socket is still out there.  on udp, 
+	// however, we cannot just delete it or we will not be "listening" 
+	// anymore, so we just do an eom flush all buffers, etc.
 	// HACK: keep all UDP sockets as well for now.  
 	if ( result != KEEP_STREAM ) {
 		stream->encode();	// we wanna "flush" below in the encode direction 
@@ -1484,9 +1626,9 @@ int DaemonCore::HandleReq(int socki)
 		}
 	}
 
-	// Now return KEEP_STREAM only if the user said to _OR_ if insock is a listen socket.
-	// Why?  we always wanna keep a listen socket.  also, if we did an accept, we already
-	// deleted the stream socket above.
+	// Now return KEEP_STREAM only if the user said to _OR_ if insock 
+	// is a listen socket.  Why?  we always wanna keep a listen socket.  
+	// Also, if we did an accept, we already deleted the stream socket above.
 	if ( result == KEEP_STREAM || insock != stream )
 		return KEEP_STREAM;
 	else
@@ -1539,15 +1681,18 @@ int DaemonCore::HandleSig(int command,int sig)
 	}
 
 	if ( sigFound == FALSE ) {
-		dprintf(D_ALWAYS,"DaemonCore: received request for unregistered Signal %d !\n",sig);
+		dprintf(D_ALWAYS,
+			"DaemonCore: received request for unregistered Signal %d !\n",sig);
 		return FALSE;
 	}
 
 	switch (command) {
 		case _DC_RAISESIGNAL:
-			dprintf(D_DAEMONCORE, "DaemonCore: received Signal %d (%s), raising event\n", sig,
+			dprintf(D_DAEMONCORE, 
+				"DaemonCore: received Signal %d (%s), raising event\n", sig,
 				sigTable[index].sig_descrip, sigTable[index].handler_descrip);
-			// set this signal entry to is_pending.  the code to actually call the handler is
+			// set this signal entry to is_pending.  
+			// the code to actually call the handler is
 			// in the Driver() method.
 			sigTable[index].is_pending = TRUE;
 			break;
@@ -1556,15 +1701,16 @@ int DaemonCore::HandleSig(int command,int sig)
 			break;
 		case _DC_UNBLOCKSIGNAL:
 			sigTable[index].is_blocked = FALSE;
-			// now check to see if this signal we are unblocking is pending.  if so,
-			// set sent_signal to TRUE.  sent_signal is used by the
-			// Driver() to ensure that a signal raised from inside a signal handler is 
-			// indeed delivered.
+			// now check to see if this signal we are unblocking is pending.  
+			// if so, set sent_signal to TRUE.  sent_signal is used by the
+			// Driver() to ensure that a signal raised from inside a 
+			// signal handler is indeed delivered.
 			if ( sigTable[index].is_pending == TRUE ) 
 				sent_signal = TRUE;
 			break;
 		default:
-			dprintf(D_DAEMONCORE,"DaemonCore: HandleSig(): unrecognized command\n");
+			dprintf(D_DAEMONCORE,
+				"DaemonCore: HandleSig(): unrecognized command\n");
 			return FALSE;
 			break;
 	}	// end of switch (command) 
@@ -1691,20 +1837,23 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 							EXCEPT("Trying to send unknown signal");
 						}
 				}
-				dprintf(D_DAEMONCORE,"Send_Signal(): Doing kill(%d,%d) [sig %d=%s]\n",
+				dprintf(D_DAEMONCORE,
+					"Send_Signal(): Doing kill(%d,%d) [sig %d=%s]\n",
 					pid, unixsig,unixsig,unixsigname);
 				priv_state priv = set_root_priv();
 				int status = ::kill(pid, unixsig);
 				set_priv(priv);
-				return (status >= 0);	// return 1 if kill succeeds, 0 otherwise
+				// return 1 if kill succeeds, 0 otherwise
+				return (status >= 0);
 			}
 #endif  // not defined Win32
 			break;
 	}
 
-	// a Signal is sent via UDP if going to a different process or thread on the same
-	// machine.  it is sent via TCP if going to a process on a remote machine.
-	// if the signal is being sent to ourselves (i.e. this process), then just twiddle
+	// a Signal is sent via UDP if going to a different process or 
+	// thread on the same machine.  it is sent via TCP if going to 
+	// a process on a remote machine.  if the signal is being sent 
+	// to ourselves (i.e. this process), then just twiddle
 	// the signal table and set sent_signal to TRUE.  sent_signal is used by the
 	// Driver() to ensure that a signal raised from inside a signal handler is 
 	// indeed delivered.
@@ -1729,9 +1878,9 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 #ifndef WIN32
 			// On UNIX, if async_sigs_unblocked == TRUE, we are being invoked
 			// from inside of a unix signal handler.  So we also need to write
-			// something to the async_pipe.  It does not matter what we write, we
-			// just need to write something to ensure that the select() in Driver()
-			// does not block.
+			// something to the async_pipe.  It does not matter what we write, 
+			// we just need to write something to ensure that the 
+			// select() in Driver() does not block.
 			if ( async_sigs_unblocked == TRUE ) {
 				write(async_pipe[1],"!",1);
 			}
@@ -1739,7 +1888,8 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 			return TRUE;
 		} else {
 			// send signal to same process, different thread.
-			// we will still need to go out via UDP so that our call to select() returns.
+			// we will still need to go out via UDP so that our call 
+			// to select() returns.
 			destination = InfoCommandSinfulString();
 			is_local = TRUE;
 		}
@@ -1780,14 +1930,16 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 	if ( (!sock->put(DC_RAISESIGNAL)) ||
 		 (!sock->code(sig)) ||
 		 (!sock->end_of_message()) ) {
-		dprintf(D_ALWAYS,"Send_Signal: ERROR sending signal %d to pid %d\n",sig,pid);
+		dprintf(D_ALWAYS,
+				"Send_Signal: ERROR sending signal %d to pid %d\n",sig,pid);
 		delete sock;
 		return FALSE;
 	}
 
 	delete sock;
 
-	dprintf(D_DAEMONCORE,"Send_Signal: sent signal %d to pid %d\n",sig,pid);
+	dprintf(D_DAEMONCORE,
+					"Send_Signal: sent signal %d to pid %d\n",sig,pid);
 	return TRUE;
 }
 
@@ -1890,7 +2042,8 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 
 	if ( pidinfo->sinful_string[0] != '\0' ) {
 		// pid is a DaemonCore Process; send it a DC_SIGTERM signal instead.
-		dprintf(D_PROCFAMILY,"Shutdown_Graceful: Sending pid %d DC_SIGTERM\n",pid);
+		dprintf(D_PROCFAMILY,
+					"Shutdown_Graceful: Sending pid %d DC_SIGTERM\n",pid);
 		return Send_Signal(pid,DC_SIGTERM);
 	}
 
@@ -1913,7 +2066,8 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 				// show up when you enumerate all the winstas.  Sometimes
 				// it takes a few seconds.  So lets sleep a while and try again.
 				sleep(4);
-				EnumWindowStations((WINSTAENUMPROC)DCFindWinSta, (LPARAM)pidinfo);
+				EnumWindowStations((WINSTAENUMPROC)DCFindWinSta, 
+								(LPARAM)pidinfo);
 			}
 
 			// Set winsta and desktop back to the service desktop (or wherever)
@@ -1946,7 +2100,8 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 			}
 		}
 		if ( !PostMessage(pidinfo->hWnd,WM_CLOSE,0,0) ) {
-			dprintf(D_PROCFAMILY,"Shutdown_Graceful: PostMessage FAILED, err=%d\n",
+			dprintf(D_PROCFAMILY,
+				"Shutdown_Graceful: PostMessage FAILED, err=%d\n",
 				GetLastError());
 			return FALSE;
 		} else {
@@ -2184,7 +2339,8 @@ int DaemonCore::Continue_Process(pid_t pid)
 			// was not suspended.  Thus, we have no need to go any further,
 			// just resume it to put the count back, and we're done.
 			::ResumeThread(hPriThread);
-			dprintf(D_DAEMONCORE,"Continue_Process: pid %d not suspended\n",pid);
+			dprintf(D_DAEMONCORE,
+							"Continue_Process: pid %d not suspended\n",pid);
 			return TRUE;
 			break;
 		default:
@@ -2202,7 +2358,7 @@ int DaemonCore::Continue_Process(pid_t pid)
 	// suspend counts using SuspendThread (because it is safer than Resuming)
 	// and make certain there is not already an active thread.  Without doing
 	// this check, we may just Resume threads that the user process has 
-	// explicitly Suspended (perhaps they are sleeping, waiting on an event, etc).
+	// explicitly Suspended (perhaps they are sleeping, waiting on an event).
 	// Remember: if we found the pid in our internal hash table, we have 
 	// already called SuspendThread once on the primary thread.
 	ExtArray<HANDLE> hThreads;
@@ -2245,7 +2401,8 @@ int DaemonCore::Continue_Process(pid_t pid)
 			if ( ::SuspendThread(hThreads[j]) == 0 ) {
 				// Oh shit! This process was already active.  Resume all
 				// the threads we have suspended and return.
-				dprintf(D_DAEMONCORE,"Continue_Process: pid %d has active thread\n",pid);
+				dprintf(D_DAEMONCORE,
+						"Continue_Process: pid %d has active thread\n",pid);
 				for (i=0; i<j+1; i++ ) {
 					if ( hThreads[i] ) {
 						::ResumeThread(hThreads[i]);
@@ -2266,14 +2423,15 @@ int DaemonCore::Continue_Process(pid_t pid)
 	// Now resume all threads until some thread becomes active.
 	dprintf(D_DAEMONCORE,"Continue_Process: resuming all threads\n");
 	while ( all_done == FALSE ) {
-		all_done = TRUE;	// set to TRUE in case all handles in hThreads are NULL
+		// set all_done to TRUE in case all handles in hThreads are NULL
+		all_done = TRUE;
 		for (j=0; j < numTids; j++) {			
 			if ( hThreads[j] ) {
 				all_done = FALSE;
 				result = ::ResumeThread(hThreads[j]);
 				dprintf(D_DAEMONCORE,
-					"Continue_Process: ResumeThread returned %d for thread %d\n",
-					result, j);
+				   "Continue_Process: ResumeThread returned %d for thread %d\n",
+				   result, j);
 				if ( result < 2 ) {
 					 all_done = TRUE;
 				} else {
@@ -3462,7 +3620,9 @@ DaemonCore::Inherit( ReliSock* &rsock, SafeSock* &ssock )
 		pidtmp->hung_tid = -1;
 		pidtmp->was_not_responding = FALSE;
 #ifdef WIN32
-		pidtmp->hProcess = ::OpenProcess( SYNCHRONIZE | PROCESS_QUERY_INFORMATION | STANDARD_RIGHTS_REQUIRED , FALSE, ppid );
+		pidtmp->hProcess = ::OpenProcess( SYNCHRONIZE | 
+						PROCESS_QUERY_INFORMATION | STANDARD_RIGHTS_REQUIRED , 
+						FALSE, ppid );
 		assert(pidtmp->hProcess);
 		pidtmp->hThread = NULL;		// do not allow child to suspend parent
 #endif
@@ -3532,8 +3692,9 @@ DaemonCore::Inherit( ReliSock* &rsock, SafeSock* &ssock )
 int
 DaemonCore::HandleDC_SIGCHLD(int sig)
 {
-	// This function gets called on Unix when one or more processes in our pid table
-	// has terminated.  We need to reap the process, get the exit status,
+	// This function gets called on Unix when one or more processes 
+	// in our pid table has terminated.  
+	// We need to reap the process, get the exit status,
 	// and call HandleProcessExit to call a reaper.
 	pid_t pid;
 	int status;
@@ -3617,12 +3778,14 @@ pidWatcherThread( void* arg )
 	result = result - WAIT_OBJECT_0;
 
 	// if result = numentries, then we are being told our entry->pidentries
-	//		array has been modified by another thread, and we should re-read it.
-	// if result < numentries, then result signifies a child process which exited.
+	// array has been modified by another thread, and we should re-read it.
+	// if result < numentries, then result signifies a child process 
+	// which exited.
 	if ( (result < numentries) && (result >= 0) ) {
 		// notify our main thread which process exited
-		// note: if it was a thread which exited, the entry's pid contains the tid
-		exited_pid = entry->pidentries[result]->pid;	// make it an unsigned int
+		// note: if it was a thread which exited, the entry's 
+		// pid contains the tid
+		exited_pid = entry->pidentries[result]->pid;	
 		SafeSock sock;
 		// Can no longer use localhost (127.0.0.1) here because we may
 		// only have our command socket bound to a specific address. -Todd
@@ -3636,7 +3799,8 @@ pidWatcherThread( void* arg )
 				 !sock.end_of_message() ) {
 				// failed to get the notification off to the main thread.
 				// we'll log a message, wait a bit, and try again
-				dprintf(D_ALWAYS,"PidWatcher thread couldn't notify main thread\n");
+				dprintf(D_ALWAYS,
+						"PidWatcher thread couldn't notify main thread\n");
 				::Sleep(500);	// sleep for a half a second (500 ms)
 			} else {
 				sent_result = TRUE;
@@ -3644,7 +3808,8 @@ pidWatcherThread( void* arg )
 			}
 		}
 	} else {
-		// no pid exited, we were signaled because our pidentries array was modified.
+		// no pid exited, we were signaled because our 
+		// pidentries array was modified.
 		// we must clear last_pidentry_exited.
 		last_pidentry_exited = MAXIMUM_WAIT_OBJECTS + 5;
 	}
@@ -3674,7 +3839,7 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 			::CloseHandle(entry->hThread);
 			PidWatcherList.DeleteCurrent();
 			delete entry;
-			continue;	// we continue here so we dont hit the LeaveCriticalSection below
+			continue;	// so we dont hit the LeaveCriticalSection below
 		} 
 		
 		if ( entry->nEntries < ( MAXIMUM_WAIT_OBJECTS - 1 ) ) {
@@ -3845,8 +4010,8 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	}
 #endif   // of WIN32
 
-	// If parent process is_local, simply invoke the reaper here.  If remote, call
-	// the DC_INVOKEREAPER command.  
+	// If parent process is_local, simply invoke the reaper here.  
+	// If remote, call the DC_INVOKEREAPER command.  
 	if ( pidentry->parent_is_local ) {
 
 		// Set i to be the entry in the reaper table to use
@@ -3882,11 +4047,12 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 		} else {
 			// no registered reaper
 			dprintf(D_DAEMONCORE,
-				"DaemonCore: %s %lu exited with status %d; no registered reaper\n",
+			"DaemonCore: %s %lu exited with status %d; no registered reaper\n",
 				whatexited,pid,exit_status);
 		}
 	} else {
-		// TODO: the parent for this process is remote.  send the parent a DC_INVOKEREAPER command.
+		// TODO: the parent for this process is remote.  
+		// send the parent a DC_INVOKEREAPER command.
 	}
 
 	// Now remove this pid from our tables ----
@@ -3911,7 +4077,8 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	// then shutdown gracefully.
 	// TODO: should also set a timer and do a fast/hard kill later on!
 	if (pid == ppid) {
-		dprintf(D_ALWAYS,"Our Parent process (pid %lu) exited; shutting down\n",pid);
+		dprintf(D_ALWAYS,
+				"Our Parent process (pid %lu) exited; shutting down\n",pid);
 		Send_Signal(mypid,DC_SIGTERM);	// SIGTERM means shutdown graceful
 	}
 
@@ -3959,8 +4126,9 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 		ASSERT( ret_value != -1 );
 	} else {
 		pidentry->hung_tid = 
-			Register_Timer(timeout_secs,(Eventcpp) &DaemonCore::HungChildTimeout,
-			"DaemonCore::HungChildTimeout", this);
+			Register_Timer(timeout_secs,
+							(Eventcpp) &DaemonCore::HungChildTimeout,
+							"DaemonCore::HungChildTimeout", this);
 		ASSERT( pidentry->hung_tid != -1 );
 		Register_DataPtr( (void *)child_pid );
 	}	
@@ -4163,7 +4331,9 @@ BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock)
 		if ( !rsock->bind(ssock->get_port()) ) {
 			// failed again -- keep trying
 			bool bind_succeeded = false;
-			for (int temp_port=1024; !bind_succeeded && temp_port < 4096; temp_port++) {
+			for (int temp_port=1024; !bind_succeeded && temp_port < 4096; 
+							temp_port++) 
+			{
 				rsock->close();
 				ssock->close();
 				if ( rsock->bind(temp_port) && ssock->bind(temp_port) ) {
@@ -4171,7 +4341,8 @@ BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock)
 				}
 			}
 			if (!bind_succeeded) {
-				dprintf(D_ALWAYS, "Failed to find available port for command sockets");
+				dprintf(D_ALWAYS, 
+						"Failed to find available port for command sockets");
 				return FALSE;
 			}
 		}

@@ -88,7 +88,9 @@ typedef int		(*ThreadStartFunc)(void *,Stream*);
 #define WEXITSTATUS(stat) ((int)(stat))
 #define WTERMSIG(stat) ((int)(stat))
 #define WIFSTOPPED(stat) ((int)(0))
+///
 int WIFEXITED(DWORD stat);
+///
 int WIFSIGNALED(DWORD stat);
 #endif  // of ifdef WIN32
 
@@ -142,34 +144,16 @@ class DaemonCore : public Service
     
   public:
     
-    /** Not_Yet_Documented
-        @param PidSize   Not_Yet_Documented
-        @param ComSize   Not_Yet_Documented
-        @param SigSize   Not_Yet_Documented
-        @param SocSize   Not_Yet_Documented
-        @param ReapSize  Not_Yet_Documented
-    */
+  	/* These are all declarations for methods which never need to be
+	 * called by the end user.  Thus they are not docified.
+	 * Typically these methods are invoked from functions inside 
+	 * of daemon_core_main.C.
+	 */
     DaemonCore (int PidSize = 0, int ComSize = 0, int SigSize = 0,
                 int SocSize = 0, int ReapSize = 0);
-    
-    ///
     ~DaemonCore();
-    
-    /// Not_Yet_Documented
     void Driver();
 
-    /** Not_Yet_Documented
-        @return Not_Yet_Documented
-    */
-    int ServiceCommandSocket();
-
-    /** Not_Yet_Documented
-        @return Not_Yet_Documented
-    */
-    int InServiceCommandSocket() {
-        return inServiceCommandSocket_flag;
-    }
-    
     /** Not_Yet_Documented
         @return Not_Yet_Documented
     */
@@ -181,7 +165,12 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Verify (DCpermission perm, const struct sockaddr_in *sin);
+    int AddAllowHost( const char* host, DCpermission perm );
+
     
+	/** @name Command Events
+	 */
+	//@{
 
     /** Not_Yet_Documented
         @param command         Not_Yet_Documented
@@ -240,6 +229,25 @@ class DaemonCore : public Service
     char* InfoCommandSinfulString (int pid = -1);
 
     /** Not_Yet_Documented
+        @return Not_Yet_Documented
+		*/
+    int ServiceCommandSocket();
+
+    /** Not_Yet_Documented
+        @return Not_Yet_Documented
+    */
+    int InServiceCommandSocket() {
+        return inServiceCommandSocket_flag;
+    }
+	//@}
+    
+
+
+	/** @name Signal events
+	 */
+	//@{
+
+    /** Not_Yet_Documented
         @param sig              Not_Yet_Documented
         @param sig_descrip      Not_Yet_Documented
         @param handler          Not_Yet_Documented
@@ -294,6 +302,18 @@ class DaemonCore : public Service
         return(HandleSig(_DC_UNBLOCKSIGNAL,sig));
     }
 
+    /** Send a signal to daemonCore processes or non-DC process
+        @param pid The receiving process ID
+        @param sig The signal to send
+        @return Not_Yet_Documented
+    */
+    int Send_Signal (pid_t pid, int sig);
+	//@}
+
+
+	/** @name Reaper events.
+	 */
+	//@{
     /** Not_Yet_Documented
         @param reap_descrip     Not_Yet_Documented
         @param handler          Not_Yet_Documented
@@ -351,7 +371,24 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Cancel_Reaper (int rid);
+   
+
+    /** Not_Yet_Documented
+        @param signal signal
+        @return Not_Yet_Documented
+    */
+	static const char *GetExceptionString(int signal);
+
+    /** Not_Yet_Documented
+        @param pid pid
+        @return Not_Yet_Documented
+    */
+    int Was_Not_Responding(pid_t pid);
+	//@}
         
+	/** @name Socket events.
+	 */
+	//@{
     /** Not_Yet_Documented
         @param iosock           Not_Yet_Documented
         @param iosock_descrip   Not_Yet_Documented
@@ -412,7 +449,11 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Lookup_Socket ( Stream * iosock );
+	//@}
 
+	/** @name Timer events.
+	 */
+	//@{
     /** Not_Yet_Documented
         @param deltawhen       Not_Yet_Documented
         @param event           Not_Yet_Documented
@@ -478,12 +519,19 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Reset_Timer ( int id, unsigned when, unsigned period = 0 );
+	//@}
 
     /** Not_Yet_Documented
         @param flag   Not_Yet_Documented
         @param indent Not_Yet_Documented
     */
     void Dump (int flag, char* indent = NULL );
+
+
+    /** @name Process management.
+        These work on any process, not just daemon core processes.
+    */
+    //@{
 
     /** Not_Yet_Documented
         @return Not_Yet_Documented
@@ -494,18 +542,6 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     inline pid_t getppid() { return ppid; };
-
-    /** Send a signal to daemonCore processes or non-DC process
-        @param pid The receiving process ID
-        @param sig The signal to send
-        @return Not_Yet_Documented
-    */
-    int Send_Signal (pid_t pid, int sig);
-
-    /** @name Process management.
-        These work on any process, not just daemon core processes.
-    */
-    //@{
 
     /** Not_Yet_Documented
         @param pid Not_Yet_Documented
@@ -537,55 +573,6 @@ class DaemonCore : public Service
     */
     int Continue_Process(pid_t pid);
 
-    //@}
-
-    /** @name Data pointer functions.
-        These functions deal with
-        associating a pointer to data with a registered callback.
-    */
-    //@{
-
-    /** Set the data pointer when you're <b>inside</b> the handler
-        function.  It will not work outside.
-
-        @param data The desired pointer to set...
-        @return Not_Yet_Documented
-    */
-    int SetDataPtr( void *data );
-
-    /** "Register" a data pointer.  You want to do this immediately
-        after you register a Command/Socket/Timer/etc.  When you enter 
-        the handler for this registered function, the pointer you 
-        specify will be magically available to (G|S)etDataPtr().
-
-        @param data The desired pointer to set...
-        @return Not_Yet_Documented
-    */
-    int Register_DataPtr( void *data );
-
-    /** Get the data pointer when you're <b>inside</b> the handler
-        function.  It will not work outside.  You must have done a 
-        Register_DataPtr after the function was registered for this
-        to work.
-
-        @return The desired pointer to set...
-    */
-    void *GetDataPtr();
-    //@}
-    
-    /** Put the {key, value} pair into the environment
-        @param key
-        @param value
-        @return Not_Yet_Documented
-    */
-    int SetEnv(char *key, char *value);
-
-    /** Put env_var into the environment
-        @param env_var Desired string to go into environment;
-        must be of the form 'name=value' 
-    */
-    int SetEnv(char *env_var);
-        
     /** Create a process.  Works for NT and Unix.  On Unix, a
         fork and exec are done.  Read the source for ugly 
         details - it takes care of most everything.
@@ -630,6 +617,61 @@ class DaemonCore : public Service
         int         nice_inc             = 0
         );
 
+    //@}
+
+    /** @name Data pointer functions.
+        These functions deal with
+        associating a pointer to data with a registered callback.
+    */
+    //@{
+    /** Set the data pointer when you're <b>inside</b> the handler
+        function.  It will not work outside.
+
+        @param data The desired pointer to set...
+        @return Not_Yet_Documented
+    */
+    int SetDataPtr( void *data );
+
+    /** "Register" a data pointer.  You want to do this immediately
+        after you register a Command/Socket/Timer/etc.  When you enter 
+        the handler for this registered function, the pointer you 
+        specify will be magically available to (G|S)etDataPtr().
+
+        @param data The desired pointer to set...
+        @return Not_Yet_Documented
+    */
+    int Register_DataPtr( void *data );
+
+    /** Get the data pointer when you're <b>inside</b> the handler
+        function.  It will not work outside.  You must have done a 
+        Register_DataPtr after the function was registered for this
+        to work.
+
+        @return The desired pointer to set...
+    */
+    void *GetDataPtr();
+    //@}
+    
+	/** @name Environment management.
+	 */
+	//@{
+    /** Put the {key, value} pair into the environment
+        @param key
+        @param value
+        @return Not_Yet_Documented
+    */
+    int SetEnv(char *key, char *value);
+
+    /** Put env_var into the environment
+        @param env_var Desired string to go into environment;
+        must be of the form 'name=value' 
+    */
+    int SetEnv(char *env_var);
+	//@}
+     
+	/** @name Thread management.
+	 */
+	//@{
 		/** Create a "poor man's" thread.  Works for NT (via
 			CreateThread) and Unix (via fork).  The new thread does
 			not have a DaemonCore command socket.
@@ -672,14 +714,10 @@ class DaemonCore : public Service
 
 	///
 	int Kill_Thread(int tid);
+	//@}
 
-    // NULL terminated array of inherited sockets
     Stream **GetInheritedSocks() { return (Stream **)inheritedSocks; }
 
-    // see if process was killed because it was hung
-    int Was_Not_Responding(pid_t pid);
-
-	static const char *GetExceptionString(int signal);
 
 		/** Register the Priv state this Daemon wants to be in, every time
 		    DaemonCore is returned to the Handler DaemonCore will check to see
@@ -787,6 +825,7 @@ class DaemonCore : public Service
         char*           iosock_descrip;
         char*           handler_descrip;
         void*           data_ptr;
+		bool			is_connect_pending;
     };
     void              DumpSocketTable(int, const char* = NULL);
     int               maxSocket;  // number of socket handlers to start with
@@ -856,7 +895,7 @@ class DaemonCore : public Service
 
     void free_descrip(char *p) { if(p &&  p != EMPTY_DESCRIP) free(p); }
     
-    fd_set              readfds; 
+    fd_set              readfds,writefds,exceptfds; 
 
     struct in_addr      negotiator_sin_addr;    // used by Verify method
 

@@ -574,9 +574,7 @@ obtainAdsFromCollector (ClassAdList &startdAds,
 	// set the constraints on the various queries
 	// 1.  Fetch ads of startds that are CLAIMED or UNCLAIMED
 	dprintf (D_ALWAYS, "  Getting startd ads ...\n");
-	sprintf (buffer, "(TARGET.%s =!= FALSE)", ATTR_REQUIREMENTS);
-	if (((result = startdQuery.addANDConstraint(buffer))	!= Q_OK) ||
-		((result = startdQuery.fetchAds(startdAds))		!= Q_OK))
+	if( (result = startdQuery.fetchAds(startdAds)) != Q_OK )
 	{
 		dprintf (D_ALWAYS, 
 			"Error %s:  failed to fetch startd ads ... aborting\n",
@@ -1021,7 +1019,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	char startdAddr[32];
 	char startdName[64];
 	char *capability;
-	ReliSock startdSock;
+	SafeSock startdSock;
 	bool send_failed;
 
 	// these will succeed

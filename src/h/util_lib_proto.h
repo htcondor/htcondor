@@ -62,6 +62,10 @@ void _EXCEPT_ ( char *fmt, ... );
 int flock ( int fd, int op );
 int getdtablesize ( void );
 
+#ifndef WIN32  // on WIN32, it messes with our macro in condor_sys_nt.h
+char* strupr( char* );
+#endif
+
 #ifndef WIN32	// on WIN32, it messes with our getwd macro in condor_sys_nt.h
 char * getwd ( char *path );
 #endif

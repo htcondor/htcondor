@@ -413,6 +413,8 @@ SetRemoteParam( char* name, char* addr, char* pool, char* param_value,
 		my_exit( 1 );
 	}
 
+	lower_case(param_name);		// make the config name case insensitive
+
 		// We need a version with a newline at the end to make
 		// everything cool at the other end.
 	char* buf = (char*)malloc( strlen(param_value) + 2 );

@@ -47,6 +47,9 @@ extern ClassAd *JobAd;
 
 extern ReliSock *syscall_sock;
 
+static int WroteExecuteEvent = 0;
+extern char* ExecutingHost;
+
 // count of total network bytes previously send and received for this
 // job from previous runs (i.e., includes ckpt transfers)
 float	TotalBytesSent = 0.0, TotalBytesRecvd = 0.0;
@@ -54,6 +57,30 @@ float	TotalBytesSent = 0.0, TotalBytesRecvd = 0.0;
 // count of network bytes send and received outside of CEDAR RSC
 // socket during this run
 float	BytesSent = 0.0, BytesRecvd = 0.0;
+
+
+extern "C" void
+log_execute (char *host)
+{
+	// log execute event
+	ExecuteEvent event;
+	strcpy (event.executeHost, host);
+	if( !ULog.writeEvent(&event) ) {
+		dprintf (D_ALWAYS, "Unable to log ULOG_EXECUTE event\n");
+	} else {
+		WroteExecuteEvent = 1;
+	}
+}
+	
+
+extern "C" void
+check_execute_event( void )
+{
+	if( ! WroteExecuteEvent ) {
+		log_execute( ExecutingHost );
+	}
+}
+
 
 extern "C" void 
 initializeUserLog ()
@@ -76,6 +103,8 @@ initializeUserLog ()
 extern "C" void
 log_termination (struct rusage *localr, struct rusage *remoter)
 {
+	check_execute_event();
+
 	switch (WTERMSIG(JobStatus))
 	{
 	  case 0:
@@ -235,6 +264,8 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 extern "C" void 
 log_checkpoint (struct rusage *localr, struct rusage *remoter)
 {
+	check_execute_event();
+
 	CheckpointedEvent event;
 	event.run_local_rusage = *localr;
 	event.run_remote_rusage = *remoter;
@@ -249,6 +280,8 @@ log_checkpoint (struct rusage *localr, struct rusage *remoter)
 extern "C" void 
 log_image_size (int size)
 {
+	check_execute_event();
+
 	// log the event
 	JobImageSizeEvent event;
 	event.size = size;
@@ -260,20 +293,10 @@ log_image_size (int size)
 
 
 extern "C" void
-log_execute (char *host)
-{
-	// log execute event
-	ExecuteEvent event;
-	strcpy (event.executeHost, host);
-	if (!ULog.writeEvent (&event))
-	{
-		dprintf (D_ALWAYS, "Unable to log ULOG_EXECUTE event\n");
-	}
-}
-	
-extern "C" void
 log_except (char *msg)
 {
+	check_execute_event();
+
 	// log shadow exception event
 	ShadowExceptionEvent event;
 	sprintf(event.message, msg);
@@ -293,3 +316,4 @@ log_except (char *msg)
 		dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event\n");
 	}
 }
+

@@ -36,7 +36,10 @@
 #include "condor_debug.h"
 #include "HashTable.h"
 #include "string_list.h"
+#include "MyString.h"
 
+// IMPORTANT NOTE:  If you add a new enum value here, please add a new
+// case to PermString() in condor_ipverify.C.
 /// enum for Daemon Core socket/command/signal permissions
 enum DCpermission {
 	/** Not_Yet_Ducumented */ ALLOW,
@@ -61,6 +64,13 @@ static const int IPVERIFY_DENY = 3;
 ///	Not_Yet_Ducumented.  15 is max for 32-bit mask
 static const int IPVERIFY_MAX_PERM_TYPES = 15;
 		
+	/** PermString() converts the given DCpermission into the
+		human-readable string version of the name.
+		@param perm The permission you want to convert
+		@return The string version of it
+	*/
+const char* PermString( DCpermission perm );
+
 /** Not_Yet_Ducumented
  */
 class IpVerify {
@@ -94,6 +104,13 @@ public:
 	*/
 	void CacheDnsResults(int flag) { cache_DNS_results = flag; }
 
+	bool AddAllowHost( const char* host, DCpermission perm );
+		/** AddAllowHost() method adds a new host to the hostallow
+			table, for the given permission level.
+			@param host IP address or hostname (no wildcards)
+			@param perm Permission level to use
+			@return TRUE if successful, FALSE on error
+		*/
 
 private:
 
@@ -103,13 +120,16 @@ private:
 	static const int perm_ints[];
 
 	int add_hash_entry(const struct in_addr & sin_addr,int new_mask);
-	int fill_table(StringList *slist, int mask);
+	void fill_table( StringList *slist, int mask );
 	int cache_DNS_results;
 
 	inline int allow_mask(int perm) { return (1 << (1+2*perm)); }
 	inline int deny_mask(int perm) { return (1 << (2+2*perm)); }
 	
 	int did_init;
+
+	bool add_host_entry( const char* addr, int new_mask );
+	void process_allow_hosts( void );
 
 	class PermTypeEntry {
 	public:
@@ -134,6 +154,8 @@ private:
 	typedef HashTable <struct in_addr, int> PermHashTable_t;
 	PermHashTable_t* PermHashTable;
 
+	typedef HashTable <MyString, int> HostHashTable_t;
+	HostHashTable_t* AllowHostsTable;
 };
 	
 

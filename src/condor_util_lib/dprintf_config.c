@@ -34,7 +34,7 @@
 #include "condor_string.h"
 
 
-int		Termlog;
+int		Termlog = 0;
 
 extern int		DebugFlags;
 extern FILE		*DebugFP;
@@ -42,6 +42,7 @@ extern int		MaxLog[D_NUMLEVELS+1];
 extern char		*DebugFile[D_NUMLEVELS+1];
 extern char		*DebugLock;
 extern char		*_condor_DebugFlagNames[];
+extern int		_condor_dprintf_works;
 
 extern void		_condor_set_debug_flags( char *strflags );
 
@@ -166,5 +167,6 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 	}
 
 	first_time = 0;
+	_condor_dprintf_works = 1;
 }
 

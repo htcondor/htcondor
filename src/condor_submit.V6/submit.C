@@ -144,6 +144,7 @@ char	*ImageSize		= "image_size";
 char	*Universe		= "universe";
 char	*MachineCount	= "machine_count";
 char	*NotifyUser		= "notify_user";
+char	*ExitRequirements = "exit_requirements";
 char	*UserLogFile	= "log";
 char	*CoreSize		= "coresize";
 char	*NiceUser		= "nice_user";
@@ -168,6 +169,8 @@ char	*TransferInputFiles = "transfer_input_files";
 char	*TransferOutputFiles = "transfer_output_files";
 char	*TransferFiles = "transfer_files";
 
+char	*CopyToSpool = "copy_to_spool";
+
 #if !defined(WIN32)
 char	*KillSig			= "kill_sig";
 #endif
@@ -183,6 +186,7 @@ void 	SetStdFile( int which_file );
 void 	SetPriority();
 void 	SetNotification();
 void 	SetNotifyUser ();
+void	SetExitRequirements();
 void 	SetArguments();
 void 	SetEnvironment();
 #if !defined(WIN32)
@@ -223,7 +227,7 @@ void setupAuthentication();
 
 char *owner = NULL;
 
-extern char **environ;
+extern DLL_IMPORT_MAGIC char **environ;
 
 
 extern "C" {
@@ -244,8 +248,6 @@ int CurrentSubmitInfo = -1;
 // explicit template instantiations
 template class HashTable<MyString, MyString>;
 template class HashBucket<MyString,MyString>;
-template class HashTable<MyString, int>;
-template class HashBucket<MyString,int>;
 template class ExtArray<SubmitRec>;
 
 void TestFilePermissions( char *scheddAddr = NULL )
@@ -490,8 +492,16 @@ main( int argc, char *argv[] )
 
 	//  Parse the file and queue the jobs 
 	if( read_condor_file(fp) < 0 ) {
-		fprintf(stderr, "\nERROR: Failed to parse command file.\n");
+		fprintf(stderr, "\nERROR: Failed to parse command file (line %d).\n",
+				LineNo);
 		exit(1);
+	}
+
+	if( !GotQueueCommand ) {
+		fprintf(stderr, "\nERROR: \"%s\" doesn't contain any \"queue\"",
+				cmd_file ? cmd_file : "(stdin)" );
+		fprintf( stderr, " commands -- no jobs queued\n" );
+		exit( 1 );
 	}
 
 	if ( !DisconnectQ(0) ) {
@@ -531,12 +541,6 @@ main( int argc, char *argv[] )
 	if(ProcId != -1 ) 
 	{
 		reschedule();
-	}
-
-	if( !GotQueueCommand ) {
-		fprintf(stderr, "ERROR: \"%s\" doesn't contain any \"queue\"", cmd_file );
-		fprintf( stderr, " commands -- no jobs queued\n" );
-		exit( 1 );
 	}
 
 	if ( !DisableFileChecks ) {
@@ -630,6 +634,7 @@ void
 SetExecutable()
 {
 	char	*ename = NULL;
+	char	*copySpool = NULL;
 
 #if !defined(WIN32)
 		//Allow GlobusExecutable to override executable
@@ -641,6 +646,7 @@ SetExecutable()
 	if ( ename == NULL ) {
 		ename = condor_param(Executable);
 	}
+
 
 	if( ename == NULL ) {
 		fprintf( stderr, "No '%s' parameter was provided\n", Executable);
@@ -694,7 +700,7 @@ SetExecutable()
 	InsertJobExpr (buffer);
 
 		/* MPI REALLY doesn't like these! */
-	if ( JobUniverse != MPI ) {
+	if ( JobUniverse != MPI && JobUniverse != PVM ) {
 		InsertJobExpr ("MinHosts = 1");
 		InsertJobExpr ("MaxHosts = 1");
 	}
@@ -725,11 +731,19 @@ SetExecutable()
 		exit( 1 );
 	}
 
+	copySpool = condor_param(CopyToSpool);
+	if( copySpool == NULL)
+	{
+		copySpool = (char *)malloc(16);
+		strcpy(copySpool, "TRUE");
+	}
+
 	// generate initial checkpoint file
 	strcpy( IckptName, gen_ckpt_name(0,ClusterId,ICKPT,0) );
 
 	// spool executable only if no $$(arch).$$(opsys) specified
-	if ( !strstr(ename,"$$") ) {			
+
+	if ( !strstr(ename,"$$") && *copySpool != 'F' && *copySpool != 'f' ) {	
 
 		if (SendSpoolFile(IckptName) < 0) {
 			fprintf(stderr,"permission to transfer executable %s denied\n",IckptName);
@@ -746,6 +760,7 @@ SetExecutable()
 	}
 
 	free(ename);
+	free(copySpool);
 }
 
 #ifdef WIN32
@@ -765,6 +780,21 @@ SetUniverse()
 	if( univ && stricmp(univ,"pvm") == MATCH ) 
 	{
 		int tmp;
+		char *pvmd = param("PVMD");
+
+		if (!pvmd || access(pvmd, R_OK|X_OK) != 0) {
+			fprintf(stderr, "Error: Condor PVM support is not installed.\n"
+					"You must install the Condor PVM Contrib Module before\n"
+					"submitting PVM universe jobs\n");
+			if (!pvmd) {
+				fprintf(stderr, "PVMD parameter not defined in the Condor "
+						"configuration file.\n");
+			} else {
+				fprintf(stderr, "Can't access %s: %s\n", pvmd,
+						strerror(errno));
+			}
+			exit(1);
+		}
 
 		JobUniverse = PVM;
 		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, PVM);
@@ -792,6 +822,9 @@ SetUniverse()
 			(void) sprintf (buffer, "%s = %d", ATTR_MAX_HOSTS, tmp);
 			InsertJobExpr (buffer);
 			free(mach_count);
+		} else {
+			InsertJobExpr ("MinHosts = 1");
+			InsertJobExpr ("MaxHosts = 1");
 		}
 		free(univ);
 		return;
@@ -1355,6 +1388,23 @@ SetNotifyUser()
 		free(who);
 	}
 }
+
+void
+SetExitRequirements()
+{
+	char *who = condor_param(ExitRequirements);
+
+	if( ! who ) {
+			// If "exit_requirements" isn't there, try "ExitRequirements" 
+		who = condor_param( "ExitRequirements" );
+	}
+
+	if (who) {
+		(void) sprintf (buffer, "%s = %s", ATTR_JOB_EXIT_REQUIREMENTS, who);
+		InsertJobExpr (buffer);
+		free(who);
+	}
+}
 	
 void
 SetArguments()
@@ -1394,7 +1444,6 @@ SetArguments()
 		if ( strcmp( args, "" ) ) {
 				//handle args in either Condor format or Globus RSL format
 			StringList newargs( args, " ,\"" );
-			char buf[1024];
 			newargs.rewind();
 			strcat( GlobusArgs, "(arguments=" );
 			for ( char *nextarg = NULL; nextarg = newargs.next();  ) {
@@ -1415,7 +1464,6 @@ SetArguments()
       }
 			//extract "GLOBUSRUN" value from config file
 		char *globusrun;
-		struct stat statbuf;
 		if ( !(globusrun = param( "GLOBUSRUN" )) ) {
 			fprintf(stderr, "\"GLOBUSRUN\" value not configured in your pool\n" );
 			DoCleanup(0,0,NULL);
@@ -1916,6 +1964,7 @@ read_condor_file( FILE *fp )
 		force = 0;
 
 		name = getline(fp);
+		LineNo++;
 		if( name == NULL ) {
 			break;
 		}
@@ -2177,6 +2226,7 @@ queue(int num)
 		SetEnvironment();
 		SetNotification();
 		SetNotifyUser();
+		SetExitRequirements();
 		SetUserLog();
 		SetCoreSize();
 #if !defined(WIN32)
@@ -2320,12 +2370,19 @@ check_requirements( char *orig )
 	}
 
 	if ( JobUniverse == PVM ) {
-		(void)strcat( answer, " && (Machine != \"" );
-		(void)strcat( answer, my_full_hostname() );
-	         // XXX Temporary hack:  we only want to run on the first node
-	         // of an SMP machine for pvm jobs.
-		(void)strcat( answer, "\" && ((VirtualMachineID =?= UNDEFINED ) "
-	                   "|| (VirtualMachineID =?= 1)) )" );
+		ptr = param("PVM_OLD_PVMD");
+		if (ptr) {
+			if (ptr[0] == 'T' || ptr[0] == 't') {
+				(void)strcat( answer, " && (Machine != \"" );
+				(void)strcat( answer, my_full_hostname() );
+					// XXX Temporary hack: we only want to run on the
+					// first node of an SMP machine for pvm jobs.
+				(void)strcat( answer,
+							  "\" && ((VirtualMachineID =?= UNDEFINED ) "
+							  "|| (VirtualMachineID =?= 1)) )" );
+			}
+			free(ptr);
+		}
 	} 
 
 	if ( JobUniverse == VANILLA ) {
@@ -2707,7 +2764,7 @@ InsertJobExpr (char *expr, bool clustercheck)
 		// We are working on building the ad which will serve as our
 		// cluster ad.  Thus insert this expr into our hashtable.
 		if ( ClusterAdAttrs.insert(hashkey,unused) < 0 ) {
-			fprintf(stderr,"Unable to insert expression into hashtable\n", expr);
+			fprintf(stderr,"Unable to insert expression into hashtable: %s\n", expr);
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}

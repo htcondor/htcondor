@@ -415,15 +415,15 @@ case $os in
 		fi
 
 		if [ $myname = "c89" ]; then
-			exec $ARGS -tl,$CONDOR_LIBDIR/ld
+			exec $ARGS -tl,$CONDOR_LD_DIR/ld
 		fi
 
 		if [ $myname = "f77" ]; then
-			exec $ARGS -tl,$CONDOR_LIBDIR/ld
+			exec $ARGS -tl,$CONDOR_LD_DIR/ld
 		fi 
 
 		if [ $myname = "fort77" ]; then
-			exec $ARGS -tl,$CONDOR_LIBDIR/ld
+			exec $ARGS -tl,$CONDOR_LD_DIR/ld
 		fi 
 		
 		;;

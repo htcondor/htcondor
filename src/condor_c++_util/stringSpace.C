@@ -27,10 +27,6 @@
 #include "stringSpace.h"
 #include "condor_debug.h"
 
-// explicit template instantiation
-template class HashTable<MyString, int>;
-template class HashBucket<MyString,int>;
-
 // hash function for strings
 static int 
 hashFunction (const MyString &str, int numBuckets)

@@ -39,6 +39,7 @@ public:
 	BOOLEAN contains( const char * );
 	BOOLEAN substring( const char * );
 	BOOLEAN contains_withwildcard(const char *string);
+	BOOLEAN contains_anycase( const char * );
 	void print (void);
 	void rewind (void) { strings.Rewind(); }
 	void append (const char* str) { strings.Append( strdup(str) ); }

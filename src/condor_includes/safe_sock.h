@@ -30,9 +30,14 @@
 #include <netinet/in.h>
 #endif
 
-#include "buffers.h"
 #include "sock.h"
 #include "condor_constants.h"
+#include "my_hostname.h"
+#include "condor_random_num.h"
+#include "SafeMsg.h"
+
+static const int SAFE_SOCK_HASH_BUCKET_SIZE = 7;
+static const int SAFE_SOCK_MAX_BTW_PKT_ARVL = 10;
 
 /*
 **	S A F E    S O C K
@@ -45,102 +50,101 @@ class SafeSock : public Sock {
 //	PUBLIC INTERFACE TO SAFE SOCKS
 //
 public:
-
 	friend class DaemonCore;
 
-	/*
-	**	Methods
-	*/
-
 	// Virtual socket services
-	//
-    ///
 	virtual int handle_incoming_packet();
-    ///
 	virtual int end_of_message();
 
-    /** Connect to a host on a port
+	virtual stream_type type() { return Stream::safe_sock; }
+
+	/** Connect to a host on a port
         @param port the port to connect to, ignorred if s includes port
         @param s can be a hostname or sinful string
+		@param do_not_block if True, call returns immediately
     **/
-	virtual int connect(char *s, int port=0);
+	virtual int connect(char *s, int port=0, bool do_not_block = false);
 
-    ///
+	//
 	inline int connect(char *h, char *s) { return connect(h,getportbyserv(s));}
+	void getStat(unsigned long &noMsgs,
+			 unsigned long &noWhole,
+			 unsigned long &noDeleted,
+			 unsigned long &avgMsgSize,
+                   unsigned long &szComplete,
+			 unsigned long &szDeleted);
+	void resetStat();
 
-    ///
+	//
 	SafeSock();
 
-	/// Copy ctor
+	// Copy constructor
 	SafeSock(const SafeSock &);
 
-    ///
+	// Destructor
 	~SafeSock();
 
-    ///
-	void init();				/* shared initialization method */
+	// Methods
+	void init();	/* shared initialization method */
+
+#ifdef DEBUG
+	int getMsgSize();
+	void dumpSock();
+#endif
 
 #ifndef WIN32
 	// interface no longer supported
 	int attach_to_file_desc(int);
 #endif
 	
-	/*
-	**	Stream protocol
-	*/
-
-    ///
-	virtual stream_type type() { return Stream::safe_sock; }
 
 	//	byte operations
-	//
-    ///
+	///
 	virtual int put_bytes(const void *, int);
-    ///
+	///
 	virtual int get_bytes(void *, int);
-    ///
+	///
 	virtual int get_ptr(void *&, char);
-    ///
+	///
 	virtual int peek(char &);
 
 //	PRIVATE INTERFACE TO SAFE SOCKS
 //
-protected:
 
-	/*
-	**	Types
-	*/
+// next line should be uncommented after testing
+protected:
+	static _condorMsgID _outMsgID;
 
 	enum safesock_state { safesock_none, safesock_listen };
 
-	/*
-	**	Methods
-	*/
 	char * serialize(char *);
 	char * serialize() const;
-
-	/*
-	**	Data structures
-	*/
-
-	int rcv_packet(SOCKET);
-	class RcvMsg {
-	public:
-		RcvMsg() : buf(65536), ready(0) {}
-
-		Buf			buf;
-		int			ready;
-	} rcv_msg;
-
-	int snd_packet(int);
-	class SndMsg {
-	public:
-		SndMsg() : buf(65536) {}
-
-		Buf			buf;
-	} snd_msg;
+	inline bool SafeSock::same(const _condorMsgID msgA,
+	                           const _condorMsgID msgB)
+	{
+		if(msgA.ip_addr == msgB.ip_addr &&
+		   msgA.pid == msgB.pid &&
+		   msgA.time == msgB.time &&
+		   msgA.msgNo == msgB.msgNo)
+			return true;
+		else return false;
+	}
 
 	safesock_state	_special_state;
+	_condorOutMsg _outMsg;
+	_condorInMsg *_inMsgs[SAFE_SOCK_HASH_BUCKET_SIZE];
+	_condorPacket _shortMsg;
+	bool _msgReady;
+	_condorInMsg *_longMsg;
+	int _tOutBtwPkts;
+
+	// statistics variables
+	unsigned long _noMsgs;
+	unsigned long _whole;;
+	unsigned long _deleted;
+	unsigned long _avgSwhole;
+	unsigned long _avgSdeleted;
 };
+
 
 #endif /* SAFE_SOCK_H */

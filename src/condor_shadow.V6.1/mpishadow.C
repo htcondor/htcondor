@@ -457,6 +457,19 @@ MPIShadow::shutDown( int exitReason, int exitStatus ) {
 		   contain only information from the 'master' node. */
 	endingUserLog( exitStatus, exitReason, ResourceList[0] );
 
+	// As we leave, we need to deactivate the claim.
+	// Does this go here, or should it go earlier
+	// does killing the starter
+	MpiResource *r;
+    for ( i=0 ; i<=ResourceList.getlast() ; i++ ) {
+		r = ResourceList[i];
+		char *tmp = NULL;
+		r->getExecutingHost( tmp );
+		dprintf(D_FULLDEBUG, "Killing the starter on %s\n",tmp);
+		r->killStarter();
+		delete [] tmp;
+	}		
+
 	MpiResource *rr;
     if ( getJobAd() ) {
             // For lack of anything better to do here, set the last 
@@ -479,6 +492,7 @@ MPIShadow::shutDown( int exitReason, int exitStatus ) {
     } else {
         DC_Exit( exitReason );
     }
+
 
 		// if we are being called from the exception handler, return
 		// now.

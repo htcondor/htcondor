@@ -328,6 +328,19 @@ int CondorFileBuffer::flush()
 	flush(0);
 }
 
+int CondorFileBuffer::fstat(struct stat *buf)
+{
+	int ret;
+
+	ret = original->fstat(buf);
+	if (ret != 0) {
+		return ret;
+	}
+	buf->st_size = get_size();
+
+	return ret;
+}
+
 int CondorFileBuffer::is_readable()
 {
 	return original->is_readable();

@@ -31,4 +31,10 @@
 #define END_C_DECLS
 #endif
 
+#ifdef WIN32
+#define DLL_IMPORT_MAGIC __declspec(dllimport)
+#else
+#define DLL_IMPORT_MAGIC  /* a no-op on Unix */
+#endif
+
 #endif /* CONDOR_SYS_FEATURES_H */

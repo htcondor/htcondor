@@ -28,14 +28,14 @@
 
 #ifndef lint
 static char *rcs_store_c =
-	"$Header: /space/home/matt/CVS2GIT/CONDOR_SRC-src/src/condor_util_lib/malloc.c,v 1.3 1998-03-24 21:11:10 tannenba Exp $";
+	"$Header: /space/home/matt/CVS2GIT/CONDOR_SRC-src/src/condor_util_lib/malloc.c,v 1.3.40.1 2000-09-14 22:04:49 wright Exp $";
 #endif
 
 
 
 
 #include <stdio.h>
-#include <assert.h>
+#include "condor_fix_assert.h"
 
 char	*Fmt1 = "%x: %-10s %-35s %-4d %-4d\n";
 

@@ -687,8 +687,29 @@ format_remote_host (char *, AttrList *ad)
 	static char result[MAXHOSTNAMELEN];
 	static char unknownHost [] = "[????????????????]";
 	char* tmp;
-
 	struct sockaddr_in sin;
+
+	int universe = STANDARD;
+	ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
+	if (universe == SCHED_UNIVERSE &&
+		string_to_sin(scheddAddr, &sin) == 1) {
+		if( (tmp = sin_to_hostname(&sin, NULL)) ) {
+			strcpy( result, tmp );
+			return result;
+		} else {
+			return unknownHost;
+		}
+	} else if (universe == PVM) {
+		int current_hosts;
+		if (ad->LookupInteger( ATTR_CURRENT_HOSTS, current_hosts ) == 1) {
+			if (current_hosts == 1) {
+				sprintf(result, "1 host");
+			} else {
+				sprintf(result, "%d hosts", current_hosts);
+			}
+			return result;
+		}
+	}
 	if (ad->LookupString(ATTR_REMOTE_HOST, result) == 1) {
 		if( is_valid_sinful(result) && 
 			(string_to_sin(result, &sin) == 1) ) {  
@@ -699,28 +720,6 @@ format_remote_host (char *, AttrList *ad)
 			}
 		}
 		return result;
-	} else {
-		int universe = STANDARD;
-		ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
-		if (universe == SCHED_UNIVERSE &&
-			string_to_sin(scheddAddr, &sin) == 1) {
-			if( (tmp = sin_to_hostname(&sin, NULL)) ) {
-				strcpy( result, tmp );
-				return result;
-			} else {
-				return unknownHost;
-			}
-		} else if (universe == PVM) {
-			int current_hosts;
-			if (ad->LookupInteger( ATTR_CURRENT_HOSTS, current_hosts ) == 1) {
-				if (current_hosts == 1) {
-					sprintf(result, "1 host");
-				} else {
-					sprintf(result, "%d hosts", current_hosts);
-				}
-				return result;
-			}
-		}
 	}
 	return unknownHost;
 }

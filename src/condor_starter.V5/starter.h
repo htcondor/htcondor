@@ -106,6 +106,9 @@ NameTable StateNames( StateNameArray );
   violated, we may end up with two different events encoded by the
   same value.  (I know POSIX says we shouldn't depend on numeric values
   of signals...)
+
+  Since SIGUSR2 isn't always last, we set the first synchronous event
+  to NSIG, so it is sure to come after the signal numbers.  -Jim B. 7/26/2000
 */
 typedef enum event_type {
 	NO_EVENT = 0,				/* place holder */
@@ -117,7 +120,7 @@ typedef enum event_type {
 	DIE = SIGINT,				/* terminate user job, don't return ckpt */
 	CHILD_EXIT = SIGCHLD,		/* user process terminated */
 	PERIODIC_CKPT = SIGUSR2,	/* checkpoint user process, but continue running */
-	CKPT_EXIT,					/* user process exited for checkpoint */
+	CKPT_EXIT = NSIG,			/* user process exited for checkpoint */
 	SUCCESS,					/* generic successful result */
 	FAILURE,					/* generic failure result */
 	DO_XFER,					/* transfer checkpoint files */
@@ -230,7 +233,6 @@ int req_die();				// Request all procs to exit - don't transfer ckpts
 int req_vacate();			// Request all procs to exit - do transfer ckpts
 int spawn_all();			// Spawn all user processes
 int stop_all();			// Stop all user processes
-int handle_vacate_req();	// Deal with Ckpt_and_Vacate in Supervise state
 int susp_ckpt_timer();		// Suspend ckpt timer, but save remaining time
 int reaper();				// Gather status of exited child process
 int set_quit();			// Set quit flag, will exit after updating ckpts
@@ -257,7 +259,6 @@ NAME_VALUE	TransFuncArray[] = {
 	{ (unsigned long)req_vacate,			"req_vacate"		},
 	{ (unsigned long)spawn_all,			"spawn_all"			},
 	{ (unsigned long)stop_all,			"stop_all"			},
-	{ (unsigned long)handle_vacate_req,	"handle_vacate_req"	},
 	{ (unsigned long)susp_ckpt_timer,		"susp_ckpt_timer"	},
 	{ (unsigned long)reaper,				"reaper"			},
 	{ (unsigned long)set_quit,			"set_quit"			},
@@ -348,12 +349,7 @@ Transition TransTab[] = {
 { GET_EXEC,			SUCCESS,			SUPERVISE,		spawn_all			},
 
 { TERMINATE,		DO_WAIT,			TERMINATE_WAIT,	0					},
-#if 0
-{ TERMINATE,		DONT_XFER,			SEND_STATUS_ALL,0					},
-{ TERMINATE,		DO_XFER,			SEND_CKPT_ALL,	0					},
-#else
 { TERMINATE,		DEFAULT,			SEND_STATUS_ALL,0					},
-#endif
 
 { TERMINATE_WAIT,	SUSPEND,			0,				susp_self			},
 { TERMINATE_WAIT,	DIE,				0,				req_die				},
@@ -367,13 +363,6 @@ Transition TransTab[] = {
 { SUPERVISE,		SUSPEND,			0,				susp_all			},
 { SUPERVISE,		PERIODIC_CKPT,		0,				periodic_ckpt_all	},
 { SUPERVISE,		ALARM,				0,				test_connection	},
-
-
-#if defined(LINK_PVM)
-	{ SUPERVISE,		PVM_MSG,			READ_PVM_MSG,	0				},
-	{ READ_PVM_MSG,		PVM_CHILD_EXIT,		PROC_EXIT,		pvm_reaper		},
-	{ READ_PVM_MSG,		DEFAULT,			SUPERVISE,		0				},
-#endif
 
 { PROC_EXIT,		NO_CORE,			SUPERVISE,		dispose_one			},
 { PROC_EXIT,		SEND_CORE,			SEND_CORE,		0					},
@@ -392,18 +381,12 @@ Transition TransTab[] = {
 { UPDATE_ALL,		DO_WAIT,			UPDATE_WAIT,	0					},
 
 { UPDATE_WAIT,		CHILD_EXIT,			UPDATE_ONE,		reaper				},
-#if 0
-{ UPDATE_WAIT,		CKPT_and_VACATE,	0,				set_quit			},
-#endif
 { UPDATE_WAIT,		SUSPEND,			0,				susp_self			},
 { UPDATE_WAIT,		VACATE,				TERMINATE,		req_vacate			},
 { UPDATE_WAIT,		DIE,				TERMINATE,		req_die				},
 
 { UPDATE_ONE,		EXITED,				UPDATE_ALL,		dispose_one			},
 { UPDATE_ONE,		FAILURE,			SEND_CKPT_ALL,	0					},
-#if 0
-{ UPDATE_ONE,		CKPT_and_VACATE,	0,				set_quit			},
-#endif
 { UPDATE_ONE,		SUSPEND,			0,				susp_self			},
 { UPDATE_ONE,		VACATE,				TERMINATE,		req_vacate			},
 { UPDATE_ONE,		DIE,				TERMINATE,		req_die				},

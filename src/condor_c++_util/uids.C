@@ -44,9 +44,6 @@ static char *priv_state_name[] = {
 /* Start Common Bits */
 #define HISTORY_LENGTH 32
 
-
-
-
 static struct {
 	time_t		timestamp;
 	priv_state	priv;
@@ -87,6 +84,12 @@ display_priv_log(void)
 	}
 }
 
+
+priv_state
+get_priv()
+{
+	return CurrentPrivState;
+}
 
 /* End Common Bits */
 
@@ -505,7 +508,6 @@ uninit_user_ids()
 }
 
 
-
 priv_state
 _set_priv(priv_state s, char file[], int line, int dologging)
 {
@@ -517,6 +519,16 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 		return PRIV_USER_FINAL;
 	}
 	CurrentPrivState = s;
+
+		// If we haven't already done so, we want to try to init the
+		// condor ids, since that's where we figure out if we're root
+		// or not, and therefore, initialize the SwitchIds variable
+		// to the right thing (there's no need to try switching unless
+		// we were started as root).
+	if( !CondorIdsInited ) {
+		init_condor_ids();
+	}
+
 	if (SwitchIds) {
 		switch (s) {
 		case PRIV_ROOT:
@@ -785,13 +797,3 @@ is_root( void )
 }
 
 #endif  /* #if defined(WIN32) */
-
-
-
-
-
-
-
-
-
-

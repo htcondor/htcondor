@@ -91,7 +91,7 @@ extern char* mySubSystem;
 // Global variables
 BUCKET	*ConfigTab[TABLESIZE];
 static char* tilde = NULL;
-extern char **environ;
+extern DLL_IMPORT_MAGIC char **environ;
 
 
 // Function implementations
