@@ -34,6 +34,9 @@ Simple guide to running tests in the Condor test suite
   If you want to run a bunch of tests all at once, you should use the
   "batch_test.pl" script.  With this script, you can:
 
+	- Run all clipped port tests for Condor:
+	  % ./batch_test.pl -dir . -file list_all
+
     - Recursively run all tests in all subdirectories:
       % ./batch_test.pl
 

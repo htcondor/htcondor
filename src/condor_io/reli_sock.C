@@ -1309,7 +1309,7 @@ const char * ReliSock::getHostAddress() {
 }
 
 int
-ReliSock::isAuthenticated()
+ReliSock::isAuthenticated() const
 {
 	if ( !authob ) {
 		return 0;

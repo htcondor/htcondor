@@ -12,35 +12,75 @@ $submitted = sub
 	system("rm $name");
 };
 
+$aborted = sub 
+{
+	my %info = @_;
+	my $done;
+	print "Abort event expected as we clear job\n";
+};
+
 $timed = sub
 {
 	die "Job should have ended by now. file streaming error file broken!\n";
 };
 
+#$execute = sub
+#{
+#	my %info = @_;
+#	my $name = $info{"error"};
+#	CondorTest::RegisterTimed($testname, $timed, 180);
+#	my $size1 = -s $name;
+#	#print "Size 1 of $name is $size1\n";
+
+#	while( $size1 == 0 )
+#	{
+#		$size1 = -s $name;
+#		#print "Size 1 of $name is $size1\n";
+#	}
+#	print "Size 1 of $name is $size1\n";
+
+#	my $size2 = -s $name;
+#	#print "Size 2 of $name is $size2\n";
+#	while( $size1 == $size2 )
+#	{
+#		#print "keep checking: size should vary if streaming\n";
+#		$size2 = -s $name;
+#		#print "Size 2 of $name is $size2\n";
+#	}
+#	print "Size 2 of $name is $size2\n";
+#};
+
 $execute = sub
 {
 	my %info = @_;
+	my $cluster = $info{"cluster"};
 	my $name = $info{"error"};
-	CondorTest::RegisterTimed($testname, $timed, 180);
 	my $size1 = -s $name;
-	#print "Size 1 of $name is $size1\n";
-
-	while( $size1 == 0 )
+	while($size1 == 0)
 	{
-		$size1 = -s $name;
 		#print "Size 1 of $name is $size1\n";
+		$size1 = -s $name;
 	}
 	print "Size 1 of $name is $size1\n";
-
+	sleep 4;
 	my $size2 = -s $name;
-	#print "Size 2 of $name is $size2\n";
-	while( $size1 == $size2 )
-	{
-		#print "keep checking: size should vary if streaming\n";
-		$size2 = -s $name;
-		#print "Size 2 of $name is $size2\n";
-	}
 	print "Size 2 of $name is $size2\n";
+	if( $size1 == $size2 )
+	{
+		die "Error size should vary if streaming\n";
+	}
+	if( $size1 == 0 )
+	{
+		my $size3 = -s $name;
+		print "Size 3 of $name is $size3\n";
+		#compare size 2 and 3
+		if( $size3 == $size2 )
+		{
+			die "Error size should vary if streaming\n";
+		}
+	}
+	print "OK remove the job!\n";
+	system("condor_rm $cluster");
 };
 
 $ExitSuccess = sub {
@@ -50,6 +90,7 @@ $ExitSuccess = sub {
 
 # before the test let's throw some weird crap into the environment
 
+CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 CondorTest::RegisterExecute($testname, $execute);
 CondorTest::RegisterSubmit( $testname, $submitted );

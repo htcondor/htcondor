@@ -1072,9 +1072,11 @@ SCHEDD_ADDRESS_FILE	= $(LOG)/.schedd_address
 
 ##  How often should the schedd send an update to the central manager?
 #SCHEDD_INTERVAL	= 300 
+SCHEDD_INTERVAL	= 15 
 
 ##  How long should the schedd wait between spawning each shadow?
 #JOB_START_DELAY	= 2
+JOB_START_DELAY	= 2
 
 ##  How often should the schedd send a keep alive message to any
 ##  startds it has claimed?  (5 minutes)

@@ -9,10 +9,18 @@ $timed = sub
 	die "Test should have eneded by now.... stuck!\n";
 };
 
+$aborted = sub 
+{
+	my %info = @_;
+	my $done;
+	print "Abort event expected as we clear job\n";
+};
+
 $execute = sub
 {
 	my %info = @_;
 	my $name = $info{"output"};
+	my $cluster = $info{"cluster"};
 	CondorTest::RegisterTimed($testname, $timed, 180);
 	my $size1 = -s $name;
 	#print "Size 1 of $name is $size1\n";
@@ -22,12 +30,16 @@ $execute = sub
 		$size1 = -s $name;
 	}
 	print "Size 1 of $name is $size1\n";
+	sleep 4;
 	my $size2 = -s $name;
 	print "Size 2 of $name is $size2\n";
 	if( $size1 != $size2 )
 	{
 		die "Output size should be stable if not streaming\n";
 	}
+
+	print "OK remove the job!\n";
+	system("condor_rm $cluster");
 };
 
 $ExitSuccess = sub {
@@ -37,6 +49,7 @@ $ExitSuccess = sub {
 
 # before the test let's throw some weird crap into the environment
 
+CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 CondorTest::RegisterExecute($testname, $execute);
 

@@ -29,6 +29,7 @@ CBUILD($(Fortran),job_rsc_f-direct-write_std,f)
 DEP_SYMLINK_EXT(job_rsc_f-direct-write_std,cmd)
 RUN(job_rsc_f-direct-write_std)
 DEPS(job_rsc_f-direct-write_std,x_hello.in)
+TESTCLASS(job_rsc_f-direct-write_std,long)
 
 
 /****************************
@@ -39,13 +40,15 @@ DESC(job_ckpt_f-printer_std,"Can Fortran print output while ckpting?")
 CBUILD($(Fortran),job_ckpt_f-printer_std,f)
 DEP_SYMLINK_EXT(job_ckpt_f-printer_std,cmd)
 RUN(job_ckpt_f-printer_std)
-TESTCLASS(job_ckpt_f-printer_std,quick)
+TESTCLASS(job_ckpt_f-printer_std,framework)
+TESTCLASS(job_ckpt_f-printer_std,long)
 
 DESC(job_ckpt_f-reader_std,"Can Fortran read input while ckpting?")
 CBUILD($(Fortran),job_ckpt_f-reader_std,f)
 DEP_SYMLINK_EXT(job_ckpt_f-reader_std,cmd)
 DEP_SYMLINK(job_ckpt_f-reader_std,job_ckpt_f-reader_std.in)
 RUN(job_ckpt_f-reader_std)
+TESTCLASS(job_ckpt_f-reader_std,long)
 
 DESC(job_ckpt_f-areauc_std,"Can Fortran compute the area under a curve?")
 CBUILD($(Fortran),job_ckpt_f-areauc_std,f)

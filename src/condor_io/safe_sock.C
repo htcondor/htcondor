@@ -862,7 +862,7 @@ void SafeSock::setFullyQualifiedUser(char * u) {
 	}
 }
 
-int SafeSock :: isAuthenticated()
+int SafeSock :: isAuthenticated() const
 {
     return _authenticated;
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.1.4.5 2005-03-07 08:35:28 wright Exp $
+# $Id: remote_pre.pl,v 1.1.4.6 2005-04-01 01:22:18 wright Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -64,15 +64,13 @@ close UNTAR;
 # setup the personal condor
 ######################################################################
 
-# find the version - macosx doesn't work w/the "old" way  
-# XXX TODO XXX !!!!
-# this seems like a hack, maybe we can find a better way...
-my $version = substr($release_tarball, 7, 5);
+# New improved way to find the version
+$release_tarball =~ /condor-(\d+)\.(\d+)\.(\d+)-.*/; 
+$version = "condor-$1.$2.$3";
 print "VERSION string is $version\n";
-# XXX TODO XXX !!!!
 
-my $configure = "$BaseDir/condor-$version/condor_configure";
-my $reltar = "$BaseDir/condor-$version/release.tar";
+my $configure = "$BaseDir/$version/condor_configure";
+my $reltar = "$BaseDir/$version/release.tar";
 
 print "SETTING UP PERSONAL CONDOR\n";
 mkdir( "$BaseDir/local" ) || die "Can't mkdir $BaseDir/local: $!\n";
@@ -145,6 +143,9 @@ print FIX "STARTER_DEBUG           = D_NODATE\n";
 
 print FIX "MAX_MASTER_LOG          = $logsize\n";
 print FIX "MASTER_DEBUG            = D_COMMAND\n";
+
+# Add a shorter check time for periodic policy issues
+print FIX "PERIODIC_EXPR_INTERVAL = 15\n";
 
 close ORIG;
 close FIX; 

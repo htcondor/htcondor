@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre,v 1.1.4.1 2004-07-19 05:28:36 wright Exp $
+# $Id: remote_pre,v 1.1.4.2 2005-04-01 01:22:16 wright Exp $
 # script to setup the Condor build
 ######################################################################
 
@@ -58,6 +58,11 @@ print "Move completed successfully\n";
 ######################################################################
 # run configure on the source tree
 ######################################################################
+
+if ($ENV{NMI_PLATFORM} eq "x86_winnt_5.1") {
+    print "SKIPPING configure step for windows\n";
+    exit 0;
+}
 
 chdir( $SrcDir ) || die "Can't chdir($SrcDir): $!\n";
 print "running CONFIGURE ...\n"; 

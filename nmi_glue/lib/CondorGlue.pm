@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.4.5 2005-03-07 08:35:26 wright Exp $
+# $Id: CondorGlue.pm,v 1.1.4.6 2005-04-01 01:22:18 wright Exp $
 #
 ######################################################################
 
@@ -173,16 +173,16 @@ sub printPrereqs
 {
     my $fh = shift;
 
-    # global prereqs
-    print $fh "prereqs = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4\n";
+    # global prereqs should be nothign because of windows
+    #print $fh "prereqs = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4\n";
 
     # platform-specific prereqs
-    print $fh "prereqs_x86_rh_7.2 = binutils-2.15\n";
-    print $fh "prereqs_x86_rh_8.0 = binutils-2.15\n";
-    print $fh "prereqs_x86_rh_9 = binutils-2.15\n";
-    print $fh "prereqs_sun4u_sol_5.9 = gcc-2.95.3, binutils-2.15\n";
-    print $fh "prereqs_sun4u_sol_5.8 = gcc-2.95.3, binutils-2.15\n";
-    print $fh "prereqs_ppc_aix_5.2 = vac-6, vacpp-6\n";
+    print $fh "prereqs_x86_rh_7.2 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, binutils-2.15\n";
+    print $fh "prereqs_x86_rh_8.0 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, binutils-2.15\n";
+    print $fh "prereqs_x86_rh_9 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, binutils-2.15\n";
+    print $fh "prereqs_sun4u_sol_5.9 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, gcc-2.95.3, binutils-2.15\n";
+    print $fh "prereqs_sun4u_sol_5.8 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, gcc-2.95.3, binutils-2.15\n";
+    print $fh "prereqs_ppc_aix_5.2 = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, vac-6, vacpp-6\n";
 }
 
 

@@ -1,15 +1,21 @@
 #!/usr/bin/env perl
 
-# $Id: remote_declare,v 1.1.4.2 2004-10-26 23:12:36 wright Exp $
+# $Id: remote_declare,v 1.1.4.3 2005-04-01 01:22:16 wright Exp $
 
 # Condor implementation of NMI build infrastructure interface.
 # This is just a trivial hard-coded declare list, which is the 
 # same on all platforms, all versions, etc.
 
 open( LIST, ">tasklist.nmi" ) || die "Can't open tasklist.nmi: $!\n";
-print LIST "externals\n";
-print LIST "release\n";
-print LIST "static\n";
-print LIST "stripped\n";
-print LIST "public\n";
+if ($ENV{NMI_PLATFORM} eq "x86_winnt_5.1") {
+    print LIST "win_make\n";
+    print LIST "win_release\n";
+}
+else {
+    print LIST "externals\n";
+    print LIST "release\n";
+    print LIST "static\n";
+    print LIST "stripped\n";
+    print LIST "public\n";
+}
 close( LIST );

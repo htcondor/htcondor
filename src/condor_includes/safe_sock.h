@@ -92,7 +92,7 @@ public:
 
 	virtual void         setFullyQualifiedUser(char * u);
 	virtual const char * getFullyQualifiedUser();
-    virtual int          isAuthenticated();
+    virtual int          isAuthenticated() const;
     void                 setAuthenticated(bool authenticated = true);
 
 #ifdef DEBUG

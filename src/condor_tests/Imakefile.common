@@ -32,6 +32,7 @@ TESTCLASS_DECL(long)
 */
 TESTCLASS_DECL(env)
 TESTCLASS_DECL(critical)
+TESTCLASS_DECL(framework)
 TESTCLASS_DECL(filexfer)
 TESTCLASS_DECL(dagman)
 TESTCLASS_DECL(performance)

@@ -1210,8 +1210,13 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 	if (JobQueue->LookupClassAd(key, ad)) {
 		if ( Q_SOCK && !OwnerCheck(ad, Q_SOCK->getOwner() )) {
-			dprintf(D_ALWAYS, "OwnerCheck(%s) failed in SetAttribute for job %d.%d\n",
-					Q_SOCK->getOwner(), cluster_id, proc_id);
+			const char *owner = Q_SOCK->getOwner( );
+			if ( ! owner ) {
+				owner = "NULL";
+			}
+			dprintf(D_ALWAYS,
+					"OwnerCheck(%s) failed in SetAttribute for job %d.%d\n",
+					owner, cluster_id, proc_id);
 			return -1;
 		}
 	} else {

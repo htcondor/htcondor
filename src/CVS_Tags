@@ -1,3 +1,14 @@
+03/31/05 V6_6-merge-37
+   The state of the V6_6-branch for a merge into V6_7-branch.  This
+   picks up some crucial post-6.6.9 bug fixes that we want in 6.7.7
+   ASAP: the major fix to detecting console activity, the collector no
+   longer segfaults if it gets a classad w/ w a NULL ip/port
+   attribute, and qmgmt no longer crashes the schedd if the FS
+   authenticate code returns a NULL username (due to a failed
+   getpwuid() call, for example).  As usual, it also includes a bunch
+   of changes to condor_tests and fixes in nmi_glue to support windoze
+   builds in the NWO.
+
 03/30/05 V6_7-spool_owner-merge-1
   The state of the V6_7-spool_owner-branch for the first (and
   hopefully only) merge back into V6_7-branch.
@@ -26,6 +37,11 @@
    only real change is the version of the gt4-gahp we're using, and a
    fix to the NMI glue to run all the tests every night.  Otherwise,
    it's just a few last minute (mostly cosmetic) changes from 6.7.6.
+
+03/15/05 V6_6_9
+   The official 6.6.9 release tag. This lives on V6_6_ALL and
+   V6_6_9_EXT. The official release version string for 6.6.9 is
+   $CondorVersion: 6.6.9 Mar 10 2005 $
 
 03/10/05 V6_7_6-branch
    A release branch for 6.7.6, created off V6_7-branch from the

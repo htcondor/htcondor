@@ -6,6 +6,6 @@ error = job_core_perhold-false_sched.err
 hold	= false
 periodic_hold = (CurrentTime - QDate) < 0
 Notification = NEVER
-arguments  = 4
+arguments  = 100
 queue
 

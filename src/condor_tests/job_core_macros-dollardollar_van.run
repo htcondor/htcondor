@@ -35,7 +35,7 @@ $success = sub
 		print "ARG -$item-\n";
 	}
 
-	CondorTest::ParseMachineAds( $lines[2] );
+	CondorTest::ParseMachineAds( $lines[1] );
 	%ads = CondorTest::FetchMachineAds();
 	my $machinemem = CondorTest::FetchMachineAdValue("memory");
 	my $wontbethere = CondorTest::FetchMachineAdValue("wontbethere");
@@ -43,7 +43,7 @@ $success = sub
 	print "Alternate value is ---$wontbethere---\n";
 	if( $machinemem ne undef)
 	{
-		if($machinemem eq $lines[1])
+		if($machinemem eq $lines[0])
 		{
 			print "Good macro and condor_status agree --$machinemem--!\n";
 			print "$lines[4] should match too\n";
@@ -66,12 +66,12 @@ $success = sub
 		}
 		else
 		{
-			die "machine $machine MISMATCH $machinemem/$lines[1]\n";
+			die "machine $machine MISMATCH $machinemem/$lines[0]\n";
 		}
 	}
 	else
 	{
-		die "Can't get memory Ad for machine $machine to compare to $lines[1]\n";
+		die "Can't get memory Ad for machine $machine to compare to $lines[0]\n";
 	}
 
 };
