@@ -487,7 +487,7 @@ negotiationTime ()
 	addRemoteUserPrios( startdAds ); 
 
 	// ----- Sort the schedd list in decreasing priority order
-	dprintf( D_ALWAYS, "Phase 3:  Sorting schedd ads by priority ...\n" );
+	dprintf( D_ALWAYS, "Phase 3:  Sorting submitter ads by priority ...\n" );
 	scheddAds.Sort( (lessThanFunc)comparisonFunction, this );
 
 	int spin_pie=0;
@@ -752,7 +752,7 @@ obtainAdsFromCollector (
 	dprintf(D_ALWAYS, "Got ads: %d public and %d private\n",
 	        allAds.MyLength(),startdPvtAds.MyLength());
 
-	dprintf(D_ALWAYS, "Public ads include %d schedd, %d startd\n",
+	dprintf(D_ALWAYS, "Public ads include %d submitter, %d startd\n",
 		scheddAds.MyLength(), startdAds.MyLength() );
 
 	return true;
@@ -814,12 +814,12 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 				if ( display_overlimit ) {  // print message only once
 					display_overlimit = false;
 					dprintf (D_ALWAYS, 	
-						"    Over schedd resource limit (%d) ... "
+						"    Over submitter resource limit (%d) ... "
 					    "only consider startd ranks\n", scheddLimit);
 				}
 			} else {
 				dprintf (D_ALWAYS, 	
-				"    Reached schedd resource limit: %d ... stopping\n", i);
+				"    Reached submitter resource limit: %d ... stopping\n", i);
 				break;	// get out of the infinite for loop & stop negotiating
 			}
 		} else {
