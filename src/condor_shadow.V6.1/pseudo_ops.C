@@ -621,14 +621,15 @@ pseudo_ulog( ClassAd *ad )
 	int result = 0;
 	char const *critical_error = NULL;
 	MyString CriticalErrorBuf;
+	ClassAdUnParser unp;
 
 	if(!event) {
-		MyString add_str;
-		ad->sPrint(add_str);
+		string add_str;
+		unp.Unparse( add_str, ad );
 		dprintf(
 		  D_ALWAYS,
 		  "invalid event ClassAd in pseudo_ulog: %s\n",
-		  add_str.GetCStr());
+		  add_str.c_str( ));
 		return -1;
 	}
 
@@ -661,12 +662,12 @@ pseudo_ulog( ClassAd *ad )
 	}
 
 	if( !Shadow->uLog.writeEvent( event ) ) {
-		MyString add_str;
-		ad->sPrint(add_str);
+		string add_str;
+		unp.Unparse( add_str, ad );
 		dprintf(
 		  D_ALWAYS,
 		  "unable to log event in pseudo_ulog: %s\n",
-		  add_str.GetCStr());
+		  add_str.c_str( ));
 		result = -1;
 	}
 
@@ -687,9 +688,12 @@ pseudo_get_job_attr( const char *name, char *expr )
 {
 	ClassAd *ad = thisRemoteResource->getJobAd();
 	ExprTree *e = ad->Lookup(name);
+	ClassAdUnParser unp;
+	string expr_string;
 	if(e) {
 		expr[0] = 0;
-		e->RArg()->PrintToStr(expr);
+		unp.Unparse( expr_string, e );
+		strcat( expr, expr_string.c_str( ) );
 		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) = %s\n",name,expr);
 		return 0;
 	} else {
