@@ -90,9 +90,7 @@ init_syscall_connection( int want_debug_mode )
 #if 0
 	rval = errno = my_errno = 0;
 	rval = write( CLIENT_LOG, "Hello World\n", 12 );
-	if( rval != 12 ) {
-		exit(1);
-	}
+	assert( rval == 12 );
 #endif
 
 	answer = RSC_Init( RSC_SOCK, CLIENT_LOG );
