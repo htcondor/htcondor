@@ -315,6 +315,31 @@ int __recv( int fd, void *data, int length, int flags )
 
 #endif
 
+/* under linux with glibc22, we must supply a _llseek which just turns around
+	and calls normal lseek() which we'll then catch. XXX This means no true 64
+	bit file offsets, however... but it is no worse than how we implement
+	llseek() and friends in the syscall.tmpl file. */
+#if defined(LINUX) && defined(GLIBC22)
+int _llseek(unsigned int fd, unsigned long offset_high,  unsigned  long
+       offset_low, loff_t *result, unsigned int whence)
+{
+	off_t rval;
+
+	rval = lseek(fd, 
+		(off_t)((((off64_t)offset_high) << (off64_t)32) | (off64_t)offset_low),
+		whence);
+
+	if (rval < 0)
+	{
+		return -1;
+	}
+
+	*result = (loff_t)rval;
+
+	return 0;
+}
+#endif
+
 /*
 On all UNIXes, creat() is a system call, but has the same semantics
 as open() with a particular flag.  We will turn creat() into an
