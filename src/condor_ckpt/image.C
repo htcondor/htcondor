@@ -24,22 +24,12 @@
  
 
 #include "condor_common.h"
+#include "condor_mmap.h"
 
-#if defined(LINUX)
-#include <sys/mman.h>
-extern "C" {
-	caddr_t MMAP(caddr_t, size_t, int, int, int, off_t);
-};
-#endif
-
-#if defined(IRIX53)
-#define MA_SHARED	0x0008	/* mapping is a shared or mapped object */
-#include <sys/mman.h>		// for mmap()
-#endif
 #if defined(Solaris)
 #include <netconfig.h>		// for setnetconfig()
-#include <sys/mman.h>		// for mmap()
 #endif
+
 #include "condor_syscalls.h"
 #include "condor_sys.h"
 #include "image.h"
@@ -52,7 +42,6 @@ extern int _condor_in_file_stream;
 const int KILO = 1024;
 
 extern "C" void report_image_size( int );
-extern "C"	int	syscall(int ...);
 extern "C"	int	SYSCALL(int ...);
 
 #ifdef SAVE_SIGSTATE
@@ -63,8 +52,6 @@ extern "C" void condor_restore_sigstates();
 #if defined(OSF1)
 	extern "C" unsigned int htonl( unsigned int );
 	extern "C" unsigned int ntohl( unsigned int );
-#elif defined(AIX32)
-#	include <net/nh.h>
 #elif defined(HPUX9)
 #	include <netinet/in.h>
 #elif defined(Solaris) && defined(sun4m)
@@ -73,7 +60,7 @@ extern "C" void condor_restore_sigstates();
 #elif defined(IRIX62)
     #include <sys/endian.h>
 #elif defined(LINUX)
-    #include <asm/byteorder.h>
+    #include <netinet/in.h>
 #else
 	extern "C" unsigned long htonl( unsigned long );
 	extern "C" unsigned long ntohl( unsigned long );
@@ -728,7 +715,7 @@ Image::Write( int fd )
 			return -1;
 		}
 
-		ack = ntohl( ack );		// Ack is in network byte order, fix here
+		ack = ntohl( ack );	// Ack is in network byte order, fix here
 		if( ack != len ) {
 			dprintf( D_ALWAYS, "Ack - expected %d, but got %d\n", len, ack );
 			return -1;
@@ -847,23 +834,18 @@ SegMap::Read( int fd, ssize_t pos )
 //		fprintf(stderr, "Calling mmap(loc = 0x%lx, size = 0x%lx, "
 //			"prot = %d, fd = %d, offset = 0)\n", core_loc, segSize,
 //			prot|PROT_WRITE, zfd);
-#if defined(Solaris)
-		if ((MMAP((caddr_t)core_loc, (size_t)segSize,
-				prot|PROT_WRITE,
-				MAP_PRIVATE|MAP_FIXED, zfd,
-				(off_t)0)) == MAP_FAILED) {
+#if defined(Solaris) || defined(LINUX)
+		if ((MMAP((MMAP_T)core_loc, (size_t)segSize,
+				  prot|PROT_WRITE,
+				  MAP_PRIVATE|MAP_FIXED, zfd,
+				  (off_t)0)) == MAP_FAILED) {
 #elif defined(IRIX53)
 		if (MMAP((caddr_t)saved_core_loc, (size_t)segSize,
-					 (saved_prot|PROT_WRITE)&(~MA_SHARED),
-					 MAP_PRIVATE|MAP_FIXED, zfd,
-					 (off_t)0) == -1) {
-#elif defined(LINUX)
-		long status;
-		if ((status=(long)MMAP((void *)core_loc, (size_t)segSize,
-				prot|PROT_WRITE,
-				MAP_PRIVATE|MAP_FIXED, zfd,
-				(off_t)0)) == -1) {
+				 (saved_prot|PROT_WRITE)&(~MA_SHARED),
+				 MAP_PRIVATE|MAP_FIXED, zfd,
+				 (off_t)0) == MAP_FAILED) {
 #endif
+
 			dprintf(D_ALWAYS, "mmap: %s", strerror(errno));
 			dprintf(D_ALWAYS, "Attempted to mmap /dev/zero at "
 				"address 0x%lx, size 0x%lx\n", saved_core_loc,
