@@ -134,8 +134,7 @@ main_shutdown_fast()
 int
 main_shutdown_graceful()
 {
-	// should request a graceful shutdown from startd here
-	exit(0);	// temporary
+	Shadow->gracefulShutDown();
 	return 0;
 }
 
