@@ -415,7 +415,9 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 		free(paramer);
 
 		ad->Insert(buf);
-		dprintf( D_SECURITY, "SECMAN: %s\n", buf );
+		if (DebugFlags & D_FULLDEBUG ) {
+			dprintf( D_SECURITY, "SECMAN: %s\n", buf );
+		}
 	}
 
 
@@ -451,7 +453,9 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 		free(paramer);
 
 		ad->Insert(buf);
-		dprintf ( D_SECURITY, "SECMAN: %s\n", buf);
+		if (DebugFlags & D_FULLDEBUG ) {
+			dprintf ( D_SECURITY, "SECMAN: %s\n", buf);
+		}
 	} else {
 		if( sec_encryption == SEC_REQ_REQUIRED || 
 			sec_integrity == SEC_REQ_REQUIRED ) {
@@ -532,13 +536,17 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 		paramer = NULL;
 
 		ad->Insert(buf);
-		dprintf ( D_SECURITY, "SECMAN: %s\n", buf);
+		if (DebugFlags & D_FULLDEBUG ) {
+			dprintf ( D_SECURITY, "SECMAN: %s\n", buf);
+		}
 	} else {
-		// default: 4 hours
-		sprintf(buf, "%s=\"14400\"", ATTR_SEC_SESSION_DURATION);
+		// default: 1 hour
+		sprintf(buf, "%s=\"3600\"", ATTR_SEC_SESSION_DURATION);
 
 		ad->Insert(buf);
-		dprintf ( D_SECURITY, "SECMAN: %s\n", buf);
+		if (DebugFlags & D_FULLDEBUG ) {
+			dprintf ( D_SECURITY, "SECMAN: %s\n", buf);
+		}
 	}
 
 	return true;
@@ -1798,7 +1806,6 @@ SecMan :: invalidateExpiredCache()
 
 /*
 
-			dprintf ( D_SECURITY, "SECMAN: cached key invalid (%s), removing.\n", sid);
 			// a failure here signals that the cache may be invalid.
 			// delete this entry from table and force normal auth.
 			KeyCacheEntry * ek = NULL;
