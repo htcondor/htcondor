@@ -39,6 +39,7 @@ int CondorID::Compare (const CondorID condorID) const {
   return result;
 }
 
+/*
 //-----------------------------------------------------------------------------
 string::string (const string & s) {
     _str = strnewp(s._str);
@@ -105,3 +106,4 @@ bool string::operator == (const string & s) const {
 bool string::operator != (const string & s) const {
     return !(*this == s);
 }
+*/

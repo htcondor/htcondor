@@ -84,7 +84,7 @@ class CondorID {
 
 
 //-----------------------------------------------------------------------------
-class string {
+/*class string {
     friend ostream & operator << (ostream & out, const string & s);
     friend string operator + (const string & s1, const string & s2);
   public:
@@ -109,5 +109,5 @@ class string {
 
 ostream & operator << (ostream & out, const string & s);
 string operator + (const string & s1, const string & s2);
-
+*/
 #endif /* #ifndef _TYPES_H_ */
