@@ -47,6 +47,7 @@
 #include "user_log.c++.h"
 #include "autocluster.h"
 #include "shadow_mgr.h"
+#include "enum_utils.h"
 
 const 	int			MAX_REJECTED_CLUSTERS = 1024;
 const   int         STARTD_CONTACT_TIMEOUT = 45;
@@ -458,7 +459,7 @@ private:
 extern void set_job_status(int cluster, int proc, int status);
 extern bool claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated );
 extern bool sendAlive( match_rec* mrec );
-extern void fixReasonAttrs( PROC_ID job_id, int action );
+extern void fixReasonAttrs( PROC_ID job_id, JobAction action );
 extern bool moveStrAttr( PROC_ID job_id, const char* old_attr,  
 						 const char* new_attr, bool verbose );
 extern bool abortJob( ClassAd *jobad, int cluster, int proc, const char *reason, bool use_transaction );

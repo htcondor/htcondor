@@ -7719,7 +7719,7 @@ fixAttrUser( ClassAd *job )
 
 
 void
-fixReasonAttrs( PROC_ID job_id, int action )
+fixReasonAttrs( PROC_ID job_id, JobAction action )
 {
 		/* 
 		   Fix the given job so that any existing reason attributes in
