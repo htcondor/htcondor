@@ -3,7 +3,8 @@ directory: /scratch/nleroy/workspace/Hawkeye-Release/modules
 prefix: Hawkeye-module-
 
 target: all
-version: 1.0-rc2
+version: 1.0-rc4
++condor_jobhist
 +condor_node
 +condor_pool
 +df
@@ -20,12 +21,16 @@ version: 1.0-rc2
 +w
 +who
 
-target: condor_node
+target: condor_jobhist
 version: 1.0-rc1
++condor_jobhist
+
+target: condor_node
+version: 1.0-rc2
 +condor_node
 
 target: condor_pool
-version: 1.0-rc2
+version: 1.0-rc3
 +condor_pool
 
 target: downlist

@@ -33,11 +33,8 @@ my %Config = (
 	      DoSubmitMunge => 0,
 	      DoCheckpoint => 1,
 	      DoSubmitDetails => 1,
-	      DoJobHistory => 0,
 	      DoArchDetail => 1,
 	      PoolDescription => "",
-	      JobHistoryConst => "",
-	      JobHistoryLong => 0,
 	     );
 my $Hash;
 
@@ -68,7 +65,7 @@ sub Init()
     $Tmp = HawkeyeLib::ReadConfig( "_cluster", "true" );
     $Config{Cluster} = " -cluster -down-cluster" if ( $Tmp =~ /true/i );
 
-    $Tmp = HawkeyeLib::ReadConfig( "_reserved", "true" );
+    $Tmp = HawkeyeLib::ReadConfig( "_reserved", "false" );
     $Config{Reserved} = " -reserved" if ( $Tmp =~ /true/i );
 
     $Tmp = HawkeyeLib::ReadConfig( "_absent", "true" );
@@ -92,96 +89,8 @@ sub Init()
     $Tmp = HawkeyeLib::ReadConfig( "_arch_detail", "true" );
     $Config{DoArchDetail} = ( $Tmp =~ /true/i ) ? 1 : 0;
 
-    $Tmp = HawkeyeLib::ReadConfig( "_job_history", "false" );
-    $Config{DoJobHistory} = ( $Tmp =~ /true/i ) ? 1 : 0;
-
-    $Tmp = HawkeyeLib::ReadConfig( "_job_history_long", "false" );
-    $Config{JobHistoryLong} = ( $Tmp =~ /true/i ) ? 1 : 0;
-
-    $Tmp = HawkeyeLib::ReadConfig( "_job_history_const", "" );
-    $Config{JobHistoryConst} = $Tmp;
-
     $Tmp = HawkeyeLib::ReadConfig( "_ckpt", "true" );
     $Config{DoCheckpoint} = ( $Tmp =~ /true/i ) ? 1 : 0;
-
-    # Finally, parse the command line...
-    foreach my $Arg ( @ARGV )
-    {
-	# Cluster on/off
-	if ( $Arg =~ /-(no)?cluster/ )
-	{
-	    $Config{Cluster} = defined($1) ? "" : " -cluster -down-cluster";
-	}
-	# Reserved on/off
-	elsif ( $Arg =~ /-(no)?reserved/ )
-	{
-	    $Config{Reserved} = defined($1) ? "" : " -reserved";
-	}
-	# Reserved on/off
-	elsif ( $Arg =~ /-(no)?absent/ )
-	{
-	    $Config{DoAbsent} = defined($1) ? 0 : 1;
-	}
-	elsif ( $Arg =~ /-(no)?summary/ )
-	{
-	    $Config{DoSummary} = defined($1) ? 0 : 1;
-	}
-	elsif ( $Arg =~ /-(no)?run/ )
-	{
-	    $Config{DoRun} = defined($1) ? 0 : 1;
-	}
-	elsif ( $Arg =~ /-(no)?submit/ )
-	{
-	    $Config{DoSubmit} = defined($1) ? 0 : 1;
-	}
-	elsif ( $Arg =~ /-(no)?submitmunge/ )
-	{
-	    $Config{DoSubmitMunge} = defined($1) ? 0 : 1;
-	}
-	elsif ( $Arg =~ /-(no)?submitdetail/ )
-	{
-	    $Config{DoSubmitDetail} = defined($1) ? 0 : 1;
-	}
-	elsif ( $Arg =~ /-(no)?ckpt/ )
-	{
-	    $Config{DoCheckpoint} = defined($1) ? 0 : 1;
-	}
-	elsif ( $Arg =~ /-(no)?archdetail/ )
-	{
-	    $Config{DoArchDetail} = defined($1) ? 0 : 1;
-	}
-	elsif ( $Arg =~ /-(no)?jobhistory/ )
-	{
-	    $Config{DoJobHistory} = defined($1) ? 0 : 1;
-	}
-	else
-	{
-	    print STDERR "Unknown option '$Arg'\n";
-	    print STDERR "Usage: condor_pool [name [options]]\n";
-	    print STDERR
-		"  [name]         \tModules logical name\n" .
-		"  [-[no]absent]  \tEnable/disable absent check\n" .
-		"  [-[no]cluster] \tEnable/disable cluster check (only w/absent)\n" .
-		"  [-[no]reserved]\tEnable/disable reserved check (only w/absent)\n" .
-		"  [-[no]summary] \tEnable/disable summary support\n" .
-		"  [-[no]run]     \tEnable/disable run check\n" .
-		"  [-[no]submit]  \tEnable/disable submit check\n" .
-		"  [-[no]submitmunge]\tEnable/disable submit email address munging\n" .
-		"  [-[no]submitdetail]\tEnable/disable submit detailed output\n".
-		"  [-[no]ckpt]    \tEnable/disable checkpoint server check\n".
-		"  [-[no]archdetail]\tEnable/disable architecture details\n".
-		"  [-[no]jobhistory]\tEnable/disable job history information\n";
-	    exit 1;
-	}
-    }
-    if ( 0 )
-    {
-	print STDERR "clus=$Config{Cluster}; res=$Config{Reserved}; " .
-	    "dab=$Config{DoAbsent} ".
-	    "dsum=$Config{DoSummary}; drun=$Config{DoRun} dsub=$Config{DoSubmit}".
-	    "dckpt=$Config{DoCheckpoint}\n";
-	exit 0;
-    }
 }
 
 # Do the real work here...
@@ -197,7 +106,6 @@ sub RunIt()
 	$Hawkeye->StoreIndex( "Description" );
     }
 
-    RunJobHistory( ) if ( $Config{DoJobHistory} );
     RunAbsent() if ( $Config{DoAbsent} );
     RunTotal( "", "Sum" ) if ( $Config{DoSummary} );
     RunTotal( "-run", "Run" ) if ( $Config{DoRun} );
@@ -530,131 +438,4 @@ sub RunCheckPoint(  )
 
     # Done
     close( CKPT );
-}
-
-# Run condor_history & parse it's output..
-sub RunJobHistory(  )
-{
-    my $Cmd = "condor_history -l";
-    $Cmd .= " -const '$Config{JobHistoryConst}'"
-	if ( $Config{JobHistoryConst} ne "" );
-    if ( ! open( HIST, "$Cmd|" ) )
-    {
-	print STDERR "Can't get history info\n";
-	return;
-    }
-
-    # Array of interesting stuff...
-    my %Interesting =
-	( ExitStatus => "n",
-	  NumRestarts => "n",
-	  JobStatus => "n",
-	  Owner => "s",
-	  JobUniverse => "",
-	  ClusterId => "",
-	  ProcId => "",
-	);
-
-    # Job information..
-    my @Jobs;
-    my @JobStatusMap = (
-			{ Count => 0, String => "Unexpanded", },
-			{ Count => 0, String => "Idle", },
-			{ Count => 0, String => "Running", },
-			{ Count => 0, String => "Removed", },
-			{ Count => 0, String => "Completed", },
-			{ Count => 0, String => "Held", },
-			{ Count => 0, String => "SubmissionError", },
-		       );
-    my @JobUniverseMap = (
-			  { Count => 0, String => "Standard", },
-			  { Count => 0, String => "Pipe", },
-			  { Count => 0, String => "Linda", },
-			  { Count => 0, String => "PVM", },
-			  { Count => 0, String => "Vanilla", },
-			  { Count => 0, String => "PVMD", },
-			  { Count => 0, String => "Scheduler", },
-			  { Count => 0, String => "MPI", },
-			  { Count => 0, String => "Globus", },
-			  { Count => 0, String => "Java", },
-			  { Count => 0, String => "Parallel", },
-			 );
-
-    # Parse the output...
-    my $CurJob;
-    while ( <HIST> )
-    {
-	s/^\s+//g;
-	chomp;
-
-	# Ad separator; sum it up here...
-	if ( $_ eq "" )
-	{
-	    if ( exists $CurJob->{ExitStatus} )
-	    {
-		push @Jobs, $CurJob;
-		if ( exists $CurJob->{JobStatus} )
-		{
-		    my $JobStatus = $CurJob->{JobStatus};
-		    $JobStatusMap[$JobStatus]{Count}++
-			if ( $JobStatus <= $#JobStatusMap );
-		}
-		if ( exists $CurJob->{JobUniverse} )
-		{
-		    my $Universe = $CurJob->{JobUniverse};
-		    $JobUniverseMap[$Universe]{Count}++
-			if ( $Universe <= $#JobUniverseMap );
-		}
-	    }
-	    $CurJob = {};
-	    next;
-	}
-
-	if ( /(\S+)\s*=\s*(.*)/ )
-	{
-	    my $Attr = $1;
-	    my $Value = $2;
-	    if ( exists ( $Interesting{$Attr} ) )
-	    {
-		$Value =~ s/^\"//;
-		$Value =~ s/\"$//;
-		$CurJob->{$Attr} = $Value;
-	    }
-	}
-    }
-    close( HIST );
-
-    # Publish the status summary info
-    foreach my $Status ( 0 .. $#JobStatusMap )
-    {
-	$Hash->Add( "JobStatus_" . $JobStatusMap[$Status]{String},
-		    "n",
-		    $JobStatusMap[$Status]{Count} );
-    }
-
-    # Publish the Universe summary info
-    foreach my $Universe ( 0 .. $#JobUniverseMap )
-    {
-	$Hash->Add( "JobUniverse_" . $JobUniverseMap[$Universe]{String},
-		    "n",
-		    $JobUniverseMap[$Universe]{Count} );
-    }
-
-    # Publish it all...
-    if ( $Config{JobHistoryLong} )
-    {
-	foreach my $Job ( @Jobs )
-	{
-	    my $JobId = $Job->{ClusterId} . "_" . $Job->{ProcId};
-	    foreach my $Attr ( keys %{$Job} )
-	    {
-		next if ( ! exists $Interesting{$Attr} );
-		next if ( $Interesting{$Attr} eq "" );
-		$Hash->Add( "Job_" . $JobId . "_" . $Attr,
-			    $Interesting{$Attr},
-			    $Job->{$Attr}
-			  );
-	    }
-	}
-    }
 }
