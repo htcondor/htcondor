@@ -112,6 +112,14 @@ int main(int argc, char **argv)
 	printf("This should be negatives: ");
 	dump_time(parsed_time);
 
+	iso8601_to_time("T01:02:03", &parsed_time, &is_utc);
+	printf("This one should be 01:02:03 (no date): ");
+	dump_time(parsed_time);
+
+	iso8601_to_time("01:02:03", &parsed_time, &is_utc);
+	printf("This one should also be 01:02:03 (no date): ");
+	dump_time(parsed_time);
+
 	return 0;
 }
 
