@@ -241,7 +241,7 @@ void 	SetRootDir();
 #endif
 void 	SetRequirements();
 void 	SetTransferFiles();
-bool 	SetNewTransferFiles( bool, bool );
+bool 	SetNewTransferFiles( void );
 void 	SetOldTransferFiles( bool, bool );
 void	InsertFileTransAttrs( FileTransferOutput_t when_output );
 void	SetRank();
@@ -1367,7 +1367,7 @@ SetTransferFiles()
 		// a fatal error.  first we check for the new attribute names
 		// ("ShouldTransferFiles" and "WheToTransferOutput").  If
 		// those aren't defined, we look for the old "TransferFiles". 
-	if( ! SetNewTransferFiles(in_files_specified, out_files_specified) ) {
+	if( ! SetNewTransferFiles() ) {
 		SetOldTransferFiles( in_files_specified, out_files_specified );
 	}
 
@@ -1524,7 +1524,7 @@ SetTransferFiles()
 
 
 bool
-SetNewTransferFiles( bool in_files_specified, bool out_files_specified )
+SetNewTransferFiles( void )
 {
 	bool found_it = false;
 	char *should, *when;
@@ -1585,43 +1585,18 @@ SetNewTransferFiles( bool in_files_specified, bool out_files_specified )
 		}
 		found_it = true;
 	} else {
-			// we we have an error here, this part of the message will
-			// be the same in both cases, so only construct it once.
-		MyString no_when_err;
-		no_when_err += " but you did not specify *when* you want Condor "
-			"to transfer the output back.  Please put either \"";
-		no_when_err += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-		no_when_err += " = ON_EXIT\" or \"";
-		no_when_err += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-		no_when_err += " = ON_EXIT_OR_EVICT\" in your submit file and "
-			"try again.";
-		
 		if( found_it && should_transfer != STF_NO ) {
 			err_msg = "\nERROR: you specified ";
 			err_msg += ATTR_SHOULD_TRANSFER_FILES;
 			err_msg += " to be \"";
 			err_msg += should;
-			err_msg += '"';
-			err_msg += no_when_err.Value();
-			print_wrapped_text( err_msg.Value(), stderr );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
-		if( in_files_specified || out_files_specified ) {
-			err_msg += "\nERROR: you specified files you want Condor to "
-				"transfer via '";
-			if( in_files_specified ) {
-				err_msg += "transfer_input_files";
-				if( out_files_specified ) {
-					err_msg += "' and 'transfer_output_files',";
-				} else {
-					err_msg += "',";
-				}
-			} else {
-				ASSERT( out_files_specified );
-				err_msg += "transfer_output_files',";
-			}
-			err_msg += no_when_err.Value();
+			err_msg += "\" but you did not specify *when* you want Condor "
+				"to transfer the output back.  Please put either \"";
+			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
+			err_msg += " = ON_EXIT\" or \"";
+			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
+			err_msg += " = ON_EXIT_OR_EVICT\" in your submit file and "
+				"try again.";
 			print_wrapped_text( err_msg.Value(), stderr );
 			DoCleanup(0,0,NULL);
 			exit( 1 );
