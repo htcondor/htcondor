@@ -1665,19 +1665,21 @@ int DaemonCore::HandleReq(int socki)
 
 		// CHECK TO SEE IF THE KERB-IP is the same
 		// as the socket IP.
-		const char* sockip = sin_to_string(sock->endpoint());
-		const char* kerbip = sock->authob->getRemoteAddress() ;
+		if ( sock->authob ) {
+			const char* sockip = sin_to_string(sock->endpoint());
+			const char* kerbip = sock->authob->getRemoteAddress() ;
 
-		result = !strncmp (sockip + 1, kerbip, strlen(kerbip) );
+			result = !strncmp (sockip + 1, kerbip, strlen(kerbip) );
 
-		dprintf (D_SECURITY, "DC_AUTHENTICATE: sock ip -> %s\n", sockip);
-		dprintf (D_SECURITY, "DC_AUTHENTICATE: kerb ip -> %s\n", kerbip);
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: sock ip -> %s\n", sockip);
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: kerb ip -> %s\n", kerbip);
 
-		if (!result) {
-			dprintf (D_ALWAYS, "ERROR: IP not in agreement!!! BAILING!\n");
-			return FALSE;
-		} else {
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: IP address verified.\n");
+			if (!result) {
+				dprintf (D_ALWAYS, "ERROR: IP not in agreement!!! BAILING!\n");
+				return FALSE;
+			} else {
+				dprintf (D_SECURITY, "DC_AUTHENTICATE: IP address verified.\n");
+			}
 		}
 
 
@@ -3893,7 +3895,7 @@ DaemonCore::InitCommandSocket( int command_port )
 	}
 
 	dprintf( D_DAEMONCORE, "Setting up command socket\n" );
-
+		
 		// First, try to inherit the sockets from our parent.
 	Inherit();
 
