@@ -201,17 +201,17 @@ main( int argc, char *argv[] )
 				usage( MyName );
 			}
 		}
+		did_one = TRUE;
 		if( (daemonname = get_daemon_name(*argv)) == NULL ) {
 			fprintf( stderr, "%s: unknown host %s\n", MyName, 
 					 get_host_part(*argv) );
 			continue;
 		}
 		do_command( daemonname );
-		did_one = TRUE;
 	}
 
 	if( ! did_one ) {
-		do_command( my_full_hostname() );
+		do_command( NULL );
 	}
 	exit( 0 );
 }
@@ -224,21 +224,36 @@ do_command( char *name )
 	switch( dt ) {
 	case MASTER:
 		if ((daemonAddr = get_master_addr(name)) == NULL) {
-			fprintf( stderr, "Can't find address of master %s\n", name );
+			if( name ) {
+				fprintf( stderr, "Can't find address of master %s\n", name );
+			} else {
+				fprintf( stderr, "Can't find address of local master\n" );
+			}
 			return;
 		}
 		break;
 	case SCHEDD:
 		if ((daemonAddr = get_schedd_addr(name)) == NULL) {
-			fprintf( stderr, "Can't find address of schedd %s\n", name );
+			if( name ) {
+				fprintf( stderr, "Can't find address of schedd %s\n", name );
+			} else {
+				fprintf( stderr, "Can't find address of local schedd\n" );
+			}
 			return;
 		}
 		break;
 	case STARTD:
-		if ((daemonAddr = get_startd_addr(get_host_part(name))) == NULL) {
-			fprintf( stderr, "Can't find startd address on %s\n", 
-					 get_host_part(name) );
-			return;
+		if( name ) {
+			if( (daemonAddr = get_startd_addr(get_host_part(name))) == NULL ) {
+				fprintf( stderr, "Can't find startd address on %s\n", 
+						 get_host_part(name) );
+				return;
+			} 
+		} else {
+			if( (daemonAddr = get_startd_addr(NULL)) == NULL ) {
+				fprintf( stderr, "Can't find address of local startd\n" );
+				return;
+			}
 		}
 		break;
 	}
@@ -258,12 +273,17 @@ do_command( char *name )
 		return;
 	}
 
-	if( dt == STARTD ) {
-		printf( "Sent %s command to %s on %s\n", cmd_to_str(cmd), 
-				daemonName, get_host_part(name) );
+	if( name ) {
+		if( dt == STARTD ) {
+			printf( "Sent %s command to %s on %s\n", cmd_to_str(cmd), 
+					daemonName, get_host_part(name) );
+		} else {
+			printf( "Sent %s command to %s %s\n", cmd_to_str(cmd), 
+					daemonName, name );
+		}
 	} else {
-		printf( "Sent %s command to %s %s\n", cmd_to_str(cmd), 
-				daemonName, name );
+		printf( "Sent %s command to local %s\n", cmd_to_str(cmd), 
+				daemonName );
 	}
 }
 
