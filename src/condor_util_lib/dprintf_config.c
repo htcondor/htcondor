@@ -43,7 +43,7 @@ extern int		DebugFlags;
 extern FILE		*DebugFP;
 extern int		MaxLog[D_NUMLEVELS+1];
 extern char		*DebugFile[D_NUMLEVELS+1];
-extern char		*DebugLock[D_NUMLEVELS+1];
+extern char		*DebugLock;
 extern char		*DebugFlagNames[];
 
 void set_debug_flags( char *strflags );
@@ -126,12 +126,12 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 					DebugFP = open_debug_file(debug_level, "a");
 				}
 
-				if( DebugFP == NULL ) {
+				if( DebugFP == NULL && debug_level == 0 ) {
 					EXCEPT("Cannot open log file '%s'",
 						   DebugFile[debug_level]);
 				}
 
-				(void)fclose( DebugFP );
+				if (DebugFP) (void)fclose( DebugFP );
 				DebugFP = (FILE *)0;
 
 				if (debug_level == 0) {
@@ -150,14 +150,11 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 
 				if (debug_level == 0) {
 					(void)sprintf(pname, "%s_LOCK", subsys);
-				} else {
-					(void)sprintf(pname, "%s_%s_LOCK", subsys,
-								  DebugFlagNames[debug_level-1]+2);
+					if (DebugLock) {
+						free(DebugLock);
+					}
+					DebugLock = param(pname);
 				}
-				if (DebugLock[debug_level]) {
-					free(DebugLock[debug_level]);
-				}
-				DebugLock[debug_level] = param(pname);
 			}
 		}
 	} else {
