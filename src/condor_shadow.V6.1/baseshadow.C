@@ -186,37 +186,16 @@ int BaseShadow::cdToIwd() {
 	return 0;
 }
 
-FILE* BaseShadow::emailUser(char *subjectline)
+FILE*
+BaseShadow::emailUser( char *subjectline )
 {
-	char email_addr[256];
-
 	dprintf(D_FULLDEBUG, "BaseShadow::emailUser() called.\n");
-
-	if (!jobAd ) {
+	if( !jobAd ) {
 		return NULL;
 	}
-	
-	/*
-	** The job may have an email address to whom the notification message
-    ** should go.  this info is in the classad.
-    */
-	email_addr[0] = '\0';
-	if ( (!jobAd->LookupString(ATTR_NOTIFY_USER, email_addr)) ||
-		 (email_addr[0] == '\0') ) {
-		// no email address specified in the job ad; use owner
-		strcpy(email_addr, owner);
-	}
-
-	if ( strchr(email_addr,'@') == NULL )
-	{
-		// No host name specified; add uid domain. 
-		// Note: UID_DOMAIN is set to the fullhostname by default.
-		strcat(email_addr,"@");
-		strcat(email_addr,uidDomain);
-	}
-
-	return email_open(email_addr,subjectline);
+	return email_user_open( jobAd, subjectline );
 }
+
 
 FILE* BaseShadow::shutDownEmail(int reason, int exitStatus) 
 {
