@@ -1,7 +1,7 @@
 NAME = condor_schedd
 all_target($(NAME) libqmgmt.a)
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DWANT_DC_PM
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DWANT_DC_PM -Wall
 CFLAGS = $(STD_C_FLAGS)
 
 LIB= $(DAEMONCORE_LIB) $(STD_LIBS)
