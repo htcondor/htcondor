@@ -69,7 +69,7 @@ private:
 };
 
 
-class Match
+class Match : public Service
 {
 public:
 	Match();
@@ -77,32 +77,32 @@ public:
 
 		// Operations you can perform on a Match
 	void vacate();	
-		// Process a keep alive for this match
-	void alive();
+	void alive();				// Process a keep alive for this match
+
+		// Timer functions
 	void start_match_timer();
 	void cancel_match_timer();
+	int  match_timed_out();		// We were matched, but not claimed in time
 	void start_claim_timer();
 	void cancel_claim_timer();
-	void claim_timed_out();
+	int  claim_timed_out(); 	// We were claimed, but didn't get a
+								// keep alive in time from the schedd
 
 		// Functions that return data
-	float	rank()		{return m_rank;};
-	float	oldrank()	{return m_oldrank;};
-	char*	capab() 	{return m_cap->capab();};
-	
-	Client* client() 	{return m_client;};
-	Capability* cap()	{return m_cap;};
-	ClassAd*	ad() 	{return m_ad;};
-	int		universe()	{return m_universe;};
-	Stream*	agentstream()	{return m_agentstream;};
+	float		rank()			{return m_rank;};
+	float		oldrank()		{return m_oldrank;};
+	char*		capab() 		{return m_cap->capab();};
+	Client* 	client() 		{return m_client;};
+	Capability* cap()			{return m_cap;};
+	ClassAd*	ad() 			{return m_ad;};
+	int			universe()		{return m_universe;};
+	Stream*		agentstream()	{return m_agentstream;};
 
 		// Functions that set the values of data
-	void setrank(float rank) {m_rank=rank;};
+	void setrank(float rank)	{m_rank=rank;};
 	void setoldrank(float rank) {m_oldrank=rank;};
-
 	void setad(ClassAd *ad);		// Set our ad to the given pointer
 	void deletead(void);
-
 	void setuniverse(int universe)	{m_universe=universe;};
 	void setagentstream(Stream* stream);	
 	void setaliveint(int alive)		{m_aliveint=alive;};

@@ -102,13 +102,10 @@ Match::start_match_timer()
 {
 	m_match_tid = 
 		daemonCore->Register_Timer( match_timeout, 0, 
-								   (TimerHandler)match_timed_out,
-								   "match_timed_out" );
+								   (TimerHandlercpp)match_timed_out,
+								   "match_timed_out", this );
 	if( m_match_tid == -1 ) {
 		EXCEPT( "Couldn't register timer (out of memory)." );
-	}
-	if( ! daemonCore->Register_DataPtr( (void*) this ) ) {
-		EXCEPT( "Couldn't register data pointer for match_timed_out handler" );
 	}
 	dprintf( D_FULLDEBUG, "Started match timer for %d seconds.\n", 
 			 match_timeout );
@@ -126,6 +123,35 @@ Match::cancel_match_timer()
 }
 
 
+int
+Match::match_timed_out()
+{
+	Resource* rip = resmgr->get_by_any_cap( capab() );
+	if( !rip ) {
+		EXCEPT( "Can't find resource of expired match." );
+	}
+
+	if( rip->r_cur->cap()->matches( capab() ) ) {
+		if( rip->state() != matched_state ) {
+			EXCEPT( "Match timed out but not in matched state." );
+		}
+		delete rip->r_cur;
+		rip->r_cur = new Match;
+		rip->change_state( owner_state );
+	} else {
+			// The match that timed out was the preempting match.
+		assert( rip->r_pre->cap()->matches( capab() ) );
+			// We need to generate a new preempting match object,
+			// restore our reqexp, and update the CM. 
+		delete rip->r_pre;
+		rip->r_pre = new Match;
+		rip->r_reqexp->pub();
+		rip->update();
+	}		
+	return TRUE;
+}
+
+
 void
 Match::start_claim_timer()
 {
@@ -134,17 +160,12 @@ Match::start_claim_timer()
 				 "Warning: starting claim timer before alive interval set.\n" );
 		m_aliveint = 300;
 	}
-
 	m_claim_tid =
 		daemonCore->Register_Timer( (3 * m_aliveint), 0,
-									(TimerHandler) ::claim_timed_out,
-									"claim_timed_out" );
+									(TimerHandlercpp)claim_timed_out,
+									"claim_timed_out", this );
 	if( m_claim_tid == -1 ) {
 		EXCEPT( "Couldn't register timer (out of memory)." );
-	}
-
-	if( ! daemonCore->Register_DataPtr( (void*) this ) ) {
-		EXCEPT( "Couldn't register data pointer." );
 	}
 	dprintf( D_FULLDEBUG, "Started claim timer w/ %d second alive interval.\n", 
 			 m_aliveint );
@@ -162,23 +183,30 @@ Match::cancel_claim_timer()
 }
 
 
+int
+Match::claim_timed_out()
+{
+	Resource* rip = resmgr->get_by_cur_cap( capab() );
+	if( !rip ) {
+		EXCEPT( "Can't find resource of expired claim." );
+	}
+		// Note that this claim timed out so we don't try to send a 
+		// command to our client.
+	if( m_client ) {
+		delete m_client;
+		m_client = NULL;
+	}
+		// Release the claim.
+	rip->release_claim();
+	return TRUE;
+}
+
+
 void
 Match::alive()
 {
 		// Process a keep alive command
 	daemonCore->Reset_Timer( m_claim_tid, (3 * m_aliveint), 0 );
-}
-
-
-// The claim timed out, so we should delete our m_client object, since
-// it is pointing to a dead daemon.
-void
-Match::claim_timed_out()
-{
-	if( m_client ) {
-		delete m_client;
-		m_client = NULL;
-	}
 }
 
 
@@ -211,8 +239,6 @@ Match::setagentstream(Stream* stream)
 	}
 	m_agentstream = stream;
 }
-
-
 
 
 ///////////////////////////////////////////////////////////////////////////
