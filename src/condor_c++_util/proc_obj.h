@@ -42,6 +42,7 @@ public:
 	virtual char    *get_date() = 0;
 	virtual time_t  get_time() = 0;
 	virtual char    *get_cmd() = 0;
+	virtual char    *get_requirements() = 0;
 	virtual int		get_cluster_id() = 0;
 	virtual int		get_proc_id() = 0;
 	virtual float	get_local_cpu() = 0;
@@ -73,6 +74,7 @@ public:
 	char	*get_owner();
 	char	*get_arch();
 	char	*get_opsys();
+	char    *get_requirements();
 	char    *get_date() {};
 	time_t  get_time() {};
 	char    *get_cmd() {};
@@ -97,6 +99,7 @@ private:
 class V3_ProcObj : public ProcObj {
 public:
 	V3_ProcObj( const V3_PROC *proc );
+	V3_ProcObj() { p = NULL; }
 	~V3_ProcObj();
 
 		// "Read-Only" access functions
@@ -109,6 +112,7 @@ public:
 	char	*get_owner();
 	char	*get_arch();
 	char	*get_opsys();
+	char    *get_requirements();
 	char    *get_date();
 	time_t	get_time();
 	char    *get_cmd();

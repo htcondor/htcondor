@@ -34,6 +34,7 @@
 
 #define _POSIX_SOURCE
 
+#include "_condor_fix_types.h"
 #include "condor_common.h"
 #include "condor_constants.h"
 #include "condor_debug.h"
@@ -43,7 +44,13 @@
 #include <pwd.h>
 #include "proc_obj.h"
 #include "proc_obj_tmpl.h"
-
+/* Solaris specific change ... dhaval 6/27 */
+/* Solaris 2.5.1 specific change ... weiru */
+/*
+#if defined(Solaris) && !defined(Solaris251)
+#include </usr/ucbinclude/sys/rusage.h>
+#endif
+*/
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
 
@@ -80,7 +87,7 @@ static void d_rusage( const char *name, struct rusage &val );
 static void d_exit_status( const char *name, int val );
 static void init_user_credentials();
 extern "C" BOOLEAN xdr_proc( XDR *, GENERIC_PROC * );
-
+extern "C" int xdr_free_proc (PROC *proc);
 /*
   Create a ProcObj given an XDR stream from which to read the data.
 */
@@ -89,25 +96,38 @@ ProcObj::create( XDR * xdrs )
 {
 	GENERIC_PROC	proc;
 	const V2_PROC	*v2 = (V2_PROC *)&proc;
+	V2_ProcObj      *newV2;
 	const V3_PROC	*v3 = (V3_PROC *)&proc;	// 
+	V3_ProcObj      *newV3;
+	int             i;
 
 	xdrs->x_op = XDR_DECODE;
 	memset( &proc, 0, sizeof(proc) );
 
 	if( !xdr_proc( xdrs, &proc ) ) {
+		xdrs->x_op = XDR_FREE;
+		xdr_proc (xdrs, &proc);
 		dprintf(D_ALWAYS, "Error reading proc struct from XDR stream\n" );
 		return 0;
 	}
 
 	if (v2->id.cluster == 0 && v2->id.proc == 0) {
+        xdrs->x_op = XDR_FREE;  
+        xdr_proc (xdrs, &proc);
 		return 0;
 	}
 
 	switch( v2->version_num ) {
 	  case 2:
-		return new V2_ProcObj( v2 );
+		newV2 = new V2_ProcObj (v2);
+        xdrs->x_op = XDR_FREE;  
+        xdr_proc (xdrs, &proc);
+		return newV2;
 	  case 3:
-		return new V3_ProcObj( v3 );
+		newV3 = new V3_ProcObj (v3);
+        xdrs->x_op = XDR_FREE;  
+        xdr_proc (xdrs, &proc);
+		return newV3;
 	  default:
 		EXCEPT( "Unknown proc type" );
 	}
@@ -323,6 +343,11 @@ char *
 string_copy( const char *str )
 {
 	char	*answer;
+
+	if(!str)
+	{
+		return NULL;
+	}
 
 	answer = new char [ strlen(str) + 1 ];
 	strcpy( answer, str );
@@ -657,10 +682,6 @@ b_per_pipe( V3_PROC *p, int i )
 
 
 
-/*
-  Display the V3_ProcObj in painstaking detail.
-*/
-
 void
 build_common_elements( V3_PROC  *p, char** long_info, int &counter)
 {  
@@ -781,6 +802,10 @@ V3_ProcObj::get_proc_long_info()
 	return long_info;
 }
 
+
+/*
+  Display the V3_ProcObj in painstaking detail.
+*/
 void
 V3_ProcObj::display()
 {
@@ -1055,6 +1080,18 @@ char *
 V3_ProcObj::get_owner()
 {
 	return p->owner;
+}
+
+char *
+V2_ProcObj::get_requirements()
+{
+	return p->requirements;
+}
+
+char *
+V3_ProcObj::get_requirements()
+{
+	return p->requirements;
 }
 
 /*
@@ -1660,6 +1697,7 @@ ProcObj::perm_to_modify()
 		init_user_credentials();
 	}
 
+	// allow root to modify
 	if( InvokingUid == 0 )
 		return TRUE;
 
@@ -1667,6 +1705,7 @@ ProcObj::perm_to_modify()
 		return TRUE;
 	}
 
+	// anyone else is out of luck
 	return FALSE;
 }
 
