@@ -450,9 +450,10 @@ UserProc::execute()
 	  case STANDARD:
 	  case PIPE:
 		if( pipe(pipe_fds) < 0 ) {
-			EXCEPT( "pipe()" );
+			EXCEPT( "pipe()" );}
+
 			dprintf( D_ALWAYS, "Pipe built\n" );
-		}
+		
 			// The user process should not try to read commands from
 			// 0, 1, or 2 since we'll be using the commands to redirect
 			// those.
@@ -541,6 +542,7 @@ UserProc::execute()
 		if( set_root_euid() < 0 ) {
 			EXCEPT( "set_root_euid()" );
 		} 
+		dprintf(D_FULLDEBUG,"Setting ruid and guid\n");
 		if( setgid( gid ) < 0 ) {
 			EXCEPT( "setgid(%d)", gid );
 		} 
@@ -598,6 +600,8 @@ UserProc::execute()
 	dprintf( D_ALWAYS, "Started user job - PID = %d\n", pid );
 	if( job_class != VANILLA ) {
 			// Send the user process its startup environment conditions
+	dprintf( D_ALWAYS, "Setting condor_euid");
+	set_condor_euid();
 		close( pipe_fds[READ_END] );
 		cmd_fp = fdopen( pipe_fds[WRITE_END], "w" );
 		dprintf( D_ALWAYS, "cmd_fp = 0x%x\n", cmd_fp );
