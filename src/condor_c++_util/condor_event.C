@@ -964,9 +964,9 @@ TerminatedEvent::readEvent( FILE *file, const char* header )
 	char buffer[128];
 	int  normalTerm;
 	int  gotCore;
-	int  retval1, retval2;
+	int  retval;
 
-	if( (retval2 = fscanf (file, "\n\t(%d) ", &normalTerm)) != 1 ) {
+	if( (retval = fscanf (file, "\n\t(%d) ", &normalTerm)) != 1 ) {
 		return 0;
 	}
 
