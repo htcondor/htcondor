@@ -56,7 +56,6 @@
 
 #include "clib.h"
 #include "shadow.h"
-#include "subproc.h"
 
 int	UsePipes;
 

@@ -39,7 +39,6 @@
 #include "exit.h"
 #include "clib.h"
 #include "shadow.h"
-#include "subproc.h"
 
 extern "C" {
 	void NotifyUser( char *buf, PROC *proc, char *email_addr );
