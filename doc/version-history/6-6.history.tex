@@ -43,6 +43,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that would crash the \Condor{collector} when
+  COLLECTOR\_NAME was too long.
+
 \item Fixed a minor bug in file transfer.  Specifically, if your VANILLA
   job had \Expr{when\_to\_transfer\_output} set to ON\_EXIT\_OR\_EVICT, wrote
   more than one output file, and was actually evicted, the \Condor{shadow}
