@@ -2,10 +2,6 @@
 #	define _POSIX_SOURCE
 #endif
 
-#if defined(OSF1) && defined(__GNUC__)
-	typedef struct  _quad { int val[2]; } quad;
-#endif
-
 #if defined(Solaris)
 #	include "_condor_fix_types.h"
 #       include <sys/statfs.h>
@@ -14,7 +10,9 @@
 #if defined(HPUX9) || defined(Solaris)
 #	define sync		__hide_sync
 #endif
+
 #include "condor_common.h"
+
 #if	defined(HPUX9) || defined(Solaris)
 #	undef sync
 #endif
@@ -32,7 +30,6 @@
 #	include "condor_fdset.h"
 #endif
 
-#include <sys/types.h>
 #define MODE_T unsigned int	/* use 32 bits on all platforms */
 
 #include <sys/stat.h>
@@ -68,6 +65,7 @@
 #if defined(LINUX)
 #	include <signal.h>
 #	include <sys/vfs.h>
+#	include <sys/file.h>  /* for flock() */
 #	include <linux/nfs.h>
 #	include <linux/ipc.h>
 	typedef struct fhandle fhandle_t;
