@@ -38,6 +38,7 @@ extern "C" int strincmp( char*, char*, int );
 
 void do_command( char *name );
 void version();
+int	is_valid_sinful( char *sinful );
 
 enum daemonType {MASTER, SCHEDD, STARTD};
 
@@ -151,7 +152,7 @@ cmd_to_str( int c )
 int
 main( int argc, char *argv[] )
 {
-	char *daemonname, *MyName = argv[0];
+	char *daemonname, *daemonaddr, *MyName = argv[0];
 	char *cmd_str, **tmp;
 	int size, did_one = FALSE;
 
@@ -240,16 +241,34 @@ main( int argc, char *argv[] )
 
 		// Now, process real args, and ignore - options.
 	for( argv++; *argv; argv++ ) {
-		if( (*argv)[0] == '-' ) {
+		switch( (*argv)[0] ) {
+		case '-':
+				// Some command-line arg we already dealt with
 			continue;
+		case '<':
+				// This is probably a sinful string, use it
+			did_one = TRUE;
+			if( is_valid_sinful(*argv) ) {
+				do_command( *argv );
+			} else {
+				fprintf( stderr, "Address %s is not valid.\n", *argv );
+				fprintf( stderr, "Should be of the form <ip.address.here:port>.\n" );
+				fprintf( stderr, "For example: <123.456.789.123:6789>\n" );
+				continue;
+			}
+			break;
+		default:
+				// This is probably a daemon name, use it.
+			did_one = TRUE;
+			do_command( *argv );
+			break;
+			if( (daemonname = get_daemon_name(*argv)) == NULL ) {
+				fprintf( stderr, "%s: unknown host %s\n", MyName, 
+						 get_host_part(*argv) );
+				continue;
+			}
+			do_command( daemonname );
 		}
-		did_one = TRUE;
-		if( (daemonname = get_daemon_name(*argv)) == NULL ) {
-			fprintf( stderr, "%s: unknown host %s\n", MyName, 
-					 get_host_part(*argv) );
-			continue;
-		}
-		do_command( daemonname );
 	}
 
 	if( ! did_one ) {
@@ -263,41 +282,47 @@ void
 do_command( char *name )
 {
 	char		*daemonAddr;
-	switch( dt ) {
-	case MASTER:
-		if ((daemonAddr = get_master_addr(name)) == NULL) {
-			if( name ) {
-				fprintf( stderr, "Can't find address of master %s\n", name );
-			} else {
-				fprintf( stderr, "Can't find address of local master\n" );
-			}
-			return;
-		}
-		break;
-	case SCHEDD:
-		if ((daemonAddr = get_schedd_addr(name)) == NULL) {
-			if( name ) {
-				fprintf( stderr, "Can't find address of schedd %s\n", name );
-			} else {
-				fprintf( stderr, "Can't find address of local schedd\n" );
-			}
-			return;
-		}
-		break;
-	case STARTD:
-		if( name ) {
-			if( (daemonAddr = get_startd_addr(get_host_part(name))) == NULL ) {
-				fprintf( stderr, "Can't find startd address on %s\n", 
-						 get_host_part(name) );
-				return;
-			} 
-		} else {
-			if( (daemonAddr = get_startd_addr(NULL)) == NULL ) {
-				fprintf( stderr, "Can't find address of local startd\n" );
+
+	if( name && *name == '<' ) {
+			// We were passed a sinful string, use it directly.
+		daemonAddr = name;
+	} else {
+		switch( dt ) {
+		case MASTER:
+			if ((daemonAddr = get_master_addr(name)) == NULL) {
+				if( name ) {
+					fprintf( stderr, "Can't find address of master %s\n", name );
+				} else {
+					fprintf( stderr, "Can't find address of local master\n" );
+				}
 				return;
 			}
+			break;
+		case SCHEDD:
+			if ((daemonAddr = get_schedd_addr(name)) == NULL) {
+				if( name ) {
+					fprintf( stderr, "Can't find address of schedd %s\n", name );
+				} else {
+					fprintf( stderr, "Can't find address of local schedd\n" );
+				}
+				return;
+			}
+			break;
+		case STARTD:
+			if( name ) {
+				if( (daemonAddr = get_startd_addr(get_host_part(name))) == NULL ) {
+					fprintf( stderr, "Can't find startd address on %s\n", 
+							 get_host_part(name) );
+					return;
+				} 
+			} else {
+				if( (daemonAddr = get_startd_addr(NULL)) == NULL ) {
+					fprintf( stderr, "Can't find address of local startd\n" );
+					return;
+				}
+			}
+			break;
 		}
-		break;
 	}
 
 		/* Connect to the daemon */
@@ -337,6 +362,18 @@ version()
 	exit(0);
 }
 
+int
+is_valid_sinful( char *sinful )
+{
+	char* tmp;
+	if( !sinful ) return FALSE;
+	if( !(sinful[0] == '<') ) return FALSE;
+	if( !(tmp = strchr(sinful, ':')) ) return FALSE;
+	if( !(tmp = strrchr(sinful, '>')) ) return FALSE;
+	return TRUE;
+}
+
 
 extern "C" int SetSyscalls(){}
+
 
