@@ -110,6 +110,7 @@ const char ATTR_IMAGE_SIZE				 [] = "ImageSize";
 const char ATTR_IS_OWNER                 [] = "IsOwner";
 const char ATTR_INACTIVE                 [] = "Inactive";
 const char ATTR_JAR_FILES                [] = "JarFiles";
+const char ATTR_JAVA_MFLOPS              [] = "JavaMFlops";
 const char ATTR_JAVA_VENDOR              [] = "JavaVendor";
 const char ATTR_JAVA_VERSION             [] = "JavaVersion";
 const char ATTR_JOB_ARGUMENTS			 [] = "Args";
