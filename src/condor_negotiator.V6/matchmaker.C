@@ -410,7 +410,7 @@ negotiationTime ()
 							20 - elapsed,
 							NegotiatorInterval);
 		dprintf(D_FULLDEBUG,
-			"New cycle requested but just finished one -- delaying %s secs\n",
+			"New cycle requested but just finished one -- delaying %u secs\n",
 			20 - elapsed);
 		return FALSE;
 	}
