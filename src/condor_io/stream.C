@@ -1851,51 +1851,61 @@ bool
 Stream::set_crypto_key(KeyInfo * key)
 {
     int code;
-	char *data = (char *)malloc(key->getKeyLength() + 1);
-    ASSERT(data);
+    static int PADDING_LEN = 24;
+    int length = key->getKeyLength() + PADDING_LEN; // Pad with 24 bytes of random data
+    char *data = 0;
 
-	if (key != 0) {
+    if (key != 0) {
+        data = (char *)malloc(length + 1);
+        ASSERT(data);
+    
         if (initialize_crypto(key)) {
-		    if (_coding == stream_encode) {
-				code = put_bytes(key->getKeyData(), key->getKeyLength());
-				if (code == key->getKeyLength()) {
-					if (data) free(data);
-					return true;
-				} else {
-					goto error;
-				}
-		    } else {
-		        code = get_bytes(data, key->getKeyLength());
-				if (code > 0) {
-					if (memcmp(data, key->getKeyData(), 
-								key->getKeyLength()) != 0) 
-					{
-						goto error;
-					} else {
-						if (data) free(data);
-						return true;
-					}
-				} else {
-					goto error;
-				}
-			}         
-		} else {
-			goto error;
+	    if (_coding == stream_encode) {
+                // generate random data
+                unsigned char * ran = Condor_Crypt_Base::randomKey(PADDING_LEN);
+                memcpy(data, ran, PADDING_LEN);
+                memcpy(data+PADDING_LEN, key->getKeyData(), key->getKeyLength());
+                free(ran);
+                code = put_bytes(data, length);
+		if (code == length) {
+		    return true;
 		}
-    } else {
+		else {
+		    goto error;
+		}
+	    }
+	    else {
+	        code = get_bytes(data, length);
+                if (code > 0) {
+                    // Only the first key->getKeyLength() are inspected
+                    if (memcmp(data+PADDING_LEN, key->getKeyData(), key->getKeyLength()) != 0) {
+		        goto error;
+	            }
+		    else {
+			return true;
+		    }
+                }
+		else {
+		   goto error;
+		}
+            } 
+        }
+    }
+    else {
         // We are turning encryption off
         if (crypto_) {
             delete crypto_;
-		}
-        crypto_ = 0;
-		if (data) free(data);
-		return true;
+            crypto_ = 0;
+        }
+        return true;
     }
  error:
     if (crypto_) {
         delete crypto_;
-		crypto_ = 0;
+        crypto_ = 0;
     }
-	if (data) free(data);
+    if (data) {
+        free(data);
+    }
     return false;
 }
