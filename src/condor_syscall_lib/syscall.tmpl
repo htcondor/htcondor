@@ -441,10 +441,16 @@ int rename( const char *from, const char *to ) {
 	int lockf( map(int fd), int request, off_t size );
 
 
+#if 0	/*
+		  Not implemented because our xdr_ustname() function isn't
+		  working.  This is because the sizes of the strings are
+		  defined differently on various platforms...
+		*/
 	int uname( struct utsname *name ) {
 		out xdr_utsname( name );
 		alloc( name, UTSNAME_SIZE );
 	}
+#endif
 
 
 	int mvalid( char * addr, size_t len, int prot ) {
