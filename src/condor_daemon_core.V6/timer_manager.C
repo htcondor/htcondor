@@ -31,6 +31,9 @@ static char* DEFAULT_INDENT = "DaemonCore--> ";
 
 static	TimerManager*	_t = NULL;
 
+const time_t TIME_T_NEVER	= 0x7fffffff;
+
+
 TimerManager::TimerManager()
 {
 	if(_t)
@@ -91,7 +94,11 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 	new_timer->period = period;
 	new_timer->service = s; 
 	new_timer->is_cpp = is_cpp;
-	new_timer->when = deltawhen + time(NULL);
+	if ( TIMER_NEVER == deltawhen ) {
+		new_timer->when = TIME_T_NEVER;
+	} else {
+		new_timer->when = deltawhen + time(NULL);
+	}
 	new_timer->data_ptr = NULL;
 	if ( event_descrip ) 
 		new_timer->event_descrip = strdup(event_descrip);
