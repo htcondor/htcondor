@@ -652,7 +652,7 @@ bool Dag::ProcessLogEvents (const Dagman & dm, int logsource, bool recovery) {
 				// any order, so we can't sanity-check
 				// in this way
 
-				if( condorLogFiles.number() == 1 ) {
+				if( _condorLogFiles.number() == 1 ) {
 
 					// as a sanity check, compare the job from the
 					// submit event to the job we expected to see from
