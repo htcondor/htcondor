@@ -57,6 +57,8 @@ CONDOR_HOST	= central-manager-hostname.your.domain
 RELEASE_DIR		= /usr/local/condor
 
 ##  Where is the local condor directory for each host?  
+##  This is where the local config file(s), logs and
+##  spool/execute directories are located
 LOCAL_DIR		= $(TILDE)
 #LOCAL_DIR		= $(RELEASE_DIR)/hosts/$(HOSTNAME)
 
@@ -84,17 +86,21 @@ MAIL			= /usr/bin/mail
 ##  Network domain parameters:
 ##--------------------------------------------------------------------
 ##  Internet domain of machines sharing a common UID space.  If your
-##  machines don't share a common UID space, use the second entry
-##  which specifies that each machine has its own UID space.
+##  machines don't share a common UID space, set it to 
+##  UID_DOMAIN = $(FULL_HOSTNAME)
+##  to specify that each machine has its own UID space.
 UID_DOMAIN		= your.domain
-#UID_DOMAIN		= $(FULL_HOSTNAME)
 
 ##  Internet domain of machines sharing a common file system.
-##  If your machines don't use a network file system, use the second
-##  entry which specifies that each machine has its own file system. 
+##  If your machines don't use a network file system, set it to
+##  FILESYSTEM_DOMAIN = $(FULL_HOSTNAME)
+##  to specify that each machine has its own file system. 
 FILESYSTEM_DOMAIN	= your.domain
-#FILESYSTEM_DOMAIN	= $(FULL_HOSTNAME)
 
+##  This macro is used to specify a short description of your pool. 
+##  It should be about 20 characters long. For example, the name of 
+##  the UW-Madison Computer Science Condor Pool is ``UW-Madison CS''.
+COLLECTOR_NAME 		= My Pool
 
 ######################################################################
 ######################################################################
@@ -111,6 +117,11 @@ FILESYSTEM_DOMAIN	= your.domain
 ##  (it is generally safe to leave these untouched) 
 ######################################################################
 ######################################################################
+
+##
+##  The user/group ID <uid>.<gid> of the "Condor" user. 
+##  (this can also be specified in the environment)
+#CONDOR_IDS=x.x
 
 ##--------------------------------------------------------------------
 ##  Flocking: Submitting jobs to more than one pool
@@ -489,11 +500,24 @@ MachineBusy		= ($(CPUBusy) || $(KeyboardBusy))
 
 WANT_SUSPEND 		= $(UWCS_WANT_SUSPEND)
 WANT_VACATE		= $(UWCS_WANT_VACATE)
+
+##  When is this machine willing to start a job? 
 START			= $(UWCS_START)
+
+##  When to suspend a job?
 SUSPEND			= $(UWCS_SUSPEND)
+
+##  When to resume a suspended job?
 CONTINUE		= $(UWCS_CONTINUE)
+
+##  When to nicely stop a job?
+##  (as opposed to killing it instantaneously)
 PREEMPT			= $(UWCS_PREEMPT)
+
+##  When to instantaneously kill a preempting job
+##  (e.g. if a job is in the pre-empting stage for too long)
 KILL			= $(UWCS_KILL)
+
 PERIODIC_CHECKPOINT	= $(UWCS_PERIODIC_CHECKPOINT)
 PREEMPTION_REQUIREMENTS	= $(UWCS_PREEMPTION_REQUIREMENTS)
 PREEMPTION_RANK		= $(UWCS_PREEMPTION_RANK)
