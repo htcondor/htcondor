@@ -332,10 +332,11 @@ int Sock::do_connect(
 		}
 
 #if defined(WIN32)
-		if (WSAGetLastError() != WSAEALREADY) {
+		int lasterr = WSAGetLastError();
+		if (lasterr != WSAEINPROGRESS && lasterr != WSAEWOULDBLOCK) {
 			if (!failed_once) {
 				dprintf( D_ALWAYS, "Can't connect to %s:%d, errno = %d\n",
-						 host, port, WSAGetLastError() );
+						 host, port, lasterr );
 				dprintf( D_ALWAYS, "Will keep trying for %d seconds...\n",
 						 CONNECT_TIMEOUT );
 				failed_once = true;
@@ -411,7 +412,10 @@ bool Sock::test_connection()
 	test_addr.sin_family = AF_INET;
 	int nbytes = sizeof(test_addr);
 	if (getpeername(_sock, (struct sockaddr *) &test_addr, &nbytes) < 0) {
-		return false;
+		sleep(1);	// try once more -- sometimes it fails the first time
+		if (getpeername(_sock, (struct sockaddr *) &test_addr, &nbytes) < 0) {
+			return false;
+		}
 	}
 	return true;
 }
