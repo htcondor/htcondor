@@ -55,7 +55,7 @@ TimerManager DaemonCore::t;
 #define _DC_UNBLOCKSIGNAL 3
 
 // Hash function for pid table.
-static int compute_pid_hash(pid_t &key, int numBuckets) 
+static int compute_pid_hash(const pid_t &key, int numBuckets) 
 {
 	return ( key % numBuckets );
 }
