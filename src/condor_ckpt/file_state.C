@@ -27,10 +27,15 @@
 #include "condor_constants.h"
 #include "file_table_interf.h"
 #include <assert.h>
+#include "condor_sys.h"
+
+#include "condor_debug.h"
+static char *_FileName_ = __FILE__;
 
 
 static OpenFileTable	FileTab;
 static char				Condor_CWD[ _POSIX_PATH_MAX ];
+static int				MaxOpenFiles;
 
 #define DEBUGGING
 
@@ -45,6 +50,7 @@ static char				Condor_CWD[ _POSIX_PATH_MAX ];
 #endif
 
 char * shorten( char *path );
+extern "C" void Set_CWD( const char *working_dir );
 
 extern int errno;
 
@@ -63,10 +69,18 @@ File::~File()
 OpenFileTable::OpenFileTable()
 {
 	SetSyscalls( SYS_UNMAPPED | SYS_LOCAL );
+
+	MaxOpenFiles = sysconf(_SC_OPEN_MAX);
+	file = new File[ MaxOpenFiles ];
+
 	getcwd( Condor_CWD, sizeof(Condor_CWD) );
-	PreOpen( 0 );
-	PreOpen( 1 );
-	PreOpen( 2 );
+	PreOpen( 0, TRUE, FALSE );
+	PreOpen( 1, FALSE, TRUE );
+	PreOpen( 2, FALSE, TRUE );
+#if 0
+	PreOpen( RSC_SOCK, TRUE, TRUE );
+	PreOpen( CLIENT_LOG, FALSE, TRUE );
+#endif
 
 	SetSyscalls( SYS_MAPPED | SYS_LOCAL );
 
@@ -80,38 +94,43 @@ void
 OpenFileTable::Display()
 {
 	int		i;
+	int		scm;
 
-	printf( "%4s %3s %3s %3s %3s %3s %3s %8s %6s %6s %s\n",
+	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+
+	dprintf( D_ALWAYS, "%4s %3s %3s %3s %3s %3s %3s %8s %6s %6s %s\n",
 		"   ", "Dup", "Pre", "Rem", "Sha", "Rd", "Wr", "Offset", "RealFd", "DupOf", "Pathname" );
-	for( i=0; i<_POSIX_OPEN_MAX; i++ ) {
+	for( i=0; i<MaxOpenFiles; i++ ) {
 		if( !file[i].isOpen() ) {
 			continue;
 		}
-		printf( "%4d ", i );
+		dprintf( D_ALWAYS, "%4d ", i );
 		file[i].Display();
 	}
+
+	SetSyscalls( scm );
 }
 
 void
 File::Display()
 {
-	printf( "%3c ", isDup() ? 'T' : 'F' );
-	printf( "%3c ", isPreOpened() ? 'T' : 'F' );
-	printf( "%3c ", isRemoteAccess() ? 'T' : 'F' );
-	printf( "%3c ", isShadowSock() ? 'T' : 'F' );
-	printf( "%3c ", isReadable() ? 'T' : 'F' );
-	printf( "%3c ", isWriteable() ? 'T' : 'F' );
-	printf( "%8d ", offset );
-	printf( "%6d ", real_fd );
+	dprintf( D_ALWAYS, "%3c ", isDup() ? 'T' : 'F' );
+	dprintf( D_ALWAYS, "%3c ", isPreOpened() ? 'T' : 'F' );
+	dprintf( D_ALWAYS, "%3c ", isRemoteAccess() ? 'T' : 'F' );
+	dprintf( D_ALWAYS, "%3c ", isShadowSock() ? 'T' : 'F' );
+	dprintf( D_ALWAYS, "%3c ", isReadable() ? 'T' : 'F' );
+	dprintf( D_ALWAYS, "%3c ", isWriteable() ? 'T' : 'F' );
+	dprintf( D_ALWAYS, "%8d ", offset );
+	dprintf( D_ALWAYS, "%6d ", real_fd );
 	if( isDup() ) {
-		printf( "%6d ", dup_of );
+		dprintf( D_ALWAYS, "%6d ", dup_of );
 	} else {
-		printf( "%6s ", "" );
+		dprintf( D_ALWAYS, "%6s ", "" );
 	}
 	if( strlen(pathname) > 25 ) {
-		printf( "\"...%s\"\n", shorten(pathname) );
+		dprintf( D_ALWAYS, "\"...%s\"\n", shorten(pathname) );
 	} else {
-		printf( "\"%s\"\n", pathname );
+		dprintf( D_ALWAYS, "\"%s\"\n", pathname );
 	}
 }
 
@@ -126,7 +145,7 @@ OpenFileTable::DoOpen( const char *path, int flags, int mode )
 	if( LocalSysCalls() ) {
 		real_fd = syscall( SYS_open, path, flags, mode );
 	} else {
-		real_fd = REMOTE_syscall( SYS_open, path, flags, mode );
+		real_fd = REMOTE_syscall( CONDOR_open, path, flags, mode );
 	}
 
 		// Stop here if there was an error
@@ -197,7 +216,7 @@ OpenFileTable::DoClose( int fd )
 
 		// Look for another file which is a dup of this one
 	was_duped = FALSE;
-	for( i=0; i<_POSIX_OPEN_MAX; i++ ) {
+	for( i=0; i<MaxOpenFiles; i++ ) {
 		if( file[i].isOpen() && file[i].isDup() && file[i].dup_of == fd ) {
 			was_duped = TRUE;
 			new_base_file = i;
@@ -208,7 +227,7 @@ OpenFileTable::DoClose( int fd )
 		// simple case, no dups - just clean up
 	if( !was_duped )  {
 		if( file[fd].isRemoteAccess() ) {
-			rval = REMOTE_syscall( SYS_close, file[fd].real_fd );
+			rval = REMOTE_syscall( CONDOR_close, file[fd].real_fd );
 		} else {
 			rval = syscall( SYS_close, file[fd].real_fd );
 		}
@@ -223,7 +242,7 @@ OpenFileTable::DoClose( int fd )
 
 		// make all other fd's which were dups of the one we're
 		// closing point to the new non-duplicate fd
-	for( i=0; i<_POSIX_OPEN_MAX; i++ ) {
+	for( i=0; i<MaxOpenFiles; i++ ) {
 		if( file[i].isOpen() && file[i].isDup() && file[i].dup_of == fd ) {
 			file[i].dup_of = new_base_file;
 		}
@@ -234,12 +253,12 @@ OpenFileTable::DoClose( int fd )
 		// those are in use by duplicates.
 	file[fd].open = FALSE;
 
-	return rval;
+	return 0;
 }
 
 
 int
-OpenFileTable::PreOpen( int fd )
+OpenFileTable::PreOpen( int fd, BOOL readable, BOOL writeable )
 {
 		// Make sure fd not already open
 	if( file[fd].isOpen() ) {
@@ -247,21 +266,8 @@ OpenFileTable::PreOpen( int fd )
 		return -1;
 	}
 
-		// Only deal with stdin, stdout, and stderr
-	switch( fd ) {
-	  case 0:
-		file[fd].readable = TRUE;
-		file[fd].writeable = FALSE;
-		break;
-	  case 1:
-	  case 2:
-		file[fd].readable = FALSE;
-		file[fd].writeable = TRUE;
-		break;
-	  default:
-		errno = EBADF;
-		return -1;
-	}
+	file[fd].readable = readable;
+	file[fd].writeable = writeable;
 
 		// Record reasonable values for everything else
 	file[fd].open = TRUE;
@@ -307,6 +313,12 @@ OpenFileTable::Map( int user_fd )
 }
 
 int
+OpenFileTable::IsLocalAccess( int user_fd )
+{
+	return !file[user_fd].isRemoteAccess();
+}
+
+int
 OpenFileTable::DoDup2( int orig_fd, int new_fd )
 {
 		// error if orig_fd not open
@@ -316,7 +328,7 @@ OpenFileTable::DoDup2( int orig_fd, int new_fd )
 	}
 
 		// error if new_fd out of range for file descriptors
-	if( new_fd < 0 || new_fd >= _POSIX_OPEN_MAX ) {
+	if( new_fd < 0 || new_fd >= MaxOpenFiles ) {
 		errno = EBADF;
 		return -1;
 	}
@@ -360,11 +372,11 @@ OpenFileTable::Save()
 	off_t	pos;
 	File	*f;
 
-	for( i=0; i<_POSIX_OPEN_MAX; i++ ) {
+	for( i=0; i<MaxOpenFiles; i++ ) {
 		f = &file[i];
 		if( f->isOpen() && !f->isDup() ) {
 			if( f->isRemoteAccess() ) {
-				pos = REMOTE_syscall( SYS_lseek, f->real_fd, (off_t)0,SEEK_CUR);
+				pos = REMOTE_syscall( CONDOR_lseek, f->real_fd, (off_t)0,SEEK_CUR);
 			} else {
 				pos = syscall( SYS_lseek, f->real_fd, (off_t)0, SEEK_CUR);
 			}
@@ -391,7 +403,7 @@ OpenFileTable::fix_dups( int user_fd  )
 {
 	int		i;
 
-	for( i=0; i<_POSIX_OPEN_MAX; i++ ) {
+	for( i=0; i<MaxOpenFiles; i++ ) {
 		if( file[i].isOpen() && file[i].isDup() && file[i].dup_of == user_fd ) {
 			file[i].real_fd = file[user_fd].real_fd;
 		}
@@ -429,7 +441,7 @@ OpenFileTable::Restore()
 #endif
 		
 
-	for( i=0; i<_POSIX_OPEN_MAX; i++ ) {
+	for( i=0; i<MaxOpenFiles; i++ ) {
 		f = &file[i];
 		if( f->isOpen() && !f->isDup() && !f->isPreOpened() ) {
 			if( f->isWriteable() && f->isReadable() ) {
@@ -517,6 +529,7 @@ extern "C" {
 
 
 #if defined( SYS_open )
+
 int
 open( const char *path, int flags, ... )
 {
@@ -534,10 +547,37 @@ open( const char *path, int flags, ... )
 		if( LocalSysCalls() ) {
 			return syscall( SYS_open, path, flags, creat_mode );
 		} else {
-			return REMOTE_syscall( SYS_open, path, flags, creat_mode );
+			return REMOTE_syscall( CONDOR_open, path, flags, creat_mode );
 		}
 	}
 }
+#endif
+
+#if defined(OSF1)
+	int
+	_open( const char *path, int flags, ... )
+	{
+		va_list ap;
+		int		creat_mode = 0;
+
+		if( flags & O_CREAT ) {
+			va_start( ap, flags );
+			creat_mode = va_arg( ap, int );
+			return open( path, flags, creat_mode );
+		} else {
+			return open( path, flags );
+		}
+
+	}
+
+	/* Force isatty() to be undefined so programs that use it get it from
+	   the condor library rather than libc.a.
+	*/
+	int
+	not_used()
+	{
+		return isatty(0);
+	}
 #endif
 
 #if defined( SYS_close )
@@ -550,7 +590,7 @@ close( int fd )
 		if( LocalSysCalls() ) {
 			return syscall( SYS_close, fd );
 		} else {
-			return REMOTE_syscall( SYS_close, fd );
+			return REMOTE_syscall( CONDOR_close, fd );
 		}
 	}
 }
@@ -567,7 +607,7 @@ dup( int old )
 	if( LocalSysCalls() ) {
 		return syscall( SYS_dup, old );
 	} else {
-		return REMOTE_syscall( SYS_dup, old );
+		return REMOTE_syscall( CONDOR_dup, old );
 	}
 }
 #endif
@@ -586,18 +626,21 @@ dup2( int old, int new_fd )
 	if( LocalSysCalls() ) {
 		rval =  syscall( SYS_dup2, old, new_fd );
 	} else {
-		rval =  REMOTE_syscall( SYS_dup2, old, new_fd );
+		rval =  REMOTE_syscall( CONDOR_dup2, old, new_fd );
 	}
 
 	return rval;
 }
 #endif
 
+extern "C" void DisplaySyscallMode();
 
 void
 DumpOpenFds()
 {
+
 	FileTab.Display();
+	DisplaySyscallMode();
 }
 
 
@@ -623,6 +666,18 @@ void
 Set_CWD( const char *working_dir )
 {
 	strcpy( Condor_CWD, working_dir );
+}
+
+int
+LocalAccess( int user_fd )
+{
+	return FileTab.IsLocalAccess( user_fd );
+}
+
+int
+pre_open( int fd, BOOL readable, BOOL writeable )
+{
+	return FileTab.PreOpen( fd, readable, writeable );
 }
 
 
