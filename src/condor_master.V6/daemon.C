@@ -29,6 +29,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "exit.h"
 #include "my_hostname.h"
+#include "basename.h"
 #include "condor_email.h"
 
 // these are defined in master.C
@@ -45,21 +46,10 @@ extern			ClassAd* ad;
 extern int		NT_ServiceFlag; // TRUE if running on NT as an NT Service
 extern Daemon*	Collector;
 
-
-#if 0
-extern int		doConfigFromServer; 
-extern char*	config_location;
-#endif
-
 extern time_t	GetTimeStamp(char* file);
 extern int 	   	NewExecutable(char* file, time_t* tsp);
 extern void		tail_log( FILE*, char*, int );
 extern int		run_preen(Service*);
-
-#ifndef WANT_DC_PM
-extern int standard_sigchld(Service *,int);
-extern int all_reaper_sigchld(Service *,int);
-#endif
 
 int		hourly_housekeeping(void);
 
@@ -331,12 +321,10 @@ daemon::DoStart()
 int
 daemon::Start()
 {
-	char	*shortname;
-	int command_port = TRUE;
-#ifndef WANT_DC_PM
-	int i, max_fds = getdtablesize();
-#endif
-	char argbuf[150];
+	char	*shortname, *tmp;
+	char	buf[512];
+	int 	command_port = TRUE;
+	int		size;
 
 	if( start_tid != -1 ) {
 		daemonCore->Cancel_Timer( start_tid );
@@ -349,17 +337,8 @@ daemon::Start()
 			// Already running
 		return TRUE;
 	}
-	if( (shortname = strrchr(process_name,'/')) ) {
-		shortname += 1;
-	} else {
-#ifdef WIN32
-		// this is icky.  yuck.  nasty.  crappy.  can't everyone just get along?
-		if ( shortname=strrchr(process_name,'\\') )
-			shortname += 1;
-		else
-#endif
-			shortname = process_name;
-	}
+
+	shortname = basename( process_name );
 
 	if( access(process_name,X_OK) != 0 ) {
 		dprintf(D_ALWAYS, "%s: Cannot execute\n", process_name );
@@ -378,16 +357,27 @@ daemon::Start()
 		command_port = NEGOTIATOR_PORT;
 	}
 
-#ifdef WANT_DC_PM
-
+	sprintf( buf, "%s_ARGS", name_in_config_file );
+	tmp = param( buf );
 	if( (strcmp(name_in_config_file,"SCHEDD") == 0) && MasterName ) {
-		sprintf( argbuf, "%s -f -n %s\0", shortname, MasterName );
+		if( tmp ) { 
+			sprintf( buf, "%s -f %s -n %s", shortname, tmp,
+					 MasterName ); 
+			free( tmp );
+		} else {
+			sprintf( buf, "%s -f -n %s", shortname, MasterName ); 
+		}
 	} else {
-		sprintf( argbuf, "%s -f\0", shortname );
+		if( tmp ) { 
+			sprintf( buf, "%s -f %s", shortname, tmp );
+			free( tmp );
+		} else {
+			sprintf( buf, "%s -f", shortname );
+		}
 	}
 	pid = daemonCore->Create_Process(
 				process_name,	// program to exec
-				argbuf,			// args
+				buf,			// args
 				PRIV_ROOT,		// privledge level
 				1,				// which reaper ID to use; use default reaper
 				command_port,	// port to use for command port; TRUE=choose one dynamically
@@ -406,44 +396,11 @@ daemon::Start()
 		return 0;
 	}
 
-#else
-	if( (pid = vfork()) < 0 ) {
-		EXCEPT( "vfork()" );
-	}
-
-	if( pid == 0 ) {	/* The child */
-		pid = ::getpid();
-		if( setsid() == -1 ) {
-			dprintf( D_ALWAYS, "ERROR: setsid() failed, errno = %d\n", errno );
-			exit( JOB_EXEC_FAILED );
-		}
-
-		// Close all inherited sockets and fds
-		for (i=0; i<max_fds; i++)
-			close(i);
-
-		if( command_port != TRUE ) {
-			sprintf( argbuf, "%d", command_port );
-			(void)execl( process_name, shortname, "-f", "-p",
-						 argbuf, 0 );
-		} else {
-			if( (strcmp(name_in_config_file,"SCHEDD") == 0) && MasterName ) {
-				(void)execl( process_name, shortname, "-f", "-n", MasterName, 0 );
-			} else {
-				(void)execl( process_name, shortname, "-f", 0 );
-			}
-		}
-
-		dprintf( D_ALWAYS, "ERROR: execl( %s, %s, -f, 0 ) failed, errno = %d\n",
-				 process_name, shortname, errno );
-		exit( JOB_EXEC_FAILED );
-	}
-#endif
-	
 	// if this is a restart, start recover timer
 	if (restarts > 0) {
-		recover_tid = daemonCore->Register_Timer(r_factor,(TimerHandlercpp)&daemon::Recover,
-			"daemon::Recover()",this);
+		recover_tid = daemonCore->Register_Timer( r_factor,
+						(TimerHandlercpp)&daemon::Recover,
+						"daemon::Recover()", this );
 		dprintf(D_FULLDEBUG, "start recover timer (%d)\n", recover_tid);
 	}
 
@@ -488,11 +445,7 @@ daemon::Stop()
 	}
 	stop_state = GRACEFUL;
 
-#ifdef WANT_DC_PM
 	Kill( DC_SIGTERM );
-#else
-	Kill( SIGTERM );
-#endif
 
 	stop_fast_tid = 
 		daemonCore->Register_Timer( shutdown_graceful_timeout, 0, 
@@ -532,11 +485,7 @@ daemon::StopFast()
 		stop_fast_tid = -1;
 	}
 
-#ifdef WANT_DC_PM
 	Kill( DC_SIGQUIT );
-#else
-	Kill( SIGQUIT );
-#endif
 
 	hard_kill_tid = 
 		daemonCore->Register_Timer( shutdown_fast_timeout, 0, 
@@ -601,11 +550,7 @@ daemon::Exited( int status )
 		// For good measure, try to clean up any dead/hung children of
 		// The daemon that just died by sending SIGKILL to it's
 		// process group.
-#ifdef WANT_DC_PM
 	Killpg( DC_SIGKILL );	
-#else
-	Killpg( SIGKILL ) ;	
-#endif
 
 		// Set flag saying if it exited cuz it was not responding
 	was_not_responding = daemonCore->Was_Not_Responding(pid);
@@ -742,20 +687,12 @@ daemon::Kill( int sig )
 	if( (!pid) || (pid == -1) ) {
 		return;
 	}
-
 	int status;
-
-#ifdef WANT_DC_PM
 	status = daemonCore->Send_Signal(pid,sig);
 	if ( status == FALSE )
 		status = -1;
 	else
 		status = 1;
-#else
-	priv_state priv = set_root_priv();
-	status = kill( pid, sig );
-	set_priv(priv);
-#endif
 
 	if( status < 0 ) {
 		dprintf( D_ALWAYS, "ERROR: failed to send %s to pid %d\n",
@@ -775,11 +712,7 @@ daemon::Reconfig()
 			// there's no need to reconfig it.
 		return;
 	}
-#ifdef WANT_DC_PM
 	Kill( DC_SIGHUP );
-#else
-	Kill( SIGHUP );
-#endif
 }
 
 
@@ -1241,15 +1174,9 @@ Daemons::SetAllReaper()
 			// All reaper is already set.
 		return;
 	}
-#ifdef WANT_DC_PM
 	daemonCore->Reset_Reaper( 1, "All Daemon Reaper",
 							  (ReaperHandlercpp)Daemons::AllReaper,
 							  "Daemons::AllReaper()",this);
-#else
-	daemonCore->Cancel_Signal(DC_SIGCHLD);
-	daemonCore->Register_Signal(DC_SIGCHLD,"DC_SIGCHLD",
-		(SignalHandler)all_reaper_sigchld,"all_reaper_sigchld");
-#endif
 	reaper = ALL_R;
 }
 
@@ -1263,7 +1190,6 @@ Daemons::SetDefaultReaper()
 			// The default reaper is already set.
 		return;
 	}
-#ifdef WANT_DC_PM
 	static int already_registered_reaper = 0;
 	if ( already_registered_reaper ) {
 		daemonCore->Reset_Reaper( 1, "Default Daemon Reaper",
@@ -1275,11 +1201,6 @@ Daemons::SetDefaultReaper()
 								 (ReaperHandlercpp)&Daemons::DefaultReaper,
 								 "Daemons::DefaultReaper()", this );
 	}
-#else
-	daemonCore->Cancel_Signal( DC_SIGCHLD );
-	daemonCore->Register_Signal( DC_SIGCHLD, "DC_SIGCHLD",
-		(SignalHandler)standard_sigchld, "standard_sigchld" );
-#endif
 	reaper = DEFAULT_R;
 }
 
