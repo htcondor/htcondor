@@ -289,7 +289,7 @@ int Sock::assign(SOCKET sockd)
 #ifndef WIN32 /* Unix */
 	errno = 0;
 #endif
-	if ((_sock = socket(AF_INET, my_type, 0)) < 0) {
+	if ((_sock = socket(AF_INET, my_type, 0)) == INVALID_SOCKET) {
 #ifndef WIN32 /* Unix... */
 		if ( errno == EMFILE ) {
 			_condor_fd_panic( __LINE__, __FILE__ ); /* Calls dprintf_exit! */
