@@ -1,0 +1,178 @@
+#define _POSIX_SOURCE
+
+#include "condor_common.h"
+#include "condor_constants.h"
+#include "condor_io.h"
+#include "condor_debug.h"
+
+static char _FileName_[] = __FILE__;
+
+
+/* Generic read/write wrappers for condor.  These function emulate the 
+ * read/write system calls under unix except that they are portable, use
+ * a timeout, and make sure that all data is read or written.
+ */
+int condor_read(int fd, char *buf, int sz, int timeout)
+{
+	int nr = 0, nro;
+	unsigned int start_time, cur_time;
+	struct timeval timer;
+	fd_set readfds;
+	int nfds = 0, nfound;
+	
+	/* PRE Conditions. */
+	ASSERT(fd >= 0);     /* Need valid file descriptor */
+	ASSERT(buf != NULL); /* Need real memory to put data into */
+	ASSERT(sz > 0);      /* Need legit size on buffer */
+	
+	if ( timeout > 0 ) {
+		start_time = time(NULL);
+		cur_time = start_time;
+	}
+
+	while( nr < sz ) {
+
+		if( timeout > 0 ) {
+
+			if( cur_time == 0 ) {
+				cur_time = time(NULL);
+			}
+
+			// If it hasn't yet been longer then we said we would wait...
+			if( start_time + timeout > cur_time ) {
+				timer.tv_sec = (start_time + timeout) - cur_time;
+			} else {
+				dprintf(D_ALWAYS, "Timeout reading buffer.\n");
+				return -1;
+			}
+			
+			cur_time = 0;
+			timer.tv_usec = 0;
+#ifndef WIN32
+			nfds = fd + 1;
+#endif
+			FD_ZERO( &readfds );
+			FD_SET( fd, &readfds );
+
+			nfound = select( nfds, &readfds, 0, 0, &timer );
+
+			switch(nfound) {
+			  case 0:
+				dprintf(D_ALWAYS, "Timeout reading buffer.\n");
+				return -1;
+
+			  case 1:
+				break;
+
+			  default:
+				dprintf( D_ALWAYS, "select returns %d, assuming failure.\n",
+						 nfound );
+				return -1;
+			}
+		}
+
+		nro = recv(fd, &buf[nr], sz - nr, 0);
+		
+		if( nro <= 0 ) {
+			dprintf( D_ALWAYS, 
+					 "recv returned %d, errno = %d, assuming failure.\n",
+					 nro, errno );
+			return -1;
+		} else if( nro == 0 ) {
+			return nr;
+		}
+
+		nr += nro;
+	}	
+	
+/* Post Conditions */
+	ASSERT(nr > 0); /* We should have read at least SOME data */
+	return nr;
+}
+
+int condor_write(int fd, char *buf, int sz, int timeout) {
+
+	int nw = 0, nwo = 0;
+	unsigned int start_time = 0, cur_time = 0;
+	struct timeval timer;
+	fd_set writefds;
+	int nfds = 0, nfound = 0;
+
+	/* Pre-conditions. */
+	ASSERT(sz > 0);      /* Can't write buffers that are have no data */
+	ASSERT(fd >= 0);     /* Need valid file descriptor */
+	ASSERT(buf != NULL); /* Need valid buffer to write */
+	
+	
+	memset( &timer, 0, sizeof( struct timeval ) );
+	memset( &writefds, 0, sizeof( fd_set ) );
+	
+	if(timeout > 0) {
+		start_time = time(NULL);
+		cur_time = start_time;
+	}
+
+	while( nw < sz ) {
+
+		if( timeout > 0 ) {
+
+			if( cur_time == 0 ) {
+				cur_time = time(NULL);
+			}
+
+			if( start_time + timeout > cur_time ) {
+				timer.tv_sec = (start_time + timeout) - cur_time;
+			} else {
+				dprintf(D_ALWAYS, "Timed out writing buffer '%s'\n",
+						buf);
+				return -1;
+			}
+			
+			cur_time = 0;
+			timer.tv_usec = 0;
+
+#ifndef WIN32
+			nfds = fd + 1;
+#endif
+			FD_ZERO( &writefds );
+			FD_SET( fd, &writefds );
+
+			nfound = select( nfds, 0, &writefds, 0, &timer );
+			
+			switch(nfound) {
+			  case 0:
+				dprintf( D_ALWAYS, "Timed out writing buffer '%s'\n",
+						buf);
+				return -1;
+				
+			  case 1:
+				break;
+
+			  default:
+				dprintf( D_ALWAYS, 
+						"Select returns %d, assuming failure.\n");
+				return -1;
+				
+			}
+		}
+		
+
+
+		nwo = send(fd, &buf[nw], sz - nw, 0);
+
+		if( nwo <= 0 ) {
+			dprintf( D_ALWAYS, 
+					"send returned %d, errno = %d. Assuming failure.\n",
+					nwo, errno);
+			return -1;
+		}
+		
+		nw += nwo;
+	}
+
+	/* POST conditions. */
+	assert( nw == sz ); /* Make sure that we wrote everything */
+	return nw;
+}
+
+
