@@ -57,7 +57,6 @@ ofstream nwdump("SERVERDUMP",ios::out);
 #include "condor_constants.h"
 #include "condor_io.h"
 #include "condor_debug.h"
-#include "condor_classad.h"
 
 #include <math.h>
 #include <string.h>
@@ -392,12 +391,6 @@ int Stream::code(StartdRec &rec)
 	}
 	return TRUE;
 }
-
-int Stream::code(ClassAd &ad)
-{			
-	return ad.code((Stream &)*this);
-}
-
 
 #if !defined(WIN32)
 

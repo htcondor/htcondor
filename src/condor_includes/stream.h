@@ -169,8 +169,6 @@
 
 #endif // !defined(WIN32)
 
-class ClassAd;
-
 class Stream {
 
 /*
@@ -232,7 +230,6 @@ public:
 	int code(STARTUP_INFO &);
 	int code(PORTS &);
 	int code(StartdRec &);
-	int code(ClassAd &);
 
 #if !defined(WIN32)
 
@@ -265,7 +262,6 @@ public:
 	int code(STARTUP_INFO *x)		{ return code(*x); }
 	int code(PORTS *x)				{ return code(*x); }
 	int code(StartdRec *x)			{ return code(*x); }
-	int code(ClassAd *x)			{ return code(*x); }
 
 #if !defined(WIN32)
 	
