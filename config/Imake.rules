@@ -431,7 +431,7 @@ afs_##name##:: strip_##type##/##name			@@\
 							@@\
 strip_##type##/##name##: stripped			@@\
 	/bin/rm -f strip_##type##/##name		@@\
-	cd strip_##type##; tar -cvf name files
+	cd strip_##type##; tar -cvf name --owner=root --group=root files
 #endif /* strip_full_tarball */
 
 #ifndef static_full_tarball
@@ -444,7 +444,7 @@ afs_##name##:: static_##type##/##name			@@\
 							@@\
 static_##type##/##name##: static			@@\
 	/bin/rm -f static_##type##/##name		@@\
-	cd static_##type##; tar -cvf name files
+	cd static_##type##; tar -cvf name --owner=root --group=root files
 #else 
 #define static_full_tarball( name, files, type ) /* NULL MACRO */
 #endif /* HAS_STATIC */
