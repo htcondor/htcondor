@@ -62,7 +62,7 @@ char * Condor_Credential_B :: condor_cred_dir()
     
     if (cred_dir == 0) {
       // Shouldn't happen! If so, let's use /tmp instead
-      cred_dir = STR_CONDOR_DEFAULT_CRED_DIR;
+      cred_dir = strdup(STR_CONDOR_DEFAULT_CRED_DIR);
     }
   }
   
