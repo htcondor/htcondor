@@ -34,8 +34,8 @@ extern int		shadow_tid;
 
 class PVMdProc:public UserProc {
 public:
-	PVMdProc( V3_PROC &p, char *orig, char *targ, uid_t u, uid_t g, int id , int soft) : 
-		UserProc(p, orig, targ, u, g, id, soft) { shadow_tid = p.notification;
+	PVMdProc( V3_PROC &p, char *exec, char *orig, char *targ, uid_t u, uid_t g, int id , int soft) : 
+		UserProc(p, exec, orig, targ, u, g, id, soft) { shadow_tid = p.notification;
 											  dprintf( D_ALWAYS, "setting shadow_tid to t%x\n", p.notification); }
 	void execute();
 	void delete_files();
@@ -45,8 +45,8 @@ public:
 
 class PVMUserProc:public UserProc {
 public:
-	PVMUserProc( V3_PROC &p, char *orig, char *targ, uid_t u, uid_t g, int id , int soft) : 
-		UserProc(p, orig, targ, u, g, id, soft) {}
+	PVMUserProc( V3_PROC &p, char *exec, char *orig, char *targ, uid_t u, uid_t g, int id , int soft) : 
+		UserProc(p, exec, orig, targ, u, g, id, soft) {}
 	void execute();
 	void send_sig( int );
 
