@@ -59,3 +59,9 @@ main_shutdown_graceful()
 	DC_Exit(0);
 	return TRUE;
 }
+
+
+void
+main_pre_dc_init( int argc, char* argv[] )
+{
+}

@@ -50,3 +50,12 @@ int main_shutdown_graceful()
 	DC_Exit(0);
 	return TRUE;	// to satisfy c++
 }
+
+//-------------------------------------------------------------
+
+void
+main_pre_dc_init( int argc, char* argv[] )
+{
+		// dprintf isn't safe yet...
+}
+

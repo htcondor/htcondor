@@ -96,3 +96,10 @@ int main_shutdown_graceful()
 	exit(0);
 	return TRUE;	// to satisfy c++
 }
+
+
+void
+main_pre_dc_init( int argc, char* argv[] )
+{
+}
+

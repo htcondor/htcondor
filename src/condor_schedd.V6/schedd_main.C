@@ -70,6 +70,7 @@ void usage(char* name)
 	exit( 1 );
 }
 
+
 int
 main_init(int argc, char* argv[])
 {
@@ -138,5 +139,11 @@ main_shutdown_graceful()
 	GridUniverseLogic::shutdown_graceful();
 	scheduler.shutdown_graceful();
 	return 0;
+}
+
+
+void
+main_pre_dc_init( int argc, char* argv[] )
+{
 }
 
