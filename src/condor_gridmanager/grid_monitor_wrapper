@@ -61,7 +61,7 @@ my $USE_GMT = 0;
 my $MIN_BYTES_PER_SECOND = 500;
 
 # Minimum time in seconds to let globus-url-copy run for.
-my $MIN_TIMEOUT = 2;
+my $MIN_TIMEOUT = 10;
 
 # Arguments to pass to the grid agent when spawned.
 my(@GRID_AGENT_ARGS) = (
