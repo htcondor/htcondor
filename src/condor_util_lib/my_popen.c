@@ -26,11 +26,6 @@
 #include "condor_debug.h"
 #include "util_lib_proto.h"
 
-/* For test program, use printf() & exit in place of EXCEPT */
-#ifdef TEST_SPAWN
-#undef EXCEPT
-#define EXCEPT(__s__)	{ fprintf(stderr,"%s\n",__s__); exit(1); }
-#endif
 
 static pid_t	ChildPid = 0;
 

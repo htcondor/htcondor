@@ -71,8 +71,9 @@ test_snprintf: test_snprintf.o util_lib.a
 test_uids: test_uids.o
 	$(CC) $(CFLAGS) -o test_uids test_uids.o
 
-test_spawn: test_spawn.o
-	$(CC) -DTEST_SPAWN $(CFLAGS) -o $@ $< my_popen.c
+test_spawn: test_spawn.o my_popen.o
+	$(CC) $(CFLAGS) -o test_spawn test_spawn.o my_popen.o
+
 clean::
 	rm -f test_spawn.o
 
