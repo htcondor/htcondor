@@ -109,6 +109,11 @@ EXTRACT = FORK.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o \
 		  GETCWD.o GETRUSAGE.o\
 		  i386_data.o SYSCONF.o GETLOGIN.o LSEEK64.o FSYNC.o
+#	elif IS_SUN4X_SOLARIS28
+EXTRACT = FORK.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
+		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o \
+		  GETCWD.o GETRUSAGE.o \
+		  SYSCONF.o GETLOGIN.o LSEEK64.o GETMNTENT.o TSDALLOC.o
 #	elif IS_IRIX
 EXTRACT = /* don't extract anything */
 #	else
@@ -293,7 +298,45 @@ uppercase_target($(SIMPLE_LIBC),__getegid.o,__GETEGID.o,__getegid,__GETEGID)
 uppercase_target($(SIMPLE_LIBC),__getppid.o,__GETPPID.o,__getppid,__GETPPID)
 uppercase_target($(SIMPLE_LIBC),__sigact.o,__SIGACT.o,__sigaction,__SIGACTION)
 uppercase_target($(SIMPLE_LIBC),__pipe.o,__PIPE.o,__pipe,__PIPE)
+
+#if IS_SOLARIS28
+/* I'm sorry about this mess. GETCWD.o now calls a bunch of things inside
+	of getmntent.o which normally wouldn't be a problem... except for some
+	reason libc.so declares getmntent functions as private, whereas libc.a
+	declares them as global. So This means we may not link with them from the
+	extracted GETCWD. So, *sigh* I must extract and rename the local functions
+	from getmntent.o and fix up the sol 2.8 version of getcwd to reflect that
+	I want to call my version of GETMNTENT. -pete 04-25-2000 */
+GETCWD.o: ToUpper $(SIMPLE_LIBC)
+	ar x $(SIMPLE_LIBC) getcwd.o
+	./ToUpper getcwd.o getcwd2.o _getextmntent _GETEXTMNTENT
+	./ToUpper getcwd2.o getcwd3.o _hasmntopt _HASMNTOPT
+	./ToUpper getcwd3.o getcwd4.o _resetmnttab _RESETMNTTAB
+	./ToUpper getcwd4.o GETCWD.o getcwd GETCWD
+	rm -f getcwd.o getcwd2.o getcwd3.o getcwd4.o
+
+GETMNTENT.o : ToUpper $(SIMPLE_LIBC)
+	ar x $(SIMPLE_LIBC) getmntent.o
+	./ToUpper getmntent.o getmntent2.o getextmntent GETEXTMNTENT
+	./ToUpper getmntent2.o getmntent3.o getmntany GETMNTANY
+	./ToUpper getmntent3.o getmntent4.o getmntent GETMNTENT
+	./ToUpper getmntent4.o getmntent5.o hasmntopt HASMNTOPT
+	./ToUpper getmntent5.o getmntent6.o resetmnttab RESETMNTTAB
+	./ToUpper getmntent6.o getmntent7.o getline GETLINE
+	./ToUpper getmntent7.o getmntent8.o _tsdbufalloc _TSDBUFALLOC
+	./ToUpper getmntent8.o GETMNTENT.o mntopt MNTOPT
+	rm -f getmntent.o getmntent2.o getmntent3.o getmntent4.o getmntent5.o getmntent6.o getmntent7.o
+
+/* Grrr.... does it ever end? */
+TSDALLOC.o: ToUpper $(SIMPLE_LIBC)
+	ar x $(SIMPLE_LIBC) tsdalloc.o
+	./ToUpper tsdalloc.o tsdalloc2.o _free_tsdbuf _FREE_TSDBUF
+	./ToUpper tsdalloc2.o TSDALLOC.o _tsdbufalloc _TSDBUFALLOC
+	rm -f tsdalloc.o tsdalloc2.o
+#else
 uppercase_target($(SIMPLE_LIBC),getcwd.o,GETCWD.o,getcwd,GETCWD)
+#endif
+
 uppercase_target($(SIMPLE_LIBC),getrusage.o,GETRUSAGE.o,getrusage,GETRUSAGE)
 
 uppercase_target($(SIMPLE_LIBC),fork.o,FORK.o,fork,FORK)
@@ -318,7 +361,7 @@ VFORK.o : ToUpper $(SIMPLE_LIBC)
 uppercase_target($(SIMPLE_LIBC),vfork.o,VFORK.o,fork,VFORK)
 #endif
 
-#if IS_SOLARIS26 || IS_SOLARIS27
+#if IS_SOLARIS26 || IS_SOLARIS27 || IS_SOLARIS28
 uppercase_target($(SIMPLE_LIBC),lseek64.o,LSEEK64.o,lseek64,LSEEK64)
 #endif
 
@@ -422,6 +465,8 @@ STUB_GEN_PLATFORM = -DSolaris251
 STUB_GEN_PLATFORM = -DSolaris26
 #elif IS_SOLARIS27
 STUB_GEN_PLATFORM = -DSolaris27
+#elif IS_SOLARIS28
+STUB_GEN_PLATFORM = -DSolaris28
 #elif IS_HPUX10
 STUB_GEN_PLATFORM = -DHPUX10
 #elif IS_IRIX62
