@@ -601,7 +601,7 @@ init_classad()
 
 		// In case MASTER_EXPRS is set, fill in our ClassAd with those
 		// expressions. 
-	config_fill_ad( ad, mySubSystem ); 	
+	config_fill_ad( ad ); 	
 }
 
 

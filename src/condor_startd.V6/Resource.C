@@ -315,7 +315,7 @@ Resource::init_classad()
 	r_classad->SetTargetTypeName( JOB_ADTYPE );
 
 		// Read in config files and fill up local ad with all attributes 
-	config( r_classad, 0 );
+	config( r_classad );
 
 		// Name of this resource
 	sprintf( tmp, "%s = \"%s\"", ATTR_NAME, r_name );
@@ -746,7 +746,7 @@ Resource::make_public_ad(ClassAd* pubCA)
 	caInsert( pubCA, r_classad, ATTR_AFS_CELL );
 
 		// Put everything in the public classad from STARTD_EXPRS. 
-	config_fill_ad( pubCA, "STARTD" );
+	config_fill_ad( pubCA );
 
 		// Insert the currently active requirements expression.  If
 		// it's just START, we need to insert that too.
