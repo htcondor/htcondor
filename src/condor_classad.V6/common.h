@@ -62,6 +62,8 @@
 #define WORD_BIT 32
 #endif
 
+
+
 #ifdef WIN32
 	// special definitions we need for Windows
 #define DLL_IMPORT_MAGIC __declspec(dllimport)
@@ -73,6 +75,10 @@
 #define strcasecmp _stricmp
 #define rint(num) floor(num + .5)
 #define isnan _isnan
+	// isinf() defined in util.h
+
+
+
 #define snprintf _snprintf
 
 	// Disable warnings about multiple template instantiations

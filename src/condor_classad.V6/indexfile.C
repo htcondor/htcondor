@@ -48,6 +48,9 @@ TruncateStorageFile()
 	int new_filed;
 	char* filename="temp_file";
 	char* logfilename="storagefile";
+
+	cur_set = 0;
+
 	hash_map<string,int,StringHash>::iterator ptr;
 	if( ( new_filed = open(filename, O_RDWR | O_CREAT | O_APPEND, 0600 )) < 0 ) {
 		CondorErrno = ERR_CACHE_FILE_ERROR;

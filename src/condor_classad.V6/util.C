@@ -148,4 +148,25 @@ getLocalTime(time_t *now, struct tm *localtm) {
 	
 }
 
+#ifdef WIN32
+
+/* meant to reproduce the same function on unix */
+int isinf(double x) {
+
+	int result;
+	result = _fpclass(x);
+
+	if (result == _FPCLASS_NINF ) {
+		/* negative infinity */
+		return -1;
+	} else if ( result == _FPCLASS_PINF ) {
+		/* positive infinity */
+		return 1;
+	} else {
+		/* otherwise */
+		return 0;
+	}
+}
+#endif
+
 END_NAMESPACE // classad
