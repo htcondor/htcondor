@@ -22,7 +22,7 @@ expression).
     \OptItem{\OptArg{-n}{schedd-name}}{Modify job attributes in the queue of the specified schedd}
 \end{Options}
 
-\begin{Examples}
+\Examples
 \begin{verbatim}
 % condor_qedit -name perdita 1849.0 In '"myinput"'
 Set attribute "In".
@@ -31,9 +31,8 @@ Set attribute "NiceUser".
 % condor_qedit -constraint 'JobUniverse == 1' Requirements '(Arch == "INTEL") && (OpSys == "SOLARIS26") && (Disk >= ExecutableSize) && (VirtualMemory >= ImageSize)'
 Set attribute "Requirements".
 \end{verbatim}
-\end{Examples}
 
-\begin{GenRem}
+\GenRem
 You can view the list of attributes with their current values for a
 job with \Condor{q} \Opt{-long}.
 
@@ -50,6 +49,5 @@ attributes to ensure security and correctness: \Attr{Owner},
 Please use \Condor{hold} to place a job ``on hold'' and
 \Condor{release} to release a held job, instead of attempting to
 modify \Attr{JobStatus} directly.
-\end{GenRem}
 
 \end{ManPage}
