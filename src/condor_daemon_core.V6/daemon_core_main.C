@@ -483,6 +483,8 @@ int main( int argc, char** argv )
 	   sigdelset(&fullset, SIGABRT);	// so assert() failures drop core right away
 	   sigdelset(&fullset, SIGILL);		// so we get a core right away
 	   sigdelset(&fullset, SIGBUS);		// so we get a core right away
+	   sigdelset(&fullset, SIGFPE);		// so we get a core right away
+	   sigdelset(&fullset, SIGTRAP);	// so gdb works when it uses SIGTRAP
 	sigprocmask( SIG_SETMASK, &fullset, NULL );
 
 		// Install these signal handlers with a default mask

@@ -125,7 +125,9 @@ ClassAd::ClassAd(const CONTEXT* context) : AttrList((CONTEXT *) context)
 }
 #endif
 
-ClassAd::ClassAd(FILE* f, char* d, int& i) : AttrList(f, d, i)
+ClassAd::
+ClassAd(FILE* f, char* d, int& i, int &err, int &empty) 
+  : AttrList(f, d, i, err, empty)
 {
     ExprTree *tree;
     EvalResult *val;

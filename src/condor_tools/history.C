@@ -38,7 +38,7 @@ static void shorten (char *, int);
 static char* format_date( time_t date );
 static char* format_time( int tot_secs );
 static char encode_status( int status );
-static bool EvalBool(AttrList *ad, const char *constraint);
+static bool EvalBool(AttrList *ad, ExprTree *tree);
 
 //------------------------------------------------------------------------
 
@@ -55,6 +55,7 @@ main(int argc, char* argv[])
   char* JobHistoryFileName=NULL;
   int LongFormat=FALSE;
   char* constraint=NULL;
+  ExprTree *constraintExpr=NULL;
   int cluster, proc;
   char tmp[512];
   int i;
@@ -104,14 +105,40 @@ main(int argc, char* argv[])
   // printf("HistroyFile=%s\nLongFormat=%d\n",JobHistoryFileName,LongFormat);
   // if (constraint) printf("constraint=%s\n",constraint);
 
+  if( constraint && Parse( constraint, constraintExpr ) ) {
+     fprintf( stderr, "Error:  could not parse constraint %s\n", constraint );
+     exit( 1 );
+  }
+
   int EndFlag=0;
+  int ErrorFlag=0;
+  int EmptyFlag=0;
+  AttrList *ad=0;
   if (!LongFormat) short_header();
   while(!EndFlag) {
-    AttrList* ad=new AttrList(LogFile,"***",EndFlag);
-    if (!constraint || EvalBool(ad, constraint)) {
-      if (LongFormat) { ad->fPrint(stdout); printf("\n"); }
-      else displayJobShort(ad);
+    if( !( ad=new AttrList(LogFile,"***", EndFlag, ErrorFlag, EmptyFlag) ) ){
+      fprintf( stderr, "Error:  Out of memory\n" );
+      exit( 1 );
+    } 
+    if( ErrorFlag ) {
+      printf( "\t*** Warning: Bad history file; skipping malformed ad(s)\n" );
+      ErrorFlag=0;
+      delete ad;
+      continue;
+    } 
+	if( EmptyFlag ) {
+      EmptyFlag=0;
+      delete ad;
+      continue;
     }
+    if (!constraint || EvalBool(ad, constraintExpr)) {
+      if (LongFormat) { 
+	    ad->fPrint(stdout); printf("\n"); 
+	  } else {
+        displayJobShort(ad);
+	  }
+    }
+    delete ad;
   }
  
   fclose(LogFile);
@@ -128,14 +155,14 @@ displayJobShort(AttrList* ad)
         char owner[64], cmd[2048], args[2048];
 
         if (!ad->EvalInteger (ATTR_CLUSTER_ID, NULL, cluster)           ||
-                !ad->EvalInteger (ATTR_PROC_ID, NULL, proc)                             ||
-                !ad->EvalInteger (ATTR_Q_DATE, NULL, date)                              ||
-                !ad->EvalInteger (ATTR_COMPLETION_DATE, NULL, CompDate)	 ||
+                !ad->EvalInteger (ATTR_PROC_ID, NULL, proc)             ||
+                !ad->EvalInteger (ATTR_Q_DATE, NULL, date)              ||
+                !ad->EvalInteger (ATTR_COMPLETION_DATE, NULL, CompDate)	||
                 !ad->EvalFloat   (ATTR_JOB_REMOTE_USER_CPU, NULL, utime)||
-                !ad->EvalInteger (ATTR_JOB_STATUS, NULL, status)                ||
-                !ad->EvalInteger (ATTR_JOB_PRIO, NULL, prio)                    ||
+                !ad->EvalInteger (ATTR_JOB_STATUS, NULL, status)        ||
+                !ad->EvalInteger (ATTR_JOB_PRIO, NULL, prio)            ||
                 !ad->EvalInteger (ATTR_IMAGE_SIZE, NULL, image_size)    ||
-                !ad->EvalString  (ATTR_OWNER, NULL, owner)                              ||
+                !ad->EvalString  (ATTR_OWNER, NULL, owner)              ||
                 !ad->EvalString  (ATTR_JOB_CMD, NULL, cmd) )
         {
                 printf (" --- ???? --- \n");
@@ -144,9 +171,9 @@ displayJobShort(AttrList* ad)
         
         shorten (owner, 14);
         if (ad->EvalString ("Args", NULL, args)) strcat (cmd, args);
-        shorten (cmd, 18);
-        short_print (cluster, proc, owner, date, CompDate, (int)utime, status, prio,
-                                        image_size, cmd); 
+        shorten (cmd, 15);
+        short_print (cluster, proc, owner, date, CompDate, (int)utime, status, 
+               prio, image_size, cmd); 
 
 }
 
@@ -155,15 +182,13 @@ displayJobShort(AttrList* ad)
 static void
 short_header (void)
 {
-    printf( " %-7s %-14s %11s %12s %-2s %11s %-3s %-4s %-18s\n",
+    printf( " %-7s %-14s %11s %12s %-2s %11s %-15s\n",
         "ID",
         "OWNER",
         "SUBMITTED",
         "CPU_USAGE",
         "ST",
 		"COMPLETED",
-        "PRI",
-        "SIZE",
         "CMD"
     );
 }
@@ -200,7 +225,7 @@ short_print(
         ) {
 		MyString SubmitDateStr=format_date(date);
 		MyString CompDateStr=format_date(CompDate);
-        printf( "%4d.%-3d %-14s %-11s %-12s %-2c %-11s %-3d %-4.1f %-18s\n",
+        printf( "%4d.%-3d %-14s %-11s %-12s %-2c %-11s %-15s\n",
                 cluster,
                 proc,
                 owner,
@@ -208,11 +233,10 @@ short_print(
                 format_time(time),
                 encode_status(status),
                 CompDateStr.Value(),
-                prio,
-                image_size/1024.0,
                 cmd
         );
 }
+
 
 //------------------------------------------------------------------------
 
@@ -291,15 +315,9 @@ encode_status( int status )
 
 //------------------------------------------------------------------------
 
-static bool EvalBool(AttrList* ad, const char *constraint)
+static bool EvalBool(AttrList* ad, ExprTree *tree)
 {
-    ExprTree *tree;
-    EvalResult result;
-
-    if (Parse(constraint, tree) != 0) {
-        // dprintf(D_ALWAYS, "can't parse constraint: %s\n", constraint);
-        return false;
-    }
+	EvalResult result;
 
     // Evaluate constraint with ad in the target scope so that constraints
     // have the same semantics as the collector queries.  --RR
@@ -308,11 +326,11 @@ static bool EvalBool(AttrList* ad, const char *constraint)
         delete tree;
         return false;
     }
-    delete tree;
+    
     if (result.type == LX_INTEGER) {
         return (bool)result.i;
     }
-    // dprintf(D_ALWAYS, "contraint (%s) does not evaluate to bool\n", constraint);
+
     return false;
 }
 

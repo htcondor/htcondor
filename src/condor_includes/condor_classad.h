@@ -57,7 +57,7 @@ class ClassAd : public AttrList
 		ClassAd();								// No associated AttrList list
 //		ClassAd(ProcObj*);						// create from a proc object
 //		ClassAd(const CONTEXT*);				// create from a CONTEXT
-        ClassAd(FILE *, char *, int &);			// Constructor, read from file.
+        ClassAd(FILE*,char*,int&,int&,int&);	// Constructor, read from file.
         ClassAd(char *, char);					// Constructor, from string.
 		ClassAd(const ClassAd&);				// copy constructor
         virtual ~ClassAd();						// destructor

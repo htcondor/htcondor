@@ -127,109 +127,63 @@ AttrList::AttrList(AttrListList* associatedList) :
 // 1 is passed on to the calling procedure if EOF is reached. Otherwise, 0
 // is passed on.
 //
-AttrList::AttrList(FILE *file, char *delimitor, int &isEOF) : AttrListAbstract(ATTRLISTENTITY)
+AttrList::
+AttrList(FILE *file, char *delimitor, int &isEOF, int &error, int &empty) 
+	: AttrListAbstract(ATTRLISTENTITY)
 {
-    ExprTree *tree;
+    ExprTree 	*tree;
+	char		buffer[ATTRLIST_MAX_EXPRESSION];
+	int			delimLen = strlen( delimitor );
 
-	seq = 0;
-    exprList = NULL;
-    associatedList = NULL;
-    tail = NULL;
-    ptrExpr = NULL;
-    ptrName = NULL;
+	seq 			= 0;
+    exprList 		= NULL;
+    associatedList 	= NULL;
+    tail 			= NULL;
+    ptrExpr 		= NULL;
+    ptrName 		= NULL;
+	empty			= TRUE;
 
-    int c;
-    int buffer_size = 10;                    // size of the input buffer.
-    int current = 0;                         // current position in buffer. 
-    char *buffer = new char[buffer_size];
-    if(!buffer)
-    {
-        EXCEPT("Warning : you ran out of memory");
-    }
-
-    isEOF = 0;
-    c = fgetc(file);
-    while(isspace(c))
-    {
-        c = fgetc(file);                     // skip leading white spaces.
-    }
-    ungetc(c, file);
-
-    while(1)                                 // loop character by character 
-    {                                        // to the end of the stirng to
-        c = fgetc(file);                     // construct a AttrList object.
-        if(c == EOF || c == '\n')                 
-	{                                    // end of an expression.
-	    if(current)
-	    {                                // current expression not empty.
-	        buffer[current] = '\0';
-		if(delimitor)
-		{
-		    if(!strncmp(buffer, delimitor, strlen(delimitor)))
-		    {                        // end of a AttrList instance 
-		        c = fgetc(file);     // input.
-		        while(isspace(c))    // look at the next character.
-			{
-			    c = fgetc(file);
-			}
-			if(c == EOF)
-			{
-			    isEOF = 1;        // next character is EOF. 
-			}
-			else
-			{
-			    isEOF = 0;        // next character is not EOF.
-			    ungetc(c, file);
-			}
-			break;
-		    }
+	buffer[0] = '\0';
+	while( 1 ) {
+			// get a line from the file
+		if( fgets( buffer, delimLen+1, file ) == NULL ) {
+			error = ( isEOF = feof( file ) ) ? 0 : errno;
+			return;
 		}
-		if(Parse(buffer, tree))
-		{
-			EXCEPT("Parse error in the input string");
-		}
-		Insert(tree);
-	    }
-	    if(c == EOF)
-	    {                                // end of input.
-	        isEOF = 1;
-	        break;
-	    }
-	    c = fgetc(file);                 // look at the next character.
-	    while(isspace(c))
-	    {
-	        c = fgetc(file);             // skip white spaces.
-	    }
-            if(c == EOF)
-	    {
-	        isEOF = 1;
-	        break;                       // end of input.
-	    }
-	    ungetc(c, file);
-	    buffer_size = 10;                // process next expression.
-	    current = 0;                  
-	    delete []buffer;
-	    buffer = new char[buffer_size];
-	    if(!buffer)
-	    {
-        	EXCEPT("Warning : you ran out of memory");
-	    }	    
-	}
-	else
-	{                                    // strore in buffer here.
-	    if(current >= (buffer_size - 1))        
-	    {
-	        buffer_size *= 2;
-			buffer = (char *) realloc(buffer, buffer_size*sizeof(char));
-			if(!buffer)
-			{
-        		EXCEPT("Warning : you ran out of memory");
+
+			// did we hit the delimitor?
+		if( strncmp( buffer, delimitor, delimLen ) == 0 ) {
+				// yes ... stop
+			isEOF = feof( file );
+			error = 0;
+			return;
+		} else {
+				// no ... read the rest of the line (into the same buffer)
+			if( fgets( buffer+delimLen, ATTRLIST_MAX_EXPRESSION-delimLen, file )
+					== NULL ) {
+				error = ( isEOF = feof( file ) ) ? 0 : errno;
+				return;
 			}
-	    }
-	    buffer[current] = c;
-	    current++;
+		}
+
+			// if the string is empty, try reading again
+		if( strlen( buffer ) == 0 || strcmp( buffer, "\n" ) == 0 ) {
+			continue;
+		}
+
+			// parse the expression in the string
+		if( Parse( buffer, tree ) || Insert( tree ) == FALSE ) {
+				// read until delimitor or EOF; whichever comes first
+			while( strncmp( buffer, delimitor, delimLen ) && !feof( file ) ) {
+				fgets( buffer, delimLen+1, file );
+			}
+			isEOF = feof( file );
+			error = -1;
+			return;
+		} else {
+			empty = FALSE;
+		}
 	}
-    }
 }
 
 //

@@ -115,6 +115,7 @@ clinpack_kflops ()
 	t1 = dtime();
 	dgesl(a,lda,n,ipvt,b,0);
 	st[1][0] = dtime() - t1;
+
 	total = st[0][0] + st[1][0];
 
 		/* 
@@ -165,6 +166,7 @@ clinpack_kflops ()
 	t1 = dtime();
 	dgesl(a,lda,n,ipvt,b,0);
 	st[1][1] = dtime() - t1;
+
 	total = st[0][1] + st[1][1];
 	
 		/* 
@@ -190,7 +192,7 @@ clinpack_kflops ()
 	t1 = dtime();
 	dgesl(a,lda,n,ipvt,b,0);
 	st[1][2] = dtime() - t1;
-	
+
 	total = st[0][2] + st[1][2];
 
 		/* 
@@ -226,6 +228,7 @@ clinpack_kflops ()
       }
 
 	st[1][3] = (dtime() - t1)/ntimes;
+
 	total = st[0][3] + st[1][3];
 
 		/* 
@@ -251,6 +254,8 @@ clinpack_kflops ()
 	dgesl(aa,ldaa,n,ipvt,b,0);
 	st[1][4] = dtime() - t1;
 
+	total = st[0][4] + st[1][4];
+
 		/* 
 		   On extremely fast machines, the total time between checks
 		   can be less than the resolution of the clock.  In this
@@ -260,7 +265,6 @@ clinpack_kflops ()
 		 */
 	if( total == 0 ) total = one_tick;
 
-	total = st[0][4] + st[1][4];
 	st[2][4] = total;
 	st[3][4] = ops/(1.0e3*total);
 	st[4][4] = 2.0e3/st[3][4];
@@ -334,6 +338,7 @@ clinpack_kflops ()
       }
 
    st[1][7] = (dtime() - t1)/ntimes;
+
    total = st[0][7] + st[1][7];
 
 		/* 

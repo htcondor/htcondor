@@ -640,8 +640,7 @@ SetImageSize()
 	int		executablesize;
 	char	*tmp;
 	char	*p;
-	char	 buff[2048];
-	int		mem_req = 0;
+	char    buff[2048];
 
 	tmp = condor_param(ImageSize);
 
@@ -667,22 +666,13 @@ SetImageSize()
 	/* It's reasonable to expect the image size will be at least the
 		physical memory requirement, so make sure it is. */
 	  
-	strcpy (buff, JobRequirements);	
-	for( p=buff; *p; p++ ) {
-		if( strincmp("Memory",p,6) == 0 ) {
-			while( *p && !isdigit(*p) ) {
-				p++;
-			}
-			if( *p ) {
-				mem_req = atoi( p ) * 1024;
-			}
-			break;
-		}
-	}
+	// At one time there was some stuff to attempt to gleen this from
+	// the requirements line, but that caused many problems.
+	// Jeff Ballard 11/4/98
 
-	(void)sprintf (buffer, "%s = %d", ATTR_IMAGE_SIZE,
-					mem_req > size ? mem_req : size);
+	(void)sprintf (buffer, "%s = %d", ATTR_IMAGE_SIZE, size);
 	InsertJobExpr (buffer);
+
 	(void)sprintf (buffer, "%s = %d", ATTR_EXECUTABLE_SIZE, executablesize);
 	InsertJobExpr (buffer);
 }

@@ -283,15 +283,32 @@ int
 ResMgr::send_update( ClassAd* public_ad, ClassAd* private_ad )
 {
 	int num = 0;
-	if( coll_sock &&
-		(send_classad_to_sock(coll_sock, public_ad, private_ad)) ) {
-		num++;
+
+	if( coll_sock ) {
+		if( send_classad_to_sock(coll_sock, public_ad, private_ad) ) {
+			num++;
+			dprintf( D_FULLDEBUG, 
+					 "Sent UDP update to the collector (%s)\n", 
+					 collector_host );
+		} else {
+			dprintf( D_ALWAYS,
+					 "Error sending UDP update to the collector (%s)\n", 
+					 collector_host );
+		}
 	}  
 
 		// If we have an alternate collector, send public CA there.
-	if( view_sock && 
-		(send_classad_to_sock(view_sock, public_ad, NULL)) ) {
-		num++;
+	if( view_sock ) {
+		if( send_classad_to_sock(view_sock, public_ad, NULL) ) {
+			num++;
+			dprintf( D_FULLDEBUG, 
+					 "Sent UDP update to the condor_view host (%s)\n", 
+					 collector_host );
+		} else {
+			dprintf( D_ALWAYS, 
+					 "Error sending UDP update to the collector (%s)\n", 
+					 collector_host );
+		}
 	}
 
 		// Increment the resmgr's count of updates.

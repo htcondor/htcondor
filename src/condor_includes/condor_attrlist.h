@@ -110,7 +110,7 @@ class AttrList : public AttrListAbstract
 		// ctors/dtor
 		AttrList();							// No associated AttrList list
         AttrList(AttrListList*);			// Associated with AttrList list
-        AttrList(FILE *, char *, int &);	// Constructor, read from file.
+        AttrList(FILE*,char*,int&,int&,int&);// Constructor, read from file.
 //		AttrList(class ProcObj*);			// create from a proc object
 //		AttrList(CONTEXT*);					// create from a CONTEXT
         AttrList(char *, char);				// Constructor, from string.

@@ -51,7 +51,9 @@ char            Ch_1_Glob,
 int             Arr_1_Glob [50];
 int             Arr_2_Glob [50] [50];
 
+#if 0
 char Reg_Define[] = "Register option selected.";
+#endif
 
 extern char     *malloc ();
 Enumeration     Func_1 ();
@@ -221,11 +223,12 @@ dhry_mips ()
     Dhrystones_Per_Second = (double) Number_Of_Runs / User_Time;
     Vax_Mips = Dhrystones_Per_Second / 1757.0;
 
+#if 0
+
 #ifndef ROPT
     strcpy(Reg_Define, "Register option not selected.");
 #endif
   
-#if 0
   fprintf(Ap,"\n");
   fprintf(Ap,"Dhrystone Benchmark, Version 2.1 (Language: C)\n");
   fprintf(Ap,"%s\n",Reg_Define);
@@ -233,7 +236,8 @@ dhry_mips ()
   fprintf(Ap,"Dhrystones per second: %10.1lf\n",Dhrystones_Per_Second);
   fprintf(Ap,"VAX MIPS rating: %10.3lf\n",Vax_Mips);
   fclose(Ap);
-#endif
+
+#endif /* 0 */
   
 
   free(Next_Ptr_Glob);
