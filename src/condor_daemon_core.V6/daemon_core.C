@@ -1596,6 +1596,9 @@ int DaemonCore::HandleReq(int socki)
 	int					old_timeout;
     int                 perm         = USER_AUTH_FAILURE;
     char                user[256] = {};
+    ClassAd *the_policy     = NULL;
+    KeyInfo *the_key        = NULL;
+    char    *the_sid        = NULL;
 	
 	insock = (*sockTable)[socki].iosock;
 
@@ -1725,10 +1728,10 @@ int DaemonCore::HandleReq(int socki)
 				zz2printf (session->key());
 #endif
 			}
-			delete sess_id;
+			free( sess_id );
 
 			if (return_address_ss) {
-				delete return_address_ss;
+				free( return_address_ss );
 			}
 		} else {
 			dprintf (D_SECURITY, "DC_AUTHENTICATE: incoming data NOT MD5ed.\n");
@@ -1926,12 +1929,6 @@ int DaemonCore::HandleReq(int socki)
 			goto finalize;
 		}
 
-
-
-
-		char    *the_sid        = NULL;
-		ClassAd *the_policy     = NULL;
-		KeyInfo *the_key        = NULL;
 		bool new_session        = false;
 
 
@@ -1943,12 +1940,15 @@ int DaemonCore::HandleReq(int socki)
 
 			dprintf (D_SECURITY, "DC_AUTHENTICATE: request to use cached session.\n");
 
-			if( ! auth_info.LookupString(ATTR_SEC_SID, &the_sid)) {
+            char * tmp_sid = NULL;
+			if( ! auth_info.LookupString(ATTR_SEC_SID, &tmp_sid)) {
 				dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
 						   "extract auth_info.%s!\n", ATTR_SEC_SID);
 				result = FALSE;	
 				goto finalize;
 			}
+
+            the_sid = strdup(tmp_sid);
 
 			dprintf (D_SECURITY, "DC_AUTHENTICATE: looking up cached key id %s.\n", the_sid);
 
@@ -2073,7 +2073,7 @@ int DaemonCore::HandleReq(int socki)
 				// generate a unique ID.
 				sprintf (buf, "%s:%i:%i:%i", my_hostname(), mypid, time(0), ZZZ_always_increase());
 				assert (the_sid == NULL);
-				the_sid = strdup(buf);
+				the_sid = strdup(buf); // This is a memory leak. Fixed above by strdup the other the_sid as well Hao
 
 				if ((will_enable_encryption == SecMan::SEC_FEAT_ACT_YES) || (will_enable_integrity == SecMan::SEC_FEAT_ACT_YES)) {
 
@@ -2303,7 +2303,7 @@ int DaemonCore::HandleReq(int socki)
 				// add the key to the cache
 				KeyCacheEntry tmp_key(the_sid, sock->endpoint(), the_key, the_policy, expiration_time);
 				sec_man->session_cache->insert(tmp_key);
-				dprintf (D_SECURITY, "DC_AUTHENTICATE: added session id %s to cache for %i seconds!\n", the_sid, atoi(dur));
+				dprintf (D_SECURITY, "DC_AUTHENTICATE: added session id %s to cache for %i seconds!\n", the_sid, expiration_time);
 			}
 		}
 
@@ -2448,6 +2448,15 @@ finalize:
 	// however, we cannot just delete it or we will not be "listening" 
 	// anymore, so we just do an eom flush all buffers, etc.
 	// HACK: keep all UDP sockets as well for now.  
+    if (the_policy) {
+        delete the_policy;
+    }
+    if (the_key) {
+        delete the_key;
+    }
+    if (the_sid) {
+        free(the_sid);
+    }
 	if ( result != KEEP_STREAM ) {
 		stream->encode();	// we wanna "flush" below in the encode direction 
 		if ( is_tcp ) {
