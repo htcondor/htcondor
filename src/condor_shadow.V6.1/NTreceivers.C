@@ -116,6 +116,29 @@ do_REMOTE_syscall()
 	}
 
 
+	case CONDOR_get_user_info:
+	{
+		ClassAd *ad = NULL;
+
+		assert( syscall_sock->end_of_message() );
+
+		errno = 0;
+		rval = pseudo_get_user_info(ad);
+		terrno = (condor_errno_t)errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code( terrno ) );
+		} else {
+			assert( ad->put(*syscall_sock) );
+		}
+		assert( syscall_sock->end_of_message() );
+		return 0;
+	}
+
+
 	case CONDOR_job_exit:
 	{
 		int status=0;
