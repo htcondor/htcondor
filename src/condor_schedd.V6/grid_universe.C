@@ -66,18 +66,20 @@ GridUniverseLogic::GridUniverseLogic()
 
 GridUniverseLogic::~GridUniverseLogic()
 {
-	if ( gman_pid_table && daemonCore) {
+	if ( gman_pid_table) {
 		gman_node_t * node;
 		gman_pid_table->startIterations();
 		while (gman_pid_table->iterate( node ) == 1 ) {
-			if ( node->add_timer_id >= 0 ) {
-				daemonCore->Cancel_Timer(node->add_timer_id);
-			}
-			if ( node->remove_timer_id >= 0 ) {
-				daemonCore->Cancel_Timer(node->remove_timer_id);
-			}
-			if ( node->pid > 0 ) {
-				daemonCore->Send_Signal(node->pid,DC_SIGQUIT);
+			if (daemonCore) {
+				if ( node->add_timer_id >= 0 ) {
+					daemonCore->Cancel_Timer(node->add_timer_id);
+				}
+				if ( node->remove_timer_id >= 0 ) {
+					daemonCore->Cancel_Timer(node->remove_timer_id);
+				}
+				if ( node->pid > 0 ) {
+					daemonCore->Send_Signal(node->pid,DC_SIGQUIT);
+				}
 			}
 			delete node;
 		}
