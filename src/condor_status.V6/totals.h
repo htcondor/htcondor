@@ -11,9 +11,10 @@ class Totals
 	void *getTotals (char *, char *);
 	void *getTotals (int);
 
-  private:
 	enum {_descSize = 32};	// max size of string "arch/os"
 	enum {_maxDescs = 32};	// max # of different "arch/os" combos in a pool
+
+  private:
 
 	// private internal structure
 	typedef struct {
