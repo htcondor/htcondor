@@ -33,6 +33,7 @@
 #include "condor_constants.h"
 #include <sys/param.h>
 #include <sys/resource.h>
+#include <sys/table.h>
 
 static char *_FileName_ = __FILE__;
 
@@ -63,8 +64,6 @@ main()
 	printf( "%d kbytes of swap free\n", virt_mem );
 }
 
-void set_root_euid(){}
-void set_condor_euid(){}
 #define dprintf fprintf
 #define D_ALWAYS stdout
 #define D_FULLDEBUG stdout
@@ -79,20 +78,21 @@ close_kmem(){}
 int
 calc_virt_memory()
 {
-	FILE	*fp, *popen();
-	char	buf[1024];
-	int		size = -1;
-	int		limit;
+	FILE				*fp, *popen();
+	char				buf[1024];
+	int					size = -1;
+	int					limit;
+	struct tbl_swapinfo	swap;
 
-	set_root_euid(); 
+	if (table(TBL_SWAPINFO,0,(char *)&swap,sizeof(swap)) >= 0)
+		return swap.free/1024;
+
+	/* if table call fails, then parse swapon output -- gross! */
 
 	if( (fp=popen("/sbin/swapon -s","r")) == NULL ) {
-		set_condor_euid();
 		dprintf( D_FULLDEBUG, "popen(swapon -s): errno = %d\n", errno );
 		return -1;
 	}
-
-	set_condor_euid();
 
     /*
 	   If a SIGCHLD is delivered when trying to parse swapon output,
