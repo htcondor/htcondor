@@ -1,3 +1,7 @@
+05/03/04 V6_6_5
+   The is the 6.6.5 release tag for all platforms except windoze.  The
+   version string was: "$CondorVersion: 6.6.5 May  3 2004 $"
+
 04/30/04 V6_6-vdt_globus
    Changing the globus external to be 2.4.3 + VDT patches from 1.1.14
 
