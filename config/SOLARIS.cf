@@ -46,12 +46,6 @@
 #define StaticFlag -static
 #endif
 
-/* 
-** Since we can't statically link on Solaris, don't try to build the 
-** static version when you "make public_all".  -Derek 6/25/98
-*/
-#define WantsStatic NO
-
 #define IS_V5					YES
 
 #ifndef HAS_X
