@@ -11,36 +11,35 @@ asked questions that are asked about Condor.
 
 \section{Obtaining Condor Distributions}
 
-\begin{enumerate}
-\item Where can I download Condor?
+\subsection{Where can I download Condor?}
 
-Condor can be downloaded from \Url{http://www.cs.wisc.edu/downloads/} or from
-\Url{http://www.bo.infn.it/condor-mirr/downloads/}.
+Condor can be downloaded from \Url{http://www.cs.wisc.edu/condor/downloads/} or from
+\Url{http://www.bo.infn.it/condor-mirror/downloads/}.
 
-\item If I try to download Condor, it sends me back to the downloads page!
+\subsection{If I try to download Condor, it sends me back to the downloads page!}
 
 If you are try to download Condor with a "junk-busting" web-proxy, try disabling it.
 We follow the path you take through our download menus, and sometimes these proxies strip off necessary information.
 
-\item Do you have any website mirrors?
+\subsection{Do you have any website mirrors?}
 
 Yes.  We have our main site at \Url{http://www.cs.wisc.edu/condor/}
 which is located in Madison, Wisconsin, USA.  We also operate a mirror
 site at the Istituto Nazionale di Fisica Nucleare in Bologna, Italy
-at \Url{http://www.bo.infn.it/condor-mirr/}.  Currently we have the 
+at \Url{http://www.bo.infn.it/condor-mirror/}.  Currently we have the 
 binary distrubations of Condor and the Condor Manual available on the
 mirror site.
 
-\item What platforms do you support?
+\subsection{What platforms do you support?}
 
 See Section~\ref{sec:Availability}, on page~\pageref{sec:Availability}.
 
-\item Do you distribute source code?
+\subsection{Do you distribute source code?}
 
 At this time we do \Bold{not} distribute source code.
 Even so, if you need the source code, email us at \Email{condor-admin@cs.wisc.edu} and tell us why.
 
-\item What is Personal Condor?
+\subsection{What is Personal Condor?}
 
 Personal Condor is a term used for a specific style of installing Condor.
 A Personal Condor is a one-machine pool.  When you use flocking to bind
@@ -48,40 +47,38 @@ them together, its simular to a normal Condor pool, except that you are restrict
 to "standard" jobs, and you are running additional \condor{collector} and \condor{negotiator} 
 daemons.
 
-\item Do you support submitting to Globus?
+\subsection{Do you support submitting to Globus?}
 
 Yes, we do.  At this time, however, we have not released it (yet!)
 
-\end{enumerate}
 
 
 \section{Setting up Condor}
 
-\begin{enumerate}
 
-\item How do I get more than one job to run on my SMP machine?
+\subsection{How do I get more than one job to run on my SMP machine?}
 
 Starting with Condor version 6.1, Condor will recognize a SMP machine and advertise each CPU of the
 machine seperately.  For more details, see section~\ref{sec:Configuring-SMP} on page~\pageref{sec:Configuring-SMP}.
 
 Support for SMP machines in Condor Version 6.0 is available as a contrib module from the download site.
 
-\item How do I configure Condor to only run my jobs at certain times of the day?
+\subsection{How do I configure Condor to only run my jobs at certain times of the day?}
+
+\Todo
 
 
-\end{enumerate}
 
 \section{Running Condor Jobs}
 
-\begin{enumerate}
 
-\item{I'm at the University of Wisconsin -- Madison, Computer Science department, and I am having problems!}
+\subsection{I'm at the University of Wisconsin--Madison, Computer Science department, and I am having problems!}
 
 First, please read the webpage \Url{http://www.cs.wisc.edu/condor/uwcs.html} before proceeding!
 Specifically, your home directory is in AFS, which causes Condor some specific problems.
 The above URL will contain the way to fix things here at UWCS.
 
-\item{I'm getting a lot of email from Condor, should I just delete all of it?}
+\subsection{I'm getting a lot of email from Condor, should I just delete all of it?}
 
 Generally you shouldn't ignore all of the mail Condor sends.  Often, Condor will
 be sending legitimate email.  To reduce the email that a job will send you, see
@@ -89,42 +86,81 @@ be sending legitimate email.  To reduce the email that a job will send you, see
 \Todo
 
 
-\item Why do my vanilla jobs only run on the machine where I submitted them from?
+\subsection{Why do my vanilla jobs only run on the machine where I submitted them from?}
+Consider the following:
+\begin {enumerate}
+\item{Did you set the special requirements expressions for
+your vanilla jobs?}
+
+See Section~\ref{sec:Shared-Filesystem-Config-File-Entries}, on page~\pageref{sec:Shared-Filesystem-Config-File-Entries}.
+
+\item{Did you submit the job from a shared filesystem?}
+
+See Section~\ref{sec:Shared-Filesystem-Config-File-Entries}, on page~\pageref{sec:Shared-Filesystem-Config-File-Entries}.
+
+\item{Is Condor running as root?}
+
+See Section~\ref{sec:Non-Root}, on page~\pageref{sec:Non-Root}.
+
+\end{enumerate}
+\subsection{How do I configure my pool to run vanilla jobs or to use a "clipped" port of Condor?}
 
 \Todo
 
-\item How do I configure my pool to run vanilla jobs or to use a "clipped" port of Condor?
+\subsection{Why won't my jobs run?}
 
-\Todo
+Common problems that are often reported to us are that no jobs are running, or
+something like:
 
-\item Why won't my jobs run at all?
+\begin{verbatim}
+> I have submitted 100 jobs to my pool, and only 18 apper to be running,
+> and there are plenty of resources available.  What should I do to
+> investigate the reason why this happens?
+\end{verbatim}
 
-\Todo
+Start by using the following steps to solve this problem:
+
+\begin{enumerate}
+\item Try \condor{q} -analyze 
+
+\item Look at the UserLog file (whatever you specify "log = XXX" in the
+submit file).  See if the jobs are starting to run and then exit right
+away, or if they never even start to run.
+
+\item Look at the SchedLog on the submit machine after it negotiates
+for this user.  Often if a user doesn't have enough priority to get
+more machines, and if so, the SchedLog will have a message with something
+like "lost priority, no more jobs".
+
+\item If the jobs are getting matched, they might be dying right away due
+to permission problems or something like that.  Check the ShadowLog on
+the submit machine for warnings or errors.
+
+\item Look at the NegotiatorLog during the negotiation for the user.
+Look for similar messages about priority, "no more machines", or
+something like this.  
 
 \end{enumerate}
 
 \section{Troubleshooting}
 
-\begin{enumerate}
 
-\item{What happens if the central manager crashes?} 
+\subsection{What happens if the central manager crashes?} 
 
 If the central manager crashes, all running jobs will continue to
 run. All queued jobs will simply remain in the queues until the central
 manager comes up and begins matchmaking again.  Nothing special needs
 to be done when the cenrtal manager is brought back online. 
 
-\end{enumerate}
 
 \section{Other questions}
 
-\begin{enumerate}
 
-\item Is Condor Y2K compliant?
+\subsection{Is Condor Y2K compliant?}
 
 Yes.
 
-\item Is there a Condor mailing list?
+\subsection{Is there a Condor mailing list?}
 
 Yes.  We run an extremely low traffic mailing list that announces new versions of Condor.
 To subscribe email
@@ -134,7 +170,6 @@ with the message body of
 subscribe condor-world
 \end{verbatim}
 
-\item My question isn't in the FAQ!
+\subsection{My question isn't in the FAQ!}
 
 If you have any questions that are not listed here in the FAQ, feel free to contact us at \Email{condor-admin@cs.wisc.edu}.
-\end{enumerate}
