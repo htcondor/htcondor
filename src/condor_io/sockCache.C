@@ -56,11 +56,20 @@ invalidateSock (char *sock)
 }
 
 
-ReliSock *SocketCache::
-getReliSock (char *sock, int timeOut)
+bool SocketCache::
+getReliSock (Sock *&sock, char *addr, int timeOut)
 {
 	ReliSock	*rSock;
 	int			slot;
+
+    for (int i = 0; i < cacheSize; i++)
+    {
+        if (sockCache[i].valid && strcmp(addr,sockCache[i].addr) == 0)
+		{
+			sock = sockCache[i].sock;
+			return true;
+		}
+	}
 
 	// increment timestamp
 	timeStamp++;
@@ -68,14 +77,14 @@ getReliSock (char *sock, int timeOut)
 	if (!(rSock = new ReliSock))
 	{
 		delete rSock;
-		return NULL;
+		return false;
 	}
 
 	rSock->timeout(timeOut);
-	if (!rSock->connect(sock, 0))
+	if (!rSock->connect(addr, 0))
 	{
 		delete rSock;
-		return NULL;
+		return false;
 	}
 		
 	slot = getCacheSlot();
@@ -84,17 +93,27 @@ getReliSock (char *sock, int timeOut)
 	sockCache[slot].timeStamp 	= timeStamp;
 	sockCache[slot].sock 		= rSock;	
 	sockCache[slot].sockType	= Stream::reli_sock;
-	strcpy(sockCache[slot].addr, sock);
+	strcpy(sockCache[slot].addr, addr);
 
-	return rSock;
+	sock = rSock;
+	return true;
 }
 
 
-SafeSock *SocketCache::
-getSafeSock (char *sock, int timeOut)
+bool SocketCache::
+getSafeSock (Sock *&sock, char *addr, int timeOut)
 {
 	SafeSock	*sSock;
 	int			slot;
+
+    for (int i = 0; i < cacheSize; i++)
+    {
+        if (sockCache[i].valid && strcmp(addr,sockCache[i].addr) == 0)
+		{
+			sock = sockCache[i].sock;
+			return true;
+		}
+	}
 
 	// increment timestamp
 	timeStamp++;
@@ -102,14 +121,14 @@ getSafeSock (char *sock, int timeOut)
 	if (!(sSock = new SafeSock))
 	{
 		delete sSock;
-		return NULL;
+		return false;
 	}
 
 	sSock->timeout(timeOut);
-	if (!sSock->connect(sock, 0))
+	if (!sSock->connect(addr, 0))
 	{
 		delete sSock;
-		return NULL;
+		return false;
 	}
 		
 	slot = getCacheSlot();
@@ -118,9 +137,10 @@ getSafeSock (char *sock, int timeOut)
 	sockCache[slot].timeStamp 	= timeStamp;
 	sockCache[slot].sock 		= sSock;	
 	sockCache[slot].sockType	= Stream::safe_sock;
-	strcpy(sockCache[slot].addr, sock);
+	strcpy(sockCache[slot].addr, addr);
 
-	return sSock;
+	sock = sSock;
+	return true;
 }
 
 
