@@ -815,7 +815,7 @@ GridManager::updateSchedd()
 int
 GridManager::globusPoll()
 {
-	if ( JobsToSubmit.IsEmpty() && JobsToCancel.IsEmpty() &&
+	if ( JobsToSubmit.IsEmpty() && JobsToRemove.IsEmpty() &&
 		 JobsToCommit.IsEmpty() ) {
 
 		time_t stop = time(NULL) + 1;
