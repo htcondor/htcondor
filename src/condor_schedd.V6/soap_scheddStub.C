@@ -250,6 +250,7 @@ condor__commitTransaction(struct soap *s,
 	if (!valid_transaction(transaction) ||
 		null_transaction(transaction)) {
 		result.response.code = INVALIDTRANSACTION;
+		result.response.message = "Invalid transaction.";
 	} else {
 		CommitTransaction();
 		current_trans_id = 0;
@@ -299,6 +300,7 @@ condor__abortTransaction(struct soap *s,
 	if (!valid_transaction(transaction) ||
 		null_transaction(transaction)) {
 		result.response.code = INVALIDTRANSACTION;
+		result.response.message = "Invalid transaction.";
 	} else {
 		result.response.code = SUCCESS;
 		result.response.message = "Don't cry for it.";
@@ -320,6 +322,7 @@ condor__extendTransaction(struct soap *s,
 	if (!valid_transaction(transaction) ||
 		null_transaction(transaction)) {
 		result.response.status.code = INVALIDTRANSACTION;
+		result.response.status.message = "Invalid transaction.";
 	} else {
 		transaction.duration = duration;
 		if (extendTransaction(transaction)) {
@@ -350,6 +353,7 @@ condor__newCluster(struct soap *s,
 	if (!valid_transaction(transaction) ||
 		null_transaction(transaction)) {
 		result.response.status.code = INVALIDTRANSACTION;
+		result.response.status.message = "Invalid transaction.";
 	} else {
 		extendTransaction(transaction);
 
@@ -381,6 +385,7 @@ condor__removeCluster(struct soap *s,
     if ( !valid_transaction(transaction) &&
          !null_transaction(transaction) ) {
         result.response.code = INVALIDTRANSACTION;
+		result.response.message = "Invalid transaction.";
     } else {
         extendTransaction(transaction);
 
@@ -418,6 +423,7 @@ condor__newJob(struct soap *soap,
 	if (!valid_transaction(transaction) ||
 		null_transaction(transaction)) {
 		result.response.status.code = INVALIDTRANSACTION;
+		result.response.status.message = "Invalid transaction.";
 	} else {
 		extendTransaction(transaction);
 
@@ -472,6 +478,7 @@ condor__removeJob(struct soap *s,
 	if (!valid_transaction(transaction) &&
 		!null_transaction(transaction)) {
 		result.response.code = INVALIDTRANSACTION;
+		result.response.message = "Invalid transaction.";
 	} else {
 		extendTransaction(transaction);
 
@@ -510,6 +517,7 @@ condor__holdJob(struct soap *s,
 	if (!valid_transaction(transaction) &&
 		!null_transaction(transaction)) {
 		result.response.code = INVALIDTRANSACTION;
+		result.response.message = "Invalid transaction.";
 	} else {
 		extendTransaction(transaction);
 
@@ -544,6 +552,7 @@ condor__releaseJob(struct soap *s,
 	if (!valid_transaction(transaction) &&
 		!null_transaction(transaction)) {
 		result.response.code = INVALIDTRANSACTION;
+		result.response.message = "Invalid transaction.";
 	} else {
 		extendTransaction(transaction);
 
@@ -575,12 +584,14 @@ condor__submit(struct soap *soap,
 	if (!valid_transaction(transaction) ||
 		null_transaction(transaction)) {
 		result.response.status.code = INVALIDTRANSACTION;
+		result.response.status.message = "Invalid transaction.";
 	} else {
 		extendTransaction(transaction);
 
 		Job *job;
 		if (getJob(clusterId, jobId, job)) {
 			result.response.status.code = UNKNOWNJOB;
+			result.response.status.message = "Unknown job.";
 		} else {
 			ClassAd realJobAd;
 			if (!convert_adStruct_to_ad(soap, &realJobAd, jobAd)) {
@@ -622,6 +633,7 @@ condor__getJobAds(struct soap *soap,
 	if (!valid_transaction(transaction) &&
 		!null_transaction(transaction)) {
 		result.response.status.code = INVALIDTRANSACTION;
+		result.response.status.message = "Invalid transaction.";
 	} else {
 		extendTransaction(transaction);
 
@@ -666,6 +678,7 @@ condor__getJobAd(struct soap *soap,
 	if (!valid_transaction(transaction) &&
 		!null_transaction(transaction)) {
 		result.response.status.code = INVALIDTRANSACTION;
+		result.response.status.message = "Invalid transaction.";
 	} else {
 		extendTransaction(transaction);
 
@@ -709,12 +722,14 @@ condor__declareFile(struct soap *soap,
 	if (!valid_transaction(transaction) ||
 		null_transaction(transaction)) {
 		result.response.code = INVALIDTRANSACTION;
+		result.response.message = "Invalid transaction.";
 	} else {
 		extendTransaction(transaction);
 
 		Job *job;
 		if (getJob(clusterId, jobId, job)) {
 			result.response.code = UNKNOWNJOB;
+			result.response.message = "Unknown job.";
 		} else {
 			CondorError errstack;
 			if (job->declare_file(MyString(name), size, errstack)) {
@@ -749,12 +764,14 @@ condor__sendFile(struct soap *soap,
 	if (!valid_transaction(transaction) ||
 		null_transaction(transaction)) {
 		result.response.code = INVALIDTRANSACTION;
+		result.response.message = "Invalid transaction.";
 	} else {
 		extendTransaction(transaction);
 
 		Job *job;
 		if (getJob(clusterId, jobId, job)) {
 			result.response.code = INVALIDTRANSACTION;
+			result.response.message = "Invalid transaction.";
 		} else {
 			CondorError errstack;
 			if (0 == job->put_file(MyString(filename),
@@ -792,12 +809,14 @@ int condor__getFile(struct soap *soap,
 	if (!valid_transaction(transaction) &&
 		!null_transaction(transaction)) {
 		result.response.status.code = INVALIDTRANSACTION;
+		result.response.status.message = "Invalid transaction.";
 	} else {
 		extendTransaction(transaction);
 
 		Job *job;
 		if (getJob(clusterId, jobId, job)) {
 			result.response.status.code = UNKNOWNJOB;
+			result.response.status.message = "Unknown job.";
 		} else {
 			if (0 >= length) {
 				result.response.status.code = FAIL;
@@ -850,6 +869,7 @@ int condor__closeSpool(struct soap *soap,
 	if (!valid_transaction(transaction) &&
 		!null_transaction(transaction)) {
 		result.response.code = INVALIDTRANSACTION;
+		result.response.message = "Invalid transaction.";
 	} else {
 		extendTransaction(transaction);
 
@@ -879,6 +899,7 @@ condor__listSpool(struct soap * soap,
 	if (!valid_transaction(transaction) &&
 		!null_transaction(transaction)) {
 		result.response.status.code = INVALIDTRANSACTION;
+		result.response.status.message = "Invalid transaction.";
 	} else {
 		extendTransaction(transaction);
 
