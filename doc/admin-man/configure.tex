@@ -81,10 +81,10 @@ macros which have not yet been defined.  The example
         C = $(A) 
 \end{verbatim}
 is a legal set of macro definitions, and the resulting value of 
-\Macro{C} is
+\MacroNI{C} is
 \Expr{xxx}.
 Note that
-\Macro{C} is actually bound to 
+\MacroNI{C} is actually bound to 
 \MacroU{A}, not its value.
 
 As a further example,
@@ -94,7 +94,7 @@ As a further example,
         A = yyy
 \end{verbatim}
 is also a legal set of macro definitions, and the resulting value of
-\Macro{C} is \Expr{yyy}.  However,
+\MacroNI{C} is \Expr{yyy}.  However,
 \begin{verbatim}
         A = $(C)
         C = xxx
@@ -113,12 +113,12 @@ definition.  For example,
 	A = $(A)zzz
 \end{verbatim}
 is a legal set of macro definitions, and the resulting value of 
-\Macro{A}
+\MacroNI{A}
 is \Expr{xxxyyyzzz}.
 Note that invocations of a macro in
 its own definition are immediately
 expanded.
-\MacroU{A} is immediately expanded in line 3 of the example.
+\MacroUNI{A} is immediately expanded in line 3 of the example.
 If it were not, then the definition would be impossible to
 evaluate.
 
@@ -193,7 +193,7 @@ Pre-Defined Macros and Expressions}
 
 Condor provides pre-defined macros and expressions that
 help configure Condor.  Pre-defined macros are listed as
-\MacroU{macro\_name}, while pre-defined expressions are listed as
+\MacroUNI{macro\_name}, while pre-defined expressions are listed as
 \Expr{expression\_name}.
 
 This first set are entries whose values are determined at
@@ -202,26 +202,32 @@ the library routine which parses the configuration files.
 \index{configuration file!pre-defined macros}
 \begin{description}
   
-\item[\Expr{CurrentTime}] \label{param:CurrentTime} An expression
+\item[\Expr{CurrentTime}] \label{param:CurrentTime}
+\index{CurrentTime expression@\texttt{CurrentTime} expression}
+\index{configuration expression!\texttt{CurrentTime}}
+  An expression
   providing the current result of the system call \Cmd{time}{2}.  It
   is an integer containing the number of seconds elapsed
   since an arbitrary date defined by UNIX as the ``beginning of time'',
   referred to as the \Term{UNIX date}.
   
-\item[\MacroU{FULL\_HOSTNAME}] \label{param:FullHostname} The
+\item[\MacroU{FULL\_HOSTNAME}] \label{param:FullHostname}
+  The
   fully qualified hostname of the local machine (hostname plus domain
   name).
   
-\item[\MacroU{HOSTNAME}] \label{param:Hostname} The
-  hostname of the local machine (no domain name).
+\item[\MacroU{HOSTNAME}] \label{param:Hostname}
+  The hostname of the local machine (no domain name).
   
-\item[\MacroU{TILDE}] \label{param:Tilde} The full path to the
+\item[\MacroU{TILDE}] \label{param:Tilde}
+  The full path to the
   home directory of the UNIX user condor, if such a user exists on the
   local machine.
 
 \label{sec:Condor-Subsystem-Names}
 \index{configuration file!subsystem names}
-\item[\MacroU{SUBSYSTEM}] \label{param:Subsystem} The subsystem
+\item[\MacroU{SUBSYSTEM}] \label{param:Subsystem}
+  The subsystem
   name of the daemon or tool that is evaluating the macro.
   This is a unique string which identifies a given daemon within the
   Condor system.  The possible subsystem names are:
@@ -248,32 +254,36 @@ automatically at runtime but which can be overwritten.
 \index{configuration file!macros}
 \begin{description}
 
-\item[\MacroU{ARCH}] \label{param:Arch} Defines the string
+\item[\MacroU{ARCH}] \label{param:Arch}
+  Defines the string
   used to identify the architecture of the local machine to Condor.
   The \Condor{startd} will advertise itself with this attribute so
   that users can submit binaries compiled for a given platform and
   force them to run on the correct machines.  \Condor{submit} will
   append a requirement to the job ClassAd that it must
-  run on the same \Macro{ARCH} and \Macro{OPSYS} of the machine where
-  it was submitted, unless the user specifies \Macro{ARCH} and/or
-  \Macro{OPSYS} explicitly in their submit file.  See the
+  run on the same \MacroNI{ARCH} and \MacroNI{OPSYS} of the machine where
+  it was submitted, unless the user specifies \MacroNI{ARCH} and/or
+  \MacroNI{OPSYS} explicitly in their submit file.  See the
   the \Condor{submit} manual page
   on page~\pageref{man-condor-submit} for details.
 
-\item[\MacroU{OPSYS}] \label{param:OpSys} Defines the
+\item[\MacroU{OPSYS}] \label{param:OpSys}
+  Defines the
   string used to identify the operating system of the local machine to
   Condor.
   If it is not defined in the configuration file, Condor will
   automatically insert the operating system of this machine as
   determined by \Prog{uname}.
 
-\item[\MacroU{FILESYSTEM\_DOMAIN}] Defaults to the fully
+\item[\MacroU{FILESYSTEM\_DOMAIN}]
+  Defaults to the fully
   qualified hostname of the machine it is evaluated on.  See
   section~\ref{sec:Shared-Filesystem-Config-File-Entries}, Shared
   File System Configuration File Entries for the full description of
   its use and under what conditions you would want to change it.
 
-\item[\MacroU{UID\_DOMAIN}] Defaults to the fully
+\item[\MacroU{UID\_DOMAIN}]
+  Defaults to the fully
   qualified hostname of the machine it is evaluated on.  See
   section~\ref{sec:Shared-Filesystem-Config-File-Entries} on ``Shared
   File System Configuration File Entries'' for the full description of
@@ -281,7 +291,7 @@ automatically at runtime but which can be overwritten.
 
 \end{description}
 
-Since \MacroU{ARCH} and \MacroU{OPSYS} will automatically be set to the
+Since \MacroUNI{ARCH} and \MacroUNI{OPSYS} will automatically be set to the
 correct values, we recommend that you do not overwrite them.
 Only do so if you know what you are doing.
   
@@ -309,12 +319,12 @@ system.
 \item[\Macro{COLLECTOR\_HOST}] \label{param:CollectorHost} The
   hostname of the machine where the \Condor{collector} is running for
   your pool.  Normally it is defined with the
-  \MacroU{CONDOR\_HOST} macro described above.
+  \MacroUNI{CONDOR\_HOST} macro described above.
 
 \item[\Macro{NEGOTIATOR\_HOST}] \label{param:NegotiatorHost} The
   hostname of the machine where the \Condor{negotiator} is running for
   your pool.  Normally it is defined with the
-  \MacroU{CONDOR\_HOST} macro described above.
+  \MacroUNI{CONDOR\_HOST} macro described above.
 
 \item[\Macro{RELEASE\_DIR}] \label{param:ReleaseDir} The full path to
   the Condor release directory, which holds the \File{bin}, \File{etc},
@@ -323,14 +333,14 @@ system.
 
 \item[\Macro{BIN}] \label{param:Bin} This directory points to the
   Condor directory where user-level programs are installed.  It
-  is usually defined relative to the \MacroU{RELEASE\_DIR} macro.
+  is usually defined relative to the \MacroUNI{RELEASE\_DIR} macro.
   
 \item[\Macro{LIB}] \label{param:Lib} This directory points to the
   Condor directory where libraries used to link jobs for Condor's
   standard universe are stored.  The \Condor{compile} program uses
   this macro to find these libraries, so it must be defined.
-  \MacroU{LIB} is usually defined relative to the
-  \MacroU{RELEASE\_DIR} macro.
+  \MacroUNI{LIB} is usually defined relative to the
+  \MacroUNI{RELEASE\_DIR} macro.
 
 \item[\Macro{SBIN}] \label{param:Sbin} This directory points to the
   Condor directory where Condor's system binaries (such as the
@@ -342,15 +352,15 @@ system.
 \item[\Macro{LOCAL\_DIR}] \label{param:LocalDir} The location of the
   local Condor directory on each machine in your pool.  One common
   option is to use the condor user's home directory which may be
-  specified with \MacroU{tilde}.  For example:
+  specified with \MacroU{TILDE}.  For example:
 \begin{verbatim}
         LOCAL_DIR = $(tilde)
 \end{verbatim}
   
   On machines with a shared file system, where either the
-  \MacroU{tilde} directory or another directory you want to use is
+  \MacroU{TILDE} directory or another directory you want to use is
   shared among all machines in your pool, you might use the
-  \MacroU{hostname} macro and have a directory with many
+  \MacroUNI{HOSTNAME} macro and have a directory with many
   subdirectories, one for each machine in your pool, each named by
   hostnames.  For example:
 \begin{verbatim}
@@ -661,10 +671,10 @@ Log files may optionally be specified per debug level as follows:
 \item[\Macro{SUBSYS\_LEVEL\_LOG}] \label{param:SubsysLevelLog} This is
   the name of a log file for messages at a specific debug level for a
   specific subsystem.  If the debug level is included in
-  \MacroU{SUBSYS\_DEBUG}, then all messages of this debug level will be
-  written both to the \MacroU{SUBSYS\_LOG} file and the
-  \MacroU{SUBSYS\_LEVEL\_LOG} file.  For example,
-  \MacroU{SHADOW\_SYSCALLS\_LOG} specifies a log file for all remote
+  \MacroUNI{SUBSYS\_DEBUG}, then all messages of this debug level will be
+  written both to the \MacroUNI{SUBSYS\_LOG} file and the
+  \MacroUNI{SUBSYS\_LEVEL\_LOG} file.  For example,
+  \MacroUNI{SHADOW\_SYSCALLS\_LOG} specifies a log file for all remote
   system call debug messages.
 
 \item[\Macro{MAX\_SUBSYS\_LEVEL\_LOG}] \label{param:MaxSubsysLevelLog}
@@ -1448,7 +1458,7 @@ change to take effect (for example, using ``\condor{restart}
   this kind of virtual machine gets.
   N can be any integer from 1 to the value of
   \MacroU{MAX\_VIRTUAL\_MACHINE\_TYPES}, such as
-  \Macro{VIRTUAL\_MACHINE\_TYPE\_1}. 
+  \MacroNI{VIRTUAL\_MACHINE\_TYPE\_1}. 
   The format of this entry can be somewhat complex, so please refer to
   section~\ref{sec:SMP-Divide} on page~\pageref{sec:SMP-Divide} for
   details on the different possibilities.
@@ -1592,17 +1602,17 @@ These macros control the \Condor{schedd}.
 
 \item[\Macro{SCHEDD\_EXPRS}] \label{param:ScheddExprs} This macro is
   described in section~\ref{param:SubsysExprs} as
-  \Macro{SUBSYS\_EXPRS}.
+  \MacroNI{SUBSYS\_EXPRS}.
 
 \item[\Macro{SCHEDD\_DEBUG}] \label{param:ScheddDebug} This macro
   (and other settings related to debug logging in the schedd) is
   described in section~\ref{param:SubsysDebug} as
-  \Macro{SUBSYS\_DEBUG}.
+  \MacroNI{SUBSYS\_DEBUG}.
 
 \item[\Macro{SCHEDD\_ADDRESS\_FILE}] \label{param:ScheddAddressFile}
   This macro is described in
   section~\ref{param:SubsysAddressFile} as
-  \Macro{SUBSYS\_ADDRESS\_FILE}. 
+  \MacroNI{SUBSYS\_ADDRESS\_FILE}. 
 
 \item[\Macro{FLOCK\_HOSTS}] \label{param:FlockHosts} This macro
   defines a list of central manager hostnames (not including the local
@@ -1611,7 +1621,7 @@ These macros control the \Condor{schedd}.
   preference.  The schedd will only send a request to a central
   manager in the list if the local pool and pools earlier in the list
   are not satisfying all the job requests.
-  \MacroU{HOSTALLOW\_NEGOTIATOR\_SCHEDD} (see
+  \MacroUNI{HOSTALLOW\_NEGOTIATOR\_SCHEDD} (see
   section~\ref{param:HostAllow}) must also be configured to allow
   negotiators from all of the \MacroU{FLOCK\_HOSTS} to contact the
   schedd.  Similarly, the central managers of the remote pools must be
@@ -1729,7 +1739,7 @@ These settings affect the \Condor{starter}.
 \item[\Macro{STARTER\_DEBUG}] \label{param:StarterDebug} This setting
   (and other settings related to debug logging in the starter) is
   described above in section~\ref{param:SubsysDebug} as
-  \MacroU{SUBSYS\_DEBUG}.
+  \MacroUNI{SUBSYS\_DEBUG}.
 
 \item[\Macro{USER\_JOB\_WRAPPER}] \label{param:UserJobWrapper} This macro
   allows the administrator to specify a ``wrapper'' script to handle the
