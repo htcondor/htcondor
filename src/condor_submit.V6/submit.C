@@ -970,6 +970,8 @@ queue()
 	static int i = 0;
 	int		rval;
 
+	ProcId = NewProc (ClusterId);
+
 	/*
 	**	Insert the current idea of the cluster and
 	**	process number into the hash table.
@@ -995,8 +997,6 @@ queue()
 	SetStdFile( 2 );
 	SetImageSize();
 
-
-	ProcId = NewProc (ClusterId);
 
 	rval = SaveClassAd( job );
 
