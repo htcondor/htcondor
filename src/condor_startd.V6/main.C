@@ -67,6 +67,9 @@ int		disconnected_keyboard_boost;	// # of seconds before when we
 
 char*	mySubSystem = "STARTD";
 
+// Define static variables
+static	int old_polling_interval;
+
 /*
  * Prototypes of static functions.
  */
@@ -75,6 +78,7 @@ void usage( char* );
 int main_init( int argc, char* argv[] );
 int init_params(int);
 int main_config();
+int finish_main_config();
 int main_shutdown_fast();
 int main_shutdown_graceful();
 extern "C" int do_cleanup();
@@ -281,10 +285,24 @@ main_init( int, char* argv[] )
 int
 main_config()
 {
+	bool done_allocating;
+
 		// Stash old interval so we know if it's changed.
-	int old_poll = polling_interval;
+	old_polling_interval = polling_interval;
 		// Reread config file for global settings.
 	init_params(0);
+		// Process any changes in the VM type specifications
+	done_allocating = resmgr->reconfig_resources();
+	if( done_allocating ) {
+		return finish_main_config();
+	}
+	return TRUE;
+}
+
+
+int
+finish_main_config( void ) 
+{
 		// Recompute machine-wide attributes object.
 	resmgr->compute( A_ALL );
 		// Rebuild ads for each resource.  
@@ -292,7 +310,7 @@ main_config()
 		// Reset various settings in the ResMgr.
 	resmgr->init_socks();
 	resmgr->reset_timers();
-	if( old_poll != polling_interval ) {
+	if( old_polling_interval != polling_interval ) {
 		resmgr->walk( &(Resource::resize_load_queue) );
 	}
 
