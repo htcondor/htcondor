@@ -41,36 +41,47 @@ ConnectQ(char *qmgr_location)
 	}
 	connection->rendevous_file = 0;
 
+	/* No schedd identified --- use local schedd */
 	if (qmgr_location == 0) {
 		if(gethostname(hostname, 256) < 0)
 		{
 			EXCEPT("Can't find host name");
 		}
 		scheddAddr = get_schedd_addr(hostname); 
-		if(!scheddAddr)
+		if(scheddAddr)
 		{
-			dprintf(D_ALWAYS, "Can't find schedd address on %s\n", hostname); 
-			return 0;
+			connection->fd=do_connect(scheddAddr, "condor_schedd", QMGR_PORT);
+		}
+		else
+		{
+			connection->fd=do_connect(hostname,"condor_schedd", QMGR_PORT);
 		}
 	}
+	/* schedd identified by Name, not <xxx.xxx.xxx.xxx:xxxx> */
 	else if(qmgr_location[0] != '<')
 	{
+		/* get schedd's IP address from collector */
 		scheddAddr = get_schedd_addr(qmgr_location);
-		if(!scheddAddr)
+		if(scheddAddr)
+	    {
+        	connection->fd = do_connect(scheddAddr, "condor_schedd", QMGR_PORT);
+        	free(scheddAddr);
+    	}
+		else
 		{
-			dprintf(D_ALWAYS, "Can't find schedd address on %s\n", hostname); 
-			return 0;
+			/* 
+			** Collector unable to resolve name; try to use qmgr_location
+			** as host name with default port 
+			*/
+			connection->fd=do_connect(qmgr_location,"condor_schedd",QMGR_PORT);
 		}
 	}
-	if(!scheddAddr)
+	else
+ 	/* qmgr_location is <xxx.xxx.xxx.xxx:xxxx> --- do_connect can handle this */
 	{
 		connection->fd = do_connect(qmgr_location, "condor_schedd", QMGR_PORT);
 	}
-	else
-	{
-		connection->fd = do_connect(scheddAddr, "condor_schedd", QMGR_PORT);
-		free(scheddAddr);
-	} 
+
 	if (connection->fd < 0) {
 		dprintf(D_ALWAYS, "Can't connect to qmgr");
 		free(connection);
