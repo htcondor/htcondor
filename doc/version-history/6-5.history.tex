@@ -87,6 +87,20 @@ specification of an alternate \Condor{dagman} executable.
   This problem is now handled gracefully and is not considered a fatal
   error. 
 
+\item Fixed a minor problem introduced in version 6.5.2 in
+  \Condor{submit}.
+  New attributes for specifying Condor's File Transfer mechanism were
+  added in version 6.5.2.
+  \Condor{submit} was supposed to be backwards compatible with old job
+  description files, but in a few cases, it would incorrectly give a
+  fatal error when it saw certain combinations of the old syntax.
+  Now, all old job description files are properly recognized by the
+  new \Condor{submit}.
+  For more information on using the Condor File Transfer mechanism,
+  see section~\ref{sec:file-transfer} on
+  page~\pageref{sec:file-transfer}, or the \Condor{submit} man
+  page on page~\pageref{man-condor-submit}.
+
 \item Fixed a minor problem (introduced in version 6.5.2 while fixing
   another bug) that made it difficult to use a \Condor{master} to
   spawn the Hawkeye daemons.
