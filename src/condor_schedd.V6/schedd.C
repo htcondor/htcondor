@@ -1371,8 +1371,6 @@ static int
 PeriodicExprEval( ClassAd *jobad )
 {
 	int cluster=-1, proc=-1, status=-1, action=-1;
-	char reason[1024];
-	const char *firing_expr;
 
 	if(!ResponsibleForPeriodicExprs(jobad)) return 1;
 
@@ -1390,18 +1388,65 @@ PeriodicExprEval( ClassAd *jobad )
 	policy.Init(jobad);
 
 	action = policy.AnalyzePolicy(PERIODIC_ONLY);
-	firing_expr = policy.FiringExpression();
-	if(firing_expr) sprintf(reason,"%s is true",firing_expr);
+
+	// Build a "reason" string for logging
+	MyString reason;
+	const char *firing_expr = policy.FiringExpression();
+	if(firing_expr) {
+		ExprTree *tree, *rhs = NULL;
+		tree = jobad->Lookup( firing_expr );
+
+		// Get a formatted expression string
+		char* exprString = NULL;
+		if( tree && (rhs=tree->RArg()) ) {
+			rhs->PrintToNewStr( &exprString );
+		}
+
+		// Format up the log entry
+		reason.sprintf( "The %s expression '%s' evaluated to ",
+						firing_expr,
+						exprString ? exprString : "" );
+
+		// Free up the buffer from PrintToNewStr()
+		if ( exprString ) {
+			free( exprString );
+		}
+
+		// Get a string for it's value
+		int firing_value = policy.FiringExpressionValue();
+		switch( firing_value ) {
+		case 0:
+			reason += "FALSE";
+			break;
+		case 1:
+			reason += "TRUE";
+			break;
+		case -1:
+			reason += "UNDEFINED";
+			break;
+		default:
+			EXCEPT( "Unrecognized FiringExpressionValue: %d", 
+					firing_value ); 
+			break;
+		}
+	}
 
 	switch(action) {
 		case REMOVE_FROM_QUEUE:
-			if(status!=REMOVED) abortJob(cluster,proc,reason,true);
+			if(status!=REMOVED) {
+				abortJob(jobad, cluster, proc, reason.Value(), true);
+			}
 			break;
 		case HOLD_IN_QUEUE:
-			if(status!=HELD) holdJob(cluster,proc,reason,true,false,false,false,false);
+			if(status!=HELD) {
+				holdJob(cluster, proc, reason.Value(),
+						true, false, false, false, false);
+			}
 			break;
 		case RELEASE_FROM_HOLD:
-			if(status==HELD) releaseJob(cluster,proc,reason,true);
+			if(status==HELD) {
+				releaseJob(cluster, proc, reason.Value(), true);
+			}
 			break;
 	}
 
@@ -7199,12 +7244,15 @@ Does not start or end a transaction.
 */
 
 static bool
-abortJobRaw( int cluster, int proc, const char *reason )
+abortJobRaw( ClassAd *jobAd, int cluster, int proc, const char *reason )
 {
 	PROC_ID job_id;
 
 	job_id.cluster = cluster;
 	job_id.proc = proc;
+
+	int universe = CONDOR_UNIVERSE_STANDARD;
+	jobAd->LookupInteger(ATTR_JOB_UNIVERSE,universe);
 
 	if( SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, REMOVED) < 0 ) {
 		dprintf(D_ALWAYS,"Couldn't change state of job %d.%d\n",cluster,proc);
@@ -7212,11 +7260,17 @@ abortJobRaw( int cluster, int proc, const char *reason )
 	}
 
 	abort_job_myself( job_id, true, true );
+	dprintf( D_ALWAYS, "Job %d.%d aborted: %s\n", cluster, proc, reason );
 
-	DestroyProc(cluster,proc);
+	if ( CONDOR_UNIVERSE_SCHEDULER != universe ) {
+		DestroyProc(cluster,proc);
+	} else {
+		MyString	removeReason;
 
-	dprintf(D_ALWAYS,"Job %d.%d aborted: %s\n",cluster,proc,reason);
-
+		removeReason.sprintf( "%s=\"%s\"", ATTR_REMOVE_REASON, reason );
+		jobAd->Insert( removeReason.Value( ) );
+	}
+	
 	return true;
 }
 
@@ -7227,7 +7281,7 @@ Performs a complete transaction if desired.
 */
 
 bool
-abortJob( int cluster, int proc, const char *reason, bool use_transaction )
+abortJob( ClassAd *jobad, int cluster, int proc, const char *reason, bool use_transaction )
 {
 	bool result;
 
@@ -7235,7 +7289,7 @@ abortJob( int cluster, int proc, const char *reason, bool use_transaction )
 		BeginTransaction();
 	}
 
-	result = abortJobRaw(cluster,proc,reason);
+	result = abortJobRaw(jobad, cluster,proc,reason);
 
 	if(use_transaction) {
 		if(result) {
