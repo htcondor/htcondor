@@ -20,7 +20,6 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-
  
 
 #include "condor_common.h"
@@ -160,7 +159,6 @@ void 	queue(int num);
 char * 	check_requirements( char *orig );
 void 	check_open( char *name, int flags );
 void 	usage();
-int 	DoCleanup();
 char * 	get_owner();
 char * 	get_owner();
 void 	init_params();
@@ -177,6 +175,7 @@ extern char **environ;
 
 extern "C" {
 int SetSyscalls( int foo );
+int DoCleanup();
 }
 
 struct SubmitRec {
@@ -1539,6 +1538,7 @@ usage()
 }
 
 
+extern "C" {
 int
 DoCleanup()
 {
@@ -1562,7 +1562,7 @@ DoCleanup()
 
 	return 0;		// For historical reasons...
 }
-
+} /* extern "C" */
 
 char *
 get_owner()
