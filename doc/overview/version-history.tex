@@ -42,6 +42,10 @@ eventually defined in your config files (even if the forward reference
 is to a macro defined in another config file, like the local config
 file, for example).
 
+\item \Condor{vacate} now supports a \Opt{-fast} option that forces
+Condor to hard-kill the job(s) immediately, instead of waiting for
+them to checkpoint and gracefully shutdown.
+
 \item \Condor{userlog} now displays times in days+hours:minutes format
 instead of total hours or total minutes.
 
