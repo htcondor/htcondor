@@ -171,6 +171,12 @@ StarterMgr::publish( ClassAd* ad, amask_t mask )
 		// finally, print out all the abilities we added into the
 		// classad so that other folks can know what we did.
 	char* ability_str = ability_list.print_to_string();
+
+	// If our ability list is NULL it means that we have no starters.
+	// This is ok for hawkeye; nothing more to do here!
+	if ( NULL == ability_str ) {
+		ability_str = "";
+	}
 	int size = strlen(ATTR_STARTER_ABILITY_LIST) +
 		strlen(ability_str) + 6;
 	char* tmp = (char*)malloc( size * sizeof(char) );
