@@ -49,6 +49,9 @@ private:
 	friend class ClassAd;
 	friend class LocalCollectionQuery;
 
+    ClassAdCollectionServer(const ClassAdCollectionServer &collection)           { return; }
+    ClassAdCollectionServer operator=(const ClassAdCollectionServer &collection) { return *this; }
+
 	// remote interrogation service function
 	bool HandleReadOnlyCommands( int, ClassAd *, Sock * );
 	bool HandleQuery( ClassAd *, Sock * );

@@ -42,6 +42,22 @@ Literal::
 {
 }
 
+Literal::
+Literal(const Literal &literal)
+{
+    CopyFrom(literal);
+    return;
+}
+
+Literal &Literal::
+operator=(const Literal &literal)
+{
+    if (this != &literal) {
+        CopyFrom(literal);
+    }
+    return *this;
+}
+
 #ifdef USE_COVARIANT_RETURN_TYPES
 Literal *Literal::
 #else
@@ -56,13 +72,19 @@ Copy( ) const
 		CondorErrMsg = "";
 		return((Literal*)NULL);
 	}
-	newTree->value.CopyFrom( value );
-	newTree->nodeKind = nodeKind;
-	newTree->parentScope = parentScope;
-	newTree->factor	= factor;
+    newTree->CopyFrom(*this);
 	return newTree;
 }
 
+void Literal::
+CopyFrom(const Literal &literal)
+{
+    value.CopyFrom(literal.value);
+    nodeKind    = literal.nodeKind;
+    parentScope = literal.parentScope;
+    factor      = literal.factor;
+    return;
+}
 
 Literal* Literal::
 MakeReal(string number_string) 

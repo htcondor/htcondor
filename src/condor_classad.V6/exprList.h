@@ -39,8 +39,13 @@ class ExprList : public ExprTree
 		ExprList();
 		ExprList(std::vector<ExprTree*>& list);
 
+        /// Copy Constructor
+        ExprList(const ExprList &other_list);
+
 		/// Destructor
 		~ExprList();
+
+        ExprList &operator=(const ExprList &other_list);
 
 		/** Factory to make an expression list expression
 		 * 	@param	list A vector of the expressions to be contained in the
@@ -59,6 +64,9 @@ class ExprList : public ExprTree
 #else
 		virtual ExprTree* Copy( ) const;
 #endif		
+
+        bool CopyFrom(const ExprList &other_list);
+
 		// STL-like iterators and functions
 	    typedef std::vector<ExprTree*>::iterator       iterator;
     	typedef std::vector<ExprTree*>::const_iterator const_iterator;

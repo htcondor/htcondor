@@ -88,9 +88,8 @@ class ExprTree
 		/// Virtual destructor
 		virtual ~ExprTree ();
 
-		// Copy constructor?
-
-		// Assignment operator?
+		// Assignment operator
+        virtual ExprTree& operator=(const ExprTree &tree);
 
 		/** Sets the lexical parent scope of the expression, which is used to 
 				determine the lexical scoping structure for resolving attribute
@@ -159,6 +158,9 @@ class ExprTree
 		friend class ExprList;
 		friend class ExprListIterator;
 		friend class ClassAd; 
+
+		/// Copy constructor
+        ExprTree(const ExprTree &tree);
 
 		virtual void _SetParentScope( const ClassAd* )=0;
 		virtual bool _Evaluate( EvalState&, Value& ) const=0;

@@ -40,6 +40,12 @@ Operation ()
 	child3    = NULL;
 }
 
+Operation::
+Operation(const Operation &op)
+{
+    CopyFrom(op);
+    return;
+}
 
 Operation::
 ~Operation ()
@@ -49,6 +55,14 @@ Operation::
 	if( child3 ) delete child3;
 }
 
+Operation &Operation::
+operator=(const Operation &op)
+{
+    if (this != &op) {
+        CopyFrom(op);
+    }
+    return *this;
+}
 
 #ifdef USE_COVARIANT_RETURN_TYPES
 Operation *Operation::
@@ -58,32 +72,41 @@ ExprTree *Operation::
 Copy( ) const
 {
 	Operation *newTree = new Operation ();
-	if (newTree == 0) return NULL;
+	if (newTree != NULL) {
+        if (!newTree->CopyFrom(*this)) {
+            delete newTree;
+            newTree = NULL;
+        }
+    }
 
-	if( child1 && ( newTree->child1=child1->Copy( ) )==NULL ){
-		delete newTree;
-		CondorErrno = ERR_MEM_ALLOC_FAILED;
-		CondorErrMsg = "";
-		return NULL;
-	}
-
-	if( child2 && ( newTree->child2=child2->Copy( ) )==NULL ){
-		delete newTree;
-		CondorErrno = ERR_MEM_ALLOC_FAILED;
-		CondorErrMsg = "";
-		return NULL;
-	}
-
-	if( child3 && ( newTree->child3=child3->Copy( ) )==NULL ){
-		delete newTree;
-		CondorErrno = ERR_MEM_ALLOC_FAILED;
-		CondorErrMsg = "";
-		return NULL;
-	}
-
-	newTree->operation = operation;
-	newTree->nodeKind = nodeKind;
 	return newTree;
+}
+
+bool Operation::
+CopyFrom(const Operation &op)
+{
+    bool success;
+
+    success = true;
+
+	if( op.child1 && (child1 = op.child1->Copy()) == NULL){
+        success = false;
+    } else if( op.child2 && (child2 = op.child2->Copy()) == NULL ){
+        success = false;
+    } else if( op.child3 && (child3 = op.child3->Copy()) == NULL ){
+        success = false;
+	} else {
+        operation   = op.operation;
+        nodeKind    = op.nodeKind;
+        parentScope = op.parentScope;
+    }
+
+    if (success == false) {
+        CondorErrno = ERR_MEM_ALLOC_FAILED;
+		CondorErrMsg = "";
+    }
+
+    return success;
 }
 
 void Operation::

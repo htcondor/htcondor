@@ -101,6 +101,9 @@ protected:
 	virtual bool LogState( FILE * );
 
 private:
+    ClassAdCollectionClient(const ClassAdCollectionClient &collection)            { return;       }
+    ClassAdCollectionClient &operator=(const ClassAdCollectionClient &collection) { return *this; }
+
 		// helper functions
 	bool SendOpToServer( int, ClassAd *, int, ClassAd *& );
 	bool _GetViewNames( int, const ViewName &, vector<string>& );

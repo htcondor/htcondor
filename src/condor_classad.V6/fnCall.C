@@ -141,6 +141,21 @@ FunctionCall::
 	}
 }
 
+FunctionCall::
+FunctionCall(FunctionCall &functioncall)
+{
+    CopyFrom(functioncall);
+    return;
+}
+
+FunctionCall & FunctionCall::
+operator=(FunctionCall &functioncall)
+{
+    if (this != &functioncall) {
+        CopyFrom(functioncall);
+    }
+    return *this;
+}
 
 #ifdef USE_COVARIANT_RETURN_TYPES
 FunctionCall *FunctionCall::
@@ -150,25 +165,39 @@ ExprTree *FunctionCall::
 Copy( ) const
 {
 	FunctionCall *newTree = new FunctionCall;
-	ExprTree *newArg;
 
 	if (!newTree) return NULL;
 
-	newTree->functionName = functionName;
-	newTree->parentScope = parentScope;
-	newTree->function    = function;
+    if (!newTree->CopyFrom(*this)) {
+        delete newTree;
+        newTree = NULL;
+    }
+	return newTree;
+}
 
-	for( ArgumentList::const_iterator i=arguments.begin(); i!=arguments.end();
-			i++ ) {
+bool FunctionCall::
+CopyFrom(const FunctionCall &functioncall)
+{
+    bool     success;
+	ExprTree *newArg;
+
+    success      = true;
+    functionName = functioncall.functionName;
+	parentScope  = functioncall.parentScope;
+	function     = functioncall.function;
+
+	for (ArgumentList::const_iterator i = functioncall.arguments.begin(); 
+         i != functioncall.arguments.end();
+         i++ ) {
 		newArg = (*i)->Copy( );
 		if( newArg ) {
-			newTree->arguments.push_back( newArg );
+			arguments.push_back( newArg );
 		} else {
-			delete newTree;
-			return NULL;
+            success = false;
+            break;
 		}
 	}
-	return newTree;
+    return success;
 }
 
 void FunctionCall::RegisterFunction(

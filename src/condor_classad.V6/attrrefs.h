@@ -31,8 +31,15 @@ BEGIN_NAMESPACE( classad )
 class AttributeReference : public ExprTree 
 {
   	public:
+
+        /// Copy Constructor
+        AttributeReference(const AttributeReference &ref);
+
 		///  Destructor
     	~AttributeReference ();
+
+        /// Assignment operator
+        AttributeReference &operator=(const AttributeReference &ref);
 
 		/** Factory method to create attribute reference nodes.
 			@param expr The expression part of the reference (i.e., in
@@ -60,6 +67,8 @@ class AttributeReference : public ExprTree
 #else
 		virtual ExprTree* Copy( ) const;
 #endif
+
+        bool CopyFrom(const AttributeReference &ref);
 
 	protected:
 		/// Constructor

@@ -108,8 +108,14 @@ class Operation : public ExprTree
 			__LAST_OP__             = __MISC_END__
 		};
 
+        /// Copy Constructor
+        Operation(const Operation &op);
+
 		/// Destructor
 		~Operation ();
+
+        /// Assignment operator
+        Operation &operator=(const Operation &op);
 
 		/** Factory method to create an operation expression node
 			@param kind The kind of operation.
@@ -169,6 +175,8 @@ class Operation : public ExprTree
 #else
 		virtual ExprTree* Copy( ) const;
 #endif
+
+        bool CopyFrom(const Operation &op);
 
 	protected:
 		/// Constructor

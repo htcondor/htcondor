@@ -66,12 +66,17 @@ class Value
 		/// Values of number multiplication factors
 		static const double ScaleFactor[];
 
-
 		/// Constructor
 		Value();
 
+        /// Copy Constructor
+        Value(const Value &value);
+
 		/// Destructor
 		~Value();
+
+        /// Assignment operator
+        Value& operator=(const Value &value);
 
 		/** Discards the previous value and sets the value to UNDEFINED */
 		void Clear (void);

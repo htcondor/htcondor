@@ -43,6 +43,14 @@ ExprTree::
 {
 }
 
+ExprTree& ExprTree::operator=(const ExprTree &tree)
+{
+    if (this != &tree) {
+        parentScope = tree.parentScope;
+        nodeKind    = tree.nodeKind;
+    }
+    return *this;
+}
 
 bool ExprTree::
 Evaluate (EvalState &state, Value &val) const

@@ -64,9 +64,15 @@ class FunctionCall : public ExprTree
  public:
  	typedef	bool(*ClassAdFunc)(const char*, const ArgumentList&, EvalState&,
 							   Value&);
+
+    /// Copy Constructor
+    FunctionCall(FunctionCall &functioncall);
+
 	/// Destructor
 	~FunctionCall ();
 	
+    FunctionCall & operator=(FunctionCall &functioncall);
+
 	/** Factory method to make a function call expression
 	 * 	@param fnName	The name of the function to be called
 	 * 	@param argList	A vector representing the argument list
@@ -88,6 +94,8 @@ class FunctionCall : public ExprTree
 	virtual ExprTree* Copy( ) const;
 #endif
 	
+    bool CopyFrom(const FunctionCall &functioncall);
+
 	static void RegisterFunction(std::string &functionName, ClassAdFunc function);
 	static void RegisterFunctions(ClassAdFunctionMapping *functions);
 

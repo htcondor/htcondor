@@ -200,6 +200,10 @@ protected:
         int                     sfiled;
 		// override for client and server
 	virtual bool LogState( FILE * ) = 0;
+
+private:
+    ClassAdCollectionInterface(const ClassAdCollectionInterface &i)            { return;       }
+    ClassAdCollectionInterface &operator=(const ClassAdCollectionInterface &i) { return *this; }
 };
 
 

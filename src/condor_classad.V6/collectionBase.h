@@ -166,6 +166,9 @@ protected:
         int test_checkpoint;
 //#endif
 
+private:
+        ClassAdCollection(const ClassAdCollection &collection) : viewTree(NULL) { return;       }
+        ClassAdCollection &operator=(const ClassAdCollection &collection) { return *this; }
 };
 
 END_NAMESPACE

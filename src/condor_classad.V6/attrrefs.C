@@ -47,11 +47,26 @@ AttributeReference( ExprTree *tree, const string &attrname, bool absolut )
 	absolute = absolut;
 }
 
+AttributeReference::
+AttributeReference(const AttributeReference &ref)
+{
+    CopyFrom(ref);
+    return;
+}
 
 AttributeReference::
 ~AttributeReference()
 {
 	if( expr ) delete expr;
+}
+
+AttributeReference &AttributeReference::
+operator=(const AttributeReference &ref)
+{
+    if (this != &ref) {
+        CopyFrom(ref);
+    }
+    return *this;
 }
 
 
@@ -69,17 +84,30 @@ Copy( ) const
 		return NULL;
 	}
 
-	newTree->attributeStr = attributeStr;
-	if( expr && ( newTree->expr=expr->Copy( ) ) == NULL ) {
-		delete newTree;
-		return NULL;
-	}
-
-	newTree->nodeKind = nodeKind;
-	newTree->parentScope = parentScope;
-	newTree->absolute = absolute;
+    if (!newTree->CopyFrom(*this)) {
+        delete newTree;
+        newTree = NULL;
+    }
 
 	return newTree;
+}
+
+bool AttributeReference::
+CopyFrom(const AttributeReference &ref)
+{
+    bool success;
+
+    success = true;
+
+	attributeStr = ref.attributeStr;
+	if( ref.expr && ( expr=ref.expr->Copy( ) ) == NULL ) {
+        success = false;
+	} else {
+        nodeKind = ref.nodeKind;
+        parentScope = ref.parentScope;
+        absolute = ref.absolute;
+    }
+    return success;
 }
 
 

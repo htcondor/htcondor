@@ -42,6 +42,12 @@ ExprList(std::vector<ExprTree*>& list)
 	return;
 }
 
+ExprList::
+ExprList(const ExprList &other_list)
+{
+    CopyFrom(other_list);
+    return;
+}
 
 ExprList::
 ~ExprList()
@@ -49,6 +55,14 @@ ExprList::
 	Clear( );
 }
 
+ExprList &ExprList::
+operator=(const ExprList &other_list)
+{
+    if (this != &other_list) {
+        CopyFrom(other_list);
+    }
+    return *this;
+}
 
 void ExprList::
 Clear ()
@@ -68,25 +82,42 @@ ExprTree *ExprList::
 Copy( ) const
 {
 	ExprList *newList = new ExprList;
-	ExprTree *newTree;
 
-	if (newList == 0) return 0;
-	newList->parentScope = parentScope;
-
-
-	vector<ExprTree*>::const_iterator itr;
-	for( itr = exprList.begin( ); itr != exprList.end( ); itr++ ) {
-		if( !( newTree = (*itr)->Copy( ) ) ) {
-			delete newList;
-			CondorErrno = ERR_MEM_ALLOC_FAILED;
-			CondorErrMsg = "";
-			return((ExprList*)NULL);
-		}
-		newList->exprList.push_back( newTree );
-	}
+	if (newList != NULL) {
+        if (!newList->CopyFrom(*this)) {
+            delete newList;
+            newList = NULL;
+        }
+    }
 	return newList;
 }
 
+
+bool ExprList::
+CopyFrom(const ExprList &other_list)
+{
+    bool success;
+
+    success = true;
+
+	parentScope = other_list.parentScope;
+
+
+	vector<ExprTree*>::const_iterator itr;
+	for( itr = other_list.exprList.begin( ); itr != other_list.exprList.end( ); itr++ ) {
+        ExprTree *newTree;
+		if( !( newTree = (*itr)->Copy( ) ) ) {
+            success = false;
+			CondorErrno = ERR_MEM_ALLOC_FAILED;
+			CondorErrMsg = "";
+            break;
+		}
+		exprList.push_back( newTree );
+	}
+
+    return success;
+
+}
 
 void ExprList::
 _SetParentScope( const ClassAd *parent )

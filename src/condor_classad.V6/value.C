@@ -57,8 +57,24 @@ Value( )
 
 
 Value::
+Value(const Value &value)
+{
+    CopyFrom(value);
+    return;
+}
+
+Value::
 ~Value()
 {
+}
+
+Value& Value::
+operator=(const Value &value)
+{
+    if (this != &value) {
+        CopyFrom(value);
+    }
+    return *this;
 }
 
 
@@ -161,6 +177,7 @@ CopyFrom( const Value &val )
 		case ABSOLUTE_TIME_VALUE:
 		  	absTimeValueSecs = val.absTimeValueSecs;
 			return;
+
 		case RELATIVE_TIME_VALUE:
 			relTimeValueSecs = val.relTimeValueSecs;
 			return;

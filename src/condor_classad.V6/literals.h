@@ -37,6 +37,12 @@ class Literal : public ExprTree
 		/// Destructor
     	~Literal ();
 
+        /// Copy constructor
+        Literal(const Literal &literal);
+
+        /// Assignment operator
+        virtual Literal &operator=(const Literal &literal);
+
 		/** Create an absolute time literal.
 		 * 	@param now The time in UNIX epoch.  If a value of NULL is passed in
 		 * 	the system's current time will be used.
@@ -82,6 +88,9 @@ class Literal : public ExprTree
 #else
 		virtual ExprTree* Copy( ) const;
 #endif
+
+        void CopyFrom(const Literal &literal);
+
 		/** Factory method to construct a Literal
 		 * @param v The value to convert to a literal. (Cannot be a classad or
 		 * 			list value.)
