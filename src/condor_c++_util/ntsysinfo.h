@@ -54,6 +54,7 @@ class CSysinfo
 
 	protected:
 	static DWORD *memptr;
+	static DWORD memptr_size;
 	void Refresh (void);
 	void MakeAnsiString (WORD *unistring, char *ansistring);
 	DWORD* NextBlock (DWORD* oldblock);

@@ -43,6 +43,7 @@ CSysinfo::FPNtQuerySystemInformation CSysinfo::NtQuerySystemInformation = NULL;
 CSysinfo::FPNtOpenThread CSysinfo::NtOpenThread = NULL;
 CSysinfo::FPNtClose CSysinfo::NtClose = NULL;
 DWORD* CSysinfo::memptr = NULL;
+DWORD CSysinfo::memptr_size = 0x10000;
 
 CSysinfo::CSysinfo()
 {
@@ -71,7 +72,7 @@ CSysinfo::CSysinfo()
 		}
 
 		memptr = (DWORD*)VirtualAlloc ((void*)0x100000, 
-						0x10000, 
+						memptr_size, 
 						MEM_COMMIT,
 						PAGE_READWRITE); 
 	}
@@ -90,12 +91,18 @@ CSysinfo::~CSysinfo()
 int CSysinfo::GetPIDs (ExtArray<pid_t> & dest)
 {
 	int s=0;
+	pid_t curpid = 0;
 	DWORD *startblock = memptr;
 	Refresh();	
 	while (startblock)
 	{
-		dest[s++] = *(startblock + 17);
+		curpid = *(startblock + 17);
+		dest[s++] = curpid;
 		startblock = NextBlock (startblock);
+		if ( startblock == (DWORD*)1 ) {
+			startblock = memptr;
+			s = 0;
+		}
 	}
 	return (s);
 }
@@ -223,18 +230,63 @@ void CSysinfo::CloseThread (HANDLE hthread)
 
 //////////////////////// Helper Funcs ////////////////////////////
 
-__inline DWORD* CSysinfo::NextBlock (DWORD* oldblock)
+DWORD* CSysinfo::NextBlock (DWORD* oldblock)
 {
 	DWORD offset = *oldblock;
-	if (offset)
-		return ((DWORD*)((DWORD)oldblock + offset));
-	else
-		return NULL;
+	DWORD *p_nextblock;
+	DWORD next_offset;
+	bool need_resize = false;
+	DWORD offset_into_buf;
+	static DWORD largest_offset = 3000;
+
+	if ( offset > largest_offset )
+		largest_offset = offset;
+
+	p_nextblock = (DWORD*)((DWORD)oldblock + offset);
+	offset_into_buf = (DWORD)p_nextblock - (DWORD)memptr + 1;
+
+	if (!offset) {
+		if ( (offset_into_buf + largest_offset) > memptr_size)
+			need_resize = true;
+		else
+			return NULL;
+	} else {
+		// Make certain the entire next block fits into our buffer.
+		// First make certain all 4 bytes of the offset are in our buffer.
+		if ( (offset_into_buf + sizeof(next_offset)) > memptr_size)
+		{
+			need_resize = true;
+		} else {
+			next_offset = *p_nextblock;
+
+			if ( next_offset > largest_offset)
+				largest_offset = next_offset;
+
+			if ( (offset_into_buf + next_offset) > memptr_size) {
+				need_resize = true;
+			}	
+		}
+	}
+
+	if ( need_resize ) {
+		VirtualFree (memptr, 0, MEM_RELEASE);
+		memptr_size += 0x10000;		// grow our buffer another 64kbytes
+		memptr = (DWORD*)VirtualAlloc ((void*)0x100000, 
+						memptr_size, 
+						MEM_COMMIT,
+						PAGE_READWRITE); 
+		Refresh();
+		// return special return value which tells our caller
+		// to start over because we had to make our buffer larger.
+		return ( (DWORD*)1 );
+	}
+
+	return (p_nextblock);
 }
 
 __inline void CSysinfo::Refresh (void)
 {
-	NtQuerySystemInformation (5, memptr, 0x10000 ,0);	
+	NtQuerySystemInformation (5, memptr, memptr_size ,0);	
 }
 
 __inline void CSysinfo::MakeAnsiString (WORD *unistring, char *ansistring)
@@ -254,6 +306,8 @@ __inline DWORD* CSysinfo::FindBlock (DWORD pid)
 		if (*(startblock+17) == pid)
 			return startblock;
 		startblock = NextBlock (startblock);
+		if ( startblock == (DWORD*)1 )
+			startblock = memptr;
 	}
 	return NULL;
 }
