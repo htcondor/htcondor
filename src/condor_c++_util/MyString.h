@@ -49,6 +49,7 @@ public:
   MyString(const char* S) {
     Data=NULL;
     Len=0;
+	capacity = 0; 
     if (!S) return;
     Len=strlen(S);	
     if (Len==0) return;
@@ -130,7 +131,8 @@ public:
     if( !buf ) return false;
     buf[0] = '\0';
     if( Data ) {
-      strncpy( buf, Data, sz ); 
+      strncpy( buf, Data, sz); 
+	  Data[sz] = 0; // Make sure it's NULL terminated. strncpy won't make sure of it.
       delete [] Data;
     }
     Len = strlen( buf );
@@ -167,7 +169,7 @@ public:
     if( s_len + Len > capacity ) {
        reserve( Len + s_len );
     }
-    strncat( Data, s, capacity-Len );
+    strcat( Data, s );
 	Len += s_len;
     return *this;
   }
