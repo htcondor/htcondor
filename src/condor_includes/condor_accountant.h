@@ -26,15 +26,15 @@
 #include <iostream.h>
 
 #include "condor_classad.h"
+// #include "classad_log.h"
 
-#include "HashTable.h"
 #include "MyString.h"
-#include "Set.h"
-#include "TimeClass.h"
 
 // this is the required minimum separation between two priorities for them
 // to be considered distinct values
-static const double PriorityDelta = 0.5;
+static const float PriorityDelta = 0.5;
+
+class ClassAdLog;
 
 class Accountant {
 
@@ -44,13 +44,19 @@ public:
   // User Functions
   //--------------------------------------------------------
 
-  void Initialize();  // Initialize some parameters
+  Accountant();
+  ~Accountant();
+
+  void Initialize();  // Configuration
 
   int GetResourcesUsed(const MyString& CustomerName); // get # of used resources
-  double GetPriority(const MyString& CustomerName); // get priority for a customer
-  void SetPriority(const MyString& CustomerName, double Priority); // set priority for a customer
+  float GetPriority(const MyString& CustomerName); // get priority for a customer
+  void SetPriority(const MyString& CustomerName, float Priority); // set priority for a customer
 
-  int MatchExist(const MyString& CustomerName, const MyString& ResourceName); // check if a mtch exists
+  void SetPriorityFactor(const MyString& CustomerName, float PriorityFactor);
+  void ResetAccumulatedUsage(const MyString& CustomerName);
+  void ResetAllUsage();
+
   void AddMatch(const MyString& CustomerName, ClassAd* ResourceAd); // Add new match
   void RemoveMatch(const MyString& ResourceName); // remove a match
 
@@ -58,70 +64,54 @@ public:
 
   void CheckMatches(ClassAdList& ResourceList);  // Remove matches that are not claimed
   AttrList* ReportState();
-
-  //--------------------------------------------------------
-  // Misc public functions
-  //--------------------------------------------------------
-
-  static int HashFunc(const MyString& Key, int TableSize) {
-    int count=0;
-    int length=Key.Length();
-    for(int i=0; i<length; i++) count+=Key[i];
-    return (count % TableSize);
-  }
-  
-  Accountant(int MaxCustomers=1024, int MaxResources=1024);
                                                 
+  void DisplayLog();
+  void DisplayMatches();
+
 private:
 
   //--------------------------------------------------------
   // Private methods Methods
   //--------------------------------------------------------
   
-  void AddMatch(const MyString& CustomerName, const MyString& ResourceName, const Time& T); 
-  void RemoveMatch(const MyString& ResourceName, const Time& T);
-  void UpdatePriorities(const Time& T);
-
-  void LoadState(); // Save to file
-  void SaveState(); // Read from file
+  void AddMatch(const MyString& CustomerName, const MyString& ResourceName, int T);
+  void RemoveMatch(const MyString& ResourceName, int T);
 
   //--------------------------------------------------------
   // Configuration variables
   //--------------------------------------------------------
 
-  double MinPriority;        // Minimum priority (if no resources used)
-  double NiceUserPriorityFactor;
-  double HalfLifePeriod;     // The time in sec in which the priority is halved by aging
+  float MinPriority;        // Minimum priority (if no resources used)
+  float NiceUserPriorityFactor;
+  float HalfLifePeriod;     // The time in sec in which the priority is halved by aging
   MyString LogFileName;      // Name of Log file
-
-  //--------------------------------------------------------
-  // Internal data types
-  //--------------------------------------------------------
-
-  struct CustomerRecord {
-    double Priority;
-    double UnchargedTime;
-    Set<MyString> ResourceNames;
-    CustomerRecord() { Priority=UnchargedTime=0; }
-  };
-
-  struct ResourceRecord {
-    MyString CustomerName;
-    ClassAd* Ad;
-    Time StartTime;
-    ResourceRecord() { Ad=NULL; }
-    ~ResourceRecord() { if (Ad) delete Ad; }
-  };
 
   //--------------------------------------------------------
   // Data members
   //--------------------------------------------------------
 
-  HashTable<MyString, CustomerRecord*> Customers;
-  HashTable<MyString, ResourceRecord*> Resources;
+  ClassAdLog* AcctLog;
+  int LastUpdateTime;
 
-  Time LastUpdateTime;
-  int LogEnabled;
+  //--------------------------------------------------------
+  // Static values
+  //--------------------------------------------------------
+
+  static MyString AcctRecord;
+  static MyString CustomerRecord;
+  static MyString ResourceRecord;
+
+  static MyString PriorityAttr;
+  static MyString UnchargedTimeAttr;
+  static MyString ResourcesUsedAttr;
+  static MyString AccumulatedUsageAttr;
+  static MyString BeginUsageTimeAttr;
+  static MyString PriorityFactorAttr;
+
+  static MyString LastUpdateTimeAttr;
+
+  static MyString RemoteUserAttr;
+  static MyString StartTimeAttr;
 
   //--------------------------------------------------------
   // Utility functions
@@ -131,8 +121,19 @@ private:
   static int IsClaimed(ClassAd* ResourceAd, MyString& CustomerName);
   static int CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& CustomerName);
   static ClassAd* FindResourceAd(const MyString& ResourceName, ClassAdList& ResourceList);
-  void AppendLogEntry(const MyString& Action, const MyString& CustomerName, const MyString& ResourceName, double d);
 
+  ClassAd* GetClassAd(const MyString& Key);
+  bool DeleteClassAd(const MyString& Key);
+
+  void SetAttributeInt(const MyString& Key, const MyString& AttrName, int AttrValue);
+  void SetAttributeFloat(const MyString& Key, const MyString& AttrName, float AttrValue);
+  void SetAttributeString(const MyString& Key, const MyString& AttrName, const MyString& AttrValue);
+
+  bool GetAttributeInt(const MyString& Key, const MyString& AttrName, int& AttrValue);
+  bool GetAttributeFloat(const MyString& Key, const MyString& AttrName, float& AttrValue);
+  bool GetAttributeString(const MyString& Key, const MyString& AttrName, MyString& AttrValue);
+
+  bool LoadState(const MyString& OldLogFileName);
 };
 
 #endif
