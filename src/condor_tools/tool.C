@@ -38,7 +38,6 @@ extern "C" int strincmp( char*, char*, int );
 
 void do_command( char *name );
 void version();
-int	is_valid_sinful( char *sinful );
 
 enum daemonType {MASTER, SCHEDD, STARTD};
 
@@ -360,18 +359,6 @@ version()
 	printf( "%s\n", CondorVersion() );
 	exit(0);
 }
-
-int
-is_valid_sinful( char *sinful )
-{
-	char* tmp;
-	if( !sinful ) return FALSE;
-	if( !(sinful[0] == '<') ) return FALSE;
-	if( !(tmp = strchr(sinful, ':')) ) return FALSE;
-	if( !(tmp = strrchr(sinful, '>')) ) return FALSE;
-	return TRUE;
-}
-
 
 extern "C" int SetSyscalls(){}
 
