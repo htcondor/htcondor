@@ -42,13 +42,17 @@ JVM, your local installation, and a variety of other factors.
 We can't offer you any specific advice on these matters, but
 we can outline a general strategy for solving these problems.
 
-To begin debugging the problem, examine the
-\Expr{STARTD\_LOG} on that machine.  For example:
+To begin debugging the problem, set the startd to full
+debugging mode, restart it, and examine the
+\Expr{STARTD\_LOG}.  For example:
 
 \begin{verbatim}
-% condor_config_val STARTD_LOG
-/var/home/condor/log/StartLog
-% more /var/home/condor/log/StartLog
+% vi /path/to/condor_config
+[ set STARTD_DEBUG = D_FULLDEBUG ]
+
+% condor_restart -startd
+
+% more /path/to/StartLog
 \end{verbatim}
 
 This log will show the command used to start the JVM, and
@@ -63,13 +67,13 @@ path to the standard libraries, and restart the \Condor{startd}.
 For example, you might have to change this:
 
 \begin{verbatim}
-JAVA_CLASSPATH_DEFAULT = $(RELEASE_DIR)/lib .
+JAVA_CLASSPATH_DEFAULT = $(LIB) $(LIB)/scimark2lib.jar .
 \end{verbatim}
 
 To this:
 
 \begin{verbatim}
-JAVA_CLASSPATH_DEFAULT = /usr/java/lib/classes.zip $(RELEASE_DIR)/lib .
+JAVA_CLASSPATH_DEFAULT = /usr/java/lib/classes.zip $(LIB) $(LIB)/scimark2.lib.jar .
 \end{verbatim}
 
 Another common problem is that the JVM requires some extensive 
