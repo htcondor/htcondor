@@ -8,14 +8,7 @@
 #include "condor_fix_fcntl.h"
 #include "image.h"
 
-#if defined(SOLARIS2)
-#include <sys/systeminfo.h>
-#define gethostname(buf,len) sysinfo( SI_HOSTNAME, buf, len)
-#endif
-
-#if !defined(HPUX9) && !defined(SOLARIS2)	// HPUX-9 has this in <unistd.h>
-extern "C" int gethostname( char *, int );
-#endif
+extern "C" int machine_name( char *, int );
 
 int
 main( int argc, char *argv[] )
@@ -28,7 +21,7 @@ main( int argc, char *argv[] )
 		restart();
 	}
 	for( i=0; i<10; i++ ) {
-		gethostname( buf, sizeof(buf) );
+		machine_name( buf, sizeof(buf) );
 		printf( "\nExecuting on \"%s\"\n", buf );
 		printf( "i = %d\n", i );
 		ckpt();

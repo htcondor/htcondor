@@ -18,7 +18,7 @@ main( int argc, char *argv[] )
 	int		scm;
 	int		i;
 	int		fd1, fd2, fd3, fd4, fd5, fd6;
-	char	buf[20];
+	char	my_name[1024];
 
 	if( argc > 1 ) {
 		restart();
@@ -59,6 +59,8 @@ main( int argc, char *argv[] )
 
 	printf( "Reading from %d\n", fd3 );
 	for( i=0; i<10; i++ ) {
+		machine_name( my_name, sizeof(my_name) );
+		printf( "\nExecuting on \"%s\"\n", my_name );
 		cat_one_line( fd3 );
 		ckpt();
 		DumpOpenFds();

@@ -44,12 +44,12 @@ syscall_stubs.c: stubs.tmpl stub_gen
 	stub_gen < stubs.tmpl > syscall_stubs.c
 
 program_target(stub_gen,y.tab.o lex.yy.o,$(NULL),no_realeas)
-c_plus_target(file_test,file_test.o $(PACKAGE),$(NULL),no_release)
+c_plus_target(file_test,file_test.o machine_name.o $(PACKAGE),$(NULL),no_release)
 program_target(noenv,noenv.o,$(NULL),no_release)
 program_target(my_printenv,my_printenv.o,$(NULL),no_release)
 c_plus_target(test,driver.o $(PACKAGE),$(NULL),no_release)
 c_plus_target(test2,driver2.o $(PACKAGE),$(NULL),no_release)
-c_plus_target(test3,driver3.o $(PACKAGE),$(NULL),no_release)
+c_plus_target(test3,driver3.o machine_name.o $(PACKAGE),$(NULL),no_release)
 c_plus_target(test4,driver4.o $(PACKAGE),$(NULL),no_release)
 c_plus_target(display,display.o $(PACKAGE),$(NULL),no_release)
 c_plus_target(gen_test,gen_test.o $(PACKAGE),$(NULL),no_release)
