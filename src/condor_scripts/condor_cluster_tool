@@ -40,11 +40,14 @@ use FileHandle;
 
 ### Global variables (not user-servicable)
 
-         $SBIN = "$RELEASE_DIR/sbin";
-          $BIN = "$RELEASE_DIR/bin";
-   $CONDOR_OFF = "$SBIN/condor_off -pool $CONDOR_CM -fast";
-    $CONDOR_ON = "$SBIN/condor_on -pool $CONDOR_CM";
-$CONDOR_STATUS = "$BIN/condor_status -pool $CONDOR_CM";
+           $SBIN = "$RELEASE_DIR/sbin";
+            $BIN = "$RELEASE_DIR/bin";
+     $CONDOR_OFF = "$SBIN/condor_off -pool $CONDOR_CM -fast";
+      $CONDOR_ON = "$SBIN/condor_on -pool $CONDOR_CM";
+     $CONFIG_OFF = "$BIN/condor_config_val -pool $CONDOR_CM -set 'start_daemons = false'";
+      $CONFIG_ON = "$BIN/condor_config_val -pool $CONDOR_CM -unset start_daemons";
+  $CONDOR_STATUS = "$BIN/condor_status -pool $CONDOR_CM";
+$CONDOR_RECONFIG = "$SBIN/condor_reconfig -pool $CONDOR_CM";
 
 
 ### The guts
@@ -156,6 +159,8 @@ sub start_condor
 	}
 	print LOG timestamp() . " $user    (returned $host)\n";
 	system( "$CONDOR_ON $host" );
+	system( "$CONFIG_ON -name $host > /dev/null" );
+	system( "$CONDOR_RECONFIG $host > /dev/null" );
     }
 }
 
@@ -241,6 +246,8 @@ sub condor_up()
 sub kill_condor {
     my( $host ) = @_;
     `$CONDOR_OFF $host`;
+    system( "$CONFIG_OFF -name $host > /dev/null" );
+    system( "$CONDOR_RECONFIG $host > /dev/null" );
 }
 
 
