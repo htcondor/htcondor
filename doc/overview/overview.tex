@@ -323,10 +323,19 @@ Condor's other services are still available for these commercial packages.
 \index{Condor!availability}
 Condor is currently available as a free download from the Internet via the World Wide Web at  
 URL \Url{http://www.cs.wisc.edu/condor/downloads}.
-Binary distributions of Condor version 6.x are available for the following UNIX platforms 
+Binary distributions of Condor version 6.x are available for the platforms 
 detailed in Table~\ref{supported-platforms}.  A platform is an 
-architecture/operating system combination.  Condor support for Windows NT is 
-expected in an upcoming release.
+architecture/operating system combination.  
+Condor binaries are available most major versions of UNIX, as well as
+Windows NT.  
+
+In the table, \Term{clipped} means that Condor does not support
+checkpointing or remote system calls on the given platform. 
+This means that \Term{standard} jobs are not supported, only
+\Term{vanilla} jobs.
+See section~\ref{sec:Choosing-Universe} on
+page~\pageref{sec:Choosing-Universe} for more details on job universes
+within Condor and their abilities and limitations.
 
 The Condor source code is no longer available for public download from the Internet.  If you 
 desire the Condor source code, please contact the Condor Team in order to discuss it further 
@@ -337,11 +346,15 @@ desire the Condor source code, please contact the Condor Team in order to discus
 \begin{tabular}{|ll|} \hline
 \emph{Architecture} & \emph{Operating System} \\ \hline \hline
 Hewlett Packard PA-RISC (both PA7000 and PA8000 series) & HPUX 10.20 \\ \hline
-Sun SPARC Sun4{m,c}, Sun UltraSPARC & Solaris 2.5.x, 2.6 \\ \hline
-Silicon Graphics MIPS (R4400, R4600, R8000, R10000) & IRIX 6.2, 6.3, 6.4 \\ \hline
-Digital ALPHA & OSF/1 (Digital Unix) 4.x \\ \hline
-Intel x86, Pentium series & Linux 2.x \\
- & Solaris 2.5.x, 2.6 \\ \hline
+Sun SPARC Sun4{m,c}, Sun UltraSPARC & Solaris 2.5.x, 2.6 \\
+ & Solaris 2.7 (``clipped'') \\ \hline
+Silicon Graphics MIPS (R4400, R4600, R8000, R10000) & IRIX 6.2, 6.3, 6.4 \\ 
+ & IRIX 6.5 (``clipped'') \\ \hline
+Intel x86, Pentium series & Linux 2.0.x, 2.2.x, glibc20, glibc21, libc5 \\
+ & Solaris 2.5.x, 2.6 \\ 
+ & Windows NT 4.0 (``clipped'') \\ \hline
+Digital ALPHA & OSF/1 (Digital Unix) 4.x \\
+ & Linux 2.0.x, Linux 2.2.x (``clipped'') \\ \hline
 \end{tabular}
 \caption{\label{supported-platforms}Condor \VersionNotice\ supported platforms}
 \end{table}
