@@ -69,11 +69,14 @@ InitializeConnection( char *owner, char *tmp_file, int auth=0 )
 		qmgmt_sock->code( shouldAuth ); //server decides if we should auth
 		qmgmt_sock->end_of_message();
 		if ( shouldAuth ) {
-//???put explanation of why user is getting prompted for password???
+			fprintf(stderr,"Configured for authentication,\n" );
 			int time = qmgmt_sock->timeout(60 * 5); //give time to type passwd
 			assert( qmgmt_sock->authenticate_user() );
 			qmgmt_sock->timeout(time);
 			assert( qmgmt_sock->authenticate() );
+		}
+		else {
+			fprintf( stderr, "Submits NOT AUTHENTICATED, server not prepared\n" );
 		}
 		qmgmt_sock->encode();
 	}
