@@ -80,104 +80,6 @@ int status;
 	(void) syscall( SYS_exit, status );
 }
 
-/*
-  The Open Files Table module needs to keep the current working
-  directory in memory so that it can remember pathnames of files that
-  are opened, even if they are opened by simple file names.  We first
-  try to do the indicated change of directory, and then if that works,
-  we record the new current working directory.
-*/
-int
-chdir( const char *path )
-{
-	int rval, status;
-	char	tbuf[ _POSIX_PATH_MAX ];
-
-		/* Try the system call */
-	if( LocalSysCalls() ) {
-		rval = syscall( SYS_chdir, path );
-	} else {
-		rval = REMOTE_syscall( CONDOR_chdir, path );
-	}
-
-		/* If it fails we can stop here */
-	if( rval < 0 ) {
-		return rval;
-	}
-
-	if( MappingFileDescriptors ) {
-		store_working_directory();
-	}
-
-	return rval;
-}
-
-#if defined(SYS_fchdir)
-int
-fchdir( int fd )
-{
-	int rval, real_fd;
-
-	if( MappingFileDescriptors() ) {
-		if( (real_fd = MapFd(fd)) < 0 ) {
-			return -1;
-		}
-	}
-
-		/* Try the system call */
-	if( LocalSysCalls() ) {
-		rval = syscall( SYS_fchdir, real_fd );
-	} else {
-		rval = REMOTE_syscall( CONDOR_fchdir, real_fd );
-	}
-
-		/* If it fails we can stop here */
-	if( rval < 0 ) {
-		return rval;
-	}
-
-	if( MappingFileDescriptors ) {
-		store_working_directory();
-	}
-
-	return rval;
-}
-#endif
-
-/*
-Keep Condor's version of the CWD up to date
-*/
-store_working_directory()
-{
-	char	tbuf[ _POSIX_PATH_MAX ];
-	char	*status;
-
-#if defined(HPUX)
-	/* avoid infinite recursion in HPUX9, where getwd calls chdir, which
-	   calls store_working_directory, which calls getwd...  - Jim B. */
-	static int inside_call = 0;
-
-	if (inside_call)
-		return;
-	inside_call = 1;
-#endif
-
-		/* Get the information */
-	status = getcwd( tbuf, sizeof(tbuf) );
-
-		/* This routine returns 0 on error! */
-	if( !status ) {
-		dprintf( D_ALWAYS, "getcwd failed in store_working_directory()!\n" );
-		Suicide();
-	}
-
-		/* Ok - everything worked */
-	Set_CWD( tbuf );
-
-#if defined(HPUX)
-	inside_call = 0;
-#endif
-}
 
 /*
   getrusage()
@@ -281,6 +183,9 @@ getrusage( int who, struct rusage *rusage )
   therefore provide a "quick and dirty" substitute here.  This may
   not always be correct, but it will get you by in most cases.
 */
+
+/* Some support for ioctl has been built in file_state.C ... */
+
 int
 isatty( int filedes )
 {
@@ -302,10 +207,13 @@ isatty( int filedes )
 	}
 }
 
+
 /*
-  We don't handle readv directly in remote system calls.  Instead we
-  break the readv up into a series of individual reads.
+All reads must pass through the buffer when mapped,
+so all calls to readv/writev must be converted into reads/writes.
+The only exception is local/unmapped.
 */
+
 #if defined(HPUX9) || defined(LINUX) 
 ssize_t
 readv( int fd, const struct iovec *iov, size_t iovcnt )
@@ -318,34 +226,22 @@ readv( int fd, struct iovec *iov, int iovcnt )
 #endif
 {
 	int rval;
-	int user_fd;
 
-	if( (user_fd=MapFd(fd)) < 0 ) {
-		return -1;
-	}
-
-	if( LocalSysCalls() ) {
-		rval = syscall( SYS_readv, user_fd, iov, iovcnt );
+	if( LocalSysCalls() && !MappingFileDescriptors() ) {
+		rval = syscall( SYS_readv, fd, iov, iovcnt );
 	} else {
-		rval = fake_readv( user_fd, iov, iovcnt );
+		rval = fake_readv( fd, iov, iovcnt );
 	}
 
 	return rval;
 }
 
-/*
-  Handle a call to readv which must be done remotely, (not NFS).  Note
-  the user file descriptor has already been mapped by the calling routine,
-  and we already know this is a remote system call.  We handle the call
-  by breaking it up into a series of remote reads.
-*/
-static int
-fake_readv( int fd, const struct iovec *iov, int iovcnt )
+static int fake_readv( int fd, const struct iovec *iov, int iovcnt )
 {
 	register int i, rval = 0, cc;
 
 	for( i = 0; i < iovcnt; i++ ) {
-		cc = REMOTE_syscall( CONDOR_read, fd, iov->iov_base, iov->iov_len );
+		cc = read( fd, iov->iov_base, iov->iov_len );
 		if( cc < 0 ) {
 			return cc;
 		}
@@ -361,36 +257,8 @@ fake_readv( int fd, const struct iovec *iov, int iovcnt )
 	return rval;
 }
 
-#if 0
-/*Fake local readv for Linux						*/
-static int
-linux_fake_readv( int fd, const struct iovec *iov, int iovcnt )
-{
-	register int i, rval = 0, cc;
+/* See comment above about readv */
 
-	for( i = 0; i < iovcnt; i++ ) {
-		cc = syscall( SYS_read, fd, iov->iov_base, iov->iov_len );
-		if( cc < 0 ) {
-			return cc;
-		}
-
-		rval += cc;
-		if( cc != iov->iov_len ) {
-			return rval;
-		}
-
-		iov++;
-	}
-
-	return rval;
-}
-#endif
-
-
-/*
-  We don't handle writev directly in remote system calls.  Instead we
-  break the writev up into a series of individual writes.
-*/
 #if defined(HPUX9) || defined(LINUX) 
 ssize_t
 writev( int fd, const struct iovec *iov, size_t iovcnt )
@@ -403,34 +271,21 @@ writev( int fd, struct iovec *iov, int iovcnt )
 #endif
 {
 	int rval;
-	int user_fd;
 
-	if( (user_fd=MapFd(fd)) < 0 ) {
-		return -1;
-	}
-
-	if( LocalSysCalls() ) {
-		rval = syscall( SYS_writev, user_fd, iov, iovcnt );
+	if( LocalSysCalls() && !MappingFileDescriptors() ) {
+		rval = syscall( SYS_writev, fd, iov, iovcnt );
 	} else {
-		rval = fake_writev( user_fd, iov, iovcnt );
+		rval = fake_writev( fd, iov, iovcnt );
 	}
 
 	return rval;
 }
-
-/*
-  Handle a call to writev which must be done remotely, (not NFS).  Note
-  the user file descriptor has already been mapped by the calling routine,
-  and we already know this is a remote system call.  We handle the call
-  by breaking it up into a series of remote writes.
-*/
-static int
-fake_writev( int fd, const struct iovec *iov, int iovcnt )
+static int fake_writev( int fd, const struct iovec *iov, int iovcnt )
 {
 	register int i, rval = 0, cc;
 
 	for( i = 0; i < iovcnt; i++ ) {
-		cc = REMOTE_syscall( CONDOR_write, fd, iov->iov_base, iov->iov_len );
+		cc = write( fd, iov->iov_base, iov->iov_len );
 		if( cc < 0 ) {
 			return cc;
 		}
@@ -441,131 +296,6 @@ fake_writev( int fd, const struct iovec *iov, int iovcnt )
 		}
 
 		iov++;
-	}
-
-	return rval;
-}
-
-#if 0
-/*Fake local writev for Linux						*/
-static int
-linux_fake_writev( int fd, const struct iovec *iov, int iovcnt )
-{
-	register int i, rval = 0, cc;
-
-	for( i = 0; i < iovcnt; i++ ) {
-		cc = syscall( SYS_write, fd, iov->iov_base, iov->iov_len );
-		if( cc < 0 ) {
-			return cc;
-		}
-
-		rval += cc;
-		if( cc != iov->iov_len ) {
-			return rval;
-		}
-
-		iov++;
-	}
-
-	return rval;
-}
-#endif
-
-
-#if defined(HPUX)
-#	include <sys/mib.h>
-#	include <sys/ioctl.h>
-#endif
-
-#if defined(Solaris) || defined(LINUX) || defined(OSF1) || defined(IRIX53) || defined(HPUX10)
-/* int
-ioctl( int fd, int request, ...) */
-#else
-int
-ioctl( int fd, int request, caddr_t arg )
-{
-#if defined(HPUX9) && 0  /* leave this out cuz it breaks Fortran on HPUX9 */
-	static int first_time = 1;
-	static int MaxOpenFiles;
-	static struct nmparms *parmset;
-	if (first_time) {
-		first_time = 0;
-		MaxOpenFiles = sysconf(_SC_OPEN_MAX);
-		parmset = (struct nmparms *)calloc(sizeof(struct nmparms),
-										   MaxOpenFiles);
-	}
-	if (request == 0x40206d02) {
-		struct nmparms *ptr = (struct nmparms *)arg;
-		dprintf( D_ALWAYS, "got NMIOSET request 0x%x on fd %d\n",
-				request, fd );
-		dprintf( D_ALWAYS, "objid = %d, buffer = 0x%x, len = 0x%x\n",
-				ptr->objid, ptr->buffer, ptr->len );
-		parmset[fd].objid = ptr->objid;
-		parmset[fd].buffer = ptr->buffer;
-		parmset[fd].len = ptr->len;
-		return 0;
-	}
-	else if (request == 0x80086d01) {
-		struct nmparms *ptr = (struct nmparms *)arg;
-		dprintf( D_ALWAYS, "got NMIOGET request 0x%x on fd %d\n",
-				request, fd);
-		ptr->objid = parmset[fd].objid;
-		ptr->buffer = parmset[fd].buffer;
-		ptr->len = parmset[fd].len;
-		dprintf( D_ALWAYS, "objid = %d, buffer = 0x%x, len = 0x%x\n",
-				ptr->objid, ptr->buffer, ptr->len );
-		return 0;
-	}		
-#endif   /* HPUX9 */
-	switch( request ) {
-#if defined(SUNOS41)
-	  case MTIOCGET:
-		fprintf( stderr, "Got mag tape request - reply -1\n" );
-		return -1;
-	  case TCGETA:
-		fprintf( stderr, "Got terminal IO request - reply -1\n" );
-		return -1;
-#endif
-	  default:
-		fprintf( stderr, "Got (unknown) ioctl 0x%x on fd %d - reply -1\n",
-															request, fd );
-		return -1;
-	}
-}
-#endif
-
-int
-#if defined(LINUX)
-ftruncate( int fd, size_t length )
-#else
-ftruncate( int fd, off_t length )
-#endif
-{
-	int	rval;
-	int	user_fd;
-	int use_local_access = FALSE;
-
-	/* The below length check is a hack to patch an f77 problem on
-	   OSF1.  - Jim B. */
-
-	if (length < 0)
-		return 0;
-
-	if( (user_fd=MapFd(fd)) < 0 ) {
-		return (int)-1;
-	}
-	if( LocalAccess(fd) ) {
-		use_local_access = TRUE;
-	}
-
-	if( LocalSysCalls() || use_local_access ) {
-#if defined( SYS_ftruncate )
-		rval = syscall( SYS_ftruncate, user_fd, length );
-#else 
-		rval = FTRUNCATE( user_fd, length );
-#endif
-	} else {
-		rval = REMOTE_syscall( CONDOR_ftruncate, user_fd, length );
 	}
 
 	return rval;
@@ -583,11 +313,7 @@ ftruncate( int fd, off_t length )
 			return -1;
 		}
 
-		if( (user_fd=MapFd(fd)) < 0 ) {
-			return -1;
-		}
-
-		if( LocalSysCalls() ) {
+		if( LocalSysCalls() && !MappingFileDescriptors() ) {
 			rval = syscall( SYS_kwritev, user_fd, iov, iovcnt );
 		} else {
 			rval = fake_writev( user_fd, iov, iovcnt );
@@ -609,11 +335,7 @@ ftruncate( int fd, off_t length )
 			return -1;
 		}
 
-		if( (user_fd=MapFd(fd)) < 0 ) {
-			return -1;
-		}
-
-		if( LocalSysCalls() ) {
+		if( LocalSysCalls() && !MappingFileDescriptors() ) {
 			rval = syscall( SYS_kreadv, user_fd, iov, iovcnt );
 		} else {
 			rval = fake_readv( user_fd, iov, iovcnt );
