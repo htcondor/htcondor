@@ -337,7 +337,7 @@ sub parse_command_line() {
 	}
 	chomp( @CONTACTS );
 
-	if ( $#ARGV == 0 ) {
+	if ( $#ARGV == -1 ) {
 	    print "No resource specified\n";
 	    exit( -1 );
 	}
