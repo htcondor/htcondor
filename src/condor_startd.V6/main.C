@@ -96,16 +96,17 @@ main_init( int, char* [] )
 
 	resmgr = new ResMgr;
 
-	if( (tmp = param("RunBenchmarks")) &&
-		(*tmp != 'F' && *tmp != 'f') ) {
+	if( (tmp = param("RunBenchmarks")) ) {
+		if( (*tmp != 'F' && *tmp != 'f') ) {
 			// There's an expression defined to have us periodically
 			// run benchmarks, so run them once here at the start.
 			// Added check so if people want no benchmarks at all,
 			// they just comment RunBenchmarks out of their config
 			// file, or set it to "False". -Derek Wright 10/20/98
-		dprintf( D_ALWAYS, "About to run initial benchmarks.\n" );
-		resmgr->walk( &Resource::force_benchmark );
-		dprintf( D_ALWAYS, "Completed initial benchmarks.\n" );
+			dprintf( D_ALWAYS, "About to run initial benchmarks.\n" );
+			resmgr->walk( &Resource::force_benchmark );
+			dprintf( D_ALWAYS, "Completed initial benchmarks.\n" );
+		}
 		free( tmp );
 	}
 
