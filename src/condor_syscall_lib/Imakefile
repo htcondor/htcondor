@@ -16,9 +16,14 @@ STUB_CLUMPS_FLAG = -DUSE_STUB_CLUMPS
 STUB_CLUMP_SIZE = -s 33
 #endif
 
+/* We need to use dlopen() and dlsym() to extract on IRIX */
+#if IS_SGI_IRIX53
+DL_EXTRACT = -DDL_EXTRACT
+#endif
+
 OS = OperatingSystem
-CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(STUB_CLUMPS_FLAG)
+CFLAGS = $(STD_C_FLAGS) -DNEW_PROC $(DL_EXTRACT)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(STUB_CLUMPS_FLAG) $(DL_EXTRACT)
 
 #if DOES_SAVE_SIGSTATE
 SAVE_SIGSTATE = -DSAVE_SIGSTATE
@@ -38,46 +43,41 @@ IOS_STUBS = ios_stub.o ios_msg.o
 
 #if DOES_CHECKPOINTING  /* ========= DOES CHECKPOINTING ============ */
 
-#	if IS_SPARC_SUNOS41
-EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
-		  MMAP.o PIPE.o GETLOGIN.o
-#	elif IS_R6000_AIX32
-/* Don't extract anything */
-#	elif IS_HPPAR_HPUX9
-EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o  \
-		  MMAP.o PIPE.o GETWD.o GETLOGIN.o
+#	if IS_HPPAR_HPUX9
+EXTRACT = FORK.o GETEUID.o GETPPID.o GETEGID.o  \
+		  MMAP.o PIPE.o GETCWD.o GETLOGIN.o
 #	elif IS_GLIBC && IS_I386_LINUX
-EXTRACT = GETWD.o MMAP.o SYSCALL.o GETEUID.o GETEGID.o GETPPID.o \
-		FORK.o PIPE.o SIGACTION.o GETLOGIN.o
+EXTRACT = GETCWD.o MMAP.o SYSCALL.o GETEUID.o GETEGID.o GETPPID.o \
+		FORK.o PIPE.o SIGACTION.o GETLOGIN.o SYSDEP.o
 #	elif IS_I386_LINUX
-EXTRACT = GETWD.o MMAP.o SYSCALL.o __GETEUID.o __GETEGID.o __GETPPID.o \
+EXTRACT = GETCWD.o MMAP.o SYSCALL.o __GETEUID.o __GETEGID.o __GETPPID.o \
 		__FORK.o __PIPE.o __SIGACT.o ____SIG.o GETLOGIN.o \
 		__PREV_FSTAT.o __PREV_LSTAT.o __PREV_STAT.o
 #	elif IS_ALPHA_OSF1
-EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
+EXTRACT = FORK.o GETEUID.o GETPPID.o GETEGID.o GETCWD.o \
 		  MMAP.o PIPE.o SYSCALL.o
 #	elif (IS_X86_SOLARIS251) 
-EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
+EXTRACT = FORK.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o GETCWD.o \
 		  i386_data.o SYSCONF.o GETLOGIN.o
 #	elif (IS_X86_SOLARIS26)
-EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
+EXTRACT = FORK.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o \
-		  GETCWD.o READDIR.o GETDENTS64.o \
+		  GETCWD.o \
 		  i386_data.o SYSCONF.o GETLOGIN.o LSEEK64.o MMAP64.o
 #	elif (IS_SUN4X_SOLARIS251)
-EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
+EXTRACT = FORK.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o GETCWD.o \
 		  SYSCONF.o GETLOGIN.o
 #	elif (IS_SUN4X_SOLARIS26)
-EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
+EXTRACT = FORK.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o \
-		  GETCWD.o READDIR.o GETDENTS64.o \
+		  GETCWD.o \
 		  SYSCONF.o GETLOGIN.o LSEEK64.o MMAP64.o
 #	elif IS_SGI_IRIX53
 EXTRACT = /* don't extract anything */
 #	else
-EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
+EXTRACT = FORK.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 		  MMAP.o PIPE.o GETLOGIN.o
 #	endif
 
@@ -95,13 +95,9 @@ EXTRACT = GETEUID.o GETEGID.o GETWD.o
 
 #endif	/* ===============  CHECKPOINTING CONDITIONAL ============*/
 
-#if IS_HPPAR_HPUX9
-/* UTIL_EXTRACT = GETWD.o */
-HP_SPECIFIC_FILES = seteuid.o setegid.o
-#if !IS_HPPAR_HPUX10
-HP_CKPT = get_reginfo.HPUX.o
-#endif   /* of !IS_HPPAR_HPUX10 */
-#endif   /* of IS_HPPAR_HPUX9   */
+#if IS_HPPAR_HPUX9 
+PLATFORM_UTIL_OBJ = seteuid.o setegid.o
+#endif
 
 #if IS_SGI_IRIX62
 DEP_OS = IRIX62
@@ -119,7 +115,9 @@ SGI_CKPT = MMAP.MIPS.$(DEP_OS).o SYSCALL.MIPS.$(DEP_OS).o
 FLOCK_OBJ = flock.o
 #endif
 
-STUBS = switches.o switches.special.o $(SEND_OBJ) $(SETPRIORITY_OBJ)
+STUBS = switches.o switches.special.o $(SEND_OBJ) $(SETPRIORITY_OBJ) \
+	getcwd.o
+
 UTIL = \
 	remote_syscall.o \
 	syscall_connect.o \
@@ -170,7 +168,7 @@ AIX_OBJ = $(LIB_DIR)/syscall.shr.o $(LIB_DIR)/syscall.exp $(LIB_DIR)/libfort.a
 SYSCALL_SUPPORT_OBJ=senders.o receivers.C syscall_mode.o syscall_connect.o remote_syscall.o syscall_numbers.o xfer_file.o
 
 UTIL_OBJ =  $(FLOCK_OBJ) dprintf.o dprintf_config.o except.o update_rusage.o \
-	condor_errlst.o internet.o $(HP_SPECIFIC_FILES) uids.o
+	condor_errlst.o internet.o $(PLATFORM_UTIL_OBJ) uids.o
 
 CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o
 
@@ -201,7 +199,6 @@ uppercase_target($(SIMPLE_LIBC),getppid.o,GETPPID.o,getppid,GETPPID)
 uppercase_target($(SIMPLE_LIBC),getegid.o,GETEGID.o,getegid,GETEGID)
 uppercase_target($(SIMPLE_LIBC),getlogin.o,GETLOGIN.o,getlogin,GETLOGIN)
 uppercase_target($(SIMPLE_LIBC),fork.o,FORK.o,fork,FORK)
-uppercase_target($(SIMPLE_LIBC),kill.o,KILL.o,kill,KILL)
 
 #if (IS_X86_SOLARIS)
 SIGACTION.o : ToUpper $(SIMPLE_LIBC)
@@ -225,32 +222,15 @@ uppercase_target($(SIMPLE_LIBC),pipe.o,PIPE.o,pipe,PIPE)
 uppercase_target($(SIMPLE_LIBC),__geteuid.o,__GETEUID.o,__geteuid,__GETEUID)
 uppercase_target($(SIMPLE_LIBC),__getegid.o,__GETEGID.o,__getegid,__GETEGID)
 uppercase_target($(SIMPLE_LIBC),__getppid.o,__GETPPID.o,__getppid,__GETPPID)
-uppercase_target($(SIMPLE_LIBC),__kill.o,__KILL.o,__kill,__KILL)
 uppercase_target($(SIMPLE_LIBC),__sigact.o,__SIGACT.o,__sigaction,__SIGACTION)
 uppercase_target($(SIMPLE_LIBC),__fork.o,__FORK.o,__fork,__FORK)
 uppercase_target($(SIMPLE_LIBC),__pipe.o,__PIPE.o,__pipe,__PIPE)
-
+uppercase_target($(SIMPLE_LIBC),getcwd.o,GETCWD.o,getcwd,GETCWD)
 
 #if (IS_SOLARIS26)
 uppercase_target($(SIMPLE_LIBC),lseek64.o,LSEEK64.o,lseek64,LSEEK64)
 uppercase_target($(SIMPLE_LIBC),mmap64.o,MMAP64.o,mmap64,MMAP64)
-uppercase_target($(SIMPLE_LIBC),getdents64.o,GETDENTS64.o,_getdents64,_GETDENTS64)
-
-READDIR.o: ToUpper $(SIMPLE_LIBC)
-	ar x $(SIMPLE_LIBC) readdir.o
-	./ToUpper readdir.o READDIR_TMP.o readdir READDIR
-	./ToUpper READDIR_TMP.o READDIR.o _getdents64 _GETDENTS64
-	rm -f readdir.o READDIR_TMP.o
-
-GETCWD.o : ToUpper $(SIMPLE_LIBC)
-	ar x $(SIMPLE_LIBC) getcwd.o
-	./ToUpper getcwd.o GETCWD_TMP.o getcwd GETCWD
-	./ToUpper GETCWD_TMP.o GETCWD.o _readdir64 _READDIR64
-	rm -f getcwd.o GETCWD_TMP.o
-
-#elif IS_SOLARIS
-uppercase_target($(SIMPLE_LIBC),getcwd.o,GETCWD.o,getcwd,GETCWD)
-#endif /* Solaris 2.6 */
+#endif
 
 
 #if (IS_I386_LINUX) 
@@ -268,6 +248,7 @@ uppercase_target($(SIMPLE_LIBC),__prev_fstat.o,__PREV_FSTAT.o,fstat,FSTAT)
 
 #if (IS_GLIBC) && (IS_I386_LINUX)
 uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL_TMP.o,syscall,SYSCALL)
+uppercase_target($(SIMPLE_LIBC),sysdep.o,SYSDEP.o,__syscall_error,__SYSCALL_ERROR)
 
 SYSCALL.o: SYSCALL_TMP.o ToUpper
 	./ToUpper SYSCALL_TMP.o SYSCALL.o __SYSCALL_error __syscall_error
@@ -298,16 +279,19 @@ strip_copy_target( condor_rt0.o, $(STRIP_DIR)/lib, condor_rt0.o, OBJECT_MODE )
 static_copy_target( condor_rt0.o, $(STATIC_DIR)/lib, condor_rt0.o, OBJECT_MODE )
 #endif
 
-#if (IS_X86_SOLARIS)
+#if (IS_X86_SOLARIS) || ((IS_GLIBC) && (IS_I386_LINUX))
 	library_target(libtmp.a,$(LIB_OBJ))
-
-condor_syscall_lib.a: libtmp.a ToUpper
-	./ToUpper libtmp.a condor_syscall_lib.a __cerror __CERROR
 
 clean::
 	rm -f condor_syscall_lib.a
 
-#else 
+condor_syscall_lib.a: libtmp.a ToUpper
+#   if (IS_X86_SOLARIS)
+	./ToUpper libtmp.a condor_syscall_lib.a __cerror __CERROR
+#   else /* GLIBC Linux */
+	./ToUpper libtmp.a condor_syscall_lib.a __syscall_error __SYSCALL_ERROR
+#   endif /* Solaris */
+#else /* Not GLIBC Linux or Intel Solaris */
 	library_target(condor_syscall_lib.a,$(LIB_OBJ))
 #endif
 
@@ -328,53 +312,30 @@ static:
 CPP = PreProcessCmd
 
 #if IS_I386_LINUX
-switches.c: syscall.tmpl switches.prologue stub_gen switches.epilogue
-	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) GlibCFlag syscall.tmpl | \
-	./stub_gen -mode switches  -p switches.prologue -e switches.epilogue \
-	> switches.c
+STUB_GEN_PLATFORM = GlibCFlag
 #elif IS_SOLARIS251
-switches.c: syscall.tmpl switches.prologue stub_gen switches.epilogue
-	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) -DSolaris251 \
-	syscall.tmpl | ./stub_gen -mode switches  -p switches.prologue -e switches.epilogue \
-	> switches.c
+STUB_GEN_PLATFORM = -DSolaris251
 #elif IS_SOLARIS26
+STUB_GEN_PLATFORM = -DSolaris26
+#endif
+
+STUB_GEN_FLAGS = $(STUB_GEN_PLATFORM) $(DL_EXTRACT) -D$(OS) \
+	$(SAVE_SIGSTATE) $(CLIP) -Wall
+
 switches.c: syscall.tmpl switches.prologue stub_gen switches.epilogue
-	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) -DSolaris26 \
-	syscall.tmpl | ./stub_gen -mode switches  -p switches.prologue -e switches.epilogue \
-	> switches.c
-#else
-switches.c: syscall.tmpl switches.prologue stub_gen switches.epilogue
-	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) syscall.tmpl | \
+	$(CPP) -DSWITCH $(STUB_GEN_FLAGS) syscall.tmpl | \
 	./stub_gen -mode switches  -p switches.prologue -e switches.epilogue \
 	> switches.c
-#endif
 
-#if IS_SOLARIS26
 senders.C: syscall.tmpl stub_gen senders.prologue senders.epilogue
-	$(CPP) -DSENDER $(CLIP) $(SAVE_SIGSTATE) -D$(OS) -DSolaris26 \
-	syscall.tmpl | \
+	$(CPP) -DSENDER $(STUB_GEN_FLAGS) syscall.tmpl | \
 	./stub_gen -mode senders -p senders.prologue -e senders.epilogue \
 	-n syscheck $(STUB_CLUMP_SIZE) > senders.C
 
 receivers.C: syscall.tmpl stub_gen receivers.prologue receivers.epilogue
-	$(CPP) -DRECEIVER $(CLIP) $(SAVE_SIGSTATE) -D$(OS) -DSolaris26 \
-	syscall.tmpl | \
+	$(CPP) -DRECEIVER $(STUB_GEN_FLAGS) syscall.tmpl | \
 	./stub_gen -mode receivers -p receivers.prologue \
-	-e receivers.epilogue -n syscheck $(STUB_CLUMP_SIZE) \
-	> receivers.C
-#else
-senders.C: syscall.tmpl stub_gen senders.prologue senders.epilogue
-	$(CPP) -DSENDER $(CLIP) $(SAVE_SIGSTATE) -D$(OS) syscall.tmpl | \
-	./stub_gen -mode senders -p senders.prologue -e senders.epilogue \
-	-n syscheck $(STUB_CLUMP_SIZE) > senders.C
-
-receivers.C: syscall.tmpl stub_gen receivers.prologue receivers.epilogue
-	$(CPP) -DRECEIVER $(CLIP) $(SAVE_SIGSTATE) -D$(OS) syscall.tmpl | \
-	./stub_gen -mode receivers -p receivers.prologue \
-	-e receivers.epilogue -n syscheck $(STUB_CLUMP_SIZE) \
-	> receivers.C
-#endif
-
+	-e receivers.epilogue -n syscheck $(STUB_CLUMP_SIZE) > receivers.C
 
 syscall-list: syscall.tmpl stub_gen 
 	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) syscall.tmpl | \
@@ -423,12 +384,6 @@ release_target( syscall.exp, $(LIB_DIR), OBJECT_MODE)
 library_target(libfort.a,C_getenv.o)
 release_library(libfort.a,$(RELEASE_DIR)/lib)
 #endif /* AIX */
-
-#if HAS_GETWD
-uppercase_target($(SIMPLE_LIBC),getwd.o,GETWD.o,getwd,GETWD)
-#else
-uppercase_target(../condor_util_lib/util_lib.a,getwd.o,GETWD.o,getwd,GETWD)
-#endif
 
 clean::
 	rm -f lex.yy.c y.tab.c y.tab.h switches.c senders.C receivers.C *.o
