@@ -90,12 +90,12 @@ GETWD_OBJ = getwd.o
 #endif
 
 #if IS_R6000_AIX32
-UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o $(FLOCK_OBJ) $(GETWD_OBJ)
+UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o $(FLOCK_OBJ) $(GETWD_OBJ) uids.o
 #elif IS_HPPAR_HPUX9
 UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o $(FLOCK_OBJ) \
-		   seteuid.o setegid.o $(GETWD_OBJ)
+		   seteuid.o setegid.o $(GETWD_OBJ) uids.o
 #else
-UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o $(FLOCK_OBJ) $(GETWD_OBJ)
+UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o $(FLOCK_OBJ) $(GETWD_OBJ) uids.o
 #endif
 
 URL_OBJ = url_condor.o include_urls.o cbstp_url.o file_url.o http_url.o \
@@ -181,13 +181,13 @@ uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL.o,syscall,SYSCALL)
 depend_target($(SRC) )
 
 #if (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS251) || (IS_X86_SOLARIS25)
-program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) dprintf.o $(FLOCK_OBJ) MMAP.o SYSCALL.o, )
+program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) dprintf.o $(FLOCK_OBJ) MMAP.o SYSCALL.o uids.o, )
 #elif (IS_HPPAR_HPUX9)
-program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) seteuid.o flock.o setegid.o, dprintf.o )
+program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) seteuid.o flock.o setegid.o, dprintf.o uids.o )
 #elif (IS_I386_LINUX)
-program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) dprintf.o, )
+program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) dprintf.o uids.o, )
 #else
-program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ), dprintf.o )
+program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ), dprintf.o uids.o )
 #endif
 
 program_target(ToUpper,ToUpper.o,$(NULL))
