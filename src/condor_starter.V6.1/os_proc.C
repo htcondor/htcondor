@@ -69,7 +69,6 @@ OsProc::~OsProc()
 int
 OsProc::StartJob()
 {
-	int i;
 	int nice_inc = 0;
 	bool has_wrapper = false;
 
@@ -218,9 +217,13 @@ OsProc::StartJob()
 
 	// handle stdin, stdout, and stderr redirection
 	int fds[3];
-	int failedStdin, failedStdout, failedStderr;
 	fds[0] = -1; fds[1] = -1; fds[2] = -1;
-	failedStdin = 0; failedStdout = 0; failedStderr = 0;
+	bool failed_stdin = false;
+	bool failed_stdout = false;
+	bool failed_stderr = false;
+	bool starter_stdin = false;
+	bool starter_stdout = false;
+	bool starter_stderr = false;
 	const char* filename = NULL;
 
 		// in order to open these files we must have the user's privs:
@@ -229,41 +232,18 @@ OsProc::StartJob()
 
 	filename = Starter->jic->jobInputFilename();
 	if( filename ) {
-		if( (fds[0]=open(filename, O_RDONLY)) < 0 ) {
-			failedStdin = 1;
-			char const *errno_str = strerror( errno );
-			MyString err_msg;
-			err_msg = "Failed to open standard input file '";
-			err_msg += filename;
-			err_msg += "': ";
-			err_msg += errno_str;
-			err_msg += " (errno ";
-			err_msg += errno;
-			err_msg += ')';
-			dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
-			Starter->jic->notifyStarterError( err_msg.Value(), true );
-		}
-		dprintf( D_ALWAYS, "Input file: %s\n", filename );
-	} else { 
-	#ifndef WIN32
-		if( (fds[0]=open("/dev/null", O_RDONLY) ) < 0 ) {
-			dprintf( D_ALWAYS,
-					 "failed to open stdin file /dev/null, errno %d\n",
-					 errno );
-			failedStdin = 1;
-		}
-	#endif
-	}
-
-	filename = Starter->jic->jobOutputFilename();
-	if( filename ) {
-		if( (fds[1]=open(filename,O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 ) {
-				// if failed, try again without O_TRUNC
-			if( (fds[1]=open( filename, O_WRONLY|O_CREAT, 0666)) < 0 ) {
-				failedStdout = 1;
+		if( filename[0] == '-' && ! filename[1] ) {
+				// special case, use the starter's stdin.
+			fds[0] = Starter->starterStdinFd();
+			starter_stdin = true;
+			dprintf( D_ALWAYS, "Input file: using STDIN of %s\n",
+					 mySubSystem );
+		} else {
+			if( (fds[0]=open(filename, O_RDONLY)) < 0 ) {
+				failed_stdin = 1;
 				char const *errno_str = strerror( errno );
 				MyString err_msg;
-				err_msg = "Failed to open standard output file '";
+				err_msg = "Failed to open standard input file '";
 				err_msg += filename;
 				err_msg += "': ";
 				err_msg += errno_str;
@@ -273,8 +253,48 @@ OsProc::StartJob()
 				dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
 				Starter->jic->notifyStarterError( err_msg.Value(), true );
 			}
+			dprintf( D_ALWAYS, "Input file: %s\n", filename );
 		}
-		dprintf( D_ALWAYS, "Output file: %s\n", filename );
+	} else { 
+	#ifndef WIN32
+		if( (fds[0]=open("/dev/null", O_RDONLY) ) < 0 ) {
+			dprintf( D_ALWAYS,
+					 "failed to open stdin file /dev/null, errno %d\n",
+					 errno );
+			failed_stdin = 1;
+		}
+	#endif
+	}
+
+	filename = Starter->jic->jobOutputFilename();
+	if( filename ) {
+		if( filename[0] == '-' && ! filename[1] ) {
+				// special case, use the starter's stdout.
+			fds[1] = Starter->starterStdoutFd();
+			starter_stdout = true;
+			dprintf( D_ALWAYS, "Output file: using STDOUT of %s\n",
+					 mySubSystem );
+		} else {
+			if( (fds[1]=open(filename,O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 )
+			{
+					// if failed, try again without O_TRUNC
+				if( (fds[1]=open( filename, O_WRONLY|O_CREAT, 0666)) < 0 ) {
+					failed_stdout = 1;
+					char const *errno_str = strerror( errno );
+					MyString err_msg;
+					err_msg = "Failed to open standard output file '";
+					err_msg += filename;
+					err_msg += "': ";
+					err_msg += errno_str;
+					err_msg += " (errno ";
+					err_msg += errno;
+					err_msg += ')';
+					dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
+					Starter->jic->notifyStarterError( err_msg.Value(), true );
+				}
+			}
+			dprintf( D_ALWAYS, "Output file: %s\n", filename );
+		}
 	} else {
     #ifndef WIN32
 		if( (fds[1]=open("/dev/null",O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 ) {
@@ -283,7 +303,7 @@ OsProc::StartJob()
 				dprintf( D_ALWAYS, 
 						 "failed to open stdout file /dev/null, errno %d\n", 
 						 errno );
-				failedStdout = 1;
+				failed_stdout = 1;
 			}
 		}
     #endif
@@ -291,24 +311,33 @@ OsProc::StartJob()
 
 	filename = Starter->jic->jobErrorFilename();
 	if( filename ) {
-		if( (fds[2]=open(filename,O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 ) {
-				// if failed, try again without O_TRUNC
-			if( (fds[2]=open(filename,O_WRONLY|O_CREAT, 0666)) < 0 ) {
-				failedStderr = 1;
-				char const *errno_str = strerror( errno );
-				MyString err_msg;
-				err_msg = "Failed to open standard error file '";
-				err_msg += filename;
-				err_msg += "': ";
-				err_msg += errno_str;
-				err_msg += " (errno ";
-				err_msg += errno;
-				err_msg += ')';
-				dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
-				Starter->jic->notifyStarterError( err_msg.Value(), true );
+		if( filename[0] == '-' && ! filename[1] ) {
+				// special case, use the starter's stderr.
+			fds[2] = Starter->starterStderrFd();
+			starter_stderr = true;
+			dprintf( D_ALWAYS, "Error file: using STDERR of %s\n",
+					 mySubSystem );
+		} else {
+			if( (fds[2]=open(filename,O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 )
+			{
+					// if failed, try again without O_TRUNC
+				if( (fds[2]=open(filename,O_WRONLY|O_CREAT, 0666)) < 0 ) {
+					failed_stderr = 1;
+					char const *errno_str = strerror( errno );
+					MyString err_msg;
+					err_msg = "Failed to open standard error file '";
+					err_msg += filename;
+					err_msg += "': ";
+					err_msg += errno_str;
+					err_msg += " (errno ";
+					err_msg += errno;
+					err_msg += ')';
+					dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
+					Starter->jic->notifyStarterError( err_msg.Value(), true );
+				}
 			}
+			dprintf ( D_ALWAYS, "Error file: %s\n", filename );
 		}
-		dprintf ( D_ALWAYS, "Error file: %s\n", filename );
 	} else {
 	#ifndef WIN32
 		if( (fds[2]=open("/dev/null",O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 ) {
@@ -317,23 +346,22 @@ OsProc::StartJob()
 				dprintf( D_ALWAYS, 
 						 "failed to open stderr file /dev/null, errno %d\n", 
 						 errno );
-				failedStderr = 1;
+				failed_stderr = 1;
 			}
 		}
 	#endif
 	}
 
-
 	/* Bail out if we couldn't open the std files correctly */
-	if ( failedStdin || failedStdout || failedStderr ) {
+	if ( failed_stdin || failed_stdout || failed_stderr ) {
 		/* only close ones that had been opened correctly */
-		if (fds[0] != -1) {
+		if( fds[0] != -1 && !starter_stdin ) {
 			close(fds[0]);
 		}
-		if (fds[1] != -1) {
+		if( fds[1] != -1 && !starter_stdout ) {
 			close(fds[1]);
 		}
-		if (fds[2] != -1) {
+		if( fds[2] != -1 && !starter_stderr ) {
 			close(fds[2]);
 		}
 		dprintf(D_ALWAYS, "Failed to open some/all of the std files...\n");
@@ -430,10 +458,24 @@ OsProc::StartJob()
 
 	// now close the descriptors in fds array.  our child has inherited
 	// them already, so we should close them so we do not leak descriptors.
-	for (i=0;i<3;i++) {
-		if ( fds[i] != -1 ) {
-			close(fds[i]);
-		}
+	// NOTE, we want to use a special method to close the starter's
+	// versions, if that's what we're using, so we don't think we've
+	// still got those available in other parts of the code for any
+	// reason.
+	if( starter_stdin ) {
+		Starter->closeSavedStdin();
+	} else if ( fds[0] != -1 ) {
+		close(fds[0]);
+	}
+	if( starter_stdout ) {
+		Starter->closeSavedStdout();
+	} else if ( fds[1] != -1 ) {
+		close(fds[1]);
+	}
+	if( starter_stderr ) {
+		Starter->closeSavedStderr();
+	} else if ( fds[2] != -1 ) {
+		close(fds[2]);
 	}
 
 		// Free up memory we allocated so we don't leak.
