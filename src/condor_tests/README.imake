@@ -149,7 +149,7 @@ RUN(testname)
 TESTCLASS(testname,test_class)
 
    This rule indicates that the given test is part of the specified
-   test "class", or category.  See "README.testclasses" for details.
+   test "class", or category.  See "README.testclass" for details.
    Tests can belong to multiple classes, so there can be multiple
    TESTCLASS rules for each test.
 
@@ -157,9 +157,9 @@ TESTCLASS(testname,test_class)
 TESTCLASS_DECL(test_class)
 
    This rule declares a new test "class", or category.  See
-   "README.testclasses" for details.  These rules should always go
-   into Imakefile.common, so they can be shared across all the other
-   Imakefiles. 
+   "README.testclass" for details.  These rules should always go into
+   Imakefile.common, so they can be shared across all the other
+   Imakefiles.
 
 
 BUILD(cmplr,testname,extension)
