@@ -73,7 +73,7 @@ enum ULogEventNumber {
 	/** Job Submitted to Globus   */  ULOG_GLOBUS_SUBMIT,
 	/** Globus Submit failed      */  ULOG_GLOBUS_SUBMIT_FAILED,
 	/** Globus Resource Up        */  ULOG_GLOBUS_RESOURCE_UP,
-	/** Globus Submit failed      */  ULOG_GLOBUS_RESOURCE_DOWN
+	/** Globus Resource Down      */  ULOG_GLOBUS_RESOURCE_DOWN
 };
 
 /// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
