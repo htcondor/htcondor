@@ -639,8 +639,6 @@ sub host_info()
 		$archdir = "$basedir/$arch";
 	}
 
-print "$CONTACT_SETUP\n$CONTACT_SETUP_QUEUE\n$arch\n";
-exit(1);
 	return( 0 );
 }
 
