@@ -95,6 +95,13 @@ usage( char *str )
 				 "(the default)" );
 		fprintf( stderr, "    -fast\t\tquickly shutdown daemons\n" );
 	}
+	if( cmd == VACATE_CLAIM ) {
+		fprintf( stderr, 
+				 "    -graceful\t\tgracefully vacate the jobs (the default)\n" );
+		fprintf( stderr, 
+				 "    -fast\t\tquickly vacate the jobs (no checkpointing)\n" );
+	}
+
 	fprintf( stderr, "where [targets] can be zero or more of:\n" );
 #if 0
 		// This isn't supported yet, so don't mention it now.
@@ -156,16 +163,14 @@ usage( char *str )
 		break;
 	case VACATE_CLAIM:
 		fprintf( stderr, 
-				 "  %s causes the condor_startd to checkpoint the running\n"
+				 "  %s causes the condor_startd to vacate the running\n"
 				 "  job(s) on specific machines.  If you specify a virtual machine\n"
 				 "  (for example, \"vm1@hostname\"), only that machine will be\n"
 				 "  vacated.  If you specify just a hostname, all jobs running under\n"
-				 "  any virtual machine at that host will be vacated.\n", str );
-		break;
-	case VACATE_ALL_CLAIMS:
-		fprintf( stderr, "  %s %s\n  %s\n", str, 
-				 "causes the condor_startd to checkpoint any running jobs",
-				 "and make them vacate the machine." );
+				 "  any virtual machines at that host will be vacated.  By default,\n"
+				 "  the jobs will be checkpointed (if possible), though if you\n"
+				 "  specify the -fast option, they will be immediately killed.\n",
+				 str );
 		break;
 	case PCKPT_JOB:
 		fprintf( stderr, "  %s %s\n  %s%s\n  %s%s\n", str, 
@@ -173,13 +178,6 @@ usage( char *str )
 				 "checkpoint on running jobs on specific (possibly virtual) ",
 				 "machines.",
 				 "The jobs continue to run once ", 
-				 "they are done checkpointing." );
-		break;
-	case PCKPT_ALL_JOBS:
-		fprintf( stderr, "  %s %s\n  %s%s\n  %s\n", str, 
-				 "causes the condor_startd to perform a periodic", 
-				 "checkpoint on any running jobs.  The jobs continue to run ",
-				 "once", 
 				 "they are done checkpointing." );
 		break;
 	case SQUAWK:
@@ -221,8 +219,12 @@ cmdToStr( int c )
 		return "Restart";
 	case VACATE_CLAIM:
 		return "Vacate-Claim";
+	case VACATE_CLAIM_FAST:
+		return "Vacate-Claim-Fast";
 	case VACATE_ALL_CLAIMS:
 		return "Vacate-All-Claims";
+	case VACATE_ALL_FAST:
+		return "Vacate-All-Claims-Fast";
 	case PCKPT_JOB:
 		return "Checkpoint-Job";
 	case PCKPT_ALL_JOBS:
@@ -372,6 +374,7 @@ main( int argc, char *argv[] )
 			case DAEMONS_OFF:
 			case DC_OFF_GRACEFUL:
 			case RESTART:
+			case VACATE_CLAIM:
 				break;
 			default:
 				fprintf( stderr, "ERROR: \"-fast\" is not valid with %s\n",
@@ -706,6 +709,9 @@ doCommand( char *name )
 	sock.encode();
 	switch(cmd) {
 	case VACATE_CLAIM:
+		if( fast ) {
+			cmd = VACATE_CLAIM_FAST;
+		}
 		// If no name is specified, or if name is a sinful string or
 		// hostname, we must send VACATE_ALL_CLAIMS.
 		if ( name && !sinful && strchr(name, '@') ) {
@@ -718,7 +724,11 @@ doCommand( char *name )
 				done = 1;
 			}
 		} else {
-			cmd = VACATE_ALL_CLAIMS;
+			if( fast ) {
+				cmd = VACATE_ALL_FAST;
+			} else {
+				cmd = VACATE_ALL_CLAIMS;
+			}
 		}
 		break;
 	case PCKPT_JOB:
