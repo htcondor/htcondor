@@ -1,3 +1,9 @@
+9/17/01 V6_3-INFN-CondorG-2
+		Basically, the V6_3-INFN-CondorG-6_3_1 tag, with an bug fix from the
+		V6_3-branch to condor_event.C. Then added new features to the grid 
+		manager to log submit-to-globus-failed events, and globus-up and down
+		events.
+
 8/29/01 V6_3-post-merge-V6_3_0-branch-merge-3
 		The state of the V6_3-branch after we merged in the V6_3_0-branch
 		for the third time.
