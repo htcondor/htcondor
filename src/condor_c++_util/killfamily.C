@@ -124,9 +124,12 @@ ProcFamily::get_max_imagesize(unsigned long & max_image )
 }
 
 void
-ProcFamily::safe_kill(pid_t inpid,int sig)
+ProcFamily::safe_kill(a_pid *pid, int sig)
 {
 	priv_state priv;
+	pid_t inpid;
+
+	inpid = pid->pid;
 
 	// make certain we do not kill init or worse!
 	if ( inpid < 2 || daddy_pid < 2 ) {
@@ -156,12 +159,57 @@ ProcFamily::safe_kill(pid_t inpid,int sig)
 	}
 
 	if ( !test_only_flag ) {
+
 #ifdef WIN32
-		if ( daemonCore->Send_Signal(inpid,sig) == FALSE ) {
+
+		// on Win32, we have to make sure that when we kill something,
+		// the process we're about to kill is the one in our last snapshot,
+		// not a new process that just happened to pick up the same pid.
+		// So, first we open up the pid's handle. As long as we
+		// have a handle to the pid in question, its pid will not
+		// get reused in the event it exits while we're doing all
+		// of this. Next, we'll check that its birthday is the
+		// same as it was when we took the last snapshot. If all goes 
+		// well, we may proceed in killing the process, and finally 
+		// close the handle.
+		// -stolley 5/2004
+
+		HANDLE pHnd;
+		piPTR pi;
+
+		pi = NULL;
+
+		pHnd = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, inpid);
+
+		if ( pHnd == NULL ) {
+			dprintf(D_ALWAYS, "Procfamily: ERROR: Could not open pid %d "
+				"(err=%d)\n", inpid, GetLastError());
+		}
+
+		ProcAPI::getProcInfo(inpid, pi);
+
+		int birth = (time(NULL) - pi->age);
+
+			// check if process birthday is atleast as old as the last
+			// snapshot's value
+		if ( !(birth <= pid->birthday) ) {
+			dprintf(D_ALWAYS, "Procfamily: Not killing pid %d "
+				"birthday (%li) not less than or equal to value from "
+				"last snapshot (%li)\n",
+				inpid, birth, pid->birthday);
+
+		} else if ( daemonCore->Send_Signal(inpid,sig) == FALSE ) {
 			dprintf(D_PROCFAMILY,
 				"ProcFamily::safe_kill: Send_Signal(%d,%d) failed\n",
 				inpid,sig);
 		}
+
+		if ( pi ) {
+			delete pi;
+		}
+		
+		CloseHandle(pHnd);
+
 #else
 		if ( kill(inpid,sig) < 0 ) {
 			dprintf(D_PROCFAMILY,
@@ -188,12 +236,12 @@ ProcFamily::spree(int sig,KILLFAMILY_DIRECTION direction)
 			if ( direction == PATRICIDE ) {
 				// PATRICIDE: parents go first
 				for (j=start;j<i;j++) {
-					safe_kill((*old_pids)[j].pid,sig);
+					safe_kill(&(*old_pids)[j], sig);
 				}
 			} else {
 				// INFANTICIDE: kids go first
 				for (j=i-1;j>=start;j--) {
-					safe_kill((*old_pids)[j].pid,sig);
+					safe_kill(&(*old_pids)[j], sig);
 				}
 			}
 			start = i;

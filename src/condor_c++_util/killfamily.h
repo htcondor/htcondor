@@ -68,8 +68,10 @@ private:
 		INFANTICIDE		// children die first, then parent
 	}; 
 
+	class a_pid;
+
 	void spree(int sig, KILLFAMILY_DIRECTION direction);
-	void safe_kill(pid_t inpid,int sig);
+	void safe_kill(a_pid *pid, int sig);
 
 	int test_only_flag;
 	
