@@ -65,7 +65,7 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -Wall
 CFLAGS = $(STD_C_FLAGS) -Wall
 LIB = -L../../lib -lcondorsdk
 
-OBJ = dagman_main.o submit.o dag.o job.o util.o parse.o debug.o types.o 	script.o dagman_instantiate.o
+OBJ = dagman_main.o submit.o dag.o job.o util.o parse.o debug.o types.o 	script.o scriptQ.o dagman_instantiate.o
 
 condor_dagman :  $(OBJ)
 	$(CC_LINK) $(C_PLUS_FLAGS) -o  condor_dagman   $(OBJ)   $(LIB)  $(ALL_LDFLAGS) $(DEMANGLE)
