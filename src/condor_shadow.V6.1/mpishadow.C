@@ -114,7 +114,10 @@ MPIShadow::getResources(int cmd, Stream *s) {
 
     if ( numProcs>1 ) {
             // will have to connect to schedd to get other ads...
-        ConnectQ( getScheddAddr() );
+		if (!ConnectQ(getScheddAddr(), SHADOW_QMGMT_TIMEOUT, true)) {
+			EXCEPT("Failed to connect to schedd!");
+		}
+
             // disconnect is below the main for loop.
     }
 
@@ -469,7 +472,9 @@ MPIShadow::shutDown( int exitReason, int exitStatus ) {
         rr = ResourceList[0];
         if ( rr ) {
             rr->getExecutingHost( tmp );
-            ConnectQ( getScheddAddr() );
+			if (!ConnectQ(getScheddAddr(), SHADOW_QMGMT_TIMEOUT)) {
+				EXCEPT("Failed to connect to schedd!");
+			}
             DeleteAttribute( getCluster(), getProc(), ATTR_REMOTE_HOST );
             SetAttributeString( getCluster(), getProc(), 
                                 ATTR_LAST_REMOTE_HOST, tmp );
