@@ -109,11 +109,11 @@ do not have regular users on them.  Let's also assume that these machines are
 solely dedicated to the use of Condor.  
 The simplest way to set up your policy is as follows:
 \begin{verbatim}
-START       : TRUE
-CONTINUE    : TRUE
-SUSPEND     : FALSE
-PREEMPT     : FALSE
-KILL        : FALSE
+START       = TRUE
+CONTINUE    = TRUE
+SUSPEND     = FALSE
+PREEMPT     = FALSE
+KILL        = FALSE
 \end{verbatim}
 
 With the above configuration, the machines will accept any Condor job, and the
@@ -132,23 +132,23 @@ IsMPI = (JobUniverse == $(MPI))
 \end{verbatim}
 Now change your configuration from
 \begin{verbatim}
-START	: /* your interesting policy here */
+START	= /* your interesting policy here */
 \end{verbatim}
 to 
 \begin{verbatim}
 FORMER_START	= /* your interesting policy here */
 \end{verbatim}
-Similarly, the \Expr{CONTINUE}, \Expr{SUSPEND}, \Expr{PREEMPT}, and 
-\Expr{KILL} expressions should be changed to macros named 
+Similarly, the \Macro{CONTINUE}, \Macro{SUSPEND}, \Macro{PREEMPT}, and 
+\Macro{KILL} expressions should be changed to macros named 
 \MacroNI{FORMER\_CONTINUE}, etc.  The following configuration will ensure that
 MPI jobs are never suspended or evicted while implementing your former policy
 for all other jobs.
 \begin{verbatim}
-START		: ( $(FORMER_START) )
-CONTINUE	: ( $(FORMER_CONTINUE) )
-SUSPEND		: ( $(FORMER_SUSPEND) && ((IsMPI) == FALSE ) )
-PREEMPT		: ( $(FORMER_PREEMPT) && ((IsMPI) == FALSE ) )
-KILL		: ( $(FORMER_KILL) && ((IsMPI) == FALSE ) )
+START		= ( $(FORMER_START) )
+CONTINUE	= ( $(FORMER_CONTINUE) )
+SUSPEND		= ( $(FORMER_SUSPEND) && ((IsMPI) == FALSE ) )
+PREEMPT		= ( $(FORMER_PREEMPT) && ((IsMPI) == FALSE ) )
+KILL		= ( $(FORMER_KILL) && ((IsMPI) == FALSE ) )
 \end{verbatim}
 Thus, Condor will never attempt to vacate an MPI job from a machine once 
 it starts running on that machine.  
