@@ -10,8 +10,8 @@
 
 #define LinkOnlyFiles lib bin/condor_compile
 
-#define PvmFiles sbin/condor_starter.pvm sbin/condor_shadow.pvm \
-  sbin/condor_pvmd sbin/condor_pvmgs 
+#define PvmFiles sbin/condor_pvmd sbin/condor_pvmgs \
+  sbin/condor_shadow.pvm sbin/condor_starter.pvm
 
 #define DagManFiles bin/condor_dagman
 
@@ -120,13 +120,17 @@ both_tarball( view_server.tar, ViewServerFiles, ViewServerContribFiles )
 
 #if WANT_PVM && HAS_PVM
 #define PvmTar pvm.tar
+#define AfsPvmTar afs_pvm.tar
 contrib_tarball( pvm.tar, PvmFiles )
 #else
 #define PvmTar 
+#define AfsPvmTar 
 #endif 
 
-all_tarballs: smp_startd.tar view_server.tar
-afs_tarballs: afs_smp_startd.tar afs_view_server.tar afs_release.tar
+all_tarballs: smp_startd.tar view_server.tar ckpt_server.tar PvmTar 
+
+afs_tarballs: afs_smp_startd.tar afs_view_server.tar afs_release.tar \
+	afs_ckpt_server.tar AfsPvmTar
 
 public:: all_tarballs
 
