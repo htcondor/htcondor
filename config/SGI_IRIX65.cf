@@ -15,4 +15,4 @@
 #define HAS_INET_NTOA NO
 
 /* For now, build a "clipped" version */
-#define IS_CLIPPED YES
+#define IS_CLIPPED NO
