@@ -126,7 +126,7 @@ int main(int argc, char** argv)
 
 	MyName = argv[0];
 
-	// run as condor.condor at all times unless root privilege is needed
+		// run as condor.condor at all times unless root privilege is needed
 	set_condor_priv();
 
 	while (*++argv) {
@@ -147,7 +147,7 @@ int main(int argc, char** argv)
 		}
 	}
 
-	// build the classAd, create a hash table
+		// build the classAd, create a hash table
 	template_ClassAd = new ClassAd();
 	config( template_ClassAd );
 
@@ -173,14 +173,18 @@ int main(int argc, char** argv)
 			exit(0);
 	}
 
-	/*
-	 * XXX Use DaemonCore for signal handling.
-	 */
-	install_sig_handler(SIGINT, event_sigint);
-	install_sig_handler(SIGQUIT, event_sigquit);
-	install_sig_handler(SIGHUP, event_sighup);
-	install_sig_handler(SIGTERM, event_sigterm);
-	install_sig_handler(SIGCHLD, event_sigchld);
+		/*
+		 * XXX Use DaemonCore for signal handling.
+		 */
+		// For now, install these signal handlers with a default mask
+		// of all signals blocked when we're in the handlers.
+	sigset_t set;
+	sigfillset( &set );
+	install_sig_handler_with_mask(SIGINT, &set, event_sigint);
+	install_sig_handler_with_mask(SIGQUIT, &set, event_sigquit);
+	install_sig_handler_with_mask(SIGHUP, &set, event_sighup);
+	install_sig_handler_with_mask(SIGTERM, &set, event_sigterm);
+	install_sig_handler_with_mask(SIGCHLD, &set, event_sigchld);
 	install_sig_handler(SIGPIPE, SIG_IGN );
 	HasSigchldHandler = 1;	/* XXX yucky */
 
@@ -188,9 +192,9 @@ int main(int argc, char** argv)
 	inudp_sock = create_udpsock("condor_startd", START_UDP_PORT);
 	coll_sock = udp_unconnect();
 
-	/*
-	 * XXX replace with DaemonCore
-	 */
+		/*
+		 * XXX replace with DaemonCore
+		 */
 
 	mainloop();
 
@@ -213,8 +217,12 @@ static void mainloop()
 	int count;
 	struct timeval timer;
 	int stashed_errno;
+	sigset_t fullset, emptyset;
 	int next_timeout = (int)time((time_t *)0);
 			// initialize next_timeout so that we do a timeout right away. 
+
+	sigfillset( &fullset );
+	sigemptyset( &emptyset );
 
 	for(;;) {
 		FD_ZERO(&readfds);
@@ -223,11 +231,18 @@ static void mainloop()
 		timer.tv_sec = next_timeout - (int)time((time_t *)0);
 		if( timer.tv_sec < 0 ) timer.tv_sec = 0;
 
+			// Unblock all signals before going into the select
+		sigprocmask( SIG_SETMASK, &emptyset, NULL );
+
 #if defined(AIX31) || defined(AIX32)
 		errno = EINTR;
 #endif
 		count = select(FD_SETSIZE, &readfds, (fd_set *)0, (fd_set *)0,
 			       &timer);
+
+			// Block all signals until we're going to select again.
+		sigprocmask( SIG_SETMASK, &fullset, NULL );
+
 		stashed_errno = errno;	// reconfig will trample our errno
 
 		if( want_reconfig ) {
