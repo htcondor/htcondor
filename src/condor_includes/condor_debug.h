@@ -36,7 +36,7 @@
 **  use the higher order bit(s).  Note that D_MAXFLAGS is 32 so we
 **  can store the debug level as a integer bitmask.
 */
-#define D_NUMLEVELS		22
+#define D_NUMLEVELS		23
 #define D_MAXFLAGS 		32
 #define D_ALWAYS 		(1<<0)
 #define D_SYSCALLS		(1<<1)
@@ -60,6 +60,7 @@
 #define D_COMMAND		(1<<19)
 #define D_BANDWIDTH		(1<<20)
 #define D_NETWORK		(1<<21)
+#define D_KEYBOARD		(1<<22)
 #define D_SECONDS		(1<<(D_MAXFLAGS-2))
 #define D_NOHEADER		(1<<(D_MAXFLAGS-1))
 #define D_ALL			(~(0))

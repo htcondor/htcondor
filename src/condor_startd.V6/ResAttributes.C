@@ -432,7 +432,7 @@ void
 CpuAttributes::display( amask_t how_much )
 {
 	if( IS_TIMEOUT(how_much) ) {
-		dprintf( D_FULLDEBUG, 
+		dprintf( D_KEYBOARD, 
 				 "Idle time: %s %-8d %s %d\n",  
 				 "Keyboard:", (int)c_idle, 
 				 "Console:", (int)c_console_idle );
