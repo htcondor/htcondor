@@ -14,9 +14,76 @@ The details of each version are described below.
 \subsection{\label{sec:New-6-2-1}Version 6.2.1}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\noindent New Features:
+
+\begin{itemize}
+
+\item The \Condor{userlog} command is now available on Windows NT.
+
+\item Jobs run in stand-alone checkpointing mode can now take a -\_condor\_nowarn
+argument, which silences the warnings from the system call library when you
+perform a checkpoint-unsafe action, such as opening a file for reading and
+writing.
+
+\end{itemize}
+
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item The entries in the \AdAttr{environment} 
+option in a submit file now correctly override the variables brought in
+from the \AdAttr{getenv} option on Windows NT.
+In previous version of CondorNT, the job would get an environment with the
+variable defined multiple times. This bug did not affect UNIX versions of 
+Condor.
+
+\item Some service packs of Windows NT had bugs that prevented Condor
+from determining the file permissions on input and output files. 6.2.1
+uses a different set of API's to determine the permissions and works 
+properly across all service packs
+
+\item In versions of Condor previous to 6.2.0, the registry would slowly
+grow on Windows NT and sometimes become corrupted. This was fixed in 6.2.0,
+but if a previously-corrupted registry was detected Condor aborted. In 6.2.1,
+this has been turned into a warning, as it doesn't need to be a fatal error.
+
+\item Fixed a memory-corruption bug in the \Condor{collector}
+
+\item PVM resources in Condor were unable to have more than one
+\Attr{@} symbol in a name. 
+
+\item The \Attr{TRANSFER\_FILES} is now set to \Attr{ON\_EXIT}
+on UNIX by default for the vanilla universe. Previously, users submitting
+from UNIX to NT needed to explicitly enable it or include the executable in
+the list of input files for the job to run.
+
+\item If \Attr{TRANSFER\_FILES} was set to \AdAttr{TRUE}
+files created during the job's run would be transfered whenever the job was 
+vacated and transfered to the next machine the job ran on, but would not be
+transfered back to the submit machine when the job finally exited for the last time.
+
+\item Determining the current working directory was broken in stand-alone
+checkpointing. 
+
+\item A job's standard output and standard error can now go to the same file.
+
+\item When the \Macro{START\_HAS\_BAD\_UTMP} is set to TRUE, the
+\Condor{startd} now detects activity on the 
+\begin{verbatim}/dev/pts\end{verbatim} devices.  
+
+\item The \Condor{negotiator} in 6.2.0 could incorrectly reject a job
+that should have been successfully matched if it previously rejected a 
+job. If the same jobs were sent to the \Condor{negotiator} in a different
+order, the match that should succeed would. In 6.2.1, the order is no longer
+important, and previous rejections will not prevent future matches.
+
+\item The getdents, getdirents, and statfs system calls now work correctly in 
+cross-platform submissions.
+
+\item \Condor{compile} is better able to detect which version of Linux
+it is running on and which flags it should pass to the linker. This should
+help Condor users on non-Red Hat distributions.
 
 \item Fixed a bug in the \Condor{startd} that would cause the daemon
 to crash if you set the \Macro{POLLING\_INTERVAL} macro to a value
@@ -32,11 +99,18 @@ argument.
 file directives to be silently ignored if you used the wrong attribute
 name.  
 Now, all submit file attributes can use the same names you see in the
-job ClassAd (what you'd see with \begin{verbatim}condor\_q
--long\end{verbatim}).
-For example, you can now use \begin{verbatim}CoreSize =
-0\end{verbatim} or \begin{verbatim}core_size = 0\end{verbatim} in your 
-submit file, and either one would be recognized.
+job ClassAd (what you'd see with \Condor{q} \Opt{-long}.
+For example, you can now use ``CoreSize = 0''  or ``core_size = 0''
+in your submit file, and either one would be recognized.
+
+\item A static limit on the number of clusters the \Condor{schedd}
+would accept from the \Condor{negotiator} was removed.
+
+\item On Windows NT, if a job's log file was in a non-existent location,
+both the \Condor{submit} and the \Condor{schedd} would crash.
+
+\item Encounting unsupported system calls could cause Condor to corrupt the
+signal state of the job. 
 
 \item Fixed some of the error messages in \Condor{submit} so that they
 are all consistently formatted.
@@ -48,12 +122,11 @@ would not return zero filled memory.
 a non-zero exit status on failure, and only return 0 on success.
 Previously, they always returned status 0.
 
-\item If a user accidentally put \begin{verbatim}notify\_user =
-false\end{verbatim} in their submit file, Condor used to treat that
+\item If a user accidentally put \begin{verbatim}notify_user = false\end{verbatim} in their submit file, Condor used to treat that
 as a valid entry.
 Now, \Condor{submit} prints out a warning in this case, telling the
-user that they probably want to use \begin{verbatim}notification =
-never\end{verbatim}, instead.
+user that they probably want to use 
+\begin{verbatim}notification = never\end{verbatim} instead.
 
 \end{itemize}
 
@@ -61,7 +134,8 @@ never\end{verbatim}, instead.
 
 \begin{itemize}
 
-\item None.
+\item It may be possible to checkpoint with an open socket on IRIX 6.2.
+On restart, the job will abort and go back into the queue. 
 
 \end{itemize}
 
@@ -72,7 +146,7 @@ never\end{verbatim}, instead.
 \noindent New Features Over the 6.0 Release Series
 \begin{itemize}
 
-\item Support for running multiple jobs on SMP (Symmetric Mutli-Processor)
+\item Support for running multiple jobs on SMP (Symmetric Multi-Processor)
 machines.
 
 \end{itemize}
