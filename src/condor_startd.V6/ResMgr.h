@@ -141,6 +141,9 @@ public:
 	void		makeAdList( ClassAdList* );   // Make a list of the
 		// ClassAds from each VM we represent.
 
+	void		markShutdown() { is_shutting_down = true; };
+	bool		isShuttingDown() { return is_shutting_down; };
+
 private:
 
 	Resource**	resources;		// Array of pointers to Resource objects
@@ -149,6 +152,7 @@ private:
 	SafeSock*	view_sock;
 
 	IdDispenser* id_disp;
+	bool 		is_shutting_down;
 
 		// Current virtual machine type we're parsing. 
 	int			currentVMType;		

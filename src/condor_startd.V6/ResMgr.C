@@ -41,6 +41,7 @@ ResMgr::ResMgr()
 	resources = NULL;
 	type_nums = NULL;
 	new_type_nums = NULL;
+	is_shutting_down = false;
 }
 
 
