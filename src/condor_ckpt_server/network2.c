@@ -242,6 +242,39 @@ char* gethostaddr(void)
 }
 
 
+static int ckpt_server_number = -1;
+
+int
+set_ckpt_server_number(int new_server)
+{
+	int		rval;
+
+	rval = ckpt_server_number;
+	ckpt_server_number = new_server;
+	return rval;
+}
+
+
+int
+get_ckpt_server_count()
+{
+	int		i;
+	char	ckpt_server_config[30];
+
+	for (i = 0; ; i++) {
+		sprintf(ckpt_server_config, "CKPT_SERVER_HOST_%d", i);
+		if (param(ckpt_server_config) == 0) {
+			break;
+		}
+	}
+
+	if (i == 0) {
+		if (param("CKPT_SERVER_HOST") == 0) {
+			i = -1;
+		}
+	}
+	return i;
+}
 
 
 /******************************************************************************
@@ -273,8 +306,15 @@ char* getserveraddr()
 {
 	struct hostent* h;
 	char	*server;
+	char	ckpt_server_config[30];
 	
-	server = param("CKPT_SERVER_HOST");
+	if (ckpt_server_number == -1) {
+		server = param("CKPT_SERVER_HOST");
+	} else {
+		sprintf(ckpt_server_config, "CKPT_SERVER_HOST_%d", ckpt_server_number);
+		server = param(ckpt_server_config);
+	}
+
 	if (server) {
 		h = gethostbyname(server);
 	} else {
