@@ -246,6 +246,10 @@ int main( int argc, char** argv )
 			// parent
 			exit(0);
 		}
+		// and close stdin, out, err if we are the MASTER.  
+		if ( strcmp(mySubSystem,"MASTER") == 0 ) {
+			close(0); close(1); close(2);
+		}
 #endif	// of else of ifdef WIN32
 	}	// if if !Foreground
 
