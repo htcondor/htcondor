@@ -9,6 +9,10 @@
 extern "C" {
 #endif
 
+int set_ckpt_server_number(int new_server);
+
+int get_ckpt_server_count();
+
 void StripPrefix(const char* pathname,
 		 char        filename[MAX_CONDOR_FILENAME_LENGTH]);
 
