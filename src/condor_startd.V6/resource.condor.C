@@ -737,10 +737,10 @@ calc_idle_time(resource_info_t* rip, int & user_idle, int & console_idle)
 		++kbdd_counter != polls_per_update_kbdd) {
 		user_idle = oldval;
 		console_idle = console_oldval;
-		kbdd_counter = 0;
 		return;
 	}
 
+	kbdd_counter = 0;
 	user_idle = tty_pty_idle_time();
 	dprintf( D_FULLDEBUG, "ttys/ptys idle %d seconds\n",  user_idle );
 
