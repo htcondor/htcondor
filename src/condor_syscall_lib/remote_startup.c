@@ -454,6 +454,7 @@ MAIN( int argc, char *argv[], char **envp )
 	#else
 		exit( main( argc, argv, envp ));
 	#endif
+	return 0;
 }
 
 void
