@@ -81,11 +81,11 @@ void job_report_display_errors( FILE *f )
 	struct error_node *i;
 
 	if( error_head ) {
-		fprintf( f, "*** ERRORS:\n");
-
+		fprintf( f,"***\n");
 		for( i=error_head; i; i=i->next ) {
 			fprintf(f,"\t* %s\n",i->text);
 		}
+		fprintf( f,"***\n");
 	}
 }
 
