@@ -292,8 +292,7 @@ int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
 			process_query (whichAds, ad, sock);
 		} else if ( FORK_CHILD == status ) {
 			// Fork ok, worker
-			process_query (whichAds, ad, sock);
-			sleep( 5 );
+			process_query (whichAds, ad, sock);			
 			forkQuery.WorkerDone( );		// Never returns
 		} else {
 			// Fork ok, parent
