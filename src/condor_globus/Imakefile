@@ -1,5 +1,5 @@
 NAME = condor_shadow.globus
-all_target($(NAME))
+all_target($(NAME) condor_glidein)
 
 #if IS_CLIPPED
 CLIPPED = -DCLIPPED
@@ -9,12 +9,19 @@ CFLAGS = $(STD_C_FLAGS) $(CLIPPED)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CLIPPED)
 LIB = $(STD_LIBS)
 
-OBJ = gshadow.o
+OBJ = gshadow.o 
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
-release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
-strip_target($(NAME),$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
-static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
+
+release_copy_target($(NAME),sbin,$(NAME),EXECUTABLE_MODE)
+release_copy_target(condor_glidein,sbin,condor_glidein,EXECUTABLE_MODE)
+
+strip_copy_target($(NAME),$(STRIP_DIR)/sbin,$(NAME),EXECUTABLE_MODE)
+strip_copy_target(condor_glidein,$(STRIP_DIR)/sbin,condor_glidein,EXECUTABLE_MODE)
+
+static_copy_target($(NAME),$(STATIC_DIR)/sbin,$(NAME),EXECUTABLE_MODE)
+static_copy_target(condor_glidein,$(STATIC_DIR)/sbin,condor_glidein,EXECUTABLE_MODE)
+
 purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
 html:
