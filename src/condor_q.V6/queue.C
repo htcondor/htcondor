@@ -4,7 +4,6 @@
 #include "_condor_fix_resource.h"
 #include "condor_config.h"
 #include "condor_q.h"
-#include "proc_obj.h"
 #include "condor_attributes.h"
 #include "files.h"
 
