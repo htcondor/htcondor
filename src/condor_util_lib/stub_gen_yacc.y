@@ -1158,6 +1158,8 @@ output_receiver( struct node *n )
 	/* If this call is not supported, skip it */
 	if( !Supported ) return;
 
+	if( Ignored ) return;
+
 	if( !n->pseudo && Do_SYS_check && n->sys_chk ) {
 		printf( "#if defined( SYS_%s )\n", n->local_name );
 	}
@@ -1373,6 +1375,7 @@ output_sender( struct node *n )
 	/* If this call is not supported, skip the sender. */
 
 	if( !Supported ) return;
+	if( Ignored ) return;
 
 	/* Notice that we check for the existence of the local system
 	   call for this stub, which may not be the same as the 
@@ -1588,7 +1591,11 @@ output_switch( struct node *n )
 		printf( "\t\t} else {\n" );
 	}
 
-	output_remote_call(  n, n->param_list );
+	if( Ignored ) {
+		printf("\t\t\treturn 0;\n");
+	} else {
+		output_remote_call(  n, n->param_list );
+	}
 
 	if (gen_local_calls) {
 		printf( "\t\t}\n\n" );
