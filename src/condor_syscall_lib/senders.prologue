@@ -7,6 +7,7 @@
 
 #include "condor_debug.h"
 #include <stdarg.h>
+#include <signal.h>
 #include "condor_fix_assert.h"
 #include "condor_syscall_mode.h"
 #include "condor_xdr.h"
@@ -47,11 +48,24 @@ REMOTE_syscall( int syscall_num, ... )
 	int		scm;
 	int		terrno;
 	int		rval;
+	sigset_t    mask, omask;
 	va_list ap;
 
 
 	scm = SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 	va_start( ap, syscall_num );
+
+	/* Some problem with blocking and unblocking sigs on OSF1 */
+#if !defined(OSF1)
+		/* Block signals requesting an exit or checkpoint for duration of
+		   system call. */
+	sigemptyset( &mask );
+	sigaddset( &mask, SIGTSTP );
+	sigaddset( &mask, SIGUSR1 );
+	if( sigprocmask(SIG_BLOCK,&mask,&omask) < 0 ) {
+		EXCEPT( "sigprocmask" );
+	}
+#endif
 
 	switch( syscall_num ) {
 

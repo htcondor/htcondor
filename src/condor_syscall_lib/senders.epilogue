@@ -184,6 +184,14 @@
 		rval =  -1;
 	}
 
+	/* Some problem with blocking and unblocking sigs on OSF1 */
+#if !defined(OSF1)
+		/* Restore previous signal mask - generally unblocks TSTP and USR1 */
+	if( sigprocmask(SIG_SETMASK,&omask,0) < 0 ) {
+		EXCEPT( "sigprocmask" );
+	}
+#endif
+
 	SetSyscalls( scm );
 	return rval;
 }
