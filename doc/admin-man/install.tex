@@ -213,13 +213,14 @@ single shared home directory.  See the section below on
 machine-specific directories for more details.
 
 If you choose not to create a user named condor,
-then you must specify via the
+then you must specify either via the
 \index{environment variables!CONDOR\_IDS@\texttt{CONDOR\_IDS}}
 \index{CONDOR\_IDS@\texttt{CONDOR\_IDS}!environment variable}
-CONDOR\_IDS environment variable which uid.gid pair should be used for
-the ownership of various Condor files.  See section~\ref{sec:uids} on
-UIDs in Condor on page~\pageref{sec:uids} in the Administrator's
-Manual for details.
+\Env{CONDOR\_IDS} environment variable or the \Macro{CONDOR\_IDS}
+config file setting which uid.gid pair should be used for
+the ownership of various Condor files.  
+See section~\ref{sec:uids} on UIDs in Condor on
+page~\pageref{sec:uids} in the Administrator's Manual for details.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Where should the machine-specific directories for

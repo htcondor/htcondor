@@ -423,6 +423,22 @@ system.
   Configuring Condor for Multiple Platforms on
   page~\pageref{sec:Multiple-Platforms}.
 
+\item[\Macro{CONDOR\_IDS}] \label{param:CondorIds}
+  The User ID (UID) and Group ID (GID) pair that the Condor daemons
+  should run as if they are spawned as root.
+  This value can also be specified in the \Env{CONDOR\_IDS}
+  environment variable.
+  If the Condor daemons are not started as root, neither the
+  \MacroNI{CONDOR\_IDS} config file setting nor the \Env{CONDOR\_IDS}
+  environment variable are used.
+  The value should be two integers, seperated by a period.  For
+  example, \verb@CONDOR_IDS = 1234.1234@.
+  If this value is not specified in the config file or in the
+  environment and the Condor daemons are spawned as root, Condor will
+  search for a \verb@condor@ user on the system and run as that user's
+  UID and GID.
+  See section~\ref{sec:uids} on UIDs in Condor for more details.
+
 \item[\Macro{CONDOR\_ADMIN}] \label{param:CondorAdmin} The email
   address that Condor will send mail to if something goes wrong in
   your pool.  For example, if a daemon crashes, the \Condor{master}
@@ -474,8 +490,9 @@ system.
   Otherwise, it is whatever you set in the \Env{CONDOR\_IDS}
   \index{environment variables!CONDOR\_IDS@\texttt{CONDOR\_IDS}}
   \index{CONDOR\_IDS@\texttt{CONDOR\_IDS}!environment variable}
-  environment variable.  See section~\ref{sec:uids} on UIDs in
-  Condor for details.
+  environment variable, or whatever you define in the
+  \Macro{CONDOR\_IDS} setting in the Condor config files.
+  See section~\ref{sec:uids} on UIDs in Condor for details.
 
 \item[\Macro{HISTORY}] \label{param:History} Defines the
   location of the Condor history file, which stores information about
@@ -590,7 +607,6 @@ system.
   that the collector will accept TCP connections for updates, and will
   keep them open for reuse.
   Defaults to FALSE.
-
 
 \item[\Macro{TRUST\_UID\_DOMAIN}]
   \label{param:TrustUidDomain}

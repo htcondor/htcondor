@@ -36,12 +36,26 @@ The daemons then have the ability to switch their
 effective UIDs at will.
 When the daemons run as root,
 they normally leave their effective UID and GID (Group IDentification)
-to be those of user and group condor.
+to be those of user and group \verb@condor@.
 This allows access to the log files without
 changing the ownership of the log files.
 It also allows access to these files when
 the user condor's home directory resides on an NFS server.
 root can not normally access NFS files.
+
+If there is no \verb@condor@ user and group on the system, an
+administrator can specify which UID and GID the Condor daemons should
+use when they do not need root privileges in two ways, 
+either with the \Env{CONDOR\_IDS} environment variable or the
+\MacroNI{CONDOR\_IDS} configuration file setting.
+In either case, the value should be the UID integer, followed by a
+period, followed by the GID integer.
+For example, if a Condor administrator does not want to create a
+\verb@condor@ user, and instead wants their Condor daemons to run as
+the \verb@daemon@ user (a common non-root user for system daemons to
+execute as), the \verb@daemon@ user's UID was 2, and group
+\verb@daemon@ had a GID of 2, the corresponding setting in the Condor
+configuration file would be \verb@CONDOR_IDS = 2.2@.
 
 On a machine where a job is submitted,
 the \Condor{schedd} daemon
