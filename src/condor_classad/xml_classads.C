@@ -123,25 +123,24 @@ private:
 struct tag_name
 {
 	TagName  id; // Defined in the condor_xml_classads.h
-	char     *short_name;
-	char     *long_name;
+	char     *name;
 };
 
 #define NUMBER_OF_TAG_NAMES (sizeof(tag_names) / sizeof(struct tag_name))
 static struct tag_name tag_names[] = 
 {
-	{tag_ClassAds,  "cs", "classads"   },
-	{tag_ClassAd,   "c",  "classad"   },
-	{tag_Attribute, "a",  "attribute" },
-	{tag_Number,    "n",  "number"    },
-	{tag_String,    "s",  "string",   },
-	{tag_Bool,      "b",  "bool"      },
-	{tag_Undefined, "u",  "undefined" },
-	{tag_Error,     "er", "error"     },
-	{tag_Time,      "t",  "time"      },
-	{tag_List,      "l",  "list"      },
-	{tag_Expr,      "e",  "expr"      },
-	{tag_NoTag,     "",   ""          }
+	{tag_ClassAds,  "cs", },
+	{tag_ClassAd,   "c",  },
+	{tag_Attribute, "a",  },
+	{tag_Number,    "n",  },
+	{tag_String,    "s",  },
+	{tag_Bool,      "b",  },
+	{tag_Undefined, "u",  },
+	{tag_Error,     "er", },
+	{tag_Time,      "t",  },
+	{tag_List,      "l",  },
+	{tag_Expr,      "e",  },
+	{tag_NoTag,     "",   }
 };
 
 static void debug_check(void);
@@ -260,7 +259,8 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 		bool         is_end_tag;
 		TagName      tag_name;
 		XMLTokenType token_type;
-		
+
+		//token->Dump();
 		is_end_tag = token->GetTagIsEnd();
 		token_type = token->GetType();
 		tag_name = token->GetTag();
@@ -378,7 +378,7 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 				in_attribute = true;
 				attribute_type = tag_NoTag;
 				token->GetAttribute(attribute_name, attribute_value);
-				if (attribute_name != "name") {
+				if (attribute_name != "n") {
 					attribute_name = "";
 					attribute_value = "";
 				}
@@ -433,7 +433,6 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 ClassAdXMLUnparser::ClassAdXMLUnparser()
 {
 	debug_check();
-	_use_compact_names = true;
 	_use_compact_spacing = true;
 	return;
 }
@@ -446,33 +445,6 @@ ClassAdXMLUnparser::ClassAdXMLUnparser()
  **************************************************************************/
 ClassAdXMLUnparser::~ClassAdXMLUnparser()
 {
-	return;
-}
-
-/**************************************************************************
- *
- * Function: GetUseCompactNames
- * Purpose:  Returns true if we are using compact names, like <a> instead
- *           of attribute.
- *
- **************************************************************************/
-bool 
-ClassAdXMLUnparser::GetUseCompactNames(void)
-{
-	return _use_compact_names;
-}
-
-/**************************************************************************
- *
- * Function: SetUseCompactNames
- * Purpose:  Allow the caller to decide if compact names should be used
- *           (like <a>) or longer names (like <attribute>). 
- *
- **************************************************************************/
-void 
-ClassAdXMLUnparser::SetUseCompactNames(bool use_compact_names)
-{
-	_use_compact_names = use_compact_names;
 	return;
 }
 
@@ -514,7 +486,7 @@ ClassAdXMLUnparser::SetUseCompactSpacing(bool use_compact_spacing)
 void ClassAdXMLUnparser::AddXMLFileHeader(MyString &buffer)
 {
 	buffer += "<?xml version=\"1.0\"?>\n";
-	buffer += "<!DOCTYPE classad SYSTEM \"classads.dtd\">\n";
+	buffer += "<!DOCTYPE classads SYSTEM \"classads.dtd\">\n";
 	buffer += "<classads>\n";
 	return;
 
@@ -699,11 +671,7 @@ ClassAdXMLUnparser::add_tag(
 	if (!start_tag) {
 		buffer += '/';
 	}
-	if (_use_compact_names) {
-		buffer += tag_names[which_tag].short_name;
-	} else {
-		buffer += tag_names[which_tag].long_name;
-	}
+	buffer += tag_names[which_tag].name;
 	buffer += '>';
 	return;
 }
@@ -725,13 +693,9 @@ ClassAdXMLUnparser::add_attribute_start_tag(
 	} else {
 		buffer += '<';
 	}
-	if (_use_compact_names) {
-		buffer += tag_names[tag_Attribute].short_name;
-		buffer += " n=\"";
-	} else {
-		buffer += tag_names[tag_Attribute].long_name;
-		buffer += " name=\"";
-	}
+
+	buffer += tag_names[tag_Attribute].name;
+	buffer += " n=\"";
 	buffer += name;
 	buffer += "\">";
 	return;
@@ -754,13 +718,8 @@ ClassAdXMLUnparser::add_bool_start_tag(
 	} else {
 		buffer += '<';
 	}
-	if (_use_compact_names) {
-		buffer += tag_names[tag_Bool].short_name;
-		buffer += " v=\"";
-	} else {
-		buffer += tag_names[tag_Bool].long_name;
-		buffer += " value=\"";
-	}
+	buffer += tag_names[tag_Bool].name;
+	buffer += " v=\"";
 	if (bool_expr->Value()) {
 		buffer += "true";
 	} else {
@@ -782,11 +741,7 @@ ClassAdXMLUnparser::add_empty_tag(
 	TagName   which_tag)
 {
 	buffer += '<';
-	if (_use_compact_names) {
-		buffer += tag_names[which_tag].short_name;
-	} else {
-		buffer += tag_names[which_tag].long_name;
-	}
+	buffer += tag_names[which_tag].name;
 	buffer += "/>";
 	return;
 }
@@ -1219,7 +1174,7 @@ XMLToken::Dump(void)
 	if (_type == XMLToken_Tag) {
 		printf("IsEnd = %s, Tag = %s",
 			   _is_end ? "true" : "false",
-			   tag_names[_tag].long_name);
+			   tag_names[_tag].name);
 		if (_attribute_name && _attribute_value) {
 			printf(", %s = %s", _attribute_name, _attribute_value);
 		}
@@ -1403,8 +1358,7 @@ static TagName interpret_tagname(const char *tag_text)
 
 	which_tag = tag_NoTag;
 	for (tag_index = 0; tag_index < (int) NUMBER_OF_TAG_NAMES; tag_index++) {
-		if (   strcmp(tag_text, tag_names[tag_index].short_name) == 0
-			|| strcmp(tag_text, tag_names[tag_index].long_name) == 0) {
+		if (strcmp(tag_text, tag_names[tag_index].name) == 0) {
 			which_tag = tag_names[tag_index].id;
 			break;
 		}
