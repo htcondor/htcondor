@@ -165,7 +165,7 @@ SIMPLE_OBJ = condor_rt0.o extern_path.o xfer_file.o
 SYSCALL_LIB = condor_syscall_lib.a
 
 #if DOES_REMOTE_SYSCALLS
-all_target($(SYSCALL_LIB) receivers.C $(SIMPLE_OBJ) $(AIX_OBJ) syscall-list)
+all_target($(SYSCALL_LIB) receivers.o $(SIMPLE_OBJ) $(AIX_OBJ) syscall-list)
 #else 
 all_target($(SYSCALL_SUPPORT_OBJ))
 #endif
@@ -321,7 +321,7 @@ senders.C: syscall.tmpl stub_gen senders.prologue senders.epilogue
 	./stub_gen -mode senders -p senders.prologue -e senders.epilogue \
 	-n syscheck $(STUB_CLUMP_SIZE) > senders.C
 
-receivers.C: syscall.tmpl stub_gen receivers.prologue receivers.epilogue
+receivers.C: syscall.tmpl stub_gen receivers.prologue receivers.epilogue pseudo_ops.h
 	$(CPP) -DRECEIVER $(STUB_GEN_FLAGS) syscall.tmpl | \
 	./stub_gen -mode receivers -p receivers.prologue \
 	-e receivers.epilogue -n syscheck $(STUB_CLUMP_SIZE) > receivers.C
@@ -345,3 +345,4 @@ import(../condor_ckpt,condor_rt0.o)
 import(../condor_ckpt,$(CKPT_OBJ))
 import(../h,syscall_numbers.c)
 import(../condor_util_lib, stub_gen)
+import(../condor_shadow.V6, pseudo_ops.h)
