@@ -521,6 +521,14 @@ and SPARC Solaris 2.6 and between SPARC Solaris 2.7 and SPARC Solaris
 2.8, but not between SPARC Solaris 2.6 and SPARC Solaris 2.7.  We may
 implement support for this feature in a future release of Condor.
 
+\item[Can I submit my standard universe SPARC Solaris 2.8 jobs and have
+them run on a SPARC Solaris 2.9 machine?]
+
+No.  Although normal executables are binary compatible, technical details
+of taking checkpoints currently prevents this particular combination.
+Note that this applies to standard universe jobs only.
+
+
 \item[Why do my vanilla jobs keep cycling between suspended and unsuspended?]
 
 Condor tries to provide a number, the ``Condor Load Average''
