@@ -1191,6 +1191,59 @@ GahpClient::globus_gram_client_ping(const char * resource_contact)
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
+int
+GahpClient::globus_gram_client_job_refresh_credentials(char *job_contact)
+{
+	static const char* command = "GRAM_JOB_REFRESH_PROXY";
+
+		// Check if this command is supported
+	if  (m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	if (!job_contact) job_contact=NULLSTRING;
+	int size = strlen(job_contact) + 150;
+	Gahp_Buf reqline(size);
+	char *buf = reqline.buffer;
+	int x = snprintf(buf,size,"%s",escape(job_contact));
+	ASSERT( x > 0 && x < size );
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf);
+	}
+
+		// If we made it here, command is pending.
+		
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if (result->argc != 2) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc = atoi(result->argv[1]);
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
 
 bool
 GahpClient::is_pending(const char *command, const char *buf) 

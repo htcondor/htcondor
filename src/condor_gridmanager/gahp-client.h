@@ -260,6 +260,10 @@ class GahpClient : public Service {
 
 		///
 		int
+		globus_gram_client_job_refresh_credentials(char *job_contact);
+
+		///
+		int
 		globus_gass_server_superez_init( char **gass_url, int port );
 
 
