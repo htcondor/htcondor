@@ -39,22 +39,67 @@
 #include "get_full_hostname.h"
 
 extern "C" char *get_master_addr(const char *);
-void reconfig( char *host );
+extern "C" int strincmp( char*, char*, int );
+
+void do_command( char *host );
 
 void usage( char *str )
 {
-	fprintf( stderr, "Usage: %s hostname [other hostnames]\n", str );
+	fprintf( stderr, "Usage: %s command [hostnames]\n", str );
+	fprintf( stderr, "  where command is one of: reconfig, off, on, restart\n" );
+	fprintf( stderr, "  (if no hostname is specified, the local host is used).\n" );
+
 	exit( 1 );
 }
+
+char*
+cmd_to_str( int c )
+{
+	switch( c ) {
+	case DAEMONS_OFF:
+		return "DAEMONS_OFF";
+	case DAEMONS_ON:
+		return "DAEMONS_ON";
+	case RECONFIG:
+		return "RECONFIG";
+	case RESTART:
+		return "RESTART";
+	default:
+		return "Unknown";
+	}
+}
+
+
+int cmd;
 
 int main( int argc, char *argv[] )
 {
 	char* fullname, *MyName = argv[0];
+	char* cmd_str;
 
 	config( 0 );
 
 	if( argc < 2 ) {
-		reconfig( my_full_hostname() );
+		usage( MyName );
+	}
+	
+	cmd_str = argv[1];
+	if( !strincmp( cmd_str, "rec", 3 ) ) {
+		cmd = RECONFIG;
+	} else if( !strincmp( cmd_str, "res", 3 ) ) {
+		cmd = RESTART;
+	} else if( !strincmp( cmd_str, "on", 2 ) ) {
+		cmd = DAEMONS_ON;
+	} else if( !strincmp( cmd_str, "of", 2 ) ) {
+		cmd = DAEMONS_OFF;
+	} else {
+		fprintf( stderr, "Error: unknown command %s\n", cmd_str );
+		exit(1);
+	}
+	argv++;
+
+	if( argc == 2 ) {
+		do_command( my_full_hostname() );
 		exit( 0 );
 	}
 
@@ -63,15 +108,15 @@ int main( int argc, char *argv[] )
 			fprintf( stderr, "%s: unknown host %s\n", MyName, *argv );
 			continue;
 		}
-		reconfig( fullname );
+		do_command( fullname );
 	}
 	exit( 0 );
 }
 
 
-void reconfig( char *host )
+void
+do_command( char *host )
 {
-	int			cmd = RECONFIG;
 	char		*masterAddr;
 
 	if ((masterAddr = get_master_addr(host)) == NULL) {
@@ -88,11 +133,11 @@ void reconfig( char *host )
 
 	sock.encode();
 	if( !sock.code(cmd) || !sock.eom() ) {
-		fprintf( stderr, "Can't send RECONFIG command to master\n" );
+		fprintf( stderr, "Can't send %s command to master\n", cmd_to_str(cmd) );
 		return;
 	}
 
-	printf( "Sent RECONFIG command to master on %s\n", host );
+	printf( "Sent %s command to master on %s\n", cmd_to_str(cmd), host );
 }
 
 extern "C" int SetSyscalls(){}
