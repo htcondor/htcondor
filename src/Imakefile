@@ -186,6 +186,6 @@ check_platform_target
 
 clean::
 	cd h; make clean
-	rm -rf Makefile */Makefile */Makefile.* release_dir \
+	rm -rf make.out Makefile */Makefile */Makefile.* release_dir \
 		strip_dir strip_pvm strip_ckpt_server \
 		static_dir static_pvm static_ckpt_server
