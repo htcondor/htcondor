@@ -334,13 +334,20 @@ Scheduler::count_jobs()
 	  } else {
 	  	sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, OldOwners[i].Name, UidDomain);
 	  }
-      FREE( OldOwners[i].Name );
 
       // check that the old name is not in the new list
       int k;
       for(k=0; k<N_Owners;k++) {
         if (!strcmp(OldOwners[i].Name,Owners[k].Name)) break;
       }
+		  // Now that we've finished using OldOwners[i].Name, we can
+		  // free it.
+      FREE( OldOwners[i].Name );
+
+		  // If k < N_Owners, we found this OldOwner in the current
+		  // Owners table, therefore, we don't want to send the
+		  // submittor ad with 0 jobs, so we continue to the next
+		  // entry in the OldOwner table.
       if (k<N_Owners) continue;
 
 	  dprintf (D_ALWAYS, "Changed attribute: %s\n", tmp);
