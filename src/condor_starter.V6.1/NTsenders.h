@@ -25,7 +25,7 @@ extern "C" {
 	int REMOTE_CONDOR_mkdir( char *path, int mode );
 	int REMOTE_CONDOR_rmdir( char *path );
 	int REMOTE_CONDOR_fsync( int fd );
-	int REMOTE_CONDOR_get_file_info_new( const char *path, char *url );
+	int REMOTE_CONDOR_get_file_info_new( char *path, char *url );
 }
 
 #endif
