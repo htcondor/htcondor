@@ -1,3 +1,23 @@
+/**********
+**
+** We are told what platform we are compiling for on the command line
+**
+**********/
+
+#if defined(IS_ALPHA_OSF1)
+#	define Platform ALPHA_OSF1
+#	define PlatformIncludeFile <ALPHA_OSF1.cf>
+#	undef IS_ALPHA_OSF1
+#elif defined(IS_R6000_AIX32)
+#	define Platform R6000_AIX32
+#	define PlatformIncludeFile <R6000_AIX32.cf>
+#	undef IS_R6000_AIX32
+#elif defined(IS_SPARC_SUNOS41)
+#	define Platform SPARC_SUNOS41
+#	define PlatformIncludeFile <SPARC_SUNOS41.cf>
+#	undef IS_SPARC_SUNOS41
+#endif
+
 /*************
 **
 ** Figure out what platform we are compiling for.
@@ -118,5 +138,6 @@
 #define Platform ALPHA_OSF1
 #define PlatformIncludeFile <ALPHA_OSF1.cf>
 #endif
+
 
 #endif
