@@ -542,6 +542,7 @@ doContactSchedd()
 	bool schedd_deletes_complete = false;
 	bool add_remove_jobs_complete = false;
 	bool commit_transaction = true;
+	bool fake_job_in_queue = false;
 
 	dprintf(D_FULLDEBUG,"in doContactSchedd()\n");
 //bool foo=false;while(!foo)sleep(1);
@@ -617,9 +618,19 @@ doContactSchedd()
 							  curr_job->procID.proc,
 							  ATTR_JOB_STATUS, &job_status_schedd );
 		if ( rc < 0 ) {
+			if ( errno == ETIMEDOUT ) {
 dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
-			commit_transaction = false;
-			goto contact_schedd_disconnect;
+				commit_transaction = false;
+				goto contact_schedd_disconnect;
+			} else {
+					// The job is not in the schedd's job queue. This
+					// probably means that the user did a condor_rm -f,
+					// so report a job status of REMOVED and pretend that
+					// all updates for the job succeed. Otherwise, we'll
+					// never make forward progress on the job.
+				job_status_schedd = REMOVED;
+				fake_job_in_queue = true;
+			}
 		}
 
 		// If the job is marked as REMOVED or HELD on the schedd, don't
@@ -651,7 +662,7 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 			rc=GetAttributeInt(curr_job->procID.cluster, 
 							   curr_job->procID.proc, ATTR_NUM_SYSTEM_HOLDS,
 							   &sys_holds);
-			if ( rc < 0 ) {
+			if ( rc < 0 && fake_job_in_queue == false ) {
 dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 				commit_transaction = false;
 				goto contact_schedd_disconnect;
@@ -699,7 +710,9 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 			rc = GetAttributeFloat(curr_job->procID.cluster,
 								   curr_job->procID.proc,
 								   ATTR_JOB_REMOTE_WALL_CLOCK,&accum_time);
-			if ( rc < 0 ) {
+			if ( fake_job_in_queue == true ) {
+				accum_time = 0.0;
+			} else if ( rc < 0 ) {
 dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 				commit_transaction = false;
 				goto contact_schedd_disconnect;
@@ -733,7 +746,7 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 							   curr_job->procID.proc,
 							   attr_name,
 							   attr_value);
-			if ( rc < 0 ) {
+			if ( rc < 0 && fake_job_in_queue == false ) {
 dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 				commit_transaction = false;
 				goto contact_schedd_disconnect;
@@ -764,7 +777,7 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 			}
 			rc = DestroyProc(curr_action->job->procID.cluster,
 							 curr_action->job->procID.proc);
-			if ( rc < 0 ) {
+			if ( rc < 0 && fake_job_in_queue == false ) {
 dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 				commit_transaction = false;
 				goto contact_schedd_disconnect;
