@@ -9,13 +9,19 @@ INSTALL_DIR = InstallDir
 TMP_DIR = TmpDir
 
 PLATFORM_DIR =		$(TOP)/Platform
+
+#if 0
 RELEASE_DIR =		$(PLATFORM_DIR)/release_dir
+#else
+RELEASE_DIR =		../release_dir
+#endif
+
 LIB_DIR =			$(RELEASE_DIR)/lib
 CONFIG_DIR = 		$(TOP)/config
 SRC_TREE =			$(TOP)/src
 DOC_TREE =			$(TOP)/doc
-INCLUDE_DIR =		$(SRC_TREE)/h
-NEW_INCLUDE_DIR =	$(SRC_TREE)/condor_includes
+INCLUDE_DIR =		../h
+NEW_INCLUDE_DIR =	../condor_includes
 C_PLUS_INCLUDE =	../condor_c++_util
 PS_DIR =			$(DOC_TREE)/POSTSCRIPT
 CAT_DIR = 			$(DOC_TREE)/CAT
