@@ -22,8 +22,9 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#include "auxDrmaa.h"
-#include "drmaa_common.h"
+#include "auxDrmaa.c"   /* so we can pull in the static functions that
+						   should be kept hidden from end-user code 
+						 */
 
 /* ------------------- private variables ------------------- */
 static const char* DRMAA_ERR_MSGS [] = {

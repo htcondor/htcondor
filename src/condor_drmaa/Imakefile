@@ -7,7 +7,7 @@ CFLAGS = $(STD_C_FLAGS)
 #endif
 
 #define ObjectFiles \
-	libDrmaa.o auxDrmaa.o drmaa_common.o
+	libDrmaa.o drmaa_common.o
 
 library_target(libcondordrmaa.a,ObjectFiles)
 

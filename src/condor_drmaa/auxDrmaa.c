@@ -24,7 +24,308 @@
 #include "auxDrmaa.h"
 #include "drmaa_common.h"
 
-int 
+/** Determines if a given string is a number.
+    @param str the string to test
+    @return true (upon success) or false
+*/
+static int is_number(const char* str);
+
+/** Allocates a new job_attr_t
+    @return pointer to a new job template on the heap or NULL on failure.
+*/
+static job_attr_t* create_job_attribute();
+
+/** Deallocates a job_attr_t
+    @param ja job attribute to deallocate
+*/
+static void destroy_job_attribute(job_attr_t* ja);
+
+/** Allocates a new condor_drmaa_job_info_t.  job_id must not be longer than MAX_JOBID_LEN.
+    @return pointer to a new job info on the heap or NULL on failure
+*/
+static condor_drmaa_job_info_t* create_job_info(const char* job_id);
+
+/** Deallocates a condor_drmaa_job_info_t */
+static void destroy_job_info(condor_drmaa_job_info_t* job_info);
+
+/** Determines if a given attribute name is valid.
+    @param name attribute name
+    @param drmaa_context_error_buf contains a context sensitive error upon
+           fail returned
+    @return true (upon success) or false
+*/
+static int is_valid_attr_name(const char* name, char* error_diagnosis, 
+	       size_t error_diag_len);
+
+/** Determines if a given attribute value is 1) of the proper format and
+    2) a valid value.  Assumes name is supported per is_supported_attr()
+    @param err_cd set to DRMAA_ERRNO_INVALID_ATTRIBUTE_FORMAT, 
+           DRMAA_ERRNO_INVALID_ATTRIBUTE_VALUE, or 
+	   DRMAA_ERRNO_CONFLICTING_ATTRIBUTE_VALUES in the appropriate case
+    @param name attribute name
+    @param value attribute value
+    @param drmaa_context_error_buf contains a context sensitive error upon
+           fail returned
+    @return true (upon success) or false
+*/
+static int is_valid_attr_value(int* err_cd, const char* name, const char* value, 
+			char* error_diagnosis, size_t error_diag_len);
+
+/** Determines if a given attribute name represents a scalar attribute.
+    Assumes that name is valid per is_valid_attr_name()
+    @param name name of attribute
+    @param error_diagnosis contains a context sensitive error upon failure
+    @param error_diag_len length of error_diagnosis buffer
+    @return true (upon succcess) or false
+*/
+static int is_scalar_attr(const char* name, char* error_diagnosis, 
+		   size_t error_diag_len);
+
+/** Determines if a given attribute name represents a vectorr attribute.
+    Assumes that an attribute name is valid per is_valid_attr_name().
+    @param name name of attribute
+    @param error_diagnosis contains a context sensitive error upon failure
+    @param error_diag_len length of error_diagnosis buffer
+    @return true or false
+*/
+static int is_vector_attr(const char* name, char* error_diagnosis, 
+		   size_t error_diag_len);
+
+/** Determines if a given attribute name is supported by this DRMAA library.
+    Assumes that name is valid per is_valid_attr_name()
+    @param name name of attribute
+    @param error_diagnosis contains a context sensitive error upon failure
+    @param error_diag_len length of error_diagnosis buffer
+    @return true (upon success) or false
+*/
+static int is_supported_attr(const char* name, char* error_diagnosis, 
+		      size_t error_diag_len);
+
+/** Prints the given job attributes.
+    Used in debugging.
+*/
+/*static void print_ja(const job_attr_t* ja);*/
+
+/** Allocates a new drmaa_job_template_t
+    @return the job template or NULL upon failure
+*/
+static drmaa_job_template_t* create_job_template();
+
+/** Determines if a given job template is valid.
+    @param jt job template
+    @param drmaa_context_error_buf contains a context sensitive error upon
+           fail returned
+    @return true (upon success) or false
+*/
+static int is_valid_job_template(const drmaa_job_template_t* jt, char* error_diagnosis,
+	      size_t error_diag_len);
+
+/** Searches a given job template for the job attribute corresponding to name. 
+    The first one found is returned.  If none is found, NULL is returned.
+    jt is assumed to be valid per is_valid_job_template() and name is 
+    assumed to be valid per is_supported_attr()
+    @param jt job template
+    @param name name of job attribute
+    @param drmaa_context_error_buf contains a context sensitive error upon
+           fail returned
+    @return a pointer to the job attribute or NULL
+*/
+static job_attr_t* find_attr(const drmaa_job_template_t* jt, const char* name, 
+		     char* error_diagnosis, size_t error_diag_len);
+
+/** Determines if a given attribute is already set in a given job template.
+    Assumes that jt is valid per is_valid_job_template() and that name is 
+    supported per is_supported_attr()
+    @param jt job template
+    @param name attribute name
+    @param error_diagnosis contains a context sensitive error upon failure
+    @param error_diag_len length of error buffer
+    @return true (upon success) or false
+*/
+static int contains_attr(const drmaa_job_template_t* jt, const char* name, 
+		  char* error_diagnosis, size_t error_diag_len);
+
+/** Prints a given job template.  Useful in debugging. */
+/*static void print_jt(const drmaa_job_template_t* jt);*/
+
+/** Creates a Condor submit file for the given job template
+    @param submit_fn submit file name allocated and returned upon SUCCESS
+    @param jt job template Must be valid per is_valid_job_template()
+    @param error_diagnosis contains a context sensitive error upon
+           fail returned
+    @param error_diag_len length of the error buffer
+    @return one of the following error codes:
+            DRMAA_ERRNO_SUCCESS
+	    DRMAA_ERRNO_TRY_LATER
+	    DRMAA_ERRNO_NO_MEMORY
+*/
+static int create_submit_file(char** submit_fn, const drmaa_job_template_t* jt, 
+		       char* error_diagnosis, size_t error_diag_len);
+
+/** Generates a unique file name.
+    @param fname allocated and filled with the unique file name on success
+    @return SUCCESS or FAILURE
+*/
+static int generate_unique_file_name(char** fname);
+
+/** Write a given job attribute to the opened submit file file stream.
+    Assumes that ja is valid.
+    @return SUCCESS or FAILURE
+*/
+static int write_job_attr(FILE* fs, const job_attr_t* ja);
+
+/** Writes a given vector job attribute to the opened submit file file stream.
+    Assumes that ja is valid.
+    @return number of characters written or negative if an error occurred
+*/
+static int write_v_job_attr(FILE* fs, const job_attr_t* ja);
+
+/** Writes special job attributes to the opened submit file file stream.
+    Special job attributes are those whose values depend on other attributes'
+    values.  Assumes that jt is valid.
+    @return SUCCESS or FAILURE
+*/
+static int write_special_attrs(FILE* fs, const drmaa_job_template_t* jt);
+
+/** Submits a job to condor using the given submit file.
+    @param error_diagnosis contains a context sensitive error upon
+           fail returned
+    @param error_diag_len length of the error buffer
+    @return one of the following error codes:
+            DRMAA_ERRNO_SUCCESS
+	    DRMAA_ERRNO_TRY_LATER
+	    DRMAA_ERRNO_DENIED_BY_DRM
+	    DRMAA_ERRNO_NO_MEMORY
+	    DRMAA_ERRNO_DRM_COMMUNICATION_FAILURE
+	    DMRAA_ERRNO_AUTH_FAILURE
+*/
+static int submit_job(char* job_id, size_t job_id_len, const char* submit_file_name, 
+		char* error_diagnosis, size_t error_diag_len);
+
+/** Determines if stat represents a valid stat code
+    @return true or false
+*/
+static int is_valid_stat(const int stat);
+
+/** Determines if a given job id is valid
+    @return true or false
+*/
+static int is_valid_job_id(const char* job_id);
+
+/** Given a valid job_id, open's its log file for reading only.
+    @return pointer to file stream or NULL
+*/
+static FILE* open_log_file(const char* job_id); 
+
+/** Removes the log file of the given job id
+    @return true upon success, false on failure
+*/
+static int rm_log_file(const char* job_id);
+
+/** Waits for a given job_id to complete by monitoring the log file
+    @param dispose If true, deletes log file
+    @return DRMAA_ERRNO_s very similar to drmaa_wait()
+ */
+static int wait_job(const char* job_id, const int dispose, const int get_stat_rusage, 
+	     int* stat, signed long timeout, const time_t start, 
+	     drmaa_attr_values_t** rusage, char* error_diagnosis, 
+	     size_t error_diag_len);
+
+/** Creates a drmaa_attr_values_t of given size 
+    @return the drmaa_attr_values_t or NULL (upon failure)
+*/
+static drmaa_attr_values_t* create_dav(int size);
+
+/** Moves the given list of job_ids from the reserved_jobs_list to the
+    job_info_list.  Caller must have locks to both lists before calling.
+    If a given item in jobids is not found in the reserved_jobs_list, it
+    is ignored and the function continues.
+    @return true or false (upon success or failure, respectively)
+*/
+static int mv_jobs_res_to_info(const drmaa_job_ids_t* jobids);    
+
+/** Moves the given valid jobid from the job_reserved list to the job_info
+    list.  This method acquires and releases locks to both lists appropriately.
+    Returns false if jobid not found on job_reserved_list.
+    @return true (on success) or false
+*/
+static int mv_job_res_to_info(const char* jobid);
+
+/** Removes a given job id from the job_info_list.  Method acquires
+    and releases job_info_list_lock.
+    @return true (upon success) or false 
+*/
+static int rm_infolist(const char* job_id);
+
+/** Removes a given job id from the reserved_job_list.  This method acquires and 
+    releases reserved_job_list lock itself.
+    @return true (upon success) or false 
+*/
+static int rm_reslist(const char* job_id);
+
+/** Change the status of a given job on the reserved list to FINISHED.  This
+    method acquires and releases the reserved_job_list lock itself.  If the 
+    jobid is not found in the reserved_jobs_list, the function returns false.
+    @return true (upon success) or false
+*/
+static int mark_res_job_finished(const char* job_id);
+
+/** Releases both the reserved_list and info_list locks and
+    returns the error code given.  The caller must have both
+    locks before calling this method.
+    @return drmaa_err_code
+*/
+static int rel_locks(const int drmaa_err_code);
+
+/** Determines the library's base directory, allocates the required memory
+    for buf, and copies the full path name there.  A successful result contains
+    a trailing forward slash or backslash, depanding upon the system.
+    @return true (on success) or false otherwise
+*/
+static int get_base_dir(char** buf);
+
+/** Places the given jobid on hold.  Assumes job is in proper state already.
+    @return drmaa error code appropriate for drmaa_control()
+*/
+static int hold_job(const char* jobid, char* error_diagnosis, size_t error_diag_len);
+
+/** Releases the given jobid, which is assumed to be already on hold.
+    @return drmaa error code appropriate for drmaa_control()
+*/
+static int release_job(const char* jobid, char* error_diagnosis, size_t error_diag_len);
+
+/** Terminates the given valid jobid by calling condor_rm.  Does not 
+    remove the jobid from the library's internal data structures.
+    @return drmaa error code appropriate for drmaa_control()
+*/
+static int terminate_job(const char* jobid, char* error_diagnosis, 
+		  size_t error_diag_len);
+
+/** Frees the memory held by the entries in the job_info_list */
+static void free_job_info_list();
+
+/** Frees the memory held by the entries in the reserved_job_list */
+static void free_reserved_job_list();
+
+/** Removes all files in the submit file directory */
+static void clean_submit_file_dir();
+
+/** Unlocks the info_list_lock */
+static void unlock_info_list_lock();
+
+/** Unlocks the reserved_list_lock */
+static void unlock_reserved_list_lock();
+
+/** Unlocks the lock of the given condor_drmaa_job_info_t */
+static void unlock_job_info(condor_drmaa_job_info_t* job_info);
+
+/** Obtains the name of the local schedd.  Sets the "schedd_name" global
+    variable upon success.  
+    @return true (upon success) or false
+*/
+static int get_schedd_name(char *error_diagnosis, size_t error_diag_len);
+
+static int 
 is_number(const char* str)
 {
     int result = 1;
@@ -40,7 +341,7 @@ is_number(const char* str)
     return result;
 }
 
-job_attr_t* 
+static job_attr_t* 
 create_job_attribute()
 {
     job_attr_t* result = (job_attr_t*)malloc(sizeof(job_attr_t));
@@ -53,7 +354,7 @@ create_job_attribute()
     return result;
 }
 
-condor_drmaa_job_info_t*
+static condor_drmaa_job_info_t*
 create_job_info(const char* job_id)
 {
     condor_drmaa_job_info_t* result = NULL;
@@ -76,7 +377,7 @@ create_job_info(const char* job_id)
     return result;
 }
 
-void
+static void
 destroy_job_attribute(job_attr_t* ja)
 {
     int i;
@@ -90,7 +391,7 @@ destroy_job_attribute(job_attr_t* ja)
     free(ja);
 }
 
-void
+static void
 destroy_job_info(condor_drmaa_job_info_t* job_info)
 {
     if (job_info != NULL){
@@ -105,7 +406,7 @@ destroy_job_info(condor_drmaa_job_info_t* job_info)
     free(job_info);
 }
 
-int 
+static int 
 is_valid_attr_name(const char* name, char* error_diagnosis, 
 		   size_t error_diag_len)
 {
@@ -145,7 +446,7 @@ is_valid_attr_name(const char* name, char* error_diagnosis,
 }
 
 
-int 
+static int 
 is_valid_attr_value(int* err_cd, const char* name, const char* value, 
 		    char* error_diagnosis, size_t error_diag_len)
 {
@@ -187,7 +488,7 @@ is_valid_attr_value(int* err_cd, const char* name, const char* value,
     return result;
 }
 
-int 
+static int 
 is_scalar_attr(const char* name, char* error_diagnosis, size_t error_diag_len)
 {
     int result = 0;
@@ -220,7 +521,7 @@ is_scalar_attr(const char* name, char* error_diagnosis, size_t error_diag_len)
     return result;
 }
 
-int 
+static int 
 is_vector_attr(const char* name, char* error_diagnosis, size_t error_diag_len)
 {
     int result = 0;
@@ -238,7 +539,7 @@ is_vector_attr(const char* name, char* error_diagnosis, size_t error_diag_len)
     return result;
 }
 
-int 
+static int 
 is_supported_attr(const char* name, char* error_diagnosis, size_t error_diag_len)
 {
     int result = 0;
@@ -274,7 +575,8 @@ is_supported_attr(const char* name, char* error_diagnosis, size_t error_diag_len
     return result;
 }
 
-void 
+/*
+static void 
 print_ja(const job_attr_t* ja)
 {
     int i;
@@ -287,8 +589,9 @@ print_ja(const job_attr_t* ja)
 	    printf("\t\tValue %d: \"%s\"\n", i, ja->val.values[i]);
     }
 }
+*/
 
-drmaa_job_template_t* 
+static drmaa_job_template_t* 
 create_job_template()
 {
     drmaa_job_template_t* jt = (drmaa_job_template_t*)
@@ -302,7 +605,7 @@ create_job_template()
     return jt;
 }
 
-int 
+static int 
 is_valid_job_template(const drmaa_job_template_t* jt, char* error_diagnosis,
 	  size_t error_diag_len)
 {
@@ -327,7 +630,7 @@ is_valid_job_template(const drmaa_job_template_t* jt, char* error_diagnosis,
     return result;
 }
 
-job_attr_t* 
+static job_attr_t* 
 find_attr(const drmaa_job_template_t* jt, const char* name, 
 	  char* error_diagnosis, size_t error_diag_len)
 {
@@ -350,7 +653,7 @@ find_attr(const drmaa_job_template_t* jt, const char* name,
     return result;
 }
 
-int 
+static int 
 contains_attr(const drmaa_job_template_t* jt, const char* name, 
 	      char* error_diagnosis, size_t error_diag_len)
 {
@@ -370,7 +673,8 @@ contains_attr(const drmaa_job_template_t* jt, const char* name,
     return result;
 }
 
-void
+/*
+static void
 print_jt(const drmaa_job_template_t* jt)
 {
     job_attr_t* ja;
@@ -391,8 +695,9 @@ print_jt(const drmaa_job_template_t* jt)
 	}
     }
 }
+*/
 
-int 
+static int 
 create_submit_file(char** submit_fn, const drmaa_job_template_t* jt, 
 		   char* error_diagnosis, size_t error_diag_len)
 {
@@ -470,7 +775,7 @@ create_submit_file(char** submit_fn, const drmaa_job_template_t* jt,
     return DRMAA_ERRNO_SUCCESS;
 }
 
-int 
+static int 
 generate_unique_file_name(char** fname)
 {
     int i;
@@ -488,7 +793,7 @@ generate_unique_file_name(char** fname)
     return SUCCESS;
 }
 
-int 
+static int 
 write_job_attr(FILE* fs, const job_attr_t* ja)
 {
     int result = FAILURE;
@@ -580,7 +885,7 @@ write_job_attr(FILE* fs, const job_attr_t* ja)
     return result;
 }
 
-int 
+static int 
 write_v_job_attr(FILE* fs, const job_attr_t* ja)
 {
     int i, result;
@@ -607,7 +912,7 @@ write_v_job_attr(FILE* fs, const job_attr_t* ja)
     return result;
 }
 
-int 
+static int 
 write_special_attrs(FILE* fs, const drmaa_job_template_t* jt)
 {
     int result = 0;
@@ -629,7 +934,7 @@ write_special_attrs(FILE* fs, const drmaa_job_template_t* jt)
     return result;
 }
 
-int 
+static int 
 submit_job(char* job_id, size_t job_id_len, const char* submit_file_name, 
 	    char* error_diagnosis, size_t error_diag_len)
 {
@@ -690,13 +995,13 @@ submit_job(char* job_id, size_t job_id_len, const char* submit_file_name,
     return DRMAA_ERRNO_SUCCESS;
 }
 
-int
+static int
 is_valid_stat(const int stat)
 {
     return stat >= STAT_ABORTED;
 }
 
-int
+static int
 is_valid_job_id(const char* job_id)
 {
     return (job_id != NULL && 
@@ -704,7 +1009,7 @@ is_valid_job_id(const char* job_id)
 	    strlen(job_id)+1 < MAX_JOBID_LEN );
 }
 
-FILE* 
+static FILE* 
 open_log_file(const char* job_id)
 {
     char log_file_nm[MAX_FILE_NAME_LEN];
@@ -714,7 +1019,7 @@ open_log_file(const char* job_id)
     return fopen(log_file_nm, "r");
 }
 
-int 
+static int 
 rm_log_file(const char* job_id)
 {
     char log_file_nm[2000];
@@ -723,7 +1028,7 @@ rm_log_file(const char* job_id)
     return remove(log_file_nm)? 0 : 1;
 }
 
-int 
+static int 
 wait_job(const char* job_id, const int dispose, const int get_stat_rusage,
 	 int* stat, signed long timeout, const time_t start,
 	 drmaa_attr_values_t** rusage, char* error_diagnosis, 
@@ -841,7 +1146,7 @@ wait_job(const char* job_id, const int dispose, const int get_stat_rusage,
     return result;
 }
 
-drmaa_attr_values_t*
+static drmaa_attr_values_t*
 create_dav(int size)
 {
     drmaa_attr_values_t* dav = (drmaa_attr_values_t*)
@@ -859,7 +1164,7 @@ create_dav(int size)
     return dav;
 }
 
-int 
+static int 
 mv_jobs_res_to_info(const drmaa_job_ids_t* jobids)
 {
     int i = 0;
@@ -892,7 +1197,7 @@ mv_jobs_res_to_info(const drmaa_job_ids_t* jobids)
     return 1;
 }
 
-int 
+static int 
 mv_job_res_to_info(const char* jobid)
 {
     int result = 0;
@@ -936,7 +1241,7 @@ mv_job_res_to_info(const char* jobid)
     return result;
 }
 
-int
+static int
 rm_infolist(const char* job_id)
 {
     int result = 0;
@@ -974,7 +1279,7 @@ rm_infolist(const char* job_id)
     return result;
 }
 
-int
+static int
 rm_reslist(const char* job_id)
 {
     int result = 0;
@@ -1012,7 +1317,7 @@ rm_reslist(const char* job_id)
     return result;
 }
 
-int 
+static int 
 mark_res_job_finished(const char* job_id)
 {
     int result = 0;
@@ -1041,7 +1346,7 @@ mark_res_job_finished(const char* job_id)
     return result;
 }
 
-int 
+static int 
 rel_locks(const int drmaa_err_code)
 {
     unlock_info_list_lock();
@@ -1049,7 +1354,7 @@ rel_locks(const int drmaa_err_code)
     return drmaa_err_code;
 }
 
-int 
+static int 
 get_base_dir(char** buf)
 {
     char* dir;
@@ -1100,7 +1405,7 @@ get_base_dir(char** buf)
     return 1;
 }
 
-int 
+static int 
 hold_job(const char* jobid, char* error_diagnosis, size_t error_diag_len)
 {
     int result = DRMAA_ERRNO_DRM_COMMUNICATION_FAILURE;
@@ -1157,7 +1462,7 @@ hold_job(const char* jobid, char* error_diagnosis, size_t error_diag_len)
     return result;
 }
 
-int 
+static int 
 release_job(const char* jobid, char* error_diagnosis, size_t error_diag_len)
 {
     int result = DRMAA_ERRNO_DRM_COMMUNICATION_FAILURE;
@@ -1220,7 +1525,7 @@ release_job(const char* jobid, char* error_diagnosis, size_t error_diag_len)
     return result;
 }
 
-int 
+static int 
 terminate_job(const char* jobid, char* error_diagnosis, size_t error_diag_len)
 {
     int result = DRMAA_ERRNO_DRM_COMMUNICATION_FAILURE;
@@ -1280,7 +1585,7 @@ terminate_job(const char* jobid, char* error_diagnosis, size_t error_diag_len)
     return result;
 }
 
-void
+static void
 free_job_info_list()
 {
     condor_drmaa_job_info_t* cur = job_info_list, *last = NULL;
@@ -1293,7 +1598,7 @@ free_job_info_list()
     free(last);
 }
 
-void
+static void
 free_reserved_job_list()
 {
     condor_drmaa_job_info_t* cur = reserved_job_list, *last = NULL;
@@ -1306,7 +1611,7 @@ free_reserved_job_list()
     free(last);
 }
 
-void 
+static void 
 clean_submit_file_dir()
 {
     char cmd[3000];
@@ -1320,7 +1625,7 @@ clean_submit_file_dir()
     system(cmd);
 }
 
-void
+static void
 unlock_info_list_lock()
 {
 #ifdef WIN32
@@ -1332,7 +1637,7 @@ unlock_info_list_lock()
 #endif
 }
 
-void 
+static void 
 unlock_reserved_list_lock()
 {
 #ifdef WIN32
@@ -1344,7 +1649,7 @@ unlock_reserved_list_lock()
 #endif    
 }
 
-void 
+static void 
 unlock_job_info(condor_drmaa_job_info_t* job_info)
 {
 #ifdef WIN32
@@ -1356,7 +1661,7 @@ unlock_job_info(condor_drmaa_job_info_t* job_info)
 #endif    
 }
 
-int 
+static int 
 get_schedd_name(char *error_diagnosis, size_t error_diag_len)
 {
     int result = 0;
