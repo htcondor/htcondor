@@ -580,3 +580,57 @@ canned_makefile(condor_tools,pform)					@@\
 canned_makefile(condor_util_lib,pform)				@@\
 canned_makefile(condor_xdr_lib,pform)
 
+CONDOR_COMPILE = ../condor_scripts/condor_compile
+
+#define RLINK(compiler, remotetarg, obj) @@\
+## remotetarg:  obj @@\
+	condor_compile $(CONDOR_COMPILE_FLAGS) compiler -o remotetarg obj @@\
+@@\
+## clean:: @@\
+	rm -f remotetarg obj @@\
+## all:: remotetarg @@\
+## release:: @@\
+## stripped:: 
+
+/*
+  Link all three types of binaries
+*/
+
+#define LINK(compiler, remotetarg, vanillatarg, standalonetarg, obj) @@\
+@@\
+## all:: @@\
+	RLINK(compiler, remotetarg, obj); @@\
+	VLINK(vanillatarg, obj); @@\
+	SLINK(compiler, standalonetarg, obj); @@\
+
+/*
+  Link a program for running remotely
+*/
+
+/*
+  Link a program standalone ( runs outside condor, but will still checkpoint )
+*/
+
+#define SLINK(compiler, standalonetarg, obj) @@\
+## standalonetarg: obj @@\
+	condor_compile $(CONDOR_COMPILE_FLAGS) $(STAND_ALONE_FLAG) compiler -o standalonetarg obj @@\
+@@\
+## clean:: @@\
+	rm -f standalonetarg obj @@\
+## all:: standalonetarg @@\
+## release:: @@\
+## stripped::
+
+/*
+  Link a program to run normally ( no condor at all )
+*/
+
+#define VLINK(vanillatarg, obj) @@\
+## vanillatarg: obj @@\
+	program_target(vanillatarg, obj, fake_ckpt.o) @@\
+@@\
+## clean::				@@\
+	rm -f vanillatarg obj			@@\
+## all:: vanillatarg @@\
+## release:: @@\
+## stripped::
