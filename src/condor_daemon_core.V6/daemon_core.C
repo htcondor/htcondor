@@ -4667,10 +4667,9 @@ int DaemonCore::Create_Process(
 
 	// First, check to see that the specified executable exists.
 	if( access(name,F_OK | X_OK) < 0 ) {
-		dprintf(D_ALWAYS, 
-				"Create_Process: Specified executable %s cannot be found. "
-				"errno = %d (%s).\n",
-				name, errno, strerror(errno));	   
+		dprintf( D_ALWAYS, "Create_Process: "
+				 "Cannot access specified executable \"%s\": " 
+				 "errno = %d (%s)\n", name, errno, strerror(errno) );
 		if ( priv != PRIV_UNKNOWN ) {
 			set_priv( current_priv );
 		}
@@ -4681,9 +4680,9 @@ int DaemonCore::Create_Process(
 	struct stat stat_struct;
 	if( cwd && (cwd[0] != '\0') ) {
 		if( stat(cwd, &stat_struct) == -1 ) {
-			dprintf(D_ALWAYS, 
-				"Create_Process: Specified cwd %s cannot be found.\n",
-				cwd);	   
+			dprintf( D_ALWAYS, "Create_Process: "
+					 "Cannot access specified cwd \"%s\": "
+					 "errno = %d (%s)\n", cwd, errno, strerror(errno) ); 
 			if ( priv != PRIV_UNKNOWN ) {
 				set_priv( current_priv );
 			}	
