@@ -435,7 +435,7 @@ set_dynamic_dir( char* param_name, const char* append_str )
 	env_str += "=";
 	env_str += newdir;
 	char *env_cstr = strdup( env_str.Value() );
-	if( putenv(env_cstr) < 0 ) {
+	if( SetEnv(env_cstr) != TRUE ) {
 		fprintf( stderr, "ERROR: Can't add %s to the environment!\n", 
 				 env_cstr );
 		exit( 4 );
@@ -465,7 +465,7 @@ handle_dynamic_dirs()
 		// variable, so that the startd will have a unique name. 
 	sprintf( buf, "_%s_STARTD_NAME=%d", myDistro->Get(), mypid );
 	char* env_str = strdup( buf );
-	if( putenv(env_str) < 0 ) {
+	if( SetEnv(env_str) != TRUE ) {
 		fprintf( stderr, "ERROR: Can't add %s to the environment!\n", 
 				 env_str );
 		exit( 4 );
@@ -503,9 +503,7 @@ drop_core_in_log( void )
 		// debug symbols
 		char *binpath = param("BIN");
 		if ( binpath ) {
-			sprintf(pseudoCoreFileName,"_NT_SYMBOL_PATH=%s",
-				binpath);
-			putenv( strdup(pseudoCoreFileName) );
+			SetEnv( "_NT_SYMBOL_PATH", binpath );
 			free(binpath);
 		}
 	}
@@ -1012,55 +1010,47 @@ dc_config_auth()
     if (pbuf) {
 
 		if( !trustedca_buf) {
-       	 sprintf( buffer, "%s=%s%ccertificates", STR_GSI_CERT_DIR, pbuf, 
-					DIR_DELIM_CHAR);
-       	 putenv( strdup( buffer ) );
+			sprintf( buffer, "%s%ccertificates", pbuf, DIR_DELIM_CHAR);
+			SetEnv( STR_GSI_CERT_DIR, buffer );
 		}
 
 		if( !cert_buf ) {
-        	sprintf( buffer, "%s=%s%chostcert.pem", STR_GSI_USER_CERT, pbuf, 
-						DIR_DELIM_CHAR);
-        	putenv( strdup ( buffer ) );
+        	sprintf( buffer, "%s%chostcert.pem", pbuf, DIR_DELIM_CHAR);
+        	SetEnv( STR_GSI_USER_CERT, buffer );
 		}
 	
 		if (!key_buf ) {
-        	sprintf(buffer,"%s=%s%chostkey.pem",STR_GSI_USER_KEY,pbuf, 
-					DIR_DELIM_CHAR);
-        	putenv( strdup ( buffer  ) );
+			sprintf( buffer, "%s%chostkey.pem", pbuf, DIR_DELIM_CHAR);
+        	SetEnv( STR_GSI_USER_KEY, buffer );
 		}
 
         free( pbuf );
     }
 
 	if(proxy_buf) { 
-		sprintf( buffer, "%s=%s", STR_GSI_USER_PROXY, proxy_buf);
-		putenv (strdup( buffer ) );
+		SetEnv( STR_GSI_USER_PROXY, proxy_buf );
 		free(proxy_buf);
 	}
 
 	if(cert_buf) { 
-		sprintf( buffer, "%s=%s", STR_GSI_USER_CERT, cert_buf);
-		putenv (strdup( buffer ) );
+		SetEnv( STR_GSI_USER_CERT, cert_buf );
 		free(cert_buf);
 	}
 
 	if(key_buf) { 
-		sprintf( buffer, "%s=%s", STR_GSI_USER_KEY, key_buf);
-		putenv (strdup( buffer ) );
+		SetEnv( STR_GSI_USER_KEY, key_buf );
 		free(key_buf);
 	}
 
 	if(trustedca_buf) { 
-		sprintf( buffer, "%s=%s", STR_GSI_CERT_DIR, trustedca_buf);
-		putenv (strdup( buffer ) );
+		SetEnv( STR_GSI_CERT_DIR, trustedca_buf );
 		free(trustedca_buf);
 	}
 
 
     pbuf = param( STR_GSI_MAPFILE );
     if (pbuf) {
-        sprintf( buffer, "%s=%s", STR_GSI_MAPFILE, pbuf);
-        putenv( strdup (buffer) );
+		SetEnv( STR_GSI_MAPFILE, pbuf );
         free(pbuf);
     }
 #endif
@@ -1273,7 +1263,7 @@ int main( int argc, char** argv )
 					(char *)malloc( strlen(ptmp) + myDistro->GetLen() + 10 );
 				if ( ptmp1 ) {
 					sprintf(ptmp1,"%s_CONFIG=%s", myDistro->GetUc(), ptmp);
-					putenv(ptmp1);
+					SetEnv(ptmp1);
 				}
 			} else {
 				fprintf( stderr, 

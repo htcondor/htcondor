@@ -4730,7 +4730,7 @@ int DaemonCore::Create_Process(
 		return FALSE;
 	}
 
-	char inheritbuf[_INHERITBUF_MAXSIZE];
+	MyString inheritbuf;
 		// note that these are on the stack; they go away nicely
 		// upon return from this function.
 	ReliSock rsock;
@@ -4773,9 +4773,9 @@ int DaemonCore::Create_Process(
 		goto wrapup;
 	}
 
-	sprintf(inheritbuf,"%lu ",(unsigned long)mypid);
+	inheritbuf.sprintf("%lu ",(unsigned long)mypid);
 
-	strcat(inheritbuf,InfoCommandSinfulString());
+	inheritbuf += InfoCommandSinfulString();
 
 	if ( sock_inherit_list ) {
 		inherit_handles = TRUE;
@@ -4803,10 +4803,10 @@ int DaemonCore::Create_Process(
 			// now place the type of socket into inheritbuf
 			 switch ( sock_inherit_list[i]->type() ) {
 				case Stream::reli_sock :
-					strcat(inheritbuf," 1 ");
+					inheritbuf += " 1 ";
 					break;
 				case Stream::safe_sock :
-					strcat(inheritbuf," 2 ");
+					inheritbuf += " 2 ";
 					break;
 				default:
 					// we only inherit safe and reli socks at this point...
@@ -4815,11 +4815,11 @@ int DaemonCore::Create_Process(
 			}
 			// now serialize object into inheritbuf
 			 ptmp = sock_inherit_list[i]->serialize();
-			 strcat(inheritbuf,ptmp);
+			 inheritbuf += ptmp;
 			 delete []ptmp;
 		}
 	}
-	strcat(inheritbuf," 0");
+	inheritbuf += " 0";
 
 	// if we want a command port for this child process, create
 	// an inheritable tcp and a udp socket to listen on, and place 
@@ -4872,20 +4872,20 @@ int DaemonCore::Create_Process(
 		}
 
 		// and now add these new command sockets to the inheritbuf
-		strcat(inheritbuf," ");
+		inheritbuf += " ";
 		ptmp = rsock.serialize();
-		strcat(inheritbuf,ptmp);
+		inheritbuf += ptmp;
 		delete []ptmp;
-		strcat(inheritbuf," ");
+		inheritbuf += " ";
 		ptmp = ssock.serialize();
-		strcat(inheritbuf,ptmp);
+		inheritbuf += ptmp;
 		delete []ptmp;		 
 
             // now put the actual fds into the list of fds to inherit
         inheritSockFds[numInheritSockFds++] = rsock.get_file_desc();
         inheritSockFds[numInheritSockFds++] = ssock.get_file_desc();
 	}
-	strcat(inheritbuf," 0");
+	inheritbuf += " 0";
 	
 #ifdef WIN32
 	// START A NEW PROCESS ON WIN32
@@ -5025,7 +5025,7 @@ int DaemonCore::Create_Process(
 		}
 
 			// now, add in the inherit buf
-		job_environ.Put( EnvGetName( ENV_INHERIT ), inheritbuf);
+		job_environ.Put( EnvGetName( ENV_INHERIT ), inheritbuf.Value() );
 
 			// and finally, get it all back as a NULL delimited string.
 			// remember to deallocate this with delete [] since it will
@@ -5035,7 +5035,7 @@ int DaemonCore::Create_Process(
 	} else {
 	
 		newenv = NULL;
-		if( !SetEnv( EnvGetName( ENV_INHERIT ), inheritbuf) ) {
+		if( !SetEnv( EnvGetName( ENV_INHERIT ), inheritbuf.Value() ) ) {
 			dprintf(D_ALWAYS, "Create_Process: Failed to set %s env.\n",
 					EnvGetName( ENV_INHERIT ) );
 			goto wrapup;
@@ -5538,7 +5538,7 @@ int DaemonCore::Create_Process(
 			// Place inheritbuf into the environment as 
 			// env variable CONDOR_INHERIT
 			// SetEnv makes a copy of everything.
-		if( !SetEnv( EnvGetName( ENV_INHERIT ), inheritbuf) ) {
+		if( !SetEnv( EnvGetName( ENV_INHERIT ), inheritbuf.Value() ) ) {
 			dprintf(D_ALWAYS, "Create_Process: Failed to set %s env.\n",
 					EnvGetName( ENV_INHERIT ) );
 				// before we exit, make sure our parent knows something
@@ -6072,7 +6072,7 @@ DaemonCore::Kill_Thread(int tid)
 void
 DaemonCore::Inherit( void ) 
 {
-	char inheritbuf[_INHERITBUF_MAXSIZE];
+	char *inheritbuf = NULL;
 	int numInheritedSocks = 0;
 	char *ptmp;
 
@@ -6087,30 +6087,16 @@ DaemonCore::Inherit( void )
 	 		"1" for relisock, a "2" for safesock, and a "0" when done.
 		*	command sockets.  first the rsock, then the ssock, then a "0".
 	*/
-	inheritbuf[0] = '\0';
-	const char	*envName = EnvGetName( ENV_INHERIT );
-#ifdef WIN32
-	if (GetEnvironmentVariable( envName ,inheritbuf,
-							   _INHERITBUF_MAXSIZE) > _INHERITBUF_MAXSIZE-1) {
-		EXCEPT("%s too large", envName);
-	}
-	SetEnvironmentVariable( envName, "");
-#else
-	ptmp = getenv( envName );
-	if ( ptmp ) {
-		if ( strlen(ptmp) > _INHERITBUF_MAXSIZE-1 ) {
-			EXCEPT("%s too large", envName );
-		}
-		dprintf ( D_DAEMONCORE, "%s: \"%s\"\n", envName, ptmp );
-		strncpy(inheritbuf,ptmp,_INHERITBUF_MAXSIZE);
-		char	tmp[50];
-		strcpy( tmp, envName );
-		strcat( tmp, "=" );
-		SetEnv( tmp );
+	const char *envName = EnvGetName( ENV_INHERIT );
+	const char *tmp = GetEnv( envName );
+	if ( tmp != NULL ) {
+		inheritbuf = strdup( tmp );
+		dprintf ( D_DAEMONCORE, "%s: \"%s\"\n", envName, inheritbuf );
+		UnsetEnv( envName );
 	} else {
+		inheritbuf = strdup( "" );
 		dprintf ( D_DAEMONCORE, "%s: is NULL\n", envName );
-	}		
-#endif
+	}
 
 	if ( (ptmp=strtok(inheritbuf," ")) != NULL ) {
 		// we read out CONDOR__INHERIT ok, ptmp is now first item
@@ -6223,6 +6209,9 @@ DaemonCore::Inherit( void )
 
 	}	// end of if we read out CONDOR_INHERIT ok
 
+	if ( inheritbuf != NULL ) {
+		free( inheritbuf );
+	}
 }
 
 void

@@ -1203,7 +1203,6 @@ extern DaemonCore* daemonCore;
 #endif
 
 #define MAX_INHERIT_SOCKS 10
-#define _INHERITBUF_MAXSIZE 500
 
 // Prototype to get sinful string.
 char *global_dc_sinful( void );
