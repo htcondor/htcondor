@@ -1,6 +1,8 @@
 #ifndef FILE_LOCK_H
 #define FILE_LOCK_H
 
+#include "condor_constants.h"   /* Need definition of BOOLEAN */
+
 typedef enum { READ_LOCK, WRITE_LOCK, UN_LOCK } LOCK_TYPE;
 
 #if defined(__cplusplus)
