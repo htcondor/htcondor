@@ -3814,22 +3814,10 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 #ifdef WIN32
 	// On Win32, we don't deal with the old ckpt server, so we stub it,
 	// thus we do not have to link in the ckpt_server_api.
-	// Furthermore, NT uses the new starter/shadow, where the ckpt
-	// "file" is now a directory.
 #include "directory.h"
 int 
-RemoveLocalOrRemoteFile(const char *, const char *filename)
+RemoveLocalOrRemoteFile(const char *, const char *)
 {
-	{
-		// Must put this in braces so the Directory object
-		// destructor is called, which will free the iterator
-		// handle.  If we didn't do this, the below rmdir 
-		// would fail.
-		Directory ckpt_dir(filename);
-		ckpt_dir.Remove_Entire_Directory();
-	}
-	_rmdir(filename);
-
 	return 0;
 }
 int
@@ -3877,17 +3865,41 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 		 * not know the owner, don't bother sending to the ckpt
 		 * server.
 		 */
-	 strcpy(ckpt_name, gen_ckpt_name(Spool,cluster,proc,0) );
-	if ( owner )
-		RemoveLocalOrRemoteFile(owner,ckpt_name);
-	else
+	strcpy(ckpt_name, gen_ckpt_name(Spool,cluster,proc,0) );
+	if ( owner ) {
+		if ( IsDirectory(ckpt_name) ) {
+			{
+				// Must put this in braces so the Directory object
+				// destructor is called, which will free the iterator
+				// handle.  If we didn't do this, the below rmdir 
+				// would fail.
+				Directory ckpt_dir(ckpt_name);
+				ckpt_dir.Remove_Entire_Directory();
+			}
+			rmdir(ckpt_name);
+		} else {
+			RemoveLocalOrRemoteFile(owner,ckpt_name);
+		}
+	} else
 		unlink(ckpt_name);
 
 		  /* Remove any temporary checkpoint files */
-	 strcat( ckpt_name, ".tmp");
-	if ( owner )
-		RemoveLocalOrRemoteFile(owner,ckpt_name);
-	else
+	strcat( ckpt_name, ".tmp");
+	if ( owner ) {
+		if ( IsDirectory(ckpt_name) ) {
+			{
+				// Must put this in braces so the Directory object
+				// destructor is called, which will free the iterator
+				// handle.  If we didn't do this, the below rmdir 
+				// would fail.
+				Directory ckpt_dir(ckpt_name);
+				ckpt_dir.Remove_Entire_Directory();
+			}
+			rmdir(ckpt_name);
+		} else {
+			RemoveLocalOrRemoteFile(owner,ckpt_name);
+		}
+	} else
 		unlink(ckpt_name);
 }
 
