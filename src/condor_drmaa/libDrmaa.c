@@ -92,7 +92,7 @@ drmaa_get_next_attr_name(drmaa_attr_names_t* values, char *value, int value_len)
 {
     int result = DRMAA_ERRNO_INVALID_ATTRIBUTE_VALUE;
     if ((values != NULL) && (values->index < values->size)){
-	strncpy(value, values->attrs[values->index], value_len);
+	snprintf(value, value_len, values->attrs[values->index]);
 	++values->index;  
 	result = DRMAA_ERRNO_SUCCESS;
     }
@@ -106,7 +106,7 @@ drmaa_get_next_attr_value(drmaa_attr_values_t* values, char *value,
 {
     int result = DRMAA_ERRNO_INVALID_ATTRIBUTE_VALUE;
     if ((values != NULL) && (values->index < values->size)){
-	strncpy(value, values->values[values->index], value_len);
+	snprintf(value, value_len, values->values[values->index]);
 	++values->index;
 	result = DRMAA_ERRNO_SUCCESS;
     }
@@ -119,7 +119,7 @@ drmaa_get_next_job_id(drmaa_job_ids_t* values, char *value, int value_len)
 {
     int result = DRMAA_ERRNO_INVALID_ATTRIBUTE_VALUE;
     if ((values != NULL) && (values->index < values->size)){
-	strncpy(value, values->values[values->index], value_len);
+	snprintf(value, value_len, values->values[values->index]);
 	++values->index;
 	result = DRMAA_ERRNO_SUCCESS;
     }
@@ -192,8 +192,8 @@ drmaa_init(const char *contact, char *error_diagnosis, size_t error_diag_len)
 	    
 	// Obtain base file directory path
 	if (!get_base_dir(&file_dir)){
-	    strncpy(error_diagnosis, "Failed to determine base directory",
-		    error_diag_len);
+	    snprintf(error_diagnosis, error_diag_len, 
+		     "Failed to determine base directory");
 	    unlock_is_init_lock();
 	    return DRMAA_ERRNO_INTERNAL_ERROR;
 	}
@@ -201,8 +201,8 @@ drmaa_init(const char *contact, char *error_diagnosis, size_t error_diag_len)
 	// Create directories
 	if (mkdir(file_dir, S_IXUSR|S_IRUSR|S_IWUSR) == -1 && 
 	    errno != EEXIST) {
-	    strncpy(error_diagnosis, "Failed to make base directory", 
-		    error_diag_len);
+	    snprintf(error_diagnosis, error_diag_len,
+		     "Failed to make base directory");
 	    unlock_is_init_lock();
 	    return DRMAA_ERRNO_INTERNAL_ERROR;
 	}
@@ -213,8 +213,8 @@ drmaa_init(const char *contact, char *error_diagnosis, size_t error_diag_len)
 	strcpy(dir, file_dir);
 	strcat(dir, SUBMIT_FILE_DIR);
 	if (mkdir(dir, S_IXUSR|S_IRUSR|S_IWUSR) == -1 && errno != EEXIST){
-	    strncpy(error_diagnosis, "Failed to make submit file directory", 
-		    error_diag_len);		
+	    snprintf(error_diagnosis, error_diag_len, 
+		     "Failed to make submit file directory");
 	    unlock_is_init_lock();
 	    return DRMAA_ERRNO_INTERNAL_ERROR;
 	}
@@ -222,8 +222,8 @@ drmaa_init(const char *contact, char *error_diagnosis, size_t error_diag_len)
 	strcpy(dir, file_dir);
 	strcat(dir, LOG_FILE_DIR);
 	if (mkdir(dir, S_IXUSR|S_IRUSR|S_IWUSR) == -1 && errno != EEXIST){
-	    strncpy(error_diagnosis, "Failed to make log file directory", 
-		    error_diag_len);		
+	    snprintf(error_diagnosis, error_diag_len, 
+		     "Failed to make log file directory");
 	    unlock_is_init_lock();
 	    return DRMAA_ERRNO_INTERNAL_ERROR;	    
 	}
@@ -265,8 +265,8 @@ drmaa_init(const char *contact, char *error_diagnosis, size_t error_diag_len)
 #if (!defined(WIN32) && HAS_PTHREADS)
     }    
     else {
-	strncpy(error_diagnosis, "Failed to determine library status", 
-		error_diag_len);	
+	snprintf(error_diagnosis, error_diag_len, 
+		 "Failed to determine library status");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }
 #endif
@@ -304,8 +304,8 @@ drmaa_exit(char *error_diagnosis, size_t error_diag_len)
 #if HAS_PTHREADS
     }
     else 
-      strncpy(error_diagnosis, "Failed to determine library status.",
-	      error_diag_len);
+      snprintf(error_diagnosis, error_diag_len, 
+	       "Failed to determine library status.");
 #endif
 #endif
     return result;
@@ -320,7 +320,7 @@ drmaa_allocate_job_template(drmaa_job_template_t **jt, char *error_diagnosis,
     int result = DRMAA_ERRNO_NO_MEMORY;
 
     if(!is_lib_init()){
-        strncpy(error_diagnosis, "Library not initialized", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Library not initialized");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }
 
@@ -338,7 +338,7 @@ drmaa_delete_job_template(drmaa_job_template_t *jt, char *error_diagnosis,
     job_attr_t* last_ja;    
 
     if(!is_lib_init()){
-        strncpy(error_diagnosis, "Library not initialized", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Library not initialized");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }
     else if (!is_valid_job_template(jt, error_diagnosis, error_diag_len))
@@ -365,7 +365,7 @@ drmaa_set_attribute(drmaa_job_template_t *jt, const char *name,
     job_attr_t* ja;;
 
     if(!is_lib_init()){
-        strncpy(error_diagnosis, "Library not initialized", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Library not initialized");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }
     else if (!is_valid_job_template(jt, error_diagnosis, error_diag_len) ||
@@ -387,7 +387,7 @@ drmaa_set_attribute(drmaa_job_template_t *jt, const char *name,
     ++jt->num_attr;
 
     // set job attribute's fields
-    strncpy(ja->name, name, DRMAA_ATTR_BUFFER);
+    snprintf(ja->name, DRMAA_ATTR_BUFFER, "%s", name);
     if ((ja->val.value = (char*)malloc(strlen(value) + 1)) == NULL)
 	return DRMAA_ERRNO_NO_MEMORY;
     ja->num_values = 1;
@@ -405,7 +405,7 @@ drmaa_get_attribute(drmaa_job_template_t *jt, const char *name, char *value,
     job_attr_t* ja = NULL;
 
     if(!is_lib_init()) {
-        strncpy(error_diagnosis, "Library not initialized", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Library not initialized");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }
     else if (!is_valid_job_template(jt, error_diagnosis, error_diag_len) ||
@@ -419,9 +419,7 @@ drmaa_get_attribute(drmaa_job_template_t *jt, const char *name, char *value,
 	return DRMAA_ERRNO_INVALID_ATTRIBUTE_VALUE;
 
     // copy scalar value to output buffer
-    // since values "SHALL" be a string (2.5.2) its ok to strncpy
-    // ? what if value_len is less than strlen(ja->value)
-    strncpy(value, ja->val.value, value_len);
+    snprintf(value, value_len, "%s", ja->val.value);
 
     return DRMAA_ERRNO_SUCCESS;
 }
@@ -435,7 +433,7 @@ drmaa_set_vector_attribute(drmaa_job_template_t *jt, const char *name,
     job_attr_t* ja;;  
 
     if(!is_lib_init()){
-        strncpy(error_diagnosis, "Library not initialized", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Library not initialized");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }
     else if (!is_valid_job_template(jt, error_diagnosis, error_diag_len) ||
@@ -448,7 +446,7 @@ drmaa_set_vector_attribute(drmaa_job_template_t *jt, const char *name,
 
     // verify values[] has at least one value
     if (value == NULL || value[0] == NULL){
-	strncpy(error_diagnosis, "No values specified", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "No values specified");
 	return DRMAA_ERRNO_INVALID_ATTRIBUTE_VALUE;
     }
 
@@ -468,14 +466,14 @@ drmaa_set_vector_attribute(drmaa_job_template_t *jt, const char *name,
     ++jt->num_attr;
 
     // set job attribute's fields
-    strncpy(ja->name, name, DRMAA_ATTR_BUFFER);
+    snprintf(ja->name, DRMAA_ATTR_BUFFER, "%s", name);
     ja->num_values = index;
 
     // set job attribute's values, allocating space according to number of values
     if (ja->num_values == 1){
 	if ((ja->val.value = (char*)malloc(strlen(value[0]) + 1)) == NULL)
 	    return DRMAA_ERRNO_NO_MEMORY;
-	strcpy(ja->val.value, value[0]);	
+	strcpy(ja->val.value, value[0]);
     }
     else {
 	if((ja->val.values = (char**)malloc(sizeof(char*)*index)) == NULL)
@@ -504,7 +502,7 @@ drmaa_get_vector_attribute(drmaa_job_template_t *jt, const char *name,
     int index = 0, value_len;
 
     if(!is_lib_init()) {
-        strncpy(error_diagnosis, "Library not initialized", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Library not initialized");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }
     else if (!is_valid_job_template(jt, error_diagnosis, error_diag_len) ||
@@ -519,8 +517,8 @@ drmaa_get_vector_attribute(drmaa_job_template_t *jt, const char *name,
 
     // allocate memory for drmaa_attr_values_t
     if ((*values = create_dav(ja->num_values)) == NULL){
-	strncpy(error_diagnosis, "Unable to allocate memory for values",
-		error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, 
+		 "Unable to allocate memory for values");
 	return DRMAA_ERRNO_NO_MEMORY;
     }
         
@@ -529,8 +527,8 @@ drmaa_get_vector_attribute(drmaa_job_template_t *jt, const char *name,
 	value_len = strlen(ja->val.value);	
 	(*values)->values[index] = (char*)malloc(value_len + 1);
 	if ((*values)->values[index] == NULL){
-	    strncpy(error_diagnosis, "Unable to allocate memory for values",
-		    error_diag_len);
+	    snprintf(error_diagnosis, error_diag_len, 
+		     "Unable to allocate memory for values");
 	    return DRMAA_ERRNO_NO_MEMORY;
 	}
 	((*values)->values[index])[value_len] = '\0'; 
@@ -541,8 +539,8 @@ drmaa_get_vector_attribute(drmaa_job_template_t *jt, const char *name,
 	    value_len = strlen(ja->val.values[index]);	
 	    (*values)->values[index] = (char*)malloc(value_len + 1);
 	    if ((*values)->values[index] == NULL){
-		strncpy(error_diagnosis, "Unable to allocate memory for values",
-			error_diag_len);
+		snprintf(error_diagnosis, error_diag_len,
+			 "Unable to allocate memory for values");
 		return DRMAA_ERRNO_NO_MEMORY;
 	    }
 	    ((*values)->values[index])[value_len] = '\0'; 
@@ -562,7 +560,7 @@ drmaa_get_attribute_names(drmaa_attr_names_t **values, char *error_diagnosis,
     int i;
     
     if(!is_lib_init()) {
-        strncpy(error_diagnosis, "Library not initialized", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Library not initialized");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }
     
@@ -616,7 +614,7 @@ drmaa_get_vector_attribute_names(drmaa_attr_names_t **values,
     int i;
 
     if(!is_lib_init()) {
-        strncpy(error_diagnosis, "Library not initialized", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Library not initialized");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }
     
@@ -657,7 +655,7 @@ drmaa_run_job(char *job_id, size_t job_id_len, drmaa_job_template_t *jt,
 
     // 1. Perform Initialization and Validation checks
     if(!is_lib_init()){
-        strncpy(error_diagnosis, "Library not initialized", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Library not initialized");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }    
     else if (!is_valid_job_template(jt, error_diagnosis, error_diag_len))
@@ -691,8 +689,8 @@ drmaa_run_job(char *job_id, size_t job_id_len, drmaa_job_template_t *jt,
 #endif
 #endif
 	if ((job = create_job_info(job_id)) == NULL){
-	    strncpy(error_diagnosis, "Unable to create job info",
-		    error_diag_len);
+	    snprintf(error_diagnosis, error_diag_len, 
+		     "Unable to create job info");
 	    result = DRMAA_ERRNO_NO_MEMORY;
 	}
 	else {
@@ -706,8 +704,8 @@ drmaa_run_job(char *job_id, size_t job_id_len, drmaa_job_template_t *jt,
 #if (!defined(WIN32) && HAS_PTHREADS)
     }
     else {
-        strncpy(error_diagnosis, "Problem acquiring job id list lock", 
-		error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, 
+		 "Problem acquiring job id list lock");
 	result = DRMAA_ERRNO_TRY_LATER;
     }
 #endif
@@ -731,7 +729,7 @@ drmaa_run_bulk_jobs(drmaa_job_ids_t **jobids, drmaa_job_template_t *jt,
     // 2.3 Acquire lock; Add job ID to internal job ID list; release lock
     // 2.4 add job IS to jobIds[]
 
-    strncpy(error_diagnosis, "Feature not yet supported.", error_diag_len);
+    snprintf(error_diagnosis, error_diag_len, "Feature not yet supported.");
 
     return result;
 }
@@ -748,18 +746,18 @@ drmaa_control(const char *jobid, int action, char *error_diagnosis,
 
     // 1. Argument validation and library state check
     if(!is_lib_init()){
-	strncpy(error_diagnosis, "Library not initialized", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Library not initialized");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }      
     else if (jobid == NULL || 
 	     (!is_valid_job_id(jobid) && 
 	      (strcmp(jobid, DRMAA_JOB_IDS_SESSION_ALL) != 0))){
-	strncpy(error_diagnosis, "Invalid job id", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Invalid job id");
 	return DRMAA_ERRNO_INVALID_ARGUMENT;
     }     
     else if (action < DRMAA_CONTROL_SUSPEND ||
 	     action > DRMAA_CONTROL_TERMINATE){
-	strncpy(error_diagnosis, "Invalid action", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Invalid action");
 	return DRMAA_ERRNO_INVALID_ARGUMENT;
     }
 
@@ -772,7 +770,7 @@ drmaa_control(const char *jobid, int action, char *error_diagnosis,
 
     // 2. Verify existence and status of job
     if (strcmp(jobid, DRMAA_JOB_IDS_SESSION_ALL) == 0){
-	strncpy(error_diagnosis, "Feature not supported", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Feature not supported");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }
     else {
@@ -824,8 +822,8 @@ drmaa_control(const char *jobid, int action, char *error_diagnosis,
 			}
 		    }
 		    else if (cur_info->state == FINISHED){
-			strncpy(error_diagnosis, "Job has finished.",
-				error_diag_len);
+			snprintf(error_diagnosis, error_diag_len,
+				 "Job has finished.");
 			if (action == DRMAA_CONTROL_HOLD)
 			    return 
 				rel_locks(DRMAA_ERRNO_HOLD_INCONSISTENT_STATE);
@@ -851,8 +849,8 @@ drmaa_control(const char *jobid, int action, char *error_diagnosis,
 	    }
 
 	    if (!proceed){  // jobid not found
-		strncpy(error_diagnosis, "Jobid not valid this session", 
-			error_diag_len);
+		snprintf(error_diagnosis, error_diag_len,
+			 "Jobid not valid this session");
 		return rel_locks(DRMAA_ERRNO_INVALID_JOB);
 	    }
 
@@ -874,8 +872,8 @@ drmaa_control(const char *jobid, int action, char *error_diagnosis,
 #else
 #if HAS_PTHREADS
 		if (pthread_mutex_lock(&(cur_info->lock)) != 0){
-		    strncpy(error_diagnosis, "Problem acquiring job lock", 
-			    error_diag_len);
+		    snprintf(error_diagnosis, error_diag_len,
+			     "Problem acquiring job lock");
 		    return rel_locks(DRMAA_ERRNO_TRY_LATER);    
 		}
 		else
@@ -888,8 +886,8 @@ drmaa_control(const char *jobid, int action, char *error_diagnosis,
 #if (!defined(WIN32) && HAS_PTHREADS)
 	}
 	else {
-	    strncpy(error_diagnosis, "Problem acquiring job list locks", 
-		    error_diag_len);
+	    snprintf(error_diagnosis, error_diag_len, 
+		     "Problem acquiring job list locks");
 	    return rel_locks(DRMAA_ERRNO_TRY_LATER);
 	}
 #endif
@@ -955,15 +953,15 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
 
     // 1. Validation of Lib status and args
     if (!is_lib_init()){
-	strncpy(error_diagnosis, "Library not initialized", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Library not initialized");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }
     else if (timeout < 0 && timeout != DRMAA_TIMEOUT_WAIT_FOREVER){
-	strncpy(error_diagnosis, "Invalid wait quantity", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Invalid wait quantity");
 	return DRMAA_ERRNO_INVALID_ARGUMENT;
     } 
     else if (jobids == NULL || jobids->size < 1){
-	strncpy(error_diagnosis, "Jobids is NULL or empty", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Jobids is NULL or empty");
 	return DRMAA_ERRNO_INVALID_ARGUMENT;
     }   
     for (i = 0; i < jobids->size; i++){
@@ -981,16 +979,16 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
     // 2. Manage locks and lib jobid lists
     if (sync_all_jobs){
 
-	strncpy(error_diagnosis, "DRMAA_JOB_IDS_SESSION_ANY not currently " \
-		"supported", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "DRMAA_JOB_IDS_SESSION_ANY "\
+		 "not currently supported");
 	return DRMAA_ERRNO_INVALID_ARGUMENT;
 
 	// verify all jobs submitted this session are "syncable"
 	/*
 	if (pthread_mutex_lock(&reserved_list_lock) == 0){
 	    if (num_reserved_jobs > 0){
-		strncpy(error_diagnosis, "Not all jobs in syncable state", 
-			error_diag_len);
+		snprintf(error_diagnosis, error_diag_len,
+		"Not all jobs in syncable state");
 		pthread_mutex_unlock(&reserved_list_lock);
 		return DRMAA_ERRNO_TRY_LATER;
 	    }
@@ -1010,14 +1008,14 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
 	    }
 	    else {
 		pthread_mutex_unlock(&reserved_list_lock);
-		strncpy(error_diagnosis, "Problem acquiring info list lock", 
-			error_diag_len);
+		snprintf(error_diagnosis, error_diag_len, 
+		"Problem acquiring info list lock");
 		return DRMAA_ERRNO_TRY_LATER;	    
 	    }
 	}
 	else {
-	    strncpy(error_diagnosis, "Problem acquiring reserved list lock", 
-		    error_diag_len);
+	    snprintf(error_diagnosis, error_diag_len, 
+	    "Problem acquiring reserved list lock");
 	    return DRMAA_ERRNO_TRY_LATER;	    
 	}
 	*/
@@ -1121,8 +1119,8 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
 #if (!defined(WIN32) && HAS_PTHREADS)
 	}
 	else {
-	    strncpy(error_diagnosis, "Problem acquiring proper locks", 
-		    error_diag_len);
+	    snprintf(error_diagnosis, error_diag_len, 
+		     "Problem acquiring proper locks");
 	    return rel_locks(DRMAA_ERRNO_TRY_LATER);
 	}
 #endif
@@ -1157,8 +1155,9 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
 		}
 		else {
 		    // this is serious!
-		    strncpy(error_diagnosis, "Problem acquiring proper locks."\
-			    " Library in inconsistent state!", error_diag_len);
+		    snprintf(error_diagnosis, error_diag_len, 
+			     "Problem acquiring proper locks."\
+			    " Library in inconsistent state!");
 		    return rel_locks(DRMAA_ERRNO_INTERNAL_ERROR);
 		}
 #endif
@@ -1192,20 +1191,20 @@ drmaa_wait(const char *job_id, char *job_id_out, size_t job_id_out_len,
 
     // Validation of lib state and args
     if (!is_lib_init()){
-	strncpy(error_diagnosis, "Library not initialized", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Library not initialized");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }
     else if (!is_valid_job_id(job_id) && 
 	     strcmp(job_id, DRMAA_JOB_IDS_SESSION_ANY) != 0){
-	strncpy(error_diagnosis, "Invalid job id", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Invalid job id");
 	return DRMAA_ERRNO_INVALID_JOB;
     }
     else if (rusage == NULL){
-	strncpy(error_diagnosis, "Invalid rusage value", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Invalid rusage value");
 	return DRMAA_ERRNO_INVALID_ARGUMENT;
     }
     else if (timeout < 0 && timeout != DRMAA_TIMEOUT_WAIT_FOREVER){
-	strncpy(error_diagnosis, "Invalid wait quantity", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Invalid wait quantity");
 	return DRMAA_ERRNO_INVALID_ARGUMENT;
     }
 
@@ -1214,19 +1213,19 @@ drmaa_wait(const char *job_id, char *job_id_out, size_t job_id_out_len,
 	// 1) condor_drmaa_job_info_t* last_job_to_complete?
 	// 2) scan through all log files for any job that has completed?
 	// 3) condor_drmaa_job_info_t* last_job_submitted?
-	strncpy(error_diagnosis, "Feature not currently supported", 
-		error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, 
+		 "Feature not currently supported");
 	return DRMAA_ERRNO_INVALID_JOB;
     }
     else 
-	strncpy(term_job_id, job_id, sizeof(term_job_id)-1);
+	snprintf(term_job_id, sizeof(term_job_id), "%s", job_id);
     
-    result = wait_job(job_id, 1, 1, stat, timeout, time(NULL), rusage, 
+    result = wait_job(term_job_id, 1, 1, stat, timeout, time(NULL), rusage, 
 		      error_diagnosis, error_diag_len);
     
     // remove job info from job_info list
     if (result == DRMAA_ERRNO_SUCCESS)
-	rm_infolist(job_id);
+	rm_infolist(term_job_id);
 
     return result;
 }
@@ -1237,11 +1236,11 @@ drmaa_wifexited(int *exited, int stat, char *error_diagnosis,
 {
     // Perform Initialization and Validation checks
     if(!is_lib_init()){
-        strncpy(error_diagnosis, "Library not initialized", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Library not initialized");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }   
     else if (!is_valid_stat(stat)){
-        strncpy(error_diagnosis, "Invalid stat code", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Invalid stat code");
 	return DRMAA_ERRNO_INVALID_ARGUMENT;
     }
 
@@ -1260,11 +1259,11 @@ drmaa_wexitstatus(int *exit_status, int stat, char *error_diagnosis,
 {
     // Perform Initialization and Validation checks
     if(!is_lib_init()){
-        strncpy(error_diagnosis, "Library not initialized", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Library not initialized");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }   
     else if (!is_valid_stat(stat) || stat == STAT_UNKNOWN){
-        strncpy(error_diagnosis, "Invalid stat code", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Invalid stat code");
 	return DRMAA_ERRNO_INVALID_ARGUMENT;
     }
 
@@ -1282,12 +1281,12 @@ drmaa_wifsignaled(int *signaled, int stat, char *error_diagnosis,
 {
     // Perform Initialization and Validation checks
     if(!is_lib_init()){
-        strncpy(error_diagnosis, "Library not initialized", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Library not initialized");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }   
     else if (!is_valid_stat(stat) ||
 	     stat <= STAT_UNKNOWN || stat >= STAT_NOR_BASE){
-        strncpy(error_diagnosis, "Invalid stat code", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Invalid stat code");
 	return DRMAA_ERRNO_INVALID_ARGUMENT;
     }
 
@@ -1301,21 +1300,21 @@ drmaa_wtermsig(char *signal, size_t signal_len, int stat,
 {
     // Perform Initialization and Validation checks
     if(!is_lib_init()){
-        strncpy(error_diagnosis, "Library not initialized", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Library not initialized");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }   
     else if (!is_valid_stat(stat) || stat <= STAT_UNKNOWN || 
 	     stat >= STAT_NOR_BASE) {
-        strncpy(error_diagnosis, "Invalid stat code", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Invalid stat code");
 	return DRMAA_ERRNO_INVALID_ARGUMENT;
     }
     else if (signal == NULL || signal_len <= MIN_SIGNAL_NM_LEN){
-	strncpy(error_diagnosis, "signal buffer too small", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "signal buffer too small");
 	return DRMAA_ERRNO_INVALID_ARGUMENT;
     }
 
     if (stat-1 < (sizeof(SIGNAL_NAMES) / sizeof(char*)))
-	strncpy(signal, SIGNAL_NAMES[stat-1], signal_len);
+	snprintf(signal, signal_len, "%s", SIGNAL_NAMES[stat-1]);
 
     return DRMAA_ERRNO_SUCCESS;
 }
@@ -1326,12 +1325,12 @@ drmaa_wcoredump(int *core_dumped, int stat, char *error_diagnosis,
 {
     // Perform Initialization and Validation checks
     if(!is_lib_init()){
-        strncpy(error_diagnosis, "Library not initialized", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Library not initialized");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }   
     else if (!is_valid_stat(stat) ||
 	     stat <= STAT_UNKNOWN || stat >= STAT_NOR_BASE){
-        strncpy(error_diagnosis, "Invalid stat code", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Invalid stat code");
 	return DRMAA_ERRNO_INVALID_ARGUMENT;
     }
     
@@ -1347,11 +1346,11 @@ drmaa_wifaborted(int *aborted, int stat, char *error_diagnosis,
 {
     // Perform Initialization and Validation checks
     if(!is_lib_init()){
-        strncpy(error_diagnosis, "Library not initialized", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Library not initialized");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }   
     else if (!is_valid_stat(stat)){
-        strncpy(error_diagnosis, "Invalid stat code", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Invalid stat code");
 	return DRMAA_ERRNO_INVALID_ARGUMENT;
     }
 
@@ -1373,11 +1372,11 @@ drmaa_job_ps(const char *job_id, int *remote_ps, char *error_diagnosis,
 
     // 1. Perform Initialization and Validation checks
     if(!is_lib_init()){
-        strncpy(error_diagnosis, "Library not initialized", error_diag_len);
+        snprintf(error_diagnosis, error_diag_len, "Library not initialized");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }    
     else if (!is_valid_job_id(job_id)){
-	strncpy(error_diagnosis, "Invalid job id", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Invalid job id");
 	return DRMAA_ERRNO_INVALID_JOB;
     }
 
@@ -1385,7 +1384,7 @@ drmaa_job_ps(const char *job_id, int *remote_ps, char *error_diagnosis,
     logFS = open_log_file(job_id);
 
     if (logFS == NULL){
-	strncpy(error_diagnosis, "Unable to open log file", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Unable to open log file");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }
 
@@ -1430,11 +1429,11 @@ drmaa_job_ps(const char *job_id, int *remote_ps, char *error_diagnosis,
 const char* 
 drmaa_strerror(int drmaa_errno)
 {
-    char* result = NULL;
+    const char *result = NULL;
     int numErrors = sizeof(DRMAA_ERR_MSGS) / sizeof(char*);
 
     if (drmaa_errno >= 0 && drmaa_errno < numErrors)
-	result = strdup(DRMAA_ERR_MSGS[drmaa_errno]);
+	result = DRMAA_ERR_MSGS[drmaa_errno];
 
     return result;
 }
@@ -1443,7 +1442,7 @@ int
 drmaa_get_contact(char *contact, size_t contact_len, char *error_diagnosis,
 		  size_t error_diag_len)
 { 
-    strncpy(contact, "Condor: condor-admin@cs.wisc.edu", contact_len);
+    snprintf(contact, contact_len, "Condor: condor-admin@cs.wisc.edu");
     return DRMAA_ERRNO_SUCCESS;;
 }
 
@@ -1460,7 +1459,7 @@ int
 drmaa_get_DRM_system(char *drm_system, size_t drm_system_len,
 		     char *error_diagnosis, size_t error_diag_len)
 {  
-    strncpy(drm_system, "Condor", drm_system_len);
+    snprintf(drm_system, drm_system_len, "Condor");
     return DRMAA_ERRNO_SUCCESS;
 }
 
@@ -1468,7 +1467,7 @@ int
 drmaa_get_DRMAA_implementation(char *impl, size_t impl_len, 
 			       char *error_diagnosis, size_t error_diag_len)
 {
-    strncpy(impl, "Condor", impl_len);
+    snprintf(impl, impl_len, "Condor");
     return DRMAA_ERRNO_SUCCESS;
 }
 

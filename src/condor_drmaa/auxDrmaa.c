@@ -61,7 +61,7 @@ create_job_info(const char* job_id)
     if (strlen(job_id)+1 <= MAX_JOBID_LEN){
 	result = (condor_drmaa_job_info_t*)malloc(sizeof(condor_drmaa_job_info_t));
 	if (result != NULL) {
-	    strncpy(result->id, job_id, MAX_JOBID_LEN);
+	    snprintf(result->id, MAX_JOBID_LEN, "%s", job_id);
 	    result->next = NULL;
 #ifdef WIN32
 	    InitializeCriticalSection(&result->lock);
@@ -112,10 +112,10 @@ is_valid_attr_name(const char* name, char* error_diagnosis,
     int result = 0;
 
     if (name == NULL)
-	strncpy(error_diagnosis, "Attribute name is empty", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Attribute name is empty");
     else if ((strlen(name) + 1) > DRMAA_ATTR_BUFFER)
-	strncpy(error_diagnosis, "Attribute name exceeds DRMAA_ATTR_BUFFER",
-		error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, 
+		 "Attribute name exceeds DRMAA_ATTR_BUFFER");
     else if (strcmp(name, DRMAA_REMOTE_COMMAND) != 0 &&
 	     strcmp(name, DRMAA_JS_STATE) != 0 && 
 	     strcmp(name, DRMAA_WD) != 0 &&
@@ -137,7 +137,7 @@ is_valid_attr_name(const char* name, char* error_diagnosis,
 	     strcmp(name, DRMAA_V_ARGV) != 0 &&
 	     strcmp(name, DRMAA_V_ENV) != 0 &&
 	     strcmp(name, DRMAA_V_EMAIL) != 0)
-	strncpy(error_diagnosis, "Unrecognized attribute name", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Unrecognized attribute name");
     else
 	result = 1;
 
@@ -193,7 +193,7 @@ is_scalar_attr(const char* name, char* error_diagnosis, size_t error_diag_len)
     int result = 0;
 
     if (name == NULL)
-	strncpy(error_diagnosis, "Attribute name is empty", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Attribute name is empty");
     else if (strcmp(name, DRMAA_REMOTE_COMMAND) == 0 ||
 	     strcmp(name, DRMAA_JS_STATE) == 0 || 
 	     strcmp(name, DRMAA_WD) == 0 ||
@@ -214,9 +214,8 @@ is_scalar_attr(const char* name, char* error_diagnosis, size_t error_diag_len)
 	     strcmp(name, DRMAA_DURATION_SLIMIT) == 0)
 	result = 1;
     else
-	strncpy(error_diagnosis,
-		"Attribute name does not specify a scalar value", 
-		error_diag_len);
+	snprintf(error_diagnosis, error_diag_len,
+		"Attribute name does not specify a scalar value");
 
     return result;
 }
@@ -227,15 +226,14 @@ is_vector_attr(const char* name, char* error_diagnosis, size_t error_diag_len)
     int result = 0;
 
     if (name == NULL)
-	strncpy(error_diagnosis, "Attribute name is empty", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Attribute name is empty");
     else if (strcmp(name, DRMAA_V_ARGV) == 0 ||
 	     strcmp(name, DRMAA_V_ENV) == 0 || 
 	     strcmp(name, DRMAA_V_EMAIL) == 0)
 	result = 1;
     else
-	strncpy(error_diagnosis, 
-		"Attribute name does not specify a vector value",
-		error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, 
+		 "Attribute name does not specify a vector value");
 
     return result;
 }
@@ -246,7 +244,7 @@ is_supported_attr(const char* name, char* error_diagnosis, size_t error_diag_len
     int result = 0;
 
     if (name == NULL)
-	strncpy(error_diagnosis, "Attribute name is empty", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Attribute name is empty");
     else if (strcmp(name, DRMAA_REMOTE_COMMAND) == 0 ||
 	     strcmp(name, DRMAA_JS_STATE) == 0 || 
 	     //strcmp(name, DRMAA_WD) == 0 || 
@@ -270,8 +268,8 @@ is_supported_attr(const char* name, char* error_diagnosis, size_t error_diag_len
 	     strcmp(name, DRMAA_V_EMAIL) == 0)
 	result = 1;
     else
-	strncpy(error_diagnosis, "Attribute is not currently supported",
-		error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, 
+		 "Attribute is not currently supported");
 
     return result;
 }
@@ -311,7 +309,7 @@ is_valid_job_template(const drmaa_job_template_t* jt, char* error_diagnosis,
     int result = 0;
 
     if (jt == NULL)
-	strncpy(error_diagnosis, "Job template is null", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Job template is null");
     else {
 	result = 1;  
 	/*  // TODO
@@ -362,8 +360,8 @@ contains_attr(const drmaa_job_template_t* jt, const char* name,
     while (!result && cur != NULL){
 	if (strcmp(cur->name, name) == 0){
 	    result = 1;
-	    strncpy(error_diagnosis, "Attribute already set in job template",
-		    error_diag_len);
+	    snprintf(error_diagnosis, error_diag_len, 
+		     "Attribute already set in job template");
 	}
 	else
 	    cur = cur->next;
@@ -405,8 +403,8 @@ create_submit_file(char** submit_fn, const drmaa_job_template_t* jt,
 
     // Generate a unique file name
     if (generate_unique_file_name(&gen_file_name) != SUCCESS){
-	strncpy(error_diagnosis, "Unable to generate submit file name", 
-		error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, 
+		 "Unable to generate submit file name");
 	return DRMAA_ERRNO_TRY_LATER;
     }	    
 
@@ -423,16 +421,16 @@ create_submit_file(char** submit_fn, const drmaa_job_template_t* jt,
     // Create the file
     if ((fs = fopen(*submit_fn, "w")) == NULL){
 	free(*submit_fn);
- 	strncpy(error_diagnosis, "Unable to create submission file", 
-	 	error_diag_len);
+ 	snprintf(error_diagnosis, error_diag_len, 
+		 "Unable to create submission file");
 	return DRMAA_ERRNO_TRY_LATER;
     }
 
     // Write the job template into the file
     if (fprintf(fs, "#\n# Condor Submit file\n") < 1){
 	free(*submit_fn);
-	strncpy(error_diagnosis, "Failed to write to submit file",
-		error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, 
+		 "Failed to write to submit file");
 	fclose(fs);
 	return DRMAA_ERRNO_TRY_LATER;
     }
@@ -450,8 +448,8 @@ create_submit_file(char** submit_fn, const drmaa_job_template_t* jt,
     while (ja != NULL){
 	if (write_job_attr(fs, ja) != SUCCESS){
 	    free(*submit_fn);
-	    strncpy(error_diagnosis, "Unable to write job attribute to file",
-		    error_diag_len);
+	    snprintf(error_diagnosis, error_diag_len, 
+		     "Unable to write job attribute to file");
 	    fclose(fs);
 	    return DRMAA_ERRNO_TRY_LATER;
 	}
@@ -461,8 +459,8 @@ create_submit_file(char** submit_fn, const drmaa_job_template_t* jt,
     // Write ja's that require knowledge of other ja's
     if (write_special_attrs(fs, jt) != SUCCESS){
 	free(*submit_fn);
-	strncpy(error_diagnosis, "Unable to write job attributes to file",
-		error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, 
+		 "Unable to write job attributes to file");
 	fclose(fs);
 	return DRMAA_ERRNO_TRY_LATER;
     }
@@ -648,20 +646,19 @@ submit_job(char* job_id, size_t job_id_len, const char* submit_file_name,
     // Submit to condor
     fs = popen(cmd, "r");
     if (fs == NULL){
-	strncpy(error_diagnosis, "Unable to perform submit call", 
-		error_diag_len);
+	snprintf(error_diagnosis, error_diag_len,
+		 "Unable to perform submit call");
 	return DRMAA_ERRNO_DRM_COMMUNICATION_FAILURE;
     }
     else if ((int)fs == -1){
-	strncpy(error_diagnosis, "Submit call failed", 
-		error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Submit call failed");
 	return DRMAA_ERRNO_DRM_COMMUNICATION_FAILURE;	
     }
 
     // Parse output - look for "<X> job<s> submitted to cluster <#>" line
     do {
 	if (fgets(buffer, MAX_READ_LEN, fs) == NULL){
-	    strncpy(error_diagnosis, last_buffer, error_diag_len);
+	    snprintf(error_diagnosis, error_diag_len, "%s", last_buffer);
 	    pclose(fs);
 	    return DRMAA_ERRNO_DENIED_BY_DRM;
 	}
@@ -679,8 +676,7 @@ submit_job(char* job_id, size_t job_id_len, const char* submit_file_name,
     // Verify job_id_len is large enough
     if ( (strlen(schedd_name) + strlen(cluster_num) + strlen(job_num) 
 	  + 1 + (2 * strlen(JOBID_TOKENIZER))) > (int)job_id_len ){
-	strncpy(error_diagnosis, "Job ID length is too small", 
-		error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Job ID length is too small");
 	pclose(fs);
 	// TODO: remove job from condor?	
 	return DRMAA_ERRNO_TRY_LATER;	
@@ -744,8 +740,7 @@ wait_job(const char* job_id, const int dispose, const int get_stat_rusage,
 
     // 1. Open log file
     if ((logFS = open_log_file(job_id)) == NULL){
-	strncpy(error_diagnosis, "Unable to open log file", 
-		error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Unable to open log file");
 	return DRMAA_ERRNO_INVALID_JOB;
     }
 
@@ -833,8 +828,8 @@ wait_job(const char* job_id, const int dispose, const int get_stat_rusage,
 	result = DRMAA_ERRNO_SUCCESS;
 	if (dispose){
 	    if (!rm_log_file(job_id))
-		strncpy(error_diagnosis, "Warning: Failed to delete log file",
-			error_diag_len);
+		snprintf(error_diagnosis, error_diag_len, 
+			 "Warning: Failed to delete log file");
 	}
     }
     else {
@@ -1115,7 +1110,7 @@ hold_job(const char* jobid, char* error_diagnosis, size_t error_diag_len)
 
     // prepare command: "condor_hold -name scheddname cluster.process"
     if (strstr(jobid, schedd_name) != jobid){
-	strncpy(error_diagnosis, "Unexpected job id format", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Unexpected job id format");
 	return DRMAA_ERRNO_INVALID_JOB;
     }
     strcpy(clu_proc, jobid+strlen(schedd_name)+1);  // 1 for schedd.clu.proc
@@ -1124,18 +1119,18 @@ hold_job(const char* jobid, char* error_diagnosis, size_t error_diag_len)
     // execute command
     fs = popen(cmd, "r");
     if (fs == NULL){
-	strncpy(error_diagnosis, "Unable to perform hold call", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Unable to perform hold call");
 	return DRMAA_ERRNO_NO_MEMORY;
     }
     else if ((int)fs == -1){
-	strncpy(error_diagnosis, "Hold call failed", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Hold call failed");
 	return DRMAA_ERRNO_DRM_COMMUNICATION_FAILURE;	
     }
 
     // Parse output for success/failure
     if (fgets(buf, MAX_READ_LEN, fs) == NULL){
-	strncpy(error_diagnosis, "Unable to read result of hold call", 
-		error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, 
+		 "Unable to read result of hold call");
 	return DRMAA_ERRNO_DRM_COMMUNICATION_FAILURE;		
     }
     // "Job $cluster.$proc held"
@@ -1144,18 +1139,18 @@ hold_job(const char* jobid, char* error_diagnosis, size_t error_diag_len)
     // "condor_hold: Can't find address for schedd $scheddname"
     if (strstr(buf, "Job") != NULL){
 	if (strstr(buf, "not found") != NULL){
-	    strncpy(error_diagnosis, "Job not found", error_diag_len);
+	    snprintf(error_diagnosis, error_diag_len, "Job not found");
 	    result = DRMAA_ERRNO_INVALID_JOB;		
 	}
 	else if (strstr(buf, "held") != NULL)
 	    result = DRMAA_ERRNO_SUCCESS;
 	else {
-	    strncpy(error_diagnosis, buf, error_diag_len);
+	    snprintf(error_diagnosis, error_diag_len, "%s", buf);
 	    result = DRMAA_ERRNO_HOLD_INCONSISTENT_STATE;		
 	}
     }
     else {
-	strncpy(error_diagnosis, buf, error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "%s", buf);
 	result = DRMAA_ERRNO_DRM_COMMUNICATION_FAILURE;
     }
 
@@ -1172,28 +1167,31 @@ release_job(const char* jobid, char* error_diagnosis, size_t error_diag_len)
 
     // prepare command: "condor_release -name schedddname cluster.process"
     if (strstr(jobid, schedd_name) != jobid){
-	strncpy(error_diagnosis, "Unexpected job id format", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Unexpected job id format");
 	return DRMAA_ERRNO_INVALID_JOB;
     }
-    strcpy(clu_proc, jobid+strlen(schedd_name)+1);  // 1 for schedd.clu.proc
+
+    // 1 for schedd.clu.proc
+    snprintf(clu_proc, sizeof(clu_proc), "%s", jobid+strlen(schedd_name)+1);
+
     snprintf(cmd, sizeof(cmd), "%s %s %s", RELEASE_CMD, schedd_name, clu_proc);
 
     // execute command
     fs = popen(cmd, "r");
     if (fs == NULL){
-	strncpy(error_diagnosis, "Unable to perform release call", 
-		error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, 
+		 "Unable to perform release call");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }
     else if ((int)fs == -1){
-	strncpy(error_diagnosis, "Release call failed", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Release call failed");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }
     
     // Parse output for success/failure
     if (fgets(buf, MAX_READ_LEN, fs) == NULL){
-	strncpy(error_diagnosis, "Unable to read result of release call", 
-		error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, 
+		 "Unable to read result of release call");
 	return DRMAA_ERRNO_DRM_COMMUNICATION_FAILURE;		
     }    
     // condor_release: unknown host schedd
@@ -1204,18 +1202,18 @@ release_job(const char* jobid, char* error_diagnosis, size_t error_diag_len)
     // Job 939091.0 not held to be released
     if (strstr(buf, "Job") != NULL){
 	if (strstr(buf, "not found") != NULL){
-	    strncpy(error_diagnosis, "Job not found", error_diag_len);
+	    snprintf(error_diagnosis, error_diag_len, "Job not found");
 	    result = DRMAA_ERRNO_INVALID_JOB;		
 	}
 	else if (strstr(buf, "released") != NULL)
 	    result = DRMAA_ERRNO_SUCCESS;
 	else {
-	    strncpy(error_diagnosis, buf, error_diag_len);
+	    snprintf(error_diagnosis, error_diag_len, "%s", buf);
 	    result = DRMAA_ERRNO_RELEASE_INCONSISTENT_STATE;		
 	}
     }
     else {
-	strncpy(error_diagnosis, buf, error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "%s", buf);
 	result = DRMAA_ERRNO_DRM_COMMUNICATION_FAILURE;
     }    
 
@@ -1232,28 +1230,31 @@ terminate_job(const char* jobid, char* error_diagnosis, size_t error_diag_len)
 
     // prepare command: "condor_rm -name schedddname cluster.process"
     if (strstr(jobid, schedd_name) != jobid){
-	strncpy(error_diagnosis, "Unexpected job id format", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Unexpected job id format");
 	return DRMAA_ERRNO_INVALID_JOB;
     }
-    strcpy(clu_proc, jobid+strlen(schedd_name)+1);  // 1 for schedd.clu.proc
+
+    // 1 for schedd.clu.proc
+    snprintf(clu_proc, sizeof(clu_proc), "%s", jobid+strlen(schedd_name)+1);
+
     snprintf(cmd, sizeof(cmd), "%s %s %s", TERMINATE_CMD, schedd_name, clu_proc);
 
     // execute command
     fs = popen(cmd, "r");
     if (fs == NULL){
-	strncpy(error_diagnosis, "Unable to perform terminate call", 
-		error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, 
+		 "Unable to perform terminate call");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }
     else if ((int)fs == -1){
-	strncpy(error_diagnosis, "Terminate call failed", error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "Terminate call failed");
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }
 
     // Parse output for success/failure
     if (fgets(buf, MAX_READ_LEN, fs) == NULL){
-	strncpy(error_diagnosis, "Unable to read result of release call", 
-		error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, 
+		 "Unable to read result of release call");
 	return DRMAA_ERRNO_DRM_COMMUNICATION_FAILURE;		
     }    
     // Job 939609.0 marked for removal
@@ -1261,18 +1262,18 @@ terminate_job(const char* jobid, char* error_diagnosis, size_t error_diag_len)
     // condor_rm: Can't find address for schedd $scheddname
     if (strstr(buf, "Job") != NULL){
 	if (strstr(buf, "not found") != NULL){
-	    strncpy(error_diagnosis, "Job not found", error_diag_len);
+	    snprintf(error_diagnosis, error_diag_len, "Job not found");
 	    result = DRMAA_ERRNO_INVALID_JOB;		
 	}
 	else if (strstr(buf, "marked for removal") != NULL)
 	    result = DRMAA_ERRNO_SUCCESS;
 	else {
-	    strncpy(error_diagnosis, buf, error_diag_len);
+	    snprintf(error_diagnosis, error_diag_len, "%s", buf);
 	    result = DRMAA_ERRNO_RELEASE_INCONSISTENT_STATE;		
 	}
     }
     else {
-	strncpy(error_diagnosis, buf, error_diag_len);
+	snprintf(error_diagnosis, error_diag_len, "%s", buf);
 	result = DRMAA_ERRNO_DRM_COMMUNICATION_FAILURE;
     }    
     
@@ -1372,8 +1373,8 @@ get_schedd_name(char *error_diagnosis, size_t error_diag_len)
     struct utsname host_info;
 
     if (uname(&host_info) == -1)
-	strncpy(error_diagnosis, "Failed to obtain name of local schedd",
-		error_diag_len);		
+	snprintf(error_diagnosis, error_diag_len, 
+		 "Failed to obtain name of local schedd");
     else {
 	result = 1;
 	schedd_name = strdup(host_info.nodename);
