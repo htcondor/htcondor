@@ -1,0 +1,148 @@
+#!/s/std/bin/perl
+
+#
+# Condor Batch Test Scheduler.  This program runs all of the programs 
+# specified in @TEST_PROGRAMS and mails any information about SUCCESS or
+# FAILURE to the email address indicated by $results.  This program is
+# somewhat intelligent in that it can be run from any directory and it will
+# look for all of the files in the directory in which it lives.
+#
+
+# results will be mailed TO this person.
+$results = `whoami`; 
+
+# mail will be sent FROM this person
+$username = `whoami`; 
+
+$MAIL = '/usr/lib/sendmail -t -oi';
+
+#--------------------------------------------------------------------------
+# No user serviceable parts below this line.
+#--------------------------------------------------------------------------
+
+while(@ARGV)
+{
+    $_ = shift;
+    if($_ eq "-o")
+    {
+	$OUT = shift;
+	$OUT = ">" . $OUT;
+    }
+    elsif($_ eq "-a")
+    {
+	$analyze = 1;
+    }
+    elsif($_ eq "-t") # test program file
+    {
+	open(PROGS, shift) || die "Can't open $_: $!.\n";
+	while(<PROGS>)
+	{
+	    chomp;
+	    push @TEST_PROGRAMS, "./" . $_;
+	}
+	close(PROGS);
+    }
+    else
+    {
+	push(@TEST_PROGRAMS, "./" . $_);
+    }
+}
+
+if(!defined($OUT))
+{
+    $OUT = "|$MAIL";
+}
+
+# Figure out where we are, and change into that directory.
+$prefix = $0;
+@path_parts = split(/\//, $prefix);
+$prefix = "";
+
+for($i = 0; $i < $#path_parts; ++$i)
+{
+    $prefix .= $path_parts[$i] . "/";
+}
+print "Changing to $prefix\n";
+chdir($prefix) || die "Can't change to $prefix:$!\n";
+
+$arch = `uname -m`;
+chomp $arch;
+$sys = `uname -s`;
+$rev = `uname -r`;
+chomp $sys;
+chomp $rev;
+
+$sys .= " " . $rev;
+
+$begin = `date`;
+chomp $begin;
+$num_process = 0;
+
+if($analyze != 1)
+{
+    foreach $prog (@TEST_PROGRAMS)
+    {
+	print "Running $prog.\n";
+	if($pid = fork())
+	{
+	    sleep 5;
+	    $num_process++;
+	    next;
+	}
+	elsif(defined $pid)
+	{
+	    unlink "$prog.out" || print "Can't unlink $prog.out: $!.\n";
+	    open(PROG, ">$prog.out") || die "Can't open $prog.out: $!.\n";
+	    @output = `$prog`;
+	    print PROG @output;
+	    close(PROG);
+	    print "$prog complete.\n";
+	    exit(0);
+	}
+	else
+	{
+	    print "Fork failed: $!.\n";
+	}
+    }
+    
+    print "All tests started, waiting for them to complete.\n";
+    print "$num_process remaining.\n";
+    
+    $completed = 0;
+    while($completed < $num_process)
+    {
+	wait();
+	$completed++;
+	$num_left = $num_process - $completed;
+	print "Child exited, $num_left left.\n";
+    }
+}
+    
+print "Analyzing test program output...\n";
+    
+open(OUTPUTFILE, "$OUT") || die "Couldn't run $OUT:$!\n";
+chomp $results; chomp $username;
+print OUTPUTFILE "To: $results\n";
+print OUTPUTFILE "From: $username\n";
+print OUTPUTFILE "Subject: Condor Test Suite Results.\n\n";
+
+print OUTPUTFILE "Testing begins at $begin.\n";
+print OUTPUTFILE "Arch = $arch Sys = $sys\n\n";
+foreach $prog (@TEST_PROGRAMS)
+{
+
+	
+    open(BATCH_OUT, "<$prog.out") || die "Can't open $prog.out: $!.\n";
+    while(<BATCH_OUT>)
+    {
+	if($_ =~ /(.*)SUCCESS(.*)/ ||
+	   $_ =~ /(.*)FAILURE(.*)/)
+	{
+	    print OUTPUTFILE $_;
+	}
+    }
+    close(BATCH_OUT);
+}
+
+close(OUTPUTFILE); 
+
