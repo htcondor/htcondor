@@ -1353,7 +1353,7 @@ int CondorFileTable::is_file_name_local( const char *incomplete_name, char *loca
 		CondorFile *file;
 		resume(match);
 		file = pointers[match]->file;
-		strcpy(local_name,strchr(file->get_url(),':')+1); 
+		strcpy(local_name,strrchr(file->get_url(),':')+1); 
 		return file->is_file_local();
 	}
 
