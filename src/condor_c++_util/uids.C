@@ -101,7 +101,7 @@ get_priv()
 
 // Lots of functions just stubs on Win NT for now....
 void init_condor_ids() {}
-void set_user_ids(uid_t uid, gid_t gid) {}
+int set_user_ids(uid_t uid, gid_t gid) { return FALSE }
 uid_t get_my_uid() { return 999999; }
 gid_t get_my_gid() { return 999999; }
 
@@ -132,12 +132,13 @@ void init_user_nobody_loginname(const char *login)
 	NobodyLoginName = strdup(login);
 }
 
-void init_user_ids(const char username[]) 
+int
+init_user_ids(const char username[]) 
 {
 	if ( strcmp(username,"nobody") != 0 ) {
 		// here we call routines to deal with password server
 		// or as Jeff says: "insert hand waving here"  :^)
-		return;
+		return FALSE;
 	}
 
 	// at this point, we know we want a user nobody, so
@@ -147,7 +148,7 @@ void init_user_ids(const char username[])
 		// we already have a user nobody handle created
 		// so just make it the CurrUserHandle
 		CurrUserHandle = DynUser.get_token();
-		return;
+		return TRUE;
 	}
 
 	if ( !NobodyLoginName ) {
@@ -161,6 +162,7 @@ void init_user_ids(const char username[])
 
 	// we created a new user, now just stash the token
 	CurrUserHandle = DynUser.get_token();
+	return TRUE;
 }
 
 priv_state
@@ -441,12 +443,19 @@ init_condor_ids()
 	CondorIdsInited = TRUE;
 }
 
-static void
+static int
 set_user_ids_implementation( uid_t uid, gid_t gid, const char *username )
 {
-	if(UserIdsInited && UserUid != uid) {
-		dprintf(D_ALWAYS, "warning: setting UserUid to %d, was %d previosly\n",
-				uid, UserUid);
+	if( uid == 0 || gid == 0 ) {
+		dprintf( D_ALWAYS, "ERROR: Attempt to initialize user_priv "
+				 "with root privileges rejected\n" );
+		return FALSE;
+	}
+
+	if( UserIdsInited && UserUid != uid ) {
+		dprintf( D_ALWAYS, 
+				 "warning: setting UserUid to %d, was %d previosly\n",
+				 uid, UserUid );
 	}
 	UserUid = uid;
 	UserGid = gid;
@@ -474,7 +483,66 @@ set_user_ids_implementation( uid_t uid, gid_t gid, const char *username )
 }
 
 
-void
+/*
+  Initialize the correct uid/gid for user "nobody".  Most of the
+  special-case logic for this code came from
+  condor_starter.V5/starter_common.C: determine_user_ids()
+*/
+int
+init_nobody_ids( void )
+{
+    struct passwd *pwd_entry = NULL;
+	int nobody_uid = -1;
+	int nobody_gid = -1;
+
+	if( (pwd_entry = getpwnam("nobody")) == NULL ) {
+#ifdef HPUX
+		// the HPUX9 release does not have a default entry for nobody,
+		// so we'll help condor admins out a bit here...
+		nobody_uid = 59999;
+		nobody_gid = 59999;
+#else
+		dprintf( D_ALWAYS, "Can't find UID for \"nobody\" in passwd file" );
+		return FALSE;
+#endif
+	}
+
+	nobody_uid = pwd_entry->pw_uid;
+	nobody_gid = pwd_entry->pw_gid;
+
+#ifdef HPUX
+	// HPUX9 has a bug in that getpwnam("nobody") always returns
+	// a gid of 60001, no matter what the group file (or NIS) says!
+	// on top of that, legal UID/GIDs must be -1<x<60000, so unless we
+	// patch here, we will generate an EXCEPT later when we try a
+	// setgid().  -Todd Tannenbaum, 3/95
+	if( (nobody_uid > 59999) || (nobody_uid < 0) ) {
+		nobody_uid = 59999;
+	}
+	if( (nobody_gid > 59999) || (nobody_gid < 0) ) {
+		nobody_gid = 59999;
+	}
+#endif
+
+#ifdef IRIX
+		// Same weirdness on IRIX.  60001 is the default uid for
+		// nobody, lets hope that works.
+	if( (nobody_uid >= UID_MAX ) || (nobody_uid < 0) ) {
+		nobody_uid = 60001;
+	}
+	if( (nobody_gid >= UID_MAX) || (nobody_gid < 0) ) {
+		nobody_gid = 60001;
+	}
+#endif
+
+		// Now we know what the uid/gid for nobody should *really* be,
+		// so we can actually initialize this as the "user" priv.
+	return set_user_ids_implementation( (uid_t)nobody_uid,
+										(gid_t)nobody_gid, "nobody" ); 
+}
+
+
+int
 init_user_ids( const char username[] )
 {
     struct passwd       *pwd;
@@ -487,20 +555,27 @@ init_user_ids( const char username[] )
 	*/
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
 
+	if( ! stricmp(username, "nobody") ) {
+			// There's so much special logic for user nobody that it's
+			// all in a seperate function now.
+		return init_nobody_ids();
+	}
+
 	if( (pwd=getpwnam(username)) == NULL ) {
 		dprintf( D_ALWAYS, "%s not in passwd file\n", username );
-		return;
+		return FALSE;
 	}
 	(void)endpwent();
 	(void)SetSyscalls( scm );
-	set_user_ids_implementation( pwd->pw_uid, pwd->pw_gid, username );
+	return set_user_ids_implementation( pwd->pw_uid, pwd->pw_gid,
+										username ); 
 }
 
 
-void
+int
 set_user_ids(uid_t uid, gid_t gid)
 {
-	set_user_ids_implementation( uid, gid, NULL );
+	return set_user_ids_implementation( uid, gid, NULL );
 }
 
 
