@@ -113,9 +113,9 @@ initialize( const char *file, int c, int p, int s )
 
 	if( fp ) {
 		if( fclose( fp ) != 0 ) {
-			dprintf( D_ALWAYS,
-					 "UserLog::initialize: fclose(\"%s\") failed (%s)",
-					 path, strerror( errno ) );
+			dprintf( D_ALWAYS, "UserLog::initialize: "
+					 "fclose(\"%s\") failed - errno %d (%s)", path,
+					 errno, strerror(errno) );
 		}
 		fp = NULL;
 	}
@@ -123,22 +123,25 @@ initialize( const char *file, int c, int p, int s )
 #ifndef WIN32
 	// Unix
 	if( (fd = open( path, O_CREAT | O_WRONLY, 0664 )) < 0 ) {
-		dprintf( D_ALWAYS, 
-			"UserLog::initialize: open(%s) failed - errno %d\n", path, errno );
+		dprintf( D_ALWAYS, "UserLog::initialize: "
+				 "open(\"%s\") failed - errno %d (%s)\n", path, errno,
+				 strerror(errno) );
 		return false;
 	}
 
 		// attach it to stdio stream
 	if( (fp = fdopen(fd,"a")) == NULL ) {
-		dprintf( D_ALWAYS, 
-			"UserLog::initialize: fdopen(%i) failed - errno %d\n", fd, errno );
+		dprintf( D_ALWAYS, "UserLog::initialize: "
+				 "fdopen(%i) failed - errno %d (%s)\n", fd, errno,
+				 strerror(errno) );
 		// should return here?
 	}
 #else
 	// Windows (Visual C++)
 	if( (fp = fopen(path,"a+tc")) == NULL ) {
-		dprintf( D_ALWAYS, 
-			"UserLog::initialize: fopen(%s) failed - errno %d\n", path, errno );
+		dprintf( D_ALWAYS, "UserLog::initialize: "
+				 "fopen(\"%s\") failed - errno %d (%s)\n", path, errno, 
+				 strerror(errno) );
 		return false;
 	}
 
