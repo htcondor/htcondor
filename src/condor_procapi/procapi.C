@@ -229,8 +229,8 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 
 #endif /* defined(Solaris251) || defined(IRIX) || defined(OSF1) */
 
-// This is the version of getProcInfo for Solaris 2.6 and 2.7 and 2.8
-#if defined(Solaris26) || defined(Solaris27) || defined(Solaris28)
+// This is the version of getProcInfo for Solaris 2.6 and 2.7 and 2.8 and 2.9
+#if defined(Solaris26) || defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
 
 	char path[64];
 	int fd, rval = 0;
@@ -330,7 +330,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	set_priv( priv );
 	return 0;
 
-#endif /* Solaris26 || Solaris27 || Solaris28 */
+#endif /* Solaris26 || Solaris27 || Solaris28 || Solaris29 */
 
 // This is the Linux version of getProcInfo.  Everything is easier and
 // actually seems to work in Linux...nice, but annoyingly different.
