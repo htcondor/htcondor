@@ -87,6 +87,19 @@ StringList::contains( const char *st )
 	return FALSE;
 }
 
+void
+StringList::remove(char *str)
+{
+	char *x;
+
+	strings.Rewind();
+	while (x = strings.Next()) {
+		if (strcmp(str, x) == MATCH) {
+			deleteCurrent();
+		}
+	}
+}
+
 
 BOOLEAN
 StringList::substring( const char *st )
