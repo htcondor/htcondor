@@ -1528,14 +1528,7 @@ Checkpoint( int sig, int code, void *scp )
 		condor_save_sigstates();
 		dprintf( D_ALWAYS, "Done saving signal state\n" );
 #endif
-		if( sig==SIGTSTP ) {
-			// Suspend all operations and save files
-			SuspendFileState();
-		} else {
-			// A periodic safety checkpoint
-			CheckpointFileState();
-		}
-
+		SaveFileState();
 		MyImage.Save();
 		write_result = MyImage.Write();
 		if ( sig == SIGTSTP ) {
@@ -1579,7 +1572,7 @@ Checkpoint( int sig, int code, void *scp )
 			} else {
 				SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 			}
-			ResumeFileState();
+			RestoreFileState();
 			dprintf( D_ALWAYS, "Done restoring files state\n" );
 			int mode = get_ckpt_mode(0);
 			if (mode > 0) {
