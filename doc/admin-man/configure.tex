@@ -2270,7 +2270,8 @@ These macros affect the \Condor{collector}.
   defaults to 10800 (3 hours).
   
 \item[\Macro{CLIENT\_TIMEOUT}] \label{param:ClientTimeout} Network
-  timeout when talking to daemons that are sending an update.  
+  timeout that the \Condor{collector} uses when talking to any daemons
+  or tools that are sending it a ClassAd update.
   It is defined in seconds and defaults to 30.
   
 \item[\Macro{QUERY\_TIMEOUT}] \label{param:QueryTimeout} Network
