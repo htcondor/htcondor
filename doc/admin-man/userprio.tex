@@ -1,6 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{User Priorities in the Condor System}
-\label{sec:UserPrio}
+\section{\label{sec:UserPrio}
+User Priorities in the Condor System}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 For accounting purposes, each user is identified by ``username@uid\_domain''
 so users have the same priority value even if they begin submitting from a 
@@ -88,10 +88,12 @@ the system additionally preempts machines (by performing a checkpoint and
 vacate) and reallocates them to avoid priority inversion.
 
 To ensure that preemptions do not lead to ``thrashing,'' a 
-\Macro{PREEMPTION\_HOLD} expression may be defined to deny preemption.  This
-expression is usually defined to deny preemption if the current running job
-has been running there for a relatively short period of time, effectively
-limiting the number of preemptions per resource per time interval.
+\Macro{PREEMPTION\_REQUIREMENTS} expression is defined to specify what
+conditions must be met for a preemption to occur.
+It is usually defined to deny preemption if the current running job
+has been running there for a relatively short period of time,
+effectively limiting the number of preemptions per resource per time
+interval.
 
 \subsection{Priority Calculation}
 This section may be skipped if the reader so feels, but for the curious,
