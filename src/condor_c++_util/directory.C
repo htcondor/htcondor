@@ -415,7 +415,7 @@ Directory::do_remove( const char* path, bool is_curr, dir_rempriv_t rem_priv )
 
 #if DEBUG_DIRECTORY_CLASS
 		dprintf(D_ALWAYS,"Directory: about to call %s\n", buf);
-#elsif defined( WIN32 )
+#elif defined( WIN32 )
 		try_1_rc = system( buf );
 #else
 		try_1_rc = my_spawnl( "/bin/rm", TRUE, "/bin/rm", "-rf",
@@ -490,7 +490,7 @@ Directory::do_remove( const char* path, bool is_curr, dir_rempriv_t rem_priv )
 #if DEBUG_DIRECTORY_CLASS
 			dprintf(D_ALWAYS,
 				"Directory: with condor priv about to call %s\n",buf);
-#elsif defined( WIN32 )
+#elif defined( WIN32 )
 			try_2_rc = system( buf );
 #else
 			try_2_rc = my_spawnl( "/bin/rm", TRUE, "/bin/rm", "-rf",
