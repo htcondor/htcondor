@@ -39,7 +39,7 @@ editinfo	-i mkmodules CVSROOT editinfo
 # Add other modules here...
 code	-a Distfile GENERIC Imakefile config src
 doc		-a config doc
-AIX_SRC	 \
+AIX_CODE	-a Distfile GENERIC Imakefile config \
 			src/condor_c++_util \
 			src/condor_collector \
 			src/condor_globalq \
@@ -69,4 +69,3 @@ AIX_SRC	 \
 			src/condor_util_lib \
 			src/condor_xdr_lib \
 			src/h
-AIX_CODE	-a Distfile GENERIC Imakefile config AIX_SRC
