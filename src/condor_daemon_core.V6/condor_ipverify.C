@@ -396,6 +396,7 @@ IpVerify::add_hash_entry(const struct in_addr & sin_addr, const char * user, int
                 *at = tolower((int) *at);
             }
         }
+        free(lower);
         perm = new UserPerm_t(42, compute_host_hash);
         if (PermHashTable->insert(sin_addr, perm) != 0) {
             delete perm;
@@ -737,7 +738,8 @@ IpVerify::AddAllowHost( const char* host, DCpermission perm )
     char * buf = (char *) malloc(len+3); // 2 for */
     memset(buf, 0, len+3);
     sprintf(buf, "*/%s", host);
-    MyString addr(host);    // */host
+    MyString addr(buf);    // */host
+    free(buf);
 
 	dprintf( D_DAEMONCORE, "Entered IpVerify::AddAllowHost(%s, %s)\n",
 			 host, PermString(perm) );
