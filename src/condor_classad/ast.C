@@ -944,7 +944,7 @@ void AssignOp::PrintToStr(char* str)
 static void 
 printComparisonOpToStr (char *str, ExprTree *lArg, ExprTree *rArg, char *op)
 {
-	bool 		inequality = (*op == '<' || *op == '>'); // maybe followed by =
+	bool 	inequality = (op[1] == '<' || op[1] == '>'); // maybe followed by =
 	LexemeType	tt;
 
     if(lArg) {
