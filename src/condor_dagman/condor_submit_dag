@@ -155,6 +155,12 @@ sub parse_dag_file {
     $did_one = 0;
     open( DAG, "<$dagfile" ) || die "Can't open $dagfile for reading: $!\n";
     while( <DAG> ) {
+		while (/^(.*[^\s])\s+\\\s*$/) { 	# This is the stuff to do the \ continuation
+			$thisdl = $1;					# lose the end space and slash
+			$nextdl = <DAG>; 				# grab the next line
+			$nextdl =~ s/^\s*//;			# remove the beginning whitespace
+			$_ = $thisdl ." ". $nextdl;		# slam them together
+		}
 	if( /^job\s*(\S*)\s*(\S*)$/i ) {
 	    $cmd_files{$2} = 1;
 	}
