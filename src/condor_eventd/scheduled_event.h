@@ -118,6 +118,8 @@ private:
 	static NetworkReservations NetRes;
 	static int SimulateShutdowns;
 
+	public:
+
 	struct ShutdownRecord {
 		ShutdownRecord(const char name[], const char addr[],
 					   const char startd_IP[], const char ckpt_server_IP[],
@@ -134,6 +136,8 @@ private:
 		int id;
 		time_t timestamp;
 	};
+
+	private:
 	List<ShutdownRecord> schedule;
 	time_t last_schedule_update;
 	int num_records_past_deadline;
