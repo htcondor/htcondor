@@ -66,7 +66,7 @@ space reserved with the \Macro{RESERVED\_DISK} macro.
 \item[\AdAttr{EnteredCurrentActivity}] : Time at which the machine
 entered the current Activity (see \AdAttr{Activity} entry above).  On
 all platforms (including NT), this is measured in the number of
-seconds since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
+integer seconds since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
 %
 \index{ClassAd machine attribute!FileSystemDomain}
 \item[\AdAttr{FileSystemDomain}] : A ``domain'' name configured by the
@@ -91,7 +91,8 @@ Linpack benchmark.
 \index{ClassAd machine attribute!LastHeardFrom}
 \item[\AdAttr{LastHeardFrom}] : Time when the Condor central manager last
 received a status update from this machine.  
-Expressed as seconds since the epoch (integer value).
+Expressed as 
+the number of integer seconds since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
 Note: This attribute is only inserted by the central manager once it
 receives the ClassAd.
 It is not present in the \Condor{startd} copy of the ClassAd.
@@ -250,8 +251,9 @@ attributes will be defined.
 on the submitting machine.
 
 \index{ClassAd machine attribute (when running)!JobStart}
-\item[\AdAttr{JobStart}] : The timestamp of when the job began
-executing. 
+\item[\AdAttr{JobStart}] : The timestamp in integer seconds of when the job began
+executing, since the Unix epoch (00:00:00 UTC, Jan 1, 1970).  For idle
+machines, the value is UNDEFINED.
 
 \index{ClassAd machine attribute (when running)!LastPeriodicCheckpoint}
 \item[\AdAttr{LastPeriodicCheckpoint}] : If the job has performed a
@@ -269,5 +271,5 @@ environment.
 \begin{description}
 \index{ClassAd attribute!CurrentTime}
 \item[\AdAttr{CurrentTime}] : Evaluates to the 
-the number of seconds since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
+the number of integer seconds since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
 \end{description}
