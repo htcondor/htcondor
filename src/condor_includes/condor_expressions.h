@@ -50,6 +50,7 @@ static const FLOAT		= 19;
 static const INT		= 20;
 static const BOOL		= 21;
 static const ERROR		= 22;
+static const EXPRSTRING = 23;
 static const ENDMARKER	= -1;
 
 #if defined(__cplusplus)
