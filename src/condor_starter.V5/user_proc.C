@@ -114,8 +114,11 @@ extern NameTable ProcStates;
 extern int Running_PVMD;
 
 int connect_to_port( int );
-int send_file( char *src, char *dst, mode_t mode );
-int get_file( char *src, char *dst, mode_t mode );
+
+#if 0
+	int send_file( char *src, char *dst, mode_t mode );
+	int get_file( char *src, char *dst, mode_t mode );
+#endif
 
 UserProc::UserProc( V3_PROC &p, char *exec, char *orig, char *targ, uid_t u, uid_t g, int id, int soft ) :
 	cluster( p.id.cluster ),
@@ -363,6 +366,7 @@ UserProc::display()
 	dprintf( D_ALWAYS, "  args = %s\n", args );
 	dprintf( D_ALWAYS, "  env = %s\n", env );
 
+	dprintf( D_ALWAYS, "  a_out = %s\n", a_out );
 	dprintf( D_ALWAYS, "  orig_ckpt = %s\n", orig_ckpt );
 	dprintf( D_ALWAYS, "  target_ckpt = %s\n", target_ckpt );
 
@@ -424,6 +428,9 @@ UserProc::display()
   the submitting host, we set it to FALSE.  For now, it is an error
   if it refers to some third host.  We then ruturn a pointer to the
   macro expanded pathname in a static data area.
+
+  The pathname could also be an AFS file, in which case we can also access
+  the file with a symlink.  The form is "/afs/...".
 */
 char *
 UserProc::expand_exec_name( int &on_this_host )
@@ -452,6 +459,9 @@ UserProc::expand_exec_name( int &on_this_host )
 					   host_part, ThisHost );
 			}
 		}
+	} else if( strncmp("/afs",a_out,4) == MATCH ) {
+		on_this_host = TRUE;
+		path_part = a_out;
 	} else {	// form is <path>
 		on_this_host = FALSE;
 		path_part = a_out;
@@ -464,7 +474,14 @@ UserProc::expand_exec_name( int &on_this_host )
 			
 
 	if( on_this_host ) {
-		dprintf( D_ALWAYS, "Executable is located on this host\n" );
+		if( access(answer,X_OK) == 0 ) {
+			dprintf( D_ALWAYS, "Executable is located on this host\n" );
+		} else {
+			dprintf( D_ALWAYS,
+				"Executable located on this host - but not executable\n"
+			);
+			on_this_host = FALSE;
+		}
 	} else {
 		dprintf( D_ALWAYS, "Executable is located on submitting host\n" );
 	}
@@ -920,17 +937,27 @@ UserProc::handle_termination( int exit_st )
 	pid = 0;
 
 	switch( state ) {
+
 	    case CHECKPOINTING:
+			core_created = FALSE;
+			ckpt_transferred = TRUE;
+			break;
+
         case ABNORMAL_EXIT:
 		    if( core_is_valid(core_name) ) {
 				dprintf( D_ALWAYS, "A core file was created\n" );
 				core_created = TRUE;
-				break;
+			} else {
+				dprintf( D_FULLDEBUG, "No core file was created\n" );
+				core_created = FALSE;
+				(void)unlink( core_name );	// remove any incomplete core
 			}
+			break;
+
 		default:
 			dprintf( D_FULLDEBUG, "No core file was created\n" );
 			core_created = FALSE;
-			(void)unlink( core_name );	// remove any incomplete core
+			break;
 	}
 
 	if( get_class() == PVMD ) {
@@ -1310,6 +1337,7 @@ connect_to_port( int portnum )
 	return fd;
 }
 
+#if 0
 int
 get_file( char *src, char *dst, mode_t mode )
 {
@@ -1321,6 +1349,7 @@ send_file( char *src, char *dst, mode_t mode )
 {
 	return REMOTE_syscall( CONDOR_send_file, src, dst, mode );
 }
+#endif
 
 extern "C"
 {
