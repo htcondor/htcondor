@@ -265,7 +265,7 @@ host_in_domain( const char *host, const char *domain )
 	const char	*ptr;
 
 	for( ptr=host; *ptr; ptr++ ) {
-		if( strcmp(ptr,domain) == MATCH ) {
+		if( stricmp(ptr,domain) == MATCH ) {
 			return TRUE;
 		}
 	}
