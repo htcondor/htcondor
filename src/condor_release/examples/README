@@ -307,3 +307,15 @@ sh_loop
     in a loop and prints out a number, then sleeps for a second.  At
     the end, sh_loop.out should contain the numbers from 1 to 60 and
     the message "Normal End-of-Job".
+
+**********************************************************************
+DAGMan jobs
+**********************************************************************
+
+    The final example is one of inter-job dependencies in Condor,
+    using the Directed Acyclical Graph Manager (DAGMan).  It is all
+    contained within its own subdirectory, "dagman".  If you cd into
+    this directory you will find a README in both plain ASCII text
+    (README.txt) and in HTML (README.html).
+
+
