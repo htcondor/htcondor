@@ -17,11 +17,31 @@ method to ensure reasonable file system cleanliness in the face of
 errors. This is done automatically by default by the \Condor{master}. 
 It may also be explicitly invoked on an as needed basis.
 
+When \Condor{preen} cleans the SPOOL directory, it always leaves
+behind the files specified in the \Macro{VALID\_SPOOL\_FILES} list in
+your config file.
+For the log directory, the only files removed or reported are those
+listed in the  \Macro{INVALID\_LOG\_FILES} list.
+The reason for this difference is that, in general, you want to leave
+all files in the LOG directory alone, with a few exceptions (namely,
+core files).
+\Condor{preen} still works if you supply a \Macro{VALID\_LOG\_FILES}
+list instead, but this usage is depricated.
+There are new log files for different things introduced all the time,
+and you wouldn't want to have to keep updating the list of files to
+leave alone in the LOG directory.
+For example, the SMP startd can spawn an arbitrary number of
+\Condor{starter} processes, each with its own log file.  
+On the other hand, there are only a small, fixed number of files in
+the SPOOL directory that the \Condor{schedd} needs to keep around, so
+it is easier to specify the files you want to keep instead of the ones
+you want to get rid of.
+
 \begin{Options}
 
-	\OptItem{\Opt{-mail}}{Send mail to the CONDOR\_ADMINISTRATORS as
-	defined in the Condor configuration files instead of writing to the
-	standard output}
+	\OptItem{\Opt{-mail}}{Send mail to the \Macro{PREEN\_ADMIN} as
+	defined in the Condor configuration files instead of writing
+	to the standard output}
 
 	\OptItem{\Opt{-remove}}{Remove the offending files and directories
 	rather than just reporting on them}
