@@ -8,17 +8,44 @@
 #include "condor_qmgr.h"
 
 
-/* gshadow is a wrapper around globusrun, meant to be a scheduler  universe 
+/* gshadow is a wrapper around globusrun, meant to be a scheduler universe 
  * scheduler. It monitors job status and updates its ClassAd.
  */
 
 
 #define QUERY_DELAY_SECS_DEFAULT 15 //can be overriden ClassAd
+#define QMGMT_TIMEOUT 300 //this is copied per Todd's advice from shadow val.
 
 
 	//these are global so the sig handlers can use them.
-volatile char *contactString = NULL;
-volatile char *globusrun = NULL;
+char *contactString = NULL;
+char *globusrun = NULL;
+
+
+/*
+  Wait up for one of those nice debuggers which attaches to a running
+  process.  These days, most every debugger can do this with a notable
+  exception being the ULTRIX version of "dbx".
+*/
+void wait_for_debugger( int do_wait )
+{
+   sigset_t sigset;
+
+   // This is not strictly POSIX conforming becuase it uses SIGTRAP, but
+   // since it is only used in those environments where is is defined, it
+   // will probably pass...
+#if defined(SIGTRAP)
+      /* Make sure we don't block the signal used by the
+      ** debugger to control the debugged process (us).
+      */
+   sigemptyset( &sigset );
+   sigaddset( &sigset, SIGTRAP );
+   sigprocmask( SIG_UNBLOCK, &sigset, 0 );
+#endif
+
+   while( do_wait )
+      ;
+}
 
 
 void
@@ -74,11 +101,17 @@ main( int argc, char *argv[] ) {
 	proc = atoi( ++decimal ); //move past decimal
 
 
-	Qmgr_connection *schedd = ConnectQ( argv[2] );
+		//THIS MUST be a fatal error if we cannot connect, since we 
+		//start the globus job without getting GlobusArgs...
+	Qmgr_connection *schedd = ConnectQ( argv[2], QMGMT_TIMEOUT );
 	if ( !schedd ) {
-//		dprintf( D_ALWAYS, "%s ERROR, cannot connect to schedd (%s)\n", argv[2] );
-		fprintf( stderr, "%s ERROR, cannot connect to schedd (%s)\n", argv[2] );
-		exit( 2 );
+		//wait a bit and try once more...
+		sleep( 30 );
+		if ( !( schedd = ConnectQ( argv[2], QMGMT_TIMEOUT ) ) ) {
+//			dprintf( D_ALWAYS, "%s ERROR, can't connect to schedd (%s)\n",argv[2]);
+			fprintf( stderr, "%s ERROR, cannot connect to schedd (%s)\n", argv[2] );
+			exit( 2 );
+		}
 	}
 
 		//these two attributes should always exist in the ClassAd
@@ -113,61 +146,87 @@ main( int argc, char *argv[] ) {
 
 		//if there was no contactString in the ad, it hasn't 
 		//been submitted to globusrun yet
-//if ( !contactString ) 
 	if ( !strcmp( contactString, "X" ) ) 
 	{
-			//add -z flag to tell globusrun to print contactString on stdout...
-		sprintf( buffer, "%s -z %s", globusrun, args );
+		sprintf( buffer, "%s %s", globusrun, args );
 
 		if ( !(run = popen( buffer, "r" ) ) ) {
 //			dprintf( D_ALWAYS, "unable to popen \"%s\"", buffer );
-//			fprintf( stderr, "unable to popen \"%s\"", buffer );
+			fprintf( stderr, "unable to popen \"%s\"", buffer );
 			exit( 5 );
 		}
 
-		if ( fgets( buffer, 80, run ) ) {
-			contactString = strdup( chomp( buffer ) );
-			schedd = ConnectQ( argv[2] );
-			SetAttributeString( cluster, proc, "GlobusContactString", contactString );
-			DisconnectQ( schedd );
+		while ( !feof( run ) ) {
+			if ( !fgets( buffer, 80, run ) ) {
+				fprintf(stderr, "error reading output of globus job\n" );
+			}
+			if ( !strncasecmp( buffer, "http", 4 ) ) {
+				contactString = strdup( chomp( buffer ) );
+				break;
+			}
 		}
-
+		if ( contactString ) {
+			if ( schedd = ConnectQ( argv[2], QMGMT_TIMEOUT ) ) {
+				SetAttributeString( cluster, proc, "GlobusContactString", 
+						contactString );
+				DisconnectQ( schedd );
+			}
+			else {
+				//FATAL error if we can't set GlobusContactString!
+//				dprintf( D_ALWAYS, "Error contacting schedd %s\n", argv[2] );
+				fprintf( stderr, "Error contacting schedd %s\n", argv[2] );
+				exit( 6 );
+			}
+	
+		}
+		else {
+//			dprintf( D_ALWAYS, "Error reading contactString from globusrun\n" );
+			fprintf( stderr, "Error reading contactString from globusrun\n" );
+			exit( 7 );
+		}
 	}
 	schedd = NULL;
 
-	FILE *statusfp;
-	char status[80];
+	FILE *statusfp = NULL;
+	char status[80] = "";
 	sprintf( buffer, "%s -status %s", globusrun, contactString );
 
 		//loop until we're done or killed with a signal
 	while ( strcasecmp( Gstatus, "DONE" ) ) {
 
-		statusfp = popen( buffer, "r" );
-		if ( chomp( fgets( status, 80, statusfp ) ) ) {
-
-			//I might have to close stderr at this point, a bug in globus reports
-			//Error to stderr, but nothing to stdout. 
-			//I am currently using a modified Globusrun until they fix the bug.
-
-			if ( !strncasecmp( status, "ERROR", 5 ) ) {
-				strcpy( status, "DONE" ); 
-			}
+		if ( !(statusfp = popen( buffer, "r" ) ) ) {
+//			dprintf( D_ALWAYS, "cannot popen( %s )\n", buffer );
+			fprintf( stderr, "cannot popen( %s )\n", buffer );
+			exit( 8 );
 		}
+		if ( !fgets( status, 80, statusfp ) ) {
+//			dprintf( D_ALWAYS, "pipe read errno %d\n", errno );
+			fprintf( stderr, "pipe read errno %d\n", errno );
+		}
+		chomp( status );
+
+		//I might have to close stderr at this point, a bug in globus reports
+		//Error to stderr, but nothing to stdout. 
+		//I am currently using a modified Globusrun until they fix the bug.
+
+		if ( !strncasecmp( status, "ERROR", 5 ) ) {
+			strcpy( status, "DONE" ); 
+		}
+
 		pclose( statusfp );
 		if ( strcasecmp( Gstatus, status ) ) {
 			strcpy( Gstatus, status );	
 
-				//update classAd as to status
-			if ( schedd = ConnectQ( argv[2] ) ) {
+				//this update is NOT fatal, just try again later
+			if ( schedd = ConnectQ( argv[2], QMGMT_TIMEOUT ) ) {
 				SetAttributeString( cluster, proc, "GlobusStatus", Gstatus );
 				DisconnectQ( schedd );
 			}
 			else {
-				fprintf( stderr, "unable to update classAd for %d.%d\n",
-					cluster, proc );
 //				dprintf( D_ALWAYS, "unable to update classAd for %d.%d\n",
 //					cluster, proc );
-				exit( 6 );
+				fprintf( stderr, "unable to update classAd for %d.%d\n",
+					cluster, proc );
 			}
 
 		}
