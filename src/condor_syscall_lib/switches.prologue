@@ -25,16 +25,12 @@
 #endif 
 
 #include "syscall_numbers.h"
+#include "syscall_macros.h"
 #include "condor_syscall_mode.h"
 #include "file_table_interf.h"
 #include <stdio.h>
 
 #include <sys/types.h>
-#define MODE_T unsigned int /* use 32 bits on all platforms */
-
-#define umask _hide_umask
-#define mkdir _hide_mkdir
-#define chmod _hide_chmod
 
 #if defined(HPUX9)
 #	define mknod	__hide_mknod
@@ -43,8 +39,6 @@
 #	define setitimer __hide_setitimer
 #	define settimeofday __hide_settimeofday
 #	define profil	__hide_profil
-#elif defined(IRIX53)
-#	define fchmod	__hide_fchmod
 #endif
 
 #if defined(LINUX) && !defined(GLIBC)
@@ -69,9 +63,6 @@
 	int setitimer( int which, const struct itimerval *,struct itimerval * );	
 	int	settimeofday( struct timeval *tp, struct timezone *tzp );
 	void profil( short *buf, unsigned int size, unsigned int ,unsigned int  );
-#elif defined(IRIX53)
-#	undef fchmod
-	int fchmod( int fd, unsigned int mode );
 #endif
 
 #if defined(IRIX53)
@@ -149,18 +140,7 @@ struct stat;
 				int opt_len );
 #endif
 
-#if defined(ULTRIX43)
-#	define uname	__hide_uname
-#endif
 #include <sys/utsname.h>
-#if	defined(ULTRIX43)
-#	undef uname
-	int uname( struct utsname *name );
-#endif
-
-#if defined(IRIX53)
-#	define kill	__hide_kill
-#endif
 
 #if defined(SUNOS41) || defined(IRIX53) || defined(Solaris) || defined(OSF1)
 #	include <signal.h>
@@ -169,11 +149,6 @@ struct stat;
 #if defined(Solaris)
 #	undef uname
 #	undef _uname
-#endif
-
-#if defined(IRIX53)
-#	undef kill
-	int kill( pid_t pid, int sig );
 #endif
 
 #if defined(HPUX9)
@@ -244,8 +219,6 @@ struct module;
 #elif defined(IRIX53)
 #	define select	__hide_select
 #	define readlink __hide_readlink
-#	define setreuid __hide_setreuid
-#	define setregid __hide_setregid
 #	define gethostid __hide_gethostid
 #	define sethostid __hide_sethostid
 #	define profil __hide_profil
@@ -277,8 +250,6 @@ struct module;
 #elif defined(IRIX53)
 #	undef select
 #	undef readlink
-#	undef setreuid
-#	undef setregid
 #	undef gethostid
 #	undef sethostid
 #	undef profil
@@ -289,8 +260,6 @@ struct module;
 	/* leave readlink() out, at least on IRIX62; not sure about IRIX53 */
 	/* int readlink( const char *path, void *buf, int buf_size ); */
 	int select();
-	int setreuid( int ruid, int euid );
-	int setregid( int rgid, int egid );
 	int gethostid();
 	int sethostid( int hostid );
 	void profil( short *buf, unsigned int size, unsigned int ,unsigned int  );
@@ -325,23 +294,6 @@ struct module;
 #	define FALSE 0
 #endif
 
-	/* Use 32 bits for file mode (mode_t) everywhere - hope nobody wants more */
-#undef MODE_T
-#if defined(AIX32)
-#	define MODE_T ulong_t
-#elif defined(Solaris)
-#	define MODE_T unsigned long
-#else
-#	define MODE_T unsigned int
-#endif
-
-#undef umask
-#undef mkdir
-#undef chmod
-MODE_T	umask( MODE_T mask );
-int mkdir( const char *path, MODE_T mode );
-int chmod( const char *path, MODE_T mode);
-
 #if	defined(ULTRIX43)
 typedef int	bool_t;
 #	include <errno.h>
@@ -351,74 +303,6 @@ typedef int	bool_t;
 
 #include <sys/types.h>
 
-#define REMAP_ZERO(old,new,type_return) \
-type_return new() \
-{ \
-return old(); \
-}
-
-#define REMAP_ONE(old,new,type_return,type_1) \
-type_return new( arg_1 ) \
-type_1 arg_1; \
-{ \
-return old( arg_1 ); \
-}
-
-#define REMAP_TWO(old,new,type_return,type_1,type_2) \
-type_return new( arg_1, arg_2 ) \
-type_1 arg_1; \
-type_2 arg_2; \
-{ \
-return old( arg_1, arg_2 ); \
-}
-
-#define REMAP_THREE(old,new,type_return,type_1,type_2,type_3) \
-type_return new( arg_1, arg_2, arg_3 ) \
-type_1 arg_1; \
-type_2 arg_2; \
-type_3 arg_3; \
-{ \
-return old( arg_1, arg_2, arg_3 ); \
-}
-
-#define REMAP_FOUR(old,new,type_return,type_1,type_2,type_3,type_4) \
-type_return new( arg_1, arg_2, arg_3, arg_4 ) \
-type_1 arg_1; \
-type_2 arg_2; \
-type_3 arg_3; \
-type_4 arg_4; \
-{ \
-return old( arg_1, arg_2, arg_3, arg_4 ); \
-}
-
-#define REMAP_FIVE(old,new,type_return,type_1,type_2,type_3,type_4,type_5) \
-type_return new( arg_1, arg_2, arg_3, arg_4, arg_5 ) \
-type_1 arg_1; \
-type_2 arg_2; \
-type_3 arg_3; \
-type_4 arg_4; \
-type_5 arg_5; \
-{ \
-return old( arg_1, arg_2, arg_3, arg_4, arg_5 ); \
-}
-
-#define REMAP_SIX(old,new,type_return,type_1,type_2,type_3,type_4,type_5,type_6) \
-type_return new( arg_1, arg_2, arg_3, arg_4, arg_5, arg_6 ) \
-type_1 arg_1; \
-type_2 arg_2; \
-type_3 arg_3; \
-type_4 arg_4; \
-type_5 arg_5; \
-type_6 arg_6; \
-{ \
-return old( arg_1, arg_2, arg_3, arg_4, arg_5, arg_6 ); \
-}
-
-
-#ifdef IRIX53
-REMAP_ONE( getwd, _getwd, char *, char * )
-REMAP_SIX( mmap, _mmap, char *, char *, size_t, int, int, int, off_t )
-#endif
 
 /* On HPUX10, libc fork.o and pipe.o have code entry points of
  * _pipe_sys and _fork_sys.  Wonder if these are "safe" to extract
