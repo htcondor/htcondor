@@ -97,7 +97,7 @@ TOY_OBJ = state_machine_driver.o signals.o name_tab.o starter.toy.o \
 TOY_LIB =  $(UTIL_LIB) $(IO_LIB)
 
 /* all_target(condor_starter.V5 test_it hound) ---we no longer need test_it & hound */
-all_target(condor_starter.V5)
+all_target(condor_starter)
 tags_target($(SRC),$(LIBDIRS))
 depend_target($(SRC))
 
@@ -108,12 +108,12 @@ c_plus_target(hound,hound.o,$(NULL))
 
 #if IS_R6000_AIX31 || IS_R6000_AIX32 
 G++_DIR = /usr/gnu/lib/gcc-lib/rs6000-ibm-aix/2.5.0
-condor_starter.V5: $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) $(LIB)
+condor_starter: $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) $(LIB)
 	$(G++_DIR)/ld \
 	-T512 -H512 -btextro -bhalt:4 -bnodelcsect \
 	-L/usr/gnu/lib \
 	-L$(INSTALL_DIR)/lib \
-	-o condor_starter.V5 \
+	-o condor_starter \
 	/lib/crt0.o \
 	$(PORTABLE_OBJ) \
 	$(NON_PORTABLE_OBJ) \
@@ -122,16 +122,16 @@ condor_starter.V5: $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) $(LIB)
 	$(REMOTE_SYSCALL_LIB) \
 	-lg++ $(G++_DIR)/libgcc.a -lc
 clean::
-	rm -f condor_starter.V5 $(OBJ)
+	rm -f condor_starter $(OBJ)
 #else
-c_plus_target(condor_starter.V5,$(OBJ),$(LIB))
+c_plus_target(condor_starter,$(OBJ),$(LIB))
 #endif
-release_target(condor_starter.V5,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+release_target(condor_starter,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
 c_plus_target(toy,$(TOY_OBJ),$(TOY_LIB))
 
-starter_state_diagram.dot: condor_starter.V5
-	condor_starter.V5 -dot > starter_state_diagram.dot
+starter_state_diagram.dot: condor_starter
+	condor_starter -dot > starter_state_diagram.dot
 
 starter_state_diagram.ps: starter_state_diagram.dot
 	dot -Tps -Gsize="10,9" -Gratio=.75 -Gorientation=landscape \
