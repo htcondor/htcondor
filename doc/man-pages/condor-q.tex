@@ -1,0 +1,25 @@
+\begin{ManPage}{\Condor{q}}{1}{Display information about jobs in queue}
+\label{man-condor-q}
+\Synopsis \SynProg{\Condor{q}}
+\oOpt{-global} \oOptArg{-submittor}{submittor} \oOpt{-help}
+\oOptArg{-name}{name} \oOptArg{-constraint}{expression} \oOpt{-long}
+\oArg{cluster} \oArg{cluster.process} \oArg{owner}
+
+\Description
+\Condor{q} displays information about jobs in the local condor job queue.
+If a \Arg{cluster} and a \Arg{process} are both specified, \Condor{q}
+displays information about the specified process. If a \Arg{cluster} is
+specified without a \Arg{process}, \Condor{q} displays information about
+all processes belonging to the specified cluster. With no arguments
+\Condor{q} displays information about all condor jobs in the local queue.
+\Condor{q} displays a one line summary of information about specified
+processes as follows
+
+\begin{Options}
+    \OptItem{\Opt{-global}}{Get the ``global queue,'' (i.e., get the jobs of
+    all the submittors in the system).  Hello, is there anybody in there?}
+
+    \OptItem{\Opt{-help}}{Get a brief description of the supported options}
+\end{Options}
+
+\end{ManPage}
