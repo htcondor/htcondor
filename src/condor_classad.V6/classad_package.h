@@ -28,9 +28,13 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <sys/types.h>
+#include <time.h>
+#include <limits.h>
 
 #include "common.h"
 #include "exprTree.h"
 #include "matchClassad.h"
+#include "classad_collection.h"
 
 #endif
