@@ -25,8 +25,23 @@
 #define _FIX_SETJMP
 
 #ifdef IRIX
-#define _save_posix _POSIX90
-#define _save_ansi _NO_ANSIMODE
+/* #define _save_posix _POSIX90 - **WRONG** */
+/* Now, technically, this might cause some problems because _POSIX90
+   is generally defined to be something like defined(FOO) || (defined...
+   but as we don't go changing what those defines are, we can safely
+   reset these to be true or false. */
+#if _POSIX90 /* Right! */
+#	define _save_posix 1
+#else
+#	define _save_posix 0
+#endif
+
+/* #define _save_ansi _NO_ANSIMODE - **WRONG** */
+#if _NO_ANSIMODE /* Right! */
+#	define _save_ansi 1
+#else
+#	define _save_ansi 0
+#endif
 #undef _POSIX90
 #undef _NO_ANSIMODE
 #define _POSIX90 1
