@@ -56,7 +56,7 @@ extern	bool	service_this_universe(int);
 static ReliSock *Q_SOCK = NULL;
 
 int		do_Q_request(ReliSock *);
-void	FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad, 
+void	FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, 
 					 char * user);
 void	FindPrioJob(PROC_ID &);
 int		Runnable(PROC_ID*);
@@ -877,9 +877,12 @@ static bool EvalBool(ClassAd *ad, const char *constraint)
 {
 	static ExprTree *tree = NULL;
 	static char * saved_constraint = NULL;
-	EvalResult result;
+	Value result;
 	bool constraint_changed = true;
-
+	ClassAdParser parser;
+	bool boolValue;
+	int intValue;
+	
 	if ( saved_constraint ) {
 		if ( strcmp(saved_constraint,constraint) == 0 ) {
 			constraint_changed = false;
@@ -896,7 +899,7 @@ static bool EvalBool(ClassAd *ad, const char *constraint)
 			delete tree;
 			tree = NULL;
 		}
-		if (Parse(constraint, tree) != 0) {
+		if( !parser.ParseExpression( string( constraint ), tree ) ) {
 			dprintf(D_ALWAYS, 
 				"can't parse constraint: %s\n", constraint);
 			return false;
@@ -906,12 +909,16 @@ static bool EvalBool(ClassAd *ad, const char *constraint)
 
 	// Evaluate constraint with ad in the target scope so that constraints
 	// have the same semantics as the collector queries.  --RR
-	if (!tree->EvalTree(NULL, ad, &result)) {
+	tree->SetParentScope( ad );
+	if( !ad->EvaluateExpr( tree, result ) ) {
 		dprintf(D_ALWAYS, "can't evaluate constraint: %s\n", constraint);
 		return false;
 	}
-	if (result.type == LX_INTEGER) {
-		return (bool)result.i;
+	if( result.IsBooleanValue( boolValue ) ) {
+		return boolValue;
+	}
+	else if( result.IsIntegerValue( intValue ) ) {
+		return (bool)intValue;
 	}
 	dprintf(D_ALWAYS, "contraint (%s) does not evaluate to bool\n", 
 		constraint);
@@ -1301,6 +1308,8 @@ GetAttributeExpr(int cluster_id, int proc_id, const char *attr_name, char *val)
 	char		key[_POSIX_PATH_MAX];
 	ExprTree	*tree;
 	char		*attr_val;
+	string 		valString;
+	ClassAdUnParser unp;
 
 	strcpy(key, IdToStr(cluster_id,proc_id) );
 
@@ -1320,7 +1329,9 @@ GetAttributeExpr(int cluster_id, int proc_id, const char *attr_name, char *val)
 	}
 
 	val[0] = '\0';
-	tree->PrintToStr(val);
+//	tree->PrintToStr(val);
+	unp.Unparse( valString, tree );
+	sprintf( val, "%s=%s", attr_name, valString.c_str( ) );
 
 	return 1;
 }
@@ -1390,6 +1401,9 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 		const char *AttrsToExpand[] = { ATTR_JOB_CMD, ATTR_JOB_ARGUMENTS,
 			ATTR_JOB_ENVIRONMENT, NULL };	// ATTR_JOB_CMD must be first
 		char *left,*name,*right,*value,*tvalue;
+		ExprTree *tree = NULL;
+		string valueString;
+		ClassAdUnParser unp;
 
 		// we must make a deep copy of the job ad; we do not
 		// want to expand the ad we have in memory.
@@ -1484,7 +1498,16 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 				// If it is not there, use the fallback.
 				// If no fallback value, then fail.
 
-				value = startd_ad->sPrintExpr(NULL,0,name);
+//				value = startd_ad->sPrintExpr(NULL,0,name);
+				tree = startd_ad->Lookup( name );
+				if( tree ) {
+					unp.Unparse( valueString, tree );
+					strcpy( value, valueString.c_str( ) );
+				}
+				else {
+					value = NULL;
+				}
+
 				if (!value) {
 					if(fallback) {
 						char *rebuild = (char *) malloc(  strlen(name) + 3 
@@ -1882,8 +1905,7 @@ void mark_jobs_idle()
  * If my_match_ad is NULL, this pool has an older negotiator,
  * so we just scan within the current cluster for the highest priority job.
  */
-void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad, 
-					 char * user)
+void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, char * user)
 {
 	char				constraintbuf[_POSIX_PATH_MAX];
 	char				*constraint = constraintbuf;
@@ -1891,6 +1913,8 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 	char				*the_at_sign;
 	static char			nice_user_prefix[50];	// static since no need to recompute
 	static int			nice_user_prefix_len = 0;
+	MatchClassAd		mad;
+	bool				match;
 
 		// First, see if jobid points to a runnable job.  If it does,
 		// there's no need to build up a PrioRec array, since we
@@ -1901,6 +1925,7 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 		return;
 	}
 
+	mad.ReplaceRightAd( my_match_ad );
 
 	// BIOTECH
 	char *biotech = param("BIOTECH");
@@ -1910,16 +1935,22 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 		while (ad != NULL) {
 			if ( Runnable(ad) ) {
 				if ( (my_match_ad && 
-					     (*ad == ((ClassAd &)(*my_match_ad)))) 
+//					     (*ad == ((ClassAd &)(*my_match_ad)))) 
+					  mad.ReplaceLeftAd( ad ) &&
+					  mad.EvaluateAttrBool( "symmetricMatch", match ) &&
+					  match )
 					 || (my_match_ad == NULL) ) 
 				{
 					ad->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster);
 					ad->LookupInteger(ATTR_PROC_ID, jobid.proc);
+					mad.RemoveLeftAd( );
 					break;
 				}
+				mad.RemoveLeftAd( );
 			}
 			ad = GetNextJob(0);
 		}
+		mad.RemoveRightAd( );
 		return;
 	}
 
@@ -1941,10 +1972,16 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 			// If job ad and resource ad match, put into prio rec array.
 			// If we do not have a resource ad, it is because this pool
 			// has an old negotiator -- so put it in prio rec array anyway.
-		if ( (my_match_ad && (*ad == ((ClassAd &)(*my_match_ad)))) || (my_match_ad == NULL) ) 
+		if ( (my_match_ad && 
+//			  (*ad == ((ClassAd &)(*my_match_ad)))) 
+			  mad.ReplaceLeftAd( ad ) &&
+			  mad.EvaluateAttrBool( "symmetricMatch", match ) &&
+			  match )
+			 || (my_match_ad == NULL) ) 
 		{
 			get_job_prio(ad);
 		} 
+		mad.RemoveLeftAd( );
 		ad = GetNextJobByCluster(jobid.cluster, 0);
 	}
 
@@ -1986,10 +2023,15 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 		ad = GetNextJobByConstraint(constraint, 1);	// init a new scan
 		while ( ad ) {
 			// If job ad and resource ad match, put into prio rec array.
-			if ( (my_match_ad && (*ad == ((ClassAd &)(*my_match_ad)))) ) 
+			if ( (my_match_ad &&
+//				  (*ad == ((ClassAd &)(*my_match_ad)))) ) 
+				  mad.ReplaceLeftAd( ad ) &&
+				  mad.EvaluateAttrBool( "symmetricMatch", match ) &&
+				  match ))
 			{
 				get_job_prio(ad);
 			}
+			mad.RemoveLeftAd( );
 			ad = GetNextJobByConstraint(constraint, 0);
 		}
 
@@ -1998,10 +2040,12 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 	if(N_PrioRecs == 0)
 	// no more jobs to run anywhere.  nothing more to do.  failure.
 	{
+		mad.RemoveLeftAd( );
 		return;
 	}
 
 
+	mad.RemoveLeftAd( );
 	FindPrioJob(jobid);
 }
 
