@@ -236,9 +236,9 @@ circumstances:
 /* For Linux, INDIRECT really means INDIRECT. */
 
 #if defined(LINUX)
-	#define INDIRECT indirect
+#	define INDIRECT indirect
 #else
-	#define INDIRECT direct
+#	define INDIRECT direct
 #endif
 
 /* 
@@ -267,9 +267,9 @@ these calls manipulate the open file table.
 #if defined(FILE_TABLE)
 	int open( const char *path, OPEN_FLAGS_T flags, ... )
 		: file_table
-		#if defined(AIX)
+#		if defined(AIX)
 			, no_sys_chk
-		#endif
+#		endif
 	{
 		SEND_PATH( path );
 		ALLOC_PATH( path );
@@ -277,15 +277,15 @@ these calls manipulate the open file table.
 
 	int close( int fd ) 
 		: file_table
-		#if defined(AIX)
+#		if defined(AIX)
 			, no_sys_chk
-		#endif
+#		endif
 		;
 
 	int unlink( map_name(const char *path) ) 
-		#if defined(AIX)
+#		if defined(AIX)
 			: no_sys_chk
-		#endif
+#		endif
 	{
 		SEND_PATH( path );
 		ALLOC_PATH( path );
@@ -330,10 +330,10 @@ All of these calls manipulate the open file table.
 	off_t lseek( int fd, off_t offset, int whence )
 		: file_table, also_implements(lseek64), also_implements(llseek); 
 
-	#if !defined(IRIX) && !defined(LINUX)
+#	if !defined(IRIX) && !defined(LINUX)
 		offset_t llseek( int fd, offset_t offset, int whence )
 			: file_table_name(lseek), remote_name(lseek);
-	#elif defined(LINUX)
+#	elif defined(LINUX)
 
 	   /*
 	      When we implement llseek in local mode, we always
@@ -344,36 +344,36 @@ All of these calls manipulate the open file table.
 	      at least 32 bit offsets work now. :) 
 	      Derek Wright <wright@cs.wisc.edu> 2/4/00
 	   */
-		#if defined(GLIBC22) || defined(GLIBC23)
+#		if defined(GLIBC22) || defined(GLIBC23)
 			off64_t llseek( int fd, off64_t offset, int whence )
 				: file_table_name(lseek), remote_name(lseek), no_sys_chk, 
 				local_name(lseek);
-		#endif
-	#endif
+#		endif
+#	endif
 
 	/* on Linux, lseek64 just goes to llseek, I can't find an lseek64 on OSF1 */
-	#if !defined(LINUX) && !defined(OSF1)
+#	if !defined(LINUX) && !defined(OSF1)
 	off64_t lseek64( int fd, off64_t offset, int whence )
 		: file_table_name(lseek), remote_name(lseek)
-		#if defined(IRIX)
+#		if defined(IRIX)
 			/* all seek calls under IRIX call lseek, disassemble it and see. */
 			, local_name(lseek)
-		#elif defined(Solaris)
+#		elif defined(Solaris)
 			, local_name(llseek)
-		#endif
+#		endif
 		;
-	#endif
+#	endif
 
 	int dup( int old_fd ) : file_table;
 	int dup2( int old_fd, int new_fd ) : file_table;
 
 	int fcntl( int fd, FCNTL_CMD_T cmd, ... ) : file_table;
 
-	#if defined(LINUX) && defined(GLIBC)
+#	if defined(LINUX) && defined(GLIBC)
 		int ioctl( int fd, unsigned long cmd, ... ) : file_table;
-	#else
+#	else
 		int ioctl( int fd, int cmd, ... ) : file_table;
-	#endif
+#	endif
 
 	int pipe( int fd[] ) : EXTRACT, file_table;
 
@@ -388,27 +388,27 @@ All of these calls manipulate the open file table.
 	int fdatasync( int fd )
 		: file_table_name(fsync), sender_name(fsync);
 	int fsync( int fd )
-		#if defined(SENDER)
+#		if defined(SENDER)
 			: file_table, no_sys_chk;
-		#else
+#		else
 			: file_table;
-		#endif
+#		endif
 
-	#if !defined(SWITCH)
-		#if SYNC_RETURNS_VOID
+#	if !defined(SWITCH)
+#		if SYNC_RETURNS_VOID
 			void sync() : pseudo, file_table;
-		#else 
+#		else 
 			int sync() : pseudo, file_table;
-		#endif
-	#endif
+#		endif
+#	endif
 
 	/* Truncate must go through the table to update the file size. */
 
 	int ftruncate( int fd, off_t length ) :
-		#if !defined(SWITCH)
+#		if !defined(SWITCH)
 			/* Sender needed, even if not a true syscall */
 			no_sys_chk,
-		#endif
+#		endif
 		file_table, also_implements(ftruncate64);
 
 	int ftruncate64( int fd, off64_t length )
@@ -430,35 +430,35 @@ All of these calls manipulate the open file table.
 	the future. -psilord 5/23/2001
 	*/
 
-	#if defined(SWITCH) || defined(SENDER)
-		#if defined(OSF1) || defined(HPUX10)
+#	if defined(SWITCH) || defined(SENDER)
+#		if defined(OSF1) || defined(HPUX10)
 			int poll( struct pollfd *fds, nfds_t nfds, int timeout ) : file_table;
 			int select (int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) : file_table;
-		#else
+#		else
 			int poll( struct pollfd *fds, unsigned long nfds, int timeout ) : file_table;
 			int select (int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) : file_table
-			#if defined(LINUX)
+#			if defined(LINUX)
 				/* Linux has a new system call we should use because SYS_select
 					is deprecated and returns EINVAL now */
 				, local_name(_newselect)
-			#endif
+#			endif
 			; /* closes the select() */
-		#endif
-	#endif
+#		endif
+#	endif
 
 	/*
 	socket is supported in general, but is a special
 	switch on Solaris.
 	*/
-	#if defined(Solaris)
-		#if !defined(SWITCH)
+#	if defined(Solaris)
+#		if !defined(SWITCH)
 		int socket( int domain, int type, int protocol )
 			: file_table, no_sys_chk, INDIRECT;
-		#endif
-	#else
+#		endif
+#	else
 		int socket( int domain, int type, int protocol )
 			: file_table, INDIRECT;
-	#endif
+#	endif
 
 
 #endif /* FILE_TABLE and not CLIP */
@@ -477,21 +477,21 @@ version.
 	Most of the switches are special.
 	*/
 
-	#if defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))
-		#define STAT_NEEDS_SPECIAL_SWITCH
-	#elif defined(IRIX)
-		#define STAT_NEEDS_SPECIAL_SWITCH
-	#endif
+#	if defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))
+#		define STAT_NEEDS_SPECIAL_SWITCH
+#	elif defined(IRIX)
+#		define STAT_NEEDS_SPECIAL_SWITCH
+#	endif
 
 
-	#if !defined(SWITCH) || !defined(STAT_NEEDS_SPECIAL_SWITCH)
+#	if !defined(SWITCH) || !defined(STAT_NEEDS_SPECIAL_SWITCH)
 		int fstat( int fd, struct stat *buf ) :
-			#if defined(STAT_NEEDS_EXTRACT)
+#			if defined(STAT_NEEDS_EXTRACT)
 				extract,
-			#endif
-			#if defined(IRIX)
+#			endif
+#			if defined(IRIX)
 				no_sys_chk,
-			#endif
+#			endif
 				also_implements(fstat64),   /* for backwards compatibility */
 				file_table
 		{
@@ -499,16 +499,16 @@ version.
 			alloc( buf, STAT_SIZE );
 		}
 
-	#endif
+#	endif
 
-	#if !defined(SWITCH) || !defined(STAT_NEEDS_SPECIAL_SWITCH)
+#	if !defined(SWITCH) || !defined(STAT_NEEDS_SPECIAL_SWITCH)
 		int stat( map_name(const char *name), struct stat *buf ) :
-			#if defined(STAT_NEEDS_EXTRACT)
+#			if defined(STAT_NEEDS_EXTRACT)
 				extract,
-			#endif
-			#if defined(IRIX)
+#			endif
+#			if defined(IRIX)
 				no_sys_chk,
-			#endif
+#			endif
 				also_implements(stat64),   /* for backwards compatibility */
 				file_table
 		{
@@ -518,16 +518,16 @@ version.
 			alloc( buf, STAT_SIZE );
 		}
 
-	#endif
+#	endif
 
-	#if !defined(SWITCH) || !defined(STAT_NEEDS_SPECIAL_SWITCH)
+#	if !defined(SWITCH) || !defined(STAT_NEEDS_SPECIAL_SWITCH)
 		int lstat( map_name(const char *name), struct stat *buf ) :
-			#if defined(STAT_NEEDS_EXTRACT)
+#			if defined(STAT_NEEDS_EXTRACT)
 				extract,
-			#endif
-			#if defined(IRIX)
+#			endif
+#			if defined(IRIX)
 				no_sys_chk,
-			#endif	
+#			endif	
 				also_implements(lstat64),   /* for backwards compatibility */
 				file_table
 		{
@@ -537,14 +537,14 @@ version.
 			alloc( buf, STAT_SIZE );
 		}
 
-	#endif
+#	endif
 
 	/*
 	64-bit system calls all generate their own switches and senders,
 	but they send the name of the 32-bit system call on the wire.
 	*/
 
-	#if defined(HAS_64BIT_SYSCALLS) 
+#	if defined(HAS_64BIT_SYSCALLS) 
 
 	/*
 	  This is stupid, you'd never have both Solaris + IRIX
@@ -553,15 +553,15 @@ version.
 	  it's all tested and working, apropos the comments below...
 	    -derek wright <wright@cs.wisc.edu> 11/22/03
 	*/
-	#if defined(Solaris) && !defined(IRIX)
+#	if defined(Solaris) && !defined(IRIX)
 
 		/* when I can test this for sure, I'll remove the IRIX stuff from
 			below */
 		int fstat64( map(int fd), struct stat64 *buf ) :
-			#if defined(IRIX)
+#			if defined(IRIX)
 			no_sys_chk,
 			dl_extract,
-			#endif
+#			endif
 			remote_name(fstat)
 		{
 			out code( buf );
@@ -569,10 +569,10 @@ version.
 		}
 	
 		int stat64( map_name(const char *path), struct stat64 *buf ) : 
-			#if defined(IRIX)
+#			if defined(IRIX)
 			no_sys_chk,
 			dl_extract,
-			#endif
+#			endif
 			remote_name(stat) 
 		{ 
 			SEND_PATH( path );
@@ -582,10 +582,10 @@ version.
 		}
 	
 		int lstat64( map_name(const char *path), struct stat64 *buf ) : 
-			#if defined(IRIX)
+#			if defined(IRIX)
 			no_sys_chk,
 			dl_extract,
-			#endif
+#			endif
 			remote_name(lstat) 
 		{ 
 			SEND_PATH( path );
@@ -593,32 +593,32 @@ version.
 			out code( buf );
 			alloc( buf, STAT64_SIZE );
 		}
-	#endif
-	#endif /* HAS_64BIT_SYSCALLS */
+#	endif
+#	endif /* HAS_64BIT_SYSCALLS */
 
 	int fchown( map(int fd), uid_t owner, gid_t group );
 	int fchmod( map(int fd), mode_t mode );
 
-	#if defined(Solaris) || defined(IRIX)
+#	if defined(Solaris) || defined(IRIX)
 		int statfs( const char *path, struct statfs *buf, rdiscard(int len), rdiscard(int fstyp) ) : pseudo {
-	#elif defined(OSF1)
+#	elif defined(OSF1)
 		int statfs( char *path, struct statfs *buf, rdiscard(int len) ) : pseudo {
-	#else
+#	else
 		int statfs( const char *path, struct statfs *buf ) : pseudo {
-	#endif
+#	endif
 			SEND_PATH( path );
 			ALLOC_PATH( path );
 			out code( buf );
 			alloc( buf, STATFS_SIZE );
 		}
 
-	#if defined(IRIX) || defined(Solaris)
+#	if defined(IRIX) || defined(Solaris)
 		int fstatfs( map(int fd), struct statfs *buf, int len, int fstyp ) {
-	#elif defined(OSF1)
+#	elif defined(OSF1)
 		int fstatfs( map(int fd), struct statfs *buf, int len) {
-	#else
+#	else
 		int fstatfs( map(int fd), struct statfs *buf ) {
-	#endif
+#	endif
 			out code( buf );
 			alloc( buf, STATFS_SIZE );
 		}
@@ -628,14 +628,14 @@ version.
 	int lockf64( map(int fd), int op, off64_t where )
 		: remote_name(lockf);
 
-	#if defined(HPUX) || defined(OSF1) || defined(LINUX)
-	    #if defined(LINUX)
+#	if defined(HPUX) || defined(OSF1) || defined(LINUX)
+#	    if defined(LINUX)
 		int getdirentries( map(int fd), char *buf, size_t nbytes, 
 								off_t *basep ) : no_sys_chk, extract 
-	    #else
+#	    else
 		int getdirentries( map(int fd), struct dirent *buf, size_t nbytes, 
 			off_t *basep ) 
-	    #endif
+#	    endif
 
 		{
 			out code_bytes_bool( buf, rval );
@@ -644,16 +644,16 @@ version.
 			alloc( buf, nbytes );
 			alloc( basep, LONG_SIZE );
 		}
-	#endif
+#	endif
 
-	#if defined(Solaris) || defined(IRIX) || ( defined(LINUX) && !defined(SWITCH) )
+#	if defined(Solaris) || defined(IRIX) || ( defined(LINUX) && !defined(SWITCH) )
 		int getdents( map(int fd), struct dirent *buf, size_t nbytes ) :
 			also_implements(getdents64)
 		{
 			out code_bytes_bool( buf, nbytes );
 			alloc( buf, nbytes );
 		}
-	#endif
+#	endif
 
 	int getdents64( map(int fd), struct dirent64 *buf, size_t nbytes )
 		: remote_name(getdents)
@@ -667,7 +667,7 @@ version.
 	only invoked by supervisory code in the syscall lib.
 	*/
 
-	#if !defined(SWITCH)
+#	if !defined(SWITCH)
 
 		int lseekread( int fd, off_t offset, int whence, void *buf, size_t len )
 			: pseudo
@@ -682,7 +682,7 @@ version.
 			in code_bytes_bool( buf, len );
 			alloc( buf, len );
 	        }
-	#endif /* not SWITCH */
+#	endif /* not SWITCH */
 
 	/*
 	Condor supports sockets now!  The socket is created and managed
@@ -726,7 +726,7 @@ version.
 
 	/* OSF1 doesn't support a separate send and recv. They are implemented as sendto and recvfrom in switches.special.C */
 
-	#if !defined(OSF1)
+#	if !defined(OSF1)
 		SOCKET_SENDRECV_TYPE send(
 			map(int fd),
 			SOCKET_DATA_CONST SOCKET_DATA_TYPE data,
@@ -737,7 +737,7 @@ version.
 			SOCKET_DATA_TYPE data,
 			SOCKET_SENDRECV_LENGTH_TYPE length,
 			SOCKET_FLAGS_TYPE flags) : INDIRECT;
-	#endif
+#	endif
 
 	/* On OSF1, this doesn't work unless recvfrom calls SYS_old_recvfrom.  I don't know why.  */
 
@@ -749,11 +749,11 @@ version.
 		SOCKET_ADDR_TYPE addr,
 		SOCKET_ALTERNATE_LENGTH_TYPE *addrlength) : INDIRECT
 
-	#if defined(OSF1)
+#	if defined(OSF1)
 		, local_name(old_recvfrom);
-	#else
+#	else
 		;
-	#endif
+#	endif
 
 	SOCKET_SENDRECV_TYPE recvmsg(
 		map(int fd),
@@ -827,29 +827,29 @@ report an error if reside on different devices.
 		alloc( buf, buf_size );
 	}
 
-	#if !defined(LINUX)
+#	if !defined(LINUX)
 		int lchown( map_name(const char *path), uid_t owner, gid_t group ) {
 			SEND_PATH( path );
 			ALLOC_PATH( path );
 		}
-	#endif
+#	endif
 
 	int chown( map_name(const char *path), uid_t owner, gid_t group ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
 
-	#if defined(Solaris) 
+#	if defined(Solaris) 
 		int truncate( map_name(const char *path), off_t length ) : extract {
 			SEND_PATH( path );
 			ALLOC_PATH( path );
 		}
-	#else
+#	else
 		int truncate( map_name(const char *path), off_t length ) {
 			SEND_PATH( path );
 			ALLOC_PATH( path );
 		}
-	#endif /* Solaris */
+#	endif /* Solaris */
 
 
 	int mkdir( map_name(const char *path), mode_t mode ) {
@@ -861,11 +861,11 @@ report an error if reside on different devices.
 		ALLOC_PATH( path );
 	}
 
-	#if defined( LINUX )
+#	if defined( LINUX )
 		int utimes( map_name(char *path), struct timeval *times ) {
-	#else
+#	else
 		int utimes( map_name(const char *path), const struct timeval *times ) {
-	#endif
+#	endif
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 		in code( times );
@@ -884,22 +884,22 @@ Miscellaneous file-related operations that do not deal with
 either file names or file descriptors.
 */
 
-	#if !defined(Solaris) && !defined(LINUX) && !defined(IRIX) && !defined(HPUX)
+#	if !defined(Solaris) && !defined(LINUX) && !defined(IRIX) && !defined(HPUX)
 		int getfsstat( struct statfs buf[], long bufsize, int flags ) {
 			out code_bytes_bool( buf, STATFS_ARRAY_SIZE );
 			alloc( buf, bufsize );
 		}
-	#endif
+#	endif
 
 
 #endif /* REMOTE_SYSCALLS and not CLIP */
 
-	#if !defined(SWITCH)
+#	if !defined(SWITCH)
 		char * getwd( char *path_name ) : pseudo {
 			GET_PATH( path_name );
 			ALLOC_PATH( path_name );
 		}
-	#endif
+#	endif
 
 
 /*
@@ -911,15 +911,15 @@ why they can't be left inside an !defined(CLIP) block...
 #if defined(REMOTE_SYSCALLS)
 	uid_t getuid() 
 		: pseudo
-		#if defined(AIX)
+#		if defined(AIX)
 			, no_sys_chk
-		#endif
+#		endif
 		;
 	gid_t getgid()  
 		: pseudo
-		#if defined(AIX)
+#		if defined(AIX)
 			, no_sys_chk
-		#endif
+#		endif
 		;
 #endif
 
@@ -944,12 +944,12 @@ They are not needed for remote I/O or for the condor daemons.
 	Furthermore, we make it pseudo cuz we want the shadow to return the
 	job's Owner as the value.  -Todd , 4/97
 	*/
-	#if !defined(SWITCH)
+#	if !defined(SWITCH)
 		int getlogin( char *loginbuf ) : pseudo {
 			out code( loginbuf );
 			alloc ( loginbuf, _POSIX_PATH_MAX );
 		}  
-	#endif /* not SWITCH */
+#	endif /* not SWITCH */
 
 
 	mode_t umask( mode_t cmask );
@@ -960,18 +960,18 @@ They are not needed for remote I/O or for the condor daemons.
 		alloc(grouplist, gidsetsize * GID_T_SIZE);
 	}
 
-	#if !defined(Solaris) && !defined(LINUX) && !defined(IRIX) && !defined(HPUX)
+#	if !defined(Solaris) && !defined(LINUX) && !defined(IRIX) && !defined(HPUX)
 		int table( int id, int index, char *addr, int nel, unsigned int lel ) {
 			out code_bytes_bool( addr, nel * lel );
 			alloc( addr, nel * lel );
 		}
-	#endif
+#	endif
 
-	#if defined(LINUX) || defined(IRIX65) || defined(OSF1)
+#	if defined(LINUX) || defined(IRIX65) || defined(OSF1)
 		int gethostname( char *address, size_t address_len ) {
-	#else 
+#	else 
 		int gethostname( char *address, int address_len ) {
-	#endif
+#	endif
 			out code_bytes_bool( address, address_len );
 			alloc( address, address_len );
 		}
@@ -981,28 +981,28 @@ They are not needed for remote I/O or for the condor daemons.
 	int setpriority( int which, int who, int priority );
 	int getpriority( int which, int who );
 
-	#if defined(LINUX)
+#	if defined(LINUX)
 		int gettimeofday( struct timeval *tp, struct timezone *tzp ) {
-	#else
+#	else
 		int gettimeofday( struct timeval *tp, void *tzp ) {
-	#endif
+#	endif
 			out code( tp );
 			/* don't code( tzp ) since it is often a NULL pointer */
 			alloc( tp, TIMEVAL_SIZE );
 			alloc( tzp, TIMEZONE_SIZE );
 		}
 
-	#if defined(HPUX10) || defined(OSF1) || defined(IRIX)
+#	if defined(HPUX10) || defined(OSF1) || defined(IRIX)
 		long gethostid();
-	#else
+#	else
 		int gethostid();
-	#endif
+#	endif
 
-	#if defined(HPUX) || defined(LINUX) || defined(Solaris) || defined(IRIX)
+#	if defined(HPUX) || defined(LINUX) || defined(Solaris) || defined(IRIX)
 		int setrlimit( int resource, const  struct rlimit *rlp ) {
-	#else
+#	else
 		int setrlimit( int resource, struct rlimit *rlp ) {
-	#endif
+#	endif
 			in code( rlp );
 			alloc( rlp, RLIMIT_SIZE );
 		}
@@ -1012,7 +1012,7 @@ They are not needed for remote I/O or for the condor daemons.
 		alloc( rlp, RLIMIT_SIZE );
 	}
 
-	#if HAS_64BIT_SYSCALLS
+#	if HAS_64BIT_SYSCALLS
 		int setrlimit64( int resource, const  struct rlimit64 *rlp ) {
 			in code( rlp );
 			alloc( rlp, RLIMIT64_SIZE );
@@ -1022,21 +1022,21 @@ They are not needed for remote I/O or for the condor daemons.
 			out code( rlp );
 			alloc( rlp, RLIMIT64_SIZE );
 		}
-	#endif
+#	endif
 
 	int getdomainname( char *name, int namelen ) {
 		out code_bytes_bool( name, namelen );
 		alloc( name, namelen );
 	}
 
-	#if defined(OSF1)
+#	if defined(OSF1)
 		int getaddressconf( struct addressconf *buf, size_t length ) {
 			out code_bytes_bool( buf, length );
 			alloc( buf, length );
 		}
-	#endif
+#	endif
 
-	#if defined(Solaris) || defined(LINUX) || defined(IRIX) || defined(HPUX)
+#	if defined(Solaris) || defined(LINUX) || defined(IRIX) || defined(HPUX)
 		not_supported { 
 			int mvalid( char * addr, size_t len, int prot ) {
 				out code_bytes_bool( addr, len );
@@ -1045,14 +1045,14 @@ They are not needed for remote I/O or for the condor daemons.
 
 			int uswitch( int cmd, int value );
 		}
-	#else
+#	else
 		int mvalid( char * addr, size_t len, int prot ) {
 			out code_bytes_bool( addr, len );
 			alloc( addr, len );
 		}
 
 		int uswitch( int cmd, int value );
-	#endif /* Solaris || Linux || IRIX */
+#	endif /* Solaris || Linux || IRIX */
 
 #endif /* REMOTE_SYSCALLS and not CLIP */
 
@@ -1148,12 +1148,12 @@ they should be built in the special "clipped" version.
 		out code( use_p );
 		alloc( use_p, RUSAGE_SIZE );
 	}
-	#ifndef RECEIVER  /* We need a special receiver so that we don't leak memory */
+#	ifndef RECEIVER  /* We need a special receiver so that we don't leak memory */
 		int startup_info_request( STARTUP_INFO *s ): pseudo {
 			out code( s );
 			alloc( s, STARTUP_INFO_SIZE );
 		}
-	#endif
+#	endif
 
 	int report_error( char *msg ) : pseudo {
 		in code( msg );
@@ -1277,7 +1277,7 @@ they should be built in the special "clipped" version.
 	}
 
 
-	#if !defined (SWITCH)
+#	if !defined (SWITCH)
 		int pvm_info( const char *response, int mytid ) : pseudo {
 			SEND_PATH( response );
 			ALLOC_PATH( response );
@@ -1286,7 +1286,7 @@ they should be built in the special "clipped" version.
 		int pvm_task_info( int v_pid, int pvm_tid) : pseudo;
 
 		int suspended( int susp ) : pseudo;
-	#endif
+#	endif
 		/*
 		This function is intended for setting up the transfer
 		of a whole file via a TCP stream.  This allows more
@@ -1351,7 +1351,7 @@ they should be built in the special "clipped" version.
 
 	int register_begin_execution( ): pseudo;
 
-	#if !defined( SENDER )
+#	if !defined( SENDER )
 		/*
 		These two functions implement protocols for sending and fetching
 		whole files at a time.  Since there is a more complex protocol
@@ -1366,7 +1366,7 @@ they should be built in the special "clipped" version.
 			SEND_PATH( name );
 			ALLOC_PATH( name );
 		}
-	#endif	/* not SENDER */
+#	endif	/* not SENDER */
 #endif	/* not SWITCH */
 
 
@@ -1388,81 +1388,81 @@ ignored {
 /* Memory mapped files */
 
 not_supported {
-	#if defined(IRIX) || defined(OSF1) || defined(HPUX)
+#	if defined(IRIX) || defined(OSF1) || defined(HPUX)
 		void * mmap( void * a, size_t l, int p, int f, map(int fd), off_t o ) : EXTRACT;
 		int mprotect( const void * addr, size_t len, int prot );
 		int madvise( void * addr, size_t len, int behav );
-	#elif defined(LINUX)
-		#if !defined(SWITCH)
+#	elif defined(LINUX)
+#		if !defined(SWITCH)
 			void * mmap( void * a, size_t l, int p, int f, map(int fd), off_t o );
-		#endif
+#		endif
 		int mprotect( MMAP_T addr, size_t len, int prot );
-	#else
+#	else
 		char * mmap( char * a, size_t l, int p, int f, map(int fd), off_t o ) : EXTRACT;
 		int mprotect( char * addr, size_t len, int prot );
 		int madvise( char * addr, size_t len, int behav );
-	#endif
+#	endif
 
-	#if HAS_64BIT_SYSCALLS
+#	if HAS_64BIT_SYSCALLS
 		MMAP_T mmap64( MMAP_T addr, size_t len, int prot, int flags, map(int fd), off64_t off);
-	#endif
+#	endif
 }
 
 ignored {
-	#if defined(IRIX) || defined(OSF1) || defined(HPUX)
+#	if defined(IRIX) || defined(OSF1) || defined(HPUX)
 		int msync( void * addr, size_t len, int flags );
-	#elif defined(LINUX)
+#	elif defined(LINUX)
 		int msync( MMAP_T addr, size_t len, int flags );
-	#else
+#	else
 		int msync( char * addr, size_t len, int flags );
-	#endif
+#	endif
 }
 
 not_supported {
 	int setuid( uid_t uid );
 	int setgid( gid_t gid );
 	int setreuid( uid_t ruid, uid_t euid );
-	#if defined(OSF1)
+#	if defined(OSF1)
 		int setregid( gid_t rgid, gid_t egid );
-	#else
+#	else
 		int setregid( uid_t rgid, uid_t egid );
-	#endif
+#	endif
 	int setlogin( char *name );
 	int revoke( char *path );
 	int chroot( const char *path );
-	#if defined(Solaris)
+#	if defined(Solaris)
 		int setgroups( int gidsetsize, const gid_t grouplist[] );
-	#else
+#	else
 		int setgroups( int gidsetsize, gid_t grouplist[] );
-	#endif
+#	endif
 	int plock( int op );
-	#if defined(HPUX10)
+#	if defined(HPUX10)
 		int adjtime( const struct timeval *delta, struct timeval *old_delta );
-	#else
+#	else
 		int adjtime( struct timeval *delta, struct timeval *old_delta );
-	#endif
+#	endif
 	int sethostid( int host_id );
-	#if defined(HPUX10)
+#	if defined(HPUX10)
 		void async_daemon();
-	#else
+#	else
 		int async_daemon();
-	#endif
+#	endif
 
-	#if defined(IRIX)
+#	if defined(IRIX)
 		/* nothing */
-	#elif defined(HPUX10)
+#	elif defined(HPUX10)
 		int getfh( map(int fd), const fhandle_t *fhp );
-	#else
+#	else
 		int getfh( map(int fd), fhandle_t *fhp, int exp_fd );
-	#endif
+#	endif
 
-	#if defined(HPUX10)
+#	if defined(HPUX10)
 		int exportfs( const char *name, const struct export *exp );
-	#else
+#	else
 		int exportfs( int access, int *record, struct exportfsdata *exdata );
-	#endif
+#	endif
 
-	#if defined(LINUX)
+#	if defined(LINUX)
 		int mount( const char *spec, const char *dir, const char *fstyp,
 			unsigned long rwflag, const void *data );
 		int umount( const char* dir );
@@ -1480,146 +1480,146 @@ not_supported {
 		int iopl( int level );
 		void idle();
 		int ioperm( unsigned long from, unsigned long num, int turn_on );
-	#else
-		#if defined(Solaris)
+#	else
+#		if defined(Solaris)
 			int mount( const char *spec, const char *dir, int mflag, int fstyp, char *pt, int len );
 			int acct( const char *path );
-		#elif defined(OSF1)
+#		elif defined(OSF1)
 			int mount( int type, char *mnt_path, int mnt_flag, char *data );
 			int acct( char *path );
-		#elif defined(HPUX10)
+#		elif defined(HPUX10)
 			/* Need a better stub gen to trap mount */
 			int acct( char *path );
-		#elif defined (IRIX)
+#		elif defined (IRIX)
 			int mount( char *spec, char *dir, int mflag, int fstyp, char *pt, int len );
 			int acct( const char *path );
-		#else
+#		else
 			int mount( char *spec, char *dir, int mflag, int fstyp, char *pt, int len );
 			int acct( char *path );
-		#endif
+#		endif
 
 		void reboot( int howto );
 
-		#if defined(IRIX)
+#		if defined(IRIX)
 			int sethostname( const char *address, int address_len );
-		#else
+#		else
 			int sethostname( char *address, int address_len );
-		#endif
+#		endif
 
-		#if defined(HPUX10)
+#		if defined(HPUX10)
 			int settimeofday( const struct timeval *tp, const struct timezone *tzp );
 			int setdomainname( const char *name, int namelen );
-		#elif defined(IRIX)
+#		elif defined(IRIX)
 			int settimeofday( struct timeval *tp, struct timezone *tzp );
 			int setdomainname( const char *name, int namelen );
-		#else
+#		else
 			int settimeofday( struct timeval *tp, struct timezone *tzp );
 			int setdomainname( char *name, int namelen );
-		#endif
+#		endif
 
-		#if defined(OSF1) 
+#		if defined(OSF1) 
 			int swapon( const char *path, int flags );
-		#elif defined(HPUX10)
+#		elif defined(HPUX10)
 			/* Need better stub gen to trap swapon */
-		#else
+#		else
 			int swapon( char *path, int flags, int lo_water, int hi_water );
-		#endif
-	#endif  /* not LINUX */
+#		endif
+#	endif  /* not LINUX */
 }
 
 /* Multiple processes */
 
 not_supported {
 	pid_t fork() : EXTRACT;
-	#if defined(LINUX)
-		#if defined(GLIBC22) || defined(GLIBC23)
+#	if defined(LINUX)
+#		if defined(GLIBC22) || defined(GLIBC23)
 			/* XXX the stub generator doesn't understand function prototypes */
 /*			pid_t clone(int (*)(void*), void *sp, int *, void *);*/
-		#else
+#		else
 			pid_t clone(void *sp, unsigned long flags);
-		#endif
-	#elif defined(Solaris)
+#		endif
+#	elif defined(Solaris)
 		pid_t fork1();
-	#endif
+#	endif
 
 	pid_t vfork();
 
 	int execve( const char *path, char * const argv[], char * const envp [] );
 
-	#if defined(HPUX)
+#	if defined(HPUX)
 		/* Need better stub gen */
-	#else
+#	else
 		int execv( const char *path, char * const argv[] );
-	#endif
+#	endif
 	
 
 	int exec_with_loader( int flags, const char *loader, const char *file,
 					  char * const argv[], char * const envp[] );
 	int execvp( const char *file, char *const argv[] );
 
-	#if defined(LINUX)
+#	if defined(LINUX)
 		pid_t wait4( pid_t pid, void *status, int options, struct rusage *ru );
-	#else
+#	else
 		pid_t wait4( pid_t pid, int *status, int options, struct rusage *ru );
-	#endif
+#	endif
 
 	pid_t wait(int *status);
 
-	#if defined(LINUX)
+#	if defined(LINUX)
 		pid_t waitpid(pid_t pid, int *status, int options);
-	#endif
+#	endif
 
-	#if defined(Solaris29)
+#	if defined(Solaris29)
 		long ptrace( int req, pid_t process, long address, long data);
-	#elif defined(Solaris28)
+#	elif defined(Solaris28)
 		long ptrace( int req, pid_t process, int address, int data);
-	#elif defined(Solaris27)
+#	elif defined(Solaris27)
 		long ptrace( int req, long process, long address, long data);
-	#elif defined(Solaris)
+#	elif defined(Solaris)
 		int ptrace( int req, long process, int address, int data);
-	#elif defined (IRIX)
+#	elif defined (IRIX)
 		int ptrace( int req, pid_t process, int address, int data);
-	#else
+#	else
 		int ptrace( long req, long int process, unsigned long *address, unsigned long data );
-	#endif
+#	endif
 		int setpgid( pid_t process_id, pid_t gid );
 		pid_t setsid();
-	#if defined(OSF1)
+#	if defined(OSF1)
 		int setpgrp( pid_t process_id , pid_t process_group_id );
-	#else 
+#	else 
 		pid_t setpgrp( );
-	#endif
+#	endif
 }
 
 /* Profiling and measuring */
 
 not_supported {
-	#if defined(LINUX)
+#	if defined(LINUX)
 		int profil( char *buf, int buf_size, int offset, int scale );
-	#elif defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
+#	elif defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
 		void profil( unsigned short *buf, unsigned int buf_size, unsigned long offset, unsigned int scale );
-	#elif defined(Solaris26)
+#	elif defined(Solaris26)
 		void profil( unsigned short *buf, unsigned int buf_size, unsigned int offset, unsigned int scale );
-	#elif defined(HPUX10)
+#	elif defined(HPUX10)
 		void profil( const void *buf, size_t size, size_t offset, int scale );
-	#elif defined(IRIX)
+#	elif defined(IRIX)
 		int profil( unsigned short *buf, unsigned int buf_size, unsigned int offset, unsigned int scale );
-	#else
+#	else
 		void profil( short *buf, unsigned int buf_size, unsigned int offset, unsigned int scale );
-	#endif
+#	endif
 
 	int quotactl( char *path, int cmd, int id, char *addr );
 	int getsysinfo( unsigned long op, char * buf, unsigned long nbytes, int *start, char *arg );
 
-	#if defined(LINUX) || defined(IRIX65) || defined(OSF1)
+#	if defined(LINUX) || defined(IRIX65) || defined(OSF1)
 		int setitimer( int which, const struct itimerval *value, struct itimerval *oval );
 		int getitimer( int which, struct itimerval *value );
-	#elif defined(HPUX)
+#	elif defined(HPUX)
 		/* get/set itimer are special on HPUX */
-	#else
+#	else
 		int setitimer( int which, struct itimerval *value, struct itimerval *oval );
 		int getitimer( int which, struct itimerval *value );
-	#endif
+#	endif
 }
 
 /* SYSV messages, semaphores, and shared memory */
