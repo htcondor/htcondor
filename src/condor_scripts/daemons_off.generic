@@ -31,8 +31,10 @@ set pid=`PsAllFlag | egrep "$CondorDaemons" | egrep -v egrep | awk PsAwkProg`
 
 if ( $#pid > 0 ) then
 	set bell=`echo G G G | tr G '\7'`
-	echo "${bell}Warning: Some Condor daemons on `hostname` have not died yet."
-	echo "Check on process(es): $pid"
+	echo "${bell}Condor daemons still running on `hostname`."
+	echo "Killing process(es) $pid in 10 seconds.  ^C will abort..."
+	sleep 10
+	kill -QUIT $pid
 else
 	echo "All condor processes have been terminated\!"
 endif
