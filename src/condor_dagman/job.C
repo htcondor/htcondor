@@ -221,12 +221,12 @@ Job::AddParent( Job* parent )
 		// child that has already been started -- but this restriction
 		// might be lifted in the future once we figure out the right
 		// way for the DAG to respond...
-	assert( _Status == Job::STATUS_READY );
+	assert( _Status == STATUS_READY );
 
-	if( !Add( Job::Q_PARENTS, parent->GetJobID() ) ) {
+	if( !Add( Q_PARENTS, parent->GetJobID() ) ) {
 		return false;
 	}
-    if( !Add( Job::Q_WAITING, parent->GetJobID() ) ) {
+    if( !Add( Q_WAITING, parent->GetJobID() ) ) {
 		return false;
 	}
 	_waitingCount++;
@@ -237,7 +237,7 @@ bool
 Job::AddChild( Job* child )
 {
     ASSERT( child  != NULL );
-    if( !Add( Job::Q_CHILDREN, child->GetJobID() ) ) {
+    if( !Add( Q_CHILDREN, child->GetJobID() ) ) {
 		return false;
 	}
 	return true;
