@@ -44,6 +44,19 @@ extern "C" char*	get_schedd_addr(const char*, const char*);
 AuthSock *qmgmt_sock;
 static Qmgr_connection *connection = 0;
 
+int
+strcmp_until_colon( const char *s1, const char *s2 ) {
+   while ( *s1 != ':' && *s2 != ':' && ( *s1 || *s2 ) ) {
+
+      if ( *s1 != *s2 ) {
+         return( *s2 - *s1 );
+      }
+      s1++;
+      s2++;
+   }
+   return( 0 );
+}
+
 Qmgr_connection *
 ConnectQ(char *qmgr_location, int auth )
 {
@@ -110,8 +123,11 @@ ConnectQ(char *qmgr_location, int auth )
 
 		/* Figure out if we're trying to connect to a remote queue, in
 		   which case we'll set our username to "nobody" */
+dprintf(D_ALWAYS,"ConnectQ, localScheddAddr: %s, scheddAddr: %s\n",localScheddAddr, scheddAddr );
 	if( localScheddAddr ) {
-		if( ! is_local && ! strcmp(localScheddAddr, scheddAddr) ) {
+//		if( ! is_local && ! strcmp(localScheddAddr, scheddAddr) ) {
+		//mju replaced strcmp with new method that ignores port number
+		if( ! is_local && ! strcmp_until_colon(localScheddAddr, scheddAddr) ) {
 			is_local = TRUE;
 		}
 		free(localScheddAddr);
@@ -150,6 +166,7 @@ ConnectQ(char *qmgr_location, int auth )
 			rval = InitializeConnection(username, tmp_file, auth );
 	} 
 	else {
+			dprintf(D_FULLDEBUG,"gonna call InitializeConnection HARDCODED \"nobody\"\n");
 			rval = InitializeConnection("nobody", tmp_file, auth );
 	}
 
