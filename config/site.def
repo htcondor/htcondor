@@ -57,6 +57,4 @@ the soft links.  The links will point back to Top/src/... */
 
 #define CondorAdministrator	condor-admin
 
-CONDOR_ANALYZE_DIR = /afs/cs.wisc.edu/p/condor/workspaces/epaulson/condor_analyze_dir/bin
-
 #endif  /* AfterVendorCF */
