@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "condor_fix_fcntl.h"
+#include "fcntl.h"
 #include "image.h"
 
 extern "C" int machine_name( char *, int );

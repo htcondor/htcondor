@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "condor_fix_fcntl.h"
+#include "fcntl.h"
 #include <string.h>
 #include "condor_syscalls.h"
 #include "image.h"
