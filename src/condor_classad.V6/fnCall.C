@@ -25,14 +25,17 @@
 #include "source.h"
 #include "sink.h"
 #include "util.h"
-#include <regex.h>
+
+#ifndef WIN32
+	#include <regex.h>
+#endif
 
 #ifdef ENABLE_SHARED_LIBRARY_FUNCTIONS
 #include "dlfcn.h"
 #endif
 
 using namespace std;
-extern long timezone;
+extern DLL_IMPORT_MAGIC long timezone;
 
 BEGIN_NAMESPACE( classad )
 
@@ -1045,6 +1048,35 @@ timeZoneOffset (const char *, const ArgumentList &argList, EvalState &,
 	return( true );
 }
 
+void 
+FunctionCall::getLocalTime(time_t *now, struct tm *localtm) {
+
+#ifndef WIN32
+	localtime_r( now, localtm );
+#else
+	// there is no localtime_r() on Windows, so for now
+	// we just call localtime() and deep copy the result.
+
+	struct tm *lt_ptr; 
+
+	lt_ptr = localtime(now);
+
+	if (localtm == NULL) { return; } 
+
+	localtm->tm_sec   = lt_ptr->tm_sec;    /* seconds */
+	localtm->tm_min   = lt_ptr->tm_min;    /* minutes */
+	localtm->tm_hour  = lt_ptr->tm_hour;   /* hours */
+	localtm->tm_mday  = lt_ptr->tm_mday;   /* day of the month */
+	localtm->tm_mon   = lt_ptr->tm_mon;    /* month */
+	localtm->tm_year  = lt_ptr->tm_year;   /* year */
+	localtm->tm_wday  = lt_ptr->tm_wday;   /* day of the week */
+	localtm->tm_yday  = lt_ptr->tm_yday;   /* day in the year */
+	localtm->tm_isdst = lt_ptr->tm_isdst;  /* daylight saving time */
+	
+#endif
+	
+}
+
 bool FunctionCall::
 dayTime (const char *, const ArgumentList &argList, EvalState &, Value &val)
 {
@@ -1059,10 +1091,14 @@ dayTime (const char *, const ArgumentList &argList, EvalState &, Value &val)
 		val.SetErrorValue( );
 		return( false );
 	}
-	localtime_r( &now, &lt );
+
+	getLocalTime(&now, &lt);
+
 	val.SetRelativeTimeValue( lt.tm_hour*3600 + lt.tm_min*60 + lt.tm_sec );
 	return( true );
 }
+
+#if 0
 
 bool FunctionCall::
 makeDate( const char*, const ArgumentList &argList, EvalState &state, 
@@ -1122,8 +1158,9 @@ makeDate( const char*, const ArgumentList &argList, EvalState &state,
 
 		// the second argument must be integer or string
 	if( arg1.IsIntegerValue( mm ) ) {
-		if( sprintf( buffer, "%d %d %d", dd, mm, yy ) > 63 ||
-			strptime( buffer, "%d %m %Y", tms ) == NULL ) {
+		if( sprintf( buffer, "%d %d %d", dd, mm, yy ) > 63 
+			|| strptime( buffer, "%d %m %Y", tms ) == NULL )
+		{
 			val.SetErrorValue( );
 			return( true );
 		}
@@ -1181,7 +1218,7 @@ getField(const char* name, const ArgumentList &argList, EvalState &state,
 
 	if( arg.IsAbsoluteTimeValue( asecs ) ) {
 	 	clock = asecs.secs + asecs.offset + timezone;
-		localtime_r( &clock, &tms );
+		getLocalTime( &clock, &tms );
 		if( strcasecmp( name, "getyear" ) == 0 ) {
 			 // tm_year is years since 1900 --- make it y2k compliant :-)
 			val.SetIntegerValue( tms.tm_year + 1900 );
@@ -1238,6 +1275,8 @@ getField(const char* name, const ArgumentList &argList, EvalState &state,
 	val.SetErrorValue( );
 	return( true );
 }
+
+#endif
 
 
 bool FunctionCall::
@@ -1980,6 +2019,7 @@ doMath( const char* name,const ArgumentList &argList,EvalState &state,
 	return( false );
 }
 
+#ifndef WIN32
 bool FunctionCall::
 matchPattern( const char*,const ArgumentList &argList,EvalState &state,
 	Value &result )
@@ -2047,6 +2087,7 @@ matchPattern( const char*,const ArgumentList &argList,EvalState &state,
 	}
 }
 
+#endif
 
 // function call which takes a string(hexadecimal number) & converts it to the 
 // corresponding 64-bit real number according to the ieee754 norms 
