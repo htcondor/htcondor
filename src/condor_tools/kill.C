@@ -168,10 +168,6 @@ find_condor_pids() {
 		my_exit( 1 );
     }
 
-    // in each directory under /proc representing a process (i.e.,
-    // those that are numeric), open "cmdline" and, if the command
-    // begins with "condor_", add its pid to our list of condor pids
-
     while( (proc_dir = readdir( proc_root )) != NULL ) {
 
         // if this a numerically-named directory (i.e., a process)
@@ -192,13 +188,13 @@ find_condor_pids() {
             }
             fgets( cmdline, 64, fp );
             fclose( fp );
-        }
 
-        // if the command begins with "condor_", save the pid
-        if( strstr( cmdline, "condor_" ) == cmdline ) {
-            pid = atoi( proc_dir->d_name );
-			cpid = new CondorPid( pid, cmdline );
-			condor_pids->Append( cpid );
+			// if the command begins with "condor_", save the pid
+			if( strstr( cmdline, "condor_" ) == cmdline ) {
+				pid = atoi( proc_dir->d_name );
+				cpid = new CondorPid( pid, cmdline );
+				condor_pids->Append( cpid );
+			}
 		}
     }
 
