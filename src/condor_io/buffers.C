@@ -122,7 +122,13 @@ int Buf::write(
 		nwo = send(sockd, &_dta[num_touched()+nw], sz-nw, 0);
 		if (nwo <= 0) {
 			dprintf(D_FULLDEBUG,"Buf:Write send failed, sock=%X, err=%d, len=%d\n",
-				sockd,WSAGetLastError(),sz-nw);
+				sockd,
+#ifdef WIN32
+				WSAGetLastError(),
+#else
+				errno,
+#endif
+				sz-nw);
 			return -1;
 		}
 
