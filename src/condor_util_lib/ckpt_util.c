@@ -168,7 +168,7 @@ int             listen_count;
 		return -1;
 	}
 	
-	bzero((char *) sin, sizeof(*sin));
+	memset((char *) sin,0, sizeof(*sin));
 	sin->sin_family = AF_INET;
 	sin->sin_port = 0;
 	
