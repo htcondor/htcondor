@@ -329,6 +329,37 @@ of the process.  For jobs submitted to the Vanilla Universe, the default
 is \verb@SIGTERM@ which is the standard way to terminate a program in UNIX.  
 
 %%%%%%%%%%%%%%%%%%%
+%% buffer_size
+%%%%%%%%%%%%%%%%%%%
+
+\item[buffer\_size $=$ $<$bytes-in-buffer$>$]
+Standard universe jobs that perform random-access I/O may benefit from a
+large buffer of recently used data.  This option specifies the number of
+bytes to buffer at the executing machine.
+
+I/O performance will generally improve as the buffer size becomes larger.
+However, the buffer increases the size of the program image and may add
+some time to checkpointing.  So, there is a point of diminishing returns
+which depends heavily on the nature of your application.
+
+In this version of Condor, buffering is disabled by default.
+
+%%%%%%%%%%%%%%%%%%%
+%% buffer_block_size
+%%%%%%%%%%%%%%%%%%%
+
+\item[buffer\_block\_size $=$ $<$bytes-in-block$>$]
+When buffering is enabled, Condor will attempt to consolidate small read
+and write operations into large blocks.  This option specifies the block
+size Condor will use.
+
+A very small block size may actually decrease I/O performance.
+The block size should definitely be larger than any of the I/O operations
+your program performs.
+
+In this version of Condor, the default buffer block size is 32 KB.
+
+%%%%%%%%%%%%%%%%%%%
 %% file_remaps
 %%%%%%%%%%%%%%%%%%%
 
@@ -340,17 +371,6 @@ describes the filename it should be replaced with.
 access specifier, \verb@local:@ or \verb@remote:@.  If left unspecified,
 the default access specifier is \verb@remote:@.  Multiple remaps can be 
 specified by separating each with a semicolon.
-
-%%%%%%%%%%%%%%%%%%%
-%% rendezvousdir
-%%%%%%%%%%%%%%%%%%%
-
-\item[rendezvousdir = $<$directory-path$>$] Used to specify the 
-shared-filesystem directory to be used for filesystem authentication
-when submitting to a remote scheduler.  Should be a path to a preexisting 
-directory.  If not specified, \Condor{submit} will automatically use
-the \Opt{initialdir} as the value for \Opt{rendezvousdir}. 
-
 
 \begin{description}
 \item[Example One:]
@@ -377,6 +397,16 @@ Several remaps can be applied at once by separating each with a semicolon.
 file_remaps = "very.big = local:/bigdisk/bigfile ; dataset.1 = other.dataset"
 \end{verbatim}
 \end{description}
+
+%%%%%%%%%%%%%%%%%%%
+%% rendezvousdir
+%%%%%%%%%%%%%%%%%%%
+
+\item[rendezvousdir = $<$directory-path$>$] Used to specify the 
+shared-filesystem directory to be used for filesystem authentication
+when submitting to a remote scheduler.  Should be a path to a preexisting 
+directory.  If not specified, \Condor{submit} will automatically use
+the \Opt{initialdir} as the value for \Opt{rendezvousdir}. 
 
 %%%%%%%%%%%%%%%%%%%
 % +
