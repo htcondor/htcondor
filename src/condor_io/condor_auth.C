@@ -21,8 +21,10 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#include "condor_common.h"
 #include "condor_auth.h"
-const char root[] = "root";
+
+static const char root[] = "root";
 
 Condor_Auth_Base :: Condor_Auth_Base(ReliSock * sock, int mode)
     : mode_          ( mode  ),
