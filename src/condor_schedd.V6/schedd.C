@@ -2598,7 +2598,7 @@ Scheduler::Init()
 	ad->SetMyTypeName(SCHEDD_ADTYPE);
 	ad->SetTargetTypeName("");
 
-	config_fill_ad( ad, mySubSystem );
+	config_fill_ad( ad );
 
 		// Throw name and machine into the classad.
 	sprintf( expr, "%s = \"%s\"", ATTR_NAME, Name );
