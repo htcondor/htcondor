@@ -395,6 +395,7 @@ init_logging()
 	pval = param( "STARTER_LOCAL_LOGGING" );
 	if( pval && (pval[0] == 't' || pval[0] == 'T') ) {
 		dprintf_config( "STARTER", -1 );	// Log file on local machine
+		free( pval );
 		return;
 	}
 
@@ -407,6 +408,7 @@ init_logging()
 	pval = param( "STARTER_DEBUG" );
 	if( pval ) {
 		set_debug_flags( pval );
+		free( pval );
 	}
 	// DebugFlags |= D_NOHEADER;
 
@@ -1009,12 +1011,21 @@ spawn_all()
 int
 test_connection()
 {
+	char    *pval;
+
 	if ( write(CLIENT_LOG,"\0\n",2) == -1 ) {
-		EXCEPT("Lost our connection to a shadow!");
-		// of course, the irony is that this message won't make it 
-		// unless we are doing local logging....!
-	}
 		
+        pval = param( "STARTER_LOCAL_LOGGING" );
+        if( pval && (pval[0] == 't' || pval[0] == 'T') ) {
+			dprintf( D_ALWAYS, "Lost our connection to the shadow! Exiting.\n" );
+			free( pval );
+		}
+
+			// Send a SIGKILL to our whole process group
+		set_root_priv();
+		kill( -(getpid()), SIGKILL );
+
+	}
 	return 0;
 }
 	
