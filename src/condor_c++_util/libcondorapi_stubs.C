@@ -142,7 +142,7 @@ QueryResult CondorQuery::addORConstraint (const char *)
 QueryResult CondorQuery::CondorQuery::addANDConstraint (const char *)
 { return (QueryResult)not_impl();}
 
-QueryResult CondorQuery::fetchAds (ClassAdList &foo, const char bar[] = "")
+QueryResult CondorQuery::fetchAds (ClassAdList &foo, const char bar[])
 { return (QueryResult)not_impl();}
 
 QueryResult CondorQuery::filterAds (ClassAdList &foo, ClassAdList &bar)
