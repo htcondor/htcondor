@@ -138,16 +138,7 @@ Unparse( string &buffer, const Value &val )
 		case Value::BOOLEAN_VALUE: {
 			bool b;
 			val.IsBooleanValue( b );
-//			buffer += b ? "true" : "false";
-
-				// back compatibility only - NAC
-			if( oldClassAd ){					// NAC
-				buffer += b ? "1" : "0";		// NAC
-			}									// NAC
-			else{								// NAC
-				buffer += b ? "true" : "false";	// NAC
-			}									// NAC
-
+			buffer += b ? "true" : "false";
 			return;
 		}
 		case Value::UNDEFINED_VALUE: {
