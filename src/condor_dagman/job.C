@@ -293,7 +293,7 @@ Job::AddScript( bool post, const char *cmd, MyString &whynot )
 						post ? "POST" : "PRE", GetPreScriptName() );
 		return false;
 	}
-	Script* script = new Script( post, cmd, this );
+	Script* script = new Script( post, cmd, _jobName );
 	if( !script ) {
 		dprintf( D_ALWAYS, "ERROR: out of memory!\n" );
 			// we already know we're out of memory, so filling in

@@ -44,15 +44,17 @@ class Script {
 	bool _done;
 
 	int BackgroundRun( int reaperId );
+	inline const char* GetNodeName() { return _nodeName; }
 
     inline const char* GetCmd() const { return _cmd; }
-    Script( bool post, const char* cmd, Job* job );
+    Script( bool post, const char* cmd, const char* noeName );
     ~Script();
 
     char * _cmd;
-    Job  * _job;
 
   protected:
+		// name of DAG node with which this script is associated
+    const char* _nodeName;
 };
 
 #endif
