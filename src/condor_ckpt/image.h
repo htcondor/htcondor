@@ -73,7 +73,7 @@ protected:
 };
 void RestoreStack();
 
-extern "C" void Checkpoint( int );
+extern "C" void Checkpoint();
 extern "C" {
 void ckpt();
 void restart();

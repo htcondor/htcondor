@@ -350,7 +350,7 @@ SegMap::Read( int fd, ssize_t pos )
 		exit( 1 );
 	}
 	if( strcmp(name,"DATA") == 0 ) {
-		brk( core_loc + len );
+		brk( (char *)(core_loc + len) );
 	}
 	nbytes =  read(fd,core_loc,len);
 	if( nbytes < 0 ) {

@@ -3,7 +3,6 @@
 /*
   Find starting and ending addresses of the data segment
 */
-extern "C" char *sbrk( int );
 #if defined(ULTRIX42) || defined(ULTRIX43)
 	// Data starts at well known value USRDATA
 	// Data ends at sbrk(0)

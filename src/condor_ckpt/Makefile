@@ -1,8 +1,8 @@
 .SUFFIXES: .C
 CC = gcc
-CFLAGS = -g -DSUNOS41
+CFLAGS = -g -DULTRIX43
 CPlusPlus = g++
-CPlusFlags = -g -Wall -DSUNOS41 
+CPlusFlags = -g -Wall -DULTRIX43 
 LD = /usr/psup/gcc/lib/gcc-lib/sparc-sun-sunos4.1.3/2.4.5/ld
 LDFLAGS = -dc -e start -Bstatic
 LIB_PATH = -L/usr/psup/gcc/lib/gcc-lib/sparc-sun-sunos4.1.3/2.4.5 -L/usr/psup/gcc/lib
