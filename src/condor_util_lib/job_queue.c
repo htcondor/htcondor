@@ -105,6 +105,9 @@
 #include "trace.h"
 #include "clib.h"
 
+#if defined(HPUX9)
+#	include "fake_flock.h"
+#endif
 
 #ifdef NDBM
 #include <ndbm.h>

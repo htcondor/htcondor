@@ -65,6 +65,10 @@
 #include "except.h"
 #include "proc.h"
 
+#if defined(HPUX9)
+#	include "fake_flock.h"
+#endif
+
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 XDR *

@@ -45,13 +45,7 @@ detach()
 	(void)close( 1 );
 	(void)close( 2 );
 
-#ifdef HPUX8
-	/*
-	if( setsid() < 0 ) {
-		EXCEPT( "setsid()" );
-	}
-	*/
-#else
+#if !defined(HPUX9)
 	if( (fd=open("/dev/tty",O_RDWR,0)) < 0 ) {
 		dprintf( D_ALWAYS, "Can't open /dev/tty\n" );
 		return;

@@ -26,6 +26,12 @@
 ** 	         University of Wisconsin, Computer Sciences Dept.
 ** 
 */ 
+
+#if defined(HPUX9)
+#	include <sys/types.h>
+#endif
+
+
 #include "condor_types.h"
 
 insque( elem, pred )

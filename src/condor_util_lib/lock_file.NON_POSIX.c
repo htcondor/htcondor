@@ -54,6 +54,10 @@
 #include "file_lock.h"
 
 
+#if defined( HPUX9 )
+#define USE_FLOCK 0
+#endif
+
 #if defined( AIX32 )
 #define USE_FLOCK 0
 #endif
