@@ -47,6 +47,7 @@
 const 	int			MAX_NUM_OWNERS = 512;
 const 	int			MAX_REJECTED_CLUSTERS = 1024;
 const   int         STARTD_CONTACT_TIMEOUT = 45;
+const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
 
 extern	char**		environ;
 
