@@ -1,14 +1,12 @@
-#include <limits.h>  /* for ARG_MAX in Dag::RemoveRunningJobs() */
+//
+// Local DAGMan includes
+//
 #include "dag.h"
 #include "debug.h"
-#include "simplelist.h"
-#include "condor_string.h"
 #include "submit.h"
 
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <pwd.h>
+#include "simplelist.h"     /* should be replaced by STL library */
+#include "condor_string.h"  /* for strnewp() */
 
 //---------------------------------------------------------------------------
 void TQI::Print () const {
@@ -403,12 +401,12 @@ void Dag::RemoveRunningJobs () const {
 
         if (jobs == 0) {
             len = 0;
-            len += snprintf (cmd, ARG_MAX, "condor_rm");
+            len += sprintf (cmd, "condor_rm");
         }
 
         if (job->_Status == Job::STATUS_SUBMITTED) {
-            len += snprintf (&cmd[len], ARG_MAX - len,
-                             " %d", job->_CondorID._cluster);
+            // Should be snprintf(), but doesn't exist on all platforms
+            len += sprintf (&cmd[len], " %d", job->_CondorID._cluster);
             jobs++;
         }
 
