@@ -62,6 +62,11 @@ char *malloc( unsigned int );
 
 #define MATCH 0 /* for strcmp() */
 
+#ifndef TRUE
+	#define TRUE 1
+	#define FALSE 0
+#endif
+
 #define SWITCHES 1
 #define SENDERS 2
 #define RECEIVERS 3
