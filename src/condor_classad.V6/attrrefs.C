@@ -232,6 +232,7 @@ _Flatten( EvalState &state, Value &val, ExprTree*&ntree, int*) const
 	ClassAd		*curAd;
 	bool		rval;
 	Value		cv;
+	EvalCache::iterator	itr;
 
 		// find the expression and the evalstate
 	curAd = state.curAd;
@@ -257,8 +258,25 @@ _Flatten( EvalState &state, Value &val, ExprTree*&ntree, int*) const
 
 		case EVAL_OK:
 
+			// lookup in cache
+			itr = state.cache.find( tree );
+
+			// if found in cache, return cached value
+			if( itr != state.cache.end( ) ) {
+				val.CopyFrom( itr->second );
+				if( val.IsUndefinedValue( ) ) {
+					if( !(ntree = Copy( ) ) ) {
+						CondorErrno = ERR_MEM_ALLOC_FAILED;
+						CondorErrMsg = "";
+						return( false );
+					}
+				}
+				state.curAd = curAd;
+				return true;
+			} 
+
 			// temporarily cache value as undef, so any circular refs
-			// in Evaluate() will eval to undef rather than loop
+			// in Flatten() will eval to undef rather than loop
 
 			cv.SetUndefinedValue( );
 			state.cache[ tree ] = cv;
