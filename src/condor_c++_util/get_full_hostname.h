@@ -23,6 +23,7 @@
 #ifndef GET_FULL_HOSTNAME_H
 #define GET_FULL_HOSTNAME_H
 
-extern  char*	get_full_hostname( const char*, struct hostent **host_ptr = NULL );
+extern char* get_full_hostname( const char*, 
+								struct in_addr *sin_addrp = NULL );
 
 #endif /* GET_FULL_HOSTNAME_H */

@@ -32,7 +32,7 @@
 // back.  WARNING: Using the 2nd arg is _not_ thread-safe.
 
 char*
-get_full_hostname( const char* host, struct hostent **host_ptrp) 
+get_full_hostname( const char* host, struct in_addr* sin_addrp ) 
 {
 	char* full_host;
 	char* tmp;
@@ -41,13 +41,13 @@ get_full_hostname( const char* host, struct hostent **host_ptrp)
 
 	if( (host_ptr = gethostbyname( host )) == NULL ) {
 			// If the resolver can't find it, just return NULL
-		if( host_ptrp ) {
-			*host_ptrp = NULL;
+		if( sin_addrp ) {
+			memset( sin_addrp, 0, sizeof(struct in_addr) );
 		}
 		return NULL;
 	}
-	if( host_ptrp ) {
-		*host_ptrp = host_ptr;
+	if( sin_addrp ) {
+		*sin_addrp = *(struct in_addr*)(host_ptr->h_addr_list[0]);
 	}
 
 		// See if it's correct in the hostent we've got.
