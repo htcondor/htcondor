@@ -16,9 +16,12 @@
     
     @param cmdFile the job's Condor command file.
     @param condorID will hold the ID for the submitted job (if successful)
+    @param DAGNodeName the name of the job's DAG node
+    @param DAGManJobId the Condor jobID of the master DAGMan job
     @return true on success, false on failure
 */
 
-bool submit_submit (const char * cmdFile, CondorID & condorID);
+bool submit_submit( const char* cmdFile, CondorID& condorID,
+					const char* DAGNodeName );
 
 #endif /* #ifndef CONDOR_SUBMIT_H */
