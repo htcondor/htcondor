@@ -131,7 +131,7 @@ int  LastCkptTime = -1;			// time when job last completed a ckpt
 int  NumCkpts = 0;				// count of completed checkpoints
 int  NumRestarts = 0;			// count of attempted checkpoint restarts
 int  CommittedTime = 0;			// run-time committed in checkpoints
-bool ManageBandwidth = false;	// notify negotiator about network usage?
+extern bool ManageBandwidth;	// notify negotiator about network usage?
 int	 BWInterval = 0;			// how often do we request RSC bandwidth?
 
 extern char *Executing_Arch, *Executing_OpSys;
