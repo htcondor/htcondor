@@ -349,15 +349,15 @@ ReadMultipleUserLogs::loadLogFileNameFromSubFile(const MyString &strSubFilename)
 ///////////////////////////////////////////////////////////////////////////////
 
 MyString
-ReadMultipleUserLogs::getJobLogsFromSubmitFiles(StringList &listLogFilenames,
-				const MyString &strDagFileName)
+ReadMultipleUserLogs::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
+            const MyString &jobKeyword, StringList &listLogFilenames)
 {
-	MyString strDagFile = readFileToString(strDagFileName);
-	if (strDagFile == "") {
-		return "Unable to read dag file";
+	MyString strDagFileContents = readFileToString(strDagFileName);
+	if (strDagFileContents == "") {
+		return "Unable to read DAG file";
 	}
 
-	StringList listLines( strDagFile.Value(), "\r\n");
+	StringList listLines( strDagFileContents.Value(), "\r\n");
 	listLines.rewind();
 	const char *psLine;
 	while( (psLine = listLines.next()) ) {
@@ -377,10 +377,7 @@ ReadMultipleUserLogs::getJobLogsFromSubmitFiles(StringList &listLogFilenames,
 		}
 
 		MyString strFirstThree = strLine.Substr(0, 2);
-		bool bFoundNonWhitespace = false;
-		int iEndOfSubFileName = strLine.Length()-1;
-		if (!stricmp(strFirstThree.Value(), "job") ||
-				!stricmp(strFirstThree.Value(), "dap")) {
+		if (!stricmp(strFirstThree.Value(), jobKeyword.Value())) {
 
                 // Format of a job line should be:
 				// JOB <name> <script> [DONE]

@@ -345,8 +345,9 @@ int main_init (int argc, char ** const argv) {
 		// if that doesn't work, use the value from the command-line
 		// argument.
 	MyString dagFileName(G.datafile);
+	MyString jobKeyword("job");
     MyString msg = ReadMultipleUserLogs::getJobLogsFromSubmitFiles(
-				G.condorLogFiles, dagFileName);
+				dagFileName, jobKeyword, G.condorLogFiles);
     if( msg != "" || G.condorLogFiles.number() == 0 ) {
 		G.condorLogFiles.rewind();
 		while( G.condorLogFiles.next() ) {

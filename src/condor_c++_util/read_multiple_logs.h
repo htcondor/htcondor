@@ -66,12 +66,12 @@ public:
 		    on success, the return value will be ""
 		    on failure, it will be an appropriate error message
 	    */
-    static MyString getJobLogsFromSubmitFiles(StringList &listLogFilenames, 
-									const MyString &strDagFile);
+    static MyString getJobLogsFromSubmitFiles(const MyString &strDagFileName,
+			const MyString &jobKeyword, StringList &listLogFilenames);
 
 	    /** Gets the log file from a Condor submit file.
 		    on success, the return value will be the log file name
-		    on faileure, it will be ""
+		    on failure, it will be ""
 		 */
     static MyString loadLogFileNameFromSubFile(const MyString &strSubFilename);
 
