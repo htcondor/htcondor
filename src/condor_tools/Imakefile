@@ -106,6 +106,9 @@ c_plus_target(test_calc,test_calc.o,$(LIB))
 
 c_plus_target(view_collection,view_collection.o,$(LIB))
 
+c_plus_target(condor_invalidate_host,invalidate_host.o,$(LIB))
+
+
 condor_master_on: master_on.c
 	gcc -o condor_master_on master_on.c
 
