@@ -267,7 +267,7 @@ OsProc::StartJob()
 
 	if ( JobPid == FALSE ) {
 		JobPid = -1;
-		EXCEPT("ERROR Create_Process(%s,%s, ...) failed",
+		EXCEPT("Create_Process(%s,%s, ...) failed",
 			JobName, Args );
 		return 0;
 	}
