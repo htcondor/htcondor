@@ -30,7 +30,7 @@ Condor_Auth_Base :: Condor_Auth_Base(ReliSock * sock, int mode)
       remoteUser_    ( NULL  ),
       remoteDomain_  ( NULL  ),
       remoteHost_    ( NULL  ),
-      isDaemon_      ( FALSE ),
+      isDaemon_      ( false ),
       mySock_        ( sock  )
 {
     char * username = my_username();
@@ -50,7 +50,7 @@ Condor_Auth_Base :: Condor_Auth_Base(ReliSock * sock, int mode)
                      strlen(STR_DEFAULT_CONDOR_USER)) == 0) ||
             (strncmp(username, root, strlen(root)) == 0)) {
             // I am a daemon! This is a daemon-daemon authentication
-            isDaemon_ = TRUE;
+            isDaemon_ = true;
             
             //fprintf(stderr,"This is a daemon with Condor uid:%d; uid:%d\n",
             //      get_condor_uid(), get_my_uid());
@@ -165,7 +165,7 @@ Condor_Auth_Base& Condor_Auth_Base :: setRemoteUser( const char *owner )
     return *this;
 }
 
-const int Condor_Auth_Base :: isDaemon() const
+const bool Condor_Auth_Base :: isDaemon() const
 {
     return isDaemon_;
 }
