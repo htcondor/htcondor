@@ -1,7 +1,7 @@
 package CondorTest;
 
 $MAX_CHECKPOINTS = 2;
-$HOST_CMD = 'host';
+
 #------------------------------------------------------------------------------
 # No user servicable parts below this line
 #------------------------------------------------------------------------------
@@ -113,26 +113,9 @@ $execute = sub
     }
     else
     {
-	&Condor::debug("Looking up $ip\n");
-	
-	open(HOST, "$HOST_CMD $ip|");
-	$output = <HOST>;
-	while ($output !~ /(.*)Host not found(.*)/  &&
-	       $output !~ /(.*)Name(.*)/)
-	{
-	    $output = <HOST>;
-	    print $output;
-	}
-	
-	if($output =~ /(.*)Host not found(.*)/)
-	{
-	    die "Can't find hostname of execte machine!: $ipaddr\n";
-	}
-	
-	($junk, $name) = split(' ',$output);
 	sleep 5;
-	&Condor::debug("Sending vacate to $name\n");
-	&Condor::Vacate($name);
+	&Condor::debug("Sending vacate to <$ip:$port>\n");
+	&Condor::Vacate("\"<$ip:$port>\"");
     }
 };
 
