@@ -282,6 +282,7 @@ void SetLogNotes();
 void SetUserNotes();
 void SetJarFiles();
 void SetParallelStartupScripts(); //JDB
+bool mightTransfer( int universe );
 
 char *owner = NULL;
 char *ntdomain = NULL;
@@ -3354,10 +3355,7 @@ check_requirements( char *orig )
 	if( JobUniverse == CONDOR_UNIVERSE_MPI ) {
 		checks_mpi = findClause( answer, ATTR_HAS_MPI );
 	}
-	if( (JobUniverse == CONDOR_UNIVERSE_VANILLA) 
-		|| (JobUniverse == CONDOR_UNIVERSE_MPI) 
-		|| (JobUniverse == CONDOR_UNIVERSE_PARALLEL) 
-		|| (JobUniverse == CONDOR_UNIVERSE_JAVA) ) {
+	if( mightTransfer(JobUniverse) ) { 
 		if( never_transfer ) {
 			checks_fsdomain = findClause( answer,
 										  ATTR_FILE_SYSTEM_DOMAIN ); 
@@ -3462,10 +3460,7 @@ check_requirements( char *orig )
 	}
 
 
-	if( (JobUniverse == CONDOR_UNIVERSE_VANILLA) 
-		|| (JobUniverse == CONDOR_UNIVERSE_MPI) 
-		|| (JobUniverse == CONDOR_UNIVERSE_PARALLEL) 
-		|| (JobUniverse == CONDOR_UNIVERSE_JAVA) ) {
+	if( mightTransfer(JobUniverse) ) {
 			/* 
 			   This is a kind of job that might be using file transfer
 			   or a shared filesystem.  so, tack on the appropriate
@@ -3479,11 +3474,11 @@ check_requirements( char *orig )
 				// the FileSystemDomain yet, tack on a clause for
 				// that. 
 			if( ! checks_fsdomain ) {
-				(void)strcat( answer, "&& (" );
+				(void)strcat( answer, "&& (TARGET." );
 				(void)strcat( answer, ATTR_FILE_SYSTEM_DOMAIN );
-				(void)strcat( answer, " == \"" );
-				(void)strcat( answer, My_fs_domain );
-				(void)strcat( answer, "\")" );
+				(void)strcat( answer, " == MY." );
+				(void)strcat( answer, ATTR_FILE_SYSTEM_DOMAIN );
+				(void)strcat( answer, ")" );
 			} 
 		} else {
 				// we're going to use file transfer.  
@@ -3494,7 +3489,6 @@ check_requirements( char *orig )
 			}
 		}			
 	}
-
 	return answer;
 }
 
@@ -3990,6 +3984,25 @@ setupAuthentication()
 		free( Rendezvous );
 	}
 }
+
+
+bool
+mightTransfer( int universe )
+{
+	switch( universe ) {
+	case CONDOR_UNIVERSE_VANILLA:
+	case CONDOR_UNIVERSE_MPI:
+	case CONDOR_UNIVERSE_PARALLEL:
+	case CONDOR_UNIVERSE_JAVA:
+		return true;
+		break;
+	default:
+		return false;
+		break;
+	}
+	return false;
+}
+
 
 
 /************************************
