@@ -3,6 +3,10 @@
 	in the merge arena of V6_6-full_redhat9_port-branch into V6_6-branch 
 	workspace.
 
+01/14/04 V6_6-full_redhat9_port-merge-1
+	The state of the V6_6-full_redhat9_port-branch just before it 
+	is merged into the V6_6-branch.
+
 12/23/03 V6_6-full_redhat9_port-branch 
    A new branch off the end of the V6_6-branch for the redhat 9 full port.
    Created from the V6_6-full_redhat9_port-root tag.  Includes the

@@ -24,6 +24,8 @@ EXT_GLIBC_VERSION = glibc-2.2.2
 EXT_GLIBC_VERSION = glibc-2.2.2
 #elif IS_GLIBC_2_2_93
 EXT_GLIBC_VERSION = glibc-2.2.93
+#elif IS_GLIBC_2_3_2
+EXT_GLIBC_VERSION = glibc-2.3.2
 #else
 #error Condor does NOT know what externals version of glibc to use!
 #endif

@@ -63,7 +63,7 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(STUB_CLUMPS_FLAG) $(DL_EXTRACT) \
 #if DOES_CHECKPOINTING  /* ========= DOES CHECKPOINTING ============ */
 
 #if IS_LINUX
-#if IS_GLIBC22
+#if IS_GLIBC22 || IS_GLIBC23
 FORK_OBJ = FORK.o
 #endif /* libc */
 #endif /* LINUX */
@@ -71,9 +71,9 @@ FORK_OBJ = FORK.o
 #	if IS_HPUX
 EXTRACT = FORK.o GETEUID.o GETPPID.o GETEGID.o SYSCALL.o __SYSCALL.o \
 		  MMAP.o PIPE.o GETCWD.o GETLOGIN.o
-#	elif IS_LINUX && IS_GLIBC22
+#	elif IS_LINUX && (IS_GLIBC22 || IS_GLIBC23)
 EXTRACT = GETCWD.o MMAP.o SYSCALL.o GETEUID.o GETEGID.o GETPPID.o \
-		$(FORK_OBJ) PIPE.o SIGACTION.o GETLOGIN.o SYSDEP.o SIGSUSPEND.o \
+		$(FORK_OBJ) PIPE.o GETLOGIN.o SYSDEP.o SIGSUSPEND.o \
 		TRUNCATE.o SIGACTION.o GETDIRENTRIES.o 
 #	elif IS_DUX
 EXTRACT = FORK.o GETEUID.o GETPPID.o GETEGID.o GETCWD.o \
@@ -500,7 +500,7 @@ receivers.C: syscall.tmpl stub_gen receivers.prologue receivers.epilogue pseudo_
 	./stub_gen -mode receivers -p receivers.prologue \
 	-e receivers.epilogue -n syscheck $(STUB_CLUMP_SIZE) > receivers.C
 
-syscall-list: syscall.tmpl stub_gen 
+syscall-list: syscall.tmpl stub_gen libcondorsyscall.a
 	$(CPP) -DSWITCH $(STUB_GEN_FLAGS) -I../condor_includes syscall.tmpl | \
 	./stub_gen -mode listcalls > syscall-list
 

@@ -471,11 +471,11 @@ all_pty_idle_time( time_t now )
 		entries come and go depending upon the number of users actually logged
 		in.  If we keep the Directory object static, then we will never know or
 		incorrectly check ttys that might or might not exist. 
-		Hopefully the performance might not be that bad under linux because
+		Hopefully the performance might not be that bad under linux since
 		this stuff is created each and every time this function is called.
 		psilord 1/4/2002
 	*/
-#if defined(LINUX) && defined(GLIBC22)
+#if defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))
 	if (dev != NULL)
 	{
 		delete dev;

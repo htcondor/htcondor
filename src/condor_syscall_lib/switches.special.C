@@ -315,31 +315,6 @@ int __recv( int fd, void *data, int length, int flags )
 
 #endif
 
-/* under linux with glibc22, we must supply a _llseek which just turns around
-	and calls normal lseek() which we'll then catch. XXX This means no true 64
-	bit file offsets, however... but it is no worse than how we implement
-	llseek() and friends in the syscall.tmpl file. */
-#if defined(LINUX) && defined(GLIBC22)
-int _llseek(unsigned int fd, unsigned long offset_high,  unsigned  long
-       offset_low, loff_t *result, unsigned int whence)
-{
-	off_t rval;
-
-	rval = lseek(fd, 
-		(off_t)((((off64_t)offset_high) << (off64_t)32) | (off64_t)offset_low),
-		whence);
-
-	if (rval < 0)
-	{
-		return -1;
-	}
-
-	*result = (loff_t)rval;
-
-	return 0;
-}
-#endif
-
 /*
 On all UNIXes, creat() is a system call, but has the same semantics
 as open() with a particular flag.  We will turn creat() into an
@@ -800,7 +775,7 @@ int __lxstat(int version, const char *path, struct stat *buf)
 	return _condor_lxstat( version, path, buf );
 }
 
-#if defined(GLIBC22)
+#if defined(GLIBC22) || defined(GLIBC23)
 int _xstat64(int version, const char *path, struct stat64 *buf)
 {
 	return _condor_xstat64( version, path, buf );
@@ -830,7 +805,7 @@ int __lxstat64(int version, const char *path, struct stat64 *buf)
 {
 	return _condor_lxstat64( version, path, buf );
 }
-#endif /* GLIBC22 */
+#endif /* GLIBC22 || GLIBC23 */
 
 /*
    _condor_k_stat_convert() takes in a version, and two pointers, one
@@ -884,9 +859,11 @@ _condor_k_stat_convert( int version, const struct kernel_stat *source,
 			*/
 		target->__pad1 = 0;
 		target->__pad2 = 0;
+		#if !defined(GLIBC23)
 		target->__unused1 = 0;
 		target->__unused2 = 0;
 		target->__unused3 = 0;
+		#endif
 		#if defined (GLIBC21)
 			/* is someone *SURE* we don't need this in glibc22, as well? */
 		target->__unused4 = 0;
@@ -915,7 +892,7 @@ _condor_k_stat_convert( int version, const struct kernel_stat *source,
 	}
 }
 
-#if defined(IRIX) || defined(GLIBC22)
+#if defined(IRIX) || defined(GLIBC22) || defined(GLIBC23)
 void 
 _condor_k_stat_convert64( int version, const struct kernel_stat *source, 
 						struct stat64 *target )
@@ -952,9 +929,12 @@ _condor_k_stat_convert64( int version, const struct kernel_stat *source,
 			*/
 		target->__pad1 = 0;
 		target->__pad2 = 0;
+		#if !defined(GLIBC23)
+		/* glibc23 uses these fields */
 		target->__unused1 = 0;
 		target->__unused2 = 0;
 		target->__unused3 = 0;
+		#endif
 		#if defined(GLIBC21)
 			/* is someone *SURE* we don't need this in glibc22, as well? */
 		target->__unused4 = 0;
@@ -1030,9 +1010,11 @@ _condor_s_stat_convert( int version, const struct stat *source,
 			*/
 		target->__pad1 = 0;
 		target->__pad2 = 0;
+		#if !defined(GLIBC23)
 		target->__unused1 = 0;
 		target->__unused2 = 0;
 		target->__unused3 = 0;
+		#endif
 		target->__unused4 = 0;
 		target->__unused5 = 0;
 		break;
@@ -1056,7 +1038,7 @@ _condor_s_stat_convert( int version, const struct stat *source,
 	}
 }
 
-#if defined(GLIBC22)
+#if defined(GLIBC22) || defined(GLIBC23)
 void 
 _condor_s_stat_convert64( int version, const struct stat *source, 
 						struct stat64 *target )
@@ -1093,9 +1075,12 @@ _condor_s_stat_convert64( int version, const struct stat *source,
 			*/
 		target->__pad1 = 0;
 		target->__pad2 = 0;
+		#if !defined(GLIBC23)
+		/* glibc23 uses these fields */
 		target->__unused1 = 0;
 		target->__unused2 = 0;
 		target->__unused3 = 0;
+		#endif
 		#if defined(GLIBC21)
 			/* is someone *SURE* we don't need this in glibc22, as well? */
 		target->__unused4 = 0;
@@ -1166,7 +1151,7 @@ int _condor_xstat(int version, const char *path, struct stat *buf)
 	return rval;
 }
 
-#if defined(GLIBC22)
+#if defined(GLIBC22) || defined(GLIBC23)
 extern "C" int REMOTE_CONDOR_stat( const char *, struct stat * );
 int _condor_xstat64(int version, const char *path, struct stat64 *buf)
 {
@@ -1239,7 +1224,7 @@ _condor_fxstat(int version, int fd, struct stat *buf)
 	return rval;
 }
 
-#if defined(GLIBC22)
+#if defined(GLIBC22) || defined(GLIBC23)
 extern "C" int REMOTE_CONDOR_fstat( int, struct stat * );
 int
 _condor_fxstat64(int version, int fd, struct stat64 *buf)
@@ -1312,7 +1297,7 @@ int _condor_lxstat(int version, const char *path, struct stat *buf)
 	return rval;
 }
 
-#if defined(GLIBC22)
+#if defined(GLIBC22) || defined(GLIBC23)
 extern "C" int REMOTE_CONDOR_lstat( const char *, struct stat *);
 int _condor_lxstat64(int version, const char *path, struct stat64 *buf)
 {

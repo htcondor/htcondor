@@ -73,7 +73,7 @@
 #endif
 
 #if defined(LINUX)
-#	if defined(GLIBC22)
+#	if defined(GLIBC22) || defined(GLIBC23)
 #		define SYNC_RETURNS_VOID 1
 #	else
 #		define SYNC_RETURNS_VOID 0

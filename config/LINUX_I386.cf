@@ -9,12 +9,12 @@
 #define HAS_GLOBUS	YES
 
 #ifdef IS_GLIBC23
-#define IS_CLIPPED	YES
-#define WANT_PVM	NO
-#else
+/*#define NEEDS_64BIT_SYSCALLS            YES*/
+/*#define NEEDS_64BIT_STRUCTS             YES*/
+#endif
+
 #define WANT_PVM	YES
 #define PVM_ARCH	LINUX
-#endif
 
 #define HAS_GSI		YES
 #define HAS_OPENSSL	YES
