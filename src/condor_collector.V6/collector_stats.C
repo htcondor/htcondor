@@ -143,9 +143,12 @@ CollectorBaseStats::setHistorySize ( int new_size )
 		// New size is larger than we have...
 	} else {
 		unsigned *newbuf = new unsigned[ required_words ];
+		memset( newbuf, 0, required_words * sizeof(unsigned) );
 		if ( historyBuffer ) {
 			memcpy( newbuf, historyBuffer, historyWords );
 			delete[] historyBuffer;
+		} else {
+			historyBitnum = 0;
 		}
 		historyBuffer = newbuf;
 		historySize = new_size;
@@ -191,7 +194,6 @@ CollectorBaseStats::storeStats ( bool sequenced, int dropped )
 	// Update the history buffer
 	if ( historyBuffer ) {
 		int		update_num;
-		int		max_offset = historyMaxbit;
 
 		// For each update to shift unsignedo our barrell register..
 		for	( update_num = 0;  update_num < count; update_num++ ) {
@@ -207,7 +209,7 @@ CollectorBaseStats::storeStats ( bool sequenced, int dropped )
 			}
 
 			// Next bit
-			if ( ++historyBitnum >= max_offset ) {
+			if ( ++historyBitnum >= historyMaxbit ) {
 				historyBitnum = 0;
 			}
 		}
