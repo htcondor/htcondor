@@ -256,6 +256,7 @@ V6_6_COMMON_EXT	-a EXT_COMMON \
 		   externals/bundles/glibc/2.2.2 \
 		   externals/bundles/gpt/3.0 \
 		   externals/bundles/krb5/1.2.5 \
+		   externals/bundles/krb5/1.2.7 \
 		   externals/bundles/pvm/3.4.2 \
 		   externals/bundles/zlib/1.1.3
 
