@@ -228,7 +228,10 @@ DEBUG_FLAG = DebugFlag
     $(LDAP_DIR)/lib/libldap.a \
     $(LDAP_DIR)/lib/liblber.a
 
-#endif
+# define IsCondorG -DCONDOR_G
+#else
+# define IsCondorG 
+#endif /*HasGlobus && WantsGlobus */
 
 #if defined( GSS_AUTHENTICATION )
 
