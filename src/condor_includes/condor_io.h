@@ -41,9 +41,7 @@ int getsockname(int, struct sockaddr *,int *);
 */
 
 #include "stream.h"
-
 #include "buffers.h"
-
 #include "sock.h"
 #include "reli_sock.h"
 #include "safe_sock.h"

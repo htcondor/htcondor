@@ -119,6 +119,16 @@
 
 #include <assert.h>
 
+#include "condor_common.h"
+#include "proc.h"
+#include "sched.h"
+/* now to clean up from sched.h... */
+#undef CHECKPOINTING
+#undef SUSPENDED
+#include "startup.h"
+#include "_condor_fix_types.h"
+#include <sys/stat.h>
+#include <sys/statfs.h>
 
 class Stream {
 
@@ -170,9 +180,52 @@ public:
 	int code(double &);
 	int code(char *&);
 	int code(char *&, int &);
+	int code_bytes(void *, int);
 
+	//	Condor types
 
-	//	put operations
+	int signal(int &);
+
+	int code(PROC_ID &);
+	int code(struct rusage &);
+	int code(PROC &);
+	int code(STARTUP_INFO &);
+	int code(struct stat &);
+	int code(struct statfs &);
+	int code(struct timezone &);
+	int code(struct timeval &);
+	int code(struct rlimit &);
+	int code(PORTS &);
+	int code(StartdRec &);
+
+	//   allow pointers instead of references to ease XDR compatibility
+	//
+
+	int code(unsigned char *x)		{ return code(*x); }
+	int code(int *x) 				{ return code(*x); }
+	int code(unsigned int *x) 		{ return code(*x); }
+	int code(long *x) 				{ return code(*x); }
+	int code(unsigned long *x) 		{ return code(*x); }
+	int code(short *x) 				{ return code(*x); }
+	int code(unsigned short *x) 	{ return code(*x); }
+	int code(float *x) 				{ return code(*x); }
+	int code(double *x) 			{ return code(*x); }
+
+	int signal(int *x)				{ return signal(*x); }
+
+	int code(PROC_ID *x)			{ return code(*x); }
+	int code(struct rusage *x)		{ return code(*x); }
+	int code(PROC *x)				{ return code(*x); }
+	int code(STARTUP_INFO *x)		{ return code(*x); }
+	int code(struct stat *x)		{ return code(*x); }
+	int code(struct statfs *x)		{ return code(*x); }
+	int code(struct timezone *x)	{ return code(*x); }
+	int code(struct timeval *x)		{ return code(*x); }
+	int code(struct rlimit *x)		{ return code(*x); }
+	int code(PORTS *x)				{ return code(*x); }
+	int code(StartdRec *x)			{ return code(*x); }
+
+	//	Put operations
 	//
 
 	int put(char);

@@ -1,12 +1,13 @@
 #ifndef BUFFERS_H
 #define BUFFERS_H
 
+#define CONDOR_IO_BUF_SIZE 4096
 
 void sanity_check();
 
 class Buf {
 public:
-	Buf(int sz=32);
+	Buf(int sz=CONDOR_IO_BUF_SIZE);
 	~Buf();
 
 	inline void reset() { _dta_pt = _dta_sz = 0; }
