@@ -59,6 +59,12 @@ assumed).  Changes ownership of log,spool,execute directories to specified user,
 and instructs Condor system to run as that user (by setting CONDOR_IDS in the
 config file).
 
+--maybe-daemon-owner
+If --owner is not specified and no appropriate user can be found to run Condor,
+then this option will allow the daemon user to be selected. This option is 
+rarely needed by users but can be useful for scripts that invoke condor_configure 
+to install Condor.
+
 --install-log=<file>
 Save information about the installation in the specified file. This is normally 
 only needed when condor_configure is called by a higher-level script, not when
@@ -417,31 +423,52 @@ sub find_owner(;$) {
     my $uid;
     my $uname;
 
+    my @pwdent_condor = getpwnam( "condor" );
+    my $condor_uid=$pwdent_condor[2];
+
     if ( $< ) {
-	# Non-root
-	$uid=$<;
+        # Non-root
+        $uid=$<;
     } 
     elsif ($owner) {
-	# We're root, see who should own the Condor files/directories
-	if ($owner =~ m/^\d+$/) {
-	    # owner as uid
-	    # fall through
-	    $uid=$owner;
-	} else {
-	    #owner as uname
-	    $uname=$owner;
-	}
+        # We're root, see who should own the Condor files/directories
+        if ($owner =~ m/^\d+$/) {
+            # owner as uid
+            # fall through
+            $uid=$owner;
+        } else {
+            #owner as uname
+            $uname=$owner;
+            $uid=(getpwnam ($uname))[2];
+            if( ! $uid ) {
+                die "\nInvalid user: getpwnam(\"$uname\") failed!\n";
+            }
+        }
+    }
+    elsif ($condor_uid) {
+        $uid = $condor_uid;
+    }
+    elsif ($opt_maybe_daemon_owner) {
+        my @pwdent = getpwnam("daemon");
+        if ($pwdent[2]) {
+            $uid=$pwdent[2];
+            log_message("Condor is being configured to use the daemon user, which "
+                        . "will work, but usually isn't "
+                        . "what you want. Usually it's the condor user, which doesn't "
+                        . "exist on this system. If you like, you can rerun the condor_configure "
+                        . "program with the --owner option when you decide which user "
+                        . "should be used by the Condor daemons.\n");
+        } else {
+            die wrap("", "", "Unable to determine which user to run Condor as. "
+                     . "Please re-run the configure script with the "
+                     . "--owner=<uname> option.\n");
+        }
     }
     else {
-	die "\nUnable to find the user to run Condor daemons as. Please specify it using the --owner option\n";
+        die wrap("", "", "\nUnable to find the user to run Condor daemons as. "
+               . "Please specify it using the --owner option\n");
     }
 
-    if ($uname) {
-	$uid=(getpwnam ($uname))[2];
-	if( ! $uid ) {
-	    die "\nInvalid user: getpwname(\"$uname\") failed!\n";
-	}
-    }
     if( ! $uid ) {
         die "\nfind_owner(): can't find a user to run as!\n";
     }
