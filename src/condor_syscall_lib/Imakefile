@@ -106,7 +106,8 @@ XDR_OBJ = \
  	xdr_timeval.o \
  	xdr_timezone.o \
  	xdr_rlimit.o \
-	xdr_startup_info.o
+	xdr_startup_info.o \
+	xdr_open_flags_t.o
 
 #if 0
  	xdr_utsname.o
@@ -122,7 +123,7 @@ URL_OBJ = url_condor.o include_urls.o cbstp_url.o file_url.o http_url.o \
 
 #if DOES_CHECKPOINTING
 CKPT_OBJ =	file_state.o image.o tmp_stack.o machdep.$(OS).o \
-			syscall_mode.o condor_rt0.o $(LONGJMP) $(HP_CKPT) \
+			syscall_mode.o fake_hooks.o condor_rt0.o $(LONGJMP) $(HP_CKPT) \
 	$(SIG_CKPT_OBJS) $(URL_OBJ)
 #else
 CKPT_OBJ = syscall_mode.o
