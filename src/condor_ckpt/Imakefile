@@ -87,7 +87,7 @@ UTIL_OBJ =  dprintf_common.o mkargv.o
 
 #if DOES_CHECKPOINTING
 OBJ =	image.o machdep.$(OS).o file_state.o tmp_stack.o syscall_mode.o \
-	local_startup.o fake_remote_syscall.o fake_hooks.o \
+	local_startup.o fake_remote_syscall.o fake_hooks.o block_signals.o \
 	buffer_cache.o buffer_glue.o \
 	$(SAVE_SIGSTATE_OBJ) fake_util_lib.o eprintf.o $(EXTRACT) \
 	$(ASSEMBLER_OBJ) $(CPP_UTIL_OBJ) $(UTIL_OBJ)
@@ -100,7 +100,7 @@ OBJ =	image.o machdep.$(OS).o file_state.o tmp_stack.o syscall_mode.o \
 #   endif
 
 #else /* ! DOES_CHECKPOINTING */
-OBJ =	syscall_mode.o
+OBJ =	syscall_mode.o block_signals.o
 #endif
 
 #if DOES_CHECKPOINTING
