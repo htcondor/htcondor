@@ -41,21 +41,24 @@ To identify jobs which are running, type
 
 -- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
  ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD               
- 125.0   jbasney         4/10 15:35   0+00:00:00 U  -10 1.2  hello.remote      
+ 125.0   jbasney         4/10 15:35   0+00:00:00 I  -10 1.2  hello.remote      
  127.0   raman           4/11 15:35   0+00:00:00 R  0   1.4  hello             
  128.0   raman           4/11 15:35   0+00:02:33 I  0   1.4  hello             
 
-3 jobs; 1 unexpanded, 1 idle, 1 running, 0 malformed
+3 jobs; 2 idle, 1 running, 0 held
 
 \end{verbatim} 
 The \verb@ST@ column (for status) shows the status of
-current jobs in the queue. The ``U'' stands for unexpanded, which means
-that the job has never checkpointed and when it starts running it will
-start running from the beginning. ``R'' means the the job is currently
-running. Finally, ``I'' stands for idle, which means the job has run
-before and has checkpointed, and when it starts running again it will
-resume where it left off, but is not running right now because it is
-waiting for a machine to become available.
+current jobs in the queue. ``R'' means the the job is currently
+running. ``I'' stands for idle, which means the job is not running right
+now because it is waiting for a machine to become available. 
+``H'' stands for hold state, which means the job will not be scheduled to
+run until it is released (see condor_hold and condor_release man pages).
+Finally, ``U'' stands for unexpanded, which means that the job has never 
+checkpointed and when it starts running it will start runnibg from the
+beginning (this state is deprecated, so jobs will be in idle state
+from the beginning, but you may still see unexpanded state jobs
+in sites running an older version of condor).
 
 \textbf{Note:} The CPU time reported for a job is the time that has been
 committed to the job.  Thus, the CPU time is not updated for a job until
@@ -81,10 +84,10 @@ is killed without a checkpoint, and its queue entry removed.  For example:
 
 -- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
  ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD               
- 125.0   jbasney         4/10 15:35   0+00:00:00 U  -10 1.2  hello.remote      
+ 125.0   jbasney         4/10 15:35   0+00:00:00 I  -10 1.2  hello.remote      
  132.0   raman           4/11 16:57   0+00:00:00 R  0   1.4  hello             
 
-2 jobs; 1 unexpanded, 0 idle, 1 running, 0 malformed
+2 jobs; 1 idle, 1 running, 0 held
 
 %  condor_rm 132.0
 Job 132.0 removed.
@@ -93,9 +96,9 @@ Job 132.0 removed.
 
 -- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
  ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD               
- 125.0   jbasney         4/10 15:35   0+00:00:00 U  -10 1.2  hello.remote      
+ 125.0   jbasney         4/10 15:35   0+00:00:00 I  -10 1.2  hello.remote      
 
-1 jobs; 1 unexpanded, 0 idle, 0 running, 0 malformed
+1 jobs; 1 idle, 0 running, 0 held
 \end{verbatim}
 
 \subsection{While your job is running ...}
@@ -163,9 +166,9 @@ command.  For example, to change the priority of a job to -15,
 
 -- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
  ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD               
- 126.0   raman           4/11 15:06   0+00:00:00 U  0   0.3  hello             
+ 126.0   raman           4/11 15:06   0+00:00:00 I  0   0.3  hello             
 
-1 jobs; 1 unexpanded, 0 idle, 0 running, 0 malformed
+1 jobs; 1 idle, 0 running, 0 held
 
 %  condor_prio -p -15 126.0
 
@@ -173,9 +176,9 @@ command.  For example, to change the priority of a job to -15,
 
 -- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
  ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD               
- 126.0   raman           4/11 15:06   0+00:00:00 U  -15 0.3  hello             
+ 126.0   raman           4/11 15:06   0+00:00:00 I  -15 0.3  hello             
 
-1 jobs; 1 unexpanded, 0 idle, 0 running, 0 malformed
+1 jobs; 1 idle, 0 running, 0 held
 \end{verbatim}
 
 It is important to note that these \emph{job} priorities are completely 
@@ -197,9 +200,9 @@ option of \Condor{q}.  For example, the following job submitted by user
 
 -- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
  ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD               
- 125.0   jbasney         4/10 15:35   0+00:00:00 U  -10 1.2  hello.remote      
+ 125.0   jbasney         4/10 15:35   0+00:00:00 I  -10 1.2  hello.remote      
 
-1 jobs; 1 unexpanded, 0 idle, 0 running, 0 malformed
+1 jobs; 1 idle, 0 running, 0 held
 \end{verbatim}
 
 Running \Condor{q}'s analyzer provided the following information:
