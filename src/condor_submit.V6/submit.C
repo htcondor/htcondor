@@ -1052,7 +1052,7 @@ SetCoreSize()
 	long coresize;
 
 	if (size == NULL) {
-#if defined(HPUX9) || defined(WIN32) /* RLIMIT_CORE not supported */
+#if defined(HPUX) || defined(WIN32) /* RLIMIT_CORE not supported */
 		size = "";
 #else
 		struct rlimit rl;
