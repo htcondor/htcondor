@@ -3994,7 +3994,7 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 	// thus we do not have to link in the ckpt_server_api.
 #include "directory.h"
 int 
-RemoveLocalOrRemoteFile(const char *, const char *)
+RemoveLocalOrRemoteFile(const char *, const char *, const char *)
 {
 	return 0;
 }
