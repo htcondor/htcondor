@@ -54,5 +54,4 @@ template class HashBucket<MyString,int>;
 template class HashTable<MyString, MyString>;
 template class HashBucket<MyString, MyString>;
 template class HashTable<MyString, KeyCacheEntry*>;
-
-
+template class Queue<char *>;

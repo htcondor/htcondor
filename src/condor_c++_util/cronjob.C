@@ -30,38 +30,71 @@
 #include "condor_cron.h"
 
 // Size of the buffer for reading from the child process
-#define READBUF_SIZE	1024
+#define STDOUT_READBUF_SIZE	1024
+#define STDOUT_LINEBUF_SIZE	8192
+#define STDERR_READBUF_SIZE	128
 
 // Cron's Line StdOut Buffer constructor
 CronJobOut::CronJobOut( class CondorCronJob *job ) :
-		LineBuffer( 1024 )
+		LineBuffer( STDOUT_LINEBUF_SIZE )
 {
 	this->job = job;
 }
 
 // Output function
 int
-CronJobOut::Output( char *buf, int len )
+CronJobOut::Output( const char *buf, int len )
 {
+	// Ignore empty lines
+	if ( 0 == len ) {
+		return 0;
+	}
+
 	// Check for record delimitter
 	if ( '-' == buf[0] ) {
 		return 1;
 	}
 
-	// Clean up EOL
-	if ( '\n' ==  buf[len] ) {
-		buf[len] = '\0';
-	}
-
 	// Build up the string
-	if ( stringBuf.Length() ) {
-		stringBuf += ",";
+	const char	*prefix = job->GetPrefix( );
+	int		fulllen = len + strlen( prefix );
+	char	*line = (char *) malloc( fulllen + 1 );
+	if ( NULL == line ) {
+		dprintf( D_ALWAYS,
+				 "cronjob: Unable to duplicate %d bytes\n",
+				 fulllen );
+		return -1;
 	}
-	stringBuf += job->GetPrefix( );
-	stringBuf += buf;
+	strcpy( line, prefix );
+	strcat( line, buf );
+
+	// Queue it up, get out
+	lineq.enqueue( line );
 
 	// Done
 	return 0;
+}
+
+// Get size of the queue
+int
+CronJobOut::
+GetQueueSize( void )
+{
+	return lineq.Length( );
+}
+
+// Get next queue element
+char *
+CronJobOut::
+GetLineFromQueue( void )
+{
+	char	*line;
+
+	if ( ! lineq.dequeue( line ) ) {
+		return line;
+	} else {
+		return NULL;
+	}
 }
 
 // Cron's Line StdErr Buffer constructor
@@ -73,13 +106,8 @@ CronJobErr::CronJobErr( class CondorCronJob *job ) :
 
 // StdErr Output function
 int
-CronJobErr::Output( char *buf, int len )
+CronJobErr::Output( const char *buf, int len )
 {
-	// Clean up EOL
-	if ( '\n' ==  buf[len] ) {
-		buf[len] = '\0';
-	}
-
 	dprintf( D_ALWAYS, "%s: %s\n", job->GetName( ), buf );
 
 	// Done
@@ -87,6 +115,7 @@ CronJobErr::Output( char *buf, int len )
 }
 
 // Output function
+#if 0
 MyString *
 CronJobOut::GetString( void )
 {
@@ -98,6 +127,7 @@ CronJobOut::GetString( void )
 	// Return the copy
 	return retString;
 }
+#endif
 
 // CronJob constructor
 CondorCronJob::CondorCronJob( const char *jobName )
@@ -380,9 +410,6 @@ CondorCronJob::Reaper( int exitPid, int exitStatus )
 	}
 	pid = 0;
 
-	// Read it's final stdout for building a ClassAd
-	MyString	*string = stdOutBuf->GetString( );
-
 	// Clean up it's file descriptors
 	CleanAll( );
 
@@ -425,22 +452,37 @@ CondorCronJob::Reaper( int exitPid, int exitStatus )
 	}
 
 	// Process the output
-	int	status;
-	if ( string->Length() == 0 ) {
-		status = 0;
-	} else {
-		status = ProcessOutput( string );
-	}
-
-	delete string;
-	return status;
+	return ProcessOutputQueue( );
 }
 
 // Publisher
 int
-CondorCronJob::ProcessOutput( MyString *string )
+CondorCronJob::
+ProcessOutputQueue( void )
 {
-	(void) string;
+	int		status = 0;
+
+	// If there's data, process it...
+	if ( stdOutBuf->GetQueueSize() != 0 ) {
+		char	*linebuf;
+		while( ( linebuf = stdOutBuf->GetLineFromQueue( ) ) != NULL ) {
+			int		tmpstatus = ProcessOutput( linebuf );
+			if ( tmpstatus ) {
+				status = tmpstatus;
+			}
+			free( linebuf );
+		}
+		ProcessOutput( NULL );
+	}
+	return 0;
+}
+
+// Publisher
+int
+CondorCronJob::
+ProcessOutput( const char *line )
+{
+	(void) line;
 
 	// Do nothing
 	return 0;
@@ -448,7 +490,8 @@ CondorCronJob::ProcessOutput( MyString *string )
 
 // Start a job
 int
-CondorCronJob::RunProcess( void )
+CondorCronJob::
+RunProcess( void )
 {
 	dprintf( D_ALWAYS, "Running '%s'\n", name );
 
@@ -539,37 +582,32 @@ CondorCronJob::RunProcess( void )
 int
 CondorCronJob::StdoutHandler ( int pipe )
 {
-	char			buf[READBUF_SIZE];
+	char			buf[STDOUT_READBUF_SIZE];
 	int				bytes;
 
 	// Read a block from it
-	bytes = read( stdOut, buf, READBUF_SIZE );
+	bytes = read( stdOut, buf, STDOUT_READBUF_SIZE );
 
 	// Zero means it closed
-	if ( bytes == 0 )
-	{
+	if ( bytes == 0 ) {
 		dprintf( D_ALWAYS, "Cron: STDOUT closed for '%s'\n", name );
 		daemonCore->Close_Pipe( stdOut );
 		stdOut = -1;
 	}
 
 	// Positve value is byte count
-	else if ( bytes > 0 )
-	{
+	else if ( bytes > 0 ) {
 		const char	*bptr = buf;
 
 		// stdOutBuf->Output() returns 1 if it finds '-', otherwise 0,
 		// so that's what Buffer returns, too...
 		while ( stdOutBuf->Buffer( &bptr, &bytes ) > 0 ) {
-			MyString	*string = stdOutBuf->GetString( );
-			ProcessOutput( string );
-			delete string;
+			ProcessOutputQueue( );
 		}
 	}
 
 	// Negative is an error; check for EWOULDBLOCK
-	else if (  ( errno != EWOULDBLOCK ) && ( errno != EAGAIN )  )
-	{
+	else if (  ( errno != EWOULDBLOCK ) && ( errno != EAGAIN )  ) {
 		dprintf( D_ALWAYS,
 				 "Cron: read STDOUT failed for '%s' %d: '%s'\n",
 				 name, errno, strerror( errno ) );
@@ -584,11 +622,11 @@ CondorCronJob::StdoutHandler ( int pipe )
 int
 CondorCronJob::StderrHandler ( int pipe )
 {
-	char			buf[READBUF_SIZE];
+	char			buf[STDERR_READBUF_SIZE];
 	int				bytes;
 
 	// Read a block from it
-	bytes = read( stdErr, buf, READBUF_SIZE );
+	bytes = read( stdErr, buf, STDERR_READBUF_SIZE );
 
 	// Zero means it closed
 	if ( bytes == 0 )

@@ -26,23 +26,66 @@
 #include "startd.h"
 
 // CronJob constructor
-StartdCronJob::StartdCronJob( const char *jobName ) :
+StartdCronJob::
+StartdCronJob( const char *jobName ) :
 		CondorCronJob( jobName )
 {
 	// Register it with the Resource Manager
 	resmgr->adlist_register( jobName );
+	OutputAd = NULL;
+	OutputAdCount = 0;
 }
 
 // StartdCronJob destructor
-StartdCronJob::~StartdCronJob( )
+StartdCronJob::
+~StartdCronJob( )
 {
 	// Delete myself from the resource manager
 	resmgr->adlist_delete( GetName() );
+	if ( NULL != OutputAd ) {
+		delete( OutputAd );
+	}
 }
 
+// Process a line of input
+int
+StartdCronJob::
+ProcessOutput( const char *line )
+{
+	if ( NULL == OutputAd ) {
+		dprintf( D_ALWAYS, "Creating new ClassAd for %s\n", GetName() );
+		OutputAd = new ClassAd( );
+	}
+
+	// NULL line means end of list
+	if ( NULL == line ) {
+		// Publish it
+		dprintf( D_ALWAYS, "Publishing new ClassAd for %s (%d)\n", GetName(), OutputAdCount );
+		if ( OutputAdCount != 0 ) {
+			// Replace the old ClassAd now
+			resmgr->adlist_replace( GetName( ), OutputAd );
+
+			// I've handed it off; forget about it!
+			OutputAd = NULL;
+			OutputAdCount = 0;
+		}
+	} else {
+		// Process this line!
+		if ( ! OutputAd->Insert( line ) ) {
+			dprintf( D_ALWAYS, "Can't insert '%s' into '%s' ClassAd\n",
+					 line, GetName() );
+		} else {
+			OutputAdCount++;
+		}
+	}
+	return OutputAdCount;
+}
+
+#if 0
 // Process the job's output
 int
-StartdCronJob::ProcessOutput( MyString *string )
+StartdCronJob::
+ProcessOutput( MyString *string )
 {
 	// Publish the results
 	const char		*cstring = string->Value( );
@@ -93,3 +136,4 @@ StartdCronJob::ProcessOutput( MyString *string )
 
 	return 0;
 }
+#endif

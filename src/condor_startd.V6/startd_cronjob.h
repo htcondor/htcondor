@@ -33,7 +33,9 @@ class StartdCronJob : public CondorCronJob
 	virtual ~StartdCronJob( );
 
   private:
-	virtual int ProcessOutput( MyString *string );
+	virtual int ProcessOutput( const char *line );
+	ClassAd	*OutputAd;
+	int		OutputAdCount;
 
 };
 

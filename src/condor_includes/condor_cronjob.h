@@ -26,6 +26,7 @@
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "linebuffer.h"
+#include "Queue.h"
 
 // Cron's StdOut Line Buffer
 class CronJobOut : public LineBuffer
@@ -33,10 +34,11 @@ class CronJobOut : public LineBuffer
   public:
 	CronJobOut( class CondorCronJob *job );
 	virtual ~CronJobOut( void ) {};
-	virtual int Output( char *buf, int len );
-	MyString *GetString( void );
+	virtual int Output( const char *buf, int len );
+	int GetQueueSize( void );
+	char *GetLineFromQueue( void );
   private:
-	MyString			stringBuf;
+	Queue<char *>		lineq;
 	class CondorCronJob	*job;
 };
 
@@ -46,7 +48,7 @@ class CronJobErr : public LineBuffer
   public:
 	CronJobErr( class CondorCronJob *job );
 	virtual ~CronJobErr( void ) {};
-	virtual int Output( char *buf, int len );
+	virtual int Output( const char *buf, int len );
   private:
 	class CondorCronJob	*job;
 };
@@ -97,7 +99,8 @@ class CondorCronJob : public Service
 	void ClearMark( void ) { marked = false; };
 	bool IsMarked( void ) { return marked; };
 
-	virtual int ProcessOutput( MyString *string );
+	int ProcessOutputQueue( void );
+	virtual int ProcessOutput( const char *line );
 
   private:
 	char			*name;			// Logical name of the job
