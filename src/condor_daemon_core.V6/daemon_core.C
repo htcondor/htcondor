@@ -2316,7 +2316,7 @@ int DaemonCore::HandleReq(int socki)
 			bool found_sess = sec_man->session_cache->lookup(sess_id, session);
 
 			if (!found_sess) {
-				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s NOT FOUND...\n", sess_id);
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s NOT FOUND...\n", sess_id);
 				// no session... we outta here!
 
 				// but first, we should be nice and send a message back to
@@ -2334,7 +2334,7 @@ int DaemonCore::HandleReq(int socki)
 			}
 
 			if (!session->key()) {
-				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
 				// uhm, there should be a key here!
 				if( return_address_ss ) {
 					free( return_address_ss );
@@ -2410,7 +2410,7 @@ int DaemonCore::HandleReq(int socki)
 			bool found_sess = sec_man->session_cache->lookup(sess_id, session);
 
 			if (!found_sess) {
-				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s NOT FOUND...\n", sess_id);
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s NOT FOUND...\n", sess_id);
 				// no session... we outta here!
 
 				// but first, see above behavior in MD5 code above.
@@ -2427,7 +2427,7 @@ int DaemonCore::HandleReq(int socki)
 			}
 
 			if (!session->key()) {
-				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
 				// uhm, there should be a key here!
 				if( return_address_ss ) {
 					free( return_address_ss );
