@@ -1,10 +1,10 @@
 #!/bin/sh
 
-#if [ -d CVS ]; then
-#	echo "You probably don't want to do this in your source repository."
-#	echo "Try doing it in a build directory instead."
-#	exit 1
-#fi
+if [ -d CVS ]; then
+	echo "You probably don't want to do this in your source repository."
+	echo "Try doing it in a build directory instead."
+	exit 1
+fi
 
 #
 # A function to find executables in the path.
