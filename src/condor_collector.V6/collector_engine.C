@@ -35,8 +35,7 @@ extern "C" void event_mgr (void);
 #include "condor_network.h"
 #include "condor_io.h"
 #include "internet.h"
-#include "url_condor.h"
-#include "fdprintf.h"
+#include "condor_email.h"
 
 #include "condor_attributes.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
@@ -53,14 +52,11 @@ ClassAd* CollectorEngine::DONE_REPORTING = (ClassAd *) 0x2;
 ClassAd* CollectorEngine::LONG_GONE	  = (ClassAd *) 0x3;
 ClassAd* CollectorEngine::THRESHOLD	  = (ClassAd *) 0x4;
 
-char* CollectorEngine::CondorAdministrator = NULL;
-
 static void killHashTable (CollectorHashTable &);
 static ClassAd* updateClassAd(CollectorHashTable&,char*,ClassAd*,HashKey&,
 							  char*, int &);
 int 	engine_clientTimeoutHandler (Service *);
 int 	engine_housekeepingHandler  (Service *);
-int		email (char *, char * = NULL); 
 char	*strStatus (ClassAd *);
 
 CollectorEngine::
@@ -743,7 +739,7 @@ masterCheck ()
 	char     hkString [128];
 	char	 whoami [128];
 	char	 buffer [128];
-	int 	 mailer = -1;
+	FILE* 	 mailer = NULL;
 	int		 more;
 
 	dprintf (D_ALWAYS, "MasterCheck:  Checking for down masters ...\n");
@@ -782,24 +778,21 @@ masterCheck ()
 
 		// need to report for recently down masters (children still alive)
 		if (ad == RECENTLY_DOWN) {
-#ifndef WIN32
-			// if the mailer is not open, open it now
-			if (mailer < 0) {
+			if (mailer == NULL) {
 				if (get_machine_name (whoami) == -1) {
 					dprintf (D_ALWAYS, "Failed get_machine_name() call\n");
 					whoami[0] = '\0';
 				}
-				sprintf (buffer, "Condor Collector (%s): Dead condor_masters", 
+				sprintf (buffer, "Collector (%s): Dead condor_masters", 
 							whoami);
-				if ((mailer = email (buffer)) < 0) {
+				if ((mailer = email_admin_open(buffer)) == NULL) {
 					dprintf (D_ALWAYS, "Error sending email --- aborting\n");
 					return FALSE;
 				}
-				fdprintf (mailer, "The following masters are dead, leaving"
+				fprintf (mailer, "The following masters are dead, leaving"
 							" orphaned daemons\n\n");
 			}
-			fdprintf (mailer, "\t\t%s\n", hkString);
-#endif
+			fprintf (mailer, "\t\t%s\n", hkString);
 			dprintf (D_ALWAYS, "\tMaster %s: recently went down\n", hkString);
 			nextStatus = DONE_REPORTING;
 		}	
@@ -825,32 +818,11 @@ masterCheck ()
 	}
 
 	// close the mailer if necessary
-	if (mailer > -1) close (mailer);
+	if (mailer) email_close(mailer);
 
 	dprintf (D_ALWAYS, "MasterCheck:  Done checking for down masters\n");
 	return TRUE;
 }
-
-#ifndef WIN32
-int
-email (char *subject, char *address)
-{
-	int 	mailer;
-	char	mailtoURL[128];
-
-	if (address == NULL) {
-		address = CollectorEngine::CondorAdministrator;
-	}
-
-	sprintf (mailtoURL, "mailto:%s", address);
-	if ((mailer = open_url (mailtoURL, O_WRONLY, 0)) < 0)
-		dprintf (D_ALWAYS, "Unable to send mail though open_url\n");
-	else
-		fdprintf (mailer, "Subject:  %s\n\n", subject);
-
-	return mailer;
-}
-#endif
 
 static void
 killHashTable (CollectorHashTable &table)
