@@ -54,6 +54,7 @@
 #include "condor_sys.h"
 #include "condor_config.h"
 #include "util_lib_proto.h"
+#include "condor_attributes.h"
 
 #if defined(__cplusplus)
 extern "C" {
