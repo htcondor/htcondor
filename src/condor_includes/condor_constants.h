@@ -83,8 +83,10 @@ static const int RPL_SOCK = 17;
 
 #if defined(WIN32)
 static const char DIR_DELIM_CHAR = '\\';
+static const char NULL_FILE[] = "NUL";
 #else
 static const char DIR_DELIM_CHAR = '/';
+static const char NULL_FILE[] = "/dev/null";
 #endif
 
 /* This is the username of the NiceUser (i.e., dirt user) */
