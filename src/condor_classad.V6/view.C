@@ -77,6 +77,43 @@ operator=( const ViewMember &vm )
 	return( *this );
 }
 
+bool operator<(const ViewMember &vm1, const ViewMember &vm2)
+{
+	bool                lessThan;
+	Value				val1, val2;
+	Value::ValueType	vt1, vt2;
+
+	vm1.GetRankValue( val1 );
+	vm2.GetRankValue( val2 );
+
+	vt1 = val1.GetType( );
+	vt2 = val2.GetType( );
+
+	// if the values are of the same scalar type, or if they are both
+	// numbers, use the builtin < comparison operator
+	if( ( vt1==vt2 && vt1!=Value::CLASSAD_VALUE && vt2!=Value::LIST_VALUE ) ||
+			( vt1==Value::INTEGER_VALUE && vt2==Value::REAL_VALUE )			||
+			( vt1 == Value::REAL_VALUE && vt2 == Value::INTEGER_VALUE ) ) {
+		Value	result;
+		Operation::Operate( Operation::LESS_THAN_OP, val1, val2, result );
+		lessThan = result.IsBooleanValue( lessThan ) && lessThan;
+	} else {
+		// otherwise, rank them by their type numbers
+		lessThan = vt1 < vt2;
+	}
+
+	// If they aren't ranked by value, rank them by key. 
+	// This is important, because otherwise two members with the same 
+	// rank are considered to have the same rank, and when we try to
+	// erase a singlemember from the viewMembers, it will erase everything 
+	// with the same rank, whether or not they have the same key.
+	if (lessThan == 0) {
+		string key1, key2;
+		lessThan = (vm1.key < vm2.key);
+	}
+
+	return lessThan;
+}
 
 // ---------------- </implementation of ViewMember class> ------------------
 
@@ -1119,29 +1156,11 @@ GetPartitionedViewNames( vector<string>& views )
 bool ViewMemberLT::
 operator()( const ViewMember &vm1, const ViewMember &vm2 ) const
 {
-	Value				val1, val2;
-	Value::ValueType	vt1, vt2;
+	bool                lessThan;
 
-	vm1.GetRankValue( val1 );
-	vm2.GetRankValue( val2 );
+	lessThan = vm1 < vm2;
 
-	vt1 = val1.GetType( );
-	vt2 = val2.GetType( );
-
-		// if the values are of the same scalar type, or if they are both
-		// numbers, use the builtin < comparison operator
-	if( ( vt1==vt2 && vt1!=Value::CLASSAD_VALUE && vt2!=Value::LIST_VALUE ) ||
-			( vt1==Value::INTEGER_VALUE && vt2==Value::REAL_VALUE )			||
-			( vt1 == Value::REAL_VALUE && vt2 == Value::INTEGER_VALUE ) ) {
-		Value	result;
-		bool	lessThan;
-		Operation::Operate( Operation::LESS_THAN_OP, val1, val2, result );
-		return( result.IsBooleanValue( lessThan ) && lessThan );
-	}
-
-		// otherwise, rank them by their type numbers
-	return( vt1 < vt2 );
+	return lessThan;
 }
-
 
 END_NAMESPACE
