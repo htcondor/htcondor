@@ -27,6 +27,7 @@
 #include "condor_common.h"      /* for <stdio.h> */
 #include "condor_constants.h"   /* from condor_includes/ directory */
 #include "simplelist.h"         /* from condor_c++_util/ directory */
+#include "MyString.h"
 
 //
 // Local DAGMan includes
@@ -134,6 +135,10 @@ class Job {
 	inline const int GetRetries() const { return retries; }
 	const char* GetPreScriptName() const;
 	const char* GetPostScriptName() const;
+
+	bool AddPreScript( const char *cmd, MyString &whynot );
+	bool AddPostScript( const char *cmd, MyString &whynot );
+	bool AddScript( bool post, const char *cmd, MyString &whynot );
 
     Script * _scriptPre;
     Script * _scriptPost;

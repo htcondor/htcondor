@@ -243,3 +243,45 @@ Job::Add( const queue_t queue, const JobID_t jobID )
 	}
 	return _queues[queue].Append(jobID);
 }
+
+bool
+Job::AddPreScript( const char *cmd, MyString &whynot )
+{
+	return AddScript( false, cmd, whynot );
+}
+
+bool
+Job::AddPostScript( const char *cmd, MyString &whynot )
+{
+	return AddScript( true, cmd, whynot );
+}
+
+bool
+Job::AddScript( bool post, const char *cmd, MyString &whynot )
+{
+	if( !cmd || strcmp( cmd, "" ) == 0 ) {
+		whynot = "missing script name";
+		return false;
+	}
+	if( post ? _scriptPost : _scriptPre ) {
+		whynot.sprintf( "%s script already assigned (%s)",
+						post ? "POST" : "PRE", GetPreScriptName() );
+		return false;
+	}
+	Script* script = new Script( post, cmd, this );
+	if( !script ) {
+		dprintf( D_ALWAYS, "ERROR: out of memory!\n" );
+			// we already know we're out of memory, so filling in
+			// whynot will likely fail, but give it a shot...
+		whynot = "out of memory!";
+		return false;
+	}
+	if( post ) {
+		_scriptPost = script;
+	}
+	else {
+		_scriptPre = script;
+	}
+	whynot = "n/a";
+	return true;
+}
