@@ -88,10 +88,12 @@ FileTransfer::FileTransfer()
 	TransferStart = 0;
 	ClientCallback = 0;
 	TransferPipe[0] = TransferPipe[1] = -1;
-	perm_obj = NULL;
 	bytesSent = 0.0;
 	bytesRcvd = 0.0;
 	m_final_transfer_flag = FALSE;
+#ifdef WIN32
+	perm_obj = NULL;
+#endif
 }
 
 FileTransfer::~FileTransfer()
@@ -131,7 +133,10 @@ FileTransfer::~FileTransfer()
 		// and free the key as well
 		free(TransKey);
 	}	
+#ifdef WIN32
 	if (perm_obj) delete perm_obj;
+#endif
+
 }
 
 int
@@ -230,6 +235,7 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 			// no owner specified in ad
 			return 0;		
 		}
+#ifdef WIN32
 		// lookup the domain
 		char ntdomain[80];
 		char *p_ntdomain = ntdomain;
@@ -245,6 +251,7 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 			perm_obj = NULL;
 			return 0;
 		} 
+#endif
 	}
 
 	// Set InputFiles to be ATTR_TRANSFER_INPUT_FILES plus 
@@ -293,12 +300,14 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 			// apparently the executable is not in the spool dir.
 			// so we must make certain the user has permission to read
 			// this file; if so, we can record it as the Executable to send.
+#ifdef WIN32
 			if ( perm_obj && (perm_obj->read_access(buf) != 1) ) {
 				// we do _not_ have permission to read this file!!
 				dprintf(D_ALWAYS,
 					"FileTrans: permission denied reading %s\n",buf);
 				return 0;
 			}
+#endif
 			ExecFile = strdup(buf);
 		}
 		if ( !InputFiles->contains(ExecFile) )
@@ -743,7 +752,7 @@ FileTransfer::DoDownload(ReliSock *s)
 
 		if ( final_transfer || IsClient() ) {
 			sprintf(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,filename);
-
+#ifdef WIN32
 			// check for write permission on this file, if we are supposed to check
 			if ( perm_obj && (perm_obj->write_access(fullname) != 1) ) {
 				// we do _not_ have permission to write this file!!
@@ -752,6 +761,7 @@ FileTransfer::DoDownload(ReliSock *s)
 				dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 				return -1;
 			}
+#endif
 		} else {
 			sprintf(fullname,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,filename);			
 		}
@@ -975,6 +985,7 @@ FileTransfer::DoUpload(ReliSock *s)
 		// check for read permission on this file, if we are supposed to check.
 		// do not check the executable, since it is likely sitting in the SPOOL
 		// directory.
+#ifdef WIN32
 		if ( perm_obj && !is_the_executable &&
 			(perm_obj->read_access(fullname) != 1) ) {
 			// we do _not_ have permission to read this file!!
@@ -983,6 +994,7 @@ FileTransfer::DoUpload(ReliSock *s)
 			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
 			return -1;
 		}
+#endif
 
 		if ( ((bytes = s->put_file(fullname)) < 0) ) {
 			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
