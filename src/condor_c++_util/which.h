@@ -35,4 +35,6 @@
 // application might use.  That's what the 2nd parameter is for.  
 MyString which(const MyString &strFilename, const MyString &strAdditionalSearchDir = "");
 
+MyString which( const char* strFilename, const char* strAdditionalSearchDir = NULL );
+
 #endif // WHICH_H
