@@ -84,6 +84,7 @@ PrintClassAdList()
   	while( list.Next( tmpClassAd ) ) {
 		pp.Unparse( buffer, tmpClassAd );
 		cout << buffer << endl;
+		buffer = "";
   	}
 }
 
