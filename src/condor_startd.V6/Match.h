@@ -81,6 +81,7 @@ public:
 	int	send_accountant( int );	
 		// Update the given classad with any needed info from this object.
 	void update( ClassAd* );
+	void refuse_agent();
 
 		// Timer functions
 	void start_match_timer();
