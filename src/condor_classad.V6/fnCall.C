@@ -173,7 +173,7 @@ MakeFunctionCall( const string &str, vector<ExprTree*> &args )
 	FunctionCall *fc = new FunctionCall;
 	if( !fc ) {
 		vector<ExprTree*>::iterator i = args.begin( );
-		while( *i ) {
+		while(i != args.end()) {
 			delete *i;
 			i++;
 		}

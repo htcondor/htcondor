@@ -440,7 +440,7 @@ bool ClassAdParser::
 parseAdditiveExpression(ExprTree *&tree)
 {
     ExprTree 	*treeL = NULL, *treeR = NULL;
-	Operation	*newTree;
+	Operation	*newTree = NULL;
 	Lexer::TokenType	tt;
 
 	if( !parseMultiplicativeExpression(tree) ) return false;
@@ -829,7 +829,7 @@ parseArgumentList( vector<ExprTree*>& argList )
 		parseExpression( tree );
 		if( tree == NULL ) {
 			vector<ExprTree*>::iterator itr = argList.begin( );
-			while( *itr ) {
+			while(itr != argList.end()) {
 				delete *itr;
 				itr++;
 			}
@@ -970,7 +970,7 @@ parseExprList( ExprList *&list , bool full )
 				"LEX_CLOSE_BRACE or LEX_COMMA but got "+
 				string(Lexer::strLexToken(tt));
 			vector<ExprTree*>::iterator i = loe.begin( );
-			while( *i ) {
+			while(i != loe.end()) {
 				delete *i;
 				i++;
 			}
