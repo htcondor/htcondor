@@ -1,20 +1,11 @@
 SRC_DIR = $(SRC_TREE)/condor_starter
 
-#if WANT_PVM && HAS_PVM
-PVM_INCLUDE = -I../condor_pvmd/include
-PVM_SRC = pvm_user_proc.C
-PVM_OBJ = pvm_user_proc.o
-PVM_FLAG = -DLINK_PVM
-PVM_LIB = ../condor_pvmd/src/libpvm3.a
-#endif
-
 #if !DOES_CHECKPOINTING
 CKPT_FLAG = -DNO_CKPT
 #endif
 
 CFLAGS = $(STD_C_FLAGS) $(CKPT_FLAG) -DNEW_PROC
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CKPT_FLAG) -DNEW_PROC $(PVM_INCLUDE)\
-	$(PVM_FLAG) -fno-implicit-templates
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CKPT_FLAG) -DNEW_PROC -fno-implicit-templates
 
 /*
   The OS dependent files are the same for Ultrix 4.2 and Ultrix 4.3, so
@@ -41,9 +32,9 @@ CLASS_LIB_OBJ = alarm.o state_machine_driver.o name_tab.o
 #endif
 
 PORTABLE_SRC = $(CLASS_LIB_SRC) signals.C starter.C \
-	user_proc.C starter.toy.C tables.C $(PVM_SRC)
+	user_proc.C starter.toy.C tables.C 
 PORTABLE_OBJ = $(CLASS_LIB_OBJ) signals.o starter.o \
-	user_proc.o tables.o $(PVM_OBJ) ../condor_syscall_lib/file_stream.o 
+	user_proc.o tables.o ../condor_syscall_lib/file_stream.o 
 
 NON_PORTABLE_SRC = NON_POSIX.C resource_limits.$(OS).C analyze_exec.$(OS).C \
 	analyze_core.$(OS).C
@@ -69,14 +60,13 @@ REMOTE_SYSCALL_LIB = \
 	$(CLASS_LIB) \
 	$(CLASSAD_LIB) \
 	$(UTIL_LIB) \
-	$(IO_LIB) \
-	$(PVM_LIB)
+	$(IO_LIB) 
 
 #else
 #if IS_R6000_AIX32 
-REMOTE_SYSCALL_LIB = ../condor_$(SYSCALL_LIB)/libremote.a $(PVM_LIB)
+REMOTE_SYSCALL_LIB = ../condor_$(SYSCALL_LIB)/libremote.a 
 #else
-REMOTE_SYSCALL_LIB = ../condor_$(SYSCALL_LIB)/libremote.a $(UTIL_LIB) $(IO_LIB) $(PVM_LIB)
+REMOTE_SYSCALL_LIB = ../condor_$(SYSCALL_LIB)/libremote.a $(UTIL_LIB) $(IO_LIB) 
 #endif
 #endif
 
