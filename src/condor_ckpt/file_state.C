@@ -1201,7 +1201,7 @@ extern "C" {
 
 off_t lseek( int fd, off_t offset, int whence )
 {
-        int     rval;
+        off_t     rval;
         int     user_fd;
         int use_local_access = FALSE;
 
@@ -1210,8 +1210,9 @@ off_t lseek( int fd, off_t offset, int whence )
 	if(MappingFileDescriptors()) {
 		File *f = FileTab->getFile(fd);
 		if( BufferGlueActive(f) ) {
+			rval = BufferGlueSeek( f, offset, whence );
 			condor_restore_sigmask(sigs);
-			return BufferGlueSeek( f, offset, whence );
+			return rval;
 		}
 	}
 
@@ -1231,7 +1232,7 @@ off_t lseek( int fd, off_t offset, int whence )
 
 	condor_restore_sigmask(sigs);
 
-        return (off_t)rval;
+        return rval;
 }
 
 #if defined( HAS_64BIT_SYSCALLS )
@@ -1240,7 +1241,7 @@ off_t lseek( int fd, off_t offset, int whence )
 offset_t
 llseek( int fd, offset_t offset, int whence )
 {
-        int     rval;
+        offset_t     rval;
         int     user_fd;
         int use_local_access = FALSE;
 
@@ -1249,8 +1250,9 @@ llseek( int fd, offset_t offset, int whence )
 	if(MappingFileDescriptors()) {
 		File *f = FileTab->getFile(fd);
 		if( BufferGlueActive(f) ) {
+			rval = BufferGlueSeek( f, offset, whence );
 			condor_restore_sigmask(sigs);
-			return BufferGlueSeek( f, offset, whence );
+			return rval;
 		}
 	}
 
@@ -1265,17 +1267,20 @@ llseek( int fd, offset_t offset, int whence )
         if( LocalSysCalls() || use_local_access ) {
                 rval = syscall( SYS_llseek, user_fd, offset, whence );
         } else {
-                rval = REMOTE_syscall( CONDOR_llseek, user_fd, offset, whence );
+                rval = REMOTE_syscall( CONDOR_lseek, user_fd, (off_t)offset, whence );
         }
 
 	condor_restore_sigmask(sigs);
         return (offset_t)rval;
 }
+#endif /* SYS_llseek */
+
+#if defined(SYS_llseek) || defined(SYS_lseek64)
 
 off64_t
 lseek64( int fd, off64_t offset, int whence )
 {
-        int     rval;
+        off64_t     rval;
         int     user_fd;
         int use_local_access = FALSE;
 
@@ -1284,8 +1289,9 @@ lseek64( int fd, off64_t offset, int whence )
 	if(MappingFileDescriptors()) {
 		File *f = FileTab->getFile(fd);
 		if( BufferGlueActive(f) ) {
-		    	condor_restore_sigmask(sigs);
-			return BufferGlueSeek( f, offset, whence );
+			rval  = BufferGlueSeek( f, offset, whence );
+		   	condor_restore_sigmask(sigs);
+			return rval;
 		}
 	}
 
@@ -1298,16 +1304,30 @@ lseek64( int fd, off64_t offset, int whence )
         }
 
         if( LocalSysCalls() || use_local_access ) {
-                rval = syscall( SYS_llseek, user_fd, offset, whence );
+
+#if defined(SYS_llseek)
+/*                rval = syscall( SYS_llseek, user_fd, offset, whence );*/
+				/* This SYS_lseek stuff is a temporary measure until I figure
+					out why I can't use the above line. -pete 11/19/99 */
+                rval = syscall( SYS_lseek, user_fd, (off_t)offset, whence );
+#else /* defined (SYS_lseek64) */
+				/* if you disassemble the lseek64 call under irix 6.5, you
+					will find that it actually calls SYS_lseek under the
+					covers. It is prolly one of those niceties that the
+					IRIX OS supplies for your convenience. Stupid damned
+					purple macintosh. -pete 11/17/99 */
+                rval = syscall( SYS_lseek, user_fd, (off_t)offset, whence );
+#endif
+				
         } else {
-                rval = REMOTE_syscall( CONDOR_lseek64, user_fd, offset, whence );
+                rval = REMOTE_syscall( CONDOR_lseek, user_fd, (off_t)offset, whence );
         }
 
 	condor_restore_sigmask(sigs);
 
-        return (off64_t)rval;
+        return rval;
 }
-#endif /* SYS_llseek */
+#endif /* SYS_llseek || SYS_lseek64*/
 
 #endif /* HAS_64BIT_SYSCALLS */
 
@@ -1322,8 +1342,9 @@ ssize_t read( int fd, void *buf, size_t len )
 	if(MappingFileDescriptors()) {
 		File *f = FileTab->getFile(fd);
 		if( BufferGlueActive(f) ) {
-			return BufferGlueRead( f, (char *)buf, len );
+			rval =  BufferGlueRead( f, (char *)buf, len );
 			condor_restore_sigmask(sigs);
+			return (ssize_t)rval;
 		}
 	}
 
@@ -1357,8 +1378,9 @@ ssize_t write( int fd, const void *buf, size_t len )
 	if(MappingFileDescriptors()) {
 		File *f = FileTab->getFile(fd);
 		if( BufferGlueActive(f) ) {
-			return BufferGlueWrite( f, (char *)buf, len );
+			rval = BufferGlueWrite( f, (char *)buf, len );
 			condor_restore_sigmask(sigs);
+			return (ssize_t)rval;
 		}
 	}
 
@@ -1401,6 +1423,7 @@ int	_condor_open( const char *path, int flags, va_list ap )
 	int		status = IS_LOCAL;
 	int		is_remote = FALSE;
 	sigset_t omask;
+	int sysopen = SYS_open;
 
 	/* we don't want to be interrupted by a checkpoint between when
 	   we open this file and we mark it opened in our local data
@@ -1421,8 +1444,16 @@ int	_condor_open( const char *path, int flags, va_list ap )
 		flags = flags | O_RDWR;
 	}
 
+/* this is temporary until I fix it well */
+#if defined (HAS_64BIT_SYSCALLS)
+#if defined (Solaris26) || defined (Solaris27)
+/*	sysopen = SYS_open64;*/
+/*	flags |= O_LARGEFILE;*/
+#endif
+#endif
+
 	if( LocalSysCalls() ) {
-		fd = syscall( SYS_open, path, flags, creat_mode );
+		fd = syscall( sysopen, path, flags, creat_mode );
 		dprintf(D_FULLDEBUG, "_condor_open_1: fd=%d(%s)\n", fd, path);
 		strcpy( local_path, path );
 	} else {
@@ -1454,7 +1485,7 @@ int	_condor_open( const char *path, int flags, va_list ap )
 		  case IS_NFS:
 		  case IS_AFS:
 		  case IS_LOCAL:
-			fd = syscall( SYS_open, local_path, flags, creat_mode );
+			fd = syscall( sysopen, local_path, flags, creat_mode );
 			if( fd >= 0 ) {
 				break;
 			} // else fall through, and try by remote syscalls anyway
@@ -1568,6 +1599,8 @@ openx( const char *path, int flags, mode_t creat_mode, int ext )
 int
 close( int fd )
 {
+	int ret;
+
 	sigset_t sigs = condor_block_signals();
 
 	dprintf(D_FULLDEBUG, "Entering close(): fd=%d\n", fd);
@@ -1591,8 +1624,9 @@ close( int fd )
 		// successfully, to allow sockets and pipes to be used
 		// successfully between checkpoints.
 		if (rval < 0 && MyImage.GetMode() == STANDALONE) {
+			ret = syscall( SYS_close, fd );
 			condor_restore_sigmask(sigs);
-			return syscall( SYS_close, fd );
+			return ret;
 		}
 		dprintf(D_FULLDEBUG, "standalone close: fd=%d, rval = %d\n", fd, rval);
 		dprintf(D_FULLDEBUG, "Leaving close(): closing fd = %d\n", fd);
@@ -1603,13 +1637,15 @@ close( int fd )
 		if( LocalSysCalls() ) {
 			dprintf(D_FULLDEBUG, 
 				"Leaving close(): closing fd = %d\n", fd);
+			ret = syscall( SYS_close, fd );
 			condor_restore_sigmask(sigs);
-			return syscall( SYS_close, fd );
+			return ret;
 		} else {
 			dprintf(D_FULLDEBUG, 
 				"Leaving close(): remote closing fd = %d\n", fd);
+			ret = REMOTE_syscall( CONDOR_close, fd );
 			condor_restore_sigmask(sigs);
-			return REMOTE_syscall( CONDOR_close, fd );
+			return ret;
 		}
 	}
 }
@@ -1645,14 +1681,16 @@ dup( int old )
 	omask = condor_block_signals();
 	if( MappingFileDescriptors() ) {
 		rval = FileTab->DoDup( old );
-		condor_restore_sigmask(omask);
 		// In standalone mode, this fd might be a socket or pipe which
 		// we didn't catch.  Allow the application to dup it
 		// successfully, to allow sockets and pipes to be used
 		// successfully between checkpoints.
 		if (rval < 0 && MyImage.GetMode() == STANDALONE) {
-			return syscall( SYS_dup, old );
+			rval = syscall( SYS_dup, old );
+			condor_restore_sigmask(omask);
+			return rval;
 		}
+		condor_restore_sigmask(omask);
 		return rval;
 	}
 
@@ -1724,6 +1762,7 @@ socket( int addr_family, int type, int protocol )
 
 	if( MappingFileDescriptors() ) {
 		rval =  FileTab->DoSocket( addr_family, type, protocol );
+		condor_restore_sigmask(sigs);
 		return rval;
 	}
 
