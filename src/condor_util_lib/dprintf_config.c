@@ -21,8 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
 
 /************************************************************************
 **
@@ -31,12 +29,6 @@
 ************************************************************************/
 
 #include "condor_common.h"
-
-#include <malloc.h>
-#undef va_start
-#undef va_end
-#include <varargs.h>
-
 #include "condor_sys.h"
 #include "debug.h"
 #include "except.h"
