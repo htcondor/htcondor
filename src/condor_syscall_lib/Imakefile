@@ -533,7 +533,7 @@ clean::
 clean::
 	rm -f lex.yy.c y.tab.c y.tab.h switches.C senders.C receivers.C *.o
 
-depend_target($(SRC))
+/*depend_target($(SRC)) */
 
 IMPORT_LINKS = ../../config/import_links
 import(../condor_io,$(IO_OBJ))
@@ -587,3 +587,7 @@ clean::
 
 html:
 
+DEPEND_SRC = C_getenv.c extern_path.c file_stream.c getcwd.c remote_startup.c \
+remote_syscall.C switches.special.C syscall_connect.C xfer_file.c
+
+depend_source_target($(DEPEND_SRC))
