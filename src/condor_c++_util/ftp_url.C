@@ -28,7 +28,6 @@
 
 #include "condor_common.h"
 #include "condor_fix_socket.h"
-#include <netinet/in.h>
 #include "url_condor.h"
 #include "condor_debug.h"
 
@@ -41,7 +40,7 @@
 
 
 #define FTP_PORT	21
-static char *uname = "anonymous";
+static char *username = "anonymous";
 static char *passwd = "CondorURLFTP@localhost.edu";
 
 #define FTP_LOGIN_RESP	220
@@ -140,7 +139,7 @@ int open_ftp( const char *name, int flags, size_t n_bytes )
 		return -1;
 	}
 	
-	sprintf(ftp_cmd, "USER %s\n", uname);
+	sprintf(ftp_cmd, "USER %s\n", username);
 	write(sock_fd, ftp_cmd, strlen(ftp_cmd));
 	if (get_ftpd_response(sock_fd, FTP_PASSWD_RESP) == 0) {
 		return -1;
