@@ -33,7 +33,7 @@ extern "C" {
 
 // returns pointer one after final '\' or '//' character in path or returns
 // path if no '\' or '//' is found
-char *basename(char *path);
+char *basename(const char *path);
 
 #if defined(__cplusplus)
 }
