@@ -1,3 +1,7 @@
+09/24/04 V6_7_2-branch
+   Branch for the 6.7.2 release.  This tag includes all of the
+   V6_7_CODE module, and was created from the V6_7_2-root tag.
+
 09/23/04 V6_7-post_merge-V6_6-merge-22
    The end of a merge of V6_6-branch into V6_7-branch.
 
