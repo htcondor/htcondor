@@ -1,10 +1,11 @@
 
-- ASSERT() calls should be removed in many places and return errors
-instead, which higher levels react to properly... so DAGMan has a
-chance to generate a rescue DAG in these circumstances, instead of
-dying...
+- ASSERT() calls should be removed in some places, and errors returned
+instead, so that higher levels can react and abort gracefully (e.g.,
+generate a rescue DAG, etc.)
 
 - maxjobs may be buggy (see litvin emails)
+
+- change command-line args to use strcasecmp() instead of strcmp()
 
 - document, document, document
   - asynchronous PRE/POST
