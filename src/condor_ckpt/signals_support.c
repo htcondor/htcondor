@@ -26,7 +26,7 @@
 ** 
 */ 
 
-#if !defined(SUNOS41) && !defined(OSF1)
+#if !defined(SUNOS41) && !defined(OSF1) && !defined(ULTRIX43)
 #define _POSIX_SOURCE
 #endif
 
@@ -211,10 +211,10 @@ struct sigvec *ovec;
 	if( ! MappingFileDescriptors() ) {
 #if defined(HPUX9)
 			rval = syscall( SYS_sigvector, sig, vec, ovec );
-#elif defined(SYS_sigvec) && !defined(SUNOS41)
-			rval = syscall( SYS_sigvec, sig, vec, ovec );
-#else
+#elif defined(SUNOS41) || defined(ULTRIX43)
 			rval = SIGVEC( sig, vec, ovec );
+#else
+			rval = syscall( SYS_sigvec, sig, vec, ovec );
 #endif
 	} else {
 		switch (sig) {
@@ -236,13 +236,13 @@ struct sigvec *ovec;
 
 #if defined(HPUX9)
 			rval = syscall( SYS_sigvector, sig, vec ? &nvec : vec, ovec );
-#elif defined(SYS_sigvec) && !defined(SUNOS41)
+#elif defined(SUNOS41) || defined(ULTRIX43)
+			rval = SIGVEC( sig, vec ? &nvec : vec, ovec );
+#else
 			/* even though SunOS 4.x has a SYS_sigvec kernel call, all the
 			 * trampoline code is setup in libc.a, not the kernel!  thus,
 			 * we cannot call syscall here on SunOS; call SIGVEC() below. */
 			rval = syscall( SYS_sigvec, sig, vec ? &nvec : vec, ovec );
-#else
-			rval = SIGVEC( sig, vec ? &nvec : vec, ovec );
 #endif
 			break;
 		}
@@ -283,11 +283,7 @@ MASK_TYPE mask;
 			 sigmask( SIGTSTP ) | sigmask(SIGCONT));
 		mask &= condor_sig_mask;
 	}
-#if defined(SYS_sigblock)
 	rval =  syscall( SYS_sigblock, mask ) & condor_sig_mask;
-#else
-	rval =  SIGBLOCK( mask ) & condor_sig_mask;
-#endif
 	return rval;
 }
 #endif
@@ -306,11 +302,7 @@ MASK_TYPE mask;
 			 sigmask( SIGTSTP ) | sigmask(SIGCONT));
 		mask &= condor_sig_mask;
 	}
-#if defined(SYS_sigpause)
 	rval =  syscall( SYS_sigpause, mask );
-#else
-	rval =  SIGPAUSE( mask );
-#endif
 	return rval;
 }
 #endif
@@ -331,11 +323,7 @@ MASK_TYPE mask;
 			 sigmask( SIGTSTP ) | sigmask(SIGCONT));
 		mask &= condor_sig_mask;
 	}
-#if defined(SYS_sigsetmask)
 	rval =  syscall( SYS_sigsetmask, mask ) & condor_sig_mask;
-#else
-	rval =  SIGSETMASK( mask ) & condor_sig_mask;
-#endif
 	return rval;
 }
 #endif
@@ -344,6 +332,12 @@ int
 sigaction( int sig, const struct sigaction *act, struct sigaction *oact )
 {
 	struct sigaction tmp, *my_act = &tmp;
+
+	if( act ) {
+		*my_act = *act;
+	} else {
+		my_act = NULL;
+	}
 
 	if ( MappingFileDescriptors() ) {		/* called by User code */
 		if ( act ) {
@@ -356,17 +350,12 @@ sigaction( int sig, const struct sigaction *act, struct sigaction *oact )
 					return -1;
 			}
 				/* block checkpointing inside users signal handler */
-			*my_act = *act;
 			sigaddset( &(my_act->sa_mask), SIGTSTP );
 			sigaddset( &(my_act->sa_mask), SIGUSR1 );
-		} else {
-			my_act = NULL;
 		}
-	} else {	/* called by Condor code */
-		my_act = act;
 	}
 
-#if !defined(SYS_sigaction) || defined(OSF1)
+#if !defined(SYS_sigaction) || defined(OSF1) || defined(ULTRIX43)
 	return SIGACTION( sig, my_act, oact);
 #else
 	return syscall(SYS_sigaction, sig, my_act, oact);
@@ -396,17 +385,13 @@ sigset_t *oset;
 			my_set = NULL;
 		}
 	}
-#if !defined(SYS_sigprocmask) || defined(OSF1)
+#if defined(OSF1) || defined(ULTRIX43)
 	SIGPROCMASK(how,my_set,oset);
 #else
 	return syscall(SYS_sigprocmask,how,my_set,oset);
 #endif
 }
 #endif
-
-#if 0	/* Beginning of OUT routines */
-#endif	/* End of OUT routines */
-
 
 #if defined (SYS_sigsuspend)
 int
@@ -423,7 +408,7 @@ const sigset_t *set;
 		sigdelset(&my_set,SIGTSTP);
 		sigdelset(&my_set,SIGCONT);
 	}
-#if !defined(SYS_sigsuspend) || defined(OSF1)
+#if defined(OSF1) || defined(ULTRIX43)
 	SIGSUSPEND(&my_set);
 #else
 	return syscall(SYS_sigsuspend,&my_set);
@@ -452,23 +437,12 @@ void (*func)(int);
 		}
 	}
 
-#if defined(SYS_signal)
-
 #if defined(VOID_SIGNAL_RETURN)
 	return ( (void (*) (int)) syscall(SYS_signal,sig,func) );
 #else
 	return ( (int (*) (int)) syscall(SYS_signal,sig,func) );
 #endif
 
-#else   /* if !defined(SYS_signal) */
-
-#if defined(VOID_SIGNAL_RETURN)
-	return ( (void (*) (int)) SIGNAL(sig,func) );
-#else
-	return ( (int (*) (int)) SIGNAL(sig,func) );
-#endif
-
-#endif
 }
 #endif
 
