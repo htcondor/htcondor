@@ -354,7 +354,7 @@ public:
 	/** Destructor. If the iterator is active, the destructor unregisters 
 	 	itself from the collection it is iterating over.
 	*/
-	~CollContentIterator( );
+	virtual ~CollContentIterator( );
 	
 	/**@name Iteration Control Methods */
 	//@{
@@ -399,7 +399,7 @@ public:
 			the last iteration operation to the iterator.  This situation may
 			have already caused the iterator to move.
 	*/
-	int  NextAd( const ClassAd *&ad );
+	virtual int NextAd( const ClassAd *&ad );
 	
 	/** Move iterator to the next classad in the collection.  (The previous
 	 	state of the iterator will be cleared.)
@@ -472,6 +472,25 @@ private:
 	ClassAdCollection			*collManager;
 	SetIterator<RankedClassAd> 	itor;
 	int							status;
+};
+
+class CollConstrContentItor : public CollContentIterator {
+public:
+	CollConstrContentItor( );
+	CollConstrContentItor( const CollConstrContentItor& );
+	CollConstrContentItor( const char *constraint );
+	CollConstrContentItor( ExprTree *constraint );
+	~CollConstrContentItor( );
+
+	bool RegisterConstraint( const char *constraint );
+	bool RegisterConstraint( ExprTree * );
+	bool RegisterQuery( ClassAd* );
+
+	int  NextAd( ) {  ClassAd *ad; return( NextAd( ad ) ); }
+	virtual int NextAd( const ClassAd *&ad );
+
+private:
+	MatchClassAd 	mad;
 };
 
 #endif
