@@ -22,6 +22,7 @@ print "\n";
 # Parse command-line args
 $submit = 1;
 $force = 0;
+$max_jobs = 0;
 $notification = "";
 while( $_ = shift ) {
   SWITCH: {	    
@@ -52,9 +53,22 @@ while( $_ = shift ) {
 	}
 	last SWITCH;
     }
+    if( /^-m.*/ ) {
+	$max_jobs = shift;
+	if( ! $max_jobs ) {
+	    &usage();
+	}
+	if( !($max_jobs =~ /^\d+$/) ) {
+	    print "ERROR: Invalid argument \"$max_jobs\" to -maxjobs.\n",
+	    "You must specify a number.\n\n";
+	    &usage();
+	}
+	last SWITCH;
+    }
     $dagfile = $_;
   }
 }
+
 if( ! $dagfile ) {
     &usage();
 } else {
@@ -63,6 +77,7 @@ if( ! $dagfile ) {
     $debug_log = "$dagfile.dagman.out";
     $sched_log = "$dagfile.dagman.log";
     $sub_file = "$dagfile.condor.sub";
+    $rescue_file = "$dagfile.rescue";
 }
 
 # Figure out if condor_dagman is installed, and if so, where. 
@@ -89,6 +104,7 @@ if( $job_log ) {
     $job_log = &parse_dag_file();
     print "Done.\n";
 }
+
 
 # Create the submit file used to submit DAGMan as a scheduler universe
 # job to Condor. 
@@ -124,6 +140,7 @@ sub usage {
     print "    -no_submit          (DAG is not submitted to Condor)\n";
     print "    -verbose            (Verbose error messages from condor_submit_dag)\n";
     print "    -force              (Overwrite files condor_submit_dag uses if they exist)\n";
+    print "    -maxjobs number     (Maximum number of jobs ever submitted at once)\n";
     print "    -log filename       (Specify the log file shared by all jobs in the DAG)\n";
     print "    -notification value (Determines how much email you get from Condor\n";
     print "         about the life of the condor_dagman job.  'value' must be\n";
@@ -133,8 +150,9 @@ sub usage {
 }
 
 sub parse_dag_file {
-    local( %cmd_files, %log_names, $log_name, $had_error, $len, $max );
+    local( %cmd_files, %log_names, $log_name, $had_error, $did_one, $len, $max );
     $had_error = 0;
+    $did_one = 0;
     open( DAG, "<$dagfile" ) || die "Can't open $dagfile for reading: $!\n";
     while( <DAG> ) {
 	if( /^job\s*(\S*)\s*(\S*)$/i ) {
@@ -165,6 +183,7 @@ sub parse_dag_file {
 	    }
 	}
 	close FOO;
+	$did_one = 1;
     }
     foreach $file (sort keys %log_names ) {
 	$len = length $file;
@@ -188,11 +207,17 @@ sub parse_dag_file {
 	}
 	exit( 1 );
     }
+    if( ! $did_one ) {
+	print "\nERROR: Your input file, \"$dagfile\" contains no jobs.\n",
+	"Please verify that this is really your DAG input file.\n";
+	exit( 1 );
+    }
     return $log_name;
 }
 
 
 sub write_submit_file {
+    local( $args );
     local( $path ) = $ENV{PATH};
 
     open( SUBMIT, ">$sub_file" ) 
@@ -205,7 +230,13 @@ sub write_submit_file {
     print SUBMIT "output\t\t= $debug_log\n";
     print SUBMIT "error\t\t= $lib_log\n";
     print SUBMIT "log\t\t= $sched_log\n";
-    print SUBMIT "arguments\t= -f -t -l . -Debug 3 -Lockfile $dagfile.lock -Condorlog $job_log -Dag $dagfile\n";
+    $args = "-f -t -l . -Debug 3 -Lockfile $dagfile.lock";
+    $args = $args . " -Condorlog $job_log -Dag $dagfile";
+    $args = $args . " -Rescue $rescue_file";
+    if( $max_jobs ) {
+	$args = $args . " -MaxJobs $max_jobs";
+    }
+    print SUBMIT "arguments\t= $args\n";
     print SUBMIT "environment\t= PATH=$path\n";
     if( $notification ) {
 	print SUBMIT "notification\t= $notification\n";
@@ -223,6 +254,7 @@ sub check_output_files() {
 	unlink( "$debug_log" );
 	unlink( "$sched_log" );
 	unlink( "$lib_log" );
+	unlink( "$rescue_file" );
     } else { 
 	if( -f $sub_file ) {
 	    $had_error = 1; 
@@ -240,8 +272,17 @@ sub check_output_files() {
 	    $had_error = 1; 
 	    print "ERROR: \"$sched_log\" already exists.\n";
 	}
+	if( -f $rescue_file ) {
+	    $had_error = 1;
+	    print "ERROR: \"$rescue_file\" already exists.\n",
+	    "  You may want to resubmit your DAG using that file, instead of ",
+	    "\"$dagfile\".\n",
+	    "  Look at the Condor manual for details about DAG rescue files.\n",
+	    "  Please investigate and either remove \"$rescue_file\",\n",
+	    "  or use that as the input to condor_submit_dag.\n";
+	}
 	if( $had_error ) {
-	    print "Some file(s) needed by condor_submit_dag already exist.  ";
+	    print "\nSome file(s) needed by condor_submit_dag already exist.  ";
 	    print "Either rename them,\nor use the \"-f\" option to force them ";
 	    print "to be overwritten.\n";
 	    exit( 1 );
