@@ -82,7 +82,7 @@ int Buf::write(
 
     nw = condor_write(sockd, &_dta[num_touched()], sz , timeout);
 	if (nw < 0){
-		dprintf(D_ALWAYS,"Buf :: write : condor_write failed\n");
+		dprintf( D_ALWAYS, "Buf::write(): condor_write() failed\n" );
 		return -1;
 	}
 
@@ -148,7 +148,7 @@ int Buf::read(
 
     nr = condor_read(sockd,&_dta[num_used()],sz,timeout);	
 	if (nr == -1) {
-		dprintf(D_ALWAYS,"Buf::read : condor_read failed\n");
+		dprintf( D_ALWAYS, "Buf::read(): condor_read() failed\n" );
 		return -1;
 	}
 
