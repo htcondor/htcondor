@@ -62,6 +62,8 @@
 
 #define HAS_STATIC			NO
 
+#define HAS_UTMPX			YES
+
 #define StaticFlag /**/
 #define UnixName /unix			/* pathname of the system executable */
 #define PsAllFlag /sbin/ps -ef		/* "Ps" flag when you want everything */
