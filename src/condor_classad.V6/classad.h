@@ -466,6 +466,8 @@ class ClassAd : public ExprTree
 //      ExprTree*	Lookup(const char*) const;	// look up an expression
 
 		int         LookupString(const char *, char *); 
+		int         LookupString(const char *, char *, int); //uses strncpy
+		int         LookupString (const char *name, char **value);
         int         LookupInteger(const char *, int &);
         int         LookupFloat(const char *, float &);
         int         LookupBool(const char *, int &);

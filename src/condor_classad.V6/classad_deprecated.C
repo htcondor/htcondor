@@ -138,6 +138,34 @@ LookupString( const char *name, char *value )
 } 
 
 int ClassAd::
+LookupString(const char *name, char *value, int max_len)
+{
+	string strVal;
+	if( !EvaluateAttrString( string( name ), strVal ) ) {
+		return 0;
+	}
+	strncpy( value, strVal.c_str( ), max_len );
+	return 1;
+}
+
+int ClassAd::
+LookupString (const char *name, char **value)
+{
+	string strVal;
+	if( !EvaluateAttrString( string( name ), strVal ) ) {
+		return 0;
+	}
+	const char *strValCStr = strVal.c_str( );
+	*value = (char *) malloc(strlen(strValCStr) + 1);
+	if (*value != NULL) {
+		strcpy(*value, strValCStr);
+		return 1;
+	}
+
+	return 0;
+}
+
+int ClassAd::
 LookupInteger( const char *name, int &value )
 {
 	bool    boolVal;
