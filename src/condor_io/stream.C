@@ -1834,7 +1834,7 @@ Stream::allow_one_empty_message()
 
 
 bool 
-Stream::get_encryption()
+Stream::get_encryption() const
 {
     return (crypto_ != 0);
 }
@@ -1912,6 +1912,16 @@ bool Stream::set_MD_mode(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId)
     }
 
     return init_MD(mode, mdKey_, keyId);
+}
+
+const KeyInfo& Stream :: get_crypto_key() const
+{
+#if defined(CONDOR_ENCRYPTION)
+    if (crypto_) {
+        return crypto_->get_key();
+    }
+#endif
+    assert(0);
 }
 
 bool 
