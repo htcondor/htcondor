@@ -127,7 +127,7 @@ public:
 	int intValue;
 
 //    if (Parse(Constraint.Value(), tree) != 0) {
-	if( !parser.ParseExpression( string( Constraint.Value( ) ), tree ) ) {
+	if( !parser.ParseExpression( std::string( Constraint.Value( ) ), tree ) ) {
 		return false;
     }
 

@@ -39,6 +39,8 @@
 #include "daemon_types.h"
 #include "nullfile.h"
 
+using namespace std;
+
 #define COMMIT_FILENAME ".ccommit.con"
 
 // Filenames are case insensitive on Win32, but case sensitive on Unix

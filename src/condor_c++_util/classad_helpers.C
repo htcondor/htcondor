@@ -30,6 +30,8 @@
 #include "condor_attributes.h"
 #include "sig_name.h"
 
+using namespace std;
+
 extern "C" {
 
 /*

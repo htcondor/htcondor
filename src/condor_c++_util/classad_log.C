@@ -30,6 +30,7 @@
 #include "condor_debug.h"
 #include "util_lib_proto.h"
 
+using namespace std;
 
 // explicitly instantiate the HashTable template
 template class HashTable<HashKey, ClassAd*>;

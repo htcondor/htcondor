@@ -32,6 +32,7 @@
 #include "internet.h"
 #include "daemon.h"
 
+using namespace std;
 
 #define XDR_ASSERT(x) {if (!(x)) return Q_COMMUNICATION_ERROR;}
 

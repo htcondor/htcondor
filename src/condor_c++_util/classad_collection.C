@@ -26,6 +26,7 @@
 
 #include "classad_collection.h"
 
+using namespace std;
 
 //----------------------------------------------------------------------------------
 // Constructor (initialization)

@@ -246,7 +246,7 @@ writeEvent (ULogEvent *event)
 		dprintf( D_ALWAYS, "Asked to write event of number %d.\n",
 				 event->eventNumber);
 		ClassAd* eventAd = event->toClassAd();
-		string adXML;
+		std::string adXML;
 		if (!eventAd) {
 			success = FALSE;
 		} else {

@@ -262,7 +262,7 @@ ClassAd* user_job_policy(ClassAd *jad)
 void EmitExpression(unsigned int mode, const char *attr, ExprTree* attr_expr)
 {
 	ClassAdUnParser unp;
-	string buf_string;
+	std::string buf_string;
 	char buf[8192]; /* PrintToStr is dumb, hope this is big enough */
 	
 	if (attr_expr == NULL)

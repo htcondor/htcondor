@@ -36,7 +36,7 @@ void SetAttrDirty(ClassAd *ad, char *attr)
 	//char dirty[DIRTY_ATTR_SIZE];
 	StringList sl;
 	char *tmp, *tmp2;
-    string s;
+    std::string s;
     Value v;
 
 	if (!ad->EvaluateAttrString(ATTR_DIRTY_ATTR_LIST, s))
@@ -76,7 +76,7 @@ void SetAttrDirty(ClassAd *ad, char *attr)
 
     v.SetStringValue(tmp2);
 	ad->Delete(ATTR_DIRTY_ATTR_LIST);
-	ad->Insert( string(ATTR_DIRTY_ATTR_LIST), Literal::MakeLiteral(v));
+	ad->Insert( std::string(ATTR_DIRTY_ATTR_LIST), Literal::MakeLiteral(v));
 
 	free(tmp);
 	free(tmp2);
@@ -89,7 +89,7 @@ void SetAttrClean(ClassAd *ad, char *attr)
 	//char dirty[DIRTY_ATTR_SIZE];
 	StringList sl;
 	char *tmp, *tmp2;
-    string s;
+    std::string s;
     Value v;
 
 	/* no dirty list means this is automatically clean */
@@ -136,7 +136,7 @@ void SetAttrClean(ClassAd *ad, char *attr)
     v.Clear();
     v.SetStringValue(tmp2);
 	ad->Delete(ATTR_DIRTY_ATTR_LIST);
-	ad->Insert( string(ATTR_DIRTY_ATTR_LIST), Literal::MakeLiteral(v));
+	ad->Insert( std::string(ATTR_DIRTY_ATTR_LIST), Literal::MakeLiteral(v));
 
 	free(tmp);
 	free(tmp2);
@@ -147,7 +147,7 @@ bool IsAttrDirty(ClassAd *ad, char *attr)
 {
 	//char dirty[DIRTY_ATTR_SIZE];
 	StringList sl;
-    string v;
+    std::string v;
 
 	/* no dirty list means this is automatically clean */
 	if (!ad->EvaluateAttrString(ATTR_DIRTY_ATTR_LIST, v))
@@ -186,7 +186,7 @@ void EmitDirtyAttrList(int mode, ClassAd *ad)
 {
 	StringList sl;
 	//char dirty[DIRTY_ATTR_SIZE];
-    string v;
+    std::string v;
 
 	if (AnyAttrDirty(ad) == true)
 	{

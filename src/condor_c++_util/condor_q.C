@@ -31,6 +31,8 @@
 #include "condor_config.h"
 #include "CondorError.h"
 
+using namespace std;
+
 // specify keyword lists; N.B.  The order should follow from the category
 // enumerations in the .h file
 static const char *intKeywords[] =

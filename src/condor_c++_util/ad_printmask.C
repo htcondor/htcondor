@@ -24,6 +24,8 @@
 #include "ad_printmask.h"
 #include "escapes.h"
 
+using namespace std;
+
 static char *new_strdup (const char *);
 
 ClassAdPrintMask::

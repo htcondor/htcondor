@@ -29,6 +29,8 @@
 #include "condor_common.h"
 #include "classadList.h"
 
+using namespace std;
+
 static	SortFunctionType SortSmallerThan;
 static	void* SortInfo;
 

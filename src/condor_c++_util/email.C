@@ -86,7 +86,7 @@ email_user_open( ClassAd *jobAd, const char *subject )
 			// If that's not defined, we look for UID_DOMAIN in the
 			// job ad
 		if( ! domain ) {
-            string s;
+            std::string s;
             if (jobAd->EvaluateAttrString( ATTR_UID_DOMAIN, s )) {
                 domain = strdup(s.data());
             }
