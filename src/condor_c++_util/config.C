@@ -392,36 +392,42 @@ expand_macro( const char *value, BUCKET **table, int table_size, char *self )
 	char *left, *name, *tvalue, *right;
 	char *rval;
 
-	if (!self)
-	while( get_env(tmp, &left, &name, &right) ) {
-		tvalue = getenv(name);
-		if( tvalue == NULL ) {
-			EXCEPT("Can't find %s in environment!",name);
+	bool all_done = false;
+	while( !all_done ) {		// loop until all done expanding
+		all_done = true;
+
+		if( !self && get_env(tmp, &left, &name, &right) ) {
+			all_done = false;
+			tvalue = getenv(name);
+			if( tvalue == NULL ) {
+				EXCEPT("Can't find %s in environment!",name);
+			}
+
+			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
+											  strlen(right) + 1));
+			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
+			FREE( tmp );
+			tmp = rval;
 		}
 
-		rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
-										  strlen(right) + 1));
-		(void)sprintf( rval, "%s%s%s", left, tvalue, right );
-		FREE( tmp );
-		tmp = rval;
-	}
+		if( get_var(tmp, &left, &name, &right, self) ) {
+			all_done = false;
+			tvalue = lookup_macro( name, table, table_size );
+			if( tvalue == NULL ) {
+					// FREE( tmp );
+					// return( NULL );
+					// Returning NULL here is bad news.  If there is a macro
+					// not defined, we should EXCEPT so a human knows there is
+					// a faulty expression in the config file.
+				EXCEPT("Cannot expand macro %s!",name);
+			}
 
-	while( get_var(tmp, &left, &name, &right, self) ) {
-		tvalue = lookup_macro( name, table, table_size );
-		if( tvalue == NULL ) {
-			// FREE( tmp );
-			// return( NULL );
-			// Returning NULL here is bad news.  If there is a macro
-			// not defined, we should EXCEPT so a human knows there is
-			// a faulty expression in the config file.
-			EXCEPT("Cannot expand macro %s!",name);
+			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
+											  strlen(right) + 1));
+			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
+			FREE( tmp );
+			tmp = rval;
 		}
-
-		rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
-										  strlen(right) + 1));
-		(void)sprintf( rval, "%s%s%s", left, tvalue, right );
-		FREE( tmp );
-		tmp = rval;
 	}
 
 	// Now, deal with the special $(DOLLAR) macro.
