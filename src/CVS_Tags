@@ -1,3 +1,9 @@
+12/31/04 V6_7-credd2-branch
+   A branch that has fixes/improvements of the CredD and associated tools
+   and data objects.
+   Created off V6_7-branch at V6_7-credd2-root.
+   Jeff Weber or Carey Kireyev will know when to merge it back in.
+
 12/30/04 V6_7-condorg_nordugrid-branch
    A branch that has implementation of Condor-G submitting to NorduGrid
    batch system.
