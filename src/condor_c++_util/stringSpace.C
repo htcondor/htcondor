@@ -133,6 +133,8 @@ getCanonical (char *str, int adopt)
             default:
                 break;
 		}
+		// increment reference count
+		strTable[index].refCount++;
 		return index;
 	}
 
