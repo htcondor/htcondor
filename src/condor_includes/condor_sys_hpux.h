@@ -52,11 +52,15 @@
 #	define WCOREFLG 0x0200
 #endif
 
+/* Define all the 64-bit types and structures we need. */
+#include "condor_hpux_64bit_types.h"
 
 /****************************************
 ** Condor-specific system definitions
 ****************************************/
 #define HAS_U_TYPES				1
 #define SIGISMEMBER_IS_BROKEN	1
+#define HAS_64BIT_STRUCTS		1
+#define HAS_64BIT_SYSCALLS		1
 
 #endif /* CONDOR_SYS_HPUX_H */
