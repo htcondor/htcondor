@@ -610,6 +610,38 @@ periodic expressions once every 300 seconds.  The period of
 these evaluations can be adjusted by setting the
 \MacroNI{PERIODIC\_EXPR\_INTERVAL} configuration macro.
 
+%%%%%%%%%%%%%%%%%%%
+%% noop
+%%%%%%%%%%%%%%%%%%%
+
+\item[noop\_job = $<$ClassAd Boolean Expression$>$]
+\index{submit commands!noop}
+If this expression is true, the job is immediately removed from the queue
+and Condor makes no attempt at running the job. The userlog will show a
+submit event and a completetion event, with exit code 0, unless 
+the user specifies a different signal or exit code.
+
+%%%%%%%%%%%%%%%%%%%
+%% noop_exit_signal
+%%%%%%%%%%%%%%%%%%%
+
+\item[noop\_job\_exit\_signal = $<$signal number$>$]
+\index{submit commands!noop\_job\_exit\_signal}
+If a job has specificed it is to be a noop, this setting allows the job
+to say what signal the userlog event will show the job having terminated
+with. If not present, the job will not show as having terminated with a
+signal
+
+%%%%%%%%%%%%%%%%%%%
+%% noop_exit_code
+%%%%%%%%%%%%%%%%%%%
+
+\item[noop\_job\_exit\_code = $<$return value$>$]
+\index{submit commands!noop\_job\_exit\_code}
+If a job has specificed it is to be a noop, this setting allows the job
+to say what return value the userlog event will show the job having terminated
+with. If not present, the job will as having terminated with status 0. This 
+will override any setting for the noop exit signal.
 
 %%%%%%%%%%%%%%%%%%%
 %% priority
