@@ -1497,6 +1497,10 @@ SetJobStatus()
 		InsertJobExpr (buffer);
 	}
 
+	(void) sprintf( buffer, "%s = %d", ATTR_ENTERED_CURRENT_STATUS,
+					(int)time(0) );
+	InsertJobExpr( buffer );
+
 	if( hold ) {
 		free(hold);
 	}
