@@ -8,7 +8,7 @@ CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
 SYSPARAM = sysparam_sun
 #endif
 #if IS_ALPHA_OSF1
-SYSPARAM = sysparam_alpha
+SYSPARAM = sysparam_osf1
 #endif
 #if IS_MIPS_ULTRIX42 || IS_MIPS_ULTRIX43
 SYSPARAM = sysparam_ultrix
