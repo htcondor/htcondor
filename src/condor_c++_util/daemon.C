@@ -591,7 +591,13 @@ Daemon::getCmInfo( const char* subsys, int port )
 		local_host = param( buf );
 	}
 
-	if( ! host && local_host ) {
+	if( ! local_host ) {
+			// Try the generic CM_IP_ADDR setting (subsys-specific
+			// settings should take precedence over this). 
+		local_host = param( "CM_IP_ADDR" );
+	}
+
+	if( local_host && ! host ) {
 		host = local_host;
 	}
 	if( local_host && remote_host && !strcmp(local_host, remote_host) ) { 
