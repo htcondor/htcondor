@@ -22,6 +22,8 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "common.h"
+#include "classad.h"
 #include "intervalTree.h"
 #include <set>
 
@@ -46,9 +48,9 @@ MakeIntervalTree( const OneDimension& intervals )
 
 	// 1.Sort the endpoints, and eliminate duplicates
 	for( itr = intervals.begin( ); itr != intervals.end( ); itr++ ) {
-		tmpL = itr->second.lower;
+		itr->second.lower.IsNumber( tmpL );
 		endPoints.insert( tmpL );
-		tmpR = itr->second.upper;
+		itr->second.upper.IsNumber( tmpR );
 		endPoints.insert( tmpR );
 	}
 	unsigned int numPoints = endPoints.size( );	// number of distinct endpoints
@@ -99,8 +101,8 @@ MakeIntervalTree( const OneDimension& intervals )
 	// 3. Insert intervals into secondary structure
 	for( itr = intervals.begin( ); itr != intervals.end( ); itr++ ) {
 		int index = 0; // start at root
-		tmpL = itr->second.lower;
-		tmpR = itr->second.upper;
+		itr->second.lower.IsNumber( tmpL );
+		itr->second.upper.IsNumber( tmpR );
 		while( 1 ) {
 			if( index > size ) {
 				printf( "Fell out of the primary structure" );
@@ -167,13 +169,14 @@ MakeIntervalTree( const OneDimension& intervals )
 
 
 bool IntervalTree::
-DeleteInterval( const int& key, const NumericInterval &interval )
+DeleteInterval( const int& key, const Interval &interval )
 {
 	double	l, r;
 	int		i;
 
-	l = interval.lower;
-	r = interval.upper;
+	if( !interval.lower.IsNumber( l ) || !interval.upper.IsNumber( r ) ) {
+		return( false );
+	}
 
 		// traverse the active tree to find split point
 	i = 0;
@@ -346,7 +349,7 @@ DeleteFromSecondary( Secondary *&list,const int &key,double val,bool less )
 
 
 bool IntervalTree::
-WindowQuery( const NumericInterval& interval, KeySet& keys )
+WindowQuery( const Interval& interval, KeySet& keys )
 {
 	double		l, r;
 	bool		ol, or;
@@ -354,9 +357,9 @@ WindowQuery( const NumericInterval& interval, KeySet& keys )
 	int			index, offset;
 	Secondary	*sec;
 
-	keys.fill( 0 );
-	l = interval.lower;
-	r = interval.upper;
+	if( !interval.lower.IsNumber( l ) || !interval.upper.IsNumber( r ) ) {
+		return( false );
+	}
 	ol = interval.openLower;
 	or = interval.openUpper;
 

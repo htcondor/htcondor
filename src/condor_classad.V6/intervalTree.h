@@ -23,17 +23,11 @@
 
 #if !defined(INTERVAL_TREE_H)
 #define INTERVAL_TREE_H
-
 #include <stdio.h>
 #include <vector>
 #include <list>
 #include <set>
-
-#include "extArray.h"
 #include "rectangle.h"
-
-typedef ExtArray<unsigned int> KeySet;
-const int SUINT	= sizeof(unsigned int)*8;	// in bits
 
 class IntervalTree
 {
@@ -41,9 +35,9 @@ public:
 	IntervalTree( );
 	~IntervalTree( );
 
-	static IntervalTree *MakeIntervalTree( const map<int, NumericInterval>& );
-	bool DeleteInterval( const int&, const NumericInterval&  );
-	bool WindowQuery( const NumericInterval&, KeySet& keys );
+	static IntervalTree *MakeIntervalTree( const OneDimension& );
+	bool DeleteInterval( const int&, const Interval&  );
+	bool WindowQuery( const Interval&, KeySet& keys );
 
 	void Display( FILE *fp );
 
