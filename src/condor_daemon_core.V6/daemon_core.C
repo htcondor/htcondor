@@ -1241,6 +1241,39 @@ int DaemonCore::Create_Pipe( int *filedes, bool nonblocking_read,
 }
 
 
+int DaemonCore::Close_Pipe( FILE* pipefp ) {
+
+	int pipefd = fileno(pipefp);
+
+	// First, call Cancel_Pipe on this pipefd.  
+	int i,j;
+	i = -1;
+	for (j=0;j<nPipe;j++) {
+		if ( (*pipeTable)[j].pipefd == pipefd ) {
+			i = j;
+			break;
+		}
+	}
+
+	if ( i != -1 ) {
+		// We now know that this pipefd is registed.  Cancel it.
+		int result = Cancel_Pipe(pipefd);
+		// ASSERT that it did not fail, because the only reason it should
+		// fail is if it is not registered.  And we already checked that.
+		ASSERT( result == TRUE );
+	}
+
+	// since its a stream, call fclose() instead of close()
+
+	if ( 0 == fclose(pipefp) ) {
+		return TRUE;
+	} else {
+		dprintf(D_ALWAYS, "fclose() failed in Pipe_Close() with errno=%d\n",
+			errno);
+		return FALSE;
+	}
+}
+
 int DaemonCore::Close_Pipe( int pipefd )
 {
 	// First, call Cancel_Pipe on this pipefd.  

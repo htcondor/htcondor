@@ -539,6 +539,10 @@ class DaemonCore : public Service
 	*/
 	int Close_Pipe(int piepfd);
 
+	/** Close a pipe stream 
+	*/
+	int Close_Pipe(FILE *pipefp);
+
 	//@}
 
 	/** @name Timer events.
