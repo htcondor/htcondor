@@ -129,7 +129,11 @@ int Sock::bind(
 
 int Sock::setsockopt(int level, int optname, const char* optval, int optlen)
 {
-	return ::setsockopt(_sock, level, optname, optval, optlen);
+	if(::setsockopt(_sock, level, optname, optval, optlen) < 0)
+	{
+		return FALSE;
+	}
+	return TRUE; 
 }
 
 
