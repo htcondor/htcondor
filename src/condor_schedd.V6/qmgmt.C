@@ -67,7 +67,7 @@ int		get_job_prio(ClassAd *ad);
 uid_t	active_owner_uid = 0;
 #endif
 
-static ClassAdCollection *JobQueue = 0;
+static OldClassAdCollection *JobQueue = 0;
 static int next_cluster_num = -1;
 static int next_proc_num = 0;
 static int active_cluster_num = -1;	// client is restricted to only insert jobs to the active cluster
@@ -201,7 +201,7 @@ void
 InitJobQueue(const char *job_queue_name)
 {
 	assert(!JobQueue);
-	JobQueue = new ClassAdCollection(job_queue_name);
+	JobQueue = new OldClassAdCollection(job_queue_name);
 	ClusterSizeHashTable = new ClusterSizeHashTable_t(37,compute_clustersize_hash);
 
 	/* We read/initialize the header ad in the job queue here.  Currently,

@@ -63,7 +63,7 @@ class Server
 	int		       replication_level;
 	int			   reclaim_interval;
 	int			   clean_interval;
-	ClassAdCollection	*CkptClassAds;
+	OldClassAdCollection	*CkptClassAds;
     int SetUpPort(u_short port);
 	void SetUpPeers();
 	ReplicationSchedule replication_schedule;

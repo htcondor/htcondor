@@ -47,7 +47,7 @@ main(int argc, char *argv[])
 	sprintf(cmd, "cp %s %s", argv[1], tmpfile);
 	system(cmd);
 	
-	ClassAdCollection c(tmpfile);
+	OldClassAdCollection c(tmpfile);
 
 	c.StartIterateAllCollections();
 
