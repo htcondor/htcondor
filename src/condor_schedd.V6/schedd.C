@@ -2245,7 +2245,7 @@ void Scheduler::StartJobHandler() {
 	Shadow = param("SHADOW");
 	sh_is_dc = TRUE;
 #else
-	if ( strnicmp(match_opsys,"winnt",5) == MATCH ) {
+	if ( strincmp(match_opsys,"winnt",5) == MATCH ) {
 		Shadow = param("SHADOWNT");
 		sh_is_dc = TRUE;
 		if ( !Shadow ) {
