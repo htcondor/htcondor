@@ -522,7 +522,7 @@ matchmakingAlgorithm(ClassAd &request,ClassAdList &startdAds,double preemptPrio)
 			// if the PreemptionHold expression evaluates to true, dont preempt
 			if (PreemptionHold 											&& 
 				PreemptionHold->EvalTree(candidate,&request,&result)	&&
-				result.type == LX_BOOL && result.b == TRUE)
+				result.type == LX_INTEGER && result.i == TRUE)
 					continue;
 		}
 
@@ -534,7 +534,7 @@ matchmakingAlgorithm(ClassAd &request,ClassAdList &startdAds,double preemptPrio)
 			offerRank = candidate->Lookup(ATTR_RANK);
 			if ((!offerRank) || (offerRank && 
 				matchCriterion->EvalTree(candidate,&request, &result) 	&&
-				(result.type == LX_BOOL) && (result.b == TRUE)))
+				(result.type == LX_INTEGER) && (result.i == TRUE)))
 			{
 				// check the rank of the request
 				if (!requestRank)
