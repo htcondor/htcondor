@@ -90,10 +90,10 @@ class Service {
 /** Function, which given a pointer to Service object,
     returns an int (C Version).
 */
-typedef int     (*Event)(Service*);
+typedef int     (*Event)(Service*,int);
 
 /// Service Method that returns an int (C++ Version).
-typedef int     (Service::*Eventcpp)();
+typedef int     (Service::*Eventcpp)(int);
 //@}
 
 // to make the timer handler stuff similar to the rest of Daemon Core...
