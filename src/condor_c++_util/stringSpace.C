@@ -20,9 +20,8 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
 #include <condor_common.h>
-#include <strings.h>
-#include <ctype.h>
 #include "HashTable.h"
 #include "stringSpace.h"
 #include "condor_debug.h"
@@ -101,7 +100,7 @@ purge ()
 					break;
 
 				case SS_ADOPT_CPLUS_STRING:
-					delete [] strTable[i].string;
+					delete [] ((void *)strTable[i].string);
 					did_delete = true;
 					break;
 
@@ -153,8 +152,12 @@ getCanonical (const char *str, StringSpaceAdoptionMethod adopt)
 	{
 		switch (adopt)
         {
-            case SS_ADOPT_C_STRING: free( (char*)str);  break;
-            case SS_ADOPT_CPLUS_STRING: delete [] str;  break;
+            case SS_ADOPT_C_STRING: 
+				free( (char*)str);  
+				break;
+            case SS_ADOPT_CPLUS_STRING: 
+				delete [] ((void*)str);  
+				break;
             case SS_DUP:
             default:
                 break;
@@ -328,7 +331,7 @@ SSString::dispose ()
                 break;
 
             case SS_ADOPT_CPLUS_STRING:
-                delete [] context->strTable[index].string;
+                delete [] ((void*)context->strTable[index].string);
 				context->strTable[index].string = NULL;
 				context->strTable[index].inUse = false;
 				context->strTable[index].adoptMode = SS_INVALID;
