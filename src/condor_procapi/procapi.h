@@ -134,7 +134,7 @@ struct procInfo {
 
   /// the image size (aka virtual memory), in k.
   unsigned long imgsize;
-  /// the resident set size, in k.
+  /// the resident set size, in k.  on WinNT, it is peak working set size.
   unsigned long rssize;       
 
   /** The number of minor page faults generated per second.  
