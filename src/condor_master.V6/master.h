@@ -82,18 +82,17 @@ public:
 	int		GetIndex(const char* process_name);
 
 	void	CheckForNewExecutable();
-
 	void	DaemonsOn();
 	void	DaemonsOff();
 	void 	StartAllDaemons();
 	void	StopAllDaemons();
 	void	StopFastAllDaemons();
-	void	CancelAllStopTimers();
 	void	ReconfigAllDaemons();
 
 	void	InitMaster();
 	void    RestartMaster();
 	void	FinishRestartMaster();
+	void	FinalRestartMaster();
 
 	char*	DaemonLog(int pid);			// full log file path name
 #if 0
@@ -109,15 +108,17 @@ public:
 	void	AllDaemonsGone();
 	void	SetAllGoneAction( AllGoneT a ) {all_daemons_gone_action=a;};
 	void	StartTimers();
-
+	int		immediate_restart;
 private:
 	daemon **daemon_ptr;
 	int	no_daemons;
 	int daemon_list_size;
 	int check_new_exec_tid;
 	int update_tid;
+	int preen_tid;
 	AllGoneT all_daemons_gone_action;
 	ReaperT reaper;
+
 };
 
 #endif /* __CONDOR_MASTER */
