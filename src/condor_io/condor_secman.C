@@ -1732,11 +1732,23 @@ const SecMan & SecMan::operator=(const SecMan &copy) {
 
 
 SecMan::~SecMan() {
+	// session_cache is static.  if we are in a destructor,
+	// then these should already have been constructed.
 	ASSERT (session_cache);
 	ASSERT (command_map);
 
-	// don't delete session_cache - it is static!!!
 	sec_man_ref_count--;
+
+	/*
+	// if that was the last one to go, we could delete the objects
+	if (sec_man_ref_count == 0) {
+		delete session_cache;
+		session_cache = NULL;
+
+		delete command_map;
+		command_map = NULL;
+	}
+	*/
 }
 
 
