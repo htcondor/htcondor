@@ -119,5 +119,7 @@ const char ATTR_STATE                    [] = "State";
 const char ATTR_ENTERED_CURRENT_STATE	 [] = "EnteredCurrentState";
 const char ATTR_ACTIVITY				 [] = "Activity";
 const char ATTR_ENTERED_CURRENT_ACTIVITY [] = "EnteredCurrentActivity";
+const char ATTR_AFS_CELL				 [] = "AFSCell";
+const char ATTR_CAPABILITY				 [] = "Capability";
 
 #endif
