@@ -58,7 +58,6 @@ void
 cleanup_execute_dir(int pid)
 {
 	char buf[2048];
-	char pathbuf[2048];
 
 #if defined(WIN32)
 
@@ -97,6 +96,7 @@ cleanup_execute_dir(int pid)
 
 #else /* UNIX */
 
+	char pathbuf[2048];
 	struct stat st;
 	priv_state priv;
 
