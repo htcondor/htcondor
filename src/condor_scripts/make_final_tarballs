@@ -262,7 +262,7 @@ foreach $module ( @modules ) {
 	   	 $dest = $file;
 		}
 		# under linux, or hpux11(with fileutils), use the GNU fileutils flags
-		if( $libc =~ /.*glibc22.*/ || $opsys =~ /.*hp_ux110.*/) {	
+		if( $libc =~ /.*glibc2[23].*/ || $opsys =~ /.*hp_ux110.*/) {	
 			`cp -rL $src $skel/$release/$dest`;
 		} else {
 			`cp -r $src $skel/$release/$dest`;
