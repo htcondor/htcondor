@@ -20,7 +20,7 @@
 #define		IS_EGCS_BUILD		YES
 #define EgcsPath /usr/local/lib/gcc-lib/sparc-sun-solaris2.5.1/egcs-2.91.66
 
-#define HAS_GLOBUS			NO
+#define HAS_GLOBUS			YES
 #define HAS_GSI				YES
 #define HAS_OPENSSL			YES
 #endif
