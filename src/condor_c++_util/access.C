@@ -52,7 +52,6 @@ void attempt_access_handler(Service *, int i, Stream *s)
 	int uid, gid;
 	int result;
 	priv_state priv;
-	int access_result;
 	int open_result;
 	int errno_result = 0;
 	int answer = FALSE;
