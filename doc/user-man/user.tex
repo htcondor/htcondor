@@ -885,7 +885,7 @@ higher priority user. Condor will not starve the lower priority user; it
 will preempt only enough jobs so that the higher priority user's fair
 share can be realized (based upon the ratio between user priorities). To
 prevent thrashing of the system due to priority preemption, the Condor 
-site administrator can define a \Macro{PREEMPTION\_HOLD} expression in Condor's configuration.
+site administrator can define a \Macro{PREEMPTION\_REQUIREMENTS} expression in Condor's configuration.
 The default expression that ships with Condor is configured to only preempt 
 lower priority jobs that have run
 for at least one hour. So in the previous example, in the worse case it
