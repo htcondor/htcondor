@@ -8,9 +8,9 @@ public:
 	~Resource();
 
 		// Members to initialize and refresh the resource classad.
-	int		init_classad();		
-	int		update_classad();	
-	int		timeout_classad();	
+	void	init_classad();		
+	void	update_classad();	
+	void	timeout_classad();	
 
 	int		update();				// Update the central manager.
 	int		eval_and_update();		// Evaluate state and update CM. 
