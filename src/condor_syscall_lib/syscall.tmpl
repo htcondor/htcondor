@@ -215,6 +215,23 @@ circumstances:
 	#define INDIRECT direct
 #endif
 
+/* 
+   fcntl's "cmd" argument, and open's "flags" argument both have to be 
+   CEDARized so that we can deal with heterogeneous submits.  So, for
+   the switch, we want to just use the regular int.  However, for the
+   sender and the reciever, we have to use CEDAR's special enum type
+   so that we send the thing across the wire in a platform-independent
+   way.  -Derek Wright and Todd Tannenbaum 2/8/00
+*/
+#if defined(SWITCH)
+#   define OPEN_FLAGS_T int
+#   define FCNTL_CMD_T int
+#else
+#   define OPEN_FLAGS_T open_flags_t
+#   define FCNTL_CMD_T fcntl_cmd_t
+#endif
+
+
 /*
 The socket-related calls have lots of tiny per-platform differences.
 This is an attempt to do autoconf-style configuration of the little
@@ -323,14 +340,14 @@ All of these calls manipulate the open file table.
 
 #if defined(FILE_TABLE) && !defined(CLIP)
 
-	int open( const char *path, int flags, ... )
+	int open( const char *path, OPEN_FLAGS_T flags, ... )
 		: file_table
 	{
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
 
-	int open64( const char *path, int flags, ... )
+	int open64( const char *path, OPEN_FLAGS_T flags, ... )
 		: sender_name(open), file_table_name(open);
 
 	int close( int fd ) : file_table;
@@ -395,7 +412,7 @@ All of these calls manipulate the open file table.
 	int dup( int old_fd ) : file_table;
 	int dup2( int old_fd, int new_fd ) : file_table;
 
-	int fcntl( int fd, int cmd, ... ) : file_table;
+	int fcntl( int fd, FCNTL_CMD_T cmd, ... ) : file_table;
 
 	#if defined(LINUX) && defined(GLIBC)
 		int ioctl( int fd, unsigned long cmd, ... ) : file_table;
