@@ -2051,7 +2051,7 @@ int	_condor_open( const char *path, int flags, va_list ap )
 	char	local_path[ _POSIX_PATH_MAX ];	// pathname on this machine
 	int		pipe_fd;	// fd number if this file is already open as a pipe
 	int		fd, scm;
-	int		status;
+	int		status = IS_LOCAL;
 	int		is_remote = FALSE;
 	sigset_t omask;
 
