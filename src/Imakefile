@@ -51,15 +51,21 @@
 
 #if WANT_NETMAN
 #define NetmanLibs netman
+#define Eventd eventd
+#define EventdTar eventd.tar
+#define AfsEventdTar afs_eventd.tar
 #else
 #define NetmanLibs
+#define Eventd
+#define EventdTar
+#define AfsEventdTar
 #endif
 
 #define Programs \
 		procapi sysapi accountant.V6 ckpt_server \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts shadow.V6 startd.V6 starter.V5 submit.V6 status.V6 \
-		tools kbdd collector.V6 PvmProgs dagman userlog eventd \
+		tools kbdd collector.V6 PvmProgs dagman userlog Eventd \
 		GlobusProgs starter.V6.1 shadow.V6.1 dcskel
 
 #define Libraries \
@@ -140,9 +146,9 @@ contrib_tarball( pvm.tar, PvmFiles )
 #define AfsPvmTar 
 #endif 
 
-all_tarballs: ckpt_server.tar eventd.tar PvmTar
+all_tarballs: ckpt_server.tar EventdTar PvmTar
 
-afs_tarballs: afs_release.tar afs_ckpt_server.tar afs_eventd.tar AfsPvmTar 
+afs_tarballs: afs_release.tar afs_ckpt_server.tar AfsEventdTar AfsPvmTar 
 
 public:: all_tarballs
 
