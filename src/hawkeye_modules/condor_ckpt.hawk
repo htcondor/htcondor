@@ -1,0 +1,16 @@
+# Data file describing the condor_ckpt module
+ModuleFiles: condor_ckpt
+
+Description:
+Used to monitor a Condor CheckPoint Server
+
+Default: ckpt
+options: kill
+period: 30m
+prefix: ckpt_
+
+# It's parameters
+parameter: log_file
+Flags: required
+Example: LOG_FILE = Name:/dir/to/CkptServerLog
+Specifies the full path to the checkpoint server log file
