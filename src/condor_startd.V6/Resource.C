@@ -4,8 +4,6 @@ static char *_FileName_ = __FILE__;
 
 Resource::Resource( Sock* coll_sock, Sock* alt_sock )
 {
-	char tmp[100];
-
 	r_classad = new ClassAd;
 	r_private_classad = new ClassAd;
 	r_state = new ResState( this );
@@ -14,11 +12,7 @@ Resource::Resource( Sock* coll_sock, Sock* alt_sock )
 	r_pre = NULL;
 	r_reqexp = new Reqexp( r_classad );
 	r_attr = new ResAttributes( this );
-
-	if( gethostname( tmp, 99 ) < 0 ) {
-		EXCEPT( "gethostname" );
-	}
-	r_name = strdup( tmp );
+	r_name = strdup( my_hostname() );
 
 	this->coll_sock = coll_sock;
 	this->alt_sock = alt_sock;
@@ -44,39 +38,51 @@ Resource::~Resource()
 }
 
 
-int
+void
 Resource::init_classad()
 {
 	char 	tmp[80];
 	int 	phys_memory = -1;
-#if !defined(WIN32)
-	char*	host_cell;
-#endif
 	char*	ptr;
 	int		needs_free = 0;
 
 		// Insert state and activity attributes into public ad
-	r_state->init_classad( r_classad );
+	r_state->update( r_classad );
 
 		// Name of this resource (needs to be in public and private ads)
-	sprintf( tmp, "%s=\"%s\"", ATTR_NAME, r_name );
+	sprintf( tmp, "%s = \"%s\"", ATTR_NAME, r_name );
 	r_classad->Insert( tmp );
 	r_private_classad->Insert( tmp );
 
+		// Stick the hostname of this machine into classad.
+	sprintf( tmp, "%s = \"%s\"", ATTR_MACHINE, my_hostname() );
+	r_classad->Insert( tmp );
+
 		// STARTD_IP_ADDR (needs to be in public and private ads)
-	sprintf( tmp, "%s=\"%s\"", ATTR_STARTD_IP_ADDR, 
+	sprintf( tmp, "%s = \"%s\"", ATTR_STARTD_IP_ADDR, 
 			 daemonCore->InfoCommandSinfulString() );
 	r_classad->Insert( tmp );
 	r_private_classad->Insert( tmp );
 
+		// Arch and OpSys.  Note: these will always return something,
+		// since config() will insert values for these from uname() if
+		// we don't have them in the config file.  
+	ptr = param( "ARCH" );
+	sprintf( tmp, "%s = \"%s\"", ATTR_ARCH, ptr );
+	r_classad->Insert( tmp );
+	free( ptr );
+
+	ptr = param( "OPSYS" );
+	sprintf( tmp, "%s = \"%s\"", ATTR_OPSYS, ptr );
+	r_classad->Insert( tmp );
+	free( ptr );
+
 #if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 		// AFS cell
-	host_cell = get_host_cell();
-	if( host_cell ) {
-		sprintf( tmp, "%s=\"%s\"", ATTR_AFS_CELL, host_cell );
+	if( r_attr->afs_cell() ) {
+		sprintf( tmp, "%s = \"%s\"", ATTR_AFS_CELL, r_attr->afs_cell() );
 		r_classad->Insert( tmp );
-		dprintf( D_ALWAYS, "AFS_Cell = \"%s\"\n", host_cell );
-		delete [] host_cell;
+		dprintf( D_ALWAYS, "%s\n", tmp );
 	} else {
 		dprintf( D_ALWAYS, "AFS_Cell not set\n" );
 	}
@@ -85,7 +91,7 @@ Resource::init_classad()
 		// If the UID domain is not set, use our hostname as the
 		// default.   
 	if( (ptr = param("UID_DOMAIN")) == NULL ) {
-		ptr = get_full_hostname();
+		ptr = my_full_hostname();
 	} else {
 			// If the UID domain is defined as "*", accept uids from
 			// anyone.  
@@ -96,8 +102,8 @@ Resource::init_classad()
 			needs_free = 1;
 		}
 	}
-	dprintf( D_ALWAYS, "%s = \"%s\"\n", ATTR_UID_DOMAIN, ptr );
-	sprintf( tmp, "%s=\"%s\"", ATTR_UID_DOMAIN, ptr );
+	sprintf( tmp, "%s = \"%s\"", ATTR_UID_DOMAIN, ptr );
+	dprintf( D_ALWAYS, "%s\n", tmp );
 	r_classad->Insert( tmp );
 	if( needs_free ) {
 		free( ptr );
@@ -107,7 +113,7 @@ Resource::init_classad()
 		// If the file system domain is not set, use our hostname as
 		// the default. 
 	if( (ptr = param("FILESYSTEM_DOMAIN")) == NULL ) {
-		ptr = get_full_hostname();
+		ptr = my_full_hostname();
 	} else {
 			// If the file system domain is defined as "*", assume we
 			// share files with everyone.
@@ -118,8 +124,8 @@ Resource::init_classad()
 			needs_free = 1;
 		}
 	}
-	dprintf( D_ALWAYS, "%s = \"%s\"\n", ATTR_FILE_SYSTEM_DOMAIN, ptr );
-	sprintf( tmp, "%s=\"%s\"", ATTR_FILE_SYSTEM_DOMAIN, ptr );
+	sprintf( tmp, "%s = \"%s\"", ATTR_FILE_SYSTEM_DOMAIN, ptr );
+	dprintf( D_ALWAYS, "%s\n", tmp );
 	r_classad->Insert( tmp );
 	if( needs_free ) {
 		free( ptr );
@@ -127,103 +133,58 @@ Resource::init_classad()
 	}
 
 		// Number of CPUs.  
-	sprintf( tmp, "%s=%d", ATTR_CPUS, calc_ncpus() );
+	sprintf( tmp, "%s = %d", ATTR_CPUS, calc_ncpus() );
 	r_classad->Insert( tmp );
 
 		// Physical memory
 	phys_memory = calc_phys_memory();
 	if( phys_memory > 0 ) {
-		sprintf( tmp, "%s=%d", ATTR_MEMORY, phys_memory );
+		sprintf( tmp, "%s = %d", ATTR_MEMORY, phys_memory );
 		r_classad->Insert( tmp );
 	}
 
 		// Nest
 	if( (ptr = param("NEST")) != NULL ) {
-		sprintf( tmp, "%s=\"%s\"", ATTR_NEST, ptr );
+		sprintf( tmp, "%s = \"%s\"", ATTR_NEST, ptr );
 		r_classad->Insert( tmp );
 		free( ptr );
 	}
 
 		// Current rank
-	sprintf( tmp, "%s=0", ATTR_CURRENT_RANK );
+	sprintf( tmp, "%s = 0", ATTR_CURRENT_RANK );
 	r_classad->Insert( tmp );
-
-	return TRUE;
 }
 
 
-int
+void
 Resource::update_classad()
 {
-	ClassAd* cp = r_classad;
-	char line[80];
+	char line[100];
 
-		// Recompute update-only statistics
-	r_attr->update();
+		// Recompute update-only statistics and fill in classad
+	r_attr->update( r_classad );
 	
-		// Refresh the classad with statistics that are only needed on updates
-	sprintf( line, "%s=%lu", ATTR_VIRTUAL_MEMORY, r_attr->virtmem() );
- 	cp->Insert( line ); 
-
-	sprintf( line, "%s=%lu", ATTR_DISK, r_attr->disk() );
-	cp->Insert( line ); 
-  
-	// KFLOPS and MIPS are only conditionally computed; thus, only
-	// advertise them if we computed them.
-	if ( r_attr->kflops() > 0 ) {
-		sprintf( line, "%s=%d", ATTR_KFLOPS, r_attr->kflops() );
-		cp->Insert( line );
-	}
-	if ( r_attr->mips() > 0 ) {
-		sprintf( line, "%s=%d", ATTR_MIPS, r_attr->mips() );
-		cp->Insert( line );
-	}
-
 		// Add capability to private classad.  If r_pre exists, we
 		// need to advertise it's capability.  Otherwise, we should
 		// get the capability from r_cur.
 	if( r_pre ) {
-		sprintf( line, "%s=\"%s\"", ATTR_CAPABILITY, r_pre->capab() );
+		sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_pre->capab() );
 	} else {
-		sprintf( line, "%s=\"%s\"", ATTR_CAPABILITY, r_cur->capab() );
+		sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_cur->capab() );
 	}		
 	r_private_classad->Insert( line );
 
 		// Update current rank expression in classad
-	sprintf( line, "%s=%f", ATTR_CURRENT_RANK, r_cur->rank() );
-	cp->Insert( line );
-
-	return TRUE;
+	sprintf( line, "%s = %f", ATTR_CURRENT_RANK, r_cur->rank() );
+	r_classad->Insert( line );
 }
 
 
-int
+void
 Resource::timeout_classad()
 {
-	ClassAd* cp = r_classad;
-	char line[80];
-  
-		// Recompute statistics needed at every timeout
-	r_attr->timeout();
-
-	sprintf( line, "%s=%f", ATTR_LOAD_AVG, r_attr->load() );
-	cp->Insert(line);
-
-	sprintf( line, "%s=%f", ATTR_CONDOR_LOAD_AVG, r_attr->condor_load() );
-	cp->Insert(line);
-
-	sprintf(line, "%s=%d", ATTR_KEYBOARD_IDLE, r_attr->idle() );
-	cp->Insert(line); 
-  
-	// ConsoleIdle cannot be determined on all platforms; thus, only
-	// advertise if it is not -1.
-	if( r_attr->console_idle() != -1 ) {
-		sprintf( line, "%s=%d", ATTR_CONSOLE_IDLE, 
-				 r_attr->console_idle() );
-		cp->Insert(line); 
-	}
-
-	return TRUE;
+		// Recompute statistics needed at every timeout and fill in classad
+	r_attr->timeout( r_classad );
 }
 
 
@@ -236,11 +197,10 @@ Resource::update()
 	this->update_classad();
 
 		// Send class ad to collector
-	rval1 = send_classad_to_sock( coll_sock, TRUE );
-	if( rval1 ) {
+	if( (rval1 = send_classad_to_sock( coll_sock, TRUE )) ) {
 		dprintf( D_ALWAYS, "Sent update to the collector (%s)\n", 
 				 collector_host );
-	}
+	}  
 
 		// If we have an alternate collector, send CA there.
 	if( alt_sock ) {
