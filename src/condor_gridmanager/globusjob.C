@@ -57,6 +57,8 @@
 #define GM_HOLD					20
 #define GM_PROXY_EXPIRED		21
 #define GM_CLEAN_JOBMANAGER		22
+#define GM_REFRESH_PROXY		23
+#define GM_PROBE_JOBMANAGER		24
 
 char *GMStateNames[] = {
 	"GM_INIT",
@@ -81,7 +83,9 @@ char *GMStateNames[] = {
 	"GM_CLEAR_REQUEST",
 	"GM_HOLD",
 	"GM_PROXY_EXPIRED",
-	"GM_CLEAN_JOBMANAGER"
+	"GM_CLEAN_JOBMANAGER",
+	"GM_REFRESH_PROXY",
+	"GM_PROBE_JOBMANAGER"
 };
 
 // TODO: once we can set the jobmanager's proxy timeout, we should either
@@ -220,6 +224,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	lastRestartAttempt = 0;
 	numRestartAttempts = 0;
 	numRestartAttemptsThisSubmit = 0;
+	jmProxyExpireTime = 0;
 	connect_failure_counter = 0;
 
 	evaluateStateTid = daemonCore->Register_Timer( TIMER_NEVER,
@@ -588,6 +593,7 @@ int GlobusJob::doEvaluateState()
 					break;
 				}
 				numSubmitAttempts++;
+				jmProxyExpireTime = Proxy_Expiration_Time;
 				if ( rc == GLOBUS_SUCCESS ) {
 					jmVersion = GRAM_V_1_0;
 					UpdateJobAdInt( ATTR_GLOBUS_GRAM_VERSION, GRAM_V_1_0 );
@@ -707,6 +713,16 @@ int GlobusJob::doEvaluateState()
 				if ( condorState == REMOVED || condorState == HELD ) {
 					gmState = GM_CANCEL;
 				} else {
+					if ( GetCallbacks() == true ) {
+						reevaluate_state = true;
+						break;
+					}
+					if ( jmProxyExpireTime < Proxy_Expiration_Time &&
+						 ( jmVersion == GRAM_V_UNKNOWN ||
+						   jmVersion >= GRAM_V_1_6) ) {
+						gmState = GM_REFRESH_PROXY;
+						break;
+					}
 					now = time(NULL);
 					if ( lastProbeTime < enteredCurrentGmState ) {
 						lastProbeTime = enteredCurrentGmState;
@@ -716,29 +732,8 @@ int GlobusJob::doEvaluateState()
 						probeNow = false;
 					}
 					if ( now >= lastProbeTime + probeInterval ) {
-						rc = gahp.globus_gram_client_job_status( jobContact,
-															&status, &error );
-						if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-							 rc == GAHPCLIENT_COMMAND_PENDING ) {
-							break;
-						}
-						if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
-							 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
-							connect_failure = true;
-							break;
-						}
-						if ( rc != GLOBUS_SUCCESS ) {
-							// unhandled error
-							LOG_GLOBUS_ERROR( "globus_gram_client_job_status()", rc );
-							globusError = rc;
-							gmState = GM_STOP_AND_RESTART;
-							break;
-						}
-						UpdateGlobusState( status, error );
-						ClearCallbacks();
-						lastProbeTime = now;
-					} else {
-						GetCallbacks();
+						gmState = GM_PROBE_JOBMANAGER;
+						break;
 					}
 					unsigned int delay = 0;
 					if ( (lastProbeTime + probeInterval) > now ) {
@@ -746,6 +741,55 @@ int GlobusJob::doEvaluateState()
 					}				
 					daemonCore->Reset_Timer( evaluateStateTid, delay );
 				}
+			}
+			} break;
+		case GM_REFRESH_PROXY: {
+			if ( condorState == REMOVED || condorState == HELD ) {
+				gmState = GM_CANCEL;
+			} else {
+				rc = gahp.globus_gram_client_job_refresh_credentials(
+																jobContact );
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
+					break;
+				}
+				if ( rc != GLOBUS_SUCCESS ) {
+					// unhandled error
+					LOG_GLOBUS_ERROR("refresh_credentials()",rc);
+					globusError = rc;
+					gmState = GM_STOP_AND_RESTART;
+					break;
+				}
+				jmProxyExpireTime = Proxy_Expiration_Time;
+				gmState = GM_SUBMITTED;
+			}
+			} break;
+		case GM_PROBE_JOBMANAGER: {
+			if ( condorState == REMOVED || condorState == HELD ) {
+				gmState = GM_CANCEL;
+			} else {
+				rc = gahp.globus_gram_client_job_status( jobContact,
+														 &status, &error );
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
+					break;
+				}
+				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
+					connect_failure = true;
+					break;
+				}
+				if ( rc != GLOBUS_SUCCESS ) {
+					// unhandled error
+					LOG_GLOBUS_ERROR( "globus_gram_client_job_status()", rc );
+					globusError = rc;
+					gmState = GM_STOP_AND_RESTART;
+					break;
+				}
+				UpdateGlobusState( status, error );
+				ClearCallbacks();
+				lastProbeTime = now;
+				gmState = GM_SUBMITTED;
 			}
 			} break;
 		case GM_CHECK_OUTPUT: {
@@ -943,6 +987,7 @@ int GlobusJob::doEvaluateState()
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_UNDEFINED_EXE ) {
 					gmState = GM_CLEAR_REQUEST;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
+					jmProxyExpireTime = Proxy_Expiration_Time;
 					rehashJobContact( this, jobContact, job_contact );
 					jobContact = strdup( job_contact );
 					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
@@ -1565,13 +1610,16 @@ void GlobusJob::GramCallback( int new_state, int new_error_code )
 	SetEvaluateState();
 }
 
-void GlobusJob::GetCallbacks()
+bool GlobusJob::GetCallbacks()
 {
 	if ( callbackGlobusState != 0 ) {
 		UpdateGlobusState( callbackGlobusState,
 						   callbackGlobusStateErrorCode );
 		callbackGlobusState = 0;
 		callbackGlobusStateErrorCode = 0;
+		return true;
+	} else {
+		return false;
 	}
 }
 

@@ -29,7 +29,7 @@ class GlobusJob : public Service
 	void UpdateCondorState( int new_state );
 	void UpdateGlobusState( int new_state, int new_error_code );
 	void GramCallback( int new_state, int new_error_code );
-	void GetCallbacks();
+	bool GetCallbacks();
 	void ClearCallbacks();
 	GlobusResource *GetResource();
 	int syncIO();
@@ -77,6 +77,7 @@ class GlobusJob : public Service
 	time_t lastRestartAttempt;
 	int numRestartAttempts;
 	int numRestartAttemptsThisSubmit;
+	time_t jmProxyExpireTime;
 
 	GahpClient gahp;
 
