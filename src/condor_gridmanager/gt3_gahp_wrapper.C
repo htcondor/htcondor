@@ -148,12 +148,9 @@ main( int argc, char* argv[] ) {
   
   fflush (stdout);
 
-  // This is to circumvent const-ness... lame
-  char * classpath_buff = strdup (classpath.Value());
+  putenv( strdup( classpath.Value() ) );
 
   char * params [] = { java, "condor.gahp.Gahp", gt3gahplog, (char*)0 };
-
-  char * unix_env [] = {classpath_buff, (char*)0};  
 
   // Changed to the gt3 directory
   // This is cruicial believe it or not !!!!
@@ -163,13 +160,12 @@ main( int argc, char* argv[] ) {
   }
 
   // Invoke "java condor.gahp.Gahp"
-  int rc = execve ( java, params, unix_env);  
+  int rc = execv ( java, params );  
 
   free (java);
   free (gt3location);
   if (gt3gahplog != NULL)
     free (gt3gahplog);
-  free (classpath_buff);
 
   return rc;
 
