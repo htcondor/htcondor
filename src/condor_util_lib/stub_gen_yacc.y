@@ -1331,7 +1331,7 @@ output_receiver( struct node *n )
 	printf( "\t\tsyscall_sock->encode();\n" );
 	printf( "\t\tassert( syscall_sock->code(rval) );\n" );
 	printf( "\t\tif( rval < 0 ) {\n" );
-	printf( "\t\t\tassert( syscall_sock->code(terrno) );\n" );
+	printf( "\t\t\tassert( syscall_sock->code((condor_errno_t)terrno) );\n" );
 	printf( "\t\t}\n" );
 
 		/*
@@ -1507,7 +1507,7 @@ output_sender( struct node *n )
 	printf( "\tassert( syscall_sock->code(rval) );\n" );
 	
 	printf( "\tif( rval < 0 ) {\n" );
-	printf( "\t\tassert( syscall_sock->code(terrno) );\n" );
+	printf( "\t\tassert( syscall_sock->code((condor_errno_t)terrno) );\n" );
 	printf( "\t\tassert( syscall_sock->end_of_message() );\n" );
 	printf( "\t\t_condor_signals_enable( omask );\n");
 	printf( "\t\tSetSyscalls( scm );\n");
@@ -1789,7 +1789,7 @@ output_send_stub( struct node *n )
 	printf( "\t\tsyscall_sock->decode();\n" );
 	printf( "\t\tassert( syscall_sock->code(rval) );\n" );
 	printf( "\t\tif( rval < 0 ) {\n" );
-	printf( "\t\t\tassert( syscall_sock->code(terrno) );\n" );
+	printf( "\t\t\tassert( syscall_sock->code((condor_errno_t)terrno) );\n" );
 	printf( "\t\t\tassert( syscall_sock->end_of_message() );\n" );
 	printf( "\t\t\terrno = terrno;\n" );
 	printf( "\t\t\treturn rval;\n" );
