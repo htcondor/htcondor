@@ -1102,7 +1102,7 @@ XCOMM End translation of func(F_COMPILER_TARGET)
 #ifndef BUILD
 #define BUILD(cmplr,name,ext)		@@\
 XCOMM Begin translation of func(BUILD)	@@\
-SYM_FILE(name,ext)			@@\
+DEP_SYMLINK_EXT(name,ext)		@@\
 LINK(cmplr,name,name.o)			@@\
 XCOMM End translation of func(BUILD)
 #endif /* BUILD */
@@ -1110,7 +1110,7 @@ XCOMM End translation of func(BUILD)
 #ifndef BUILD_DEP
 #define BUILD_DEP(cmplr,name,ext,dep)	@@\
 XCOMM Begin translation of func(BUILD_DEP) @@\
-SYM_FILE(name,ext)			@@\
+DEP_SYMLINK_EXT(name,ext)		@@\
 LINK(cmplr,name,dep name.o)		@@\
 XCOMM End translation of func(BUILD_DEP)
 #endif /* BUILD_DEP */
@@ -1118,8 +1118,7 @@ XCOMM End translation of func(BUILD_DEP)
 #ifndef CBUILD
 #define CBUILD(cmplr,name,ext)		@@\
 XCOMM Begin translation of func(CBUILD) @@\
-SYM_FILE(name,cmd)			@@\
-SYM_FILE(name,ext)			@@\
+DEP_SYMLINK_EXT(name,ext)		@@\
 CLINK(cmplr,name,name.o)		@@\
 CLINK_NOSTD(cmplr,name,name.o)		@@\
 XCOMM End translation of func(CBUILD)
@@ -1128,22 +1127,29 @@ XCOMM End translation of func(CBUILD)
 #ifndef CBUILD_DEP
 #define CBUILD_DEP(cmplr,name,ext,dep)	@@\
 XCOMM Begin translation of func(CBUILD_DEP) @@\
-SYM_FILE(name,ext)			@@\
+DEP_SYMLINK_EXT(name,ext)		@@\
 CLINK(cmplr,name,dep name.o)		@@\
 CLINK_NOSTD(cmplr,name,dep name.o)	@@\
 XCOMM End translation of func(CBUILD_DEP)
 #endif /* CBUILD_DEP */
 
-#ifndef SYM_FILE
-#define SYM_FILE(name,ext)		@@\
-XCOMM Begin translation of func(SYM_FILE) @@\
-name:: name.ext					@@\
+#ifndef DEP_SYMLINK
+#define DEP_SYMLINK(name,file)		@@\
+XCOMM Begin translation of func(DEP_SYMLINK) @@\
+name:: file					@@\
        @/bin/true				@@\
-all:: name.ext					@@\
-name.ext:					@@\
-	ln -s ../name.ext .			@@\
-XCOMM End translation of func(SYM_FILE)
-#endif /* SYM_FILE */
+all:: file					@@\
+file:					@@\
+	ln -s ../file .			@@\
+XCOMM End translation of func(DEP_SYMLINK)
+#endif /* DEP_SYMLINK */
+
+#ifndef DEP_SYMLINK_EXT
+#define DEP_SYMLINK_EXT(name,ext)		@@\
+XCOMM Begin translation of func(DEP_SYMLINK_EXT) @@\
+DEP_SYMLINK(name,name.ext)			@@\
+XCOMM End translation of func(DEP_SYMLINK_EXT)
+#endif /* DEP_SYMLINK_EXT */
 
 #ifndef DEPS
 #define DEPS(name,deps)				@@\
@@ -1160,7 +1166,7 @@ XCOMM End translation of func(DEPS)
 #ifndef RUN
 #define RUN(name)				@@\
 XCOMM Begin translation of func(RUN)		@@\
-SYM_FILE(name,run)				@@\
+DEP_SYMLINK_EXT(name,run)			@@\
 DEPS(name,Condor.pm CondorTest.pm)		@@\
 clean::						@@\
 	rm -f run_list				@@\

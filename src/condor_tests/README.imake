@@ -202,14 +202,24 @@ DEPS(testname,dependencyA dependencyB ...)
    input files, those should be listed with a DEPS() rule.
 
 
-SYM_FILE(testname,ext)
+DEP_SYMLINK(testname,filename)
 
    Inside the compiler-specific Imakefiles, if a given test depends on
    some input files that live in the parent condor_tests directory,
    this rule can be used to add a symlink in the compiler-specific
-   directory for "testname.exe" that points to the to the same file in
-   the parent directory.  Creating this symlink is added as a
+   directory for the given filename that points to the to the same
+   file in the parent directory.  Creating this symlink is added as a
    dependency for building the given testname.
+
+
+DEP_SYMLINK_EXT(testname,extension)
+
+   This rule is for a common special case of DEP_SYMLINK() described
+   above, where the filename you want a symlink to has the same base
+   as the testname, but contains a filename extension.  The most
+   common example is the "testname.cmd" file.  When using this rule,
+   the symlink created uses "testname.extension" as the filename and
+   otherwise, it works just like DEP_SYMLINK().
 
 
 In general, the CBUILD* rules should go into compiler-specific

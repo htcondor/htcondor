@@ -16,6 +16,7 @@
 DESC(job_core_bigenv_std,"Standard job with an enormous environment")
 CBUILD($(CC),job_core_bigenv,c)
 DEPS(job_core_bigenv_std,job_core_bigenv.exe)
+DEP_SYMLINK_EXT(job_core_bigenv_std,cmd)
 RUN(job_core_bigenv_std)
 TESTCLASS(job_core_bigenv_std,quick)
 
@@ -26,6 +27,7 @@ TESTCLASS(job_core_bigenv_std,quick)
 
 DESC(job_rsc_all-syscalls_std,"Tests nearly all remote syscalls")
 CBUILD($(CC),job_rsc_all-syscalls_std,c)
+DEP_SYMLINK_EXT(job_rsc_all-syscalls_std,cmd)
 RUN(job_rsc_all-syscalls_std)
 TESTCLASS(job_rsc_all-syscalls_std,quick)
 TESTCLASS(job_rsc_all-syscalls_std,critical)
@@ -33,16 +35,19 @@ TESTCLASS(job_rsc_all-syscalls_std,critical)
 DESC(job_rsc_hello_std,"Tests various RSC I/O methods")
 CBUILD($(CC),job_rsc_hello_std,c)
 DEPS(job_rsc_hello_std,x_hello.in)
+DEP_SYMLINK_EXT(job_rsc_hello_std,cmd)
 RUN(job_rsc_hello_std)
 TESTCLASS(job_rsc_hello_std,quick)
 
 DESC(job_rsc_fcntl_std,"Does fcntl() work remotely?")
 CBUILD($(CC),job_rsc_fcntl_std,c)
+DEP_SYMLINK_EXT(job_rsc_fcntl_std,cmd)
 RUN(job_rsc_fcntl_std)
 TESTCLASS(job_rsc_fcntl_std,quick)
 
 DESC(job_rsc_truncate_std,"Can we truncate files with open() remotely?")
 CBUILD($(CC),job_rsc_truncate_std,c)
+DEP_SYMLINK_EXT(job_rsc_truncate_std,cmd)
 RUN(job_rsc_truncate_std)
 TESTCLASS(job_rsc_truncate_std,quick)
 
@@ -53,30 +58,35 @@ TESTCLASS(job_rsc_truncate_std,quick)
 */
 DESC(job_rsc_getdirentries_std,"Does getdirentries() work remotely?")
 CBUILD($(CC),job_rsc_getdirentries_std,c)
+DEP_SYMLINK_EXT(job_rsc_getdirentries_std,cmd)
 RUN(job_rsc_getdirentries_std)
 #endif /* HAS_GETDIRENTRIES */
 
 DESC(job_rsc_fgets_std,"Does fgets() work remotely?")
 CBUILD($(CC),job_rsc_fgets_std,c)
 DEPS(job_rsc_fgets_std,x_data.in)
+DEP_SYMLINK_EXT(job_rsc_fgets_std,cmd)
 RUN(job_rsc_fgets_std)
 TESTCLASS(job_rsc_fgets_std,quick)
 
 DESC(job_rsc_fread_std,"Does fread() work remotely?")
 CBUILD($(CC),job_rsc_fread_std,c)
 DEPS(job_rsc_fread_std,x_data.in)
+DEP_SYMLINK_EXT(job_rsc_fread_std,cmd)
 RUN(job_rsc_fread_std)
 TESTCLASS(job_rsc_fread_std,quick)
 
 DESC(job_rsc_ftell_std,"Does ftell() work remotely?")
 CBUILD($(CC),job_rsc_ftell_std,c)
 DEPS(job_rsc_ftell_std,x_data.in)
+DEP_SYMLINK_EXT(job_rsc_ftell_std,cmd)
 RUN(job_rsc_ftell_std)
 TESTCLASS(job_rsc_ftell_std,quick)
 
 DESC(job_rsc_stat_std,"Does stat() work remotely?")
 CBUILD($(CC),job_rsc_stat_std,c)
 DEPS(job_rsc_stat_std,x_data.in)
+DEP_SYMLINK_EXT(job_rsc_stat_std,cmd)
 RUN(job_rsc_stat_std)
 TESTCLASS(job_rsc_stat_std,quick)
 
@@ -87,36 +97,43 @@ TESTCLASS(job_rsc_stat_std,quick)
 
 DESC(job_ckpt_stack_std,"ckpt/restore function call stack")
 CBUILD($(CC),job_ckpt_stack_std,c)
+DEP_SYMLINK_EXT(job_ckpt_stack_std,cmd)
 RUN(job_ckpt_stack_std)
 TESTCLASS(job_ckpt_stack_std,quick)
 
 DESC(job_ckpt_floats_std,"ckpt/restore floating point registers")
 CBUILD($(CC),job_ckpt_floats_std,c)
+DEP_SYMLINK_EXT(job_ckpt_floats_std,cmd)
 RUN(job_ckpt_floats_std)
 TESTCLASS(job_ckpt_floats_std,quick)
 
 DESC(job_ckpt_integers_std,"ckpt/restore integer registers")
 CBUILD($(CC),job_ckpt_integers_std,c)
+DEP_SYMLINK_EXT(job_ckpt_integers_std,cmd)
 RUN(job_ckpt_integers_std)
 TESTCLASS(job_ckpt_integers_std,quick)
 
 #if DOES_SAVE_SIGSTATE
 DESC(job_ckpt_signals_std,"ckpt/restore signal state")
 CBUILD($(CC),job_ckpt_signals_std,c)
+DEP_SYMLINK_EXT(job_ckpt_signals_std,cmd)
 RUN(job_ckpt_signals_std)
 #endif /* DOES_SAVE_SIGSTATE */
 
 DESC(job_ckpt_dup_std,"ckpt/restore file table state with dup() calls")
 CBUILD($(CC),job_ckpt_dup_std,c)
 DEPS(job_ckpt_dup_std,x_data.in)
+DEP_SYMLINK_EXT(job_ckpt_dup_std,cmd)
 RUN(job_ckpt_dup_std)
 
 DESC(job_ckpt_gettimeofday_std,"ckpt/restore current time-of-day")
 CBUILD_DEP($(CC),job_ckpt_gettimeofday_std,c,x_waste_second.o)
+DEP_SYMLINK_EXT(job_ckpt_gettimeofday_std,cmd)
 RUN(job_ckpt_gettimeofday_std)
 
 DESC(job_ckpt_getrusage-loop_std,"Does getrusage() work across ckpts?")
 CBUILD_DEP($(CC),job_ckpt_getrusage-loop_std,c,x_waste_second.o)
+DEP_SYMLINK_EXT(job_ckpt_getrusage-loop_std,cmd)
 /* 
 this is a terrible idea, but i'm commenting out this test so it
 doesn't keep running.  there's a bug in condor's getrusage() support
