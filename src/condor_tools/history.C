@@ -8,7 +8,7 @@
 
 static void displayJobShort(ClassAd *ad);
 static void short_header(void);
-static void short_print(int,int,const char*,int,int,int,int,int,const char *);
+static void short_print(int,int,const char*,int,int,int,int,int,int,const char *);
 static void short_header (void);
 static void displayJobShort (ClassAd *);
 static void shorten (char *, int);
@@ -100,13 +100,14 @@ main(int argc, char* argv[])
 static void
 displayJobShort (ClassAd *ad)
 {
-        int cluster, proc, date, status, prio, image_size;
+        int cluster, proc, date, status, prio, image_size, CompDate;
         float utime;
         char owner[64], cmd[2048], args[2048];
 
         if (!ad->EvalInteger (ATTR_CLUSTER_ID, NULL, cluster)           ||
                 !ad->EvalInteger (ATTR_PROC_ID, NULL, proc)                             ||
                 !ad->EvalInteger (ATTR_Q_DATE, NULL, date)                              ||
+                !ad->EvalInteger (ATTR_COMPLETION_DATE, NULL, CompDate)	 ||
                 !ad->EvalFloat   (ATTR_JOB_REMOTE_USER_CPU, NULL, utime)||
                 !ad->EvalInteger (ATTR_JOB_STATUS, NULL, status)                ||
                 !ad->EvalInteger (ATTR_JOB_PRIO, NULL, prio)                    ||
@@ -121,7 +122,7 @@ displayJobShort (ClassAd *ad)
         shorten (owner, 14);
         if (ad->EvalString ("Args", NULL, args)) strcat (cmd, args);
         shorten (cmd, 18);
-        short_print (cluster, proc, owner, date, (int)utime, status, prio,
+        short_print (cluster, proc, owner, date, CompDate, (int)utime, status, prio,
                                         image_size, cmd); 
 
 }
@@ -131,12 +132,13 @@ displayJobShort (ClassAd *ad)
 static void
 short_header (void)
 {
-    printf( " %-7s %-14s %11s %12s %-2s %-3s %-4s %-18s\n",
+    printf( " %-7s %-14s %11s %12s %-2s %11s %-3s %-4s %-18s\n",
         "ID",
         "OWNER",
         "SUBMITTED",
         "CPU_USAGE",
         "ST",
+		"COMPLETED",
         "PRI",
         "SIZE",
         "CMD"
@@ -166,19 +168,21 @@ short_print(
         int proc,
         const char *owner,
         int date,
+		int CompDate,
         int time,
         int status,
         int prio,
         int image_size,
         const char *cmd
         ) {
-        printf( "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %-18s\n",
+        printf( "%4d.%-3d %-14s %-11s %-12s %-2c %-11s %-3d %-4.1f %-18s\n",
                 cluster,
                 proc,
                 owner,
                 format_date(date),
                 format_time(time),
                 encode_status(status),
+                format_date(CompDate),
                 prio,
                 image_size/1024.0,
                 cmd
@@ -195,6 +199,8 @@ static char* format_date( time_t date )
 {
         static char     buf[ 12 ];
         struct tm       *tm;
+
+		if (date==0) return " ??? ";
 
         tm = localtime( &date );
         sprintf( buf, "%2d/%-2d %02d:%02d",
