@@ -192,7 +192,6 @@ int open_ckpt_file( const char *name, int flags, size_t n_bytes );
 void get_ckpt_name();
 extern volatile int InRestart;
 extern void InitFileState();
-void _condor_disable_uid_switching();
 
 int
 #if defined(HPUX)
@@ -208,18 +207,6 @@ MAIN( int argc, char *argv[], char **envp )
 	char	*argv0;
 	char 	*argv1;
 	
-		/* 
-		   Since we're the user job, we want to just disable any
-		   priv-state switching.  We would, eventually, anyway, since
-		   we'd realize we weren't root, but then we hit the somewhat
-		   expensive init_condor_ids() code in uids.c, which is
-		   segfaulting on HPUX10 on a machine using YP.  So, we just
-		   call a helper function here that sets the flags in uids.c
-		   how we want them so we don't do switching, period.
-		   -Derek Wright 7/21/98
-		*/
-	_condor_disable_uid_switching();
-
 #undef WAIT_FOR_DEBUGGER
 #if defined(WAIT_FOR_DEBUGGER)
 	int		do_wait = 1;
@@ -639,6 +626,17 @@ int
 get_ckpt_speed()
 {
 	return REMOTE_syscall( CONDOR_get_ckpt_speed );
+}
+
+/*
+  dprintf uses _set_priv, but it is a noop in the user job, so we just
+  include a dummy stub here to avoid bringing in more junk from the Condor
+  libs.
+*/
+int
+_set_priv()
+{
+	return 0;
 }
 
 void
