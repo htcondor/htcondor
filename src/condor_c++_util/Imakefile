@@ -1,7 +1,7 @@
 all_target(cplus_lib.a liburl.a libcondorapi.a)
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) IsCondorG
-CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) IsCondorG -Wall
+CFLAGS = $(STD_C_FLAGS) -Wall
 LIB = $(STD_LIBS)
 
 URL_OBJ = url_condor.o cbstp_url.o file_url.o http_url.o filter_url.o \
@@ -38,6 +38,7 @@ library_target( libcondorapi.a,$(API_OBJ) file_lock.o ../condor_util_lib/dprintf
 
 c_plus_target(test_locks,test_locks.o,$(LIB))
 c_plus_target(test_stringSpace, test_stringSpace.o,$(LIB))
+c_plus_target(test_user_job_policy, test_user_job_policy.o user_job_policy.o, $(LIB))
 
 c_plus_target(cat_url, cat_url.o, liburl.a)
 c_plus_target(access.t, access.t.o, $(LIB))
