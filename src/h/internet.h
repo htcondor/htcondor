@@ -62,6 +62,9 @@ char* string_to_ipstr( const char* addr );
 /* Convert a sinful string into a hostname. */
 char* string_to_hostname( const char* addr );
 
+/* Convert a hostname[:port] to sinful string */
+char * hostname_to_string (const char * hostname, const int default_port );
+
 char *sock_to_string(SOCKET sockd);
 
 /* Return the real hostname of a machine given a sin; return NULL if it cannot
