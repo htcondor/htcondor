@@ -230,6 +230,15 @@ float_to_rusage(float utime, float stime, struct rusage *ru)
 	return 0;
 }
 
+// I looked at this code for a while today, trying to figure out how
+// to get GetAttributeString() to create a new string of the correct
+// size so that we can get any size environment. Then I realized that
+// no one calls this code. shadow_common.c now contains MakeProc() which 
+// replaces this code. Thefore, I have #if-ed it out, to help other
+// people avoid similar confusion. 
+// Sincerely,
+// Alain Roy, 30-Oct-2001
+#if 0
 #if !defined(WIN32)
 int
 GetProc(int cl, int pr, PROC *p)
@@ -329,4 +338,5 @@ GetProc(int cl, int pr, PROC *p)
 	}
 	return 0;
 }
+#endif
 #endif
