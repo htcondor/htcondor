@@ -22,6 +22,7 @@ static 	void short_header (void);
 static 	void usage (char *);
 static 	void displayJobShort (ClassAd *);
 static 	void shorten (char *, int);
+static	bool show_queue (char*, char*, char*);
 
 static 	int verbose = 0, summarize = 1, global = 0;
 static 	int malformed, unexpanded, running, idle;
@@ -40,10 +41,8 @@ extern 	"C"	int		Termlog;
 
 int main (int argc, char **argv)
 {
-	ClassAd     *job;
 	ClassAd		*ad;
 	bool		first = true;
-	int         numDisplayed = 0;
 	char		scheddAddr[64];
 	char		scheddName[64];
 	char		scheddMachine[64];
@@ -58,18 +57,25 @@ int main (int argc, char **argv)
 	// process arguments
 	processCommandLineArguments (argc, argv);
 
-	// make sure we are querying schedd's or submittors
+	// if we haven't figured out what to do yet, just display the
+	// local queue 
 	if (!global && !querySchedds && !querySubmittors) {
-		char *host = my_full_hostname();
-		//localQueue = true;
-		querySchedds = true;
-		result = scheddQuery.addConstraint (SCHEDD_NAME, host);
-		if (result != Q_OK) {
-			fprintf(stderr,"Error: Couldn't add constraint Name=\"%s\"\n",host);
-			exit (1);
+		char *tmp = get_schedd_addr(0);
+		if( !tmp ) {
+			fprintf( stderr, "Can't find address of local schedd\n" );
+			exit( 1 );
+		}
+		sprintf( scheddAddr, "%s", tmp );
+		sprintf( scheddName, "%s", my_daemon_name("SCHEDD") );		
+		sprintf( scheddMachine, "%s", my_full_hostname() );
+		if( show_queue(scheddAddr, scheddName, scheddMachine) ) {
+			exit( 0 );
+		} else {
+			fprintf( stderr, "Can't display queue of local schedd\n" );
+			exit( 1 );
 		}
 	}
-
+	
 	// if a global queue is required, query the schedds instead of submittors
 	if (global) {
 		querySchedds = true;
@@ -96,61 +102,13 @@ int main (int argc, char **argv)
 	scheddList.Open();
 	while ((ad = scheddList.Next()))
 	{
-		ClassAdList jobs; 
-
 		// get the address of the schedd
 		if (!ad->LookupString(ATTR_SCHEDD_IP_ADDR, scheddAddr)	||
 			!ad->LookupString(ATTR_NAME, scheddName)			||
 			!ad->LookupString(ATTR_MACHINE, scheddMachine))
 				continue;
 	
-		// fetch queue from schedd	
-		if (Q.fetchQueueFromHost (jobs, scheddAddr) != Q_OK) continue;
-
-		// sort jobs by (cluster.proc)
-		jobs.Sort( (SortFunctionType)JobSort );
-
-		// display the jobs from this submittor
-		if (jobs.MyLength() != 0 || !global)
-		{
-			// print header
-			if (querySchedds) {
-				printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
-			} else {
-				printf ("\n\n-- Submittor: %s : %s : %s\n", scheddName, 
-							scheddAddr, scheddMachine);	
-			}
-	
-			// initialize counters
-			malformed = 0; idle = 0; running = 0; unexpanded = 0;
-
-			if (verbose)
-			{
-				jobs.fPrintAttrListList (stdout);
-				numDisplayed++;
-			}
-			else
-			{
-				short_header ();
-				jobs.Open ();
-				while (job = jobs.Next())
-				{
-					displayJobShort (job);
-					numDisplayed++;
-				}
-				jobs.Close ();
-			}
-
-			if (summarize)
-			{
-				printf("\n%d jobs; "
-					"%d unexpanded, %d idle, %d running, %d malformed\n",
-					unexpanded+idle+running+malformed,unexpanded,idle,running, 
-					malformed);
-			}
-		}
-
-	
+		show_queue( scheddAddr, scheddName, scheddMachine );
 		first = false;
 	}
 
@@ -161,10 +119,6 @@ int main (int argc, char **argv)
 	{
 		fprintf (stderr,"Error: Collector has no record of schedd/submittor\n");
 		exit(1);
-	}
-
-	if( !numDisplayed ) {
-		printf( "\tNo jobs in the query you requested.\n" );
 	}
 
 	return 0;
@@ -392,4 +346,51 @@ usage (char *myName)
 		"\t\t<cluster>\t\tGet information about specific cluster\n"
 		"\t\t<cluster>.<proc>\tGet information about specific job\n"
 		"\t\t<owner>\t\t\tInformation about jobs owned by <owner>\n", myName);
+}
+
+
+static bool
+show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
+{
+	ClassAdList jobs; 
+	ClassAd		*job;
+
+		// fetch queue from schedd	
+	if( Q.fetchQueueFromHost(jobs, scheddAddr) != Q_OK ) return false;
+
+		// sort jobs by (cluster.proc)
+	jobs.Sort( (SortFunctionType)JobSort );
+
+		// display the jobs from this submittor
+	if( jobs.MyLength() != 0 || !global ) {
+			// print header
+		if( querySchedds ) {
+			printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
+		} else {
+			printf ("\n\n-- Submittor: %s : %s : %s\n", scheddName, 
+					scheddAddr, scheddMachine);	
+		}
+		
+			// initialize counters
+		malformed = 0; idle = 0; running = 0; unexpanded = 0;
+		
+		if( verbose ) {
+			jobs.fPrintAttrListList( stdout );
+		} else {
+			short_header();
+			jobs.Open();
+			while( job = jobs.Next() ) {
+				displayJobShort( job );
+			}
+			jobs.Close();
+		}
+
+		if( summarize ) {
+			printf( "\n%d jobs; "
+					"%d unexpanded, %d idle, %d running, %d malformed\n",
+					unexpanded+idle+running+malformed,unexpanded,idle,running, 
+					malformed);
+		}
+	}
+	return true;
 }
