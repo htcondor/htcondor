@@ -1165,13 +1165,17 @@ int
 pseudo_get_ckpt_mode( int sig )
 {
 	int mode = 0;
-	if (sig == SIGTSTP) {
+	if (sig == SIGTSTP) {		// vacate checkpoint
 		if (CompressVacateCkpt) mode |= CKPT_MODE_USE_COMPRESSION;
 		if (SlowCkptSpeed) mode |= CKPT_MODE_SLOW;
 	} else if (sig == SIGUSR2) { // periodic checkpoint 
 		if (CompressPeriodicCkpt) mode |= CKPT_MODE_USE_COMPRESSION;
 		if (PeriodicSync) mode |= CKPT_MODE_MSYNC;
+	} else if (sig == 0) {		// restart
+		if (PeriodicSync) mode |= CKPT_MODE_MSYNC;
 	} else {
+		dprintf( D_ALWAYS,
+				 "pseudo_get_ckpt_mode called with unknown signal %d\n", sig );
 		mode = -1;
 	}
 	return mode;
