@@ -234,11 +234,8 @@ EXT_COMMON	-a externals/.cvsignore \
 		   externals/build_external \
 		   externals/bundles/man/current
 
-# The externals needed for the V6_6_0 release.  Normally, we wouldn't
-# necessarily keep these seperately for a given release, but we had to
-# add a new glibc bundle for 6.6.1 (to do the full port to redhat 8).
-V6_6_0_EXT	-a EXT_COMMON \
-		   externals/bundles/gahp/6.5 \
+# The common externals needed for all V6_6_* releases
+V6_6_COMMON_EXT	-a EXT_COMMON \
 		   externals/bundles/glibc/2.2.2 \
 		   externals/bundles/globus/2.2.4 \
 		   externals/bundles/globus/2.4.3 \
@@ -247,17 +244,21 @@ V6_6_0_EXT	-a EXT_COMMON \
 		   externals/bundles/pvm/3.4.2 \
 		   externals/bundles/zlib/1.1.3
 
-V6_6_EXT	-a EXT_COMMON \
+# Externals needed for V6_6_0
+V6_6_0_EXT	-a V6_6_COMMON_EXT \
+		   externals/bundles/gahp/6.5 \
+
+# Externals needed for V6_6_1
+V6_6_1_EXT	-a V6_6_COMMON_EXT \
 		   externals/bundles/gahp/1.0.10 \
-		   externals/bundles/glibc/2.2.2 \
 		   externals/bundles/glibc/2.2.93 \
-		   externals/bundles/glibc/2.3.2.27.9.7 \
-		   externals/bundles/globus/2.2.4 \
-		   externals/bundles/globus/2.4.3 \
-		   externals/bundles/gpt/3.0 \
-		   externals/bundles/krb5/1.2.5 \
-		   externals/bundles/pvm/3.4.2 \
-		   externals/bundles/zlib/1.1.3
+		   externals/bundles/glibc/2.3.2.27.9.7
+
+# Externals needed for the head of the V6_6-branch
+V6_6_EXT	-a V6_6_COMMON_EXT \
+		   externals/bundles/gahp/1.0.10 \
+		   externals/bundles/glibc/2.2.93 \
+		   externals/bundles/glibc/2.3.2.27.9.7
 
 # For now, V6_7-branch uses all the same externals as the V6_6-branch
 V6_7_EXT	-a V6_6_EXT
