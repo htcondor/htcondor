@@ -98,6 +98,7 @@ class TimerManager
 		Timer* 	timer_list;
 		int	   	timer_ids;
 		int		in_timeout;
+		int		did_reset;
 };
 
 #endif
