@@ -1312,9 +1312,9 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 			char * auth_methods = NULL;
 			auth_info.LookupString( ATTR_SEC_AUTHENTICATION_METHODS_LIST, &auth_methods );
 			if (auth_methods) {
-				dprintf (D_ALWAYS, "SECMAN: ZKM: %s\n", auth_methods);
+				dprintf (D_SECURITY, "SECMAN: ZKM: %s\n", auth_methods);
 			} else {
-				dprintf (D_ALWAYS, "SECMAN: ZKM: (null)\n", auth_methods);
+				dprintf (D_SECURITY, "SECMAN: ZKM: (null)\n", auth_methods);
 				auth_info.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, &auth_methods );
 			}
 

@@ -3001,7 +3001,6 @@ int DaemonCore::HandleReq(int socki)
 			if (comTable[index].perm != ALLOW) {
 
 				ClassAd our_policy;
-				dprintf (D_ALWAYS, "ZKM: thinking about level command %s.\n", PermString(comTable[index].perm));
 				if( ! sec_man->FillInSecurityPolicyAd( PermString(comTable[index].perm), &our_policy) ) {
 					dprintf( D_ALWAYS, "DC_AUTHENTICATE: "
 							 "Our security policy is invalid!\n" );
