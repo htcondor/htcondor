@@ -24,7 +24,7 @@
 #ifndef CLASSAD_ITOR
 #define CLASSAD_ITOR
 
-BEGIN_NAMESPACE( classad )
+BEGIN_NAMESPACE( classad );
 
 /** An object for iterating over the attributes of a ClassAd.  Several
     iterators may be active over the same ClassAd at any time, and the same
