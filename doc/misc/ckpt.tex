@@ -75,11 +75,11 @@ The Condor checkpointing facility can also be used for any Unix process
 outside of the Condor batch environment. Standalone checkpointing
 is described in section~\ref{sec:standalone-ckpt}.
 
-Condor can now read and write compressed checkpoints.  This new
-functionality is provided in the \File{libcondorzsyscall.a} library.
-If \File{/usr/lib/libz.a} exists on your workstation, \Condor{compile}
-will automatically link your job with the compression-enabled version
-of the checkpointing library.
+Condor can produce and use compressed checkpoints.
+Configuration variables (detailed in 
+section~\ref{sec:Shadow-Config-File-Entries}
+control whether compression is used.
+The default is to not compress.
 
 By default, a checkpoint is written to a file on the local disk of the
 machine where the job was submitted.  A checkpoint server is available
@@ -100,10 +100,10 @@ mode checkpointing.
 
 To prepare a program for standalone checkpointing, simply use the
 \Condor{compile} utility as for a standard Condor job, but do not
-use \Condor{submit} -- just run your program normally from the command
+use \Condor{submit} -- run the program normally from the command
 line.  The checkpointing library will print a message to let you know
-that checkpointing is enabled and to inform you where the checkpoint
-image is stored:
+that checkpointing is enabled and to inform you of the default
+name for the checkpoint image. The message is of the form:
 
 \begin{verbatim}
 Condor: Notice: Will checkpoint to program_name.ckpt
@@ -115,13 +115,15 @@ the SIGTSP signal or press control-Z.  To force the program to
 write a checkpoint image and continue executing, send it the
 SIGUSR2 signal.
 
-To restart the program from a checkpoint, run it again with the
-option ``-\_condor\_restart'' and the name of the checkpoint
+To restart a program using a checkpoint, run the program
+with the argument
+\Arg{-\_condor\_restart} followed by the name of the checkpoint
 image file.
-
-To use a different filename for the checkpoint image, use the option
-''-\_condor\_ckpt'' and the name of the file you want checkpoints
-written to.
+As an example, if the program is called \Prog{P1} and
+the checkpoint is called \File{P1.ckpt}, use
+\begin{verbatim}
+P1 -_condor_restart P1.ckpt
+\end{verbatim}
 
 \subsection{\label{sec:ckpt-safety}Checkpoint Safety}
 
@@ -149,7 +151,8 @@ please understand that your program may compute incorrect results.
 \subsection{\label{sec:ckpt-warnings}Checkpoint Warnings}
 
 Condor has a number of messages that warn you of unexpected
-behaviors in your program.  For example, if a file is opened for reading
+behaviors in your program.  For example, if file \File{x}
+is opened for reading
 and writing, you will see:
 
 \begin{verbatim}
@@ -191,57 +194,66 @@ if needed.
 
 \begin{itemize}
 
-\item \verb$void ckpt()$\\
+\item \Code{void init\_image\_with\_file\_name( char *ckpt\_file\_name )}\\
+This function explicitly sets a file name to use when
+producing or using a checkpoint.
+\Code{ckpt()} or
+\Code{ckpt\_and\_exit()} must be called to produce the
+checkpoint, and
+\Code{restart()} must be called to perform the
+actual restart.
+
+\item \Code{void init\_image\_with\_file\_descriptor( int fd )}\\
+This function explicitly sets a file descriptor to use when
+producing or using a checkpoint.
+\Code{ckpt()} or
+\Code{ckpt\_and\_exit()} must be called to produce the
+checkpoint, and
+\Code{restart()} must be called to perform the
+actual restart.
+
+\item \Code{void ckpt()}\\
 This function causes a checkpoint image to be written to disk.
 The program will continue to execute.  This is identical to sending
 the program a SIGUSR2 signal.
 
-\item \verb$void ckpt_and_exit()$\\
+\item \Code{void ckpt\_and\_exit()}\\
 This function causes a checkpoint image to be writtent to disk.
 The program will then exit.  This is identical to sending the program
 a SIGTSTP signal.
 
-\item \verb$void init_image_with_file_name( char *ckpt_file_name )$\\
-This function prepares the library to restart from the 
-given file name. \verb$restart()$ must be called to perform the
-actual restart.
-
-\item \verb$void init_image_with_file_descriptor( int fd )$\\
-This function prepares the library to restart from
-the given file descriptor.  \verb$restart()$ must be called to
-perform the actual restart.
-
-\item \verb$void restart()$\\
+\item \Code{void restart()}\\
 This function causes the program to read the checkpoint
-image specified by one of the above functions, and to resume the
-program where the checkpoint left off.  This function does
-not return.
+image and to resume
+execution of the program from the point where the checkpoint
+was taken.
+This function does not return.
 
-\item \verb$void _condor_ckpt_disable()$\\
+\item \Code{void \_condor\_ckpt\_disable()}\\
 This function temporarily disables checkpointing.  This can
-be handy if your program does something with is not checkpoint-safe.
+be handy if your program does something that is not checkpoint-safe.
 For example, if a program must not be interrupted while accessing
-a special file, call \verb$_condor_ckpt_disable()$, access the
-file, and then call \verb$_condor_ckpt_enable()$.  Some program
+a special file, call \Code{\_condor\_ckpt\_disable()}, access the
+file, and then call \Code{\_condor\_ckpt\_enable()}.  Some program
 actions, such as opening a socket or a pipe, implicitly cause
 checkpointing to be disabled.
 
-\item \verb$void _condor_ckpt_enable()$\\
+\item \Code{void \_condor\_ckpt\_enable()}\\
 This function re-enables checkpointing after a call to
-\verb$_condor_ckpt_disable()$.  If a checkpointing signal arrived
+\Code{\_condor\_ckpt\_disable()}.  If a checkpointing signal arrived
 while checkpointing was disabled, the checkpoint will occur when
 this function is called.  Disabling and enabling of checkpointing
-must occur in matched pairs.  \verb$_condor_ckpt_enable()$ must
-be called once for every time that \verb$_condor_ckpt_disable()$
+must occur in matched pairs.  \Code{\_condor\_ckpt\_enable()} must
+be called once for every time that \Code{\_condor\_ckpt\_disable()}
 is called.
 
-\item \verb$int _condor_warning_config( const char *kind, const char *mode )$\\
+\item \Code{int \_condor\_warning\_config( const char *kind, const char *mode )}\\
 This function controls what warnings are displayed by Condor.
-The \verb$kind$ and \verb$mode$ arguments are the same as for the
-\verb$-_condor_warning$ option described in section \ref{sec:ckpt-warnings}.  This function returns true
+The \Code{kind} and \Code{mode} arguments are the same as for the
+\Code{-\_condor\_warning} option described in section \ref{sec:ckpt-warnings}.  This function returns true
 if the arguments are understood and accepted.  Otherwise, it returns false.
 
-\item \verb$extern int condor_compress_ckpt$\\
+\item \Code{extern int condor\_compress\_ckpt}\\
 Setting this variable to one causes checkpoint images to be compressed.
 Setting it to zero disables compression.
 

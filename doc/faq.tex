@@ -616,10 +616,12 @@ Your central manager can be either Windows NT or Unix.  For example,
 even if you had a pool consisting strictly of Unix machines, you could
 use an NT box for your central manager, and vice versa.
 
-You can submit jobs destined to run on Windows NT from either an NT
-machine \Bold{or} a Unix machine.  However, at this point in time you
-cannot submit jobs destined to run on Unix from NT.  We do plan on
-adding this functionality, however.
+Submitted jobs can originate from either a 
+Windows NT \Bold{or} a Unix machine,
+and be destined to run on Windows NT 
+\Bold{or} a Unix machine.
+Note that there are still restrictions on the supported universes
+for jobs executed on Windows NT machines.
 
 So, in summary:
 
@@ -633,10 +635,27 @@ machines.}
 \item{Unix machines can submit jobs to run on other Unix or Windows NT
 machines.}
 
-\item{Windows NT machines can only submit jobs which will run on Windows
-NT machines.}
+\item{Windows NT machines can submit jobs to run on other Windows
+NT or Unix machines.}
 
 \end{enumerate}
+
+
+\subsection{Job submitted from Unix to execute on NT do not work properly.}
+A difficulty with defaults causes jobs submitted from Unix for execution
+on an NT platform to remain in the queue, but make no progress.
+For jobs with this problem, log files will contain error messages
+pointing to shadow exceptions.
+
+This difficulty stems from the defaults for whether file transfer
+takes place.
+The workaround for this problem is to place the line
+\begin{verbatim}
+   TRANSFER_FILES  = ALWAYS
+\end{verbatim}
+into the submit description file for jobs submitted from a Unix
+machine for execution on a Windows NT machine.
+
 
 \subsection{When I run \Condor{status} I get a communication error, or the
 Condor daemon log files report a failure to bind.}
