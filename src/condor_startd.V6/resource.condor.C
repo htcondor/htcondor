@@ -25,8 +25,6 @@ extern int Last_X_Event;
 extern char *exec_path;
 extern char *Starter;
 extern int run_benchmarks;
-extern int polls_per_update_load;
-extern int polls_per_update_kbdd;
 
 extern "C" int resource_initAd(resource_info_t* rip);
 extern "C" char *param(char*);
@@ -158,8 +156,22 @@ resource_open(resource_name_t name, resource_id_t* id)
 	return 0;
 }
 
+
+/* Re-calculate all dynamic parameters */
 int
 resource_params(resource_id_t rid, job_id_t jid, task_id_t tid, 
+				resource_param_t* old, resource_param_t* New)
+{
+	resource_timeout_params(rid, jid, tid, old, New);
+	resource_update_params(rid, jid, tid, old, New);
+}
+
+
+/* Re-calculate parameters for a given resource for things we need to
+   know at every timeout */
+
+int
+resource_timeout_params(resource_id_t rid, job_id_t jid, task_id_t tid, 
 				resource_param_t* old, resource_param_t* New)
 {
 	resource_info_t *rip;
@@ -173,11 +185,37 @@ resource_params(resource_id_t rid, job_id_t jid, task_id_t tid,
 
 	if (rid != NO_RID) {
 		old->res.res_load = get_load_avg();
-		dprintf(D_FULLDEBUG, "load avg: %f\n", old->res.res_load);
-		old->res.res_memavail = calc_virt_memory();
-		old->res.res_diskavail = calc_disk();
 		calc_idle_time(rip, old->res.res_idle, old->res.res_console_idle);
+			/* These are just here as a place holder in case some day
+			 we decide to do something in this function if we are not
+			 passed a valid Resource ID, but are passed a valid Job or
+			 Task ID -- Derek Wright 8/22/97 */
+	} else if (jid != NO_JID) {
+	} else if (tid != NO_TID) {
+	}
+	return 0;
+}
 
+/* Re-calculate parameters for a given resource for things we only
+   need to know when we're updating the central manager */
+int
+resource_update_params(resource_id_t rid, job_id_t jid, task_id_t tid, 
+				resource_param_t* old, resource_param_t* New)
+{
+	resource_info_t *rip;
+
+	rip = resmgr_getbyrid(rid);
+	/*
+	 * Can't set any parameters for now.
+	 */
+	if (New != NULL)
+		return -1;
+
+	if (rid != NO_RID) {
+		old->res.res_memavail = calc_virt_memory();
+		dprintf( D_FULLDEBUG, "Swap space: %d\n", old->res.res_memavail );
+		old->res.res_diskavail = calc_disk();
+		dprintf( D_FULLDEBUG, "Disk space: %d\n", old->res.res_diskavail );
 
 		/* Perform CPU Benchmarks only if desired in config_file 
 		 * _and_ only if we've been idle for quite some time or we've
@@ -210,6 +248,10 @@ resource_params(resource_id_t rid, job_id_t jid, task_id_t tid,
 			}
 		}
 
+			/* These are just here as a place holder in case some day
+			 we decide to do something in this function if we are not
+			 passed a valid Resource ID, but are passed a valid Job or
+			 Task ID -- Derek Wright 8/22/97 */
 	} else if (jid != NO_JID) {
 	} else if (tid != NO_TID) {
 	}
@@ -263,9 +305,9 @@ resource_free(resource_id_t rid)
 		return -1;
 	if (rip->r_pid == NO_PID)
 		return -1;
-	if (rip->r_jobcontext) {
-		delete rip->r_jobcontext;
-		rip->r_jobcontext = NULL;
+	if (rip->r_jobclassad) {
+		delete rip->r_jobclassad;
+		rip->r_jobclassad = NULL;
 	}
 	/* XXX boundary crossing */
 	free(rip->r_clientmachine);
@@ -303,14 +345,26 @@ resource_event(resource_id_t rid, job_id_t jid, task_id_t tid, event_t ev)
 	return 0;
 }
 
-int resource_initAd(resource_info_t* rip)
+int 
+resource_initAd(resource_info_t* rip)
 {
 	init_static_info(rip);
-	return (rip->r_context)->Insert("State=\"NoJob\"");
+	return (rip->r_classad)->Insert("State=\"NoJob\"");
 }
 
-//fill in the classAd of rip with dynamic info
-ClassAd* resource_context(resource_info_t* rip)
+
+// Update all dynamic info in the classad associated with the given rip 
+ClassAd*
+resource_classad(resource_info_t* rip)
+{
+	resource_timeout_classad( rip );
+	return resource_update_classad( rip );
+}
+
+
+//fill in the classAd of rip with dynamic info needed at every timeout
+ClassAd* 
+resource_timeout_classad(resource_info_t* rip)
 {
 	resource_param_t *rp;
 	ClassAd *cp;
@@ -318,19 +372,13 @@ ClassAd* resource_context(resource_info_t* rip)
 	char line[80];
 
 	rp = &rip->r_param;
-	cp = rip->r_context;
+	cp = rip->r_classad;
   
-	resource_params(rip->r_rid, NO_JID, NO_TID, rp, NULL);
+	resource_timeout_params(rip->r_rid, NO_JID, NO_TID, rp, NULL);
  
 	sprintf(line,"LoadAvg=%f",rp->res.res_load);
 	cp->Insert(line);
 
-	sprintf(line,"VirtualMemory=%d",rp->res.res_memavail);
-	cp->Insert(line); 
-
-	sprintf(line,"Disk=%d",rp->res.res_diskavail);
-	cp->Insert(line); 
-  
 	sprintf(line,"KeyboardIdle=%d",rp->res.res_idle);
 	cp->Insert(line); 
   
@@ -340,6 +388,29 @@ ClassAd* resource_context(resource_info_t* rip)
 		sprintf(line,"ConsoleIdle=%d",rp->res.res_console_idle);
 		cp->Insert(line); 
 	}
+	return cp;
+}
+
+
+//fill in the classAd of rip with dynamic info needed only for updating CM
+ClassAd* 
+resource_update_classad(resource_info_t* rip)
+{
+	resource_param_t *rp;
+	ClassAd *cp;
+
+	char line[80];
+
+	rp = &rip->r_param;
+	cp = rip->r_classad;
+  
+	resource_update_params(rip->r_rid, NO_JID, NO_TID, rp, NULL);
+ 
+	sprintf(line,"VirtualMemory=%d",rp->res.res_memavail);
+	cp->Insert(line); 
+
+	sprintf(line,"Disk=%d",rp->res.res_diskavail);
+	cp->Insert(line); 
   
 	// KFLOPS and MIPS are only conditionally computed; thus, only
 	// advertise them if we computed them.
@@ -354,6 +425,7 @@ ClassAd* resource_context(resource_info_t* rip)
 
 	return cp;
 }
+
 
 int
 resource_close(resource_id_t rid)
@@ -724,8 +796,8 @@ kill_starter(int pid, int signo)
 static char *UtmpName = "/var/adm/utmp";
 static char *AltUtmpName = "/etc/utmp";
 #elif defined(LINUX)
-static char *AltUtmpName = "/var/run/utmp";
-static char *UtmpName = "/var/adm/utmp";
+static char *UtmpName = "/var/run/utmp";
+static char *AltUtmpName = "/var/adm/utmp";
 #else
 static char *UtmpName = "/etc/utmp";
 static char *AltUtmpName = "/var/adm/utmp";
@@ -746,22 +818,12 @@ calc_idle_time(resource_info_t* rip, int & user_idle, int & console_idle)
 	int now;
 	struct utmp utmp;
 	ELEM temp;
-	static int oldval = 0, console_oldval = 0, kbdd_counter = 0;
 #if defined(HPUX9) || defined(LINUX)	/*Linux uses /dev/mouse	*/
 	int i;
 	char devname[MAXPATHLEN];
 #endif
 
 	console_idle = -1;  // initialize
-
-	if (oldval != 0 && (rip == NULL || rip->r_state != JOB_RUNNING) &&
-		++kbdd_counter != polls_per_update_kbdd) {
-		user_idle = oldval;
-		console_idle = console_oldval;
-		return;
-	}
-
-	kbdd_counter = 0;
 
 	user_idle = tty_pty_idle_time();
 	dprintf( D_FULLDEBUG, "ttys/ptys idle %d seconds\n",  user_idle );
@@ -809,7 +871,7 @@ calc_idle_time(resource_info_t* rip, int & user_idle, int & console_idle)
 #endif
 
 /*
- * Linux usally has a /dev/mouse linked to ttySx.  Use it!
+ * Linux usally has a /dev/mouse linked to ttySx or psaux, etc.  Use it!
  *
  * stat() will follow the link to the apropriate ttySx
  */
@@ -831,8 +893,6 @@ calc_idle_time(resource_info_t* rip, int & user_idle, int & console_idle)
 
 	dprintf(D_FULLDEBUG, "Idle Time: user= %d , console= %d seconds\n",
 			user_idle,console_idle);
-	oldval = user_idle;
-	console_oldval = console_idle;
 	return;
 }
 
@@ -922,17 +982,17 @@ static void init_static_info(resource_info_t* rip)
 	char	*addrname;
 	char tmp[80];
 	int phys_memory = -1;
-	ClassAd* config_context = rip->r_context;
+	ClassAd* config_classad = rip->r_classad;
 	struct sockaddr_in sin;
 	int len = sizeof sin;
   
 	sprintf(tmp,"Name=\"%s\"",rip->r_name);
-	config_context->Insert(tmp);
+	config_classad->Insert(tmp);
   
 	host_cell = get_host_cell();
 	if(host_cell) {
 		sprintf(tmp,"AFS_CELL=\"%s\"",host_cell);
-		config_context->Insert(tmp);
+		config_classad->Insert(tmp);
 		dprintf(D_ALWAYS, "AFS_Cell = \"%s\"\n", host_cell);
 	} else {
 		dprintf(D_ALWAYS, "AFS_Cell not set\n");
@@ -956,7 +1016,7 @@ static void init_static_info(resource_info_t* rip)
 	dprintf(D_ALWAYS, "UidDomain = \"%s\"\n", ptr);
   
 	sprintf(tmp,"UidDomain=\"%s\"",ptr);
-	config_context->Insert(tmp);
+	config_classad->Insert(tmp);
   
 	/*
 	 * If the filesystem domain is not defined, we share files only
@@ -974,11 +1034,11 @@ static void init_static_info(resource_info_t* rip)
 		ptr = "";
   
 	sprintf(tmp,"FilesystemDomain=\"%s\"",ptr);
-	config_context->Insert(tmp);
+	config_classad->Insert(tmp);
 	dprintf(D_ALWAYS, "FilesystemDomain = \"%s\"\n", tmp);
   
 	sprintf(tmp,"Cpus=%d",calc_ncpus());
-	config_context->Insert(tmp);
+	config_classad->Insert(tmp);
   
 	
 	/*
@@ -992,14 +1052,14 @@ static void init_static_info(resource_info_t* rip)
 		strcpy(tmp,param("NEST"));
 	else
 		strcpy(tmp,"NOTSET");
-	config_context->Insert(tmp);
+	config_classad->Insert(tmp);
 	dprintf(D_ALWAYS, "Nest = \"%s\"\n", tmp);
   
 	phys_memory = calc_phys_memory();
 
 	if (phys_memory > 0) {
 		sprintf(tmp,"Memory=%d",phys_memory);
-		config_context->Insert(tmp);
+		config_classad->Insert(tmp);
 	}
   
 	addrname = (char *)malloc(32);
@@ -1008,12 +1068,12 @@ static void init_static_info(resource_info_t* rip)
 	strcpy(addrname, sin_to_string(&sin));
   
 	sprintf(tmp,"%s=\"%s\"",(char *)ATTR_STARTD_IP_ADDR,addrname);
-	config_context->Insert(tmp);
+	config_classad->Insert(tmp);
 
 	// Quick hack to refer to the START expression as the machine
 	// classad requirements.  Eventually we should do some more
 	// intelligent local evaluation or some such here.  -Todd 7/97
-	config_context->SetRequirements("Requirements = START");
+	config_classad->SetRequirements("Requirements = START");
 }
 
 static char *
@@ -1068,15 +1128,7 @@ calc_ncpus()
 static float
 get_load_avg()
 {
-	static int first = 1;
-	static float oldval;
-	static int load_counter = 0;
-
-	if (++load_counter != polls_per_update_load && !first)
-		return oldval;
-	first = 0;
-	load_counter = 0;
-	oldval = calc_load_avg();
-	dprintf(D_ALWAYS, "calc_load_avg -> %f\n", oldval);
-	return oldval;
+	float val = calc_load_avg();
+	dprintf(D_ALWAYS, "calc_load_avg -> %f\n", val);
+	return val;
 }
