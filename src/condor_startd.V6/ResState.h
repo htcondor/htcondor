@@ -24,7 +24,7 @@ public:
 	~ResState();
 	State	state() {return r_state;};
 	Activity activity() {return r_act;};
-	void	init_classad( ClassAd* );
+	void	update( ClassAd* );
 	int		change( Activity );
 	int		change( State );
 	int 	eval();
@@ -34,7 +34,8 @@ private:
 	State 		r_state;
 	Activity	r_act;		
 
-	int		act_time;		// time we entered the current activitiy
+	int		stime;		// time we entered the current state
+	int		atime;		// time we entered the current activitiy
 	LoadQueue*	r_load_q;	// load average queue
 		// Function called on every activity change which update the load_q
 	void	load_activity_change();  

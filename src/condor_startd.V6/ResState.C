@@ -7,7 +7,8 @@ ResState::ResState( Resource* rip )
 	r_load_q = new LoadQueue(60);
 	r_state = owner_state;
 	r_act = idle_act;
-	act_time = (int)time(NULL);
+	atime = (int)time(NULL);
+	stime = atime;
 	this->rip = rip;
 }
 
@@ -19,21 +20,20 @@ ResState::~ResState()
 
 
 void
-ResState::init_classad( ClassAd* cp ) 
+ResState::update( ClassAd* cp ) 
 {
 	char tmp[80];
-	int now = (int)time(NULL);
 
 	sprintf( tmp, "%s=\"%s\"", ATTR_STATE, state_to_string(r_state) );
 	cp->InsertOrUpdate( tmp );
 
-	sprintf( tmp, "%s=%d", ATTR_ENTERED_CURRENT_STATE, now );
+	sprintf( tmp, "%s=%d", ATTR_ENTERED_CURRENT_STATE, stime );
 	cp->InsertOrUpdate( tmp );
 
 	sprintf( tmp, "%s=\"%s\"", ATTR_ACTIVITY, activity_to_string(r_act) );
 	cp->InsertOrUpdate( tmp );
 
-	sprintf( tmp, "%s=%d", ATTR_ENTERED_CURRENT_ACTIVITY, now );
+	sprintf( tmp, "%s=%d", ATTR_ENTERED_CURRENT_ACTIVITY, atime );
 	cp->InsertOrUpdate(tmp);
 }
 
@@ -41,10 +41,6 @@ ResState::init_classad( ClassAd* cp )
 int
 ResState::change( State new_state )
 {
-	time_t now;
-	char tmp[100];
-	char* name;
-	ClassAd* cp = rip->r_classad;
 	int val;
 
 	if( new_state == r_state ) {
@@ -62,6 +58,7 @@ ResState::change( State new_state )
 			 state_to_string(new_state) );
 
 	r_state = new_state;
+	stime = (int)time( NULL );
 
 	switch( new_state ) {
 	case owner_state:
@@ -112,14 +109,8 @@ ResState::change( State new_state )
 		EXCEPT( "unknown state in ResState::change" );
 	}
 
-	now = time( NULL );
-	name = state_to_string( new_state);
-
-	sprintf( tmp, "%s=\"%s\"", ATTR_STATE, name );
-	cp->InsertOrUpdate( tmp );
-
-	sprintf( tmp, "%s=%d", ATTR_ENTERED_CURRENT_STATE, (int)now );
-	cp->InsertOrUpdate( tmp );
+		// Note our current state and activity in the classad
+	this->update( rip->r_classad );
 
 		// Since we did a state change, we need to update the Central
 		// Manager for this resource.
@@ -144,10 +135,6 @@ ResState::change( State new_state )
 int
 ResState::change( Activity new_act )
 {
-	char tmp[100];
-	char* name;
-	ClassAd* cp = rip->r_classad;
-
 	if( r_act == new_act ) {
 		return TRUE;
 	}
@@ -166,13 +153,10 @@ ResState::change( Activity new_act )
 	load_activity_change();
 
 	r_act = new_act;
+	atime = (int)time( NULL );
 
-	name = activity_to_string( new_act );
-	sprintf( tmp, "%s=\"%s\"", ATTR_ACTIVITY, name );
-	cp->InsertOrUpdate( tmp );
-
-	sprintf( tmp, "%s=%d", ATTR_ENTERED_CURRENT_ACTIVITY, (int)time(NULL) );
-	cp->InsertOrUpdate(tmp);
+		// Update our current state and activity in the classad
+	this->update( rip->r_classad );
 
 	return TRUE;
 }
@@ -318,7 +302,7 @@ void
 ResState::load_activity_change() 
 {
 	int now		=	(int) time(NULL);
-	int delta	= 	now - act_time;
+	int delta	= 	now - atime;
 	int load	=	act_to_load( r_act );
 
 	if( delta < 1 ) {
@@ -326,14 +310,9 @@ ResState::load_activity_change()
 	}
 	if( delta >= 60 ) {
 		r_load_q->setval( (char)load );
-		dprintf( D_FULLDEBUG, "Reset load queue to %d\n", load );
 	} else {
 		r_load_q->push( delta, (char)load );
-		dprintf( D_FULLDEBUG, 
-				 "Added %d seconds worth of %d to load queue\n", 
-				 delta, load );
 	}
-	act_time = now;
 }
 
 
@@ -341,7 +320,7 @@ float
 ResState::condor_load()
 {
 	int now		=	(int) time(NULL);
-	int delta	= 	now - act_time;
+	int delta	= 	now - atime;
 	int load	=	act_to_load( r_act );
 	int val;
 
