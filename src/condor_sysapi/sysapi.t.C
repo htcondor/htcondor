@@ -30,8 +30,13 @@
 int
 main(int argc, char** argv)
 {
+	Termlog = 1;
+	dprintf_config("TOOL", 2);
+
 	set_debug_flags("D_ALWAYS");
 	config();
 	sysapi_test_dump_all(argc, argv);
 	return 0;
 }
+
+
