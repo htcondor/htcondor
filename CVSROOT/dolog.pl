@@ -269,7 +269,7 @@ sub mail_notification {
     my ($remote,$port, $iaddr, $paddr, $proto, $line);
 
     $remote  = $mailhost;
-    $port    = 16;
+    $port    = 1600;
     if ($port =~ /\D/) { $port = getservbyname($port, 'tcp') }
     die "No port" unless $port;
     $iaddr   = inet_aton($remote)               || die "no host: $remote";
