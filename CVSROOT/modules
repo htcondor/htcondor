@@ -95,7 +95,8 @@ V6_3_SRC		-a \
 			src/condor_test_suite_java \
 			src/condor_dcskel \
 			src/condor_daemon_client \
-			src/condor_gridmanager
+			src/condor_gridmanager \
+			src/hawkeye_modules
 
 V6_5_SRC		-a \
 			V6_COMMON \
