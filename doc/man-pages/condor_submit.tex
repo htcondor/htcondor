@@ -63,12 +63,12 @@ The commands which can appear in the submit description file are:
 \index{submit commands!executable}
 The name of the executable file for this
 job cluster. Only one executable command may be present in a description
-file. If submitting into the Standard Universe, which is the default,
+file. If submitting into the standard universe, which is the default,
 then the named executable must have been re-linked with the Condor
 libraries (such as via the \Condor{compile} command). If submitting into
-the Vanilla Universe, then the named executable need not be re-linked and
+the vanilla universe, then the named executable need not be re-linked and
 can be any process which can run in the background (shell scripts work
-fine as well).  If submitting into the Java Universe, then the argument
+fine as well).  If submitting into the Java universe, then the argument
 must be a compiled \File{.class} file.
 
 
@@ -1112,11 +1112,11 @@ and the name of the file is given
 by the \Opt{error} command.
 
 %%%%%%%%%%%%%%%%%%%
-%% Transfer_Executable
+%% transfer_executable
 %%%%%%%%%%%%%%%%%%%
 
 \item[transfer\_executable = $<$True \Bar\ False$>$]
-For jobs submitted to the globus universe only.
+For jobs submitted to the globus universe, as well as vanilla and MPI.
 If \Opt{transfer\_executable} is set to
 \index{submit commands!transfer\_executable}
 \Expr{False}, then Condor looks for the executable on the remote machine, and
@@ -1124,7 +1124,6 @@ does not transfer the executable over.
 This is useful if you have already pre-staged your
 executable and wish to have Condor behave more like rsh.
 Defaults to \Expr{True}.
-This option is only used in the Globus universe.
 
 
 %%%%%%%%%%%%%%%%%%%
