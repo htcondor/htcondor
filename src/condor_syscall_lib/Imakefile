@@ -62,7 +62,8 @@ EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  i386_data.o SYSCONF.o GETLOGIN.o
 #	elif (IS_X86_SOLARIS26)
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
-		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o GETCWD.o \
+		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o \
+		  GETCWD.o READDIR.o GETDENTS64.o \
 		  i386_data.o SYSCONF.o GETLOGIN.o LSEEK64.o MMAP64.o
 #	elif (IS_SUN4X_SOLARIS251)
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
@@ -70,7 +71,8 @@ EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  SYSCONF.o GETLOGIN.o
 #	elif (IS_SUN4X_SOLARIS26)
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
-		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o GETCWD.o \
+		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o \
+		  GETCWD.o READDIR.o GETDENTS64.o \
 		  SYSCONF.o GETLOGIN.o LSEEK64.o MMAP64.o
 #	elif IS_SGI_IRIX53
 EXTRACT = /* don't extract anything */
@@ -215,8 +217,8 @@ uppercase_target($(SIMPLE_LIBC),sigaction.o,SIGACTION.o,sigaction,SIGACTION)
 uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL.o,syscall,SYSCALL)
 uppercase_target($(SIMPLE_LIBC),_sigaction.o,_SIGACTION.o,sigaction,SIGACTION)
 uppercase_target($(SIMPLE_LIBC),truncate.o,TRUNCATE.o,ftruncate,FTRUNCATE)
-uppercase_target($(SIMPLE_LIBC),getcwd.o,GETCWD.o,getcwd,GETCWD)
 #endif
+
 uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
 uppercase_target($(SIMPLE_LIBC),pipe.o,PIPE.o,pipe,PIPE)
 
@@ -232,7 +234,23 @@ uppercase_target($(SIMPLE_LIBC),__pipe.o,__PIPE.o,__pipe,__PIPE)
 #if (IS_SOLARIS26)
 uppercase_target($(SIMPLE_LIBC),lseek64.o,LSEEK64.o,lseek64,LSEEK64)
 uppercase_target($(SIMPLE_LIBC),mmap64.o,MMAP64.o,mmap64,MMAP64)
-#endif
+uppercase_target($(SIMPLE_LIBC),getdents64.o,GETDENTS64.o,_getdents64,_GETDENTS64)
+
+READDIR.o: ToUpper $(SIMPLE_LIBC)
+	ar x $(SIMPLE_LIBC) readdir.o
+	./ToUpper readdir.o READDIR_TMP.o readdir READDIR
+	./ToUpper READDIR_TMP.o READDIR.o _getdents64 _GETDENTS64
+	rm -f readdir.o READDIR_TMP.o
+
+GETCWD.o : ToUpper $(SIMPLE_LIBC)
+	ar x $(SIMPLE_LIBC) getcwd.o
+	./ToUpper getcwd.o GETCWD_TMP.o getcwd GETCWD
+	./ToUpper GETCWD_TMP.o GETCWD.o _readdir64 _READDIR64
+	rm -f getcwd.o GETCWD_TMP.o
+
+#elif IS_SOLARIS
+uppercase_target($(SIMPLE_LIBC),getcwd.o,GETCWD.o,getcwd,GETCWD)
+#endif /* Solaris 2.6 */
 
 
 #if (IS_I386_LINUX) 
