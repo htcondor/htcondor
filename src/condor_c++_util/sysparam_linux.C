@@ -10,11 +10,7 @@
 
 // C definitions
 static char *_FileName_ = __FILE__;
-extern "C"
-{
-	int set_root_euid();
-	int set_condor_euid();
-}
+
 class LoadVector {
 public:
 	int		Update();
@@ -53,9 +49,6 @@ Linux::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 {
 	char	c;
 
-
-	set_root_euid();
-
 	switch ( sys )
 	{
 	case Arch:                            // get_arch()
@@ -84,7 +77,6 @@ Linux::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 		if ( temp == -1 )
 		{
 			dprintf( D_ALWAYS, "LoadAvg failed from Kernel \n");
-			set_condor_euid();
 			return -1;
 		}
 		size = sizeof(float);     // we return the long average as of now
@@ -112,7 +104,6 @@ Linux::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 	    proc=fopen("/proc/meminfo","r");
 	    if(!proc) {
 		dprintf(D_ALWAYS, "Could not open /proc/meminfo");
-		set_condor_euid();
 		return -1;
 	    }
 	    // The /proc/meminfo looks something like this for V1.x.x:
@@ -178,7 +169,6 @@ Linux::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 	    proc=fopen("/proc/meminfo","r");
 	    if(!proc) {
 		dprintf(D_ALWAYS, "Could not open /proc/meminfo");
-		set_condor_euid();
 		return -1;
 	    }
 	    // The /proc/meminfo looks something like this:
@@ -239,7 +229,6 @@ Linux::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 	    proc=fopen("/proc/cpuinfo","r");
 	    if(!proc) {
 		dprintf(D_ALWAYS, "Could not open /proc/cpuinfo");
-		set_condor_euid();
 		return -1;
 	    }
 
@@ -295,7 +284,6 @@ Linux::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 		dprintf(D_ALWAYS, "readSysParam: default\n");
 		return -1;
 	}
-	set_condor_euid();
 	return 1;
 }
 
