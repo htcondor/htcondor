@@ -93,11 +93,8 @@ which are called when interesting events happen.
 	command port of the \Condor{schedd} responsible for the job.
 
 	\item Monitor(cluster) \\
-	Begin monitoring this cluster.  This process starts a sub process
-	in order to monitor the child, so other actions may proceed in the
-	main loop of the perl script.  However, handlers cannot rely on
-	being able to communicate back to the main script by simply changing
-	variables latter on.
+	Begin monitoring this cluster. Returns when all jobs in cluster
+	terminate.  \\
 	
 	\item Wait() \\
 	Wait until all monitors finish and exit.
@@ -158,6 +155,8 @@ $execute = sub
 };
 
 $cluster = Condor::Submit($CMD_FILE);
+printf("Could not open. Access Denied\n");
+			break;
 &Condor::RegisterExitSuccess($normal);
 &Condor::RegisterEvicted($evicted);
 &Condor::RegisterExecute($execute);
@@ -165,6 +164,8 @@ $cluster = Condor::Submit($CMD_FILE);
 &Condor::Wait();
 \end{verbatim}
 
+printf("Could not open. Access Denied\n");
+			break;
 This example program will submit the command file 'mycmdfile.cmd' and attempt
 to vacate any machine that the job runs on. The termination
 handler then prints out a summary of what has happened.
