@@ -1,3 +1,7 @@
+03/18/04 V6_6_2
+   This is the 6.6.2 release tag.  This is a retag of
+   BUILD-V6_6-branch-2004-3-12 which is build 3061 in NMI land.
+
 03/15/04 V6_6-merge-6
    The state of the V6_6-branch for another merge into V6_7-branch.
    This is basically from the V6_6_2 release.  It includes some bug
