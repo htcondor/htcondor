@@ -14,60 +14,68 @@ my %Options =
      "[-pool=host]"	=> "Set the condor pool to \"host\"",
      "[-down-cluster]"	=> "Report known down cluster nodes",
      "[-down-all]"	=> "Report all known down nodes",
+     "[-script]"	=> "Produce script-parsable output",
      "[-v]"		=> "Verbose",
      "[-h]"		=> "Dump help",
     );
 
 # Process command line
-my $Verbose = 0;
-my $DoPing = 0;
-my $DoPingOk = 0;
-my $DoReserved = 0;
-my $DoClusterCheck = 0;
-my $RosterFile = "";
+my %Config = (
+	      Verbose		=> 0,
+	      DoPing		=> 0,
+	      DoReserved	=> 0,
+	      DoClusterCheck	=> 0,
+	      DoDownCluster	=> 0,
+	      DoDownNodes	=> 0,
+	      DoScriptOut	=> 0,
+	      RosterDir		=> "/p/condor/home/admin",
+	      RosterFile	=> "",
+	      CondorPool	=> "",
+	     );
 my $Program = $0;
-my $CondorPool = "";
-my $DoDownCluster = 0;
-my $DoDownNodes = 0;
 my @DownList;
 foreach my $Arg ( @ARGV )
 {
     if ( $Arg =~ /^-ping$/ )
     {
-	$DoPing = 1;
+	$Config{DoPing} = 1;
     }
     elsif ( $Arg =~ /^-pingok$/ )
     {
-	$DoPingOk = 1;
+	$Config{DoPingOk} = 1;
     }
     elsif ( $Arg =~ /^-$/ )
     {
-	$RosterFile = "<\&STDIN";
+	$Config{RosterFile} = "<\&STDIN";
     }
     elsif ( $Arg =~ /^-reserved$/ )
     {
-	$DoReserved = 1;
+	$Config{DoReserved} = 1;
     }
     elsif ( $Arg =~ /^-cluster$/ )
     {
-	$DoClusterCheck = 1;
+	$Config{DoClusterCheck} = 1;
     }
     elsif ( $Arg =~ /^-down-cluster$/ )
     {
-	$DoDownCluster = 1;
+	$Config{DoDownCluster} = 1;
     }
     elsif ( $Arg =~ /^-down-all$/ )
     {
-	$DoDownCluster = 1;
-	$DoDownNodes = 1;
+	$Config{DoDownCluster} = 1;
+	$Config{DoDownNodes} = 1;
+    }
+    elsif ( $Arg =~ /^-script$/ )
+    {
+	$Config{DoScriptOut} = 1;
     }
     elsif ( $Arg =~ /^-pool=(.*)/ )
     {
-	$CondorPool = $1;
+	$Config{CondorPool} = $1;
     }
     elsif ( $Arg =~ /^-v$/ )
     {
-	$Verbose++;
+	$Config{Verbose}++;
     }
     elsif ( $Arg =~ /^-h$/ )
     {
@@ -82,7 +90,7 @@ foreach my $Arg ( @ARGV )
 }
 
 # -cluster w/o -ping doesn't make sense
-if (  ( $DoClusterCheck ) && ( ! $DoPing )  )
+if (  ( $Config{DoClusterCheck} ) && ( ! $Config{DoPing} )  )
 {
     print STDERR "Warning: -cluster has no effect without -ping\n";
 }
@@ -90,17 +98,17 @@ if (  ( $DoClusterCheck ) && ( ! $DoPing )  )
 # Set this to the file that contains the list of machines in your
 # pool, sorted and unique.  It should contain just hostnames, not full
 # hostnames with domains.
-my $RosterDir = "/p/condor/home/admin";
 if ( exists( $ENV{CONDOR_ROSTER_DIR} ) )
 {
-    $RosterDir = $ENV{CONDOR_ROSTER_DIR};
+    $Config{RosterDir} = $ENV{CONDOR_ROSTER_DIR};
 }
-$RosterFile = "$RosterDir/roster" if ( $RosterFile eq "" );
+$Config{RosterFile} = "$Config{RosterDir}/roster"
+    if ( $Config{RosterFile} eq "" );
 if ( exists( $ENV{CONDOR_ROSTER_FILE} ) )
 {
-    $RosterFile = $ENV{CONDOR_ROSTER_FILE};
+    $Config{RosterFile} = $ENV{CONDOR_ROSTER_FILE};
 }
-my $RosterStateFile = "$RosterDir/roster.state";
+my $RosterStateFile = "$Config{RosterDir}/roster.state";
 if ( exists( $ENV{CONDOR_ROSTER_STATE} ) )
 {
     $RosterStateFile = $ENV{CONDOR_ROSTER_STATE};
@@ -108,8 +116,8 @@ if ( exists( $ENV{CONDOR_ROSTER_STATE} ) )
 my $CondorStatus = "condor_status";
 my $CondorReserved = "condor_reserved";
 my $CondorStatusArgs = "-master";
-$CondorStatusArgs = $CondorStatusArgs . " -pool $CondorPool"
-    if ( $CondorPool ne "" );
+$CondorStatusArgs = $CondorStatusArgs . " -pool $Config{CondorPool}"
+    if ( $Config{CondorPool} ne "" );
 
 # List of users,hosts,user@hosts to allow as personal condor users
 my %PersonalCondorLists = (
@@ -170,13 +178,14 @@ while ( <IN> )
     }
     elsif ( ! /^$/ )
     {
-	print "Can't parse state line $. '$_'\n";
+	print STDERR "Can't parse state line $. '$_'\n";
     }
 }
 close( IN );
 
 # Read in the current roster, build the "%Absent" hash of names
-die "Can't open '$RosterFile'" if ( ! open( IN, "$RosterFile" )  );
+die "Can't open '$Config{RosterFile}'"
+    if ( ! open( IN, "$Config{RosterFile}" )  );
 my $RosterCount;
 my %FullRoster;
 my %RosterDown;
@@ -261,7 +270,7 @@ foreach my $Host ( keys %FullRoster )
 
 # Run the cluster tool...
 my $ReservedCount = 0;
-if ( $DoReserved )
+if ( $Config{DoReserved} )
 {
     my $Cmd = "$CondorReserved";
     die "Can't run '$Cmd'" if ( ! open( IN, "$Cmd|" )  );
@@ -274,7 +283,7 @@ if ( $DoReserved )
 	    delete $Absent{$Host};
 	}
 	$ReservedCount++;
-	print "Reserved: $Host\n" if ( $Verbose >= 1 );
+	print "Reserved: $Host\n" if ( $Config{Verbose} >= 1 );
     }
     close( IN );
 }
@@ -284,7 +293,7 @@ if ( $DoReserved )
 my @ClusterDown;		# Cluster nodes that are 'down'
 my $ClusterAbsent = 0;		# Count of the above
 my @NotDown;			# Hosts listed as down, but not
-if ( $DoPing )
+if ( $Config{DoPing} )
 {
     my %PingOk;
 
@@ -353,24 +362,44 @@ if ( $DoPing )
 
 # Ok, now dump out the results
 my $AbsentCount = 0;
-foreach my $Host ( sort keys %Absent )
+my @ClusterAbsent;
+if ( scalar keys %Absent > 0 )
 {
-    print "$Host\n";
-    $AbsentCount++;
+    my $Num = ( scalar keys %Absent );
+    print "\n# Absent nodes ($Num):\n" if ( ! $Config{DoScriptOut} );
+    foreach my $Host ( sort keys %Absent )
+    {
+	print "$Host\n";
+	$AbsentCount++;
+	push @ClusterAbsent, $Host if ( exists $ClusterNodes{$Host} );
+    }
 }
 
 # Report hosts that are listed as down, but ping ok
-if ( $DoPingOk )
+if ( $Config{DoPingOk} )
 {
     foreach my $Host ( @NotDown )
     {
-	print "Host listed as down, but ping ok: '$Host'\n";
+	print "# Host listed as down, but ping ok: '$Host'\n";
+    }
+}
+
+# Report absent cluster nodes separately...
+if ( $#ClusterAbsent >= 0 )
+{
+    my $Num = $#ClusterAbsent + 1;
+    print "\n# Cluster nodes absent ($Num):\n" if ( ! $Config{DoScriptOut} );
+    foreach my $Host ( @ClusterAbsent )
+    {
+	print "Cluster node absent: '$Host'\n";
     }
 }
 
 # Report cluster hosts that are down
-if ( $DoClusterCheck )
+if ( ( $Config{DoClusterCheck} ) && ( $#ClusterDown >= 0 ) )
 {
+    my $Num = ($#ClusterDown + 1);
+    print "\n# Cluster nodes down ($Num):\n" if ( ! $Config{DoScriptOut} );
     foreach my $Host ( @ClusterDown )
     {
 	print "Cluster node down: '$Host'\n";
@@ -392,15 +421,21 @@ foreach my $Host ( sort @DownList )
     }
 }
 # Report hosts that are _known_ to be down...
-if ( $DoDownCluster )
+if ( ( $Config{DoDownCluster} ) && ( $#KnownClusterDown >= 0 ) )
 {
+    my $Num = $#KnownClusterDown + 1;
+    print "\n# Cluster nodes known to be down ($Num):\n"
+	if ( ! $Config{DoScriptOut} );
     foreach my $Host ( @KnownClusterDown )
     {
 	print "Cluster node known to be down: '$Host'\n";
     }
 }
-if ( $DoDownNodes )
+if ( ( $Config{DoDownNodes} ) && ( $#KnownNodeDown >= 0 ) )
 {
+    my $Num = $#KnownNodeDown + 1;
+    print "\n# Nodes known to be down ($Num):\n"
+	if ( ! $Config{DoScriptOut} );
     foreach my $Host ( @KnownNodeDown )
     {
 	print "Node known to be down: '$Host'\n";
@@ -408,11 +443,12 @@ if ( $DoDownNodes )
 }
 
 # Report cluster nodes that are known to be down..
+print "\n" if ( ! $Config{DoScriptOut} );
 print "# Summary\n";
 print "#   $RosterCount machines in the roster\n";
 print "#   Cluster: $ClusterCount nodes";
-print ", $ReservedCount reserved" if ( $DoReserved );
-print ", " . ($#ClusterDown + 1) . " down" if ( $DoClusterCheck );
+print ", $ReservedCount reserved" if ( $Config{DoReserved} );
+print ", " . ($#ClusterDown + 1) . " down" if ( $Config{DoClusterCheck} );
 print ", $ClusterAbsent absent";
 print "\n#   $AbsentCount hosts absent\n";
 
