@@ -234,6 +234,10 @@ main_init( int argc, char* argv[] )
 								  (CommandHandler)command_pckpt_all,
 								  "command_pckpt_all", 0, WRITE );
 
+	daemonCore->Register_Command( PCKPT_JOB, "PCKPT_JOB", 
+								  (CommandHandler)command_name_handler,
+								  "command_name_handler", 0, WRITE );
+
 		// OWNER permission commands
 	daemonCore->Register_Command( VACATE_ALL_CLAIMS,
 								  "VACATE_ALL_CLAIMS",
@@ -241,8 +245,8 @@ main_init( int argc, char* argv[] )
 								  "command_vacate_all", 0, OWNER );
 	daemonCore->Register_Command( VACATE_CLAIM,
 								  "VACATE_CLAIM",
-								  (CommandHandler)command_vacate,
-								  "command_vacate", 0, OWNER );
+								  (CommandHandler)command_name_handler,
+								  "command_name_handler", 0, OWNER );
 
 		// NEGOTIATOR permission commands
 	daemonCore->Register_Command( MATCH_INFO, "MATCH_INFO",
