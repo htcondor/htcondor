@@ -3,6 +3,7 @@
 #include <unistd.h>
 
 int signalcaught = 0;
+int exit(int code);
 
 void catchsig( int sig )
 {
@@ -18,17 +19,18 @@ void catchsig( int sig )
 		exit(sig);
 }
 
+
 struct sigaction new = 
 {
 	&catchsig,
 	0,
-	SA_NOMASK,
-	SA_NOMASK,
+	0, /*SA_NOMASK,*/
+	0, /*SA_NOMASK,*/
 };
 
 struct sigaction old;
 
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
 	int res = 0;
 	/*signal( 1, (sighandler_t)&catchsig);*/
