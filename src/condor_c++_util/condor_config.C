@@ -284,7 +284,17 @@ real_config(ClassAd *classAd, char* host, int wantsQuiet)
 			
 			if ( varname[8] && (varvalue=getenv(varname)) ) {
 				//dprintf(D_ALWAYS,"TODD at line %d insert var %s val %s\n",__LINE__,&(varname[8]), varvalue);
-				insert( &(varname[8]), varvalue, ConfigTab, TABLESIZE );
+
+				if ( !strncmp( &( varname[8] ), "START_owner", 11 ) ) {
+					char *tmp = (char *) malloc( strlen( varvalue ) 
+								+ strlen( "Owner == \"   \"" ) );
+					sprintf( tmp, "Owner == \"%s\"", varvalue );
+					insert( &(varname[8]), tmp, ConfigTab, TABLESIZE );
+					free( tmp );
+				}
+				else {
+					insert( &(varname[8]), varvalue, ConfigTab, TABLESIZE );
+				}
 			}
 		}
 	}
