@@ -20,10 +20,10 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-/* Do not remove the following line! Required for SCCS. */
-static char sccsid[] = "@(#)virt_mem.c	4.3 9/18/91"; 
+
 
 #include "condor_common.h"
+
 
 #if defined(WIN32)
 
