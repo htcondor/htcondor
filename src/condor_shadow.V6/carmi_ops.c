@@ -252,24 +252,20 @@ int pseudo_carmi_addhosts(char *class_name, int count, ResponseTag resp_tag)
   SetAttributeFloat(cl, pr, "Remote_CPU", 0.0);
   
   DisconnectQ(0);
-  if (pr != -1)
-    {
-      /* send the reschedule command to the schedd */
-      gethostname(hostname, 255);
-      if ((scheddAddr = get_schedd_addr(hostname)) == NULL)                                 
-        {
-	  EXCEPT("Can't find schedd address on %s\n", hostname);
-        }
+  if (pr != -1) {
+		  /* send the reschedule command to the schedd */
+
+	  if( (scheddAddr = get_schedd_addr(my_full_hostname())) == NULL ) {
+		  EXCEPT( "Can't find schedd address on %s", my_full_hostname() );
+	  }
       
       /* Connect to the schedd */
-      if ((sock = do_connect(scheddAddr, "condor_schedd", SCHED_PORT)) < 0) 
-	{
-	  dprintf(D_ALWAYS, "Can't connect to condor_schedd on %s\n", hostname);
-  	  free(scheddAddr);
-	  return;
-	}
-
-	free(scheddAddr);
+      if ((sock = do_connect(scheddAddr, "condor_schedd", SCHED_PORT)) < 0) {
+		  dprintf(D_ALWAYS, "Can't connect to condor_schedd on %s\n", hostname);
+		  free(scheddAddr);
+		  return;
+	  }
+	  free(scheddAddr);
   
       xdrs = xdr_Init( &sock, &xdr );                                                        
       xdrs->x_op = XDR_ENCODE; 

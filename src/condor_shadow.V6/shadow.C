@@ -28,7 +28,6 @@
 */ 
 
 #include "condor_common.h"
-#include "condor_fdset.h"
 #include "condor_classad.h"
 #include "condor_io.h"
 #include "condor_ckpt_name.h"
@@ -38,6 +37,7 @@
 #include "condor_adtypes.h"
 #include "condor_attributes.h"
 #include "condor_config.h"
+#include "my_hostname.h"
 
 #if defined(AIX31) || defined(AIX32)
 #include "syscall.aix.h"
@@ -61,7 +61,6 @@
 #include "subproc.h"
 #include "afs.h"
 
-#include "condor_constants.h"
 int	UsePipes;
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
@@ -1182,7 +1181,7 @@ regular_setup( char *host, char *cluster, char *proc, char *capability )
 void
 pipe_setup( char *cluster, char *proc, char *capability )
 {
-	static char	buf[1024];
+	static char	host[1024];
 
 	UsePipes = TRUE;
 	dprintf( D_ALWAYS, "Job = %s.%s\n", cluster, proc );
@@ -1192,10 +1191,8 @@ pipe_setup( char *cluster, char *proc, char *capability )
 		EXCEPT( "Spool directory not specified in config file" );
 	}
 
-	if( gethostname(buf,sizeof(buf)) < 0 ) {
-		EXCEPT( "gethostname()" );
-	}
-	ExecutingHost = buf;
+	strcpy( host, my_hostname() );
+	ExecutingHost = host;
 
 	open_named_pipe( "/tmp/syscall_req", O_RDONLY, REQ_SOCK );
 	dprintf( D_ALWAYS, "Shadow: REQ_SOCK connected, fd = %d\n", REQ_SOCK );
