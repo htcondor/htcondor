@@ -6,6 +6,8 @@
 #include <aclapi.h>
 #include "ntsecapi.h"
 
+
+
 const int max_sid_length = 100;
 const int max_domain_length = 100;
 
@@ -19,12 +21,16 @@ public:
 	dynuser();
 	~dynuser();
 
-	bool createuser(char * username);
+	bool init_user();
 	bool deleteuser(char * username);
+	const char* get_accountname();
 
 	HANDLE get_token();
 
     bool cleanup_condor_users(char* user_prefix);
+
+	void reset(); // used to be private
+
 
 private:
 
@@ -40,23 +46,27 @@ private:
 
 	// End of SID stuff
 
-	void update_psid();
+	bool update_psid(); // returns true on successful
 
 	void createpass();
 	void createaccount();
+	void enable_account();
+	void disable_account();
 	void update_t();
 	
 	bool add_batch_privilege();
 	bool add_users_group();
 
     bool del_users_group();
-
+	bool logon_user();
+	
 #if 0
 	bool dump_groups();
 #endif
 
 	char	*accountname,	*password;			// ASCII versions
 	wchar_t	*accountname_t,	*password_t;		// Unicode versions
+	bool reuse_account;	// accounts are enabled/disabled instead of created/deleted when true
 
 	HANDLE logon_token;
 };
