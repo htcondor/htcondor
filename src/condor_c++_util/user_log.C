@@ -101,7 +101,7 @@ get_env_val( const char *str )
 }
 
 void UserLog::
-openLog( const char *file, int c, int p, int s )
+initialize( const char *file, int c, int p, int s )
 {
 	int 			fd;
 

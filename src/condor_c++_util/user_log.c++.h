@@ -55,10 +55,8 @@ public:
 
 	// to initialize if not initialized bt ctor
 	void initialize(const char *, const char *, int, int, int);
+	void initialize(const char *, int, int, int);
 	void initialize(int, int, int);
-
-	// open the log file (do not create it)
-	void openLog(const char *, int, int, int);
 
 	// use this function to access log (see condor_event.h)   --RR
 	int       writeEvent (ULogEvent *);
