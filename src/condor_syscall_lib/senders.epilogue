@@ -100,6 +100,7 @@
 		int		file_size;
 		int		bytes_to_go;
 		int		scm;
+		int		close_status;
 
 		CurrentSysCall = CONDOR_get_file;
 
@@ -141,7 +142,12 @@
 			assert(xdr_opaque(xdr_syscall,buf,len));
 			write_status = write( loc_fd, buf, len );
 		}
-		(void)close( loc_fd );
+		close_status = close( loc_fd );
+		if( close_status < 0 ) {
+			dprintf( D_ALWAYS,
+				"Close of \"%s\" failed - errno = %d\n", local, errno
+			);
+		}
 
 			/* Should get file size again as a check */
 		assert( xdr_int(xdr_syscall,&checksum) );
@@ -157,9 +163,9 @@
 		}
 
 			/* Wrapup */
-		if( write_status >= 0 && read_status >= 0 ) {
+		if( write_status >= 0 && read_status >= 0 && close_status >= 0 ) {
 			dprintf( D_ALWAYS,
-				"PSEUDO_get_file: transferred %d bytes\n", file_size );
+				"CONDOR_get_file: transferred %d bytes\n", file_size );
 			rval = 0;
 		} else {
 			rval = -1;
