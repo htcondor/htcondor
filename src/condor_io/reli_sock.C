@@ -1143,14 +1143,36 @@ ReliSock::prepare_for_nobuffering(stream_coding direction)
 	return ret_val;
 }
 
-int ReliSock::authenticate(KeyInfo *& key, const char* methods, CondorError* errstack)
+int ReliSock::perform_authenticate(bool with_key, KeyInfo *& key, 
+								   const char* methods, CondorError* errstack)
 {
+	int in_encode_mode;
+	int result;
+
     if (!isAuthenticated()) {
         if ( !authob ) {
             authob = new Authentication( this );
         }
         if ( authob ) {
-            return( authob->authenticate( hostAddr, key, methods, errstack ) );
+				// store if we are in encode or decode mode
+			in_encode_mode = is_encode();
+
+				// actually perform the authentication
+			if ( with_key ) {
+				result = authob->authenticate( hostAddr, key, methods, errstack );
+			} else {
+				result = authob->authenticate( hostAddr, methods, errstack );
+			}
+				// restore stream mode (either encode or decode)
+			if ( in_encode_mode && is_decode() ) {
+				encode();
+			} else {
+				if ( !in_encode_mode && is_encode() ) { 
+					decode();
+				}
+			}
+
+			return result;
         }
         return( 0 );  
     }
@@ -1159,22 +1181,18 @@ int ReliSock::authenticate(KeyInfo *& key, const char* methods, CondorError* err
     }
 }
 
+int ReliSock::authenticate(KeyInfo *& key, const char* methods, CondorError* errstack)
+{
+	return perform_authenticate(true,key,methods,errstack);
+}
+
 int 
 ReliSock::authenticate(const char* methods, CondorError* errstack ) 
 {
-    if ( !isAuthenticated() ) {
-        if ( !authob ) {
-            authob = new Authentication( this );
-        }
-        if ( authob ) {
-            return( authob->authenticate( hostAddr, methods, errstack ) );
-        }
-        return 0;
-    }
-    else {
-        return 1;
-    }
+	KeyInfo *key = NULL;
+	return perform_authenticate(false,key,methods,errstack);
 }
+
 
 void
 ReliSock::setOwner( const char *newOwner ) {
