@@ -59,6 +59,7 @@ const int Scheduler::MPIShadowSockTimeout = 60;
 extern char *gen_ckpt_name();
 
 #include "condor_qmgr.h"
+#include "qmgmt.h"
 
 extern "C"
 {
@@ -68,7 +69,6 @@ extern "C"
 	char* gen_ckpt_name(char*, int, int, int);
 	int getdtablesize();
 */
-	void handle_q(Service *, int, Stream *sock);
 	int prio_compar(prio_rec*, prio_rec*);
 }
 
@@ -99,6 +99,8 @@ void send_vacate(match_rec*, int);
 void mark_job_stopped(PROC_ID*);
 shadow_rec * find_shadow_rec(PROC_ID*);
 shadow_rec * add_shadow_rec(int, PROC_ID*, match_rec*, int);
+
+int	WallClockCkptInterval = 0;
 
 #ifdef CARMI_OPS
 struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
@@ -3141,6 +3143,32 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 	return new_rec;
 }
 
+
+void
+CkptWallClock()
+{
+	int first_time = 1;
+	int current_time = (int)time(0); // bad cast, but ClassAds only know ints
+	ClassAd *ad;
+	while (ad = GetNextJob(first_time)) {
+		first_time = 0;
+		int status = IDLE;
+		ad->LookupInteger(ATTR_JOB_STATUS, status);
+		if (status == RUNNING) {
+			int bday = 0;
+			ad->LookupInteger(ATTR_SHADOW_BIRTHDATE, bday);
+			int run_time = current_time - bday;
+			if (bday && run_time > WallClockCkptInterval) {
+				int cluster, proc;
+				ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
+				ad->LookupInteger(ATTR_PROC_ID, proc);
+				SetAttributeInt(cluster, proc, ATTR_JOB_WALL_CLOCK_CKPT,
+								run_time);
+			}
+		}
+	}
+}
+
 void
 Scheduler::delete_shadow_rec(int pid)
 {
@@ -3164,8 +3192,18 @@ Scheduler::delete_shadow_rec(int pid)
 			GetAttributeFloat(rec->job_id.cluster,rec->job_id.proc,
 				ATTR_JOB_REMOTE_WALL_CLOCK,&accum_time);
 			accum_time += (float)( time(NULL) - bday );
+				// We want to update our wall clock time and delete
+				// our wall clock checkpoint inside a transaction, so
+				// we are sure not to double-count.  The wall-clock
+				// checkpoint (see CkptWallClock above) ensures that
+				// if we crash before committing our wall clock time,
+				// we won't lose too much.
+			BeginTransaction();
 			SetAttributeFloat(rec->job_id.cluster,rec->job_id.proc,
 				ATTR_JOB_REMOTE_WALL_CLOCK,accum_time);
+			DeleteAttribute(rec->job_id.cluster,rec->job_id.proc,
+				ATTR_JOB_WALL_CLOCK_CKPT);
+			CommitTransaction();
 		}
 				
 		char last_host[256];
@@ -4156,6 +4194,14 @@ Scheduler::Init()
 		free( tmp );
 	}
 
+	tmp = param( "WALL_CLOCK_CKPT_INTERVAL" );
+	if( ! tmp ) {
+		WallClockCkptInterval = 60*60;	// every hour
+	} else {
+		WallClockCkptInterval = atoi( tmp );
+		free( tmp );
+	}
+
 	tmp = param( "JOB_START_DELAY" );
 	 if( ! tmp ) {
 		  JobStartDelay = 2;
@@ -4388,7 +4434,7 @@ Scheduler::Register()
 void
 Scheduler::RegisterTimers()
 {
-	static int aliveid = -1, cleanid = -1;
+	static int aliveid = -1, cleanid = -1, wallclocktid = -1;
 
 	// clear previous timers
 	if (timeoutid >= 0) {
@@ -4415,6 +4461,12 @@ Scheduler::RegisterTimers()
 										 QueueCleanInterval,
 										 (Event)&CleanJobQueue,
 										 "CleanJobQueue");
+	if (WallClockCkptInterval) {
+		wallclocktid = daemonCore->Register_Timer(WallClockCkptInterval,
+												  WallClockCkptInterval,
+												  (Event)&CkptWallClock,
+												  "CkptWallClock");
+	}
 }
 
 
