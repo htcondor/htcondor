@@ -528,6 +528,28 @@ find_file(const char *env_name, const char *file_name)
     // For Condor-G, first check in the default install path, which is the
     // user's homedirectory/CondorG/etc/condor_config 
 	if( ! config_file ) {
+		char *globus_location;      
+	
+		if( globus_location = getenv("GLOBUS_LOCATION") ) {
+	
+			config_file = (char *)malloc( ( strlen(globus_location) +
+                                            strlen("/etc/") +   
+                                            strlen(file_name) + 3 ) 
+                                          * sizeof(char) );	
+			config_file[0] = '\0';
+			strcat(config_file, globus_location);
+			strcat(config_file, "/etc/");
+			strcat(config_file, file_name); 
+			if( (fd = open( config_file, O_RDONLY)) < 0 ) {
+				free( config_file );
+				config_file = NULL;
+			} else {
+				close( fd );
+			}
+		}
+	} 
+	// Check the old location in the user's home dir
+	if( ! config_file ) {
 		struct passwd *pwent;      
 		
 		if( pwent = getpwuid( getuid() ) ) {
