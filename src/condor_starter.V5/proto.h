@@ -28,6 +28,10 @@
 
 #include <signal.h>
 
+#if defined(LINUX)
+typedef long	rlim_t;
+#endif
+
 extern "C" {
 #if 0
 #include "util_lib_proto.h"

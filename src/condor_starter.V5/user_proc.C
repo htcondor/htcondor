@@ -46,6 +46,9 @@
 #include "proto.h"
 #include "condor_sys.h"
 #include "startup.h"
+#if defined(LINUX)
+#include <unistd.h>
+#endif
 
 #if defined(AIX32)
 #	include <sys/id.h>

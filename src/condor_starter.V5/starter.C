@@ -251,6 +251,8 @@ delay( int sec )
 	int		lim = 300000;
 #elif defined(HPPAR)
 	int		lim = 650000;
+#elif defined(LINUX)
+	int		lim = 300000;
 #endif
 
 
