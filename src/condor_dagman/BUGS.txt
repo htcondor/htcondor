@@ -1,3 +1,9 @@
+- Given a DAG:
+    job test test.submit
+    script post test logargs $RETURN --foo=$RETURN $RETURN
+  Assuming my test.submit job returns 1, the script "logargs" gets
+  arguments of "1" "--foo=$RETURN" "1".  This is surprising.
+
 - submit files that queue multiple jobs are handled *very* poorly --
   they're not detected and rejected, and what's more, they result in
   dagman thinking the submit failed, so it re-submits, resulting in
