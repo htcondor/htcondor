@@ -1,10 +1,12 @@
 #include <iostream.h>
+#include <pwd.h>
 #include "condor_common.h"
 #include "_condor_fix_resource.h"
 #include "condor_config.h"
 #include "condor_q.h"
 #include "proc_obj.h"
 #include "condor_attributes.h"
+#include "files.h"
 
 extern "C" SetSyscalls(){}
 extern "C" int float_to_rusage (float, struct rusage *);
@@ -18,6 +20,8 @@ static void shorten (char *, int);
 static int verbose = 0, summarize = 1;
 static int malformed, unexpanded, running, idle;
 
+extern	"C" BUCKET*		ConfigTab[];
+
 int main (int argc, char **argv)
 {
 	CondorQ 		  Q;
@@ -27,7 +31,10 @@ int main (int argc, char **argv)
 	int               cluster, proc;
 	char              constraint[1024];
 	char              *host = 0;
-
+	struct passwd*		pwd;
+	char*			    config_location;
+	char*				scheddAddr;
+	
 	for (i = 1; i < argc; i++)
 	{
 		if (strcmp (argv[i], "-l") == 0)
@@ -69,10 +76,48 @@ int main (int argc, char **argv)
 		}
 	}
 	
-	config (argv [0], (CONTEXT *) 0);
+	/* Weiru */
+	if((pwd = getpwnam("condor")) == NULL)
+	{
+		printf( "condor not in passwd file" );
+		exit(1); 
+	}
+	if(read_config(pwd->pw_dir, MASTER_CONFIG, NULL, ConfigTab, TABLESIZE,
+				   EXPAND_LAZY) < 0)
+	{
+		config(argv[0], NULL);
+	}
+	else
+	{
+   		config_location = param("CONFIG_FILE_LOCATION");
+   		if(!config_location)
+   		{
+   			config_location = pwd->pw_dir;
+   		}
+		if(config_from_server(config_location, argv[0], NULL) < 0)
+	    {
+			config(argv[0], NULL);
+		}
+	}
 
+	// find ip port of schedd from collector
+	if(!host)
+	{
+		host = new char[256];
+		if(gethostname(host, 256) < 0)
+		{
+			printf("Can't find host\n");
+			exit(1);
+		}
+	}
+	if((scheddAddr = get_schedd_addr(host)) == NULL)
+	{
+		printf("Can't find schedd address on %s\n", host);
+		exit(1);
+	}
+	
 	// fetch queue from schedd	
-	if (Q.fetchQueueFromHost (jobs, host) != Q_OK)
+	if (Q.fetchQueueFromHost (jobs, scheddAddr) != Q_OK)
 	{
 		printf ("Error connecting to job queue\n");
 		exit (1);
