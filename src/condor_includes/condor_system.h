@@ -23,14 +23,6 @@
 #ifndef CONDOR_SYSTEM_H
 #define CONDOR_SYSTEM_H
 
-#ifdef  __cplusplus
-#define BEGIN_C_DECLS   extern "C" {
-#define END_C_DECLS     }
-#else
-#define BEGIN_C_DECLS
-#define END_C_DECLS
-#endif
-
 #if defined(WIN32)
 
 #include "condor_sys_nt.h"
@@ -68,6 +60,11 @@
 #include "condor_file_lock.h"
 #include "condor_fix_assert.h"
 #include "condor_fix_string.h"
+
+
+/**********************************************************************
+** Clean-up, default definitions, etc.
+**********************************************************************/
 
 #if !defined(HAS_U_TYPES)
     typedef unsigned int	u_int;
