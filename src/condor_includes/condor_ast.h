@@ -785,4 +785,6 @@ class AggEqOp: public AggOp	// aggregate equal operator
 	*/
 };
 
+extern	int		Parse(const char*, ExprTree*&);
+
 #endif
