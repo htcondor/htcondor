@@ -50,19 +50,18 @@ OBJ = $(CLASSAD_OBJ_2)
 LIB =  ./libclassad.a ../condor_c++_util/cplus_lib.a \
       ../condor_util_lib/util_lib.a ../condor_io/libcedar.a \
       ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a \
-	  RpcLib SocketLib
+	  ../condor_sysapi/libsysapi.a
 
 
 /* The S_* files are for standalone classads */
 S_OBJ = $(S_UTL_OBJ) $(S_LCL_OBJ)
 #if !HAS_FLOCK
 S_UTL_OBJ = ../condor_util_lib/except.o ../condor_util_lib/dprintf.o \
-			../condor_util_lib/uids.o ../condor_util_lib/condor_errlst.o \
-			../condor_util_lib/escapes.o ../condor_util_lib/flock.o
+			../condor_c++_util/uids.o ../condor_util_lib/escapes.o \
+			../condor_util_lib/flock.o
 #else
 S_UTL_OBJ = ../condor_util_lib/except.o ../condor_util_lib/dprintf.o \
-			../condor_util_lib/uids.o ../condor_util_lib/condor_errlst.o \
-			../condor_util_lib/escapes.o 
+			../condor_c++_util/uids.o ../condor_util_lib/escapes.o 
 #endif
 S_LCL_OBJ = ./stand_alone.o
 
@@ -91,19 +90,17 @@ CONDOR_HEADERS = ../condor_includes/condor_debug.h ../condor_c++_util/extArray.h
 
 
 /* Standalone distribution of classads/collections */
-tarball: libclassads.a html
+tarball: libclassads.a ../condor_release/LICENSE.TXT
 	rm -rf classads *.gz
-	mkdir -p classads/include classads/lib
-	/s/binutils/bin/strip libclassads.a
+	mkdir -p classads/include classads/lib classads/example
+	strip --strip-debug libclassads.a
 	cp libclassads.a classads/lib
-	cp -r distrib classads/example
 	cp cxi.C classads/example
-	cp -r html classads/html-docs
+	cp distrib/Makefile classads/example
 	cp $(CONDOR_HEADERS) classads/include
 	cp *.h classads/include
 	cp ../condor_release/LICENSE.TXT classads
-	tar cvf classads.tar classads
-	gzip classads.tar
+	cp distrib/README classads
 
 
 /* Rule to make documentation */
@@ -111,8 +108,7 @@ doc: html
 
 
 /* Also depends on several header files, but I'm ignoring that for now */
-html: documentation 
-	doc++ -d html -H documentation
+html_target( documentation )
 
 
 clean::
