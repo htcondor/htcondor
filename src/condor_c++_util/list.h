@@ -124,7 +124,11 @@ public:
 	bool	Append( ObjType * obj );
 
     /// Insert an element before the current element
+	/// Warning: if AtEnd(), Insert() will add the element before the
+	/// last element, not at the end of the list.  In that case, use
+	/// Append() instead
 	void	Insert( ObjType & obj );
+	void	Insert( ObjType * obj );
 	bool	IsEmpty() const;
 	int		Number() const;
 
@@ -321,6 +325,20 @@ List<ObjType>::Insert( ObjType& obj )
 {
 	Item<ObjType>	*item;
 	item = new Item<ObjType>( &obj );
+	current->prev->next = item;
+	item->prev = current->prev;
+	current->prev = item;
+	item->next = current;
+	num_elem++;
+}
+
+/* Insert an element before the current element */
+template <class ObjType>
+void
+List<ObjType>::Insert( ObjType * obj )
+{
+	Item<ObjType>	*item;
+	item = new Item<ObjType>( obj );
 	current->prev->next = item;
 	item->prev = current->prev;
 	current->prev = item;
@@ -571,12 +589,14 @@ template <class ObjType>
 bool
 ListIterator<ObjType>::Prev( ObjType& obj ) 
 {
-	if( cur && cur != list->dummy ) {
-		if( ( cur = cur->prev ) ) {
-			obj = *(cur->obj);
-			return true;
-		}
-	} 
+	if( cur == NULL ) {
+		cur = list->dummy;
+	}
+	cur = cur->prev;
+	if( cur != list->dummy ) {
+		obj = *(cur->obj);
+		return true;
+	}
 	return false;
 }
 
@@ -585,10 +605,12 @@ template <class ObjType>
 ObjType*
 ListIterator<ObjType>::Prev( )
 {
-	if( cur && cur != list->dummy ) {
-		if( ( cur = cur->prev ) ) {
-			return( cur->obj );
-		}
+	if( cur == NULL ) {
+		cur = list->dummy;
+	}
+	cur = cur->prev;
+	if( cur != list->dummy ) {
+		return( cur->obj );
 	}
 	return NULL;
 }
