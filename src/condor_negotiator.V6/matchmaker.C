@@ -66,6 +66,8 @@ Matchmaker ()
 
 	negotiation_timerID = -1;
 	GotRescheduleCmd=false;
+	
+	stashedAds = new AdHash(1000, HashFunc);
 }
 
 
@@ -717,7 +719,10 @@ obtainAdsFromCollector (
 	CondorQuery publicQuery(ANY_AD);
 	CondorQuery privateQuery(STARTD_PVT_AD);
 	QueryResult result;
-	ClassAd *ad;
+	ClassAd *ad, *oldAd;
+	MapEntry *oldAdEntry;
+	int newSequence, oldSequence, MaxMatches;
+	char    remoteHost[MAXHOSTNAMELEN];
 
 	dprintf(D_ALWAYS, "  Getting all public ads ...\n");
 	result = publicQuery.fetchAds(allAds);
@@ -734,7 +739,42 @@ obtainAdsFromCollector (
 		// Insert each ad into the appropriate list.
 		// After we insert it into a list, do not delete the ad...
 
-		if( !strcmp(ad->GetMyTypeName(),STARTD_ADTYPE) ) {
+		// let's see if we've already got it - first lookup the sequence 
+		// number from the new ad, then let's look and see if we've already
+		// got something for this one.		
+		if(!strcmp(ad->GetMyTypeName(),STARTD_ADTYPE)) {
+			newSequence = -1;	
+			ad->LookupInteger(ATTR_UPDATE_SEQUENCE_NUMBER, newSequence);
+			if( newSequence != -1) {
+				ad->LookupString(ATTR_NAME, remoteHost);
+				oldAd = NULL;
+				oldAdEntry = NULL;
+				MyString rhost(remoteHost);
+				stashedAds->lookup( rhost, oldAdEntry);
+				// if we find it...
+				oldSequence = -1;
+				if( oldAdEntry ) {
+					oldSequence = oldAdEntry->sequenceNum;
+				}
+				if(newSequence > oldSequence) {
+					if(oldSequence >= 0) {
+						delete(oldAdEntry->oldAd);
+						delete(oldAdEntry->remoteHost);
+						delete(oldAdEntry);
+						stashedAds->remove(rhost);
+					}
+					MapEntry *me = new MapEntry;
+					me->sequenceNum = newSequence;
+					me->remoteHost = strdup(remoteHost);
+					me->oldAd = new ClassAd(*ad); 
+					stashedAds->insert(rhost, me); 
+				} else {
+					allAds.Delete(ad);
+					ad = new ClassAd(*(oldAdEntry->oldAd));
+					ad->Delete(ATTR_UPDATE_SEQUENCE_NUMBER);
+					allAds.Insert(ad);
+				}
+			}
 			startdAds.Insert(ad);
 		} else if( !strcmp(ad->GetMyTypeName(),SUBMITTER_ADTYPE) ) {
 			scheddAds.Insert(ad);
@@ -996,7 +1036,12 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 
 		// 2g.  Delete ad from list so that it will not be considered again in 
 		//		this negotiation cycle
-		startdAds.Delete (offer);
+		int reevaluate_ad = false;
+		if(offer->LookupBool(ATTR_WANT_AD_REVAULATE, reevaluate_ad)) {
+			reeval(offer);
+		} else  {
+			startdAds.Delete (offer);
+		}	
 	}
 
 
@@ -1489,3 +1534,30 @@ addRemoteUserPrios( ClassAdList &cal )
 	}
 	cal.Close();
 }
+
+void Matchmaker::
+reeval(ClassAd *ad) 
+{
+	int cur_matches;
+	MapEntry *oldAdEntry;
+	ClassAd *oldAd;
+	char    remoteHost[MAXHOSTNAMELEN];	
+	char    buffer[255];
+	
+	cur_matches = 0;
+	ad->EvalInteger("CurMatches", NULL, cur_matches);
+
+	ad->LookupString(ATTR_NAME, remoteHost);
+	MyString rhost(remoteHost);
+    stashedAds->lookup( rhost, oldAdEntry);
+		
+	cur_matches++;
+	ad->InsertOrUpdate(buffer);
+	delete(oldAdEntry->oldAd);
+	oldAdEntry->oldAd = new ClassAd(*ad);
+}
+
+int Matchmaker::HashFunc(const MyString &Key, int TableSize) {
+	return Key.Hash() % TableSize;
+}
+
