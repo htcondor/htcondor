@@ -48,13 +48,13 @@
 #include "condor_debug.h"
 #include "condor_constants.h"
 #include "condor_config.h"
-#include "condor_jobqueue.h"
 #include "condor_mach_status.h"
 #include "condor_uid.h"
-#include "proc_obj.h"
 #include "string_list.h"
 #include "directory.h"
 #include "alloc.h"
+#include "condor_qmgr.h"
+#include "condor_classad.h"
 
 #if defined(OSF1)
 #pragma define_template List<char>
@@ -71,14 +71,13 @@ int			MaxCkptInterval;	// max time between ckpts on this machine
 char		*Spool;				// dir for condor job queue
 char		*Execute;			// dir for execution of condor jobs
 char		*Log;				// dir for condor program logs
-char		*CondorAdmin;		// who to send mail to in case of trouble
+char		*PreenAdmin;		// who to send mail to in case of trouble
 char		*MyName;			// name this program was invoked by
 char        *ValidSpoolFiles;   // well known files in the spool dir
 char        *ValidLogFiles;     // well known files in the log dir
 BOOLEAN		MailFlag;			// true if we should send mail about problems
 BOOLEAN		VerboseFlag;		// true if we should produce verbose output
 BOOLEAN		RmFlag;				// true if we should remove extraneous files
-List<ProcObj> *ProcList;		// all processes in current job queue
 List<char>	*BadFiles;			// list of files which don't belong
 
 
@@ -100,7 +99,7 @@ BOOLEAN proc_exists( int, int );
 BOOLEAN do_unlink( const char *path );
 BOOLEAN remove_directory( const char *name );
 int do_stat( const char *path, struct stat *buf );
-
+int findJobAd( int cluster_id, int proc_id );
 
 /*
   Tell folks how to use this program.
@@ -188,7 +187,7 @@ produce_output()
 	FILE	*mailer;
 	char	cmd[ 1024 ];
 
-	sprintf( cmd, "%s %s", BIN_MAIL, CondorAdmin );
+	sprintf( cmd, "%s %s", BIN_MAIL, PreenAdmin );
 
 	if( MailFlag ) {
 		if( (mailer=popen(cmd,"w")) == NULL ) {
@@ -199,7 +198,7 @@ produce_output()
 	}
 
 	if( MailFlag ) {
-		fprintf( mailer, "To: %s\n", CondorAdmin );
+		fprintf( mailer, "To: %s\n", PreenAdmin );
 		fprintf( mailer, "Subject: Junk Condor Files\n" );
 		fprintf( mailer, "\n" );
 		fprintf( mailer,
@@ -231,28 +230,18 @@ produce_output()
 void
 check_spool_dir()
 {
-	char	   *f;
-	Directory  dir(Spool);
-	StringList well_known_list;
-	char	   queue_name[_POSIX_PATH_MAX];
-	DBM	*q;
+	char	   		*f;
+	Directory  		dir(Spool);
+	StringList 		well_known_list;
+	int				result;
+	Qmgr_connection *qmgr;
 
 	well_known_list.initializeFromString (ValidSpoolFiles);
 
-		/* Open and lock the job queue */
-	(void)sprintf( queue_name, "%s/job_queue", Spool );
-	if( (q=OpenJobQueue(queue_name,O_RDONLY,0)) == NULL ) {
-		EXCEPT( "OpenJobQueue(%s)", queue_name );
+	// connect to the Q manager
+	if (!(qmgr = ConnectQ (0))) {
+		EXCEPT( "ConnectQ(0) failed" );
 	}
-    if( LockJobQueue(q,READER) < 0 ) {
-		EXCEPT( "Can't lock job queue for READING\n" );
-	}
-
-	// clear_alloc_stats();
-	// print_alloc_stats( "Beginning create_list()" );
-
-		// Create a list of all procs corresponding to the complete job queue
-	ProcList = ProcObj::create_list( q, 0 );
 
 		// Check each file in the directory
 	while( f = dir.Next() ) {
@@ -273,11 +262,7 @@ check_spool_dir()
 	}
 
 		// Clean up
-    if( LockJobQueue(q,UNLOCK) < 0 ) {
-		EXCEPT( "Can't unlock job queue\n");
-	}
-	CloseJobQueue( q );
-	ProcObj::delete_list( ProcList );
+	DisconnectQ (qmgr);
 
 	// print_alloc_stats( "End of check_spool_dir" );
 }
@@ -376,6 +361,10 @@ is_v3_ckpt( const char *name )
 	}
 }
 
+static BOOLEAN	__exists;
+static int		__cluster;
+static int		__proc;
+
 /*
   Check to see whether a given cluster number exists in the job queue.
   Assume a higher level routine has already assembled a list of jobs in
@@ -384,15 +373,13 @@ is_v3_ckpt( const char *name )
 BOOLEAN
 cluster_exists( int cluster )
 {
-	ProcObj	*p;
+	__exists = FALSE;
+	__cluster = cluster;
+	__proc = -1;
+	
+	WalkJobQueue(findJobAd);
 
-	ProcList->Rewind();
-	while( p = ProcList->Next() ) {
-		if( p->get_cluster_id() == cluster ) {
-			return TRUE;
-		}
-	}
-	return FALSE;
+	return __exists;
 }
 
 /*
@@ -403,15 +390,22 @@ cluster_exists( int cluster )
 BOOLEAN
 proc_exists( int cluster, int proc )
 {
-	ProcObj	*p;
+	__exists = FALSE;
+	__cluster = cluster;
+	__proc = proc;
+	
+	WalkJobQueue(findJobAd);
 
-	ProcList->Rewind();
-	while( p = ProcList->Next() ) {
-		if( p->get_cluster_id() == cluster && p->get_proc_id() == proc ) {
-			return TRUE;
-		}
+	return __exists;
+}
+
+int findJobAd(int cluster_id, int proc_id)
+{
+	if ((__cluster == cluster_id) && (__proc == -1 || __proc == proc_id)) {
+		__exists = TRUE;
+		return -1;				// we've found it -- stop walking
 	}
-	return FALSE;
+	return 0;
 }
 
 /*
@@ -531,8 +525,10 @@ init_params()
         EXCEPT( "EXECUTE not specified in config file\n" );
     }
 
-    if( (CondorAdmin = param("CONDOR_ADMIN")) == NULL ) {
-        EXCEPT( "CONDOR_ADMIN not specified in config file" );
+    if( (PreenAdmin = param("PREEN_ADMIN")) == NULL ) {
+		if( (PreenAdmin = param("CONDOR_ADMIN")) == NULL ) {
+			EXCEPT( "CONDOR_ADMIN not specified in config file" );
+		}
     }
 
 	if( (ValidSpoolFiles = param("VALID_SPOOL_FILES")) == NULL ) {
