@@ -47,7 +47,6 @@
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
 static  void processCommandLineArguments(int, char *[]);
-extern 	"C" void set_debug_flags( char * );
 
 static 	void short_header (void);
 static 	void usage (char *);
