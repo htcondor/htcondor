@@ -540,6 +540,34 @@ LogDeleteAttribute::WriteBody(int fd)
 }
 
 
+int 
+LogBeginTransaction::ReadBody( int fd )
+{
+	char 	ch;
+	int		rval = read( fd, &ch, 1 );
+	if( rval < 1 ) {
+		return( rval );
+	}
+	if( ch != '\n' ) {
+		return( -1 );
+	}
+}
+
+
+int 
+LogEndTransaction::ReadBody( int fd )
+{
+	char 	ch;
+	int		rval = read( fd, &ch, 1 );
+	if( rval < 1 ) {
+		return( rval );
+	}
+	if( ch != '\n' ) {
+		return( -1 );
+	}
+}
+
+
 int
 LogDeleteAttribute::ReadBody(int fd)
 {
@@ -588,6 +616,47 @@ InstantiateLogEntry(int fd, int type)
 		    return 0;
 			break;
 	}
-	log_rec->ReadBody(fd);
+
+		// check if we got a bogus record indicating a bad log file
+	if( log_rec->ReadBody(fd) < 0 ) {
+
+			// check if this bogus record is in the midst of a transaction
+			// (try to find a CloseTransaction log record)
+
+
+		char	line[ATTRLIST_MAX_EXPRESSION + 64];
+		FILE	*fp = fdopen( fd, "r" );
+		int		op;
+
+		delete log_rec;
+		if( !fp ) {
+			EXCEPT("Error: failed fdopen() when recovering corrpupt log file");
+		}
+
+		while( fgets( line, ATTRLIST_MAX_EXPRESSION+64, fp ) ) {
+			if( sscanf( line, "%d ", &op ) != 1 ) {
+					// no op field in line; more bad log records...
+				continue;
+			}
+			if( op == CondorLogOp_EndTransaction ) {
+					// aargh!  bad record in transaction.  abort!
+				EXCEPT("Error: bad record with op=%d in corrupt logfile",type);
+			}
+		}
+
+		if( !feof( fp ) ) {
+			EXCEPT("Error: failed recovering from corrupt file, errno=%d",
+				errno );
+		}
+
+			// there wasn't an error in reading the file, and the bad log 
+			// record wasn't bracketed by a CloseTransaction; ignore all
+			// records starting from the bad record to the end-of-file, and
+			// pretend that we hit the end-of-file.
+		fclose( fp );
+		return( NULL );
+	}
+
+		// record was good
 	return log_rec;
 }

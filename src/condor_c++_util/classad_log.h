@@ -159,7 +159,7 @@ public:
 	LogBeginTransaction() { op_type = CondorLogOp_BeginTransaction; }
 private:
 	virtual int WriteBody(int fd) { return 0; }
-	virtual int ReadBody(int fd) { return 0; }
+	virtual int ReadBody(int fd);
 };
 
 class LogEndTransaction : public LogRecord {
@@ -167,7 +167,7 @@ public:
 	LogEndTransaction() { op_type = CondorLogOp_EndTransaction; }
 private:
 	virtual int WriteBody(int fd) { return 0; }
-	virtual int ReadBody(int fd) { return 0; }
+	virtual int ReadBody(int fd);
 };
 
 LogRecord *InstantiateLogEntry(int fd, int type);
