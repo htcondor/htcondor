@@ -24,6 +24,7 @@ public:
 	int		change_state( State );
 	int		change_state( Activity );
 	State	state() {return r_state->state();};
+	Activity	activity() {return r_state->activity();};
 	int		eval_state() {return r_state->eval();};
 	bool	in_use();
 	float	condor_load() {return r_state->condor_load();};
