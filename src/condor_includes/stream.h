@@ -116,10 +116,21 @@
 
 #include "condor_common.h"
 #include "proc.h"
-#include "sched.h"
-/* now to clean up from sched.h... */
-#undef CHECKPOINTING
-#undef SUSPENDED
+
+/* now include sched.h.  cleanup namespace if user has not
+ * already included condor_mach_status.h, otherwise leave alone.
+ * this silliness is needed because other parts of the code use
+ * an enumerated type which has CHECKPOINTING and SUSPENDED defined,
+ * and g++ apparently handles enums via #defines behind the scence. -Todd 7/97
+ */
+#ifndef _MACH_STATUS
+#	include "sched.h"
+#	undef CHECKPOINTING
+#	undef SUSPENDED
+#else
+#	include "sched.h"
+#endif
+
 #include "condor_constants.h"	/* to get BOOLEAN typedef... */
 #include "startup.h"
 #include <sys/stat.h>
