@@ -313,7 +313,7 @@ switch_ids( uid_t new_euid, gid_t new_egid )
 		/* First set euid to root so we have privilege to do this */
 	if( seteuid(0) < 0 ) {
 		fprintf( stderr, "Can't set euid to root\n" );
-		exit( errno );
+	/*	exit( errno ); don't want to exit here in case of non-root condor */
 	}
 
 #if 0
@@ -327,7 +327,7 @@ switch_ids( uid_t new_euid, gid_t new_egid )
 		/* Now set the euid as desired */
 	if( seteuid(new_euid) < 0 ) {
 		fprintf( stderr, "Can't set euid to %d\n", new_euid );
-		exit( errno );
+		/*exit( errno ); don't want to exit here in case of non-root Condor*/
 	}
 }
 
