@@ -881,7 +881,8 @@ param_in_pattern( char *parameter, char *pattern )
 	return 0;
 }
 
-
+// Note that the line_number can be -1 if the filename isn't a real
+// filename, but something like <Internal> or <Environment>
 bool param_get_location(
 	const char *parameter,
 	MyString  &filename,
