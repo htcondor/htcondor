@@ -15,18 +15,25 @@ ASSEMBLER_OBJ = get_reginfo.o
 	as /lib/pcc_prefix.s $<
 #endif
 
+#if IS_R6000_AIX32
+ASSEMBLER_SRC = _longjmp.AIX32.s
+ASSEMBLER_OBJ = _longjmp.AIX32.o
+.s.o:
+	m4 /usr/include/sys/asdef.s $*.s | as -o $*.o
+#endif
+
 SRC = $(DRIVER_SRC) $(PACKAGE_SRC)
 PACKAGE = image.o stubs.o machdep.$(OS).o $(ASSEMBLER_OBJ)
 
 depend_target($(SRC) $(PACKAGE) )
 all_target(test3)
 
-c_plus_target(test,driver.o $(PACKAGE),,no_release)
-c_plus_target(test2,driver2.o $(PACKAGE),,no_release)
-c_plus_target(test3,driver3.o $(PACKAGE),,no_release)
-c_plus_target(test4,driver4.o $(PACKAGE),,no_release)
-c_plus_target(display,display.o $(PACKAGE),,no_release)
-c_plus_target(gen_test,gen_test.o $(PACKAGE),,no_release)
+c_plus_target(test,driver.o $(PACKAGE),$(NULL),no_release)
+c_plus_target(test2,driver2.o $(PACKAGE),$(NULL),no_release)
+c_plus_target(test3,driver3.o $(PACKAGE),$(NULL),no_release)
+c_plus_target(test4,driver4.o $(PACKAGE),$(NULL),no_release)
+c_plus_target(display,display.o $(PACKAGE),$(NULL),no_release)
+c_plus_target(gen_test,gen_test.o $(PACKAGE),$(NULL),no_release)
 
 clean::
 	rm -f Ckpt.13.13 core
