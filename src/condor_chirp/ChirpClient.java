@@ -1,3 +1,9 @@
+/*
+Chirp Java Client
+
+This public domain software is provided "as is".  See the Chirp License
+for details.
+*/
 
 package edu.wisc.cs.condor.chirp;
 
@@ -6,7 +12,7 @@ import java.net.*;
 
 /*
 XXX XXX XXX
-WARNING WARNING WARNING
+WARNING WARNING WARNING (Condor maintainers)
 If you change this file, then you must compile it
 and check the .jar file into CVS.  Why?  Because
 we can't manage a Java installation on all of our platforms,

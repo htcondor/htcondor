@@ -1,3 +1,9 @@
+/*
+Chirp C Client
+
+This public domain software is provided "as is".  See the Chirp License
+for details.
+*/
 
 #ifndef CHIRP_CLIENT_H
 #define CHIRP_CLIENT_H
