@@ -17,6 +17,9 @@
 # 25-Jul-2000 Peter Couvares <pfc@cs.wisc.edu> fixed status checking
 #             to ask nodes directly so fast shutdown works reliably
 #
+# 17-Sep-2000 Erik Paulson <epaulson@cs.wisc.edu> added condor_findhost 
+#             to the 'off' command; 
+#
 # This is a very simple, first pass to solve this problem.
 # Future work required:
 #   reservations into the future
@@ -41,7 +44,8 @@ use Sys::Hostname;
 
        $RELEASE_DIR = "/unsup/condor";
           $NUMNODES = 64;  # (beware: we assume $NUMNODES<=99 in a few places)
-         $STARTNODE = 2;
+	   $DBNODES = 36;
+         $STARTNODE = 1;
        $CONDOR_POOL = "condor.cs.wisc.edu";
            $LOGFILE = "/p/condor/workspaces/cluster/condor_cluster_tool.log";
              $DEBUG = 0;
@@ -53,6 +57,7 @@ use Sys::Hostname;
              $BIN = "$RELEASE_DIR/bin";
       $CONDOR_OFF = "$SBIN/condor_off -pool $CONDOR_POOL -fast";
        $CONDOR_ON = "$SBIN/condor_on -pool $CONDOR_POOL";
+ $CONDOR_FINDHOST = "$BIN/condor_findhost -m -pool $CONDOR_POOL";  
       $CONFIG_OFF = "$BIN/condor_config_val -pool $CONDOR_POOL " .
                     "-set 'start_daemons = false'";
        $CONFIG_ON = "$BIN/condor_config_val -pool $CONDOR_POOL " .
@@ -61,6 +66,10 @@ use Sys::Hostname;
  $CONDOR_RECONFIG = "$SBIN/condor_reconfig -pool $CONDOR_POOL";
 $CONDOR_HOSTALLOW = "$BIN/condor_config_val -pool $CONDOR_POOL " .
                     "-name c33 hostallow_administrator";
+  $CCLUSTER_CONST = " -c 'IsComputeCluster==TRUE'";
+ $DBCLUSTER_CONST = " -c 'IsDBCluster==TRUE'";
+   $GIGABIT_CONST = " -c 'HasGigabit==TRUE'";
+       $USE_CONST = $CCLUSTER_CONST;
 
 
 ### The guts
@@ -102,6 +111,14 @@ if( $cmd =~ /^ch/ )
 	foreach $n (10 .. $NUMNODES)
 	{
 	    push @args, "c$n";
+	}
+	foreach $n ($STARTNODE .. 9)
+	{
+	    push @args, "db0$n";
+	}
+	foreach $n (10 .. $DBNODES)
+	{
+	    push @args, "db$n";
 	}
 	$print_summary = 1;
     }
@@ -203,18 +220,33 @@ sub start_condor
 
 
 sub stop_condor {
-    my ($num) = @_;
-    my ($host, @hosts);
+    my ($num, $host, @hosts);
+
+    foreach $arg (@_) {
+         if( $arg eq "-gigabit") {
+            $USE_CONST = $GIGABIT_CONST;
+         }
+         elsif ($arg eq "-dbnode") {
+             $USE_CONST = $DBCLUSTER_CONST;
+         }
+         elsif ($arg eq "-cnode") {
+			$USE_CONST = $CCLUSTER_CONST;
+         }
+         else {
+			$num = $arg;
+         }
+    }
 
     if( $num =~ /\D/ ) {
-	die "$0: error: $num is not a number, try again\n";
+        die "$0: error: $num is not a number, try again\n";
     }
     if( $num > $NUMNODES ) {
-	die "$0: error: the cluster only has $NUMNODES machines, try again\n";
+        die "$0: error: the cluster only has $NUMNODES machines, try again\n";
     }
 
     @hosts = find_avail( $num );
 
+    @hosts = sort(@hosts);
     foreach $host ( @hosts ) {
 	kill_condor( $host );
     }
@@ -226,6 +258,7 @@ sub stop_condor {
 	    print "DEBUG: $host still up...\n" if $DEBUG;
 	    sleep 1;
 	}
+	$host =~ s/\.cs\.wisc\.edu//;
 	print $host, "\n";
 	print LOG timestamp() . " $user    (given $host)\n";
     }
@@ -237,23 +270,19 @@ sub find_avail {
     my ($found, $host, @avail);
 
     $found = 0;
-    for( $i = $STARTNODE; $i <= $NUMNODES; $i++ ) {
-	if( $i < 10 ) {
-	    $host = "c0$i";
-	} else {
-	    $host = "c$i";
-	}
-	if( condor_up ( $host ) )
-	{
-	    # this node is available; give it up
-	    push @avail, $host;
-	    $found++;
-	} 
-	if( $found == $num ) {
-	    return @avail;
-	}
+
+    $CONDOR_FINDHOST_COMMAND = $CONDOR_FINDHOST . $USE_CONST . " -n $num";
+    open ( GETMACHINES, "$CONDOR_FINDHOST_COMMAND 2>&1 |\n");
+    while(<GETMACHINES>) {
+        chomp;
+        push @avail, $_;
     }
-    die "$0: error: only $found nodes found running Condor, try again\n";
+
+    close(GETMACHINES);
+    $exit = ($? >> 8);
+    $found = $exit - 1;
+    die "$0: error: only $found nodes found running Condor, try again\n" if $exit > 0;
+    return @avail;
 }
 
 
