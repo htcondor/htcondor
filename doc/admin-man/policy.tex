@@ -466,6 +466,13 @@ have ever been run.  So, if you want the startd to run benchmarks as
 soon as it is is unclaimed if it hasn't done so already, just include
 a term for \Attr{LastBenchmark} as in the example above.
 
+\Note If \Expr{RunBenchmarks} is defined, and set to something
+other than ``False'', the startd will automatically run one set of
+benchmarks when it starts up.  So, if you want to totally disable
+benchmarks, both at startup, and at any time thereafter, just set 
+\Expr{RunBenchmarks} to ``False'' or comment it out from your config
+file.  
+
 From the Unclaimed state, the startd can go to two other possible
 states: Matched or Claimed/Idle.  Once the \Condor{negotiator} matches
 an Unclaimed startd with a requester at a given schedd, the negotiator
