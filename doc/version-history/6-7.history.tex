@@ -22,10 +22,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Added a feature to DAGMan that will allow VARS names to include
+\item Added a feature to \Condor{dagman} that will allow VARS names to include
 numerics and underscores.
 
 \item Added optional \Expr{COLLECTOR\_HOST\_FOR\_NEGOTIATOR} configuration parameter to indicate which \Condor{collector} the  \Condor{negotiator} on this (local) host should query first. This is designed to improve negotiation performance.
+
+\item Added a new \Condor{dagman} capability to allow the DAG to continue
+if it encounters a double run of the same node job (set the
+\Expr{DAGMAN\_ALLOW\_EXTRA\_RUNS} parameter to true to do this).
 
 \end{itemize}
 
@@ -33,7 +37,8 @@ numerics and underscores.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a \Condor{dagman} bug that could cause it to leave jobs running
+when aborting a DAG.
 
 \end{itemize}
 
