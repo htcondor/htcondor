@@ -2,11 +2,10 @@
 #define DAG_H
 
 #include "condor_common.h"
-
+#include "list.h"
 #include "job.h"
 #include "user_log.c++.h"          /* from condor_c++_util/ directory */
 #include "condor_constants.h"      /* from condor_includes/ directory */
-#include "list.h"
 
 /** Termination Queue Item (TQI).  EXPLANATION NEEDED HERE!
  */
@@ -26,6 +25,7 @@ class TQI {
     /** The job that terminated      */   Job                 * parent;
     /** Children net yet seen in log */   SimpleList<JobID_t>   children;
 };
+
 
 //------------------------------------------------------------------------
 /** A Dag instance stores information about a job dependency graph,

@@ -1,6 +1,7 @@
 //
 // Local DAGMan includes
 //
+#include "condor_common.h"
 #include "dag.h"
 #include "debug.h"
 #include "submit.h"
@@ -14,7 +15,7 @@ void TQI::Print () const {
     printf ("Job: ");
     job_print(parent);
     printf (", Children: ");
-    cout << children;
+    children.Display(cout);
 }
 
 //---------------------------------------------------------------------------

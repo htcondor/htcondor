@@ -1,4 +1,4 @@
-// Function to Parse the DagMan initialization file
+#include "condor_common.h"
 
 #include "job.h"
 #include "parse.h"

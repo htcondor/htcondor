@@ -1,3 +1,4 @@
+#include "condor_common.h"
 #include "types.h"
 #include "condor_string.h"
 
