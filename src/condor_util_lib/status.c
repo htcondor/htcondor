@@ -29,6 +29,7 @@
 
 
 #include <stdio.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <netinet/in.h>
@@ -43,9 +44,6 @@
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 #endif LINT
 
-char	*strchr();
-
-
 display_status_line( line, fp )
 STATUS_LINE	*line;
 FILE		*fp;
@@ -55,7 +53,7 @@ FILE		*fp;
 	char	*format_seconds();
 
 	
-	if( ptr=strchr(line->name,'.') ) {
+	if( ptr=(char *)strchr((const char *)line->name,'.') ) {
 		*ptr = '\0';
 	}
 	fprintf( fp, "%-14s ", line->name );

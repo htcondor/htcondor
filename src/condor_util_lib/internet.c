@@ -138,9 +138,9 @@ string_to_sin(char *addr, struct sockaddr_in *sin)
 	string++;					/* skip the leading '<' */
 	cur_byte = (char *) &(sin->sin_addr);
 	for(end_string = string; end_string != 0; ) {
-		end_string = strchr(string, '.');
+		end_string = (char *)strchr((const char *)string, '.');
 		if (end_string == 0) {
-			end_string = strchr(string, ':');
+			end_string = (char *)strchr((const char *)string, ':');
 		}
 		if (end_string) {
 			*end_string = '\0';
