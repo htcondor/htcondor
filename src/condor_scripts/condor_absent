@@ -223,10 +223,13 @@ if ( $DoPing )
 }
 
 # Ok, now dump out the results
+my $Count = 0;
 foreach my $Host ( sort keys %Absent )
 {
     print "$Host\n";
+    $Count++;
 }
+print "# Total: $Count hosts\n";
 
 # Report cluster hosts that are down
 if ( $DoClusterCheck )
