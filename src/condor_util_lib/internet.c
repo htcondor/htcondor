@@ -125,13 +125,16 @@ int				proc;
 /* Convert a string of the form "<xx.xx.xx.xx:pppp>" to a sockaddr_in  TCP */
 
 int
-string_to_sin(char *string, struct sockaddr_in *sin)
+string_to_sin(char *addr, struct sockaddr_in *sin)
 {
 	int             i;
 	char    *cur_byte;
 	char    *end_string;
 	int 	temp=0;
+	char*	addrCpy = (char*)malloc(strlen(addr)+1);
+	char*	string = addrCpy;
 
+	strcpy(addrCpy, addr);
 	string++;					/* skip the leading '<' */
 	cur_byte = (char *) &(sin->sin_addr);
 	for(end_string = string; end_string != 0; ) {
@@ -154,6 +157,7 @@ string_to_sin(char *string, struct sockaddr_in *sin)
 	string[temp-1] = '>';
 	string[temp] = '\0';
 	string[temp-6] = ':';
+	free(addrCpy);
 }
 
 
