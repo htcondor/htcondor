@@ -30,6 +30,7 @@
 #include "condor_ast.h"
 #include "condor_attrlist.h"
 #include "condor_attributes.h"
+#include "iso_dates.h"
 
 extern void evalFromEnvironment (const char *, EvalResult *);
 
@@ -1080,6 +1081,49 @@ int AttrList::LookupString (const char *name, char **value)
 	}
 
 	return 0;
+}
+
+int AttrList::LookupTime (const char *name, char **value)
+{
+	ExprTree *tree, *rhs;
+	char     *strVal;
+
+	tree = Lookup (name);
+	if (tree && (rhs=tree->RArg()) && (rhs->MyType() == LX_TIME) &&
+		(strVal = ((String *) rhs)->Value()) && strVal)
+	{
+		*value = (char *) malloc(strlen(strVal) + 1);
+		if (*value != NULL) {
+			strcpy(*value, strVal);
+			return 1;
+		}
+		else {
+			// We shouldn't ever fail, but what if something gets corrupted
+			// and we try to allocate 3billion bytes of storage?
+			return 0;
+		}
+	}
+
+	return 0;
+}
+
+int AttrList::LookupTime(const char *name, struct tm *time, bool *is_utc)
+{
+	ExprTree *tree, *rhs;
+	char     *strVal;
+	int      succeeded;
+
+	succeeded = 0;
+	if (name != NULL && time != NULL && is_utc != NULL) {
+		tree = Lookup (name);
+		if (tree && (rhs=tree->RArg()) && (rhs->MyType() == LX_TIME) &&
+			(strVal = ((String *) rhs)->Value()) && strVal) {
+			iso8601_to_time(strVal, time, is_utc);
+			succeeded = 1;
+		}
+	}
+
+	return succeeded;
 }
 
 int AttrList::LookupInteger (const char *name, int &value)
