@@ -65,6 +65,7 @@ my_popen( const char *cmd, const char * mode )
 	int		pipe_d[2];
 	int		parent_reads;
 	uid_t	euid;
+	gid_t	egid;
 
 		/* Use ChildPid as a simple semaphore-like lock */
 	if ( ChildPid ) {
@@ -104,9 +105,9 @@ my_popen( const char *cmd, const char * mode )
 				close( pipe_d[READ_END] );
 			}
 		}
-
 			/* to be safe, we want to switch our real uid/gid to our
 			   effective uid/gid (shedding any privledges we've got).
+			   we also want to drop any supplimental groups we're in.
 			   we want to run this popen()'ed thing as our effective
 			   uid/gid, dropping the real uid/gid.  all of these calls
 			   will fail if we don't have a ruid of 0 (root), but
@@ -115,8 +116,10 @@ my_popen( const char *cmd, const char * mode )
 			   set our real uid/gid
 			*/
 		euid = geteuid();
+		egid = getegid();
 		seteuid( 0 );
-		setgid( getegid() );
+		setgroups( 1, &egid );
+		setgid( egid );
 		setuid( euid );
 
 		execl( "/bin/sh", "sh", "-c", cmd, 0 );
@@ -214,6 +217,7 @@ my_spawnv( const char* cmd, char *const argv[] )
 {
 	int					status;
 	uid_t euid;
+	gid_t egid;
 
 		/* Use ChildPid as a simple semaphore-like lock */
 	if ( ChildPid ) {
@@ -231,6 +235,7 @@ my_spawnv( const char* cmd, char *const argv[] )
 	if( ChildPid == 0 ) {
 			/* to be safe, we want to switch our real uid/gid to our
 			   effective uid/gid (shedding any privledges we've got).
+			   we also want to drop any supplimental groups we're in.
 			   the whole point of my_spawn*() is that we want to run
 			   something as our effective uid/gid, and we want to do
 			   it safely.  all of these calls will fail if we don't
@@ -239,8 +244,10 @@ my_spawnv( const char* cmd, char *const argv[] )
 			   switch our euid to 0 to be able to set our real uid/gid 
 			*/
 		euid = geteuid();
+		egid = getegid();
 		seteuid( 0 );
-		setgid( getegid() );
+		setgroups( 1, &egid );
+		setgid( egid );
 		setuid( euid );
 
 			/* Now it's safe to exec whatever we were given */
