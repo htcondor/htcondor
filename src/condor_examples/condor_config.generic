@@ -60,6 +60,43 @@ MAIL			= /usr/bin/mail
 ######################################################################
 
 ##--------------------------------------------------------------------
+##  Host/IP access levels
+##--------------------------------------------------------------------
+##  Please see the administrator's manual for details on these
+##  settings, what they're for, and how to use them.
+
+##  What machines have administrative rights for your pool?  This
+##  defaults to your central manager.  You should set it to the
+##  machine(s) where whoever is the condor administrator(s) works
+##  (assuming you trust all the users who log into that/those
+##  machine(s), since this is machine-wide access you're granting).
+HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST)
+
+##  If there are no machines that should have administrative access 
+##  to your pool (for example, there's no machine where only trusted
+##  users have accounts), you can uncomment this setting.
+##  Unfortunately, this will mean that administering your pool will 
+##  be more difficult.
+#HOSTDENY_ADMINISTRATOR = *
+
+##  What machines should have "owner" access to your machines, meaning
+##  they can issue commands that a machine owner should be able to
+##  issue to their own machine (like condor_vacate).  This defaults to
+##  machines with administrator access, and the local machine.  This
+##  is probably what you want.
+HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
+
+##  Read access.  Machines listed as allow (and/or not listed as deny)
+##  can view the status of your pool, etc.  
+#HOSTALLOW_READ = 
+#HOSTDENY_READ = *.bad.subnet, bad-machine.your.domain, 144.77.88.*
+
+##  Write access.  Machines listed here can join your pool, submit
+##  jobs, etc.
+#HOSTALLOW_WRITE = *.your.domain, your-friend's-machine.other.domain
+#HOSTDENY_WRITE = bad-machine.your.domain
+
+##--------------------------------------------------------------------
 ##  Network filesystem parameters:
 ##--------------------------------------------------------------------
 ##  If all the machines in your domain share a common file system,
@@ -119,10 +156,6 @@ MAX_JOBS_RUNNING	= 200
 ##  you've set in the CONDOR_IDS environment variable.  See the Admin
 ##  manual for details on this.
 LOCK		= $(LOCAL_DIR)/log
-
-##  Should the master allow the "admin commands": on, off, restart,
-##  and reconfig?
-ALLOW_ADMIN_COMMANDS            = True
 
 
 ##--------------------------------------------------------------------
@@ -203,7 +236,7 @@ KILL_VANILLA		: $(ActivityTimer) > $(MaxVacateTime)
 ##
 ##  Periodic Checkpointing
 LastCkpt	= (CurrentTime - LastPeriodicCheckpoint)
-PERIODIC_CHECKPOINT	: ( (image_size < 60000) && ( $(LastCkpt) > (6 * $(HOUR)) ) ) || ( $(LastCkpt) > (12 * $(HOUR)) )
+PERIODIC_CHECKPOINT	: ( (ImageSize < 60000) && ( $(LastCkpt) > (6 * $(HOUR)) ) ) || ( $(LastCkpt) > (12 * $(HOUR)) )
 
 
 ######################################################################
@@ -241,7 +274,6 @@ STARTD_LOG	= $(LOG)/StartLog
 STARTER_LOG	= $(LOG)/StarterLog
 
 ##  Lock files
-USERLOG_LOCK	= $(LOCK)/ULogLock
 SCHEDD_LOCK	= $(LOCK)/SchedLock
 SHADOW_LOCK	= $(LOCK)/ShadowLock
 
@@ -517,5 +549,5 @@ PREEN_ADMIN		= $(CONDOR_ADMIN)
 VALID_SPOOL_FILES	= job_queue.log, job_queue.log.tmp, history, Accountant.log
 
 ##  What files should condor_preen leave in the log directory?
-VALID_LOG_FILES		= MasterLog, MasterLog.old, NegotiatorLog, NegotiatorLog.old, CollectorLog, CollectorLog.old, SchedLog, SchedLog.old, ShadowLog, ShadowLog.old, StartLog, StartLog.old, StarterLog, StarterLog.old, KbdLog, KbdLog.old, ShadowLock, ULogLock, SchedLock, CkptServerLog, CkptServerLog.old, .startd_address, .schedd_address, .master_address
+VALID_LOG_FILES		= MasterLog, MasterLog.old, NegotiatorLog, NegotiatorLog.old, CollectorLog, CollectorLog.old, SchedLog, SchedLog.old, ShadowLog, ShadowLog.old, StartLog, StartLog.old, StarterLog, StarterLog.old, KbdLog, KbdLog.old, ShadowLock, SchedLock, CkptServerLog, CkptServerLog.old, .startd_address, .schedd_address, .master_address
 
