@@ -338,7 +338,7 @@ sub RunIt( $ )
 
     # Build the command & start it
     my $Summary = HawkeyeHash->new( \$Hawkeye, "Summary_" );
-    my $Cmd = "/bin/nice -20 top -b -d $Config{TopPeriod}";
+    my $Cmd = "nice -20 top -b -d $Config{TopPeriod}";
     $TopPid = open ( TOP, "$Cmd|" );
     Carp::confess( "Can't run top '$Cmd'" ) if ( ! $TopPid );
     print STDERR "$Cmd => $TopPid\n";
