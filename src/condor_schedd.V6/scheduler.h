@@ -80,7 +80,6 @@ class Scheduler : public Service
  
 	// maintainence
 	void			timeout(); 
-	void			sigint_handler();
 	void			SetClassAd(ClassAd*);
 	void			SetCommandPort(int);
 	void			reconfig();
