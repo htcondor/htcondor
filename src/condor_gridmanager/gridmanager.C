@@ -1687,11 +1687,13 @@ WriteTerminateEventToUserLog( GlobusJob *curr_job )
 	// Globus doesn't tell us how the job exited, so we'll just assume it
 	// exited normally.
 	event.returnValue = 0;
+	event.normal = true;
 
 	if( curr_job->IsExitStatusValid() ) {
 		int int_val;
 		if( job_ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, int_val) ) {
 			if( int_val ) {
+				event.normal = false;
 				if( job_ad->LookupInteger(ATTR_ON_EXIT_SIGNAL, int_val) ) {
 					event.signalNumber = int_val;
 					event.normal = false;
@@ -1706,6 +1708,7 @@ WriteTerminateEventToUserLog( GlobusJob *curr_job )
 					event.normal = true;
 					event.returnValue = int_val;
 				} else {
+					event.normal = false;
 					dprintf( D_ALWAYS, "(%d.%d) Job ad lacks %s.  "
 						 "Return code unknown.\n", cluster, proc, 
 						 ATTR_ON_EXIT_CODE);
@@ -1713,6 +1716,7 @@ WriteTerminateEventToUserLog( GlobusJob *curr_job )
 				}
 			}
 		} else {
+			event.normal = false;
 			dprintf( D_ALWAYS,
 				 "(%d.%d) Job ad lacks %s.  Final state unknown.\n",
 				 cluster, proc, ATTR_ON_EXIT_BY_SIGNAL);
