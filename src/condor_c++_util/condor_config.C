@@ -556,14 +556,22 @@ fill_attributes()
 		   these are already defined.  -Derek Wright
 		   Amended -Pete Keller 06/01/99 */
 
-	char *arch, *opsys;
+	char *tmp;
 
-	if( (arch = sysapi_condor_arch()) != NULL ) {
-		insert( "ARCH", arch, ConfigTab, TABLESIZE );
+	if( (tmp = sysapi_condor_arch()) != NULL ) {
+		insert( "ARCH", tmp, ConfigTab, TABLESIZE );
 	}
 
-	if( (opsys = sysapi_opsys()) != NULL ) {
-		insert( "OPSYS", opsys, ConfigTab, TABLESIZE );
+	if( (tmp = sysapi_uname_arch()) != NULL ) {
+		insert( "UNAME_ARCH", tmp, ConfigTab, TABLESIZE );
+	}
+
+	if( (tmp = sysapi_opsys()) != NULL ) {
+		insert( "OPSYS", tmp, ConfigTab, TABLESIZE );
+	}
+
+	if( (tmp = sysapi_uname_opsys()) != NULL ) {
+		insert( "UNAME_OPSYS", tmp, ConfigTab, TABLESIZE );
 	}
 
 	insert( "subsystem", mySubSystem, ConfigTab, TABLESIZE );
