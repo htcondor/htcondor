@@ -210,12 +210,6 @@ void CondorFileTable::dump()
 	}
 }
 
-void CondorFileTable::close_all()
-{
-	for( int i=0; i<length; i++ )
-		close(i);
-}
-
 int CondorFileTable::find_name( const char *name )
 {
 	for( int fd=0; fd<length; fd++ ) {
@@ -669,7 +663,16 @@ int CondorFileTable::dup2( int fd, int nfd )
 
 	if( fd==nfd ) return fd;
 
-	if( pointers[nfd]!=0 ) close(nfd);
+	// If this fd is already in use, close it.
+	// But, close _can_ fail!  If that happens,
+	// abort the dup with the errno from the close.
+
+	if( pointers[nfd]!=0 ) {
+		result = close(nfd);
+		if( result==-1 ) {
+			return result;
+		}
+	}
 
 	pointers[nfd] = pointers[fd];
 	    
