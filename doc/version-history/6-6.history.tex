@@ -122,6 +122,12 @@ exception would result in abortion of the executable instead of the
 delivery of the exception. This bug affects Condor version 6.6.0 for
 Redhat 7.x.
 
+\item Fixed a \Condor{shadow} bug that could result in a fatal error
+  if the following 3 conditions were met: (1) the job enables Condor's
+  file transfer mechanism, (2) the job wants Condor to automatically
+  figure out what files to transfer back (the default), and (3) the
+  job does not specify a userlog.
+
 \item Fixed bug whereby \Condor{dagman}, if removed from the queue via
       \Condor{rm}, could fail to remove all of its submitted jobs if
       any of their submit events had not yet appeared in the userlog.
