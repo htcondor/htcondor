@@ -1,12 +1,14 @@
 // Includes 
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
+#include "condor_common.h"
 #include "caseSensitivity.h"
+#include "escapes.h"
 #include "lexer.h"
 
 // for EXCEPT in condor_debug.h
 static char _FileName_[] = __FILE__;
+
+// macro for recognising octal digits
+#define isodigit(x) ( (x) - '0' < 8 )
 
 // ctor
 Lexer::
@@ -19,13 +21,13 @@ Lexer ()
 
 	// initialize lexer state (token, etc.) variables
 	tokenType = LEX_END_OF_INPUT;
-	lexTokenString = NULL;
 	lexBufferCount = 0;
 	savedChar = 0;
 	ch = 0;
 	pos = 0;	
 	inString = false;
 	tokenConsumed = true;
+	accumulating = false;
 
 	// debug flag
 	debug = false;
@@ -42,7 +44,7 @@ Lexer::
 // Initialization method:  Initialize with immutable string
 //   +  Token will be accumulated in the lexBuffer
 bool Lexer::
-initializeWithString (const char *buf, int buflen)
+initializeWithString (char *buf, int buflen)
 {
 	// sanity check
 	if (!buf || buflen < 1) return false;
@@ -56,34 +58,9 @@ initializeWithString (const char *buf, int buflen)
 	pos = 0;
 	ch = lexInputStream[pos];
 	lexBufferCount = 0;
-	lexTokenString = NULL;
 	inString = false;
 	tokenConsumed = true;
-
-	return true;
-}
-
-
-// Initialization method:  Initialize with mutable string
-//   + The token will be cut in place
-bool Lexer::
-initializeWithStringBuffer (char *buf, int buflen)
-{
-	// sanity check
-    if (!buf || buflen < 1) return false;
-
-	// set source characteristics
-	lexInputSource = LEXER_SRC_STRING_BUFFER; 
-	lexInputLength = buflen;
-	lexInputStream = buf;
-
-	// token state initialization
-	pos = 0;
-	ch  = lexInputStream[pos];
-	lexBufferCount = 0;
-	lexTokenString = NULL;
-	inString = false;
-	tokenConsumed = true;
+	accumulating = false;
 
 	return true;
 }
@@ -105,10 +82,10 @@ initializeWithCedar (Sock &s)
 	// token state initialization
 	pos = 0;
 	lexBufferCount = 0;
-	lexTokenString = NULL;
 	if (!sock->get_bytes (lexBuffer, 1)) return false;
 	inString = false;
 	tokenConsumed = true;
+	accumulating = false;
 
 	// the first character
 	ch = *lexBuffer;
@@ -133,10 +110,10 @@ initializeWithFd (int desc)
     // token state initialization
     pos = 0;
 	lexBufferCount = 0;
-    lexTokenString = NULL;
 	if (read (fd, lexBuffer, 1) < 0) return false;
 	inString = false;
 	tokenConsumed = true;
+	accumulating = false;
 
 	// the first character
 	ch = *lexBuffer;
@@ -161,9 +138,9 @@ initializeWithFile (FILE *fp)
     // token state initialization
     pos = 0;
     lexBufferCount = 0;
-    lexTokenString = NULL;
 	inString = false;
 	tokenConsumed = true;
+	accumulating = false;
 
 	// the first character
 	if ((ch = getc (fp)) == EOF) return false;
@@ -185,191 +162,69 @@ void Lexer::
 finishedParse ()
 {
 	strings.purge ();
+	accumulating = false;
 }
 
 
 // Mark:  This function is called when the beginning of a token is detected
-//   1. If tokens are accumulated in the lexBuffer, set the lexTokenString to
-//      the beginning of the lexBuffer
-//   2. Otherwise, the token string is constructed in the input stream itself
 void Lexer::
 mark (void)
 {
-	switch (lexInputSource) {
-		// tokens accumulated in place
-		case LEXER_SRC_STRING_BUFFER:
-			lexTokenString = lexInputStream + pos;
-			break;
-
-		// tokens accumulated in the lexBuffer
-		case LEXER_SRC_STRING:
-		case LEXER_SRC_CEDAR:
-		case LEXER_SRC_FILE:
-		case LEXER_SRC_FILE_DESC:
-			lexTokenString = lexBuffer;
-			*lexBuffer = (char) ch;	
-			lexBufferCount = 0;
-			break;
-
-		default:
-			// should not reach here
-			EXCEPT ("ClassAd Lexer:  Should not reach here");
-	}
+	*lexBuffer = (char) ch;	
+	lexBufferCount = 0;
+	accumulating = true;
 }
 
 
 // Cut:  This function is called when the end of a token is detected
-//   1. If tokens are accumulated in the lexBuffer, terminate the string in the
-//      lexBuffer.
-//   2. Otherwise, tokens are constructed in-place.  Save the character under
-//      the cursor, and replace it with a NULL character.
 void  Lexer::
 cut (void)
 {
-	switch (lexInputSource) {
-		// tokens accumulated in place
-		case LEXER_SRC_STRING_BUFFER:
-			savedChar = lexInputStream[pos];	
-			lexInputStream[pos] = '\0';
-			break;
-
-		// tokens accumulated in the lexBuffer
-		case LEXER_SRC_STRING:
-		case LEXER_SRC_CEDAR:
-		case LEXER_SRC_FILE:
-		case LEXER_SRC_FILE_DESC:
-			lexTokenString[lexBufferCount] = '\0';
-			break;
-
-		default:
-			// should not reach here
-			EXCEPT ("ClassAd Lexer:  Should not reach here");
-	}
-}
-
-
-// Uncut:  Called at the beginning of the yylex() function to restore the
-//         input stream due to any previous cut operation.
-//  1.  If yylex() is being called for the first time, we should not perform
-//      the uncut().  This condition is detected by checking the lexTokenString
-//      pointer.
-//  2.  Reset the lexTokenString pointer to indicate that we are no longer
-//      accumulating a token (can reduce copying to the lexBuffer).
-//  3.  If we are uncut()ting after a string literal, also consume the trailing
-//      close quote
-void Lexer::
-uncut (void)
-{
-	// Check if uncut is being called for the first time (i.e., before any
-	// cut), or if the tokens are being accumulated in the lex buffer.  If so, 
-	// do *not* perform the uncut.
-	if (lexTokenString && lexInputSource == LEXER_SRC_STRING_BUFFER) {
-		lexInputStream[pos] = savedChar;
-	}
-
-	// Are we uncut()ting a string literal?  If so, consume the close quote
-	if (lexTokenString && inString && ch == '\"') {
-		lexTokenString = NULL;
-		lexBufferCount = 0;
-		inString = false;
-		wind ();
-	}
-
-	// reinitialize the lexBuffer state
-	lexTokenString = NULL;
-	lexBufferCount = 0;
+	lexBuffer[lexBufferCount] = '\0';
+	accumulating = false;
 }
 
 
 // Wind:  This function is called when an additional character must be read
 //        from the input source; the conceptual action is to move the cursor
-//  1.  If we are accumulating tokens in the lexBuffer, we must copy a character
-//      to the lexBuffer.  However, we need to do this only if we are in the
-//      midst of a token.
-//  2.  Otherwise, the tokens are being accumulated in place, and we only need
-//      to wind the pointer.
-//  3.  For external sources (like cedar, FILE and file desc), we do not have
-//      to keep track of the cursor
 void Lexer::
 wind (void)
 {
 	char chr;
 
-	// are we accumulating a token?
-	if (lexTokenString) {
-		// check the source
-		switch (lexInputSource) {
-			case LEXER_SRC_STRING:
-			case LEXER_SRC_STRING_BUFFER:
-				// common operations to both
-				pos++;
-				if (pos >= lexInputLength) { ch = EOF; return; }
-				ch = lexInputStream[pos];
+	// check the source
+	switch (lexInputSource) {
+		case LEXER_SRC_STRING:
+			// common operations to both
+			pos++;
+			if (pos >= lexInputLength) { ch = EOF; return; }
+			ch = lexInputStream[pos];
+			break;
 
-				// for immutable strings, the character must be copied to 
-				// the lexBuffer
-				if (lexInputSource == LEXER_SRC_STRING)
-					lexBuffer[++lexBufferCount] = ch;
-			
-				return;
+		// in the rest of the cases, the cursor is irrelevent --- just
+		// accumulate the token in the lexBuffer
+		case LEXER_SRC_CEDAR:
+			if (!sock->get_bytes (&chr, 1)) { ch = EOF; return; }
+			ch = chr;
+			break;
 
+		case LEXER_SRC_FILE:
+			if ((ch = getc (file)) == EOF)	{ return; }
+			break;
 
-			// in the rest of the cases, the cursor is irrelevent --- just
-			// accumulate the token in the lexBuffer
-			case LEXER_SRC_CEDAR:
-				if (!sock->get_bytes (&chr, 1)) { ch = EOF; return; }
-				ch = chr;
-				lexBuffer[++lexBufferCount] = chr;
-				break;
+		case LEXER_SRC_FILE_DESC:
+			if ((read (fd, &chr, 1)) < 0) { ch = EOF; return; }
+			ch = chr;
+			break;
 
-			case LEXER_SRC_FILE:
-				if ((ch = getc (file)) == EOF)	{ return; }
-				lexBuffer[++lexBufferCount] = (char) ch;
-				break;
-
-			case LEXER_SRC_FILE_DESC:
-				if ((read (fd, &chr, 1)) < 0) { ch = EOF; return; }
-				ch = chr;
-				lexBuffer[++lexBufferCount] = chr;
-				break;
-
-			default:
-				EXCEPT ("ClassAd Lexer:  Should not get here");
-		}
-	} else {
-		// we are not accumulating a token;  this means that we do not have to
-		// perform any copying and count updating for input sources that require
-		// token accumulation in the lexBuffer
-		switch (lexInputSource) {
-			case LEXER_SRC_STRING:
-			case LEXER_SRC_STRING_BUFFER:
-				pos++;
-				if (pos >= lexInputLength) { ch = EOF; return; }
-				ch = lexInputStream[pos];
-				return;
-
-			// in the rest of the cases, the cursor is irrelevent
-			case LEXER_SRC_CEDAR:
-				if (!sock->get_bytes (&chr, 1)) { ch = EOF; return; }
-				ch = chr;
-				break;
-
-			case LEXER_SRC_FILE:
-				if ((ch = getc (file)) == EOF)	{ return; }
-				break;
-
-			case LEXER_SRC_FILE_DESC:
-				if ((read (fd, &chr, 1)) < 0) { ch = EOF; return; }
-				ch = chr;
-				break;
-
-			default:
-				EXCEPT ("ClassAd Lexer:  Should not get here");
-		}
+		default:
+			ch = EOF;
+			return;
 	}
+	if( accumulating ) lexBuffer[++lexBufferCount] = ch;
 }
 
-				
+			
 TokenType Lexer::
 consumeToken (TokenValue *lvalp)
 {
@@ -395,12 +250,37 @@ peekToken (TokenValue *lvalp)
 	// set the token to unconsumed
 	tokenConsumed = false;
 	
-	// the last token was cut, so restore the buffer
-	uncut ();
-
 	// consume white space
-	while (isspace (ch)) {
-		wind ();
+	while( 1 ) {
+		if( isspace( ch ) ) {
+			wind( );
+			continue;
+		} else if( ch == '/' ) {
+			mark( );
+			wind( );
+			if( ch == '/' ) {
+				// a c++ style comment
+				while( ch && ch != '\n' ) {
+					wind( );
+				}
+			} else if( ch == '*' ) {
+				// a c style comment
+				int oldCh;
+				ch = '\n';
+				do {
+					oldCh = ch;
+					wind( );
+				} while( oldCh != '*' || ch != '/' );
+				wind( );
+			} else {
+				// just a division operator
+				cut( );
+				tokenType = LEX_DIVIDE;
+				return( tokenType );
+			}
+		} else {
+			break; // out of while( 1 ) loop
+		}
 	}
 
 	// check if this is the end of the input
@@ -409,12 +289,10 @@ peekToken (TokenValue *lvalp)
 		return tokenType;
 	}
 
-	// this is the start of the token
-	mark ();
-
 	// check the first character of the token
-	if (isdigit (ch)) {
-		tokenizeNumber ();	
+	if (isdigit( ch ) || ch == '.' ) {
+		// tokenizeNumber() also takes care of the selection operator
+		tokenizeNumber();	
 	} else if (isalpha (ch) || ch == '_') {
 		tokenizeAlphaHead ();
 	} else if (ch == '\"') {
@@ -434,79 +312,136 @@ peekToken (TokenValue *lvalp)
 
 
 // Tokenize number constants:
-//   1.  Integers:  [0-9]+
-//   2.  Reals   :  [0-9]+\.[0-9]*
-// At some point, we should probably include scientific notation.
+//   1.  Integers:  0[0-7]+ | 0[xX][0-9a-fA-F]+ | [0-9]+
+//   2.  Reals   :  [0-9]*\.[0-9]* (e|E) [+-]? [0-9]+
 int Lexer::
 tokenizeNumber (void)
 {
-	NumberFactor f = NO_FACTOR;
-	int uch;
+	enum { NONE, INTEGER, REAL };
+	int		numberType = NONE;
+	NumberFactor f;
+	int		integer;
+	double	real;
+	int 	och;
 
-	// the token is either integer or real value
-	while (isdigit (ch)) {
-		wind ();
+	och = ch;
+	mark( );
+	wind( );
+
+	if( och == '0' ) {
+		// number is octal, hex or real
+		if( tolower( ch ) == 'x' ) {
+			// get hex digits only; parse hex-digit+
+			numberType = INTEGER;
+			wind( );
+			if( !isxdigit( ch ) ) {
+				cut( );
+				tokenType = LEX_TOKEN_ERROR;
+				return( tokenType ) ;
+			}
+			while( isxdigit( ch ) ) {
+				wind( );
+			}
+		} else {
+			// get octal or real
+			numberType = INTEGER;
+			while( isdigit( ch ) ) {
+				wind( );
+				if( !isodigit( ch ) ) {
+					// not an octal number
+					numberType = REAL;
+				}
+			}
+			if( ch == '.' || tolower( ch ) == 'e' ) {
+				numberType = REAL;
+			} else if( numberType == REAL ) {
+				// non-octal digits, but not a real (no '.' or 'e')
+				// so, illegal octal constant
+				cut( );
+				tokenType = LEX_TOKEN_ERROR;
+				return( tokenType );
+			}
+		}
+	} else if( isdigit( och ) ) {
+		// decimal or real; get digits
+		while( isdigit( ch ) ) {
+			wind( );
+		}
+		numberType = ( ch=='.' || tolower( ch )=='e' ) ? REAL : INTEGER;
+	} 
+
+	if( och == '.' || ch == '.' ) {
+		// fraction part of real or selection operator
+		if( ch == '.' ) wind( );
+		if( isdigit( ch ) ) {
+			// real; get digits after decimal point
+			numberType = REAL;
+			while( isdigit( ch ) ) {
+				wind( );
+			}
+		} else {
+			if( numberType != NONE ) {
+				// initially like a number, but no digit following the '.'
+				cut( );
+				tokenType = LEX_TOKEN_ERROR;
+				return( tokenType );
+			}
+			// selection operator
+			cut( );
+			tokenType = LEX_SELECTION;
+			return( tokenType );
+		}
 	}
 
-	// if the next character is a '.', the token is a real otherwise
-	// treat the token as an integer and return
-	if (ch != '.') {
-		// whether or not there's a multiplicative factor, we don't want the
-		// character to be in the tokenString --- just being nice to atoi()
-		cut ();
-
-		f = NO_FACTOR;
-		uch = toupper(ch);
-
-		// check if there is a multiplicative factor
-		if (uch == 'K' || uch == 'M' || uch == 'G') {
-			wind ();
-			if (uch == 'K') f = K_FACTOR;
-			if (uch == 'M') f = M_FACTOR;
-			if (uch == 'G') f = G_FACTOR;
+	// if we are tokenizing a real, the (optional) exponent part is left
+	//   i.e., [eE][+-]?[0-9]+
+	if( numberType == REAL && tolower( ch ) == 'e' ) {
+		wind( );
+		if( ch == '+' || ch == '-' ) wind( );
+		if( !isdigit( ch ) ) {
+			cut( );
+			tokenType = LEX_TOKEN_ERROR;
+			return( tokenType );
 		}
+		while( isdigit( ch ) ) {
+			wind( );
+		}
+	}
 
-		// token is an integer
-		tokenType = LEX_INTEGER_VALUE;
-		yylval.intValue.value  = atoi (lexTokenString);
-		yylval.intValue.factor = f;
-		uncut ();
-		return tokenType;
+	char *endptr;
+	if( numberType == INTEGER ) {
+		cut( );
+		integer = (int) strtol( lexBuffer, &endptr, 0 );
+	} else if( numberType == REAL ) {
+		cut( );
+		real = strtod( lexBuffer, &endptr );
 	} else {
-		// token is a real ... consume the '.'
-		wind ();
-
-		// read the fraction part
-		while (isdigit (ch)) {
-			wind ();
-		}
-
-		// whether or not there's a multiplicative factor, we don't want the
-		// character to be in the tokenString --- just being nice to atof()
-		cut ();
-
-		uch = toupper(ch);
-		f = NO_FACTOR;
-
-		// check if there is a multiplicative factor
-		if (uch == 'K' || uch == 'M' || uch == 'G') {
-			wind ();
-			if (uch == 'K') f = K_FACTOR;
-			if (uch == 'M') f = M_FACTOR;
-			if (uch == 'G') f = G_FACTOR;
-		}
-
-		tokenType = LEX_REAL_VALUE;
-		yylval.realValue.value  = atof (lexTokenString);
-		yylval.realValue.factor = f;
-
-		uncut ();
-		return tokenType;
+		EXCEPT( "Should not reach here" );
 	}
 
-	// should not get here
-	return LEX_TOKEN_ERROR;
+	if( *endptr != '\0' ) {
+		EXCEPT( "strto{l,d}() signalled an error" );
+	}
 
+	switch( toupper( ch ) ) {
+		case 'K': f = K_FACTOR; wind( ); break;
+		case 'M': f = M_FACTOR; wind( ); break;
+		case 'G': f = G_FACTOR; wind( ); break;
+		default:
+			f = NO_FACTOR;
+	}
+
+	if( numberType == INTEGER ) {
+		yylval.intValue.value = integer;
+		yylval.intValue.factor = f;
+		tokenType = LEX_INTEGER_VALUE;
+	} else {
+		yylval.realValue.value = real;
+		yylval.realValue.factor = f;
+		tokenType = LEX_REAL_VALUE;
+	}
+
+	return( tokenType );
 }
 
 
@@ -516,7 +451,7 @@ tokenizeNumber (void)
 int Lexer::
 tokenizeAlphaHead (void)
 {
-	// true or false or undefined or error or identifier
+	mark( );
 	while (isalpha (ch)) {
 		wind ();
 	}
@@ -530,33 +465,31 @@ tokenizeAlphaHead (void)
 		cut ();
 
 		tokenType = LEX_IDENTIFIER;
-		yylval.strValue = strings.getCanonical(lexTokenString);
+		yylval.strValue = strings.getCanonical(lexBuffer);
 		
 		return tokenType;
 	}	
 
 	// check if the string is one of the reserved words
 	cut ();
-	if (CLASSAD_RESERVED_STRCMP(lexTokenString, "true") == 0) {
-		tokenType = LEX_INTEGER_VALUE;
-		yylval.intValue.value = 1;
-		yylval.intValue.factor = NO_FACTOR;
-	} else if (CLASSAD_RESERVED_STRCMP(lexTokenString, "false") == 0) {
-		tokenType = LEX_INTEGER_VALUE;
-		yylval.intValue.value = 0;
-		yylval.intValue.factor = NO_FACTOR;
-	} else if (CLASSAD_RESERVED_STRCMP(lexTokenString, "undefined") == 0) {
+	if (CLASSAD_RESERVED_STRCMP(lexBuffer, "true") == 0) {
+		tokenType = LEX_BOOLEAN_VALUE;
+		yylval.boolValue = true;
+	} else if (CLASSAD_RESERVED_STRCMP(lexBuffer, "false") == 0) {
+		tokenType = LEX_BOOLEAN_VALUE;
+		yylval.boolValue = false;
+	} else if (CLASSAD_RESERVED_STRCMP(lexBuffer, "undefined") == 0) {
 		tokenType = LEX_UNDEFINED_VALUE;
-	} else if (CLASSAD_RESERVED_STRCMP(lexTokenString, "error") == 0) {
+	} else if (CLASSAD_RESERVED_STRCMP(lexBuffer, "error") == 0) {
 		tokenType = LEX_ERROR_VALUE;
-	} else if (CLASSAD_RESERVED_STRCMP(lexTokenString, "is") == 0 ) {
+	} else if (CLASSAD_RESERVED_STRCMP(lexBuffer, "is") == 0 ) {
 		tokenType = LEX_META_EQUAL;
-	} else if (CLASSAD_RESERVED_STRCMP(lexTokenString, "isnt") == 0) {
+	} else if (CLASSAD_RESERVED_STRCMP(lexBuffer, "isnt") == 0) {
 		tokenType = LEX_META_NOT_EQUAL;
 	} else {
 		// token is a character only identifier
 		tokenType = LEX_IDENTIFIER;
-		yylval.strValue = strings.getCanonical (lexTokenString);
+		yylval.strValue = strings.getCanonical (lexBuffer);
 	}
 
 	return tokenType;
@@ -564,32 +497,32 @@ tokenizeAlphaHead (void)
 
 
 // tokenizeStringLiteral:  Scans strings of the form " ... "
-//   +  We should add support for escape sequences sometime
 int Lexer::
 tokenizeStringLiteral (void)
 {
+	int oldCh = 0;
+
 	// need to mark() after the quote
 	inString = true;
 	wind ();
 	mark ();
 
-	// consume the string literal
-	while (ch != '\"' && ch > 0) {
-		wind ();
+	// consume the string literal; read upto " ignoring \"
+	while( ( ch > 0 ) && ( ch != '\"' || ch == '\"' && oldCh == '\\' ) ) {
+		wind( );
+		oldCh = ch;
 	}
 
-	// check the termination condition
-	if (ch == '\"') {
-		// correctly got the end of string delimiter
-		cut ();
+	if( ch == '\"' ) {
+		cut( );
+		wind( );	// skip over the close quote
+		collapse_escapes( lexBuffer );
+		yylval.strValue = strings.getCanonical( lexBuffer );
 		tokenType = LEX_STRING_VALUE;
-		yylval.strValue = strings.getCanonical(lexTokenString);
-
-		return tokenType;
+	} else {
+		// loop quit due to ch == 0 or ch == EOF
+		tokenType = LEX_TOKEN_ERROR;
 	}
-
-	// loop quit due to ch == 0 or ch == EOF
-	tokenType = LEX_TOKEN_ERROR;
 
 	return tokenType;
 }
@@ -601,7 +534,7 @@ tokenizePunctOperator (void)
 {
 	// save character; may need to lookahead
 	int oldch = ch;
-
+	mark( );
 	wind ();
 	switch (oldch) {
 		// these cases don't need lookaheads
@@ -744,10 +677,10 @@ tokenizePunctOperator (void)
 					break;
 
 				case '>':
-					tokenType = LEX_ARITH_RIGHT_SHIFT;
+					tokenType = LEX_RIGHT_SHIFT;
 					wind ();
 					if (ch == '>') {
-						tokenType = LEX_LOGICAL_RIGHT_SHIFT;
+						tokenType = LEX_URIGHT_SHIFT;
 						wind ();
 					}
 					break;
@@ -857,8 +790,8 @@ strLexToken (int tokenValue)
 		case LEX_BITWISE_XOR:            return "LEX_BITWISE_XOR";
 
 		case LEX_LEFT_SHIFT:             return "LEX_LEFT_SHIFT";
-		case LEX_LOGICAL_RIGHT_SHIFT:    return "LEX_LOGICAL_RIGHT_SHIFT";
-		case LEX_ARITH_RIGHT_SHIFT:      return "LEX_ARITH_RIGHT_SHIFT";
+		case LEX_RIGHT_SHIFT:    		 return "LEX_RIGHT_SHIFT";
+		case LEX_URIGHT_SHIFT:      	 return "LEX_URIGHT_SHIFT";
 
 		case LEX_LOGICAL_AND:            return "LEX_LOGICAL_AND";
 		case LEX_LOGICAL_OR:             return "LEX_LOGICAL_OR";

@@ -20,6 +20,7 @@ union TokenValue
 {
     IntValue    intValue;
     RealValue   realValue;
+	bool		boolValue;
     int         strValue;
 };
 
@@ -33,11 +34,10 @@ class Lexer
 		~Lexer ();
 
 		// initialize methods
-		bool initializeWithString		(const char *,int);	// immutable 
-		bool initializeWithStringBuffer	(char *,int);		// mutable 
-		bool initializeWithCedar 		(Sock &);			// CEDAR
-		bool initializeWithFd 			(int);				// file descriptor
-		bool initializeWithFile 		(FILE *);			// FILE structure
+		bool initializeWithString(char *,int);		// string 
+		bool initializeWithCedar (Sock &);			// CEDAR
+		bool initializeWithFd 	(int);				// file descriptor
+		bool initializeWithFile (FILE *);			// FILE structure
 
 		// return the character string from the string space given the ID
 		inline char *getCharString (int);
@@ -58,12 +58,9 @@ class Lexer
 
 	private:
 		// types of input streams to the scanner
-		enum LexerInputSource 
-		{
-			LEXER_SRC_NONE, 
-			LEXER_SRC_STRING, LEXER_SRC_STRING_BUFFER,
-			LEXER_SRC_FILE,   LEXER_SRC_FILE_DESC,
-			LEXER_SRC_CEDAR
+		enum LexerInputSource {
+			LEXER_SRC_NONE, LEXER_SRC_STRING, LEXER_SRC_FILE,   
+			LEXER_SRC_FILE_DESC, LEXER_SRC_CEDAR
 		};
 
 		// variables to describe and store the input source
@@ -73,13 +70,14 @@ class Lexer
 
 		// internal state of lexical analyzer
 		TokenType	tokenType;             		// the integer id of the token
-		char   	*lexTokenString;        		// pointer to marked character
 		int    	markedPos;              		// index of marked character
 		char   	savedChar;          			// stores character when cut
 		int    	ch;                     		// the current character
 		int    	pos;                    		// the cursor
 		int		lexBufferCount;					// current offset in lexBuffer
 		bool	inString;						// lexing a string constant
+		bool	accumulating;					// are we in a token?
+		int 	debug; 							// debug flag
 
 		StringSpace strings;					// identifiers/constants
 
@@ -91,7 +89,6 @@ class Lexer
 		void 	wind (void);					// consume character from source
 		void 	mark (void);					// mark()s beginning of a token
 		void 	cut (void);						// delimits token
-		void 	uncut (void);					// repatches input stream 
 
 		// to tokenize the various tokens
 		int 	tokenizeNumber (void);			// integer or real
@@ -99,11 +96,10 @@ class Lexer
 		int 	tokenizeStringLiteral (void);	// string constants
 		int 	tokenizePunctOperator (void);	// punctuation and operators
 
-		// miscellaneous
+		// input sources
 		Sock	*sock;							// the Cedar sock
 		int		fd;								// the file descriptor
 		FILE 	*file;							// the file structure
-		int 	debug; 							// debug flag
 };
 
 
