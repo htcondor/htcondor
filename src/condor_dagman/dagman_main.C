@@ -45,7 +45,6 @@ const char* DAGManJobIdAttrName = "DAGManJobID";
 bool run_post_on_failure = TRUE;
 
 static char* lockFileName = NULL;
-char* DAGManJobId;
 
 static Dagman dagman;
 
@@ -246,11 +245,9 @@ int main_init (int argc, char ** const argv) {
 
     if (argc < 2) Usage();  //  Make sure an input file was specified
 
-	// get dagman job id from environment
-	DAGManJobId = getenv( EnvGetName( ENV_ID ) );
-	if( DAGManJobId == NULL ) {
-		DAGManJobId = strdup( "unknown (requires condor_schedd >= v6.3)" );
-	}
+		// get dagman job id from environment, if it's there
+		// (otherwise it will be set to "-1.-1.-1")
+	dagman.DAGManJobId.SetFromString( getenv( EnvGetName( ENV_ID ) ) );
 
     //
     // Process command-line arguments
@@ -406,7 +403,7 @@ int main_init (int argc, char ** const argv) {
 			free( temp );
 		}
     }
-  
+
     //
     // Create the DAG
     //

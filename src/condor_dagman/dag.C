@@ -1376,8 +1376,8 @@ void Dag::RemoveRunningJobs ( const Dagman &dm) const {
 	}
 
 	if ( haveCondorJob ) {
-		snprintf( cmd, ARG_MAX, "condor_rm -const \'%s == \"%s\"\'",
-			  	DAGManJobIdAttrName, DAGManJobId );
+		snprintf( cmd, ARG_MAX, "condor_rm -const \'%s == \"%d\"\'",
+			  	DAGManJobIdAttrName, dm.DAGManJobId._cluster );
 		debug_printf( DEBUG_VERBOSE, "Executing: %s\n", cmd );
 		if ( util_popen( cmd ) ) {
 			debug_printf( DEBUG_VERBOSE, "Error removing DAGMan jobs\n");
@@ -1848,8 +1848,9 @@ Dag::DumpDotFile(void)
 			}
 			
 			fprintf(temp_dot_file, "digraph DAG {\n");
-			fprintf(temp_dot_file, "    label=\"DAGMan Job %s status at %s\";\n\n",
-					DAGManJobId, time_string);
+			fprintf( temp_dot_file,
+					 "    label=\"DAGMan Job status at %s\";\n\n",
+					 time_string);
 
 			IncludeExtraDotCommands(temp_dot_file);
 

@@ -77,6 +77,9 @@ class Dagman {
 		// a node at the back of the ready queue.  (Default is true.)
 	bool retrySubmitFirst;
 
+		// the Condor job id of the DAGMan job
+	CondorID DAGManJobId;
+
     bool Config();
 };
 

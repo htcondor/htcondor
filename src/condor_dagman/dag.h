@@ -41,9 +41,6 @@ extern bool run_post_on_failure;
 // the name of the attr we insert in job ads, recording DAGMan's job id
 extern const char* DAGManJobIdAttrName;
 
-// for the Condor job id of the DAGMan job
-extern char* DAGManJobId;
-
 // NOTE: must be kept in sync with _job_type_t
 enum Log_source{
   CONDORLOG,

@@ -177,10 +177,17 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	// itself; then, define submit_event_notes to print the job's node
 	// name inside the submit event in the userlog
 
+	// NOTE: we specify the job ID of DAGMan using only its cluster ID
+	// so that it may be referenced by jobs in their priority
+	// attribute (which needs an int, not a string).  Doing so allows
+	// users to effectively "batch" jobs by DAG so that when they
+	// submit many DAGs to the same schedd, all the ready jobs from
+	// one DAG complete before any jobs from another begin.
+
 	prependLines = prependLines +
 		" -a " + quote + "dag_node_name = " + DAGNodeName + quote +
 		" -a " + quote + "+DAGParentNodeNames = \"" + DAGParentNodeNames + "\"" + quote +
-		" -a " + quote + "+" + DAGManJobIdAttrName + " = " + DAGManJobId + quote +
+		" -a " + quote + "+" + DAGManJobIdAttrName + " = " + dm.DAGManJobId._cluster + quote +
 		" -a " + quote + "submit_event_notes = DAG Node: " + DAGNodeName + quote;
 
 	MyString anotherLine;
