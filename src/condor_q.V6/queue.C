@@ -804,77 +804,39 @@ format_owner (char *owner, AttrList *ad)
 
 
 static char *
-format_globusHostJMAndExec( char  *globusArgs, AttrList * )
+format_globusHostJMAndExec( char  *globusResource, AttrList *ad )
 {
 	static char result[64];
-	char	host[80], jobManager[80], exec[10240];
-	char    *tmp = NULL, *jm = NULL, *ex = NULL;
-	int		i, p;
+	char	host[80] = "[?????]";
+	char	exec[1024] = "[?????]";
+	char	jm[80] = "[?????]";
+	char	*tmp;
+	int	p;
 
-	strcpy( result, "[?????] [?????]\n" );
+	// copy the hostname
+	p = strcspn( globusResource, ":/" );
+	if ( p > sizeof(host) )
+		p = sizeof(host) - 1;
+	strncpy( host, tmp, p );
+	host[p] = '\0';
 
-	if( ( tmp = strstr( globusArgs, "jobmanager-" ) ) == NULL ) {
-		if ( (tmp = strstr( globusArgs, "jobmanager" ) ) == NULL ) {
-			return( result );
-		}
-	} else { 
-		jm = tmp + 11; // 11==strlen("jobmanager-")
+	if ( ( tmp = strstr( globusResource, "jobmanager-" ) ) != NULL ) {
+		tmp += 11; // 11==strlen("jobmanager-")
+
+		// copy the jobmanager name
+		p = strcspn( tmp, ":" );
+		if ( p > sizeof(jm) )
+			p = sizeof(jm) - 1;
+		strncpy( jm, tmp, p );
+		jm[p] = '\0';
 	}
 
-		// A.  Get the HOST part
-		// scan backwards until (')
-	while( *tmp != '\'' ) {
-			// make sure we don't overrun the beginning of the string
-		if( tmp == globusArgs ) return( result );
-		tmp--;
-	}
-	tmp++;
-	i = 0;
-	while( *tmp != ':' && i < sizeof(host)-1 ) {
-			// make sure we don't overrun the end of the string
-		if( *tmp == '\0' ) return( result );
-		host[i] = *tmp;
-		tmp++;
-		i++;
-	}
-	host[i] = '\0';
+	// get the executable name
+	ad->LookupString(ATTR_JOB_CMD, result);
 
-		// B.  Get the JOBMANAGER part
-	if ( jm ) {
-		i = 0;
-		while( *jm != ':' && i < sizeof(jobManager)-1 ) {
-				// make sure we don't overrun the end of the string
-			if( *jm == '\0' ) return( result );
-			jobManager[i] = *jm;
-			jm++;
-			i++;
-		}
-		jobManager[i] = '\0';
-	} else {
-		strcpy(jobManager, "fork" );
-	}
-		
-		// C.  Get the globus executable
-	if( ( tmp = strstr( globusArgs, "&(executable=" ) ) == NULL ) {
-		exec[0] = '\0';	
-	} else {
-		ex = tmp + 13;	// 13==strlen("&(executable=")
-		i = 0;
-		p = 1;
-		while( p > 0 && i < sizeof(exec)-1 ) {
-			// make sure we don't overrun the end of the string
-			if( *ex == '\0' ) return( result );
-			exec[i] = *ex;
-			ex++;
-			i++;
-			if( *ex == '(' ) p++;
-			if( *ex == ')' ) p--;
-		}
-		exec[i] = '\0';
-	}
-		// done --- pack components into the result string and return
-	sprintf( result, " %-8.8s %-18.18s  %-18.18s\n", jobManager, host, 
-		basename(exec) );
+	// done --- pack components into the result string and return
+	sprintf( result, " %-8.8s %-18.18s  %-18.18s\n", jm, host,
+			 basename(exec) );
 	return( result );
 }
 
@@ -995,7 +957,7 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 			mask.registerFormat( "%7s ", "GlobusStatus" );
 			mask.registerFormat( (StringCustomFmt)
 								 format_globusHostJMAndExec,
-								 "GlobusArgs", "[?????] [?????]\n" );
+								 ATTR_GLOBUS_RESOURCE, "[?????] [?????]\n" );
 			setup_mask = true;
 			usingPrintMask = true;
 		}
@@ -1156,7 +1118,7 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 				mask.registerFormat( "%7s ", "GlobusStatus" );
 				mask.registerFormat( (StringCustomFmt)
 									 format_globusHostJMAndExec,
-									 "GlobusArgs", "[?????] [?????]\n" );
+									 ATTR_GLOBUS_RESOURCE, "[?????] [?????]\n" );
 				setup_mask = true;
 				usingPrintMask = true;
 			}
