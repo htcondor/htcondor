@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.1.2.14 2005-02-07 19:21:53 tannenba Exp $
+# $Id: remote_task.pl,v 1.1.2.15 2005-02-17 19:56:40 bt Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -89,6 +89,10 @@ if( $? >> 8 ) {
 system( "make Condor.pm" );
 if( $? >> 8 ) {
     c_die("Can't build Condor.pm\n");
+}
+system( "make CondorPersonal.pm" );
+if( $? >> 8 ) {
+    c_die("Can't build CondorPersonal.pm\n");
 }
 
 open(BATCHTEST, "perl ./batch_test.pl -d $compiler -t $testname 2>&1 |" ) || 
