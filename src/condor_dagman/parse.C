@@ -41,6 +41,7 @@ static bool parse_script(char *endline, Dag *dag, char *filename, int lineNumber
 static bool parse_parent(Dag *dag, char *filename, int lineNumber);
 static bool parse_retry(Dag *dag, char *filename, int lineNumber);
 static bool parse_dot(Dag *dag, char *filename, int lineNumber);
+static bool parse_vars(Dag *dag, char *filename, int lineNumber);
 
 //-----------------------------------------------------------------------------
 void exampleSyntax (const char * example) {
@@ -74,26 +75,24 @@ isDelimiter( char c ) {
 
 //-----------------------------------------------------------------------------
 bool parse (char *filename, Dag *dag) {
+	ASSERT( dag != NULL );
 
-    ASSERT( dag != NULL );
-  
-    FILE *fp = fopen(filename, "r");
-    if (fp == NULL) {
-        if (DEBUG_LEVEL(DEBUG_QUIET)) {
-            debug_printf( DEBUG_QUIET, "Could not open file %s for input\n",
-                           filename);
-            return false;
-        }
-    }
+	FILE *fp = fopen(filename, "r");
+	if(fp == NULL) {
+		if(DEBUG_LEVEL(DEBUG_QUIET)) {
+			debug_printf( DEBUG_QUIET, "Could not open file %s for input\n", filename);
+			return false;
+		}
+    	}
 
-    char *line;
-    int lineNumber = 0;
-  
-    //
-    // This loop will read every line of the input file
-    //
-    while ( ((line=getline(fp)) != NULL) ) {
-        lineNumber++;
+	char *line;
+	int lineNumber = 0;
+
+	//
+	// This loop will read every line of the input file
+	//
+	while ( ((line=getline(fp)) != NULL) ) {
+		lineNumber++;
 
 		//
 		// Find the terminating '\0'
@@ -104,36 +103,36 @@ bool parse (char *filename, Dag *dag) {
 
 		// Note that getline will truncate leading spaces (as defined by isspace())
 		// so we don't need to do that before checking for empty lines or comments.
-        if (line[0] == 0)       continue;  // Ignore blank lines
-        if (line[0] == COMMENT) continue;  // Ignore comments
+		if (line[0] == 0)       continue;  // Ignore blank lines
+		if (line[0] == COMMENT) continue;  // Ignore comments
 
-        char *token = strtok(line, DELIMITERS);
+		char *token = strtok(line, DELIMITERS);
 		bool parsed_line_successfully;
 
-        // Handle a Job spec
-        // Example Syntax is:  JOB j1 j1.condor [DONE]
-        //
-        if (strcasecmp(token, "JOB") == 0) {
+		// Handle a Job spec
+		// Example Syntax is:  JOB j1 j1.condor [DONE]
+		//
+		if(strcasecmp(token, "JOB") == 0) {
 			parsed_line_successfully = parse_job(dag, filename, lineNumber);
 		}
 
-	// Handle a DaP spec
-        // Example Syntax is:  DAP j1 j1.dapsubmit [DONE]
-        //
-        else if (strcasecmp(token, "DAP") == 0) {
-	  parsed_line_successfully = parse_dap(dag, filename, lineNumber);
-	}
-
-        // Handle a SCRIPT spec
-        // Example Syntax is:  SCRIPT (PRE|POST) JobName ScriptName Args ...
-        else if ( strcasecmp(token, "SCRIPT") == 0 ) {
-			parsed_line_successfully = parse_script(endline, dag, 
-													filename, lineNumber);
+		// Handle a DaP spec
+		// Example Syntax is:  DAP j1 j1.dapsubmit [DONE]
+		//
+		else if (strcasecmp(token, "DAP") == 0) {
+			parsed_line_successfully = parse_dap(dag, filename, lineNumber);
 		}
 
-        // Handle a Dependency spec
-        // Example Syntax is:  PARENT p1 p2 p3 ... CHILD c1 c2 c3 ...
-        else if (strcasecmp(token, "PARENT") == 0) {
+		// Handle a SCRIPT spec
+		// Example Syntax is:  SCRIPT (PRE|POST) JobName ScriptName Args ...
+		else if ( strcasecmp(token, "SCRIPT") == 0 ) {
+			parsed_line_successfully = parse_script(endline, dag, 
+				filename, lineNumber);
+		}
+
+		// Handle a Dependency spec
+		// Example Syntax is:  PARENT p1 p2 p3 ... CHILD c1 c2 c3 ...
+		else if (strcasecmp(token, "PARENT") == 0) {
 			parsed_line_successfully = parse_parent(dag, filename, lineNumber);
 		}
 			
@@ -141,7 +140,7 @@ bool parse (char *filename, Dag *dag) {
 		// Example Syntax is:  Retry JobName 3
 		else if( strcasecmp( token, "Retry" ) == 0 ) {
 			parsed_line_successfully = parse_retry(dag, filename, lineNumber);
-        } 
+		} 
 
 		// Handle a Dot spec
 		// Example syntax is: Dot dotfile [UPDATE | DONT-UPDATE] 
@@ -149,21 +148,28 @@ bool parse (char *filename, Dag *dag) {
 		//                    [INCLUDE dot-file-header]
 		else if( strcasecmp( token, "DOT" ) == 0 ) {
 			parsed_line_successfully = parse_dot(dag, filename, lineNumber);
-        } 
+		} 
 
+		// Handle a Vars spec
+		// Example syntax is: Vars JobName var1="val1" var2="val2"
+		else if(strcasecmp(token, "VARS") == 0) {
+			parsed_line_successfully = parse_vars(dag, filename, lineNumber);
+		}
+		
 		// None of the above means that there was bad input.
 		else {
-            debug_printf( DEBUG_QUIET, "%s (line %d): "
-						  "Expected JOB, SCRIPT, or PARENT token\n",
-						  filename, lineNumber );
-            parsed_line_successfully = false;
-        }
+			debug_printf( DEBUG_QUIET, "%s (line %d): "
+				"Expected JOB, SCRIPT, or PARENT token\n",
+				filename, lineNumber );
+			parsed_line_successfully = false;
+		}
+		
 		if (!parsed_line_successfully) {
 			fclose(fp);
 			return false;
 		}
-    }
-    return true;
+	}
+	return true;
 }
 
 //-----------------------------------------------------------------------------
@@ -639,3 +645,130 @@ static bool parse_dot(Dag *dag, char *filename, int lineNumber)
 	dag->SetDotFileName(dot_file_name);
 	return true;
 }
+
+
+//-----------------------------------------------------------------------------
+// 
+// Function: parse_vars
+// Purpose:  Parses a line of named variables that will be made available to a job's
+//           submit description file
+//           The format of this line must be
+//           Vars JobName VarName1="value1" VarName2="value2" etc
+//           Whitespace surrounding the = sign is permissible
+//-----------------------------------------------------------------------------
+static bool parse_vars(Dag *dag, char *filename, int lineNumber) {
+	const char* example = "Vars JobName VarName1=\"value1\" VarName2=\"value2\"";
+	const int maxLen = 5096;
+	char name[maxLen];
+	char value[maxLen];
+
+	char *jobName = strtok( NULL, DELIMITERS );
+	if(jobName == NULL) {
+		debug_printf(DEBUG_QUIET, "%s (line %d): Missing job name\n", filename, lineNumber);
+		exampleSyntax(example);
+		return false;
+	}
+
+	Job *job = dag->GetJob(jobName);
+	if(job == NULL) {
+		debug_printf(DEBUG_QUIET, "%s (line %d): Unknown Job %s\n", filename, lineNumber, jobName);
+		return false;
+	}
+
+	char *str = strtok(NULL, "\n"); // just get all the rest -- we'll be doing this by hand
+
+	int numPairs;
+	for(numPairs = 0; ; numPairs++) {  // for each name="value" pair
+		if(str == NULL) // this happens when the above strtok returns NULL
+			break;
+		while(isspace(*str))
+			str++;
+		if(*str == '\0') {
+			break;
+		}
+
+		// copy name char-by-char until we hit a symbol or whitespace
+		char* nameWriter = name;
+		while(isalpha(*str) && nameWriter-name < maxLen)
+			*nameWriter++ = *str++;
+		*nameWriter = '\0';
+
+		if(name[0] == '\0') { // no alphanumeric symbols at all were written into name,
+		                      // just something weird, which we'll print
+			debug_printf(DEBUG_QUIET, "%s (line %d): Unexpected symbol: \"%c\"\n", filename,
+				lineNumber, *str);
+			return false;
+		}
+		
+		// burn through any whitespace there may be afterwards
+		while(isspace(*str))
+			str++;
+		if(*str != '=') {
+			debug_printf(DEBUG_QUIET, "%s (line %d): No \"=\" for \"%s\"\n", filename,
+				lineNumber, name);
+			return false;
+		}
+		str++;
+		while(isspace(*str))
+			str++;
+		
+		if(*str != '"') {
+			debug_printf(DEBUG_QUIET, "%s (line %d): %s's value must be quoted\n", filename,
+				lineNumber, name);
+			return false;
+		}
+
+		// now it's time to read in all the data until the next double quote, while handling
+		// the two escape sequences: \\ and \"
+		bool stillInQuotes = true;
+		bool escaped       = false;
+		int i = 0;
+		do {
+			value[i++] = *(++str);
+			if(i >= maxLen) {
+				debug_printf(DEBUG_QUIET, "%s (line %d): Sorry, value lengths are restricted "
+					"to %d characters maximum\n", filename, lineNumber, maxLen);
+				return false;
+			}
+			
+			if(*str == '\0') {
+				debug_printf(DEBUG_QUIET, "%s (line %d): Missing end quote\n", filename,
+					lineNumber);
+				return false;
+			}
+			
+			if(!escaped) {
+				if(*str == '"') {
+					i--; // we don't want that last " in the string
+					stillInQuotes = false;
+				} else if(*str == '\\') {
+					i--; // on the next pass it will be filled in appropriately
+					escaped = true;
+					continue;
+				}
+			} else {
+				if(*str != '\\' && *str != '"') {
+					debug_printf(DEBUG_QUIET, "%s (line %d): Unknown escape sequence "
+						"\"\\%c\"\n", filename, lineNumber, *str);
+					return false;
+				}
+				escaped = false; // being escaped only lasts for one character
+			}
+		} while(stillInQuotes);
+		value[i] = '\0';
+
+		*str++;
+		
+		debug_printf(DEBUG_VERBOSE, "Argument added, Name=\"%s\"\tValue=\"%s\"\n", name, value);
+		job->varNamesFromDag->Append(new MyString(name));
+		job->varValsFromDag->Append(new MyString(value));
+	}
+
+	if(numPairs == 0) {
+		debug_printf(DEBUG_QUIET, "%s (line %d): No valid name-value pairs\n", filename, lineNumber);
+		return false;
+	}
+
+	return true;
+}
+

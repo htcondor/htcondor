@@ -98,62 +98,65 @@ submit_try( const char *exe, const char *command, CondorID &condorID )
 //-------------------------------------------------------------------------
 bool
 submit_submit( const char* cmdFile, CondorID& condorID,
-			   const char* DAGNodeName )
+	const char* DAGNodeName, List<MyString>* names, List<MyString>* vals )
 {
-  const char * exe = "condor_submit";
-  char prependLines[8192];
-  char* command;
-  int cmdLen;
+	const char * exe = "condor_submit";
+	MyString prependLines;
+	MyString command;
+	char quote[2] = {commandLineQuoteChar, '\0'};
 
-  // add arguments to condor_submit to identify the job's name in the
-  // DAG and the DAGMan's job id, and to print the former in the
-  // submit log
+	// add arguments to condor_submit to identify the job's name in the
+	// DAG and the DAGMan's job id, and to print the former in the
+	// submit log
 
-  sprintf( prependLines, 
-	   "-a %cdag_node_name = %s%c "
-	   "-a %cdagman_job_id = %s%c "
-	   "-a %csubmit_event_notes = DAG Node: $(dag_node_name)%c",
-	   commandLineQuoteChar, DAGNodeName, commandLineQuoteChar,
-	   commandLineQuoteChar, DAGManJobId, commandLineQuoteChar,
-	   commandLineQuoteChar, commandLineQuoteChar );
+	prependLines = MyString(" -a ") + quote +
+		"dag_node_name = " + DAGNodeName + quote +
+		" -a " + quote +
+		"dagman_job_id = " + DAGManJobId + quote +
+		" -a " + quote +
+		"submit_event_notes = DAG Node: $(dag_node_name)" +
+		quote;
 
-  cmdLen = strlen( exe ) + strlen( prependLines ) + strlen( cmdFile ) + 16;
-  command = new char[cmdLen];
-  if (command == NULL) {
-	  debug_printf( DEBUG_SILENT, "\nERROR: out of memory (%s:%d)!\n",
-				   __FILE__, __LINE__ );
-	  return false;
-  }
+	MyString anotherLine;
+	ListIterator<MyString> nameIter(*names);
+	ListIterator<MyString> valIter(*vals);
+	MyString name, val;
+	while(nameIter.Next(name) && valIter.Next(val)) {
+		anotherLine = MyString(" -a ") + quote +
+			name + " = " + val + quote;
+		debug_printf(DEBUG_VERBOSE, "Got another line: %s", anotherLine.Value());
+		prependLines += anotherLine;
+	}
 
 #ifdef WIN32
-  sprintf( command, "%s %s %s", exe, prependLines, cmdFile );
+	command = MyString(exe) + " " + prependLines + " " + cmdFile;
 #else
-  // we use 2>&1 to make sure we get both stdout and stderr from command
-  sprintf( command, "%s %s %s 2>&1", exe, prependLines, cmdFile );
+	// we use 2>&1 to make sure we get both stdout and stderr from command
+	command = MyString(exe) + " " + prependLines + " " + cmdFile + ">&1";;
 #endif
+	
+	debug_printf(DEBUG_VERBOSE, "submitting: %s\n", command.Value());
   
-  bool success = false;
-  const int tries = 6;
-  int wait = 1;
-  
-  success = submit_try( exe, command, condorID );
-  for (int i = 1 ; i < tries && !success ; i++) {
-      debug_printf( DEBUG_NORMAL, "condor_submit try %d/%d failed, "
-                     "will try again in %d second%s\n", i, tries, wait,
-					 wait == 1 ? "" : "s" );
-      sleep( wait );
-	  success = submit_try( exe, command, condorID );
-	  wait = wait * 2;
-  }
-  if (!success && DEBUG_LEVEL(DEBUG_QUIET)) {
-    dprintf( D_ALWAYS, "condor_submit failed after %d tr%s.\n", tries,
+	bool success = false;
+	const int tries = 6;
+	int wait = 1;
+
+	success = submit_try( exe, command.Value(), condorID );
+	for (int i = 1 ; i < tries && !success ; i++) {
+		debug_printf( DEBUG_NORMAL, "condor_submit try %d/%d failed, "
+			"will try again in %d second%s\n", i, tries, wait,
+			wait == 1 ? "" : "s" );
+		sleep( wait );
+		success = submit_try( exe, command.Value(), condorID );
+		wait = wait * 2;
+	}
+	if (!success && DEBUG_LEVEL(DEBUG_QUIET)) {
+		dprintf( D_ALWAYS, "condor_submit failed after %d tr%s.\n", tries,
 			tries == 1 ? "y" : "ies" );
-    dprintf( D_ALWAYS, "submit command was: %s\n", command );
-	delete[] command;
-	return false;
-  }
-  delete [] command;
-  return success;
+		dprintf( D_ALWAYS, "submit command was: %s\n", command.Value() );
+		return false;
+	}
+	return success;
 }
 
 //-------------------------------------------------------------------------

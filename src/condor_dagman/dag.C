@@ -779,7 +779,8 @@ Dag::SubmitReadyJobs()
 #endif //BUILD_HELPER
     //--> DAP
     if (job->job_type == Job::CONDOR_JOB){
-      if( ! submit_submit( cmd_file.Value(), condorID, job->GetJobName() ) ) {
+      if( ! submit_submit( cmd_file.Value(), condorID, job->GetJobName(),
+                           job->varNamesFromDag, job->varValsFromDag ) ) {
 	// if( ! submit_submit( job->GetCmdFile(), condorID, job->GetJobName() ) ) {
 	// NOTE: this failure does not observe the "retry" feature
 	// (for better or worse)

@@ -50,9 +50,11 @@ const char * Job::status_t_names[] = {
 
 //---------------------------------------------------------------------------
 Job::~Job() {
-    delete [] _cmdFile;
-    delete [] _jobName;
-    delete [] _logFile;
+	delete [] _cmdFile;
+	delete [] _jobName;
+	delete [] _logFile;
+	delete varNamesFromDag;
+	delete varValsFromDag;
 }
 
 //---------------------------------------------------------------------------
@@ -81,6 +83,8 @@ Job::Job (const char *jobName, const char *cmdFile):
     MyString logFile = ReadMultipleUserLogs::loadLogFileNameFromSubFile(_cmdFile);
     _logFile = strnewp (logFile.Value());
 
+	varNamesFromDag = new List<MyString>;
+	varValsFromDag = new List<MyString>;
 }
 
 //---------------------------------------------------------------------------

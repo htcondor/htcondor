@@ -28,6 +28,7 @@
 #include "condor_constants.h"   /* from condor_includes/ directory */
 #include "simplelist.h"         /* from condor_c++_util/ directory */
 #include "MyString.h"
+#include "list.h"
 
 //
 // Local DAGMan includes
@@ -260,7 +261,17 @@ class Job {
 	//The log file for this job -- needed because we're now allowing
 	//each job to have its own log file.
 	char *_logFile;
-  private:
+
+	// DAG definition files can now pass named variables into job submit files.
+	// For lack of a pair<> class, I made two lists, and these lists work together
+	// closely. The order of their items defines the mapping between names
+	// and values of these named variables, i.e., for the first named variable, its
+	// name is the first item in varNamesFromDag, and its value is the first item
+	// in varValsFromDag.
+	List<MyString> *varNamesFromDag;
+	List<MyString> *varValsFromDag;
+
+private:
   
 	bool AddDependency( Job* parent, Job* child );
 
