@@ -33,6 +33,8 @@
 #include "condor_debug.h"
 #include "condor_uid.h"
 
+int _condor_mkargv( int* argc, char* argv[], char* line );
+
 
 /* 
    This should default to 0 so we only get dprintf() messages if we
