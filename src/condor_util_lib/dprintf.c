@@ -479,8 +479,6 @@ preserve_log_file(int debug_level)
 		if (stat (DebugFile[debug_level], &buf) >= 0)
 		{
 			/* Debug file exists! */
-			fprintf (DebugFP, "Double check on rename failed!\n");
-			fprintf (DebugFP, "%s still exists\n", DebugFile[debug_level]);
 			_condor_dprintf_exit();
 		}
 	}
