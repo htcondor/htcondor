@@ -1,5 +1,9 @@
 #include <stdio.h>
-#include <fstream.h>
+#if defined(OSF1)
+#	include <fstream.h>
+#else
+#	include <iostream.h>
+#endif
 #include <string.h>
 
 #include "debug.h"
