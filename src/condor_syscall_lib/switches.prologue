@@ -17,7 +17,8 @@
 #define stat __hide_stat 
 #define lstat __hide_lstat 
 #define mknod __hide_mknod 
-#define uname __hide_uname 
+#define uname __hide_uname
+#define _uname __hide__uname
 #define profil __hide_profil
 #define mount __hide_mount
 #include "../condor_includes/_condor_fix_types.h"
@@ -167,6 +168,7 @@ struct stat;
 
 #if defined(Solaris)
 #	undef uname
+#	undef _uname
 #endif
 
 #if defined(IRIX53)
