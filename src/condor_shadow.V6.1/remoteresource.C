@@ -29,8 +29,6 @@
 #include "condor_debug.h"     // for D_debuglevel #defines
 #include "condor_string.h"    // for strnewp()
 
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h) */
-
 // for remote syscalls, this is currently in NTreceivers.C.
 extern int do_REMOTE_syscall();
 
@@ -62,6 +60,8 @@ void RemoteResource::init( BaseShadow *shad ) {
 	machineName = NULL;
 	starterAddress = NULL;
 	jobAd = NULL;
+	fs_domain = NULL;
+	uid_domain = NULL;
 	claimSock = new ReliSock();
 	exitReason = exitStatus = -1;
 }	
@@ -71,6 +71,8 @@ RemoteResource::~RemoteResource() {
 	if ( machineName   ) delete [] machineName;
 	if ( capability    ) delete [] capability;
 	if ( starterAddress) delete [] starterAddress;
+	if ( uid_domain	   ) delete [] uid_domain;
+	if ( fs_domain     ) delete [] fs_domain;
 	if ( claimSock     ) delete claimSock;
 	if ( jobAd         ) delete jobAd;
 }
@@ -219,6 +221,32 @@ void RemoteResource::getMachineName( char *& mName ) {
 	}
 }			
 
+void RemoteResource::getUidDomain( char *& uidDomain ) {
+
+	if ( !uidDomain ) {
+		uidDomain = strnewp( uid_domain );
+	} else {
+		if ( uid_domain ) {
+			strcpy( uidDomain, uid_domain );
+		} else {
+			uidDomain[0] = '\0';
+		}
+	}
+}			
+
+void RemoteResource::getFilesystemDomain( char *& filesystemDomain ) {
+
+	if ( !filesystemDomain ) {
+		filesystemDomain = strnewp( fs_domain );
+	} else {
+		if ( fs_domain ) {
+			strcpy( filesystemDomain, fs_domain );
+		} else {
+			filesystemDomain[0] = '\0';
+		}
+	}
+}			
+
 void RemoteResource::getCapability( char *& cbility ) {
 
 	if (!cbility) {
@@ -273,6 +301,22 @@ void RemoteResource::setMachineName( const char * mName ) {
 	machineName = strnewp ( mName );
 }
 
+void RemoteResource::setUidDomain( const char * uidDomain ) {
+
+	if ( uid_domain )
+		delete [] uid_domain;
+	
+	uid_domain = strnewp ( uidDomain );
+}
+
+void RemoteResource::setFilesystemDomain( const char * filesystemDomain ) {
+
+	if ( fs_domain )
+		delete [] fs_domain;
+	
+	fs_domain = strnewp ( filesystemDomain );
+}
+
 void RemoteResource::setCapability( const char * cbility ) {
 
 	if ( capability )
@@ -294,9 +338,13 @@ void RemoteResource::setClaimSock( ReliSock * cSock ) {
 }
 
 void RemoteResource::setExitReason( int reason ) {
-// old code was { if (ExitReason != JOB_KILLED) ExitReason = reason; }
-// from Todd.  Why?
-	exitReason = reason;
+	// Set the exitReason, but not if the reason is JOB_KILLED.
+	// This prevents exitReason being reset from JOB_KILLED to
+	// JOB_NOT_CKPTED or some such when the starter gets killed
+	// and the syscall sock goes away.
+	if ( exitReason != JOB_KILLED ) {
+		exitReason = reason;
+	}
 }
 
 void RemoteResource::setExitStatus( int status ) {
