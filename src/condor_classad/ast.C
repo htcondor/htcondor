@@ -922,7 +922,7 @@ void ISOTime::PrintToStr(char* str)
 	ptr1++;
 	ptr2++;
   }
-  *ptr2 = '"';
+  *ptr2 = '\'';
   *(ptr2 + 1) = '\0';
 }
 
