@@ -295,29 +295,30 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 	dprintf(D_ALWAYS,"Job satisfies Pref Tier %d\n",JobTier);
 	  
 	if(CondorPendingJobs::AreTherePendingJobs(rid)) {
-		if((!CondorPendingJobs::CapabString(rid)) ||
-		   (strcmp(CondorPendingJobs::CapabString(rid),check_string))) {
+		if( (!CondorPendingJobs::CapabString(rid)) ||
+			(strcmp(CondorPendingJobs::CapabString(rid),check_string)) ) {
 			capability_verify = 0;
 		}
-	}
-	else  
+	} else {
 		/* fvdl XXX sometimes bad timeouts for capabilities */
 	    if (rip->r_capab == NULL || strcmp(rip->r_capab, check_string)) {
 			if(rip->r_capab) {
 				dprintf(D_ALWAYS, "Capability check failed: "
 						"r_capab=%s != check_string=%s\n",
 						rip->r_capab,check_string);
-			}
-			else
+			} else {
 				dprintf(D_ALWAYS,"r_capab is NULL!!!\n");
+			}
 			capability_verify = 0;
 	    }
+	}
 	free(check_string);
-	if (!start || !job_reqs || !capability_verify) {
+	if( !start || !job_reqs || !capability_verify ) {
 	    dprintf(D_ALWAYS,"start = %d, job_reqs = %d, capability_verify = %d\n",
-				 start, job_reqs, capability_verify);
-	    if(CondorPendingJobs::AreTherePendingJobs(rid))
+				start, job_reqs, capability_verify);
+	    if( CondorPendingJobs::AreTherePendingJobs(rid) ) {
 			CondorPendingJobs::DequeueJob();
+		}
 	    (void)reply(sock, NOT_OK);
 	    ABORT;
 	}
@@ -638,6 +639,9 @@ MatchInfo(resource_info_t* rip, char* str)
   
 	rip->r_capab = str;
 	rip->r_claimed = TRUE;
+
+		/* TODO: Change states to CLAIMED ? */
+
 	dprintf(D_ALWAYS, "Received match %s\n", rip->r_capab);
 	rip->r_captime = time(NULL);
 	return 0;
@@ -831,13 +835,7 @@ command_relservice(Sock *sock, struct sockaddr_in* from, resource_id_t rid)
 			if (rip->r_capab && !strcmp(rip->r_capab, recv_string)){
 				dprintf(D_ALWAYS, "Match %s terminated.\n",
 						rip->r_capab);
-				free(rip->r_capab);
-				free(rip->r_client);
-				free(rip->r_user);
-				rip->r_capab = NULL;
-				rip->r_client = NULL;
-				rip->r_user = NULL;
-				rip->r_claimed = FALSE;
+				resource_free( rid );
 			}
 		} else
 			dprintf(D_ALWAYS, "Couldn't receive cap for relserv\n");
