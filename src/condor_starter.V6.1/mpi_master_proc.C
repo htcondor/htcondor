@@ -212,7 +212,13 @@ MPIMasterProc::alterEnv()
 		return 0;
 	}
 
-    sprintf( foo, ";MPI_SHADOW_SINFUL=%s\"", shad );
+    sprintf( foo, ";MPI_SHADOW_SINFUL=%s", shad );
+    strcat( env, foo );
+
+		// In case the user job is linked with a newer version of
+		// MPICH that honors the P4_RSHCOMMAND env var, let's set
+		// that, too.
+    sprintf( foo, ";P4_RSHCOMMAND=%s/rsh\"", condor_rsh );
     strcat( env, foo );
 
         // now put the env back into the JobAd:
