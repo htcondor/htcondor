@@ -56,14 +56,14 @@ MyString::MyString(int i)
 MyString::MyString(const char* S) 
 {
 	init();
-    *this=S;
+    *this=S; // = operator is overloaded!
 	return;
 };
 
 MyString::MyString(const MyString& S) 
 {
 	init();
-    *this=S;
+    *this=S; // = operator is overloaded!
 	return;
 }
 
