@@ -850,6 +850,7 @@ gmState=GM_SUBMIT;
 					RSL = buildSubmitRSL();
 				}
 				if ( RSL == NULL ) {
+					myResource->CancelSubmit(this);
 					gmState = GM_HOLD;
 					break;
 				}
@@ -888,6 +889,7 @@ gmState=GM_SUBMIT;
 					globusErrorString = gahp->getErrorString();
 					WriteGT4SubmitFailedEventToUserLog( ad,
 														gahp->getErrorString() );
+					myResource->CancelSubmit( this );
 					gmState = GM_UNSUBMITTED;
 					reevaluate_state = true;
 				}
@@ -1057,6 +1059,7 @@ gmState=GM_SUBMIT;
 				gmState = GM_CANCEL;
 				break;
 			}
+			myResource->CancelSubmit( this );
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
 				gmState = GM_DELETE;
 			} else {
@@ -1064,7 +1067,6 @@ gmState=GM_SUBMIT;
 				// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
 				if ( jobContact != NULL ) {
 					SetJobContact( NULL );
-					myResource->CancelSubmit( this );
 					globusState = GT4_JOB_STATE_UNSUBMITTED;
 					UpdateJobAdInt( ATTR_GLOBUS_STATUS, globusState );
 					requestScheddUpdate( this );
@@ -1090,6 +1092,7 @@ gmState=GM_SUBMIT;
 					gmState = GM_CLEAR_REQUEST;
 					break;
 				}
+				myResource->CancelSubmit( this );
 				SetJobContact( NULL );
 			}
 			if ( condorState == REMOVED ) {
@@ -1190,9 +1193,9 @@ gmState=GM_SUBMIT;
 			ClearCallbacks();
 			// HACK!
 			retryStdioSize = true;
+			myResource->CancelSubmit( this );
 			if ( jobContact != NULL ) {
 				SetJobContact( NULL );
-				myResource->CancelSubmit( this );
 				jmDown = false;
 			}
 			JobIdle();
