@@ -5,6 +5,7 @@
 
 LIBC = LibC
 SIMPLE_LIBC = SimpleLibC
+EGCS_LIBC = EgcsLibc
 CRT0 = Crt0
 
 TOP = Top
@@ -39,6 +40,8 @@ CPlusPlus = CPlusCompiler
 STATIC	= StaticFlag
 MKDEPEND = MkDepend
 STAR	= *
+
+PLATFORM_LDFLAGS = PlatformLdFlags
 
 ifdef SMP_NUM_JOBS
 SMP_FLAGS = -j $(SMP_NUM_JOBS)
@@ -78,6 +81,18 @@ endif
 #	endif
 #endif
 
+#ifndef IS_CLIPPED
+#  define IS_CLIPPED NO
+#endif
+#if IS_CLIPPED
+#  undef DOES_CHECKPOINTING
+#  define DOES_CHECKPOINTING NO
+#  undef DOES_COMPRESS_CKPT
+#  define DOES_COMPRESS_CKPT NO
+#  undef DOES_REMOTE_SYSCALLS
+#  define DOES_REMOTE_SYSCALLS NO
+#endif /* IS_CLIPPED */
+
 #ifdef XIncludeFlag
 #define XInclude XIncludeFlag
 #else
@@ -96,6 +111,10 @@ ARCH_FLAG = Architecture
 #endif
 
 DEBUG_FLAG = DebugFlag
+
+#if !defined( IS_EGCS_BUILD )
+#define IS_EGCS_BUILD NO
+#endif
 
 #if !defined( YACC )
 #define YACC yacc
