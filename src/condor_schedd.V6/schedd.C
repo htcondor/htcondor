@@ -4979,7 +4979,22 @@ Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, ClassAd* my_match_ad,
 	{
 		EXCEPT("Out of memory!");
 	} 
-	matches->insert(HashKey(id), rec);
+
+	// spit out a warning and return NULL if we already have this mrec
+	match_rec *tempRec;
+	if( matches->lookup( HashKey( id ), tempRec ) == 0 ) {
+		dprintf( D_ALWAYS,
+				 "attempt to add pre-existing match \"%s\" ignored\n",
+				 id ? id : "(null)" );
+		delete rec;
+		return NULL;
+	}
+	if( matches->insert( HashKey( id ), rec ) != 0 ) {
+		dprintf( D_ALWAYS, "match \"%s\" insert failed\n",
+				 id ? id : "(null)" );
+		delete rec;
+		return NULL;
+	}
 	numMatches++;
 
 		/*

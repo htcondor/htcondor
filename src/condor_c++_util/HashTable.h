@@ -24,6 +24,7 @@
 #define HASH_H
 
 #include "condor_common.h"
+#include "condor_debug.h"
 #include <iostream.h>
 
 // a generic hash bucket class
@@ -38,13 +39,21 @@ class HashBucket {
 
 // a generic hash table class
 
+// various options for what we do when someone tries to insert a new
+// bucket with a key (index) that already exists in the table
+typedef enum {
+	allowDuplicateKeys,   // original (arguably broken) default behavior
+	rejectDuplicateKeys,
+//	updateDuplicateKeys,  // not yet implemented
+} duplicateKeyBehavior_t;
+
 template <class Index, class Value>
 class HashTable {
  public:
-  HashTable(int tableSize,
-	    int (*hashfcn)(const Index &index,
-			   int numBuckets)); // constructor  
-  ~HashTable();                              // destructor
+  HashTable( int tableSize,
+			 int (*hashfcn)( const Index &index, int numBuckets ),
+			 duplicateKeyBehavior_t behavior = allowDuplicateKeys );
+  ~HashTable();
 
   int insert(const Index &index, const Value &value);
   int lookup(const Index &index, Value &value);
@@ -68,6 +77,7 @@ class HashTable {
   int tableSize;                                // size of hash table
   HashBucket<Index, Value> **ht;                // actual hash table
   int (*hashfcn)(const Index &index, int numBuckets); // user-provided hash function
+  duplicateKeyBehavior_t behavior;              // duplicate key behavior
   int currentBucket;
   HashBucket<Index, Value> *currentItem;
   int *chainsUsed;	// array which says which chains have items; speeds iterating
@@ -81,9 +91,10 @@ class HashTable {
 // initialize its elements.
 
 template <class Index, class Value>
-HashTable<Index,Value>::HashTable(int tableSz,
-				  int (*hashF)(const Index &index,
-					       int numBuckets)) :
+HashTable<Index,Value>::HashTable( int tableSz,
+								   int (*hashF)( const Index &index,
+												 int numBuckets),
+								   duplicateKeyBehavior_t behavior ) :
 	tableSize(tableSz), hashfcn(hashF)
 {
   int i,j,k;
@@ -146,10 +157,19 @@ HashTable<Index,Value>::HashTable(int tableSz,
 template <class Index, class Value>
 int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
 {
+	// if rejectDuplicateKeys is set and index already exists in the
+	// table, return -1
+	Value *tempVal;
+	if( behavior == rejectDuplicateKeys && lookup( index, tempVal ) == 0 ) {
+		return -1;
+	}
+
   int temp;
   int idx = hashfcn(index, tableSize);
   // do sanity check on return value from hash func
   if ( (idx < 0) || (idx >= tableSize) ) {
+    dprintf( D_ALWAYS, "hashfcn() is broken "
+			 "(returned %d when tablesize = %d)!\n", idx, tableSize );
     return -1;
   }
 
