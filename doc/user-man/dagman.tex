@@ -198,6 +198,8 @@ A node not marked as failed at any point is successful.
 Two variables are available to ease script writing.
 The \Env{\$JOB} variable evaluates to \Arg{JobName}.
 For POST scripts, the \Env{\$RETURN} variable evaluates to the return value of the program.
+Jobs that are aborted, removed, preempted, etc. are passed a \Env{\$RETURN}
+value of -6.
 The variables may be
 placed anywhere within the arguments.
 
