@@ -32,12 +32,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <syslog.h>
+#include <limits.h>
 #include <afs/stds.h>
 #include <afs/afs.h>
 #include <sys/syscall.h>
 extern int errno;
 
-static char* master_path = "/unsup/condor/sbin/condor_master";
+static char* static_master_path = "/unsup/condor/sbin/condor_master";
 static char* config_val_path = "/unsup/condor/bin/condor_config_val master";
 
 int
