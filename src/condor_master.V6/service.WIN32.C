@@ -44,6 +44,7 @@
 
 // Externs
 extern int dc_main(int, char**);
+extern int line_where_service_stopped;
 
 // Static variables
 // The name of the service
@@ -124,8 +125,10 @@ BOOL SendStatusToSCM (DWORD dwCurrentState,
 	success = SetServiceStatus (serviceStatusHandle,
 		&serviceStatus);
 
-	if (!success)
+	if (!success) {
+		// line_where_service_stopped = __LINE__;
 		StopService();
+	}
 
 	return success;
 }
@@ -134,7 +137,8 @@ BOOL SendStatusToSCM (DWORD dwCurrentState,
 // control manager
 VOID ServiceCtrlHandler (DWORD controlCode) 
 {
-	DWORD  currentState = 0;
+	// DWORD  currentState = 0;
+	DWORD currentState = SERVICE_RUNNING;
 	BOOL success;
 
 	switch(controlCode)
@@ -146,36 +150,44 @@ VOID ServiceCtrlHandler (DWORD controlCode)
 		case SERVICE_CONTROL_STOP:
 			currentState = SERVICE_STOP_PENDING;
 			// Tell the SCM what's happening
+			line_where_service_stopped = __LINE__;
 			success = SendStatusToSCM(
 				SERVICE_STOP_PENDING,
 				NO_ERROR, 0, 1, 60000);
 			// Not much to do if not successful
 
 			// Stop the service
+			line_where_service_stopped = __LINE__;
 			StopService();
 			return;
 
 		// Pause the service- a NOOP for now
 		case SERVICE_CONTROL_PAUSE:
+			line_where_service_stopped = __LINE__;
 			break;
 
 		// Resume from a pause- a NOOP for now
 		case SERVICE_CONTROL_CONTINUE:
+			line_where_service_stopped = __LINE__;
 			break;
 
 		// Update current status
 		case SERVICE_CONTROL_INTERROGATE:
 			// it will fall to bottom and send status
+			line_where_service_stopped = __LINE__;
 			break;
 
 		// Do nothing in a shutdown. Could do cleanup
 		// here but it must be very quick.
 		case SERVICE_CONTROL_SHUTDOWN:
 			daemonCore->Send_Signal(daemonCore->getpid(), DC_SIGQUIT);
+			line_where_service_stopped = __LINE__;
 			return;
 		default:
+			line_where_service_stopped = __LINE__;
  			break;
 	}
+	//line_where_service_stopped = __LINE__;
 	SendStatusToSCM(currentState, NO_ERROR,
 		0, 0, 0);
 }
@@ -186,9 +198,11 @@ VOID terminate(DWORD error)
 {
 	// Send a message to the scm to tell about
 	// stopage
-	if (serviceStatusHandle)
+	if (serviceStatusHandle) {
+		line_where_service_stopped = __LINE__;
 		SendStatusToSCM(SERVICE_STOPPED, error,
 			0, 0, 0);
+	}
 
 	// Do not need to close serviceStatusHandle
 }
@@ -215,7 +229,9 @@ VOID ServiceMain(DWORD argc, LPTSTR *argv)
 		return;
 	}
 
+#ifdef NOT_NEEDED
 	// Notify SCM of progress
+	line_where_service_stopped = __LINE__;
 	success = SendStatusToSCM(
 		SERVICE_START_PENDING,
 		NO_ERROR, 0, 1, 5000);
@@ -224,9 +240,11 @@ VOID ServiceMain(DWORD argc, LPTSTR *argv)
 		terminate(GetLastError()); 
 		return;
 	}
+#endif
 
 	// The service is now running. 
 	// Notify SCM of progress
+	line_where_service_stopped = __LINE__;
 	success = SendStatusToSCM(
 		SERVICE_RUNNING,
 		NO_ERROR, 0, 0, 0);
@@ -235,6 +253,8 @@ VOID ServiceMain(DWORD argc, LPTSTR *argv)
 		terminate(GetLastError()); 
 		return;
 	}
+
+	FreeConsole();
 
 	// Invoke the real daemon core main
 	dc_main(argc,argv);
