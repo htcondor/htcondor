@@ -532,7 +532,9 @@ int main_init (int argc, char ** const argv) {
 			// we can differentiate between identically-named nodes
 			// from different dag instances.  (to take this to the
 			// extreme, we might also want a unique schedd id in there
-			// too...)
+			// too...)  Or, we can do as Doug Thain suggests, and
+			// have DAGMan keep its own log independant of
+			// Condor -- but Miron hates that idea...
 
 			debug_printf( DEBUG_VERBOSE,
 						  "Deleting any older versions of log files...\n" );
