@@ -2504,6 +2504,7 @@ Scheduler::reaper(int sig)
 	 }
 
 	for(;;) {
+		  errno = 0;
 		  if( (pid = waitpid(-1,&status,WNOHANG)) <= 0 ) {
 				dprintf( D_FULLDEBUG, "waitpid() returned %d, errno = %d\n",
 																				pid, errno );
