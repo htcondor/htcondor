@@ -12,11 +12,6 @@ if [ "$1" = "-DGSS_AUTHENTICATION" ]; then
 	shift;
 fi
 
-if [ $# -gt 0 ]; then
-	imake -s Makefile $* -I../config -I../../config
-	exit 0
-fi
-
 arch=`uname -m`
 osversion=`uname -r`
 # Make sure if we get back something that begins with "IRIX" that we
@@ -27,6 +22,14 @@ ArchFlag=""
 Opsys=""
 Other=""
 Other2=""
+
+# kerberos discovery
+KerbPath="-DKERBEROS_PATH=/s/krb5"
+HasKerb="-DHAS_KERBEROS=YES"
+KerbFlags="$KerbPath $HasKerb"
+
+# figure out where that annoying libgcc is... 
+EgcsLib="-DLIB_GCC=`gcc -print-libgcc-file-name`"
 
 if [ $os = "HP-UX" -a $osversion = "B.10.20" ] ; then
 	Opsys="-DIS_HPUX10"
@@ -43,6 +46,8 @@ elif [ $os = "Linux" ]; then
 		Other2="-DIS_GLIBC20"
 	elif [ -f /lib/libc-2.1.* ]; then
 		Other2="-DIS_GLIBC21"
+	elif [ -f /lib/libc-2.2.* ]; then
+		Other2="-DIS_GLIBC22"
 	fi
 	if [ $arch = "i686" -o $arch = "i586" -o $arch = "i486" ] ; then
 		ArchFlag="-DIS_I386"
@@ -82,4 +87,4 @@ if [ $gss = "Y" ]; then
 	fi
 fi
 
-imake -s Makefile $ArchFlag $Opsys $Other $Other2 $GssAuth -I../config -I../../config
+imake -s Makefile $ArchFlag $Opsys $Other $Other2 $GssAuth $EgcsLib $KerbFlags -I../config -I../../config $*
