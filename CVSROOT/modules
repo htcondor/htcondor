@@ -42,8 +42,7 @@ TOOLS	-a Distfile GENERIC Imakefile config
 DOC		-a TOOLS doc
 COMMON_CODE	-a src/Imakefile \
 			src/condor_c++_util \
-			src/condor_ckpt \
-			src/condor_collector \
+			src/condor_ckpt  src/condor_collector \
 			src/condor_globalq \
 			src/condor_includes \
 			src/condor_kbdd \
