@@ -35,6 +35,7 @@ Copy( )
 	ExprTree *newTree, *tree;
 
 	if (newList == 0) return 0;
+	newList->parentScope = parentScope;
 
 	exprList.Rewind();
 	while ((tree = exprList.Next())) {
