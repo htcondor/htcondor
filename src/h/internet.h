@@ -75,6 +75,9 @@ display_from( struct sockaddr_in *from );
    host, 0 if they don't, and -1 on error. */
 int same_host(const char *h1, const char *h2);
 
+/* Returns TRUE if hostname belongs to the given domain, FALSE if not */ 
+int host_in_domain(const char *host, const char *domain);
+
 char* calc_subnet_name( char* host );
 
 int is_ipaddr(const char *inbuf, struct in_addr *sin_addr);
