@@ -4,6 +4,7 @@
 # It is unlikely that anyone will want to use it. 
 # This script is renamed to something like build_classads-0.9.7
 
+##### Configure and Build ClassAds #####
 ./configure --enable-namespace --prefix $PACKAGE_INSTALL_DIR
 if [ $? -ne 0 ]
 then
@@ -18,9 +19,27 @@ then
     exit 1
 fi
 
+##### Test the ClassAd build #####
+./classad_unit_tester
+if [ $? -ne 0 ]
+then
+    echo "Unit tests failed"
+    exit 2
+fi
+
+./classad_functional_tester functional_tests.txt
+if [ $? -ne 0 ]
+then
+    echo "Functional tests failed"
+    exit 2
+fi
+
+##### Install the ClassAd build #####
 make install
 if [ $? -ne 0 ]
 then
-    echo "configure failed"
+    echo "Install failed"
     exit 3
 fi
+
+exit 0
