@@ -190,6 +190,7 @@ VanillaProc::StartJob()
 		TransferAtVacate = true;
 	} 
 
+#ifdef WIN32
 	// taken from OsProc::StartJob for now, here we create the user and
 	// set the acls on the starter directory _before_ we start placing
 	// files in there.
@@ -208,6 +209,7 @@ VanillaProc::StartJob()
 			}
 		}
 	}
+#endif
 
 	// if requested in the jobad, transfer files over 
 	char TransSock[40];
@@ -314,9 +316,12 @@ VanillaProc::JobExit(int pid, int status)
 		((Requested_Exit != TRUE) || TransferAtVacate) ) {
 		// The user job may have created files only readable by the user,
 		// so set_user_priv here.
-		bool final_transfer = (Requested_Exit != TRUE);	// true if job exited on its own
+		// true if job exited on its own
+		bool final_transfer = (Requested_Exit != TRUE);	
 		priv_state saved_priv = set_user_priv();
-		ASSERT( filetrans->UploadFiles(true, final_transfer) );	// this will block
+		// this will block
+		ASSERT( filetrans->UploadFiles(true, final_transfer) );	
+
 		set_priv(saved_priv);
 	}
 
