@@ -446,7 +446,8 @@ initialize (const char *filename)
 	}
 
 	char afterangle;
-	if( fscanf(_fp, " <%c", &afterangle) > 0 ) {
+	int scanf_result = fscanf(_fp, " <%c", &afterangle);
+	if( scanf_result > 0 ) {
 
 		setIsXMLLog(TRUE);
 
@@ -491,6 +492,11 @@ initialize (const char *filename)
 				return false;
 			}
 		}			
+
+	} else if( scanf_result == EOF ) {
+	    // Assume old log format for now.
+		setIsXMLLog(FALSE);
+
 	} else {
 		// the first non whitespace char is not <, so this doesn't look like
 		// XML; go back to the beginning and take another look
@@ -500,7 +506,7 @@ initialize (const char *filename)
 			return false;
 		}
 		int nothing;
-		if( fscanf(_fp, " %d", &nothing) ) {
+		if( fscanf(_fp, " %d", &nothing) > 0 ) {
 
 			setIsXMLLog(FALSE);
 
