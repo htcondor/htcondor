@@ -32,6 +32,8 @@
 #include "query_result_type.h"
 #include "generic_query.h"
 #include "CondorError.h"
+#include "daemon.h"
+#include "daemon_list.h"
 
 // Please read the documentation for the API before you use it (RTFM :-)  --RR
 
@@ -128,7 +130,8 @@ class CondorQuery
 	QueryResult addANDConstraint (const char *);		 // custom constraints
 
 	// fetch from collector
-	QueryResult fetchAds (ClassAdList &, const char [] = "", CondorError* errstack = NULL);
+	QueryResult fetchAds (ClassAdList &adList, const char * pool, CondorError* errstack = NULL);
+	QueryResult fetchAds (ClassAdList &adList, DaemonList * daemon_list, CondorError* errstack = NULL);
 
 	// filter list of ads; arg1 is 'in', arg2 is 'out'
 	QueryResult filterAds (ClassAdList &, ClassAdList &);

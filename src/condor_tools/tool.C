@@ -948,7 +948,15 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 	ClassAdList ads;
 
 	CondorError errstack;
-	if( query.fetchAds(ads, pool_addr, &errstack) != Q_OK ) {
+	QueryResult q_result;
+	if (pool_addr) {
+		q_result = query.fetchAds(ads, pool_addr, &errstack);
+	} else {
+		DaemonList * collectors = DCCollector::getCollectors();
+		q_result =  query.fetchAds(ads, collectors, &errstack);
+		delete collectors;
+	}
+	if( q_result != Q_OK ) {
 		fprintf( stderr, "%s\n", errstack.getFullText(true) );
 		fprintf( stderr, "ERROR: can't connect to %s\n",
 				 pool ? pool->idStr() : "local collector" );

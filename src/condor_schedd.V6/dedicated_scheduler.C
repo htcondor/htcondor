@@ -51,6 +51,7 @@
 #include "proc.h"
 #include "exit.h"
 #include "dc_startd.h"
+#include "dc_collector.h"
 
 extern Scheduler scheduler;
 extern char* Name;
@@ -1821,7 +1822,9 @@ DedicatedScheduler::getDedicatedResourceInfo( void )
 
 		// This should fill in resources with all the classads we care
 		// about
-	query.fetchAds( *resources );
+	DaemonList * collectors = DCCollector::getCollectors();
+	query.fetchAds( *resources , collectors );
+	delete collectors;
 
 	dprintf( D_FULLDEBUG, "Found %d potential dedicated resources\n",
 			 resources->Length() );
@@ -2678,7 +2681,11 @@ DedicatedScheduler::publishRequestAd( void )
 
 		// Now, we can actually send this off to the CM:
 		// Port doesn't matter, since we've got the sinful string. 
-	scheduler.Collector->sendUpdate( UPDATE_SUBMITTOR_AD, &ad );
+	scheduler.Collectors->rewind();
+	Daemon * collector;
+	while (scheduler.Collectors->next(collector)) {
+		((DCCollector*)collector)->sendUpdate( UPDATE_SUBMITTOR_AD, &ad );
+	}
 }
 
 

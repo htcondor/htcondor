@@ -27,6 +27,7 @@
 #include "condor_accountant.h"
 #include "condor_io.h"
 #include "HashTable.h"
+#include "dc_collector.h"
 
 #ifdef WANT_NETMAN
 #include "../condor_netman/netman.h"
@@ -102,6 +103,8 @@ class Matchmaker : public Service
 		ExprTree *PreemptionRank; 	// rank preemption candidates
 		ExprTree *NegotiatorPreJobRank;  // rank applied before job rank
 		ExprTree *NegotiatorPostJobRank; // rank applied after job rank
+
+		DaemonList* Collectors;
 
 		typedef HashTable<MyString, MapEntry*> AdHash;
 		AdHash *stashedAds;	

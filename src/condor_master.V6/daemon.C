@@ -49,7 +49,7 @@ extern int		new_bin_delay;
 extern char*	FS_Preen;
 extern			ClassAd* ad;
 extern int		NT_ServiceFlag; // TRUE if running on NT as an NT Service
-extern DCCollector*	Collector;
+extern DaemonList*	Collectors;
 extern DaemonList* secondary_collectors;
 
 extern time_t	GetTimeStamp(char* file);
@@ -480,13 +480,29 @@ int daemon::RealStart( )
 		// in the keytab file, we still need root afterall. :(
 	bool wants_condor_priv = false;
 	if ( strcmp(name_in_config_file,"COLLECTOR") == 0 ) {
+			// **** OLD
 			// If we're spawning a collector, we can get the right
 			// port by asking the global Collector object for it,
 			// since we've already instantiated that with the info for
 			// the local pool's collector.  This also saves the
 			// trouble of instantiating a new DCCollector object,
 			// which duplicates some effort and is less efficient. 
-		command_port = Collector->port();
+			// **** END OLD
+
+            // ckireyev 8/25/04: This approach is not great b/c we can have
+			// several collectors with different ports. The right thing to 
+			// do is to get the COLLECTOR_PORT parameter in the config file
+
+		char * collector_port_config = param ( "COLLECTOR_PORT" );
+		if ( collector_port_config && *collector_port_config ) {
+			command_port = atoi (collector_port_config);
+		} else {
+			command_port = COLLECTOR_PORT; // the default
+		}
+		if (collector_port_config) {
+			free( collector_port_config );
+		}
+
 			// We can't do this b/c of needing to read host certs as root 
 			// wants_condor_priv = true;
 	} else if( stricmp(name_in_config_file,"CONDOR_VIEW") == 0 ||
@@ -1834,11 +1850,16 @@ Daemons::UpdateCollector()
 
 	Update(ad);
     
-	if( !Collector->sendUpdate(UPDATE_MASTER_AD, ad) ) {
-		dprintf( D_ALWAYS, 
-				 "Can't send UPDATE_MASTER_AD to collector %s: %s\n", 
-				 Collector->updateDestination(), Collector->error() );
-		return;
+	if (Collectors) {
+		Collectors->rewind();
+		Daemon * d;
+		while (Collectors->next (d)) {
+			if( !((DCCollector*)d)->sendUpdate(UPDATE_MASTER_AD, ad) ) {
+				dprintf( D_ALWAYS, 
+						 "Can't send UPDATE_MASTER_AD to collector %s: %s\n", 
+						 ((DCCollector*)d)->updateDestination(), d->error() );
+			}
+		}
 	}
 
 	if (secondary_collectors) {

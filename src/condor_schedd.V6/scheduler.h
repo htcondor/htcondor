@@ -298,7 +298,7 @@ class Scheduler : public Service
 	void addActiveShadows( int num ) { CurNumActiveShadows += num; };
 	
 	// info about our central manager
-	DCCollector*	Collector;
+	DaemonList* 	Collectors;
 	Daemon*			Negotiator;
 
 		// object to manage our various shadows and their ClassAds

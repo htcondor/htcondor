@@ -275,7 +275,8 @@ Scheduler::Scheduler()
 	N_RejectedClusters = 0;
 	N_Owners = 0;
 	LastTimeout = time(NULL);
-	Collector = NULL;
+
+	Collectors = NULL;
 	Negotiator = NULL;
 	CondorAdministrator = NULL;
 	Mail = NULL;
@@ -337,8 +338,9 @@ Scheduler::~Scheduler()
 		// they're already getting cleaned up, so if we do it again,
 		// we'll seg fault.
 
-	if( Collector ) {
-		delete( Collector );
+
+	if ( Collectors ) {
+		delete( Collectors );
 	}
 	if( Negotiator ) {
 		delete( Negotiator );
@@ -638,10 +640,16 @@ Scheduler::count_jobs()
 	sprintf(tmp, "%s = True", ATTR_WANT_RESOURCE_AD );
 	ad->InsertOrUpdate(tmp);
 
-	Collector->sendUpdate( UPDATE_SCHEDD_AD, ad );
-	dprintf( D_FULLDEBUG, 
-			 "Sent HEART BEAT ad to central mgr: Number of submittors=%d\n",
-			 N_Owners );
+		// Update collectors
+	Collectors->rewind();
+	Daemon * collector = NULL;
+	while (Collectors->next (collector)) {
+		((DCCollector*)collector)->sendUpdate( UPDATE_SCHEDD_AD, ad );
+		dprintf( D_FULLDEBUG, 
+			 "Sent HEART BEAT ad to collector %s: Number of submittors=%d\n",
+				 collector->name(),
+				 N_Owners );   
+	}
 
 	// send the schedd ad to our flock collectors too, so we will
 	// appear in condor_q -global and condor_status -schedd
@@ -717,11 +725,19 @@ Scheduler::count_jobs()
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
-	  Collector->sendUpdate( UPDATE_SUBMITTOR_AD, ad ); 
 
-	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
-				SubmittingOwners[i].Name, UidDomain );
 
+		// Update collectors
+	  Collectors->rewind();
+	  Daemon * collector = NULL;
+	  while (Collectors->next (collector)) {
+		((DCCollector*)collector)->sendUpdate( UPDATE_SUBMITTOR_AD, ad );
+
+		dprintf( D_ALWAYS, "Sent ad to collector %s for %s@%s\n", 
+				 collector->name(),
+				 SubmittingOwners[i].Name, UidDomain );
+
+	  }	
 	}
 
 	// update collector of the pools with which we are flocking, if
@@ -850,8 +866,15 @@ Scheduler::count_jobs()
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
-	  dprintf (D_ALWAYS, "Sent owner (0 jobs) ad to central manager\n");
-	  Collector->sendUpdate( UPDATE_SUBMITTOR_AD, ad ); 
+		// Update collectors
+	  Collectors->rewind();
+	  Daemon * collector = NULL;
+	  while (Collectors->next (collector)) {
+		  ((DCCollector*)collector)->sendUpdate( UPDATE_SUBMITTOR_AD, ad );
+		  dprintf (D_ALWAYS, "Sent owner (0 jobs) ad to collector %s\n", collector->name());
+	  }
+
+
 
 	  // also update all of the flock hosts
 	  int i;
@@ -4145,7 +4168,7 @@ Scheduler::checkReconnectQueue( void )
 	}
 
 	CondorError errstack;
-	if( query.fetchAds(ads, NULL, &errstack) != Q_OK ) {
+	if( query.fetchAds(ads, Collectors, &errstack) != Q_OK ) {
 		dprintf( D_ALWAYS, "ERROR: failed to query collector (%s)\n",
 				 errstack.getFullText() );
 			// TODO! deal violently with this failure. ;)
@@ -6866,10 +6889,8 @@ Scheduler::Init()
 		EXCEPT( "No spool directory specified in config file" );
 	}
 
-	if( Collector ) {
-		delete( Collector );
-	}
-	Collector = new DCCollector;
+	if ( Collectors ) delete ( Collectors );
+	Collectors = DCCollector::getCollectors();
 
 	if( Negotiator ) delete( Negotiator );
 	Negotiator = new Daemon( DT_NEGOTIATOR );
@@ -7496,7 +7517,14 @@ Scheduler::invalidate_ads()
     sprintf( line, "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, 
              Name );
     ad->Insert( line );
-	Collector->sendUpdate( INVALIDATE_SCHEDD_ADS, ad );
+
+
+		// Update collectors
+	Collectors->rewind();
+	Daemon * collector = NULL;
+	while (Collectors->next (collector)) {
+		((DCCollector*)collector)->sendUpdate( INVALIDATE_SCHEDD_ADS, ad );
+	}
 
 	if (N_Owners == 0) return;	// no submitter ads to invalidate
 
@@ -7504,7 +7532,12 @@ Scheduler::invalidate_ads()
 	sprintf( line, "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_SCHEDD_NAME,
 			 Name );
     ad->InsertOrUpdate( line );
-	Collector->sendUpdate( INVALIDATE_SUBMITTOR_ADS, ad );
+
+	Collectors->rewind();
+	while (Collectors->next (collector)) {
+		((DCCollector*)collector)->sendUpdate( INVALIDATE_SUBMITTOR_ADS, ad );
+	}
+
 
 	Daemon* d;
 	if( FlockCollectors && FlockLevel > 0 ) {

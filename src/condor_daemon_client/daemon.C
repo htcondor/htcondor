@@ -38,6 +38,7 @@
 #include "internet.h"
 #include "HashTable.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "dc_collector.h"
 
 extern char *mySubSystem;
 
@@ -70,6 +71,13 @@ void Daemon::common_init() {
 
 Daemon::Daemon( daemon_t type, const char* name, const char* pool ) 
 {
+		// We are no longer allowed to create a "default" collector
+		// since there can be more than one
+		// Use DCCollector::getCollectors()
+	if ((type == DT_COLLECTOR) && (name == NULL)) {
+		EXCEPT ( "Daemon constructor (type=COLLECTOR, name=NULL) called" );
+	}
+
 	common_init();
 	_type = type;
 
@@ -945,11 +953,18 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 			sprintf(buf, "%s == \"%s\"", ATTR_NAME, _name ); 
 		}
 		query.addANDConstraint(buf);
+
+			// We need to query the collector(s0
+
+		DaemonList * collectors = DCCollector::getCollectors();
 		CondorError errstack;
-		if (query.fetchAds(ads, _pool, &errstack) != Q_OK) {
+		if (query.fetchAds(ads, collectors, &errstack) != Q_OK) {
+			delete collectors;
 			newError( CA_LOCATE_FAILED, errstack.getFullText() );
 			return false;
 		};
+		delete collectors;
+
 		ads.Open();
 		scan = ads.Next();
 		if(!scan) {
@@ -1057,33 +1072,9 @@ Daemon::getCmInfo( const char* subsys )
 		_is_local = false;
 	}
 
+
 	if( ! host  || !host[0] ) {
-			// Try the config file for a subsys-specific IP addr 
-		sprintf( buf, "%s_IP_ADDR", subsys );
-		host = param( buf );
-		if( host && host[0] ) {
-			dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf, host );
-		}
-	}
-
-	if( ! host || !host[0]) {
-			// Try the config file for a subsys-specific hostname 
-		sprintf( buf, "%s_HOST", subsys );
-		host = param( buf );
-		if( host && host[0] ) {
-			dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf, 
-					 host ); 
-		}
-	}
-
-	if( ! host || !host[0]) {
-			// Try the generic CM_IP_ADDR setting (subsys-specific
-			// settings should take precedence over this). 
-		host = param( "CM_IP_ADDR" );
-		if( host && host[0] ) {
-			dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf, 
-					 host ); 
-		}
+		getCmHostFromConfig ( subsys, host );
 	}
 
 	if( ! host || !host[0]) {
@@ -1126,6 +1117,7 @@ Daemon::getCmInfo( const char* subsys )
 	tmp = NULL;
 
 
+
 	if ( !host ) {
 		sprintf( buf, "%s address or hostname not specified in config file",
 				 subsys ); 
@@ -1166,7 +1158,37 @@ Daemon::getCmInfo( const char* subsys )
 	return true;
 }
 
+bool
+Daemon::getCmHostFromConfig (const char * subsys, char *& host) { 
+	MyString buf;
 
+		// Try the config file for a subsys-specific hostname 
+	buf.sprintf( "%s_HOST", subsys );
+	host = param( buf.Value() );
+	if( host && host[0] ) {
+		dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf.Value(), 
+				 host ); 
+		return true;
+	}
+
+		// Try the config file for a subsys-specific IP addr 
+	buf.sprintf ("%s_IP_ADDR", subsys );
+	host = param( buf.Value() );
+	if( host && host[0] ) {
+		dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf.Value(), host );
+		return true;
+	}
+
+		// settings should take precedence over this). 
+	host = param( "CM_IP_ADDR" );
+	if( host && host[0] ) {
+		dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf.Value(), 
+				 host ); 
+		return true;
+	}
+
+	return false;
+}
 
 bool
 Daemon::initHostname( void )

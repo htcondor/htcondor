@@ -29,6 +29,7 @@
 #include "condor_adtypes.h"
 #include "condor_debug.h"
 #include "ListCache.h"
+#include "dc_collector.h"
 
 static ClassAdLookupFunc lookup_func = 0;
 static void *lookup_arg = 0;
@@ -68,10 +69,13 @@ ClassAd * ClassAdLookupGlobal( const char *constraint )
 
 	dprintf(D_ALWAYS,"ClassAd: Contacting collector to find \"%s\"\n",constraint);
 
-	if(query.fetchAds(list)!=Q_OK) {
+	DaemonList * collectorList = DCCollector::getCollectors();
+	if(query.fetchAds(list, collectorList)!=Q_OK) {
+		delete collectorList;
 		dprintf(D_FULLDEBUG,"ClassAd Warning: couldn't contact collector!\n");
 		return 0;
 	}
+	delete collectorList;
 
 	list.Open();
 	ad=list.Next();

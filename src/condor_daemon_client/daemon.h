@@ -380,6 +380,12 @@ protected:
 		  */
 	bool getCmInfo( const char* subsys );
 
+
+		/** Helper to get the *_HOST or *_IP_ADDR param for the appropriate
+			subsystem
+		*/
+	static bool getCmHostFromConfig (const char * subsys, char *& host);
+
 		/** Helper to initialize the hostname if we don't have it
 			already, but we do have an IP address.  Usually, when we
 			locate(), we can get all the hostname info for free, but

@@ -30,6 +30,8 @@
 #include "daemon.h"
 #include "safe_sock.h"
 #include "condor_distribution.h"
+#include "daemon_list.h"
+#include "dc_collector.h"
 
 void
 usage( char *cmd )
@@ -57,6 +59,7 @@ int main( int argc, char *argv[] )
 	int command=-1;
 	int i;
 	bool use_tcp = false;
+
 
 	myDistro->Init( argc, argv );
 	config();
@@ -133,35 +136,53 @@ int main( int argc, char *argv[] )
 		return 1;
 	}
 
-	collector = new Daemon( DT_COLLECTOR, pool, 0 );
-		
-	dprintf(D_FULLDEBUG,"locating collector...\n");
-
-	if(!collector->locate()) {
-		fprintf(stderr,"couldn't locate collector: %s\n",collector->error());
-		exit(1);
-	}
-
-	dprintf(D_FULLDEBUG,"collector is %s located at %s\n",
-						collector->hostname(),collector->addr());
-	
-	if ( use_tcp ) {
-		sock = collector->startCommand(command,Stream::reli_sock,20);
+	DaemonList * collectors;
+	if ( pool ) {
+		collector = new Daemon( DT_COLLECTOR, pool, 0 );
+		collectors = new DaemonList();
+		collectors->append (collector);
 	} else {
-		sock = collector->startCommand(command,Stream::safe_sock,20);
+		collectors = DCCollector::getCollectors();
 	}
 
-	int result = 0;
-	if ( sock ) {
-		result += ad->put( *sock );
-		result += sock->end_of_message();
-	}
-	if ( result != 2 ) {
-		fprintf(stderr,"failed to send classad to %s\n",collector->addr());
-		exit(1);
+	bool had_error = false;
+
+	collectors->rewind();
+	while (collectors->next(collector)) {
+		
+		dprintf(D_FULLDEBUG,"locating collector %s...\n", collector->name());
+
+		if(!collector->locate()) {
+			fprintf(stderr,"couldn't locate collector: %s\n",collector->error());
+			had_error = true;
+			continue;
+		}
+
+		dprintf(D_FULLDEBUG,"collector is %s located at %s\n",
+				collector->hostname(),collector->addr());
+	
+		if ( use_tcp ) {
+			sock = collector->startCommand(command,Stream::reli_sock,20);
+		} else {
+			sock = collector->startCommand(command,Stream::safe_sock,20);
+		}
+
+		int result = 0;
+		if ( sock ) {
+			result += ad->put( *sock );
+			result += sock->end_of_message();
+		}
+		if ( result != 2 ) {
+			fprintf(stderr,"failed to send classad to %s\n",collector->addr());
+			had_error = true;
+			delete sock;
+			continue;
+		}
+
+		delete sock;
 	}
 
-	delete collector;
+	delete collectors;
 
-	return 0;
+	return (had_error)?1:0;
 }

@@ -52,7 +52,7 @@ private:
 	char	*subnet;
 	char	pwd[_POSIX_PATH_MAX];
 
-	DCCollector* Collector;
+	DaemonList * Collectors;
 
 	void log_transfer(time_t, transferinfo *, bool success_flag,
 					  struct in_addr peer, int xfer_size);

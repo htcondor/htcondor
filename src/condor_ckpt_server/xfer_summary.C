@@ -45,7 +45,7 @@ XferSummary::XferSummary()
 {
 	subnet = 0;
 	log_file = 0;
-	Collector = NULL;
+	Collectors = NULL;
 }
 
 
@@ -54,6 +54,7 @@ XferSummary::~XferSummary()
 {
 	if( log_file ) { fclose(log_file); }
 	if( subnet ) { free(subnet); }
+	if( Collectors ) { delete Collectors; }
 
 }
 
@@ -72,8 +73,8 @@ XferSummary::init()
 	tot_recv_bandwidth = 0;
 	time_recving = 0;
 
-	if( ! Collector ) {
-		Collector = new DCCollector;
+	if( ! Collectors ) {
+		Collectors = DCCollector::getCollectors();
 	}
 
 	if( subnet ) { free( subnet ); }
@@ -177,10 +178,13 @@ XferSummary::time_out(time_t now)
 	info.Insert(line);
 	
 	// Send to collector
-	if( Collector ) {
-		if( ! Collector->sendUpdate(UPDATE_CKPT_SRVR_AD, &info) ) {
-            dprintf( D_ALWAYS, "Failed to update collector %s: %s\n", 
-					 Collector->updateDestination(), Collector->error() );
+	if( Collectors ) {
+		Daemon * collector;
+		while (Collectors->next (collector)) {
+			if( ! ((DCCollector*)collector)->sendUpdate(UPDATE_CKPT_SRVR_AD, &info) ) {
+				dprintf( D_ALWAYS, "Failed to update collector %s: %s\n", 
+						 ((DCCollector*)collector)->updateDestination(), collector->error() );
+			}
 		}
 	}
 

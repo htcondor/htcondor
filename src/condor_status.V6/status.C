@@ -264,8 +264,17 @@ main (int argc, char *argv[])
 		}
 	}
 
-	CondorError errstack;
-	if ((q = query->fetchAds (result, addr, &errstack)) != Q_OK) {
+	CondorError errstack;	
+	if (addr) {
+		q = query->fetchAds (result, addr, &errstack);
+	} else {
+		DaemonList * collectors = DCCollector::getCollectors();
+		q = query->fetchAds (result, collectors, &errstack);
+		delete collectors;
+	}
+		
+
+	if (q != Q_OK) {
 		if (q == Q_COMMUNICATION_ERROR) {
 			fprintf( stderr, "%s\n", errstack.getFullText(true) );
 				// if we're not an expert, we want verbose output

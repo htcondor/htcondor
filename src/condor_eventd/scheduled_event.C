@@ -614,9 +614,13 @@ ScheduledShutdownEvent::GetStartdList()
 	if (StartdQuery.addANDConstraint(constraint) != Q_OK) {
 		return -1;
 	}
-	if (StartdQuery.fetchAds(*StartdList) != Q_OK) {
+
+	DaemonList * collectors = DCCollector::getCollectors();
+	if (StartdQuery.fetchAds(*StartdList, collectors) != Q_OK) {
+		delete collectors;
 		return -1;
 	}
+	delete collectors;
 
 	return 0;
 }
@@ -1113,9 +1117,12 @@ CleanupShutdownModeConfigs()
 	if (StartdQuery.addANDConstraint(CleanupConstraint) != Q_OK) {
 		return -1;
 	}
-	if (StartdQuery.fetchAds(StartdList) != Q_OK) {
+	DaemonList * collectors = DCCollector::getCollectors();
+	if (StartdQuery.fetchAds(StartdList, collectors) != Q_OK) {
+		delete collectors;
 		return -1;
 	}
+	delete collectors;
 
 	StartdList.Open();
 	StringList Machines;

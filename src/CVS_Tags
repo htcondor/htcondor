@@ -1,3 +1,7 @@
+08/27/04 multiple-collectors-pre-checkin
+   A tag to mark the state of 6.7 branch before ckrieyev's changes to
+   allow multiple collectors were checked in
+
 08/09/04 V6_7-post_merge-V6_6-merge-20
    The end of a merge of V6_6-branch into V6_7-branch.
 

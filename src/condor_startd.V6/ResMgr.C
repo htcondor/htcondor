@@ -1161,13 +1161,17 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad )
 {
 	int num = 0;
 
-	if( Collector ) {
-		if( Collector->sendUpdate(cmd, public_ad, private_ad) ) {
-			num++;
-		} else {
-			dprintf( D_FAILURE|D_ALWAYS,
-					 "Error sending update to the collector %s: %s \n", 
-					 Collector->updateDestination(), Collector->error() );
+	if( Collectors ) {
+		Collectors->rewind();
+		Daemon * collector;
+		while (Collectors->next (collector)) {
+			if( ((DCCollector*)collector)->sendUpdate(cmd, public_ad, private_ad) ) {
+				num++;
+			} else {
+				dprintf( D_FAILURE|D_ALWAYS,
+						 "Error sending update to the collector %s: %s \n", 
+						 ((DCCollector*)collector)->updateDestination(), collector->error() );
+			}
 		}
 	}  
 
@@ -1213,10 +1217,19 @@ ResMgr::report_updates( void )
 	if( !num_updates ) {
 		return;
 	}
-	if( Collector ) {
+
+	if( Collectors ) {
+		MyString list;
+		Daemon * collector;
+		Collectors->rewind();
+		while (Collectors->next (collector)) {
+			list += collector->fullHostname();
+			list += " ";
+		}
+
 		dprintf( D_FULLDEBUG,
 				 "Sent %d update(s) to the collector (%s)\n", 
-				 num_updates, Collector->fullHostname() );
+				 num_updates, list.Value());
 	}  
 }
 

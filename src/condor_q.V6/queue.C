@@ -116,6 +116,7 @@ static	char		constraint[4096];
 static	DCCollector* pool = NULL; 
 static	char		scheddAddr[64];	// used by format_remote_host()
 static	AttrListPrintMask 	mask;
+static DaemonList * Collectors = NULL;
 
 // for run failure analysis
 static  int			findSubmittor( char * );
@@ -140,6 +141,8 @@ template class ExtArray<PrioEntry>;
 	
 char return_buff[4096];
 
+
+
 extern 	"C"	int		Termlog;
 
 int main (int argc, char **argv)
@@ -149,6 +152,8 @@ int main (int argc, char **argv)
 	char		scheddName[64];
 	char		scheddMachine[64];
 	char		*tmp;
+
+	Collectors = NULL;
 
 	// load up configuration file
 	myDistro->Init( argc, argv );
@@ -161,6 +166,10 @@ int main (int argc, char **argv)
 
 	// process arguments
 	processCommandLineArguments (argc, argv);
+
+	if (Collectors == NULL) {
+		Collectors = DCCollector::getCollectors();
+	}
 
 	// check if analysis is required
 	if( analyze ) {
@@ -241,11 +250,10 @@ int main (int argc, char **argv)
 
 	// get the list of ads from the collector
 	if( querySchedds ) { 
-		result = scheddQuery.fetchAds( scheddList, 
-									   pool ? pool->addr() : NULL );
+		result = scheddQuery.fetchAds( scheddList, Collectors );
+
 	} else {
-		result = submittorQuery.fetchAds( scheddList,
-										  pool ? pool->addr() : NULL );
+		result = scheddQuery.fetchAds( scheddList, Collectors );
 	}
 
 	switch( result ) {
@@ -375,6 +383,8 @@ processCommandLineArguments (int argc, char *argv[])
 				}
 				exit(1);
 			}
+			Collectors = new DaemonList();
+			Collectors->append (pool);
 		} 
 		else
 		if (match_prefix (arg, "D")) {
@@ -1473,7 +1483,7 @@ setupAnalysis()
 	int			index;
 
 	// fetch startd ads
-	rval = query.fetchAds( startdAds , pool ? pool->addr() : NULL );
+	rval = query.fetchAds( startdAds , Collectors );
 	if( rval != Q_OK ) {
 		fprintf( stderr , "Error:  Could not fetch startd ads\n" );
 		exit( 1 );

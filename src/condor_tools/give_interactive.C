@@ -40,6 +40,7 @@
 #include "MyString.h"
 #include "basename.h"
 #include "condor_distribution.h"
+#include "dc_collector.h"
 
 // Globals
 
@@ -74,10 +75,14 @@ obtainAdsFromCollector (ClassAdList &startdAds, const char *constraint)
 			return false;		
 	} 
 
-	if ( pool ) 
+	if ( pool ) {
 		result = startdQuery.fetchAds(startdAds,pool);
-	else
-		result = startdQuery.fetchAds(startdAds);
+	}
+	else {
+		DaemonList * collectors = DCCollector::getCollectors();
+		result = startdQuery.fetchAds(startdAds, collectors);
+		delete collectors;
+	}
 
 	if (result != Q_OK) 
 		return false;

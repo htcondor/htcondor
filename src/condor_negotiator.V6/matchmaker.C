@@ -33,6 +33,7 @@
 #include "daemon.h"
 #include "dc_startd.h"
 #include "daemon_types.h"
+#include "dc_collector.h"
 
 // the comparison function must be declared before the declaration of the
 // matchmaker class in order to preserve its static-ness.  (otherwise, it
@@ -71,6 +72,8 @@ Matchmaker ()
 	GotRescheduleCmd=false;
 	
 	stashedAds = new AdHash(1000, HashFunc);
+
+	Collectors = NULL;
 }
 
 
@@ -85,6 +88,9 @@ Matchmaker::
 	delete NegotiatorPreJobRank;
 	delete NegotiatorPostJobRank;
 	delete sockCache;
+	if (Collectors) {
+		delete Collectors;
+	}
 }
 
 
@@ -231,6 +237,11 @@ reinitialize ()
 #ifdef WANT_NETMAN
 	netman.Config();
 #endif
+
+	if (Collectors) {
+		delete Collectors;
+	}
+	Collectors = DCCollector::getCollectors();
 
 	// done
 	return TRUE;
@@ -785,7 +796,7 @@ obtainAdsFromCollector (
 	char    remoteHost[MAXHOSTNAMELEN];
 
 	dprintf(D_ALWAYS, "  Getting all public ads ...\n");
-	result = publicQuery.fetchAds(allAds);
+	result = publicQuery.fetchAds(allAds, Collectors);
 	if( result!=Q_OK ) {
 		dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
 		return false;
@@ -865,7 +876,7 @@ obtainAdsFromCollector (
 	allAds.Close();
 
 	dprintf(D_ALWAYS,"  Getting startd private ads ...\n");
-	result = privateQuery.fetchAds(startdPvtAds);
+	result = privateQuery.fetchAds(startdPvtAds, Collectors);
 	if( result!=Q_OK ) {
 		dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
 		return false;
