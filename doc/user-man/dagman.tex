@@ -615,6 +615,24 @@ startup, in addition to its runtime cycle detection.  The startup
 check can be expensive for large DAGs, so if undefined, it defaults to
 False.
 
+\index{STORK\_SERVER}
+\Macro{STORK\_SERVER} (needs explanation here)
+
+\index{DAGMAN\_IGNORE\_DUPLICATE\_JOB\_EXECUTION}
+\Macro{DAGMAN\_IGNORE\_DUPLICATE\_JOB\_EXECUTION} is a boolean that controls
+whether \Condor{dagman} allows "extra" runs of a given DAG node
+job.  This is a workaround for a bug in Condor itself:  (very)
+occasionally a job gets run twice, even though it was submitted
+only once.  If this happens, \Condor{dagman} considers it a fatal
+error unless \Macro{DAGMAN\_IGNORE\_DUPLICATE\_JOB\_EXECUTION} is set to true
+(the default is false).  Note that this value should be set to
+false about 99.99 percent of the time -- only set it to true if you
+have run into problems because of "extra" jobs runs, and are sure
+that having a node job run twice won't corrupt the DAG.  If you
+do set \Macro{DAGMAN\_IGNORE\_DUPLICATE\_JOB\_EXECUTION} to true, you should
+check your *.dagman.out files for "EVENT ERROR" messages, and
+carefully check the output of any runs that have such errors.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Visualizing DAGs with \Prog{dot}}
