@@ -120,10 +120,10 @@ ResMgr::init_resources()
 		} else {
 			nresources = num_cpus();
 		}
-		max = MAX( nresources, num_cpus() );
+		num = MAX( nresources, num_cpus() );
 		if( nresources ) {
 			resources = new Resource*[nresources];
-			share = (float)1 / max;
+			share = (float)1 / num;
 			for( i=0; i<nresources; i++ ) {
 				cap = new CpuAttributes( m_attr, 1, share, share, share );
 				resources[i] = new Resource( cap, i+1 );
