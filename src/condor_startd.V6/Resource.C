@@ -23,7 +23,7 @@
 #include "startd.h"
 static char *_FileName_ = __FILE__;
 
-Resource::Resource( Sock* coll_sock, Sock* alt_sock )
+Resource::Resource()
 {
 	r_classad = NULL;
 	r_state = new ResState( this );
@@ -34,8 +34,6 @@ Resource::Resource( Sock* coll_sock, Sock* alt_sock )
 	r_attr = new ResAttributes( this );
 	r_name = strdup( my_full_hostname() );
 
-	this->coll_sock = coll_sock;
-	this->alt_sock = alt_sock;
 	up_tid = -1;
 	poll_tid = -1;
 	kill_tid = -1;
@@ -430,21 +428,8 @@ Resource::update()
 	this->make_private_ad( &private_ad );
 
 
-		// Send class ads to collector
-	if( (rval1 = 
-		 send_classad_to_sock( coll_sock, &public_ad, &private_ad )) ) {
-		dprintf( D_FULLDEBUG, "Sent update to the collector (%s)\n", 
-				 collector_host );
-	}  
-
-		// If we have an alternate collector, send public CA there.
-	if( alt_sock ) {
-		if( (rval2 = send_classad_to_sock( alt_sock, &public_ad, NULL )) ) {
-			dprintf( D_FULLDEBUG, 
-					 "Sent update to the condor_view host (%s)\n",
-					 condor_view_host );
-		}
-	}
+		// Send class ads to collector(s)
+	resmgr->send_update( &public_ad, &private_ad );
 
 		// Set a flag to indicate that we've done an update.
 	did_update = TRUE;
@@ -785,34 +770,4 @@ Resource::make_private_ad(ClassAd* privCA)
 	caInsert( privCA, r_classad, ATTR_CAPABILITY );
 }
 
-
-int
-Resource::send_classad_to_sock( Sock* sock, ClassAd* pubCA, ClassAd* privCA ) 
-{
-	sock->encode();
-	if( ! sock->put( UPDATE_STARTD_AD ) ) {
-		dprintf( D_ALWAYS, "Can't send command\n");
-		sock->end_of_message();
-		return FALSE;
-	}
-	if( pubCA ) {
-		if( ! pubCA->put( *sock ) ) {
-			dprintf( D_ALWAYS, "Can't send public classad\n");
-			sock->end_of_message();
-			return FALSE;
-		}
-	}
-	if( privCA ) {
-		if( ! privCA->put( *sock ) ) {
-			dprintf( D_ALWAYS, "Can't send private classad\n");
-			sock->end_of_message();
-			return FALSE;
-		}
-	}
-	if( ! sock->end_of_message() ) {
-		dprintf( D_ALWAYS, "Can't send end_of_message\n");
-		return FALSE;
-	}
-	return TRUE;
-}
 
