@@ -79,7 +79,7 @@ admin-man/startd-states.eps: admin-man/startd-states.fig
 	fig2dev -L ps -m .6 admin-man/startd-states.fig > admin-man/startd-states.eps 
 
 admin-man/startd-activities.eps: admin-man/startd-activities.fig
-	rm -f admin-man/startd-states.eps
+	rm -f admin-man/startd-activities.eps
 	fig2dev -L ps -m .6 admin-man/startd-activities.fig > admin-man/startd-activities.eps 
 
 clean:
