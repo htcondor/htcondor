@@ -290,6 +290,7 @@ char* getserveraddr()
 
 	if (server) {
 		h = gethostbyname(server);
+		free(server);	/* BUG FIXED : Ashish */
 	} else {
 		dprintf(D_ALWAYS, "CKPT_SERVER Not defined in the config file.\n");
 		return NULL;
@@ -302,7 +303,7 @@ char* getserveraddr()
 		fprintf(stderr, "ERROR:\n");
 		fprintf(stderr, "ERROR:\n\n");
 		return NULL;
-    }
+        }
 	return(h->h_addr);
 }
 
