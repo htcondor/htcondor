@@ -106,6 +106,15 @@ public:
 
 	char* GetOrigJobName() { return &OrigJobName[0]; };
 
+		/** Check to see if we're configured to transfer files or not.
+			If so, see if transfer_output_files is set.  If so, append
+			the given filename to the list, so that we try to transfer
+			it back, too.  This is used when we find a core file to
+			make sure we always transfer it.
+			@param filename File to append to the transfer output list 
+		*/
+	void addToTransferOutputFiles( const char* filename );
+
 protected:
 	List<UserProc> JobList;
 	List<UserProc> CleanedUpJobList;

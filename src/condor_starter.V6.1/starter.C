@@ -614,6 +614,16 @@ CStarter::TransferCompleted( FileTransfer *ftrans )
 }
 
 
+void
+CStarter::addToTransferOutputFiles( const char* filename )
+{
+	if( ! filetrans ) {
+		return;
+	}
+	filetrans->addOutputFile( filename );
+}
+
+
 bool
 CStarter::InitUserPriv( void )
 {
