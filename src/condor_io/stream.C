@@ -61,8 +61,9 @@ Stream :: Stream(stream_code c) :
     _coding(stream_encode),
     crypto_(NULL),                // I love individual coding style!
     encrypt_(false)               // You put _ in the front, I put in the
-    // back, very consistent, isn't it?
+								  // back, very consistent, isn't it?	
 {
+	allow_empty_message_flag = FALSE;
 }
 
 int
@@ -1586,12 +1587,9 @@ Stream::get( char	*&s)
 {
 	char	c;
 	void 	*tmp_ptr = 0;
-        int     len;
+    int     len;
 
-        if (tmp_ptr) {
-            free(tmp_ptr);
-            tmp_ptr = 0;
-        }
+
 
 	switch(_code){
 		case internal:
@@ -1762,12 +1760,21 @@ Stream::rcv_int(
 	return TRUE;
 }
 
-bool Stream :: get_encryption()
+void 
+Stream::allow_one_empty_message()
+{
+	allow_empty_message_flag = TRUE;
+}
+
+
+bool 
+Stream::get_encryption()
 {
     return (crypto_ != 0);
 }
 
-bool Stream :: wrap(unsigned char* d_in,int l_in, 
+bool 
+Stream::wrap(unsigned char* d_in,int l_in, 
                     unsigned char*& d_out,int& l_out)
 {    
     bool code = false;
@@ -1777,7 +1784,8 @@ bool Stream :: wrap(unsigned char* d_in,int l_in,
     return code;
 }
 
-bool Stream :: unwrap(unsigned char* d_in,int l_in,
+bool 
+Stream::unwrap(unsigned char* d_in,int l_in,
                       unsigned char*& d_out, int& l_out)
 {
     bool code = false;
@@ -1787,7 +1795,8 @@ bool Stream :: unwrap(unsigned char* d_in,int l_in,
     return code;
 }
 
-bool Stream :: initialize_crypto(KeyInfo * key) 
+bool 
+Stream::initialize_crypto(KeyInfo * key) 
 {
     delete crypto_;
     crypto_ = 0;
@@ -1796,12 +1805,16 @@ bool Stream :: initialize_crypto(KeyInfo * key)
     if (key) {
         switch (key->getProtocol()) 
         {
+#ifdef CONDOR_BLOWFISH_ENCRYPTION
         case CONDOR_BLOWFISH :
             crypto_ = new Condor_Crypt_Blowfish(*key);
             break;
+#endif
+#ifdef CONDOR_3DES_ENCRYPTION
         case CONDOR_3DES:
             crypto_ = new Condor_Crypt_3des(*key);
             break;
+#endif
         default:
             break;
         }
@@ -1834,54 +1847,55 @@ bool Stream :: get_crypto_key(KeyInfo * key)
 
 }
 */
-bool Stream :: set_crypto_key(KeyInfo * key)
+bool 
+Stream::set_crypto_key(KeyInfo * key)
 {
     int code;
+	char *data = (char *)malloc(key->getKeyLength() + 1);
+    ASSERT(data);
 
-    if (key != 0) {
-        char data[key->getKeyLength()];
+	if (key != 0) {
         if (initialize_crypto(key)) {
-
-	    if (_coding == stream_encode) {
-                code = put_bytes(key->getKeyData(), key->getKeyLength());
-		if (code == key->getKeyLength()) {
-		    return true;
+		    if (_coding == stream_encode) {
+				code = put_bytes(key->getKeyData(), key->getKeyLength());
+				if (code == key->getKeyLength()) {
+					if (data) free(data);
+					return true;
+				} else {
+					goto error;
+				}
+		    } else {
+		        code = get_bytes(data, key->getKeyLength());
+				if (code > 0) {
+					if (memcmp(data, key->getKeyData(), 
+								key->getKeyLength()) != 0) 
+					{
+						goto error;
+					} else {
+						if (data) free(data);
+						return true;
+					}
+				} else {
+					goto error;
+				}
+			}         
+		} else {
+			goto error;
 		}
-		else {
-		    goto error;
-		}
-	    }
-	    else {
-	        code = get_bytes(data, key->getKeyLength());
-                if (code > 0) {
-                    if (memcmp(data, key->getKeyData(), key->getKeyLength()) != 0) {
-		        goto error;
-	            }
-		    else {
-			return true;
-		    }
-                }
-		else {
-		   goto error;
-		}
-            }
-         }
-         else {
-	     goto error;
-         }
-    }
-    else {
+    } else {
         // We are turning encryption off
         if (crypto_) {
             delete crypto_;
-	}
+		}
         crypto_ = 0;
-	return true;
+		if (data) free(data);
+		return true;
     }
  error:
     if (crypto_) {
         delete crypto_;
-	crypto_ = 0;
+		crypto_ = 0;
     }
+	if (data) free(data);
     return false;
 }
