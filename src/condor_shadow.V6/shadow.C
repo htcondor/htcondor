@@ -131,6 +131,7 @@ int  NumCkpts = 0;				// count of completed checkpoints
 int  NumRestarts = 0;			// count of attempted checkpoint restarts
 int  CommittedTime = 0;			// run-time committed in checkpoints
 bool ManageBandwidth = false;	// notify negotiator about network usage?
+int	 BWInterval = 0;			// how often do we request RSC bandwidth?
 
 extern char *Executing_Arch, *Executing_OpSys;
 
@@ -448,6 +449,13 @@ main(int argc, char *argv[], char *envp[])
 			ManageBandwidth = false;
 		}
 		free(tmp);
+		tmp = param("RSC_BANDWIDTH_INTERVAL");
+		if (!tmp) {
+			BWInterval = 300;	// should be equal to NETWORK_HORIZON
+		} else {
+			BWInterval = atoi(tmp);
+			free(tmp);
+		}
 	}
 
 	MailerPgm = param( "MAIL" );
@@ -489,6 +497,7 @@ HandleSyscalls()
 	fd_set 			readfds;
 	int 			nfds = -1;
 	priv_state		priv;
+	time_t			last_bw_update = time(0);
 
 	nfds = (RSC_SOCK > CLIENT_LOG ) ? (RSC_SOCK + 1) : (CLIENT_LOG + 1);
 
@@ -511,14 +520,19 @@ HandleSyscalls()
 		FD_SET(RSC_SOCK, &readfds);
 		FD_SET(CLIENT_LOG, &readfds);
 
+		struct timeval *ptimer = NULL, timer;
+		if (ManageBandwidth) {
+			timer.tv_sec = BWInterval;
+			timer.tv_usec = 0;
+			ptimer = &timer;
+		}
+
 		unblock_signal(SIGCHLD);
 		unblock_signal(SIGUSR1);
 #if defined(LINUX) || defined(IRIX) || defined(Solaris)
-		cnt = select(nfds, &readfds, (fd_set *)0, (fd_set *)0,
-					 (struct timeval *)0);
+		cnt = select(nfds, &readfds, (fd_set *)0, (fd_set *)0, ptimer);
 #else
-		cnt = select(nfds, &readfds, 0, 0,
-					 (struct timeval *)0);
+		cnt = select(nfds, &readfds, 0, 0, ptimer);
 #endif
 		block_signal(SIGCHLD);
 		block_signal(SIGUSR1);
@@ -545,6 +559,14 @@ HandleSyscalls()
 			dprintf(D_ALWAYS,
 				"Shadow: Local scheduler apparently died, so I die too\n");
 			exit(1);
+		}
+
+		if (ManageBandwidth) {
+			time_t current_time = time(0);
+			if (current_time > last_bw_update + BWInterval) {
+				RequestRSCBandwidth();
+				last_bw_update = current_time;
+			}
 		}
 
 #if defined(SYSCALL_DEBUG)
