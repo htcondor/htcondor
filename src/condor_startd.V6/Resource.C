@@ -1058,8 +1058,10 @@ void
 Resource::dprintf_va( int flags, char* fmt, va_list args )
 {
 	if( resmgr->is_smp() ) {
-		::dprintf( flags, "%s: ", r_id_str );
-		::_condor_dprintf_va( flags | D_NOHEADER, fmt, args );
+		MyString fmt_str( r_id_str );
+		fmt_str += ": ";
+		fmt_str += fmt;
+		::_condor_dprintf_va( flags, (char*)fmt_str.Value(), args );
 	} else {
 		::_condor_dprintf_va( flags, fmt, args );
 	}
