@@ -101,6 +101,15 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_wait
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_cod
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_drmaa
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_transfer_data
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -201,7 +210,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_cod"=.\condor_cod.dsp - Package Owner=<4>
+Project: "condor_cod"=".\condor_cod.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -228,7 +237,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_collector"=.\condor_collector.dsp - Package Owner=<4>
+Project: "condor_collector"=".\condor_collector.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
