@@ -25,7 +25,7 @@ SIG_EXTRACT = SIGACTION.o _SIGACTION.o i386_data.o
 #elif IS_SUN4X_SOLARIS
 SIG_EXTRACT = SIGACTION.o _SIGACTION.o
 #elif IS_LINUX
-SIG_EXTRACT = SIGSUSPEND.o
+SIG_EXTRACT = SIGSUSPEND.o SIGACTION.o
 #endif
 
 #endif  /* ======= of if DOES_SAVE_SIGSTATE ==========*/
@@ -117,7 +117,7 @@ OBJ =	syscall_mode.o shared_utils.o
 			  exception.o frame.o __dummy.o _pure.o 
 
         CPP_SUPPORT_OBJ = c_plus_alloc.o $(CPP_SUPPORT_EXTRACT_OBJ)
-		
+
 #   else 
         CPP_SUPPORT_OBJ = c_plus_alloc.o pure_virtual.o
 #   endif
