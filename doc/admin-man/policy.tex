@@ -5,6 +5,7 @@ Configuring The Startd Policy}
 
 \index{configuration!startd policy}
 \index{startd!configuration}
+\index{daemon!\Condor{startd}}
 This section describes the configuration of the \Condor{startd} to
 implement the desired policy for when remote jobs should start, be
 suspended, (possibly) resumed, vacate (with a checkpoint) or be killed
@@ -56,6 +57,8 @@ ClassAd.
 Listed in this section are
 the attributes that are included in the machine's ClassAd and
 the attributes that are included in a job ClassAd. 
+\index{START@\Expr{START} expression}
+\index{configuration!START@\Expr{START} expression}
 The \Expr{START} expression, which describes
 to Condor what conditions must be met for a machine to start a job
 are explained.

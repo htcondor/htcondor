@@ -83,7 +83,7 @@ is a legal set of macro definitions, and the resulting value of
 \Expr{xxx}.
 Note that
 \MacroNI{C} is actually bound to 
-\MacroU{A}, not its value.
+\MacroUNI{A}, not its value.
 
 As a further example,
 \begin{verbatim}
@@ -1273,12 +1273,12 @@ control state or activity transitions within the
 \item[\Macro{UPDATE\_INTERVAL}] \label{param:UpdateInterval}
   Determines how often the startd should send a ClassAd update
   to the \Condor{collector}.  The startd also sends update on any
-  state or activity change, or if the value of its \Macro{START} expression
+  state or activity change, or if the value of its \Expr{START} expression
   changes.  See section~\ref{sec:States} on \condor{startd}
   States, section~\ref{sec:Activities} on \condor{startd}
   Activities, and section~\ref{sec:Start-Expr} on \condor{startd}
-  \Macro{START} expression for details on states, activities, and the
-  \Macro{START} expression.  This macro is defined in
+  \Expr{START} expression for details on states, activities, and the
+  \Expr{START} expression.  This macro is defined in
   terms of seconds and defaults to 300 (5 minutes).
   
 \item[\Macro{STARTD\_HAS\_BAD\_UTMP}] \label{param:StartdHasBadUtmp}
