@@ -222,7 +222,7 @@ sub prompt_multi_machines {
 	print "\nYou should run condor_install on your file server, so that ",
 	"root has\npermission to create files needed by Condor.\n";
     } else {
-	print "\nYou will need to run condor_install locally on each",
+	print "\nYou will need to run condor_install locally on each ",
 	"machine.\nSetting up host \"$host\" for Condor.\n";
 	return @machines;
     }
