@@ -21,24 +21,21 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
-
-#define _POSIX_SOURCE
-
 #include "condor_common.h"
 #include "condor_constants.h"
 #include "condor_io.h"
 #include "sock.h"
 #include "condor_network.h"
 #include "internet.h"
+#include "my_hostname.h"
 #include "condor_debug.h"
 
 Sock::Sock() : Stream() {
 	_sock = INVALID_SOCKET;
 	_state = sock_virgin;
 	_timeout = 0;
-	memset(&_who, 0, sizeof( struct sockaddr_in ) );
+	memset( &_who, 0, sizeof( struct sockaddr_in ) );
+	memset(	&_endpoint_ip_buf, 0, _ENDPOINT_BUF_SIZE );
 }
 
 
@@ -254,7 +251,7 @@ int Sock::bind(
 
 	memset(&sin, 0, sizeof(sockaddr_in));
 	sin.sin_family = AF_INET;
-	sin.sin_addr.s_addr = htonl(INADDR_ANY);
+	sin.sin_addr.s_addr = htonl( my_ip_addr() );
 	sin.sin_port = htons((u_short)port);
 
 	if (::bind(_sock, (sockaddr *)&sin, sizeof(sockaddr_in)) < 0) {
@@ -302,7 +299,6 @@ int Sock::do_connect(
 	int		port
 	)
 {
-	sockaddr_in		sin;
 	hostent			*hostp;
 	unsigned long	inaddr;
 
@@ -316,22 +312,22 @@ int Sock::do_connect(
 	if (_state != sock_bound) return FALSE;
 
 
-	memset(&sin, 0, sizeof(sockaddr_in));
-	sin.sin_family = AF_INET;
-	sin.sin_port = htons((u_short)port);
+	memset(&_who, 0, sizeof(sockaddr_in));
+	_who.sin_family = AF_INET;
+	_who.sin_port = htons((u_short)port);
 
 	/* might be in <x.x.x.x:x> notation				*/
 	if (host[0] == '<') {
-		string_to_sin(host, &sin);
+		string_to_sin(host, &_who);
 	}
 	/* try to get a decimal notation 	 			*/
 	else if ((inaddr = inet_addr(host)) != (unsigned int)-1){
-		memcpy((char *)&sin.sin_addr, &inaddr, sizeof(inaddr));
+		memcpy((char *)&_who.sin_addr, &inaddr, sizeof(inaddr));
 	}
 	/* if dotted notation fails, try host database	*/
 	else{
 		if ((hostp = gethostbyname(host)) == (hostent *)0) return FALSE;
-		memcpy(&sin.sin_addr, hostp->h_addr, hostp->h_length);
+		memcpy(&_who.sin_addr, hostp->h_addr, hostp->h_length);
 	}
 
 	time_t timeout_time = time(NULL) + CONNECT_TIMEOUT;
@@ -340,10 +336,10 @@ int Sock::do_connect(
 	do {
 		connect_failed = false;
 
-		if (::connect(_sock, (sockaddr *)&sin, sizeof(sockaddr_in)) == 0) {
+		if (::connect(_sock, (sockaddr *)&_who, sizeof(sockaddr_in)) == 0) {
 			_state = sock_connect;
 			dprintf( D_NETWORK, "%s ACCEPT %s ", sock_to_string(_sock) );
-			dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string(&sin) );
+			dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string(&_who) );
 			return TRUE;
 		}
 
@@ -393,7 +389,7 @@ int Sock::do_connect(
 					dprintf( D_NETWORK, "%s ACCEPT %s ",
 							 sock_to_string(_sock) );
 					dprintf( D_NETWORK|D_NOHEADER, "%s\n",
-							 sin_to_string(&sin) );
+							 sin_to_string(&_who) );
 					return TRUE;
 				} else {
 					if (!failed_once) {
@@ -459,6 +455,8 @@ int Sock::close()
 	_state = sock_virgin;
 	_timeout = 0;
 	memset(&_who, 0, sizeof( struct sockaddr_in ) );
+	memset(&_endpoint_ip_buf, 0, _ENDPOINT_BUF_SIZE );
+	
 	return TRUE;
 }
 
@@ -526,5 +524,80 @@ char * Sock::do_serialize(char *buf)
 	}
 
 	return ptmp;
+}
+
+
+struct sockaddr_in *
+Sock::endpoint()
+{
+	return &_who;
+}
+
+
+int
+Sock::endpoint_port()
+{
+	return (int) ntohs( _who.sin_port );
+}
+
+
+unsigned int
+Sock::endpoint_ip_int()
+{
+	return (unsigned int) ntohl( _who.sin_addr.s_addr );
+}
+
+
+char *
+Sock::endpoint_ip_str()
+{
+		// If we don't have our answer yet, figure it out now. 
+	if( ! _endpoint_ip_buf[0] ) {
+		int             i;
+		char			*cur_byte;
+		char			tmp_buf[10];
+		unsigned char   this_byte;
+
+		cur_byte = (char *) &(_who.sin_addr);
+		for (i = 0; i < sizeof(_who.sin_addr); i++) {
+			this_byte = (unsigned char) *cur_byte;
+			sprintf(tmp_buf, "%u.", this_byte);
+			cur_byte++;
+			strcat(_endpoint_ip_buf, tmp_buf);
+		}
+			// Chop off the trailing '.' and terminate our string.
+		_endpoint_ip_buf[strlen(_endpoint_ip_buf) - 1] = '\0';
+	} 
+
+	return &(_endpoint_ip_buf[0]);
+}
+
+
+int 
+Sock::get_file_desc()
+{
+	return _sock;
+}
+
+
+int
+Sock::get_port()
+{
+	sockaddr_in	addr;
+	int			addr_len = sizeof(sockaddr_in);
+
+	if (getsockname(_sock, (sockaddr *)&addr, &addr_len) < 0) return -1;
+	return (int) ntohs(addr.sin_port);
+}
+
+
+unsigned int 
+Sock::get_ip_int()
+{
+	sockaddr_in	addr;
+	int			addr_len = sizeof(sockaddr_in);
+
+	if (getsockname(_sock, (sockaddr *)&addr, &addr_len) < 0) return 0;
+	return (unsigned int) ntohl(addr.sin_addr.s_addr);
 }
 
