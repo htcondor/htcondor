@@ -26,10 +26,9 @@
 **
 */ 
 
-#include <stdio.h>
-#include <string.h>
+#define _POSIX_SOURCE
 #include "condor_common.h"
-#include <sys/socket.h>
+#include "condor_fix_socket.h"
 #include <netinet/in.h>
 extern "C" {
 #include <netdb.h>
@@ -56,8 +55,6 @@ static char *passwd = "CondorURLFTP@localhost.edu";
 #define FTP_CONNECTED_RESP 150
 
 extern int readline(int, char *);
-extern int socket (int, int, int);
-extern int connect (int, struct sockaddr *, int);
 
 static
 char *get_ftpd_response(int sock_fd, int resp_val)

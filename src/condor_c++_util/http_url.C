@@ -26,10 +26,9 @@
 **
 */ 
 
-#include <stdio.h>
-#include <string.h>
+#define _POSIX_SORUCE
 #include "condor_common.h"
-#include <sys/socket.h>
+#include "condor_fix_socket.h"
 #include <netinet/in.h>
 extern "C" {
 #include <netdb.h>
@@ -42,9 +41,6 @@ extern "C" {
 #define HTTP_GET_FORMAT "GET %s HTTP/1.0\n\n"
 #define ASCII_CR ('M' - 32)
 #define ASCII_LF ('J' - 32)
-
-extern int socket (int, int, int);
-extern int connect (int, struct sockaddr *, int);
 
 
 int

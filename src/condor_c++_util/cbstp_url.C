@@ -26,17 +26,13 @@
 **
 */ 
 
-#include <stdio.h>
-#include <string.h>
+#define _POSIX_SOURCE
 #include "condor_common.h"
-#include <sys/socket.h>
+#include "condor_fix_socket.h"
 #include <netinet/in.h>
 #include "url_condor.h"
 #include "condor_debug.h"
 
-
-extern int socket (int, int, int);
-extern int connect (int, struct sockaddr *, int);
 
 /* Convert a string of the form "<xx.xx.xx.xx:pppp>" to a sockaddr_in  JCP */
 
