@@ -3,5 +3,6 @@
 
 extern	char*	my_hostname();
 extern	char*	my_full_hostname();
+extern	unsigned int	my_ip_addr();
 
-#endif MY_HOSTNAME_H
+#endif /* MY_HOSTNAME_H */
