@@ -33,7 +33,9 @@ static char* hostname = NULL;
 static char* full_hostname = NULL;
 static unsigned int ip_addr;
 static int hostnames_initialized = 0;
+static int ipaddr_initialized = 0;
 static void init_hostnames();
+static void init_ipaddr();
 
 extern "C" {
 
@@ -63,74 +65,104 @@ my_full_hostname()
 unsigned int
 my_ip_addr()
 {
-	if( ! hostnames_initialized ) {
-		init_hostnames();
+	if( ! ipaddr_initialized ) {
+		init_ipaddr();
 	}
 	return ip_addr;
+}
+
+
+void
+init_full_hostname()
+{
+	char *tmp;
+
+	if( full_hostname ) {
+		free( full_hostname );
+	}
+
+		// If we don't have our IP addr yet, we'll get it for free if
+		// we want it.  
+	if( ! host_ptr ) {
+		tmp = get_full_hostname( hostname, &host_ptr );
+		init_ipaddr();
+	} else {
+		tmp = get_full_hostname( hostname );
+	}
+
+	if( tmp ) {
+			// Found it, use it.
+		full_hostname = strdup( tmp );
+	} else {
+			// Couldn't find it, just use what we've already got. 
+		full_hostname = strdup( hostname );
+	}
 }
 
 } /* extern "C" */
 
 
 void
-init_hostnames()
+init_ipaddr()
 {
-	char *tmp, hostbuf[MAXHOSTNAMELEN];
-	int i;
-	hostbuf[0]='\0';
-
-	if( hostname ) {
-		free( hostname );
-	}
-	if( full_hostname ) {
-		free( full_hostname );
-		full_hostname = NULL;
+    if( ! hostnames_initialized ) {
+		init_hostnames();
 	}
 
-		// Get our local hostname, and strip off the domain if
-		// gethostname returns it.
-	if( gethostname(hostbuf, sizeof(hostbuf)) == 0 ) {
-		if( hostbuf[0] ) {
-			if( (tmp = strchr(hostbuf, '.')) ) {
-					// There's a '.' in the hostname, assume we've got
-					// the full hostname here, save it, and trim the
-					// domain off and save that as the hostname.
-				full_hostname = strdup( hostbuf );
-				*tmp = '\0';
-			} 
-			hostname = strdup( hostbuf );
-		} else {
-			EXCEPT( "gethostname succeeded, but hostbuf is empty" );
+	if( ! host_ptr ) {
+			// Look up our official host information
+		if( (host_ptr = gethostbyname(hostname)) == NULL ) {
+			EXCEPT( "gethostbyname(%s) failed, errno = %d", hostname, errno );
 		}
-	} else {
-		EXCEPT( "gethostname failed, errno = %d", 
-#ifndef WIN32
-				errno );
-#else
-		WSAGetLastError() );
-#endif
-    }
-	
-		// Look up our official host information
-	if( (host_ptr = gethostbyname(hostbuf)) == NULL ) {
-		EXCEPT( "gethostbyname(%s) failed, errno = %d", hostbuf, errno );
 	}
 
 		// Grab our ip_addr
 	memcpy( &ip_addr, host_ptr->h_addr, (size_t)host_ptr->h_length );
     ip_addr = ntohl( ip_addr );
+	ipaddr_initialized = TRUE;
+}
 
-	    // If we don't have our full_hostname yet, try to find it. 
-	if( ! full_hostname ) {
-		tmp = get_full_hostname( hostbuf );
-		if( tmp ) {
-				// Found it, use it.
-			full_hostname = strdup( tmp );
-		} else {
-				// Couldn't find it, just use what we've got in hostbuf. 
-			full_hostname = strdup( hostbuf );
-		}
+
+void
+init_hostnames()
+{
+    char *tmp, hostbuf[MAXHOSTNAMELEN];
+    int i;
+    hostbuf[0]='\0';
+
+    if( hostname ) {
+        free( hostname );
+    }
+    if( full_hostname ) {
+        free( full_hostname );
+        full_hostname = NULL;
+    }
+
+        // Get our local hostname, and strip off the domain if
+        // gethostname returns it.
+    if( gethostname(hostbuf, sizeof(hostbuf)) == 0 ) {
+        if( hostbuf[0] ) {
+            if( (tmp = strchr(hostbuf, '.')) ) {
+                    // There's a '.' in the hostname, assume we've got
+                    // the full hostname here, save it, and trim the
+                    // domain off and save that as the hostname.
+                full_hostname = strdup( hostbuf );
+                *tmp = '\0';
+            }
+            hostname = strdup( hostbuf );
+        } else {
+            EXCEPT( "gethostname succeeded, but hostbuf is empty" );
+        }
+    } else {
+        EXCEPT( "gethostname failed, errno = %d",
+#ifndef WIN32
+                errno );
+#else
+                WSAGetLastError() );
+#endif
+    }
+    if( ! full_hostname ) {
+		init_full_hostname();
 	}
 	hostnames_initialized = TRUE;
 }
-
