@@ -10,10 +10,10 @@ class SocketCache
 		SocketCache(int=16);
 		~SocketCache();
 
-		void	 clearCache(void);
-		void 	 invalidateSock(char *);
-		ReliSock *getReliSock(char *, int=30);
-		SafeSock *getSafeSock(char *, int=30);		
+		void clearCache(void);
+		void invalidateSock(char *);
+		bool getReliSock(Sock *&, char *, int=30);
+		bool getSafeSock(Sock *&, char *, int=30);		
 
 	private:
 		int 	 getCacheSlot();
