@@ -267,12 +267,11 @@ ResState::leave_action( State s, Activity a,
 				// If we're leaving the preepting state, we should
 				// delete all the attributes from our classad that are
 				// only valid when we're claimed.
-			cp = rip->r_classad;
-			cp->Delete( ATTR_CLIENT_MACHINE );
-			cp->Delete( ATTR_REMOTE_USER );
-			cp->Delete( ATTR_JOB_START );
-			cp->Delete( ATTR_JOB_ID );
-			cp->Delete( ATTR_LAST_PERIODIC_CHECKPOINT );
+
+				// In fact, we should just delete the whole ClassAd
+				// and rebuild it, since we might be leaving around
+				// attributes from STARTD_JOB_EXPRS, etc.
+			rip->init_classad();
 		}
 		break;
 	case matched_state:
