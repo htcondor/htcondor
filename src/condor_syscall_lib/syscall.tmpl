@@ -587,6 +587,9 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
+#if (!defined (SWITCH) && !defined(CLIP))
+	int ftruncate( map(int fd), off_t length );
+#endif
 #else
 	int fchmod( map(int fd), MODE_T mode );
 	int setreuid( int ruid, int euid );
@@ -595,9 +598,7 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
-#if (!defined(OSF1)) || (!defined (SWITCH) && !defined(CLIP))
 	int ftruncate( map(int fd), off_t length );
-#endif
 #endif
 	not_supported int setgid( gid_t gid );
 	int mkdir( const char *path, MODE_T mode ) {
