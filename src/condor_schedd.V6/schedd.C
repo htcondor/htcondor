@@ -2671,9 +2671,6 @@ Scheduler::send_alive()
     int     	i, j;
 	int			alive = ALIVE;
 
-	{
-		return;
-	}
     for(i = 0, j = 0; i < nMrec; i++)
     {
 		if(rec[i]->status != M_ACTIVE)
