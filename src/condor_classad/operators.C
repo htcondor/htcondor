@@ -93,8 +93,8 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3, bool valid1,
 	else
 	if (op == UNARY_PLUS_OP)
 	{
-		if (vt1 == STRING_VALUE)
-			result.setUndefinedValue();
+		if (vt1 != INTEGER_VALUE && vt1 != REAL_VALUE)
+			result.setErrorValue();
 		else
 			result = val1;
 		return;
@@ -106,14 +106,15 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3, bool valid1,
 		op != TERNARY_OP)
 	{
 		// check for error values
-		if (vt1==ERROR_VALUE || vt2==ERROR_VALUE || vt3==ERROR_VALUE)
+		if (valid1 && vt1==ERROR_VALUE || 
+			valid2 && vt2==ERROR_VALUE || 
+			valid3 && vt3==ERROR_VALUE)
 		{
 			result.setErrorValue ();
 			return;
 		}
 
-		// check for undefined values.  we need to check if the corresponding
-		// tree exists, because these values would be undefined" anyway then.
+		// check for undefined values
 		if (valid1 && vt1==UNDEFINED_VALUE	||
 			valid2 && vt2==UNDEFINED_VALUE 	||
 			valid3 && vt3==UNDEFINED_VALUE)
@@ -123,14 +124,14 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3, bool valid1,
 		}
 	}
 
-	// comparison operations (binary, one unary)
+	// comparison operations (binary)
 	if (op >= __COMPARISON_START__ && op <= __COMPARISON_END__)
 	{
 		doComparison (op, val1, val2, result);
 		return;
 	}
 
-	// arithmetic operations (binary)
+	// arithmetic operations (binary, one unary)
 	if (op >= __ARITHMETIC_START__ && op <= __ARITHMETIC_END__)
 	{
 		doArithmetic (op, val1, val2, result);

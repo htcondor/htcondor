@@ -609,39 +609,15 @@ void Error::PrintToStr(char* str)
 
 void AddOp::PrintToStr(char* str)
 {
-    if(lArg)
-    {
-	((ExprTree*)lArg)->PrintToStr(str);
-    }
-    else
-    {
-	strcat(str, "NULL");
-    }
+    if(lArg) ((ExprTree*)lArg)->PrintToStr(str);
     strcat(str, " + ");
-    if(rArg)
-    {
-	((ExprTree*)rArg)->PrintToStr(str);
-    }
-    else
-    {
-	strcat(str, "NULL");
-    }
-    if(unit == 'k')
-    {
-	strcat(str, " k");
-    }
+    if(rArg) ((ExprTree*)rArg)->PrintToStr(str);
+    if(unit == 'k') strcat(str, " k");
 }
 
 void SubOp::PrintToStr(char* str)
 {
-    if(lArg)
-    {
-	((ExprTree*)lArg)->PrintToStr(str);
-    }
-    else
-    {
-	strcat(str, "NULL");
-    }
+    if(lArg) ((ExprTree*)lArg)->PrintToStr(str);
     strcat(str, " - ");
     if(rArg && rArg->MyType() == LX_ADD || rArg->MyType() == LX_SUB)
     {
@@ -649,18 +625,8 @@ void SubOp::PrintToStr(char* str)
     	((ExprTree*)rArg)->PrintToStr(str);
     	strcat(str, ")");
     }
-    else if(!rArg)
-    {
-	strcat(str, "NULL");
-    }
-    else
-    {
-	((ExprTree*)rArg)->PrintToStr(str);
-    }
-    if(unit == 'k')
-    {
-	strcat(str, " k");
-    }
+	if (rArg) ((ExprTree*)rArg)->PrintToStr(str);
+    if(unit == 'k') strcat(str, " k"); 
 }
 
 void MultOp::PrintToStr(char* str)
@@ -671,14 +637,7 @@ void MultOp::PrintToStr(char* str)
     	((ExprTree*)lArg)->PrintToStr(str);
     	strcat(str, ")");
     }
-    else if(!lArg)
-    {
-	strcat(str, "NULL");
-    }
-    else
-    {
-	((ExprTree*)lArg)->PrintToStr(str);
-    }
+	if (lArg) ((ExprTree*)lArg)->PrintToStr(str);
     strcat(str, " * ");
     if(rArg && rArg->MyType() == LX_ADD || rArg->MyType() == LX_SUB)
     {
@@ -686,18 +645,8 @@ void MultOp::PrintToStr(char* str)
     	((ExprTree*)rArg)->PrintToStr(str);
     	strcat(str, ")");
     }
-    else if(!rArg)
-    {
-	strcat(str, "NULL");
-    }
-    else
-    {
-	((ExprTree*)rArg)->PrintToStr(str);
-    }
-    if(unit == 'k')
-    {
-	strcat(str, " k");
-    }
+	if (rArg) ((ExprTree*)rArg)->PrintToStr(str);
+    if(unit == 'k') strcat(str, " k");
 }
 
 void DivOp::PrintToStr(char* str)
@@ -715,10 +664,6 @@ void DivOp::PrintToStr(char* str)
     	    default     : ((ExprTree*)lArg)->PrintToStr(str);
     	}
     }
-    else
-    {
-  	strcat(str, "NULL");
-    }
     strcat(str, " / ");
     if(rArg)
     {
@@ -733,14 +678,7 @@ void DivOp::PrintToStr(char* str)
     	    default     : ((ExprTree*)rArg)->PrintToStr(str);
     	}
     }
-    else
-    {
-  	strcat(str, "NULL");
-    }
-    if(unit == 'k')
-    {
-	strcat(str, " k");
-    }
+    if(unit == 'k') strcat(str, " k");
 }
 
 void MetaEqOp::PrintToStr(char* str)
@@ -761,10 +699,6 @@ void MetaEqOp::PrintToStr(char* str)
 	    default:      ((ExprTree*)lArg)->PrintToStr(str);
    	}
     }
-    else
-    {
-  	strcat(str, "NULL");
-    }
     strcat(str, " =?= ");
     if(rArg)
     {
@@ -781,10 +715,6 @@ void MetaEqOp::PrintToStr(char* str)
 			  break;
     	    default:      ((ExprTree*)rArg)->PrintToStr(str);
   	}
-    }
-    else
-    {
-  	strcat(str, "NULL");
     }
 }
 
@@ -806,10 +736,6 @@ void MetaNeqOp::PrintToStr(char* str)
 	    default:      ((ExprTree*)lArg)->PrintToStr(str);
    	}
     }
-    else
-    {
-  	strcat(str, "NULL");
-    }
     strcat(str, " =!= ");
     if(rArg)
     {
@@ -827,11 +753,8 @@ void MetaNeqOp::PrintToStr(char* str)
     	    default:      ((ExprTree*)rArg)->PrintToStr(str);
   	}
     }
-    else
-    {
-  	strcat(str, "NULL");
-    }
 }
+
 void EqOp::PrintToStr(char* str)
 {
     if(lArg)
@@ -850,10 +773,6 @@ void EqOp::PrintToStr(char* str)
 	    default:      ((ExprTree*)lArg)->PrintToStr(str);
    	}
     }
-    else
-    {
-  	strcat(str, "NULL");
-    }
     strcat(str, " == ");
     if(rArg)
     {
@@ -870,10 +789,6 @@ void EqOp::PrintToStr(char* str)
 			  break;
     	    default:      ((ExprTree*)rArg)->PrintToStr(str);
   	}
-    }
-    else
-    {
-  	strcat(str, "NULL");
     }
 }
 
@@ -895,10 +810,6 @@ void NeqOp::PrintToStr(char* str)
 	    default:      ((ExprTree*)lArg)->PrintToStr(str);
    	}
     }
-    else
-    {
-  	strcat(str, "NULL");
-    }
     strcat(str, " != ");
     if(rArg)
     {
@@ -915,10 +826,6 @@ void NeqOp::PrintToStr(char* str)
 			  break;
     	    default:      ((ExprTree*)rArg)->PrintToStr(str);
   	}
-    }
-    else
-    {
-  	strcat(str, "NULL");
     }
 }
 
@@ -937,8 +844,6 @@ void GtOp::PrintToStr(char* str)
 			  break;
 	    default:      ((ExprTree*)lArg)->PrintToStr(str);
    	}
-    else
-  	strcat(str, "NULL");
     strcat(str, " > ");
     if(rArg)
   	switch(rArg->MyType()) {
@@ -953,8 +858,6 @@ void GtOp::PrintToStr(char* str)
 			  break;
     	    default:      ((ExprTree*)rArg)->PrintToStr(str);
   	}
-    else
-  	strcat(str, "NULL");
 }
 
 void GeOp::PrintToStr(char* str)
@@ -972,8 +875,6 @@ void GeOp::PrintToStr(char* str)
 			  break;
 	    default:      ((ExprTree*)lArg)->PrintToStr(str);
    	}
-    else
-  	strcat(str, "NULL");
     strcat(str, " >= ");
     if(rArg)
   	switch(rArg->MyType()) {
@@ -988,8 +889,6 @@ void GeOp::PrintToStr(char* str)
 			  break;
     	    default:      ((ExprTree*)rArg)->PrintToStr(str);
   	}
-    else
-  	strcat(str, "NULL");
 }
 
 void LtOp::PrintToStr(char* str)
@@ -1007,8 +906,6 @@ void LtOp::PrintToStr(char* str)
 			  break;
 	    default:      ((ExprTree*)lArg)->PrintToStr(str);
    	}
-    else
-  	strcat(str, "NULL");
     strcat(str, " < ");
     if(rArg)
   	switch(rArg->MyType()) {
@@ -1023,8 +920,6 @@ void LtOp::PrintToStr(char* str)
 			  break;
     	    default:      ((ExprTree*)rArg)->PrintToStr(str);
   	}
-    else
-  	strcat(str, "NULL");
 }
 
 void LeOp::PrintToStr(char* str)
@@ -1042,8 +937,6 @@ void LeOp::PrintToStr(char* str)
 			  break;
 	    default:      ((ExprTree*)lArg)->PrintToStr(str);
    	}
-    else
-  	strcat(str, "NULL");
     strcat(str, " <= ");
     if(rArg)
   	switch(rArg->MyType()) {
@@ -1058,8 +951,6 @@ void LeOp::PrintToStr(char* str)
 			  break;
     	    default:      ((ExprTree*)rArg)->PrintToStr(str);
   	}
-    else
-  	strcat(str, "NULL");
 }
 
 void AndOp::PrintToStr(char* str)
@@ -1076,8 +967,6 @@ void AndOp::PrintToStr(char* str)
 		      ((ExprTree*)lArg)->PrintToStr(str);
 		      strcat(str, ")");
     	}
-    else
-  	strcat(str, "NULL");
     strcat(str, " && ");
     if(rArg)
   	switch(rArg->MyType()) {
@@ -1091,8 +980,6 @@ void AndOp::PrintToStr(char* str)
 	 	      ((ExprTree*)rArg)->PrintToStr(str);
 		      strcat(str, ")");
   	}
-    else
-  	strcat(str, "NULL");
 }
 
 void OrOp::PrintToStr(char* str)
@@ -1109,8 +996,6 @@ void OrOp::PrintToStr(char* str)
 		      ((ExprTree*)lArg)->PrintToStr(str);
 		      strcat(str, ")");
     	}
-    else
-  	strcat(str, "NULL");
     strcat(str, " || ");
     if(rArg)
   	switch(rArg->MyType()) {
@@ -1124,20 +1009,12 @@ void OrOp::PrintToStr(char* str)
 	 	      ((ExprTree*)rArg)->PrintToStr(str);
 		      strcat(str, ")");
   	}
-    else
-  	strcat(str, "NULL");
 }
 
 void AssignOp::PrintToStr(char* str)
 {
-    if(lArg)
-  	((ExprTree*)lArg)->PrintToStr(str);
-    else
-  	strcat(str, "NULL");
+    if(lArg) ((ExprTree*)lArg)->PrintToStr(str);
     strcat(str, " = ");
-    if(rArg)
-  	((ExprTree*)rArg)->PrintToStr(str);
-    else
-  	strcat(str, "NULL");
+    if(rArg) ((ExprTree*)rArg)->PrintToStr(str);
 }
 
