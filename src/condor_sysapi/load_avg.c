@@ -261,7 +261,11 @@ sysapi_load_avg_raw(void)
 		long_avg = avg.tl_avenrun.d[2];
 	}
 
-	return short_avg;
+	/* Unlike other Unixes, OSF1 computes the load average in 5
+	   second, 30 second, and 60 second intervals (see uptime(1)), so
+	   we want to use the long_avg here. */
+
+	return long_avg;
 }
 
 #elif defined(Solaris)
