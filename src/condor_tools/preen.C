@@ -181,24 +181,24 @@ produce_output()
 	if( MailFlag ) {
 		fprintf( mailer, "\n" );
 		fprintf( mailer,
-			 "The condor_preen process has found the following "
+			 "The condor_preen process has found the following\n"
 			 "stale condor files on <%s>:\n\n", my_hostname() );
 	}
 
 	for( BadFiles->rewind(); (str = BadFiles->next()); ) {
-		fprintf( mailer, "%s\n", str );
+		fprintf( mailer, "  %s\n", str );
 	}
 
 	if( MailFlag ) {
 		char *explanation = "\n\nWhat is condor_preen?\n\n"
-"The condor_preen tool examines the directories belonging to Condor, and "
-"removes extraneous files and directories which may be left over from Condor "
-"processes which terminated abnormally either due to internal errors or a "
-"system crash.  The directories checked are the LOG, EXECUTE, and SPOOL "
-"directories as defined in the Condor configuration files.  The condor_preen "
-"tool is intended to be run as user root (or user condor) periodically as a "
-"backup method to ensure reasonable file system cleanliness in the face of "
-"errors. This is done automatically by default by the condor_master daemon. "
+"The condor_preen tool examines the directories belonging to Condor, and\n"
+"removes extraneous files and directories which may be left over from Condor\n"
+"processes which terminated abnormally either due to internal errors or a\n"
+"system crash.  The directories checked are the LOG, EXECUTE, and SPOOL\n"
+"directories as defined in the Condor configuration files.  The condor_preen\n"
+"tool is intended to be run as user root (or user condor) periodically as a\n"
+"backup method to ensure reasonable file system cleanliness in the face of\n"
+"errors. This is done automatically by default by the condor_master daemon.\n"
 "It may also be explicitly invoked on an as needed basis.\n\n"
 "See the condor manual section on condor_preen for more details.\n";
 
