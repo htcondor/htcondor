@@ -104,11 +104,11 @@ class DaemonCore : public Service
 {
 	friend class TimerManager; 
 #ifdef WIN32
-	friend dc_main( int argc, char** argv );
+	friend int dc_main( int argc, char** argv );
 	friend DWORD pidWatcherThread(void*);
 	friend BOOL CALLBACK DCFindWindow(HWND, LPARAM);
 #else
-	friend main(int, char**);
+	friend int main(int, char**);
 #endif
 
 	public:
