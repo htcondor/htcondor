@@ -807,67 +807,47 @@ static char *
 format_globusHostJMAndExec( char  *globusArgs, AttrList * )
 {
 	static char result[64];
-	char	host[80], jobManager[80], exec[10240];
-	char	*tmp, *jm, *ex;
-	int		i, p;
+	char	host[80] = "[?????]";
+	char	exec[80] = "[?????]";
+	char	jm[80] = "[?????]";
+	char	*tmp;
+	int		p;
 
-	strcpy( result, "[?????] [?????]\n" );
+	if ( ( tmp = strstr( globusArgs, "-r '" ) ) != NULL ) {
+		tmp += 4; // 4==strlen("-r '")
 
-	if( ( tmp = strstr( globusArgs, "jobmanager-" ) ) == NULL ) {
-		return( result );
-	} 
-
-	jm = tmp + 11; // 11==strlen("jobmanager-")
-
-		// A.  Get the HOST part
-		// scan backwards until (')
-	while( *tmp != '\'' ) {
-			// make sure we don't overrun the beginning of the string
-		if( tmp == globusArgs ) return( result );
-		tmp--;
+		// copy the hostname
+		p = strcspn( tmp, ":'" );
+		if ( p > sizeof(host) )
+			p = sizeof(host) - 1;
+		strncpy( host, tmp, p );
+		host[p] = '\0';
 	}
-	tmp++;
-	i = 0;
-	while( *tmp != ':' && i < sizeof(host)-1 ) {
-			// make sure we don't overrun the end of the string
-		if( *tmp == '\0' ) return( result );
-		host[i] = *tmp;
-		tmp++;
-		i++;
-	}
-	host[i] = '\0';
 
-		// B.  Get the JOBMANAGER part
-	i = 0;
-	while( *jm != ':' && i < sizeof(jobManager)-1 ) {
-			// make sure we don't overrun the end of the string
-		if( *jm == '\0' ) return( result );
-		jobManager[i] = *jm;
-		jm++;
-		i++;
-	}
-	jobManager[i] = '\0';
-		
-		// C.  Get the globus executable
-	if( ( tmp = strstr( globusArgs, "&(executable=" ) ) == NULL ) {
-		return( result );
-	}
-	ex = tmp + 13;	// 13==strlen("&(executable=")
-	i = 0;
-	p = 1;
-	while( p > 0 && i < sizeof(exec)-1 ) {
-			// make sure we don't overrun the end of the string
-		if( *ex == '\0' ) return( result );
-		exec[i] = *ex;
-		ex++;
-		i++;
-		if( *ex == '(' ) p++;
-		if( *ex == ')' ) p--;
-	}
-	exec[i] = '\0';
+	if ( ( tmp = strstr( globusArgs, "jobmanager-" ) ) != NULL ) {
+		tmp += 11; // 11==strlen("jobmanager-")
 
-		// done --- pack components into the result string and return
-	sprintf( result, " %-8.8s %-18.18s  %-18.18s\n", jobManager, host, 
+		// copy the jobmanager name
+		p = strcspn( tmp, ":'" );
+		if ( p > sizeof(jm) )
+			p = sizeof(jm) - 1;
+		strncpy( jm, tmp, p );
+		jm[p] = '\0';
+	}
+
+	if ( ( tmp = strstr( globusArgs, "(executable=" ) ) != NULL ) {
+		tmp += 12; // 12==strlen("(executable=")
+
+		// copy the executable name
+		p = strcspn( tmp, ")" );
+		if ( p > sizeof(exec) )
+			p = sizeof(exec) - 1;
+		strncpy( exec, tmp, p );
+		exec[p] = '\0';
+	}
+
+	// done --- pack components into the result string and return
+	sprintf( result, " %-8.8s %-18.18s  %-18.18s\n", jm, host, 
 		basename(exec) );
 	return( result );
 }
