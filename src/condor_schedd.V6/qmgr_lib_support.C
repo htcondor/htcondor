@@ -148,7 +148,11 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
 	}
 
 	if ( !read_only ) {
-		qmgmt_sock->authenticate();
+		if (!qmgmt_sock->authenticate()) {
+			delete qmgmt_sock;
+			qmgmt_sock = NULL;
+			return 0;
+		}
 	}
 
 	return &connection;
