@@ -14,44 +14,6 @@
 #define IS_IRIX			YES
 #define Architecture		SGI
 
-/*** This should change to define all these things for all three ABIs ***
-**** but for now, at least make it work for one of them               ***
-**** see also Platform_CFLAGS below                                   ***/
-/* #if !defined( IRIXABI )
-#	define IRIXABI -n32
-#endif
-
-#define RealMldLib 
-#define IRIX_ABI IRIXABI
-#if IRIXABI == -n32
-#	define BaseLibPath /usr/lib32
-#elif IRIXABI == -64
-#	define BaseLibPath /usr/lib64
-#else */
-#	define BaseLibPath /usr/lib
-#	define RealMldLib concat(BaseLibPath,/libmld.a)
-/* #endif */
-
-
-#define MldLib concat(BaseLibPath,/libelf.a)
-#define RpcSvc	concat(BaseLibPath,/librpcsvc.so)
-#define RpcSun	concat(BaseLibPath,/libsun.a)
-/*
-#define RpcLib RpcSvc RpcSun 
-*/
-#define MallocLib	concat(BaseLibPath,/libmalloc.so)
-#define SimpleLibC concat(BaseLibPath,/libc.so.1)
-#define LibC SimpleLibC
-
-#define Crt0 concat(BaseLibPath,/crt1.o)
-#define CrtN concat(BaseLibPath,/crtn.o)
-
-#define PlatformLdFlags MldLib RealMldLib 
-#define SyscallsExp /**/
-
-#define XLibPath -lX11
-#define XExtLibPath concat(BaseLibPath,/libXext.a)
-
 #define IS_V5				YES
 
 #define HAS_X_EXTENSIONS		NO
@@ -114,8 +76,6 @@
 #define MkDepend /usr/sbin/mkdepend
 #endif MkDepend
 
-#define Platform_CFLAGS -cckr IRIXABI
-
 /**************************************************************************
 ** Include OS version-specific config files
 **************************************************************************/
@@ -123,3 +83,39 @@
 #ifdef OSVersionIncludeFile
 #include OSVersionIncludeFile
 #endif
+
+
+/**************************************************************************
+** Finally, deal with shared settings that depend on version-specific
+** settings.
+**************************************************************************/
+
+/*** This should change to define all these things for all three ABIs ***
+**** but for now, at least make it work for one of them               ***
+**** see also Platform_CFLAGS below                                   ***/
+
+#if !defined( IRIXABI )
+#   define IRIXABI -o32
+#endif
+
+#if !defined( BaseLibPath ) 
+#   define BaseLibPath /usr/lib
+#endif
+
+/*#define RealMldLib	concat(BaseLibPath,/libmld.a) */
+#define RealMldLib	/usr/lib/libmld.a
+#define MldLib		concat(BaseLibPath,/libelf.a)
+#define RpcSvc		concat(BaseLibPath,/librpcsvc.so)
+#define RpcSun		concat(BaseLibPath,/libsun.a)
+#define MallocLib	concat(BaseLibPath,/libmalloc.so)
+#define SimpleLibC 	concat(BaseLibPath,/libc.so.1)
+#define LibC		SimpleLibC
+
+#define Crt0 concat(BaseLibPath,/crt1.o)
+#define CrtN concat(BaseLibPath,/crtn.o)
+
+#define PlatformLdFlags MldLib RealMldLib 
+#define SyscallsExp /**/
+
+#define XLibPath -lX11
+#define XExtLibPath concat(BaseLibPath,/libXext.a)
