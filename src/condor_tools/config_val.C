@@ -331,7 +331,7 @@ GetRemoteParam( char* name, char* addr, char* pool, char* param_name )
 		my_exit(1);
 	}
 
-	Daemon d(addr);
+	Daemon d( DT_ANY, addr );
 	d.startCommand (CONFIG_VAL, &s, 30);
 
 	s.encode();
@@ -455,7 +455,7 @@ SetRemoteParam( char* name, char* addr, char* pool, char* param_value,
 		my_exit(1);
 	}
 
-	Daemon d(addr);
+	Daemon d( DT_ANY, addr );
 	d.startCommand (cmd, &s);
 
 	s.encode();

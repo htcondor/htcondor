@@ -767,7 +767,7 @@ doCommand( char *name )
 	}
 
 		/* Connect to the daemon */
-	Daemon d(addr);
+	Daemon d( DT_ANY, addr );
 	/* Connect to the daemon */
 	ReliSock sock;
 	if(!sock.connect(addr)) {
@@ -1006,7 +1006,7 @@ handleSquawk( char *line, char *addr ) {
 		return FALSE;
 		
 	case 'd': { /* dump state */
-		Daemon d(addr);
+		Daemon d( DT_ANY, addr );
         d.startCommand(DUMP_STATE, &sock, 0);
 
 		sock.decode();
@@ -1035,7 +1035,7 @@ handleSquawk( char *line, char *addr ) {
 			return TRUE;
 		}
 		
-		Daemon d(addr);
+		Daemon d( DT_ANY, addr );
 		d.startCommand (DC_RAISESIGNAL, &sock, 0);
 
 		sock.encode();
@@ -1057,7 +1057,7 @@ handleSquawk( char *line, char *addr ) {
 			return TRUE;
 		}
 
-		Daemon d(addr);
+		Daemon d( DT_ANY, addr );
 		d.startCommand ( command, &sock, 0);
 		sock.encode();
 		while( (token = strtok(NULL, " ")) ) {
