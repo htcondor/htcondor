@@ -33,7 +33,9 @@
 #include "syscall_numbers.h"
 #include "exit.h"
 #include "condor_uid.h"
+#ifdef WIN32
 #include "perm.h"
+#endif
 
 extern CStarter *Starter;
 
