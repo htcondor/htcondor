@@ -61,6 +61,7 @@
 #define GM_CLEAN_JOBMANAGER		22
 #define GM_REFRESH_PROXY		23
 #define GM_PROBE_JOBMANAGER		24
+#define GM_OUTPUT_WAIT			25
 
 char *GMStateNames[] = {
 	"GM_INIT",
@@ -87,7 +88,8 @@ char *GMStateNames[] = {
 	"GM_PROXY_EXPIRED",
 	"GM_CLEAN_JOBMANAGER",
 	"GM_REFRESH_PROXY",
-	"GM_PROBE_JOBMANAGER"
+	"GM_PROBE_JOBMANAGER",
+	"GM_OUTPUT_WAIT"
 };
 
 // TODO: once we can set the jobmanager's proxy timeout, we should either
@@ -98,6 +100,8 @@ char *GMStateNames[] = {
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
 #define MAX_SUBMIT_ATTEMPTS	1
+
+#define OUTPUT_WAIT_POLL_INTERVAL 1
 
 #define LOG_GLOBUS_ERROR(func,error) \
     dprintf(D_ALWAYS, \
@@ -174,6 +178,7 @@ int GlobusJob::submitInterval = 300;	// default value
 int GlobusJob::restartInterval = 60;	// default value
 int GlobusJob::gahpCallTimeout = 300;	// default value
 int GlobusJob::maxConnectFailures = 3;	// default value
+int GlobusJob::outputWaitGrowthTimeout = 15;	// default value
 
 GlobusJob::GlobusJob( GlobusJob& copy )
 {
@@ -228,6 +233,9 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	numRestartAttemptsThisSubmit = 0;
 	jmProxyExpireTime = 0;
 	connect_failure_counter = 0;
+	outputWaitLastGrowth = 0;
+	// HACK!
+	retryStdioSize = true;
 
 	evaluateStateTid = daemonCore->Register_Timer( TIMER_NEVER,
 								(TimerHandlercpp)&GlobusJob::doEvaluateState,
@@ -839,22 +847,99 @@ int GlobusJob::doEvaluateState()
 					break;
 				}
 				if ( rc == GLOBUS_SUCCESS ) {
+					// HACK!
+					retryStdioSize = true;
 					gmState = GM_DONE_SAVE;
 				} else if ( rc ==  GLOBUS_GRAM_PROTOCOL_ERROR_STDIO_SIZE ) {
+					// HACK!
+					if ( retryStdioSize ) {
+						dprintf( D_FULLDEBUG, "(%d.%d) ERROR_STDIO_SIZE, will wait and retry\n", procID.cluster, procID.proc);
+						retryStdioSize = false;
+						gmState = GM_OUTPUT_WAIT;
+					} else {
+					// HACK!
+					retryStdioSize = true;
 					globusError = rc;
 					gmState = GM_STOP_AND_RESTART;
 					dprintf( D_FULLDEBUG, "(%d.%d) Requesting jobmanager restart because of GLOBUS_GRAM_PROTOCOL_ERROR_STDIO_SIZE\n",
 							 procID.cluster, procID.proc);
 					dprintf( D_FULLDEBUG, "(%d.%d) output_size = %d, error_size = %d\n",
 							 procID.cluster, procID.proc,output_size, error_size );
+					}
 				} else {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(STDIO_SIZE)", rc );
+					// HACK!
+					retryStdioSize = true;
 					globusError = rc;
 					gmState = GM_STOP_AND_RESTART;
 					dprintf( D_FULLDEBUG, "(%d.%d) Requesting jobmanager restart because of unknown error\n",
 							 procID.cluster, procID.proc);
 				}
+			}
+			} break;
+		case GM_OUTPUT_WAIT: {
+			// We haven't received all the output from the job, but we
+			// think the jobmanager is still trying to send it. Wait until
+			// we think it's all here, then check again with the jobmanager.
+			if ( condorState == REMOVED || condorState == HELD ) {
+				gmState = GM_DONE_COMMIT;
+				break;
+			}
+			now = time(NULL);
+			if ( outputWaitLastGrowth == 0 ) {
+				outputWaitLastGrowth = now;
+				outputWaitOutputSize = syncedOutputSize;
+				outputWaitErrorSize = syncedErrorSize;
+				ClearCallbacks();
+			} else {
+				struct stat file_status;
+
+				if ( localOutput != NULL ) {
+					rc = stat( localOutput, &file_status );
+					if ( rc < 0 ) {
+						dprintf( D_ALWAYS,
+								 "(%d.%d) stat failed for output file %s (errno=%d)\n",
+								 procID.cluster, procID.proc, localOutput,
+								 errno );
+						file_status.st_size = outputWaitOutputSize;
+					}
+					if ( file_status.st_size > outputWaitOutputSize ) {
+dprintf(D_FULLDEBUG,"(%d.%d) saw new output size %d\n",procID.cluster,procID.proc,file_status.st_size);
+						outputWaitOutputSize = file_status.st_size;
+						outputWaitLastGrowth = now;
+					}
+				}
+
+				if ( localError != NULL ) {
+					rc = stat( localError, &file_status );
+					if ( rc < 0 ) {
+						dprintf( D_ALWAYS,
+								 "(%d.%d) stat failed for error file %s (errno=%d)\n",
+								 procID.cluster, procID.proc, localError,
+								 errno );
+						file_status.st_size = outputWaitErrorSize;
+					}
+					if ( file_status.st_size > outputWaitErrorSize ) {
+dprintf(D_FULLDEBUG,"(%d.%d) saw new error size %d\n",procID.cluster,procID.proc,file_status.st_size);
+						outputWaitErrorSize = file_status.st_size;
+						outputWaitLastGrowth = now;
+					}
+				}
+			}
+			if ( now > outputWaitLastGrowth + outputWaitGrowthTimeout ) {
+dprintf(D_FULLDEBUG,"(%d.%d) no new output/error for %d seconds, retrying STDIO_SIZE\n",procID.cluster,procID.proc,outputWaitGrowthTimeout);
+				syncIO();
+				outputWaitLastGrowth = 0;
+				gmState = GM_CHECK_OUTPUT;
+			} else if ( GetCallbacks() ) {
+dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.cluster,procID.proc);
+				syncIO();
+				outputWaitLastGrowth = 0;
+				gmState = GM_CHECK_OUTPUT;
+			} else {
+				daemonCore->Reset_Timer( evaluateStateTid,
+										 OUTPUT_WAIT_POLL_INTERVAL );
 			}
 			} break;
 		case GM_DONE_SAVE: {
@@ -1318,6 +1403,8 @@ int GlobusJob::doEvaluateState()
 			jmVersion = GRAM_V_UNKNOWN;
 			errorString = "";
 			ClearCallbacks();
+			// HACK!
+			retryStdioSize = true;
 			if ( jobContact != NULL ) {
 				rehashJobContact( this, jobContact, NULL );
 				free( jobContact );

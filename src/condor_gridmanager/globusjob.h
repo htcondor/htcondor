@@ -40,6 +40,7 @@ class GlobusJob : public Service
 	static int restartInterval;
 	static int gahpCallTimeout;
 	static int maxConnectFailures;
+	static int outputWaitGrowthTimeout;
 
 	static void setProbeInterval( int new_interval )
 		{ probeInterval = new_interval; }
@@ -79,6 +80,11 @@ class GlobusJob : public Service
 	int numRestartAttempts;
 	int numRestartAttemptsThisSubmit;
 	time_t jmProxyExpireTime;
+	time_t outputWaitLastGrowth;
+	int outputWaitOutputSize;
+	int outputWaitErrorSize;
+	// HACK!
+	bool retryStdioSize;
 
 	GahpClient gahp;
 
