@@ -411,6 +411,12 @@ class JobAbortedEvent : public ULogEvent
         @return 0 for failure, 1 for success
     */
     virtual int writeEvent (FILE *);
+
+	const char* getReason();
+	void setReason( const char* );
+
+ private:
+	char* reason;
 };
 
 

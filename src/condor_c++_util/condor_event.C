@@ -860,19 +860,46 @@ JobAbortedEvent::
 JobAbortedEvent ()
 {
 	eventNumber = ULOG_JOB_ABORTED;
+	reason = NULL;
 }
 
 JobAbortedEvent::
 ~JobAbortedEvent()
 {
+	if( reason ) {
+		free( reason );
+	}
 }
+
+
+void JobAbortedEvent::
+setReason( const char* reason_str )
+{
+	if( reason ) {
+		free( reason );
+	}
+	reason = strdup( reason_str );
+}
+
+
+const char* JobAbortedEvent::
+getReason( void )
+{
+	return reason;
+}
+
 
 int JobAbortedEvent::
 writeEvent (FILE *file)
 {
-
-	if (fprintf (file, "Job was aborted by the user.\n") < 0) return 0;
-
+	if( fprintf(file, "Job was aborted by the user.\n") < 0 ) {
+		return 0;
+	}
+	if( reason ) {
+		if( fprintf(file, "\t%s\n", reason) < 0 ) {
+			return 0;
+		}
+	}
 	return 1;
 }
 
@@ -880,9 +907,21 @@ writeEvent (FILE *file)
 int JobAbortedEvent::
 readEvent (FILE *file)
 {
-	if (fscanf (file, "Job was aborted by the user.") == EOF)
+	if( fscanf(file, "Job was aborted by the user.\n") == EOF ) {
 		return 0;
-
+	}
+		// also try to read the reason, but for backwards
+		// compatibility, don't fail if it's not there.
+	if( reason ) {
+		free( reason );
+		reason = NULL;
+	}
+	char reason_buf[BUFSIZ];
+	if( fgets(reason_buf, BUFSIZ, file) == NULL) {
+		return 1;	// backwards compatibility
+	}
+	chomp( reason_buf );  // strip the newline, if it's there.
+	reason = strdup(reason_buf);
 	return 1;
 }
 
