@@ -285,14 +285,8 @@ However, two limits are imposed.
 
 \begin{enumerate}
 
-\item Each \textit{CondorCommandFile} must submit a cluster of size one.
-There cannot be multiple \texttt{queue} lines.  The reasoning is long winded,
-so a brief summary will be attempted.  If multi-job clusters were allowed,
-DAGMan would have to parse the \textit{CondorCommandFile} to find out how many
-jobs belong to that cluster.  Otherwise, DAGMan would not know for sure if a
-cluster had terminated based on seeing the event from one job of that
-cluster.  This restriction may be lifted in future DAGMan version, depending
-on the design and implementation issues.
+\item \Bold{Each \textit{CondorCommandFile} must submit only one job.}
+There cannot be multiple \texttt{queue} lines, or DAGMan will fail.
 
 \item All \textit{CondorCommandFile}s of a DAG must specify the same log.
 In order for DAGMan to follow the order of events correctly, all events from
