@@ -1,3 +1,11 @@
+02/01/04 V6_7-mirror-2-branch
+   A new branch off of V6_7-branch for the final product we're sending
+   to CORE.  It will contain all of the HighAvailability locking stuff
+   along with the Condor-C-style schedding mirroring, so that CORE can
+   decide which solution they want to use.  The V6_7-mirror-branch
+   will be merged directly into this one and then abandoned.  Created
+   from the V6_7-mirror-2-root tag.
+
 02/01/04 V6_7-post_merge-V6_6-merge-4
    The state of the V6_7-branch after merging in the V6_6-branch as
    tagged at V6_6-merge-4.
