@@ -4890,8 +4890,28 @@ int DaemonCore::Create_Process(
 
 	}
 	
-	BOOL cp_result;
-	if ( priv != PRIV_USER_FINAL ) {
+	BOOL cp_result, gbt_result;
+	DWORD binType;
+	gbt_result = GetBinaryType(namebuf, &binType);
+
+	// test if the executable is either unexecutable, or if GetBinaryType() 
+	// thinks its a DOS 16-bit app, but in reality the actual binary
+	// image isn't (this happens when the executable is bogus or corrupt).
+	if ( !gbt_result || ( binType == SCS_DOS_BINARY && !bIs16Bit) ) {
+	
+		dprintf(D_ALWAYS, "ERROR: %s is not a valid Windows executable\n",
+			   	namebuf);
+		cp_result = 0;
+
+		if ( newenv ) {
+			delete [] newenv;
+		}
+		goto wrapup;
+	} else {
+		dprintf(D_FULLDEBUG, "GetBinaryType() returned %d\n", binType);
+	}
+
+   	if ( priv != PRIV_USER_FINAL ) {
 		cp_result = ::CreateProcess(bIs16Bit ? NULL : namebuf,(char*)args,NULL,
 			NULL,inherit_handles, new_process_group,newenv,cwd,&si,&piProcess);
 	} else {
