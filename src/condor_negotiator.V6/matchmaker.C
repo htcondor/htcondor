@@ -704,7 +704,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	}
 
 	// find the startd's capability from the private ad
-	if (!(capability = getCapability (startdName, startdPvtAds)))
+	if (!(capability = getCapability (startdName, startdAddr, startdPvtAds)))
 	{
 		dprintf(D_ALWAYS,"\t\t\t%s has no capability\n", startdName);
 		return MM_BAD_MATCH;
@@ -808,17 +808,20 @@ calculateNormalizationFactor (ClassAdList &scheddAds, double &max,
 
 
 char *Matchmaker::
-getCapability (char *startdName, ClassAdList &startdPvtAds)
+getCapability (char *startdName, char *startdAddr, ClassAdList &startdPvtAds)
 {
 	ClassAd *pvtAd;
 	static char	capability[80];
 	char	name[64];
+	char	addr[64];
 
 	startdPvtAds.Open();
 	while ((pvtAd = startdPvtAds.Next()))
 	{
-		if (pvtAd->LookupString (ATTR_NAME, name)	&&
-			strcmp (name, startdName) == 0			&&
+		if (pvtAd->LookupString (ATTR_NAME, name)			&&
+			strcmp (name, startdName) == 0					&&
+			pvtAd->LookupString (ATTR_STARTD_IP_ADDR, addr)	&&
+			strcmp (addr, startdAddr) == 0					&&
 			pvtAd->LookupString (ATTR_CAPABILITY, capability))
 		{
 			startdPvtAds.Close ();

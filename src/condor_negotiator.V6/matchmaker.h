@@ -34,7 +34,7 @@ class Matchmaker : public Service
 		ClassAd *matchmakingAlgorithm(ClassAd &, ClassAdList &, double = -1.0);
 		int  matchmakingProtocol (ClassAd &, ClassAd *, ClassAdList &, Sock *, char*);
 		void calculateNormalizationFactor (ClassAdList &, double &, double &);
-		char *getCapability (char *, ClassAdList &);
+		char *getCapability (char *, char *, ClassAdList &);
 		friend static int comparisonFunction (ClassAd *, ClassAd *, void *);
 
 		// configuration information
