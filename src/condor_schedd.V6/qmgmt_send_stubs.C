@@ -56,6 +56,19 @@ InitializeConnection( const char *owner )
 	return( 0 );
 }
 
+int
+InitializeReadOnlyConnection( const char *owner )
+{
+	int	rval;
+
+	CurrentSysCall = CONDOR_InitializeReadOnlyConnection;
+
+	qmgmt_sock->encode();
+	assert( qmgmt_sock->code(CurrentSysCall) );
+
+	qmgmt_sock->setOwner( owner );
+	return( 0 );
+}
 
 int
 NewCluster()

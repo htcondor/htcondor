@@ -67,6 +67,13 @@ do_Q_request(ReliSock *syscall_sock)
 		return 0;
 	}
 
+	case CONDOR_InitializeReadOnlyConnection:
+	{
+			// same as InitializeConnection but no authenticate()
+		InitializeConnection( NULL );			
+		return 0;
+	}
+
 	case CONDOR_NewCluster:
 	  {
 		int terrno;
