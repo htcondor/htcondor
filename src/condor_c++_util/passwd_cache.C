@@ -120,7 +120,7 @@ bool passwd_cache::cache_groups(const char* user) {
 			}
 	   		group_cache_entry->gidlist = new
 			  		 	gid_t[group_cache_entry->gidlist_sz];
-			if (getgroups( 	group_cache_entry->gidlist_sz,
+			if (::getgroups( 	group_cache_entry->gidlist_sz,
 					 		group_cache_entry->gidlist) < 0) {
 				dprintf(D_ALWAYS, "cache_groups(): getgroups() failed! "
 						"errno=%s\n", strerror(errno));
@@ -400,7 +400,7 @@ passwd_cache::lookup_group(const char *user, group_entry *&gce) {
 				/* time to refresh the entry! */
 			dprintf(D_FULLDEBUG, "uid cache entry expired for user %s\n", user);
 			cache_groups(user);
-			return group_table->lookup(user, gce);
+			return (group_table->lookup(user, gce) == 0);
 		} else {
 			/* entry is still considered valid, so just return */
 			return true;
