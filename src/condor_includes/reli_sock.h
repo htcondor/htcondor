@@ -61,7 +61,8 @@ public:
         @param s can be a hostname or sinful string
         @param port the port to connect to, ignorred if s contains port
     */
-	virtual int connect(char *s, int port=0);
+	virtual int connect(char *s, int port=0, 
+							bool do_not_block = false);
 
 
     ///
