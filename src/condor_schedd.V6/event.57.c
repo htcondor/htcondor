@@ -453,6 +453,37 @@ update_central_mgr()
 	send_context_to_machine(&CollectorHandle, cmd, MachineContext);
 }
 
+abort_job_myself( job_id )
+PROC_ID job_id;
+{
+        char    *host;
+        int             i;
+
+
+        for( i=0; i<NShadowRecs; i++ ) {
+                if( ShadowRecs[i].job_id.cluster == job_id.cluster &&
+                        (ShadowRecs[i].job_id.proc == job_id.proc ||
+job_id.proc
+ == -1)) {
+
+                        host = ShadowRecs[i].host;
+                        dprintf( D_ALWAYS,
+                                "Found shadow record for job %d.%d, host =
+%s\n"
+,
+                                job_id.cluster, job_id.proc, host );
+                        /* send_kill_command( host ); */
+            /* change for condor flocking */
+            if ( kill( ShadowRecs[i].pid, SIGUSR1) == -1 )
+                dprintf(D_ALWAYS,"Error in sending SIGUSR1 to %d errno = %d\n",
+
+                            ShadowRecs[i].pid, errno);
+            else dprintf(D_ALWAYS, "Send SIGUSR1 to Shadow Pid %d\n",
+                            ShadowRecs[i].pid);
+
+                }
+        }
+}
 
 abort_job( xdrs )
 XDR		*xdrs;

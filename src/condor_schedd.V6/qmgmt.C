@@ -404,6 +404,10 @@ int DestroyProc(int cluster_id, int proc_id)
 	int		rval;
 	Job		*job;
 	LogDestroyProc	*log;
+	PROC_ID		job_id;
+
+        job_id.cluster = cluster_id;
+        job_id.proc = proc_id;
 
 	if (CheckConnection() < 0) {
 		return -1;
@@ -421,6 +425,10 @@ int DestroyProc(int cluster_id, int proc_id)
 	job->DeleteSelf();
 	log = new LogDestroyProc(cluster_id, proc_id);
 	AppendLog(log, job, 0);
+
+	// notify schedd to abort job
+	abort_job_myself( job_id );
+
 	return 0;
 }
 
@@ -431,6 +439,10 @@ int DestroyCluster(int cluster_id)
 	int					rval;
 	Cluster				*cl;
 	Job					*job;
+	PROC_ID		job_id;
+
+        job_id.cluster = cluster_id;
+        job_id.proc = -1;
 
 	if (CheckConnection() < 0) {
 		return -1;
@@ -454,6 +466,10 @@ int DestroyCluster(int cluster_id)
 	cl->DeleteSelf();
 	log = new LogDestroyCluster(cluster_id);
 	AppendLog(log, 0, cl);
+
+	// notify schedd to abort job
+	abort_job_myself( job_id );
+
 	return 0;
 }
 
@@ -474,10 +490,18 @@ int DestroyClusterByConstraint(const char* constraint)
 		if(cl->OwnerCheck(active_owner) && cl->ApplyToCluster(constraint))
 		// delete the whole cluster because one cluster can have only one owner
 		{
+			PROC_ID		job_id;
+			
+        		job_id.cluster = cl->get_cluster_num();
+        		job_id.proc = -1;
+
 			cl->DeleteSelf();
 			log = new LogDestroyCluster(cl->get_cluster_num());
 			AppendLog(log, 0, cl);
 			flag = 0;
+			
+			// notify schedd to abort job
+			abort_job_myself( job_id );
 		}
 	}
 	if(flag)
