@@ -63,7 +63,7 @@ StatInfo::StatInfo( const char *path )
 			last = s;
         }
     }
-	if( last[1] ) {
+	if( last != NULL && last[1] ) {
 		filename = strnewp( &last[1] ); 
 		last[1] = '\0';
 	} else {
