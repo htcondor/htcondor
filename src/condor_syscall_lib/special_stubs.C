@@ -33,6 +33,19 @@
 #include "condor_debug.h"
 #include "exit.h"
 
+/* the length of the output buffer */
+#define VFPRINTF_LEN 384
+#define DECIMAL 0
+#define HEXADECIMAL 1
+#define OCTAL 2
+/* these are the number or ASCII digits a 64bit quantity needs with a minus
+	sign and stuff */
+#define ASCII64DECIMAL 22
+#define ASCII64HEXADECIMAL 17
+#define ASCII64OCTAL 23
+#define ABS(x) ((x)<0)?((x)*-1):x
+
+
 extern	ReliSock* syscall_sock;
 
 extern "C" {
