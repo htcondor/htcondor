@@ -21,10 +21,9 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
 #include "condor_common.h"
 #include "url_condor.h"
+#include "internet.h"
 #include "condor_debug.h"
 
 /*
@@ -94,6 +93,11 @@ int open_ftp( const char *name, int flags, size_t n_bytes )
 		fprintf(stderr, "socket() failed, errno = %d\n", errno);
 		fflush(stderr);
 		return sock_fd;
+	}
+
+	if( ! _condor_local_bind(sock_fd) ) {
+		close( sock_fd );
+		return -1;
 	}
 
 	if (name[0] != '/' || name[1] != '/') {
