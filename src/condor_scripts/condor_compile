@@ -6,6 +6,7 @@
 
 # --------------------------------------------------
 
+
 # Here are the default paths/directories to use.
 # These defaults can be overidden with command-line args.
 # Customize these if desired.  The defaults provided should be
@@ -139,7 +140,7 @@ export CONDOR_LD_DIR
 # platforms, use a PATH.  NOTE: we want to add these things to the END
 # of the PATH, to make sure people get the version of the compiler
 # they thought they were using. 
-PATH=$PATH:/bin:/usr/bin
+PATH=$PATH:/bin:/usr/bin:/usr/bsd
 
 # Figure out what architecture we're running on 
 
@@ -167,18 +168,11 @@ case $os in
 			CONDOR_FULLINSTALL=true
 		fi
 		
-		#6/3/99 mikeu: we need to support use of all three ABIs, so we must
-		#figure out which one to use: -o32, -n32 or -64
-		abi=`printenv SGI_ABI`  #extract from ENV
+		abi="-32"
+		if [ $osver = "6.5" ]; then
+			abi="-n32"
+		fi
 
-		if [ X$abi = X ]; then
-		  #if not overridden in env, then use system default
-		  abi=-`sed -e 's/.*abi=//' -e 's/:.*//' /etc/compiler.defaults`
-		fi
-		#O32 ABI might be specified as -o32 or -32, maybe even -O32
-		if [ X$abi = X-32 -o X$abi = X-O32 ]; then
-			abi="-o32"
-		fi
 
 		SGI_ABI=$abi
 		export SGI_ABI
@@ -295,7 +289,6 @@ fi
 # option(s) allows us to use $CONDOR_LIBDIR/ld instead
 # of the default path for ld.
 
-
 case $os in 
 
 	IRIX )
@@ -347,13 +340,8 @@ case $os in
 			fi
 		fi 
 
-		if [ $myname = "KCC" ]; then	
-			exec $ARGS --backend -tul --backend \
-			-h$CONDOR_LD_DIR --backend -B
-		fi 
-
 		;;
-
+	
 	OSF1 )
 		if [ $myname = "cc" ]; then
 			exec $ARGS -tul -h$CONDOR_LD_DIR -B
