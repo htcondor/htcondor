@@ -32,6 +32,8 @@ my %Config = (
 	      DoSubmit => 1,
 	      DoSubmitMunge => 0,
 	      DoCheckpoint => 1,
+	      DoSubmitDetails => 1,
+	      DoArchDetail => 1,
 	      PoolDescription => "",
 	     );
 my $Hash;
@@ -81,6 +83,12 @@ sub Init()
     $Tmp = HawkeyeLib::ReadConfig( "_submit_munge", "true" );
     $Config{DoSubmitMunge} = ( $Tmp =~ /true/i ) ? 1 : 0;
 
+    $Tmp = HawkeyeLib::ReadConfig( "_submit_detail", "true" );
+    $Config{DoSubmitDetail} = ( $Tmp =~ /true/i ) ? 1 : 0;
+
+    $Tmp = HawkeyeLib::ReadConfig( "_arch_detail", "true" );
+    $Config{DoArchDetail} = ( $Tmp =~ /true/i ) ? 1 : 0;
+
     $Tmp = HawkeyeLib::ReadConfig( "_ckpt", "true" );
     $Config{DoCheckpoint} = ( $Tmp =~ /true/i ) ? 1 : 0;
 
@@ -118,9 +126,17 @@ sub Init()
 	{
 	    $Config{DoSubmitMunge} = defined($1) ? 0 : 1;
 	}
+	elsif ( $Arg =~ /-(no)?submitdetail/ )
+	{
+	    $Config{DoSubmitDetail} = defined($1) ? 0 : 1;
+	}
 	elsif ( $Arg =~ /-(no)?ckpt/ )
 	{
 	    $Config{DoCheckpoint} = defined($1) ? 0 : 1;
+	}
+	elsif ( $Arg =~ /-(no)?archdetail/ )
+	{
+	    $Config{DoArchDetail} = defined($1) ? 0 : 1;
 	}
 	else
 	{
@@ -135,7 +151,9 @@ sub Init()
 		"  [-[no]run]     \tEnable/disable run check\n" .
 		"  [-[no]submit]  \tEnable/disable submit check\n" .
 		"  [-[no]submitmunge]\tEnable/disable submit email address munging\n" .
-		"  [-[no]ckpt]    \tEnable/disable checkpoint server check\n";
+		"  [-[no]submitdetail]\tEnable/disable submit detailed output\n".
+		"  [-[no]ckpt]    \tEnable/disable checkpoint server check\n".
+		"  [-[no]archdetail]\tEnable/disable architecture details\n";
 	    exit 1;
 	}
     }
@@ -256,7 +274,7 @@ sub RunAbsent()
 	}
 
 	# Cluster nodes "known" to be down
-	elsif ( /Host down, but ping ok: '(.*)'/ )
+	elsif ( /Host marked down, but ping ok: '(.*)'/ )
 	{
 	    push @NotDown, $1;
 	}
@@ -339,6 +357,8 @@ sub RunTotal( $$ )
 	elsif ( ! /omit/i )
 	{
 	    my ( $Arch, @Values ) = split;
+
+	    next if (  (! $Config{DoArchDetail}) && ( $Arch ne "Total" )  );
 	    push @ArchList, $Arch;
 	    foreach my $Field ( 0 .. $#Values )
 	    {
@@ -382,6 +402,7 @@ sub RunSubmit(  )
 
     # Parse the output...
     my $SubmitNo = 0;
+    my %Totals;
     while ( <SUB> )
     {
 	chomp;
@@ -393,8 +414,8 @@ sub RunSubmit(  )
 	warn "Wrong data size ($_) : " if ( $#Values != $#Fields );
 	for my $FieldNo ( 0 .. $#Fields )
 	{
-	    my $Attr = sprintf "Submit_%02d_%s",
-		$SubmitNo, $Fields[$FieldNo]->{Name};
+	    my $Name = $Fields[$FieldNo]->{Name};
+	    my $Attr = sprintf "Submit_%02d_%s", $SubmitNo, $Name;
 
 	    # Munge the email address to deter spambots
 	    if (  ( $Fields[$FieldNo]->{Munge} ) &&
@@ -404,10 +425,20 @@ sub RunSubmit(  )
 	    }
 
 	    # Finally, publish it
-	    $Hash->Add( $Attr, $Fields[$FieldNo]->{Type}, $Values[$FieldNo] );
+	    $Hash->Add( $Attr, $Fields[$FieldNo]->{Type}, $Values[$FieldNo] )
+		if ( $Config{DoSubmitDetail} );
+	    if ( $Fields[$FieldNo]->{Type} eq "n" )
+	    {
+		$Totals{$Name} = 0 if ( ! exists $Totals{$Name} );
+		$Totals{$Name} += $Values[$FieldNo];
+	    }
 	}
     }
     $Hash->Add( "Submit_Count", "n", $SubmitNo );
+    foreach my $Name ( keys %Totals )
+    {
+	$Hash->Add( "Submit_Total_$Name", "n", $Totals{$Name} );
+    }
 
     # Done
     close( SUB );
