@@ -14,8 +14,8 @@
 #include "condor_mach_status.h"
 #include "sched.h"
 #include "util_lib_proto.h"
+#include "condor_uid.h"
 
-#include "cdefs.h"
 #include "resource.h"
 #include "resmgr.h"
 #include "state.h"
@@ -34,7 +34,7 @@ extern "C" char *param(char*);
 extern "C" char *sin_to_string(sockaddr_in*);
 extern "C" char *get_host_cell();
 extern "C" int event_killall(resource_id_t rid, job_id_t jid, task_id_t tid);
-extern "C" int event_pcheckpoint(resource_id_t rid, job_id_t jid, task_id_t tid);
+extern "C" int event_pcheckpoint(resource_id_t rid,job_id_t jid,task_id_t tid);
 extern "C" int event_killjob(resource_id_t rid, job_id_t jid, task_id_t tid);
 
 extern "C" int calc_virt_memory();
@@ -47,33 +47,32 @@ char *mouse_dev=NULL;
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
-static void check_perms __P((void));
-static void cleanup_execute_dir __P((void));
-static int calc_disk __P((void));
-static void calc_idle_time __P((resource_info_t *, int &, int &));
-static int calc_ncpus __P((void));
-static int tty_idle_time __P((char *));
+static void check_perms(void);
+static void cleanup_execute_dir(void);
+static int calc_disk(void);
+static void calc_idle_time(resource_info_t *, int &, int &);
+static int calc_ncpus(void);
+static int tty_idle_time(char *);
 
 #if !defined(OSF1)
-static int tty_pty_idle_time __P((void));
+static int tty_pty_idle_time(void);
 #else
 extern "C" time_t tty_pty_idle_time();
 #endif
 
-static float get_load_avg __P((void));
-static int kill_starter __P((int, int));
+static float get_load_avg(void);
+static int kill_starter(int, int);
 extern "C" int event_vacate(resource_id_t, job_id_t, task_id_t);
 static int event_block(resource_id_t, job_id_t, task_id_t);
 static int event_unblock(resource_id_t, job_id_t, task_id_t);
 static int event_start(resource_id_t, job_id_t, task_id_t);
 extern "C" int event_suspend(resource_id_t, job_id_t, task_id_t);
-//int event_continue __P((resource_id_t, job_id_t, task_id_t));
 extern "C" int event_continue(resource_id_t, job_id_t, task_id_t);
 extern "C" int event_checkpoint(resource_id_t, job_id_t, task_id_t);
 extern "C" int event_exited(resource_id_t, job_id_t, task_id_t);
-static char *get_full_hostname __P((void));
-static void init_static_info __P((resource_info_t *));
-static int exec_starter __P((char *, char *, int, int));
+static char *get_full_hostname(void);
+static void init_static_info(resource_info_t *);
+static int exec_starter(char *, char *, int, int);
 
 
 
@@ -161,7 +160,7 @@ resource_open(resource_name_t name, resource_id_t* id)
 
 int
 resource_params(resource_id_t rid, job_id_t jid, task_id_t tid, 
-		resource_param_t* old, resource_param_t* New)
+				resource_param_t* old, resource_param_t* New)
 {
 	resource_info_t *rip;
 
@@ -190,22 +189,24 @@ resource_params(resource_id_t rid, job_id_t jid, task_id_t tid,
 			} else {
 				old->res.res_consecutive_idle = 0;
 			}
-			if ((old->res.res_mips == 0) || (old->res.res_consecutive_idle >= 5)) {
+			if ((old->res.res_mips == 0) ||
+				(old->res.res_consecutive_idle >= 5)) {
 				int new_mips_calc = dhry_mips();
 				int new_kflops_calc = clinpack_kflops();
-				old->res.res_consecutive_idle = 0;  // don't recompute right away
+				// don't recompute right away
+				old->res.res_consecutive_idle = 0;
 				if ( old->res.res_mips == 0 ) {
 					old->res.res_mips = new_mips_calc;
 					old->res.res_kflops = new_kflops_calc;
 				} else {
 					// compute a weighted average
 					old->res.res_mips = (old->res.res_mips * 3 + 
-						new_mips_calc) / 4;
+										 new_mips_calc) / 4;
 					old->res.res_kflops = (old->res.res_kflops * 3 + 
-						new_kflops_calc) / 4;
+										   new_kflops_calc) / 4;
 				}
-				dprintf(D_FULLDEBUG,"recalc:DHRY_MIPS=%d,CLINPACK KFLOPS=%d\n",	
-					old->res.res_mips, old->res.res_kflops);
+				dprintf(D_FULLDEBUG,"recalc:DHRY_MIPS=%d,CLINPACK KFLOPS=%d\n",
+						old->res.res_mips, old->res.res_kflops);
 			}
 		}
 
@@ -230,7 +231,7 @@ resource_allocate(resource_id_t rid, int njobs, int ntasks)
 
 int
 resource_activate(resource_id_t rid, int njobs, job_id_t* jobs, 
-		  int ntasks, task_id_t* tasks, start_info_t* jobinfo)
+				  int ntasks, task_id_t* tasks, start_info_t* jobinfo)
 {
 	int pid;
 	resource_info_t *rip;
@@ -239,8 +240,8 @@ resource_activate(resource_id_t rid, int njobs, job_id_t* jobs,
 		return -1;
 
 	pid = exec_starter(rip->r_starter, jobinfo->ji_hname, 
-			   jobinfo->ji_sock1,
-			   jobinfo->ji_sock2);
+					   jobinfo->ji_sock1,
+					   jobinfo->ji_sock2);
 
 	if (rip->r_pid != getpid()) {
 		/*
@@ -262,7 +263,6 @@ resource_free(resource_id_t rid)
 		return -1;
 	if (rip->r_pid == NO_PID)
 		return -1;
-// C H A N G E -> N Anand
 	if (rip->r_jobcontext) {
 		delete rip->r_jobcontext;
 		rip->r_jobcontext = NULL;
@@ -277,102 +277,82 @@ resource_free(resource_id_t rid)
 int
 resource_event(resource_id_t rid, job_id_t jid, task_id_t tid, event_t ev)
 {
-  resource_info_t *rip;
+	resource_info_t *rip;
   
-  if (!(rip = resmgr_getbyrid(rid)))
-    return -1;
-  switch (ev) 
-  {
-   case EV_VACATE:
-    if (rip->r_claimed == TRUE)
-      vacate_client(rid);
-    return event_vacate(rid, jid, tid);
-   case EV_BLOCK:
-    return event_block(rid, jid, tid);
-   case EV_UNBLOCK:
-    return event_unblock(rid, jid, tid);
-   case EV_START:
-    return event_start(rid, jid, tid);
-   case EV_SUSPEND:
-    return event_suspend(rid, jid, tid);
-   case EV_CONTINUE:
-    return event_continue(rid, jid, tid);
-   case EV_KILL:
-    return event_killjob(rid, jid, tid);
-   case EV_EXITED:
-    return event_exited(rid, jid, tid);
-  }
-  return 0;
-}
-
-// C H A N G E -> N Anand -> Ask Rajesh
-/*
-int
-resource_initcontext(resource_info_t* rip)
-{
-	ELEM tmp;
-
-	init_static_info(rip);
-
-	tmp.type = STRING;
-	tmp.s_val = "NoJob";
-	store_stmt(build_expr("State",&tmp), rip->r_context);
-
+	if (!(rip = resmgr_getbyrid(rid)))
+		return -1;
+	switch (ev) 
+		{
+		case EV_VACATE:
+			return event_vacate(rid, jid, tid);
+		case EV_BLOCK:
+			return event_block(rid, jid, tid);
+		case EV_UNBLOCK:
+			return event_unblock(rid, jid, tid);
+		case EV_START:
+			return event_start(rid, jid, tid);
+		case EV_SUSPEND:
+			return event_suspend(rid, jid, tid);
+		case EV_CONTINUE:
+			return event_continue(rid, jid, tid);
+		case EV_KILL:
+			return event_killjob(rid, jid, tid);
+		case EV_EXITED:
+			return event_exited(rid, jid, tid);
+		}
 	return 0;
 }
-*/
 
 int resource_initAd(resource_info_t* rip)
 {
-  init_static_info(rip);
-  return (rip->r_context)->Insert("State=\"NoJob\"");
+	init_static_info(rip);
+	return (rip->r_context)->Insert("State=\"NoJob\"");
 }
 
-// C H A N G E -> N Anand 
 //fill in the classAd of rip with dynamic info
 ClassAd* resource_context(resource_info_t* rip)
 {
-  resource_param_t *rp;
-  ClassAd *cp;
+	resource_param_t *rp;
+	ClassAd *cp;
 
-  char line[80];
+	char line[80];
 
-  rp = &rip->r_param;
-  cp = rip->r_context;
+	rp = &rip->r_param;
+	cp = rip->r_context;
   
-  resource_params(rip->r_rid, NO_JID, NO_TID, rp, NULL);
+	resource_params(rip->r_rid, NO_JID, NO_TID, rp, NULL);
  
-  sprintf(line,"LoadAvg=%f",rp->res.res_load);
-  cp->Insert(line);
-
-  sprintf(line,"VirtualMemory=%d",rp->res.res_memavail);
-  cp->Insert(line); 
-
-  sprintf(line,"Disk=%d",rp->res.res_diskavail);
-  cp->Insert(line); 
-  
-  sprintf(line,"KeyboardIdle=%d",rp->res.res_idle);
-  cp->Insert(line); 
-  
-  // ConsoleIdle cannot be determined on all platforms; thus, only
-  // advertise if it is not -1.
-  if ( rp->res.res_console_idle != -1 ) {
-  	sprintf(line,"ConsoleIdle=%d",rp->res.res_console_idle);
-  	cp->Insert(line); 
-  }
-  
-  // KFLOPS and MIPS are only conditionally computed; thus, only
-  // advertise them if we computed them.
-  if ( rp->res.res_kflops != 0 ) {
-	sprintf(line,"KFLOPS=%d",rp->res.res_kflops);
+	sprintf(line,"LoadAvg=%f",rp->res.res_load);
 	cp->Insert(line);
-  }
-  if ( rp->res.res_mips != 0 ) {
-	sprintf(line,"MIPS=%d",rp->res.res_mips);
-	cp->Insert(line);
-  }
 
-  return cp;
+	sprintf(line,"VirtualMemory=%d",rp->res.res_memavail);
+	cp->Insert(line); 
+
+	sprintf(line,"Disk=%d",rp->res.res_diskavail);
+	cp->Insert(line); 
+  
+	sprintf(line,"KeyboardIdle=%d",rp->res.res_idle);
+	cp->Insert(line); 
+  
+	// ConsoleIdle cannot be determined on all platforms; thus, only
+	// advertise if it is not -1.
+	if ( rp->res.res_console_idle != -1 ) {
+		sprintf(line,"ConsoleIdle=%d",rp->res.res_console_idle);
+		cp->Insert(line); 
+	}
+  
+	// KFLOPS and MIPS are only conditionally computed; thus, only
+	// advertise them if we computed them.
+	if ( rp->res.res_kflops != 0 ) {
+		sprintf(line,"KFLOPS=%d",rp->res.res_kflops);
+		cp->Insert(line);
+	}
+	if ( rp->res.res_mips != 0 ) {
+		sprintf(line,"MIPS=%d",rp->res.res_mips);
+		cp->Insert(line);
+	}
+
+	return cp;
 }
 
 int
@@ -415,11 +395,11 @@ cleanup_execute_dir()
 
 	if(strcmp("execute", execute) != 0) {
 		EXCEPT("EXECUTE parameter (%s) must end with 'execute'.\n",
-			exec_path);
+			   exec_path);
 	}
 
 	sprintf(buf, "/bin/rm -rf %.256s/condor_exec* %.256s/dir_*",
-		exec_path, exec_path);
+			exec_path, exec_path);
 	system(buf);
 }
 
@@ -434,11 +414,11 @@ exec_starter(char* starter, char* hostname, int main_sock, int err_sock)
 	sigset_t set;
 
 	/*
-	omask = sigblock(sigmask(SIGTSTP));
-	*/
+	  omask = sigblock(sigmask(SIGTSTP));
+	  */
 #if defined(Solaris)
 	if (sigprocmask(SIG_SETMASK,0,&set)  == -1)
-	{EXCEPT("Error in reading procmask, errno = %d\n", errno);}
+		{EXCEPT("Error in reading procmask, errno = %d\n", errno);}
 	for (i=0; i < MAXSIG; i++) block_signal(i);
 #else
 	omask = sigblock(-1);
@@ -449,11 +429,11 @@ exec_starter(char* starter, char* hostname, int main_sock, int err_sock)
 
 	if (pid) {	/* The parent */
 		/*
-		(void)sigblock(omask);
-		*/
+		  (void)sigblock(omask);
+		  */
 #if defined(Solaris)
 		if ( sigprocmask(SIG_SETMASK, &set, 0)  == -1 )
-		{EXCEPT("Error in setting procmask, errno = %d\n", errno);}
+			{EXCEPT("Error in setting procmask, errno = %d\n", errno);}
 #else
 		(void)sigsetmask(omask);
 #endif
@@ -461,10 +441,10 @@ exec_starter(char* starter, char* hostname, int main_sock, int err_sock)
 		(void)close(err_sock);
 
 		dprintf(D_ALWAYS,
-			"exec_starter( %s, %d, %d ) : pid %d\n",
-			hostname, main_sock, err_sock, pid);
+				"exec_starter( %s, %d, %d ) : pid %d\n",
+				hostname, main_sock, err_sock, pid);
 		dprintf(D_ALWAYS, "execl(%s, \"condor_starter\", %s, 0)\n",
-			starter, hostname);
+				starter, hostname);
 	} else {	/* the child */
 		/*
 		 * N.B. The child is born with TSTP blocked, so he can be
@@ -494,20 +474,12 @@ exec_starter(char* starter, char* hostname, int main_sock, int err_sock)
 		for(i = 3; i<n_fds; i++) {
 			(void) close(i);
 		}
-#ifdef NFSFIX
 		/*
 		 * Starter must be exec'd as root so it can change to client's
 		 * uid and gid.
 		 */
-		if (getuid() == 0)
-			set_root_euid();
-#endif NFSFIX
+		set_root_priv();
 		(void)execl(starter, "condor_starter", hostname, 0);
-#ifdef NFSFIX
-		/* Must be condor to write to log files. */
-		if (getuid() == 0)
-			set_condor_euid();
-#endif NFSFIX
 		EXCEPT( "execl(%s, condor_starter, %s, 0)", starter, hostname );
 	}
 	return pid;
@@ -539,7 +511,7 @@ event_vacate(resource_id_t rid, job_id_t jid,task_id_t tid)
 		vacate_client(rip->r_rid);
 
 	if (rip->r_pid == NO_PID || rip->r_pid == getpid()) {
-		dprintf(D_ALWAYS, "vacate: resource not allocated.\n");
+		dprintf(D_FULLDEBUG, "vacate: resource not allocated.\n");
 		return -1;
 	}
 
@@ -639,8 +611,6 @@ event_killjob(resource_id_t rid, job_id_t jid, task_id_t tid)
 		return -1;
 	}
 
-	// state change changed to NO_JOB, was CHECKPOINT prev (an
-	// error on th epart of prev person?) -> NA
 	resmgr_changestate(rip->r_rid, NO_JOB);
 
 	return kill_starter(rip->r_pid, SIGINT);
@@ -672,8 +642,8 @@ event_killall(resource_id_t rid, job_id_t jid, task_id_t tid)
 		return -1;
 	}
 
-	if (getuid() == 0)
-		set_root_euid();
+	set_root_priv();
+
 #if defined(HPUX9) || defined(LINUX) || defined(Solaris) || defined(OSF1)
 	if( kill(-getpgrp(),SIGKILL) < 0 ) {
 #else
@@ -696,28 +666,26 @@ static int
 kill_starter(int pid, int signo)
 {
 	struct stat st;
-	int ret = 0;
+	int 		ret = 0;
+	priv_state	priv;
 
 	dprintf(D_ALWAYS,"In kill_starter() with signo %d\n",signo);
 
 	for (errno = 0; (ret = stat(Starter, &st)) < 0; errno = 0) {
 		if (errno == ETIMEDOUT)
 			continue;
-		EXCEPT("kill_starter(%d, %d): cannot stat <%s> -- errno = %d\n",
-			pid, signo, Starter, errno);
+		EXCEPT("kill_starter(%d, %d): cannot stat <%s> - errno = %d\n",
+			   pid, signo, Starter, errno);
 	}
 
-#ifdef NFSFIX
-	if (getuid() == 0)
-		set_root_euid();
-#endif
+	priv = set_root_priv();
+
 	if (signo != SIGSTOP && signo != SIGCONT)
 		ret = kill(pid, SIGCONT);
 	ret = kill(pid, signo);
-#ifdef NFSFIX
-	if (getuid() == 0)
-		set_condor_euid();
-#endif
+
+	set_priv(priv);
+
 	return ret;
 }
 
@@ -732,14 +700,14 @@ kill_starter(int pid, int signo)
 #endif
 
 #if defined(OSF1)
-	static char *UtmpName = "/var/adm/utmp";
-	static char *AltUtmpName = "/etc/utmp";
+static char *UtmpName = "/var/adm/utmp";
+static char *AltUtmpName = "/etc/utmp";
 #elif defined(LINUX)
-	static char *AltUtmpName = "/var/run/utmp";
-	static char *UtmpName = "/var/adm/utmp";
+static char *AltUtmpName = "/var/run/utmp";
+static char *UtmpName = "/var/adm/utmp";
 #else
-	static char *UtmpName = "/etc/utmp";
-	static char *AltUtmpName = "/var/adm/utmp";
+static char *UtmpName = "/etc/utmp";
+static char *AltUtmpName = "/var/adm/utmp";
 #endif
 
 /* calc_idle_time fills in user_idle and console_idle with the number
@@ -766,7 +734,7 @@ calc_idle_time(resource_info_t* rip, int & user_idle, int & console_idle)
 	console_idle = -1;  // initialize
 
 	if (oldval != 0 && (rip == NULL || rip->r_state != JOB_RUNNING) &&
-	    ++kbdd_counter != polls_per_update_kbdd) {
+		++kbdd_counter != polls_per_update_kbdd) {
 		user_idle = oldval;
 		console_idle = console_oldval;
 		return;
@@ -780,7 +748,7 @@ calc_idle_time(resource_info_t* rip, int & user_idle, int & console_idle)
 		user_idle = MIN(tty_idle, user_idle);
 		console_idle = tty_idle;
 		dprintf(D_FULLDEBUG, "/dev/%s idle %d seconds\n",
-			kbd_dev, tty_idle);
+				kbd_dev, tty_idle);
 	}
 
 	if (mouse_dev) {
@@ -789,7 +757,7 @@ calc_idle_time(resource_info_t* rip, int & user_idle, int & console_idle)
 		if (console_idle != -1)
 			console_idle = MIN(tty_idle, console_idle);
 		dprintf(D_FULLDEBUG, "/dev/%s idle %d seconds\n", mouse_dev,
-			tty_idle);
+				tty_idle);
 	}
 /*
 ** On HP's "/dev/hil1" - "/dev/hil7" are mapped to input devices such as
@@ -808,7 +776,7 @@ calc_idle_time(resource_info_t* rip, int & user_idle, int & console_idle)
 			console_idle = MIN(tty_idle, console_idle);
 
 		dprintf(D_FULLDEBUG, "%s idle %d seconds\n", devname, tty_idle);
-        }
+	}
 	tty_idle = tty_idle_time("ps2kbd");
 	console_idle = MIN(tty_idle, console_idle);
 	tty_idle = tty_idle_time("ps2mouse");
@@ -834,11 +802,12 @@ calc_idle_time(resource_info_t* rip, int & user_idle, int & console_idle)
 
 	/* if Last_X_Event != 0, then condor_kbdd told us someone did something
 	 * on the console. but always believe a /dev device over the kbdd */
-	 if ( (console_idle == -1) && (Last_X_Event != 0) ) {
-		 console_idle = now - Last_X_Event;
-	 }
+	if ( (console_idle == -1) && (Last_X_Event != 0) ) {
+		console_idle = now - Last_X_Event;
+	}
 
-	dprintf(D_FULLDEBUG, "Idle Time: user= %d , console= %d seconds\n", user_idle,console_idle);
+	dprintf(D_FULLDEBUG, "Idle Time: user= %d , console= %d seconds\n",
+			user_idle,console_idle);
 	oldval = user_idle;
 	console_oldval = console_idle;
 	return;
@@ -867,9 +836,9 @@ tty_pty_idle_time()
 #if defined(AIX31) || defined(AIX32) || defined(IRIX331) || defined(IRIX53) || defined(LINUX)
 		if (utmp.ut_type != USER_PROCESS)
 #else
-		if (utmp.ut_name[0] == '\0')
+			if (utmp.ut_name[0] == '\0')
 #endif
-			continue;
+				continue;
 
 		tty_idle = tty_idle_time(utmp.ut_line);
 		answer = MIN(tty_idle, answer);
@@ -878,18 +847,18 @@ tty_pty_idle_time()
 
 	/* Here we check to see if we are about to return INT_MAX.  If so,
 	 * we recompute via the last pty access we knew about.  -Todd, 2/97 */
-	 now = (int)time( (time_t *)0 );
-	 if ( (answer == INT_MAX) && ( saved_idle_answer != -1 ) ) {
-		 answer = (now - saved_now) + saved_idle_answer;
-		 if ( answer < 0 )
-			 answer = 0; /* someone messed with the system date */
-	 } else {
-		 if ( answer != INT_MAX ) {
-			 /* here we are returning an answer we discovered; save it */
-			 saved_idle_answer = answer;
-			 saved_now = now;
-		 }
-	 }
+	now = (int)time( (time_t *)0 );
+	if ( (answer == INT_MAX) && ( saved_idle_answer != -1 ) ) {
+		answer = (now - saved_now) + saved_idle_answer;
+		if ( answer < 0 )
+			answer = 0; /* someone messed with the system date */
+	} else {
+		if ( answer != INT_MAX ) {
+			/* here we are returning an answer we discovered; save it */
+			saved_idle_answer = answer;
+			saved_now = now;
+		}
+	}
 
 	return answer;
 }
@@ -906,7 +875,7 @@ tty_idle_time(char* file)
 	strcpy( &pathname[5], file );
 	if (stat(pathname,&buf) < 0) {
 		dprintf( D_FULLDEBUG, "Error on stat(%s,0x%x), errno = %d\n",
-			pathname, &buf, errno );
+				 pathname, &buf, errno );
 		buf.st_atime = 0;
 	}
 
@@ -925,108 +894,105 @@ tty_idle_time(char* file)
 
 static void init_static_info(resource_info_t* rip)
 {
-  char	*ptr;
-  char	*host_cell;
-  char	*addrname;
-  char tmp[80];
-  int phys_memory = -1;
-  ClassAd* config_context = rip->r_context;
-  struct sockaddr_in sin;
-  int len = sizeof sin;
+	char	*ptr;
+	char	*host_cell;
+	char	*addrname;
+	char tmp[80];
+	int phys_memory = -1;
+	ClassAd* config_context = rip->r_context;
+	struct sockaddr_in sin;
+	int len = sizeof sin;
   
-  sprintf(tmp,"Name=\"%s\"",rip->r_name);
-  config_context->Insert(tmp);
+	sprintf(tmp,"Name=\"%s\"",rip->r_name);
+	config_context->Insert(tmp);
   
-  host_cell = get_host_cell();
-  if(host_cell)
-  {
-    sprintf(tmp,"AFS_CELL=\"%s\"",host_cell);
-    config_context->Insert(tmp);
-    dprintf(D_ALWAYS, "AFS_Cell = \"%s\"\n", host_cell);
-  }
-  else
-  {
-    dprintf(D_ALWAYS, "AFS_Cell not set\n");
-  }
+	host_cell = get_host_cell();
+	if(host_cell)
+		{
+			sprintf(tmp,"AFS_CELL=\"%s\"",host_cell);
+			config_context->Insert(tmp);
+			dprintf(D_ALWAYS, "AFS_Cell = \"%s\"\n", host_cell);
+		}
+	else
+		{
+			dprintf(D_ALWAYS, "AFS_Cell not set\n");
+		}
   
-  /*
-   * If the uid domain is not defined, accept uid's only from this
-   * machine.
-   */
-  if ((ptr = param("UID_DOMAIN")) == NULL) 
-  {
-    ptr = get_full_hostname();
-  }
+	/*
+	 * If the uid domain is not defined, accept uid's only from this
+	 * machine.
+	 */
+	if ((ptr = param("UID_DOMAIN")) == NULL) 
+		{
+			ptr = get_full_hostname();
+		}
   
-  /*
-   * If the uid domain is defined as "*", accept uid's from anybody.
-   */
-  if( ptr[0] == '*' ) 
-  {
-    ptr = "";
-  }
+	/*
+	 * If the uid domain is defined as "*", accept uid's from anybody.
+	 */
+	if( ptr[0] == '*' ) 
+		{
+			ptr = "";
+		}
 
-  dprintf(D_ALWAYS, "UidDomain = \"%s\"\n", ptr);
+	dprintf(D_ALWAYS, "UidDomain = \"%s\"\n", ptr);
   
-  sprintf(tmp,"UidDomain=\"%s\"",ptr);
-  config_context->Insert(tmp);
+	sprintf(tmp,"UidDomain=\"%s\"",ptr);
+	config_context->Insert(tmp);
   
-  /*
-   * If the filesystem domain is not defined, we share files only
-   * with our own machine.
-   */
-  if ((ptr = param("FILESYSTEM_DOMAIN")) == NULL) 
-  {
-    ptr = get_full_hostname();
-  }
+	/*
+	 * If the filesystem domain is not defined, we share files only
+	 * with our own machine.
+	 */
+	if ((ptr = param("FILESYSTEM_DOMAIN")) == NULL) 
+		{
+			ptr = get_full_hostname();
+		}
   
-  /*
-   * If the filesystem domain is defined as "*", assume we share
-   * files with everybody.
-   */
-  if( ptr[0] == '*' )
-    ptr = "";
+	/*
+	 * If the filesystem domain is defined as "*", assume we share
+	 * files with everybody.
+	 */
+	if( ptr[0] == '*' )
+		ptr = "";
   
-  sprintf(tmp,"FilesystemDomain=\"%s\"",ptr);
-  config_context->Insert(tmp);
-  dprintf(D_ALWAYS, "FilesystemDomain = \"%s\"\n", tmp);
+	sprintf(tmp,"FilesystemDomain=\"%s\"",ptr);
+	config_context->Insert(tmp);
+	dprintf(D_ALWAYS, "FilesystemDomain = \"%s\"\n", tmp);
   
-  sprintf(tmp,"Cpus=%d",calc_ncpus());
-  config_context->Insert(tmp);
+	sprintf(tmp,"Cpus=%d",calc_ncpus());
+	config_context->Insert(tmp);
   
 	
-  /*
-   * NEST has nothing to do with the filesystem, but we set it here
-   * instead of in update_central_manager() because it only needs 
-   * to run at startup and at a reconfig (i.e. a HUP signal)
-   * XXX
-   */
+	/*
+	 * NEST has nothing to do with the filesystem, but we set it here
+	 * instead of in update_central_manager() because it only needs 
+	 * to run at startup and at a reconfig (i.e. a HUP signal)
+	 * XXX
+	 */
   
-  if(param("NEST"))
-    strcpy(tmp,param("NEST"));
-  else
-    strcpy(tmp,"NOTSET");
-  config_context->Insert(tmp);
-  dprintf(D_ALWAYS, "Nest = \"%s\"\n", tmp);
+	if(param("NEST"))
+		strcpy(tmp,param("NEST"));
+	else
+		strcpy(tmp,"NOTSET");
+	config_context->Insert(tmp);
+	dprintf(D_ALWAYS, "Nest = \"%s\"\n", tmp);
   
-  if (getuid() == 0)
-    set_root_euid();
-  phys_memory = calc_phys_memory();
-  if (getuid() == 0)
-    set_condor_euid();
-  if (phys_memory > 0) 
-  {
-    sprintf(tmp,"Memory=%d",phys_memory);
-    config_context->Insert(tmp);
-  }
+	phys_memory = calc_phys_memory();
+
+	if (phys_memory > 0) 
+		{
+			sprintf(tmp,"Memory=%d",phys_memory);
+			config_context->Insert(tmp);
+		}
   
-  addrname = (char *)malloc(32);
-  getsockname(rip->r_sock, (struct sockaddr *)&sin, &len);
-  get_inet_address(&sin.sin_addr);
-  strcpy(addrname, sin_to_string(&sin));
+	addrname = (char *)malloc(32);
+	getsockname(rip->r_sock, (struct sockaddr *)&sin, &len);
+	get_inet_address(&sin.sin_addr);
+	strcpy(addrname, sin_to_string(&sin));
   
-  sprintf(tmp,"%s=\"%s\"",(char *)ATTR_STARTD_IP_ADDR,addrname);
-  config_context->Insert(tmp);
+	sprintf(tmp,"%s=\"%s\"",(char *)ATTR_STARTD_IP_ADDR,addrname);
+	config_context->Insert(tmp);
 }
 
 static char *
@@ -1036,17 +1002,17 @@ get_full_hostname()
 	char this_host[MAX_STRING];
 	struct hostent *host_ptr;
 
-		/* determine our own host name */
+	/* determine our own host name */
 	if (gethostname(this_host,MAX_STRING) < 0) {
 		EXCEPT("gethostname");
 	}
 
-		/* Look up out official host information */
+	/* Look up out official host information */
 	if ((host_ptr = gethostbyname(this_host)) == NULL) {
 		EXCEPT("gethostbyname");
 	}
 
-		/* copy out the official hostname */
+	/* copy out the official hostname */
 	strcpy(answer, host_ptr->h_name);
 
 	return answer;
@@ -1081,7 +1047,7 @@ calc_ncpus()
 	}
 
 	while (eng--) {
-        	if( tmp_ctl(TMP_QUERY,eng) == TMP_ENG_ONLINE )
+		if( tmp_ctl(TMP_QUERY,eng) == TMP_ENG_ONLINE )
 			cpus++;
 	}
 	return cpus;

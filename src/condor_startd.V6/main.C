@@ -33,6 +33,7 @@
 #include "expr.h"
 #include "clib.h"
 #include "util_lib_proto.h"
+#include "condor_uid.h"
 
 #include "resource.h"
 #include "resmgr.h"
@@ -61,8 +62,6 @@ char		*spool_path=NULL;
 char		*exec_path=NULL;
 char		*mail_path=NULL;
 char		*AccountantHost=NULL;
-extern char	*uptime_path;
-extern	char	*pstat_path;
 
 /*
  * Hosts.
@@ -107,6 +106,7 @@ int coll_sock, intcp_sock, inudp_sock;
 extern char *get_host_cell();
 
 extern void event_sigint(int);
+extern void event_sigquit(int);
 extern void event_sighup(int);
 extern void event_sigterm(int);
 extern void event_sigchld(int);
@@ -129,9 +129,10 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
-
 	MyName = argv[0];
-	// MyName is now 'startd' or 'startd_t'
+
+	// run as condor.condor at all times unless root privilege is needed
+	set_condor_priv();
 
 	while (*++argv) {
 		if (*argv[0] != '-') {
@@ -150,9 +151,6 @@ int main(int argc, char** argv)
 			exit(1);
 		}
 	}
-
-	if (getuid() == 0)
-		set_condor_euid();
 
 	// build the classAd, create a hash table
 
@@ -196,6 +194,7 @@ int main(int argc, char** argv)
 	 * XXX Use DaemonCore for signal handling.
 	 */
 	install_sig_handler(SIGINT, event_sigint);
+	install_sig_handler(SIGQUIT, event_sigquit);
 	install_sig_handler(SIGHUP, event_sighup);
 	install_sig_handler(SIGTERM, event_sigterm);
 	install_sig_handler(SIGCHLD, event_sigchld);
