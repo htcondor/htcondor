@@ -240,7 +240,7 @@ object_dir_target(condor_shadow.V6.1)
 object_dir_target(condor_starter.V6.1)
 object_dir_target(html)
 object_dir_target(condor_bypass)
-object_dir_target(globus)
+object_dir_target(condor_globus)
 
 single_target(condor_schedd.V6, libqmgmt.a)
 single_target(condor_accountant.V6, libacct.a)
