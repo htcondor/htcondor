@@ -21,14 +21,9 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
+#ifndef _CONDOR_TYPES_H
+#define _CONDOR_TYPES_H
 
-
-#ifndef CONDOR_TYPES_INCLUDED
-#define CONDOR_TYPES_INCLUDED
-
-
-#include "condor_expressions.h"
 #include "condor_getmnt.h"
 
 #if !defined(AIX31) && !defined(AIX32)
@@ -85,4 +80,4 @@ typedef char * caddr_t;
 #include "proc.h"
 #include "condor_status.h"
 
-#endif
+#endif /* _CONDOR_TYPES_H */
