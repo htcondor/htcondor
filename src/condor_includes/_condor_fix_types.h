@@ -21,12 +21,9 @@
 typedef int		bool_t;
 #endif
 
-/* undefine _POSIX_SOURCE temporarily on suns so u_int & friends get defined */
+/* define __EXTENSIONS__ on suns so u_int & friends get defined */
 #if defined(Solaris) || defined(SUNOS41)
-#if defined(_POSIX_SOURCE)
-#define HOLD_POSIX_SOURCE
-#undef _POSIX_SOURCE
-#endif /* _POSIX_SOURCE */
+#define __EXTENSIONS__
 #endif /* Solaris */
 
 /* for IRIX62, we want _BSD_TYPES defined when we include sys/types.h, but
@@ -44,9 +41,6 @@ typedef int		bool_t;
 
 #include <sys/types.h>
 
-#if defined(Solaris) && defined(HOLD_POSIX_SOURCE)
-#define _POSIX_SOURCE
-#endif
 
 #if defined(OSF1) && !defined(__GNUC__)
 #undef off_t
@@ -71,7 +65,7 @@ need these extra definitions...
 #	define HAS_U_TYPES
 #endif
 
-#if !defined(HAS_U_TYPES)  /*  || defined(Solaris)   */
+#if !defined(HAS_U_TYPES)
 	typedef unsigned int u_int;
 	typedef unsigned char   u_char;
 	typedef unsigned short  u_short;
