@@ -15,3 +15,4 @@ library_target( libcondor.a,$(OBJ))
 
 tags_target($(SRC),$(NULL))
 depend_target($(SRC))
+release:
