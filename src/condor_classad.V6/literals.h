@@ -41,7 +41,7 @@ class Literal : public ExprTree
         Literal(const Literal &literal);
 
         /// Assignment operator
-        virtual Literal &operator=(const Literal &literal);
+        Literal &operator=(const Literal &literal);
 
 		/** Create an absolute time literal.
 		 * 	@param now The time in UNIX epoch.  If a value of NULL is passed in
@@ -83,11 +83,7 @@ class Literal : public ExprTree
 		static Literal* MakeReal(std::string realstr);
 
 		/// Make a deep copy
-#ifdef USE_COVARIANT_RETURN_TYPES
-		virtual Literal* Copy( ) const;
-#else
 		virtual ExprTree* Copy( ) const;
-#endif
 
         void CopyFrom(const Literal &literal);
 

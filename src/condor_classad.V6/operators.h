@@ -170,11 +170,7 @@ class Operation : public ExprTree
 		static int PrecedenceLevel( OpKind );
 
 		/// Make a deep copy of the expression
-#ifdef USE_COVARIANT_RETURN_TYPES
-		virtual Operation* Copy( ) const;
-#else
 		virtual ExprTree* Copy( ) const;
-#endif
 
         bool CopyFrom(const Operation &op);
 

@@ -64,11 +64,7 @@ operator=(const Operation &op)
     return *this;
 }
 
-#ifdef USE_COVARIANT_RETURN_TYPES
-Operation *Operation::
-#else
 ExprTree *Operation::
-#endif
 Copy( ) const
 {
 	Operation *newTree = new Operation ();
@@ -97,8 +93,7 @@ CopyFrom(const Operation &op)
         success = false;
 	} else {
         operation   = op.operation;
-        nodeKind    = op.nodeKind;
-        parentScope = op.parentScope;
+        ExprTree::CopyFrom(op);
     }
 
     if (success == false) {

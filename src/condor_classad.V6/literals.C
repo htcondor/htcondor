@@ -58,11 +58,7 @@ operator=(const Literal &literal)
     return *this;
 }
 
-#ifdef USE_COVARIANT_RETURN_TYPES
-Literal *Literal::
-#else
 ExprTree *Literal::
-#endif
 Copy( ) const
 {
 	Literal *newTree = new Literal;
@@ -79,10 +75,8 @@ Copy( ) const
 void Literal::
 CopyFrom(const Literal &literal)
 {
+    ExprTree::CopyFrom(literal);
     value.CopyFrom(literal.value);
-    nodeKind    = literal.nodeKind;
-    parentScope = literal.parentScope;
-    factor      = literal.factor;
     return;
 }
 
@@ -101,7 +95,6 @@ MakeReal(string number_string)
 	}
 	return MakeLiteral(val);
 }
-
 
 Literal* Literal::
 MakeAbsTime( abstime_t *tim )
