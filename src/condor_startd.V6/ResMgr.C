@@ -40,6 +40,8 @@ ResMgr::ResMgr()
 
 	nresources = 0;
 	resources = NULL;
+	type_nums = NULL;
+	new_type_nums = NULL;
 }
 
 
@@ -61,13 +63,16 @@ ResMgr::~ResMgr()
 		}
 		delete [] resources;
 	}
-	for( i=0; i<=max_types; i++ ) {
+	for( i=0; i<max_types; i++ ) {
 		if( type_strings[i] ) {
 			delete type_strings[i];
 		}
 	}
 	delete [] type_strings;
 	delete [] type_nums;
+	if( new_type_nums ) {
+		delete [] new_type_nums;
+	}		
 }
 
 
@@ -83,22 +88,22 @@ ResMgr::init_config_classad()
 void
 ResMgr::init_resources()
 {
-	int i, j, num;
+	int i;
 	char *tmp;
 	CpuAttributes** new_cpu_attrs;
 
 		// These things can only be set once, at startup, so they
 		// don't need to be in build_cpu_attrs() at all.
 	if( (tmp = param("MAX_VIRTUAL_MACHINE_TYPES")) ) {
-		max_types = atoi( tmp );
+		max_types = atoi( tmp ) + 1;
 		free( tmp );
 	} else {
-		max_types = 10;
+		max_types = 11;
 	}
 		// The reason this isn't on the stack is b/c of the variable
 		// nature of max_types. *sigh*  
-	type_strings = new StringList*[max_types+1];
-	memset( type_strings, 0, (sizeof(StringList*) * max_types+1) );
+	type_strings = new StringList*[max_types];
+	memset( type_strings, 0, (sizeof(StringList*) * max_types) );
 
 		// Fill in the type_strings array with all the appropriate
 		// string lists for each type definition.  This only happens
@@ -125,7 +130,7 @@ ResMgr::init_resources()
 	}
 
 		// We can now seed our IdDispenser with the right VM id. 
-	id_disp = new IdDispenser( i+1 );
+	id_disp = new IdDispenser( num_cpus() + 1, i+1 );
 
 		// Finally, we can free up the space of the new_cpu_attrs
 		// array itself, now that all the objects it was holding that
@@ -136,12 +141,20 @@ ResMgr::init_resources()
 }
 
 
-void
+bool
 ResMgr::reconfig_resources()
 {
-	int i, diff, num = 0;
-	int *new_type_nums;
+	int t, i, cur, num;
+	int cur_type_index[max_types];
 	CpuAttributes** new_cpu_attrs;
+	int max_num = num_cpus();
+	Resource* sorted_resources[max_types][max_num];
+	Resource* rip;
+
+		// Initialize
+	memset( cur_type_index, 0, (max_types*sizeof(int)) );
+	memset( sorted_resources[0], 0, 
+			(max_num*max_types*sizeof(Resource*)) );
 
 		// See if any new types were defined.  Don't except if there's
 		// any errors, just dprintf().
@@ -153,26 +166,91 @@ ResMgr::reconfig_resources()
 	if( typeNumCmp(new_type_nums, type_nums) ) {
 			// We want the same number of each VM type that we've got
 			// now.  We're done!
-		return;
+		delete [] new_type_nums;
+		new_type_nums = NULL;
+		return true;
 	}
 
-	for( i=0; i<=max_types; i++ ) {
-		diff = new_type_nums[i] - type_nums[i];
-		if( diff > 0 ) {
-				// More of this type requested than we already have.
-				// We need to make some new VMs of this type.
-		} else if ( diff < 0 ) {
-				// We want less of this type than we have now.  We
-				// need to evict some and free up the resources. 
-		} else {
-				// No change
+		// See if the config file allows for a valid set of
+		// CpuAttributes objects.  
+	new_cpu_attrs = buildCpuAttrs( num, new_type_nums, false );
+	if( ! new_cpu_attrs ) {
+			// There was an error, abort.  We still return true to
+			// indicate that we're done doing our thing...
+		delete [] new_type_nums;
+		new_type_nums = NULL;
+		return true;
+	}
+
+		////////////////////////////////////////////////////
+		// Sort all our resources by type and state.
+		////////////////////////////////////////////////////
+
+		// Populate our sorted_resources array by type.
+	for( i=0; i<nresources; i++ ) {
+		t = resources[i]->type();
+		sorted_resources[t][cur_type_index[t]] = resources[i];
+		cur_type_index[t]++;
+	}
+	
+		// Now, for each type, sort our resources by state.
+	for( t=0; t<max_types; t++ ) {
+		assert( cur_type_index[t] == type_nums[t] );
+		qsort( &sorted_resources[t], type_nums[t], 
+			   sizeof(Resource*), &claimedRankCmp );
+	}
+
+		////////////////////////////////////////////////////
+		// Decide what we need to do.
+		////////////////////////////////////////////////////
+	cur = -1;
+	for( t=0; t<max_types; t++ ) {
+		for( i=0; i<new_type_nums[t]; i++ ) {
+			cur++;
+			if( ! sorted_resources[t][i] ) {
+					// If there are no more existing resources of this
+					// type, we'll need to allocate one.
+				alloc_list.Append( new_cpu_attrs[cur] );
+				continue;
+			}
+			if( sorted_resources[t][i]->type() ==
+				new_cpu_attrs[cur]->type() ) {
+					// We've already got a Resource for this VM, so we
+					// can delete it.
+				delete new_cpu_attrs[cur];
+				continue;
+			}
+		}
+			// We're done with the new VMs of this type.  See if there
+			// are any Resources left over that need to be destroyed.
+		for( ; i<max_num; i++ ) {
+			if( sorted_resources[t][i] ) {
+				destroy_list.Append( sorted_resources[t][i] );
+			} else {
+				break;
+			}
 		}
 	}
 
-		// Now, sort our resources by type, to see what we have.
-	resource_sort( vm_type_cmp );
-}
+		////////////////////////////////////////////////////
+		// Finally, act on our decisions.
+		////////////////////////////////////////////////////
 
+		// Everything we care about in new_cpu_attrs is saved
+		// elsewhere, and the rest has already been deleted, so we
+		// should now delete the array itself. 
+	delete [] new_cpu_attrs;
+
+		// See if there's anything to destroy, and if so, do it. 
+	destroy_list.Rewind();
+	while( destroy_list.Next(rip) ) {
+		rip->set_destination_state( delete_state );
+	}
+
+		// Finally, call our helper, so that if all the VMs we need to
+		// get rid of are gone by now, we'll allocate the new ones. 
+	return processAllocList();
+}
 
 
 CpuAttributes** 
@@ -181,8 +259,6 @@ ResMgr::buildCpuAttrs( int total, int* type_num_array, bool except )
 	int i, j, num;
 	CpuAttributes* cap;
 	CpuAttributes** cap_array;
-	float share;
-	char* tmp;
 
 		// Available system resources.
 	AvailAttributes avail( m_attr );
@@ -193,7 +269,7 @@ ResMgr::buildCpuAttrs( int total, int* type_num_array, bool except )
 	}
 
 	num = 0;
-	for( i=0; i<=max_types; i++ ) {
+	for( i=0; i<max_types; i++ ) {
 		if( type_num_array[i] ) {
 			currentVMType = i;
 			for( j=0; j<type_num_array[i]; j++ ) {
@@ -274,7 +350,7 @@ ResMgr::countTypes( int** array_ptr, bool except )
 	int i, num=0, num_set=0;
 	char* tmp;
 	char buf[128];
-	int* new_type_nums = new int[max_types+1];
+	int* new_type_nums = new int[max_types];
 
 	if( ! array_ptr ) {
 		EXCEPT( "ResMgr:countTypes() called with NULL array_ptr!" );
@@ -292,7 +368,7 @@ ResMgr::countTypes( int** array_ptr, bool except )
 		}
 	}
 
-	for( i=1; i<=max_types; i++ ) {
+	for( i=1; i<max_types; i++ ) {
 		new_type_nums[i] = 0;
 		sprintf( buf, "NUM_VIRTUAL_MACHINES_TYPE_%d", i );
 		if( (tmp = param(buf)) ) {
@@ -327,7 +403,7 @@ bool
 ResMgr::typeNumCmp( int* a, int* b )
 {
 	int i;
-	for( i=0; i<=max_types; i++ ) {
+	for( i=0; i<max_types; i++ ) {
 		if( a[i] != b[i] ) {
 			return false;
 		}
@@ -753,8 +829,8 @@ ResMgr::get_by_any_cap( char* cap )
 		if( resources[i]->r_cur->cap()->matches(cap) ) {
 			return resources[i];
 		}
-		if( (resources[i]->r_pre) &&
-			(resources[i]->r_pre->cap()->matches(cap)) ) {
+		if( resources[i]->r_pre &&
+			resources[i]->r_pre->cap()->matches(cap) ) {
 			return resources[i];
 		}
 	}
@@ -928,7 +1004,7 @@ ResMgr::compute( amask_t how_much )
 		// average and keyboard activity, we get to them in the
 		// following state order: Owner, Unclaimed, Matched, Claimed
 		// Preempting 
-	resource_sort( owner_state_cmp );
+	resource_sort( ownerStateCmp );
 
 	assign_load();
 	assign_keyboard();
@@ -1094,56 +1170,209 @@ ResMgr::reset_timers()
 }
 
 
+void
+ResMgr::deleteResource( Resource* rip )
+{
+		// First, find the rip in the resources array:
+	int i, j, dead = -1;
+	Resource** new_resources = NULL;
+	Resource* rip2;
+
+	for( i = 0; i < nresources; i++ ) {
+		if( resources[i] == rip ) {
+			dead = i;
+			break;
+		}
+	}
+	if( dead < 0 ) {
+			// Didn't find it.
+		dprintf( D_ALWAYS,
+				 "ResMgr::deleteResource() failed: couldn't find resource\n" );
+		return;
+	}
+
+	if( nresources > 1 ) {
+			// There are still more resources after this one is
+			// deleted, so we'll need to make a new resources array
+			// without this resource. 
+		new_resources = new Resource* [ nresources - 1 ];
+		j = 0;
+		for( i = 0; i < nresources; i++ ) {
+			if( i == dead ) {
+				continue;
+			} 
+			new_resources[j++] = resources[i];
+		}
+	}
+
+		// Remove this rip from our destroy_list.
+	destroy_list.Rewind();
+	while( destroy_list.Next(rip2) ) {
+		if( rip2 == rip ) {
+			destroy_list.DeleteCurrent();
+			break;
+		}
+	}
+
+		// Now, delete the old array and start using the new one.  
+	delete [] resources;
+	resources = new_resources;
+	nresources--;
+	
+		// Return this Resource's ID to the dispenser.
+	id_disp->insert( rip->r_id );
+
+		// At last, we can delete the object itself.
+	delete rip;
+
+		// Now that a Resource is gone, see if we're done deleting
+		// Resources and see if we should allocate any. 
+	if( processAllocList() ) {
+			// We're done allocating, so we can finish our reconfig. 
+		finish_main_config();
+	}
+}
+
+
+bool
+ResMgr::processAllocList( void )
+{
+	if( ! destroy_list.IsEmpty() ) {
+			// Can't start allocating until everything has been
+			// destroyed.
+		return false;
+	}
+	if( alloc_list.IsEmpty() ) {
+		return true;  // Since there's nothing to allocate...
+	}
+
+		// We're done destroying, and there's something to allocate.  
+	int i, new_size, new_num = alloc_list.Number();
+	new_size = nresources + new_num;
+	Resource** new_resources = new Resource* [ new_size ];
+	CpuAttributes* cap;
+
+		// Copy over the old Resource pointers.
+	memcpy( (void*)new_resources, (void*)resources, 
+			(sizeof(Resource*)*nresources) );
+
+		// Create the new Resource objects.
+	alloc_list.Rewind();
+	for( i=nresources; i<new_size; i++ ) {
+		alloc_list.Next(cap);
+		new_resources[i] = new Resource( cap, id_disp->next() );
+		alloc_list.DeleteCurrent();
+	}	
+
+		// Switch over to new_resources:
+	delete [] resources;
+	resources = new_resources;
+	nresources = new_size;
+	delete [] type_nums;
+	type_nums = new_type_nums;
+	new_type_nums = NULL;
+
+	return true; 	// Since we're done allocating.
+}
+
+
 int
-owner_state_cmp( const void* a, const void* b )
+ownerStateCmp( const void* a, const void* b )
 {
 	Resource *rip1, *rip2;
-	int val1, val2;
+	int val1, val2, diff;
+	float fval1, fval2;
+	State s;
 	rip1 = *((Resource**)a);
 	rip2 = *((Resource**)b);
 		// Since the State enum is already in the "right" order for
 		// this kind of sort, we don't need to do anything fancy, we
 		// just cast the state enum to an int and we're done.
-	val1 = (int)rip1->state();
+	s = rip1->state();
+	val1 = (int)s;
 	val2 = (int)rip2->state();
-	return val1 - val2;
+	diff = val1 - val2;
+	if( diff ) {
+		return diff;
+	}
+		// We're still here, means we've got the same state.  If that
+		// state is "Claimed" or "Preempting", we want to break ties
+		// w/ the Rank expression, else, don't worry about ties.
+	if( s == claimed_state || s == preempting_state ) {
+		fval1 = rip1->r_cur->rank();
+		fval2 = rip2->r_cur->rank();
+		diff = (int)(fval1 - fval2);
+		return diff;
+	} 
+	return 0;
 }
 
 
+// This is basically the same as above, except we want it in exactly
+// the opposite order, so reverse the signs.
 int
-vm_type_cmp( const void* a, const void* b )
+claimedRankCmp( const void* a, const void* b )
 {
 	Resource *rip1, *rip2;
+	int val1, val2, diff;
+	float fval1, fval2;
+	State s;
 	rip1 = *((Resource**)a);
 	rip2 = *((Resource**)b);
-		// Since we just want to sort on the resource type, which is
-		// an integer, we don't need to do anything fancy. 
-	return( rip1->type() - rip2->type() );
+
+	s = rip1->state();
+	val1 = (int)s;
+	val2 = (int)rip2->state();
+	diff = val2 - val1;
+	if( diff ) {
+		return diff;
+	}
+		// We're still here, means we've got the same state.  If that
+		// state is "Claimed" or "Preempting", we want to break ties
+		// w/ the Rank expression, else, don't worry about ties.
+	if( s == claimed_state || s == preempting_state ) {
+		fval1 = rip1->r_cur->rank();
+		fval2 = rip2->r_cur->rank();
+		diff = (int)(fval2 - fval1);
+		return diff;
+	} 
+	return 0;
 }
 
 
-IdDispenser::IdDispenser( int seed )
+
+
+IdDispenser::IdDispenser( int size, int seed ) :
+	free_ids(size)
 {
-	set.Add( seed );
+	int i;
+	free_ids.setFiller(true);
+	free_ids.fill(true);
+	for( i=0; i<seed; i++ ) {
+		free_ids[i] = false;
+	}
 }
 
 
 int
 IdDispenser::next()
 {
-	int id;
-	set.StartIterations();
-	set.Iterate( id );
-	set.RemoveLast();
-	set.Add( id+1 );
-	return id;
+	int i;
+	for( i=1 ; ; i++ ) {
+		if( free_ids[i] ) {
+			free_ids[i] = false;
+			return i;
+		}
+	}
 }
 
 
 void
 IdDispenser::insert( int id )
 {
-	set.Add( id );
+	if( free_ids[id] ) {
+		EXCEPT( "IdDispenser::insert: %d is already free", id );
+	}
+	free_ids[id] = true;
 }
-
 
