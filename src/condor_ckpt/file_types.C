@@ -14,7 +14,7 @@
 // XXX Where is the header for this?
 extern "C" int syscall( int kind, ... );
 
-void file_warning( char *format, ... )
+extern "C" void file_warning( char *format, ... )
 {
 	va_list	args;
 	va_start(args,format);
@@ -30,6 +30,10 @@ void file_warning( char *format, ... )
 	va_end(args);
 }
 
+extern "C" void __pure_virtual()
+{
+}
+
 void File::dump() {
 	dprintf(D_ALWAYS,
 		"rfd: %d r: %d w: %d size: %d users: %d kind: '%s' name: '%s'",
@@ -43,62 +47,29 @@ int File::illegal( char *op )
 	return -1;
 }
 
-int File::fstat( struct stat *buf )
-{
-	return illegal("fstat");
-}
-
-int File::ioctl( int cmd, int arg )
-{
-	return illegal("ioctl");
-}
-
-int File::flock( int op )
-{
-	return illegal("flock");
-}
-
-int File::fstatfs( struct statfs *buf )
-{
-	return illegal("fstatfs");
-}
-
-int File::fchown( uid_t owner, gid_t group )
-{
-	return illegal("fchown");
-}
-
-int File::fchmod( mode_t mode )
-{
-	return illegal("fchmod");
-}
-
-int File::ftruncate( size_t length )
-{
-	return illegal("ftruncate");
-}
-
-int File::fsync()
-{
-	return illegal("fsync");
-}
-
-int File::fcntl(int cmd, int arg)
-{
-	return illegal("fcntl");
-}
+int File::map_fd_hack()                       { return fd; }
+int File::local_access_hack()                 { return 0; }
+int File::fstat( struct stat *buf )           { return illegal("fstat"); }
+int File::ioctl( int cmd, int arg )           { return illegal("ioctl"); }
+int File::flock( int op )                     { return illegal("flock"); }
+int File::fstatfs( struct statfs *buf )       { return illegal("fstatfs"); }
+int File::fchown( uid_t owner, gid_t group )  { return illegal("fchown"); }
+int File::fchmod( mode_t mode )               { return illegal("fchmod"); }
+int File::ftruncate( size_t length )          { return illegal("ftruncate"); }
+int File::fsync()                             { return illegal("fsync"); }
+int File::fcntl(int cmd, int arg)             { return illegal("fcntl"); }
 
 LocalFile::LocalFile()
 {
 	fd = -1;
 	readable = writeable = 0;
-	strcpy(kind,"local file");
+	kind = "local file";
 	name[0] = 0;
 	size = 0;
 	use_count = 0;
 	forced = 0;
-	suspended = 0;
 	bufferable = 0;
+	resume_count=0;
 }
 
 int LocalFile::open(const char *path, int flags, int mode ) {
@@ -216,16 +187,15 @@ void LocalFile::checkpoint()
 
 void LocalFile::suspend()
 {
-	if(suspended) return;
-	suspended = 1;
-
-	if(!forced) syscall( SYS_close, fd );
+	if( (fd==-1) || forced ) return;
+	syscall( SYS_close, fd );
+	fd=-1;
 }
 
-void LocalFile::resume()
+void LocalFile::resume( int count )
 {
-	if(!suspended) return;
-	suspended = 0;
+	if( (count==resume_count) || forced ) return;
+	resume_count = count;
 
 	int flags;
 
@@ -237,35 +207,28 @@ void LocalFile::resume()
 		flags = O_RDONLY;
 	}
 
-	if(!forced) {
-		fd = syscall( SYS_open, name, flags, 0 );
-		if( fd==-1 ) {
-			file_warning("Unable to reopen local file %s after a checkpoint!\n",name);
-		}
+	fd = syscall( SYS_open, name, flags, 0 );
+	if( fd==-1 ) {
+		file_warning("Unable to reopen local file %s after a checkpoint!\n",name);
 	}
-}
-
-int LocalFile::map_fd_hack()
-{
-	return fd;
 }
 
 int LocalFile::local_access_hack()
 {
-	return 0;
+	return 1;
 }
 
 RemoteFile::RemoteFile()
 {
 	fd = -1;
 	readable = writeable = 0;
-	strcpy(kind,"remote file");
+	kind = "remote file";
 	name[0] = 0;
 	size = 0;
 	use_count = 0;
 	forced = 0;
-	suspended = 0;
 	bufferable = 0;
+	resume_count = 0;
 }
 
 int RemoteFile::open(const char *path, int flags, int mode )
@@ -318,17 +281,17 @@ void RemoteFile::checkpoint()
 {
 }
 
-void RemoteFile::suspend() {
-	if(suspended) return;
-	suspended = 1;
-
-	if(!forced) REMOTE_syscall( CONDOR_close, fd );
+void RemoteFile::suspend()
+{
+	if( (fd==-1) || forced ) return;
+	REMOTE_syscall( CONDOR_close, fd );
+	fd = -1;
 }
 
-void RemoteFile::resume() {
-
-	if(!suspended) return;
-	suspended = 0;
+void RemoteFile::resume( int count )
+{
+	if( (count==resume_count) || forced ) return;
+	resume_count = count;
 
 	int flags;
 
@@ -340,11 +303,9 @@ void RemoteFile::resume() {
 		flags = O_RDONLY;
 	}
 
-	if(!forced) {
-		fd=REMOTE_syscall( CONDOR_open, name, flags, 0 );
-		if(fd<0) {
-			file_warning("Unable to re-open remote file %s after checkpoint!\n",name);
-		}
+	fd=REMOTE_syscall( CONDOR_open, name, flags, 0 );
+	if(fd<0) {
+		file_warning("Unable to re-open remote file %s after checkpoint!\n",name);
 	}
 }
 
@@ -394,13 +355,5 @@ int RemoteFile::fsync()
 	return REMOTE_syscall( CONDOR_fsync, fd );
 }
 
-int RemoteFile::map_fd_hack()
-{
-	return fd;
-}
 
-int RemoteFile::local_access_hack()
-{
-	return 0;
-}
 

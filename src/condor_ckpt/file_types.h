@@ -11,35 +11,56 @@ unsafe opearation in three places:
 stderr, the condor log, and the user's email.
 */
 
-void file_warning( char *format, ... );
+extern "C" void file_warning( char *format, ... );
+
+/**
+Pure virtual functions here cause a reference to a g++
+symbol, __pure_virtual.  When the c++ library is not present,
+i.e. linking with a fortran program, we need to provide 
+a reference for this symbol.
+<p>
+Perhaps this function should be moved to a more
+general purpose location...
+*/
+
+extern "C" void __pure_virtual();
 
 /**
 File is a virtual class which defines all the operations that
 can be performed on an fd.  Methods of accessing an fd (local,
 remote, ioserver, etc.) are built be extending File.
-.
+<p>
 Open, close, read, write, checkpoint, suspend, and resume must be
 implemented by subclasses of File.  Esoteric operations
 (fcntl, fstat, etc.) have defaults which display a warning 
 and return an error.
-.
+<p>
 Notice that all the operations listed below operate on an fd.
 Operations that work on a name instead of an fd are sent off
 to the shadow or local system, as appropriate.
+<p>
+Caveats:
+<dir>
+<li> Each file stores a unique integer when a resume() is
+performed, so that no file is accidentally resumed twice after
+a checkpoint.  (See file_state.h for a instance where this
+might happen.)  The open file table must provide a unique
+integer every time a resume() is performed.
+</dir>
 */
 
 class File {
 public:
 	virtual void dump();
 
-	virtual int open(const char *path, int flags, int mode) {}
-	virtual int close() {}
-	virtual int read(int offset, char *data, int length) {}
-	virtual int write(int offset, char *data, int length) {}
+	virtual int open(const char *path, int flags, int mode)=0;
+	virtual int close()=0;
+	virtual int read(int offset, char *data, int length)=0;
+	virtual int write(int offset, char *data, int length)=0;
 
-	virtual void checkpoint() {}
-	virtual void suspend() {}
-	virtual void resume() {}
+	virtual void checkpoint()=0;
+	virtual void suspend()=0;
+	virtual void resume(int count)=0;
 
 	virtual int fcntl( int cmd, int arg );
 	virtual int fstat( struct stat *buf );
@@ -86,21 +107,21 @@ public:
 	These will go away soon.
 	*/
 
-	virtual int map_fd_hack() { return -1; }
-	virtual int local_access_hack() { return -1; }
+	virtual int map_fd_hack();
+	virtual int local_access_hack();
 
 protected:
 
 	int	fd;		// the real fd used by this file
 	int	readable;	// can this file be read?
 	int	writeable;	// can this file be written?
-	char	kind[_POSIX_PATH_MAX]; // text describing file type
+	char	*kind;		// text describing file type
 	char	name[_POSIX_PATH_MAX]; // file name used at open
 	int	size;		// number of bytes in the file
 	int	use_count;	// how many people are using this object?
 	int	forced;		// was this created with force_open?
-	int	suspended;	// has this dup already been suspended?
 	int	bufferable;	// should this file be buffered?
+	int	resume_count;	// how many times has this object been resumed?
 };
 
 /**
@@ -119,7 +140,7 @@ public:
 
 	virtual void checkpoint();
 	virtual void suspend();
-	virtual void resume();
+	virtual void resume(int count);
 
 	virtual int fcntl( int cmd, int arg );
 	virtual int fstat( struct stat *buf );
@@ -131,7 +152,6 @@ public:
 	virtual int ftruncate( size_t length ); 
 	virtual int fsync();
 
-	virtual int map_fd_hack();
 	virtual int local_access_hack();
 };
 
@@ -151,7 +171,7 @@ public:
 
 	virtual void checkpoint();
 	virtual void suspend();
-	virtual void resume();
+	virtual void resume(int count);
 
 	virtual int fcntl( int cmd, int arg );
 	virtual int fstat( struct stat *buf );
@@ -162,9 +182,6 @@ public:
 	virtual int fchmod( mode_t mode );
 	virtual int ftruncate( size_t length ); 
 	virtual int fsync();
-
-	virtual int map_fd_hack();
-	virtual int local_access_hack();
 };
 
 /**
