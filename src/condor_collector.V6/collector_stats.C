@@ -483,7 +483,7 @@ CollectorDaemonStatsList::updateStats( const char *class_name,
 	}
 	size += strlen( ATTR_UPDATESTATS_SEQUENCED );	// Longest one
 	size += 20;										// Some "buffer" space
-    char		line[size];
+    char		*line = new char [size];
 
 	// Update the daemon object...
 	daemon->updateStats( sequenced, dropped );
@@ -505,6 +505,9 @@ CollectorDaemonStatsList::updateStats( const char *class_name,
 		ad->Insert(line);
 		delete tmp;
 	}
+
+	// Free up the line buffer
+	delete line;
 
 	return 0;
 }
