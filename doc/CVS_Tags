@@ -8,6 +8,22 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+9/11/03 V6_7-branch
+   A new branch off the end of the V6_5-branch for the 6.7.x
+   development series.  Created from the V6_6-root tag.  Includes the
+   doc directory.
+
+9/11/03 V6_6-branch
+   A new branch off the end of the V6_5-branch for the 6.6.x stable
+   series.  Created from the V6_6-root tag.  Includes the doc
+   directory.
+
+9/11/03 V6_5_5
+   The 6.5.5 release tag.  It's also the end of the V6_5-branch, and
+   the same versions of files as the root of V6_6-branch and
+   V6_7-branch (although those will have their own tags, as well).
+   Added so that "cvs co -r V6_5_5 V6_5_ALL" would work...
+
 07/11/03 V6_5_3-doc-post-merge-V6_5-branch-doc-merge-1
     The state of the doc directory in V6_5-branch after merging
     changes from the V6_5_3-branch as tagged V6_5_3-doc-merge-1.
