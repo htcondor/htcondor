@@ -775,12 +775,11 @@ not_supported{
 #if defined(OSF1) || (defined(HPUX9) && !defined(HPUX10)) || defined(LINUX)
 	int gettimeofday( struct timeval *tp, struct timezone *tzp ) {
 		out code( tp );
-		out code( tzp );
 #else
 	int gettimeofday( struct timeval *tp, void *tzp ) {
 		out code( tp );
-		out code_bytes_bool( tzp, TIMEZONE_SIZE );
 #endif
+		/* don't code( tzp ) since it is often a NULL pointer */
 		alloc( tp, TIMEVAL_SIZE );
 		alloc( tzp, TIMEZONE_SIZE );
 	}
