@@ -20,6 +20,10 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+#ifndef __UTIL_LIB_PROTO_H
+#define __UTIL_LIB_PROTO_H
+
 #include "condor_status.h"		/* For STATUS_LINE */
 #include "condor_config.h"
 #include "condor_getmnt.h"
@@ -142,4 +146,6 @@ PROC *ConstructProc();
 
 #if defined(__cplusplus)
 }		/* End of extern "C" declaration */
+#endif
+
 #endif
