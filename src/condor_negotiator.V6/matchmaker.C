@@ -29,6 +29,8 @@
 #include "condor_attributes.h"
 #include "condor_api.h"
 
+static char *_FileName_ = __FILE__;
+
 // the comparison function must be declared before the declaration of the
 // matchmaker class in order to preserve its static-ness.  (otherwise, it
 // is forced to be extern.)
