@@ -186,12 +186,67 @@ DWORD CSysinfo::GetHandleCount (pid_t pid)
 
 DWORD CSysinfo::GetParentPID (pid_t pid)
 {
+#if 0
+	/* this is broken on some versions of XP, so 
+	   it is deprecated. See new implementation below. 
+	 */
 	DWORD *block;
 	Refresh();
 	block = FindBlock (pid);
 	if (!block)
 		return 0;
 	return block[18];
+#endif
+	PROCESSENTRY32 pe32;
+
+	if ( GetProcessEntry(pid, pe32) ) {
+		return pe32.th32ParentProcessID;
+	} else {
+		return 0;
+	}
+}
+
+int
+CSysinfo::GetProcessEntry(pid_t pid, PROCESSENTRY32 &pe32 ) {
+	
+	HANDLE hProcessSnap;
+	int result;
+
+	result = FALSE;
+
+	// Take a snapshot of all processes in the system.
+	hProcessSnap = CreateToolhelp32Snapshot( TH32CS_SNAPPROCESS, 0 );
+	
+	if( hProcessSnap == INVALID_HANDLE_VALUE )
+	{
+		return FALSE;
+	}
+	
+	// Set the size of the structure before using it.
+	pe32.dwSize = sizeof( PROCESSENTRY32 );
+	
+	// Retrieve information about the first process,
+	// and exit if unsuccessful
+	if( !Process32First( hProcessSnap, &pe32 ) )
+	{
+		CloseHandle( hProcessSnap ); // Must clean up the snapshot object!
+		return FALSE;
+	}
+	
+	// Now walk the snapshot of processes, and
+	// when we find our pid, stop.
+	do {
+		if ( pe32.th32ProcessID == pid ) {
+			// Found it! Woohoo!
+			result = TRUE;
+			break;
+		}
+	} while( Process32Next( hProcessSnap, &pe32 ) );
+
+  // Don't forget to clean up the snapshot object!
+  CloseHandle( hProcessSnap );
+  
+  return result;
 }
 
 #if 0

@@ -1655,7 +1655,7 @@ PeriodicExprEval( ClassAd *jobad )
 	switch(action) {
 		case REMOVE_FROM_QUEUE:
 			if(status!=REMOVED) {
-				abortJob(jobad, cluster, proc, reason.Value(), true);
+				abortJob( cluster, proc, reason.Value(), true );
 			}
 			break;
 		case HOLD_IN_QUEUE:
@@ -8107,15 +8107,12 @@ Does not start or end a transaction.
 */
 
 static bool
-abortJobRaw( ClassAd *jobAd, int cluster, int proc, const char *reason )
+abortJobRaw( int cluster, int proc, const char *reason )
 {
 	PROC_ID job_id;
 
 	job_id.cluster = cluster;
 	job_id.proc = proc;
-
-	int universe = CONDOR_UNIVERSE_STANDARD;
-	jobAd->LookupInteger(ATTR_JOB_UNIVERSE,universe);
 
 	if( SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, REMOVED) < 0 ) {
 		dprintf(D_ALWAYS,"Couldn't change state of job %d.%d\n",cluster,proc);
@@ -8124,9 +8121,7 @@ abortJobRaw( ClassAd *jobAd, int cluster, int proc, const char *reason )
 
 	// Add the remove reason to the job's attributes
 	if ( reason && *reason ) {
-		MyString	removeReason;
-		removeReason.sprintf( "%s=\"%s\"", ATTR_REMOVE_REASON, reason );
-		jobAd->Insert( removeReason.Value( ) );
+		SetAttribute( cluster, proc, ATTR_REMOVE_REASON, reason );
 	}
 
 	// Abort the job now
@@ -8143,7 +8138,7 @@ Performs a complete transaction if desired.
 */
 
 bool
-abortJob( ClassAd *jobad, int cluster, int proc, const char *reason, bool use_transaction )
+abortJob( int cluster, int proc, const char *reason, bool use_transaction )
 {
 	bool result;
 
@@ -8151,7 +8146,7 @@ abortJob( ClassAd *jobad, int cluster, int proc, const char *reason, bool use_tr
 		BeginTransaction();
 	}
 
-	result = abortJobRaw(jobad, cluster,proc,reason);
+	result = abortJobRaw( cluster, proc, reason );
 
 	if(use_transaction) {
 		if(result) {

@@ -504,7 +504,7 @@ void Accountant::UpdatePriorities()
   HashKey HK;
   char key[_POSIX_PATH_MAX];
   ClassAd* ad;
-  float Priority, OldPrio;
+  float Priority, OldPrio, PriorityFactor;
   int UnchargedTime;
   float AccumulatedUsage;
   float RecentUsage;
@@ -520,6 +520,11 @@ void Accountant::UpdatePriorities()
     if (ad->LookupFloat(PriorityAttr.Value(),Priority)==0) Priority=0;
 	if (Priority<MinPriority) Priority=MinPriority;
     OldPrio=Priority;
+
+    if (ad->LookupFloat(PriorityFactorAttr.Value(),PriorityFactor)==0) {
+	   	PriorityFactor = DefaultPriorityFactor;
+	}
+
     if (ad->LookupInteger(UnchargedTimeAttr.Value(),UnchargedTime)==0) UnchargedTime=0;
     if (ad->LookupFloat(AccumulatedUsageAttr.Value(),AccumulatedUsage)==0) AccumulatedUsage=0;
     if (ad->LookupInteger(BeginUsageTimeAttr.Value(),BeginUsageTime)==0) BeginUsageTime=0;
@@ -535,7 +540,12 @@ void Accountant::UpdatePriorities()
     if (AccumulatedUsage>0 && BeginUsageTime==0) SetAttributeInt(key,BeginUsageTimeAttr,T);
     if (RecentUsage>0) SetAttributeInt(key,LastUsageTimeAttr,T);
     SetAttributeInt(key,UnchargedTimeAttr,0);
-    if (Priority<MinPriority && ResourcesUsed==0 && AccumulatedUsage==0) DeleteClassAd(key);
+
+    if (Priority<MinPriority && ResourcesUsed==0 &&
+		   	AccumulatedUsage==0 && PriorityFactor==DefaultPriorityFactor ) {
+		DeleteClassAd(key);
+	}
+
 	AcctLog->CommitTransaction();
 	
     dprintf(D_ACCOUNTANT,"CustomerName=%s , Old Priority=%5.3f , New Priority=%5.3f , ResourcesUsed=%d\n",key,OldPrio,Priority,ResourcesUsed);

@@ -203,6 +203,16 @@ init_user_ids(const char username[], const char domain[])
 			if (! CurrUserHandle ) {
 				dprintf(D_FULLDEBUG, "init_user_ids: handle is null!\n");
 			}
+			
+			if (UserLoginName) {
+				free(UserLoginName);
+				UserLoginName = NULL;
+			}
+			if (UserDomainName) {
+				free(UserDomainName);
+				UserDomainName = NULL;
+			}
+			
 			// these are strdup'ed, so we can just stash their pointers
 			UserLoginName = myusr;
 			UserDomainName = mydom;
@@ -261,6 +271,14 @@ init_user_ids(const char username[], const char domain[])
 
 			dprintf(D_FULLDEBUG, "LogonUser completed.\n");
 
+			if (UserLoginName) {
+				free(UserLoginName);
+				UserDomainName = NULL;
+			}
+			if (UserDomainName) {
+				free(UserDomainName);
+				UserDomainName = NULL;
+			}
 			UserLoginName = strdup(username);
 			UserDomainName = strdup(domain);
 
@@ -292,7 +310,16 @@ init_user_ids(const char username[], const char domain[])
 			// This is indicative of a serious problem.
 			EXCEPT("Failed to create a user nobody");
 		}
-	
+		
+		if (UserLoginName) {
+			free(UserLoginName);
+			UserDomainName = NULL;
+		}
+		if (UserDomainName) {
+			free(UserDomainName);
+			UserDomainName = NULL;
+		}
+
 		UserLoginName = strdup( myDynuser->get_accountname() );
 		UserDomainName = strdup( "." );
 

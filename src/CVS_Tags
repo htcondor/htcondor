@@ -2,6 +2,15 @@
    The state of the V6_7-branch before merging in the V6_6-branch as
    tagged at V6_6-merge-11.
 
+05/14/04 V6_6-merge-11
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  Lots of random fixes, especially the schedd fix for
+   abortJob() that was causing conflicts for the SOAP-branch.
+
+05/12/04 V6_6_5_NMI
+   This is the tag for NMI_R5 condor. It is identical to Condor 6.6.5, 
+   except it knows how to build the gahp server properly on AIX 5.1
+
 5/12/04 V6_7-merge-1
   The state of the V6_7 branch before merging to the trunk.
   It will be merged to trunk-merge-V6_7-branch-1.
@@ -19,6 +28,17 @@
    V6_7-branch has new syntax for specifying grid universe job subtypes
    and parsing to/from new classad native format that we now want on the
    condorc branch.
+
+05/04/04 V6_6_5_WINDOWS
+   The is the 6.6.5 release tag for windoze.  The version string was:
+   "$CondorVersion: 6.6.5 May  4 2004 $"
+
+05/03/04 V6_6_5
+   The is the 6.6.5 release tag for all platforms except windoze.  The
+   version string was: "$CondorVersion: 6.6.5 May  3 2004 $"
+
+04/30/04 V6_6-vdt_globus
+   Changing the globus external to be 2.4.3 + VDT patches from 1.1.14
 
 04/29/04 V6_7-soap-2-branch
    A new branch off of V6_7-branch created from the V6_7-soap-2-root

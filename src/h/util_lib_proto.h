@@ -43,6 +43,8 @@ char * gen_exec_name ( int cluster, int proc, int subproc );
 int hash ( register char *string, register int size );
 char * getline ( FILE *fp );
 
+char* getExecPath();
+
 int rotate_file(const char *old_filename, const char *new_filename);
 int copy_file(const char *old_filename, const char *new_filename);
 
@@ -94,6 +96,8 @@ PROC *ConstructProc( int, PROC *);
 
 int blankline ();
 char * gen_exec_name ();
+
+char* getExecPath();
 
 int hash ();
 char * getline ();

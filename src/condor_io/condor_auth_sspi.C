@@ -335,6 +335,7 @@ Condor_Auth_SSPI::sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx)
 		setRemoteUser(buf);
 		dom = my_domainname();
 		setRemoteDomain(dom);
+		
 		it_worked = TRUE;
 	   	(pf->RevertSecurityContext)( &srvCtx );
     }
@@ -343,6 +344,7 @@ Condor_Auth_SSPI::sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx)
 
 	dprintf( D_FULLDEBUG, "sspi_server_auth(): user name is: \"%s\"\n", buf );
 	dprintf( D_FULLDEBUG, "sspi_server_auth(): domain name is: \"%s\"\n", dom);
+	if (dom) { free(dom); }
 
     (pf->FreeContextBuffer)( secPackInfo );
 

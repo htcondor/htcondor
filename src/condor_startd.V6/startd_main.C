@@ -622,9 +622,6 @@ startd_exit()
 #endif
 
 	dprintf( D_ALWAYS, "All resources are free, exiting.\n" );
-#ifdef WIN32
-	KBShutdown();
-#endif
 	DC_Exit(0);
 }
 
@@ -732,11 +729,6 @@ do_cleanup(int,int,char*)
 		resmgr->walk( &Resource::kill_claim );
 		dprintf( D_FAILURE|D_ALWAYS, "startd exiting because of fatal exception.\n" );
 	}
-
-#ifdef WIN32
-	// Detach our keyboard hook
-	KBShutdown();
-#endif
 
 	return TRUE;
 }

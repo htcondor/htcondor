@@ -68,7 +68,7 @@ BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_userprio.bsc"
 BSC32_SBRS= \
 	
 LINK32=link.exe
-LINK32_FLAGS=../Debug/condor_common.obj ..\Debug\condor_common_c.obj kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib Crypt32.lib /nologo /subsystem:console /incremental:yes /pdb:"$(OUTDIR)\condor_userprio.pdb" /debug /machine:I386 /out:"$(OUTDIR)\condor_userprio.exe" /pdbtype:sept 
+LINK32_FLAGS=../Debug/condor_common.obj ..\Debug\condor_common_c.obj Crypt32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib mpr.lib psapi.lib /nologo /subsystem:console /incremental:yes /pdb:"$(OUTDIR)\condor_userprio.pdb" /debug /machine:I386 /out:"$(OUTDIR)\condor_userprio.exe" /pdbtype:sept 
 LINK32_OBJS= \
 	"$(INTDIR)\dc_stub.obj" \
 	"$(INTDIR)\user_prio.obj" \
@@ -121,7 +121,7 @@ BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_userprio.bsc"
 BSC32_SBRS= \
 	
 LINK32=link.exe
-LINK32_FLAGS=../Release/condor_common.obj ../Release/condor_common_c.obj Crypt32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_userprio.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_userprio.exe" 
+LINK32_FLAGS=../Release/condor_common.obj ../Release/condor_common_c.obj Crypt32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib mpr.lib psapi.lib /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_userprio.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_userprio.exe" 
 LINK32_OBJS= \
 	"$(INTDIR)\dc_stub.obj" \
 	"$(INTDIR)\user_prio.obj" \

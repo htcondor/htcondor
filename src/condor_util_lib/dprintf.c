@@ -809,7 +809,7 @@ _condor_save_dprintf_line( int flags, char* fmt, va_list args )
 	int len;
 
 		/* figure out how much space we need to store the string */
-	len = vprintf_length( fmt, args );
+	len = vprintf_length( fmt, args )+1; /* add 1 for the null terminator */
 	if( len <= 0 ) { 
 		return;
 	}

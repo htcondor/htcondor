@@ -80,6 +80,7 @@ token_cache::storeToken(const char* username, const char* domain_raw,
 	
 	if ( getToken(username, domain) ) {
 		// if we already have it, just return.
+		free(domain);
 		return true;
 	}
 

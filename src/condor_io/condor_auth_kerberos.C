@@ -899,11 +899,11 @@ int Condor_Auth_Kerberos :: init_realm_mapping()
     
     	while (buffer = getline(fd)) {
         	char * token;
-        	token = strtok(buffer, "==");
+        	token = strtok(buffer, "= ");
         	if(token) {
 				char *tmpf = strdup(token);
 
-				token = strtok(NULL, "==");
+				token = strtok(NULL, "= ");
 				if(token) {
 					to.append(token);
 					from.append(tmpf);

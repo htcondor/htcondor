@@ -55,6 +55,7 @@ CLEAN :
 	-@erase "$(INTDIR)\except.obj"
 	-@erase "$(INTDIR)\fdprintf.obj"
 	-@erase "$(INTDIR)\filename_tools.obj"
+	-@erase "$(INTDIR)\get_exec_path.obj"
 	-@erase "$(INTDIR)\get_port_range.obj"
 	-@erase "$(INTDIR)\get_random_num.obj"
 	-@erase "$(INTDIR)\globus_utils.obj"
@@ -153,7 +154,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\setsyscalls.obj" \
 	"$(INTDIR)\signames.obj" \
 	"$(INTDIR)\strcmp_until.obj" \
-	"$(INTDIR)\win32_posix.obj"
+	"$(INTDIR)\win32_posix.obj" \
+	"$(INTDIR)\get_exec_path.obj"
 
 "..\src\condor_util_lib\condor_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -190,6 +192,7 @@ CLEAN :
 	-@erase "$(INTDIR)\except.obj"
 	-@erase "$(INTDIR)\fdprintf.obj"
 	-@erase "$(INTDIR)\filename_tools.obj"
+	-@erase "$(INTDIR)\get_exec_path.obj"
 	-@erase "$(INTDIR)\get_port_range.obj"
 	-@erase "$(INTDIR)\get_random_num.obj"
 	-@erase "$(INTDIR)\globus_utils.obj"
@@ -287,7 +290,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\setsyscalls.obj" \
 	"$(INTDIR)\signames.obj" \
 	"$(INTDIR)\strcmp_until.obj" \
-	"$(INTDIR)\win32_posix.obj"
+	"$(INTDIR)\win32_posix.obj" \
+	"$(INTDIR)\get_exec_path.obj"
 
 "..\src\condor_util_lib\condor_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -460,6 +464,12 @@ SOURCE=..\src\condor_util_lib\fdprintf.c
 SOURCE=..\src\condor_util_lib\filename_tools.c
 
 "$(INTDIR)\filename_tools.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_util_lib\get_exec_path.c
+
+"$(INTDIR)\get_exec_path.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

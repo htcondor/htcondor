@@ -107,6 +107,7 @@
 	"..\..\program files\microsoft sdk\include\tvout.h"\
 	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_config.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\

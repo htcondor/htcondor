@@ -452,8 +452,6 @@ int main (int argc, char **argv)
 	}
 
 
-
-
 	token = tt2.GetNextToken("_", false);
 	if ( token != NULL && !strcmp(token, "Bottechia") ) {
 	   	printf("OK: GetNextToken() worked in line %d.\n", __LINE__);
@@ -481,6 +479,48 @@ int main (int argc, char **argv)
 	   	printf("FAILED: GetNextToken() error in line %d.\n", __LINE__);
 		everythingOkay = false;
 	}
+
+
+    // ---- Test trimming of whitespace.
+	MyString	tw1("  Miguel   ");
+	tw1.trim();
+	if ( tw1 == "Miguel" ) {
+	   	printf("OK: trim() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: trim() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
+
+	tw1 = "Indurain";
+	tw1.trim();
+	if ( tw1 == "Indurain" ) {
+	   	printf("OK: trim() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: trim() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
+
+
+	tw1 = "   Merckx";
+	tw1.trim();
+	if ( tw1 == "Merckx" ) {
+	   	printf("OK: trim() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: trim() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
+
+	tw1 = "Hinault    ";
+	tw1.trim();
+	if ( tw1 == "Hinault" ) {
+	   	printf("OK: trim() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: trim() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
+
+
+
 
 
     // ---- Final summary.

@@ -24,9 +24,12 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_config.h"
+#include "starter.h"
 
 #include "java_proc.h"
 #include "java_config.h"
+
+extern CStarter * Starter;
 
 JavaProc::JavaProc( ClassAd * jobAd, const char *xdir ) : VanillaProc(jobAd)
 {
@@ -49,21 +52,64 @@ int JavaProc::StartJob()
 	
 	char java_cmd[_POSIX_PATH_MAX];
 	char java_args[_POSIX_ARG_MAX];
-	char jarfiles[ATTRLIST_MAX_EXPRESSION];
-	StringList *jarfiles_list=0;
+	char* jarfiles = NULL;
 
 	ExprTree  *tree;
 	char	  *tmp_args;
 	char      *job_args;
 	int		  length;
 
-	if(JobAd->LookupString(ATTR_JAR_FILES,jarfiles)==1) {
-		jarfiles_list = new StringList(jarfiles);
+	// Construct the list of jar files for the command line
+	// If a jar file is transferred locally, use its local name
+	// (in the execute directory)
+	// otherwise use the original name
+
+	StringList jarfiles_orig_list;
+	StringList jarfiles_local_list;
+	StringList* jarfiles_final_list = NULL;
+
+	if( JobAd->LookupString(ATTR_JAR_FILES,&jarfiles) ) {
+		jarfiles_orig_list.initializeFromString( jarfiles );
+		free( jarfiles );
+		jarfiles = NULL;
+
+		char * jarfile_name;
+		char * base_name;
+		struct stat stat_buff;
+		if( Starter->jic->iwdIsChanged() ) {
+				// If the job's IWD has been changed (because we're
+				// running in the sandbox due to file transfer), we
+				// need to use a local version of the path to the jar
+				// files, not the full paths from the submit machine. 
+			jarfiles_orig_list.rewind();
+			while( (jarfile_name = jarfiles_orig_list.next()) ) {
+					// Construct the local name
+				base_name = basename( jarfile_name );
+				MyString local_name = execute_dir;
+				local_name += DIR_DELIM_CHAR;
+				local_name += base_name; 
+
+				if( stat(local_name.Value(), &stat_buff) == 0 ) {
+						// Jar file exists locally, use local name
+					jarfiles_local_list.append( local_name.Value() );
+				} else {
+						// Use the original name
+					jarfiles_local_list.append (jarfile_name);
+				}
+			} // while(jarfiles_orig_list)
+
+				// jarfiles_local_list is our real copy...
+			jarfiles_final_list = &jarfiles_local_list;
+
+		} else {  // !iwdIsChanged()
+
+				// just use jarfiles_orig_list as our real copy...
+			jarfiles_final_list = &jarfiles_orig_list;
+		}			
 	}
 
-	if(!java_config(java_cmd,java_args,jarfiles_list)) {
+	if( !java_config(java_cmd,java_args,jarfiles_final_list) ) {
 		dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Java is not configured!\n");
-		if(jarfiles_list) delete jarfiles_list;
 		return 0;
 	}
 

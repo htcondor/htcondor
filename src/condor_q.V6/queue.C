@@ -1205,6 +1205,14 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 		}
 	}
 
+	if (!output_buffer_empty) {
+		for (int i=0;i<=output_buffer->getlast(); i++) {
+			if ((*output_buffer)[i]) {
+				delete[] ((*output_buffer)[i])->string;
+				delete ((*output_buffer)[i]);
+			}
+		}
+	}
 	delete output_buffer;
 
 	return true;
@@ -1588,6 +1596,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 	int		cluster, proc;
 	int		jobState;
 	int		niceUser;
+	int		universe;
 
 	int 	fReqConstraint 	= 0;
 	int		fOffConstraint 	= 0;
@@ -1718,6 +1727,8 @@ doRunAnalysisToBuffer( ClassAd *request )
 					// failed 6 and 5, but satisfies 4; so have priority
 					// but not better or equally preferred than current
 					// customer
+					// NOTE: In practice this often indicates some
+					// unknown problem.
 					fRankCond++;
 				}
 			} 
@@ -1739,7 +1750,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 		 "  %5d are rejected by your job's requirements\n"
 		 "  %5d reject your job because of their own requirements\n"
 		 "  %5d match, but are serving users with a better priority in the pool%s\n"
-		 "  %5d match, but prefer another specific job despite its worse user-priority\n"
+		 "  %5d match, match, but reject the job for unknown reasons\n"
 		 "  %5d match, but will not currently preempt their existing job\n"
 		 "  %5d are available to run your job\n",
 		return_buff, cluster, proc, totalMachines,
@@ -1802,6 +1813,52 @@ doRunAnalysisToBuffer( ClassAd *request )
 		sprintf( return_buff, "%s   Request %d.%d did not match any "
 			"resource's constraints\n\n", return_buff, cluster, proc);
 	}
+
+	request->LookupInteger( ATTR_JOB_UNIVERSE, universe );
+	switch(universe) {
+			// Known valid
+		case CONDOR_UNIVERSE_STANDARD:
+		case CONDOR_UNIVERSE_JAVA:
+		case CONDOR_UNIVERSE_VANILLA:
+			break;
+
+			// Unknown
+		case CONDOR_UNIVERSE_PVM:
+		case CONDOR_UNIVERSE_PVMD:
+		case CONDOR_UNIVERSE_PARALLEL:
+			break;
+
+			// Maybe
+		case CONDOR_UNIVERSE_GLOBUS:
+			/* We may be able to detect when it's valid.  Check for existance
+			 * of "$$(FOO)" style variables in the classad. */
+			sprintf( return_buff, "%s\nWARNING: Analysis is only meaningful for Globus universe jobs using matchmaking.\n", return_buff);
+			break;
+
+			// Specific known bad
+		case CONDOR_UNIVERSE_MPI:
+			sprintf( return_buff, "%s\nWARNING: Analysis is meaningless for MPI universe jobs.\n", return_buff );
+			break;
+
+			// Specific known bad
+		case CONDOR_UNIVERSE_SCHEDULER:
+			/* Note: May be valid (although requiring a different algorithm)
+			 * starting some time in V6.7. */
+			sprintf( return_buff, "%s\nWARNING: Analysis is meaningless for Scheduler universe jobs.\n", return_buff );
+			break;
+
+			// Unknown
+			/* These _might_ be meaningful, especially if someone adds a 
+			 * universe but fails to update this code. */
+		//case CONDOR_UNIVERSE_PIPE:
+		//case CONDOR_UNIVERSE_LINDA:
+		//case CONDOR_UNIVERSE_MAX:
+		//case CONDOR_UNIVERSE_MIN:
+		default:
+			sprintf( return_buff, "%s\nWARNING: Job universe unknown.  Analysis may not be meaningful.\n", return_buff );
+			break;
+	}
+
 
 	//printf("%s",return_buff);
 	return return_buff;

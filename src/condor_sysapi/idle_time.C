@@ -37,12 +37,7 @@
 
 /* define some static functions */
 #if defined(WIN32)
-static BOOL ThreadInteract(HDESK * hdesk, HWINSTA * hwinsta);
-static DWORD WINAPI message_loop_thread(void *);
 static void calc_idle_time_cpp(time_t * m_idle, time_t * m_console_idle);
-extern int WINAPI KBInitialize(void);
-extern int WINAPI KBShutdown(void);
-extern int WINAPI KBQuery(void);
 #else /* Not defined WIN32 */
 #include "string_list.h"
 #ifndef Darwin
@@ -64,173 +59,53 @@ static time_t solaris_mouse_idle(void);
 
 /* the local function that does the main work */
 
-
 #if defined(WIN32)
-
-// ThreadInteract allows the calling thread to access the visable,
-// interactive desktop in order to set a hook. 
-// Win32
-BOOL ThreadInteract(HDESK * hdesk_input, HWINSTA * hwinsta_input)   
-{      
-	HDESK   hdeskTest;
-	HDESK	hdesk;
-	HWINSTA	hwinsta;
-	
-	*hdesk_input = NULL;
-	*hwinsta_input = NULL;
-
-	// Obtain a handle to WinSta0 - service must be running
-	// in the LocalSystem account or this will fail!!!!!     
-	hwinsta = OpenWindowStation("winsta0", FALSE,
-							  WINSTA_ACCESSCLIPBOARD   |
-							  WINSTA_ACCESSGLOBALATOMS |
-							  WINSTA_CREATEDESKTOP     |
-							  WINSTA_ENUMDESKTOPS      |
-							  WINSTA_ENUMERATE         |
-							  WINSTA_EXITWINDOWS       |
-							  WINSTA_READATTRIBUTES    |
-							  WINSTA_READSCREEN        |
-							  WINSTA_WRITEATTRIBUTES);
-
-	if (hwinsta == NULL)         
-	  return FALSE; 
-
-	// Set the windowstation to be winsta0     
-	if (!SetProcessWindowStation(hwinsta))         
-	  return FALSE;      
-
-	// Get the desktop     
-	hdeskTest = GetThreadDesktop(GetCurrentThreadId());
-	if (hdeskTest == NULL)         
-	  return FALSE;     
-
-	// Get the default desktop on winsta0      
-	hdesk = OpenDesktop("default", 0, FALSE,               
-						DESKTOP_HOOKCONTROL |
-						DESKTOP_READOBJECTS |
-						DESKTOP_SWITCHDESKTOP |
-						DESKTOP_WRITEOBJECTS);   
-
-	if (hdesk == NULL)
-	   return FALSE;   
-
-	// Set the desktop to be "default"   
-	if (!SetThreadDesktop(hdesk))           
-	  return FALSE;   
-
-	*hdesk_input = hdesk;
-	*hwinsta_input = hwinsta;
-
-	return TRUE;
-}
-
-
-// Win32
-static DWORD WINAPI
-message_loop_thread(void *foo)
-{
-	MSG msg;
-	HDESK hdesk;
-	HWINSTA hwinsta;
-
-	// first allow this thread access to the interactive(visable) desktop
-	while ( !ThreadInteract(&hdesk,&hwinsta) ) {
-		// failed to get access to the desktop!!!  Perhaps we are still
-		// at the login screen....
-		dprintf(D_ALWAYS,
-			"Failed to access the interactive desktop; will try later\n");
-		// now sleep for 2 minutes and try again
-		sleep(120);
-	}
-
-	// tell our DLL to hook onto WH_KEYBOARD messages
-	if ( !KBInitialize() ) {
-		dprintf(D_ALWAYS,"ERROR: could not initialize kbdd DLL\n");
-		return 0;
-	}
-
-	while (GetMessage( &msg, NULL, 0, 0 ) ) {
-		TranslateMessage( &msg );
-		DispatchMessage( &msg );	
-	}
-
-	// TODO: not exactly certain what we should do
-	//		when GetMessage returns NULL.  at this
-	//		stage I won't worry about it, because
-	//		it is likely we are about to get killed
-	//		anyhow...
-	//		I guess we should unhook since things could
-	//		get sluggish without a message loop....
-	dprintf(D_ALWAYS,"WARNING: GetMessage() returned NULL\n");
-
-	KBShutdown();	// will unhook WH_KEYBOARD messages
-
-	// Close the windowstation and desktop handles   
-	CloseWindowStation(hwinsta);
-	CloseDesktop(hdesk);
-
-	return 0;
-}
 
 // Win32
 void
 calc_idle_time_cpp( time_t * user_idle, time_t * console_idle)
 {
-	static HANDLE threadHandle = NULL;
-	static DWORD threadID = -1;
-	static POINT previous_pos = { 0, 0 };	// stored position of cursor
-	time_t now = time( 0 );
-
-	if (threadHandle == NULL) {
-
-		// First time calc_idle_time has been called.
-
-		// Start a thread to act as a message pump.  We need this
-		// because down because SetWindowsHookEx forwards messages 
-		// to the same thread which performs the hook.  So, whatever
-		// thread calls SetWindowsHookEx also needs to have a message
-		// pump.
-		threadHandle = CreateThread(NULL, 0, message_loop_thread, 
-									NULL, 0, &threadID);
-		if (threadHandle == NULL) {
-			dprintf(D_ALWAYS, "failed to create message loop thread, errno = %d\n",
-					GetLastError());
-			*user_idle = -1;
-			*console_idle = -1;
-		}		
+	LASTINPUTINFO lii;
+	static POINT previous_pos = { 0, 0 };   // stored position of cursor
+	static DWORD previous_input_tick = 0;
+    time_t now = time( 0 );
+	
+	
+	lii.cbSize = sizeof(LASTINPUTINFO);
+	lii.dwTime = 0;
+	
+	if ( !GetLastInputInfo(&lii) ) {
+		dprintf(D_ALWAYS, "calc_idle_time: GetLastInputInfo()"
+			" failed with err=%d\n", GetLastError());
+	}
+	
+	if ( lii.dwTime != previous_input_tick ) {
+		_sysapi_last_x_event = now;
+		previous_input_tick = lii.dwTime;
 	} else {
-
-		// Not the first time calc_idle_time has been called
-
-		if ( KBQuery() ) {
-			// a keypress was detected
-			_sysapi_last_x_event = now;
+		// no keypress detected, test if mouse moved
+		CURSORINFO cursor_inf;
+		cursor_inf.cbSize = sizeof(CURSORINFO);
+		if ( ! GetCursorInfo(&cursor_inf) ) {
+			dprintf(D_ALWAYS,"GetCursorInfo() failed (err=%li)\n",
+				GetLastError());
 		} else {
-			// no keypress detected, test if mouse moved
-			CURSORINFO cursor_inf;
-			cursor_inf.cbSize = sizeof(CURSORINFO);
-			if ( ! GetCursorInfo(&cursor_inf) ) {
-				dprintf(D_ALWAYS,"GetCursorInfo() failed (err=%li)\n",
-					   	GetLastError());
-			} else {
-				if ( (cursor_inf.ptScreenPos.x != previous_pos.x) || 
-					(cursor_inf.ptScreenPos.y != previous_pos.y) ) {
-						// the mouse has moved!
-						// stash new position
-					previous_pos.x = cursor_inf.ptScreenPos.x; 
-					previous_pos.y = cursor_inf.ptScreenPos.y; 
-					_sysapi_last_x_event = now;
-				}
+			if ( (cursor_inf.ptScreenPos.x != previous_pos.x) || 
+				(cursor_inf.ptScreenPos.y != previous_pos.y) ) {
+				// the mouse has moved!
+				// stash new position
+				previous_pos.x = cursor_inf.ptScreenPos.x; 
+				previous_pos.y = cursor_inf.ptScreenPos.y; 
+				_sysapi_last_x_event = now;
 			}
 		}
-
 	}
-
+	
 	*user_idle = now - _sysapi_last_x_event;
 	*console_idle = *user_idle;
-
+	
 	dprintf( D_IDLE, "Idle Time: user= %d , console= %d seconds\n",
-			 *user_idle, *console_idle );
+		*user_idle, *console_idle );
 	return;
 }
 
