@@ -28,6 +28,9 @@
 
 enum AllocStatus { A_NEW, A_RUNNING, A_DYING };
 
+enum NegotiationResult { NR_MATCHED, NR_REJECTED, NR_END_NEGOTIATE, 
+						 NR_LIMIT_REACHED, NR_ERROR };
+
 class CAList : public List<ClassAd> {};
 class MRecArray : public ExtArray<match_rec*> {};
 
@@ -56,10 +59,15 @@ class ResTimeNode {
 	ResTimeNode( time_t t );
 	~ResTimeNode();
 	
-		// Can we satisfy the given job with this ResTimeNode?  No
-		// matter what we return, num_matches is reset to the number
-		// of matches we found at this time, and the candidates list
-		// includes a copy of each resource ad we matched with.
+		/** Can we satisfy the given job with this ResTimeNode?  No
+			matter what we return, num_matches is reset to the number
+			of matches we found at this time, and the candidates list
+			includes a pointer to each resource ad we matched with.
+			@param jobAd The job to satisfy
+			@param max_hosts How many resources does this job need?
+			@param candidates List of pointers to ads that matched
+			@return Was the job completely satisfied?
+		*/
 	bool satisfyJob( ClassAd* jobAd, int max_hosts,
 					 CAList* candidates );
 
@@ -73,9 +81,25 @@ class AvailTimeList : public List<ResTimeNode> {
  public:
 	~AvailTimeList();
 	void display( int debug_level );
-	void addResource( match_rec* mrec );
+
+		/// Returns if there are any resources available in our list.
 	bool hasAvailResources( void );
-	void removeResource( ClassAd* resource, ResTimeNode* rtn );
+
+		/** Add the resource described in the given match record into
+			our list.  We find out when the resource will be
+			available, and add the resource to our list in the
+			appropriate ResTimeNode.  If no node exists for the given
+			time, we create a new node.
+			@param mrec The match record for the resource to add.  */
+	void addResource( match_rec* mrec );
+
+		/** Removes the resource classad from the given ResTimeNode in
+			our list.  If that was the last resource in the
+			ResTimeNode, we remove the node from our list, delete the
+			object, and set the given rtn pointer to NULL.
+			@param resource The resource to remove
+			@param rtn The ResTimeNode to remove it from */
+	void removeResource( ClassAd* resource, ResTimeNode* &rtn );
 };
 
 
@@ -92,6 +116,12 @@ class DedicatedScheduler : public Service {
 	int shutdown_graceful( void );
 	int	reconfig( void );
 
+		// Function to negotiate with the central manager for our MPI
+		// jobs.  This is called by Scheduler::negotiate() if the
+		// owner we get off the wire matches the "owner" string we're
+		// using. 
+	int negotiate( Stream* s, char* negotiator_name );
+
 		// Called everytime we want to process the job queue and
 		// schedule/spawn MPI jobs.
 	int handleDedicatedJobs( void );
@@ -104,6 +134,7 @@ class DedicatedScheduler : public Service {
 	void listDedicatedResources( int debug_level, ClassAdList* resources );
 
 		// Used for claiming/releasing startds we control
+	bool contactStartd( ContactStartdArgs* args );
 	bool requestClaim( ClassAd* r );
 	int	startdContactSockHandler( Stream* sock );
 	bool releaseClaim( match_rec* m_rec, bool use_tcp = true );
@@ -117,13 +148,35 @@ class DedicatedScheduler : public Service {
 
 		// These are public, since the Scheduler class needs to call
 		// them from vacate_service and possibly other places, too.
-	bool DelMrec( char* capability );
+	bool DelMrec( char* cap );
 	bool DelMrec( match_rec* rec );
 
 	char* name( void ) { return ds_name; };
 	char* owner( void ) { return ds_owner; };
 
+		/** Publish a ClassAd to the collector that says we have
+			resource requests we want to negotiate for.
+		*/
+	void publishRequestAd( void );
+
+	void generateRequest( ClassAd* machine_ad );
+
  private:
+
+	/** Used to handle the negotiation protocol for a given
+		resource request.  
+		@param req ClassAd holding the resource request
+		@param s The Stream to communicate with the CM
+		@param negotiator_name The name of this negotiator
+		@param reqs_matched How many requests have been matched already.
+		@param max_reqs Total number of requests we're trying to meet. 
+		@return An enum describing the results.
+	*/
+	NegotiationResult negotiateRequest( ClassAd* req, Stream* s, 
+										char* negotiator_name, 
+										int reqs_matched, 
+										int max_reqs ); 
+
 		// This gets a list of all dedicated resources we control.
 		// This is called at the begining of each handleDedicatedJobs
 		// cycle.
@@ -141,6 +194,13 @@ class DedicatedScheduler : public Service {
 		// This does the work of acting on a schedule, once that's
 		// been decided.  
 	bool spawnJobs( void );
+
+		// Do through our list of pending resource requests, and
+		// publish a ClassAd to the CM to ask for them.
+	bool requestResources( void );
+
+		// Print out all our pending resource requests.
+	void displayResourceRequests( void );
 
 	void sortResources( void );
 
@@ -169,11 +229,19 @@ class DedicatedScheduler : public Service {
         // hashed on cluster, all our allocations
     HashTable <int, AllocationNode*>* allocations;
 
-		// hashed on capability, each claim we have
+		// hashed on resource name, each claim we have
 	HashTable <HashKey, match_rec*>* all_matches;
 
-		// hashed on capability, each claim we've allocated to a job
-	HashTable <HashKey, match_rec*>* allocated_matches;
+		// hashed on capability, each claim we have.  only store
+		// pointers in here into the real match records we store in
+		// all_matches.  This is needed for some functions that only
+		// know the capability (like DelMrec(), since vacate_service()
+		// is only given a capability to identify the lost claim).
+	HashTable <HashKey, match_rec*>* all_matches_by_cap;
+
+		// hashed on resource name, each resource we're requesting
+		// that we need to negotiate for
+	HashTable <HashKey, ClassAd*>* resource_requests;
 
 	int		num_matches;	// Total number of matches in all_matches 
 
@@ -199,5 +267,8 @@ int jobSortByDate( const void* ptr1, const void* ptr2 );
 
 // Print out
 void displayResource( ClassAd* ad, char* str, int debug_level );
+void displayRequest( ClassAd* ad, char* str, int debug_level );
 
 char* makeCapability( ClassAd* ad, char* addr = NULL );
+
+char* getCapability( ClassAd* ad );
