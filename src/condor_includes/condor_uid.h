@@ -76,6 +76,10 @@ uid_t get_condor_uid();
 gid_t get_condor_gid();
 uid_t get_user_uid();
 gid_t get_user_gid();
+uid_t get_my_uid();
+gid_t get_my_gid();
+uid_t get_real_condor_uid();
+gid_t get_real_condor_gid();
 #endif
 void display_priv_log();
 
