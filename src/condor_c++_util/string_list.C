@@ -104,3 +104,82 @@ StringList::substring( const char *st )
 	}
 	return FALSE;
 }
+
+// contains_withwildcard() is just like the contains() method except that
+// list members can have an asterisk wildcard in them.  So, if
+// the string passed in is "pppmiron.cs.wisc.edu", and an entry in the
+// the list is "ppp*", then it will return TRUE.
+BOOLEAN
+StringList::contains_withwildcard(const char *string)
+{
+	char *x;
+	char *matchstart;
+	char *matchend;
+	char *asterisk;
+	int matchendlen, len;
+	BOOLEAN result;
+	
+	if ( !string )
+		return FALSE;
+
+	strings.Rewind();
+
+	while ( x=strings.Next() ) {
+
+		if ( (asterisk = strchr(x,'*')) == NULL ) {
+			// There is no wildcard in this entry; just compare
+			if ( strcmp(x,string) == MATCH )
+				return TRUE;
+			else
+				continue;
+		}
+
+		if ( asterisk == x ) {
+			// asterisk at the start behavior
+			matchstart = NULL;
+			matchend = &(x[1]);
+		} else {
+			if ( asterisk[1] == '\0' ) {
+				// asterisk at the end behavior.
+				*asterisk = '\0';	// remove asterisk
+				int temp = strncmp(x,string,strlen(x));
+				*asterisk = '*';	// replace asterisk
+				if ( temp == MATCH ) {
+					return TRUE;
+				} else {
+					continue;
+				}				
+			} else {
+				// asterisk must be in the middle somewhere				
+				matchstart = x;
+				matchend = &(asterisk[1]);
+			}
+		}
+
+		// at this point, we know that there is an  asterisk either at the start
+		// or in the middle somewhere, and both matchstart and matchend are set 
+		// appropiately with what we want
+
+		result = TRUE;
+		*asterisk = '\0';	// replace asterisk with a NULL
+		if ( matchstart ) {
+			if ( strncmp(matchstart,string,strlen(matchstart)) != MATCH ) 
+				result = FALSE;
+		}
+		if ( matchend && result == TRUE) {
+			len = strlen(string);
+			matchendlen = strlen(matchend);
+			if ( matchendlen > len )	// make certain we do not SEGV below
+				result = FALSE;
+			if ( result == TRUE && strcmp(&(string[len-matchendlen]),matchend) != MATCH )
+				result = FALSE;
+		}
+		*asterisk = '*';	// set asterisk back no matter what the result
+		if ( result == TRUE ) {
+			return TRUE;
+		}
+	
+	}	// end of while loop
+
+	return FALSE;
+}

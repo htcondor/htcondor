@@ -32,15 +32,18 @@
 */
 class StringList {
 public:
-	StringList () {};
-	~StringList ();
+	StringList() {};
+	StringList(char *s) {initializeFromString(s);};
+	~StringList();
 	void initializeFromString (char *);
 	BOOLEAN contains( const char * );
 	BOOLEAN substring( const char * );
+	BOOLEAN contains_withwildcard(const char *string);
 	void print (void);
 	void rewind (void) { strings.Rewind(); }
 	void append (char* str) { strings.Append( strdup(str) ); }
 	char *next (void) { return strings.Next(); }
+	void deleteCurrent (void) { strings.DeleteCurrent(); }
 	int number (void) { return strings.Number(); }
 private:
 	List<char> strings;
