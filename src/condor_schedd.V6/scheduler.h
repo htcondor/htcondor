@@ -19,6 +19,7 @@
 #include "HashTable.h"
 #include "list.h"
 #include "classad_hashtable.h"	// for HashKey class
+#include "Queue.h"
 
 const 	int			MAX_NUM_OWNERS = 512;
 const 	int			MAX_REJECTED_CLUSTERS = 1024;
@@ -46,7 +47,6 @@ struct OwnerData {
 struct match_rec
 {
     match_rec(char*, char*, PROC_ID*);
-   
     char    		id[SIZE_OF_CAPABILITY_STRING];
     char    		peer[50];
     int     		cluster;
@@ -112,6 +112,7 @@ class Scheduler : public Service
 	void			StartJobs();
 	void			StartSchedUniverseJobs();
 	void			send_alive();
+	void			StartJobHandler();
 	
   private:
 	
@@ -126,7 +127,7 @@ class Scheduler : public Service
 	// parameters controling the scheduling and starting shadow
 	int				SchedDInterval;
 	int				QueueCleanInterval;
-	int				MaxJobStarts;
+	int				JobStartDelay;
 	int				MaxJobsRunning;
 	int				JobsStarted; // # of jobs started last negotiating session
 	int				SwapSpace;	 // available at beginning of last session
@@ -145,6 +146,8 @@ class Scheduler : public Service
 	int				N_Owners;
 	time_t			LastTimeout;
 	int				ExitWhenDone;  // Flag set for graceful shutdown
+	Queue<shadow_rec*> RunnableJobQueue;
+	int				StartJobTimer;
 	
 	// useful names
 	char*			CollectorHost;
@@ -185,6 +188,8 @@ class Scheduler : public Service
 	void			kill_zombie(int, PROC_ID*);
 	shadow_rec*     find_shadow_rec(PROC_ID*);
 	shadow_rec*     add_shadow_rec(int, PROC_ID*, match_rec*, int);
+	shadow_rec*		add_shadow_rec(shadow_rec*);
+	
 #ifdef CARMI_OPS
 	shadow_rec*		find_shadow_by_cluster( PROC_ID * );
 #endif

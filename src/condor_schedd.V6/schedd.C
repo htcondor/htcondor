@@ -36,6 +36,7 @@
 ** 
 */ 
 #pragma implementation "list.h"
+#pragma implementation "Queue.h"
 
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
@@ -132,7 +133,7 @@ Scheduler::Scheduler()
     MySockName = NULL;
     SchedDInterval = 0;
 	QueueCleanInterval = 0;
-    MaxJobStarts = 0;
+    JobStartDelay = 0;
     MaxJobsRunning = 0;
     JobsStarted = 0;
     JobsRunning = 0;
@@ -156,6 +157,7 @@ Scheduler::Scheduler()
 	numMatches = 0;
 	numShadows = 0;
 	IdleSchedUniverseJobIDs = NULL;
+	StartJobTimer=-1;
 }
 
 Scheduler::~Scheduler()
@@ -761,17 +763,6 @@ Scheduler::negotiate(int, Stream* s)
 					host_cnt = max_hosts + 1;
 					break;
 				case SEND_JOB_INFO: {
-					if( JobsStarted >= MaxJobStarts ) {
-						if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
-							dprintf( D_ALWAYS,
-									"Can't send NO_MORE_JOBS to mgr\n" );
-							return (!(KEEP_STREAM));
-						}
-						dprintf( D_ALWAYS,
-					"Reached MAX_JOB_STARTS - %d jobs matched, %d jobs idle\n",
-								JobsStarted, jobs - JobsStarted );
-						return KEEP_STREAM;
-					}
 					/* Really, we're trying to make sure we don't have too
 					   many shadows running, so compare here against
 					   numShadows rather than JobsRunning as in the past. */
@@ -1176,23 +1167,45 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 	return NULL;
 }
 
-shadow_rec*
-Scheduler::start_std(match_rec* mrec , PROC_ID* job_id)
-{
-#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
+//-----------------------------------------------------------------
+// Start Job Handler
+//-----------------------------------------------------------------
+
+void Scheduler::StartJobHandler() {
+
+    StartJobTimer=-1;
+	PROC_ID* job_id=NULL;
+	match_rec* mrec=NULL;
+	shadow_rec* srec;
+
+	// get job from runnable job queue
+	while(!mrec) {	
+	    if (RunnableJobQueue.dequeue(srec)) return;
+		job_id=&srec->job_id;
+		mrec=srec->match;
+		if (!mrec) {
+			dprintf(D_ALWAYS,"match for job %d.%d was deleted - not forking a shadow\n",job_id->cluster,job_id->proc);
+			mark_job_stopped(job_id);
+		}
+	}
+
+    long l=time(NULL);
+    // dprintf(D_ALWAYS,"Forking a shadow for job=%d.%d time=%s\n",job_id->cluster,job_id->proc,asctime(localtime(&l)));
+
+	//-------------------------------
+	// Actually fork the shadow
+	//-------------------------------
+
 	char	*argv[7];
 	char	cluster[10], proc[10];
 	int		pid;
-	int		i, lim;
+	int		lim;
 
 #ifdef CARMI_OPS
 	struct shadow_rec *srp;
 	char out_buf[80];
 	int pipes[2];
 #endif
-
-	dprintf( D_FULLDEBUG, "Got permission to run job %d.%d on %s\n",
-			job_id->cluster, job_id->proc, mrec->peer);
 
 	(void)sprintf( cluster, "%d", job_id->cluster );
 	(void)sprintf( proc, "%d", job_id->proc );
@@ -1204,44 +1217,30 @@ Scheduler::start_std(match_rec* mrec , PROC_ID* job_id)
 	argv[5] = proc;
 	argv[6] = 0;
 
-#ifdef NOTDEF
-	{
-	char	**ptr;
-
-	dprintf( D_ALWAYS, "About to call: " );
-	for( ptr = argv; *ptr; ptr++ ) {
-		dprintf( D_ALWAYS | D_NOHEADER, "%s ", *ptr );
-	}
-	dprintf( D_ALWAYS | D_NOHEADER, "\n" );
-	}
-#endif NOTDEF
-
-	mark_job_running(job_id);
-	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 1);
 	lim = getdtablesize();
 
 #ifdef CARMI_OPS
 	srp = find_shadow_by_cluster( job_id );
 	
 	if (srp != NULL) /* mean that the shadow exists */
-	  {
-	    if (!find_shadow_rec( job_id )) /* means the shadow rec for this
+	{
+		if (!find_shadow_rec( job_id )) /* means the shadow rec for this
 					      process does not exist */
-	      add_shadow_rec( srp->pid, job_id, server, srp->conn_fd);
+			add_shadow_rec( srp->pid, job_id, server, srp->conn_fd);
 		  /* next write out the server cluster and proc on conn_fd */
-	    dprintf( D_ALWAYS, "Sending job %d.%d to shadow pid %d\n", 
+		dprintf( D_ALWAYS, "Sending job %d.%d to shadow pid %d\n", 
 			job_id->cluster, job_id->proc, srp->pid);
 	    sprintf(out_buf, "%s %d %d\n", server, job_id->cluster, 
-		    job_id->proc);
-	    dprintf( D_ALWAYS, "sending %s", out_buf);
-	    if (write(srp->conn_fd, out_buf, strlen(out_buf)) <= 0)
-	      dprintf(D_ALWAYS, "error in write %d \n", errno);
-            else
-	      dprintf(D_ALWAYS, "done writting to %d \n", srp->conn_fd);
-	    return 1;	
-	  }
+			job_id->proc);
+		dprintf( D_ALWAYS, "sending %s", out_buf);
+		if (write(srp->conn_fd, out_buf, strlen(out_buf)) <= 0)
+			dprintf(D_ALWAYS, "error in write %d \n", errno);
+		else
+			dprintf(D_ALWAYS, "done writting to %d \n", srp->conn_fd);
+		return 1;	
+	}
 	
-       /* now the case when the shadow is absent */
+    /* now the case when the shadow is absent */
 	socketpair(AF_UNIX, SOCK_STREAM, 0, pipes);
 	dprintf(D_ALWAYS, "Got the socket pair %d %d \n", pipes[0], pipes[1]);
 #endif
@@ -1272,7 +1271,7 @@ Scheduler::start_std(match_rec* mrec , PROC_ID* job_id)
 			    dprintf(D_ALWAYS, " Duped 0 to %d \n", pipes[0]);
 #endif		
 			// Close descriptors we do not want inherited by the shadow
-			for( i=3; i<lim; i++ ) {
+			for( int i=3; i<lim; i++ ) {
 				(void)close( i );
 			}
 
@@ -1286,17 +1285,47 @@ Scheduler::start_std(match_rec* mrec , PROC_ID* job_id)
 			}
 			break;
 		default:	/* the parent */
-			dprintf( D_ALWAYS, "Running %d.%d on \"%s\", (shadow pid = %d)\n",
+			dprintf( D_ALWAYS, "Forked shadow for job %d.%d on \"%s\", (shadow pid = %d)\n",
 				job_id->cluster, job_id->proc, mrec->peer, pid );
-#ifdef ASHISH_DEBUG
-			close(pipes[0]);
-			srp = add_shadow_rec( pid, job_id, server, pipes[1] );
-			dprintf( D_ALWAYS, "pipes[1] = %d\n", pipes[1]);
-#endif	
-			return add_shadow_rec( pid, job_id, mrec, -1 );
+			srec->pid=pid;
+			add_shadow_rec(srec);
 	}
-#endif /* !defined(WIN32) */
+
+    // Re-set timer if there are any jobs left in the queue
+    if (!RunnableJobQueue.IsEmpty()) {
+        StartJobTimer=daemonCore->Register_Timer(JobStartDelay,(Eventcpp)StartJobHandler,"start_job", this);
+    }
+
+}
+
+shadow_rec*
+Scheduler::start_std(match_rec* mrec , PROC_ID* job_id)
+{
+#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
+
+	dprintf( D_FULLDEBUG, "Scheduler::start_std - job=%d.%d on %s\n",
+			job_id->cluster, job_id->proc, mrec->peer);
+
+	mark_job_running(job_id);
+	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 1);
+
+	// add job to run queue
+	dprintf(D_FULLDEBUG,"Queueing job %d.%d in runnable job queue\n",job_id->cluster,job_id->proc);
+	shadow_rec* srec=add_shadow_rec(0,job_id, mrec,-1);
+	if (RunnableJobQueue.enqueue(srec)) {
+		EXCEPT("Cannot put job into run queue\n");
+	}
+	if (StartJobTimer<0) {
+		StartJobTimer=daemonCore->Register_Timer(0,(Eventcpp)StartJobHandler,"start_job", this);
+    }
+
+	return srec;
+
+#else /* WIN32 */
+
 	return NULL;
+
+#endif /* !defined(WIN32) */
 }
 
 
@@ -1546,15 +1575,22 @@ Scheduler::display_shadow_recs()
 {
 	struct shadow_rec *r;
 
+
 	dprintf( D_FULLDEBUG, "\n");
 	dprintf( D_FULLDEBUG, "..................\n" );
 	dprintf( D_FULLDEBUG, ".. Shadow Recs (%d)\n", numShadows );
 	shadowsByPid->startIterations();
 	while (shadowsByPid->iterate(r) == 1) {
-		dprintf(D_FULLDEBUG, ".. %d, %d.%d, %s, %s\n",
+
+		int cur_hosts=-1, status=-1;
+		GetAttributeInt(r->job_id.cluster, r->job_id.proc, ATTR_CURRENT_HOSTS, &cur_hosts);
+		GetAttributeInt(r->job_id.cluster, r->job_id.proc, ATTR_JOB_STATUS, &status);
+
+		dprintf(D_FULLDEBUG, ".. %d, %d.%d, %s, %s, cur_hosts=%d, status=%d\n",
 				r->pid, r->job_id.cluster, r->job_id.proc,
 				r->preempted ? "T" : "F" ,
-				r->match ? r->match->peer : "localhost");
+				r->match ? r->match->peer : "localhost",
+				cur_hosts, status);
 	}
 	dprintf( D_FULLDEBUG, "..................\n\n" );
 }
@@ -1571,11 +1607,18 @@ Scheduler::add_shadow_rec( int pid, PROC_ID* job_id, match_rec* mrec, int fd )
 	new_rec->removed = FALSE;
 	new_rec->conn_fd = fd;
 	
+	if (pid) add_shadow_rec(new_rec);
+	return new_rec;
+}
+
+struct shadow_rec *
+Scheduler::add_shadow_rec( shadow_rec* new_rec )
+{
 	numShadows++;
-	shadowsByPid->insert(pid, new_rec);
-	shadowsByProcID->insert(*job_id, new_rec);
+	shadowsByPid->insert(new_rec->pid, new_rec);
+	shadowsByProcID->insert(new_rec->job_id, new_rec);
 	dprintf( D_FULLDEBUG, "Added shadow record for PID %d, job (%d.%d)\n",
-			pid, job_id->cluster, job_id->proc );
+			new_rec->pid, new_rec->job_id.cluster, new_rec->job_id.proc );
 	scheduler.display_shadow_recs();
 	return new_rec;
 }
@@ -1845,6 +1888,8 @@ Scheduler::shadow_prio_recs_consistent()
 			BadProc = srp->job_id.proc;
 			GetAttributeInt(BadCluster, BadProc, ATTR_JOB_STATUS, &status);
 			if (status != RUNNING) {
+				// display_shadow_recs();
+				// dprintf(D_ALWAYS,"shadow_prio_recs_consistent(): PrioRec %d - id = %d.%d, owner = %s\n",i,PrioRec[i].id.cluster,PrioRec[i].id.proc,PrioRec[i].owner);
 				dprintf( D_ALWAYS, "Found a consistency problem!!!\n" );
 				return FALSE;
 			}
@@ -2339,11 +2384,11 @@ Scheduler::Init()
 		free( tmp );
 	}
 
-	tmp = param( "MAX_JOB_STARTS" );
+	tmp = param( "JOB_START_DELAY" );
     if( ! tmp ) {
-        MaxJobStarts = 5;
+        JobStartDelay = 2;
     } else {
-        MaxJobStarts = atoi( tmp );
+        JobStartDelay = atoi( tmp );
         free( tmp );
     }
 
