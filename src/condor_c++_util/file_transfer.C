@@ -1205,9 +1205,33 @@ FileTransfer::DoUpload(ReliSock *s)
 		filelist->rewind();
 	}
 
+	// get ourselves a local copy that will be cleaned up if we exit
+	char *tmpSpool = param("SPOOL");
+	char Spool[_POSIX_PATH_MAX];
+	if (tmpSpool) {
+		strcpy (Spool, tmpSpool);
+		free (tmpSpool);
+	}
+
 	while ( filelist && (filename=filelist->next()) ) {
 
 		dprintf(D_FULLDEBUG,"DoUpload: send file %s\n",filename);
+
+		// okay, what we do here is undo the old priv change. then,
+		// depending on if the file is in spool or not, we switch to
+		// condor priv for a spool file or else back to desired priv.
+		if (saved_priv != PRIV_UNKNOWN) {
+        	_set_priv(saved_priv,__FILE__,__LINE__,1);
+		}
+		// look at the filename to see if it starts with the SPOOL dir
+		if (strncmp(Spool, filename, strlen(Spool)) == 0) {
+			saved_priv = set_condor_priv();
+		} else {
+			saved_priv = PRIV_UNKNOWN;
+			if( want_priv_change ) {
+				saved_priv = set_priv( desired_priv_state );
+			}
+		}
 
 		if( !s->snd_int(1,FALSE) ) {
 			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
