@@ -35,6 +35,45 @@
 #include "get_full_hostname.h"
 #include "my_hostname.h"
 #include "internet.h"
+#include "HashTable.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
+
+
+Daemon::Daemon( char* sinful_addr, int port ) 
+{
+	_type = DT_ANY;
+	_port = 0;
+	_is_local = false;
+	_tried_locate = true;
+
+	_addr = NULL;
+	_name = NULL;
+	_pool = NULL;
+	_version = NULL;
+	_platform = NULL;
+	_error = NULL;
+	_id_str = NULL;
+	_hostname = NULL;
+	_full_hostname = NULL;
+
+	if( sinful_addr && is_valid_sinful(sinful_addr) ) {
+		if (port) {
+			char new_sinful_addr[128] = {0};
+			int iplen = strchr( sinful_addr, ':') - sinful_addr;
+			strncpy (new_sinful_addr, sinful_addr, iplen);
+			sprintf (new_sinful_addr + iplen, ":%i>", port);
+			_addr = strnewp( new_sinful_addr );
+		} else {
+			_addr = strnewp( sinful_addr );
+		}
+		_port = string_to_port( _addr );
+	} else {
+		_addr = NULL;
+		_port = 0;
+	}
+
+}
+
 
 Daemon::Daemon( daemon_t type, const char* name, const char* pool ) 
 {
@@ -42,8 +81,6 @@ Daemon::Daemon( daemon_t type, const char* name, const char* pool )
 	_port = 0;
 	_is_local = false;
 	_tried_locate = false;
-	_auth_cap_known = false;
-	_is_auth_cap = false;
 
 	_addr = NULL;
 	_name = NULL;
@@ -67,6 +104,7 @@ Daemon::Daemon( daemon_t type, const char* name, const char* pool )
 			_name = strnewp( name );
 		}
 	} 
+
 }
 
 
@@ -81,6 +119,7 @@ Daemon::~Daemon()
 	if( _full_hostname ) delete [] _full_hostname;
 	if( _version ) delete [] _version;
 	if( _platform ) { delete [] _platform; }
+
 }
 
 
@@ -301,310 +340,61 @@ Daemon::startCommand( int cmd, Stream::stream_type st, int sec )
 		return NULL;
 	}
 
-	return startCommand ( cmd, sock, sec );
+
+	if (startCommand ( cmd, sock, sec )) {
+		return sock;
+	} else {
+		delete sock;
+		return NULL;
+	}
 
 }
 
 
-Sock*
+bool
 Daemon::startCommand( int cmd, Sock* sock, int sec )
 {
-	// the classad for sending
-	ClassAd auth_info;
 
-	// temp vars for putting the classad together
-	char *buf;
-	char *paramer;
-
-
-	// set up the socket
-
+	// basic sanity check
 	if( ! sock ) {
-		newError( "startCommand() called with a NULL Sock*" );
-		return NULL;
+		dprintf ( D_ALWAYS, "startCommand() called with a NULL Sock*, failing." );
+		return false;
+	} else {
+		dprintf ( D_SECURITY, "STARTCOMMAND: starting %i to %s on %s port %i.\n", cmd, sin_to_string(sock->endpoint()), (sock->type() == Stream::safe_sock) ? "UDP" : "TCP", sock->get_port());
 	}
+
+	// set up the timeout
 	if( sec ) {
 		sock->timeout( sec );
 	}
 
+	// give them the benefit of the doubt
+	bool    other_side_can_negotiate = true;
 
-	// read the config
-
-	// default value for config file
-	bool always_authenticate = false; 
-
-	paramer = param("ALWAYS_AUTHENTICATE");
-	if (paramer) {
-		dprintf (D_SECURITY, "STARTCOMMAND: param(ALWAYS_AUTHENTICATE)"
-					" == %s\n", paramer);
-		if ((stricmp(paramer, "YES") == 0) ||
-		    (stricmp(paramer, "TRUE") == 0)) {
-			dprintf ( D_SECURITY, "STARTCOMMAND: "
-					      "forcing authentication.\n");
-			always_authenticate = true;
-		}
-		free(paramer);
-	} else {
-		dprintf (D_SECURITY, "STARTCOMMAND: param(ALWAYS_AUTHENTICATE)"
-					"failed, assuming FALSE.\n" );
-	}
-
-	// find out if client supports authentication negotiation
-
-	// default is disabled.
-	// the config can override that to enabled
-	// the version can override that to disabled
-
-	bool disable_auth_negotiation = true;	// default
-	paramer = param("DISABLE_AUTH_NEGOTIATION");
-	if (paramer) {
-		dprintf (D_SECURITY, "STARTCOMMAND: param(DISABLE_AUTH_NEGOTIATION)"
-					" == %s\n", paramer);
-		if ( (paramer[0] == 'N') || (paramer[0] == 'n') ||
-		     (paramer[0] == 'F') || (paramer[0] == 'f' ) ) 
-		{
-			disable_auth_negotiation = false;
-		}
-		free(paramer);
-	} 
-
-	// look at the version if we haven't and it is available
-	if (!_auth_cap_known && _version) {
-		dprintf(D_SECURITY, "STARTCOMMAND: talking to a %s daemon.\n", _version);
-
+	// look at the version if it is available.  we must disable
+	// negotiation when talk to pre-6.3.2.
+	if (_version) {
+		dprintf(D_SECURITY, "DAEMON: talking to a %s daemon.\n", _version);
 		CondorVersionInfo vi(_version);
-		
-		if ( !vi.built_since_version(6,3,1) ) {
-			_auth_cap_known = true;
-			_is_auth_cap = false;
-			dprintf (D_SECURITY, "STARTCOMMAND: disabling auth "
-				"negotiation to talk to pre 6.3.1.\n");
+		if ( !vi.built_since_version(6,3,2) ) {
+			dprintf(D_SECURITY, "DAEMON: security negotiation not possible, disabling.\n");
+			other_side_can_negotiate = false;
 		}
 	}
 
+	// handoff to the security manager
+	return _sec_man.startCommand(cmd, sock, other_side_can_negotiate);
 
-	if ( disable_auth_negotiation ) {
-			dprintf ( D_SECURITY, "STARTCOMMAND: "
-				"disabling negotiation for authentication.\n");
-			_auth_cap_known = true;
-			_is_auth_cap = false;
-
-	} 
-
-
-	// possible courses of action:
-	const int AUTH_FAIL = 0;
-	const int AUTH_OLD  = 1;
-	const int AUTH_NO   = 2;
-	const int AUTH_ASK  = 3;
-	const int AUTH_YES  = 4;
-
-	int authentication_action;
-
-
-	// now the 'logic' :)
-	if (always_authenticate) {
-		authentication_action = AUTH_YES;
-		if (_auth_cap_known && !_is_auth_cap) {
-			authentication_action = AUTH_FAIL;
-		}
-	} else {
-		authentication_action = AUTH_ASK;
-		if (_auth_cap_known && !_is_auth_cap) {
-			authentication_action = AUTH_OLD;
-		}
-	}
-
-
-
-	// now take action
-
-	sock->encode();
-
-	// AUTH_FAIL - we demand auth, the daemon does not support it
-	if (authentication_action == AUTH_FAIL) {
-		// cannot possibly authenticate to pre-6.3.0,
-		// so exit with error.
-		dprintf(D_SECURITY, "STARTCOMMAND: cannot authenticate"
-					" with pre 6.3.0\n");
-
-		delete sock;
-		return NULL;
-	}
-
-	// AUTH_OLD - we support auth, daemon does not.  command is sent
-	// like it was in pre 6.3
-	if (authentication_action == AUTH_OLD) {
-		dprintf(D_SECURITY, "STARTCOMMAND: skipping negotiation\n");
-		// just code the command and be done
-		sock->code(cmd);
-		// we must _not_ do an eom() here!  Ques?  See Todd or Zach 9/01
-		return sock;
-	}
-
-
-	dprintf ( D_SECURITY, "negotiating auth for command %i.\n", cmd);
-
-	// package the ClassAd together
-
-	// allocate a buffer big enough to work with all fields
-	int buflen = 128;
-
-	paramer = param("AUTHENTICATION_METHODS");
-	if (paramer != NULL) {
-		dprintf ( D_SECURITY, "STARTCOMMAND: param(AUTHENTICATION_METHODS) == %s\n", paramer );
-		// expand the buffer to hold the names of all the methods
-		buflen += strlen(paramer);
-	} else {
-		dprintf ( D_SECURITY, "STARTCOMMAND: param(AUTHENTICATION_METHODS) failed!\n" );
-	}
-
-	buf = new char[buflen];
-	if (buf == NULL) {
-		dprintf ( D_ALWAYS, "STARTCOMMAND: new failed!\n" );
-		delete sock;
-		if (paramer) {
-			delete paramer;
-		}
-		return NULL;
-	}
-
-	// auth_types
-	if (paramer) {
-		sprintf(buf, "%s=\"%s\"", ATTR_AUTH_TYPES, paramer);
-		free(paramer);
-	} else {
-#if defined(WIN32)
-		sprintf(buf, "%s=\"NTSSPI\"", ATTR_AUTH_TYPES);
-#else
-		sprintf(buf, "%s=\"FS\"", ATTR_AUTH_TYPES);
-#endif
-	}
-
-	auth_info.Insert(buf);
-	dprintf ( D_SECURITY, "STARTCOMMAND: inserted '%s'\n", buf);
-
-
-	// command
-	sprintf(buf, "%s=%i", ATTR_AUTH_COMMAND, cmd);
-	auth_info.Insert(buf);
-	dprintf ( D_SECURITY, "STARTCOMMAND: inserted '%s'\n", buf);
-
-	// authentication action
-	if (authentication_action == AUTH_YES) {
-		sprintf(buf, "%s=\"YES\"", ATTR_AUTH_ACTION);
-	} else {
-		sprintf(buf, "%s=\"ASK\"", ATTR_AUTH_ACTION);
-	}
-
-	auth_info.Insert(buf);
-	dprintf ( D_SECURITY, "STARTCOMMAND: inserted '%s'\n", buf);
-
-	// free the buffer
-	delete [] buf;
-
-
-	dprintf ( D_SECURITY, "STARTCOMMAND: sending DC_AUTHENTICATE command\n");
-	int authcmd = DC_AUTHENTICATE;
-	if (! sock->code(authcmd)) {
-		dprintf ( D_ALWAYS, "STARTCOMMAND: failed to send DC_AUTHENTICATE\n");
-		delete sock;
-		return NULL;
-	}
-
-
-	// send the classad
-	dprintf ( D_SECURITY, "STARTCOMMAND: sending following classad:\n");
-	auth_info.dPrint ( D_SECURITY );
-
-	if (! auth_info.put(*sock)) {
-		dprintf ( D_ALWAYS, "STARTCOMMAND: failed to send auth_info\n");
-		delete sock;
-		return NULL;
-	}
-
-	if (! sock->end_of_message()) {
-		dprintf ( D_ALWAYS, "STARTCOMMAND: failed to end classad message\n");
-		delete sock;
-		return NULL;
-	}
-
-	bool retval;
-
-	if (authentication_action == AUTH_ASK) {
-		ClassAd auth_response;
-		sock->decode();
-		auth_response.initFromStream(*sock);
-		sock->end_of_message();
-
-		dprintf ( D_SECURITY, "STARTCOMMAND: server responded with:\n");
-		auth_response.dPrint( D_SECURITY );
-
-		buf = new char[128];
-		if (buf == NULL) {
-			dprintf ( D_ALWAYS, "STARTCOMMAND: new failed!\n");
-			delete sock;
-			return NULL;
-		}
-
-		if (auth_response.LookupString(ATTR_VERSION, buf)) {
-			dprintf ( D_SECURITY, "STARTCOMMAND: %s "
-				"== %s in response ClassAd", ATTR_VERSION, buf);
-			New_version(buf);
-		} else {
-			dprintf ( D_SECURITY, "STARTCOMMAND: no %s "
-						"in response ClassAd.\n", ATTR_VERSION,
-						ATTR_AUTH_ACTION );
-		}
-
-
-		if (!auth_response.LookupString(ATTR_AUTH_ACTION, buf)) {
-			dprintf ( D_ALWAYS, "STARTCOMMAND: no %s "
-						"in response ClassAd!\n", ATTR_AUTH_ACTION );
-			delete sock;
-			return NULL;
-		}
-		if( buf[0] == 'Y' || buf[0] == 'y' ||
-			buf[0] == 'T' || buf[0] == 't' ) {
-			authentication_action = AUTH_YES;
-		} else {
-			authentication_action = AUTH_NO;
-		}
-
-	}
-
-	if (authentication_action == AUTH_YES) {
-		dprintf ( D_SECURITY, "STARTCOMMAND: authenticate(0xFFFF) "
-					"RIGHT NOW.\n");
-		retval = sock->authenticate(0xFFFF);
-	} else {
-		dprintf ( D_SECURITY, "STARTCOMMAND: not authenticating.\n");
-		retval = true;
-	}
-
-	dprintf (D_SECURITY, "STARTCOMMAND: retval is %i.\n", retval);
-	if (retval) {
-		dprintf ( D_SECURITY, "STARTCOMMAND: setting sock->encode()\n");
-		sock->encode();
-		sock->allow_one_empty_message();
-		return sock;
-	} else {
-		dprintf (D_SECURITY, "STARTCOMMAND: authenticate failed.\n");
-		delete sock;
-		return NULL;
-	}
 }
-
-
 
 bool
 Daemon::sendCommand( int cmd, Sock* sock, int sec )
 {
-	Sock* tmp = startCommand( cmd, sock, sec );
-	if( ! tmp ) {
+	
+	if( ! startCommand( cmd, sock, sec )) {
 		return false;
 	}
-	if( ! tmp->eom() ) {
+	if( ! sock->eom() ) {
 		char err_buf[256];
 		sprintf( err_buf, "Can't send eom for %d to %s", cmd,  
 				 idStr() );
@@ -665,6 +455,9 @@ Daemon::locate( void )
 		// _is_local.  If possible, they will also set _full_hostname
 		// and _name. 
 	switch( _type ) {
+	case DT_ANY:
+		// don't do anything
+		break;
 	case DT_CLUSTER:
 		rval = getDaemonInfo( "CLUSTER", CLUSTER_AD );
 		break;
@@ -855,6 +648,7 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 
 
 	}
+
 
 	if( ! _addr ) {
 			// If we still don't have it (or it wasn't local), query
@@ -1119,7 +913,6 @@ Daemon::New_addr( char* str )
 	return str;
 }
 
-
 char*
 Daemon::New_version ( char* ver )
 {
@@ -1129,7 +922,6 @@ Daemon::New_version ( char* ver )
 	_version = ver;
 	return ver;
 }
-
 
 char*
 Daemon::New_platform ( char* plat )

@@ -21,7 +21,10 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
+
 /* Dummy definition of mySubSystem string to be included in Condor
    libraries where needed. */
 
 char* mySubSystem = "TOOL";
+DaemonCore* daemonCore = NULL;

@@ -247,7 +247,8 @@ const int QUERY_ANY_ADS = 48;
 #define DC_AUTHENTICATE     (DC_BASE+10)
 #define DC_NOP              (DC_BASE+11)
 #define DC_RECONFIG_FULL	(DC_BASE+12)
-#define DC_FETCH_LOG            (DC_BASE+13)
+#define DC_FETCH_LOG        (DC_BASE+13)
+#define DC_INVALIDATE_KEY   (DC_BASE+14)
 
 /*
 *** Log type supported by DC_FETCH_LOG

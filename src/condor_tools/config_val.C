@@ -46,6 +46,7 @@
 #include "string_list.h"
 #include "get_daemon_addr.h"
 #include "get_full_hostname.h"
+#include "daemon.h"
 #include "daemon_types.h"
 #include "internet.h"
 
@@ -295,45 +296,46 @@ main( int argc, char* argv[] )
 char*
 GetRemoteParam( char* name, char* addr, char* pool, char* param_name ) 
 {
-	ReliSock s;
-	s.timeout( 30 );
 	char	*val = NULL;
-	int 	cmd = CONFIG_VAL;
 	
 	if( !name ) {
 		name = "";
 	}
 
-	if( ! s.connect( addr, 0 ) ) {
+	Daemon d(addr);
+	ReliSock *s = (ReliSock*)d.startCommand (CONFIG_VAL, Stream::reli_sock, 30);
+	if( !s ) {
 		fprintf( stderr, "Can't connect to %s on %s %s\n", 
 				 daemonString(dt), name, addr );
 		my_exit(1);
 	}
 
-	s.encode();
-	if( !s.code(cmd) ) {
-		fprintf( stderr, "Can't send command CONFIG_VAL (%d)\n", cmd );
-		return NULL;
-	}
-	if( !s.code(param_name) ) {
+	s->encode();
+	if( !s->code(param_name) ) {
 		fprintf( stderr, "Can't send request (%s)\n", param_name );
+		delete s;
 		return NULL;
 	}
-	if( !s.end_of_message() ) {
+	if( !s->end_of_message() ) {
 		fprintf( stderr, "Can't send end of message\n" );
+		delete s;
 		return NULL;
 	}
 
-	s.decode();
-	if( !s.code(val) ) {
+	s->decode();
+	if( !s->code(val) ) {
 		fprintf( stderr, "Can't receive reply from %s on %s %s\n",
 				 daemonString(dt), name, addr );
+		delete s;
 		return NULL;
 	}
-	if( !s.end_of_message() ) {
+	if( !s->end_of_message() ) {
 		fprintf( stderr, "Can't receive end of message\n" );
+		delete s;
 		return NULL;
 	}
+
+	delete s;
 	return val;
 }
 
@@ -343,7 +345,6 @@ SetRemoteParam( char* name, char* addr, char* pool, char* param_value,
 				ModeType mt )
 {
 	int cmd, rval;
-	ReliSock s;
 	bool set = false;
 
 		// We need to know two things: what command to send, and (for
@@ -427,50 +428,54 @@ SetRemoteParam( char* name, char* addr, char* pool, char* param_value,
 	char* buf = (char*)malloc( strlen(param_value) + 2 );
 	sprintf( buf, "%s\n", param_value );
 
-	s.timeout( 30 );
-	if( ! s.connect( addr, 0 ) ) {
+	Daemon d(addr);
+	ReliSock *s = (ReliSock*)d.startCommand (cmd, Stream::reli_sock, 30);
+	if( !s ) {
 		fprintf( stderr, "Can't connect to %s on %s %s\n", 
 				 daemonString(dt), name, addr );
 		my_exit(1);
 	}
 
-	s.encode();
-	if( !s.code(cmd) ) {
-		fprintf( stderr, "Can't send DC_CONFIG command (%d)\n", cmd );
-		my_exit(1);
-	}
-	if( !s.code(param_name) ) {
+	s->encode();
+	if( !s->code(param_name) ) {
 		fprintf( stderr, "Can't send config name (%s)\n", param_name );
+		delete s;
 		my_exit(1);
 	}
 	if( set ) {
-		if( !s.code(param_value) ) {
+		if( !s->code(param_value) ) {
 			fprintf( stderr, "Can't send config setting (%s)\n", param_value );
+			delete s;
 			my_exit(1);
 		}
-		if( !s.put('\n') ) {
+		if( !s->put('\n') ) {
 			fprintf( stderr, "Can't send newline\n" );
+			delete s;
 			my_exit(1);
 		}
 	} else {
-		if( !s.put("") ) {
+		if( !s->put("") ) {
 			fprintf( stderr, "Can't send config setting\n" );
+			delete s;
 			my_exit(1);
 		}
 	}
-	if( !s.end_of_message() ) {
+	if( !s->end_of_message() ) {
 		fprintf( stderr, "Can't send end of message\n" );
+		delete s;
 		my_exit(1);
 	}
 
-	s.decode();
-	if( !s.code(rval) ) {
+	s->decode();
+	if( !s->code(rval) ) {
 		fprintf( stderr, "Can't receive reply from %s on %s %s\n",
 				 daemonString(dt), name, addr );
+		delete s;
 		my_exit(1);
 	}
-	if( !s.end_of_message() ) {
+	if( !s->end_of_message() ) {
 		fprintf( stderr, "Can't receive end of message\n" );
+		delete s;
 		my_exit(1);
 	}
 	if (rval < 0) {
@@ -483,6 +488,7 @@ SetRemoteParam( char* name, char* addr, char* pool, char* param_value,
 					 "%s failed.\n",
 					 param_value, daemonString(dt), name, addr );
 		}
+		delete s;
 		my_exit(1);
 	}
 	if (set) {
@@ -494,6 +500,9 @@ SetRemoteParam( char* name, char* addr, char* pool, char* param_value,
 				 "%s.\n",
 				 param_value, daemonString(dt), name, addr );
 	}
+
+	delete s;
+
 	free( buf );
 	free( param_name );
 }

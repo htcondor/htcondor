@@ -21,69 +21,36 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#ifndef CONDOR_CRYPT_KEY
-#define CONDOR_CRYPT_KEY
+#ifndef CONDOR_AUTHENTICATOR_ANONYMOUS
+#define CONDOR_AUTHENTICATOR_ANONYMOUS
 
-enum Protocol {
-    CONDOR_NO_PROTOCOL,
-    CONDOR_BLOWFISH,
-    CONDOR_3DES
-};
+#if !defined(SKIP_AUTHENTICATION)
 
-class KeyInfo {
+#include "condor_auth_claim.h"        // Condor_Auth_Base class is defined here
+
+class Condor_Auth_Anonymous : public Condor_Auth_Claim {
  public:
-    KeyInfo();
+    Condor_Auth_Anonymous(ReliSock * sock);
     //------------------------------------------
-    // Default constructor
-    //------------------------------------------
-
-    KeyInfo(unsigned char * keyData,
-            int             keyDataLen,
-            Protocol        protocol = CONDOR_NO_PROTOCOL,
-            int             duration = 0);
-    //------------------------------------------
-    // Construct a key object
+    // Constructor
     //------------------------------------------
 
-    KeyInfo(const KeyInfo& copy);
+    ~Condor_Auth_Anonymous();
     //------------------------------------------
-    // Copy constructor
-    //------------------------------------------
-
-    ~KeyInfo();
-
-    unsigned char * getKeyData();
-    //------------------------------------------
-    // PURPOSE: Return the key
-    // REQUIRE: None
-    // RETURNS: unsigned char * 
-    //------------------------------------------
-    
-    int getKeyLength();
-    //------------------------------------------
-    // PURPOSE: Return length of the key
-    // REQUIRE: None
-    // RETURNS: length
+    // Destructor
     //------------------------------------------
 
-    Protocol getProtocol();
+    int authenticate(const char * remoteHost);
     //------------------------------------------
-    // PURPOSE: Return protocol
-    // REQUIRE: None
-    // RETURNS: protocol
-    //------------------------------------------
+    // PURPOSE: authenticate with the other side 
+    // REQUIRE: hostAddr -- host to authenticate
+    // RETURNS:
+    //------------------------------------------    
 
-    int getDuration();
-    //------------------------------------------
-    // PURPOSE: Return duration
-    // REQUIRE: None
-    // REQUIRE: None
-    //------------------------------------------
  private:
-    unsigned char * keyData_;
-    int             keyDataLen_;
-    Protocol        protocol_;
-    int             duration_;
+
 };
+
+#endif  // SKIP_AUTHENTICATION
 
 #endif

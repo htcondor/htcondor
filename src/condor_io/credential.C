@@ -32,7 +32,6 @@
 #   include "internet.h"
 #   include "condor_uid.h"
 #   include "my_username.h"
-#   include "string_list.h"
 #endif /* !defined(SKIP_AUTHENTICATION) */
 #include "credential.h"
 extern DLL_IMPORT_MAGIC char **environ;
@@ -301,9 +300,17 @@ int X509_Credential :: check_x509_proxy( char *proxy_file )
 	ERR_load_prxyerr_strings(0);
 	SSLeay_add_ssl_algorithms();
 
+    pcd = proxy_cred_desc_new(); // Added. But not sure if it's correct. Hao
+
+    if (!pcd) {
+        dprintf(D_ALWAYS,"ERROR: unable to initialize globus\n");
+        return 1;
+    }
+
 	/* Load proxy */
-	if (!proxy_file) 
-		proxy_get_filenames(NULL, 1, NULL, NULL, &proxy_file, NULL, NULL);
+	if (!proxy_file) {
+		proxy_get_filenames(pcd, 1, NULL, NULL, &proxy_file, NULL, NULL);
+	}
 
 	if (!proxy_file) {
 		fprintf(stderr,"ERROR: unable to determine proxy file name\n");

@@ -43,7 +43,7 @@ bool	configInsert( ClassAd* ad, const char* param_name,
 
 		// Send given classads to the given sock.  If either pointer
 		// is NULL, the class ad is not sent.  
-int		send_classad_to_sock( int cmd, Sock* sock, ClassAd* pubCA,
+int		send_classad_to_sock( int cmd, Daemon* d, ClassAd* pubCA,
 							  ClassAd* privCA ); 
 Resource* stream_to_rip( Stream* );
 

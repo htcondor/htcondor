@@ -44,8 +44,12 @@ class Condor_Crypt_Base {
     //------------------------------------------
 
     static unsigned char * randomKey(int length = 24);
+    static unsigned char * oneWayHashKey(const char * initialKey);
     //------------------------------------------
     // PURPOSE: Generate a random key
+    //          First method use rand function to generate the key
+    //          Second method use MD5 hashing algorithm to generate a key
+    //             using the input string. initialkey should not be too short!
     // REQUIRE: length of the key, default to 12
     // RETURNS: a buffer (malloc) with length 
     //------------------------------------------
@@ -55,6 +59,14 @@ class Condor_Crypt_Base {
     // PURPOSE: return protocol 
     // REQUIRE: None
     // RETURNS: protocol
+    //------------------------------------------
+
+    virtual void resetState() = 0;
+    //------------------------------------------
+    // PURPOSE: Reset encryption state. This is 
+    //          required for UPD encryption
+    // REQUIRE: None
+    // RETURNS: None
     //------------------------------------------
 
     virtual bool encrypt(unsigned char *   input, 

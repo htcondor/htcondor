@@ -35,6 +35,8 @@
 #include "condor_ckpt_name.h"
 #include "condor_string.h"
 #include "util_lib_proto.h"
+#include "daemon.h"
+#include "daemon_types.h"
 
 #define COMMIT_FILENAME ".ccommit.con"
 
@@ -465,7 +467,6 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 int
 FileTransfer::DownloadFiles(bool blocking)
 {
-	ReliSock sock;
 	int ret_value;
 	
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DownloadFiles\n");
@@ -485,18 +486,23 @@ FileTransfer::DownloadFiles(bool blocking)
 		EXCEPT("FileTransfer: DownloadFiles called on server side");
 	}
 
-	if ( !sock.connect(TransSock,0) )
-		return 0;
+	Daemon d(TransSock);
 
-	sock.encode();
+	ReliSock* sock = (ReliSock*)(d.startCommand(FILETRANS_UPLOAD, Stream::reli_sock, 0));
 
-	if (!sock.snd_int(FILETRANS_UPLOAD,0) ||
-		!sock.code(TransKey) ||
-		!sock.end_of_message() ) {
+	if ( !sock ) {
 		return 0;
 	}
 
-	ret_value = Download(&sock,blocking);
+	sock->encode();
+
+	if ( !sock->code(TransKey) ||
+		!sock->end_of_message() ) {
+		delete sock;
+		return 0;
+	}
+
+	ret_value = Download(sock,blocking);
 
 	// If Download was successful (it returns 1 on success) and
 	// upload_changed_files is true, then we must record the current
@@ -512,13 +518,13 @@ FileTransfer::DownloadFiles(bool blocking)
 		sleep(1);
 	}
 
+	delete sock;
 	return ret_value;
 }
 
 int
 FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 {
-	ReliSock sock;
 	StringList changed_files(NULL,",");
 
 	dprintf(D_FULLDEBUG,
@@ -609,21 +615,27 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 		return 1;
 	}
 
-	if( !sock.connect(TransSock,0) ) {
+	Daemon d(TransSock);
+
+	ReliSock* sock = (ReliSock*)(d.startCommand(FILETRANS_DOWNLOAD, Stream::reli_sock, 0));
+	if( !sock ) {
 		return 0;
 	}
 
-	sock.encode();
+	sock->encode();
 
-	if (!sock.snd_int(FILETRANS_DOWNLOAD,0) ||
-		!sock.code(TransKey) ||
-		!sock.end_of_message() ) {
+	if ( !sock->code(TransKey) ||
+		!sock->end_of_message() ) {
+		delete sock;
 		return 0;
 	}
 
 	dprintf( D_FULLDEBUG,
 			 "FileTransfer::UploadFiles: sent TransKey=%s\n", TransKey );
-	return( Upload(&sock,blocking) );
+	int retval = Upload(sock,blocking);
+
+	delete sock;
+	return( retval );
 }
 
 int

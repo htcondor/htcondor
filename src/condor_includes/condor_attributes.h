@@ -289,9 +289,27 @@ const char ATTR_ON_EXIT_SIGNAL		     [] = "ExitSignal";
 const char ATTR_PERIODIC_HOLD_CHECK		 [] = "PeriodicHold";
 const char ATTR_PERIODIC_REMOVE_CHECK	 [] = "PeriodicRemove";
 
-const char ATTR_AUTH_TYPES               [] = "AuthTypes";
-const char ATTR_AUTH_ACTION              [] = "AuthAction";
-const char ATTR_AUTH_COMMAND             [] = "AuthCommand";
-
+const char ATTR_SEC_AUTHENTICATION_METHODS[] = "AuthMethods";
+const char ATTR_SEC_CRYPTO_METHODS       [] = "CryptoMethods";
+const char ATTR_SEC_AUTHENTICATION       [] = "Authentication";
+const char ATTR_SEC_ENCRYPTION           [] = "Encryption";
+const char ATTR_SEC_INTEGRITY            [] = "Integrity";
+const char ATTR_SEC_ENACT                [] = "Enact";
+const char ATTR_SEC_RESPOND              [] = "Respond";
+const char ATTR_SEC_COMMAND              [] = "Command";
+const char ATTR_SEC_AUTH_COMMAND         [] = "AuthCommand";
+const char ATTR_SEC_SID                  [] = "Sid";
+const char ATTR_SEC_SUBSYSTEM            [] = "Subsystem";
+const char ATTR_SEC_VERSION              [] = "Version";
+const char ATTR_SEC_SERVER_ENDPOINT      [] = "ServerEndpoint";
+const char ATTR_SEC_SERVER_COMMAND_SOCK  [] = "ServerCommandSock";
+const char ATTR_SEC_SERVER_PID           [] = "ServerPid";
+const char ATTR_SEC_PACKET_COUNT         [] = "PacketCount";
+const char ATTR_SEC_NEGOTIATION          [] = "OutgoingNegotiation";
+const char ATTR_SEC_VALID_COMMANDS       [] = "ValidCommands";
+const char ATTR_SEC_SESSION_DURATION     [] = "SessionDuration";
+const char ATTR_SEC_USER                 [] = "User";
+const char ATTR_SEC_NEW_SESSION          [] = "NewSession";
+const char ATTR_SEC_USE_SESSION          [] = "UseSession";
 
 #endif

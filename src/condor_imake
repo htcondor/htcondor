@@ -23,17 +23,17 @@ Opsys=""
 Other=""
 Other2=""
 
-# kerberos discovery *SHOULD* go here eventually.
+# kerberos discovery
 if [ -f /s/krb5/lib/libkrb5.a ] ; then
-      KerbPath="-DKERBEROS_PATH=/s/krb5"
-      HasKerb="-DHAS_KERBEROS=YES"
-      if [ -f /s/krb5/lib/libk5crypto.a ] ; then
-              KerbK5="-DKERBEROS_K5=YES"
-      else
-              KerbK5="-DKERBEROS_K5=NO"
-      fi
+	KerbPath="-DKERBEROS_PATH=/s/krb5"
+	HasKerb="-DHAS_KERBEROS=YES"
+	if [ -f /s/krb5/lib/libk5crypto.a ] ; then
+		KerbK5="-DKERBEROS_K5=YES"
+	else
+		KerbK5="-DKERBEROS_K5=NO"
+	fi
 
-      KerbFlags="$KerbPath $HasKerb $KerbK5"
+	KerbFlags="$KerbPath $HasKerb $KerbK5"
 fi
 
 # figure out where that annoying libgcc is... 

@@ -252,7 +252,7 @@ GLOBUS_DIR = /unsup/globus-2.0-beta
 
 /* Kerberos */
 #if HAS_KERBEROS && WANT_KERBEROS
-  KERBEROS_FLAG = -DCONDOR_3DES_ENCRYPTION -DKERBEROS_AUTHENTICATION -I$(KERBEROS_INCLUDE)
+  KERBEROS_FLAG = -DKERBEROS_AUTHENTICATION -I$(KERBEROS_INCLUDE)
 #else
   KERBEROS_FLAG = 
 #endif /* !defined(WANT_KERBEROS) */
@@ -274,12 +274,22 @@ GLOBUS_DIR = /unsup/globus-2.0-beta
     CONDOR_BLOWFISH_FLAGS =
 #endif
 
-ENCRYPTION_FLAGS = $(CONDOR_3DES_FLAGS) $(CONDOR_BLOWFISH_FLAGS) -I$(OpenSSLIncludePath)
+#if CONDOR_ENCRYPTION
+ENCRYPTION_FLAGS = -DCONDOR_ENCRYPTION $(CONDOR_3DES_FLAGS) $(CONDOR_BLOWFISH_FLAGS) -I$(OpenSSLIncludePath)
+#endif
 
 #if NEED_OPENSSL
-  ENCRYPTION_LIB = $(OpenSSL_LIB_PATH)/libssl_gcc32dbg.a $(OpenSSL_LIB_PATH)/libcrypto_gcc32dbg.a
+  ENCRYPTION_LIB = $(OpenSSL_LIB)
 #else
   ENCRYPTION_LIB =
+#endif
+
+#if WANT_MD
+    MD_LIB = $(OpenSSL_LIB)
+    MD_FLAGS = -DCONDOR_MD -I$(OpenSSLIncludePath)
+#else
+    MD_LIB =
+    MD_FLAGS = 
 #endif
 
 #if WANT_NETMAN
@@ -293,8 +303,8 @@ NETMAN_FLAGS =
 VENDOR_C_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG)=$(ARCH_FLAG) \
 		 -D$(OS_FLAG)=$(OS_FLAG) $(KERBEROS_FLAG) $(ENCRYPTION_FLAGS) \
-		 $(SITE_C_FLAGS) $(X509_FLAGS) $(GLOBUS_FLAGS) \
-		 $(NETMAN_FLAGS) -I$(DAEMONCLIENT_INCLUDE)
+		 $(SITE_C_FLAGS) $(X509_FLAGS) $(GLOBUS_FLAGS) $(NETMAN_FLAGS) \
+                 $(MD_FLAGS) -I$(DAEMONCLIENT_INCLUDE)
 
 /*
 Generally, compile with -fPIC for position-independent code.
@@ -334,7 +344,7 @@ DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a
 ALL_LDFLAGS = -lm $(LDFLAGS) $(PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
 TEST_LDFLAGS = -lm $(LDFLAGS) $(TEST_PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
 
-# Credential API related libraries
+/* Credential API related libraries */
 CONDOR_CRED_LIB = 
 
 STD_LIBS = \
@@ -364,5 +374,6 @@ STD_LIBS = \
   $(CREDENTIAL_LIB) \
   $(X509_LIB) \
   $(KERBEROS_LIB) \
-  $(ENCRYPTION_LIB)
+  $(ENCRYPTION_LIB) \
+  $(MD_LIB)
 

@@ -41,7 +41,9 @@
 #include "condor_ipverify.h"
 #include "condor_commands.h"
 #include "condor_classad.h"
+#include "condor_secman.h"
 #include "HashTable.h"
+#include "KeyCache.h"
 #include "list.h"
 #include "extArray.h"
 #include "Queue.h"
@@ -167,7 +169,7 @@ class DaemonCore : public Service
         @param sin  Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Verify (DCpermission perm, const struct sockaddr_in *sin);
+    int Verify (DCpermission perm, const struct sockaddr_in *sin, const char * fqu);
     int AddAllowHost( const char* host, DCpermission perm );
 
     
@@ -667,7 +669,17 @@ class DaemonCore : public Service
     void *GetDataPtr();
     //@}
     
-	/** @name Environment management.
+	/** @name Key management.
+	 */
+	//@{
+    /** Access to the SecMan object;
+        @return Pointer to this daemon's SecMan
+    */
+    SecMan* getSecMan();
+    KeyCache* getKeyCache();
+	//@}
+
+ 	/** @name Environment management.
 	 */
 	//@{
     /** Put the {key, value} pair into the environment
@@ -812,6 +824,8 @@ class DaemonCore : public Service
                         Service* s, 
                         int is_cpp);
 
+	MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm);
+
     struct CommandEnt
     {
         int             num;
@@ -932,6 +946,9 @@ class DaemonCore : public Service
             
     static              TimerManager t;
     void                DumpTimerList(int, char* = NULL);
+
+	SecMan	    		*sec_man;
+
 
     IpVerify            ipverify;   
 

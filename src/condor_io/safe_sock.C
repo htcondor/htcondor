@@ -118,18 +118,18 @@ int SafeSock::end_of_message()
 
 	switch(_coding){
 		case stream_encode:
-			sent = _outMsg.sendMsg(_sock, (struct sockaddr *)&_who, _outMsgID);
-			_outMsgID.msgNo++; // It doesn't hurt to increment msgNO even if fails
-			if ( allow_empty_message_flag ) {
-				allow_empty_message_flag = FALSE;
-				return TRUE;
-			}
-			if (sent < 0) {
-				return FALSE;
-			} else {
-				return TRUE;
-			}
-
+                    sent = _outMsg.sendMsg(_sock, (struct sockaddr *)&_who, _outMsgID);
+                    _outMsgID.msgNo++; // It doesn't hurt to increment msgNO even if fails
+                    resetCrypto();
+                    if ( allow_empty_message_flag ) {
+                        allow_empty_message_flag = FALSE;
+                        return TRUE;
+                    }
+                    if (sent < 0) {
+                        return FALSE;
+                    } else {
+                        return TRUE;
+                    }
 		case stream_decode:
 			if(_msgReady) {
 				if(_longMsg) { // long message is ready
@@ -159,9 +159,11 @@ int SafeSock::end_of_message()
 				// message is not ready
 				ret_val = TRUE;
 			}
+                        resetCrypto();
 			break;
 
 		default:
+                        resetCrypto();
 			break;
 	}
 			
@@ -232,25 +234,23 @@ int SafeSock::put_bytes(const void *data, int sz)
 	int bytesPut, l_out;
     unsigned char * dta = 0;
 
-        // Check to see if we need to encrypt
-        if (get_encryption()) {
-            if (wrap((unsigned char *)data, sz, dta , l_out)) { 
-                dprintf(D_SECURITY, "Encrypted size is %d\n", l_out);
-            }
-            else {
-                dprintf(D_SECURITY, "Encryption failed\n");
-                return -1;  // encryption failed!
-            }
+    // Check to see if we need to encrypt
+    // This works only because putn will actually put all 
+    if (get_encryption()) {
+        if (!wrap((unsigned char *)data, sz, dta , l_out)) { 
+            dprintf(D_SECURITY, "Encryption failed\n");
+            return -1;  // encryption failed!
         }
-        else {
-            dta = (unsigned char *) malloc(sz);
-            memcpy(dta, data, sz);
-        }
-
-	bytesPut = _outMsg.putn((char *)dta, sz);
-
-        free(dta);
-
+    }
+    else {
+        dta = (unsigned char *) malloc(sz);
+        memcpy(dta, data, sz);
+    }
+    
+    bytesPut = _outMsg.putn((char *)dta, sz);
+    
+    free(dta);
+    
 	return bytesPut;
 }
 
@@ -288,9 +288,7 @@ int SafeSock::get_bytes(void *dta, int size)
 				case 1:
 					break;
 				default:
-					dprintf(D_NETWORK,
-					        "select returns %d, recv failed\n",
-						  nfound );
+					dprintf(D_NETWORK, "select returns %d, recv failed\n", nfound );
 					return 0;
 					break;
 			}
@@ -303,12 +301,13 @@ int SafeSock::get_bytes(void *dta, int size)
     unsigned char * dec;
 
 	if(_longMsg) {
-            // long message 
-            readSize = _longMsg->getn(tempBuf, size);
-        }
-	else { // short message
-            readSize = _shortMsg.getn(tempBuf, size);
-        }
+        // long message 
+        readSize = _longMsg->getn(tempBuf, size);
+    }
+	else { 
+        // short message
+        readSize = _shortMsg.getn(tempBuf, size);
+    }
 
 	if(readSize == size) {
             if (get_encryption()) {
@@ -317,7 +316,7 @@ int SafeSock::get_bytes(void *dta, int size)
                 free(dec);
             }
             else {
-		memcpy(dta, tempBuf, readSize);
+                memcpy(dta, tempBuf, readSize);
             }
 
             free(tempBuf);
@@ -448,6 +447,7 @@ int SafeSock::handle_incoming_packet()
 
 	received = recvfrom(_sock, _shortMsg.dataGram, SAFE_MSG_MAX_PACKET_SIZE,
 	                    0, (struct sockaddr *)&_who, &fromlen );
+    _shortMsg.setVerified(false);  // check MD if necessary
 	if(received < 0) {
 		dprintf(D_NETWORK, "recvfrom failed: errno = %d\n", errno);
 		return FALSE;
@@ -455,77 +455,101 @@ int SafeSock::handle_incoming_packet()
 	dprintf( D_NETWORK, "RECV %s ", sock_to_string(_sock) );
 	dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string(&_who) );
 	length = received;
-	if(_shortMsg.getHeader(last, seqNo, length, mID, data)) { // short message
-		_shortMsg.curIndex = 0;
-		_msgReady = true;
-		_whole++;
-		if(_whole == 1)
-			_avgSwhole = length;
-		else
-			_avgSwhole = ((_whole - 1) * _avgSwhole + length) / _whole;
 
-		_noMsgs++;
-		return TRUE;
-	}
-
-	/* long message */
-	curTime = (unsigned long)time(NULL);
-	index = labs(mID.ip_addr + mID.time + mID.msgNo) % SAFE_SOCK_HASH_BUCKET_SIZE;
-	tempMsg = _inMsgs[index];
-	while(tempMsg != NULL && !same(tempMsg->msgID, mID)) {
-		prev = tempMsg;
-		tempMsg = tempMsg->nextMsg;
-		// delete 'timeout'ed message
-		if(curTime - prev->lastTime > _tOutBtwPkts) {
-			delMsg = prev;
-			prev = delMsg->prevMsg;
-			if(prev)
-				prev->nextMsg = delMsg->nextMsg;
-			else  // delMsg is the 1st message in the chain
-				_inMsgs[index] = tempMsg;
-			if(tempMsg)
-				tempMsg->prevMsg = prev;
-			_deleted++;
-			if(_deleted == 1)
-				_avgSdeleted = delMsg->msgLen;
-			else {
-				_avgSdeleted = ((_deleted - 1) * _avgSdeleted + delMsg->msgLen) / _deleted;
-			}
-			dprintf(D_NETWORK, "Timeouted message deleted\n");
-			delete delMsg;
-		}
-	}
-	if(tempMsg != NULL) { // found
-		if(tempMsg->addPacket(last, seqNo, length, data)) { // message is ready
-			_longMsg = tempMsg;
-			_msgReady = true;
-			_whole++;
-			if(_whole == 1)
-				_avgSwhole = _longMsg->msgLen;
-			else
-				_avgSwhole = ((_whole - 1) * _avgSwhole + _longMsg->msgLen) / _whole;
-			return TRUE;
-		}
-		return FALSE;
-	} else { // not found
-		if(prev) { // add a new message at the end of the chain
-			prev->nextMsg = new _condorInMsg(mID, last, seqNo,
-			                                 length, data, prev);
-			if(!prev->nextMsg) {
-				EXCEPT("Error:handle_incomming_packet: Out of Memory");
-			}
-			_noMsgs++;
-			return FALSE;
-		} else { // first message in the bucket
-			_inMsgs[index] = new _condorInMsg(mID, last, seqNo,
-			                                  length, data, NULL);
-			if(!_inMsgs[index]) {
-				EXCEPT("Error:handle_incomming_packet: Out of Memory");
-			}
-			_noMsgs++;
-			return FALSE;
-		}
-	}
+	int code = _shortMsg.getHeader(last, seqNo, length, mID, data);
+    if (code == 1) {
+        // short message, checksum maybe okay
+        _shortMsg.curIndex = 0;
+        _msgReady = true;
+        _whole++;
+        if(_whole == 1)
+            _avgSwhole = length;
+        else
+            _avgSwhole = ((_whole - 1) * _avgSwhole + length) / _whole;
+        
+        _noMsgs++;
+        return TRUE;
+    }
+    else if (code == -1) {
+        dprintf(D_ALWAYS, "SafeSock: incorrect Message Digest\n");
+        _shortMsg.reset();
+        return false;
+    }
+    else {
+        // code == 0, not a short message, continue
+    }
+    
+    /* long message */
+    curTime = (unsigned long)time(NULL);
+    index = labs(mID.ip_addr + mID.time + mID.msgNo) % SAFE_SOCK_HASH_BUCKET_SIZE;
+    tempMsg = _inMsgs[index];
+    while(tempMsg != NULL && !same(tempMsg->msgID, mID)) {
+        prev = tempMsg;
+        tempMsg = tempMsg->nextMsg;
+        // delete 'timeout'ed message
+        if(curTime - prev->lastTime > _tOutBtwPkts) {
+            delMsg = prev;
+            prev = delMsg->prevMsg;
+            if(prev)
+                prev->nextMsg = delMsg->nextMsg;
+            else  // delMsg is the 1st message in the chain
+                _inMsgs[index] = tempMsg;
+            if(tempMsg)
+                tempMsg->prevMsg = prev;
+            _deleted++;
+            if(_deleted == 1)
+                _avgSdeleted = delMsg->msgLen;
+            else     {
+                _avgSdeleted = ((_deleted - 1) * _avgSdeleted + delMsg->msgLen) / _deleted;
+            }   
+            dprintf(D_NETWORK, "Timeouted message deleted\n");
+            delete delMsg;
+        }   
+    }   
+    if(tempMsg != NULL) { // found
+        bool ok = true;
+        if (_shortMsg.verified()) {
+            ok = tempMsg->addPacket(last, seqNo, length, data, 0, 0) ;
+        }
+        else {
+            ok = tempMsg->addPacket(last, seqNo, length, data, _shortMsg.md(), _shortMsg.headerLen());
+        }
+        if (ok) { // message is ready
+            _longMsg = tempMsg;
+            _msgReady = true;
+            _whole++;
+            if(_whole == 1)
+                _avgSwhole = _longMsg->msgLen;
+            else
+                _avgSwhole = ((_whole - 1) * _avgSwhole + _longMsg->msgLen) / _whole;
+            return TRUE;
+        }
+        return FALSE;
+    } else { // not found
+        if(prev) { // add a new message at the end of the chain
+            prev->nextMsg = new _condorInMsg(mID, last, seqNo, length, data, 
+                                             _shortMsg.isDataMD5ed(), 
+                                             _shortMsg.md(), 
+                                             _shortMsg.headerLen(), 
+                                             _shortMsg.isDataEncrypted(), prev);
+            if(!prev->nextMsg) {    
+                EXCEPT("Error:handle_incomming_packet: Out of Memory");
+            }
+            _noMsgs++;
+            return FALSE;
+        } else { // first message in the bucket
+            _inMsgs[index] = new _condorInMsg(mID, last, seqNo, length, data, 
+                                              _shortMsg.isDataMD5ed(), 
+                                              _shortMsg.md(), 
+                                              _shortMsg.headerLen(),
+                                              _shortMsg.isDataEncrypted(), NULL);
+            if(!_inMsgs[index]) {
+                EXCEPT("Error:handle_incomming_packet: Out of Memory");
+            }
+            _noMsgs++;
+            return FALSE;
+        }
+    }   
 }
 
 
@@ -598,6 +622,80 @@ char * SafeSock::serialize(char *buf)
 	string_to_sin(sinful_string, &_who);
 
 	return NULL;
+}
+
+const char * SafeSock :: isIncomingDataMD5ed()
+{
+    char c;
+    if (!peek(c)) {
+        return 0;
+    }
+    else {
+        if(_longMsg) {
+            // long message 
+            return _longMsg->isDataMD5ed();
+        }
+        else { // short message
+            return _shortMsg.isDataMD5ed();
+        }
+    }
+}
+
+const char * SafeSock :: isIncomingDataEncrypted()
+{
+    char c;
+    if (!peek(c)) {
+        return 0;
+    }
+    else {
+        if(_longMsg) {
+            // long message 
+            return _longMsg->isDataEncrypted();
+        }
+        else { // short message
+            return _shortMsg.isDataEncrypted();
+        }
+    }
+}
+
+bool SafeSock :: set_encryption_id(const char * keyId)
+{
+    bool inited = true;
+
+    if (keyId == 0) {
+        _shortMsg.resetEnc();
+
+        if (_longMsg) {
+            _longMsg->resetEnc();
+        }
+    }
+
+    inited = _outMsg.set_encryption_id(keyId);
+
+    return inited;
+}
+
+bool SafeSock :: init_MD(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId)
+{
+    bool inited = true;
+   
+    if (key == 0) {
+        _shortMsg.resetMD(); // For incoming message, we don't need to set keyId
+
+        if (_longMsg) {
+            _longMsg->resetMD();    // For incoming message, we don't need to set keyId
+        }
+    }
+    else {
+        _shortMsg.init_MD(false, key);
+        if (_longMsg) {
+            _longMsg->init_MD(key);
+        }
+    }
+    
+    inited = _outMsg.init_MD(key, keyId);
+
+    return inited;
 }
 
 #ifdef DEBUG

@@ -83,6 +83,8 @@ class Authentication {
     void setAuthAny();
     
     int setOwner( const char *owner );
+
+    const char *getFullyQualifiedUser() const;
     
     const char *getOwner() const;
     
@@ -103,6 +105,15 @@ class Authentication {
     // RETURNS: TRUE or FALSE
     //------------------------------------------
     
+    int end_time();
+    //------------------------------------------
+    // PURPOSE: Return the expiration time for the
+    //          authenticator
+    // REQUIRE: None
+    // RETURNS: -1 -- invalid, for Kerberos, X.509, etc
+    //           0 -- undefined, for FS, 
+    //          >0 -- for Kerberos and X.509
+    //------------------------------------------
     int encrypt(bool);
     //------------------------------------------
     // PURPOSE: Turn encryption mode on or off
@@ -158,9 +169,9 @@ class Authentication {
     
     void setAuthType( int state );
     
-    int selectAuthenticationType( int clientCanUse );
+    int selectAuthenticationType( int methods );
     
-    void setupEnv( char *hostAddr );
+    int default_auth_methods();
     
 #endif /* !SKIP_AUTHENTICATION */
     
@@ -171,8 +182,8 @@ class Authentication {
     ReliSock         *   mySock;
     transfer_mode        t_mode;
     int                  auth_status;
-    int                  canUseFlags;
-    char             *   serverShouldTry;
+    // int                  canUseFlags;
+    // char             *   serverShouldTry;
 };
 
 #endif /* AUTHENTICATION_H */

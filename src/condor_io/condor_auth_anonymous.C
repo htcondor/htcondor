@@ -22,62 +22,42 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-#include "CryptKey.h"
 
-KeyInfo:: KeyInfo()
-    : keyData_    (0),
-      keyDataLen_ (0),
-      protocol_   (CONDOR_NO_PROTOCOL),
-      duration_   (0)
+#if !defined(SKIP_AUTHENTICATION)
+
+const char STR_ANONYMOUS[]  = "CONDOR_ANONYMOUS_USER";
+
+#include "condor_auth_anonymous.h"
+
+Condor_Auth_Anonymous :: Condor_Auth_Anonymous(ReliSock * sock)
+    : Condor_Auth_Claim(sock)
 {
-    
 }
 
-KeyInfo :: KeyInfo(const KeyInfo& copy)
-    : keyData_    ( 0 ),
-      keyDataLen_ (copy.keyDataLen_),
-      protocol_   (copy.protocol_),
-      duration_   (copy.duration_)
+Condor_Auth_Anonymous :: ~Condor_Auth_Anonymous()
 {
-    if (copy.keyDataLen_) {
-        keyData_ = new unsigned char[copy.keyDataLen_];
-        memcpy(keyData_, copy.keyData_, keyDataLen_);   
+}
+
+int Condor_Auth_Anonymous :: authenticate(const char * remoteHost)
+{
+    int retval = 0;
+    
+    // very simple for right now, server just set the remote user to
+    // be anonymous directly
+    if ( mySock_->isClient() ) {
+        mySock_->decode();
+        mySock_->code( retval );
+        mySock_->end_of_message();
+    } 
+    else { //server side
+        setRemoteUser( STR_ANONYMOUS );
+        mySock_->encode();
+        retval = 1;
+        mySock_->code( retval );
+        mySock_->end_of_message();
     }
-}
-
-KeyInfo :: KeyInfo(unsigned char * keyData,
-                   int             keyDataLen,
-                   Protocol        protocol,
-                   int             duration )
-    : protocol_   (protocol),
-      keyData_    (new unsigned char[keyDataLen]),
-      keyDataLen_ (keyDataLen),
-      duration_   (duration)
-{
-    memcpy(keyData_, keyData, keyDataLen);
-}
-
-KeyInfo :: ~KeyInfo()
-{
-    delete keyData_;
-}
-
-unsigned char * KeyInfo :: getKeyData()
-{
-    return keyData_;
-}
     
-int KeyInfo :: getKeyLength()
-{
-    return keyDataLen_;
+    return retval;
 }
 
-Protocol KeyInfo :: getProtocol()
-{
-    return protocol_;
-}
-
-int KeyInfo :: getDuration()
-{
-    return duration_;
-}
+#endif

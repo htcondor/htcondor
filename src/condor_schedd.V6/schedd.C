@@ -956,16 +956,22 @@ Scheduler::updateCentralMgr( int command, ClassAd* ca, char *host,
 		return;
 	}
 
-	SafeSock sock;
-	sock.timeout(NEGOTIATOR_CONTACT_TIMEOUT);
-	sock.encode();
-	if( !sock.connect(host, port) ||
-		!sock.put(command) ||
-		!ca->put(sock) ||
-		!sock.end_of_message() ) {
-		dprintf( D_FAILURE|D_ALWAYS, "failed to update central manager (%s)!\n",
+	Daemon d(host, port);
+	SafeSock* sock = (SafeSock*)d.startCommand(command, Stream::safe_sock, NEGOTIATOR_CONTACT_TIMEOUT);
+
+	if (!sock) {
+		dprintf( D_ALWAYS, "failed to connect to central manager (%s)!\n",
+				 host );
+		return;
+	}
+
+	sock->encode();
+	if( !ca->put(*sock) ||
+		!sock->end_of_message() ) {
+		dprintf( D_ALWAYS, "failed to update central manager (%s)!\n",
 				 host );
 	}
+	delete sock;
 }
 
 static int IsSchedulerUniverse(shadow_rec* srec);
@@ -2584,13 +2590,11 @@ Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 	sprintf(buf, "%s = %d", ATTR_VIRTUAL_MACHINE_ID, vm);
 	request.Insert(buf);
 
-	SafeSock sock;
-	sock.timeout(NEGOTIATOR_CONTACT_TIMEOUT);
-	if (!sock.connect(Negotiator->addr())) {
-		dprintf(D_FAILURE|D_ALWAYS, "Couldn't connect to negotiator!\n");
+	SafeSock* sock = (SafeSock*)Negotiator->startCommand(REQUEST_NETWORK, Stream::safe_sock, NEGOTIATOR_CONTACT_TIMEOUT);
+	if (!sock) {
+		dprintf(D_ALWAYS, "Couldn't connect to negotiator!\n");
 		return;
 	}
-	sock.put(REQUEST_NETWORK);
 
 	GetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, &universe);
 	float cputime = 1.0;
@@ -2619,10 +2623,10 @@ Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 		sprintf(buf, "%s = \"CheckpointRestart\"", ATTR_TRANSFER_TYPE);
 		request.Insert(buf);
 		request.Insert(buf);
-		sock.put(2);
-		request.put(sock);
+		sock->put(2);
+		request.put(*sock);
 	} else {
-		sock.put(1);
+		sock->put(1);
 	}
 
 	sprintf(buf, "%s = \"InitialCheckpoint\"", ATTR_TRANSFER_TYPE);
@@ -2632,8 +2636,9 @@ Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 	request.Insert(buf);
 	sprintf(buf, "%s = \"%s\"", ATTR_SOURCE, inet_ntoa(*(my_sin_addr())));
 	request.Insert(buf);
-	request.put(sock);
-	sock.end_of_message();
+	request.put(*sock);
+	sock->end_of_message();
+	delete sock;
 }
 #endif
 
@@ -3776,32 +3781,28 @@ Scheduler::preempt(int n)
 void
 send_vacate(match_rec* match,int cmd)
 {
-	//SC2000
-	//ReliSock	sock;
-	SafeSock	sock;
 
 	dprintf( D_FULLDEBUG, "Called send_vacate( %s, %d )\n", match->peer, cmd );
 	 
-	sock.timeout(STARTD_CONTACT_TIMEOUT);
-	if (!sock.connect(match->peer,START_PORT)) {
-		dprintf( D_FAILURE|D_ALWAYS,"Can't connect to startd at %s\n",match->peer);
+	Daemon d (match->peer, START_PORT);
+	SafeSock *sock = (SafeSock*)d.startCommand(cmd, Stream::safe_sock, STARTD_CONTACT_TIMEOUT);
+
+	if (!sock) {
+		dprintf(D_ALWAYS,"Can't connect to startd at %s\n",match->peer);
 		return;
 	}
 	
-	sock.encode();
+	sock->encode();
 
-	 if( !sock.code(cmd) ) {
-		  dprintf( D_ALWAYS, "Can't initialize sock to %s\n", match->peer);
+	if( !sock->put(match->id) ) {
+		dprintf( D_ALWAYS, "Can't initialize sock to %s\n", match->peer);
+		delete sock;
 		return;
 	}
 
-	 if( !sock.put(match->id) ) {
-		  dprintf( D_ALWAYS, "Can't initialize sock to %s\n", match->peer);
-		return;
-	}
-
-	 if( !sock.eom() ) {
-		  dprintf( D_ALWAYS, "Can't send EOM to %s\n", match->peer);
+	if( !sock->eom() ) {
+		dprintf( D_ALWAYS, "Can't send EOM to %s\n", match->peer);
+		delete sock;
 		return;
 	}
 
@@ -3810,6 +3811,8 @@ send_vacate(match_rec* match,int cmd)
 	} else {
 		dprintf( D_ALWAYS, "Sent KILL_FRGN_JOB to startd on %s\n", match->peer);
 	}
+
+	delete sock;
 }
 
 void
@@ -5060,39 +5063,22 @@ Scheduler::reschedule_negotiator(int, Stream *)
 void
 Scheduler::sendReschedule( void )
 {
-	int cmd = RESCHEDULE;
-	SafeSock sock;
-	sock.timeout(NEGOTIATOR_CONTACT_TIMEOUT);
-
 	dprintf( D_FULLDEBUG, "Sending RESCHEDULE command to negotiator(s)\n" );
 
-	if( !sock.connect(Negotiator->addr(), 0) ) {
-		dprintf( D_FAILURE|D_ALWAYS, "failed to connect to negotiator %s\n",
-				 Negotiator->addr() );
-		return;
-	}
-
-	sock.encode();
-	if( !sock.code(cmd) ) {
+	if( !Negotiator->sendCommand(RESCHEDULE, Stream::safe_sock, NEGOTIATOR_CONTACT_TIMEOUT) ) {
 		dprintf( D_ALWAYS,
 				 "failed to send RESCHEDULE command to negotiator\n" );
 		return;
 	}
-	if( !sock.eom() ) {
-		dprintf( D_ALWAYS,
-				 "failed to send RESCHEDULE command to negotiator\n" );
-		return;
-	}
-	sock.close();
 
 	if( FlockNegotiators ) {
 		FlockNegotiators->rewind();
 		char *negotiator = FlockNegotiators->next();
 		for( int i=0; negotiator && i < FlockLevel;
-			 negotiator = FlockNegotiators->next(), i++ ) {
-			if( !sock.connect(negotiator, NEGOTIATOR_PORT) ||
-				!sock.code(cmd) || !sock.eom() ) {
-				dprintf( D_FAILURE|D_ALWAYS, "failed to send RESCHEDULE command to %s\n",
+			negotiator = FlockNegotiators->next(), i++ ) {
+			Daemon d(negotiator, NEGOTIATOR_PORT);
+			if (!d.sendCommand(RESCHEDULE, Stream::safe_sock, NEGOTIATOR_CONTACT_TIMEOUT)) {
+				dprintf( D_ALWAYS, "failed to send RESCHEDULE command to %s\n",
 						 negotiator );
 			}
 		}
@@ -5146,7 +5132,7 @@ Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, ClassAd* my_match_ad,
 		  Derek Wright <wright@cs.wisc.edu>
 		*/
 	if( (addr = string_to_ipstr(peer)) ) {
-		daemonCore->AddAllowHost( addr, WRITE );
+		daemonCore->AddAllowHost( addr, DAEMON );
 	} else {
 		dprintf( D_ALWAYS, "ERROR: Can't convert \"%s\" to an IP address!\n", 
 				 peer );
@@ -5234,17 +5220,11 @@ Scheduler::Relinquish(match_rec* mrec)
 
 	// inform the startd
 
-	//sock = new ReliSock;
-	sock = new SafeSock;
-	sock->timeout(STARTD_CONTACT_TIMEOUT);
-	sock->encode();
-	if(!sock->connect(mrec->peer)) {
-		dprintf(D_FAILURE|D_ALWAYS, "Can't connect to startd %s\n", mrec->peer);
-	}
-	else if(!sock->put(RELINQUISH_SERVICE))
-	{
-		dprintf(D_ALWAYS, "Can't relinquish startd. Match record is:\n");
-		dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
+	Daemon d(mrec->peer);
+	sock = (SafeSock*)d.startCommand(RELINQUISH_SERVICE, Stream::safe_sock, STARTD_CONTACT_TIMEOUT);
+
+	if(!sock) {
+		dprintf(D_ALWAYS, "Can't connect to startd %s\n", mrec->peer);
 	}
 	else if(!sock->put(mrec->id) || !sock->end_of_message())
 	{
@@ -5269,17 +5249,16 @@ Scheduler::Relinquish(match_rec* mrec)
 	}
 	else
 	{
-		sock = new ReliSock;
+		Daemon d (AccountantName);
+		sock = d.startCommand (RELINQUISH_SERVICE,
+				Stream::reli_sock,
+				NEGOTIATOR_CONTACT_TIMEOUT);
+
 		sock->timeout(NEGOTIATOR_CONTACT_TIMEOUT);
 		sock->encode();
-		if(!sock->connect(AccountantName)) {
-			dprintf(D_FAILURE|D_ALWAYS,"Can't connect to accountant %s\n",
+		if(!sock) {
+			dprintf(D_ALWAYS,"Can't connect to accountant %s\n",
 					AccountantName);
-		}
-		else if(!sock->put(RELINQUISH_SERVICE))
-		{
-			dprintf(D_ALWAYS,"Can't relinquish accountant. Match record is:\n");
-			dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
 		}
 		else if(!sock->code(MySockName))
 		{
@@ -5377,22 +5356,28 @@ Scheduler::AlreadyMatched(PROC_ID* id)
 bool
 sendAlive( match_rec* mrec )
 {
-	SafeSock	sock;
+	SafeSock	*sock;
 	int			alive = ALIVE;
 	char		*id = NULL;
 	
 	dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n",mrec->peer);
+
+	Daemon d (mrec->peer);
+	sock = (SafeSock*)d.startCommand ( ALIVE, Stream::safe_sock, STARTD_CONTACT_TIMEOUT);
+
+	if (!sock) {
+		dprintf(D_ALWAYS, "\t(Can't contact %s)\n", mrec->peer);
+		return false;
+	}
+
+	sock->encode();
 	id = mrec->id;
-	sock.timeout(STARTD_CONTACT_TIMEOUT);
-	sock.encode();
-	id = mrec->id;
-	if( !sock.connect(mrec->peer) ||
-		!sock.put(alive) || 
-		!sock.code(id) || 
-		!sock.end_of_message() ) {
+	if( !sock->code(id) || 
+		!sock->end_of_message() ) {
 			// UDP transport out of buffer space!
 		dprintf(D_ALWAYS, "\t(Can't send alive message to %s)\n",
 				mrec->peer);
+		delete sock;
 		return false;
 	}
 		/* TODO: Someday, espcially once the accountant is done, 

@@ -1201,17 +1201,18 @@ file_stream_progress_report(int bytes_moved)
 			file_stream_info.shadow_pid);
  	request.Insert(buf);
 	Daemon Negotiator(DT_NEGOTIATOR);
-	SafeSock sock;
-	sock.timeout(10);
-	if (!sock.connect(Negotiator.addr())) {
+
+	SafeSock* sock = (SafeSock*)(Negotiator.startCommand( REQUEST_NETWORK, Stream::safe_sock, 10));
+
+	if (!sock) {
 		dprintf(D_ALWAYS, "Couldn't connect to negotiator!\n");
 		return;
 	}
-	sock.put(REQUEST_NETWORK);
-	sock.put(1);
-	request.put(sock);
-	sock.end_of_message();
+	sock->put(1);
+	request.put(*sock);
+	sock->end_of_message();
 	file_stream_info.last_update = time(0);
+	delete sock;
 }
 }
 #endif

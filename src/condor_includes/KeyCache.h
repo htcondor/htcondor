@@ -20,38 +20,70 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+#ifndef CONDOR_KEYCACHE_H_INCLUDE
+#define CONDOR_KEYCACHE_H_INCLUDE
+
 #include "condor_common.h"
-#include "list.h"
-#include "simplelist.h"
-#include "extArray.h"
-#include "stringSpace.h"
-#include "killfamily.h"
-#include "HashTable.h"
 #include "condor_classad.h"
-#include "classad_collection_types.h"
+#include "CryptKey.h"
 #include "MyString.h"
-#include "Set.h"
+#include "HashTable.h"
+
+class KeyCacheEntry {
+ public:
+    KeyCacheEntry(
+			char * id,
+			struct sockaddr_in * addr,
+			KeyInfo * key,
+			ClassAd * policy,
+			int expiration
+			);
+    KeyCacheEntry(const KeyCacheEntry &copy);
+    ~KeyCacheEntry();
+
+	const KeyCacheEntry& operator=(const KeyCacheEntry &kc);
+
+    char*                 id();
+    struct sockaddr_in *  addr();
+    KeyInfo*              key();
+    ClassAd*              policy();
+    int                   expiration();
+
+ private:
+
+	void delete_storage();
+	void copy_storage(const KeyCacheEntry &);
+
+    char *               _id;
+    struct sockaddr_in * _addr;
+    KeyInfo*             _key;
+    ClassAd*             _policy;
+    int                  _expiration;
+};
 
 
-template class List<char>; 		template class Item<char>;
-template class List<int>; 		template class Item<int>;
-template class SimpleList<int>; 
-template class SimpleList<float>;
-template class ExtArray<char *>;
-template class ExtArray<StringSpace::SSStringEnt>;
-template class ExtArray<StringSpace*>;
-template class ExtArray<ProcFamily::a_pid>;
-template class HashTable<int, BaseCollection*>;
-template class HashBucket<int, BaseCollection*>;
-template class Set<MyString>;
-template class SetElem<MyString>;
-template class Set<int>;
-template class SetElem<int>;
-template class Set<RankedClassAd>;
-template class SetElem<RankedClassAd>;
-template class HashTable<MyString, int>;
-template class HashBucket<MyString,int>;
-template class HashTable<MyString, MyString>;
-template class HashBucket<MyString, MyString>;
-template class HashTable<MyString, KeyCacheEntry*>;
 
+class KeyCache {
+public:
+	KeyCache(int nbuckets);
+	KeyCache(const KeyCache&);
+	~KeyCache();
+	const KeyCache& operator=(const KeyCache&);
+
+	bool insert(KeyCacheEntry&);
+	bool lookup(const char *key_id, KeyCacheEntry*&);
+	bool remove(const char *key_id);
+	void expire(KeyCacheEntry*);
+
+	void RemoveExpiredKeys();
+
+private:
+	void copy_storage(const KeyCache &kc);
+	void delete_storage();
+
+	HashTable<MyString, KeyCacheEntry*> *key_table;
+};
+
+
+#endif

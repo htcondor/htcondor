@@ -7,14 +7,14 @@ LIB = libcedar.a $(STD_LIBS)
 #if CONDOR_ENCRYPTION
 
 #if CONDOR_3DES_ENCRYPTION
-DES_ENC_OBJ = condor_crypt_3des.o
-#endif 
+CONDOR_DES_OBJ = condor_crypt_3des.o
+#endif
 
 #if CONDOR_BLOWFISH_ENCRYPTION
-BLOWFISH_OBJ = condor_crypt_blowfish.o
-#endif 
+CONDOR_BLOWFISH_OBJ = condor_crypt_blowfish.o
+#endif
 
-ENC_BASE_OBJ = condor_crypt.o
+CONDOR_CRYPT_OBJ = $(CONDOR_DES_OBJ) $(CONDOR_BLOWFISH_OBJ)
 #endif
 
 #if WANT_KERBEROS && HAS_KERBEROS
@@ -25,10 +25,10 @@ CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o errno_num.o
 
 OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o sockCache.o \
 		condor_auth.o condor_auth_claim.o condor_auth_x509.o \
-		condor_auth_fs.o condor_auth_sspi.o \
+		condor_auth_fs.o condor_auth_sspi.o condor_auth_anonymous.o \
 		authentication.o credential.o $(CONDOR_TYPE_OBJ) condor_rw.o \
-		SafeMsg.o $(ENC_BASE_OBJ) CryptKey.o $(DES_ENC_OBJ) $(KERB_OBJ) \
-		$(BLOWFISH_OBJ)
+		SafeMsg.o condor_crypt.o $(CONDOR_CRYPT_OBJ) CryptKey.o $(KERB_OBJ) \
+		condor_secman.o
 #		autoTest.o manTest.o
 
 library_target(libcedar.a, $(OBJ))
@@ -42,3 +42,8 @@ html_target( ../condor_includes/stream.h ../condor_includes/reli_sock.h ../condo
 release:: all
 stripped:: all
 static:: all
+
+#  reli_sock_no_auth.o: reli_sock.C
+#  $(CPlusPlus) $(C_PLUS_FLAGS) -DNO_AUTHENTICATION \
+#  -c reli_sock.C -o reli_sock_no_auth.o
+

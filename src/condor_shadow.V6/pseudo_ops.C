@@ -1173,29 +1173,31 @@ RequestCkptBandwidth()
 	sprintf(buf, "%s = %d", ATTR_REQUESTED_CAPACITY,
 			file_stream_info.total_bytes-file_stream_info.bytes_so_far);
 	request.Insert(buf);
-	SafeSock sock;
-	sock.timeout(10);
-	if (!sock.connect(Negotiator.addr())) {
+	SafeSock *sock = (SafeSock*)Negotiator.startCommand (REQUEST_NETWORK, Stream::safe_sock, 10);
+	if (!sock) {
 		dprintf(D_ALWAYS, "Couldn't connect to negotiator (%s)!\n",
 				Negotiator.addr());
 		return;
 	}
-	sock.put(REQUEST_NETWORK);
-	sock.put(1);
-	request.put(sock);
-	sock.end_of_message();
+	sock->put(1);
+	request.put(*sock);
+	sock->end_of_message();
+
+	delete sock;
+
 	buf[0] = '\0';
 	if (JobAd->LookupString(ATTR_REMOTE_POOL, buf)) {
 		Daemon FlockNegotiator(DT_NEGOTIATOR, buf, buf);
-		if (!sock.connect(FlockNegotiator.addr())) {
+		sock = (SafeSock*)FlockNegotiator.startCommand(REQUEST_NETWORK, Stream::safe_sock, 10);
+		if (!sock) {
 			dprintf(D_ALWAYS, "Couldn't connect to flock negotiator (%s)!\n",
 					FlockNegotiator.addr());
 			return;
 		}
-		sock.put(REQUEST_NETWORK);
-		sock.put(1);
-		request.put(sock);
-		sock.end_of_message();
+		sock->put(1);
+		request.put(*sock);
+		sock->end_of_message();
+		delete sock;
 	}
 	file_stream_info.last_update = time(0);
 }
@@ -1234,14 +1236,12 @@ RequestRSCBandwidth()
 	// don't bother allocating anything under 1KB
 	if (send_estimate < 1024.0 && recv_estimate < 1024.0) return;
 
-	SafeSock sock;
-	sock.timeout(10);
-	if (!sock.connect(Negotiator.addr())) {
+	SafeSock *sock = (SafeSock*)Negotiator.startCommand (REQUEST_NETWORK, Stream::safe_sock, 10);
+	if (!sock) {
 		dprintf(D_ALWAYS, "Couldn't connect to negotiator!\n");
 		return;
 	}
-	sock.put(REQUEST_NETWORK);
-	sock.put(2);
+	sock->put(2);
 
 	// these attributes are only required in the first network req. ClassAd
 	sprintf(buf, "%s = \"RemoteSyscalls\"", ATTR_TRANSFER_TYPE);
@@ -1276,28 +1276,32 @@ RequestRSCBandwidth()
 	send_request.Insert(buf);
 	sprintf(buf, "%s = %d", ATTR_REQUESTED_CAPACITY, recv_estimate);
 	send_request.Insert(buf);
-	send_request.put(sock);
+	send_request.put(*sock);
 	sprintf(buf, "%s = \"%s\"", ATTR_DESTINATION, endpoint);
 	recv_request.Insert(buf);
 	sprintf(buf, "%s = \"%s\"", ATTR_SOURCE, inet_ntoa(*my_sin_addr()));
 	recv_request.Insert(buf);
 	sprintf(buf, "%s = %d", ATTR_REQUESTED_CAPACITY, send_estimate);
 	recv_request.Insert(buf);
-	recv_request.put(sock);
-	sock.end_of_message();
+	recv_request.put(*sock);
+	sock->end_of_message();
+
+	delete sock;
+
 	buf[0] = '\0';
 	if (JobAd->LookupString(ATTR_REMOTE_POOL, buf)) {
 		Daemon FlockNegotiator(DT_NEGOTIATOR, buf, buf);
-		if (!sock.connect(FlockNegotiator.addr())) {
+		sock = (SafeSock*)FlockNegotiator.startCommand(REQUEST_NETWORK, Stream::safe_sock, 10);
+		if (!sock) {
 			dprintf(D_ALWAYS, "Couldn't connect to flock negotiator (%s)!\n",
 					FlockNegotiator.addr());
 			return;
 		}
-		sock.put(REQUEST_NETWORK);
-		sock.put(2);
-		send_request.put(sock);
-		recv_request.put(sock);
-		sock.end_of_message();
+		sock->put(2);
+		send_request.put(*sock);
+		recv_request.put(*sock);
+		sock->end_of_message();
+		delete sock;
 	}
 }
 #endif

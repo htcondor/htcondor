@@ -46,6 +46,7 @@ StringList *startd_job_exprs = NULL;
 
 // Hosts
 Daemon*	Collector = NULL;
+Daemon* View_Collector = NULL;
 char*	condor_view_host = NULL;
 char*	accountant_host = NULL;
 
@@ -218,25 +219,25 @@ main_init( int, char* argv[] )
 		// you need WRITE permission.
 	daemonCore->Register_Command( ALIVE, "ALIVE", 
 								  (CommandHandler)command_handler,
-								  "command_handler", 0, WRITE,
+								  "command_handler", 0, DAEMON,
 								  D_FULLDEBUG ); 
 	daemonCore->Register_Command( RELEASE_CLAIM, "RELEASE_CLAIM", 
 								  (CommandHandler)command_handler,
-								  "command_handler", 0, WRITE );
+								  "command_handler", 0, DAEMON );
 	daemonCore->Register_Command( DEACTIVATE_CLAIM,
 								  "DEACTIVATE_CLAIM",  
 								  (CommandHandler)command_handler,
-								  "command_handler", 0, WRITE );
+								  "command_handler", 0, DAEMON );
 	daemonCore->Register_Command( DEACTIVATE_CLAIM_FORCIBLY, 
 								  "DEACTIVATE_CLAIM_FORCIBLY", 
 								  (CommandHandler)command_handler,
-								  "command_handler", 0, WRITE );
+								  "command_handler", 0, DAEMON );
 	daemonCore->Register_Command( PCKPT_FRGN_JOB, "PCKPT_FRGN_JOB", 
 								  (CommandHandler)command_handler,
-								  "command_handler", 0, WRITE );
+								  "command_handler", 0, DAEMON );
 	daemonCore->Register_Command( REQ_NEW_PROC, "REQ_NEW_PROC", 
 								  (CommandHandler)command_handler,
-								  "command_handler", 0, WRITE );
+								  "command_handler", 0, DAEMON );
 
 		// These commands are special and need their own handlers
 		// READ permission commands
@@ -258,21 +259,21 @@ main_init( int, char* argv[] )
 		// WRITE permission commands
 	daemonCore->Register_Command( ACTIVATE_CLAIM, "ACTIVATE_CLAIM",
 								  (CommandHandler)command_activate_claim,
-								  "command_activate_claim", 0, WRITE );
+								  "command_activate_claim", 0, DAEMON );
 	daemonCore->Register_Command( REQUEST_CLAIM, "REQUEST_CLAIM", 
 								  (CommandHandler)command_request_claim,
-								  "command_request_claim", 0, WRITE );
+								  "command_request_claim", 0, DAEMON );
 	daemonCore->Register_Command( X_EVENT_NOTIFICATION,
 								  "X_EVENT_NOTIFICATION",
 								  (CommandHandler)command_x_event,
-								  "command_x_event", 0, WRITE,
+								  "command_x_event", 0, DAEMON,
 								  D_FULLDEBUG ); 
 	daemonCore->Register_Command( PCKPT_ALL_JOBS, "PCKPT_ALL_JOBS", 
 								  (CommandHandler)command_pckpt_all,
-								  "command_pckpt_all", 0, WRITE );
+								  "command_pckpt_all", 0, DAEMON );
 	daemonCore->Register_Command( PCKPT_JOB, "PCKPT_JOB", 
 								  (CommandHandler)command_name_handler,
-								  "command_name_handler", 0, WRITE );
+								  "command_name_handler", 0, DAEMON );
 
 		// OWNER permission commands
 	daemonCore->Register_Command( VACATE_ALL_CLAIMS,
@@ -418,6 +419,13 @@ init_params( int first_time)
 		free( condor_view_host );
 	}
 	condor_view_host = param( "CONDOR_VIEW_HOST" );
+
+    if (View_Collector) {
+        delete View_Collector;
+    }
+    if (condor_view_host) {
+        View_Collector = new Daemon(condor_view_host, CONDOR_VIEW_PORT);
+    }
 
 	tmp = param( "POLLING_INTERVAL" );
 	if( tmp == NULL ) {

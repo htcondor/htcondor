@@ -61,6 +61,7 @@ class HashTable {
 	      void *&next);
   int remove(const Index &index);  
   int getNumElements( ) { return numElems; }
+  int getTableSize( ) { return tableSize; }
   int clear();
 
   void startIterations (void);

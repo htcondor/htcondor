@@ -79,7 +79,7 @@ DCStartd::deactivateClaim( bool graceful )
 		return false;
 	}
 
-	Sock* tmp;
+	bool  result;
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
 	if( ! reli_sock.connect(_addr) ) {
@@ -93,8 +93,8 @@ DCStartd::deactivateClaim( bool graceful )
 	} else {
 		cmd = DEACTIVATE_CLAIM_FORCIBLY;
 	}
-	tmp = startCommand( cmd, (Sock*)&reli_sock ); 
-	if( ! tmp ) {
+	result = startCommand( cmd, (Sock*)&reli_sock ); 
+	if( ! result ) {
 		dprintf( D_ALWAYS, "DCStartd::deactivateClaim: "
 				 "Failed to send command (%s) to the startd\n", 
 				 graceful ? "DEACTIVATE_CLAIM" :
@@ -102,12 +102,12 @@ DCStartd::deactivateClaim( bool graceful )
 		return false;
 	}
 		// Now, send the capability
-	if( ! tmp->code(capability) ) {
+	if( ! reli_sock.code(capability) ) {
 		dprintf( D_ALWAYS, "DCStartd::deactivateClaim: "
 				 "Failed to send capability to the startd\n" );
 		return false;
 	}
-	if( ! tmp->eom() ) {
+	if( ! reli_sock.eom() ) {
 		dprintf( D_ALWAYS, "DCStartd::deactivateClaim: "
 				 "Failed to send EOM to the startd\n" );
 		return false;

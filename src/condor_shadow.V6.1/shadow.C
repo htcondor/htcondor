@@ -209,7 +209,7 @@ void UniShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 	daemonCore->
 		Register_Command( SHADOW_UPDATEINFO, "SHADOW_UPDATEINFO",
 						  (CommandHandlercpp)&UniShadow::updateFromStarter, 
-						  "UniShadow::updateFromStarter", this, WRITE );
+						  "UniShadow::updateFromStarter", this, DAEMON );
 
 		// finally, we can attempt to activate our claim.
 	if( remRes->activateClaim() ) {

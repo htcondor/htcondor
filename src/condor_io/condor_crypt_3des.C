@@ -26,8 +26,7 @@
 
 Condor_Crypt_3des :: Condor_Crypt_3des(const KeyInfo& key)
 #if !defined(SKIP_AUTHENTICATION)
-    : Condor_Crypt_Base(CONDOR_3DES, key),
-      num_             (0)
+    : Condor_Crypt_Base(CONDOR_3DES, key)
 {
     KeyInfo k(key);
     unsigned char * keyData = k.getKeyData();
@@ -39,7 +38,7 @@ Condor_Crypt_3des :: Condor_Crypt_3des(const KeyInfo& key)
     des_set_key((des_cblock *) (keyData+16), keySchedule3_);
 
     // initialize ivsec
-    memset(ivec_, 0, 8);
+    resetState();
 }
 #else
 {
@@ -49,6 +48,17 @@ Condor_Crypt_3des :: Condor_Crypt_3des(const KeyInfo& key)
 Condor_Crypt_3des :: ~Condor_Crypt_3des()
 {
 }
+
+void Condor_Crypt_3des:: resetState()
+#if !defined(SKIP_AUTHENTICATION)
+{
+     memset(ivec_, 0, 8);
+     num_=0;
+}
+#else
+{
+}
+#endif
 
 bool Condor_Crypt_3des :: encrypt(unsigned char *  input, 
                                   int              input_len, 

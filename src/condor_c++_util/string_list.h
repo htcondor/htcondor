@@ -41,6 +41,7 @@ public:
 	BOOLEAN contains_anycase( const char * );
 	BOOLEAN contains_withwildcard( const char *str );				
 	BOOLEAN contains_anycase_withwildcard( const char * );
+    const char *  string_anycase_withwildcard( const char *);
 	void print (void);
 	void rewind (void) { strings.Rewind(); }
 	void append (const char* str) { strings.Append( strdup(str) ); }
@@ -59,7 +60,7 @@ public:
 	char* print_to_string(void);
 
 private:
-	BOOLEAN contains_withwildcard(const char *string, bool anycase);
+    const char * contains_withwildcard(const char *string, bool anycase);
 	List<char> strings;
 	char *delimiters;
 

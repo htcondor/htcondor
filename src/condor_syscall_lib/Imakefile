@@ -223,31 +223,36 @@ SYSCALL_SUPPORT_OBJ=senders.o receivers.o syscall_mode.o syscall_connect.o remot
 UTIL_OBJ =  $(FLOCK_OBJ) dprintf_common.o except.o update_rusage.o \
 	internet.o $(PLATFORM_UTIL_OBJ) mkargv.o filename_tools.o
 
-CPP_UTIL_OBJ = condor_version.o
+CPP_UTIL_OBJ = condor_version.o 
 
 CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o errno_num.o
 
-IO_OBJ = stream.o sock.o safe_sock.o buffers.o $(CONDOR_TYPE_OBJ) condor_rw.o reli_sock.o SafeMsg.o ../condor_util_lib/get_random_num.o 
+IO_OBJ = stream.o sock.o safe_sock.o reli_sock.o buffers.o $(CONDOR_TYPE_OBJ) condor_rw.o SafeMsg.o
 
 #if CONDOR_ENCRYPTION
 
-	#if CONDOR_3DES_ENCRYPTION
-	   CONDOR_DES_OBJ = condor_crypt_3des.o
-	   CONDOR_DES_SRC = condor_crypt_3des.C
-	#endif
-
-	#if CONDOR_BLOWFISH_ENCRYPTION
-	   CONDOR_BLOWFISH_OBJ = condor_crypt_blowfish.o
-	   CONDOR_BLOWFISH_SRC = condor_crypt_blowfish.C
-	#endif
-
-   CONDOR_CRYPT_OBJ = condor_crypt.o $(CONDOR_DES_OBJ) $(CONDOR_BLOWFISH_OBJ)
-   CONDOR_CRYPT_SRC = condor_crypt.C $(CONDOR_DES_SRC) $(CONDOR_BLOWFISH_SRC)
+#if CONDOR_3DES_ENCRYPTION
+   CONDOR_DES_OBJ = condor_crypt_3des.o
 #endif
 
-SPECIAL_IO_OBJ = authentication.o CryptKey.o $(CONDOR_CRYPT_OBJ)
+#if CONDOR_BLOWFISH_ENCRYPTION
+   CONDOR_BLOWFISH_OBJ = condor_crypt_blowfish.o
+#endif /* CONDOR_BLOWFISH_ENCRYPTION */
 
-SPECIAL_IO_SRC = authentication.C CryptKey.C $(CONDOR_CRYPT_SRC)
+OPENSSL_MD_OBJ = md5_dgst.o md5_one.o rand_lib.o md_rand.o sha1dgst.o cryptlib.o buffer.o stack.o err.o lhash.o
+
+#if defined( PlatformMdObj ) 
+PLATFORM_MD_OBJ = PlatformMdObj
+#else
+#error YOU MUST DEFINE PlatformMdObj IF YOU WANT TO USE ENCRYPTION
+#endif
+CONDOR_MD_OBJ = ../condor_c++_util/condor_md.o $(OPENSSL_MD_OBJ) $(PLATFORM_MD_OBJ)
+
+CONDOR_CRYPT_OBJ = condor_crypt.o ../condor_util_lib/get_random_num.o $(CONDOR_DES_OBJ) $(CONDOR_BLOWFISH_OBJ) $(CONDOR_MD_OBJ)
+
+#endif /* CONDOR_ENCRYPTION */
+
+SPECIAL_IO_OBJ = authentication.o CryptKey.o $(CONDOR_CRYPT_OBJ)
 
 SPECIAL_OBJ = special_stubs.o
 
@@ -551,7 +556,6 @@ clean::
 
 IMPORT_LINKS = ../../config/import_links
 import(../condor_io,$(IO_OBJ))
-import(../condor_io,$(SPECIAL_IO_SRC))
 import(../condor_util_lib,$(UTIL_OBJ))
 import(../condor_c++_util,$(CPP_UTIL_OBJ))
 import(../condor_ckpt,condor_rt0.o)
@@ -563,25 +567,25 @@ import(../condor_shadow.V6, pseudo_ops.h)
 import(../condor_ckpt,libcondorc++support.a)
 import( ZLibPath , libz.a )
 
-authentication.o: authentication.C
+authentication.o: ../condor_io/authentication.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) -I$(OpenSSLIncludePath) -I../condor_io \
-		-DSKIP_AUTHENTICATION -c authentication.C
+		-DSKIP_AUTHENTICATION -c ../condor_io/authentication.C
 
-condor_crypt_3des.o: condor_crypt_3des.C
+condor_crypt_3des.o: ../condor_io/condor_crypt_3des.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) -I$(OpenSSLIncludePath) -I../condor_io \
-		-DSKIP_AUTHENTICATION -c condor_crypt_3des.C
+		-DSKIP_AUTHENTICATION -c ../condor_io/condor_crypt_3des.C
 
-condor_crypt_blowfish.o: condor_crypt_blowfish.C
+condor_crypt_blowfish.o: ../condor_io/condor_crypt_blowfish.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) -I$(OpenSSLIncludePath) -I../condor_io \
-		-DSKIP_AUTHENTICATION -c condor_crypt_blowfish.C
+		-DSKIP_AUTHENTICATION -c ../condor_io/condor_crypt_blowfish.C
 
-CryptKey.o: CryptKey.C
+CryptKey.o: ../condor_io/CryptKey.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) -I$(OpenSSLIncludePath) -I../condor_io \
-		-DSKIP_AUTHENTICATION -c CryptKey.C
+		-DSKIP_AUTHENTICATION -c ../condor_io/CryptKey.C
 
-condor_crypt.o: condor_crypt.C
+condor_crypt.o: ../condor_io/condor_crypt.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) -I$(OpenSSLIncludePath) -I../condor_io \
-		-DSKIP_AUTHENTICATION -c condor_crypt.C
+		-DSKIP_AUTHENTICATION -c ../condor_io/condor_crypt.C
 
 #if DOES_COMPRESS_CKPT
 $(COMPRESS_LIB) : $(SYSCALL_LIB) $(COMPRESS_OBJ)
@@ -605,3 +609,7 @@ DEPEND_SRC = C_getenv.c extern_path.c file_stream.c getcwd.c remote_startup.c \
 remote_syscall.C switches.special.C syscall_connect.C xfer_file.c
 
 depend_source_target($(DEPEND_SRC))
+
+#if CONDOR_ENCRYPTION
+obj_extract( $(OpenSSL_MD_LIB), $(PLATFORM_MD_OBJ) $(OPENSSL_MD_OBJ) )
+#endif

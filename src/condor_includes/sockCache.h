@@ -34,8 +34,8 @@ class SocketCache
 
 		void clearCache(void);
 		void invalidateSock(char *);
-		bool getReliSock(Sock *&, char *, int=30);
-		bool getSafeSock(Sock *&, char *, int=30);		
+		bool getReliSock(Sock *&, char *, int cmd, int=30);
+		bool getSafeSock(Sock *&, char *, int cmd, int=30);		
 
 	private:
 		int 	 getCacheSlot();

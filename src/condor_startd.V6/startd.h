@@ -94,6 +94,7 @@ extern	StringList* startd_job_exprs;
 
 // Hosts
 extern	Daemon*	Collector;
+extern	Daemon*	View_Collector;
 extern	char*	condor_view_host;
 extern	char*	accountant_host;
 

@@ -33,6 +33,8 @@ Condor_Auth_Base :: Condor_Auth_Base(ReliSock * sock, int mode)
       remoteUser_    ( NULL  ),
       remoteDomain_  ( NULL  ),
       remoteHost_    ( NULL  ),
+      localDomain_   ( NULL  ),
+      fqu_           ( NULL  ),
       isDaemon_      ( false ),
       mySock_        ( sock  )
 {
@@ -59,10 +61,21 @@ Condor_Auth_Base :: Condor_Auth_Base(ReliSock * sock, int mode)
             //      get_condor_uid(), get_my_uid());
         }
     }
-  
+
     free(username);
+  
+    const char * tmp = param( "UID_DOMAIN" );
+    if (tmp) {
+        localDomain_ = strdup(tmp);
+    }
+    else {
+        // This is not right!
+        dprintf(D_SECURITY, "Unable to determine local UID domain!");
+    }
 
     setRemoteHost(inet_ntoa(mySock_->endpoint()->sin_addr));
+    // This is done for protocols such as fs, anonymous. Kerberos should
+    // override this with the ip address from Kerbeos
 }
 
 Condor_Auth_Base :: ~Condor_Auth_Base()
@@ -77,6 +90,14 @@ Condor_Auth_Base :: ~Condor_Auth_Base()
 
     if (remoteHost_) {
         free(remoteHost_);
+    }
+
+    if (localDomain_) {
+        free(localDomain_);
+    }
+    
+    if (fqu_) {
+        free(fqu_);
     }
 }
 
@@ -139,6 +160,28 @@ const char * Condor_Auth_Base :: getRemoteDomain() const
     return remoteDomain_;
 }
 
+const char * Condor_Auth_Base :: getRemoteFQU()
+{
+    if (fqu_ == NULL) {
+        if (remoteUser_ && remoteDomain_) {
+            int userlen = strlen(remoteUser_);
+            int domlen  = strlen(remoteDomain_);
+            int len = userlen + domlen;
+            fqu_ = (char *) malloc(len + 2);
+            memcpy(fqu_, remoteUser_, userlen);
+            fqu_[userlen] = '@';
+            memcpy(fqu_+userlen+1, remoteDomain_, domlen);
+            fqu_[len+1] = 0;
+        }
+    }
+
+    return fqu_;
+}
+
+const char * Condor_Auth_Base :: getLocalDomain() const
+{
+    return localDomain_;
+}
     
 Condor_Auth_Base& Condor_Auth_Base :: setRemoteDomain(const char * domain)
 {
@@ -148,7 +191,14 @@ Condor_Auth_Base& Condor_Auth_Base :: setRemoteDomain(const char * domain)
     }
 
     if (domain) {
+        // need to do some conversion here to use lower case domain
+        // name only. This is because later on we hash on the user@domain
         remoteDomain_ = strdup(domain);
+        char * at = remoteDomain_;
+        while (*at != '\0') {
+            *at = tolower((int) *at);
+            at++;
+        }
     }
 
     return *this;
@@ -189,6 +239,11 @@ Condor_Auth_Base& Condor_Auth_Base :: setRemoteUser( const char *owner )
 const bool Condor_Auth_Base :: isDaemon() const
 {
     return isDaemon_;
+}
+
+int Condor_Auth_Base :: endTime() const
+{
+    return -1;
 }
 
 Condor_Auth_Base :: Condor_Auth_Base()

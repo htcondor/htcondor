@@ -158,7 +158,7 @@ main( int argc, char *argv[] )
 			case 'd':
 				// dprintf to console
 				Termlog = 1;
-				dprintf_config ("RM", 2 );
+				dprintf_config ("TOOL", 2 );
 				break;
 			case 'a':
 				if( arg[2] && arg[2] == 'd' ) {

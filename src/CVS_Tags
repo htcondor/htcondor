@@ -1,8 +1,18 @@
+03/06/02 V6_3-branch-post-merge-V6_3-security-2-branch-merge-1
+		V6_3-branch right after V6_3-security-2-branch was merged in.
+
+03/06/02 V6_3-branch-pre-merge-V6_3-security-2-branch-merge-1
+		V6_3-branch right before V6_3-security-2-branch was merged in.
+
+03/06/02 V6_3-security-2-branch-merge-1
+		V6_3-security-2-branch tagged in case we merge from this branch again.
+		(unlikely, we plan to abandon)
+
 02/06/02 V6_3-tdp-branch
-	 Branch for all the "TDP" work, which stands for "Tool Daemon
-	 Protocol".  This is the work to integrate Condor with
-	 Paradyn, creating paused processes, etc.  Branched off of the
-	 main V6_3-branch.  
+	 	Branch for all the "TDP" work, which stands for "Tool Daemon
+	 	Protocol".  This is the work to integrate Condor with
+	 	Paradyn, creating paused processes, etc.  Branched off of the
+	 	main V6_3-branch.  
 
 01/15/02 V6_3-new-gridmanager-branch
 		Branch containing Jamie and Todd's rewrite of the 

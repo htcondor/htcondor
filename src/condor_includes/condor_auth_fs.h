@@ -58,7 +58,6 @@ class Condor_Auth_FS : public Condor_Auth_Base {
  private:
 
     int    remote_;
-    char * RendezvousDirectory;
 };
 
 #endif

@@ -81,6 +81,7 @@ public:
 
 	friend class DaemonCore;
 	friend class Daemon;
+	friend class SecMan;
 
 	/*
 	**	Methods
@@ -240,6 +241,8 @@ protected:
 	virtual bool is_hdr_encrypt();
     ///
 	virtual int authenticate(int clientFlags = 0);
+    ///
+	virtual int authenticate(KeyInfo *&ki, int clientFlags = 0);
     ///
 	virtual int isAuthenticated();
     ///

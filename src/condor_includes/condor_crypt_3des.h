@@ -24,11 +24,9 @@
 #ifndef CONDOR_CRYPTO_3DES_H
 #define CONDOR_CRYPTO_3DES_H
 
-#ifdef CONDOR_3DES_ENCRYPTION
-
 #include "condor_common.h"
 #include "condor_crypt.h"          // base class
-#include <des.h>
+#include <openssl/des.h>
 
 class Condor_Crypt_3des : public Condor_Crypt_Base {
 
@@ -47,6 +45,7 @@ class Condor_Crypt_3des : public Condor_Crypt_Base {
     // RETURNS: None
     //------------------------------------------
 
+    void resetState();
 
     bool encrypt(unsigned char *  input, 
                  int              input_len, 
@@ -69,5 +68,4 @@ class Condor_Crypt_3des : public Condor_Crypt_Base {
 };
 
 
-#endif /* CONDOR_3DES_ENCRYPTION */
 #endif /* CONDOR_CRYPTO_3DES_H */

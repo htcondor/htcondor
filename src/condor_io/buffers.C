@@ -26,7 +26,8 @@
 #include "condor_constants.h"
 #include "condor_io.h"
 #include "condor_debug.h"
-
+#include "condor_md.h"
+#include "condor_rw.h"
 
 unsigned long num_created = 0;
 unsigned long num_deleted = 0;
@@ -75,64 +76,10 @@ int Buf::write(
 
 	if (sz < 0 || sz > num_untouched()) sz = num_untouched();
 
-	if ( timeout > 0 ) {
-		start_time = time(NULL);
-		curr_time = start_time;
-	}
-
-	for(nw=0;nw < sz;) {
-		if (timeout > 0) {
-			struct timeval	timer;
-			fd_set			writefds;
-			int				nfds=0, nfound;
-
-			if ( curr_time == 0 )
-				curr_time = time(NULL);
-			if ( start_time + timeout > curr_time ) {
-				timer.tv_sec = (start_time + timeout) - curr_time;
-			} else {
-				dprintf(D_ALWAYS,"timeout writing in Buf::write()\n");
-				return -1;
-			}
-			curr_time = 0;	// so we call time() next time around
-			timer.tv_usec = 0;
-	#if !defined(WIN32) // nfds is ignored on WIN32
-			nfds = sockd + 1;
-	#endif
-			FD_ZERO( &writefds );
-			FD_SET( sockd, &writefds );
-
-			nfound = select( nfds, 0, &writefds, &writefds, &timer );
-
-			switch(nfound) {
-			case 0:
-				dprintf(D_ALWAYS,"select timed out in Buf::write()\n");
-				return -1;
-				break;
-			case 1:
-				break;
-			default:
-				dprintf( D_ALWAYS, "select returns %d, send failed\n",
-					nfound );
-				return -1;
-				break;
-			}
-		}
-
-		nwo = send(sockd, &_dta[num_touched()+nw], sz-nw, 0);
-		if (nwo <= 0) {
-			dprintf(D_FULLDEBUG,"Buf:Write send failed, sock=%X, err=%d, len=%d\n",
-				sockd,
-#ifdef WIN32
-				WSAGetLastError(),
-#else
-				errno,
-#endif
-				sz-nw);
-			return -1;
-		}
-
-		nw += nwo;
+    nw = condor_write(sockd, &_dta[num_touched()], sz , timeout);
+	if (nw < 0){
+		dprintf(D_ALWAYS,"Buf :: write : condor_write failed\n");
+		return -1;
 	}
 
 	_dta_pt += nw;
@@ -195,62 +142,13 @@ int Buf::read(
 		/* sz = num_free(); */
 	}
 
-	if ( timeout > 0 ) {
-		start_time = time(NULL);
-		curr_time = start_time;
-	}
-
-	for(nr=0;nr <sz;){
-
-		if (timeout > 0) {
-			struct timeval	timer;
-			fd_set			readfds;
-			int				nfds=0, nfound;
-
-			if ( curr_time == 0 )
-				curr_time = time(NULL);
-			if ( start_time + timeout > curr_time ) {
-				timer.tv_sec = (start_time + timeout) - curr_time;
-			} else {
-				dprintf(D_ALWAYS,"timeout reading in Buf::read()\n");
-				return -1;
-			}
-			curr_time = 0;	// so we call time() next time around
-			timer.tv_usec = 0;
-#if !defined(WIN32) // nfds is ignored on WIN32
-			nfds = sockd + 1;
-#endif
-			FD_ZERO( &readfds );
-			FD_SET( sockd, &readfds );
-
-			nfound = select( nfds, &readfds, 0, 0, &timer );
-
-			switch(nfound) {
-			case 0:
-				dprintf( D_ALWAYS, "select timed out in Buf::read()\n" );
-				return -1;
-			case 1:
-				break;
-			default:
-				dprintf( D_ALWAYS, "select returns %d, recv failed\n",
-					nfound );
-				return -1;
-			}
-		}
-
-		nro = recv(sockd, &_dta[num_used()+nr], sz-nr, 0);
-
-		if (nro <= 0) {
-			dprintf( D_ALWAYS, "recv returned %d, errno = %d\n", 
-					 nro, errno );
-			return -1;
-		}
-
-		nr += nro;
+    nr = condor_read(sockd,&_dta[num_used()],sz,timeout);	
+	if (nr == -1) {
+		dprintf(D_ALWAYS,"Buf::read : condor_read failed\n");
+		return -1;
 	}
 
 	_dta_sz += nr;
-
 
 /* DEBUG SESSION
 	if ((dbg_fd = open("trace.rcv", O_WRONLY|O_APPEND|O_CREAT, 0700)) < 0){
@@ -335,7 +233,26 @@ int Buf::seek(
 	return tmp;
 }
 
+bool Buf::computeMD(char * checkSUM, Condor_MD_MAC * checker)
+{
+    // I absolutely hate this! 21
+    checker->addMD((unsigned char *) &(_dta[21]), _dta_sz - 21);
+    unsigned char * md = checker->computeMD();
 
+    if (md) {
+        memcpy(checkSUM, md, MAC_SIZE);
+        free(md);
+        return true;
+    }
+    return false;
+}
+
+bool Buf::verifyMD(char * checkSUM, Condor_MD_MAC * checker)
+{
+    checker->addMD((unsigned char *) &(_dta[0]), _dta_sz);
+
+    return checker->verifyMD((unsigned char *) checkSUM);
+}
 
 void ChainBuf::reset()
 {

@@ -25,6 +25,8 @@
 
 #include "condor_auth_kerberos.h"
 #include "condor_config.h"
+#include "condor_string.h"
+#include "string_list.h"
 
 const char STR_CONDOR_KERBEROS_CACHE[]  = "CONDOR_KERBEROS_CACHE";
 const char STR_CONDOR_CACHE_SHARE[]     = "CONDOR_KERBEROS_SHARE_CACHE";
@@ -42,6 +44,8 @@ const char STR_CONDOR_CACHE_PREFIX[]    = "krb_condor_";
 #define KERBEROS_MUTUAL  3
 #define KERBEROS_PROCEED 4
 
+template class HashTable<MyString, MyString>;
+HashTable<MyString, MyString> * Condor_Auth_Kerberos::RealmMap = 0;
 //----------------------------------------------------------------------
 // Kerberos Implementation
 //----------------------------------------------------------------------
@@ -69,15 +73,15 @@ Condor_Auth_Kerberos :: ~Condor_Auth_Kerberos()
         }
 
         if (krb_principal_) {
-	    krb5_free_principal(krb_context_, krb_principal_);
+            krb5_free_principal(krb_context_, krb_principal_);
         }
         
         if (sessionKey_) {
-	    krb5_free_keyblock(krb_context_, sessionKey_);
+            krb5_free_keyblock(krb_context_, sessionKey_);
         }
         
         if (server_) {
-	    krb5_free_principal(krb_context_, server_);
+            krb5_free_principal(krb_context_, server_);
         }
         
         krb5_free_context(krb_context_);
@@ -163,8 +167,8 @@ int Condor_Auth_Kerberos :: wrap(char*  input,
     krb5_data       in_data, test;
     krb5_enc_data   out_data;
     krb5_pointer    ivec;
-    int             index;
-  
+    int             index, tmp;
+
     // Make the input buffer
     in_data.length = input_len;
     in_data.data = (char *) malloc(input_len);
@@ -182,12 +186,18 @@ int Condor_Auth_Kerberos :: wrap(char*  input,
     
     output = (char *) malloc(output_len);
     index = 0;
-    memcpy(output + index, &(out_data.enctype), sizeof(out_data.enctype));
+    tmp = htonl(out_data.enctype);
+    memcpy(output + index, &tmp, sizeof(out_data.enctype));
     index += sizeof(out_data.enctype);
-    memcpy(output + index, &(out_data.kvno), sizeof(out_data.kvno));
+
+    tmp = htonl(out_data.kvno);
+    memcpy(output + index, &tmp, sizeof(out_data.kvno));
     index += sizeof(out_data.kvno);
-    memcpy(output + index, &(out_data.ciphertext.length), sizeof(out_data.ciphertext.length));
+
+    tmp = htonl(out_data.ciphertext.length);
+    memcpy(output + index, &tmp, sizeof(out_data.ciphertext.length));
     index += sizeof(out_data.ciphertext.length);
+
     memcpy(output + index, out_data.ciphertext.data, out_data.ciphertext.length);
     
     if (in_data.data) {
@@ -209,12 +219,18 @@ int Condor_Auth_Kerberos :: unwrap(char*  input,
     krb5_data     out_data;
     krb5_enc_data enc_data;
     
-    int index = 0;
-    memcpy(&(enc_data.enctype), input, sizeof(enc_data.enctype));
+    int index = 0, tmp;
+
+    memcpy(&tmp, input, sizeof(enc_data.enctype));
+    enc_data.enctype = ntohl(tmp);
     index += sizeof(enc_data.enctype);
-    memcpy(&(enc_data.kvno), input + index, sizeof(enc_data.kvno));
+
+    memcpy(&tmp, input + index, sizeof(enc_data.kvno));
+    enc_data.kvno = ntohl(tmp);
     index += sizeof(enc_data.kvno);
-    memcpy(&(enc_data.ciphertext.length), input + index, sizeof(enc_data.ciphertext.length));
+
+    memcpy(&tmp, input + index, sizeof(enc_data.ciphertext.length));
+    enc_data.ciphertext.length = ntohl(tmp);
     index += sizeof(enc_data.ciphertext.length);
     
     enc_data.ciphertext.data = (char *) malloc(enc_data.ciphertext.length);
@@ -284,7 +300,7 @@ int Condor_Auth_Kerberos :: init_daemon()
     krb5_copy_principal(krb_context_, krb_principal_, &(creds_->client));
     krb5_copy_principal(krb_context_, server_, &(creds_->server));
     
-    dprintf(D_ALWAYS, "Trying to get credential\n");
+    dprintf(D_SECURITY, "Trying to get credential\n");
     
     if (keytabName_) {
         code = krb5_kt_resolve(krb_context_, keytabName_, &keytab);
@@ -305,7 +321,6 @@ int Condor_Auth_Kerberos :: init_daemon()
                                            creds_,
                                            0)) {
         set_priv(priv);
-        dprintf(D_ALWAYS, "Daemon failed to retrieve credential\n");
         goto error;
     }
     
@@ -341,7 +356,7 @@ int Condor_Auth_Kerberos :: init_user()
 
     memset(&mcreds, 0, sizeof(mcreds));
 
-    dprintf(D_ALWAYS, "Acquiring credential for user\n");
+    dprintf(D_SECURITY, "Acquiring credential for user\n");
 
     //------------------------------------------
     // First, try the default credential cache
@@ -349,7 +364,6 @@ int Condor_Auth_Kerberos :: init_user()
     ccname_ = strdup(krb5_cc_default_name(krb_context_));
     
     if (code = krb5_cc_resolve(krb_context_, ccname_, &ccache)) {
-        dprintf(D_ALWAYS, "Kerberos: Could not find default cache.");
         goto error;
     }
     
@@ -357,7 +371,6 @@ int Condor_Auth_Kerberos :: init_user()
     // Get principal info
     //------------------------------------------
     if (code = krb5_cc_get_principal(krb_context_, ccache, &krb_principal_)) {
-        dprintf(D_ALWAYS,"Kerberos : failure to get principal info");
         goto error;
     }
 
@@ -425,7 +438,6 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
                                     0, 
                                     creds_, 
                                     &request)) {
-        dprintf(D_ALWAYS, "Unable to build request buffer\n");
         goto error;
     }
     
@@ -530,6 +542,7 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     }
     
     if (code) {
+        dprintf(D_ALWAYS, "Kerberos server authentication error:%s\n", error_message(code));
         goto error;
     }
     
@@ -553,6 +566,7 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
                            &flags,
                            &ticket)) {
         set_priv(priv);   // Reset
+        dprintf(D_ALWAYS, "Kerberos server authentication error:%s\n", error_message(code));
         goto error;
     }
     set_priv(priv);   // Reset
@@ -562,11 +576,12 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     //------------------------------------------
     if (flags & AP_OPTS_MUTUAL_REQUIRED) {
         if (code = krb5_mk_rep(krb_context_, auth_context_, &reply)) {
+            dprintf(D_ALWAYS, "Kerberos server authentication error:%s\n", error_message(code));
             goto error;
         }
 
         mySock_->encode();
-	message = KERBEROS_MUTUAL;
+        message = KERBEROS_MUTUAL;
         if (!mySock_->code(message) || !mySock_->end_of_message()) {
             goto error;
         }
@@ -582,25 +597,24 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     //------------------------------------------
     if (ticket->enc_part2->caddrs) {
         struct in_addr in;
-        memcpy(&(in.s_addr), 
-               ticket->enc_part2->caddrs[0]->contents, 
-               sizeof(in_addr));
+        memcpy(&(in.s_addr), ticket->enc_part2->caddrs[0]->contents, sizeof(in_addr));
         
         setRemoteHost(inet_ntoa(in));
     
-        dprintf(D_ALWAYS, "Client address is %s\n", getRemoteHost());
+        dprintf(D_SECURITY, "Client address is %s\n", getRemoteHost());
     }    
 
     // First, map the name, this has to take place before receive_tgt_creds!
     if (!map_kerberos_name(ticket)) {
-        dprintf(D_ALWAYS, "Unable to map name ");
-        goto cleanup;
+        dprintf(D_SECURITY, "Unable to map Kerberos name\n");
+        goto error;
     }
 
     // copy the session key
     if (code = krb5_copy_keyblock(krb_context_, 
                                   ticket->enc_part2->session, 
                                   &sessionKey_)){
+        dprintf(D_SECURITY, "Kerberos server authentication error:%s\n", error_message(code));
         goto error;
     }
     
@@ -612,7 +626,7 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     //------------------------------------------
     // We are now authenticated!
     //------------------------------------------
-    dprintf(D_ALWAYS, "User %s is now authenticated!\n", getRemoteUser());
+    dprintf(D_SECURITY, "User %s is now authenticated!\n", getRemoteUser());
     
     rc = TRUE;
     
@@ -625,9 +639,6 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     if ((!mySock_->code(message)) || (!mySock_->end_of_message())) {
         dprintf(D_ALWAYS, "Failed to send response message!\n");
     }
-    
-    dprintf(D_ALWAYS, "Kerberos server authentication error:%s\n", 
-            error_message(code));
     
  cleanup:
     
@@ -772,17 +783,17 @@ int Condor_Auth_Kerberos :: map_kerberos_name(krb5_ticket * ticket)
     else {
         // We need to parse it right now. from userid@domain
         // to just user id
-        char *tmp;
+        char *tmp, * domain;
         if ((tmp = strchr( client, '/')) == NULL) {
             tmp = strchr( client, '@' );
         }
 
-        if (tmp != NULL) {
+        domain = strchr(client, '@');
+
+        if ((tmp != NULL) && (domain != NULL)) {
             int len = strlen(tmp);
             int size = strlen(client) - len + 1;
             char * claimToBe = (char *) malloc(size);
-            char * domain = NULL;
-    
             memset(claimToBe, '\0', size);
             memcpy(claimToBe, client, size -1);
             
@@ -800,14 +811,13 @@ int Condor_Auth_Kerberos :: map_kerberos_name(krb5_ticket * ticket)
             //------------------------------------------
             // Now, map domain name
             //------------------------------------------
-            if (code = krb5_get_default_realm(krb_context_, &domain)) {
-                goto error;
+           
+            if (!map_domain_name(domain+1)) {
+                return FALSE;
             }
 
-            setRemoteDomain(domain);
-            free(domain);
-
             dprintf(D_SECURITY, "Client is %s@%s\n", getRemoteUser(), getRemoteDomain());
+
             rc = TRUE;
             goto cleanup;
         }
@@ -825,7 +835,91 @@ int Condor_Auth_Kerberos :: map_kerberos_name(krb5_ticket * ticket)
     }
     return rc;
 }
+
+int Condor_Auth_Kerberos :: map_domain_name(const char * domain)
+{
+    int rc = TRUE;
+    int code;
+    const char * localDomain;
+    if (RealmMap == 0) {
+        init_realm_mapping();
+        // it's okay if it returns false
+    }
+
+    // two cases, if domain is the same as the current uid domain,
+    // then we are okay, other wise, see if we have a map
+    if (RealmMap) {
+        MyString from(domain), to;
+        if (RealmMap->lookup(from, to) != -1) {
+            setRemoteDomain(to.GetCStr());
+            return TRUE;
+        }
+    }
+
+    // Maybe the domain is the same as our local domain?
+    localDomain = getLocalDomain();
+    if (localDomain && !strcmp(localDomain, domain)) {
+        // we are in the same domain, 
+        setRemoteDomain(localDomain);
+    }
+    else {
+        // No idea how to map the domain, exception!
+        dprintf(D_SECURITY, "Unable to map domain %s\n", domain);
+        rc = FALSE;
+    }
+    return rc;
+}
+
+static int compute_string_hash(const MyString& str, int numBuckets)
+{
+	return ( str.Hash() % numBuckets );
+}
+
+int Condor_Auth_Kerberos :: init_realm_mapping()
+{
+    int lc = 0;
+    FILE *fd;
+    char * buffer;
+    char * filename = param( "KERBEROS_MAP_FILE" );
+    StringList from, to;
+
+    if (RealmMap) {
+        delete RealmMap;
+    }
+
+    if ( !(fd = fopen(  filename, "r" ) ) ) {
+        dprintf( D_SECURITY, "unable to open map file %s, errno %d\n", 
+                 filename, errno );
+        return FALSE;
+    }
     
+    while (buffer = getline(fd)) {
+        char * token;
+        token = strtok(buffer, "==");
+        if(token) {
+            from.append(token);
+        }
+        token = strtok(NULL, "==");
+        if(token) {
+            to.append(token);
+        }
+        lc++;
+    }
+
+    RealmMap = new Realm_Map_t(lc, compute_string_hash);
+	from.rewind();
+    to.rewind();
+    char *f, * t;
+	while ( (f = from.next()) ) {
+        t = to.next();
+        RealmMap->insert(MyString(f), MyString(t));
+        from.deleteCurrent();
+        to.deleteCurrent();
+    }
+    fclose(fd);
+    return TRUE;
+}
+   
 int Condor_Auth_Kerberos :: send_request(krb5_data * request)
 {
     int reply = KERBEROS_DENY;
@@ -836,13 +930,13 @@ int Condor_Auth_Kerberos :: send_request(krb5_data * request)
     mySock_->encode();
     
     if (!mySock_->code(message) || !mySock_->code(request->length)) {
-        dprintf(D_ALWAYS, "Faile to send request length\n");
+        dprintf(D_SECURITY, "Faile to send request length\n");
         return reply;
     }
     
     if (!(mySock_->put_bytes(request->data, request->length)) ||
         !(mySock_->end_of_message())) {
-        dprintf(D_ALWAYS, "Faile to send request data\n");
+        dprintf(D_SECURITY, "Faile to send request data\n");
         return reply;
     }
 
@@ -852,7 +946,7 @@ int Condor_Auth_Kerberos :: send_request(krb5_data * request)
     mySock_->decode();
     
     if ((!mySock_->code(reply)) || (!mySock_->end_of_message())) {
-        dprintf(D_ALWAYS, "Failed to receive response from server\n");
+        dprintf(D_SECURITY, "Failed to receive response from server\n");
         return KERBEROS_DENY;
     }// Resturn buffer size
     
@@ -910,6 +1004,12 @@ int Condor_Auth_Kerberos :: init_server_info()
         free(name);
         return -1;
     }
+    else {
+        if (mySock_->isClient()) {
+            setRemoteUser(name);
+            setRemoteDomain((*server)->realm.data);
+        }
+    }
 
     free(name);
     krb5_unparse_name(krb_context_, *server, &name);
@@ -940,7 +1040,6 @@ int Condor_Auth_Kerberos :: forward_tgt_creds(krb5_creds      * cred,
                                   ccache, 
                                   KDC_OPT_FORWARDABLE,
                                   &request)) {
-        dprintf(D_ALWAYS, "Error getting forwarded creds\n");
         goto error;
     }
     
@@ -950,7 +1049,7 @@ int Condor_Auth_Kerberos :: forward_tgt_creds(krb5_creds      * cred,
     mySock_->encode();
     if ((!mySock_->code(message)) || (!mySock_->end_of_message())) {
         dprintf(D_ALWAYS, "Failed to send response\n");
-        goto error;
+        goto cleanup;
     }
     
     rc = !(send_request(&request) == KERBEROS_GRANT);
@@ -1153,12 +1252,22 @@ void Condor_Auth_Kerberos :: setRemoteAddress()
         krb5_free_addresses(krb_context_, remoteAddr);
     }
     
-    dprintf(D_ALWAYS, "Remote host is %s\n", getRemoteHost());
+    dprintf(D_SECURITY, "Remote host is %s\n", getRemoteHost());
 
     return;
 
  error:
     dprintf(D_ALWAYS, "Unable to obtain remote address: ", error_message(code));
+}
+
+int Condor_Auth_Kerberos :: endTime() const
+{
+    if (creds_) {
+        return creds_->times.endtime;
+    }
+    else {
+        return -1;
+    }
 }
 
 int Condor_Auth_Kerberos :: isValid() const

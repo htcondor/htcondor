@@ -115,44 +115,44 @@ void CollectorDaemon::Init()
 	
 	// install command handlers for invalidations
 	daemonCore->Register_Command(INVALIDATE_STARTD_ADS,"INVALIDATE_STARTD_ADS",
-		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,WRITE);
+		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,DAEMON);
 	daemonCore->Register_Command(INVALIDATE_SCHEDD_ADS,"INVALIDATE_SCHEDD_ADS",
-		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,WRITE);
+		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,DAEMON);
 	daemonCore->Register_Command(INVALIDATE_MASTER_ADS,"INVALIDATE_MASTER_ADS",
-		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,WRITE);
+		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,DAEMON);
 	daemonCore->Register_Command(INVALIDATE_CKPT_SRVR_ADS,
 		"INVALIDATE_CKPT_SRVR_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,WRITE);
+		"receive_invalidation",NULL,DAEMON);
 	daemonCore->Register_Command(INVALIDATE_SUBMITTOR_ADS,
 		"INVALIDATE_SUBMITTOR_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,WRITE);
+		"receive_invalidation",NULL,DAEMON);
 	daemonCore->Register_Command(INVALIDATE_LICENSE_ADS,
 		"INVALIDATE_LICENSE_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,WRITE);
+		"receive_invalidation",NULL,DAEMON);
 	daemonCore->Register_Command(INVALIDATE_COLLECTOR_ADS,
 		"INVALIDATE_COLLECTOR_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,ALLOW);
+		"receive_invalidation",NULL,DAEMON);
 	daemonCore->Register_Command(INVALIDATE_STORAGE_ADS,
 		"INVALIDATE_STORAGE_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,WRITE);
+		"receive_invalidation",NULL,DAEMON);
 
 	// install command handlers for updates
 	daemonCore->Register_Command(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
+		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 	daemonCore->Register_Command(UPDATE_SCHEDD_AD,"UPDATE_SCHEDD_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
+		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 	daemonCore->Register_Command(UPDATE_SUBMITTOR_AD,"UPDATE_SUBMITTOR_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
+		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 	daemonCore->Register_Command(UPDATE_LICENSE_AD,"UPDATE_LICENSE_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
+		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 	daemonCore->Register_Command(UPDATE_MASTER_AD,"UPDATE_MASTER_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
+		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 	daemonCore->Register_Command(UPDATE_CKPT_SRVR_AD,"UPDATE_CKPT_SRVR_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
+		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 	daemonCore->Register_Command(UPDATE_COLLECTOR_AD,"UPDATE_COLLECTOR_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,ALLOW);
 	daemonCore->Register_Command(UPDATE_STORAGE_AD,"UPDATE_STORAGE_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
+		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 
 	// ClassAd evaluations use this function to resolve names
 	ClassAdLookupRegister( process_global_query, this );

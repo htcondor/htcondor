@@ -85,7 +85,7 @@ MPIShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 	daemonCore->
 		Register_Command( SHADOW_UPDATEINFO, "SHADOW_UPDATEINFO", 
 						  (CommandHandlercpp)&MPIShadow::updateFromStarter,
-						  "MPIShadow::updateFromStarter", this, WRITE ); 
+						  "MPIShadow::updateFromStarter", this, DAEMON ); 
 
 #if MPI_USES_RSH	
 

@@ -25,6 +25,7 @@
 
 #define CONDOR_IO_BUF_SIZE 4096
 #include "sock.h"
+
 void sanity_check();
 
 #if !defined(WIN32)
@@ -32,6 +33,8 @@ void sanity_check();
 #    define SOCKET int
 #  endif
 #endif /* not WIN32 */
+
+class Condor_MD_MAC;
 
 class Buf {
 	
@@ -74,6 +77,9 @@ public:
 	
 	///initialize socket handle.
 	void init_parent(Sock* tmp) { p_sock = tmp;}
+
+        bool computeMD(char * checkSUM, Condor_MD_MAC * checker);
+        bool verifyMD(char * checkSUM, Condor_MD_MAC * checker);
 
 private:
 

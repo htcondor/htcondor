@@ -242,34 +242,35 @@ main(int argc, char* argv[])
 
   int LineCount=0;
 
-  ReliSock sock;
-  if (!sock.connect((char*) view_host.addr(), 0)) {
+  ReliSock *sock = (ReliSock*)view_host.startCommand(QueryType, Stream::reli_sock, 0);
+  if (!sock) {
     fprintf( stderr, "failed to connect to the CondorView server (%s)\n", 
 			 view_host.fullHostname() );
     fputs("No Data.\n",outfile);
     exit(1);
   }
 
-  sock.encode();
-  if (!sock.code(QueryType) ||
-      !sock.code(FromDate) ||
-      !sock.code(ToDate) ||
-      !sock.code(Options) ||
-      !sock.code(LinePtr) ||
-      !sock.end_of_message()) {
+  sock->encode();
+  if (!sock->code(FromDate) ||
+      !sock->code(ToDate) ||
+      !sock->code(Options) ||
+      !sock->code(LinePtr) ||
+      !sock->end_of_message()) {
     fprintf( stderr, "failed to send query to the CondorView server %s\n",
 			 view_host.fullHostname() );
     fputs("No Data.\n",outfile);
+    delete sock;
     exit(1);
   }
 
   char NewStr[200];
 
-  sock.decode(); 
+  sock->decode(); 
   while(1) {
-    if (!sock.code(LinePtr)) {
+    if (!sock->code(LinePtr)) {
       fprintf(stderr, "failed to receive data from the CondorView server\n");
       if (LineCount==0) fputs("No Data.\n",outfile);
+      delete sock;
       exit(1);
     }
     if (strlen(LinePtr)==0) break;
@@ -282,13 +283,14 @@ main(int argc, char* argv[])
       fputs(LinePtr,outfile);
     }
   }
-  if (!sock.end_of_message()) {
+  if (!sock->end_of_message()) {
     fprintf(stderr, "failed to receive data from the CondorView server\n");
   }
 
   if (LineCount==0) fputs("No Data.\n",outfile);
   if (FileName.Length()>0) fclose(outfile);
 
+  delete sock;
   return 0;
 }
 

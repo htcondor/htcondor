@@ -158,7 +158,7 @@ NotifyUser( char *buf, PROC *proc )
 				proc->id.cluster, proc->id.proc);
 
 		if( ! JobAd ) {
-			dprintf( D_ALWAYS, "In NotifyUser() w/ NULL JobAd!" );
+			dprintf( D_ALWAYS, "In NotifyUser() w/ NULL JobAd!\n" );
 			return;
 		}
 		mailer = email_user_open(JobAd, subject);
@@ -303,7 +303,7 @@ HoldJob( const char* buf )
 			 Proc->id.cluster, Proc->id.proc );
 
 	if( ! JobAd ) {
-		dprintf( D_ALWAYS, "In HoldJob() w/ NULL JobAd!" );
+		dprintf( D_ALWAYS, "In HoldJob() w/ NULL JobAd!\n" );
 		exit( JOB_SHOULD_HOLD );
 	}
 	mailer = email_user_open(JobAd, subject);
@@ -439,7 +439,7 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 	 case 0: /* If core, bad executable -- otherwise a normal exit */
 		if( WCOREDUMP(status) && WEXITSTATUS(status) == ENOEXEC ) {
 			(void)sprintf( notification, "is not executable." );
-			dprintf( D_ALWAYS, "Shadow: Job file not executable" );
+			dprintf( D_ALWAYS, "Shadow: Job file not executable\n" );
 			ExitReason = JOB_KILLED;
 		} else if( WCOREDUMP(status) && WEXITSTATUS(status) == 0 ) {
 				(void)sprintf(notification,
@@ -616,14 +616,14 @@ part_send_job(
 
 	  Daemon startd(DT_STARTD, host, NULL);
 	  if (!(sock = (ReliSock*)startd.startCommand ( ACTIVATE_CLAIM, Stream::reli_sock, 90))) {
-		  dprintf( D_ALWAYS, "startCommand(ACTIVATE_CLAIM) to startd failed");
+		  dprintf( D_ALWAYS, "startCommand(ACTIVATE_CLAIM) to startd failed\n");
 		  goto returnfailure;
 	  }
 
 		  // Send the capability
 	  dprintf(D_FULLDEBUG, "send capability %s\n", capability);
 	  if( !sock->code(capability) ) {
-		  dprintf( D_ALWAYS, "sock->put(\"%s\") failed", capability );
+		  dprintf( D_ALWAYS, "sock->put(\"%s\") failed\n", capability );
 		  goto returnfailure;
 	  }
 
@@ -634,25 +634,25 @@ part_send_job(
 		  dprintf( D_ALWAYS, "Requesting Primary Starter\n" );
 	  }
 	  if( !sock->code(test_starter) ) {
-		  dprintf( D_ALWAYS, "sock->code(%d) failed", test_starter );
+		  dprintf( D_ALWAYS, "sock->code(%d) failed\n", test_starter );
 		  goto returnfailure;
 	  }
 
 		  // Send the job info 
 	  if( !JobAd->put(*sock) ) {
-		  dprintf( D_ALWAYS, "failed to send job ad" );
+		  dprintf( D_ALWAYS, "failed to send job ad\n" );
 		  goto returnfailure;
 	  }	
 
 	  if( !sock->end_of_message() ) {
-		  dprintf( D_ALWAYS, "failed to send message to startd" );
+		  dprintf( D_ALWAYS, "failed to send message to startd\n" );
 		  goto returnfailure;
 	  }
 
 		  // We're done sending.  Now, get the reply.
 	  sock->decode();
 	  if( !sock->code(reply) || !sock->end_of_message() ) {
-		  dprintf( D_ALWAYS, "failed to receive reply from startd" );
+		  dprintf( D_ALWAYS, "failed to receive reply from startd\n" );
 		  goto returnfailure;
 	  }
 	  
@@ -739,7 +739,7 @@ part_send_job(
   //snprintf(sinfulstring, 40, "<%s:%d>", sock->endpoint_ip_str(), ports.port1);
   sprintf(sinfulstring, "<%s:%d>", sock->endpoint_ip_str(), ports.port1);
   if( (sd1 = do_connect(sinfulstring, (char *)0, (u_short)ports.port1)) < 0 ) {
-    dprintf( D_ALWAYS, "failed to connect to scheduler on %s", sinfulstring );
+    dprintf( D_ALWAYS, "failed to connect to scheduler on %s\n", sinfulstring );
 	goto returnfailure;
   }
  
@@ -747,7 +747,7 @@ part_send_job(
   //snprintf(sinfulstring, 40, "<%s:%d>", sock->endpoint_ip_str(), ports.port2);
   sprintf(sinfulstring, "<%s:%d>", sock->endpoint_ip_str(), ports.port2);
   if( (sd2 = do_connect(sinfulstring, (char *)0, (u_short)ports.port2)) < 0 ) {
-    dprintf( D_ALWAYS, "failed to connect to scheduler on %s", sinfulstring );
+    dprintf( D_ALWAYS, "failed to connect to scheduler on %s\n", sinfulstring );
 	close(sd1);
 	goto returnfailure;
   }
@@ -787,13 +787,13 @@ send_cmd_to_startd(char *sin_host, char *capability, int cmd)
   // send the capability
   dprintf(D_FULLDEBUG, "send capability %s\n", capability);
   if(!sock->code(capability)){
-    dprintf( D_ALWAYS, "sock->code(%s)", capability );
+    dprintf( D_ALWAYS, "sock->code(%s) failed.\n", capability );
     return -3;
   }
 
   // send end of message
   if( !sock->end_of_message() ) {
-    dprintf( D_ALWAYS, "end_of_message failed" );
+    dprintf( D_ALWAYS, "end_of_message failed\n" );
     return -4;
   }
   dprintf( D_FULLDEBUG, "Sent command %d to startd at %s with cap %s\n",

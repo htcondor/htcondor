@@ -21,63 +21,8 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#include "condor_common.h"
-#include "CryptKey.h"
+/* Dummy definition of ZZZ_dc_sinful to be included in Condor
+   libraries where needed. */
 
-KeyInfo:: KeyInfo()
-    : keyData_    (0),
-      keyDataLen_ (0),
-      protocol_   (CONDOR_NO_PROTOCOL),
-      duration_   (0)
-{
-    
-}
+char* ZZZ_dc_sinful() { return 0; }
 
-KeyInfo :: KeyInfo(const KeyInfo& copy)
-    : keyData_    ( 0 ),
-      keyDataLen_ (copy.keyDataLen_),
-      protocol_   (copy.protocol_),
-      duration_   (copy.duration_)
-{
-    if (copy.keyDataLen_) {
-        keyData_ = new unsigned char[copy.keyDataLen_];
-        memcpy(keyData_, copy.keyData_, keyDataLen_);   
-    }
-}
-
-KeyInfo :: KeyInfo(unsigned char * keyData,
-                   int             keyDataLen,
-                   Protocol        protocol,
-                   int             duration )
-    : protocol_   (protocol),
-      keyData_    (new unsigned char[keyDataLen]),
-      keyDataLen_ (keyDataLen),
-      duration_   (duration)
-{
-    memcpy(keyData_, keyData, keyDataLen);
-}
-
-KeyInfo :: ~KeyInfo()
-{
-    delete keyData_;
-}
-
-unsigned char * KeyInfo :: getKeyData()
-{
-    return keyData_;
-}
-    
-int KeyInfo :: getKeyLength()
-{
-    return keyDataLen_;
-}
-
-Protocol KeyInfo :: getProtocol()
-{
-    return protocol_;
-}
-
-int KeyInfo :: getDuration()
-{
-    return duration_;
-}

@@ -39,22 +39,47 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 
 
 #include "authentication.h"
+#include "daemon.h"
 #include "reli_sock.h"
 #include "condor_daemon_core.h"
 #include "condor_io.h"
 #include "internet.h"
+#include "KeyCache.h"
 #include "condor_debug.h"
 #include "get_daemon_addr.h"
 #include "condor_uid.h"
+#include "my_hostname.h"
 #include "condor_commands.h"
 #include "condor_config.h"
 #include "condor_attributes.h"
 #include "strupr.h"
 #include "env.h"
+#include "condor_secman.h"
 #ifdef WIN32
 #include "exphnd.WIN32.h"
 typedef unsigned (__stdcall *CRT_THREAD_HANDLER) (void *);
 #endif
+
+
+#define SECURITY_HACK_ENABLE
+void zz2printf(KeyInfo *k) {
+	if (k) {
+		char hexout[260];  // holds (at least) a 128 byte key.
+		unsigned char* dataptr = k->getKeyData();
+		int   length  =  k->getKeyLength();
+
+		for (int i = 0; (i < length) && (i < 24); i++) {
+			sprintf (&hexout[i*2], "%02x", *dataptr++);
+		}
+
+    	dprintf (D_SECURITY, "ZKM: [%i] %s\n", length, hexout);
+	}
+}
+
+static unsigned int ZZZZZ = 0;
+int ZZZ_always_increase() {
+	return ZZZZZ++;
+}
 
 extern void drop_addr_file( void );
 
@@ -67,6 +92,7 @@ static int compute_pid_hash(const pid_t &key, int numBuckets)
 {
 	return ( key % numBuckets );
 }
+
 
 // DaemonCore constructor. 
 
@@ -117,6 +143,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 
 	if(maxSocket == 0)
 		maxSocket = DEFAULT_MAXSOCKETS;
+
+	sec_man = new SecMan();
 
 	sockTable = new ExtArray<SockEnt>(maxSocket);
 	if(sockTable == NULL)
@@ -219,6 +247,10 @@ DaemonCore::~DaemonCore()
 			free_descrip( (*sockTable)[i].handler_descrip );		
 		}
 		delete sockTable;
+	}
+
+	if (sec_man) {
+		delete sec_man;
 	}
 
 		// Since we created these, we need to clean them up.
@@ -958,6 +990,30 @@ void DaemonCore::DumpCommandTable(int flag, const char* indent)
 	dprintf(flag, "\n");
 }
 
+MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm) {
+	int		i;
+
+	MyString res;
+	char tbuf[16];
+
+	for (i = 0; i < maxCommand; i++) {
+		if ((comTable[i].handler != NULL) || 
+						(comTable[i].handlercpp != NULL)) 
+		{
+
+			sprintf (tbuf, "%i", comTable[i].num);
+			if (res.Length()) {
+				res += ",";
+			}
+			res += tbuf;
+		}
+	}
+
+	return res;
+
+}
+
+
 void DaemonCore::DumpReapTable(int flag, const char* indent)
 {
 	int		i;
@@ -1087,6 +1143,9 @@ DaemonCore::ReInit()
 		// Reset our IpVerify object
 	ipverify.Init();
 
+		// Reset our SecMan object (clears the cached info)
+	sec_man->ClearCache();
+
 		// Handle our timer.  If this is the first time, we need to
 		// register it.  Otherwise, we just reset its value to go off
 		// 8 hours from now.  The reason we don't do this as a simple
@@ -1131,9 +1190,8 @@ DaemonCore::ReInit()
 	return TRUE;
 }
 
-
 int
-DaemonCore::Verify(DCpermission perm, const struct sockaddr_in *sin )
+DaemonCore::Verify(DCpermission perm, const struct sockaddr_in *sin, const char * fqu )
 {
 	/*
 	 * Be Warned:  careful about parameter "sin" being NULL.  It could be, in
@@ -1153,7 +1211,7 @@ DaemonCore::Verify(DCpermission perm, const struct sockaddr_in *sin )
 
 	default:
 		if ( sin ) {
-			return ipverify.Verify(perm,sin);
+			return ipverify.Verify(perm, sin, fqu);
 		} else {
 			return FALSE;
 		}
@@ -1536,7 +1594,8 @@ int DaemonCore::HandleReq(int socki)
 	int					reqFound = FALSE;
 	int					result;
 	int					old_timeout;
-
+    int                 perm         = USER_AUTH_FAILURE;
+    char                user[256] = {};
 	
 	insock = (*sockTable)[socki].iosock;
 
@@ -1583,10 +1642,189 @@ int DaemonCore::HandleReq(int socki)
 		// in UDP we cannot display who the command is from until 
 		// we read something off the socket, so we display who from 
 		// after we read the command below...
+
+		dprintf ( D_SECURITY, "DC_AUTHENTICATE: received UDP packet from %s.\n",
+				sin_to_string(((Sock*)stream)->endpoint()));
+
+
+		// get the info, if there is any
+		char * cleartext_info = (char*)((SafeSock*)stream)->isIncomingDataMD5ed();
+		char * sess_id = NULL;
+		char * return_address_ss = NULL;
+
+		if (cleartext_info) {
+			StringList info_list(cleartext_info);
+			char * tmp = NULL;
+
+			info_list.rewind();
+			tmp = info_list.next();
+			if (tmp) {
+				sess_id = strdup(tmp);
+				dprintf ( D_SECURITY, "DC_AUTHENTICATE: packet is MD5ed with key %s.\n", sess_id);
+
+				tmp = info_list.next();
+				if (tmp) {
+					return_address_ss = strdup(tmp);
+					dprintf ( D_SECURITY, "DC_AUTHENTICATE: packet is from daemon %s.\n", return_address_ss);
+				}
+			} else {
+				// protocol violation... StringList didn't give us anything!
+				// this is unlikely to work, but we may as well try... so, we
+				// don't fail here.
+			}
+		} else {
+			dprintf ( D_SECURITY, "DC_AUTHENTICATE: no MD5...\n");
+		}
+
+		if (sess_id) {
+			dprintf ( D_SECURITY, "DC_AUTHENTICATE: looking for session %s...\n", sess_id);
+			KeyCacheEntry *session = NULL;
+			bool found_sess = sec_man->session_cache->lookup(sess_id, session);
+
+			if (!found_sess) {
+				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s NOT FOUND...\n", sess_id);
+				// no session... we outta here!
+
+
+				// but first, we should be nice and send a message back to
+				// the people who sent us the wrong session id.
+				SafeSock s;
+				if (s.connect(return_address_ss)) {
+					s.encode();
+					s.put(DC_INVALIDATE_KEY);
+					s.code(sess_id);
+					s.eom();
+					s.close();
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: sent DC_INVALIDATE %s to %s.\n",
+						sess_id, return_address_ss);
+				} else {
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't send DC_INVALIDATE %s to %s.\n",
+						sess_id, return_address_ss);
+				}
+
+				result = FALSE;
+				goto finalize;
+			}
+
+			dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s is here...\n", sess_id);
+
+			if (!session->key()) {
+				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
+				// uhm, there should be a key here!
+				result = FALSE;
+				goto finalize;
+			}
+
+			if (!stream->set_MD_mode(MD_ALWAYS_ON, session->key())) {
+				dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on message authenticator, failing.\n");
+				result = FALSE;
+				goto finalize;
+			} else {
+				dprintf (D_SECURITY, "DC_AUTHENTICATE: message authenticator enabled with key id %s.\n", sess_id);
+#ifdef SECURITY_HACK_ENABLE
+				zz2printf (session->key());
+#endif
+			}
+			delete sess_id;
+
+			if (return_address_ss) {
+				delete return_address_ss;
+			}
+		} else {
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: incoming data NOT MD5ed.\n");
+		}
+
+
+		dprintf ( D_SECURITY, "DC_AUTHENTICATE: checking UDP for encryption...\n");
+
+		// get the info, if there is any
+		cleartext_info = (char*)((SafeSock*)stream)->isIncomingDataEncrypted();
+		sess_id = NULL;
+		return_address_ss = NULL;
+
+		if (cleartext_info) {
+			StringList info_list(cleartext_info);
+			char * tmp = NULL;
+
+			info_list.rewind();
+			tmp = info_list.next();
+			if (tmp) {
+				sess_id = strdup(tmp);
+				dprintf ( D_SECURITY, "DC_AUTHENTICATE: packet is encrypted with key %s.\n", sess_id);
+
+				tmp = info_list.next();
+				if (tmp) {
+					return_address_ss = strdup(tmp);
+					dprintf ( D_SECURITY, "DC_AUTHENTICATE: packet is from daemon %s.\n", return_address_ss);
+				}
+			} else {
+				// protocol violation... StringList didn't give us anything!
+				// this is unlikely to work, but we may as well try... so, we
+				// don't fail here.
+			}
+		}
+
+
+		if (sess_id) {
+			dprintf ( D_SECURITY, "DC_AUTHENTICATE: looking for session %s...\n", sess_id);
+			KeyCacheEntry *session = NULL;
+			bool found_sess = sec_man->session_cache->lookup(sess_id, session);
+
+			if (!found_sess) {
+				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s NOT FOUND...\n", sess_id);
+				// no session... we outta here!
+
+				// but first, see above behavior in MD5 code above.
+
+				SafeSock s;
+				if (s.connect(return_address_ss)) {
+					s.encode();
+					s.put(DC_INVALIDATE_KEY);
+					s.code(sess_id);
+					s.eom();
+					s.close();
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: sent DC_INVALIDATE %s to %s.\n",
+						sess_id, return_address_ss);
+				} else {
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't send DC_INVALIDATE %s to %s.\n",
+						sess_id, return_address_ss);
+				}
+
+				result = FALSE;
+				goto finalize;
+			}
+
+			dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s is here...\n", sess_id);
+
+			if (!session->key()) {
+				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
+				// uhm, there should be a key here!
+				result = FALSE;
+				goto finalize;
+			}
+
+			if (!stream->set_crypto_key(session->key())) {
+				dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption, failing.\n");
+				result = FALSE;
+				goto finalize;
+			} else {
+				dprintf (D_SECURITY, "DC_AUTHENTICATE: encryption enabled with key id %s.\n", sess_id);
+#ifdef SECURITY_HACK_ENABLE
+				zz2printf (session->key());
+#endif
+			}
+			delete sess_id;
+			if (return_address_ss) {
+				delete return_address_ss;
+			}
+		} else {
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: incoming data NOT encrypted.\n");
+		}
 	}
 	
 	// read in the command from the stream with a timeout value of 20 seconds
 	old_timeout = stream->timeout(20);
+
 	stream->decode();
 	result = stream->code(req);
 	// For now, lets keep the timeout, so all command handlers are called with
@@ -1602,133 +1840,482 @@ int DaemonCore::HandleReq(int socki)
 		if ( insock != stream )	{   // delete stream only if we did an accept
 			delete stream;		   
 		} else {
+			stream->set_crypto_key(NULL);
+			stream->set_MD_mode(MD_OFF, NULL);
 			stream->end_of_message();
 		}
-		return KEEP_STREAM;
+        return KEEP_STREAM;
 	}
-
 
 	if (req == DC_AUTHENTICATE) {
 
-		// For now, only TCP is authenticated.  But stay tuned,
-		// soon UDP authentication will arrive as well!
-		ASSERT( is_tcp == TRUE );
+		if (!is_tcp) {
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: bring on the UDP !\n");
+		}
 
-		ReliSock* sock = (ReliSock*)stream;
+		Sock* sock = (Sock*)stream;
+		sock->decode();
 
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: received DC_AUTHENTICATE from %s\n", sin_to_string(sock->endpoint()));
 
-		// determine the value of config.ALWAYS_AUTHENTICATE
-		char *paramer;
-		paramer = param("ALWAYS_AUTHENTICATE");
 
-		bool always_authenticate = false;
-		if (paramer) {
-			if ((stricmp(paramer, "YES") == 0) ||
-			    (stricmp(paramer, "TRUE") == 0)) {
-				always_authenticate = true;
-			}
-			free (paramer);
-		}
-	
 		int saveres = result;
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: entry value of result == %i\n", result);
 
 		ClassAd auth_info;
-		if( !auth_info.initFromStream(*sock) || !sock->end_of_message()) {
+		if( !auth_info.initFromStream(*sock)) {
 			dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
 					   "receive auth_info!\n");
-			return FALSE;	
+			result = FALSE;	
+			goto finalize;
 		}
-
+		
+		if ( is_tcp && !sock->end_of_message()) {
+			dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE is TCP, unable to "
+					   "receive eom!\n");
+			result = FALSE;	
+			goto finalize;
+		}
+	
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: received following ClassAd:\n");
 		auth_info.dPrint (D_SECURITY);
 
 		char buf[ATTRLIST_MAX_EXPRESSION];
-		char auth_types[ATTRLIST_MAX_EXPRESSION];
 
-		if( ! auth_info.LookupString(ATTR_AUTH_TYPES, auth_types)) {
-			dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
-					   "extract auth_info.%s!\n", ATTR_AUTH_TYPES);
-			return FALSE;
+		// look at the ad.  get the command number.
+		int real_cmd = 0;
+		int tmp_cmd = 0;
+		auth_info.LookupInteger(ATTR_SEC_COMMAND, real_cmd);
+
+		if (real_cmd == DC_AUTHENTICATE) {
+			// we'll set tmp_cmd temporarily to 
+			auth_info.LookupInteger(ATTR_SEC_AUTH_COMMAND, tmp_cmd);
+		} else {
+			tmp_cmd = real_cmd;
 		}
 
-		dprintf (D_SECURITY, "DC_AUTHENTICATE: auth_info.%s == '%s'\n",
-				ATTR_AUTH_TYPES, auth_types);
+		// get the auth level of this command
+		// locate the hash table entry
+		int cmd_index = 0;
 
-		if( ! auth_info.LookupString(ATTR_AUTH_ACTION, buf)) {
-			dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
-					   "extract auth_info.%s!\n", ATTR_AUTH_ACTION);
-			return FALSE;	
-		}
+		// first compute the hash
+		if ( tmp_cmd < 0 )
+			cmd_index = -tmp_cmd % maxCommand;
+		else
+			cmd_index = tmp_cmd % maxCommand;
 
-		dprintf (D_SECURITY, "DC_AUTHENTICATE: auth_info.AUTHENTICATE == '%s'\n",
-				buf);
-
-		if (stricmp(buf, "YES") == 0) {
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticating RIGHT NOW.\n");
-			if (!sock->authenticate(getAuthBitmask(auth_types))) {
-				dprintf (D_ALWAYS, "DC_AUTHENTICATE: authenticate failed\n");
-				return FALSE;
-			}
-		} else if (stricmp(buf, "NO") == 0) {
-			if (always_authenticate) {
-				// client refused to authenticate
-				// when server required it
-				dprintf (D_ALWAYS, "DC_AUTHENTICATE: client refused to authenticate.\n");
-				return FALSE;
-			}
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: not authenticating.\n");
-		} else if (stricmp(buf, "ASK") == 0) {
-			ClassAd auth_response;
-			if (always_authenticate) {
-				auth_response.Insert("AUTHENTICATE=\"YES\"");
-			} else {
-				auth_response.Insert("AUTHENTICATE=\"NO\"");
-			}
-			sock->encode();
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: sending following classad to client: \n");
-			auth_response.dPrint (D_SECURITY);
-			auth_response.put(*sock);
-			sock->end_of_message();
-
-			if (always_authenticate) {
-				dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticating RIGHT NOW.\n");
-				if (!sock->authenticate(getAuthBitmask(auth_types))) {
-					dprintf (D_ALWAYS, "DC_AUTHENTICATE: authenticate failed\n");
-					return FALSE;
+		int cmdFound = FALSE;
+		if (comTable[cmd_index].num == tmp_cmd) {
+			// hash found it first try... cool
+			cmdFound = TRUE;
+		} else {
+			// hash did not find it, search for it
+			for (j = (cmd_index + 1) % maxCommand; j != cmd_index; j = (j + 1) % maxCommand) {
+				if(comTable[j].num == tmp_cmd) {
+					cmdFound = TRUE; 
+					cmd_index = j;
+					break;
 				}
+			}
+		}
+
+		if (!cmdFound) {
+			// we have no idea what command they want to send.
+			// too bad, bye bye
+			result = FALSE;
+			goto finalize;
+		}
+
+
+
+
+		char    *the_sid        = NULL;
+		ClassAd *the_policy     = NULL;
+		KeyInfo *the_key        = NULL;
+		bool new_session        = false;
+
+
+		// check if we are restarting a cached session
+		
+		if ( sec_man->sec_lookup_feat_act(auth_info, ATTR_SEC_USE_SESSION) == SecMan::SEC_FEAT_ACT_YES) {
+
+			KeyCacheEntry *session = NULL;
+
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: request to use cached session.\n");
+
+			if( ! auth_info.LookupString(ATTR_SEC_SID, &the_sid)) {
+				dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
+						   "extract auth_info.%s!\n", ATTR_SEC_SID);
+				result = FALSE;	
+				goto finalize;
+			}
+
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: looking up cached key id %s.\n", the_sid);
+
+
+			// lookup the suggested key
+			if (!sec_man->session_cache->lookup(the_sid, session)) {
+
+				// the key id they sent was not in our cache.  this is a
+				// problem.
+
+				dprintf (D_ALWAYS, "DC_AUTHENTICATE: attempt to open "
+						   "invalid session %s, failing.\n", the_sid);
+
+				/* this is not UDP.
+				// if this is UDP, they have no idea the key they are
+				// using is bunk, so  it would be nice of us to tell them.
+
+				// blast off a udp packet, its the least we can do.
+				
+				// get their sinful string
+				char client_sinful_string[256];
+				if( auth_info.LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, client_sinful_string)) {
+					SafeSock s;
+					if (s.connect(client_sinful_string)) {
+						s.encode();
+						s.put(DC_INVALIDATE_KEY);
+						s.code(the_sid);
+						s.eom();
+						s.close();
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: sent DC_INVALIDATE %s to %s.\n",
+							the_sid, client_sinful_string);
+					} else {
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't send DC_INVALIDATE %s to %s.\n",
+							the_sid, client_sinful_string);
+					}
+				} else {
+					dprintf ( D_SECURITY, "DC_AUTHENTICATE: no return address for invalid UDP.\n");
+				}
+				*/
+
+				// close the connection.
+				dprintf (D_ALWAYS, "DC_AUTHENTICATE: Closing connection.\n");
+				result = FALSE;
+				goto finalize;
+
 			} else {
-				dprintf (D_SECURITY, "DC_AUTHENTICATE: decided not to authenticate.\n");
+				// the session->id() and the_sid strings should be identical.
+
+				dprintf (D_SECURITY, "DC_AUTHENTICATE: found session id %s given to %s:\n",
+							session->id(), sin_to_string(session->addr()));
+			}
+
+			if (session->key()) {
+				// copy this to the HandleReq() scope
+				the_key = new KeyInfo(*session->key());
+			}
+
+			if (session->policy()) {
+				// copy this to the HandleReq() scope
+				the_policy = new ClassAd(*session->policy());
+				the_policy->dPrint (D_SECURITY);
+			}
+
+			// grab the user out of the policy.
+			if (the_policy) {
+				char *the_user  = NULL;
+				the_policy->LookupString( ATTR_SEC_USER, &the_user);
+
+				if (the_user) {
+					// copy this to the HandleReq() scope
+					strcpy (user, the_user);
+					delete the_user;
+				}
+			}
+			new_session = false;
+
+		} else {
+			// they did not request a cached session.  see if they want to start one.
+
+			// look at our security policy.
+			ClassAd *our_policy = sec_man->CreateSecurityPolicyAd(PermString(comTable[cmd_index].perm));
+			if (!our_policy) {
+				// our policy is invalid even without the other side getting involved.
+				dprintf(D_ALWAYS, "DC_AUTHENTICATE: Security policy is invalid!\n");
+				result = FALSE;
+				goto finalize;
+			}
+
+			dprintf ( D_SECURITY, "DC_AUTHENTICATE: our_policy:\n" );
+			our_policy->dPrint(D_SECURITY);
+			
+			// reconcile.  if unable, close socket.
+			the_policy = sec_man->ReconcileSecurityPolicyAds(auth_info, *our_policy);
+
+			// done with this now
+			delete our_policy;
+
+			if (!the_policy) {
+				dprintf(D_ALWAYS, "DC_AUTHENTICATE: Unable to reconcile!\n");
+				result = FALSE;
+				goto finalize;
+			} else {
+				dprintf ( D_SECURITY, "DC_AUTHENTICATE: the_policy:\n" );
+				the_policy->dPrint(D_SECURITY);
+			}
+
+			// handy policy vars
+			SecMan::sec_feat_act will_enable_encryption = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_ENCRYPTION);
+			SecMan::sec_feat_act will_enable_integrity  = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_INTEGRITY);
+
+			if (sec_man->sec_lookup_feat_act(auth_info, ATTR_SEC_NEW_SESSION) == SecMan::SEC_FEAT_ACT_YES) {
+
+				// generate a new session
+
+				int    mypid = 0;
+#ifdef WIN32
+				mypid = ::GetCurrentProcessId();
+#else
+				mypid = ::getpid();
+#endif
+
+				// generate a unique ID.
+				sprintf (buf, "%s:%i:%i:%i", my_hostname(), mypid, time(0), ZZZ_always_increase());
+				assert (the_sid == NULL);
+				the_sid = strdup(buf);
+
+				if ((will_enable_encryption == SecMan::SEC_FEAT_ACT_YES) || (will_enable_integrity == SecMan::SEC_FEAT_ACT_YES)) {
+
+					char *crypto_method = NULL;
+					if (!the_policy->LookupString(ATTR_SEC_CRYPTO_METHODS, &crypto_method)) {
+						dprintf ( D_ALWAYS, "DC_AUTHENTICATE: tried to enable encryption but we have none!\n" );
+						result = FALSE;
+						goto finalize;
+					}
+
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: generating private key id %s...\n", the_sid);
+					unsigned char* rkey = Condor_Crypt_Base::randomKey(24);
+					unsigned char  rbuf[24];
+					if (rkey) {
+						memcpy (rbuf, rkey, 24);
+						// this was malloced in randomKey
+						free (rkey);
+					} else {
+						memset (rbuf, 0, 24);
+						dprintf ( D_SECURITY, "DC_AUTHENTICATE: unable to generate key - no crypto available!\n");
+						// result = FALSE;
+						// goto finalize;
+					}
+
+					switch (toupper(crypto_method[0])) {
+						case 'B': // blowfish
+							dprintf ( D_SECURITY, "DC_AUTHENTICATE: created blowfish key.\n" );
+							the_key = new KeyInfo(rbuf, 24, CONDOR_BLOWFISH);
+							break;
+						case '3': // 3des
+						case 'T': // Tripledes
+							dprintf ( D_SECURITY, "DC_AUTHENTICATE: created 3des key.\n" );
+							the_key = new KeyInfo(rbuf, 24, CONDOR_3DES);
+							break;
+						default:
+							dprintf ( D_SECURITY, "DC_AUTHENTICATE: this version doesn't support %s crypto.\n", crypto_method );
+							break;
+					}
+
+					if (!the_key) {
+						result = FALSE;
+						goto finalize;
+					}
+
+#ifdef SECURITY_HACK_ENABLE
+					zz2printf (the_key);
+#endif
+				}
+
+				new_session = true;
+			}
+
+			// if they asked, tell them
+			if (is_tcp && (sec_man->sec_lookup_feat_act(auth_info, ATTR_SEC_ENACT) == SecMan::SEC_FEAT_ACT_NO)) {
+				dprintf (D_SECURITY, "SECMAN: Sending following response ClassAd:\n");
+				the_policy->dPrint( D_SECURITY );
+				sock->encode();
+				if (!the_policy->put(*sock) ||
+					!sock->eom()) {
+					dprintf (D_ALWAYS, "SECMAN: Error sending response classad!\n");
+					result = FALSE;
+					goto finalize;
+				}
+				sock->decode();
+			} else {
+				dprintf( D_SECURITY, "SECMAN: Enact was '%s', not sending response.\n",
+					SecMan::sec_feat_act_rev[sec_man->sec_lookup_feat_act(auth_info, ATTR_SEC_ENACT)] );
 			}
 
 		}
 
-		// CHECK TO SEE IF THE KERB-IP is the same
-		// as the socket IP.
-		if ( sock->authob ) {
-			const char* sockip = sin_to_string(sock->endpoint());
-			const char* kerbip = sock->authob->getRemoteAddress() ;
+		
 
-			result = !strncmp (sockip + 1, kerbip, strlen(kerbip) );
 
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: sock ip -> %s\n", sockip);
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: kerb ip -> %s\n", kerbip);
+		if (is_tcp) {
 
-			if (!result) {
-				dprintf (D_ALWAYS, "ERROR: IP not in agreement!!! BAILING!\n");
-				return FALSE;
+			// do what we decided
+
+			// handy policy vars
+			SecMan::sec_feat_act will_authenticate      = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_AUTHENTICATION);
+			SecMan::sec_feat_act will_enable_encryption = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_ENCRYPTION);
+			SecMan::sec_feat_act will_enable_integrity  = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_INTEGRITY);
+
+
+
+			if (is_tcp && (will_authenticate == SecMan::SEC_FEAT_ACT_YES)) {
+
+				// we are going to authenticate.  this could one of two ways.
+				// the "real" way or the "quick" way which is by presenting a
+				// session ID.  the fact that the private key matches on both
+				// sides proves the authenticity.  if the key does not match,
+				// it will be detected as long as some crypto is used.
+
+
+				// this means we are authenticating for real
+
+				if (!is_tcp) {
+					dprintf ( D_SECURITY, "DC_AUTHENTICATE: UDP can't authenticate!\n");
+					result = FALSE;
+					goto finalize;
+				}
+				char * auth_method = NULL;
+				the_policy->LookupString(ATTR_SEC_AUTHENTICATION_METHODS, &auth_method);
+
+				dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticating RIGHT NOW.\n");
+				if (!sock->authenticate(the_key, sec_man->getAuthBitmask(auth_method))) {
+					dprintf (D_ALWAYS, "DC_AUTHENTICATE: authenticate failed\n");
+					result = FALSE;
+					goto finalize;
+				}
+
+				delete auth_method;
+
+
+				// check to see if the kerb IP is the same
+				// as the socket IP.  this cast is safe because
+				// we return above is sock is not a ReliSock.
+				if ( ((ReliSock*)sock)->authob ) {
+					const char* sockip = sin_to_string(sock->endpoint());
+					const char* kerbip = ((ReliSock*)sock)->authob->getRemoteAddress() ;
+
+					result = !strncmp (sockip + 1, kerbip, strlen(kerbip) );
+
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: sock ip -> %s\n", sockip);
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: kerb ip -> %s\n", kerbip);
+
+					if (!result) {
+						dprintf (D_ALWAYS, "DC_AUTHENTICATE: ERROR: IP not in agreement!!! BAILING!\n");
+						result = FALSE;
+						goto finalize;
+
+					} else {
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: host %s address verified.\n", kerbip);
+					}
+				}
+
 			} else {
-				dprintf (D_SECURITY, "DC_AUTHENTICATE: IP address verified.\n");
+				// an FYI
+				dprintf (D_SECURITY, "DC_AUTHENTICATE: not authenticating.\n");
+			}
+
+
+			if (will_enable_integrity == SecMan::SEC_FEAT_ACT_YES) {
+
+				if (!the_key) {
+					// uhm, there should be a key here!
+					result = FALSE;
+					goto finalize;
+				}
+
+				sock->decode();
+				if (!sock->set_MD_mode(MD_ALWAYS_ON, the_key)) {
+					dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on message authenticator, failing.\n");
+					result = FALSE;
+					goto finalize;
+				} else {
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: message authenticator enabled with key id %s.\n", the_sid);
+#ifdef SECURITY_HACK_ENABLE
+					zz2printf (the_key);
+#endif
+				}
+			}
+
+
+			if (will_enable_encryption == SecMan::SEC_FEAT_ACT_YES) {
+
+				if (!the_key) {
+					// uhm, there should be a key here!
+					result = FALSE;
+					goto finalize;
+				}
+
+				dprintf (D_SECURITY, "about to enable encryption.\n");
+#ifdef SECURITY_HACK_ENABLE
+				zz2printf (the_key);
+#endif
+
+				sock->decode();
+				if (!sock->set_crypto_key(the_key) ) {
+					dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption, failing.\n");
+					result = FALSE;
+					goto finalize;
+				} else {
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: encryption enabled for session %s\n", the_sid);
+				}
+			}
+
+
+
+			if (new_session) {
+				// clear the buffer
+				sock->decode();
+				sock->eom();
+
+				// ready a classad to send
+				dprintf (D_SECURITY, "DC_AUTHENTICATE: sending p.a. classad.\n");
+				ClassAd pa_ad;
+
+				// session user
+				sprintf (buf, "%s=\"%s\"", ATTR_SEC_USER, ((ReliSock*)sock)->getFullyQualifiedUser());
+				pa_ad.Insert(buf);
+
+				// session id
+				sprintf (buf, "%s=\"%s\"", ATTR_SEC_SID, the_sid);
+				pa_ad.Insert(buf);
+
+				// other commands this session is good for
+				sprintf (buf, "%s=\"%s\"", ATTR_SEC_VALID_COMMANDS, GetCommandsInAuthLevel(comTable[cmd_index].perm).Value());
+				pa_ad.Insert(buf);
+
+				// also put these attributes in the policy classad we are caching.
+				sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_USER );
+				sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_SID );
+				sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_VALID_COMMANDS );
+
+
+				sock->encode();
+				pa_ad.put(*sock);
+				sock->eom();
+
+				// extract the session duration
+				char *dur = NULL;
+				the_policy->LookupString(ATTR_SEC_SESSION_DURATION, &dur);
+
+				int expiration_time = time(0) + atoi(dur);
+
+				// add the key to the cache
+				KeyCacheEntry tmp_key(the_sid, sock->endpoint(), the_key, the_policy, expiration_time);
+				sec_man->session_cache->insert(tmp_key);
+				dprintf (D_SECURITY, "DC_AUTHENTICATE: added session id %s to cache for %i seconds!\n", the_sid, atoi(dur));
 			}
 		}
 
 
-		result = auth_info.LookupInteger(ATTR_AUTH_COMMAND, req);
-		if (! result) {
-			EXCEPT ("AUTH: no %s in ClassAd!", ATTR_AUTH_COMMAND);
+
+		if (real_cmd == DC_AUTHENTICATE) {
+			result = TRUE;
+			goto finalize;
 		}
 
+		req = real_cmd;
+		result = TRUE;
 
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: setting sock->decode()\n");
 		sock->decode();
@@ -1736,82 +2323,87 @@ int DaemonCore::HandleReq(int socki)
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: allowing an empty message for sock.\n");
 		sock->allow_one_empty_message();
 
-		result = saveres;
-		dprintf (D_SECURITY, "DC_AUTHENTICATE: restored result to %i\n", result);
+		// fill in the command info
+		reqFound = TRUE;
+		index = cmd_index;
 
-		dprintf (D_SECURITY, "DC_AUTHENTICATE: continuing with command %i\n", req);
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: Success.\n");
 	} else {
-		// determine the value of config.ALWAYS_AUTHENTICATE
-		char *paramer;
-		paramer = param("ALWAYS_AUTHENTICATE");
+		// need to check our security policy to see if this is allowed.
 
-		bool always_authenticate = false;
-		if (paramer) {
-			if ((stricmp(paramer, "YES") == 0) ||
-			    (stricmp(paramer, "TRUE") == 0)) {
-				always_authenticate = true;
-			}
-			free (paramer);
+		dprintf (D_SECURITY, "DaemonCore received UNAUTHENTICATED command %i.\n", req);
+		dprintf (D_SECURITY, "\tNormally, this may not be allowed.  For now, it is.\n");
+
+		// get the handler function
+		
+		// first compute the hash
+		if ( req < 0 ) {
+			index = -req % maxCommand;
+		} else { 
+			index = req % maxCommand;
 		}
-
-		if (always_authenticate) {
-			dprintf (D_SECURITY, "DaemonCore received UNAUTHENTICATED command %i.\n", req);
-			dprintf (D_SECURITY, "\tNormally, this would not be allowed.  For now, it is.\n");
-			// ZKM
-			// return error.
+			
+		reqFound = FALSE;
+		if (comTable[index].num == req) {
+			// hash found it first try... cool
+			reqFound = TRUE;
+		} else {
+			// hash did not find it, search for it
+			for (j = (index + 1) % maxCommand; j != index; j = (j + 1) % maxCommand) {
+				if(comTable[j].num == req) {
+					reqFound = TRUE; 
+					index = j;
+					break;
+				}
+			}
 		}
 	}
 	
-	// get the handler function
-
-	// first compute the hash
-	if ( req < 0 )
-		index = -req % maxCommand;
-	else
-		index = req % maxCommand;
-
-	reqFound = FALSE;
-	if (comTable[index].num == req) {
-		// hash found it first try... cool
-		reqFound = TRUE;
-	} else {
-		// hash did not find it, search for it
-		for (j = (index + 1) % maxCommand; j != index; j = (j + 1) % maxCommand)
-			if(comTable[j].num == req) {
-				reqFound = TRUE; 
-				index = j;
-				break;
-			}
-	}
+				
+	// At this point, the stream should be a TCP/ReliSock stream
 
 	if ( reqFound == TRUE ) {
+
 		// Check the daemon core permission for this command handler
-		if ( Verify(comTable[index].perm,((Sock*)stream)->endpoint()) == FALSE )
+
+		// grab the user from the socket
+        if (is_tcp) {
+            const char *t = ((ReliSock*)stream)->getFullyQualifiedUser();
+			if (t) {
+				strcpy(user, t);
+			}
+        } else {
+			// user is filled in above
+		}
+
+		if ( (perm = Verify(comTable[index].perm, ((Sock*)stream)->endpoint(), user)) != USER_AUTH_SUCCESS )
 		{
 			// Permission check FAILED
 			reqFound = FALSE;	// so we do not call the handler function below
 			// make result != to KEEP_STREAM, so we blow away this socket below
 			result = 0;
 			dprintf( D_ALWAYS,
-			   "DaemonCore: PERMISSION DENIED to host %s for command %d (%s)\n",
-			   sin_to_string(((Sock*)stream)->endpoint()), req,
-			   comTable[index].command_descrip );
+                     "DaemonCore: PERMISSION DENIED to %s from host %s for command %d (%s)\n",
+                     (user == 0)? "unknown user" : user, sin_to_string(((Sock*)stream)->endpoint()), req,
+                     comTable[index].command_descrip );
 			// if UDP, consume the rest of this message to try to stay "in-sync"
 			if ( !is_tcp)
 				stream->end_of_message();
+            
 		} else {
 			dprintf(comTable[index].dprintf_flag,
-					"DaemonCore: Command received via %s from %s\n",
-					(is_tcp) ? "TCP" : "UDP",
+					"DaemonCore: Command received via %s from %s from host %s\n",
+					(user == 0) ? "uknown user" : user, (is_tcp) ? "TCP" : "UDP",
 					sin_to_string(((Sock*)stream)->endpoint()) );
 			dprintf(comTable[index].dprintf_flag, 
-				"DaemonCore: received command %d (%s), calling handler (%s)\n",
-				req, comTable[index].command_descrip, 
-				comTable[index].handler_descrip);
+                    "DaemonCore: received command %d (%s), calling handler (%s)\n",
+                    req, comTable[index].command_descrip, 
+                    comTable[index].handler_descrip);
 		}
+
 	} else {
-		dprintf(D_ALWAYS, "DaemonCore: Command received via %s from %s\n",
-				(is_tcp) ? "TCP" : "UDP",
+		dprintf(D_ALWAYS, "DaemonCore: Command received via %s from %s from host %s\n",
+				(user == 0)? "unknown user" : user, (is_tcp) ? "TCP" : "UDP",
 				sin_to_string(((Sock*)stream)->endpoint()) );
 		dprintf(D_ALWAYS,
 			"DaemonCore: received unregistered command request %d !\n",req);
@@ -1821,7 +2413,15 @@ int DaemonCore::HandleReq(int socki)
 		if ( !is_tcp)
 			stream->end_of_message();
 	}
-
+/*
+    // Send authorization message
+    if (is_tcp) {
+        stream->encode();
+        if (!stream->code(perm) || !stream->end_of_message()) {
+            dprintf(D_ALWAYS, "DaemonCore: Unable to send permission results\n");
+        }
+    }
+*/
 	if ( reqFound == TRUE ) {
 		// call the handler function; first curr_dataptr for GetDataPtr()
 		curr_dataptr = &(comTable[index].data_ptr);
@@ -1840,6 +2440,7 @@ int DaemonCore::HandleReq(int socki)
 		curr_dataptr = NULL;
 	}
 	
+finalize:
 	// finalize; the handler is done with the command.  the handler will return
 	// with KEEP_STREAM if we should not touch the stream; otherwise, cleanup
 	// the stream.  On tcp, we just delete it since the stream is the one we got
@@ -1855,8 +2456,19 @@ int DaemonCore::HandleReq(int socki)
 				delete stream;		   //     did not do an accept, Driver() will delete the stream.
 		} else {			
 			stream->end_of_message(); 			
+
+			// we need to reset the crypto keys
+			stream->set_MD_mode(MD_OFF);
+			stream->set_crypto_key(0);
+
 			result = KEEP_STREAM;	// HACK: keep all UDP sockets for now.  The only ones
 									// in Condor so far are Initial command socks, so keep it.
+		}
+	} else {
+		if (!is_tcp) {
+			stream->end_of_message(); 			
+			stream->set_MD_mode(MD_OFF);
+			stream->set_crypto_key(0);
 		}
 	}
 
@@ -1870,8 +2482,7 @@ int DaemonCore::HandleReq(int socki)
 }
 
 
-int DaemonCore::HandleSigCommand(int command, Stream* stream)
-{
+int DaemonCore::HandleSigCommand(int command, Stream* stream) {
 	int sig;
 
 	assert( command == DC_RAISESIGNAL );
@@ -2143,26 +2754,23 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 		destination = pidinfo->sinful_string;
 	}
 
+	Daemon d(destination);
 	// now destination process is local, send via UDP; if remote, send via TCP
 	if ( is_local == TRUE ) {
-		sock = (Stream *) new SafeSock();
-		sock->timeout(3);
+		sock = (Stream *)(d.startCommand(DC_RAISESIGNAL, Stream::safe_sock, 3));
 	} else {
-		sock = (Stream *) new ReliSock();
-		sock->timeout(20);
+		sock = (Stream *)(d.startCommand(DC_RAISESIGNAL, Stream::reli_sock, 20));
 	}
 
-	if (!((Sock *)sock)->connect(destination)) {
+	if (!sock) {
 		dprintf(D_ALWAYS,"Send_Signal: ERROR Connect to %s failed.",
 				destination);
-		delete sock;
 		return FALSE;
 	}
 
 	// send the signal out as a DC_RAISESIGNAL command
 	sock->encode();		
-	if ( (!sock->put(DC_RAISESIGNAL)) ||
-		 (!sock->code(sig)) ||
+	if ( (!sock->code(sig)) ||
 		 (!sock->end_of_message()) ) {
 		dprintf(D_ALWAYS,
 				"Send_Signal: ERROR sending signal %d to pid %d\n",sig,pid);
@@ -3911,6 +4519,7 @@ DaemonCore::Inherit( void )
 							   _INHERITBUF_MAXSIZE) > _INHERITBUF_MAXSIZE-1) {
 		EXCEPT("CONDOR_INHERIT too large");
 	}
+	SetEnvironmentVariable("CONDOR_INHERIT", "");
 #else
 	ptmp = getenv("CONDOR_INHERIT");
 	if ( ptmp ) {
@@ -3919,6 +4528,7 @@ DaemonCore::Inherit( void )
 		}
 		dprintf ( D_DAEMONCORE, "CONDOR_INHERIT: \"%s\"\n", ptmp );
 		strncpy(inheritbuf,ptmp,_INHERITBUF_MAXSIZE);
+		unsetenv("CONDOR_INHERIT");
 	} else {
 		dprintf ( D_DAEMONCORE, "CONDOR_INHERIT: is NULL\n", ptmp );
 	}		
@@ -4298,21 +4908,28 @@ pidWatcherThread( void* arg )
 		// note: if it was a thread which exited, the entry's 
 		// pid contains the tid
 		exited_pid = entry->pidentries[result]->pid;	
-		SafeSock sock;
-		// Can no longer use localhost (127.0.0.1) here because we may
-		// only have our command socket bound to a specific address. -Todd
-		// sock.connect("127.0.0.1",daemonCore->InfoCommandPort());		
-		sock.connect(daemonCore->InfoCommandSinfulString());
-		sock.encode();
+
 		sent_result = FALSE;
 		while ( sent_result == FALSE ) {
-			if ( !sock.snd_int(DC_PROCESSEXIT,FALSE) ||
+			// Can no longer use localhost (127.0.0.1) here because we may
+			// only have our command socket bound to a specific address. -Todd
+			// sock.connect("127.0.0.1",daemonCore->InfoCommandPort());		
+	
+			Daemon d(daemonCore->InfoCommandSinfulString());
+			SafeSock* sock = d.startCommand(DC_PROCESSEXIT, Stream::safe_sock, 0);
+		
+			if ( !sock ||
 				 !sock.code(exited_pid) ||
 				 !sock.end_of_message() ) {
 				// failed to get the notification off to the main thread.
 				// we'll log a message, wait a bit, and try again
 				dprintf(D_ALWAYS,
 						"PidWatcher thread couldn't notify main thread\n");
+
+				if (sock) {
+					delete sock;
+				}
+
 				::Sleep(500);	// sleep for a half a second (500 ms)
 			} else {
 				sent_result = TRUE;
@@ -4722,29 +5339,29 @@ int DaemonCore::Was_Not_Responding(pid_t pid)
 
 int DaemonCore::SendAliveToParent()
 {
-	SafeSock sock;
-	char *parent_sinfull_string;
-	int alive_command = DC_CHILDALIVE;
+	char *parent_sinful_string;
 
 	dprintf(D_FULLDEBUG,"DaemonCore: in SendAliveToParent()\n");
-	parent_sinfull_string = InfoCommandSinfulString(ppid);	
-	if (!parent_sinfull_string ) {
+	parent_sinful_string = InfoCommandSinfulString(ppid);	
+	if (!parent_sinful_string ) {
 		return FALSE;
 	}
 	
-	if (!sock.connect(parent_sinfull_string)) {
+	Daemon d(parent_sinful_string);
+	SafeSock* sock = (SafeSock*)d.startCommand(DC_CHILDALIVE, Stream::safe_sock, 0);
+	if (!sock) {
 		return FALSE;
 	}
 	
 	dprintf( D_DAEMONCORE, "DaemonCore: Sending alive to %s\n",
-			 parent_sinfull_string );
+			 parent_sinful_string );
 
-	sock.encode();
-	sock.code(alive_command);
-	sock.code(mypid);
-	sock.code(max_hang_time);
-	sock.end_of_message();
+	sock->encode();
+	sock->code(mypid);
+	sock->code(max_hang_time);
+	sock->end_of_message();
 
+	delete sock;
 	return TRUE;
 }
 	
@@ -4901,45 +5518,6 @@ DaemonCore::Register_Priv_State( priv_state priv )
 	return old_priv;
 }
 
-int
-DaemonCore::getAuthBitmask ( char * methods )
-{
-	if (methods) {
-		dprintf ( D_SECURITY, "GETAUTHBITMASK: in getAuthBitmask('%s')\n", methods);
-	} else {
-		dprintf ( D_SECURITY, "GETAUTHBITMASK: getAuthBitmask( NULL ) called!\n");
-		return 0;
-	}
-
-	StringList server( methods );
-	char *tmp = NULL;
-	int retval = 0;
-
-	server.rewind();
-	while( (tmp = server.next()) ) {
-		if ( !stricmp( tmp, "GSS_AUTHENTICATION" ) ) {
-			dprintf ( D_SECURITY, "GETAUTHBITMASK: added CAUTH_GSS\n");
-			retval |= CAUTH_GSS;
-		} else if ( !stricmp( tmp, "NTSSPI" ) ) {
-			dprintf ( D_SECURITY, "GETAUTHBITMASK: added CAUTH_NTSSPI\n");
-			retval |= CAUTH_NTSSPI;
-		} else if ( !stricmp( tmp, "FS" ) ) {
-			dprintf ( D_SECURITY, "GETAUTHBITMASK: added CAUTH_FILESYSTEM\n");
-			retval |= CAUTH_FILESYSTEM;
-		} else if ( !stricmp( tmp, "FS_REMOTE" ) ) {
-			dprintf ( D_SECURITY, "GETAUTHBITMASK: added CAUTH_FILESYSTEM_REMOTE\n");
-			retval |= CAUTH_FILESYSTEM_REMOTE;
-		} else if ( !stricmp( tmp, "KERBEROS" ) ) {
-			dprintf ( D_SECURITY, "GETAUTHBITMASK: added CAUTH_KERBEROS\n");
-			retval |= CAUTH_KERBEROS;
-		} else if ( !stricmp( tmp, "CLAIMTOBE" ) ) {
-			dprintf ( D_SECURITY, "GETAUTHBITMASK: added CAUTH_CLAIMTOBE\n");
-			retval |= CAUTH_CLAIMTOBE;
-		}
-	}
-
-	return retval;
-}
 
 
 bool
@@ -4993,7 +5571,8 @@ DaemonCore::CheckConfigSecurity( const char* config, Sock* sock )
 			// if they qualify for the perm level we're considering.
 			// so, now see if the connection qualifies for this access
 			// level.
-		if( Verify((DCpermission)i, sock->endpoint()) ) {
+		// HACK- passing NULL for user, please fix after merge!
+		if( Verify((DCpermission)i, sock->endpoint(), NULL)) {
 				// now we can see if the specific attribute they're
 				// trying to set is in our list.
 			if( (SettableAttrsLists[i])->
@@ -5103,4 +5682,11 @@ DaemonCore::InitSettableAttrsList( const char* subsys, int i )
 	}
 	return false;
 }
-	
+
+
+KeyCache*
+DaemonCore::getKeyCache() {
+	return sec_man->session_cache;
+}
+
+

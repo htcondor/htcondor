@@ -25,6 +25,7 @@
 #include "startd.h"
 #include "directory.h"
 #include "dynuser.h"	// used in cleanup_execute_dir() for WinNT
+#include "daemon.h"
 
 void
 check_perms()
@@ -401,15 +402,16 @@ configInsert( ClassAd* ad, const char* param_name,
 
 
 int
-send_classad_to_sock( int cmd, Sock* sock, ClassAd* pubCA, ClassAd*
+send_classad_to_sock( int cmd, Daemon * d, ClassAd* pubCA, ClassAd*
 					  privCA )  
 {
-	sock->encode();
-	if( ! sock->put( cmd ) ) {
+    Sock * sock = d->safeSock();
+    if (! d->startCommand(cmd, sock)) {
 		dprintf( D_ALWAYS, "Can't send command\n");
 		sock->end_of_message();
 		return FALSE;
 	}
+
 	if( pubCA ) {
 		if( ! pubCA->put( *sock ) ) {
 			dprintf( D_ALWAYS, "Can't send public classad\n");

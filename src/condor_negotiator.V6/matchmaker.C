@@ -30,6 +30,8 @@
 #include "condor_api.h"
 #include "condor_classad_lookup.h"
 #include "condor_query.h"
+#include "daemon.h"
+#include "daemon_types.h"
 
 // the comparison function must be declared before the declaration of the
 // matchmaker class in order to preserve its static-ness.  (otherwise, it
@@ -88,7 +90,7 @@ initialize ()
     // register commands
     daemonCore->Register_Command (RESCHEDULE, "Reschedule", 
             (CommandHandlercpp) &Matchmaker::RESCHEDULE_commandHandler, 
-			"RESCHEDULE_commandHandler", (Service*) this, WRITE);
+			"RESCHEDULE_commandHandler", (Service*) this, DAEMON);
     daemonCore->Register_Command (RESET_ALL_USAGE, "ResetAllUsage",
             (CommandHandlercpp) &Matchmaker::RESET_ALL_USAGE_commandHandler, 
 			"RESET_ALL_USAGE_commandHandler", this, ADMINISTRATOR);
@@ -776,7 +778,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 	char		prioExpr[128], remoteUser[128];
 
 	// 0.  connect to the schedd --- ask the cache for a connection
-	if (!sockCache->getReliSock((Sock *&)sock, scheddAddr, NegotiatorTimeout))
+	if (!sockCache->getReliSock((Sock *&)sock, scheddAddr, NEGOTIATE, NegotiatorTimeout))
 	{
 		dprintf (D_ALWAYS, "    Failed to connect to %s\n", scheddAddr);
 		return MM_ERROR;
@@ -784,9 +786,9 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 
 	// 1.  send NEGOTIATE command, followed by the scheddName (user@uiddomain)
 	sock->encode();
-	if (!sock->put(NEGOTIATE)||!sock->put(scheddName)||!sock->end_of_message())
+	if (!sock->put(scheddName) || !sock->end_of_message())
 	{
-		dprintf (D_ALWAYS, "    Failed to send NEGOTIATE/scheddName/eom\n");
+		dprintf (D_ALWAYS, "    Failed to send scheddName/eom\n");
 		sockCache->invalidateSock(scheddAddr);
 		return MM_ERROR;
 	}
@@ -1269,7 +1271,6 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	char startdName[64];
 	char remoteUser[128];
 	char *capability;
-	SafeSock startdSock;
 	bool send_failed;
 
 	// these will succeed
@@ -1296,9 +1297,10 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	// 1.  contact the startd 
 	dprintf (D_FULLDEBUG, "      Connecting to startd %s at %s\n", 
 				startdName, startdAddr); 
-	startdSock.timeout (NegotiatorTimeout);
-	if (!startdSock.connect (startdAddr, 0))
-	{
+	Daemon startd (startdAddr, 0);
+	SafeSock* startdSock = (SafeSock*)(startd.startCommand (MATCH_INFO, Stream::safe_sock, NegotiatorTimeout));
+
+	if (!startdSock) {
 		dprintf(D_ALWAYS,"      Could not connect to %s\n", startdAddr);
 		return MM_BAD_MATCH;
 	}
@@ -1306,16 +1308,17 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	// 2.  pass the startd MATCH_INFO and capability string
 	dprintf (D_FULLDEBUG, "      Sending MATCH_INFO/capability\n" );
 	dprintf (D_FULLDEBUG, "      (Capability is \"%s\" )\n", capability);
-	startdSock.encode();
-	if (!startdSock.put (MATCH_INFO) || 
-		!startdSock.put (capability) || 
-		!startdSock.end_of_message())
+	startdSock->encode();
+	if ( !startdSock->put (capability) || 
+		!startdSock->end_of_message())
 	{
 		dprintf (D_ALWAYS,"      Could not send MATCH_INFO/capability to %s\n",
 					startdName );
 		dprintf (D_FULLDEBUG, "      (Capability is \"%s\")\n", capability );
+		delete startdSock;
 		return MM_BAD_MATCH;
 	}
+	delete startdSock;
 
 	// 3.  send the match and capability to the schedd
 	sock->encode();

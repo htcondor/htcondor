@@ -173,20 +173,25 @@ StringList::substring( const char *st )
 BOOLEAN
 StringList::contains_withwildcard(const char *string)
 {
-	return contains_withwildcard(string, false);
+	return (contains_withwildcard(string, false) != NULL);
 }
 
 BOOLEAN
 StringList::contains_anycase_withwildcard(const char *string)
 {
-	return contains_withwildcard(string, true);
+	return (contains_withwildcard(string, true) != NULL);
 }
-	
+
+const char * StringList :: string_anycase_withwildcard( const char * string)
+{
+    return contains_withwildcard(string, true);
+}
+
 // contains_withwildcard() is just like the contains() method except that
 // list members can have an asterisk wildcard in them.  So, if
 // the string passed in is "pppmiron.cs.wisc.edu", and an entry in the
 // the list is "ppp*", then it will return TRUE.
-BOOLEAN
+const char *
 StringList::contains_withwildcard(const char *string, bool anycase)
 {
 	char *x;
@@ -194,11 +199,11 @@ StringList::contains_withwildcard(const char *string, bool anycase)
 	char *matchend;
 	char *asterisk;
 	int matchendlen, len;
-	BOOLEAN result;
+    BOOLEAN result; 
 	int temp;
 	
 	if ( !string )
-		return FALSE;
+		return NULL;
 
 	strings.Rewind();
 
@@ -212,7 +217,7 @@ StringList::contains_withwildcard(const char *string, bool anycase)
 				temp = strcmp(x,string);
 			}
 			if ( temp == MATCH )
-				return TRUE;
+				return x;
 			else
 				continue;
 		}
@@ -232,7 +237,7 @@ StringList::contains_withwildcard(const char *string, bool anycase)
 				}
 				*asterisk = '*';	// replace asterisk
 				if ( temp == MATCH ) {
-					return TRUE;
+					return x;
 				} else {
 					continue;
 				}				
@@ -275,12 +280,12 @@ StringList::contains_withwildcard(const char *string, bool anycase)
 		}
 		*asterisk = '*';	// set asterisk back no matter what the result
 		if ( result == TRUE ) {
-			return TRUE;
+			return x;
 		}
 	
 	}	// end of while loop
 
-	return FALSE;
+	return NULL;
 }
 
 /* returns a malloc'ed string that contains a comma delimited list of

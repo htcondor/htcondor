@@ -32,6 +32,16 @@
 // inline function for eom.  Someday not needed ?
 #define eom end_of_message
 
+enum CONDOR_MD_MODE {
+    MD_OFF        = 0,         // off
+    MD_ALWAYS_ON,              // always on, condor will check MAC automatically
+    MD_EXPLICIT                // user needs to call checkMAC explicitly
+};
+
+const int CLEAR_HEADER     = 0;
+const int MD_IS_ON         = 1;
+const int ENCRYPTION_IS_ON = 2;
+
 #include "proc.h"
 
 /* now include sched.h.  cleanup namespace if user has not
@@ -478,27 +488,19 @@ public:
      */
     //@{
 	///
-        int snd_int(int val, int end_of_record);
-        ///
+    int snd_int(int val, int end_of_record);
+    ///
 	int rcv_int(int &val, int end_of_record);
 
         //------------------------------------------
         // Encryption support below
         //------------------------------------------
-        bool set_crypto_key(KeyInfo * key);
+        bool set_crypto_key(KeyInfo * key, const char * keyId=0);
         //------------------------------------------
         // PURPOSE: set sock to use a particular encryptio
         // REQUIRE: KeyInfo -- a wrapper for keyData, if key == NULL
         //          encryption is disabled. I don't like this somehow
         // RETURNS: true -- success; false -- failure
-        //------------------------------------------
-
-        //bool get_crypto_key(KeyInfo * key);
-        //------------------------------------------
-        // PURPOSE: return the current encryption protocol used,
-        //          if any
-        // REQUIRE: None
-        // RETURNS: true -- key matched; false -- otherwise
         //------------------------------------------
 
         bool get_encryption();
@@ -508,7 +510,7 @@ public:
         // RETURNS: true -- on, false -- off
         //------------------------------------------
 
-	bool wrap(unsigned char* input, int input_len, 
+        bool wrap(unsigned char* input, int input_len, 
                   unsigned char*& output, int& outputlen);
         //------------------------------------------
         // PURPOSE: encrypt some data
@@ -517,7 +519,7 @@ public:
         // RETURNS: TRUE -- success, FALSE -- failure
         //------------------------------------------
 
-	bool unwrap(unsigned char* input, int input_len, 
+        bool unwrap(unsigned char* input, int input_len, 
                     unsigned char*& output, int& outputlen);
         //------------------------------------------
         // PURPOSE: decrypt some data
@@ -526,6 +528,37 @@ public:
         // RETURNS: TRUE -- success, FALSE -- failure
         //------------------------------------------
 
+        //----------------------------------------------------------------------
+        // MAC/MD related stuff
+        //----------------------------------------------------------------------
+        bool set_MD_mode(CONDOR_MD_MODE mode, KeyInfo * key = 0, const char * keyid = 0);    
+        //virtual bool set_MD_off() = 0;
+        //------------------------------------------
+        // PURPOSE: set mode for MAC (on or off)
+        // REQUIRE: mode -- see the enumeration defined above
+        //          key  -- an optional key for the MAC. if null (by default)
+        //                  all CEDAR does is send a Message Digest over
+        //                  When key is specified, this is essentially a MAC
+        // RETURNS: true -- success; false -- false
+        //------------------------------------------
+
+        bool isOutgoing_MD5_on() { return (mdMode_ == MD_ALWAYS_ON); }
+        //------------------------------------------
+        // PURPOSE: whether MD is turned on or not
+        // REQUIRE: None
+        // RETURNS: true -- MD is on; 
+        //          false -- MD is off
+        //------------------------------------------
+
+        virtual const char * isIncomingDataMD5ed() = 0;
+        //------------------------------------------
+        // PURPOSE: To check to see if incoming data
+        //          has MD5 checksum/. NOTE! Currently,
+        //          this method should be used with UDP only!
+        // REQUIRE: None
+        // RETURNS: NULL -- data does not contain MD5
+        //          key id -- if the data is checksumed
+        //------------------------------------------
     //@}
  private:
         bool initialize_crypto(KeyInfo * key);
@@ -540,6 +573,10 @@ public:
 */
 protected:
 
+        virtual bool init_MD(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId) = 0;
+        virtual bool set_encryption_id(const char * keyId) = 0;
+        
+        void resetCrypto();
 
 	// serialize object (save/restore object state to an ascii string)
 	//
@@ -565,6 +602,8 @@ protected:
 	*/
 
         Condor_Crypt_Base * crypto_;         // The actual crypto
+        CONDOR_MD_MODE      mdMode_;        // MAC mode
+        KeyInfo           * mdKey_;
         bool                encrypt_;        // Encryption mode
 	stream_code	    _code;
 	stream_coding	    _coding;

@@ -336,6 +336,7 @@ usage ()
 		"\t-ckptsrvr\t\tDisplay checkpoint server attributes\n"
 		"\t-claimed\t\tPrint information about claimed resources\n"
 //		"\t-collector\t\tSame as -world\n"
+		"\t-debug\t\t\tDisplay debugging info to console\n"
 		"\t-direct <host>\t\tGet attributes directly from the given daemon\n"
 		"\t-java\t\t\tDisplay Java-capable hosts\n"
 		"\t-license\t\tDisplay attributes of licenses\n"
@@ -447,6 +448,11 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix (argv[i], "-diagnose")) {
 			diagnose = 1;
+		} else
+		if (matchPrefix (argv[i], "-debug")) {
+			// dprintf to console
+			Termlog = 1;
+			dprintf_config ("TOOL", 2 );
 		} else
 		if (matchPrefix (argv[i], "-help")) {
 			usage ();

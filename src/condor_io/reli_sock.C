@@ -23,17 +23,19 @@
 
 #include "condor_common.h"
 #include "condor_constants.h"
-#include "condor_io.h"
 #include "authentication.h"
 #include "condor_debug.h"
 #include "internet.h"
 #include "condor_rw.h"
 #include "condor_socket_types.h"
+#include "condor_md.h"
 
 #ifdef WIN32
 #include <mswsock.h>	// For TransmitFile()
 #endif
 
+#define NORMAL_HEADER_SIZE 5
+#define MAX_HEADER_SIZE MAC_SIZE + NORMAL_HEADER_SIZE
 /**************************************************************/
 
 /* 
@@ -51,6 +53,9 @@ ReliSock::init()
 	is_client = 0;
 	authob = NULL;
 	hostAddr = NULL;
+    fqu_ = NULL;
+	snd_msg.buf.reset();                                                    
+	rcv_msg.buf.reset();   
 	rcv_msg.init_parent(this);
 	snd_msg.init_parent(this);
 }
@@ -84,6 +89,11 @@ ReliSock::~ReliSock()
 		free( hostAddr );
 		hostAddr = NULL;
 	}
+
+    if (fqu_) {
+        free( fqu_ );
+        fqu_ = NULL;
+    }
 }
 
 
@@ -202,7 +212,15 @@ ReliSock::accept( ReliSock	*c)
 	return accept(*c);
 }
 
+bool ReliSock :: set_encryption_id(const char * keyId)
+{
+    return false; // TCP does not need this yet
+}
 
+bool ReliSock::init_MD(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId)
+{
+    return (snd_msg.init_MD(mode, key) && rcv_msg.init_MD(mode, key));
+}
 
 ReliSock *
 ReliSock::accept()
@@ -225,6 +243,11 @@ ReliSock::accept()
 int 
 ReliSock::connect( char	*host, int port, bool non_blocking_flag )
 {
+	if (authob) {                                                           
+		delete authob;                                                  
+	}  	                                                                     
+ 
+	init();     
 	is_client = 1;
 	if( ! host ) {
 		return FALSE;
@@ -283,7 +306,7 @@ ReliSock::put_bytes_nobuffer( char *buffer, int length, int send_size )
 	int i, result, l_out;
 	int pagesize = 65536;  // Optimize large writes to be page sized.
 	unsigned char * cur;
-    unsigned char * buf = NULL;
+        unsigned char * buf = NULL;
         
         // First, encrypt the data if necessary
         if (get_encryption()) {
@@ -654,15 +677,20 @@ ReliSock::end_of_message()
 }
 
 
+const char * ReliSock :: isIncomingDataMD5ed()
+{
+    return NULL;    // For now
+}
 
 int 
 ReliSock::put_bytes(const void *data, int sz)
 {
-	int		tw;
+	int		tw, header_size = isOutgoing_MD5_on() ? MAX_HEADER_SIZE:NORMAL_HEADER_SIZE;
 	int		nw, l_out;
-    unsigned char * dta = NULL;
+        unsigned char * dta = NULL;
 
         // Check to see if we need to encrypt
+        // Okay, this is a bug! H.W. 9/25/2001
         if (get_encryption()) {
             if (!wrap((unsigned char *)data, sz, dta , l_out)) { 
                 dprintf(D_SECURITY, "Encryption failed\n");
@@ -685,7 +713,7 @@ ReliSock::put_bytes(const void *data, int sz)
 		}
 		
 		if (snd_msg.buf.empty()) {
-			snd_msg.buf.seek(5);
+			snd_msg.buf.seek(header_size);
 		}
 		
 		if ((tw = snd_msg.buf.put_max(&((char *)dta)[nw], sz-nw)) < 0) {
@@ -759,16 +787,49 @@ int ReliSock::peek( char &c)
 	return rcv_msg.buf.peek(c);
 }
 
+bool ReliSock::RcvMsg::init_MD(CONDOR_MD_MODE mode, KeyInfo * key)
+{
+    if (!buf.consumed()) {
+        return false;
+    }
+
+    mode_ = mode;
+    delete mdChecker_;
+
+    if (key) {
+        mdChecker_ = new Condor_MD_MAC(key);
+    }
+    else {
+      mdChecker_ = new Condor_MD_MAC();
+    }
+
+    return true;
+}
+
+ReliSock::RcvMsg :: RcvMsg() : 
+    ready(0), 
+    mdChecker_(0), 
+    mode_(MD_OFF) 
+{
+}
+
+ReliSock::RcvMsg::~RcvMsg()
+{
+    delete mdChecker_;
+}
+
 int ReliSock::RcvMsg::rcv_packet( SOCKET _sock, int _timeout)
 {
 	Buf		*tmp;
-	char	hdr[5];
+	char	        hdr[MAX_HEADER_SIZE];
 	int		end;
-	int		len, len_t;
+	int		len, len_t, header_size;
 	int		tmp_len;
 
+        header_size = mdChecker_ ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
+
 	len = 0;
-	while (len < 5) {
+	while (len < header_size) {
 		if (_timeout > 0) {
 			struct timeval	timer;
 			fd_set			readfds;
@@ -795,7 +856,7 @@ int ReliSock::RcvMsg::rcv_packet( SOCKET _sock, int _timeout)
 				break;
 			}
 		}
-		tmp_len = recv(_sock, hdr+len, 5-len, 0);
+		tmp_len = recv(_sock, hdr+len, header_size - len, 0);
 		if (tmp_len <= 0) {
 			return FALSE;
 		}
@@ -804,7 +865,7 @@ int ReliSock::RcvMsg::rcv_packet( SOCKET _sock, int _timeout)
 	end = (int) ((char *)hdr)[0];
 	memcpy(&len_t,  &hdr[1], 4);
 	len = (int) ntohl(len_t);
-		
+        
 	if (!(tmp = new Buf)){
 		dprintf(D_ALWAYS, "IO: Out of memory\n");
 		return FALSE;
@@ -820,6 +881,16 @@ int ReliSock::RcvMsg::rcv_packet( SOCKET _sock, int _timeout)
 				tmp_len, len);
 		return FALSE;
 	}
+
+        // Now, check MD
+        if (mdChecker_) {
+            if (!tmp->verifyMD(&hdr[5], mdChecker_)) {
+                delete tmp;
+                dprintf(D_ALWAYS, "IO: Message Digest/MAC verification failed!\n");
+                return FALSE;  // or something other than this
+            }
+        }
+        
 	if (!buf.put(tmp)) {
 		delete tmp;
 		dprintf(D_ALWAYS, "IO: Packet storing failed\n");
@@ -833,24 +904,62 @@ int ReliSock::RcvMsg::rcv_packet( SOCKET _sock, int _timeout)
 }
 
 
+ReliSock::SndMsg::SndMsg() : 
+    mode_(MD_OFF), 
+    mdChecker_(0) 
+{
+}
+
+ReliSock::SndMsg::~SndMsg() 
+{
+    delete mdChecker_;
+}
+
 int ReliSock::SndMsg::snd_packet( int _sock, int end, int _timeout )
 {
-	char	hdr[5];
-	int		len;
+	char	        hdr[MAX_HEADER_SIZE];
+	int		len, header_size;
 	int		ns;
 
+        header_size = mdChecker_ ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
 	hdr[0] = (char) end;
-	ns = buf.num_used()-5;
+	ns = buf.num_used() - header_size;
 	len = (int) htonl(ns);
 
 	memcpy(&hdr[1], &len, 4);
-	if (buf.flush(_sock, hdr, 5, _timeout) != (ns+5)){
-		return FALSE;
-	}
 
+        if (mdChecker_) {
+            if (!buf.computeMD(&hdr[5], mdChecker_)) {
+                dprintf(D_ALWAYS, "IO: Failed to compute Message Digest/MAC\n");
+                return FALSE;
+            }
+        }
+
+        if (buf.flush(_sock, hdr, header_size, _timeout) != (ns+header_size)){
+            return FALSE;
+        }
+        
 	return TRUE;
 }
 
+bool ReliSock::SndMsg::init_MD(CONDOR_MD_MODE mode, KeyInfo * key)
+{
+    if (!buf.empty()) {
+        return false;
+    }
+
+    mode_ = mode;
+    delete mdChecker_;
+
+    if (key) {
+        mdChecker_ = new Condor_MD_MAC(key);
+    }
+    else {
+        mdChecker_ = new Condor_MD_MAC();
+    }
+
+    return true;
+}
 
 #ifndef WIN32
 	// interface no longer supported
@@ -881,10 +990,19 @@ ReliSock::serialize() const
 
 	// first, get the state from our parent class
 	char * parent_state = Sock::serialize();
-	// now concatenate our state
+    // now concatenate our state
 	char * outbuf = new char[50];
-	sprintf(outbuf,"*%d*%s",_special_state,sin_to_string(&_who));
+	sprintf(outbuf,"*%d*%s*",_special_state,sin_to_string(&_who));
 	strcat(parent_state,outbuf);
+	
+    const char * tmp = getFullyQualifiedUser();
+    if (tmp) {
+        strcat(parent_state, tmp);
+    }
+    else {
+        strcat(parent_state, " ");
+    }
+
 	delete []outbuf;
 	return( parent_state );
 }
@@ -892,20 +1010,33 @@ ReliSock::serialize() const
 char * 
 ReliSock::serialize(char *buf)
 {
-	char sinful_string[28];
+	char sinful_string[28], fqu[256];
 	char *ptmp;
 	
-	assert(buf);
-
+    assert(buf);
+    memset(fqu, 0, 256);
 	// here we want to restore our state from the incoming buffer
 
 	// first, let our parent class restore its state
-	ptmp = Sock::serialize(buf);
-	assert( ptmp );
-	sscanf(ptmp,"%d*%s",&_special_state,sinful_string);
-	string_to_sin(sinful_string, &_who);
-
-	return NULL;
+    ptmp = Sock::serialize(buf);
+    assert( ptmp );
+    memset(fqu, 0, 256);
+    sscanf(ptmp,"%d*%s*%s",&_special_state,sinful_string, fqu);
+    string_to_sin(sinful_string, &_who);
+    if ((fqu[0] != ' ') && (fqu[0] != '\0')) {
+      if (authob && (authob->getFullyQualifiedUser() != NULL)) {
+          // odd situation!
+          dprintf(D_SECURITY, "WARNING!!!! Trying to serialize a socket for user %s but the socket is identified with another user: %s", fqu, authob->getFullyQualifiedUser());
+      }
+      else {
+          // We are cozy
+          fqu_ = strdup(fqu);
+      }
+    }
+    else {
+      fqu_ = NULL;
+    }
+    return NULL;
 }
 
 int 
@@ -958,9 +1089,9 @@ ReliSock::prepare_for_nobuffering(stream_coding direction)
 
 int ReliSock::authenticate(KeyInfo *& key, int clientFlags)
 {
-        if ( !authob ) {
-                authob = new Authentication( this );
-        }
+    if ( !authob ) {
+        authob = new Authentication( this );
+    }
 	if ( authob ) {
 		return( authob->authenticate( hostAddr, key, clientFlags ) );
 	}
@@ -991,6 +1122,32 @@ ReliSock::getOwner() {
 		return( authob->getOwner() );
 	}
 	return NULL;
+}
+
+const char *
+ReliSock::getFullyQualifiedUser() const {
+	if ( authob ) {
+		return( authob->getFullyQualifiedUser() );
+	}
+    else if (fqu_) {
+        return fqu_;
+    }
+	return NULL;
+}
+
+const char * ReliSock::getDomain()
+{
+    if (authob) {
+        return ( authob->getDomain() );
+    }
+    return NULL;
+}
+
+const char * ReliSock::getHostAddress() {
+    if (authob) {
+        return ( authob->getRemoteAddress() );
+    }
+    return NULL;
 }
 
 int

@@ -27,6 +27,9 @@
 #if !defined(SKIP_AUTHENTICATION) && defined(KERBEROS_AUTHENTICATION)
 
 #include "condor_auth.h"        // Condor_Auth_Base class is defined here
+#include "MyString.h"
+#include "HashTable.h"
+
 extern "C" {
 #include "krb5.h"
 #include "com_err.h"            // error_message is defined here
@@ -59,6 +62,15 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     // RETURNS: 1 -- true; 0 -- false
     //------------------------------------------
 
+    int endTime() const;
+    //------------------------------------------
+    // PURPOSE: Return the expiration time for
+    //          kerberos
+    // REQUIRE: None
+    // RETURNS: -1 -- invalid
+    //          >0 -- expiration time
+    //------------------------------------------
+
     int wrap(char* input, int input_len, char*& output, int& output_len);
     //------------------------------------------
     // PURPOSE: Wrap the buffer
@@ -73,7 +85,13 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     // REQUIRE: 
     // RETURNS: TRUE -- success, FALSE -- failure
     //------------------------------------------
-
+    
+    static int init_realm_mapping();
+    //------------------------------------------
+    // PURPOSE: Initialize realm mapping
+    // REQUIRE: None
+    // RETURNS: TRUE -- success, FALSE -- failure
+    //------------------------------------------
  private:
 
     int init_user();
@@ -113,6 +131,7 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     //------------------------------------------
     
     int map_kerberos_name(krb5_ticket * ticket);
+    int map_domain_name(const char * domain);
     //------------------------------------------
     // PURPOSE: Map kerberos realm to condor uid
     // REQUIRE: A valid kerberos principal
@@ -183,6 +202,8 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     char *             ccname_;           // FILE:/krbcc_name
     char *             defaultStash_;     // Default stash location
     char *             keytabName_;       // keytab to use   
+    typedef HashTable<MyString, MyString> Realm_Map_t;
+    static Realm_Map_t * RealmMap;
 };
 
 #endif

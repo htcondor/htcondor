@@ -1185,22 +1185,14 @@ DedicatedScheduler::releaseClaim( match_rec* m_rec, bool use_tcp )
 {
 	Sock *sock;
 
-		// These two sock variables have to live in the top-level
-		// stack frame, since if you put them inside the if() below
-		// where we set what sock points to, they go out of scope,
-		// right away, get destructed, etc. :(
-	ReliSock rsock;
-	SafeSock ssock;
+	Daemon d(m_rec->peer);
 
 	if( use_tcp ) {
-		sock = &rsock;
+		sock = d.startCommand( RELEASE_CLAIM, Stream::reli_sock, 2);
 	} else {
-		sock = &ssock;
+		sock = d.startCommand( RELEASE_CLAIM, Stream::safe_sock, 2);
 	}
-	sock->timeout(2);
-	sock->connect( m_rec->peer );
 	sock->encode();
-	sock->put( RELEASE_CLAIM );
 	sock->put( m_rec->id );
 	sock->end_of_message();
 
@@ -1213,6 +1205,8 @@ DedicatedScheduler::releaseClaim( match_rec* m_rec, bool use_tcp )
 	}
 
 	DelMrec( m_rec );
+
+	delete sock;
 	return true;
 }
 
@@ -1220,38 +1214,37 @@ DedicatedScheduler::releaseClaim( match_rec* m_rec, bool use_tcp )
 bool
 DedicatedScheduler::deactivateClaim( match_rec* m_rec )
 {
-	int cmd = DEACTIVATE_CLAIM;
-	ReliSock sock;
+	ReliSock* sock;
 
 	if( ! m_rec ) {
         dprintf( D_ALWAYS, "ERROR in deactivateClaim(): NULL m_rec\n" ); 
 		return false;
 	}
 
-	sock.timeout( STARTD_CONTACT_TIMEOUT );
+	Daemon d(m_rec->peer);
+	sock = (ReliSock*)d.startCommand(DEACTIVATE_CLAIM, Stream::reli_sock, STARTD_CONTACT_TIMEOUT);
 
-	if( !sock.connect(m_rec->peer, 0) ) {
+	if( !sock ) {
         dprintf( D_ALWAYS, "ERROR in deactivateClaim(): "
 				 "Couldn't connect to startd.\n" );
 		return false;
 	}
-	sock.encode();
-	if( !sock.put(cmd) ) {
-        dprintf( D_ALWAYS, "ERROR in deactivateClaim(): "
-				 "Can't code cmd int (%d)\n", cmd );
-		return false;
-	}
-	if( !sock.put(m_rec->id) ) {
-        dprintf( D_ALWAYS, "ERROR in deactivateClaim(): "
+
+	sock->encode();
+
+	if( !sock->put(m_rec->id) ) {
+        	dprintf( D_ALWAYS, "ERROR in deactivateClaim(): "
 				 "Can't code capability (%s)\n", m_rec->id );
+		delete sock;
 		return false;
 	}
-	if( !sock.end_of_message() ) {
-        dprintf( D_ALWAYS, "ERROR in deactivateClaim(): "
+	if( !sock->end_of_message() ) {
+        	dprintf( D_ALWAYS, "ERROR in deactivateClaim(): "
 				 "Can't send EOM\n" );
+		delete sock;
 		return false;
 	}
-	sock.close();
+	delete sock;
 	
 		// Clear out this match rec, since it's no longer allocated to
 		// a given MPI job.

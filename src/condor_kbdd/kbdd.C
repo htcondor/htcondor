@@ -44,20 +44,22 @@ update_startd()
     static SafeSock ssock;
 	static bool first_time = true;
 	if( first_time ) {
-		if( !(ssock.connect(my_addr)) ) {
+		Daemon startd(DT_STARTD);
+		if (!startd.sendCommand(X_EVENT_NOTIFICATION, &ssock, 3)) {
 			dprintf( D_ALWAYS, "Can't connect to startd, aborting.\n" );
 			return -1;
 		}
 		first_time = false;
+	} else {
+		ssock.encode();
+		ssock.timeout(3);
+		if( !ssock.code(cmd_num) || !ssock.end_of_message() ) {
+			dprintf( D_ALWAYS, "Can't send command to startd\n" );
+			return -1;
+		} 
 	}
-	ssock.encode();
-	ssock.timeout(3);
-	if( !ssock.code(cmd_num) || !ssock.end_of_message() ) {
-		dprintf( D_ALWAYS, "Can't send command to startd\n" );
-	    return -1;
-	} 
-    dprintf( D_FULLDEBUG, "Sent update to startd at: %s.\n", my_addr);
-    return 0;		
+	dprintf( D_FULLDEBUG, "Sent update to startd at: %s.\n", my_addr);
+	return 0;		
 }
 
 int 

@@ -1,6 +1,6 @@
 all_target(cplus_lib.a liburl.a libcondorapi.a)
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) IsCondorG -Wall
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) IsCondorG -Wall -I$(OpenSSLIncludePath)
 CFLAGS = $(STD_C_FLAGS) -Wall
 LIB = $(STD_LIBS)
 
@@ -29,8 +29,8 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	limit.o my_subsystem.o killfamily.o access.o \
 	strnewp.o memory_file.o my_username.o misc_utils.o file_transfer.o \
 	uids.o metric_units.o condor_ver_info.o condor_cred_base.o \
-        $(KERBEROS_OBJ)  condor_credential.o HashTable.o MyString.o \
-	which.o iso_dates.o java_config.o
+	$(KERBEROS_OBJ) condor_md.o condor_credential.o HashTable.o MyString.o \
+	KeyCache.o dc_stub.o which.o iso_dates.o java_config.o
 
 #if !HAS_FLOCK
 FLOCK_OBJ = ../condor_util_lib/flock.o

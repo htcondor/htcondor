@@ -27,11 +27,10 @@
 
 Condor_Crypt_Blowfish :: Condor_Crypt_Blowfish(const KeyInfo& key)
 #if !defined(SKIP_AUTHENTICATION)
-    : Condor_Crypt_Base(CONDOR_BLOWFISH, key),
-      num_             (0)
+    : Condor_Crypt_Base(CONDOR_BLOWFISH, key)
 {
     // initialize 
-    memset(ivec_, 0, 8);
+    resetState();
 
     // Generate the key
     KeyInfo k(key);
@@ -45,6 +44,17 @@ Condor_Crypt_Blowfish :: Condor_Crypt_Blowfish(const KeyInfo& key)
 Condor_Crypt_Blowfish :: ~Condor_Crypt_Blowfish()
 {
 }
+
+void Condor_Crypt_Blowfish:: resetState()
+#if !defined(SKIP_AUTHENTICATION)
+{
+     memset(ivec_, 0, 8);
+     num_=0;
+}
+#else
+{
+}
+#endif
 
 bool Condor_Crypt_Blowfish :: encrypt(unsigned char *  input, 
                                       int              input_len, 

@@ -486,7 +486,7 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 	// to the schedd.  we have to explicitly check here because all queue
 	// management commands come in via one sole daemon core command which
 	// has just READ permission.
-	if ( daemonCore->Verify(WRITE, Q_SOCK->endpoint()) == FALSE ) {
+	if ( daemonCore->Verify(WRITE, Q_SOCK->endpoint(), Q_SOCK->getFullyQualifiedUser()) == FALSE ) {
 		// this machine does not have write permission; return failure
 		dprintf(D_ALWAYS,"QMGT command failed: no WRITE permission for %s\n",
 			Q_SOCK->endpoint_ip_str() );
@@ -575,7 +575,7 @@ handle_q(Service *, int, Stream *sock)
 	// code the request is from an external user instead of originating
 	// from within the schedd itself.
 	Q_SOCK = (ReliSock *)sock;
-	Q_SOCK->unAuthenticate();
+	//Q_SOCK->unAuthenticate();
 #ifndef WIN32
 	active_owner_uid = 0;
 #endif
@@ -591,7 +591,7 @@ handle_q(Service *, int, Stream *sock)
 	// importance is setting Q_SOCK back to NULL. this tells the rest of 
 	// the QMGMT code the request originated internally, and it should
 	// be permitted (i.e. we only call OwnerCheck if Q_SOCK is not NULL).
-	Q_SOCK->unAuthenticate();
+	//Q_SOCK->unAuthenticate();
 	uninit_user_ids();
 	// note: Q_SOCK is static...
 	Q_SOCK = NULL;

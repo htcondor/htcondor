@@ -68,7 +68,7 @@ Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
         }
     }	
     else{
-        pbuf = getenv(STR_X509_DIRECTORY );
+        pbuf = param(STR_X509_DIRECTORY );   // in condor_config
         
         if (pbuf) {
 	    if (!getenv(STR_X509_CERT_DIR )){	
@@ -95,7 +95,7 @@ Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
         }
     }
     
-    pbuf =  param("CONDOR_GATEKEEPER") ; 
+    pbuf = param("CONDOR_GATEKEEPER") ; 
     
     if (pbuf){
         sprintf(buffer ,"CONDOR_GATEKEEPER=%s",pbuf);
@@ -109,10 +109,10 @@ Condor_Auth_X509 ::  ~Condor_Auth_X509()
     // Delete context handle if exist
     if (context_handle) {
         OM_uint32 minor_status = 0;
-	gss_delete_sec_context(&minor_status,&context_handle,GSS_C_NO_BUFFER);
+        gss_delete_sec_context(&minor_status,&context_handle,GSS_C_NO_BUFFER);
     }
 
-    if (credential_handle) {
+    if (credential_handle != GSS_C_NO_CREDENTIAL) {
         OM_uint32 major_status = 0; 
         gss_release_cred(&major_status, &credential_handle);
     }
@@ -157,7 +157,7 @@ int Condor_Auth_X509 :: wrap(char*  data_in,
 {
     OM_uint32 major_status;
     OM_uint32 minor_status;
-    
+
     gss_buffer_desc input_token_desc  = GSS_C_EMPTY_BUFFER;
     gss_buffer_t    input_token       = &input_token_desc;
     gss_buffer_desc output_token_desc = GSS_C_EMPTY_BUFFER;
@@ -179,6 +179,8 @@ int Condor_Auth_X509 :: wrap(char*  data_in,
     
     data_out = (char*)output_token -> value;
     length_out = output_token -> length;
+
+    dprintf(D_ALWAYS,"Encrypting using X.509 %s --> %x\n", data_in, data_out);
     
     return major_status;
 }
@@ -213,25 +215,32 @@ int Condor_Auth_X509 :: unwrap(char*  data_in,
     
     data_out = (char*)output_token -> value;
     length_out = output_token -> length;
-    
+
+    dprintf(D_ALWAYS,"Decrypting using X.509 %x --> %s\n", data_in, data_out);
+ 
     return major_status;
 }
 
-int Condor_Auth_X509 :: isValid() const
+int Condor_Auth_X509 :: endTime() const
 {
-	OM_uint32 major_status;
+    OM_uint32 major_status;
 	OM_uint32 minor_status;
 	OM_uint32 time_rec;
 	
 	major_status = gss_context_time(&minor_status ,
-                                        context_handle ,
-                                        &time_rec);
-	if (major_status == GSS_S_COMPLETE) {
-            return TRUE;
+                                    context_handle ,
+                                    &time_rec);
+
+	if (!(major_status == GSS_S_COMPLETE)) {
+        return -1;
 	}
-	else {
-            return FALSE;
-	}
+
+    return time_rec;
+}
+
+int Condor_Auth_X509 :: isValid() const
+{
+    return (endTime() != -1);
 }	
 
 void Condor_Auth_X509 :: print_log(OM_uint32 major_status,
@@ -254,14 +263,25 @@ void Condor_Auth_X509 :: print_log(OM_uint32 major_status,
 int Condor_Auth_X509::get_user_x509name(char *proxy_file, char* name)
 {
 
-	proxy_cred_desc *     pcd = NULL;
+    proxy_cred_desc *     pcd = NULL;
     struct stat           stx; 
 	/* initialize SSLeay and the error strings */
     ERR_load_prxyerr_strings(0);
     SSLeay_add_ssl_algorithms();
+
+    pcd = proxy_cred_desc_new(); // Added. But not sure if it's correct. Hao
+
+    if (!pcd) {
+        dprintf(D_ALWAYS,"ERROR: unable to initialize globus\n");
+        return 1;
+    }
+
     /* Load proxy */
-    if (!proxy_file)
-   	 proxy_get_filenames(NULL, 1, NULL, NULL, &proxy_file, NULL, NULL);
+    if (!proxy_file) {
+        proxy_get_filenames(pcd, 1, NULL, NULL, &proxy_file, NULL, NULL);
+    }
+
+    // potential memory leak below. Should change the code! Hao
     if (!proxy_file)
     {
         dprintf(D_ALWAYS,"ERROR: unable to determine proxy file name\n");
@@ -272,20 +292,17 @@ int Condor_Auth_X509::get_user_x509name(char *proxy_file, char* name)
     	return 1;
     }
 
-    pcd = proxy_cred_desc_new();
-    if (!pcd)
-    {
-       dprintf(D_ALWAYS,"ERROR: problem during internal initialization\n");
-       return 1;
-    }
-
     if (proxy_load_user_cert(pcd, proxy_file, NULL, NULL))
     {
     	dprintf(D_ALWAYS,"ERROR: unable to load proxy");
 	    return 1;
-	}
-	name=X509_NAME_oneline(X509_get_subject_name(pcd->ucert),NULL,0);
-	return 0;
+    }
+
+    name=X509_NAME_oneline(X509_get_subject_name(pcd->ucert),NULL,0);
+
+    proxy_cred_desc_free(pcd);  
+
+    return 0;
 }
 
 void  Condor_Auth_X509 :: erase_env()
@@ -320,13 +337,12 @@ int Condor_Auth_X509::nameGssToLocal(char * GSSClientname)
     char *pos,*pos1, *pos_temp;
     FILE *index;
     
-    sprintf( filename, "%.*s/index.txt", MAXPATHLEN-11, 
-             getenv( STR_X509_CERT_DIR ) );
+    sprintf( filename, "%.*s/index.txt", MAXPATHLEN-11, getenv( STR_X509_CERT_DIR ) );
     
     if ( !(index = fopen(  filename, "r" ) ) ) {
         dprintf( D_ALWAYS, "unable to open index file %s, errno %d\n", 
                  filename, errno );
-        return -1;
+        return 0;
     }
     
     sprintf(temp,"%c",ch);
@@ -346,65 +362,34 @@ int Condor_Auth_X509::nameGssToLocal(char * GSSClientname)
                 pos_temp--;
             pos_temp++;
             *pos_temp = '\0';
-            if (!strcmp(pos,GSSClientname))
-		found = 1;
+            if (!strcmp(pos,GSSClientname)) {
+                found = 1;
+            }
         }
         if (ch_temp == EOF) break;
     }
     fclose( index );
-    if (found)
-        {
-            setRemoteUser((const char*)pos1);
-            return 1;
+    if (found) {
+        // split it into user@domain
+        char * tmp = strchr(pos1, '@');
+        if (tmp == NULL) {
+            dprintf(D_SECURITY, "X509 certificate map is invalid. Expect user@domain. Instead, the user id is %s\n", pos1);
+            return 0;
         }
+        int len  = strlen(pos1);
+        int len2 = len - strlen(tmp);
+        char * user = (char *) malloc(len2 + 1);
+        memset(user, 0, len2 + 1);
+        strncpy(user, pos1, len2);
+        setRemoteUser  (user);
+        setRemoteDomain(tmp+1);
+        free(user);
+        return 1;
+    }
     else {
-        dprintf(D_ALWAYS, "lookup failure\n");
+        dprintf(D_SECURITY, "X509 certificate name lookup failure\n");
         return 0;
     }
-}
-
-int Condor_Auth_X509::lookup_user_gss( char *client_name ) 
-{
-    char filename[MAXPATHLEN];
-    
-    sprintf( filename, "%.*s/index.txt", MAXPATHLEN-11, 
-             getenv( "X509_CERT_DIR" ) );
-    
-    FILE *index;
-    if ( !(index = fopen(  filename, "r" ) ) ) {
-        dprintf( D_ALWAYS, "unable to open index file %s, errno %d\n", 
-                 filename, errno );
-        return -1;
-    }
-    
-    //find entry
-    int found = 0,i=0;
-    char line[256],ch_temp,ch = 9,temp[2],*pos;
-    sprintf(temp,"%c",ch);
-    while ( !found){ 
-        for (i=0;(line[i] = fgetc(index)) != '\n' && (ch_temp=line[i]) != EOF;i++);
-        line[i] = '\0';
-        
-        //Valid user entries have 'V' as first byte in their cert db entry
-     	if ( line[0] == 'V'){
-            pos = line;
-            while (*pos != '/') pos++;
-            pos = strtok(pos,temp);
-            if (!strcmp(pos,client_name)){
-                found = 1;
-                dprintf(D_ALWAYS, "found the entry for client\n");
-		    }
-    	}
-        if (ch_temp == EOF) break;
-    }
-    fclose( index );
-    if ( !found ) {
-        dprintf( D_ALWAYS, "unable to find V entry for %s in %s\n", 
-                 filename, client_name );
-        return( -1 );
-    }
-    
-    return 0;
 }
 
 //cannot make this an AuthSock method, since gss_assist method expects
@@ -503,7 +488,12 @@ int Condor_Auth_X509::authenticate_self_gss()
     major_status = globus_gss_assist_acquire_cred(&minor_status,
                                                   GSS_C_BOTH, 
                                                   &credential_handle);
-    
+    if (major_status != GSS_S_COMPLETE) {
+        major_status = globus_gss_assist_acquire_cred(&minor_status,
+                                                      GSS_C_BOTH,
+                                                      &credential_handle);
+    }
+
     if (!mySock_->isClient() || isDaemon()) {
         set_priv(priv);
     }
@@ -512,11 +502,11 @@ int Condor_Auth_X509::authenticate_self_gss()
     
     if (major_status != GSS_S_COMPLETE)
 	{
-            sprintf(comment,"authenticate_self_gss: acquiring self 
+        sprintf(comment,"authenticate_self_gss: acquiring self 
 				credentials failed \n");
-            print_log( major_status,minor_status,0,comment); 
-            credential_handle = GSS_C_NO_CREDENTIAL; 
-            return FALSE;
+        print_log( major_status,minor_status,0,comment); 
+        credential_handle = GSS_C_NO_CREDENTIAL; 
+        return FALSE;
 	}
     
     dprintf( D_FULLDEBUG, "This process has a valid certificate & key\n" );
@@ -536,8 +526,6 @@ int Condor_Auth_X509::authenticate_client_gss()
     
     priv_state priv;
     
-    //fprintf(stderr, "GSS\n");
-    
     char *gateKeeper = param( "CONDOR_GATEKEEPER" );
     
     if ( !gateKeeper ) {
@@ -545,6 +533,7 @@ int Condor_Auth_X509::authenticate_client_gss()
         return FALSE;
     }
     
+    //nameGssToLocal(gateKeeper);
     
     if (isDaemon()) {
         priv = set_root_priv();
@@ -554,7 +543,7 @@ int Condor_Auth_X509::authenticate_client_gss()
                                                       credential_handle,
                                                       &context_handle,
                                                       gateKeeper,
-                                                      GSS_C_DELEG_FLAG|GSS_C_MUTUAL_FLAG,
+                                                      GSS_C_MUTUAL_FLAG,
                                                       &ret_flags, 
                                                       &token_status,
                                                       authsock_get, 
@@ -622,20 +611,22 @@ int Condor_Auth_X509::authenticate_server_gss()
     set_priv(priv);
     
     if ( (major_status != GSS_S_COMPLETE)) {
-        if (major_status != GSS_S_COMPLETE) 
+        if (major_status != GSS_S_COMPLETE) {
             print_log(major_status,minor_status,token_status,
-                      "GSS authentication failure on server side" );
-        else 
-            dprintf( D_ALWAYS, "server: user lookup failure.\n" );
+                      "X509 GSS authentication failure on server side" );
+        }
+        else {
+            dprintf( D_SECURITY, "X509 server: user lookup failure.\n" );
+        }
         return FALSE;
     }
     
     if ( !nameGssToLocal(GSSClientname) ) {
-        dprintf(D_ALWAYS,"Could not find local mapping \n");
+        dprintf(D_SECURITY,"Could not find X509 local mapping \n");
         return( FALSE );
     }
     
-    dprintf(D_FULLDEBUG,"valid GSS connection established to %s\n", 
+    dprintf(D_FULLDEBUG,"Valid GSS connection established to %s\n", 
             GSSClientname);
     
     //my_credential = new X509_Credential(SYSTEM,NULL); 

@@ -53,6 +53,8 @@ statically linked to avoid problems */
 #define XLibPath /usr/X11R6/lib/libX11.a
 #define XExtLibPath /usr/X11R6/lib/libXext.a
 
+#define PlatformMdObj mx86-elf.o sx86-elf.o
+
 #define IS_V5				YES
 #define DOES_CHECKPOINTING		YES
 #define DOES_COMPRESS_CKPT		YES

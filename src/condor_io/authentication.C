@@ -26,10 +26,12 @@
 
 #include "condor_auth.h"
 #include "condor_auth_claim.h"
+#include "condor_auth_anonymous.h"
 #include "condor_auth_fs.h"
 #include "condor_auth_sspi.h"
 #include "condor_auth_x509.h"
 #include "condor_auth_kerberos.h"
+#include "condor_secman.h"
 
 #if !defined(SKIP_AUTHENTICATION)
 #   include "condor_debug.h"
@@ -44,8 +46,6 @@ Authentication::Authentication( ReliSock *sock )
 #if !defined(SKIP_AUTHENTICATION)
 	mySock              = sock;
 	auth_status         = CAUTH_NONE;
-	canUseFlags         = CAUTH_NONE;
-	serverShouldTry     = NULL;
 	t_mode              = NORMAL;
         authenticator_      = NULL;
 #endif
@@ -55,11 +55,6 @@ Authentication::~Authentication()
 {
 #if !defined(SKIP_AUTHENTICATION)
 	mySock = NULL;
-
-	if ( serverShouldTry ) {
-	  free( serverShouldTry );
-	  serverShouldTry = NULL;
-	}
 
         delete authenticator_;
 #endif
@@ -81,7 +76,7 @@ int Authentication::authenticate( char *hostAddr, KeyInfo *& key, int clientFlag
     return retval;
 }
 
-int Authentication::authenticate( char *hostAddr, int clientFlags )
+int Authentication::authenticate( char *hostAddr, int auth_method )
 {
 #if defined(SKIP_AUTHENTICATION)
     dprintf(D_ALWAYS, "Skipping....\n");
@@ -90,32 +85,35 @@ int Authentication::authenticate( char *hostAddr, int clientFlags )
   Condor_Auth_Base * auth = NULL;
 
   if (hostAddr) {
-	dprintf ( D_SECURITY, "AUTHENTICATE: in authenticate( char *addr == '%s', int flags == %i)\n",
-		  hostAddr, clientFlags);
+	dprintf ( D_SECURITY, "AUTHENTICATE: in authenticate( char *addr == '%s', int method == %i)\n",
+		  hostAddr, auth_method);
   } else {
-	dprintf ( D_SECURITY, "AUTHENTICATE: in authenticate( char *addr == NULL, int flags == %i)\n",
-		  clientFlags);
+	dprintf ( D_SECURITY, "AUTHENTICATE: in authenticate( char *addr == NULL, int method == %i)\n",
+		  auth_method);
   }
   
-  int clientCanUse = clientFlags;
-  //call setupEnv if Server or if Client doesn't know which methods to try
-  // if ( !mySock->isClient() && !isServer) 
-  // interesting, I am not sure whether this is right or not
+  int methods_to_try = 0;
 
-  if ( !mySock->isClient() || !canUseFlags ) {
-      setupEnv( hostAddr );
+  if (auth_method) {
+	  methods_to_try = auth_method;
+  } else {
+	  methods_to_try = default_auth_methods();
   }
+
   
   auth_status = CAUTH_NONE;
   
   while (auth_status == CAUTH_NONE ) {
-    int firm = handshake(clientCanUse);
+    dprintf(D_SECURITY, "AUTHENTICATE: can still try these methods: %d\n", methods_to_try);
+
+    int firm = handshake(methods_to_try);
     if ( firm < 0 ) {
-      dprintf(D_ALWAYS, "handshake failed!\n");
+      dprintf(D_ALWAYS, "AUTHENTICATE: handshake failed!\n");
       break;
-    } else {
-      dprintf(D_SECURITY, "Trying to use %d\n", firm);
     }
+
+
+    dprintf(D_SECURITY, "AUTHENTICATE: will try to use %d\n", firm);
 
     switch ( firm ) {
 #if defined(GSS_AUTHENTICATION)
@@ -146,8 +144,12 @@ int Authentication::authenticate( char *hostAddr, int clientFlags )
         auth = new Condor_Auth_Claim(mySock);
       break;
       
+    case CAUTH_ANONYMOUS:
+        auth = new Condor_Auth_Anonymous(mySock);
+      break;
+      
     default:
-      dprintf(D_ALWAYS,"Authentication::authenticate-- bad handshake FAILURE\n" );
+      dprintf(D_ALWAYS,"AUTHENTICATE: unsupported method: %i, failing.\n", firm);
       return 0;
     }
 
@@ -156,17 +158,20 @@ int Authentication::authenticate( char *hostAddr, int clientFlags )
     //------------------------------------------
     if (!auth->authenticate(hostAddr) ) {
         delete auth;
+		auth = NULL;
 
         //if authentication failed, try again after removing from client tries
         if ( mySock->isClient() ) {
-            canUseFlags &= ~firm;
+            methods_to_try &= ~firm;
         }
+
+      	dprintf(D_ALWAYS,"AUTHENTICATE: method %i failed.\n", firm);
+		return 0;
     }
     else {
         authenticator_ = auth;
         auth_status = authenticator_->getMode();
     }
-    clientCanUse = 0;
   }
 
   //if none of the methods succeeded, we fall thru to default "none" from above
@@ -194,16 +199,20 @@ void Authentication::unAuthenticate()
 {
 #if !defined(SKIP_AUTHENTICATION)
     auth_status = CAUTH_NONE;
+    delete authenticator_;
+    authenticator_ = 0;
 #endif
 }
 
 
+/*
 void Authentication::setAuthAny()
 {
 #if !defined(SKIP_AUTHENTICATION)
     canUseFlags = CAUTH_ANY;
 #endif
 }
+*/
 
 int Authentication::setOwner( const char *owner ) 
 {
@@ -277,26 +286,51 @@ const char * Authentication::getOwner() const
 #endif  
 }               
 
+const char * Authentication::getFullyQualifiedUser() const
+{
+#if defined(SKIP_AUTHENTICATION)
+    return NULL;
+#else
+    // Since we never use getOwner() like it allocates memory
+    // anywhere in the code, it shouldn't actually allocate
+    // memory.  We can always just return claimToBe, since it'll
+    // either be NULL or the string we want, which is the old
+    // semantics.  -Derek Wright 3/12/99
+    if (authenticator_) {
+        return authenticator_->getRemoteFQU();
+    }
+    else {
+        return NULL;
+    }
+#endif  
+}           
+
+int Authentication :: end_time()
+{
+    int endtime = 0;
+#if !defined(SKIP_AUTHENTICATION)
+    if (authenticator_) {
+        endtime = authenticator_->endTime();
+    }
+#endif
+    return endtime;
+}
+
 bool Authentication :: is_valid()
 {
     bool valid = FALSE;
-#if defined(SKIP_AUTHENTICATION)
-    return valid;
-#else
+#if !defined(SKIP_AUTHENTICATION)
     if (authenticator_) {
         valid = authenticator_->isValid();
     }
-
-    return valid;
 #endif
+    return valid;
 }
 
 int Authentication :: encrypt(bool flag)
 {
     int code = 0;
-#if defined(SKIP_AUTHENTICATION)
-    return code;
-#else
+#if !defined(SKIP_AUTHENTICATION)
     if (flag == TRUE) {
         if (is_valid()){//check for flags to support shd be added 
             t_mode = ENCRYPT;
@@ -311,9 +345,8 @@ int Authentication :: encrypt(bool flag)
         t_mode = NORMAL;
         code = 0;
     }
-
-    return code;
 #endif
+    return code;
 }
 
 bool Authentication :: is_encrypt()
@@ -413,6 +446,9 @@ int Authentication::exchangeKey(KeyInfo *& key)
             authenticator_->unwrap(encryptedKey,  inputLen, decryptedKey, outputLen);
             key = new KeyInfo((unsigned char *)decryptedKey, keyLength,(Protocol) protocol,duration);
         }
+        else {
+            key = NULL;
+        }
     }
     else {  // server sends the key!
 
@@ -452,193 +488,150 @@ int Authentication::exchangeKey(KeyInfo *& key)
     return retval;
 }
 
-void Authentication::setupEnv( char *hostAddr )
-{
-    int needfree = 0;
-    
-    if ( mySock->isClient() ) {
-        //client needs to know name of the schedd, I stashed hostAddr in 
-        //applicable ReliSock::ReliSock() or ReliSock::connect(), which 
-        //should only be called by clients. 
-        
-        canUseFlags |= (int) CAUTH_CLAIMTOBE;
+int Authentication::default_auth_methods() {
+
+	// get the methods from config file
+	char * methods = param("SEC_DEFAULT_AUTHENTICATION_METHODS");
+
+	int bitmask = 0;
+	if (methods) {
+		// instantiating a SecMan isn't a big deal... all the
+		// data in it is static anyways.  i guess the functions
+		// really should be too.  oh well, deal with it.
+		SecMan s;
+
+		bitmask = s.getAuthBitmask(methods);
+		delete methods;
+	} else {
+
+		// try whatever we support
+		bitmask = 0;
+
+        bitmask |= (int) CAUTH_CLAIMTOBE;
+        bitmask |= (int) CAUTH_ANONYMOUS;
 #if defined(WIN32)
-        canUseFlags |= (int) CAUTH_NTSSPI;
+        bitmask |= (int) CAUTH_NTSSPI;
 #else
-        canUseFlags |= (int) CAUTH_FILESYSTEM;
+        bitmask |= (int) CAUTH_FILESYSTEM;
         
         //RendezvousDirectory is for use by shared-filesystem filesys auth.
         //if user specfied RENDEZVOUS_DIRECTORY, extract it
         if ( getenv( "RENDEZVOUS_DIRECTORY" )) {
-	    canUseFlags |= (int) CAUTH_FILESYSTEM_REMOTE;
+	    	bitmask |= (int) CAUTH_FILESYSTEM_REMOTE;
         }
+#endif
+
 #if defined( GSS_AUTHENTICATION )
-        canUseFlags |= CAUTH_GSS;
+        bitmask |= (int) CAUTH_GSS;
 #endif
 
 #if defined(KERBEROS_AUTHENTICATION)
-        canUseFlags |= CAUTH_KERBEROS;
+        bitmask |= (int) CAUTH_KERBEROS;
 #endif
-	  
-#endif /* defined WIN32 */
-    }
-    else {   //server
-        if ( serverShouldTry ) {
-	    delete serverShouldTry;
-	    serverShouldTry = NULL;
-        }
-        serverShouldTry = param( "AUTHENTICATION_METHODS" );
-    }
+	}
+
+	return bitmask;
 }
+
 
 void Authentication::setAuthType( int state ) {
     auth_status = state;
 }
 
-int Authentication::handshake(int clientFlags)
-{
+
+int Authentication::handshake(int method_bitmask) {
+
     int shouldUseMethod = 0;
     
-    int clientCanUse = 0;
-    int canUse = (int) canUseFlags;
-    
-    dprintf ( D_SECURITY, "HANDSHAKE: in handshake(int flags == %i)\n", clientFlags);
+    dprintf ( D_SECURITY, "HANDSHAKE: in handshake(int methods == %i)\n", method_bitmask);
 
     if ( mySock->isClient() ) {
+
+		// client
+
         dprintf (D_SECURITY, "HANDSHAKE: handshake() - i am the client\n");
-        if (!clientFlags) {
-            mySock->encode();
-            dprintf ( D_SECURITY, "HANDSHAKE: sending methods (canUse == %i) to server\n",
-                      canUse);
-            if ( !mySock->code( canUse ) ||
-                 !mySock->end_of_message() )
-                {
-                    return -1;
-                }
+        mySock->encode();
+        dprintf ( D_SECURITY, "HANDSHAKE: sending (methods == %i) to server\n", method_bitmask);
+        if ( !mySock->code( method_bitmask ) || !mySock->end_of_message() ) {
+            return -1;
         }
 
-        mySock->decode();
-        if ( !mySock->code( shouldUseMethod ) ||
-             !mySock->end_of_message() )  
-            {
-                return -1;
-            }
-        dprintf ( D_SECURITY, "HANDSHAKE: server replied (shouldUseMethod == %i)\n",
-                  shouldUseMethod);
-        clientCanUse = canUse;
-    }
-    else { //server
+    	mySock->decode();
+    	if ( !mySock->code( shouldUseMethod ) || !mySock->end_of_message() )  {
+        	return -1;
+    	}
+    	dprintf ( D_SECURITY, "HANDSHAKE: server replied (method = %i)\n", shouldUseMethod);
+
+    } else {
+
+		//server
+
+		int client_methods = 0;
         dprintf (D_SECURITY, "HANDSHAKE: handshake() - i am the server\n");
-        if (!clientFlags) {
-            mySock->decode();
-            if ( !mySock->code( clientCanUse ) ||
-                 !mySock->end_of_message() )
-                {
-                    return -1;
-                }
-            dprintf ( D_SECURITY, "HANDSHAKE: client sent methods (clientCanUse == %i)\n",
-                      clientCanUse);
-        } else {
-            clientCanUse = clientFlags;
+        mySock->decode();
+        if ( !mySock->code( client_methods ) || !mySock->end_of_message() ) {
+            return -1;
         }
+        dprintf ( D_SECURITY, "HANDSHAKE: client sent (methods == %i)\n", client_methods);
         
-        shouldUseMethod = selectAuthenticationType( clientCanUse );
-        dprintf ( D_SECURITY, "HANDSHAKE: i picked a method (shouldUseMethod == %i)\n",
-                  shouldUseMethod);
+		// take our supported method bitmasks and bitwise AND them together.  this yields
+		// the methods we have in common.  selectAuthenticationType then picks one from a
+		// hardcoded order
+        shouldUseMethod = selectAuthenticationType( method_bitmask & client_methods );
+        dprintf ( D_SECURITY, "HANDSHAKE: i picked (method == %i)\n", shouldUseMethod);
         
         
         mySock->encode();
-        if ( !mySock->code( shouldUseMethod ) ||
-             !mySock->end_of_message() )
-            {
-                return -1;
-            }
+        if ( !mySock->code( shouldUseMethod ) || !mySock->end_of_message() ) {
+            return -1;
+        }
         
-        dprintf ( D_SECURITY, "HANDSHAKE: client received method (shouldUseMethod == %i)\n",
-                  shouldUseMethod);
+		dprintf ( D_SECURITY, "HANDSHAKE: client received (method == %i)\n", shouldUseMethod);
     }
 
-    dprintf(D_SECURITY, "HANDSHAKE: clientCanUse=%d,shouldUseMethod=%d\n",
-            clientCanUse,shouldUseMethod);
-    
     return( shouldUseMethod );
 }
 
-int Authentication::selectAuthenticationType( int clientCanUse ) 
-{
-    int retval = 0;
-    
-    if ( !serverShouldTry ) {
-        //wasn't specified in config file [param("AUTHENTICATION_METHODS")]
-        //default to generic authentication:
-#if defined(WIN32)
-        serverShouldTry = strdup("NTSSPI");
-#else
-        serverShouldTry = strdup("FS");
-#endif
-    }
-    StringList server( serverShouldTry );
-    char *tmp = NULL;
-    
-    server.rewind();
-    while ( tmp = server.next() ) {
-        dprintf ( D_SECURITY, "SELECTAUTHENTICATIONTYPE: evaluating '%s'\n", tmp);
+
+
+int Authentication::selectAuthenticationType( int methods ) {
+
 #if defined(GSS_AUTHENTICATION)
-        if ( ( clientCanUse & CAUTH_GSS )  
-             && !stricmp( tmp, "GSS_AUTHENTICATION" ) ) {
-	    dprintf ( D_SECURITY, "SELECTAUTHENTICATIONTYPE: picking '%s'\n", tmp);
-	    retval = CAUTH_GSS;
-	    break;
-        }
+	if ( methods & CAUTH_GSS )  {
+		return CAUTH_GSS;
+	}
 #endif
-        
+	
 #if defined(WIN32)
-        if ( ( clientCanUse & CAUTH_NTSSPI ) && !stricmp( tmp, "NTSSPI" ) ) {
-	    dprintf ( D_SECURITY, "SELECTAUTHENTICATIONTYPE: picking '%s'\n", tmp);
-	    retval = CAUTH_NTSSPI;
-	    break;
-        }
+	if ( methods & CAUTH_NTSSPI ) {
+		return CAUTH_NTSSPI;
+	}
 #else
-        if ( ( clientCanUse & CAUTH_FILESYSTEM ) && !stricmp( tmp, "FS" ) ) {
-	    dprintf ( D_SECURITY, "SELECTAUTHENTICATIONTYPE: picking '%s'\n", tmp);
-	    retval = CAUTH_FILESYSTEM;
-	    break;
-        }
-        if ( ( clientCanUse & CAUTH_FILESYSTEM_REMOTE ) 
-             && !stricmp( tmp, "FS_REMOTE" ) ) {
-	    dprintf ( D_SECURITY, "SELECTAUTHENTICATIONTYPE: picking '%s'\n", tmp);
-            retval = CAUTH_FILESYSTEM_REMOTE;
-	    break;
-        }
-        
+	if ( methods & CAUTH_FILESYSTEM ) {
+		return CAUTH_FILESYSTEM;
+	}
+	if ( methods & CAUTH_FILESYSTEM_REMOTE ) {
+		return CAUTH_FILESYSTEM_REMOTE;
+	}
+#endif
+	
+
 #if defined(KERBEROS_AUTHENTICATION)
-	  if ( ( clientCanUse & CAUTH_KERBEROS) && !stricmp( tmp, "KERBEROS")){
-	    dprintf ( D_SECURITY, "SELECTAUTHENTICATIONTYPE: picking '%s'\n", tmp);
-            retval = CAUTH_KERBEROS;
-	    break;
-        }
+	if ( methods & CAUTH_KERBEROS ) {
+		return CAUTH_KERBEROS;
+	}
 #endif
-        
-#endif
-        if ( ( clientCanUse & CAUTH_CLAIMTOBE ) && !stricmp( tmp, "CLAIMTOBE" ) )
-	    {
-	      dprintf ( D_SECURITY, "SELECTAUTHENTICATIONTYPE: picking '%s'\n", tmp);
-	      retval = CAUTH_CLAIMTOBE;
-	      break;
-	    }
-    }
-    
-    return retval;
+	if ( methods & CAUTH_CLAIMTOBE ) {
+		return CAUTH_CLAIMTOBE;
+	}
+
+	if ( methods & CAUTH_ANONYMOUS ) {
+		return CAUTH_ANONYMOUS;
+	}
+
+    return CAUTH_NONE;
 }
 
+
 #endif /* !defined(SKIP_AUTHENTICATION) */
-
-
-
-
-
-
-
-
-
 

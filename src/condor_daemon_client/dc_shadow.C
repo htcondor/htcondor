@@ -121,6 +121,7 @@ DCShadow::updateJobInfo( ClassAd* ad, bool insure_update )
 
 	ReliSock reli_sock;
 	Sock* tmp;
+	bool  result;
 
 	if( insure_update ) {
 			// For now, if we have to ensure that the update gets
@@ -131,11 +132,13 @@ DCShadow::updateJobInfo( ClassAd* ad, bool insure_update )
 					 "(%s)\n", _addr );
 			return false;
 		}
-		tmp = startCommand( SHADOW_UPDATEINFO, (Sock*)&reli_sock );
+		result = startCommand( SHADOW_UPDATEINFO, (Sock*)&reli_sock );
+		tmp = &reli_sock;
 	} else {
-		tmp = startCommand( SHADOW_UPDATEINFO, (Sock*)shadow_safesock );
+		result = startCommand( SHADOW_UPDATEINFO, (Sock*)shadow_safesock );
+		tmp = shadow_safesock;
 	}
-	if( ! tmp ) {
+	if( ! result ) {
 		dprintf( D_FULLDEBUG, 
 				 "Failed to send SHADOW_UPDATEINFO command to shadow\n" );
 		if( shadow_safesock ) {

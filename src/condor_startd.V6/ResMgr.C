@@ -719,13 +719,9 @@ ResMgr::init_socks( void )
 		delete view_sock;
 		view_sock = NULL;
 	}
-	if( condor_view_host ) {
-		view_sock = new SafeSock;
-		if (!view_sock->connect( condor_view_host, CONDOR_VIEW_PORT )) {
-			dprintf(D_ALWAYS, "Failed to connect to condor view server "
-					"<%s:%d>\n", condor_view_host, CONDOR_VIEW_PORT);
-		}
-	}
+    if (View_Collector) {
+        view_sock = View_Collector->safeSock();
+    }
 }
 
 
@@ -994,7 +990,8 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad )
 					 "Collector Daemon Object: %s (%s)\n",
 					 Collector->addr(), Collector->fullHostname() );
 		}
-		if( send_classad_to_sock(cmd, coll_sock, public_ad, private_ad) ) {
+
+		if( send_classad_to_sock(cmd, Collector, public_ad, private_ad) ) {
 			num++;
 		} else {
 			dprintf( D_FAILURE|D_ALWAYS,
@@ -1010,7 +1007,7 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad )
 					 "Attempting to send update to view collector <%s:%d>\n", 
 					 view_sock->endpoint_ip_str(), view_sock->endpoint_port() );
 		}
-		if( send_classad_to_sock(cmd, view_sock, public_ad, NULL) ) {
+		if( send_classad_to_sock(cmd, View_Collector, public_ad, NULL) ) {
 			num++;
 		} else {
 			dprintf( D_ALWAYS, 

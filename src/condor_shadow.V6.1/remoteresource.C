@@ -31,6 +31,7 @@
 #include "condor_attributes.h"
 #include "internet.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "daemon.h"
 
 // for remote syscalls, this is currently in NTreceivers.C.
 extern int do_REMOTE_syscall();
@@ -181,6 +182,7 @@ RemoteResource::killStarter()
 						 "Could not send command to startd\n" );
 		return false;
 	}
+
 	if( state != RR_FINISHED ) {
 		setResourceState( RR_PENDING_DEATH );
 	}
@@ -478,7 +480,7 @@ RemoteResource::setStartdInfo( const char *sinful,
 		*/
 	char *addr;
 	if( (addr = string_to_ipstr(sinful)) ) {
-		daemonCore->AddAllowHost( addr, WRITE );
+		daemonCore->AddAllowHost( addr, DAEMON );
 	} else {
 		dprintf( D_ALWAYS, "ERROR: Can't convert \"%s\" to an IP address!\n", 
 				 sinful );

@@ -1399,7 +1399,6 @@ Daemons::Update( ClassAd* ca )
 void
 Daemons::UpdateCollector()
 {
-	int		cmd = UPDATE_MASTER_AD;
 	int		error_debug;
 
 #if defined(CONDOR_G)
@@ -1412,52 +1411,46 @@ Daemons::UpdateCollector()
 
 	Update(ad);
 
-	SafeSock sock;
-	sock.timeout(2);
+	SafeSock* sock = (SafeSock*)(Collector->startCommand(UPDATE_MASTER_AD, Stream::safe_sock, 2));
 
-		// Port doesn't matter, since we've got the sinful string. 
-	if (!sock.connect(Collector->addr(), 0)) {
-		dprintf( error_debug, "Can't locate collector %s\n", 
-				 Collector->fullHostname() );
-		return;
-	}
-
-	sock.encode();
-	if(!sock.code(cmd))
-	{
+	if (!sock) {
 		dprintf( D_ALWAYS, "Can't send UPDATE_MASTER_AD to collector (%s)\n", 
 				 Collector->fullHostname() );
 		return;
 	}
-	if(!ad->put(sock))
-	{
+
+	if(!ad->put(*sock)) {
 		dprintf( D_ALWAYS, "Can't send ClassAd to the collector (%s)\n",
 				 Collector->fullHostname() );
-
+		delete sock;
 		return;
 	}
-	if(!sock.end_of_message())
-	{
+
+	if(!sock->end_of_message()) {
 		dprintf( D_ALWAYS, "Can't send EOM to the collector (%s)\n",
 				 Collector->fullHostname() );
-
 	}
 
 	if (secondary_collectors) {
 		secondary_collectors->rewind();
 		char *collector;
 		while ((collector = secondary_collectors->next()) != NULL) {
-			SafeSock s;
-			s.timeout(2);
-			s.encode();
-			if (!s.connect(collector, COLLECTOR_PORT) ||
-				!s.code(cmd) || !ad->put(s) || !s.end_of_message()) {
+			// COLLECTOR_PORT need to be added in there?  Bueller?
+			Daemon col(collector);
+			SafeSock* s = (SafeSock*)(col.startCommand(UPDATE_MASTER_AD, Stream::safe_sock, 2));
+			if (!s || !ad->put(*s) || !s->end_of_message()) {
 				dprintf( D_ALWAYS,
 						 "Failed to send update to secondary collector %s\n",
 						 collector);
 			}
+			if (s) {
+				delete s;
+			}
 		}
 	}
+
+	// clean up
+	delete sock;
 
 		// Reset the timer so we don't do another period update until 
 	daemonCore->Reset_Timer( update_tid, update_interval, update_interval );

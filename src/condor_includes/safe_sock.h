@@ -87,6 +87,9 @@ public:
 	// Methods
 	void init();	/* shared initialization method */
 
+    const char * isIncomingDataMD5ed();
+    const char * isIncomingDataEncrypted();
+
 #ifdef DEBUG
 	int getMsgSize();
 	void dumpSock();
@@ -113,6 +116,10 @@ public:
 
 // next line should be uncommented after testing
 protected:
+
+    bool init_MD(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId);
+    bool set_encryption_id(const char * keyId);
+
 	static _condorMsgID _outMsgID;
 
 	enum safesock_state { safesock_none, safesock_listen };
