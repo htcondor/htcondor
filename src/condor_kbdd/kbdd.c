@@ -466,6 +466,7 @@ X_is_active()
 		}
 #if defined(IRIX53) || defined(IRIX62)
 			/* The SGI visuallogin process is running, so nobody on console */
+			/* we should check for this before we check for 4Dwm */
 		if( substr(command,"clogin") ) {
 			dprintf(D_ALWAYS, "Found clogin, nobody on console\n");
 			pclose(fp);
@@ -479,7 +480,7 @@ X_is_active()
 		if( substr(command,"4Dwm") ) {
 			dprintf(D_ALWAYS,"Found 4Dwm!\n");
 			pclose(fp);
-			return FALSE;
+			return TRUE;
 		}
 #endif  /* IRIX */
 
