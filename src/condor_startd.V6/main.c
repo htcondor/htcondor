@@ -132,6 +132,7 @@ main(argc, argv)
 	}
 
 	MyName = argv[0];
+	// MyName is now 'startd' or 'startd_t'
 
 	while (*++argv) {
 		if (*argv[0] != '-') {
@@ -155,7 +156,15 @@ main(argc, argv)
 		set_condor_euid();
 
 	template_context = create_context();
+	// build the context, create a hash table
 	config(MyName, template_context);	/* XXXX */
+	dprintf_config("STARTD", 2);
+
+	dprintf(D_ALWAYS, "************************************************\n");
+	dprintf(D_ALWAYS, "***       CONDOR_STARTD STARTING UP          ***\n");
+	dprintf(D_ALWAYS, "************************************************\n");
+	dprintf(D_ALWAYS, "\n");
+
 	resmgr_init();
 	resmgr_walk(res_config_context);
 	init_params();
@@ -172,7 +181,6 @@ main(argc, argv)
 		if (fork())
 			exit(0);
 	}
-	dprintf_config("STARTD", 2);
 
 	/*
 	 * XXX Use DaemonCore for signal handling.
@@ -197,11 +205,6 @@ main(argc, argv)
 	/*
 	 * XXX replace with DaemonCore
 	 */
-
-	dprintf(D_ALWAYS, "************************************************\n");
-	dprintf(D_ALWAYS, "***       CONDOR_STARTD STARTING UP          ***\n");
-	dprintf(D_ALWAYS, "************************************************\n");
-	dprintf(D_ALWAYS, "\n");
 
 	mainloop();
 
