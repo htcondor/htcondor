@@ -111,7 +111,7 @@ do_REMOTE_syscall(ReliSock *sock, int process)
 	switch( condor_sysnum ) {
         case CONDOR_work_request:
           {
-                ClassAd *ad;
+                ClassAd *ad = NULL;
                 char *a_out;
                 char *targ;
                 char *orig;
@@ -146,7 +146,7 @@ do_REMOTE_syscall(ReliSock *sock, int process)
                 free( (char *)orig );
                 free( (char *)targ );
                 free( (char *)a_out );
-				delete ad;
+		if ( ad != NULL ) delete ad;
                 assert( syscall_sock->end_of_message() );;
                 return 0;
         }
