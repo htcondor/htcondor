@@ -92,6 +92,8 @@ public:
 
 	virtual void         setFullyQualifiedUser(char * u);
 	virtual const char * getFullyQualifiedUser();
+    virtual int          isAuthenticated();
+    void                 setAuthenticated(bool authenticated = true);
 
 #ifdef DEBUG
 	int getMsgSize();
@@ -148,6 +150,7 @@ protected:
 	_condorInMsg *_longMsg;
 	int _tOutBtwPkts;
 	char* _fqu;  // fully qualified username
+    int   _authenticated;
 
 	// statistics variables
 	static unsigned long _noMsgs;
