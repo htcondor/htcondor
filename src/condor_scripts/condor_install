@@ -29,6 +29,9 @@ umask 0022;
 @lib_names=( "c_plus_alloc.o", "condor_rt0.o", "condor_syscall_lib.a",
 	    "libckpt.a", "ld" );
 $needs_lock=0;
+$fs_domain="";
+$uid_domain="";
+$soft_uid="";
 
 ###  Figure out who and where we are:
 @pwdent = getpwuid($<);
@@ -40,6 +43,9 @@ chop($host=`hostname`);
 $host =~ s/(\w*)\..*/$1/;
 # Lookup the full hostname.
 $fullhost=(gethostbyname($host))[0];
+# Grab just the domain, so we have it.
+$fullhost =~ /\w*\.(.*)/;
+$domain = $1;
 
 ###  Find condor's home directory, if it exists.
 @pwdent = getpwnam( "condor" );
@@ -135,6 +141,15 @@ if( grep(/submit/, @install_type) ) {
 
     print "\nUsing $mail_path to send email to $condor_admin\n",
     "\nPress enter to continue. ";
+    $_ = <STDIN>;
+
+    ### Only need to prompt for domain settings for full-install or submit-only
+    print "\n***************************************************************************\n",
+    "\tSTEP 5: Filesystem and UID domains.\n",
+    "***************************************************************************\n";
+    &prompt_domain_settings();
+
+    print "\nPress enter to continue. ";
     $_ = <STDIN>;
 
     if( grep(/execute/, @install_type) ) {
@@ -266,7 +281,7 @@ sub configure_submit_only {
     local( $pool, $config_file, $path, %pool_config_file );
 
     print "\n***************************************************************************\n",
-    "\tSTEP 5: Where should public programs be installed?\n",
+    "\tSTEP 6: Where should public programs be installed?\n",
     "***************************************************************************\n";
     print "\n",
     "When I'm done, I'm going to need to install some scripts and links.\n",
@@ -765,7 +780,7 @@ sub customize_config_file {
 	  }
 	  if( /^MAIL.*$/ ) { $_ = "MAIL\t\t\t= $mail_path\n"; last SWITCH; }
 	  if( $lock && /^LOCK.*$/ ) { $_ = "LOCK\t\t\t= $lock\n"; last SWITCH; }
-	  if( $ckpt && /^USE_CKPT_SERVER.*$/ ) { 
+	  if( $ckpt && /^#USE_CKPT_SERVER.*$/ ) { 
 	      $_ = "USE_CKPT_SERVER\t\t= True\n"; last SWITCH; 
 	  }
 	  if( $ckpt && /^#CKPT_SERVER_HOST.*$/ ) {
@@ -779,6 +794,15 @@ sub customize_config_file {
 	  }
 	  if( $view && /^#CONDOR_VIEW_HOST.*$/ ) {
 	      $_ = "CONDOR_VIEW_HOST\t= $view\n"; last SWITCH; 	     
+ 	  }
+	  if( $soft_uid && /^#SOFT_UID_DOMAIN.*$/ ) {
+	      $_ = "SOFT_UID_DOMAIN\t= $soft_uid\n"; last SWITCH; 	     
+ 	  }
+	  if( $uid_domain && /^UID_DOMAIN.*$/ ) {
+	      $_ = "UID_DOMAIN\t= $uid_domain\n"; last SWITCH; 	     
+ 	  }
+	  if( $fs_domain && /^FILESYSTEM_DOMAIN.*$/ ) {
+	      $_ = "FILESYSTEM_DOMAIN\t= $fs_domain\n"; last SWITCH; 	     
  	  }
       }
 	print CONFIG "$_";
@@ -1055,7 +1079,7 @@ sub configure_full_install {
     $is_cm = 0;
 
     print "\n***************************************************************************\n",
-    "\tSTEP 5: Where should public programs be installed?\n",
+    "\tSTEP 6: Where should public programs be installed?\n",
     "***************************************************************************\n";
     print "\n",
     "The Condor binaries and scripts are already installed in:\n",
@@ -1077,7 +1101,7 @@ sub configure_full_install {
     $_ = <STDIN>;
 
     print "\n***************************************************************************\n",
-    "\tSTEP 6: What machine will be your central manager?\n",
+    "\tSTEP 7: What machine will be your central manager?\n",
     "***************************************************************************\n";
     $cm = &prompt_central_manager( 0 );
     
@@ -1090,7 +1114,7 @@ sub configure_full_install {
     $_ = <STDIN>;
 
     print "\n***************************************************************************\n",
-    "\tSTEP 7: Where will the \"local directory\" go?\n",
+    "\tSTEP 8: Where will the \"local directory\" go?\n",
     "***************************************************************************\n";
     
     if( @machines ) {
@@ -1224,7 +1248,7 @@ sub configure_full_install {
     $_ = <STDIN>;
 
     print "\n***************************************************************************\n",
-    "\tSTEP 8: Where will the local (machine-specific) config files go?\n",
+    "\tSTEP 9: Where will the local (machine-specific) config files go?\n",
     "***************************************************************************\n";
 
     if( @machines ) {
@@ -1258,7 +1282,7 @@ sub configure_full_install {
     }
 
     print "\n***************************************************************************\n",
-    "\tSTEP 9: How do you want Condor to find its config file?\n",
+    "\tSTEP 10: How do you want Condor to find its config file?\n",
     "***************************************************************************\n";
     $has_config=0;
 
@@ -1636,4 +1660,47 @@ sub prompt_pools {
 	}
     }
     return @pools;
+}
+
+
+# Figure out what to use for UID and FileSystem domain.
+sub prompt_domain_settings {
+    print "\nTo correctly run all jobs in your pool, including ones that aren't ",
+    "relinked\nfor Condor, you must tell Condor if you have a shared filesystem, ",
+    "and if\nso, what machines share it.\n",
+    "\nPlease read the \"Configuring Condor\" section of the Administrator's manual\n",
+    "(in particular, the section \"Shared Filesystem Config File Entries\")\n",
+    "for a complete explaination of these (and other, related) settings.\n";
+
+    print "\nDo all of the machines in your pool from your domain "
+	"(\"$domain\")\nshare a common filesystem? [no] ";
+    chop($_ = <STDIN>);    
+    if( /^y$/i ) {
+	print "\nConfiguring all machines to use \"$domain\" for their filesystem",
+	" domain.\n";
+	$fs_domain=$domain;
+    } else {
+	print "\nConfiguring each machine to be in its own filesystem domain.\n";
+	$fs_domain="\$(FULL_HOSTNAME)";
+    }
+
+    print "\nDo all of the users across all the machines in your domain, have a ",
+    "unique\nUID (in other words, do they all share a common passwd file)? [no] ";
+    chop($_ = <STDIN>);    
+    if( /^y$/i ) {
+	print "\nConfiguring all machines to use \"$domain\" for their uid domain.\n";
+	$uid_domain=$domain;
+
+	print "\nIn some cases, even if you have unique UIDs, you might not have ",
+	"all users\nlisted in the password file on each machine.\n",
+	"Is this the case at your site? [no] ";
+	chop($_ = <STDIN>);    
+	if( /^y$/i ) {
+	    print "\nSetting \"SOFT_UID_DOMAIN\" to True.\n";
+	    $soft_uid = "True";
+	}
+    } else {
+	print "\nConfiguring each machine to be in its own uid domain.\n";
+	$uid_domain="\$(FULL_HOSTNAME)";
+    }
 }
