@@ -26,6 +26,7 @@
 
 #include "condor_uid.h"
 #include "condor_adtypes.h"
+#include "condor_universe.h"
 #include "my_hostname.h"
 
 #include "collector.h"
@@ -53,6 +54,9 @@ int CollectorDaemon::__failed__;
 TrackTotals* CollectorDaemon::normalTotals;
 int CollectorDaemon::submittorRunningJobs;
 int CollectorDaemon::submittorIdleJobs;
+
+CollectorUniverseStats CollectorDaemon::ustatsAccum;
+CollectorUniverseStats CollectorDaemon::ustatsMonthly;
 
 int CollectorDaemon::machinesTotal;
 int CollectorDaemon::machinesUnclaimed;
@@ -91,7 +95,6 @@ void CollectorDaemon::Init()
 	sock_cache = NULL;
 	updateCollector = NULL;
 	Config();
-
 
     // setup routine to report to condor developers
     // schedule reports to developers
@@ -257,6 +260,7 @@ int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
 		whichAds = (AdTypes) -1;
     }
 
+	// Process the query
     if (whichAds != (AdTypes) -1) {
 		process_query (whichAds, ad, sock);
 	}
@@ -676,6 +680,13 @@ int CollectorDaemon::reportMiniStartdScanFunc( ClassAd *ad )
             break;
     }
 
+	// Count the number of jobs in each universe
+	int		universe;
+	if ( ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) ) {
+		ustatsAccum.accumulate( universe );
+	}
+
+	// Done
     return 1;
 }
 
@@ -690,6 +701,8 @@ void CollectorDaemon::reportToDevelopers (void)
     machinesUnclaimed = 0;
     machinesClaimed = 0;
     machinesOwner = 0;
+	ustatsAccum.Reset( );
+
     if (!collector.walkHashTable (STARTD_AD, reportMiniStartdScanFunc)) {
             dprintf (D_ALWAYS, "Error counting machines in devel report \n");
     }
@@ -702,6 +715,9 @@ void CollectorDaemon::reportToDevelopers (void)
 		dprintf( D_ALWAYS, "Didn't send monthly report (failed totals)\n" );
 		return;
 	}
+
+	// Accumulate our monthly maxes
+	ustatsMonthly.setMax( ustatsAccum );
 
 	sprintf( buffer, "Collector (%s):  Monthly report", 
 			 my_full_hostname() );
@@ -730,6 +746,22 @@ void CollectorDaemon::reportToDevelopers (void)
 	}
 	fprintf( mailer , "%20s\t%20s\n" , ATTR_RUNNING_JOBS , ATTR_IDLE_JOBS );
 	fprintf( mailer , "%20d\t%20d\n" , submittorRunningJobs,submittorIdleJobs );
+
+	// If we've got any, find the maxes
+	if ( ustatsMonthly.getCount( ) ) {
+		fprintf( mailer , "\n%20s\t%20s\n" , "Universe", "Max Running Jobs" );
+		int		univ;
+		for( univ=0;  univ<CONDOR_UNIVERSE_MAX;  univ++) {
+			const char	*name = ustatsMonthly.getName( univ );
+			if ( name ) {
+				fprintf( mailer, "%20s\t%20d\n",
+						 name, ustatsMonthly.getValue(univ) );
+			}
+		}
+		fprintf( mailer, "%20s\t%20d\n",
+				 "All", ustatsMonthly.getCount( ) );
+	}
+	ustatsMonthly.Reset( );
 	
 	email_close( mailer );
 	return;
@@ -916,7 +948,7 @@ void CollectorDaemon::Config()
     } else {
         collectorStats.setDaemonHistorySize( 0 );
     }
-		
+
     return;
 }
 
@@ -944,12 +976,13 @@ int CollectorDaemon::sendCollectorAd()
     machinesUnclaimed = 0;
     machinesClaimed = 0;
     machinesOwner = 0;
+	ustatsAccum.Reset( );
     if (!collector.walkHashTable (STARTD_AD, reportMiniStartdScanFunc)) {
             dprintf (D_ALWAYS, "Error making collector ad (startd scan) \n");
     }
 
-    // If we don't have any machines, then bail out. You oftentimes see people
-    // run a collector on each macnine in their pool. Duh.
+    // If we don't have any machines, then bail out. You oftentimes
+    // see people run a collector on each macnine in their pool. Duh.
     if(machinesTotal == 0) {
 		return 1;
 	} 
@@ -968,10 +1001,17 @@ int CollectorDaemon::sendCollectorAd()
     sprintf(line,"%s = %d",ATTR_NUM_HOSTS_OWNER,machinesOwner);
     ad->Insert(line);
 
+	// Accumulate for the monthly
+	ustatsMonthly.setMax( ustatsAccum );
+
+	// If we've got any universe reports, find the maxes
+	ustatsAccum.publish( ATTR_CURRENT_JOBS_RUNNING, ad );
+	ustatsMonthly.publish( ATTR_MAX_JOBS_RUNNING, ad );
+
 	// Collector engine stats, too
 	collectorStats.publishGlobal( ad );
 
-    // send the ad
+    // Send the ad
 	if( ! updateCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad) ) {
 		dprintf( D_ALWAYS, "Can't send UPDATE_COLLECTOR_AD to collector "
 				 "(%s): %s\n", updateCollector->fullHostname(),
@@ -1051,4 +1091,128 @@ CollectorDaemon::send_classad_to_sock(int cmd, Daemon * d, ClassAd* theAd)
         return;
     }
     return;
+}
+
+//  Collector stats on universes
+CollectorUniverseStats::CollectorUniverseStats( void )
+{
+	Reset( );
+}
+
+//  Collector stats on universes
+CollectorUniverseStats::CollectorUniverseStats( CollectorUniverseStats &ref )
+{
+	int		univ;
+
+	for( univ=0;  univ<CONDOR_UNIVERSE_MAX;  univ++) {
+		perUniverse[univ] = ref.perUniverse[univ];
+	}
+	count = ref.count;
+}
+
+CollectorUniverseStats::~CollectorUniverseStats( void )
+{
+}
+
+void
+CollectorUniverseStats::Reset( void )
+{
+	int		univ;
+
+	dprintf( D_ALWAYS, "%p: Reseting\n", this );
+	for( univ=0;  univ<CONDOR_UNIVERSE_MAX;  univ++) {
+		perUniverse[univ] = 0;
+	}
+	count = 0;
+}
+
+void
+CollectorUniverseStats::accumulate(int univ )
+{
+	dprintf( D_ALWAYS, "%p: Accumulating %d\n", this, univ );
+	if (  ( univ >= 0 ) && ( univ < CONDOR_UNIVERSE_MAX ) ) {
+		perUniverse[univ]++;
+		count++;
+	}
+}
+
+int
+CollectorUniverseStats::getValue (int univ )
+{
+	if (  ( univ >= 0 ) && ( univ < CONDOR_UNIVERSE_MAX ) ) {
+		return perUniverse[univ];
+	} else {
+		return -1;
+	}
+}
+
+int
+CollectorUniverseStats::getCount ( void )
+{
+	return count;
+}
+
+int
+CollectorUniverseStats::setMax( CollectorUniverseStats &ref )
+{
+	int		univ;
+
+	dprintf( D_ALWAYS, "%p: Maxing\n", this );
+	for( univ=0;  univ<CONDOR_UNIVERSE_MAX;  univ++) {
+		if ( ref.perUniverse[univ] > perUniverse[univ] ) {
+			perUniverse[univ] = ref.perUniverse[univ];
+		}
+		if ( ref.count > count ) {
+			count = ref.count;
+		}
+	}
+	return 0;
+}
+
+const char *
+CollectorUniverseStats::getName( int univ )
+{
+	// Insert universe attributes
+	static const char	*names[] =
+	{
+		NULL,
+		"Standard",
+		NULL,
+		NULL,
+		"PVM",
+		"Vanilla",
+		"PVMD",
+		"Scheduler",
+		"MPI",
+		"Globus",
+		"Java",
+		"Parallel"
+	};
+
+	if (  ( univ >= 0 ) && ( univ < CONDOR_UNIVERSE_MAX ) ) {
+		return names[univ];
+	} else {
+		return NULL;
+	}
+}
+
+int
+CollectorUniverseStats::publish( const char *label, ClassAd *ad )
+{
+	int	univ;
+	char line[100];
+
+	// Loop through, publish all universes with a name
+	for( univ=0;  univ<CONDOR_UNIVERSE_MAX;  univ++) {
+		const char *name = getName( univ );
+		if ( name ) {
+			sprintf( line, "%s%s = %d", label, name, getValue( univ ) );
+			ad->Insert(line);
+		}
+	}
+	sprintf( line, "%s%s = %d", label, "All", count );
+	ad->Insert(line);
+	dprintf( D_ALWAYS, "%p: Publishing %s = %d\n", this, label, count );
+
+	return 0;
 }

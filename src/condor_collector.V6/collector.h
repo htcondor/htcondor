@@ -10,6 +10,30 @@
 #include "collector_stats.h"
 #include "dc_collector.h"
 
+
+//----------------------------------------------------------------
+// Simple job universe stats
+//----------------------------------------------------------------
+class CollectorUniverseStats {
+  public:
+	CollectorUniverseStats( void );
+	CollectorUniverseStats( CollectorUniverseStats & );
+	~CollectorUniverseStats( void );
+	void Reset( void );
+	void accumulate( int univ );
+	int getValue( int univ );
+	int getCount( void );
+	int setMax( CollectorUniverseStats & );
+	const char *getName( int univ );
+	int publish( const char *label, ClassAd *ad );
+
+  private:
+	int perUniverse[CONDOR_UNIVERSE_MAX];
+	int count;
+
+};
+
+
 //----------------------------------------------------------------
 // Collector daemon class declaration
 //----------------------------------------------------------------
@@ -72,6 +96,9 @@ protected:
 	static int submittorIdleJobs;
 
 	static int machinesTotal,machinesUnclaimed,machinesClaimed,machinesOwner;
+
+	static CollectorUniverseStats ustatsAccum;
+	static CollectorUniverseStats ustatsMonthly;
 
 	static ClassAd *ad;
 	static DCCollector* updateCollector;
