@@ -145,7 +145,7 @@ libcondorckpt.a: libtmp.a ToUpper
 
 #else /* Not DOES_CHECKPOINTING */
 
-all_target(syscall_mode.o ToUpper)
+all_target($(OBJ) ToUpper)
 release: all
 stripped: all
 static: all
