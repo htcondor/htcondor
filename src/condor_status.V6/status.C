@@ -4,8 +4,7 @@
 #include "condor_api.h"
 #include "status_types.h"
 #include "totals.h"
-#include "my_hostname.h"
-#include "get_full_hostname.h"
+#include "get_daemon_addr.h"
 
 // global variables
 AttrListPrintMask pm;
@@ -269,7 +268,7 @@ firstPass (int argc, char *argv[])
 void 
 secondPass (int argc, char *argv[])
 {
-	char *fullname;
+	char *daemonname;
 	for (int i = 1; i < argc; i++) {
 		// omit parameters which qualify switches
 		if (matchPrefix (argv[i], "-pool")) {
@@ -294,9 +293,9 @@ secondPass (int argc, char *argv[])
 				printf ("Arg %d (%s) --- adding constraint", i, argv[i]);
 			}
 
-			if( !(fullname = get_full_hostname(argv[i])) ) {
+			if( !(daemonname = get_daemon_name(argv[i])) ) {
 				fprintf( stderr, "%s: unknown host %s\n",
-						 argv[0], argv[i] );
+						 argv[0], get_host_part(argv[i]) );
 				exit(1);
 			}
 
@@ -307,7 +306,7 @@ secondPass (int argc, char *argv[])
 			  case MODE_MASTER_NORMAL:
 			  case MODE_CKPT_SRVR_NORMAL:
     		  case MODE_STARTD_AVAIL:
-				sprintf (buffer, "TARGET.%s == \"%s\"", ATTR_NAME, fullname);
+				sprintf (buffer, "TARGET.%s == \"%s\"", ATTR_NAME, daemonname);
 				if (diagnose) {
 					printf ("[%s]\n", buffer);
 				}
