@@ -645,4 +645,7 @@ Starter::recompute_pidfamily()
 		s_pidfamily = NULL;
 	}
 	s_family_size = s_procfam->currentfamily( s_pidfamily );
+	if( ! s_family_size ) {
+		dprintf( D_ALWAYS, "WARNING: No processes found in starter's family\n" );
+	}
 }
