@@ -202,8 +202,10 @@ END_C_DECLS
 #if defined(WIN32)
 /* Win32 uses _stati64(); this should be detected by configure */
 # define HAS__STATI64
+# define HAVE__STATI64
   /* Win32 has a __int64 type defined; this should be detected by configure */
 #  define HAS___INT64
+#  define HAVE___INT64
 #endif
 
 /* Define the PRIx64 macros */

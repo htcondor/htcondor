@@ -121,7 +121,7 @@ int _Esigaction(int signum, const struct sigaction  *act, struct sigaction *olda
 
 /* We need to include this _before_ 'db.h' gets included so that we
    get the int64_t types */
-#if defined( HAS_INTTYPES_H )
+#if HAVE_INTTYPES_H
 # define __STDC_FORMAT_MACROS
 # include <inttypes.h>
 #endif

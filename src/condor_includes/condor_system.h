@@ -199,13 +199,13 @@ typedef fd_set *SELECT_FDSET_PTR;
 /* This stuff here is shared by all archs, *INCLUDING* NiceTry */
 
 /* Pull in some required types */
-#if defined( HAS_SYS_TYPES_H )
+#if defined( HAVE_SYS_TYPES_H )
 # include <sys/types.h>
 #endif
-#if defined( HAS_STDINT_H )
+#if defined( HAVE_STDINT_H )
 # include <stdint.h>
 #endif
-#if defined( HAS_INTTYPES_H )
+#if defined( HAVE_INTTYPES_H )
 # define __STDC_FORMAT_MACROS
 # include <inttypes.h>
 #endif
@@ -234,11 +234,11 @@ typedef fd_set *SELECT_FDSET_PTR;
 #endif
 
 // Define a 'filesize_t' type and FILESIZE_T_FORMAT printf format string
-#if defined HAS_INT64_T
+#if defined HAVE_INT64_T
   typedef int64_t filesize_t;
 # define FILESIZE_T_FORMAT "%" PRId64
 
-#elif defined HAS___INT64_T
+#elif defined HAVE___INT64_T
   typedef __int64 filesize_t;
 # define FILESIZE_T_FORMAT "%" PRId64
 
