@@ -210,7 +210,7 @@ int main (int argc, char **argv)
 						"If you are the system administrator, check the "
 						"MasterLog and SchedLog in %s "
 						"for possible clues as to why the condor_schedd "
-						"isn't misbehaving. Also see the Troubleshooting "
+						"is misbehaving. Also see the Troubleshooting "
 						"section of the manual.", 
 						log_directory ? log_directory : "your Condor log directory");
 				print_wrapped_text(error_message, stderr);
