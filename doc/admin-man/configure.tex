@@ -615,10 +615,19 @@ you wish to control logging for.
   defined in \Macro{SCHEDD\_DEBUG} you will see verbose logging of all
   queue management operations the \Condor{schedd} performs.  
 
+\item[\Dflag{BANDWIDTH}] \label{dflag:bandwidth} When this flag is
+  set, the negotiator will log a message for every match which
+  includes the amount of network bandwidth used for job placement and
+  preemption.
+
 \label{list:debug level description}
 \end{description}
 
+\end{description}
+
 Log files may optionally be specified per debug level as follows:
+
+\begin{description}
 
 \item[\Macro{SUBSYS\_LEVEL\_LOG}] \label{param:SubsysLevelLog} This is
   the name of a log file for messages at a specific debug level for a
@@ -1434,7 +1443,7 @@ These settings control the \Condor{schedd}.
   manager in the list if the local pool and pools earlier in the list
   are not satisfying all the job requests.
   \Macro{HOSTALLOW\_NEGOTIATOR\_SCHEDD} (see
-  section~\ref{param:HostAllow} must also be configured to allow
+  section~\ref{param:HostAllow}) must also be configured to allow
   negotiators from all of the \Macro{FLOCK\_HOSTS} to contact the
   schedd.  Similarly, the central managers of the remote pools must be
   configured to listen to requests from this schedd.
@@ -1729,7 +1738,7 @@ These settings control the \Condor{negotiator}.
   \label{param:PreemptionRequirements} The negotiator will not preempt
   a job running on a given machine unless the
   \Expr{PREEMPTION\_REQUIREMENTS} expression evaluates to true.  This
-  expression defaults to true.
+  expression defaults to (RemoteUserPrio $>$ SubmittorPrio).
 
 \item[\Expr{PREEMPTION\_RANK}] \label{param:PreemptionRank} This
   expression is used to rank machines which the job ranks the same.
