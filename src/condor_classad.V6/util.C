@@ -31,7 +31,11 @@ BEGIN_NAMESPACE( classad )
 union RealHexUnion
 { 
 	double     real; 
+#ifndef WIN32
 	long long  hex; 
+#else
+	__int64 hex;
+#endif
 };
 
 bool hex_to_double(const string &hex, double &number)
