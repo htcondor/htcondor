@@ -482,25 +482,31 @@ section~\ref{sec:Condor-AFS} for all the details.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{disk space requirement!all versions}
-The Condor release directory takes up a fair amount of space.  This is
-another reason why it's a good idea to have it on a shared
-file system.  The rough size requirements for the release
-directory on various platforms are listed in table~\ref{install-sizes}.
+Condor takes up a fair amount of space.
+This is another reason why it is a good idea to have it on a shared
+file system.
+The size requirements for the downloads are given on the
+downloads page.
+They currently vary from about 20 Mbytes (statically linked HP Unix
+on a PA RISC)
+to more than 50 Mbytes (dynamically linked Irix on an SGI).
 
-\begin{center}
-\begin{table}
-\begin{tabular}{|ll|} \hline
-\emph{Platform} 	&	\emph{Size}		\\	\hline \hline
-	  Intel/Linux   &	11   Mbytes (statically linked) \\
-	  Intel/Linux   &	6.5 Mbytes (dynamically linked) \\
-	  Intel/Solaris &	8   Mbytes \\
-	  Sparc/Solaris &	10   Mbytes \\
-	  SGI/IRIX	    &	17.5 Mbytes \\
-	  Alpha/Digital Unix & 	15.5 Mbytes \\ \hline
-\end{tabular}
-\caption{\label{install-sizes}Release Directory Size Requirements}
-\end{table}
-\end{center}
+%listed in table~\ref{install-sizes}.
+
+%\begin{center}
+%\begin{table}
+%\begin{tabular}{|ll|} \hline
+%\emph{Platform} 	&	\emph{Size}		\\	\hline \hline
+%         Intel/Linux   &	11   Mbytes (statically linked) \\
+%         Intel/Linux   &	6.5 Mbytes (dynamically linked) \\
+%         Intel/Solaris &	8   Mbytes \\
+%         Sparc/Solaris &	10   Mbytes \\
+%         SGI/IRIX	    &	17.5 Mbytes \\
+%         Alpha/Digital Unix & 	15.5 Mbytes \\ \hline
+%\end{tabular}
+%\caption{\label{install-sizes}Release Directory Size Requirements}
+%\end{table}
+%\end{center}
 
 In addition, you will need a lot of disk space in the local directory
 of any machines that are submitting jobs to Condor.  See question 5
