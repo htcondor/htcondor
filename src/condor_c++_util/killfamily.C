@@ -89,12 +89,15 @@ ProcFamily::hardkill()
 void
 ProcFamily::suspend()
 {
+	takesnapshot();
 	spree(SIGSTOP, PATRICIDE);
 }
 
 void
 ProcFamily::resume()
 {
+		// Shouldn't need to take a snapshot, since if the family is
+		// suspended, it hasn't been changing.
 	spree(SIGCONT, INFANTICIDE);
 }
 
@@ -201,11 +204,8 @@ ProcFamily::takesnapshot()
 	if ( procAPI->getPidFamily(daddy_pid,pidfamily) < 0 ) {
 		// daddy_pid must be gone!
 		pidfamily[0] = 0;
-	} else {
-		// daddy_pid still around, add it to our list
-		(*new_pids)[newpidindex].pid = daddy_pid;
-		newpidindex++;
 	}
+		// Don't need to insert daddypid, it's already in there. 
 
 	// see if there are pids we saw earlier which no longer
 	// show up -- they may have been inherited by init
