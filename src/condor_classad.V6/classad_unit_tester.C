@@ -21,6 +21,20 @@
  *
  *********************************************************************/
 
+/*--------------------------------------------------------------------
+ *
+ * To Do:
+ *  - Write test_classad()
+ *    Make sure to test GetExternalReferences()
+ *  - Write test_value()
+ *  - Write test_literal()
+ *  - Write test_match()
+ *  - Write test_operator()
+ *  - Extend test_collection() to test much more of the interface
+ *  - Test xml: roll in test_xml.C?
+ *
+ *-------------------------------------------------------------------*/
+
 #if defined(CLASSAD_DISTRIBUTION)
 #include "classad_distribution.h"
 #else
@@ -45,19 +59,19 @@ else results.AddFailedTest(name, __LINE__);}
 class Parameters
 {
 public: 
-	bool      debug;
-    bool      verbose;
-    bool      very_verbose;
+	bool  debug;
+    bool  verbose;
+    bool  very_verbose;
 
-    bool      check_all;
-    bool      check_classad;
-	bool      check_exprlist;
-    bool      check_value;
-    bool      check_literal;
-    bool      check_match;
-    bool      check_operator;
-    bool      check_collection;
-	void ParseCommandLine(int argc, char **argv);
+    bool  check_all;
+    bool  check_classad;
+	bool  check_exprlist;
+    bool  check_value;
+    bool  check_literal;
+    bool  check_match;
+    bool  check_operator;
+    bool  check_collection;
+	void  ParseCommandLine(int argc, char **argv);
 };
 
 class Results
@@ -83,6 +97,8 @@ private:
  *
  *--------------------------------------------------------------------*/
 
+static void test_collection(const Parameters &parameters, Results &results);
+static bool check_in_view(ClassAdCollection *collection, string view_name, string classad_name);
 static void test_exprlist(const Parameters &parameters, Results &results);
 static void print_version(void);
 
@@ -263,6 +279,7 @@ int main(
     if (parameters.check_all || parameters.check_operator) {
     }
     if (parameters.check_all || parameters.check_collection) {
+        test_collection(parameters, results);
     }
 
     /* ----- Report ----- */
@@ -394,6 +411,132 @@ static void test_exprlist(const Parameters &parameters, Results &results)
     // they should have been deleted when the list was deleted.
 
     return;
+}
+
+/*********************************************************************
+ *
+ * Function: test_collection
+ * Purpose:  Test the ClassAdCollection class. Note that we test the
+ *           local Collections only: we don't test the server/client
+ *           versions available in ClassAdCollectionServer and 
+ *           ClassAdCollectionClient.
+ *
+ *********************************************************************/
+static void test_collection(const Parameters &parameters, Results &results)
+{
+    bool               success;
+    static const char  *collection_log_file_name = "collection.log";
+    ClassAd            *machine1, *machine2, *machine3;
+    ClassAd            *retrieved;
+    ClassAdParser      parser;
+    ClassAdCollection  *collection;
+
+    cout << "Testing the ClassAdCollection class...\n";
+
+    /* ----- Create the ClassAds that we'll put into the collection ----- */
+    machine1 = parser.ParseClassAd("[ Type = \"machine\"; OS = \"Linux\"; Memory = 5000;]", true);
+    machine2 = parser.ParseClassAd("[ Type = \"machine\"; OS = \"Linux\"; Memory = 3000;]", true);
+    machine3 = parser.ParseClassAd("[ Type = \"machine\"; OS = \"Windows\"; Memory = 6000;]", true);
+    TEST("Made ClassAds for Collection", ((machine1 != NULL) && (machine2 != NULL) && (machine3 != NULL)));
+
+    /* ----- Create the collection ----- */
+    collection = new ClassAdCollection();
+    TEST("Made Collection", collection != NULL);
+    if (collection == NULL) {
+        return;
+    }
+    
+    // We delete the log file so we start with a fresh slate.
+    // Later on we will make a different colleciton from the log file
+    // that we create, so we can test that it does what we want.
+    unlink(collection_log_file_name);
+    success = collection->InitializeFromLog(collection_log_file_name);
+    TEST("Initialized from empty log", success == true);
+
+    /* ----- Add the machines to the collection ----- */
+    success = collection->AddClassAd("machine1", machine1);
+    TEST("Added machine1 to collection", success == true);
+    success = collection->AddClassAd("machine2", machine2);
+    TEST("Added machine2 to collection", success == true);
+    success = collection->AddClassAd("machine3", machine3);
+    TEST("Added machine3 to collection", success == true);
+
+    /* ----- Make sure that they are in the collection ----- */
+    retrieved = collection->GetClassAd("machine1");
+    TEST("machine1 in the colleciton", retrieved == machine1);
+    retrieved = collection->GetClassAd("machine2");
+    TEST("machine1 in the colleciton", retrieved == machine2);
+    retrieved = collection->GetClassAd("machine3");
+    TEST("machine1 in the colleciton", retrieved == machine3);
+
+    /* ----- Make a couple of subviews ----- */
+    success = collection->CreateSubView("Linux-View", "root",
+                                        "(other.OS == \"Linux\")", "", "");
+    TEST("Create Machine-View", success == true);
+    success = collection->CreateSubView("BigLinux-View", "Linux-View",
+                                        "(other.Memory >= 5000)", "", "");
+    TEST("Create BigMachine-View", success == true);
+
+    /* ----- Now test that the right things are in each view ----- */
+    TEST("machine1 in Linux-View", (check_in_view(collection, "Linux-View", "machine1") == true));
+    TEST("machine2 in Linux-View", (check_in_view(collection, "Linux-View", "machine2") == true));
+    TEST("machine3 not in Linux-View", (check_in_view(collection, "Linux-View", "machine3") == false));
+    TEST("machine1 not in BigLinux-View", (check_in_view(collection, "BigLinux-View", "machine1") == true));
+    TEST("machine2 in BigLinux-View", (check_in_view(collection, "BigLinux-View", "machine2") == false));
+    TEST("machine3 not in BigLinux-View", (check_in_view(collection, "BigLinux-View", "machine3") == false));
+
+    /* ----- Reread from the collection log and see if everything is still good ----- */
+    delete collection;
+    collection = new ClassAdCollection();
+    TEST("Made Collection again", collection != NULL);
+    if (collection == NULL) {
+        return;
+    }
+    success = collection->InitializeFromLog(collection_log_file_name);
+    TEST("Initialized from full log", success == true);
+    TEST("machine1 in root", (check_in_view(collection, "root", "machine1") == true));
+    TEST("machine2 in root", (check_in_view(collection, "root", "machine2") == true));
+    TEST("machine3 not in root", (check_in_view(collection, "root", "machine3") == true));
+    TEST("machine1 in Linux-View", (check_in_view(collection, "Linux-View", "machine1") == true));
+    TEST("machine2 in Linux-View", (check_in_view(collection, "Linux-View", "machine2") == true));
+    TEST("machine3 not in Linux-View", (check_in_view(collection, "Linux-View", "machine3") == false));
+    TEST("machine1 not in BigLinux-View", (check_in_view(collection, "BigLinux-View", "machine1") == true));
+    TEST("machine2 in BigLinux-View", (check_in_view(collection, "BigLinux-View", "machine2") == false));
+    TEST("machine3 not in BigLinux-View", (check_in_view(collection, "BigLinux-View", "machine3") == false));
+
+    delete collection;
+
+    unlink(collection_log_file_name);
+    return;
+}
+
+static bool check_in_view(
+    ClassAdCollection  *collection,
+    string             view_name,
+    string             classad_name)
+{
+    bool have_view;
+    bool in_view;
+
+    in_view = false;
+
+    LocalCollectionQuery  query;
+
+    query.Bind(collection);
+    
+    have_view = query.Query(view_name, NULL);
+    if (have_view) {
+        string classad_key;
+        for (query.ToFirst(), query.Current(classad_key); 
+             !query.IsAfterLast(); 
+             query.Next(classad_key)) {
+            if (!classad_key.compare(classad_name)) {
+                in_view = true;
+                break;
+            }
+        }
+    }
+    return in_view;
 }
 
 /*********************************************************************
