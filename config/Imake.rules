@@ -6,6 +6,8 @@
 PLATFORM_FLAG=-DIS_SUN4M_SOLARIS251
 #elif IS_X86_SOLARIS25
 #define IMAKE_FLAGS 	-I../../config -DIS_X86_SOLARIS25 -s Makefile
+#elif IS_GLIBC
+#define IMAKE_FLAGS 	-I../../config -DIS_GLIBC -s Makefile
 #else
 #define IMAKE_FLAGS	-I../../config -s Makefile
 #endif
@@ -31,25 +33,25 @@ DEMANGLE = 2>&1 | Demangler
 ** Set up to make all the objects in a particular directory.
 */
 #ifndef object_target
-#define object_target(obj_name)				@@\
-obj_name: condor_##obj_name				@@\
-	cd condor_##obj_name; make $(SMP_FLAGS)		@@\
-release:: condor_##obj_name				@@\
-	cd condor_##obj_name; make release		@@\
-stripped:: condor_##obj_name				@@\
-	cd condor_##obj_name; make stripped		@@\
-static:: condor_##obj_name				@@\
-	cd condor_##obj_name; make static		@@\
-clean:: condor_##obj_name				@@\
-	cd condor_##obj_name; make clean		@@\
-tags:: condor_##obj_name				@@\
-	cd condor_##obj_name; make tags			@@\
-depend:: condor_##obj_name				@@\
-	cd condor_##obj_name; make depend		@@\
-makefiles:: condor_##obj_name##/Makefile		@@\
-condor_##obj_name##/Makefile:				@@\
-	cd condor_##obj_name ; imake IMAKE_FLAGS	@@\
-object_dir_target(condor_##obj_name)
+#define object_target(obj_name)					@@\
+##obj_name##: condor_##obj_name					@@\
+	cd condor_##obj_name; make $(SMP_FLAGS)			@@\
+release:: condor_##obj_name					@@\
+	cd condor_##obj_name; make release			@@\
+stripped:: condor_##obj_name					@@\
+	cd condor_##obj_name; make stripped			@@\
+static:: condor_##obj_name					@@\
+	cd condor_##obj_name; make static			@@\
+clean:: condor_##obj_name					@@\
+	cd condor_##obj_name; make clean			@@\
+tags:: condor_##obj_name					@@\
+	cd condor_##obj_name; make tags				@@\
+depend:: condor_##obj_name					@@\
+	cd condor_##obj_name; make depend			@@\
+makefiles:: condor_##obj_name condor_##obj_name##/Makefile	@@\
+condor_##obj_name##/Makefile:					@@\
+	cd condor_##obj_name ; imake IMAKE_FLAGS		@@\
+object_dir_target(condor_##obj_name)		
 #endif /* object_target */
 
 /*
@@ -388,7 +390,7 @@ all::						@@\
 */
 #define RLINK( compiler, remotetarg, obj )	@@\
 remotetarg: obj					@@\
-	condor_compile $(CONDOR_COMPILE_FLAGS) compiler -o remotetarg obj @@\
+	$(CONDOR_COMPILE) $(CONDOR_COMPILE_FLAGS) compiler -o remotetarg obj @@\
 clean::						@@\
 	rm -f remotetarg obj			@@\
 all:: remotetarg
@@ -399,7 +401,7 @@ all:: remotetarg
 */
 #define SLINK( compiler, standalonetarg, obj )		@@\
 standalonetarg: obj					@@\
-	condor_compile $(CONDOR_COMPILE_FLAGS) $(STAND_ALONE_FLAG) compiler -o standalonetarg obj @@\
+	$(CONDOR_COMPILE) $(CONDOR_COMPILE_FLAGS) $(STAND_ALONE_FLAG) compiler -o standalonetarg obj @@\
 							@@\
 clean::							@@\
 	rm -f standalonetarg obj			@@\
@@ -486,8 +488,8 @@ clean::						@@\
 	mkdir dir_name							@@\
 	cd dir_name##; for file in `ls $(SRC_TREE)/##dir_name##`; \	@@\
 		do ln -s $(SRC_TREE)/##dir_name##/$$file .; done;	@@\
-	cd dir_name##; imake IMAKE_FLAGS
-#endif  object_dir_target
+	rm dir_name##/CVS
+#endif /* object_dir_target */
 
 
 /*
