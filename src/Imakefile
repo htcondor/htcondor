@@ -79,7 +79,7 @@ TEST_SUITE_C = test_suite_C.V5
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts shadow.V6 startd.V6 starter.V5 submit.V6 status.V6 \
 		tools kbdd collector.V6 PvmProgs dagman userlog Eventd \
-		GlobusProgs starter.V6.1 shadow.V6.1 dcskel
+		GlobusProgs starter.V6.1 shadow.V6.1 dcskel drmaa
 
 #define Libraries \
 		util_lib daemon_client classad c++_util condor_procapi/libprocapi.a \
@@ -227,6 +227,7 @@ object_target(scripts)
 object_target(starter.V6.1)
 object_target(shadow.V6.1)
 object_target(dcskel)
+object_target(drmaa)
 object_target(chirp)
 
 object_dir_target(h)
