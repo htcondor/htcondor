@@ -236,7 +236,7 @@ short_print(
 		cluster,
 		proc,
 		owner,
-		format_date(date),
+		format_date((time_t)date),
 		format_time(time),
 		encode_status(status),
 		prio,
