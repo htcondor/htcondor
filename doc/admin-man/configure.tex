@@ -2560,6 +2560,15 @@ These macros control the \Condor{schedd}.
   The macro is defined in terms of seconds and defaults to 300 (every
   5 minutes).
 
+\item[\Macro{REQUEST\_CLAIM\_TIMEOUT}]
+  \label{param:RequestClaimTimeout} This macro sets the time (in
+  seconds) that the schedd will wait for a claim to be granted by the
+  startd.  The default is 30 minutes.  This is only likely to matter
+  if the startd has an existing claim and it takes a long time for the
+  existing claim to be preempted due to \Expr{MaxJobRetirementTime}.
+  Once a request times out, the schedd will simply begin the process
+  of finding a machine for the job all over again.
+
 \item[\Macro{SHADOW\_SIZE\_ESTIMATE}] \label{param:ShadowSizeEstimate}
   This macro sets the estimated virtual memory size of each
   \Condor{shadow} process.  Specified in kilobytes.  The default

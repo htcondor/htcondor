@@ -153,6 +153,13 @@ machine.  For Condor \VersionNotice\ typically one of the following:
 of the machine ClassAd and a job ClassAd, must evaluate to
 TRUE before Condor will allow the job to use this machine.
 %
+\index{ClassAd machine attribute!MaxJobRetirementTime}
+\item[\AdAttr{MaxJobRetirementTime}] : An expression giving the
+maximum time in seconds that the startd will wait for the job to
+finish before kicking it off if it needs to do so.  This is evaluated
+in the context of the job ClassAd, so it may refer to job attributes
+as well as machine attributes.
+%
 \index{ClassAd machine attribute!StartdIpAddr}
 \item[\AdAttr{StartdIpAddr}] : String with the IP and port address of the
 \Condor{startd} daemon which is publishing this machine ClassAd.

@@ -6,6 +6,56 @@ This is the development release series of Condor,
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:New-6-7-2}Version 6.7.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Added new startd policy expression MaxJobRetirementTime.  This
+specifies the maximum amount of time (in seconds) that the startd
+is willing to wait for a job to finish on its own when the startd
+needs to preempt the job (for owner preemption, negotiator preemption,
+or graceful startd shutdown).
+
+\item Added -peaceful shutdown/restart mode.  This will shut down the
+startd without killing any jobs, effectively treating both
+\Expr{MaxJobRetirementTime} and \Expr{GRACEFUL\_SHUTDOWN\_TIMEOUT} as
+infinite.  The default shutdown/restart mode is still -graceful, which
+behaves according to whatever \Expr{MaxJobRetirementTime} and
+\Expr{GRACEFUL\_SHUTDOWN\_TIMEOUT} are.  The behavior of -fast mode
+is unchanged; it kills jobs immediately, regardless of the other
+timeout settings.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:New-6-7-1}Version 6.7.1}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

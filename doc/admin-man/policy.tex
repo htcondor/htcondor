@@ -156,7 +156,7 @@ is modified to reference job ClassAd attributes, the
 only machine ClassAd attributes.
 
 \Note If you have machines with lots of real memory and swap space such
-that the only scarce resource is CPU time, consider using
+that the only scarce resource is CPU time, consider
 defining \Macro{JOB\_RENICE\_INCREMENT} 
 so that Condor starts jobs on the machine with low priority.
 Then, further configure to set up the machines with:
@@ -166,7 +166,8 @@ Then, further configure to set up the machines with:
         PREEMPT = False
         KILL = False
 \end{verbatim}
-In this way, Condor jobs always run and can never be kicked off. 
+In this way, Condor jobs always run and can never be kicked off
+from activity on the machine. 
 However, because they would run with ``nice priority'', interactive 
 response on the machines will not suffer.
 You probably would not notice Condor was running the jobs, 
@@ -399,6 +400,14 @@ The following list describes all the possible state/activity pairs.
   The match between the schedd and machine has not been broken (the
   claim is still valid), but the job is not making any progress and
   Condor is no longer generating a load on the machine.
+
+\index{machine activity!Retiring}
+\item[Retiring] When an active claim is about to be preempted for any
+reason, it enters retirement, while it waits for the current job to
+finish.  The \Expr{MaxJobRetirementTime} expression determines how
+long to wait (counting since the time the job started).  Once the job
+finishes or the retirement time expires, the Preempting state is
+entered.
 \end{description}
 
 \item Preempting
@@ -717,10 +726,19 @@ If already polling one virtual machine, it does not
 cost much to evaluate the state of all the virtual machines at
 the same time.
 
-In general, when the startd is going to take a job off a machine
-(usually because of activity on the machine that signifies that the
-owner is using the machine again),
-the startd will go through
+There are a variety of events that may cause the startd to try to get
+rid of or temporarily suspend a running job.  Activity on the
+machine's console, load from other jobs, or shutdown of the startd via
+an administrative command are all possible sources of inteference.
+Another one is the appearance of a higher priority claim to the
+machine by a different Condor user.
+
+Depending on the configuration, the startd may respond quite
+differently to activity on the machine, such as keyboard activity or
+demand for the cpu from processes that are not managed by Condor.  The
+startd can be configured to completely ignore such activity or to
+suspend the job or even to kill it.  A standard configuration for a desktop
+machine might be to go through
 successive levels of getting the job out of the way.
 The first and least costly to the job is suspending it.
 This works for both standard and vanilla jobs.
@@ -730,7 +748,7 @@ time), the startd moves on to vacating the job.
 Vacating a standard universe job
 involves performing a checkpoint so that the work already completed
 is not lost.  Vanilla jobs are sent a \Term{soft kill signal} so that they
-can gracefully shutdown if necessary; the default is \verb@SIGTERM@.
+can gracefully shut down if necessary; the default is \verb@SIGTERM@.
 If vacating does not satisfy the machine owner (usually because it is
 taking too long and the owner wants their machine back \emph{now}),
 the final, most drastic stage is reached: killing.  
@@ -775,21 +793,26 @@ By transition, the possible state/activity destinations from Claimed/Busy:
   (for example because the jobs completes), the machine will go
   to Claimed/Idle (transition \Bold{11}).
   
-\item[Preempting] If \Expr{WANT\_SUSPEND} is FALSE and the
+\item[Claimed/Retiring] If \Expr{WANT\_SUSPEND} is FALSE and the
   \Expr{PREEMPT} expression is TRUE, the machine enters the
-  Preempting state (transition \Bold{12}).
-  The other reason the machine would go from Claimed/Busy to
-  Preempting is if the \Condor{negotiator} matched the machine
+  Retiring activity (transition \Bold{12}).  From there, it
+  waits for a configurable amount of time for the job to finish
+  before moving on to preemption.
+
+  Another reason the machine would go from Claimed/Busy to
+  Claimed/Retiring is if the \Condor{negotiator} matched the machine
   with a ``better'' match.  This better match could either be from the
-  machine's perspective using the \Expr{RANK} Expression above,
+  machine's perspective using the startd \Expr{RANK} expression,
   or it could be from the negotiator's perspective due to
   a job with a higher user priority.
-  In this case, \Expr{WANT\_VACATE} is assumed to be TRUE, and the
-  machine transitions to Preempting/Vacating.
+
+  Another case resulting in a transition to Claimed/Retiring is when
+  the startd is being shut down.  The only exception is a ``fast''
+  shutdown, which bypasses retirement completely.
   
 \item[Claimed/Suspended] If both the \Expr{WANT\_SUSPEND} and
   \Expr{SUSPEND} expressions evaluate to TRUE, the machine
-  suspends the job (transition \Bold{13}).
+  suspends the job (transition \Bold{14}).
   
 \end{description}
   
@@ -808,10 +831,36 @@ may occur:
   
 \item[Claimed/Busy] If the \Expr{CONTINUE} expression evaluates to
   TRUE, the machine resumes the job and enters the
-  Claimed/Busy state (transition \Bold{14}).
+  Claimed/Busy state (transition \Bold{15}).
 
-\item[Preempting] If the \Expr{PREEMPT} expression is TRUE, the machine
-  will enter the Preempting state (transition \Bold{15}).
+\item[Claimed/Retiring] If the \Expr{PREEMPT} expression is TRUE, the machine
+  will enter the Claimed/Retiring activity (transition \Bold{16}).
+
+\end{description}
+
+For the Claimed/Retiring state, the following transitions may occur:
+
+\begin{description}
+
+\item[Preempting] If the job finishes or the job's runtime exceeds
+\Expr{MaxJobRetirementTime}, the Preempting state is entered
+(transition \Bold{18}).  The runtime is computed from the time when the
+job was started by the startd minus any suspension time.  (When retiring
+due to startd shutdown or restart, it is possible for the admin to issue a
+``peaceful'' shutdown command, which causes \Expr{MaxJobRetirementTime}
+to effectively be infinite, avoiding any killing of jobs.)
+
+\item[Claimed/Busy] If the startd was retiring because of a preempting
+claim only and the preempting claim goes away, the normal Claimed/Busy
+state is resumed (transition \Bold{13}).  If instead the retirement
+is due to owner activity (\Expr{PREEMPT}) or the startd is being shut down,
+no unretirement is possible.
+
+\item[Claimed/Suspended] In exactly the same way that suspension may
+happen from the Claimed/Busy state, it may also happen during the
+Claimed/Retiring state (transition \Bold{17}).  In this case, when the
+job continues from suspension, it transitions back into
+Claimed/Retiring instead of Claimed/Busy (transition \Bold{16}).
 
 \end{description}
 
@@ -844,7 +893,7 @@ do a graceful shutdown, by intercepting the soft kill signal.
 If the machine is in the Vacating activity, it keeps evaluating the 
 \Expr{KILL} expression.
 As soon as this expression evaluates to TRUE,
-the machine enters the Killing activity (transition \Bold{16}).
+the machine enters the Killing activity (transition \Bold{19}).
 
 When the starter exits, or if there was no starter running when the
 machine enters the Preempting state (transition \Bold{9}),
@@ -853,8 +902,8 @@ notifying the schedd that had claimed this machine that the claim is
 broken.
 
 At this point, the machine enters either the Owner state by
-transition \Bold{17} (if the job was preempted because the machine
-owner came back) or the Claimed/Idle state by transition \Bold{18}
+transition \Bold{20} (if the job was preempted because the machine
+owner came back) or the Claimed/Idle state by transition \Bold{21}
 (if the job was preempted because a better match was found).
 The machine enters the Killing activity, and it starts a timer, the
 length of which is defined by the \Macro{KILLING\_TIMEOUT}
@@ -868,9 +917,9 @@ the \Condor{starter} itself.
 
 Once the starter is gone and the schedd that had claimed the
 machine is notified that the claim is broken, the machine will either
-enter the Owner state by transition \Bold{19} (if the job was
+enter the Owner state by transition \Bold{22} (if the job was
 preempted because the machine owner came back) or the Claimed/Idle
-state by transition \Bold{20} (if the job was preempted because a
+state by transition \Bold{23} (if the job was preempted because a
 better match was found). 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -910,8 +959,23 @@ It serves as a quick reference.
   
 \item[\Expr{PREEMPT}] If the machine is either in the Claimed/Suspended
   activity, or is in the Claimed/Busy activity and
-  \Expr{WANT\_SUSPEND} is FALSE, the machine enters the Preempting
+  \Expr{WANT\_SUSPEND} is FALSE, the machine enters the Claimed/Retiring
   state whenever \Expr{PREEMPT} is TRUE. 
+
+\item[\Expr{MaxJobRetirementTime}] If the machine is in the
+Claimed/Retiring state, this expression specifies the maximum time (in
+seconds) that the startd is willing to wait for the job to finish on
+its own.  The clock starts when the job is started and is paused
+during any suspension, so the job may count on at least the specified
+amount of runtime without getting killed by the startd.  The job may
+provide its own expression for \Expr{MaxJobRetirementTime}, but this
+can only be used to take \emph{less} than the time granted by the
+startd, never more.  (For convenience, standard universe and
+nice\_user jobs have a default retirement time of 0, so they will
+normally not wait in retirement.)
+
+Once the job finishes or if the retirement time expires, the machine
+enters the Preempting state.
   
 \item[\Expr{WANT\_VACATE}] This is checked only when the
   \Expr{PREEMPT} expression is TRUE and the machine enters the
@@ -921,7 +985,7 @@ It serves as a quick reference.
   If it is FALSE, the machine will proceed directly to the Killing
   activity.  
   
-\item[\Expr{KILL}] If the machine is the Preempting/Vacating state, it
+\item[\Expr{KILL}] If the machine is in the Preempting/Vacating state, it
   enters Preempting/Killing whenever \Expr{KILL} is TRUE. 
   
 \item[\Macro{KILLING\_TIMEOUT}] If the machine is in the
@@ -1102,6 +1166,15 @@ PREEMPT	        = ( ((Activity == "Suspended") && \
                     || (SUSPEND && (WANT_SUSPEND == False)) )
 \end{verbatim}
 
+
+Do not give jobs any time to retire on their own when they are about to
+be preempted.
+
+\begin{verbatim}
+MaxJobRetirementTime = 0
+\end{verbatim}
+
+
 Kill jobs that take too long leaving gracefully.
 \begin{verbatim}
 KILL            = $(ActivityTimer) > $(MaxVacateTime)
@@ -1166,6 +1239,7 @@ CONTINUE        = ( $(CPUIdle) && ($(ActivityTimer) > 10) \
 PREEMPT	        = ( ((Activity == "Suspended") && \
                     ($(ActivityTimer) > $(MaxSuspendTime))) \
                     || (SUSPEND && (WANT_SUSPEND == False)) )
+MaxJobRetirementTime = 0
 KILL            = $(ActivityTimer) > $(MaxVacateTime)
 PERIODIC_CHECKPOINT     = ( (ImageSize < 60000) && \
                             ($(LastCkpt) > (6 * $(HOUR))) ) || \ 
@@ -1345,6 +1419,12 @@ PREEMPT = ( ((Activity == "Suspended") && \
             ($(ActivityTimer) > $(MaxSuspendTime))) \
            || (SUSPEND && (WANT_SUSPEND == False)) )
 
+# Replace 0 in the following expression with whatever amount of
+# retirement time you want dedicated jobs to provide.  The other part
+# of the expression forces the whole expression to 0 on desktop
+# machines.
+MaxJobRetirementTime = (IsDesktop =!= True) * 0
+
 # Kill jobs if they have taken too long to vacate gracefully
 KILL = $(ActivityTimer) > $(MaxVacateTime) 
 
@@ -1380,39 +1460,25 @@ still have it gracefully shutdown and restart by intercepting the soft
 kill signal.
 
 All that being said, there still may be cases where you want to be
-sure that Condor is never responsible for killing jobs.  This can be
-achieved with the following policy:
+sure that Condor is never responsible for killing jobs within some
+upper time limit.  This can be achieved with the following policy:
 
 \begin{verbatim}
-PREEMPT = False
-PREEMPTION_REQUIREMENTS = False
-RANK = 0
+# When we want to kick a job off, let it run uninterrupted for
+# up to 2 days before forcing it to vacate.
+MaxJobRetirementTime = $(HOUR) * 24 * 2
 \end{verbatim}
 
-Setting \Macro{PREEMPT} to False disables preemption from activity
-on the machine, for example because of console activity from
-the machine owner.
-\Macro{PREEMPTION\_REQUIREMENTS} is set to False to disable preemption
-by users with better priority in the pool. 
-Technically, that is part
-of the \Condor{negotiator} policy, not the \Condor{startd} daemon policy.
-Setting the
-\Condor{startd}'s \Macro{RANK} expression to 0 removes the possibility of
-\Condor{startd} preemption,
-which is when the \Condor{negotiator} finds a job that the
-\Condor{startd} likes better than the current job it is running.
-For this purpose,
-setting the rank to any constant or to nothing at all would
-work just as well.
+The expression may be more complicated.  For example, it could provide
+a different retirement time to different users or different types of
+jobs.  Also be aware that the job may come with its own definition
+of \Expr{MaxJobRetirementTime}, but this may only cause \emph{less}
+retirement time to be used, never more than what the machine offers.
 
-You should be aware of one disadvantage of this policy:
-a low priority
-user can get a claim to a machine and then hold on to it indefinitely,
-by running a very long job or by keeping the machine busy with a
-continuous stream of short jobs.  The \Condor{negotiator} will not
-be able to
-reallocate the resource to a higher priority user until the machine
-returns to an unclaimed state.
+The longer the retirement time that is given, the slower reallocation
+of resources in the pool can become if there are long jobs.  However,
+by preventing jobs from being killed, you may decrease the number of
+cycles that are wasted on non-checkpointable jobs that are killed.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Job-Suspension}Job Suspension}

@@ -414,6 +414,32 @@ for \Opt{grid} or \Opt{globus} universe jobs.
 The default value is \Opt{"gt2"}.
 
 %%%%%%%%%%%%%%%%%%%
+%% MaxJobRetirementTime
+%%%%%%%%%%%%%%%%%%%
+
+\item[MaxJobRetirementTime] Expression \index{MaxJobRetirementTime}
+giving the maximum runtime of the job (in seconds) that should be
+allowed for the job to finish naturally (with no soft or hard kill
+signals) when the resource claim is being preempted.  If the job is
+still running when the time expires, the usual preemption procedure is
+followed (typically a soft kill signal, followed by some time to
+gracefully shut down, followed by a hard kill signal).
+
+Standard universe jobs and any jobs running with nice\_user priority
+have a default \AdAttr{MaxJobRetirementTime} of 0.  In all other
+cases, no default value is provided, so if \AdAttr{MaxJobRetirementTime}
+is not specified, the full amount of time given by the machine policy
+will apply.  If \AdAttr{MaxJobRetirementTime} in your submit file is
+longer than the machine policy allows, the machine's upper bound takes
+effect.
+
+Setting this expression does not affect your job's resource
+requirements or preferences.  If you want your job to only run on
+machines with some minimum \AdAttr{MaxJobRetirementTime} or if you
+just want to preferentially run on such machines, you must explicitly
+specify what you want in the requirements and/or rank expressions.
+
+%%%%%%%%%%%%%%%%%%%
 %% on_exit_remove
 %%%%%%%%%%%%%%%%%%%
 

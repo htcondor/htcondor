@@ -205,6 +205,13 @@ epoch (00:00:00 UTC, Jan 1, 1970).
 evicted from a remote workstation.  Measured in the number of seconds
 since the epoch (00:00:00 UTC, Jan 1, 1970).
 
+%%% ClassAd attribute: MaxJobRetirementTime
+\index{ClassAd job attribute!MaxJobRetirementTime}
+\item[\AdAttr{MaxJobRetirementTime}] : Maximum time in seconds to let this
+job run uninterrupted before kicking it off when it is being preempted.
+This can only decrease the amount of time from what the corresponding
+startd expression allows.
+
 %%% ClassAd attribute: NiceUser
 \index{ClassAd job attribute!NiceUser}
 \item[\AdAttr{NiceUser}] : Boolean value which indicates whether

@@ -20,9 +20,8 @@
 
 \Condor{off} shuts down a set of the Condor daemons running on a set of
 one or more machines.
-It does this cleanly without a loss of work done by any jobs
-currently running on this machine, or jobs that are running on other machines
-that have been submitted from this machine.
+It does this cleanly so that checkpointable jobs may gracefully exit with
+minimal loss of work.
 
 The command \Condor{off} without any arguments will shut down
 all daemons except \Condor{master}.
@@ -45,6 +44,7 @@ for further explanation.
 	\ToolArgsBaseDesc
 	\OptItem{\Opt{-graceful}}{Gracefully shutdown daemons (the default)}
 	\OptItem{\Opt{-fast}}{Quickly shutdown daemons}
+	\OptItem{\Opt{-peaceful}}{Wait indefinitely for jobs to finish}
 	\ToolArgsLocateDesc
 	\ToolArgsAffectDesc
 \end{Options}
