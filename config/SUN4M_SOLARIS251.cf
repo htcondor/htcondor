@@ -3,7 +3,7 @@
 
 #define RpcLib /**/
 #define MldLib /**/
-#define KernLib /usr/lib/libelf.a /* weiru */
+#define KernLib /usr/lib/libkvm.so /usr/lib/libelf.a
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC  
 #define SocketLib /usr/lib/libsocket.so /usr/lib/libnsl.so
@@ -80,7 +80,7 @@
 #endif
 
 #ifndef Demangler
-#define Demangler /opt/SUNWspro/bin/c++filt  /* Ajitk */
+#define Demangler c++filt
 #endif
 
 #ifndef CFlags
