@@ -1604,9 +1604,27 @@ Checkpoint( int sig, int code, void *scp )
 	while( wait_up )
 		;
 #endif
+
+		// These two things must be done BEFORE saving of the process image.
+		_condor_save_sigstates();
+		dprintf( D_ALWAYS, "Saved signal state.\n");
+
+		dprintf( D_ALWAYS, "About to save file state\n");
+		_condor_file_table_checkpoint();
+		dprintf( D_ALWAYS, "Done saving file state\n");
+
 	if( SETJMP(Env) == 0 ) {	// Checkpoint
 			// First, take a snapshot of our memory image to prepare
 			// for the checkpoint and accurately report our image size.
+
+			// WARNING!!!! Once we have taken this snapshot, we MUST not do
+			// WARNING!!!! any libc memory managment anymore because it could
+			// WARNING!!!! screw up the segment boundaries.
+			// WARNING!!!! We should't be doing ANY memory management in the
+			// WARNING!!!! Checkpoint function call because we are in a signal
+			// WARNING!!!! handler anyway.
+			// WARNING!!!! We need to inspect the code to see if this
+			// WARNING!!!! happens. which I suspect it does... psilord 9/24/01
 		dprintf( D_ALWAYS, "About to update MyImage\n" );
 		MyImage.Save();
 
@@ -1643,8 +1661,17 @@ Checkpoint( int sig, int code, void *scp )
 				if (mode&CKPT_MODE_ABORT) {
 					dprintf(D_ALWAYS,
 							"Checkpoint aborted by shadow request.\n");
-						// We can't just return here.  We need to cleanup
-						// anything we've done above first.
+
+					// We can't just return here.  We need to cleanup
+					// anything we've done above first.
+
+					dprintf( D_ALWAYS, "About to restore file state\n");
+					_condor_file_table_resume();
+					dprintf( D_ALWAYS, "Done restoring file state\n" );
+
+					dprintf( D_ALWAYS, "About to restore signal state\n" );
+					_condor_restore_sigstates();
+
 					SetSyscalls( scm );
 					dprintf( D_ALWAYS, "About to return to user code\n" );
 					InRestart = FALSE;
@@ -1655,13 +1682,6 @@ Checkpoint( int sig, int code, void *scp )
 				condor_compress_ckpt = condor_slow_ckpt = 0;
 			}
 		}
-
-		_condor_save_sigstates();
-		dprintf( D_ALWAYS, "Saved signal state.\n");
-
-		dprintf( D_ALWAYS, "About to save file state\n");
-		_condor_file_table_checkpoint();
-		dprintf( D_ALWAYS, "Done saving file state\n");
 
 		dprintf( D_ALWAYS, "About to write checkpoint\n");
 		write_result = MyImage.Write();
