@@ -23,6 +23,7 @@
 
 #if !defined(SKIP_AUTHENTICATION) && !defined(WIN32)
 #include "condor_auth_fs.h"
+#include "condor_string.h"
 
 Condor_Auth_FS :: Condor_Auth_FS(ReliSock * sock, int remote)
     : Condor_Auth_Base( sock, CAUTH_FILESYSTEM ),

@@ -33,7 +33,6 @@
 
 #if !defined(SKIP_AUTHENTICATION)
 #   include "condor_debug.h"
-#   include "condor_string.h"
 #   include "condor_config.h"
 #   include "string_list.h"
 #endif /* !defined(SKIP_AUTHENTICATION) */
