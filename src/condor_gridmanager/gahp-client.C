@@ -1103,7 +1103,7 @@ GahpClient::globus_gram_client_job_signal(const char * job_contact,
 
 
 int
-GahpClient::globus_gram_client_job_callback_register(char * job_contact,
+GahpClient::globus_gram_client_job_callback_register(const char * job_contact,
 	const int job_state_mask,
 	const char * callback_contact,
 	int * job_status,
@@ -1223,7 +1223,7 @@ GahpClient::globus_gram_client_ping(const char * resource_contact)
 }
 
 int
-GahpClient::globus_gram_client_job_refresh_credentials(char *job_contact)
+GahpClient::globus_gram_client_job_refresh_credentials(const char *job_contact)
 {
 	static const char* command = "GRAM_JOB_REFRESH_PROXY";
 

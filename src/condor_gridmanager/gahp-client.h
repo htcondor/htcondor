@@ -241,7 +241,7 @@ class GahpClient : public Service {
 
 		///
 		int
-		globus_gram_client_job_callback_register(char * job_contact,
+		globus_gram_client_job_callback_register(const char * job_contact,
 			const int job_state_mask,
 			const char * callback_contact,
 			int * job_status,
@@ -263,7 +263,7 @@ class GahpClient : public Service {
 
 		///
 		int
-		globus_gram_client_job_refresh_credentials(char *job_contact);
+		globus_gram_client_job_refresh_credentials(const char *job_contact);
 
 		///
 		int
