@@ -51,7 +51,11 @@ string_to_sin(char *addr, struct sockaddr_in *sin)
 	string++;					/* skip the leading '<' */
 
 	/* allow strings of the form "<hostname:pppp>" */
-	colon = strchr(string, ':');
+	if( !(colon = strchr(string, ':')) ) {
+			// Not a valid sinful string, return failure
+		free(addrCpy);
+		return 0;
+	}
 	*colon = '\0';
 	if ( is_ipaddr(string,NULL) != TRUE &&	// only call gethostbyname if not numbers
 		((hostptr=gethostbyname(string)) != NULL && hostptr->h_addrtype==AF_INET) )
@@ -87,7 +91,6 @@ string_to_sin(char *addr, struct sockaddr_in *sin)
 	string[temp] = '\0';
 	*colon = ':';
 	free(addrCpy);
-
 	return 1;
 }
 
@@ -334,6 +337,8 @@ string_to_port( const char* addr )
 	char *sinful, *tmp;
 	int port = 0;
 
+	if( ! addr ) return 0;
+
 	sinful = strdup( addr );
 	if( (tmp = strrchr(sinful, '>')) ) {
 		*tmp = '\0';
@@ -353,6 +358,8 @@ string_to_ip( const char* addr )
 	char *sinful, *tmp;
 	unsigned int ip = 0;
 	struct in_addr sin_addr;
+
+	if( ! addr ) return 0;
 
 	sinful = strdup( addr );
 	if( sinful[0] == '<' && sinful[1] ) {
