@@ -59,6 +59,7 @@ enum ULogEventNumber
 #if defined(GENERIC_EVENT)
 	,ULOG_GENERIC			        
 #endif	    
+	,ULOG_JOB_ABORTED				// Job terminated
 };
 
 
@@ -180,6 +181,19 @@ class CheckpointedEvent : public ULogEvent
 	rusage	run_local_rusage;
 	rusage  run_remote_rusage;
 #endif
+};
+
+
+// this event occurs when a job is removed from a machine
+class JobAbortedEvent : public ULogEvent
+{
+  public:
+	JobAbortedEvent();
+	~JobAbortedEvent();
+
+	virtual int readEvent (FILE *);
+	virtual int writeEvent (FILE *);
+
 };
 
 

@@ -446,6 +446,42 @@ writeEvent (FILE *file)
 }
 
 
+// ----- JobAbortedEvent class
+JobAbortedEvent::
+JobAbortedEvent ()
+{
+	eventNumber = ULOG_JOB_ABORTED;
+}
+
+JobAbortedEvent::
+~JobAbortedEvent()
+{
+}
+
+int JobAbortedEvent::
+writeEvent (FILE *file)
+{
+
+	if (fprintf (file, "Job was aborted by the user.\n") < 0) return 0;
+
+	return 1;
+}
+
+
+int JobAbortedEvent::
+readEvent (FILE *file)
+{
+	char buffer[128];
+	int  normalTerm;
+	int  retval, retval1, retval2;
+
+	if (fscanf (file, "Job was aborted by the user.") == EOF)
+		return 0;
+
+	return 0;
+}
+
+
 // ----- JobTerminatedEvent class
 JobTerminatedEvent::
 JobTerminatedEvent ()
@@ -467,7 +503,7 @@ JobTerminatedEvent::
 int JobTerminatedEvent::
 writeEvent (FILE *file)
 {
-	int retval;
+	int retval=0;
 
 	if (fprintf (file, "Job terminated.\n") < 0) return 0;
 	if (normal)
@@ -674,5 +710,5 @@ readRusage (FILE *file, rusage &usage)
 
 	return (1);
 }
-#endif
 
+#endif

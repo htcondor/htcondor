@@ -101,6 +101,38 @@ get_env_val( const char *str )
 }
 
 void UserLog::
+openLog( const char *file, int c, int p, int s )
+{
+	int 			fd;
+
+		// Save parameter info
+	path = new char[ strlen(file) + 1 ];
+	strcpy( path, file );
+	in_block = FALSE;
+
+	if (fp) fclose(fp);
+
+	if( (fd = open( path, O_CREAT | O_WRONLY, 0664 )) < 0 ) {
+		EXCEPT( "open(%s) failed with errno %d", path, errno );
+	}
+
+		// attach it to stdio stream
+	if( (fp = fdopen(fd,"w")) == NULL ) {
+		EXCEPT( "fdopen(%d)", fd );
+	}
+
+		// set the stdio stream for line buffering
+	if( setvbuf(fp,NULL,_IOLBF,BUFSIZ) < 0 ) {
+		EXCEPT( "setvbuf" );
+	}
+
+	// prepare to lock the file
+	lock = new FileLock( fd );
+
+	initialize(c, p, s);
+}
+
+void UserLog::
 initialize( const char *owner, const char *file, int c, int p, int s )
 {
 	priv_state		priv;
