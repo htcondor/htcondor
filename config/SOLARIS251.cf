@@ -3,6 +3,8 @@
 #define NEEDS_64BIT_SYSCALLS    NO
 #define NEEDS_64BIT_STRUCTS NO
 
+#define HAS_PVM	YES
+
 
 #define		IS_SOLARIS251		YES
 #define		ImakeOpsysFlag		-DIS_SOLARIS251
