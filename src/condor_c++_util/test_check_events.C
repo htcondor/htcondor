@@ -122,9 +122,35 @@ int main(int argc, char **argv)
 		result = false;
 	}
 
+		// Test an execute event.  This should fail because we already
+		// got an aborted event for this job.
+	ExecuteEvent exec;
+	exec.cluster = 1234;
+	exec.proc = 0;
+	exec.subproc = 1;
+	printf("Testing execute... ");
+	if ( ce1.CheckAnEvent(&exec, errorMsg) ) {
+		printf("...should have gotten an error (test failed)\n");
+		result = false;
+	} else {
+		printf("...got expected error (%s)\n", errorMsg.Value());
+	}
+
+		// Test an execute event.  This should fail because we haven't
+		// gotten a submit event for this job.
+	exec.cluster = 1234;
+	exec.proc = 5;
+	exec.subproc = 1;
+	printf("Testing execute... ");
+	if ( ce1.CheckAnEvent(&exec, errorMsg) ) {
+		printf("...should have gotten an error (test failed)\n");
+		result = false;
+	} else {
+		printf("...got expected error (%s)\n", errorMsg.Value());
+	}
+
 		// Test a terminate event.  This should fail because we already
 		// got an aborted event for this job.
-		// two submits for this job.
 	JobTerminatedEvent	te2;
 	te2.cluster = 1234;
 	te2.proc = 0;

@@ -94,8 +94,16 @@ CheckEvents::CheckAnEvent(const ULogEvent *event, MyString &errorMsg)
 			break;
 
 		case ULOG_EXECUTE:
-			// Do we want to do anything here?  For example, if a job terminates without
-			// executing, is that an error?
+			if ( info->submitCount != 1 ) {
+				errorMsg = idStr + " executing; submit count != 1 (" +
+						MyString(info->submitCount) + ")";
+				result = false;
+			}
+			if ( info->termAbortCount != 0 ) {
+				errorMsg = idStr + " executing; abort/terminate count != 0 (" +
+						MyString(info->termAbortCount) + ")";
+				result = false;
+			}
 			break;
 
 		case ULOG_EXECUTABLE_ERROR:
