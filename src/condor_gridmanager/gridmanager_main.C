@@ -4,7 +4,6 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "basename.h"
 
-#include "sslutils.h"	// for proxy_get_filenames
 #include "globus_utils.h"
 
 #include "gridmanager.h"
@@ -32,8 +31,8 @@ main_activate_globus()
 	// Find the location of our proxy file, if we don't already
 	// know (from the command line)
 	if (X509Proxy == NULL) {
-		proxy_get_filenames(NULL, 1, NULL, NULL, &X509Proxy, NULL, NULL);
-		if ( X509Proxy == NULL ) {
+        X509Proxy = get_x509_proxy_filename();
+        if (X509Proxy == NULL) {
 			dprintf(D_ALWAYS,"Error finding X509 proxy filename. "
 					"Proxy file probably doesn't exist. Aborting.\n");
 			return false;
