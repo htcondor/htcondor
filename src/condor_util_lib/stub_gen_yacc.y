@@ -41,7 +41,7 @@ struct node * mk_xfer_func( char *xdr_func, struct node *param_list,
 struct node * mk_alloc_func( struct node *param_list );
 struct node * mk_return_func( struct node *param_list );
 struct node * mk_param_node( char *type, char *name,
-	int is_const, int is_ptr, int is_const_ptr, int is_array,
+	int is_const, int is_ptr, int is_ref, int is_const_ptr, int is_array,
 	int is_in, int is_out );
 struct node * mk_action_param_node( char *name, int is_ref, char *mult );
 struct node *set_map_attr( struct node * simple );
@@ -348,15 +348,16 @@ map_param
 	;
 
 simple_param
-	: use_type opt_const TYPE_NAME opt_ptr opt_ptr_to_const IDENTIFIER opt_array
+	: use_type opt_const TYPE_NAME opt_ptr opt_reference opt_ptr_to_const IDENTIFIER opt_array
 			{
 			$$ = mk_param_node(
 				$3.val,			/* TYPE_NAME */
-				$6.val,			/* IDENTIFIER */
+				$7.val,			/* IDENTIFIER */
 				$2,				/* constant */
 				$4,				/* pointer */
-				$5,				/* pointer to const */
-				$7,				/* array */
+				$5,				/* reference */
+				$6,				/* pointer to const */
+				$8,				/* array */
 				$1.in,			/* in parameter */
 				$1.out			/* out parameter */
 			);
@@ -532,7 +533,7 @@ yyerror( char * s )
 
 struct node *
 mk_param_node( char *type, char *name,
-	int is_const, int is_ptr, int is_const_ptr, int is_array,
+	int is_const, int is_ptr, int is_ref, int is_const_ptr, int is_array,
 	int is_in, int is_out )
 {
 	struct node	*answer;
@@ -545,6 +546,7 @@ mk_param_node( char *type, char *name,
 	answer->is_const = is_const;
 	answer->is_const_ptr = is_const_ptr;
 	answer->is_ptr = is_ptr;
+	answer->is_ref = is_ref;
 	answer->is_array = is_array;
 	answer->in_param = is_in;
 	answer->out_param = is_out;
@@ -706,6 +708,10 @@ output_param_type( struct node *n )
 		printf( " *" );
 	}
 
+	if( n->is_ref ) {
+		printf( "&" );
+	}
+
 	if( n->is_const_ptr ) {
 		printf( " const " );
 	}
@@ -728,6 +734,10 @@ output_param_node( struct node *n, int want_id )
 
 	if( n->is_ptr ) {
 		printf( "*" );
+	}
+
+	if( n->is_ref ) {
+		printf( "&" );
 	}
 
 	if( n->is_const_ptr ) {
