@@ -52,8 +52,8 @@ sub customizeCmdFile() {
     print $fh "remote_task = nmi_glue/build/remote_task\n";
     print $fh "remote_post = nmi_glue/build/remote_post\n";
     print $fh "platform_post = nmi_glue/build/platform_post\n";
-    print $fh "post_all = nmi_glue/build/post_all\n";
-    print $fh "post_all_args = $tag $module\n";
+    #print $fh "post_all = nmi_glue/build/post_all\n";
+    #print $fh "post_all_args = $tag $module\n";
 
     # misc administrative stuff
     CondorGlue::printPrereqs( *$fh );
