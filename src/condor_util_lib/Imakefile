@@ -57,7 +57,7 @@ INET_NTOA_OBJ = inet_ntoa.o
 #define ObjectFiles \
 	blankline.o do_connect.o dprintf.o dprintf_config.o except.o \
 	ltrunc.o mkargv.o proc.o signames.o killkids.o \
-	stricmp.o expr.o perror.o condor_errlst.o \
+	stricmp.o perror.o condor_errlst.o \
 	ctrace.o detach.o update_rusage.o cronos.o \
 	$(FLOCK_OBJ) \
 	$(SETREUID_OBJ) email.o email_file.o \
