@@ -251,6 +251,7 @@ const char ATTR_NUM_HOSTS_CLAIMED		 [] = "HostsClaimed";
 const char ATTR_NUM_HOSTS_UNCLAIMED		 [] = "HostsUnclaimed";
 const char ATTR_NUM_HOSTS_OWNER			 [] = "HostsOwner";
 const char ATTR_VERSION					 [] = "CondorVersion";
+const char ATTR_SHADOW_VERSION			 [] = "ShadowVersion";
 const char ATTR_VIRTUAL_MACHINE_ID		 [] = "VirtualMachineID";
 const char ATTR_TRANSFER_TYPE			 [] = "TransferType";
 const char ATTR_TRANSFER_FILES			 [] = "TransferFiles";
