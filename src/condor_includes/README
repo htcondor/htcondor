@@ -83,6 +83,13 @@ Descriptions:
 		Definition of (BSD style) struct timeval.  This will be needed in the
 		PROC structure for storing resource usage information.
 
+	condor_mach_status.h
+		Definitions needed to use the get_mach_status() function.  This is
+		a "quick" method of learing the machine's status vis a vis Condor.
+		The status is kept in a well known file by the condor_startd, and
+		can be read by this function.  The return is coded as an integer,
+		and the codes are defined here.
+
 
 =========================================================================
 
