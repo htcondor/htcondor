@@ -34,6 +34,7 @@ static const int DEFAULT_MAXSIGNALS = 99;
 static const int DEFAULT_MAXSOCKETS = 8;
 static const int DEFAULT_MAXREAPS = 8;
 static const int DEFAULT_PIDBUCKETS = 11;
+static const int ERRNO_EXEC_AS_ROOT = 666666;
 static const char* DEFAULT_INDENT = "DaemonCore--> ";
 
 
@@ -3623,6 +3624,15 @@ int DaemonCore::Create_Process(
 
 			/* No dprintfs allowed after this! */
 
+		if ( priv != PRIV_ROOT ) {
+				// Final check to make sure we're not root anymore.
+			if( getuid() == 0 ) {
+				errno = ERRNO_EXEC_AS_ROOT;
+				write(errorpipe[1], &errno, sizeof(errno));
+				exit(4);
+			}
+		}
+
 			// switch to the cwd now that we are in user priv state
 		if ( cwd && cwd[0] ) {
 			if( chdir(cwd) == -1 ) {
@@ -3665,8 +3675,15 @@ int DaemonCore::Create_Process(
 			int child_status;
 			waitpid(newpid, &child_status, 0);
 			errno = child_errno;
-			dprintf(D_ALWAYS, "Create_Process: child failed with errno %d (%s)"
-					"before exec().\n", errno, strerror(errno));
+			if( errno == ERRNO_EXEC_AS_ROOT ) {
+				dprintf( D_ALWAYS, "Create_Process: child failed because "
+						 "%s process was still root before exec()\n",
+						 priv_to_string(priv) );
+			} else {
+				dprintf( D_ALWAYS, "Create_Process: child failed with "
+						 "errno %d (%s) before exec()\n", errno,
+						 strerror(errno) );
+			}
 			close(errorpipe[0]);
 			return FALSE;
 		}
