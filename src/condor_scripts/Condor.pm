@@ -45,6 +45,7 @@ sub Reset
     undef $ExitedFailureCallback;
     undef $ExitedAbnormalCallback;
     undef $AbortCallback;
+    undef $JobErrCallback;
 }
 
 # submits job/s to condor, recording all variables from the submit
@@ -192,6 +193,11 @@ sub RegisterAbort
 {
     my $sub = shift || croak "missing argument";
     $AbortCallback = $sub;
+}
+sub RegisterJobErr
+{
+    my $sub = shift || croak "missing argument";
+    $JobErrCallback = $sub;
 }
 
 sub Wait
@@ -426,7 +432,7 @@ sub Monitor
 
 	    next LINE;
 	}
-	# job aborted by user
+	# 009: job aborted by user
 	elsif( $line =~ /^009/ )
 	{
 	    # decrement # of queued jobs so we will know when to exit monitor
@@ -435,6 +441,17 @@ sub Monitor
 	    # execute callback if one is registered
 	    &$AbortCallback( %info )
 		if defined $AbortCallback;
+	}
+#	002 (171.000.000) 06/15 14:49:45 (0) Job file not executable.
+	# 002: job not executable
+	elsif( $line =~ /^002/ )
+	{
+	    # decrement # of queued jobs so we will know when to exit monitor
+	    $num_active_jobs--;
+
+	    # execute callback if one is registered
+	    &$JobErrCallback( %info )
+		if defined $JobErrCallback;
 	}
     }
     return 1;

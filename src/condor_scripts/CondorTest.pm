@@ -114,6 +114,13 @@ sub RegisterAbort
 
     $test{$handle}{"RegisterAbort"} = $function_ref;
 }
+sub RegisterJobErr
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterJobErr"} = $function_ref;
+}
 
 sub DefaultOutputTest
 {
@@ -204,6 +211,18 @@ sub RunTest
 	Condor::RegisterAbort( sub {
 	    my %info = @_;
 	    die "$handle: FAILURE (job aborted by user)\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterJobErr"} )
+    {
+	Condor::RegisterJobErr( $test{$handle}{"RegisterJobErr"} );
+    }
+    else
+    {
+	Condor::RegisterJobErr( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (job error -- see $info{'log'})\n";
 	} );
     }
 
