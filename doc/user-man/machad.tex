@@ -56,8 +56,8 @@ owner's affinity
 for running the Condor job which it is currently hosting.  If not
 currently hosting a Condor job, \AdAttr{CurrentRank} is 0.0.
 When a machine is claimed,
-the attribute's value is evaluated with respect to the current
-job's ClassAd.
+the attribute's value is computed by evaluating the machine's
+\AdAttr{Rank} expression with respect to the current job's ClassAd.
 %
 \index{ClassAd machine attribute!Disk}
 \item[\AdAttr{Disk}] : The amount of disk space on this machine available for
