@@ -49,6 +49,7 @@ public:
  		// Helper functions to evaluate resource expressions
 	int		wants_vacate();
 	int		wants_suspend();
+	int		wants_pckpt();
 	int		eval_kill();
 	int		eval_vacate();
 	int		eval_suspend();

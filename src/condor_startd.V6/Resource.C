@@ -91,6 +91,7 @@ Resource::periodic_checkpoint()
 	if( state() != claimed_state ) {
 		return FALSE;
 	}
+	dprintf( D_FULLDEBUG, "Performing a periodic checkpoint on %s.\n", r_name );
 	if( r_starter->active() ) {
 		if( r_starter->kill( DC_SIGPCKPT ) < 0 ) {
 			return FALSE;
@@ -468,6 +469,20 @@ Resource::wants_suspend()
 		}
 	}
 	return want_suspend;
+}
+
+
+int 
+Resource::wants_pckpt()
+{
+	int want_pckpt;
+	if( r_classad->EvalBool( "PERIODIC_CHECKPOINT",
+							 r_cur->ad(),
+							 want_pckpt ) == 0) { 
+			// Default to no, if not defined.
+		want_pckpt = 0;
+	}
+	return want_pckpt;
 }
 
 
