@@ -1,4 +1,5 @@
 FILES = README condor.generic condor_config.local.central.manager
+CONTRIB_FILES = $(FILES) condor_config.local.ckpt.server
 
 all:
 
@@ -6,13 +7,19 @@ clean:
 
 release:
 
-stripped:
-	/bin/cp -f $(FILES) $(STRIP_DIR)/etc/examples
-	/bin/cp -f condor_config.local.ckpt.server ../strip_ckpt_server/etc/examples
-	perl ./customize $(STRIP_DIR)
+stripped: $(STRIP_DIR)/etc/examples/README
 
-static:
+$(STRIP_DIR)/etc/examples/README: 
+	/bin/cp -f $(FILES) $(STRIP_DIR)/etc/examples
+	/bin/cp -f $(CONTRIB_FILES) $(STRIP_CONTRIB)/etc/examples
+	perl ./customize $(STRIP_DIR)
+	perl ./customize $(STRIP_CONTRIB)
+
+static: $(STATIC_DIR)/etc/examples/README
+
+$(STATIC_DIR)/etc/examples/README:
 	/bin/cp -f $(FILES) $(STATIC_DIR)/etc/examples
-	/bin/cp -f condor_config.local.ckpt.server ../static_ckpt_server/etc/examples
+	/bin/cp -f $(CONTRIB_FILES) $(STATIC_CONTRIB)/etc/examples
 	perl ./customize $(STATIC_DIR)
+	perl ./customize $(STATIC_CONTRIB)
 
