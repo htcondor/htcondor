@@ -3,7 +3,7 @@
  *
  * See LICENSE.TXT for additional notices and disclaimers.
  *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
  * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
  * No use of the CONDOR Software Program Source Code is authorized 
  * without the express consent of the CONDOR Team.  For more information 
@@ -28,30 +28,6 @@
 #include "env.h"
 
 bool
-AppendEnvVariable( char* env, char* name, char* value )
-{
-    if( env == NULL || name == NULL || value == NULL ) {
-        return false;
-    }
-
-    // make sure env has enough room for delimiter + name + '=' + value + '\0'
-    if( strlen( env ) + strlen( name ) + strlen( value ) + 3 >=
-        ATTRLIST_MAX_EXPRESSION ) {
-        return false;
-    }
-
-	// if this is the first entry in env
-	if( strlen( env ) == 0 ) {
-		sprintf( env, "%s=%s", name, value );
-	} else {
-		char *oldenv = strdup( env );
-		sprintf( env, "%s%c%s=%s", oldenv, env_delimiter, name, value );
-		free( oldenv );
-	}
-    return true;
-}
-
-bool
 AppendEnvVariableSafely( char** env, char* name, char* value )
 {
 	char *new_env;
@@ -65,6 +41,9 @@ AppendEnvVariableSafely( char** env, char* name, char* value )
 							  + strlen(name)
 							  + strlen(value)
 							  + 3);
+	if( new_env == NULL ) {
+		return false;
+	}
 
 	// if this is the first entry in env
 	if( strlen( *env ) == 0 ) {
