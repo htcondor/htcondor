@@ -1162,7 +1162,7 @@ Image::Write( int fd )
 	}
 #endif
 
-	dprintf( D_ALWASY, "Wrote all Segments OK\n" );
+	dprintf( D_ALWAYS, "Wrote all Segments OK\n" );
 
 		/* When using the stream protocol the shadow echo's the number
 		   of bytes transferred as a final acknowledgement.  If, however,
