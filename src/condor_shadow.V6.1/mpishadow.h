@@ -29,6 +29,12 @@
 #include "mpiresource.h"
 #include "list.h"
 
+#if defined( WIN32 )
+#define MPI_USES_RSH FALSE
+#else
+#define MPI_USES_RSH TRUE
+#endif
+
 /** This is the MPI Shadow class.  It acts as a shadow for an MPI
 	job submitted to Condor.<p>
 
@@ -99,6 +105,15 @@ class MPIShadow : public BaseShadow
 	float bytesSent( void );
 	float bytesReceived( void );
 
+		/** Record the IP and port where the MPI master is running for
+			this computation.  Once we get this info, we can spawn all
+			the workers, so start the ball rolling on that, too.
+			@param str A string containing the IP and port, separated
+			by a semicolon (e.g. "128.105.102.46:2342")
+			@return Always return true, since we're an MPI shadow
+		*/
+	bool setMpiMasterInfo( char* str );
+
  private:
 
         /** After the schedd claims a resource, it puts it in a queue
@@ -111,6 +126,7 @@ class MPIShadow : public BaseShadow
             function, which starts the mpi job */
     void startMaster();
 
+#if (MPI_USES_RSH) 
         /** We will be given the args to start the mpi process by 
             the sneaky rsh program.  Start a Comrade with them */
     int startComrade(int cmd, Stream *s);
@@ -123,6 +139,26 @@ class MPIShadow : public BaseShadow
             the args back in. */
     void hackMasterAd( ClassAd *ad );
     
+#else
+		/** Once we have the IP and port of the master, we can spawn
+			all the comrade nodes at once.  
+		*/
+	void spawnAllComrades( void );
+
+		/** Adds the necessary variables to the environment of any
+			node in the MPI computation so it can properly execute. 
+			@param ad Pointer to the ClassAd to modify
+		 */
+	bool modifyNodeAd( ClassAd* );
+
+#endif /* ! MPI_USES_RSH */
+
+		/** This function is shared by all the different methods that
+			spawn nodes (root vs. comrade and rsh vs. non-rsh).
+			@param rr Pointer to the RemoteResource to spawn
+		*/
+	void spawnNode( MpiResource* rr );
+
 		/** A complex function that deals with the end of an MPI
 			job.  It has two functions: 1) figure out if all the 
 			resources should be told to kill themselves and 
@@ -164,7 +200,16 @@ class MPIShadow : public BaseShadow
 
 	int info_tid;	// DC id for our timer to get resource info 
 
+#if ! MPI_USES_RSH
+	char* master_addr;   // string containing the IP and port where
+		                 // the MPI master node is running.
+
+	char* mpich_jobid;   // job ID string, we use
+                         // "submit_host.cluster.proc" 
+
+#endif
+
 };
 
 
-#endif
+#endif /* MPISHADOW_H */
