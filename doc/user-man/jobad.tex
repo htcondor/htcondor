@@ -87,6 +87,16 @@ job.
 a cluster of many jobs, each job will have the same ClusterId but will
 have a unique ProcId.
 %
+\item[\AdAttr{RemoteWallClockTime}] : Cumulative number of seconds
+the job has been allocated a machine.
+This also includes time spent in suspension (if any),
+so the total real time spent running is 
+\begin{verbatim}
+RemoteWallClockTime - CumulativeSuspensionTime
+\end{verbatim}
+Note that this number does not get reset to
+zero when a job is forced to migrate from one machine to another.
+%
 \item[\AdAttr{TotalSuspensions}] : A count of the number of times this job
 has been suspended during its lifetime.
 %
