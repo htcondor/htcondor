@@ -80,6 +80,8 @@ class KeyInfo {
     // REQUIRE: None
     //------------------------------------------
  private:
+    void init(unsigned char * keyData, int keyDataLen);
+
     unsigned char * keyData_;
     int             keyDataLen_;
     Protocol        protocol_;
