@@ -802,7 +802,7 @@ void Server::ProcessServiceReq(int             req_id,
 		Log("Cannot sent IP/port to shadow (socket closed)");
     } else {
 		close(req_sd);
-		if (service_req.service == CKPT_SERVER_SERVICE_STATUS)
+		if (service_req.service == CKPT_SERVER_SERVICE_STATUS) {
 			if (num_files == 0) {
 				Log(req_id, "Request for server status GRANTED:");
 				Log("No files on checkpoint server");
@@ -827,23 +827,15 @@ void Server::ProcessServiceReq(int             req_id,
 					SendStatus(data_conn_sd);
 					exit(CHILDTERM_SUCCESS);
 				}
-			} else if (service_req.service == SERVICE_RENAME)
-				if (service_reply.req_status == htons(CKPT_OK))
-					Log(req_id, "Rename file request successfully completed");
-				else {
-					Log(req_id, "Rename file request cannot be completed:");
-					sprintf(log_msg, "Attempt returns error #%d", 
-							ntohs(service_reply.req_status));
-					Log(log_msg);
-				}
-			else if (service_reply.req_status == htons(CKPT_OK))
-				Log(req_id, "Delete file request successfully completed");
-			else {
-				Log(req_id, "Delete file request cannot be completed:");
-				sprintf(log_msg, "Attempt returns error #%d", 
-						ntohs(service_reply.req_status));
-				Log(log_msg);
 			}
+		} else if (service_reply.req_status == htons(CKPT_OK))
+			Log(req_id, "Service request successfully completed");
+		else {
+			Log(req_id, "Service request cannot be completed:");
+			sprintf(log_msg, "Attempt returns error #%d", 
+					ntohs(service_reply.req_status));
+			Log(log_msg);
+		}
 	}
 	UnblockSignals();
 }
