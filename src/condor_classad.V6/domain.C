@@ -15,8 +15,7 @@ ClassAdDomainManager::
 {
 	int i, j = schemaArray.getsize();
 
-	for (i = 0; i < j; i++)
-	{
+	for (i = 0; i < j; i++) {
 		delete schemaArray[i];
 	}
 }
@@ -26,18 +25,15 @@ void ClassAdDomainManager::
 getDomainSchema (char *domainName, int &index, StringSpace *&schema)
 {
 	index = domainNameSpace.getCanonical (domainName);
-	if (index == -1) 
-	{
+	if (index == -1) {
 		schema = NULL;		// some problem
 		return;
 	}
 
 	schema = schemaArray[index];
-	if (schema == NULL)
-	{
+	if (schema == NULL) {
 		schema = new StringSpace;
-		if (schema == NULL)
-		{
+		if (schema == NULL) {
 			EXCEPT("Out of memory");
 		}
 		schemaArray[index] = schema;

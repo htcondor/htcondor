@@ -15,6 +15,15 @@ AttributeReference()
 	absolute = false;
 }
 
+// a private ctor for use in significant expr identification
+AttributeReference::
+AttributeReference( ExprTree *tree, char *attrname, bool absolut )
+{
+	nodeKind = ATTRREF_NODE;
+	attributeStr = strdup( attrname );
+	expr = tree;
+	absolute = absolut;
+}
 
 AttributeReference::
 ~AttributeReference()
@@ -25,24 +34,38 @@ AttributeReference::
 
 
 ExprTree *AttributeReference::
-copy (CopyMode)
+_copy( CopyMode cm )
 {
-	AttributeReference *newTree = new AttributeReference ();
-	if (newTree == 0) return NULL;
+	if( cm == EXPR_DEEP_COPY ) {
+		AttributeReference *newTree = new AttributeReference ();
+		if (newTree == 0) return NULL;
 
-	if (attributeStr) newTree->attributeStr = strdup (attributeStr);
-	newTree->attributeName = attributeName;
+		if (attributeStr) newTree->attributeStr = strdup (attributeStr);
+		newTree->attributeName = attributeName;
 
-	if( expr && ( newTree->expr = expr->copy() ) == NULL )	{
-		free( newTree->attributeStr );
-		delete newTree;
-		return NULL;
+		if( expr && ( newTree->expr=expr->copy(EXPR_DEEP_COPY) ) == NULL ) {
+			free( newTree->attributeStr );
+			delete newTree;
+			return NULL;
+		}
+
+		newTree->nodeKind = nodeKind;
+		newTree->absolute = absolute;
+
+		return newTree;
+	} else {
+		if( expr ) expr->copy( EXPR_REF_COUNT );
+		return this;
 	}
 
-	newTree->nodeKind = nodeKind;
-	newTree->absolute = absolute;
+	// will not reach here
+	return 0;	
+}
 
-	return newTree;
+void AttributeReference::
+setParentScope( ClassAd *parent ) 
+{
+	if( expr ) expr->setParentScope( parent );
 }
 
 
@@ -60,23 +83,56 @@ toSink (Sink &s)
 
 
 void AttributeReference::
-_evaluate (EvalState &state, EvalValue &val)
+_evaluate (EvalState &state, Value &val)
 {
-	ExprTree	*tree;
-	EvalState	nextState;
+	ExprTree	*tree, *dummy;
+	ClassAd		*curAd;
 
 	// find the expression and the evalstate
-	switch( findExpr( state , expr , tree , nextState ) ) {
+	curAd = state.curAd;
+	switch( findExpr( state, tree, dummy, false ) ) {
 		case EVAL_ERROR:
 			val.setErrorValue();
+			state.curAd = curAd;
 			return;
 
 		case EVAL_UNDEF:
 			val.setUndefinedValue();
+			state.curAd = curAd;
 			return;
 
 		case EVAL_OK:
-			tree->evaluate( nextState , val );
+			tree->evaluate( state , val );
+			state.curAd = curAd;
+			return;
+
+		default:  EXCEPT( "ClassAd:  Should not reach here" );
+	}
+}
+
+
+void AttributeReference::
+_evaluate (EvalState &state, Value &val, ExprTree *&sig )
+{
+	ExprTree	*tree;
+	ClassAd		*curAd;
+
+	// find the expression and the evalstate
+	curAd = state.curAd;
+	switch( findExpr( state , tree , sig , true ) ) {
+		case EVAL_ERROR:
+			val.setErrorValue();
+			state.curAd = curAd;
+			return;
+
+		case EVAL_UNDEF:
+			val.setUndefinedValue();
+			state.curAd = curAd;
+			return;
+
+		case EVAL_OK:
+			tree->evaluate( state , val );
+			state.curAd = curAd;
 			return;
 
 		default:  EXCEPT( "ClassAd:  Should not reach here" );
@@ -85,7 +141,7 @@ _evaluate (EvalState &state, EvalValue &val)
 
 
 bool AttributeReference::
-_flatten( EvalState &state, EvalValue &val, ExprTree*&ntree, OpKind*)
+_flatten( EvalState &state, Value &val, ExprTree*&ntree, OpKind*)
 {
 	if( absolute ) {
 		ntree = copy();
@@ -105,89 +161,105 @@ _flatten( EvalState &state, EvalValue &val, ExprTree*&ntree, OpKind*)
 
 
 int AttributeReference::
-findExpr( EvalState curState, ExprTree *expr, ExprTree *&tree, 
-			EvalState &nextState )
+findExpr( EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig )
 {
-	EvalState	parentState;
+	ClassAd 	*current=NULL, *parent=NULL;
+	ExprTree	*tmp, *sigExpr = NULL;
+	Value		val;
+	bool		seen;
+	int			rval = EVAL_OK;
 
-	if( expr == NULL && !absolute ) {	
-		// case 1:  attr
-		if( curState.curAd == NULL ) {
-			tree = NULL;
-			return EVAL_UNDEF;
-		}
-		if( CLASSAD_RESERVED_STRCMP( attributeStr , "super" ) == 0 ) {
-			// 1.0:  The implicit "super" attribute
-			if( curState.curAd == curState.rootAd || curState.rootAd == NULL ) {
-				// no "super"
-				tree = NULL;
-				return EVAL_UNDEF;
-			}
-			tree = curState.curAd->parentScope;
-			nextState.curAd = curState.curAd->parentScope;
-			nextState.rootAd = curState.rootAd;
-			return EVAL_OK;
-		}
-		if( ( tree = curState.curAd->lookup( attributeStr ) ) ) {
-			// 1.1:  In current scope
-			nextState = curState;
-			return EVAL_OK;
-		} else {
-			// 1.2:  In closest enclosing scope
-			if( curState.curAd == curState.rootAd ) {
-				// Assume curAd is the root ad; so undefined
-				tree = NULL;
-				return EVAL_UNDEF;
-			}
-			parentState.curAd  = curState.curAd->parentScope;
-			parentState.rootAd = curState.rootAd;
-			return findExpr( parentState , expr , tree , nextState );
-		}
-	} else
-	if( expr == NULL && absolute ) {
-		// case 2:  .attr
-		if( CLASSAD_RESERVED_STRCMP( attributeStr , "super" ) == 0 ) {
-			// 2.0:  The implicit "super" attribute (doesn't exist for root)
-			tree = NULL;
-			return EVAL_UNDEF;
-		}
-		if( ( curState.rootAd != NULL ) && 
-			( tree = curState.rootAd->lookup( attributeStr ) ) ) {
-			// 2.1:  In root scope
-			nextState.curAd  = curState.rootAd;
-			nextState.rootAd = curState.rootAd;
-			return EVAL_OK;
-		} else {
-			// 2.2:  Not in root scope; (undefined)
-			tree = NULL;
-			return EVAL_UNDEF;
-		}
+	sig = NULL;
+	state.superChase.clear( );
+
+	// establish starting point for search
+	if( expr == NULL ) {
+		// "attr" and ".attr"
+		current = absolute ? state.rootAd : state.curAd;
 	} else {
-		// case 3:  expr.attr
-		EvalValue	adv;
-		EvalState	intermState;
-		ClassAd		*ad;
-
-		expr->evaluate( curState , adv );
-		if( adv.isClassAdValue( ad ) ) {
-			// 3.1:  Evaluated expression is a classad
-			intermState.curAd  = ad;
-			intermState.rootAd = curState.rootAd;
-			return findExpr( intermState , NULL , tree , nextState );
+		// "expr.attr"
+		if( wantSig ) {
+			expr->evaluate( state, val, sigExpr );
 		} else {
-			// 3.2:  Evaluated expression is not a classad; (error)
-			tree = NULL;
-			return EVAL_ERROR;
+			expr->evaluate( state, val );
+		}
+		if( val.isUndefinedValue( ) ) {
+			if( wantSig ) delete sigExpr;
+			return( EVAL_UNDEF );
+		}
+		if( !val.isClassAdValue( current ) ) {
+			if( wantSig ) delete sigExpr;
+			return( EVAL_ERROR );
 		}
 	}
+
+	tree = current->lookup( attributeStr );
+
+	while( !tree ) {
+		// mark this scope as visited while chasing scopes
+		if( state.superChase.insert( current, true ) < 0 ) {
+			rval = EVAL_ERROR;
+			break;
+		}
+
+		// determine parent scope
+		if( ( tmp = current->lookup( "super" ) ) ) {
+			// explicit "super" attribute specified
+			state.curAd = current;
+			tmp->evaluate( state, val );
+			if( val.isUndefinedValue( ) ) {
+				rval = EVAL_UNDEF;
+				break;
+			} else if( !val.isClassAdValue( parent ) ) {
+				rval = EVAL_ERROR;
+				break;
+			}
+		} else {
+			// no explicit "super" attribute; get natural lexical parent
+			parent = current->parentScope;
+		}
+
+		if( parent == NULL ) {
+			// must have reached root scope
+			rval = EVAL_UNDEF;
+			break;
+		} else {
+			// continue searching from parent scope
+			current = parent;
+		}
+		
+		// have we already visited this scope?
+		if( state.superChase.lookup( current, seen ) == 0 && seen ) {
+			rval = EVAL_UNDEF;
+			break;
+		} 
+
+		// if the attr ref is "super", just return the parent scope
+		if( CLASSAD_RESERVED_STRCMP( attributeStr, "super" ) == 0 ) {
+			tree = current;
+			rval = EVAL_OK;
+			break;
+		}
+			
+		// continue search from this scope
+		tree = current->lookup( attributeStr );
+	}
+
+	state.superChase.clear( );
+
+	if( wantSig ) {
+		if( rval != EVAL_OK ) {
+			delete sigExpr;
+			sig = NULL;
+		} else {
+			sig = new AttributeReference( sigExpr, attributeStr, absolute );
+		}
+	}
+
+	state.curAd = current;
+	return( rval );
 }
 
-
-void AttributeReference::
-setParentScope( ClassAd *ad )
-{
-	if( expr ) expr->setParentScope( ad );
-}
 
 void AttributeReference::
 setReference (ExprTree *tree, char *attrStr, bool absolut)
@@ -197,5 +269,5 @@ setReference (ExprTree *tree, char *attrStr, bool absolut)
 
 	expr 		= tree;
 	absolute 	= absolut;
-	attributeStr= attrStr ? strdup(attrStr) : NULL;
+	attributeStr= attrStr ? strdup(attrStr) : 0;
 }

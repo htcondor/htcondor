@@ -13,22 +13,21 @@ class FunctionCall : public ExprTree
 		~FunctionCall ();
 
 		// override methods
-		virtual ExprTree *copy (CopyMode);
 		virtual bool toSink (Sink &);
+		virtual void setParentScope( ClassAd* );
 
 		// specific methods
 		void setFunctionName (char *fnName);
 		void appendArgument  (ExprTree *arg);
 
-		typedef	void (*ClassAdFunc)(char*,ArgumentList&,EvalState&,EvalValue&);
+		typedef	void (*ClassAdFunc)(char*,ArgumentList&,EvalState&,Value&);
 		typedef HashTable<MyString, ClassAdFunc> FuncTable;
 
-	protected:
-		virtual void setParentScope( ClassAd* );
-
 	private:
-		virtual void _evaluate( EvalState &, EvalValue & );
-		virtual bool _flatten( EvalState&, EvalValue&, ExprTree*&, OpKind* );
+		virtual ExprTree* _copy( CopyMode );
+		virtual void _evaluate( EvalState &, Value & );
+		virtual void _evaluate( EvalState &, Value &, ExprTree *& );
+		virtual bool _flatten( EvalState&, Value&, ExprTree*&, OpKind* );
 
 		// information common to all function calls
 		// a mapping from function names (char*) to static methods
@@ -42,18 +41,18 @@ class FunctionCall : public ExprTree
 		int				numArgs;
 
 		// the functions themselves 
-		static void isUndefined(char*,ArgumentList&,EvalState&,EvalValue&);
-		static void isError(char*,ArgumentList&,EvalState&,EvalValue&);
-		static void isInteger(char*,ArgumentList&,EvalState&,EvalValue&);
-		static void isReal(char*,ArgumentList&,EvalState&,EvalValue&);
-		static void isString(char*,ArgumentList&,EvalState&,EvalValue&);
-		static void isList(char*,ArgumentList&,EvalState&,EvalValue&);
-		static void isClassAd(char*,ArgumentList&,EvalState&,EvalValue&);
-		static void isMember(char*,ArgumentList&,EvalState&,EvalValue&);
-		static void isExactMember(char*,ArgumentList&,EvalState&,EvalValue&);
-		static void sumFrom(char*,ArgumentList&,EvalState&,EvalValue&);
-		static void avgFrom(char*,ArgumentList&,EvalState&,EvalValue&);
-		static void boundFrom(char*,ArgumentList&,EvalState&,EvalValue&);
+		static void isUndefined(char*,ArgumentList&,EvalState&,Value&);
+		static void isError(char*,ArgumentList&,EvalState&,Value&);
+		static void isInteger(char*,ArgumentList&,EvalState&,Value&);
+		static void isReal(char*,ArgumentList&,EvalState&,Value&);
+		static void isString(char*,ArgumentList&,EvalState&,Value&);
+		static void isList(char*,ArgumentList&,EvalState&,Value&);
+		static void isClassAd(char*,ArgumentList&,EvalState&,Value&);
+		static void isMember(char*,ArgumentList&,EvalState&,Value&);
+		static void isExactMember(char*,ArgumentList&,EvalState&,Value&);
+		static void sumFrom(char*,ArgumentList&,EvalState&,Value&);
+		static void avgFrom(char*,ArgumentList&,EvalState&,Value&);
+		static void boundFrom(char*,ArgumentList&,EvalState&,Value&);
 };
 
 

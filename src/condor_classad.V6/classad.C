@@ -74,7 +74,8 @@ ClassAd (const ClassAd &ad) : attrList( 32 )
 			} else {
 				attrList[i].attrName = NULL;
 			}
-			attrList[i].expression = ad.attrList[i].expression->copy();
+			attrList[i].expression = 
+				ad.attrList[i].expression->copy(EXPR_DEEP_COPY);
 			attrList[i].valid = true;
 		} else {
 			attrList[i].valid = false;
@@ -86,7 +87,12 @@ ClassAd (const ClassAd &ad) : attrList( 32 )
 ClassAd::
 ~ClassAd ()
 {
-	clear();
+	for( int i = 0 ; i < last ; i++ ) {
+		if( attrList[i].valid && attrList[i].attrName ) {
+			free( attrList[i].attrName );
+			delete attrList[i].expression;
+		}
+	}
 }
 
 
@@ -114,9 +120,12 @@ insert (char *name, ExprTree *tree)
 	// sanity check
 	if (!name || !tree) return false;
 
-	// the expression is in the scope of this classad
+	// parent of the expression is this classad
 	tree->setParentScope( this );
 
+	// get rid of prefix or postfix white space
+	name = strtok( name, " \t\n" );
+	
 	// if the classad is domainized
 	if (schema) {
 		SSString s;
@@ -149,13 +158,25 @@ insert (char *name, ExprTree *tree)
 
 	// if a tree was previously inserted here, delete it	
 	if (attrList[index].expression) {
-		delete (attrList[index].expression);
+		delete attrList[index].expression;
 	}
 	
 	// insert the new tree
 	attrList[index].expression = tree;
 
 	return true;
+}
+
+
+bool ClassAd::
+insert( char *name, char *expr, int len )
+{
+	static Source 	src;
+	ExprTree 		*tree;
+
+	if( len < 0 ) len = strlen( expr );	
+	src.setSource( expr, len );
+	return( src.parseExpression( tree ) && insert( name, tree ) );
 }
 
 
@@ -179,7 +200,7 @@ lookup (char *name)
         }
     }
 
-	return (attrList[index].valid ? attrList[index].expression : NULL);
+	return( attrList[index].valid ? attrList[index].expression : 0 );
 }
 
 
@@ -221,6 +242,12 @@ remove (char *name)
 }
 
 
+void ClassAd::
+setParentScope( ClassAd* parent )
+{
+	parentScope = parent;
+}
+
 bool ClassAd::
 toSink (Sink &s)
 {
@@ -255,51 +282,72 @@ toSink (Sink &s)
 
 
 ExprTree* ClassAd::
-copy( CopyMode )
+_copy( CopyMode cm )
 {
-	ClassAd	*newAd = new ClassAd();
+	if( cm == EXPR_DEEP_COPY ) {
+		ClassAd	*newAd = new ClassAd();
 
-	if( !newAd ) return NULL;
+		if( !newAd ) return NULL;
+		newAd->nodeKind = CLASSAD_NODE;
+		newAd->schema = schema;
+		newAd->last = last;
+		newAd->parentScope = parentScope;
 
-	newAd->nodeKind = CLASSAD_NODE;
-	newAd->schema = schema;
-	newAd->last = last;
-	newAd->parentScope = parentScope;
-
-	for( int i = 0 ; i < last ; i++ ) {
-		if( attrList[i].valid ) {
-			if( attrList[i].attrName ) {
-				newAd->attrList[i].attrName = strdup( attrList[i].attrName );
+		for	( int i = 0 ; i < last ; i++ ) {
+			if( attrList[i].valid ) {
+				if( attrList[i].attrName ) {
+					newAd->attrList[i].attrName=strdup( attrList[i].attrName );
+				} else {
+					newAd->attrList[i].attrName = NULL;
+				}
+				newAd->attrList[i].expression = 
+					attrList[i].expression->copy( EXPR_DEEP_COPY );
+				if( !newAd->attrList[i].expression ) {
+					delete newAd;
+					return NULL;
+				}
+				newAd->attrList[i].valid = true;
 			} else {
-				newAd->attrList[i].attrName = NULL;
+				newAd->attrList[i].valid = false;
 			}
-			newAd->attrList[i].expression = attrList[i].expression->copy();
-			if( !newAd->attrList[i].expression ) {
-				delete newAd;
-				return NULL;
-			}
-			newAd->attrList[i].valid = true;
-		} else {
-			newAd->attrList[i].valid = false;
 		}
+
+		return newAd;
+	} else if( cm == EXPR_REF_COUNT ) {
+		// reference counted copy
+		for( int i = 0 ; i < last ; i++ ) {
+			if( attrList[i].valid ) {
+				attrList[i].expression->copy( EXPR_REF_COUNT );
+			}
+		}
+		return this;
 	}
 
-	return newAd;
+	// will not get here
+	return 0;
 }
 
 
 void ClassAd::
-_evaluate( EvalState&, EvalValue& val )
+_evaluate( EvalState&, Value& val )
 {
 	val.setClassAdValue( this );
 }
 
 
+void ClassAd::
+_evaluate( EvalState&, Value &val, ExprTree *&tree )
+{
+	val.setClassAdValue( this );
+	tree = copy();
+}
+
+
 bool ClassAd::
-_flatten( EvalState& state, EvalValue&, ExprTree*& tree, OpKind* ) 
+_flatten( EvalState& state, Value&, ExprTree*& tree, OpKind* ) 
 {
 	ClassAd 	*newAd = new ClassAd();
-	EvalValue	eval;
+	Value		eval;
 	ExprTree	*etree;
 	EvalState	intermState;
 
@@ -319,6 +367,7 @@ _flatten( EvalState& state, EvalValue&, ExprTree*& tree, OpKind* )
 			if( !attrList[i].expression->flatten( intermState, eval, etree ) ) {
 				delete newAd;
 				tree = NULL;
+				eval.clear();
 				return false;
 			}
 
@@ -328,6 +377,7 @@ _flatten( EvalState& state, EvalValue&, ExprTree*& tree, OpKind* )
 				if( !etree ) {
 					delete newAd;
 					tree = NULL;
+					eval.clear();
 					return false;
 				}
 			}
@@ -337,19 +387,14 @@ _flatten( EvalState& state, EvalValue&, ExprTree*& tree, OpKind* )
 		} else {
 			newAd->attrList[i].valid = false;
 		}
+
+		eval.clear();
 	}
 
 	newAd->last = last;
 	tree = newAd;
 
 	return true;
-}
-
-
-void ClassAd::
-setParentScope( ClassAd *ad )
-{
-	parentScope = ad;
 }
 
 
@@ -370,7 +415,7 @@ fromSource (Source &s)
 ClassAd *ClassAd::
 augmentFromSource (Source &s, ClassAd &ad)
 {
-    return (s.parseClassAd(&ad) ? &ad : NULL);
+    return( s.parseClassAd(&ad) ? &ad : 0 );
 }
 
 
@@ -378,15 +423,13 @@ void ClassAd::
 evaluateAttr( char *attr , Value &val )
 {
 	EvalState	state;
-	EvalValue	value;
 	ExprTree	*tree;
 
 	state.curAd  = this;
 	state.rootAd = this;
 
 	if( ( tree = lookup( attr ) ) ) {
-		tree->evaluate( state , value );
-		val.copyFrom( value );
+		tree->evaluate( state , val );
 		return;
 	} else {
 		val.setUndefinedValue();
@@ -395,7 +438,7 @@ evaluateAttr( char *attr , Value &val )
 
 
 bool ClassAd::
-evaluate( const char *expr , Value &val , int len )
+evaluateExpr( char *expr , Value &val , int len )
 {
 	static Source	src;
 	ExprTree		*tree;
@@ -407,57 +450,88 @@ evaluate( const char *expr , Value &val , int len )
 		val.setErrorValue();
 		return false;
 	}
-	evaluate( tree , val );
-	delete tree;
-	return true;	
-}
-
-
-bool ClassAd::
-evaluate( char *expr , Value &val , int len )
-{
-	static Source	src;
-	ExprTree		*tree;
-
-	if( len == -1 ) len = strlen( expr );
-	src.setSource( expr , len );
-	src.parseExpression( tree );
-	if( !tree ) {
-		val.setErrorValue();
-		return false;
-	}
-	evaluate( tree , val );
+	evaluateExpr( tree , val );
 	delete tree;
 	return true;	
 }
 
 
 void ClassAd::
-evaluate( ExprTree *tree , Value &val )
+evaluateExpr( ExprTree *tree , Value &val )
 {
 	EvalState	state;
-	EvalValue	value;
 
 	state.curAd  = this;
 	state.rootAd = this;
-	tree->evaluate( state , value );
-	val.copyFrom( value );
+	tree->evaluate( state , val );
+}
+
+void ClassAd::
+evaluateExpr( ExprTree *tree , Value &val , ExprTree *&sig )
+{
+	EvalState	state;
+
+	state.curAd  = this;
+	state.rootAd = this;
+	tree->evaluate( state , val , sig );
+}
+
+bool ClassAd::
+evaluateAttrInt( char *attr, int &i ) 
+{
+	Value val;
+	evaluateAttr( attr, val );
+	return( val.isIntegerValue( i ) );
+}
+
+bool ClassAd::
+evaluateAttrReal( char *attr, double &r ) 
+{
+	Value val;
+	evaluateAttr( attr, val );
+	return( val.isRealValue( r ) );
+}
+
+bool ClassAd::
+evaluateAttrNumber( char *attr, int &i ) 
+{
+	Value val;
+	evaluateAttr( attr, val );
+	return( val.isNumber( i ) );
+}
+
+bool ClassAd::
+evaluateAttrNumber( char *attr, double &r ) 
+{
+	Value val;
+	evaluateAttr( attr, val );
+	return( val.isNumber( r ) );
+}
+
+bool ClassAd::
+evaluateAttrString( char *attr, char *buf, int len )
+{
+	Value val;
+	evaluateAttr( attr, val );
+	return( val.isStringValue( buf, len ) );
+}
+
+bool ClassAd::
+evaluateAttrString( char *attr, char *&str )
+{
+	Value val;
+	evaluateAttr( attr, val );
+	return( val.isStringValue( str ) );
 }
 
 bool ClassAd::
 flatten( ExprTree *tree , Value &val , ExprTree *&fexpr )
 {
-	bool rval;
-
 	EvalState	state;
-	EvalValue	value;
 
 	state.curAd  = this;
 	state.rootAd = this;
-	rval = tree->flatten( state , value , fexpr );
-	val.copyFrom( value );
-
-	return rval;
+	return( tree->flatten( state , val , fexpr ) );
 }
 
 bool ClassAdIterator::
@@ -488,4 +562,3 @@ previousAttribute (char *&attr, ExprTree *&expr)
     expr = ad->attrList[index].expression;
 	return true;	
 }
-

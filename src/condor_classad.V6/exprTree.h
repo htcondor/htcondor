@@ -2,9 +2,10 @@
 #define __EXPR_TREE_H__
 
 #include "common.h"
-#include "values.h"
+#include "value.h"
 
 // forward declarations
+class ExprTree;
 class ClassAd;
 class Source;
 class Sink;
@@ -23,11 +24,14 @@ enum NodeKind
 	EXPR_LIST_NODE
 };
 
+class EvalState {
+	public:
+		EvalState( );
 
-// Required info for handling scopes during eval'n
-struct EvalState {
-	ClassAd	*rootAd;
-	ClassAd *curAd;
+		HashTable<ExprTree*,Value> cache;
+		HashTable<ExprTree*, bool> superChase;
+		ClassAd	*rootAd;
+		ClassAd *curAd;
 };
 
 
@@ -40,24 +44,28 @@ class ExprTree
 
 		// factory method to parse expressions
 		static ExprTree *fromSource (Source &s);
+
+		// setter for default copy mode ( deep copy or ref count )
+		static void setDefaultCopyMode( CopyMode );
 		
 		// external interface operations defined on expressions
+		virtual void setParentScope( ClassAd* ) = 0;
 		virtual bool toSink (Sink &)  = 0;
-		virtual ExprTree *copy (CopyMode = EXPR_DEEP_COPY) = 0;
+		ExprTree *copy( CopyMode = EXPR_DEFAULT_COPY );
 
-		// general purpose methods
 		NodeKind getKind (void) { return nodeKind; }
-
 		bool flatten( Value&, ExprTree*& );
 		void evaluate( Value& );
+		void evaluate( Value&, ExprTree*& );
 
   	protected:
 		ExprTree ();
 
-		bool flatten( EvalState&, EvalValue&, ExprTree*&, OpKind* = NULL );
-		void evaluate( EvalState &, EvalValue & ); 
-		virtual void setParentScope( ClassAd* ) = 0;
+		bool flatten( EvalState&, Value&, ExprTree*&, OpKind* = NULL );
+		void evaluate( EvalState &, Value & ); 
+		void evaluate( EvalState &, Value &, ExprTree *& );
 
+		static CopyMode	defaultCopyMode;
 		NodeKind	nodeKind;
 		int			refCount;
 
@@ -69,10 +77,11 @@ class ExprTree
 		friend class ExprList;
 		friend class ClassAd; 
 
-		virtual void _evaluate (EvalState &, EvalValue &) = 0;
-		virtual bool _flatten( EvalState&, EvalValue&, ExprTree*&, OpKind* )=0;
+		virtual ExprTree *_copy( CopyMode = EXPR_DEEP_COPY )=0;
+		virtual void _evaluate( EvalState&, Value& )=0;
+		virtual void _evaluate( EvalState&, Value&, ExprTree*& )=0;
+		virtual bool _flatten( EvalState&, Value&, ExprTree*&, OpKind* )=0;
 
-		bool evalFlag;	// for cycle detection
 		bool flattenFlag;
 };
 

@@ -3,5 +3,6 @@
 
 #include "common.h"
 #include "exprTree.h"
+#include "condorClassad.h"
 
 #endif

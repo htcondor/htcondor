@@ -23,55 +23,62 @@ class Attribute
 
 class ClassAd : public ExprTree
 {
-  public:
-	// Ctors/dtor
-	ClassAd ();
-	ClassAd (char *);			// instantiate in domain
-	ClassAd (const ClassAd &);
-	~ClassAd ();
+  	public:
+		// Ctors/dtor
+		ClassAd ();
+		ClassAd (char *);			// instantiate in domain
+		ClassAd (const ClassAd &);
+		~ClassAd ();
 
-	// override methods
-	virtual ExprTree *copy(CopyMode);
-	virtual bool toSink (Sink &);	
+		// override methods
+		virtual bool toSink (Sink &);	
+		virtual void setParentScope( ClassAd* );
 	
-	// Accessors/modifiers
-	void		clear( );
-	bool 		insert( char *, ExprTree * );
-	ExprTree 	*lookup( char * );
-	bool 		remove( char * );
+		// Accessors/modifiers
+		void		clear( );
+		bool 		insert( char *, ExprTree * );
+		bool		insert( char *, char *, int=-1 );
+		ExprTree 	*lookup( char * );
+		bool 		remove( char * );
 	
-	// evaluation methods
-	void		evaluateAttr( char* , Value & );	// lookup+eval'n
-	bool		evaluate( const char*, Value&, int=-1);// parse+eval (strings)
-	bool		evaluate( char* , Value & , int=-1);// parse+eval'n (strBuffers)
-	void		evaluate( ExprTree*, Value & );		// eval'n
+		// evaluation methods
+		void		evaluateAttr( char* , Value & );			// lookup+eval'n
+		bool		evaluateExpr( char* , Value & , int=-1);	// parse+eval'n 
+		void		evaluateExpr( ExprTree*, Value & );			// eval'n
+		void		evaluateExpr( ExprTree*, Value &, ExprTree *& );
 
-	// flattening method
-	bool		flatten( ExprTree*, Value&, ExprTree *& );
+		bool		evaluateAttrInt( char*, int& );
+		bool		evaluateAttrReal( char*, double& );
+		bool		evaluateAttrNumber( char*, int& );
+		bool		evaluateAttrNumber( char*, double& );
+		bool		evaluateAttrString( char*, char*, int );
+		bool		evaluateAttrString( char*, char*& );
+
+		// flattening method
+		bool		flatten( ExprTree*, Value&, ExprTree *& );
+		
+		// factory methods to procure classads
+		static ClassAd *augmentFromSource 	(Source &, ClassAd &);
+		static ClassAd *fromSource 			(Source &);
+
+  	private:
+		friend 	class AttributeReference;
+		friend 	class ExprTree;
+		friend 	class ClassAdIterator;
+
+		virtual ExprTree* _copy( CopyMode );
+		virtual void _evaluate( EvalState& , Value& );
+		virtual void _evaluate( EvalState&, Value&, ExprTree*& );
+		virtual bool _flatten( EvalState&, Value&, ExprTree*&, OpKind* );
 	
-	// factory methods to procure classads
-	static ClassAd *augmentFromSource 	(Source &, ClassAd &);
-	static ClassAd *fromSource 			(Source &);
-
-  protected:
-	virtual void setParentScope( ClassAd* ad );
-
-  private:
-	friend	class AttributeReference;
-	friend class ExprTree;
-	friend class ClassAdIterator;
-
-	virtual void _evaluate( EvalState& , EvalValue& );
-	virtual bool _flatten( EvalState&, EvalValue&, ExprTree*&, OpKind* );
-
-	static	ClassAdDomainManager 	domMan;
-	ExtArray<Attribute> 			attrList;
-
-	StringSpace		*schema;
-	ClassAd			*parentScope;
-	int				last;
+		static	ClassAdDomainManager 	domMan;
+		ExtArray<Attribute> 			attrList;
+		ClassAd							*parentScope;
+	
+		StringSpace		*schema;
+		int				last;
 };
-
+	
 
 // Iterator
 class ClassAdIterator

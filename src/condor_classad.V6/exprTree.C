@@ -1,12 +1,12 @@
 #include "stringSpace.h"
 #include "exprTree.h"
 
+CopyMode ExprTree::defaultCopyMode = EXPR_DEEP_COPY;
 
 ExprTree::
 ExprTree ()
 {
-	refCount = 0;
-	evalFlag = false;
+	refCount = 1;
 	flattenFlag = false;
 }
 
@@ -21,30 +21,78 @@ void ExprTree::
 evaluate( Value& val )
 {
 	EvalState	state;
-	EvalValue	eval;
 
 	state.curAd  = NULL;
 	state.rootAd = NULL;
-	evaluate( state, eval );
-
-	val.copyFrom( eval );
+	evaluate( state, val );
 }
 
 
 void ExprTree::
-evaluate (EvalState &state, EvalValue &val)
+evaluate (EvalState &state, Value &val)
 {
-	if(evalFlag) {
-		val.setErrorValue ();
-		evalFlag = false; 
+	Value cv;
+
+	if( state.cache.lookup( this, cv ) == 0 ) {
+		// found in cache; return cached value
+		val.copyFrom( cv );
+		return;
+	} 
+
+	// not found in cache; insert a cache entry
+	cv.setUndefinedValue( );
+	if( state.cache.insert( this, cv) < 0 ) {
+		val.setErrorValue( );
 		return;
 	}
 
-	evalFlag = true; 	
+	// evaluate the expression
 	_evaluate( state, val );
-	evalFlag = false; 
 
-	return;
+	// cache the value
+	if( state.cache.insert( this, val ) < 0 ) {
+		val.setErrorValue( );
+		return;
+	}
+}
+
+void ExprTree::
+evaluate( Value& val, ExprTree *&sig )
+{
+	EvalState	state;
+
+	state.curAd  = NULL;
+	state.rootAd = NULL;
+	evaluate( state, val, sig );
+}
+
+
+void ExprTree::
+evaluate( EvalState &state, Value &val, ExprTree *&sig )
+{
+	Value	cv;
+
+	if( state.cache.lookup( this, cv ) == 0 ) {
+		// found in cache; return cached value
+		val.copyFrom( cv );
+		return;
+	} 
+
+	// not found in cache; insert a cache entry
+	cv.setUndefinedValue( );
+	if( state.cache.insert( this, cv) < 0 ) {
+		val.setErrorValue( );
+		return;
+	}
+
+	// evaluate the expression
+	_evaluate( state, val, sig );
+
+	// cache the value
+	if( state.cache.insert( this, val ) < 0 ) {
+		val.setErrorValue( );
+		return;
+	}
 }
 
 
@@ -52,22 +100,16 @@ bool ExprTree::
 flatten( Value& val, ExprTree *&tree )
 {
 	EvalState 	state;
-	EvalValue	eval;
-	bool		rval;
 
 	state.curAd  = NULL;
 	state.rootAd = NULL;
 
-	rval = flatten( state, eval, tree );
-
-	val.copyFrom( eval );
-
-	return rval;
+	return( flatten( state, val, tree ) );
 }
 
 
 bool ExprTree::
-flatten( EvalState &state, EvalValue &val, ExprTree *&tree, OpKind* op)
+flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind* op)
 {
 	bool rval;
 
@@ -84,15 +126,51 @@ flatten( EvalState &state, EvalValue &val, ExprTree *&tree, OpKind* op)
 	return rval;
 }
 
+void ExprTree::
+setDefaultCopyMode( CopyMode cm )
+{
+	if( cm == EXPR_DEEP_COPY || cm == EXPR_REF_COUNT ) {
+		defaultCopyMode = cm;
+	} else {
+		cm = EXPR_DEEP_COPY;
+	}
+}
+
+ExprTree *ExprTree::
+copy( CopyMode cm )
+{
+	if( cm == EXPR_DEFAULT_COPY ) cm = defaultCopyMode;
+	if( cm == EXPR_REF_COUNT ) {
+		refCount++;
+	}
+	return( _copy( cm ) );
+}
+
 
 ExprTree *ExprTree::
 fromSource (Source &s)
 {
 	ExprTree *tree = NULL;
-	if (!s.parseExpression(tree) && tree)
-	{
+	if (!s.parseExpression(tree) && tree) {
 		delete tree;
 		return (ExprTree*)NULL;
 	}
 	return tree;
+}
+
+
+int 
+exprHash( ExprTree* const& expr, int numBkts ) 
+{
+	unsigned char *ptr = (unsigned char*) &expr;
+	int	result = 0;
+	
+	for( int i = 0 ; (unsigned)i < sizeof( expr ) ; i++ ) result += ptr[i];
+	return( result % numBkts );
+}
+
+
+EvalState::
+EvalState( ) : cache( 128, &exprHash ), superChase( 128, &exprHash )
+{
 }

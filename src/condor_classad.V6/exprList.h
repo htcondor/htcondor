@@ -11,24 +11,25 @@ class ExprList : public ExprTree
 		~ExprList();
 
 		// override methods
-		virtual ExprTree *copy (CopyMode);
 		virtual bool toSink (Sink &);
+		virtual void setParentScope( ClassAd* );
 
 		// specific methods
 		void appendExpression(ExprTree *);
-		int  getLength();
+		int  number();
+		void rewind();
+		ExprTree* next();
 
 	protected:
-		virtual void setParentScope( ClassAd* );
-
 		void clear (void);
 		List<ExprTree> exprList;
 
 	private:
-		virtual void _evaluate (EvalState &, EvalValue &);
-		virtual bool _flatten( EvalState&, EvalValue&, ExprTree*&, OpKind* );
+		virtual ExprTree* _copy( CopyMode );
+		virtual void _evaluate (EvalState &, Value &);
+		virtual void _evaluate (EvalState &, Value &, ExprTree *&);
+		virtual bool _flatten( EvalState&, Value&, ExprTree*&, OpKind* );
 };
 
 
 #endif//__EXPR_LIST_H__
-

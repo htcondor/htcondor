@@ -11,20 +11,22 @@ class AttributeReference : public ExprTree
     	~AttributeReference ();
 
     	// override methods
-    	virtual ExprTree *copy (CopyMode);
 		virtual bool toSink (Sink &);
+		virtual void setParentScope( ClassAd* );
 
     	// specific methods
     	void setReference (ExprTree *, char *, bool = false);
 
-	protected:
-		virtual void setParentScope( ClassAd* );
-
   	private:
-    	virtual void _evaluate( EvalState & , EvalValue & );
-    	virtual bool _flatten( EvalState&, EvalValue&, ExprTree*&, OpKind* );
+		// private ctor for internal use
+		AttributeReference( ExprTree*, char*, bool );
 
-		int	findExpr( EvalState , ExprTree* , ExprTree*& , EvalState& );
+		virtual ExprTree* _copy( CopyMode );
+    	virtual void _evaluate( EvalState & , Value & );
+    	virtual void _evaluate( EvalState & , Value &, ExprTree*& );
+    	virtual bool _flatten( EvalState&, Value&, ExprTree*&, OpKind* );
+
+		int	findExpr( EvalState&, ExprTree*&, ExprTree*&, bool );
 
 		ExprTree	*expr;
 		bool		absolute;

@@ -11,6 +11,7 @@ enum MmMode
 
 enum CopyMode 
 { 
+	EXPR_DEFAULT_COPY,
 	EXPR_DEEP_COPY, 
 	EXPR_REF_COUNT 
 };
@@ -36,7 +37,9 @@ enum OpKind
     NOT_EQUAL_OP,           // (comparison)
     EQUAL_OP,               // (comparison)
     META_EQUAL_OP,          // (comparison)
+	IS_OP					= META_EQUAL_OP,
     META_NOT_EQUAL_OP,      // (comparison)
+	ISNT_OP					= META_NOT_EQUAL_OP,
     GREATER_OR_EQUAL_OP,    // (comparison)
     GREATER_THAN_OP,        // (comparison)
     __COMPARISON_END__      = GREATER_THAN_OP,
@@ -63,9 +66,9 @@ enum OpKind
     BITWISE_XOR_OP,         // (bitwise)
     BITWISE_AND_OP,         // (bitwise)
     LEFT_SHIFT_OP,          // (bitwise)
-    LOGICAL_RIGHT_SHIFT_OP, // (bitwise) -- unsigned shift
-    ARITH_RIGHT_SHIFT_OP,   // (bitwise) -- signed shift
-    __BITWISE_END__         = ARITH_RIGHT_SHIFT_OP, 
+    RIGHT_SHIFT_OP, 		// (bitwise) -- signed shift
+    URIGHT_SHIFT_OP,   		// (bitwise) -- unsigned shift
+    __BITWISE_END__         = URIGHT_SHIFT_OP, 
 
     __MISC_START__,
     PARENTHESES_OP          = __MISC_START__,

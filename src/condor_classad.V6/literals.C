@@ -16,7 +16,7 @@ Literal::
 
 
 ExprTree *Literal::
-copy (CopyMode cm)
+_copy( CopyMode cm )
 {
 	if( cm == EXPR_DEEP_COPY ) {	
 		Literal *newTree = new Literal;
@@ -26,11 +26,14 @@ copy (CopyMode cm)
 		newTree->nodeKind = nodeKind;
 
 		return newTree;
+	} else if( cm == EXPR_REF_COUNT ) {
+		// ref count already updated by ExprTree::copy()
+		return this;
 	}
 
-	return this;
+	// will not reach here
+	return 0;
 }
-
 
 bool Literal::
 toSink (Sink &s)
@@ -49,24 +52,22 @@ toSink (Sink &s)
 
 
 Literal* Literal::
-makeLiteral( EvalValue& val ) 
+makeLiteral( Value& val ) 
 {
 	Literal* lit = new Literal();
 	if( !lit ) return NULL;
-	lit->value.copyFrom( val );
+	lit->value.copyFrom( val, VALUE_HANDOVER );
 	return lit;
 }
 
 
 void Literal::
-_evaluate (EvalState &, EvalValue &val)
+_evaluate (EvalState &, Value &val)
 {
 	int		i;
 	double	r;
-	Value	v;
 
-	v.copyFrom (value);
-	val.copyFrom( v );
+	val.copyFrom( value, VALUE_COPY );
 
 	// if integer or real, multiply by the factor
 	if (val.isIntegerValue(i)) {
@@ -77,12 +78,27 @@ _evaluate (EvalState &, EvalValue &val)
 }
 
 
+void Literal::
+_evaluate( EvalState &state, Value &val, ExprTree *&tree )
+{
+	_evaluate( state, val );
+	tree = copy();
+}
+
 bool Literal::
-_flatten( EvalState &state, EvalValue &val, ExprTree *&tree, OpKind*)
+_flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind*)
 {
 	tree = NULL;
 	_evaluate( state, val );
 	return true;
+}
+
+
+void Literal::
+setBooleanValue( bool b )
+{
+	value.setBooleanValue( b );
+	factor = NO_FACTOR;
 }
 
 

@@ -9,10 +9,11 @@ class Literal : public ExprTree
     	~Literal ();
 
     	// override methods
-    	virtual ExprTree *copy (CopyMode = EXPR_DEEP_COPY);
+		virtual void setParentScope( ClassAd* ){ }
 		virtual bool toSink (Sink &);
 
     	// specific methods
+		void setBooleanValue	(bool);
     	void setIntegerValue    (int, NumberFactor = NO_FACTOR);
     	void setRealValue       (double, NumberFactor = NO_FACTOR);
     	void adoptStringValue   (char *);
@@ -26,12 +27,12 @@ class Literal : public ExprTree
 		friend ExprList;
 		friend Operation;
 
-		static Literal* makeLiteral( EvalValue& );
-		virtual void setParentScope( ClassAd* ) {};
-
+		static Literal* makeLiteral( Value& );
   	private:
-		virtual bool _flatten( EvalState&, EvalValue&, ExprTree*&, OpKind* );
- 		virtual void _evaluate (EvalState &, EvalValue &);
+		virtual ExprTree* _copy( CopyMode );
+		virtual bool _flatten( EvalState&, Value&, ExprTree*&, OpKind* );
+ 		virtual void _evaluate (EvalState &, Value &);
+ 		virtual void _evaluate (EvalState &, Value &, ExprTree *&);
 
 		// literal specific information
     	Value   		value;

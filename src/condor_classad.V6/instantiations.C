@@ -12,3 +12,9 @@ template class ExtArray<ExprTree*>;
 template class List<Value>;		template class Item<Value>;
 template class List<ExprTree>;	template class Item<ExprTree>;
 
+template class HashTable<ExprTree*, Value>;
+template class HashBucket<ExprTree*, Value>;
+template class HashTable<ExprTree*, bool>;
+template class HashBucket<ExprTree*, bool>;
+template class HashTable<ClassAd*,ClassAd*>;
+template class HashBucket<ClassAd*,ClassAd*>;

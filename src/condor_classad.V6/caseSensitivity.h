@@ -1,10 +1,6 @@
 #ifndef __CASE_SENSITIVITY_H__
 #define __CASE_SENSITIVITY_H__
 
-#include "condor_common.h"
-#include <string.h>
-#include "condor_string.h"
-
 // Attribute lookups are case insensitive
 #define CLASSAD_ATTR_NAMES_CASE_INSENSITIVE
 #define CLASSAD_ATTR_NAMES_STRCMP	strcasecmp

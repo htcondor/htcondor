@@ -13,8 +13,8 @@ class Operation : public ExprTree
 		~Operation ();
 
 		// override methods
-		virtual ExprTree *copy (CopyMode);
 		virtual bool toSink (Sink &);
+		virtual void setParentScope( ClassAd* );
 
 		// specific methods (allow for unary, binary and ternary ops) 
 		void setOperation (OpKind, ExprTree* = NULL, ExprTree* = NULL,
@@ -26,35 +26,38 @@ class Operation : public ExprTree
 		// public access to operation function
 		static void operate (OpKind, Value &, Value &, Value &);
 		static void operate (OpKind, Value &, Value &, Value &, Value &);
-
-	protected:
-		virtual void setParentScope( ClassAd * );
+		static bool isStrictOperator( OpKind );
 
   	private:
-		virtual void _evaluate (EvalState &, EvalValue &);
-		virtual bool _flatten( EvalState&, EvalValue&, ExprTree*&, OpKind* );
+		virtual ExprTree* _copy( CopyMode );
+		virtual void _evaluate( EvalState &, Value &);
+		virtual void _evaluate( EvalState &, Value &, ExprTree*& );
+		virtual bool _flatten( EvalState&, Value&, ExprTree*&, OpKind* );
 
 		// auxillary functionms
-		bool combine( OpKind&, EvalValue&, ExprTree*&, 
-				OpKind, EvalValue&, ExprTree*, OpKind, EvalValue&, ExprTree* );
-		bool flattenSpecials( EvalState &, EvalValue &, ExprTree *& );
+		bool combine( OpKind&, Value&, ExprTree*&, 
+				OpKind, Value&, ExprTree*, OpKind, Value&, ExprTree* );
+		bool flattenSpecials( EvalState &, Value &, ExprTree *& );
 
-		static Operation* makeOperation( OpKind, EvalValue&, ExprTree* );
-		static Operation* makeOperation( OpKind, ExprTree*, EvalValue& );
+		static Operation* makeOperation( OpKind, Value&, ExprTree* );
+		static Operation* makeOperation( OpKind, ExprTree*, Value& );
 		static Operation* makeOperation( OpKind, ExprTree*, ExprTree* );
 		static Operation* makeOperation( OpKind,ExprTree*,ExprTree*,ExprTree* );
 		static Operation* makeOperation( OpKind, ExprTree* );
-		static ValueType  coerceToNumber (EvalValue&, EvalValue &);
-		static void _doOperation(OpKind,EvalValue&,EvalValue&,EvalValue&,
-								bool,bool,bool, EvalValue&);
-		static void doComparison(OpKind, EvalValue&, EvalValue&, EvalValue&);
-		static void doArithmetic(OpKind, EvalValue&, EvalValue&, EvalValue&);
-		static void doLogical 	(OpKind, EvalValue&, EvalValue&, EvalValue&);
-		static void doBitwise 	(OpKind, EvalValue&, EvalValue&, EvalValue&); 
-		static void compareStrings(OpKind, EvalValue&, EvalValue&, EvalValue&);
-		static void compareReals(OpKind, EvalValue&, EvalValue&, EvalValue&);
-		static void compareIntegers(OpKind, EvalValue&, EvalValue&, EvalValue&);
-		static void doRealArithmetic(OpKind,EvalValue&, EvalValue&, EvalValue&);
+		static ValueType  coerceToNumber (Value&, Value &);
+
+		enum SigValues { SIG_NONE=0 , SIG_LEFT=1 , SIG_MIDDLE=2 , SIG_RIGHT=4 };
+
+		static int _doOperation(OpKind,Value&,Value&,Value&,
+								bool,bool,bool, Value&, EvalState* = NULL);
+		static int doComparison(OpKind, Value&, Value&, Value&);
+		static int doArithmetic(OpKind, Value&, Value&, Value&);
+		static int doLogical 	(OpKind, Value&, Value&, Value&);
+		static int doBitwise 	(OpKind, Value&, Value&, Value&); 
+		static int doRealArithmetic(OpKind,Value&, Value&, Value&);
+		static void compareStrings(OpKind, Value&, Value&, Value&);
+		static void compareReals(OpKind, Value&, Value&, Value&);
+		static void compareIntegers(OpKind, Value&, Value&, Value&);
 
 		// operation specific information
 		OpKind		operation;
