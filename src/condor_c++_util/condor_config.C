@@ -976,7 +976,7 @@ set_persistent_config(char *admin, char *config)
 	}
 	PersistAdminList.rewind();
 	bool first_time = true;
-	while (tmp = PersistAdminList.next()) {
+	while( (tmp = PersistAdminList.next()) ) {
 		if (!first_time) {
 			if (write(fd, ", ", 2) != 2) {
 				dprintf( D_ALWAYS, "write failed with errno %d in "

@@ -400,7 +400,7 @@ handle_agent_fetch_log (ReliSock* stream) {
 
 	dprintf( D_ALWAYS, "INFO: daemon_paramname: %s\n", daemon_paramname );
 
-	if( daemon_filename = param(daemon_paramname) ) {
+	if( (daemon_filename = param(daemon_paramname)) ) {
 		dprintf( D_ALWAYS, "INFO: daemon_filename: %s\n", daemon_filename );
 		stream->encode();
 		res = (stream->put_file(daemon_filename) < 0);
