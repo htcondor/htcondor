@@ -51,15 +51,11 @@ bool ClassAdParser::
 ParseExpression( const string &buffer, ExprTree *&tree, bool full )
 {
 	bool              success;
-	StringLexerSource *lexer_source;
+	StringLexerSource lexer_source(&buffer);
 
 	success      = false;
-	lexer_source = new StringLexerSource(&buffer);
-	if (lexer_source != NULL) {
-		if (lexer.Initialize(lexer_source)) {
-			success = parseExpression(tree, full);
-		}
-		delete lexer_source;
+	if (lexer.Initialize(&lexer_source)) {
+		success = parseExpression(tree, full);
 	}
 
 	return success;
@@ -70,21 +66,17 @@ ExprTree *ClassAdParser::
 ParseExpression( const string &buffer, bool full )
 {
 	ExprTree          *tree;
-	StringLexerSource *lexer_source;
+	StringLexerSource lexer_source(&buffer);
 
 	tree = NULL;
-	lexer_source = new StringLexerSource(&buffer);
 
-	if (lexer_source != NULL) {
-		if (lexer.Initialize(lexer_source)) {
-			if (!parseExpression(tree, full)) {
-				if (tree) {
-					delete tree;
-					tree = NULL;
-				}
+	if (lexer.Initialize(&lexer_source)) {
+		if (!parseExpression(tree, full)) {
+			if (tree) {
+				delete tree;
+				tree = NULL;
 			}
 		}
-		delete lexer_source;
 	}
 	return tree;
 }
@@ -99,15 +91,9 @@ bool ClassAdParser::
 ParseClassAd(const string &buffer, ClassAd &classad, bool full)
 {
 	bool              success;
-	StringLexerSource *lexer_source;
+	StringLexerSource lexer_source(&buffer);
 
-	lexer_source = new StringLexerSource(&buffer);
-	if (lexer_source != NULL) {
-		success = ParseClassAd(lexer_source, classad, full);
-		delete lexer_source;
-	} else {
-		success = false;
-	}
+	success = ParseClassAd(&lexer_source, classad, full);
 
 	return success;
 }
@@ -116,15 +102,11 @@ bool ClassAdParser::
 ParseClassAd(const string &buffer, ClassAd &classad, int *offset)
 {
 	bool              success = false;
-	StringLexerSource *lexer_source;
+	StringLexerSource lexer_source(&buffer, *offset);
 
 	if (offset != NULL) {
-		lexer_source = new StringLexerSource(&buffer, *offset);
-		if (lexer_source != NULL) {
-			success = ParseClassAd(lexer_source, classad);
-			*offset = lexer_source->GetCurrentLocation();
-			delete lexer_source;
-		}
+		success = ParseClassAd(&lexer_source, classad);
+		*offset = lexer_source.GetCurrentLocation();
 	}
 
 	return success;
@@ -133,15 +115,9 @@ ParseClassAd(const string &buffer, ClassAd &classad, int *offset)
 bool ClassAdParser::ParseClassAd(const char *buffer, ClassAd &classad, bool full)
 {
 	bool success;
-	CharLexerSource *lexer_source;
+	CharLexerSource lexer_source(buffer);
 
-	lexer_source = new CharLexerSource(buffer);
-	if (lexer_source != NULL) {
-		success = ParseClassAd(lexer_source, classad, full);
-		delete lexer_source;
-	} else {
-		success = false;
-	}
+	success = ParseClassAd(&lexer_source, classad, full);
 	
 	return success;
 }
@@ -149,15 +125,11 @@ bool ClassAdParser::ParseClassAd(const char *buffer, ClassAd &classad, bool full
 bool ClassAdParser::ParseClassAd(const char *buffer, ClassAd &classad, int *offset)
 {
 	bool success = false;
-	CharLexerSource *lexer_source;
+	CharLexerSource lexer_source(buffer, *offset);
 
 	if (offset != NULL) {
-		lexer_source = new CharLexerSource(buffer, *offset);
-		if (lexer_source != NULL) {
-			success = ParseClassAd(lexer_source, classad);
-			*offset = lexer_source->GetCurrentLocation();
-			delete lexer_source;
-		}
+		success = ParseClassAd(&lexer_source, classad);
+		*offset = lexer_source.GetCurrentLocation();
 	}
 
 	return success;
@@ -166,15 +138,9 @@ bool ClassAdParser::ParseClassAd(const char *buffer, ClassAd &classad, int *offs
 bool ClassAdParser::ParseClassAd(FILE *file, ClassAd &classad, bool full)
 {
 	bool success;
-	FileLexerSource *lexer_source;
+	FileLexerSource lexer_source(file);
 
-	lexer_source = new FileLexerSource(file);
-	if (lexer_source != NULL) {
-		success = ParseClassAd(lexer_source, classad, full);
-		delete lexer_source;
-	} else {
-		success = false;
-	}
+	success = ParseClassAd(&lexer_source, classad, full);
 
 	return success;
 }
@@ -182,15 +148,9 @@ bool ClassAdParser::ParseClassAd(FILE *file, ClassAd &classad, bool full)
 bool ClassAdParser::ParseClassAd(istream *stream, ClassAd &classad, bool full)
 {
 	bool                    success;
-	InputStreamLexerSource *lexer_source;
+	InputStreamLexerSource lexer_source(stream);
 
-	lexer_source = new InputStreamLexerSource(stream);
-	if (lexer_source != NULL) {
-		success = ParseClassAd(lexer_source, classad, full);
-		delete lexer_source;
-	} else {
-		success = false;
-	}
+	success = ParseClassAd(&lexer_source, classad, full);
 
 	return success;
 }
@@ -229,15 +189,9 @@ ClassAd *ClassAdParser::
 ParseClassAd(const string &buffer, bool full)
 {
 	ClassAd           *ad;
-	StringLexerSource *lexer_source;
+	StringLexerSource lexer_source(&buffer);
 
-	lexer_source = new StringLexerSource(&buffer);
-	if (lexer_source != NULL) {
-		ad = ParseClassAd(lexer_source, full);
-		delete lexer_source;
-	} else {
-		ad = NULL;
-	}
+	ad = ParseClassAd(&lexer_source, full);
 
 	return ad;
 }
@@ -246,15 +200,11 @@ ClassAd *ClassAdParser::
 ParseClassAd(const string &buffer, int *offset)
 {
 	ClassAd           *ad = NULL;
-	StringLexerSource *lexer_source;
+	StringLexerSource lexer_source(&buffer, *offset);
 
 	if (offset != NULL) {
-		lexer_source = new StringLexerSource(&buffer, *offset);
-		if (lexer_source != NULL) {
-			ad = ParseClassAd(lexer_source);
-			*offset = lexer_source->GetCurrentLocation();
-			delete lexer_source;
-		}
+		ad = ParseClassAd(&lexer_source);
+		*offset = lexer_source.GetCurrentLocation();
 	}
 	return ad;
 }
@@ -263,15 +213,9 @@ ClassAd *ClassAdParser::
 ParseClassAd(const char *buffer, bool full)
 {
 	ClassAd          *ad;
-	CharLexerSource  *lexer_source;
+	CharLexerSource  lexer_source(buffer);
 
-	lexer_source = new CharLexerSource(buffer);
-	if (lexer_source != NULL) {
-		ad = ParseClassAd(lexer_source, full);
-		delete lexer_source;
-	} else {
-		ad = NULL;
-	}
+	ad = ParseClassAd(&lexer_source, full);
 
 	return ad;
 }
@@ -280,15 +224,11 @@ ClassAd *ClassAdParser::
 ParseClassAd(const char *buffer, int *offset)
 {
 	ClassAd          *ad = NULL;
-	CharLexerSource  *lexer_source;
+	CharLexerSource  lexer_source(buffer, *offset);
 
 	if (offset != NULL) {
-		lexer_source = new CharLexerSource(buffer, *offset);
-		if (lexer_source != NULL) {
-			ad = ParseClassAd(lexer_source);
-			*offset = lexer_source->GetCurrentLocation();
-			delete lexer_source;
-		}
+		ad = ParseClassAd(&lexer_source);
+		*offset = lexer_source.GetCurrentLocation();
 	}
 
 	return ad;
@@ -297,16 +237,11 @@ ParseClassAd(const char *buffer, int *offset)
 ClassAd *ClassAdParser::
 ParseClassAd(FILE *file, bool full)
 {
-	ClassAd           *ad;
-	FileLexerSource *lexer_source;
+	ClassAd         *ad;
+	FileLexerSource lexer_source(file);
 
-	lexer_source = new FileLexerSource(file);
-	if (lexer_source != NULL) {
-		ad = ParseClassAd(lexer_source, full);
-		delete lexer_source;
-	} else {
-		ad = NULL;
-	}
+	ad = ParseClassAd(&lexer_source, full);
+
 	return ad;
 }
 
@@ -314,15 +249,9 @@ ClassAd *ClassAdParser::
 ParseClassAd(istream *stream, bool full)
 {
 	ClassAd                *ad;
-	InputStreamLexerSource *lexer_source;
+	InputStreamLexerSource lexer_source(stream);
 
-	lexer_source = new InputStreamLexerSource(stream);
-	if (lexer_source != NULL) {
-		ad = ParseClassAd(lexer_source, full);
-		delete lexer_source;
-	} else {
-		ad = NULL;
-	}
+	ad = ParseClassAd(&lexer_source, full);
 	return ad;
 }
 
