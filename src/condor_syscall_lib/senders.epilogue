@@ -1,3 +1,40 @@
+	case CONDOR_work_request:
+	  {
+		ClassAd *ad;
+		char *a_out;
+		char *targ;
+		char *orig;
+		int *kill_sig;
+
+		CurrentSysCall = CONDOR_work_request;
+
+		ad = va_arg( ap, ClassAd *);
+		a_out = va_arg( ap, char *);
+		targ = va_arg( ap, char *);
+		orig = va_arg( ap, char *);
+		kill_sig = va_arg( ap, int *);
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(CurrentSysCall) );
+		assert( syscall_sock->end_of_message() );
+
+		syscall_sock->decode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+			assert( syscall_sock->end_of_message() );
+			errno = terrno;
+			break;
+		}
+		assert( syscall_sock->signal(kill_sig) );
+		assert( syscall_sock->code(orig) );
+		assert( syscall_sock->code(targ) );
+		assert( syscall_sock->code(a_out) );
+		assert( ad->get(*syscall_sock) );
+		assert( syscall_sock->end_of_message() );
+		break;
+	}
+
 	case CONDOR_send_file:
 	  {
 		char	*local;

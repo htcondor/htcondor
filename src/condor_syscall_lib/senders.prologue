@@ -97,6 +97,7 @@
 #endif
 
 #include "syscall_param_sizes.h"
+#include "condor_classad.h"
 
 typedef int open_flags_t;
 

@@ -12,6 +12,7 @@
 #endif
 
 #include "condor_common.h"
+#include "condor_classad.h"
 
 #if	defined(HPUX9) || defined(Solaris)
 #	undef sync
@@ -140,6 +141,8 @@ do_REMOTE_syscall()
 #include "joblist.h"
 extern struct tagJobList	*JobList;
 
+#include "prototypes.h"
+
 int
 do_REMOTE_syscall(ReliSock *sock, int process)
 {
@@ -166,4 +169,45 @@ do_REMOTE_syscall(ReliSock *sock, int process)
 			condor_sysnum, _condor_syscall_name(condor_sysnum) );
 
 	switch( condor_sysnum ) {
+        case CONDOR_work_request:
+          {
+                ClassAd *ad;
+                char *a_out;
+                char *targ;
+                char *orig;
+                int *kill_sig;
+                int terrno;
+
+                kill_sig = (int *)malloc( (unsigned)INT_SIZE );
+                orig = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
+                targ = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
+                a_out = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
+		/* space for ad allocated by pseudo_work_req */
+                assert( syscall_sock->end_of_message() );;
+
+                errno = 0;
+                rval = pseudo_work_request( ad, a_out, targ, orig, kill_sig );
+                terrno = errno;
+                dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno);
+
+                syscall_sock->encode();
+                assert( syscall_sock->code(rval) );
+                if( rval < 0 ) {
+                        assert( syscall_sock->code(terrno) );
+                }
+                if( rval >= 0 ) {
+                        assert( syscall_sock->signal(kill_sig) );
+                        assert( syscall_sock->code(orig) );
+                        assert( syscall_sock->code(targ) );
+                        assert( syscall_sock->code(a_out) );
+			assert( ad->put(*syscall_sock) );
+                }
+                free( (char *)kill_sig );
+                free( (char *)orig );
+                free( (char *)targ );
+                free( (char *)a_out );
+                free( (ClassAd *)ad );
+                assert( syscall_sock->end_of_message() );;
+                return 0;
+        }
 #endif
