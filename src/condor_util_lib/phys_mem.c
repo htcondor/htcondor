@@ -157,7 +157,7 @@ calc_phys_memory()
 {
 	MEMORYSTATUS status;
 	GlobalMemoryStatus(&status);
-	return (int)(status.dwTotalPhys/(1024*1024));
+	return (int)( ceil(status.dwTotalPhys/(1024*1024)+.4 ) );
 }
 
 #elif defined(OSF1)
