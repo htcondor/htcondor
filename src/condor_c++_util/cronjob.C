@@ -34,7 +34,7 @@
 
 // Cron's Line StdOut Buffer constructor
 CronJobOut::CronJobOut( const char *prefix) :
-		LineBuffer( 128 )
+		LineBuffer( 1024 )
 {
 	this->prefix = NULL;
 	SetPrefix( prefix );
@@ -508,11 +508,26 @@ CondorCronJob::RunProcess( void )
 		strcat( argBuf, args );
 	}
 
+	// Create the priv state for the process
+	uid_t uid = get_condor_uid( );
+	if ( uid == (uid_t) -1 )
+	{
+		dprintf( D_ALWAYS, "Cron: Invalid UID -1\n" );
+		return -1;
+	}
+	gid_t gid = get_condor_gid( );
+	if ( gid == (uid_t) -1 )
+	{
+		dprintf( D_ALWAYS, "Cron: Invalid GID -1\n" );
+		return -1;
+	}
+	set_user_ids( uid, gid );
+
 	// Create the process, finally..
 	pid = daemonCore->Create_Process(
 		path,				// Path to executable
 		argBuf,				// argv
-		PRIV_CONDOR,		// Priviledge level
+		PRIV_USER_FINAL,	// Priviledge level
 		reaperId,			// ID Of reaper
 		FALSE,				// Command port?  No
 		env,				// Env to give to child
@@ -521,6 +536,9 @@ CondorCronJob::RunProcess( void )
 		NULL,				// Socket list
 		childFds,			// Stdin/stdout/stderr
 		0 );				// Nice increment
+
+	// Restore my priv state.
+	uninit_user_ids( );
 
 	// Close the child FDs
 	CleanFd( &childFds[0] );
