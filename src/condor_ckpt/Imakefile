@@ -38,7 +38,7 @@ EXTRACT = $(SIG_EXTRACT) $(PLATFORM_EXTRACT)
 
 #if DOES_COMPRESS_CKPT
 #if IS_SUN4X_SOLARIS
-COMPRESS_OBJ = malloc.o zimage.o _rem.o
+COMPRESS_OBJ = malloc.o zimage.o _rem.o _div.o umultiply.o
 #else
 COMPRESS_OBJ = malloc.o zimage.o
 #endif
@@ -205,12 +205,16 @@ program_target(ToUpper,ToUpper.o,$(NULL))
 
 #if DOES_COMPRESS_CKPT
 malloc.o : malloc.c
-	CCompiler -O2 -g -DMORECORE=condor_morecore -DHAVE_MMAP=0 -c malloc.c
+	CCompiler -O2 -g -DMORECORE=condor_morecore -DHAVE_MMAP=0 -Dmalloc_getpagesize=8192 -c malloc.c
 zimage.o : image.C
 	CPlusCompiler $(C_PLUS_FLAGS) $(COMPRESS_FLAGS) -o zimage.o -c image.C
 #if IS_SUN4X_SOLARIS
 _rem.o : $(SIMPLE_LIBC)
 	ar x $(SIMPLE_LIBC) _rem.o
+_div.o : $(SIMPLE_LIBC)
+	ar x $(SIMPLE_LIBC) _div.o
+umultiply.o : $(SIMPLE_LIBC)
+	ar x $(SIMPLE_LIBC) umultiply.o
 #endif
 $(COMPRESS_LIB): libckpt.a $(COMPRESS_OBJ)
 	cp libckpt.a $(COMPRESS_LIB)
