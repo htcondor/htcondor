@@ -1332,14 +1332,6 @@ SetTransferFiles()
 		input_file_list.initializeFromString( macro_value );
 	}
 
-	if( HasTDP ) {
-		if( tdp_cmd && ! input_file_list.contains(tdp_cmd) ) {
-			input_file_list.append( tdp_cmd );
-		}
-		if( tdp_input && ! input_file_list.contains(tdp_input) ) {
-			input_file_list.append( tdp_input );
-		}
-	}
 
 #if defined( WIN32 )
 	if( JobUniverse == CONDOR_UNIVERSE_MPI ) {
@@ -1434,6 +1426,45 @@ SetTransferFiles()
 	if( ! SetNewTransferFiles() ) {
 		SetOldTransferFiles( in_files_specified, out_files_specified );
 	}
+
+		/*
+		  If we're dealing w/ TDP and we might be transfering files,
+		  we want to make sure the tool binary and input file (if
+		  any) are included in the transfer_input_files list.
+		*/
+	if( should_transfer!=STF_NO && HasTDP ) {
+		char file_list[ATTRLIST_MAX_EXPRESSION];
+		bool changed_it = false;
+		if(job->LookupString(ATTR_TRANSFER_INPUT_FILES,file_list)!=1) {
+			file_list[0] = 0;
+		}
+		if( tdp_cmd && (!strstr(file_list, tdp_cmd)) ) {
+			TransferInputSize += calc_image_size(tdp_cmd);
+			if(file_list[0]) {
+				strcat(file_list,",");
+				strcat(file_list,tdp_cmd);
+			} else {
+				strcpy(file_list,tdp_cmd);
+			}
+			changed_it = true;
+		}
+		if( tdp_input && (!strstr(file_list, tdp_input)) ) {
+			TransferInputSize += calc_image_size(tdp_input);
+			if(file_list[0]) {
+				strcat(file_list,",");
+				strcat(file_list,tdp_input);
+			} else {
+				strcpy(file_list,tdp_input);
+			}
+			changed_it = true;
+		}
+		if( changed_it ) {
+			sprintf( buffer, "%s = \"%s\"", ATTR_TRANSFER_INPUT_FILES,
+					 file_list );
+			InsertJobExpr( buffer );
+		}
+	}
+
 
 	/*
 	  In the Java universe, if we might be transfering files, we want
