@@ -9,7 +9,7 @@
   these prototypes, even though the Ultrix 4.2 versions did...
   Once again, OSF1 also chokes, unless _AES_SOURCE(?) is defined JCP
 */
-#if defined(ULTRIX43) || defined(OSF1)
+#if defined(ULTRIX43) || defined(SUNOS41) || defined(OSF1)
 
 #if defined(__cplusplus)
 extern "C" {
