@@ -124,7 +124,7 @@ DEBUG_FLAG = DebugFlag
 #else
 
 #  define GssAuthentication -DGSS_AUTHENTICATION \
-          I$(GLOBUS_DIR)/include -I$(SSL_DIR)/include 
+          -I$(GLOBUS_DIR)/include -I$(SSL_DIR)/include 
 #  define ImakeGssFlag -DGSS_AUTHENTICATION
 
   SSL_DIR = /p/condor/workspaces/ssl
