@@ -33,6 +33,7 @@
 #include "scheduler.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"
+#include "classad_util.h"
 #include "condor_adtypes.h"
 #include "condor_string.h"
 #include "condor_email.h"
@@ -1077,13 +1078,16 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
 			owner[0] = '\0';
 			GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
 			init_user_ids(owner);
-			int kill_sig = SIGTERM;
-				// First, try ATTR_REMOVE_KILL_SIG
-			if( GetAttributeInt(job_id.cluster, job_id.proc,
-								ATTR_REMOVE_KILL_SIG, &kill_sig) < 0 ) {
+			int kill_sig;
+			ClassAd* job_ad = GetJobAd( job_id.cluster, job_id.proc );
+			kill_sig = findRmKillSig( job_ad );
+			if( kill_sig <= 0 ) {
 					// Fall back on the regular ATTR_KILL_SIG
-				GetAttributeInt(job_id.cluster, job_id.proc,
-								ATTR_KILL_SIG, &kill_sig);
+				kill_sig = findSoftKillSig( job_ad );
+			}
+			FreeJobAd( job_ad );
+			if( kill_sig <= 0 ) {
+				kill_sig = SIGTERM;
 			}
 			dprintf( D_FULLDEBUG,
 					 "Sending remove signal (%d) to scheduler universe job"
@@ -4251,9 +4255,15 @@ Scheduler::preempt(int n)
 					// beceause it could also be a shadow for which the
 					// claim was relinquished (by the startd).
 					if (IsSchedulerUniverse(rec)) {
-						int kill_sig = SIGTERM;
-						GetAttributeInt(rec->job_id.cluster, rec->job_id.proc, 
-										ATTR_KILL_SIG,&kill_sig);
+						int kill_sig;
+						ClassAd* job_ad = 
+							GetJobAd( rec->job_id.cluster,
+									  rec->job_id.proc );  
+						kill_sig = findSoftKillSig( job_ad );
+						if( kill_sig <= 0 ) {
+							kill_sig = SIGTERM;
+						}
+						FreeJobAd( job_ad );
 						daemonCore->Send_Signal( rec->pid, kill_sig );
 					}
 				} else {
