@@ -2564,8 +2564,8 @@ int DaemonCore::Create_Process(
 
 	STARTUPINFO si;
 	PROCESS_INFORMATION piProcess;
-	SECURITY_ATTRIBUTES sa;
-	SECURITY_DESCRIPTOR sd;
+	// SECURITY_ATTRIBUTES sa;
+	// SECURITY_DESCRIPTOR sd;
 	char *newenv = NULL;
 
 	// prepare a STARTUPINFO structure for the new process
@@ -2614,7 +2614,8 @@ int DaemonCore::Create_Process(
 			inherit_handles = TRUE;
 		}
 	}
-		
+	
+#if 0
 	// prepare the SECURITY_ATTRIBUTES structure
 	ZeroMemory(&sa,sizeof(sa));
 	sa.nLength = sizeof(sa);
@@ -2628,6 +2629,7 @@ int DaemonCore::Create_Process(
 				"failed, errno = %d\n",GetLastError());
 		return FALSE;
 	}
+#endif
 
 	if ( new_process_group == TRUE )
 		new_process_group = CREATE_NEW_PROCESS_GROUP;
@@ -2655,8 +2657,32 @@ int DaemonCore::Create_Process(
 		}
 	}
 
-	if ( !::CreateProcess(name,args,NULL,NULL,inherit_handles,
-			new_process_group,newenv,cwd,&si,&piProcess) ) {
+	BOOL cp_result;
+	if ( priv != PRIV_USER_FINAL ) {
+		cp_result = ::CreateProcess(name,args,NULL,NULL,inherit_handles,
+			new_process_group,newenv,cwd,&si,&piProcess);
+	} else {
+		// here we want to create a process as user for PRIV_USER_FINAL
+
+			// making this a NULL string tells NT to dynamically
+			// create a new Window Station for the process we are about
+			// to create....
+		si.lpDesktop = "";
+
+		HANDLE user_token = priv_state_get_handle();
+		ASSERT(user_token);
+
+			// we need to make certain to specify CREATE_NEW_CONSOLE, because
+			// our ACLs will not let us use the current console which is
+			// restricted to LOCALSYSTEM.  
+			//
+			// "Who's your Daddy ?!?!?!   JEFF B.!"
+		cp_result = ::CreateProcessAsUser(user_token,name,args,NULL,NULL,
+			inherit_handles,new_process_group | CREATE_NEW_CONSOLE, 
+			newenv,cwd,&si,&piProcess);
+	}
+
+	if ( !cp_result ) {
 		dprintf(D_ALWAYS,
 			"Create_Process: CreateProcess failed, errno=%d\n",GetLastError());
 		if ( newenv ) {
@@ -3671,6 +3697,8 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 		Register_DataPtr( (void *)child_pid );
 	}	
 
+	pidentry->was_not_responding = FALSE;
+	
 	dprintf(D_DAEMONCORE,
 		"received childalive, pid=%d, secs=%d\n",child_pid,timeout_secs);
 
@@ -3690,12 +3718,41 @@ int DaemonCore::HungChildTimeout()
 		return FALSE;
 	}
 
-	dprintf(D_ALWAYS,"ERROR: Child pid %d appears hung! Killing it hard.\n",
-		hung_child_pid);
+	// reset our tid to -1 so HandleChildAliveCommand() knows that there
+	// is currently no timer set.
+	pidentry->hung_tid = -1;
 
 	// set a flag in the PidEntry so a reaper can discover it was killed
 	// because it was hung.
 	pidentry->was_not_responding = TRUE;
+
+	// now we give the child one last chance to save itself.  we do this by 
+	// servicing any waiting commands, since there could be a child_alive 
+	// command sitting there in our receive buffer.  the reason we do this
+	// is to handle the case where both the child _and_ the parent have been
+	// hung for a period of time (e.g. perhaps the log files are on a hard
+	// mounted NFS volume, and everyone was blocked until the NFS server
+	// returned).  in this situation we should try to avoid killing the child.
+	// so service the buffered commands and check if the was_not_responding
+	// flag flips back to false.
+	ServiceCommandSocket();
+
+	// Now make certain that this pid did not exit by verifying we still
+	// exist in the pid table.  We must do this because ServiceCommandSocket
+	// could result in a process reaper being invoked.
+	if ((pidTable->lookup(hung_child_pid, pidentry) < 0)) {
+		// we have no information anymore on this pid, it must have exited
+		return FALSE;
+	}
+
+	// Now see if was_not_responding flipped back to FALSE
+	if ( pidentry->was_not_responding == FALSE ) {
+		// the child saved itself!
+		return FALSE;
+	}
+
+	dprintf(D_ALWAYS,"ERROR: Child pid %d appears hung! Killing it hard.\n",
+		hung_child_pid);
 
 	// and hardkill the bastard!
 	Shutdown_Fast(hung_child_pid);
