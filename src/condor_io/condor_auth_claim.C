@@ -39,7 +39,7 @@ Condor_Auth_Claim :: ~Condor_Auth_Claim()
 int Condor_Auth_Claim :: authenticate(const char * remoteHost)
 {
 #ifdef WIN32
-    const char * __FUNCTION__ = "Condor_Auth_Claim :: authenticate";
+    const char * pszFunction = "Condor_Auth_Claim :: authenticate";
 #endif 
 
 	int retval = 0;
@@ -55,7 +55,7 @@ int Condor_Auth_Claim :: authenticate(const char * remoteHost)
             	!mySock_->code( tmpOwner ))
 			{ 
 				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
-					__FUNCTION__, __LINE__);
+					pszFunction, __LINE__);
 				free(tmpOwner);
 				return fail; 
 			}
@@ -63,20 +63,20 @@ int Condor_Auth_Claim :: authenticate(const char * remoteHost)
             free( tmpOwner );
             if (!mySock_->end_of_message()) { 
 				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
-					__FUNCTION__, __LINE__);
+					pszFunction, __LINE__);
 				return fail;
 			}
             mySock_->decode();
             if (!mySock_->code( retval )) {
 				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
-					__FUNCTION__, __LINE__);
+					pszFunction, __LINE__);
 				return fail; 
 			}
         } else {
             //send 0
             if (!mySock_->code( retval )) { 
 				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
-					__FUNCTION__, __LINE__);
+					pszFunction, __LINE__);
 				return fail; 
 			}
         }
@@ -84,7 +84,7 @@ int Condor_Auth_Claim :: authenticate(const char * remoteHost)
         mySock_->decode();
         if (!mySock_->code( retval )) { 
 			dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
-				__FUNCTION__, __LINE__);
+				pszFunction, __LINE__);
 			return fail; 
 		}
         //if 1, receive owner and send back ok
@@ -93,7 +93,7 @@ int Condor_Auth_Claim :: authenticate(const char * remoteHost)
             	!mySock_->end_of_message())
 			{
 				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
-					__FUNCTION__, __LINE__);
+					pszFunction, __LINE__);
 				if (tmpOwner != NULL)
 				{
 					free(tmpOwner);
@@ -110,7 +110,7 @@ int Condor_Auth_Claim :: authenticate(const char * remoteHost)
             }
             if (!mySock_->code( retval )) { 
 				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
-					__FUNCTION__, __LINE__);
+					pszFunction, __LINE__);
 				return fail;
 			}
         }
@@ -118,7 +118,7 @@ int Condor_Auth_Claim :: authenticate(const char * remoteHost)
     
     if (!mySock_->end_of_message()) { 
 		dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
-			__FUNCTION__, __LINE__);
+			pszFunction, __LINE__);
 		return fail; 
 	}
     return retval;

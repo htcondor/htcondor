@@ -1673,6 +1673,9 @@ TranslateNameW(
  
 #endif // __SSPI_H__ 
 
+
+#if _MSC_VER < 1300 // if we're NOT in .NET
+
 //+------------------------------------------------------------------------- 
 // 
 //  Microsoft Windows 
@@ -1987,5 +1990,4 @@ TranslateNameW(
  
 #endif // _ISSPERR_H_ 
  
-
- 
+#endif // _MSC_VER < 1300 // if we're NOT in .NET

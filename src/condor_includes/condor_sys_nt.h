@@ -34,8 +34,16 @@
 
 // #define NOGDI
 #define NOSOUND
+
+#define _WIN32_WINNT 0x0500 // ray's stupid kludge to get jobobject stuff to build
+
+#if _MSC_VER >= 1300 // we're using .NET (visual c++ 7.0)
 #include <winsock2.h>
 #include <windows.h>
+#else // we're using 6.0
+#include <windows.h>
+#include <winsock2.h>
+#endif
 
 #include <io.h>
 #include <fcntl.h>

@@ -31,7 +31,7 @@
 #ifndef _SMPL_LIST_H_
 #define _SMPL_LIST_H_
 
-#include <iostream.h>
+#include <iostream>
 
 template <class ObjType> class SimpleListIterator;
 
