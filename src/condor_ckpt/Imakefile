@@ -115,6 +115,11 @@ libckpt.a: libtmp.a ToUpper
 	strip_copy_target(c_plus_alloc.o,$(STRIP_DIR)/lib,c_plus_alloc.o,OBJECT_MODE)
 	static_library(libckpt.a,$(STATIC_DIR)/lib)
 	static_copy_target(c_plus_alloc.o,$(STATIC_DIR)/lib,c_plus_alloc.o,OBJECT_MODE)
+#if	DOES_COMPRESS_CKPT
+	release_library($(COMPRESS_LIB),$(RELEASE_DIR)/lib)
+	strip_library($(COMPRESS_LIB),$(STRIP_DIR)/lib)
+	static_library($(COMPRESS_LIB),$(STATIC_DIR)/lib)
+#endif
 
 #else /* Not DOES_CHECKPOINTING */
 
