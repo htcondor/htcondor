@@ -5,6 +5,47 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 
+/* This code figures out what to do with a job given the user policy
+denotated in the submit description file(and therefore in the job
+ad). Here are the steps necessary to use this code:
+
+1. If you are doing periodic calls to this function, then just check the
+result classad and see what you need to do with the job. This is done like 
+this:
+	a) check to see if there is an error condition, then
+	b) check if there needs to be an action taken.
+
+2. If you are checking the job ad after the job has exited, then make sure you
+	fix up the job ad with the exit/signal code BEFORE you call the user policy
+	function.
+
+3. If the job has exited for real, but the user_policy code says it shouldn't
+leave the queue, then make sure you UNDEFINE ATTR_ON_EXIT_CODE, 
+ATTR_ON_EXIT_SIGNAL, and set ATTR_EXIT_BY_SIGNAL to FALSE. This undoes the
+exiting of the job with repect to the classad. Also, you have to set
+ATTR_COMPLETION_DATE back to zero.
+
+Now, what do you do with the result classad?
+
+A. check to see if ATTR_USER_POLICY_ERROR is true, if so, then the
+attribute ATTR_USER_ERROR_REASON will contain a reason for the error.
+
+B. check to see ATTR_TAKE_ACTION is true, if so, then 
+ATTR_USER_POLICY_FIRING_EXPR will contain the offending expression or
+the text in "old_style_exit" that explains which expression caused the action.
+The attribute ATTR_USER_POLICY_ACTION dictates what you should DO with the
+job, either put it on hold or remove it from the queue.
+
+C. If ATTR_USER_POLICY_FIRING_EXPR is ATTR_PERIODIC_REMOVE_CHECK then
+"condor" removed the job and it should be treated differently than if
+the job exited legitimately. For example, a different email to the user
+explaining the job was forcibly removed because the periodic remove check
+became true, not because the job exited legitimately.
+
+D. The general case of no action specified means the job stays in the queue.
+
+*/
+
 /* determine what to do with this job. */
 ClassAd* user_job_policy(ClassAd *jad);
 
