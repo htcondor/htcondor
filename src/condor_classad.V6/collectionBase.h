@@ -46,9 +46,9 @@ public:
 };
 
 
-typedef std::hash_map<std::string,View*,StringHash> ViewRegistry;
-typedef std::hash_map<std::string,ClassAdProxy,StringHash> ClassAdTable;
-typedef std::hash_map<std::string,ServerTransaction*,StringHash> XactionTable;
+typedef classad_hash_map<std::string,View*,StringHash> ViewRegistry;
+typedef classad_hash_map<std::string,ClassAdProxy,StringHash> ClassAdTable;
+typedef classad_hash_map<std::string,ServerTransaction*,StringHash> XactionTable;
 
 class ClassAdCollection : public ClassAdCollectionInterface {
 public:

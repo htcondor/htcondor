@@ -23,15 +23,9 @@
 #ifndef __EXPR_TREE_H__
 #define __EXPR_TREE_H__
 
-#if (__GNUC__<3)
-#include <hash_map>
-#else
-#include <ext/hash_map>
-using namespace __gnu_cxx;
-#endif
+#include "classad_stl.h"
 #include "common.h"
 #include "value.h"
-
 
 BEGIN_NAMESPACE( classad )
 
@@ -40,7 +34,7 @@ class ExprTree;
 class ClassAd;
 class MatchClassAd;
 
-typedef std::hash_map< const ExprTree*, Value, ExprHash > EvalCache;
+typedef classad_hash_map< const ExprTree*, Value, ExprHash > EvalCache;
 
 class EvalState {
 	public:

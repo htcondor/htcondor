@@ -24,7 +24,7 @@
 #if !defined( COMPRESS_H )
 #define COMPRESS_H
 
-#include <hash_map>
+#include "classad_stl.h"
 #include "classad.h"
 
 class ClassAdBin
@@ -37,7 +37,7 @@ class ClassAdBin
     ClassAd     *ad;
 };
 
-typedef hash_map< string, ClassAdBin*, StringHash > CompressedAds;
+typedef classad_hash_map< string, ClassAdBin*, StringHash > CompressedAds;
 
 bool MakeSignature( ClassAd *ad, References &refs, string &sig );
 bool Compress( ClassAdCollectionServer *server, LocalCollectionQuery *query,

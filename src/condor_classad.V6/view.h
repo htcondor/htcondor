@@ -26,14 +26,8 @@
 // STL includes
 #include <string>
 #include <set>
-#if (__GNUC__<3)
-#include <hash_map>
-#include <slist>
-#else
-#include <ext/hash_map>
-#include <ext/slist>
-using namespace __gnu_cxx;
-#endif
+
+#include "classad_stl.h"
 #include "exprTree.h"
 #include "matchClassad.h"
 
@@ -74,9 +68,9 @@ struct ViewMemberLT {
 
 typedef std::string ViewName;
 typedef std::multiset<ViewMember, ViewMemberLT> ViewMembers;
-typedef std::slist<View*> SubordinateViews;
-typedef std::hash_map<std::string,View*,StringHash> PartitionedViews;
-typedef std::hash_map<std::string,ViewMembers::iterator,StringHash> MemberIndex;
+typedef classad_slist<View*> SubordinateViews;
+typedef classad_hash_map<std::string,View*,StringHash> PartitionedViews;
+typedef classad_hash_map<std::string,ViewMembers::iterator,StringHash> MemberIndex;
 
 
 /* View class */

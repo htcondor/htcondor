@@ -24,11 +24,7 @@
 #include <stdio.h>
 #include <string>
 #include <map>
-#if (__GNUC__<3)
-#include <hash_map>
-#else
-#include <ext/hash_map>
-#endif
+#include "classad_stl.h"
 #include <sys/types.h>
 
 BEGIN_NAMESPACE( classad )
@@ -64,8 +60,8 @@ class IndexFile {
 	bool  TruncateStorageFile();
 	int  dump_index();
  private:
-	std::hash_map<std::string,int,StringHash> Index;
-	std::hash_map<std::string,int,StringHash>::iterator index_itr;
+	classad_hash_map<std::string,int,StringHash> Index;
+	classad_hash_map<std::string,int,StringHash>::iterator index_itr;
 	int filed;
 };
 

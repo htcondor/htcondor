@@ -26,6 +26,7 @@
 #include <set>
 #include <map>
 #include <vector>
+#include "classad_stl.h"
 #include "exprTree.h"
 
 BEGIN_NAMESPACE( classad )
@@ -40,7 +41,7 @@ BEGIN_NAMESPACE( classad )
 #include "stream.h"
 #endif
 
-typedef std::hash_map<std::string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr> AttrList;
+typedef classad_hash_map<std::string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr> AttrList;
 typedef std::set<std::string, CaseIgnLTStr> DirtyAttrList;
 
 /// An internal node of an expression which represents a ClassAd. 
@@ -511,9 +512,9 @@ e		*/
 		void        EnableDirtyTracking(void)  { do_dirty_tracking = true;  }
 		void        DisableDirtyTracking(void) { do_dirty_tracking = false; }
 		void		ClearAllDirtyFlags(void);
-		void        MarkAttributeDirty(const string &name);
-		void        MarkAttributeClean(const string &name);
-		bool        IsAttributeDirty(const string &name);
+		void        MarkAttributeDirty(const std::string &name);
+		void        MarkAttributeClean(const std::string &name);
+		bool        IsAttributeDirty(const std::string &name);
 
 		typedef DirtyAttrList::iterator dirtyIterator;
 		dirtyIterator dirtyBegin() { return dirtyAttrList.begin(); }
