@@ -286,8 +286,7 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
         CondorID condorID;
         if (e != NULL) condorID = CondorID (e->cluster, e->proc, e->subproc);
         
-        //debug_printf( DEBUG_DEBUG_4, "Log outcome: %s\n",
-        debug_printf( DEBUG_NORMAL, "Log outcome: %s\n",
+        debug_printf( DEBUG_DEBUG_4, "Log outcome: %s\n",
                       ULogEventOutcomeNames[outcome] );
         
         if (outcome != ULOG_UNK_ERROR) log_unk_count = 0;

@@ -66,16 +66,16 @@ while( $_ = shift ) {
 		last SWITCH;
 	}
 # -->DAP
-    if( /^-daplog.*/i ) {
-        $dap_log = shift;
-	if( ! $dap_log ) {
+    if( /^-storklog.*/i ) {
+        $stork_log = shift;
+	if( ! $stork_log ) {
 	    &usage();
         }
         last SWITCH;
     }						    
-    if( /^-dapserver.*/i ) {
-        $dap_server = shift;
-	if( ! $dap_server ) {
+    if( /^-storkserver.*/i ) {
+        $stork_server = shift;
+	if( ! $stork_server ) {
 	    &usage();
         }
         last SWITCH;
@@ -207,10 +207,10 @@ if ( $job_log ){
   print "Condor Log file for all Condor jobs of this DAG: $job_log\n";
 }
 # -->DAP
-if ( $dap_log ){
+if ( $stork_log ){
   print "Stork Log file for all DaP jobs of this DAG      : $stork_log\n";
 }
-if ( $dap_server ){
+if ( $stork_server ){
   print "Stork server to which DaP jobs will be submitted : $stork_server\n";
 }
 # <--DAP
