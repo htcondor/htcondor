@@ -113,6 +113,7 @@ char	*Notification	= "notification";
 char	*Executable		= "executable";
 char	*Arguments		= "arguments";
 char	*GetEnv			= "getenv";
+char	*AllowStartupScript = "allow_startup_script";
 char	*Environment	= "environment";
 char	*Input			= "input";
 char	*Output			= "output";
@@ -657,6 +658,8 @@ SetExecutable()
 	if (SendSpoolFileBytes(ename) < 0) {
 		EXCEPT("failed to transfer executable file %s", ename);
 	}
+
+	free(ename);
 }
 
 void
@@ -697,7 +700,9 @@ SetUniverse()
 
 			(void) sprintf (buffer, "%s = %d", ATTR_MAX_HOSTS, tmp);
 			InsertJobExpr (buffer);
+			free(mach_count);
 		}
+		free(univ);
 		return;
 	};
 
@@ -712,6 +717,7 @@ SetUniverse()
 		int tmp;
 		if ( mach_count != NULL ) {
 			tmp = atoi(mach_count);
+			free(mach_count);
 		}
 		else {
 			EXCEPT( "No machine_count specified!\n" );
@@ -722,6 +728,7 @@ SetUniverse()
 		(void) sprintf (buffer, "%s = %d", ATTR_MAX_HOSTS, tmp);
 		InsertJobExpr (buffer);
 
+		free(univ);
 		return;
 	}
 
@@ -730,6 +737,7 @@ SetUniverse()
 		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, PIPE);
 		InsertJobExpr (buffer);
 		InsertJobExpr ("Checkpoint = 0");
+		free(univ);
 		return;
 	};
 
@@ -737,6 +745,7 @@ SetUniverse()
 		JobUniverse = VANILLA;
 		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, VANILLA);
 		InsertJobExpr (buffer);
+		free(univ);
 		return;
 	};
 
@@ -744,6 +753,7 @@ SetUniverse()
 		JobUniverse = SCHED_UNIVERSE;
 		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, SCHED_UNIVERSE);
 		InsertJobExpr (buffer);
+		free(univ);
 		return;
 	};
 
@@ -758,6 +768,7 @@ SetUniverse()
 		JobUniverse = GLOBUS_UNIVERSE;
 		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, SCHED_UNIVERSE);
 		InsertJobExpr (buffer);
+		free(univ);
 		return;
 	};
 #endif
@@ -779,6 +790,9 @@ SetUniverse()
 	JobUniverse = STANDARD;
 	(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, STANDARD);
 	InsertJobExpr (buffer);
+	if ( univ ) {
+		free(univ);
+	}
 
 	return;
 }
@@ -842,18 +856,21 @@ void SetFileOptions()
 	if(tmp) {
 		sprintf(buffer,"%s = %s",ATTR_FILE_REMAPS,tmp);
 		InsertJobExpr(buffer);
+		free(tmp);
 	}
 
 	tmp = condor_param(BufferSize);
 	if(tmp) {
 		sprintf(buffer,"%s = %s",ATTR_BUFFER_SIZE,tmp);
 		InsertJobExpr(buffer);
+		free(tmp);
 	}
 
 	tmp = condor_param(BufferBlockSize);
 	if(tmp) {
 		sprintf(buffer,"%s = %s",ATTR_BUFFER_BLOCK_SIZE,tmp);
 		InsertJobExpr(buffer);
+		free(tmp);
 	}
 }
 
@@ -902,7 +919,7 @@ SetStdFile( int which_file )
 	
 	if( !macro_value || *macro_value == '\0') 
 	{
-		macro_value = NULL_FILE;
+		macro_value = strdup(NULL_FILE);
 	}
 	
 	if( whitespace(macro_value) ) 
@@ -937,6 +954,9 @@ SetStdFile( int which_file )
 		sprintf( GlobusArgs, "%s(%s=$(GLOBUSRUN_GASS_URL)%s%s)", tmpbuf, 
 				fileneeded, macro_value[0] == '/' ? "" : "/./", macro_value );
 
+		if ( macro_value )
+			free(macro_value);
+
 		return;
 	}
 #endif
@@ -959,6 +979,9 @@ SetStdFile( int which_file )
 		check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
 		break;
 	}
+		
+	if ( macro_value )
+		free(macro_value);
 }
 
 void
@@ -974,6 +997,7 @@ SetPriority()
 		{
 			EXCEPT("Priority must be in the range -20 thru 20 (%d)", prioval );
 		}
+		free(prio);
 	}
 	(void) sprintf (buffer, "%s = %d", ATTR_JOB_PRIO, prioval);
 	InsertJobExpr (buffer);
@@ -984,6 +1008,7 @@ SetPriority()
 	{
 		sprintf( buffer, "%s = TRUE", ATTR_NICE_USER );
 		InsertJobExpr( buffer );
+		free(nice_user);
 	}
 	else
 	{
@@ -1014,6 +1039,10 @@ SetNotification()
 
 	(void) sprintf (buffer, "%s = %d", ATTR_JOB_NOTIFICATION, notification);
 	InsertJobExpr (buffer);
+
+	if ( how )
+		free(how);
+
 }
 
 void
@@ -1025,6 +1054,7 @@ SetNotifyUser()
 	{
 		(void) sprintf (buffer, "%s = \"%s\"", ATTR_NOTIFY_USER, who);
 		InsertJobExpr (buffer);
+		free(who);
 	}
 }
 	
@@ -1034,7 +1064,7 @@ SetArguments()
 	char	*args = condor_param(Arguments);
 
 	if( args == NULL ) {
-		args = "";
+		args = strdup("");
 	} 
 	else if (strlen(args) > _POSIX_ARG_MAX) {
 		fprintf(stderr, "\nERROR: arguments are too long:\n"
@@ -1068,6 +1098,7 @@ SetArguments()
 		sprintf (buffer, "%s = \"%s\"", ATTR_JOB_ARGUMENTS, args);
 	}
 	InsertJobExpr (buffer);
+	free(args);
 }
 
 void
@@ -1075,6 +1106,7 @@ SetEnvironment()
 {
 	char *env = condor_param(Environment);
 	char *shouldgetenv = condor_param(GetEnv);
+	char *allowscripts = condor_param(AllowStartupScript);
 	Environ envobject;
 	char newenv[ATTRLIST_MAX_EXPRESSION];
 	char varname[MAXVARNAME];
@@ -1099,6 +1131,16 @@ SetEnvironment()
 		envobject.add_string(env);
 		first = false;
 	}
+
+	if (allowscripts && (*allowscripts=='T' || *allowscripts=='t') ) {
+		if ( !first ) {
+			strcat(newenv,env_delimiter);
+		}
+		strcat(newenv,"_CONDOR_NOCHECK=1");
+		first = false;
+		free(allowscripts);
+	}
+
 
 	envlen = strlen(newenv);
 
@@ -1140,6 +1182,10 @@ SetEnvironment()
 	strcat(newenv, "\"");
 
 	InsertJobExpr (newenv);
+	if ( env )
+		free(env);
+	if ( shouldgetenv ) 
+		free(shouldgetenv);
 }
 
 #if !defined(WIN32)
@@ -1160,6 +1206,7 @@ ComputeRootDir()
 
 		check_path_length(rootdir, RootDir);
 		(void) strcpy (JobRootdir, rootdir);
+		free(rootdir);
 	}
 }
 
@@ -1184,6 +1231,7 @@ SetRequirements()
 	else 
 	{
 		(void) strcpy (JobRequirements, requirements);
+		free(requirements);
 	}
 
 	tmp = check_requirements( JobRequirements );
@@ -1262,6 +1310,12 @@ SetRank()
 		(void)sprintf( buffer, "%s = %s", ATTR_RANK, rank );
 		InsertJobExpr( buffer );
 	}
+
+	if ( orig_pref ) 
+		free(orig_pref);
+	if ( orig_rank )
+		free(orig_rank);
+
 }
 
 void
@@ -1310,6 +1364,9 @@ ComputeIWD()
 	check_path_length(iwd, InitialDir);
 	check_iwd( iwd );
 	strcpy (JobIwd, iwd);
+
+	if ( shortname )
+		free(shortname);
 }
 
 void
@@ -1351,6 +1408,7 @@ SetUserLog()
 		(void) sprintf(buffer, "%s = \"%s\"", ATTR_ULOG_FILE, ulog);
 		InsertJobExpr(buffer);
 		UserLogSpecified = true;
+		free(ulog);
 	}
 }
 
@@ -1385,6 +1443,7 @@ SetCoreSize()
 #endif
 	} else {
 		coresize = atoi(size);
+		free(size);
 	}
 
 	(void)sprintf (buffer, "%s = %ld", ATTR_CORE_SIZE, coresize);
@@ -1469,6 +1528,7 @@ SetKillSig()
 		if (signo == 0 && isalnum(sig[0])) {
 			signo = sig_name_lookup(sig);
 		}
+		free(sig);
 	} else {
 		switch(JobUniverse) {
 		case STANDARD:
