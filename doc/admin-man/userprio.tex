@@ -1,7 +1,26 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:UserPrio}
-User Priorities in the Condor System}
+User Priorities}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Karen's understanding of this stuff, in preparation for a re-write
+% of the section:
+
+% Users request machines (by submitting jobs).
+% Each user has a calculated priority.
+%   A larger priority is worse.
+%   This priority essentially tells how many machines the user is
+%   currently using.  The priority can be made worse (larger number)
+%   by the settings of various configuration variables.
+% During each negotiation cycle, all machines are allocated (presuming
+%   that there are more requests than machines).
+% Each user is allocated machines in a ratio of 1/users's priority.
+% Within the negotiation cycle, each user is given an initial
+%   allocation of machines.  From there, remaining unallocated machines
+%   are divided up among users that want more.  In a round robin
+%   manner, each user is allocated a fraction of the remaining
+%   unallocated machines.  this fraction is 1/user's priority.
+
 \index{priority!in machine allocation}
 \index{user priority}
 Condor uses priorities to determine machine allocation for jobs.
@@ -143,3 +162,22 @@ calculated over non-uniform time intervals $\delta t$ without affecting the
 calculation.  The time interval $\delta t$ varies due to events internal to 
 the system, but Condor guarantees that unless the central manager machine is 
 down, no matches will be unaccounted for due to this variance.
+
+% Derek's explanation:
+%  > Preferably the user priority is determined by the number of
+%  > processors jobs of the user currently occupy, i.e., the "history"
+%  > should not play a role.
+%  
+%  this is the responsibility of the condor "accountant", which lives
+%  inside the condor_negotiator daemon.  the knob you want to turn is
+%  called "PRIORITY_HALFLIFE".  think of your user priority as a
+%  radioactive substance. :) consider a priority that exactly matches
+%  your current resource usage the "stable state", and a priority
+%  "contaminated" with past usage "radioactive."  if it's got a long
+%  halflife, it takes a long time for your priority to decay back to
+%  "normal".  if the halflife is very short, it'll decay very quickly,
+%  and will remain very close to your current usage.  so, just set
+%  PRIORITY_HALFLIFE to a small floating point value (like 0.0001), and
+%  your user priority should always match your current usage.  if you're
+%  not using any resources, your priority will go back to the baseline
+%  value instantly.

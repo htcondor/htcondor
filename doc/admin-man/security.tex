@@ -351,7 +351,7 @@ by Condor.
 
 \begin{description}
 
-\item[\DCPerm{READ}] \label{dcperm:read} This access level
+\item[\DCPerm{READ}] \label{sec-level-read} This access level
    access can obtain or read information about Condor.
    Examples that require only \DCPerm{READ} access are
    viewing the status of the pool, checking the job queue(s),
@@ -359,20 +359,20 @@ by Condor.
    \DCPerm{READ} access does not allow any
    changes, and it does not allow job submission.
 
-\item[\DCPerm{WRITE}] \label{dcperm:write} This access level
+\item[\DCPerm{WRITE}] \label{sec-level-write} This access level
    is required to send (write) information to Condor.
    Note that \DCPerm{WRITE} access does not include \DCPerm{READ} access.
    They are separate access levels.
    Job submission requires \DCPerm{WRITE} access.
 
-\item[\DCPerm{ADMINISTRATOR}] \label{dcperm:administrator} This
+\item[\DCPerm{ADMINISTRATOR}] \label{sec-level-administrator} This
    access level has additional Condor
    administrator rights to the pool.  It includes the ability to
    change user priorities (with the command \Condor{userprio -set}),
    and the ability to turn Condor on and off
    (as with the commands \Condor{on} and \Condor{off}).
 
-\item[\DCPerm{CONFIG}] \label{dcperm:config} This access level is
+\item[\DCPerm{CONFIG}] \label{sec-level-config} This access level is
    required to modify a daemon's configuration using
    the \Condor{config\_val} command.
    By default, this level of access can
@@ -380,7 +380,7 @@ by Condor.
    except those specified in
    the \File{condor\_config.root} configuration file.
 
-\item[\DCPerm{DAEMON}] \label{dcperm:config} 
+\item[\DCPerm{DAEMON}] \label{sec-level-daemon} 
    This access level is only used by Condor daemons for internal
    exchange of requests.
    An example is the message sent from the \Condor{startd} daemon
@@ -389,7 +389,7 @@ by Condor.
    daemons, implying that this level of access should be granted
    to the id under which the Condor daemons are run.
 
-\item[\DCPerm{OWNER}] \label{dcperm:owner} This level of access is
+\item[\DCPerm{OWNER}] \label{sec-level-owner} This level of access is
    required for commands that the owner of a machine (any local user)
    should be able to use, in addition to the Condor administrators.
    An example that requires the \DCPerm{OWNER} access level is
@@ -399,7 +399,7 @@ by Condor.
    The owner of that machine should be able to cause the removal
    of a job running on the machine.
 
-\item[\DCPerm{NEGOTIATOR}] \label{dcperm:negotiator} This 
+\item[\DCPerm{NEGOTIATOR}] \label{sec-level-negotiator} This 
    access level is used specifically to verify that commands are
    sent by the \Condor{negotiator} daemon.
    The \Condor{negotiator} daemon runs on the central manager of
@@ -634,18 +634,24 @@ The values will be
 \begin{verbatim}
     KERBEROS
     FS
-    GSS_AUTHENTICATION
     CLAIMTOBE
     ANONYMOUS
     NTSSPI
 \end{verbatim}
+%   GSI
 
 As an example, the macro
+% \begin{verbatim}
+% SEC_DEFAULT_AUTHENTICATION_METHODS = KERBEROS, GSI
+% \end{verbatim}
+% indicates that either Kerberos or the Globus Security Infrastructure
+% (GSI) authentication may be used,
+% but Kerberos is preferred over GSI.
 \begin{verbatim}
-SEC_DEFAULT_AUTHENTICATION_METHODS = KERBEROS, GSS_AUTHENTICATION
+SEC_DEFAULT_AUTHENTICATION_METHODS = KERBEROS, NTSSPI
 \end{verbatim}
-indicates that either Kerberos or X.509 authentication may be used,
-but Kerberos is preferred over X.509.
+indicates that either Kerberos or Windows authentication may be used,
+but Kerberos is preferred over Windows.
 
 If Kerberos is used for authentication, then 
 the optional configuration variable
@@ -907,168 +913,205 @@ the ability to do secure communication.
 Authentication provides an assurance of an identity.
 Condor supports authenticated communications by using any one
 of several supported methods.
-The details of Condor's requirements for using X.509 authentication
-and Kerberos authentication are given below.
+The details of Condor's requirements for using various methods
+of authentication are given below.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:X509-Authentication}X.509 Authentication}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-The Globus GSI (Grid Security Infrastructure) protocol provides
-an avenue for Condor to do
-PKI-based authentication using X.509 certificates.
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \subsubsection{\label{sec:X509-Authentication}X.509 Authentication}
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% The Globus GSI (Grid Security Infrastructure) protocol provides
+% an avenue for Condor to do
+% PKI-based authentication using X.509 certificates.
+% 
+% Several steps are required to enable this authentication.
+% \begin{description}
+% \item[X.509 Certificates]
+% 
+% PKI-based authentication between Condor daemons
+% requires
+% a valid X.509 certificate from a trusted
+% CA (Certification Authority).
+% The certificate may be a single host certificate,
+% and all Condor daemons on the same machine may share the same certificate.
+% The directory where the certificate resides, along with
+% other related files such as one containing the private key,
+% are utilized by Condor when doing authentication. 
+% 
+% Condor locates the daemon's certificate through the use of
+% a configuration macro.
+% Note that the certificate can be shared by all Condor daemons
+% running on a machine.
+% The certificate can also be copied to other machines,
+% where local copies are necessary.
+% The certificates must be protected by access rights to
+% files, since the password file is not encrypted.
+% 
+% Condor users (those who submit jobs) can also use
+% the X.509-based authentication.
+% These users must also
+% have valid X.509 certificates signed by a trusted CA.
+% For use when submitting jobs,
+% the certificate is used to generate a proxy:
+% a combination of certificate and password that is valid only
+% for a specific (and usually short) time period.
+% A proxy is used so that the user does  
+% not need to be present (to give a password) when a job is executed.
+% 
+% \item[Condor Configuration]
+        % 
+% To use X.509 certificates for authentication, the Condor configuration file
+% must have the following configuration macros set.
+% This setting is an example.
+% 
+% \begin{verbatim}
+% SEC_DEFAULT_AUTHENTICATION = REQUIRED
+% SEC_DEFAULT_AUTHENTICATION_METHODS = GSS_AUTHENTICATION 
+% X509_DIRECTORY = /path/to/daemon/certificatedirectory
+% CONDOR_GATEKEEPER = /C=US/O=Condor/O=University of Wisconsin
+% /OU=Computer Sciences Department/CN=condor@cs.wisc.edu
+% \end{verbatim}
+% 
+% The
+% \MacroNI{SEC\_DEFAULT\_AUTHENTICATION} macro specifies that
+% authentication is required for all communications.
+% This single macro covers all communications, but could be
+% replaced with a set of macros that require authentication for
+% only specific communications.
+% See section~\ref{sec:Security-Authentication} for details on the
+% more specific configuration variables used for authentication.
 
-Several steps are required to enable this authentication.
-\begin{description}
-\item[X.509 Certificates]
-
-PKI-based authentication between Condor daemons
-requires
-a valid X.509 certificate from a trusted
-CA (Certification Authority).
-The certificate may be a single host certificate,
-and all Condor daemons on the same machine may share the same certificate.
-The directory where the certificate resides, along with
-other related files such as one containing the private key,
-are utilized by Condor when doing authentication. 
-
-Condor locates the daemon's certificate through the use of
-a configuration macro.
-Note that the certificate can be shared by all Condor daemons
-running on a machine.
-The certificate can also be copied to other machines,
-where local copies are necessary.
-The certificates must be protected by access rights to
-files, since the password file is not encrypted.
-
-Condor users (those who submit jobs) can also use
-the X.509-based authentication.
-These users must also
-have valid X.509 certificates signed by a trusted CA.
-For use when submitting jobs,
-the certificate is used to generate a proxy:
-a combination of certificate and password that is valid only
-for a specific (and usually short) time period.
-A proxy is used so that the user does  
-not need to be present (to give a password) when a job is executed.
-
-\item[Condor Configuration]
-        
-To use X.509 certificates for authentication, the Condor configuration file
-must have the following configuration macros set.
-This setting is an example.
-
-\begin{verbatim}
-SEC_DEFAULT_AUTHENTICATION = REQUIRED
-SEC_DEFAULT_AUTHENTICATION_METHODS = GSS_AUTHENTICATION 
-X509_DIRECTORY = /path/to/daemon/certificatedirectory
-CONDOR_GATEKEEPER = /C=US/O=Condor/O=University of Wisconsin
-/OU=Computer Sciences Department/CN=condor@cs.wisc.edu
-\end{verbatim}
-
-The
-\MacroNI{SEC\_DEFAULT\_AUTHENTICATION} macro specifies that
-authentication is required for all communications.
-This single macro covers all communications, but could be
-replaced with a set of macros that require authentication for
-only specific communications.
-See section~\ref{sec:Security-Authentication} for details on the
-more specific configuration variables used for authentication.
-
-The \MacroNI{GSS\_AUTHENTICATION} method specifies the use of
-the X.509 protocol. 
-If this is the only method listed, then X.509 will be the only
-protocol used.
-If other methods are acceptable, then placing this method
-first within the list will cause Condor to give preference to
-this method over others.
-
-The macro \MacroNI{X509\_DIRECTORY} must be specified,
-so that Condor knows where to look for the daemon's certificate.
-This path may be a directory or a shared file system such as AFS. 
-Alternatively, this path name
-can point to 
-local copies of the certificate stored
-in a local file system.
-
-The macro \MacroNI{CONDOR\_GATEKEEPER} configuration macro
-provides daemons with a distinguished name to use for
-X.509 authentication.
-This name is specified with the following format
-\begin{verbatim}
-CONDOR_GATEKEEPER = /C=?/O=?/O=?/OU=?/CN=<daemon_name@domain>
-\end{verbatim}
-A complete example that has the question marks filled in and the
-daemon's user name filled in is given in the 
-example above.
-
-Condor will also need a way to map an X.509 distinguished
-name to a Condor user id.
-This is done in an administrator-maintained file called an X.509 map file,
-mapping from X509 Distinguished Name (DN) to Condor user id.
-It is similar to a Globus Gridmap file.
-Entries (lines) in the file each contain two items.
-The first item in an entry is the distinguished name
-given in an X.509 certificate.
-The second item is the Condor user id, given as a
-fully qualified name.
-Note that the two items in an entry are separated by tab character(s),
-not spaces.
-An example of two entries in an X.509 map file:
-
-\begin{verbatim}
-V	020406001927Z		01	unknown	/C=US/O=Condor/O=University
-of Wisconsin/ OU=Computer Sciences Department/CN=condor@cs.wisc.edu
-condor@cs.wisc.edu
-V	020406002049Z		02	unknown	/C=US/O=Condor/O=University
-of Wisconsin/OU=Computer Sciences Department/CN=jsmith@cs.wisc.edu
-jsmith@cs.wisc.edu
-\end{verbatim}
-
-Condor expects the map file to be in the location given by
-\begin{verbatim}
-$(X509_DIRECTORY)/certdir/index.txt
-\end{verbatim}
-If the map file is not in this location, a symbolic link
-may be used to point to the actual map file.
-
-\item[User environment]
-
-The Condor user (one who submits jobs) must create a proxy
-prior to authentication.
-The user creates a proxy using the program
-\Prog{grid-proxy-init}.
-This program needs to know 
-the location of the user's certificate directory.
-This is done by setting an environment variable, called
-\Env{X509\_CERT\_DIR}.
-For example, if the X509 directory is \File{/test/myX509},
-then \Env{X509\_CERT\_DIR} should be set to \File{/test/myX509/certdir}.
-
-After running \Prog{grid-proxy-init},
-an environment variable called
-\Env{X509\_USER\_PROXY} may be set to give
-the location where the proxy is stored.
-By default,
-\Prog{grid-proxy-init} will place the proxy in the \File{/tmp}
-directory with
-the file name being determined by the format:
-\begin{verbatim}
-/tmp/x509_uXXXX
-\end{verbatim}
-The specific file name is given by substituting the \verb@XXXX@
-characters with the UID of the user.
-The
-\Env{X509\_USER\_PROXY} environment variable is optional,
-since Condor looks in the default location if the environment
-variable is not set.
-
-
-\end{description}
+% The \MacroNI{GSS\_AUTHENTICATION} method specifies the use of
+% the X.509 protocol. 
+% If this is the only method listed, then X.509 will be the only
+% protocol used.
+% If other methods are acceptable, then placing this method
+% first within the list will cause Condor to give preference to
+% this method over others.
+% 
+% The macro \MacroNI{X509\_DIRECTORY} must be specified,
+% so that Condor knows where to look for the daemon's certificate.
+% This path may be a directory or a shared file system such as AFS. 
+% Alternatively, this path name
+% can point to 
+% local copies of the certificate stored
+% in a local file system.
+% 
+% The macro \MacroNI{CONDOR\_GATEKEEPER} configuration macro
+% provides daemons with a distinguished name to use for
+% X.509 authentication.
+% This name is specified with the following format
+% \begin{verbatim}
+% CONDOR_GATEKEEPER = /C=?/O=?/O=?/OU=?/CN=<daemon_name@domain>
+% \end{verbatim}
+% A complete example that has the question marks filled in and the
+% daemon's user name filled in is given in the 
+% example above.
+% 
+% Condor will also need a way to map an X.509 distinguished
+% name to a Condor user id.
+% This is done in an administrator-maintained file called an X.509 map file,
+% mapping from X509 Distinguished Name (DN) to Condor user id.
+% It is similar to a Globus Gridmap file.
+% Entries (lines) in the file each contain two items.
+% The first item in an entry is the distinguished name
+% given in an X.509 certificate.
+% The second item is the Condor user id, given as a
+% fully qualified name.
+% Note that the two items in an entry are separated by tab character(s),
+% not spaces.
+% An example of two entries in an X.509 map file:
+% 
+% \begin{verbatim}
+% V	020406001927Z		01	unknown	/C=US/O=Condor/O=University
+% of Wisconsin/ OU=Computer Sciences Department/CN=condor@cs.wisc.edu
+% condor@cs.wisc.edu
+% V	020406002049Z		02	unknown	/C=US/O=Condor/O=University
+% of Wisconsin/OU=Computer Sciences Department/CN=jsmith@cs.wisc.edu
+% jsmith@cs.wisc.edu
+% \end{verbatim}
+% 
+% Condor expects the map file to be in the location given by
+% \begin{verbatim}
+% $(X509_DIRECTORY)/certdir/index.txt
+% \end{verbatim}
+% If the map file is not in this location, a symbolic link
+% may be used to point to the actual map file.
+% 
+% \item[User environment]
+% 
+% The Condor user (one who submits jobs) must create a proxy
+% prior to authentication.
+% The user creates a proxy using the program
+% \Prog{grid-proxy-init}.
+% This program needs to know 
+% the location of the user's certificate directory.
+% This is done by setting an environment variable, called
+% \Env{X509\_CERT\_DIR}.
+% For example, if the X509 directory is \File{/test/myX509},
+% then \Env{X509\_CERT\_DIR} should be set to \File{/test/myX509/certdir}.
+% 
+% After running \Prog{grid-proxy-init},
+% an environment variable called
+% \Env{X509\_USER\_PROXY} may be set to give
+% the location where the proxy is stored.
+% By default,
+% \Prog{grid-proxy-init} will place the proxy in the \File{/tmp}
+% directory with
+% the file name being determined by the format:
+% \begin{verbatim}
+% /tmp/x509_uXXXX
+% \end{verbatim}
+% The specific file name is given by substituting the \verb@XXXX@
+% characters with the UID of the user.
+% The
+% \Env{X509\_USER\_PROXY} environment variable is optional,
+% since Condor looks in the default location if the environment
+% variable is not set.
+% 
+% 
+% \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Kerberos-Authentication}Kerberos Authentication}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \Todo
+\index{authentication!Kerberos}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:FS-Authentication}File System Authentication}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{authentication!using a file system}
+This form of authentication utilizes the ownership of a file
+in the identity verification of a client.
+A daemon authenticating a client requires the client to write
+a file in a specific location.
+The daemon then checks the ownership of the file.
+The file's ownership verifies the identity of the client.
+In this way, the file system becomes the trusted authority.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:NTSSPI-Authentication}Windows Authentication}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{authentication!Windows}
+This is authentication done among Windows machines using
+a proprietary method.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:CLAIM-Authentication}Claim To Be Authentication}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Claim To Be authentication accepts any identity claimed by the client.
+As such, it does not authenticate.
+It is included in Condor and in the list of authentication methods
+for testing purposes only.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:ANON-Authentication}Anonymous Authentication}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Anonymous authentication causes authentication to be skipped entirely.
+As such, it does not authenticate.
+It is included in Condor and in the list of authentication methods
+for testing purposes only.
 
 \index{authentication|)}
 
@@ -1416,13 +1459,11 @@ Condor can be registered with:
    extreme caution.
    By default, \DCPerm{CONFIG} access is denied for all hosts.
 
-   Starting with version 6.3.2, Condor provides a mechanism for more
-   fine-grained control over the configuration settings that can be
-   modified remotely with \Condor{config\_val}.  
-   Please see section~\ref{sec:Config-Val-Security} below on Host
-   Security for \Condor{config\_val}.
-
 \end{description}
+
+Starting with version 6.3.2, Condor provides a mechanism for more
+fine-grained control over the configuration settings that can be
+modified remotely with \Condor{config\_val}.  
 
 Host-based security access
 permissions are specified in configuration files.

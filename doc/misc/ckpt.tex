@@ -1,3 +1,8 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{ckpt-reference}
+Condor's Checkpoint Mechanism}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 Checkpointing is taking a snapshot of the current state of a program
 in such a way that the program can be restarted from that state at a
 later time.  Checkpointing gives the Condor scheduler the freedom to
@@ -111,7 +116,7 @@ Condor: Notice: Remote system calls disabled.
 \end{verbatim}
 
 To force the program to write a checkpoint image and stop, send it
-the SIGTSP signal or press control-Z.  To force the program to 
+the SIGTSTP signal or press control-Z.  To force the program to 
 write a checkpoint image and continue executing, send it the
 SIGUSR2 signal.
 
@@ -165,7 +170,7 @@ accepts a warning category and a mode.  The category describes a certain
 class of messages, such as READWRITE or ALL.  The mode describes what
 to do with the category.  It may be ON, OFF, or ONCE.
 If a category is ON, it is always displayed.
-If a category is OF, it is never displayed.
+If a category is OFF, it is never displayed.
 If a category is ONCE, it is displayed only once.
 To show all the available categories and modes, just use
 \verb$-_condor_warning$ with no arguments.

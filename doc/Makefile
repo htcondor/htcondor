@@ -6,7 +6,7 @@ all:  ref.dvi
 #all:  man.ps
 
 ref.pdf: clean
-	echo "\usepackage{times}" > timesfont.tex
+	echo "\usepackage{times} \usepackage[latex2html,ps2pdf,bookmarks,bookmarksnumbered,plainpages=false,pdfpagelabels]{hyperref}" > timesfont.tex
 	rm -f fontsize.tex
 	rm -f symbol.tex
 	rm -f figuresizing.tex

@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:PVM}Parallel Applications in Condor: Condor-PVM}
+\section{\label{sec:PVM}PVM Applications}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \newcommand{\func}[1]{\texttt{#1}}
@@ -17,7 +17,7 @@ Multiple processes
 may run on multiple machines,
 while communicating with each other.
 More information about PVM is available at 
-\Url{http://www.epm.ornl.gov/pvm/}.
+\URL{http://www.epm.ornl.gov/pvm/}.
 
 Condor-PVM provides a framework to run PVM applications
 in Condor's opportunistic environment.
@@ -56,7 +56,7 @@ file \File{condor\_pvmd} on your system, then the Condor-PVM module
 is installed.
 If not,
 ask your site administrator to download and install Condor-PVM from
-\Url{http://www.cs.wisc.edu/condor/downloads/}.
+\URL{http://www.cs.wisc.edu/condor/downloads/}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Effective Usage: the Master-Worker Paradigm}
@@ -109,7 +109,7 @@ master-worker Condor-PVM application.
 We suggest that you consider modifying your PVM application to use MW
 instead of developing your own dynamic PVM master from scratch.
 Additional information about MW is available at 
-\Url{http://www.cs.wisc.edu/condor/mw/}.
+\URL{http://www.cs.wisc.edu/condor/mw/}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Binary Compatibility and Runtime Differences}
@@ -290,7 +290,7 @@ The following is an
 example of a submit description file for a PVM job.  
 This job has a master PVM program called \func{master.exe}.
 
-\CondorSmall
+\footnotesize
 \begin{verbatim}
 ###########################################################
 # sample_submit

@@ -215,8 +215,8 @@ command line:
 \item The \DCPerm{CONFIG} security access level now controls the
 modification of daemon configurations using \Condor{config\_val}.  For
 more information about security access levels, see
-section~\ref{sec:Security-Access-Levels} on
-page~\pageref{sec:Security-Access-Levels}.
+section~\ref{sec:Host-Security} on
+page~\pageref{sec:Host-Security}.
 
 \item The \Macro{DC\_DAEMON\_LIST} macro now indicates to the
 \Condor{master} which processes in the \Macro{DAEMON\_LIST} use
@@ -1003,7 +1003,7 @@ See section~\ref{sec:Intro-to-Config-Files} on
 page~\pageref{sec:Intro-to-Config-Files} for details on macros
 vs. expressions.
 See the \Condor{config\_val} man page on
-page~\pageref{man:condor-config-val} for details on
+page~\pageref{man-condor-config-val} for details on
 \Condor{config\_val}.  
 
 \item If the directory you specified for LOCK (which holds lock files
@@ -1737,8 +1737,8 @@ For example, you can now use ``\condor{reconfig} -startd'' to just
 have the startd reconfigure itself.
 Similarly, \condor{off}, \condor{on} and \condor{restart} can now all 
 work on a single daemon, instead of machine-wide.
-See the man pages (section~\ref{command-reference} on
-page~\pageref{command-reference}) or run any command with \Opt{-help}
+See the man pages (section~\ref{sec:command-reference} on
+page~\pageref{sec:command-reference}) or run any command with \Opt{-help}
 for details. 
 \Note The usage message in 6.1.3 incorrectly reports \Opt{-all} as a
 valid option.

@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:install}Installation of Condor}
+\section{\label{sec:install}Installation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This section contains the instructions for installing Condor at your
@@ -24,9 +24,9 @@ Obtaining Condor}
 \index{Unix installation!download}
 \index{download}
 The first step to installing Condor is to download it from the Condor
-web site, \Url{http://www.cs.wisc.edu/condor}.
+web site, \URL{http://www.cs.wisc.edu/condor}.
 The downloads are available from the downloads page,
-at \Url{http://www.cs.wisc.edu/condor/downloads/}.
+at \URL{http://www.cs.wisc.edu/condor/downloads/}.
 
 The platform-dependent Condor files are currently available from two sites.
 The main site is at the University of Wisconsin--Madison,
@@ -141,7 +141,7 @@ You can install Condor as any user,
 however there are both serious security and performance consequences.
 Please see section~\ref{sec:Non-Root} on page~\pageref{sec:Non-Root}
 in the manual for the details and ramifications of
-on running Condor as a Unix user other than root.
+running Condor as a Unix user other than root.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Who will administer Condor?}
@@ -353,7 +353,7 @@ controlled by root that will override any other Condor settings.  This
 way, if the Condor administrator is not root, the regular Condor configuration
 files can be owned and writable by condor-admin, but root does not have
 to grant root access to this person.  See
-section~\ref{sec:Root-Config} on page~\pageref{sec:Root-Config} in the
+section~\ref{Root-Config} on page~\pageref{Root-Config} in the
 manual for a detailed discussion of the root configuration files, if you
 should use them, and what settings should be in them.
 
@@ -415,7 +415,7 @@ located on a shared file system, if possible.
      either put them in a well known location (such as
      \File{/usr/local/condor/bin}) which you have Condor users add to
      their \Env{PATH} environment variable, or copy those files
-     directly into a well known place already in user's PATHs (such as
+     directly into a well known place already in the user's PATHs (such as
      \File{/usr/local/bin}).  With the above examples, you could also
      leave the binaries in \File{/usr/local/condor/bin} and put in
      soft links from \File{/usr/local/bin} to point to each program.
@@ -454,7 +454,7 @@ The documentation provided with Condor is currently available in
      HTML, Postscript and PDF (Adobe Acrobat).  It can be locally installed
      wherever is customary at your site.  You can also find the Condor
      documentation on the web at:
-     \Url{http://www.cs.wisc.edu/condor/manual}.
+     \URL{http://www.cs.wisc.edu/condor/manual}.
 
 \end{description}
 
@@ -713,7 +713,7 @@ what each step is for, and suggests how to answer the questions
      own domain.
 
      If you have a common \Macro{UID\_DOMAIN}, \condor{install} will
-     ask you if have a \Term{soft UID domain}, meaning that although
+     ask if you have a \Term{soft UID domain}, meaning that although
      you have unique UIDs, not every machine in your pool has all the
      users in their individual password files.  Please see the
      description of \Macro{SOFT\_UID\_DOMAIN} in
@@ -930,7 +930,7 @@ things you should check before you start up Condor.
 \end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Starting up the Condor daemons}
+\subsection{\label{sec:Run-Condor} Starting up the Condor daemons}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 To start up the Condor daemons, execute
@@ -1036,3 +1036,4 @@ some user other than root, see section~\ref{sec:Non-Root} on
 page~\pageref{sec:Non-Root}.
 
 \end{enumerate}
+

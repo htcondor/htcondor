@@ -1,41 +1,54 @@
-\section{\label{sec:Glidein}Extending your Condor pool with Glidein}
+\section{\label{sec:Glidein}Glidein}
 \index{universe!Globus}
 \index{Globus}
-\index{\Condor{glidein}}
+\index{Condor commands!condor\_glidein}
 
 Condor works together with Globus software to provide the capability
-of submitting Condor jobs to remote computer systems.
+of submitting Condor jobs to remote computer systems that are
+not part of the local Condor pool of machines.
 Globus software provides mechanisms to access and utilize
 remote resources.
 
-\Condor{glidein} is a program that can be used to add Globus resources
-to a Condor pool on a temporary basis.
-During this period, these resources are visible 
-to users of the pool, but only the user
-that added the resources is allowed to use them.
-The machine in the Condor pool is referred to herein as the
-local node, while the resource added to the local Condor pool
-is referred to as the remote node.
+Glidein is a mechanism by which one or more Grid resources (remote machines)
+temporarily join a local Condor pool. 
+The program \Condor{glidein} is used to add a machine
+to a Condor pool.
+During the period of time when the added resource is
+part of the local pool, the resource is visible 
+to users of the pool, but the resource is only available for
+use by the user
+that added the resource to the pool.
 
-These requirements are general to using any Globus resource:
+After glidein, the user may submit jobs for execution on the
+added resource the same way that all Condor jobs are submitted.
+To force a submitted job to run on the added resource, the
+submit description file contains a requirement that the job run 
+specifically on the added resource.
+
+
+\subsection{\Condor{glidein} Requirements}
+
+Use of \Condor{glidein} requires prior set up of two
+categories of items.
+The first category enable the use of Globus software.
+The second category are specific to Condor.
+
+To use Globus for the purpose of \Condor{glidein}:
 \begin{enumerate}
 
-\item An X.509 certificate issued by a Globus certificate authority.
+\item Obtain an X.509 certificate issued by a certificate authority.
 
-\item Access to a Globus resource.
+\item Have valid access to a Globus resource.
 You must be a valid Globus user and be mapped to a valid login account by
 the site's Globus administrator on every Globus resource that will be
 added to the local Condor pool using \Condor{glidein}.
-More information can be found at \Url{http://www.globus.org}
+More information can be found at \URL{http://www.globus.org}
 
-\item The environment variables \Env{HOME} and either
-\Env{GLOBUS\_INSTALL\_PATH} or \Env{GLOBUS\_DEPLOY\_PATH}
+\item The environment variables \Env{HOME} and \Env{GLOBUS\_LOCATION}
 must be set.
 
 \end{enumerate}
 
-
-\subsection{\Condor{glidein} Requirements}
 In order to use \Condor{glidein} to add a Globus resource to the
 local Condor pool,
 there are several requirements beyond the general Globus requirements
@@ -43,13 +56,6 @@ given above.
 
 \begin{enumerate}
 \item Use Globus v1.1 or better.
-
-\item Have \Prog{gsincftp} installed. This program is an ftp
-  client modified to use Globus X.509 authentication.
-  More information ca be found at
-  \Url{http://www.globus.org/datagrid/deliverables/gsiftp-tools.html}.
-
-\item Be an authorized user of the local Condor pool.
 
 \item The local Condor pool configuration file(s) must 
   give \Macro{HOSTALLOW\_WRITE} permission
@@ -60,10 +66,6 @@ given above.
   \Macro{HOSTALLOW\_WRITE} list.
   Recall that the changes take effect when all machines
   in the local pool are sent a reconfigure command.
-
-\item The local Condor pool's configuration file(s) must
-  set \Macro{GLOBUSRUN} to be the path of \Prog{globusrun}
-  and \Macro{SHADOW\_GLOBUS} to be the path of the \Condor{shadow.globus}.
 
 \item Included in the \Env{PATH} must be the common user programs
   directory \File{/bin}, globus tools, and the Condor user program
@@ -94,7 +96,7 @@ resource.
 The Condor daemons exit gracefully when no jobs run on the daemons for a
 configurable period of time. The default length of time is 20 minutes.
 
-The Condor executables on the Globus resource contact the local pool and
+The Condor daemons on the Globus resource contact the local pool and
 attempt to join the pool.  The \Expr{START}
 expression for the \Condor{startd} daemon requires that the username
 of the person running \Condor{glidein} matches the username of the jobs
@@ -104,10 +106,12 @@ After a short length of time,
 the Globus resource can be seen in the local Condor pool,
 as with this example.
 
+\footnotesize
 \begin{verbatim}
 % condor_status | grep denal
 7591386@denal IRIX65      SGI    Unclaimed  Idle       3.700  24064  0+00:06:35
 \end{verbatim}
+\normalsize
 
 Once the Globus resource has been added to the local Condor
 pool with \Condor{glidein},

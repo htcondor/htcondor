@@ -1,4 +1,4 @@
-\section{\label{sec:DAGMan}Inter-job Dependencies: DAGMan Meta-Scheduler}
+\section{\label{sec:DAGMan}DAGMan Applications}
 \index{DAGMan|(}
 \index{directed acyclic graph}
 \index{Directed Acyclic Graph Manager (DAGMan)}
@@ -411,6 +411,7 @@ remove the DAGMan job running under Condor.
 \Condor{q} will list the job number.
 Use the job number to remove the job, for example
 
+\footnotesize
 \begin{verbatim}
 
 % condor_q
@@ -424,6 +425,7 @@ Use the job number to remove the job, for example
 
 % condor_rm 9.0
 \end{verbatim}
+\normalsize
 
 Before the DAGMan job stops running, it uses \Condor{rm}
 to remove any Condor jobs within the DAG that are running.

@@ -22,6 +22,7 @@ The \Condor{status} command can be used to see a list of
 machines in the pool for which Condor can use the Java Virtual
 Machine.
 
+\footnotesize
 \begin{verbatim}
 % condor_status -java
 
@@ -32,6 +33,7 @@ doc.cs.wisc.e Sun Microsy 1.2.2  Unclaimed  Idle       0.000   511  0+01:05:04
 dsonokwa.cs.w Sun Microsy 1.2.2  Unclaimed  Idle       0.000   511  0+01:05:04
 ...
 \end{verbatim}
+\normalsize
 
 If there is no output from the
 \Condor{status} command,
@@ -145,7 +147,7 @@ Each machine with Java capability in a Condor pool
 will execute a benchmark to determine its speed.
 The benchmark is taken when Condor is started on
 the machine, and it uses the SciMark2
-(\Url{http://math.nist.gov/scimark2}) benchmark.
+(\URL{http://math.nist.gov/scimark2}) benchmark.
 The result of the benchmark is held as an attribute
 within the 
 machine ClassAd.

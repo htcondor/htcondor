@@ -815,7 +815,9 @@ which contains the certificate, private key, and trusted certificate directory
 for GSS authentication.
 If this attribute is set, the environment variables 
 X509\_USER\_KEY, X509\_USER\_CERT, and X509\_CERT\_DIR are exported with 
-default values. See section~\ref{sec:X509-Authentication} for more info.
+default values.
+%Commented out by Karen for 6.4.3.
+%See section~\ref{sec:X509-Authentication} for more info.
 
 %%%%%%%%%%%%%%%%%%%
 %% x509userproxy
@@ -832,8 +834,9 @@ Condor will use the proxy specified in the submit description file first.
 If nothing is specified in the submit description file,
 it will use the environment variable X509\_USER\_CERT.
 If that variable is not present,
-it will search in the default location. See 
-section~\ref{sec:X509-Authentication} for more info.
+it will search in the default location.
+%Commented out by Karen for 6.4.3.
+%See section~\ref{sec:X509-Authentication} for more info.
 
 %%%%%%%%%%%%%%%%%%%
 %% globusscheduler
@@ -920,7 +923,7 @@ and comments:
 
 \begin{description}
 
-\item[Macros] Parameterless macros in the form of \MacroU{macro\_name}
+\item[Macros] Parameterless macros in the form of \MacroUNI{macro\_name}
 may be inserted anywhere in Condor submit description files. Macros can be
 defined by lines in the form of 
 \begin{verbatim} 
