@@ -47,6 +47,14 @@
 #   include <sys/vfs.h>      /* for struct statfs */
 #endif
 
+#if defined(LINUX)
+#	include <sys/vfs.h>
+#       include <linux/nfs.h>
+#	include <linux/ipc.h>
+        typedef struct fhandle fhandle_t;
+#endif
+
+
 #if defined(OSF1)
 #	define _AES_SOURCE
 #	include <sys/poll.h>

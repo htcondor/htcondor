@@ -92,6 +92,14 @@
 #	include <sys/sysinfo.h>
 #endif
 
+#if defined(LINUX)
+#	include <signal.h>
+#	include <sys/vfs.h>
+#	include <linux/ipc.h>
+#	define	TRUE 1
+#	define	FALSE 0
+#endif
+
 #if defined(OSF1) || defined(AIX32)
 #	define semctl __hide_semctl
 #	include <sys/sem.h>
@@ -272,3 +280,7 @@ FIVE( select, _select, size_t, int *, int *, int *, struct timeval * )
 THREE( socket, _socket, int, int, int )
 /* THREE( wait3, _wait3, int *, int, int * ) FIX */
 #endif /* HPUX9 */
+
+#if defined(LINUX)
+#include "switches.linux.h"
+#endif
