@@ -30,6 +30,7 @@
 #include "MyString.h"
 #include "HashTable.h"
 
+class SecMan;
 class KeyCacheEntry {
  public:
     KeyCacheEntry(
@@ -65,6 +66,7 @@ class KeyCacheEntry {
 
 
 class KeyCache {
+    friend class SecMan;
 public:
 	KeyCache(int nbuckets);
 	KeyCache(const KeyCache&);
