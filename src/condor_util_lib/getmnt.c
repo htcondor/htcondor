@@ -199,7 +199,7 @@ char			*path;
 	}
 
 	lim = bufsize / sizeof(struct fs_data);
-	for( i=0; i < lim && ent=getmntent(tab); i++ ) {
+	for( i=0; (i < lim) && (ent=getmntent(tab)); i++ ) {
 		if( stat(ent->mnt_dir,&st_buf) < 0 ) {
 			buf[i].fd_req.dev = 0;
 		} else {
