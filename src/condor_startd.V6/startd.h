@@ -73,6 +73,10 @@ class Resource;
 static const int MAX_STARTERS = 10;
 
 #ifndef _STARTD_NO_DECLARE_GLOBALS
+
+// Define external functions
+extern int finish_main_config( void );
+
 // Define external global variables
 
 // Resource manager
