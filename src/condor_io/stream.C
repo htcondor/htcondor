@@ -35,6 +35,7 @@ int putcount =0;
 int getcount = 0;
 
 static int shipcount =0;
+#if 0
 #ifdef CLIENT
 ofstream nwdump("CLIENTDUMP",ios::out);
 #endif
@@ -42,9 +43,13 @@ ofstream nwdump("CLIENTDUMP",ios::out);
 #ifndef CLIENT
 ofstream nwdump("SERVERDUMP",ios::out);
 #endif
+#endif
 
+#if 0
 #define NETWORK_TRACE(s) { shipcount++; nwdump << s << "|"; \
               if(shipcount % 4 == 0) nwdump  << endl; } 
+#endif
+#define NETWORK_TRACE(s) { }
 
 #define _POSIX_SOURCE
 
