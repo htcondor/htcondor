@@ -246,9 +246,9 @@ allow getmsg and putmsg on locally opened files.  If a file is not locally
 opened, we will report that it is not a stream.
 */
 
-#include <stropts.h>
-
 #if defined(SYS_getmsg)
+
+#include <stropts.h>
 
 int getmsg( int fd, struct strbuf *cptr, struct strbuf *dptr, int *flags )
 {
@@ -321,9 +321,16 @@ int __getpmsg( int fd, struct strbuf *cptr, struct strbuf *dptr, int *band, int 
 
 #endif
 
+#if defined( HPUX )
+#define STREAM_CONST 
+#else
+#define STREAM_CONST const
+#endif
+
 #if defined(SYS_putmsg)
 
-int putmsg( int fd, const struct strbuf *cptr, const struct strbuf *dptr, int flags )
+int putmsg( int fd, STREAM_CONST struct strbuf *cptr, 
+			STREAM_CONST struct strbuf *dptr, int flags )
 {
 	int	rval;
 	int	real_fd;
@@ -345,12 +352,14 @@ int putmsg( int fd, const struct strbuf *cptr, const struct strbuf *dptr, int fl
 	return rval;
 }
 
-int _putmsg( int fd, const struct strbuf *cptr, const struct strbuf *dptr, int flags )
+int _putmsg( int fd, STREAM_CONST struct strbuf *cptr, 
+			 STREAM_CONST struct strbuf *dptr, int flags )
 {
 	return putmsg( fd, cptr, dptr, flags );
 }
 
-int __putmsg( int fd, const struct strbuf *cptr, const struct strbuf *dptr, int flags )
+int __putmsg( int fd, STREAM_CONST struct strbuf *cptr,
+			  STREAM_CONST struct strbuf *dptr, int flags )
 {
 	return putmsg( fd, cptr, dptr, flags );
 }
@@ -360,7 +369,8 @@ int __putmsg( int fd, const struct strbuf *cptr, const struct strbuf *dptr, int 
 
 #if defined(SYS_putpmsg)
 
-int putpmsg( int fd, const struct strbuf *cptr, const struct strbuf *dptr, int band, int flags )
+int putpmsg( int fd, STREAM_CONST struct strbuf *cptr, 
+			 STREAM_CONST struct strbuf *dptr, int band, int flags )
 {
 	int	rval;
 	int	real_fd;
@@ -382,12 +392,14 @@ int putpmsg( int fd, const struct strbuf *cptr, const struct strbuf *dptr, int b
 	return rval;
 }
 
-int _putpmsg( int fd, const struct strbuf *cptr, const struct strbuf *dptr, int band, int flags )
+int _putpmsg( int fd, STREAM_CONST struct strbuf *cptr, 
+			  STREAM_CONST struct strbuf *dptr, int band, int flags )
 {
 	return putpmsg( fd, cptr, dptr, band, flags );
 }
 
-int __putpmsg( int fd, const struct strbuf *cptr, const struct strbuf *dptr, int band, int flags )
+int __putpmsg( int fd, STREAM_CONST struct strbuf *cptr, 
+			   STREAM_CONST struct strbuf *dptr, int band, int flags )
 {
 	return putpmsg( fd, cptr, dptr, band, flags );
 }
