@@ -1,9 +1,11 @@
-#define OperatingSystem		IRIX53 -DIRIX62
+#define OperatingSystem		IRIX
 #define Architecture		SGI
 #define Platform		SGI_IRIX62
 #define ImakeOpsysFlag		-DIS_IRIX6
 #define IS_IRIX			YES
 #define Platform		SGI_IRIX62
+#define PlatformFlags		-DIRIX62 -DIRIX53
+/* This is EVIL!!!!  Must get rid of IRIX53 code that's really for both!!! */
 
 #define RpcSvc	/usr/lib/librpcsvc.so
 #define RpcSun	/usr/lib/libsun.a
@@ -23,6 +25,7 @@
 
 #define IS_SGI_IRIX53			YES
 #define IS_SGI_IRIX62			YES
+#define IS_IRIX62			YES
 #define IS_V5				YES
 
 #define HAS_X_EXTENSIONS		NO
