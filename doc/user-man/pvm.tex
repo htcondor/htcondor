@@ -125,7 +125,18 @@ Condor environment in the following list:
   \func{pvm\_notify()} with that host tid and with
   \func{PvmHostSuspend} (or \func{PvmHostResume}) as arguments, then
   the application will receive a notification for the corresponding
-  event.
+  event.  Note that after you receive one of these notifications, the notify
+  is 'consumed' for that pid.  So if you set up a \func{PvmHostSuspend} 
+  notification request for tid 4 and you get a \func{PvmHostSuspend}
+  message for tid 4, you won't get a \func{PvmHostSuspend} message for
+  that tid again unless you set up another notification request.
+
+  The easiest way to handle this is the following:  When a worker
+  node starts up, set up a notification for \func{PvmHostSuspend} on
+  its tid.  When that node gets suspended, set up a \func{PvmHostResume}
+  notification.  When it resumes, set up a \func{PvmHostSuspend}
+  notification.
+
 
 \item \func{pvm\_spawn()}.  If  the flag in \func{pvm\_spawn()} is 
   PvmTaskArch, then the string specifying the desired architecture
@@ -137,6 +148,10 @@ Condor environment in the following list:
   sites will suspend or vacate
   a job if the load on its machine is higher than a specified
   threshold.
+
+  A good fault-tolerant program will, of course, be able to deal with
+  \func{pvm\_spawn()} failing.  This happens more often in opportunistic 
+  environments like condor than in dedicated ones.
 
 \end{itemize}
 
@@ -604,6 +619,9 @@ main()
 \end{verbatim}
 \normalsize
 
+There is also a larger and far more robust application available
+at \Url{http://www.cs.wisc.edu/~yoderme/pvm_demo/}.
+
 \subsection{Sample PVM submit file}
 \label{submit}
 
@@ -684,5 +702,9 @@ class.  (See the sample program in this section for details.)
 
 The \func{queue} command should be inserted after the specifications of
 each class.
+
+
+
+
 
 
