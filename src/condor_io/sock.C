@@ -439,11 +439,19 @@ int Sock::close()
 #define ioctlsocket ioctl
 #endif
 
+/* NOTE: on timeout() we return the previous timeout value, or a -1 on an error.
+ * Once more: we do _not_ return FALSE on Error like most other CEDAR functions;
+ * we return a -1 !! 
+ */
 int Sock::timeout(int sec)
 {
 	int t = _timeout;
 
 	_timeout = sec;
+
+	/* if stream not assigned to a sock, do it now	*/
+	if (_state == sock_virgin) assign();
+	if (_state != sock_assigned) return -1;
 
 	if (_timeout == 0) {
 		unsigned long mode = 0;	// reset blocking mode
