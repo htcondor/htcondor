@@ -41,7 +41,7 @@ void exampleSyntax (const char * example) {
 
 //-----------------------------------------------------------------------------
 bool isKeyWord (char *token) {
-    const unsigned int numKeyWords = 6;
+    const unsigned int numKeyWords = 7;
     const char * keywords[numKeyWords] = {
         "JOB", "PARENT", "CHILD", "PRE", "POST", "DONE", "Retry",
     };
