@@ -929,7 +929,7 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 		if (LastCkptTime > 0) {
 			SetAttributeInt(Proc->id.cluster, Proc->id.proc,
 							ATTR_LAST_CKPT_TIME, LastCkptTime);
-			int ckpt_time;
+			int ckpt_time=0;
 			GetAttributeInt(Proc->id.cluster, Proc->id.proc,
 							ATTR_JOB_COMMITTED_TIME, &ckpt_time);
 			ckpt_time += LastCkptTime - LastRestartTime;
