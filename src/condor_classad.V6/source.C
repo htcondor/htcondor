@@ -579,7 +579,7 @@ bool ClassAdParser::
 parseShiftExpression(ExprTree *&tree)
 {
     ExprTree 			*treeL = NULL, *treeR = NULL;
-	Operation			*newTree;
+	Operation			*newTree = NULL;
 	Lexer::TokenType	tt;
     Operation::OpKind 	op;
 
@@ -658,7 +658,7 @@ bool ClassAdParser::
 parseMultiplicativeExpression(ExprTree *&tree)
 {
     ExprTree 			*treeL = NULL, *treeR = NULL;
-	Operation			*newTree;
+	Operation			*newTree = NULL;
 	Operation::OpKind	op;
 	Lexer::TokenType	tt;
 
@@ -704,7 +704,7 @@ bool ClassAdParser::
 parseUnaryExpression(ExprTree *&tree)
 {
     ExprTree 			*treeM = NULL;
-	Operation			*newTree;
+	Operation			*newTree = NULL;
 	Operation::OpKind	op=Operation::__NO_OP__;
 	Lexer::TokenType	tt;
 
