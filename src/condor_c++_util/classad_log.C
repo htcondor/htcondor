@@ -28,6 +28,10 @@
 
 #define _POSIX_SOURCE
 
+#ifdef __GNUG__
+#pragma implementation "HashTable.h"
+#endif
+
 #include "condor_common.h"
 #include "classad_log.h"
 #include "condor_debug.h"
