@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: pre_all,v 1.1.4.1 2004-07-19 05:28:37 wright Exp $
+# $Id: pre_all,v 1.1.4.2 2004-08-25 21:33:58 bgietzel Exp $
 # Submit-side NMI build system infrastructure to setup source
 # input for test jobs before the platform-specific stuff is called.
 # All we have to do is untar the common/results.tar.gz file so that
@@ -12,6 +12,10 @@
 
 # autoflush our STDOUT
 $| = 1;
+
+#added to simulate results from build, since we don't have the database to work with yet 
+system ("tar -zxvf results.tar.gz"); 
+system ("mv */results.tar.gz ../.");
 
 my $results = "results.tar.gz";
 -f $results || die "$results does not exist!\n";
