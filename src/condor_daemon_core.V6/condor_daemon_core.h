@@ -463,6 +463,10 @@ class DaemonCore : public Service
     */
     int Cancel_Socket ( Stream * insock );
 
+	/// Cancel and close all registed sockets.
+	int Cancel_And_Close_All_Sockets(void);
+
+
     /** Not_Yet_Documented
         @param insock           Not_Yet_Documented
         @return Not_Yet_Documented
@@ -511,6 +515,9 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Cancel_Pipe ( int pipefd );
+
+	/// Cancel and close all registed pipes.
+	int Cancel_And_Close_All_Pipes(void);
 
 	/** Create an anonymous pipe.
 	*/
@@ -662,7 +669,13 @@ class DaemonCore : public Service
         @param priv The priv state to change into right before
                the exec.  Default = no action.
         @param reaper_id The reaper number to use.  Default = 1.
-        @param want_command_port Well, do you?  Default = TRUE
+        @param want_command_port Well, do you?  Default = TRUE.  If
+			   want_command_port it TRUE, the child process will be
+			   born with a daemonCore command socket on a dynamic port.
+			   If it is FALSE, the child process will not have a command
+			   socket.  If it is any integer > 1, then it will have a
+			   command socket on a port well-known port 
+			   specified by want_command_port.
         @param env A colon-separated list of stuff to be put into
                the environment of the new process
         @param cwd Current Working Directory

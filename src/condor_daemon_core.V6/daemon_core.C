@@ -868,6 +868,45 @@ int DaemonCore::Register_Socket(Stream *iosock, char* iosock_descrip,
 }
 
 
+int 
+DaemonCore::Cancel_And_Close_All_Sockets(void) 
+{
+	// This method will cancel *and delete* all registered sockets.
+	// It will return the number of sockets cancelled + closed.
+	int i = 0;
+
+	while ( nSock > 0 ) {
+		if ( (*sockTable)[0].iosock ) {	// if a valid entry....
+			Stream* insock = (*sockTable)[i].iosock;
+			Cancel_Socket( insock );		
+			delete insock;
+			i++;
+		}
+	}
+
+	return i;
+}
+
+
+int 
+DaemonCore::Cancel_And_Close_All_Pipes(void) 
+{
+	// This method will cancel *and delete* all registered pipes.
+	// It will return the number of pipes cancelled + closed.
+	int i = 0;
+
+	while ( nPipe > 0 ) {
+		if ( (*pipeTable)[0].pipefd ) {	// if a valid entry....
+			Close_Pipe( (*pipeTable)[i].pipefd );		
+			i++;
+		}
+	}
+
+	return i;
+}
+		
+
+
 int DaemonCore::Cancel_Socket( Stream* insock)
 {
 	int i,j;
