@@ -84,7 +84,7 @@ condor_save_sigstates()
 
 
 	/* Save the user's signal mask */
-	sigprocmask(SIG_SETMASK,NULL,&(signal_states.user_mask));
+	sigprocmask(SIG_SETMASK,(sigset_t *)0L,&(signal_states.user_mask));
 
 	/* Save pending signal information */
 	sigpending( &(signal_states.pending) );
@@ -239,9 +239,6 @@ struct sigvec *ovec;
 #elif defined(SUNOS41) || defined(ULTRIX43)
 			rval = SIGVEC( sig, vec ? &nvec : vec, ovec );
 #else
-			/* even though SunOS 4.x has a SYS_sigvec kernel call, all the
-			 * trampoline code is setup in libc.a, not the kernel!  thus,
-			 * we cannot call syscall here on SunOS; call SIGVEC() below. */
 			rval = syscall( SYS_sigvec, sig, vec ? &nvec : vec, ovec );
 #endif
 			break;
@@ -340,19 +337,16 @@ sigaction( int sig, const struct sigaction *act, struct sigaction *oact )
 		my_act = NULL;
 	}
 
-	if ( MappingFileDescriptors() ) {		/* called by User code */
-		if ( act ) {
-				/* don't let user code mess with these signals */
-			switch (sig) {
-				case SIGUSR1:
-				case SIGTSTP:
-				case SIGCONT:
-					errno = EINVAL;
-					return -1;
-			}
-				/* block checkpointing inside users signal handler */
-			sigaddset( &(my_act->sa_mask), SIGTSTP );
-			sigaddset( &(my_act->sa_mask), SIGUSR1 );
+	if ( MappingFileDescriptors() && act ) {		/* called by User code */
+		switch (sig) {
+			case SIGUSR1:
+			case SIGTSTP:
+			case SIGCONT: /* don't let user code mess with these signals */
+				errno = EINVAL;
+				return -1;
+			default: /* block checkpointing inside users signal handler */
+				sigaddset( &(my_act->sa_mask), SIGTSTP );
+				sigaddset( &(my_act->sa_mask), SIGUSR1 );
 		}
 	}
 
@@ -368,23 +362,22 @@ sigaction( int sig, const struct sigaction *act, struct sigaction *oact )
 
 #if defined(SYS_sigprocmask)
 int
-sigprocmask(how,set,oset)
-int how;
-const sigset_t *set;
-sigset_t *oset;
+sigprocmask( int how, const sigset_t *set, sigset_t *oset)
 {
-	sigset_t tmp, *my_set = &tmp;
+	sigset_t tmp, *my_set;
 
-	if ( MappingFileDescriptors() ) {
-		if( set ) {
-			*my_set = *set;
-			if ( (how == SIG_BLOCK) || (how == SIG_SETMASK) ) {
-				sigdelset(my_set,SIGUSR1);
-				sigdelset(my_set,SIGTSTP);
-				sigdelset(my_set,SIGCONT);
-			}
-		} else {
-			my_set = NULL;
+	if( set ) {
+		tmp = *set;
+		my_set = &tmp;
+	} else {
+		my_set = NULL;
+	}
+
+	if ( MappingFileDescriptors() && set ) {
+		if ( (how == SIG_BLOCK) || (how == SIG_SETMASK) ) {
+			sigdelset(my_set,SIGUSR1);
+			sigdelset(my_set,SIGTSTP);
+			sigdelset(my_set,SIGCONT);
 		}
 	}
 #if defined(OSF1) || defined(ULTRIX43)
