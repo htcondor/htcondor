@@ -23,6 +23,8 @@ SIG_CKPT_OBJS = signals_support.o
 #endif
 #endif
 
+IOS_STUBS = ios_stub.o ios_msg.o
+
 #if DOES_CHECKPOINTING  /* ========= DOES CHECKPOINTING ============ */
 
 #	if IS_SPARC_SUNOS41
@@ -117,7 +119,10 @@ SRC = \
 	syscall_connect.c \
 	syscall_numbers.c \
 	xfer_file.c \
-	file_stream.c
+	file_stream.c \
+        ios_stub.C \
+        ios_msg.C
+	 
 
 #if IS_ALPHA_OSF1
 XDR_STATFS_OBJ = xdr_statfs.OSF1.o
@@ -167,7 +172,7 @@ UTIL_OBJ =  dprintf.o dprintf_config.o except.o update_rusage.o \
 			condor_errlst.o $(HP_SPECIFIC_FILES)
 
 LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL) $(NAME_TAB) $(XDR_OBJ) $(UTIL_OBJ) \
-		$(CKPT_OBJ) $(UTIL_EXTRACT) $(HP_UTIL)
+		$(CKPT_OBJ) $(UTIL_EXTRACT) $(HP_UTIL) $(IOS_STUBS)
 
 SIMPLE_OBJ = $(LIB_DIR)/condor_rt0.o extern_path.o xfer_file.o 
 SYSCALL_LIB = $(LIB_DIR)/condor_syscall_lib.a
