@@ -317,7 +317,7 @@ real_config(char* host, int wantsQuiet)
 	reinsert_specials( host );
 
 		// Try to find and read the global root config file
-	if( config_file = find_global_root() ) {
+	if( (config_file = find_global_root()) ) {
 		process_file( config_file, "global root config file", host );
 
 			// Re-insert the special macros.  We don't want the user
