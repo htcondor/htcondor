@@ -79,21 +79,20 @@ int ConnectToServer(request_type type)
 
 	conn_req_sd = I_socket();
 	if (conn_req_sd == INSUFFICIENT_RESOURCES) {
-		fprintf(stderr, "ERROR:\n");
-		fprintf(stderr, "ERROR:\n");
-		fprintf(stderr, "ERROR: insufficient resources for a new socket\n");
-		fprintf(stderr, "ERROR:\n");
-		fprintf(stderr, "ERROR:\n");
+		dprintf( D_ALWAYS, "ERROR: insufficient resources for a new socket\n" );
 		return INSUFFICIENT_RESOURCES;
     }
 	else if (conn_req_sd == CKPT_SERVER_SOCKET_ERROR) {
-		fprintf(stderr, "ERROR:\n");
-		fprintf(stderr, "ERROR:\n");
-		fprintf(stderr, "ERROR: unable to create a new socket\n");
-		fprintf(stderr, "ERROR:\n");
-		fprintf(stderr, "ERROR:\n");
+		dprintf( D_ALWAYS, "ERROR: unable to create a new socket\n" );
 		return CKPT_SERVER_SOCKET_ERROR;
     }
+
+	if( ! _condor_local_bind(conn_req_sd) ) {
+		close( conn_req_sd );
+		dprintf( D_ALWAYS, "ERROR: unable to bind new socket to local interface\n");
+		return CKPT_SERVER_SOCKET_ERROR;
+	}
+
 	memset((char*) &server_sa, 0, (int) sizeof(server_sa));
 	server_sa.sin_family = AF_INET;
 	memcpy((char*) &server_sa.sin_addr.s_addr, (char*) server_IP, 
