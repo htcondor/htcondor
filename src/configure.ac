@@ -91,24 +91,42 @@ AC_PROG_PERL_VERSION([5.005_03], [],
 # Figure out what platform we're being run on
 ############################################################
 AC_MSG_NOTICE([determining host platform])
+# these three are just used by configure to specify the settings we
+# actually care about, described below
 arch=`uname -m`
 osrelease=`uname -r`
 osversion=`uname -v`
+
+# this is what ends up as "Architecture" in the Imakefiles, and is
+# used in a number of the IS_* #define's too.  luckily, we can use the
+# same thing in both places without confusion...
 _cv_arch=""
+
+# this is the opsys-specific string in the IS_* #define's
 _cv_opsys=""
+
+# this is what ends up as "OperatingSystem" in the Imakefile, which
+# unfortnuately is sometimes different than what we use in _cv_opsys
+# this is stupid and evil, but since the naming isn't consistent in
+# the Condor code and build system, for now, we'll just define both.
+# hopefully, someday relatively soon, we'll be able to go through and
+# clean this discrepancy up and remove this evil setting.  sorry.
+_cv_op_sys=""
+
+# the version-specific opsys string we use in the IS_* #define's
 _cv_opsys_vers=""
+
+# what gets set as the "SYSNAME" make variable, for now, it's only
+# used as the argument to "make_final_tarballs" to determine what the
+# packaged filenames should be when we try to release this platform
 _cv_sysname=""
-_cv_linux_distro="UNKNOWN"
-_cv_libc_kind="LIBC-UNKNOWN"
-_cv_libc_major="0"
-_cv_libc_minor="0"
-_cv_libc_patch="0"
 
 # Make sure if we get back something that begins with "IRIX" that we
 # strip off anything after it (e.g. "IRIX64", etc).
 os=`uname -s | sed 's/IRIX.*/IRIX/'`
 
 if test "$os" = "HP-UX"; then
+  _cv_op_sys="HPUX"
   _cv_opsys="HPUX"
   _cv_arch="HPPA"
   if test "$osrelease" = "B.10.20" ; then
@@ -121,6 +139,7 @@ if test "$os" = "HP-UX"; then
 
 elif test "$os" = "OSF1" ; then
   _cv_arch="ALPHA"
+  _cv_op_sys="OSF1"
   _cv_opsys="DUX"
   if test $osrelease = "V4.0" ; then
     _cv_opsys_vers="DUX4"
@@ -133,6 +152,7 @@ elif test "$os" = "OSF1" ; then
 elif test $os = "Linux" ; then
   # linux is a big mess, since we have different distributions,
   # different versions of glibc, etc, etc...
+  _cv_op_sys="LINUX"
   _cv_opsys="LINUX"
   if test $arch = "i686" -o $arch = "i586" -o $arch = "i486" ; then
     _cv_arch="I386"
@@ -192,6 +212,7 @@ elif test $os = "Linux" ; then
   _cv_opsys_vers="LINUX-$_cv_linux_distro"
 
 elif test $os = "SunOS" ; then
+  _cv_op_sys="Solaris"
   _cv_opsys="SOLARIS"
   if test $arch = "sun4m" -o $arch = "sun4u" ; then
     _cv_arch="SUN4X"
@@ -214,6 +235,7 @@ elif test $os = "SunOS" ; then
 
 elif test $os = "IRIX" ; then
   _cv_arch="SGI"
+  _cv_op_sys="IRIX"
   _cv_opsys="IRIX"
   if test "$osrelease" = "6.5" ; then
     _cv_opsys_vers="IRIX65"
@@ -230,6 +252,7 @@ elif test $os = "IRIX" ; then
 elif test $os = "AIX" ; then
   # add detection to this when ia64 is needed
   _cv_arch="PPC"
+  _cv_op_sys="AIX"
   _cv_opsys="AIX"
   if test "$osversion" = "5" ; then
     _cv_opsys_vers="AIX5"
@@ -238,9 +261,20 @@ elif test $os = "AIX" ; then
 
 elif test $os = "Darwin" ; then
   _cv_arch="PPC"
-  _cv_opsys="BSD"
-  _cv_opsys_vers="DARWIN"
-  _cv_sysname="ppc_macosx"
+  _cv_op_sys="Darwin"
+  _cv_opsys="DARWIN"
+  if test "$osrelease" = "6.8" ; then
+    _cv_opsys_vers="DARWIN-6_8"
+    _cv_sysname="ppc_macosx"
+  elif test "$osrelease" = "7.0.0" ; then
+    _cv_opsys_vers="DARWIN-7_0"
+    _cv_sysname="ppc_macosx_7_0"
+  else
+    _cv_opsys_vers="DARWIN-UNKNOWN"
+    AC_MSG_WARN([Unrecognised MacOSX/Darwin version])
+    AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
+  fi  
+
 
 else
   AC_MSG_ERROR([Condor has not been ported to this platform])
@@ -253,6 +287,7 @@ AC_SUBST(_cv_arch,$_cv_arch)
 AC_MSG_CHECKING([generic operating system])
 AC_MSG_RESULT([$_cv_opsys])
 AC_SUBST(_cv_opsys,$_cv_opsys)
+AC_SUBST(_cv_op_sys,$_cv_op_sys)
 
 AC_MSG_CHECKING([operating system version])
 AC_MSG_RESULT([$_cv_opsys_vers])
@@ -286,7 +321,7 @@ if test "$_cv_opsys" = "LINUX" ; then
     AC_MSG_RESULT([ERROR])
     AC_MSG_ERROR([Can not determine libc version on this machine])
   fi
-  AC_MSG_RESULT([$_libc_ver])
+  AC_MSG_RESULT([GLIBC $_libc_ver])
   _cv_libc_kind="GLIBC"
   _cv_libc_major=`echo $_libc_ver | cut -f1 -d.`
   _cv_libc_minor=`echo $_libc_ver | cut -f2 -d.`
