@@ -1064,9 +1064,11 @@ XCOMM Begin translation of func(RUN)		@@\
 all:: name.run name.cmd				@@\
 name:: name.run name.cmd			@@\
        @/bin/true				@@\
-name.run:					@@\
+name.run: Condor.pm CondorTest.pm		@@\
+	rm -f name.run				@@\
 	ln -s ../name.run .			@@\
 name.cmd:					@@\
+	rm -f name.cmd				@@\
 	ln -s ../name.cmd .			@@\
 clean::						@@\
 	rm -f name.run name.cmd run_list	@@\
