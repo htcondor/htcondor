@@ -265,6 +265,7 @@ sub CacheUsage( $$ )
     my $MeanBytes = 0;
     $MeanBytes = ( $TotalBytes / $Count ) if ( $Count );
     $Hash->Add( "GlobalDataBytesMean", "n", $MeanBytes );
+    $Hash->Add( "GlobalDataBytesMax", "n", $MaxBytes );
 
     # Tag & URL counts
     my $TagCount = keys %TagInodes;
@@ -389,8 +390,6 @@ sub CheckAge(  )
 # Check file sizes
 sub CheckSize(  )
 {
-    my $MaxSize = 0;
-
     my $BigCount = 0;
     my $BigTotalBytes = 0;
     my $BigTotalBlocks = 0;
@@ -401,9 +400,6 @@ sub CheckSize(  )
 	my $Size = $File->{Bytes};
 
 	$Count++ if ( $File->{IsGlobal} );
-
-	# Some quick calcs.
-	$MaxSize = $Size if ( $Size > $MaxSize );
 
 	# If it's an old global file, note it..
 	if (  ( $File->{IsGlobal} ) && ( $Size > $Config{MaxSize} )  )
@@ -423,8 +419,6 @@ sub CheckSize(  )
     $BigCount = 1 if ( 0 == $BigCount );
 
     # Store the results...
-    $Hash->Add( "GlobalMaxSize", "n",
-		$MaxSize );
     $Hash->Add( "BigTotalBytes", "n",
 		$BigTotalBytes );
     $Hash->Add( "BigMeanBytes", "n",
