@@ -35,9 +35,10 @@
 #include "condor_common.h"
 #include "condor_query.h"
 #include "my_hostname.h"
+#include "get_full_hostname.h"
 
-extern "C"
-{
+extern "C" {
+
 char* get_daemon_addr( const char* constraint_attr, 
 					   const char* name,
 					   AdTypes adtype, const char* attribute )
@@ -49,7 +50,7 @@ char* get_daemon_addr( const char* constraint_attr,
 	ClassAdList			ads;
 	char*				fullname;
 	
-	if( name ) {
+	if( name && *name ) {
 		fullname = (char*)name;
 	} else {
 		fullname = my_full_hostname();
@@ -72,16 +73,87 @@ char* get_daemon_addr( const char* constraint_attr,
 	}
 	return daemonAddr;
 }
-char* get_schedd_addr(const char* name)
+
+
+char*
+get_schedd_addr(const char* name)
 {
 	return get_daemon_addr(ATTR_NAME, name, SCHEDD_AD, ATTR_SCHEDD_IP_ADDR);
 } 
-char* get_startd_addr(const char* name)
+
+
+char*
+get_startd_addr(const char* name)
 {
 	return get_daemon_addr(ATTR_MACHINE, name, STARTD_AD, ATTR_STARTD_IP_ADDR);
 } 
-char* get_master_addr(const char* name)
+
+
+char*
+get_master_addr(const char* name)
 {
-	return get_daemon_addr(ATTR_MACHINE, name, MASTER_AD, ATTR_MASTER_IP_ADDR);
+	return get_daemon_addr(ATTR_NAME, name, MASTER_AD, ATTR_MASTER_IP_ADDR);
 } 
+
+
+// Return the host portion of a daemon name string.  Either the name
+// includes an "@" sign, in which case we return whatever is after it,
+// or it doesn't, in which case we just return what we got passed.
+const char*
+get_host_part( const char* name )
+{
+	char* tmp;
+	tmp = strchr( name, '@' );
+	if( tmp ) {
+		return ++tmp;
+	} else {
+		return name;
+	}
 }
+
+
+char*
+get_daemon_name( const char* name )
+{
+	char *tmp, *fullname, *tmpname;
+	static char daemon_name[256];
+	daemon_name[0] = '\0';
+	tmpname= strdup( name );
+	int had_error = 0;
+
+		// First, check for a '@' in the name.
+	tmp = strchr( tmpname, '@' );
+	if( tmp ) {
+			// There's a '@'.
+		*tmp = '\0';
+		tmp++;
+		if( *tmp ) {
+				// There was something after the @, try to resolve it
+				// as a full hostname:
+			fullname = get_full_hostname( tmp );
+		} else {
+				// There was nothing after the @, use localhost:
+			fullname = my_full_hostname();
+		}
+		if( fullname ) {
+			sprintf( daemon_name, "%s@%s", tmpname, fullname );
+		} else {
+			had_error = 1;
+		}
+	} else {
+			// There's no '@', just try to resolve the hostname.
+		if( (fullname = get_full_hostname(tmpname)) ) {
+			sprintf( daemon_name, "%s", fullname );
+		} else {
+			had_error = 1;
+		}			
+	}
+	free( tmpname );
+	if( had_error ) {
+		return NULL;
+	} else {
+		return daemon_name;
+	}
+}
+
+} /* extern "C" */
