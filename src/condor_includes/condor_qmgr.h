@@ -132,7 +132,7 @@ int SetAttributeFloat(int cluster, int proc, const char *attr, float value);
 int SetAttributeString(int cluster, int proc, const char *attr, char *value);
 
 int CloseConnection();
-int BeginTransaction();
+void BeginTransaction();
 
 /** Get value of attr for job with specified cluster and proc.
 	@return -1 on failure; 0 on success
