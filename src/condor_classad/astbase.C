@@ -14,7 +14,7 @@
 
 #define AdvancePtr(ptr)  while(*ptr != '\0') ptr++;
 
-// extern  void dprintf(int, char *fmt, ...);
+extern  "C"	void dprintf(int, char *fmt, ...);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Tree node constructors.                                                    //

@@ -1,11 +1,7 @@
 SRC_DIR = $(SRC_TREE)/condor_classad
 
-#if IS_I386_LINUX
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fexternal-templates -DNEW_PROC
-#else
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fexternal-templates -DNEW_PROC
-#endif
-CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = -Wall $(STD_C_PLUS_FLAGS) -fexternal-templates -DNEW_PROC
+CFLAGS = -Wall $(STD_C_FLAGS)
 
 #if IS_SPARC_SUNOS41
 SYSPARAM = sysparam_sun

@@ -422,6 +422,10 @@ int ClassAd::IsAMatch(ClassAd* temp)
 ////////////////////////////////////////////////////////////////////////////////
 int ClassAd::fPrint(FILE* f)
 {
+	if(!f)
+	{
+		return FALSE;
+	}
     fprintf(f, "MyType = ");
     fprintf(f, "%c", '"');
 	if(GetMyTypeName())
@@ -437,5 +441,5 @@ int ClassAd::fPrint(FILE* f)
 	}
     fprintf(f, "%c\n", '"');    
 	
-	AttrList::fPrint(f);
+	return AttrList::fPrint(f);
 }

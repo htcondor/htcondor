@@ -19,8 +19,9 @@
 # include "condor_attrlist.h"
 # include "condor_parser.h"
 
-static char *_FileName_ = __FILE__;         // Used by EXCEPT (see except.h)
-extern "C" int _EXCEPT_(char*, ...);
+static 	char *_FileName_ = __FILE__;         // Used by EXCEPT (see except.h)
+extern 	"C" int _EXCEPT_(char*, ...);
+extern	"C"	void	dprintf(int, char* fmt, ...);
 
 ////////////////////////////////////////////////////////////////////////////////
 // AttrListElem constructor.
@@ -118,7 +119,6 @@ AttrList::AttrList(AttrListList* associatedList) :
 AttrList::AttrList(FILE *file, char *delimitor, int &isEOF) : AttrListAbstract(ATTRLISTENTITY)
 {
     ExprTree *tree;
-    EvalResult *val;
 
 	seq = 0;
     exprList = NULL;
@@ -232,7 +232,6 @@ AttrList::AttrList(FILE *file, char *delimitor, int &isEOF) : AttrListAbstract(A
 AttrList::AttrList(char *AttrList, char delimitor) : AttrListAbstract(ATTRLISTENTITY)
 {
     ExprTree *tree;
-    EvalResult *val;
 
 	seq = 0;
     exprList = NULL;
@@ -452,6 +451,10 @@ ExprTree* AttrList::ProcToTree(char* var, LexemeType t, int i, float f, char* s)
 				delete tmpTree;
 				return NULL;
 			}
+			break;
+		
+		default:
+
 			break;
 	}
 

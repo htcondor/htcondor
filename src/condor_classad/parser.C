@@ -92,7 +92,6 @@ int Match(LexemeType t, char*& s, int& count)
 int ParseFactor(char*& s, ExprTree*& newTree, int& count)
 {
     Token*		t = LookToken(s);	// next token
-	char*		tmpStr;
  
     switch(t->type)
     {
