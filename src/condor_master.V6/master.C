@@ -304,7 +304,7 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 			}
 			else
 			{
-				config(MyName, NULL, TRUE);
+				config_from_server(MyName, NULL);
 			}
 		}
 	}
