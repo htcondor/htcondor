@@ -815,7 +815,23 @@ GridManager::updateSchedd()
 int
 GridManager::globusPoll()
 {
-	globus_poll();
+	if ( JobsToSubmit.IsEmpty() && JobsToCancel.IsEmpty() &&
+		 JobsToCommit.IsEmpty() ) {
+
+		time_t stop = time(NULL) + 1;
+		globus_abstime_t wait;
+		do {
+			wait.tv_sec = stop;
+			wait.tv_nsec = 0;
+			globus_callback_poll( &wait );
+		} while ( time(NULL) < stop );
+
+	} else {
+
+		globus_poll();
+
+	}
+
 	return TRUE;
 }
 
