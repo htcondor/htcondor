@@ -1,26 +1,32 @@
 \begin{ManPage}{\label{man-condor-master}\Condor{master}}{1}
 {The master Condor Daemon}
+
 \Synopsis \SynProg{\Condor{master}}
 
 \index{Condor commands!condor\_master}
 \index{condor\_master command}
+\index{Condor daemon!\Condor{master} manual page}
 
 \Description 
 
 This daemon is responsible for keeping all the
 rest of the Condor daemons running on each machine in your pool.  It  
 spawns the other daemons, and periodically checks to see if there are
-new binaries installed for any of them.  If there are, the master will
-restart the affected daemons.  In addition, if any daemon crashes, the
-master will send email to the Condor Administrator of your pool and 
+new binaries installed for any of them.  If there are,
+the \Condor{master} will restart the affected daemons.
+In addition, if any daemon crashes, the
+\Condor{master} will send e-mail to the Condor Administrator of your pool and 
 restart the daemon.  The \Condor{master} also supports various
 administrative commands that let you start, stop or reconfigure
 daemons remotely.  The \Condor{master} will run on every machine in 
 your Condor pool, regardless of what functions each machine are
 performing.
 
-See section~\ref{sec:Condor-Daemons} in Admin Manual for more information
-about \Condor{master} and other Condor daemons.
+See section~\ref{sec:Condor-Daemons} in the Administrator's Manual
+for more information
+about the \Condor{master} and other Condor daemons.
+Command line arguments for a \Condor{master} daemon are included
+in that section.
 
 The \Macro{DAEMON\_LIST} configuration macro is used by the
 \Condor{master} to provide a per-machine list of daemons that
