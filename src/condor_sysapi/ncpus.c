@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "condor_debug.h"
 #include "sysapi.h"
 #include "sysapi_externs.h"
 
@@ -78,6 +79,7 @@ sysapi_ncpus_raw(void)
 
 	FILE        *proc;
 	char 		buf[256];
+	char		*tmp;
 	int 		num_cpus = 0;
 
 	sysapi_internal_reconfig();
@@ -88,8 +90,13 @@ sysapi_ncpus_raw(void)
 
 /*
 /proc/cpuinfo looks something like this on an I386 machine...:
-The alpha linux port does not use "processor", so we use bogomips instead.
-(For 1 cpu machines, there's only 1 entry).
+The alpha linux port does not use "processor", nor does it provide
+seperate entries on SMP machines.  In fact, for Alpha Linux, there's
+another whole entry for "cpus detected" that just contains the number
+we want.  So, on Alpha Linux we have to look for that, and on Intel
+Linux, we just have to count the number of lines containing
+"processor". 
+   -Alpha/Linux wisdom added by Derek Wright on 12/7/99
 
 processor       : 0
 cpu             : 686
@@ -121,15 +128,37 @@ wp              : yes
 flags           : fpu vme de pse tsc msr pae mce cx8 apic 11 mtrr pge mca cmov mmx
 bogomips        : 299.01
 */
-	// Count how many lines begin with the string "bogomips".
+
+	// Count how many lines begin with the string "processor".
 	while( fgets( buf, 256, proc) ) {
-		if( !strincmp( buf, "bogomips", 8 ) ) {
+#if defined(I386)
+		if( !strincmp(buf, "processor", 9) ) {
 			num_cpus++;
 		}
+#elif defined(ALPHA)
+		if( !strincmp(buf, "cpus detected", 13) ) {
+			tmp = strchr( buf, ':' );
+			if( tmp && tmp[1] ) {
+				tmp++;
+				num_cpus = atoi( tmp );
+			} else {
+				dprintf( D_ALWAYS, 
+						 "ERROR: Unrecognized format for /proc/cpuinfo:\n(%s)\n",
+						 buf );
+				num_cpus = 1;
+			}
+		}
+#else
+#error YOU MUST CHECK THE FORMAT OF /proc/cpuinfo TO FIND N-CPUS CORRECTLY
+#endif
+	}
+		/* If we didn't find something, default to 1 cpu. */
+	if( !num_cpus ) {
+		num_cpus = 1;
 	}
 	fclose( proc );
 	return num_cpus;
-#else sequent
+#else
 #error DO NOT KNOW HOW ON THIS PLATFORM
 #endif
 }
