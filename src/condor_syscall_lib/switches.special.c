@@ -56,6 +56,11 @@
 static int fake_readv( int fd, const struct iovec *iov, int iovcnt );
 static int fake_writev( int fd, const struct iovec *iov, int iovcnt );
 
+/*Local fake readv, writev's for linux.  Linux does not have a SYS_readv	*/
+/*or SYS_writev									*/
+static int linux_fake_readv( int fd, const struct iovec *iov, int iovcnt );
+static int linux_fake_writev( int fd, const struct iovec *iov, int iovcnt );
+
 char	*getwd( char * );
 
 /*
@@ -227,7 +232,7 @@ isatty( int filedes )
   We don't handle readv directly in remote system calls.  Instead we
   break the readv up into a series of individual reads.
 */
-#if defined(HPUX9)
+#if defined(HPUX9) || defined(LINUX)
 ssize_t
 readv( int fd, const struct iovec *iov, size_t iovcnt )
 #else
@@ -243,7 +248,11 @@ readv( int fd, struct iovec *iov, int iovcnt )
 	}
 
 	if( LocalSysCalls() ) {
+		#if defined(LINUX)
+		rval = linux_fake_readv( user_fd, iov, iovcnt );
+		#else
 		rval = syscall( SYS_readv, user_fd, iov, iovcnt );
+		#endif
 	} else {
 		rval = fake_readv( user_fd, iov, iovcnt );
 	}
@@ -279,11 +288,35 @@ fake_readv( int fd, const struct iovec *iov, int iovcnt )
 	return rval;
 }
 
+/*Fake local readv for Linux						*/
+static int
+linux_fake_readv( int fd, const struct iovec *iov, int iovcnt )
+{
+	register int i, rval = 0, cc;
+
+	for( i = 0; i < iovcnt; i++ ) {
+		cc = syscall( SYS_read, fd, iov->iov_base, iov->iov_len );
+		if( cc < 0 ) {
+			return cc;
+		}
+
+		rval += cc;
+		if( cc != iov->iov_len ) {
+			return rval;
+		}
+
+		iov++;
+	}
+
+	return rval;
+}
+
+
 /*
   We don't handle writev directly in remote system calls.  Instead we
   break the writev up into a series of individual writes.
 */
-#if defined(HPUX9)
+#if defined(HPUX9) || defined(LINUX)
 ssize_t
 writev( int fd, const struct iovec *iov, size_t iovcnt )
 #else
@@ -299,7 +332,11 @@ writev( int fd, struct iovec *iov, int iovcnt )
 	}
 
 	if( LocalSysCalls() ) {
+		#if defined(LINUX)
+		rval = linux_fake_writev( user_fd, iov, iovcnt );
+		#else
 		rval = syscall( SYS_writev, user_fd, iov, iovcnt );
+		#endif
 	} else {
 		rval = fake_writev( user_fd, iov, iovcnt );
 	}
@@ -320,6 +357,29 @@ fake_writev( int fd, const struct iovec *iov, int iovcnt )
 
 	for( i = 0; i < iovcnt; i++ ) {
 		cc = REMOTE_syscall( CONDOR_write, fd, iov->iov_base, iov->iov_len );
+		if( cc < 0 ) {
+			return cc;
+		}
+
+		rval += cc;
+		if( cc != iov->iov_len ) {
+			return rval;
+		}
+
+		iov++;
+	}
+
+	return rval;
+}
+
+/*Fake local writev for Linux						*/
+static int
+linux_fake_writev( int fd, const struct iovec *iov, int iovcnt )
+{
+	register int i, rval = 0, cc;
+
+	for( i = 0; i < iovcnt; i++ ) {
+		cc = syscall( SYS_write, fd, iov->iov_base, iov->iov_len );
 		if( cc < 0 ) {
 			return cc;
 		}
