@@ -36,7 +36,7 @@
   TEST_SUITE_F = test_suite_F.V5
 #endif
 
-#if !HAS_X
+#if !(NEEDS_KBDD)
 #   define kbdd
 #endif
 
@@ -209,7 +209,7 @@ object_target(schedd.V6)
 object_target(status.V6)
 object_target(dagman)
 object_target(userlog)
-#if HAS_X
+#if NEEDS_KBDD
    object_target(kbdd)
 #endif
 object_target(negotiator.V6)
