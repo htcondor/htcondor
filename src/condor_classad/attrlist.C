@@ -1084,7 +1084,7 @@ AttrListList::AttrListList(AttrListList& oldList)
     // the AttrList list to be copied is not empty
     {
 	oldList.OpenList();
-	while(tmpAttrList = oldList.NextAttrList())
+	while((tmpAttrList = oldList.NextAttrList()))
 	{
 	    switch(tmpAttrList->Type())
 	    {
@@ -1227,7 +1227,7 @@ void AttrListList::Insert(AttrList* AttrList)
     ExprTree*	tmpExpr;
 
     AttrList->ResetExpr();
-    while(tmpExpr = AttrList->NextExpr())
+    while((tmpExpr = AttrList->NextExpr()))
     {
         UpdateAgg(tmpExpr, AGG_INSERT);
     }
@@ -1279,7 +1279,7 @@ int AttrListList::Delete(AttrList* attrList)
 				ExprTree*	tmpExpr;
 
 				((AttrList*)cur)->ResetExpr();
-				while(tmpExpr = ((AttrList*)cur)->NextExpr())
+				while((tmpExpr = ((AttrList*)cur)->NextExpr()))
 				{
 					UpdateAgg(tmpExpr, AGG_REMOVE);
 				}
@@ -1336,7 +1336,7 @@ int AttrListList::Delete(AttrList* attrList)
                 ExprTree*	tmpExpr;
 
 				attrList->ResetExpr();
-				while(tmpExpr = attrList->NextExpr())
+				while((tmpExpr = attrList->NextExpr()))
 				{
 					UpdateAgg(tmpExpr, AGG_REMOVE);
 				}
@@ -1356,7 +1356,7 @@ ExprTree* AttrListList::Lookup(char* name, AttrList*& attrList)
     OpenList();
     for(tmpAttrList = NextAttrList(); tmpAttrList; tmpAttrList = NextAttrList())
     {
-        if(tmpExpr = tmpAttrList->Lookup(name))
+        if((tmpExpr = tmpAttrList->Lookup(name)))
         {
             CloseList();
             attrList = tmpAttrList;
@@ -1375,7 +1375,7 @@ ExprTree* AttrListList::Lookup(char* name)
     OpenList();
     for(tmpAttrList = NextAttrList(); tmpAttrList; tmpAttrList = NextAttrList())
     {
-        if(tmpExpr = tmpAttrList->Lookup(name))
+        if((tmpExpr = tmpAttrList->Lookup(name)))
         {
             CloseList();
             return tmpExpr;
@@ -1392,7 +1392,7 @@ void AttrListList::UpdateAgg(ExprTree* expr, int operation)
     if(associatedAttrLists)
     {
     	associatedAttrLists->OpenList();
-    	while(tmpAttrList = associatedAttrLists->NextAttrList())
+    	while((tmpAttrList = associatedAttrLists->NextAttrList()))
     	{
 	    tmpAttrList->UpdateAgg(expr, operation);
     	}
@@ -1432,14 +1432,14 @@ ExprTree* AttrListList::BuildAgg(char* name, LexemeType op)
     ExprTree*	tmpTree = NULL;	// tree to be added to the aggregate expression
 
     OpenList();
-    while(tmpAttrList = NextAttrList())
+    while((tmpAttrList = NextAttrList()))
     {
 	switch(op)
 	{
 
 	    case LX_AGGADD :
 
-		if(tmpTree = tmpAttrList->Lookup(name))
+		if((tmpTree = tmpAttrList->Lookup(name)))
 		// a branch is found for the new aggregate expression
 		{
 		    tmpTree->Copy();
@@ -1456,7 +1456,7 @@ ExprTree* AttrListList::BuildAgg(char* name, LexemeType op)
 
 	    case LX_AGGEQ :
 
-		if(tmpTree = tmpAttrList->Lookup(name))
+		if((tmpTree = tmpAttrList->Lookup(name)))
 		// a branch is found for the new aggregate expression
 		{
 		    tmpTree->Copy();

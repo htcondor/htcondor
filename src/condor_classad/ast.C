@@ -234,17 +234,17 @@ int Float::operator <=(ExprTree& tree)
 // evaluation. 
 //----------
 
-int	ExprTree::EvalTree(AttrListList* classads, EvalResult* val)
+int	ExprTree::EvalTree(AttrListList*, EvalResult*)
 {
 	return FALSE;
 }
 
-int ExprTree::EvalTree(AttrList* classad, EvalResult* val)
+int ExprTree::EvalTree(AttrList*, EvalResult*)
 {
 	return FALSE;
 }
 
-int ExprTree::EvalTree(AttrList* classad1, AttrList* classad2, EvalResult* val)
+int ExprTree::EvalTree(AttrList*, AttrList*, EvalResult*)
 {
 	return FALSE;
 }
@@ -358,7 +358,7 @@ int Variable::EvalTree(AttrList* my_classad,AttrList* req_classad, EvalResult* v
 
 //---------------------------
 
-int Integer::EvalTree(AttrListList* classads, EvalResult* val)
+int Integer::EvalTree(AttrListList*, EvalResult* val)
 {
     if(!val) 
     {
@@ -378,7 +378,7 @@ int Integer::EvalTree(AttrListList* classads, EvalResult* val)
     return TRUE;
 }
 
-int Integer::EvalTree(AttrList* classad, EvalResult* val)
+int Integer::EvalTree(AttrList*, EvalResult* val)
 {
     if(!val) 
     {
@@ -398,7 +398,7 @@ int Integer::EvalTree(AttrList* classad, EvalResult* val)
 }
 
 //-------tw-------------
-int Integer::EvalTree(AttrList* my_classad, AttrList* req_classad, EvalResult* val)
+int Integer::EvalTree(AttrList*, AttrList*, EvalResult* val)
 {
     if(!val) 
     {
@@ -420,7 +420,7 @@ int Integer::EvalTree(AttrList* my_classad, AttrList* req_classad, EvalResult* v
 //--------------------
 
 
-int Float::EvalTree(AttrListList* classads, EvalResult* val)
+int Float::EvalTree(AttrListList*, EvalResult* val)
 {
     if(!val) 
     {
@@ -440,7 +440,7 @@ int Float::EvalTree(AttrListList* classads, EvalResult* val)
 }
 
 
-int Float::EvalTree(AttrList* classad, EvalResult* val)
+int Float::EvalTree(AttrList*, EvalResult* val)
 {
     if(!val) 
     {
@@ -463,7 +463,7 @@ int Float::EvalTree(AttrList* classad, EvalResult* val)
 
 //----------tw------------------
 
-int Float::EvalTree(AttrList* my_classad,AttrList* req_classad, EvalResult* val)
+int Float::EvalTree(AttrList*, AttrList*, EvalResult* val)
 {
     if(!val) 
     {
@@ -484,7 +484,7 @@ int Float::EvalTree(AttrList* my_classad,AttrList* req_classad, EvalResult* val)
 
 //--------------------------------
 
-int String::EvalTree(AttrListList* classads, EvalResult* val)
+int String::EvalTree(AttrListList*, EvalResult* val)
 {
     if(!val) 
     {
@@ -496,7 +496,7 @@ int String::EvalTree(AttrListList* classads, EvalResult* val)
     return TRUE;
 }
 
-int String::EvalTree(AttrList* classad, EvalResult* val)
+int String::EvalTree(AttrList*, EvalResult* val)
 {
     if(!val) 
     {
@@ -511,7 +511,7 @@ int String::EvalTree(AttrList* classad, EvalResult* val)
 
 //-------tw-----------------------------
 
-int String::EvalTree(AttrList* my_classad,AttrList* req_classad, EvalResult* val)
+int String::EvalTree(AttrList*, AttrList*, EvalResult* val)
 {
     if(!val) 
     {
@@ -527,7 +527,7 @@ int String::EvalTree(AttrList* my_classad,AttrList* req_classad, EvalResult* val
 //-----------------------------------
 
 
-int Boolean::EvalTree(AttrListList* classads, EvalResult* val)
+int Boolean::EvalTree(AttrListList*, EvalResult* val)
 {
     if(!val) 
     {
@@ -538,7 +538,7 @@ int Boolean::EvalTree(AttrListList* classads, EvalResult* val)
     return TRUE;
 }
 
-int Boolean::EvalTree(AttrList* classad, EvalResult* val)
+int Boolean::EvalTree(AttrList*, EvalResult* val)
 {
     if(!val) 
     {
@@ -552,7 +552,7 @@ int Boolean::EvalTree(AttrList* classad, EvalResult* val)
 
 //-----------tw------------------------
 
-int Boolean::EvalTree(AttrList* my_classad, AttrList* req_classad, EvalResult* val)
+int Boolean::EvalTree(AttrList*, AttrList*, EvalResult* val)
 {
     if(!val) 
     {
@@ -566,7 +566,7 @@ int Boolean::EvalTree(AttrList* my_classad, AttrList* req_classad, EvalResult* v
 //-----------------------------------
 
 
-int Null::EvalTree(AttrList* classad, EvalResult* val)
+int Null::EvalTree(AttrList*, EvalResult* val)
 {
     if(!val) 
     {
@@ -576,7 +576,7 @@ int Null::EvalTree(AttrList* classad, EvalResult* val)
     return TRUE;
 }
 
-int Null::EvalTree(AttrListList* classads, EvalResult* val)
+int Null::EvalTree(AttrListList*, EvalResult* val)
 {
     if(!val) 
     {
@@ -588,7 +588,7 @@ int Null::EvalTree(AttrListList* classads, EvalResult* val)
 
 //-------------tw----------------------------
 
-int Null::EvalTree(AttrList* my_classad, AttrList* req_classad,EvalResult* val)
+int Null::EvalTree(AttrList*, AttrList*, EvalResult* val)
 {
     if(!val) 
     {
@@ -599,7 +599,7 @@ int Null::EvalTree(AttrList* my_classad, AttrList* req_classad,EvalResult* val)
 }
 //------------------------------------------
 
-int Error::EvalTree(AttrList* classad, EvalResult* val)
+int Error::EvalTree(AttrList*, EvalResult* val)
 {
     if(!val)
     {
@@ -609,7 +609,7 @@ int Error::EvalTree(AttrList* classad, EvalResult* val)
     return TRUE;
 }
 
-int Error::EvalTree(AttrListList* classads, EvalResult* val)
+int Error::EvalTree(AttrListList*, EvalResult* val)
 {
     if(!val)
     {
@@ -620,7 +620,7 @@ int Error::EvalTree(AttrListList* classads, EvalResult* val)
 }
 
 //------------tw-------------------
-int Error::EvalTree(AttrList* my_classad, AttrList* req_classad,  EvalResult* val)
+int Error::EvalTree(AttrList*, AttrList*,  EvalResult* val)
 {
     if(!val)
     {
@@ -4960,11 +4960,11 @@ ExprTree* OrOp::MinTree(AttrListList* classads)
 {
   ExprTree* l, *r;
 
-  if(l = lArg->MinTree(classads))
+  if((l = lArg->MinTree(classads)))
   {
     return l;
   }
-  if(r = rArg->MinTree(classads))
+  if((r = rArg->MinTree(classads)))
   {
     return r;
   }

@@ -5,6 +5,7 @@
 #include "condor_ast.h"
 #include "condor_parser.h"
 #include "condor_classad_util.h" 
+#include "_condor_fix_resource.h"
 
 //
 // Given a ClassAd and a ClassAdList, a pointer to the first match in the 
@@ -160,7 +161,9 @@ void SortClassAdList(ClassAdList *adList1, ClassAdList *&adList2, char *constrai
 {
     int *mark;                               // mark each entity in the list
                                              // already selected.
+	int	i;
     ClassAd *temp, *min;
+
     if(!adList1 || !adList1->MyLength())
     {
         cerr << "Warning : empty list not sorted !" << endl;
@@ -182,7 +185,7 @@ void SortClassAdList(ClassAdList *adList1, ClassAdList *&adList2, char *constrai
 	exit(1);
     }
 
-    for(int i = 0; i < adList1->MyLength(); i++)
+    for(i = 0; i < adList1->MyLength(); i++)
     {
         mark[i] = 0;                         // initialize as unselected.
     }

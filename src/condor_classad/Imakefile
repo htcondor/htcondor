@@ -29,11 +29,13 @@ SYSPARAM = sysparam_linux
 #endif
 
 
+IO_OBJ = stream.o buffers.o
+
 SRC = ast.C astbase.C buildtable.C parser.C scanner.C registration.C \
 	  attrlist.C classad.C classifiedjobs.C classad_util.C
 
 OBJ = ast.o astbase.o buildtable.o parser.o scanner.o registration.o \
-	  attrlist.o classad.o classifiedjobs.o classad_util.o
+	  attrlist.o classad.o classifiedjobs.o classad_util.o $(IO_OBJ)
 
 all_target(expr_lib.a)
 
@@ -43,5 +45,8 @@ clean::
 	rm -f *.o expr_lib.a
 
 depend_target($(SRC))
+
+IMPORT_LINKS = ../../config/import_links
+import(../condor_io, $(IO_OBJ))
 
 release:

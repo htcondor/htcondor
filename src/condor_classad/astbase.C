@@ -311,7 +311,7 @@ int BinaryOpBase::operator ==(ExprTree& tree)
 // ">" operator.
 ////////////////////////////////////////////////////////////////////////////////
 
-int ExprTree::operator >(ExprTree& tree)
+int ExprTree::operator >(ExprTree&)
 {
     return FALSE;
 }
@@ -346,7 +346,7 @@ int FloatBase::operator >(ExprTree& tree)
 // ">=" operator.
 ////////////////////////////////////////////////////////////////////////////////
 
-int ExprTree::operator >=(ExprTree& tree)
+int ExprTree::operator >=(ExprTree&)
 {
     return FALSE;
 }
@@ -381,7 +381,7 @@ int FloatBase::operator >=(ExprTree& tree)
 // "<" operator.
 ////////////////////////////////////////////////////////////////////////////////
 
-int ExprTree::operator <(ExprTree& tree)
+int ExprTree::operator <(ExprTree&)
 {
     return FALSE;
 }
@@ -416,7 +416,7 @@ int FloatBase::operator <(ExprTree& tree)
 // "<=" operator.
 ////////////////////////////////////////////////////////////////////////////////
 
-int ExprTree::operator <=(ExprTree& tree)
+int ExprTree::operator <=(ExprTree&)
 {
     return FALSE;
 }
