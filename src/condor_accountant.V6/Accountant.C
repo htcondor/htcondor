@@ -96,6 +96,18 @@ void Accountant::SetPriority(const MyString& CustomerName, double Priority)
 // Add a match
 //------------------------------------------------------------------
 
+int Accountant::MatchExist(const MyString& CustomerName, const MyString& ResourceName)
+{
+  ResourceRecord* Resource;
+  if (Resources.lookup(ResourceName,Resource)==-1) return 0;
+  if (CustomerName==Resource->CustomerName) return 1;
+  return 0;
+}
+
+//------------------------------------------------------------------
+// Add a match
+//------------------------------------------------------------------
+
 void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd) 
 {
   AddMatch(CustomerName,GetResourceName(ResourceAd),Time::Now());
@@ -103,7 +115,11 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
 
 void Accountant::AddMatch(const MyString& CustomerName, const MyString& ResourceName, const Time& T) 
 {
+  // Check if match exists, if so no need to register it again
+  if (MatchExist(CustomerName,ResourceName)) return;
+  // check if the resource is used by any other customer, if so remove that natch
   RemoveMatch(ResourceName,T);
+
   dprintf(D_FULLDEBUG,"Accountant::AddMatch - CustomerName=%s, ResourceName=%s\n",CustomerName.Value(),ResourceName.Value());
   CustomerRecord* Customer;
   if (Customers.lookup(CustomerName,Customer)==-1) {
@@ -213,11 +229,28 @@ void Accountant::UpdatePriorities(const Time& T)
 
 void Accountant::CheckMatches(ClassAdList& ResourceList) {
   dprintf(D_FULLDEBUG,"Accountant::CheckMatches\n");
-  ResourceList.Open();
   ClassAd* ResourceAd;
-  while ((ResourceAd=ResourceList.Next())!=NULL) {
-    if (NotClaimed(ResourceAd)) RemoveMatch(GetResourceName(ResourceAd));
+  MyString ResourceName;
+  MyString CustomerName;
+  ResourceRecord* Resource;
+
+  // Remove matches that were broken
+  Resources.startIterations();
+  while (Resources.iterate(ResourceName, Resource)) {
+    ResourceAd=FindResourceAd(ResourceName, ResourceList);
+    if (!ResourceAd) 
+      RemoveMatch(ResourceName);
+	else if (!CheckClaimedOrMatched(ResourceAd, Resource->CustomerName))
+      RemoveMatch(ResourceName);
   }
+
+  // Scan startd ads and add matches that are not registered
+  ResourceList.Open();
+  while ((ResourceAd=ResourceList.Next())!=NULL) {
+    if (IsClaimed(ResourceAd, CustomerName)) AddMatch(CustomerName, ResourceAd);
+  }
+  ResourceList.Close();
+
   return;
 }
 
@@ -241,9 +274,10 @@ AttrList* Accountant::ReportState() {
   int OwnerNum=1;
   Customers.startIterations();
   while (Customers.iterate(CustomerName, Customer)) {
+    if (Customer->Priority<MinPriority) continue;
     sprintf(tmp,"Name%d = \"%s\"",OwnerNum,CustomerName.Value());
     ad->Insert(tmp);
-    sprintf(tmp,"Priority%d = %f",OwnerNum,Customer->Priority);
+    sprintf(tmp,"Priority%d = %f",OwnerNum,GetPriority(CustomerName));
     ad->Insert(tmp);
     sprintf(tmp,"ResourcesUsed%d = %d",OwnerNum,Customer->ResourceNames.Count());
     ad->Insert(tmp);
@@ -367,17 +401,70 @@ MyString Accountant::GetResourceName(ClassAd* ResourceAd)
 }
 
 //------------------------------------------------------------------
-// Check class ad of startd to see if it's claimed: 
-// return 1 if it's not, otherwise 0
+// Check class ad of startd to see if it's claimed
+// return 1 if it is (and set CustomerName to its remote_user), otherwise 0
 //------------------------------------------------------------------
 
-int Accountant::NotClaimed(ClassAd* ResourceAd) {
+int Accountant::IsClaimed(ClassAd* ResourceAd, MyString& CustomerName) {
   char state[16];
-  if (!ResourceAd->LookupString (ATTR_STATE, state))
-    {
-        dprintf (D_ALWAYS, "Could not lookup state --- assuming CLAIMED\n");
-        return 0;
-    }
+  if (!ResourceAd->LookupString(ATTR_STATE, state)) {
+    dprintf (D_ALWAYS, "Could not lookup state --- assuming not claimed\n");
+    return 0;
+  }
 
-  return (string_to_state(state) != claimed_state);
+  if (string_to_state(state)!=claimed_state) return 0;
+  
+  char RemoteUser[512];
+  if (!ResourceAd->LookupString(ATTR_REMOTE_USER, RemoteUser)) {
+    dprintf (D_ALWAYS, "Could not lookup remote user --- assuming not claimed\n");
+    return 0;
+  }
+
+  CustomerName=RemoteUser;
+  return 1;
+
+}
+
+//------------------------------------------------------------------
+// Check class ad of startd to see if it's claimed
+// (by a specific user) or matched: 
+// return 1 if it is, otherwise 0
+//------------------------------------------------------------------
+
+int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& CustomerName) {
+  char state[16];
+  if (!ResourceAd->LookupString(ATTR_STATE, state)) {
+    dprintf (D_ALWAYS, "Could not lookup state --- assuming not claimed\n");
+    return 0;
+  }
+
+  if (string_to_state(state)==matched_state) return 1;
+  if (string_to_state(state)!=claimed_state) return 0;
+  
+  char RemoteUser[512];
+  if (!ResourceAd->LookupString(ATTR_REMOTE_USER, RemoteUser)) {
+    dprintf (D_ALWAYS, "Could not lookup remote user --- assuming not claimed\n");
+    return 0;
+  }
+
+  if (CustomerName==RemoteUser) return 1;
+  return 0;
+
+}
+
+//------------------------------------------------------------------
+// Find a resource ad in class ad list (by name)
+//------------------------------------------------------------------
+
+ClassAd* Accountant::FindResourceAd(const MyString& ResourceName, ClassAdList& ResourceList)
+{
+  ClassAd* ResourceAd;
+  char Name[512];
+  
+  ResourceList.Open();
+  while ((ResourceAd=ResourceList.Next())!=NULL) {
+	if (ResourceName==GetResourceName(ResourceAd)) break;
+  }
+  ResourceList.Close();
+  return ResourceAd;
 }
