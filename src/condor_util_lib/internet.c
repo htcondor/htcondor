@@ -95,7 +95,7 @@ string_to_sin(char *addr, struct sockaddr_in *sin)
 
 
 char *
-sin_to_string(struct sockaddr_in *sin)
+sin_to_string(const struct sockaddr_in *sin)
 {
 	int             i;
 	static  char    buf[24];
