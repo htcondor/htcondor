@@ -33,6 +33,7 @@
 #include "condor_attributes.h"
 #include "condor_syscall_mode.h"
 #include "syscall_numbers.h"
+#include "classad_util.h"
 #include "sig_name.h"
 #include "exit.h"
 #include "condor_uid.h"
@@ -356,14 +357,14 @@ OsProc::initKillSigs( void )
 {
 	int sig;
 
-	sig = findKillSig( ATTR_KILL_SIG );
+	sig = findSoftKillSig( JobAd );
 	if( sig > 0 ) {
 		soft_kill_sig = sig;
 	} else {
 		soft_kill_sig = SIGTERM;
 	}
 
-	sig = findKillSig( ATTR_REMOVE_KILL_SIG );
+	sig = findRmKillSig( JobAd );
 	if( sig > 0 ) {
 		rm_kill_sig = sig;
 	} else {
@@ -377,41 +378,6 @@ OsProc::initKillSigs( void )
 	tmp = signalName( rm_kill_sig );
 	dprintf( D_FULLDEBUG, "RmKillSignal: %d (%s)\n", rm_kill_sig, 
 			 tmp ? tmp : "Unknown" );
-}
-
-
-int
-OsProc::findKillSig( const char* attr_name )
-{
-	if( ! JobAd ) {
-		return -1;
-	}
-	char* name = NULL;
-
-	ExprTree *tree, *rhs;
-	tree = JobAd->Lookup( attr_name );
-	if(  tree ) {
-		rhs = tree->RArg();
-		if( ! rhs ) {
-				// invalid!
-			return -1;
-		}
-		switch( rhs->MyType() ) {
-		case LX_STRING:
-				// if the ad has a string version, translate it to the 
-				// local number we'll need to use.
-			name = ((String *)rhs)->Value();
-			return signalNumber( name );
-			break;
-		case LX_INTEGER:
-			return ((Integer *)rhs)->Value();
-			break;
-		default:
-			EXCEPT( "Unknown type of ClassAd expression in findKillSig!" );
-			break;
-		}
-	}
-	return -1;
 }
 
 

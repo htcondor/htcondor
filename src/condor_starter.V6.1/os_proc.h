@@ -100,7 +100,6 @@ protected:
 	char* job_iwd;
 
 	void initKillSigs( void );
-	int findKillSig( const char* attr_name );
 
 	int soft_kill_sig;
 	int rm_kill_sig;
