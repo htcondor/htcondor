@@ -707,7 +707,8 @@ Scheduler::permission(char* id, char* server, PROC_ID* jobId)
             for(i = 3; i < lim; i++) {
                 close(i);
             }
-            Agent(server, id, MySockName, aliveFrequency);
+            Agent(server, id, MySockName, aliveFrequency, jobId);
+			
 
         default:    /* the parent */
 
@@ -2159,6 +2160,8 @@ Scheduler::DelMrec(char* id)
 		{
 			dprintf(D_FULLDEBUG, "Match record (%s, %s, %d, %d) deleted\n",
 					rec[i]->id, rec[i]->peer, rec[i]->cluster, rec[i]->proc); 
+				// Remove this match from the associated shadowRec.
+			rec[i]->shadowRec->match = NULL;
 			delete rec[i];
 			nMrec--; 
 			rec[i] = rec[nMrec];
@@ -2212,76 +2215,64 @@ Scheduler::MarkDel(char* id)
 }
 
 void
-Scheduler::Agent(char* server, char* capability, char* name, int aliveFrequency)
+Scheduler::Agent(char* server, char* capability, 
+				 char* name, int aliveFrequency, PROC_ID* jobId) 
 {
-    int     	attempt;                            /* # of attempts */
     int     	reply;                              /* reply from the startd */
-    int     	flag = TRUE;
 
-    for(attempt = 1; attempt <= 3; attempt++)
-    {
-        flag = TRUE;
+	ClassAd jobAd;
+	getJobAd( jobId->cluster, jobId->proc, &jobAd );
 
-		ReliSock sock(server, 0);
+	ReliSock sock(server, 0);
 		
-		dprintf (D_PROTOCOL, "## 5. Requesting resource from %s ...\n", server);
+	dprintf (D_PROTOCOL, "## 5. Requesting resource from %s ...\n", server);
+	sock.encode();
+
+	if( !sock.put( REQUEST_SERVICE ) ) {
+		dprintf( D_ALWAYS, "Couldn't send command to startd.\n" );	
+		exit(EXITSTATUS_NOTOK);
+	}
+
+	if( !sock.code( capability ) ) {
+		dprintf( D_ALWAYS, "Couldn't send capability to startd.\n" );	
+		exit(EXITSTATUS_NOTOK);
+	}
+
+	if( !jobAd.put( sock ) ) {
+		dprintf( D_ALWAYS, "Couldn't send job classad to startd.\n" );	
+		exit(EXITSTATUS_NOTOK);
+	}
+	
+	if( !sock.eom() ) {
+		dprintf( D_ALWAYS, "Couldn't send eom to startd.\n" );	
+		exit(EXITSTATUS_NOTOK);
+	}
+
+	if( !sock.rcv_int(reply, TRUE) ) {
+		dprintf( D_ALWAYS, "Couldn't receive response from startd.\n" );	
+		exit(EXITSTATUS_NOTOK);
+	}
+
+	if( reply == OK ) {
+		dprintf (D_PROTOCOL, "(Request was accepted)\n");
 		sock.encode();
-        if(!sock.put(REQUEST_SERVICE))
-        {
-            flag = FALSE;
-            sleep(1);
-            continue;
-        }
-        if(!sock.code(capability) || !sock.eom())
-        {
-            flag = FALSE;
-            sleep(1);
-            continue;
-        }
-        if(!sock.rcv_int(reply, TRUE))
-        {
-            flag = FALSE;
-            sleep(1);
-            continue;
-        }
-        if(reply == OK)
-        {
-			dprintf (D_PROTOCOL, "(Request was accepted)\n");
-			sock.encode();
-            if(!sock.code(name))
-            {
-                flag = FALSE;
-                sleep(1);
-                continue;
-            }
-            if(!sock.snd_int(aliveFrequency, TRUE))
-            {
-                flag = FALSE;
-                sleep(1);
-                continue;
-            }
-            dprintf(D_ALWAYS, "alive frequency %d secs\n", aliveFrequency);
-            break;
-        }
-		else
-		if (reply == NOT_OK)
-		{
-			dprintf (D_PROTOCOL, "(Request was NOT accepted)\n");
-			flag = FALSE;
+		if( !sock.code(name) ) {
+			dprintf( D_ALWAYS, "Couldn't send schedd string to startd.\n" );	
+			exit(EXITSTATUS_NOTOK);
 		}
-		else
-		{
-			flag = FALSE;
+		if( !sock.snd_int(aliveFrequency, TRUE) ) {
+			dprintf( D_ALWAYS, "Couldn't receive response from startd.\n" );	
+			exit(EXITSTATUS_NOTOK);
 		}
-    }
-    if(flag == TRUE)
-    {
-        exit(EXITSTATUS_OK);
-    }
-    else
-    {
-        exit(EXITSTATUS_NOTOK);
-    }
+		dprintf( D_ALWAYS, "alive frequency %d secs\n", aliveFrequency );
+	} else if( reply == NOT_OK ) {
+		dprintf( D_PROTOCOL, "(Request was NOT accepted)\n" );
+		exit(EXITSTATUS_NOTOK);
+	} else {
+		dprintf( D_ALWAYS, "Unknown reply from startd, agent exiting.\n" ); 
+		exit(EXITSTATUS_NOTOK);	
+	}
+	exit(EXITSTATUS_OK);
 }
 
 Mrec*
