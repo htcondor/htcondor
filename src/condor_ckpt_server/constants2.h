@@ -25,6 +25,8 @@
 
 /* Symbolic Constants */
 
+#define	DEFAULT_XFERS						50
+
 #define OK                                  0
 #define CKPT_SVR_STORE_REQ_PORT             5651
 #define CKPT_SVR_RESTORE_REQ_PORT           5652
