@@ -56,10 +56,10 @@ initialize ()
 
     // register commands
     daemonCore->Register_Command (RESCHEDULE, "Reschedule", 
-            (CommandHandlercpp) &RESCHEDULE_commandHandler, 
+            (CommandHandlercpp) RESCHEDULE_commandHandler, 
 			"RESCHEDULE_commandHandler", (Service*) this);
     daemonCore->Register_Command (SET_PRIORITY, "SetPriority",
-            (CommandHandlercpp) &SET_PRIORITY_commandHandler, 
+            (CommandHandlercpp) SET_PRIORITY_commandHandler, 
 			"SET_PRIORITY_commandHandler", this, NEGOTIATOR);
 
     // ensure that we renegotiate at least once every 'NegtiatorInterval'
