@@ -66,6 +66,11 @@ SelfDrainingQueue::~SelfDrainingQueue()
 }
 
 
+//--------------------------------------------------
+// Registering callbacks and tuning behavior
+//--------------------------------------------------
+
+
 bool
 SelfDrainingQueue::registerHandler( ServiceDataHandler handler_fn )
 {
@@ -103,6 +108,27 @@ SelfDrainingQueue::registerCompareFunc( ServiceDataCompare compare_fn )
 
 
 bool
+SelfDrainingQueue::setPeriod( int new_period )
+{
+	if( period == new_period ) {
+		return false;
+	}
+	dprintf( D_FULLDEBUG, "Period for SelfDrainingQueue %s set to %d\n",
+			 name, new_period );
+	period = new_period; 
+	if( tid != -1 ) { 
+		resetTimer();
+	}
+	return true;
+}
+
+
+//--------------------------------------------------
+// Public interface
+//--------------------------------------------------
+
+
+bool
 SelfDrainingQueue::enqueue( ServiceData* data, bool allow_dups )
 {
 	if( ! allow_dups ) {
@@ -125,20 +151,10 @@ SelfDrainingQueue::enqueue( ServiceData* data, bool allow_dups )
 }
 
 
-bool
-SelfDrainingQueue::setPeriod( int new_period )
-{
-	if( period == new_period ) {
-		return false;
-	}
-	dprintf( D_FULLDEBUG, "Period for SelfDrainingQueue %s set to %d\n",
-			 name, new_period );
-	period = new_period; 
-	if( tid != -1 ) { 
-		resetTimer();
-	}
-	return true;
-}
+
+//--------------------------------------------------
+// Private methods 
+//--------------------------------------------------
 
 
 int

@@ -54,13 +54,16 @@ public:
 					   ServiceDataCompare compare_fn = NULL );
 	~SelfDrainingQueue();
 
+		/// Functions to register handlers and tune behavior
 	bool registerHandler( ServiceDataHandler handler_fn );
 	bool registerHandlercpp( ServiceDataHandlercpp handlercpp_fn, 
 							 Service* service_ptr );
 	bool registerCompareFunc( ServiceDataCompare compare_fn );
-
-	bool enqueue( ServiceData* data, bool allow_dups = true );
 	bool setPeriod( int new_period );
+
+		/// Main public interface
+	bool enqueue( ServiceData* data, bool allow_dups = true );
+
 
 private:
 	Queue<ServiceData*> queue;
