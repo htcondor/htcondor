@@ -2,11 +2,13 @@
 {remove jobs from the Condor queue}
 \Synopsis \SynProg{\Condor{rm}}
 \ToolArgsBase
-\ToolLocate
-\ToolJobs
 
 \SynProg{\Condor{rm}}
-\ToolArgsBase
+\ToolLocate
+\ToolJobs
+$|$ \OptArg{-constraint}{expression} \Dots
+
+\SynProg{\Condor{rm}}
 \ToolLocate
 \ToolAll
 
@@ -30,6 +32,8 @@ For any given job, only the owner of the job or one of the queue super users
 	\OptItem{\Arg{cluster}}{Remove all jobs in the specified cluster}
 	\OptItem{\Arg{cluster.process}}{Remove the specific job in the cluster}
 	\OptItem{\Arg{user}}{Remove jobs belonging to specified user}
+	\OptItem{\OptArg{-constraint}{expression}} {Remove all jobs which match
+	                the job ClassAd expression constraint}
         \OptItem{\Arg{-all}}{Remove all the jobs in the queue}
 \end{Options}
 
@@ -40,6 +44,16 @@ job cluster.  (In the PVM universe, each PVM job is assigned its own
 cluster number, and each machine class is assigned a ``process''
 number in the job's cluster.)  Removing a subset of the machine
 classes for a PVM job is not supported.
+
+\Examples
+To remove all jobs of a user named Mary that are not currently running:
+\footnotesize
+\begin{verbatim}
+% condor_rm Mary -constraint Activity!=\"Busy\"
+\end{verbatim}
+\normalsize
+Note that quotation marks must be escaped with the backslash characters
+for most shells.
 
 \ExitStatus
 
