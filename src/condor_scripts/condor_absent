@@ -80,6 +80,7 @@ my $CondorReserved = "condor_reserved";
 
 # Read the state; all we really need is the "ClusterNodes" list
 my %ClusterNodes;
+my $ClusterCount;
 die "can't read '$RosterStateFile'" if (! open ( IN, $RosterStateFile ) );
 while ( <IN> )
 {
@@ -110,6 +111,7 @@ while ( <IN> )
     elsif ( /ClusterNode\s+=\s+\"(.+?)\"/i )
     {
 	$ClusterNodes{$1} = $1;
+	$ClusterCount++;
     }
     elsif ( /Down\s+=\s+\"(.+?)\"/i )
     {
@@ -123,12 +125,14 @@ close( IN );
 
 # Read in the current roster, build the "%Absent" hash of names
 die "Can't open '$RosterFile'" if ( ! open( IN, "$RosterFile" )  );
+my $RosterCount;
 my %Absent;
 while ( <IN> )
 {
     chomp;
     next if ( /^\s+$/ );
     $Absent{$_} = $_;
+    $RosterCount++;
 }
 close( IN );
 
@@ -151,6 +155,7 @@ close( IN );
 }
 
 # Run the cluster tool...
+my $ReservedCount = 0;
 if ( $DoReserved )
 {
     my $Cmd = "$CondorReserved";
@@ -163,6 +168,7 @@ if ( $DoReserved )
 	{
 	    delete $Absent{$Host};
 	}
+	$ReservedCount++;
     }
     close( IN );
 }
@@ -223,13 +229,12 @@ if ( $DoPing )
 }
 
 # Ok, now dump out the results
-my $Count = 0;
+my $AbsentCount = 0;
 foreach my $Host ( sort keys %Absent )
 {
     print "$Host\n";
-    $Count++;
+    $AbsentCount++;
 }
-print "# Total: $Count hosts\n";
 
 # Report cluster hosts that are down
 if ( $DoClusterCheck )
@@ -239,6 +244,12 @@ if ( $DoClusterCheck )
 	print "Cluster '$Host' is down!\n";
     }
 }
+print "# Summary\n";
+print "#   $RosterCount machine in the roster\n";
+print "#   $ClusterCount cluster nodes ";
+print "($ReservedCount reserved) " if ( $DoReserved );
+print "(" . ($#ClusterDown + 1) . " down) " if ( $DoClusterCheck );
+print "\n#   $AbsentCount hosts absent\n";
 
 # ******************************************************
 # Dump out usage
