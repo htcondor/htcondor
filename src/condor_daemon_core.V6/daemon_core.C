@@ -142,8 +142,6 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,int SocSize,int Reap
 	curr_dataptr = NULL;
 	curr_regdataptr = NULL;
 
-	reinit_timer_id = -1;
-
 #ifdef WIN32
 	dcmainThreadId = ::GetCurrentThreadId();
 #endif
@@ -961,14 +959,6 @@ DaemonCore::ReInit()
 
 	// Reset our IpVerify object
 	ipverify.Init();
-
-	// Setup a timer to call ourselves (ReInit) again in eight hours.  This
-	// is a safeguard in case DNS addresses change and we are caching them.
-	if ( reinit_timer_id != -1 ) {
-		Cancel_Timer( reinit_timer_id );
-	}
-	reinit_timer_id = Register_Timer( 8 * 60 * 60, (Eventcpp)ReInit,
-		"DaemonCore::ReInit", this);
 
 	return TRUE;
 }
@@ -2852,18 +2842,12 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 		// temporary hack: if we are the startd, and we do not want DC_PM,
 		// then create a temp pidentry to call reaper #1.  This hack should
 		// be removed once the startd is switched over to use DC_PM.
-#ifndef WANT_DC_PM
 		if ( strcmp(mySubSystem,"STARTD") == 0 ) {
 			pidentry = new PidEntry;
 			ASSERT(pidentry);
 			pidentry->parent_is_local = TRUE;
 			pidentry->reaper_id = 1;
-		}
-		else {
-#else
-		// here we want DC_PM
-		{
-#endif
+		} else {
 			dprintf(D_DAEMONCORE,"Unknown process exited (popen?) - pid=%d\n",pid);
 			return FALSE;
 		}
