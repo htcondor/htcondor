@@ -52,8 +52,11 @@ AttrListElem::AttrListElem(ExprTree* expr)
 ////////////////////////////////////////////////////////////////////////////////
 AttrListElem::AttrListElem(AttrListElem& oldNode)
 {
-    oldNode.tree->Copy();
-    this->tree = oldNode.tree;
+	// This old lame Copy business doesn't really make a copy
+    // oldNode.tree->Copy();
+    // this->tree = oldNode.tree;
+	// So we do the new DeepCopy():
+	this->tree = oldNode.tree->DeepCopy();
     this->dirty = FALSE;
     this->name = ((Variable*)tree->LArg())->Name();
     next = NULL;
@@ -637,22 +640,20 @@ AttrList::AttrList(AttrList &old) : AttrListAbstract(ATTRLISTENTITY)
     AttrListElem* tmpOld;	// working variable
     AttrListElem* tmpThis;	// working variable
 
-    if(old.exprList)
-    {
-	// copy all the AttrList elements. The pointers to the trees are copied
-	// but not the trees
-	this->exprList = new AttrListElem(*old.exprList);
-	tmpThis = this->exprList;
-        for(tmpOld = old.exprList->next; tmpOld; tmpOld = tmpOld->next)
-        {
-	    tmpThis->next = new AttrListElem(*tmpOld);
-	    tmpThis = tmpThis->next;
+    if(old.exprList) {
+		// copy all the AttrList elements. 
+		// As of 14-Sep-2001, we now copy the trees, not just the pointers
+		// to the trees. This happens in the copy constructor for AttrListElem
+		this->exprList = new AttrListElem(*old.exprList);
+		tmpThis = this->exprList;
+        for(tmpOld = old.exprList->next; tmpOld; tmpOld = tmpOld->next) {
+			tmpThis->next = new AttrListElem(*tmpOld);
+			tmpThis = tmpThis->next;
         }
 		tmpThis->next = NULL;
         this->tail = tmpThis;
     }
-    else
-    {
+    else {
         this->exprList = NULL;
         this->tail = NULL;
     }
@@ -662,10 +663,10 @@ AttrList::AttrList(AttrList &old) : AttrListAbstract(ATTRLISTENTITY)
     this->ptrName = NULL;
     this->associatedList = old.associatedList;
 	this->seq = old.seq;
-    if(this->associatedList)
-    {
+    if(this->associatedList) {
 		this->associatedList->associatedAttrLists->Insert(this);
     }
+	return;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
