@@ -262,7 +262,7 @@ $(STRIP_DIR)/##dir##/##dest##: src			@@\
 #ifndef	static_target
 #define	static_target( program, objlist, libs, dir )		@@\
 dir##/##program: objlist libs					@@\
-	$(CPlusPlus) $(STATIC) $(C_PLUS_FLAGS) -o program##.static objlist libs $(LDFLAGS) $(DEMANGLE) @@\
+	$(CPlusPlus) $(STATIC)  $(C_PLUS_FLAGS) -o program##.static objlist libs $(LDFLAGS) $(SITE_LDFLAGS) $(DEMANGLE) @@\
 	strip program##.static					@@\
 	/bin/rm -f dir##/##program				@@\
 	cp program##.static dir##/##program			@@\
