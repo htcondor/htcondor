@@ -60,12 +60,13 @@
 #define HAS_INSQUE				YES
 #define HAS_SETLINEBUF			YES
 #define HAS_PVM					NO
+#define PVM_ARCH			ALPHA
 
 #define USE_GCC					YES
 #if USE_GCC
-#	define CCompiler /usr/psup/gcc-2.6.3/bin/gcc 
-#	define CPlusCompiler /usr/psup/gcc-2.6.3/bin/g++
-#	define Demangler /usr/psup/gcc-2.6.3/bin/c++filt
+#	define CCompiler /usr/psup/gcc-2.6.0/bin/gcc 
+#	define CPlusCompiler /usr/psup/gcc-2.6.0/bin/g++
+#	define Demangler /usr/psup/gcc-2.6.0/bin/c++filt
 #else
 #	define CCompiler cc
 #	define CPlusCompiler cxx
