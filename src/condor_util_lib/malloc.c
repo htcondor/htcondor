@@ -6,7 +6,7 @@
 
 #ifndef lint
 static char *rcs_store_c =
-	"$Header: /space/home/matt/CVS2GIT/CONDOR_SRC-src/src/condor_util_lib/malloc.c,v 1.1.1.1 1993-11-29 23:17:30 condor Exp $";
+	"$Header: /space/home/matt/CVS2GIT/CONDOR_SRC-src/src/condor_util_lib/malloc.c,v 1.2 1995-10-18 18:31:27 dhaval Exp $";
 #endif
 /*
  * Copyright 1990 DLS Associates
@@ -50,7 +50,7 @@ static struct chunk {
 
 #define OFFSET (head.buf - (char *)&head)
 
-void exit(), abort(), bzero(), perror();
+void exit(), abort(), memset(), perror();
 char *sbrk();
 
 char *
@@ -181,7 +181,7 @@ mycalloc(fname, line, count, size)
 	int s = count*size;
 	char *res = mymalloc(fname,line,s);
 
-	bzero(res,s);
+	memset(res,0,s);
 	return res;
 }
 
@@ -208,7 +208,7 @@ myrealloc(fname, line, ptr, size)
 #endif lint
 	assert(p->buf == ptr);
 	new = mymalloc(fname, line, size);
-	(void) bcopy(ptr, new, p->size);
+	(void) memcpy(new, ptr, p->size);
 	myfree(fname, line, ptr);
 
 	return new;

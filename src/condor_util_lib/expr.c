@@ -1088,7 +1088,7 @@ ELEM	*elem;
 			}
 			break;
 		default:
-			bcopy( (char *)elem, (char *)answer, sizeof(ELEM) );
+			memcpy( (char *)answer, (char *)elem, sizeof(ELEM) );
 			break;
 	}
 	return answer;
@@ -1594,20 +1594,20 @@ va_dcl
 	fmt = va_arg(pvar, char *);
 
 
-#if vax || (i386 && !LINUX) || bobcat || ibm032
+#if vax || (i386 && !LINUX && !defined(Solaris)) || bobcat || ibm032
 	{
 		FILE _strbuf;
 		int *argaddr = &va_arg(pvar, int);
 
-		_strbuf._flag = _IOWRT+_IOSTRG;
+		_strbuf._flag = _IOWRT/*+_IOSTRG*/;
 		_strbuf._ptr  = buf;
 		_strbuf._cnt  = BUFSIZ;
 		_doprnt( fmt, argaddr, &_strbuf );
 		putc('\0', &_strbuf);
 	}
-#else vax || (i386 && !LINUX) || bobcat || ibm032
+#else vax || (i386 && !LINUX && !defined(Solaris)) || bobcat || ibm032
 	vsprintf( buf, fmt, pvar );
-#endif vax || (i386 && !LINUX) || bobcat || ibm032
+#endif vax || (i386 && !LINUX && !defined(Solaris)) || bobcat || ibm032
 
 	dprintf( D_EXPR, "Evaluation error: %s\n", buf );
 	HadError++;

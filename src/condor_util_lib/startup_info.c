@@ -1,5 +1,9 @@
 #define _POSIX_SOURCE
 
+#if defined(Solaris)
+#include "_condor_fix_types.h"
+#endif
+
 #include <sys/types.h>
 #include "condor_common.h"
 #include "condor_jobqueue.h"

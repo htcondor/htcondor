@@ -46,6 +46,39 @@ int HasSigchldHandler = 0;
 
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
+/*
+*  Prototype for the pstat_swapspace function called everywhere within
+*  this file but nowhere outside.  -- Ajitk.
+*/
+
+int pstat_swapspace(void);
+
+
+/*
+ *  executing_as_nonroot
+ *
+ *  Tells us whether root invoked it or someone else.
+ */
+int     executing_as_nonroot = 1;
+
+/*
+ *  pstat_path
+ *
+ *  Path to the pstat program.
+ */
+
+char    *pstat_path;
+
+/*
+ *  DEFAULT_SWAPSPACE
+ *
+ *  This constant is used when we can't get the available swap space through
+ *  other means.  -- Ajitk
+ */
+
+#define DEFAULT_SWAPSPACE       100000 /* ..dhaval 7/20 */
+
+
 #ifdef OSF1
 /*
 ** Try to determine the swap space available on our own machine.  The answer
@@ -192,7 +225,9 @@ calc_virt_memory()
 
 
 			/* Operate as root to read /dev/kmem */
-		set_root_euid();
+#if !defined(Solaris)
+		set_root_euid(); 
+#endif
 
         /*
          * First time in this call, get the offset to the anon structure.
@@ -267,7 +302,9 @@ calc_virt_memory()
 	int freeswap;
 
 	/* Become root so we have no hassles reading /dev/kmem */
-	set_root_euid();
+#if !defined(Solaris) 
+	set_root_euid(); 
+#endif
 
 	if( !initialized ) {
 
@@ -327,10 +364,21 @@ calc_virt_memory()
 ** Have to be root to run pstat on some systems...
 */
 #ifdef NFSFIX
-	set_root_euid();
+#if !defined(Solaris)
+	 set_root_euid(); 
+#endif
 #endif NFSFIX
 
 	buf[0] = '\0';
+#if defined(Solaris)
+    if( (fp=popen("/etc/swap -s","r")) == NULL ) {
+#ifdef NFSFIX
+		set_condor_euid();
+#endif NFSFIX
+		dprintf( D_FULLDEBUG, "popen(swap -s): errno = %d\n", errno );
+		return -1;
+	}
+#else
 	if( (fp=popen("/etc/pstat -s","r")) == NULL ) {
 #ifdef NFSFIX
 		set_condor_euid();
@@ -338,6 +386,7 @@ calc_virt_memory()
 		dprintf( D_FULLDEBUG, "popen(pstat -s): errno = %d\n", errno );
 		return -1;
 	}
+#endif
 
 #ifdef NFSFIX
 	set_condor_euid();
@@ -380,7 +429,7 @@ calc_virt_memory()
 		} else {
 			dprintf( D_ALWAYS, "Can't parse pstat line \"%s\"\n", buf );
 		}
-		return -1;
+		return DEFAULT_SWAPSPACE;
 	}
 
 	if( getrlimit(RLIMIT_DATA,&lim) < 0 ) {
@@ -394,20 +443,21 @@ calc_virt_memory()
 		return limit;
 	} else {
 		dprintf( D_FULLDEBUG, "Returning %d\n", size );
+                /*printf("Returning size %d\n",size);*/
 		return size;
 	}
 }
 #endif
 
 
-#if defined(ULTRIX43) || defined(ULTRIX42) || defined(BSD43) || defined(DYNIX) || defined(SUNOS32)
-parse_pstat_line( str )
+#if defined(ULTRIX43) || defined(ULTRIX42) || defined(BSD43) || defined(DYNIX) || defined(SUNOS32) 
+int parse_pstat_line( str )
 char	*str;
 {
-	char	*ptr;
-	int		n_blocks, block_size, answer;
+	char	*ptr,*temp;
+	int		n_blocks, block_size, answer, count=0;
 
-	if( strncmp("avail",str,5) != MATCH ) {
+        if( strncmp("avail",str,5) != MATCH ) {
 		return -1;
 	}
 
@@ -432,6 +482,30 @@ char	*str;
 	answer =  (n_blocks - 1) * block_size;
 #endif defined(DYNIX)
 	return answer;
+}
+#endif
+
+#if  defined(Solaris)
+int parse_pstat_line( str )
+char    str[200]; /* large enough */
+{
+        char    *ptr,temp[200];
+        int count=0;
+
+ptr=str;
+while(*ptr!='\0') {ptr++;}
+
+while(*ptr!='k') {ptr--; }
+while(*ptr!=' ') {ptr--; }
+
+while(*ptr!='k'){
+temp[count++]=*ptr;
+ptr++;
+}
+
+count=atoi(temp);
+/*printf("Returning virtual memory size %d \n",count);*/
+return count;
 }
 #endif
 

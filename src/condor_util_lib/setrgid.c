@@ -34,5 +34,5 @@
 setrgid( rgid )
 int		rgid;
 {
-	return setregid( rgid, -1, -1 );
+	return setregid( rgid, -1);
 }

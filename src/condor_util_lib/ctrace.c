@@ -41,7 +41,7 @@ void StartRecording()
   {
     if ((traceFlag) || (numberOfTransfers == 0))
     {
-      bzero(&entry, sizeof(TraceEntry));
+      memset(&entry,0, sizeof(TraceEntry)); /* dhaval 9/25 */
       gettimeofday(&entry.initialTime, 0);
     }
   }
@@ -89,7 +89,7 @@ void ProcessLogging (request, extraInteger)
       case CATCH_SIGKILL    : 
 			      if (traceFlag)
 			      {
-				bzero(&entry, sizeof(TraceEntry));
+				memset(&entry, 0,sizeof(TraceEntry));/* dhaval 9/25*/
 				gettimeofday(&entry.initialTime, 0);
 				entry.operation = INTERRUPT; 
 				write(2 /*stderr*/, &entry, sizeof(TraceEntry));

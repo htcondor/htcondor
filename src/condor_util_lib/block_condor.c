@@ -56,6 +56,13 @@
 #include <stdio.h>
 #include <sys/file.h>
 #include <errno.h>
+
+/* Solaris specific change ..dhaval 6/23
+*/
+#if defined(Solaris)
+#include <sys/fcntl.h> 
+#endif
+
 #include "sched.h"
 #include "debug.h"
 #include "except.h"

@@ -453,7 +453,8 @@ PROC	*proc_template;
 		FREE( proc );
 		return NULL;
 	}
-	proc->exit_status = (int *) MALLOC( sizeof(union wait) * n_cmds );
+	proc->exit_status = (int *) MALLOC( sizeof(/*union*/ wait) * n_cmds ); /* Solaris specific
+	change ..dhaval 6/24 */
 	if ( proc->err == NULL) {
 		FREE( proc->cmd );
 		FREE( proc->args );

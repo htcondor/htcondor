@@ -149,7 +149,7 @@ event_mgr()
 	}
 	get_moment( now );
 	check_schedule( prev, now );
-	bcopy( now, prev, sizeof(now) );
+	memcpy( prev,now, sizeof(now) ); /* ..dhaval 9/25 */
 }
 
 

@@ -41,6 +41,10 @@
 #include "clib.h"
 #include <string.h>
 #include "dgram_io_handle.h"
+#if defined(Solaris) /* Solaris specific change ..Dhaval 6/23 */
+#include <sys/filio.h> /* This contains the
+definition of FIONBIO in Solaris */
+#endif 
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
@@ -87,9 +91,8 @@ u_short		port;
 		EXCEPT( "setsockopt( SO_KEEPALIVE )" );
 	}
 
-	bzero( (char *)&sin, sizeof sin );
-	bcopy( hostentp->h_addr, (char *)&sin.sin_addr,
-											(unsigned)hostentp->h_length );
+	memset( (char *)&sin,0,sizeof(sin) );
+	memcpy( (char *)&sin.sin_addr, hostentp->h_addr, (unsigned)hostentp->h_length );
 	sin.sin_family = hostentp->h_addrtype;
 	sin.sin_port = htons(port);
 
@@ -131,9 +134,8 @@ char	*host;
 	}
 
 
-	bzero( (char *)&sin, sizeof sin );
-	bcopy( hostentp->h_addr, (char *)&sin.sin_addr,
-												(unsigned)hostentp->h_length );
+	memset( (char *)&sin,0,sizeof(sin) );
+	memcpy( (char *)&sin.sin_addr, hostentp->h_addr, (unsigned)hostentp->h_length );
 	sin.sin_family = hostentp->h_addrtype;
 	sin.sin_port = htons( (u_short)port );
 
@@ -162,7 +164,7 @@ udp_unconnect()
 
     /* Bind */
 
-     bzero( (char *)&cli_addr, sizeof(cli_addr));   /* zero out */
+     memset( (char *)&cli_addr, 0,sizeof(cli_addr));   /* zero out */
      cli_addr.sin_family = AF_INET;
      cli_addr.sin_addr.s_addr = htonl(INADDR_ANY);
      cli_addr.sin_port = htonl(0);
@@ -255,7 +257,7 @@ fill_dgram_io_handle(DGRAM_IO_HANDLE *handle, char *chost, int sock_fd, int port
          EXCEPT("gethostbyname()");
    }
    
-   bzero((char *)&(handle->addr), sizeof(handle->addr));
+   memset((char *)&(handle->addr), 0,sizeof(handle->addr));
    memcpy((void *) &((handle->addr).sin_addr), serv_p->h_addr, serv_p->h_length);
    
    (handle->addr).sin_family = AF_INET;
@@ -296,7 +298,7 @@ int tcp_connect_timeout( int sockfd, struct sockaddr *sin, int len,
            For some reason on AIX if you set this here, the connect()
            fails.  In that case errno doesn't get set either... */
 #if !defined(AIX31) && !defined(AIX32)
-	if( ioctl(sockfd,FIONBIO,(char *)&on) < 0 ) {
+	if( ioctl(sockfd,(int *)FIONBIO,(char *)&on) < 0 ) /* int casting to make it Solaris compatible */{
 		EXCEPT( "ioctl" );
 	}
 #endif

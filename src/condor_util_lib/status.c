@@ -43,7 +43,7 @@
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 #endif LINT
 
-char	*index();
+char	*strchr();
 
 
 display_status_line( line, fp )
@@ -55,7 +55,7 @@ FILE		*fp;
 	char	*format_seconds();
 
 	
-	if( ptr=index(line->name,'.') ) {
+	if( ptr=strchr(line->name,'.') ) {
 		*ptr = '\0';
 	}
 	fprintf( fp, "%-14s ", line->name );

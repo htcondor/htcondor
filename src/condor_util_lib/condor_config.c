@@ -53,7 +53,7 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 #define TABLESIZE 113
 BUCKET	*ConfigTab[TABLESIZE];
 
-char	*strdup(), *index(), *expand_macro(), *lookup_macro(), *param();
+char	*strdup(), *strchr(), *expand_macro(), *lookup_macro(), *param();
 
 char *get_arch();
 char *get_op_sys();
@@ -68,7 +68,7 @@ extern int	ConfigLineNo;
 
 init_config()
 {
-	bzero( (char *)ConfigTab, sizeof(ConfigTab) );
+	 memset( (char *)ConfigTab, 0,sizeof(ConfigTab) ); 
 }
 
 #if !defined(USER_NAME)
@@ -109,7 +109,7 @@ CONTEXT	*context;
 		exit( 1 );
 	}
 
-	if( ptr=index(hostname,'.') )
+	if( ptr=strchr(hostname,'.') )
 		*ptr = '\0';
 	insert( "hostname", hostname, ConfigTab, TABLESIZE );
 

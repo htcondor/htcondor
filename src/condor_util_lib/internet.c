@@ -7,14 +7,12 @@
 */
 #include <stdio.h>
 #include <errno.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <netdb.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <sys/resource.h>
 
 #include "except.h"
 #include "debug.h"

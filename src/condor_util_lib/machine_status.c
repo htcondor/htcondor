@@ -61,6 +61,12 @@
 #include <string.h>
 #include <sys/file.h>
 #include <errno.h>
+
+/* Solaris specific change ..dhaval 6/24 */
+#if defined(Solaris)
+#include <sys/fcntl.h> 
+#endif
+
 #include "sched.h"
 #include "debug.h"
 #include "except.h"

@@ -99,8 +99,16 @@
 #include <rpc/xdr.h>
 #include <sys/param.h>
 #include <sys/time.h>
+/* Solaris specific change 6/23 ..dhaval */
+#if !defined(Solaris)
 #include <sys/resource.h>
-#include "proc.h"
+#endif
+
+#include "fake_flock.h" /* Solaris
+specific change because of the enclosure of this 
+header in HPUX9 definition but is used 
+unconditionally in following code */
+#include "proc.h" 
 #include "debug.h"
 #include "except.h"
 #include "trace.h"
@@ -109,6 +117,13 @@
 #if defined(HPUX9)
 #	include "fake_flock.h"
 #endif
+
+/* Solaris specific change ..dhaval 6/25 */
+#if defined(Solaris) 
+#       include <sys/signal.h> 
+#       include <sys/fcntl.h> 
+#       include </usr/ucbinclude/sys/rusage.h> 
+#endif 
 
 #ifdef NDBM
 #include <ndbm.h>
@@ -313,7 +328,7 @@ FetchProc( DBM *Q, PROC *proc )
 
 		/* Use XDR to unpack the structure from the contiguous buffer */
 	xdrmem_create( xdrs, data.dptr, data.dsize, XDR_DECODE );
-	bzero( (char *)proc, sizeof(PROC) );	/* let XDR allocate all the space */
+	memset( (char *)proc,0, sizeof(PROC) );	/*..dhaval 9/11/95  let XDR allocate all the space */
 	if( !xdr_proc(xdrs,proc) ) {
 		EXCEPT( "Can't unpack proc %d.%d", proc->id.cluster, proc->id.proc );
 	}
@@ -346,7 +361,7 @@ ScanCluster( DBM *Q, int cluster, PROC_FUNC_PTR func )
 	PROC	proc;
 	int		proc_id;
 
-	bzero( (char *)&proc, sizeof(PROC) );
+	memset( (char *)&proc, 0,sizeof(PROC) ); /* ..dhaval 9/11/95 */
 
 	proc.id.cluster = cluster;
 	for( proc_id = 0; ;proc_id++) {
@@ -591,8 +606,9 @@ copy_cluster_list( CLUSTER_LIST *list )
 								(list->array_len - 1) * sizeof(int)) );
 
 		/* Copy in the old one */
-	bcopy( (char *)list, (char *)answer,
+	memcpy( (char *)answer,(char *)list, 
 		(unsigned)(sizeof(CLUSTER_LIST) + (list->array_len-1) * sizeof(int)) );
+/* ..dhaval 9/11/95 */
 	
 	return answer;
 }

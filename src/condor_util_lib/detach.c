@@ -30,6 +30,13 @@
 #include <stdio.h>
 #include <sys/file.h>
 #include <sys/ioctl.h>
+
+/* Solaris specific change ..dhaval 6/24 */
+#if defined(Solaris)
+#include <sys/fcntl.h>
+#include <sys/termios.h>
+#endif
+
 #include "debug.h"
 #include "except.h"
 

@@ -61,11 +61,23 @@
 #include <rpc/types.h>
 #include <rpc/xdr.h>
 #include <sys/time.h>
+/* Solaris specific change 6/23 ..dhaval */
+#if !defined(Solaris)
 #include <sys/resource.h>
+#endif
+
+/* Solaris specific change */
+#if defined(Solaris)
+#include <sys/fcntl.h>
+#include <sys/types.h>
+#include <unistd.h>
+#       include </usr/ucbinclude/sys/rusage.h>
+#endif
+
 #include "except.h"
 #include "proc.h"
 
-#if defined(HPUX9)
+#if defined(HPUX9) || defined(Solaris)
 #	include "fake_flock.h"
 #endif
 
@@ -140,7 +152,7 @@ int		(*func)();
 	H->x_op = XDR_DECODE;
 
 	for(;;) {
-		bzero( (char *)&p, sizeof(PROC) );
+		memset( (char *)&p,0, sizeof(PROC) );/* ..dhaval 9/11/95 */
 		if( xdr_proc(H,&p) ) {
 			xdrrec_skiprecord( H );
 			func( &p );

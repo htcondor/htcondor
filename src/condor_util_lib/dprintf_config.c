@@ -45,6 +45,11 @@
 #include "except.h"
 #include "clib.h"
 
+/* Solaris specific change ..dhaval 6/23 */
+#if defined(Solaris)
+#include <fcntl.h>
+#endif 
+
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 int		Termlog;

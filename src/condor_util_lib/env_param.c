@@ -1,5 +1,10 @@
 #define _POSIX_SOURCE
 
+/* Solaris specific change ..dhaval 6/25 */
+#if defined(Solaris)
+#include "_condor_fix_types.h" 
+#endif 
+
 #if defined(ULTRIX42) || defined(ULTRIX43)
 typedef char * caddr_t;
 typedef unsigned int u_int;
@@ -51,7 +56,7 @@ char *env_string;
 		}
 		
 		/* parse name */
-		bzero( name, sizeof(name) );
+		memset( name,0, sizeof(name) ); /* ..dhaval 9/11/95 */
 		i = 0;
 		while( *ptr ) {
 			if( *ptr == SPACE || *ptr == TAB || *ptr == EQUAL 

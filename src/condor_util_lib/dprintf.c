@@ -58,8 +58,14 @@
 #	include <signal.h>
 #endif
 
-#if defined(HPUX9)
+#if defined(HPUX9) || defined(Solaris) /* Solaris specific change because of the enclosure of this header in HPUX9 definition but is used unconditionally in following code ..dhaval 6/23 */
 #	include "fake_flock.h"
+#endif
+
+/* Solaris specific change ..dhaval 6/23 */
+#if defined(Solaris)
+#	include <sys/signal.h> 
+#	include <sys/fcntl.h> 
 #endif
 
 FILE	*debug_lock();
@@ -190,14 +196,14 @@ va_dcl
 
 	fmt = va_arg(pvar, char *);
 
-#if vax || (i386 && !LINUX) || bobcat || ibm032
+#if vax || (i386 && !LINUX && !defined(Solaris)) || bobcat || ibm032
 	{
 		int *argaddr = &va_arg(pvar, int);
 		_doprnt( fmt, argaddr, DebugFP );
 	}
-#else vax || (i386 && !LINUX) || bobcat || ibm032
+#else vax || (i386 && !LINUX && !defined(Solaris)) || bobcat || ibm032
 	vfprintf( DebugFP, fmt, pvar );
-#endif vax || (i386 && !LINUX) || bobcat || ibm032
+#endif vax || (i386 && !LINUX && !defined(Solaris)) || bobcat || ibm032
 
 		/* Close and unlock the log file */
 	debug_unlock();

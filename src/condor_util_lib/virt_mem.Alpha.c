@@ -73,7 +73,7 @@ calc_virt_memory()
 	int		size = -1;
 	int		limit;
 
-	set_root_euid();
+	set_root_euid(); 
 
 	if( (fp=popen("/sbin/swapon -s","r")) == NULL ) {
 		set_condor_euid();

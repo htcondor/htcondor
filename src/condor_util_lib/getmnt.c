@@ -31,7 +31,14 @@
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/stat.h>
-#include <sys/dir.h>
+/* #include <sys/dir.h>  This is wrong
+path for Solaris (alternative provided
+below) ..dhaval 6/24*/
+/* Solaris specific change .dhaval 6/24
+*/
+#if defined(Solaris)
+#include </usr/ucbinclude/sys/dir.h>
+#endif
 
 #include "condor_getmnt.h"
 
@@ -56,6 +63,7 @@ char			*strdup(), *malloc();
 
 #include <sys/stat.h>
 #include <sys/mount.h>
+
 
 getmnt( start, buf, bufsize, mode, path )
 int				*start;
@@ -172,6 +180,50 @@ struct fs_data	*ent;
 	ent->fd_req.devname = strdup(buf);
 	ent->fd_req.path = strdup( STUB );
 }
+
+#elif defined(Solaris)
+	/* Solaris specific change ..dhaval
+	6/26 */
+
+/*FILE			*setmntent();*/
+
+getmnt( start, buf, bufsize, mode, path )
+int				*start;
+struct fs_data	buf[];
+unsigned		bufsize;
+int				mode;
+char			*path;
+{
+	FILE			*tab;
+	int			check;
+	struct mnttab		*ent;	
+	struct stat		st_buf;
+	int				i;
+	int				lim;
+
+/*	if( (tab=setmntent("/etc/mnttab","r")) == NULL ) {
+		perror( "setmntent" );
+		exit( 1 );
+	} */
+
+	if( (tab=fopen("/etc/mnttab","r")) == NULL ) {
+		perror( "setmntent" );
+		exit( 1 );
+	} 
+
+	lim = bufsize / sizeof(struct fs_data);
+	for( i=0; (i < lim) && (check=getmntent(tab,ent)); i++ ) {
+		if( stat(ent->mnt_mountp,&st_buf) < 0 ) {
+			buf[i].fd_req.dev = 0;
+		} else {
+			buf[i].fd_req.dev = st_buf.st_dev;
+		}
+		buf[i].fd_req.devname = strdup(ent->mnt_special);
+		buf[i].fd_req.path = strdup(ent->mnt_mountp); 
+	}
+	return i;
+}
+
 
 #else
 

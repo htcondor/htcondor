@@ -55,7 +55,7 @@
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 char	*strdup(), *getline(), *expand_macro(), *ltrunc(),
-		*index(), *rindex(), *lookup_macro();
+		*strchr(), *strrchr(), *lookup_macro();
 
 int		ConfigLineNo;
 
@@ -307,7 +307,7 @@ FILE	*fp;
 		if( line != read_buf ) {
 			(void)strcpy( read_buf, line );
 		}
-		if( (ptr = rindex(line,'\\')) == NULL )
+		if( (ptr = strrchr(line,'\\')) == NULL )
 			return buf;
 		if( *(ptr+1) != '\0' )
 			return buf;
@@ -384,7 +384,7 @@ register char *value, **leftp, **namep, **rightp;
 
 	for(;;) {
 tryagain:
-		value = index( tvalue, '$' );
+		value = strchr( tvalue, '$' );
 		if( value == NULL ) {
 			return( 0 );
 		}
