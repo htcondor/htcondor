@@ -67,7 +67,7 @@ RELEASE_OBJ = $(LIB_DIR)/libckpt.a $(LIB_DIR)/c_plus_alloc.o
 #endif
 
 #if DOES_CHECKPOINTING
-	all_target(machdep_test libckpt.a c_plus_alloc.o $(RELEASE_OBJ))
+	all_target(ToUpper machdep_test libckpt.a c_plus_alloc.o $(RELEASE_OBJ))
 	library_target(libckpt.a,$(OBJ))
 	release_library(libckpt.a,$(RELEASE_DIR)/lib)
 	release_target(c_plus_alloc.o,$(RELEASE_DIR)/lib,OBJECT_MODE)
