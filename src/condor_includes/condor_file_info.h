@@ -13,6 +13,7 @@ enum {
 	IS_AFS,			/* File is accessible via AFS */
 	IS_NFS,			/* File is accessible via NFS */
 	IS_RSC,			/* Open the file via remote system calls */
+	IS_IOSERVER		/* Open the file using the IO Server */
 };
 
 
