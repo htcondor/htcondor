@@ -60,11 +60,11 @@ do_Q_request(ReliSock *syscall_sock)
 	{
 
 		if ( syscall_sock->authenticate() ) {
-			InitializeConnection( syscall_sock->getOwner() );
-
-			return 0;
+			InitializeConnection( syscall_sock->getOwner() );			
+		} else {
+			InitializeConnection( NULL );			
 		}
-		return -1;
+		return 0;
 	}
 
 	case CONDOR_NewCluster:
