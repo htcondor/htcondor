@@ -770,6 +770,9 @@ CStarter::Suspend(int)
 	while ((job = JobList.Next()) != NULL) {
 		job->Suspend();
 	}
+		// Now that everything is suspended, we want to send another
+		// update to the shadow to let it know the job state.
+	UpdateShadow();
 	return 0;
 }
 
@@ -788,6 +791,10 @@ CStarter::Continue(int)
 	while ((job = JobList.Next()) != NULL) {
 		job->Continue();
 	}
+		// Now that everything is running again, we want to send
+		// another update to the shadow to let it know the job state. 
+	UpdateShadow();
+
 	return 0;
 }
 
