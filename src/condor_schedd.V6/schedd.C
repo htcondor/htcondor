@@ -43,6 +43,8 @@
 #include "user_log.c++.h"
 #include "access.h"
 #include "internet.h"
+#include "condor_ckpt_name.h"
+#include "../condor_ckpt_server/server_interface.h"
 
 #define DEFAULT_SHADOW_SIZE 125
 
@@ -56,14 +58,14 @@ extern char *gen_ckpt_name();
 
 extern "C"
 {
-	int		SetCkptServerHost(const char *host);
+/*	int		SetCkptServerHost(const char *host);
 	int 	RemoveLocalOrRemoteFile(const char *, const char *);
 	int		FileExists(const char *, const char *);
-	int	 	calc_virt_memory();
-	int	 	getdtablesize();
 	char* 	gen_ckpt_name(char*, int, int, int);
+	int	 	getdtablesize();
+*/
+	int	 	calc_virt_memory();
 	void	handle_q(Service *, int, Stream *sock);
-	int		udp_unconnect();
 	int		prio_compar(prio_rec*, prio_rec*);
 }
 
