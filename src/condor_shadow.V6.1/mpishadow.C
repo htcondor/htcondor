@@ -30,6 +30,7 @@
 #include "condor_email.h"        // for email.
 #include "list.h"                // List class
 #include "internet.h"            // sinful->hostname stuff
+#include "daemon.h"
 
 
 MPIShadow::MPIShadow() {
@@ -134,30 +135,27 @@ MPIShadow::getResources( void )
 	ClassAd *job_ad = NULL;
 	ClassAd *tmp_ad = NULL;
 	int nodenum = 1;
-	ReliSock sock;
+	ReliSock* sock;
 	int cmd = GIVE_MATCHES;
 
 	cluster = getCluster();
     rr = ResourceList[0];
 	rr->getCapability( capability );
 
-	sock.timeout(20);
 
 		// First, contact the schedd and send the command, the
 		// cluster, and the capability
+	Daemon my_schedd (DT_SCHEDD, NULL, NULL);
 
-	if( ! sock.connect( getScheddAddr() ) ) {
+	if(!(sock = (ReliSock*)my_schedd.startCommand(GIVE_MATCHES))) {
 		EXCEPT( "Can't connect to schedd at %s", getScheddAddr() );
 	}
 		
-	sock.encode();
-	if( ! sock.code(cmd) ) {
-		EXCEPT( "Can't send cmd (%d) to schedd", cmd );
-	}
-	if( ! sock.code(cluster) ) {
+	sock->encode();
+	if( ! sock->code(cluster) ) {
 		EXCEPT( "Can't send cluster (%d) to schedd\n", cluster );
 	}
-	if( ! sock.code(capability) ) {
+	if( ! sock->code(capability) ) {
 		EXCEPT( "Can't send capability to schedd\n" );
 	}
 
@@ -166,26 +164,26 @@ MPIShadow::getResources( void )
 	delete [] capability;
 	capability = NULL;
 
-	if( ! sock.end_of_message() ) {
+	if( ! sock->end_of_message() ) {
 		EXCEPT( "Can't send EOM to schedd\n" );
 	}
 	
 		// Ok, that's all we need to send, now we can read the data
 		// back off the wire
-	sock.decode();
+	sock->decode();
 
         // We first get the number of proc classes we'll be getting.
-    if ( !sock.code( numProcs ) ) {
+    if ( !sock->code( numProcs ) ) {
         EXCEPT( "Failed to get number of procs" );
     }
 
         /* Now, do stuff for each proc: */
     for ( int i=0 ; i<numProcs ; i++ ) {
 		job_ad = new ClassAd();
-		if( !job_ad->get(sock)  ) {
+		if( !job_ad->get(*sock)  ) {
             EXCEPT( "Failed to get job classad for proc %d", i );
 		}
-        if( !sock.code( numInProc ) ) {
+        if( !sock->code( numInProc ) ) {
             EXCEPT( "Failed to get number of matches in proc %d", i );
         }
 
@@ -193,8 +191,8 @@ MPIShadow::getResources( void )
 				  numInProc, i );
 
         for ( int j=0 ; j<numInProc ; j++ ) {
-            if ( !sock.code( host ) ||
-                 !sock.code( capability ) ) {
+            if ( !sock->code( host ) ||
+                 !sock->code( capability ) ) {
                 EXCEPT( "Problem getting resource %d, %d", i, j );
             }
             dprintf ( D_FULLDEBUG, "Got host: %s   cap: %s\n",host,capability);
@@ -246,7 +244,7 @@ MPIShadow::getResources( void )
 
     } // end of for loop on all procs...
 
-    sock.end_of_message();
+    sock->end_of_message();
 
 	numNodes = nodenum;  // for later use...
 

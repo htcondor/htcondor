@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
  
 
+#include "daemon.h"
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
@@ -425,6 +426,11 @@ main( int argc, char *argv[] )
 
 	MyName = basename(argv[0]);
 	config();
+
+	// dprintf to console
+	Termlog = 1;
+	dprintf_config ("SUBMIT", 2 );
+
 	init_params();
 
 		// If our effective and real gids are different (b/c the
@@ -607,24 +613,15 @@ main( int argc, char *argv[] )
 void
 reschedule()
 {
-	int			cmd;
 
-	/* Connect to the schedd */
-	ReliSock sock;
-	if(!sock.connect(ScheddAddr)) {
-		fprintf(stderr, "Can't connect to condor scheduler (%s)\n",
-				ScheddAddr );
-		DoCleanup(0,0,NULL);
-		exit( 1 );
-	}
+        Daemon  my_schedd(DT_SCHEDD, NULL, NULL);
 
-	sock.encode();
-	cmd = RESCHEDULE;
-	if( !sock.code(cmd) || !sock.eom() ) {
+ 	if ( ! my_schedd.sendCommand(RESCHEDULE, Stream::reli_sock, 0) ) {
 		fprintf(stderr, "Can't send RESCHEDULE command to condor scheduler\n" );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
+
 }
 
 

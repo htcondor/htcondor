@@ -45,6 +45,7 @@
 #include "condor_state.h"
 #include "sig_install.h"
 #include "condor_email.h"
+#include "daemon.h"
 State get_machine_state();
 
 
@@ -561,23 +562,27 @@ get_machine_state()
 		return _error_state_;
 	}
 
-	ReliSock sock;
-	if( ! sock.connect( addr, 5 ) ) {
+	ReliSock* sock;
+
+	Daemon my_startd (DT_STARTD, addr, NULL);
+	if (!(sock = (ReliSock*)my_startd.startCommand( GIVE_STATE, Stream::reli_sock, 0 ))) {
 		dprintf( D_ALWAYS, "Can't connect to startd at %s\n", addr );
 		return _error_state_;
 	}
 
-	sock.encode();
-	sock.put( GIVE_STATE );
-	sock.end_of_message();
-	sock.decode();
-	if( !sock.code( state_str ) || !sock.end_of_message() ) {
+	sock->end_of_message();
+	sock->decode();
+	if( !sock->code( state_str ) || !sock->end_of_message() ) {
 		dprintf( D_ALWAYS, "Can't read state/eom from startd.\n" );
 		free(state_str);
 		return _error_state_;
 	}
 
+	sock->close();
+	delete sock;
+
 	s = string_to_state( state_str );
 	free(state_str);
 	return s;
 }
+

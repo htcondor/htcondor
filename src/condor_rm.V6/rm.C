@@ -298,13 +298,13 @@ extern "C" int SetSyscalls( int foo ) { return foo; }
 void
 notify_schedd()
 {
-	ReliSock	sock;
 	int			cmd;
 	PROC_ID		*job_id;
 	int 		i;
 
-		/* Connect to the schedd */
-	if( !sock.connect(schedd->addr(), 0) ) {
+	Sock* sock;
+
+	if (!(sock = schedd->startCommand (KILL_FRGN_JOB, Stream::reli_sock, 0))) {
 		if( !TroubleReported ) {
 			fprintf( stderr, "%s: can't connect to %s\n", MyName, 
 					 schedd->idStr() );
@@ -313,16 +313,16 @@ notify_schedd()
 		return;
 	}
 
-	sock.encode();
+	sock->encode();
 
 	cmd = KILL_FRGN_JOB;
-	if( !sock.code(cmd) ) {
+	if( !sock->code(cmd) ) {
 		fprintf( stderr,
 			"Warning: can't send KILL_JOB command to condor scheduler\n" );
 		return;
 	}
 
-	if( !sock.code(nToProcess) ) {
+	if( !sock->code(nToProcess) ) {
 		fprintf( stderr,
 			"Warning: can't send num jobs to process to schedd (%d)\n",
 			nToProcess );
@@ -332,18 +332,21 @@ notify_schedd()
 	ToProcess.Rewind();
 	for (i=0;i<nToProcess;i++) {
 		job_id = ToProcess.Next();
-		if( !sock.code(*job_id) ) {
+		if( !sock->code(*job_id) ) {
 			fprintf( stderr,
 				"Error: can't send a proc_id to condor scheduler\n" );
 			return;
 		}
 	}
 
-	if( !sock.end_of_message() ) {
+	if( !sock->end_of_message() ) {
 		fprintf( stderr,
 			"Warning: can't send end of message to condor scheduler\n" );
 		return;
 	}
+
+	sock->close();
+	delete sock;
 }
 
 

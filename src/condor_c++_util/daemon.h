@@ -237,8 +237,8 @@ public:
 		  @return Success or failure.
 		  */
 	bool sendCommand( int cmd, 
-					  Stream::stream_type st = Stream::reli_sock,
-					  int sec = 0 );
+					   Stream::stream_type st = Stream::reli_sock,
+					   int sec = 0 );
 	
 		/** Send the given command to the daemon.  The caller gives
 		  the command they want to send, a pointer to the Sock they
@@ -266,8 +266,8 @@ public:
 		  rest of the command on success.
 		  */
 	Sock* startCommand( int cmd, 
-						Stream::stream_type st = Stream::reli_sock,
-						int sec = 0 );
+				Stream::stream_type st = Stream::reli_sock,
+				int sec = 0 );
 	
 		/** Start sending the given command to the daemon.  The caller
 		  gives the command they want to send, and a pointer to the

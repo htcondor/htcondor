@@ -37,6 +37,8 @@ static const int DEFAULT_PIDBUCKETS = 11;
 static const char* DEFAULT_INDENT = "DaemonCore--> ";
 
 
+#include "authentication.h"
+#include "reli_sock.h"
 #include "condor_daemon_core.h"
 #include "condor_io.h"
 #include "internet.h"
@@ -45,6 +47,7 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 #include "condor_uid.h"
 #include "condor_commands.h"
 #include "condor_config.h"
+#include "condor_attributes.h"
 #ifdef WIN32
 #include "exphnd.WIN32.h"
 typedef unsigned (__stdcall *CRT_THREAD_HANDLER) (void *);
@@ -1566,6 +1569,109 @@ int DaemonCore::HandleReq(int socki)
 			stream->end_of_message();
 		}
 		return KEEP_STREAM;
+	}
+
+
+        if (req == DC_AUTHENTICATE) {
+		ReliSock* sock = (ReliSock*)stream;
+
+		dprintf (D_ALWAYS, "ZKM: received DC_AUTHENTICATE\n");
+
+		int saveres = result;
+		dprintf (D_ALWAYS, "ZKM: entry value of result == %i\n", result);
+
+		ClassAd auth_info;
+		result = auth_info.code(*sock);
+		if (!result) {
+			dprintf (D_ALWAYS, "ZKM: BAIL!\n");
+			assert(0);
+		}
+
+		result = sock->end_of_message();
+		if (!result) {
+			dprintf (D_ALWAYS, "ZKM: BAIL!\n");
+			assert(0);
+		}
+
+
+		dprintf (D_ALWAYS, "ZKM: received following ClassAd:\n");
+		auth_info.dPrint (D_ALWAYS);
+
+		char buf[ATTRLIST_MAX_EXPRESSION];
+		char auth_types[ATTRLIST_MAX_EXPRESSION];
+
+		result = auth_info.LookupString(ATTR_AUTH_TYPES, auth_types);
+		dprintf (D_ALWAYS, "ZKM: ca.AUTH_TYPES returned %i and '%s'\n", result, auth_types);
+		if (!result) {
+			dprintf (D_ALWAYS, "ZKM: BAIL!\n");
+			assert(0);
+		}
+
+		result = auth_info.LookupString(ATTR_AUTHENTICATE, buf);
+		dprintf (D_ALWAYS, "ZKM: ca.AUTHENTICATE returned %i and '%s'\n", result, buf);
+		if (!result) {
+			dprintf (D_ALWAYS, "ZKM: BAIL!\n");
+			assert(0);
+		}
+
+		if (stricmp(buf, "YES") == 0) {
+			dprintf (D_ALWAYS, "ZKM: authenticating RIGHT NOW.\n");
+			sock->authenticate(getAuthBitmask(auth_types));
+		} else if (stricmp(buf, "NO") == 0) {
+			char *paramer;
+			paramer = param("ALWAYS_AUTHENTICATE");
+
+			if (paramer && (stricmp(paramer, "YES") == 0)) {
+				// client refused to authenticate
+				// when server required it
+				dprintf (D_ALWAYS, "ZKM: client refused to authenticate.\n");
+				free (paramer);
+				assert(0);
+			}
+		} else if (stricmp(buf, "ASK") == 0) {
+			ClassAd auth_response;
+			auth_response.Insert("AUTHENTICATE=\"YES\"");
+			sock->encode();
+			dprintf (D_ALWAYS, "ZKM: sending following classad telling client to authenticate: \n");
+			auth_response.dPrint (D_ALWAYS);
+			auth_response.code(*sock);
+			dprintf (D_ALWAYS, "ZKM: authenticating RIGHT NOW.\n");
+			sock->authenticate(getAuthBitmask(auth_types));
+		}
+
+		// CHECK TO SEE IF THE KERB-IP is the same
+		// as the socket IP.
+		const char* sockip = sin_to_string(sock->endpoint());
+		const char* kerbip = sock->authob->getRemoteAddress() ;
+		result = !strncmp (sockip + 1, kerbip, strlen(kerbip) );
+
+		dprintf (D_ALWAYS, "ZKM: sock ip -> %s\n", sockip);
+		dprintf (D_ALWAYS, "ZKM: kerb ip -> %s\n", kerbip);
+
+		if (!result) {
+			dprintf (D_ALWAYS, "ZKM: IP not in agreement!!! BAILING!\n");
+			return FALSE;
+		} else {
+			dprintf (D_ALWAYS, "ZKM: IP address verified.\n");
+		}
+
+
+		result = auth_info.LookupInteger(ATTR_COMMAND, req);
+		if (! result) {
+			EXCEPT ("AUTH: no COMMAND in ClassAd!");
+		}
+
+
+		dprintf (D_ALWAYS, "ZKM: setting sock->decode()\n");
+		sock->decode();
+
+		dprintf (D_ALWAYS, "ZKM: allowing an empty message for sock.\n");
+		sock->allow_one_empty_message();
+
+		result = saveres;
+		dprintf (D_ALWAYS, "ZKM: restored result to %i\n", result);
+
+		dprintf (D_ALWAYS, "ZKM: continuing with command %i\n", req);
 	}
 	
 	// get the handler function
@@ -4659,3 +4765,48 @@ DaemonCore::Register_Priv_State( priv_state priv )
 	Default_Priv_State = priv;
 	return old_priv;
 }
+
+
+
+
+
+int
+DaemonCore::getAuthBitmask ( char * methods ) {
+
+	if (methods) {
+		dprintf ( D_ALWAYS, "ZKM: in getAuthBitmask('%s')\n", methods);
+	} else {
+		dprintf ( D_ALWAYS, "ZKM: getAuthBitmask( NULL ) called!\n");
+		return 0;
+	}
+
+	StringList server( methods );
+	char *tmp = NULL;
+	int retval = 0;
+
+	server.rewind();
+	while ( tmp = server.next() ) {
+		if ( !stricmp( tmp, "GSS_AUTHENTICATION" ) ) {
+			dprintf ( D_ALWAYS, "ZKM: added CAUTH_GSS\n");
+			retval |= Authentication::CAUTH_GSS;
+		} else if ( !stricmp( tmp, "NTSSPI" ) ) {
+			dprintf ( D_ALWAYS, "ZKM: added CAUTH_NTSSPI\n");
+			retval |= Authentication::CAUTH_NTSSPI;
+		} else if ( !stricmp( tmp, "FS" ) ) {
+			dprintf ( D_ALWAYS, "ZKM: added CAUTH_FILESYSTEM\n");
+			retval |= Authentication::CAUTH_FILESYSTEM;
+		} else if ( !stricmp( tmp, "FS_REMOTE" ) ) {
+			dprintf ( D_ALWAYS, "ZKM: added CAUTH_FILESYSTEM_REMOTE\n");
+			retval |= Authentication::CAUTH_FILESYSTEM_REMOTE;
+		} else if ( !stricmp( tmp, "KERBEROS" ) ) {
+			dprintf ( D_ALWAYS, "ZKM: added CAUTH_KERBEROS\n");
+			retval |= Authentication::CAUTH_KERBEROS;
+		} else if ( !stricmp( tmp, "CLAIMTOBE" ) ) {
+			dprintf ( D_ALWAYS, "ZKM: added CAUTH_CLAIMTOBE\n");
+			retval |= Authentication::CAUTH_CLAIMTOBE;
+		}
+	}
+
+	return retval;
+}
+

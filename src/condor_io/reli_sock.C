@@ -43,6 +43,7 @@
 void
 ReliSock::init()
 {
+	allow_empty_message_flag = FALSE;
 	ignore_next_encode_eom = FALSE;
 	ignore_next_decode_eom = FALSE;
 	_bytes_sent = 0.0;
@@ -534,6 +535,10 @@ ReliSock::end_of_message()
 			if (!snd_msg.buf.empty()) {
 				return snd_msg.snd_packet(_sock, TRUE, _timeout);
 			}
+			if ( allow_empty_message_flag ) {
+				allow_empty_message_flag = FALSE;
+				return TRUE;
+			}
 			break;
 
 		case stream_decode:
@@ -546,6 +551,10 @@ ReliSock::end_of_message()
 					ret_val = TRUE;
 				rcv_msg.ready = FALSE;
 				rcv_msg.buf.reset();
+			}
+			if ( allow_empty_message_flag ) {
+				allow_empty_message_flag = FALSE;
+				return TRUE;
 			}
 			break;
 
@@ -836,12 +845,12 @@ ReliSock::prepare_for_nobuffering(stream_coding direction)
 }
 
 int 
-ReliSock::authenticate() {
+ReliSock::authenticate(int clientFlags = 0 ) {
 	if ( !authob ) {
 		authob = new Authentication( this );
 	}
 	if ( authob ) {
-		return( authob->authenticate( hostAddr ) );
+		return( authob->authenticate( hostAddr, clientFlags ) );
 	}
 	return( 0 );
 }
@@ -931,3 +940,7 @@ int ReliSock :: unwrap(char* d_in,int l_in,char*& d_out , int& l_out)
 }
 
 
+int ReliSock :: allow_one_empty_message()
+{
+	allow_empty_message_flag = TRUE;
+}

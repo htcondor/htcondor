@@ -40,6 +40,9 @@
 #include "condor_email.h"
 #include "../condor_ckpt_server/server_interface.h"
 
+#include "daemon.h"
+#include "stream.h"
+
 #include "sched.h"
 #include "debug.h"
 #include "fileno.h"
@@ -605,25 +608,14 @@ part_send_job(
   int retry_delay = 3;
   int num_retries = 0;
 
-  cmd = ACTIVATE_CLAIM; // new protocol in V6 startd
-
   // make sure we have the job classad
   InitJobAd(proc->id.cluster, proc->id.proc);
 
   while( !done ) {
 
-		  // Connect to the startd
-	  sock = new ReliSock();
-	  sock->timeout(90);
-	  if ( sock->connect(host,START_PORT) == FALSE ) {
-		  goto returnfailure;
-	  }
-
-	  sock->encode();
-
-		  // Send the command
-	  if( !sock->code(cmd) ) {
-		  dprintf( D_ALWAYS, "sock->code(%d) failed", cmd );
+	  Daemon startd(DT_STARTD, host, NULL);
+	  if (!(sock = (ReliSock*)startd.startCommand ( ACTIVATE_CLAIM, Stream::reli_sock, 90))) {
+		  dprintf( D_ALWAYS, "startCommand(ACTIVATE_CLAIM) to startd failed");
 		  goto returnfailure;
 	  }
 
@@ -782,35 +774,24 @@ returnfailure:
 int
 send_cmd_to_startd(char *sin_host, char *capability, int cmd)
 {
-  // create a relisock to communicate with startd
-  ReliSock sock;
-  if( sock.timeout( 20 ) < 0 ) {
-	  dprintf( D_ALWAYS, "Can't set timeout on sock.\n" );
-	  return -5;
-  }
+	ReliSock* sock;
 
-  if( !sock.connect( sin_host, 0 ) ) {
-	  dprintf( D_ALWAYS, "Can't connect to startd at %s\n", sin_host );
-	  return -1;
-  }
+	Daemon startd (DT_STARTD, sin_host, NULL);
+	if (!(sock = (ReliSock*)startd.startCommand(cmd, Stream::reli_sock, 20))) {
+		dprintf( D_ALWAYS, "Can't connect to startd at %s\n", sin_host );
+		return -1;
+	}
 
-  sock.encode();
-
-  // Send the command
-  if( !sock.code(cmd) ) {
-    dprintf( D_ALWAYS, "sock.code(%d)", cmd );
-    return -2;
-  }
-  
+    
   // send the capability
   dprintf(D_FULLDEBUG, "send capability %s\n", capability);
-  if(!sock.code(capability)){
-    dprintf( D_ALWAYS, "sock.code(%s)", capability );
+  if(!sock->code(capability)){
+    dprintf( D_ALWAYS, "sock->code(%s)", capability );
     return -3;
   }
 
   // send end of message
-  if( !sock.end_of_message() ) {
+  if( !sock->end_of_message() ) {
     dprintf( D_ALWAYS, "end_of_message failed" );
     return -4;
   }

@@ -32,6 +32,7 @@
 #include "condor_debug.h"
 #include "get_daemon_addr.h"
 #include "internet.h"
+#include "daemon.h"
 
 
 #define XDR_ASSERT(x) {if (!(x)) return Q_COMMUNICATION_ERROR;}
@@ -254,11 +255,11 @@ addORConstraint (const char *value)
 QueryResult CondorQuery::
 fetchAds (ClassAdList &adList, const char *poolName)
 {
-    const char  *pool;
-    ReliSock    sock; 
+	const char  *pool;
+	Sock*    sock; 
 	int			more;
-    QueryResult result;
-    ClassAd     queryAd, *ad;
+	QueryResult result;
+	ClassAd     queryAd, *ad;
 
 	if( is_valid_sinful((char *)poolName) ) {
 			// We already have a sinful string, use that.
@@ -312,39 +313,37 @@ fetchAds (ClassAdList &adList, const char *poolName)
 	}
 
 	// contact collector
-	if (!sock.connect((char*)pool, COLLECTOR_COMM_PORT)) {
-        return Q_COMMUNICATION_ERROR;
-    }
+	Daemon my_collector(DT_COLLECTOR, NULL, NULL);
+	if (!(sock = my_collector.startCommand(command, Stream::reli_sock, 0)) ||
+	    !queryAd.put (*sock) || !sock->end_of_message()) {
 
-	// ship query
-	sock.encode();
-	if (!sock.code (command) || !queryAd.put (sock) || !sock.end_of_message()) {
 		return Q_COMMUNICATION_ERROR;
 	}
 	
 	// get result
-	sock.decode ();
+	sock->decode ();
 	more = 1;
 	while (more)
 	{
-		if (!sock.code (more)) {
-			sock.end_of_message();
+		if (!sock->code (more)) {
+			sock->end_of_message();
 			return Q_COMMUNICATION_ERROR;
 		}
 		if (more) {
 			ad = new ClassAd;
-			if (!ad->get (sock)) {
-				sock.end_of_message();
+			if (!ad->get (*sock)) {
+				sock->end_of_message();
 				delete ad;
 				return Q_COMMUNICATION_ERROR;
 			}
 			adList.Insert (ad);
 		}
 	}
-	sock.end_of_message();
+	sock->end_of_message();
 
 	// finalize
-	sock.close ();
+	sock->close();
+	delete sock;
 	
 	return (Q_OK);
 }

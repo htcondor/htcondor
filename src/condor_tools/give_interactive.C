@@ -356,25 +356,27 @@ fetchSubmittorPrios()
 		// negotiator is on the same host as the collector.
 	Daemon	negotiator( DT_NEGOTIATOR, pool, pool );
 
+	Sock* sock;
+
+	if (!(sock = negotiator.startCommand( GET_PRIORITY, Stream::reli_sock, 0)) ||
+	    !(sock->end_of_message())) {
+		fprintf( stderr, 
+				 "Error:  Could not get priorities from negotiator (%s)\n",
+				 negotiator.fullHostname() );
+		exit( 1 );
+	}
+
 	// connect to negotiator
-	ReliSock sock;
-	sock.connect( negotiator.addr(), 0 );
 
-	sock.encode();
-	if( !sock.put( GET_PRIORITY ) || !sock.end_of_message() ) {
+	sock->decode();
+	if( !al.get(*sock) || !sock->end_of_message() ) {
 		fprintf( stderr, 
 				 "Error:  Could not get priorities from negotiator (%s)\n",
 				 negotiator.fullHostname() );
 		exit( 1 );
 	}
-
-	sock.decode();
-	if( !al.get(sock) || !sock.end_of_message() ) {
-		fprintf( stderr, 
-				 "Error:  Could not get priorities from negotiator (%s)\n",
-				 negotiator.fullHostname() );
-		exit( 1 );
-	}
+	sock->close();
+	delete sock;
 
 	i = 1;
 	while( i ) {

@@ -4,6 +4,7 @@
 #include "condor_uid.h"
 #include "access.h"
 #include "condor_debug.h"
+#include "daemon.h"
 
 
 static int code_access_request(Stream *socket, char *&filename, int &mode, 
@@ -140,56 +141,36 @@ int attempt_access(char *filename, int mode, int uid, int gid,
 {
 	int result;
 	int return_val;
-	char *scheddAddr;
-	ReliSock *socket;
+	Sock* sock;
 	int cmd = ATTEMPT_ACCESS;
 
 	
-	if ( scheddAddress ) {
-		scheddAddr = scheddAddress;
-	}
-	else {
-		scheddAddr = get_schedd_addr(0);
-	}
-	if(scheddAddr == NULL)
-	{
-		dprintf(D_ALWAYS, "Can't find address of schedd.\n");
-		return FALSE;
-	}
 
-	socket = new ReliSock();
+	Daemon my_schedd(DT_SCHEDD, NULL, NULL);
 
-	if ( !socket->connect(scheddAddr) ) 
-	{
-		dprintf(D_ALWAYS, "Can't connect to schedd.\n");
-		return FALSE;
-	}
-
-	socket->encode();
-
-	result = socket->code(cmd);
-	if( !result ) {
+	sock = my_schedd.startCommand(cmd, Stream::reli_sock, 0);
+	if( !sock ) {
 		dprintf(D_ALWAYS, 
-				"ATTEMPT_ACCESS: Failed to encode command number.\n");
+				"ATTEMPT_ACCESS: Failed to start command.\n");
 		return FALSE;
 	}
 
-	result = code_access_request(socket, filename, mode, uid, gid);
+	result = code_access_request(sock, filename, mode, uid, gid);
 
 	if( result == FALSE ) {
 		dprintf(D_ALWAYS, "ATTEMPT_ACCESS: code_access_request failed.\n");
 		return FALSE;
 	}
 
-	socket->decode();
+	sock->decode();
 	
-	result = socket->code(return_val);
+	result = sock->code(return_val);
 	if( !result ) {
 		dprintf(D_ALWAYS, "ATTEMPT_ACCESS: failed to recv schedd's answer.\n");
 		return FALSE;
 	}
 
-	result = socket->end_of_message();
+	result = sock->end_of_message();
 	if( !result ) {
 		dprintf(D_ALWAYS, "ATTEMPT_ACCESS: failed to code eom.\n");
 		return FALSE;
@@ -226,6 +207,6 @@ int attempt_access(char *filename, int mode, int uid, int gid,
 		}
 		break;
 	}
-	delete socket;
+	delete sock;
 	return return_val;
 }	

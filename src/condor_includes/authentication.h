@@ -105,7 +105,16 @@ public:
 
 	Authentication( ReliSock *sock );
 	~Authentication();
-	int authenticate( char *hostAddr );
+
+	int authenticate( char *hostAddr, int clientFlags = 0 );
+        //------------------------------------------
+        // PURPOSE: authenticate with the other side 
+        // REQUIRE: hostAddr -- host to authenticate
+        //          clientCanUse -- what protocols
+        //                       does client support
+        // RETURNS:
+        //------------------------------------------
+
 	int isAuthenticated();
 	void unAuthenticate();
 
@@ -189,7 +198,7 @@ public:
 private:
 #if !defined(SKIP_AUTHENTICATION)
 	Authentication() {}; //should never be called, make private to help that!
-	int handshake();
+	int handshake(int clientCanUse);
 
 	void setAuthType( authentication_state state );
 	int authenticate_claimtobe();

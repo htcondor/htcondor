@@ -27,6 +27,7 @@
 #include "condor_query.h"
 #include "get_daemon_addr.h"
 #include "condor_config.h"
+#include "daemon.h"
 
 #include "scheduled_event.h"
 
@@ -544,20 +545,18 @@ ScheduledShutdownEvent::Timeout()
 			VacateList->contains(startd_name)) {
 			continue;
 		}
-		ReliSock sock;
-		sock.timeout(10);
-		if (!sock.connect(startd_addr, 0)) {
-			dprintf(D_ALWAYS, "Failed to connect to startd %s %s.\n",
-					startd_name, startd_addr);
-			continue;
-		}
-		sock.encode();
-		int cmd = VACATE_CLAIM;
-		if (!sock.code(cmd) || !sock.put(startd_name) || !sock.eom()) {
+
+
+		Daemon my_startd (DT_STARTD, NULL, NULL);
+
+		Sock* sock = my_startd.startCommand( VACATE_CLAIM, Stream::reli_sock, 10 );
+		if ( !sock || !sock->put(startd_name) || !sock->eom()) {
 			dprintf(D_ALWAYS, "Failed to send VACATE_CLAIM to %s %s.\n",
 					startd_name, startd_addr);
 			continue;
 		}
+		delete sock;
+
 		dprintf(D_ALWAYS, "Sent VACATE_CLAIM to %s.\n", startd_name);
 		VacateList->append(startd_name);
 		if (JobUniverse == 1) {
@@ -619,34 +618,24 @@ int
 ScheduledShutdownEvent::EnterShutdownMode(const char startd_name[],
 										  const char startd_addr[])
 {
-	ReliSock sock;
-	sock.timeout(10);
-	if (!sock.connect((char *)startd_addr, 0)) {
-		dprintf(D_ALWAYS, "Failed to connect to %s %s.\n", startd_name,
-				startd_addr);
-		return -1;
-	}
-	sock.encode();
-	int cmd = DC_CONFIG_PERSIST;
+	Daemon my_startd(DT_STARTD, NULL, NULL);
+
+	Sock* sock = my_startd.startCommand (DC_CONFIG_PERSIST, Stream::reli_sock, 10);
+
 	char *config = (char *)malloc(strlen(ShutdownConfig)+20);
 	sprintf(config, ShutdownConfig, EndTime+SlowStartPos);
-	if (!sock.code(cmd) || !sock.put((char *)ShutdownAdminId) ||
-		!sock.code(config) || !sock.eom()) {
+	if (!sock || !sock->put((char *)ShutdownAdminId) ||
+		!sock->code(config) || !sock->eom()) {
 		dprintf(D_ALWAYS, "Failed to send DC_CONFIG_PERSIST to "
 				"%s %s.\n", startd_name, startd_addr);
 		free(config);
 		return -1;
 	}
 	free(config);
-	sock.close();
-	if (!sock.connect((char *)startd_addr, 0)) {
-		dprintf(D_ALWAYS, "Failed to connect to %s %s.\n", startd_name,
-				startd_addr);
-		return -1;
-	}
-	sock.encode();
-	cmd = DC_RECONFIG;
-	if (!sock.code(cmd) || !sock.eom()) {
+	sock->close();
+	delete sock;
+
+	if (! my_startd.sendCommand ( DC_RECONFIG, Stream::reli_sock, 10 ) ) {
 		dprintf(D_ALWAYS, "Failed to send DC_RECONFIG to %s %s.\n",
 				startd_name, startd_addr);
 		return -1;
@@ -663,30 +652,20 @@ static int
 CleanupShutdownModeConfig(const char startd_machine[],
 						  const char startd_addr[])
 {
-	ReliSock sock;
-	sock.timeout(10);
-	if (!sock.connect((char *)startd_addr, 0)) {
-		dprintf(D_ALWAYS, "Failed to connect to %s %s.\n", startd_machine,
-				startd_addr);
-		return -1;
-	}
-	sock.encode();
-	int cmd = DC_CONFIG_PERSIST;
-	if (!sock.code(cmd) || !sock.put((char *)ShutdownAdminId) ||
-		!sock.put("") || !sock.eom()) {
+	Daemon my_startd(DT_STARTD, NULL, NULL);
+
+	Sock* sock = my_startd.startCommand (DC_CONFIG_PERSIST, Stream::reli_sock, 10);
+
+	if (!sock  || !sock->put((char *)ShutdownAdminId) ||
+		!sock->put("") || !sock->eom()) {
 		dprintf(D_ALWAYS, "Failed to send DC_CONFIG_PERSIST to "
 				"%s %s.\n", startd_machine, startd_addr);
 		return -1;
 	}
-	sock.close();
-	if (!sock.connect((char *)startd_addr, 0)) {
-		dprintf(D_ALWAYS, "Failed to connect to %s %s.\n", startd_machine,
-				startd_addr);
-		return -1;
-	}
-	sock.encode();
-	cmd = DC_RECONFIG;
-	if (!sock.code(cmd) || !sock.eom()) {
+	sock->close();
+	delete sock;
+
+	if (!my_startd.sendCommand (DC_RECONFIG, Stream::reli_sock, 10)) {
 		dprintf(D_ALWAYS, "Failed to send DC_RECONFIG to %s %s.\n",
 				startd_machine, startd_addr);
 		return -1;

@@ -260,52 +260,203 @@ Daemon::startCommand( int cmd, Stream::stream_type st, int sec )
 	Sock* sock;
 	switch( st ) {
 	case Stream::reli_sock:
-		sock = reliSock( sec );
+		sock = reliSock();
 		break;
 	case Stream::safe_sock:
-		sock = safeSock( sec );
+		sock = safeSock();
 		break;
 	default:
-		EXCEPT( "Unknown stream_type (%d) in Daemon::sendCommand",
+		EXCEPT( "Unknown stream_type (%d) in Daemon::startCommand",
 				(int)st );
 	}
 	if( ! sock ) {
 			// _error will already be set.
 		return NULL;
 	}
-	sock->encode();
-	if( ! sock->code(cmd) ) {
-		delete sock;
-		char err_buf[256];
-		sprintf( err_buf, "Can't encode command (%d) for %s", cmd, 
-				 idStr() );
-		newError( err_buf );
-		return NULL;
-	}
-	return sock;
+
+	return startCommand ( cmd, sock, sec );
+
 }
 
 
 Sock*
 Daemon::startCommand( int cmd, Sock* sock, int sec )
 {
+	const int AUTH_NO  = 0;
+	const int AUTH_ASK = 1;
+	const int AUTH_YES = 2;
+
+	// the classad for sending
+	ClassAd auth_info;
+
+	// temp vars for putting the classad together
+	char *buf;
+	char *paramer;
+
+	int  authenticating;
+
+	dprintf ( D_ALWAYS, "authenticating for command %i.\n", cmd);
+
+
+	// set up the socket
+
 	if( ! sock ) {
-		newError( "sendCommand() called with a NULL Sock*" );
+		newError( "startCommand() called with a NULL Sock*" );
 		return NULL;
 	}
 	if( sec ) {
 		sock->timeout( sec );
 	}
+
 	sock->encode();
-	if( ! sock->code(cmd) ) {
-		char err_buf[256];
-		sprintf( err_buf, "Can't encode command (%d) for %s", cmd, 
-				 idStr() );
-		newError( err_buf );
+
+
+	// start with whatever the command asked for
+	// HACK: start with AUTH_ASK
+	authenticating = AUTH_ASK;
+
+	// allow the config to force authentication
+        paramer = param("ALWAYS_AUTHENTICATE");
+	if (paramer != NULL) {
+		dprintf ( D_ALWAYS, "ZKM: param(ALWAYS_AUTHENTICATE) == %s\n", paramer);
+		if (strcasecmp(paramer, "YES") == 0) {
+			dprintf ( D_ALWAYS, "ZKM: forcing authentication.\n" );
+			authenticating = AUTH_YES;
+		}
+		free(paramer);
+	} else {
+		dprintf ( D_ALWAYS, "ZKM: param(ALWAYS_AUTHENTICATE) failed!\n" );
+	}
+
+
+        // package the ClassAd together
+
+	// allocate a buffer big enough to work with all fields
+	int buflen;
+
+	paramer = param("AUTHENTICATION_METHODS");
+	if (paramer != NULL) {
+		dprintf ( D_ALWAYS, "ZKM: param(AUTHENTICATION_METHODS) == %s\n",
+				paramer );
+		buflen = 128 + strlen(paramer);
+	} else {
+		dprintf ( D_ALWAYS, "ZKM: param(AUTHENTICATION_METHODS) failed!\n" );
+		buflen = 128;
+	}
+
+	buf = new char[buflen];
+	if (buf == NULL) {
+		dprintf ( D_ALWAYS, "ZKM: new failed!\n" );
+		delete sock;
 		return NULL;
 	}
-	return sock;
+
+	// auth_types
+	if (paramer) {
+		sprintf(buf, "%s=\"%s\"", ATTR_AUTH_TYPES, paramer);
+		free(paramer);
+	} else {
+		sprintf(buf, "%s=\"\"", ATTR_AUTH_TYPES);
+	}
+
+	auth_info.Insert(buf);
+	dprintf ( D_ALWAYS, "ZKM: inserted '%s'\n", buf);
+
+
+	// command
+	sprintf(buf, "%s=%i", ATTR_COMMAND, cmd);
+	auth_info.Insert(buf);
+	dprintf ( D_ALWAYS, "ZKM: inserted '%s'\n", buf);
+
+	// convert authenticate into a string
+	assert (authenticating >= 0 && authenticating <= 2);
+	char* tmpdesc[] = { "NO", "ASK", "YES" };
+	sprintf(buf, "%s=\"%s\"", ATTR_AUTHENTICATE, tmpdesc[authenticating]);
+	auth_info.Insert(buf);
+	dprintf ( D_ALWAYS, "ZKM: inserted '%s'\n", buf);
+
+	// free the buffer
+	delete [] buf;
+
+
+	dprintf ( D_ALWAYS, "ZKM: sending DC_AUTHENTICATE command\n");
+	int authcmd = DC_AUTHENTICATE;
+	if (! sock->code(authcmd)) {
+		dprintf ( D_ALWAYS, "ZKM: failed to send DC_AUTHENTICATE\n");
+		assert(0);	
+	}
+
+
+	// send the classad
+	dprintf ( D_ALWAYS, "ZKM: sending following classad:\n");
+	auth_info.dPrint ( D_ALWAYS );
+
+	// this is redundant:
+	// sock->encode();
+
+	if (! auth_info.code(*sock)) {
+		dprintf ( D_ALWAYS, "ZKM: failed to send auth_info\n");
+	}
+
+	if (! sock->end_of_message()) {
+		dprintf ( D_ALWAYS, "ZKM: failed to end classad message\n");
+	}
+
+	bool retval;
+
+	switch(authenticating) {
+		case AUTH_YES:
+			dprintf ( D_ALWAYS, "ZKM: authenticate(0xFFFF) RIGHT NOW.\n");
+			retval = sock->authenticate(0xFFFF);
+			break;
+
+		case AUTH_ASK:
+			{
+				ClassAd auth_response;
+				sock->decode();
+				auth_response.code(*sock);
+
+				dprintf ( D_ALWAYS, "ZKM: server responded with:\n");
+				auth_response.dPrint( D_ALWAYS );
+
+				buf = new char[128];
+				if (buf == NULL) {
+					dprintf ( D_ALWAYS, "ZKM: new failed!\n");
+					retval = false;
+					break;
+				}
+
+				if (!auth_response.LookupString(ATTR_AUTHENTICATE, buf)) {
+					EXCEPT( "AUTH: no AUTHENTICATE in response ClassAd" );
+				}
+				if(strcasecmp(buf, "YES")) {
+					dprintf ( D_ALWAYS, "ZKM: authenticate(0xFFFF) RIGHT NOW.\n");
+					retval = sock->authenticate(0xFFFF);
+				}
+				break;
+			}
+		case AUTH_NO:
+			dprintf ( D_ALWAYS, "ZKM: not authenticating.\n");
+			retval = true;
+			break;
+
+		default:
+			EXCEPT( "AUTH: wierd value for authenticating" );
+	}
+
+	dprintf (D_ALWAYS, "ZKM: retval is %i.\n", retval);
+	if (retval) {
+		dprintf ( D_ALWAYS, "ZKM: setting sock->encode()\n");
+		sock->encode();
+
+		return sock;
+	} else {
+		dprintf (D_ALWAYS, "ZKM: retval sucked.\n");
+		delete sock;
+		return NULL;
+	}
 }
+
 
 
 bool
@@ -315,7 +466,7 @@ Daemon::sendCommand( int cmd, Sock* sock, int sec )
 	if( ! tmp ) {
 		return false;
 	}
-	if( ! sock->eom() ) {
+	if( ! tmp->eom() ) {
 		char err_buf[256];
 		sprintf( err_buf, "Can't send eom for %d to %s", cmd,  
 				 idStr() );
@@ -344,6 +495,8 @@ Daemon::sendCommand( int cmd, Stream::stream_type st, int sec )
 	delete tmp;
 	return true;
 }
+
+
 
 
 //////////////////////////////////////////////////////////////////////
@@ -500,7 +653,8 @@ Daemon::getDaemonInfo( const char* subsys,
 							   sizeof(struct in_addr), AF_INET ); 
 		if( ! hostp ) {
 			New_full_hostname( NULL );
-			sprintf( buf, "can't find host info for %s", _addr );
+
+			sprintf( buf, "cant find host info for %s", _addr );
 			newError( buf );
 		} else {
 			New_full_hostname( strnewp(hostp->h_name) );

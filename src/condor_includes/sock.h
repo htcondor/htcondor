@@ -80,6 +80,7 @@ class Sock : public Stream {
 public:
 
 	friend class DaemonCore;
+	friend class Daemon;
 
 	/*
 	**	Methods
@@ -242,7 +243,7 @@ protected:
 	///
 	virtual bool is_hdr_encrypt();
     ///
-	virtual int authenticate();
+	virtual int authenticate(int clientFlags = 0);
     ///
 	virtual int isAuthenticated();
     ///

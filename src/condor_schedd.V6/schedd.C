@@ -2103,25 +2103,21 @@ bool
 claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated )
 {
 
-	ReliSock *sock = new ReliSock();
-
-	sock->timeout( STARTD_CONTACT_TIMEOUT );
-
-	if ( !sock->connect(mrec->peer, 0) ) {
-		dprintf( D_ALWAYS, "Couldn't connect to startd at %s\n",
-				 mrec->peer );
-		BAILOUT;
-	}
+	Daemon matched_startd ( DT_STARTD, mrec->peer, NULL );
+	Sock* sock;
 
 	dprintf( D_PROTOCOL, "Requesting resource from %s ...\n",
 			 mrec->peer ); 
 
+	if (!(sock = matched_startd.startCommand(REQUEST_CLAIM, Stream::reli_sock,
+						STARTD_CONTACT_TIMEOUT ))) {
+		dprintf( D_ALWAYS, "Couldn't send REQUEST_CLAIM to startd at %s\n",
+				 mrec->peer );
+		return false;
+	}
+
 	sock->encode();
 
-	if( !sock->put( REQUEST_CLAIM ) ) {
-		dprintf( D_ALWAYS, "Couldn't send command to startd.\n" );	
-		BAILOUT;
-	}
 
 	if( !sock->put( mrec->id ) ) {
 		dprintf( D_ALWAYS, "Couldn't send capability to startd.\n" );	

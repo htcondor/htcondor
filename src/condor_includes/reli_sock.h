@@ -134,7 +134,7 @@ public:
     ///
 	void setOwner( const char * );
     ///
-	int authenticate();
+	int authenticate( int clientFlags = 0 );
     ///
 	const char *getOwner();
     ///
@@ -173,6 +173,7 @@ protected:
 	char * serialize(char *);	// restore state from buffer
 	char * serialize() const;	// save state into buffer
 
+	int allow_one_empty_message();
 	int prepare_for_nobuffering( stream_coding = stream_unknown);
 
 	/*
@@ -212,6 +213,7 @@ protected:
 	relisock_state	_special_state;
 	int	ignore_next_encode_eom;
 	int	ignore_next_decode_eom;
+	int	allow_empty_message_flag;
 	float _bytes_sent, _bytes_recvd;
 
 	Authentication * authob;

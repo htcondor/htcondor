@@ -109,6 +109,8 @@ Authentication::Authentication( ReliSock *sock )
 #endif
 }
 
+
+
 Authentication::~Authentication()
 {
 #if !defined(SKIP_AUTHENTICATION)
@@ -189,35 +191,44 @@ Authentication::~Authentication()
 }
 
 int
-Authentication::authenticate( char *hostAddr )
+Authentication::authenticate( char *hostAddr, int clientFlags )
 {
 #if defined(SKIP_AUTHENTICATION)
   return 0;
 #else
-  
+
+
+  if (hostAddr) {
+	dprintf ( D_ALWAYS, "ZKM: in authenticate( char *addr == '%s', int flags == %i)\n",
+		  hostAddr, clientFlags);
+  } else {
+	dprintf ( D_ALWAYS, "ZKM: in authenticate( char *addr == NULL, int flags == %i)\n",
+		  clientFlags);
+  }
+
+  int clientCanUse = clientFlags;
   //call setupEnv if Server or if Client doesn't know which methods to try
   // if ( !mySock->isClient() && !isServer) 
   // interesting, I am not sure whether this is right or not
 
   if ( !mySock->isClient() || !canUseFlags ) {
-    setupEnv( hostAddr );
+      setupEnv( hostAddr );
   }
   
   auth_status = CAUTH_NONE;
   
   while (auth_status == CAUTH_NONE ) {
-    int firm = handshake();
+    int firm = handshake(clientCanUse);
     if ( firm < 0 ) {
-      dprintf(D_FULLDEBUG,"authentication failed due to network errors\n");
+      dprintf(D_ALWAYS, "authentication failed due to network errors\n");
       break;
-    }
-    else 
+    } else {
       dprintf(D_ALWAYS, "Trying to use %d\n", firm);
+    }
 
     switch ( firm ) {
 #if defined(GSS_AUTHENTICATION)
     case CAUTH_GSS:
-      //authenticate_self_gss();
       if( authenticate_gss() ) {
 	auth_status = CAUTH_GSS;
       }
@@ -268,12 +279,15 @@ Authentication::authenticate( char *hostAddr )
     if ( auth_status == CAUTH_NONE && mySock->isClient() ) {
       canUseFlags &= ~firm;
     }
+    clientCanUse = 0;
   }
   
   //if none of the methods succeeded, we fall thru to default "none" from above
   int retval = ( auth_status != CAUTH_NONE );
   dprintf(D_FULLDEBUG, "Authentication::authenticate %s\n", 
 	  retval == 1 ? "Success" : "FAILURE" );
+
+  mySock->allow_one_empty_message();
   return ( retval );
 #endif /* SKIP_AUTHENTICATION */
 }
@@ -358,14 +372,14 @@ const char * Authentication::getOwner()
 #if defined(SKIP_AUTHENTICATION)
 	return NULL;
 #else
-		// Since we never use getOwner() like it allocates memory
-		// anywhere in the code, it shouldn't actually allocate
-		// memory.  We can always just return claimToBe, since it'll
-		// either be NULL or the string we want, which is the old
-		// semantics.  -Derek Wright 3/12/99
+        // Since we never use getOwner() like it allocates memory
+        // anywhere in the code, it shouldn't actually allocate
+        // memory.  We can always just return claimToBe, since it'll
+        // either be NULL or the string we want, which is the old
+        // semantics.  -Derek Wright 3/12/99
 	return (const char*) claimToBe;
-#endif
-}
+#endif  
+}               
 
 bool Authentication :: is_valid()
 {
@@ -879,20 +893,20 @@ Authentication::setupEnv( char *hostAddr )
 
 	  pbuf = param( STR_X509_DIRECTORY );
 	  if (pbuf) {
-	    sprintf( buffer, "%s=%s/certdir", STR_X509_CERT_DIR, pbuf);
-	    putenv( strdup( buffer ) );
+              sprintf( buffer, "%s=%s/certdir", STR_X509_CERT_DIR, pbuf);
+              putenv( strdup( buffer ) );
 	    
-	    sprintf( buffer, "%s=%s/usercert.pem", STR_X509_USER_CERT, pbuf);
-	    putenv( strdup ( buffer ) );
-	    
-	    sprintf(buffer,"%s=%s/private/userkey.pem",STR_X509_USER_KEY,pbuf);
-	    putenv( strdup ( buffer  ) );
-	    
-	    sprintf(buffer,"%s=%s/condor_ssl.cnf", STR_SSLEAY_CONF, pbuf);
-	    putenv( strdup ( buffer ) );
-
-	    tryGss = 1;
-	    free(pbuf);
+              sprintf( buffer, "%s=%s/usercert.pem", STR_X509_USER_CERT, pbuf);
+              putenv( strdup ( buffer ) );
+              
+              sprintf(buffer,"%s=%s/private/userkey.pem",STR_X509_USER_KEY,pbuf);
+              putenv( strdup ( buffer  ) );
+              
+              sprintf(buffer,"%s=%s/condor_ssl.cnf", STR_SSLEAY_CONF, pbuf);
+              putenv( strdup ( buffer ) );
+              
+              tryGss = 1;
+              free(pbuf);
 	  }
   	}	
 	else{
@@ -952,9 +966,9 @@ Authentication::setupEnv( char *hostAddr )
 	    canUseFlags |= (int) CAUTH_FILESYSTEM_REMOTE;
 	  }
 #if defined( GSS_AUTHENTICATION )
-		if ( tryGss ) {
-			canUseFlags |= CAUTH_GSS;
-		}
+          if ( tryGss ) {
+              canUseFlags |= CAUTH_GSS;
+          }
 #endif
 
 #if defined(KERBEROS_AUTHENTICATION)
@@ -1022,48 +1036,70 @@ Authentication::setAuthType( authentication_state state ) {
 }
 
 int
-Authentication::handshake()
+Authentication::handshake(int clientFlags)
 {
 	int shouldUseMethod = 0;
 
 	int clientCanUse = 0;
 	int canUse = (int) canUseFlags;
 
+	dprintf ( D_ALWAYS, "ZKM: in handshake(int flags == %i)\n", clientFlags);
+
 	if ( mySock->isClient() ) {
+	    dprintf (D_ALWAYS, "ZKM: handshake() - i am the client\n");
+//            if (!clientFlags) {
 		mySock->encode();
+		dprintf ( D_ALWAYS, "ZKM: sending methods (canUse == %i) to server\n",
+				canUse);
 		if ( !mySock->code( canUse ) ||
-			 !mySock->end_of_message() )
+                     !mySock->end_of_message() )
 		{
-			return -1;
+                    return -1;
 		}
-		mySock->decode();
-		if ( !mySock->code( shouldUseMethod ) ||
-			 !mySock->end_of_message() )
-		{
-			return -1;
+//            }
+            mySock->decode();
+            if ( !mySock->code( shouldUseMethod ) ||
+                 !mySock->end_of_message() )  
+                {
+                    return -1;
 		}
+	    dprintf ( D_ALWAYS, "ZKM: server replied (shouldUseMethod == %i)\n",
+				shouldUseMethod);
+	    clientCanUse = canUse;
 	}
 	else { //server
-		mySock->decode();
-		if ( !mySock->code( clientCanUse ) ||
-			 !mySock->end_of_message() )
+	    dprintf (D_ALWAYS, "ZKM: handshake() - i am the server\n");
+//            if (!clientFlags) {
+                mySock->decode();
+                if ( !mySock->code( clientCanUse ) ||
+                     !mySock->end_of_message() )
+                    {
+                        return -1;
+                    }
+		dprintf ( D_ALWAYS, "ZKM: client sent methods (clientCanUse == %i)\n",
+				clientCanUse);
+//            } else {
+//                clientCanUse = clientFlags;
+//            }
+
+            shouldUseMethod = selectAuthenticationType( clientCanUse );
+	    dprintf ( D_ALWAYS, "ZKM: i picked a method (shouldUseMethod == %i)\n",
+				shouldUseMethod);
+
+
+            mySock->encode();
+            if ( !mySock->code( shouldUseMethod ) ||
+                 !mySock->end_of_message() )
 		{
-			return -1;
+                    return -1;
 		}
 
-		shouldUseMethod = selectAuthenticationType( clientCanUse );
-
-
-		mySock->encode();
-		if ( !mySock->code( shouldUseMethod ) ||
-			 !mySock->end_of_message() )
-		{
-			return -1;
-		}
+	    dprintf ( D_ALWAYS, "ZKM: client received method (shouldUseMethod == %i)\n",
+				shouldUseMethod);
 	}
 
-	dprintf(D_FULLDEBUG,
-		"handshake: clientCanUse=%d,shouldUseMethod=%d\n",
+	dprintf(D_ALWAYS,
+		"ZKM: clientCanUse=%d,shouldUseMethod=%d\n",
 		clientCanUse,shouldUseMethod);
 
 	return( shouldUseMethod );
@@ -1191,28 +1227,37 @@ Authentication::selectAuthenticationType( int clientCanUse )
 
 	server.rewind();
 	while ( tmp = server.next() ) {
-	  if ( ( clientCanUse & CAUTH_GSS ) ) {
+		dprintf ( D_ALWAYS, "ZKM: evaluating '%s'\n", tmp);
+#if defined(GSS_AUTHENTICATION)
+	  if ( ( clientCanUse & CAUTH_GSS )  && !stricmp( tmp, "GSS_AUTHENTICATION" ) ) {
+	    dprintf ( D_ALWAYS, "ZKM: picking '%s'\n", tmp);
 	    retval = CAUTH_GSS;
 	    break;
 	  }
+#endif
+
 #if defined(WIN32)
 	  if ( ( clientCanUse & CAUTH_NTSSPI ) && !stricmp( tmp, "NTSSPI" ) ) {
+	    dprintf ( D_ALWAYS, "ZKM: picking '%s'\n", tmp);
 	    retval = CAUTH_NTSSPI;
 	    break;
 	  }
 #else
 	  if ( ( clientCanUse & CAUTH_FILESYSTEM ) && !stricmp( tmp, "FS" ) ) {
+	    dprintf ( D_ALWAYS, "ZKM: picking '%s'\n", tmp);
 	    retval = CAUTH_FILESYSTEM;
 	    break;
 	  }
 	  if ( ( clientCanUse & CAUTH_FILESYSTEM_REMOTE ) 
 	       && !stricmp( tmp, "FS_REMOTE" ) ) {
+	    dprintf ( D_ALWAYS, "ZKM: picking '%s'\n", tmp);
 	    retval = CAUTH_FILESYSTEM_REMOTE;
 	    break;
 	  }
 
 #if defined(KERBEROS_AUTHENTICATION)
 	  if ( ( clientCanUse & CAUTH_KERBEROS) && !stricmp( tmp, "KERBEROS")){
+	    dprintf ( D_ALWAYS, "ZKM: picking '%s'\n", tmp);
 	    retval = CAUTH_KERBEROS;
 	    break;
 	  }
@@ -1221,6 +1266,7 @@ Authentication::selectAuthenticationType( int clientCanUse )
 #endif
 	  if ( ( clientCanUse & CAUTH_CLAIMTOBE ) && !stricmp( tmp, "CLAIMTOBE" ) )
 	    {
+	      dprintf ( D_ALWAYS, "ZKM: picking '%s'\n", tmp);
 	      retval = CAUTH_CLAIMTOBE;
 	      break;
 	    }
@@ -1898,6 +1944,8 @@ int Authentication::authenticate_client_kerberos()
 	dprintf(D_ALWAYS, "Unable to forward credentials\n");
 	return FALSE;  
       }
+    case KERBEROS_GRANT:
+      break; 
     default:
       dprintf(D_ALWAYS, "Response is invalid\n");
       break;
@@ -2327,7 +2375,7 @@ int Authentication :: daemon_acquire_credential()
 
  error:
 
-  dprintf(D_ALWAYS, "%s\n", error_message(code));
+  dprintf(D_ALWAYS, "AUTH_ERROR: %s\n", error_message(code));
   rc = FALSE;
 
  cleanup:
@@ -2461,6 +2509,7 @@ int Authentication::authenticate_kerberos()
 
   mySock->timeout(time); //put it back to what it was before
   
+  dprintf(D_ALWAYS, "Successfull!\n");
   return( status );
 }
 
@@ -2635,7 +2684,7 @@ int Authentication :: receive_tgt_creds(krb5_auth_context auth_context,
   int              message;
   // First find out who we are talking to.
   // In case of host or condor, we do not need to receive credential
-
+  /*
   // This is really ugly
   if ((strncmp(claimToBe, "host/"  , strlen("host/")) == 0) || 
       (strncmp(claimToBe, "condor/", strlen("condor/")) == 0)) {
@@ -2647,7 +2696,7 @@ int Authentication :: receive_tgt_creds(krb5_auth_context auth_context,
   else {
     if (defaultStash_) {
       sprintf(defaultCCName, STR_KRB_FORMAT, defaultStash_, claimToBe);
-      dprintf(D_ALWAYS, defaultCCName);
+      dprintf(D_ALWAYS, "%s\n", defaultCCName);
       
       // First, check to see if we have a stash ticket
       if (code = krb5_cc_resolve(krb_context_, defaultCCName, &ccache)) {
@@ -2727,7 +2776,7 @@ int Authentication :: receive_tgt_creds(krb5_auth_context auth_context,
       goto error;
     }
   }
-
+  */
   //------------------------------------------
   // Tell the other side the good news
   //------------------------------------------

@@ -150,6 +150,10 @@ int main (int argc, char **argv)
 	// load up configuration file
 	config();
 
+	// dprintf to console
+	Termlog = 1;
+	dprintf_config ("QUEUE", 2 );
+
 #if !defined(WIN32)
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
@@ -1385,24 +1389,32 @@ fetchSubmittorPrios()
 	Daemon	negotiator( DT_NEGOTIATOR, pool, pool );
 
 	// connect to negotiator
-	ReliSock sock;
-	sock.connect( negotiator.addr(), 0 );
+	Sock* sock;
 
-	sock.encode();
-	if( !sock.put( GET_PRIORITY ) || !sock.end_of_message() ) {
+	if (!(sock = negotiator.startCommand( GET_PRIORITY, Stream::reli_sock, 0))) {
+		fprintf( stderr, "ZKM: startCommand failed.\n");
+		exit( 1 );
+	}
+
+	dprintf (D_ALWAYS, "ZKM: sock->is_encode == %i.\n", sock->is_encode());
+
+	if (!sock->end_of_message() ) {
+		fprintf( stderr, 
+				 "Error:  Could not end message to %s.\n",
+				 negotiator.fullHostname() );
+		exit( 1 );
+	}
+
+	sock->decode();
+	if( !al.get(*sock) || !sock->end_of_message() ) {
 		fprintf( stderr, 
 				 "Error:  Could not get priorities from negotiator (%s)\n",
 				 negotiator.fullHostname() );
 		exit( 1 );
 	}
+	sock->close();
+	delete sock;
 
-	sock.decode();
-	if( !al.get(sock) || !sock.end_of_message() ) {
-		fprintf( stderr, 
-				 "Error:  Could not get priorities from negotiator (%s)\n",
-				 negotiator.fullHostname() );
-		exit( 1 );
-	}
 
 	i = 1;
 	while( i ) {

@@ -167,16 +167,19 @@ main(int argc, char* argv[])
     float Priority=atof(argv[SetPrio+2]);
 
     // send request
-    ReliSock sock;
-    sock.encode();
-    if (!sock.connect(negotiator.addr(), 0) ||
-		!sock.put(SET_PRIORITY) ||
-        !sock.put(argv[SetPrio+1]) ||
-        !sock.put(Priority) ||
-        !sock.end_of_message()) {
+    Daemon my_negotiator(DT_NEGOTIATOR, NULL, pool);
+    Sock* sock;
+
+    if (!(sock = my_negotiator.startCommand(SET_PRIORITY, Stream::reli_sock, 0)) ||
+        !sock->put(argv[SetPrio+1]) ||
+        !sock->put(Priority) ||
+        !sock->end_of_message()) {
       fprintf( stderr, "failed to send SET_PRIORITY command to negotiator\n" );
       exit(1);
     }
+
+    sock->close();
+    delete sock;
 
     printf("The priority of %s was set to %f\n",argv[SetPrio+1],Priority);
 
@@ -201,16 +204,19 @@ main(int argc, char* argv[])
 	}
 
     // send request
-    ReliSock sock;
-    sock.encode();
-    if (!sock.connect(negotiator.addr(), 0) ||
-		!sock.put(SET_PRIORITYFACTOR) ||
-        !sock.put(argv[SetFactor+1]) ||
-        !sock.put(Factor) ||
-        !sock.end_of_message()) {
+    Daemon my_negotiator(DT_NEGOTIATOR, NULL, pool);
+    Sock* sock;
+
+    if (!(sock = my_negotiator.startCommand(SET_PRIORITYFACTOR, Stream::reli_sock, 0)) ||
+        !sock->put(argv[SetFactor+1]) ||
+        !sock->put(Factor) ||
+        !sock->end_of_message()) {
       fprintf( stderr, "failed to send SET_PRIORITYFACTOR command to negotiator\n" );
       exit(1);
     }
+
+    sock->close();
+    delete sock;
 
     printf("The priority factor of %s was set to %f\n",argv[SetFactor+1],Factor);
 
@@ -229,15 +235,18 @@ main(int argc, char* argv[])
 	}
 
     // send request
-    ReliSock sock;
-    sock.encode();
-    if (!sock.connect(negotiator.addr(), 0) ||
-		!sock.put(RESET_USAGE) ||
-        !sock.put(argv[ResetUsage+1]) ||
-        !sock.end_of_message()) {
+    Daemon my_negotiator(DT_NEGOTIATOR, NULL, pool);
+    Sock* sock;
+
+    if (!(sock = my_negotiator.startCommand(RESET_USAGE, Stream::reli_sock, 0)) ||
+        !sock->put(argv[ResetUsage+1]) ||
+        !sock->end_of_message()) {
       fprintf( stderr, "failed to send RESET_USAGE command to negotiator\n" );
       exit(1);
     }
+
+    sock->close();
+    delete sock;
 
     printf("The accumulated usage of %s was reset\n",argv[ResetUsage+1]);
 
@@ -246,11 +255,9 @@ main(int argc, char* argv[])
   else if (ResetAll) {
 
     // send request
-    ReliSock sock;
-    sock.encode();
-    if (!sock.connect(negotiator.addr(), 0) ||
-		!sock.put(RESET_ALL_USAGE) ||
-        !sock.end_of_message()) {
+    Daemon my_negotiator(DT_NEGOTIATOR, NULL, pool);
+
+    if (!my_negotiator.sendCommand (RESET_ALL_USAGE, Stream::reli_sock, 0)) {
       fprintf( stderr, "failed to send RESET_ALL_USAGE command to negotiator\n" );
       exit(1);
     }
@@ -272,24 +279,27 @@ main(int argc, char* argv[])
 	}
 
     // send request
-    ReliSock sock;
-    sock.encode();
-    if (!sock.connect(negotiator.addr(), 0) ||
-		!sock.put(GET_RESLIST) ||
-        !sock.put(argv[GetResList+1]) ||
-        !sock.end_of_message()) {
+    Daemon my_negotiator(DT_NEGOTIATOR, NULL, pool);
+    Sock* sock;
+
+    if (!(sock = my_negotiator.startCommand(GET_RESLIST, Stream::reli_sock, 0)) ||
+        !sock->put(argv[GetResList+1]) ||
+        !sock->end_of_message()) {
       fprintf( stderr, "failed to send GET_RESLIST command to negotiator\n" );
       exit(1);
     }
 
     // get reply
-    sock.decode();
+    sock->decode();
     AttrList* ad=new AttrList();
-    if (!ad->get(sock) ||
-        !sock.end_of_message()) {
+    if (!ad->get(*sock) ||
+        !sock->end_of_message()) {
       fprintf( stderr, "failed to get classad from negotiator\n" );
       exit(1);
     }
+
+    sock->close();
+    delete sock;
 
     if (LongFlag) ad->fPrint(stdout);
     else PrintResList(ad);
@@ -298,23 +308,27 @@ main(int argc, char* argv[])
   else {  // list priorities
 
     // send request
-    ReliSock sock;
-    sock.encode();
-    if (!sock.connect(negotiator.addr(), 0) ||
-		!sock.put(GET_PRIORITY) ||
-        !sock.end_of_message()) {
+    Daemon my_negotiator(DT_NEGOTIATOR, NULL, pool);
+
+    Sock* sock;
+
+    if (!(sock = my_negotiator.startCommand( GET_PRIORITY, Stream::reli_sock, 0)) ||
+        !sock->end_of_message()) {
       fprintf( stderr, "failed to send GET_PRIORITY command to negotiator\n" );
       exit(1);
     }
 
     // get reply
-    sock.decode();
+    sock->decode();
     AttrList* ad=new AttrList();
-    if (!ad->get(sock) ||
-        !sock.end_of_message()) {
+    if (!ad->get(*sock) ||
+        !sock->end_of_message()) {
       fprintf( stderr, "failed to get classad from negotiator\n" );
       exit(1);
     }
+
+    sock->close();
+    delete sock;
 
     if (LongFlag) ad->fPrint(stdout);
     else ProcessInfo(ad);
