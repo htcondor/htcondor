@@ -81,7 +81,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <values.h>
-#include <math.h>
+#include "condor_fix_math.h" 
 #include <sys/file.h>
 
 #endif /* System specific stuff */
