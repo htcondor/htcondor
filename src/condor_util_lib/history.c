@@ -75,7 +75,7 @@
 #include "except.h"
 #include "proc.h"
 
-#if defined(HPUX9) || defined(Solaris)
+#if defined(HPUX) || defined(Solaris)
 #	include "fake_flock.h"
 #endif
 
