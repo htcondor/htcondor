@@ -2949,44 +2949,46 @@ void
 SetGlobusParams()
 {
 	char buff[2048];
-	char *globushost;
 	char *tmp;
 	char *use_gridshell;
+	char *grid_type;
 
 	if ( JobUniverse != CONDOR_UNIVERSE_GLOBUS )
 		return;
 
-	if ( !(globushost = condor_param( GlobusScheduler ) ) ) {
-		char * grid_type = condor_param( Grid_Type, ATTR_JOB_GRID_TYPE );
-		if ((grid_type == NULL ||
-				(stricmp (grid_type, "globus") == MATCH) ||
-				(stricmp (grid_type, "gt2") == MATCH) ||
-				(stricmp (grid_type, "gt3") == MATCH) ||
-				(stricmp (grid_type, "nordugrid") == MATCH))) {
+	grid_type = condor_param( Grid_Type, ATTR_JOB_GRID_TYPE );
+
+	if ((grid_type == NULL ||
+			(stricmp (grid_type, "globus") == MATCH) ||
+			(stricmp (grid_type, "gt2") == MATCH) ||
+			(stricmp (grid_type, "gt3") == MATCH) ||
+			(stricmp (grid_type, "nordugrid") == MATCH))) {
+
+		char *globushost;
+
+		if ( !(globushost = condor_param( GlobusScheduler ) ) ) {
 			fprintf(stderr, "\nERROR: Globus/gt3 jobs require a \"%s\" parameter\n",
 					GlobusScheduler );
 			DoCleanup( 0, 0, NULL );
 			exit( 1 );
 		}
-		if (grid_type != NULL)
-			free (grid_type);
+
+		sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_RESOURCE, globushost );
+		InsertJobExpr (buffer);
+
+		if ( strstr(globushost,"$$") ) {
+			// We need to perform matchmaking on the job in order to find
+			// the GlobusScheduler.
+			sprintf(buffer,"%s = FALSE", ATTR_JOB_MATCHED);
+			InsertJobExpr (buffer);
+			sprintf(buffer,"%s = 0", ATTR_CURRENT_HOSTS);
+			InsertJobExpr (buffer);
+			sprintf(buffer,"%s = 1", ATTR_MAX_HOSTS);
+			InsertJobExpr (buffer);
+		}
+
+		free( globushost );
 	}
-
-	sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_RESOURCE, globushost );
-	InsertJobExpr (buffer);
-
-	if ( strstr(globushost,"$$") ) {
-		// We need to perform matchmaking on the job in order to find
-		// the GlobusScheduler.
-		sprintf(buffer,"%s = FALSE", ATTR_JOB_MATCHED);
-		InsertJobExpr (buffer);
-		sprintf(buffer,"%s = 0", ATTR_CURRENT_HOSTS);
-		InsertJobExpr (buffer);
-		sprintf(buffer,"%s = 1", ATTR_MAX_HOSTS);
-		InsertJobExpr (buffer);
-	}
-
-	free( globushost );
 
 	if ( (use_gridshell = condor_param(GridShell)) ) {
 		if( use_gridshell[0] == 't' || use_gridshell[0] == 'T' ) {
@@ -3077,6 +3079,10 @@ SetGlobusParams()
 	}
 
 	// END MyProxy-related crap
+
+	if (grid_type != NULL) {
+		free (grid_type);
+	}
 }
 
 #if !defined(WIN32)
