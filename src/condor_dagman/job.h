@@ -204,8 +204,16 @@ class Job {
     */
 	const char* GetStatusName() const;
 
+		/** Is the specified node a child of this node?
+			@param child Pointer to the node to check for childhood.
+			@return true: specified node is our child, false: otherwise
+		*/
 	bool HasChild( Job* child );
-	bool HasParent( Job* child );
+		/** Is the specified node a parent of this node?
+			@param child Pointer to the node to check for parenthood.
+			@return true: specified node is our parent, false: otherwise
+		*/
+	bool HasParent( Job* parent );
 
 	bool RemoveChild( Job* child, MyString &whynot );
 	bool RemoveParent( Job* parent, MyString &whynot );
