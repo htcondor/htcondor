@@ -25,9 +25,9 @@
 #define CLASSAD_IO
 
 /** The ByteSource class serves as an abstract input source for classad 
-	expressions, and can be extended for custom situations.  The class
-	a derived class only needs to implement the 'virtual bool _GetChar(int &)'
-	method
+	expressions, and can be extended for custom situations.  A derived class 
+	only needs to implement the 'virtual bool _GetChar(int &)' method to
+	customize the source.
 */
 class ByteSource {
 	public:
@@ -84,22 +84,68 @@ class ByteSource {
 		int index;
 };
 
-
+/** The ByteSink class serves as an abstract output sink for classad 
+	expressions, and can be extended for custom situations.  A derived class 
+	only needs to implement the 'virtual bool _PutBytes( const void*, int )'
+	method to customize the sink.
+*/
 class ByteSink {
 	public:
+		/// Destructor
 		virtual ~ByteSink( ){ };
+
+		/** Sets the terminal character to be written to the sink.  The 
+		 	terminal character is written to the sink just before it is flushed.
+		*/
 		inline void SetTerminal( int t=0 ) { terminal = (char) t; };
+
+		/** Sets the maximum length (size) of the sink.  If more bytes are
+		 	attempted to be written to the sink than the length, further
+			PutBytes() operations return with failure.  If the length is -1,
+			there is no limit imposed on the sink size.
+		*/
 		inline void SetLength( int l=-1 ) { length = l; };
+
+		/** Resets the byte count for the sink.  The counter keeps track of
+		 	the number of bytes written to the sink.
+		*/
+		inline void Reset( ) { index = 0; }
+
+		/** Pushes the buffer into the sink.
+		 	@param buf The buffer to be written to the sink
+			@param buflen The size of the buffer
+		*/
 		bool PutBytes( const void* buf, int buflen );
+
+		/** Performs the clean-up protocol for the sink
+		 	@return true if the operation succeeded, false otherwise
+		*/
 		bool Flush( );
 
 	protected:
+		/// Constructor
 		ByteSink( ) { terminal = 0; length = -1; index = 0; };
-		virtual bool _PutBytes( const void *, int )=0;
+
+		/** The main method to be implemented by classes that extend ByteSink
+		 	@param buf The buffer to be transferred to the sink
+			@param buflen The length of the buffer
+			@return true if the operation succeeded, false otherwise
+		*/
+		virtual bool _PutBytes( const void *buf, int buflen )=0;
+
+		/** This method will be called when the serialization is complete.
+		 	Clean-up protocols should be implemented here.
+			@return true if the operation succeeded, false otherwise
+		*/
 		virtual bool _Flush( ) { return true; };
 
+		/// The terminal character (initialized to '\0')
 		char terminal;
+
+		/// The maximum size of the sink (initialized to -1)
 		int length;
+
+		/// The number of bytes written to the sink thus far
 		int index;
 };
 
