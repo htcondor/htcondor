@@ -530,13 +530,10 @@ bool Dag::ProcessLogEvents (bool recovery) {
               case ULOG_SUBMIT:
 			  {
 				SubmitEvent* submit_event = (SubmitEvent*) e;
-				char job_name[1024] = "";
 				if( submit_event->submitEventLogNotes ) {
+					char job_name[1024] = "";
 					if( sscanf( submit_event->submitEventLogNotes,
-								"DAG Node: %1023s", job_name ) != 1 ) {
-						job_name[0] = '\0';
-					}
-					else {
+								"DAG Node: %1023s", job_name ) == 1 ) {
 						job = GetJob( job_name );
 						if( job ) {
 							job->_CondorID = condorID;
