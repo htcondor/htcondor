@@ -525,7 +525,7 @@ readEvent (FILE *file)
 int ShadowExceptionEvent::
 writeEvent (FILE *file)
 {
-	if (fprintf (file, "Shadow exception!") < 0)
+	if (fprintf (file, "Shadow exception!\n") < 0)
 		return 0;
 
 	return 1;
