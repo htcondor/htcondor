@@ -253,7 +253,7 @@ debug_lock()
 			oumask = umask( 0 );
 			LockFd = open(DebugLock,O_CREAT|O_WRONLY,0660);
 			if( LockFd < 0 ) {
-				fprintf( DebugFP, "Can't open \"%s\"\n", DebugLock );
+				fprintf( stderr, "Can't open \"%s\"\n", DebugLock );
 				dprintf_exit();
 
 			}
@@ -261,8 +261,8 @@ debug_lock()
 		}
 
 		if( flock(LockFd,LOCK_EX) < 0 ) {
-			fprintf( DebugFP, "Can't get exclusive lock on \"%s\"\n",
-							DebugLock);
+			fprintf( stderr, "Can't get exclusive lock on \"%s\"\n",
+					 DebugLock);
 			dprintf_exit();
 		}
 #endif
@@ -503,6 +503,9 @@ dprintf_exit()
 		/* First, set a flag so we know not to try to keep using
 		   dprintf during the rest of this */
 	DprintfBroken = 1;
+
+		/* Don't forget to unlock the log file! */
+	debug_unlock();
 
 		/* If _EXCEPT_Cleanup is set for cleaning up during EXCEPT(),
 		   we call that here, as well. */
