@@ -19,8 +19,8 @@
 #include <sys/resource.h>
 #include <sys/uio.h>
 
-static int fake_readv( int fd, struct iovec *iov, int iovcnt );
-static int fake_writev( int fd, struct iovec *iov, int iovcnt );
+static int fake_readv( int fd, const struct iovec *iov, int iovcnt );
+static int fake_writev( int fd, const struct iovec *iov, int iovcnt );
 
 /*
   The process should exit making the status value available to its parent
@@ -189,8 +189,13 @@ isatty( int filedes )
   We don't handle readv directly in remote system calls.  Instead we
   break the readv up into a series of individual reads.
 */
+#if defined(HPUX9)
+ssize_t
+readv( int fd, const struct iovec *iov, size_t iovcnt )
+#else
 int
 readv( int fd, struct iovec *iov, int iovcnt )
+#endif
 {
 	int rval;
 	int user_fd;
@@ -215,7 +220,7 @@ readv( int fd, struct iovec *iov, int iovcnt )
   by breaking it up into a series of remote reads.
 */
 static int
-fake_readv( int fd, struct iovec *iov, int iovcnt )
+fake_readv( int fd, const struct iovec *iov, int iovcnt )
 {
 	register int i, rval = 0, cc;
 
@@ -240,8 +245,13 @@ fake_readv( int fd, struct iovec *iov, int iovcnt )
   We don't handle writev directly in remote system calls.  Instead we
   break the writev up into a series of individual writes.
 */
+#if defined(HPUX9)
+ssize_t
+writev( int fd, const struct iovec *iov, size_t iovcnt )
+#else
 int
 writev( int fd, struct iovec *iov, int iovcnt )
+#endif
 {
 	int rval;
 	int user_fd;
@@ -266,7 +276,7 @@ writev( int fd, struct iovec *iov, int iovcnt )
   by breaking it up into a series of remote writes.
 */
 static int
-fake_writev( int fd, struct iovec *iov, int iovcnt )
+fake_writev( int fd, const struct iovec *iov, int iovcnt )
 {
 	register int i, rval = 0, cc;
 
