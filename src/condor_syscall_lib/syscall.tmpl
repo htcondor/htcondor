@@ -92,6 +92,12 @@
 	ensure that each generator sees only the prototypes for which it
 	should generate code.
 */
+
+	/* Use 32 bits for file mode (mode_t) everywhere - hope nobody wants more */
+#if !defined(MODE_T)
+#	define MODE_T unsigned int
+#endif
+
 #define SEND_PATH(name) in xdr_string(&name,_POSIX_PATH_MAX)
 #define GET_PATH(name) out xdr_string(&name,_POSIX_PATH_MAX)
 #define ALLOC_PATH(name) alloc(name,_POSIX_PATH_MAX)
@@ -269,7 +275,7 @@ int rename( const char *from, const char *to ) {
 		involved, it's easier to just code the senders by hand.
 		They are implemented in "senders.epilogue".
 		*/
-	int send_file( const char *name, mode_t mode ) : pseudo {
+	int send_file( const char *name, MODE_T mode ) : pseudo {
 		SEND_PATH( name );
 		ALLOC_PATH( name );
 	}
@@ -303,14 +309,16 @@ int rename( const char *from, const char *to ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
-	int chmod( const char *path, mode_t mode ) {
+	int chmod( const char *path, MODE_T mode ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
+#if !defined(SUNOS41)
 	int getfsstat( struct statfs buf[], long bufsize, int flags ) {
 		out xdr_opaque( buf, STATFS_ARRAY_SIZE );
 		alloc( buf, bufsize );
 	}
+#endif
 	int flock( map(int fd), int op );
 	int fstatfs( map(int fd), struct statfs *buf ) {
 		out xdr_statfs( buf );
@@ -331,7 +339,7 @@ int rename( const char *from, const char *to ) {
 		alloc( buf, buf_size );
 	}
 	pid_t getpgrp();
-	mode_t umask( mode_t cmask );
+	MODE_T umask( MODE_T cmask );
 	int getpagesize();
 	int fcntl( map(int fd), int req, int arg );
 
@@ -340,6 +348,12 @@ int rename( const char *from, const char *to ) {
 		alloc( grouplist, gidsetsize * GID_T_SIZE );
 	}
 	int setpgrp( int pid, int pgrp );
+#if defined(SUNOS41)
+	int getdents( map(int fd), char *buf, int nbytes ) {
+		out xdr_bytes( &buf, &nbytes, nbytes );
+		alloc( buf, nbytes );
+	}
+#else
 	int getdirentries( map(int fd), char *buf, int nbytes, long *basep ) {
 		out xdr_bytes( &buf, &rval, rval );
 		in xdr_opaque( basep, EIGHT );
@@ -347,6 +361,7 @@ int rename( const char *from, const char *to ) {
 		alloc( buf, nbytes );
 		alloc( basep, LONG_SIZE );
 	}
+#endif
 	int table( int id, int index, char *addr, int nel, unsigned int lel ) {
 		out xdr_bytes( &addr, nel * lel, nel * lel );
 		alloc( addr, nel * lel );
@@ -395,7 +410,7 @@ int rename( const char *from, const char *to ) {
 		ALLOC_PATH( path );
 	}
 
-	int fchmod( map(int fd), mode_t mode );
+	int fchmod( map(int fd), MODE_T mode );
 	int setreuid( int ruid, int euid );
 	int setregid( int rgid, int egid );
 	int truncate( const char *path, off_t length ) {
@@ -404,7 +419,7 @@ int rename( const char *from, const char *to ) {
 	}
 	int ftruncate( map(int fd), off_t length );
 	int setgid( gid_t gid );
-	int mkdir( const char *path, mode_t mode ) {
+	int mkdir( const char *path, MODE_T mode ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
@@ -435,7 +450,7 @@ int rename( const char *from, const char *to ) {
 		alloc( buf, STATFS_SIZE );
 	}
 	int getdomainname( char *name, int namelen ) {
-		out xdr_string( &name, namelen, namelen );
+		out xdr_string( &name, namelen );
 		alloc( name, namelen );
 	}
 	int lockf( map(int fd), int request, off_t size );
@@ -527,9 +542,11 @@ not_supported {
 	int adjtime( struct timeval *delta, struct timeval *old_delta );
 	int sethostid( int host_id );
 	int async_daemon();
+#if !defined(SUNOS41)
 	int getfh( map(int fd), fhandle_t *fhp, int exp_fd );
-	int setdomainname( char *name, int namelen );
 	int exportfs( int access, int *record, struct exportfsdata *exdata );
+#endif
+	int setdomainname( char *name, int namelen );
 	int swapon( char *path, int flags, int lo_water, int hi_water );
 }
 
@@ -542,7 +559,8 @@ not_supported {
 	int exec_with_loader( int flags, const char *loader, const char *file,
 					  char * const argv[], char * const envp[] );
 	pid_t wait4( pid_t pid, int *status, int options, struct rusage *ru );
-	int ptrace( long req, long int process, ulong_t *address, ulong_t data );
+	int ptrace( long req, long int process, unsigned long *address,
+						unsigned long data );
 	int setpgid( pid_t process_id, pid_t gid );
 	int pipe( int fd[] ) : extract;
 }
@@ -581,7 +599,9 @@ not_supported {
 not_supported {
 	void profil( short *buf, unsigned int buf_size, unsigned int offset,
 				 unsigned int scale );
+#if 0	/* moved to switches.special.c */
 	int ioctl( map(int fd), unsigned long request, char *argp );
+#endif
 	int quotactl( char *path, int cmd, int id, char *addr );
 	int getsysinfo( unsigned long op, char * buf, unsigned long nbytes,
 					int *start, char *arg );
