@@ -24,21 +24,25 @@ AFS_Info::AFS_Info()
 	if( tmp[0] == 't' || tmp[0] == 'T' ) {
 		has_afs = TRUE;
 	} else {
+		free( tmp );	/* BUG FIXED : Ashish */
 		has_afs = FALSE;
 		return;
 	}
+	free( tmp );	/* BUG FIXED : Ashish */
 
 		// get pathname for the "fs" program
 	if( (tmp=param("FS_PATHNAME")) == NULL ) {
 		EXCEPT( "FS_PATHNAME not defined" );
 	}
 	strcpy( fs_pathname, tmp );
+	free( tmp );	 /* BUG FIXED : Ashish */
 
 		// get pathname for the "vos" program
 	if( (tmp=param("VOS_PATHNAME")) == NULL ) {
 		EXCEPT( "VOS_PATHNAME not defined" );
 	}
 	strcpy( vos_pathname, tmp );
+	free( tmp );	/* BUG FIXED : Ashish */
 
 	my_cell_name = 0;
 }

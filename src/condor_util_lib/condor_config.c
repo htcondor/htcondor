@@ -83,6 +83,7 @@ void config( char* a_out_name, CONTEXT* context )
 	char			hostname[1024];
 	int				scm;
 	char			*arch, *op_sys;
+	char		*temp = NULL;
 
 	/*
 	** N.B. if we are using the yellow pages, system calls which are
@@ -155,22 +156,29 @@ void config( char* a_out_name, CONTEXT* context )
 	/* If ARCH is not defined in config file, then try to get value
 	   using uname().  Note that the config file parameter overrides
 	   the uname() value.  -Jim B. */
-	if( (param("ARCH") == NULL) && ((arch = get_arch()) != NULL) ) {
+	if( ((temp = param("ARCH")) == NULL) && ((arch = get_arch()) != NULL) ) {
 		insert( "ARCH", arch, ConfigTab, TABLESIZE );
 		if( context ) {
 			insert_context( "Arch", arch, context );
 		}
 	}
 
+	/* BUG FIXED: Ashish*/
+	free(temp); 
+
 	/* If OPSYS is not defined in config file, then try to get value
 	   using uname().  Note that the config file parameter overrides
 	   the uname() value.  -Jim B. */
-	if( (param("OPSYS") == NULL) && ((op_sys = get_op_sys()) != NULL) ) {
+	if( ((temp=param("OPSYS")) == NULL) && 
+		((op_sys = get_op_sys()) != NULL) ) {
 		insert( "OPSYS", op_sys, ConfigTab, TABLESIZE );
 		if( context ) {
 			insert_context( "OpSys", op_sys, context );
 		}
 	}
+	/* BUG FIXED: Ashish*/
+	free(temp); 
+
 }
 
 int config_from_server( dir, a_out_name, context )
@@ -362,11 +370,17 @@ void Config(const char* MyName)
    		if(!config_location)
    		{
    			config_location = pwd->pw_dir;
+			/* BUG FIXED: Ashish */
+			free (config_location); 
    		}
 		if(config_from_server(config_location, MyName, NULL) < 0)
-	    {
+	    	{
 			config(MyName, NULL);
+			/* BUG FIXED: Ashish */
+			free (config_location); 
 		}
 	}
+	/* BUG FIXED: Ashish */
+	free(pwd); 
 }	
 
