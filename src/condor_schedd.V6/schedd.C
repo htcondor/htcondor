@@ -1231,6 +1231,36 @@ Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 
 
 bool
+Scheduler::WriteReleaseToUserLog( PROC_ID job_id )
+{
+	UserLog* ULog = this->InitializeUserLog( job_id );
+	if( ! ULog ) {
+			// User didn't want log
+		return true;
+	}
+	JobReleasedEvent event;
+
+	char* reason = NULL;
+	if( GetAttributeStringNew(job_id.cluster, job_id.proc,
+							  ATTR_RELEASE_REASON, &reason) >= 0 ) {
+		event.setReason( reason );
+	}
+		// GetAttributeStringNew always allocates memory, so we free
+		// regardless of the return value.
+	free( reason );
+
+	int status = ULog->writeEvent(&event);
+	delete ULog;
+
+	if (!status) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RELEASED event\n" );
+		return false;
+	}
+	return true;
+}
+
+
+bool
 Scheduler::WriteExecuteToUserLog( PROC_ID job_id, const char* sinful )
 {
 	UserLog* ULog = this->InitializeUserLog( job_id );
