@@ -803,29 +803,45 @@ param( const char *name )
 /*
 ** Return the integer value associated with the named paramter.
 ** If the value is not defined or not a valid integer, then
-** return the default_value argument.
+** return the default_value argument.  The min_value and max_value
+** arguments are optional and default to MININT and MAXINT.
 */
 
 int
-param_integer( const char *name, int default_value )
+param_integer( const char *name, int default_value,
+			   int min_value, int max_value )
 {
 	int result;
 	int fields;
 	char *string;
 
+	ASSERT( name );
 	string = param( name );
 	if( ! string ) {
+		dprintf( D_FULLDEBUG, "%s is undefined, using default value of %d\n",
+				 name, default_value );
 		return default_value;
 	}
 
 	fields = sscanf( string, "%d", &result );
-	free( string );
-	
-	if( fields==1 ) {
-		return result;
-	}
 
-	return default_value;
+	if( fields != 1 ) {
+		dprintf( D_FULLDEBUG, "WARNING: %s not an integer (\"%s\"), using "
+				 "default value of %d\n", name, string, default_value );
+		result = default_value;
+	}
+	else if( result < min_value ) {
+		dprintf( D_FULLDEBUG, "WARNING: %s too low (%d), using minimum "
+				 "value of %d\n", name, result, min_value );
+		result = min_value;
+	}
+	else if( result > max_value ) {
+		dprintf( D_FULLDEBUG, "WARNING: %s too high (%d), using maximum "
+				 "value of %d\n", name, result, max_value );
+		result = max_value;
+	}
+	free( string );
+	return result;
 }
 
 /*
@@ -842,8 +858,11 @@ param_boolean( const char *name, const bool default_value )
 	bool result;
 	char *string;
 
+	ASSERT( name );
 	string = param( name );
 	if( ! string ) {
+		dprintf( D_FULLDEBUG, "%s is undefined, using default value of %s\n",
+				 name, default_value ? "True" : "False" );
 		return default_value;
 	}
 
@@ -859,6 +878,9 @@ param_boolean( const char *name, const bool default_value )
 			result = false;
 			break;
 		default:
+		    dprintf( D_FULLDEBUG, "WARNING: %s not a boolean (\"%s\"), using "
+					 "default value of %s\n", name, string,
+					 default_value ? "True" : "False" );
 			result = default_value;
 			break;
 	}
