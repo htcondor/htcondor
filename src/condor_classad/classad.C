@@ -491,6 +491,8 @@ int ClassAd::fPrint(FILE* f)
 	return AttrList::fPrint(f);
 }
 
+// shipping functions for ClassAd -- added by Lei Cao
+
 int ClassAd::put(Stream& s)
 {
     AttrListElem*   elem;
@@ -527,6 +529,7 @@ int ClassAd::put(Stream& s)
 
 int ClassAd::get(Stream& s)
 {
+    AttrListElem*   elem;
     ExprTree*       tree;
     char*           name;
     char*           line;
@@ -554,15 +557,15 @@ int ClassAd::get(Stream& s)
         
         if(!Parse(line, tree)) {
             if(tree->MyType() == LX_ERROR) {
-                cerr << "Parse error in the incomming stream -- quitting !" 
-                     << endl;
+                cerr << "Parse error in the incomming stream -- quitting !"
+					 << endl;
                 delete [] line;
                 exit(1);
             }
         }
         else {
             cerr << "Parse error in the incomming stream -- quitting !" << endl;
-    delete [] line;
+			delete [] line;
             exit(1);
         }
         
@@ -598,4 +601,3 @@ int ClassAd::code(Stream& s)
     else
         return get(s);
 }
-

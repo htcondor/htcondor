@@ -30,10 +30,10 @@ SYSPARAM = sysparam_linux
 
 
 SRC = ast.C astbase.C buildtable.C parser.C scanner.C registration.C \
-	  attrlist.C classad.C classifiedjobs.C
+	  attrlist.C classad.C classifiedjobs.C classad_util.C
 
 OBJ = ast.o astbase.o buildtable.o parser.o scanner.o registration.o \
-	  attrlist.o classad.o classifiedjobs.o
+	  attrlist.o classad.o classifiedjobs.o classad_util.o
 
 all_target(expr_lib.a)
 

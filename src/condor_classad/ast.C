@@ -234,21 +234,6 @@ int Float::operator <=(ExprTree& tree)
 // evaluation. 
 //----------
 
-int	ExprTree::EvalTree(AttrListList* classads, EvalResult* val)
-{
-	return FALSE;
-}
-
-int ExprTree::EvalTree(AttrList* classad, EvalResult* val)
-{
-	return FALSE;
-}
-
-int ExprTree::EvalTree(AttrList* classad1, AttrList* classad2, EvalResult* val)
-{
-	return FALSE;
-}
-
 int Variable::EvalTree(AttrListList* classads, EvalResult* val)
 {
     ExprTree* tmp = NULL;

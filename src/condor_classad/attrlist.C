@@ -5,12 +5,13 @@
 //
 //******************************************************************************
 
-# include <iostream.h>
 # include <std.h>
 # include <ctype.h>
 # include <assert.h>
 # include <string.h>
 # include <sys/time.h>
+# include <iostream.h>
+# include <iomanip.h>
 
 # include "except.h"
 # include "debug.h"
@@ -29,6 +30,7 @@ extern	"C"	void	dprintf(int, char* fmt, ...);
 ////////////////////////////////////////////////////////////////////////////////
 AttrListElem::AttrListElem(ExprTree* expr)
 {
+    expr->Copy();
     tree = expr;
     dirty = FALSE;
     name = ((Variable*)expr->LArg())->Name();
@@ -549,7 +551,7 @@ char *Print_elem(ELEM *elem, char *str)
   return tmpChar;
 }
 
-AttrList::AttrList(const CONTEXT* context) : AttrListAbstract(ATTRLISTENTITY)
+AttrList::AttrList(CONTEXT* context) : AttrListAbstract(ATTRLISTENTITY)
 {
 	STACK		stack;
 	ELEM*		elem, *lElem, *rElem;
@@ -1484,6 +1486,8 @@ ExprTree* AttrListList::BuildAgg(char* name, LexemeType op)
     return NULL;
 }
 
+// shipping functions for AttrList -- added by Lei Cao
+
 int AttrList::put(Stream& s)
 {
     AttrListElem*   elem;
@@ -1515,8 +1519,11 @@ int AttrList::put(Stream& s)
 
 int AttrList::get(Stream& s)
 {
+    AttrListElem*   elem;
     ExprTree*       tree;
+    char*           name;
     char*           line;
+    int             status;
     int             numExprs;
 
     exprList       = NULL;
@@ -1539,15 +1546,13 @@ int AttrList::get(Stream& s)
         
         if(!Parse(line, tree)) {
             if(tree->MyType() == LX_ERROR) {
-                cerr << "Parse error in the incomming stream -- quitting !" 
-                     << endl;
+                cerr << "Parse error in the incomming stream -- quitting !" << endl;
                 delete [] line;
                 exit(1);
             }
         }
         else {
-            cerr << "Parse error in the incomming stream -- quitting !" << endl;
-            delete [] line;
+            cerr << "Parse error in the incomming stream -- quitting !" << endl;            delete [] line;
             exit(1);
         }
         
@@ -1567,4 +1572,3 @@ int AttrList::code(Stream& s)
     else
         return get(s);
 }
-
