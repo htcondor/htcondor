@@ -228,14 +228,13 @@ sub gather_info() {
 			. "Rerun grid-proxy-init." );
 	}
 
-		##also, ensure GLOBUS_INSTALL_PATH and HOME are set in ENV
+		##also, ensure GLOBUS_LOCATION and HOME are set in ENV
 	if ( !defined( $ENV{'HOME'} ) ) {
 		return( "$NAME: $HOME not in your ENV" );
 	}
-	if ( ! ( defined( $ENV{'GLOBUS_INSTALL_PATH'} )
-			|| defined( $ENV{'GLOBUS_DEPLOY_PATH'} ) ) )
+	if ( !defined( $ENV{'GLOBUS_LOCATION'} ) )
 	{
-		return( "$NAME: either GLOBUS_INSTALL_PATH or GLOBUS_DEPLOY_PATH "
+		return( "$NAME: GLOBUS_LOCATION "
 			. "must be defined in your ENV" );
 	}
 
@@ -247,7 +246,7 @@ sub usage() {
 	print STDERR "Usage: $NAME [options] [<globus contact>]\n";
 	print STDERR "\tWhere <globus contact> is of form:\n";
 	print STDERR "\t<hostname> | <hostname>/jobmanager-<scheduler> | <full contact string>\n";
-				
+
 print STDERR "	Valid options:\n"
 . "   --basedir <name>		   Use <name> as remote base directory\n"
 . "                            [default: $(HOME)/Condor_glidein]\n"
@@ -437,7 +436,7 @@ sub host_info()
 	#things: which jobmanager/queue will run jobs immediately (for
 	#setup), and the architecture of the jobmanager the user wants to
 	#run on (not necessarily the same as the machine we're talking to).
-	open( QUERY, "$G_SEARCH -h $GLOBUSHOST -p 2135 -b 'o=Grid' -R '|(objectclass=GlobusQueue)(objectclass=GlobusServiceJobManager)' dispatchtype cputype manufacturer osname osversion|" );
+	open( QUERY, "$G_SEARCH -x -h $GLOBUSHOST -p 2135 '(|(objectclass=MdsServiceGram)(objectclass=MdsGramJobQueue))' Mds-Software-deployment Mds-Gram-Job-Queue-dispatchtype Mds-Computer-isa Mds-Computer-manufacturer Mds-Os-name Mds-Os-release|" );
 	@QUERY = <QUERY>;
 	if ( !close( QUERY ) ) {
 	    print STDERR "Error querying GRIS on $GLOBUSHOST\n";
@@ -445,16 +444,16 @@ sub host_info()
 	}
 
 	#Search the query results for an "Immediate" jobmanager/queue
-	@SEARCH1 = grep( /^queue=/, @QUERY );
-	@SEARCH2 = grep( /^dispatchtype=/, @QUERY );
+	@SEARCH1 = grep( /^dn: Mds-Job-Queue-name=/, @QUERY );
+	@SEARCH2 = grep( /^Mds-Gram-Job-Queue-dispatchtype:/, @QUERY );
 	my $queue = "";
 	my $service = "";
 	for ( $i = 0; $i <= $#SEARCH1; $i++ ) {
 		if ( grep( /Immediate/, $SEARCH2[$i] ) > 0 ) {
 			chomp( $queue = $SEARCH1[$i] );
-			$queue =~ s/^.*queue=([^,]*),.*$/\1/;
+			$queue =~ s/^dn: Mds-Job-Queue-name=([^,]*),.*$/\1/;
 			chomp( $service = $SEARCH1[$i] );
-			$service =~ s/^.*service=([^,]*),.*$/\1/;
+			$service =~ s/^.*Mds-Software-deployment=([^,]*),.*$/\1/;
 			last;
 		}
 	}
@@ -483,26 +482,26 @@ sub host_info()
 	} else {
 		$jobmanager = "jobmanager";
 	}
-	@SEARCH1 = grep( /^service=/, @QUERY );
-	@SEARCH2 = grep( /^cputype=/, @QUERY );
-	@SEARCH3 = grep( /^manufacturer=/, @QUERY );
-	@SEARCH4 = grep( /^osname=/, @QUERY );
-	@SEARCH5 = grep( /^osversion=/, @QUERY );
+	@SEARCH1 = grep( /^Mds-Software-deployment:/, @QUERY );
+	@SEARCH2 = grep( /^Mds-Computer-isa:/, @QUERY );
+	@SEARCH3 = grep( /^Mds-Computer-manufacturer:/, @QUERY );
+	@SEARCH4 = grep( /^Mds-Os-name:/, @QUERY );
+	@SEARCH5 = grep( /^Mds-Os-release:/, @QUERY );
 	my $cputype = "";
 	my $manufacturer = "";
 	my $osname = "";
 	my $osversion = "";
 	for ( $i = 0; $i <= $#SEARCH1; $i++ ) {
-		if ( grep( /$jobmanager,/, $SEARCH1[$i] ) > 0 ) {
+		if ( grep( /$jobmanager/, $SEARCH1[$i] ) > 0 ) {
 			chomp( $cputype = $SEARCH2[$i] );
-			$cputype =~ s/cputype=//;
+			$cputype =~ s/Mds-Computer-isa: //;
 			chomp( $manufacturer = $SEARCH3[$i] );
-			$manufacturer =~ s/manufacturer=//;
+			$manufacturer =~ s/Mds-Computer-manufacturer: //;
 			chomp( $osname = $SEARCH4[$i] );
-			$osname =~ s/osname=//;
+			$osname =~ s/Mds-Os-name: //;
 			chomp( $osversion = $SEARCH5[$i] );
-			$osversion =~ s/osversion=//;
-			if ( $osname eq "linux" ) {
+			$osversion =~ s/Mds-Os-release: //;
+			if ( $osname =~ /[Ll]inux/ ) {
 				$osversion =~ s/(\d+\.\d+)\..*/\1/;
 			}
 			last;
@@ -603,7 +602,7 @@ sub do_remote_setup() {
 
 EOF
 	close( REM_SETUP );
-	$SYSTEM = "$G_RUN -s -r '$CONTACT_SETUP' '&(executable=\$(GLOBUS_TOOLS_PATH)/bin/globus-sh-exec)(arguments=\$(GLOBUSRUN_GASS_URL)$REM_SETUP $basedir $archdir $arch $localdir \$(GLOBUS_TOOLS_PATH)/bin/globus-url-copy \$(GLOBUSRUN_GASS_URL)$remotedir)(queue=$CONTACT_SETUP_QUEUE)'";
+	$SYSTEM = "$G_RUN -s -r '$CONTACT_SETUP' '&(executable=\$(GLOBUS_LOCATION)/bin/globus-sh-exec)(arguments=\$(GLOBUSRUN_GASS_URL)$REM_SETUP $basedir $archdir $arch $localdir \$(GLOBUS_LOCATION)/bin/globus-url-copy \$(GLOBUSRUN_GASS_URL)$remotedir)(queue=$CONTACT_SETUP_QUEUE)'";
 
 	$err = system( $SYSTEM );
 
