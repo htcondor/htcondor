@@ -168,7 +168,6 @@ int Read_config(char* config_file, ClassAd* classAd,
 		if( op == ':' ) {
 			if( classAd != NULL ) {
 				char *evalue;
-				char *line;
 
 				if( expand_flag == EXPAND_IMMEDIATE ) {
 					evalue = strdup( value );
@@ -180,21 +179,11 @@ int Read_config(char* config_file, ClassAd* classAd,
 					}
 				}
 
-				line = (char*)MALLOC( (unsigned)(strlen(name) + strlen(evalue) + 4) );
-
-				if( line == NULL ) {
-					EXCEPT("Out of memory" );
-				}
-
-				(void)sprintf(line, "%s = %s", name, evalue);
-				FREE( evalue );
-
-				if(!(classAd->Insert(line))) {
+				if( !( classAd->Insert( name, evalue ) ) ) {
 				  EXCEPT("Expression syntax error in <%s> line %d",
 					 config_file, ConfigLineNo );
 				}
-
-				FREE( line );
+				FREE( evalue );
 			}
 			
 			/* insert expressions into the Configuration Table as well */
