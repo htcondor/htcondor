@@ -100,6 +100,7 @@ int		DisableFileChecks = 0;
 int	  ClusterId = -1;
 int	  ProcId = -1;
 int	  JobUniverse;
+char	  *JobLanguage;
 int		Remote=0;
 int		ClusterCreated = FALSE;
 int		ActiveQueueConnection = FALSE;
@@ -150,6 +151,7 @@ char	*Preferences	= "preferences";
 char	*Rank				= "rank";
 char	*ImageSize		= "image_size";
 char	*Universe		= "universe";
+char	*Language		= "language";
 char	*MachineCount	= "machine_count";
 char	*NotifyUser		= "notify_user";
 char	*ExitRequirements = "exit_requirements";
@@ -692,28 +694,40 @@ SetExecutable()
 		exit( 1 );
 	}
 
-	macro_value = condor_param( TransferExecutable ) ;
-	if ( macro_value ) {
-		if ( macro_value[0] == 'F' || macro_value[0] == 'f' ) {
-			sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_EXECUTABLE );
-			InsertJobExpr( buffer );
-			transfer_it = false;
-		}
-		free( macro_value );
-	}
+	if( JobLanguage ) {
 
-	// If we're not transfering the executable, leave a relative pathname
-	// unresolved. This is mainly important for the Globus universe.
-	if ( transfer_it ) {
-		full_ename = full_path( ename, false );
+		sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_EXECUTABLE );
+		InsertJobExpr(buffer);
+		transfer_it = false;
+
+		sprintf( buffer, "%s = \"$$(%sInterpreter)\"", ATTR_JOB_CMD,JobLanguage );
+		InsertJobExpr(buffer);
+
 	} else {
-		full_ename = ename;
+
+		macro_value = condor_param( TransferExecutable ) ;
+		if ( macro_value ) {
+			if ( macro_value[0] == 'F' || macro_value[0] == 'f' ) {
+				sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_EXECUTABLE );
+				InsertJobExpr( buffer );
+				transfer_it = false;
+			}
+			free( macro_value );
+		}
+
+		// If we're not transfering the executable, leave a relative pathname
+		// unresolved. This is mainly important for the Globus universe.
+		if ( transfer_it ) {
+			full_ename = full_path( ename, false );
+		} else {
+			full_ename = ename;
+		}
+
+		check_path_length(full_ename, Executable);
+
+		(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_CMD, full_ename);
+		InsertJobExpr (buffer);
 	}
-
-	check_path_length(full_ename, Executable);
-
-	(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_CMD, full_ename);
-	InsertJobExpr (buffer);
 
 		/* MPI REALLY doesn't like these! */
 	if ( JobUniverse != MPI && JobUniverse != PVM ) {
@@ -887,6 +901,24 @@ SetUniverse()
 
 	return;
 }
+
+void
+SetLanguage()
+{
+	JobLanguage = condor_param(Language);
+
+	if( JobLanguage ) {
+		if( JobUniverse!=VANILLA ) {
+			fprintf(stderr,"You can only use language=%s with universe=vanilla.\n",JobLanguage);
+			DoCleanup(0,0,NULL);
+			exit(1);
+		} else {
+			(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_LANGUAGE, JobLanguage );
+			InsertJobExpr(buffer);
+		}			
+	}
+}
+
 
 void
 SetMachineCount()
@@ -1093,6 +1125,16 @@ SetTransferFiles()
 
 	macro_value = condor_param( TransferInputFiles ) ;
 	TransferInputSize = 0;
+
+	if( JobLanguage ) {
+		strcpy(buffer,condor_param(Executable));
+		if(macro_value) {
+			strcat(buffer,",");
+			strcat(buffer,macro_value);
+		}
+		macro_value = buffer;
+	}
+
 	if( macro_value ) 
 	{
 		StringList files(macro_value,",");
@@ -1109,7 +1151,6 @@ SetTransferFiles()
 				ATTR_TRANSFER_INPUT_FILES, macro_value);
 			files_specified = true;
 		}
-		free(macro_value);
 	}
 
 
@@ -2416,6 +2457,7 @@ queue(int num)
 		if (NewExecutable) {
 			NewExecutable = false;
 			SetUniverse();
+			SetLanguage();
 			SetExecutable();
 		}
 		SetMachineCount();
@@ -2662,20 +2704,27 @@ check_requirements( char *orig )
 		}
 	}
 
-	if( !has_arch ) {
-		if( answer[0] ) {
-			(void)strcat( answer, " && (Arch == \"" );
-		} else {
-			(void)strcpy( answer, "(Arch == \"" );
+	if ( JobLanguage ) {
+		if(answer[0]) (void)strcat( answer, " && " );
+		(void)strcat( answer, "(" );
+		(void)strcat( answer, JobLanguage );
+		(void)strcat( answer, "Interpreter!=\"\")" );
+	} else {
+		if( !has_arch ) {
+			if( answer[0] ) {
+				(void)strcat( answer, " && (Arch == \"" );
+			} else {
+				(void)strcpy( answer, "(Arch == \"" );
+			}
+			(void)strcat( answer, Architecture );
+			(void)strcat( answer, "\")" );
 		}
-		(void)strcat( answer, Architecture );
-		(void)strcat( answer, "\")" );
-	}
 
-	if( !has_opsys ) {
-		(void)strcat( answer, " && (OpSys == \"" );
-		(void)strcat( answer, OperatingSystem );
-		(void)strcat( answer, "\")" );
+		if( !has_opsys ) {
+			(void)strcat( answer, " && (OpSys == \"" );
+			(void)strcat( answer, OperatingSystem );
+			(void)strcat( answer, "\")" );
+		}
 	}
 
 	if ( JobUniverse == STANDARD && !has_ckpt_arch ) {
