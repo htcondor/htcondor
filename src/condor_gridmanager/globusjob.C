@@ -2396,6 +2396,10 @@ bool GlobusJob::FailureIsRestartable( int error_code )
 		return false;
 	}
 	switch( error_code ) {
+		// Normally, 0 isn't a valid error_code, but it can be returned
+		// when a poll of the job by the jobmanager fails, which is not
+		// restartable.
+	case 0:
 	case GLOBUS_GRAM_PROTOCOL_ERROR_STAGING_EXECUTABLE:
 	case GLOBUS_GRAM_PROTOCOL_ERROR_COMMIT_TIMED_OUT:
 	case GLOBUS_GRAM_PROTOCOL_ERROR_USER_CANCELLED:
