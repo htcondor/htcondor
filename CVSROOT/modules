@@ -82,7 +82,7 @@ V5_SRC		-a \
 			src/condor_globalq \
 			src/condor_includes \
 			src/condor_kbdd \
-			src/condor_master \
+			src/condor_master.dhruba \
 			src/condor_negotiator \
 			src/condor_off \
 			src/condor_on \
