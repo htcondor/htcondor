@@ -216,7 +216,7 @@ processXDR_TCP_Command (void)
 	}
 
 	// set up alarm for getting the command
-	timerID = timer.NewTimer (NULL,ClientTimeout,(void *)&clientTimeoutHandler);
+	timerID=timer.NewTimer (NULL,ClientTimeout,(void *)&clientTimeoutHandler);
 
 	xdrs = xdr_Init (&ClientSocket, &xdr);
 
@@ -235,32 +235,41 @@ processXDR_TCP_Command (void)
 	// collecting further information
 	(void) timer.CancelTimer (timerID);
 
-	// TCP commands should not allow for classad updates.  In fact the collector
+	// TCP commands should not allow for classad updates. In fact the collector
 	// will not collect on TCP to discourage use of TCP for classad updates
-
 	// check for GIVE_STATUS command
 	if (command == GIVE_STATUS)
 	{
+		dprintf (D_ALWAYS, "Got GIVE_STATUS\n");
 		giveStatus(xdrs);
 	}
 	else
 	{
 		switch (command)
 		{
-       		case QUERY_STARTD_ADS:  
-				whichAds = STARTD_AD; 
-				break;
+		  case QUERY_STARTD_ADS:  
+			dprintf (D_ALWAYS, "Got QUERY_STARTD_ADS\n");
+			whichAds = STARTD_AD; 
+			break;
+			
+		  case QUERY_SCHEDD_ADS:  
+			dprintf (D_ALWAYS, "Got QUERY_SCHEDD_ADS\n");
+			whichAds = SCHEDD_AD; 
+			break;
+			
+		  case QUERY_MASTER_ADS:  
+			dprintf (D_ALWAYS, "Got QUERY_MASTER_ADS\n");
+			whichAds = MASTER_AD; 
+			break;
 
-            case QUERY_SCHEDD_ADS:  
-				whichAds = SCHEDD_AD; 
-				break;
-            case QUERY_MASTER_ADS:  
-				whichAds = MASTER_AD; 
-				break;
-
-			default:
-				dprintf(D_ALWAYS,"Unknown command %d\n", command);
-				whichAds = (AdTypes) -1;	
+		  case QUERY_CKPT_SRVR_ADS:
+			dprintf (D_ALWAYS, "Got QUERY_CKPT_SRVR_ADS\n");
+			whichAds = CKPT_SRVR_AD;	
+			break;
+		
+		  default:
+			dprintf(D_ALWAYS,"Unknown command %d\n", command);
+			whichAds = (AdTypes) -1;	
         }
 		
 		if (whichAds != (AdTypes) -1)
@@ -320,21 +329,29 @@ processCOMM_TCP_Command (void)
 
     switch (command)
     {
-        case QUERY_STARTD_ADS:
-            whichAds = STARTD_AD;
-            break;
-
-        case QUERY_SCHEDD_ADS:
-            whichAds = SCHEDD_AD;
-            break;
-
-        case QUERY_MASTER_ADS:
-            whichAds = MASTER_AD;
-            break;
-
-        default:
-            dprintf(D_ALWAYS,"Unknown command %d\n", command);
-            whichAds = (AdTypes) -1;
+	  case QUERY_STARTD_ADS:
+		dprintf (D_ALWAYS, "Got QUERY_STARTD_ADS\n");
+		whichAds = STARTD_AD;
+		break;
+		
+	  case QUERY_SCHEDD_ADS:
+		dprintf (D_ALWAYS, "Got QUERY_SCHEDD_ADS\n");
+		whichAds = SCHEDD_AD;
+		break;
+		
+	  case QUERY_MASTER_ADS:
+		dprintf (D_ALWAYS, "Got QUERY_MASTER_ADS\n");
+		whichAds = MASTER_AD;
+		break;
+		
+	  case QUERY_CKPT_SRVR_ADS:
+		dprintf (D_ALWAYS, "Got QUERY_CKPT_SRVR_ADS\n");
+		whichAds = CKPT_SRVR_AD;	
+		break;
+		
+	  default:
+		dprintf(D_ALWAYS,"Unknown command %d\n", command);
+		whichAds = (AdTypes) -1;
     }
    
     if (whichAds != (AdTypes) -1)
@@ -489,6 +506,7 @@ processXDR_query (AdTypes whichAds, ClassAd &query, XDR *xdrs)
 	// set up for hashtable scan
 	__query__ = &query;
 	__numAds__ = 0;
+	__xdrs__ = xdrs;
 	xdrs->x_op = XDR_ENCODE;
 	if (!collector.walkHashTable (whichAds, XDR_query_scanFunc))
 	{

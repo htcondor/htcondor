@@ -31,11 +31,11 @@ int engine_housekeepingHandler  (Service *);
 
 CollectorEngine::
 CollectorEngine (TimerManager *timerManager) : 
-    StartdAds       (GREATER_TABLE_SIZE, &hashFunction),
-	ScheddAds       (GREATER_TABLE_SIZE, &hashFunction),
-	MasterAds       (GREATER_TABLE_SIZE, &hashFunction),
-	ConfigServerAds (LESSER_TABLE_SIZE , &hashFunction),
-	GatewayAds      (LESSER_TABLE_SIZE , &hashFunction)
+    StartdAds     (GREATER_TABLE_SIZE, &hashFunction),
+	ScheddAds     (GREATER_TABLE_SIZE, &hashFunction),
+	MasterAds     (GREATER_TABLE_SIZE, &hashFunction),
+	CkptServerAds (LESSER_TABLE_SIZE , &hashFunction),
+	GatewayAds    (LESSER_TABLE_SIZE , &hashFunction)
 {
 	timeToClean = false;
 	clientTimeout = 20;
@@ -56,7 +56,7 @@ CollectorEngine::
 	killHashTable (StartdAds);
 	killHashTable (ScheddAds);
 	killHashTable (MasterAds);
-	killHashTable (ConfigServerAds);
+	killHashTable (CkptServerAds);
 	killHashTable (GatewayAds);
 }
 
@@ -129,6 +129,10 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 
 	  case MASTER_AD:
 		table = &MasterAds;
+		break;
+
+	  case CKPT_SRVR_AD:
+		table = &CkptServerAds;
 		break;
 
 	  default:
@@ -237,8 +241,8 @@ collect (int command, ClassAd *clientAd, sockaddr_in *from, int &insert)
 			break;
 		}
 		sprintf (hashString, "< %s , %s , %d >", hk.name, hk.ip_addr, hk.port);
-		retVal=updateClassAd (StartdAds, "StartdAd", clientAd, hk, hashString,
-							  insert);
+		retVal=updateClassAd (StartdAds, "StartdAd  ", clientAd, hk, 
+							  hashString, insert);
 		break;
 
 	  case UPDATE_SCHEDD_AD:
@@ -249,8 +253,8 @@ collect (int command, ClassAd *clientAd, sockaddr_in *from, int &insert)
 			break;
 		}
 		sprintf (hashString, "< %s , %s , %d >", hk.name, hk.ip_addr, hk.port);
-		retVal=updateClassAd (ScheddAds, "ScheddAd", clientAd, hk, hashString,
-							  insert);
+		retVal=updateClassAd (ScheddAds, "ScheddAd  ", clientAd, hk,
+							  hashString, insert);
 		break;
 
 	  case UPDATE_MASTER_AD:
@@ -261,13 +265,26 @@ collect (int command, ClassAd *clientAd, sockaddr_in *from, int &insert)
 			break;
 		}
 		sprintf (hashString, "< %s >", hk.name);
-		retVal=updateClassAd (MasterAds, "MasterAd", clientAd, hk, hashString,
-							  insert);
+		retVal=updateClassAd (MasterAds, "MasterAd  ", clientAd, hk, 
+							  hashString, insert);
+		break;
+
+	  case UPDATE_CKPT_SRVR_AD:
+		if (!makeCkptSrvrAdHashKey (hk, clientAd, from))
+		{
+			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			retVal = 0;
+			break;
+		}
+		sprintf (hashString, "< %s >", hk.name);
+		retVal=updateClassAd (CkptServerAds, "CkptSrvrAd", clientAd, hk, 
+							  hashString, insert);
 		break;
 
 	  case QUERY_STARTD_ADS:
 	  case QUERY_SCHEDD_ADS:
 	  case QUERY_MASTER_ADS:
+	  case QUERY_CKPT_SRVR_ADS:
 		// these are not implemented in the engine, but we allow another
 		// daemon to detect that these commands have been given
 	    insert = -2;
@@ -306,6 +323,11 @@ lookup (AdTypes adType, HashKey &hk)
 				return 0;
 			break;
 
+		  case CKPT_SRVR_AD:
+			if (CkptServerAds.lookup (hk, val) == -1)
+				return 0;
+			break;
+
 		default:
 			val = 0;
 	}
@@ -327,6 +349,9 @@ remove (AdTypes adType, HashKey &hk)
 
 		case MASTER_AD:
 			return !MasterAds.remove (hk);
+
+		  case CKPT_SRVR_AD:
+			return !CkptServerAds.remove (hk);
 
 		default:
 			return 0;
@@ -412,6 +437,9 @@ housekeeper (void)
 
 	dprintf (D_ALWAYS, "\tCleaning MasterAds ...\n");
 	cleanHashTable (MasterAds, now, makeMasterAdHashKey);
+
+	dprintf (D_ALWAYS, "\tCleaning CkptServerAds ...\n");
+	cleanHashTable (CkptServerAds, now, makeCkptSrvrAdHashKey);
 
 	// add other ad types here ...
 	dprintf (D_ALWAYS, "Housekeeper:  Done cleaning\n");
@@ -525,12 +553,12 @@ backwardCompatibility (int &command, ClassAd *&clientAd, XDR *xdrs)
 	  case UPDATE_SCHEDD_AD:
 	  case UPDATE_MASTER_AD:
 	  case UPDATE_GATEWAY_AD:
-	  case UPDATE_CONFIG_SRVR_AD:
+	  case UPDATE_CKPT_SRVR_AD:
 	  case QUERY_STARTD_ADS:
 	  case QUERY_SCHEDD_ADS:
 	  case QUERY_MASTER_ADS:
 	  case QUERY_GATEWAY_ADS:
-	  case QUERY_CONFIG_SRVR_ADS:
+	  case QUERY_CKPT_SRVR_ADS:
 		clientAd = new ClassAd ();
 		if (!clientAd->get (xdrs))
 		{

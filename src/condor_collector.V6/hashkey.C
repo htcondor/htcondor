@@ -16,7 +16,10 @@ extern void parseIpPort (char *, char *, int &);
 
 void HashKey::sprint (char *s)
 {
-	sprintf (s, "< %s , %s , %d >", name, ip_addr, port);
+	if (port != 0)
+		sprintf (s, "< %s , %s , %d >", name, ip_addr, port);
+	else
+		sprintf (s, "< %s >", name);
 }
 
 bool operator== (HashKey &lhs, HashKey &rhs)
@@ -87,7 +90,6 @@ makeStartdAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	}
 	
 	// get the IP and port of the startd 
-	// *** May have to extract this from packet ***
 	tree = ad->Lookup ("STARTD_IP_ADDR");
 	if (tree)
 	{
@@ -136,7 +138,6 @@ makeScheddAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	}
 	
 	// get the IP and port of the startd 
-	// *** May have to extract this from packet ***
 	tree = ad->Lookup ("SCHEDD_IP_ADDR");
 	if (tree)
 	{
@@ -176,6 +177,21 @@ makeMasterAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 
 	// ip_addr and port are not necessary
 	hk.ip_addr [0] = '\0';
+	hk.port = 0;
+
+	return true;
+}
+
+bool
+makeCkptSrvrAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
+{
+	if (!ad->LookupString ("Machine", hk.name))
+	{
+		dprintf (D_ALWAYS, "Error:  No 'Machine' attribute\n");
+		return false;
+	}
+
+	hk.ip_addr[0] = '\0';
 	hk.port = 0;
 
 	return true;

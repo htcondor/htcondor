@@ -34,6 +34,7 @@ typedef HashTable <HashKey, ClassAd *> CollectorHashTable;
 bool makeStartdAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
 bool makeScheddAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
 bool makeMasterAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
+bool makeCkptSrvrAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
 
 #endif __COLLHASH_H__
 

@@ -47,7 +47,7 @@ class CollectorEngine : public Service
 
 	// the lesser tables
 	const int LESSER_TABLE_SIZE = 32;
-	CollectorHashTable ConfigServerAds;
+	CollectorHashTable CkptServerAds;
 	CollectorHashTable GatewayAds;
 
 	// relevent variables from the config file

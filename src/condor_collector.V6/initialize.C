@@ -98,7 +98,7 @@ initializeUDPSocket (const char *service, int port)
 	}
 	else
 	{
-		sin.sin_port = port;
+		sin.sin_port = htons (port);
 	}
 
 	sock = socket (AF_INET, SOCK_DGRAM, 0);
