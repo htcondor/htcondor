@@ -54,6 +54,15 @@ function to track mouse activity that does not have a tendancy to fail.
   Now, Condor correctly transfers back any core files created by
   faulty user jobs in any job universe.
 
+\item In some circumstances, \Condor{history} would fail to read
+  information about some jobs, and would report errors. In particular,
+  when jobs had large environments, it would fail. This has been
+  corrected.
+
+\item The error message in the SchedLog that indicates that swap space
+  has been depleted has been rephrased so it appears to be
+  significant. 
+
 \end{itemize}
 
 \noindent Known Bugs:
