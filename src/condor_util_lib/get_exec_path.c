@@ -99,11 +99,51 @@ solaris_getExecPath()
 
 
 #if defined( WIN32 )
+
+#include <psapi.h>
+
 char*
 win32_getExecPath()
 {
-		/* There's a way to do this.  For now, just return NULL */
-	return NULL;
+	char buf[MAX_PATH];
+	HANDLE hProc;
+	DWORD result;
+	HMODULE hMod;
+	DWORD cbNeeded;
+
+	hProc = GetCurrentProcess();
+
+	if ( ! EnumProcessModules( hProc, &hMod, sizeof(hMod), 
+		&cbNeeded) )
+	{
+				
+		dprintf( D_ALWAYS,"getExecPath: EnumProcessModules()  failed "
+			"(err=%li)\n", GetLastError() );
+		
+		CloseHandle(hProc);
+		return NULL;
+	}
+		
+	result = GetModuleFileNameEx(
+		hProc,     /* process handle */
+		hMod,      /* handle to module we want to know about */
+		buf,       /* buffer to receive name */
+		MAX_PATH   /* size of buffer needed */
+		);
+	
+	CloseHandle(hProc);
+	
+	if ( result == 0 ) {
+		
+		dprintf( D_ALWAYS,"getExecPath: "
+			"unable to find full path from GetModuleFileNameEx() "
+			"(err=%li)\n", GetLastError() );
+		
+		return NULL;
+		
+	} else {
+		return strdup(buf);
+	}
 }
 #endif /* defined(WIN32) */
 
