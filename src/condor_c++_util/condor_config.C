@@ -190,12 +190,22 @@ real_config(ClassAd *classAd, char* host, int wantsQuiet)
 			exit( 1 );
 		}
 		fprintf(stderr,"\nNeither the environment variable CONDOR_CONFIG,\n" );
+#ifndef WIN32
 		fprintf(stderr,"/etc/condor/, nor ~condor/ contain a condor_config "
 				"file.\n" );
+#else
+		fprintf(stderr,"nor the registry contains a path to a condor_config "
+				"file.\n" );
+#endif
 		fprintf( stderr,"Either set CONDOR_CONFIG to point to a valid config "
 				"file,\n" );
-		fprintf( stderr,"or put a \"condor_config\" file in %s or %s.\n", 
-				 "/etc/condor", "~condor/" );
+		fprintf( stderr,"or put a \"condor_config\" file in %s.\n", 
+#ifndef WIN32
+				 "/etc/condor or ~condor/" 
+#else
+				 "the registry at:\n HKEY_LOCAL_MACHINE\\Software\\Condor\\CONDOR_CONFIG"
+#endif
+				 );
 		fprintf( stderr, "Exiting.\n\n" );
 		exit( 1 );
 	}
@@ -401,6 +411,9 @@ find_file(const char *env_name, const char *file_name)
 			close( fd );
 		}
 	}
+
+#ifndef WIN32
+	// Only look in /etc/condor and in ~condor on Unix.
 	if( ! config_file ) {
 			// try /etc/condor/file_name
 		config_file = (char *)malloc( (strlen(file_name) + 14) * sizeof(char) ); 
@@ -429,6 +442,41 @@ find_file(const char *env_name, const char *file_name)
 			close( fd );
 		}
 	}
+#else	/* of ifndef WIN32 */
+	// Only look in the registry on WinNT.
+	HKEY handle;
+
+	if ( RegOpenKeyEx(HKEY_LOCAL_MACHINE,"Software\\Condor",
+		0, KEY_READ, &handle) == ERROR_SUCCESS ) {
+		// We have found a registry key for Condor, which
+		// means this user has a pulse and has actually run the
+		// installation program before trying to run Condor.  
+		// This user deserves a tax credit.  
+
+		// So now that we found the key, read it.
+		char the_path[_POSIX_PATH_MAX];
+		DWORD valType;
+		DWORD valSize = _POSIX_PATH_MAX - 2;
+
+		the_path[0] = '\0';
+		if ( RegQueryValueEx(handle, "CONDOR_CONFIG", 0, 
+			&valType, (unsigned char *)the_path, &valSize) == ERROR_SUCCESS ) {
+
+			// confirm it is a string value with something there
+			if ( valType == REG_SZ && the_path[0] ) {
+				// got it!  whoohooo!
+				config_file = strdup(the_path);
+				if( (fd = open( config_file, O_RDONLY)) < 0 ) {
+					free( config_file );
+					config_file = NULL;
+				} else {
+					close( fd );
+				}
+			}
+		}
+	}
+#endif   /* of Win32 */
+
 	return config_file;
 }
 
