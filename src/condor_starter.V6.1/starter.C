@@ -40,6 +40,7 @@
 #include "condor_attributes.h"
 #include "condor_random_num.h"
 #include "io_proxy.h"
+#include "condor_version.h"
 #include "condor_ver_info.h"
 #include "../condor_sysapi/sysapi.h"
 #include "directory.h"
