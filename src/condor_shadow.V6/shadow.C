@@ -187,7 +187,7 @@ int ExitReason = JOB_EXITED;		/* Schedd counts on knowing exit reason */
 int JobExitStatus = 0;                 /* the job's exit status */
 int MaxDiscardedRunTime = 3600;
 
-extern "C" int ExceptCleanup();
+extern "C" int ExceptCleanup(int,int,char*);
 int Termlog;
 ReliSock	*sock_RSC1 = NULL, *RSC_ShadowInit(int rscsock, int errsock);
 ReliSock	*RSC_MyShadowInit(int rscsock, int errsock);;
