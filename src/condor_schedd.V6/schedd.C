@@ -1336,7 +1336,7 @@ static int
 ResponsibleForPeriodicExprs( ClassAd *jobad )
 {
 	int status=-1, univ=-1;
-	bool managed=false;
+	int managed=false;
 
 	jobad->LookupInteger(ATTR_JOB_STATUS,status);
 	jobad->LookupInteger(ATTR_JOB_UNIVERSE,univ);
