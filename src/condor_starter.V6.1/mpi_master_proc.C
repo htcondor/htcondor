@@ -205,7 +205,7 @@ MPIMasterProc::alterEnv()
 	env_str = envobject.getDelimitedString();
     dprintf ( D_FULLDEBUG, "New env: %s\n", env_str );
 
-	bool assigned = JobAd->Assign( ATTR_JOB_ENVIRONMENT,env_str );
+    bool assigned = JobAd->InsertAttr( ATTR_JOB_ENVIRONMENT,env_str );
 	if(env_str) {
 		delete[] env_str;
 	}
