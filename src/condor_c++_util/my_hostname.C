@@ -24,18 +24,19 @@
  
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "condor_config.h"
+#include "internet.h"
 #include "get_full_hostname.h"
-
-static char *_FileName_ = __FILE__;
+#include "my_hostname.h"
 
 static struct hostent *host_ptr = NULL;
 static char* hostname = NULL;
 static char* full_hostname = NULL;
 static unsigned int ip_addr;
+static struct in_addr sin_addr;
 static int hostnames_initialized = 0;
 static int ipaddr_initialized = 0;
 static void init_hostnames();
-static void init_ipaddr();
 
 extern "C" {
 
@@ -66,9 +67,19 @@ unsigned int
 my_ip_addr()
 {
 	if( ! ipaddr_initialized ) {
-		init_ipaddr();
+		init_ipaddr(0);
 	}
 	return ip_addr;
+}
+
+
+struct in_addr*
+my_sin_addr()
+{
+	if( ! ipaddr_initialized ) {
+		init_ipaddr(0);
+	}
+	return &sin_addr;
 }
 
 
@@ -81,7 +92,7 @@ init_full_hostname()
 		// we want it.  
 	if( ! host_ptr ) {
 		tmp = get_full_hostname( hostname, &host_ptr );
-		init_ipaddr();
+		init_ipaddr(0);
 	} else {
 		tmp = get_full_hostname( hostname );
 	}
@@ -98,28 +109,49 @@ init_full_hostname()
 	}
 }
 
-} /* extern "C" */
-
-
 void
-init_ipaddr()
+init_ipaddr( int config_done )
 {
+	char *network_interface;
+
     if( ! hostname ) {
 		init_hostnames();
 	}
 
-	if( ! host_ptr ) {
-			// Look up our official host information
-		if( (host_ptr = gethostbyname(hostname)) == NULL ) {
-			EXCEPT( "gethostbyname(%s) failed, errno = %d", hostname, errno );
+	if( config_done ) {
+		if( (network_interface = param("NETWORK_INTERFACE")) ) {
+			if( is_ipaddr((const char*)network_interface, &sin_addr) ) {
+					// We were given a valid IP address, which we now
+					// have in ip_addr.  Just make sure it's in host
+					// order now:
+				ip_addr = ntohl( sin_addr.s_addr );
+				ipaddr_initialized = TRUE;
+			} else {
+				dprintf( D_ALWAYS, 
+						 "init_ipaddr: Invalid network interface string: \"%s\"\n", 
+						 network_interface );
+				dprintf( D_ALWAYS, "init_ipaddr: Using default interface.\n" );
+			} 
+			free( network_interface );
 		}
 	}
 
-		// Grab our ip_addr
-	memcpy( &ip_addr, host_ptr->h_addr, (size_t)host_ptr->h_length );
-    ip_addr = ntohl( ip_addr );
-	ipaddr_initialized = TRUE;
+	if( ! ipaddr_initialized ) {
+		if( ! host_ptr ) {
+				// Look up our official host information
+			if( (host_ptr = gethostbyname(hostname)) == NULL ) {
+				EXCEPT( "gethostbyname(%s) failed, errno = %d", hostname, errno );
+			}
+		}
+			// Grab our ip_addr
+		memcpy( &ip_addr, host_ptr->h_addr, (size_t)host_ptr->h_length );
+		sin_addr.s_addr = ip_addr;
+		ip_addr = ntohl( ip_addr );
+		ipaddr_initialized = TRUE;
+	}
 }
+
+} /* extern "C" */
 
 #ifdef WIN32
 	// see below comment in init_hostname() to learn why we must
