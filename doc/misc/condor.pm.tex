@@ -1,0 +1,139 @@
+The Condor perl module facilitates automatic submitting and monitoring of
+condor jobs, along with automated administration of condor.  The most common
+use of the perl module is the monitoring of condor jobs.  The condor perl
+module uses the user log of a condor job for monitoring.
+
+The Condor perl module is made up of several subroutines.  Many subroutines 
+take other subroutines as arguments.  These subroutines are used as callbacks
+which are called when interesting events happen.
+
+\subsection{Subroutines}
+\begin{enumerate}
+	\item Submit(command\_file) \\
+	The submit subroutine takes a command file name as an argument and
+	submits it to condor.  The \Condor{submit} program should be in the
+	path of the user.  If the user wishes to monitor the job with condor
+	they must specify a log file in the command file.  The cluster
+	submitted is returned. For more information
+	see the \Condor{submit} man page.
+	
+	\item Vacate(machine) \\
+	Vacate the machine specified.  The machine may be specified
+	either by hostname, or by \Term{sinful string}.  For more information
+	see the \Condor{vacate} man page.
+
+	\item Reschedule(machine) \\
+	Reschedule the machine specified.  The machine may be specified either
+ 	by hostname, or by \Term{sinful string}.  For more information see
+	the \Condor{reschedule} man page.
+
+	\item RegisterEvicted(cluster, sub) \\
+	Register an eviction handler that will be called anytime a job from
+	the specified cluster is evicted.  The eviction handler will be
+	called with three arguments: cluster, proc, and ckpt.  The cluster
+	and proc are the cluster number and process number of the job that
+	was evicted.  The ckpt argument denotes whether the job was 
+	checkpointed when it was evicted.
+
+	\item RegisterNormalTerm( cluster, sub ) \\
+	Register a normal termination handler that is called when a job exits
+	normally.  The normal termination handler will be called with five
+	arguments: cluster, proc, return\_val, output and error.  The cluster
+	and proc are the cluster and process numbers of the exiting job, 
+	their return\_val is the exit code of the job, and the output and error
+	arguments are arrays containing the output and error produced by the
+	job, one line per element.
+
+	\item RegisterAbnormalTerm( cluster, sub ) \\
+	Register an abnormal termination handler.  Works similar to 
+	RegisterNormalTerm except that it is called when a job abnormally 
+	exits (segmentation fault, bus error, ...) and the return\_val
+	argument is replaced with two arguments: signal\_val and core.
+	Signal\_val indicates the signal that the job died with and
+	core indicates whether a core file was created and if so, what
+	the full path to the core file is.
+
+	\item RegisterExecute(cluster, sub) \\
+	Register an execution handler that is called whenever a job starts
+	running on a given host.  The handler is called with four arguments:
+	cluster, proc, ip, and port.  Cluster and proc are the cluster and
+	process numbers for the job, ip is the Internet address of the
+	machine running the job, and port is the command port of the 
+	\Condor{starter} supervising the job.
+
+	\item RegisterSubmit(cluster, sub) \\
+	Register a submit handler that is called whenever a job is submitted
+	with the given cluster.  The handler is called with cluster, proc,
+	ip, and port.  Cluster and proc are the cluster and
+	process numbers for the job, ip is the Internet address of the
+	machine running the job, and port is the command port of the 
+	\Condor{schedd} responsible for the job.
+
+	\item Monitor(cluster) \\
+	Begin monitoring this cluster.  This process starts a sub process
+	in order to monitor the child, so other actions may proceed in the
+	main loop of the perl script.  However, handlers cannot rely on
+	being able to communicate back to the main script by simply changing
+	variables latter on.
+	
+	\item Wait() \\
+	Wait until all monitors finish and exit.
+
+	\item DebugOn() \\
+	Turn debug messages on.  This may be useful if you don't understand
+	what your script is doing.	
+\end{enumerate}
+
+\subsection{An Example}
+The following is a simple example of using the condor perl module.
+\begin{verbatim}
+#!/usr/bin/perl
+use Condor;
+
+$CMD_FILE = 'mycmdfile.cmd';
+$checkpoints = 0;
+$evicts = 0;
+$vacates = 0;
+
+# A subroutine that will be used as the normal execution callback
+$normal = sub
+{
+    ($cluster, $proc, $return_val, @output, @error) = @_;
+    print "Job $cluster.$proc exited normally with status $return_val.\n";
+    print "Job was vacated $vacates times and evicted $evicts times\n";
+    print "Job checkpointed $checkpoints times\n";
+    exit(0);
+};	
+
+$evicted = sub
+{
+    ($cluster, $proc, $ckpt) = @_;
+    print "Job $cluster, $proc was evicted.\n";
+    $checkpoints += $ckpt;
+    $evicts++;
+    &Condor::Reschedule();	
+};
+
+$execute = sub
+{
+    ($cluster, $proc, $ip, $port) = @_;
+    print "Job running on $ip:$port, vacating...\n";
+    &Condor::Vacate("\"<$ip:$port>\"");
+    $vacates++;
+};
+
+$cluster = Condor::Submit($CMD_FILE);
+&Condor::RegisterNormalTerm($cluster, $normal);
+&Condor::RegisterEvicted($cluster, $evicted);
+&Condor::RegisterExecute($cluster, $execute);
+&Condor::Monitor($cluster);
+&Condor::Wait();
+\end{verbatim}
+
+This example program will submit the command file 'mycmdfile.cmd' and attempt
+to vacate any machine that the job runs on.  The eviction handler will
+then keep track of how many times the job has checkpointed.  The termination
+handler then prints out a summary of what has happened.
+
+    
+
