@@ -72,7 +72,7 @@ LIB = $(LIB_BASE)
 #endif
 
 /* the main condor library target */
-all_target(libclassad.a classad_functional_tester test_classads test_xml extra_tests)
+all_target(libclassad.a classad_functional_tester classad_unit_tester classad_version test_classads test_xml extra_tests)
 library_target(libclassad.a,$(OBJ))
 
 release:: all
@@ -89,8 +89,9 @@ template_inst( exp-inst.C, exp-inst.o )					/* experimental */
 DISTRIBUTION_DIR = classads_0.9.6-beta
 
 DIST_FILES = attrrefs.C attrrefs.h classad.C classad.h					\
-classad_functional_tester.C classad_functional_tester.h collection.C	\
-collection.h collectionBase.C collectionBase.h common.h classadErrno.h	\
+classad_functional_tester.C classad_functional_tester.h					\
+classad_unit_tester.C classad_version.C collection.C collection.h		\
+collectionBase.C collectionBase.h common.h classadErrno.h				\
 classadItor.h cxi.C debug.C debug.h exprList.C exprList.h exprTree.C	\
 exprTree.h extra_tests.C fnCall.C fnCall.h indexfile.h indexfile.C		\
 instantiations.C lexer.C lexer.h lexerSource.C lexerSource.h			\
@@ -138,6 +139,8 @@ LDFLAGS =  -Xlinker --export-dynamic -ldl
 c_plus_target (cxi, cxi.o, $(LIB))
 c_plus_target (test_classads, test_classads.o test_instantiations.o, $(LIB))
 c_plus_target (classad_functional_tester, classad_functional_tester.o test_instantiations.o, $(LIB))
+c_plus_target (classad_unit_tester, classad_unit_tester.o, $(LIB))
+c_plus_target (classad_version, classad_version.o, $(LIB))
 c_plus_target (test_xml, test_xml.o, $(LIB))
 c_plus_target (extra_tests, extra_tests.o, $(LIB))
 c_plus_target (sample, sample.o, $(LIB))
