@@ -284,8 +284,10 @@ check_core_files()
 	if ( want_set_error_mode ) {
 		::SetErrorMode( 
 			SEM_NOGPFAULTERRORBOX | SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX );
+		g_ExceptionHandler.TurnOn();
 	} else {
 		::SetErrorMode( 0 );
+		g_ExceptionHandler.TurnOff();
 	}
 #endif
 
@@ -824,10 +826,21 @@ int main( int argc, char** argv )
 	}
 #ifdef WIN32
 	{
+		// give our Win32 exception handler a filename for the core file
 		char pseudoCoreFileName[MAX_PATH];
 		sprintf(pseudoCoreFileName,"%s\\core.%s.WIN32",ptmp,
 			mySubSystem);
 		g_ExceptionHandler.SetLogFileName(pseudoCoreFileName);
+
+		// set the path where our Win32 exception handler can find
+		// debug symbols
+		char *binpath = param("BIN");
+		if ( binpath ) {
+			sprintf(pseudoCoreFileName,"_NT_SYMBOL_PATH=%s",
+				binpath);
+			putenv( strdup(pseudoCoreFileName) );
+			free(binpath);
+		}
 	}
 #endif
 	free(ptmp);
@@ -973,7 +986,6 @@ int main( int argc, char** argv )
 
 		// now register any DaemonCore "default" handlers
 
-#ifdef WANT_DC_PM
 		// register the command handler to take care of signals
 		daemonCore->Register_Command(DC_RAISESIGNAL,"DC_RAISESIGNAL",
 				(CommandHandlercpp)daemonCore->HandleSigCommand,
@@ -983,7 +995,12 @@ int main( int argc, char** argv )
 		daemonCore->Register_Command(DC_PROCESSEXIT,"DC_PROCESSEXIT",
 				(CommandHandlercpp)daemonCore->HandleProcessExitCommand,
 				"HandleProcessExitCommand()",daemonCore,IMMEDIATE_FAMILY);
-#endif
+
+		// this handler receives keepalive pings from our children, so
+		// we can detect if any of our kids are hung.
+		daemonCore->Register_Command(DC_CHILDALIVE,"DC_CHILDALIVE",
+			(CommandHandlercpp)&DaemonCore::HandleChildAliveCommand,
+			"HandleChildAliveCommand",daemonCore,IMMEDIATE_FAMILY);
 	}
 	
 		// Install DaemonCore signal handlers common to all daemons.
