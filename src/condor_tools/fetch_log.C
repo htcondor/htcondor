@@ -33,13 +33,22 @@
 void
 usage( char *cmd )
 {
-	fprintf(stderr,"Usage: %s [options] <machine-name> <log-name> <file-name>\n",cmd);
+	fprintf(stderr,"Usage: %s [options] <machine-name> <log-name>\n",cmd);
 	fprintf(stderr,"Where options are:\n");
 	fprintf(stderr,"    -help             Display options\n");
 	fprintf(stderr,"    -version          Display Condor version\n");
 	fprintf(stderr,"    -pool <hostname>  Use this central manager\n");
 	fprintf(stderr,"    -debug            Show extra debugging info\n");
-	fprintf(stderr,"\nExample: %s -debug coral STARTD\n\n",cmd);
+	fprintf(stderr,"To select a particular daemon, use:\n");
+	fprintf(stderr,"    -master\n");
+	fprintf(stderr,"    -schedd\n");
+	fprintf(stderr,"    -startd\n");
+	fprintf(stderr,"    -collector\n");
+	fprintf(stderr,"    -negotiator\n");
+	fprintf(stderr,"    -kbdd\n");
+	fprintf(stderr,"    -dagman\n"); 
+	fprintf(stderr,"    -view_collector\n");
+	fprintf(stderr,"\nExample: %s -debug coral STARTD log.file\n\n",cmd);
 }
 
 void
@@ -52,9 +61,10 @@ int main( int argc, char *argv[] )
 {
 	char *machine_name = 0;
 	char *log_name = 0;
-	char *file_name = 0;
 	char *pool=0;
 	int i;
+
+	daemon_t type = DT_MASTER;
 
 	config();
 
@@ -75,69 +85,66 @@ int main( int argc, char *argv[] )
 			exit(0);
 		} else if(!strcmp(argv[i],"-debug")) {
 			set_debug_flags("D_FULLDEBUG");
+		} else if(argv[i][0]=='-') {
+			type = stringToDaemonType(&argv[i][1]);
+			if(type==DT_NONE) {
+				usage(argv[0]);
+				exit(1);
+			}
 		} else if(argv[i][0]!='-') {
 			if(!machine_name) {
 				machine_name = argv[i];
 			} else if(!log_name) {
 				log_name = argv[i];
-			} else if(!file_name) {
-				file_name = argv[i];
 			} else {
 				fprintf(stderr,"Extra argument: %s\n\n",argv[i]);
 				usage(argv[0]);
 				exit(1);
 			}
 		} else {
-			fprintf(stderr,"Unknown argument: %s\n\n",argv[i]);
 			usage(argv[0]);
 			exit(1);
 		}
 	}
 
-	if( !machine_name || !log_name || !file_name ) {
-		fprintf(stderr,"You must give three arguments: a machine, log, and file name.\n");
+	if( !machine_name || !log_name ) {
 		usage(argv[0]);
 		exit(1);
 	}
 
-	Daemon *master;
+	Daemon *daemon;
 	ReliSock *sock;
 
-	if(pool) {
-		master = new Daemon( DT_MASTER, machine_name, pool );
-	} else {
-		master = new Daemon( DT_MASTER, machine_name, 0 );
-	}
+	daemon = new Daemon( type, machine_name, pool );
 		
-	dprintf(D_FULLDEBUG,"Locating master process on %s...\n",machine_name);
+	dprintf(D_FULLDEBUG,"Locating daemon process on %s...\n",machine_name);
 
-	if(!master->locate()) {
-		fprintf(stderr,"Couldn't locate master on %s: %s\n",machine_name,master->error());
+	if(!daemon->locate()) {
+		fprintf(stderr,"Couldn't locate daemon on %s: %s\n",machine_name,daemon->error());
 		exit(1);
 	}
 
-	dprintf(D_FULLDEBUG,"Master is %s <%s:%d>\n",master->hostname(),master->addr(),master->port());
+	dprintf(D_FULLDEBUG,"Daemon %s is %s\n",daemon->hostname(),daemon->addr());
 	
-	sock = master->reliSock();
+	sock = daemon->reliSock();
 
 	if(!sock) {
-		fprintf(stderr,"couldn't connect to master %s at <%s:%d>\n",master->hostname(),master->addr(),master->port());
+		fprintf(stderr,"couldn't connect to daemon %s at %s\n",daemon->hostname(),daemon->addr());
 		return 1;
 	}
 
 	sock->encode();
-	sock->put( FETCH_LOG );
+	sock->put( DC_FETCH_LOG );
 	sock->put( log_name );
 	sock->end_of_message();
 
 	sock->decode();
-	int result = sock->get_file(file_name,0);
+	int result = sock->get_file(1,0);
 	
 	if(result<=0) {
 		fprintf(stderr,"Unable to fetch log.\n");
-		fprintf(stderr,"There might not be a log file named '%s.'\n",log_name);
+		fprintf(stderr,"There might not be a log file named '%s'.\n",log_name);
 		fprintf(stderr,"Or, '%s' may not authorize you to view it.\n",machine_name);
-		fprintf(stderr,"Or, you might not have permission to write to '%s.'\n",file_name);
 		return 1;
 	} else {
 		return 0;

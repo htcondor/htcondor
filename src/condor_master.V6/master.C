@@ -259,10 +259,6 @@ main_init( int argc, char* argv[] )
 								  (CommandHandler)admin_command_handler, 
 								  "admin_command_handler", 0, ADMINISTRATOR );
 
-	daemonCore->Register_Command( FETCH_LOG, "FETCH_LOG",
-								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler", 0, ADMINISTRATOR );
-
 	/*
 	daemonCore->Register_Command( START_AGENT, "START_AGENT",
 					  (CommandHandler)admin_command_handler, 
@@ -335,10 +331,6 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 	case DAEMON_OFF:
 	case DAEMON_OFF_FAST:
 		return handle_subsys_command( cmd, stream );
-
-	case FETCH_LOG:
-		return handle_agent_fetch_log( (ReliSock*) stream );
-		break;
 
 			// This function is also special, since it needs to read
 			// off more info.  So, it is handled with a special function.

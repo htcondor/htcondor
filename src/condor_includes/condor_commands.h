@@ -129,7 +129,6 @@
 #define VACATE_CLAIM_FAST	(SCHED_VERS+75)  	// fast vacate for a given VM
 #define REJECTED_WITH_REASON (SCHED_VERS+76) // diagnostic version of REJECTED
 #define START_AGENT		(SCHED_VERS+77) // have the master start an agent
-#define FETCH_LOG               (SCHED_VERS+78)
 
 /************
 *** Command ids used by the collector 
@@ -248,6 +247,7 @@ const int QUERY_ANY_ADS = 48;
 #define DC_AUTHENTICATE     (DC_BASE+10)
 #define DC_NOP              (DC_BASE+11)
 #define DC_RECONFIG_FULL	(DC_BASE+12)
+#define DC_FETCH_LOG            (DC_BASE+13)
 
 /*
 *** Commands used by the FileTransfer object

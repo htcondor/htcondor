@@ -482,7 +482,42 @@ handle_reconfig( Service*, int cmd, Stream* )
 	}		
 	return TRUE;
 }
-	
+
+int
+handle_fetch_log( Service *service, int cmd, Stream *s )
+{
+	char *name = NULL;
+	char *pname = NULL;
+	char *filename = NULL;
+	ReliSock *stream = (ReliSock*) s;
+	int  total_bytes = 0;
+
+	if( ! stream->code(name) ||
+		! stream->end_of_message()) {
+		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log can't read log name\n" );
+		free( name );
+		return FALSE;
+	}
+
+	pname = (char*)malloc (strlen(name) + 5);
+	strcpy (pname, name);
+	strcat (pname, "_LOG");
+
+	filename = param(pname);
+
+	if(filename) {
+		stream->encode();
+		total_bytes = stream->put_file(filename);
+		free (filename);
+	} else {
+		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log can't param for log name\n" );
+	}
+
+	free (pname);
+	free (name);
+
+	return total_bytes>=0;
+}
 
 int
 handle_nop( Service*, int, Stream* )
@@ -1236,6 +1271,10 @@ int main( int argc, char** argv )
 	daemonCore->Register_Command( DC_NOP, "DC_NOP",
 								  (CommandHandler)handle_nop,
 								  "handle_nop()", 0, READ );
+
+	daemonCore->Register_Command( DC_FETCH_LOG, "DC_FETCH_LOG",
+								  (CommandHandler)handle_fetch_log,
+								  "handle_fetch_log()", 0, ADMINISTRATOR );
 
 	// Call daemonCore's ReInit(), which clears the cached DNS info.
 	// It also initializes some stuff, which is why we call it now. 
