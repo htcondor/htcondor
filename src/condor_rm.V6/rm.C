@@ -139,10 +139,6 @@ main( int argc, char *argv[] )
 
 	config();
 
-	// dprintf to console
-	Termlog = 1;
-	dprintf_config ("RM", 2 );
-
 
 	if( argc < 2 ) {
 		usage();
@@ -158,6 +154,11 @@ main( int argc, char *argv[] )
 				usage();
 			}
 			switch( arg[1] ) {
+			case 'g':
+				// dprintf to console
+				Termlog = 1;
+				dprintf_config ("RM", 2 );
+				break;
 			case 'a':
 				if( arg[2] && arg[2] == 'd' ) {
 					argv++;

@@ -427,10 +427,6 @@ main( int argc, char *argv[] )
 	MyName = basename(argv[0]);
 	config();
 
-	// dprintf to console
-	Termlog = 1;
-	dprintf_config ("SUBMIT", 2 );
-
 	init_params();
 
 		// If our effective and real gids are different (b/c the
@@ -448,6 +444,11 @@ main( int argc, char *argv[] )
 	for( ptr=argv+1,argc--; argc > 0; argc--,ptr++ ) {
 		if( ptr[0][0] == '-' ) {
 			switch( ptr[0][1] ) {
+			case 'g':
+				// dprintf to console
+				Termlog = 1;
+				dprintf_config ("SUBMIT", 2 );
+				break;
 			case 'v': 
 				Quiet = 0;
 				break;
