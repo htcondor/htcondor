@@ -256,7 +256,7 @@ main( int argc, char *argv[] )
 	if (Remote) {
 		ThisHost = queue_file;
 	} else {
-		ThisHost = my_hostname();
+		ThisHost = my_full_hostname();
 	}
 
 	// open submit file
@@ -1373,10 +1373,8 @@ check_requirements( char *orig )
 	}
 
 	if (JobUniverse == PVM) {
-		char	localhost[80];
-		gethostname(localhost, 80);
 		(void)strcat( answer, " && (Machine != \"" );
-		(void)strcat( answer, localhost );
+		(void)strcat( answer, my_full_hostname() );
 		(void)strcat( answer, "\")" );
 	} 
 
