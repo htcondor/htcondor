@@ -1368,6 +1368,12 @@ GRIDMANAGER_LOG = /tmp/GridmanagerLog.$(USERNAME)
 CRED_MIN_TIME_LEFT		= 120 
 
 ##
+## The location of the wrapper for invoking
+## GT3 GAHP server
+##
+GT3_GAHP = $(SBIN)/gt3_gahp
+
+##
 ## The location of GT3 files. This should normally be lib/gt3
 ##
 GT3_LOCATION = $(LIB)/gt3
