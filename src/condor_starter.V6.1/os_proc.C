@@ -34,6 +34,7 @@
 #include "syscall_numbers.h"
 #include "exit.h"
 #include "condor_uid.h"
+#include "condor_ver_info.h"
 #ifdef WIN32
 #include "perm.h"
 #endif
@@ -252,6 +253,7 @@ int
 OsProc::JobExit(int pid, int status)
 {
 	int reason;	
+	bool job_exit_wants_ad;
 
 	dprintf( D_FULLDEBUG, "Inside OsProc::JobExit()\n" );
 
@@ -262,10 +264,31 @@ OsProc::JobExit(int pid, int status)
 			reason = JOB_EXITED;
 		}
 
-		ClassAd ad;
-		PublishUpdateAd( &ad );
+		// protocol changed w/ v6.3.0 so the Update Ad is sent
+		// with the final REMOTE_CONDOR_job_exit system call.
+		// to keep things backwards compatible, do not send the
+		// ad with this system call if the shadow is older.
+		job_exit_wants_ad = false;
+		if ( Starter->GetShadowVersion() ) {
+			CondorVersionInfo ver(Starter->GetShadowVersion(),"SHADOW");
+			if( ver.built_since_version(6,3,0) ) {
+				job_exit_wants_ad = true;	// new shadow; send ad
+			}
+		}
 
-		if( REMOTE_CONDOR_job_exit(status, reason, &ad) < 0 ) {   
+		ClassAd ad;
+		ClassAd *ad_to_send;
+
+		if ( job_exit_wants_ad ) {
+			PublishUpdateAd( &ad );
+			ad_to_send = &ad;
+		} else {
+			dprintf(D_FULLDEBUG,
+				"Shadow is pre-v6.3.0 - not sending final update ad\n");
+			ad_to_send = NULL;
+		}
+			
+		if( REMOTE_CONDOR_job_exit(status, reason, ad_to_send) < 0 ) {   
 			dprintf( D_ALWAYS, 
 					 "Failed to send job exit status to Shadow.\n" );
 		}
