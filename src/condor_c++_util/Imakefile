@@ -85,3 +85,7 @@ static_copy_target(../h/file_lock.h,include,file_lock.h,TEXT_MODE)
 
 foo.o: user_log.h
 test.o: user_log.h
+
+condor_version.o: condor_version.C
+	$(CPlusPlus) $(C_PLUS_FLAGS) -c -DPLATFORM=$(PLATFORM) condor_version.C
+
