@@ -78,6 +78,22 @@ LIB32=link.exe -lib
 # Name "condor_cpp_util - Win32 Debug"
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\classad_hashtable.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\classad_hashtable.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\classad_log.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\classad_log.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\condor_config.C"
 # End Source File
 # Begin Source File
@@ -139,6 +155,22 @@ SOURCE="..\src\condor_c++_util\get_schedd_addr.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\list.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\log.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\log.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\log_transaction.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\log_transaction.h"
 # End Source File
 # Begin Source File
 
