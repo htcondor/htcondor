@@ -182,11 +182,8 @@ int             listen_count;
 		return -1;
 	}
 	
-	memset((char *) sin,0, sizeof(*sin));
-	sin->sin_family = AF_INET;
-	sin->sin_port = 0;
-	
-	if ( bind(socket_fd, (struct sockaddr *) sin, sizeof(*sin)) < 0) {
+	if( ! _condor_local_bind(socket_fd) ) {
+		close( socket_fd );
 		fprintf(stderr, "condor_exec: bind failed\n");
 		return -1;
 	}
@@ -195,8 +192,8 @@ int             listen_count;
 	
 	len = sizeof(*sin);
 	getsockname(socket_fd, (struct sockaddr *) sin, &len);
-	get_inet_address(&(sin->sin_addr));  /* from internet.c */
-	
+	sin->sin_addr.s_addr = htonl( my_ip_addr() );
+
 	return socket_fd;
 }
 
