@@ -256,10 +256,10 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 
 	if( IS_TIMEOUT(how_much) || IS_PUBLIC(how_much) ) {
 
-		sprintf( line, "%s=%f", ATTR_TOTAL_LOAD_AVG, m_load );
+		sprintf( line, "%s=%.2f", ATTR_TOTAL_LOAD_AVG, m_load );
 		cp->Insert(line);
 		
-		sprintf( line, "%s=%f", ATTR_TOTAL_CONDOR_LOAD_AVG, m_condor_load );
+		sprintf( line, "%s=%.2f", ATTR_TOTAL_CONDOR_LOAD_AVG, m_condor_load );
 		cp->Insert(line);
 		
 		sprintf(line, "%s=%d", ATTR_CLOCK_MIN, m_clock_min );
@@ -328,6 +328,12 @@ deal_with_benchmarks( Resource* rip )
 {
 	ClassAd* cp = rip->r_classad;
 
+	if( rip->isSuspendedForCOD() ) {
+			// if there's a COD job, we definitely don't want to run
+			// benchmarks
+		return;
+	}
+
 	int run_benchmarks = 0;
 	if( cp->EvalBool( ATTR_RUN_BENCHMARKS, cp, run_benchmarks ) == 0 ) {
 		run_benchmarks = 0;
@@ -380,10 +386,10 @@ CpuAttributes::publish( ClassAd* cp, amask_t how_much )
 
 	if( IS_TIMEOUT(how_much) || IS_PUBLIC(how_much) ) {
 
-		sprintf( line, "%s=%f", ATTR_CONDOR_LOAD_AVG, c_condor_load );
+		sprintf( line, "%s=%.2f", ATTR_CONDOR_LOAD_AVG, c_condor_load );
 		cp->Insert(line);
 
-		sprintf( line, "%s=%f", ATTR_LOAD_AVG, 
+		sprintf( line, "%s=%.2f", ATTR_LOAD_AVG, 
 				 (c_owner_load + c_condor_load) );
 		cp->Insert(line);
 
@@ -442,14 +448,14 @@ CpuAttributes::display( amask_t how_much )
 				 "Console:", (int)c_console_idle );
 
 		dprintf( D_LOAD, 
-				 "%s %.3f  %s %.3f  %s %.3f\n",  
+				 "%s %.2f  %s %.2f  %s %.2f\n",  
 				 "SystemLoad:", c_condor_load + c_owner_load,
 				 "CondorLoad:", c_condor_load,
 				 "OwnerLoad:", c_owner_load );
 	} else {
 		if( DebugFlags & D_LOAD ) {
 			dprintf( D_FULLDEBUG, 
-					 "%s %.3f  %s %.3f  %s %.3f\n",  
+					 "%s %.2f  %s %.2f  %s %.2f\n",  
 					 "SystemLoad:", c_condor_load + c_owner_load,
 					 "CondorLoad:", c_condor_load,
 					 "OwnerLoad:", c_owner_load );

@@ -39,6 +39,8 @@
 #define STORAGE_ADTYPE		"Storage"
 #define ANY_ADTYPE			"Any"
 #define SUBMITTER_ADTYPE	"Submitter"
+#define COMMAND_ADTYPE		"Command"
+#define REPLY_ADTYPE		"Reply"
 
 #endif
 

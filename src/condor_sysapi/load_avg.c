@@ -123,7 +123,7 @@ sysapi_load_avg_raw(void)
 		val = lookup_load_avg_via_uptime();
 
 	if( (DebugFlags & D_LOAD) && (DebugFlags & D_FULLDEBUG) ) {
-		dprintf( D_LOAD, "Load avg: %f\n", val );
+		dprintf( D_LOAD, "Load avg: %.2f\n", val );
 	}
 	return val;
 }
@@ -259,7 +259,7 @@ sysapi_load_avg_raw(void)
     fclose(proc);
 
 	if( (DebugFlags & D_LOAD) && (DebugFlags & D_FULLDEBUG) ) {
-		dprintf( D_LOAD, "Load avg: %f %f %f\n", short_avg, 
+		dprintf( D_LOAD, "Load avg: %.2f %.2f %.2f\n", short_avg, 
 				 medium_avg, long_avg );
 	}
 	return short_avg;
@@ -328,7 +328,7 @@ sysapi_load_avg_raw(void)
 		val = lookup_load_avg_via_uptime();
 
 	if( (DebugFlags & D_LOAD) && (DebugFlags & D_FULLDEBUG) ) {
-		dprintf( D_LOAD, "Load avg: %f\n", val );
+		dprintf( D_LOAD, "Load avg: %.2f\n", val );
 	}
 	return val;
 }
@@ -561,7 +561,7 @@ sysapi_load_avg_raw(void)
 	}
 
 #ifndef TESTING
-	dprintf(D_LOAD, "loadavg=%f with %d samples\n",
+	dprintf(D_LOAD, "loadavg=%.2f with %d samples\n",
 			((float)totalLoad)/((float)numSamples), numSamples);
 #endif
 
@@ -572,7 +572,7 @@ sysapi_load_avg_raw(void)
 int main()
 {
 	while (1) {
-		printf("%f\n", sysapi_load_avg());
+		printf("%.2f\n", sysapi_load_avg());
 		Sleep(5000);
 	}
 

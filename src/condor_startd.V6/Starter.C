@@ -49,8 +49,9 @@ Starter::Starter()
 
 Starter::Starter( const Starter& s )
 {
-	if( s.rip || s.s_pid || s.s_procfam || s.s_family_size
-		|| s.s_pidfamily || s.s_birthdate ) {
+	if( s.s_claim || s.s_pid || s.s_procfam || s.s_family_size
+		|| s.s_pidfamily || s.s_birthdate || s.s_cod_keyword 
+		|| s.s_port1 >= 0 || s.s_port2 >= 0 ) {
 		EXCEPT( "Trying to copy a Starter object that's already running!" );
 	}
 
@@ -75,18 +76,27 @@ Starter::Starter( const Starter& s )
 void
 Starter::initRunData( void ) 
 {
-	rip = NULL;
+	s_claim = NULL;
 	s_pid = 0;		// pid_t can be unsigned, so use 0, not -1
 	s_procfam = NULL;
 	s_family_size = 0;
 	s_pidfamily = NULL;
 	s_birthdate = 0;
 	s_last_snapshot = 0;
+	s_kill_tid = -1;
+	s_cod_keyword = NULL;
+	s_port1 = -1;
+	s_port2 = -1;
+		// Initialize our procInfo structure so we don't use any
+		// values until we've actually computed them.
+	memset( (void*)&s_pinfo, 0, (size_t)sizeof(s_pinfo) );
 }
 
 
 Starter::~Starter()
 {
+	cancelKillTimer();
+
 	if (s_path) {
 		delete [] s_path;
 	}
@@ -99,6 +109,9 @@ Starter::~Starter()
 	}
 	if( s_ad ) {
 		delete( s_ad );
+	}
+	if( s_cod_keyword ) {
+		delete [] s_cod_keyword;
 	}
 }
 
@@ -150,18 +163,34 @@ Starter::setPath( const char* path )
 	s_path = strnewp( path );
 }
 
-
 void
 Starter::setIsDC( bool is_dc )
 {
 	s_is_dc = is_dc;
 }
 
+void
+Starter::setClaim( Claim* c )
+{
+	s_claim = c;
+}
+
 
 void
-Starter::setResource( Resource* rip )
+Starter::setPorts( int port1, int port2 )
 {
-	this->rip = rip;
+	s_port1 = port1;
+	s_port2 = port2;
+}
+
+
+void
+Starter::setCODArgs( const char* keyword )
+{
+	if( s_cod_keyword ) {
+		delete [] s_cod_keyword;
+	}
+	s_cod_keyword = strnewp( keyword );
 }
 
 
@@ -464,8 +493,9 @@ Starter::reallykill( int signo, int type )
 			/* Aha, the starter is already dead */
 			return 0;
 		} else {
-			dprintf( D_ALWAYS, "Error sending signal to starter, errno = %d\n", 
-					 errno );
+			dprintf( D_ALWAYS, 
+					 "Error sending signal to starter, errno = %d (%s)\n", 
+					 errno, strerror(errno) );
 			return -1;
 		}
 	} else {
@@ -474,19 +504,17 @@ Starter::reallykill( int signo, int type )
 }
 
 
-int 
-Starter::spawn( start_info_t* info, time_t now )
-{
 
-	if( is_dc() ) {
-			// Use spiffy new starter.
-		s_pid = exec_starter( s_path, info->ji_hname, 
-							  info->shadowCommandSock);
+int 
+Starter::spawn( time_t now, Stream* s )
+{
+	if( isCOD() ) {
+		s_pid = execCODStarter();
+	} else if( is_dc() ) {
+		s_pid = execDCStarter( s ); 
 	} else {
 			// Use old icky non-daemoncore starter.
-		s_pid = exec_starter( s_path, info->ji_hname, 
-							  info->ji_sock1,
-							  info->ji_sock2 );
+		s_pid = execOldStarter();
 	}
 
 	if( s_pid == 0 ) {
@@ -494,9 +522,21 @@ Starter::spawn( start_info_t* info, time_t now )
 	} else {
 		s_birthdate = now;
 		s_procfam = new ProcFamily( s_pid, PRIV_ROOT );
+#if WIN32
+			// we only support running jobs as user nobody for now
+		char nobody_login[100];
+
+			// just use the prefix (we don't know the nobody_login yet
+			// since we're in the startd)
+		strcpy(nobody_login, myDynuser->account_prefix());
+		
+			// set ProcFamily to find decendants via a common login name
+		s_procfam->setFamilyLogin(nobody_login);
+#endif
 		dprintf( D_PROCFAMILY, 
-				 "Created new ProcFamily w/ pid %d as the parent.\n", s_pid );
-		recompute_pidfamily( now );
+				 "Created new ProcFamily w/ pid %d as the parent.\n",
+				 s_pid ); 
+		recomputePidFamily( now );
 	}
 	return s_pid;
 }
@@ -505,6 +545,9 @@ Starter::spawn( start_info_t* info, time_t now )
 void
 Starter::exited()
 {
+		// Make sure our time isn't going to go off.
+	cancelKillTimer();
+
 		// Just for good measure, try to kill what's left of our whole
 		// pid family.  
 	s_procfam->hardkill();
@@ -515,24 +558,66 @@ Starter::exited()
 
 
 int
-Starter::exec_starter( char* starter, char* hostname, 
-					   Stream *sock)
+Starter::execCODStarter( void )
+{
+	MyString args;
+	int cluster = s_claim->cluster();
+	int proc = s_claim->proc();
+	args = "condor_starter -f -append cod -lockfile StarterLock.cod ";
+	args += "-header (";
+	if( resmgr->is_smp() ) {
+		args += s_claim->rip()->r_id_str;
+		args += ':';
+	}
+	args += s_claim->codId();
+	args += ") -job_keyword ";
+	args += s_cod_keyword;
+	if( cluster >= 0 ) {
+		args += " -job_cluster ";
+		args += cluster;
+	} 
+	if( proc >= 0 ) {
+		args += " -job_proc ";
+		args += proc;
+	} 
+	return execDCStarter( args.Value(), NULL );
+}
+
+
+int
+Starter::execDCStarter( Stream* s )
 {
 	char args[_POSIX_ARG_MAX];
-	Stream *sock_inherit_list[] = { sock, 0 };
 
+	char* hostname = s_claim->client()->host();
 	if ( resmgr->is_smp() ) {
 		// Note: the "-a" option is a daemon core option, so it
 		// must come first on the command line.
-		sprintf( args, "condor_starter -f -a %s %s", rip->r_id_str, hostname );
+		sprintf( args, "condor_starter -f -a %s %s",  
+				 s_claim->rip()->r_id_str, hostname );
 	} else {
-		sprintf(args, "condor_starter -f %s", hostname);
+		sprintf(args, "condor_starter -f %s", hostname );
+	}
+	execDCStarter( args, s );
+
+	return s_pid;
+}
+
+
+int
+Starter::execDCStarter( const char* args, Stream* s )
+{
+	Stream *sock_inherit_list[] = { s, 0 };
+	Stream** inherit_list = NULL;
+	if( s ) {
+		inherit_list = sock_inherit_list;
 	}
 
 	dprintf ( D_FULLDEBUG, "About to Create_Process \"%s\".\n", args );
 
-	s_pid = daemonCore->Create_Process( s_path, args, PRIV_ROOT, main_reaper, TRUE, 
-										NULL, NULL, TRUE, sock_inherit_list );
+	s_pid = daemonCore->
+		Create_Process( s_path, (char*)args, PRIV_ROOT, main_reaper,
+						TRUE, NULL, NULL, TRUE, inherit_list );
 	if( s_pid == FALSE ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");
 		s_pid = 0;
@@ -540,16 +625,19 @@ Starter::exec_starter( char* starter, char* hostname,
 	return s_pid;
 }
 
+
 int
-Starter::exec_starter( char* starter, char* hostname, 
-					   int main_sock, int err_sock )
+Starter::execOldStarter( void )
 {
 #if defined(WIN32) /* THIS IS UNIX SPECIFIC */
 	return 0;
 #else
+	char* hostname = s_claim->client()->host();
 	int i;
 	int pid;
 	int n_fds = getdtablesize();
+	int main_sock = s_port1;
+	int err_sock = s_port2;
 
 #if defined(Solaris)
 	sigset_t set;
@@ -584,7 +672,7 @@ Starter::exec_starter( char* starter, char* hostname,
 				"exec_starter( %s, %d, %d ) : pid %d\n",
 				hostname, main_sock, err_sock, pid);
 		dprintf(D_ALWAYS, "execl(%s, \"condor_starter\", %s, 0)\n",
-				starter, hostname);
+				s_path, hostname);
 	} else {	/* the child */
 
 			/* 
@@ -652,18 +740,18 @@ Starter::exec_starter( char* starter, char* hostname,
 		 */
 		set_root_priv();
 		if( resmgr->is_smp() ) {
-			(void)execl(starter, "condor_starter", hostname, 
-						daemonCore->InfoCommandSinfulString(), 
-						"-a", rip->r_id_str, 0 );
+			(void)execl( s_path, "condor_starter", hostname, 
+						 daemonCore->InfoCommandSinfulString(), 
+						 "-a", s_claim->rip()->r_id_str, 0 );
 		} else {			
-			(void)execl(starter, "condor_starter", hostname, 
-						daemonCore->InfoCommandSinfulString(), 0 );
+			(void)execl( s_path, "condor_starter", hostname, 
+						 daemonCore->InfoCommandSinfulString(), 0 );
 
 		}
 			// If we got this far, there was an error in execl().
 		dprintf( D_ALWAYS, 
 				 "ERROR: execl(%s, condor_starter, %s, %s, 0) errno: %d\n", 
-				 starter, daemonCore->InfoCommandSinfulString(), hostname,
+				 s_path, daemonCore->InfoCommandSinfulString(), hostname,
 				 errno );
 		exit( 4 );
 	}
@@ -676,6 +764,13 @@ Starter::exec_starter( char* starter, char* hostname,
 
 		
 bool
+Starter::isCOD()
+{
+	return s_claim->isCOD();
+}
+
+
+bool
 Starter::active()
 {
 	return( (s_pid != 0) );
@@ -687,8 +782,8 @@ Starter::dprintf( int flags, char* fmt, ... )
 {
 	va_list args;
 	va_start( args, fmt );
-	if( rip ) {
-		rip->dprintf_va( flags, fmt, args );
+	if( s_claim && s_claim->rip() ) {
+		s_claim->rip()->dprintf_va( flags, fmt, args );
 	} else {
 		::_condor_dprintf_va( flags, fmt, args );
 	}
@@ -696,8 +791,49 @@ Starter::dprintf( int flags, char* fmt, ... )
 }
 
 
+float
+Starter::percentCpuUsage( void )
+{
+	time_t now = time(NULL);
+	if( now - s_last_snapshot >= pid_snapshot_interval ) { 
+		recomputePidFamily( now );
+	}
+
+	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
+		printPidFamily( D_FULLDEBUG, 
+						"Computing percent CPU usage with pids: " );
+	}
+
+		// ProcAPI wants a non-const pointer reference, so we need
+		// a temporary.
+	procInfo *pinfoPTR = &s_pinfo;
+	if( (ProcAPI::getProcSetInfo(s_pidfamily, s_family_size,
+								 pinfoPTR) < -1) ) {
+			// If we failed, it might be b/c our pid family has stale
+			// info, so before we give up for real, recompute and try
+			// once more.
+		recomputePidFamily();
+
+		if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
+			printPidFamily(D_FULLDEBUG, "Failed once, now using pids: ");  
+		}
+
+		if( (ProcAPI::getProcSetInfo( s_pidfamily, s_family_size, 
+									  pinfoPTR) < -1) ) {
+			EXCEPT( "Fatal error getting process info for the starter "
+					"and decendents" ); 
+		}
+	}
+	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
+		dprintf( D_FULLDEBUG, "Percent CPU usage for those pids is: %f\n", 
+				 s_pinfo.cpuusage );
+	}
+	return s_pinfo.cpuusage;
+}
+
+
 void
-Starter::recompute_pidfamily( time_t now ) 
+Starter::recomputePidFamily( time_t now ) 
 {
 	if( !s_procfam ) {
 		dprintf( D_PROCFAMILY, 
@@ -724,6 +860,34 @@ Starter::recompute_pidfamily( time_t now )
 
 
 void
+Starter::printPidFamily( int dprintf_level, char* header ) 
+{
+	MyString msg;
+	char numbuf[32];
+
+	if( header ) {
+		msg += header;
+	}
+	int i;
+	for( i=0; i<s_family_size; i++ ) {
+		snprintf( numbuf, 32, "%d ", s_pidfamily[i] );
+		msg += numbuf;
+	}
+	dprintf( dprintf_level, "%s\n", msg.Value() );
+}
+
+
+unsigned long
+Starter::imageSize( void )
+{
+		// we assume we're only asked for this after we've already
+		// computed % cpu usage and we've already got this info
+		// sitting here...
+	return s_pinfo.imgsize;
+}
+
+
+void
 Starter::printInfo( int debug_level )
 {
 	dprintf( debug_level, "Info for \"%s\":\n", s_path );
@@ -737,3 +901,121 @@ Starter::printInfo( int debug_level )
 	}
 	dprintf( debug_level | D_NOHEADER, "*** End of starter info ***\n" ); 
 }
+
+
+bool
+Starter::killHard( void )
+{
+	if( ! active() ) {
+		return true;
+	}
+	if( kill( DC_SIGHARDKILL ) < 0 ) {
+		killpg( SIGKILL );
+		return false;
+	}
+	startKillTimer();
+	return true;
+}
+
+
+bool
+Starter::killSoft( void )
+{
+	if( ! active() ) {
+		return true;
+	}
+	if( kill( DC_SIGSOFTKILL ) < 0 ) {
+		killpg( SIGKILL );
+		return false;
+	}
+	return true;
+}
+
+
+bool
+Starter::suspend( void )
+{
+	if( ! active() ) {
+		return true;
+	}
+	if( kill( DC_SIGSUSPEND ) < 0 ) {
+		killpg( SIGKILL );
+		return false;
+	}
+	return true;
+}
+
+
+bool
+Starter::resume( void )
+{
+	if( ! active() ) {
+		return true;
+	}
+	if( kill( DC_SIGCONTINUE ) < 0 ) {
+		killpg( SIGKILL );
+		return false;
+	}
+	return true;
+}
+
+
+int
+Starter::startKillTimer( void )
+{
+	if( s_kill_tid >= 0 ) {
+			// Timer already started.
+		return TRUE;
+	}
+	s_kill_tid = 
+		daemonCore->Register_Timer( killing_timeout,
+						0, 
+						(TimerHandlercpp)&Starter::sigkillStarter,
+						"sigkillStarter", this );
+	if( s_kill_tid < 0 ) {
+		EXCEPT( "Can't register DaemonCore timer" );
+	}
+	return TRUE;
+}
+
+
+void
+Starter::cancelKillTimer( void )
+{
+	int rval;
+	if( s_kill_tid != -1 ) {
+		rval = daemonCore->Cancel_Timer( s_kill_tid );
+		if( rval < 0 ) {
+			dprintf( D_ALWAYS, 
+					 "Failed to cancel hardkill-starter timer (%d): "
+					 "daemonCore error\n", s_kill_tid );
+		} else {
+			dprintf( D_FULLDEBUG, "Canceled hardkill-starter timer (%d)\n",
+					 s_kill_tid );
+		}
+		s_kill_tid = -1;
+	}
+}
+
+
+int
+Starter::sigkillStarter( void )
+{
+		// Now that the timer has gone off, clear out the tid.
+	s_kill_tid = -1;
+
+	if( active() ) {
+		dprintf( D_ALWAYS, "starter (pid %d) is not responding to the "
+				 "request to hardkill its job.  The startd will now "
+				 "directly hard kill the starter and all its "
+				 "decendents.\n", s_pid );
+
+			// Kill all of the starter's children.
+		killkids( SIGKILL );
+
+			// Kill the starter's entire process group.
+		return killpg( SIGKILL );
+	}
+	return TRUE;
+}
+

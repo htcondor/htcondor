@@ -42,7 +42,7 @@ MyString::MyString()
 MyString::MyString(int i) 
 {
     char tmp[50];
-	sprintf(tmp,"%d",i);
+	::snprintf(tmp,50,"%d",i);
     Len=strlen(tmp);
     Data=new char[Len+1];
     capacity = Len;
@@ -262,6 +262,37 @@ MyString operator+(const MyString& S1, const MyString& S2)
     S += S2;
     return S;
 }
+
+
+MyString& 
+MyString::operator+=( int i )
+{
+	char tmp[64];
+	::snprintf( tmp, 64, "%d", i );
+    int s_len = strlen( tmp );
+    if( s_len + Len > capacity ) {
+		reserve_at_least( Len + s_len );
+    }
+	strcpy( Data + Len, tmp );
+	Len += s_len;
+    return *this;
+}
+
+
+MyString& 
+MyString::operator+=( double d )
+{
+	char tmp[128];
+	::snprintf( tmp, 128, "%f", d );
+    int s_len = strlen( tmp );
+    if( s_len + Len > capacity ) {
+		reserve_at_least( Len + s_len );
+    }
+	strcpy( Data + Len, tmp);
+	Len += s_len;
+    return *this;
+}
+
 
 /*--------------------------------------------------------------------
  *

@@ -45,6 +45,8 @@
 #include "../condor_procapi/procapi.h"
 #include "misc_utils.h"
 #include "get_daemon_addr.h"
+#include "enum_utils.h"
+#include "condor_version.h"
 
 
 #if !defined(WIN32)
@@ -60,7 +62,7 @@ class Resource;
 #include "LoadQueue.h"
 #include "ResAttributes.h"
 #include "AvailStats.h"
-#include "Match.h"
+#include "claim.h"
 #include "Starter.h"
 #include "Reqexp.h"
 #include "ResState.h"
@@ -69,6 +71,7 @@ class Resource;
 #include "command.h"
 #include "util.h"
 #include "starter_mgr.h"
+#include "cod_mgr.h"
 
 static const int MAX_STARTERS = 10;
 
@@ -76,6 +79,7 @@ static const int MAX_STARTERS = 10;
 
 // Define external functions
 extern int finish_main_config( void );
+extern bool authorizedForCOD( const char* owner );
 
 // Define external global variables
 

@@ -69,7 +69,7 @@ extern "C" {
 	void init_config ( void );
 	void clear_config ( void );
 	void set_debug_flags( char * );
-	void config_insert( char*, char* );
+	void config_insert( const char*, const char* );
 #else
 	void config();
 	void config_host();

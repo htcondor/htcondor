@@ -143,22 +143,6 @@ DCSchedd::releaseJobs( StringList* ids, const char* reason,
 					  notify_scheduler );
 }
 
-void 
-DCSchedd::forceAuthentication(ReliSock & rsock)
-{
-		// If we're not already authenticated, do that now. 
-	if( ! rsock.isAuthenticated() ) {
-		char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", "CLIENT");
-		MyString methods;
-		if (p) {
-			methods = p;
-			free(p);
-		} else {
-			methods = SecMan::getDefaultAuthenticationMethods();
-		}
-		rsock.authenticate(methods.Value());
-	}
-}
 
 bool 
 DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[])
@@ -185,7 +169,7 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[])
 
 
 		// First, if we're not already authenticated, force that now. 
-	forceAuthentication(rsock);
+	forceAuthentication( &rsock );
 
 		// Send the number of jobs
 	rsock.encode();
@@ -334,7 +318,7 @@ DCSchedd::actOnJobs( job_action_t action, const char* action_str,
 		return NULL;
 	}
 		// First, if we're not already authenticated, force that now. 
-	forceAuthentication(rsock);
+	forceAuthentication( &rsock );
 
 		// Now, put the command classad on the wire
 	if( ! (cmd_ad.put(rsock) && rsock.eom()) ) {

@@ -54,6 +54,7 @@ void Daemon::common_init() {
 	_id_str = NULL;
 	_hostname = NULL;
 	_full_hostname = NULL;
+	_cmd_str = NULL;
 }
 
 Daemon::Daemon( const char* addr_string, int port ) 
@@ -138,7 +139,7 @@ Daemon::~Daemon()
 	if( _full_hostname ) delete [] _full_hostname;
 	if( _version ) delete [] _version;
 	if( _platform ) { delete [] _platform; }
-
+	if( _cmd_str ) { delete [] _cmd_str; }
 }
 
 
@@ -445,6 +446,123 @@ Daemon::sendCommand( int cmd, Stream::stream_type st, int sec )
 }
 
 
+bool
+Daemon::sendCACmd( ClassAd* req, ClassAd* reply, bool force_auth,
+				   int timeout )
+{
+	if( !req ) {
+		newError( "sendCACmd() called with no request ClassAd" ); 
+		return false;
+	}
+	if( !reply ) {
+		newError( "sendCACmd() called with no reply ClassAd" );
+		return false;
+	}
+	if( !checkAddr() ) {
+			// this already deals w/ _error for us...
+		return false;
+	}
+	
+	req->SetMyTypeName( COMMAND_ADTYPE );
+	req->SetTargetTypeName( REPLY_ADTYPE );
+
+	ReliSock cmd_sock;
+
+	if( timeout >= 0 ) {
+		cmd_sock.timeout( timeout );
+	}
+
+	if( ! cmd_sock.connect(_addr) ) {
+		MyString err_msg = "Failed to connect to ";
+		err_msg += daemonString(_type);
+		err_msg += " ";
+		err_msg += _addr;
+		newError( err_msg.Value() );
+		return false;
+	}
+
+	if( ! startCommand(CA_CMD, &cmd_sock, 20) ) {
+		newError( "Failed to send command (CA_CMD)" );
+		return false;
+	}
+	if( force_auth ) {
+		if( ! forceAuthentication(&cmd_sock) ) {
+			newError( "Client: server failed to authenticate" );
+			return false;
+		}
+	}
+
+		// due to an EVIL bug in authenticate(), our timeout just got
+		// set to 20.  so, if we were given a timeout, we have to set
+		// it again... :(
+	if( timeout >= 0 ) {
+		cmd_sock.timeout( timeout );
+	}
+
+	if( ! req->put(cmd_sock) ) { 
+		newError( "Failed to send request ClassAd" );
+		return false;
+	}
+	if( ! cmd_sock.end_of_message() ) {
+		newError( "Failed to send end-of-message" );
+		return false;
+	}
+
+		// Now, try to get the reply
+	cmd_sock.decode();
+	if( ! reply->initFromStream(cmd_sock) ) {
+		newError( "Failed to read reply ClassAd" );
+		return false;
+	}
+	if( !cmd_sock.end_of_message() ) {
+		newError( "Failed to read end-of-message" );
+		return false;
+	}
+
+		// Finally, interpret the results
+	char* result_str = NULL;
+	if( ! reply->LookupString(ATTR_RESULT, &result_str) ) {
+		MyString err_msg = "Reply ClassAd does not have ";
+		err_msg += ATTR_RESULT;
+		err_msg += " attribute";
+		newError( err_msg.Value() );
+		return false;
+	}
+	CAResult result = getCAResultNum( result_str );
+	if( result == CA_SUCCESS ) { 
+			// we recognized it and it's good, just return.
+		free( result_str );
+		return true;		
+	}
+
+		// Either we don't recognize the result, or it's some known
+		// failure.  Either way, look for the error string if there is
+		// one, and set it. 
+	char* err = NULL;
+	if( ! reply->LookupString(ATTR_ERROR_STRING, &err) ) {
+		if( ! result ) {
+				// we didn't recognize the result, so don't assume
+				// it's a failure, just let the caller interpret the
+				// reply ClassAd if they know how...
+			free( result_str );
+			return true;
+		}
+			// otherwise, it's a known failure, but there's no error
+			// string to help us...
+		MyString err_msg = "Reply ClassAd returned '";
+		err_msg += result_str;
+		err_msg += "' but does not have the ";
+		err_msg += ATTR_ERROR_STRING;
+		err_msg += " attribute";
+		newError( err_msg.Value() );
+		free( result_str );
+		return false;
+	}
+	newError( err );
+	free( err );
+	free( result_str );
+	return false;
+}
 
 
 //////////////////////////////////////////////////////////////////////
@@ -877,7 +995,7 @@ Daemon::getCmInfo( const char* subsys, int port )
 //////////////////////////////////////////////////////////////////////
 
 void
-Daemon::newError( char* str )
+Daemon::newError( const char* str )
 {
 	if( _error ) {
 		delete [] _error;
@@ -974,4 +1092,56 @@ Daemon::New_pool( char* str )
 	} 
 	_pool = str;
 	return str;
+}
+
+
+bool
+Daemon::checkAddr( void )
+{
+	if( ! _addr ) {
+		locate();
+	}
+	if( ! _addr ) {
+			// _error will already be set appropriately
+		return false;
+	}
+	return true;
+}
+
+
+bool
+Daemon::forceAuthentication( ReliSock* rsock )
+{
+	if( ! rsock ) {
+		return false;
+	}
+
+		// If we're already authenticated, return success...
+	if( rsock->isAuthenticated() ) {
+		return true;
+	}
+
+	char *p = SecMan::getSecSetting( "SEC_%s_AUTHENTICATION_METHODS",
+									 "CLIENT" ); 
+	MyString methods;
+	if( p ) {
+		methods = p;
+		free(p);
+	} else {
+		methods = SecMan::getDefaultAuthenticationMethods();
+	}
+	return rsock->authenticate( methods.Value() );
+}
+
+
+void
+Daemon::setCmdStr( const char* cmd )
+{
+	if( _cmd_str ) { 
+		delete [] _cmd_str;
+		_cmd_str = NULL;
+	}
+	if( cmd ) {
+		_cmd_str = strnewp( cmd );
+	}
 }

@@ -160,9 +160,23 @@ ResState::eval( void )
 {
 	int want_suspend;
 
+		// we may need to modify the load average in our internal
+		// policy classad if we're currently running a COD job or have
+		// been running 1 in the last minute.  so, give our rip a
+		// chance to modify the load, if necessary, before we evaluate
+		// anything.  
+	rip->hackLoadForCOD();
+
 	switch( r_state ) {
 
 	case claimed_state:
+		if( r_act == suspended_act && rip->isSuspendedForCOD() ) { 
+				// this is the special case where we do *NOT* want to
+				// evaluate any policy expressions.  so long as
+				// there's an active COD job, we want to leave the
+				// opportunistic claim "checkpointed to swap"
+			return 0;
+		}
 		want_suspend = rip->wants_suspend();
 		if( ((r_act == busy_act) && (!want_suspend)) ||
 			(r_act == suspended_act) ) {
@@ -301,13 +315,12 @@ ResState::leave_action( State s, Activity a,
 		break;
 	case claimed_state:
 		if( a == suspended_act ) {
-			if( rip->r_starter && 
-				rip->r_starter->kill( DC_SIGCONTINUE ) < 0 ) {
+			if( ! rip->r_cur->resumeClaim() ) {
 					// If there's an error sending kill, it could only
 					// mean the starter has blown up and we didn't
 					// know about it.  Send SIGKILL to the process
 					// group and go to the owner state.
-				rip->r_starter->killpg( SIGKILL );
+				rip->r_cur->starterKillPg( SIGKILL );
 				dprintf( D_ALWAYS,
 						 "State change: Error sending signals to starter\n" );
 				return change( owner_state );
@@ -331,11 +344,11 @@ ResState::enter_action( State s, Activity a,
 {
 	switch( s ) {
 	case owner_state:
-			// Always want to create new match objects
+			// Always want to create new claim objects
 		if( rip->r_cur ) {
 			delete( rip->r_cur );
 		}
-		rip->r_cur = new Match( rip );
+		rip->r_cur = new Claim( rip );
 		if( rip->r_pre ) {
 			delete rip->r_pre;
 			rip->r_pre = NULL;
@@ -352,16 +365,15 @@ ResState::enter_action( State s, Activity a,
 	case claimed_state:
 		rip->r_reqexp->restore();			
 		if( statechange ) {
-			rip->r_cur->start_claim_timer();	
+			rip->r_cur->beginClaim();	
 				// Update important attributes into the classad.
 			rip->r_cur->publish( rip->r_classad, A_PUBLIC );
-				// Generate a preempting match object
-			rip->r_pre = new Match( rip );
+				// Generate a preempting claim object
+			rip->r_pre = new Claim( rip );
 		}
 		if( a == suspended_act ) {
-			if( rip->r_starter &&
-				rip->r_starter->kill( DC_SIGSUSPEND ) < 0 ) {
-				rip->r_starter->killpg( SIGKILL );
+			if( ! rip->r_cur->suspendClaim() ) {
+				rip->r_cur->starterKillPg( SIGKILL );
 				dprintf( D_ALWAYS,
 						 "State change: Error sending signals to starter\n" );
 				return change( owner_state );
@@ -384,9 +396,9 @@ ResState::enter_action( State s, Activity a,
 		rip->r_reqexp->unavail();
 		switch( a ) {
 		case killing_act:
-			if( rip->r_starter && rip->r_starter->active() ) {
-				if( ! rip->hardkill_starter() ) {
-						// hardkill_starter returns FALSE if there was
+			if( rip->claimIsActive() ) {
+				if( ! rip->r_cur->starterKillHard() ) {
+						// starterKillHard returns FALSE if there was
 						// an error in kill and we had to send SIGKILL
 						// to the starter's process group.
 					dprintf( D_ALWAYS,
@@ -400,9 +412,9 @@ ResState::enter_action( State s, Activity a,
 			break;
 
 		case vacating_act:
-			if( rip->r_starter && rip->r_starter->active() ) {
-				if( rip->r_starter->kill( DC_SIGSOFTKILL ) < 0 ) {
-					rip->r_starter->killpg( SIGKILL );
+			if( rip->claimIsActive() ) {
+				if( ! rip->r_cur->starterKillSoft() ) {
+					rip->r_cur->starterKillPg( SIGKILL );
 					dprintf( D_ALWAYS,
 							 "State change: Error sending signals to starter\n" );
 					return change( owner_state );

@@ -38,7 +38,6 @@
 #include "exit.h"
 #include "condor_uid.h"
 #include "condor_distribution.h"
-#include "nullfile.h"
 #ifdef WIN32
 #include "perm.h"
 #endif
@@ -52,7 +51,7 @@ OsProc::OsProc( ClassAd* ad )
 {
     dprintf ( D_FULLDEBUG, "In OsProc::OsProc()\n" );
 	JobAd = ad;
-	JobPid = Cluster = Proc = -1;
+	JobPid = -1;
 	exit_status = -1;
 	requested_exit = false;
 	job_suspended = FALSE;
@@ -80,18 +79,6 @@ OsProc::StartJob()
 
 	if ( !JobAd ) {
 		dprintf ( D_ALWAYS, "No JobAd in OsProc::StartJob()!\n" );
-		return 0;
-	}
-
-	if (JobAd->LookupInteger(ATTR_CLUSTER_ID, Cluster) != 1) {
-		dprintf(D_ALWAYS, "%s not found in JobAd.  Aborting StartJob.\n", 
-				ATTR_CLUSTER_ID);
-		return 0;
-	}
-
-	if (JobAd->LookupInteger(ATTR_PROC_ID, Proc) != 1) {
-		dprintf(D_ALWAYS, "%s not found in JobAd.  Aborting StartJob.\n", 
-				ATTR_PROC_ID);
 		return 0;
 	}
 
@@ -192,22 +179,21 @@ OsProc::StartJob()
 		// // // // // // 
 
 	char* env_str = NULL;
-	if( JobAd->LookupString(ATTR_JOB_ENVIRONMENT, &env_str) != 1 ) {
-		dprintf( D_ALWAYS, "%s not found in JobAd.  "
-				 "Aborting OsProc::StartJob.\n", ATTR_JOB_ENVIRONMENT );  
-		return 0;
-	}
+	JobAd->LookupString( ATTR_JOB_ENVIRONMENT, &env_str );
+
 		// Now, instantiate an Env object so we can manipulate the
 		// environment as needed.
 	Env job_env;
-	if( ! job_env.Merge(env_str) ) {
-		dprintf( D_ALWAYS, "Invalid %s found in JobAd.  "
-				 "Aborting OsProc::StartJob.\n", ATTR_JOB_ENVIRONMENT );  
-		return 0;
+	if( env_str ) { 
+		if( ! job_env.Merge(env_str) ) {
+			dprintf( D_ALWAYS, "Invalid %s found in JobAd.  "
+					 "Aborting OsProc::StartJob.\n", ATTR_JOB_ENVIRONMENT );  
+			return 0;
+		}
+			// Next, we can free the string we got back from
+			// LookupString() so we don't leak any memory.
+		free( env_str );
 	}
-		// Next, we can free the string we got back from
-		// LookupString() so we don't leak any memory.
-	free( env_str );
 
 	// Now, add some env vars the user job might want to see:
 	char	envName[256];
@@ -238,149 +224,109 @@ OsProc::StartJob()
 		// Standard Files
 		// // // // // // 
 
-	if (JobAd->LookupString(ATTR_JOB_IWD, &job_iwd) != 1) {
-		dprintf(D_ALWAYS, "%s not found in JobAd.  "
-				"Aborting DC_StartCondorJob.\n", ATTR_JOB_IWD);
-		return 0;
-	}
+	const char* job_iwd = Starter->jic->jobIWD();
 
 	// handle stdin, stdout, and stderr redirection
 	int fds[3];
 	int failedStdin, failedStdout, failedStderr;
 	fds[0] = -1; fds[1] = -1; fds[2] = -1;
 	failedStdin = 0; failedStdout = 0; failedStderr = 0;
-	char filename1[_POSIX_PATH_MAX];
-	char *filename;
-	char infile[_POSIX_PATH_MAX];
-	char outfile[_POSIX_PATH_MAX];
-	char errfile[_POSIX_PATH_MAX];
+	const char* filename = NULL;
 
 		// in order to open these files we must have the user's privs:
 	priv_state priv;
 	priv = set_user_priv();
 
-	if (JobAd->LookupString(ATTR_JOB_INPUT, filename1) == 1) {
-		if ( !nullFile(filename1) ) {
-			if( Starter->wantsFileTransfer() ) {
-				filename = basename( filename1 );
-			} else {
-				filename = filename1;
-			}
-            if ( filename[0] != '/' ) {  // prepend full path
-                sprintf( infile, "%s%c", job_iwd, DIR_DELIM_CHAR );
-            } else {
-                infile[0] = '\0';
-            }
-			strcat ( infile, filename );
-			if ( (fds[0]=open( infile, O_RDONLY ) ) < 0 ) {
-				char const *errno_str = strerror(errno);
-
-				dprintf(D_ALWAYS,"failed to open stdin file %s, errno %d\n",
-						infile, errno);
-				failedStdin = 1;
-
-				REMOTE_CONDOR_ulog_printf(
-				  "Failed to open standard input file '%s': %s",
-				  infile,
-				  errno_str);
-			}
-			dprintf ( D_ALWAYS, "Input file: %s\n", infile );
+	filename = Starter->jic->jobInputFilename();
+	if( filename ) {
+		if( (fds[0]=open(filename, O_RDONLY)) < 0 ) {
+			failedStdin = 1;
+			char const *errno_str = strerror( errno );
+			MyString err_msg;
+			err_msg = "Failed to open standard input file '";
+			err_msg += filename;
+			err_msg += "': ";
+			err_msg += errno_str;
+			err_msg += " (errno ";
+			err_msg += errno;
+			err_msg += ')';
+			dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
+			Starter->jic->notifyStarterError( err_msg.Value(), true );
 		}
-	} else {
+		dprintf( D_ALWAYS, "Input file: %s\n", filename );
+	} else { 
 	#ifndef WIN32
-		if ( (fds[0]=open( "/dev/null", O_RDONLY ) ) < 0 ) {
-			dprintf(D_ALWAYS, "failed to open stdin file /dev/null, errno %d\n",
-				errno);
+		if( (fds[0]=open("/dev/null", O_RDONLY) ) < 0 ) {
+			dprintf( D_ALWAYS,
+					 "failed to open stdin file /dev/null, errno %d\n",
+					 errno );
 			failedStdin = 1;
 		}
 	#endif
 	}
 
-	if (JobAd->LookupString(ATTR_JOB_OUTPUT, filename1) == 1) {
-		if ( !nullFile(filename1) ) {
-			if( Starter->wantsFileTransfer() ) {
-				filename = basename( filename1 );
-			} else {
-				filename = filename1;
+	filename = Starter->jic->jobOutputFilename();
+	if( filename ) {
+		if( (fds[1]=open(filename,O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 ) {
+				// if failed, try again without O_TRUNC
+			if( (fds[1]=open( filename, O_WRONLY|O_CREAT, 0666)) < 0 ) {
+				failedStdout = 1;
+				char const *errno_str = strerror( errno );
+				MyString err_msg;
+				err_msg = "Failed to open standard output file '";
+				err_msg += filename;
+				err_msg += "': ";
+				err_msg += errno_str;
+				err_msg += " (errno ";
+				err_msg += errno;
+				err_msg += ')';
+				dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
+				Starter->jic->notifyStarterError( err_msg.Value(), true );
 			}
-            if ( filename[0] != '/' ) {  // prepend full path
-                sprintf( outfile, "%s%c", job_iwd, DIR_DELIM_CHAR );
-            } else {
-                outfile[0] = '\0';
-            }
-			strcat ( outfile, filename );
-			if ((fds[1]=open(outfile,O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 ) {
-					// if failed, try again without O_TRUNC
-				if ( (fds[1]=open( outfile, O_WRONLY | O_CREAT, 0666)) < 0 ) {
-					char const *errno_str = strerror(errno);
-
-					dprintf(D_ALWAYS,
-							"failed to open stdout file %s, errno %d\n",
-							outfile, errno);
-					failedStdout = 1;
-
-
-					REMOTE_CONDOR_ulog_printf(
-					  "Failed to open standard output file '%s': %s",
-					  infile,
-					  errno_str);
-				}
-			}
-			dprintf ( D_ALWAYS, "Output file: %s\n", outfile );
 		}
+		dprintf( D_ALWAYS, "Output file: %s\n", filename );
 	} else {
-	#ifndef WIN32
-		if ((fds[1]=open("/dev/null",O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 ) {
-			// if failed, try again without O_TRUNC
-			if ( (fds[1]=open( "/dev/null", O_WRONLY | O_CREAT, 0666)) < 0 ) {
-				dprintf(D_ALWAYS, 
-					"failed to open stdout file /dev/null, errno %d\n", 
-					 errno);
+    #ifndef WIN32
+		if( (fds[1]=open("/dev/null",O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 ) {
+				// if failed, try again without O_TRUNC
+			if( (fds[1]=open( "/dev/null", O_WRONLY | O_CREAT, 0666)) < 0 ) {
+				dprintf( D_ALWAYS, 
+						 "failed to open stdout file /dev/null, errno %d\n", 
+						 errno );
 				failedStdout = 1;
 			}
 		}
-	#endif
+    #endif
 	}
 
-	if (JobAd->LookupString(ATTR_JOB_ERROR, filename1) == 1) {
-		if ( !nullFile(filename1) ) {
-			if( Starter->wantsFileTransfer() ) {
-				filename = basename( filename1 );
-			} else {
-				filename = filename1;
+	filename = Starter->jic->jobErrorFilename();
+	if( filename ) {
+		if( (fds[2]=open(filename,O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 ) {
+				// if failed, try again without O_TRUNC
+			if( (fds[2]=open(filename,O_WRONLY|O_CREAT, 0666)) < 0 ) {
+				failedStderr = 1;
+				char const *errno_str = strerror( errno );
+				MyString err_msg;
+				err_msg = "Failed to open standard error file '";
+				err_msg += filename;
+				err_msg += "': ";
+				err_msg += errno_str;
+				err_msg += " (errno ";
+				err_msg += errno;
+				err_msg += ')';
+				dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
+				Starter->jic->notifyStarterError( err_msg.Value(), true );
 			}
-            if ( filename[0] != '/' ) {  // prepend full path
-                sprintf( errfile, "%s%c", job_iwd, DIR_DELIM_CHAR );
-            } else {
-                errfile[0] = '\0';
-            }
-			strcat ( errfile, filename );
-			if ((fds[2]=open( errfile,O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 ) {
-					// if failed, try again without O_TRUNC
-				if ((fds[2]=open( errfile,O_WRONLY|O_CREAT, 0666)) < 0 ) {
-					char const *errno_str = strerror(errno);
-
-					dprintf(D_ALWAYS,
-							"failed to open stderr file %s, errno %d\n",
-							errfile, errno);
-					failedStderr = 1;
-
-					REMOTE_CONDOR_ulog_printf(
-					  "Failed to open standard error file '%s': %s",
-					  infile,
-					  errno_str);
-				}
-			}
-			dprintf ( D_ALWAYS, "Error file: %s\n", errfile );
 		}
+		dprintf ( D_ALWAYS, "Error file: %s\n", filename );
 	} else {
 	#ifndef WIN32
-		if ((fds[2]=open("/dev/null",O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 ) {
+		if( (fds[2]=open("/dev/null",O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 ) {
 			// if failed, try again without O_TRUNC
-			if ( (fds[2]=open( "/dev/null", O_WRONLY | O_CREAT, 0666)) < 0 ) {
-				dprintf(D_ALWAYS, 
-						"failed to open stderr file /dev/null, errno %d\n", 
-						errno);
+			if( (fds[2]=open( "/dev/null", O_WRONLY | O_CREAT, 0666)) < 0 ) {
+				dprintf( D_ALWAYS, 
+						 "failed to open stderr file /dev/null, errno %d\n", 
+						 errno );
 				failedStderr = 1;
 			}
 		}
@@ -410,8 +356,7 @@ OsProc::StartJob()
 		// Misc + Exec
 		// // // // // // 
 
-		// Notify the shadow we're about to exec.
-	REMOTE_CONDOR_begin_execution();
+	Starter->jic->notifyJobPreSpawn();
 
 	// handle JOB_RENICE_INCREMENT
 	char* ptmp = param( "JOB_RENICE_INCREMENT" );
@@ -449,7 +394,7 @@ OsProc::StartJob()
 	set_priv ( priv );
 
 	JobPid = daemonCore->Create_Process(JobName, Args, PRIV_USER_FINAL, 1,
-				   FALSE, env_str, job_iwd, TRUE, NULL, fds, nice_inc,
+				   FALSE, env_str, (char*)job_iwd, TRUE, NULL, fds, nice_inc,
 				   DCJOBOPT_NO_ENV_INHERIT );
 
 	//NOTE: Create_Process() saves the errno for us if it is an
@@ -472,11 +417,13 @@ OsProc::StartJob()
 		JobPid = -1;
 
 		if(create_process_error) {
-			REMOTE_CONDOR_ulog_printf(
-			  "Failed to execute '%s %s': %s",
-			  JobName,
-			  Args,
-			  create_process_error);
+			MyString err_msg = "Failed to execute '";
+			err_msg += JobName;
+			err_msg += ' ';
+			err_msg += Args;
+			err_msg += "': ";
+			err_msg += create_process_error;
+			Starter->jic->notifyStarterError( err_msg.Value(), true );
 		}
 
 		EXCEPT("Create_Process(%s,%s, ...) failed",
@@ -498,14 +445,14 @@ OsProc::initKillSigs( void )
 	int sig;
 
 	sig = findSoftKillSig( JobAd );
-	if( sig > 0 ) {
+	if( sig >= 0 ) {
 		soft_kill_sig = sig;
 	} else {
 		soft_kill_sig = SIGTERM;
 	}
 
 	sig = findRmKillSig( JobAd );
-	if( sig > 0 ) {
+	if( sig >= 0 ) {
 		rm_kill_sig = sig;
 	} else {
 		rm_kill_sig = SIGTERM;
@@ -552,7 +499,6 @@ bool
 OsProc::JobExit( void )
 {
 	int reason;	
-	bool job_exit_wants_ad = true;
 
 	dprintf( D_FULLDEBUG, "Inside OsProc::JobExit()\n" );
 
@@ -564,48 +510,7 @@ OsProc::JobExit( void )
 		reason = JOB_EXITED;
 	}
 
-		// protocol changed w/ v6.3.0 so the Update Ad is sent
-		// with the final REMOTE_CONDOR_job_exit system call.
-		// to keep things backwards compatible, do not send the 
-		// ad with this system call if the shadow is older.
-
-		// However, b/c the shadow didn't start sending it's version
-		// to the starter until 6.3.2, we confuse 6.3.0 and 6.3.1
-		// shadows with 6.2.X shadows that don't support the new
-		// protocol.  Luckily, we never released 6.3.0 or 6.3.1 for
-		// windoze, and we never released any part of the new
-		// shadow/starter for Unix until 6.3.0.  So, we only have to
-		// do this compatibility check on windoze, and we don't have
-		// to worry about it not being able to tell the difference
-		// between 6.2.X, 6.3.0, and 6.3.1, since we never released
-		// 6.3.0 or 6.3.1. :) Derek <wright@cs.wisc.edu> 1/25/02
-
-#ifdef WIN32		
-	job_exit_wants_ad = false;
-	CondorVersionInfo * ver = Starter->GetShadowVersion();
-	if( ver && ver->built_since_version(6,3,0) ) {
-		job_exit_wants_ad = true;	// new shadow; send ad
-	}
-#endif		
-
-	ClassAd ad;
-	ClassAd *ad_to_send;
-	
-	if ( job_exit_wants_ad ) {
-		PublishUpdateAd( &ad );
-		ad_to_send = &ad;
-	} else {
-		dprintf( D_FULLDEBUG,
-				 "Shadow is pre-v6.3.0 - not sending final update ad\n" ); 
-		ad_to_send = NULL;
-	}
-			
-	if( REMOTE_CONDOR_job_exit(exit_status, reason, ad_to_send) < 0 ) {    
-		dprintf( D_ALWAYS, 
-				 "Failed to send job exit status to Shadow.\n" );
-		return false;
-	}
-	return true;
+	return Starter->jic->notifyJobExit( exit_status, reason, this );
 }
 
 
@@ -617,7 +522,8 @@ OsProc::renameCoreFile( void )
 	priv_state old_priv;
 
 	char buf[64];
-	sprintf( buf, "core.%d.%d", Cluster, Proc );
+	sprintf( buf, "core.%d.%d", Starter->jic->jobCluster(), 
+			 Starter->jic->jobProc() );
 
 	MyString old_name( job_iwd );
 	MyString new_name( job_iwd );
@@ -638,7 +544,7 @@ OsProc::renameCoreFile( void )
 
 	if( rval ) {
 			// make sure it'll get transfered back, too.
-		Starter->addToTransferOutputFiles( buf );
+		Starter->jic->addToOutputFiles( buf );
 		dprintf( D_FULLDEBUG, "Found core file, renamed to %s\n", buf );
 	} else if( errno != ENOENT ) {
 		dprintf( D_ALWAYS, "Failed to rename(%s,%s): errno %d (%s)\n",

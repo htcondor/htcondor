@@ -44,6 +44,7 @@ char*	exec_path = NULL;
 
 // String Lists
 StringList *startd_job_exprs = NULL;
+static StringList *valid_cod_users = NULL; 
 
 // Hosts
 Daemon*	Collector = NULL;
@@ -307,6 +308,11 @@ main_init( int, char* argv[] )
 								  (CommandHandler)command_match_info,
 								  "command_match_info", 0, NEGOTIATOR );
 
+		// the ClassAd-only command
+	daemonCore->Register_Command( CA_CMD, "CA_CMD",
+								  (CommandHandler)command_classad_handler,
+								  "command_classad_handler", 0, WRITE );
+
 		//////////////////////////////////////////////////
 		// Reapers 
 		//////////////////////////////////////////////////
@@ -559,6 +565,17 @@ init_params( int first_time)
 		free( tmp );
 	}
 
+	if( valid_cod_users ) {
+		delete( valid_cod_users );
+		valid_cod_users = NULL;
+	}
+	tmp = param( "VALID_COD_USERS" );
+	if( tmp ) {
+		valid_cod_users = new StringList();
+		valid_cod_users->initializeFromString( tmp );
+		free( tmp );
+	}
+
 	return TRUE;
 }
 
@@ -613,7 +630,7 @@ main_shutdown_fast()
 								 "shutdown_reaper" );
 
 		// Quickly kill all the starters that are running
-	resmgr->walk( &Resource::kill_claim );
+	resmgr->walk( &Resource::killAllClaims );
 
 	daemonCore->Register_Timer( 0, 5, 
 								(TimerHandler)startd_check_free,
@@ -644,7 +661,7 @@ main_shutdown_graceful()
 								 "shutdown_reaper" );
 
 		// Release all claims, active or not
-	resmgr->walk( &Resource::release_claim );
+	resmgr->walk( &Resource::releaseAllClaims );
 
 	daemonCore->Register_Timer( 0, 5, 
 								(TimerHandler)startd_check_free,
@@ -656,7 +673,7 @@ main_shutdown_graceful()
 int
 reaper(Service *, int pid, int status)
 {
-	Resource* rip;
+	Claim* foo;
 
 	if( WIFSIGNALED(status) ) {
 		dprintf(D_FAILURE|D_ALWAYS, "Starter pid %d died on signal %d (%s)\n",
@@ -665,9 +682,9 @@ reaper(Service *, int pid, int status)
 		dprintf(D_FAILURE|D_ALWAYS, "Starter pid %d exited with status %d\n",
 				pid, WEXITSTATUS(status));
 	}
-	rip = resmgr->get_by_pid(pid);
-	if( rip ) {
-		rip->starter_exited();
+	foo = resmgr->getClaimByPid(pid);
+	if( foo ) {
+		foo->starterExited();
 	}		
 	return TRUE;
 }
@@ -714,7 +731,7 @@ startd_check_free()
 	if ( ! resmgr ) {
 		startd_exit();
 	}
-	if( ! resmgr->in_use() ) {
+	if( ! resmgr->hasAnyClaim() ) {
 		startd_exit();
 	}
 	return TRUE;
@@ -732,3 +749,12 @@ main_pre_command_sock_init( )
 {
 }
 
+
+bool
+authorizedForCOD( const char* owner )
+{
+	if( ! valid_cod_users ) {
+		return false;
+	}
+	return valid_cod_users->contains( owner );
+}

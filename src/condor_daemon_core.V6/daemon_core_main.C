@@ -65,6 +65,8 @@ static int is_master = 0;
 char*	logDir = NULL;
 char*	pidFile = NULL;
 char*	addrFile = NULL;
+static	char*	logAppend = NULL;
+static	char*	lockFile = NULL;
 #ifdef WIN32
 int line_where_service_stopped = 0;
 #endif
@@ -311,9 +313,9 @@ set_log_dir()
 
 
 void
-handle_log_append( char* logAppend )
+handle_log_append( char* append_str )
 {
-	if( ! logAppend ) {
+	if( ! append_str ) {
 		return;
 	}
 	char *tmp1, *tmp2;
@@ -322,17 +324,69 @@ handle_log_append( char* logAppend )
 	if( !(tmp1 = param(buf)) ) { 
 		EXCEPT( "%s not defined!", buf );
 	}
-	tmp2 = (char*)malloc( (strlen(tmp1) + strlen(logAppend) + 2)
+	tmp2 = (char*)malloc( (strlen(tmp1) + strlen(append_str) + 2)
 						  * sizeof(char) );
 	if( !tmp2 ) {	
 		EXCEPT( "Out of memory!" );
 	}
-	sprintf( tmp2, "%s.%s", tmp1, logAppend );
+	sprintf( tmp2, "%s.%s", tmp1, append_str );
 	config_insert( buf, tmp2 );
 	free( tmp1 );
 	free( tmp2 );
 }
 
+
+void
+handle_dprintf_locking( char* file )
+{
+	if( ! file ) {
+		EXCEPT( "handle_dprintf_locking called with NULL file!" );
+	}
+
+	char *lock_dir = NULL;
+	char *log_dir = NULL;
+	MyString lock_value;
+
+	MyString lock_name = mySubSystem;
+	lock_name += "_LOCK";
+	char* tmp = param( lock_name.Value() );
+	if( tmp ) {
+			// we're already doing locking, nothing else to do.
+		free( tmp );
+		return;
+	} 
+
+
+	if( fullpath(file) ) { 
+			// they gave us a fully-qualified path, trust 'em.
+		lock_value = file;
+	} else {
+			// they just gave us a filename, so prepend either LOCK or
+			// LOG, whichever is defined. 
+		lock_dir = param( "LOCK" );
+		if( lock_dir ) {
+			lock_value = lock_dir;
+		} else {
+			log_dir = param( "LOG" );
+			if( ! log_dir ) { 
+				EXCEPT( "dprintf locking requested but neither LOCK "
+						"nor LOG defined in config file!" );
+			}
+			lock_value = log_dir;
+		}
+		lock_value += DIR_DELIM_CHAR;
+		lock_value += file;
+	}
+
+	config_insert( lock_name.Value(), lock_value.Value() );
+
+	if( lock_dir ) {
+		free( lock_dir );
+	}
+	if( log_dir ) {
+		free( log_dir );
+	}
+}
 
 void
 set_dynamic_dir( char* param_name, const char* append_str )
@@ -801,6 +855,14 @@ dc_reconfig( bool is_full )
 		set_log_dir();
 	}
 
+	if( logAppend ) {
+		handle_log_append( logAppend );
+	}
+
+	if( lockFile ) { 
+		handle_dprintf_locking( lockFile );
+	}
+
 	// Reinitialize logging system; after all, LOG may have been changed.
 	dprintf_config(mySubSystem,2);
 	
@@ -978,7 +1040,6 @@ int main( int argc, char** argv )
 	char	*ptmp, *ptmp1;
 	int		i;
 	int		wantsKill = FALSE, wantsQuiet = FALSE;
-	char	*logAppend = NULL;
 	int runfor = 0; //allow cmd line option to exit after *runfor* minutes
 
 
@@ -1036,6 +1097,10 @@ int main( int argc, char** argv )
 	// from the front of the command line.
 	i = 0;
 	bool done = false;
+	char* target;
+	char _lockfile [] = "-lockfile";
+	char _log [] = "-log";
+	int opt_len;
 
 	for(ptr = argv + 1; *ptr && (i < argc - 1); ptr++,i++) {
 		if(ptr[0][0] != '-') {
@@ -1116,16 +1181,28 @@ int main( int argc, char** argv )
 			}
 			break;
 #endif
-		case 'l':		// specify Log directory
+		case 'l':		// specify Log directory or lockfile
+			opt_len = strlen( ptr[0] );
+			if( opt_len > 3 && !strncmp(ptr[0], _lockfile, opt_len) ) {
+				target = _lockfile;
+			} else if( !strncmp(ptr[0], _log, opt_len) ) {
+				target = _log;
+			} else {
+				fprintf( stderr, "DaemonCore: ERROR: '%s' is invalid\n",
+						 ptr[0] );
+				exit( 1 );
+			}
 			ptr++;
 			if( ptr && *ptr ) {
-				logDir = *ptr;
+				if( target == _log ) {
+					logDir = *ptr;
+				} else { 
+					lockFile = *ptr;
+				}					
 				dcargs += 2;
 			} else {
-				fprintf( stderr, 
-						 "DaemonCore: ERROR: -log needs another argument.\n" );
-				fprintf( stderr, 
-						 "   Please specify a directory to use for logging.\n" );
+				fprintf( stderr, "DaemonCore: ERROR: %s needs another "
+						 "argument\n", target );
 				exit( 1 );
 			}				  
 			break;
@@ -1241,6 +1318,10 @@ int main( int argc, char** argv )
 			handle_log_append( logAppend );
 		}
 		
+		if( lockFile ) {
+			handle_dprintf_locking( lockFile );
+		}
+
 			// Actually set up logging.
 		dprintf_config(mySubSystem,2);
 	}
@@ -1296,6 +1377,13 @@ int main( int argc, char** argv )
 
 		handle_dynamic_dirs();
 
+		if( logAppend ) {
+			handle_log_append( logAppend );
+		}
+		
+		if( lockFile ) {
+			handle_dprintf_locking( lockFile );
+		}
 			// Actually set up logging.
 		dprintf_config(mySubSystem,2);
 	}
@@ -1506,7 +1594,7 @@ main( int argc, char** argv)
 		case 'f':		// run in Foreground
 			Foreground = 1;
 			break;
-		case 'l':		// specify Log directory
+		case 'l':		// specify Log directory or locking
 			 ptr++;
 			 break;
 		case 'p':		// Use well-known Port for command socket.		

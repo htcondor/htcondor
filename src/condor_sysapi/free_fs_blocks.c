@@ -311,8 +311,8 @@ const char *filename;
 		return(INT_MAX);
 	}
 
-	dprintf(D_FULLDEBUG, "number of kbytes available for (%s): %f\n", 
-			filename, free_kbytes);
+	dprintf( D_FULLDEBUG, "%.0f kbytes available for \"%s\"\n", 
+			 free_kbytes, filename );
 
 	return (int)free_kbytes;
 }

@@ -22,8 +22,11 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "condor_string.h"
 #include "condor_debug.h"
+#include "condor_attributes.h"
 #include "condor_commands.h"
+#include "command_strings.h"
 #include "daemon.h"
 #include "dc_startd.h"
 
@@ -32,14 +35,14 @@
 DCStartd::DCStartd( const char* name, const char* pool ) 
 	: Daemon( DT_STARTD, name, pool )
 {
-	capability = NULL;
+	claim_id = NULL;
 }
 
 
 DCStartd::~DCStartd( void )
 {
-	if( capability ) {
-		free( capability );
+	if( claim_id ) {
+		delete [] claim_id;
 	}
 }
 
@@ -47,13 +50,21 @@ DCStartd::~DCStartd( void )
 bool
 DCStartd::setCapability( const char* cap_str ) 
 {
-	if( ! cap_str ) {
+	return setClaimId( cap_str );
+}
+
+
+bool
+DCStartd::setClaimId( const char* id ) 
+{
+	if( ! id ) {
 		return false;
 	}
-	if( capability ) {
-		free( capability );
+	if( claim_id ) {
+		delete [] claim_id;
+		claim_id = NULL;
 	}
-	capability = strdup( cap_str );
+	claim_id = strnewp( id );
 	return true;
 }
 
@@ -64,18 +75,11 @@ DCStartd::deactivateClaim( bool graceful )
 	dprintf( D_FULLDEBUG, "Entering DCStartd::deactivateClaim(%s)\n",
 			 graceful ? "graceful" : "forceful" );
 
-	if( ! capability ) {
-		dprintf( D_ALWAYS, "DCStartd::deactivateClaim "
-				 "called with NULL capability, failing\n" );
+	setCmdStr( "deactivateClaim" );
+	if( ! checkClaimId() ) {
 		return false;
 	}
-	if( ! _addr ) {
-		locate();
-	}
-	if( ! _addr ) {
-		dprintf( D_ALWAYS, "DCStartd::deactivateClaim: "
-				 "Can't locate startd: %s\n", _error ? _error : 
-				 "unknown error" );
+	if( ! checkAddr() ) {
 		return false;
 	}
 
@@ -101,10 +105,10 @@ DCStartd::deactivateClaim( bool graceful )
 				 "DEACTIVATE_CLAIM_FORCIBLY" );
 		return false;
 	}
-		// Now, send the capability
-	if( ! reli_sock.code(capability) ) {
+		// Now, send the claim_id
+	if( ! reli_sock.code(claim_id) ) {
 		dprintf( D_ALWAYS, "DCStartd::deactivateClaim: "
-				 "Failed to send capability to the startd\n" );
+				 "Failed to send claim_id to the startd\n" );
 		return false;
 	}
 	if( ! reli_sock.eom() ) {
@@ -126,6 +130,8 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 	int reply;
 	dprintf( D_FULLDEBUG, "Entering DCStartd::activateClaim()\n" );
 
+	setCmdStr( "activateClaim" );
+
 	if( claim_sock_ptr ) {
 			// our caller wants a pointer to the socket we used to
 			// successfully activate the claim.  right now, set it to
@@ -134,18 +140,9 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 		*claim_sock_ptr = NULL;
 	}
 
-	if( ! capability ) {
+	if( ! claim_id ) {
 		dprintf( D_ALWAYS, "DCStartd::activateClaim "
-				 "called with NULL capability, failing\n" );
-		return NOT_OK;
-	}
-	if( ! _addr ) {
-		locate();
-	}
-	if( ! _addr ) {
-		dprintf( D_ALWAYS, "DCStartd::activateClaim: "
-				 "Can't locate startd: %s\n", _error ? _error : 
-				 "unknown error" );
+				 "called with NULL claim_id, failing\n" );
 		return NOT_OK;
 	}
 
@@ -157,9 +154,9 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 				 "ACTIVATE_CLAIM" );
 		return NOT_OK;
 	}
-	if( ! tmp->code(capability) ) {
+	if( ! tmp->code(claim_id) ) {
 		dprintf( D_ALWAYS, "DCStartd::activateClaim: "
-				 "Failed to send capability to the startd\n" );
+				 "Failed to send claim_id to the startd\n" );
 		delete tmp;
 		return NOT_OK;
 	}
@@ -202,4 +199,219 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 		delete tmp;
 	}
 	return reply;
+}
+
+
+bool
+DCStartd::requestClaim( ClaimType type, const ClassAd* req_ad, 
+						ClassAd* reply, int timeout )
+{
+	setCmdStr( "requestClaim" );
+
+	MyString err_msg;
+	switch( type ) {
+	case CLAIM_COD:
+	case CLAIM_OPPORTUNISTIC:
+		break;
+	default:
+		err_msg = "Invalid ClaimType (";
+		err_msg += (int)type;
+		err_msg += ')';
+		newError( err_msg.Value() );
+		return false;
+	}
+
+	ClassAd req( *req_ad );
+	char buf[1024]; 
+
+		// Add our own attributes to the request ad we're sending
+	sprintf( buf, "%s = \"%s\"", ATTR_COMMAND,
+			 getCommandString(CA_REQUEST_CLAIM) );
+	req.Insert( buf );
+
+	sprintf( buf, "%s = \"%s\"", ATTR_CLAIM_TYPE, getClaimTypeString(type) );
+	req.Insert( buf );
+
+	return sendCACmd( &req, reply, true, timeout );
+}
+
+
+bool
+DCStartd::activateClaim( const ClassAd* job_ad, ClassAd* reply, 
+						 int timeout ) 
+{
+	setCmdStr( "activateClaim" );
+	if( ! checkClaimId() ) {
+		return false;
+	}
+	ClassAd req( *job_ad );
+	char buf[1024]; 
+
+		// Add our own attributes to the request ad we're sending
+	sprintf( buf, "%s = \"%s\"", ATTR_COMMAND,
+			 getCommandString(CA_ACTIVATE_CLAIM) );
+	req.Insert( buf );
+
+	sprintf( buf, "%s = \"%s\"", ATTR_CLAIM_ID, claim_id );
+	req.Insert( buf );
+
+	return sendCACmd( &req, reply, true, timeout );
+}
+
+
+bool
+DCStartd::suspendClaim( ClassAd* reply, int timeout )
+{
+	setCmdStr( "suspendClaim" );
+	if( ! checkClaimId() ) {
+		return false;
+	}
+
+	ClassAd req;
+	char buf[1024]; 
+
+		// Add our own attributes to the request ad we're sending
+	sprintf( buf, "%s = \"%s\"", ATTR_COMMAND,
+			 getCommandString(CA_SUSPEND_CLAIM) );
+	req.Insert( buf );
+
+	sprintf( buf, "%s = \"%s\"", ATTR_CLAIM_ID, claim_id );
+	req.Insert( buf );
+
+	return sendCACmd( &req, reply, true, timeout );
+}
+
+
+bool
+DCStartd::resumeClaim( ClassAd* reply, int timeout )
+{
+	setCmdStr( "resumeClaim" );
+	if( ! checkClaimId() ) {
+		return false;
+	}
+
+	ClassAd req;
+	char buf[1024]; 
+
+		// Add our own attributes to the request ad we're sending
+	sprintf( buf, "%s = \"%s\"", ATTR_COMMAND,
+			 getCommandString(CA_RESUME_CLAIM) );
+	req.Insert( buf );
+
+	sprintf( buf, "%s = \"%s\"", ATTR_CLAIM_ID, claim_id );
+	req.Insert( buf );
+
+	return sendCACmd( &req, reply, true, timeout );
+}
+
+
+bool
+DCStartd::deactivateClaim( VacateType type, ClassAd* reply,
+						   int timeout )
+{
+	setCmdStr( "deactivateClaim" );
+	if( ! checkClaimId() ) {
+		return false;
+	}
+	if( ! checkVacateType(type) ) {
+		return false;
+	}
+
+	ClassAd req;
+	char buf[1024]; 
+
+		// Add our own attributes to the request ad we're sending
+	sprintf( buf, "%s = \"%s\"", ATTR_COMMAND,
+			 getCommandString(CA_DEACTIVATE_CLAIM) );
+	req.Insert( buf );
+
+	sprintf( buf, "%s = \"%s\"", ATTR_CLAIM_ID, claim_id );
+	req.Insert( buf );
+
+	sprintf( buf, "%s = \"%s\"", ATTR_VACATE_TYPE,
+			 getVacateTypeString(type) ); 
+	req.Insert( buf );
+
+ 		// since deactivate could take a while, if we didn't already
+		// get told what timeout to use, set the timeout to 0 so we
+ 		// don't bail out prematurely...
+	if( timeout < 0 ) {
+		return sendCACmd( &req, reply, true, 0 );
+	} else {
+		return sendCACmd( &req, reply, true, timeout );
+	}
+}
+
+
+bool
+DCStartd::releaseClaim( VacateType type, ClassAd* reply, 
+						int timeout ) 
+{
+	setCmdStr( "releaseClaim" );
+	if( ! checkClaimId() ) {
+		return false;
+	}
+	if( ! checkVacateType(type) ) {
+		return false;
+	}
+
+	ClassAd req;
+	char buf[1024]; 
+
+		// Add our own attributes to the request ad we're sending
+	sprintf( buf, "%s = \"%s\"", ATTR_COMMAND,
+			 getCommandString(CA_RELEASE_CLAIM) );
+	req.Insert( buf );
+
+	sprintf( buf, "%s = \"%s\"", ATTR_CLAIM_ID, claim_id );
+	req.Insert( buf );
+
+	sprintf( buf, "%s = \"%s\"", ATTR_VACATE_TYPE,
+			 getVacateTypeString(type) );
+	req.Insert( buf );
+
+ 		// since release could take a while, if we didn't already get
+		// told what timeout to use, set the timeout to 0 so we don't
+		// bail out prematurely...
+	if( timeout < 0 ) {
+		return sendCACmd( &req, reply, true, 0 );
+	} else {
+		return sendCACmd( &req, reply, true, timeout );
+	}
+}
+
+
+bool
+DCStartd::checkClaimId( void )
+{
+	if( claim_id ) {
+		return true;
+	}
+	MyString err_msg;
+	if( _cmd_str ) {
+		err_msg += _cmd_str;
+		err_msg += ": ";
+	}
+	err_msg += "called with no ClaimId";
+	newError( err_msg.Value() );
+	return false;
+}
+
+
+bool
+DCStartd::checkVacateType( VacateType t )
+{
+	MyString err_msg;
+	switch( t ) {
+	case VACATE_GRACEFUL:
+	case VACATE_FAST:
+		break;
+	default:
+		err_msg = "Invalid VacateType (";
+		err_msg += (int)t;
+		err_msg += ')';
+		newError( err_msg.Value() );
+		return false;
+	}
+	return true;
 }

@@ -103,3 +103,31 @@ dirname(const char *path)
 	return strdup( "." );
 }
 
+
+/* 
+   return TRUE if the given path is a full pathname, FALSE if not.  by
+   full pathname, we mean it either begins with "/" or "\" or "*:\"
+   (something like "c:\..." on windoze).
+*/
+int
+fullpath( const char* path )
+{
+	if( ! path ) {
+		return FALSE;
+	}
+	if( path[0] == '/' || path[0]=='\\' ) {
+		return TRUE;
+	}
+		/*
+		  for this next check, we should be careful not to walk off
+		  the end of the string.  short circuit evaluation will save
+		  us if we hit the NULL character.  if it's only 3 bytes long,
+		  we the 3rd byte will be NULL, which we can still safely
+		  compare against, it's just the thing *after* NULL we don't
+		  want to touch. :)
+		*/
+	if( path[0] && path[1] && path[1]==':' && path[2]=='\\' ) {
+		return TRUE;
+	}
+	return FALSE;
+}

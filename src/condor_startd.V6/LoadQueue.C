@@ -85,13 +85,21 @@ LoadQueue::setval( float val ) {
 
 
 void
-LoadQueue::display() {
+LoadQueue::display( Resource* rip )
+{
 	int i, j;
-	dprintf( D_FULLDEBUG, "LoadQueue: " );
+	MyString msg;
+	msg += "LoadQueue: ";
+	char numbuf[64];
 	for( i=0; i<q_size; i++ ) {
 		j = (head + i) % q_size;
-		dprintf( D_FULLDEBUG | D_NOHEADER, "%f ", buf[j] );
+		snprintf( numbuf, 64, "%.2f ", buf[j] );
+		msg += numbuf;
 	}
-	dprintf( D_FULLDEBUG | D_NOHEADER, "\n" );
+	if( rip ) {
+		rip->dprintf( D_FULLDEBUG, "%s\n", msg.Value() );
+	} else { 
+		dprintf( D_FULLDEBUG, "%s\n", msg.Value() );
+	}
 }
 

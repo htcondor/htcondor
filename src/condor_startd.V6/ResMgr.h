@@ -33,6 +33,7 @@
 #include "simplelist.h"
 #include "extArray.h"
 #include "Resource.h"
+#include "claim.h"
 #include "starter_mgr.h"
 
 typedef int (Resource::*ResourceMember)();
@@ -82,7 +83,8 @@ public:
 	void	assign_load( void );
 	void	assign_keyboard( void );
 
-	bool 	in_use( void );
+	bool 	hasOppClaim( void );
+	bool 	hasAnyClaim( void );
 	bool	is_smp( void ) { return( num_cpus() > 1 ); }
 	int		num_cpus( void ) { return m_attr->num_cpus(); }
 	int		num_vms( void ) { return nresources; }
@@ -140,11 +142,14 @@ public:
 	void	reset_timers( void );	// Reset the period on our timers,
 									// in case the config has changed.
 
-	Resource*	get_by_pid( pid_t );	// Find rip by pid of starter
+	Claim*		getClaimByPid( pid_t );	// Find Claim by pid of starter
+	Claim*		getClaimById( const char* id );	// Find Claim by ClaimId
+	Resource*	findRipForNewCOD( ClassAd* ad );
 	Resource*	get_by_cur_cap(char*);	// Find rip by r_cur->capab 
 	Resource*	get_by_any_cap(char*);	// Find rip by r_cur or r_pre
 	Resource*	get_by_name(char*);		// Find rip by r_name
 	State		state( void );			// Return the machine state
+
 
 	int	force_benchmark( void ); 	// Force a resource to benchmark
 	
@@ -276,5 +281,18 @@ int ownerStateCmp( const void*, const void* );
 // Sort on State, with Claimed state resources coming first.  Break
 // ties with the value of the Rank expression for Claimed resources.
 int claimedRankCmp( const void*, const void* );
+
+/*
+  Sort resource so their in the right order to give out a new COD
+  Claim.  We give out COD claims in the following order:  
+  1) the Resource with the least # of existing COD claims (to ensure
+     round-robin across resources
+  2) in case of a tie, the Resource in the best state (owner or
+     unclaimed, not claimed)
+  3) in case of a tie, the Claimed resource with the lowest value of
+     machine Rank for its claim
+*/
+int newCODClaimCmp( const void*, const void* );
+
 
 #endif /* _CONDOR_RESMGR_H */

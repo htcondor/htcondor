@@ -174,6 +174,13 @@ main (int argc, char *argv[])
 		query->addORConstraint (buffer);
 		break;
 
+	  case MODE_STARTD_COD:
+	    sprintf (buffer, "TARGET.%s > 0", ATTR_NUM_COD_CLAIMS );
+		if (diagnose) {
+			printf ("Adding constraint [%s]\n", buffer);
+		}
+		query->addORConstraint (buffer);
+		break;
 
 	  default:
 		break;
@@ -228,6 +235,7 @@ main (int argc, char *argv[])
 		case MODE_STARTD_NORMAL:
 		case MODE_STARTD_AVAIL:
 		case MODE_STARTD_RUN:
+		case MODE_STARTD_COD:
 			d = new Daemon( DT_STARTD, direct, pool );
 			break;
 		case MODE_SCHEDD_NORMAL: 
@@ -304,6 +312,7 @@ usage ()
 		"\t-avail\t\t\tPrint information about available resources\n"
 		"\t-ckptsrvr\t\tDisplay checkpoint server attributes\n"
 		"\t-claimed\t\tPrint information about claimed resources\n"
+		"\t-cod\t\t\tDisplay Computing On Demand (COD) jobs\n"
 //		"\t-collector\t\tSame as -world\n"
 		"\t-debug\t\t\tDisplay debugging info to console\n"
 		"\t-direct <host>\t\tGet attributes directly from the given daemon\n"
@@ -315,7 +324,7 @@ usage ()
 		"\t-schedd\t\t\tDisplay attributes of schedds\n"
 		"\t-server\t\t\tDisplay important attributes of resources\n"
 		"\t-startd\t\t\tDisplay resource attributes\n"
-		"\t-storage\t\t\tDisplay network storage resources\n"
+		"\t-storage\t\tDisplay network storage resources\n"
 		"\t-any\t\t\tDisplay any resources\n"
 		"\t-state\t\t\tDisplay state of resources\n"
 		"\t-submitters\t\tDisplay information about request submitters\n"
@@ -436,6 +445,9 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix (argv[i], "-run") || matchPrefix(argv[i], "-claimed")) {
 			setMode (MODE_STARTD_RUN, i, argv[i]);
+		} else
+		if( matchPrefix (argv[i], "-cod") ) {
+			setMode (MODE_STARTD_COD, i, argv[i]);
 		} else
 		if (matchPrefix (argv[i], "-java") || matchPrefix(argv[i], "-java")) {
 			javaMode = true;
@@ -580,6 +592,7 @@ secondPass (int argc, char *argv[])
 
 			switch (mode) {
 			  case MODE_STARTD_NORMAL:
+			  case MODE_STARTD_COD:
 			  case MODE_SCHEDD_NORMAL:
 			  case MODE_SCHEDD_SUBMITTORS:
 			  case MODE_MASTER_NORMAL:

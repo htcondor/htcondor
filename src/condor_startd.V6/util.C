@@ -245,49 +245,6 @@ create_port( ReliSock* rsock )
 }
 
 
-char*
-command_to_string( int cmd )
-{
-	switch( cmd ) {
-	case CONTINUE_CLAIM:
-		return "continue_claim";
-	case SUSPEND_CLAIM:
-		return "suspend_claim";
-	case DEACTIVATE_CLAIM:
-		return "deactivate_claim";
-	case DEACTIVATE_CLAIM_FORCIBLY:
-		return "deactivate_claim_forcibly";
-	case MATCH_INFO:
-		return "match_info";
-	case ALIVE:
-		return "alive";
-	case REQUEST_CLAIM:
-		return "request_claim";
-	case RELEASE_CLAIM:
-		return "release_claim";
-	case ACTIVATE_CLAIM:
-		return "activate_claim";
-	case GIVE_STATE:
-		return "give_state";
-	case PCKPT_JOB:
-		return "pckpt_job";
-	case PCKPT_ALL_JOBS:
-		return "pckpt_all_jobs";
-	case VACATE_CLAIM:
-		return "vacate_claim";
-	case VACATE_CLAIM_FAST:
-		return "vacate_claim_fast";
-	case VACATE_ALL_CLAIMS:
-		return "vacate_all_claims";
-	case VACATE_ALL_FAST:
-		return "vacate_all_fast";
-	default:
-		return "unknown";
-	}
-	return "error";
-}
-
-
 bool
 reply( Stream* s, int cmd )
 {
@@ -473,3 +430,80 @@ stream_to_rip( Stream* stream )
 	free( cap );
 	return rip;
 }
+
+
+VacateType
+getVacateType( ClassAd* ad )
+{
+	VacateType vac_t;
+	char* vac_t_str = NULL;
+	if( ! ad->LookupString(ATTR_VACATE_TYPE, &vac_t_str) ) { 
+		return VACATE_GRACEFUL;
+	}
+	vac_t = getVacateTypeNum( vac_t_str );
+	free( vac_t_str );
+	return vac_t;
+}
+
+
+int
+sendCAReply( Stream* s, char* cmd_str, ClassAd* reply )
+{
+	reply->SetMyTypeName( REPLY_ADTYPE );
+	reply->SetTargetTypeName( COMMAND_ADTYPE );
+
+	MyString line;
+	line = ATTR_VERSION;
+	line += " = \"";
+	line += CondorVersion();
+	line += '"';
+	reply->Insert( line.Value() );
+
+	line = ATTR_PLATFORM;
+	line += " = \"";
+	line += CondorPlatform();
+	line += '"';
+	reply->Insert( line.Value() );
+
+	s->encode();
+	if( ! reply->put(*s) ) {
+		dprintf( D_ALWAYS,
+				 "ERROR: Can't send reply classad for %s, aborting\n",
+				 cmd_str );
+		return FALSE;
+	}
+	if( ! s->eom() ) {
+		dprintf( D_ALWAYS, "ERROR: Can't send eom for %s, aborting\n", 
+				 cmd_str );
+		return FALSE;
+	}
+	return TRUE;
+}
+
+
+
+int
+sendErrorReply( Stream* s, char* cmd_str, CAResult result, 
+				const char* err_str ) 
+{
+	dprintf( D_ALWAYS, "Aborting %s\n", cmd_str );
+	dprintf( D_ALWAYS, "%s\n", err_str );
+
+	ClassAd reply;
+	MyString line;
+
+	line = ATTR_RESULT;
+	line += " = \"";
+	line += getCAResultString( result );
+	line += '"';
+	reply.Insert( line.Value() );
+
+	line = ATTR_ERROR_STRING;
+	line += " = \"";
+	line += err_str;
+	line += '"';
+	reply.Insert( line.Value() );
+	
+	return sendCAReply( s, cmd_str, &reply );
+}
+

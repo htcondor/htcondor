@@ -30,16 +30,11 @@
 #ifndef _CONDOR_STARTD_STARTER_H
 #define _CONDOR_STARTD_STARTER_H
 
+#include "../condor_procapi/procapi.h"
 #include "killfamily.h"
+class Claim;
 
-typedef struct jobstartinfo {
-	char *ji_hname;
-	int ji_sock1;
-	int ji_sock2;
-	Stream* shadowCommandSock;
-} start_info_t;
-
-class Starter
+class Starter : public Service
 {
 public:
 	Starter();
@@ -55,15 +50,25 @@ public:
 	int		kill(int);
 	int		killpg(int);
 	void	killkids(int);
-	int		spawn( start_info_t*, time_t );
 	void	exited();
 	pid_t	pid() {return s_pid;};
 	bool	is_dc() {return s_is_dc;};
+	bool	isCOD(); 
 	bool	active();
-	pid_t*	pidfamily() {return s_pidfamily;};
-	int		pidfamily_size() {return s_family_size;};
-	void	recompute_pidfamily( time_t now = 0 );
 	void	set_last_snapshot( time_t val ) { s_last_snapshot = val; };
+	float	percentCpuUsage( void );
+	unsigned long	imageSize( void );
+
+	int		spawn( time_t now, Stream* s );
+
+	bool	killHard( void );
+	bool	killSoft( void );
+	bool	suspend( void );
+	bool	resume( void );
+	
+		// Send SIGKILL to starter + process group (called by our kill
+		// timer if we've been hardkilling too long).
+	int		sigkillStarter( void );
 
 	void	publish( ClassAd* ad, amask_t mask, StringList* list );
 
@@ -74,7 +79,10 @@ public:
 	void	setPath( const char* path );
 	void	setIsDC( bool is_dc );
 
-	void	setResource( Resource* rip );
+	void	setClaim( Claim* c );
+	void	setPorts( int, int );
+	void	setCODArgs( const char* keyword );
+	char*	getCODKeyword( void ) { return s_cod_keyword; };
 
 	void	printInfo( int debug_level );
 
@@ -82,9 +90,18 @@ private:
 
 		// methods
 	int		reallykill(int, int);
-	int		exec_starter(char*, char*, int, int);
-	int		exec_starter(char*, char*, Stream*);
+	int		execOldStarter( void );
+	int		execCODStarter( void );
+	int		execDCStarter( Stream* s );
+	int		execDCStarter( const char* args, Stream* s );
 	void	initRunData( void );
+
+	int		startKillTimer( void );	    // Timer for how long we're willing 
+	void	cancelKillTimer( void );	// to "hardkill" before we SIGKILL
+
+		// helpers related to computing percent cpu usage
+	void	printPidFamily( int dprintf_level, char* header );
+	void	recomputePidFamily( time_t now = 0 );
 
 		// data that will be the same across all instances of this
 		// starter (i.e. things that are valid for copying)
@@ -94,14 +111,18 @@ private:
 
 		// data that only makes sense once this Starter object has
 		// been assigned to a given resource and spawned.
-	Resource*	rip;
+	Claim*	s_claim;
 	pid_t	s_pid;
 	pid_t*	s_pidfamily;
 	int		s_family_size;
 	ProcFamily*	s_procfam;
 	time_t	s_birthdate;
 	time_t	s_last_snapshot;
-
+	int		s_kill_tid;		// DC timer id for hard killing
+	procInfo	s_pinfo;	// aggregate ProcAPI info for starter & job
+	int		s_port1;
+	int		s_port2;
+	char*	s_cod_keyword;
 };
 
 #endif /* _CONDOR_STARTD_STARTER_H */

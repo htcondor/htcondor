@@ -1,7 +1,7 @@
 PROGRAMS =  	condor_config_val condor_preen condor_stats \
 		condor_userprio condor_history condor test_calc \
 		view_collection condor_qedit condor_advertise condor_version \
-		condor_fetchlog condor_submit_dag condor_findhost
+		condor_fetchlog condor_submit_dag condor_findhost cod
 
 all_target( $(PROGRAMS) )
 
@@ -9,17 +9,21 @@ CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)  
 LIB = $(STD_LIBS)
 
+c_plus_target(cod,cod_tool.o,$(LIB))
+static_target(cod,cod_tool.o,$(LIB),$(STATIC_CONTRIB)/bin)
+release_target(cod,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+
 c_plus_target(condor_preen,preen.o,$(LIB))
 release_target(condor_preen,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
 strip_target(condor_preen,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
 static_target(condor_preen,preen.o,$(LIB),$(STATIC_DIR)/sbin)
 pure_c_plus_target(condor_preen.pure,preen.o,$(LIB))
 
-c_plus_target(condor_advertise,advertise.o command_strings.o,$(LIB))
+c_plus_target(condor_advertise,advertise.o,$(LIB))
 release_target(condor_advertise,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
 strip_target(condor_advertise,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
-static_target(condor_advertise,advertise.o command_strings.o,$(LIB),$(STATIC_DIR)/sbin)
-pure_c_plus_target(condor_advertise.pure,advertise.o command_strings.o,$(LIB))
+static_target(condor_advertise,advertise.o,$(LIB),$(STATIC_DIR)/sbin)
+pure_c_plus_target(condor_advertise.pure,advertise.o,$(LIB))
 
 c_plus_target(condor_fetchlog,fetch_log.o,$(LIB))
 release_target(condor_fetchlog,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
@@ -65,15 +69,15 @@ release_target(condor_version,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 strip_target(condor_version,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
 static_target(condor_version,version.o,$(LIB),$(STATIC_DIR)/bin)
 
-c_plus_target(condor,tool.o command_strings.o,$(LIB))
+c_plus_target(condor,tool.o,$(LIB))
 release_target(condor,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
 release_copy_target($(RELEASE_DIR)/sbin/condor,$(RELEASE_DIR)/bin,condor,EXECUTABLE_MODE)
 strip_target(condor,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
 strip_copy_target($(STRIP_DIR)/sbin/condor,$(STRIP_DIR)/bin,condor,EXECUTABLE_MODE)
-static_target(condor,tool.o command_strings.o,$(LIB),$(STATIC_DIR)/sbin)
+static_target(condor,tool.o,$(LIB),$(STATIC_DIR)/sbin)
 static_copy_target($(STATIC_DIR)/sbin/condor,$(STATIC_DIR)/bin,condor,EXECUTABLE_MODE)
-purecov_c_plus_target(condor.pc,tool.o command_strings.o,$(LIB))
-pure_c_plus_target(condor.pure,tool.o command_strings.o,$(LIB))
+purecov_c_plus_target(condor.pc,tool.o,$(LIB))
+pure_c_plus_target(condor.pure,tool.o,$(LIB))
 
 release_link_target($(RELEASE_DIR)/sbin/condor,sbin,condor_on)
 release_link_target($(RELEASE_DIR)/sbin/condor,sbin,condor_off)

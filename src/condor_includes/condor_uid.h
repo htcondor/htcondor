@@ -101,6 +101,7 @@ uid_t getuid(); /* getuid stub for WINNT */
 
 int is_root( void );
 
+const char* get_real_username();
 const char* get_condor_username();
 void display_priv_log();
 

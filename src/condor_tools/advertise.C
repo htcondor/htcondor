@@ -82,7 +82,7 @@ int main( int argc, char *argv[] )
 			set_debug_flags("D_FULLDEBUG");
 		} else if(argv[i][0]!='-') {
 			if(command==-1) {
-				command = get_collector_command_num(argv[i]);
+				command = getCollectorCommandNum(argv[i]);
 				if(command==-1) {
 					fprintf(stderr,"Unknown command name %s\n\n",argv[i]);
 					usage(argv[0]);

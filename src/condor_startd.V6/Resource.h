@@ -26,11 +26,12 @@
 #include "ResAttributes.h"
 #include "ResState.h"
 #include "Starter.h"
-#include "Match.h"
+#include "claim.h"
 #include "Reqexp.h"
 #include "LoadQueue.h"
-#include "../condor_procapi/procapi.h"
 #include "AvailStats.h"
+#include "cod_mgr.h"
+
 
 class Resource : public Service
 {
@@ -54,14 +55,14 @@ public:
 		// Quickly kill starter but keep claim
 	int		deactivate_claim_forcibly( void );
 
- 		// Send DC_SIGHARDKILL to the starter and start a timer to
-		// send SIGKILL to the starter if it's not gone in
-		// killing_timeout seconds.  
-	int		hardkill_starter( void );
+		// Remove the given claim from this Resource
+	void	removeClaim( Claim* );
 
-		// Send SIGKILL to starter + process group 
-	int		sigkill_starter( void );
-	
+		// Shutdown methods that deal w/ opportunistic *and* COD claims
+	int		shutdownAllClaims( bool graceful );
+	int		releaseAllClaims( void );
+	int		killAllClaims( void );
+
 		// Resource state methods
 	void	set_destination_state( State s ) { r_state->set_destination(s);};
 	State	destination_state( void ) {return r_state->destination();};
@@ -71,8 +72,14 @@ public:
 	State		state( void )		{return r_state->state();};
 	Activity	activity( void )	{return r_state->activity();};
 	int		eval_state( void )		{return r_state->eval();};
-	bool	in_use( void );
-	bool	is_deactivating( void ) {return r_is_deactivating;};
+	bool	hasOppClaim( void );
+	bool	hasAnyClaim( void );
+	bool	isDeactivating( void )	{return r_cur->isDeactivating();};
+	bool	isSuspendedForCOD( void ) {return r_suspended_for_cod;};
+	void	hackLoadForCOD( void );
+
+	void	suspendForCOD( void );
+	void	resumeForCOD( void );
 
 		// Methods for computing and publishing resource attributes 
 	void	compute( amask_t mask);
@@ -101,17 +108,23 @@ public:
 	void	log_ignore( int cmd, State s, Activity a );
 	void	log_shutdown_ignore( int cmd );
 
-		// Called from the reaper to handle things for this rip
-	void	starter_exited( void );	
+		// Return a pointer to the Claim object whose starter has the
+		// given pid.  
+	Claim*	findClaimByPid( pid_t starter_pid );
 
-		// Called by command_activate_claim() to spawn a starter
-	int		spawn_starter( start_info_t*, time_t );
+		// Return a pointer to the Claim object with the given ClaimId
+	Claim*	findClaimById( const char* id );
 
-	void	setStarter( Starter* s );
+	bool	claimIsActive( void ); 
+
+	Claim*	newCODClaim( void );
+
+		// Called when the starter of one of our claims exits
+	void	starterExited( Claim* cur_claim );	
 
 		// Since the preempting state is so weird, and when we want to
 		// leave it, we need to decide where we want to go, and we
-		// have to do lots of funky twiddling with our match objects,
+		// have to do lots of funky twiddling with our claim objects,
 		// we put all the actions and logic in one place that gets
 		// called whenever we're finally ready to leave the preempting
 		// state. 
@@ -128,10 +141,6 @@ public:
 	void	final_update( void );		// Send a final update to the CM
 									    // with Requirements = False.
 
-		// Methods to control various timers 
-	int		start_kill_timer( void );	// Timer for how long we're willing to 
-	void	cancel_kill_timer( void );	// be in preempting/killing state. 
-
  		// Helper functions to evaluate resource expressions
 	int		wants_vacate( void );		// EXCEPT's on undefined
 	int		wants_suspend( void );		// EXCEPT's on undefined
@@ -147,31 +156,37 @@ public:
 		// Data members
 	ResState*		r_state;	// Startd state object, contains state and activity
 	ClassAd*		r_classad;	// Resource classad (contains everything in config file)
-	Starter*		r_starter;	// Starter object
-	Match*			r_cur;		// Info about the current match
-	Match*			r_pre;		// Info about the possibly preempting match
+	Claim*			r_cur;		// Info about the current claim
+	Claim*			r_pre;		// Info about the possibly preempting claim
+	CODMgr*			r_cod_mgr;	// Object to manage COD claims
 	Reqexp*			r_reqexp;   // Object for the requirements expression
 	CpuAttributes*	r_attr;		// Attributes of this resource
 	LoadQueue*		r_load_queue;  // Holds 1 minute avg % cpu usage
 	char*			r_name;		// Name of this resource
 	int				r_id;		// CPU id of this resource (int form)
 	char*			r_id_str;	// CPU id of this resource (string form)
-	procInfo		r_pinfo;	// aggregate ProcAPI info for starter & job
 	AvailStats		r_avail_stats; // computes resource availability stats
 
 	int				type( void ) { return r_attr->type(); };
 
 private:
-	int			kill_tid;	// DaemonCore timer id for kiling timer.
 	int			update_tid;	// DaemonCore timer id for update delay
 	unsigned	update_sequence;	// Update sequence number
 
 	int		fast_shutdown;	// Flag set if we're in fast shutdown mode.
 	void	remove_pre( void );	// If r_pre is set, refuse and delete it.
-	bool	r_is_deactivating;	// Are we in the middle of deactivating a claim?
 	int		r_cpu_busy;
 	time_t	r_cpu_busy_start_time;
 	time_t	r_last_compute_condor_load;
+	bool	r_suspended_for_cod;
+	bool	r_hack_load_for_cod;
+	int		r_cod_load_hack_tid;
+	void	beginCODLoadHack( void );
+	float	r_pre_cod_total_load;
+	float	r_pre_cod_condor_load;
+	void 	startTimerToEndCODLoadHack( void );
+	void	endCODLoadHack( void );
 };
+
 
 #endif /* _STARTD_RESOURCE_H */

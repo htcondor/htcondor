@@ -149,6 +149,13 @@ class MyString
 		reasonably.  */
 	MyString& operator+=(const char ); 
 
+	/** Appends the string version of the given int */
+	MyString& operator+=(int i);
+
+	/** Appends the string version of the given double */
+	MyString& operator+=(double d);
+
+
 	/** Returns a new string that is S1 followed by S2 */
 	friend MyString operator+(const MyString &S1, const MyString &S2); 
 	//@}

@@ -21,33 +21,45 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#ifndef COMMAND_STRINGS_H
-#define COMMAND_STRINGS_H
+#ifndef _CONDOR_ENUM_UTILS_H
+#define _CONDOR_ENUM_UTILS_H
 
-#include "condor_common.h"
-#include "condor_commands.h"
-
-/* This file contains a mapping from Commands and Signals in 
-   condor to the appropriate strings.  Some supporting functions
-   are included.  A future implementation should use a hashtable */
-
-/** @name Command and Signal mapping
-
-	Maps commands and signals from name to number and vice-versa.
+/*
+  This file contains utilities for mapping various enum types from our
+  code to and from the corresponding strings.
 */
-//@{
 
-/** Given a command number, return the (static buffer) string */
-char* get_command_string( int );
+#include "translation_utils.h"
 
-/** Given a command/signal name, return the number. */
-int get_command_num( char* );
+typedef enum { 
+	CLAIM_COD=1,
+	CLAIM_OPPORTUNISTIC,
+} ClaimType;
 
-/** Given a collector command number, return the (static buffer) string */
-char* get_collector_command_string( int );
-
-/** Given a collector command/signal name, return the number. */
-int get_collector_command_num( char* );
+const char* getClaimTypeString( ClaimType type );
+ClaimType   getClaimTypeNum( const char* string );
 
 
-#endif
+typedef enum {
+    CLAIM_UNCLAIMED,
+    CLAIM_IDLE,
+    CLAIM_RUNNING,
+    CLAIM_SUSPENDED,
+    CLAIM_VACATING,
+    CLAIM_KILLING,
+} ClaimState;
+
+const char* getClaimStateString( ClaimState state );
+ClaimState  getClaimStateNum( const char* string );
+
+
+typedef enum { 
+	VACATE_GRACEFUL = 1,
+	VACATE_FAST
+} VacateType;
+
+const char* getVacateTypeString( VacateType type );
+VacateType  getVacateTypeNum( const char* string );
+
+
+#endif /* _CONDOR_ENUM_UTILS_H */

@@ -1,0 +1,593 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-2002 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+
+#include "condor_common.h"
+#include "startd.h"
+
+
+CODMgr::CODMgr( Resource* my_rip )
+{
+	rip = my_rip;
+}
+
+
+CODMgr::~CODMgr()
+{
+	Claim* tmp_claim;
+	claims.Rewind();
+	while( claims.Next(tmp_claim) ) {
+		delete( tmp_claim );
+		claims.DeleteCurrent();
+	}
+}
+
+
+void
+CODMgr::publish( ClassAd* ad, amask_t mask )
+{
+	int num_claims = numClaims();
+	if( ! (IS_PUBLIC(mask) && IS_UPDATE(mask)) ) {
+		return;
+	}
+	if( ! num_claims ) {
+		return;
+	}
+	MyString claim_names;
+	Claim* tmp_claim;
+	claims.Rewind();
+	while( claims.Next(tmp_claim) ) {
+		tmp_claim->publishCOD( ad );
+		claim_names += tmp_claim->codId();
+		if( ! claims.AtEnd() ) {
+			claim_names += ", ";
+		}
+	}
+
+	MyString line = ATTR_NUM_COD_CLAIMS;
+	line += '=';
+	line += num_claims;
+	ad->Insert( line.Value() );
+
+	line = ATTR_COD_CLAIMS;
+	line += " = \"";
+	line += claim_names.Value();
+	line +='"';
+	ad->Insert( line.Value() );
+}
+
+
+
+Claim*
+CODMgr::findClaimById( const char* id )
+{
+	Claim* tmp_claim;
+	claims.Rewind();
+	while( claims.Next(tmp_claim) ) {
+		if( tmp_claim->cap()->matches(id) ) {
+			return tmp_claim;
+		}
+	}
+	return NULL;
+}
+
+
+Claim*
+CODMgr::findClaimByPid( pid_t pid )
+{
+	Claim* tmp_claim;
+	claims.Rewind();
+	while( claims.Next(tmp_claim) ) {
+		if( tmp_claim->starterPidMatches(pid) ) {
+			return tmp_claim;
+		}
+	}
+	return NULL;
+}
+
+
+Claim*
+CODMgr::addClaim( ) 
+{
+	Claim* new_claim;
+	new_claim = new Claim( rip, true );
+	new_claim->beginClaim();
+	claims.Append( new_claim );
+	return new_claim;
+}
+
+
+bool
+CODMgr::removeClaim( Claim* c ) 
+{
+	bool found_it = false;
+	Claim* tmp;
+	claims.Rewind();
+	while( claims.Next(tmp) ) {
+		if( tmp == c ) {
+			found_it = true;
+			claims.DeleteCurrent();
+		}
+	}
+	if( found_it ) {
+		delete c;
+		rip->update();
+	} else {
+		dprintf( D_ALWAYS, 
+				 "WARNING: CODMgr::removeClaim() could not find claim %s\n", 
+				 c->id() );
+	}
+	return found_it;
+}
+
+
+void
+CODMgr::starterExited( Claim* c ) 
+{
+	bool claim_removed = false;
+	if( c->hasPendingCmd() ) {
+			// if our pending command is to release the claim, as soon
+			// as we finish that command, the claim will be deleted,
+			// so we won't want to access it anymore.
+		if( c->pendingCmd() == CA_RELEASE_CLAIM ) {
+			claim_removed = true;
+		}
+
+			// if we're in the middle of a pending command, we can
+			// finally complete it and reply now that the starter is
+			// gone and we're done cleaning up everything.
+		c->finishPendingCmd();
+	}
+
+	if( ! claim_removed ) {
+		if( c->wantsRemove() ) {
+			removeClaim( c );
+			claim_removed = true;
+		}
+	}
+
+		// otherwise, the claim is back to idle again, so we should
+		// see if we can resume our opportunistic claim, if we've got
+		// one... 
+	interactionLogicCODStopped();
+}
+
+
+int
+CODMgr::numClaims( void )
+{
+	return claims.Number();
+}
+
+
+bool
+CODMgr::hasClaims( void )
+{
+	return (claims.Number() > 0);
+}
+
+
+bool
+CODMgr::isRunning( void )
+{
+	Claim* tmp;
+	claims.Rewind();
+	while( claims.Next(tmp) ) {
+		if( tmp->isRunning() ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+
+void
+CODMgr::shutdownAllClaims( bool graceful )
+{
+	Claim* tmp;
+	claims.Rewind();
+	while( claims.Next(tmp) ) {
+		if( tmp->removeClaim(graceful) ) {
+			claims.DeleteCurrent();
+			delete( tmp );
+		}
+			// else, there was a starter which we sent a signal to,
+			// so, we'll delete it and clean up in the reaper...
+	}
+}
+
+
+int
+CODMgr::release( Stream* s, ClassAd* req, Claim* claim )
+{
+	VacateType vac_type = getVacateType( req );
+
+		// tell this claim we're trying to release it
+	claim->setPendingCmd( CA_RELEASE_CLAIM );
+	claim->setRequestStream( s );
+
+	switch( claim->state() ) {
+
+	case CLAIM_UNCLAIMED:
+			// This is a programmer error.  we can't possibly get here  
+		EXCEPT( "Trying to release a claim that was never claimed!" ); 
+		break;
+
+	case CLAIM_IDLE:
+			// it's not running a job, so we can remove it
+			// immediately.
+		claim->finishPendingCmd();
+		break;
+
+	case CLAIM_RUNNING:
+	case CLAIM_SUSPENDED:
+			// for these two, we have to kill the starter, and then
+			// clean up the claim when it's gone.  so, all we can do
+			// now is stash the Stream in the claim, and signal the
+			// starter as appropriate;
+		claim->deactivateClaim( vac_type == VACATE_GRACEFUL );
+		break;
+
+	case CLAIM_VACATING:
+			// if we're already preempting gracefully, but the command
+			// requested a fast shutdown, do the hardkill.  otherwise,
+			// now that we know to release this claim, there's nothing
+			// else to do except wait for the starter to exit.
+		if( vac_type == VACATE_FAST ) {
+			claim->deactivateClaim( false );
+		}
+		break;
+
+	case CLAIM_KILLING:
+			// if we're already trying to fast-kill, there's nothing
+			// we can do now except wait for the starter to exit. 
+		break;
+
+	}
+		// in general, we're going to have to wait to reply to the
+  		// requesting entity until the starter exists.  even if we're
+		// ready to reply right now, the finishPendingCmd() method will
+		// have deleted the stream, so in all cases, we want
+		// DaemonCore to leave it alone.
+	return KEEP_STREAM;
+}
+
+
+int
+CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
+{
+	MyString err_msg;
+	ClassAd *mach_classad = rip->r_classad;
+
+	switch( claim->state() ) {
+	case CLAIM_IDLE:
+			// this is the only state that makes sense
+		break;
+	case CLAIM_UNCLAIMED:
+			// This is a programmer error.  we can't possibly get here  
+		EXCEPT( "Trying to activate a claim that was never claimed!" ); 
+		break;
+	case CLAIM_SUSPENDED:
+	case CLAIM_RUNNING:
+	case CLAIM_VACATING:
+	case CLAIM_KILLING:
+		err_msg = "Cannot activate claim: already active (";
+		err_msg += getClaimStateString( claim->state() );
+		err_msg += ')';
+		return sendErrorReply( s, "CA_ACTIVATE_CLAIM",
+							   CA_INVALID_STATE, err_msg.Value() );
+		break;
+	}
+
+		// first, we have to find a Starter that matches the request
+	Starter* tmp_starter;
+	tmp_starter = resmgr->starter_mgr.findStarter( req, mach_classad );
+	if( ! tmp_starter ) {
+		char* tmp = NULL;
+		req->LookupString( ATTR_REQUIREMENTS, &tmp );
+		if( ! tmp ) {
+			err_msg = "Request does not contain ";
+			err_msg += ATTR_REQUIREMENTS;
+			err_msg += ", cannot find a valid starter to activate";
+			return sendErrorReply( s, "CA_ACTIVATE_CLAIM",
+								   CA_INVALID_REQUEST, err_msg.Value() ); 
+		}
+		err_msg = "Cannot find starter that satisfies requirements '";
+		err_msg += tmp;
+		err_msg = "'";
+		free( tmp );
+		return sendErrorReply( s, "CA_ACTIVATE_CLAIM",
+							   CA_INVALID_REQUEST, err_msg.Value() );
+	}
+
+	char* keyword = NULL;
+	if( ! req->LookupString(ATTR_JOB_KEYWORD, &keyword) ) {
+		err_msg = "Request does not contain ";
+		err_msg += ATTR_JOB_KEYWORD;
+		err_msg += ", so server cannot find job in config file\n";
+		delete tmp_starter;
+		return sendErrorReply( s, "CA_ACTIVATE_CLAIM",
+							   CA_INVALID_REQUEST, err_msg.Value() ); 
+	}
+	tmp_starter->setCODArgs( keyword );
+	free( keyword );
+
+		// Grab the job ID so we've got it, and can use it to spawn
+		// the starter with the right args if needed...
+	claim->getJobId( req );
+
+		// now that we've gotten this far, we know we're going to
+		// start a starter.  so, we call the interactionLogic method
+		// to deal with the state changes of the opportunistic claim
+	interactionLogicCODRunning();
+
+		// finally, spawn the starter and COD job itself
+	time_t now = time(NULL);
+	claim->setStarter( tmp_starter );	
+	claim->spawnStarter( now );
+
+		// we need to make a copy of this, since the original is on
+		// the stack in command.C:command_classad_handler().
+		// otherwise, once the handler completes, we've got a dangling
+		// pointer, and if we try to access this variable, we'll crash 
+	ClassAd* new_req_ad = new ClassAd( *req );
+	claim->beginActivation( new_req_ad, now );
+
+	ClassAd reply;
+
+	MyString line = ATTR_RESULT;
+	line += " = \"";
+	line += getCAResultString( CA_SUCCESS );
+	line += '"';
+	reply.Insert( line.Value() );
+
+		// TODO any other info for the reply?
+
+	sendCAReply( s, "CA_ACTIVATE_CLAIM", &reply );
+
+	return TRUE;
+}
+
+
+int
+CODMgr::deactivate( Stream* s, ClassAd* req, Claim* claim )
+{
+	MyString err_msg;
+	VacateType vac_type = getVacateType( req );
+
+	claim->setPendingCmd( CA_DEACTIVATE_CLAIM );
+	claim->setRequestStream( s );
+
+	switch( claim->state() ) {
+
+	case CLAIM_UNCLAIMED:
+			// This is a programmer error.  we can't possibly get here  
+		EXCEPT( "Trying to deactivate a claim that was never claimed!" ); 
+		break;
+
+	case CLAIM_IDLE:
+			// it is not activate, so return an error
+		err_msg = "Cannot deactivate a claim that is not active (";
+		err_msg += getClaimStateString( CLAIM_IDLE );
+		err_msg += ')';
+
+		sendErrorReply( s, "CA_DEACTIVATE_CLAIM",
+						CA_INVALID_STATE, err_msg.Value() ); 
+		claim->setRequestStream( NULL );
+		claim->setPendingCmd( -1 );
+		break;
+
+	case CLAIM_RUNNING:
+	case CLAIM_SUSPENDED:
+			// for these two, we have to kill the starter, and then
+			// notify the other side when it's gone.  so, all we can
+			// do now is stash the Stream in the claim, and signal the
+			// starter as appropriate;
+		claim->deactivateClaim( vac_type == VACATE_GRACEFUL );
+		break;
+
+	case CLAIM_VACATING:
+			// if we're already preempting gracefully, but the command
+			// requested a fast shutdown, do the hardkill.  otherwise,
+			// now that we set the flag so we know to reply to this
+			// stream, there's nothing else to do except wait for the
+			// starter to exit.
+		if( vac_type == VACATE_FAST ) {
+			claim->deactivateClaim( false );
+		}
+		break;
+
+	case CLAIM_KILLING:
+			// if we're already trying to fast-kill, there's nothing
+			// we can do now except wait for the starter to exit. 
+		break;
+
+	}
+		// in general, we're going to have to wait to reply to the
+  		// requesting entity until the starter exists.  even if we
+		// just replied, we already deleted the stream by resetting
+		// the stashed stream in the claim object.  so, in all cases,
+		// we want DaemonCore to leave it alone.
+	return KEEP_STREAM;
+}
+
+
+
+
+int
+CODMgr::suspend( Stream* s, ClassAd* req, Claim* claim )
+{
+	int rval;
+	ClassAd reply;
+	MyString line;
+
+	switch( claim->state() ) {
+
+	case CLAIM_RUNNING:
+		if( claim->suspendClaim() ) { 
+
+			line = ATTR_RESULT;
+			line += " = \"";
+			line += getCAResultString( CA_SUCCESS );
+			line += '"';
+			reply.Insert( line.Value() );
+
+				// TODO any other info for the reply?
+			rval = sendCAReply( s, "CA_SUSPEND_CLAIM", &reply );
+
+				// now that a COD job has stopped, invoke our helper
+				// to deal w/ interactions w/ the opportunistic claim
+			interactionLogicCODStopped();
+
+			return rval;
+		} else {
+			return sendErrorReply( s, "CA_SUSPEND_CLAIM",
+								   CA_FAILURE, 
+						   "Failed to send suspend signal to starter" );
+		}
+		break;
+
+	case CLAIM_UNCLAIMED:
+			// This is a programmer error.  we can't possibly get here  
+		EXCEPT( "Trying to suspend a claim that was never claimed!" ); 
+		break;
+
+	case CLAIM_SUSPENDED:
+		return sendErrorReply( s, "CA_SUSPEND_CLAIM",
+							   CA_INVALID_STATE, 
+							   "Claim is already suspended" );
+		break;
+
+	case CLAIM_IDLE:
+			// it's not running a job, so we can't suspend it!
+		return sendErrorReply( s, "CA_SUSPEND_CLAIM",
+							   CA_INVALID_STATE, 
+							   "Cannot suspend an inactive claim" );
+		break;
+
+	case CLAIM_VACATING:
+	case CLAIM_KILLING:
+		line = "Cannot suspend a claim that is being evicted (";
+		line += getClaimStateString( claim->state() );
+		line += ')';
+		return sendErrorReply( s, "CA_SUSPEND_CLAIM",
+							   CA_INVALID_STATE, line.Value() );
+		break;
+	}
+
+	return FALSE;
+}
+
+
+int
+CODMgr::resume( Stream* s, ClassAd* req, Claim* claim )
+{
+	int rval;
+	ClassAd reply;
+	MyString line;
+
+	switch( claim->state() ) {
+
+	case CLAIM_SUSPENDED:
+			// now that a COD job is about to start running again,
+			// invoke our helper to deal w/ interactions w/ the
+			// opportunistic claim.  we want to do this before we
+			// resume the cod job, since we don't want both to run
+			// simultaneously, even if it's only for a very short
+			// period of time.
+		interactionLogicCODRunning();
+		if( claim->resumeClaim() ) { 
+			line = ATTR_RESULT;
+			line += " = \"";
+			line += getCAResultString( CA_SUCCESS );
+			line += '"';
+			reply.Insert( line.Value() );
+
+				// TODO any other info for the reply?
+			return sendCAReply( s, "CA_RESUME_CLAIM", &reply );
+
+		} else {
+			rval = sendErrorReply( s, "CA_RESUME_CLAIM",
+								   CA_FAILURE, 
+						   "Failed to send resume signal to starter" );
+				// since we didn't really suspend, let the
+				// opportunistic job try to run again... 
+			interactionLogicCODStopped();
+			return rval;
+		}
+		break;
+
+	case CLAIM_UNCLAIMED:
+			// This is a programmer error.  we can't possibly get here  
+		EXCEPT( "Trying to resume a claim that was never claimed!" ); 
+		break;
+
+	case CLAIM_RUNNING:
+		return sendErrorReply( s, "CA_RESUME_CLAIM",
+							   CA_INVALID_STATE, 
+							   "Claim is already running" );
+		break;
+
+
+	case CLAIM_IDLE:
+			// it's not running a job, so we can't resume it!
+		return sendErrorReply( s, "CA_RESUME_CLAIM",
+							   CA_INVALID_STATE, 
+							   "Cannot resume an inactive claim" );
+		break;
+
+	case CLAIM_VACATING:
+	case CLAIM_KILLING:
+		line = "Cannot resume a claim that is being evicted (";
+		line += getClaimStateString( claim->state() );
+		line += ')';
+		return sendErrorReply( s, "CA_RESUME_CLAIM",
+							   CA_INVALID_STATE, line.Value() );
+		break;
+
+	}
+
+	return FALSE;
+}
+
+
+void
+CODMgr::interactionLogicCODRunning( void )
+{
+	if( rip->isSuspendedForCOD() ) {
+			// already suspended, nothing to do
+		return;
+	}
+	rip->suspendForCOD();
+}
+
+
+void
+CODMgr::interactionLogicCODStopped( void )
+{
+	if( isRunning() ) {
+			// we've still got something running, nothing to do.
+		return;
+	} 
+	rip->resumeForCOD();
+}

@@ -27,6 +27,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_io.h"
+#include "enum_utils.h"
 
 
 class DCStartd : public Daemon {
@@ -43,15 +44,27 @@ public:
 	~DCStartd();
 
 		/** Set the capability for use when talking to this startd.
+			This method is deprecated.  You should use setClaimId(),
+			instead.  
 			@param cap_str The capability string
 			@return true on success, false on invalid input (NULL)
 		*/
 	bool setCapability( const char* cap_str );
 
-		/** @return the capability string for this startd, NULL if we
-			don't have a value yet.
+		/** Set the ClaimId to use when talking to this startd. 
+			@param id The ClaimID string
+			@return true on success, false on invalid input (NULL)
 		*/
-	char* getCapability( void ) { return capability; };
+	bool setClaimId( const char* id );
+
+
+		/** @return the capability string for this startd, NULL if we
+			don't have a value yet.  This method is deprecated.  You
+			should use getClaimId(), instead.  
+
+		*/
+	char* getCapability( void ) { return claim_id; };
+	char* getClaimId( void ) { return claim_id; };
 
 		/** Send the command to this startd to deactivate the claim 
 			@param graceful Should we be graceful or forcful?
@@ -74,8 +87,30 @@ public:
 	int activateClaim( ClassAd* job_ad, int starter_version, 
 					   ReliSock** claim_sock_ptr );
 
+		// Generic ClassAd-only protocol for managing claims
+
+	bool requestClaim( ClaimType type, const ClassAd* req_ad,
+					   ClassAd* reply, int timeout = -1 );
+
+	bool activateClaim( const ClassAd* job_ad, ClassAd* reply,
+						int timeout = -1 );
+
+	bool suspendClaim( ClassAd* reply, int timeout = -1 );
+
+	bool resumeClaim( ClassAd* reply, int timeout = -1 );
+
+	bool deactivateClaim( VacateType type, ClassAd* reply,
+						  int timeout = -1 );
+
+	bool releaseClaim( VacateType type, ClassAd* reply,
+					   int timeout = -1 );
+
  private:
-	char* capability;
+	char* claim_id;
+
+		// Helper methods
+	bool checkClaimId( void );
+	bool checkVacateType( VacateType t );
 
 		// I can't be copied (yet)
 	DCStartd( const DCStartd& );

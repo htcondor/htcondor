@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
 #include "condor_state.h"
+#include "enum_utils.h"
 #include "condor_attributes.h"
 #include "MyString.h"
 #include "stdio.h"
@@ -107,6 +108,7 @@ displayTotals (FILE *file, int keyLength)
     	case PP_STARTD_SERVER:
     	case PP_STARTD_RUN:
 		case PP_STARTD_STATE:
+    	case PP_STARTD_COD:
     	case PP_SCHEDD_NORMAL:
     	case PP_SCHEDD_SUBMITTORS:   
     	case PP_CKPT_SRVR_NORMAL:
@@ -373,6 +375,70 @@ displayInfo( FILE *file, int )
 }
 
 
+StartdCODTotal::
+StartdCODTotal()
+{
+	total = 0;
+	idle = 0;
+	running = 0;
+	suspended = 0;
+	vacating = 0;
+	killing = 0;
+}
+
+void
+StartdCODTotal::updateTotals( ClassAd* ad, const char* id ) 
+{
+	char* state_str = getCODStr( ad, id, ATTR_CLAIM_STATE, "unknown" );
+	ClaimState	state = getClaimStateNum( state_str );
+	free( state_str );
+	switch( state ) {
+	case CLAIM_IDLE:		idle++;			break;
+	case CLAIM_RUNNING:		running++;		break;
+	case CLAIM_SUSPENDED:	suspended++;	break;
+	case CLAIM_VACATING:	vacating++;		break;
+	case CLAIM_KILLING:		killing++;		break;
+	default:	break;
+	}
+	total++;
+}
+
+int StartdCODTotal::
+update( ClassAd *ad )
+{
+	StringList cod_claim_list;
+	char* cod_claims = NULL;
+	ad->LookupString( ATTR_COD_CLAIMS, &cod_claims );
+	if( ! cod_claims ) {
+		return 0;
+	}
+	cod_claim_list.initializeFromString( cod_claims );
+	free( cod_claims );
+	char* claim_id;
+	cod_claim_list.rewind();
+	while( (claim_id = cod_claim_list.next()) ) {
+		updateTotals( ad, claim_id );
+	}
+	return 1;
+}
+		
+
+void StartdCODTotal::
+displayHeader(FILE *file)
+{
+	fprintf( file, "%8.8s %5.5s %8.8s %10.10s %9.9s %8.8s\n", "Total", 
+				"Idle", "Running", "Suspended", "Vacating", "Killing" );
+}
+
+
+void StartdCODTotal::
+displayInfo( FILE *file, int )
+{
+	fprintf( file, "%8d %5d %8d %10d %9d %8d\n", total, idle,
+			 running, suspended, vacating, killing );
+}
+
+
 ScheddNormalTotal::
 ScheddNormalTotal()
 {
@@ -531,6 +597,7 @@ makeTotalObject (ppOption ppo)
 		case PP_STARTD_SERVER:		ct = new StartdServerTotal;	break;
 		case PP_STARTD_RUN:			ct = new StartdRunTotal;	break;
 		case PP_STARTD_STATE:		ct = new StartdStateTotal;	break;
+		case PP_STARTD_COD:			ct = new StartdCODTotal;	break;
 		case PP_SCHEDD_NORMAL:		ct = new ScheddNormalTotal; break;
 		case PP_SCHEDD_SUBMITTORS:	ct = new ScheddSubmittorTotal; break;
 		case PP_CKPT_SRVR_NORMAL:	ct = new CkptSrvrNormalTotal; break;
@@ -552,6 +619,7 @@ makeKey (MyString &key, ClassAd *ad, ppOption ppo)
 	{
 		case PP_STARTD_NORMAL:
 		case PP_STARTD_RUN:
+		case PP_STARTD_COD:
 		case PP_STARTD_SERVER:
 			if (!ad->LookupString(ATTR_ARCH, p1) || 
 				!ad->LookupString(ATTR_OPSYS, p2))
@@ -581,5 +649,33 @@ makeKey (MyString &key, ClassAd *ad, ppOption ppo)
 		default:
 			return 0;
 	}
+}
+
+
+int
+getCODInt( ClassAd* ad, const char* id, const char* attr, int alt_val )
+{
+	int rval;
+	char buf[128];
+	sprintf( buf, "%s_%s", id, attr );
+	if( ad->LookupInteger(buf, rval) ) {
+		return rval;
+	}
+	return alt_val;
+} 
+
+
+char* 
+getCODStr( ClassAd* ad, const char* id, const char* attr, 
+		   const char* alt ) 
+{
+	char* tmp = NULL;
+	char buf[128];
+	sprintf( buf, "%s_%s", id, attr );
+	ad->LookupString( buf, &tmp );
+	if( tmp ) {
+		return tmp;
+	}
+	return strdup( alt );
 }
 

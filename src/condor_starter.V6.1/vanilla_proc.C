@@ -71,7 +71,7 @@ VanillaProc::StartJob()
 	char systemshell[_POSIX_PATH_MAX];
 	char tmp[_POSIX_PATH_MAX];
 
-	char* jobtmp = Starter->GetOrigJobName();
+	char* jobtmp = Starter->jic->origJobName();
 	int joblen = strlen(jobtmp);
 	if ( joblen > 5 && 
 			( (stricmp(".bat",&(jobtmp[joblen-4])) == 0) || 

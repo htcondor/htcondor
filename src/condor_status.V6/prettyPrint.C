@@ -34,6 +34,8 @@ extern bool javaMode;
 
 extern char *format_time( int );
 
+static int stashed_now = 0;
+
 void printStartdNormal 	(ClassAd *);
 void printScheddNormal 	(ClassAd *);
 void printScheddSubmittors(ClassAd *);
@@ -44,6 +46,7 @@ void printStorageNormal(ClassAd *);
 void printAnyNormal(ClassAd *);
 void printServer 		(ClassAd *);
 void printRun    		(ClassAd *);
+void printCOD    		(ClassAd *);
 void printState			(ClassAd *);
 void printVerbose   	(ClassAd *);
 void printXML       	(ClassAd *, bool first_ad, bool last_ad);
@@ -75,6 +78,10 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 
 			  case PP_STARTD_RUN:
 				printRun (ad);
+				break;
+
+			  case PP_STARTD_COD:
+				printCOD (ad);
 				break;
 
 			  case PP_STARTD_STATE:
@@ -313,6 +320,80 @@ printRun (ClassAd *ad)
 		}
 
 		pm.display (stdout, ad);
+	}
+}
+
+
+void
+printCODDetailLine( ClassAd* ad, const char* id )
+{
+	char* name = NULL;
+	char* state = NULL;
+	char* user = NULL;
+	char* job_id = NULL;
+	char* keyword = NULL;
+	int entered_state = 0;
+	int now = 0;
+
+	ad->LookupString( ATTR_NAME, &name );
+	if( ! name ) {
+		name = strdup( "[???????????]" );
+	}
+	if( ! ad->LookupInteger(ATTR_LAST_HEARD_FROM, now) ) {
+		if( ! stashed_now ) {
+			stashed_now = (int)time(NULL);
+		}
+		now = stashed_now;
+	}
+	entered_state = getCODInt( ad, id, ATTR_ENTERED_CURRENT_STATE, 0 );
+	int state_timer = now - entered_state;
+
+	state = getCODStr( ad, id, ATTR_CLAIM_STATE, "[????????]" );
+	user = getCODStr( ad, id, ATTR_REMOTE_USER, "[?????????]" );
+	job_id = getCODStr( ad, id, ATTR_JOB_ID, " " );
+	keyword = getCODStr( ad, id, ATTR_JOB_KEYWORD, " " );
+
+	printf( "%-13.13s %-5.5s %-10.10s %-13.13s %-12.12s %-6.6s "
+			"%-14.14s\n",  name, id, state, format_time(state_timer),
+			user, job_id, keyword );
+
+	free( name );
+	free( state );
+	free( user );
+	free( job_id );
+	free( keyword );
+}
+
+
+void
+printCOD (ClassAd *ad)
+{
+	static bool first = true;
+
+	if (ad)
+	{
+		// print header if necessary
+		if (first)
+		{
+			printf( "\n%-13.13s %-5.5s %-10.10s %13.13s %-12.12s "
+					"%-6.6s %-14.14s\n\n", ATTR_NAME, "ID",
+					ATTR_CLAIM_STATE, "TimeInState ",
+					ATTR_REMOTE_USER, ATTR_JOB_ID, "Keyword" );
+			first = false;
+		}
+		StringList cod_claim_list;
+		char* cod_claims = NULL;
+		ad->LookupString( ATTR_COD_CLAIMS, &cod_claims );
+		if( ! cod_claims ) {
+			return;
+		}
+		cod_claim_list.initializeFromString( cod_claims );
+		free( cod_claims );
+		char* claim_id;
+		cod_claim_list.rewind();
+		while( (claim_id = cod_claim_list.next()) ) {
+			printCODDetailLine( ad, claim_id );
+		}
 	}
 }
 

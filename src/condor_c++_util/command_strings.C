@@ -3,11 +3,6 @@
 #include "condor_common.h"
 #include "command_strings.h"
 
-struct Translation {
-	char *name;
-	int number;
-};
-
 struct Translation DCTranslation[] = {
 	{ "QMGMT_CMD", QMGMT_CMD }, 
 	{ "CONTINUE_FRGM_JOB", CONTINUE_FRGN_JOB },
@@ -88,12 +83,25 @@ struct Translation DCTranslation[] = {
 	{ "DAEMON_ON", DAEMON_ON },
 	{ "GIVE_TOTALS_CLASSAD", GIVE_TOTALS_CLASSAD },
 	{ "DUMP_STATE", DUMP_STATE },
+	{ "PERMISSION_AND_AD", PERMISSION_AND_AD },
+	{ "REQUEST_NETWORK", REQUEST_NETWORK },
+	{ "VACATE_ALL_FAST", VACATE_ALL_FAST },
+	{ "VACATE_CLAIM_FAST", VACATE_CLAIM_FAST },
+	{ "REJECTED_WITH_REASON", REJECTED_WITH_REASON },
+	{ "START_AGENT", START_AGENT },
+	{ "ACT_ON_JOBS", ACT_ON_JOBS },
+	{ "CA_CMD", CA_CMD },
+	{ "CA_REQUEST_CLAIM", CA_REQUEST_CLAIM },
+	{ "CA_RELEASE_CLAIM", CA_RELEASE_CLAIM },
+	{ "CA_ACTIVATE_CLAIM", CA_ACTIVATE_CLAIM },
+	{ "CA_DEACTIVATE_CLAIM", CA_DEACTIVATE_CLAIM },
+	{ "CA_SUSPEND_CLAIM", CA_SUSPEND_CLAIM },
+	{ "CA_RESUME_CLAIM", CA_RESUME_CLAIM },
 	{ "DC_SIGSUSPEND", DC_SIGSUSPEND },
 	{ "DC_SIGCONTINUE", DC_SIGCONTINUE },
 	{ "DC_SIGSOFTKILL", DC_SIGSOFTKILL },
 	{ "DC_SIGHARDKILL", DC_SIGHARDKILL },
 	{ "DC_SIGPCKPT", DC_SIGPCKPT },
-	{ "DC_BASE", DC_BASE },
 	{ "DC_RAISESIGNAL", DC_RAISESIGNAL },
 	{ "DC_PROCESSEXIT", DC_PROCESSEXIT },
 	{ "DC_CONFIG_PERSIST", DC_CONFIG_PERSIST },
@@ -104,14 +112,11 @@ struct Translation DCTranslation[] = {
 	{ "DC_CONFIG_VAL", DC_CONFIG_VAL },
 	{ "DC_CHILDALIVE", DC_CHILDALIVE },
 	{ "DC_FETCH_LOG", DC_FETCH_LOG },
-	{ "FILETRANSFER_BASE", FILETRANSFER_BASE },
 	{ "FILETRANS_UPLOAD", FILETRANS_UPLOAD },
 	{ "FILETRANS_DOWNLOAD", FILETRANS_DOWNLOAD },
-	{ "PW_BASE", PW_BASE },
 	{ "PW_SETPASS", PW_SETPASS },
 	{ "PW_GETPASS", PW_GETPASS },
 	{ "PW_CLEARPASS", PW_CLEARPASS },
-	{ "DCSHADOW_BASE", DCSHADOW_BASE },
 	{ "SHADOW_UPDATEINFO", SHADOW_UPDATEINFO },
 	{ "TAKE_MATCH", TAKE_MATCH },
 	{ "MPI_START_COMRADE", MPI_START_COMRADE },
@@ -161,63 +166,54 @@ struct Translation CollectorTranslation[] = {
 	{ NULL, 0 }
 };
 
-static char * get_name_from_num( int num, struct Translation *table ) {
 
-	if ( num < 0 ) return NULL;
+struct Translation CAResultTranslation[] = {
+	{ "Success", CA_SUCCESS },
+	{ "Failure", CA_FAILURE },
+	{ "NotAuthenticated", CA_NOT_AUTHENTICATED },
+	{ "NotAuthorized", CA_NOT_AUTHORIZED },
+	{ "InvalidRequest", CA_INVALID_REQUEST },
+	{ "InvalidState", CA_INVALID_STATE },
+	{ NULL, 0 }
+};
 
-	int i, found = FALSE;
 
-	for ( i=0 ; (table[i].name != NULL) ; i++ ) {
-		if ( table[i].number == num ) {
-			found = TRUE;
-			break;
-		}
-	}
-
-	if ( found ) {
-		return table[i].name;
-	} else {
-		return NULL;
-	}
-}
-
-static int get_num_from_name( char * command, struct Translation *table ) {
-
-	if ( !command ) return -1;
-
-	int i, found = FALSE;
-	
-	for ( i=0 ; (table[i].name != NULL) ; i++ ) {
-		if ( !stricmp ( table[i].name, command ) ) {
-			found = TRUE;
-			break;
-		}
-	}
-
-	if ( found ) {
-		return table[i].number;
-	} else {
-		return -1;
-	}
-}
-
-char * get_command_string( int num ) {
-	return get_name_from_num(num,DCTranslation);
-}
-
-int get_command_num( char * command ) {
-	return get_num_from_name(command,DCTranslation);
-}
-
-char * get_collector_command_string( int num ) {
-	return get_name_from_num(num,CollectorTranslation);
-}
-
-int get_collector_command_num( char * command ) {
-	return get_num_from_name(command,CollectorTranslation);
+const char*
+getCommandString( int num )
+{
+	return getNameFromNum( num, DCTranslation );
 }
 
 
+int
+getCommandNum( const char* command )
+{
+	return getNumFromName( command, DCTranslation );
+}
+
+const char*
+getCollectorCommandString( int num )
+{
+	return getNameFromNum( num, CollectorTranslation );
+}
+
+int
+getCollectorCommandNum( const char* command )
+{
+	return getNumFromName( command, CollectorTranslation );
+}
+
+const char*
+getCAResultString( CAResult r )
+{
+	return getNameFromNum( (int)r, CAResultTranslation );
+}
+
+CAResult
+getCAResultNum( const char* str )
+{
+	return (CAResult)getNumFromName( str, CAResultTranslation );
+}
 
 
 

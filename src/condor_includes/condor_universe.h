@@ -48,8 +48,11 @@ with the strings in condor_universe.c
 #define CONDOR_UNIVERSE_MAX       12 /* A placeholder, not a universe. */
 
 /* To get the name of a universe, call this function */
-
 const char *CondorUniverseName( int universe );
+
+/* To get the number of a universe from a string, call this.  Returns
+   0 if the given string doesn't correspond to a known universe */
+int CondorUniverseNumber( const char* univ );
 
 END_C_DECLS
 

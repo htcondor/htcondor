@@ -40,6 +40,7 @@
 #include "condor_timer_manager.h"
 #include "condor_ipverify.h"
 #include "condor_commands.h"
+#include "command_strings.h"
 #include "condor_classad.h"
 #include "condor_secman.h"
 #include "HashTable.h"

@@ -2,12 +2,33 @@
     the state of the V6_5-branch before merging in the COD merge
     branch (V6_5-MB-V6_5-cod-merge-1-branch)
 
+03/05/03 V6_5-MB-V6_5-cod-merge-1-MB-m-1
+    the merge-from tag for the final merge of
+    V6_5-MB-V6_5-cod-merge-1-branch into the V6_5-branch.
+
+03/04/03 V6_5-MB-V6_5-cod-merge-1-post_merge
+    post_merge tag to demark the point after the basic CVS conflict
+    resolution was done, and when the more complicated code changes
+    where started to get this branch building and working again.
+
+03/04/03 V6_5-MB-V6_5-cod-merge-1-branch
+    the *right* name for the COD->V6_5 merge branch.  because of the
+    extensive changes required for COD and various things that were
+    changed on V6_5 (how CEDAR authenticate() works, and the starter
+    exception userlog event), i decided to use a merge-branch for this
+    merge so that we can track the changes i had to make to resolve
+    conflicts and get everything working after the merge.
+
 03/04/03 V6_5-merge-V6_5-cod-branch
     a failed attempt at a merge-branch for merging COD into
     V6_5-branch.  this is *NOT* the right naming scheme, so i'm
     abandoning the branch (and no one else should use this convention
     in the future).  unfortunately, i couldn't get CVS to just remove
     this tag completely. :( 
+
+03/03/03 V6_5-cod-merge-1
+     The state of the COD branch when it was merged into V6_5 (via the 
+     "V6_5-MB-V6_5-cod-merge-1-branch" merge branch)
 
 02/24/03 HAWKEYE_V1_0_RC1
     Release Candidate 1 of Hawkeye 1.0.

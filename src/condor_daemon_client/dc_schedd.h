@@ -201,8 +201,6 @@ private:
 						action_result_type_t result_type,
 						bool notify_scheduler );
 
-	void forceAuthentication(ReliSock & rsock);
-
 		// I can't be copied (yet)
 	DCSchedd( const DCSchedd& );
 	DCSchedd& operator = ( const DCSchedd& );

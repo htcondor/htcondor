@@ -23,16 +23,18 @@
 #ifndef _UTIL_H
 #define _UTIL_H
 
+#include "enum_utils.h"
+
 class ClassAd;
 class Stream;
 class Resource;
+
 
 // Our utilities 
 void	cleanup_execute_dir(int pid);
 void	check_perms(void);
 float	compute_rank( ClassAd*, ClassAd* );
 int 	create_port( ReliSock* );
-char*	command_to_string( int );
 bool	reply( Stream*, int );
 bool	refuse( Stream* );
 bool	caInsert( ClassAd* target, ClassAd* source, const char* attr,
@@ -46,5 +48,10 @@ bool	configInsert( ClassAd* ad, const char* param_name,
 int		send_classad_to_sock( int cmd, Daemon* d, ClassAd* pubCA,
 							  ClassAd* privCA ); 
 Resource* stream_to_rip( Stream* );
+
+VacateType getVacateType( ClassAd* ad );
+int sendCAReply( Stream* s, char* cmd_str, ClassAd* reply );
+int sendErrorReply( Stream* s, char* cmd_str, CAResult result, 
+					const char* err_str );
 
 #endif /* _UTIL_H */

@@ -368,7 +368,7 @@ protected:
 		  is already set, deallocate the existing string.  Then, make
 		  a copy of the given string and store that in _error.
 		  */
-	void newError( char* );
+	void newError( const char* );
 
 		/** Returns a string containing the local daemon's name.  If
 		  the <subsys>_NAME parameter is set in the config file, we
@@ -396,6 +396,51 @@ protected:
 	char* New_platform( char* );
 	char* New_addr( char* );
 	char* New_pool( char* );
+
+		/**
+		   Set a string so we know what command we're inside for use
+		   in constructing error messages, and so we know the last
+		   command we tried to perform.
+		 */
+	void setCmdStr( const char* cmd );
+	char* _cmd_str;
+
+		/** 
+ 		   Helper method for the client-side of the ClassAd-only
+		   protocol.  This method will try to: locate our daemon,
+		   create a ReliSock, try to connect(), send the CA_CMD int,
+		   send a ClassAd and an EOM, read back a ClassAd and EOM,
+		   lookup the ATTR_RESULT in the reply, and if it's FALSE,
+		   lookup ATTR_ERROR_STRING.  This deals with everything for
+		   you, so all you have to do if you want to use this protocol
+		   is define a method that sets up up the right request ad and
+		   calls this.
+		   @param req Pointer to the request ad (you fill it in)
+		   @param reply Pointer to the reply ad (from the server)
+		   @param force_auth Should we force authentication for this cmd?
+		   @param timeout Network timeout to use (ignored if < 0 )
+		   @return false if there were any network errors, if
+		   ATTR_ERROR_STRING is defined, and/or if ATTR_RESULT is not
+		   CA_SUCCESS.  Otherwise, true.   
+		*/
+	bool sendCACmd( ClassAd* req, ClassAd* reply, bool force_auth,
+					int timeout = -1 );
+
+		/** 
+		   Helper method for commands to see if we've already got the
+		   right address for our daemon.  If not, we try to locate
+		   it.  
+		   @return true if we've got the address or found it, false 
+		   if we failed to locate it.
+		*/
+	bool checkAddr( void );
+
+		/**
+           Helper method for commands to see if we've already
+           authenticated this socket, and if not, to try to do so.
+		*/
+    bool forceAuthentication( ReliSock* rsock );
+
 
  private:
 

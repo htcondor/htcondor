@@ -21,6 +21,9 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#if !defined( _CONDOR_BASENAME_H )
+#define _CONDOR_BASENAME_H
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -44,6 +47,17 @@ char* basename( const char* path );
 */
 char* dirname( const char* path );
 
+
+/* 
+   return TRUE if the given path is a full pathname, FALSE if not.  by
+   full pathname, we mean it either begins with "/" or "\" or "*:\"
+   (something like "c:\..." on windoze).
+*/
+int fullpath( const char* path );
+
+
 #if defined(__cplusplus)
 }
 #endif
+
+#endif /* _CONDOR_BASENAME_H */

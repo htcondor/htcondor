@@ -1029,7 +1029,7 @@ handleSquawk( char *line, char *addr ) {
 			return TRUE;
 		}
 		
-		signal = get_command_num ( token );
+		signal = getCommandNum( token );
 		if ( signal == -1 ) {
 			printf ( "Signal %s not known.\n", token );
 			return TRUE;
@@ -1051,7 +1051,7 @@ handleSquawk( char *line, char *addr ) {
 			return TRUE;
 		}
 		
-		command = get_command_num ( token );
+		command = getCommandNum( token );
 		if ( command == -1 ) {
 			printf ( "Command %s not known.\n", token );
 			return TRUE;

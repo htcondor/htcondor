@@ -946,15 +946,16 @@ ResMgr::adlist_publish( ClassAd *resAd, amask_t mask )
 	return 0;
 }
 
+
 bool
-ResMgr::in_use( void )
+ResMgr::hasOppClaim( void )
 {
 	if( ! resources ) {
 		return false;
 	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
-		if( resources[i]->in_use() ) {
+		if( resources[i]->hasOppClaim() ) {
 			return true;
 		}
 	}
@@ -962,21 +963,94 @@ ResMgr::in_use( void )
 }
 
 
-Resource*
-ResMgr::get_by_pid( pid_t pid )
+bool
+ResMgr::hasAnyClaim( void )
 {
+	if( ! resources ) {
+		return false;
+	}
+	int i;
+	for( i = 0; i < nresources; i++ ) {
+		if( resources[i]->hasAnyClaim() ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+
+Claim*
+ResMgr::getClaimByPid( pid_t pid )
+{
+	Claim* foo = NULL;
 	if( ! resources ) {
 		return NULL;
 	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
-		if( resources[i]->r_starter &&
-			resources[i]->r_starter->pid() == pid ) {
+		if( (foo = resources[i]->findClaimByPid(pid)) ) {
+			return foo;
+		}
+	}
+	return NULL;
+}
+
+
+Claim*
+ResMgr::getClaimById( const char* id )
+{
+	Claim* foo = NULL;
+	if( ! resources ) {
+		return NULL;
+	}
+	int i;
+	for( i = 0; i < nresources; i++ ) {
+		if( (foo = resources[i]->findClaimById(id)) ) {
+			return foo;
+		}
+	}
+	return NULL;
+}
+
+
+Resource*
+ResMgr::findRipForNewCOD( ClassAd* ad )
+{
+	if( ! resources ) {
+		return NULL;
+	}
+	int requirements;
+	int i;
+
+		/*
+          We always ensure that the request's Requirements, if any,
+		  are met.  Other than that, we give out COD claims to
+		  Resources in the following order:  
+
+		  1) the Resource with the least # of existing COD claims (to
+  		     ensure round-robin across resources
+		  2) in case of a tie, the Resource in the best state (owner
+   		     or unclaimed, not claimed)
+		  3) in case of a tie, the Claimed resource with the lowest
+  		     value of machine Rank for its claim
+		*/
+
+		// sort resources based on the above order
+	resource_sort( newCODClaimCmp );
+
+		// find the first one that matches our requirements 
+	for( i = 0; i < nresources; i++ ) {
+		if( ad->EvalBool( ATTR_REQUIREMENTS, resources[i]->r_classad,
+						  requirements ) == 0 ) {
+			requirements = 0;
+		}
+		if( requirements ) { 
 			return resources[i];
 		}
 	}
 	return NULL;
 }
+
 
 
 Resource*
@@ -1330,7 +1404,7 @@ ResMgr::check_polling( void )
 		return;
 	}
 
-	if( in_use() || m_attr->condor_load() > 0 ) {
+	if( hasOppClaim() || m_attr->condor_load() > 0 ) {
 		start_poll_timer();
 	} else {
 		cancel_poll_timer();
@@ -1551,7 +1625,7 @@ void
 ResMgr::check_use( void ) 
 {
 	int now = time(NULL);
-	if( in_use() ) {
+	if( hasAnyClaim() ) {
 		last_in_use = now;
 	}
 	if( ! startd_noclaim_shutdown ) {
@@ -1632,6 +1706,65 @@ claimedRankCmp( const void* a, const void* b )
 	} 
 	return 0;
 }
+
+
+/*
+  Sort resource so their in the right order to give out a new COD
+  Claim.  We give out COD claims in the following order:  
+  1) the Resource with the least # of existing COD claims (to ensure
+     round-robin across resources
+  2) in case of a tie, the Resource in the best state (owner or
+     unclaimed, not claimed)
+  3) in case of a tie, the Claimed resource with the lowest value of
+     machine Rank for its claim
+*/
+int
+newCODClaimCmp( const void* a, const void* b )
+{
+	Resource *rip1, *rip2;
+	int val1, val2, diff;
+	int numCOD1, numCOD2;
+	float fval1, fval2;
+	State s;
+	rip1 = *((Resource**)a);
+	rip2 = *((Resource**)b);
+
+	numCOD1 = rip1->r_cod_mgr->numClaims();
+	numCOD2 = rip2->r_cod_mgr->numClaims();
+
+		// In the first case, sort based on # of COD claims
+	diff = numCOD1 - numCOD2;
+	if( diff ) {
+		return diff;
+	}
+
+		// If we're still here, we've got same # of COD claims, so
+		// sort based on State.  Since the state enum is already in
+		// the "right" order for this kind of sort, we don't need to
+		// do anything fancy, we just cast the state enum to an int
+		// and we're done.
+	s = rip1->state();
+	val1 = (int)s;
+	val2 = (int)rip2->state();
+	diff = val1 - val2;
+	if( diff ) {
+		return diff;
+	}
+
+		// We're still here, means we've got the same number of COD
+		// claims and the same state.  If that state is "Claimed" or
+		// "Preempting", we want to break ties w/ the Rank expression,
+		// else, don't worry about ties.
+	if( s == claimed_state || s == preempting_state ) {
+		fval1 = rip1->r_cur->rank();
+		fval2 = rip2->r_cur->rank();
+		diff = (int)(fval1 - fval2);
+		return diff;
+	} 
+	return 0;
+}
+
+
 
 
 
