@@ -22,6 +22,16 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 /*
+XXX XXX XXX
+WARNING WARNING WARNING
+If you change this file, then you must compile it
+and check the .class file into CVS.  Why?  Because
+we can't manage a Java installation on all of our platforms,
+but we still want compiled Java code distributed with
+all platforms.
+*/
+
+/*
 This program queries the JVM for system properties and
 displays them as a ClassAd.  The single argument
 must be either "new" or "old" and controls whether the

@@ -1,11 +1,7 @@
 NAME = condor_startd
-
-#if WANT_JAVA && HAS_JAVA
 INFO_CLASS = CondorJavaInfo.class
-INFO_JAVA  = CondorJavaInfo.java
-#endif
 
-all_target( $(NAME) $(INFO_CLASS) )
+all_target( $(NAME) )
 
 CFLAGS = $(STD_C_FLAGS) -Wall
 
@@ -39,12 +35,9 @@ purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 quantify_c_plus_target($(NAME).quantify,$(OBJ),$(LIB))
 c_plus_target(AvailStats.t,AvailStats.o AvailStats.t.o startd_instantiate.o,$(LIB))
 
-#if WANT_JAVA && HAS_JAVA
-java_target($(INFO_CLASS),$(INFO_JAVA),.)
 release_copy_target($(INFO_CLASS),$(RELEASE_DIR)/lib,$(INFO_CLASS),EXECUTABLE_MODE)
 strip_copy_target($(INFO_CLASS),$(STRIP_DIR)/lib,$(INFO_CLASS),EXECUTABLE_MODE)
 static_copy_target($(INFO_CLASS),$(STATIC_DIR)/lib,$(INFO_CLASS),EXECUTABLE_MODE)
-#endif
 
 html:
 

@@ -4,6 +4,16 @@ package edu.wisc.cs.condor.chirp;
 import java.io.*;
 import java.net.*;
 
+/*
+XXX XXX XXX
+WARNING WARNING WARNING
+If you change this file, then you must compile it
+and check the .jar file into CVS.  Why?  Because
+we can't manage a Java installation on all of our platforms,
+but we still want compiled Java code distributed with
+all platforms.
+*/
+
 /**
 A ChirpOutputStream gives a sequential binary interface to a write-only
 file. Users that require random-access I/O should see ChirpClient.

@@ -6,25 +6,6 @@ if [ -d CVS ]; then
 	exit 1
 fi
 
-#
-# A function to find executables in the path.
-#
-
-check_path ()
-{
-        IFS=":"
-        for dir in $PATH
-        do
-                if [ -x $dir/$1 ]
-                then
-                        IFS=" "
-                        return 0
-                fi
-        done
-        IFS=" "
-        return 1
-}
-
 gss="no"
 if [ "$1" = "-DGSS_AUTHENTICATION" ]; then
 	gss="Y"
@@ -58,21 +39,6 @@ fi
 # figure out where that annoying libgcc is... 
 LIBGCC=`gcc -print-libgcc-file-name`
 EgcsLib="-DLIB_GCC=$LIBGCC"
-
-# advertise Java only if we have all the necessary tools
-
-JavaFlags="-DHAS_JAVA=NO"
-
-if check_path "java"
-then
-	if check_path "javac"
-	then
-		if check_path "jar"
-		then
-			JavaFlags="-DHAS_JAVA=YES"
-		fi
-	fi
-fi
 
 if [ $os = "HP-UX" -a $osversion = "B.10.20" ] ; then
 	Opsys="-DIS_HPUX10"
@@ -130,5 +96,5 @@ if [ $gss = "Y" ]; then
 	fi
 fi
 
-imake -s Makefile $ArchFlag $Opsys $Other $Other2 $GssAuth $EgcsLib $KerbFlags $JavaFlags -I../config -I../../config $*
+imake -s Makefile $ArchFlag $Opsys $Other $Other2 $GssAuth $EgcsLib $KerbFlags -I../config -I../../config $*
 

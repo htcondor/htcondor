@@ -5,6 +5,17 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
+/*
+XXX XXX XXX
+WARNING WARNING WARNING
+If you change this file, then you must compile it
+and check the .jar file into CVS.  Why?  Because
+we can't manage a Java installation on all of our platforms,
+but we still want compiled Java code distributed with
+all platforms.
+*/
+
+
 /**
 ChirpConfig represents the client configuration information needed
 for a Chirp connection.  The constructor parses a configuration
