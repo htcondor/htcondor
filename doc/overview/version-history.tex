@@ -130,6 +130,10 @@ insensitive.
 \item Fixed a bug where the \Condor{schedd}, under rare circumstances,
 cause another schedd's jobs not to be matched.
 
+\item The free disk space is now properly computed on Digital Unix.
+This fixed problems where the \Attr{Disk} attribute in the
+\condor{startd} classad reported incorrect values.
+
 \end{itemize}
 
 \noindent Known Bugs:
