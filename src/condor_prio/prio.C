@@ -26,15 +26,7 @@
 **
 */ 
 
-#if defined(Solaris) && !defined(Solaris251)
-#include "condor_fix_timeval.h"
-#include </usr/ucbinclude/sys/rusage.h>
-#endif
-
-#define _POSIX_SOURCE
-
 #include "condor_common.h"
-#include "condor_constants.h"
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_attributes.h"
