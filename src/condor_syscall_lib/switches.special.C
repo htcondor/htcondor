@@ -498,7 +498,7 @@ it came from the heap.
 MMAP_T
 mmap( MMAP_T a, size_t l, int p, int f, int fd, off_t o )
 {
-        MMAP_T rval;
+        MMAP_T rval = NULL;
         static int recursive=0;
 
         if( (f==(MAP_ANONYMOUS|MAP_PRIVATE)) ) {
@@ -516,6 +516,13 @@ mmap( MMAP_T a, size_t l, int p, int f, int fd, off_t o )
                         rval = (MMAP_T) REMOTE_syscall( CONDOR_mmap, a,l,p,f,fd,o );
                 }
         }
+
+		/* now that we have the memory, zero it out because we _would_ have
+			mapped in /dev/zero */
+		if (rval != NULL && rval != MAP_FAILED)
+		{
+			memset(rval, 0, l);
+		}
 
         return rval;
 }
