@@ -132,8 +132,14 @@ object_target(daemon_core.V6)
 makefiles:: h/Makefile
 h/Makefile:
 	cd h; imake IMAKE_FLAGS
-h: h/Makefile
-	cd h; make
+
+h: h/Makefile h/syscall_numbers.o h/syscall_numbers.h
+
+h/syscall_numbers.h: h/syscall_numbers.tmpl h/Makefile
+	cd h; make syscall_numbers.h
+
+h/syscall_numbers.o: h/syscall_numbers.tmpl h/Makefile
+	cd h; make syscall_numbers.o
 
 object_target(prio)
 object_target(scripts)
