@@ -15,7 +15,7 @@ Reqexp::Reqexp( ClassAd** cap )
 	char tmp[1024];
 	sprintf( tmp, "%s = %s", ATTR_REQUIREMENTS, "START" );
 	origreqexp = strdup( tmp );
-	rstate = ORIG;
+	rstate = UNAVAIL;
 }
 
 
