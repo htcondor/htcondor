@@ -125,6 +125,7 @@ daemon::daemon(char *name, bool is_daemon_core, bool is_ha )
 
 	// Check the process name (is it me?)
 	process_name = NULL;
+    watch_name = NULL;
 	log_name = NULL;
 	if( strcmp(name, "MASTER") == MATCH ) {
 		runs_here = FALSE;
@@ -653,7 +654,7 @@ int daemon::RealStart( )
 	}
 	
 		// Make sure we've got the current timestamp for updates, etc.
-	timeStamp = GetTimeStamp(process_name);
+	timeStamp = GetTimeStamp(watch_name);
 
 		// record the time we were started
 	startTime = time(0);
@@ -1249,6 +1250,7 @@ Daemons::RegisterDaemon(class daemon *d)
 void
 Daemons::InitParams()
 {
+	char* buf;
 	char* tmp = NULL;
 	for( int i=0; i < no_daemons; i++ ) {
 		if( daemon_ptr[i]->process_name ) {
@@ -1267,6 +1269,31 @@ Daemons::InitParams()
 				// file, we will need to start the new version.
 			daemon_ptr[i]->newExec = TRUE;
 		}
+		if (tmp) {
+			free( tmp );
+			tmp = NULL;
+		}
+		if( daemon_ptr[i]->watch_name ) {
+			tmp = daemon_ptr[i]->watch_name;
+		}
+			
+		int length = strlen(daemon_ptr[i]->name_in_config_file) + 32;
+		buf = (char *)malloc(length);
+		snprintf( buf, length, "%s_WATCH_FILE", 
+				daemon_ptr[i]->name_in_config_file );
+		daemon_ptr[i]->watch_name = param( buf );
+		free(buf);
+		if( !daemon_ptr[i]->watch_name)	{
+			daemon_ptr[i]->watch_name = strdup(daemon_ptr[i]->process_name);
+		} 
+
+		if( tmp && strcmp(daemon_ptr[i]->watch_name, tmp) ) {
+			// tmp is what the old watch_name was 
+			// The path to what we're watching has changed in the 
+			// config file, we will need to start the new version.
+			daemon_ptr[i]->timeStamp = 0;
+		}
+
 		if (tmp) {
 			free( tmp );
 			tmp = NULL;
@@ -1311,9 +1338,10 @@ Daemons::CheckForNewExecutable()
 			// do here.
 		return;
 	}
-    if( NewExecutable( daemon_ptr[master]->process_name,
+    if( NewExecutable( daemon_ptr[master]->watch_name,
 					   &daemon_ptr[master]->timeStamp ) ) {
-		dprintf( D_ALWAYS,"%s was modified, restarting.\n", 
+		dprintf( D_ALWAYS,"%s was modified, restarting %s.\n", 
+				 daemon_ptr[master]->watch_name, 
 				 daemon_ptr[master]->process_name );
 		daemon_ptr[master]->newExec = TRUE;
 			// Begin the master restart procedure.
@@ -1325,7 +1353,7 @@ Daemons::CheckForNewExecutable()
     for( int i=0; i < no_daemons; i++ ) {
 		if( daemon_ptr[i]->runs_here && !daemon_ptr[i]->newExec 
 			&& ! daemon_ptr[i]->on_hold ) {
-			if( NewExecutable( daemon_ptr[i]->process_name,
+			if( NewExecutable( daemon_ptr[i]->watch_name,
 							   &daemon_ptr[i]->timeStamp ) ) {
 				found_new = TRUE;
 				daemon_ptr[i]->newExec = TRUE;				
@@ -1340,7 +1368,8 @@ Daemons::CheckForNewExecutable()
 					daemon_ptr[i]->restarts = 0;
 				}
 				if( daemon_ptr[i]->pid ) {
-					dprintf( D_ALWAYS,"%s was modified, killing.\n", 
+					dprintf( D_ALWAYS,"%s was modified, killing %s.\n", 
+							 daemon_ptr[i]->watch_name,
 							 daemon_ptr[i]->process_name );
 					daemon_ptr[i]->Stop();
 				} else {
@@ -1487,7 +1516,7 @@ Daemons::InitMaster()
 		EXCEPT("InitMaster: MASTER not Specifed");
 	}
 	daemon_ptr[master]->timeStamp = 
-		GetTimeStamp(daemon_ptr[master]->process_name);
+		GetTimeStamp(daemon_ptr[master]->watch_name);
 	daemon_ptr[master]->startTime = time(0);
 	daemon_ptr[master]->pid = daemonCore->getpid();
 }

@@ -42,6 +42,7 @@ public:
 	char*	log_filename_in_config_file;
 	char*	flag_in_config_file;
 	char*	process_name;
+	char*	watch_name;
 	char*	log_name;
 	int		runs_here;
 	int		on_hold;
