@@ -7,12 +7,12 @@
 
 #include <std.h>
 #include <string.h>
-#include "exprtype.h"
-#include "ast.h"
-#include "classad.h"
-#include "buildtable.h"
+#include "condor_exprtype.h"
+#include "condor_ast.h"
+#include "condor_classad.h"
+#include "condor_buildtable.h"
 
-#define AdvancePtr(ptr)  while(*ptr != '\0') ptr++;
+#define EatSpace(ptr)  while(*ptr != '\0') ptr++;
 
 void EvalResult::fPrintResult(FILE *f)
 {
@@ -4563,8 +4563,8 @@ void AndOp::AnalTree(char* info, AttrListList* classads)
   char* tmp2 = info;
   int tmp, i;
   
-  AdvancePtr(tmp1);
-  AdvancePtr(tmp2);
+  EatSpace(tmp1);
+  EatSpace(tmp2);
   lArg->EvalTree(classads, &lval);
   rArg->EvalTree(classads, &rval);
 
@@ -4575,7 +4575,7 @@ void AndOp::AnalTree(char* info, AttrListList* classads)
   if(lval.ValType() == LX_BOOL && !lval.b)
     lArg->AnalTree(info, classads);
   tmp1 = tmp1 + lArg->MyLength();
-  AdvancePtr(tmp2);
+  EatSpace(tmp2);
 
   tmp = tmp2 - tmp1;
   if(lArg->MyType() == LX_OR)
@@ -4608,8 +4608,8 @@ void  OrOp::AnalTree(char* info, AttrListList* classads)
   char* tmp2 = info;
   int  tmp, i;
   
-  AdvancePtr(tmp1);
-  AdvancePtr(tmp2);
+  EatSpace(tmp1);
+  EatSpace(tmp2);
   lArg->EvalTree(classads, &lval);
   rArg->EvalTree(classads, &rval);
 
@@ -4620,7 +4620,7 @@ void  OrOp::AnalTree(char* info, AttrListList* classads)
       tmp1++;
     }
     lArg->AnalTree(info, classads);
-    AdvancePtr(tmp1);
+    EatSpace(tmp1);
 
     tmp2 = tmp2 + lArg->MyLength();
     tmp = tmp2 - tmp1;

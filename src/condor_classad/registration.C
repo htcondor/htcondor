@@ -10,7 +10,7 @@
 #include <string.h>
 #include <assert.h>
 #include <iostream.h>
-#include "registration.h"
+#include "condor_registration.h"
 
 //
 // Constructor of the Registration class.

@@ -12,11 +12,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include "config.h"
-#include "exprtype.h"
-#include "astbase.h"
-#include "scanner.h"
-#include "parser.h"
+#include "condor_config.h"
+#include "condor_exprtype.h"
+#include "condor_astbase.h"
+#include "condor_scanner.h"
+#include "condor_parser.h"
 
 const int TABLESIZE = 20;
 

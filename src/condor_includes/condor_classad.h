@@ -12,9 +12,9 @@
 #include <fstream.h>
 
 #include "condor_expressions.h"
-#include "exprtype.h"
-#include "ast.h"
-#include "attrlist.h"
+#include "condor_exprtype.h"
+#include "condor_ast.h"
+#include "condor_attrlist.h"
 
 struct AdType                   // type of a ClassAd.
 {

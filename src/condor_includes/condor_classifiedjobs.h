@@ -11,7 +11,7 @@
 #ifndef _CLASSIFIEDJOBS_H
 #define _CLASSIFIEDJOBS_H
 
-#include "astbase.h"
+#include "condor_astbase.h"
 
 class Class
 {

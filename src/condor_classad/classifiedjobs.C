@@ -8,9 +8,9 @@
 
 #include <std.h>
 #include "proc_obj.h"
-#include "classad.h"
-#include "classifiedjobs.h"
-#include "parser.h"
+#include "condor_classad.h"
+#include "condor_classifiedjobs.h"
+#include "condor_parser.h"
 
 Class::Class(ExprTree* classDef)
 {

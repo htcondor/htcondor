@@ -11,13 +11,13 @@
 # include <string.h>
 
 # include "except.h"
-# include "ast.h"
-# include "registration.h"
+# include "condor_ast.h"
+# include "condor_registration.h"
 # include "condor_expressions.h"
 # include "proc_obj.h"
-# include "attrlist.h"
-# include "classad.h"
-# include "parser.h"
+# include "condor_attrlist.h"
+# include "condor_classad.h"
+# include "condor_parser.h"
 
 static Registration regi;                   // this is the registration for 
                                             // the AttrList type names. It 

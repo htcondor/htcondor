@@ -10,7 +10,7 @@
 #ifndef _PARSER_H
 #define _PARSER_H
 
-#include "ast.h"
+#include "condor_ast.h"
 
 int Parse(char*, ExprTree*&);
 

@@ -1,7 +1,11 @@
-/* type.h
- *  Interface for datatypes.
- * changed.
- */
+//******************************************************************************
+// condor_exprtype.h
+//
+// Cai, Weiru
+//
+// condor literal types.
+//
+//******************************************************************************
 
 #ifndef _EXPRTYPE_H_
 #define _EXPRTYPE_H_
@@ -53,4 +57,4 @@ typedef enum
   NOT_KEYWORD
 } LexemeType;
 
-#endif /* _TYPE_H */
+#endif

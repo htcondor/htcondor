@@ -5,7 +5,7 @@
 #define FLOATRANGE 1
 #define NONRANGE   2
 
-#include "ast.h"
+#include "condor_ast.h"
 
 /*
 class EntryNode {

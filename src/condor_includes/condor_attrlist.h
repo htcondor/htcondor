@@ -11,8 +11,8 @@
 #include <stdio.h>
 
 #include "condor_expressions.h"
-#include "exprtype.h"
-#include "astbase.h"
+#include "condor_exprtype.h"
+#include "condor_astbase.h"
 
 enum							// various AttrLists
 {

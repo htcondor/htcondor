@@ -44,8 +44,8 @@
 #define _AST_H_
 
 #include <stdio.h>
-#include "exprtype.h"
-#include "astbase.h"
+#include "condor_exprtype.h"
+#include "condor_astbase.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class EvalResult is passed to ExprTree::EvalTree() to buffer the result of

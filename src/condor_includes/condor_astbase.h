@@ -1,7 +1,7 @@
 //******************************************************************************
 // astbase.h
 //
-// Interface definition for the basic Abstract Syntax Tree (AST) module. There
+// Interface definition for the basic Abstract Syntax Tree (AST). There
 // is no interface between this module and the classad module. The following
 // operators are defined:
 //
@@ -55,7 +55,7 @@
 #ifndef _ASTBASE_H_
 #define _ASTBASE_H_
 
-#include "exprtype.h"
+#include "condor_exprtype.h"
 
 class ExprTree
 {

@@ -10,8 +10,8 @@
 #include <stdio.h> 
 #include <string.h>
 #include <ctype.h> 
-#include "exprtype.h"
-#include "scanner.h" 
+#include "condor_exprtype.h"
+#include "condor_scanner.h" 
 
 static int 	MAXVARNAME = 100;
 

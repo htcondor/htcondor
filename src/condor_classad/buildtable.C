@@ -5,10 +5,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "exprtype.h"
-#include "ast.h"
-#include "parser.h"
-#include "buildtable.h"
+#include "condor_exprtype.h"
+#include "condor_ast.h"
+#include "condor_parser.h"
+#include "condor_buildtable.h"
 
 #define NextSpace(str) while(*str != ' ') str++;
 

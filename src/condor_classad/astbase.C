@@ -9,8 +9,8 @@
 #include <varargs.h>
 #include <string.h>
 #include "debug.h"    // required by dprintf
-#include "exprtype.h"
-#include "astbase.h"
+#include "condor_exprtype.h"
+#include "condor_astbase.h"
 
 #define AdvancePtr(ptr)  while(*ptr != '\0') ptr++;
 
