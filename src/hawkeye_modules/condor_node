@@ -17,7 +17,11 @@ use HawkeyeLib;
 my $Hawkeye;
 
 # Setup
-my $MasterUserList = "";
+my %Config = (
+	      MasterOwnerList => "",
+	      DaemonOwnerList => "",
+	      UserOwnerList => "",
+	     );
 
 # Do it
 Init();
@@ -31,9 +35,15 @@ sub Init {
     $Hawkeye->Quiet( 1 );
     $Hawkeye->AutoIndexSet( 1 );
 
-    my $Tmp = HawkeyeLib::ReadConfig( "_master_owners", "condor,root" );
-    $MasterUserList = $Tmp if ( $Tmp ne "" );
+    my $Tmp;
+    $Tmp = HawkeyeLib::ReadConfig( "_master_owners", "" );
+    $Config{MasterOwnerList} = $Tmp if ( $Tmp ne "" );
+    $Tmp = HawkeyeLib::ReadConfig( "_daemon_owners", "" );
+    $Config{DaemonOwnerList} = $Tmp if ( $Tmp ne "" );
+    $Tmp = HawkeyeLib::ReadConfig( "_user_owners", "" );
+    $Config{UserOwnerList} = $Tmp if ( $Tmp ne "" );
 }
+
 
 # Do the real work here...
 sub RunIt {
@@ -51,18 +61,46 @@ sub RunIt {
 		     );
 
     # Table to translate "ps-command" regex to $CondorInfo key..
+    my $DefaultDaemonOwnerList = "condor,root";
     my %CondorCmdTable =
 	(
-	 condor_starter	=> { Attr => "NumStarters", UserList => "", },
-	 condor_startd	=> { Attr => "NumStartds", UserList => "", },
-	 condor_master	=> { Attr => "NumMasters", UserList => "condor,root", },
-	 condor_exec	=> { Attr => "NumExecs", UserList => "", },
-	 condor_shadow	=> { Attr => "NumShadows", UserList => "", },
-	 condor_schedd	=> { Attr => "NumSchedds", UserList => "", },
+	 condor_starter	=> { Attr => "NumStarters",
+			     DaemonUser => 1,
+			     OwnerList => $DefaultDaemonOwnerList, },
+	 condor_startd	=> { Attr => "NumStartds",
+			     DaemonUser => 1,
+			     OwnerList => $DefaultDaemonOwnerList, },
+	 condor_master	=> { Attr => "NumMasters",
+			     DaemonUser => 1,
+			     OwnerList => $DefaultDaemonOwnerList, },
+	 condor_schedd	=> { Attr => "NumSchedds",
+			     DaemonUser => 1,
+			     OwnerList => $DefaultDaemonOwnerList, },
+	 condor_exec	=> { Attr => "NumExecs",
+			     DaemonUser => 0,
+			     OwnerList => "*", },
+	 condor_shadow	=> { Attr => "NumShadows",
+			     DaemonUser => 0,
+			     OwnerList => "*", },
 	);
 
-    $CondorCmdTable{condor_master}{UserList} = $MasterUserList
-	if ( $MasterUserList ne "" );
+    # Set the "user list" for each command
+    foreach my $Cmd ( keys %CondorCmdTable )
+    {
+	if ( $CondorCmdTable{$Cmd}{DaemonUser} )
+	{
+	    $CondorCmdTable{$Cmd}{OwnerList} = $Config{DaemonOwnerList}
+		if ( $Config{DaemonOwnerList} ne "" );
+	}
+	else
+	{
+	    $CondorCmdTable{$Cmd}{OwnerList} = $Config{UserOwnerList}
+		if ( $Config{UserOwnerList} ne "" );
+	}
+    }
+    # Master has a special list that overrides the others..
+    $CondorCmdTable{condor_master}{OwnerList} = $Config{MasterOwnerList}
+	if ( $Config{MasterOwnerList} ne "" );
 
     # Run a 'ps' and gather some info...
     if ( open( PS, "/bin/ps -eo user,pid,ppid,command|" ) )
@@ -90,13 +128,14 @@ sub RunIt {
 		if ( $CmdString =~ /$CmdPat/ )
 		{
 		    my $Attr = $CondorCmdTable{$CmdPat}->{Attr};
-		    my $UserList = $CondorCmdTable{$CmdPat}->{UserList};
+		    my $OwnerList = $CondorCmdTable{$CmdPat}->{OwnerList};
 
 		    # Is it on the user match list?
 		    my $UserMatch = 0;
-		    foreach my $TmpUser ( split( /,/, $UserList ) )
+		    $OwnerList = "*" if ( $OwnerList eq "" );
+		    foreach my $TmpUser ( split( /,/, $OwnerList ) )
 		    {
-			$UserMatch++ if (  ( $TmpUser eq "" ) ||
+			$UserMatch++ if (  ( $TmpUser eq "*" ) ||
 					   ( $TmpUser eq $User )  );
 		    }
 		    last if ( ! $UserMatch );
