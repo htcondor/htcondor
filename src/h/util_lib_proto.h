@@ -93,6 +93,7 @@ int TerminateCluster ( DBM *Q, int cluster, int status );
 int TerminateProc ( DBM *Q, PROC_ID *pid, int status );
 CLUSTER_LIST * fetch_cluster_list ( DBM *Q );
 int data_too_big ( int size );
+#if 0
 #if defined(LINUX)
 DBM * dbm_open ( const char *file, int flags, int mode );
 #else
@@ -101,6 +102,7 @@ DBM * dbm_open ( char *file, int flags, int mode );
 int dbm_store ( DBM *Q, datum key, datum data, int flags );
 datum dbm_fetch ( DBM *Q, datum key );
 int dbm_delete ( DBM *Q, datum key );
+#endif
 char * ltrunc ( register char *str );
 int set_machine_status ( int status );
 int get_machine_status ( void );
@@ -124,7 +126,10 @@ char * shorten ( char *state );
 int free_status_line ( STATUS_LINE *line );
 int print_header ( FILE *fp );
 char * format_seconds ( int t_sec );
+#if 0
 char * strdup ( const char *s );
+#endif
+char * strdup ( char *s );
 int stricmp ( register char *s1, register char *s2 );
 int strincmp ( register char *s1, register char *s2, register n );
 char * substr ( char *string, char *pattern );
@@ -225,21 +230,6 @@ int display_proc_long ();
 int display_v2_proc_long ();
 int setegid ();
 int seteuid ();
-<<<<<<< util_lib_proto.h
-
-#if 0
-||||||| 1.2
-=======
-#if 0
->>>>>>> /usr/tmp/T4026760
-int setlinebuf ();
-<<<<<<< util_lib_proto.h
-#endif
-
-||||||| 1.2
-=======
-#endif
->>>>>>> /usr/tmp/T4026760
 int setregid ();
 int setreuid ();
 int setrgid ();
