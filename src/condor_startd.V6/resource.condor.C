@@ -352,6 +352,7 @@ resource_initAd(resource_info_t* rip)
 
 		// Save the orig. requirement expression for later use.
 	rip->r_origreqexp = malloc( sizeof(char) * 512 );
+	rip->r_origreqexp[0] = '\0';  // PrintToStr just uses strcat()!!
 	((rip->r_classad)->Lookup(ATTR_REQUIREMENTS))->PrintToStr(rip->r_origreqexp);
 
 	return (rip->r_classad)->Insert("State=\"NoJob\"");
@@ -433,7 +434,7 @@ resource_update_classad(resource_info_t* rip)
 		// RESOURCE_STATE=Owner.  It it evalutes to True, stick True
 		// into classad and set RESOURCE_STATE=Condor.  Only if it
 		// evaluates to Undefined do we actually ship out the
-		// expression.  Undefined means we should be in  
+		// expression.  Undefined means we should be in Condor state. 
 	ClassAd ad;
 	int tmp;
 	cp->Insert(rip->r_origreqexp);
@@ -604,6 +605,7 @@ int
 event_vacate(resource_id_t rid, job_id_t jid,task_id_t tid)
 {
 	resource_info_t *rip;
+	int rval;
 
 	dprintf(D_ALWAYS, "Called vacate_order()\n");
 	if (!(rip = resmgr_getbyrid(rid))) {
@@ -619,9 +621,11 @@ event_vacate(resource_id_t rid, job_id_t jid,task_id_t tid)
 		return -1;
 	}
 
-	resmgr_changestate(rid, CHECKPOINTING);
-
-	return kill_starter(rip->r_pid, SIGTSTP);
+	rval = kill_starter(rip->r_pid, SIGTSTP);
+	if ( rval == 0 ) {
+		resmgr_changestate(rid, CHECKPOINTING);
+	}
+	return rval;
 }
 
 int
@@ -661,6 +665,7 @@ int
 event_suspend(resource_id_t rid, job_id_t jid, task_id_t tid)
 {
 	resource_info_t *rip;
+	int rval;
 
 	dprintf(D_ALWAYS, "Called event_suspend()\n");
 	if (!(rip = resmgr_getbyrid(rid))) {
@@ -673,15 +678,18 @@ event_suspend(resource_id_t rid, job_id_t jid, task_id_t tid)
 		return -1;
 	}
 
-	resmgr_changestate(rip->r_rid, SUSPENDED);
-
-	return kill_starter(rip->r_pid, SIGUSR1);
+	rval = kill_starter(rip->r_pid, SIGUSR1);
+	if( rval == 0 ) {
+		resmgr_changestate(rip->r_rid, SUSPENDED);
+	}
+	return rval;
 }
 
 int
 event_continue(resource_id_t rid, job_id_t jid, task_id_t tid)
 {
 	resource_info_t *rip;
+	int rval;
 
 	dprintf(D_ALWAYS, "Called event_continue()\n");
 	if (!(rip = resmgr_getbyrid(rid))) {
@@ -694,15 +702,19 @@ event_continue(resource_id_t rid, job_id_t jid, task_id_t tid)
 		return -1;
 	}
 
-	resmgr_changestate(rip->r_rid, JOB_RUNNING);
+	rval = kill_starter(rip->r_pid, SIGCONT);
+	if( rval == 0 ) {
+		resmgr_changestate(rip->r_rid, JOB_RUNNING);
+	}
+	return rval;
 
-	return kill_starter(rip->r_pid, SIGCONT);
 }
 
 int
 event_killjob(resource_id_t rid, job_id_t jid, task_id_t tid)
 {
 	resource_info_t *rip;
+	int rval;
 
 	dprintf(D_ALWAYS, "Called event_killjob()\n");
 	if (!(rip = resmgr_getbyrid(rid))) {
@@ -715,9 +727,12 @@ event_killjob(resource_id_t rid, job_id_t jid, task_id_t tid)
 		return -1;
 	}
 
-	resmgr_changestate(rip->r_rid, NO_JOB);
+	rval = kill_starter(rip->r_pid, SIGINT);
+	if( rval == 0 ) {
+		resmgr_changestate(rip->r_rid, NO_JOB);
+	}
+	return rval;
 
-	return kill_starter(rip->r_pid, SIGINT);
 }
 
 int
@@ -767,13 +782,21 @@ event_killall(resource_id_t rid, job_id_t jid, task_id_t tid)
 		return -1;
 	}
 
-	set_root_priv();
+	pid_t pgrp;
 
 #if defined(HPUX9) || defined(LINUX) || defined(Solaris) || defined(OSF1)
-	if( kill(-getpgrp(),SIGKILL) < 0 ) {
+	pgrp = getpgrp();
 #else
-	if( kill(-getpgrp(0),SIGKILL) < 0 ) {
+	pgrp = getpgrp(0);
 #endif
+
+	resmgr_changestate(rip->r_rid, NO_JOB);
+
+	dprintf(D_FULLDEBUG, "***** About to kill( -%d, SIGKILL ) *****\n", pgrp );
+
+	set_root_priv();
+
+	if( kill( -pgrp, SIGKILL ) < 0 ) {
 		EXCEPT("kill( my_process_group ) euid = %d\n", geteuid());
 	}
 	sigpause(0);	/* huh? */
@@ -794,7 +817,13 @@ kill_starter(int pid, int signo)
 	int 		ret = 0;
 	priv_state	priv;
 
-	dprintf(D_ALWAYS,"In kill_starter() with signo %d\n",signo);
+	if ( pid <= 0 ) {
+		dprintf(D_ALWAYS,"Invalid pid (%d) in kill_starter, returning.\n", 
+				pid );
+		return -1;
+	}
+
+	dprintf(D_ALWAYS,"In kill_starter() with pid %d, signo %d\n", pid, signo);
 
 	for (errno = 0; (ret = stat(Starter, &st)) < 0; errno = 0) {
 		if (errno == ETIMEDOUT)
