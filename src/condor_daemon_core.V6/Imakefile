@@ -9,8 +9,9 @@ OBJ = timer_manager.o daemon_core.o daemon_core_main.o \
 
 library_target(daemon_core.a,$(OBJ))
 c_plus_target(testit,test_daemon_core.o daemon_core.a,$(LIB))
+html_target( condor_timer_manager.h )
 
 release:
 stripped:
 static:
-html:
+
