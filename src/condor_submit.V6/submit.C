@@ -1202,7 +1202,7 @@ read_condor_file( FILE *fp )
 		} else
 		if (*name == '-') {
 			name++;
-			forcedAttributes.remove( name );
+			forcedAttributes.remove( MyString( name ) );
 			job.Delete( name );
 			continue;
 		}
@@ -1273,6 +1273,7 @@ read_condor_file( FILE *fp )
 
 		/* if the user wanted to force the parameter into the classad, do it */
 		if (force == 1) {
+			forcedAttributes.remove( MyString( name ) );
 			forcedAttributes.insert( MyString( name ), MyString( value ) );
 		} 
 
