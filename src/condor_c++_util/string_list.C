@@ -112,6 +112,22 @@ StringList::contains( const char *st )
 	return FALSE;
 }
 
+
+BOOLEAN
+StringList::contains_anycase( const char *st )
+{
+	char	*x;
+
+	strings.Rewind ();
+	while (x = strings.Next ()) {
+		if( stricmp(st, x) == MATCH ) {
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+
 void
 StringList::remove(char *str)
 {
