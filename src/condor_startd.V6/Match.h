@@ -92,7 +92,7 @@ private:
 class Match : public Service
 {
 public:
-	Match();
+	Match( Resource* );
 	~Match();
 
 		// Operations you can perform on a Match
@@ -101,8 +101,11 @@ public:
 		// Send the given cmd to the accountant, followed by the
 		// capability of this match. 
 	int	send_accountant( int );	
-		// Update the given classad with any needed info from this object.
-	void update( ClassAd* );
+
+	void publish( ClassAd*, amask_t );
+
+	void dprintf( int, char* ... );
+
 	void refuse_agent();
 
 		// Timer functions
@@ -142,6 +145,7 @@ public:
 	void setjobstart(int jobstart) 	{m_job_start=jobstart;};
 
 private:
+	Resource	*rip;
 	Client 		*m_client;
 	Capability 	*m_cap;
 	ClassAd*	m_ad;

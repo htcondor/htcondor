@@ -30,10 +30,6 @@
 #ifndef _CONDOR_STARTD_STARTER_H
 #define _CONDOR_STARTD_STARTER_H
 
-#if !defined( WIN32 )
-    extern "C" void killkids( pid_t, int );
-#endif
-
 typedef struct jobstartinfo {
 	char *ji_hname;
 	int ji_sock1;
@@ -43,8 +39,11 @@ typedef struct jobstartinfo {
 class Starter
 {
 public:
-	Starter();
+	Starter( Resource* );
 	~Starter();
+
+	void	dprintf( int, char* ... );
+
 	char*	name() {return s_name;};
 	void	setname(char*);
 	int		kill(int);
@@ -52,14 +51,21 @@ public:
 	void	killkids(int);
 	int		spawn(start_info_t*);
 	void	exited();
-	int		pid() {return s_pid;};
+	pid_t	pid() {return s_pid;};
 	bool	active();
+	pid_t*	pidfamily() {return s_pidfamily;};
+	int		pidfamily_size() {return s_family_size;};
+	void	recompute_pidfamily();
+
 private:
+	Resource*	rip;
 	pid_t	s_pid;
 	char*	s_name;
 	int		reallykill(int, int);
+	int		exec_starter(char*, char*, int, int);
+	pid_t*	s_pidfamily;
+	int		s_family_size;
+	ProcFamily*	s_procfam;
 };
-
-int exec_starter(char*, char*, int, int);
 
 #endif _CONDOR_STARTD_STARTER_H

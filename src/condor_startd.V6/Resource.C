@@ -23,27 +23,37 @@
 #include "startd.h"
 static char *_FileName_ = __FILE__;
 
-Resource::Resource()
+Resource::Resource( CpuAttributes* cap, int rid )
 {
+	char tmp[256];
+	int size = (int)ceil(60 / polling_interval);
 	r_classad = NULL;
 	r_state = new ResState( this );
-	r_starter = new Starter;
-	r_cur = new Match;
+	r_starter = new Starter( this );
+	r_cur = new Match( this );
 	r_pre = NULL;
-	r_reqexp = new Reqexp( &r_classad );
-	r_attr = new ResAttributes( this );
-	r_name = strdup( my_full_hostname() );
+	r_reqexp = new Reqexp( this );
+	r_load_queue = new LoadQueue( size );
 
-	up_tid = -1;
-	poll_tid = -1;
+	sprintf( tmp, "ro%d", rid );
+	r_id = strdup( tmp );
+	
+	if( resmgr->is_smp() ) {
+		sprintf( tmp, "%s@%s", r_id, my_full_hostname() );
+		r_name = strdup( tmp );
+	} else {
+		r_name = strdup( my_full_hostname() );
+	}
+
+	r_attr = cap;
+	r_attr->attach( this );
+
 	kill_tid = -1;
 }
 
 
 Resource::~Resource()
 {
-	daemonCore->Cancel_Timer( up_tid );
-	this->cancel_poll_timer();
 	this->cancel_kill_timer();
 
 	delete r_state;
@@ -53,7 +63,9 @@ Resource::~Resource()
 	delete r_pre;		
 	delete r_reqexp;   
 	delete r_attr;		
+	delete r_load_queue;
 	free( r_name );
+	free( r_id );
 }
 
 
@@ -126,7 +138,7 @@ Resource::periodic_checkpoint()
 		// Now that we updated this time, be sure to insert those
 		// attributes into the classad right away so we don't keep
 		// periodically checkpointing with stale info.
-	r_cur->update( r_classad );
+	r_cur->publish( r_classad, A_PUBLIC );
 
 	return TRUE;
 }
@@ -308,108 +320,36 @@ Resource::init_classad()
 	if( r_classad )	delete(r_classad);
 	r_classad 		= new ClassAd();
 
-		// Initialize classad types.
-	r_classad->SetMyTypeName( STARTD_ADTYPE );
-	r_classad->SetTargetTypeName( JOB_ADTYPE );
+		// Publish everything we know about.
+	this->publish( r_classad, A_PUBLIC | A_ALL );
 
-		// Read in config files and fill up local ad with all attributes 
+		// Read in config files and fill up local ad with all
+		// expressions.
 	config( r_classad );
-
-		// Name of this resource
-	sprintf( tmp, "%s = \"%s\"", ATTR_NAME, r_name );
-	r_classad->Insert( tmp );
-
-		// Grab the hostname of this machine
-	sprintf( tmp, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() );
-	r_classad->Insert( tmp );
-
-		// STARTD_IP_ADDR (needs to be in all ads)
-	sprintf( tmp, "%s = \"%s\"", ATTR_STARTD_IP_ADDR, 
-			 daemonCore->InfoCommandSinfulString() );
-	r_classad->Insert( tmp );
-
-		// Arch, OpSys, FileSystemDomain and UidDomain.  Note: these
-		// will always return something, since config() will insert
-		// values for these if we don't have them in the config file.
-	ptr = param( "ARCH" );
-	sprintf( tmp, "%s = \"%s\"", ATTR_ARCH, ptr );
-	r_classad->Insert( tmp );
-	free( ptr );
-
-	ptr = param( "OPSYS" );
-	sprintf( tmp, "%s = \"%s\"", ATTR_OPSYS, ptr );
-	r_classad->Insert( tmp );
-	free( ptr );
-
-	ptr = param("UID_DOMAIN");
-	sprintf( tmp, "%s = \"%s\"", ATTR_UID_DOMAIN, ptr );
-	dprintf( D_ALWAYS, "%s\n", tmp );
-	r_classad->Insert( tmp );
-	free( ptr );
-
-	ptr = param("FILESYSTEM_DOMAIN");
-	sprintf( tmp, "%s = \"%s\"", ATTR_FILE_SYSTEM_DOMAIN, ptr );
-	dprintf( D_ALWAYS, "%s\n", tmp );
-	r_classad->Insert( tmp );
-	free( ptr );
-
-		// Insert state and activity attributes.
-	r_state->update( r_classad );
-
-		// Insert all resource attribute info.
-	r_attr->init( r_classad );
-
-		// Number of CPUs.  
-	sprintf( tmp, "%s = %d", ATTR_CPUS, calc_ncpus() );
-	r_classad->Insert( tmp );
 
 	return TRUE;
 }
 
 
 void
-Resource::update_classad()
+Resource::timeout_classad()
 {
-	char line[100];
-
-		// Recompute update only stats and fill in classad.
-	r_attr->compute( UPDATE );
-	r_attr->refresh( r_classad, UPDATE );
-	
-		// Put in state info
-	r_state->update( r_classad );
-
-		// Put in requirement expression info
-	r_reqexp->update( r_classad );
-
-		// Update info from the current Match object 
-	r_cur->update( r_classad );
-
-		// Add currently useful capability.  If r_pre exists, we
-		// need to advertise it's capability.  Otherwise, we should
-		// get the capability from r_cur.
-	if( r_pre ) {
-		sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_pre->capab() );
-	} else {
-		sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_cur->capab() );
-	}		
-	r_classad->Insert( line );
+	publish( r_classad, A_PUBLIC | A_TIMEOUT );
 }
 
 
 void
-Resource::timeout_classad()
+Resource::update_classad()
 {
-		// Recompute statistics needed at every timeout and fill in classad
-	r_attr->compute( TIMEOUT );
-	r_attr->refresh( r_classad, TIMEOUT );
+	publish( r_classad, A_PUBLIC | A_UPDATE );
 }
+
 
 int
 Resource::force_benchmark()
 {
 		// Force this resource to run benchmarking.
-	r_attr->benchmark(1);
+	resmgr->m_attr->benchmark( this, 1 );
 	return TRUE;
 }
 
@@ -417,27 +357,23 @@ Resource::force_benchmark()
 int
 Resource::update()
 {
-	int rval1 = TRUE, rval2 = TRUE;
+	int rval;
 	ClassAd private_ad;
 	ClassAd public_ad;
 
-		// Recompute stats needed for updates and refresh classad. 
-	this->update_classad();
-
-	this->make_public_ad( &public_ad );
-	this->make_private_ad( &private_ad );
-
+	this->publish( &public_ad, A_PUBLIC | A_ALL );
+	this->publish( &private_ad, A_PRIVATE | A_ALL );
 
 		// Send class ads to collector(s)
-	resmgr->send_update( &public_ad, &private_ad );
+	rval = resmgr->send_update( &public_ad, &private_ad );
+	if( rval ) {
+		dprintf( D_FULLDEBUG, "Sent update to %d collector(s)\n", rval );
+	} else {
+		dprintf( D_ALWAYS, "Error sending update to collector(s)\n" );
+	}
 
 		// Set a flag to indicate that we've done an update.
 	did_update = TRUE;
-
-		// Reset our timer so we update again after update_interval.
-	daemonCore->Reset_Timer( up_tid, update_interval, 0 );
-
-	return( rval1 && rval2 );
 }
 
 
@@ -445,10 +381,8 @@ void
 Resource::final_update() 
 {
 	ClassAd public_ad;
-	this->make_public_ad( &public_ad );
 	r_reqexp->unavail();
-	r_state->update( &public_ad );
-	r_reqexp->update( &public_ad );
+	this->publish( &public_ad, A_PUBLIC | A_ALL ); 
 	resmgr->send_update( &public_ad, NULL );
 }
 
@@ -467,50 +401,6 @@ Resource::eval_and_update()
 		update();
 	}
 	return TRUE;
-}
-
-
-int
-Resource::start_update_timer()
-{
-	up_tid = 
-		daemonCore->Register_Timer( update_interval, 0,
-									(TimerHandlercpp)eval_and_update,
-									"eval_and_update", this );
-	if( up_tid < 0 ) {
-		EXCEPT( "Can't register DaemonCore timer" );
-	}
-	return TRUE;
-}
-
-
-int
-Resource::start_poll_timer()
-{
-	if( poll_tid >= 0 ) {
-			// Timer already started.
-		return TRUE;
-	}
-	poll_tid = 
-		daemonCore->Register_Timer( polling_interval,
-									polling_interval, 
-									(TimerHandlercpp)eval_state,
-									"poll_resource", this );
-	if( poll_tid < 0 ) {
-		EXCEPT( "Can't register DaemonCore timer" );
-	}
-	return TRUE;
-}
-
-
-void
-Resource::cancel_poll_timer()
-{
-	if( poll_tid != -1 ) {
-		daemonCore->Cancel_Timer( poll_tid );
-		poll_tid = -1;
-		dprintf( D_FULLDEBUG, "Canceled polling timer.\n" );
-	}
 }
 
 
@@ -630,24 +520,24 @@ Resource::eval_kill()
 
 
 int
-Resource::eval_vacate()
+Resource::eval_preempt()
 {
 	int tmp;
 	if( r_cur->universe() == VANILLA ) {
-		if( (r_classad->EvalBool( "VACATE_VANILLA",
+		if( (r_classad->EvalBool( "PREEMPT_VANILLA",
 								   r_cur->ad(), 
 								   tmp)) == 0 ) {
-			if( (r_classad->EvalBool( "VACATE",
+			if( (r_classad->EvalBool( "PREEMPT",
 									   r_cur->ad(), 
 									   tmp)) == 0 ) {
-				EXCEPT("Can't evaluate VACATE");
+				EXCEPT("Can't evaluate PREEMPT");
 			}
 		}
 	} else {
-		if( (r_classad->EvalBool( "VACATE",
+		if( (r_classad->EvalBool( "PREEMPT",
 								   r_cur->ad(), 
 								   tmp)) == 0 ) {
-			EXCEPT("Can't evaluate VACATE");
+			EXCEPT("Can't evaluate PREEMPT");
 		}
 	}
 	return tmp;
@@ -705,69 +595,177 @@ Resource::eval_continue()
 
 
 void
-Resource::make_public_ad(ClassAd* pubCA)
+Resource::publish( ClassAd* cap, amask_t mask ) 
 {
-	char*	expr;
-	char*	ptr;
-	char	tmp[1024];
-	State	s;
+	char line[256];
+	State s;
+	char* ptr;
 
-	pubCA->SetMyTypeName( STARTD_ADTYPE );
-	pubCA->SetTargetTypeName( JOB_ADTYPE );
+		// Set the correct types on the ClassAd
+	cap->SetMyTypeName( STARTD_ADTYPE );
+	cap->SetTargetTypeName( JOB_ADTYPE );
 
-	caInsert( pubCA, r_classad, ATTR_NAME );
-	caInsert( pubCA, r_classad, ATTR_MACHINE );
-	caInsert( pubCA, r_classad, ATTR_STARTD_IP_ADDR );
-	caInsert( pubCA, r_classad, ATTR_ARCH );
-	caInsert( pubCA, r_classad, ATTR_OPSYS );
-	caInsert( pubCA, r_classad, ATTR_UID_DOMAIN );
-	caInsert( pubCA, r_classad, ATTR_FILE_SYSTEM_DOMAIN );
+		// Insert attributes directly in the Resource object, or not
+		// handled by other objects.
 
-	r_state->update( pubCA );
-	r_attr->refresh( pubCA, PUBLIC );
+	if( IS_STATIC(mask) ) {
+			// We need these for both public and private ads
+		sprintf( line, "%s = \"%s\"", ATTR_STARTD_IP_ADDR, 
+				 daemonCore->InfoCommandSinfulString() );
+		cap->Insert( line );
 
-	caInsert( pubCA, r_classad, ATTR_CPUS );
-	caInsert( pubCA, r_classad, ATTR_MEMORY );
-	caInsert( pubCA, r_classad, ATTR_AFS_CELL );
-
-		// Put everything in the public classad from STARTD_EXPRS. 
-	config_fill_ad( pubCA );
-
-		// Insert the currently active requirements expression.  If
-		// it's just START, we need to insert that too.
-	if( (r_reqexp->update( pubCA ) == ORIG) ) {
-		caInsert( pubCA, r_classad, ATTR_START );
+		sprintf( line, "%s = \"%s\"", ATTR_NAME, r_name );
+		cap->Insert( line );
 	}
 
-	caInsert( pubCA, r_classad, ATTR_RANK );
-	caInsert( pubCA, r_classad, ATTR_CURRENT_RANK );
+	if( IS_PUBLIC(mask) && IS_STATIC(mask) ) {
+		sprintf( line, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() );
+		cap->Insert( line );
 
-	s = this->state();
-	if( s == claimed_state || s == preempting_state ) {
-		caInsert( pubCA, r_classad, ATTR_CLIENT_MACHINE );
-		caInsert( pubCA, r_classad, ATTR_REMOTE_USER );
-		caInsert( pubCA, r_classad, ATTR_JOB_ID );
-		caInsert( pubCA, r_classad, ATTR_JOB_START );
-		caInsert( pubCA, r_classad, ATTR_LAST_PERIODIC_CHECKPOINT );
-		if( startd_job_exprs ) {
-			startd_job_exprs->rewind();
-			while( (ptr = startd_job_exprs->next()) ) {
-				caInsert( pubCA, r_cur->ad(), ptr );
+			// Since the Rank expression itself only lives in the
+			// config file and the r_classad (not any obejects), we
+			// have to insert it here from r_classad.
+		caInsert( cap, r_classad, ATTR_RANK );
+
+			// Include everything from STARTD_EXPRS.
+		config_fill_ad( cap );
+	}		
+
+	if( IS_PUBLIC(mask) && IS_UPDATE(mask) ) {
+			// If we're claimed or preempting, handle anything listed 
+			// in STARTD_JOB_EXPRS.
+		s = this->state();
+		if( s == claimed_state || s == preempting_state ) {
+			if( startd_job_exprs ) {
+				startd_job_exprs->rewind();
+				while( (ptr = startd_job_exprs->next()) ) {
+					caInsert( cap, r_cur->ad(), ptr );
+				}
 			}
 		}
-	}		
+	}
+
+		// Things you only need in private ads
+	if( IS_PRIVATE(mask) && IS_UPDATE(mask) ) {
+			// Add currently useful capability.  If r_pre exists, we  
+			// need to advertise it's capability.  Otherwise, we
+			// should  get the capability from r_cur.
+		if( r_pre ) {
+			sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_pre->capab() );
+		} else {
+			sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_cur->capab() );
+		}		
+		cap->Insert( line );
+	}
+
+		// Put in cpu-specific attributes
+	r_attr->publish( cap, mask );
+	
+		// Put in machine-wide attributes 
+	resmgr->m_attr->publish( cap, mask );
+
+		// Put in state info
+	r_state->publish( cap, mask );
+
+		// Put in requirement expression info
+	r_reqexp->publish( cap, mask );
+
+		// Update info from the current Match object 
+	r_cur->publish( cap, mask );
 }
 
 
 void
-Resource::make_private_ad(ClassAd* privCA)
+Resource::compute( amask_t mask ) 
 {
-	privCA->SetMyTypeName( STARTD_ADTYPE );
-	privCA->SetTargetTypeName( JOB_ADTYPE );
+		// Only resource-specific things that need to be computed are
+		// in the CpuAttributes object.
+	r_attr->compute( mask );
 
-	caInsert( privCA, r_classad, ATTR_NAME );
-	caInsert( privCA, r_classad, ATTR_STARTD_IP_ADDR );
-	caInsert( privCA, r_classad, ATTR_CAPABILITY );
+		// Actually, we'll have the Reqexp object compute too, so that
+		// we get static stuff recomputed on reconfig, etc.
+	r_reqexp->compute( mask );
+
 }
+
+
+void
+Resource::dprintf_va( int flags, char* fmt, va_list args )
+{
+	if( resmgr->is_smp() ) {
+		::dprintf( flags, "%s: ", r_id );
+		::_condor_dprintf_va( flags | D_NOHEADER, fmt, args );
+	} else {
+		::_condor_dprintf_va( flags, fmt, args );
+	}
+}
+
+
+void
+Resource::dprintf( int flags, char* fmt, ... )
+{
+	va_list args;
+	va_start( args, fmt );
+	this->dprintf_va( flags, fmt, args );
+	va_end( args );
+}
+
+
+float
+Resource::compute_condor_load()
+{
+	float avg;
+	float max;
+	float load;
+	int numcpus = resmgr->num_cpus();
+	procInfo* pinfo = NULL;
+	static int num_called = 0;
+
+	if( r_starter->active() ) { 
+		num_called++;
+		if( num_called >= 10 ) {
+			r_starter->recompute_pidfamily();
+			num_called = 0;
+		}
+
+		resmgr->m_proc->getProcSetInfo( r_starter->pidfamily(), 
+										r_starter->pidfamily_size(), 
+										pinfo ); 
+		if( !pinfo ) {
+			EXCEPT( "Out of memory!" );
+		}
+		r_load_queue->push( 1, pinfo->cpuusage );
+		delete pinfo;
+	} else {
+		r_load_queue->push( 1, 0.0 );
+	}
+	avg = (r_load_queue->avg() / numcpus);
+
+#if 0
+	r_load_queue->display();
+	dprintf( D_FULLDEBUG | D_NOHEADER, "Size: %d  Avg value: %f\n", 
+			 r_load_queue->size(), avg );
+#endif
+
+	max = MAX( numcpus, resmgr->m_attr->load() );
+	load = (avg * max) / 100;
+		// Make sure we don't think the CondorLoad on 1 node is higher
+		// than the total system load.
+	return MIN( load, resmgr->m_attr->load() );
+}
+
+
+void
+Resource::resize_load_queue()
+{
+	int size = (int)ceil(60 / polling_interval);
+	dprintf( D_FULLDEBUG, "Resizing load queue.  Old: %d, New: %d\n",
+			 r_load_queue->size(), size );
+	float val = r_load_queue->avg();
+	delete r_load_queue;
+	r_load_queue = new LoadQueue( size );
+	r_load_queue->setval( val );
+}
+	
 
 

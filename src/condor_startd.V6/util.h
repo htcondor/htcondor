@@ -27,7 +27,7 @@ class ClassAd;
 class Stream;
 
 // Our utilities 
-void	cleanup_execute_dir(void);
+void	cleanup_execute_dir(int pid);
 void	check_perms(void);
 float	compute_rank( ClassAd*, ClassAd* );
 int		create_port( int* );

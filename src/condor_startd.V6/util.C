@@ -44,21 +44,28 @@ check_perms()
 
 
 void
-cleanup_execute_dir()
+cleanup_execute_dir(int pid)
 {
 	char buf[2048];
 
 #if defined(WIN32)
-	sprintf(buf, "del /f /s /q %.256s\\condor_exec*",
-			exec_path);
-	system(buf);
-	sprintf(buf, "rmdir /s /q %.256s\\dir_1",
-			exec_path);
-	system(buf);
+	if( pid ) {
+		sprintf( buf, "rmdir /s /q %.256s\\dir_%d",
+				 exec_path, pid );
+	} else {
+		sprintf( buf, "rmdir /s /q %.256s\\dir_*",
+				 exec_path );
+	}
+	system( buf );
 #else
-	sprintf(buf, "/bin/rm -rf %.256s/condor_exec* %.256s/dir_*",
-			exec_path, exec_path);
-	system(buf);
+	if( pid ) {
+		sprintf( buf, "/bin/rm -rf %.256s/dir_%d",
+				exec_path, pid );
+	} else {
+		sprintf( buf, "/bin/rm -rf %.256s/condor_exec* %.256s/dir_*",
+				 exec_path, exec_path );
+	}
+	system( buf );
 #endif
 }
 

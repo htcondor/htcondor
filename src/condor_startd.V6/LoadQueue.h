@@ -20,41 +20,27 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-/* 
-    This file defines the Reqexp class.  A Reqexp object contains
-    methods and data to manipulate the requirements expression of a
-    given resource.
+#ifndef _LOAD_QUEUE_H
+#define _LOAD_QUEUE_H
 
-   	Written 9/29/97 by Derek Wright <wright@cs.wisc.edu>
-*/
 
-#ifndef _REQEXP_H
-#define _REQEXP_H
-
-enum reqexp_state { AVAIL, UNAVAIL, ORIG };
-
-class Reqexp
+class LoadQueue
 {
 public:
-	Reqexp( Resource* rip );
-	~Reqexp();
-	void	restore();		// Restore the original requirements
-	void	unavail();		// Set requirements to False
-	void	avail();		// Set requirements to True
-	int		eval();			// Evaluate the original requirements  
-							// (-1 = undef, 1 = true, 0 = false)
-	int		pub();			// Evaluates orig reqexp and sets classad
-							// appropriately, returns 1 if change.
-
-	void 	publish( ClassAd*, amask_t );
-	void	compute( amask_t );
-	void	dprintf( int, char* ... );
+	LoadQueue( int queue_size );
+	~LoadQueue();
+	void	push( int num, float val );
+	void	clear();
+	float	avg();
+	int		size() { return q_size; };
+	void	setval( float val );
+	void	display();
 
 private:
-	Resource*		rip;
-	char* 			origreqexp;
-	char* 			origstart;
-	reqexp_state	rstate;
+	int			head;	// Index of the next available slot.
+	float*	 	buf;	// Actual array to hold values.
+	int			q_size;	
 };
 
-#endif _REQEXP_H
+
+#endif /* _LOAD_QUEUE_H */

@@ -20,41 +20,78 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-/* 
-    This file defines the Reqexp class.  A Reqexp object contains
-    methods and data to manipulate the requirements expression of a
-    given resource.
+#include "startd.h"
+static char *_FileName_ = __FILE__;
 
-   	Written 9/29/97 by Derek Wright <wright@cs.wisc.edu>
-*/
 
-#ifndef _REQEXP_H
-#define _REQEXP_H
-
-enum reqexp_state { AVAIL, UNAVAIL, ORIG };
-
-class Reqexp
+LoadQueue::LoadQueue( int queue_size )
 {
-public:
-	Reqexp( Resource* rip );
-	~Reqexp();
-	void	restore();		// Restore the original requirements
-	void	unavail();		// Set requirements to False
-	void	avail();		// Set requirements to True
-	int		eval();			// Evaluate the original requirements  
-							// (-1 = undef, 1 = true, 0 = false)
-	int		pub();			// Evaluates orig reqexp and sets classad
-							// appropriately, returns 1 if change.
+	q_size = queue_size;
+	head = 0;
+	buf = new float[q_size];
+	this->clear();
+}
 
-	void 	publish( ClassAd*, amask_t );
-	void	compute( amask_t );
-	void	dprintf( int, char* ... );
 
-private:
-	Resource*		rip;
-	char* 			origreqexp;
-	char* 			origstart;
-	reqexp_state	rstate;
-};
+LoadQueue::~LoadQueue()
+{
+	delete [] buf;
+}
 
-#endif _REQEXP_H
+
+// Return the average value of the queue
+float
+LoadQueue::avg()
+{
+	int i;
+	float val = 0;
+	for( i=0; i<q_size; i++ ) {
+		val += buf[i];
+	}
+	return( (float)val/q_size );
+}
+
+
+// Push num elements onto the array with the given value.
+void
+LoadQueue::push( int num, float val ) 
+{
+	int i, j;
+	if( num > q_size ) {
+		num = q_size;
+	}
+	for( i=0; i<num; i++ ) {
+		j = (head + i) % q_size;
+		buf[j] = val;
+	}
+	head = (head + num) % q_size;
+}
+
+
+// Set all elements of the array to 0
+void
+LoadQueue::clear() 
+{
+	memset( (void*)buf, 0, (q_size*sizeof(float)) );
+		// Reset the head, too.
+	head = 0;
+}
+
+
+void
+LoadQueue::setval( float val ) {
+	this->push( q_size, val );
+}
+
+
+void
+LoadQueue::display() {
+	int i, j;
+	dprintf( D_FULLDEBUG | D_NOHEADER, "LoadQueue: " );
+	for( i=0; i<q_size; i++ ) {
+		j = (head + i) % q_size;
+		dprintf( D_FULLDEBUG | D_NOHEADER, "%f ", buf[j] );
+	}
+	dprintf( D_FULLDEBUG | D_NOHEADER, "\n" );
+}
+

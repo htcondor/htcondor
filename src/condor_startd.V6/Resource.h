@@ -26,7 +26,7 @@
 class Resource : public Service
 {
 public:
-	Resource();
+	Resource( CpuAttributes*, int );
 	~Resource();
 
 		// Public methods that can be called from command handlers
@@ -56,7 +56,26 @@ public:
 	Activity	activity()	{return r_state->activity();};
 	int		eval_state()	{return r_state->eval();};
 	bool	in_use();
-	float	condor_load() {return r_state->condor_load();};
+
+		// Methods for computing and publishing resource attributes 
+	void	compute( amask_t mask);
+	void	publish( ClassAd*, amask_t );
+
+		// Load Average related methods
+	float	condor_load() {return r_attr->condor_load();};
+	float	compute_condor_load();
+	void	resize_load_queue(); 
+	float	owner_load() {return r_attr->owner_load();};
+	void	set_owner_load( float val) {r_attr->set_owner_load(val);};
+
+
+	void	display( amask_t m ) {r_attr->display(m);}
+
+		// dprintf() functions add the CPU id to the header of each
+		// message for SMP startds (single CPU machines get no special
+		// header and it works just like regular dprintf())
+	void	dprintf( int, char*, ... );
+	void	dprintf_va( int, char*, va_list );
 
 		// Called from the reaper to handle things for this rip
 	void	starter_exited();	
@@ -78,12 +97,9 @@ public:
 	int		update();				// Update the central manager.
 	int		eval_and_update();		// Evaluate state and update CM. 
 	void	final_update();			// Send a final update to the CM
-									// with Requirements = False
+									// with Requirements = False.
 
 		// Methods to control various timers 
-	int		start_update_timer();	// Timer for updating CM. 
-	int		start_poll_timer();		// Timer for polling the resource
-	void	cancel_poll_timer();	//    when it's in use by Condor. 
 	int		start_kill_timer();		// Timer for how long we're willing to 
 	void	cancel_kill_timer();	//    be in preempting/killing state. 
 
@@ -92,7 +108,7 @@ public:
 	int		wants_suspend();
 	int		wants_pckpt();
 	int		eval_kill();
-	int		eval_vacate();
+	int		eval_preempt();
 	int		eval_suspend();
 	int		eval_continue();
 
@@ -103,16 +119,12 @@ public:
 	Match*			r_cur;		// Info about the current match
 	Match*			r_pre;		// Info about the possibly preempting match
 	Reqexp*			r_reqexp;   // Object for the requirements expression
-	ResAttributes*	r_attr;		// Parameters of this resource
+	CpuAttributes*	r_attr;		// Attributes of this resource
+	LoadQueue*		r_load_queue;  // Holds 1 minute avg % cpu usage
 	char*			r_name;		// Name of this resource
-	
-private:
-		// Make public and private ads out of our classad
-	void make_public_ad( ClassAd* );
-	void make_private_ad( ClassAd* );
+	char*			r_id;		// CPU id of this resource
 
-	int		up_tid;		// DaemonCore timer id for update timer.
-	int		poll_tid;	// DaemonCore timer id for polling timer.
+private:
 	int		kill_tid;	// DaemonCore timer id for kiling timer.
 
 	int		did_update;		// Flag set when we do an update.

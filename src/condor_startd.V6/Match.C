@@ -53,7 +53,7 @@ static char *_FileName_ = __FILE__;
 // Match
 ///////////////////////////////////////////////////////////////////////////
 
-Match::Match()
+Match::Match( Resource* rip )
 {
 	m_client = new Client;
 	m_cap = new Capability;
@@ -69,6 +69,7 @@ Match::Match()
 	m_proc = -1;
 	m_job_start = -1;
 	m_last_pckpt = -1;
+	this->rip = rip;
 }
 
 
@@ -134,10 +135,14 @@ Match::send_accountant( int cmd )
 
 
 void
-Match::update( ClassAd* ad )
+Match::publish( ClassAd* ad, amask_t how_much )
 {
 	char line[256];
 	char* tmp;
+
+	if( IS_PRIVATE(how_much) ) {
+		return;
+	}
 
 	sprintf( line, "%s = %f", ATTR_CURRENT_RANK, m_rank );
 	ad->Insert( line );
@@ -170,6 +175,16 @@ Match::update( ClassAd* ad )
 		ad->Insert( line );
 	}
 }	
+
+
+void
+Match::dprintf( int flags, char* fmt, ... )
+{
+	va_list args;
+	va_start( args, fmt );
+	rip->dprintf_va( flags, fmt, args );
+	va_end( args );
+}
 
 
 void
@@ -222,7 +237,7 @@ Match::match_timed_out()
 			EXCEPT( "Match timed out but not in matched state." );
 		}
 		delete rip->r_cur;
-		rip->r_cur = new Match;
+		rip->r_cur = new Match( rip );
 		rip->change_state( owner_state );
 	} else {
 			// The match that timed out was the preempting match.
@@ -230,7 +245,7 @@ Match::match_timed_out()
 			// We need to generate a new preempting match object,
 			// restore our reqexp, and update the CM. 
 		delete rip->r_pre;
-		rip->r_pre = new Match;
+		rip->r_pre = new Match( rip );
 		rip->r_reqexp->pub();
 		rip->update();
 	}		

@@ -34,8 +34,8 @@ static char *_FileName_ = __FILE__;
 ResMgr*	resmgr;			// Pointer to the resource manager object
 
 // Polling variables
-int	polling_interval;	// Interval for polling when there are resources in use
-int	update_interval;	// Interval to update CM
+int	polling_interval = 0;	// Interval for polling when there are resources in use
+int	update_interval = 0;	// Interval to update CM
 
 // Paths
 char*	exec_path = NULL;
@@ -62,6 +62,10 @@ int		killing_timeout;	// How long you're willing to be in
 							// preempting/killing before you drop the
 							// hammer on the starter
 int		last_x_event = 0;	// Time of the last x event
+time_t	startd_startup;		// Time when the startd started up
+
+int		console_cpus = 0;	// # of nodes in an SMP that care about
+int		keyboard_cpus = 0;  //   console and keyboard activity
 
 char*	mySubSystem = "STARTD";
 
@@ -69,7 +73,7 @@ char*	mySubSystem = "STARTD";
  * Prototypes of static functions.
  */
 
-void usage( const char *s );
+void usage( char* );
 int main_init( int argc, char* argv[] );
 int init_params(int);
 int main_config();
@@ -81,22 +85,71 @@ int	handle_dc_sigchld( Service*, int );
 int	shutdown_sigchld( Service*, int ); 
 int	check_free();
 
-int
-main_init( int, char* [] )
+
+void
+usage( char* MyName)
 {
-	char* tmp;
+	fprintf( stderr, "Usage: %s [option]\n", MyName );
+	fprintf( stderr, "  where [option] is one of:\n" );
+	fprintf( stderr, 
+			 "     [-skip-benchmarks]\t(don't run initial benchmarks)\n" );
+	exit( 1 );
+}
+
+
+int
+main_init( int argc, char* argv[] )
+{
+	int		skip_benchmarks = FALSE;
+	int		rval;
+	char*	tmp;
+	char**	ptr; 
+
+		// Process command line args.
+	for(ptr = argv + 1; *ptr; ptr++) {
+		if(ptr[0][0] != '-') {
+			usage( argv[0] );
+		}
+		switch( ptr[0][1] ) {
+		case 's':
+			skip_benchmarks = TRUE;
+			break;
+		default:
+			fprintf( stderr, "Error:  Unknown option %s\n", *ptr );
+			usage( argv[0] );
+		}
+	}
 
 		// Seed the random number generator for capability generation.
 	set_seed( 0 );
 
+		// Record the time we started up for use in determining
+		// keyboard idle time on SMP machines, etc.
+	startd_startup = time( 0 );
+
 		// If we EXCEPT, don't leave any starters lying around.
 	_EXCEPT_Cleanup = do_cleanup;
 
-	init_params(1);		// The 1 indicates that this is the first time
-
+		// Instantiate the Resource Manager object.
 	resmgr = new ResMgr;
 
-	if( (tmp = param("RunBenchmarks")) &&
+		// Read in global parameters from the config file.
+		// We do this after we instantiate the resmgr, so we can know
+		// what num_cpus is, but before init_resources(), so we can
+		// use polling_interval to figure out how big to make each
+		// Resource's LoadQueue object.
+	init_params(1);		// The 1 indicates that this is the first time
+
+		// Instantiate Resource objects in the ResMgr
+	resmgr->init_resources();
+
+	resmgr->init_socks();
+
+		// Compute all attributes
+	resmgr->compute( A_ALL );
+
+	if( (!skip_benchmarks) &&
+		(tmp = param("RunBenchmarks")) &&
 		(*tmp != 'F' && *tmp != 'f') ) {
 			// There's an expression defined to have us periodically
 			// run benchmarks, so run them once here at the start.
@@ -104,7 +157,7 @@ main_init( int, char* [] )
 			// they just comment RunBenchmarks out of their config
 			// file, or set it to "False". -Derek Wright 10/20/98
 		dprintf( D_ALWAYS, "About to run initial benchmarks.\n" );
-		resmgr->walk( &Resource::force_benchmark );
+		resmgr->force_benchmark();
 		dprintf( D_ALWAYS, "Completed initial benchmarks.\n" );
 		free( tmp );
 	}
@@ -113,7 +166,7 @@ main_init( int, char* [] )
 
 		// Do a little sanity checking and cleanup
 	check_perms();
-	cleanup_execute_dir();
+	cleanup_execute_dir( 0 );	// 0 indicates we should clean everything.
 
 		// register daemoncore stuff
 
@@ -205,12 +258,12 @@ main_init( int, char* [] )
 	command_x_event( 0, 0, 0 );
 #endif
 
-		// Walk through all resources and start an update timer for
-		// each one.  
-	resmgr->walk( &Resource::start_update_timer );
+	resmgr->start_update_timer();
 
-		// Evaluate the state of all resources and update CM
-	resmgr->walk( &Resource::eval_and_update );
+		// Evaluate the state of all resources and update CM 
+		// We don't just call eval_and_update_all() b/c we don't need
+		// to recompute anything.
+	resmgr->first_eval_and_update_all();
 
 	return TRUE;
 }
@@ -219,13 +272,25 @@ main_init( int, char* [] )
 int
 main_config()
 {
-		// Re-read config file, and rebuild ads for each resource.  
-	resmgr->walk( &Resource::init_classad );  
-		// Re-read config file for startd-wide stuff.
+		// Stash old interval so we know if it's changed.
+	int old_poll = polling_interval;
+		// Reread config file for global settings.
 	init_params(0);
+		// Recompute machine-wide attributes object.
+	resmgr->compute( A_ALL );
+		// Rebuild ads for each resource.  
+	resmgr->walk( Resource::init_classad );  
+		// Reset various settings in the ResMgr.
 	resmgr->init_socks();
-		// Re-evaluate and update the CM for each resource.
-	resmgr->walk( &Resource::eval_and_update );
+	resmgr->reset_timers();
+	if( old_poll != polling_interval ) {
+		resmgr->walk( Resource::resize_load_queue );
+	}
+
+		// Re-evaluate and update the CM for each resource (again, we
+		// don't need to recompute, since we just did that, so we call
+		// the special case version).
+	resmgr->first_eval_and_update_all();
 	return TRUE;
 }
 
@@ -363,6 +428,22 @@ init_params( int first_time)
 		free( tmp );
 	}
 
+	tmp = param( "CONSOLE_CPUS" );
+	if( !tmp ) {
+		console_cpus = resmgr->m_attr->num_cpus();
+	} else {
+		console_cpus = atoi( tmp );
+		free( tmp );
+	}
+
+	tmp = param( "KEYBOARD_CPUS" );
+	if( !tmp ) {
+		keyboard_cpus = 1;
+	} else {
+		keyboard_cpus = atoi( tmp );
+		free( tmp );
+	}
+
 	return TRUE;
 }
 
@@ -446,10 +527,9 @@ reaper_loop()
 					pid, WEXITSTATUS(status));
 		}
 		rip = resmgr->get_by_pid(pid);
-		if( rip == NULL ) {
-			continue;
+		if( rip ) {
+			rip->starter_exited();
 		}		
-		rip->starter_exited();
 	}
 #endif
 }

@@ -23,9 +23,9 @@
 #include "startd.h"
 static char *_FileName_ = __FILE__;
 
+
 ResState::ResState( Resource* rip )
 {
-	r_load_q = new LoadQueue(60);
 	r_state = owner_state;
 	r_act = idle_act;
 	atime = (int)time(NULL);
@@ -34,16 +34,15 @@ ResState::ResState( Resource* rip )
 }
 
 
-ResState::~ResState()
-{
-	delete r_load_q;
-}
-
-
 void
-ResState::update( ClassAd* cp ) 
+ResState::publish( ClassAd* cp, amask_t how_much ) 
 {
 	char tmp[80];
+
+	if( IS_PRIVATE(how_much) ) {
+			// Nothing to publish for private ads
+		return;
+	}
 
 	sprintf( tmp, "%s=\"%s\"", ATTR_STATE, state_to_string(r_state) );
 	cp->InsertOrUpdate( tmp );
@@ -104,7 +103,6 @@ ResState::change( State new_state, Activity new_act )
 		r_state = new_state;
 	}
 	if( actchange ) {
-		load_activity_change();
 		r_act = new_act;
 		atime = now;
 	}
@@ -114,7 +112,7 @@ ResState::change( State new_state, Activity new_act )
 	}
 	
 		// Note our current state and activity in the classad
-	this->update( rip->r_classad );
+	this->publish( rip->r_classad, A_ALL );
 
 		// We want to update the CM on every state or activity change
 	rip->update();   
@@ -157,15 +155,10 @@ ResState::eval()
 
 	case claimed_state:
 		want_suspend = rip->wants_suspend();
-		want_vacate = rip->wants_vacate();
 		if( ((r_act == busy_act) && (!want_suspend)) ||
 			(r_act == suspended_act) ) {
-					// STATE TRANSITION #15 or #16
-			if( want_vacate && rip->eval_vacate() ) {
-				return change( preempting_state, vacating_act ); 
-			}
-			if( !want_vacate && rip->eval_kill() ) {
-				return change( preempting_state, killing_act );  
+			if( rip->eval_preempt() ) {
+				return change( preempting_state ); 
 			}
 		}
 		if( (r_act == busy_act) && want_suspend ) {
@@ -262,127 +255,6 @@ act_to_load( Activity act )
 }
 
 
-// This function is called on every activity change.  It's purpose is
-// to keep the load_q array up to date by pushing a 0 or 1 onto the
-// queue for every second we've been in the previous activity.  
-void
-ResState::load_activity_change() 
-{
-	int now		=	(int) time(NULL);
-	int delta	= 	now - atime;
-	int load	=	act_to_load( r_act );
-
-	if( delta < 1 ) {
-		delta = 1;
-	}
-	if( delta >= 60 ) {
-		r_load_q->setval( (char)load );
-	} else {
-		r_load_q->push( delta, (char)load );
-	}
-}
-
-
-float
-ResState::condor_load()
-{
-	int now		=	(int) time(NULL);
-	int delta	= 	now - atime;
-	int load	=	act_to_load( r_act );
-	int val;
-
-	if( delta >= 60 ) {
-			// Easy: Condor load is just 1 or 0 depending on previous
-			// activity.
-		return (float)load;
-	} 
-
-	if( delta < 1 ) {
-		delta = 1;
-	}
-		// Hard: Need to use the load queue to determine average
-		// over last minute.
-	val = r_load_q->val( 60 - delta );
-	val += ( load * delta );
-	return ( (float)val / 60 );
-}
-
-
-LoadQueue::LoadQueue( int q_size )
-{
-	size = q_size;
-	head = 0;
-	buf = new char[size];
-	this->setval( (char)0 );
-}
-
-
-LoadQueue::~LoadQueue()
-{
-	delete [] buf;
-}
-
-
-// Return the average value of the queue
-float
-LoadQueue::avg()
-{
-	int i, val = 0;
-	for( i=0; i<size; i++ ) {
-		val += buf[i];
-	}
-	return( (float)val/size );
-}
-
-
-// Return the sum of the values of the first num elements.
-int
-LoadQueue::val( int num )
-{
-	int i, j, val = 0, delta = size - num, foo;
-		// delta is how many elements we need to skip over to get to
-		// the values we care about.  If we were asked for more
-		// elements than the size of our array, we need to return the
-		// sum of all values, i.e., don't skip anything.
-	if( delta < 0 ) {
-		delta = 0;
-		num = size;	
-	}
-	foo = head + delta;
-	for( i=0; i<num; i++ ) {
-		j = (foo + i) % size;
-		val += buf[j];
-	}
-	return val;
-}
-
-
-// Push num elements onto the array with the given value.
-void
-LoadQueue::push( int num, char val ) 
-{
-	int i, j;
-	if( num > size ) {
-		num = size;
-	}
-	for( i=0; i<num; i++ ) {
-		j = (head + i) % size;
-		buf[j] = val;
-	}
-	head = (head + num) % size;
-}
-
-
-// Set all elements of the array to have the given value.
-void
-LoadQueue::setval( char val ) 
-{
-	memset( (void*)buf, (int)val, (size*sizeof(char)) );
-		// Reset the head, too.
-	head = 0;
-}
-
-
 int
 ResState::leave_action( State s, Activity a, 
 						int statechange, int ) 
@@ -437,12 +309,11 @@ ResState::enter_action( State s, Activity a,
 {
 	switch( s ) {
 	case owner_state:
-		rip->cancel_poll_timer();
 			// Always want to create new match objects
 		if( rip->r_cur ) {
 			delete( rip->r_cur );
 		}
-		rip->r_cur = new Match;
+		rip->r_cur = new Match( rip );
 		if( rip->r_pre ) {
 			delete rip->r_pre;
 			rip->r_pre = NULL;
@@ -458,18 +329,20 @@ ResState::enter_action( State s, Activity a,
 	case claimed_state:
 		rip->r_reqexp->pub();			
 		if( statechange ) {
-			rip->start_poll_timer();
 			rip->r_cur->start_claim_timer();	
 				// Update important attributes into the classad.
-			rip->r_cur->update( rip->r_classad );
+			rip->r_cur->publish( rip->r_classad, A_PUBLIC );
 				// Generate a preempting match object
-			rip->r_pre = new Match;
+			rip->r_pre = new Match( rip );
 		}
 		if( a == suspended_act ) {
 			if( rip->r_starter->kill( DC_SIGSUSPEND ) < 0 ) {
 				rip->r_starter->killpg( DC_SIGKILL );
 				return change( owner_state );
 			}
+		}
+		if( a == busy_act ) {
+			resmgr->start_poll_timer();
 		}
 		break;
 
@@ -521,4 +394,13 @@ ResState::enter_action( State s, Activity a,
 	return FALSE;
 }
 
+
+void
+ResState::dprintf( int flags, char* fmt, ... )
+{
+	va_list args;
+	va_start( args, fmt );
+	rip->dprintf_va( flags, fmt, args );
+	va_end( args );
+}
 

@@ -31,16 +31,26 @@
 static char *_FileName_ = __FILE__;
 
 
-Starter::Starter()
+Starter::Starter( Resource* rip )
 {
+	this->rip = rip;
 	s_pid = -1;
 	s_name = NULL;
+	s_procfam = NULL;
+	s_pidfamily = NULL;
+	s_family_size = 0;
 }
 
 
 Starter::~Starter()
 {
 	free( s_name );
+	if( s_procfam ) {
+		delete s_procfam;
+	}
+	if( s_pidfamily ) {
+		delete [] s_pidfamily;
+	}
 }
 
 
@@ -242,7 +252,12 @@ Starter::reallykill( int signo, int type )
 		ret = ::kill( -(s_pid), sig );
 		break;
 	case 2:
-		::killkids( s_pid, sig );
+		if( signo != DC_SIGKILL ) {
+			dprintf( D_ALWAYS, 
+					 "In Starter::killkids() with %s\n", signame );
+			EXCEPT( "Starter::killkids() can only handle DC_SIGKILL!" );
+		}
+		s_procfam->hardkill();  // This really sends SIGKILL
 		break;
 	}
 
@@ -270,7 +285,7 @@ Starter::spawn( start_info_t* info )
 		dprintf( D_ALWAYS, "ERROR: exec_starter returned %d\n", s_pid );
 		s_pid = -1;
 	} else {
-
+		s_procfam = new ProcFamily( s_pid, PRIV_ROOT, resmgr->m_proc );
 	}
 	return s_pid;
 }
@@ -279,23 +294,33 @@ Starter::spawn( start_info_t* info )
 void
 Starter::exited()
 {
-		// Just as a safety precaution, when the starter exits, we try
-		// to kill it's process group in the hopes that we might catch
-		// some random children that it didn't kill.
-	this->killpg( DC_SIGKILL );
+		// Just for good measure, try to kill what's left of our whole
+		// pid family.  
+	s_procfam->hardkill();
 
-		// Now that the process group has been killed, we can clear
-		// out all our data structures associated with this starter. 
+		// Now, delete any files lying around.
+	cleanup_execute_dir( s_pid );
+
+		// Finally, we can free up our memory and data structures.
 	s_pid = -1;
 	free( s_name );
 	s_name = NULL;
 
-	cleanup_execute_dir();
+	if( s_procfam ) {
+		delete s_procfam;
+		s_procfam = NULL;
+	}
+	if( s_pidfamily ) {
+		delete [] s_pidfamily;
+		s_pidfamily = NULL;
+	}
+	s_family_size = 0;
 }
 
 
 int
-exec_starter(char* starter, char* hostname, int main_sock, int err_sock)
+Starter::exec_starter( char* starter, char* hostname, 
+					   int main_sock, int err_sock )
 {
 #if defined(WIN32) /* NEED TO PORT TO WIN32 */
 	return 0;
@@ -384,8 +409,15 @@ exec_starter(char* starter, char* hostname, int main_sock, int err_sock)
 		 * uid and gid.
 		 */
 		set_root_priv();
-		(void)execl(starter, "condor_starter", hostname, 
-					daemonCore->InfoCommandSinfulString(), 0);
+		if( resmgr->is_smp() ) {
+			(void)execl(starter, "condor_starter", hostname, 
+						daemonCore->InfoCommandSinfulString(), 
+						"-l", rip->r_id, 0 );
+		} else {			
+			(void)execl(starter, "condor_starter", hostname, 
+						daemonCore->InfoCommandSinfulString(), 0 );
+
+		}
 		EXCEPT( "execl(%s, condor_starter, %s, %s, 0)", starter, 
 				daemonCore->InfoCommandSinfulString(), hostname );
 	}
@@ -400,3 +432,26 @@ Starter::active()
 	return( (s_pid != -1) );
 }
 	
+
+void
+Starter::dprintf( int flags, char* fmt, ... )
+{
+	va_list args;
+	va_start( args, fmt );
+	rip->dprintf_va( flags, fmt, args );
+	va_end( args );
+}
+
+
+void
+Starter::recompute_pidfamily() 
+{
+	if( !s_procfam ) {
+		return;
+	}
+	s_procfam->takesnapshot();
+	if( s_pidfamily ) {
+		delete [] s_pidfamily;
+	}
+	s_family_size = s_procfam->currentfamily( s_pidfamily );
+}

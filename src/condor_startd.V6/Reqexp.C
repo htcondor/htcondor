@@ -31,19 +31,37 @@
 #include "startd.h"
 static char *_FileName_ = __FILE__;
 
-Reqexp::Reqexp( ClassAd** cap )
+Reqexp::Reqexp( Resource* rip )
 {
-	this->cap = cap;
+	this->rip = rip;
 	char tmp[1024];
+	char* start;
 	sprintf( tmp, "%s = %s", ATTR_REQUIREMENTS, "START" );
 	origreqexp = strdup( tmp );
 	rstate = UNAVAIL;
 }
 
 
+void
+Reqexp::compute( amask_t how_much ) 
+{
+	if( IS_STATIC(how_much) ) {
+		char* start = param( "START" );
+		if( !start ) {
+			EXCEPT( "START expression not defined!" );
+		}
+		origstart = (char*)malloc( (strlen(start) + strlen(ATTR_START)
+									+ 4) * sizeof(char) );
+		sprintf( origstart, "%s = %s", ATTR_START, start );
+		free( start );
+	}
+}
+
+
 Reqexp::~Reqexp()
 {
 	free( origreqexp );
+	free( origstart );
 }
 
 
@@ -55,7 +73,7 @@ Reqexp::eval()
 	EvalResult res;
 
 	Parse( origreqexp, tree );
-	tree->EvalTree( *cap, &ad, &res);
+	tree->EvalTree( rip->r_classad, &ad, &res);
 	delete tree;
 
 	if( res.type != LX_INTEGER ) {
@@ -70,7 +88,7 @@ void
 Reqexp::restore()
 {
 	if( rstate != ORIG ) {
-		(*cap)->InsertOrUpdate( origreqexp );
+		rip->r_classad->InsertOrUpdate( origreqexp );
 		rstate = ORIG;
 	}
 }
@@ -81,7 +99,7 @@ Reqexp::unavail()
 {
 	char tmp[100];
 	sprintf( tmp, "%s = False", ATTR_REQUIREMENTS );
-	(*cap)->InsertOrUpdate( tmp );
+	rip->r_classad->InsertOrUpdate( tmp );
 	rstate = UNAVAIL;
 }
 
@@ -91,7 +109,7 @@ Reqexp::avail()
 {
 	char tmp[100];
 	sprintf( tmp, "%s = True", ATTR_REQUIREMENTS );
-	(*cap)->InsertOrUpdate( tmp );
+	rip->r_classad->InsertOrUpdate( tmp );
 	rstate = AVAIL;
 }
 
@@ -116,12 +134,18 @@ Reqexp::pub()
 }
 
 
-reqexp_state
-Reqexp::update( ClassAd* ca )
+void
+Reqexp::publish( ClassAd* ca, amask_t how_much )
 {
+	if( IS_PRIVATE(how_much) ) {
+			// Nothing to publish for private ads
+		return;
+	}
+
 	char tmp[100];
 	switch( rstate ) {
 	case ORIG:
+		ca->InsertOrUpdate( origstart );
 		sprintf( tmp, "%s", origreqexp );
 		break;
 	case AVAIL:
@@ -132,5 +156,15 @@ Reqexp::update( ClassAd* ca )
 		break;
 	}
 	ca->InsertOrUpdate( tmp );
-	return rstate;
 }
+
+
+void
+Reqexp::dprintf( int flags, char* fmt, ... )
+{
+	va_list args;
+	va_start( args, fmt );
+	rip->dprintf_va( flags, fmt, args );
+	va_end( args );
+}
+

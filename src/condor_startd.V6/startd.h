@@ -38,6 +38,8 @@
 #include "condor_state.h"
 #include "string_list.h"
 #include "get_full_hostname.h"
+#include "killfamily.h"
+#include "../condor_procapi/procapi.h"
 
 // Unix specific stuff
 #if !defined(WIN32)
@@ -46,12 +48,13 @@
 #endif
 
 // Startd includes
+class Resource;
+#include "LoadQueue.h"
+#include "ResAttributes.h"
 #include "Match.h"
 #include "Starter.h"
 #include "Reqexp.h"
-class Resource;
 #include "ResState.h"
-#include "ResAttributes.h"
 #include "Resource.h"
 #include "ResMgr.h"
 #include "calc.h"
@@ -74,7 +77,7 @@ extern	int		update_interval;	// Interval to update CM
 // Paths
 extern	char*	exec_path;
 
-// Sting Lists
+// String Lists
 extern	StringList* console_devices;
 extern	StringList* startd_job_exprs;
 
@@ -95,7 +98,13 @@ extern	int		match_timeout;	// How long you're willing to be
 extern	int		killing_timeout;  // How long you're willing to be
 	                              // in preempting/killing before you
 								  // drop the hammer on the starter
-extern	int		last_x_event;	// Time of the last x event
+extern	int		last_x_event;		// Time of the last x event
+extern  time_t	startd_startup;		// Time when the startd started up
+
+extern	int		console_cpus;	// # of CPUs in an SMP machine that
+								// care when there's console activity
+extern	int		keyboard_cpus;	// # of CPUs in an SMP machine that
+								// care when there's keyboard activity
 
 #endif _STARTD_NO_DECLARE_GLOBALS
 

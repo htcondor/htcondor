@@ -35,39 +35,129 @@
 #include "afs.h"
 #endif
 
-enum ResAttr_t { UPDATE, TIMEOUT, ALL, PUBLIC };
+typedef char amask_t;
 
-class ResAttributes
+const amask_t A_PUBLIC	= 1;
+const amask_t A_PRIVATE	= 2;
+const amask_t A_STATIC	= 4;
+const amask_t A_TIMEOUT	= 8;
+const amask_t A_UPDATE	= 16;
+const amask_t A_SHARED	= 32;
+const amask_t A_SUMMED	= 64;
+const amask_t A_ALL		= (A_UPDATE | A_TIMEOUT | A_STATIC | A_SHARED | A_SUMMED);
+
+#define IS_PUBLIC(mask)		((mask) & A_PUBLIC)
+#define IS_PRIVATE(mask)	((mask) & A_PRIVATE)
+#define IS_STATIC(mask)		((mask) & A_STATIC)
+#define IS_TIMEOUT(mask)	((mask) & A_TIMEOUT)
+#define IS_UPDATE(mask)		((mask) & A_UPDATE)
+#define IS_SHARED(mask)		((mask) & A_SHARED)
+#define IS_SUMMED(mask)		((mask) & A_SUMMED)
+#define IS_ALL(mask)		((mask) & A_ALL)
+
+
+// Machine-wide attributes.  
+class MachAttributes
 {
 public:
-	ResAttributes( Resource* );
-	~ResAttributes();
+	MachAttributes();
+	~MachAttributes();
 
-	void init( ClassAd* );		// Initialize all static info into classad
-	void refresh( ClassAd*, ResAttr_t );  // Refresh given CA w/ desired info
-	void compute( ResAttr_t );		// Actually recompute desired stats.  
-	void benchmark(int);			// Compute kflops and mips
+	void init();
+
+	void publish( ClassAd*, amask_t );  // Publish desired info to given CA
+	void compute( amask_t );			  // Actually recompute desired stats
+
+		// Compute kflops and mips on the given resource
+	void benchmark( Resource*, int force = 0 );	
+
+		// Functions to return the value of shared attributes
+	int				num_cpus()	{ return m_num_cpus; };
+	int				phys_mem()	{ return m_phys_mem; };
+	unsigned long   virt_mem()	{ return m_virt_mem; };
+	unsigned long   disk()		{ return m_disk; };
+	float		load()			{ return m_load; };
+	float		condor_load()	{ return m_condor_load; };
+	time_t		keyboard_idle() { return m_idle; };
+	time_t		console_idle() { return m_console_idle; };
+
+private:
+		// Dynamic info
+	float			m_load;
+	float			m_condor_load;
+	float			m_owner_load;
+	unsigned long   m_virt_mem;
+	unsigned long   m_disk;
+	time_t			m_idle;
+	time_t			m_console_idle;
+	int				m_mips;
+	int				m_kflops;
+	int				m_last_benchmark;   // Last time we computed benchmarks
+	int				m_clock_day;
+	int				m_clock_min;
+		// Static info
+	int				m_num_cpus;
+	int				m_phys_mem;
+	char*			m_arch;
+	char*			m_opsys;
+	char*			m_uid_domain;
+	char*			m_filesystem_domain;
+#if !defined(WIN32)
+	AFS_Info*		m_afs_info;
+#endif
+};	
+
+
+// CPU-specific attributes.  
+class CpuAttributes
+{
+public:
+	CpuAttributes( MachAttributes*, float, float, float );
+
+	void attach( Resource* );	// Attach to the given Resource
+									   
+
+	void publish( ClassAd*, amask_t );  // Publish desired info to given CA
+	void compute( amask_t );			  // Actually recompute desired stats
+
+		// Load average methods
+	float condor_load() { return c_condor_load; };
+	float owner_load() { return c_owner_load; };
+	void set_owner_load( float v ) { c_owner_load = v; };
+
+		// Keyboad activity methods
+	void set_keyboard( time_t k ) { c_idle = k; };
+	void set_console( time_t k ) { c_console_idle = k; };
+	time_t keyboard_idle() { return c_idle; };
+	time_t console_idle() { return c_console_idle; };
+
+	void display( amask_t );
+
+	void dprintf( int, char*, ... );
 
 private:
 	Resource*	 	rip;
+	MachAttributes*	map;
+
 		// Dynamic info
-	float			r_load;
-	float			r_condor_load;
-	unsigned long   r_virtmem;
-	unsigned long   r_disk;
-	time_t			r_idle;
-	time_t			r_console_idle;
-	int				r_mips;
-	int				r_kflops;
-	int				r_last_benchmark;   // Last time we computed benchmarks
-	int				r_clock_day;
-	int				r_clock_min;
+	float			c_condor_load;
+	float			c_owner_load;
+	time_t			c_idle;
+	time_t			c_console_idle;
+	unsigned long   c_virt_mem;
+	unsigned long   c_disk;
+
 		// Static info
-	int				r_phys_mem;
-#if !defined(WIN32)
-	AFS_Info*		r_afs_info;
-#endif
+	int				c_phys_mem;
+	int				c_num_cpus;
+
+		// These hold the percentages of shared, dynamic resources
+		// that are allocated to this CPU.
+	float			c_phys_mem_percent;
+	float			c_virt_mem_percent;
+	float			c_disk_percent;
 };	
+
 
 void deal_with_benchmarks( Resource* );
 

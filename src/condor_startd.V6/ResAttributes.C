@@ -23,117 +23,206 @@
 #include "startd.h"
 static char *_FileName_ = __FILE__;
 
-ResAttributes::ResAttributes( Resource* rip )
+MachAttributes::MachAttributes()
 {
 #if !defined(WIN32)
-	r_afs_info = new AFS_Info();
+	m_afs_info = new AFS_Info();
 #endif
-	r_mips = -1;
-	r_kflops = -1;
-	r_last_benchmark = 0;
-	this->rip = rip;
+	m_mips = -1;
+	m_kflops = -1;
+	m_last_benchmark = 0;
+
+	m_arch = NULL;
+	m_opsys = NULL;
+	m_uid_domain = NULL;
+	m_filesystem_domain = NULL;
+
+		// Number of CPUs.  Since this is used heavily by the ResMgr
+		// instantiation and initialization, we need to have a real
+		// value for this as soon as the MachAttributes object exists.
+	m_num_cpus = calc_ncpus();
 }
 
 
-ResAttributes::~ResAttributes()
+MachAttributes::~MachAttributes()
 {
 #if !defined(WIN32)
-	delete r_afs_info;
+	delete m_afs_info;
 #endif
 }
 
 
 void
-ResAttributes::compute( ResAttr_t how_much )
+MachAttributes::init()
 {
-	if( how_much != TIMEOUT ) {
-		r_virtmem = calc_virt_memory();
-		dprintf( D_FULLDEBUG, "Swap space: %lu\n", r_virtmem );
+	this->compute( A_ALL );
+}
 
-		r_disk = calc_disk();
-		dprintf( D_FULLDEBUG, "Disk space: %lu\n", r_disk );
+
+void
+MachAttributes::compute( amask_t how_much )
+{
+	if( IS_STATIC(how_much) && IS_SHARED(how_much) ) {
+
+			// Physical memory
+		m_phys_mem = calc_phys_memory();
+		if( m_phys_mem <= 0 ) {
+				// calc_phys_memory() failed to give us something
+				// useful, try paraming. 
+			char* ptr;
+			if( (ptr = param("MEMORY")) != NULL ) {
+				m_phys_mem = atoi(ptr);
+				free(ptr);
+			}
+		}
+
+#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
+			// AFS cell
+		if( m_afs_info->my_cell() ) {
+			dprintf( D_FULLDEBUG, "%s = \"%s\"\n", ATTR_AFS_CELL, 
+					 m_afs_info->my_cell() );
+		} else {
+			dprintf( D_FULLDEBUG, "AFS_Cell not set\n" );
+		}
+#endif
+
+			// Arch, OpSys, FileSystemDomain and UidDomain.  Note:
+			// these will always return something, since config() will
+			// insert values if we don't have them in the config file.
+		if( m_arch ) {
+			free( m_arch );
+		}
+		m_arch = param( "ARCH" );
+
+		if( m_opsys ) {
+			free( m_opsys );
+		}
+		m_opsys = param( "OPSYS" );
+
+		if( m_uid_domain ) {
+			free( m_uid_domain );
+		}
+		m_uid_domain = param( "UID_DOMAIN" );
+		dprintf( D_FULLDEBUG, "%s = \"%s\"\n", ATTR_UID_DOMAIN,
+				 m_uid_domain );
+
+		if( m_filesystem_domain ) {
+			free( m_filesystem_domain );
+		}
+		m_filesystem_domain = param( "FILESYSTEM_DOMAIN" );
+		dprintf( D_FULLDEBUG, "%s = \"%s\"\n", ATTR_FILE_SYSTEM_DOMAIN,
+				 m_filesystem_domain );
 	}
 
-	if( how_much != UPDATE ) {
-		r_load = calc_load_avg();
-		r_condor_load = rip->condor_load();
-		float tmp = r_load - r_condor_load;
-		if( tmp < 0 ) {
-			tmp = 0;
-		}
-		dprintf( D_LOAD, 
-				 "SystemLoad: %.3f\tCondorLoad: %.3f\tNonCondorLoad: %.3f\n",  
-				 r_load, r_condor_load, tmp );
+	if( IS_UPDATE(how_much) && IS_SHARED(how_much) ) {
+		m_virt_mem = calc_virt_memory();
+		dprintf( D_FULLDEBUG, "Swap space: %lu\n", m_virt_mem );
+		
+		m_disk = calc_disk();
+		dprintf( D_FULLDEBUG, "Disk space: %lu\n", m_disk );
+	}
 
-		calc_idle_time( r_idle, r_console_idle );
+
+	if( IS_TIMEOUT(how_much) && IS_SHARED(how_much) ) {
+		m_load = calc_load_avg();
+
+		calc_idle_time( m_idle, m_console_idle );
 
 		time_t my_timer;
 		struct tm *the_time;
 		time( &my_timer );
 		the_time = localtime(&my_timer);
-		r_clock_min = (the_time->tm_hour * 60) + the_time->tm_min;
-		r_clock_day = the_time->tm_wday;
+		m_clock_min = (the_time->tm_hour * 60) + the_time->tm_min;
+		m_clock_day = the_time->tm_wday;
+	}
+
+	if( IS_TIMEOUT(how_much) && IS_SUMMED(how_much) ) {
+		m_condor_load = resmgr->sum( Resource::condor_load );
+		if( m_condor_load > m_load ) {
+			m_condor_load = m_load;
+		}
 	}
 }
 
 
 void
-ResAttributes::refresh( ClassAd* cp, ResAttr_t how_much) 
+MachAttributes::publish( ClassAd* cp, amask_t how_much) 
 {
 	char line[100];
 
-	if( how_much != TIMEOUT ) {
-		sprintf( line, "%s=%lu", ATTR_VIRTUAL_MEMORY, r_virtmem );
+	if( IS_STATIC(how_much) || IS_PUBLIC(how_much) ) {
+
+		if( m_afs_info->my_cell() ) {
+			sprintf( line, "%s = \"%s\"", ATTR_AFS_CELL,
+					 m_afs_info->my_cell() );
+			cp->Insert( line );
+		}
+
+			// STARTD_IP_ADDR 
+		sprintf( line, "%s = \"%s\"", ATTR_STARTD_IP_ADDR, 
+				 daemonCore->InfoCommandSinfulString() );
+		cp->Insert( line );
+
+		sprintf( line, "%s = \"%s\"", ATTR_ARCH, m_arch );
+		cp->Insert( line );
+
+		sprintf( line, "%s = \"%s\"", ATTR_OPSYS, m_opsys );
+		cp->Insert( line );
+
+		sprintf( line, "%s = \"%s\"", ATTR_UID_DOMAIN, m_uid_domain );
+		cp->Insert( line );
+
+		sprintf( line, "%s = \"%s\"", ATTR_FILE_SYSTEM_DOMAIN, 
+				 m_filesystem_domain );
+		cp->Insert( line );
+	}
+
+	if( IS_UPDATE(how_much) || IS_PUBLIC(how_much) ) {
+
+		sprintf( line, "%s=%lu", ATTR_VIRTUAL_MEMORY, m_virt_mem );
 		cp->Insert( line ); 
 
-		sprintf( line, "%s=%lu", ATTR_DISK, r_disk );
+		sprintf( line, "%s=%lu", ATTR_DISK, m_disk );
 		cp->Insert( line ); 
 
 			// KFLOPS and MIPS are only conditionally computed; thus, only
 			// advertise them if we computed them.
-		if ( r_kflops > 0 ) {
-			sprintf( line, "%s=%d", ATTR_KFLOPS, r_kflops );
+		if ( m_kflops > 0 ) {
+			sprintf( line, "%s=%d", ATTR_KFLOPS, m_kflops );
 			cp->Insert( line );
 		}
-		if ( r_mips > 0 ) {
-			sprintf( line, "%s=%d", ATTR_MIPS, r_mips );
+		if ( m_mips > 0 ) {
+			sprintf( line, "%s=%d", ATTR_MIPS, m_mips );
 			cp->Insert( line );
 		}
 	}
+
 		// We don't want this inserted into the public ad automatically
-	if( how_much == UPDATE || how_much == ALL ) {
-		sprintf( line, "%s=%d", ATTR_LAST_BENCHMARK, r_last_benchmark );
+	if( IS_UPDATE(how_much) || IS_TIMEOUT(how_much) ) {
+		sprintf( line, "%s=%d", ATTR_LAST_BENCHMARK, m_last_benchmark );
 		cp->Insert( line );
 	}
 
-	if( how_much != UPDATE ) {
-		sprintf( line, "%s=%f", ATTR_LOAD_AVG, r_load );
+
+	if( IS_TIMEOUT(how_much) || IS_PUBLIC(how_much) ) {
+
+		sprintf( line, "%s=%f", ATTR_TOTAL_LOAD_AVG, m_load );
 		cp->Insert(line);
 		
-		sprintf( line, "%s=%f", ATTR_CONDOR_LOAD_AVG, r_condor_load );
+		sprintf( line, "%s=%f", ATTR_TOTAL_CONDOR_LOAD_AVG, m_condor_load );
 		cp->Insert(line);
 		
-		sprintf(line, "%s=%d", ATTR_KEYBOARD_IDLE, (int)r_idle );
+		sprintf(line, "%s=%d", ATTR_CLOCK_MIN, m_clock_min );
 		cp->Insert(line); 
 
-		sprintf(line, "%s=%d", ATTR_CLOCK_MIN, r_clock_min );
+		sprintf(line, "%s=%d", ATTR_CLOCK_DAY, m_clock_day );
 		cp->Insert(line); 
-
-		sprintf(line, "%s=%d", ATTR_CLOCK_DAY, r_clock_day );
-		cp->Insert(line); 
-  
-			// ConsoleIdle cannot be determined on all platforms; thus, only
-			// advertise if it is not -1.
-		if( r_console_idle != -1 ) {
-			sprintf( line, "%s=%d", ATTR_CONSOLE_IDLE, (int)r_console_idle );
-			cp->Insert(line); 
-		}
 	}
 }
 
 
 void
-ResAttributes::benchmark(int force = 0)
+MachAttributes::benchmark( Resource* rip, int force )
 {
 
 	if( ! force ) {
@@ -151,29 +240,29 @@ ResAttributes::benchmark(int force = 0)
 	int new_mips_calc = calc_mips();
 	dprintf( D_FULLDEBUG, "Computed mips: %d\n", new_mips_calc );
 
-	if ( r_mips == -1 ) {
+	if ( m_mips == -1 ) {
 			// first time we've done benchmarks
-		r_mips = new_mips_calc;
+		m_mips = new_mips_calc;
 	} else {
 			// compute a weighted average
-		r_mips = (r_mips * 3 + new_mips_calc) / 4;
+		m_mips = (m_mips * 3 + new_mips_calc) / 4;
 	}
 
 	dprintf( D_FULLDEBUG, "About to compute kflops\n" );
 	int new_kflops_calc = calc_kflops();
 	dprintf( D_FULLDEBUG, "Computed kflops: %d\n", new_kflops_calc );
-	if ( r_kflops == -1 ) {
+	if ( m_kflops == -1 ) {
 			// first time we've done benchmarks
-		r_kflops = new_kflops_calc;
+		m_kflops = new_kflops_calc;
 	} else {
 			// compute a weighted average
-		r_kflops = (r_kflops * 3 + new_kflops_calc) / 4;
+		m_kflops = (m_kflops * 3 + new_kflops_calc) / 4;
 	}
 
 	dprintf( D_FULLDEBUG, "recalc:DHRY_MIPS=%d, CLINPACK KFLOPS=%d\n",
-			 r_mips, r_kflops);
+			 m_mips, m_kflops);
 
-	r_last_benchmark = (int)time(NULL);
+	m_last_benchmark = (int)time(NULL);
 
 	if( ! force ) {
 		rip->change_state( idle_act );
@@ -192,47 +281,131 @@ deal_with_benchmarks( Resource* rip )
 	}
 
 	if( run_benchmarks ) {
-		rip->r_attr->benchmark();
+		resmgr->m_attr->benchmark( rip );
+	}
+}
+
+CpuAttributes::CpuAttributes( MachAttributes* map, 
+							  float phys_mem_percent, 
+							  float virt_mem_percent, 
+							  float disk_percent )
+{
+	c_phys_mem_percent = phys_mem_percent;
+	c_virt_mem_percent = virt_mem_percent;
+	c_disk_percent = disk_percent;
+	this->map = map;
+	c_num_cpus = 1;
+	c_idle = -1;
+	c_console_idle = -1;
+}
+
+
+void
+CpuAttributes::attach( Resource* rip )
+{
+	this->rip = rip;
+}
+
+
+void
+CpuAttributes::publish( ClassAd* cp, amask_t how_much )
+{
+	char line[100];
+
+	if( IS_UPDATE(how_much) || IS_PUBLIC(how_much) ) {
+
+		sprintf( line, "%s=%lu", ATTR_VIRTUAL_MEMORY, c_virt_mem );
+		cp->Insert( line ); 
+
+		sprintf( line, "%s=%lu", ATTR_DISK, c_disk );
+		cp->Insert( line ); 
+	}
+
+	if( IS_TIMEOUT(how_much) || IS_PUBLIC(how_much) ) {
+
+		sprintf( line, "%s=%f", ATTR_CONDOR_LOAD_AVG, c_condor_load );
+		cp->Insert(line);
+
+		sprintf( line, "%s=%f", ATTR_LOAD_AVG, 
+				 (c_owner_load + c_condor_load) );
+		cp->Insert(line);
+
+		sprintf(line, "%s=%d", ATTR_KEYBOARD_IDLE, (int)c_idle );
+		cp->Insert(line); 
+  
+			// ConsoleIdle cannot be determined on all platforms; thus, only
+			// advertise if it is not -1.
+		if( c_console_idle != -1 ) {
+			sprintf( line, "%s=%d", ATTR_CONSOLE_IDLE, (int)c_console_idle );
+			cp->Insert(line); 
+		}
+	}
+
+	if( IS_STATIC(how_much) || IS_PUBLIC(how_much) ) {
+
+		sprintf( line, "%s=%d", ATTR_MEMORY, c_phys_mem );
+		cp->Insert(line);
+
+		sprintf( line, "%s=%d", ATTR_CPUS, c_num_cpus );
+		cp->Insert(line);
 	}
 }
 
 
 void
-ResAttributes::init(ClassAd* ca)
+CpuAttributes::compute( amask_t how_much )
 {
-	char* ptr;
-	char tmp[512];
+	float val;
 
-		// Compute and insert all static info
+	if( IS_STATIC(how_much) && IS_SHARED(how_much) ) {
 
-#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
-		// AFS cell
-	if( r_afs_info->my_cell() ) {
-		sprintf( tmp, "%s = \"%s\"", ATTR_AFS_CELL,
-				 r_afs_info->my_cell() );
-		ca->Insert( tmp );
-		dprintf( D_FULLDEBUG, "%s\n", tmp );
-	} else {
-		dprintf( D_FULLDEBUG, "AFS_Cell not set\n" );
-	}
-#endif
-
-		// Physical memory
-	r_phys_mem = calc_phys_memory();
-	if( r_phys_mem <= 0 ) {
-			// calc_phys_memory() failed to give us something useful,
-			// try paraming. 
-		if( (ptr = param("MEMORY")) != NULL ) {
-			r_phys_mem = atoi(ptr);
-			free(ptr);
-		}
-	}
-	if( r_phys_mem > 0 ) {
-		sprintf( tmp, "%s = %d", ATTR_MEMORY, r_phys_mem );
-		ca->Insert( tmp );
+			// Physical memory
+		val = map->phys_mem() * c_phys_mem_percent;
+		c_phys_mem = (int)floor( val );
 	}
 
-		// Compute and insert all dynamic info
-	this->compute( ALL );
-	this->refresh( ca, ALL );
+	if( IS_UPDATE(how_much) && IS_SHARED(how_much) ) {
+
+			// Shared attributes that we only get a percentage of
+		val = map->virt_mem() * c_virt_mem_percent;
+		c_virt_mem = (unsigned long)floor( val );
+		
+		val = map->disk() * c_disk_percent;
+		c_disk = (unsigned long)floor( val );
+	}
+
+	if( IS_TIMEOUT(how_much) && !IS_SHARED(how_much) ) {
+
+		// Dynamic, non-shared attributes we need to actually compute
+		c_condor_load = rip->compute_condor_load();
+	}	
 }
+
+
+void
+CpuAttributes::display( amask_t how_much )
+{
+	if( IS_TIMEOUT(how_much) ) {
+		dprintf( D_FULLDEBUG, 
+				 "Idle time: %s %-8d %s %d\n",  
+				 "Keyboard:", (int)c_idle, 
+				 "Console:", (int)c_console_idle );
+
+		dprintf( D_LOAD, 
+				 "%s %.3f  %s %.3f  %s %.3f\n",  
+				 "SystemLoad:", c_condor_load + c_owner_load,
+				 "CondorLoad:", c_condor_load,
+				 "OwnerLoad:", c_owner_load );
+	}
+}
+
+
+void
+CpuAttributes::dprintf( int flags, char* fmt, ... )
+{
+	va_list args;
+	va_start( args, fmt );
+	rip->dprintf_va( flags, fmt, args );
+	va_end( args );
+}
+
