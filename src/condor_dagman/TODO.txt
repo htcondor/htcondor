@@ -27,6 +27,9 @@ generate a rescue DAG, etc.)
   - cycles
   - no jobs
 
+- add an option to have DAGMan clean up all its temp/log files when
+  it's done, if it finished successfully
+
 ? recursive-DAG-aware tools (condor_submit DAG-hunting, etc.)
 
 === bugs

@@ -5,3 +5,6 @@ it be handled in mid-pause?  think...
 - dagman doesn't dump pre/post script arguments to recovery DAGs!
 
 - if condor_submit hangs (which it can), DAGMan hangs -- we need a timeout
+
+- condor_submit_dag does not properly consider the job's InitialDir
+  when interpreting the log file location
