@@ -76,6 +76,7 @@ XDR*      xdr_Init( int *sock, XDR *xdrs );
 void      config( char *a_out_name, CONTEXT *context );
 void      bzero( char *, int );  
 char*     strdup();              
+void       printTimeAndColl();
 }
 
 
@@ -154,7 +155,6 @@ int        find_prefix(char *str, ENTRY *tab );
 int        name_comp( STATUS_LINE **ptr1, STATUS_LINE **ptr2 );
 int        prio_comp_simple( STATUS_LINE **ptr1, STATUS_LINE **ptr2 );
 int        prio_comp_arch( STATUS_LINE **ptr1, STATUS_LINE **ptr2 );
-void       printTimeAndColl();
 void       inc_summary( STATUS_LINE *line );
 SUMMARY*   get_summary( char *arch, char *op_sys );
 void       display_summaries();
@@ -813,6 +813,7 @@ int prio_comp_arch( STATUS_LINE **ptr1, STATUS_LINE **ptr2 )
 }
 
 
+extern "C" {
 void printTimeAndColl()
 {
   time_t tmp;
@@ -820,6 +821,7 @@ void printTimeAndColl()
 
   printf("\nCollector : %s\n", CollectorHost); 
   printf("Time      : %s\n", ctime(&tmp));
+}
 }
 
 

@@ -38,7 +38,9 @@
       h_table<int*>                     HSUB_S;
 
 
-void  printTimeAndColl();       
+extern "C" {
+void  printTimeAndColl();
+}
 
 
 sub_rec_list::sub_rec_list( int AVAILONLY, int TOTALONLY, int DISPLAYTOTAL,
