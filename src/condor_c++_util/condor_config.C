@@ -77,7 +77,6 @@ extern int	ConfigLineNo;
 BUCKET	*ConfigTab[TABLESIZE];
 static char* tilde = NULL;
 
-
 // Function implementations
 
 void
@@ -275,6 +274,14 @@ init_tilde()
 
 
 char*
+get_tilde()
+{
+	init_tilde();
+	return tilde;
+}
+
+
+char*
 find_global()
 {
 	return find_file( "CONDOR_CONFIG", "condor_config" );
@@ -284,11 +291,8 @@ find_global()
 char*
 find_local()
 {
-	char* local_name = param( "LOCAL_CONFIG_FILE" );
-	if( !local_name ) {
-		local_name = find_file( NULL, "condor_config.local" );
-	}
-	return local_name;
+	return param( "LOCAL_CONFIG_FILE" );
+
 }
 
 
@@ -301,11 +305,7 @@ find_global_root()
 char*
 find_local_root()
 {
-	char* local_name = param( "LOCAL_ROOT_CONFIG_FILE" );
-	if( !local_name ) {
-		local_name = find_file( NULL, "condor_config.local.root" );
-	}
-	return local_name;
+	return param( "LOCAL_ROOT_CONFIG_FILE" );
 }
 
 
