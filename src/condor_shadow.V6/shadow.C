@@ -104,7 +104,7 @@ extern int do_REMOTE_syscall3(int);
 extern int do_REMOTE_syscall4(int);
 extern int do_REMOTE_syscall5(int);
 
-extern void RequestRSCBandwidth();
+extern "C" void RequestRSCBandwidth();
 
 #if !defined(AIX31) && !defined(AIX32)
 char *strcpy();
