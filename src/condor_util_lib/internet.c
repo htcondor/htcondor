@@ -331,3 +331,27 @@ calc_subnet_name(char* host)
 	}
 	return strdup("");
 }
+
+int
+same_host(const char *h1, const char *h2)
+{
+	struct hostent *he1, *he2;
+	char cn1[MAXHOSTNAMELEN];
+
+	if (strcmp(h1, h2) == MATCH) {
+		return TRUE;
+	}
+	
+	if ((he1 = gethostbyname(h1)) == NULL) {
+		return -1;
+	}
+
+	// stash h_name before our next call to gethostbyname
+	strcpy(cn1, he1->h_name);
+
+	if ((he2 = gethostbyname(h2)) == NULL) {
+		return -1;
+	}
+
+	return (strcmp(cn1, he2->h_name) == MATCH);
+}
