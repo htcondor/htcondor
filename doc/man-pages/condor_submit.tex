@@ -1039,10 +1039,56 @@ and \verb@LastMatchName0@ being set by the most recent
 value of the \Attr{Name} attribute.
 
 %%%%%%%%%%%%%%%%%%%
+%% transfer_output
+%%%%%%%%%%%%%%%%%%%
+\item[transfer\_output = $<$True \Bar\ False$>$]
+\index{submit commands!transfer\_output}
+For jobs submitted to the globus universe only.
+If \Expr{True}, then the output (from \File{stdout}) from the job
+is transferred from the remote machine back to the submit machine.
+The name of the file after transfer is given
+by the \Opt{output} command.
+If \Expr{False}, no transfer takes place (from the remote machine
+to submit machine),
+and the name of the file is given
+by the \Opt{output} command.
+
+%%%%%%%%%%%%%%%%%%%
+%% transfer_input
+%%%%%%%%%%%%%%%%%%%
+\item[transfer\_input = $<$True \Bar\ False$>$]
+\index{submit commands!transfer\_input}
+For jobs submitted to the globus universe only.
+If \Expr{True}, then the job input (\File{stdin}) is transferred
+from the machine where the job was submitted to the remote machine.
+The name of the file that is transferred is given by the
+\Opt{input} command.
+If \Expr{False}, then the job's input is taken from a pre-staged
+file on the remote machine, and
+the name of the file is given by the \Opt{input} command.
+
+%%%%%%%%%%%%%%%%%%%
+%% transfer_error
+%%%%%%%%%%%%%%%%%%%
+\item[transfer\_error = $<$True \Bar\ False$>$]
+\index{submit commands!transfer\_error}
+For jobs submitted to the globus universe only.
+If \Expr{True}, then the error output (from \File{stderr}) from the job
+is transferred from the remote machine back to the submit machine.
+The name of the file after transfer is given
+by the \Opt{error} command.
+If \Expr{False}, no transfer takes place (from the remote machine
+to submit machine),
+and the name of the file is given
+by the \Opt{error} command.
+
+%%%%%%%%%%%%%%%%%%%
 %% Transfer_Executable
 %%%%%%%%%%%%%%%%%%%
 
-\item[transfer\_executable = $<$True \Bar\ False$>$] If \Opt{transfer\_executable} is set to
+\item[transfer\_executable = $<$True \Bar\ False$>$]
+For jobs submitted to the globus universe only.
+If \Opt{transfer\_executable} is set to
 \index{submit commands!transfer\_executable}
 \Expr{False}, then Condor looks for the executable on the remote machine, and
 does not transfer the executable over.
@@ -1050,6 +1096,37 @@ This is useful if you have already pre-staged your
 executable and wish to have Condor behave more like rsh.
 Defaults to \Expr{True}.
 This option is only used in the Globus universe.
+
+
+%%%%%%%%%%%%%%%%%%%
+%% stream_output
+%%%%%%%%%%%%%%%%%%%
+\item[stream\_output = $<$True \Bar\ False$>$] 
+\index{submit commands!stream\_output}
+For jobs submitted to the globus universe only,
+if \Expr{True}, then \File{stdout} is streamed back to
+the machine from which the job was submitted. 
+If \Expr{False}, \File{stdout} is stored by the Globus jobmanager 
+and transferred back when the job completes.
+This command is ignored if the job ClassAd attribute
+\Attr{TransferOut} is
+\Expr{False}.
+The default value is \Expr{True}.
+
+%%%%%%%%%%%%%%%%%%%
+%% stream_error
+%%%%%%%%%%%%%%%%%%%
+\item[stream\_error = $<$True \Bar\ False$>$] 
+\index{submit commands!stream\_error}
+For jobs submitted to the globus universe only,
+if \Expr{True}, then \File{stderr} is streamed back to
+the machine from which the job was submitted. 
+If \Expr{False}, \File{stderr} is stored by the Globus jobmanager 
+and transferred back when the job completes.
+This command is ignored if the job ClassAd attribute
+\Attr{TransferErr} is
+\Expr{False}.
+The default value is \Expr{True}.
 
 %%%%%%%%%%%%%%%%%%%
 % +
