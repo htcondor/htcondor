@@ -22,7 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 /* Here is the version string - update before a public release */
-static char* CondorVersionString = "$Version: 6.1.0 1998/10/29 $";
+static char* CondorVersionString = "$Version: 6.1.0 1998/12/07 $";
 
 extern "C" {
 
