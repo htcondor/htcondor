@@ -832,6 +832,8 @@ main_config( bool is_full )
 	} else {
 		daemons.DaemonsOff();
 	}
+    // Invalide session if necessary
+    daemonCore->invalidateSessionCache();
 		// Re-register our timers, since their intervals might have
 		// changed.
 	daemons.StartTimers();
