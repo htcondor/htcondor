@@ -25,7 +25,8 @@
 ** Origional author:  Anand Narayanan
 ** 
 ** Totally re-written and stream-lined on 7/10/97 by Derek Wright
-** 
+** Again, major re-write on 2/5/98 by Derek Wright to remove
+**   config_master and replace it with condor_config.root and friends.
 */ 
 
 /* 
@@ -34,16 +35,15 @@
   configure themselves.  It takes up to two arguments: a pointer to a
   ClassAd to fill up with the expressions in the config_file, and a
   pointer to a string containing the name of the daemon calling config
-  (mySubSystem).  config() simply calls real_config() with the right
-  parameters for the default behavior.  real_config() is also called
-  by config_master(), which is used to configure the condor_master
-  process with different file names.
+  (mySubSystem).  
 
-  In general, the config functions check an environment variable to
-  find the location of the global config files.  If that doesn't
-  exist, it looks in /etc/condor.  If the files aren't there, it try's
-  ~condor/.  If none of the above locations contain a config file, the
-  functions print error messages and exit
+  In general, when looking for a given config file (either global,
+  local, global-root or local-root), config() checks an environment
+  variable to find the location of the global config files.  If that
+  doesn't exist, it looks in /etc/condor.  If the files aren't there,
+  it try's ~condor/.  If none of the above locations contain a config
+  file, config() prints an error message and exits. 
+
 */
 
 #include "condor_common.h"
@@ -63,9 +63,17 @@ extern "C" {
 // Function prototypes
 int real_config(const char*, const char*, const char*, ClassAd*);
 int Read_config(char*, ClassAd*, BUCKET**, int, int);
-char *get_arch();
-char *get_op_sys();
+char* get_arch();
+char* get_op_sys();
 int SetSyscalls(int);
+char* find_global();
+char* find_local();
+char* find_global_root();
+char* find_local_root();
+char* find_file();
+void init_tilde();
+void fill_attributes(ClassAd*);
+
 
 // External variables
 extern BUCKET	*ConfigTab[];
@@ -74,56 +82,10 @@ extern int	ConfigLineNo;
 
 // Global variables
 BUCKET	*ConfigTab[TABLESIZE];
+static char* tilde = NULL;
+
 
 // Function implementations
-void 
-config(ClassAd *classAd, char *mySubsystem)
-{
-	if( real_config("CONDOR_CONFIG", "condor_config", 
-					"condor_config.local", (mySubsystem ? (ClassAd*)NULL : classAd)) ) {
-		fprintf(stderr,"\nNeither the environment variable CONDOR_CONFIG,\n" );
-		fprintf(stderr,"/etc/condor/, nor ~condor/ contain a condor_config "
-				"file.\n" );
-		fprintf( stderr,"Either set CONDOR_CONFIG to point to a valid config "
-				"file,\n" );
-		fprintf( stderr,"or put a \"condor_config\" file in %s or %s.\n", 
-				 "/etc/condor", "~condor/" );
-		fprintf( stderr, "Exiting.\n\n" );
-		exit( 1 );
-	}
-	config_fill_ad( classAd, mySubsystem );
-}
-
-void
-config_master(ClassAd *classAd)
-{
-	int rval = real_config("CONDOR_CONFIG_MASTER", "condor_config.master", 
-						   "condor_config.master.local", NULL);
-	if( rval ) {
-			// Trying to find things in with the .master names failed,
-			// try the regular config files.  
-		rval = real_config("CONDOR_CONFIG", "condor_config", 
-						   "condor_config.local", NULL);
-		if( rval ) {
-				// Everything failed, give up.
-			fprintf( stderr, "\nNeither the environment variables %s nor\n",
-					 "CONDOR_CONFIG_MASTER" );
-			fprintf( stderr, "%s, nor %s, nor %s contain\n",
-					 "CONDOR_CONFIG", "/etc/condor/", "~condor/" );
-			fprintf( stderr, "a %s or %s file.  Either set\n",
-					 "condor_config", "condor_config.master" );
-			fprintf( stderr, "%s or %s to point to a\n",	
-					 "CONDOR_CONFIG", "CONDOR_CONFIG_MASTER" );
-			fprintf( stderr, "valid config file, or put a \"%s\" file in\n", 
-					 "condor_config" );
-			fprintf( stderr, "/etc/condor or ~condor/ and try again.\n" );
-			fprintf( stderr, "Exiting.\n\n" );
-			exit( 1 );
-		}
-	}
-	config_fill_ad( classAd, "MASTER" );
-}
-
 
 void
 config_fill_ad(ClassAd* ad, char* mySubsys)
@@ -153,21 +115,13 @@ config_fill_ad(ClassAd* ad, char* mySubsys)
 }
 
 
-int
-real_config(const char *env_name, const char *file_name,
-			const char *local_name, ClassAd *classAd)
+void 
+config(ClassAd *classAd, char *mySubsystem)
 {
-#if !defined(WIN32)
-	struct passwd	*pw, *getpwnam();
-#endif
-	char			*ptr;
-	int				rval, fd;
-	char			hostname[1024];
-	int				scm;
-	char			*arch, *op_sys, *filesys_domain, *uid_domain;
-	char			*env, *config_file = NULL, *tilde = NULL;
-	char			line[256];
-  
+	char	hostname[1024];
+	char	*config_file;
+	int		scm, rval;
+
 	static int first_time = TRUE;
 	if( first_time ) {
 		first_time = FALSE;
@@ -185,15 +139,166 @@ real_config(const char *env_name, const char *file_name,
 		*/
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
 
+		// Try to find user "condor" in the passwd file.
+	init_tilde();
+
+
+		// Insert entries for "tilde" and "hostname". Note that
+		// "hostname" ends up as just the machine name w/o the
+		// . separators
+	if( tilde ) {
+		insert( "tilde", tilde, ConfigTab, TABLESIZE );
+	} else {
+			// What about tilde if there's no ~condor? 
+	}
+	insert( "hostname", my_hostname(), ConfigTab, TABLESIZE );
+
+
+		// Try to find the global config file
+	if( ! (config_file = find_global()) ) {
+		fprintf(stderr,"\nNeither the environment variable CONDOR_CONFIG,\n" );
+		fprintf(stderr,"/etc/condor/, nor ~condor/ contain a condor_config "
+				"file.\n" );
+		fprintf( stderr,"Either set CONDOR_CONFIG to point to a valid config "
+				"file,\n" );
+		fprintf( stderr,"or put a \"condor_config\" file in %s or %s.\n", 
+				 "/etc/condor", "~condor/" );
+		fprintf( stderr, "Exiting.\n\n" );
+		exit( 1 );
+	}
+
+		// Actually read in the global file
+	rval = Read_config( config_file, classAd, ConfigTab, TABLESIZE,
+						EXPAND_LAZY );
+	if( rval < 0 ) {
+		fprintf( stderr,
+				 "Configuration Error Line %d while processing config file %s ",
+				 ConfigLineNo, config_file );
+		perror( "" );
+		exit( 1 );
+	}
+	free( config_file );
+
+	
+		// Try to find and read the local config file
+	if( config_file = find_local() ) {
+		rval = Read_config( config_file, classAd, ConfigTab, 
+							TABLESIZE, EXPAND_LAZY ); 
+		if( rval < 0 ) {
+			fprintf( stderr,
+					 "Configuration Error Line %d while processing config file %s ",
+					 ConfigLineNo, config_file );
+			perror( "" );
+			exit( 1 );
+		}
+		free( config_file );
+	}
+
+
+		// Try to find and read the global root config file
+	if( config_file = find_global_root() ) {
+		rval = Read_config( config_file, classAd, ConfigTab, 
+							TABLESIZE, EXPAND_LAZY ); 
+		if( rval < 0 ) {
+			fprintf( stderr,
+					 "Configuration Error Line %d while processing config file %s ",
+					 ConfigLineNo, config_file );
+			perror( "" );
+			exit( 1 );
+		}
+		free( config_file );
+	}
+
+		// Try to find and read the local root config file
+	if( config_file = find_local_root() ) {
+		rval = Read_config( config_file, classAd, ConfigTab, 
+							TABLESIZE, EXPAND_LAZY ); 
+		if( rval < 0 ) {
+			fprintf( stderr,
+					 "Configuration Error Line %d while processing config file %s ",
+					 ConfigLineNo, config_file );
+			perror( "" );
+			exit( 1 );
+		}
+		free( config_file );
+	}
+
+		// Now that we've read all the config files, there are some
+		// attributes we want to define with defaults if they're not
+		// defined in the config files: ARCH, OPSYS,
+		// FILESYSTEM_DOMAIN and UID_DOMAIN.
+	fill_attributes( classAd );
+
+		// If mySubSystem_EXPRS is set, insert those expressions into
+		// the given classad.
+	config_fill_ad( classAd, mySubsystem );
+
+	(void)SetSyscalls( scm );
+}
+
+
+// Try to find the "condor" user's home directory
+void
+init_tilde()
+{
+	if( tilde ) {
+		free( tilde );
+		tilde = NULL;
+	}
 #if !defined(WIN32)
+	struct passwd *pw;
 	if( (pw=getpwnam( "condor" )) ) {
 		tilde = strdup( pw->pw_dir );
 	} 
 #endif
+}
 
-		// Find location of condor_config file
 
-	if( (env = getenv( env_name )) ) {
+char*
+find_global()
+{
+	return find_file( "CONDOR_CONFIG", "condor_config" );
+}
+
+
+char*
+find_local()
+{
+	char* local_name = param( "LOCAL_CONFIG_FILE" );
+	if( !local_name ) {
+		local_name = find_file( NULL, "condor_config.local" );
+	}
+	return local_name;
+}
+
+
+char*
+find_global_root()
+{
+	return find_file( "CONDOR_CONFIG_ROOT", "condor_config.root" );
+}
+
+char*
+find_local_root()
+{
+	char* local_name = param( "LOCAL_ROOT_CONFIG_FILE" );
+	if( !local_name ) {
+		local_name = find_file( NULL, "condor_config.local.root" );
+	}
+	return local_name;
+}
+
+
+// Find location of specified file
+char*
+find_file(const char *env_name, const char *file_name)
+{
+
+	char	*config_file = NULL, *env;
+	int		fd;
+
+		// If we were given an environment variable name, try that first. 
+	if( env_name && (env = getenv( env_name )) ) {
 		config_file = strdup( env );
 		if( (fd = open( config_file, O_RDONLY)) < 0 ) {
 			fprintf( stderr, "File specified in %s environment ", env_name );
@@ -233,68 +338,13 @@ real_config(const char *env_name, const char *file_name,
 			close( fd );
 		}
 	}
+	return config_file;
+}
 
-	if( ! config_file ) {
-		return(1);
-	}
 
-		// Build a hash table with entries for "tilde" and
-		// "hostname". Note that "hostname" ends up as just the
-		// machine name w/o the . separators
-	if( tilde ) {
-		insert( "tilde", tilde, ConfigTab, TABLESIZE );
-		free( tilde );
-		tilde = NULL;
-	} else {
-			// What about tilde if there's no ~condor? 
-	}
-	insert( "hostname", my_hostname(), ConfigTab, TABLESIZE );
-
-		// Actually read in the file
-
-	rval = Read_config( config_file, classAd, ConfigTab, TABLESIZE,
-						EXPAND_LAZY );
-	if( rval < 0 ) {
-		fprintf( stderr,
-				 "Configuration Error Line %d while processing config file %s ",
-				 ConfigLineNo, config_file );
-		perror( "" );
-		exit( 1 );
-	}
-	free( config_file );
-	
-		// Try to find the local config file
-
-	config_file=param( "LOCAL_CONFIG_FILE" );
-	if( ! config_file && tilde ) {
-			// If there's no LOCAL_CONFIG_FILE in the global config
-			// file, try ~condor/local_name
-		config_file = (char *)malloc( 
-						 (strlen(tilde) + strlen(local_name) + 2) * sizeof(char) ); 
-		config_file[0] = '\0';
-		strcat( config_file, tilde );
-		strcat( config_file, "/" );
-		strcat( config_file, local_name );
-		if( (fd = open( config_file, O_RDONLY)) < 0 ) {
-			free( config_file );
-			config_file = NULL;
-		} else {
-			close( fd );
-		}
-	}
-
-	if( config_file) {
-		rval = Read_config( config_file, classAd, ConfigTab, TABLESIZE, EXPAND_LAZY ); 
-
-		if( rval < 0 ) {
-			fprintf( stderr,
-					 "Configuration Error Line %d while processing config file %s ",
-					 ConfigLineNo, config_file );
-			perror( "" );
-			exit( 1 );
-		}
-		free( config_file );
-	}
+void
+fill_attributes(ClassAd* classAd)
+{
 
 		/* Now that we've read in the whole config file, there are a
 		   few attributes that we want to insert values for even if 
@@ -305,6 +355,9 @@ real_config(const char *env_name, const char *file_name,
 		   this host.  In all cases, the value in the config file
 		   overrides these defaults.  Arch and OpSys by Jim B.  Uid
 		   and FileSys by Derek Wright, 1/12/98 */
+
+	char *arch, *op_sys, *uid_domain, *filesys_domain;
+	char line[1024];
 
   	arch = param("ARCH");
 	if( !arch ) {
@@ -355,13 +408,8 @@ real_config(const char *env_name, const char *file_name,
 	} else {
 		free( uid_domain );
 	}
-	
-#if !defined(WIN32)
-	(void)endpwent();
-#endif
-	(void)SetSyscalls( scm );
-	return 0;
 }
+
 
 void
 init_config()
