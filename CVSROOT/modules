@@ -486,3 +486,4 @@ JAVA_SRC	-a \
 		src_java/byacc \
 		src_java/condor
 
+HOFFMAN		-a hoffman
