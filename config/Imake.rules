@@ -1,3 +1,9 @@
+#if IS_MIPS_ULTRIX43
+#define IMAKE_FLAGS	-I../../config -Dultrix43a -DTilde=$(TILDE) -s Makefile
+#else
+#define IMAKE_FLAGS	-I../../config -DTilde=$(TILDE) -s Makefile
+#endif
+
 /*
 ** Build an object directory with symbolic links back into the
 ** source directory.  Making it appear as though all the source
@@ -10,7 +16,7 @@ dir_name:												@@\
 	mkdir dir_name										@@\
 	cd dir_name; for file in `ls $(SRC_TREE)/dir_name`;	\@@\
 		do ln -s $(SRC_TREE)/dir_name/$$file .; done;	@@\
-	cd dir_name; imake -I../../config -DTilde=$(TILDE) -s Makefile
+	cd dir_name; imake IMAKE_FLAGS
 #endif object_dir_target
 
 /*
@@ -39,7 +45,7 @@ depend:: condor_/**/obj_name CheckPlatformType			@@\
 	cd condor_/**/obj_name; make depend					@@\
 makefiles:: condor_/**/obj_name/Makefile				@@\
 condor_/**/obj_name/Makefile:							@@\
-	cd condor_/**/obj_name; imake -I../../config -s Makefile	@@\
+	cd condor_/**/obj_name; imake IMAKE_FLAGS			@@\
 object_dir_target(condor_/**/obj_name)
 #endif object_target
 
@@ -51,7 +57,7 @@ object_dir_target(condor_/**/obj_name)
 platform.init: platform ALWAYS							@@\
 	cp GENERIC/CheckPlatformType.c platform				@@\
 	cp Imakefile.platform_skel platform/Imakefile	@@\
-	cd platform ; imake -I../../config -DTilde=$(TILDE) -s Makefile;	@@\
+	cd platform ; imake IMAKE_FLAGS						@@\
 	cd platform ; make directories; make depend			@@\
 platform: 												@@\
 	mkdir platform
@@ -79,7 +85,7 @@ libname:	objlist									@@\
 	rm -f libname									@@\
 	AR_REPLACE( libname, objlist )					@@\
 rel:: libname										@@\
-	cp libname  $(RELEASE_DIR)/lib					@@\
+	COPY_LIBRARY( libname, $(RELEASE_DIR)/lib )		@@\
 	RANLIB_TOUCH( $(RELEASE_DIR)/lib/libname )		@@\
 clean::												@@\
 	rm -f libname objlist
