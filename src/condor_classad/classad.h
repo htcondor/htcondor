@@ -54,6 +54,6 @@ class ClassAd : public AttrList
         AdType*		targetType;					// target type field.
 };
 
-typedef	AttrList ClassAdList;
+typedef	AttrListList ClassAdList;
 
 #endif
