@@ -925,11 +925,11 @@ sub install_release_dir {
 	    last;
 	} else {
 	    print "What's the full path to the release directory? ";
-	    chop( $_ = <STDIN> );
-	    if( &check_release_dir( $_ ) ) {
-		return $_;
+	    chop( $release_dir = <STDIN> );
+	    if( &check_release_dir( $release_dir ) ) {
+		return $release_dir;
 	    } else {
-		print "$_ doesn't contain a complete release directory,\n",
+		print "$release_dir doesn't contain a complete release directory,\n",
 		"try again.\n";
 	    }
 	}
@@ -1135,22 +1135,31 @@ sub configure_full_install {
     print "\n***************************************************************************\n",
     "\tSTEP 6: Where should public programs be installed?\n",
     "***************************************************************************\n";
+    $path = "$release_dir/bin";
     print "\n",
     "The Condor binaries and scripts are already installed in:\n",
-    "\t$release_dir/bin\n",
-    "If you want, I can create some soft links from a directory that is already\n",
-    "in the default PATH to point to these binaries, so that Condor users do not\n",
-    "have to change their PATH.  Alternatively, I can leave them where they are\n",
-    "and Condor users will have to add $release_dir/bin\n",
-    "to their PATH or explicity use a full pathname to access the Condor tools.\n",
-    "\nShall I create links in some other directory? [yes] ";
-    chop( $_ = <STDIN> );
-    if( /(^[Yy].*)|^$/ ) {    
-	$path = &prompt_install_path();
+    "\t$path\n"; 
+
+    if( ! grep(/$path/, ($ENV{PATH})) ) {
+	# Not in the PATH
+	print "If you want, I can create some soft links from a directory that is already\n",
+	"in the default PATH to point to these binaries, so that Condor users do not\n",
+	"have to change their PATH.  Alternatively, I can leave them where they are\n",
+	"and Condor users will have to add $path\n",
+	"to their PATH or explicity use a full pathname to access the Condor tools.\n",
+	"\nShall I create links in some other directory? [yes] ";
+	chop( $_ = <STDIN> );
+	if( /(^[Yy].*)|^$/ ) {    
+	    $path = &prompt_install_path();
+	} else {
+	    $path = "";
+	}
     } else {
+	# Already in the PATH
+	print "This directory is already in your PATH, so there is nothing else you\n",
+	"need to do.\n";
 	$path = "";
     }
-
     print "\nPress enter to continue. ";
     $_ = <STDIN>;
 
@@ -1661,6 +1670,7 @@ sub customize_boot_script {
     close GENERIC;
     close BOOT;
     unlink( "$release_dir/etc/examples/condor.boot.generic" );
+    chmod( 0755, "$release_dir/etc/examples/condor.boot" );
 }
 
 
@@ -1729,7 +1739,7 @@ sub prompt_domain_settings {
     print "\nDo all of the machines in your pool from your domain ",
 	"(\"$domain\")\nshare a common filesystem? [no] ";
     chop($_ = <STDIN>);    
-    if( /^y$/i ) {
+    if( /^y.*/i ) {
 	print "\nConfiguring all machines to use \"$domain\" for their filesystem",
 	" domain.\n";
 	$fs_domain=$domain;
@@ -1738,10 +1748,10 @@ sub prompt_domain_settings {
 	$fs_domain="\$(FULL_HOSTNAME)";
     }
 
-    print "\nDo all of the users across all the machines in your domain, have a ",
+    print "\nDo all of the users across all the machines in your domain have a ",
     "unique\nUID (in other words, do they all share a common passwd file)? [no] ";
     chop($_ = <STDIN>);    
-    if( /^y$/i ) {
+    if( /^y.*/i ) {
 	print "\nConfiguring all machines to use \"$domain\" for their uid domain.\n";
 	$uid_domain=$domain;
 
