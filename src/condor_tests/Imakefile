@@ -49,10 +49,6 @@ DESC(job_filexfer_sandbox-empty_van,"Are job sandboxes with bad permissions clea
 RUN(job_filexfer_sandbox-empty_van)
 TESTCLASS(job_filexfer_sandbox-empty_van,quick)
 
-DESC(job_core_macros-dollardollar_van,"Do $$ macros work?")
-RUN(job_core_macros-dollardollar_van)
-TESTCLASS(job_core_macros-dollardollar_van,quick)
-
 DESC(job_core_sh-loop_van,"Simple vanilla job that loops for N seconds")
 RUN(job_core_sh-loop_van)
 TESTCLASS(job_core_sh-loop_van,quick)
