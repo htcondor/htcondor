@@ -208,13 +208,15 @@ display_stats()
 		printf("%9.9s ", format_time_nosecs(hs->wall_time));
 		printf("%9.9s ", format_time_nosecs(hs->good_time));
 		printf("%9.9s ", format_time_nosecs(hs->cpu_usage));
-		printf("%9.9s ", format_time_nosecs(hs->wall_time/hs->allocations/60));
+		printf("%9.9s ", format_time_nosecs(hs->wall_time/hs->allocations));
 		printf("%9.9s ", hs->kills ?
 			   format_time_nosecs((hs->wall_time-hs->good_time)/hs->kills) :
 			   "0+00:00");
 		printf("%6.1f%% %5.1f%%\n",
-			   hs->wall_time ? hs->good_time/hs->wall_time*100 : 0.0,
-			   hs->good_time ? hs->cpu_usage/hs->good_time*100 : 0.0);
+			   hs->wall_time ?
+			   float(hs->good_time)/float(hs->wall_time)*100 : 0.0,
+			   hs->good_time ?
+			   float(hs->cpu_usage)/float(hs->good_time)*100 : 0.0);
 		delete hs;
 	}
 	HStats.clear();
@@ -240,13 +242,15 @@ display_stats()
 		printf("%9.9s ", format_time_nosecs(js->wall_time));
 		printf("%9.9s ", format_time_nosecs(js->good_time));
 		printf("%9.9s ", format_time_nosecs(js->cpu_usage));
-		printf("%9.9s ", format_time_nosecs(js->wall_time/js->allocations/60));
+		printf("%9.9s ", format_time_nosecs(js->wall_time/js->allocations));
 		printf("%9.9s ", js->kills ?
 			   format_time_nosecs((js->wall_time-js->good_time)/js->kills) :
 			   "0+00:00");
 		printf("%6.1f%% %5.1f%%\n",
-			   js->wall_time ? js->good_time/js->wall_time*100 : 0.0,
-			   js->good_time ? js->cpu_usage/js->good_time*100 : 0.0);
+			   js->wall_time ?
+			   float(js->good_time)/float(js->wall_time)*100 : 0.0,
+			   js->good_time ?
+			   float(js->cpu_usage)/float(js->good_time)*100 : 0.0);
 		allocations += js->allocations;
 		kills += js->kills;
 		wall_time += js->wall_time;
@@ -259,13 +263,13 @@ display_stats()
 	printf("%9.9s ", format_time_nosecs(wall_time));
 	printf("%9.9s ", format_time_nosecs(good_time));
 	printf("%9.9s ", format_time_nosecs(cpu_usage));
-	printf("%9.9s ", format_time_nosecs(wall_time/allocations/60));
+	printf("%9.9s ", format_time_nosecs(wall_time/allocations));
 	printf("%9.9s ", kills ?
 		   format_time_nosecs((wall_time-good_time)/kills) :
 		   "0+00:00");
 	printf("%6.1f%% %5.1f%%\n",
-		   wall_time ? good_time/wall_time*100 : 0.0,
-		   good_time ? cpu_usage/good_time*100 : 0.0);
+		   wall_time ? float(good_time)/float(wall_time)*100 : 0.0,
+		   good_time ? float(cpu_usage)/float(good_time)*100 : 0.0);
 	Stats.clear();
 	delete [] statarray;
 }
