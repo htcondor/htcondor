@@ -906,12 +906,12 @@ ResMgr::force_benchmark()
 
 
 int
-ResMgr::send_update( ClassAd* public_ad, ClassAd* private_ad )
+ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad )
 {
 	int num = 0;
 
 	if( coll_sock ) {
-		if( send_classad_to_sock(coll_sock, public_ad, private_ad) ) {
+		if( send_classad_to_sock(cmd, coll_sock, public_ad, private_ad) ) {
 			num++;
 		} else {
 			dprintf( D_ALWAYS,
@@ -922,7 +922,7 @@ ResMgr::send_update( ClassAd* public_ad, ClassAd* private_ad )
 
 		// If we have an alternate collector, send public CA there.
 	if( view_sock ) {
-		if( send_classad_to_sock(view_sock, public_ad, NULL) ) {
+		if( send_classad_to_sock(cmd, view_sock, public_ad, NULL) ) {
 			num++;
 		} else {
 			dprintf( D_ALWAYS, 
@@ -1221,6 +1221,9 @@ ResMgr::deleteResource( Resource* rip )
 	
 		// Return this Resource's ID to the dispenser.
 	id_disp->insert( rip->r_id );
+
+		// Tell the collector this Resource is gone.
+	rip->final_update();
 
 		// At last, we can delete the object itself.
 	delete rip;
