@@ -33,7 +33,10 @@
 #include "simplelist.h"
 #include "condor_string.h"  /* for strnewp() */
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+
+#if defined(BUILD_HELPER)
 #include "helper.h"
+#endif
 
 //---------------------------------------------------------------------------
 Dag::Dag( const char* condorLogName, const int maxJobsSubmitted,
@@ -621,7 +624,10 @@ Dag::StartNode( Job *node )
 int
 Dag::SubmitReadyJobs()
 {
+
+#if defined(BUILD_HELPER)
 	Helper helperObj;
+#endif
 //	PrintReadyQ( DEBUG_DEBUG_4 );
 	// no jobs ready to submit
     if( _readyQ->IsEmpty() ) {
@@ -651,6 +657,7 @@ Dag::SubmitReadyJobs()
     CondorID condorID(0,0,0);
     MyString cmd_file = job->GetCmdFile();
 
+#if defined(BUILD_HELPER)
     char *helper = param( "DAGMAN_HELPER_COMMAND" );
     if( helper ) {
       debug_printf( DEBUG_VERBOSE, "  passing original submit file (%s) "
@@ -677,6 +684,7 @@ Dag::SubmitReadyJobs()
       free( helper );
       helper = NULL;
     }
+#endif //BUILD_HELPER
     if ( !submit_submit( cmd_file.Value(),
 			 condorID,
 			 job->GetJobName())) {

@@ -1,9 +1,13 @@
 NAME = condor_dagman
 all_target($(NAME) t_helper)
 
+#if defined(DAGMAN_HELPER)
+HELPER_FLAGS = -DBUILD_HELPER
+#endif
+
 C_PLUS_FLAGS = -I. $(STD_C_PLUS_FLAGS) \
 	-I../condor_daemon_core.V6 \
-	-I../condor_includes -I- -Wall
+	-I../condor_includes -I- -Wall $(HELPER_FLAGS)
 CFLAGS = $(STD_C_FLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
@@ -26,4 +30,6 @@ strip_copy_target(condor_submit_dag,$(STRIP_DIR)/bin, \
 static_copy_target(condor_submit_dag,$(STATIC_DIR)/bin, \
 		condor_submit_dag,EXECUTABLE_MODE)
 
+#if defined(DAGMAN_HELPER)
 c_plus_target(t_helper, t_helper.o helper.o, $(LIB))
+#endif

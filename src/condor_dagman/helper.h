@@ -23,11 +23,12 @@
 
 // Author: Francesco Giacomini, INFN <Francesco.Giacomini@cnaf.infn.it>
 
-// $Id: helper.h,v 1.1.4.1 2003-01-10 20:22:55 pfc Exp $
+// $Id: helper.h,v 1.1.4.2 2003-01-18 19:30:57 epaulson Exp $
 
 #ifndef HELPER_H
 #define HELPER_H
 
+#if defined(BUILD_HELPER)
 #include <string>
 
 class Helper
@@ -42,8 +43,9 @@ public:
   std::string resolve(std::string const& input_file) const;
 };
 
-#endif
+#endif //BUILD_HELPER
 
+#endif
 // Local Variables:
 // mode:c++
 // End:

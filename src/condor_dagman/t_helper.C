@@ -1,3 +1,4 @@
+#if defined(BUILD_HELPER)
 #include <cassert>
 #include <string>
 #include <fstream>
@@ -14,3 +15,6 @@ int main(int argc, char* argv[])
   std::ofstream output_file_created(output_file.c_str());
   assert(output_file_created);
 }
+#else
+int main() { return 0; }
+#endif

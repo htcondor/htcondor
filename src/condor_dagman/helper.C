@@ -24,10 +24,12 @@
 // File: Helper.cpp
 // Author: Francesco Giacomini, INFN <Francesco.Giacomini@cnaf.infn.it>
 
-// $Id: helper.C,v 1.1.4.3 2003-01-14 03:53:46 pfc Exp $
+// $Id: helper.C,v 1.1.4.4 2003-01-18 19:30:56 epaulson Exp $
 
 #include "condor_common.h"
 #include "helper.h"
+
+#if defined(BUILD_HELPER)
 #include <fstream>
 #include <sstream>
 #include <cstdlib>		// for system()
@@ -107,3 +109,5 @@ Helper::HelperImpl::resolve(std::string const& input_file)
 
   return output_file;
 }
+
+#endif //BUILD_HELPER
