@@ -30,6 +30,8 @@ SAVE_SIGSTATE = -DSAVE_SIGSTATE
 #if IS_DUX
 SIG_CKPT_OBJS = signals_support.o SIGPROCMASK.o SIGSUSPEND.o \
 	SIGACTION.o SIGNAL.o
+#elif IS_LINUX
+SIG_CKPT_OBJS = signals_support.o SIGSUSPEND.o
 #else
 SIG_CKPT_OBJS = signals_support.o
 #endif
