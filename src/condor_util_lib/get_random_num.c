@@ -36,13 +36,26 @@
 
 static char initialized = 0;
 
+/* (re)sets the seed for the random number generator -- may be useful
+   for generating less predictable random numbers */
+int set_seed(int seed)
+{
+	if (seed == 0) {
+		seed = time(0);
+	}
+
+	srand48(seed);
+	initialized = 1;
+
+	return seed;
+}
+
 /* returns a random positive integer, trying to use best random number
    generator available on each platform */
 int get_random_int()
 {
 	if (!initialized) {
-		srand48(time(0));
-		initialized = 1;
+		set_seed(0);
 	}
 
 	return (int) (lrand48() & MAXINT);
@@ -53,8 +66,7 @@ int get_random_int()
 float get_random_float()
 {
 	if (!initialized) {
-		srand48(time(0));
-		initialized = 1;
+		set_seed(0);
 	}
 
 	return (float) drand48();
