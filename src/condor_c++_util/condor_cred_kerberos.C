@@ -73,11 +73,6 @@ Condor_Kerberos :: Condor_Kerberos()
     //condor_krb5_error(retval, STR_CONDOR_CRED_KRB_INIT);
     // throw exception!
   }
-  // Let's try to get the default cache now
-  char * temp = (char *) krb5_cc_default_name(context_);
-  // Stupid!!!!@*!()@*)!(@*)!(@*)(@*()!@)(!*@)(!*@)(!@*)(!*@)($&*@&
-  // The lab's installation of Solarix 28 does not have the same header as
-  // the rest. 
  
   // Let's copy it now
   ccname_ = new char[CONDOR_KRB_DIR_LENGTH];
