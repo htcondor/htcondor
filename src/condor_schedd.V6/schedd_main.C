@@ -31,58 +31,23 @@
 **
 */
 
-#define _POSIX_SOURCE
 #include "condor_common.h"
+#include "condor_debug.h"
+#include "condor_config.h"
 
-#if !defined(WIN32)
-#include <netdb.h>
-#include <pwd.h>
+static char *_FileName_ = __FILE__;		/* Used by EXCEPT */
 
-#if defined(IRIX331)
-#define __EXTENSIONS__
-#include <signal.h>
-#define BADSIG SIG_ERR
-#undef __EXTENSIONS__
-#else
-#include <signal.h>
-#endif
-
-#include <sys/socket.h>
-#include <sys/param.h>
-#include <sys/file.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <sys/wait.h>
-#include <sys/utsname.h>
-#include <sys/stat.h>
-#include <netinet/in.h>
-
-#include "condor_fix_wait.h"
 #include "condor_fdset.h"
-#endif // !defined WIN32
 
-#if defined(HPUX9)
-#include "fake_flock.h"
-#endif
-
-#if defined(Solaris)
-#include "fake_flock.h"
-#endif
-
-#include "debug.h"
-#include "trace.h"
-#include "except.h"
 #include "sched.h"
 #include "clib.h"
 #include "exit.h"
-
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_qmgr.h"
 #include "scheduler.h"
 #include "condor_adtypes.h"
 #include "condor_uid.h"
-#include "condor_config.h"
 
 #if defined(BSD43) || defined(DYNIX)
 #	define WEXITSTATUS(x) ((x).w_retcode)
@@ -91,16 +56,10 @@
 
 extern "C"
 {
-	void	dprintf_config(char*, int);
-	void	dprintf(int, char*...);
-	char*	param(char*);
-	int		param_in_pattern(char*, char*);
-	int		SetSyscalls() { return 0; }
 	int		ReadLog(char*);
 }
 extern	void	mark_jobs_idle();
 
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 // global variables to control the daemon's running and logging
 char*		Spool;							// spool directory
