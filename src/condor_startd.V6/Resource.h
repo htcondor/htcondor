@@ -137,6 +137,7 @@ private:
 
 	int		did_update;		// Flag set when we do an update.
 	int		fast_shutdown;	// Flag set if we're in fast shutdown mode.
+	int		r_load_num_called;		// Counter used for CondorLoadAvg
 };
 
 #endif _STARTD_RESOURCE_H
