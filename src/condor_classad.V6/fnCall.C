@@ -59,12 +59,10 @@ FunctionCall () : arguments( 4 )
 		functionTable.insert( "gethours",		getField );
 		functionTable.insert( "getminutes",		getField );
 		functionTable.insert( "getseconds",		getField );
-		functionTable.insert( "getuseconds",	getField );
 		functionTable.insert( "indays",			inTimeUnits );
 		functionTable.insert( "inhours",		inTimeUnits );
 		functionTable.insert( "inminutes",		inTimeUnits );
 		functionTable.insert( "inseconds",		inTimeUnits );
-		functionTable.insert( "inuseconds",		inTimeUnits );
 
 			// string manipulation
 		functionTable.insert( "strcat",			strCat );
@@ -694,7 +692,7 @@ bool FunctionCall::
 getField( char* name, ArgumentList &argList, EvalState &state, Value &val )
 {
 	Value 	arg;
-	int 	secs, usecs;
+	int 	secs;
 	time_t	clock;
 	struct  tm tms;
 
@@ -739,7 +737,7 @@ getField( char* name, ArgumentList &argList, EvalState &state, Value &val )
 			return( false );
 		}
 		return( true );
-	} else if( arg.IsRelativeTimeValue( secs, usecs ) ) {
+	} else if( arg.IsRelativeTimeValue( secs ) ) {
 		if( strcasecmp( name, "getyear" ) == 0  	||
 			strcasecmp( name, "getmonth" ) == 0  	||
 			strcasecmp( name, "getdayofmonth" )== 0 ||
@@ -756,8 +754,6 @@ getField( char* name, ArgumentList &argList, EvalState &state, Value &val )
 			val.SetIntegerValue( ( secs % 3600 ) / 60 );
 		} else if( strcasecmp( name, "getseconds" ) == 0 ) {
 			val.SetIntegerValue( secs % 60 );
-		} else if( strcasecmp( name, "getuseconds" ) == 0 ) {
-			val.SetIntegerValue( usecs );
 		} else {
 			EXCEPT( "Should not reach here" );
 			val.SetErrorValue( );
@@ -774,7 +770,7 @@ bool FunctionCall::
 inTimeUnits( char* name, ArgumentList &argList, EvalState &state, Value &val )
 {
 	Value 	arg;
-	int		asecs=0, rsecs=0, rusecs=0;
+	int		asecs=0, rsecs=0;
 	double	secs;
 
     if( argList.getlast( ) != 0 ) {
@@ -789,7 +785,7 @@ inTimeUnits( char* name, ArgumentList &argList, EvalState &state, Value &val )
 
 		// only handle times
 	if( !arg.IsAbsoluteTimeValue(asecs) && 
-		!arg.IsRelativeTimeValue(rsecs,rusecs ) ) {
+		!arg.IsRelativeTimeValue(rsecs) ) {
 		val.SetErrorValue( );
 		return( true );
 	}
@@ -801,18 +797,15 @@ inTimeUnits( char* name, ArgumentList &argList, EvalState &state, Value &val )
 	}
 
 	if (strcasecmp( name, "indays" ) == 0 ) {
-		val.SetRealValue( ( secs + (rusecs * 1.0E-6) ) / 86400.0 );
+		val.SetRealValue( secs / 86400.0 );
 		return( true );
 	} else if( strcasecmp( name, "inhours" ) == 0 ) {
-		val.SetRealValue( ( secs + (rusecs * 1.0E-6) ) / 3600.0 );
+		val.SetRealValue( secs / 3600.0 );
 		return( true );
 	} else if( strcasecmp( name, "inminutes" ) == 0 ) {
-		val.SetRealValue( ( secs + (rusecs * 1.0E-6 ) ) / 60.0 );
+		val.SetRealValue( secs / 60.0 );
 	} else if( strcasecmp( name, "inseconds" ) == 0 ) {
-		val.SetRealValue( secs + (rusecs * 1.0E-6) );
-		return( true );
-	} else if( strcasecmp( name, "inuseconds" ) == 0 ) {
-		val.SetRealValue( ( secs * 1.0E+6 ) + rusecs );
+		val.SetRealValue( secs );
 		return( true );
 	}
 
@@ -1068,7 +1061,7 @@ convReal( char*, ArgumentList &argList, EvalState &state, Value &result )
 	char	buf[16];
 	char	*end;
 	int		alen;
-	int		ivalue, usecs;
+	int		ivalue;
 	bool	bvalue;
 	double	rvalue;
 	NumberFactor nf;
@@ -1134,8 +1127,8 @@ convReal( char*, ArgumentList &argList, EvalState &state, Value &result )
 			return( true );
 
 		case RELATIVE_TIME_VALUE:
-			arg.IsRelativeTimeValue( ivalue, usecs );
-			result.SetRealValue( ivalue + usecs*1.0E-6 );
+			arg.IsRelativeTimeValue( ivalue );
+			result.SetRealValue( ivalue );
 			return( true );
 
 		default:
@@ -1263,9 +1256,9 @@ convBool( char*, ArgumentList &argList, EvalState &state, Value &result )
 
 		case RELATIVE_TIME_VALUE:
 			{
-				int rsecs, rusecs;
-				arg.IsRelativeTimeValue( rsecs, rusecs );
-				result.SetBooleanValue( rsecs != 0 || rusecs != 0 );
+				int rsecs;
+				arg.IsRelativeTimeValue( rsecs );
+				result.SetBooleanValue( rsecs != 0 );
 				return( true );
 			}
 
@@ -1319,12 +1312,10 @@ convTime( char* name, ArgumentList &argList, EvalState &state, Value &result )
 		case REAL_VALUE:
 			{
 				double	rvalue;
-				double 	intPart;
 
 				arg.IsRealValue( rvalue );
 				if( relative ) {
-					result.SetRelativeTimeValue( (int)rvalue, 
-							(int) ( modf( rvalue, &intPart ) * 1.0E+6 ) );
+					result.SetRelativeTimeValue( (int)rvalue );
 				} else {
 					result.SetAbsoluteTimeValue( (int)rvalue );
 				}
@@ -1335,14 +1326,14 @@ convTime( char* name, ArgumentList &argList, EvalState &state, Value &result )
 			{
 				char buf[64];
 				int	 alen;
-				int	 secs, usecs;
+				int	 secs;
 				arg.IsStringValue( buf, 64, alen );
 				if( relative ) {
-					if( !Lexer::tokenizeRelativeTime( buf, secs, usecs ) ) {
+					if( !Lexer::tokenizeRelativeTime( buf, secs ) ) {
 						result.SetErrorValue( );
 						return( true );
 					}
-					result.SetRelativeTimeValue( secs, usecs );
+					result.SetRelativeTimeValue( secs );
 				} else {
 					if( !Lexer::tokenizeAbsoluteTime( buf, secs ) ) {
 						result.SetErrorValue( );
