@@ -1,0 +1,18 @@
+# Data file describing the pbs_qstat module
+ModuleFiles: pbs_qstat
+
+Description:
+Used to monitor the queue of a PBS queue
+You should set the HAWKEYE_PBS_QNAME parameter by hand
+
+Default: pbs
+options: kill
+period: 15m
+prefix: pbs_
+
+# It's parameters
+parameter: HAWKEYE_PBS_QSTAT = /usr/pbs/bin/qstat
+Full path to the PBS qstat program
+
+parameter: HAWKEYE_PBS_QNAME
+Name of the PBS queue to monitor

@@ -1,9 +1,9 @@
 # Master Hawkeye targets data file
-directory: /scratch/nleroy/workspace/Hawkeye-Release/modules
+directory: /local.chopin/nleroy/Hawkeye-Release/modules
 prefix: Hawkeye_modules_
 
 target: all
-version: 1.0.rc6
+version: 1.0.rc7
 os: Unix-Any
 +condor_jobhist
 +condor_node
@@ -16,6 +16,7 @@ os: Unix-Any
 +memory
 +network_stats
 +open_files
++pbs_qstat
 +top
 +uptime
 +vmstat
@@ -81,6 +82,11 @@ target: open_files
 os: Unix-Any
 version: 1.0.rc1
 +open_files
+
+target: pbs_qstat
+os: Unix-Any
+version: 1.0.rc1
++pbs_qstat
 
 target: top
 os: Unix-Any
