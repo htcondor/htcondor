@@ -49,7 +49,10 @@ class MPIMasterProc : public MPIComradeProc
     virtual ~MPIMasterProc();
 
     virtual int StartJob();
+
+#if ! MPI_USES_RSH
 	virtual int JobExit(int pid, int status);
+#endif
 
  private:
 
