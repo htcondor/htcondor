@@ -22,7 +22,7 @@ extern "C" {
 
 #if defined(__STDC__) || defined(__cplusplus)
 	void config ( char *a_out_name, CONTEXT *context );
-	void config_from_server(char*, CONTEXT*);
+	void config_from_server(char*, char*, CONTEXT*);
 	char * param ( char *name );
 	void insert ( char *name, char *value, BUCKET *table[], int table_size );
 	char * expand_macro ( char *value, BUCKET *table[], int table_size );
