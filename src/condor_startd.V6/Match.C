@@ -188,7 +188,7 @@ Match::start_match_timer()
 			  continue. 
 			*/
 		
-	   dprintf( D_ALWAYS, "Warning: got matched twice for same capability."
+	   dprintf( D_FAILURE|D_ALWAYS, "Warning: got matched twice for same capability."
 				" Canceling old match timer (%d)\n", m_match_tid );
 	   if( daemonCore->Cancel_Timer(m_match_tid) < 0 ) {
 		   dprintf( D_ALWAYS, "Failed to cancel old match timer (%d): "
@@ -240,14 +240,14 @@ Match::match_timed_out()
 			// Don't use our dprintf(), use the "real" version, since
 			// if we're this confused, our rip pointer might be messed
 			// up, too, and we don't want to seg fault.
-		::dprintf( D_ALWAYS,
+		::dprintf( D_FAILURE|D_ALWAYS,
 				   "ERROR: Match timed out but there's no capability\n" );
 		return FALSE;
 	}
 		
 	Resource* rip = resmgr->get_by_any_cap( my_cap );
 	if( !rip ) {
-		::dprintf( D_ALWAYS,
+		::dprintf( D_FAILURE|D_ALWAYS,
 				   "ERROR: Can't find resource of expired match\n" );
 		return FALSE;
 	}
@@ -267,14 +267,14 @@ Match::match_timed_out()
 				   sending email at this point with the last 300 lines
 				   of the log file or something.  -Derek 10/9/00
 				*/
-			dprintf( D_FULLDEBUG, 
+			dprintf( D_FAILURE|D_FULLDEBUG, 
 					 "WARNING: Current match timed out but in %s state.",
 					 state_to_string(rip->state()) );
 			return FALSE;
 		}
 		delete rip->r_cur;
 		rip->r_cur = new Match( rip );
-		dprintf( D_ALWAYS, "State change: match timed out\n" );
+		dprintf( D_FAILURE|D_ALWAYS, "State change: match timed out\n" );
 		rip->change_state( owner_state );
 	} else {
 			// The match that timed out was the preempting match.
@@ -346,7 +346,7 @@ Match::claim_timed_out()
 		m_client = NULL;
 	}
 
-	dprintf( D_ALWAYS, "State change: claim timed out (condor_schedd gone?)\n" );
+	dprintf( D_FAILURE|D_ALWAYS, "State change: claim timed out (condor_schedd gone?)\n" );
 
 		// Kill the claim.
 	rip->kill_claim();
@@ -497,7 +497,7 @@ Client::vacate(char* cap)
 
 	Daemon my_schedd (DT_SCHEDD, NULL, NULL);
 	if (!(sock = (ReliSock*)my_schedd.startCommand( RELEASE_CLAIM, Stream::reli_sock, 20 ))) {
-		dprintf(D_ALWAYS, "Can't connect to schedd (%s)\n", c_addr);
+		dprintf(D_FAILURE|D_ALWAYS, "Can't connect to schedd (%s)\n", c_addr);
 		return;
 	}
 

@@ -997,7 +997,7 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad )
 		if( send_classad_to_sock(cmd, coll_sock, public_ad, private_ad) ) {
 			num++;
 		} else {
-			dprintf( D_ALWAYS,
+			dprintf( D_FAILURE|D_ALWAYS,
 					 "Error sending UDP update to the collector (%s)\n", 
 					 Collector->fullHostname() );
 		}

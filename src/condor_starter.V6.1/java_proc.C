@@ -33,7 +33,7 @@ int JavaProc::StartJob()
 	}
 
 	if(!java_config(java_cmd,java_args,jarfiles_list)) {
-		dprintf(D_ALWAYS,"JavaProc: Java is not configured!\n");
+		dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Java is not configured!\n");
 		if(jarfiles_list) delete jarfiles_list;
 		return 0;
 	}
@@ -169,40 +169,40 @@ java_exit_mode_t JavaProc::ClassifyExit( int status )
 				dprintf(D_ALWAYS,"JavaProc: Wrapper left end record %s\n",endfile);
 				fields = fscanf(file,"%s",tmp);
 				if(fields!=1) {
-					dprintf(D_ALWAYS,"JavaProc: Job called System.exit(%d)\n",exit_code);
+					dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Job called System.exit(%d)\n",exit_code);
 					exit_mode = JAVA_EXIT_NORMAL;
 				} else if(!strcmp(tmp,"normal")) {
-					dprintf(D_ALWAYS,"JavaProc: Job returned from main()\n");
+					dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Job returned from main()\n");
 					exit_mode = JAVA_EXIT_NORMAL;
 				} else if(!strcmp(tmp,"abnormal")) {	
 					ParseExceptionFile(file,ex_name,ex_type);
 					if(!strcmp(ex_type,"java.lang.Error")) {
-						dprintf(D_ALWAYS,"JavaProc: Job threw a %s (%s), will retry it later.\n",ex_name,ex_type);
+						dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Job threw a %s (%s), will retry it later.\n",ex_name,ex_type);
 						exit_mode = JAVA_EXIT_SYSTEM_ERROR;
 					} else {
-						dprintf(D_ALWAYS,"JavaProc: Job threw a %s (%s), will return it to the user.\n",ex_name,ex_type);
+						dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Job threw a %s (%s), will return it to the user.\n",ex_name,ex_type);
 						exit_mode = JAVA_EXIT_EXCEPTION;
 					}
 				} else if(!strcmp(tmp,"noexec")) {
-					dprintf(D_ALWAYS,"JavaProc: Job could not be executed\n");
+					dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Job could not be executed\n");
 					exit_mode = JAVA_EXIT_EXCEPTION;
 				} else {
-					dprintf(D_ALWAYS,"JavaProc: Unknown wrapper result '%s'\n",tmp);
+					dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Unknown wrapper result '%s'\n",tmp);
 					exit_mode = JAVA_EXIT_SYSTEM_ERROR;
 				}
 				fclose(file);
 			} else {
-				dprintf(D_ALWAYS,"JavaProc: Wrapper did not leave end record %s\n",endfile);
+				dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Wrapper did not leave end record %s\n",endfile);
 				dprintf(D_ALWAYS,"JavaProc: Thus, job called System.exit(%d)\n",exit_code);
 				exit_mode = JAVA_EXIT_NORMAL;
 			}
 		} else {
-			dprintf(D_ALWAYS,"JavaProc: Wrapper did not leave start record.\n");
+			dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Wrapper did not leave start record.\n");
 			dprintf(D_ALWAYS,"JavaProc: I'll assume Java is misconfigured here.\n");
 			exit_mode = JAVA_EXIT_SYSTEM_ERROR;
 		}
 	} else {
-		dprintf(D_ALWAYS,"JavaProc: JVM exited abnormally with signal %d\n",sig_num);
+		dprintf(D_FAILURE|D_ALWAYS,"JavaProc: JVM exited abnormally with signal %d\n",sig_num);
 		exit_mode = JAVA_EXIT_SYSTEM_ERROR;
 	}
 

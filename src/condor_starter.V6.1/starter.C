@@ -192,7 +192,7 @@ CStarter::StartJob()
     ClassAd *jobAd = new ClassAd;
 
 	if (REMOTE_CONDOR_get_job_info(jobAd) < 0) {
-		dprintf(D_ALWAYS, 
+		dprintf(D_FAILURE|D_ALWAYS, 
 				"Failed to get job info from Shadow.  Aborting StartJob.\n");
 		return false;
 	}
@@ -236,7 +236,7 @@ CStarter::StartJob()
 	sprintf( WorkingDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
 			 daemonCore->getpid() );
 	if( mkdir(WorkingDir, 0777) < 0 ) {
-		dprintf( D_ALWAYS, "couldn't create dir %s: %s\n", WorkingDir,
+		dprintf( D_FAILURE|D_ALWAYS, "couldn't create dir %s: %s\n", WorkingDir,
 				 strerror(errno) );
 		return false;
 	}
@@ -255,7 +255,7 @@ CStarter::StartJob()
 #endif /* WIN32 */
 
 	if( chdir(WorkingDir) < 0 ) {
-		dprintf( D_ALWAYS, "couldn't move to %s: %s\n", WorkingDir,
+		dprintf( D_FAILURE|D_ALWAYS, "couldn't move to %s: %s\n", WorkingDir,
 				 strerror(errno) ); 
 		return false;
 	}
@@ -276,7 +276,7 @@ CStarter::StartJob()
 	if( want_io_proxy || universe==CONDOR_UNIVERSE_JAVA ) {
 		sprintf(io_proxy_config_file,"%s%cchirp.config",WorkingDir,DIR_DELIM_CHAR);
 		if(!io_proxy.init(io_proxy_config_file)) {
-			dprintf(D_ALWAYS,"StartJob: Couldn't initialize proxy.\n");
+			dprintf(D_FAILURE|D_ALWAYS,"StartJob: Couldn't initialize proxy.\n");
 			return false;
 		} else {
 			dprintf(D_ALWAYS,"StartJob: Initialized IO Proxy.\n");

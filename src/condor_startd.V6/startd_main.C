@@ -620,10 +620,10 @@ reaper(Service *, int pid, int status)
 	Resource* rip;
 
 	if( WIFSIGNALED(status) ) {
-		dprintf(D_ALWAYS, "pid %d died on %s\n",
-				pid, daemonCore->GetExceptionString(status));
+		dprintf(D_FAILURE|D_ALWAYS, "starter pid %d died on signal %d (%s)\n",
+				pid, WTERMSIG(status), daemonCore->GetExceptionString(status));
 	} else {
-		dprintf(D_ALWAYS, "pid %d exited with status %d\n",
+		dprintf(D_FAILURE|D_ALWAYS, "starter pid %d exited with status %d\n",
 				pid, WEXITSTATUS(status));
 	}
 	rip = resmgr->get_by_pid(pid);
@@ -654,7 +654,7 @@ do_cleanup(int,int,char*)
 		check_free();		
 			// Otherwise, quickly kill all the active starters.
 		resmgr->walk( &(Resource::kill_claim) );
-		dprintf( D_ALWAYS, "Exiting because of fatal exception.\n" );
+		dprintf( D_FAILURE|D_ALWAYS, "startd exiting because of fatal exception.\n" );
 	}
 
 #ifdef WIN32

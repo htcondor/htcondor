@@ -963,7 +963,7 @@ Scheduler::updateCentralMgr( int command, ClassAd* ca, char *host,
 		!sock.put(command) ||
 		!ca->put(sock) ||
 		!sock.end_of_message() ) {
-		dprintf( D_ALWAYS, "failed to update central manager (%s)!\n",
+		dprintf( D_FAILURE|D_ALWAYS, "failed to update central manager (%s)!\n",
 				 host );
 	}
 }
@@ -2156,7 +2156,7 @@ claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated )
 
 	if (!(sock = matched_startd.startCommand(REQUEST_CLAIM, Stream::reli_sock,
 						STARTD_CONTACT_TIMEOUT ))) {
-		dprintf( D_ALWAYS, "Couldn't send REQUEST_CLAIM to startd at %s\n",
+		dprintf( D_FAILURE|D_ALWAYS, "Couldn't send REQUEST_CLAIM to startd at %s\n",
 				 mrec->peer );
 		return false;
 	}
@@ -2587,7 +2587,7 @@ Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 	SafeSock sock;
 	sock.timeout(NEGOTIATOR_CONTACT_TIMEOUT);
 	if (!sock.connect(Negotiator->addr())) {
-		dprintf(D_ALWAYS, "Couldn't connect to negotiator!\n");
+		dprintf(D_FAILURE|D_ALWAYS, "Couldn't connect to negotiator!\n");
 		return;
 	}
 	sock.put(REQUEST_NETWORK);
@@ -2606,7 +2606,7 @@ Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 							 ATTR_LAST_CKPT_SERVER, source)) == 0) {
 			struct hostent *hp = gethostbyname(source);
 			if (!hp) {
-				dprintf(D_ALWAYS, "DNS lookup for %s %s failed!\n",
+				dprintf(D_FAILURE|D_ALWAYS, "DNS lookup for %s %s failed!\n",
 						ATTR_LAST_CKPT_SERVER, source);
 				return;
 			}
@@ -2832,7 +2832,7 @@ void Scheduler::StartJobHandler() {
                                      niceness );
 
 	if (pid == FALSE) {
-		dprintf( D_ALWAYS, "CreateProcess(%s, %s) failed\n", Shadow, args );
+		dprintf( D_FAILURE|D_ALWAYS, "CreateProcess(%s, %s) failed\n", Shadow, args );
 		pid = -1;
 	} 
 	free(Shadow);
@@ -2857,10 +2857,10 @@ void Scheduler::StartJobHandler() {
 		case -1:	/* error */
 #ifndef WANT_DC_PM
 			if( errno == ENOMEM ) {
-				dprintf(D_ALWAYS, "fork() failed, due to lack of swap space\n");
+				dprintf(D_FAILURE|D_ALWAYS, "fork() failed, due to lack of swap space\n");
 				swap_space_exhausted();
 			} else {
-				dprintf(D_ALWAYS, "fork() failed, errno = %d\n" );
+				dprintf(D_FAILURE|D_ALWAYS, "fork() failed, errno = %d\n" );
 			}
 #endif
 			mark_job_stopped(job_id);
@@ -2892,7 +2892,7 @@ void Scheduler::StartJobHandler() {
 
 			Shadow = param("SHADOW");
 			(void)execve( Shadow, argv, environ );
-			dprintf( D_ALWAYS, "exec(%s) failed, errno = %d\n", Shadow, errno);
+			dprintf( D_FAILURE|D_ALWAYS, "exec(%s) failed, errno = %d\n", Shadow, errno);
 			if (errno == ENOMEM) {
 				exit( JOB_NO_MEM );
 			} else {
@@ -3016,7 +3016,7 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 										  NULL, fds );
 
 		if ( !pid ) {
-			dprintf ( D_ALWAYS, "Problem with Create_Process!\n" );
+			dprintf ( D_FAILURE|D_ALWAYS, "Problem with Create_Process!\n" );
 			close(pipes[0]);
 			return NULL;
 		}
@@ -3088,7 +3088,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	strcpy(a_out_name, gen_ckpt_name(Spool, job_id->cluster, ICKPT, 0));
 	errno = 0;
 	if( chmod(a_out_name, 0755) < 0 ) {
-		dprintf( D_ALWAYS, "ERROR: Can't chmod(%s, 0755), errno: %d\n",
+		dprintf( D_FAILURE|D_ALWAYS, "ERROR: Can't chmod(%s, 0755), errno: %d\n",
 				 a_out_name, errno );
 		dprintf( D_ALWAYS, "Putting job %d.%d on hold\n",
 				 job_id->cluster, job_id->proc );
@@ -3161,15 +3161,15 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	int inouterr[3];
 	bool cannot_open_files = false;
 	if ((inouterr[0] = open(input, O_RDONLY, 0)) < 0) {
-		dprintf ( D_ALWAYS, "Open of %s failed, errno %d\n", input, errno );
+		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", input, errno );
 		cannot_open_files = true;
 	}
 	if ((inouterr[1] = open(output, O_WRONLY | O_CREAT | O_TRUNC, 0)) < 0) {
-		dprintf ( D_ALWAYS, "Open of %s failed, errno %d\n", output, errno );
+		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", output, errno );
 		cannot_open_files = true;
 	}
 	if ((inouterr[2] = open(error, O_WRONLY | O_CREAT | O_TRUNC, 0)) < 0) {
-		dprintf ( D_ALWAYS, "Open of %s failed, errno %d\n", error, errno );
+		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", error, errno );
 		cannot_open_files = true;
 	}
 
@@ -3225,7 +3225,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	}
 
 	if ( pid <= 0 ) {
-		dprintf ( D_ALWAYS, "Create_Process problems!\n" );
+		dprintf ( D_FAILURE|D_ALWAYS, "Create_Process problems!\n" );
 		return NULL;
 	}
 
@@ -3784,7 +3784,7 @@ send_vacate(match_rec* match,int cmd)
 	 
 	sock.timeout(STARTD_CONTACT_TIMEOUT);
 	if (!sock.connect(match->peer,START_PORT)) {
-		dprintf(D_ALWAYS,"Can't connect to startd at %s\n",match->peer);
+		dprintf( D_FAILURE|D_ALWAYS,"Can't connect to startd at %s\n",match->peer);
 		return;
 	}
 	
@@ -4158,8 +4158,8 @@ Scheduler::child_exit(int pid, int status)
 					srec->job_id.cluster, srec->job_id.proc );
 		}
 		if( WIFEXITED(status) ) {			
-            dprintf( D_FULLDEBUG, "Shadow pid %d exited with status %d\n",
-					 pid, WEXITSTATUS(status) );
+            dprintf( D_FAILURE|D_FULLDEBUG, "Shadow pid %d for job %d.%d exited with status %d\n",
+					 pid, srec->job_id.cluster, srec->job_id.proc, WEXITSTATUS(status) );
 
 			switch( WEXITSTATUS(status) ) {
 			case JOB_NO_MEM:
@@ -4232,7 +4232,7 @@ Scheduler::child_exit(int pid, int status)
 				break;
 			}
 	 	} else if( WIFSIGNALED(status) ) {
-			dprintf( D_ALWAYS, "Shadow pid %d died with %s\n",
+			dprintf( D_FAILURE|D_ALWAYS, "Shadow pid %d died with %s\n",
 					 pid, daemonCore->GetExceptionString(status) );
 		}
 		delete_shadow_rec( pid );
@@ -5067,7 +5067,7 @@ Scheduler::sendReschedule( void )
 	dprintf( D_FULLDEBUG, "Sending RESCHEDULE command to negotiator(s)\n" );
 
 	if( !sock.connect(Negotiator->addr(), 0) ) {
-		dprintf( D_ALWAYS, "failed to connect to negotiator %s\n",
+		dprintf( D_FAILURE|D_ALWAYS, "failed to connect to negotiator %s\n",
 				 Negotiator->addr() );
 		return;
 	}
@@ -5092,7 +5092,7 @@ Scheduler::sendReschedule( void )
 			 negotiator = FlockNegotiators->next(), i++ ) {
 			if( !sock.connect(negotiator, NEGOTIATOR_PORT) ||
 				!sock.code(cmd) || !sock.eom() ) {
-				dprintf( D_ALWAYS, "failed to send RESCHEDULE command to %s\n",
+				dprintf( D_FAILURE|D_ALWAYS, "failed to send RESCHEDULE command to %s\n",
 						 negotiator );
 			}
 		}
@@ -5239,7 +5239,7 @@ Scheduler::Relinquish(match_rec* mrec)
 	sock->timeout(STARTD_CONTACT_TIMEOUT);
 	sock->encode();
 	if(!sock->connect(mrec->peer)) {
-		dprintf(D_ALWAYS, "Can't connect to startd %s\n", mrec->peer);
+		dprintf(D_FAILURE|D_ALWAYS, "Can't connect to startd %s\n", mrec->peer);
 	}
 	else if(!sock->put(RELINQUISH_SERVICE))
 	{
@@ -5273,7 +5273,7 @@ Scheduler::Relinquish(match_rec* mrec)
 		sock->timeout(NEGOTIATOR_CONTACT_TIMEOUT);
 		sock->encode();
 		if(!sock->connect(AccountantName)) {
-			dprintf(D_ALWAYS,"Can't connect to accountant %s\n",
+			dprintf(D_FAILURE|D_ALWAYS,"Can't connect to accountant %s\n",
 					AccountantName);
 		}
 		else if(!sock->put(RELINQUISH_SERVICE))
@@ -5446,7 +5446,7 @@ Scheduler::HadException( match_rec* mrec )
 	}
 	mrec->num_exceptions++;
 	if( mrec->num_exceptions >= MaxExceptions ) {
-		dprintf( D_ALWAYS, 
+		dprintf( D_FAILURE|D_ALWAYS, 
 				 "Match for cluster %d has had %d shadow exceptions, relinquishing.\n",
 				 mrec->cluster, mrec->num_exceptions );
 		Relinquish(mrec);

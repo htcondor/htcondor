@@ -53,7 +53,7 @@ _EXCEPT_(char *fmt, ...)
 	vsprintf( buf, fmt, pvar );
 
 	if( _condor_dprintf_works ) {
-		dprintf( D_ALWAYS, "ERROR \"%s\" at line %d in file %s\n",
+		dprintf( D_ALWAYS|D_FAILURE, "ERROR \"%s\" at line %d in file %s\n",
 				 buf, _EXCEPT_Line, _EXCEPT_File );
 	} else {
 		fprintf( stderr, "ERROR \"%s\" at line %d in file %s\n",

@@ -388,7 +388,7 @@ daemon::Start()
 
 	if ( pid == FALSE ) {
 		// Create_Process failed!
-		dprintf( D_ALWAYS,
+		dprintf( D_FAILURE|D_ALWAYS,
 				 "ERROR: Create_Process failed trying to start %s\n",
 				 process_name);
 		pid = 0;
@@ -406,7 +406,7 @@ daemon::Start()
 	}
 
 	if (command_port) {
-		dprintf( D_ALWAYS,
+		dprintf( D_FAILURE|D_ALWAYS,
 				 "Started DaemonCore process \"%s\", pid and pgroup = %d\n",
 				 process_name, pid );
 	} else {
@@ -555,7 +555,7 @@ daemon::Exited( int status )
 	if ( daemonCore->Was_Not_Responding(pid) ) {
 		sprintf( buf2, "was killed because it was no longer responding");
 	}
-	dprintf( D_ALWAYS, "%s%s\n", buf1, buf2 );
+	dprintf( D_FAILURE|D_ALWAYS, "%s%s\n", buf1, buf2 );
 
 		// For good measure, try to clean up any dead/hung children of
 		// the daemon that just died by sending SIGKILL to it's
