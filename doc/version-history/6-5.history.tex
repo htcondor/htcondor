@@ -53,6 +53,11 @@ unnecessarily restricted.
   Now, the parser for the user-specified ClassAd will ignore comments
   and whitespace.
 
+\item In Standard Universe, a transient failure to read the user's
+password file entry (e.g. with an overloaded NIS server) could
+result in the job running to completion and exiting the queue
+without updating the user log.
+
 \end{itemize}
 
 \noindent Known Bugs:
