@@ -173,6 +173,7 @@ class AttrList : public AttrListAbstract
 		int			fPrintExpr(FILE*, char*);	// print an expression
 		char*		sPrintExpr(char*, unsigned int, const char*); // print expression to buffer
         virtual int	fPrint(FILE*);				// print the AttrList to a file
+		int         sPrint(MyString &output);   // put the AttrList in a string. 
 		void		dPrint( int );				// dprintf to given dprintf level
 
 		// conversion function
