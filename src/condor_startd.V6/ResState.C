@@ -423,6 +423,21 @@ ResState::enter_action( State s, Activity a,
 		if( statechange ) {
 			rip->start_poll_timer();
 			rip->r_cur->start_claim_timer();	
+			
+				// Put attributes in our classad for this claim
+			{
+				char tmp[1024];
+
+				sprintf( tmp, "%s=\"%s\"", ATTR_REMOTE_USER,
+						 rip->r_cur->client()->name() );
+				(rip->r_classad)->Insert( tmp );
+				sprintf( tmp, "%s=\"%s\"", ATTR_CLIENT_MACHINE,
+						 rip->r_cur->client()->host() );
+				(rip->r_classad)->Insert( tmp );
+			}
+
+				// Generate a preempting match object
+			rip->r_pre = new Match;
 		}
 		if( a == suspended_act ) {
 			if( rip->r_starter->kill( DC_SIGSUSPEND ) < 0 ) {
@@ -443,33 +458,6 @@ ResState::enter_action( State s, Activity a,
 	case preempting_state:
 		rip->r_reqexp->unavail();
 		switch( a ) {
-		case idle_act:
-			delete rip->r_cur;
-			rip->r_cur = NULL;
-
-				// In english:  "If the owner wants the machine
-				// back, or there's no one waiting..."
-			if( (rip->r_reqexp->eval() == 0) ||
-				( ! (rip->r_pre && rip->r_pre->agentstream()) ) ) {
-
-					// STATE TRANSITION #21
-				if( rip->r_pre ) {
-					rip->r_pre->vacate();
-					delete rip->r_pre;
-					rip->r_pre = NULL;
-				}
-				change( owner_state );
-				return TRUE;
-			}
-			if( rip->r_pre && rip->r_pre->agentstream() ) {
-				rip->r_cur = rip->r_pre;
-				rip->r_pre = NULL;
-					// STATE TRANSITION #20
-				accept_request_claim( rip );
-				return TRUE;
-			} 
-			break;  // idle_act
-
 		case killing_act:
 			if( rip->r_starter->active() ) {
 				if( rip->r_starter->kill( DC_SIGHARDKILL ) < 0 ) {
@@ -477,19 +465,20 @@ ResState::enter_action( State s, Activity a,
 					return change( owner_state );
 				}
 			} else {
-				return change( idle_act );
+				rip->leave_preempting_state();
+				return TRUE;
 			}
 			break;
 
 		case vacating_act:
-			rip->r_cur->vacate();	// Send a vacate to the client
 			if( rip->r_starter->active() ) {
 				if( rip->r_starter->kill( DC_SIGSOFTKILL ) < 0 ) {
 					rip->r_starter->killpg( DC_SIGKILL );
 					return change( owner_state );
 				}
 			} else {
-				return change( idle_act );
+				rip->leave_preempting_state();
+				return TRUE;
 			}
 			break;
 
