@@ -60,20 +60,18 @@ Copy( ) const
 }
 
 
-/* Creates a Real literal, from the string realstr,
- * according to the ieee754 norms
- * realstr is meant to be a 16 character string in hexa charcaters, 
- * which corresponds to the 64-bit internal double value
- */
 Literal* Literal::
-MakeReal(string realstr) {
+MakeReal(string number_string) 
+{
 	Value  val;
 	double real;
+    char   *end;
 
-	if (hex_to_double(realstr, real)) {
-		val.SetRealValue(real);
-	} else {
+    real = strtod(number_string.c_str(), &end);
+    if (end == number_string.c_str() && real == 0.0) {
 		val.SetErrorValue();
+    } else {
+		val.SetRealValue(real);
 	}
 	return MakeLiteral(val);
 }

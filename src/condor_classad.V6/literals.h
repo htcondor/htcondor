@@ -73,9 +73,6 @@ class Literal : public ExprTree
 		*/		
 		static Literal* MakeRelTime(std::string str);
 
-		/* Creates a Real literal, from the string realstr,
-		 * according to the ieee754 norms
-		 */
 		static Literal* MakeReal(std::string realstr);
 
 		/// Make a deep copy
