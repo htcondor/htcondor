@@ -104,6 +104,7 @@ extern ClassAd *JobAd;
 extern float BytesSent, BytesRecvd;
 
 const int MaxRetryWait = 3600;
+static bool CkptWanted = true;	// WantCheckpoint from Job ClassAd
 
 /*
 **	getppid normally returns the parents id, right?  Well in
@@ -1010,6 +1011,8 @@ pseudo_startup_info_request( STARTUP_INFO *s )
 		s->ckpt_wanted = TRUE;
 	}
 
+	CkptWanted = s->ckpt_wanted;
+
 	if (JobAd->LookupInteger(ATTR_CORE_SIZE, s->coredump_limit) == 1) {
 		s->coredump_limit_exists = TRUE;
 	} else {
@@ -1186,7 +1189,9 @@ int
 pseudo_get_ckpt_mode( int sig )
 {
 	int mode = 0;
-	if (sig == SIGTSTP) {		// vacate checkpoint
+	if (!CkptWanted) {
+		mode = CKPT_MODE_ABORT;
+	} else if (sig == SIGTSTP) { // vacate checkpoint
 		if (CompressVacateCkpt) mode |= CKPT_MODE_USE_COMPRESSION;
 		if (SlowCkptSpeed) mode |= CKPT_MODE_SLOW;
 	} else if (sig == SIGUSR2) { // periodic checkpoint 
