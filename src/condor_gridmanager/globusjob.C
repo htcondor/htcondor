@@ -2193,7 +2193,7 @@ void GlobusJob::DeleteOutput()
 
 	mode_t old_umask = umask(0);
 
-	if ( streamOutput || stageOutput ) {
+	if ( streamOutput ) {
 		rc = stat( localOutput, &fs );
 		if ( rc < 0 ) {
 			dprintf( D_ALWAYS, "(%d.%d) Failed to stat %s\n",
@@ -2215,7 +2215,7 @@ void GlobusJob::DeleteOutput()
 		}
 	}
 
-	if ( streamError || stageOutput ) {
+	if ( streamError ) {
 		rc = stat( localError, &fs );
 		if ( rc < 0 ) {
 			dprintf( D_ALWAYS, "(%d.%d) Failed to stat %s\n",
