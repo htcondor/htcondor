@@ -1203,8 +1203,6 @@ send_job( V2_PROC *proc, char *host, char *cap)
 }
 
 
-extern char	*SigNames[];
-
 /*
 ** Opens job queue (Q), and reads in process structure (Proc) as side
 ** affects.
