@@ -126,7 +126,7 @@ getCmdFromReliSock( ReliSock* s, ClassAd* ad, bool force_auth )
                 // we failed to authenticate, we should bail out now
                 // since we don't know what user is trying to perform
                 // this action.
-			sendErrorReply( s, "CA_CMD", CA_NOT_AUTHENTICATED,
+			sendErrorReply( s, "CA_AUTH_CMD", CA_NOT_AUTHENTICATED,
 							"Server: client failed to authenticate" );
 			dprintf( D_ALWAYS, "getCmdFromSock: authenticate failed\n" );
 			dprintf( D_ALWAYS, "%s\n", errstack.getFullText() );
@@ -156,7 +156,8 @@ getCmdFromReliSock( ReliSock* s, ClassAd* ad, bool force_auth )
 	if( ! ad->LookupString(ATTR_COMMAND, &cmd_str) ) {
 		dprintf( D_ALWAYS, "Failed to read %s from ClassAd, aborting\n", 
 				 ATTR_COMMAND );
-		sendErrorReply( s, "CA_CMD", CA_INVALID_REQUEST,
+		sendErrorReply( s, force_auth ? "CA_AUTH_CMD" : "CA_CMD",
+						CA_INVALID_REQUEST,
 						"Command not specified in request ClassAd" );
 		return FALSE;
 	}		

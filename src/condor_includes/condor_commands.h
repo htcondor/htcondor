@@ -35,7 +35,9 @@
 **	Scheduler version number
 */
 #define SCHED_VERS			400
-#define CA_CMD_BASE			1000
+#define CA_AUTH_CMD_BASE	1000
+// beware, QMGMT_CMD is 1111, so we don't want to use 1100...
+#define CA_CMD_BASE			1200
 #define ALT_STARTER_BASE 	70
 
 /*
@@ -142,21 +144,26 @@
   ATTR_COMMAND, do the right thing, and send the results back as a
   ClassAd".  The rest of the commands listed here are possible values
   for ATTR_COMMAND.
+  CA_AUTH_CMD forces authentication if that's needed, while CA_CMD
+  just uses whatever authentication methods are configured.
 */
 
-#define CA_CMD                  (CA_CMD_BASE+0) 
+#define CA_AUTH_CMD                  (CA_AUTH_CMD_BASE+0) 
 
 // generic claiming protocol that the startd uses for COD
-#define CA_REQUEST_CLAIM        (CA_CMD_BASE+1)
-#define CA_RELEASE_CLAIM        (CA_CMD_BASE+2)
-#define CA_ACTIVATE_CLAIM       (CA_CMD_BASE+3)
-#define CA_DEACTIVATE_CLAIM     (CA_CMD_BASE+4)
-#define CA_SUSPEND_CLAIM        (CA_CMD_BASE+5)
-#define CA_RESUME_CLAIM         (CA_CMD_BASE+6)
+#define CA_REQUEST_CLAIM        (CA_AUTH_CMD_BASE+1)
+#define CA_RELEASE_CLAIM        (CA_AUTH_CMD_BASE+2)
+#define CA_ACTIVATE_CLAIM       (CA_AUTH_CMD_BASE+3)
+#define CA_DEACTIVATE_CLAIM     (CA_AUTH_CMD_BASE+4)
+#define CA_SUSPEND_CLAIM        (CA_AUTH_CMD_BASE+5)
+#define CA_RESUME_CLAIM         (CA_AUTH_CMD_BASE+6)
 // other commands that use the ClassAd-only protocol 
-#define CA_LOCATE_STARTER       (CA_CMD_BASE+7)
-#define CA_RECONNECT_JOB        (CA_CMD_BASE+8)
+// CA_LOCATE_STARTER used to be (CA_AUTH_CMD_BASE+7), but no more 
+// CA_RECONNECT_JOB used to be  (CA_AUTH_CMD_BASE+8), but no more 
 
+#define CA_CMD                  (CA_CMD_BASE+0) 
+#define CA_LOCATE_STARTER       (CA_CMD_BASE+1)
+#define CA_RECONNECT_JOB        (CA_CMD_BASE+2)
 
 /************
 *** Command ids used by the collector 

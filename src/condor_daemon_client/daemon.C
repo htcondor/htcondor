@@ -579,9 +579,21 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 		return false;
 	}
 
+	int cmd;
+	if( force_auth ) {
+		cmd = CA_AUTH_CMD;
+	} else {
+		cmd = CA_CMD;
+	}
 	CondorError errstack;
-	if( ! startCommand(CA_CMD, cmd_sock, 20, &errstack) ) {
-		MyString err_msg = "Failed to send command (CA_CMD): ";
+	if( ! startCommand(cmd, cmd_sock, 20, &errstack) ) {
+		MyString err_msg = "Failed to send command (";
+		if( cmd == CA_CMD ) {
+			err_msg += "CA_CMD";
+		} else {
+			err_msg += "CA_AUTH_CMD";
+		}
+		err_msg += "): ";
 		err_msg += errstack.getFullText();
 		newError( CA_COMMUNICATION_ERROR, err_msg.Value() );
 		return false;

@@ -112,7 +112,7 @@ DCStarter::reconnect( ClassAd* req, ClassAd* reply, ReliSock* rsock,
 	line += '"';
 	req->Insert( line.Value() );
 
-	return sendCACmd( req, reply, rsock, true, timeout );
+	return sendCACmd( req, reply, rsock, false, timeout );
 	
 
 }

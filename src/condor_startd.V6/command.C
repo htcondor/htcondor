@@ -1303,7 +1303,7 @@ caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 
 
 int
-command_classad_handler( Service*, int, Stream* s )
+command_classad_handler( Service*, int dc_cmd, Stream* s )
 {
 	int rval;
 	ClassAd ad;
@@ -1311,7 +1311,12 @@ command_classad_handler( Service*, int, Stream* s )
 	int cmd = 0;
 	char* cmd_str = NULL;
 
-	cmd = getCmdFromReliSock( rsock, &ad, true );
+
+	if( dc_cmd == CA_AUTH_CMD ) {
+		cmd = getCmdFromReliSock( rsock, &ad, true );
+	} else {
+		cmd = getCmdFromReliSock( rsock, &ad, false );
+	}
 		// since we really care about the command string for a lot of
 		// things, let's just grab it out of the classad once right
 		// here.

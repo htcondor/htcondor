@@ -846,7 +846,7 @@ CStarter::classadCommand( int, Stream* s )
 	ReliSock* rsock = (ReliSock*)s;
 	int cmd = 0;
 
-	cmd = getCmdFromReliSock( rsock, &ad, true );
+	cmd = getCmdFromReliSock( rsock, &ad, false );
 
 	switch( cmd ) {
 	case FALSE:

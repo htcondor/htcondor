@@ -449,10 +449,10 @@ protected:
 	char* _cmd_str;
 
 		/** 
-
  		   Helper method for the client-side of the ClassAd-only
 		   protocol.  This method will try to: locate our daemon,
-		   connect(), send the CA_CMD int, send a ClassAd and an EOM,
+		   connect(), send the CA_CMD int (or CA_AUTH_CMD is
+		   force_auth is true), send a ClassAd and an EOM,  
 		   read back a ClassAd and EOM, lookup the ATTR_RESULT in the
 		   reply, and if it's FALSE, lookup ATTR_ERROR_STRING.  This
 		   deals with everything for you, so all you have to do if you

@@ -432,7 +432,7 @@ DCStartd::locateStarter( const char* global_job_id, ClassAd* reply,
 	line += '"';
 	req.Insert( line.Value() );
 
-	return sendCACmd( &req, reply, true, timeout );
+	return sendCACmd( &req, reply, false, timeout );
 }
 
 

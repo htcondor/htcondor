@@ -309,6 +309,9 @@ main_init( int, char* argv[] )
 								  "command_match_info", 0, NEGOTIATOR );
 
 		// the ClassAd-only command
+	daemonCore->Register_Command( CA_AUTH_CMD, "CA_AUTH_CMD",
+								  (CommandHandler)command_classad_handler,
+								  "command_classad_handler", 0, WRITE );
 	daemonCore->Register_Command( CA_CMD, "CA_CMD",
 								  (CommandHandler)command_classad_handler,
 								  "command_classad_handler", 0, WRITE );
