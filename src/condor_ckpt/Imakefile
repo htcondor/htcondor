@@ -110,7 +110,7 @@ OBJ =	image.o machdep.$(OS).o tmp_stack.o syscall_mode.o \
 	fake_remote_syscall.o fake_hooks.o condor_error.o \
 	$(SAVE_SIGSTATE_OBJ) fake_util_lib.o eprintf.o $(EXTRACT) \
 	$(ASSEMBLER_OBJ) $(CPP_UTIL_OBJ) $(UTIL_OBJ) $(FILE_TABLE_OBJ) \
-	$(COMPRESS_OBJ) shared_utils.o malloc-user.o
+	$(COMPRESS_OBJ) shared_utils.o malloc-user.o gtodc.o
 
 #else /* !DOES_CHECKPOINTING */
 
