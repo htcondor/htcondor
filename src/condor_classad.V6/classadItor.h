@@ -29,6 +29,9 @@ BEGIN_NAMESPACE( classad )
 /** An object for iterating over the attributes of a ClassAd.  Several
     iterators may be active over the same ClassAd at any time, and the same
     iterator object may be used to iterate over other ClassAds as well.
+	Note that attributes will not be provided in any specific order.  Also,
+	ClassAdIterator is a ``forward iterator'' only; i.e., there is no 
+	PreviousAttribute() method.
 */
 class ClassAdIterator
 {
@@ -75,14 +78,6 @@ class ClassAdIterator
             @return false if the operation failed, true otherwise.
         */
         bool CurrentAttribute( string& attr, const ExprTree*& expr ) const;
-
-        /** Gets the previous attribute in the ClassAd.
-            @param attr The name of the previous attribute in the ClassAd.
-            @param expr The expression of the previous attribute in the ClassAd.
-            @return false if the iterator has crossed the first attribute in
-                the ClassAd, or true otherwise.
-        */
-        bool PreviousAttribute( string& attr, const ExprTree *&expr );
 
         /** Predicate to check the position of the iterator.
             @return true iff the iterator is before the first element.
