@@ -382,6 +382,8 @@ int main(void)
 {
 	ServerStat SS;
 	
+	config("server_stat", 0);
+
 	SS.LoadInfo();
 	SS.ConvertInfo();
 	SS.SortInfo();
