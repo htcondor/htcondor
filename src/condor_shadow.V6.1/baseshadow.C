@@ -982,9 +982,14 @@ BaseShadow::updateJobInQueue( update_t type )
 											   bytesSent()) );
 	jobAd->Insert( buf );
 
-	jobAd->ResetExpr();
-	while( (tree = jobAd->NextDirtyExpr()) ) {
-		name = ((Variable*)tree->LArg())->Name();
+//	jobAd->ResetExpr();
+//	while( (tree = jobAd->NextDirtyExpr()) ) {
+	ClassAd::dirtyIterator j;
+	for( j = jobAd->dirtyBegin( ); j != jobAd->dirtyEnd( ); j++ ) {
+//		name = ((Variable*)tree->LArg())->Name();
+		name = new char[j->length( )+1];
+		tree = jobAd->Lookup( name );
+		strcpy( name, j->c_str( ) );
 
 			// If we have the lists of attributes we care about and
 			// this attribute is in one of the lists, actually do the
@@ -998,15 +1003,17 @@ BaseShadow::updateJobInQueue( update_t type )
 
 			if( ! is_connected ) {
 				if( ! ConnectQ(scheddAddr, SHADOW_QMGMT_TIMEOUT) ) {
+					delete name;
 					return false;
 				}
 				is_connected = true;
 			}
-			if( ! updateExprTree(tree) ) {
+			if( ! updateExprTree( name, tree) ) {
 				had_error = true;
 			}
 		}
 	}
+	delete name;
 	if( is_connected ) {
 		DisconnectQ(NULL);
 	} 
@@ -1019,16 +1026,16 @@ BaseShadow::updateJobInQueue( update_t type )
 
 
 bool
-BaseShadow::updateExprTree( ExprTree* tree )
+BaseShadow::updateExprTree( char* name, ExprTree* tree )
 {
 	if( ! tree ) {
 		return false;
 	}
-	ExprTree *rhs = tree->RArg(), *lhs = tree->LArg();
-	if( ! rhs || ! lhs ) {
-		return false;
-	}
-	char* name = ((Variable*)lhs)->Name();
+//	ExprTree *rhs = tree->RArg(), *lhs = tree->LArg();
+//	if( ! rhs || ! lhs ) {
+//		return false;
+//	}
+//	char* name = ((Variable*)lhs)->Name();
 	if( ! name ) {
 		return false;
 	}		
@@ -1040,19 +1047,23 @@ BaseShadow::updateExprTree( ExprTree* tree )
 		// and call SetAttribute(), so it was both a waste of effort
 		// here, and made this code needlessly more complex.  
 		// Derek Wright, 3/25/02
-	char* tmp = NULL;
-	rhs->PrintToNewStr( &tmp );
-	if( SetAttribute(cluster, proc, name, tmp) < 0 ) {
+//	char* tmp = NULL;
+	ClassAdUnParser unp;
+	string tmpString;
+	unp.Unparse( tmpString, tree );
+//	rhs->PrintToNewStr( &tmp );
+	
+	if( SetAttribute(cluster, proc, name, tmpString.c_str( ) ) < 0 ) {
 		dprintf( D_ALWAYS, 
 				 "updateExprTree: Failed SetAttribute(%s, %s)\n",
-				 name, tmp );
-		free( tmp );
+				 name, tmpString.c_str( ) );
+//		free( tmp );
 		return false;
 	}
 	dprintf( D_FULLDEBUG, 
 			 "Updating Job Queue: SetAttribute(%s, %s)\n",
-			 name, tmp );
-	free( tmp );
+			 name, tmpString.c_str( ) );
+//	free( tmp );
 	return true;
 }
 
