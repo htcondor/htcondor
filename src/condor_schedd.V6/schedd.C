@@ -2663,6 +2663,11 @@ Scheduler::Init()
 			putenv( strdup( tmpstring ) );
 		}
 
+      if ( !getenv( "SSLEAY_CONF" ) ) {
+         sprintf(tmpstring,"SSLEAY_CONF=%s/condor_ssl.cnf",CondorCertDir);
+         putenv( strdup( tmpstring ) );
+      }
+
 		free( CondorCertDir );
 	}
 #endif
