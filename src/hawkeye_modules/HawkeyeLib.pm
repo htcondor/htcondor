@@ -38,6 +38,7 @@ sub ReadConfig
 	$String = $HardConfigs{$Label};
     } else {
 	$String = `hawkeye_config_val -startd hawkeye_$Module$Ext`;
+	$String = "not defined" if ( -1 == $? );
     }
 
     # Parse it
