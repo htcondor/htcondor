@@ -335,7 +335,7 @@ Stream::code(STARTUP_INFO &start)
 	STREAM_ASSERT(code(start.uid));
 	STREAM_ASSERT(code(start.gid));
 	STREAM_ASSERT(code(start.virt_pid));
-	signal_t temp = (signal_t)start.soft_kill_sig;
+	condor_signal_t temp = (condor_signal_t)start.soft_kill_sig;
 	STREAM_ASSERT(code(temp));
 	start.soft_kill_sig = (int)temp;
 #endif
@@ -394,7 +394,7 @@ extern "C" int sig_num_encode( int sig_num );
 extern "C" int sig_num_decode( int sig_num );
 
 int 
-Stream::code(signal_t &sig_num)
+Stream::code(condor_signal_t &sig_num)
 {
 	int real_sig_num, rval;
 	
@@ -405,7 +405,7 @@ Stream::code(signal_t &sig_num)
 	rval = code(real_sig_num);
 
 	if (_coding == stream_decode) {
-		sig_num = (signal_t)sig_num_decode(real_sig_num);
+		sig_num = (condor_signal_t)sig_num_decode(real_sig_num);
 	}
 
 	return rval;

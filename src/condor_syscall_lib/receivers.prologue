@@ -140,10 +140,10 @@ do_REMOTE_syscall(ReliSock *sock, int process)
                 char *a_out;
                 char *targ;
                 char *orig;
-                signal_t *kill_sig;
+                condor_signal_t *kill_sig;
                 int terrno;
 
-                kill_sig = (signal_t *)malloc( (unsigned)INT_SIZE );
+                kill_sig = (condor_signal_t *)malloc( (unsigned)INT_SIZE );
                 orig = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
                 targ = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
                 a_out = (char *)malloc( (unsigned)_POSIX_PATH_MAX );

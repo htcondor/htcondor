@@ -10,7 +10,7 @@
 		char *a_out;
 		char *targ;
 		char *orig;
-		signal_t *kill_sig;
+		condor_signal_t *kill_sig;
 
 		CurrentSysCall = CONDOR_work_request;
 
@@ -18,7 +18,7 @@
 		a_out = va_arg( ap, char *);
 		targ = va_arg( ap, char *);
 		orig = va_arg( ap, char *);
-		kill_sig = (signal_t *) va_arg( ap, int *);
+		kill_sig = (condor_signal_t *) va_arg( ap, int *);
 
 		syscall_sock->encode();
 		assert( syscall_sock->code(CurrentSysCall) );

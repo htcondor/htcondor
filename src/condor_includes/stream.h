@@ -60,7 +60,7 @@
 //@{
 
 ///
-enum signal_t { __signal_t_dummy_value = INT_MAX };
+enum condor_signal_t { __signal_t_dummy_value = INT_MAX };
 ///
 enum open_flags_t { __open_flags_t_dummy_value = INT_MAX };
 ///
@@ -275,7 +275,7 @@ public:
 	int code(struct stat &);
 #if !defined(WIN32)
     ///
-	int code(signal_t &);
+	int code(condor_signal_t &);
     ///
 	int code(fcntl_cmd_t &);
     ///
@@ -342,7 +342,7 @@ public:
 	int code(open_flags_t *x)		{ return code(*x); }
 #if !defined(WIN32)
     ///
-	int code(signal_t *x)			{ return code(*x); }
+	int code(condor_signal_t *x)			{ return code(*x); }
     ///
 	int code(fcntl_cmd_t *x) 		{ return code(*x); }
     ///
