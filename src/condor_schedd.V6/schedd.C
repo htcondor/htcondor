@@ -212,6 +212,8 @@ Scheduler::timeout()
 	clean_shadow_recs();
 
 	if( (numShadows-SchedUniverseJobsRunning) > MaxJobsRunning ) {
+		dprintf(D_ALWAYS,"Preempting %d jobs due to MAX_JOBS_RUNNING change\n",
+			numShadows-SchedUniverseJobsRunning);
 		preempt( numShadows - MaxJobsRunning );
 	}
 
@@ -665,6 +667,9 @@ Scheduler::negotiate(int, Stream* s)
 	int		max_hosts;
 	int		host_cnt;
 	int		perm_rval;
+	int		curr_num_active_shadows;
+	int		shadow_num_increment;
+	int		job_universe;
 
 	dprintf( D_FULLDEBUG, "\n" );
 	dprintf( D_FULLDEBUG, "Entered negotiate\n" );
@@ -679,6 +684,11 @@ Scheduler::negotiate(int, Stream* s)
  	} else {
  		SwapSpace = INT_MAX;
  	}
+
+	// figure out the number of active shadows. we do this by
+	// adding the number of existing shadows + the number of shadows
+	// queued up to run in the future.
+	curr_num_active_shadows = numShadows + RunnableJobQueue.Length();
 
 	N_PrioRecs = 0;
 
@@ -702,6 +712,8 @@ Scheduler::negotiate(int, Stream* s)
 		dprintf( D_FULLDEBUG, "*** Shadow Size Estimate = %d\n",ShadowSizeEstimate);
 		dprintf( D_FULLDEBUG, "*** Start Limit For Swap = %d\n",
 				 									start_limit_for_swap);
+		dprintf( D_FULLDEBUG, "*** Current num of active shadows = %d\n",
+													curr_num_active_shadows);
 	}
 
 	//-----------------------------------------------
@@ -785,8 +797,12 @@ Scheduler::negotiate(int, Stream* s)
 				case SEND_JOB_INFO: {
 					/* Really, we're trying to make sure we don't have too
 					   many shadows running, so compare here against
-					   numShadows rather than JobsRunning as in the past. */
-					if( numShadows >= MaxJobsRunning ) {
+					   curr_num_active_shadows rather than JobsRunning 
+					   as in the past.  Furthermore, we do not want to use
+					   just numShadows, because this does not take into account
+					   the shadows which have been enqueued (slow shadow start) 
+					 */
+					if( curr_num_active_shadows >= MaxJobsRunning ) {
 						if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
 							dprintf( D_ALWAYS, 
 									"Can't send NO_MORE_JOBS to mgr\n" );
@@ -833,6 +849,30 @@ Scheduler::negotiate(int, Stream* s)
 								 id.cluster, id.proc );
 						return (!(KEEP_STREAM));
 					}
+
+					// Figure out if this request would result in another 
+					// shadow process if matched.  If non-PVM, the answer
+					// is always yes.  If PVM, perhaps yes or no.
+					shadow_num_increment = 1;
+					job_universe = 0;
+					ad->LookupInteger(ATTR_JOB_UNIVERSE, job_universe);
+					if ( job_universe == PVM ) {
+						PROC_ID temp_id;
+
+						// For PVM jobs, the shadow record is keyed based
+						// upon cluster number only - so set proc to 0.
+						temp_id.cluster = id.cluster;
+						temp_id.proc = 0;
+
+						if ( find_shadow_rec(&temp_id) != NULL ) {
+							// A shadow already exists for this PVM job, so
+							// if we get a match we will not get a new shadow.
+							shadow_num_increment = 0;
+						}
+
+					}					
+
+					// Send the ad to the negotiator
 					if( !ad->put(*s) ) {
 						dprintf( D_ALWAYS,
 								"Can't send job ad to mgr\n" );
@@ -903,6 +943,7 @@ Scheduler::negotiate(int, Stream* s)
 					capability = NULL;
 					JobsStarted += perm_rval;
 					host_cnt++;
+					curr_num_active_shadows += (perm_rval * shadow_num_increment);
 					break;
 				case END_NEGOTIATE:
 					dprintf( D_ALWAYS, "Lost priority - %d jobs matched\n",
