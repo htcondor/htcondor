@@ -419,7 +419,7 @@ MyString::replaceString(
 
 int operator==(const MyString& S1, const MyString& S2) 
 {
-    if (!S1.Data && !S2.Data) {
+    if ((!S1.Data || !S1.Length()) && (!S2.Data || !S2.Length())) {
 		return 1;
 	}
     if (!S1.Data || !S2.Data) {
@@ -433,7 +433,7 @@ int operator==(const MyString& S1, const MyString& S2)
 
 int operator==(const MyString& S1, const char *S2) 
 {
-    if (!S1.Data && !S2) {
+    if ((!S1.Data || !S1.Length()) && (!S2 || !strlen(S2))) {
 		return 1;
 	}
     if (!S1.Data || !S2) {
