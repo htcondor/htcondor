@@ -1227,6 +1227,7 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 	int				   file_fd;
 	int				   peer_info_fd;
 	char			   peer_info_filename[100];
+	bool			   incomplete_file = false;
 	
 #if 1
 	file_fd = open(pathname, O_WRONLY|O_CREAT|O_TRUNC,0664);
@@ -1262,6 +1263,7 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 	setsockopt(xfer_sd, SOL_SOCKET, SO_RCVBUF, (char*) &buf_size, 
 			   sizeof(buf_size));
 	bytes_recvd = stream_file_xfer(xfer_sd, file_fd, file_size);
+	if (bytes_recvd < file_size) incomplete_file = true;
 	bytes_recvd = htonl(bytes_recvd);
 	net_write(xfer_sd, (char*) &bytes_recvd, sizeof(bytes_recvd));
 	close(xfer_sd);
@@ -1277,6 +1279,8 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 			  sizeof(struct in_addr));
 		close(peer_info_fd);
 	}
+
+	if (incomplete_file) exit(CHILDTERM_ERROR_INCOMPLETE_FILE);
 }
 
 
