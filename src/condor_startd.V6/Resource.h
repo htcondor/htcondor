@@ -97,6 +97,9 @@ public:
 	void	timeout_classad();	
 	int		force_benchmark();
 
+	int		give_classad( Stream* stream );	// Send this VM's classad
+											// to the given Stream
+
 	int		update();				// Update the central manager.
 	int		eval_and_update();		// Evaluate state and update CM. 
 	void	final_update();			// Send a final update to the CM
