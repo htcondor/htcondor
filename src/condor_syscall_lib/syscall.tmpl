@@ -217,10 +217,16 @@ int rename( const char *from, const char *to ) {
 		they are generally used by Condor daemons, not user programs.  Thus,
 		they should be built in the special "clipped" version.
 		*/
-    int get_universe( int *univ_id ) : pseudo {
-        out xdr_int( univ_id );
-        alloc( univ_id, INT_SIZE );
-    }
+	int get_universe( int *univ_id ) : pseudo {
+	    out xdr_int( univ_id );
+	    alloc( univ_id, INT_SIZE );
+	}
+
+	int get_username( char *uname ) : pseudo {
+	    GET_PATH( uname );
+	    ALLOC_PATH( uname );
+	}
+
 	int extern_name( const char *path, char *buf, int bufsize ) : pseudo {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
