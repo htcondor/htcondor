@@ -80,7 +80,7 @@
 #define Libraries \
 		util_lib c++_util condor_procapi/libprocapi.a \
 		condor_sysapi/libsysapi.a io classad \
-		daemon_core.V6 \
+		daemon_core.V6 daemon_client \
 		condor_ckpt_server/ckpt_server_api.a \
 		condor_schedd.V6/libqmgmt.a condor_accountant.V6/libacct.a \
 		ckpt syscall_lib NetmanLibs chirp
@@ -250,6 +250,7 @@ object_target(netman)
 object_target(io)
 object_target(classad)
 object_target(daemon_core.V6)
+object_target(daemon_client)
 #if WANT_PVM && HAS_PVM
    object_target(starter.jim)
    object_target(shadow.jim)
