@@ -14,6 +14,9 @@
 
 #define PlatformLdFlags -lmld
 
+#define IS_EGCS_BUILD YES
+#define EgcsPath /s/egcs-1.1.2/alpha_dux40d/lib/gcc-lib/alpha-dec-osf4.0d/egcs-2.91.66
+#define EgcsLibc concat(EgcsPath,/libgcc.a)
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC
 #define Crt0 /usr/lib/cmplrs/cc/crt0.o
