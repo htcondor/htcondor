@@ -5,6 +5,10 @@
 #include <aclapi.h>
 #endif
 
+#define MAX_DOMAIN_LENGTH 254	// max string length 
+#define MAX_ACCOUNT_LENGTH 256	// max string length
+#define MAX_GROUP_LENGTH 256	// max string length
+
 const int perm_max_sid_length = 100;
 
 class perm {
@@ -46,10 +50,9 @@ private:
 	char * Domain_name;
 	
 	bool domainAndNameMatch( const char *account1, const char *account2, const char *domain1, const char *domain2 );
-	int getAccountFromSid( LPTSTR Sid, char* &account, char* &domain );
-	
+
 		// takes string of the form <DOMAIN_NAME>\<ACCOUNT_NAME> and chops it into two strings
-	void getDomainAndName( char* &namestr, char* &domain, char* &name ) {
+	void getDomainAndName( char* namestr, char* &domain, char* &name ) {
 		char* nameptr = strrchr ( namestr, '\\' ); 
 		if ( nameptr != NULL ) {
 			domain = namestr;
