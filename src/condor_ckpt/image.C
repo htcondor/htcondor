@@ -73,6 +73,10 @@ extern "C" void condor_restore_sigstates();
 #elif defined(Solaris) && defined(sun4m)
     #define htonl(x)        (x)
     #define ntohl(x)        (x)
+#elif defined(IRIX62)
+    #include <sys/endian.h>
+#elif defined(LINUX)
+    #include <asm/byteorder.h>
 #else
 	extern "C" unsigned long htonl( unsigned long );
 	extern "C" unsigned long ntohl( unsigned long );
