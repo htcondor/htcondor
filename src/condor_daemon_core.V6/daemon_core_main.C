@@ -788,6 +788,10 @@ int main( int argc, char** argv )
 		// Set up logging
 	dprintf_config(mySubSystem,2);
 
+		// run as condor 99.9% of the time, so studies tell us.
+	set_condor_priv();
+
+		// Print out opening banner
 	dprintf(D_ALWAYS,"******************************************************\n");
 	dprintf(D_ALWAYS,"** %s (CONDOR_%s) STARTING UP\n",myName,mySubSystem);
 	dprintf(D_ALWAYS,"** %s\n", CondorVersion());
@@ -799,9 +803,6 @@ int main( int argc, char** argv )
 	argc -= dcargs;
 	if ( argc < 1 )
 		argc = 1;
-
-	// run as condor 99.9% of the time, so studies tell us.
-	set_condor_priv();
 
 	// chdir to the LOG directory so that if we dump a core
 	// it will go there.
@@ -862,6 +863,15 @@ int main( int argc, char** argv )
 		// print out what our pid is.
 
 	dprintf(D_ALWAYS,"** PID = %lu\n",daemonCore->getpid());
+
+		// Want to do this dprintf() here, since we can't do it w/n 
+		// the priv code itself or we get major problems. 
+		// -Derek Wright 12/21/98 
+	if( getuid() ) {
+		dprintf(D_PRIV, "** Running as non-root: No privilege switching\n");
+	} else {
+		dprintf(D_PRIV, "** Running as root: Privilege switching in effect\n");
+	}
 	dprintf(D_ALWAYS,"******************************************************\n");
 
 #ifdef WIN32

@@ -54,7 +54,7 @@ use Archive::Tar;
 ######################################################################
 
 # These are the modules you actually want to build.
-@modules = ( "condor", "smp_startd", "view_server" );
+@modules = ( "condor", "smp_startd", "view_server", "ckpt_server", "pvm" );
 
 # List any special files, other than README, DOC, INSTALL, and
 # LICENSE.TXT (which are included in all releases) that you want in
@@ -84,6 +84,7 @@ use Archive::Tar;
   "view_client"   => "CondorView client contrib module",
   "dagman"        => "DagMan contrib module",
   "pvm"           => "PVM contrib module",
+  "ckpt_server"   => "Checkpoint Server contrib module",
 );	   
 
 ######################################################################
@@ -166,7 +167,7 @@ foreach $module ( @modules ) {
 	$tarfile="$module.tar";
     }
 
-# Setup skeleton directory
+    # Setup skeleton directory
     print "Setting up skeleton directory for \"$module\"... ";  $| = 1;
     mkdir( "$skel/$release", 0777 );
 
@@ -311,6 +312,8 @@ sub customize {
 	s/#date#/$date/;
 	print TARGET $_;
     }
+    close( SRC );
+    close( TARGET );
 }
     
 

@@ -1655,7 +1655,7 @@ usage()
 {
 	fprintf( stderr, "Usage: %s [options] cmdfile\n", MyName );
 	fprintf( stderr, "	Valid options:\n" );
-	fprintf( stderr, "	-v\t\t\tverbose output\n" );
+	fprintf( stderr, "	-v\t\tverbose output\n" );
 	fprintf( stderr, "	-n schedd_name\tsubmit to the specified schedd\n" );
 	fprintf( stderr, 
 			 "	-r schedd_name\tsubmit to the specified remote schedd\n" );

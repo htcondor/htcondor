@@ -234,7 +234,12 @@ init_condor_ids()
 				exit(1);
 			}
 		}
-		dprintf(D_PRIV, "running as root; privilege switching in effect\n");
+			/* We'd like to dprintf() here, but we can't.  Since this 
+			   function is called from the initial time we try to
+			   enter Condor priv, if we dprintf() here, we'll still be
+			   in root priv when we service this dprintf(), and we'll
+			   have major problems.  -Derek Wright 12/21/98 */
+			/* dprintf(D_PRIV, "running as root; privilege switching in effect\n"); */
 	} else {
 		/* Non-root.  Set the CondorUid/Gid to our current uid/gid */
 		CondorUid = MyUid;
@@ -248,7 +253,8 @@ init_condor_ids()
 		}
 
 		/* no need to try to switch ids when running as non-root */
-		dprintf(D_PRIV, "running as non-root; no privilege switching\n");
+		/* Can't dprintf() here, see above comment. -Derek 12/21/98 */
+		/* dprintf(D_PRIV, "running as non-root; no privilege switching\n"); */
 		SwitchIds = FALSE;
 	}
 	
@@ -347,7 +353,6 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 		return PRIV_USER_FINAL;
 	}
 	CurrentPrivState = s;
-	if (dologging) log_priv(PrevPrivState, CurrentPrivState, file, line);
 	if (SwitchIds) {
 		switch (s) {
 		case PRIV_ROOT:
@@ -371,9 +376,10 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 		case PRIV_UNKNOWN:		/* silently ignore */
 			break;
 		default:
-			dprintf(D_ALWAYS, "unknown priv state %d\n", (int)s);
+			dprintf( D_ALWAYS, "set_priv: Unknown priv state %d\n", (int)s);
 		}
 	}
+	if (dologging) log_priv(PrevPrivState, CurrentPrivState, file, line);
 	return PrevPrivState;
 }	
 

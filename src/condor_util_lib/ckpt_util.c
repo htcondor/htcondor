@@ -76,16 +76,16 @@ stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes )
 		}
 
 			/* Send it */
-		for (bytes_written = 0;
+		for( bytes_written = 0;
 			 bytes_written < bytes_read;
 			 bytes_written += rval) {
-			rval = write( dst_fd, buf+bytes_written, bytes_read-bytes_written);
+			rval = write( dst_fd, buf+bytes_written, bytes_read-bytes_written );
 			if( rval < 0 ) {
 				dprintf( D_ALWAYS, "stream_file_xfer: %d bytes written, "
 						 "%d bytes to go\n", bytes_moved, bytes_to_go );
 				dprintf( D_ALWAYS, "stream_file_xfer: write returns %d "
 						 "(errno=%d) when attempting to write %d bytes\n",
-						 rval, errno, bytes_read-bytes_written );
+						 rval, errno, bytes_read );
 				return -1;
 			}
 		}

@@ -71,14 +71,27 @@ MachAttributes::compute( amask_t how_much )
 	if( IS_STATIC(how_much) && IS_SHARED(how_much) ) {
 
 			// Physical memory
-		m_phys_mem = calc_phys_memory();
-		if( m_phys_mem <= 0 ) {
-				// calc_phys_memory() failed to give us something
-				// useful, try paraming. 
-			char* ptr;
-			if( (ptr = param("MEMORY")) != NULL ) {
-				m_phys_mem = atoi(ptr);
-				free(ptr);
+			// Try to param for it.  If it's defined, use what they
+			// say.  If not, try to figure it out for ourselves. 
+			// If we had an error in calc_phys_mem(), we can't param()
+			// (since we'd only call calc_phys_mem() if param()
+			// returned NULL, so we need to just EXCEPT with a message
+			// telling the user to define MEMORY manually.
+			// Derek Wright 1/8/99
+		char* ptr;
+		if( (ptr = param("MEMORY")) != NULL ) {
+			m_phys_mem = atoi(ptr);
+			free(ptr);
+		} else {
+			m_phys_mem = calc_phys_memory();
+			if( m_phys_mem <= 0 ) {
+				dprintf( D_ALWAYS, 
+						 "Error computing physical memory with calc_phys_mem().\n" );
+				dprintf( D_ALWAYS | D_NOHEADER, 
+						 "\t\tMEMORY parameter not defined in config file.\n" );
+				dprintf( D_ALWAYS | D_NOHEADER, 
+						 "\t\tTry setting MEMORY to the number of megabytes of RAM.\n" );
+				EXCEPT( "Can't compute physical memory." );
 			}
 		}
 
