@@ -1274,7 +1274,7 @@ JobHeldEvent::getReason( void )
 int
 JobHeldEvent::readEvent( FILE *file )
 {
-	if( fscanf(file, "Job was held\n") == EOF ) { 
+	if( fscanf(file, "Job was held.\n") == EOF ) { 
 		return 0;
 	}
 		// try to read the reason, but don't fail if it's not there.
@@ -1297,7 +1297,7 @@ JobHeldEvent::readEvent( FILE *file )
 int
 JobHeldEvent::writeEvent( FILE *file )
 {
-	if( fprintf(file, "Job was held\n") < 0 ) {
+	if( fprintf(file, "Job was held.\n") < 0 ) {
 		return 0;
 	}
 	if( reason ) {
