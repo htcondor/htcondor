@@ -169,6 +169,18 @@ SOURCE=..\src\condor_classad\environment.C
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_classad\evaluateOperators.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_classad\operators.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_classad\operators.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_classad\parser.C
 # End Source File
 # Begin Source File
@@ -178,6 +190,14 @@ SOURCE=..\src\condor_classad\registration.C
 # Begin Source File
 
 SOURCE=..\src\condor_classad\scanner.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_classad\value.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_classad\value.h
 # End Source File
 # End Target
 # End Project
