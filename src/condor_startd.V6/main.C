@@ -332,6 +332,7 @@ int
 init_params( int first_time)
 {
 	char *tmp;
+	char *old_collector = NULL;
 
 	resmgr->init_config_classad();
 
@@ -354,9 +355,26 @@ init_params( int first_time)
 #endif
 
 	if( Collector ) {
-		delete( Collector );
+			// See if we changed collectors, and if so, invalidate our
+			// ads at the old one, and initialize a new Collector
+			// object to use.
+		old_collector = strdup( Collector->fullHostname() );
+		tmp = param( "COLLECTOR_HOST" );
+		if( tmp ) {
+			if( strcmp(tmp, old_collector) != MATCH ) {
+				resmgr->final_update();
+				delete Collector;
+				Collector = new Daemon( DT_COLLECTOR );
+			}
+			free( tmp );
+		}
+		free( old_collector );
+	} else {
+			// No Collector yet, there's nothing to do except create a
+			// new object.
+		Collector = new Daemon( DT_COLLECTOR );
 	}
-	Collector = new Daemon( DT_COLLECTOR );
+
 
 	if( condor_view_host ) {
 		free( condor_view_host );
