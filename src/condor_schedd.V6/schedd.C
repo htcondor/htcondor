@@ -52,6 +52,7 @@
 #endif
 
 #include "sched.h"
+#include "condor_config.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_debug.h"
 #include "proc.h"
@@ -93,20 +94,17 @@ extern int getJobAd(int cluster_id, int proc_id, ClassAd *new_ad);
 
 extern "C"
 {
-    void	upDown_ClearUserInfo(void);
-    void 	upDown_UpdateUserInfo(const char* , const int);
-    int 	upDown_GetNoOfActiveUsers(void);
-    int 	upDown_GetUserPriority(const char* , int* );
-    void 	upDown_UpdatePriority(void);
-    void 	upDown_SetParameters(const int , const int);
-    void 	upDown_ReadFromFile(const char* );
-    void 	upDown_WriteToFile(const char*);
-    void 	upDown_Display(void);
     void 	dprintf(int, char*...);
 	int	 	calc_virt_memory();
 	int	 	getdtablesize();
 	char* 	gen_ckpt_name(char*, int, int, int);
 	int	 	do_connect(const char*, const char*, u_int);
+#if defined(HPUX9)
+	int	 	gethostname(char*, unsigned int);
+#else
+	int	 	gethostname(char*, int);
+#endif
+	int	 	boolean(char*, char*);
 	int	 	param_in_pattern(char*, char*);
 	char*	param(char*);
 	void	block_signal(int);
@@ -169,11 +167,13 @@ Scheduler::Scheduler()
     JobsStarted = 0;
     JobsRunning = 0;
     ReservedSwap = 0;
+
     ShadowSizeEstimate = 0;
-    ScheddScalingFactor = 0;
-    ScheddHeavyUserTime = 0;
-    Step = 0;
-    ScheddHeavyUserPriority = 0;
+    ScheddScalingFactor = 0;	// ??
+    ScheddHeavyUserTime = 0;	// ??
+    Step = 0;					// ??
+    ScheddHeavyUserPriority = 0;// ??
+
 	LastTimeout = time(NULL);
     CollectorHost = NULL;
     NegotiatorHost = NULL;
@@ -210,20 +210,22 @@ Scheduler::~Scheduler()
 void
 Scheduler::timeout()
 {
+	block_signal(SIGCHLD);
+#ifdef 0
 	/* the step size in the UPDOWN algo depends on the time */
 	/* interval of sampling			                */
 	Step = ( time((time_t*)0) - LastTimeout) /ScheddScalingFactor;
 	upDown_SetParameters(Step, ScheddHeavyUserPriority);
 
 	upDown_ClearUserInfo();	/* UPDOWN */
-	count_jobs();
 	upDown_UpdatePriority(); /* UPDOWN */
 	upDown_Display();        /* UPDOWN */
 	upDown_WriteToFile(filename);    /* UPDOWN */
+#endif
 
-	//	update_central_mgr();
+	count_jobs();
 
-		/* Neither of these should be needed! */
+	/* Neither of these should be needed! */
 	reaper( 0, 0, 0 );
 	clean_shadow_recs();
 
@@ -343,11 +345,14 @@ count( int cluster, int proc )
 		sched->Owners[OwnerNum].JobsRunning += cur_hosts;
 		sched->Owners[OwnerNum].JobsIdle += (max_hosts - cur_hosts);
 
+#ifdef 0
 		if ( status == RUNNING ) {	/* UPDOWN */
 			upDown_UpdateUserInfo(owner,UpDownRunning);
 		} else if ( (status == IDLE)||(status == UNEXPANDED)) {
 			upDown_UpdateUserInfo(owner,UpDownIdle);
 		}	
+#endif
+
 	}
 	return 0;
 }
@@ -422,6 +427,7 @@ void
 Scheduler::abort_job(int, Stream* s)
 {
 	PROC_ID	job_id;
+	s->end_of_message();
 	s->decode();
 	if( !s->code(job_id) ) {
 		dprintf( D_ALWAYS, "abort_job() can't read job_id\n" );
@@ -430,6 +436,12 @@ Scheduler::abort_job(int, Stream* s)
 	abort_job_myself(job_id);
 }
 
+#define RETURN \
+	/* if( context ) { \
+	 	free_context( context ); \
+	 }*/  \
+	unblock_signal(SIGCHLD); \
+	return
 
 /*
 ** The negotiator wants to give us permission to run a job on some
@@ -442,6 +454,7 @@ Scheduler::negotiate(int, Stream* s)
 {
 	int		i;
 	int		op;
+	// CONTEXT	*context = NULL;
 	PROC_ID	id;
 	char	*match= NULL;				// each match info received from cmgr
 	char*	capability;					// capability for each match made
@@ -484,8 +497,34 @@ Scheduler::negotiate(int, Stream* s)
 				 									start_limit_for_swap);
 	}
 
-		/* Try jobs in priority order */
+	//-----------------------------------------------
+	// Get Owner name from negotiator
+	//-----------------------------------------------
+	char owner[200];
+	s->decode();
+	if (!s->code(owner)) {
+		dprintf( D_ALWAYS, "Can't receive request from manager\n" );
+		RETURN;
+	}
+	if (!s->end_of_message()) {
+		dprintf( D_ALWAYS, "Can't receive request from manager\n" );
+		RETURN;
+	}
+	dprintf (D_ALWAYS, "Negotiating for owner: %s\n", owner);
+	//-----------------------------------------------
+
+
+	/* Try jobs in priority order */
 	for( i=0; i < N_PrioRecs; i++ ) {
+
+		char tmpstr[200];
+		sprintf(tmpstr,"%s@%s",PrioRec[i].owner,UidDomain);
+		if(strcmp(owner,tmpstr)!=0)
+		{
+			dprintf( D_FULLDEBUG, "Job %d.%d skipped ---  belongs to %s\n", 
+				PrioRec[i].id.cluster, PrioRec[i].id.proc, tmpstr);
+			continue;
+		}
 
 		if(AlreadyMatched(&PrioRec[i].id))
 		{
@@ -615,6 +654,8 @@ Scheduler::negotiate(int, Stream* s)
 					}
 					// match is in the form "<xxx.xxx.xxx.xxx:xxxx> xxxxxxxx#xx"
 					dprintf(D_PROTOCOL, "## 4. Received match %s\n", match);
+
+				#ifdef 0
 					capability = strchr(match, '#');
 					if(capability)
 					{
@@ -623,7 +664,9 @@ Scheduler::negotiate(int, Stream* s)
 					capability = strchr(match, ' ');
 					*capability = '\0';
 					capability++;
-					perm_rval = permission(capability, match, &id);
+				#endif
+
+					perm_rval = permission(capability, owner, match, &id);
 					FREE( match );
 					match = NULL;
 					JobsStarted += perm_rval;
@@ -683,7 +726,7 @@ Scheduler::vacate_service(int, Stream *sock)
  * Returns 1 if successful (not the result of agent's negotiation), 0 if failed.
  */
 int
-Scheduler::permission(char* id, char* server, PROC_ID* jobId)
+Scheduler::permission(char* id, char *user, char* server, PROC_ID* jobId)
 {
 #if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 	Mrec*		mrec;						// match record pointer
@@ -713,7 +756,7 @@ Scheduler::permission(char* id, char* server, PROC_ID* jobId)
             for(i = 3; i < lim; i++) {
                 close(i);
             }
-            Agent(server, id, MySockName, aliveInterval, jobId);
+            Agent(server, id, MySockName, user, aliveInterval, jobId);
 			
 
         default:    /* the parent */
@@ -1961,6 +2004,7 @@ Scheduler::Init()
         EXCEPT( "No UID_DOMAIN specified in config file\n" );
     }
 
+#ifdef 0
     Step                    = SchedDInterval/ScheddScalingFactor;
     ScheddHeavyUserPriority = Step * ScheddHeavyUserTime;
 
@@ -1971,6 +2015,7 @@ Scheduler::Init()
 	filename = new char[MAXPATHLEN];
     sprintf(filename,"%s/%s",Spool, "UserPrio");
     upDown_ReadFromFile(filename);                /* UPDOWN */
+#endif
 
     if( (Mail=param("MAIL")) == NULL ) {
         EXCEPT( "MAIL not specified in config file\n" );
@@ -1988,26 +2033,26 @@ Scheduler::Init()
 void
 Scheduler::Register(DaemonCore* core)
 {
-	// message handlers for schedd commands
-	core->Register_Command(NEGOTIATE, "NEGOTIATE", (CommandHandlercpp)negotiate, "negotiate", this, NEGOTIATOR);
-	core->Register_Command(RESCHEDULE, "RESCHEDULE", (CommandHandlercpp)reschedule_negotiator, "reschedule_negotiator", 
-						   this, ALLOW);
-	core->Register_Command(VACATE_SERVICE, "VACATE_SERVICE", (CommandHandlercpp)vacate_service, "vacate_service", 
-						   this, WRITE);
-	core->Register_Command(KILL_FRGN_JOB, "KILL_FRGN_JOB", (CommandHandlercpp)abort_job, "abort_job", this, WRITE);
+        // message handlers for schedd commands
+        core->Register_Command(NEGOTIATE, "NEGOTIATE", (CommandHandlercpp)negotiate, "negotiate", this, NEGOTIATOR);
+        core->Register_Command(RESCHEDULE, "RESCHEDULE", (CommandHandlercpp)reschedule_negotiator, "reschedule_negotiator", 
+                                                   this, ALLOW);
+        core->Register_Command(VACATE_SERVICE, "VACATE_SERVICE", (CommandHandlercpp)vacate_service, "vacate_service", 
+                                                   this, WRITE);
+        core->Register_Command(KILL_FRGN_JOB, "KILL_FRGN_JOB", (CommandHandlercpp)abort_job, "abort_job", this, WRITE);
 
-	// handler for queue management commands
-	// Note: This could either be a READ or a WRITE command.  Too bad we have to lump both together here.
-	core->Register_Command(QMGMT_CMD, "QMGMT_CMD", (CommandHandler)handle_q, "handle_q", NULL, WRITE);
+        // handler for queue management commands
+        // Note: This could either be a READ or a WRITE command.  Too bad we have to lump both together here.
+        core->Register_Command(QMGMT_CMD, "QMGMT_CMD", (CommandHandler)handle_q, "handle_q", NULL, WRITE);
 
-	// timer handler
-	core->Register_Timer(10, SchedDInterval, (Eventcpp)timeout, "timeout", this);
-	core->Register_Timer(10, SchedDInterval, (Eventcpp)StartJobs, "StartJobs", this);
-	core->Register_Timer(aliveInterval, aliveInterval, (Eventcpp)send_alive, "send_alive", this);
+        // timer handler
+        core->Register_Timer(10, SchedDInterval, (Eventcpp)timeout, "timeout", this);
+        core->Register_Timer(10, SchedDInterval, (Eventcpp)StartJobs, "StartJobs", this);
+        core->Register_Timer(aliveInterval, aliveInterval, (Eventcpp)send_alive, "send_alive", this);
 
 #if !defined(WIN32) /* not sure what the WIN32 equivalents of these will be yet */
-	// signal handlers
-	core->Register_Signal( DC_SIGCHLD, "SIGCHLD", (SignalHandler)reaper, "reaper" );
+        // signal handlers
+        core->Register_Signal( DC_SIGCHLD, "SIGCHLD", (SignalHandler)reaper, "reaper" );
 #endif
 
 }
@@ -2018,13 +2063,14 @@ prio_compar(prio_rec* a, prio_rec* b)
 {
     /* compare up down priorities */
     /* lower values mean more priority */
+#ifdef 0
     if( a->prio > b->prio ) {
         return 1;
     }
     if( a->prio < b->prio ) {
         return -1;
     }
-
+#endif
     /* here updown priorities are equal */
     /* compare job priorities: higher values have more priority */
     if( a->job_prio < b->job_prio ) {
@@ -2121,6 +2167,8 @@ Scheduler::reschedule_negotiator(int, Stream *)
 {
     int     	cmd = RESCHEDULE;
 	ReliSock	sock(NegotiatorHost, NEGOTIATOR_PORT);
+
+	// relsock->end_of_message();
 
     dprintf( D_ALWAYS, "Called reschedule_negotiator()\n" );
 
@@ -2236,12 +2284,19 @@ Scheduler::MarkDel(char* id)
 
 void
 Scheduler::Agent(char* server, char* capability, 
-				 char* name, int aliveInterval, PROC_ID* jobId) 
+				 char* name, char *user, int aliveInterval, PROC_ID* jobId) 
 {
     int     	reply;                              /* reply from the startd */
 
 	ClassAd jobAd;
 	getJobAd( jobId->cluster, jobId->proc, &jobAd );
+
+	// add User = "owner@uiddomain" to ad
+	{
+		char temp[512];
+		sprintf (temp, "%s = \"%s\"", ATTR_USER, user);
+		jobAd.Insert (temp);
+	}	
 
 	ReliSock sock(server, 0);
 		
@@ -2263,7 +2318,7 @@ Scheduler::Agent(char* server, char* capability,
 		exit(EXITSTATUS_NOTOK);
 	}
 	
-	if( !sock.eom() ) {
+	if( !sock.end_of_message() ) {
 		dprintf( D_ALWAYS, "Couldn't send eom to startd.\n" );	
 		exit(EXITSTATUS_NOTOK);
 	}
