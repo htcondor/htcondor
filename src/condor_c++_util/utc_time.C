@@ -24,6 +24,12 @@
 #include "condor_common.h"
 #include "utc_time.h"
 
+#ifdef WIN32
+#include <sys/timeb.h>
+#endif
+
+
+
 
 UtcTime::UtcTime()
 {
@@ -38,6 +44,11 @@ UtcTime::getTime()
 #ifdef WIN32
 
 		// call _ftime()
+	struct _timeb timebuffer;
+	_ftime( &timebuffer );
+
+	sec = timebuffer.time;
+	usec = (long) timebuffer.millitm * 1000; // convert milli to micro 
 
 #else	// UNIX
 	struct timeval now;
