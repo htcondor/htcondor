@@ -4373,7 +4373,7 @@ int DaemonCore::SetEnv( char *env_var )
 #endif
 }
 
-#ifndef WIN32
+#if !defined(WIN32) && !defined(DUX)
 	/* On Unix, we define our own exit() call.  The reason is messy: 
 	 * Basically, daemonCore Create_Thread call fork() on Unix.  
 	 * When the forked child calls exit, however, all the class 
