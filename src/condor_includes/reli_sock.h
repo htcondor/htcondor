@@ -136,6 +136,8 @@ public:
     ///
 	int authenticate( int clientFlags = 0 );
     ///
+	int authenticate( KeyInfo *& key, int clientFlags = 0 );
+    ///
 	const char *getOwner();
     ///
 	int isAuthenticated();
