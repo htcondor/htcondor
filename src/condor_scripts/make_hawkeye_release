@@ -78,7 +78,7 @@ my $BinTarBall;
 {
     my $TarBall = sprintf( $TarBallPat, $HawkeyeVersion );
     my $TarBallPath = "$ReleaseDir/$TarBall";
-    print "Creating tarball '$TarBallPath'...  ";
+    print "\nCreating tarball '$TarBallPath'...  ";
     system( "gtar -C $Temp -cf $TarBallPath ." );
     print "Done\n";
     system( "ls -l $TarBallPath" );
@@ -113,11 +113,11 @@ CopyAll( $ClassAdViewer, $Temp, "h*tgz*" );
 {
     my $TarBall = sprintf( $RelTarBallPat, $HawkeyeVersion );
     my $TarBallPath = "$ReleaseDir/$TarBall";
-    print "Creating release tarball '$TarBallPath'...  ";
+    print "\nCreating release tarball '$TarBallPath'...  ";
     system( "gtar --gzip -C $Temp -cf $TarBallPath ." );
+    print "Done\n";
     system( "ls -l $TarBallPath" );
     system( "tar --gzip -tvf $TarBallPath" );
-    print "Done\n";
 }
 
 # Clean up the temp dir
