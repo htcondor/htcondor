@@ -77,6 +77,8 @@ double Accountant::GetPriority(const MyString& CustomerName)
 
 void Accountant::SetPriority(const MyString& CustomerName, double Priority) 
 {
+  dprintf(D_FULLDEBUG,"Accountant::SetPriority - CustomerName=%s, Priority=%8.3f\n",CustomerName.Value(),Priority);
+
   AppendLogEntry("SetPriority",CustomerName,"*",Priority);
 
   CustomerRecord* Customer;
@@ -102,6 +104,7 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
 void Accountant::AddMatch(const MyString& CustomerName, const MyString& ResourceName, const Time& T) 
 {
   RemoveMatch(ResourceName,T);
+  dprintf(D_FULLDEBUG,"Accountant::AddMatch - CustomerName=%s, ResourceName=%s\n",CustomerName.Value(),ResourceName.Value());
   CustomerRecord* Customer;
   if (Customers.lookup(CustomerName,Customer)==-1) {
     Customer=new CustomerRecord;
@@ -150,6 +153,8 @@ void Accountant::RemoveMatch(const MyString& ResourceName, const Time& T)
 
   CustomerRecord* Customer;
   if (Customers.lookup(CustomerName,Customer)==-1) return;
+
+  dprintf(D_FULLDEBUG,"Accountant::RemoveMatch - ResourceName=%s\n",ResourceName.Value());
   Customer->ResourceNames.Remove(ResourceName);
 
   if (StartTime<LastUpdateTime) StartTime=LastUpdateTime;
@@ -172,7 +177,7 @@ void Accountant::UpdatePriorities(const Time& T)
   double AgingFactor=pow(0.5,TimePassed/HalfLifePeriod);
   LastUpdateTime=T;
 
-  dprintf(D_ALWAYS,"Updating Priorities: AgingFactor=%8.3f , TimePassed=%5.3f\n",AgingFactor,TimePassed);
+  dprintf(D_FULLDEBUG,"Accountant::UpdatePriorities - AgingFactor=%8.3f , TimePassed=%5.3f\n",AgingFactor,TimePassed);
 
   CustomerRecord* Customer;
   MyString CustomerName;
@@ -187,7 +192,7 @@ void Accountant::UpdatePriorities(const Time& T)
     dprintf(D_FULLDEBUG,"CustomerName=%s , Old Priority=%5.3f , New Priority=%5.3f , ResourcesUsed=%1.0f\n",CustomerName.Value(),Customer->Priority,Priority,ResourcesUsed);
     dprintf(D_FULLDEBUG,"UnchargedResources=%8.3f , UnchargedTime=%5.3f\n",UnchargedResources,Customer->UnchargedTime);
 #ifdef DEBUG_FLAG
-    dprintf(D_ALWAYS,"Resources: "); Customer->ResourceNames.PrintSet();
+    dprintf(D_FULLDEBUG,"Resources: "); Customer->ResourceNames.PrintSet();
 #endif
 
     Customer->UnchargedTime=0;
@@ -207,6 +212,7 @@ void Accountant::UpdatePriorities(const Time& T)
 //------------------------------------------------------------------
 
 void Accountant::CheckMatches(ClassAdList& ResourceList) {
+  dprintf(D_FULLDEBUG,"Accountant::CheckMatches\n");
   ResourceList.Open();
   ClassAd* ResourceAd;
   while ((ResourceAd=ResourceList.Next())!=NULL) {
