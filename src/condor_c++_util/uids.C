@@ -721,10 +721,10 @@ init_nobody_ids( int is_quiet )
 		}
 		return FALSE;
 #endif
+	} else {
+		nobody_uid = pwd_entry->pw_uid;
+		nobody_gid = pwd_entry->pw_gid;
 	}
-
-	nobody_uid = pwd_entry->pw_uid;
-	nobody_gid = pwd_entry->pw_gid;
 
 #ifdef HPUX
 	// HPUX9 has a bug in that getpwnam("nobody") always returns
