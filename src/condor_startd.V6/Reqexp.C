@@ -9,14 +9,13 @@
 #include "startd.h"
 static char *_FileName_ = __FILE__;
 
-Reqexp::Reqexp( ClassAd* ca )
+Reqexp::Reqexp( ClassAd** cap )
 {
-	this->ca = ca;
+	this->cap = cap;
 	char tmp[1024];
 	sprintf( tmp, "%s = %s", ATTR_REQUIREMENTS, "START" );
 	origreqexp = strdup( tmp );
-	ca->SetRequirements( tmp );
-	modified = 0;
+	rstate = ORIG;
 }
 
 
@@ -34,7 +33,7 @@ Reqexp::eval()
 	EvalResult res;
 
 	Parse( origreqexp, tree );
-	tree->EvalTree( ca, &ad, &res);
+	tree->EvalTree( *cap, &ad, &res);
 	delete tree;
 
 	if( res.type != LX_INTEGER ) {
@@ -48,9 +47,9 @@ Reqexp::eval()
 void
 Reqexp::restore()
 {
-	if( modified ) {
-		ca->InsertOrUpdate( origreqexp );
-		modified = 0;
+	if( rstate != ORIG ) {
+		(*cap)->InsertOrUpdate( origreqexp );
+		rstate = ORIG;
 	}
 }
 
@@ -60,8 +59,8 @@ Reqexp::unavail()
 {
 	char tmp[100];
 	sprintf( tmp, "%s = False", ATTR_REQUIREMENTS );
-	ca->InsertOrUpdate( tmp );
-	modified = 1;
+	(*cap)->InsertOrUpdate( tmp );
+	rstate = UNAVAIL;
 }
 
 
@@ -70,8 +69,8 @@ Reqexp::avail()
 {
 	char tmp[100];
 	sprintf( tmp, "%s = True", ATTR_REQUIREMENTS );
-	ca->InsertOrUpdate( tmp );
-	modified = 1;
+	(*cap)->InsertOrUpdate( tmp );
+	rstate = AVAIL;
 }
 
 
@@ -89,4 +88,24 @@ Reqexp::pub()
 		this->restore();			
 		break;
 	}
+}
+
+
+reqexp_state
+Reqexp::update( ClassAd* ca )
+{
+	char tmp[100];
+	switch( rstate ) {
+	case ORIG:
+		sprintf( tmp, "%s", origreqexp );
+		break;
+	case AVAIL:
+		sprintf( tmp, "%s = True", ATTR_REQUIREMENTS );
+		break;
+	case UNAVAIL:
+		sprintf( tmp, "%s = False", ATTR_REQUIREMENTS );
+		break;
+	}
+	ca->InsertOrUpdate( tmp );
+	return rstate;
 }
