@@ -217,16 +217,6 @@ usage()
 	char	*SyscallLabel;
 #endif
 
-#ifdef CARMI_OPS
-#include <ProcList.h>
-
-extern ProcLIST* ProcList;
-extern HostLIST* HostList;
-extern ClassLIST* ClassList;
-extern ScheddLIST* ScheddList;
-extern SpawnLIST* SpawnList;
-#endif
-
 extern ClassAd *JobAd;
 
 char*		schedd = NULL;
@@ -246,11 +236,15 @@ main(int argc, char *argv[], char *envp[])
 	   the FILE * returned by popen() fail if the underlying file descriptor
 	   is 1.  This is ugly, but we have 4K fd's so we won't miss these few */
 
+#ifdef WAIT_FOR_DEBUGGER
+	int x = 1;
+	while( x ) {
+
+	}
+#endif WAIT_FOR_DEBUGGER
 
 #if !defined(OSF1) && !defined(Solaris)
-#ifndef CARMI_OPS
-	close( 0 );					// stdin should remain open for CARMI_OPS
-#endif
+	close( 0 );
 	close( 1 );
 	close( 2 );
 #endif
@@ -313,13 +307,6 @@ main(int argc, char *argv[], char *envp[])
 	if( argc != 6 ) {
 		usage();
 	}
-
-#ifdef WAIT_FOR_DEBUGGER
-	int x = 1;
-	while( x ) {
-
-	}
-#endif WAIT_FOR_DEBUGGER
 
 	if( strcmp("-pipe",argv[1]) == 0 ) {
 		capability = argv[2];
@@ -493,20 +480,6 @@ HandleSyscalls()
 
 	nfds = (RSC_SOCK > CLIENT_LOG ) ? (RSC_SOCK + 1) : (CLIENT_LOG + 1);
 
-#ifdef CARMI_OPS
-	struct timeval select_to;
-	fd_set exceptfds;
-	int sockfd, errsock;
-	struct sockaddr_in from;
-	int len = sizeof(from);
-	ProcLIST *plist;
-	ProcLIST *tempproc;
-	NotifyLIST *temp, *next;
-	int list;
-
-	Proc = &(ProcList->proc);
-#endif
-
 	init_user_ids(Proc->owner);
 	set_user_priv();
 
@@ -521,163 +494,7 @@ HandleSyscalls()
 	errno = 0;
 
 	for(;;) {	/* get a request and fulfill it */
-#ifdef CARMI_OPS
-		FD_ZERO(&readfds);
-		FD_SET(fileno(stdin), &readfds);
-		nfds = (nfds > fileno(stdin))?nfds:fileno(stdin);
-		
-		plist = ProcList;
-		while (plist != NULL)
-		{
-		  if (plist->proc.status != COMPLETED)
-		  {
-		     FD_SET(plist->rsc_sock, &readfds);
-		     if (plist->rsc_sock > nfds) nfds = plist->rsc_sock;
-		     FD_SET(plist->client_log, &readfds);
-		     if (plist->client_log > nfds) nfds = plist->client_log;
-		  }
-		  plist = plist->next;
-		}
-		
-		select_to.tv_sec = 1;
-		select_to.tv_usec = 0;
-		unblock_signal(SIGCHLD);
-		unblock_signal(SIGUSR1);
-		/* TODO: include LogSock in this select */
-		cnt = select(nfds + 1, (fd_set *) &readfds, (fd_set *) 0,
-			 (fd_set *) 0, &select_to);
-		block_signal(SIGCHLD);
-		block_signal(SIGUSR1);
 
-		if (cnt <= 0) /* means timer expiration or interrupt got */
-		  continue;
-		    
-		if (FD_ISSET(fileno(stdin), &readfds))
-		    {
-		      /* means new host from the schedd */
-		      NewHostFound();
-		    }
-		
-		plist = ProcList;
-		while (plist != NULL)
-		{
-		  if (FD_ISSET(plist->client_log, &readfds))
-		    {
-		      char buf[275];
-		      int len;
-
-		      dprintf(D_ALWAYS, "ErrSock read to be done \n");
-                      len = read(plist->client_log, buf, sizeof(buf)-1);
-		      if (len != 0)
-			{
-			  int old_cnt, cnter;
-
-			  buf[len] = '\0';
-			  old_cnt = 0;
-			  for(cnter = 0; cnter <= len; cnter++)
-			    {
-			      if ((buf[cnter] == '\n' || buf[cnter] == '\0')&&
-				  (cnter - old_cnt > 1))
-				  {
-				    buf[cnter] = '\0';
-				    dprintf(D_ALWAYS | D_NOHEADER, "->%s\n",
-					    &(buf[old_cnt]));
-                                    old_cnt = cnter+1;
-				  }
-	                     }
-                        }
-       		   }
-			plist = plist->next;
-	        }
-
-		plist = ProcList;
-		while (plist != NULL)
-		{
-		  if (FD_ISSET(plist->rsc_sock, &readfds))
-                    {
-		      if (do_REMOTE_syscall(plist->xdr_RSC1, plist) < 0)
-			{
-			  if( !UsePipes ) 
-			    {
-			      char *capability; // need to get this somehow
-			      send_quit( plist->hostname, capability );
-			    }
-			  
-			  dprintf(D_ALWAYS,
-				  "Shadow: Job %d.%d exited, 
-				  termsig = %d, coredump = %d, retcode = %d\n",
-				  Proc->id.cluster, Proc->id.proc, 
-				  WTERMSIG(JobStatus), WCOREDUMP(JobStatus), 
-				  WEXITSTATUS(JobStatus));
-			  
-			  Proc = &(plist->proc);
-			  Wrapup();
-			  xdr_destroy(plist->xdr_RSC1);
-			  free(plist->xdr_RSC1);
-			  close(plist->client_log);
-			  close(plist->rsc_sock);
-			  for(tempproc = ProcList; 
-v			      ((tempproc->next != plist)&&(ProcList != plist));
-			      tempproc = tempproc->next);
-			  if (ProcList == plist)
-			    {
-			      /* have to delete the head */
-			      ProcList = ProcList->next;
-
-			      /* Empty out the DelNotifyList, etc. from plist */
-			      /*
-			      for (list=1; list<=3; list++)
-			      {
-				   if (list == 1) temp=plist->DelNotifyList;
-				   if (list == 2) temp=plist->ResNotifyList;
-				   if (list == 3) temp=plist->SusNotifyList;
-
-				   while(temp)
-				   {
-				       next = temp->next;
-				       free(temp);
-				       temp = next;
-				   }
-				}
-				*/
-
-			      free(plist);
-			      plist = ProcList;
-			    }
-			  else
-			    {
-			      tempproc->next = plist->next;
-
-			      /* Empty out the DelNotifyList, etc. from plist */
-			      /*
-			      for (list=1; list<=3; list++)
-			      {
-				   if (list == 1) temp=plist->DelNotifyList;
-				   if (list == 2) temp=plist->ResNotifyList;
-				   if (list == 3) temp=plist->SusNotifyList;
-				   while(temp)
-				   {
-				       next = temp->next;
-				       free(temp);
-				       temp = next;
-				   }
-				}
-				*/
-
-			      free(plist);
-			      plist = tempproc->next;
-			    }
-			}
-		      else
-			plist = plist->next;
-		    }
-		  else
-		    plist = plist->next;
-		}
-		nfds = -1;
-		if ((ProcList == NULL) && (SpawnList == NULL))  break;
-	
-#else
 		FD_ZERO(&readfds);
 		FD_SET(RSC_SOCK, &readfds);
 		FD_SET(CLIENT_LOG, &readfds);
@@ -722,7 +539,6 @@ v			      ((tempproc->next != plist)&&(ProcList != plist));
 		strcpy( SyscallLabel, "shadow" );
 #endif
 	}
-#endif // CARMI_OPS
 
 	/*
 	The user job might exit while there is still unread data in the log.
@@ -991,20 +807,6 @@ send_job( V2_PROC *proc, char *host, char *cap)
 		dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
 		exit( reason );
 	}
-
-#ifdef CARMI_OPS
-
-	ProcList->rsc_sock = sd1;
-	dprintf( D_ALWAYS, "Shadow: RSC_SOCK connected, fd = %d\n", ProcList->rsc_sock);
-
-	ProcList->client_log = sd2;
-	dprintf( D_ALWAYS, "Shadow: CLIENT_LOG connected, fd = %d\n", ProcList->client_log );
-
-	ProcList->xdr_RSC1 = RSC_MyShadowInit( &(ProcList->rsc_sock), &(ProcList->client_log));
-        free(stRec.server_name); 
-
-#else
-
 	if( sd1 != RSC_SOCK ) {
 		ASSERT(dup2(sd1, RSC_SOCK) >= 0);
 		(void)close(sd1);
@@ -1018,9 +820,6 @@ send_job( V2_PROC *proc, char *host, char *cap)
 	dprintf( D_ALWAYS, "Shadow: CLIENT_LOG connected, fd = %d\n", CLIENT_LOG );
 
 	sock_RSC1 = RSC_ShadowInit( RSC_SOCK, CLIENT_LOG );
-
-#endif // CARMI_OPS
-
 }
 
 
@@ -1036,31 +835,17 @@ start_job( char *cluster_id, char *proc_id )
 	int		proc_num;
 	char	*tmp;
 
-#ifdef CARMI_OPS
-	ProcLIST*	Proc;
-
-	Proc = (ProcLIST *) malloc(sizeof(ProcLIST)); /* is this needed ?? */
-	Proc->proc.id.cluster = atoi( cluster_id );
-	Proc->proc.id.proc = atoi( proc_id );
-#else
 	Proc->id.cluster = atoi( cluster_id );
 	Proc->id.proc = atoi( proc_id );
-#endif
 
 	cluster_num = atoi( cluster_id );
 	proc_num = atoi( proc_id );
 
 	InitJobAd(cluster_num, proc_num); // make sure we have the job classad
 
-#ifdef CARMI_OPS
-	if (MakeProc(JobAd, &(Proc->proc)) < 0) {
-		EXCEPT("MakeProc()");
-	}
-#else
 	if (MakeProc(JobAd, Proc) < 0) {
 		EXCEPT("MakeProc()");
 	}
-#endif
 
 	JobAd->LookupFloat(ATTR_BYTES_SENT, TotalBytesSent);
 	JobAd->LookupFloat(ATTR_BYTES_RECVD, TotalBytesRecvd);
@@ -1077,43 +862,8 @@ start_job( char *cluster_id, char *proc_id )
 	}
 #endif
 
-#ifdef CARMI_OPS
-	LocalUsage = Proc->proc.local_usage;
-#if defined(NEW_PROC)
-	RemoteUsage = Proc->proc.remote_usage[0];
-#else
-	RemoteUsage = Proc->proc.remote_usage;
-#endif
-	ImageSize = Proc->proc.image_size;
-
-	tmp = gen_ckpt_name( Spool, Proc->proc->id.cluster,
-						 Proc->proc->id.proc, 0 );
-	strcpy( CkptName, tmp );
-
-	tmp = gen_ckpt_name( Spool, Proc->proc->id.cluster, ICKPT, 0 );
-	strcpy( ICkptName, tmp );
-
-	sprintf( TmpCkptName, "%s.tmp", CkptName );
-
-	strcpy( RCkptName, CkptName );
-
-	strcpy( Proc->CkptName, CkptName );
-	strcpy( Proc->ICkptName, ICkptName );
-	strcpy( Proc->RCkptName, RCkptName );
-	strcpy( Proc->TmpCkptName, TmpCkptName );
-	Proc->proc.n_pipes = 0; // temporary 
-	Proc->procId = (ProcList == NULL) ? 1 : ProcList->procId + 1;
-	Proc->next = ProcList;
-	ProcList = Proc;
-	/* don't forget to add the host here */
-	/* and also to update the class information */
-#else
 	LocalUsage = Proc->local_usage;
-#if defined(NEW_PROC)
 	RemoteUsage = Proc->remote_usage[0];
-#else
-	RemoteUsage = Proc->remote_usage;
-#endif
 	ImageSize = Proc->image_size;
 
 	if (Proc->universe != STANDARD) {
@@ -1129,7 +879,6 @@ start_job( char *cluster_id, char *proc_id )
 	strcpy( ICkptName, tmp );
 
 	strcpy( RCkptName, CkptName );
-#endif
 }
 
 extern "C" {
@@ -1237,12 +986,7 @@ regular_setup( char *host, char *cluster, char *proc, char *capability )
 	}
 	ExecutingHost = host;
 	start_job( cluster, proc );
-#ifdef CARMI_OPS
-	send_job( &(ProcList->proc), host, capability );
-	strcpy(ProcList->hostname, host);
-#else
 	send_job( Proc, host, capability );
-#endif
 }
 
 void
@@ -1297,12 +1041,6 @@ void
 reaper()
 {
 	pid_t		pid;
-#ifdef CARMI_OPS
-	SpawnLIST* sp_list;
-	SpawnLIST* sp_prev;
-	int found;
-#endif
-
 	int			status;
 
 #ifdef HPUX
@@ -1315,54 +1053,6 @@ reaper()
 		if( pid == 0 || pid == -1 ) {
 			break;
 		}
-
-#ifdef CARMI_OPS
-                found = 0;
-		sp_list = SpawnList;
-		sp_prev = NULL;
-		if( WIFEXITED(status) ) {
-			dprintf( D_ALWAYS,
-				"Reaped child status - pid %d exited with status %d\n",
-				pid, WEXITSTATUS(status)
-			);
-			if ( ((status >> 8) & 0x0ff) == 2)
-			{
-			  /* the process reaped was a spawn process */
-			  while(!found && (sp_list != NULL))
-			  {
-			    if (sp_list->pid == pid)
-			       found = 1;
-                            else
-			     {
-			       sp_prev = sp_list;
-			       sp_list = sp_list->next;
-			     }
-			  }
-			  if (found)
-			    {
-			      regular_setup(sp_list->hostname, sp_list->Cl_str,
-					    sp_list->Pr_str);
-			      if (!sp_prev)
-				SpawnList = sp_list->next;
-			      else
-				sp_prev->next = sp_list->next;
-			      
-			      free(sp_list);
-			    }
-			}
-						  
-		} else {
-			dprintf( D_ALWAYS,
-				"Reaped child status - pid %d killed by signal %d\n",
-				pid, WTERMSIG(status)
-			);
-		}
-			
-	}
-
-#else
-
-#if 1
 		if( WIFEXITED(status) ) {
 			dprintf( D_ALWAYS,
 				"Reaped child status - pid %d exited with status %d\n",
@@ -1374,11 +1064,7 @@ reaper()
 				pid, WTERMSIG(status)
 			);
 		}
-#endif
-			
 	}
-
-#endif
 
 #ifdef HPUX
 #define _BSD
@@ -1409,33 +1095,10 @@ condor_rm()
 
 	dprintf(D_ALWAYS, "Shadow received rm command from Schedd \n");
 
-#ifdef CARMI_OPS
-	ProcLIST*       plist;
-
-	for (plist = ProcList; plist != NULL; plist = ProcList)	{
-		char *capability; 
-		// need to retrieve capability for that host
-		retval = send_cmd_to_startd(plist->hostname, capability, KILL_FRGN_JOB);
-
-#else
-
 	retval = send_cmd_to_startd(ExecutingHost, GlobalCap, KILL_FRGN_JOB);
-
-#endif
 
 	if (retval < 0) 
 		return;
-
-#ifdef CARMI_OPS
-	 xdr_destroy(ProcList->xdr_RSC1);
-	 free(ProcList->xdr_RSC1);
-	 close(ProcList->rsc_sock);
-	 close(ProcList->client_log);
-	 ProcList = plist->next;
-	 free(plist);
-       }
-#endif
-
 }
 
 int
