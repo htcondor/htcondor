@@ -29,11 +29,11 @@
 #include "get_full_hostname.h"
 #include "my_hostname.h"
 
-static struct hostent *host_ptr = NULL;
 static char* hostname = NULL;
 static char* full_hostname = NULL;
 static unsigned int ip_addr;
 static struct in_addr sin_addr;
+static bool has_sin_addr = false;
 static int hostnames_initialized = 0;
 static int ipaddr_initialized = 0;
 static void init_hostnames();
@@ -90,8 +90,9 @@ init_full_hostname()
 
 		// If we don't have our IP addr yet, we'll get it for free if
 		// we want it.  
-	if( ! host_ptr ) {
-		tmp = get_full_hostname( hostname, &host_ptr );
+	if( ! ipaddr_initialized ) {
+		tmp = get_full_hostname( hostname, &sin_addr );
+		has_sin_addr = true;
 		init_ipaddr(0);
 	} else {
 		tmp = get_full_hostname( hostname );
@@ -114,6 +115,7 @@ void
 init_ipaddr( int config_done )
 {
 	char *network_interface;
+	struct hostent * host_ptr;
 
     if( ! hostname ) {
 		init_hostnames();
@@ -125,6 +127,7 @@ init_ipaddr( int config_done )
 					// We were given a valid IP address, which we now
 					// have in ip_addr.  Just make sure it's in host
 					// order now:
+				has_sin_addr = true;
 				ip_addr = ntohl( sin_addr.s_addr );
 				ipaddr_initialized = TRUE;
 			} else {
@@ -138,16 +141,17 @@ init_ipaddr( int config_done )
 	}
 
 	if( ! ipaddr_initialized ) {
-		if( ! host_ptr ) {
-				// Look up our official host information
+			// Look up our official host information
+		if( ! has_sin_addr ) {
 			if( (host_ptr = gethostbyname(hostname)) == NULL ) {
 				EXCEPT( "gethostbyname(%s) failed, errno = %d", hostname, errno );
 			}
+				// Grab our ip_addr
+			memcpy( &ip_addr, host_ptr->h_addr, (size_t)host_ptr->h_length );
+			sin_addr.s_addr = ip_addr;
+			has_sin_addr = true;
 		}
-			// Grab our ip_addr
-		memcpy( &ip_addr, host_ptr->h_addr, (size_t)host_ptr->h_length );
-		sin_addr.s_addr = ip_addr;
-		ip_addr = ntohl( ip_addr );
+		ip_addr = ntohl( sin_addr.s_addr );
 		ipaddr_initialized = TRUE;
 	}
 }
