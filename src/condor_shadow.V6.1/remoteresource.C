@@ -28,6 +28,8 @@
 #include "exit.h"             // for JOB_BLAH_BLAH exit reasons
 #include "condor_debug.h"     // for D_debuglevel #defines
 #include "condor_string.h"    // for strnewp()
+#include "internet.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 // for remote syscalls, this is currently in NTreceivers.C.
 extern int do_REMOTE_syscall();
@@ -50,7 +52,8 @@ RemoteResource::RemoteResource( BaseShadow * shad,
 								const char * eHost, 
 								const char * cbility )
 {
-	executingHost = strnewp( eHost );
+	executingHost = NULL;
+	setExecutingHost( eHost );
 	capability    = strnewp( cbility );
 	init( shad );
 }
@@ -353,6 +356,25 @@ void RemoteResource::setExecutingHost( const char * eHost ) {
 		delete [] executingHost;
 	
 	executingHost = strnewp( eHost );
+
+		/*
+		  Tell daemonCore that we're willing to
+		  grant WRITE permission to whatever machine we are claiming.
+		  This greatly simplifies DaemonCore permission stuff
+		  for flocking, since submitters don't have to know all the
+		  hosts they might possibly run on, all they have to do is
+		  trust the central managers of all the pools they're flocking
+		  to (which they have to do, already).  
+		  Added on 3/15/01 by Todd Tannenbaum <tannenba@cs.wisc.edu>
+		*/
+	char *addr;
+	if( (addr = string_to_ipstr(eHost)) ) {
+		daemonCore->AddAllowHost( addr, WRITE );
+	} else {
+		dprintf( D_ALWAYS, "ERROR: Can't convert \"%s\" to an IP address!\n", 
+				 eHost );
+	}
+
 }
 
 void RemoteResource::setMachineName( const char * mName ) {
