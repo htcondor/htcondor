@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "condor_constants.h"
-#include "condor_config.h"
 #include "condor_io.h"
 #include "sock.h"
 #include "condor_network.h"
