@@ -420,7 +420,7 @@ GlobusSubmitFailedEvent::
 ~GlobusSubmitFailedEvent()
 {
     if( reason ) {
-        delete[] reason;
+        delete [] reason;
     }
 }
 
@@ -867,7 +867,7 @@ JobAbortedEvent::
 ~JobAbortedEvent()
 {
 	if( reason ) {
-		free( reason );
+		delete [] reason;
 	}
 }
 
@@ -876,9 +876,9 @@ void JobAbortedEvent::
 setReason( const char* reason_str )
 {
 	if( reason ) {
-		free( reason );
+		delete [] reason;
 	}
-	reason = strdup( reason_str );
+	reason = strnewp( reason_str );
 }
 
 
@@ -913,7 +913,7 @@ readEvent (FILE *file)
 		// also try to read the reason, but for backwards
 		// compatibility, don't fail if it's not there.
 	if( reason ) {
-		free( reason );
+		delete [] reason;
 		reason = NULL;
 	}
 	char reason_buf[BUFSIZ];
@@ -921,7 +921,7 @@ readEvent (FILE *file)
 		return 1;	// backwards compatibility
 	}
 	chomp( reason_buf );  // strip the newline, if it's there.
-	reason = strdup(reason_buf);
+	reason = strnewp(reason_buf);
 	return 1;
 }
 
