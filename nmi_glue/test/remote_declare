@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# $Id: remote_declare,v 1.1.2.3 2004-06-24 19:52:43 wright Exp $
+# $Id: remote_declare,v 1.1.2.4 2004-06-28 22:17:58 wright Exp $
 
 # Condor implementation of NMI test infrastructure interface
 # Simple wrapper to source the environment file and spawn the
@@ -15,4 +15,6 @@ if [ ! -f $ENV_FILE ]; then
 fi
 . $ENV_FILE
 
-exec ./test_declare.pl $*
+exec ./remote_declare.pl $*
+
+
