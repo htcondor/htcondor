@@ -28,6 +28,11 @@
 
 #define _POSIX_SOURCE
 
+#if defined(Solaris)
+#include "_condor_fix_types.h"
+#include </usr/ucbinclude/sys/rusage.h>
+#endif
+
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_constants.h"
@@ -40,7 +45,7 @@
 extern int errno;
 pid_t	StarterPid;
 
-/* Prototypes for random functions */
+/* Prototypes for random functions 
 extern "C" {
 	void srandom( int );
 #if defined(OSF1)
@@ -48,7 +53,15 @@ extern "C" {
 #else
 	long random( void );
 #endif
-}
+} */
+
+#if defined(Solaris)
+/* Prototypes for random functions */
+extern "C" {
+	int srandom( unsigned );
+	long random( void ); 
+	}
+#endif
 
 typedef struct {
 	EVENT	ev;

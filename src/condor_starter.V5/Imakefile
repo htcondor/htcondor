@@ -1,4 +1,3 @@
-
 SRC_DIR = $(SRC_TREE)/condor_starter
 
 #if WANT_PVM && HAS_PVM
@@ -15,7 +14,8 @@ CKPT_FLAG = -DNO_CKPT
 
 CFLAGS = $(STD_C_FLAGS) $(CKPT_FLAG) -DNEW_PROC
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CKPT_FLAG) -DNEW_PROC $(PVM_INCLUDE)\
-	$(PVM_FLAG) $(STATIC)
+	$(PVM_FLAG) -fexternal-templates
+#	$(PVM_FLAG) $(STATIC)
 
 #if IS_ALPHA_OSF1
 LDFLAGS = -lmld
@@ -44,9 +44,9 @@ CLASS_LIB_OBJ = alarm.o state_machine_driver.o name_tab.o
 #endif
 
 PORTABLE_SRC = $(CLASS_LIB_SRC) signals.C starter.C \
-	user_proc.C starter.toy.C tables.C $(PVM_SRC) killkids.c
+	user_proc.C starter.toy.C tables.C $(PVM_SRC) killkids.c instantiate.C
 PORTABLE_OBJ = $(CLASS_LIB_OBJ) signals.o starter.o \
-	user_proc.o tables.o $(PVM_OBJ) ../condor_syscall_lib/file_stream.o killkids.o
+	user_proc.o tables.o $(PVM_OBJ) ../condor_syscall_lib/file_stream.o killkids.o instantiate.o
 
 NON_PORTABLE_SRC = NON_POSIX.C resource_limits.$(OS).C analyze_exec.$(OS).C \
 	analyze_core.$(OS).C
@@ -83,8 +83,10 @@ REMOTE_SYSCALL_LIB = ../condor_$(SYSCALL_LIB)/libremote.a $(UTIL_LIB) $(XDR_LIB)
 
 #if IS_MIPS_ULTRIX42
 LIB = $(REMOTE_SYSCALL_LIB) /usr/lib/libcP.a
-#else
-LIB = $(REMOTE_SYSCALL_LIB) 
+#elif (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS)
+LIB = $(REMOTE_SYSCALL_LIB) ../condor_xdr_lib/xdr_lib.a ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a KernLib SocketLib RpcLib MldLib 
+#else 
+LIB = $(REMOTE_SYSCALL_LIB) ../condor_xdr_lib/xdr_lib.a ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a KernLib  RpcLib MldLib 
 #endif
 
 LIBDIRS = ../condor_util_lib ../condor_xdr_lib

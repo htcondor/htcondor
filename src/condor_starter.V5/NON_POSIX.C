@@ -38,6 +38,12 @@ Portability
 
 #define _POSIX_SOURCE
 
+#if defined(Solaris)
+#include "_condor_fix_types.h"
+#include </usr/ucbinclude/sys/rusage.h>
+#include </usr/ucbinclude/sys/wait.h>
+#endif
+
 #if defined(ULTRIX42) || defined(ULTRIX43)
 typedef char *  caddr_t;
 #endif
@@ -130,7 +136,7 @@ physical_file_size( char *name )
 	}
 
 
-#if defined(AIX32) || defined(ULTRIX42) || defined(ULTRIX43) || defined(SUNOS41)|| defined(OSF1)
+#if defined(AIX32) || defined(ULTRIX42) || defined(ULTRIX43) || defined(SUNOS41)|| defined(OSF1) || defined(Solaris) /* ..dhaval 6/30 */
 
 	   /*  On these systems struct stat member st_blocks is
 	       defined, and appears to be in 512 byte blocks. */
@@ -166,7 +172,10 @@ physical_file_size( char *name )
 #	define _BSD
 #	define _OSF_SOURCE
 #	include <sys/wait.h>
-#elif defined(SUNOS41)
+#elif defined(SUNOS41) 
+#	undef _POSIX_SOURCE
+#	include <sys/wait.h>
+#elif defined(Solaris)
 #	undef _POSIX_SOURCE
 #	include <sys/wait.h>
 #elif defined(ULTRIX43)

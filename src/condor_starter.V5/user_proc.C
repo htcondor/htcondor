@@ -28,6 +28,11 @@
 
 #define _POSIX_SOURCE
 
+#if defined(Solaris)
+#include "_condor_fix_types.h"
+#include </usr/ucbinclude/sys/rusage.h>
+#endif
+
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "debug.h"
@@ -531,15 +536,17 @@ UserProc::execute()
 			// will change real, effective, and saved uid's.  Thus the
 			// child process will have only it's submitting uid, and cannot
 			// switch back to root or some other uid.
+#if !defined(Solaris)
 		if( set_root_euid() < 0 ) {
 			EXCEPT( "set_root_euid()" );
-		}
+		} 
 		if( setgid( gid ) < 0 ) {
 			EXCEPT( "setgid(%d)", gid );
-		}
+		} 
 		if( setuid( uid ) < 0 ) {
 			EXCEPT( "setuid(%d)", uid );
-		}
+		} 
+#endif
 
 		switch( job_class ) {
 		  
@@ -741,7 +748,9 @@ UserProc::send_sig( int sig )
 		return;
 	}
 
-	set_root_euid();
+#if !defined(Solaris)
+ 	set_root_euid(); 
+#endif
 
 	if ( job_class == VANILLA )
 		killkids(pid,sig);

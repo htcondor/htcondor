@@ -28,6 +28,11 @@
 
 #define _POSIX_SOURCE
 
+#if defined(Solaris)
+#include "_condor_fix_types.h"
+#include </usr/ucbinclude/sys/rusage.h>
+#endif
+
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_constants.h"

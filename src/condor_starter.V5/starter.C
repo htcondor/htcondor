@@ -29,6 +29,11 @@
 
 #define _POSIX_SOURCE
 
+#if defined(Solaris)
+#include "_condor_fix_types.h"
+#include </usr/ucbinclude/sys/rusage.h>
+#endif
+
 #include "condor_common.h"
 #include "condor_expressions.h"
 #include "condor_debug.h"
@@ -42,17 +47,22 @@
 #include "condor_sys.h"
 #include "name_tab.h"
 
-#include "../condor_c++_util/state_machine_driver.h"
+#include "state_machine_driver.h"
 
 #include "starter.h"
 #include "fileno.h"
 #include "ckpt_file.h"
 #include "startup.h"
-#include "user_proc.h"
 #include "alarm.h"
 #include "afs.h"
 
-#include "../condor_c++_util/list.h"
+#pragma implementation "list.h"
+#include "list.h"
+#include "user_proc.h"
+
+#if !defined(X86)
+typedef List<UserProc> listuserproc; 
+#endif 
 
 #include <sys/stat.h>
 #include <pwd.h>
@@ -67,7 +77,7 @@ int free_fs_blocks(const char *);
 void display_startup_info( const STARTUP_INFO *s, int flags );
 }
 
-#if defined(OSF1)
+#if defined(OSF1) 
 #pragma define_template List<UserProc>
 #pragma define_template Item<UserProc>
 #endif
@@ -100,6 +110,7 @@ const pid_t	ANY_PID = -1;		// arg to waitpid() for any process
 
 XDR		*SyscallStream;			// XDR stream to shadow for remote system calls
 List<UserProc>	UProcList;		// List of user processes
+//listuserproc	UProcList;		// List of user processes
 char	*Execute;				// Name of directory where user procs execute
 int		MinCkptInterval;		// Use this ckpt interval to start
 int		MaxCkptInterval;		// Don't increase ckpt interval beyond this
@@ -190,6 +201,7 @@ initial_bookeeping( int argc, char *argv[] )
 
 		/* Now if we have an error, we can print a message */
 	if( argc != 2 ) {
+// printf("argc is %d",argc);
 		usage( argv[0] );	/* usage() exits */
 	}
 
@@ -242,6 +254,8 @@ delay( int sec )
 	int		j, k;
 
 #if defined(SPARC)
+	int		lim = 250000;
+#elif defined(Solaris)
 	int		lim = 250000;
 #elif defined(R6000)
 	int		lim = 250000;
@@ -1205,6 +1219,10 @@ get_job_info()
 	UserProc		*u_proc;
 	int				cmd = CONDOR_startup_info_request;
 	STARTUP_INFO	s;
+/*
+	int wait_for_debugger = 1;
+
+	while ( wait_for_debugger ) ; */
 
 	dprintf( D_ALWAYS, "Entering get_job_info()\n" );
 

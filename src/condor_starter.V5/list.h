@@ -1,3 +1,9 @@
+#if defined(LINUX)
+#pragma interface
+#endif
+
+#pragma interface
+
 /* 
 ** Copyright 1993 by Miron Livny, and Mike Litzkow
 ** 
@@ -117,7 +123,6 @@
 // const int	TRUE = 1;
 // const int	FALSE = 0;
 
-
 template <class ObjType> class Item;
 
 
@@ -159,7 +164,6 @@ private:
 	Item<ObjType>	*prev;
 	ObjType	*obj;
 };
-
 
 /*
   Implementation of the List class begins here.  This is so that every
@@ -324,7 +328,7 @@ List<ObjType>::Current( ObjType & answer )
 		return FALSE;
 	}
 
-	answer =  *current->obj;
+	answer =  (*current->obj);
 	return TRUE;
 }
 
@@ -355,7 +359,7 @@ ObjType *
 List<ObjType>::Current()
 {
 	if( IsEmpty() ) {
-		return NULL;
+		return 0;
 	}
 
 	return current->obj;
@@ -370,7 +374,7 @@ ObjType *
 List<ObjType>::Next()
 {
 	if( AtEnd() ) {
-		return NULL;
+		return 0;
 	}
 
 	current = current->next;
