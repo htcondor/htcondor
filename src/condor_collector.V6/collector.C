@@ -861,6 +861,14 @@ void CollectorDaemon::Config()
 	if( tmp ) {
 		int size = atoi( tmp );
 		if( size ) {
+			if( size < 0 || size > 64000 ) {
+					// the upper bound here is because a TCP port
+					// can't be any bigger than 64K (65536).  however,
+					// b/c of reserved ports and some other things, we
+					// leave it at 64000, just to be safe...
+				EXCEPT( "COLLECTOR_SOCKET_CACHE_SIZE must be between "
+						"0 and 64000 (you used: %s)", tmp );
+			}
 			if( sock_cache ) {
 				if( size > sock_cache->size() ) {
 					sock_cache->resize( size );
