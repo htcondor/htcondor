@@ -1536,6 +1536,28 @@ doRunAnalysisToBuffer( ClassAd *request )
 		fPreemptReqTest,
 		available );
 
+	int last_match_time=0, last_rej_match_time=0;
+	request->LookupInteger(ATTR_LAST_MATCH_TIME, last_match_time);
+	request->LookupInteger(ATTR_LAST_REJ_MATCH_TIME, last_rej_match_time);
+	if (last_match_time) {
+		time_t t = (time_t)last_match_time;
+		sprintf( return_buff, "%s\tLast successful match: %s",
+				 return_buff, ctime(&t) );
+	} else if (last_rej_match_time) {
+		strcat( return_buff, "\tNo successful match recorded.\n" );
+	}
+	if (last_rej_match_time > last_match_time) {
+		time_t t = (time_t)last_rej_match_time;
+		sprintf( return_buff, "%s\tLast failed match: %s",
+				 return_buff, ctime(&t) );
+		buffer[0] = '\0';
+		request->LookupString(ATTR_LAST_REJ_MATCH_REASON, buffer);
+		if (buffer[0]) {
+			sprintf( return_buff, "%s\tReason for last match failure: %s\n",
+					 return_buff, buffer );
+		}
+	}
+
 	if( niceUser ) {
 		sprintf( return_buff, 
 				 "%s\n\t(*)  Since this is a \"nice-user\" request, this request "
@@ -1563,7 +1585,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 
 	if( fOffConstraint == totalMachines ) {
 		sprintf( return_buff, "%s\nWARNING:  Be advised:", return_buff );
-		sprintf( return_buff, "%s   Request %d.%d did not match any"
+		sprintf( return_buff, "%s   Request %d.%d did not match any "
 			"resource's constraints\n\n", return_buff, cluster, proc);
 	}
 
