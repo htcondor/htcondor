@@ -156,6 +156,7 @@ match_rec::match_rec(char* i, char* p, PROC_ID* id, ClassAd *match,
 	}
 	sent_alive_interval = false;
 	allocated = false;
+	scheduled = false;
 }
 
 

@@ -104,6 +104,7 @@ struct match_rec
 	char*			pool;		// negotiator hostname if flocking; else NULL
 	bool			sent_alive_interval;
 	bool			allocated;	// For use by the DedicatedScheduler
+	bool			scheduled;	// For use by the DedicatedScheduler
 };
 
 enum MrecStatus {
