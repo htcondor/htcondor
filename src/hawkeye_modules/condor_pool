@@ -163,8 +163,8 @@ sub RunIt()
     }
 
     RunAbsent() if ( $Config{DoAbsent} );
-    RunTotal( "", "Sum_" ) if ( $Config{DoSummary} );
-    RunTotal( "-run", "Run_" ) if ( $Config{DoRun} );
+    RunTotal( "", "Sum" ) if ( $Config{DoSummary} );
+    RunTotal( "-run", "Run" ) if ( $Config{DoRun} );
     RunSubmit( ) if ( $Config{DoSubmit} );
     RunCheckPoint( ) if ( $Config{DoCheckpoint} );
 
@@ -264,6 +264,9 @@ sub RunTotal( $$ )
 
     # Add it to the prefix list
     $Hawkeye->StoreIndex( $Prefix );
+
+    # Add an _ to it..
+    $Prefix .= "_";
 
     # "Global" info..
     my @FieldNames;
