@@ -1957,7 +1957,10 @@ int send_to_startd(const char *addr)
 		return -1;
 	}
 
-	sock.eom();
+	if(!sock.eom() ) {
+		dprintf(D_ALWAYS, "can't send eom to startd\n");		
+		return -1;
+	}
 
 	dprintf(D_FULLDEBUG, "\tsend match %s to startd\n", str);
 
