@@ -37,7 +37,7 @@ class UserProc : public Service
 public:
 		/// Constructor
 	UserProc() : JobAd(NULL), JobPid(-1), Cluster(-1), Proc(-1),
-		requested_exit(false), exit_status(-1) {};
+		exit_status(-1), requested_exit(false) {};
 
 		/// Destructor
 	virtual ~UserProc() {};
