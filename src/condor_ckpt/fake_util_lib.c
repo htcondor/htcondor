@@ -32,6 +32,8 @@ int		_EXCEPT_Errno;
 char	*_EXCEPT_File;
 int		(*_EXCEPT_Cleanup)();
 
+char *mySubSystem = "JOB";
+
 void
 dprintf(int flags, ... )
 {
