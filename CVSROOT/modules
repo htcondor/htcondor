@@ -97,6 +97,7 @@ V6_SRC		-a \
 			src/condor_schedd.V6 \
 			src/condor_scripts \
 			src/condor_shadow.V6 \
+			src/condor_shadow.V6.1 \
 			src/condor_startd.V6 \
 			src/condor_starter.V5 \
 			src/condor_shadow.jim \
