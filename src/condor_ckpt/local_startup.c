@@ -258,42 +258,6 @@ get_ckpt_speed()
 }
 
 
-/* if you modify this, then make sure to do the same changes in senders.prologue */
-sigset_t
-block_condor_signals()
-{
-	int sigscm;
-	sigset_t mask, omask;
-
-	/* Block signals requesting an exit or checkpoint for duration of
-	   system call. */
-	sigscm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-	sigemptyset( &mask );
-	sigaddset( &mask, SIGTSTP );
-	sigaddset( &mask, SIGUSR1 );
-	sigaddset( &mask, SIGUSR2 );
-	if( sigprocmask(SIG_BLOCK,&mask,&omask) < 0 ) {
-		dprintf(D_ALWAYS, "sigprocmask failed: %s\n", strerror(errno));
-		return omask;
-	}
-	SetSyscalls( sigscm );
-	return omask;
-}
-
-void restore_condor_sigmask(sigset_t omask)
-{
-	int sigscm;
-
-	sigscm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-	/* Restore previous signal mask - generally unblocks TSTP and USR1 */
-	if( sigprocmask(SIG_SETMASK,&omask,0) < 0 ) {
-		dprintf(D_ALWAYS, "sigprocmask failed: %s\n", strerror(errno));
-		return;
-	}
-	SetSyscalls( sigscm );
-}
-
-
 char	*
 condor_get_executable_name()
 {
