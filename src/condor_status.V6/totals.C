@@ -28,7 +28,10 @@
 #include "HashTable.h"
 #include "totals.h"
 
+#ifndef WIN32
 template class  HashTable<MyString,ClassTotal*>;
+#endif
+
 template class  HashBucket<MyString,ClassTotal*>;
 
 int hashFunc (const MyString &key, int size)
