@@ -1252,8 +1252,9 @@ void DaemonCore::Driver()
 #endif
 
 		errno = 0;
-		rv = select(FD_SETSIZE, (SELECT_FDSET_PTR) &readfds, 
-								&writefds, &exceptfds, ptimer);
+		rv = select( FD_SETSIZE, (SELECT_FDSET_PTR) &readfds, 
+					 (SELECT_FDSET_PTR) &writefds, 
+					 (SELECT_FDSET_PTR) &exceptfds, ptimer );
 		tmpErrno = errno;
 
 #ifndef WIN32
