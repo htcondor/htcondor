@@ -75,6 +75,7 @@ public:
 	int DoClose( int fd );
 	int DoDup( int fd );
 	int DoDup2( int fd, int dupfd );
+	int DoSocket( int addr_family, int type, int protocol );
 	int	Map( int user_fd );
 	BOOL IsLocalAccess( int user_fd );
 	BOOL IsDup( int user_fd );

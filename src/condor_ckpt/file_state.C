@@ -380,6 +380,45 @@ OpenFileTable::DoDup( int user_fd )
 	return DoDup2( user_fd, new_fd );
 }
 
+int
+OpenFileTable::DoSocket(int addr_family, int type, int protocol )
+{
+	int	user_fd;
+	int	real_fd;
+	char	buf[ _POSIX_PATH_MAX ];
+
+		// Try to open the file
+	if( LocalSysCalls() ) {
+		real_fd = syscall( SYS_socket, addr_family, type, protocol );
+	} else {
+		real_fd = -1;
+	}
+
+		// Stop here if there was an error
+	if( real_fd < 0 ) {
+		return -1;
+	}
+
+		// find an unused fd
+	if( (user_fd = find_avail(0)) < 0 ) {
+		errno = EMFILE;
+		return -1;
+	}
+
+	file[user_fd].readable = TRUE;
+	file[user_fd].writeable = TRUE;
+	file[user_fd].open = TRUE;
+	file[user_fd].duplicate = TRUE;
+	file[user_fd].pre_opened = TRUE;  /* Make it not be re-opened */
+	file[user_fd].remote_access = RemoteSysCalls();
+	file[user_fd].shadow_sock = FALSE;
+	file[user_fd].offset = 0;
+	file[user_fd].real_fd = real_fd;
+	file[user_fd].pathname = (char *) 0;
+	return user_fd;
+}
+
+
 void
 OpenFileTable::Save()
 {
@@ -658,6 +697,27 @@ dup2( int old, int new_fd )
 		rval =  syscall( SYS_dup2, old, new_fd );
 	} else {
 		rval =  REMOTE_syscall( CONDOR_dup2, old, new_fd );
+	}
+
+	return rval;
+}
+#endif
+
+#if defined(SYS_socket)
+int
+socket( int addr_family, int type, int protocol )
+{
+	int		rval;
+
+	if( MappingFileDescriptors() ) {
+		rval =  FileTab->DoSocket( addr_family, type, protocol );
+		return rval;
+	}
+
+	if( LocalSysCalls() ) {
+		rval =  syscall( SYS_socket, addr_family, type, protocol );
+	} else {
+		rval =  -1;		/* What to do with a remote socket() call? JCP */
 	}
 
 	return rval;
