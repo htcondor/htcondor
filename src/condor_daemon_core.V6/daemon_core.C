@@ -1045,6 +1045,14 @@ DaemonCore::Verify(DCpermission perm, const struct sockaddr_in *sin )
 	return FALSE;
 }
 
+
+int
+DaemonCore::AddAllowHost( const char* host, DCpermission perm )
+{
+	return ipverify.AddAllowHost( host, perm );
+}
+
+
 // This function never returns. It is responsible for monitor signals and
 // incoming messages or requests and invoke corresponding handlers.
 void DaemonCore::Driver()
