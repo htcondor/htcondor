@@ -307,11 +307,11 @@ is_root( void )
 
 #ifndef FALSE
 #define FALSE 0
-#endif FALSE
+#endif /* FALSE */
 
 #ifndef TRUE
 #define TRUE 1
-#endif TRUE
+#endif /* TRUE */
 
 #define ROOT 0
 

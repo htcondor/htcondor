@@ -36,7 +36,7 @@ State string_to_state(char*);
 char* activity_to_string(Activity);
 Activity string_to_activity(char*);
 
-#endif _CONDOR_STATE_H
+#endif /* _CONDOR_STATE_H */
 
 
 

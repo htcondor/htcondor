@@ -266,7 +266,7 @@ int tcp_connect_timeout( int sockfd, struct sockaddr *sin, int len,
 	if( ioctl(sockfd,FIONBIO,(char *)&on) < 0 ) {
 		EXCEPT( "ioctl" );
 	}
-#endif AIX31
+#endif /* AIX31 */
 
 
 	timer.tv_sec = timeout;

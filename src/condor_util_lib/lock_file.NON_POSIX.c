@@ -146,4 +146,4 @@ lock_file( int fd, LOCK_TYPE type, int do_block )
 	return 0;
 }
 
-#endif CONDOR_USE_FLOCK
+#endif /* CONDOR_USE_FLOCK */

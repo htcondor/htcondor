@@ -251,7 +251,7 @@ Condor_Credential_B * create_new_cred(Credential_t type, ReliSock * sock)
       newCred = new Condor_Kerberos();
     }
     break;
-#endif;
+#endif
   default:
     break;
   }

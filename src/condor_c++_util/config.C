@@ -31,7 +31,7 @@
 extern "C" {
 #endif
 
-char *getline_implementation( FILE *, int );
+static char *getline_implementation( FILE *, int );
 
 int		ConfigLineNo;
 

@@ -961,7 +961,7 @@ Authentication::setupEnv( char *hostAddr )
 	  canUseFlags |= CAUTH_KERBEROS;
 #endif
 	  
-#endif defined WIN32
+#endif /* defined WIN32 */
 	}
 	else {   //server
 	  if ( serverShouldTry ) {
@@ -1780,7 +1780,7 @@ bool Authentication ::  gss_is_valid()
 	}
 }	
 
-#endif defined(GSS_AUTHENTICATION)
+#endif /* defined(GSS_AUTHENTICATION) */
 
 //----------------------------------------------------------------------
 // Kerberos Authentication Code
@@ -2956,9 +2956,9 @@ int Authentication :: kerberos_unwrap(char*  input,
   return FALSE;
 }
 
-#endif defined(KERBEROS_AUTHENTICATION)
+#endif /* defined(KERBEROS_AUTHENTICATION) */
 
-#endif !defined(SKIP_AUTHENTICATION)
+#endif /* !defined(SKIP_AUTHENTICATION) */
 
 
 

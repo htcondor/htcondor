@@ -31,7 +31,7 @@
 _EXCEPT_(foo)
 char	*foo;
 { printf( foo ); }
-#else LINT
+#else /* LINT */
 
 int		_EXCEPT_Line;
 int		_EXCEPT_Errno;
@@ -68,4 +68,4 @@ _EXCEPT_(char *fmt, ...)
 
 	exit( JOB_EXCEPTION );
 }
-#endif LINT
+#endif /* LINT */

@@ -47,4 +47,4 @@ class X509_Credential{
 
 #endif
 
-#endif CREDENTIAL_H
+#endif /* CREDENTIAL_H */

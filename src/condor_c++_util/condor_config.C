@@ -83,7 +83,7 @@ void clear_config();
 void reinsert_specials(char*);
 void process_file(char*, char*, char*);
 void process_locals( char*, char*);
-int  process_runtime_configs();
+static int  process_runtime_configs();
 void check_params();
 
 // External variables

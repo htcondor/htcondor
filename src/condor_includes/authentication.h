@@ -399,7 +399,7 @@ private:
 	//------------------------------------------
 #endif
 
-#endif !SKIP_AUTHENTICATION
+#endif /* !SKIP_AUTHENTICATION */
 	
 #if defined (GSS_AUTHENTICATION)
 	/// Personal credentials
@@ -444,5 +444,5 @@ private:
 
 };
 
-#endif define AUTHENTICATION_H
+#endif /* AUTHENTICATION_H */
 
