@@ -93,7 +93,7 @@ int FileExists(const char *filename, const char *owner)
 		return TRUE;
 	}
 	
-	if (FileOnServer(owner, filename)) {
+	if (FileOnServer(owner, filename) == 0) {
 		return TRUE;
 	} else {
 		return FALSE;
@@ -253,6 +253,15 @@ int FileOnServer(const char* owner,
 int RemoveRemoteFile(const char* owner,
 					 const char* filename)
 {
+	return (RequestService(owner, filename, NULL, DELETE, NULL, NULL, NULL, 
+						   NULL));
+}
+
+
+int RemoveLocalOrRemoteFile(const char* owner,
+							const char* filename)
+{
+	unlink(filename);
 	return (RequestService(owner, filename, NULL, DELETE, NULL, NULL, NULL, 
 						   NULL));
 }
