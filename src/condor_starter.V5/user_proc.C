@@ -1165,7 +1165,7 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 
 		// Generate a directory where process can run and do its checkpointing
 	omask = umask(0);
-	sprintf( buf, "dir_%d", proc_index++ );
+	sprintf( buf, "dir_%d", getpid() );
 	local_dir = new char [ strlen(buf) + 1 ];
 	strcpy( local_dir, buf );
 	if( mkdir(local_dir,LOCAL_DIR_MODE) < 0 ) {
