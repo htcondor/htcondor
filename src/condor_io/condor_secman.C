@@ -1735,8 +1735,5 @@ SecMan :: invalidateExpiredCache()
 				return false;
 			}
 
-			dprintf ( D_SECURITY, "SECMAN: will now re-auth for %s on port %i.\n",
-					keybuf, sock->get_port());
-
 			goto choose_action;
 */
