@@ -38,7 +38,7 @@ static char *_FileName_ = __FILE__;
 
 extern "C" {
 	char *calc_subnet_name();
-	int	free_fs_blocks(char*);
+	int	free_fs_blocks(const char*);
 	char* getwd( char* );
 }
 
