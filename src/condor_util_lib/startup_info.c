@@ -49,6 +49,9 @@ display_startup_info( const STARTUP_INFO *s, int flags )
 		case PVM:
 			dprintf( flags, "\tJobClass: PVM\n" );
 			break;
+		case MPI:
+			dprintf( flags, "\tJobClass: MPI\n" );
+			break;
 		default:
 			dprintf( flags, "\tJobClass: UNKNOWN (%d)\n", s->job_class );
 	}
