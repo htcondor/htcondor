@@ -388,18 +388,17 @@ Authentication::authenticate_filesystem()
 		mySock->code( new_file );
 		if ( new_file ) {
 			fd = open(new_file, O_RDONLY | O_CREAT | O_TRUNC, 0666);
-dprintf(D_ALWAYS,"auth_filesystem, client open stat: %d\n", fd );
 			::close(fd);
 		}
 		mySock->end_of_message();
 		mySock->encode();
+		//send over fd as a success/failure indicator (-1 == failure)
 		mySock->code( fd );
 		mySock->end_of_message();
 		int rval = -1;
 		mySock->decode();
 		mySock->code( rval );
 		mySock->end_of_message();
-//		dprintf(D_FULLDEBUG,"server determined owner is \"%s\"\n", owner );
 		if ( new_file ) {
 			unlink( new_file );
 			free( new_file );
@@ -703,8 +702,6 @@ Authentication::authenticate_client_gss()
 	auth_status = CAUTH_GSS;
 
 	dprintf(D_FULLDEBUG,"valid GSS connection established to %s\n", gateKeeper);
-//	delete gateKeeper;
-//	gateKeeper = NULL;
 	return TRUE;
 }
 
@@ -724,10 +721,6 @@ Authentication::authenticate_server_gss()
 			"failure authenticating self in auth_connection_server\n" );
 		return FALSE;
 	}
-//	if ( GSSClientname ) {
-//		free( GSSClientname );
-//		GSSClientname = NULL;
-//	}
 	 
 	authComms.sock = mySock;
 	authComms.buffer = NULL;
@@ -826,7 +819,6 @@ Authentication::authenticate_gss()
 			default: 
 				dprintf(D_FULLDEBUG,"about to authenticate client from server\n" );
 				status = authenticate_server_gss();
-//				init_user_ids( getOwner() );
 				break;
 		}
 		mySock->timeout(time); //put it back to what it was before
