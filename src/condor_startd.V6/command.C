@@ -419,6 +419,17 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 		ABORT;
 	}
 
+		// At this point, the schedd has registered this socket (stream)
+		// and likely has gone off to service other requests.  Thus, 
+		// we need change the timeout on the socket to the schedd to be
+		// very patient.  By default, daemon core put a timeout of ~20
+		// seconds on this socket.  This is not at all long enough.
+		// since we should only hold this match for match_timeout,
+		// set the timeout to be 10 seconds less than that. -Todd
+	if ( match_timeout > 10 ) {
+		stream->timeout( match_timeout - 10 );
+	}
+		
 	rip->dprintf( D_FULLDEBUG,
 				  "Received capability from schedd agent (%s)\n", cap );
 
