@@ -94,7 +94,11 @@ double Accountant::GetPriority(const MyString& CustomerName)
   CustomerRecord* Customer;
   double PriorityFactor=1;
   if (strncmp(CustomerName,NiceUserName,strlen(NiceUserName))==0) PriorityFactor=NiceUserPriorityFactor;
-  if (Customers.lookup(CustomerName,Customer)) return MinPriority*PriorityFactor;
+  if (Customers.lookup(CustomerName,Customer)) {
+	// if its a new customer, create a new customer record
+	SetPriority(CustomerName, MinPriority*PriorityFactor);
+	return MinPriority*PriorityFactor;
+  }
   if (Customer->Priority<MinPriority) Customer->Priority=MinPriority;
   return Customer->Priority*PriorityFactor;;
 }
