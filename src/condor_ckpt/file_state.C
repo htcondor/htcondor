@@ -45,6 +45,10 @@
 #	define _G_USE_PROTOS
 #endif
 
+#if defined(IRIX62)
+typedef struct fd_set fd_set;
+#endif
+
 #include <stdio.h>
 #include <signal.h>
 #include "fcntl.h"
@@ -927,7 +931,9 @@ dup( int old )
 	   modify our local file table and actually make the change */
 	omask = block_condor_signals();
 	if( MappingFileDescriptors() ) {
-		return FileTab->DoDup( old );
+		rval = FileTab->DoDup( old );
+		restore_condor_sigmask(omask);
+		return rval;
 	}
 
 	if( LocalSysCalls() ) {
