@@ -659,6 +659,21 @@ system.
   matches the \MacroNI{UID\_DOMAIN}.
   The default is FALSE, since it is more secure to perform this test. 
 
+\item[\Macro{PASSWD\_CACHE\_REFRESH}]
+  \label{param:PasswdCacheRefresh}
+  Condor can cause NIS servers to become overwhelmed by queries for uid
+  and group information in large pools. In order to avoid this problem,
+  Condor caches uid and group information internally. This setting allows
+  pool administrators to specify (in seconds) how long Condor should wait
+  until refreshes a cache entry. The default is set to 300 seconds, or
+  5 minutes. This means that if a pool administrator updates the user
+  or group database (e.g. /etc/passwd or /etc/group), it can take up
+  to 5 minutes before Condor will have the updated information. This
+  caching feature can be disabled by setting the refresh interval to
+  0. In addition, the cache can also be flushed explicitly by running
+  the ``\condor{reconfig} -full'' command. This setting has no effect
+  on Windows.
+
 \end{description}
 
 
