@@ -308,8 +308,8 @@ Match::claim_timed_out()
 		delete m_client;
 		m_client = NULL;
 	}
-		// Release the claim.
-	rip->release_claim();
+		// Kill the claim.
+	rip->kill_claim();
 	return TRUE;
 }
 
