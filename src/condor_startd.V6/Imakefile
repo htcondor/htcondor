@@ -1,7 +1,7 @@
 SRC_DIR = $(SRC_TREE)/condor_startd.V6
 TARGET_SYSTEM = condor
 
-CFLAGS = $(STD_C_FLAGS) -g -DNEW_PROC
+CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC
 
 RESOURCE_SRC = resource.C
@@ -28,13 +28,14 @@ RESOURCE_HDR = resource.h
 #	define LOAD_AVG_OBJ load_avg.BSD.o
 #endif
 
-#if (IS_ALPHA_OSF1)
-STARTD_SRC = $(RESOURCE_SRC) command.C event.C main.C resmgr.C rpc.C glue.C LOAD_G_SRC startd_classad.C CondorPrefExps.C CondorPendingJobs.C tty_idle.OSF1.C
-STARTD_OBJ = $(RESOURCE_OBJ) command.o event.o main.o resmgr.o rpc.o glue.o LOAD_AVG_OBJ startd_classad.o CondorPrefExps.o CondorPendingJobs.o tty_idle.OSF1.o
-#else
-STARTD_SRC = $(RESOURCE_SRC) command.C event.C main.C resmgr.C rpc.C glue.C LOAD_G_SRC startd_classad.C CondorPrefExps.C CondorPendingJobs.C
-STARTD_OBJ = $(RESOURCE_OBJ) command.o event.o main.o resmgr.o rpc.o glue.o LOAD_AVG_OBJ startd_classad.o CondorPrefExps.o CondorPendingJobs.o
+#if IS_ALPHA_OSF1
+PLATFORM_SPECIAL_SRC = tty_idle.OSF1.C
+PLATFORM_SPECIAL_OBJ = tty_idle.OSF1.o
 #endif
+
+STARTD_SRC = $(RESOURCE_SRC) command.C event.C main.C resmgr.C rpc.C glue.C LOAD_G_SRC startd_classad.C CondorPrefExps.C CondorPendingJobs.C $(PLATFORM_SPECIAL_SRC) clinpack.c dhry21a.c dhry21b.c timers_b.c
+
+STARTD_OBJ = $(RESOURCE_OBJ) command.o event.o main.o resmgr.o rpc.o glue.o LOAD_AVG_OBJ startd_classad.o CondorPrefExps.o CondorPendingJobs.o $(PLATFORM_SPECIAL_OBJ) clinpack.o dhry21a.o dhry21b.o timers_b.o
 
 #if (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS25) || (IS_SUN4M_SOLARIS251)
 LIB= $(REMOTE_SYSCALL_LIB)  ../condor_classad/expr_lib.a ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a SocketLib RpcLib MldLib KernLib
@@ -53,15 +54,8 @@ $(RESOURCE_SRC):
 tags_target($(STARTD_SRC),$(LIBDIRS))
 depend_target($(STARTD_SRC))
 
-#if IS_V6
 c_plus_target(condor_startd,$(STARTD_OBJ),$(LIB))
 release_target(condor_startd,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
-#if DO_BENCHMARKING
-	program_target(bench,$(BENCH_MAIN_OBJ),$(LIB))
-#endif
-#else
-program_target(condor_startd,$(STARTD_OBJ),$(LIB),release)
-#endif
 
 clean::
 	rm -f resource.C resource.h
