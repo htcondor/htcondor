@@ -54,6 +54,9 @@ extern "C" {
 	int use_local_access (const char *);
 	int use_special_access (const char *);
 	void HoldJob( const char* buf );
+	#if defined(OSF1)
+		int statfs(const char *, struct statfs*);
+	#endif
 }
 
 extern int JobStatus;
@@ -1988,13 +1991,12 @@ pseudo_register_syscall_version( const char *version )
 	return 0;
 }
 
+
 int
 pseudo_statfs( const char *path, struct statfs *buf )
 {
 #if defined(Solaris) || defined(IRIX)
 	return statfs( path, buf, 0, 0);
-#elif defined(OSF1)
-	return statfs( path, buf, 0);
 #else
 	return statfs( path, buf );
 #endif
