@@ -2018,8 +2018,8 @@ Scheduler::actOnJobs(int, Stream* s)
 		/* 
 		   Find out what they want us to do.  This classad should
 		   contain:
-		   ATTR_JOB_ACTION - either JA_HOLD_JOBS, JA_RELEASE_JOBS, or
-		                     JA_REMOVE_JOBS 
+		   ATTR_JOB_ACTION - either JA_HOLD_JOBS, JA_RELEASE_JOBS,
+		                     JA_REMOVE_JOBS, or JA_REMOVE_X_JOBS
 		   ATTR_ACTION_RESULT_TYPE - either AR_TOTALS or AR_LONG
 		   and one of:
 		   ATTR_ACTION_CONSTRAINT - a string with a ClassAd constraint 
@@ -2050,6 +2050,10 @@ Scheduler::actOnJobs(int, Stream* s)
 		reason_attr_name = ATTR_RELEASE_REASON;
 		break;
 	case JA_REMOVE_JOBS:
+		sprintf( status_str, "%d", REMOVED );
+		reason_attr_name = ATTR_REMOVE_REASON;
+		break;
+	case JA_REMOVE_X_JOBS:
 		sprintf( status_str, "%d", REMOVED );
 		reason_attr_name = ATTR_REMOVE_REASON;
 		break;
@@ -2117,6 +2121,10 @@ Scheduler::actOnJobs(int, Stream* s)
 		case JA_REMOVE_JOBS:
 				// Don't remove removed jobs
 			sprintf( buf, "(%s!=%d) && (", ATTR_JOB_STATUS, REMOVED );
+			break;
+		case JA_REMOVE_X_JOBS:
+				// only allow forced removal of previously "removed" jobs
+			sprintf( buf, "(%s==%d) && (", ATTR_JOB_STATUS, REMOVED );
 			break;
 		case JA_HOLD_JOBS:
 				// Don't hold held jobs
@@ -2242,6 +2250,18 @@ Scheduler::actOnJobs(int, Stream* s)
 					continue;
 				}
 				break;
+			case JA_REMOVE_X_JOBS:
+				if( status != REMOVED ) {
+					results.record( tmp_id, AR_BAD_STATUS );
+					continue;
+				}
+					// set LeaveJobInQueue to false...
+				if( SetAttribute( tmp_id.cluster, tmp_id.proc,
+								  ATTR_JOB_LEAVE_IN_QUEUE, "False" ) < 0 ) {
+					results.record( tmp_id, AR_PERMISSION_DENIED );
+					continue;
+				}
+				break;
 			case JA_HOLD_JOBS:
 				if( status == HELD ) {
 					results.record( tmp_id, AR_ALREADY_DONE );
@@ -2346,6 +2366,14 @@ Scheduler::actOnJobs(int, Stream* s)
 	} else if( action == JA_RELEASE_JOBS ) {
 		for( i=0; i<num_matches; i++ ) {
 			WriteReleaseToUserLog( jobs[i] );		
+		}
+	} else if( action == JA_REMOVE_X_JOBS ) {
+		for( i=0; i<num_matches; i++ ) {		
+			if( !scheduler.WriteAbortToUserLog( jobs[i] ) ) {
+				dprintf( D_ALWAYS, 
+						 "Failed to write abort event to the user log\n" ); 
+			}
+			DestroyProc( jobs[i].cluster, jobs[i].proc );
 		}
 	}
 	return TRUE;

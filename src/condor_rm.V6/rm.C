@@ -3,7 +3,7 @@
  *
  * See LICENSE.TXT for additional notices and disclaimers.
  *
- * Copyright (c)1990-2002 CONDOR Team, Computer Sciences Department, 
+ * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
  * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
  * No use of the CONDOR Software Program Source Code is authorized 
  * without the express consent of the CONDOR Team.  For more information 
@@ -46,6 +46,7 @@ int mode;
 bool All = false;
 bool had_error = false;
 bool old_messages = false;
+bool forceX = false;
 
 DCSchedd* schedd = NULL;
 
@@ -97,6 +98,11 @@ usage()
 	fprintf( stderr, "  -name schedd_name   Connect to the given schedd\n" );
 	fprintf( stderr, "  -pool hostname      Use the given central manager to find daemons\n" );
 	fprintf( stderr, "  -addr <ip:port>     Connect directly to the given \"sinful string\"\n" );
+	if( mode == REMOVED ) {
+		fprintf( stderr,
+				     "  -forcex             Force the immediate local removal of jobs in the X state\n"
+		         "                      (only affects jobs already being removed)\n" );
+	}
 	fprintf( stderr, " and where [constraints] is one or more of:\n" );
 	fprintf( stderr, "  cluster.proc        %s the given job\n", word );
 	fprintf( stderr, "  cluster             %s the given cluster of jobs\n", word );
@@ -214,6 +220,9 @@ main( int argc, char *argv[] )
 				}
 				All = true;
 				break;
+			case 'f':
+				forceX = true;
+				break;				
 			case 'n': 
 				// use the given name as the schedd name to connect to
 				argv++;
@@ -265,8 +274,6 @@ main( int argc, char *argv[] )
 
 	if( ! (All || nArgs) ) {
 			// We got no indication of what to act on
-
-
 		fprintf( stderr, "You did not specify any jobs\n" ); 
 		usage();
 	}
@@ -364,7 +371,11 @@ doWorkByConstraint( const char* constraint )
 		ad = schedd->releaseJobs( constraint, "via condor_release" );
 		break;
 	case REMOVED:
-		ad = schedd->removeJobs( constraint, "via condor_rm" );
+		if( forceX ) {
+			ad = schedd->removeXJobs( constraint, "via condor_rm -forceX" );
+		} else {
+			ad = schedd->removeJobs( constraint, "via condor_rm" );
+		}
 		break;
 	case HELD:
 		ad = schedd->holdJobs( constraint, "via condor_hold" );
@@ -393,7 +404,11 @@ doWorkByList( StringList* ids )
 		rval = schedd->releaseJobs( ids, "via condor_release" );
 		break;
 	case REMOVED:
-		rval = schedd->removeJobs( ids, "via condor_rm" );
+		if( forceX ) {
+			rval = schedd->removeXJobs( ids, "via condor_rm -forcex" );
+		} else {
+			rval = schedd->removeJobs( ids, "via condor_rm" );
+		}
 		break;
 	case HELD:
 		rval = schedd->holdJobs( ids, "via condor_hold" );
@@ -436,7 +451,10 @@ procArg(const char* arg)
 			if( doWorkByConstraint(constraint) ) {
 				fprintf( old_messages ? stderr : stdout, 
 						 "Cluster %d %s.\n", c,
-						 (mode==REMOVED)?"has been marked for removal":
+						 (mode == REMOVED && forceX == false) ?
+						 "has been marked for removal" :
+						 (mode == REMOVED && forceX == true) ?
+						 "has been removed locally (remote state unknown)" :
 						 (mode==HELD)?"held":"released" );
 			} else {
 				fprintf( stderr, 
@@ -474,7 +492,10 @@ procArg(const char* arg)
 		sprintf( constraint, "%s == \"%s\"", ATTR_OWNER, arg );
 		if( doWorkByConstraint(constraint) ) {
 			fprintf( stdout, "User %s's job(s) %s.\n", arg,
-					 (mode==REMOVED)?"have been marked for removal":
+					 (mode == REMOVED && forceX == false) ?
+					 "have been marked for removal" :
+					 (mode == REMOVED && forceX == true) ?
+					 "have been removed locally (remote state unknown)" :
 					 (mode==HELD)?"held":"released" );
 		} else {
 			fprintf( stderr, 
@@ -513,7 +534,10 @@ handleAll()
 
 	if( doWorkByConstraint(constraint) ) {
 		fprintf( stdout, "All jobs %s.\n",
-				 (mode==REMOVED)?"marked for removal":
+				 (mode == REMOVED && forceX == false) ?
+				 "marked for removal" :
+				 (mode == REMOVED && forceX == true) ?
+				 "removed locally (remote state unknown)" :
 				 (mode==HELD)?"held":"released" );
 	} else {
 		fprintf( stderr, "Could not %s all jobs.\n",
@@ -534,7 +558,10 @@ handleConstraints( void )
 
 	if( doWorkByConstraint(tmp) ) {
 		fprintf( stdout, "Jobs matching constraint %s %s\n", tmp,
-				 (mode==REMOVED)?"have been marked for removal":
+				 (mode == REMOVED && forceX == false) ?
+				 "have been marked for removal" :
+				 (mode == REMOVED && forceX == true) ?
+				 "have been removed locally (remote state unknown)" :
 				 (mode==HELD)?"held":"released" );
 	} else {
 		fprintf( stderr, 
@@ -561,7 +588,10 @@ printOldMessage( PROC_ID job_id, action_result_t result )
 	case AR_SUCCESS:
 		fprintf( stdout, "Job %d.%d %s.\n", 
 				 job_id.cluster, job_id.proc, 
-				 (mode==REMOVED)?"marked for removal":
+				 (mode == REMOVED && forceX == false) ?
+				 "marked for removal" :
+				 (mode == REMOVED && forceX == true) ?
+				 "removed locally (remote state unknown)" :
 				 (mode==HELD)?"held":"released" );
 		break;
 
@@ -592,7 +622,10 @@ printOldMessage( PROC_ID job_id, action_result_t result )
 			// the same job over and over again...
 		fprintf( stdout, "Job %d.%d %s.\n", 
 				 job_id.cluster, job_id.proc, 
-				 (mode==REMOVED)?"marked for removal":
+				 (mode == REMOVED && forceX == false) ?
+				 "marked for removal" :
+				 (mode == REMOVED && forceX == true) ?
+				 "removed locally (remote state unknown)" :
 				 (mode==HELD)?"held":"released" );
 		break;
 
