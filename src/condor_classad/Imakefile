@@ -32,10 +32,11 @@ SYSPARAM = sysparam_linux
 IO_OBJ = stream.o buffers.o reli_sock.o safe_sock.o sock.o
 
 SRC = ast.C astbase.C buildtable.C parser.C scanner.C registration.C \
-	  attrlist.C classad.C classifiedjobs.C classad_util.C
+	  attrlist.C classad.C classifiedjobs.C classad_util.C environment.C
 
 OBJ = ast.o astbase.o buildtable.o parser.o scanner.o registration.o \
-	  attrlist.o classad.o classifiedjobs.o classad_util.o $(IO_OBJ)
+	  attrlist.o classad.o classifiedjobs.o classad_util.o environment.o \
+	  $(IO_OBJ)
 
 all_target(expr_lib.a)
 

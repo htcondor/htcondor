@@ -12,6 +12,8 @@
 #include "condor_classad.h"
 #include "condor_buildtable.h"
 
+extern void evalFromEnvironment (char *, EvalResult *);
+
 #define EatSpace(ptr)  while(*ptr != '\0') ptr++;
 
 void EvalResult::fPrintResult(FILE *f)
@@ -300,6 +302,7 @@ EvalTree(AttrList* my_classad,AttrList* req_classad, EvalResult* val)
 
     char * myNamePrefix = "MY.";
     char * reqNamePrefix = "TARGET.";
+	char * envNamePrefix = "ENV.";
 
     if (name == NULL)
     {
@@ -310,14 +313,16 @@ EvalTree(AttrList* my_classad,AttrList* req_classad, EvalResult* val)
 	// check for scope of the variable.  semantics state that if a variable's
   	// scope is not defined, first look in the MY scope.  If the variable is
 	// not found in the MY scope, look in the TARGET scope.  If not found in
-	// both, return LX_UNDEFINED    --RR
+	// target scope, lookup environment scope.  If not found in all three, 
+	// return LX_UNDEFINED    --RR
 	char *realName = new char [strlen (name) + 1];
-	bool myScope, targetScope;
+	bool myScope, targetScope, envScope;
 
 	if (strncmp(name, myNamePrefix, 3) == 0)
 	{
 		myScope = true;
 		targetScope = false;
+		envScope = false;
 		strcpy (realName, name+3);
 	}
 	else
@@ -325,39 +330,58 @@ EvalTree(AttrList* my_classad,AttrList* req_classad, EvalResult* val)
 	{	
 		targetScope = true;
 		myScope = false;
+		envScope = false;
 		strcpy (realName, name+7);
 	}
 	else
+	if (strncmp (name, envNamePrefix, 4) == 0)
 	{
-		// not prefixed by either MY or TARGET, must lookup both scopes
+		envScope = true;
+		targetScope = false;
+		myScope = false;
+	}
+	else
+	{
+		// not prefixed by MY, TARGET or ENV; must lookup all scopes
 		myScope = true;
 		targetScope = true;
+		envScope = true;
 		strcpy (realName, name);
 	}
 
    	if (myScope && my_classad)
    	{
-		// lookup
+		// lookup my scope
        	tmp = my_classad->Lookup(realName);
+		if (tmp)
+		{
+			delete [] realName;
+			return (tmp->EvalTree(my_classad, req_classad, val));
+		}
 	}
 
-	if (targetScope && req_classad && tmp == NULL)
+	if (targetScope && req_classad)
 	{
-		// lookup
+		// lookup target scope
 		tmp = req_classad->Lookup(realName);
+		if (tmp)
+        {
+			delete [] realName;
+        	return (tmp->EvalTree(my_classad, req_classad, val));
+		}
 	}
 
-	// done with realName
-	delete [] realName;
-
-	// if the tree was not found
-	if (tmp == NULL)
+	if (envScope)
 	{
-	   	val->type = LX_UNDEFINED;
-	   	return TRUE;
+		// lookup environment scope
+		evalFromEnvironment (realName, val);
+		delete [] realName;
+		return TRUE;	
 	}
 
-    return tmp->EvalTree(my_classad, req_classad, val);
+	// should never reach here
+	val->type = LX_ERROR;	
+	return TRUE;
 }
 
 
