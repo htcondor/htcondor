@@ -745,6 +745,15 @@ The \Condor{startd} keeps track
   and close, and on every UDP send and receive.  This flag is not
   yet fully supported in the \Condor{shadow}.
 
+\item[\Dflag{HOSTNAME}] \label{dflag:hostname}
+  \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_HOSTNAME@\texttt{D\_HOSTNAME}}
+  When this flag is set, the Condor daemons and/or tools will print
+  verbose messages explaining how they resolve host names, domain
+  names, and IP addresses.
+  This is useful for sites that are having trouble getting Condor to
+  work because of problems with DNS, NIS or other host name resolving
+  systems your machines are using.
+
 \end{description}
 
 \item[\Macro{ALL\_DEBUG}] \label{param:AllDebug} To make all subsystems
