@@ -125,6 +125,7 @@ Scheduler::Scheduler()
     ad = NULL;
     MySockName = NULL;
     SchedDInterval = 0;
+	QueueCleanInterval = 0;
     MaxJobStarts = 0;
     MaxJobsRunning = 0;
     JobsStarted = 0;
@@ -2069,6 +2070,14 @@ Scheduler::Init()
         free( tmp );
     }
 
+	tmp = param( "QUEUE_CLEAN_INTERVAL" );
+	if( tmp == NULL ) {
+		QueueCleanInterval = 24*60*60;	// every 24 hours
+	} else {
+		QueueCleanInterval = atoi( tmp );
+		free( tmp );
+	}
+
     if( (Shadow=param("SHADOW")) == NULL ) {
         EXCEPT( "SHADOW not specified in config file\n" );
     }
@@ -2181,9 +2190,12 @@ Scheduler::Register(DaemonCore* core)
 
     // timer handler
     core->Register_Timer(10,SchedDInterval,(Eventcpp)timeout,"timeout",this);
-   core->Register_Timer(10,SchedDInterval,(Eventcpp)StartJobs,"StartJobs",this);
+	core->Register_Timer(10,SchedDInterval,(Eventcpp)StartJobs,"StartJobs",
+						 this);
     core->Register_Timer(aliveInterval, aliveInterval, (Eventcpp)send_alive, 
-			"send_alive", this);
+						 "send_alive", this);
+	core->Register_Timer(QueueCleanInterval, QueueCleanInterval,
+						 (Event)CleanJobQueue, "CleanJobQueue");
 
 #if !defined(WIN32) /* not sure what the WIN32 equivalents of these will be yet */
     // signal handlers

@@ -128,6 +128,7 @@ class Scheduler : public Service
 
 	// parameters controling the scheduling and starting shadow
 	int				SchedDInterval;
+	int				QueueCleanInterval;
 	int				MaxJobStarts;
 	int				MaxJobsRunning;
 	int				JobsStarted; // # of jobs started last negotiating session
