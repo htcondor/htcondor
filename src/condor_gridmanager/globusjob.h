@@ -32,7 +32,7 @@ class GlobusJob : public Service
 	void UpdateCondorState( int new_state );
 	void UpdateGlobusState( int new_state, int new_error_code );
 	void GramCallback( int new_state, int new_error_code );
-	bool GetCallbacks();
+	bool GetCallbacks( bool ignore_failed = false );
 	void ClearCallbacks();
 	GlobusResource *GetResource();
 
@@ -85,6 +85,7 @@ class GlobusJob : public Service
 	// HACK!
 	bool retryStdioSize;
 	char *resourceManagerString;
+	bool useGridJobMonitor;
 
 	bool gahp_proxy_id_set;
 	Proxy *myProxy;
@@ -144,6 +145,7 @@ class GlobusJob : public Service
 
 	bool FailureIsRestartable( int error_code );
 	bool FailureNeedsCommit( int error_code );
+	bool JmShouldSleep();
 };
 
 #endif

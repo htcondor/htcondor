@@ -215,15 +215,36 @@ RequestContactSchedd()
 	}
 }
 
+char *
+globusJobId( const char *contact )
+{
+	static char buff[1024];
+	char *first_end;
+	char *second_begin;
+
+	ASSERT( strlen(contact) < sizeof(buff) );
+
+	first_end = strrchr( contact, ':' );
+	ASSERT( first_end );
+
+	second_begin = strchr( first_end, '/' );
+	ASSERT( second_begin );
+
+	strncpy( buff, contact, first_end - contact );
+	strcpy( buff + ( first_end - contact ), second_begin );
+
+	return buff;
+}
+
 void
 rehashJobContact( GlobusJob *job, const char *old_contact,
 				  const char *new_contact )
 {
 	if ( old_contact ) {
-		JobsByContact.remove(HashKey(old_contact));
+		JobsByContact.remove(HashKey(globusJobId(old_contact)));
 	}
 	if ( new_contact ) {
-		JobsByContact.insert(HashKey(new_contact), job);
+		JobsByContact.insert(HashKey(globusJobId(new_contact)), job);
 	}
 }
 
@@ -317,6 +338,7 @@ void
 Reconfig()
 {
 	int tmp_int;
+	bool tmp_bool;
 
 	// This method is called both at startup [from method Init()], and
 	// when we are asked to reconfig.
@@ -343,6 +365,9 @@ Reconfig()
 
 	tmp_int = param_integer("GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT",3);
 	GlobusJob::setConnectFailureRetry( tmp_int );
+
+	tmp_bool = param_boolean("ENABLE_GRID_MONITOR",false);
+	GlobusResource::setEnableGridMonitor( tmp_bool );
 
 	CheckProxies_interval = param_integer( "GRIDMANAGER_CHECKPROXY_INTERVAL",
 										   10 * 60 );
@@ -1100,7 +1125,7 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 				 true ) {
 
 				if ( curr_job->jobContact != NULL ) {
-					JobsByContact.remove( HashKey( curr_job->jobContact ) );
+					JobsByContact.remove( HashKey( globusJobId(curr_job->jobContact) ) );
 				}
 				JobsByProcID.remove( curr_job->procID );
 					// If wantRematch is set, send a reschedule now
@@ -1172,7 +1197,7 @@ orphanCallbackHandler()
 	OrphanCallbackList.DeleteCurrent();
 
 	// Find the right job object
-	rc = JobsByContact.lookup( HashKey( orphan->job_contact ), this_job );
+	rc = JobsByContact.lookup( HashKey( globusJobId(orphan->job_contact) ), this_job );
 	if ( rc != 0 || this_job == NULL ) {
 		dprintf( D_ALWAYS, 
 			"orphanCallbackHandler: Can't find record for globus job with "
@@ -1203,7 +1228,7 @@ gramCallbackHandler( void *user_arg, char *job_contact, int state,
 	GlobusJob *this_job;
 
 	// Find the right job object
-	rc = JobsByContact.lookup( HashKey( job_contact ), this_job );
+	rc = JobsByContact.lookup( HashKey( globusJobId(job_contact) ), this_job );
 	if ( rc != 0 || this_job == NULL ) {
 		dprintf( D_ALWAYS, 
 			"gramCallbackHandler: Can't find record for globus job with "

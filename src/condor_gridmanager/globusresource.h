@@ -27,6 +27,8 @@ class GlobusResource : public Service
 	void SubmitComplete( GlobusJob *job );
 	void CancelSubmit( GlobusJob *job );
 
+	bool GridJobMonitorActive() { return monitorActive; }
+
 	bool IsEmpty();
 	bool IsDown();
 	char *ResourceName();
@@ -44,8 +46,16 @@ class GlobusResource : public Service
 	static void setGahpCallTimeout( int new_timeout )
 		{ gahpCallTimeout = new_timeout; }
 
+	static void setEnableGridMonitor( bool enable )
+		{ enableGridMonitor = enable; }
+
  private:
 	int DoPing();
+	int CheckMonitor();
+	void StopMonitor();
+	bool SubmitMonitorJob();
+	bool ReadMonitorJobStatusFile();
+	int ReadMonitorLogFile();
 
 	char *resourceName;
 	bool resourceDown;
@@ -69,6 +79,14 @@ class GlobusResource : public Service
 	int submitLimit;		// max number of submit actions
 	int jobLimit;			// max number of submitted jobs
 	static int gahpCallTimeout;
+
+	static bool enableGridMonitor;
+	int checkMonitorTid;
+	bool monitorActive;
+	char *monitorJobStatusFile;
+	char *monitorLogFile;
+	int jobStatusFileLastReadTime;
+	int logFileLastReadTime;
 
 	GahpClient gahp;
 };

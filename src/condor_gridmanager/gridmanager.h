@@ -32,11 +32,11 @@ extern bool useDefaultProxy;
 extern char *ScheddJobConstraint;
 extern char *GridmanagerScratchDir;
 
-extern time_t Proxy_Expiration_Time;
-
 extern GahpClient GahpMain;
 
 extern char *gassServerUrl;
+
+extern HashTable <HashKey, GlobusJob *> JobsByContact;
 
 // initialization
 void Init();
@@ -51,6 +51,7 @@ bool addScheddUpdateAction( GlobusJob *job, int actions, int request_id = 0 );
 void removeScheddUpdateAction( GlobusJob *job );
 void rehashJobContact( GlobusJob *job, const char *old_contact,
 					   const char *new_contact );
+char *globusJobId( const char *contact );
 
 void gramCallbackHandler( void *user_arg, char *job_contact, int state,
 						  int errorcode );

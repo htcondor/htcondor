@@ -7,12 +7,18 @@
 #include "globusresource.h"
 #include "gridmanager.h"
 
+// timer id value that indicates the timer is not registered
+#define TIMER_UNSET		-1
+
 #define DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE	5
 #define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		100
+
+#define LOG_FILE_TIMEOUT		300
 
 int GlobusResource::probeInterval = 300;	// default value
 int GlobusResource::probeDelay = 15;		// default value
 int GlobusResource::gahpCallTimeout = 300;	// default value
+bool GlobusResource::enableGridMonitor = false;
 
 GlobusResource::GlobusResource( const char *resource_name )
 {
@@ -32,6 +38,19 @@ GlobusResource::GlobusResource( const char *resource_name )
 
 	myProxy = AcquireProxy( NULL, pingTimerId );
 
+	checkMonitorTid = TIMER_UNSET;
+	monitorActive = false;
+
+	MyString buff;
+
+	buff.sprintf( "%s/grid-monitor-job-status.%s.%d", GridmanagerScratchDir,
+				  resourceName, getpid() );
+	monitorJobStatusFile = strdup( buff.Value() );
+
+	buff.sprintf( "%s/grid-monitor-log.%s.%d", GridmanagerScratchDir,
+				  resourceName, getpid() );
+	monitorLogFile = strdup( buff.Value() );
+
 	Reconfig();
 }
 
@@ -39,8 +58,19 @@ GlobusResource::~GlobusResource()
 {
 	ReleaseProxy( NULL, pingTimerId );
 	daemonCore->Cancel_Timer( pingTimerId );
+	if ( checkMonitorTid != TIMER_UNSET ) {
+		daemonCore->Cancel_Timer( checkMonitorTid );
+	}
 	if ( resourceName != NULL ) {
 		free( resourceName );
+	}
+	if ( monitorJobStatusFile != NULL ) {
+		unlink( monitorJobStatusFile );
+		free( monitorJobStatusFile );
+	}
+	if ( monitorLogFile != NULL ) {
+		unlink( monitorLogFile );
+		free( monitorLogFile );
 	}
 }
 
@@ -114,6 +144,21 @@ void GlobusResource::Reconfig()
 		submitsQueued.Delete( queued_job );
 		submitsInProgress.Append( queued_job );
 		queued_job->SetEvaluateState();
+	}
+
+	if ( enableGridMonitor && checkMonitorTid == TIMER_UNSET ) {
+		// start grid monitor
+		checkMonitorTid = daemonCore->Register_Timer( 0,
+							(TimerHandlercpp)&GlobusResource::CheckMonitor,
+							"GlobusResource::CheckMonitor", (Service*)this );
+	} else if ( !enableGridMonitor && checkMonitorTid != TIMER_UNSET ) {
+		// stop grid monitor
+		if ( monitorActive ) {
+			StopMonitor();
+		}
+
+		daemonCore->Cancel_Timer( checkMonitorTid );
+		checkMonitorTid = TIMER_UNSET;
 	}
 }
 
@@ -372,3 +417,289 @@ int GlobusResource::DoPing()
 
 	return 0;
 }
+
+int
+GlobusResource::CheckMonitor()
+{
+	GlobusJob *job;
+	// TODO should we require our jobs to request the grid monitor before
+	//   we'll start it up?
+	// TODO what if we're in the middle of a ping when we get here? Either
+	//   delay until ping is done or have seperate GahpClient
+	// TODO if resource is down, should we delay any actions?
+	daemonCore->Reset_Timer( checkMonitorTid, TIMER_NEVER );
+dprintf(D_ALWAYS,"*** entering CheckMonitor\n");
+
+	if ( firstPingDone == false ) {
+dprintf(D_ALWAYS,"*** first ping not done yet, retry later\n");
+		daemonCore->Reset_Timer( checkMonitorTid, 5 );
+		return TRUE;
+	}
+
+	if ( monitorActive == false ) {
+		if ( SubmitMonitorJob() == true ) {
+			monitorActive = true;
+			// signal all jobs
+			registeredJobs.Rewind();
+			while ( registeredJobs.Next( job ) ) {
+				job->SetEvaluateState();
+			}
+			daemonCore->Reset_Timer( checkMonitorTid, 30 );
+		} else {
+dprintf(D_ALWAYS,"*** grid monitor disabled, stopping\n");
+			daemonCore->Reset_Timer( checkMonitorTid, 60*60 );
+		}
+	} else {
+		int rc;
+		struct stat file_status;
+		int job_status_mod_time;
+		int log_mod_time;
+
+		rc = stat( monitorJobStatusFile, &file_status );
+		if ( rc < 0 ) {
+			EXCEPT( "stat(%s) failed, errno=%d", monitorJobStatusFile, errno );
+		}
+		job_status_mod_time = file_status.st_mtime;
+
+		rc = stat( monitorLogFile, &file_status );
+		if ( rc < 0 ) {
+			EXCEPT( "stat(%s) failed, errno=%d", monitorLogFile, errno );
+		}
+		log_mod_time = file_status.st_mtime;
+
+		if ( job_status_mod_time > jobStatusFileLastReadTime ) {
+
+dprintf(D_ALWAYS,"*** job status file has been refreshed!\n");
+			if ( ReadMonitorJobStatusFile() == true ) {
+dprintf(D_ALWAYS,"*** read status file successfully\n");
+				jobStatusFileLastReadTime = time(NULL);
+				daemonCore->Reset_Timer( checkMonitorTid, 30 );
+			} else {
+dprintf(D_ALWAYS,"*** error reading job status file, stopping grid monitor\n");
+				StopMonitor();
+				daemonCore->Reset_Timer( checkMonitorTid, 60*60 );
+				return TRUE;
+			}
+
+		}
+
+		if ( log_mod_time > logFileLastReadTime ) {
+
+dprintf(D_ALWAYS,"*** log file has been refreshed!\n");
+			rc = ReadMonitorLogFile();
+
+			switch( rc ) {
+			case 0:
+dprintf(D_ALWAYS,"*** log file looks normal\n");
+				logFileLastReadTime = time(NULL);
+				daemonCore->Reset_Timer( checkMonitorTid, 30 );
+				break;
+			case 1:
+dprintf(D_ALWAYS,"*** grid monitor reached max lifetime, restarting...\n");
+				if ( SubmitMonitorJob() == true ) {
+dprintf(D_ALWAYS,"***    success!\n");
+					daemonCore->Reset_Timer( checkMonitorTid, 30 );
+				} else {
+dprintf(D_ALWAYS,"***    failure\n");
+					StopMonitor();
+					daemonCore->Reset_Timer( checkMonitorTid, 60*60 );
+				}
+				break;
+			case 2:
+dprintf(D_ALWAYS,"*** error in grid monitor, stopping\n");
+				StopMonitor();
+				daemonCore->Reset_Timer( checkMonitorTid, 60*60 );
+				break;
+			default:
+				EXCEPT( "Unknown return value %d from ReadLogFile", rc );
+			}
+
+		} else if ( time(NULL) > logFileLastReadTime + LOG_FILE_TIMEOUT ) {
+
+dprintf(D_ALWAYS,"*** log file too old, stopping monitor\n");
+			StopMonitor();
+			daemonCore->Reset_Timer( checkMonitorTid, 60*60 );
+
+		} else {
+			daemonCore->Reset_Timer( checkMonitorTid, 30 );
+		}
+	}
+
+	return TRUE;
+}
+
+void
+GlobusResource::StopMonitor()
+{
+	GlobusJob *job;
+
+	monitorActive = false;
+	registeredJobs.Rewind();
+	while ( registeredJobs.Next( job ) ) {
+		job->SetEvaluateState();
+	}
+	// try to cancel monitor job?
+	unlink( monitorJobStatusFile );
+	unlink( monitorLogFile );
+}
+
+bool
+GlobusResource::SubmitMonitorJob()
+{
+	// return true if job submitted, else return false
+	GahpClient tmp_gahp;
+	int now = time(NULL);
+	int rc;
+	char *monitor_executable;
+	MyString contact;
+	MyString RSL;
+
+	rc = unlink( monitorJobStatusFile );
+	if ( rc < 0 && errno != ENOENT ) {
+		dprintf( D_ALWAYS, "unlink(%s) failed, errno=%d\n",
+				 monitorJobStatusFile, errno );
+		return false;
+	}
+	rc = creat( monitorJobStatusFile, S_IRUSR|S_IWUSR );
+	if ( rc < 0 ) {
+		dprintf( D_ALWAYS, "creat(%s,%d) failed, errno=%d\n",
+				 monitorJobStatusFile, S_IRUSR|S_IWUSR, errno );
+		return false;
+	} else {
+		close( rc );
+	}
+
+	rc = unlink( monitorLogFile );
+	if ( rc < 0 && errno != ENOENT ) {
+		dprintf( D_ALWAYS, "unlink(%s) failed, errno=%d\n",
+				 monitorLogFile, errno );
+		return false;
+	}
+	rc = creat( monitorLogFile, S_IRUSR|S_IWUSR );
+	if ( rc < 0 ) {
+		dprintf( D_ALWAYS, "creat(%s,%d) failed, errno=%d\n",
+				 monitorLogFile, S_IRUSR|S_IWUSR, errno );
+		return false;
+	} else {
+		close( rc );
+	}
+
+	jobStatusFileLastReadTime = now;
+	logFileLastReadTime = now;
+
+	tmp_gahp.setMode( GahpClient::normal );
+
+	monitor_executable = param( "GRID_MONITOR" );
+	if ( monitor_executable == NULL ) {
+		dprintf( D_ALWAYS, "GRID_MONITOR not defined!\n" );
+		return false;
+	}
+
+	RSL.sprintf( "&(executable=%s%s)(stdout=%s%s)(arguments='--dest-url=%s%s')",
+				 gassServerUrl, monitor_executable, gassServerUrl,
+				 monitorLogFile, gassServerUrl, monitorJobStatusFile );
+
+	free( monitor_executable );
+
+	contact.sprintf( "%s/jobmanager-fork", resourceName );
+
+	rc = tmp_gahp.globus_gram_client_job_request( contact.Value(), RSL.Value(),
+												  0, NULL, NULL );
+
+	if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
+		dprintf( D_ALWAYS, "globus_gram_client_job_request() returned %d!\n",
+				 rc );
+		return false;
+	}
+
+	return true;
+}
+
+bool
+GlobusResource::ReadMonitorJobStatusFile()
+{
+	// return true if file successfully processed and jobs notified,
+	// else return false. 
+	// TODO should distinguish between temporary and permanent problems.
+	//   e.g. if file is incomplete, retry after short delay
+	FILE *fp;
+	char buff[1024];
+	char contact[1024];
+	int status;
+
+	fp = fopen( monitorJobStatusFile, "r" );
+	if ( fp == NULL ) {
+		dprintf( D_ALWAYS, "Failed to open GridMonitor job status file %s\n",
+				 monitorJobStatusFile );
+		return false;
+	}
+
+	if ( fgets( buff, sizeof(buff), fp ) == NULL ) {
+		dprintf( D_ALWAYS, "Can't read GridMonitor job status file %s\n",
+				 monitorJobStatusFile );
+		fclose( fp );
+		return false;
+	}
+
+	while ( fgets( buff, sizeof(buff), fp ) != NULL ) {
+		contact[0] = '\0';
+		status = 0;
+
+		if ( sscanf( buff, "%s %d", contact, &status ) == 2 &&
+			 *contact != '\0' && status > 0 ) {
+			int rc;
+			GlobusJob *job;
+
+dprintf(D_ALWAYS,"***    %s %d\n",contact,status);
+			rc = JobsByContact.lookup( HashKey( globusJobId(contact) ), job );
+			if ( rc == 0 & job != NULL ) {
+				if ( status == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ) {
+					status=GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_OUT;
+				}
+dprintf(D_ALWAYS,"*** sent callback of %d to %d.%d\n",status,job->procID.cluster,job->procID.proc);
+				job->GramCallback( status, 0 );
+			}
+		}
+	}
+
+	fclose( fp );
+
+	return true;
+}
+
+int
+GlobusResource::ReadMonitorLogFile()
+{
+	// return 0 on nothing of interest, 1 on normal exit, 2 on error exit
+	int retval = 0;
+	FILE *fp;
+	char buff[1024];
+
+	fp = fopen( monitorLogFile, "r" );
+	if ( fp == NULL ) {
+		dprintf( D_ALWAYS, "Failed to open GridMonitor log file %s\n",
+				 monitorLogFile );
+		return 2;
+	}
+
+	while ( fgets( buff, sizeof(buff), fp ) != NULL ) {
+		int error_code;
+
+		if ( sscanf( buff, "%*d-%*d-%*d %*d:%*d:%*d ERROR: %d",
+					 &error_code ) == 1 ) {
+
+			if ( error_code == 0 ) {
+				retval = 1;
+			} else {
+dprintf(D_ALWAYS,"*** log file has error code %d\n",error_code);
+				retval = 2;
+			}
+
+		}
+	}
+
+	fclose( fp );
+
+	return retval;
+}
+

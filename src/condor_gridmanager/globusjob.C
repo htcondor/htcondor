@@ -62,6 +62,8 @@
 #define GM_REFRESH_PROXY		23
 #define GM_PROBE_JOBMANAGER		24
 #define GM_OUTPUT_WAIT			25
+#define GM_PUT_TO_SLEEP			26
+#define GM_JOBMANAGER_ASLEEP	27
 
 char *GMStateNames[] = {
 	"GM_INIT",
@@ -89,7 +91,9 @@ char *GMStateNames[] = {
 	"GM_CLEAN_JOBMANAGER",
 	"GM_REFRESH_PROXY",
 	"GM_PROBE_JOBMANAGER",
-	"GM_OUTPUT_WAIT"
+	"GM_OUTPUT_WAIT",
+	"GM_PUT_TO_SLEEP",
+	"GM_JOBMANAGER_ASLEEP"
 };
 
 // TODO: once we can set the jobmanager's proxy timeout, we should either
@@ -188,7 +192,7 @@ GlobusJob::GlobusJob( GlobusJob& copy )
 
 GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 {
-	int transfer;
+	int bool_value;
 	char buff[4096];
 	char buff2[_POSIX_PATH_MAX];
 	char iwd[_POSIX_PATH_MAX];
@@ -300,6 +304,8 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	// RegisterJob() may call our NotifyResourceUp/Down(), so be careful.
 	myResource->RegisterJob( this, job_already_submitted );
 
+	useGridJobMonitor = true;
+
 	ad->LookupInteger( ATTR_GLOBUS_STATUS, globusState );
 	ad->LookupInteger( ATTR_JOB_STATUS, condorState );
 
@@ -319,7 +325,10 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	buff2[0] = '\0';
 	if ( ad->LookupString(ATTR_JOB_OUTPUT, buff) && *buff &&
 		 strcmp( buff, NULL_FILE ) ) {
-		if ( !ad->LookupBool( ATTR_TRANSFER_OUTPUT, transfer ) || transfer ) {
+
+		if ( !ad->LookupBool( ATTR_TRANSFER_OUTPUT, bool_value ) ||
+			 bool_value ) {
+
 			if ( buff[0] != '/' ) {
 				strcat( buff2, iwd );
 			}
@@ -327,9 +336,9 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 			strcat( buff2, buff );
 			localOutput = strdup( buff2 );
 
-			int stream = 1;
-			ad->LookupBool( ATTR_STREAM_OUTPUT, stream );
-			streamOutput = (stream != 0);
+			bool_value = 1;
+			ad->LookupBool( ATTR_STREAM_OUTPUT, bool_value );
+			streamOutput = (bool_value != 0);
 			stageOutput = !streamOutput;
 		}
 	}
@@ -338,7 +347,10 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	buff2[0] = '\0';
 	if ( ad->LookupString(ATTR_JOB_ERROR, buff) && *buff &&
 		 strcmp( buff, NULL_FILE ) ) {
-		if ( !ad->LookupBool( ATTR_TRANSFER_ERROR, transfer ) || transfer ) {
+
+		if ( !ad->LookupBool( ATTR_TRANSFER_ERROR, bool_value ) ||
+			 bool_value ) {
+
 			if ( buff[0] != '/' ) {
 				strcat( buff2, iwd );
 			}
@@ -346,9 +358,9 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 			strcat( buff2, buff );
 			localError = strdup( buff2 );
 
-			int stream = 1;
-			ad->LookupBool( ATTR_STREAM_ERROR, stream );
-			streamError = (stream != 0);
+			bool_value = 1;
+			ad->LookupBool( ATTR_STREAM_ERROR, bool_value );
+			streamError = (bool_value != 0);
 			stageError = !streamError;
 		}
 	}
@@ -815,38 +827,38 @@ dprintf(D_FULLDEBUG,"(%d.%d) jobmanager timed out on commit, clearing request\n"
 				}
 			} else if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 				gmState = GM_FAILED;
+			} else if ( condorState == REMOVED || condorState == HELD ) {
+				gmState = GM_CANCEL;
+			} else if ( JmShouldSleep() ) {
+				gmState = GM_PUT_TO_SLEEP;
 			} else {
-				if ( condorState == REMOVED || condorState == HELD ) {
-					gmState = GM_CANCEL;
-				} else {
-					if ( GetCallbacks() == true ) {
-						reevaluate_state = true;
-						break;
-					}
-					if ( jmProxyExpireTime < myProxy->expiration_time &&
-						 ( jmVersion == GRAM_V_UNKNOWN ||
-						   jmVersion >= GRAM_V_1_6) ) {
-						gmState = GM_REFRESH_PROXY;
-						break;
-					}
-					now = time(NULL);
-					if ( lastProbeTime < enteredCurrentGmState ) {
-						lastProbeTime = enteredCurrentGmState;
-					}
-					if ( probeNow ) {
-						lastProbeTime = 0;
-						probeNow = false;
-					}
-					if ( now >= lastProbeTime + probeInterval ) {
-						gmState = GM_PROBE_JOBMANAGER;
-						break;
-					}
-					unsigned int delay = 0;
-					if ( (lastProbeTime + probeInterval) > now ) {
-						delay = (lastProbeTime + probeInterval) - now;
-					}				
-					daemonCore->Reset_Timer( evaluateStateTid, delay );
+				if ( GetCallbacks() == true ) {
+					reevaluate_state = true;
+					break;
 				}
+				if ( jmProxyExpireTime < myProxy->expiration_time &&
+					 ( jmVersion == GRAM_V_UNKNOWN ||
+					   jmVersion >= GRAM_V_1_6) ) {
+					gmState = GM_REFRESH_PROXY;
+					break;
+				}
+				now = time(NULL);
+				if ( lastProbeTime < enteredCurrentGmState ) {
+					lastProbeTime = enteredCurrentGmState;
+				}
+				if ( probeNow ) {
+					lastProbeTime = 0;
+					probeNow = false;
+				}
+				if ( now >= lastProbeTime + probeInterval ) {
+					gmState = GM_PROBE_JOBMANAGER;
+					break;
+				}
+				unsigned int delay = 0;
+				if ( (lastProbeTime + probeInterval) > now ) {
+					delay = (lastProbeTime + probeInterval) - now;
+				}				
+				daemonCore->Reset_Timer( evaluateStateTid, delay );
 			}
 			} break;
 		case GM_REFRESH_PROXY: {
@@ -1239,8 +1251,21 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 				LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_REQUEST)", rc );
 				globusError = rc;
 				gmState = GM_STOP_AND_RESTART;
+			} else {
+				if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE &&
+					 ( status == GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_OUT ||
+					   status == GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE ) ) {
+					// TODO: should this get sent to the schedd in
+					//   GM_RESTART_SAVE??
+					dprintf(D_FULLDEBUG,"(%d.%d) jobmanager's job state went from DONE to %s across a restart, do the same here",
+							procID.cluster, procID.proc, GlobusJobStatusName(status) );
+					globusState = status;
+					UpdateJobAdInt( ATTR_GLOBUS_STATUS, status );
+					enteredCurrentGlobusState = time(NULL);
+					addScheddUpdateAction( this, UA_UPDATE_JOB_AD, 0 );
+				}
+				gmState = GM_SUBMITTED;
 			}
-			gmState = GM_SUBMITTED;
 			} break;
 		case GM_CANCEL: {
 			// We need to cancel the job submission.
@@ -1621,6 +1646,36 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 				// Do nothing. Our proxy is about to expire.
 			}
 			} break;
+		case GM_PUT_TO_SLEEP: {
+			rc = gahp.globus_gram_client_job_signal( jobContact,
+								GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_STOP_MANAGER,
+								NULL, &status, &error );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
+				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
+				connect_failure = true;
+				break;
+			}
+			if ( rc != GLOBUS_SUCCESS ) {
+				// unhandled error
+				LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(STOP_MANAGER)", rc );
+				globusError = rc;
+				gmState = GM_CANCEL;
+			} else {
+				gmState = GM_JOBMANAGER_ASLEEP;
+			}
+			} break;
+		case GM_JOBMANAGER_ASLEEP: {
+			GetCallbacks( true );
+			globusError = 0;
+			if ( JmShouldSleep() == false ) {
+				gmState = GM_RESTART;
+			}
+			} break;
 		default:
 			EXCEPT( "(%d.%d) Unknown gmState %d!", procID.cluster,procID.proc,
 					gmState );
@@ -1812,27 +1867,33 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 		enteredCurrentGlobusState = time(NULL);
 
 		addScheddUpdateAction( this, update_actions, 0 );
+
+		SetEvaluateState();
 	}
-	SetEvaluateState(); // should this be inside the if statement?
 }
 
 void GlobusJob::GramCallback( int new_state, int new_error_code )
 {
-	if ( callbackGlobusState == 0 || 
-		 AllowTransition(new_state,callbackGlobusState) ) 
-	{
+	if ( AllowTransition(new_state,
+						 callbackGlobusState ?
+						 callbackGlobusState :
+						 globusState ) ) {
+
 		callbackGlobusState = new_state;
 		callbackGlobusStateErrorCode = new_error_code;
-	}
 
-	SetEvaluateState();
+		SetEvaluateState();
+	}
 }
 
-bool GlobusJob::GetCallbacks()
+bool GlobusJob::GetCallbacks( bool ignore_failed )
 {
 	if ( callbackGlobusState != 0 ) {
-		UpdateGlobusState( callbackGlobusState,
-						   callbackGlobusStateErrorCode );
+		if ( callbackGlobusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ||
+			 ignore_failed == false ) {
+			UpdateGlobusState( callbackGlobusState,
+							   callbackGlobusStateErrorCode );
+		}
 		callbackGlobusState = 0;
 		callbackGlobusStateErrorCode = 0;
 		return true;
@@ -2356,5 +2417,49 @@ bool GlobusJob::FailureNeedsCommit( int error_code )
 		return false;
 	default:
 		return true;
+	}
+}
+
+bool
+GlobusJob::JmShouldSleep()
+{
+	if ( jmVersion == GRAM_V_1_0 ) {
+dprintf(D_ALWAYS,"(%d.%d) JmShouldSleep returning false (0)\n",procID.cluster, procID.proc);
+		return false;
+	}
+	if ( jmProxyExpireTime < myProxy->expiration_time ) {
+dprintf(D_ALWAYS,"(%d.%d) JmShouldSleep returning false (0.5)\n",procID.cluster, procID.proc);
+		return false;
+	}
+	if ( condorState != IDLE && condorState != RUNNING ) {
+dprintf(D_ALWAYS,"(%d.%d) JmShouldSleep returning false (1)\n",procID.cluster, procID.proc);
+		return false;
+	}
+	if ( useGridJobMonitor == false ) {
+dprintf(D_ALWAYS,"(%d.%d) JmShouldSleep returning false (2)\n",procID.cluster, procID.proc);
+		return false;
+	}
+
+	if ( myResource->GridJobMonitorActive() == false ) {
+dprintf(D_ALWAYS,"(%d.%d) JmShouldSleep returning false (3)\n",procID.cluster, procID.proc);
+		return false;
+	}
+
+	switch ( globusState ) {
+	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING:
+dprintf(D_ALWAYS,"(%d.%d) JmShouldSleep returning true (4)\n",procID.cluster, procID.proc);
+		return true;
+	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE:
+	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED:
+		if ( !streamOutput && !streamError ) {
+dprintf(D_ALWAYS,"(%d.%d) JmShouldSleep returning true (5)\n",procID.cluster, procID.proc);
+			return true;
+		} else {
+dprintf(D_ALWAYS,"(%d.%d) JmShouldSleep returning false (6)\n",procID.cluster, procID.proc);
+			return false;
+		}
+	default:
+dprintf(D_ALWAYS,"(%d.%d) JmShouldSleep returning false (7)\n",procID.cluster, procID.proc);
+		return false;
 	}
 }
