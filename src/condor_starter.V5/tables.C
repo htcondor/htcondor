@@ -40,4 +40,5 @@
 #endif
 #define INSERT_TABLES
 #include "starter.h"
+#include "startup.h"
 #include "user_proc.h"
