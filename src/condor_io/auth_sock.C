@@ -34,7 +34,14 @@
 #include "internet.h"
 
 #include "globus_gss_assist.h"
+
+#if !defined(GSS_AUTHENTICATION)
+#define AuthSock ReliSock
+#else
+
+//include rest of file in this #ELSE
 #include "auth_sock.h"
+
 
 /*******************************************************************/
 gss_cred_id_t AuthSock::credential_handle = GSS_C_NO_CREDENTIAL;
@@ -392,3 +399,5 @@ int AuthSock::authenticate() {
 			return FALSE;
 	}
 }
+
+#endif //#!defined GSS_AUTHENTICATION
