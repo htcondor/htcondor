@@ -37,7 +37,6 @@
 #include "condor_fix_sys_wait.h"
 #include "condor_fix_assert.h"
 #include <stdlib.h>
-#include <std.h>
 #include <ctype.h>
 #include <fcntl.h>	
 #include <errno.h>
