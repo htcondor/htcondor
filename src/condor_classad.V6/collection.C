@@ -356,7 +356,7 @@ WriteLogEntry( FILE *fp, ClassAd *rec, bool synch )
 		unparser.Unparse( buffer, rec );
 		if (fprintf(fp, "%s\n", buffer.c_str()) < 0) {
 		    wrote_entry = false;
-		} else if (synch && 0) {
+		} else if (synch) {
 			if (fflush(fp) != 0 || fsync(fileno(fp)) != 0) {
 				wrote_entry = false;
 			}
