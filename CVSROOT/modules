@@ -31,7 +31,7 @@ world		-a .
 validate_user	-i co validate_user
 
 # Add other modules here...
-TOOLS	-a GENERIC config
+TOOLS	-a config
 DOC		-a TOOLS doc
 COMMON_CODE	-a src/Imakefile \
 			src/condor_c++_util \
