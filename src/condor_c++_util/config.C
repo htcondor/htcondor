@@ -384,7 +384,7 @@ lower_case( register char	*str )
 ** only.
 */
 char *
-expand_macro( char *value, BUCKET **table, int table_size, char *self )
+expand_macro( const char *value, BUCKET **table, int table_size, char *self )
 {
 	char *tmp = strdup( value );
 	char *left, *name, *tvalue, *right;
@@ -483,7 +483,7 @@ tryagain:
 ** if the given parameter is not defined.
 */
 char *
-lookup_macro( char *name, BUCKET **table, int table_size )
+lookup_macro( const char *name, BUCKET **table, int table_size )
 {
 	int				loc;
 	register BUCKET	*ptr;
