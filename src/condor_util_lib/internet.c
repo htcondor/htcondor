@@ -34,6 +34,7 @@
 #include "my_hostname.h"
 #include "condor_config.h"
 #include "get_port_range.h"
+#include "condor_socket_types.h"
 
 int bindWithin(const int fd, const int low_port, const int high_port);
 
@@ -133,7 +134,7 @@ char *
 sock_to_string(SOCKET sockd)
 {
 	struct sockaddr_in	addr;
-	int			addr_len;
+	SOCKET_LENGTH_TYPE	addr_len;
 	static char *mynull = "\0";
 
 	addr_len = sizeof(addr);
