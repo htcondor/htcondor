@@ -153,4 +153,33 @@ void convert_escapes(string &text, bool &validStr)
 	return;
 }
 
+void 
+getLocalTime(time_t *now, struct tm *localtm) {
+
+#ifndef WIN32
+	localtime_r( now, localtm );
+#else
+	// there is no localtime_r() on Windows, so for now
+	// we just call localtime() and deep copy the result.
+
+	struct tm *lt_ptr; 
+
+	lt_ptr = localtime(now);
+
+	if (localtm == NULL) { return; } 
+
+	localtm->tm_sec   = lt_ptr->tm_sec;    /* seconds */
+	localtm->tm_min   = lt_ptr->tm_min;    /* minutes */
+	localtm->tm_hour  = lt_ptr->tm_hour;   /* hours */
+	localtm->tm_mday  = lt_ptr->tm_mday;   /* day of the month */
+	localtm->tm_mon   = lt_ptr->tm_mon;    /* month */
+	localtm->tm_year  = lt_ptr->tm_year;   /* year */
+	localtm->tm_wday  = lt_ptr->tm_wday;   /* day of the week */
+	localtm->tm_yday  = lt_ptr->tm_yday;   /* day in the year */
+	localtm->tm_isdst = lt_ptr->tm_isdst;  /* daylight saving time */
+	
+#endif
+	
+}
+
 END_NAMESPACE // classad

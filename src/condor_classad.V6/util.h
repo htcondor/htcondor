@@ -48,6 +48,8 @@ void double_to_hex(double number, char *hex);
  */
 void convert_escapes(std::string &text, bool &validStr); 
 
+void getLocalTime(time_t *now, struct tm *localtm);
+
 END_NAMESPACE // classad
 
 #endif//__UTILS_H__
