@@ -46,18 +46,21 @@ public:
 	void	dprintf( int, char* ... );
 
 	char*	name() {return s_name;};
+	time_t	birthdate( void ) {return s_birthdate;};
+	time_t	last_snapshot( void ) {return s_last_snapshot;};
 	int		settype(int);
 	int		kill(int);
 	int		killpg(int);
 	void	killkids(int);
-	int		spawn(start_info_t*);
+	int		spawn( start_info_t*, time_t );
 	void	exited();
 	pid_t	pid() {return s_pid;};
 	int		is_dc() {return s_is_dc;};
 	bool	active();
 	pid_t*	pidfamily() {return s_pidfamily;};
 	int		pidfamily_size() {return s_family_size;};
-	void	recompute_pidfamily();
+	void	recompute_pidfamily( time_t now = 0 );
+	void	set_last_snapshot( time_t val ) { s_last_snapshot = val; };
 
 private:
 	Resource*	rip;
@@ -71,6 +74,8 @@ private:
 	ProcFamily*	s_procfam;
 	int 	s_type;
 	int 	s_is_dc;
+	time_t	s_birthdate;
+	time_t	s_last_snapshot;
 };
 
 #endif _CONDOR_STARTD_STARTER_H
