@@ -10,8 +10,10 @@ ref.pdf:
 	echo "\usepackage{times}" > timesfont.tex
 	rm -f fontsize.tex
 	rm -f symbol.tex
+	rm -f figuresizing.tex
 	ln -s regularfont.tex fontsize.tex
 	ln -s symbol-postscript.tex symbol.tex
+	ln -s figuresizing-latex.tex figuresizing.tex
 	make clean
 	make figures
 	latex ref.tex
@@ -34,8 +36,10 @@ ref.dvi:
 	echo "% do not want times" > timesfont.tex
 	rm -f fontsize.tex
 	rm -f symbol.tex
+	rm -f figuresizing.tex
 	ln -s smallfont.tex fontsize.tex
 	ln -s symbol-postscript.tex symbol.tex
+	ln -s figuresizing-latex.tex figuresizing.tex
 	make clean
 	make figures
 	latex ref.tex
@@ -60,8 +64,10 @@ ref.html: $(TARGETDIR)
 	echo "% do not want times" > timesfont.tex
 	rm -f fontsize.tex
 	rm -f symbol.tex
+	rm -f figuresizing.tex
 	ln -s regularfont.tex fontsize.tex
 	ln -s symbol-html.tex symbol.tex
+	ln -s figuresizing-html.tex figuresizing.tex
 	make clean
 	make figures
 	latex ref.tex
