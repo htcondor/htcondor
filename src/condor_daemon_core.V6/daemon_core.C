@@ -6146,15 +6146,17 @@ int DaemonCore::SendAliveToParent()
 #ifndef WIN32
 char **DaemonCore::ParseEnvArgsString(char *str, bool env)
 {
-	char separator;
+	char separator1, separator2;
 	int maxlength;
 	char **argv, *arg;
 	int nargs=0;
 
 	if(env) {
-		separator = ';';
+		separator1 = ';';
+		separator2 = ';';
 	} else {
-		separator = ' ';
+		separator1 = ' ';
+		separator2 = '\t';
 	}
 
 	/*
@@ -6170,7 +6172,7 @@ char **DaemonCore::ParseEnvArgsString(char *str, bool env)
 	/* While there are characters left... */
 	while(*str) {
 		/* Skip over any sequence of whitespace */
-		while( *str == separator ) {
+		while( *str == separator1 || *str == separator2 ) {
 			str++;
 		}
 
@@ -6182,7 +6184,7 @@ char **DaemonCore::ParseEnvArgsString(char *str, bool env)
 
 			/* Copy the arg into the new string */
 			arg = argv[nargs];
-			while( *str && *str != separator ) {
+			while( *str && *str != separator1 && *str != separator2 ) {
 				*arg++ = *str++;
 			}
 			*arg = 0;
