@@ -41,7 +41,7 @@ int		_EXCEPT_Errno;
 char	*_EXCEPT_File;
 int		(*_EXCEPT_Cleanup)();
 int		SetSyscalls(int);
-void	dprintf ( int flags, char *fmt, ... );
+void	dprintf ( int flags, ... );
 
 void
 _EXCEPT_(char *fmt, ...)
