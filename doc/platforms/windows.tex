@@ -164,9 +164,9 @@ running on the submitting machine, and pulls over the job's executable and
 input files.
 These files are placed into the temporary working directory for the job.
 After all files have been received,
-the starter spawns the user's executable as user ``condor-run-dir\_XXX''
-with its current working directory set to the temporary working directory
-(that is, \MacroUNI{EXECUTE}/dir\_XXX).
+the starter spawns the user's executable as user ``condor-reuse-vmX'', where X is the number of the virtual machine (or 1 on a uniprocessor machine).
+Its current working directory set to the temporary working directory
+(that is, \MacroUNI{EXECUTE}/dir\_XXX, where XXX is the process id of the \Condor{starter} daemon).
 
 While the job is running, the starter closely monitors the CPU
 usage and image size of all processes started by the job.
