@@ -495,13 +495,13 @@ Image::Save()
 		// Set up data segment
 	data_start = data_start_addr();
 	data_end = data_end_addr();
-	dprintf(D_ALWAYS, "Adding a DATA segment: start[0x%x], end [0x%x]\n",
+	dprintf(D_CKPT, "Adding a DATA segment: start[0x%x], end [0x%x]\n",
 		data_start, data_end);
 	AddSegment( "DATA", data_start, data_end, 0 );
 
 		// Set up stack segment
 	find_stack_location( stack_start, stack_end );
-	dprintf(D_ALWAYS, "Adding a STACK segment: start[0x%x], end [0x%x]\n",
+	dprintf(D_CKPT, "Adding a STACK segment: start[0x%x], end [0x%x]\n",
 		stack_start, stack_end);
 	AddSegment( "STACK", stack_start, stack_end, 0 );
 
@@ -516,14 +516,17 @@ Image::Save()
 	// restore segments in order, and the STACK segment must be restored
 	// last so that we can immediately return to user code.  - Jim B.
 
+	
+	dprintf(D_CKPT, "About to ask the OS for segments...\n");
 	numsegs = num_segments();
+	dprintf(D_CKPT, "I should have %d segments...\n", numsegs);
 
 #if !defined(IRIX) && !defined(Solaris)
 
 	// data segment is saved and restored as before, using sbrk()
 	data_start = data_start_addr();
 	data_end = data_end_addr();
-/*	printf( "Data start = 0x%lx, data end = 0x%lx\n",*/
+/*	printf( "Data start = 0x%x, data end = 0x%x\n",*/
 /*			data_start, data_end );*/
 	AddSegment( "DATA", data_start, data_end, 0 );
 
@@ -543,6 +546,7 @@ Image::Save()
 		}
 	}
 	AddSegment( "DATA", data_start, data_end, prot );
+	dprintf(D_CKPT, "I just added the data segment\n");
 
 #endif	
 
@@ -554,16 +558,22 @@ Image::Save()
 			Suicide();
 			break;
 		case 0:
+			dprintf(D_CKPT, "Adding SHARED LIB\n");
 			if (addr_start != head.AltHeap()) {	// don't ckpt alt heap
 				AddSegment( "SHARED LIB", addr_start, addr_end, prot);
+				dprintf(D_CKPT, "\tlen:[0x%x]\n", 
+					addr_end - addr_start);
 			}
 			break;
 		case 1:
+			dprintf(D_CKPT, "Skipping Text Segment\n");
 			break;		// don't checkpoint text segment
 		case 2:
+			dprintf(D_CKPT, "Adding Stack Segment\n");
 			stackseg = i;	// don't add STACK segment until the end
 			break;
 		case 3:
+			dprintf(D_CKPT, "Don't add DATA segment again\n");
 			break;		// don't add DATA segment again
 		default:
 			dprintf( D_ALWAYS, "Internal error, segment_bounds"
@@ -580,10 +590,8 @@ Image::Save()
 	// now add stack segment
 	rtn = segment_bounds(stackseg, addr_start, addr_end, prot);
 	AddSegment( "STACK", addr_start, addr_end, prot);
-	dprintf( D_ALWAYS, "stack start = 0x%lx, stack end = 0x%lx\n",
+	dprintf( D_CKPT, "stack start = 0x%x, stack end = 0x%x\n",
 			addr_start, addr_end);
-	dprintf( D_ALWAYS, "Current segmap dump follows\n");
-	display_prmap();
 
 #endif
 
@@ -591,7 +599,7 @@ Image::Save()
 	pos = sizeof(Header) + head.N_Segs() * sizeof(SegMap);
 	for( i=0; i<head.N_Segs(); i++ ) {
 		pos = map[i].SetPos( pos );
-		dprintf( D_ALWAYS,"Pos: %d\n",pos);
+		dprintf( D_CKPT,"Pos: %d\n",pos);
 	}
 
 	if( pos < 0 ) {
@@ -630,13 +638,14 @@ Image::Display()
 void
 Image::AddSegment( const char *name, RAW_ADDR start, RAW_ADDR end, int prot )
 {
-	long	len = end - start;
+	RAW_ADDR	len = end - start;
 	int idx = head.N_Segs();
 
 	if( idx >= MAX_SEGS ) {
 		dprintf( D_ALWAYS, "Don't know how to grow segment map yet!\n" );
 		Suicide();
 	}
+	dprintf(D_CKPT, "Image::AddSegment: name=[%s], start=[0x%x], end=[0x%x], len=[0x%x], prot=[0x%x]\n", name, start, end, len, prot);
 	head.IncrSegs();
 	map[idx].Init( name, start, len, prot );
 }
@@ -723,7 +732,25 @@ Image::Restore()
 
 		// Overwrite our data segment with the one saved at checkpoint
 		// time *and* restore any saved shared libraries.
+
+	/* XXX We used to be able to get killed in the middle of a restart by the
+		user comming back during a long restart, and that is
+		correct behaviour. This stops that until I can add in
+		all of the code needed to do it safely. What happens is
+		that on some machines(like IRIX) when we receive a
+		signal, trampoline code in libc gets called before our signal
+		handler does. This creates a race condition that if we get a signal
+		just as we have mmap'ed /dev/zero over libc, we will segfault.
+
+		So, until that code gets into place, the restart will complete before
+		being trashed when the signal is unblocked.
+
+		-pete 01/18/00
+	*/
+
+	_condor_signals_disable();
 	RestoreAllSegsExceptStack();
+	_condor_signals_enable();
 
 		// We have just overwritten our data segment, so the image
 		// we are working with has been overwritten too.  Fortunately,
@@ -737,6 +764,7 @@ Image::Restore()
 		// Now we're going to restore the stack, so we move our execution
 		// stack to a temporary area (in the data segment), then call
 		// the RestoreStack() routine.
+	dprintf(D_CKPT, "About to execute on TmpStk\n");
 	ExecuteOnTmpStk( RestoreStack );
 
 		// RestoreStack() also does the jump back to user code
@@ -841,6 +869,7 @@ RestoreStack()
 #endif
 	int		status;
 
+	dprintf(D_CKPT, "RestoreStack() Entrance!\n");
 	MyImage.RestoreSeg( "STACK" );
 
 		// In remote mode, we have to send back size of ckpt informaton
@@ -873,6 +902,8 @@ RestoreStack()
 	}
 #endif
 
+	dprintf(D_CKPT, "RestoreStack() Exit!\n");
+	
 	_condor_signals_enable();
 
 	LONGJMP( Env, 1 );
@@ -881,7 +912,7 @@ RestoreStack()
 int
 Image::Write()
 {
-	dprintf( D_FULLDEBUG, "Image::Write(): fd %d file_name %s\n",
+	dprintf( D_ALWAYS, "Image::Write(): fd %d file_name %s\n",
 			 fd, file_name?file_name:"(NULL)");
 	if (fd == -1) {
 		return Write( file_name );
@@ -1080,12 +1111,13 @@ Image::Write( int fd )
 	for( i=0; i<head.N_Segs(); i++ ) {
 /*		map[i].Display();*/
 		if( (nbytes=map[i].Write(fd,pos)) < 0 ) {
-			dprintf( D_ALWAYS, "Write() of segment %d failed\n", i );
+			dprintf( D_ALWAYS, "Write() Segment[%d] of type %s -> FAILED\n", i,
+				map[i].GetName() );
 			dprintf( D_ALWAYS, "errno = %d, nbytes = %d\n", errno, nbytes );
 			return -1;
 		}
 		pos += nbytes;
-		dprintf( D_ALWAYS, "Wrote Segment[%d] OK\n", i );
+		dprintf( D_ALWAYS, "Wrote Segment[%d] of type %s -> OK\n", i, map[i].GetName() );
 	}
 
 #if defined(COMPRESS_CKPT)
@@ -1130,7 +1162,7 @@ Image::Write( int fd )
 	}
 #endif
 
-	dprintf( D_ALWAYS, "Wrote all Segments OK\n" );
+	dprintf( D_ALWASY, "Wrote all Segments OK\n" );
 
 		/* When using the stream protocol the shadow echo's the number
 		   of bytes transferred as a final acknowledgement.  If, however,
@@ -1197,7 +1229,7 @@ Image::Read()
 		}
 /*		map[i].Display();*/
 		pos += nbytes;
-		dprintf( D_ALWAYS, "Read SegMap[%d] OK\n", i );
+		dprintf( D_ALWAYS, "Read SegMap[%d](%s) OK\n", i, map[i].GetName() );
 	}
 	dprintf( D_ALWAYS, "Read all SegMaps OK\n" );
 
@@ -1233,6 +1265,8 @@ SegMap::Read( int fd, ssize_t pos )
 				 file_loc );
 		Suicide();
 	}
+
+	dprintf(D_CKPT, "Restoring a %s segment\n", name);
 
 	if( mystrcmp(name,"DATA") == 0 ) {
 		orig_brk = (char *)sbrk(0);
@@ -1282,7 +1316,7 @@ SegMap::Read( int fd, ssize_t pos )
 
 			dprintf(D_ALWAYS, "mmap: %s", strerror(errno));
 			dprintf(D_ALWAYS, "Attempted to mmap /dev/zero at "
-				"address 0x%lx, size 0x%lx\n", saved_core_loc,
+				"address 0x%x, size 0x%x\n", saved_core_loc,
 				segSize);
 			dprintf(D_ALWAYS, "Current segmap dump follows\n");
 			display_prmap();
@@ -1313,7 +1347,8 @@ SegMap::Read( int fd, ssize_t pos )
 	ptr = (char *)saved_core_loc;
 
 	dprintf(D_ALWAYS, 
-		"About to overwrite 0x%x bytes starting at 0x%x\n", bytes_to_go, ptr);
+		"About to overwrite 0x%x bytes starting at 0x%x(%s)\n", 
+			bytes_to_go, ptr, name);
 
 #if defined(COMPRESS_CKPT)
 	if (zstr) {
@@ -1358,8 +1393,8 @@ SegMap::Read( int fd, ssize_t pos )
 		if( nbytes < 0 ) {
 			dprintf(D_ALWAYS, "in Segmap::Read(): fd = %d, read_size=%d\n", fd,
 				read_size);
-			dprintf(D_ALWAYS, "Error=%d, core_loc=%x, nbytes=%d\n",
-				errno, core_loc, nbytes);
+			dprintf(D_ALWAYS, "core_loc=%x, nbytes=%d\n",
+				core_loc, nbytes);
 			return -1;
 		}
 		bytes_to_go -= nbytes;
@@ -1417,9 +1452,11 @@ SegMap::Write( int fd, ssize_t pos )
 		return len;
 	}
 #endif
-	dprintf( D_ALWAYS, "write(fd=%d,core_loc=0x%lx,len=0x%lx)\n",
+	dprintf( D_ALWAYS, "write(fd=%d,core_loc=0x%x,len=0x%x)\n",
 			fd, core_loc, len );
+
 	int bytes_to_go = len, nbytes;
+
 	char *ptr = (char *)core_loc;
 	while (bytes_to_go) {
 		size_t write_size;
@@ -1430,6 +1467,7 @@ SegMap::Write( int fd, ssize_t pos )
 			write_size = bytes_to_go;
 		}
 		nbytes = write(fd,(void *)ptr,write_size);
+		dprintf(D_CKPT, "I wrote %d bytes with write...\n", nbytes);
 		if ( nbytes < 0 ) {
 			dprintf( D_ALWAYS, "in SegMap::Write(): fd = %d, write_size=%d\n",
 					 fd, bytes_to_go );
@@ -1589,11 +1627,13 @@ Checkpoint( int sig, int code, void *scp )
 			SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 			if ( write_result == 0 ) {
 				terminate_with_sig( SIGUSR2 );
+/*				terminate_with_sig( SIGKILL );*/
 			} else {
 				dprintf(D_ALWAYS, "Write failed with [%d]\n", write_result);
 				Suicide();
 			}
 			/* should never get here */
+			dprintf(D_ALWAYS, "You should never see this line in the log!\n");
 		} else {
 			if ( MyImage.GetMode() == REMOTE ) {
 
