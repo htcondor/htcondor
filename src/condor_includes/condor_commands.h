@@ -117,6 +117,7 @@
 #define GET_RESLIST			(SCHED_VERS+63)		// negotiator
 #define ATTEMPT_ACCESS		(SCHED_VERS+64) // schedd, test a file
 #define VACATE_CLAIM		(SCHED_VERS+65)     // vacate a given claim
+#define PCKPT_JOB			(SCHED_VERS+66)     // periodic ckpt a given VM
 
 /************
 *** Command ids used by the collector 
