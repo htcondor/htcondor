@@ -34,6 +34,20 @@ submitted by ``older'' DAGs will start before jobs submitted by
 \end{itemize}
 
 
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item In versions 6.7.4 through 6.7.6, Computing On Demand (COD)
+  support was broken due to a bug in how Condor daemons parsed their
+  command line arguments.
+  The bug was introduced with the changes to provide a web services
+  (SOAP) interface to Condor.
+  This bug has been fixed and COD support is now working again.
+
+\end{itemize}
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:New-6-7-6}Version 6.7.6}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
