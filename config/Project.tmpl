@@ -198,6 +198,74 @@ DEBUG_FLAG = DebugFlag
     #define DAGMAN_HELPER YES
 #endif 
 
+/**********************************************************************
+A whole bunch of settings related to things included in the Condor
+externals tree.  First, we make sure this particular build has been
+configured to use the externals, and if not, we disable a bunch of
+stuff, even if the rest of the imake configuration things we want it.
+**********************************************************************/
+
+#if ! HAS_EXTERNALS
+
+#ifdef WANT_MAN_PAGES
+#undef WANT_MAN_PAGES
+#endif
+#define WANT_MAN_PAGES	NO
+
+#ifdef WANT_PVM
+#undef WANT_PVM
+#endif
+#define WANT_PVM	NO
+
+#ifdef WANT_CONDOR_G
+#undef WANT_CONDOR_G
+#endif
+#define WANT_CONDOR_G	NO
+
+#ifdef WANT_GSI
+#undef WANT_GSI
+#endif
+#define WANT_GSI	NO
+
+#ifdef WANT_X509
+#undef WANT_X509
+#endif
+#define WANT_X509	NO
+
+#ifdef WANT_KERBEROS
+#undef WANT_KERBEROS
+#endif
+#define WANT_KERBEROS	NO
+
+#ifdef WANT_MD
+#undef WANT_MD
+#endif
+#define WANT_MD		NO
+
+#ifdef WANT_3DES
+#undef WANT_3DES
+#endif
+#define WANT_3DES	NO
+
+#ifdef WANT_BLOWFISH
+#undef WANT_BLOWFISH
+#endif
+#define WANT_BLOWFISH	NO
+
+#ifdef USE_GLOBUS_OPENSSL
+#undef USE_GLOBUS_OPENSSL
+#endif
+#define USE_GLOBUS_OPENSSL	NO
+
+
+#endif /* ! HAS_EXTERNALS */
+
+/****************************************
+ Now that all that is taken care of, we
+ can setup a bunch of make variables
+ depending on what features are enabled
+****************************************/
+
 #if WANT_CONDOR_G && HAS_GLOBUS
 
   #define NEEDS_GSI YES
@@ -336,6 +404,10 @@ NETMAN_FLAGS = -DWANT_NETMAN
 NETMAN_LIB =
 NETMAN_FLAGS =
 #endif
+
+/********************************************
+ end of externals-specific settings and flags
+********************************************/
 
 VENDOR_C_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 -I$(C_PLUS_INCLUDE) -D$(ARCH_FLAG)=$(ARCH_FLAG) \
