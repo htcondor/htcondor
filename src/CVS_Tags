@@ -1,3 +1,9 @@
+5/15/02 V6_3-NMI-Condor-G-Beta1
+	The 6.3 branch that was released as the first NMI beta. It's a bit before
+	6.3.3, and is built with WANT_GLOBUS=TRUE and IS_CONDORG_RELEASE = Yes,
+	or whatever the settings are. The version string these carry are
+	6.3.2-NMI-Condor-G-Beta
+
 5/01/02 HAWKEYE_V0_1_2
 	The Hawkeye 0.1.2 release tag
 
