@@ -157,3 +157,25 @@ dumpClassad( const char* header, ClassAd* ad, int debug_flag )
 		dprintf( debug_flag, "--- End of ClassAd ---\n" );
 	}
 }
+
+
+void
+printClassAd( void )
+{
+	printf( "%s = True\n", ATTR_IS_DAEMON_CORE );
+	printf( "%s = True\n", ATTR_HAS_FILE_TRANSFER );
+	printf( "%s = True\n", ATTR_HAS_MPI );
+	printf( "%s = True\n", ATTR_HAS_JAVA );
+	printf( "%s = \"%s\"\n", ATTR_VERSION, CondorVersion() );
+}
+
+
+void
+main_pre_dc_init( int argc, char* argv[] )
+{
+	if( argc == 2 && strincmp(argv[1],"-cl",3) == MATCH ) {
+		printClassAd();
+		exit(0);
+	}
+}
+

@@ -24,6 +24,8 @@
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_io.h"
+#include "condor_attributes.h"
+#include "condor_version.h"
 #include "starter.h"
 #include "condor_debug.h"
 
@@ -41,6 +43,28 @@ usage()
 }
 
 /* DaemonCore interface implementation */
+
+
+void
+printClassAd( void )
+{
+	printf( "%s = True\n", ATTR_IS_DAEMON_CORE );
+	printf( "%s = True\n", ATTR_HAS_FILE_TRANSFER );
+	printf( "%s = True\n", ATTR_HAS_MPI );
+	printf( "%s = True\n", ATTR_HAS_JAVA );
+	printf( "%s = \"%s\"\n", ATTR_VERSION, CondorVersion() );
+}
+
+
+void
+main_pre_dc_init( int argc, char* argv[] )
+{
+	if( argc == 2 && strincmp(argv[1],"-cl",3) == MATCH ) {
+		printClassAd();
+		exit(0);
+	}
+}
+
 
 char *mySubSystem = "STARTER";
 
