@@ -1003,6 +1003,10 @@ int _condor_xstat(int version, const char *path, struct stat *buf)
 
 	_condor_signals_disable();
 
+	char newname[_POSIX_PATH_MAX];
+	do_local = _condor_is_file_name_local( path, newname );
+	path = newname;
+
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
 		rval = FileTab->stat( path, &sbuf );	
@@ -1010,7 +1014,7 @@ int _condor_xstat(int version, const char *path, struct stat *buf)
 			_condor_s_stat_convert( version, &sbuf, buf );
 		}		
 	} else {
-		if( LocalSysCalls() ) {
+		if( LocalSysCalls() || do_local ) {
 			rval = syscall( CONDOR_SYS_stat, OPT_STAT_VERSION path, &kbuf );
 			if (rval >= 0) {
 				_condor_k_stat_convert( version, &kbuf, buf );
@@ -1036,7 +1040,9 @@ int _condor_xstat64(int version, const char *path, struct stat64 *buf)
 
 	_condor_signals_disable();
 
-	do_local = _condor_is_file_name_local( path );
+	char newname[_POSIX_PATH_MAX];
+	do_local = _condor_is_file_name_local( path, newname );
+	path = newname;
 
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
@@ -1045,7 +1051,7 @@ int _condor_xstat64(int version, const char *path, struct stat64 *buf)
 			_condor_s_stat_convert64( version, &sbuf, buf );
 		}		
 	} else {
-		if( LocalSysCalls() ) {
+		if( LocalSysCalls() || do_local ) {
 			rval = syscall( CONDOR_SYS_stat, path, &kbuf );
 			if (rval >= 0) {
 				_condor_k_stat_convert64( version, &kbuf, buf );
@@ -1140,6 +1146,10 @@ int _condor_lxstat(int version, const char *path, struct stat *buf)
 
 	_condor_signals_disable();
 
+	char newname[_POSIX_PATH_MAX];
+	do_local = _condor_is_file_name_local( path, newname );
+	path = newname;
+
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
 		rval = FileTab->lstat( path, &sbuf );	
@@ -1172,6 +1182,10 @@ int _condor_lxstat64(int version, const char *path, struct stat64 *buf)
 	int do_local = 0;
 
 	_condor_signals_disable();
+
+	char newname[_POSIX_PATH_MAX];
+	do_local = _condor_is_file_name_local( path, newname );
+	path = newname;
 
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
@@ -1220,11 +1234,16 @@ int _xstat(const int ver, const char *path, struct stat *buf)
 
 	_condor_signals_disable();
 
+	char newname[_POSIX_PATH_MAX];
+	do_local = _condor_is_file_name_local( path, newname );
+	path = newname;
+
+
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
 		rval = FileTab->stat( path, buf );
 	} else {
-		if( LocalSysCalls() ) {
+		if( LocalSysCalls() || do_local ) {
 			rval = syscall( SYS_xstat, ver, path, buf );
 		} else {
 			rval = REMOTE_syscall( CONDOR_stat, path, buf );
@@ -1244,11 +1263,16 @@ int _lxstat(const int ver, const char *path, struct stat *buf)
 
 	_condor_signals_disable();
 
+	char newname[_POSIX_PATH_MAX];
+	do_local = _condor_is_file_name_local( path, newname );
+	path = newname;
+
+
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
 		rval = FileTab->lstat( path, buf );
 	} else {
-		if( LocalSysCalls() ) {
+		if( LocalSysCalls() || do_local ) {
 			rval = syscall( SYS_lxstat, ver, path, buf );
 		} else {
 			rval = REMOTE_syscall( CONDOR_lstat, path, buf );
