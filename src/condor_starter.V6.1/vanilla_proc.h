@@ -26,7 +26,6 @@
 
 #include "os_proc.h"
 #include "killfamily.h"
-#include "file_transfer.h"
 
 
 /* forward reference */
@@ -43,13 +42,13 @@ public:
 		/// Destructor
 	virtual ~VanillaProc();
 
-		/** Transfer files; call OsProc::StartJob(), make a new 
-			ProcFamily with new process as head. */
+		/** call OsProc::StartJob(), make a new ProcFamily with new
+			process as head. */
 	virtual int StartJob();
 
-		/** Upload files if requested; call OsProc::JobExit(); 
-			make certain all decendants are dead with family->hardkill() */
-	virtual int JobExit(int pid, int status);
+		/** call OsProc::JobCleanup(); make certain all decendants are
+			dead with family->hardkill() */
+	virtual int JobCleanup(int pid, int status);
 
 		/** Call family->suspend() */
 	virtual void Suspend();
@@ -76,22 +75,11 @@ public:
 
 protected:
 
-	int TransferCompleted(FileTransfer *);
-
 private:
 	ProcFamily *family;
-	FileTransfer *filetrans;
 
 	// timer id for periodically taking a ProcFamily snapshot
 	int snapshot_tid;
-
-	// the real job executable name (after ATTR_JOB_CMD
-	// is switched to condor_exec).
-	char jobtmp[_POSIX_PATH_MAX];
-
-	// if true, transfer files at vacate time (in addtion to job exit)
-	bool TransferAtVacate;
-
 };
 
 #endif
