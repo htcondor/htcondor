@@ -16,6 +16,7 @@ BEGIN_C_DECLS
 void _condor_warning( char *format, ... );
 void _condor_error_retry( char *format, ... );
 void _condor_error_fatal( char *format, ... );
+void _condor_warning_mode_set( int onoff );
 
 END_C_DECLS
 

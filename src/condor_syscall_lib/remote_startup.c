@@ -295,6 +295,7 @@ MAIN( int argc, char *argv[], char **envp )
 			   opening warning message.
 			*/
 		if( (strcmp(arg, "nowarn") == MATCH) ) {
+			_condor_warning_mode_set(0);
 			warning = FALSE;
 			continue;
 		}

@@ -8,6 +8,13 @@
 #define BUFFER_SIZE 1024
 
 static char text[BUFFER_SIZE];
+static int warning_mode=1;
+
+void _condor_warning_mode_set( int onoff )
+{
+	warning_mode = onoff;
+}
+
 
 static void _condor_message( char *text, int kind )
 {
@@ -27,6 +34,7 @@ extern "C" void _condor_warning( char *format, ... )
 {
 	va_list	args;
 	va_start(args,format);
+	if(!warning_mode) return;
 	strcpy(text,"Warning: ");
 	vsprintf( &text[strlen(text)], format, args );
 	_condor_message(text,CONDOR_report_error);
