@@ -4373,6 +4373,16 @@ int DaemonCore::SetEnv( char *env_var )
 #endif
 }
 
+
+void
+DaemonCore::Forked_Child_Wants_Exit_By_Exec( bool exit_by_exec )
+{
+	if( exit_by_exec ) {
+		_condor_exit_with_exec = 1;
+	}
+}
+
+
 #if !defined(WIN32) && !defined(DUX)
 	/* On Unix, we define our own exit() call.  The reason is messy: 
 	 * Basically, daemonCore Create_Thread call fork() on Unix.  

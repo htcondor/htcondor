@@ -840,6 +840,13 @@ class DaemonCore : public Service
 	int Kill_Thread(int tid);
 	//@}
 
+	/** Public method to allow things that fork() themselves without
+		using Create_Thread() to set the magic DC variable so that our
+		version of exit() uses exec() instead of exit() and we don't
+		call destructors when the child exits.
+	*/
+	void Forked_Child_Wants_Exit_By_Exec( bool exit_by_exec );
+
     Stream **GetInheritedSocks() { return (Stream **)inheritedSocks; }
 
 
