@@ -1,5 +1,6 @@
 #include "condor_common.h"
 #include "sink.h"
+#include "formatOptions.h"
 
 Sink::
 Sink ()
