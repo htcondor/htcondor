@@ -2648,8 +2648,10 @@ int AndOp::EvalTree(AttrListList* classads, EvalResult* val)
     lArgType = lArgVal.type;
     rArgType = rArgVal.type;
 
-    if((lArgType != LX_BOOL && lArgType != LX_ERROR && lArgType != LX_NULL) ||
-       (rArgType != LX_BOOL && rArgType != LX_ERROR && rArgType != LX_NULL))
+    if((lArgType != LX_BOOL && lArgType != LX_ERROR && lArgType != LX_NULL &&
+			lArgType != LX_UNDEFINED) ||
+       (rArgType != LX_BOOL && rArgType != LX_ERROR && rArgType != LX_NULL &&
+			rArgType != LX_UNDEFINED))
     {
 	val->type = LX_UNDEFINED;
 	return TRUE;
@@ -2701,8 +2703,10 @@ int AndOp::EvalTree(AttrList* classad, EvalResult* val)
     lArgType = lArgVal.type;
     rArgType = rArgVal.type;
 
-    if((lArgType != LX_BOOL && lArgType != LX_ERROR && lArgType != LX_NULL) ||
-       (rArgType != LX_BOOL && rArgType != LX_ERROR && rArgType != LX_NULL))
+    if((lArgType != LX_BOOL && lArgType != LX_ERROR && lArgType != LX_NULL &&
+			lArgType != LX_UNDEFINED) ||
+       (rArgType != LX_BOOL && rArgType != LX_ERROR && rArgType != LX_NULL &&
+			rArgType != LX_UNDEFINED))
     {
 	val->type = LX_UNDEFINED;
 	return TRUE;
@@ -2756,8 +2760,10 @@ int AndOp::EvalTree(AttrList* my_classad,AttrList* req_classad, EvalResult* val)
     lArgType = lArgVal.type;
     rArgType = rArgVal.type;
 
-    if((lArgType != LX_BOOL && lArgType != LX_ERROR && lArgType != LX_NULL) ||
-       (rArgType != LX_BOOL && rArgType != LX_ERROR && rArgType != LX_NULL))
+    if((lArgType != LX_BOOL && lArgType != LX_ERROR && lArgType != LX_NULL &&
+			lArgType != LX_UNDEFINED) ||
+       (rArgType != LX_BOOL && rArgType != LX_ERROR && rArgType != LX_NULL &&
+			rArgType != LX_UNDEFINED))
     {
 	val->type = LX_UNDEFINED;
 	return TRUE;
@@ -2811,8 +2817,10 @@ int OrOp::EvalTree(AttrListList* classads, EvalResult* val)
     lArgType = lArgVal.type;
     rArgType = rArgVal.type;
 
-    if((lArgType != LX_BOOL && lArgType != LX_ERROR && lArgType != LX_NULL) ||
-       (rArgType != LX_BOOL && rArgType != LX_ERROR && rArgType != LX_NULL))
+    if((lArgType != LX_BOOL && lArgType != LX_ERROR && lArgType != LX_NULL &&
+			lArgType != LX_UNDEFINED) ||
+       (rArgType != LX_BOOL && rArgType != LX_ERROR && rArgType != LX_NULL &&
+			rArgType != LX_UNDEFINED))
     {
 	val->type = LX_UNDEFINED;
 	return TRUE;
@@ -2864,8 +2872,10 @@ int OrOp::EvalTree(AttrList* classad, EvalResult* val)
     lArgType = lArgVal.type;
     rArgType = rArgVal.type;
 
-    if((lArgType != LX_BOOL && lArgType != LX_ERROR && lArgType != LX_NULL) ||
-       (rArgType != LX_BOOL && rArgType != LX_ERROR && rArgType != LX_NULL))
+    if((lArgType != LX_BOOL && lArgType != LX_ERROR && lArgType != LX_NULL &&
+			lArgType != LX_UNDEFINED) ||
+       (rArgType != LX_BOOL && rArgType != LX_ERROR && rArgType != LX_NULL &&
+			rArgType != LX_UNDEFINED))
     {
 	val->type = LX_UNDEFINED;
 	return TRUE;
@@ -2919,8 +2929,10 @@ int OrOp::EvalTree(AttrList* my_classad,AttrList* req_classad, EvalResult* val)
     lArgType = lArgVal.type;
     rArgType = rArgVal.type;
 
-    if((lArgType != LX_BOOL && lArgType != LX_ERROR && lArgType != LX_NULL) ||
-       (rArgType != LX_BOOL && rArgType != LX_ERROR && rArgType != LX_NULL))
+    if((lArgType != LX_BOOL && lArgType != LX_ERROR && lArgType != LX_NULL &&
+			lArgType != LX_UNDEFINED) ||
+       (rArgType != LX_BOOL && rArgType != LX_ERROR && rArgType != LX_NULL &&
+			rArgType != LX_UNDEFINED))
     {
 	val->type = LX_UNDEFINED;
 	return TRUE;
