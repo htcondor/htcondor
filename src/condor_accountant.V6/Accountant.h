@@ -10,18 +10,19 @@ class Accountant {
 
 public:
 
-  // Customer=owner@uid_domain
-  // Resource=startd_name@ip_addr
+  // User Functions
 
   int GetPriority(const MyString& CustomerName); // get priority for a customer
   void SetPriority(const MyString& CustomerName, int Priority); // set priority for a customer
 
-  void AddMatch(const MyString& CustomerName, ClassAd* Resource); // Add new match
-  void RemoveMatch(const MyString& CustomerName, ClassAd* Resource); // remove a match
+  void AddMatch(const MyString& CustomerName, ClassAd* ResourceAd); // Add new match
+  void RemoveMatch(const MyString& ResourceAd); // remove a match
 
   // void CheckMatches(ClassAdList& ResourceList);  // Remove matches that are not claimed
   void UpdatePriorities(); // update all the priorities
-  
+
+  //----------------------------------------------------------------------
+
   static int HashFunc(const MyString& Key, int TableSize) {
     int count=0;
     int length=Key.Length();
@@ -39,29 +40,26 @@ private:
 
   struct CustomerRecord {
     int Priority;
-    StringSet Resources;
+    StringSet ResourceNames;
     CustomerRecord() { Priority=0; }
   };
 
   typedef HashTable<MyString, CustomerRecord*> CustomerTable;
   CustomerTable Customers;
-  
-  typedef HashTable<MyString, ClassAd*> ResourceTable;
+
+  struct ResourceRecord {
+    MyString CustomerName;
+    ClassAd* Ad;
+    ResourceRecord() { Ad=NULL; }
+    ~ResourceRecord() { if (Ad) delete Ad; }
+  };
+
+  typedef HashTable<MyString, ResourceRecord*> ResourceTable;
   ResourceTable Resources;
 
   // --------------------------------------------------------
 
   MyString GetResourceName(ClassAd* Resource);
-  ClassAd* GetResource(const MyString& ResourceName);
-  void RemoveResource(const MyString& ResourceName);
-  ClassAd* AddResource(const MyString& ResourceName, ClassAd* Resource);
-
-  // --------------------------------------------------------
-
-  void CheckDeadCustomer(const MyString& CustomerName, CustomerRecord* Customer);
-  CustomerRecord* GetCustomer(const MyString& CustomerName);
-  CustomerRecord* NewCustomer(const MyString& CustomerName);
-
 
 };
 

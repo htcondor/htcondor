@@ -39,6 +39,7 @@ public:
     N->Name=Name;
     N->Prev=NULL;
     N->Next=Head;
+    if (Head) Head->Prev=N;
     Head=N;
     Len++;
   }
@@ -67,6 +68,18 @@ public:
     }
   }
   
+#ifdef DEBUG_FLAG
+#include <iostream.h>
+  void PrintSet() {
+    Elem* N=Head;
+    while(N) {
+      cout << N->Name.Value() << " ";
+      N=N->Next;
+    }
+    cout << endl;
+  }
+#endif
+
 private:
 
   Elem* Find(const MyString& Name) {

@@ -72,6 +72,8 @@ public:
     }
     return *this;
   }
+
+  char* Value() { return Data; }
     
 private:
 
