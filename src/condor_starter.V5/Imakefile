@@ -13,6 +13,7 @@ REMOTE_SYSCALL_LIB = \
 	../condor_syscall_lib/syscall_connect.o \
 	../condor_syscall_lib/remote_syscall.o \
 	../condor_syscall_lib/syscall_numbers.o \
+	../condor_syscall_lib/block_signals.o \
 	../condor_syscall_lib/xfer_file.o
 LIB = $(REMOTE_SYSCALL_LIB) $(STD_LIBS)
 
