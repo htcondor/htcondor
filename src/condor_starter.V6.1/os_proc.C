@@ -53,16 +53,12 @@ OsProc::OsProc( ClassAd* ad )
 	is_suspended = false;
 	num_pids = 0;
 	dumped_core = false;
-	job_iwd = NULL;
 	UserProc::initialize();
 }
 
 
 OsProc::~OsProc()
 {
-	if( job_iwd ) {
-		free( job_iwd );
-	}
 }
 
 
@@ -564,6 +560,7 @@ OsProc::renameCoreFile( void )
 	int t_errno = 0;
 
 	priv_state old_priv;
+	const char* job_iwd = Starter->jic->jobIWD();
 
 	char buf[64];
 	sprintf( buf, "core.%d.%d", Starter->jic->jobCluster(), 

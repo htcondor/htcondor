@@ -97,7 +97,6 @@ protected:
 	int num_pids;
 
 	bool dumped_core;
-	char* job_iwd;
 
 };
 
