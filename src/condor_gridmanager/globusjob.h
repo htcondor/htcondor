@@ -27,6 +27,9 @@ class GlobusJob : public Service
 	void NotifyResourceUp();
 	void UpdateCondorState( int new_state );
 	void UpdateGlobusState( int new_state, int new_error_code );
+	void GramCallback( int new_state, int new_error_code );
+	void GetCallbacks();
+	void ClearCallbacks();
 	GlobusResource *GetResource();
 	int syncIO();
 
@@ -41,6 +44,9 @@ class GlobusJob : public Service
 	int gmState;
 	int globusState;
 	int globusStateErrorCode;
+	int globusStateBeforeFailure;
+	int callbackGlobusState;
+	int callbackGlobusStateErrorCode;
 	bool jmUnreachable;
 	GlobusResource *myResource;
 	int evaluateStateTid;

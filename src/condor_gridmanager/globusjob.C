@@ -105,7 +105,10 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	localOutput = NULL;
 	localError = NULL;
 	userLogFile = NULL;
-	globusError = 0;
+	globusStateErrorCode = 0;
+	globusStateBeforeFailure = 0;
+	callbackGlobusState = 0;
+	callbackGlobusStateErrorCode = 0;
 	jmFailureCode = 0;
 	exitValue = 0;
 	submitLogged = false;
@@ -468,7 +471,10 @@ int GlobusJob::doEvaluateState()
 							break;
 						}
 						UpdateGlobusState( status, error );
+						ClearCallbacks();
 						lastProbeTime = now;
+					} else {
+						GetCallbacks();
 					}
 					daemonCore->Reset_Timer( evaluateStateTid,
 								(lastProbeTime + probeInterval) - now );
@@ -615,6 +621,11 @@ int GlobusJob::doEvaluateState()
 					rehashJobContact( this, jobContact, job_contact );
 					jobContact = strdup( job_contact );
 					gahp.globus_gram_client_job_contact_free( job_contact );
+					if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
+						globusState = globusStateBeforeFailure;
+					}
+					globusStateErrorCode = 0;
+					ClearCallbacks();
 					gmState = GM_SUBMIT_SAVE;
 				} else {
 					// unhandled error
@@ -708,17 +719,20 @@ int GlobusJob::doEvaluateState()
 						gmState = GM_CLEAR_REQUEST;
 					}
 					UpdateGlobusState( status, error );
+					ClearCallbacks();
 					lastProbeTime = now;
+				} else {
+					GetCallbacks();
 				}
 				daemonCore->Reset_Timer( evaluateStateTid,
 								(lastProbeTime + probeInterval) - now );
 			}
 			break;
 		case GM_FAILED:
-			if ( globusError == GLOBUS_GRAM_PROTOCOL_ERROR_COMMIT_TIMED_OUT ||
-				 globusError == GLOBUS_GRAM_PROTOCOL_ERROR_TTL_EXPIRED ||
-				 globusError == GLOBUS_GRAM_PROTOCOL_ERROR_JM_STOPPED ||
-				 globusError == GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED ) {
+			if ( globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_COMMIT_TIMED_OUT ||
+				 globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_TTL_EXPIRED ||
+				 globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_JM_STOPPED ||
+				 globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED ) {
 				gmState = GM_RESTART;
 			} else {
 				if ( newJM ) {
@@ -774,6 +788,7 @@ int GlobusJob::doEvaluateState()
 				schedd_actions |= UA_UPDATE_GLOBUS_STATE;
 			}
 			globusStateErrorCode = 0;
+			ClearCallbacks();
 			if ( jobContact != NULL ) {
 				rehashJobContact( this, jobContact, NULL );
 				free( jobContact );
@@ -827,10 +842,10 @@ int GlobusJob::doEvaluateState()
 			reevaluate_state = true;
 		}
 		if ( globusState != old_globus_state ) {
-			dprintf(D_FULLDEBUG, "(%d.%d) globus state change: %s -> %s\n",
-					procID.cluster, procID.proc,
-					GlobusJobStatusName(old_globus_state),
-					GlobusJobStatusName(globusState));
+//			dprintf(D_FULLDEBUG, "(%d.%d) globus state change: %s -> %s\n",
+//					procID.cluster, procID.proc,
+//					GlobusJobStatusName(old_globus_state),
+//					GlobusJobStatusName(globusState));
 			enteredCurrentGlobusState = time(NULL);
 		}
 		if ( gmState != old_gm_state ) {
@@ -937,6 +952,10 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 			update_actions |= UA_LOG_EXECUTE_EVENT;
 		}
 
+		if ( new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
+			globusStateBeforeFailure = globusState;
+		}
+
 		globusState = new_state;
 		globusStateErrorCode = new_error_code;
 		enteredCurrentGlobusState = time(NULL);
@@ -944,6 +963,30 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 		addScheddUpdateAction( this, update_actions, 0 );
 	}
 	SetEvaluateState(); // should this be inside the if statement?
+}
+
+void GlobusJob::GramCallback( int new_state, int new_error_code )
+{
+	callbackGlobusState = new_state;
+	callbackGlobusStateErrorCode = new_error_code;
+
+	SetEvaluateState();
+}
+
+void GlobusJob::GetCallbacks()
+{
+	if ( callbackGlobusState != 0 ) {
+		UpdateGlobusState( callbackGlobusState,
+						   callbackGlobusStateErrorCode );
+		callbackGlobusState = 0;
+		callbackGlobusStateErrorCode = 0;
+	}
+}
+
+void GlobusJob::ClearCallbacks()
+{
+	callbackGlobusState = 0;
+	callbackGlobusStateErrorCode = 0;
 }
 
 GlobusResource *GlobusJob::GetResource()

@@ -651,9 +651,17 @@ doContactSchedd()
 		}
 
 		if ( curr_action->actions & UA_UPDATE_GLOBUS_STATE ) {
-			SetAttributeInt( curr_job->procID.cluster,
-							 curr_job->procID.proc,
-							 ATTR_GLOBUS_STATUS, curr_job->globusState );
+			if ( curr_job->globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
+				SetAttributeInt( curr_job->procID.cluster,
+								 curr_job->procID.proc,
+								 ATTR_GLOBUS_STATUS,
+								 curr_job->globusStateBeforeFailure );
+			} else {
+				SetAttributeInt( curr_job->procID.cluster,
+								 curr_job->procID.proc,
+								 ATTR_GLOBUS_STATUS,
+								 curr_job->globusState );
+			}
 		}
 
 		if ( curr_action->actions & UA_UPDATE_CONTACT_STRING ) {
@@ -879,7 +887,7 @@ orphanCallbackHandler()
 			 this_job->procID.cluster, this_job->procID.proc, orphan->state,
 			 orphan->errorcode );
 
-	this_job->UpdateGlobusState( orphan->state, orphan->errorcode );
+	this_job->GramCallback( orphan->state, orphan->errorcode );
 
 	free( orphan->job_contact );
 	delete orphan;
@@ -916,7 +924,7 @@ gramCallbackHandler( void *user_arg, char *job_contact, int state,
 			 this_job->procID.cluster, this_job->procID.proc, state,
 			 errorcode );
 
-	this_job->UpdateGlobusState( state, errorcode );
+	this_job->GramCallback( state, errorcode );
 }
 
 // Initialize a UserLog object for a given job and return a pointer to
