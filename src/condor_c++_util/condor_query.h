@@ -22,7 +22,6 @@ extern const char *StartdFloatKeywords	[];
 enum ScheddStringCategory
 {
 	SCHEDD_NAME,
-	SCHEDD_JOB_OWNER,
 
 	SCHEDD_STRING_THRESHOLD
 };

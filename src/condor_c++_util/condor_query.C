@@ -21,13 +21,12 @@ char *new_strdup (const char *);
 // in the header file condor_query.h)
 const char *ScheddStringKeywords [] = 
 {
-	ATTR_NAME ,
-	ATTR_OWNER 
+	ATTR_NAME 
 };
 
 const char *ScheddIntegerKeywords [] = 
 {
-	ATTR_USERS,
+	ATTR_NUM_USERS,
 	ATTR_IDLE_JOBS,
 	ATTR_RUNNING_JOBS
 };
@@ -564,6 +563,9 @@ clearQueryObject (void)
 	for (i = 0; i < integerThreshold; i++)
 		clearIntegerCategory (integerConstraints[i]);
 
+	for (i = 0; i < floatThreshold; i++)
+		clearFloatCategory (floatConstraints[i]);
+
 	clearStringCategory (customConstraints);
 }
 
@@ -592,6 +594,7 @@ copyQueryObject (CondorQuery &from)
 	queryType = from.queryType;
 	stringThreshold = from.stringThreshold;
 	integerThreshold = from.integerThreshold;
+	floatThreshold = from.floatThreshold;
 }
 
 
