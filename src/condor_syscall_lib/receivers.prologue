@@ -141,7 +141,7 @@ do_REMOTE_syscall()
 extern struct tagJobList	*JobList;
 
 int
-do_REMOTE_syscall(ReliSock *sock, int jobnum, int process)
+do_REMOTE_syscall(ReliSock *sock, int process)
 {
 	int condor_sysnum;
 	int rval;
@@ -150,16 +150,15 @@ do_REMOTE_syscall(ReliSock *sock, int jobnum, int process)
 
 	syscall_sock->decode();
 
-	SyscallSockClosed = FALSE;
+	/* SyscallSockClosed = FALSE; */
 	read_ok = syscall_sock->code(condor_sysnum);
 
 	if( !read_ok ) {
-		ASSERT( SyscallSockClosed );
+		/* ASSERT( SyscallSockClosed ); */
 		dprintf( D_ALWAYS, 
-		"Failed to get syscall_code for job %d, proc %d removing..\n",
-				jobnum, process);
+		"Failed to get syscall_code for proc %d removing..\n", process);
 
-		RemoveProc( jobnum, process );
+		RemoveProc( process );
 		return -1;
 	}
 
