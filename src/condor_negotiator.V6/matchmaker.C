@@ -519,14 +519,15 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 		while (result == MM_BAD_MATCH) 
 		{
 			// 2e(i).  find a compatible offer
-			if (!(offer = matchmakingAlgorithm (request, startdAds)))
+			if (!(offer = matchmakingAlgorithm(scheddName, request, startdAds)))
 			{
 				// no offer ...
 				dprintf(D_ALWAYS, "\t\t\tNo offer --- trying preemption\n");
 			
 				// try matchmaking algorithm with preemption mode enabled
 				// (i.e., with priority == priority threshold)
-				if (!(offer=matchmakingAlgorithm(request, startdAds, priority)))
+				if (!(offer=matchmakingAlgorithm(scheddName, request, startdAds,
+							priority)))
 				{
 					// no preemptable resource offer either ... 
 					dprintf(D_ALWAYS,
@@ -561,7 +562,8 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 			}
 
 			// 2e(ii).  perform the matchmaking protocol
-			result = matchmakingProtocol (request, offer, startdPvtAds, sock, scheddName);
+			result = matchmakingProtocol (request, offer, startdPvtAds, sock, 
+					scheddName);
 
 			// 2e(iii). if the matchmaking protocol failed, do not consider the
 			//			startd again for this negotiation cycle.
@@ -610,7 +612,8 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 
 
 ClassAd *Matchmaker::
-matchmakingAlgorithm(ClassAd &request,ClassAdList &startdAds,double preemptPrio)
+matchmakingAlgorithm(char *scheddName, ClassAd &request,ClassAdList &startdAds,
+			double preemptPrio)
 {
 	ClassAd 	*candidate;
 	double		candidateRank;
@@ -640,6 +643,16 @@ matchmakingAlgorithm(ClassAd &request,ClassAdList &startdAds,double preemptPrio)
 			if (candidate->LookupString (ATTR_REMOTE_USER, remoteUser) &&
 				preemptPrio-accountant.GetPriority(remoteUser) > PriorityDelta) 
 					continue;
+
+			dprintf( D_FULLDEBUG, "Passed preemption priority condition:\n" );
+			dprintf( D_FULLDEBUG, "  %s has higher priority than %s (???)\n", 
+						scheddName, remoteUser );
+			dprintf( D_FULLDEBUG, "  tested: submittorPrio - remoteUserPrio "
+						"> PriorityDelta\n" );
+			dprintf( D_FULLDEBUG, "  tested: %f - %f > %f; result=%d\n", 
+					preemptPrio, accountant.GetPriority(remoteUser), 
+					PriorityDelta, preemptPrio - 
+						accountant.GetPriority(remoteUser) > PriorityDelta );
 
 			// if the PreemptionHold expression evaluates to true, dont preempt
 			if (PreemptionHold 											&& 
