@@ -681,7 +681,7 @@ SetStdFile( int which_file )
 			macro_value = condor_param( generic_name );
 		}
 
-		if( !macro_value ) {
+		if( !macro_value || macro_value[0] == '\0') {
 			macro_value = "/dev/null";
 		}
 
