@@ -3717,12 +3717,11 @@ DaemonCore::InitCommandSocket( int command_port )
 
 	dprintf( D_DAEMONCORE, "Setting up command socket\n" );
 
-		// we want a command port for this process, so create a tcp
-		// and a udp socket to listen on if we did not already inherit
-		// them above.
-		// If rsock/ssock are not NULL, it means we inherited them
-		// from our parent.
+		// First, try to inherit the sockets from our parent.
+	Inherit();
 
+		// If dc_rsock/dc_ssock are still NULL, we need to create our
+		// own udp and tcp sockets, bind them, etc.
 	if( dc_rsock == NULL && dc_ssock == NULL ) {
 		dc_rsock = new ReliSock;
 		dc_ssock = new SafeSock;

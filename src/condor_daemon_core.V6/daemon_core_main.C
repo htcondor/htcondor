@@ -1297,10 +1297,7 @@ int main( int argc, char** argv )
 	}
 #endif
 
-		// Now take care of inheriting resources from our parent
-	daemonCore->Inherit();
-
-	// SETUP COMMAND SOCKET
+		// SETUP COMMAND SOCKET
 	daemonCore->InitCommandSocket( command_port );
 	
 		// Install DaemonCore signal handlers common to all daemons.
