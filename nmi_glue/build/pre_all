@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-# $Id: pre_all,v 1.1.2.1 2004-06-25 23:19:49 wright Exp $
+# $Id: pre_all,v 1.1.2.2 2004-06-25 23:44:07 wright Exp $
 
 ######################################################################
 # Submit-side NMI build system infrastructure to prepare sources for
@@ -49,7 +49,7 @@ my $ExtDir = "$CommonDir/externals";
 print "Figuring out Condor version\n";
 chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
 my $vers_src="$SrcDir/condor_c++_util/condor_version.C";
-my $vers_file="CONDORVERSION";
+my $vers_file="CONDOR-VERSION";
 my $majorv;
 my $minorv;
 my $releasev;
