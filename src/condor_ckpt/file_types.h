@@ -32,14 +32,14 @@ class File {
 public:
 	virtual void dump();
 
-	virtual int open(const char *path, int flags, int mode)=0;
-	virtual int close()=0;
-	virtual int read(int offset, char *data, int length)=0;
-	virtual int write(int offset, char *data, int length)=0;
+	virtual int open(const char *path, int flags, int mode) {}
+	virtual int close() {}
+	virtual int read(int offset, char *data, int length) {}
+	virtual int write(int offset, char *data, int length) {}
 
-	virtual void checkpoint()=0;
-	virtual void suspend()=0;
-	virtual void resume()=0;
+	virtual void checkpoint() {}
+	virtual void suspend() {}
+	virtual void resume() {}
 
 	virtual int fcntl( int cmd, int arg );
 	virtual int fstat( struct stat *buf );
@@ -86,8 +86,8 @@ public:
 	These will go away soon.
 	*/
 
-	virtual int map_fd_hack()=0;
-	virtual int local_access_hack()=0;
+	virtual int map_fd_hack() { return -1; }
+	virtual int local_access_hack() { return -1; }
 
 protected:
 
