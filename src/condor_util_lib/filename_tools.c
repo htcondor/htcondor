@@ -1,4 +1,4 @@
-
+#include "condor_common.h"
 #include "filename_tools.h"
 
 void filename_url_parse( char *input, char *method, char *server, int *port, char *path )
