@@ -93,6 +93,7 @@ V6_SRC		-a \
 			src/condor_shadow.V6.1 \
 			src/condor_startd.V6 \
 			src/condor_starter.V5 \
+			src/condor_starter.V6.1 \
 			src/condor_shadow.jim \
 			src/condor_starter.jim \
 			src/condor_submit.V6 \
