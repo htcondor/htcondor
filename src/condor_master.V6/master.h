@@ -103,7 +103,7 @@ public:
 
 	void	CheckForNewExecutable();
 	void	DaemonsOn();
-	void	DaemonsOff();
+	void	DaemonsOff( int fast = 0 );
 	void 	StartAllDaemons();
 	void	StopAllDaemons();
 	void	StopFastAllDaemons();

@@ -918,12 +918,16 @@ Daemons::DaemonsOn()
 
 
 void
-Daemons::DaemonsOff()
+Daemons::DaemonsOff( int fast )
 {
 		// Maybe someday we'll add code here to edit the config file.
 	StartDaemons = FALSE;
 	all_daemons_gone_action = MASTER_RESET;
-	StopAllDaemons();
+	if( fast ) {
+		StopFastAllDaemons();
+	} else {
+		StopAllDaemons();
+	}
 }
 
 

@@ -112,6 +112,8 @@
 #define RESET_USAGE			(SCHED_VERS+58)		// negotiator
 #define SET_PRIORITYFACTOR	(SCHED_VERS+59)		// negotiator
 #define RESET_ALL_USAGE		(SCHED_VERS+60)		// negotiator
+#define DAEMONS_OFF_FAST	(SCHED_VERS+61)
+#define MASTER_OFF_FAST		(SCHED_VERS+62)
 
 
 /************
