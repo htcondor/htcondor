@@ -10,8 +10,8 @@ enum AdTypes
     MASTER_AD,
     GATEWAY_AD,
     CKPT_SRVR_AD,
-
 	STARTD_PVT_AD,
+	SUBMITTOR_AD,
 
     NUM_AD_TYPES
 };

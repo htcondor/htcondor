@@ -98,6 +98,9 @@ const int QUERY_GATEWAY_ADS		= 8;
 const int QUERY_CKPT_SRVR_ADS	= 9;
 const int QUERY_STARTD_PVT_ADS	= 10;
 
+const int UPDATE_SUBMITTOR_AD	= 11;
+const int QUERY_SUBMITTOR_ADS	= 12;
+
 /*
 *** Daemon Core Signals
 */
