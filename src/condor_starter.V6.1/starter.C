@@ -338,8 +338,6 @@ CStarter::createTempExecuteDir( void )
 				efs_support = false;
 			}
 
-			FreeLibrary(advapi);
-			
 			if ( efs_support ) {
 				wchar_t *WorkingDir_w = new wchar_t[strlen(WorkingDir)+1];
 				swprintf(WorkingDir_w, L"%S", WorkingDir);
@@ -347,13 +345,16 @@ CStarter::createTempExecuteDir( void )
 				delete[] WorkingDir_w;
 				
 				if ( EncryptFile(WorkingDir) == 0 ) {
-					dprintf(D_ALWAYS, "Could not encrypt execute directory (err=%li)\n", 
-						GetLastError());
+					dprintf(D_ALWAYS, "Could not encrypt execute directory "
+							"(err=%li)\n", GetLastError());
 				}
+
+				FreeLibrary(advapi); // don't leak the dll library handle
+
 			} else {
 				// tell the user it didn't work out
-				dprintf(D_ALWAYS, "ENCRYPT_EXECUTE_DIRECTORY set to True, but the Encryption"
-					" functions are unavailable!");
+				dprintf(D_ALWAYS, "ENCRYPT_EXECUTE_DIRECTORY set to True, "
+						"but the Encryption" " functions are unavailable!");
 			}
 
 		} // ENCRYPT_EXECUTE_DIRECTORY is True
