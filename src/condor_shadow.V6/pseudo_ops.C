@@ -179,14 +179,16 @@ pseudo_free_fs_blocks( const char *path )
 int
 pseudo_image_size( int size )
 {
+	int executable_size = 0;
 	dprintf( D_SYSCALLS, "\tGot Image Size report of %d kilobytes\n", size );
-	if( size > ImageSize ) {
-		ImageSize = size;
-		dprintf( D_SYSCALLS, "Set Image Size to %d kilobytes\n", size );
+	JobAd->LookupInteger(ATTR_EXECUTABLE_SIZE, executable_size);
+	dprintf( D_SYSCALLS, "\tAdding executable size of %d kilobytes\n",
+			 executable_size );
+	ImageSize = size + executable_size;
+	dprintf( D_SYSCALLS, "Set Image Size to %d kilobytes\n", size );
 
-		// log the event
-		log_image_size (size);
-	}
+	// log the event
+	log_image_size (size);
 	return 0;
 }
 
