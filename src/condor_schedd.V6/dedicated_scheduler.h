@@ -161,6 +161,7 @@ class DedicatedScheduler : public Service {
 
 	char* name( void ) { return ds_name; };
 	char* owner( void ) { return ds_owner; };
+	char* schedulerName( void ) { return ds_scheduler; };
 
 		/** Publish a ClassAd to the collector that says we have
 			resource requests we want to negotiate for.
@@ -168,6 +169,10 @@ class DedicatedScheduler : public Service {
 	void publishRequestAd( void );
 
 	void generateRequest( ClassAd* machine_ad );
+ 
+		// Set the correct value of ATTR_SCHEDULER in the queue for
+		// the given job ad.
+	bool setScheduler( ClassAd* job_ad );
 
  private:
 
@@ -266,6 +271,7 @@ class DedicatedScheduler : public Service {
 
 	char* ds_name;		// Name of this dedicated scheduler
 	char* ds_owner;		// "Owner" to identify this dedicated scheduler 
+	char* ds_scheduler;	// ATTR_SCHEDULER for the dedicated scheduler
 
 };
 
@@ -291,3 +297,4 @@ char* getCapability( ClassAd* ad );
 // Clear out all the fields in the match record that have anything to
 // do with the mrec being allocated to a certain MPI job.
 void deallocMatchRec( match_rec* mrec );
+
