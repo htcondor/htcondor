@@ -41,6 +41,12 @@ STATIC	= StaticFlag
 MKDEPEND = MkDepend
 STAR	= *
 
+ifdef SMP_NUM_JOBS
+SMP_FLAGS = -j $(SMP_NUM_JOBS)
+else
+SMP_FLAGS =
+endif
+
 SYSCALL_LIB = syscall_lib
 
 #define UNIX_RT0    $(CRT0)

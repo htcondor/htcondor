@@ -42,7 +42,7 @@ PLATFORM_FLAG=-DIS_SUN4M_SOLARIS
 #ifndef object_target
 #define object_target(obj_name)							@@\
 ## obj_name##: condor_##obj_name						@@\
-	cd condor_##obj_name; make 							@@\
+	cd condor_##obj_name; make $(SMP_FLAGS)						@@\
 release:: condor_##obj_name								@@\
 	cd condor_##obj_name; make release					@@\
 clean:: condor_##obj_name								@@\
