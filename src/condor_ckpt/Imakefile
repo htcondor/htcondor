@@ -313,32 +313,32 @@ CMNT N.B. This is done differently than other objects in that we start out
 CMNT with a copy of crt0.o, and change the name of "main" to "MAIN".
 CMNT
 #if IS_HPUX
-condor_rt0.o: Crt0 ToUpper
-	./ToUpper Crt0 tmp1 _start _START 
+condor_rt0.o: $(CRT_BEGIN) ToUpper
+	./ToUpper $(CRT_BEGIN) tmp1 _start _START 
 	./ToUpper tmp1 tmp2 _data_START _data_start
 	./ToUpper tmp2 condor_rt0.o _text_START _text_start
 	rm -f tmp1 tmp2
 clean::
 	rm -f condor_rt0.o
 #elif IS_SUN4X_SOLARIS
-condor_rt0.o: Crt0 ToUpper
-	./ToUpper Crt0 condor_rt0.o main  MAIN
+condor_rt0.o: $(CRT_BEGIN) ToUpper
+	./ToUpper $(CRT_BEGIN) condor_rt0.o main  MAIN
 clean::
 	rm -f condor_rt0.o
 #elif  IS_X86_SOLARIS
-condor_rt0.o: Crt0 ToUpper
-	./ToUpper Crt0 condor_rt0.o main  MAIN
+condor_rt0.o: $(CRT_BEGIN) ToUpper
+	./ToUpper $(CRT_BEGIN) condor_rt0.o main  MAIN
 clean::
 	rm -f condor_rt0.o
 #elif IS_GLIBC_LINUX && (IS_GLIBC21 || IS_GLIBC22)
-condor_rt0.o: Crt0 ToUpper
-	./ToUpper Crt0 tmp1 main  MAIN
+condor_rt0.o: $(CRT_BEGIN) ToUpper
+	./ToUpper $(CRT_BEGIN) tmp1 main  MAIN
 	./ToUpper tmp1 condor_rt0.o __libc_start_MAIN __libc_start_main
 clean::
 	rm -f condor_rt0.o
 #else
-condor_rt0.o: Crt0 ToUpper
-	./ToUpper Crt0 condor_rt0.o main  MAIN
+condor_rt0.o: $(CRT_BEGIN) ToUpper
+	./ToUpper $(CRT_BEGIN) condor_rt0.o main  MAIN
 clean::
 	rm -f condor_rt0.o
 #endif
