@@ -76,9 +76,22 @@ static	QueryResult result;
 static	CondorQuery	scheddQuery(SCHEDD_AD);
 static	CondorQuery submittorQuery(SUBMITTOR_AD);
 static	ClassAdList	scheddList;
-static  ExtArray<char*> *output_buffer;
+
+// clusterProcString is the container where the output strings are
+//    stored.  We need the cluster and proc so that we can sort in an
+//    orderly manner (and don't need to rely on the cluster.proc to be
+//    available....)
+
+typedef struct {
+	int cluster;
+	int proc;
+	char * string;
+} clusterProcString;
+
+static  ExtArray<clusterProcString *> *output_buffer;
 static	bool		output_buffer_empty = true;
 
+static	bool		usingPrintMask = false;
 static 	bool		customFormat = false;
 static  bool		cputime = false;
 static	bool		current_run = false;
@@ -145,7 +158,8 @@ int main (int argc, char **argv)
 			sprintf( scheddAddr, "%s", schedd.addr() );
 			sprintf( scheddName, "%s", schedd.name() );
 			sprintf( scheddMachine, "%s", schedd.fullHostname() );
-			if ( verbose || run || show_io || goodput || customFormat ) {
+			//if ( verbose || run || show_io || goodput ) {
+			if ( verbose ) {
 				exit( !show_queue( scheddAddr, scheddName,
 							scheddMachine ) );
 			} else {
@@ -196,7 +210,8 @@ int main (int argc, char **argv)
 			!ad->LookupString(ATTR_MACHINE, scheddMachine))
 				continue;
 	
-		if ( verbose || run || show_io || goodput ) {
+		//if ( verbose || run || show_io || goodput ) {
+		if ( verbose ) {
 			show_queue( scheddAddr, scheddName, scheddMachine );
 		} else {
 			show_queue_buffered( scheddAddr, scheddName, scheddMachine );
@@ -399,6 +414,7 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 			customFormat = true;
 			mask.registerFormat( argv[i+1], argv[i+2] );
+			usingPrintMask = true;
 			i+=2;
 		}
 		else
@@ -629,16 +645,25 @@ bufferJobShort( ClassAd *ad ) {
 static void 
 short_header (void)
 {
-    printf( " %-7s %-14s %11s %12s %-2s %-3s %-4s %-18s\n",
-        "ID",
-        "OWNER",
-        "SUBMITTED",
-        JOB_TIME,
-        "ST",
-        "PRI",
-        "SIZE",
-        "CMD"
-    );
+	if ( goodput || run ) {
+		printf( " %-7s %-14s %11s %12s %-16s\n", "ID", "OWNER",
+				"SUBMITTED", JOB_TIME,
+				run ? "HOST(S)" : "GOODPUT CPU_UTIL   Mb/s" );
+	} else if ( globus ) {
+		printf( " %-7s %-14s %-7s %-8s %-18s  %-18s\n", 
+			"ID", "OWNER", "STATUS", "MANAGER", "HOST", "EXECUTABLE" );
+	} else {
+		printf( " %-7s %-14s %11s %12s %-2s %-3s %-4s %-18s\n",
+			"ID",
+			"OWNER",
+			"SUBMITTED",
+			JOB_TIME,
+			"ST",
+			"PRI",
+			"SIZE",
+			"CMD"
+		);
+	}
 }
 
 static char *
@@ -857,36 +882,86 @@ usage (char *myName)
 int
 output_sorter( const void * va, const void * vb ) {
 
-	char ** a, ** b;
-	int daa, dab, dba, dbb;
+	clusterProcString **a, **b;
 
-	a = ( char ** ) va;
-	b = ( char ** ) vb;
-	if( analyze ) {
-		sscanf( *a, "---\n%d.%d", &daa, &dab );
-		sscanf( *b, "---\n%d.%d", &dba, &dbb );
-	} else {
-		sscanf( *a, "%d.%d", &daa, &dab );
-		sscanf( *b, "%d.%d", &dba, &dbb );
-	}
+	a = ( clusterProcString ** ) va;
+	b = ( clusterProcString ** ) vb;
 
-	if (daa < dba) { return -1; }
-	if (daa > dba) { return  1; }
-	if (dab < dbb) { return -1; }
-	if (dab > dbb) { return  1; }
+	if ((*a)->cluster < (*b)->cluster ) { return -1; }
+	if ((*a)->cluster > (*b)->cluster ) { return  1; }
+	if ((*a)->proc    < (*b)->proc    ) { return -1; }
+	if ((*a)->proc    > (*b)->proc    ) { return  1; }
+
 	return 0;
 }
 
 static bool
 show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 {
-	char **the_output;
-	output_buffer = new ExtArray<char*>;
+	static bool	setup_mask = false;
+	clusterProcString **the_output;
+	output_buffer = new ExtArray<clusterProcString*>;
 
-	output_buffer->setFiller( (char *) NULL );
+	output_buffer->setFiller( (clusterProcString *) NULL );
 
 		// initialize counters
 	unexpanded = idle = running = held = malformed = 0;
+
+	if ( run || goodput ) {
+		summarize = false;
+		if (!setup_mask) {
+			mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
+			mask.registerFormat ("%-3d ", ATTR_PROC_ID);
+			mask.registerFormat ( (StringCustomFmt) format_owner,
+								  ATTR_OWNER, "[????????????] " );
+			mask.registerFormat(" ", "*bogus*", " ");  // force space
+			mask.registerFormat ( (IntCustomFmt) format_q_date,
+								  ATTR_Q_DATE, "[????????????]");
+			mask.registerFormat(" ", "*bogus*", " ");  // force space
+			mask.registerFormat ( (FloatCustomFmt) format_cpu_time,
+								  ATTR_JOB_REMOTE_USER_CPU,
+								  "[??????????]");
+			if ( run ) {
+				mask.registerFormat(" ", "*bogus*", " "); // force space
+				// We send in ATTR_OWNER since we know it is always
+				// defined, and we need to make sure
+				// format_remote_host() is always called. We are
+				// actually displaying ATTR_REMOTE_HOST if defined,
+				// but we play some tricks if it isn't defined.
+				mask.registerFormat ( (StringCustomFmt) format_remote_host,
+									  ATTR_OWNER, "[????????????????]");
+			} else {			// goodput
+				mask.registerFormat ( (FloatCustomFmt) format_goodput,
+									  ATTR_JOB_REMOTE_WALL_CLOCK,
+									  " [?????]");
+				mask.registerFormat ( (FloatCustomFmt) format_cpu_util,
+									  ATTR_JOB_REMOTE_USER_CPU,
+									  " [??????]");
+				mask.registerFormat ( (FloatCustomFmt) format_mbps,
+									  ATTR_JOB_REMOTE_WALL_CLOCK,
+									  " [????]");
+			}
+			mask.registerFormat("\n", "*bogus*", "\n");  // force newline
+			setup_mask = true;
+			usingPrintMask = true;
+		}
+	} else if( globus ) {
+		summarize = false;
+		if (!setup_mask) {
+			mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
+			mask.registerFormat ("%-3d ", ATTR_PROC_ID);
+			mask.registerFormat ( (StringCustomFmt) format_owner,
+								  ATTR_OWNER, "[????????????] " );
+			mask.registerFormat( "%7s ", "GlobusStatus" );
+			mask.registerFormat( (StringCustomFmt)
+								 format_globusHostJMAndExec,
+								 "GlobusArgs", "[?????] [?????]\n" );
+			setup_mask = true;
+			usingPrintMask = true;
+		}
+	} else if ( customFormat ) {
+		summarize = false;
+	}
 
 	// fetch queue from schedd and stash it in output_buffer.
 	if( Q.fetchQueueFromHostAndProcess( scheddAddr,
@@ -897,23 +972,26 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 	}
 
 	the_output = &(*output_buffer)[0];
-	qsort(the_output, output_buffer->getlast()+1, sizeof(char*), output_sorter);
+	qsort(the_output, output_buffer->getlast()+1, sizeof(clusterProcString*),
+		output_sorter);
 
-	if( querySchedds ) {
-		printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
-	} else {
-		printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
-				scheddAddr, scheddMachine);	
+	if (! customFormat ) {
+		if( querySchedds ) {
+			printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
+		} else {
+			printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
+					scheddAddr, scheddMachine);	
+		}
+		// Print the output header
+	
+		short_header();
 	}
-	// Print the output header
-
-	short_header();
 
 	// Print the jobs if we have any
 	if (!output_buffer_empty) {
 		for (int i=0;i<=output_buffer->getlast(); i++) {
 			if ((*output_buffer)[i])
-				printf("%s",(*output_buffer)[i]);
+				printf("[BUFF]%s",((*output_buffer)[i])->string);
 		}
 	}
 
@@ -933,23 +1011,27 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 	return true;
 }
 
+
 // process_buffer_line returns 1 so that the ad that is passed
 // to it should be deleted.
+
 
 static bool
 process_buffer_line( ClassAd *job )
 {
+	clusterProcString * tempCPS = new clusterProcString;
+	(*output_buffer)[output_buffer->getlast()+1] = tempCPS;
+	job->LookupInteger( ATTR_CLUSTER_ID, tempCPS->cluster );
+	job->LookupInteger( ATTR_PROC_ID, tempCPS->proc );
+
 	if( analyze ) {
-		(*output_buffer)[output_buffer->getlast()+1] =
-								strnewp( doRunAnalysisToBuffer( job ) );
+		tempCPS->string = strnewp( doRunAnalysisToBuffer( job ) );
 	} else if ( show_io ) {
-		(*output_buffer)[output_buffer->getlast()+1] =
-								strnewp( buffer_io_display( job ) );
-
-
+		tempCPS->string = strnewp( buffer_io_display( job ) );
+	} else if ( usingPrintMask ) {
+		tempCPS->string = mask.display( job );
 	} else {
-		(*output_buffer)[output_buffer->getlast()+1] =
-								strnewp( bufferJobShort( job ) );
+		tempCPS->string = strnewp( bufferJobShort( job ) );
 	}
 
 	output_buffer_empty = false;
@@ -1027,6 +1109,7 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 									 format_globusHostJMAndExec,
 									 "GlobusArgs", "[?????] [?????]\n" );
 				setup_mask = true;
+				usingPrintMask = true;
 			}
 			mask.display( stdout, &jobs );
 		} else if ( run || goodput ) {
@@ -1068,6 +1151,7 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 				}
 				mask.registerFormat("\n", "*bogus*", "\n");  // force newline
 				setup_mask = true;
+				usingPrintMask = true;
 			}
 			mask.display(stdout, &jobs);
 		} else if( show_io ) {
