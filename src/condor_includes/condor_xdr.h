@@ -31,18 +31,13 @@ extern "C" {
 #define xdr_string hide_xdr_string
 #endif
 
-#include <rpc/types.h>
+#include <rpc/types.h> 
 
 #if defined(IRIX62)
-#define time_t dont_change_to_long
-typedef long dont_change_to_long;
+#define xdr_time_t xdr_hidemetimet
 #endif
 
 #include <rpc/xdr.h>
-
-#if defined(IRIX62)
-#undef time_t
-#endif
 
 /*
   Now uncover all the names
@@ -67,6 +62,10 @@ typedef long dont_change_to_long;
 #undef xdr_void
 #undef xdr_string
 #endif /* __STDC__ || __cplusplus */
+
+#if defined(IRIX62)
+#undef xdr_time_t
+#endif
 
 #if defined(OSF1)
 #define mem_alloc(bsize)        malloc(bsize)
