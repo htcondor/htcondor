@@ -107,6 +107,7 @@ V6_5_SRC		-a \
 
 V6_6_SRC		-a \
 			src/configure.ac \
+			src/aclocal.m4 \
 			V6_5_SRC
 
 V_TRUNK_SRC		-a \
