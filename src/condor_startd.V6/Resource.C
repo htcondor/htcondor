@@ -449,7 +449,7 @@ Resource::final_update()
 	r_reqexp->unavail();
 	r_state->update( &public_ad );
 	r_reqexp->update( &public_ad );
-	send_classad_to_sock( coll_sock, &public_ad, NULL );
+	resmgr->send_update( &public_ad, NULL );
 }
 
 
