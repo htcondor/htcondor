@@ -42,6 +42,20 @@ The details of each version are described below.
       on the log file line were not correctly parsed, causing the DAG
       to fail.
 
+\item Fixed a bug in \Condor{submit} that appears to only have
+  effected OSX machines.
+  Previously, submit files that only defined a single job and used
+  \verb@queue@ without any numerical modifiers would result in an
+  error like this: 
+\footnotesize
+\begin{verbatim}
+     ERROR: "test.sub" doesn't contain any "queue" commands -- no jobs queued
+\end{verbatim}
+\normalsize
+  Now, \Condor{submit} will properly process and submit the job from
+  job description files that contain a single \verb@queue@ statement
+  with no modifiers.
+
 \end{itemize}
 
 \noindent Known Bugs:
