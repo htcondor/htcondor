@@ -42,21 +42,39 @@ HashTable <HashKey, CondorResource *>
 
 int CondorResource::scheddPollInterval = 300;		// default value
 
+const char *CondorResource::HashName( const char *resource_name,
+									  const char *pool_name,
+									  const char *proxy_subject )
+{
+	static MyString hash_name;
+
+	hash_name.sprintf( "%s#%s#%s", resource_name, 
+					   pool_name ? pool_name : "NULL",
+					   proxy_subject ? proxy_subject : "NULL" );
+
+	return hash_name.Value();
+}
+
 CondorResource *CondorResource::FindOrCreateResource( const char * resource_name,
-													  const char *pool_name )
+													  const char *pool_name,
+													  const char *proxy_subject )
 {
 	int rc;
 	MyString resource_key;
 	CondorResource *resource = NULL;
 
-	resource_key.sprintf( "%s/%s", pool_name ? pool_name : "NULL",
-						  resource_name );
-
-	rc = ResourcesByName.lookup( HashKey( resource_key.Value() ), resource );
+	rc = ResourcesByName.lookup( HashKey( HashName( resource_name,
+													pool_name,
+													proxy_subject ) ),
+								 resource );
 	if ( rc != 0 ) {
-		resource = new CondorResource( resource_name, pool_name );
+		resource = new CondorResource( resource_name, pool_name,
+									   proxy_subject );
 		ASSERT(resource);
-		ResourcesByName.insert( HashKey( resource_key.Value() ), resource );
+		ResourcesByName.insert( HashKey( HashName( resource_name,
+												   pool_name,
+												   proxy_subject ) ),
+								resource );
 	} else {
 		ASSERT(resource);
 	}
@@ -64,9 +82,13 @@ CondorResource *CondorResource::FindOrCreateResource( const char * resource_name
 	return resource;
 }
 
-CondorResource::CondorResource( const char *resource_name, const char *pool_name )
+CondorResource::CondorResource( const char *resource_name, const char *pool_name,
+								const char *proxy_subject )
 	: BaseResource( resource_name )
 {
+	if ( proxy_subject != NULL ) {
+		proxySubject = strdup( proxy_subject );
+	}
 	scheddPollTid = TIMER_UNSET;
 	registeredJobs = new List<CondorJob>;
 	scheddName = strdup( resource_name );
@@ -92,8 +114,8 @@ CondorResource::CondorResource( const char *resource_name, const char *pool_name
 		//   a gahp server can handle multiple schedds
 		MyString buff;
 		MyString buff2;
-		buff.sprintf( "CONDORRESOURCE/%s/%s", poolName ? poolName : "NULL",
-					  scheddName );
+		buff.sprintf( "CONDOR/%s/%s/%s", poolName ? poolName : "NULL",
+					  scheddName, proxySubject ? proxySubject : "NULL" );
 		buff2.sprintf( "-f -s %s", scheddName );
 		if ( poolName != NULL ) {
 			buff2.sprintf_cat( " -P %s", poolName );
@@ -108,6 +130,9 @@ CondorResource::CondorResource( const char *resource_name, const char *pool_name
 
 CondorResource::~CondorResource()
 {
+	if ( proxySubject != NULL ) {
+		free( proxySubject );
+	}
 	if ( scheddPollTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( scheddPollTid );
 	}

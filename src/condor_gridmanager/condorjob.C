@@ -248,7 +248,8 @@ CondorJob::CondorJob( ClassAd *classad )
 	}
 
 	myResource = CondorResource::FindOrCreateResource( remoteScheddName,
-													   remotePoolName );
+													   remotePoolName,
+													   jobProxy ? jobProxy->subject->subject_name : NULL );
 	myResource->RegisterJob( this, submitterId );
 
 	gahp_path = param("CONDOR_GAHP");
@@ -258,8 +259,9 @@ CondorJob::CondorJob( ClassAd *classad )
 	}
 		// TODO remove remoteScheddName from the gahp server key if/when
 		//   a gahp server can handle multiple schedds
-	sprintf( buff, "CONDOR/%s/%s", remotePoolName ? remotePoolName : "NULL",
-			 remoteScheddName );
+	sprintf( buff, "CONDOR/%s/%s/%s", remotePoolName ? remotePoolName : "NULL",
+			 remoteScheddName,
+			 jobProxy != NULL ? jobProxy->subject->subject_name : "NULL" );
 	sprintf( buff2, "-f -s %s", remoteScheddName );
 	if ( remotePoolName ) {
 		strcat( buff2, " -P " );
@@ -358,6 +360,15 @@ int CondorJob::doEvaluateState()
 						 procID.cluster, procID.proc );
 
 				UpdateJobAdString( ATTR_HOLD_REASON, "Failed to start GAHP" );
+				gmState = GM_HOLD;
+				break;
+			}
+			if ( jobProxy && gahp->Initialize( jobProxy ) == false ) {
+				dprintf( D_ALWAYS, "(%d.%d) Error initializing GAHP\n",
+						 procID.cluster, procID.proc );
+
+				UpdateJobAdString( ATTR_HOLD_REASON,
+								   "Failed to initialize GAHP" );
 				gmState = GM_HOLD;
 				break;
 			}
