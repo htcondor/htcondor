@@ -874,9 +874,12 @@ activate_claim( Resource* rip, Stream* stream )
 
 	rip->dprintf( D_FULLDEBUG, "Read request ad and starter from shadow.\n" );
 
-		// This recomputes all attributes and fills in the machine classad 
-	rip->update_classad();
-	
+		// Now, ask the ResMgr to recompute so we have totally
+		// up-to-date values for everything in our classad.
+		// Unfortunately, this happens to all the resources in an SMP
+		// at once, but that's the only way to compute anything... 
+	resmgr->compute( A_TIMEOUT | A_UPDATE );
+
 		// Possibly print out the ads we just got to the logs.
 	rip->dprintf( D_JOB, "REQ_CLASSAD:\n" );
 	if( DebugFlags & D_JOB ) {
