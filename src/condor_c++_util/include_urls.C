@@ -29,14 +29,18 @@
 #include "url_condor.h"
 
 
-extern URLProtocol CondorFileUrl;
-extern URLProtocol CondorByteStreamProtocol;
-extern URLProtocol HTTP;
+extern URLProtocol FILE_URL;
+extern URLProtocol CBSTP_URL;
+extern URLProtocol HTTP_URL;
+extern URLProtocol FILTER_URL;
+extern URLProtocol MAILTO_URL;
 
 URLProtocol	*protocols[] = {
-	&CondorFileUrl,
-	&CondorByteStreamProtocol,
-	&HTTP,
+	&FILE_URL,
+	&CBSTP_URL,
+	&HTTP_URL,
+	&FILTER_URL,
+	&MAILTO_URL,
 	0
 	};
 
