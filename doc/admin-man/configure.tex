@@ -2089,7 +2089,7 @@ used in other situations, as well.
 
     \item \MacroNI{period} The period specifies time intervals at
     which the module should be run.
-    For non-continuous modules, this
+    For periodic modules, this
     is the time interval that passes between starting the execution
     of the module.
     The value may be specified in seconds (append value with the character 's'),
@@ -2097,41 +2097,72 @@ used in other situations, as well.
     or in hours (append value with the character 'h').
     As an example, 5m starts the execution of the module every five minutes.
     If no character is appended to the value, seconds are used as a default.
-    For continuous mode, the value has a different meaning.
-    It specifies the length of time after the module ceases execution
+    For ``Wait For Exit'' mode, the value has a different meaning; in this case
+    the period specifies the length of time after the module ceases execution
     before it is restarted.
-    A value of 0 is valid only in continuous mode.
+    The minimum valid value of the period is 1 second.
 
    \item Several options are available. Using more than one
    of these options for one module does not make sense.  If this happens,
    the last one in the list is followed.
 
-	\MacroNI{continuous} is used to specify a module which runs in continuous
-	mode (as described above).
-	In continuous mode, the \Condor{startd} daemon will
-	attempt to keep the module running continuously;
-	this is used for modules that do not normally exit.
-	If the period is non-zero, Condor uses the period field as
-	an amount of time to wait after
-	the module exits before restarting it.
+	\begin{itemize}
+	\item The ``Continuous'' option is used to specify a module
+	which runs in continuous mode (as described above).  See the
+	``WaitForExit'' and ``ReConfig'' options which replace
+	``Continuous''.
 
-	\MacroNI{kill} 
-	For a noncontinuous mode of module execution,
+	This option is now deprecated, and it's functionality has been
+	replaced by the new ``WaitForExit'' and ``ReConfig'' options,
+	which together implement the capabilities of ``Continuous''.
+	This option will be removed from a future version of Condor.
+
+	\item The ``WaitForExit'' option is used to specify a module
+	which runs in the ``Wait For Exit'' mode (as described above).
+	In ``Wait For Exit'' mode, the \Condor{startd} daemon
+	interprets the ``period'' differently.  In this case, it
+	refers to the amount of time to wait after the module exits
+	before restarting it.  With a value of 1, the module is kept
+	running nearly continuously.
+
+	In general, ``Wait For Exit'' mode is for modules that produce
+	a periodic stream of updated data, but it can be used for other
+	purposes, as well.
+
+	\item The ``ReConfig'' option is used to specify that a module
+	can handle HUP signals, and should be sent a HUP signal when
+	the \Condor{startd} daemon is reconfigured.  The module is
+	expected to reread it's configuration at that time.
+
+	Note that the HUP signal will never be delivered to a module
+	until it produces it's first block of ``publishable'' data
+	(i.e. the module exits or produces a ``-'' alone on a line).
+
+	\item The ``NoReConfig'' option is used turn off the
+	``reconfig'' option.  This is the default (except for modules
+	using the deprecated ``continuous'' mode). 
+
+	\item The ``Kill'' option is for
+	for a periodic mode of module execution,
 	the module may still be running when the period is up
 	and it is time to start the module again.
 	This option causes the module to be killed and restarted.
+	This option has no effect on ``Continuous'' or ``WaitForExit'' jobs.
 
-	\MacroNI{no kill} 
-	For a noncontinuous mode of module execution,
+	\item The ``NoKill'' option is
+	for a periodic mode of module execution,
 	the module may still be running when the period is up
 	and it is time to start the module again.
 	This option allows the module to continue execution.
 	This is the default for noncontinuous mode.
+	This option has no effect on ``Continuous'' or ``WaitForExit''
+	jobs.
+    \end{itemize}
 	
   \end{itemize}
 \Note The configuration file parsing logic will strip whitespace from
 the beginning and end of continuation lines.  Thus, a job list like
-below will be mis-interpretted:
+below will be misinterpreted and will not work as expected:
 \begin{verbatim}
 # Hawkeye Job Definitions
 HAWKEYE_JOBS   =\
