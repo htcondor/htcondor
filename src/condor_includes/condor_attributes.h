@@ -88,6 +88,7 @@ const char ATTR_LAST_PERIODIC_CHECKPOINT [] = "LastPeriodicCheckpoint";
 const char ATTR_LAST_UPDATE				 [] = "LastUpdate";
 const char ATTR_LOAD_AVG                 [] = "LoadAvg";
 const char ATTR_MACHINE                  [] = "Machine";
+const char ATTR_MASTER_IP_ADDR			 [] = "MasterIpAddr";
 const char ATTR_MAX_HOSTS				 [] = "MaxHosts";
 const char ATTR_MAX_JOBS_RUNNING         [] = "MaxJobsRunning";
 const char ATTR_MEMORY                   [] = "Memory";
