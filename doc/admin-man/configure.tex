@@ -1411,7 +1411,14 @@ control state or activity transitions within the
   \Note This setting cannot be changed with a simple reconfig (either
   by sending a SIGHUP or using \Condor{reconfig}.
   If you change this, you must restart the \Condor{startd} for the
-  change to take effect.
+  change to take effect (by using ``\condor{restart} -startd'').
+
+  \Note If you use this setting on a given machine, you should
+  probably advertise that fact in the machine's ClassAd by using the
+  \Macro{STARTD\_EXPRS} setting (described above).
+  This way, jobs submitted in your pool could specify that they did or
+  did not want to be matched with machines that were only really
+  offering ``fractional CPUs''.
 
 \end{description}
 
