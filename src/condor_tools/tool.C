@@ -73,6 +73,7 @@ bool all = false;
 char* subsys = NULL;
 int takes_subsys = 0;
 int cmd_set = 0;
+char *daemonarg = NULL;
 
 
 template class HashBucket<MyString, bool>;
@@ -141,6 +142,11 @@ usage( char *str )
 	fprintf( stderr, "  (if no targets are specified, the local host is used)\n" );
 	if( takes_subsys ) {
 		fprintf( stderr, "where [subsystem] can be one of:\n" );
+		fprintf( stderr, 
+			 "    -subsystem <name>\tspecify the target subsystem by name.\n" );
+		fprintf( stderr,
+			"    The following named subsystem options are deprecated, and\n");
+		fprintf( stderr, "    may be discontinued in a future release:\n");
 		if( cmd == DAEMONS_OFF || cmd == DAEMON_OFF ) {
 			fprintf( stderr, "    -master\n" );
 		} else {
@@ -630,19 +636,37 @@ main( int argc, char *argv[] )
 				case 't':
 					dt = DT_STARTD;
 					break;
+				case 'u': 
+						// We got a "-subsystem", make sure we've got 
+						// something else after it
+					tmp++;
+					if( tmp && *tmp ) {
+						subsys_check( MyName );
+						daemonarg = *tmp;
+						dt = stringToDaemonType(daemonarg);
+						if( dt == DT_NONE ) {
+							dt = DT_ANY;
+						}
+					} else {
+						fprintf( stderr, 
+							 "ERROR: -subsystem requires another argument\n" ); 
+						usage( NULL );
+						exit( 1 );
+					}
+					break;
 				default: 
 					fprintf( stderr, 
-							 "ERROR: invalid subsystem argument \"%s\"\n",
-							 *tmp );
+							 "ERROR: unknown parameter: \"%s\"\n",
+							 *tmp );  
 					usage( NULL );
 					break;
 				}
 			} else {
 				fprintf( stderr, 
-						 "ERROR: ambiguous subsystem argument \"%s\"\n",
+						 "ERROR: ambiguous argument \"%s\"\n",
 						 *tmp );
 				fprintf( stderr, 
-						 "Please specify \"-startd\" or \"-schedd\"\n" );
+				"Please specify \"-subsystem\", \"-startd\" or \"-schedd\"\n" );
 				usage( NULL );
 			}
 			break;
@@ -758,16 +782,18 @@ doCommands(int argc,char *argv[],char *MyName) {
 			}
 			break;
 		default:
-				// This is probably a daemon name, use it.
-			found_one = true;
-			if( (daemonname = get_daemon_name(*argv)) == NULL ) {
-				fprintf( stderr, "%s: unknown host %s\n", MyName, 
-						 get_host_part(*argv) );
-				continue;
+			if (! daemonarg ) {
+					// This is probably a daemon name, use it.
+				found_one = true;
+				if( (daemonname = get_daemon_name(*argv)) == NULL ) {
+					fprintf( stderr, "%s: unknown host %s\n", MyName, 
+							 get_host_part(*argv) );
+					continue;
+				}
+				names.append( daemonname );
+				delete [] daemonname;
+				daemonname = NULL;
 			}
-			names.append( daemonname );
-			delete [] daemonname;
-			daemonname = NULL;
 			break;
 		}
 	}
