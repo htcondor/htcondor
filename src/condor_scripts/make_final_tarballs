@@ -35,7 +35,7 @@ if( $versarg ) {
     # directly on the condor_master binary.
     $_=`ident strip_dir/sbin/condor_master`;
 }
-/(\$Version: )?(\d*)\.(\d*)\.(\d*).*/;
+/(\$CondorVersion: )?(\d*)\.(\d*)\.(\d*).*/;
 $majorv = $2;
 $minorv = $3;
 $releasev = $4;
