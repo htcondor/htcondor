@@ -31,6 +31,7 @@
 #include "condor_attrlist.h"
 #include "condor_attributes.h"
 #include "iso_dates.h"
+#include "condor_xml_classads.h"
 
 extern void evalFromEnvironment (const char *, EvalResult *);
 
@@ -1901,22 +1902,39 @@ ExprTree* AttrListList::Lookup(const char* name)
 }
 
 
-void AttrListList::fPrintAttrListList(FILE* f)
+void AttrListList::fPrintAttrListList(FILE* f, bool use_xml)
 {
-    AttrList *tmpAttrList;
+    AttrList            *tmpAttrList;
+	ClassAdXMLUnparser  unparser;
+	MyString            xml;
+				
+	if (use_xml) {
+		unparser.SetUseCompactSpacing(false);
+		unparser.AddXMLFileHeader(xml);
+		printf("%s\n", xml.Value());
+		xml = "";
+	}
 
     Open();
-    for(tmpAttrList = Next(); tmpAttrList; tmpAttrList = Next())
-    {
-	switch(tmpAttrList->Type())
-	{
-	    case ATTRLISTENTITY :
-
-        	 tmpAttrList->fPrint(f);
-			 break;
-	}
+    for(tmpAttrList = Next(); tmpAttrList; tmpAttrList = Next()) {
+		switch(tmpAttrList->Type()) {
+		case ATTRLISTENTITY :
+			if (use_xml) {
+				unparser.Unparse((ClassAd *) tmpAttrList, xml);
+				printf("%s\n", xml.Value());
+				xml = "";
+			} else {
+				tmpAttrList->fPrint(f);
+			}
+			break;
+		}
         fprintf(f, "\n");
     }
+	if (use_xml) {
+		unparser.AddXMLFileFooter(xml);
+		printf("%s\n", xml.Value());
+		xml = "";
+	}
     Close();
 }
 
