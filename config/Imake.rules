@@ -117,6 +117,16 @@ rel::													@@\
 .C.o:
 	$(CPlusPlus) $(C_PLUS_FLAGS) -c $<
 
+#if IS_ALPHA_OSF1
+#define	c_plus_target(program, objlist, libs, rel)		@@\
+program: objlist libs									@@\
+	$(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(LDFLAGS) 2>&1 | demangle @@\
+clean:: 												@@\
+	rm -f program objlist								@@\
+rel::													@@\
+	/bin/rm -f $(RELEASE_DIR)/bin/program				@@\
+	cp program $(RELEASE_DIR)/bin
+#else
 #define	c_plus_target(program, objlist, libs, rel)		@@\
 program: objlist libs									@@\
 	$(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(LDFLAGS)	@@\
@@ -125,7 +135,7 @@ clean:: 												@@\
 rel::													@@\
 	/bin/rm -f $(RELEASE_DIR)/bin/program				@@\
 	cp program $(RELEASE_DIR)/bin
-
+#endif
 
 #if IS_SPARC_SUNOS41
 #define	pure_cplus_targ(program, objlist, libs, rel)	@@\
