@@ -51,11 +51,51 @@ timeout settings.
    immediately have a terminate event written to the job log file and 
    removed from the queue. This is useful for DAGs where the pre-script
    determines the job should not run.
+
+\item Added preliminary support for the Tool Daemon Protocol (TDP)
+  into Condor.
+  This protocol is still under development, but the goal is to provide
+  a generic way for scheduling systems (daemons) to interact with
+  monitoring tools.
+  Assuming this protocol is adopted by other scheduling systems and by
+  various monitoring tools, it would allow arbitrary combinations of
+  tools and schedulers to co-exist, function properly, and provide
+  monitoring services for jobs running under the schedulers.
+  This initial support allows users to specify a ``tool'' that should
+  be spawned along-side their regular Condor job.
+  On Linux, the ability to have the batch Condor job suspend
+  immediately upon start-up is also implemented, which allows a
+  monitoring tool to attach with ptrace() before the job's main()
+  function is called.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a significant memory leak in the \Condor{schedd} that was
+  introduced in version 6.7.0.
+  In 6.7.0, the \Condor{schedd} would leak a copy of ClassAd for every
+  job it tried to spawn (on average, around 2000 bytes per job).
+
+\item Fixed a number of bugs in the \Opt{-format} option to \Condor{q}
+  and \Condor{status}.
+  Now, these tools will properly handle printing boolean expressions
+  in all cases.
+  Previously, depending on how the boolean evaluated, either the
+  expression was printed, or the tool could crash.
+  Furthermore, the tools do a better job of handling the different 
+  types of format conversion strings and printing out the appropriate
+  value.
+  For example, if a user tries to print out a boolean attribute with
+  \verb@condor_status -format "%d\n" HasFileTransfer@, the
+  \Condor{status} tool will evalute \Attr{HasFiletransfer} and print
+  either a 0 or a 1 (FALSE or TRUE).
+  If, on the other hand, a user tries to print out a boolean attribute
+  with \verb@condor_status -format "%s\n" HasFileTransfer@, the
+  \Condor{status} tool will print out the string ``FALSE'' or ``TRUE''
+  as appropriate.
 
 \item Fixed the bugs in Condor's MPI support that were introduced in
   version 6.7.0.
