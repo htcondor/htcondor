@@ -74,6 +74,9 @@ sub RunIt()
     $Hash->Add( "CmdLine", HawkeyePublish::TypeString, $CmdLine );
     $Hash->Add( "ModuleName", HawkeyePublish::TypeString,
 		HawkeyeLib::GetModuleName() );
+    my $hcv = `/usr/bin/which hawkeye_config_val`; chomp $hcv;
+    print STDERR "Hawkeye config val program: '$hcv'\n";
+    $Hash->Add( "HawkeyeConfigVal", HawkeyePublish::TypeString, $hcv );
     foreach my $Env ( keys %ENV )
     {
 	$Hash->Add( "Env_" . $Env, HawkeyePublish::TypeAuto, $ENV{$Env} );
