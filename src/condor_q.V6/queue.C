@@ -66,6 +66,7 @@ static 	void io_display (ClassAd *);
 static 	char * buffer_io_display (ClassAd *);
 static 	void displayJobShort (ClassAd *);
 static 	char * bufferJobShort (ClassAd *);
+static 	void shorten (char *, int);
 static	bool show_queue (char* scheddAddr, char* scheddName, char* scheddMachine);
 static	bool show_queue_buffered (char* scheddAddr, char* scheddName,
 								  char* scheddMachine);
@@ -1078,12 +1079,18 @@ format_globusHostAndJM( char  *globusResource, ClassAd *ad )
 }
 
 
+static void
+shorten (char *buff, int len)
+{
+	if ((unsigned int)strlen (buff) > (unsigned int)len) buff[len] = '\0';
+}
 
 static char *
 format_q_date (int d, ClassAd *)
 {
 	return format_date(d);
 }
+
 
 		
 static void
@@ -1695,7 +1702,6 @@ doRunAnalysisToBuffer( ClassAd *request )
 	int		cluster, proc;
 	int		jobState;
 	int		niceUser;
-	bool 	niceUserBool;	// NAC
 
 	int 	fReqConstraint 	= 0;
 	int		fOffConstraint 	= 0;
