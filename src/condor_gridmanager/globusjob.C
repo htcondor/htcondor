@@ -878,6 +878,8 @@ void GlobusJob::NotifyResourceUp()
 	SetEvaluateState();
 }
 
+// We're assuming that any updates that come through UpdateCondorState()
+// are coming from the schedd, so we don't need to update it.
 void GlobusJob::UpdateCondorState( int new_state )
 {
 	condorState = new_state;
@@ -908,6 +910,18 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 				procID.cluster, procID.proc,
 				GlobusJobStatusName(globusState),
 				GlobusJobStatusName(new_state));
+
+		if ( new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE &&
+			 condorState == IDLE ) {
+			condorState = RUNNING;
+			update_actions |= UA_UPDATE_CONDOR_STATE;
+		}
+
+		if ( new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED &&
+			 condorState == RUNNING ) {
+			condorState = IDLE;
+			update_actions |= UA_UPDATE_CONDOR_STATE;
+		}
 
 		if ( !submitLogged && new_state !=
 			 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
