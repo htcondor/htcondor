@@ -48,4 +48,8 @@
 #undef MAXINT
 #include <values.h>
 
+#if !defined(WCOREFLG)
+#	define WCOREFLG 0x0200
+#endif
+
 #endif /* CONDOR_SYS_HPUX_H */
