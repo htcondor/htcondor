@@ -1503,19 +1503,19 @@ doRunAnalysisToBuffer( ClassAd *request )
 
 	if( jobState == RUNNING ) {
 		sprintf( return_buff,
-			"---\n%03d.%03d:  Request is being serviced\n\n", cluster, 
+			"---\n%03d.%03d:  Job is being serviced\n\n", cluster, 
 			proc );
 		return return_buff;
 	}
 	if( jobState == HELD ) {
 		sprintf( return_buff,
-			"---\n%03d.%03d:  Request is held.\n\n", cluster, 
+			"---\n%03d.%03d:  Job is held.\n\n", cluster, 
 			proc );
 		return return_buff;
 	}
 	if( jobState == REMOVED ) {
 		sprintf( return_buff,
-			"---\n%03d.%03d:  Request is removed.\n\n", cluster, 
+			"---\n%03d.%03d:  Job is removed.\n\n", cluster, 
 			proc );
 		return return_buff;
 	}
@@ -1549,7 +1549,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 
 			if( verbose ) {
 				sprintf( return_buff,
-						 "%sFailed request constraint\n",
+						 "%sFailed job constraint\n",
 						 return_buff );
 
 			}
@@ -1577,7 +1577,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 				  ( val.IsNumber( matchD ) && !matchD ) ) {			// NAC
 
   			if( verbose ) { 
-				strcat( return_buff, "Failed resource constraint\n");
+				strcat( return_buff, "Failed machine constraint\n");
 			}  
 			fOffConstraint++;
 			offer->SetParentScope( NULL );							// NAC
@@ -1683,18 +1683,18 @@ doRunAnalysisToBuffer( ClassAd *request )
 	startdAds.Close();
 
 	sprintf( return_buff,
-			 "%s---\n%03d.%03d:  Run analysis summary.  Of %d resources,\n" 
-			 "\t%5d were rejected by the request's constraints\n",
+			 "%s---\n%03d.%03d:  Run analysis summary.  Of %d machines,\n" 
+			 "\t%5d were rejected by the job's constraints\n",
 			 return_buff, cluster, proc, totalMachines,
 			 fReqConstraint );
 	
 	if( fReqConstraint < totalMachines ) {
 		sprintf( return_buff,
-				 "\t%5d rejected the request\n"
+				 "\t%5d rejected the job\n"
 				 "\t%5d are serving equal or higher priority customers%s\n" 
 				 "\t%5d do not prefer this job\n"
 				 "\t%5d cannot preempt because PREEMPTION_REQUIREMENTS are false\n"
-				 "\t%5d are available to service your request\n",
+				 "\t%5d are available to service your job\n",
 				 fOffConstraint,
 				 fPreemptPrioCond, niceUser ? "(*)" : "",
 				 fRankCond,
@@ -1704,15 +1704,15 @@ doRunAnalysisToBuffer( ClassAd *request )
 
 	if( niceUser ) {
 		sprintf( return_buff, 
-				 "%s\n\t(*)  Since this is a \"nice-user\" request, this request "
+				 "%s\n\t(*)  Since this is a \"nice-user\" job, this job "
 				 "has a\n\t     very low priority and is unlikely to preempt other "
-				 "requests.\n", return_buff );
+				 "jobs.\n", return_buff );
 	}
 			
 
 	if( fReqConstraint == totalMachines ) {
 		strcat( return_buff, "\nWARNING:  Be advised:\n");
-		strcat( return_buff, "   No resources matched request's constraints\n");
+		strcat( return_buff, "   No machines matched job's constraints\n");
 		strcat( return_buff, "\n" ); 	// NAC
 		string buffer_string;			// NAC
 		char buffer[2048];				// NAC
@@ -1723,8 +1723,8 @@ doRunAnalysisToBuffer( ClassAd *request )
 
 	if( fOffConstraint == totalMachines ) {
 		sprintf( return_buff, "%s\nWARNING:  Be advised:", return_buff );
-		sprintf( return_buff, "%s   Request %d.%d did not match any"
-			"resource's constraints\n\n", return_buff, cluster, proc);
+		sprintf( return_buff, "%s   Job %d.%d did not match any"
+			"machine's constraints\n\n", return_buff, cluster, proc);
 	}
 
 	return return_buff;
