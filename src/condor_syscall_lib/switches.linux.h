@@ -178,3 +178,7 @@ extern int __close(int __fd)
 {
 	return(close(__fd));
 }
+extern int __fcntl(int __fd, int __cmd, long __arg)
+{
+	return(fcntl(__fd, __cmd, __arg));
+}
