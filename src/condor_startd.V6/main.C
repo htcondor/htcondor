@@ -48,6 +48,7 @@ int init_params(int);
 int main_config();
 int main_shutdown_fast();
 int main_shutdown_graceful();
+int do_cleanup();
 void reaper_loop();
 int	handle_dc_sigchld( Service*, int );
 int	shutdown_sigchld( Service*, int ); 
@@ -57,6 +58,9 @@ main_init( int, char* [] )
 {
 		// Seed the random number generator for capability generation.
 	set_seed( 0 );
+
+		// If we EXCEPT, don't leave any starters lying around.
+	_EXCEPT_Cleanup = do_cleanup;
 
 	init_params(1);		// The 1 indicates that this is the first time
 
@@ -287,7 +291,7 @@ int
 main_shutdown_fast()
 {
 		// Quickly kill all the starters that are running
-	resmgr->walk( Resource::kill_claim );
+	resmgr->walk( Resource::hardkill_claim );
 	dprintf( D_ALWAYS, "All resources are free, exiting.\n" );
 	exit(0);
 	return TRUE;
@@ -361,3 +365,17 @@ shutdown_sigchld( Service*, int )
 	} 
 	return TRUE;
 }
+
+
+int
+do_cleanup()
+{
+	static int already_excepted = FALSE;
+
+	if ( already_excepted == FALSE ) {
+		already_excepted = TRUE;
+		main_shutdown_fast();  // this will exit if successful
+	}
+	return TRUE;
+}
+
