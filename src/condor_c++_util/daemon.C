@@ -552,6 +552,7 @@ Daemon::sendCommand( int cmd, Sock* sock, int sec )
 	if( ! tmp ) {
 		return false;
 	}
+#if 0  // don't need this block, the cmd int was sent in startCommand
 	if( ! tmp->eom() ) {
 		char err_buf[256];
 		sprintf( err_buf, "Can't send eom for %d to %s", cmd,  
@@ -559,6 +560,7 @@ Daemon::sendCommand( int cmd, Sock* sock, int sec )
 		newError( err_buf );
 		return false;
 	}
+#endif
 	return true;
 }
 
@@ -570,6 +572,7 @@ Daemon::sendCommand( int cmd, Stream::stream_type st, int sec )
 	if( ! tmp ) {
 		return false;
 	}
+#if 0
 	if( ! tmp->eom() ) {
 		char err_buf[256];
 		sprintf( err_buf, "Can't send eom for %d to %s", cmd,  
@@ -578,6 +581,7 @@ Daemon::sendCommand( int cmd, Stream::stream_type st, int sec )
 		delete tmp;
 		return false;
 	}
+#endif
 	delete tmp;
 	return true;
 }
