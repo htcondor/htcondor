@@ -60,7 +60,7 @@ static void PrintResList(AttrList* ad);
 //-----------------------------------------------------------------
 
 extern "C" {
-int CompPrio(LineRec* a, LineRec* b);
+int CompPrio(const void * a, const void * b);
 }
 
 
@@ -69,6 +69,7 @@ int CompPrio(LineRec* a, LineRec* b);
 int DetailFlag=0;
 time_t MinLastUsageTime;
 
+void
 main(int argc, char* argv[])
 {
 
@@ -336,8 +337,11 @@ static int CountElem(AttrList* ad)
 //-----------------------------------------------------------------
 
 extern "C" {
-int CompPrio(LineRec* a, LineRec* b) 
+int CompPrio(const void * ina, const void * inb) 
 {
+  LineRec* a = (LineRec *)ina;
+  LineRec* b = (LineRec *)inb;
+
   if (DetailFlag==2) {
     if (a->AccUsage>b->AccUsage) return 1;
   }
