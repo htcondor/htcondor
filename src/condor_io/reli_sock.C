@@ -725,6 +725,7 @@ ReliSock::attach_to_file_desc( int fd )
 
 	_sock = fd;
 	_state = sock_connect;
+	timeout(0);	// make certain in blocking mode
 	return TRUE;
 }
 #endif

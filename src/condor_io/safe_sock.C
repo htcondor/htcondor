@@ -510,6 +510,7 @@ int SafeSock::attach_to_file_desc(int fd)
 
 	_sock = fd;
 	_state = sock_connect;
+	timeout(0); // make certain in block mode
 	return TRUE;
 }
 #endif
