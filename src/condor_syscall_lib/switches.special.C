@@ -46,6 +46,13 @@ This file can be processed with several purposes in mind.
 
 extern unsigned int _condor_numrestarts;  /* in image.C */
 
+/* get rid of the remapping of access() to access_euid() since system calls
+	generally should be what they actually should be, and not what we think
+	they should be. */
+#ifdef access
+# undef access
+#endif
+
 extern "C" {
 
 int GETRUSAGE(...);
