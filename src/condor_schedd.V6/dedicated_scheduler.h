@@ -303,19 +303,12 @@ class DedicatedScheduler : public Service {
 // Find when a given resource will next be available
 time_t findAvailTime( match_rec* mrec );
 
-// Comparison function for sorting job ads by QDate
-int jobSortByDate( const void* ptr1, const void* ptr2 );
-
 // Comparison function for sorting job cluster ids by QDate
 int clusterSortByDate( const void* ptr1, const void* ptr2 );
 
 // Print out
 void displayResource( ClassAd* ad, char* str, int debug_level );
 void displayRequest( ClassAd* ad, char* str, int debug_level );
-
-char* makeCapability( ClassAd* ad, char* addr = NULL );
-
-char* getCapability( ClassAd* ad );
 
 // Clear out all the fields in the match record that have anything to
 // do with the mrec being allocated to a certain MPI job.
