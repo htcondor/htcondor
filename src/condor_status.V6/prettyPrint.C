@@ -134,13 +134,13 @@ printStartdNormal (ClassAd *ad)
 		// print header if necessary
 		if (first)
 		{
-			printf ("\n%-10.10s %-8.8s %-12.12s %-10.10s %-10.10s %-6.6s "
+			printf ("\n%-13.13s %-5.5s %-12.12s %-10.10s %-10.10s %-6.6s "
 					"%-4.4s %s\n\n", 
 				ATTR_NAME, ATTR_ARCH, ATTR_OPSYS, ATTR_STATE, ATTR_ACTIVITY, 
 				ATTR_LOAD_AVG, "Mem", "ActvtyTime");
 		
-			pm.registerFormat("%-10.10s ", ATTR_NAME, "[????????] ");
-			pm.registerFormat("%-8.8s " , ATTR_ARCH, "[??????] ");
+			pm.registerFormat("%-13.13s ", ATTR_NAME, "[????????] ");
+			pm.registerFormat("%-5.5s " , ATTR_ARCH, "[??????] ");
 			pm.registerFormat("%-12.12s " , ATTR_OPSYS, "[??????????] ");
 			pm.registerFormat("%-10.10s ",  ATTR_STATE), "[????????] ";
 			pm.registerFormat("%-10.10s ",  ATTR_ACTIVITY, "[????????] ");
@@ -176,13 +176,13 @@ printServer (ClassAd *ad)
 		// print header if necessary
 		if (first)
 		{
-			printf ("\n%-10.10s %-8.8s %-12.12s %-6.6s %-6.6s  %-7.7s "
+			printf ("\n%-13.13s %-5.5s %-12.12s %-6.6s %-6.6s  %-7.7s "
 					"%-10.10s %-10.10s\n\n", 
 				ATTR_NAME, ATTR_ARCH, ATTR_OPSYS, ATTR_LOAD_AVG, ATTR_MEMORY, 
 				ATTR_DISK, ATTR_MIPS, ATTR_KFLOPS);
 		
-			pm.registerFormat("%-10.10s ", ATTR_NAME, "[????????] ");
-			pm.registerFormat("%-8.8s " , ATTR_ARCH, "[??????] ");
+			pm.registerFormat("%-13.13s ", ATTR_NAME, "[????????] ");
+			pm.registerFormat("%-5.5s " , ATTR_ARCH, "[??????] ");
 			pm.registerFormat("%-12.12s " , ATTR_OPSYS, "[??????????] ");
 			pm.registerFormat("%-.3f  ",  ATTR_LOAD_AVG, "[????]  ");
 			pm.registerFormat("%-6d  ",  ATTR_MEMORY, "[????]  ");
@@ -250,12 +250,12 @@ printRun (ClassAd *ad)
 		// print header if necessary
 		if (first)
 		{
-			printf ("\n%-10.10s %-8.8s %-12.12s %-6.6s %-20.20s %-15.15s\n\n",
+			printf ("\n%-13.13s %-5.5s %-12.12s %-6.6s %-20.20s %-15.15s\n\n",
 				ATTR_NAME, ATTR_ARCH, ATTR_OPSYS, ATTR_LOAD_AVG, 
 				ATTR_REMOTE_USER, ATTR_CLIENT_MACHINE);
 		
-			pm.registerFormat("%-10.10s ", ATTR_NAME, "[????????] ");
-			pm.registerFormat("%-8.8s " , ATTR_ARCH, "[??????] ");
+			pm.registerFormat("%-13.13s ", ATTR_NAME, "[????????] ");
+			pm.registerFormat("%-5.5s " , ATTR_ARCH, "[??????] ");
 			pm.registerFormat("%-12.12s " , ATTR_OPSYS, "[??????????] ");
 			pm.registerFormat("%-.3f  ",  ATTR_LOAD_AVG, "[????]  ");
 			pm.registerFormat("%-20.20s ", ATTR_REMOTE_USER, 
