@@ -42,6 +42,8 @@
 #include <time.h>
 #include <stdio.h>
 
+using namespace std;
+
 // A very simple class for parsing the command-line parameters
 class Parameters
 {
@@ -172,7 +174,11 @@ int main(int argc, char **argv)
 			printf("Converting %s to %s\n", 
 				   parameters.input_file.c_str(), parameters.output_file.c_str());
 		}
+#if (__GNUC__<3) 
 		input_file.flags(0);
+#else
+		input_file.flags((std::_Ios_Fmtflags)0);
+#endif
 		process_file(input_file, output_file, parameters);
 	}
 
