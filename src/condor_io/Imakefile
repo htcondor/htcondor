@@ -17,7 +17,7 @@ CONDOR_BLOWFISH_OBJ = condor_crypt_blowfish.o
 CONDOR_CRYPT_OBJ = $(CONDOR_DES_OBJ) $(CONDOR_BLOWFISH_OBJ)
 #endif
 
-#if WANT_KERBEROS && HAS_KERBEROS
+#if WANT_KERBEROS
 AUTH_KERB_OBJ = condor_auth_kerberos.o
 #endif
 

@@ -1,15 +1,4 @@
-
-
-#ifdef IS_DARWIN
-/* DARWIN Specific stuff */
-#define Platform			PPC-DARWIN
-#define GccArch				ppc-apple-darwin1.2
-#define ImakeOpsysFlag			-DIS_BSD -DIS_DARWIN
-#define PlatformFlags			-DCONDOR_DARWIN=CONDOR_DARWIN 
-#define Architecture			PPC
-#define OperatingSystem			Darwin
-#define PlatformLdFlags			-framework IOKit -framework Carbon
-#endif
+/* shared BSD-specific settings... */
 
 #define HAS_ADJTIME			YES
 #define HAS_GETDTABLESIZE		YES
@@ -24,11 +13,4 @@
 #define HAS_INSQUE			YES
 #define NEEDS_FAKE_GETMNT		YES
 
-#define HAS_DYNAMIC_USER_JOBS	NO
 
-#define IS_CLIPPED YES
-#define HAS_OPENSSL YES
-#define HAS_GLOBUS YES
-#define HAS_GSI    YES
-#undef HAS_PVM
-#define HAS_PVM NO

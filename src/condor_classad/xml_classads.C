@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-2002 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
- ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_string.h"
@@ -118,16 +118,6 @@ private:
     char         *_text;
 	char         *_attribute_name;
 	char         *_attribute_value;
-};
-
-union RealHexUnion
-{ 
-	double     real; 
-#ifdef WIN32
-	__int64    hex;
-#else
-	long long  hex; 
-#endif
 };
 
 struct tag_name
@@ -337,19 +327,8 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 				case tag_Number:
 				case tag_Integer:
 				case tag_Expr:
-					to_insert += token_text;
-					break;
 				case tag_Real:
-					RealHexUnion  real_to_hex;
-#ifdef WIN32
-					if (sscanf(token_text.Value(), "%I64x", &real_to_hex.hex) == 1) {
-#else
-					if (sscanf(token_text.Value(), "%llx", &real_to_hex.hex) == 1) {
-#endif
-						to_insert.sprintf_cat("%lg", real_to_hex.real);
-					} else {
-						add_to_classad = false;
-					}
+					to_insert += token_text;
 					break;
 				case tag_Undefined:
 					to_insert += "UNDEFINED";
@@ -679,10 +658,10 @@ ClassAdXMLUnparser::Unparse(ExprTree *expression, MyString &buffer)
 			
 			add_attribute_start_tag(buffer, name);
 			
-			char      number_string[20];
+			MyString  number_string;
 			char      *expr_string;
 			int       int_number;
-			RealHexUnion  real_to_hex;
+            double    double_number;
 			MyString  fixed_string;
 			
 			switch (value_expr->MyType()) {
@@ -691,22 +670,17 @@ ClassAdXMLUnparser::Unparse(ExprTree *expression, MyString &buffer)
 				if (value_expr->unit == 'k') {
 					int_number *= 1024;
 				}
-				sprintf(number_string, "%d", int_number);
+				number_string.sprintf("%d", int_number);
 				add_tag(buffer, tag_Integer, true);
 				buffer += number_string;
 				add_tag(buffer, tag_Integer, false);
 				break;
 			case LX_FLOAT:
-				real_to_hex.real = ((FloatBase *)value_expr)->Value();
+				double_number = ((FloatBase *)value_expr)->Value();
 				if (value_expr->unit == 'k') {
-					real_to_hex.real *= 1024;
+					double_number *= 1024;
 				}
-#ifdef WIN32
-				snprintf(number_string, 17, "%016I64x", real_to_hex.hex);
-#else
-				snprintf(number_string, 17, "%016llx", real_to_hex.hex);
-#endif
-
+                number_string.sprintf("%1.15E", double_number);
 				add_tag(buffer, tag_Real, true);
 				buffer += number_string;
 				add_tag(buffer, tag_Real, false);

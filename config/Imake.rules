@@ -498,12 +498,9 @@ clean::						@@\
 #define strip_full_tarball( name, files, type )		@@\
 ##name##:: strip_##type##/##name			@@\
 							@@\
-afs_##name##:: strip_##type##/##name			@@\
-	cp strip_##type##/##name $(PUBLIC_D_TARGET)	@@\
-							@@\
 strip_##type##/##name##: stripped			@@\
 	/bin/rm -f strip_##type##/##name		@@\
-	cd strip_##type##; tar -cvf name --owner=root --group=0 files
+	cd strip_##type##; $(TAR_CMD) -cvf name files
 #endif /* strip_full_tarball */
 
 #ifndef static_full_tarball
@@ -511,12 +508,9 @@ strip_##type##/##name##: stripped			@@\
 #define static_full_tarball( name, files, type )	@@\
 ##name##:: static_##type##/##name			@@\
 							@@\
-afs_##name##:: static_##type##/##name			@@\
-	cp static_##type##/##name $(PUBLIC_S_TARGET)	@@\
-							@@\
 static_##type##/##name##: static			@@\
 	/bin/rm -f static_##type##/##name		@@\
-	cd static_##type##; tar -cvf name --owner=root --group=0 files
+	cd static_##type##; $(TAR_CMD) -cvf name files
 #else 
 #define static_full_tarball( name, files, type ) /* NULL MACRO */
 #endif /* HAS_STATIC */
@@ -533,11 +527,8 @@ static_##type##/##name##: static			@@\
 #define strip_both_tarball( name, files, contribfiles )		@@\
 ##name##:: strip_dir/##name					@@\
 								@@\
-afs_##name##:: strip_dir/##name					@@\
-	cp strip_dir/##name $(PUBLIC_D_TARGET)			@@\
-								@@\
 strip_dir/##name##: stripped					@@\
-	perl condor_scripts/make_both_tarball strip##, name##, files##, contribfiles
+	perl condor_scripts/make_both_tarball -cmd "$(TAR_CMD)" strip##, name##, files##, contribfiles
 #endif /* strip_both_tarball */
 
 #ifndef static_both_tarball
@@ -545,11 +536,8 @@ strip_dir/##name##: stripped					@@\
 #define static_both_tarball( name, files, contribfiles )	@@\
 ##name##:: static_dir/##name					@@\
 								@@\
-afs_##name##:: static_dir/##name				@@\
-	cp static_dir/##name $(PUBLIC_S_TARGET)			@@\
-								@@\
 static_dir/##name##: static					@@\
-	perl condor_scripts/make_both_tarball static##, name##, files##, contribfiles
+	perl condor_scripts/make_both_tarball -cmd "$(TAR_CMD)" static##, name##, files##, contribfiles
 #else 
 #define static_both_tarball( name, files, contribfiles ) /* NULL MACRO */
 #endif /* HAS_STATIC */
@@ -563,13 +551,11 @@ static_dir/##name##: static					@@\
 ** for either purify, purecoverage, or both.
 ***********************************************************************/
 
-#if IS_SUN4X
-
-#define PureCollector concat3(-collector=,CrtLibPath,/ld)
+#if HAS_PURIFY
 
 #define	pure_c_plus_target( program, objlist, libs )	@@\
 ##program: objlist libs					@@\
-	purify -g++=yes -chain-length=50 PureCollector purecov -g++=yes PureCollector $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)	@@\
+	purify -g++=yes -chain-length=50 -cache-dir=$(PURE_CACHE_DIR) purecov -g++=yes $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)	@@\
 clean::							@@\
 	rm -f program objlist
 
@@ -581,14 +567,14 @@ clean::							@@\
 
 #define	purecov_c_plus_target( program, objlist, libs )	@@\
 ##program: objlist libs					@@\
-	purecov -g++=yes PureCollector $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)						@@\
+	purecov -g++=yes -cache-dir=$(PURE_CACHE_DIR) $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)	@@\
 clean:: 						@@\
 	rm -f program objlist
 
 
 #define	quantify_c_plus_target( program, objlist, libs )	@@\
 ##program: objlist libs						@@\
-	quantify -g++=yes PureCollector $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)	                                 @@\
+	quantify -g++=yes -cache-dir=$(PURE_CACHE_DIR) $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)     @@\
 clean::		 						@@\
 	rm -f program objlist
 
@@ -608,7 +594,7 @@ pure:: $(PURE_DIR)/##program
 #define	purecov_c_plus_target( program, objlist, libs )	/* NULL MACRO */
 #define	quantify_c_plus_target( program, objlist, libs ) /* NULL MACRO */
 
-#endif	/* IS_SUN4M_SOLARIS251 */
+#endif	/* HAS_PURIFY */
 
 
 /***********************************************************************
@@ -631,6 +617,9 @@ VLINK( compiler, vanillatarg, obj );
 /*
 ** Link a program for running remotely
 */
+#if IS_CLIPPED
+#define RLINK( compiler, remotetarg, obj )	/* */
+#else
 #define RLINK( compiler, remotetarg, obj )	@@\
 remotetarg: obj					@@\
 	$(CONDOR_COMPILE) $(CONDOR_COMPILE_FLAGS) compiler -o remotetarg obj $(TEST_LDFLAGS) @@\
@@ -638,6 +627,7 @@ remotetarg: obj					@@\
 clean::						@@\
 	rm -f remotetarg obj			@@\
 all:: remotetarg
+#endif
 
 
 /*
@@ -732,6 +722,12 @@ BUILD_FILES( name, ext )			@@\
 RLINK( cmplr, name##.remote, name##.o )		@@\
 VLINK( cmplr, name##.vanilla, name##.o )
 
+#define BUILD_EXTRA( cmplr, name, ext, obj)	@@\
+BUILD_FILES( name, ext )			@@\
+RLINK( cmplr, name##.remote, obj name##.o)	@@\
+VLINK( cmplr, name##.vanilla, obj name##.o)
+
+
 #define BUILD_SPECIFIC_VANILLA(compiler, progname, objfiles, cmdfile, runfile, ext) @@\
 BUILD_FILES_SPECIFIC(progname, cmdfile, runfile, ext) @@\
 VLINK(compiler, progname##.vanilla, objfiles)
@@ -795,7 +791,7 @@ html: files							@@\
 ** the comment in src/condor_c++_util/condor_version.C for more
 ** details.  -Derek Wright <wright@cs.wisc.edu> 1/25/00
 */ 
-#define x_dollar_paren(a) $( ## a ## )
+#define x_dollar_paren(a) $(##a##)
 #define dollar_paren(a) x_dollar_paren(a)
 
 
@@ -863,12 +859,21 @@ clean::						@@\
 ** source directory.  Making it appear as though all the source
 ** files are in the directory where we want to build the objects
 ** will simplify the Makefiles.
+** The really-clean rule is for blowing away a whole build workspace
+** and starting over from scratch.  However, since that's totally
+** overkill and dangerous for a source workspace, if we see a "CVS"
+** directory, we print a message and exit.  Notice that we use "@if"
+** to tell make to pass this directly to the shell.  That way, it
+** doesn't echo this test for every directory, but instead just prints
+** the error and bails out if it finds the directory.
 */
+
 #ifndef object_dir_target
 #define object_dir_target(dir_name)					@@\
 ##dir_name##:								@@\
 	perl $(SRC_TREE)/condor_scripts/make_dir_tree dir_name $(SRC_TREE) @@\
 really-clean::								@@\
+	@if [ -d CVS ]; then echo "You definitely do NOT want to do this in your source repository." ; echo "Try doing it in a build directory, instead."; exit 1; fi @@\
 	rm -rf dir_name
 #endif /* object_dir_target */
 
@@ -946,19 +951,26 @@ depend:	ALWAYS				               @@\
 	$(CPlusPlus) $(CFLAGS) -MM $(DEPEND_C_SRC) > dependencies
 #endif
 
-/* The old definition of depend
-depend: ALWAYS						@@\
-	$(MKDEPEND) $(CFLAGS) src_list
-*/
 
 /*
-** Build a tags file for a source directory.
+** Build rule for copying man pages into the right place
 */
-#ifndef tags_target
-#define tags_target( c_files, libdirs )			@@\
-tags: ALWAYS						@@\
-	condor_ctags c_files -l libdirs			@@\
-clean::							@@\
-	rm -f tags
-#endif 
 
+#ifndef man_target
+#define man_target(name)			@@\
+release_copy_target($(MAN_DIR)/man1/##name##,man/man1,##name##,OBJECT_MODE) @@\
+static_copy_target($(MAN_DIR)/man1/##name##,man/man1,##name##,OBJECT_MODE) @@\
+strip_copy_target($(MAN_DIR)/man1/##name##,man/man1,##name##,OBJECT_MODE)
+#endif
+
+
+/*
+** Externals build rule
+*/
+
+#ifndef ext_target
+#define ext_target(package_id,ext_dep)				@@\
+$(EXT_TRIGGER)/$(##package_id##): ext_dep			@@\
+	$(EXT_ROOT)/build_external  --bundle_dir=$(EXT_BUNDLE) --install_dir=$(EXT_INSTALL) --build_dir=$(EXT_BUILD) --log=$(EXT_BUILD)/log.$(##package_id##) --package_name=$(##package_id##) --package_dir=$(EXT_INSTALL)/$(##package_id##) --trigger_dir=$(EXT_TRIGGER) @@\
+externals:: $(EXT_TRIGGER)/$(##package_id##)
+#endif

@@ -237,7 +237,7 @@ e.g. mymachine.mydomain.com \n";
     # Make sure $host is just hostname, with no domain.  Grab everything
     # upto the first ".".
     
-    if ($host =~ /(\w+)\.(\w.*)/) {
+    if ($host =~ /^([^.]+)\.(\S+)$/) {
 
 	# $host = mymachine.mydomain.com
 
@@ -250,6 +250,12 @@ e.g. mymachine.mydomain.com \n";
 	# $host = mymachine
 
 	# Lookup the full hostname.
+	if (!gethostbyname($host)) {
+	    die "\nInvalid host name \"$host\". Please set the \
+ environment variable \$HOSTNAME to the full name of this machine \
+ e.g. mymachine.mydomain.com \n";
+       }
+
 	$fullhost=(gethostbyname($host))[0];
 	if( ! ($fullhost =~ /.*\..*/) ) {
 	    # There's no "." in the hostname.  DNS/hosts/YP is probably
@@ -276,9 +282,9 @@ e.g. mymachine.mydomain.com \n";
 }
 
 
-    ###  Find condor's home directory, if it exists.
-    
-}
+#    ###  Find condor's home directory, if it exists.
+#    
+#}
 
 sub parse_command_line() {
     if ($#ARGV == -1) {
@@ -513,12 +519,12 @@ sub install {
     &make_personal_condor();
     # Don't assume the CONDOR_HOST will be defined (e.g. Condor-G)
     #$local_config{CONDOR_HOST}=$host;
-    
+
     $local_config{COLLECTOR}="\$(SBIN)/condor_collector";
     $local_config{NEGOTIATOR}="\$(SBIN)/condor_negotiator";
     $local_config{UID_DOMAIN}="\$(FULL_HOSTNAME)";
     $local_config{FILESYSTEM_DOMAIN}="\$(FULL_HOSTNAME)";
-    $local_config{LOCK}="/tmp/condor-lock.\$(HOSTNAME)";
+    $local_config{LOCK}="/tmp/condor-lock.\$(HOSTNAME)".rand();
 
     # This is necessary so that if no collector host is specified, 
     # Condor doesn't start using "central-manager-hostname.your.domain"
@@ -613,28 +619,29 @@ sub set_mail_settings {
       if(/^HP-UX/) { $mail_path="/bin/mailx";      last SWITCH; }
       if(/^IRIX.*/) { $mail_path="/usr/sbin/mailx";  last SWITCH; }
       if(/^OSF1/)  { $mail_path="/usr/ucb/mailx";  last SWITCH; }
+      if(/^Darwin/) { $mail_path="/usr/bin/mail";  last SWITCH; }
       $mail_path="/bin/mail";
   }   
     
     if (-f $mail_path && -x $mail_path) {
-	$local_config{MAIL_PATH}=$mail_path;
+	$local_config{MAIL}=$mail_path;
     }
     else {
 	foreach $mail_path ( "/bin/mailx", "/usr/sbin/mailx",
 			     "/usr/ucb/mailx", "/usr/bin/mail",
 			     "/usr/ucb/mail", "/bin/mail" ) {
 	    if (-f $mail_path && -x $mail_path) {
-		$local_config{MAIL_PATH}=$mail_path;
+		$local_config{MAIL}=$mail_path;
 		last;
 	    }
 	}
     }
 
-    if ( $local_config{MAIL_PATH} ) {
-	&debug ("Setting mail path to: $local_config{MAIL_PATH}");
+    if ( $local_config{MAIL} ) {
+	&debug ("Setting mail path to: $local_config{MAIL}");
     } else {
 	print "\n\n WARNING: Unable to find mail program! Condor will not be \n
-able to send status notifications until MAIL_PATH parameter is configured.\n";
+able to send status notifications until MAIL parameter is configured.\n";
     }
 
 }

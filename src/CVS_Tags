@@ -2,6 +2,75 @@
    The state of the V6_7-branch before merging in the V6_6-branch as
    tagged at V6_6-merge-1.
 
+12/02/03 V6_6-merge-1
+   The state of the V6_6-branch when first merged into V6_7-branch.
+   This is after V6_6_0, but before V6_6_1.  This is the first merge
+   from V6_6-branch -> V6_7-branch.  it includes the entire autoconf +
+   externals build system, the rh8 full port, an updated copyright
+   notice, and all the bug fixes for V6_6_0 (and some that will show
+   up for V6_6_1). 
+
+11/27/03 V6_6-branch-post-redhat80-fullport-checkin
+	This is the state of the V6_6-branch just after I checked in the full
+	port for the redhat 8.0 revision of Linux.
+
+11/27/03 V6_6-branch-pre-redhat80-fullport-checkin
+	This is the state of the V6_6-branch just before I checked in the full
+	port for the redhat 8.0 revision of Linux.
+
+11/14/03 V6_6_0
+   The official 6.6.0 release tag!  This is a re-tagging of
+   "BUILD-V6_6-branch-2003-11-13" and "BUILD-V6_6_0-2003-11-12" (both
+   of which might go away eventually).  This tag lives on the
+   V6_6-branch for the V6_6_ALL module, and on the trunk for the
+   entire externals tree.  In NMI land most of the binaries/tarballs
+   came from build ID 1715.  The test suite ran on most platforms via
+   build #1707 (equivalent source tag).  Solaris 9 and MacOSX had to
+   be tested by hand, and Alpha-DUX-40f had to be built and tested by
+   hand due to unexplainable errors building the globus external via
+   the nightly builds.  Hopefully IRIX will use this same tag
+   eventually, but right now, we don't have a functional build machine
+   to use.  Maybe NMI will be stable enough to do the full build by
+   6.6.1.  The version string for all platforms (except IRIX and maybe
+   windows) is: "$CondorVersion: 6.6.0 Nov 13 2003 $"
+   NOTE: this is also the last tag of the source that includes all the
+   build system wisdom regarding X86 Solaris, Solaris 2.5.1, IRIX 6.2,
+   and pre-glibc versions of Linux (everything before rh7.2, in fact).
+   I modified all the build system files to purge these platforms
+   since we're no longer supporting them, and they were causing
+   needless complication in various ways.  This change also
+   corresponds with moving platform detection from condor_imake into
+   the configure script under the new build system.  Finally, i purged
+   a bunch of really old code from condor_ckpt and condor_syscall_lib,
+   such as: AIX3.2, ULTRIX, SUNOS, HPUX9, and IRIX53.
+
+11/10/03 HAWKEYE_V1_0_RC3
+    Release Candidate 3 of Hawkeye 1.0.
+
+11/04/03 V6_6_0-analyze
+   The 6.6.0 version of condor_analyze, which lives on the trunk.  The
+   condor_analyze we include in 6.6.0 is really a version of condor_q
+   from the trunk with new classads.  it was built manually on linux
+   (i386_rh72), and will be included in the 6.6.0 tarballs for that
+   platform by the build system.  The condor_analyze binaries included
+   in 6.6.0 have this version string: 
+   "$CondorVersion: 6.6.0 Nov  5 2003 CONDOR_ANALYZE-BETA $"
+
+10/22/03 V6_6-post_merge_V6_6-externals-merge-1
+   The state of the V6_6-branch after merging the
+   V6_6-externals-branch as tagged at V6_6-externals-merge-1.
+   The V6_6-externals-branch is now abandonded.
+
+10/22/03 V6_6-externals-merge-1
+   The state of the V6_6-externals-branch when it was merged back into
+   V6_6-branch.  We'll abandon the V6_6-externals-branch after this
+   merge, and move all development on the new system onto the
+   V6_6-branch for the 6.6.x stable series.
+
+10/22/03 V6_6-pre_merge_V6_6-externals-merge-1
+   The state of the V6_6-branch before merging the
+   V6_6-externals-branch as tagged at V6_6-externals-merge-1.
+
 10/03/03 V6_7-soap-branch
    A new branch off V6_7-branch to hold our initial effort
    at incorporating SOAP interfaces into the Condor daemons.
@@ -11,6 +80,17 @@
    back into V6_7-branch once it stabilizes more... ideally after
    V6_7-branch has the List of Shame work (so we can add gSOAP as
    an external), but before we go back to the trunk.
+
+9/25/03 V6_6-externals-branch
+   A new branch off the V6_6-branch for checking in the solution to
+   the "list of shame": the new "externals" directory and related
+   changes to our Imake system.  This will be a short-lived branch.
+   Once everything is working on all our platforms, this branch will
+   be merged back into V6_6-branch and abandoned.  The only reason it
+   exists is so that the V6_6-branch isn't broken while we work out
+   the kinks with the new externals system.  Created from the
+   V6_6-externals-root tag.  Does *not* include doc (since there's no
+   user visible changes to document).
 
 9/12/03 V6_7-tdp-branch
    A new branch off V6_7-branch for continued work on the TDP (Tool

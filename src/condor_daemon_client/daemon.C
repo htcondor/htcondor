@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_debug.h"
@@ -85,6 +85,87 @@ Daemon::Daemon( daemon_t type, const char* name, const char* pool )
 			_name = strnewp( name );
 		}
 	} 
+	dprintf( D_HOSTNAME, "New Daemon obj (%s) name: \"%s\", pool: "
+			 "\"%s\", addr: \"%s\"\n", daemonString(_type), 
+			 _name ? _name : "NULL", _pool ? _pool : "NULL",
+			 _addr ? _addr : "NULL" );
+}
+
+
+Daemon::Daemon( ClassAd* ad, daemon_t type, const char* pool ) 
+{
+	if( ! ad ) {
+		EXCEPT( "Daemon constructor called with NULL ClassAd!" );
+	}
+
+	common_init();
+	_type = type;
+
+	switch( _type ) {
+	case DT_MASTER:
+		_subsys = strnewp( "MASTER" );
+		break;
+	case DT_STARTD:
+		_subsys = strnewp( "STARTD" );
+		break;
+	case DT_SCHEDD:
+		_subsys = strnewp( "SCHEDD" );
+		break;
+	default:
+		EXCEPT( "Invalid daemon_type %d (%s) in ClassAd version of "
+				"Daemon object", (int)_type, daemonString(_type) );
+	}
+
+	if( pool ) {
+		_pool = strnewp( pool );
+	} else {
+		_pool = NULL;
+	}
+
+		// construct the appropriate IP_ADDR attribute
+	MyString addr_attr = _subsys;
+	addr_attr += "IpAddr";
+
+	char *tmp = NULL;
+	ad->LookupString( ATTR_NAME, &tmp );
+	if( tmp ) {
+		_name = strnewp( tmp );
+		free( tmp );
+		tmp = NULL;
+	} 
+
+	ad->LookupString( addr_attr.GetCStr(), &tmp );
+	if( tmp ) {
+		_addr = strnewp( tmp );
+		free( tmp );
+		tmp = NULL;
+		_tried_locate = true;		
+	} 
+
+	ad->LookupString( ATTR_MACHINE, &tmp );
+	if( tmp ) {
+		_full_hostname = strnewp( tmp );
+		free( tmp );
+		tmp = NULL;
+		initHostnameFromFull();
+		_tried_init_hostname = false;
+	} 
+
+	ad->LookupString( ATTR_VERSION, &tmp );
+	if( tmp ) {
+		_version = strnewp( tmp );
+		free( tmp );
+		tmp = NULL;
+		_tried_init_version = true;
+	} 
+
+	ad->LookupString( ATTR_PLATFORM, &tmp );
+	if( tmp ) {
+		_platform = strnewp( tmp );
+		free( tmp );
+		tmp = NULL;
+	} 
+
 	dprintf( D_HOSTNAME, "New Daemon obj (%s) name: \"%s\", pool: "
 			 "\"%s\", addr: \"%s\"\n", daemonString(_type), 
 			 _name ? _name : "NULL", _pool ? _pool : "NULL",
@@ -203,23 +284,28 @@ Daemon::idStr( void )
 	if( _id_str ) {
 		return _id_str;
 	}
-	if( ! locate() ) {
-		return "unknown daemon";
+	locate();
+
+	const char* dt_str;
+	if( _type == DT_ANY ) {
+		dt_str = "daemon";
+	} else {
+		dt_str = daemonString(_type);
 	}
 	char buf[128];
 	if( _is_local ) {
-		sprintf( buf, "local %s", daemonString(_type) );
+		sprintf( buf, "local %s", dt_str );
 	} else if( _name ) {
-		sprintf( buf, "%s %s", daemonString(_type), _name );
+		sprintf( buf, "%s %s", dt_str, _name );
 	} else if( _addr ) {
-		sprintf( buf, "%s at %s", daemonString(_type), _addr );
+		sprintf( buf, "%s at %s", dt_str, _addr );
 		if( _full_hostname ) {
 			strcat( buf, " (" );
 			strcat( buf, _full_hostname );
 			strcat( buf, ")" );
 		}
 	} else {
-		EXCEPT( "Daemon::idStr: locate() successful but _addr not found" );
+		return "unknown daemon";
 	}
 	_id_str = strnewp( buf );
 	return _id_str;

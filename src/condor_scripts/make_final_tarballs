@@ -23,13 +23,26 @@ while( $_ = shift( @ARGV ) ) {
 	$versarg = shift(@ARGV);
 	last SWITCH;
     }
-    if( /-t.*/ ) {
-        $target = shift(@ARGV);
-        last SWITCH;
-    }
     if( /-l.*/ ) {
 	$libc = shift(@ARGV);
 	last SWITCH;
+    }
+    if( /-tarcmd.*/ ) {
+	$tar_cmd = shift(@ARGV);
+	last SWITCH;
+    }
+    if( /-cpcmd.*/ ) {
+	$cp_cmd = shift(@ARGV);
+	last SWITCH;
+    }
+    if( /-t.*/ ) {
+	# this is short for "-target".  if we get "-tarcmd", we'll
+	# already catch it above, so we can leave this test alone...
+        $target = shift(@ARGV);
+	if( ! -d $target ) {
+	    die "Target directory $target does not exist!\n";
+	}
+        last SWITCH;
     }
   }
 }
@@ -55,10 +68,6 @@ $releasev = $3;
 $version = "$majorv.$minorv.$releasev";
 
 # Things you should probably leave alone:
-BEGIN {
-    unshift(@INC, "/p/condor/home/perl");
-}
-
 require 5.002;
 
 ######################################################################
@@ -121,30 +130,18 @@ $realskel="condor_release";
 
 # Convert from AFS @sys names to our names for the tarballs.
 %opsysname = (
-  "sun4x_55"      => "solaris251",
   "sun4x_56"      => "solaris26",
   "sun4x_57"      => "solaris27",
   "sun4x_58"      => "solaris28",
   "sun4x_59"      => "solaris29",
-  "sunx86_55"     => "solaris251",
-  "sunx86_56"     => "solaris26",
-  "sunx86_57"     => "solaris27",
-  "i386_linux2"   => "linux",
-  "i386_linux22"  => "linux",
-  "i386_linux3"   => "linux",
-  "i386_rh62"     => "linux",
-  "i386_rh71"     => "linux",
   "i386_rh72"     => "linux",
   "i386_rh80"     => "linux",
-  "i386_rh9"     => "linux",
-  "ia64_linux24"  => "linux",
-  "alpha_linux3"  => "linux",
-  "alpha_linux22" => "linux",
+  "i386_rh9"      => "linux",
+  "ia64_rh72"     => "linux",
+  "ia64_sles81"   => "linux",
+  "alpha_rh72"    => "linux",
   "alpha_dux40"   => "dux40",
-  "alpha_dux40f"  => "dux40",
-  "sgi_62"        => "irix6",
-  "sgi_63"        => "irix6",
-  "sgi_64"        => "irix6",
+  "alpha_dux51"   => "dux51",
   "sgi_65"        => "irix65",
   "ppc_macosx"    => "MacOSX",
   "hp_ux102"      => "hpux10.20",
@@ -152,30 +149,18 @@ $realskel="condor_release";
 );
 
 %archname = (
-  "sun4x_55"      => "Sparc",
   "sun4x_56"      => "Sparc",
   "sun4x_57"      => "Sparc",
   "sun4x_58"      => "Sparc",
   "sun4x_59"      => "Sparc",
-  "sunx86_55"     => "x86",
-  "sunx86_56"     => "x86",
-  "sunx86_57"     => "x86",
-  "i386_linux2"   => "x86",
-  "i386_linux22"  => "x86",
-  "i386_rh62"     => "x86",
-  "i386_rh71"     => "x86",
   "i386_rh72"     => "x86",
   "i386_rh80"     => "x86",
-  "i386_rh9"     => "x86",
-  "i386_linux3"   => "x86",
-  "ia64_linux24"  => "ia64",
-  "alpha_linux3"  => "Alpha",
-  "alpha_linux22" => "Alpha",
+  "i386_rh9"      => "x86",
+  "ia64_rh72"     => "ia64",
+  "ia64_sles81"   => "ia64",
+  "alpha_rh72"    => "Alpha",
   "alpha_dux40"   => "Alpha",
-  "alpha_dux40f"  => "Alpha",
-  "sgi_62"        => "SGI",
-  "sgi_63"        => "SGI",
-  "sgi_64"        => "SGI",
+  "alpha_dux51"   => "Alpha",
   "sgi_65"        => "SGI",
   "ppc_macosx"    => "PPC",
   "hp_ux102"      => "HPPAR",
@@ -183,19 +168,16 @@ $realskel="condor_release";
 );
 
 
+# NOTE: any two entries in here with the same arch *MUST* have
+# seperate values, or else we get identically named files and that's
+# no good at all!
 %libcname = (
-  "i386_linux2"   => "libc5",
-  "i386_linux22"  => "glibc21",
-  "i386_linux3"   => "glibc20",
-  "i386_rh61"   => "glibc21",
-  "i386_rh62"   => "glibc21",
-  "i386_rh71"   => "glibc22",
   "i386_rh72"   => "glibc22",
-  "i386_rh80"   => "glibc22",
-  "i386_rh9"   => "glibc23",
-  "ia64_linux24" => "glibc22",
-  "alpha_linux3"  => "glibc20",
-  "alpha_linux22" => "glibc21"
+  "i386_rh80"   => "redhat80",
+  "i386_rh9"    => "glibc23",
+  "ia64_rh72"   => "glibc22",
+  "ia64_sles81" => "sles81",
+  "alpha_rh72"  => "glibc22",
 );
 
 
@@ -218,6 +200,24 @@ if( ! $sys ) {
 $arch = $archname{$sys};
 $opsys = $opsysname{$sys};
 $libc = $libcname{$sys};
+
+if( ! $tar_cmd ) {
+    $tar_cmd = "tar --owner=root --group=root";
+}
+if( ! $cp_cmd ) {
+  # the condor build system always tells us the right thing, so
+  # hopefully we never hit this code.  however, if we need a default,
+  # it really depends on if we're using GNU cp or not.  on linux, we
+  # can safely use the GNU flags, and on the others, we'll just have
+  # to live without and hope for the best.  luckily, the configure
+  # script figures it out for us and tells us, so it's not really an
+  # issue inside here anymore...
+  if( $opsys =~ /.*linux.*/ ) {
+    $cp_cmd = "cp -rL";
+  } else {  
+    $cp_cmd = "cp -r";
+  }
+}
 
 `rm -rf $skel`;
 mkdir( "$skel", 0777 );
@@ -259,12 +259,7 @@ foreach $module ( @modules ) {
 		} else {
 	   	 $dest = $file;
 		}
-		# under linux, or hpux11(with fileutils), use the GNU fileutils flags
-		if( $libc =~ /.*glibc22.*/ || $opsys =~ /.*hp_ux110.*/) {	
-			`cp -rL $src $skel/$release/$dest`;
-		} else {
-			`cp -r $src $skel/$release/$dest`;
-		}	
+		`$cp_cmd $src $skel/$release/$dest`;
     }
     `rm -rf $skel/$release/CVS`;
     `rm -rf $skel/$release/*/CVS`;
@@ -297,7 +292,7 @@ foreach $module ( @modules ) {
 	# Create full archive 
 	chdir( $skel ) || die "Can't chdir to $skel: $!\n";
 	print "Creating full archive: $release.tar\n";
-	print `tar -cvf $release.tar --owner=root --group=0 $release`;
+	print `$tar_cmd -cvf $release.tar $release`;
 	chdir( ".." ) || die "Can't chdir to ..: $!\n";
 
 	# Delete the release.tar we're now done with.
@@ -314,6 +309,9 @@ foreach $module ( @modules ) {
 	    $targetdir = "$target/v$majorv.$minorv";
 	} else {
 	    $targetdir = "$target/contrib";
+	}
+	if( ! -d $targetdir ) {
+	    mkdir( $targetdir, 0777 ) || die "Can't mkdir $targetdir: $!\n";
 	}
 	$targetfile = "$targetdir/$release-$platform.tar";
 

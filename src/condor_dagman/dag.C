@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
- ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 //
 // Local DAGMan includes
@@ -354,7 +354,7 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
                   _numJobsSubmitted--;
                   ASSERT( _numJobsSubmitted >= 0 );
 
-				  if( job->retries++ < job->GetRetryMax() ) {
+				  if( job->GetRetries() < job->GetRetryMax() ) {
 					  RestartNode( job, recovery );
 					  break;
 				  }
@@ -948,24 +948,34 @@ Dag::PrintReadyQ( debug_level_t level ) const {
 void Dag::RemoveRunningJobs () const {
     char cmd[ARG_MAX];
 
+		// first, remove all Condor jobs submitted by this DAGMan
+	debug_printf( DEBUG_NORMAL, "Removing any/all submitted Condor jobs...\n",
+				  cmd );
+	snprintf( cmd, ARG_MAX, "condor_rm -const \'%s == \"%s\"\'",
+			  DAGManJobIdAttrName, DAGManJobId );
+	debug_printf( DEBUG_VERBOSE, "Executing: %s\n", cmd );
+	util_popen( cmd );
+		// TODO: we need to check for failures here
+
     ListIterator<Job> iList(_jobs);
     Job * job;
     while (iList.Next(job)) {
-		// if the job has been submitted, remove it
-        if (job->GetStatus() == Job::STATUS_SUBMITTED) {
-			switch( job->JobType() ) {
-			case Job::TYPE_CONDOR:
-				sprintf( cmd, "condor_rm %d", job->_CondorID._cluster );
-				util_popen( cmd );
-				break;
-			case Job::TYPE_STORK:
-				sprintf( cmd, "dap_rm %d", job->_CondorID._cluster );
-				util_popen( cmd );
-				break;
-			}
+		ASSERT( job != NULL );
+			// if node has a Stork job that is presently submitted,
+			// remove it individually (this is necessary because
+			// DAGMan's job ID can't currently be inserted into the
+			// Stork job ad, and thus we can't do a "dap_rm -const..." 
+			// like we do with Condor; this should be fixed)
+		if( job->JobType() == Job::TYPE_STORK &&
+			job->GetStatus() == Job::STATUS_SUBMITTED ) {
+			snprintf( cmd, ARG_MAX, "dap_rm %d", job->_CondorID._cluster );
+			debug_printf( DEBUG_VERBOSE, "Executing: %s\n", cmd );
+			util_popen( cmd );
+				// TODO: we need to check for failures here
         }
 		// if node is running a PRE script, hard kill it
         else if( job->GetStatus() == Job::STATUS_PRERUN ) {
+			ASSERT( job->_scriptPre );
 			ASSERT( job->_scriptPre->_pid != 0 );
 			if (daemonCore->Shutdown_Fast(job->_scriptPre->_pid) == FALSE) {
 				debug_printf(DEBUG_QUIET,
@@ -975,6 +985,7 @@ void Dag::RemoveRunningJobs () const {
         }
 		// if node is running a POST script, hard kill it
         else if( job->GetStatus() == Job::STATUS_POSTRUN ) {
+			ASSERT( job->_scriptPost );
 			ASSERT( job->_scriptPost->_pid != 0 );
 			if(daemonCore->Shutdown_Fast(job->_scriptPost->_pid) == FALSE) {
 				debug_printf(DEBUG_QUIET,
@@ -1160,13 +1171,16 @@ void
 Dag::RestartNode( Job *node, bool recovery )
 {
 	node->_Status = Job::STATUS_READY;
+	node->retries++;
+	ASSERT( node->GetRetries() <= node->GetRetryMax() );
 	if( node->_scriptPre ) {
 		// undo PRE script completion
 		node->_scriptPre->_done = false;
 	}
 	strcpy( node->error_text, "" );
-	debug_printf( DEBUG_VERBOSE, "Retrying node %s ...\n",
-				  node->GetJobName() );
+	debug_printf( DEBUG_VERBOSE, "Retrying node %s (retry #%d of %d)...\n",
+				  node->GetJobName(), node->GetRetries(),
+				  node->GetRetryMax() );
 	if( !recovery ) {
 		StartNode( node );
 	}

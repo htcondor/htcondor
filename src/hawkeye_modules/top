@@ -29,24 +29,30 @@ my %Config =
      Debug	=> 0,
      TopPeriod	=> 30,
      RunOnce	=> 0,
+     TopOpt	=> {
+		    Batch => "-b ",
+		    Delay => "-d ",
+		    BlankSep => 0,
+		   },
     );
 
 # Valid field list:
 my %TopFields =
     (
-     pid	=> { enabled => 0, type => "n", l => "PID" },
-     user	=> { enabled => 0, type => "s", l => "USER" },
-     priority	=> { enabled => 0, type => "n", l => "PRI" },
-     nice	=> { enabled => 0, type => "n", l => "NI" },
-     size	=> { enabled => 0, type => "n", l => "SIZE" },
-     rss	=> { enabled => 0, type => "n", l => "RSS" },
-     share	=> { enabled => 0, type => "n", l => "SHARE" },
-     state	=> { enabled => 0, type => "s", l => "STAT" },
-     lib	=> { enabled => 0, type => "n", l => "LIB" },
-     cpu	=> { enabled => 0, type => "%", l => "%CPU" },
-     mem	=> { enabled => 0, type => "%", l => "%MEM" },
-     time	=> { enabled => 0, type => "t", l => "TIME" },
-     command	=> { enabled => 0, type => "s", l => "COMMAND" },
+     pid	=> { enabled => 0, type => "n", l => [ "PID", ], },
+     user	=> { enabled => 0, type => "s", l => [ "USER", "USERNAME", ], },
+     priority	=> { enabled => 0, type => "n", l => [ "PRI", ], },
+     thread	=> { enabled => 0, type => "n", l => [ "THR", ], },
+     nice	=> { enabled => 0, type => "n", l => [ "NI", "NICE", ], },
+     size	=> { enabled => 0, type => "n", l => [ "SIZE", ] },
+     rss	=> { enabled => 0, type => "n", l => [ "RSS", "RES" ], },
+     share	=> { enabled => 0, type => "n", l => [ "SHARE", ], },
+     state	=> { enabled => 0, type => "s", l => [ "STAT", "STATE", ], },
+     lib	=> { enabled => 0, type => "n", l => [ "LIB", ], },
+     cpu	=> { enabled => 0, type => "%", l => [ "%CPU", "CPU", ], },
+     mem	=> { enabled => 0, type => "%", l => [ "%MEM", ], },
+     time	=> { enabled => 0, type => "t", l => [ "TIME", ], },
+     command	=> { enabled => 0, type => "s", l => [ "COMMAND", ], },
     );
 my %TopTypes =
     (
@@ -182,6 +188,27 @@ sub Init( )
     s/^\s+//;
     @TopHeader = split ( /\s+/, $_ );
 
+    # Run top, and look at it's version...
+    my $Cmd = "top -v";
+    if ( open( TOP, "$Cmd 2>&1 |" ) )
+    {
+	$_ = <TOP>; chomp;
+	print STDERR "Top version string: '$_'\n";
+	if ( /procps/ )
+	{
+	    $Config{TopOpt}{Batch} = "-b ";
+	    $Config{TopOpt}{Delay} = "-d ";
+	    $Config{TopOpt}{BlankSep} = 0;
+	}
+	elsif ( /version 3\.5/ )
+	{
+	    $Config{TopOpt}{Batch} = "-b -d999999";
+	    $Config{TopOpt}{Delay} = "-s";
+	    $Config{TopOpt}{BlankSep} = 1;
+	}
+	close( TOP );
+    }
+
     # Do an initial configuration
     Configure( );
 }
@@ -235,9 +262,12 @@ sub Configure( )
     {
 	foreach my $Key ( keys %TopFields )
 	{
-	    if ( $TopFields{$Key}{l} eq $tf )
+	    foreach my $Label ( @{$TopFields{$Key}{l}} )
 	    {
-		$TopFields{$Key}{offset} = $Offset;
+		if ( $Label eq $tf )
+		{
+		    $TopFields{$Key}{offset} = $Offset;
+		}
 	    }
 	}
 	$Offset++;
@@ -288,8 +318,9 @@ sub Configure( )
     {
 	my $Fields = "";
 	my $Name;
-	$ConfigStringFields =~ s/\s+/,/g;
-	my ( @List ) = split ( /,+/, $ConfigStringFields );
+	my ( @List ) = split ( /[\s\,]+/, $ConfigStringFields );
+	print STDERR "Enable list: " . join( " ", @List ) . "\n"
+	    if ( $Config{Debug} );
 	if ( $List[0] eq "*" )
 	{
 	    print STDERR "Enabling: " if ( $Config{Debug} );
@@ -315,7 +346,12 @@ sub Configure( )
 			"Warning: Invalid field '$Name' in Top list\n";
 		    next;
 		}
-		next if ( $TopFields{$Name}{offset} < 0 );
+		elsif ( $TopFields{$Name}{offset} < 0 )
+		{
+		    print STDERR
+			"Warning: Field name '$Name' not found in top output\n";
+		    next;
+		}
 		$TopFields{$Name}{enabled} = 1;
 		my $Type = $TopFields{$Name}{type};
 		$Fields = $Fields . $TopTypes{$Type}{prefix} . $Name . " ";
@@ -338,7 +374,8 @@ sub RunIt( $ )
 
     # Build the command & start it
     my $Summary = HawkeyeHash->new( \$Hawkeye, "Summary_" );
-    my $Cmd = "nice -20 top -b -d $Config{TopPeriod}";
+    my $Cmd = "nice -20 top " . $Config{TopOpt}{Batch} . " " .
+	$Config{TopOpt}{Delay} . "$Config{TopPeriod}";
     $TopPid = open ( TOP, "$Cmd|" );
     Carp::confess( "Can't run top '$Cmd'" ) if ( ! $TopPid );
     print STDERR "$Cmd => $TopPid\n";
@@ -349,7 +386,7 @@ sub RunIt( $ )
     # Flag to skip the first input line
     my $SkipFirst = 0;
 
-    # Are we done yet (yes if in 'run once' mode
+    # Are we done yet (yes if in 'run once' mode)
     my $Done = 0;
 
     # Timing info
@@ -371,8 +408,9 @@ sub RunIt( $ )
 
 	# Read the header
       READHEADER:
+	my @Buffer;
 	while ( <TOP> ) {
-	    # Uptime display?
+	    # Uptime line?
 	    if ( /.*up.*load/ ) {
 		my %Uptime;
 
@@ -384,6 +422,41 @@ sub RunIt( $ )
 		{
 		    my $Type = ( $Attr =~ /string/i ) ? "s" : "n";
 		    $Summary->Add( $Attr, $Type, $Uptime{$Attr} );
+		}
+	    }
+	    # Older tops just dump a "load" line
+	    elsif ( /^load averages:\s+(.*)/ ) {
+		chomp;
+
+		# Hack out the commas
+		my @LoadInfo = split( /[\s\,]+/, $1 );
+		if ( $#LoadInfo == 3 )
+		{
+		    my %Load;
+
+		    # Parse the uptime line
+		    $Load{Load01} = shift( @LoadInfo );
+		    $Load{Load05} = shift( @LoadInfo );
+		    $Load{Load15} = shift( @LoadInfo );
+
+		    my $TimeStr = shift( @LoadInfo );
+		    if ( $TimeStr =~ /(\d+):(\d+)([ap])m/ ) {
+			my $Time = ( $1 * 60 ) + $2;
+			$Time += (12 * 60 ) if ( $3 =~ /p/ );
+			$Load{Time} = $Time;
+			$Load{TimeString} = $TimeStr;
+		    }
+		    elsif ( $TimeStr =~ /(\d+):(\d+):(\d+)/ ) {
+			$Load{Time} = ( $1 * 60 ) + $2;
+			$Load{TimeString} = $TimeStr;
+		    }
+
+		    # And, add it to our summary
+		    foreach my $Attr ( keys %Load )
+		    {
+			my $Type = ( $Attr =~ /string/i ) ? "s" : "n";
+			$Summary->Add( $Attr, $Type, $Load{$Attr} );
+		    }
 		}
 	    }
 	    # Processes summary?
@@ -410,7 +483,7 @@ sub RunIt( $ )
 			my $Var = $2;
 			$Var =~ s/^\s+//;
 			my $Type = FixString( \$Value );
-			my $What = 
+			my $What =
 			    $Name . "_" . $TopTypes{$Type}{prefix} . $Var;
 			$Summary->Add( $What,
 				       $TopTypes{$Type}{pubtype},
@@ -421,6 +494,13 @@ sub RunIt( $ )
 
 	    # Header line?
 	    elsif ( /\s+PID\s+USER/ ) {
+		while( <TOP> )
+		{
+		    chomp;
+		    next if ( ! /\s*\d+/ );
+		    push( @Buffer, $_ );
+		    last;
+		}
 		last;
 	    }
 	}
@@ -434,9 +514,10 @@ sub RunIt( $ )
 	my $Proc = 0;
 	my %Processes;
       READPROC:
-	while ( <TOP> ) {
+	while ( ( $_ = shift @Buffer ) || ( $_ = <TOP> ) ) {
+	    chomp;
 
-	    #last if ( ! /^\s*$/ );
+	    last if ( $Config{TopOpt}{BlankSep} && ( /^\s*$/ ) );
 
 	    # Verify that we start with a process ID type thingy,
 	    # then parse it..
@@ -494,8 +575,11 @@ sub RunIt( $ )
     }
 
     # All done reading!
-    print STDERR "Killing top (PID = $TopPid )\n";
-    kill( "TERM", $TopPid ) if ( $TopPid >= 0 );
+    sleep( 1 );
+    if ( $TopPid >= 0 ) {
+	print STDERR "Killing top (PID = $TopPid )\n";
+	kill( "TERM", $TopPid )
+    }
     close( TOP );
 }
 
@@ -623,6 +707,12 @@ sub FixString( $ )
     elsif ( $$String =~ /^(\d+)m$/ )
     {
 	$$String = $1;
+	return "n";
+    }
+    # Clean up nnnnH (ie 12345H = 12345 hours)
+    elsif ( $$String =~ /^([\d\.]+)H$/ )
+    {
+	$$String = $1 * 60;
 	return "n";
     }
     # Percentages (just return the number portion, strip the %)

@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_constants.h"
@@ -245,7 +245,14 @@ ReliSock::connect( char	*host, int port, bool non_blocking_flag )
 {
 	if (authob) {                                                           
 		delete authob;                                                  
+		authob = NULL;
 	}  	                                                                     
+
+	if (hostAddr != NULL)
+	{
+		free(hostAddr);
+		hostAddr = NULL;
+	}
  
 	init();     
 	is_client = 1;
@@ -701,6 +708,11 @@ ReliSock::put_bytes(const void *data, int sz)
         if (get_encryption()) {
             if (!wrap((unsigned char *)data, sz, dta , l_out)) { 
                 dprintf(D_SECURITY, "Encryption failed\n");
+				if (dta != NULL)
+				{
+					free(dta);
+					dta = NULL;
+				}
                 return -1;  // encryption failed!
             }
         }
@@ -715,6 +727,11 @@ ReliSock::put_bytes(const void *data, int sz)
 		
 		if (snd_msg.buf.full()) {
 			if (!snd_msg.snd_packet(_sock, FALSE, _timeout)) {
+				if (dta != NULL)
+				{
+					free(dta);
+					dta = NULL;
+				}
 				return FALSE;
 			}
 		}
@@ -724,7 +741,11 @@ ReliSock::put_bytes(const void *data, int sz)
 		}
 		
 		if ((tw = snd_msg.buf.put_max(&((char *)dta)[nw], sz-nw)) < 0) {
-                    free(dta);
+					if (dta != NULL)
+					{
+                    	free(dta);
+						dta = NULL;
+					}
                     return -1;
 		}
 		
@@ -737,7 +758,12 @@ ReliSock::put_bytes(const void *data, int sz)
 		_bytes_sent += nw;
 	}
 
-        free(dta);
+	if (dta != NULL)
+	{
+    	free(dta);
+		dta = NULL;
+	}
+
 	return nw;
 }
 
@@ -1044,7 +1070,11 @@ ReliSock::serialize(char *buf)
     ASSERT(buf);
     memset(fqu, 0, 256);
     memset(sinful_string, 0 , 28);
+
 	// here we want to restore our state from the incoming buffer
+	if (fqu_ != NULL) {
+		free(fqu_);
+	}
     fqu_ = NULL;
 
 	// first, let our parent class restore its state

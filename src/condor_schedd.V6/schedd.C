@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
@@ -391,9 +391,11 @@ Scheduler::~Scheduler()
 	for( i=0; i<N_Owners; i++) {
 		if( Owners[i].Name ) { 
 			free( Owners[i].Name );
+			Owners[i].Name = NULL;
 		}
 		if( Owners[i].X509 ) { 
 			free( Owners[i].X509 );
+			Owners[i].X509 = NULL;
 		}
 	}
 
@@ -471,6 +473,8 @@ Scheduler::count_jobs()
 	time_t current_time = time(0);
 	for ( i = 0; i < Owners.getsize(); i++) {
 		Owners[i].Name = NULL;
+		Owners[i].Domain = NULL;
+		Owners[i].X509 = NULL;
 		Owners[i].JobsRunning = 0;
 		Owners[i].JobsIdle = 0;
 		Owners[i].JobsHeld = 0;
@@ -796,9 +800,16 @@ Scheduler::count_jobs()
 		for(k=0; k<N_Owners;k++) {
 		  if (!strcmp(OldOwners[i].Name,Owners[k].Name)) break;
 		}
-	  // Now that we've finished using OldOwners[i].Name, we can
-		  // free it.
-		FREE( OldOwners[i].Name );
+		// Now that we've finished using OldOwners[i].Name, we can
+		// free it.
+		if ( OldOwners[i].Name ) {
+			free(OldOwners[i].Name);
+			OldOwners[i].Name = NULL;
+		}
+		if ( OldOwners[i].X509 ) {
+			free(OldOwners[i].X509);
+			OldOwners[i].X509 = NULL;
+		}
 
 		  // If k < N_Owners, we found this OldOwner in the current
 		  // Owners table, therefore, we don't want to send the
@@ -909,6 +920,9 @@ count( ClassAd *job )
 	if (job->LookupString(ATTR_OWNER, buf) < 0) {
 		dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n",
 				ATTR_OWNER);
+		if (x509userproxy != NULL) {
+			free(x509userproxy);
+		}
 		return 0;
 	}
 	owner = buf;
@@ -931,6 +945,7 @@ count( ClassAd *job )
 	scheduler.JobsTotalAds++;
 
 	// insert owner even if REMOVED or HELD for condor_q -{global|sub}
+	// this function makes its own copies of the memory passed in 
 	int OwnerNum = scheduler.insert_owner( owner, x509userproxy );
 
 	if ( (universe != CONDOR_UNIVERSE_GLOBUS) &&	// handle Globus below...
@@ -956,6 +971,9 @@ count( ClassAd *job )
 
 		// bailout now, since all the crud below is only for jobs
 		// which the schedd needs to service
+		if (x509userproxy != NULL) {
+			free(x509userproxy);
+		}
 		return 0;
 	} 
 
@@ -1017,6 +1035,9 @@ count( ClassAd *job )
 			// If we do not need to do matchmaking on this job (i.e.
 			// service this globus universe job), than we can bailout now.
 		if (!want_service) {
+			if (x509userproxy != NULL) {
+				free(x509userproxy);
+			}
 			return 0;
 		}
 		status = real_status;	// set status back for below logic...
@@ -1035,6 +1056,9 @@ count( ClassAd *job )
 		scheduler.JobsRemoved++;
 	}
 
+	if (x509userproxy != NULL) {
+		free(x509userproxy);
+	}
 	return 0;
 }
 
@@ -1086,6 +1110,7 @@ Scheduler::insert_owner(char* owner, char *x509proxy)
 				return i; //We both have an X509
 		}
 	}
+
 	Owners[i].Name = strdup( owner );
 	if(x509proxy) 
 		Owners[i].X509 = strdup( x509proxy); 
@@ -1122,7 +1147,7 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
 	// are removing the job).
 
     dprintf( D_FULLDEBUG, 
-			 "abort_job_myself: %d.%d log_hold: %s notify: %s\n", 
+			 "abort_job_myself: %d.%d log_hold:%s; notify:%s\n", 
 			 job_id.cluster, job_id.proc, 
 			 log_hold ? "true" : "false",
 			 notify ? "true" : "false" );
@@ -1138,7 +1163,7 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
 	}
 
 	mode = -1;
-	job_ad->LookupInteger(ATTR_JOB_STATUS,mode);
+	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_STATUS, &mode);
 	if ( mode == -1 ) {
 		EXCEPT("In abort_job_myself: %s attribute not found in job %d.%d\n",
 				ATTR_JOB_STATUS,job_id.cluster, job_id.proc);
@@ -1188,6 +1213,7 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
 			char proxy[_POSIX_PATH_MAX];
 			owner[0] = '\0';
 			proxy[0] = '\0';
+			domain[0] = '\0';
 			job_ad->LookupString(ATTR_OWNER,owner);
 			job_ad->LookupString(ATTR_NT_DOMAIN,domain);
 			if ( GridUniverseLogic::group_per_subject() ) {
@@ -1208,8 +1234,8 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
 		job_id.proc = 0;		// PVM shadow is always associated with proc 0
 	} 
 
-	// If it is not a Globus Universe job (which has already been dealt with above), 
-	// then find the process/shadow managing it.
+	// If it is not a Globus Universe job (which has already been
+	// dealt with above), then find the process/shadow managing it.
 	if ((job_universe != CONDOR_UNIVERSE_GLOBUS) && 
 		(srec = scheduler.FindSrecByProcID(job_id)) != NULL) 
 	{
@@ -1300,9 +1326,8 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
 			srec->removed = TRUE;
 		}
 
-		return;        
-    } 
-	
+		return;
+    }
 
 	// If we made it here, we did not find a shadow or other job manager 
 	// process for this job.  Just handle the operation ourselves.
@@ -1371,8 +1396,6 @@ static int
 PeriodicExprEval( ClassAd *jobad )
 {
 	int cluster=-1, proc=-1, status=-1, action=-1;
-	char reason[1024];
-	const char *firing_expr;
 
 	if(!ResponsibleForPeriodicExprs(jobad)) return 1;
 
@@ -1390,18 +1413,65 @@ PeriodicExprEval( ClassAd *jobad )
 	policy.Init(jobad);
 
 	action = policy.AnalyzePolicy(PERIODIC_ONLY);
-	firing_expr = policy.FiringExpression();
-	if(firing_expr) sprintf(reason,"%s is true",firing_expr);
+
+	// Build a "reason" string for logging
+	MyString reason;
+	const char *firing_expr = policy.FiringExpression();
+	if(firing_expr) {
+		ExprTree *tree, *rhs = NULL;
+		tree = jobad->Lookup( firing_expr );
+
+		// Get a formatted expression string
+		char* exprString = NULL;
+		if( tree && (rhs=tree->RArg()) ) {
+			rhs->PrintToNewStr( &exprString );
+		}
+
+		// Format up the log entry
+		reason.sprintf( "The %s expression '%s' evaluated to ",
+						firing_expr,
+						exprString ? exprString : "" );
+
+		// Free up the buffer from PrintToNewStr()
+		if ( exprString ) {
+			free( exprString );
+		}
+
+		// Get a string for it's value
+		int firing_value = policy.FiringExpressionValue();
+		switch( firing_value ) {
+		case 0:
+			reason += "FALSE";
+			break;
+		case 1:
+			reason += "TRUE";
+			break;
+		case -1:
+			reason += "UNDEFINED";
+			break;
+		default:
+			EXCEPT( "Unrecognized FiringExpressionValue: %d", 
+					firing_value ); 
+			break;
+		}
+	}
 
 	switch(action) {
 		case REMOVE_FROM_QUEUE:
-			if(status!=REMOVED) abortJob(cluster,proc,reason,true);
+			if(status!=REMOVED) {
+				abortJob(jobad, cluster, proc, reason.Value(), true);
+			}
 			break;
 		case HOLD_IN_QUEUE:
-			if(status!=HELD) holdJob(cluster,proc,reason,true,false,false,false,false);
+			if(status!=HELD) {
+				holdJob(cluster, proc, reason.Value(),
+						true, false, false, false, false);
+			}
 			break;
 		case RELEASE_FROM_HOLD:
-			if(status==HELD) releaseJob(cluster,proc,reason,true);
+			if(status==HELD) {
+				releaseJob(cluster, proc, reason.Value(), true);
+			}
 			break;
 	}
 
@@ -1681,7 +1751,7 @@ Scheduler::abort_job(int, Stream* s)
 					nToRemove);
 				return FALSE;
 			}
-			abort_job_myself(job_id, false, true);
+			abort_job_myself(job_id, false, true );
 			nToRemove--;
 		}
 		s->end_of_message();
@@ -1719,7 +1789,7 @@ Scheduler::abort_job(int, Stream* s)
 			if ( (ad->LookupInteger(ATTR_CLUSTER_ID,job_id.cluster) == 1) &&
 				 (ad->LookupInteger(ATTR_PROC_ID,job_id.proc) == 1) ) {
 
-				 abort_job_myself(job_id, false, true);
+				 abort_job_myself(job_id, false, true );
 
 			}
 			FreeJobAd(ad);
@@ -6226,9 +6296,11 @@ Scheduler::Init()
 
 	tmp = param("PERIODIC_EXPR_INTERVAL");
 	if(!tmp) {
-		PeriodicExprInterval = 60;
+		PeriodicExprInterval = 300;
 	} else {
 		PeriodicExprInterval = atoi(tmp);
+		free(tmp);
+		tmp = NULL;
 	}
 
 	if ( first_time_in_init ) {	  // cannot be changed on the fly
@@ -7204,23 +7276,31 @@ Does not start or end a transaction.
 */
 
 static bool
-abortJobRaw( int cluster, int proc, const char *reason )
+abortJobRaw( ClassAd *jobAd, int cluster, int proc, const char *reason )
 {
 	PROC_ID job_id;
 
 	job_id.cluster = cluster;
 	job_id.proc = proc;
 
+	int universe = CONDOR_UNIVERSE_STANDARD;
+	jobAd->LookupInteger(ATTR_JOB_UNIVERSE,universe);
+
 	if( SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, REMOVED) < 0 ) {
 		dprintf(D_ALWAYS,"Couldn't change state of job %d.%d\n",cluster,proc);
 		return false;
 	}
 
+	// Add the remove reason to the job's attributes
+	if ( reason && *reason ) {
+		MyString	removeReason;
+		removeReason.sprintf( "%s=\"%s\"", ATTR_REMOVE_REASON, reason );
+		jobAd->Insert( removeReason.Value( ) );
+	}
+
+	// Abort the job now
 	abort_job_myself( job_id, true, true );
-
-	DestroyProc(cluster,proc);
-
-	dprintf(D_ALWAYS,"Job %d.%d aborted: %s\n",cluster,proc,reason);
+	dprintf( D_ALWAYS, "Job %d.%d aborted: %s\n", cluster, proc, reason );
 
 	return true;
 }
@@ -7232,7 +7312,7 @@ Performs a complete transaction if desired.
 */
 
 bool
-abortJob( int cluster, int proc, const char *reason, bool use_transaction )
+abortJob( ClassAd *jobad, int cluster, int proc, const char *reason, bool use_transaction )
 {
 	bool result;
 
@@ -7240,7 +7320,7 @@ abortJob( int cluster, int proc, const char *reason, bool use_transaction )
 		BeginTransaction();
 	}
 
-	result = abortJobRaw(cluster,proc,reason);
+	result = abortJobRaw(jobad, cluster,proc,reason);
 
 	if(use_transaction) {
 		if(result) {

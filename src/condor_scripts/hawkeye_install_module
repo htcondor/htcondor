@@ -162,15 +162,15 @@ sub FindConfigFile( )
     # Check the config env variable...
     if ( ( $Config{HawkeyeConfig} eq "" ) && ( exists $ENV{HAWKEYE_CONFIG} ) )
     {
-	die "$ENV{HAWKEYE_CONFIG} (from ENV) does not exist!"
+	warn "$ENV{HAWKEYE_CONFIG} (from ENV) does not exist!"
 	    if ( ! -f $ENV{HAWKEYE_CONFIG} );
 	$Config{HawkeyeConfig} = $ENV{HAWKEYE_CONFIG};
     }
 
     # Fallbacks...
-    # HAWKEYE_CONFIG_DIR is a magic string, overwritten by hawkeye_install
-    my @FallbackConfigs = { "HAWKEYE_CONFIG_DIR",
-			    "/home/hawkeye", };
+    my @FallbackConfigs = [ "/home/hawkeye", ];
+    unshift @FallbackConfigs, $ENV{HAWKEYE_ROOT_DIR}
+	if ( exists $ENV{HAWKEYE_ROOT_DIR} );
     foreach my $TempConfig ( @FallbackConfigs )
     {
 	if (  ( $Config{HawkeyeConfig} eq "" ) && ( -f $TempConfig )  )
@@ -292,7 +292,7 @@ sub InstallModules ( )
     my $TmpDir = "/tmp/$$";
     my $OrigDir = $ENV{PWD};
     die "$TmpDir already exists!" if ( -d $TmpDir );
-    mkdir $TmpDir || die "Can't mkdir '$TmpDir'";
+    mkdir( $TmpDir, 0700 ) || die "Can't mkdir '$TmpDir'";
     chdir $TmpDir || die "Can't chdir to $TmpDir";
 
     # Summary info

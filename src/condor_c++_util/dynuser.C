@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_debug.h"
@@ -42,24 +42,46 @@ char* getSystemAccountName() {
 // language-independant way to get at the BUILTIN\Users group name
 // delete[] the result!
 char* getUserGroupName() {
-	return getWellKnownName(SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_USERS);
+	return getWellKnownName(
+		SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_USERS);
 }
 
-// looks up well known SIDs and RIDs and returns the account name.
+// looks up Users group and returns the BUILTIN domain
+// which for example is VORDEFINIERT on German systems
+char*
+getBuiltinDomainName() {
+	return getWellKnownName(
+		SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_USERS, true);
+}
+
+// looks up SYSTEM account and returns the NT AUTHORITY
+// domain, which for example is NT-AUTHORITAT on German systems.
+char*
+getNTAuthorityDomainName() {
+	return getWellKnownName(SECURITY_LOCAL_SYSTEM_RID, 0, true);
+}
+
+// looks up well known SIDs and RIDs. The optional domainname,
+// parameter, when true, causes it to return the domain name
+// instead of the account name.
 // Seems like two sub-authorities should be enough for what we need.
 // delete[] the result!
-char* getWellKnownName( DWORD subAuth1, DWORD subAuth2 ) {
+char* 
+getWellKnownName( DWORD subAuth1, DWORD subAuth2, bool domainname ) {
 	
 	PSID pSystemSID;
 	SID_IDENTIFIER_AUTHORITY auth = SECURITY_NT_AUTHORITY;
-	char* systemName;
-	char systemDomain[255];
+	char *systemName;
+	char *systemDomain;
+	char *well_known_name;
 	DWORD name_size, domain_size;
 	SID_NAME_USE sidUse;
 	bool result;
 	
 	name_size = domain_size = 255;
-	
+	systemName =	new char[name_size];
+	systemDomain =	new char[domain_size];
+
 	// Create a well-known SID for the Users Group.
 	
 	if(! AllocateAndInitializeSid( &auth, ((subAuth2) ? 2 : 1),
@@ -70,9 +92,6 @@ char* getWellKnownName( DWORD subAuth1, DWORD subAuth2 ) {
 		printf( "AllocateAndInitializeSid Error %u\n", GetLastError() );
 		return NULL;
 	}
-	
-	
-	systemName = new char[name_size];
 	
 	// Now lookup whatever the account name is for this SID
 	
@@ -89,9 +108,12 @@ char* getWellKnownName( DWORD subAuth1, DWORD subAuth2 ) {
 	
 	if ( ! result ) {
 		printf( "LookupAccountSid Error %u\n", GetLastError() );
-		delete[] systemName;
 		return NULL;
+	} else if ( domainname ) {
+		delete[] systemName;
+		return systemDomain;	
 	} else {
+		delete[] systemDomain;
 		return systemName;
 	}
 }

@@ -9,7 +9,7 @@ OBJ = eventd.o main.o scheduled_event.o eventd_instantiate.o
 
 template_inst(eventd_instantiate.C,eventd_instantiate.o)
 c_plus_target($(NAME),$(OBJ),$(LIB))
-release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
+release_target($(NAME),sbin,EXECUTABLE_MODE)
 strip_target($(NAME),$(STRIP_CONTRIB)/sbin,EXECUTABLE_MODE)
 static_target($(NAME),$(OBJ),$(LIB),$(STATIC_CONTRIB)/sbin)
 pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))

@@ -1,8 +1,0 @@
-#define CMNT #
-#define CSH #!/bin/csh -f
-#include <Platform.select>
-#include <Global.h>
-#include PlatformIncludeFile
-#include <site.def>
-#include <Imake.rules>
-#include INCLUDE_IMAKEFILE

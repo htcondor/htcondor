@@ -148,11 +148,6 @@ rdiscard			return grab( RDISCARD );
 "..."					return grab( ELLIPSIS );
 .					return grab( UNKNOWN );
 %%
-int
-yywrap()
-{
-	return feof(stdin);
-}
 
 int
 grab( int type )

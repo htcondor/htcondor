@@ -86,6 +86,10 @@ sub main( @ )
 	{
 	    $KnownTargets{$Target}{Version} = $1;
 	}
+	elsif ( /^os:\s+(\S+)/i )
+	{
+	    $KnownTargets{$Target}{OS} = $1;
+	}
 	elsif ( /^\+(.*)/ )
 	{
 	    push( @{$KnownTargets{$Target}{HawkFiles}},
@@ -138,6 +142,11 @@ sub main( @ )
     {
 	die "$Target has no version defined"
 	    if ( ! exists $KnownTargets{$Target}{Version} );
+	if ( ! exists $KnownTargets{$Target}{OS} )
+	{
+	    $KnownTargets{$Target}{OS} = "Unix-Any";
+	    warn "No O/S Specified; assuming 'Unix-Any'";
+	}
 	die "$Target has no files"
 	    if ( ! exists $KnownTargets{$Target}{HawkFiles} );
 	foreach my $File ( @{$KnownTargets{$Target}{HawkFiles}} )
@@ -157,7 +166,9 @@ sub main( @ )
     foreach my $Target ( @Targets )
     {
 	my $Version = $KnownTargets{$Target}{Version};
-	my $TarBall = $ModulePrefix . $Target . "-" . $Version . ".tar.gz";
+	my $OS = $KnownTargets{$Target}{OS};
+	my $TarBall =
+	    $ModulePrefix . $Target . "-" . $Version . "-".  $OS . ".tar.gz";
 	my $TarBallFull = "$TargetDir/$TarBall";
 
 	# Does it already exist?

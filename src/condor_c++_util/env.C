@@ -1,55 +1,31 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_attrlist.h"
 #include "condor_string.h"
 
 #include "env.h"
-
-bool
-AppendEnvVariable( char* env, char* name, char* value )
-{
-    if( env == NULL || name == NULL || value == NULL ) {
-        return false;
-    }
-
-    // make sure env has enough room for delimiter + name + '=' + value + '\0'
-    if( strlen( env ) + strlen( name ) + strlen( value ) + 3 >=
-        ATTRLIST_MAX_EXPRESSION ) {
-        return false;
-    }
-
-	// if this is the first entry in env
-	if( strlen( env ) == 0 ) {
-		sprintf( env, "%s=%s", name, value );
-	} else {
-		char *oldenv = strdup( env );
-		sprintf( env, "%s%c%s=%s", oldenv, env_delimiter, name, value );
-		free( oldenv );
-	}
-    return true;
-}
 
 bool
 AppendEnvVariableSafely( char** env, char* name, char* value )
@@ -65,6 +41,9 @@ AppendEnvVariableSafely( char** env, char* name, char* value )
 							  + strlen(name)
 							  + strlen(value)
 							  + 3);
+	if( new_env == NULL ) {
+		return false;
+	}
 
 	// if this is the first entry in env
 	if( strlen( *env ) == 0 ) {
@@ -81,14 +60,24 @@ char*
 environToString( const char** env ) {
 	// fixed size is bad here but consistent with old code...
 	char *s = new char[ATTRLIST_MAX_EXPRESSION];
+	if( !s ) {
+		return NULL;
+	}
 	s[0] = '\0';
 	int len = 0;
-	for( int i = 0; env[i] && env[i][0] != '\0'; i++ ) {
+	for( int i = 0; env[i] != NULL; i++ ) {
 		len += strlen( env[i] ) + 1;
 		if ( len > ATTRLIST_MAX_EXPRESSION ) {
-			return s;
+			dprintf( D_ALWAYS, "ERROR: environToString(): "
+					 "ATTRLIST_MAX_EXPRESSION too small for env array!\n" );
+			delete[] s;
+			return NULL;
 		}
 		char *old = strdup( s );
+		if( !old ) {
+			delete[] s;
+			return NULL;
+		}
 		sprintf( s, "%s%c%s", old, env_delimiter, env[i] );
 		free( old );
 	}
@@ -97,18 +86,26 @@ environToString( const char** env ) {
 
 char**
 environDup( const char** env ) {
+	if( !env ) {
+		return NULL;
+	}
+
 	char **newEnv;
 	int i;
 
 	int numElements = 0;
-    for( i = 0; env[i] && env[i][0] != '\0'; i++ ) {
+    for( i = 0; env[i] != NULL; i++ ) {
 		 numElements++;
 	}
 
-	newEnv = (char **) malloc( numElements * sizeof( char* ) );
+	newEnv = (char **) malloc( (numElements + 1) * sizeof( char* ) );
+	if( !newEnv ) {
+		return NULL;
+	}
 	for( i = 0; i < numElements; i++ ) {
 		newEnv[i] = strdup( env[i] );
 	}
+	newEnv[i] = NULL;
 
 	return newEnv;
 }
@@ -122,7 +119,6 @@ Env::Env()
 
 Env::~Env()
 {
-	ASSERT( _envTable );
 	delete _envTable;
 }
 

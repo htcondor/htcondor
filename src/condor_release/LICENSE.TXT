@@ -1,6 +1,6 @@
 
 CONDOR (r) PUBLIC LICENSE
-Version 1.0, February 7, 2003
+Version 1.1, October 30, 2003
 
 Copyright (c) 1990-2003 Condor Team, Computer Sciences Department,
 University of Wisconsin-Madison, Madison, WI. All Rights Reserved.
@@ -9,22 +9,26 @@ Livny, Dept of Computer Sciences, 1210 W. Dayton St., Madison, WI
 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 
 This software referred to as the Condor (r) Version 6.x software
-("Software") consists of voluntary contributions made to
-the Condor Project collaboration. For more information on the Condor
-Project, please see http://www.condorproject.org/.
+("Software") was developed by the Condor Project, Condor Team,
+Computer Sciences Department, University of Wisconsin-Madison, under
+the authority of the Board of Regents of the  University of Wisconsin
+System and includes voluntary contributions made to the Condor Project
+("Copyright Holders and Contributors and the University").  For more
+information on the Condor Project, please see
+http://www.condorproject.org/.
 
 Installation, use, reproduction, display, modification and
 redistribution of this Software, with or without modification,  in
 source and binary forms, are permitted.  Any exercise of rights under
-this license by you or your sub-licensees is subject to the following
+this license including sublicenses by you is subject to the following
 conditions:
 
 1. Redistributions of this Software, with or without modification,
    must reproduce this Condor Public License in: (1) the Software,
-   and (2) the user documentation or some other similar material
-   which is provided with the Software (if any).
+   and (2) any user documentation or other similar material
+   which is provided with the Software.
 
-2. The user documentation, if any, included with a redistribution, 
+2. Any user documentation included with a redistribution 
    must include the following notice:
 
        "This product includes software from the Condor (r) Project
@@ -41,8 +45,8 @@ conditions:
 4. The name Condor (r) is a registered trademark of the University of
    Wisconsin-Madison.  The trademark may not be used to endorse or
    promote software, or products derived therefrom, and, other than
-   as required by section 2, above, it may not be affixed to modified
-   redistributions of this Software except with prior written
+   as required by section 2 and 3 above, it may not be affixed to modified
+   redistributions of this Software without the prior written
    approval, obtainable via email to condor-admin@cs.wisc.edu.
 
 5. To the extent that patent claims licensable by the University of
@@ -70,19 +74,20 @@ conditions:
 
 6. DISCLAIMER
 
-   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
-   CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+   AND THE UNIVERSITY "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
    INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
    MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS FOR A
    PARTICULAR PURPOSE OR USE ARE DISCLAIMED.  THE COPYRIGHT HOLDERS
-   AND CONTRIBUTORS MAKE NO REPRESENTATION THAT THE SOFTWARE,
-   MODIFICATIONS, ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT
-   INFRINGE ANY PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER
-   PROPRIETARY RIGHT.
+   AND CONTRIBUTORS AND THE UNIVERSITY MAKE NO REPRESENTATION THAT THE
+   SOFTWARE, MODIFICATIONS, ENHANCEMENTS OR DERIVATIVE WORKS THEREOF,
+   WILL NOT INFRINGE ANY PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR
+   OTHER PROPRIETARY RIGHT.
 
 7. LIMITATION OF LIABILITY
 
-   THE COPYRIGHT HOLDERS AND CONTRIBUTORS SHALL HAVE NO LIABILITY TO
+   THE COPYRIGHT HOLDERS AND CONTRIBUTORS AND ANY OTHER OFFICER,
+   AGENT, OR EMPLOYEE OF THE UNIVERSITY SHALL HAVE NO LIABILITY TO
    LICENSEE OR OTHER PERSONS FOR DIRECT, INDIRECT, SPECIAL,
    INCIDENTAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES OF ANY
    CHARACTER INCLUDING, WITHOUT LIMITATION, PROCUREMENT OF SUBSTITUTE
@@ -92,18 +97,16 @@ conditions:
    OTHERWISE, ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
    EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
    
-8. LICENSEE AGREES THAT THE EXPORT OF GOODS AND/OR TECHNICAL DATA
-   FROM THE UNITED STATES MAY REQUIRE SOME FORM OF EXPORT CONTROL
-   LICENSE FROM THE U.S. GOVERNMENT AND THAT FAILURE TO OBTAIN SUCH
-   EXPORT CONTROL LICENSE MAY RESULT IN CRIMINAL LIABILITY UNDER U.S.
-   LAWS.  This software is exported from the United States in accordance
-   with the Export Administration Regulations. Diversion contrary to
-   U.S. law is    prohibited. At the time of the creation of this
-   license, export of the software to Cuba, Iran, Iraq, Libya, North
-   Korea, Sudan, and Syria is prohibited without a license, and it is
-   also prohibited for citizens of these countries to use the
-   software without a license.
-   
+8. Certain uses and transfers of the Software or documentation, and/or
+   items or software incorporating the Condor Software or
+   documentation, may require a license under U.S. Export Control
+   laws.  Licensee represents and warrants that all uses and transfers
+   of the Condor Software or documentation and/or any items or
+   software incorporating Condor shall be in compliance with U.S.
+   Export Control laws, and Licensee further understands that failure
+   to comply with such export control laws may result in criminal
+   liability to Licensee under U.S. laws 
+
 9. The Condor Team may publish revised and/or new versions of this
    Condor Public License ("this License") from time to time.  Each
    version will be given a distinguishing version number.  Once

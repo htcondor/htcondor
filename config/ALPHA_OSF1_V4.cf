@@ -1,15 +1,5 @@
-#define Platform	ALPHA-DUX4
-#define GccArch		alpha-dec-osf4.0
-
 #define PlatformFlags	-DDUX=DUX -DDUX4=DUX4
 
-#define IS_ALPHA_OSF1	YES
-#define IS_DUX		YES
-#define IS_DUX4		YES
-
-#define HAS_PVM		YES
-#define HAS_GLOBUS	YES
-#define HAS_GSI		YES
-#define HAS_OPENSSL	YES
-
+#define WANT_PVM	YES
+#define PVM_ARCH	ALPHA
 #define NEED_SNPRINTF	YES

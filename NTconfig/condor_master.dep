@@ -2,6 +2,7 @@
 
 ..\src\condor_master.V6\daemon_master.C : \
 	"..\src\condor_c++_util\command_strings.h"\
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\env.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -38,6 +39,7 @@
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_email.h"\
 	"..\src\condor_includes\condor_environ.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
@@ -70,6 +72,7 @@
 
 ..\src\condor_master.V6\master.C : \
 	"..\src\condor_c++_util\command_strings.h"\
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\get_daemon_name.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -104,6 +107,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_getmnt.h"\
@@ -143,6 +147,7 @@
 
 ..\src\condor_master.V6\service.WIN32.C : \
 	"..\src\condor_c++_util\command_strings.h"\
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -166,6 +171,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\

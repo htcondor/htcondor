@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_config.h"
@@ -187,16 +187,11 @@ main( int argc, char *argv[] )
 
 	for( argv++; (arg = *argv); argv++ ) {
 		if( arg[0] == '-' ) {
-			if( ! arg[1] ) {
-				usage();
-			}
-			switch( arg[1] ) {
-			case 'd':
+            if (match_prefix(arg, "-debug")) {
 				// dprintf to console
 				Termlog = 1;
 				dprintf_config ("TOOL", 2 );
-				break;
-			case 'c':
+            } else if (match_prefix(arg, "-constraint")) {
 				args[nArgs] = arg;
 				nArgs++;
 				argv++;
@@ -208,40 +203,35 @@ main( int argc, char *argv[] )
 				}				
 				args[nArgs] = *argv;
 				nArgs++;
-				break;
-			case 'a':
-				if( arg[2] && arg[2] == 'd' ) {
-					argv++;
-					if( ! *argv ) {
-						fprintf( stderr, 
-								 "%s: -addr requires another argument\n", 
-								 MyName);
-						exit(1);
-					}				
-					if( is_valid_sinful(*argv) ) {
-						scheddAddr = strdup(*argv);
-						if( ! scheddAddr ) {
-							fprintf( stderr, "Out of Memory!\n" );
-							exit(1);
-						}
-					} else {
-						fprintf( stderr, 
-								 "%s: \"%s\" is not a valid address\n",
-								 MyName, *argv );
-						fprintf( stderr, "Should be of the form "
-								 "<ip.address.here:port>\n" );
-						fprintf( stderr, 
-								 "For example: <123.456.789.123:6789>\n" );
-						exit( 1 );
-					}
-					break;
-				}
-				All = true;
-				break;
-			case 'f':
+            } else if (match_prefix(arg, "-all")) {
+                All = true;
+            } else if (match_prefix(arg, "-addr")) {
+                argv++;
+                if( ! *argv ) {
+                    fprintf( stderr, 
+                             "%s: -addr requires another argument\n", 
+                             MyName);
+                    exit(1);
+                }				
+                if( is_valid_sinful(*argv) ) {
+                    scheddAddr = strdup(*argv);
+                    if( ! scheddAddr ) {
+                        fprintf( stderr, "Out of memory!\n" );
+                        exit(1);
+                    }
+                } else {
+                    fprintf( stderr, 
+                             "%s: \"%s\" is not a valid address\n",
+                             MyName, *argv );
+                    fprintf( stderr, "Should be of the form "
+                             "<ip.address.here:port>\n" );
+                    fprintf( stderr, 
+                             "For example: <123.456.789.123:6789>\n" );
+                    exit( 1 );
+                }
+            } else if (match_prefix(arg, "-forcex")) {
 				forceX = true;
-				break;				
-			case 'n': 
+            } else if (match_prefix(arg, "-name")) {
 				// use the given name as the schedd name to connect to
 				argv++;
 				if( ! *argv ) {
@@ -254,8 +244,7 @@ main( int argc, char *argv[] )
 							 MyName, get_host_part(*argv) );
 					exit(1);
 				}
-				break;
-			case 'p':
+            } else if (match_prefix(arg, "-pool")) {
 				// use the given name as the central manager to query
 				argv++;
 				if( ! *argv ) {
@@ -271,17 +260,13 @@ main( int argc, char *argv[] )
 					fprintf( stderr, "%s: %s\n", MyName, pool->error() );
 					exit(1);
 				}
-				break;
-			case 'v':
+            } else if (match_prefix(arg, "-version")) {
 				version();
-				break;
-			case 'h':
+            } else if (match_prefix(arg, "-help")) {
 				usage();
-				break;
-			default:
+            } else {
 				fprintf( stderr, "Unrecognized option: %s\n", arg ); 
 				usage();
-				break;
 			}
 		} else {
 			if( All ) {

@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "procapi.h"
@@ -492,23 +492,72 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 		// get the system boot time periodically, since it may change
 		// if the time on the machine is adjusted
 	if( boottime_expiration <= now ) {
-		if( (fp = fopen("/proc/stat", "r")) > 0 ) {
+		// There are two (sometimes conflicting) sources of boottime
+		// information.  One is the /proc/stat "btime" field, and the
+		// other is /proc/uptime.  For some unknown reason, btime
+		// has been observed to suddenly jump forward in time to
+		// the present moment, which totally messes up the process
+		// age calculation, which messes up the CPU usage estimation.
+		// Since this is not well understood, we hedge our bets
+		// and use whichever measure of boot-time is older.
+
+		unsigned long stat_boottime = 0;
+		unsigned long uptime_boottime = 0;
+
+		// get uptime_boottime
+
+		if( (fp = fopen("/proc/uptime","r")) ) {
+			double uptime=0;
+			double junk=0;
+			fgets( s, 256, fp );
+			if (sscanf( s, "%lf %lf", &uptime, &junk ) >= 1) {
+				// uptime is number of seconds since boottime
+				// convert to nearest time stamp
+				uptime_boottime = (unsigned long)(now - uptime + 0.5);
+			}
+			fclose( fp );
+		}
+
+		// get stat_boottime
+		if( (fp = fopen("/proc/stat", "r")) ) {
 			fgets( s, 256, fp );
 			while( strstr(s, "btime") == NULL ) {
 				fgets( s, 256, fp );
 			}
-			sscanf( s, "%s %lu", junk, &boottime );
+			sscanf( s, "%s %lu", junk, &stat_boottime );
 			fclose( fp );
-			boottime_expiration = now+60; // update once every minute
-		} else if (boottime == 0) {
+		}
+
+		if (stat_boottime == 0 && uptime_boottime == 0 && boottime == 0) {
 				// we failed to get the boottime, so we must abort
 				// unless we have an old boottime value to fall back on
 			dprintf( D_ALWAYS, "ProcAPI: Problem opening /proc/stat "
-					 "for btime.\n" );
+					 " and /proc/uptime for boottime.\n" );
 			delete pi; 
 			pi = NULL;
 			set_priv( priv );
 			return -2;
+		}
+
+		if (stat_boottime != 0 || uptime_boottime != 0) {
+			unsigned long old_boottime = boottime;
+
+			// Use the older of the two boottime estimates.
+			// If either one is missing, ignore it.
+			if (stat_boottime == 0) boottime = uptime_boottime;
+			else if (uptime_boottime == 0) boottime = stat_boottime;
+			else boottime = MIN(stat_boottime,uptime_boottime);
+
+			boottime_expiration = now+60; // update once every minute
+
+			// Since boottime is critical for correct cpu usage
+			// calculations, show how we got it.
+			dprintf( D_LOAD,
+					 "ProcAPI: new boottime = %lu; "
+					 "old_boottime = %lu; "
+					 "/proc/stat boottime = %lu; "
+					 "/proc/uptime boottime = %lu\n",
+					 boottime,old_boottime,stat_boottime,uptime_boottime);
 		}
 	}
 		// now we've got the boottime, the start time, and can get
@@ -564,12 +613,21 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	rval = pstat_getproc( &buf, sizeof(buf), 0, pid );
 
 	if ( rval < 0 ) {
-		dprintf( D_ALWAYS, "ProcAPI: Error in pstat_getproc(%d): errno=%d\n",
-				 pid, errno );
+		int		status = -2;
+
+		// Handle "No such process" separately!
+		if ( ESRCH == errno ) {
+			dprintf( D_FULLDEBUG, "ProcAPI: pid %d does not exist.\n", pid );
+			status = -1;
+		} else {
+			dprintf( D_ALWAYS, "ProcAPI: Error in pstat_getproc(%d): errno=%d\n",
+					 pid, errno );
+			status = -2;
+		}
 		delete pi; 
 		pi = NULL;
 		set_priv( priv );
-		return -2;
+		return status;
 	}
 
 	if( pagesize == 0 ) {
@@ -611,7 +669,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 
 #endif /* HPUX */
 
-#ifdef CONDOR_DARWIN
+#ifdef Darwin
 
 
 	// First, let's get the BSD task info for this stucture. This
@@ -1107,7 +1165,7 @@ ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 }
 #endif /* HPUX */
 
-#if ( defined(CONDOR_DARWIN)  )
+#if ( defined(Darwin)  )
 int
 ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 	
@@ -1670,7 +1728,7 @@ ProcAPI::getAndRemNextPid () {
    to by pidList, a private data member of ProcAPI.  
  */
 
-#ifndef CONDOR_DARWIN
+#ifndef Darwin
 int
 ProcAPI::buildPidList() {
 
@@ -1717,7 +1775,7 @@ ProcAPI::buildPidList() {
    FreeBSD as well, but FreeBSD does have a /proc that it could look at
  */
 
-#ifdef CONDOR_DARWIN
+#ifdef Darwin
 int
 ProcAPI::buildPidList() {
 

@@ -191,6 +191,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\condor_state.obj" \
 	"$(INTDIR)\condor_ver_info.obj" \
 	"$(INTDIR)\condor_version.obj" \
+	"$(INTDIR)\CondorError.obj" \
 	"$(INTDIR)\config.obj" \
 	"$(INTDIR)\cron.obj" \
 	"$(INTDIR)\cronjob.obj" \
@@ -251,9 +252,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\usagemon.obj" \
 	"$(INTDIR)\user_job_policy.obj" \
 	"$(INTDIR)\user_log.obj" \
-	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\CondorError.obj" \
-	"$(INTDIR)\utc_time.obj"
+	"$(INTDIR)\utc_time.obj" \
+	"$(INTDIR)\which.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -425,6 +425,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\condor_state.obj" \
 	"$(INTDIR)\condor_ver_info.obj" \
 	"$(INTDIR)\condor_version.obj" \
+	"$(INTDIR)\CondorError.obj" \
 	"$(INTDIR)\config.obj" \
 	"$(INTDIR)\cron.obj" \
 	"$(INTDIR)\cronjob.obj" \
@@ -485,9 +486,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\usagemon.obj" \
 	"$(INTDIR)\user_job_policy.obj" \
 	"$(INTDIR)\user_log.obj" \
-	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\CondorError.obj" \
-	"$(INTDIR)\utc_time.obj"
+	"$(INTDIR)\utc_time.obj" \
+	"$(INTDIR)\which.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<

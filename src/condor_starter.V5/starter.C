@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "starter_common.h"
@@ -75,7 +75,6 @@ ReliSock	*SyscallStream = NULL;	// stream to shadow for remote system calls
 List<UserProc>	UProcList;		// List of user processes
 char	*Execute;				// Name of directory where user procs execute
 int		ExecTransferAttempts;	// How many attempts at getting the initial ckpt
-int		DoDelays;				// Insert artificial delays for testing
 char	*UidDomain=NULL;		// Machines we share UID space with
 bool	TrustUidDomain=false;	// Should we trust what the submit side claims?
 
@@ -161,50 +160,6 @@ main( int argc, char *argv[] )
 	return 0;
 }
 
-
-/*
-  If TESTING is set to TRUE, we delay approximately sec seconds for
-  purposes of debugging.  If TESTING is not TRUE, we just return.
-*/
-void
-delay( int sec )
-{
-	int		i;
-	int		j, k;
-
-#if defined(SPARC)
-	int		lim = 250000;
-#elif defined(Solaris)
-	int		lim = 250000;
-#elif defined(R6000)
-	int		lim = 250000;
-#elif defined(MIPS)
-	int		lim = 200000;
-#elif defined(ALPHA)
-	int		lim = 300000;
-#elif defined(HPPAR)
-	int		lim = 650000;
-#elif defined(CONDOR_DARWIN)
-	int		lim = 650000;
-#elif defined(LINUX)
-	int		lim = 300000;
-#elif defined(SGI)
-	int		lim = 300000;
-#endif
-
-
-	if( !DoDelays || sec == 0 ) {
-		return;
-	}
-
-	for( i=sec; i > 0; i-- ) {
-		dprintf( D_ALWAYS | D_NOHEADER,  "%d\n", i );
-		for( j=0; j<lim; j++ ) {
-			for( k=0; k<5; k++ );
-		}
-	}
-	dprintf( D_ALWAYS | D_NOHEADER,  "0\n" );
-}
 
 /*
   Initialization stuff to be done before getting any use processes.
@@ -350,16 +305,6 @@ init_params()
 		EXCEPT( "Execute directory not specified in config file" );
 	}
 
-	if( (tmp=param("STARTER_DELAYS")) == NULL ) {
-		DoDelays = FALSE;
-	} else {
-		if( tmp[0] == 't' || tmp[0] == 'T' ) {
-			DoDelays = TRUE;
-		} else {
-			DoDelays = FALSE;
-		}
-	}
-
 		// find out domain of machines whose UIDs we honor
 	UidDomain = param( "UID_DOMAIN" );
 
@@ -438,7 +383,6 @@ get_exec()
 
 
 	new_process = UProcList.Current();
-	delay( 5 );
 	if( new_process->fetch_ckpt() != TRUE ) {
 		return FAILURE;
 	}

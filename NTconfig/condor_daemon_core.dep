@@ -46,6 +46,7 @@
 
 ..\src\condor_daemon_core.V6\daemon_core.C : \
 	"..\src\condor_c++_util\command_strings.h"\
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\env.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -83,6 +84,7 @@
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_distribution.h"\
 	"..\src\condor_includes\condor_environ.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
@@ -115,6 +117,7 @@
 ..\src\condor_daemon_core.V6\daemon_core_main.C : \
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_version.h"\
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\limit.h"\
@@ -150,6 +153,7 @@
 	"..\src\condor_includes\condor_distribution.h"\
 	"..\src\condor_includes\condor_email.h"\
 	"..\src\condor_includes\condor_environ.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_getmnt.h"\
@@ -196,6 +200,7 @@
 
 ..\src\condor_daemon_core.V6\timer_manager.C : \
 	"..\src\condor_c++_util\command_strings.h"\
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -219,6 +224,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\

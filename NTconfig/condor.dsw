@@ -95,6 +95,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_advertise
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_version
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -1105,6 +1108,18 @@ Package=<4>
 ###############################################################################
 
 Project: "condor_util_lib"=".\condor_util_lib.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "condor_version"=".\condor_version.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
