@@ -83,6 +83,7 @@ MpiResource::resourceExit( int reason, int status )
 
 	NodeTerminatedEvent event;
 	switch( reason ) {
+	case JOB_COREDUMPED:
 	case JOB_EXITED:
 		{
 			// Job exited on its own, normally or abnormally
@@ -96,6 +97,12 @@ MpiResource::resourceExit( int reason, int status )
 				event.returnValue = exit_value;
 			}
 			
+			int had_core = 0;
+			jobAd->LookupBool( ATTR_JOB_CORE_DUMPED, had_core );
+			if( had_core ) {
+				event.setCoreFile( shadow->getCoreName() );
+			}
+
 				// TODO: fill in local/total rusage
 				// event.run_local_rusage = r;
 			event.run_remote_rusage = remote_rusage;
