@@ -85,8 +85,10 @@ typedef struct {
 	int		clusterId;
 	int		procId;
 	char*	host;
-	char*   owner;
-	time_t	time;
+	char*  	owner;
+	int		q_date;
+	time_t	finishTime;
+	time_t	cpuTime;
 } COMPLETED_JOB_INFO;
 
 typedef struct {
