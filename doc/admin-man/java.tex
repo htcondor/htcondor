@@ -1,0 +1,95 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:java-install}Installing Java Support in Condor}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{installation!Java}
+\index{Java}
+
+Any Condor execution site may be coupled with a
+\index{Java Virtual Machine}
+\index{JVM}
+Java Virtual Machine (JVM) in order to make it Java-capable.
+However, Condor must be informed of some details of the
+installation in order to execute programs correctly.
+
+Begin by installing a Java distribution according to the vendor's
+instructions.  We have successfully used the Sun Java Developer's
+Kit, but any distribution should suffice.  Your machine may have
+been delivered with a JVM already installed -- it is frequently
+found in \File{/usr/bin/java}.
+
+Next, edit your \Condor{config} file.  Adjust the \Expr{JAVA}
+setting to point to the JVM binary, typically \File{/usr/bin/java}.
+Now, restart the \Condor{startd} on that host.  For example,
+
+\begin{verbatim}
+% condor_restart -startd <hostname>
+\end{verbatim}
+
+The \Condor{startd} should take a few moments to test the Java
+installation, query its properties, and advertise itself as
+Java-capable.  If the setup succeeded, then \Condor{status} will
+tell you the host is now Java-capable:
+
+\begin{verbatim}
+% condor_status -java <hostname>
+\end{verbatim}
+
+If, after a few tries, this command does not give any output,
+then the startd is having difficulty executing the JVM.
+The exact cause of the problem depends on the details of the
+JVM, your local installation, and a variety of other factors.
+We can't offer you any specific advice on these matters, but
+we can outline a general strategy for solving these problems.
+
+To begin debugging the problem, examine the
+\Expr{STARTD\_LOG} on that machine.  For example:
+
+\begin{verbatim}
+% condor_config_val STARTD_LOG
+/var/home/condor/log/StartLog
+% more /var/home/condor/log/StartLog
+\end{verbatim}
+
+This log will show the command used to start the JVM, and
+any error messages should it fail.  Two common problems
+are encountered here.
+
+The most common problem is that the JVM
+must be explicitly directed to the location
+of the standard class files.  If this is the case, then
+edit the \Expr{JAVA\_CLASSPATH\_DEFAULT} setting, add the
+path to the standard libraries, and restart the \Condor{startd}.
+For example, you might have to change this:
+
+\begin{verbatim}
+JAVA_CLASSPATH_DEFAULT = $(RELEASE_DIR)/lib .
+\end{verbatim}
+
+To this:
+
+\begin{verbatim}
+JAVA_CLASSPATH_DEFAULT = /usr/java/lib/classes.zip $(RELEASE_DIR)/lib .
+\end{verbatim}
+
+Another common problem is that the JVM requires some extensive 
+setup information involving environment variables, path settings,
+and the like. If this is the case, we recommended that you put
+the necesary information in a wrapper script, and then direct Condor to
+execute the wrapper instead of the JVM directly.  For example,
+you might set:
+
+\begin{verbatim}
+JAVA = /usr/local/bin/java.wrapper
+\end{verbatim}
+
+And then create \File{/usr/local/bin/java.wrapper} with:
+
+\begin{verbatim}
+#!/bin/sh
+
+LD_LIBRARY_PATH=/usr/java/lib:/usr/lib
+export LD_LIBRARY_PATH
+
+exec /usr/bin/java "$@"
+\end{verbatim}
