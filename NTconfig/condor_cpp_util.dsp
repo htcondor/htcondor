@@ -654,6 +654,18 @@ SOURCE="..\src\condor_c++_util\simplelist.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\stat_func.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\stat_wrapper.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\stat_wrapper.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\status_string.C"
 # End Source File
 # Begin Source File
