@@ -574,7 +574,13 @@ RestoreStack()
 int
 Image::Write()
 {
-	return Write( file_name );
+     dprintf( D_ALWAYS, "Image::Write(): fd %d file_name %s\n",
+	      fd, file_name?file_name:"(NULL)");
+     if (fd == -1) {
+	  return Write( file_name );
+     } else {
+	  return Write( fd );
+     }
 }
 
 
@@ -951,7 +957,7 @@ Checkpoint( int sig, int code, void *scp )
 
 	if( MyImage.GetMode() == REMOTE ) {
 		scm = SetSyscalls( SYS_REMOTE | SYS_UNMAPPED );
-		if ( MyImage.GetFd() != -1 ) {
+		// if ( MyImage.GetFd() != -1 ) {
 			// Here we make _certain_ that fd is -1.  on remote checkpoints,
 			// the fd is always new since we open a fresh TCP socket to the
 			// shadow.  I have detected some buggy behavior where the remote
@@ -959,9 +965,12 @@ Checkpoint( int sig, int code, void *scp )
 			// related to the fact that fd is _not_ -1 here, so we make
 			// certain.  Hopefully the real bug will be found someday and
 			// this "patch" can go away...  -Todd 11/95
-			dprintf(D_ALWAYS,"WARNING: fd is %d for remote checkpoint, should be -1\n",MyImage.GetFd());
-			MyImage.SetFd( -1 );
-		}
+			
+		//dprintf(D_ALWAYS,"WARNING: fd is %d for remote checkpoint, should be -1\n",MyImage.GetFd());
+		//MyImage.SetFd( -1 );
+		//}
+		// The above should be commented out for pvm standalone checkpointing -Bin
+
 	} else {
 		scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	}
