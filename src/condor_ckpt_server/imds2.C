@@ -20,17 +20,11 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#include <time.h>
-#include <iostream.h>
-#include <iomanip.h>
-#include <fstream.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
+
+#include "condor_common.h"
 #include "imds2.h"
 #include "fileinfo2.h"
 #include "fileindex2.h"
-
 
 
 u_lint IMDS::GetNumFiles()

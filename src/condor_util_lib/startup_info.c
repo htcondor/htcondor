@@ -20,17 +20,8 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#define _POSIX_SOURCE
-
-#if defined(IRIX62)
-typedef struct fd_set fd_set;
-#endif
 
 #include "condor_common.h"
-
-#ifdef SUNOS41
-#define bool_t int
-#endif
 #include "condor_jobqueue.h"
 #include "condor_constants.h"
 #include "condor_debug.h"

@@ -21,14 +21,7 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
-#if defined(HPUX9)
-#	include <sys/types.h>
-#endif
-
-
-#include "condor_types.h"
+#include "condor_common.h" 
 
 insque( elem, pred )
 struct qelem	*elem;

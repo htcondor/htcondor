@@ -21,9 +21,7 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
-#define _POSIX_SOURCE
+#include "condor_common.h"
 #include "sig_install.h"
 #include "condor_debug.h"
 

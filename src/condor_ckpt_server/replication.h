@@ -24,8 +24,6 @@
 #define REPLICATION_H
 
 #include "constants2.h"
-#include "_condor_fix_types.h"
-#include <netinet/in.h>
 
 class ReplicationEvent
 {

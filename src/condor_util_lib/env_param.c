@@ -21,7 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
-#include "condor_types.h"
 #include "debug.h"
 
 #define EQUAL '='		/* chars looked for during parsing */

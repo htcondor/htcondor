@@ -23,7 +23,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "condor_fdset.h"
 #include "xfer_summary.h"
 #include "string_list.h"
 #include "internet.h"

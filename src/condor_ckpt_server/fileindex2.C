@@ -20,17 +20,10 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#include "fileindex2.h"
-#include <iostream.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <limits.h>
-#include <errno.h>
-#include <sys/stat.h>
-#include "_condor_fix_types.h"
-#include "gen_lib.h" 
 
+#include "condor_common.h"
+#include "fileindex2.h"
+#include "gen_lib.h" 
 
 FileIndex::FileIndex()
 {
