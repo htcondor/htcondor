@@ -597,7 +597,7 @@ Scheduler::update_central_mgr( int command, char *host, int port )
 		return;
 	}
 	SafeSock sock;
-	sock.timeout( 30 );
+	sock.timeout(NEGOTIATOR_CONTACT_TIMEOUT);
 	sock.encode();
 	if( !sock.connect(host, port) ||
 		!sock.put(command) ||
@@ -2789,8 +2789,7 @@ send_vacate(match_rec* match,int cmd)
 
 	dprintf( D_FULLDEBUG, "Called send_vacate( %s, %d )\n", match->peer, cmd );
 	 
-	/* Connect to the specified host with 20 second timeout */
-	sock.timeout(20);
+	sock.timeout(STARTD_CONTACT_TIMEOUT);
 	if (!sock.connect(match->peer,START_PORT)) {
 		dprintf(D_ALWAYS,"Can't connect to startd at %s\n",match->peer);
 		return;
@@ -3804,6 +3803,7 @@ Scheduler::reschedule_negotiator(int, Stream *)
 	if ( !reschedule_request_pending ) {
 		dprintf( D_ALWAYS, "Called reschedule_negotiator()\n" );
 		ReliSock sock;
+		sock.timeout(NEGOTIATOR_CONTACT_TIMEOUT);
 
 		if (!sock.connect(Negotiator->addr(), 0)) {
 			dprintf( D_ALWAYS, "failed to connect to negotiator %s\n",
@@ -3948,6 +3948,7 @@ Scheduler::Relinquish(match_rec* mrec)
 	// inform the startd
 
 	sock = new ReliSock;
+	sock->timeout(STARTD_CONTACT_TIMEOUT);
 	sock->encode();
 	if(!sock->connect(mrec->peer)) {
 		dprintf(D_ALWAYS, "Can't connect to startd %s\n", mrec->peer);
@@ -3978,6 +3979,7 @@ Scheduler::Relinquish(match_rec* mrec)
 	else
 	{
 		sock = new ReliSock;
+		sock->timeout(NEGOTIATOR_CONTACT_TIMEOUT);
 		sock->encode();
 		if(!sock->connect(AccountantName)) {
 			dprintf(D_ALWAYS,"Can't connect to accountant %s\n",
@@ -4089,6 +4091,7 @@ Scheduler::send_alive()
 		numsent++;
 		id = rec->id;
 		sock = new SafeSock;
+		sock->timeout(STARTD_CONTACT_TIMEOUT);
 		sock->encode();
 		id = rec->id;
 		if( !sock->connect(rec->peer) ||
