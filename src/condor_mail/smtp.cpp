@@ -438,9 +438,32 @@ int CSMTPMessage::GetNumberOfAttachments() const
 
 CString CSMTPMessage::GetHeader() const
 {
-  //Create the "Date:" part of the header
+  // Create the "Date:" part of the header
   CTime now(CTime::GetCurrentTime());
-  CString sDate(now.Format(_T("%a, %d %b %Y %H:%M:%S %Z")));
+  CString sDate(now.Format(_T("%a, %d %b %Y %H:%M:%S ")));
+  // The CTime object cannot spit out the timezone info
+  // in a manner compliant with rfc1036 & rfc822. So we
+  // need to do it ourselves, sigh.... Fixed by Todd
+  // Tannenbaum <tannenba@cs.wisc.edu> 11/27/01 after being
+  // pointed out that we were not rfc compliant by the
+  // ever watchful Jim Drews <drews@engr.wisc.edu>.  
+  {
+    TIME_ZONE_INFORMATION tzinfo;
+    int retval = GetTimeZoneInformation( &tzinfo );
+    int hours = (int) tzinfo.Bias / 60;
+    int minutes = (int) tzinfo.Bias % 60;
+    if ( retval == TIME_ZONE_ID_STANDARD ) {
+        hours += (int) tzinfo.StandardBias / 60;
+        minutes += (int) tzinfo.StandardBias % 60;
+    } else {
+        hours += (int) tzinfo.DaylightBias / 60;
+        minutes += (int) tzinfo.DaylightBias % 60;
+    }
+	char tmpstr[80];
+	sprintf( tmpstr, "%+03d%02d", -hours, -minutes );
+	// Now the rfc happy timezone is in tmpstr; append to sDate
+	sDate += tmpstr;
+  }
 
   //Create the "To:" part of the header
   CString sTo;
