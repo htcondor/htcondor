@@ -218,7 +218,7 @@ on that fd.  A door is something like a named pipe.  So, we must
 trap door_info and cause it to return "that is not a door", and all is well.
 */
 
-#if defined(Solaris251) || defined(Solaris27)
+#if defined(Solaris251) || defined(Solaris27) | defined(Solaris28)
 
 int door_info( int fd, void *info )
 {
@@ -1193,7 +1193,7 @@ both remote and local system calls.
 
 #if defined(HPUX9) || defined(LINUX) 
 ssize_t readv( int fd, const struct iovec *iov, size_t iovcnt )
-#elif defined(IRIX) || defined(OSF1)|| defined(HPUX10) || defined(Solaris26) || defined(Solaris27)
+#elif defined(IRIX) || defined(OSF1)|| defined(HPUX10) || defined(Solaris26) || defined(Solaris27) || defined(Solaris28)
 ssize_t readv( int fd, const struct iovec *iov, int iovcnt )
 #else
 int readv( int fd, struct iovec *iov, int iovcnt )
