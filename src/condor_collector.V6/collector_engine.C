@@ -346,11 +346,20 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 	int		insPvt;
 	HashKey		hk;
 	HashString	hashString;
+	static int repeatStartdAds = -1;		// for debugging
+	ClassAd		*clientAdToRepeat = NULL;
+
+	if (repeatStartdAds == -1) {
+		repeatStartdAds = param_integer("COLLECTOR_REPEAT_STARTD_ADS",0);
+	}
 	
 	// mux on command
 	switch (command)
 	{
 	  case UPDATE_STARTD_AD:
+		if ( repeatStartdAds > 0 ) {
+			clientAdToRepeat = new ClassAd(*clientAd);
+		}
 		if (!makeStartdAdHashKey (hk, clientAd, from))
 		{
 			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
@@ -387,6 +396,33 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			(void) updateClassAd (StartdPrivateAds, "StartdPvtAd  ",
 								  "StartdPvt", pvtAd, hk, hashString, insPvt,
 								  from );
+		}
+
+		// create fake duplicates of this ad, each with a different name, if 
+		// we are told to do so.  this feature exists for developer 
+		// scalability testing.
+		if ( repeatStartdAds > 0 && clientAdToRepeat ) {
+			ClassAd *fakeAd;
+			int n;
+			char newname[150],oldname[130];
+			oldname[0] = '\0';
+			clientAdToRepeat->LookupString("Name",oldname,sizeof(oldname));
+			for (n=0;n<repeatStartdAds;n++) {
+				fakeAd = new ClassAd(*clientAdToRepeat);
+				snprintf(newname,sizeof(newname),
+						 "Name=\"fake%d-%s\"",n,oldname);
+				fakeAd->InsertOrUpdate(newname);
+				makeStartdAdHashKey (hk, fakeAd, from);
+				hashString.Build( hk );
+				if (! updateClassAd (StartdAds, "StartdAd     ", "Start",
+							  fakeAd, hk, hashString, insert, from ) )
+				{
+					// don't leak memory if there is some failure
+					delete fakeAd;
+				}
+			}
+			delete clientAdToRepeat;
+			clientAdToRepeat = NULL;
 		}
 		break;
 
