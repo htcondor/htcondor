@@ -37,6 +37,16 @@ GlobusResource::~GlobusResource()
 void GlobusResource::Reconfig()
 {
 	gahp.setTimeout( gahpCallTimeout );
+
+	// If the submitLimit was widened, move jobs from Queued to In-Progress
+	while ( submitsInProgress.Length() < submitLimit &&
+			submitsQueued.Length() > 0 ) {
+		GlobusJob *queued_job = submitsQueued.Head();
+		submitsQueued.Delete( queued_job );
+		submitsInProgress.Append( queued_job );
+		queued_job->SetEvaluateState();
+dprintf(D_FULLDEBUG,"*** Job %d.%d moved to submitsInProgress\n",queued_job->procID.cluster,queued_job->procID.proc);
+	}
 }
 
 void GlobusResource::RegisterJob( GlobusJob *job )
@@ -73,7 +83,6 @@ void GlobusResource::RequestPing( GlobusJob *job )
 bool GlobusResource::RequestSubmit( GlobusJob *job )
 {
 	GlobusJob *jobptr;
-	static int oldSubmitLimit = -1;
 
 	submitsQueued.Rewind();
 	while ( submitsQueued.Next( jobptr ) ) {
@@ -91,14 +100,10 @@ dprintf(D_FULLDEBUG,"*** Job %d.%d already in submitsInProgress\n",job->procID.c
 		}
 	}
 
-		// don't EXCEPT here if submitLimit changed due to a condor_reconfig.
-		// we check against oldSumitLimit to check for this case...
 	if ( submitsInProgress.Length() < submitLimit &&
-		 submitLimit == oldSubmitLimit && 
 		 submitsQueued.Length() > 0 ) {
 		EXCEPT("In GlobusResource for %s, SubmitsQueued is not empty and SubmitsToProgress is not full\n",resourceName);
 	}
-	oldSubmitLimit = submitLimit;
 	if ( submitsInProgress.Length() < submitLimit ) {
 		submitsInProgress.Append( job );
 dprintf(D_FULLDEBUG,"*** Job %d.%d appended to submitsInProgress\n",job->procID.cluster,job->procID.proc);
@@ -119,7 +124,8 @@ dprintf(D_FULLDEBUG,"*** Job %d.%d removed from submitsQueued\n",job->procID.clu
 
 	if ( submitsInProgress.Delete( job ) ) {
 dprintf(D_FULLDEBUG,"*** Job %d.%d removed from submitsInProgress\n",job->procID.cluster,job->procID.proc);
-		if ( submitsQueued.Length() > 0 ) {
+		if ( submitsInProgress.Length() < submitLimit &&
+			 submitsQueued.Length() > 0 ) {
 			GlobusJob *queued_job = submitsQueued.Head();
 			submitsQueued.Delete( queued_job );
 			submitsInProgress.Append( queued_job );
