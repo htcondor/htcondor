@@ -648,8 +648,11 @@ event_vacate(resource_id_t rid, job_id_t jid,task_id_t tid)
 		return -1;
 	}
 
-		// Send VACATE_SERVICE to the schedd and accountant.
-	vacate_client( rip->r_rid );
+		// If the resource is claimed, send VACATE_SERVICE to the
+		// schedd and accountant. 
+	if( rip->r_claimed ) {
+		vacate_client( rip->r_rid );
+	}
 		// Relinquish the match, checkpoint the job, set claimed to false. 
 	resource_free( rip->r_rid );
 	return 0;
