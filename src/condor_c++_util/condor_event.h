@@ -162,7 +162,7 @@ class ULogEvent {
     int                subproc;
     
   protected:
-#if !defined(WIN32)
+
     /** Read the resource usage from the log file.
         @param file the non-NULL readable log file
         @param usage the rusage buffer to modify
@@ -176,7 +176,6 @@ class ULogEvent {
         @return 0 for failure, 1 for success
     */
     int writeRusage (FILE *, rusage &);
-#endif
 
     /** Read the body of the next event.  This virtual function will
         be implemented differently for each specific type of event.
@@ -375,10 +374,8 @@ class CheckpointedEvent : public ULogEvent
     */
     virtual int writeEvent (FILE *);
 
-#if !defined(WIN32)
     /** Local  Usage for the run */  rusage  run_local_rusage;
     /** Remote Usage for the run */  rusage  run_remote_rusage;
-#endif
 };
 
 
@@ -443,10 +440,10 @@ class JobEvictedEvent : public ULogEvent
 
     /// Was the job checkpointed on eviction?
     bool    checkpointed;
-#if !defined(WIN32)
+
     /** Local  Usage for the run */ rusage  run_local_rusage;
     /** Remote Usage for the run */ rusage  run_remote_rusage;
-#endif
+
 	/// bytes sent by the job over network for the run
 	float sent_bytes;
 	/// bytes received by the job over the network for the run
@@ -500,12 +497,12 @@ class JobTerminatedEvent : public ULogEvent
 
     /// name of core file
     char    coreFile[_POSIX_PATH_MAX];
-#if !defined(WIN32)
+
     /** Local  usage for the run */    rusage  run_local_rusage;
     /** Remote usage for the run */    rusage  run_remote_rusage;
     /** Total Local  rusage      */    rusage  total_local_rusage;
     /** Total Remote rusage      */    rusage  total_remote_rusage;
-#endif
+
 	/// bytes sent by the job over network for the run
 	float sent_bytes;
 	/// bytes received by the job over the network for the run

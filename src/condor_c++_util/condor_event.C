@@ -373,10 +373,9 @@ readEvent (FILE *file)
 CheckpointedEvent::
 CheckpointedEvent()
 {
-#if !defined(WIN32)
 	(void)memset((void*)&run_local_rusage,0,(size_t) sizeof(run_local_rusage));
 	run_remote_rusage = run_local_rusage;
-#endif
+
 	eventNumber = ULOG_CHECKPOINTED;
 }
 
@@ -388,17 +387,13 @@ CheckpointedEvent::
 int CheckpointedEvent::
 writeEvent (FILE *file)
 {
-#if defined(WIN32)
-	if (fprintf (file, "Job was checkpointed.\n") < 0)
-		return 0;
-#else
 	if (fprintf (file, "Job was checkpointed.\n") < 0  		||
 		(!writeRusage (file, run_remote_rusage)) 			||
 		(fprintf (file, "  -  Run Remote Usage\n\t") < 0) 	||
 		(!writeRusage (file, run_local_rusage)) 			||
 		(fprintf (file, "  -  Run Local Usage\n") < 0))
 		return 0;
-#endif
+
 	return 1;
 }
 
@@ -406,13 +401,13 @@ int CheckpointedEvent::
 readEvent (FILE *file)
 {
 	int retval = fscanf (file, "Job was checkpointed.");
-#if !defined(WIN32)
+
 	char buffer[128];
 	if (retval == EOF ||
 		!readRusage(file,run_remote_rusage) || fgets (buffer,128,file) == 0  ||
 		!readRusage(file,run_local_rusage)  || fgets (buffer,128,file) == 0)
 		return 0;
-#endif
+
 	return 1;
 }
 		
@@ -422,10 +417,10 @@ JobEvictedEvent ()
 {
 	eventNumber = ULOG_JOB_EVICTED;
 	checkpointed = false;
-#if !defined(WIN32)
+
 	(void)memset((void*)&run_local_rusage,0,(size_t) sizeof(run_local_rusage));
 	run_remote_rusage = run_local_rusage;
-#endif
+
 	sent_bytes = recvd_bytes = 0.0;
 }
 
@@ -447,11 +442,11 @@ readEvent (FILE *file)
 	checkpointed = (bool) ckpt;
 	if (fgets (buffer, 128, file) == 0) return 0;
 	
-#if !defined(WIN32)
+
 	if (!readRusage(file,run_remote_rusage) || fgets (buffer,128,file) == 0  ||
 		!readRusage(file,run_local_rusage)  || fgets (buffer,128,file) == 0)
 		return 0;
-#endif
+
 
 	if (fscanf (file, "\t%f  -  Run Bytes Sent By Job\n", &sent_bytes) == 0 ||
 		fscanf (file, "\t%f  -  Run Bytes Received By Job\n",
@@ -474,14 +469,14 @@ writeEvent (FILE *file)
 	else
 		retval = fprintf (file, "Job was not checkpointed.\n\t");
 
-#if !defined(WIN32)
+
 	if ((retval < 0)										||
 		(!writeRusage (file, run_remote_rusage)) 			||
 		(fprintf (file, "  -  Run Remote Usage\n\t") < 0) 	||
 		(!writeRusage (file, run_local_rusage)) 			||
 		(fprintf (file, "  -  Run Local Usage\n") < 0))
 		return 0;
-#endif
+
 
 	if (fprintf (file, "\t%.0f  -  Run Bytes Sent By Job\n", sent_bytes) < 0 ||
 		fprintf (file, "\t%.0f  -  Run Bytes Received By Job\n",
@@ -517,10 +512,6 @@ writeEvent (FILE *file)
 int JobAbortedEvent::
 readEvent (FILE *file)
 {
-	char buffer[128];
-	int  normalTerm;
-	int  retval, retval1, retval2;
-
 	if (fscanf (file, "Job was aborted by the user.") == EOF)
 		return 0;
 
@@ -535,10 +526,10 @@ JobTerminatedEvent ()
 	eventNumber = ULOG_JOB_TERMINATED;
 	coreFile[0] = '\0';
 	returnValue = signalNumber = -1;
-#if !defined(WIN32)
+
 	(void)memset((void*)&run_local_rusage,0,(size_t)sizeof(run_local_rusage));
 	run_remote_rusage=total_local_rusage=total_remote_rusage=run_local_rusage;
-#endif
+
 	sent_bytes = recvd_bytes = total_sent_bytes = total_recvd_bytes = 0.0;
 }
 
@@ -571,7 +562,7 @@ writeEvent (FILE *file)
 			retval = fprintf (file, "\t(0) No core file\n\t");
 	}
 
-#if !defined(WIN32)
+
 	if ((retval < 0)										||
 		(!writeRusage (file, run_remote_rusage))			||
 		(fprintf (file, "  -  Run Remote Usage\n\t") < 0) 	||
@@ -582,7 +573,7 @@ writeEvent (FILE *file)
 		(!writeRusage (file,  total_local_rusage))			||
 		(fprintf (file, "  -  Total Local Usage\n") < 0))
 		return 0;
-#endif
+
 
 	if (fprintf (file, "\t%.0f  -  Run Bytes Sent By Job\n", sent_bytes) < 0 ||
 		fprintf (file, "\t%.0f  -  Run Bytes Received By Job\n",
@@ -634,14 +625,12 @@ readEvent (FILE *file)
 		}
 	}
 
-#if !defined(WIN32)
 	// read in rusage values
 	if (!readRusage(file,run_remote_rusage) || !fgets(buffer, 128, file) ||
 		!readRusage(file,run_local_rusage)   || !fgets(buffer, 128, file) ||
 		!readRusage(file,total_remote_rusage)|| !fgets(buffer, 128, file) ||
 		!readRusage(file,total_local_rusage) || !fgets(buffer, 128, file))
 		return 0;
-#endif
 	
 	if (fscanf (file, "\t%f  -  Run Bytes Sent By Job\n", &sent_bytes) == 0 ||
 		fscanf (file, "\t%f  -  Run Bytes Received By Job\n",
@@ -745,7 +734,6 @@ static const int minutes = 60 * seconds;
 static const int hours = 60 * minutes;
 static const int days = 24 * hours;
 
-#if !defined(WIN32)
 int ULogEvent::
 writeRusage (FILE *file, rusage &usage)
 {
@@ -797,4 +785,3 @@ readRusage (FILE *file, rusage &usage)
 	return (1);
 }
 
-#endif
