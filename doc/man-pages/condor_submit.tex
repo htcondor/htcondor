@@ -208,6 +208,16 @@ to :
 \end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%
+%% copy_to_spool 
+%%%%%%%%%%%%%%%%%%%
+
+\item[copy\_to\_spool = $<$True \Bar\ False$>$] If \Opt{copy\_to\_spool} is set to
+\Arg{True}, then \Condor{submit} will copy the executable to the local spool 
+directory before running it on a remote host. Oftentimes this can be quite
+time consuming and unnecessary. By setting it to \Arg{False}, \Condor{submit}
+will skip this step.  Defaults to \Arg{True}.
+
+%%%%%%%%%%%%%%%%%%%
 %% getenv
 %%%%%%%%%%%%%%%%%%%
 
@@ -416,6 +426,9 @@ access specifier, \verb@local:@ or \verb@remote:@.  If left unspecified,
 the default access specifier is \verb@remote:@.  Multiple remaps can be 
 specified by separating each with a semicolon.
 
+If you wish to remap file names that contain equals signs or semicolons,
+these special chracaters may be escaped with a backslash.
+
 \begin{description}
 \item[Example One:]
 Suppose that your job reads a file named \verb@dataset.1@.  To instruct Condor
@@ -601,7 +614,7 @@ Two pre-defined macros are supplied by the description file parser. The
 intended to aid in the specification of input/output files, arguments,
 etc., for clusters with lots of jobs, and/or could be used to supply a
 Condor process with its own cluster and process numbers on the command
-line. 
+line.  The \MacroU{Process} macro should not be used for PVM jobs.
 
 \item[Comments] Blank lines and lines beginning with a '\#' (pound-sign)
 character are ignored by the submit-description file parser. 
