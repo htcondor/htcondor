@@ -129,8 +129,7 @@ DEBUG_FLAG = DebugFlag
 
   SSL_DIR = /p/condor/workspaces/ssl
   GLOBUS_DIR = /p/condor/workspaces/globus
-  AUTH2_LIB = ../condor_io/libauth_io.a \
-    $(GLOBUS_DIR)/lib/libglobus_gss_assist.a \
+  AUTH2_LIB = $(GLOBUS_DIR)/lib/libglobus_gss_assist.a \
     $(GLOBUS_DIR)/lib/libglobus_gss.a \
     $(SSL_DIR)/lib/libssl.a $(SSL_DIR)/lib/libcrypto.a 
 
@@ -169,4 +168,5 @@ STD_LIBS = \
   $(CLASSAD_LIB) \
   $(IO_LIB) \
   $(CPLUS_LIB) \
-  $(CUTIL_LIB)
+  $(CUTIL_LIB) \
+  $(AUTH2_LIB)
