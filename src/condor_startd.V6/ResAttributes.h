@@ -33,8 +33,8 @@ private:
 	float			r_condor_load;
 	unsigned long   r_virtmem;
 	unsigned long   r_disk;
-	int             r_idle;
-	int             r_console_idle;
+	time_t			r_idle;
+	time_t			r_console_idle;
 	int				r_mips;
 	int				r_kflops;
 	int				r_last_benchmark;   // Last time we computed benchmarks

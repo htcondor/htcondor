@@ -84,13 +84,13 @@ ResAttributes::refresh( ClassAd* cp, ResAttr_t how_much)
 		sprintf( line, "%s=%f", ATTR_CONDOR_LOAD_AVG, r_condor_load );
 		cp->Insert(line);
 		
-		sprintf(line, "%s=%d", ATTR_KEYBOARD_IDLE, r_idle );
+		sprintf(line, "%s=%d", ATTR_KEYBOARD_IDLE, (int)r_idle );
 		cp->Insert(line); 
   
 			// ConsoleIdle cannot be determined on all platforms; thus, only
 			// advertise if it is not -1.
 		if( r_console_idle != -1 ) {
-			sprintf( line, "%s=%d", ATTR_CONSOLE_IDLE, r_console_idle );
+			sprintf( line, "%s=%d", ATTR_CONSOLE_IDLE, (int)r_console_idle );
 			cp->Insert(line); 
 		}
 	}
