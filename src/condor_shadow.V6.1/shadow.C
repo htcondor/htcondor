@@ -27,6 +27,7 @@
 #include "condor_qmgr.h"         // need to talk to schedd's qmgr
 #include "condor_attributes.h"   // for ATTR_ ClassAd stuff
 #include "condor_email.h"        // for email.
+#include "metric_units.h"
 
 extern "C" char* d_format_time(double);
 
@@ -280,6 +281,17 @@ UniShadow::emailTerminateEvent( int exitReason )
 	fprintf(mailer, "Statistics totaled from all runs:\n");
 	fprintf(mailer, "Allocation/Run time:     %s\n",
 			d_format_time(total_wall_time) );
+
+		// TODO: deal w/ total bytes
+	float network_bytes;
+	network_bytes = bytesSent();
+	fprintf(mailer, "\nNetwork:\n" );
+	fprintf(mailer, "%10s Run Bytes Received By Job\n", 
+			metric_units(network_bytes) );
+	network_bytes = bytesReceived();
+	fprintf(mailer, "%10s Run Bytes Sent By Job\n",
+			metric_units(network_bytes) );
+
 	email_close(mailer);
 }
 
