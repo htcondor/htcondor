@@ -34,6 +34,7 @@ AC_MSG_NOTICE([checking for critical tools used by configure])
 AC_PROG_AWK
 REQUIRE_PATH_PROG([GREP],[grep])
 REQUIRE_PATH_PROG([CUT],[cut])
+AC_PATH_PROG([WHICH],[which],[no],[$PATH])
 
 # Condor only requires 5.002, but GPT apparently relies on 5.005_03 or
 # greater.  Unfortunately, GPT doesn't have a configure script or
@@ -505,8 +506,13 @@ if test $ac_cv_c_compiler_gnu != yes; then
 fi   
 
 AC_MSG_CHECKING([for full path to gcc])
-gcc_path=`which gcc`
-AC_MSG_RESULT([$gcc_path])
+if test $WHICH != no; then
+  gcc_path=`which gcc`
+  AC_MSG_RESULT([$gcc_path])
+else
+  AC_MSG_RESULT([this platform does not support 'which'])
+fi
+
 
 # Figure out the version of gcc. 
 # This probably seems like a job for a regular expression, not a big
@@ -676,9 +682,12 @@ if test $ac_cv_cxx_compiler_gnu != yes; then
    AC_MSG_ERROR( [GNU C++ (g++) is required] )
 fi   
 AC_MSG_CHECKING([for full path to g++])
-gpp_path=`which g++`
-AC_MSG_RESULT([$gpp_path])
-
+if test $WHICH != no; then
+  gpp_path=`which g++`
+  AC_MSG_RESULT([$gpp_path])
+else
+  AC_MSG_RESULT([this platform does not support 'which'])
+fi
 
 #########
 # figure out what linker flags put us in static-link mode
@@ -862,9 +871,13 @@ if test "$LEX" = "no" ; then
     AC_MSG_ERROR( [lex is required] )
 fi
 AC_MSG_CHECKING([for full path to $LEX])
-lex_path=`which $LEX`
-AC_MSG_RESULT([$lex_path])
 
+if test $WHICH != no; then
+  lex_path=`which $LEX`
+  AC_MSG_RESULT([$lex_path])
+else
+  AC_MSG_RESULT([this platform does not support 'which'])
+fi
 
 
 # We don't want to do the default AC_PROG_YACC, since it selects
@@ -1002,7 +1015,11 @@ AC_CACHE_CHECK([for GNU tar],_cv_gnu_tar,
     if test -z "$a" ; then continue ; fi ;
     if ( sh -c "$a --version" 2> /dev/null | grep GNU  2>&1 > /dev/null );
     then
-      _cv_gnu_tar=`which $a`;
+      if test $WHICH != no; then
+        _cv_gnu_tar=`$WHICH $a`;
+      else
+        _cv_gnu_tar="$a";
+      fi
       break;
     fi
   done;
