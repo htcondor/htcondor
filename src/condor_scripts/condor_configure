@@ -89,9 +89,11 @@ else {
     if ($opt_local_dir) {
 	my $old_local_dir=&find_local_dir();
 	$local_dir=$opt_local_dir; 
-	system ("mv $old_local_dir/spool $local_dir");
-	system ("mv $old_local_dir/log $local_dir");
-	system ("mv $old_local_dir/execute $local_dir");
+ 
+	(system ("mv $old_local_dir/spool $local_dir") ||
+	system ("mv $old_local_dir/log $local_dir") ||
+	system ("mv $old_local_dir/execute $local_dir")) &&
+	die "\nUnable to move log, spool, execute directories to new local directory: \"$local_dir\"\n\n";
 	&condor_init ($local_dir);
 	$local_config{LOCAL_DIR}=$local_dir;
     }
