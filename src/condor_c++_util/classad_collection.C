@@ -7,19 +7,9 @@
 static char *_FileName_ = __FILE__;
 
 //----------------------------------------------------------------------------------
-// Constructor
-//----------------------------------------------------------------------------------
-
-ClassAdCollection::ClassAdCollection() 
-  : Collections(97, HashFunc)
-{
-  LastCoID=0;
-  Collections.insert(LastCoID,new ExplicitCollection(-1,"",true));
-  
-}
-
-//----------------------------------------------------------------------------------
-// Constructor
+/** Constructor (initialization)
+ input: filename - the name of the log file
+*/
 //----------------------------------------------------------------------------------
 
 ClassAdCollection::ClassAdCollection(const char* filename) 
@@ -39,7 +29,7 @@ ClassAdCollection::ClassAdCollection(const char* filename)
 }
 
 //----------------------------------------------------------------------------------
-// Destructor
+/// Destructor - frees the memory used by the collections
 //----------------------------------------------------------------------------------
 
 ClassAdCollection::~ClassAdCollection() {
@@ -47,7 +37,16 @@ ClassAdCollection::~ClassAdCollection() {
 }
 
 //----------------------------------------------------------------------------------
-// New Class Ad
+/** Insert a new Class Ad -
+ this inserts a classad with a given key, type, and target type. The class ad is
+inserted as an empty class ad (use SetAttribute to set its attributes).
+This operation is logged. The class ad is inserted into the root collection,
+and into its children if appropriate.
+Input: key - the unique key for the ad
+       mytype - the ad's type
+       targettype - the target type
+Output: true on success, false otherwise
+*/
 //----------------------------------------------------------------------------------
 
 bool ClassAdCollection::NewClassAd(const char *key, const char *mytype, const char *targettype)
@@ -58,7 +57,12 @@ bool ClassAdCollection::NewClassAd(const char *key, const char *mytype, const ch
 }
 
 //----------------------------------------------------------------------------------
-// Destroy Class Ad
+/** Delete a Class Ad
+Delete a class ad. The ad is deleted from all the collections. This operation
+is logged. 
+Input: key - the class ad's key.
+Output: true on success, false otherwise
+*/
 //----------------------------------------------------------------------------------
 
 bool ClassAdCollection::DestroyClassAd(const char *key)
@@ -69,7 +73,13 @@ bool ClassAdCollection::DestroyClassAd(const char *key)
 }
 
 //----------------------------------------------------------------------------------
-// Change attribute of a class ad
+/** Change attribute of a class ad - this operation is logged.
+Any effects on collection membership will also take place.
+Input: key - the class ad's key
+       name - the attribute name
+       value - the attribute value
+Output: true on success, false otherwise
+*/
 //----------------------------------------------------------------------------------
 
 bool ClassAdCollection::SetAttribute(const char *key, const char *name, const char *value)
@@ -80,7 +90,12 @@ bool ClassAdCollection::SetAttribute(const char *key, const char *name, const ch
 }
 
 //----------------------------------------------------------------------------------
-// New Class Ad
+/** Delete an attribute of a class ad - this operation is logged.
+Any effects on collection membership will also take place.
+Input: key - the class ad's key
+       name - the attribute name
+Output: true on success, false otherwise
+*/
 //----------------------------------------------------------------------------------
 
 bool ClassAdCollection::DeleteAttribute(const char *key, const char *name)
@@ -91,7 +106,15 @@ bool ClassAdCollection::DeleteAttribute(const char *key, const char *name)
 }
 
 //----------------------------------------------------------------------------------
-// Create an Explicit Collection
+/** Create an Explicit Collection - create a new collection as a child of
+an exisiting collection. This operation, as well as other collection management
+operation is not logged.
+Input: ParentCoID - the ID of the parent collection
+       Rank - the rank expression for the collection
+       FullFlag - indicates wether ads which are added to the parent should automatically
+                  be added to the child
+Output: the new collectionID
+*/
 //----------------------------------------------------------------------------------
 
 int ClassAdCollection::CreateExplicitCollection(int ParentCoID, const MyString& Rank, bool FullFlag)
@@ -118,7 +141,14 @@ int ClassAdCollection::CreateExplicitCollection(int ParentCoID, const MyString& 
 }
 
 //----------------------------------------------------------------------------------
-// Create a constraint collection
+/** Create a constraint Collection - create a new collection as a child of
+an exisiting collection. This operation, as well as other collection management
+operation is not logged.
+Input: ParentCoID - the ID of the parent collection
+       Rank - the rank expression for the collection
+       Constraint - the constraint expression (must result in a boolean)
+Output: the new collectionID
+*/
 //----------------------------------------------------------------------------------
 
 int ClassAdCollection::CreateConstraintCollection(int ParentCoID, const MyString& Rank, const MyString& Constraint)
@@ -145,7 +175,10 @@ int ClassAdCollection::CreateConstraintCollection(int ParentCoID, const MyString
 }
 
 //----------------------------------------------------------------------------------
-// Delete a collection
+/** Delete a collection
+Input: CoID - the ID of the collection
+Output: true on success, false otherwise
+*/
 //----------------------------------------------------------------------------------
 
 bool ClassAdCollection::DeleteCollection(int CoID)
@@ -154,7 +187,7 @@ bool ClassAdCollection::DeleteCollection(int CoID)
 }
 
 //----------------------------------------------------------------------------------
-// Include Class Ad in a collection
+/// Include Class Ad in a collection (private method)
 //----------------------------------------------------------------------------------
 
 bool ClassAdCollection::AddClassAd(int CoID, const MyString& OID)
@@ -167,7 +200,7 @@ bool ClassAdCollection::AddClassAd(int CoID, const MyString& OID)
 }
 
 //----------------------------------------------------------------------------------
-// Include Class Ad in a collection
+/// Include Class Ad in a collection (private method)
 //----------------------------------------------------------------------------------
 
 bool ClassAdCollection::AddClassAd(int CoID, const MyString& OID, ClassAd* Ad)
@@ -206,7 +239,7 @@ bool ClassAdCollection::AddClassAd(int CoID, const MyString& OID, ClassAd* Ad)
 }
 
 //----------------------------------------------------------------------------------
-// Remove Class Ad from a collection
+/// Remove Class Ad from a collection (private method)
 //----------------------------------------------------------------------------------
 
 bool ClassAdCollection::RemoveClassAd(int CoID, const MyString& OID)
@@ -229,7 +262,7 @@ bool ClassAdCollection::RemoveClassAd(int CoID, const MyString& OID)
 }
 
 //----------------------------------------------------------------------------------
-// Change a class-ad
+/// Change a class-ad (private method)
 //----------------------------------------------------------------------------------
 
 bool ClassAdCollection::ChangeClassAd(int CoID, const MyString& OID)
@@ -242,7 +275,7 @@ bool ClassAdCollection::ChangeClassAd(int CoID, const MyString& OID)
 }
 
 //----------------------------------------------------------------------------------
-// Change a class-ad
+/// Change a class-ad (private method)
 //----------------------------------------------------------------------------------
 
 bool ClassAdCollection::ChangeClassAd(int CoID, const MyString& OID, ClassAd* Ad)
@@ -290,7 +323,7 @@ bool ClassAdCollection::ChangeClassAd(int CoID, const MyString& OID, ClassAd* Ad
 }
 
 //----------------------------------------------------------------------------------
-// Remove a collection
+/// Remove a collection (private method)
 //----------------------------------------------------------------------------------
 
 bool ClassAdCollection::RemoveCollection(int CoID, BaseCollection* Coll)
@@ -301,7 +334,7 @@ bool ClassAdCollection::RemoveCollection(int CoID, BaseCollection* Coll)
 }
 
 //----------------------------------------------------------------------------------
-// Iteration Methods
+/// Start iterating on cllection IDs
 //----------------------------------------------------------------------------------
 
 void ClassAdCollection::StartIterateAllCollections()
@@ -309,6 +342,8 @@ void ClassAdCollection::StartIterateAllCollections()
   Collections.startIterations();
 }
 
+//----------------------------------------------------------------------------------
+/// Get the next collection ID
 //----------------------------------------------------------------------------------
 
 bool ClassAdCollection::IterateAllCollections(int& CoID)
@@ -318,6 +353,8 @@ bool ClassAdCollection::IterateAllCollections(int& CoID)
   return false;
 }
 
+//----------------------------------------------------------------------------------
+/// Start iterating on child collections of some parent collection
 //----------------------------------------------------------------------------------
 
 bool ClassAdCollection::StartIterateChildCollections(int ParentCoID)
@@ -331,6 +368,8 @@ bool ClassAdCollection::StartIterateChildCollections(int ParentCoID)
 }
 
 //----------------------------------------------------------------------------------
+/// Get the next child collection
+//----------------------------------------------------------------------------------
 
 bool ClassAdCollection::IterateChildCollections(int ParentCoID, int& CoID)
 {
@@ -342,6 +381,8 @@ bool ClassAdCollection::IterateChildCollections(int ParentCoID, int& CoID)
   return false;
 }
 
+//----------------------------------------------------------------------------------
+/// Start iterating on class ads in a collection
 //----------------------------------------------------------------------------------
 
 bool ClassAdCollection::StartIterateClassAds(int CoID)
@@ -355,6 +396,8 @@ bool ClassAdCollection::StartIterateClassAds(int CoID)
 }
 
 //----------------------------------------------------------------------------------
+/// Get the next class ad and rank in the collection
+//----------------------------------------------------------------------------------
 
 bool ClassAdCollection::IterateClassAds(int CoID, RankedClassAd& RankedAd)
 {
@@ -367,7 +410,7 @@ bool ClassAdCollection::IterateClassAds(int CoID, RankedClassAd& RankedAd)
 }
 
 //----------------------------------------------------------------------------------
-// Misc methods
+/// Calculate a class-ad's rank
 //----------------------------------------------------------------------------------
 
 float ClassAdCollection::GetClassAdRank(ClassAd* Ad, const MyString& RankExpr)
@@ -382,6 +425,8 @@ float ClassAdCollection::GetClassAdRank(ClassAd* Ad, const MyString& RankExpr)
 }
 
 //----------------------------------------------------------------------------------
+/// Find a collection's type
+//----------------------------------------------------------------------------------
 
 int ClassAdCollection::GetCollectionType(int CoID)
 {
@@ -390,6 +435,8 @@ int ClassAdCollection::GetCollectionType(int CoID)
   return Coll->Type();
 }
 
+//----------------------------------------------------------------------------------
+/// Traverse the collection tree
 //----------------------------------------------------------------------------------
 
 bool ClassAdCollection::TraverseTree(int CoID, bool (ClassAdCollection::*Func)(int,BaseCollection*))
@@ -404,6 +451,8 @@ bool ClassAdCollection::TraverseTree(int CoID, bool (ClassAdCollection::*Func)(i
   return Func(CoID,CurrNode);
 }
 
+//----------------------------------------------------------------------------------
+/// Print out all the collections
 //----------------------------------------------------------------------------------
   
 void ClassAdCollection::Print()
@@ -427,6 +476,9 @@ void ClassAdCollection::Print()
     printf("\n-----------------------------------------\n");
   }
 }
+
+//----------------------------------------------------------------------------------
+/// Print out a single collection
 //----------------------------------------------------------------------------------
   
 void ClassAdCollection::Print(int CoID)

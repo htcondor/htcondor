@@ -23,7 +23,6 @@ public:
 
   // Constructors and destructor
 
-  ClassAdCollection();
   ClassAdCollection(const char* filename);
   ~ClassAdCollection();
 
