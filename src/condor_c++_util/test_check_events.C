@@ -38,7 +38,7 @@ Status
 CheckArgs(int argc, char **argv);
 
 void
-CheckAnEvent(CheckEvents &ce, const ULogEvent *event,
+CheckThisEvent(CheckEvents &ce, const ULogEvent *event,
 		bool expectedResult, bool expectedGoodEvent, bool &result);
 
 int main(int argc, char **argv)
@@ -72,11 +72,11 @@ int main(int argc, char **argv)
 	se1.subproc = 0;
 
 	printf("Testing submit... ");
-	CheckAnEvent(ce1, &se1, true, true, result);
+	CheckThisEvent(ce1, &se1, true, true, result);
 
 		// Re-do the same submit event -- this should generate an error.
 	printf("Testing submit... ");
-	CheckAnEvent(ce1, &se1, false, false, result);
+	CheckThisEvent(ce1, &se1, false, false, result);
 
 		// Test a submit event for a new job.
 	SubmitEvent		se2;
@@ -85,7 +85,7 @@ int main(int argc, char **argv)
 	se2.subproc = 1;
 
 	printf("Testing submit... ");
-	CheckAnEvent(ce1, &se2, true, true, result);
+	CheckThisEvent(ce1, &se2, true, true, result);
 
 		// Test a terminate event.  This should fail because we have
 		// two submits for this job.
@@ -95,7 +95,7 @@ int main(int argc, char **argv)
 	te1.subproc = 0;
 
 	printf("Testing terminate... ");
-	CheckAnEvent(ce1, &te1, false, false, result);
+	CheckThisEvent(ce1, &te1, false, false, result);
 
 		// Test a job aborted event.
 	JobAbortedEvent	ae2;
@@ -104,7 +104,7 @@ int main(int argc, char **argv)
 	ae2.subproc = 1;
 
 	printf("Testing job aborted... ");
-	CheckAnEvent(ce1, &ae2, true, true, result);
+	CheckThisEvent(ce1, &ae2, true, true, result);
 
 		// Test an execute event.  This should fail because we already
 		// got an aborted event for this job.
@@ -114,7 +114,7 @@ int main(int argc, char **argv)
 	exec.subproc = 1;
 
 	printf("Testing execute... ");
-	CheckAnEvent(ce1, &exec, false, false, result);
+	CheckThisEvent(ce1, &exec, false, false, result);
 
 		// Test an execute event.  This should fail because we haven't
 		// gotten a submit event for this job.
@@ -123,7 +123,7 @@ int main(int argc, char **argv)
 	exec.subproc = 1;
 
 	printf("Testing execute... ");
-	CheckAnEvent(ce1, &exec, false, false, result);
+	CheckThisEvent(ce1, &exec, false, false, result);
 
 		// Test a terminate event.  This should fail because we already
 		// got an aborted event for this job.
@@ -133,7 +133,7 @@ int main(int argc, char **argv)
 	te2.subproc = 1;
 
 	printf("Testing terminate... ");
-	CheckAnEvent(ce1, &te2, false, false, result);
+	CheckThisEvent(ce1, &te2, false, false, result);
 
 		// Test a job aborted event.  This should fail because we
 		// don't have a submit event for this job yet.
@@ -143,7 +143,7 @@ int main(int argc, char **argv)
 	ae3.subproc = 0;
 
 	printf("Testing job aborted... ");
-	CheckAnEvent(ce1, &ae3, false, false, result);
+	CheckThisEvent(ce1, &ae3, false, false, result);
 
 		// Test a submit event for the job that just aborted.  This
 		// should fail because we got the abort before the submit.
@@ -153,7 +153,7 @@ int main(int argc, char **argv)
 	se3.subproc = 0;
 
 	printf("Testing submit... ");
-	CheckAnEvent(ce1, &se3, false, false, result);
+	CheckThisEvent(ce1, &se3, false, false, result);
 
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce1.CheckAllJobs(errorMsg) ) {
@@ -171,13 +171,13 @@ int main(int argc, char **argv)
 		// events...
 	CheckEvents		ce2;
 	printf("Testing submit... ");
-	CheckAnEvent(ce2, &se1, true, true, result);
+	CheckThisEvent(ce2, &se1, true, true, result);
 
 	printf("Testing submit... ");
-	CheckAnEvent(ce2, &se2, true, true, result);
+	CheckThisEvent(ce2, &se2, true, true, result);
 
 	printf("Testing terminate... ");
-	CheckAnEvent(ce2, &te1, true, true, result);
+	CheckThisEvent(ce2, &te1, true, true, result);
 
 		// This should fail because the second job doesn't have a terminate
 		// or abort event.
@@ -195,7 +195,7 @@ int main(int argc, char **argv)
 	ee2.subproc = 1;
 
 	printf("Testing executable error... ");
-	CheckAnEvent(ce2, &ee2, true,true, result);
+	CheckThisEvent(ce2, &ee2, true,true, result);
 
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce2.CheckAllJobs(errorMsg) ) {
@@ -220,7 +220,7 @@ int main(int argc, char **argv)
 	se4.subproc = 9;
 
 	printf("Testing submit... ");
-	CheckAnEvent(ce3, &se4, true, true, result);
+	CheckThisEvent(ce3, &se4, true, true, result);
 
 	ExecuteEvent exec2;
 	exec2.cluster = 9876;
@@ -228,7 +228,7 @@ int main(int argc, char **argv)
 	exec2.subproc = 9;
 
 	printf("Testing execute... ");
-	CheckAnEvent(ce3, &exec2, true, true, result);
+	CheckThisEvent(ce3, &exec2, true, true, result);
 
 	JobTerminatedEvent	te3;
 	te3.cluster = 9876;
@@ -236,7 +236,7 @@ int main(int argc, char **argv)
 	te3.subproc = 9;
 
 	printf("Testing terminate... ");
-	CheckAnEvent(ce3, &te3, true, true, result);
+	CheckThisEvent(ce3, &te3, true, true, result);
 
 	JobAbortedEvent	ae4;
 	ae4.cluster = 9876;
@@ -244,7 +244,7 @@ int main(int argc, char **argv)
 	ae4.subproc = 9;
 
 	printf("Testing job aborted... ");
-	CheckAnEvent(ce3, &ae4, true, false, result);
+	CheckThisEvent(ce3, &ae4, true, false, result);
 
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce3.CheckAllJobs(errorMsg) ) {
@@ -262,16 +262,16 @@ int main(int argc, char **argv)
 	CheckEvents		ce4;
 
 	printf("Testing submit... ");
-	CheckAnEvent(ce4, &se4, true, true, result);
+	CheckThisEvent(ce4, &se4, true, true, result);
 
 	printf("Testing execute... ");
-	CheckAnEvent(ce4, &exec2, true, true, result);
+	CheckThisEvent(ce4, &exec2, true, true, result);
 
 	printf("Testing terminate... ");
-	CheckAnEvent(ce4, &te3, true, true, result);
+	CheckThisEvent(ce4, &te3, true, true, result);
 
 	printf("Testing job aborted... ");
-	CheckAnEvent(ce4, &ae4, false, false, result);
+	CheckThisEvent(ce4, &ae4, false, false, result);
 
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce4.CheckAllJobs(errorMsg) ) {
@@ -287,19 +287,19 @@ int main(int argc, char **argv)
 	CheckEvents		ce5(false, true);
 
 	printf("Testing submit... ");
-	CheckAnEvent(ce5, &se4, true, true, result);
+	CheckThisEvent(ce5, &se4, true, true, result);
 
 	printf("Testing execute... ");
-	CheckAnEvent(ce5, &exec2, true, true, result);
+	CheckThisEvent(ce5, &exec2, true, true, result);
 
 	printf("Testing terminate... ");
-	CheckAnEvent(ce5, &te3, true, true, result);
+	CheckThisEvent(ce5, &te3, true, true, result);
 
 	printf("Testing execute... ");
-	CheckAnEvent(ce5, &exec2, true, false, result);
+	CheckThisEvent(ce5, &exec2, true, false, result);
 
 	printf("Testing terminate... ");
-	CheckAnEvent(ce5, &te3, true, false, result);
+	CheckThisEvent(ce5, &te3, true, false, result);
 
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce5.CheckAllJobs(errorMsg) ) {
@@ -317,19 +317,19 @@ int main(int argc, char **argv)
 	CheckEvents		ce6;
 
 	printf("Testing submit... ");
-	CheckAnEvent(ce6, &se4, true, true, result);
+	CheckThisEvent(ce6, &se4, true, true, result);
 
 	printf("Testing execute... ");
-	CheckAnEvent(ce6, &exec2, true, true, result);
+	CheckThisEvent(ce6, &exec2, true, true, result);
 
 	printf("Testing terminate... ");
-	CheckAnEvent(ce6, &te3, true, true, result);
+	CheckThisEvent(ce6, &te3, true, true, result);
 
 	printf("Testing execute... ");
-	CheckAnEvent(ce6, &exec2, false, false, result);
+	CheckThisEvent(ce6, &exec2, false, false, result);
 
 	printf("Testing terminate... ");
-	CheckAnEvent(ce6, &te3, false, false, result);
+	CheckThisEvent(ce6, &te3, false, false, result);
 
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce6.CheckAllJobs(errorMsg) ) {
@@ -389,7 +389,7 @@ CheckArgs(int argc, char **argv)
 }
 
 void
-CheckAnEvent(CheckEvents &ce, const ULogEvent *event,
+CheckThisEvent(CheckEvents &ce, const ULogEvent *event,
 		bool expectedResult, bool expectedGoodEvent, bool &result)
 {
 	MyString		errorMsg;

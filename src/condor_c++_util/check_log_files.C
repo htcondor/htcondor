@@ -74,7 +74,8 @@ int main(int argc, char **argv)
 
 			printf( "Log event: %s", ULogEventNumberNames[e->eventNumber] );
 
-			if ( !ce.CheckAnEvent(e, errorMsg) ) {
+			bool	eventIsGood;
+			if ( !ce.CheckAnEvent(e, errorMsg, eventIsGood) ) {
 				fprintf(stderr, "%s\n", errorMsg.Value());
 				result = 1;
 			}
