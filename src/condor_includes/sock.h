@@ -61,6 +61,7 @@ public:
 
 	int assign(int =-1);
 	int bind(int =0);
+    int setsockopt(int, int, const char*, int); 
 	inline int bind(char *s) { return bind(getportbyserv(s)); }
 	inline int get_socket (void) { return _sock; }
 

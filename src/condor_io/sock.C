@@ -127,6 +127,11 @@ int Sock::bind(
 }
 
 
+int Sock::setsockopt(int level, int optname, const char* optval, int optlen)
+{
+	return ::setsockopt(_sock, level, optname, optval, optlen);
+}
+
 
 int Sock::do_connect(
 	char	*host,
