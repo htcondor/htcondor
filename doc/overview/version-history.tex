@@ -22,6 +22,12 @@ being added, many bugs fixed, etc.
 
 \begin{itemize}
 
+\item Fixed a very serious bug in the Condor library linked in with
+\Condor{compile} to create standard jobs that was causing
+checkpointing to fail in many cases.  
+Any jobs that were linked with the 6.1.5 Condor libraries should
+probably be removed, re-linked, and re-submitted. 
+
 \item Fixed a bug in \Condor{userprio} that was introduced in version
 6.1.5 that was preventing it from finding the address of the
 \Condor{negotiator} for your pool.
@@ -33,7 +39,46 @@ being added, many bugs fixed, etc.
 \item Fixed a bug in the way the \Opt{-pool} option was handled by
 many Condor tools that was introduced in version 6.1.5. 
 
+\item The Condor version string is now included in all Condor
+libraries.
+You can now run \Prog{ident} on any program linked with
+\Condor{compile} to view which version of the Condor libraries you
+linked with.
+
+\item The SMP startd can now handle dynamic reconfiguration of the
+number of each type of virtual machine being reported.
+This allows you, during the normal running of the startd, to increase
+or decrease the number of CPUs that Condor is using.
+If you reconfigure the startd to use less CPUs than it currently has
+under its control, it will first remove CPUs that have no Condor jobs
+running on them.
+If more CPUs need to be evicted, the startd will checkpoint jobs and
+evict them in reverse rank order (using the startd's \Macro{Rank}
+expression).
+So, the lower the value of the rank, the more likely a job will be
+kicked off.
+
+\item The SMP startd contrib module's \Condor{starter} no longer makes
+a call that was causing warning messages about ``ERROR: Unknown System
+Call (-58) - system call not supported by Condor'' when used with the
+6.0.X \Condor{shadow}.
+This was a harmless call, but removing the call prevents the error
+message.
+In addition, the SMP startd module now includes the \Condor{vacate}
+and \Condor{checkpoint} tools, since they have been enhanced in 6.1.X
+to support SMP-specific functionality.  
+
 \item Added support for SMP Digital Unix (Alpha) machines.
+
+\item Fixed a bug that was causing an overflow in the computation of
+free disk and swap space on Digital Unix (Alpha) machines.
+
+\item The \Condor{startd} and \Condor{schedd} now can ``invalidate''
+their classads from the collector.
+So, when a daemon is shut down, or a machine is reconfigured to 
+advertise fewer virtual machines, those changes will be instantly
+visable with \Condor{status}, instead of having to wait 15 minutes for
+the stale classads to time-out.
 
 \item The \Condor{schedd} no longer forks a child process (a ``schedd
 agent'') to claim available \Condor{startd}s.  
@@ -53,17 +98,27 @@ This ID can be used to help write more complex policy expressions on
 SMP hosts, and to easily identify which hosts in your pool are in fact
 SMP machines.
 
+\item The SMP contrib module now includes the \Condor{checkpoint} and
+\Condor{vacate} programs, which allow you to vacate or checkpoint jobs
+on individual CPUs on the SMP, instead of checkpointing or vacating
+everything.  
+
 \item Modified the output for \Condor{q} -run for scheduler and PVM
 universe jobs.  The host where the scheduler universe job is running
 is now displayed correctly.  For PVM jobs, a count of the current
 number of hosts where the job is running is displayed.
 
-\item Fixed the \Condor{startd} so that it no longer prints gobs of 
-ProcAPI errors to the log file when it is being run as non-root.  
+\item Fixed the \Condor{startd} so that it no longer prints lots of
+ProcAPI errors to the log file when it is being run as non-root.
 
 \item \Macro{FS\_PATHNAME} and \Macro{VOS\_PATHNAME} are no longer
 used.  AFS support now works similar to NFS support, via the
 \Macro{FILESYSTEM\_DOMAIN} macro.
+
+\item Fixed a minor bug in the \File{Condor.pm} perl module that was
+causing it to be case-sensitve when parsing the Condor submit file.
+Now, the perl module is properly case-insensitive, as indicated in the
+documentation.
 
 \end{itemize}
 
