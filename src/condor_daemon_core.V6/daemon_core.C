@@ -61,6 +61,7 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 #include "condor_distribution.h"
 #include "condor_environ.h"
 #include "condor_version.h"
+#include "setenv.h"
 #ifdef WIN32
 #include "exphnd.WIN32.h"
 #include "condor_fix_assert.h"
@@ -4614,85 +4615,6 @@ DCFindWindow(HWND hWnd, LPARAM p)
 	return TRUE;
 }
 #endif	// of ifdef WIN32
-
-int DaemonCore::SetEnv( const char *key, char *value)
-{
-	assert(key);
-	assert(value);
-#ifdef WIN32
-	if ( !SetEnvironmentVariable(key, value) ) {
-		dprintf(D_ALWAYS,
-				"SetEnvironmentVariable failed, errno=%d\n",
-				GetLastError());
-		return FALSE;
-	}
-#else
-	// XXX: We should actually put all of this in a hash table, so that 
-	// we don't leak memory.  This is just quick and dirty to get something
-	// working.
-	char *buf;
-	buf = new char[strlen(key) + strlen(value) + 2];
-	sprintf(buf, "%s=%s", key, value);
-	if( putenv(buf) != 0 )
-	{
-		dprintf(D_ALWAYS, "putenv failed: %s (errno=%d)\n",
-				strerror(errno), errno);
-		return FALSE;
-	}
-#endif
-	return TRUE;
-}
-
-int DaemonCore::SetEnv( char *env_var ) 
-{
-		// this function used if you've already got a name=value type
-		// of string, and want to put it into the environment.  env_var
-		// must therefore contain an '='.
-	if ( !env_var ) {
-		dprintf (D_ALWAYS, "DaemonCore::SetEnv, env_var = NULL!\n" );
-		return FALSE;
-	}
-
-		// Assume this type of string passes thru with no problem...
-	if ( env_var[0] == 0 ) {
-		return TRUE;
-	}
-
-	char *equalpos = NULL;
-
-	if ( ! (equalpos = strchr( env_var, '=' )) ) {
-		dprintf (D_ALWAYS, "DaemonCore::SetEnv, env_var has no '='\n" );
-		dprintf (D_ALWAYS, "env_var = \"%s\"\n", env_var );
-		return FALSE; 
-	}
-
-#ifdef WIN32  // will this ever be used?  Hmmm....
-		// hack up string and pass to other SetEnv version.
-	int namelen = (int) equalpos - (int) env_var;
-	int valuelen = strlen(env_var) - namelen - 1;
-
-	char *name = new char[namelen+1];
-	char *value = new char[valuelen+1];
-	strncpy ( name, env_var, namelen );
-	strncpy ( value, equalpos+1, valuelen );
-
-	int retval = SetEnv ( name, value );
-
-	delete [] name;
-	delete [] value;
-	return retval;
-#else
-		// XXX again, this is a memory-leaking quick hack; see above.
-	char *buf = new char[strlen(env_var) +1];
-	strcpy ( buf, env_var );
-	if( putenv(buf) != 0 ) {
-		dprintf(D_ALWAYS, "putenv failed: %s (errno=%d)\n",
-				strerror(errno), errno);
-		return FALSE;
-	}
-	return TRUE;
-#endif
-}
 
 
 void

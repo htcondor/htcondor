@@ -34,6 +34,7 @@
 #include "condor_debug.h"
 #include "condor_distribution.h"
 #include "condor_environ.h"
+#include "setenv.h"
 
 #define _NO_EXTERN_DAEMON_CORE 1	
 #include "condor_daemon_core.h"
@@ -964,18 +965,9 @@ void
 dc_config_auth()
 {
 #if !defined(SKIP_AUTHENTICATION) && defined(GSI_AUTHENTICATION)
-    int i;
-	char *x509_env = "X509_USER_PROXY=";
 
     // First, if there is X509_USER_PROXY, we clear it.
-    for (i=0;environ[i] != NULL;i++) {
-         if (strncmp(environ[i], x509_env, strlen(x509_env) ) == 0) {
-             for (;environ[i] != NULL;i++) {
-                 environ[i] = environ[i+1];
-			}
-             break;
-         }
-    }
+	UnsetEnv( "X509_USER_PROXY" );
 
     // Next, we param the configuration file for GSI related stuff and 
     // set the corresponding environment variables for it
@@ -1762,7 +1754,7 @@ int main( int argc, char** argv )
 
 	// now re-set the identity so that any children we spawn will have it
 	// in their environment
-	daemonCore->SetEnv( envName, daemonCore->sec_man->my_unique_id() );
+	SetEnv( envName, daemonCore->sec_man->my_unique_id() );
 
 
 		// Initialize the StringLists that contain the attributes we

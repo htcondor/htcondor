@@ -770,22 +770,6 @@ class DaemonCore : public Service
     KeyCache* getKeyCache();
 	//@}
 
- 	/** @name Environment management.
-	 */
-	//@{
-    /** Put the {key, value} pair into the environment
-        @param key
-        @param value
-        @return Not_Yet_Documented
-    */
-    int SetEnv(const char *key, char *value);
-
-    /** Put env_var into the environment
-        @param env_var Desired string to go into environment;
-        must be of the form 'name=value' 
-    */
-    int SetEnv(char *env_var);
-	//@}
      
 	/** @name Thread management.
 	 */
