@@ -44,7 +44,8 @@ extern int		check_new_exec_interval;
 extern int		preen_interval;
 extern int		new_bin_delay;
 extern char*	FS_Preen;
-
+extern ClassAd*	ad;
+extern char*	CollectorHost;
 
 #if 0
 extern int		doConfigFromServer; 
@@ -52,9 +53,8 @@ extern char*	config_location;
 #endif
 
 extern time_t	GetTimeStamp(char* file);
-extern int 	   	NewExecutable(char* file, time_t tsp);
+extern int 	   	NewExecutable(char* file, time_t* tsp);
 extern void		tail_log( FILE*, char*, int );
-extern void		update_collector();
 extern int		run_preen(Service*);
 
 #ifndef WANT_DC_PM
@@ -156,12 +156,14 @@ daemon::daemon(char *name)
 	restarts = 0;
 	newExec = FALSE; 
 	timeStamp = 0;
+	startTime = 0;
 	start_tid = -1;
 	recover_tid = -1;
 	stop_tid = -1;
 	stop_fast_tid = -1;
  	hard_kill_tid = -1;
 	stop_state = NONE;
+	needs_update = FALSE;
 #if 0
 	port = NULL;
 	config_info_file = NULL;
@@ -303,6 +305,13 @@ int daemon::Restart()
 		Register_Timer( n, (TimerHandlercpp)daemon::DoStart,
 						"daemon::DoStart()", this );
 	dprintf(D_ALWAYS, "restarting %s in %d seconds\n", process_name, n);
+
+		// Update the CM now so we see that this daemon is down.
+	daemons.UpdateCollector();
+
+		// Set a flag so Start() knows to update once it's up again.
+	needs_update = TRUE;
+
 	return 1;
 }
 
@@ -430,10 +439,17 @@ daemon::Start()
 
 	dprintf( D_ALWAYS, "Started \"%s\", pid and pgroup = %d\n",
 		process_name, pid );
-
-	// update the timestamp so we do not restart accidently a second time
+	
+		// Make sure we've got the current timestamp for updates, etc.
 	timeStamp = GetTimeStamp(process_name);
 
+		// record the time we were started
+	startTime = time(0);
+
+	if( needs_update ) {
+		needs_update = FALSE;
+		daemons.UpdateCollector();
+	}
 	return pid;	
 }
 
@@ -821,12 +837,10 @@ Daemons::GetIndex(const char* name)
 void
 Daemons::CheckForNewExecutable()
 {
-    int master = GetIndex("MASTER");
+	int found_new = FALSE;
 
 	dprintf(D_FULLDEBUG, "enter Daemons::CheckForNewExecutable\n");
-    if ( master == -1 ) {
-        EXCEPT("CheckForNewExecutable: MASTER not specifed");
-    }
+
 	if( daemon_ptr[master]->newExec ) {
 			// We already noticed the master has a new binary, so we
 			// already started to restart it.  There's nothing else to
@@ -834,19 +848,21 @@ Daemons::CheckForNewExecutable()
 		return;
 	}
     if( NewExecutable( daemon_ptr[master]->process_name,
-					   daemon_ptr[master]->timeStamp ) ) {
+					   &daemon_ptr[master]->timeStamp ) ) {
 		dprintf( D_ALWAYS,"%s was modified, restarting.\n", 
 				 daemon_ptr[master]->process_name );
 		daemon_ptr[master]->newExec = TRUE;
 			// Begin the master restart procedure.
+		
         RestartMaster();
 		return;
     }
 
     for( int i=0; i < no_daemons; i++ ) {
-		if( daemon_ptr[i]->runs_here ) {
+		if( daemon_ptr[i]->runs_here && !daemon_ptr[i]->newExec ) {
 			if( NewExecutable( daemon_ptr[i]->process_name,
-							   daemon_ptr[i]->timeStamp ) ) {
+							   &daemon_ptr[i]->timeStamp ) ) {
+				found_new = TRUE;
 				daemon_ptr[i]->newExec = TRUE;				
 				if( immediate_restart ) {
 						// If we want to avoid the new_binary_delay,
@@ -874,6 +890,9 @@ Daemons::CheckForNewExecutable()
 				}
 			}
 		}
+	}
+	if( found_new ) {
+		UpdateCollector();
 	}
 	dprintf(D_FULLDEBUG, "exit Daemons::CheckForNewExecutable\n");
 }
@@ -962,13 +981,14 @@ void
 Daemons::InitMaster()
 {
 		// initialize master data structure
-	int index = GetIndex("MASTER");
-	if ( index == -1 ) {
+	master = GetIndex("MASTER");
+	if ( master == -1 ) {
 		EXCEPT("InitMaster: MASTER not Specifed");
 	}
-	daemon_ptr[index]->timeStamp = 
-		GetTimeStamp(daemon_ptr[index]->process_name);
-	daemon_ptr[index]->pid = daemonCore->getpid();
+	daemon_ptr[master]->timeStamp = 
+		GetTimeStamp(daemon_ptr[master]->process_name);
+	daemon_ptr[master]->startTime = time(0);
+	daemon_ptr[master]->pid = daemonCore->getpid();
 }
 
 
@@ -1015,15 +1035,10 @@ Daemons::FinalRestartMaster()
 {
 #ifndef WANT_DC_PM
 	int 		i, max_fds = getdtablesize();
-	int			index = GetIndex("MASTER");
-
-	if ( index == -1 ) {
-		EXCEPT("Restart Master: MASTER not specifed");
-	}
 
 	if ( MasterLock->release() == FALSE ) {
 		dprintf( D_ALWAYS,
-				 "Can't remove lock on \"%s\"\n",daemon_ptr[index]->log_name);
+				 "Can't remove lock on \"%s\"\n",daemon_ptr[master]->log_name);
 		EXCEPT( "file_lock(%d)", MasterLockFD );
 	}
 	(void)close( MasterLockFD );
@@ -1039,16 +1054,16 @@ Daemons::FinalRestartMaster()
 		// backoff code.
 	while(1) {
 		dprintf( D_ALWAYS, "Doing exec( \"%s\" )\n", 
-				 daemon_ptr[index]->process_name);
+				 daemon_ptr[master]->process_name);
 		if( MasterName ) {
-			(void)execl(daemon_ptr[index]->process_name, 
+			(void)execl(daemon_ptr[master]->process_name, 
 						"condor_master", "-f", "-n", MasterName, 0);
 		} else {
-			(void)execl(daemon_ptr[index]->process_name, 
+			(void)execl(daemon_ptr[master]->process_name, 
 						"condor_master", "-f", 0);
 		}
-		daemon_ptr[index]->restarts++;
-		i = daemon_ptr[index]->NextStart();
+		daemon_ptr[master]->restarts++;
+		i = daemon_ptr[master]->NextStart();
 		dprintf( D_ALWAYS, 
 				 "Cannot execute condor_master, will try again in %d seconds\n", 
 				 i );
@@ -1217,8 +1232,8 @@ Daemons::StartTimers()
 			// collector before we try to send an update to it.
 		update_tid = daemonCore->
 			Register_Timer( 5, update_interval,
-							(TimerHandler)update_collector,
-							"update_collector" );
+							(TimerHandlercpp)Daemons::UpdateCollector,
+							"Daemons::UpdateCollector()", this );
 		old_update_int = update_interval;
 	}
 
@@ -1252,3 +1267,65 @@ Daemons::StartTimers()
 	}
 	old_preen_int = preen_interval;
 }	
+
+
+// Fill in Timestamp and startTime for all daemons info into a
+// classad.  If a daemon is supposed to be running but isn't, put a 0
+// for the startTime to signify that daemon is down.
+void
+Daemons::Update( ClassAd* ca ) 
+{
+	char buf[128];
+	for( int i=0; i < no_daemons; i++) {
+		if( daemon_ptr[i]->runs_here || i == master ) {
+			sprintf( buf, "%s_Timestamp = %ld", 
+					 daemon_ptr[i]->name_in_config_file, 	
+					 (long)daemon_ptr[i]->timeStamp );
+			ca->Insert( buf );
+			if( daemon_ptr[i]->pid ) {
+				sprintf( buf, "%s_StartTime = %ld", 
+						 daemon_ptr[i]->name_in_config_file, 	
+						 (long)daemon_ptr[i]->startTime );
+				ca->Insert( buf );
+			} else {
+					// No pid, but daemon's supposed to be running.
+				sprintf( buf, "%s_StartTime = 0", 
+						 daemon_ptr[i]->name_in_config_file );
+				ca->Insert( buf );
+			}
+		}
+	}
+}
+
+
+void
+Daemons::UpdateCollector()
+{
+	int		cmd = UPDATE_MASTER_AD;
+	SafeSock sock(CollectorHost, COLLECTOR_PORT, 2);
+
+	dprintf(D_FULLDEBUG, "enter Daemons::UpdateCollector\n");
+
+	Update(ad);
+
+	sock.encode();
+	if(!sock.code(cmd))
+	{
+		dprintf(D_ALWAYS, "Can't send UPDATE_MASTER_AD to the collector\n");
+		return;
+	}
+	if(!ad->put(sock))
+	{
+		dprintf(D_ALWAYS, "Can't send ClassAd to the collector\n");
+		return;
+	}
+	if(!sock.end_of_message())
+	{
+		dprintf(D_ALWAYS, "Can't send endofrecord to the collector\n");
+	}
+
+		// Reset the timer so we don't do another period update until 
+	daemonCore->Reset_Timer( update_tid, update_interval, update_interval );
+
+	dprintf(D_FULLDEBUG, "exit Daemons::UpdateCollector\n");
+}
