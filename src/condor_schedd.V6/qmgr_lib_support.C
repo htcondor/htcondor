@@ -52,7 +52,6 @@ ConnectQ(char *qmgr_location)
 
 	if(scheddAddr) {
 		qmgmt_sock = new ReliSock(scheddAddr, QMGR_PORT);
-		free(scheddAddr);
 	} else if(qmgr_location && (*qmgr_location == '<') ) {
 		qmgmt_sock = new ReliSock(qmgr_location, QMGR_PORT);
 	} else {
