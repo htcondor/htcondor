@@ -710,15 +710,21 @@ void
 MyString::Tokenize()
 {
 	delete [] tokenBuf;
-	tokenBuf = new char[strlen(Data) + 1];
-	strcpy(tokenBuf, Data);
-	nextToken = tokenBuf;
+	tokenBuf = new char[strlen(Value()) + 1];
+	strcpy(tokenBuf, Value());
+	if ( strlen(tokenBuf) > 0 ) {
+		nextToken = tokenBuf;
+	} else {
+		nextToken = NULL;
+	}
 }
 
 const char *
 MyString::GetNextToken(const char *delim)
 {
 	const char *result = nextToken;
+
+	if ( !delim || strlen(delim) == 0 ) result = NULL;
 
 	if ( result != NULL ) {
 		while ( *nextToken != '\0' && index(delim, *nextToken) == NULL ) {

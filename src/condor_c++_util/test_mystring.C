@@ -440,6 +440,26 @@ int main (int argc, char **argv)
 		everythingOkay = false;
 	}
 
+	// Make sure tokenizing works on an empty string.
+	MyString	tt3;
+	tt3.Tokenize();
+	if ( tt3.GetNextToken(" ") == NULL ) {
+	   	printf("OK: GetNextToken() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: GetNextToken() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
+
+	// Make sure we can handle an empty delimiter string.
+	MyString	tt4("foobar");
+	tt4.Tokenize();
+	if ( tt4.GetNextToken("") == NULL ) {
+	   	printf("OK: GetNextToken() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: GetNextToken() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
+
 
     // ---- Final summary.
 	printf("\n");
