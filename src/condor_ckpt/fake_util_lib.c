@@ -50,7 +50,7 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 
 		/* Actually print the message */
-	vfprintf( stderr, fmt, args );
+	_condor_vfprintf_va( 2, fmt, args );
 
 	(void) SetSyscalls( scm );
 }
@@ -69,7 +69,7 @@ _EXCEPT_(char* fmt, ...)
 	if (DebugFlags) {
 		va_list args;
 		va_start( args, fmt );
-		vfprintf( stderr, fmt, args );
+		_condor_vfprintf_va( 2, fmt, args );
 		va_end( args );
 	}
 	abort();
