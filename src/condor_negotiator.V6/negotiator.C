@@ -1343,27 +1343,29 @@ find_server( CONTEXT* job_context )
 
     /* We have to have a recent time stamp in order to use this machine JCP */
 		if (curTime - ptr->time_stamp > 65 * MINUTE) {
+			dprintf( D_FULLDEBUG, "time stamp %d too old\n", ptr->time_stamp );
 			continue;
 		}
 
-		if( !check_bool("START",ptr->machine_context,job_context) ) {
-			dprintf( D_FULLDEBUG, "START is FALSE\n" );
+		if( !check_bool(ATTR_REQUIREMENTS,ptr->machine_context,job_context) ) {
+			dprintf( D_FULLDEBUG, "machine requirements evaluate to FALSE\n" );
 			continue;
 		}
-		dprintf( D_FULLDEBUG, "START is TRUE\n" );
+		dprintf( D_FULLDEBUG, "machine requirements evaluate to TRUE\n" );
 
-		if( !check_bool("JOB_REQUIREMENTS",ptr->machine_context,job_context)) {
-			dprintf( D_FULLDEBUG, "JOB_REQUIREMENTS is FALSE\n" );
+		if( !check_bool(ATTR_REQUIREMENTS,job_context,ptr->machine_context)) {
+			dprintf( D_FULLDEBUG, "job requirements evaluate to FALSE\n" );
 			continue;
 		}
-		dprintf( D_FULLDEBUG, "JOB_REQUIREMENTS is TRUE\n" );
+		dprintf( D_FULLDEBUG, "job requirements evaluate to TRUE\n" );
 
-		if( !check_bool("JOB_PREFERENCES",ptr->machine_context,job_context) ) {
-			dprintf( D_FULLDEBUG, "JOB_PREFERENCES is FALSE\n" );
+		if( !check_bool(ATTR_PREFERENCES,job_context,ptr->machine_context) ) {
+			dprintf( D_FULLDEBUG, "job preferences evaluate to FALSE\n" );
 			continue;
 		}
-		dprintf( D_FULLDEBUG, "JOB_PREFERENCES is TRUE\n" );
+		dprintf( D_FULLDEBUG, "job preferences evaluate to TRUE\n" );
 
+		/* TODO: Don't look at State in V6! */
 		if( !check_string("State","NoJob",ptr->machine_context,(CONTEXT *)0)) {
 			dprintf( D_FULLDEBUG, "State != NoJob\n" );
 			continue;
@@ -1377,41 +1379,37 @@ find_server( CONTEXT* job_context )
 
 		/* Look for a server which just meets the requirements */
 	for( ptr=MachineList->next; ptr->name; ptr = ptr->next ) {
-		/*
-		** dprintf( D_FULLDEBUG, "\n" );
-		** dprintf( D_FULLDEBUG, "Checking %s\n", ptr->name );
-		** display_context( ptr->machine_context );
-		** dprintf( D_FULLDEBUG, "\n" );
-		*/
+
 		if( ptr->busy ) {
 			continue;
 		}
+
     /* We have to have a recent time stamp in order to use this machine JCP */
 		if (curTime - ptr->time_stamp > 65 * MINUTE) {
+			dprintf( D_FULLDEBUG, "time stamp %d too old\n", ptr->time_stamp );
 			continue;
 		}
-		if( !check_bool("START",ptr->machine_context,job_context) ) {
+		if( !check_bool(ATTR_REQUIREMENTS,ptr->machine_context,job_context) ) {
+			dprintf( D_FULLDEBUG, "machine requirements evaluate to FALSE\n" );
 			continue;
 		}
-		if( !check_bool("JOB_REQUIREMENTS",ptr->machine_context,job_context) ) {
+		dprintf( D_FULLDEBUG, "machine requirements evaluate to TRUE\n" );
+
+		if( !check_bool(ATTR_REQUIREMENTS,job_context,ptr->machine_context)) {
+			dprintf( D_FULLDEBUG, "job requirements evaluate to FALSE\n" );
 			continue;
 		}
-		if( !check_string("State","NoJob",ptr->machine_context,(CONTEXT *)0) ) {
-			/*
-			** dprintf( D_FULLDEBUG, "State != NoJob\n" );
-			*/
+		dprintf( D_FULLDEBUG, "job requirements evaluate to TRUE\n" );
+
+		/* TODO: Don't look at State in V6! */
+		if( !check_string("State","NoJob",ptr->machine_context,(CONTEXT *)0)) {
+			dprintf( D_FULLDEBUG, "State != NoJob\n" );
 			continue;
 		}
 
-		/*
-		** dprintf( D_FULLDEBUG, "Returning 0x%x\n", ptr );
-		*/
 		return ptr;
 	}
 
-	/*
-	** dprintf( D_FULLDEBUG, "Returning NULL\n" );
-	*/
 	return NULL;
 }
 
