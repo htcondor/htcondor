@@ -72,9 +72,6 @@ c_plus_target(test_context, test_carmi_context.o, $(TEST_LIBS) ../condor_xdr_lib
 
 c_plus_target(cat_url, cat_url.o, liburl.a SocketLib)
 
-filter.o: filter.C filter.h
-	$(CC) $(CFLAGS) -c filter.C
-
 test: test.o user_log.o
 	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o test test.o user_log.o $(TEST_LIBS)
 
