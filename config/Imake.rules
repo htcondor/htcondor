@@ -728,58 +728,58 @@ clean::							@@\
 ** Build directory strucuture for a compiler in the test suite.
 */
 #ifndef C_COMPILER_TARGET
-#define C_COMPILER_TARGET(compiler, flags_macro_name)		@@\
-all:: compiler							@@\
+#define C_COMPILER_TARGET(compiledir, compiler, flags_macro_name)		@@\
+all:: compiledir							@@\
 								@@\
 all:: 								@@\
-	cd compiler; $(MAKE)					@@\
+	cd compiledir; $(MAKE)					@@\
 								@@\
-compiler##: 							@@\
-	mkdir compiler						@@\
-	cd compiler; ln -s ../CImakefile Imakefile		@@\
-	cd compiler; imake IMAKE_FLAGS	-I../../../config \	@@\
+compiledir##: 							@@\
+	mkdir compiledir						@@\
+	cd compiledir; ln -s ../CImakefile Imakefile		@@\
+	cd compiledir; imake IMAKE_FLAGS	-I../../../config \	@@\
 	   -DC_COMPILER=##compiler \				@@\
 	   -DFLAGS_MACRO_NAME=##flags_macro_name		@@\
 								@@\
 clean::								@@\
-	rm -rf compiler						
+	rm -rf compiledir						
 #endif
 
 #ifndef CPP_COMPILER_TARGET
-#define CPP_COMPILER_TARGET(compiler, flags_macro_name)		@@\
-all:: compiler							@@\
+#define CPP_COMPILER_TARGET(compiledir, compiler, flags_macro_name)		@@\
+all:: compiledir							@@\
 								@@\
 all:: 								@@\
-	cd compiler; $(MAKE)					@@\
+	cd compiledir; $(MAKE)					@@\
 								@@\
-compiler##: 							@@\
-	mkdir compiler						@@\
-	cd compiler; ln -s ../CPPImakefile Imakefile		@@\
-	cd compiler; imake IMAKE_FLAGS -I../../../config \	@@\
+compiledir##: 							@@\
+	mkdir compiledir						@@\
+	cd compiledir; ln -s ../CPPImakefile Imakefile		@@\
+	cd compiledir; imake IMAKE_FLAGS -I../../../config \	@@\
 	   -DCPP_COMPILER=##compiler \				@@\
 	   -DFLAGS_MACRO_NAME=##flags_macro_name		@@\
 								@@\
 clean::								@@\
-	rm -rf compiler						
+	rm -rf compiledir						
 #endif
 
 #ifndef F_COMPILER_TARGET
-#define F_COMPILER_TARGET(compiler, flags_macro_name, has_recursion) @@\
-all:: compiler							@@\
+#define F_COMPILER_TARGET(compiledir, compiler, flags_macro_name, has_recursion) @@\
+all:: compiledir							@@\
 								@@\
 all::								@@\
-	cd compiler; $(MAKE)					@@\
+	cd compiledir; $(MAKE)					@@\
 								@@\
-compiler##:							@@\
-	mkdir compiler						@@\
-	cd compiler; ln -s ../FImakefile Imakefile		@@\
-	cd compiler; imake IMAKE_FLAGS -I../../../config \	@@\
+compiledir##:							@@\
+	mkdir compiledir						@@\
+	cd compiledir; ln -s ../FImakefile Imakefile		@@\
+	cd compiledir; imake IMAKE_FLAGS -I../../../config \	@@\
 		-DFORTRAN_HAS_RECURSION=##has_recursion \	@@\
 		-DF_COMPILER=##compiler	\			@@\
 		-DFLAGS_MACRO_NAME=##flags_macro_name		@@\
 								@@\
 clean::								@@\
-	rm -rf compiler					
+	rm -rf compiledir					
 #endif
 
 
