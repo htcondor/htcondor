@@ -330,19 +330,19 @@ sub ReadCmdFile
 	elsif( $_ =~ /(.*)=(.*)/)
 	{
 	    ($var, $val) = split('=', $_);
-	    if($var =~ /^error(.*)/)
+	    if($var =~ /^error(.*)/i)
 	    {
 		$err = $val;
 	    }
-	    elsif($var =~ /^log(.*)/)
+	    elsif($var =~ /^log(.*)/i)
 	    {
 		$log = $val;
 	    }
-	    elsif($var =~ /^out(.*)/)
+	    elsif($var =~ /^out(.*)/i)
 	    {
 		$out = $val;
 	    }
-	    elsif($var =~ /^in(.*)/)
+	    elsif($var =~ /^in(.*)/i)
 	    {
 		$in = $val;
 	    }
