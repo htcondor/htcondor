@@ -4597,7 +4597,7 @@ int DaemonCore::Create_Process(
 	// failed.  So we init the part of the structure we care about and just 
 	// ignore the return value.  
 	loaded.fDOSImage = FALSE;
-	MapAndLoad(namebuf, NULL, &loaded, FALSE, TRUE);
+	MapAndLoad((char *)namebuf, NULL, &loaded, FALSE, TRUE);
 	if (loaded.fDOSImage == TRUE)
 		bIs16Bit = true;
 	UnMapAndLoad(&loaded);
@@ -4628,7 +4628,7 @@ int DaemonCore::Create_Process(
 	
 	BOOL cp_result;
 	if ( priv != PRIV_USER_FINAL ) {
-		cp_result = ::CreateProcess(bIs16Bit ? NULL : namebuf,args,NULL,
+		cp_result = ::CreateProcess(bIs16Bit ? NULL : namebuf,(char*)args,NULL,
 			NULL,inherit_handles, new_process_group,newenv,cwd,&si,&piProcess);
 	} else {
 		// here we want to create a process as user for PRIV_USER_FINAL
@@ -4671,7 +4671,7 @@ int DaemonCore::Create_Process(
 			//
 			// "Who's your Daddy ?!?!?!   JEFF B.!"
 		cp_result = ::CreateProcessAsUser(user_token,bIs16Bit ? NULL : namebuf,
-			args,NULL,NULL, inherit_handles,
+			(char *)args,NULL,NULL, inherit_handles,
 			new_process_group | CREATE_NEW_CONSOLE, newenv,cwd,&si,&piProcess);
 	}
 
