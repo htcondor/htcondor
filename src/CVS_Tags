@@ -1,3 +1,6 @@
+5/22/01 V6_3-post-authentication
+	The V6_3-branch right after zach's authentication stuff.
+
 5/22/01 V6_3-pre-authentication
 	The V6_3-branch before zach's authentication stuff, which
 	affects pretty much all of condor's ReliSocks.
