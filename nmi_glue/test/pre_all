@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: pre_all,v 1.1.4.6 2004-09-14 20:25:43 bgietzel Exp $
+# $Id: pre_all,v 1.1.4.7 2004-09-16 18:08:08 wright Exp $
 # Submit-side NMI build system infrastructure to setup source
 # input for test jobs before the platform-specific stuff is called.
 # All we have to do is untar the common/results.tar.gz file so that
@@ -12,30 +12,6 @@
 
 # autoflush our STDOUT
 $| = 1;
-
-
-# before we do anything, untar the huge tarball containing all results. 
-# this is only until the database is working
-my $huge_tarball = "huge-tarball.tar.gz";
--f $huge_tarball || die "$huge_tarball does not exist!\n";
-
-print "Unpacking huge hack tarball\n";
-open( UNTAR, "tar -zxvf $huge_tarball|" ) ||
-    die "Can't open tar -zxvf $huge_tarball: $!\n";
-while( <UNTAR> ) {
-    print;
-}
-close( UNTAR );
-if( $? ) {
-    die "'tar -zxvf $huge_tarball' failed with status $?\n";
-}
-print "Untar of huge tarball completed successfully\n";
-
-# Now, unlink huge tarball
-print "Removing $huge_tarball\n";
-unlink( $huge_tarball ) || die "Can't unlink($huge_tarball): $!\n";
-
-#=======================================================================
 
 my $results = "results.tar.gz";
 -f $results || die "$results does not exist!\n";

@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre_declare,v 1.1.4.3 2004-09-14 23:08:45 bgietzel Exp $
+# $Id: remote_pre_declare,v 1.1.4.4 2004-09-16 18:08:08 wright Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -73,22 +73,6 @@ print ENVSETUP "PATH=$BaseDir/nmi_glue/test:$BaseDir/condor/bin:$BaseDir/condor/
 print ENVSETUP "export PATH\n";
 print ENVSETUP "SRC_DIR=$SrcDir\n";
 print ENVSETUP "export SRC_DIR\n";
-
-close ENVSETUP;
-
-# I don't know where remote_declare wakes up, but it can't find setup_test_env
-print "copy setup_test_env to nmi_glue/test to see if it can be found there.";
-
-system( "cp setup_test_env nmi_glue/test/." );
-if ( $? ) {
-    warn "copying setup_test_env to nmi_glue/test directory failed with status $?\n";
-}
-
-print "copy setup_test_env up one level to see if it can be found there.";
-system( "cp setup_test_env ../." );
-if ( $? ) {
-    warn "copying setup_test_env up one directory failed with status $?\n";
-}
 
 print "All steps completed successfully\n";
 
