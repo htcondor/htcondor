@@ -402,7 +402,11 @@ case $os in
 		fi
 
 		if [ $myname = "CC" ]; then
-			exec $ARGS -tl,$CONDOR_LD_DIR/ld
+			exec $ARGS +A -tl,$CONDOR_LD_DIR/ld
+		fi
+
+		if [ $myname = "aCC" ]; then
+			exec $ARGS +A -tl,$CONDOR_LD_DIR/ld
 		fi
 
 		if [ $myname = "c89" ]; then
