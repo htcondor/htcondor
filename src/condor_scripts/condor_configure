@@ -59,6 +59,11 @@ assumed).  Changes ownership of log,spool,execute directories to specified user,
 and instructs Condor system to run as that user (by setting CONDOR_IDS in the
 config file).
 
+--install-log=<file>
+Save information about the installation in the specified file. This is normally 
+only needed when condor_configure is called by a higher-level script, not when
+invoked by a person.
+
 --verbose
 Print more information. 
 
@@ -78,7 +83,7 @@ my (
 	$opt_owner,
 	$opt_verbose,
 	$opt_maybe_daemon_owner,
-	$opt_vdt_post_install,
+	$opt_install_log,
 );
 
 
@@ -87,6 +92,8 @@ my ($who, $host, $fullhost, $domain);
 my $no_config_modify=0;
 my %comment_hash;
 my @allparams;
+my $logfile;
+my $printed_log_message = 0;
 
 # Prototypes
 sub user_host_stuff();
@@ -108,10 +115,19 @@ sub make_personal_condor();
 sub get_config_value($;$);
 sub debug($);
 sub read_config_file_comments();
+sub log_message($);
 
 parse_command_line();
 
 my $timestamp=time();
+
+if ($opt_install_log) {
+    open(LOGFILE, ">>$opt_install_log")
+        or die "Couldn't open $opt_install_log\n";
+    $logfile = *LOGFILE;
+} else {
+    $logfile = *STDOUT;
+}
 
 # Hashes to store values that will go into config files
 my %local_config=();
@@ -284,13 +300,13 @@ if (defined($opt_install)) {
     print "    $release_dir\n";
 }
 
-unless (exists($ENV{CONDOR_CONFIG}) && ($ENV{CONDOR_CONFIG} eq $config_file) ) {
-    print "\nIn order for Condor to work properly you must set your \
+unless (defined($ENV{CONDOR_CONFIG}) && ($ENV{CONDOR_CONFIG} eq $config_file) ) {
+    log_message( "\nIn order for Condor to work properly you must set your \
 CONDOR_CONFIG environment variable to point to your \
 Condor configuration file: \
     $config_file \
 before running Condor commands/daemons.
-";
+" );
 
 }
 
@@ -386,7 +402,7 @@ sub parse_command_line() {
 		"verbose!"				=>	\$opt_verbose,
 		"help"					=>	sub {print $Usage; exit 0},
 		"maybe-daemon-owner!"	=>	\$opt_maybe_daemon_owner,
-		"vdt-post-install=s"	=>	\$opt_vdt_post_install,
+		"install-log=s"	        =>	\$opt_install_log,
 	) or die $Usage;
 
     if ($opt_local_dir && !($opt_local_dir =~ m/^\//)) {
@@ -822,9 +838,9 @@ sub set_java_jvm_path()
     # accept what I found. 
 
     if ($jvm eq "") {
-	print "Unable to find a valid Java installation \
+	log_message( "Unable to find a valid Java installation \
 Java Universe will not work properly until the JAVA \
-(and JAVA_MAXHEAP_ARGUMENT) parameters are set in the configuration file!";
+(and JAVA_MAXHEAP_ARGUMENT) parameters are set in the configuration file!" );
 return;
 }
 
@@ -917,4 +933,23 @@ sub read_config_file_comments() {
     }
 
     close (CONFIG);
+}
+
+sub log_message($)
+{
+    my $message = shift;
+  
+    if (defined($opt_install_log) && $opt_install_log ne "") {
+        if ($printed_log_message == 0) {
+            print wrap("", "", "You should look inside the installation log ",
+                       "for some details about how Condor was installed.\n");
+            $printed_log_message = 1;
+            
+            print $logfile "----------------------------------------------------------------------\n\n";
+            print $logfile "Condor Installation Notes\n\n";
+        }
+    }
+    print $logfile (wrap("", "", $message));
+    print $logfile "\n";
+    return;
 }
