@@ -222,8 +222,10 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period)
 	
 	// DumpTimerList(D_DAEMONCORE | D_FULLDEBUG);
 
-		// set flag letting Timeout() know we did a reset
-	did_reset = -1;
+		// set flag letting Timeout() know if a timer handler reset itself
+	if ( did_reset == id )
+		did_reset = -1;
+
 	return 0;
 }
 
