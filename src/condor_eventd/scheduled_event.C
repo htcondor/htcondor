@@ -26,6 +26,7 @@
 #include "condor_debug.h"
 #include "condor_query.h"
 #include "condor_config.h"
+#include "dc_collector.h"
 #include "daemon.h"
 
 #include "scheduled_event.h"
