@@ -6,7 +6,7 @@ CFLAGS = -Wall $(STD_C_FLAGS)
 #if IS_SPARC_SUNOS41
 SYSPARAM = sysparam_sun
 #endif
-#if IS_SUN4M_SOLARIS
+#if IS_SUN4M_SOLARIS || IS_SUN4M_SOLARIS251
 SYSPARAM = sysparam_solaris
 #endif
 #if IS_X86_SOLARIS
@@ -29,7 +29,7 @@ SYSPARAM = sysparam_linux
 #endif
 
 
-IO_OBJ = stream.o buffers.o
+IO_OBJ = stream.o buffers.o reli_sock.o sock.o
 
 SRC = ast.C astbase.C buildtable.C parser.C scanner.C registration.C \
 	  attrlist.C classad.C classifiedjobs.C classad_util.C
