@@ -26,6 +26,7 @@
 #include "condor_debug.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
+#include "condor_config.h"
 #include "my_hostname.h"
 
 extern "C" {
@@ -37,6 +38,8 @@ email_user_open( ClassAd *jobAd, const char *subject )
     email_addr[0] = '\0';
 	int cluster = 0, proc = 0;
     int notification = NOTIFY_COMPLETE; // default
+
+	ASSERT(jobAd);
 
     jobAd->LookupInteger( ATTR_JOB_NOTIFICATION, notification );
 	jobAd->LookupInteger( ATTR_CLUSTER_ID, cluster );
@@ -82,8 +85,17 @@ email_user_open( ClassAd *jobAd, const char *subject )
 		domain[0] = '\0';
 		if ( (!jobAd->LookupString(ATTR_UID_DOMAIN, domain)) ||
 			 (domain[0] == '\0') ) {
-				// No uid domain!  Use fullhostname
-			strcat( domain, my_full_hostname() );
+				// No uid domain found in the job ClassAd, fall back
+				// on the uid domain specified in the config file.
+				char *config_uid_domain;
+				if ( (config_uid_domain=param("UID_DOMAIN")) != NULL ) {
+					strcpy(domain,config_uid_domain);
+					free(config_uid_domain);
+				} else {
+					// No uid domain in the job ad or in the
+					// config file!  Use fullhostname.
+					strcpy( domain, my_full_hostname() );
+				}
 		}
         strcat( email_addr, "@" );
         strcat( email_addr, domain );
