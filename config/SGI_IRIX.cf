@@ -14,13 +14,10 @@
 #define IS_IRIX			YES
 #define Architecture		SGI
 
-/* define mips 3 compilation, if left NO, then it will be default of compiler */
-#define IS_MIPS3				YES
-
 #define IS_V5				YES
 
+#define HAS_X				YES
 #define HAS_X_EXTENSIONS		NO
-#define HAS_X	YES
 
 #define DOES_CHECKPOINTING		YES
 #define DOES_REMOTE_SYSCALLS		YES
@@ -93,39 +90,55 @@
 ** settings.
 **************************************************************************/
 
-/*** This should change to define all these things for all three ABIs ***
-**** but for now, at least make it work for one of them               ***
-**** see also Platform_CFLAGS below                                   ***/
-
-#if !defined( IRIXABI )
-#   define IRIXABI -o32
+/* First, provide some defaults, just in case nothing is set */
+#if !defined( MIPS_VERSION )
+#   define MIPS_VERSION 2
+#endif
+#if !( IS_O32 || IS_N32 || IS_N64 )
+#   define IS_O32 YES
 #endif
 
-#if !defined( BaseLibPath ) 
+/* Now, make sure we don't think we want two different ABI's */
+#if (IS_O32 && (IS_N32 || IS_N64)) || (IS_N32 && IS_N64)
+#error MULTIPLE IS_<ABI> DEFINITIONS, PLEASE INVESTIGATE!!!
+#endif
+
+/* Now, set everything that depends on which ABI we are */
+#if( IS_O32 )
+#   define AbiFlags 
 #   define BaseLibPath /usr/lib
-#endif
-
-/*#define RealMldLib	concat(BaseLibPath,/libmld.a) */
-#define RealMldLib	/usr/lib/libmld.a
-#define MldLib		concat(BaseLibPath,/libelf.a)
-#define RpcSvc		concat(BaseLibPath,/librpcsvc.so)
-#define RpcSun		concat(BaseLibPath,/libsun.a)
-#define MallocLib	concat(BaseLibPath,/libmalloc.so)
-
-#if defined(IS_MIPS3)
-#	define SimpleLibC 	/usr/lib32/mips3/libc.so.1
-#	define Crt0 /usr/lib32/mips3/crt1.o
-#	define CrtN /usr/lib32/mips3/crtn.o
+#elif( IS_N32 )
+#   define AbiFlags -mabi=n32
+#   define BaseLibPath /usr/lib32
+#elif( IS_N64 )
+#   define AbiFlags -mabi=n64
+#   define BaseLibPath /usr/lib64
 #else
-#	define SimpleLibC 	concat(BaseLibPath,/libc.so.1)
-#	define Crt0 concat(BaseLibPath,/crt1.o)
-#	define CrtN concat(BaseLibPath,/crtn.o)
+#error UNKNOWN ABI_VERSION
 #endif
 
-#define LibC		SimpleLibC
+/* Now, set everything that depends on which MIPS version we are */
+#if ( MIPS_VERSION == 2 )
+#   define LibPath	BaseLibPath
+#   define MipsFlags
+#elif ( MIPS_VERSION == 3 )
+#   define LibPath	concat(BaseLibPath,/mips3)
+#   define MipsFlags -mips3
+#elif ( MIPS_VERSION == 4 )
+#   define LibPath	concat(BaseLibPath,/mips4)
+#   define MipsFlags -mips4
+#else
+#error UNKNOWN MIPS_VERSION
+#endif
 
-#define PlatformLdFlags MldLib RealMldLib 
-#define SyscallsExp /**/
+/* 
+   Now that we finally know everything, define all the things we
+   actually care about.
+*/
+#define LibC    	concat(LibPath,/libc.so.1)
+#define Crt0		concat(LibPath,/crt1.o)
+#define CrtN		concat(LibPath,/crtn.o)
 
-#define XLibPath -lX11
-#define XExtLibPath concat(BaseLibPath,/libXext.a)
+#define PlatformFlags VersionPlatformFlags AbiFlags MipsFlags
+
+#define PlatformLdFlags -lelf
