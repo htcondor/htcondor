@@ -30,6 +30,7 @@ sub main( @ )
     my %KnownTargets;
     my $DefaultDir = ".";
     my $TargetDir = "";
+    my $Force = 0;
 
     # Process the command line...
     foreach my $Arg ( @_ )
@@ -45,6 +46,10 @@ sub main( @ )
 	    elsif ( $Opt =~ /^d=(.*)/ )
 	    {
 		$TargetDir = $1;
+	    }
+	    elsif ( $Opt =~ /^f$/ )
+	    {
+		$Force = 1;
 	    }
 	    else
 	    {
@@ -132,6 +137,15 @@ sub main( @ )
     {
 	my $Version = $KnownTargets{$Target}{Version};
 	my $TarBall = "$Target-$Version.tar.gz";
+	my $TarBallFull = "$TargetDir/$TarBall";
+
+	# Does it already exist?
+	if ( ( 0 == $Force ) && ( -f $TarBallFull ) )
+	{
+	    print "\n$TarBall exists; skipping\n";
+	    print "  Use -f to force overwrite\n";
+	    next;
+	}
 
 	# Do it
 	print "\nBuilding $Target $Version -> '$TarBall'\n";
