@@ -52,7 +52,6 @@ and~\ref{sec:Multiple-Platforms} below.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Macro definitions are of the form:
-
 \begin{verbatim}
         <macro_name> = <macro_definition>
 \end{verbatim}
@@ -60,37 +59,29 @@ Macro definitions are of the form:
 \Note You must have whitespace between the macro name, the
 ``='' sign, and the macro definition.  Macro invocations are of the
 form: 
-
 \begin{verbatim}
         $(macro_name)
 \end{verbatim}
-
-Macro definitions may contain references to \textbf{previously defined
+Macro definitions may contain references to \Bold{previously defined
   macros}.  Nothing in a config file can reference Macros which have
   not yet been defined.  Thus,
-
 \begin{verbatim}
         A = xxx
         C = $(A) 
 \end{verbatim}
-
 is a legal set of macro definitions, and the resulting value of ``C'' is
 ``xxx''.  Note that ``C'' is actually bound to ``\MacroU{A}'', not its value, thus
-
 \begin{verbatim}
         A = xxx
         C = $(A)
         A = yyy
 \end{verbatim}
-
 is also a legal set of macro definitions and the resulting value of
 ``C'' is ``yyy''.  However, 
-
 \begin{verbatim}
         A = $(C)
         C = xxx
 \end{verbatim}
-
 is not legal, and will result in the Condor daemons and tools exiting
 when they try to parse their config files.
 
@@ -100,11 +91,9 @@ when they try to parse their config files.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Expression definitions are of the form:
-
 \begin{verbatim}
         <expression_name> : <expression>
 \end{verbatim}
-
 \Note You must have whitespace between the expression name,
 the ``:'' sign, and the expression definition.  Expressions may
 contain constants, operators, and other expressions.  Macros may also
@@ -120,21 +109,17 @@ Note that expression which contain references to other expressions are
 bound to the expressions definition, not its current value, but
 expressions which contain macro invocations are bound to the current
 value of the macro.  Thus
-
 \begin{verbatim}
         X : "xxx"
         Y : X
         X : "yyy"
 \end{verbatim}
-
 will result in ``Y'' being evaluated as ``yyy'' at run time, but
-
 \begin{verbatim}
         X = "xxx"
         Y : $(X)
         X = "yyy" 
 \end{verbatim}
-
 will result in ``Y'' having a run time value of ``xxx''.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -148,14 +133,11 @@ comments or continuations.  A comment is any line begining with a
 continues across multiples lines.  This is accomplished with the
 ``$\backslash$'' sign at the end of any line that you wish to continue onto
 another.  For example,
-
 \begin{verbatim}
         START : (KeyboardIdle > 15 * $(MINUTE)) && \
                 ((LoadAvg - CondorLoadAvg) <= 0.3)
 \end{verbatim}
-
 or,
-
 \begin{verbatim}
         ADMIN_MACHINES = condor.cs.wisc.edu, raven.cs.wisc.edu, \
                         stork.cs.wisc.edu, ostrich.cs.wisc.edu, \
@@ -326,7 +308,6 @@ system.
   local Condor directory on each machine in your pool.  One common
   option is to use the condor user's home directory which you could
   specify with \MacroU{tilde}.  For example:
-
 \begin{verbatim}
         LOCAL_DIR = $(tilde)
 \end{verbatim}
@@ -337,17 +318,13 @@ system.
   \MacroU{hostname} macro and have a directory with many
   subdirectories, one for each machine in your pool, each named by
   hostnames.  For example:
-
 \begin{verbatim}
         LOCAL_DIR = $(tilde)/hosts/$(hostname)      
 \end{verbatim}
-
   or:
-
 \begin{verbatim}
         LOCAL_DIR = $(release_dir)/hosts/$(hostname)
 \end{verbatim}
-
   
 \item[\Macro{LOG}] \label{param:Log} This entry is used to specify the
   directory where each Condor daemon writes its log files.  The names
@@ -384,19 +361,14 @@ system.
   file in the \MacroU{LOCAL\_DIR} you just defined, or putting all
   local config files for your pool in a shared directory, each one
   named by hostname.  For example:
-
 \begin{verbatim}
         LOCAL_CONFIG_FILE = $(LOCAL_DIR)/condor_config.local
 \end{verbatim}
-  
   or:
-
 \begin{verbatim}
         LOCAL_CONFIG_FILE = $(release_dir)/etc/$(hostname).local
 \end{verbatim}
-  
   or, not using your release directory:
-
 \begin{verbatim}
         LOCAL_CONFIG_FILE = /full/path/to/configs/$(hostname).local
 \end{verbatim}
@@ -538,14 +510,6 @@ you wish to control logging for.
   invocations of the program will simply append to the previous log
   file.  By default this setting is turned off for all daemons. 
 
-\item[\Macro{SUBSYS\_DEBUG}] \label{param:SubsysDebug} All of the
-  Condor daemons can produce different levels of output depending on
-  how much information you want to see.  The various levels of
-  verbosity for a given daemon are determined by this entry.  All
-  daemons have a default level, \Dflag{ALWAYS}, and log message for
-  that level will be printed to the daemon's log, regardless of what
-  you have set here.  The other possible debug levels are:
-
 \item[\Macro{SUBSYS\_LOCK}] \label{param:SubsysLock} This parameter
   specifies the lock file used to synchonize append operations to the
   log file for this subsystem.  It must be a separate file from the
@@ -558,7 +522,17 @@ you wish to control logging for.
   reason, you decide to change this setting, be sure to change the
   \Macro{VALID\_LOG\_FILES} entry that \Condor{preen} uses as well.
 
+\item[\Macro{SUBSYS\_DEBUG}] \label{param:SubsysDebug} All of the
+  Condor daemons can produce different levels of output depending on
+  how much information you want to see.  The various levels of
+  verbosity for a given daemon are determined by this entry.  All
+  daemons have a default level, \Dflag{ALWAYS}, and log message for
+  that level will be printed to the daemon's log, regardless of what
+  you have set here.  The other possible debug levels are:
+
 \begin{description}
+
+\label{list:debug-level-description}
   
 \item[\Dflag{FULLDEBUG}] \label{dflag:fulldebug} Generally, turning on
   this setting provides very verbose output in the log files.
@@ -620,7 +594,6 @@ you wish to control logging for.
   includes the amount of network bandwidth used for job placement and
   preemption.
 
-\label{list:debug level description}
 \end{description}
 
 \end{description}
@@ -1013,7 +986,6 @@ These settings control the \Condor{master}.
   watchful eyes on.  The list is a comma or space seperated list of
   subsystem names (described above in
   section~\ref{sec:Condor-Subsystem-Names}).  For example,
-
 \begin{verbatim}
         DAEMON_LIST = MASTER, STARTD, SCHEDD
 \end{verbatim}
@@ -1032,13 +1004,11 @@ These settings control the \Condor{master}.
 \item[\Macro{SUBSYS}] \label{param:SUBSYS} Once you have defined which
   subsystems you want the \Condor{master} to start, you must provide
   it with the full path to each of these binaries.  For example:
-
 \begin{verbatim}
         MASTER          = $(SBIN)/condor_master
         STARTD          = $(SBIN)/condor_startd
         SCHEDD          = $(SBIN)/condor_schedd
 \end{verbatim}
-
   Generally speaking, these would be defined relative to the
   \Macro{SBIN} macro.
   
@@ -1148,7 +1118,6 @@ many times it's been restarted.  We take the number of times the
 daemon has restarted, take the \Macro{MASTER\_BACKOFF\_FACTOR}
 (defaults to 2) to that power, and add 9.  Sounds complicated, but
 here's how it works:
-
 \begin{verbatim}
         1st crash:  restarts == 0, so, 9 + 2^0 = 9 + 1 = 10 seconds
         2nd crash:  restarts == 1, so, 9 + 2^1 = 9 + 2 = 11 seconds
@@ -1161,7 +1130,6 @@ here's how it works:
 
 If the daemon kept dying and restarting, after the 13th crash, you'd
 have:
-
 \begin{verbatim}
         13th crash:  restarts == 12, so, 9 + 2^12 = 9 + 4096 = 4105 seconds
 \end{verbatim}
@@ -1304,6 +1272,13 @@ section`\ref{sec:Configuring-Policy}.
   \Macro{SUBSYS\_ADDRESS\_FILE} 
 
 \end{description}
+
+These final settings only apply to the startd when it is running on an
+SMP machine. 
+See section~\ref{sec:Configuring-SMP} on ``Configuring The Startd for
+SMP Machines'' for more details.
+
+\input{admin-man/smp-params.tex}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\condor{schedd} Config File Entries}
@@ -1590,7 +1565,6 @@ don't specify their own:
 Both of these macros default to the jobs preferring machines where
 there is more main memory than the image size of the job, expressed
 as:
-
 \begin{verbatim}
         ((Memory*1024) > Imagesize)
 \end{verbatim}
