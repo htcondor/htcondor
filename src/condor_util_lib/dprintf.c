@@ -98,12 +98,18 @@ char *DebugFlagNames[] = {
 dprintf_init( fd )
 int fd;
 {
-	FILE *fp = fdopen( fd, "a" );
+	FILE *fp;
+	int		tmp_errno;
+
+	errno = 0;
+	fp = fdopen( fd, "a" );
+	tmp_errno = errno;
 
 	if( fp != NULL ) {
 		DebugFP = fp;
 	} else {
-		dprintf(D_ALWAYS, "dprintf_init: failed to fdopen(%d)\n", fd );
+		fprintf(stderr, "dprintf_init: failed to fdopen(%d)\n", fd );
+		exit( 1 );
 	}
 }
 
