@@ -71,6 +71,8 @@
 #define HAS_GETWD				NO
 #define HAS_INSQUE				NO
 
+#define PVM_ARCH			HPPA
+
 #define CCompiler gcc
 #define CPlusCompiler g++
 #define StaticFlag -static
