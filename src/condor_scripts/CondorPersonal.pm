@@ -55,7 +55,6 @@ my $pid = $$;
 
 BEGIN
 {
-	%machine_ads;
     %personal_condor_params;
     %personal_config_changes;
 	$personal_config = "condor_config";
@@ -128,7 +127,6 @@ sub timestamp {
 sub Reset
 {
 	debug( "CondorPersonal RESET\n");
-    %machine_ads = {};
     %personal_condor_params = {};
     %personal_config_changes = {};
 	$personal_config = "condor_config";

@@ -32,7 +32,6 @@ BEGIN
     $num_active_jobs = 0;
     $saw_submit = 0;
     %submit_info;
-	%machine_ads;
 
 	$submit_time = 0;
 	$TimedCallbackWait = 0;
@@ -45,7 +44,6 @@ sub Reset
     $num_active_jobs = 0;
     $saw_submit = 0;
     %submit_info = {};
-    %machine_ads = {};
 
 	$submit_time = 0;
 	$TimedCallbackWait = 0;
@@ -283,13 +281,6 @@ sub Vacate
 {
     my $machine = shift || croak "missing machine argument";
     return runCommand( "$CONDOR_VACATE $machine" );
-}
-
-sub VacateJob
-{
-    #my $cluster = shift || croak "missing cluster argument";
-	print "Cluster is $cluster\n";
-    return runCommand( "$CONDOR_VACATE_JOB $cluster" );
 }
 
 sub Reschedule
@@ -921,89 +912,6 @@ sub ParseSubmitFile
 	}
     }
     return 1;
-}
-
-sub ParseMachineAds
-{
-    my $machine = shift || croak "missing machine argument";
-    my $line = 0;
-
-	if( ! open(PULL, "condor_status -l $machine 2>&1 |") )
-    {
-		print "error getting Ads for \"$machine\": $!\n";
-		return 0;
-    }
-    
-    debug( "reading machine ads from $machine...\n" );
-    while( <PULL> )
-    {
-	chomp;
-#	debug("Raw AD is $_\n");
-	$line++;
-
-	# skip comments & blank lines
-	next if /^#/ || /^\s*$/;
-
-	# if this line is a variable assignment...
-	if( /^(\w+)\s*\=\s*(.*)$/ )
-	{
-	    $variable = lc $1;
-	    $value = $2;
-
-	    # if line ends with a continuation ('\')...
-	    while( $value =~ /\\\s*$/ )
-	    {
-		# remove the continuation
-		$value =~ s/\\\s*$//;
-
-		# read the next line and append it
-		<PULL> || last;
-		$value .= $_;
-	    }
-
-	    # compress whitespace and remove trailing newline for readability
-	    $value =~ s/\s+/ /g;
-	    chomp $value;
-
-	
-		# Do proper environment substitution
-	    if( $value =~ /(.*)\$ENV\((.*)\)(.*)/ )
-	    {
-			my $envlookup = $ENV{$2};
-	    	#debug( "Found $envlookup in environment \n");
-			$value = $1.$envlookup.$3;
-	    }
-
-	    #debug( "$variable = $value\n" );
-	    
-	    # save the variable/value pair
-	    $machine_ads{$variable} = $value;
-	}
-	else
-	{
-#	    debug( "line $line of $submit_file not a variable assignment... " .
-#		   "skipping\n" );
-	}
-    }
-    return 1;
-}
-
-sub FetchMachineAds
-{
-	return %machine_ads;
-}
-
-sub FetchMachineAdValue
-{
-	my $key = shift @_;
-	if(exists $machine_ads{$key})
-	{
-		return $machine_ads{$key};
-	}
-	else
-	{
-		return undef;
-	}
 }
 
 sub DebugOn

@@ -24,35 +24,13 @@ BEGIN
     $checkpoints = 0;
     $vacates = 0;
     %test;
+	%machine_ads;
 }
 
-sub ResetTest
+sub Reset
 {
-    $handle = shift || croak "missing handle argument";
-    $test{$handle} = undef;
-    $checkpoints = 0;
-    $vacates = 0;
-}
-
-sub ForceVacateJob
-{
-    my %info = @_;
-
-	print "ForceVacateJob called\n";
-	foreach my $key  (sort keys %info)
-	{
-		print "Info holds $key\n";
-	}
-	print "After sort keys in info........\n";
-
-    return 0 if ( $checkpoints >= $MAX_CHECKPOINTS ||
-		  $vacates >= $MAX_VACATES );
-
-    # let the job run for a few seconds and then send vacate signal
-    sleep 5;
-    Condor::VacateJob( "\"$info{'cluster'}\"" );
-    $vacates++;
-    return 1;
+    %machine_ads = {};
+	Condor::Reset();
 }
 
 sub ForceVacate
@@ -218,7 +196,7 @@ sub RunTest
 
 	# moved the reset to preserve callback registrations which includes
 	# an error callback at submit time..... Had to change timing
-	Condor::Reset();
+	CondorTest::Reset();
 
     croak "too many arguments" if shift;
 
@@ -270,7 +248,7 @@ sub RunDagTest
 
 	# moved the reset to preserve callback registrations which includes
 	# an error callback at submit time..... Had to change timing
-	Condor::Reset();
+	CondorTest::Reset();
 
     # this is kludgey :: needed to happen sooner for an error message callback in runcommand
     $Condor::submit_info{'handle'} = $handle;
@@ -566,6 +544,89 @@ sub MergeOutputFiles
 			#print "$m = $Testhash->{extensions}[$m]\n";
 		}
 		close(LOG);
+	}
+}
+
+sub ParseMachineAds
+{
+    my $machine = shift || croak "missing machine argument";
+    my $line = 0;
+
+	if( ! open(PULL, "condor_status -l $machine 2>&1 |") )
+    {
+		print "error getting Ads for \"$machine\": $!\n";
+		return 0;
+    }
+    
+    #Condor::debug( "reading machine ads from $machine...\n" );
+    while( <PULL> )
+    {
+	chomp;
+#	Condor::debug("Raw AD is $_\n");
+	$line++;
+
+	# skip comments & blank lines
+	next if /^#/ || /^\s*$/;
+
+	# if this line is a variable assignment...
+	if( /^(\w+)\s*\=\s*(.*)$/ )
+	{
+	    $variable = lc $1;
+	    $value = $2;
+
+	    # if line ends with a continuation ('\')...
+	    while( $value =~ /\\\s*$/ )
+	    {
+		# remove the continuation
+		$value =~ s/\\\s*$//;
+
+		# read the next line and append it
+		<PULL> || last;
+		$value .= $_;
+	    }
+
+	    # compress whitespace and remove trailing newline for readability
+	    $value =~ s/\s+/ /g;
+	    chomp $value;
+
+	
+		# Do proper environment substitution
+	    if( $value =~ /(.*)\$ENV\((.*)\)(.*)/ )
+	    {
+			my $envlookup = $ENV{$2};
+	    	#Condor::debug( "Found $envlookup in environment \n");
+			$value = $1.$envlookup.$3;
+	    }
+
+	    #Condor::debug( "$variable = $value\n" );
+	    
+	    # save the variable/value pair
+	    $machine_ads{$variable} = $value;
+	}
+	else
+	{
+#	    Condor::debug( "line $line of $submit_file not a variable assignment... " .
+#		   "skipping\n" );
+	}
+    }
+    return 1;
+}
+
+sub FetchMachineAds
+{
+	return %machine_ads;
+}
+
+sub FetchMachineAdValue
+{
+	my $key = shift @_;
+	if(exists $machine_ads{$key})
+	{
+		return $machine_ads{$key};
+	}
+	else
+	{
+		return undef;
 	}
 }
 
