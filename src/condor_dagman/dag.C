@@ -299,6 +299,8 @@ bool Dag::ProcessLogEvents (bool recovery) {
                       }
 					  _numJobsFailed++;
 					  if( run_post_on_failure == FALSE ) {
+						  _numJobsRunning--;
+						  assert( _numJobsRunning >= 0 );
 						  break;
 					  }
                   }
