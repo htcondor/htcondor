@@ -62,6 +62,10 @@ int CollectorXDR_TCPSocket;  // used for queries
 // the shipping socket abstractions
 SafeSock   COMM_UDP_sock;
 
+// control and display
+int		Foreground;
+int		Termlog;
+
 // misc functions
 extern "C" XDR *xdr_Init ();
 extern "C" XDR *xdr_Udp_Init ();
@@ -96,15 +100,61 @@ void processXDR_query        (AdTypes, ClassAd &, XDR *);
 void processCOMM_query       (AdTypes, ClassAd &, Sock *);
 int  xdr_send_classad_as_mach_rec (XDR *, ClassAd *);
 
+void usage(char* name)
+{
+	dprintf( D_ALWAYS, "Usage: %s [-f] [-b] [-t] [-c config_file_name]\n", name );
+	exit( 1 );
+}
+
 // main code sequence starts ....
 int main (int argc, char *argv[])
 {
 	fd_set readfds;
 	int    count, timerID;
- 
+	char**	ptr;
+	char	config_file[MAXPATHLEN] = "";
+	
+	if(argc > 5)
+	{
+		usage(argv[0]);
+	}
+	for(ptr = argv + 1; *ptr; ptr++)
+	{
+		if(ptr[0][0] != '-')
+		{
+			usage(argv[0]);
+		}
+		switch(ptr[0][1])
+		{
+		case 'f':
+			Foreground = 1;
+			break;
+		case 't':
+			Termlog = 1;
+			break;
+		case 'b':
+			Foreground = 0;
+			break;
+		case 'c':
+			strcpy(config_file, *(++ptr));
+			++ptr;
+			break;
+		default:
+			usage(argv[0]);
+		}
+	}
+	
     // initialize
     MyName = *argv;
-    config (MyName, NULL);
+	if(config_file[0] == '\0')
+	{
+		config (MyName, NULL);
+	}
+	else
+	{
+		config_from_server(config_file, MyName, NULL);
+	}
+	
     initializeParams ();
     dprintf_config ("COLLECTOR", STDERR_FILENO);
 
