@@ -5,11 +5,23 @@
 ##  This is the default local configuration file for your central
 ##  manager machine.  You should copy this file to the appropriate
 ##  location and customize it for your needs.  The file is divided
-##  into two main parts:  Settings you may want to customize and
-##  settings you should probably leave alone (unless you know what
-##  you're doing). 
+##  into three main parts: Local settings of your own, settings you
+##  may want to customize and settings you should probably leave alone
+##  (unless you know what you're doing).
 ##
 ######################################################################
+
+######################################################################
+######################################################################
+##  Local settings 
+######################################################################
+######################################################################
+
+##  Place your own local configuration settings for your central
+##  manager here.
+
+
+
 
 ######################################################################
 ######################################################################
