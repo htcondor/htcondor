@@ -247,6 +247,29 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2 )
 			}
 		}
 	}
+	
+		// We never want to try sending an update to port 0.  If we're
+		// about to try that, and we're trying to talk to a local
+		// collector, we should try re-reading the address file and
+		// re-setting our port.
+	if( _port == 0 && _is_local) {
+		dprintf( D_HOSTNAME, "About to update local collector with port 0, "
+				 "attempting to re-read address file\n" );
+		if( readAddressFile(_subsys) ) {
+			_port = string_to_port( _addr );
+			dprintf( D_HOSTNAME, "Using port %d based on address \"%s\"\n",
+					 _port, _addr );
+		}
+	}
+
+	if( _port <= 0 ) {
+			// If it's still 0, we've got to give up and fail.
+		MyString err_msg;
+		err_msg.sprintf( "Can't send update: invalid collector port (%d)", 
+						 _port );
+		newError( err_msg.Value() );
+		return false;
+	}
 
 	if( cmd == UPDATE_COLLECTOR_AD || cmd == INVALIDATE_COLLECTOR_ADS ) {
 			// we *never* want to use TCP to send pool updates to the
