@@ -3319,7 +3319,7 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 {
 #if !defined(WIN32)
 	int notification;
-	char owner[20], buf[80];
+	char owner[2048], buf[2048];
 	char cmd[_POSIX_PATH_MAX], args[_POSIX_ARG_MAX];
 
 	if (GetAttributeInt(srec->job_id.cluster, srec->job_id.proc,
@@ -3361,7 +3361,8 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 		}
 	}
 
-	if (GetAttributeString(srec->job_id.cluster, srec->job_id.proc, "cmd",
+	if (GetAttributeString(srec->job_id.cluster, srec->job_id.proc, 
+							ATTR_JOB_CMD,
 							cmd) < 0) {
 		EXCEPT("GetAttributeString(%d, %d, \"cmd\")", srec->job_id.cluster,
 				srec->job_id.proc);
@@ -3377,7 +3378,7 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 	dprintf( D_FULLDEBUG, "Notify user using cmd: %s\n",buf);
 	FILE* mailer = popen( buf, "w" );
 	if (!mailer) {
-		EXCEPT("cannot execute %s %s\n", cmd, "w");
+		EXCEPT("cannot execute %s %s\n", buf, "w");
 	}
 	fprintf(mailer, "Your condor job\n" );
 	fprintf(mailer, "\t%s %s\n", cmd, args );
