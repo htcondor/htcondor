@@ -27,7 +27,8 @@
 #include "string_list.h"
 #include "condor_attributes.h"
 #include "condor_string.h"
-#include "classad_merge.h"
+//#include "classad_merge.h"
+#include "MyString.h"
 
 /*
 
