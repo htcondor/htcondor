@@ -39,7 +39,6 @@ EXECUTE		= $(LOCAL_DIR)/execute
 HISTORY		= $(SPOOL)/history
 BIN			= $(RELEASEDIR)/bin
 LIB			= $(RELEASEDIR)/lib
-PREEN		= $(BIN)/condor_preen -m -r
 MACHINE_STATUS_FILE = $(LOG)/machine_status
 CHECKJOBQUEUE			= $(BIN)/condor_jobqueue -w -m
 QUEUE_LOCK				= $(LOG)/QueueLock
@@ -85,6 +84,15 @@ CMNT		PVM related Macros
 CMNT
 PVMD				= $(BIN)/condor_pvmd
 
+
+
+CMNT
+CMNT        CONDOR_Preen Macros
+CMNT
+PREEN             = $(BIN)/condor_preen -m -r
+PREEN_ADMIN       = $(CONDOR_ADMIN)
+VALID_SPOOL_FILES = job_queue.dir, job_queue.pag, job_queue.log, history, UserPrio, OldFiles
+VALID_LOG_FILES   = MasterLog, MasterLog.old, NegotiatorLog, NegotiatorLog.old, CollectorLog, CollectorLog.old, SchedLog, SchedLog.old, ShadowLog, ShadowLog.old, StartLog, StartLog.old, StarterLog, StarterLog.old, KbdLog, KbdLog.old, GetHistoryLog, GetHistoryLog.old, ShadowLock, ULogLock, priorities.pag, priorities.dir, machine_status, QueueLock, CondorViewLog, CkptServerLog, CkptServerLog.old, W_Start_Log, W_Sched_Log, W_Start_Log.old, W_Sched_Log.old, AccountantLog, AccountantLog.old, CLIENTDUMP, OldFiles
 
 
 CMNT
