@@ -68,13 +68,13 @@ access has on the various parts of Condor:
 
     You might consider installing \Condor{submit} as a setgid condor
     program so that at least the \File{stdout}, \File{stderr} and
-    \File{UserLog} files get created with the right permissions.
-    You'll want to make sure it's umask is 002 as it runs so that it
-    creates group-writable files.  This way, the simple case of a job
-    that just writes to \File{stdout} and \File{stderr} will work.  If
-    users have programs that open their own files, they'll have to
-    know to set the right permissions on the directories they submit
-    from.
+    \File{UserLog} files get created with the right permissions.  If
+    \Condor{submit} is a setgid program, it will automatically set
+    it's umask to 002, so that creates group-writable files.  This
+    way, the simple case of a job that just writes to \File{stdout}
+    and \File{stderr} will work.  If users have programs that open
+    their own files, they'll have to know to set the right permissions
+    on the directories they submit from.
 
 \item[\Condor{master}] The \Condor{master} is what spawns the
     \Condor{startd} and \Condor{schedd}, so if want them both running
@@ -85,13 +85,13 @@ access has on the various parts of Condor:
 \item[\Condor{collector}] There is no need to have either of these
 daemons running as root.
 
-\item[\Condor{kbdd}] On platforms that need the \Condor{kbdd}
-    (Digital Unix and IRIX) the \Condor{kbdd} has to run as root.  If
-    it is started as any other user, it will not work.  You might
-    consider installing this program as a setuid root binary if you
-    can't run the \Condor{master} as root.  Without the \Condor{kbdd},
-    the startd has no way to monitor mouse activity at all, and the
-    only keyboard activity it will notice is activity on ttys (such as
+\item[\Condor{kbdd}] On platforms that need the \Condor{kbdd} (Digital
+    Unix and IRIX) the \Condor{kbdd} has to run as root.  If it is
+    started as any other user, it will not work.  You might consider
+    installing this program as a setuid root binary if you can't run
+    the \Condor{master} as root.  Without the \Condor{kbdd}, the
+    startd has no way to monitor mouse activity at all, and the only
+    keyboard activity it will notice is activity on ttys (such as
     xterms, remote logins, etc).
 
 \end{description}
