@@ -24,7 +24,7 @@
 #include "condor_common.h"
 #include <stdlib.h>
 #include "condor_crypt.h"
-#include "rand.h"              // SSLeay rand function
+#include <rand.h>              // SSLeay rand function
 #include <assert.h>
 
 Condor_Crypt_Base :: Condor_Crypt_Base(Protocol protocol, const KeyInfo& keyInfo)
