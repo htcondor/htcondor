@@ -133,6 +133,11 @@ int main( int argc, char** argv )
 		// do the select.
 	sigset_t fullset;
 	sigfillset( &fullset );
+	// We do not want to block the following signals ----
+	   sigdelset(&fullset, SIGSEGV);	// so we get a core right away
+	   sigdelset(&fullset, SIGABRT);	// so assert() failures drop core right away
+	   sigdelset(&fullset, SIGILL);		// so we get a core right away
+	   sigdelset(&fullset, SIGBUS);		// so we get a core right away
 	sigprocmask( SIG_SETMASK, &fullset, NULL );
 
 		// Install these signal handlers with a default mask
