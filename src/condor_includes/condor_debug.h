@@ -110,7 +110,7 @@ extern char		*sys_errlist[];
 extern int	_EXCEPT_Line;			/* Line number of the exception    */
 extern char	*_EXCEPT_File;			/* File name of the exception      */
 extern int	_EXCEPT_Errno;			/* errno from most recent system call */
-extern int (*_EXCEPT_Cleanup)();	/* Function to call to clean up (or NULL) */
+extern int (*_EXCEPT_Cleanup)(int,int,char*);	/* Function to call to clean up (or NULL) */
 extern void _EXCEPT_(char*, ...);
 
 #if defined(__cplusplus)
