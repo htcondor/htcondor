@@ -60,7 +60,6 @@
 /*#define dprintf mydprintf*/
 
 #include "condor_debug.h"
-static char *_FileName_ = __FILE__;
 
 #include "image.h"
 extern Image MyImage;
@@ -90,7 +89,6 @@ extern "C" void Set_CWD( const char *working_dir );
 extern "C" sigset_t block_condor_signals(void);
 extern "C" void restore_condor_sigmask(sigset_t omask);
 
-extern int errno;
 extern volatile int check_sig;
 
 extern "C" {
