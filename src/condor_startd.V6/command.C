@@ -427,7 +427,10 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 		(void)close(sock_2);
 		return -1;
 	}
-	
+
+	/* now that we sent stRec, free stRec.server_name which we strduped */
+	free( stRec.server_name );
+
 	/* Wait for connection to port1 */
 	len = sizeof frm;
 	memset((char *)&frm,0, sizeof frm);
