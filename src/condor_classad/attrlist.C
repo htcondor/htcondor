@@ -1409,6 +1409,43 @@ int AttrList::fPrint(FILE* f)
     return TRUE;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// print the whole AttrList into a file. The expressions are in infix notation.
+// Returns FALSE if the file pointer is NULL; TRUE otherwise.
+////////////////////////////////////////////////////////////////////////////////
+int AttrList::sPrint(MyString &output)
+{
+    AttrListElem*	tmpElem;
+    char			*tmpLine;
+
+	// if this is a chained ad, print out chained attrs first. this is so
+	// if this ad is scanned in from a file, the chained attrs will get
+	// updated with attrs from this ad in case of duplicates.
+	if ( chainedAttrs ) {
+		for(tmpElem = *chainedAttrs; tmpElem; tmpElem = tmpElem->next)
+		{
+			tmpLine = NULL;
+			tmpElem->tree->PrintToNewStr(&tmpLine);
+			if (tmpLine != NULL) {
+				output += tmpLine;
+				output += '\n';
+				free(tmpLine);
+			}
+		}
+	}
+
+    for(tmpElem = exprList; tmpElem; tmpElem = tmpElem->next)
+    {
+		tmpLine = NULL;
+        tmpElem->tree->PrintToNewStr(&tmpLine);
+		if (tmpLine != NULL) {
+			output += tmpLine;
+			output += '\n';
+			free(tmpLine);
+		}
+    }
+    return TRUE;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // print the whole AttrList to the given debug level. The expressions
