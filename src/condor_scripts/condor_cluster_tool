@@ -19,6 +19,8 @@
 #
 # 17-Sep-2000 Erik Paulson <epaulson@cs.wisc.edu> added condor_findhost 
 #             to the 'off' command; 
+# 04-Oct-2000 Erik Paulson <epaulson@cs.wisc.edu> fix check_auth() to
+#             know about the database nodes, and update the usage
 #
 # This is a very simple, first pass to solve this problem.
 # Future work required:
@@ -64,8 +66,9 @@ use Sys::Hostname;
                     "-unset start_daemons";
    $CONDOR_STATUS = "$BIN/condor_status -pool $CONDOR_POOL -direct";
  $CONDOR_RECONFIG = "$SBIN/condor_reconfig -pool $CONDOR_POOL";
-$CONDOR_HOSTALLOW = "$BIN/condor_config_val -pool $CONDOR_POOL " .
-                    "-name c33 hostallow_administrator";
+$CONDOR_HOSTALLOW = "$BIN/condor_config_val -pool $CONDOR_POOL "; 
+  $CONDOR_DBALLOW = "-name db31 hostallow_administrator";
+  $CONDOR_CCALLOW = "-name c33 hostallow_administrator";
   $CCLUSTER_CONST = " -c 'IsComputeCluster==TRUE'";
  $DBCLUSTER_CONST = " -c 'IsDBCluster==TRUE'";
    $GIGABIT_CONST = " -c 'HasGigabit==TRUE'";
@@ -135,7 +138,6 @@ elsif( $cmd eq "on" )
 	usage();
 	exit 1;
     }
-    check_auth();
     start_condor( @args );
 }
 elsif( $cmd =~ /^of/ )
@@ -145,7 +147,6 @@ elsif( $cmd =~ /^of/ )
 	usage();
 	exit 1;
     }
-    check_auth();
     stop_condor( @args );
 }
 else
@@ -163,30 +164,47 @@ exit 0;
 sub usage()
 {
     print STDERR
-	"Usage: $0 off N\n",
-	"       $0 on hosts\n",
+	"Usage: $0 off N [-cnode] [-dbnode] [-gigabit]\n",
+	"       $0 on hosts [-a]\n",
 	"       $0 check [hosts]\n",
 	"\n",
 	"       off   Stop Condor on any N nodes, and print their hostnames ",
 	"to STDOUT\n",
+	"            -cnode:   Pick from the Compute Cluster (default)\n ",
+	"            -dbnode:  Pick from the Database Cluster\n ",
+ 	"            -gigabit: Pick from the nodes with gigabit\n ",     
+    "\n",
 	"       on    Start Condor on the given hosts\n",
+	"             -a: Return all nodes that you currently hae checked out\n",
+	"\n",
 	"       check Print state of Condor on all nodes (or specific nodes, if given)\n",
 	"\n",
 	"       Examples:\n",
 	"          $0 off 4\n",
+	"          $0 off 2 -dbnode\n",
 	"          $0 on c03 c05 c07 c09\n",
-	"          $0 check c03 c04\n";
+	"          $0 on -a\n",
+	"          $0 check c03 c04\n",
+	"\nFor help, please send mail to c-cluster-admin\@cs.wisc.edu\n";
 }
 
 
 sub check_auth()
 {
-    $auth_hosts = `$CONDOR_HOSTALLOW`;
-    unless( $auth_hosts =~ /$hostname/ ) {
+    $DBCHECK = $CONDOR_HOSTALLOW . $CONDOR_DBALLOW;
+    $CCCHECK = $CONDOR_HOSTALLOW . $CONDOR_CCALLOW;
+
+    $db_auth_hosts = `$DBCHECK`;
+	print "$DBCHECK\n";
+    $cc_auth_hosts = `$CCCHECK`;
+    unless( ($cc_auth_hosts =~ /$hostname/ )||(db_auth_hosts =~ /$hostname/)) {
 	print "Error: current host ($hostname) is not authorized ";
 	print "to manage nodes\n\n";
-	print "Please use one of the following authorized hosts: ";
-	print "$auth_hosts\n";
+	print "Please use one of the following authorized hosts for "; 
+	print "compute cluster nodes:\n ";
+	print "$cc_auth_hosts\n";
+	print "Or use one of the following hosts for DB nodes:\n ";
+	print "$db_auth_hosts\n";
 	print "...or contact c-cluster-admin\@cs.wisc.edu with any ";
 	print "questions.\n\n";
 	exit 1;
@@ -241,6 +259,8 @@ sub start_condor
         }
     }
 
+    check_auth();
+
     foreach $host ( @hosts )
     {
 	# if the user just specified a number, translate to a "cXX" node name
@@ -289,9 +309,11 @@ sub stop_condor {
         die "$0: error: the cluster only has $NUMNODES machines, try again\n";
     }
 
-    @hosts = find_avail( $num );
+    check_auth();
 
+    @hosts = find_avail( $num );
     @hosts = sort(@hosts);
+
     foreach $host ( @hosts ) {
 	kill_condor( $host );
     }
