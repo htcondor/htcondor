@@ -136,7 +136,7 @@ void JavaInfo::query_create()
 	}
 
 	if(reaper_id==-1) {
-		reaper_id = daemonCore->Register_Reaper("JavaInfo::query_reaper",(ReaperHandlercpp)&(JavaInfo::query_reaper),"JavaInfo::query_reaper",this);
+		reaper_id = daemonCore->Register_Reaper("JavaInfo::query_reaper",(ReaperHandlercpp)(JavaInfo::query_reaper),"JavaInfo::query_reaper",this);
 		if(reaper_id==FALSE) {
 			dprintf(D_ALWAYS,"JavaInfo: Unable to register reaper!\n");
 			unlink(output_file);
