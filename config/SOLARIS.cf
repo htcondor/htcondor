@@ -109,7 +109,7 @@
 #define HAS_RANLIB_TOUCH		YES
 #define HAS_CP_PRESERVE			YES
 #define NEEDS_SPECIAL_SETJMP	NO
-#define HAS_FORTRAN				NO
+#define HAS_FORTRAN				YES
 #define HAS_FLOCK				NO
 #define HAS_ADJTIME				YES
 #define HAS_GETDTABLESIZE		NO
