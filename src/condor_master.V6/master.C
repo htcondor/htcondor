@@ -89,6 +89,7 @@ int		preen_interval;
 int		new_bin_delay;
 char	*MasterName = NULL;
 Daemon	*Collector = NULL;
+StringList *secondary_collectors = NULL;
 
 int		ceiling = 3600;
 float	e_factor = 2.0;								// exponential factor
@@ -565,6 +566,16 @@ init_params()
 		free( FS_Preen );
 	}
 	FS_Preen = param( "PREEN" );
+
+	tmp = param( "SECONDARY_COLLECTOR_LIST" );
+	if( tmp ) {
+		if (secondary_collectors) delete secondary_collectors;
+		secondary_collectors = new StringList(tmp);
+		free(tmp);
+	} else {
+		if (secondary_collectors) delete secondary_collectors;
+		secondary_collectors = NULL;
+	}
 }
 
 

@@ -31,6 +31,7 @@
 #include "my_hostname.h"
 #include "basename.h"
 #include "condor_email.h"
+#include "string_list.h"
 
 // these are defined in master.C
 extern int		RestartsPerHour;
@@ -45,6 +46,7 @@ extern char*	FS_Preen;
 extern			ClassAd* ad;
 extern int		NT_ServiceFlag; // TRUE if running on NT as an NT Service
 extern Daemon*	Collector;
+extern StringList *secondary_collectors;
 
 extern time_t	GetTimeStamp(char* file);
 extern int 	   	NewExecutable(char* file, time_t* tsp);
@@ -1397,6 +1399,22 @@ Daemons::UpdateCollector()
 		dprintf( D_ALWAYS, "Can't send EOM to the collector (%s)\n",
 				 Collector->fullHostname() );
 
+	}
+
+	if (secondary_collectors) {
+		secondary_collectors->rewind();
+		char *collector;
+		while ((collector = secondary_collectors->next()) != NULL) {
+			SafeSock s;
+			s.timeout(2);
+			s.encode();
+			if (!s.connect(collector, COLLECTOR_PORT) ||
+				!s.code(cmd) || !ad->put(s) || !s.end_of_message()) {
+				dprintf( D_ALWAYS,
+						 "Failed to send update to secondary collector %s\n",
+						 collector);
+			}
+		}
 	}
 
 		// Reset the timer so we don't do another period update until 
