@@ -2,6 +2,7 @@
 %n 1500
 %a 4000
 %e 2500
+%o 5000
 %{
 #include "scanner.h"
 #include "y.tab.h"
@@ -120,6 +121,7 @@ ignored				return grab( IGNORE );
 local_name			return grab( LOCAL_NAME );
 file_table_name			return grab( FILE_TABLE_NAME );
 remote_name			return grab( REMOTE_NAME );
+also_implements			return grab( ALSO_IMPLEMENTS );
 sender_name			return grab( SENDER_NAME );
 discard				return grab( DISCARD );
 rdiscard			return grab( RDISCARD );

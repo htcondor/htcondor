@@ -68,6 +68,7 @@ struct node {
 	char		remote_name[NAME_LENGTH];
 	char		local_name[NAME_LENGTH];
 	char		sender_name[NAME_LENGTH];
+	char		also_implements[10 * NAME_LENGTH];
 };
 
 #define XDR_FUNC id

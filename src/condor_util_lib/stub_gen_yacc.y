@@ -19,6 +19,7 @@
 %token IGNORE
 %token ELLIPSIS
 %token REMOTE_NAME
+%token ALSO_IMPLEMENTS
 %token SENDER_NAME
 %token LOCAL_NAME
 %token FILE_TABLE_NAME
@@ -96,11 +97,13 @@ int DoSysChk = TRUE;
 int IsTabled = FALSE;
 int IsVararg = FALSE;
 int UseAltRemoteName = FALSE;
+int AlsoImplementsCounter = 0;
 int UseAltLocalName = FALSE;
 int UseAltTableName = FALSE;
 int UseAltSenderName = FALSE;
 
 static char AltRemoteName[NAME_LENGTH] = {0};
+static char AltAlsoImplements[10 * NAME_LENGTH] = {0};
 static char AltLocalName[NAME_LENGTH] = {0};
 static char AltTableName[NAME_LENGTH] = {0};
 static char AltSenderName[NAME_LENGTH] = {0};
@@ -363,6 +366,17 @@ option
 		Trace( "option (5)" );
 		UseAltRemoteName = TRUE;
 		strcpy(AltRemoteName,$3.val);
+		}
+	| ALSO_IMPLEMENTS '(' IDENTIFIER ')'
+		{
+		Trace( "option (5)" );
+		if ( AlsoImplementsCounter == 0 ) {
+			strcpy(AltAlsoImplements,$3.val);
+		} else {
+			strcat(AltAlsoImplements,",");
+			strcat(AltAlsoImplements,$3.val);
+		}
+		AlsoImplementsCounter++;
 		}
 	| SENDER_NAME '(' IDENTIFIER ')'
 		{
@@ -681,6 +695,13 @@ mk_func_node( char *type, char *name, struct node * p_list,
 	IsVararg = FALSE;
 	answer->param_list = p_list;
 	answer->action_func_list = action_func_list;
+
+	if(AlsoImplementsCounter) {
+		AlsoImplementsCounter = 0;
+		strcpy(answer->also_implements,AltAlsoImplements);
+	} else {
+		answer->also_implements[0] = '\0';
+	}
 
 	if(UseAltRemoteName) {
 		strcpy(answer->remote_name,AltRemoteName);
@@ -1145,6 +1166,8 @@ output_receiver( struct node *n )
 	struct node *var, *size;
 	char   *rval;
 	static int clump_number = 0;
+	char   *pchar = NULL;
+	char   *pchar1 = NULL;
 
 	assert( n->node_type == FUNC );
 
@@ -1165,6 +1188,19 @@ output_receiver( struct node *n )
 	}
 
 	printf( "	case CONDOR_%s:\n", n->remote_name );
+	if ( n->also_implements[0] ) {
+		pchar = n->also_implements;
+		while (pchar) {
+			pchar1 = strchr(pchar,',');
+			if ( pchar1 ) {
+				*pchar1 = '\0';
+				pchar1++;
+			}
+			printf( "	case CONDOR_%s:\n", pchar );
+			pchar = pchar1;
+		}
+	}
+			
 	printf( "	  {\n" );
 
 		/* output a local variable decl for each param of the sys call */
