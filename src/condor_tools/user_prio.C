@@ -60,18 +60,26 @@ int CompPrio(LineRec* a, LineRec* b);
 
 //-----------------------------------------------------------------
 
+int ResFlag=0;
+
 main(int argc, char* argv[])
 {
   int SetMode=0;
 
-  if (argc>1) { // set priority
-    if (argc!=4 || strcmp(argv[1],"-set")!=0 ) {
-      usage( argv[0] );
-      exit(1);
+  for (int i=1; i<argc; i++) {
+    if (strcmp(argv[i],"-set")==0) {
+      if (i+2>=argc) usage(argv[0]);
+      SetMode=i;
+      i+=2;
     }
-    SetMode=1;
+    else if (strcmp(argv[i],"-res")==0) {
+      ResFlag=1;
+    }
+    else {
+      usage(argv[0]);
+    }
   }
-
+      
   config( 0 );
   char* NegotiatorHost = param( "NEGOTIATOR_HOST" );
   if (!NegotiatorHost) {
@@ -79,11 +87,10 @@ main(int argc, char* argv[])
 	exit(1);
   }
 
-
   if (SetMode) { // set priority
 
     char* tmp;
-	if( ! (tmp = strchr(argv[2], '@')) ) {
+	if( ! (tmp = strchr(argv[SetMode+1], '@')) ) {
 		fprintf( stderr, 
 				 "%s: You must specify the full name of the submittor you wish\n",
 				 argv[0] );
@@ -91,13 +98,13 @@ main(int argc, char* argv[])
 				 "user@uid.domain", "user@full.host.name" );
 		exit(1);
 	}
-    double Priority=atof(argv[3]);
+    double Priority=atof(argv[SetMode+2]);
 
     // send request
     ReliSock sock(NegotiatorHost, NEGOTIATOR_PORT);
     sock.encode();
     if (!sock.put(SET_PRIORITY) ||
-        !sock.put(argv[2]) ||
+        !sock.put(argv[SetMode+1]) ||
         !sock.put(Priority) ||
         !sock.end_of_message()) {
       fprintf( stderr, "failed to send SET_PRIORITY command to negotiator\n" );
@@ -205,6 +212,11 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
   char* Fmt2="%-30s   %12s   %4s\n"; 
   char* Fmt3="%-30s   %12s   %4d\n"; 
 
+  if (ResFlag==0) {
+    Fmt1="%-30s   %12.3f\n"; 
+    Fmt2="%-30s   %12s\n"; 
+  }
+
   printf(Fmt2,"Name","Priority","Resources Used");
   printf(Fmt2,"----","--------","--------------");
 
@@ -223,6 +235,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
 //-----------------------------------------------------------------
 
 static void usage(char* name) {
-  fprintf( stderr, "usage: %s [ -set user priority_value ]\n", name );
+  fprintf( stderr, "usage: %s [ -res | -set user priority_value ]\n", name );
+  exit(1);
 }
 
