@@ -27,10 +27,11 @@ DOC_TREE =		$(TOP)/doc
 INCLUDE_DIR =		../h
 NEW_INCLUDE_DIR =	../condor_includes
 C_PLUS_INCLUDE =	../condor_c++_util
+
 #ifdef X11Include
 X11_INCLUDE = X11Include
 #else
-X11_INCLUDE =           /usr/X11R6/include	
+X11_INCLUDE = /usr/X11R6/include	
 #endif
 
 #if !defined( CLinker )
@@ -252,6 +253,14 @@ DEBUG_FLAG = DebugFlag
 
 #endif /* !defined( GSS_AUTHENTICATION ) */
 
+#if WANT_KERBEROS
+# define ImakeKerberosFlag -DKERBEROS_AUTHENTICATION
+  KERBEROS_FLAG = -DKERBEROS_AUTHENTICATION -I$(KERBEROS_INCLUDE)
+#else
+  KERBEROS_FLAG = 
+# define ImakeKerberosFlag
+#endif /* !defined(KERBEROS_AUTHENTICAION) */
+
 AUTH_FLAGS = GssAuthFlags
 
 #if WANT_NETMAN
@@ -262,12 +271,13 @@ NETMAN_LIB =
 NETMAN_FLAGS =
 #endif
 
-#define ImakeFlags ImakeArchFlag ImakeOpsysFlag ImakeOtherFlag ImakeGssFlag
+#define ImakeFlags ImakeArchFlag ImakeOpsysFlag ImakeOtherFlag ImakeGssFlag \
+        ImakeKerberosFlag
 #define IMAKE_FLAGS ImakeFlags -I../../config -s Makefile
 
 VENDOR_C_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG)=$(ARCH_FLAG) \
-		 -D$(OS_FLAG)=$(OS_FLAG) \
+		 -D$(OS_FLAG)=$(OS_FLAG) $(KERBEROS_FLAG) \
 		 $(SITE_C_FLAGS) $(AUTH_FLAGS) $(GLOBUS_FLAGS) $(NETMAN_FLAGS)
 
 /*
@@ -308,6 +318,9 @@ DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a
 ALL_LDFLAGS = -lm $(LDFLAGS) $(PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
 TEST_LDFLAGS = -lm $(LDFLAGS) $(TEST_PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
 
+# Credential API related libraries
+CONDOR_CRED_LIB = 
+
 STD_LIBS = \
   $(CUTIL_LIB) \
   $(CPLUS_LIB) \
@@ -332,5 +345,6 @@ STD_LIBS = \
   $(CPLUS_LIB) \
   $(IO_LIB) \
   $(CPLUS_LIB) \
-  $(CUTIL_LIB)
+  $(CUTIL_LIB) \
+  $(CREDENTIAL_LIB)
 
