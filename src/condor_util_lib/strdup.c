@@ -36,7 +36,11 @@
 
 char *
 strdup( s )
+#if defined(OSF1)
+const char *s;
+#else
 char	*s;
+#endif
 {
 	char	*answer;
 
