@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
 void ensureOutputFilesExist(const SubmitDagOptions &opts);
 void writeSubmitFile(const SubmitDagOptions &opts);
 void getJobLogFilenameFromSubmitFiles(SubmitDagOptions &opts);
-MyString loadLogFileNameFromSubFile(const MyString &strSubFile);
+MyString loadLogFileNameFromSubFile(const MyString &strSubFile, const SubmitDagOptions &opts);
 
 void submitDag(SubmitDagOptions &opts)
 {
@@ -350,7 +350,6 @@ void writeSubmitFile(const SubmitDagOptions &opts)
 
 void getJobLogFilenameFromSubmitFiles(SubmitDagOptions &opts)
 {
-	//printf("This isn't working yet, use -log for now\n");
 
 	MyString strDagFile = readFileToString(opts.strDagFile);
 	if (strDagFile == "")
@@ -397,20 +396,14 @@ void getJobLogFilenameFromSubmitFiles(SubmitDagOptions &opts)
 
 			// get the log= value from the sub file
 
-			MyString strLogFilename = loadLogFileNameFromSubFile(strSubFile);
+			MyString strLogFilename = loadLogFileNameFromSubFile(strSubFile, opts);
 
-			if (strLogFilename != strPreviousLogFilename && strPreviousLogFilename != "")
-			{
-				printf("ERROR: submit files use different log files (detected in: %s)\n", strSubFile.Value());
-				opts.strJobLog = "";
-				return;
+			if (opts.strJobLog == "") {
+				opts.strJobLog = strLogFilename;
 			}
-
-			strPreviousLogFilename = strLogFilename;
 		}
 	}	
 
-	opts.strJobLog = strPreviousLogFilename;
 }
 
 void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
@@ -546,9 +539,27 @@ int printUsage()
 	exit(1);
 }
 
-MyString loadLogFileNameFromSubFile(const MyString &strSubFilename)
+MyString loadLogFileNameFromSubFile(const MyString &strSubFilename, 
+	const SubmitDagOptions &opts)
 {
 	MyString strSubFile = readFileToString(strSubFilename);
+
+	if ( strSubFile == "" ) {
+		printf( "\nCan't open command file %s for reading: %s\n"
+			"Either create %s or re-run with the \"-log\" option.\n", 
+			strSubFilename.Value(), strerror(errno), strSubFilename.Value());
+		if( ! opts.bVerbose ) {
+			printf( "Use the \"-verbose\" option for a more verbose error message.\n");
+			exit( 1 );
+		}
+		printf("If all the command files in your DAG don't exist now, consider running\n"
+			"condor_submit_dag with the \"-log filename\" option to specify the log file\n"
+			"shared by all jobs in your DAG.  This avoids this check.\n"
+			"If you do so, you must be sure those files are created when they are needed,\n"
+			"probably by using the PRE and POST directives in your DAG file.\n"
+			"See the DAGMan manual for more details.\n");
+		exit( 1 );		
+	}
 	
 	StringList listLines( strSubFile.Value(), "\r\n");
 	listLines.rewind();
