@@ -161,9 +161,12 @@ gid_t getegid() : extract, pseudo;
 		SEND_PATH( pathname );
 		ALLOC_PATH( pathname );
 	}
-	int reallyexit( int status, struct rusage *use_p ) : pseudo {
+	int reallyexit( int *status, struct rusage *use_p ) : pseudo {
+		in xdr_int( status, INT_SIZE );
+		alloc( status, INT_SIZE );
 		in xdr_rusage( use_p );
 		alloc( use_p, RUSAGE_SIZE );
+		return( NEG_ONE );
 	}
 	int image_size( int megs ) : pseudo;
 	int send_rusage( struct rusage *use_p ) : pseudo {
@@ -174,9 +177,11 @@ gid_t getegid() : extract, pseudo;
 		in xdr_string( &msg, MAX_STRING );
 		alloc( msg, MAX_STRING );
 	}
-	int work_request( PROC *p, char *targ, char *orig, int *kill_sig ): pseudo {
+	int work_request( PROC *p, char *a_out, char *targ, char *orig, int *kill_sig ): pseudo {
 		out xdr_proc( p );
 		alloc( p, PROC_SIZE );
+		GET_PATH( a_out );
+		ALLOC_PATH( a_out );
 		GET_PATH( targ );
 		ALLOC_PATH( targ );
 		GET_PATH( orig );
