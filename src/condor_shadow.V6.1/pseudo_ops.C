@@ -46,6 +46,14 @@ pseudo_register_machine_info(char *uiddomain, char *fsdomain,
 	thisRemoteResource->setFilesystemDomain( fsdomain );
 	thisRemoteResource->setStarterAddress( starterAddr );
 	thisRemoteResource->setMachineName( full_hostname );
+
+		/* For backwards compatibility, if we get this old pseudo call
+		   from the starter, we assume we're not going to get the
+		   happy new pseudo_begin_execution call.  So, pretend we got
+		   it now so we still log execute events and so on, even if
+		   it's not as acurate as we'd like.
+		*/
+	thisRemoteResource->beginExecution();
 	return 0;
 }
 
@@ -105,6 +113,14 @@ pseudo_register_starter_info( ClassAd* ad )
 		tmp = NULL;
 	}
 
+	return 0;
+}
+
+
+int
+pseudo_begin_execution()
+{
+	thisRemoteResource->beginExecution();
 	return 0;
 }
 
