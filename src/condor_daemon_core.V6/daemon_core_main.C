@@ -875,51 +875,20 @@ dc_config_auth()
     // buffer overflow problem. Hao 
     pbuf = param( STR_GSI_DAEMON_DIRECTORY );
 
-	if (get_my_uid()) {
-		if (pbuf) {
-			sprintf( buffer, "X509_RUN_AS_SERVER=1");
-			putenv (strdup(buffer));
+    if (pbuf) {
+        sprintf( buffer, "X509_DIRECTORY=%s", pbuf);
+        putenv( strdup( buffer ) );
 
-			sprintf( buffer, "X509_DIRECTORY=%s", pbuf);
-			putenv( strdup( buffer ) );
+        sprintf( buffer, "%s=%s/certificates", STR_GSI_CERT_DIR, pbuf);
+        putenv( strdup( buffer ) );
 
-			dprintf (D_ALWAYS, "Assuming personal condor, specifying cert.");
-			sprintf( buffer, "%s=%s/certificates", STR_GSI_CERT_DIR, pbuf);
-			putenv( strdup( buffer ) );
+        sprintf( buffer, "%s=%s/hostcert.pem", STR_GSI_USER_CERT, pbuf);
+        putenv( strdup ( buffer ) );
 
-			sprintf( buffer, "%s=%s/usercert.pem", STR_GSI_USER_CERT, pbuf);
-			putenv( strdup ( buffer ) );
+        sprintf(buffer,"%s=%s/hostkey.pem",STR_GSI_USER_KEY,pbuf);
+        putenv( strdup ( buffer  ) );
 
-			sprintf(buffer,"%s=%s/userkey.pem",STR_GSI_USER_KEY,pbuf);
-			putenv( strdup ( buffer  ) );
-
-			sprintf(buffer,"%s=%s/condor_ssl.cnf", STR_SSLEAY_CONF, pbuf);
-			putenv( strdup ( buffer ) );
-				// now that we're done with pbuf, we have to free it
-				// so we don't leak memory!
-			free( pbuf );
-		} else {
-			dprintf (D_ALWAYS, "ZKM: running personal condor and "
-				" no %s specified! gsi won't work.\n",
-				STR_GSI_DAEMON_DIRECTORY);
-		}
-	}
-    else { // running as root/condor, assuming host certificates
-		if (pbuf) {
-			sprintf( buffer, "X509_DIRECTORY=%s", pbuf);
-			putenv( strdup( buffer ) );
-
-			sprintf( buffer, "%s=%s/certificates", STR_GSI_CERT_DIR, pbuf);
-			putenv( strdup( buffer ) );
-
-			sprintf( buffer, "%s=%s/hostcert.pem", STR_GSI_USER_CERT, pbuf);
-			putenv( strdup ( buffer ) );
-
-			sprintf(buffer,"%s=%s/hostkey.pem",STR_GSI_USER_KEY,pbuf);
-			putenv( strdup ( buffer  ) );
-
-            free( pbuf );
-        }
+        free( pbuf );
     }
 
     pbuf = param( STR_GSI_MAPFILE );
