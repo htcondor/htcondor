@@ -20,6 +20,8 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+#define EXPERIMENTAL
+
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_state.h"
@@ -38,6 +40,7 @@
 #include "condor_string.h"   // for strnewp()
 #include "print_wrapped_text.h"
 #include "condor_distribution.h"
+#include "condor_classad_analysis.h"	// NAC
 
 // global variables
 ClassAdPrintMask pm;
@@ -59,6 +62,8 @@ StringList	*sortConstraints = NULL;
 ExtArray<ExprTree*> sortLessThanExprs( 4 );
 ExtArray<ExprTree*> sortEqualExprs( 4 );
 bool            javaMode = false;
+
+ClassAdAnalyzer analyzer;	// NAC
 
 // instantiate templates
 template class ExtArray<ExprTree*>;
@@ -742,8 +747,8 @@ customLessThanFunc( ClassAd *ad1, ClassAd *ad2, void *)
 	bool		boolValue = false;		// NAC
 	
 	MatchClassAd mad;			// NAC
-	mad.ReplaceLeftAd( ad1 );	// NAC
-	mad.ReplaceRightAd( ad2 );	// NAC
+	mad.ReplaceLeftAd( analyzer.AddExplicitTargets( ad1 ) );	// NAC
+	mad.ReplaceRightAd( analyzer.AddExplicitTargets( ad2 ) );	// NAC
 
 	for( int i = 0 ; i <= last ; i++ ) {
 //		sortLessThanExprs[i]->EvalTree( ad1, ad2, &result );
