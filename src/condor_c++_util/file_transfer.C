@@ -912,12 +912,19 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 
 	transobject->Info.duration = time(NULL)-transobject->TransferStart;
 	transobject->Info.in_progress = false;
-	if (WEXITSTATUS(exit_status) != 0) {
-		dprintf(D_ALWAYS, "File transfer completed successfully.\n");
-		transobject->Info.success = true;
-	} else {
-		dprintf(D_ALWAYS, "File transfer failed (status=%d).\n",exit_status);
+	if( WIFSIGNALED(exit_status) ) {
+		dprintf( D_ALWAYS, "File transfer failed (killed by signal=%d)\n",
+				 WTERMSIG(exit_status) );
 		transobject->Info.success = false;
+	} else {
+		if( WEXITSTATUS(exit_status) != 0 ) {
+			dprintf( D_ALWAYS, "File transfer completed successfully.\n" );
+			transobject->Info.success = true;
+		} else {
+			dprintf( D_ALWAYS, "File transfer failed (status=%d).\n",
+					 WEXITSTATUS(exit_status) );
+			transobject->Info.success = false;
+		}
 	}
 
 	read(transobject->TransferPipe[0], (char *)&transobject->Info.bytes,
