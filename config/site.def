@@ -25,7 +25,7 @@
 /* Top should be the root of the source directory you want to use if
 you want our top-level Makefile to build the directory tree with all
 the soft links.  The links will point back to Top/src/... */
-#define Top 		/p/condor/ws1/workspaces/mikeu/Condor/V6_CODE
+#define Top           /p/condor/workspaces/wright/V6
 
 #define TmpDir		/tmp
 
