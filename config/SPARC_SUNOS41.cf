@@ -76,8 +76,8 @@
 #define PVM_ARCH			SUN4
 
 
-#define CCompiler gcc
-#define CPlusCompiler g++
+#define CCompiler /usr/psup/gcc-2.6.0/bin/gcc
+#define CPlusCompiler /usr/psup/gcc-2.6.0/bin/g++
 #define StaticFlag -static
 #define UnixName /vmunix			/* pathname of the system executable */
 #define syscall_lib syscall_lib_bsd
