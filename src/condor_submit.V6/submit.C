@@ -1832,7 +1832,7 @@ SetUserLog()
 		FILE* test = fopen(ulog, "a+");
 		if (!test) {
 			fprintf(stderr,
-				"\nERROR: Invalid log file: \"%s\"\n", ulog);
+				"\nWARNING: Invalid log file: \"%s\"\n", ulog);
 			exit( 1 );
 		} else {
 			fclose(test);
