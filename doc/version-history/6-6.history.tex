@@ -38,9 +38,13 @@ The details of each version are described below.
   would remove all of your jobs.
   Now it gives an error.
 
-\item One Windows, when you type a command like
+\item On Windows, when you type a command like
   \verb@condor_reconfig.exe@ instead of \verb@condor_reconfig@, you no
   longer get an error.
+
+\item Fixed a bug on Windows that would cause ``GetCursorPos() failed''
+to appear repeatedly in the StartLog. The startd now uses a different
+function to track mouse activity that does not have a tendancy to fail.
 
 \end{itemize}
 
