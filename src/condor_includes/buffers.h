@@ -28,8 +28,10 @@
 void sanity_check();
 
 #if !defined(WIN32)
-typedef int SOCKET;
-#endif
+#  ifndef SOCKET
+#    define SOCKET int
+#  endif
+#endif /* not WIN32 */
 
 class Buf {
 public:
