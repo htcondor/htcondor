@@ -27,6 +27,12 @@
 #include "condor_event.h"
 #include "user_log.c++.h"
 
+//--------------------------------------------------------
+#include "condor_debug.h"
+static char *_FileName_ = __FILE__;   // used by EXCEPT
+//--------------------------------------------------------
+
+
 #define ESCAPE { errorNumber=(errno==EAGAIN) ? ULOG_NO_EVENT : ULOG_UNK_ERROR;\
 					 return 0; }
 
@@ -87,8 +93,12 @@ instantiateEvent (ULogEventNumber event)
 		return new GenericEvent;
 #endif
 
+	  case ULOG_JOB_ABORTED:
+		return new JobAbortedEvent;
+
 	  default:
-		return 0;
+        EXCEPT( "Invalid ULogEventNumber" );
+
 	}
 
     return 0;
@@ -501,7 +511,7 @@ readEvent (FILE *file)
 	if (fscanf (file, "Job was aborted by the user.") == EOF)
 		return 0;
 
-	return 0;
+	return 1;
 }
 
 
