@@ -206,7 +206,7 @@ class Value
 			@param l The expression list if the value is an expression list.
 			@return true iff the value is an expression list.
 		*/
-		inline bool IsListValue(ExprList*& l) const;
+		inline bool IsListValue(ExprList*& l);
 		/** Checks if the value is an expression list.
 			@return true iff the value is an expression list.
 		*/
@@ -356,7 +356,7 @@ IsListValue( const ExprList *&l) const
 }
 
 inline bool Value::
-IsListValue( ExprList *&l) const
+IsListValue( ExprList *&l)
 {
     if (valueType == LIST_VALUE) {
         l = listValue;
