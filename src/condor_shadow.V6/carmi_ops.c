@@ -55,6 +55,7 @@ CARMI_PROJECT_CONFIG:
 #include "debug.h"
 #include <fileno.h>
 #include <errno.h>
+#include "get_daemon_addr.h"
 
 #define MAX_HOSTS 100
 
@@ -71,7 +72,6 @@ SpawnLIST *SpawnList = NULL;
 extern XDR *xdr_syscall;
 
 static char *_FileName_ = __FILE__;
-char *get_schedd_addr(char *);
 int _mkckpt(char *, char *);
 char* gen_ckpt_name(char *, int, int, int);
 

@@ -31,9 +31,10 @@ static char *_FileName_ = __FILE__;
 #include "condor_attributes.h"
 #include "condor_classad.h"
 #include "my_hostname.h"
+#include "get_daemon_addr.h"
 
 int open_url(char *, int, int);
-extern "C" char*	get_schedd_addr(const char*); 
+
 
 ReliSock *qmgmt_sock;
 static Qmgr_connection *connection = 0;
