@@ -35,6 +35,7 @@
 #include "daemon.h"
 #include "internet.h"
 #include "simplelist.h"
+#include "my_username.h"
 
 
 #include "proxymanager.h"
@@ -680,15 +681,7 @@ int RefreshProxyThruMyProxy(Proxy * proxy) {
 
 
 	// Figure out user name;
-	char * username = NULL;
-	struct passwd * userinfo = getpwuid (geteuid());
-	if (userinfo) {
-		username = strdup (userinfo->pw_name);
-		// For some reason this gags...
-		//delete userinfo;
-	} else {
-		username = getlogin();
-	}
+	char * username = my_username(0);	
 
 
 	// Figure out myproxy host and port
