@@ -277,11 +277,7 @@ void TransferState::Insert(int            child_pid,
 	
 	t = new transferinfo;
 	if (t == NULL) {
-		cerr << endl << "ERROR:" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR: cannot make new fileinfo node" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR:" << endl << endl;
+		dprintf(D_ALWAYS, "ERROR: cannot make new fileinfo node\n");
 		exit(DYNAMIC_ALLOCATION);
     }
 	memcpy((char*) &t->shadow_addr, (char*) &shadow_addr, 
@@ -532,11 +528,7 @@ void TransferState::DestroyList()
 		num_transfers--;
     }
 	if (num_transfers != 0) {
-		cerr << endl << "WARNING:" << endl;
-		cerr << "WARNING:" << endl;
-		cerr << "WARNING: incorrect count of nodes in transfer list" << endl;
-		cerr << "WARNING:" << endl;
-		cerr << "WARNING:" << endl << endl;
+		dprintf(D_ALWAYS, "WARNING: incorrect count of nodes in transfer list\n");
     }
 }
 
