@@ -1001,17 +1001,12 @@ abort_job_myself(PROC_ID job_id)
         return;
     }
 
-		// If we're here, the user either called condor_hold or
-		// condor_rm, so we should set ATTR_*_REASON appropriately. 
+		// If we're here, the user called condor_rm, so we should set
+		// ATTR_REMOVE_REASON appropriately.
 	if( mode == REMOVED ) {
 		SetAttributeString( job_id.cluster, job_id.proc, 
 							ATTR_REMOVE_REASON, 
 							"Job removed by condor_rm" );
-	}
-	if( mode == HELD ) {
-		SetAttributeString( job_id.cluster, job_id.proc, 
-							ATTR_HOLD_REASON, 
-							"Job held by condor_hold" );
 	}
 
 	int job_universe = CONDOR_UNIVERSE_STANDARD;
@@ -1121,12 +1116,6 @@ abort_job_myself(PROC_ID job_id)
 						 "Failed to write abort event to the user log\n" ); 
 			}
 			DestroyProc(job_id.cluster,job_id.proc);
-		}
-		if( mode == HELD ) {
-			if (!scheduler.WriteHoldToUserLog(job_id)) {
-				dprintf( D_ALWAYS, 
-						 "Failed to write hold event to the user log\n"); 
-			}
 		}
 	}
 }
@@ -3573,12 +3562,6 @@ Scheduler::delete_shadow_rec(int pid)
 		if (rec->removed) {
 			if (!WriteAbortToUserLog(rec->job_id)) {
 				dprintf(D_ALWAYS,"Failed to write abort to the user log\n");
-			}
-		}
-		if( job_status == HELD ) {
-			if( !WriteHoldToUserLog(rec->job_id) ) {
-				dprintf( D_ALWAYS,
-						 "Failed to write hold event to the user log\n" );
 			}
 		}
 		check_zombie( pid, &(rec->job_id) );
