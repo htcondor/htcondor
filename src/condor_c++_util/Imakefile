@@ -18,7 +18,42 @@ API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
 DH_OBJ = condor_dh.o
 #endif
 
-CONLIBAPI_OBJ = $(API_OBJ) \
+/* Bring in the old classad library because the user log parsing code
+	(which we form the condor api archive with) now can use xml logging and
+	classad representations of the events.
+	This brings in cedar, but we define stub functions in libcondorapi_stubs.C
+	to remedy the situation. If you're just reading log files, then you don't
+	need that functionality anyway. */
+CLASSAD_OBJ = \
+	../condor_classad/ast.o \
+	../condor_classad/astbase.o \
+	../condor_classad/attrlist.o \
+	../condor_classad/buildtable.o \
+	../condor_classad/classad.o \
+	../condor_classad/classad_instantiate.o \
+	../condor_classad/classad_lookup.o \
+	../condor_classad/classad_util.o  \
+	../condor_classad/classifiedjobs.o \
+	../condor_classad/environment.o \
+	../condor_classad/evaluateOperators.o \
+	../condor_classad/operators.o \
+	../condor_classad/parser.o \
+	../condor_classad/scanner.o \
+	../condor_classad/value.o \
+	../condor_classad/xml_classads.o \
+	../condor_classad/registration.o \
+	../condor_util_lib/condor_snutils.o \
+	stringSpace.o \
+	MyString.o
+
+/* Construct a libcondorapi.a that includes enough stuff to read and write
+	log files. The libcondorapi_stubs.o object contains stubs for cedar, the
+	condor query object, and a few various other simple implementations for
+	functions we could not bring in from another place. */
+CONLIBAPI_OBJ = \
+	condor_event.o \
+	user_log.o \
+	iso_dates.o \
 	file_lock.o \
 	../condor_util_lib/dprintf_common.o \
 	../condor_util_lib/dprintf.o \
@@ -26,6 +61,7 @@ CONLIBAPI_OBJ = $(API_OBJ) \
 	../condor_util_lib/except.o \
 	../condor_util_lib/lock_file.NON_POSIX.o \
 	$(FLOCK_OBJ) \
+	strnewp.o \
 	condor_environ.o \
 	../condor_util_lib/setsyscalls.o \
 	uids.o \
@@ -34,9 +70,10 @@ CONLIBAPI_OBJ = $(API_OBJ) \
 	my_subsystem.o \
 	distribution.o \
 	my_distribution.o \
-	libcondorapi_stubs.o \
-	strnewp.o \
-	$(DH_OBJ)
+	$(CLASSAD_OBJ) \
+	$(DH_OBJ) \
+	c++_util_instantiate.o \
+	libcondorapi_stubs.o
 
 DAEMON_CLIENT_OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o \
 	dc_schedd.o
