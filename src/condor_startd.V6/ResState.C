@@ -451,8 +451,10 @@ ResState::enter_action( State s, Activity a,
 		switch( a ) {
 		case killing_act:
 			if( rip->r_starter->active() ) {
-				if( rip->r_starter->kill( DC_SIGHARDKILL ) < 0 ) {
-					rip->r_starter->killpg( DC_SIGKILL );
+				if( ! rip->hardkill_starter() ) {
+						// hardkill_starter returns FALSE if there was
+						// an error in kill and we had to send SIGKILL
+						// to the starter's process group.
 					return change( owner_state );
 				}
 			} else {
