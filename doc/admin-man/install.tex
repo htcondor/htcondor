@@ -379,21 +379,21 @@ above for details on this.
 IF YOU HAVE DECIDED TO CREATE A 'condor' USER AND GROUP, YOU SHOULD DO
 THAT ON ALL YOUR MACHINES BEFORE YOU DO ANYTHING ELSE.
 
-The easiest way to install Condor is to use the one or both of the
-scripts scripts provided to help you: \Condor{install} and
-\Condor{init}.  You should run these scripts as the user that you are
-going to run the Condor daemons as.  First,run \Condor{install} on any
-machine that will be a fileserver for shared files used by Condor,
-such as the release directory, and possibly the condor user's home
-directory.
+The easiest way to install Condor is to use one or both of the scripts
+provided to help you: \Condor{install} and \Condor{init}.  You should
+run these scripts as the user that you are going to run the Condor
+daemons as.  First, run \Condor{install} on the machine that will be a
+fileserver for shared files used by Condor, such as the release
+directory, and possibly the condor user's home directory.  When you
+do, choose the ``full-install'' option in step #1 described below.
 
 Once you have run \Condor{install} on a file server to setup your
 release directory and configure Condor for your site, you should run
 \Condor{init} on any other machines in your pool to create any locally
-used files that aren't created by \Condor{install}.  In the most simple
-case, where nearly all of Condor is instaled on a shared file system,
-even though Condor{install} will create nearly all the files and
-directories you need, you will still need to use \Condor{init} to
+used files that aren't created by \Condor{install}.  In the most
+simple case, where nearly all of Condor is installed on a shared file
+system, even though Condor{install} will create nearly all the files
+and directories you need, you will still need to use \Condor{init} to
 create the \Macro{LOCK} directory on the local disk of each machine.
 If you have a shared release directory, but the \Macro{LOCAL\_DIR} is
 local on each machine, \Condor{init} will create all the directories
@@ -406,10 +406,18 @@ If you don't have a shared filesystem, you will need to run
 this case, there is no need to run \Condor{init} at all.
 
 In addition, you will want to run \Condor{install} on your central
-manager machine.  If your central manager is the same machine as your
-file server, you only have to run \Condor{install} once.  If they are
-separate machines, run \Condor{install} on your file server first, then
-on your central manager.
+manager machine if that machine is different from your file server,
+using the ``central-manager'' option in step #1 described below.  Run
+\Condor{install} on your file server first, then on your central
+manager.  If this step fails for some reason (NFS permissions, etc),
+you can do it manually quite easily.  All this does is copy the
+\File{condor_config.local.central.manager} file from
+\Release{etc/examples} to the proper location for the local config
+file of your central manager machine.  If your central manager is an
+Alpha or an SGI, you might want to add ``KBDD'' to the
+\Macro{DAEMON\_LIST} parameter.  See
+section~\ref{sec:Configuring-Condor} ``Configuring Condor'' on
+page~\pageref{sec:Configuring-Condor} of the manual for details.
 
 \Condor{install} assumes you have perl installed in \File{/usr/bin/perl}.  If
 this is not the case, you can either edit the script to put the right
