@@ -52,6 +52,9 @@ condor_isalnum(int c)
 #define ISIDCHAR(c)		(isalnum(c) || ((c) == '_'))
 #endif
 
+// $$ expressions may also contain a colon
+#define ISDDCHAR(c) ( ISIDCHAR(c) || ((c)==':') )
+
 #define ISOP(c)		(((c) == '=') || ((c) == ':'))
 
 // Magic macro to represent a dollar sign, i.e. $(DOLLAR)="$"
@@ -558,9 +561,16 @@ tryagain:
 			name = ++value;
 			while( *value && *value != ')' ) {
 				char c = *value++;
-				if( !ISIDCHAR(c) ) {
-					tvalue = name;
-					goto tryagain;
+				if( getdollardollar ) {
+					if( !ISDDCHAR(c) ) {
+						tvalue = name;
+						goto tryagain;
+					}
+				} else {
+					if( !ISIDCHAR(c) ) {
+						tvalue = name;
+						goto tryagain;
+					}
 				}
 			}
 

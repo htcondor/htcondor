@@ -1354,11 +1354,37 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 					no_startd_ad = true;
 					break;
 				}
+
+				// If the name contains a colon, then it
+				// is a	fallback value, should the startd
+				// leave it undefined, e.g.
+				// $$(NearestStorage:turkey)
+
+				char rebuild[ATTRLIST_MAX_EXPRESSION];
+				char *fallback;
+
+				fallback = strchr(name,':');
+				if(fallback) {
+					*fallback = 0;
+					fallback++;
+				}
+
+				// Look for the name in the ad.
+				// If it is not there, use the fallback.
+				// If no fallback value, then fail.
+
 				value = startd_ad->sPrintExpr(NULL,0,name);
 				if (!value) {
-					attribute_not_found = true;
-					break;
+					if(fallback) {
+						sprintf(rebuild,"%s = %s",name,fallback);
+						value = strdup(rebuild);
+					}
+					if(!fallback || !value) {
+						attribute_not_found = true;
+						break;
+					}
 				}
+
 				// we just want the attribute value, so strip
 				// out the "attrname=" prefix and any quotation marks 
 				// around string value.
