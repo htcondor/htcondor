@@ -358,6 +358,7 @@ universes for user jobs:
  	\item MPI
 	\item Globus
 	\item Java
+	\item Scheduler
 \end{itemize}
 
 The \AdAttr{Universe} attribute is specified in the submit description file.
@@ -384,6 +385,9 @@ Condor interface.  See \URL{http://www.globus.org} for more about Globus.
 \index{JVM}
 The Java universe allows users to run jobs written for the
 Java Virtual Machine (JVM).
+%\index{universe!Scheduler}
+%The scheduler universe . . .
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:standard-universe}Standard Universe}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -545,6 +549,11 @@ A program submitted to the Java universe may run on any sort of machine
 with a JVM regardless of its location, owner, or JVM version.  Condor
 will take care of all the details such as finding the JVM binary and
 setting the classpath.
+
+%%%%%%%%%%%%
+\subsubsection{Scheduler Universe}
+%%%%%%%%%%%%
+\Todo
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Submitting a Job}
@@ -1375,7 +1384,8 @@ the usual method to nicely terminate a Unix program.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\input{user-man/glidein.tex}
+% Put into the Grid Computing chapter
+%\input{user-man/glidein.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
