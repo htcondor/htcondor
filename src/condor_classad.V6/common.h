@@ -49,13 +49,41 @@
 #include <time.h>
 #include <math.h>
 #include "debug.h"
-#include <unistd.h>
+#ifndef WIN32
+	#include <unistd.h>
+	#define DLL_IMPORT_MAGIC  /* a no-op on Unix */
+#endif
 #include <errno.h>
 #include <ctype.h>
 
 #ifndef WORD_BIT
 #define WORD_BIT 32
 #endif
+
+#ifdef WIN32
+	// special definitions we need for Windows
+#define DLL_IMPORT_MAGIC __declspec(dllimport)
+#include <windows.h>
+#include <float.h>
+#include <io.h>
+#define fsync _commit
+#define open _open
+#define strcasecmp _stricmp
+#define rint(num) floor(num + .5)
+#define isnan _isnan
+#define snprintf _snprintf
+
+	// Disable warnings about multiple template instantiations
+	// (done for gcc)
+#pragma warning( disable : 4660 )  
+	// Disable warnings about forcing bools
+#pragma warning( disable : 4800 )  
+	// Disable warnings about truncated debug identifiers
+#pragma warning( disable : 4786 )
+	// use new SDK stuff in STLport
+#define _STLP_NEW_PLATFORM_SDK
+#endif // WIN32
+
 
 #else /* CLASSAD_DISTRIBUTION isn't defined */
 
@@ -67,6 +95,7 @@
 using namespace std;
 #endif
 
+	
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
