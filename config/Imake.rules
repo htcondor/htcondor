@@ -948,13 +948,16 @@ compiledir/Imakefile:	CImakefile				@@\
 	cd compiledir; /bin/rm -f Imakefile			@@\
 	cd compiledir; ln -s ../CImakefile Imakefile		@@\
 								@@\
-compiledir/Makefile: compiledir compiledir/Imakefile	@@\
+compiledir/Makefile: compiledir compiledir/Imakefile		@@\
 	cd compiledir; ../../condor_imake -I../../../config \	@@\
 	   -DC_COMPILER=compiler \				@@\
-	   -DFLAGS_MACRO_NAME=flags_macro_name		@@\
+	   -DFLAGS_MACRO_NAME=flags_macro_name			@@\
 								@@\
 clean::								@@\
-	rm -rf compiledir				@@\
+	rm -rf compiledir compiler_list				@@\
+								@@\
+compiler_list:: safe_append.pl					@@\
+	perl safe_append.pl -f compiler_list -a compiledir	@@\
 XCOMM End translation of func(C_COMPILER_TARGET)
 #endif /* C_COMPILER_TARGET */
 
@@ -972,13 +975,16 @@ compiledir/Imakefile: CPPImakefile				@@\
 	cd compiledir; /bin/rm -f Imakefile			@@\
 	cd compiledir; ln -s ../CPPImakefile Imakefile		@@\
 								@@\
-compiledir/Makefile: compiledir compiledir/Imakefile	@@\
+compiledir/Makefile: compiledir compiledir/Imakefile		@@\
 	cd compiledir; ../../condor_imake -I../../../config \	@@\
 	   -DCPP_COMPILER=compiler \				@@\
-	   -DFLAGS_MACRO_NAME=flags_macro_name		@@\
+	   -DFLAGS_MACRO_NAME=flags_macro_name			@@\
 								@@\
 clean::								@@\
-	rm -rf compiledir						@@\
+	rm -rf compiledir compiler_list				@@\
+								@@\
+compiler_list:: safe_append.pl					@@\
+	perl safe_append.pl -f compiler_list -a compiledir	@@\
 XCOMM End translation of func(CPP_COMPILER_TARGET)
 #endif /* CPP_COMPILER_TARGET */
 
@@ -1003,7 +1009,10 @@ compiledir/Makefile: compiledir compiledir/Imakefile	@@\
 		-DFLAGS_MACRO_NAME=flags_macro_name		@@\
 								@@\
 clean::								@@\
-	rm -rf compiledir					@@\
+	rm -rf compiledir compiler_list				@@\
+								@@\
+compiler_list:: safe_append.pl					@@\
+	perl safe_append.pl -f compiler_list -a compiledir	@@\
 XCOMM End translation of func(F_COMPILER_TARGET)
 #endif /* F_COMPILER_TARGET */
 
@@ -1029,22 +1038,6 @@ VLINK(cmplr,name.vanilla,obj name.o) @@\
 XCOMM End translation of func(BUILD_EXTRA)
 #endif /* BUILD_EXTRA */
 
-#ifndef BUILD_SPECIFIC_VANILLA
-#define BUILD_SPECIFIC_VANILLA(compiler,progname,objfiles,cmdfile,runfile,ext) @@\
-XCOMM Begin translation of func(BUILD_SPECIFIC_VANILLA) @@\
-BUILD_FILES_SPECIFIC(progname,cmdfile,runfile,ext) @@\
-VLINK(compiler,progname.vanilla,objfiles)	@@\
-XCOMM End translation of func(BUILD_SPECIFIC_VANILLA)
-#endif /* BUILD_SPECIFIC_VANILLA */
-
-#ifndef BUILD_SPECIFIC_STANDARD
-#define BUILD_SPECIFIC_STANDARD(compiler,progname,objfiles,cmdfile,runfile,ext) @@\
-XCOMM Begin translation of func(BUILD_SPECIFIC_STANDARD) @@\
-BUILD_FILES_SPECIFIC(progname,cmdfile,runfile,ext) @@\
-RLINK(compiler,progname.remote,objfiles)		@@\
-XCOMM End translation of func(BUILD_SPECIFIC_STANDARD)
-#endif /* BUILD_SPECIFIC_STANDARD */
-
 #ifndef RBUILD
 #define RBUILD(cmplr,name,ext)		@@\
 XCOMM Begin translation of func(RBUILD) @@\
@@ -1057,33 +1050,29 @@ XCOMM End translation of func(RBUILD)
 #ifndef BUILD_FILES
 #define BUILD_FILES(name,ext)		@@\
 XCOMM Begin translation of func(BUILD_FILES) @@\
-all:: name.ext name.cmd name.run	@@\
+all:: name.ext				     @@\
 name.ext:					@@\
-	ln -s ../name.ext .		@@\
-name.cmd:					@@\
-	ln -s ../name.cmd .			@@\
-name.run:					@@\
-	ln -s ../name.run .			@@\
+	ln -s ../name.ext .			@@\
 clean::						@@\
-	rm -f name.ext name.cmd name.run	@@\
+	rm -f name.ext				@@\
 XCOMM End translation of func(BUILD_FILES)
 #endif /* BUILD_FILES */
 
 
-#ifndef BUILD_FILES_SPECIFIC
-#define BUILD_FILES_SPECIFIC(progname,cmdfile,runfile,ext)		@@\
-XCOMM Begin translation of func(BUILD_FILES_SPECIFIC) @@\
-all:: progname.ext cmdfile.cmd runfile.run	@@\
-progname.ext:					@@\
-	ln -s ../progname.ext .		@@\
-cmdfile.cmd:					@@\
-	ln -s ../cmdfile.cmd .			@@\
-runfile.run:					@@\
-	ln -s ../runfile.run .			@@\
+#ifndef RUN
+#define RUN(name)	@@\
+XCOMM Begin translation of func(RUN)		@@\
+all:: name.run name.cmd				@@\
+name.run:					@@\
+	ln -s ../name.run .			@@\
+name.cmd:					@@\
+	ln -s ../name.cmd .			@@\
 clean::						@@\
-	rm -f progname.ext cmdfile.cmd runfile.run @@\
-XCOMM End translation of func(BUILD_FILES_SPECIFIC)
-#endif /* BUILD_FILES_SPECIFIC */
+	rm -f name.run name.cmd run_list	@@\
+run_list:: safe_append.pl name.run 		@@\
+	perl safe_append.pl -f run_list -a name	@@\
+XCOMM End translation of func(RUN)
+#endif /* RUN */
 
 
 /***********************************************************************
