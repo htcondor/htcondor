@@ -37,7 +37,9 @@
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT */
 
+#if !defined(WIN32)
 #include "condor_fdset.h"
+#endif
 
 #include "sched.h"
 #include "clib.h"

@@ -175,7 +175,7 @@ class Scheduler : public Service
 	int				cluster_rejected(int);
 	void   			mark_cluster_rejected(int); 
 	int				count_jobs();
-	void			update_central_mgr();
+	void			update_central_mgr(int command);
 	int				insert_owner(char*);
 	void			reaper(int, int, struct sigcontext*);
 	void			clean_shadow_recs();

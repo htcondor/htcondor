@@ -296,7 +296,7 @@ Scheduler::count_jobs()
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_RUNNING_JOBS, JobsRunning);
 	ad->Insert (tmp);
 
-	update_central_mgr();// Send even if no owners
+	update_central_mgr(UPDATE_SCHEDD_AD);// Send even if no owners
 	dprintf (D_ALWAYS, "Sent HEART BEAT ad to central mgr: N_Owners=%d\n",
 				N_Owners);
 
@@ -320,7 +320,7 @@ Scheduler::count_jobs()
 	  dprintf (D_ALWAYS, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
-	  update_central_mgr();
+	  update_central_mgr(UPDATE_SUBMITTOR_AD);
 	}
 
 	return 0;
@@ -391,12 +391,12 @@ Scheduler::insert_owner(char* owner)
 }
 
 void
-Scheduler::update_central_mgr()
+Scheduler::update_central_mgr(int command)
 {
 	SafeSock	sock(CollectorHost, COLLECTOR_UDP_COMM_PORT);
 
 	sock.encode();
-	if (!sock.put(UPDATE_SCHEDD_AD) ||
+	if (!sock.put(command) ||
 		!ad->put(sock) ||
 		!sock.end_of_message())
 		dprintf(D_ALWAYS, "failed to update central manager!\n");
