@@ -482,9 +482,9 @@ display_dprintf_header(FILE *fp)
 	}
 
 	if ( mycluster != -1 ) {
-		fprintf( fp, "(%d.%d) (%ld): ", mycluster,myproc,mypid );
+		fprintf( fp, "(%d.%d) (%ld): ", mycluster, myproc, (long)mypid );
 	} else {
-		fprintf( fp, "(?.?) (%ld): ", mypid );
+		fprintf( fp, "(?.?) (%ld): ", (long)mypid );
 	}	
 
 	return TRUE;
