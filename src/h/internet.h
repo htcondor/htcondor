@@ -82,6 +82,8 @@ char* calc_subnet_name( char* host );
 
 int is_ipaddr(const char *inbuf, struct in_addr *sin_addr);
 
+int is_valid_network( const char *network, struct in_addr *ip, struct in_addr *mask);
+
 int is_valid_sinful( const char *sinful );
 
 /* Binds the given fd to any port on the correct local interface for
