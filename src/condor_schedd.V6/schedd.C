@@ -237,9 +237,11 @@ Scheduler::timeout()
 {
 	count_jobs();
 
-	/* Neither of these should be needed! */
-	reaper( 0, 0, 0 );
-	clean_shadow_recs();
+	/* Neither of these calls (reaper or clean_shadow_recs) should be needed! */
+#ifndef WIN32
+	reaper( 0 );
+#endif
+	clean_shadow_recs();	
 
 	if( (numShadows-SchedUniverseJobsRunning) > MaxJobsRunning ) {
 		dprintf(D_ALWAYS,"Preempting %d jobs due to MAX_JOBS_RUNNING change\n",
@@ -616,27 +618,31 @@ abort_job_myself(PROC_ID job_id)
 				"This job does not have a match -- It may be a PVM job.\nFound shadow record for job %d.%d\n",
 				job_id.cluster, job_id.proc);
 		  
-#if !defined(WIN32)	/* NEED TO PORT TO WIN32 */
-		  if ( kill( srec->pid, SIGUSR1) == -1 )
+#ifdef WANT_DC_PM
+		if ( daemonCore->Send_Signal( srec->pid, DC_SIGUSR1 ) == FALSE )
+#else
+		if ( kill( srec->pid, SIGUSR1) == -1 )
+#endif
 		       dprintf(D_ALWAYS,
 			       "Error in sending SIGUSR1 to %d errno = %d\n",
 			       srec->pid, errno);
 		  else dprintf(D_ALWAYS, "Sent SIGUSR1 to Shadow Pid %d\n",
 			       srec->pid);
-#endif
 	     } else {
 		  dprintf( D_ALWAYS,
 			   "Found record for scheduler universe job %d.%d\n",
 			   job_id.cluster, job_id.proc);
-#if !defined(WIN32)	/* NEED TO PORT TO WIN32 */
 		  char owner[_POSIX_PATH_MAX];
 		  GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
 		  dprintf(D_FULLDEBUG,"Sending SIGUSR1 to scheduler universe job pid=%d owner=%s\n",srec->pid,owner);
     	  init_user_ids(owner);
 		  priv_state priv = set_user_priv();
+#ifdef WANT_DC_PM
+		  daemonCore->Send_Signal( srec->pid, DC_SIGUSR1 );
+#else
 		  kill( srec->pid, SIGUSR1 );
-		  set_priv(priv);
 #endif
+		  set_priv(priv);
 	     }
 		 if (mode == REMOVED) {
 			 srec->removed = TRUE;
@@ -681,17 +687,13 @@ bool Scheduler::WriteAbortToUserLog(PROC_ID job_id)
 
 	dprintf(D_FULLDEBUG,"Writing abort record to user logfile=%s owner=%s\n",logfilename,owner);
 
-    init_user_ids(owner);
-	priv_state priv = set_user_priv();
-
     UserLog* ULog=new UserLog();
-	ULog->initialize(logfilename, job_id.cluster, job_id.proc, 0);
+	ULog->initialize(owner, logfilename, job_id.cluster, job_id.proc, 0);
 
 	JobAbortedEvent event;
 	int status=ULog->writeEvent(&event);
 
 	delete ULog;
-	set_priv(priv);
 
 	if (!status) return false;
 	return true;
@@ -1192,6 +1194,11 @@ Scheduler::negotiate(int, Stream* s)
 				case END_NEGOTIATE:
 					dprintf( D_ALWAYS, "Lost priority - %d jobs matched\n",
 							JobsStarted );
+#ifdef WIN32
+					if( ! ExitWhenDone ) {
+						if (JobsStarted) StartJobs();
+					}
+#endif
 					return KEEP_STREAM;
 				default:
 					dprintf( D_ALWAYS, "Got unexpected request (%d)\n", op );
@@ -1247,6 +1254,18 @@ Scheduler::negotiate(int, Stream* s)
 		"Out of jobs - %d jobs matched, %d jobs idle, flock level = %d\n",
 							JobsStarted, jobs - JobsStarted, FlockLevel );
 	}
+
+#ifdef WIN32
+		// If we're not trying to shutdown, now an agent
+		// has claimed a resource, we should try to
+		// activate all our claims and start jobs on them.
+		// On Unix, this is done in the repear, but on WIN32
+		// we do not fork the agent, so do it here.
+	if( ! ExitWhenDone ) {
+		if (JobsStarted) StartJobs();
+	}
+#endif
+
 	return KEEP_STREAM;
 }
 
@@ -1280,11 +1299,11 @@ Scheduler::vacate_service(int, Stream *sock)
 int
 Scheduler::permission(char* id, char *user, char* server, PROC_ID* jobId)
 {
-#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 	match_rec*		mrec;						// match record pointer
-	int			pid;
+#if 0
 	int			lim = getdtablesize();		// size of descriptor table
 	int			i;
+#endif
 
 	mrec = AddMrec(id, server, jobId);
 	if(!mrec) {
@@ -1295,7 +1314,40 @@ Scheduler::permission(char* id, char *user, char* server, PROC_ID* jobId)
 		dprintf(D_ALWAYS, "failed to find job %d.%d\n", jobId->cluster, jobId->proc);
 		return 0;
 	}
-	ClassAd *jobAdCopy = new ClassAd(*jobAd);	// make a copy for Agent
+
+	// The above GetJobAd() does different things if we are a qmgmt client
+	// or server.  In the client, it allocates memory for a new ad and therefore
+	// must be deleted when we are done.  On the server side, the server being
+	// the schedd where we now are, GetJobAd() does _not_ allocate any new memory
+	// and instead simply returns a pointer to the ad which is already in memory.
+	// We must not delete this ad (now pointed to by jobAd), which is why
+	// FreeJobAd() is a no-op on the server side.  So, we make a copy of the ad
+	// into jobAdCopy for the agent (which must be deleted).  This is so the 
+	// Agent can run in a thread without the need of a semaphore to protect
+	// the in-memory queue. -Todd 11/98
+	// ClassAd *jobAdCopy = new ClassAd(*jobAd);	// make a copy for Agent
+
+#ifdef WIN32
+
+	// Note: this is going to tie up the negotiator until we do it in a new thread
+	switch (Agent(server, id, MySockName, user, aliveInterval, jobAd)) {
+	case EXITSTATUS_OK:
+		dprintf(D_ALWAYS, "Agent contacting startd successful\n");
+		mrec->status = M_ACTIVE;
+		// delete jobAdCopy;
+		return 1;
+		break;
+	default:
+		dprintf(D_ALWAYS, "capability rejected by startd\n");
+		DelMrec(mrec);
+		// delete jobAdCopy;
+		return 0;
+		break;
+	}
+
+#else
+
+	int	pid;
 	switch((pid = fork())) 	{
 	    case -1:	/* error */
 
@@ -1307,7 +1359,7 @@ Scheduler::permission(char* id, char *user, char* server, PROC_ID* jobId)
             }
 			DelMrec(mrec);
 			FreeJobAd(jobAd);
-			delete jobAdCopy;
+			// delete jobAdCopy;
 			return 0;
 
         case 0:     /* the child */
@@ -1322,7 +1374,7 @@ Scheduler::permission(char* id, char *user, char* server, PROC_ID* jobId)
             }
 #endif
 
-            Agent(server, id, MySockName, user, aliveInterval, jobAdCopy);
+            exit( Agent(server, id, MySockName, user, aliveInterval, jobAd) );
 			
 
         default:    /* the parent */
@@ -1330,7 +1382,7 @@ Scheduler::permission(char* id, char *user, char* server, PROC_ID* jobId)
 			dprintf(D_FULLDEBUG,"Forked Agent with pid=%d for job=%d.%d\n",pid,jobId->cluster,jobId->proc);
             mrec->agentPid = pid;
 			FreeJobAd(jobAd);
-			delete jobAdCopy;	// THREAD SHARED MEMORY WARNING
+			// delete jobAdCopy;	// THREAD SHARED MEMORY WARNING
 			return 1;
 	}
 #endif
@@ -1519,21 +1571,6 @@ void Scheduler::StartJobHandler() {
 	struct shadow_rec *srp;
 	char out_buf[80];
 	int pipes[2];
-#endif
-
-	(void)sprintf( cluster, "%d", job_id->cluster );
-	(void)sprintf( proc, "%d", job_id->proc );
-	argv[0] = "condor_shadow";
-	argv[1] = MyShadowSockName;
-	argv[2] = mrec->peer;
-	argv[3] = mrec->id;
-	argv[4] = cluster;
-	argv[5] = proc;
-	argv[6] = 0;
-
-	lim = getdtablesize();
-
-#ifdef CARMI_OPS
 	srp = find_shadow_by_cluster( job_id );
 	
 	if (srp != NULL) /* mean that the shadow exists */
@@ -1557,26 +1594,60 @@ void Scheduler::StartJobHandler() {
     /* now the case when the shadow is absent */
 	socketpair(AF_UNIX, SOCK_STREAM, 0, pipes);
 	dprintf(D_ALWAYS, "Got the socket pair %d %d \n", pipes[0], pipes[1]);
+#endif  // of CARMI_OPS
+
+#ifdef WANT_DC_PM
+	char	args[_POSIX_ARG_MAX];
+
+	sprintf(args, "condor_shadow %s %s %s %d %d", MyShadowSockName, mrec->peer,
+			mrec->id, job_id->cluster, job_id->proc);
+	if (Shadow) free(Shadow);
+	Shadow = param("SHADOW");
+	pid = daemonCore->Create_Process(Shadow, args);
+	if (pid == FALSE) {
+		dprintf( D_ALWAYS, "CreateProcess(%s, %s) failed\n", Shadow, args );
+		pid = -1;
+	} 
+	free(Shadow);
+	Shadow = NULL;
+#else
+	// here we are not using WANT_DC_PM, so prepare an argv[] array for
+	// exec and do an actual honest to goodness fork().
+	(void)sprintf( cluster, "%d", job_id->cluster );
+	(void)sprintf( proc, "%d", job_id->proc );
+	argv[0] = "condor_shadow";
+	argv[1] = MyShadowSockName;
+	argv[2] = mrec->peer;
+	argv[3] = mrec->id;
+	argv[4] = cluster;
+	argv[5] = proc;
+	argv[6] = 0;
+
+	pid = fork();
 #endif
 
-	switch( (pid=fork()) ) {
+	switch(pid) {
 		case -1:	/* error */
+#ifndef WANT_DC_PM
 			if( errno == ENOMEM ) {
 				dprintf(D_ALWAYS, "fork() failed, due to lack of swap space\n");
 				swap_space_exhausted();
 			} else {
 				dprintf(D_ALWAYS, "fork() failed, errno = %d\n" );
 			}
+#endif
 			mark_job_stopped(job_id);
 			delete srec;
 			break;
+
+#ifndef WANT_DC_PM
 		case 0:		/* the child */
 			
 			// Renice 
 			renice_shadow();
 
 			(void)close( 0 );
-#ifdef CARMI_OPS
+#	ifdef CARMI_OPS
 			if ((retval = dup2( pipes[0], 0 )) < 0)
 			  {
 			    dprintf(D_ALWAYS, "Dup2 returns %d\n", retval);  
@@ -1584,8 +1655,9 @@ void Scheduler::StartJobHandler() {
 			  }
 		        else
 			    dprintf(D_ALWAYS, " Duped 0 to %d \n", pipes[0]);
-#endif		
+#	endif		
 			// Close descriptors we do not want inherited by the shadow
+			lim = getdtablesize();
 			for( int i=3; i<lim; i++ ) {
 				(void)close( i );
 			}
@@ -1599,8 +1671,10 @@ void Scheduler::StartJobHandler() {
 				exit( JOB_EXEC_FAILED );
 			}
 			break;
+#endif // of ifndef WANT_DC_PM
+
 		default:	/* the parent */
-			dprintf( D_ALWAYS, "Forked shadow for job %d.%d on \"%s\", (shadow pid = %d)\n",
+			dprintf( D_ALWAYS, "Started shadow for job %d.%d on \"%s\", (shadow pid = %d)\n",
 				job_id->cluster, job_id->proc, mrec->peer, pid );
 			srec->pid=pid;
 			add_shadow_rec(srec);
@@ -1608,7 +1682,8 @@ void Scheduler::StartJobHandler() {
 
     // Re-set timer if there are any jobs left in the queue
     if (!RunnableJobQueue.IsEmpty()) {
-        StartJobTimer=daemonCore->Register_Timer(JobStartDelay,(Eventcpp)StartJobHandler,"start_job", this);
+        StartJobTimer=daemonCore->Register_Timer(JobStartDelay,
+						(Eventcpp)&Scheduler::StartJobHandler,"start_job", this);
     } else {
 		// if there are no more jobs in the queue, this is a great time to
 		// update the central manager since things are pretty "stable".
@@ -1621,7 +1696,6 @@ void Scheduler::StartJobHandler() {
 shadow_rec*
 Scheduler::start_std(match_rec* mrec , PROC_ID* job_id)
 {
-#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 
 	dprintf( D_FULLDEBUG, "Scheduler::start_std - job=%d.%d on %s\n",
 			job_id->cluster, job_id->proc, mrec->peer);
@@ -1636,16 +1710,11 @@ Scheduler::start_std(match_rec* mrec , PROC_ID* job_id)
 		EXCEPT("Cannot put job into run queue\n");
 	}
 	if (StartJobTimer<0) {
-		StartJobTimer=daemonCore->Register_Timer(0,(Eventcpp)StartJobHandler,"start_job", this);
+		StartJobTimer=daemonCore->Register_Timer(0,
+						(Eventcpp)&Scheduler::StartJobHandler,"start_job", this);
     }
 
 	return srec;
-
-#else /* WIN32 */
-
-	return NULL;
-
-#endif /* !defined(WIN32) */
 }
 
 
@@ -2089,29 +2158,23 @@ Scheduler::cluster_rejected(int cluster)
 }
 
 /*
-** Try to send a signal to the given process to determine whether it
-** is alive.  We use signal '0' which only checks whether a signal is
-** sendable, it doesn't actually send one.
-*/
+ * Ask daemonCore to check to see if a given process is still alive
+ */
 int
 Scheduler::is_alive(shadow_rec* srec)
 {
-#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 	int status;
 	if (IsSchedulerUniverse(srec)) {
 		char owner[_POSIX_PATH_MAX];
 		GetAttributeString(srec->job_id.cluster, srec->job_id.proc, ATTR_OWNER, owner);
    		init_user_ids(owner);
 		priv_state priv = set_user_priv();
-		status=kill(srec->pid,0);
+		status=daemonCore->Is_Pid_Alive(srec->pid);
 		set_priv(priv);
 	} else {
-		status=kill(srec->pid,0);
+		status=daemonCore->Is_Pid_Alive(srec->pid);
 	}
-	return (status==0);
-#else
-	return 0;
-#endif
+	return status;
 }
 
 void
@@ -2154,20 +2217,17 @@ Scheduler::preempt(int n)
 				}
 				n--;
 			} else if (preempt_all) {
-#if !defined(WIN32)		// NEED TO PORT TO WIN32
 				if ( !rec->preempted ) {
+#ifdef WANT_DC_PM
+					daemonCore->Send_Signal( rec->pid, DC_SIGTERM );
+#else
 					kill( rec->pid, SIGTERM );
+#endif
 					rec->preempted = TRUE;
 				}
-#endif
-				n--;
+				rec->preempted = TRUE;
 			}
-		} else {
-			dprintf( D_ALWAYS,
-					 "Have ShadowRec for pid %d, but is dead!\n",
-					 rec->pid );
-			dprintf( D_ALWAYS, "Deleting now...\n" );
-			delete_shadow_rec( rec->pid );
+			n--;
 		}
 	}
 }
@@ -2426,28 +2486,21 @@ static int IsSchedulerUniverse(shadow_rec* srec)
 	return TRUE;
 }
 
+#ifndef WANT_DC_PM
 /*
 ** Allow child processes to die a decent death, don't keep them
 ** hanging around as <defunct>.
-**
-** NOTE: This signal handler calls routines which will attempt to lock
-** the job queue.  Be very careful it is not called when the lock is
-** already held, or deadlock will occur!
 */
 void
-Scheduler::reaper(int sig, int code, struct sigcontext* scp)
+Scheduler::reaper(int sig)
 {
-#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
-	pid_t   	pid;
-    int     	status;
-	match_rec*		mrec;
-	shadow_rec*	srec;
-    int StartJobsFlag=TRUE;
+	pid_t   		pid;
+    int     		status;
 
     if( sig == 0 ) {
         dprintf( D_FULLDEBUG, "***********  Begin Extra Checking ********\n" );
     } else {
-        dprintf( D_ALWAYS, "Entered reaper( %d, %d, 0x%x )\n", sig, code, scp );
+        dprintf( D_ALWAYS, "Entered reaper( %d, %d )\n", sig, code );
     }
 
 	for(;;) {
@@ -2456,46 +2509,63 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
                                                             pid, errno );
             break;
         }
-	
-		mrec = FindMrecByPid(pid);
-		srec = FindSrecByPid(pid);
+		child_exit(pid, status);
+	}
+    if( sig == 0 ) {
+        dprintf( D_FULLDEBUG, "***********  End Extra Checking ********\n" );
+    }
+}
+#endif
 
-		if(mrec) {
-			if(WIFEXITED(status)) {
-                dprintf(D_FULLDEBUG, "agent pid %d exited with status %d\n",
-                        pid, WEXITSTATUS(status) );
-                if(WEXITSTATUS(status) == EXITSTATUS_NOTOK) {
-                    dprintf(D_ALWAYS, "capability rejected by startd\n");
-                    DelMrec(mrec);
-                } else {
-                    dprintf(D_ALWAYS, "Agent contacting startd successful\n");
+void
+Scheduler::child_exit(int pid, int status)
+{
+	match_rec*		mrec;
+	shadow_rec*		srec;
+    int				StartJobsFlag=TRUE;
+
+	mrec = FindMrecByPid(pid);
+	srec = FindSrecByPid(pid);
+
+	if(mrec) {
+		if(WIFEXITED(status)) {
+               dprintf(D_FULLDEBUG, "agent pid %d exited with status %d\n",
+                       pid, WEXITSTATUS(status) );
+               if(WEXITSTATUS(status) == EXITSTATUS_NOTOK) {
+                   dprintf(D_ALWAYS, "capability rejected by startd\n");
+                   DelMrec(mrec);
+               } else {
+                   dprintf(D_ALWAYS, "Agent contacting startd successful\n");
 					mrec->status = M_ACTIVE;
-                }
-            } else if(WIFSIGNALED(status)) {
-                dprintf(D_ALWAYS, "Agent pid %d died with signal %d\n",
-                        pid, WTERMSIG(status));
-                DelMrec(mrec);
-            }
-		} else if (IsSchedulerUniverse(srec)) {
-			// scheduler universe process
-			if(WIFEXITED(status)) {
-				dprintf(D_FULLDEBUG,
-						"scheduler universe job (%d.%d) pid %d "
-						"exited with status %d\n", srec->job_id.cluster,
-						srec->job_id.proc, pid, WEXITSTATUS(status) );
-				NotifyUser(srec, "exited with status ",
-						   WEXITSTATUS(status) , COMPLETED);
-				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, ATTR_JOB_STATUS, COMPLETED);
-				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, ATTR_JOB_EXIT_STATUS, WEXITSTATUS(status) );
-			} else if(WIFSIGNALED(status)) {
-				dprintf(D_ALWAYS,
-						"scheduler universe job (%d.%d) pid %d died "
-						"with signal %d\n", srec->job_id.cluster,
-						srec->job_id.proc, pid, WTERMSIG(status));
-				NotifyUser(srec, "was killed by signal ",
-						   WTERMSIG(status), REMOVED);
-				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, ATTR_JOB_STATUS, REMOVED);
-			}
+               }
+        } else if(WIFSIGNALED(status)) {
+               dprintf(D_ALWAYS, "Agent pid %d died with signal %d\n",
+                       pid, WTERMSIG(status));
+               DelMrec(mrec);
+        }
+	} else if (IsSchedulerUniverse(srec)) {
+		// scheduler universe process
+		if(WIFEXITED(status)) {
+			dprintf(D_FULLDEBUG,
+					"scheduler universe job (%d.%d) pid %d "
+					"exited with status %d\n", srec->job_id.cluster,
+					srec->job_id.proc, pid, WEXITSTATUS(status) );
+			NotifyUser(srec, "exited with status ",
+				   WEXITSTATUS(status) , COMPLETED);
+			SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
+							ATTR_JOB_STATUS, COMPLETED);
+			SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
+							ATTR_JOB_EXIT_STATUS, WEXITSTATUS(status) );
+		} else if(WIFSIGNALED(status)) {
+			dprintf(D_ALWAYS,
+					"scheduler universe job (%d.%d) pid %d died "
+					"with signal %d\n", srec->job_id.cluster,
+					srec->job_id.proc, pid, WTERMSIG(status));
+			NotifyUser(srec, "was killed by signal ",
+					   WTERMSIG(status), REMOVED);
+			SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
+							ATTR_JOB_STATUS, REMOVED);
+		}
 /*
 			if( DestroyProc(srec->job_id.cluster, srec->job_id.proc) ) {
 				dprintf(D_ALWAYS, "DestroyProc(%d.%d) failed -- "
@@ -2505,12 +2575,12 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 			}
 */
 			delete_shadow_rec( pid );
-		} else if (srec) {
-			// A real shadow
-			if( WIFEXITED(status) ) {
-                dprintf( D_FULLDEBUG, "Shadow pid %d exited with status %d\n",
-                                                pid, WEXITSTATUS(status) );
-				switch( WEXITSTATUS(status) ) {
+	} else if (srec) {
+		// A real shadow
+		if( WIFEXITED(status) ) {
+            dprintf( D_FULLDEBUG, "Shadow pid %d exited with status %d\n",
+                                               pid, WEXITSTATUS(status) );
+			switch( WEXITSTATUS(status) ) {
 				case JOB_NO_MEM:
 					swap_space_exhausted();
                 case JOB_EXEC_FAILED:
@@ -2544,38 +2614,32 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 				case JOB_NO_CKPT_FILE:
 				case JOB_KILLED:
 				case JOB_COREDUMPED:
-					SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, ATTR_JOB_STATUS, REMOVED);
+					SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
+									ATTR_JOB_STATUS, REMOVED);
 					break;
 				case JOB_EXITED:
 					SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, ATTR_JOB_STATUS, COMPLETED);
 					break;
-				}
-            } else if( WIFSIGNALED(status) ) {
+			}
+    	} else if( WIFSIGNALED(status) ) {
                 dprintf( D_FULLDEBUG, "Shadow pid %d died with signal %d\n",
                                                 pid, WTERMSIG(status) );
-            }
-			delete_shadow_rec( pid );
-		} else {
-			// mrec and srec are NULL - agent dies after deleting match
-			StartJobsFlag=FALSE;
-        }  // big if..else if...
-    } // for loop
-    if( sig == 0 ) {
-        dprintf( D_FULLDEBUG, "***********  End Extra Checking ********\n" );
-    }
+        }
+		delete_shadow_rec( pid );
+	} else {
+		// mrec and srec are NULL - agent dies after deleting match
+		StartJobsFlag=FALSE;
+    }  // big if..else if...
 	if( ExitWhenDone && numShadows == 0 ) {
 		dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
 		DC_Exit(0);
 	}
-
 		// If we're not trying to shutdown, now that either an agent
 		// or a shadow (or both) have exited, we should try to
 		// activate all our claims and start jobs on them.
 	if( ! ExitWhenDone ) {
 		if (StartJobsFlag) StartJobs();
 	}
-
-#endif /* !defined(WIN32) */
 }
 
 void
@@ -3001,9 +3065,14 @@ Scheduler::Register()
 								 (CommandHandler)handle_q, 
 								 "handle_q", NULL, READ);
 
-    // signal handlers
-    daemonCore->Register_Signal( DC_SIGCHLD, "SIGCHLD", (SignalHandlercpp)reaper, 
-			"reaper", this );
+    // reaper
+#ifdef WIN32
+	daemonCore->Register_Reaper( "reaper", (ReaperHandlercpp)&Scheduler::child_exit,
+								 "child_exit", this );
+#else
+    daemonCore->Register_Signal( DC_SIGCHLD, "SIGCHLD", (SignalHandlercpp)&Scheduler::reaper, 
+								 "reaper", this );
+#endif
 
 	RegisterTimers();
 }
@@ -3099,7 +3168,6 @@ Scheduler::reconfig()
 void
 Scheduler::shutdown_graceful()
 {
-#if !defined(WIN32)
 	if( numShadows == 0 ) {
 		dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
 		DC_Exit(0);
@@ -3113,22 +3181,23 @@ Scheduler::shutdown_graceful()
 		ExitWhenDone = TRUE;
 		preempt( numShadows );
 	}
-#endif
 }
 
 // Perform fast shutdown.
 void
 Scheduler::shutdown_fast()
 {
-#if !defined(WIN32)
 	shadow_rec *rec;
 	shadowsByPid->startIterations();
 	while (shadowsByPid->iterate(rec) == 1) {
+#ifdef WANT_DC_PM
+		daemonCore->Send_Signal( rec->pid, DC_SIGKILL );
+#else
 		kill( rec->pid, SIGKILL );
+#endif
 	}
 	dprintf( D_ALWAYS, "All shadows have been killed, exiting.\n" );
 	DC_Exit(0);
-#endif
 }
 
 
@@ -3238,7 +3307,23 @@ Scheduler::MarkDel(char* id)
 	return 0;
 }
 
-void
+// The Agent() function is forked on Unix, so we need to exit our return value,
+// but on WIN32 we should just return the value.  In all cases, free jobAd
+// whenever we leave the Agent() function.
+
+//#ifdef WIN32
+//#define agent_exit(x) delete jobAd; return x
+//#else
+//#define agent_exit(x) delete jobAd; exit(x)
+//#endif
+
+#ifdef WIN32
+#define agent_exit(x) return x
+#else
+#define agent_exit(x) exit(x)
+#endif
+
+int
 Scheduler::Agent(char* server, char* capability, 
 				 char* name, char *user, int aliveInterval, ClassAd* jobAd) 
 {
@@ -3255,7 +3340,7 @@ Scheduler::Agent(char* server, char* capability,
 
 	if ( !sock.connect(server, 0) ) {
 		// dprintf( D_ALWAYS, "Couldn't connect to startd.\n" );
-		exit(EXITSTATUS_NOTOK);
+		agent_exit(EXITSTATUS_NOTOK);
 	}
 
 	// dprintf (D_PROTOCOL, "## 5. Requesting resource from %s ...\n", server);
@@ -3263,28 +3348,27 @@ Scheduler::Agent(char* server, char* capability,
 
 	if( !sock.put( REQUEST_SERVICE ) ) {
 		// dprintf( D_ALWAYS, "Couldn't send command to startd.\n" );	
-		exit(EXITSTATUS_NOTOK);
+		agent_exit(EXITSTATUS_NOTOK);
 	}
 
 	if( !sock.code( capability ) ) {
 		// dprintf( D_ALWAYS, "Couldn't send capability to startd.\n" );	
-		exit(EXITSTATUS_NOTOK);
+		agent_exit(EXITSTATUS_NOTOK);
 	}
 
 	if( !jobAd->put( sock ) ) {
 		// dprintf( D_ALWAYS, "Couldn't send job classad to startd.\n" );	
-		exit(EXITSTATUS_NOTOK);
-	}
-	delete jobAd;	// allocated by parent
+		agent_exit(EXITSTATUS_NOTOK);
+	}	
 	
 	if( !sock.end_of_message() ) {
 		// dprintf( D_ALWAYS, "Couldn't send eom to startd.\n" );	
-		exit(EXITSTATUS_NOTOK);
+		agent_exit(EXITSTATUS_NOTOK);
 	}
 
 	if( !sock.rcv_int(reply, TRUE) ) {
 		// dprintf( D_ALWAYS, "Couldn't receive response from startd.\n" );	
-		exit(EXITSTATUS_NOTOK);
+		agent_exit(EXITSTATUS_NOTOK);
 	}
 
 	if( reply == OK ) {
@@ -3292,20 +3376,21 @@ Scheduler::Agent(char* server, char* capability,
 		sock.encode();
 		if( !sock.code(name) ) {
 			// dprintf( D_ALWAYS, "Couldn't send schedd string to startd.\n" );	
-			exit(EXITSTATUS_NOTOK);
+			agent_exit(EXITSTATUS_NOTOK);
 		}
 		if( !sock.snd_int(aliveInterval, TRUE) ) {
 			// dprintf( D_ALWAYS, "Couldn't receive response from startd.\n" );	
-			exit(EXITSTATUS_NOTOK);
+			agent_exit(EXITSTATUS_NOTOK);
 		}
 	} else if( reply == NOT_OK ) {
 		// dprintf( D_PROTOCOL, "(Request was NOT accepted)\n" );
-		exit(EXITSTATUS_NOTOK);
+		agent_exit(EXITSTATUS_NOTOK);
 	} else {
-		// dprintf( D_ALWAYS, "Unknown reply from startd, agent exiting.\n" ); 
-		exit(EXITSTATUS_NOTOK);	
+		// dprintf( D_ALWAYS, "Unknown reply from startd, agent agent_exiting.\n" ); 
+		agent_exit(EXITSTATUS_NOTOK);	
 	}
-	exit(EXITSTATUS_OK);
+
+	agent_exit(EXITSTATUS_OK);
 }
 
 match_rec*
@@ -3480,8 +3565,8 @@ Scheduler::send_alive()
 	SafeSock	*sock;
     int     	numsent=0;
 	int			alive = ALIVE;
+	char		*id = NULL;
 	match_rec	*rec;
-	char		*id;
 
 	matches->startIterations();
 	while (matches->iterate(rec) == 1) {
@@ -3490,6 +3575,7 @@ Scheduler::send_alive()
 		}
 		dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n",rec->peer);
 		numsent++;
+		id = rec->id;
 		sock = new SafeSock(rec->peer, 0);
 		sock->encode();
 		id = rec->id;
