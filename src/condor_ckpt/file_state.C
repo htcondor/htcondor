@@ -67,6 +67,7 @@ public:
 		write_count = write_bytes = 0;
 		seek_count = 0;
 		already_warned = 0;
+		special_file = 0;
 		next = 0;
 	}
 
@@ -83,7 +84,7 @@ public:
 	int	write_count, write_bytes;
 	int	seek_count;
 	int	already_warned;
-
+	int	special_file;
 	CondorFileInfo	*next;
 };
 
@@ -239,7 +240,8 @@ CondorFileInfo * CondorFileTable::find_info( char *kind, char *name )
 
 int CondorFileTable::find_empty()
 {
-	for( int fd=0; fd<length; fd++ )
+	int fd;
+	for( fd=0; fd<length; fd++ )
 		if( !pointers[fd] )
 			return fd;
 
@@ -307,27 +309,46 @@ int CondorFileTable::open( const char *logical_name, int flags, int mode )
 	if(match>=0) {
 		f = pointers[match]->file;
 	} else {
-		if(!strcmp(method,"local")) {
-			f = new CondorFileLocal;
-		} else if(!strcmp(method,"special")) {
-			f = new CondorFileSpecial("special file");
-		} else if(!strcmp(method,"remote")) {
-			if( fd==2 || !buffer_size ) {
-				f = new CondorFileRemote();
-			} else {
-				f = new CondorFileBuffer(new CondorFileRemote);
-			}
-		} else if(!strcmp(method,"remotefetch")) {
-		 	f = new CondorFileAgent(new CondorFileRemote);
-		} else {
-			_condor_warning("I don't know how to access file type '%s'",url);
-			errno = ENOENT;
-			return -1;
-		}
 
-		if( f->open(full_path,flags,mode)<0 ) {
-			delete f;
-			return -1;
+		// Create a file object according to the url and open.
+		// We may try this several times with several methods.
+
+		while(1) {
+			if(!strcmp(method,"local")) {
+				f = new CondorFileLocal;
+			} else if(!strcmp(method,"special")) {
+				f = new CondorFileSpecial("special file");
+			} else if(!strcmp(method,"remote")) {
+				if( fd==2 || !buffer_size ) {
+					f = new CondorFileRemote();
+				} else {
+					f = new CondorFileBuffer(new CondorFileRemote);
+				}
+			} else {
+				_condor_warning("I don't understand file type '%s'.",url);
+				errno = ENOENT;
+				return -1;
+			}
+
+			// Finally, open the file.
+
+			if( f->open(full_path,flags,mode)>=0 ) {
+				// On success, exit the loop
+				break;
+			} else {
+				// We can retry the open using remote syscalls
+				// if we haven't tried it yet and we are in
+				// remote mode.  Otherwise, fail.
+
+				delete f;
+
+				if( RemoteSysCalls() && strcmp(method,"remote") ) {
+					strcpy(method,"remote");
+					continue;
+				} else {
+					return -1;
+				}
+			}
 		}
 	}
 
@@ -346,21 +367,6 @@ int CondorFileTable::open( const char *logical_name, int flags, int mode )
 
 	CondorFileInfo *info = find_info( f->get_kind(), f->get_name() );
 	info->open_count++;
-
-	// A file may not be opened RDWR, not may it be opened once for
-	// reading and later for writing, or vice-versa.
-
-	if(	!info->already_warned
-		&&
-		(
-			(flags&O_RDWR) ||
-			( (flags&O_WRONLY) && (info->read_bytes) ) ||
-			( (flags&O_RDONLY) && (info->write_bytes) )
-		)
-	) {
-		_condor_warning("'%s' opened for read and write.  This is not checkpoint-safe.",logical_name);
-		info->already_warned = 1;
-	}
 
 	// Finally, install the pointer and return!
 
@@ -382,6 +388,7 @@ int CondorFileTable::install_special( char * kind, int real_fd )
 
 	CondorFileInfo *info = find_info( f->get_kind(), f->get_name() );
 	info->open_count++;
+	info->special_file = 1;
 
 	CondorFilePointer *fp = new CondorFilePointer(f,info);
 	if(!fp) {
@@ -512,6 +519,9 @@ ssize_t CondorFileTable::read( int fd, void *data, size_t nbyte )
 	fp->info->read_count++;
 	fp->info->read_bytes+=actual;
 
+	// Perhaps send a warning message
+	check_safety(fp);
+
 	// Return the number of bytes read
 	return actual;
 }
@@ -549,11 +559,22 @@ ssize_t CondorFileTable::write( int fd, const void *data, size_t nbyte )
 	fp->info->write_count++;
 	fp->info->write_bytes+=actual;
 
+	// Perhaps send a warning message
+	check_safety(fp);
+
 	// If flush_mode is enabled, flush it to disk
 	if(flush_mode) f->fsync();
 
 	// Return the number of bytes written
 	return actual;
+}
+
+void CondorFileTable::check_safety( CondorFilePointer *fp )
+{
+	if( fp->info->read_bytes && fp->info->write_bytes && !fp->info->already_warned && !fp->info->special_file ) {
+		fp->info->already_warned = 1;
+		_condor_warning("File '%s' used for both reading and writing.  This is not checkpoint-safe.\n",fp->info->name);
+	}
 }
 
 off_t CondorFileTable::lseek( int fd, off_t offset, int whence )

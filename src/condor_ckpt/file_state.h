@@ -234,6 +234,7 @@ private:
 	int	find_empty();
 	int	count_file_uses( CondorFile *f );
 	int	count_pointer_uses( CondorFilePointer *f );
+	void	check_safety( CondorFilePointer *f );
 	CondorFileInfo	* find_info( char *name, char *kind );
 
 	CondorFilePointer	**pointers;
