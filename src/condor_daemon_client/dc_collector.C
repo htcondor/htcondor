@@ -483,10 +483,11 @@ DCCollectorAdSeq::~DCCollectorAdSeq( void )
 }
 
 // Match operator
-bool DCCollectorAdSeq::Match( const char *inName,
-							  const char *inMyType,
-							  const char *inMachine )
-{
+bool
+DCCollectorAdSeq::Match( const char *inName,
+						 const char *inMyType,
+						 const char *inMachine )
+{	
 	// Check for complete match.. Return false if there are ANY mismatches
 	if ( inName ) {
 		if ( ! Name ) {
@@ -529,7 +530,8 @@ bool DCCollectorAdSeq::Match( const char *inName,
 }
 
 // Get the sequence number
-unsigned DCCollectorAdSeq::GetSequence( void )
+unsigned
+DCCollectorAdSeq::GetSequence( void )
 {
 	return sequence++;
 }
@@ -549,9 +551,10 @@ DCCollectorAdSeqMan::~DCCollectorAdSeqMan( void )
 }
 
 // Get the sequence number
-unsigned DCCollectorAdSeqMan::GetSequence( ClassAd *ad )
+unsigned
+DCCollectorAdSeqMan::GetSequence( ClassAd *ad )
 {
-	int			adNum;
+	int		adNum;
 	char		*name = NULL;
 	char		*myType = NULL;
 	char		*machine = NULL;
