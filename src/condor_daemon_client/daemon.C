@@ -355,10 +355,9 @@ Daemon::display( FILE* fp )
 ReliSock*
 Daemon::reliSock( int sec, CondorError* errstack )
 {
-	if( ! _addr ) {
-		if( ! locate() ) {
-			return NULL;
-		}
+	if( !checkAddr() ) {
+			// this already deals w/ _error for us...
+		return NULL;
 	}
 	ReliSock* reli;
 	reli = new ReliSock();
@@ -381,10 +380,9 @@ Daemon::reliSock( int sec, CondorError* errstack )
 SafeSock*
 Daemon::safeSock( int sec, CondorError* errstack )
 {
-	if( ! _addr ) {
-		if( ! locate() ) {
-			return NULL;
-		}
+	if( !checkAddr() ) {
+			// this already deals w/ _error for us...
+		return NULL;
 	}
 	SafeSock* safe;
 	safe = new SafeSock();
@@ -1445,12 +1443,29 @@ Daemon::New_pool( char* str )
 bool
 Daemon::checkAddr( void )
 {
+	bool just_tried_locate = false;
 	if( ! _addr ) {
 		locate();
+		just_tried_locate = true;
 	}
 	if( ! _addr ) {
 			// _error will already be set appropriately
 		return false;
+	}
+	if( _port == 0 ) {
+			// if we didn't *just* try locating, we should try again,
+			// in case the address file for the thing we're trying to
+			// talk to has now been written.
+		if( just_tried_locate ) {
+			newError( "port is still 0 after locate(), address invalid" );
+			return false;
+		}
+		_tried_locate = false;
+		locate();
+		if( _port == 0 ) {
+			newError( "port is still 0 after locate(), address invalid" );
+			return false;
+		}
 	}
 	return true;
 }
