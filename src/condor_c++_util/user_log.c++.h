@@ -3,7 +3,7 @@
  *
  * See LICENSE.TXT for additional notices and disclaimers.
  *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
  * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
  * No use of the CONDOR Software Program Source Code is authorized 
  * without the express consent of the CONDOR Team.  For more information 
@@ -86,7 +86,7 @@ class UserLog {
         @param clu  condorID cluster to put into each ULogEvent
         @param proc condorID proc    to put into each ULogEvent
         @param subp condorID subproc to put into each ULogEvent
-		@param xml  make this true to write XML logs, false to use the old form
+		@param xml  make this TRUE to write XML logs, FALSE to use the old form
     */
     UserLog(const char *owner, const char *domain, const char *file,
 			int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT);
@@ -99,7 +99,7 @@ class UserLog {
         @param c the condor ID cluster to put into each ULogEvent
         @param p the condor ID proc    to put into each ULogEvent
         @param s the condor ID subproc to put into each ULogEvent
-		@return true on success
+		@return TRUE on success
     */
     bool initialize(const char *owner, const char *domain, const char *file,
 		   	int c, int p, int s);
@@ -109,7 +109,7 @@ class UserLog {
         @param c the condor ID cluster to put into each ULogEvent
         @param p the condor ID proc    to put into each ULogEvent
         @param s the condor ID subproc to put into each ULogEvent
-		@return true on success
+		@return TRUE on success
     */
     bool initialize(const char *file, int c, int p, int s);
     
@@ -119,7 +119,7 @@ class UserLog {
         @param c the condor ID cluster to put into each ULogEvent
         @param p the condor ID proc    to put into each ULogEvent
         @param s the condor ID subproc to put into each ULogEvent
-		@return true on success
+		@return TRUE on success
     */
     bool initialize(int c, int p, int s);
 
@@ -171,19 +171,23 @@ class ReadUserLog
 {
   public:
 
-    ///
-    inline ReadUserLog() : _fd(-1), _fp(0), is_locked(false) {}
+    /** Default constructor.
+	*/
+    ReadUserLog() { clear(); }
 
-    ///
+    /** Constructor.
+        @param file the file to read from
+	*/
     ReadUserLog (const char * filename);
                                       
-    ///
-    inline ~ReadUserLog() { if (_fp) fclose(_fp); if(is_locked) lock->release(); }
+    /** Destructor.
+	*/
+    inline ~ReadUserLog() { releaseResources(); }
 
-    /** Initialize the log file.  This function will abort the program
-        (by calling EXCEPT) if it can't open the log file.
+    /** Initialize the log file.  This function will return FALSE
+        if it can't open the log file (among other things).
         @param file the file to read from
-        @return 1 for success
+        @return TRUE for success
     */
     bool initialize (const char *filename);
 
@@ -200,7 +204,7 @@ class ReadUserLog
         "bad" event (i.e., read up to and including the event separator (...))
         so that the rest of the events can be read.
 
-        @return true: success, false: failure
+        @return TRUE: success, FALSE: failure
     */
     bool synchronize ();
 
@@ -215,16 +219,56 @@ class ReadUserLog
 
 	/** Set whether the log file should be treated as XML. The constructor will
 		attempt to figure this out on its own.
-		@param is_xml should be true if we have a XML log file, false otherwise
+		@param is_xml should be TRUE if we have an XML log file, FALSE otherwise
 	*/
-	void setIsXMLLog( bool val );
+	void setIsXMLLog( bool is_xml );
 
 	/** Determine whether this ReadUserLog thinks its log file is XML.
-		@return true if XML, false otherwise
+		Note that false may mean that the type is not yet known (e.g.,
+		the log file is empty).
+		@return TRUE if XML, FALSE otherwise
 	*/
 	bool getIsXMLLog();
 
+	/** Set whether the log file should be treated as "old-style" (non-XML).
+	    The constructor will attempt to figure this out on its own.
+		@param is_old should be TRUE if we have a "old-style" log file,
+		FALSE otherwise
+	*/
+	void setIsOldLog( bool is_old );
+
+	/** Determine whether this ReadUserLog thinks its log file is "old-style"
+	    (non-XML).
+		Note that false may mean that the type is not yet known (e.g.,
+		the log file is empty).
+		@return TRUE if "old-style", FALSE otherwise
+	*/
+	bool getIsOldLog();
+
+
     private:
+
+	/** Set all members to their cleared values.
+	*/
+	void clear();
+
+	/** Release all resources this object has claimed/allocated.
+	*/
+	void releaseResources();
+
+	/** Determine the type of log this is; note that if called on an
+	    empty log, this will return TRUE and the log type will stay
+		LOG_TYPE_UNKNOWN.
+        @return TRUE for success, FALSE otherwise
+	*/
+	bool determineLogType();
+
+	/** Skip the XML header of this log, if there is one.
+	    @param the first character after the opening '<'
+		@param the initial file position
+        @return TRUE for success, FALSE otherwise
+	*/
+	bool skipXMLHeader(char afterangle, long filepos);
 
     /** Read the next event from the XML log file. The event pointer to
         set to point to a newly instatiated ULogEvent object.
@@ -240,12 +284,18 @@ class ReadUserLog
     */
     ULogEventOutcome readEventOld (ULogEvent * & event);
 
+	enum LogType {
+		LOG_TYPE_UNKNOWN = 0,
+		LOG_TYPE_OLD,
+		LOG_TYPE_XML
+	};
+
     /** The log's file descriptor */  int    _fd;
     /** The log's file pointer    */  FILE * _fp;
     /** The log file lock         */  FileLock* lock;
 	/** Is the file locked?       */  bool is_locked;
 
-	/** Is this an XML log file ? */  bool is_xml;
+	/** Type of this log		  */  LogType log_type;
 };
 
 #endif /* __cplusplus */
