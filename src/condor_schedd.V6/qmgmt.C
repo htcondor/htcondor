@@ -847,9 +847,9 @@ GetNextJobByConstraint(const char *constraint, int initScan)
 
 
 void
-FreeJobAd(ClassAd *ad)
+FreeJobAd(ClassAd *&ad)
 {
-	// NOOP
+	ad = NULL;
 }
 
 

@@ -40,7 +40,7 @@ ClassAd *GetJobAd(int cluster_id, int proc_id);
 ClassAd *GetJobByConstraint(const char *constraint);
 ClassAd *GetNextJob(int initScan);
 ClassAd *GetNextJobByConstraint(const char *constraint, int initScan);
-void FreeJobAd(ClassAd *ad);
+void FreeJobAd(ClassAd *&ad);
 
 int SendSpoolFile(char *filename);		/* prepare for file xfer */
 int SendSpoolFileBytes(char *filename); /* actually do file xfer */

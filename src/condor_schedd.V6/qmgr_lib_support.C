@@ -158,9 +158,10 @@ DisconnectQ(Qmgr_connection *conn)
 
 
 void
-FreeJobAd(ClassAd *ad)
+FreeJobAd(ClassAd *&ad)
 {
 	delete ad;
+	ad = NULL;
 }
 
 int
