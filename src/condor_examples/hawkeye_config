@@ -680,35 +680,6 @@ Hawkeye_pool_submit = true
 Hawkeye_pool_ckpt = true
 Hawkeye_pool_env=PATH=/bin:/sbin:/usr/bin:/home/hawkeye/bin:/home/condor/bin:/home/condor/scripts;CONDOR_ROSTER_DIR=/n/uscms_share/nleroy/etc
 
-## Define parameters for the GridProbe module
-## Directories & paths related to where Globus and Condor are installed
-GLOBUS_INSTALL = /scratch/nleroy/workspace/globus-install
-CONDOR_INSTALL = /scratch/nleroy/workspace/v65/condor-test
-# Put Condor & Globus "bin" directories in the PATH
-Hawkeye_grid_path = \
-    $(GLOBUS_INSTALL)/bin:$(GLOBUS_INSTALL)/sbin:\
-    $(CONDOR_INSTALL)/release_dir/bin:$(CONDOR_INSTALL)/release_dir/sbin:
-# Where's the Condor config file?
-Hawkeye_grid_condor_config = $(CONDOR_INSTALL)/condor_config
-# Where's the probe itself located?
-Hawkeye_grid_probepath = \
-    /u/n/l/nleroy/devel/monitor/test0
-# The GLOBUS_LOCATION env variable value
-Hawkeye_grid_globus_location = $(GLOBUS_INSTALL)
-# And, where your X509 certificates are stored
-Hawkeye_grid_X509_CERT_DIR = /unsup/globus/share/certificates
-
-## List of Globus contacts
-## HAWKEYE_GRID_CONTACTS is a list of logical contact "names"
-Hawkeye_grid_contacts = test,local,condor
-## One entry for each of the logical names; this is the actual Globus
-## "Contact string"
-## HAKWEYE_GRID_name_CONTACT = "your contact string"
-Hawkeye_grid_test_contact = "test.cs.wisc.edu:12345:/C=US/O=Globus/O=University of Wisconsin/OU=Computer Sciences Department/CN=John Doe"
-Hawkeye_grid_local_contact = "host.cs.wisc.edu/jobmanager"
-Hawkeye_grid_condor_contact = "condorhost.cs.wisc.edu/jobmanager-condor-INTEL-LINUX"
-
-
 
 ## #################################################################
 ## Define parameters for the GridProbe module
