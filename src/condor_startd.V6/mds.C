@@ -55,27 +55,37 @@ int MdsGenerate(ClassAd *machine, const char *file )
 	fprintf( fp, "objectclass: MdsHost\n" );
 
 	// Prepare to walk through the ClassAd
-	machine->ResetName();
-	machine->ResetExpr();
+//	machine->ResetName();
+//	machine->ResetExpr();
 
 	// Do it
-	while (1) {
+//	while (1) {
+	ClassAd::iterator m;
+	ClassAdUnParser unp;
+	for( m = machine->begin( ); m != machine->end( ); m++ ) {
 		const char		*name;
-		ExprTree		*expr;
+//		ExprTree		*expr;
 
 		// Get the name..
-		name = machine->NextNameOriginal();
-		expr = machine->NextExpr();
-		if ( ( NULL == name ) || ( NULL == expr ) ){
+//		name = machine->NextNameOriginal();
+		name = m->first.c_str( );
+//		expr = machine->NextExpr();
+//		if ( ( NULL == name ) || ( NULL == expr ) ){
+		if ( NULL == name ) {
 			break;
 		}
 
 		// And, find it's value.
-		ExprTree	*value = expr->RArg();
+//		ExprTree	*value = expr->RArg();
+		ExprTree 	*value = m->second;
 
 		if ( NULL != value ) {
 			char		*thestr;
-			value->PrintToNewStr( &thestr );
+//			value->PrintToNewStr( &thestr );
+			string thestring;
+			unp.Unparse( thestring, m->second );
+			thestr = new char[thestring.length( )+1];
+			strcpy( thestr, thestring.c_str( ) );
 			if ( thestr != NULL ) {
 				char	*tmp = thestr;
 				int		len = strlen( thestr );
