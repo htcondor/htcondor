@@ -56,6 +56,7 @@
 #include "condor_syscall_mode.h"
 
 #include <assert.h>
+#include <unistd.h>
 
 #include "condor_debug.h"
 static char *_FileName_ = __FILE__;
@@ -65,6 +66,8 @@ int main( int argc, char *argv[], char **envp );
 extern int DebugFlags;
 int _condor_in_file_stream;
 
+static char	*executable_name;
+
 int
 #if defined(HPUX9)
 _START( int argc, char *argv[], char **envp )
@@ -73,10 +76,20 @@ MAIN( int argc, char *argv[], char **envp )
 #endif
 {
 	char	buf[_POSIX_PATH_MAX];
-	char	init_working_dir[_POSIX_PATH_MAX];
+	static char	init_working_dir[_POSIX_PATH_MAX];
+	int		i;
 	DebugFlags = D_NOHEADER | D_ALWAYS;
 
 	_condor_prestart( SYS_LOCAL );
+
+	getcwd( init_working_dir, sizeof(init_working_dir) );
+	if (argv[0][0] == '/') {
+		executable_name = argv[0];
+	} else {
+		strcat(init_working_dir, "/");
+		strcat(init_working_dir, argv[0]);
+		executable_name = init_working_dir;
+	}
 
 		/*
 		If the command line looks like 
@@ -85,7 +98,13 @@ MAIN( int argc, char *argv[], char **envp )
 		*/
 	if( argc >= 3 && strcmp("-_condor_ckpt",argv[1]) == MATCH ) {
 		init_image_with_file_name( argv[2] );
-		getcwd( init_working_dir, sizeof(init_working_dir) );
+		fprintf(stderr, "Checkpointing to file %s\n", argv[2]);
+		fflush(stderr);
+#if 0
+		if (access( argv[2], R_OK ) == 0) {
+			restart();
+		}
+#endif
 		Set_CWD( init_working_dir );
 		argc -= 2;
 		argv += 2;
@@ -113,7 +132,7 @@ MAIN( int argc, char *argv[], char **envp )
 		checkpoints to the name by which we were invoked with a
 		".ckpt" extension.
 		*/
-	if( argc < 3 ) {
+	if( argc < 3 || 1) {
 		sprintf( buf, "%s.ckpt", argv[0] );
 		init_image_with_file_name( buf );
 		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
@@ -146,4 +165,11 @@ void
 report_image_size( int kbytes )
 {
 	/* noop in local mode */
+}
+
+
+char	*
+condor_get_executable_name()
+{
+	return executable_name;
 }
