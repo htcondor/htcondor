@@ -468,11 +468,18 @@ MPIShadow::shutDown( int exitReason, int exitStatus ) {
         }
     }
 
+		// write stuff to the user log.
+	MpiResource *rr;
+    for ( int i=0 ; i<=ResourceList.getlast() ; i++ ) {
+		rr = ResourceList[i];
+		endingUserLog( exitStatus, exitReason, rr );
+	}
+
     if ( getJobAd() ) {
             // For lack of anything better to do here, set the last 
             // executing host to the host the master was on.
         char *tmp = NULL;
-        MpiResource *rr = ResourceList[0];
+        rr = ResourceList[0];
         if ( rr ) {
             rr->getExecutingHost( tmp );
             ConnectQ( getScheddAddr() );

@@ -91,6 +91,9 @@ void UniShadow::shutDown( int reason, int exitStatus ) {
 		return;
 	}
 
+		// write stuff to user log:
+	endingUserLog( exitStatus, reason, remRes );
+
 		// returns a mailer if desired
 	FILE* mailer;
 	mailer = shutDownEmail( reason, exitStatus );
