@@ -421,7 +421,7 @@ ResState::set_destination( State new_state )
 				state_to_string(r_destination) );
 	}
 
-	dprintf( D_ALWAYS, "Set destination state to %s\n", 
+	dprintf( D_FULLDEBUG, "Set destination state to %s\n", 
 			 state_to_string(new_state) );
 
 		// Now, depending on what state we're in, do what we have to
