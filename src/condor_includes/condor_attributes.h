@@ -334,6 +334,8 @@ const char ATTR_MAX_RUNNING_JOBS			 [] = "MaxRunningJobs";
 #define ATTR_VERSION					AttrGetName( ATTRE_VERSION )
 const char ATTR_SHADOW_VERSION			 [] = "ShadowVersion";
 const char ATTR_VIRTUAL_MACHINE_ID		 [] = "VirtualMachineID";
+const char ATTR_SHOULD_TRANSFER_FILES    [] = "ShouldTransferFiles";
+const char ATTR_WHEN_TO_TRANSFER_OUTPUT  [] = "WhenToTransferOutput";
 const char ATTR_TRANSFER_TYPE			 [] = "TransferType";
 const char ATTR_TRANSFER_FILES			 [] = "TransferFiles";
 const char ATTR_TRANSFER_KEY			 [] = "TransferKey";
