@@ -172,7 +172,7 @@ WriteEvents(Arguments &args)
 {
 	int		result = 0;
 
-	UserLog	log("owner", args.logFile, 0, 0, getpid(), args.isXml);
+	UserLog	log("owner", args.logFile, getpid(), 0, 0, args.isXml);
 
 		//
 		// Write the submit event.
@@ -222,7 +222,7 @@ WriteEvents(Arguments &args)
 	}
 	JobTerminatedEvent	terminated;
 	terminated.normal = true;
-	terminated.returnValue = 1;
+	terminated.returnValue = 0;
 	terminated.signalNumber = 0;
 	terminated.sent_bytes = 1000;
 	terminated.recvd_bytes = 2000;
