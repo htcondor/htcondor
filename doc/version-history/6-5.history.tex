@@ -15,6 +15,12 @@ The details of each version are described below.
 
 \item Added initial support for the \Condor{gridshell}.
 
+\item Added support for the \Macro{TRUST\_UID\_DOMAIN} config file
+  setting.
+  For more information about this setting, see
+  section~\ref{param:TrustUidDomain} on
+  page~\pageref{param:TrustUidDomain}. 
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -23,6 +29,13 @@ The details of each version are described below.
 
 \item The \Condor{starter} no longer seg-faults when attempting to run
   a job as nobody on HPUX.
+
+\item Fixed a bug related to defining \Macro{CONDOR\_IDS} in the
+  configuration file.
+  This new feature was added in version 6.5.3, but it did not work
+  properly with the Standard and PVM universes.
+  Now, all parts of Condor should work correctly without permission
+  problems if \MacroNI{CONDOR\_IDS} is defined in the config file.
 
 \end{itemize}
 
