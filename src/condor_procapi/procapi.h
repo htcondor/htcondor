@@ -212,14 +212,18 @@ const int PHBUCKETS = 101;  // why 101?  Well...it's slightly greater than
 struct procHashNode {
   /// the last time (secs) this data was retrieved.
   double lasttime;
-  /// old time usage number
+  /// old cpu usage number (raw, not percent)
   double oldtime;
-  /// the old value for cpu usage.
+  /// the old value for cpu usage (the actual percent)
   double oldusage;
-  /// the old value for minor page faults.
+  /// the old value for minor page faults. (This is a raw # of total faults)
   long oldminf;
   /// the old value for major page faults.
   long oldmajf;
+  /// the major page fault rate (per sec).  This is the last value sampled.
+  long majfaultrate;
+  /// the minor page fault rate.  Last value sampled.
+  long minfaultrate;
   /// The "time of birth" of this process (in sec)
   long creation_time;
 };
@@ -264,7 +268,8 @@ struct procHashNode {
 
 class ProcAPI {
  public:
-  /** Destructor */
+
+	 /** Destructor */
   ~ProcAPI();
 
   /** getProcInfo returns information about one process.  Information 
@@ -386,9 +391,18 @@ class ProcAPI {
 
   static void initpi ( piPTR& );                  // initialization of pi.
   static int isinfamily ( pid_t *, int, pid_t );  // used by buildFamily & NT equiv.
+
+  // works with the hashtable; finds cpuusage, maj/min page faults.
+  static void do_usage_sampling( piPTR& pi, 
+								 double ustime, 
+								 long majf, 
+								 long minf
+#ifdef WIN32  /* Win32 also passes in the time. */
+								 , double now
+#endif
+								 );
+
 #ifndef WIN32
-	  // works with the hashtable; finds cpuusage, maj/min page faults.
-  static void do_usage_sampling( piPTR&, double, long, long);
   static int buildPidList();                      // just what it says
   static int buildProcInfoList();                 // ditto.
   static int buildFamily( pid_t );                // builds + sums procInfo list
@@ -408,7 +422,7 @@ class ProcAPI {
 
 #ifdef WIN32 // some windoze-specific thingies:
 	//Todd's system info class, for getting parent:
-  static CSysinfo ntSysInfo;
+  //static CSysinfo ntSysInfo;
 
   static void makeFamily( pid_t dadpid, pid_t *allpids, int numpids, 
 						  pid_t* &fampids, int &famsize );
