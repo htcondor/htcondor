@@ -3,7 +3,7 @@ Microsoft Developer Studio Workspace File, Format Version 5.00
 
 ###############################################################################
 
-Project: "condor"=.\condor\condor.dsp - Package Owner=<4>
+Project: "condor"=.\condor.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -19,6 +19,15 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_util_lib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_qmgmt
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_q
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_cpp_util
     End Project Dependency
 }}}
 
@@ -36,7 +45,58 @@ Package=<4>
 
 ###############################################################################
 
+Project: "condor_cpp_util"=.\condor_cpp_util.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "condor_io"=.\condor_io.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "condor_q"=.\condor_q.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name condor_classad
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_io
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_qmgmt
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_cpp_util
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_util_lib
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "condor_qmgmt"=.\condor_qmgmt.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
