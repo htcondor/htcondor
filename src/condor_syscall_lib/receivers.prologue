@@ -176,7 +176,7 @@ do_REMOTE_syscall(ReliSock *sock, int process)
                 syscall_sock->encode();
                 assert( syscall_sock->code(rval) );
                 if( rval < 0 ) {
-                        assert( syscall_sock->code(terrno) );
+                        assert( syscall_sock->code((condor_errno_t)terrno) );
                 }
                 if( rval >= 0 ) {
                         assert( syscall_sock->code(kill_sig) );
@@ -211,7 +211,7 @@ do_REMOTE_syscall(ReliSock *sock, int process)
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			assert( syscall_sock->code((condor_errno_t)terrno) );
 		}
 		if( rval >= 0 ) {
 			assert( syscall_sock->code(s) );

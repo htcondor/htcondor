@@ -27,7 +27,7 @@ REMOTE_CONDOR_work_request(ClassAd *ad, char *a_out, char *targ, char *orig,
 	syscall_sock->decode();
 	assert( syscall_sock->code(rval) );
 	if( rval < 0 ) {
-		assert( syscall_sock->code(terrno) );
+		assert( syscall_sock->code((condor_errno_t)terrno) );
 		assert( syscall_sock->end_of_message() );
 		_condor_signals_enable( omask );
 		SetSyscalls( scm );
@@ -86,7 +86,7 @@ REMOTE_CONDOR_send_file(char *local, char *remote, mode_t mode)
 	syscall_sock->decode();
 	assert( syscall_sock->code(rval) );
 	if( rval < 0 ) {
-		assert( syscall_sock->code(terrno) );
+		assert( syscall_sock->code((condor_errno_t)terrno) );
 		assert( syscall_sock->end_of_message() );
 		rval = -1;
 		_condor_signals_enable( omask );
@@ -119,7 +119,7 @@ REMOTE_CONDOR_send_file(char *local, char *remote, mode_t mode)
 	syscall_sock->decode();
 	assert( syscall_sock->code(write_status) );
 	if( write_status < 0 ) {
-		assert( syscall_sock->code(terrno) );
+		assert( syscall_sock->code((condor_errno_t)terrno) );
 		assert( syscall_sock->end_of_message() );
 		rval = write_status;
 		_condor_signals_enable( omask );
@@ -189,7 +189,7 @@ REMOTE_CONDOR_get_file(char *remote, char *local, int mode)
 	syscall_sock->decode();
 	assert( syscall_sock->code(rval) );
 	if( rval < 0 ) {
-		assert( syscall_sock->code(terrno) );
+		assert( syscall_sock->code((condor_errno_t)terrno) );
 		assert( syscall_sock->end_of_message() );
 		rval = -1;
 		_condor_signals_enable( omask );
@@ -221,7 +221,7 @@ REMOTE_CONDOR_get_file(char *remote, char *local, int mode)
 		/* Get status from remote reads */
 	assert( syscall_sock->code(read_status) );
 	if( read_status < 0 ) {
-		assert( syscall_sock->code(terrno) );
+		assert( syscall_sock->code((condor_errno_t)terrno) );
 		assert( syscall_sock->end_of_message() );
 		rval = -1;
 		_condor_signals_enable( omask );
