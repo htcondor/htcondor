@@ -23,19 +23,20 @@ template <class Index, class Value>
 class HashTable {
  public:
   HashTable(int tableSize,
-	    int (*hashfcn)(Index &index,
+	    int (*hashfcn)(const Index &index,
 			   int numBuckets)); // constructor  
   ~HashTable();                              // destructor
 
-  int insert(Index &index, Value &value);
-  int lookup(Index &index, Value &value);
-  int getNext(Index &index, void *current, Value &value, void *&next);
-  int remove(Index &index);  
+  int insert(const Index &index, const Value &value);
+  int lookup(const Index &index, Value &value);
+  int getNext(Index &index, void *current, Value &value,
+	      void *&next);
+  int remove(const Index &index);  
   int clear();
 
   void startIterations (void);
-  int  getCurrentKey   (Index &);
-  int  iterate (Value &);
+  int  iterate (Value &value);
+  int  iterate (Index &index, Value &value);
     
  private:
 #ifdef DEBUGHASH
@@ -44,7 +45,7 @@ class HashTable {
 
   int tableSize;                                // size of hash table
   HashBucket<Index, Value> **ht;                // actual hash table
-  int (*hashfcn)(Index &index, int numBuckets); // user-provided hash function
+  int (*hashfcn)(const Index &index, int numBuckets); // user-provided hash function
 
   int currentBucket;
   HashBucket<Index, Value> *currentItem;
@@ -55,7 +56,7 @@ class HashTable {
 
 template <class Index, class Value>
 HashTable<Index,Value>::HashTable(int tableSz,
-				  int (*hashF)(Index &index,
+				  int (*hashF)(const Index &index,
 					       int numBuckets)) :
 	tableSize(tableSz), hashfcn(hashF)
 {
@@ -71,7 +72,7 @@ HashTable<Index,Value>::HashTable(int tableSz,
 // Returns 0 if OK, an error code otherwise.
 
 template <class Index, class Value>
-int HashTable<Index,Value>::insert(Index &index, Value &value)
+int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
 {
   int idx = hashfcn(index, tableSize);
 
@@ -97,7 +98,7 @@ int HashTable<Index,Value>::insert(Index &index, Value &value)
 // corresponding value and OK status (0). Otherwise return -1.
 
 template <class Index, class Value>
-int HashTable<Index,Value>::lookup(Index &index, Value &value)
+int HashTable<Index,Value>::lookup(const Index &index, Value &value)
 {
   int idx = hashfcn(index, tableSize);
 
@@ -161,7 +162,7 @@ int HashTable<Index,Value>::getNext(Index &index, void *current,
 // Else return -1.
 
 template <class Index, class Value>
-int HashTable<Index,Value>::remove(Index &index)
+int HashTable<Index,Value>::remove(const Index &index)
 {
   	int idx = hashfcn(index, tableSize);
 
@@ -239,16 +240,6 @@ startIterations (void)
 
 template <class Index, class Value>
 int HashTable<Index,Value>::
-getCurrentKey (Index &index)
-{
-	if (!currentItem) return -1;
-	index = currentItem->index;
-	return 0;
-}
-
-
-template <class Index, class Value>
-int HashTable<Index,Value>::
 iterate (Value &v)
 {
     // try to get next item in chain ...
@@ -281,6 +272,47 @@ iterate (Value &v)
 	else
 	{
 		currentItem = ht[currentBucket];
+		v = currentItem->value;
+		return 1;
+	}
+}
+
+template <class Index, class Value>
+int HashTable<Index,Value>::
+iterate (Index &index, Value &v)
+{
+    // try to get next item in chain ...
+    if (currentItem)
+    {
+        currentItem = currentItem->next;
+    
+        // ... if successful, return OK
+        if (currentItem)
+        {
+            index = currentItem->index;
+            v = currentItem->value;
+            return 1;
+       }
+    }
+
+	do
+	{
+		// try next bucket ...
+		currentBucket ++;
+	} while (currentBucket < tableSize && ht[currentBucket] == NULL);
+
+	if (currentBucket == tableSize)
+	{
+    	// end of hash table ... no more entries
+    	currentBucket = -1;
+    	currentItem = 0;
+
+    	return 0;
+	}
+	else
+	{
+		currentItem = ht[currentBucket];
+		index = currentItem->index;
 		v = currentItem->value;
 		return 1;
 	}
