@@ -52,6 +52,7 @@ int fast = 0;
 int all = 0;
 char* subsys = NULL;
 int takes_subsys = 0;
+int cmd_set = 0;
 
 // The pure-tools (PureCoverage, Purify, etc) spit out a bunch of
 // stuff to stderr, which is where we normally put our error
@@ -358,6 +359,23 @@ main( int argc, char *argv[] )
 				dt = DT_NEGOTIATOR;
 				break;
 			case 'c':
+				if( (*tmp)[2] && (*tmp)[2] == 'm' ) {	
+					tmp++;
+					if( tmp && *tmp ) {
+						cmd = atoi( *tmp );
+						cmd_set = 1;
+						if( !cmd ) {
+							fprintf( stderr, 
+									 "ERROR: invalid argument to -cmd (\"%s\")\n",
+									 *tmp );
+							exit( 1 );
+						}
+					} else {
+						fprintf( stderr, "ERROR: -cmd requires another argument\n" );
+						exit( 1 );
+					}
+					break;
+				}
 				subsys_check( MyName );
 				dt = DT_COLLECTOR;
 				break;
@@ -429,8 +447,9 @@ main( int argc, char *argv[] )
 		switch( (*argv)[0] ) {
 		case '-':
 				// Some command-line arg we already dealt with
-			if( (*argv)[1] == 'p' ) {
-					// If it's -pool, we want to skip the next arg, too. 
+			if( (*argv)[1] == 'p' || 
+				((*argv)[1] == 'c' && (*argv)[2] == 'm') ) {
+					// If it's -pool or -cmd, we want to skip the next arg, too.
 				argv++;
 			}
 			continue;
@@ -633,6 +652,8 @@ doCommand( char *name )
 			printf( "-Fast" );
 		}
 		namePrintf( stdout, name, "\" command to", cmdToStr(old_cmd) );
+	} else if( cmd_set ) {
+		namePrintf( stdout, name, "Sent command \"%d\" to", cmd );
 	} else {
 		namePrintf( stdout, name, "Sent \"%s\" command to", cmdToStr(cmd) );
 	}
