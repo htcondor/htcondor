@@ -157,11 +157,9 @@ get_daemon_addr( const char* constraint_attr,
 				 const char* name, AdTypes adtype,
 				 const char* attribute, const char* subsys )
 {
-	CondorQuery			query(adtype);
-	ClassAd*			scan;
+
 	static char			daemonAddr[100];
 	char				constraint[500];
-	ClassAdList			ads;
 	char				*fullname = NULL, *addr_file, *tmp, *my_name;
 	FILE				*addr_fp;
 	int					is_local = 0;
@@ -201,6 +199,10 @@ get_daemon_addr( const char* constraint_attr,
 			return daemonAddr;
 		}
 	}
+
+	CondorQuery			query(adtype);
+	ClassAd*			scan;
+	ClassAdList			ads;
 
 	sprintf(constraint, "%s == \"%s\"", constraint_attr, fullname ); 
 	query.addConstraint(constraint);
