@@ -70,6 +70,9 @@
 extern "C" {
 #endif
 
+#include <stdio.h>
+#include <stdarg.h>
+
 extern int DebugFlags;	/* Bits to look for in dprintf */
 extern int Termlog;		/* Are we logging to a terminal? */
 extern int (*DebugId)(FILE *);		/* set header message */
