@@ -42,8 +42,8 @@ typedef struct bucket {
 
 #if defined(__cplusplus)
 extern "C" {
-	void config( ClassAd* classAd=NULL, int wantsQuiet=0 );
-	void config_host( ClassAd* classAd=NULL, char* host=NULL );
+	void config( int wantsQuiet=0 );
+	void config_host( char* host=NULL );
 	void config_fill_ad( ClassAd* );
 	int  set_persistent_config(char *admin, char *config);
 	int  set_runtime_config(char *admin, char *config);
@@ -83,4 +83,5 @@ extern "C" {
 }
 #endif
 
-#endif
+#endif /* CONFIG_H */
+
