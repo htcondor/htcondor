@@ -63,7 +63,7 @@ extern "C" {
 #endif
 	
 // Function prototypes
-void real_config(ClassAd *classAd, char* host);
+void real_config(ClassAd *classAd, char* host, int wantsQuiet);
 int Read_config(char*, ClassAd*, BUCKET**, int, int);
 int SetSyscalls(int);
 char* find_global();
@@ -120,21 +120,21 @@ config_fill_ad( ClassAd* ad )
 
 
 void
-config( ClassAd* classAd )
+config( ClassAd* classAd, int wantsQuiet )
 {
-	real_config( classAd, NULL );
+	real_config( classAd, NULL, wantsQuiet );
 }
 
 
 void
 config_host( ClassAd* classAd, char* host )
 {
-	real_config( classAd, host );
+	real_config( classAd, host, 0 );
 }
 
 
 void
-real_config(ClassAd *classAd, char* host)
+real_config(ClassAd *classAd, char* host, int wantsQuiet)
 {
 	char		*config_file;
 	int			scm, rval;
@@ -179,6 +179,10 @@ real_config(ClassAd *classAd, char* host)
 
 		// Try to find the global config file
 	if( ! (config_file = find_global()) ) {
+		if( wantsQuiet ) {
+			fprintf( stderr, "Condor error: can't find config file.\n" ); 
+			exit( 1 );
+		}
 		fprintf(stderr,"\nNeither the environment variable CONDOR_CONFIG,\n" );
 		fprintf(stderr,"/etc/condor/, nor ~condor/ contain a condor_config "
 				"file.\n" );
