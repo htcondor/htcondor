@@ -22,7 +22,7 @@
 #include <sys/poll.h>
 #endif
 
-#include "syscall_param_sizes.h"
+#include "../condor_syscall_lib/syscall_param_sizes.h"
 
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)    */
 
