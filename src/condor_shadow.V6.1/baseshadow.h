@@ -296,6 +296,8 @@ class BaseShadow : public Service
 
 	void evalPeriodicUserPolicy( void );
 
+	const char* getCoreName( void );
+
  protected:
 	
 		/** Note that this is the base, "unexpanded" ClassAd for the job.

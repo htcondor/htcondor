@@ -940,6 +940,17 @@ BaseShadow::evalPeriodicUserPolicy( void )
 	shadow_user_policy.checkPeriodic();
 }
 
+
+const char*
+BaseShadow::getCoreName( void )
+{
+	if( core_file_name ) {
+		return core_file_name;
+	} 
+	return "unknown";
+}
+
+
 void BaseShadow::dprintf_va( int flags, char* fmt, va_list args )
 {
 		// Print nothing in this version.  A subclass like MPIShadow
