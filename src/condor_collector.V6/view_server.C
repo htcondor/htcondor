@@ -404,6 +404,7 @@ int ViewServer::SendDataReply(Stream* sock,const MyString& FileName, int FromDat
 	float OutTime;
 	int T;
 
+	OldTime = 0;
 	FILE* fp=fopen(FileName.Value(),"r");
 	if (!fp) return -1;
 
