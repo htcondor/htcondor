@@ -73,7 +73,8 @@ END {
 	   "", "Bandwidth", "Success", "Bandwidth", "Success", "Bandwidth",
 	   "Success");
     printf("%-16.16s %9.9s %7.7s %9.9s %7.7s %9.9s %7.7s\n\n",
-	   "User/Host", "(Mb/s)", "Rate", "(Mb/s)", "Rate", "(Mb/s)", "Rate");
+	   "User/Host/Subnet", "(Mb/s)", "Rate", "(Mb/s)", "Rate", "(Mb/s)",
+	   "Rate");
     for (i=0; i < num_users; i++) {
 	User = Users[i];
 	Bytes = BytesSent[User] + BytesRecvd[User];
