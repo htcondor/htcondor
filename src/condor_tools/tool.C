@@ -660,7 +660,7 @@ doCommand( char *name )
 	} else {
 		namePrintf( stdout, name, "Sent \"%s\" command to", cmdToStr(cmd) );
 	}
-	dt = old_dt;
+	RESTORE;
 }
 
 
