@@ -69,8 +69,8 @@ extern int _condor_in_file_stream;
 const int KILO = 1024;
 
 extern "C" void report_image_size( int );
-extern		int	syscall(int ...);
-extern		int	SYSCALL(int ...);
+extern "C"	int	syscall(int ...);
+extern "C"	int	SYSCALL(int ...);
 
 #ifdef SAVE_SIGSTATE
 extern "C" void condor_save_sigstates();
