@@ -92,10 +92,18 @@ int Match(LexemeType t, char*& s, int& count)
     count = count + token->length;
     if(t == token->type)
     {
-		delete token;
+		if ( token ) {
+			delete token;
+			if (token == nextToken )
+				nextToken = NULL;
+		}
         return TRUE;
     }
-	delete token;
+	if ( token ) {
+		delete token;
+		if (token == nextToken)
+			nextToken = NULL;
+	}
     return FALSE;
 }
 
@@ -603,11 +611,17 @@ int Parse(const char* s, ExprTree*& tree)
     alreadyRead = TRUE;
     if(ParseAssignExpr(tmp, tree, count))
     {
-		delete nextToken;
+		if ( nextToken ) {
+			delete nextToken;
+			nextToken = NULL;
+		}
 		delete [] str;
 		return 0;
     }
-	delete nextToken;
+	if ( nextToken ) {
+		delete nextToken;
+		nextToken = NULL;
+	}
 	delete [] str;
     return count;
 }
