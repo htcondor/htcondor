@@ -54,6 +54,8 @@
 #include "HashTable.h"
 #include "MyString.h"
 
+#include "my_username.h"
+
 static int hashFunction( const MyString&, int );
 HashTable<MyString,MyString> forcedAttributes( 64, hashFunction ); 
 
@@ -126,7 +128,7 @@ char	*NotifyUser		= "notify_user";
 char	*UserLogFile	= "log";
 char	*CoreSize		= "coresize";
 char	*NiceUser		= "nice_user";
-char	*CertDir			= "cert_dir";
+char	*X509CertDir	= "x509certdir";
 #if !defined(WIN32)
 char	*KillSig			= "kill_sig";
 #endif
@@ -181,7 +183,6 @@ int	  SaveClassAd (ClassAd &);
 void	InsertJobExpr (char *expr);
 void	check_umask();
 
-int setupAuthentication( FILE * &infp );
 char *owner = NULL;
 
 extern char **environ;
@@ -352,15 +353,33 @@ main( int argc, char *argv[] )
 	// get_schedd_addr which uses a (gasp!) _static_ buffer.
 	ScheddAddr = strdup(ScheddAddr);
 
+	
 	// open submit file
 	if( (fp=fopen(cmd_file,"r")) == NULL ) {
 		fprintf( stderr, "ERROR: Failed to open command file\n");
 		exit(1);
 	}
+	// Need X509_CERT_DIR set before connectQ if in submit file
 
-	int canTryGSS = setupAuthentication( fp );
+	//  Parse the file, stopping at "queue" command
+	if( read_condor_file( fp, 1 ) < 0 ) {
+		fprintf(stderr, "ERROR: Failed to parse command file.\n");
+		exit(1);
+	}
 
-	if (ConnectQ(ScheddAddr, owner, canTryGSS, !Remote ) == 0) {
+	//if defined in file, set up to use x509certdir
+	char *CertDir;
+	if ( CertDir = condor_param( X509CertDir ) ) {
+		dprintf( D_FULLDEBUG, "setting env X509_CERT_DIR=%s from submit file\n",
+				CertDir );
+		char tmpstring[1024];
+		sprintf( tmpstring, "X509_CERT_DIR=%s/", CertDir );
+		putenv( strdup( tmpstring ) );
+		free( CertDir );
+	}
+
+
+	if (ConnectQ(ScheddAddr) == 0) {
 		if( ScheddName ) {
 			fprintf( stderr, "ERROR: Failed to connect to queue manager %s\n",
 					 ScheddName );
@@ -381,7 +400,9 @@ main( int argc, char *argv[] )
 	(void) sprintf (buffer, "%s = 0", ATTR_COMPLETION_DATE);
 	InsertJobExpr (buffer);
 
-	(void) sprintf (buffer, "%s = \"%s\"", ATTR_OWNER, get_owner());
+//	(void) sprintf (buffer, "%s = \"%s\"", ATTR_OWNER, get_owner());
+//this should go away, and the owner name be placed in ad by schedd!!!!!
+	(void) sprintf (buffer, "%s = \"%s\"", ATTR_OWNER, my_username());
 	InsertJobExpr (buffer);
 
 	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_LOCAL_USER_CPU);
@@ -1264,7 +1285,7 @@ read_condor_file( FILE *fp, int stopBeforeQueuing )
 		if( strincmp(name, "queue", strlen("queue")) == 0 ) {
 			//sleazy hack to deal with fact that queue must happen AFTER
 			//connection is authenticated, but cert_dir must be read
-			//before user or connection authentication
+			//before user or connection authentication -- mju
 			if ( stopBeforeQueuing ) {
 				rewind( fp );
 				return 0;
@@ -1924,87 +1945,3 @@ check_umask()
 #endif
 }
 
-int 
-setupAuthentication( FILE * &infp )
-{
-	//this section sets up env vars needed by authentication code. //mju
-	char *CondorCertDir;
-	char tmpstring[MAXPATHLEN];
-	int canTryGSS = 0;
-
-#if !defined(GSS_AUTHENTICATION)
-	return( 0 );
-#endif
-
-	//  Parse the file, stopping at "queue" command
-	if( read_condor_file( infp, 1 ) < 0 ) {
-		fprintf(stderr, "ERROR: Failed to parse command file.\n");
-		exit(1);
-	}
-
-	//if defined in file, set up to use condor cert dir
-	if ( CondorCertDir = condor_param( CertDir ) ) {
-		dprintf( D_FULLDEBUG, "setting CONDOR_CERT_DIR from submit file\n" );
-		canTryGSS = 1;
-	}
-
-	if ( canTryGSS ) {
-		struct stat statbuf;
-
-		if ( stat( CondorCertDir, &statbuf ) ) {
-			canTryGSS = 0;
-		}
-		else if ( !( statbuf.st_mode & ( S_IFDIR | S_IREAD ) ) ) {
-			canTryGSS = 0;
-		}
-		if ( !canTryGSS ) {
-			fprintf( stderr, "unable to read cert_dir %s directory\n",
-					CondorCertDir );
-		}
-	}
-
-	if ( canTryGSS ) {
-		//didn't bother re-putting vars which shouldn't change
-		if ( !getenv( "CONDOR_GATEKEEPER" ) ) {
-			struct hostent *host;
-			char tmp[MAXHOSTNAMELEN];
-			const char *hostname;
-	
-			if ( Remote ) {
-				hostname = get_host_part( ScheddName );
-			}
-			else {
-				gethostname( tmp, MAXHOSTNAMELEN );
-				host = gethostbyname( tmp );
-				hostname = host->h_name;
-			}
-			sprintf( tmpstring, "CONDOR_GATEKEEPER=/CN=schedd@%s", hostname );
-			putenv( strdup( tmpstring ) );
-		}
-	
-		if ( !getenv( "X509_CERT_DIR" ) ) {
-			sprintf( tmpstring, "X509_CERT_DIR=%s/", CondorCertDir );
-			putenv( strdup( tmpstring ) );
-		}
-	
-		if ( !getenv( "X509_USER_CERT" ) ) {
-			sprintf( tmpstring, "X509_USER_CERT=%s/newcert.pem", CondorCertDir );
-			putenv( strdup( tmpstring ) );
-		}
-	
-		if ( !getenv( "X509_USER_KEY" ) ) {
-			sprintf(tmpstring,"X509_USER_KEY=%s/private/newkey.pem",CondorCertDir);
-			putenv( strdup( tmpstring ) );
-		}
-
-		if ( !getenv( "SSLEAY_CONF" ) ) {
-			sprintf(tmpstring,"SSLEAY_CONF=%s/condor_ssl.cnf",CondorCertDir);
-			putenv( strdup( tmpstring ) );
-		}
-
-		free( CondorCertDir );
-		//end of authentication setup
-	}
-	
-	return( canTryGSS );
-}
