@@ -224,23 +224,23 @@ int	DaemonCore::Reset_Reaper(int rid, char* reap_descrip, ReaperHandlercpp handl
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, Event event, char *event_descrip, 
-					   Service* s, int id) {
-	return( t.NewTimer(s, deltawhen, event, event_descrip, 0, id) );
+					   Service* s) {
+	return( t.NewTimer(s, deltawhen, event, event_descrip, 0, -1) );
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period, Event event, char *event_descrip, 
-					   Service* s, int id) {
-	return( t.NewTimer(s, deltawhen, event, event_descrip, period, id) );
+					   Service* s) {
+	return( t.NewTimer(s, deltawhen, event, event_descrip, period, -1) );
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, Eventcpp eventcpp, char *event_descrip, 
-					   Service* s, int id) {
-	return( t.NewTimer(s, deltawhen, eventcpp, event_descrip, 0, id) );
+					   Service* s) {
+	return( t.NewTimer(s, deltawhen, eventcpp, event_descrip, 0, -1) );
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period, Eventcpp event, 
-				   char *event_descrip, Service* s, int id) {
-	return( t.NewTimer(s, deltawhen, event, event_descrip, period, id) );
+				   char *event_descrip, Service* s ) {
+	return( t.NewTimer(s, deltawhen, event, event_descrip, period, -1) );
 }
 	
 int	DaemonCore::Cancel_Timer( int id ) {

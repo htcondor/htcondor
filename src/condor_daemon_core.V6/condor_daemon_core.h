@@ -125,13 +125,13 @@ class DaemonCore : public Service
 		int		Cancel_Socket( Stream* );
 
 		int		Register_Timer(unsigned deltawhen, Event event, char *event_descrip, 
-					Service* s = NULL, int id = -1);
+					Service* s = NULL);
 		int		Register_Timer(unsigned deltawhen, unsigned period, Event event, 
-					char *event_descrip, Service* s = NULL, int id = -1);
+					char *event_descrip, Service* s = NULL);
 		int		Register_Timer(unsigned deltawhen, Eventcpp event, char *event_descrip, 
-					Service* s, int id = -1);
+					Service* s);
 		int		Register_Timer(unsigned deltawhen, unsigned period, Eventcpp event, 
-					char *event_descrip, Service* s, int id = -1);
+					char *event_descrip, Service* s);
 		int		Cancel_Timer( int id );
 		int		Reset_Timer( int id, unsigned when, unsigned period = 0 );
 
