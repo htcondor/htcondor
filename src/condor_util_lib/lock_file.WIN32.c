@@ -53,7 +53,13 @@ lock_file(int fd, LOCK_TYPE type, int do_block)
 		break;
 	}
 
-	result = _locking(fd, mode, 4L);
+	// _locking() in blocking mode will try 10 times to get
+	// the lock on the file, after which it gives up and fails
+	// with errno==EDEADLOCK. Since we want to block indefinitely
+	// for this lock, we loop until we get the lock.
+	do {
+		result = _locking(fd, mode, 4L);
+	} while ((result < 0) && errno == EDEADLOCK); 
 
 #if 0  // leave this out because lock_file called from dprintf,
 	   // so we cannot dprintf or EXCEPT in lock_file !
