@@ -216,23 +216,9 @@ foreach $module ( @modules ) {
     `cp -r $realskel/LICENSE.TXT $skel/$release`;
 
     # Now, you always want a README, DOC, and INSTALL
-    if( $module =~ /condor/ ) {
 	foreach $file ( "README", "INSTALL", "DOC" ) {
 	    `cp -f $realskel/$file $skel/$release/`;
-	}
-    } else {
-	# If we're contrib, we need to do some special stuff.
-	# The README and DOC files really come from .contrib versions
-	# that are customized for a given contrib module.
-	foreach $file ( "README", "DOC" ) {
-	    customize( "$realskel/$file.contrib", 
-		      "$skel/$release/$file", 
-		      $module, $tarfile );
-	}
-	# The appropriate INSTALL file is stored in CVS by the module
-	# name. 
-	`cp -f $realskel/INSTALL.$module $skel/$release/INSTALL`;
-    }
+    } 
 
     # Now, handle any special case files for a given module
     foreach $file ( @{$skelfiles{$module}} ) {
