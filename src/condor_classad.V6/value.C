@@ -2,8 +2,6 @@
 #include "operators.h"
 #include "value.h"
 
-StringSpace Value::stringValues;
-
 Value::
 Value()
 {
@@ -37,8 +35,9 @@ clear()
 			break;
 
 		case STRING_VALUE:
-			// string values are handled with reference counts
-			strValue.dispose();
+			// strValue is assumed to be a pointer to memory that is not
+			// handled by the Value class; so don't attempt to free it
+			strValue = NULL;
 			break;
 
 		default:
@@ -51,8 +50,7 @@ clear()
 bool Value::
 isNumber (int &i)
 {
-	switch (valueType)
-	{
+	switch (valueType) {
 		case INTEGER_VALUE:
 			i = integerValue;
 			return true;
@@ -70,8 +68,7 @@ isNumber (int &i)
 bool Value::
 isNumber (double &r)
 {
-	switch (valueType)
-	{
+	switch (valueType) {
 		case INTEGER_VALUE:
 			r = (double) integerValue;
 			return true;
@@ -87,37 +84,23 @@ isNumber (double &r)
 
 
 void Value::
-copyFrom(Value &val, ValueCopyMode cm)
+copyFrom(Value &val)
 {
-	switch (val.valueType)
-	{
+	switch (val.valueType) {
 		case STRING_VALUE:
 			setStringValue( val.strValue );
-			if( cm == VALUE_HANDOVER ) {
-				val.strValue.dispose();
-				val.valueType = UNDEFINED_VALUE;
-			}
 			return;
 
 		case BOOLEAN_VALUE:
 			setBooleanValue( val.booleanValue );
-			if( cm == VALUE_HANDOVER ) {
-				val.valueType = UNDEFINED_VALUE;
-			}
 			return;
 
 		case INTEGER_VALUE:
 			setIntegerValue( val.integerValue );
-			if( cm == VALUE_HANDOVER ) {
-				val.valueType = UNDEFINED_VALUE;
-			}
 			return;
 
 		case REAL_VALUE:
 			setRealValue( val.realValue );
-			if( cm == VALUE_HANDOVER ) {
-				val.valueType = UNDEFINED_VALUE;
-			}
 			return;
 
 		case UNDEFINED_VALUE:
@@ -126,25 +109,14 @@ copyFrom(Value &val, ValueCopyMode cm)
 
 		case ERROR_VALUE:
 			setErrorValue ();
-			if( cm == VALUE_HANDOVER ) {
-				val.valueType = UNDEFINED_VALUE;
-			}
 			return;
 	
 		case LIST_VALUE:
 			setListValue (val.listValue);
-			if( cm == VALUE_HANDOVER ) {
-				val.listValue = NULL;
-				val.valueType = UNDEFINED_VALUE;
-			}
 			return;
 
 		case CLASSAD_VALUE:
 			setClassAdValue (val.classadValue);
-			if( cm == VALUE_HANDOVER ) {
-				val.classadValue = NULL;
-				val.valueType = UNDEFINED_VALUE;
-			}
 			return;
 
 		default:
@@ -157,7 +129,6 @@ bool Value::
 toSink (Sink &dest)
 {
 	char tempBuf[512];
-	char *str;
 
     switch (valueType) {
       	case UNDEFINED_VALUE:
@@ -179,9 +150,8 @@ toSink (Sink &dest)
 			return (dest.sendToSink ((void*)tempBuf, strlen(tempBuf)));
 
       	case STRING_VALUE:
-			str = strValue.getCharString();
-			return (dest.sendToSink ((void*) "\"", 1) 			&&
-					dest.sendToSink ((void*)str, strlen(str))	&&
+			return (dest.sendToSink ((void*) "\"", 1) 					&&
+					dest.sendToSink ((void*)strValue, strlen(strValue))	&&
 					dest.sendToSink ((void*) "\"", 1));
 
 		case LIST_VALUE:
@@ -249,28 +219,19 @@ setErrorValue (void)
 }
 
 void Value::
-adoptStringValue(char *s, int adopt)
+adoptStringValue(char *s, int )
 {
     clear();
-    valueType = STRING_VALUE;
-    stringValues.getCanonical (s, strValue, adopt);
+	valueType = STRING_VALUE;
+    strValue = s;
 }
-
 
 void Value::
 setStringValue(char *s)
 {
     clear();
     valueType = STRING_VALUE;
-    stringValues.getCanonical (s, strValue, SS_DUP);
-}
-
-void Value::
-setStringValue(SSString &s)
-{
-    clear();
-    valueType = STRING_VALUE;
-    strValue.copy (s);
+    strValue = s;
 }
 
 void Value::
