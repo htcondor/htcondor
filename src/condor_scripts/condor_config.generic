@@ -41,6 +41,7 @@ BIN			= $(RELEASEDIR)/bin
 LIB			= $(RELEASEDIR)/lib
 PREEN		= $(BIN)/condor_preen -m -r
 MACHINE_STATUS_FILE = $(LOG)/machine_status
+QUEUE_LOCK				= $(LOG)/QueueLock
 
 CMNT
 CMNT       CONDOR_KeyboardD Macros
