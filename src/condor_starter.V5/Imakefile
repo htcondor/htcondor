@@ -61,7 +61,7 @@ REMOTE_SYSCALL_LIB = \
 	../condor_syscall_lib/syscall_mode.o \
 	../condor_syscall_lib/syscall_connect.o \
 	../condor_syscall_lib/remote_syscall.o \
-	../h/syscall_numbers.o \
+	../condor_syscall_lib/syscall_numbers.o \
 	$(UTIL_LIB) \
 	$(XDR_LIB) \
 	$(CLASS_LIB) \
