@@ -40,6 +40,8 @@
 #define GLOBUS_POLL_INTERVAL	1
 #define JOB_PROBE_INTERVAL		300
 #define UPDATE_SCHEDD_DELAY		5
+#define JM_RESTART_DELAY		60
+#define JOB_PROBE_LENGTH		5
 
 #define HASH_TABLE_SIZE			500
 
@@ -64,12 +66,14 @@ template class HashTable<HashKey, GlobusJob *>;
 template class HashBucket<HashKey, GlobusJob *>;
 template class HashTable<PROC_ID, GlobusJob *>;
 template class HashBucket<PROC_ID, GlobusJob *>;
+template class HashTable<HashKey, char *>;
+template class HashBucket<HashKey, char *>;
 template class List<GlobusJob>;
 template class Item<GlobusJob>;
-// template class List<GlobusJob *>;
-// template class Item<GlobusJob *>;
 template class List<JobUpdateEvent>;
 template class Item<JobUpdateEvent>;
+template class List<char *>;
+template class Item<char *>;
 
 
 void 
@@ -124,7 +128,6 @@ void removeJobUpdateEvents( GlobusJob *job ) {
 void
 setUpdate()
 {
-
 	if ( updateScheddTimerSet == false 
 			&& !JobUpdateEventQueue.IsEmpty() ) 
 	{
@@ -160,6 +163,8 @@ GridManager::GridManager()
 														  hashFunction );
 	JobsByProcID = new HashTable <PROC_ID, GlobusJob *>( HASH_TABLE_SIZE,
 														 procIDHash );
+	DeadMachines = new HashTable <HashKey, char *>( HASH_TABLE_SIZE,
+													hashFunction );
 }
 
 GridManager::~GridManager()
@@ -184,10 +189,15 @@ GridManager::~GridManager()
 	if ( JobsByProcID != NULL ) {
 		GlobusJob *tmp;
 		JobsByProcID->startIterations();
-		while( JobsByProcID->iterate( tmp ) )
+		while( JobsByProcID->iterate( tmp ) ) {
 			delete tmp;
+		}
 		delete JobsByProcID;
 		JobsByProcID = NULL;
+	}
+	if ( DeadMachines != NULL ) {
+		delete DeadMachines;
+		DeadMachines = NULL;
 	}
 }
 
@@ -242,11 +252,15 @@ GridManager::Register()
 		(SignalHandlercpp)&GridManager::COMMIT_JOB_signalHandler,
 		"COMMIT_JOB_signalHandler", (Service*)this, WRITE );
 
+	daemonCore->Register_Signal( GRIDMAN_RESTART_JM, "RestartJM",
+		(SignalHandlercpp)&GridManager::RESTART_JM_signalHandler,
+		"RESTART_JM_signalHandler", (Service*)this, WRITE );
+
 	daemonCore->Register_Timer( 0, GLOBUS_POLL_INTERVAL,
 		(TimerHandlercpp)&GridManager::globusPoll,
 		"globusPoll", (Service*)this );
 
-	daemonCore->Register_Timer( 10, JOB_PROBE_INTERVAL,
+	daemonCore->Register_Timer( 10,
 		(TimerHandlercpp)&GridManager::jobProbe,
 		"jobProbe", (Service*)this );
 }
@@ -348,41 +362,109 @@ GridManager::SUBMIT_JOB_signalHandler( int signal )
 	JobsToSubmit.Rewind();
 	JobsToSubmit.Next( new_job );
 
-	if ( new_job->jobState == G_UNSUBMITTED ) {
-		dprintf(D_FULLDEBUG,"Attempting to submit job %d.%d\n",
-				new_job->procID.cluster,new_job->procID.proc);
+	char *tmp;
+	if ( DeadMachines->lookup( HashKey(new_job->rmContact), tmp ) == 0 ) {
 
-		if ( new_job->start() == true ) {
-			dprintf(D_ALWAYS,"Submited job %d.%d\n",
-					new_job->procID.cluster,new_job->procID.proc);
-		} else {
-			dprintf(D_ALWAYS,"ERROR: Job %d.%d Submit failed because %s\n",
-					new_job->procID.cluster,new_job->procID.proc,
-					new_job->errorString());
-			if (new_job->RSL) {
-				dprintf(D_ALWAYS,"Job %d.%d RSL is: %s\n",
-						new_job->procID.cluster,new_job->procID.proc,
-						new_job->RSL);
-			}
-			// TODO : we just failed to submit a job; handle it better.
-		}
-	} else {
 		dprintf(D_FULLDEBUG,
-				"Job %d.%d already submitted to Globus\n",
-				new_job->procID.cluster,new_job->procID.proc);
-		// So here the job has already been submitted to Globus.
-		// We need to place the contact string into our hashtable,
-		// and setup to get async events.
-		if ( new_job->jobContact ) {
+				"Resource %s is dead, delaying submit of job %d.%d\n",
+				new_job->rmContact,new_job->procID.cluster,
+				new_job->procID.proc);
+		WaitingToSubmit.Append( new_job );
+
+	} else {
+
+		if ( new_job->jobState == G_UNSUBMITTED ) {
+			dprintf(D_FULLDEBUG,"Attempting to submit job %d.%d\n",
+					new_job->procID.cluster,new_job->procID.proc);
+
+			if ( new_job->start() == true ) {
+				dprintf(D_ALWAYS,"Submited job %d.%d\n",
+						new_job->procID.cluster,new_job->procID.proc);
+			} else {
+				if ( new_job->errorCode ==
+					 GLOBUS_GRAM_CLIENT_ERROR_CONNECTION_FAILED ) {
+
+					// The machine is unreachable. Mark it dead and
+					// delay the submit.
+					dprintf( D_ALWAYS,
+							 "Resource %s unreachable. Marking as dead\n",
+							 new_job->rmContact );
+					DeadMachines->insert( HashKey(new_job->rmContact), NULL );
+					WaitingToSubmit.Append( new_job );
+
+				} else {
+
+					dprintf(D_ALWAYS,
+							"ERROR: Job %d.%d Submit failed because %s\n",
+							new_job->procID.cluster, new_job->procID.proc,
+							new_job->errorString());
+					if (new_job->RSL) {
+						dprintf(D_ALWAYS,"Job %d.%d RSL is: %s\n",
+								new_job->procID.cluster,new_job->procID.proc,
+								new_job->RSL);
+					}
+					// TODO : we just failed to submit a job; handle it better.
+				}
+			}
+		} else if ( new_job->jobContact ) {
+			dprintf(D_FULLDEBUG,
+					"Job %d.%d already submitted to Globus\n",
+					new_job->procID.cluster,new_job->procID.proc);
+			// So here the job has already been submitted to Globus.
+			// We need to place the contact string into our hashtable,
+			// and setup to get async events.
 			GlobusJob *tmp_job = NULL;
 			// see if this contact string already in our hash table
 			JobsByContact->lookup(HashKey(new_job->jobContact), tmp_job);
 			if ( tmp_job == NULL ) {
 				// nope, this string is not in our hash table. Register
 				// a callback for it (and insert it in the hash table).
-				new_job->callback_register();
+				if ( new_job->callback_register() == false ) {
+
+					if ( new_job->errorCode ==
+						 GLOBUS_GRAM_CLIENT_ERROR_CONTACTING_JOB_MANAGER ) {
+
+						// The jobmanager is unreachable. See if the same is
+						// true for the entire machine.
+						if ( globus_gram_client_ping(new_job->rmContact) !=
+							 GLOBUS_SUCCESS ) {
+
+							// The machine is unreachable. Mark it dead and
+							// delay the cancel.
+							dprintf( D_ALWAYS,
+									 "Resource %s unreachable. Marking as dead\n",
+									 new_job->rmContact );
+							DeadMachines->insert( HashKey(new_job->rmContact),
+												  NULL );
+							WaitingToSubmit.Append( new_job );
+
+						} else {
+
+							// Try to restart the jobmanager
+							dprintf(D_FULLDEBUG,
+									"Can't contact jobmanager for job %d.%d. Will try to restart\n",
+									new_job->procID.cluster,new_job->procID.proc);
+							addRestartJM( new_job );
+
+						}
+
+					} else {
+						// Error
+						dprintf(D_ALWAYS,
+							"ERROR: JM register for %d.%d failed because %s\n",
+							new_job->procID.cluster, new_job->procID.proc,
+							new_job->errorString());
+						// TODO what now?  try later ?
+					}
+				}
 			}
+		} else {
+			// bad state
+			dprintf(D_ALWAYS,"ERROR: job %d.%d is in state %d but has no contact string\n",
+					new_job->procID.cluster, new_job->procID.proc,
+					new_job->jobState);
 		}
+
 	}
 
 	JobsToSubmit.DeleteCurrent();
@@ -441,7 +523,7 @@ GridManager::REMOVE_JOBS_signalHandler( int signal )
 
 			JobsToSubmit.Delete( next_job );
 			next_job->removedByUser = true;
-			JobsToRemove.Append( next_job );
+			JobsToCancel.Append( next_job );
 			num_ads++;
 
 		} else {
@@ -459,7 +541,7 @@ GridManager::REMOVE_JOBS_signalHandler( int signal )
 	DisconnectQ( schedd );
 	dprintf(D_FULLDEBUG,"Fetched %d job ads from schedd\n",num_ads);
 
-	if ( !JobsToRemove.IsEmpty() ) {
+	if ( !JobsToCancel.IsEmpty() ) {
 		daemonCore->Block_Signal( GRIDMAN_REMOVE_JOBS );
 		daemonCore->Send_Signal( daemonCore->getpid(), GRIDMAN_CANCEL_JOB );
 	}
@@ -476,42 +558,89 @@ GridManager::CANCEL_JOB_signalHandler( int signal )
 
 	dprintf( D_FULLDEBUG, "in CANCEL_JOB_signalHandler\n" );
 
-	if ( JobsToRemove.IsEmpty() ) {
+	if ( JobsToCancel.IsEmpty() ) {
 		daemonCore->Unblock_Signal( GRIDMAN_REMOVE_JOBS );
 		return TRUE;
 	}
 
-	JobsToRemove.Rewind();
-	JobsToRemove.Next( curr_job );
+	JobsToCancel.Rewind();
+	JobsToCancel.Next( curr_job );
 
 	JobsToSubmit.Delete( curr_job );
 
 	if ( curr_job->jobContact != NULL ) {
 
-		dprintf(D_FULLDEBUG,"Attempting to remove job %d.%d\n",
-				curr_job->procID.cluster,curr_job->procID.proc);
+		char *tmp;
+		if ( DeadMachines->lookup( HashKey(curr_job->rmContact), tmp ) == 0 ) {
 
-		if ( curr_job->cancel() == false ) {
-			// Error
-			dprintf(D_ALWAYS,"ERROR: Job cancel failed because %s\n",
-					globus_gram_client_error_string(curr_job->errorCode));
+			dprintf(D_FULLDEBUG,
+					"Resource %s is dead, delaying cancel of job %d.%d\n",
+					curr_job->rmContact,curr_job->procID.cluster,
+					curr_job->procID.proc);
+			WaitingToCancel.Append( curr_job );
 
-			// TODO what now?  try later ?
-		} else {
-			// Success.  We don't actually remove it until
-			// we receive the status update from the job manager.
-			dprintf(D_ALWAYS,"Removed job %d.%d\n",
+		} else if ( curr_job->restartingJM == false ) {
+			// If we're in the middle of restarting the jobmanager, don't
+			// send a cancel because it'll just cancel the new jobmanager and
+			// not the job. Once the restart is complete, the job will be
+			// re-added to the cancel queue (by the COMMIT_JOB handler).
+
+			dprintf(D_FULLDEBUG,"Attempting to remove job %d.%d\n",
 					curr_job->procID.cluster,curr_job->procID.proc);
 
-			JobsToCommit.Delete( curr_job );
-			removeJobUpdateEvents( curr_job );
+			if ( curr_job->cancel() == false ) {
+
+				if ( curr_job->errorCode ==
+					 GLOBUS_GRAM_CLIENT_ERROR_CONTACTING_JOB_MANAGER ) {
+
+					// The jobmanager is unreachable. See if the same is
+					// true for the entire machine.
+					if ( globus_gram_client_ping(curr_job->rmContact) !=
+						 GLOBUS_SUCCESS ) {
+
+						// The machine is unreachable. Mark it dead and
+						// delay the cancel.
+						dprintf( D_ALWAYS,
+								 "Resource %s unreachable. Marking as dead\n",
+								 curr_job->rmContact );
+						DeadMachines->insert( HashKey(curr_job->rmContact),
+											  NULL );
+						WaitingToCancel.Append( curr_job );
+
+					} else {
+
+						// Try to restart the jobmanager
+						dprintf(D_FULLDEBUG,
+								"Can't contact jobmanager for job %d.%d. Will try to restart\n",
+								curr_job->procID.cluster,curr_job->procID.proc);
+						addRestartJM( curr_job );
+
+					}
+
+				} else if ( curr_job->errorCode !=
+							GLOBUS_GRAM_CLIENT_ERROR_JOB_QUERY_DENIAL ) {
+					// JOB_QUERY_DENIAL means the job is done and the
+					// jobmanager is cleaning up. In that case, wait for
+					// the final callback.
+					// Error
+					dprintf(D_ALWAYS,
+						"ERROR: Job cancel for %d.%d failed because %s\n",
+						curr_job->procID.cluster, curr_job->procID.proc,
+						curr_job->errorString());
+					// TODO what now?  try later ?
+				}
+			} else {
+				// Success.  We don't actually remove it until
+				// we receive the status update from the job manager.
+				dprintf(D_ALWAYS,"Removed job %d.%d\n",
+						curr_job->procID.cluster,curr_job->procID.proc);
+
+				JobsToCommit.Delete( curr_job );
+				removeJobUpdateEvents( curr_job );
+			}
+
 		}
-		/*
-		  if ( curr_job->jobContact != NULL )
-		  JobsByContact->remove( HashKey( curr_job->jobContact ) );
-		  JobsByProcID->remove( curr_procid );
-		  addJobUpdateEvent( curr_job, JOB_REMOVED );
-		*/
+
 	} else {
 
 		// If the state is DONE or FAILED with no contact string, then
@@ -527,9 +656,9 @@ GridManager::CANCEL_JOB_signalHandler( int signal )
 
 	}
 
-	JobsToRemove.DeleteCurrent();
+	JobsToCancel.DeleteCurrent();
 
-	if ( !JobsToRemove.IsEmpty() ) {
+	if ( !JobsToCancel.IsEmpty() ) {
 		dprintf(D_FULLDEBUG, "More jobs to cancel, Resignalling CANCEL_JOB\n");
 
 		daemonCore->Block_Signal( GRIDMAN_REMOVE_JOBS );
@@ -545,6 +674,7 @@ int
 GridManager::COMMIT_JOB_signalHandler( int signal )
 {
 	// Try to commit a job submission or completion
+	bool resignal_cancel = false;
 	GlobusJob *curr_job = NULL;
 	PROC_ID procID;
 
@@ -557,15 +687,229 @@ GridManager::COMMIT_JOB_signalHandler( int signal )
 	JobsToCommit.Rewind();
 	JobsToCommit.Next( curr_job );
 
-	curr_job->commit();
-	// Need to deal with failure...
+	char *tmp;
+	if ( DeadMachines->lookup( HashKey(curr_job->rmContact), tmp ) == 0 ) {
+
+		dprintf(D_FULLDEBUG,
+				"Resource %s is dead, delaying commit of job %d.%d\n",
+				curr_job->rmContact,curr_job->procID.cluster,
+				curr_job->procID.proc);
+		WaitingToCommit.Append( curr_job );
+
+	} else if ( curr_job->jobContact != NULL ) {
+
+		if ( curr_job->restartingJM && curr_job->removedByUser ) {
+			// If we're restarting a jobmanager for a removed job, we need
+			// to retry canceling the job.
+			resignal_cancel = true;
+		}
+
+		dprintf(D_FULLDEBUG,"Attempting to send commit for job %d.%d\n",
+				curr_job->procID.cluster, curr_job->procID.proc);
+
+		if ( curr_job->commit() == false ) {
+
+			if ( curr_job->errorCode ==
+				 GLOBUS_GRAM_CLIENT_ERROR_CONTACTING_JOB_MANAGER ) {
+
+				// The jobmanager is unreachable. See if the same is
+				// true for the entire machine.
+				if ( globus_gram_client_ping(curr_job->rmContact) !=
+					 GLOBUS_SUCCESS ) {
+
+					// The machine is unreachable. Mark it dead and
+					// delay the commit.
+					dprintf( D_ALWAYS,
+							 "Resource %s unreachable. Marking as dead\n",
+							 curr_job->rmContact );
+					DeadMachines->insert( HashKey(curr_job->rmContact),
+										  NULL );
+					WaitingToCommit.Append( curr_job );
+
+				} else {
+
+					// Try to restart the jobmanager
+					dprintf(D_FULLDEBUG,
+							"Can't contact jobmanager for job %d.%d. Will try to restart\n",
+							curr_job->procID.cluster,curr_job->procID.proc);
+					addRestartJM( curr_job );
+
+
+				}
+
+			} else {
+				// Error
+				dprintf(D_ALWAYS,
+						"ERROR: Job commit for %d.%d failed because %s\n",
+						curr_job->procID.cluster, curr_job->procID.proc,
+						curr_job->errorString());
+				// TODO what now?  try later ?
+			}
+
+		} else {
+
+			dprintf(D_FULLDEBUG,"Commit successful for job %d.%d\n",
+					curr_job->procID.cluster,curr_job->procID.proc);
+
+			if ( resignal_cancel ) {
+
+				JobsToCancel.Append( curr_job );
+				daemonCore->Send_Signal( daemonCore->getpid(),
+										 GRIDMAN_CANCEL_JOB );
+
+			}
+
+		}
+
+	}
 
 	JobsToCommit.DeleteCurrent();
+
+	// This job may have crept into the commit list more than once, but there
+	// should be at most one pending commit at any time per job. Make sure
+	// we only send one commit.
+	while ( JobsToCommit.Delete( curr_job ) );
 
 	if ( !JobsToCommit.IsEmpty() ) {
 		dprintf(D_FULLDEBUG, "More jobs to commit, Resignalling COMMIT_JOB\n");
 
 		daemonCore->Send_Signal( daemonCore->getpid(), GRIDMAN_COMMIT_JOB );
+	}
+
+	return TRUE;
+}
+
+void
+GridManager::addRestartJM( GlobusJob *job )
+{
+	bool need_signal = JMsToRestart.IsEmpty();
+
+	if ( job->restartWhen == 0 ) {
+		job->restartWhen = time(NULL) + JM_RESTART_DELAY;
+		JMsToRestart.Append( job );
+
+		if ( need_signal ) {
+			daemonCore->Send_Signal( daemonCore->getpid(),
+									 GRIDMAN_RESTART_JM );
+		}
+	}
+}
+
+int
+GridManager::RESTART_JM_signalHandler( int signal = 0 )
+{
+	// Try to restart a dead jobmanager
+	GlobusJob *curr_job = NULL;
+	PROC_ID procID;
+
+	dprintf( D_FULLDEBUG, "in RESTART_JM_signalHandler\n" );
+
+	if ( JMsToRestart.IsEmpty() ) {
+		return TRUE;
+	}
+
+	JMsToRestart.Rewind();
+	JMsToRestart.Next( curr_job );
+
+	if ( curr_job->restartWhen > time(NULL) ) {
+		dprintf( D_FULLDEBUG, "not time to restart job yet, waiting\n");
+
+		daemonCore->Register_Timer( curr_job->restartWhen - time(NULL),
+					(TimerHandlercpp)&GridManager::RESTART_JM_signalHandler,
+					"RESTART_JM_signalHandler", (Service*)&gridmanager );
+		return TRUE;
+	}
+
+	char *tmp;
+	if ( DeadMachines->lookup( HashKey(curr_job->rmContact), tmp ) == 0 ) {
+
+		dprintf(D_FULLDEBUG,
+				"Resource %s is dead, delaying restart of job %d.%d\n",
+				curr_job->rmContact,curr_job->procID.cluster,
+				curr_job->procID.proc);
+		WaitingToRestart.Append( curr_job );
+
+	} else if ( curr_job->restartWhen != 0 ) {
+
+		curr_job->restartWhen = 0;
+
+		dprintf(D_FULLDEBUG,"Attempting to restart jobmanager for job %d.%d\n",
+				curr_job->procID.cluster, curr_job->procID.proc);
+
+		if ( curr_job->restart() == false ) {
+
+			if ( curr_job->errorCode ==
+				 GLOBUS_GRAM_CLIENT_ERROR_CONNECTION_FAILED ) {
+
+				// The machine is unreachable. Mark it dead and
+				// delay the restart.
+				dprintf( D_ALWAYS,
+						 "Resource %s unreachable. Marking as dead\n",
+						 curr_job->rmContact );
+				DeadMachines->insert( HashKey(curr_job->rmContact),
+									  NULL );
+				WaitingToRestart.Append( curr_job );
+
+			} else {
+
+				// Can't restart, so give up on this job
+				// submission. Resubmit the job (or let a
+				// cancel complete).
+				dprintf(D_ALWAYS,
+						"JM restart failed for job %d.%d because %s\n",
+						curr_job->procID.cluster,
+						curr_job->procID.proc,
+						curr_job->errorString());
+
+				JobsByContact->remove(HashKey(curr_job->jobContact));
+				free( curr_job->jobContact );
+				curr_job->jobContact = NULL;
+
+				if ( curr_job->jobState == G_CANCELED ||
+					 curr_job->removedByUser ) {
+
+					curr_job->jobState = G_CANCELED;
+					removeJobUpdateEvents( curr_job );
+					addJobUpdateEvent( curr_job, JOB_UE_CANCELED );
+
+				} else {
+
+					curr_job->jobState = G_UNSUBMITTED;
+					addJobUpdateEvent( curr_job, JOB_UE_RESUBMIT );
+
+				}
+
+			}
+
+		} else {
+
+			dprintf(D_FULLDEBUG,"Restarted jobmanager for job %d.%d\n",
+					curr_job->procID.cluster,curr_job->procID.proc);
+
+		}
+
+	}
+
+	JMsToRestart.DeleteCurrent();
+
+	// This job may have crept into the restart list more than once (closely-
+	// spaced commit and probe failures, for example). Make sure we only
+	// restart it once.
+	while ( JMsToRestart.Delete( curr_job ) );
+
+	if ( !JMsToRestart.IsEmpty() ) {
+		dprintf(D_FULLDEBUG, "More JMs to restart, Resignalling RESTART_JM\n");
+
+		JMsToRestart.Next( curr_job );
+
+		if ( curr_job->restartWhen > time(NULL) ) {
+			daemonCore->Register_Timer( curr_job->restartWhen - time(NULL),
+					(TimerHandlercpp)&GridManager::RESTART_JM_signalHandler,
+					"RESTART_JM_signalHandler", (Service*)&gridmanager );
+		} else {
+			daemonCore->Send_Signal( daemonCore->getpid(),
+									 GRIDMAN_RESTART_JM );
+		}
 	}
 
 	return TRUE;
@@ -582,6 +926,8 @@ GridManager::updateSchedd()
 	JobUpdateEvent *curr_event;
 	GlobusJob *curr_job;
 	bool handled;
+	List <GlobusJob> jobs_to_delete;
+
 
 	dprintf(D_FULLDEBUG,"in updateSchedd()\n");
 
@@ -622,6 +968,12 @@ GridManager::updateSchedd()
 			if ( !curr_job->exitLogged ) {
 				WriteAbortToUserLog( curr_job );
 				curr_job->exitLogged = true;
+			}
+			break;
+		case JOB_UE_RESUBMIT:
+			if ( curr_job->executeLogged ) {
+				curr_job->executeLogged = false;
+				WriteEvictToUserLog( curr_job );
 			}
 			break;
 		}
@@ -748,6 +1100,14 @@ GridManager::updateSchedd()
 				handled = true;
 			}
 			break;
+		case JOB_UE_JM_RESTARTED:
+			if ( curr_job->jobContact ) {
+				SetAttributeString( curr_job->procID.cluster,
+									curr_job->procID.proc,
+									ATTR_GLOBUS_CONTACT_STRING,
+									curr_job->jobContact );
+			}
+			break;
 		case JOB_UE_RUNNING:
 			// The job's been marked as running. Nothing else to do.
 			handled = true;
@@ -779,12 +1139,20 @@ GridManager::updateSchedd()
 			DestroyProc(curr_job->procID.cluster,
 						curr_job->procID.proc);
 
+			jobs_to_delete.Append( curr_job );
 			// Remove all knowledge we may have about this job
-			JobsByProcID->remove( curr_job->procID );
-			JobsToRemove.Delete( curr_job );
-			delete curr_job;
+//			JobsByProcID->remove( curr_job->procID );
+//			JobsToCancel.Delete( curr_job );
+//			delete curr_job;
 
 			handled = true;
+			break;
+		case JOB_UE_RESUBMIT:
+		case JOB_UE_NOT_SUBMITTED:
+			SetAttributeString( curr_job->procID.cluster,
+								curr_job->procID.proc,
+								ATTR_GLOBUS_CONTACT_STRING,
+								NULL_JOB_CONTACT );
 			break;
 		}
 
@@ -805,12 +1173,20 @@ GridManager::updateSchedd()
 
 		switch ( curr_event->event ) {
 		case JOB_UE_SUBMITTED:
+		case JOB_UE_JM_RESTARTED:
 		case JOB_UE_DONE:
 		case JOB_UE_FAILED:
 		case JOB_UE_CANCELED:
 			JobsToCommit.Append( curr_job );
 			daemonCore->Send_Signal( daemonCore->getpid(),
 									 GRIDMAN_COMMIT_JOB );
+			handled = true;
+			break;
+		case JOB_UE_RESUBMIT:
+		case JOB_UE_NOT_SUBMITTED:
+			JobsToSubmit.Append( curr_job );
+			daemonCore->Send_Signal( daemonCore->getpid(),
+									 GRIDMAN_SUBMIT_JOB );
 			handled = true;
 			break;
 		}
@@ -821,13 +1197,39 @@ GridManager::updateSchedd()
 		}
 	}
 
+	jobs_to_delete.Rewind();
+
+	while ( jobs_to_delete.Next( curr_job ) ) {
+
+		// For jobs we just removed from the schedd's queue, remove all
+		// knowledge of them and delete them. We do the after disconnecting
+		// from the schedd because some of the lists we need to search could
+		// be very long. Most of these lists shouldn't contain the job, but
+		// we're being safe.
+		if ( curr_job->jobContact != NULL ) {
+			JobsByContact->remove( HashKey( curr_job->jobContact ) );
+		}
+		JobsByProcID->remove( curr_job->procID );
+		JobsToSubmit.Delete( curr_job );
+		JobsToCancel.Delete( curr_job );
+		JobsToCommit.Delete( curr_job );
+		JMsToRestart.Delete( curr_job );
+		JobsToProbe.Delete( curr_job );
+		WaitingToSubmit.Delete( curr_job );
+		WaitingToCancel.Delete( curr_job );
+		WaitingToCommit.Delete( curr_job );
+		WaitingToRestart.Delete( curr_job );
+		delete curr_job;
+
+	}
+
 	return TRUE;
 }
 
 int
 GridManager::globusPoll()
 {
-	if ( JobsToSubmit.IsEmpty() && JobsToRemove.IsEmpty() &&
+	if ( JobsToSubmit.IsEmpty() && JobsToCancel.IsEmpty() &&
 		 JobsToCommit.IsEmpty() ) {
 
 		time_t stop = time(NULL) + 1;
@@ -850,20 +1252,122 @@ GridManager::globusPoll()
 int
 GridManager::jobProbe()
 {
+	char *next_contact;
 	GlobusJob *next_job;
+	time_t end_time = time(NULL) + JOB_PROBE_LENGTH;
 
-	//dprintf(D_FULLDEBUG,"in jobProbe elements=%d\n",JobsByContact->getNumElements() );
+	dprintf(D_FULLDEBUG,"in jobProbe\n");
 	if ( JobsByProcID->getNumElements() == 0 ) {
 		dprintf( D_ALWAYS, "No jobs left, shutting down\n" );
 		daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGTERM );
 		return TRUE;
 	}
 
-	JobsByContact->startIterations();
+	if ( MachinesToProbe.IsEmpty() && JobsToProbe.IsEmpty() ) {
 
-	while ( JobsByContact->iterate( next_job ) != 0 ) {
+		HashKey next_key;
+
+		DeadMachines->startIterations();
+
+		while ( DeadMachines->iterate( next_key, next_contact ) != 0 ) {
+			next_contact = strdup( next_key.value() );
+			MachinesToProbe.Append( next_contact );
+		}
+
+		JobsByProcID->startIterations();
+
+		while ( JobsByProcID->iterate( next_job ) != 0 ) {
+			JobsToProbe.Append( next_job );
+		}
+
+	}
+
+	dprintf(D_FULLDEBUG,"machines to probe:%d jobs to probe:%d\n",MachinesToProbe.Number(),JobsToProbe.Number() );
+
+	// Ping all the unreachable machines to see if they're back
+	MachinesToProbe.Rewind();
+
+	while ( MachinesToProbe.Next( next_contact ) && time(NULL) <= end_time ) {
+
+		dprintf(D_FULLDEBUG,"Trying to ping dead resource %s\n",next_contact);
+
+		if ( globus_gram_client_ping(next_contact) == GLOBUS_SUCCESS ) {
+
+			dprintf( D_ALWAYS,
+					 "Ping succeeded for resource %s. Removing from dead list\n",
+					 next_contact );
+
+			DeadMachines->remove( HashKey(next_contact) );
+
+			if ( !WaitingToSubmit.IsEmpty() ) {
+				WaitingToSubmit.Rewind();
+				while ( WaitingToSubmit.Next( next_job ) ) {
+					if ( strcmp( next_job->rmContact, next_contact ) == 0 ) {
+						WaitingToSubmit.DeleteCurrent();
+						JobsToSubmit.Append( next_job );
+					}
+				}
+				daemonCore->Send_Signal( daemonCore->getpid(),
+										 GRIDMAN_SUBMIT_JOB );
+			}
+
+			if ( !WaitingToCancel.IsEmpty() ) {
+				WaitingToCancel.Rewind();
+				while ( WaitingToCancel.Next( next_job ) ) {
+					if ( strcmp( next_job->rmContact, next_contact ) == 0 ) {
+						WaitingToCancel.DeleteCurrent();
+						JobsToCancel.Append( next_job );
+					}
+				}
+				daemonCore->Send_Signal( daemonCore->getpid(),
+										 GRIDMAN_CANCEL_JOB );
+			}
+
+			if ( !WaitingToCommit.IsEmpty() ) {
+				WaitingToCommit.Rewind();
+				while ( WaitingToCommit.Next( next_job ) ) {
+					if ( strcmp( next_job->rmContact, next_contact ) == 0 ) {
+						WaitingToCommit.DeleteCurrent();
+						JobsToCommit.Append( next_job );
+					}
+				}
+				daemonCore->Send_Signal( daemonCore->getpid(),
+										 GRIDMAN_COMMIT_JOB );
+			}
+
+			if ( !WaitingToRestart.IsEmpty() ) {
+				WaitingToRestart.Rewind();
+				while ( WaitingToRestart.Next( next_job ) ) {
+					if ( strcmp( next_job->rmContact, next_contact ) == 0 ) {
+						WaitingToRestart.DeleteCurrent();
+						JMsToRestart.Append( next_job );
+					}
+				}
+				daemonCore->Send_Signal( daemonCore->getpid(),
+										 GRIDMAN_RESTART_JM );
+			}
+
+		} else {
+			dprintf(D_FULLDEBUG,"Ping failed, %s still dead\n",next_contact);
+		}
+
+		MachinesToProbe.DeleteCurrent();
+		free( next_contact );
+
+	}
+
+	JobsToProbe.Rewind();
+
+	while ( JobsToProbe.Next( next_job ) && time(NULL) <= end_time ) {
 
 		if ( next_job->jobContact != NULL ) {
+
+			char *tmp;
+			if ( DeadMachines->lookup( HashKey(next_job->rmContact),
+									   tmp ) == 0 ) {
+				JobsToProbe.DeleteCurrent();
+				continue;
+			}
 
 			dprintf(D_FULLDEBUG,"calling jobProbe for job %d.%d\n",
 						 next_job->procID.cluster, next_job->procID.proc );
@@ -872,38 +1376,68 @@ GridManager::jobProbe()
 				     GLOBUS_GRAM_CLIENT_ERROR_CONTACTING_JOB_MANAGER ) {
 
 				dprintf( D_ALWAYS, 
-						"Globus JobManager unreachable for job %d.%d\n",
+						"Globus Jobmanager unreachable for job %d.%d\n",
 						 next_job->procID.cluster, next_job->procID.proc );
-				// job manager is unreachable
-				// resubmit or fail?
-				// bad stuff
-				// TODO: INSERT JAMIE'S RE-ATTACH TO JOBMANAGER CODE HERE
 
-				// For now, check if we can contact the gatekeeper.
-				// If we can contact the gatekeeper, and not the jobmanager,
-				// we know the jobmanager is gone.  So either 
-				// resubmit the job or place it on hold.
-				// Note: It is possible to get the final callback from the
-				//   jobmanager inside the ping call. If we do, then the
-				//   jobmanager exitted normally and we shouldn't flag an
-				//   error. For now, we test this by seeing if jobContact
-				//   is still defined (meaning we still expect a running
-				//   jobmanager on the other end).
+				// Check if we can contact the gatekeeper. If we can
+				// contact to the gatekeeper, and not the jobmanager,
+				// we know the jobmanager is gone.  So attempt to
+				// restart the jobmanager.
 				int err=globus_gram_client_ping(next_job->rmContact);
-				if ( err == GLOBUS_SUCCESS && next_job->jobContact != NULL ) {
-					// jobmanager definitely gone.
-					// make it appear like it exited with status 1
-					dprintf( D_ALWAYS, 
-						"Job %d.%d exiting with status 1 because JobManager gone\n",
-						 next_job->procID.cluster, next_job->procID.proc );
-					next_job->exitValue = 1;
-					next_job->callback(GLOBUS_GRAM_CLIENT_JOB_STATE_DONE);
-				} 
+				if ( err == GLOBUS_SUCCESS ) {
+					// It is possible to get the final callback from the
+					// jobmanager inside the ping call. If we do, then the
+					// jobmanager exitted normally and we shouldn't flag an
+					// error. For now, we test this by seeing if jobContact
+					// is still defined (meaning we still expect a running
+					// jobmanager on the other end).
+					if ( next_job->jobContact != NULL ) {
+
+						// Try to restart the jobmanager
+						dprintf(D_FULLDEBUG,
+								"Can't contact jobmanager for job %d.%d. Will try to restart\n",
+								next_job->procID.cluster,next_job->procID.proc);
+
+						// Cancel any pending submit, cancel, or commit action.
+						// They will conflict with the restart.
+						JobsToSubmit.Delete( next_job );
+						JobsToCancel.Delete( next_job );
+						JobsToCommit.Delete( next_job );
+
+						addRestartJM( next_job );
+
+					}
+				} else {
+					// Mark the machine as dead
+					dprintf( D_ALWAYS,
+							 "Resource %s unreachable. Marking as dead\n",
+							 next_job->rmContact );
+					DeadMachines->insert( HashKey(next_job->rmContact), NULL );
+				}
 
 			}
 
 		}
 
+		JobsToProbe.DeleteCurrent();
+
+	}
+
+	if ( MachinesToProbe.IsEmpty() && JobsToProbe.IsEmpty() ) {
+		dprintf(D_FULLDEBUG,
+				"No more probes to do, resignalling probe in %d seconds\n",
+				JOB_PROBE_INTERVAL);
+
+		daemonCore->Register_Timer( JOB_PROBE_INTERVAL,
+									(TimerHandlercpp)&GridManager::jobProbe,
+									"jobProbe", (Service*)this );
+	} else {
+		dprintf(D_FULLDEBUG,
+				"More probes to do, resignalling probe immediately\n");
+
+		daemonCore->Register_Timer( 0,
+									(TimerHandlercpp)&GridManager::jobProbe,
+									"jobProbe", (Service*)this );
 	}
 
 	return TRUE;
@@ -1049,6 +1583,42 @@ GridManager::WriteTerminateToUserLog( GlobusJob *job )
 
 	if (!rc) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_TERMINATED event\n" );
+		return false;
+	}
+
+	return true;
+}
+
+bool
+GridManager::WriteEvictToUserLog( GlobusJob *job )
+{
+	UserLog *ulog = InitializeUserLog( job );
+	if ( ulog == NULL ) {
+		// User doesn't want a log
+		return true;
+	}
+
+	dprintf( D_FULLDEBUG, "Writing evict record to user logfile=%s job=%d.%d owner=%s\n",
+			 job->userLogFile, job->procID.cluster, job->procID.proc, Owner );
+
+	JobEvictedEvent event;
+	struct rusage r;
+	memset( &r, 0, sizeof( struct rusage ) );
+
+#if !defined(WIN32)
+	event.run_local_rusage = r;
+	event.run_remote_rusage = r;
+#endif /* WIN32 */
+	event.sent_bytes = 0;
+	event.recvd_bytes = 0;
+
+	event.checkpointed = false;
+
+	int rc = ulog->writeEvent(&event);
+	delete ulog;
+
+	if (!rc) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_EVICTED event\n" );
 		return false;
 	}
 

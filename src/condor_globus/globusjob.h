@@ -24,6 +24,7 @@ class GlobusJob
 	bool cancel();
 	bool probe();
 	bool callback_register();
+	bool restart();
 
 	const char *errorString();
 
@@ -34,6 +35,8 @@ class GlobusJob
 	int jobState;	// this is the Globus status, not Condor job status
 	char *RSL;
 	char *rmContact;
+	char *localOutput;
+	char *localError;
 	int errorCode;
 	char *userLogFile;
 	bool removedByUser;
@@ -43,6 +46,8 @@ class GlobusJob
 	bool stateChanged;
 	bool newJM;		// This means a jobmanager that supports restart
 					// and two-phase commit
+	bool restartingJM;
+	time_t restartWhen;
 
  protected:
 	bool callbackRegistered;

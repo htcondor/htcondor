@@ -34,6 +34,8 @@ class GridManager : public Service
 	int REMOVE_JOBS_signalHandler( int );
 	int CANCEL_JOB_signalHandler( int );
 	int COMMIT_JOB_signalHandler( int );
+	int RESTART_JM_signalHandler( int );
+	void addRestartJM( GlobusJob * );
 	int updateSchedd();
 	int globusPoll();
 	int jobProbe();
@@ -44,6 +46,7 @@ class GridManager : public Service
 	bool WriteExecuteToUserLog( GlobusJob * );
 	bool WriteAbortToUserLog( GlobusJob * );
 	bool WriteTerminateToUserLog( GlobusJob * );
+	bool WriteEvictToUserLog( GlobusJob * );
 
 
 	// This is public because it needs to be accessible from main_init()
@@ -53,10 +56,20 @@ class GridManager : public Service
 
 	HashTable <HashKey, GlobusJob *> *JobsByContact;
 	HashTable <PROC_ID, GlobusJob *> *JobsByProcID;
+	HashTable <HashKey, char *> *DeadMachines;
 
 	List <GlobusJob> JobsToSubmit;
-	List <GlobusJob> JobsToRemove;
+	List <GlobusJob> JobsToCancel;
 	List <GlobusJob> JobsToCommit;
+	List <GlobusJob> JMsToRestart;
+
+	List <GlobusJob> WaitingToSubmit;
+	List <GlobusJob> WaitingToCancel;
+	List <GlobusJob> WaitingToCommit;
+	List <GlobusJob> WaitingToRestart;
+
+	List <char *> MachinesToProbe;
+	List <GlobusJob> JobsToProbe;
 
  private:
 

@@ -14,6 +14,16 @@ extern char *gassServerUrl;
 #define JOB_UE_DONE				4
 #define JOB_UE_CANCELED			5
 #define JOB_UE_STATE_CHANGE		6
+#define JOB_UE_JM_RESTARTED		7
+#define JOB_UE_RESUBMIT			8	// We are returning the job to an
+									// unsubmitted state following a failed
+									// submission/execution. Erase knowledge
+									// of the old submission from the schedd,
+									// then resubmit it.
+#define JOB_UE_NOT_SUBMITTED	9	// We were told by a restarted jobmanager
+									// that the previous jobmanager hadn't
+									// actually submitted the job.
+
 
 class GlobusJob;
 
