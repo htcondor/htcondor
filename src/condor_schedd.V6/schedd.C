@@ -3846,7 +3846,10 @@ Scheduler::mail_problem_message()
 	mailer = email_admin_open("CONDOR Problem");
 	if (mailer == NULL)
 	{
-		EXCEPT( "Could not open mailer to admininstrator!" );
+		// Could not send email, probably because no admin 
+		// email address defined.  Just return.  No biggie.  Keep 
+		// your pants on.
+		return;
 	}
 
 	fprintf( mailer, "Problem with condor_schedd %s\n", Name );
