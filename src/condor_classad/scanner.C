@@ -13,7 +13,7 @@
 #include "condor_exprtype.h"
 #include "condor_scanner.h" 
 
-static int 	MAXVARNAME = 100;
+static int 	MAXVARNAME = 256;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Implementation of class Token
