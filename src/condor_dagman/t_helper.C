@@ -1,4 +1,5 @@
 #if defined(BUILD_HELPER)
+#include "condor_common.h"
 #include <cassert>
 #include <string>
 #include <fstream>
