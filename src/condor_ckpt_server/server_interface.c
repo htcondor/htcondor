@@ -69,6 +69,7 @@ int ConnectToServer(request_type type)
 	int                conn_req_sd;
 	struct sockaddr_in server_sa;
 	char			   *server_IP;
+	int				   on = 1;
 	
 	server_IP = getserveraddr();
 	if (server_IP == 0) {
@@ -111,6 +112,7 @@ int ConnectToServer(request_type type)
 		close(conn_req_sd);
 		return CONNECT_ERROR;
 	}
+	setsockopt(conn_req_sd,SOL_SOCKET,SO_KEEPALIVE,(char*)&on,sizeof(on));
 	return conn_req_sd;
 }
 

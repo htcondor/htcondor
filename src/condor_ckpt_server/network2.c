@@ -501,6 +501,7 @@ int I_accept(int                 socket_desc,
 {
 #if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 	int temp;
+	int on = 1;
 	
 	while ((temp=accept(socket_desc, (struct sockaddr*) addr, addr_len)) < 0) {
 		if (errno != EINTR) {
@@ -513,6 +514,7 @@ int I_accept(int                 socket_desc,
 			return ACCEPT_ERROR;
 		}
     }
+	setsockopt( temp, SOL_SOCKET, SO_KEEPALIVE, (char*)&on, sizeof(on) );
 	return(temp);
 #else
 	return 0;
