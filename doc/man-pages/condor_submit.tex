@@ -163,6 +163,137 @@ Manual for complete information on the syntax and available attributes
 that can be used in the ClassAd expression.
 
 %%%%%%%%%%%%%%%%%%%
+%% on_exit_remove
+%%%%%%%%%%%%%%%%%%%
+
+\item[on\_exit\_remove = $<$ClassAd Boolean Expression$>$] This expression
+is checked when the job exits and if true, then it allows the job to leave the
+queue normally. If false, then the job is placed back into the Idle state.
+If the user job is a vanilla job then it restarts from the beginning. If the
+user job is a standard job, then it restarts from the last checkpoint.
+
+For example:
+Suppose you have a job that occasionally segfaults but you know if you run it
+again on the same data, chances are it will finish successfully. This is
+how you would represent that with \AdAttr{on\_exit\_remove}(assuming the
+signal identifier for segmentation fault is 4):
+
+\begin{verbatim}
+	on_exit_remove = (ExitBySignal == True) && (ExitSignal != 4)
+\end{verbatim}
+
+The above expression will not let the job exit if it exited by a signal and
+that signal number was 4(representing segmentaion fault). In any other case
+of the job exiting, it will leave the queue as it normally would have done.
+
+If left unspecified, this will default to \Expr{True}.
+
+periodic\_$*$ expressions(defined elsewhere in this man page) take
+precedent over on\_exit\_$*$ expressions and a $*$\_hold expression takes
+precedent over a $*$\_remove expression.
+
+This expression is available only under UNIX and only for the standard and 
+vanilla universes.
+
+%%%%%%%%%%%%%%%%%%%
+%% on_exit_hold
+%%%%%%%%%%%%%%%%%%%
+
+\item[on\_exit\_hold = $<$ClassAd Boolean Expression$>$] This expression
+is checked when the job exits and if true, places the job on hold. If false
+then nothing happens and the \AdAttr{on\_exit\_remove} expression is
+checked to determine if that needs to be applied.
+
+For example:
+Suppose you have a job that you know will run for an hour minimum. If
+the job exits after less than an hour, you would like it to be placed on
+hold and notified by e-mail instead of being allowed to leave the queue.
+
+\begin{verbatim}
+	on_exit_hold = (ServerStartTime - JobStartDate) < 3600
+\end{verbatim}
+
+The above expression will place the job on hold if it exits for any reason
+before running for an hour. An e-mail will be sent to the user explaining
+that the job was placed on hold because this expression became true.
+
+periodic\_$*$ expressions(defined elsewhere in this man page) take
+precedent over on\_exit\_$*$ expressions and any $*$\_hold expression takes
+precedent over a $*$\_remove expression.
+
+If left unspecified, this will default to \Expr{False}.
+
+This expression is available only under UNIX and only for the standard and 
+vanilla universes.
+
+%%%%%%%%%%%%%%%%%%%
+%% periodic_remove
+%%%%%%%%%%%%%%%%%%%
+
+\item[periodic\_remove = $<$ClassAd Boolean Expression$>$]
+This expression is checked every 20 seconds(non-configurable,
+but might be in future) and if it becomes true, the job will
+leave the queue. \AdAttr{periodic\_remove} takes precedent over
+\AdAttr{on\_exit\_remove} if the two describe conflicting states.
+
+For example:
+Suppose you would like your job removed if the total suspension time of the
+job is more than half of the run time of the job.
+
+\begin{verbatim}
+	periodic_remove = CumulativeSuspensionTime > (RemoteWallClockTime / 2.0)
+\end{verbatim}
+
+The above expression will remove the job once the conditions have become true.
+
+\Notice{Currently, this option will force a ``terminate'' event in the user
+log of the job and it will report a successful termination of the job. This
+reporting of this event will be changed in a future version of Condor to
+be a ``job aborted event'' with descriptions of who intitated the event. As
+it stands now, someone looking at the user log termination event wouldn't be
+able to tell the difference between a job that legitimately ended successfully
+and a job where the \AdAttr{periodic\_remove} expression had become true.} 
+
+periodic\_$*$ expressions(defined elsewhere in this man page) take
+precedent over on\_exit\_$*$ expressions and any $*$\_hold expression takes
+precedent over a $*$\_remove expression.
+
+If left unspecified, this will default to \Expr{False}.
+
+This expression is available only under UNIX and only for the standard and 
+vanilla universes.
+
+%%%%%%%%%%%%%%%%%%%
+%% periodic_hold
+%%%%%%%%%%%%%%%%%%%
+
+\item[periodic\_hold = $<$ClassAd Boolean Expression$>$] This expression
+is checked every 20 seconds(non-configurable, but might be in future) and
+if it becomes true, the job will be placed on hold.
+
+For example:
+Suppose you would like your job held if the total suspension time of the
+job is more than half of the total run time of the job.
+
+\begin{verbatim}
+	periodic_hold = CumulativeSuspensionTime > (RemoteWallClockTime / 2.0)
+\end{verbatim}
+
+The above expression will place the job on hold if it suspends longer
+than half the amount of time it has totally run.  An e-mail will be
+sent to the user explaining that the job was placed on hold because this
+expression became true.
+
+If left unspecified, this will default to \Expr{False}.
+
+periodic\_$*$ expressions(defined elsewhere in this man page) take
+precedent over on\_exit\_$*$ expressions and any $*$\_hold expression takes
+precedent over a $*$\_remove expression.
+
+This expression is available only under UNIX and only for the standard and 
+vanilla universes.
+
+%%%%%%%%%%%%%%%%%%%
 %% priority
 %%%%%%%%%%%%%%%%%%%
 
