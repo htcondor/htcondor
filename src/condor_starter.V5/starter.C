@@ -69,6 +69,8 @@ void display_startup_info( const STARTUP_INFO *s, int flags );
 
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
+char* mySubSystem = "STARTER";
+
 #undef ASSERT
 #define ASSERT(cond) \
 	if( !(cond) ) { \
@@ -371,7 +373,7 @@ init_logging()
 
 	pval = param( "STARTER_LOCAL_LOGGING" );
 	if( pval && (pval[0] == 't' || pval[0] == 'T') ) {
-		dprintf_config( "STARTER", -1 );	// Log file on local machine
+		dprintf_config( mySubSystem, -1 );	// Log file on local machine
 		free( pval );
 		return;
 	}
