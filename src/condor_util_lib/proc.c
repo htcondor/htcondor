@@ -34,7 +34,7 @@
 
 #include <sys/wait.h>
 #include "proc.h"
-#include "debug.h"
+#include "condor_debug.h"
 
 #if defined(AIX31) || defined(AIX32)
 #include <time.h>

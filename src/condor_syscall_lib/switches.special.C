@@ -36,7 +36,7 @@ This file can be processed with several purposes in mind.
 #include "syscall_numbers.h"
 #include "condor_syscall_mode.h"
 #include "file_table_interf.h"
-#include "debug.h"
+#include "condor_debug.h"
 #include "../condor_ckpt/signals_control.h"
 #include "../condor_ckpt/file_state.h"
 

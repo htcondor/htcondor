@@ -68,7 +68,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include "constants2.h"
-#include "debug.h"
+#include "condor_debug.h"
 
 /* P R O T O T Y P E S */
 char *param();

@@ -25,7 +25,7 @@
 #include "condor_debug.h"		/* for EXCEPT */
 #include "condor_sys.h"
 #include "errno.h"
-#include "debug.h"
+#include "condor_debug.h"
 
 extern	char	*strerror();
 
