@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post_always,v 1.1.2.3 2004-06-25 05:19:09 wright Exp $
+# $Id: remote_post,v 1.1.2.1 2004-06-25 06:01:36 wright Exp $
 # post script to cleanup after a Condor build, successful or not
 ######################################################################
 
