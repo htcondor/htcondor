@@ -323,16 +323,12 @@ ext_target(EXT_KERBEROS_VERSION,$(NULL))
 ext_target(EXT_GLOBUS_VERSION,$(EXT_TRIGGER)/$(EXT_GPT_VERSION))
 ext_target(EXT_GAHP_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION))
 ext_target(EXT_GPT_VERSION,$(NULL))
+ext_target(EXT_GT3GAHP_VERSION,$(NULL))
 #endif
 #if WANT_PVM
 ext_target(EXT_PVM_VERSION,$(NULL))
 #endif
 ext_nodep_target(EXT_MAN_VERSION,$(NULL))
-
-
-# if WANT_GT3GAHP
-ext_target(EXT_GT3GAHP_VERSION,$(NULL))
-#endif
 
 
 clean::
