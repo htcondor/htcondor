@@ -14,6 +14,13 @@
 #include <unistd.h>
 #include <stdio.h>
 
+#if !defined(TRUE)
+#define TRUE (1)
+#endif
+
+#if !defined(FALSE)
+#define FALSE (0)
+#endif
 
 void StripPrefix(const char* pathname,
 				 char        filename[MAX_CONDOR_FILENAME_LENGTH])
