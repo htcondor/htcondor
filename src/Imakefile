@@ -28,7 +28,7 @@ CONFIG_SERVER = config_server
 #if IS_V6
 #	define Programs \
 		accountant.V6 ckpt_server collector.V6 $(CONFIG_SERVER) \
-		master.V6 negotiator.V6 off on schedd.V6 prio q.V6 rm.V6 \
+		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts shadow.V6 startd.V6 starter.V5 submit.V6 status.V6 \
 		tools kbdd
 
@@ -52,7 +52,7 @@ CONFIG_SERVER = config_server
 #endif
 
 
-#define Directories release_dir release_dir/bin release_dir/lib
+#define Directories release_dir release_dir/bin release_dir/lib release_dir/sbin
 all: h makefiles Directories Libraries Programs
 release:: all
 
@@ -79,6 +79,7 @@ obj_distrib: release
 simple_dir_target(release_dir)
 simple_dir_target(release_dir/bin)
 simple_dir_target(release_dir/lib)
+simple_dir_target(release_dir/sbin)
 object_target(util_lib)
 object_target(c++_util)
 
@@ -165,11 +166,11 @@ object_target(master.dhruba)
 object_target(q)
 object_target(rm)
 object_target(globalq)
+object_target(on)
+object_target(off)
 #endif
 
 object_target(prio)
-object_target(on)
-object_target(off)
 object_target(scripts)
 
 
