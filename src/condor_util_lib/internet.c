@@ -618,3 +618,73 @@ int bindWithin(const int fd, const int low_port, const int high_port)
 
 	return FALSE;
 }
+
+
+int
+getPortFromAddr( const char* addr )
+{
+	char *copy, *tmp;
+	int port = 0;
+
+	if( ! addr ) {
+		return 0;
+	}
+	
+	copy = strdup( addr );
+		// if it ends with '>', we want to chop that off from the
+		// string so we don't confuse atoi() 
+	if( (tmp = strrchr(copy, '>')) ) {
+		*tmp = '\0';
+	}
+	tmp = strchr( copy, ':' );
+	if( tmp && tmp[1] ) {
+		port = atoi( &tmp[1] );
+	}
+	free( copy );
+	return port;
+}
+
+
+char*
+getHostFromAddr( const char* addr )
+{
+	char *copy, *host = NULL, *tmp; 
+
+	if( ! (addr && addr[0]) ) {
+		return 0;
+	}
+	
+	copy = strdup( addr );
+
+		// if there's a colon, we want to end the host part there
+	if( (tmp = strchr(copy, ':')) ) {
+		*tmp = '\0';
+	}
+
+		// if it still ends with '>', we want to chop that off from
+		// the string
+	if( (tmp = strrchr(copy, '>')) ) {
+		*tmp = '\0';
+	}
+
+		// if there's an '@' sign, we just want everything after that.
+	if( (tmp = strchr(copy, '@')) ) {
+		if( tmp[1] ) {
+			host = strdup( &tmp[1] );
+		}
+		free( copy );
+		return host;
+	}
+
+		// if there was no '@', but it begins with '<', we want to
+		// skip that and just use what follows it...
+	if( copy[0] == '<' ) {
+		if( copy[1] ) { 
+			host = strdup( &copy[1] );
+		}
+	} else if( copy[0] ) {
+		host = strdup( copy );
+	}
+	free( copy );
+	return host;
+}
