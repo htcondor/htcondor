@@ -612,7 +612,9 @@ int CondorJob::doEvaluateState()
 				// in completed, we'll get confused by the jobStatus of
 				// HELD. By doing an active probe, we'll automatically
 				// ignore any update ads from before the probe.
-				remoteProxyExpireTime = jobProxy->expiration_time;
+				if(jobProxy) {
+					remoteProxyExpireTime = jobProxy->expiration_time;
+				}
 				gmState = GM_POLL_ACTIVE;
 			} else {
 				// unhandled error
@@ -654,7 +656,7 @@ int CondorJob::doEvaluateState()
 				// The job is on hold remotely but not locally. This means
 				// the remote job needs to be released.
 				gmState = GM_RELEASE_REMOTE_JOB;
-			} else if ( remoteProxyExpireTime < jobProxy->expiration_time ) {
+			} else if ( jobProxy && remoteProxyExpireTime < jobProxy->expiration_time ) {
 				int interval = param_integer( "GRIDMANAGER_PROXY_REFRESH_INTERVAL", 10*60 );
 				if ( now >= lastProxyRefreshAttempt + interval ) {
 					gmState = GM_REFRESH_PROXY;
