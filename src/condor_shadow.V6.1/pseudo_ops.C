@@ -45,15 +45,20 @@ extern BaseShadow *Shadow;
 extern RemoteResource *thisRemoteResource;
 
 int
-pseudo_register_machine_info(char *uiddomain, char *fsdomain)
+pseudo_register_machine_info(char *uiddomain, char *fsdomain, 
+							 char * starterAddr, char *full_hostname )
 {
+		// do something with uiddomain or fsdomain?  We've already 
+		// got them from the jobAd at startup...
+	thisRemoteResource->setStarterAddress( starterAddr );
+	thisRemoteResource->setMachineName( full_hostname );
 	return 0;
 }
 
 int
 pseudo_get_job_info(ClassAd *&ad)
 {
-	ad = Shadow->getJobAd();
+	ad = thisRemoteResource->getJobAd();
 	return 0;
 }
 
@@ -68,8 +73,8 @@ pseudo_get_executable(char *source)
 int
 pseudo_job_exit(int status, int reason)
 {
-	dprintf(D_SYSCALLS,"in pseudo_job_exit: status=%d,reason=%d\n",status,
-		reason);
+	dprintf(D_SYSCALLS, "in pseudo_job_exit: status=%d,reason=%d\n",
+			status, reason);
 	thisRemoteResource->setExitStatus(status);
 	thisRemoteResource->setExitReason(reason);
 	return 0;

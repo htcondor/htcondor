@@ -267,14 +267,6 @@ void BaseShadow::initUserLog()
 	}
 }
 
-void BaseShadow::makeExecuteEvent( char *host ) {
-	ExecuteEvent event;
-	strncpy ( event.executeHost, host, 128 );
-	if (!uLog.writeEvent(&event)) {
-		dprintf(D_ALWAYS, "Unable to log ULOG_EXECUTE event\n");
-	}
-}
-
 void BaseShadow::dprintf_va( int flags, char* fmt, va_list args )
 {
 		// Print nothing in this version.  A subclass like MPIShadow

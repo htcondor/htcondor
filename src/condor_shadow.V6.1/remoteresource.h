@@ -30,9 +30,6 @@
 #include "reli_sock.h"
 #include "baseshadow.h"
 
-/// This is the timeout period to hear from a startd.  (90 seconds).
-const int SHADOW_SOCK_TIMEOUT = 90;
-
 /** This class represents one remotely running user job.  <p>
 
 	This class has a Socket to the remote job from which it can handle
@@ -64,6 +61,12 @@ class RemoteResource : public Service {
 	RemoteResource( BaseShadow *shadow, const char * executingHost, 
 					const char * capability );
 
+		/** Copy Constructor */
+	RemoteResource( const RemoteResource& );
+
+		/** Asignment operator */
+	RemoteResource& operator = ( const RemoteResource& );
+
 		/// Destructor
 	~RemoteResource();
 
@@ -71,12 +74,11 @@ class RemoteResource : public Service {
 			an ACTIVATE_CLAIM command on it.  The capability, starternum
 			and Job ClassAd are pushed, and the executing host's 
 			full machine name and (hopefully) an OK are returned.
-			@param jobAd The classAd for this job.
 			@param starterVersion The version number of the starter wanted.
 			                  The default is 2.
 			@return 0 if everthing went ok, -1 if error.				  
 		 */ 
-	int requestIt( ClassAd *jobAd, int starterVersion = 2 );
+	int requestIt( int starterVersion = 2 );
 
 		/** Here we tell the remote starter to kill itself in a gentle manner.
 			@return 0 on success, -1 if a problem occurred.
@@ -113,6 +115,11 @@ class RemoteResource : public Service {
 			@param capability Will contain the capability for the host.
 		*/ 
 	void getCapability( char *& capability );
+	
+		/** Return the sinful string of the starter.  If NULL, a "" returned.
+			@param starterAddr Will contain the starter's sinful string.
+		*/
+	void getStarterAddress( char *& starterAddr );
 
 		/** Return the claim socket associated with this remote host.  
 			@return The claim socket for this host.
@@ -139,6 +146,11 @@ class RemoteResource : public Service {
 		*/
 	void setCapability( const char *capability );
 
+		/** Set the address (sinful string).
+			@param The starter's sinful string 
+		*/
+	void setStarterAddress( const char *starterAddr );
+	
 		/** Set the reason this host exited.  
 			@param reason Why did it exit?  Film at 11.
 		*/
@@ -149,12 +161,18 @@ class RemoteResource : public Service {
 		*/
 	void setExitStatus( int status );
 
- private:
+		/** Set this resource's jobAd */
+	void setJobAd( ClassAd *jA ) { this->jobAd = jA; };
+
+		/** Get this resource's jobAd */
+	ClassAd* getJobAd() { return this->jobAd; };
 
 		/** Set the machine name for this host.
 			@param machineName The machine name of this host.
 		*/
 	void setMachineName( const char *machineName );
+
+ protected:
 
 		/** Set the claimSock associated with this host.  
 			XXX is this needed at all?  Time will tell.
@@ -163,13 +181,12 @@ class RemoteResource : public Service {
 		*/
 	void setClaimSock( ReliSock* claimSock);
 
-		/** Making the copy constructor private prevents people
-			from copying it. */
-	RemoteResource( const RemoteResource& );
-
-		/** Making the assignment operator private also prevents copying.
-		 */
-	RemoteResource& operator = ( const RemoteResource& );
+		/** The jobAd for this resource.  Why is this here and not
+			in the shadow?  Well...if we're an MPI job, say, and we
+			want the different nodes to have a slightly different ad
+			for things like i/o, etc, we have to have one copy of 
+			the ClassAd for each resource...and thus, it's here. */
+	ClassAd *jobAd;
 
 		/* internal data: if you can't figure the following out.... */
 	char *executingHost;
@@ -178,9 +195,22 @@ class RemoteResource : public Service {
 	ReliSock *claimSock;
 	int exitReason;
 	int exitStatus;
+	char *starterAddress;
+
+		/// This is the timeout period to hear from a startd.  (90 seconds).
+	static const int SHADOW_SOCK_TIMEOUT;
+
+		// The rusage at the remote machine...to be implemented.
+	struct rusage remote_rusage;
+
+		// The number of bytes sent and received to/from this resource.
+		// To be implemented.
+	int bytesSent, bytesRecvd;
+
+		// More resource-specific stuff goes here.
 
 		// we keep a pointer to the shadow class around.  This is useful
-		// in handleSysCalls if we have to panic and do a shutdown.
+		// in handleSysCalls.
 	BaseShadow *shadow;
 };
 

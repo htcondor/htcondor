@@ -74,8 +74,8 @@ class UniShadow : public BaseShadow
 	void init( ClassAd *jobAd, char schedd_addr[], char host[], 
 			   char capability[], char cluster[], char proc[]);
 	
-		/** Makes the job go away.  Updates the job's classAs in the
-			Q manager, sends email to the user ir requested, and
+		/** Makes the job go away.  Updates the job's classAd in the
+			Q manager, sends email to the user if requested, and
 			calls DC_Exit().  It doesn't return.
 			@param reason The reason this job exited.
 			@param exitStatus Status upon exit.
@@ -90,9 +90,6 @@ class UniShadow : public BaseShadow
 
 	RemoteResource *remRes;
 
-		// This makes this class un-copy-able:
-	UniShadow( const UniShadow& );
-	UniShadow& operator = ( const UniShadow& );
 };
 
 

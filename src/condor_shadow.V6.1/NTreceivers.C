@@ -57,6 +57,7 @@ do_REMOTE_syscall()
 		char *uiddomain = NULL;
 		char *fsdomain = NULL;
 		char *address = NULL;
+		char *fullHostname = NULL;
 		int key = -1;
 
 		assert( syscall_sock->code(uiddomain) );
@@ -65,13 +66,15 @@ do_REMOTE_syscall()
 		dprintf( D_SYSCALLS, "  fsdomain = %s\n", fsdomain);
 		assert( syscall_sock->code(address) );
 		dprintf( D_SYSCALLS, "  address = %s\n", address);
-			// Problem: nothing is done with address here: mem. leak!
+		assert( syscall_sock->code(fullHostname) );
+		dprintf( D_SYSCALLS, "  fullHostname = %s\n", fullHostname );
 		assert( syscall_sock->code(key) );
 		dprintf( D_SYSCALLS, "  key = %d\n", key);
 		assert( syscall_sock->end_of_message() );
 
 		errno = 0;
-		rval = pseudo_register_machine_info(uiddomain, fsdomain);
+		rval = pseudo_register_machine_info(uiddomain, fsdomain, 
+											address, fullHostname);
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 

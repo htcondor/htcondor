@@ -25,6 +25,7 @@
 #include "condor_common.h"
 #include "shadow.h"
 #include "mpishadow.h"
+#include "list.h"
 
 static char *_FileName_ = __FILE__;   /* Used by EXCEPT (see except.h) */
 
@@ -36,4 +37,20 @@ MPIShadow::~MPIShadow() {
 		// todo
 }
 
-// more to come....
+
+void MPIShadow::init( ClassAd *jobAd, char schedd_addr[], char host[], 
+					  char capability[], char cluster[], char proc[])  {
+
+
+}
+
+void MPIShadow::shutDown( int reason, int exitStatus ) {
+
+}
+
+int MPIShadow::handleJobRemoval( int sig ) {
+
+}
+
+
+

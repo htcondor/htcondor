@@ -24,11 +24,6 @@
 #ifndef BASESHADOW_H
 #define BASESHADOW_H
 
-// The following for doc++:
-
-//@Include: shadow.h
-//@Include: remoteresource.h
-
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_classad.h"
@@ -119,11 +114,6 @@ class BaseShadow : public Service
 		 */
 	void initUserLog();
 
-		/** Write an Execute event to the user log.  
-			@param host The host that it's executing on.
-		*/
-	void makeExecuteEvent( char *host );
-
 		/** Change to the 'Iwd' directory.  Send email if problem.
 			@return 0 on success, -1 on failure.
 		*/
@@ -161,6 +151,16 @@ class BaseShadow : public Service
 		/// Returns the schedd address
 	char *getScheddAddr() { return scheddAddr; }
 
+ protected:
+
+	UserLog uLog;
+	
+		/** Note that this is the base, "unexpanded" ClassAd for the job.
+			If we're a regular shadow, this pointer gets copied into the
+			remoteresource.  If we're an MPI job we expand it based on
+			something like $(NODE) into each remoteresource. */
+	ClassAd *jobAd;
+
  private:
 
 	// config file parameters
@@ -173,7 +173,6 @@ class BaseShadow : public Service
 	bool useCkptServer;
 
 	// job parameters
-	ClassAd *jobAd;
 	int cluster;
 	int proc;
 	char owner[_POSIX_PATH_MAX];
@@ -183,7 +182,10 @@ class BaseShadow : public Service
 
 	// others
 	char *afsCell;
-	UserLog uLog;
+
+		// This makes this class un-copy-able:
+	BaseShadow( const BaseShadow& );
+	BaseShadow& operator = ( const BaseShadow& );
 
 };
 
