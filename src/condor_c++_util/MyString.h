@@ -216,6 +216,8 @@ class MyString
 	/** Like vsprintf, but this appends to existing data. */
 	bool vsprintf_cat(const char *format, va_list args);
 
+	void lower_case(void);
+
 	//@}
 
 	// ----------------------------------------
