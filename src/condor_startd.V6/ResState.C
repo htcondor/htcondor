@@ -94,9 +94,9 @@ ResState::change( State new_state, Activity new_act )
 		// Note our current state and activity in the classad
 	this->update( rip->r_classad );
 
-	if( statechange ) {
-		rip->update();   // We want to update the CM on every state change
-	}
+		// We want to update the CM on every state or activity change
+	rip->update();   
+
 	return TRUE;
 }
 
