@@ -61,11 +61,10 @@ Lexer::
 // Initialization method:  Initialize with immutable string
 //   +  Token will be accumulated in the lexBuffer
 bool Lexer::
-Initialize( const string &str )
+Initialize(LexerSource *source)
 {
-	parseBuffer = str.c_str( );
-	offset = 0;
-	ch = parseBuffer[offset];
+	lexSource = source;
+	ch = lexSource->ReadCharacter();
 
 	// token state initialization
 	lexBuffer = ch;
@@ -81,9 +80,7 @@ Initialize( const string &str )
 bool Lexer::
 Reinitialize( )
 {
-	offset++;
-	ch = parseBuffer[offset];
-
+	ch = lexSource->ReadCharacter();
 	// token state initialization
 	lexBuffer = ch;
 	lexBufferCount = 0;
@@ -133,11 +130,10 @@ cut (void)
 void Lexer::
 wind (void)
 {
-	if(ch == '\0') return;
-	offset++;
-	ch = parseBuffer[offset];
+	if(ch == -1) return;
+	ch = lexSource->ReadCharacter();
 	++lexBufferCount;
-	if( ch == '\0' ) return;
+	if( ch == -1 ) return;
 	if( accumulating ) {
 		lexBuffer += ch; 
 	}

@@ -25,6 +25,7 @@
 
 #include "common.h"
 #include "value.h"
+#include "lexerSource.h"
 
 BEGIN_NAMESPACE( classad )
 
@@ -185,7 +186,7 @@ class Lexer
 		~Lexer ();
 
 		// initialize methods
-		bool Initialize( const std::string &buf );
+		bool Initialize(LexerSource *source);
 		bool Reinitialize( );
 
 		// cleanup function --- purges strings from string space
@@ -210,8 +211,7 @@ class Lexer
 
 		// internal state of lexical analyzer
 		TokenType	tokenType;             		// the integer id of the token
-		const char  *parseBuffer;				// the buffer being parsed
-		int			offset;						// offset in parse buffer
+		LexerSource *lexSource;
 		int    		markedPos;              	// index of marked character
 		char   		savedChar;          		// stores character when cut
 		int    		ch;                     	// the current character
