@@ -143,11 +143,20 @@ bool
 passwd_cache::cache_uid(const char* user) {
 
 	struct passwd *pwent;
+	char *err_string;
 
 	pwent = getpwnam(user);
 	if ( pwent == NULL ) {
-		dprintf(D_ALWAYS, "passwd_cache: getpwnam() failed at line %d "
-				"with error %s\n", __LINE__, strerror(errno));
+			// unix is lame: getpwnam() sets errno to ENOENT ("No such
+			// file or directory") when it means "user not found"
+		if( errno == ENOENT ) {
+			static char *errno_clarification = "user not found";
+			err_string = errno_clarification;
+		} else {
+			err_string = strerror( errno );
+		}
+		dprintf( D_ALWAYS, "passwd_cache::cache_uid(): getpwnam(\"%s\") "
+				 "failed: %s\n", user, err_string );
 		return false;
 	} else {
 	   	return cache_uid(pwent);
