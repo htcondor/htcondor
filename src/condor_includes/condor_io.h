@@ -14,7 +14,7 @@
 #if defined(OSF1) && defined(__cplusplus)
 
 extern "C" {
-int bzero(void *, int);
+void bzero(char *, int);
 int gethostname(char *, int);
 
 unsigned int htonl(unsigned int);
