@@ -564,7 +564,7 @@ doCommand( char *name )
 	case VACATE_CLAIM:
 		// If no name is specified, or if name is a sinful string or
 		// hostname, we must send VACATE_ALL_CLAIMS.
-		if ( name && !sinful && (name, '@')) {
+		if ( name && !sinful && strchr(name, '@') ) {
 			if( !sock.code(cmd) || !sock.code(name) || !sock.eom() ) {
 				namePrintf( stderr, name, "Can't send %s command to", 
 							 cmdToStr(cmd) );
@@ -580,7 +580,7 @@ doCommand( char *name )
 	case PCKPT_JOB:
 		// If no name is specified, or if name is a sinful string or
 		// hostname, we must send PCKPT_ALL_JOBS.
-		if( name && !sinful && strchr(name, '@')) {
+		if( name && !sinful && strchr(name, '@') ) {
 			if( !sock.code(cmd) || !sock.code(name) || !sock.eom() ) {
 				namePrintf( stderr, name, "Can't send %s command to", 
 							 cmdToStr(cmd) );
