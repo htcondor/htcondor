@@ -22,7 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
  
-
+#include "condor_common.h"
 #include <fcntl.h>
 
 #define CONDOR_O_RDONLY 0x000
@@ -42,8 +42,10 @@ static struct {
 	{O_RDWR, CONDOR_O_RDWR},
 	{O_CREAT, CONDOR_O_CREAT},
 	{O_TRUNC, CONDOR_O_TRUNC},
-	{O_EXCL, CONDOR_O_EXCL},
-	{O_NOCTTY, CONDOR_O_NOCTTY}
+#ifndef WIN32
+	{O_NOCTTY, CONDOR_O_NOCTTY},
+#endif
+	{O_EXCL, CONDOR_O_EXCL}	
 };
 
 int open_flags_encode(int old_flags)
