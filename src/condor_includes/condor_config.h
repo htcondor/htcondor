@@ -54,7 +54,7 @@ extern "C" {
 #if defined(__STDC__) || defined(__cplusplus)
 	char * get_tilde();
 	char * param ( char *name );
-	void insert ( char *name, char *value, BUCKET *table[], int table_size );
+	void insert ( const char *name, const char *value, BUCKET *table[], int table_size );
 	char * lookup_macro ( char *name, BUCKET *table[], int table_size );
 	char * macro_expand ( char *name );
 	int param_in_pattern ( char *parameter, char *pattern);

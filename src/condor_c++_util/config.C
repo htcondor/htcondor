@@ -248,7 +248,7 @@ hash( register char *string, register int size )
 ** Insert the parameter name and value into the given hash table.
 */
 void
-insert( char *name, char *value, BUCKET **table, int table_size )
+insert( const char *name, const char *value, BUCKET **table, int table_size )
 {
 	register BUCKET	*ptr;
 	int		loc;
