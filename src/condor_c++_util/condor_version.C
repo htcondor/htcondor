@@ -33,7 +33,7 @@
    will EXCEPT at startup time.  
 */
 
-static char* CondorVersionString = "$HawekeyeVersion: 1.0 " __DATE__ " RC-1 $";
+static char* CondorVersionString = "$CondorVersion: 6.5.0 " __DATE__ " $";
 
 /* 
    This is some wisdom from Cygnus's web page.  If you just try to use
@@ -65,7 +65,7 @@ static char* CondorVersionString = "$HawekeyeVersion: 1.0 " __DATE__ " RC-1 $";
 #define str(s) #s
 
 /* Here is the platform string.  You don't need to edit this */
-static char* CondorPlatformString = "$HawkeyePlatform: " xstr(PLATFORM) " $";
+static char* CondorPlatformString = "$CondorPlatform: " xstr(PLATFORM) " $";
 
 extern "C" {
 
