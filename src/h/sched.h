@@ -164,6 +164,7 @@ typedef struct {        /* record sent by startd to shadow */
 #define	MATCH_INFO			(SCHED_VERS+40)
 #define	ALIVE				(SCHED_VERS+41)
 #define	REQUEST_SERVICE		(SCHED_VERS+42)
+#define	VACATE_SERVICE		(SCHED_VERS+43)
 
 #define SCHED_PORT		9605
 #define START_PORT		9611
