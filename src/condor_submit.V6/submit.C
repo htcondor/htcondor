@@ -2358,16 +2358,16 @@ setupAuthentication()
 		//X509_USER_PROXY needed for Globus universe and glideins under condor
 	char *UserProxy = NULL;
 	if ( UserProxy = condor_param( X509UserProxy ) ) {
-		dprintf( D_FULLDEBUG, "setting X509_USER_PROXY=%s\n", UserProxy )
+		dprintf( D_FULLDEBUG, "setting X509_USER_PROXY=%s\n", UserProxy );
 		sprintf( buffer, "X509_USER_PROXY=%s", UserProxy );
-		if ( == GLOBUS_UNIVERSE ) {
+		if ( JobUniverse == GLOBUS_UNIVERSE ) {
 			strcat( GlobusEnv, buffer );
 			strcat( GlobusEnv, env_delimiter );
 		}
 		else { 
 			putenv( strdup( buffer ) );
 		}
-		sprintf( buffer, "X509_USER_PROXY = \"%s\"", CertDir );
+		sprintf( buffer, "X509_USER_PROXY = \"%s\"", UserProxy );
 		InsertJobExpr( buffer );
 
 			//Put it in the ClassAd as well (per directive from 7th floor...)
