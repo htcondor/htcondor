@@ -39,9 +39,13 @@ void usage(void);
 int main(int argc, char *argv[]) {
 	
 	char* pw;
-	char* my_user = my_username();		// for now, we're only stashing the 
-	// current user's password
-	char* systemName;
+	char* my_name = my_username();		// we're only stashing the current user
+	char* my_domain = my_domainname();
+	char my_full_name[_POSIX_PATH_MAX];
+
+	sprintf(my_full_name, "%s@%s", my_name, my_domain);
+	printf("Account: %s\n\n", my_full_name);
+
 	int result;
 	
 	MyName = basename(argv[0]);
@@ -53,6 +57,7 @@ int main(int argc, char *argv[]) {
 	if ( (argc < 2) ||
 		( (stricmp(argv[1], CONFIG_CREDENTIAL ) != 0) &&				
 		(stricmp(argv[1], ADD_CREDENTIAL) != 0) && 
+		(stricmp(argv[1], QUERY_CREDENTIAL) != 0) && 
 		(stricmp(argv[1], DELETE_CREDENTIAL) != 0)) ) {
 		usage();
 	} else {
@@ -61,50 +66,56 @@ int main(int argc, char *argv[]) {
 		case 'A':	// Add
 			pw = get_password();
 			if ( pw ) {
-				result = addCredential( my_user, pw );			
+				result = addCredential( my_full_name, pw );			
 				ZeroMemory(pw, MAX_PASSWORD_LENGTH+1);
 				delete[] pw;
+				if ( result == FAILURE_BAD_PASSWORD ) {
+					fprintf(stdout, "\n\nPassword is invalid for this account"
+							".\n\n");
+				} else if ( result == SUCCESS ) {
+					fprintf(stdout, "\n\nPassword has been stored.\n");
+				} else {
+					fprintf(stdout, "\n\nFailure occured.\n");
+				}
 			} else {
 				fprintf(stderr, "\nAborted.\n");
-				exit(1); // usually due to CTRL-C
 			}
 			break;
 		case 'd':	
 		case 'D':	// Delete
-			result = deleteCredential(my_user);
+			result = deleteCredential(my_full_name);
+			if ( result == SUCCESS ) {
+				fprintf(stdout, "Delete Successful.\n");
+			} else {
+				fprintf(stdout, "Delete failed.\n");
+			}
 			break;
+		case 'q':	
+		case 'Q':	// tell me if I have anything stored
+			result = queryCredential(my_full_name);
+			if ( result == SUCCESS ) {
+				fprintf(stdout, "Your credential is stored.\n");
+			} else {
+				fprintf(stdout, "No credential is stored.\n");
+			}
+			break;
+#if 1
+			// I only want to build this when I'm debugging
 		case 'c':	
 		case 'C':	// Config
-			
-			systemName = getSystemAccountName();
-			if ( systemName ) {
-				result = strcmp(my_user, systemName);
-				delete[] systemName;
-				systemName = NULL;
-			} else {
-				// ok, we couldn't get the account. Try just SYSTEM then.
-				result = strcmp(my_user, "SYSTEM");
-			}
-			
-			if ( result == 0 ) {
-				return interactive();
-			} else {
-				fprintf(stderr, "You must be SYSTEM in order to run this command\n");
-				result = 0;
-			}
+			return interactive();
 			break;
+#endif
 		default:
 			fprintf(stderr, "Unknown option.\n");
 			usage();
 			break;
 		}
 	}
-	
-	if ( result ) {
-		fprintf( stderr, "\nOperation Successful.\n" );
-	} else {
-		fprintf( stderr, "\nOperation Failed.\n" );
-	}
+
+	if ( my_name) { free(my_name); }
+	if ( my_domain) { free(my_domain); }
+	my_name = my_domain = NULL;
 	
 	return result;
 }
@@ -112,7 +123,7 @@ int main(int argc, char *argv[]) {
 void
 usage()
 {
-	fprintf( stderr, "Usage: %s [ add | delete | config ] \n", MyName );
+	fprintf( stderr, "Usage: %s [ add | delete | query ] \n", MyName );
 	exit( 1 );
 };
 
