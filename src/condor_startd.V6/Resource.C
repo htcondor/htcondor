@@ -1065,9 +1065,11 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			// in STARTD_JOB_EXPRS.
 			// Our current claim object might be gone though, so make
 			// sure we have the object before we try to use it.
+			// Also, our current claim object might not have a
+			// ClassAd, so be careful about that, too. 
 		s = this->state();
 		if( s == claimed_state || s == preempting_state ) {
-			if( startd_job_exprs && r_cur ) {
+			if( startd_job_exprs && r_cur && r_cur->ad() ) {
 				startd_job_exprs->rewind();
 				while( (ptr = startd_job_exprs->next()) ) {
 					caInsert( cap, r_cur->ad(), ptr );
