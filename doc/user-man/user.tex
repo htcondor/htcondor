@@ -344,7 +344,7 @@ A \Term{universe} in Condor
 \index{universe}
 \index{Condor!universe}
 defines an execution environment. 
-Condor \VersionNotice\ supports four different
+Condor \VersionNotice\ supports several different
 universes for user jobs:
 \begin{itemize}
 	\item Standard
@@ -352,6 +352,7 @@ universes for user jobs:
 	\item PVM
 %	\item MPI
 	\item Globus
+	\item Java
 \end{itemize}
 
 The \AdAttr{Universe} attribute is specified in the submit description file.
@@ -372,7 +373,12 @@ Machine interface.  See section~\ref{sec:PVM} for more about PVM and Condor.
 \index{universe!Globus}
 The Globus universe allows users to submit Globus jobs through the
 Condor interface.  See \Url{http://www.globus.org} for more about Globus.
-
+\index{universe!Java}
+\index{Java}
+\index{Java Virtual Machine}
+\index{JVM}
+The Java universe allows users to run jobs written for the
+Java Virtual Machine (JVM).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:standard-universe}Standard Universe}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -495,7 +501,7 @@ chapter~\ref{condor-nt} for more details about Condor NT.
 }
 
 %%%%%%%%%%%%
-\subsubsection{PVM}
+\subsubsection{PVM Universe}
 %%%%%%%%%%%%
 
 \index{universe!PVM}
@@ -505,7 +511,7 @@ Please see section~\ref{sec:PVM} for more details.
 
 % Commented out until implementation/documentation is complete:
 %%%%%%%%%%%%
-%\subsubsection{MPI}
+%\subsubsection{MPI Universe}
 %%%%%%%%%%%%
 %\index{universe!MPI}
 %The MPI universe allows programs written to the MPICH
@@ -525,6 +531,17 @@ program. The manual page for \Condor{submit}
 on page~\pageref{man-condor-submit}
 has detailed descriptions of
 the Globus-related attributes.
+
+%%%%%%%%%%%%
+\subsubsection{Java Universe}
+%%%%%%%%%%%%
+
+\index{universe!Java}
+
+A program submitted to the Java universe may run on any sort of machine
+with a JVM regardless of its location, owner, or JVM version.  Condor
+will take care of all the details such as finding the JVM binary and
+setting the classpath.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Submitting a Job to Condor}
@@ -1107,6 +1124,10 @@ if any, on which your job is run.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{user-man/java.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{user-man/pvm.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -1122,15 +1143,6 @@ if any, on which your job is run.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{user-man/dagman.tex}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%
-% This section should be uncommented when the Vanilla universe
-% moves to the new starter.
-%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\input{user-man/interp.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

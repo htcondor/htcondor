@@ -54,7 +54,8 @@ then the named executable must have been re-linked with the Condor
 libraries (such as via the \Condor{compile} command). If submitting into
 the Vanilla Universe, then the named executable need not be re-linked and
 can be any process which can run in the background (shell scripts work
-fine as well). 
+fine as well).  If submitting into the Java Universe, then the argument
+must be a compiled \File{.class} file.
 
 %%%%%%%%%%%%%%%%%%%
 %% input
@@ -94,7 +95,8 @@ this will cause one job to overwrite the errors of another.
 %%%%%%%%%%%%%%%%%%%
 
 \item[arguments = $<$argument\_list$>$] List of arguments to be supplied
-to the program on the command line. 
+to the program on the command line.   In the Java Universe, the first
+argument must be the main of the class containing \Code{main}.
 
 
 %%%%%%%%%%%%%%%%%%%
@@ -403,7 +405,7 @@ Condor does not create a log for this cluster.
 %%%%%%%%%%%%%%%%%%%
 
 \item[universe = $<$vanilla \Bar\ standard \Bar\ pvm \Bar\ scheduler
-\Bar\ globus \Bar\ mpi$>$] 
+\Bar\ globus \Bar\ mpi \Bar\ java$>$] 
 Specifies which Condor Universe to use when running this job.  The Condor 
 Universe specifies a Condor execution environment.  The \Arg{standard} 
 Universe is the default, and tells Condor that this job has been re-linked 
@@ -418,7 +420,17 @@ The \Arg{globus} universe uses the Globus
 GRAM API to contact the Globus resource specifed and requests it run the job.
 The \Arg{mpi} universe is
 for running mpi jobs made with the MPICH package.
+The \Arg{java} Universe is for programs written to the Java Virtual Machine.
 See the Condor User's Manual for more information about using Universe.
+
+%%%%%%%%%%%%%%%%%%%
+%% jar_files
+%%%%%%%%%%%%%%%%%%%
+
+\item[jar\_files = $<$file\_list$>$]
+Specifies a list of additional JAR files to include when using
+the Java Universe.  JAR files will be transferred along with
+the executable and automatically added to the classpath.
 
 %%%%%%%%%%%%%%%%%%%
 %% image_size
