@@ -1,31 +1,28 @@
-/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
+/*********************************************************************
  *
- * See LICENSE.TXT for additional notices and disclaimers.
+ * Condor ClassAd library
+ * Copyright (C) 1990-2001, CONDOR Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI, and Rajesh Raman.
  *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of version 2.1 of the GNU Lesser General
+ * Public License as published by the Free Software Foundation.
  *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
+ * USA
+ *
+ *********************************************************************/
 
 // Includes 
-#include "condor_common.h"
-#include "condor_debug.h"
 #include "common.h"
-#include "escapes.h"
+
 #include "lexer.h"
 
 BEGIN_NAMESPACE( classad )
@@ -48,6 +45,7 @@ Lexer ()
 
 	// debug flag
 	debug = false;
+	return;
 }
 
 
@@ -68,7 +66,7 @@ Initialize( const string &str )
 	ch = parseBuffer[offset];
 
 	// token state initialization
-	lexBuffer[0] = (char) ch;
+	lexBuffer = ch;
 	lexBufferCount = 0;
 	inString = false;
 	tokenConsumed = true;
@@ -85,7 +83,7 @@ Reinitialize( )
 	ch = parseBuffer[offset];
 
 	// token state initialization
-	lexBuffer[0] = (char) ch;
+	lexBuffer = ch;
 	lexBufferCount = 0;
 	inString = false;
 	tokenConsumed = true;
@@ -103,6 +101,7 @@ void Lexer::
 FinishedParse ()
 {
 	accumulating = false;
+	return;
 }
 
 
@@ -110,9 +109,10 @@ FinishedParse ()
 void Lexer::
 mark (void)
 {
-	lexBuffer[0] = (char) ch;	
+	lexBuffer = ch;
 	lexBufferCount = 0;
 	accumulating = true;
+	return;
 }
 
 
@@ -122,6 +122,7 @@ cut (void)
 {
 	lexBuffer[lexBufferCount] = '\0';
 	accumulating = false;
+	return;
 }
 
 
@@ -135,7 +136,10 @@ wind (void)
 	ch = parseBuffer[offset];
 	++lexBufferCount;
 	if( ch == '\0' ) return;
-	if( accumulating ) lexBuffer[lexBufferCount] = ch;
+	if( accumulating ) {
+		lexBuffer += ch; 
+	}
+	return;
 }
 
 			
@@ -327,19 +331,20 @@ tokenizeNumber (void)
 		}
 	}
 
-	char *endptr;
 	if( numberType == INTEGER ) {
 		cut( );
-		integer = (int) strtol( lexBuffer.getarray(), &endptr, 0 );
+		integer = (int) strtol( lexBuffer.c_str(), NULL, 0 );
 	} else if( numberType == REAL ) {
 		cut( );
-		real = strtod( lexBuffer.getarray(), &endptr );
+		real = strtod( lexBuffer.c_str(), NULL );
 	} else {
-		EXCEPT( "Should not reach here" );
-	}
-
-	if( *endptr != '\0' ) {
-		EXCEPT( "strto{l,d}() signalled an error" );
+		/* If we've reached this point, we have a serious programming
+		 * error: tokenizeNumber should only be called if we are
+		 * lexing a number or a selection, and we didn't find a number
+		 * or a selection. This should really never happen, so we
+		 * bomb if it does. It should be reported as a bug.
+		 */
+		EXCEPT("Should not reach here");
 	}
 
 	switch( toupper( ch ) ) {
@@ -386,31 +391,31 @@ tokenizeAlphaHead (void)
 		cut ();
 
 		tokenType = LEX_IDENTIFIER;
-		yylval.SetStringValue( lexBuffer.getarray( ) );
+		yylval.SetStringValue( lexBuffer.c_str( ) );
 		
 		return tokenType;
 	}	
 
 	// check if the string is one of the reserved words; Case insensitive
 	cut ();
-	if (strcasecmp(lexBuffer.getarray(), "true") == 0) {
+	if (strcasecmp(lexBuffer.c_str(), "true") == 0) {
 		tokenType = LEX_BOOLEAN_VALUE;
 		yylval.SetBoolValue( true );
-	} else if (strcasecmp(lexBuffer.getarray(), "false") == 0) {
+	} else if (strcasecmp(lexBuffer.c_str(), "false") == 0) {
 		tokenType = LEX_BOOLEAN_VALUE;
 		yylval.SetBoolValue( false );
-	} else if (strcasecmp(lexBuffer.getarray(), "undefined") == 0) {
+	} else if (strcasecmp(lexBuffer.c_str(), "undefined") == 0) {
 		tokenType = LEX_UNDEFINED_VALUE;
-	} else if (strcasecmp(lexBuffer.getarray(), "error") == 0) {
+	} else if (strcasecmp(lexBuffer.c_str(), "error") == 0) {
 		tokenType = LEX_ERROR_VALUE;
-	} else if (strcasecmp(lexBuffer.getarray(), "is") == 0 ) {
+	} else if (strcasecmp(lexBuffer.c_str(), "is") == 0 ) {
 		tokenType = LEX_META_EQUAL;
-	} else if (strcasecmp(lexBuffer.getarray(), "isnt") == 0) {
+	} else if (strcasecmp(lexBuffer.c_str(), "isnt") == 0) {
 		tokenType = LEX_META_NOT_EQUAL;
 	} else {
 		// token is a character only identifier
 		tokenType = LEX_IDENTIFIER;
-		yylval.SetStringValue( lexBuffer.getarray() );
+		yylval.SetStringValue( lexBuffer.c_str() );
 	}
 
 	return tokenType;
@@ -432,40 +437,36 @@ tokenizeTime( )
 	// time not terminated by '
 	if( ch != '\'' ) {
 		tokenType = LEX_TOKEN_ERROR;
-		return( tokenType );
 	}
-	cut( );
-	wind( );
+	else {
+		cut( );
+		wind( );
 
 		// absolute time starts with an alpha character
-	if( isalpha( lexBuffer[0] ) ) {
-		if( !tokenizeAbsoluteTime( lexBuffer.getarray( ), secs ) ) {
-			tokenType = LEX_TOKEN_ERROR;
-			return( tokenType );
-		}
-		tokenType = LEX_ABSOLUTE_TIME_VALUE;
-		yylval.SetAbsTimeValue( secs );
-		return( tokenType );
-	} else {
+		if( isalpha( lexBuffer[0] ) ) {
+			if( !tokenizeAbsoluteTime( lexBuffer.c_str( ), secs ) ) {
+				tokenType = LEX_TOKEN_ERROR;
+			} else {
+				tokenType = LEX_ABSOLUTE_TIME_VALUE;
+				yylval.SetAbsTimeValue( secs );
+			}
+		} else {
 			// relative time value
-		if( !tokenizeRelativeTime( lexBuffer.getarray( ), secs ) ) {
-			tokenType = LEX_TOKEN_ERROR;
-			return( tokenType );
+			if( !tokenizeRelativeTime( lexBuffer.c_str( ), secs ) ) {
+				tokenType = LEX_TOKEN_ERROR;
+			} else {
+				tokenType = LEX_RELATIVE_TIME_VALUE;
+				yylval.SetRelTimeValue( secs );
+			}
 		}
-		tokenType = LEX_RELATIVE_TIME_VALUE;
-		yylval.SetRelTimeValue( secs );
-		return( tokenType );
 	}
 
-		// shouldn't reach here
-	EXCEPT( "Shouldn't reach here" );
-	tokenType = LEX_TOKEN_ERROR;
-	return( tokenType );
+	return tokenType;
 }
 
 
 bool Lexer::
-tokenizeAbsoluteTime( char *buf, time_t &asecs )
+tokenizeAbsoluteTime( const char *buf, time_t &asecs )
 {
 	struct 	tm timeValue;
 	time_t	secs;
@@ -507,12 +508,19 @@ tokenizeAbsoluteTime( char *buf, time_t &asecs )
 }
 
 bool Lexer::
-tokenizeRelativeTime( char *buf, time_t &rsecs )
+tokenizeRelativeTime( const char *buf, time_t &rsecs )
 {
 	bool negative = false;
 	int  days=0, hrs=0, mins=0, secs=0;
-	char *ptr = buf, *start, *end;
+	char *buf_copy, *ptr, *start, *end;
 	bool secsPresent=false;
+
+	buf_copy = new char[strlen(buf) + 1];
+	if (buf_copy == NULL) {
+		return false;
+	}
+	strcpy(buf_copy, buf);
+	ptr = buf_copy;
 
 		// initial (optional) plus or minus
 	if( *ptr == '-' ) {
@@ -522,6 +530,7 @@ tokenizeRelativeTime( char *buf, time_t &rsecs )
 		negative = false;
 		ptr++;
 	} else if( !isdigit( *ptr ) ) {
+		delete [] buf_copy;
 		return false;
 	}
 
@@ -534,6 +543,7 @@ tokenizeRelativeTime( char *buf, time_t &rsecs )
 		*ptr = '\0';
 		days = strtol( start, &end, 10 );  // base 10
 		if( days == 0 && end == start ) {
+			delete [] buf_copy;
 			return( false );
 		}
 		// wind pointers past hours field
@@ -551,6 +561,7 @@ tokenizeRelativeTime( char *buf, time_t &rsecs )
 		hrs = strtol( start, &end, 10 ); // base 10
 		if( ( hrs < 0 || hrs > 23 ) || ( hrs == 0 && end == start ) ) {
 			// strtol() failed
+			delete [] buf_copy;
 			return( false );
 		}
 		// wind past minutes field
@@ -562,6 +573,7 @@ tokenizeRelativeTime( char *buf, time_t &rsecs )
 		}
 	} else {
 		// no hours field
+		delete [] buf_copy;
 		return( false );
 	}
 
@@ -570,6 +582,7 @@ tokenizeRelativeTime( char *buf, time_t &rsecs )
 		secsPresent = true;
 		*ptr = '\0';
 	} else if( *ptr != '\0' ) {
+		delete [] buf_copy;
 		return( false );
 	}
 		
@@ -577,6 +590,7 @@ tokenizeRelativeTime( char *buf, time_t &rsecs )
 	mins = strtol( start, &end, 10 ); // base 10
 	if( ( mins < 0 || mins > 59 ) || ( mins == 0 && end == start ) ) {
 		// strtol() failed
+		delete [] buf_copy;
 		return( false );
 	}
 
@@ -592,6 +606,7 @@ tokenizeRelativeTime( char *buf, time_t &rsecs )
 
 		// must terminate here
 	if( *ptr != '\0' ) {
+		delete [] buf_copy;
 		return( false );
 	}
 
@@ -600,12 +615,14 @@ tokenizeRelativeTime( char *buf, time_t &rsecs )
 		secs = strtol( start, &end, 10 ); // base 10
 		if( ( secs < 0 || secs > 59 ) || ( secs == 0 && end == start ) ) {
 			// strtol() failed
+			delete [] buf_copy;
 			return( false );
 		}
 	}
 
 		// convert all fields into number of secs
 	rsecs = ( negative ? -1 : +1 ) * ( days*86400 + hrs*3600 + mins*60 + secs );
+	delete [] buf_copy;
 	return( true );
 }
 
@@ -631,8 +648,8 @@ tokenizeStringLiteral (void)
 	if( ch == '\"' ) {
 		cut( );
 		wind( );	// skip over the close quote
-		collapse_escapes( lexBuffer.getarray( ) );
-		yylval.SetStringValue( lexBuffer.getarray( ) );
+		convert_escapes( lexBuffer );
+		yylval.SetStringValue( lexBuffer.c_str( ) );
 		tokenType = LEX_STRING_VALUE;
 	} else {
 		// loop quit due to ch == 0 or ch == EOF
@@ -934,10 +951,58 @@ strLexToken (int tokenValue)
 		case LEX_OPEN_BRACE: 			 return "LEX_OPEN_BRACE";
 		case LEX_CLOSE_BRACE: 			 return "LEX_CLOSE_BRACE";
 		case LEX_BACKSLASH:              return "LEX_BACKSLASH";
+	    case LEX_ABSOLUTE_TIME_VALUE:    return "LEX_ABSOLUTE_TIME_VALUE";
+	    case LEX_RELATIVE_TIME_VALUE:    return "LEX_RELATIVE_TIME_VALUE";
 
 		default:
 				return "** Unknown **";
 	}
+}
+
+void Lexer::convert_escapes(string &text)
+{
+	char *copy;
+	int  length;
+	int  source, dest;
+
+	// We now it will be no longer than the original.
+	length = text.length();
+	copy = new char[length + 1];
+	
+	// We scan up to one less than the length, because we ignore
+	// a terminating slash: it can't be an escape. 
+	dest = 0;
+	for (source = 0; source < length - 1; source++) {
+		if (text[source] != '\\') {
+			copy[dest++]= text[source]; 
+		}
+		else {
+			source++;
+
+			char new_char;
+			// Note that we ignore octal and hexadecimal escapes.
+			// I'm thinking about it. 
+			switch(text[source]) {
+			case 'a':	new_char = '\a'; break;
+			case 'b':	new_char = '\b'; break;
+			case 'f':	new_char = '\f'; break;
+			case 'n':	new_char = '\n'; break;
+			case 'r':	new_char = '\r'; break;
+			case 't':	new_char = '\t'; break;
+			case 'v':	new_char = '\v'; break;
+			case '\\':	new_char = '\\'; break;
+			case '\?':	new_char = '\?'; break;
+			case '\'':	new_char = '\''; break;
+			case '\"':	new_char = '\"'; break;
+			default:    new_char = text[source]; break;
+			}
+			copy[dest++] = new_char;
+		}
+	}
+	copy[dest] = 0;
+	text = copy;
+	delete [] copy;
+	return;
 }
 
 END_NAMESPACE // classad
