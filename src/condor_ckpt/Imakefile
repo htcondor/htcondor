@@ -144,6 +144,8 @@ depend_target($(SRC) )
 
 #if (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS251)
 program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) dprintf.o $(FLOCK_OBJ) MMAP.o SYSCALL.o, )
+#elif (IS_HPPAR_HPUX9)
+program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) seteuid.o flock.o setegid.o, dprintf.o )
 #else
 program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ), dprintf.o )
 #endif
