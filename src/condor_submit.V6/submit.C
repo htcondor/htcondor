@@ -2768,15 +2768,33 @@ queue(int num)
 	}
 }
 
+
+bool
+findClause( const char* buffer, const char* attr_name )
+{
+	char* ptr;
+	int len = strlen( attr_name );
+	for( ptr = (char*)buffer; *ptr; ptr++ ) {
+		if( strincmp(attr_name,ptr,len) == MATCH ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+
 char *
 check_requirements( char *orig )
 {
-	int		has_opsys = FALSE;
-	int		has_arch = FALSE;
-	int		has_disk = FALSE;
-	int		has_mem = FALSE;
-	int		has_fsdomain = FALSE;
-	int		has_ckpt_arch = FALSE;
+	bool	checks_opsys = false;
+	bool	checks_arch = false;
+	bool	checks_disk = false;
+	bool	checks_mem = false;
+	bool	checks_fsdomain = false;
+	bool	checks_ckpt_arch = false;
+	bool	checks_file_transfer = false;
+	bool	checks_pvm = false;
+	bool	checks_mpi = false;
 	char	*ptr, *tmp;
 	static char	answer[4096];
 
@@ -2819,28 +2837,34 @@ check_requirements( char *orig )
 		free( ptr );
 	}
 
-				
-	for( ptr = answer; *ptr; ptr++ ) {
-		if( strincmp(ATTR_ARCH,ptr,4) == MATCH ) {
-			has_arch = TRUE;
-			break;
+
+	checks_arch = findClause( answer, ATTR_ARCH );
+	checks_opsys = findClause( answer, ATTR_OPSYS );
+	checks_disk =  findClause( answer, ATTR_DISK );
+
+	if( JobUniverse == CONDOR_UNIVERSE_STANDARD ) {
+		checks_ckpt_arch = findClause( answer, ATTR_CKPT_ARCH );
+	}
+	if( JobUniverse == CONDOR_UNIVERSE_PVM ) {
+		checks_pvm = findClause( answer, ATTR_HAS_PVM );
+	}
+	if( JobUniverse == CONDOR_UNIVERSE_MPI ) {
+		checks_mpi = findClause( answer, ATTR_HAS_MPI );
+	}
+	if( (JobUniverse == CONDOR_UNIVERSE_VANILLA) 
+		|| (JobUniverse == CONDOR_UNIVERSE_MPI) 
+		|| (JobUniverse == CONDOR_UNIVERSE_JAVA) ) {
+		if( never_transfer ) {
+			checks_fsdomain = findClause( answer,
+										  ATTR_FILE_SYSTEM_DOMAIN ); 
+		} else {
+			checks_file_transfer = findClause( answer,
+											   ATTR_HAS_FILE_TRANSFER );
 		}
 	}
 
-	for( ptr = answer; *ptr; ptr++ ) {
-		if( strincmp(ATTR_OPSYS,ptr,5) == MATCH ) {
-			has_opsys = TRUE;
-			break;
-		}
-	}
- 
-	for( ptr = answer; *ptr; ptr++ ) {
-		if( strincmp(ATTR_DISK,ptr,5) == MATCH ) {
-			has_disk = TRUE;
-			break;
-		}
-	}
- 
+		// because of the special-case nature of "Memory" and
+		// "VirtualMemory", we have to do this one manually...
 	for( ptr = answer; *ptr; ptr++ ) {
 		if( strincmp(ATTR_MEMORY,ptr,5) == MATCH ) {
 				// We found "Memory", but we need to make sure that's
@@ -2848,7 +2872,7 @@ check_requirements( char *orig )
 			if( ptr == answer ) {
 					// We're at the beginning, must be Memory, since
 					// there's nothing before it.
-				has_mem = TRUE;
+				checks_mem = true;
 				break;
 			}
 				// Otherwise, it's safe to go back one position:
@@ -2858,26 +2882,21 @@ check_requirements( char *orig )
 				continue;
 			}
 				// If it wasn't an 'l', we must have found it...
-			has_mem = TRUE;
+			checks_mem = true;
 			break;
 		}
 	}
  
-	for( ptr = answer; *ptr; ptr++ ) {
-		if( strincmp(ATTR_CKPT_ARCH,ptr,4) == MATCH ) {
-			has_ckpt_arch = TRUE;
-			break;
-		}
-	}
-
 	if( JobUniverse == CONDOR_UNIVERSE_JAVA ) {
 		if( answer[0] ) {
-			strcat( answer, " && (HasJava) ");
+			strcat( answer, " && (" );
 		} else {
-			strcat( answer, "(HasJava) ");
+			(void)strcat( answer, "(" );
 		}
+		(void)strcat( answer, ATTR_HAS_JAVA );
+		(void)strcat( answer, ")" );
 	} else {
-		if( !has_arch ) {
+		if( !checks_arch ) {
 			if( answer[0] ) {
 				(void)strcat( answer, " && (Arch == \"" );
 			} else {
@@ -2887,25 +2906,25 @@ check_requirements( char *orig )
 			(void)strcat( answer, "\")" );
 		}
 
-		if( !has_opsys ) {
+		if( !checks_opsys ) {
 			(void)strcat( answer, " && (OpSys == \"" );
 			(void)strcat( answer, OperatingSystem );
 			(void)strcat( answer, "\")" );
 		}
 	}
 
-	if ( JobUniverse == CONDOR_UNIVERSE_STANDARD && !has_ckpt_arch ) {
+	if ( JobUniverse == CONDOR_UNIVERSE_STANDARD && !checks_ckpt_arch ) {
 		(void)strcat( answer, " && ((CkptArch == Arch) ||" );
 		(void)strcat( answer, " (CkptArch =?= UNDEFINED))" );
 		(void)strcat( answer, " && ((CkptOpSys == OpSys) ||" );
 		(void)strcat( answer, "(CkptOpSys =?= UNDEFINED))" );
 	}
 
-	if( !has_disk ) {
+	if( !checks_disk ) {
 		(void)strcat( answer, " && (Disk >= DiskUsage)" );
 	}
 
-	if ( !has_mem ) {
+	if ( !checks_mem ) {
 		(void)strcat( answer, " && ( (Memory * 1024) >= ImageSize )" );
 	}
 
@@ -2923,7 +2942,21 @@ check_requirements( char *orig )
 			}
 			free(ptr);
 		}
+		if( ! checks_pvm ) {
+			(void)strcat( answer, "&& (" );
+			(void)strcat( answer, ATTR_HAS_PVM );
+			(void)strcat( answer, ")" );
+		}
 	} 
+
+	if( JobUniverse == CONDOR_UNIVERSE_MPI ) {
+		if( ! checks_mpi ) {
+			(void)strcat( answer, "&& (" );
+			(void)strcat( answer, ATTR_HAS_MPI );
+			(void)strcat( answer, ")" );
+		}
+	}
+
 
 	if( (JobUniverse == CONDOR_UNIVERSE_VANILLA) 
 		|| (JobUniverse == CONDOR_UNIVERSE_MPI) 
@@ -2940,25 +2973,27 @@ check_requirements( char *orig )
 				// no file transfer used.  if there's nothing about
 				// the FileSystemDomain yet, tack on a clause for
 				// that. 
-			for( ptr = answer; *ptr; ptr++ ) {
-				if( strincmp("FileSystemDo",ptr,12) == MATCH ) {
-					has_fsdomain = TRUE;
-					break;
-				}
-			}
-			if( !has_fsdomain ) {
-				(void)strcat( answer, "&& (FileSystemDomain == \"" );
+			if( ! checks_fsdomain ) {
+				(void)strcat( answer, "&& (" );
+				(void)strcat( answer, ATTR_FILE_SYSTEM_DOMAIN );
+				(void)strcat( answer, " == \"" );
 				(void)strcat( answer, My_fs_domain );
 				(void)strcat( answer, "\")" );
 			} 
 		} else {
 				// we're going to use file transfer.  
-			(void)strcat( answer, "&& (HasFileTransfer)");
+			if( ! checks_file_transfer ) {
+				(void)strcat( answer, "&& (");
+				(void)strcat( answer, ATTR_HAS_FILE_TRANSFER );
+				(void)strcat( answer, ")");
+			}
 		}			
 	}
 
 	return answer;
 }
+
+
 
 char *
 full_path(const char *name, bool use_iwd)
