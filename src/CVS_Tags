@@ -1,3 +1,6 @@
+01/31/05 V6_6_8
+   The official 6.6.8 release tag. This lives on V6_6_ALL and V6_6_7_EXT.
+
 01/05/05 V6_6-tests-branch
    A new branch for adding a bunch of tests to Condor.
    Created off V6_6-branch at V6_6-tests-root.  
