@@ -120,7 +120,12 @@ protected:
 };
 void RestoreStack();
 
+#if defined(HPUX10)
+extern "C" void Checkpoint( int, siginfo_t *, void * );
+#else
 extern "C" void Checkpoint( int, int, void * );
+#endif
+
 extern "C" {
 void ckpt();
 extern "C" void restart();

@@ -112,6 +112,10 @@ extern "C" void condor_restore_sigstates();
 	extern "C" unsigned long ntohl( unsigned long );
 #endif
 
+#if defined(HPUX10)
+extern "C" int _sigreturn();
+#endif
+
 void terminate_with_sig( int sig );
 void Suicide();
 static void find_stack_location( RAW_ADDR &start, RAW_ADDR &end );
@@ -261,7 +265,11 @@ _install_signal_handler( int sig, SIG_HANDLER handler )
 
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 
+#if defined(HPUX10)
+	action.sa_sigaction = handler;
+#else
 	action.sa_handler = handler;
+#endif
 	sigemptyset( &action.sa_mask );
 	/* We do not want "recursive" checkpointing going on.  So block SIGUSR2
 		during a SIGTSTP checkpoint, and vice-versa.  -Todd Tannenbaum, 8/95 */
@@ -270,7 +278,11 @@ _install_signal_handler( int sig, SIG_HANDLER handler )
 	if ( sig == SIGUSR2 )
 		sigaddset(&action.sa_mask,SIGTSTP);
 	
+#if defined(HPUX10)
+	action.sa_flags = SA_SIGINFO;	/* so our handler is passed the context */
+#else
 	action.sa_flags = 0;
+#endif
 
 	if( sigaction(sig,&action,NULL) < 0 ) {
 		perror( "sigaction" );
@@ -967,7 +979,11 @@ extern "C" {
   periodic checkpoint). -Todd Tannenbaum
 */
 void
+#if defined( HPUX10 )
+Checkpoint( int sig, siginfo_t *code, void *scp )
+#else
 Checkpoint( int sig, int code, void *scp )
+#endif
 {
 	int		scm, p_scm;
 	int		do_full_restart = 1; // set to 0 for periodic checkpoint
@@ -1099,11 +1115,28 @@ Checkpoint( int sig, int code, void *scp )
 		} else {
 			patch_registers( scp );
 		}
+
+#ifdef HPUX10
+    /* TODD'S SCARY FIX TO THE HPUX10.X FORTRAN PROBLEM ------
+     * reset the return-pointer in the current stack frame
+     * to _sigreturn, as it sometimes is a screwed-up address during
+     * a restart with HPUX10 Fortran. weird trampoline code in HPUX f77?
+	 * We find the return-pointer in the stack frame by adding an offset (16)
+	 * from the address of the 1st parameter on the frame. (in this case, &sig)
+     * WARNING: we are only dealing here with 32-bit RP addresses!  We
+     * may need to make this patch more intelligent someday.
+     * WANRING: do not move this code to a different procedure/func,
+     * we need to twiddle _this_ stack frame and &sig is only in scope
+     * here in Checkpoint().  -Todd, 4/97 */
+	    *((unsigned int *)( ((unsigned int) &sig)+16 )) = (unsigned int) _sigreturn;
+#endif
+
 #ifdef SAVE_SIGSTATE
 		dprintf( D_ALWAYS, "About to restore signal state\n" );
 		condor_restore_sigstates();
 		dprintf( D_ALWAYS, "Done restoring signal state\n" );
 #endif
+
 		SetSyscalls( scm );
 		InRestart = FALSE;
 		dprintf( D_ALWAYS, "About to return to user code\n" );
@@ -1186,7 +1219,11 @@ terminate_with_sig( int sig )
 
 		// Make sure we have the default action in place for the sig
 	if( sig != SIGKILL && sig != SIGSTOP ) {
+#ifdef HPUX10
+		act.sa_handler = SIG_DFL;
+#else
 		act.sa_handler = (SIG_HANDLER)SIG_DFL;
+#endif
 		// mask everything so no user-level sig handlers run
 		sigfillset( &act.sa_mask );
 		act.sa_flags = 0;

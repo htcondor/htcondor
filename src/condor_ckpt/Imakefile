@@ -39,12 +39,18 @@ EXTRACT = $(SIG_EXTRACT)
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(SAVE_SIGSTATE) $(STATIC) $(PVM_CHECKPOINT)
 
+#if IS_HPPAR_HPUX10
+CFLAGS = $(STD_C_FLAGS) $(STATIC)
+#else
 CFLAGS = $(STD_C_FLAGS)
+#endif
 
 SRC_DIR = $(SRC_TREE)/condor_ckpt
 
 #if IS_SGI_IRIX62
 OS = IRIX62
+#elif IS_HPPAR_HPUX10
+OS = HPUX10
 #else
 OS = OperatingSystem
 #endif
@@ -53,7 +59,7 @@ OS = OperatingSystem
 FLOCK_OBJ = flock.o
 #endif
 
-#if IS_HPPAR_HPUX9
+#if IS_HPPAR_HPUX9 && !IS_HPPAR_HPUX10
 ASSEMBLER_SRC = get_reginfo.HPUX.s
 ASSEMBLER_OBJ = get_reginfo.HPUX.o
 .s.o:

@@ -46,7 +46,7 @@ extern	char	*strerror();
 extern void _sigreturn();
 #endif
 
-#if defined(HPUX9)
+#if defined(HPUX9) 
 #define MASK_TYPE long
 #else
 #define MASK_TYPE int
@@ -317,9 +317,15 @@ MASK_TYPE mask;
 #endif
 
 #if defined(SYS_sigpause)
+#ifdef HPUX10
+int
+sigpause( mask )
+int mask;
+#else   /* HPUX10 */
 MASK_TYPE 
 sigpause( mask )
 MASK_TYPE mask;
+#endif  /* else HPUX10 */
 {
 	MASK_TYPE condor_sig_mask;
 	MASK_TYPE rval;
