@@ -69,7 +69,7 @@ sysapi_load_avg_raw(void)
 	 * no other Unix does that, so our startd assumes otherwise.
 	 * So we multiply by the number of CPUs so HPUX SMP load avg
 	 * is reported the same way as other Unixes. -Todd
-	 * /
+	 */
   static int numcpus = 0;  
 
   if ( numcpus == 0 ) {
