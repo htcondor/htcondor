@@ -5,6 +5,11 @@
 # Derek Wright, 6/98
 
 ######################################################################
+# Configurable settings
+######################################################################
+SYSCALL_LIB='../condor_syscall_lib/libcondorsyscall.a'
+
+######################################################################
 # Figure out the platform-specific crap:
 ######################################################################
 
@@ -51,10 +56,10 @@ fi
 grep "#define" $SYSCALL | grep "SYS_" | awk '{print $2}' | sed 's/SYS_//' \
 	| tr "[:upper:]" "[:lower:]" | sort | uniq > /tmp/asc1.$$
 
-# place all global functions in condor_syscall_lib into /tmp/asc2.$$
+# place all global functions in SYSCALL_LIB into /tmp/asc2.$$
 # for C++ objects, just report the object with "[C++]" appended instead
 # of all the C++ methods.
-$NM ../condor_syscall_lib/libcondorsyscall.a | grep " T " | c++filt | \
+$NM $SYSCALL_LIB | grep " T " | c++filt | \
    sed 's/::[^ ]*/\[C++\]/' | awk '{print $1}' - | sort | uniq  > /tmp/asc2.$$
 
 # store trapped calls into /tmp/asc3.$$ and pretty print them 
@@ -267,7 +272,7 @@ echo " "
 
 
 echo "*** LIKELY VARIABLE NAMESPACE CLUTTER IN condor_syscall_lib"
-$NM ../condor_syscall_lib/condor_syscall_lib.a | grep " D " | c++filt | \
+$NM $SYSCALL_LIB | grep " D " | c++filt | \
    sed 's/::[^ ]*/\[C++\]/' | awk '{print $1}' - | sort | uniq |\
    grep -v -i '^_condor' | awk \
 '{ printf "%20.20s",sprintf("%s",$0)
