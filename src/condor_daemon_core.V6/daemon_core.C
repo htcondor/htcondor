@@ -1193,6 +1193,24 @@ void DaemonCore::Driver()
 				if ( (*sockTable)[i].iosock ) {	// if a valid entry...
 					if (FD_ISSET((*sockTable)[i].sockd, &readfds)) {
 						// ok, select says this socket table entry has new data.
+
+						// if this sock is a safe_sock, then call the method
+						// to enqueue this packet into the buffers.  if a complete
+						// message is not yet ready, then do not yet call a handler.
+						if ( (*sockTable)[i].iosock->type() == Stream::safe_sock ) 
+						{
+							SafeSock* ss = (SafeSock *)(*sockTable)[i].iosock;
+							// call handle_incoming_packet to consume the packet.
+							// it returns true if there is a complete message ready,
+							// otherwise it returns false.
+							if ( !(ss->handle_incoming_packet()) ) {
+								// there is not yet a complete message ready.
+								// so go back to the outer for loop - do not
+								// call the user handler yet.
+								continue;
+							}
+						}
+
 						// if the user provided a handler for this socket, then
 						// call it now.  otherwise, call the daemoncore HandleReq()
 						// handler which strips off the command request number and

@@ -34,8 +34,8 @@ Sock::Sock() : Stream() {
 	_sock = INVALID_SOCKET;
 	_state = sock_virgin;
 	_timeout = 0;
-	memset( &_who, 0, sizeof( struct sockaddr_in ) );
-	memset(	&_endpoint_ip_buf, 0, _ENDPOINT_BUF_SIZE );
+	memset(&_who, 0, sizeof(struct sockaddr_in));
+	memset(&_endpoint_ip_buf, 0, _ENDPOINT_BUF_SIZE);
 }
 
 Sock::Sock(const Sock & orig) : Stream() {
@@ -217,8 +217,9 @@ int Sock::set_inheritable( int flag )
         flag, // inheritable flag
         DUPLICATE_SAME_ACCESS)) {
 			// failed to duplicate
-			dprintf(D_ALWAYS,"ERROR: DuplicateHandle() failed in Sock:set_inheritable(%d), error=%d\n"
-				,flag,GetLastError());
+			dprintf(D_ALWAYS,"ERROR: DuplicateHandle() failed
+			                  in Sock:set_inheritable(%d), error=%d\n"
+				  ,flag,GetLastError());
 			closesocket(DuplicateSock);
 			return FALSE;
 	}
@@ -230,9 +231,7 @@ int Sock::set_inheritable( int flag )
 }
 #endif	// of WIN32
 
-int Sock::assign(
-	SOCKET		sockd
-	)
+int Sock::assign(SOCKET sockd)
 {
 	int		my_type;
 
@@ -288,16 +287,17 @@ int Sock::assign(
 
 
 
-int Sock::bind(
-	int		port
-	)
+int Sock::bind(int port)
 {
 	sockaddr_in		sin;
 	
-		/* if stream not assigned to a sock, do it now	*/
+	/* if stream not assigned to a sock, do it now	*/
 	if (_state == sock_virgin) assign();
 
-	if (_state != sock_assigned) return FALSE;
+	if (_state != sock_assigned) {
+		dprintf(D_NETWORK, "Sock::bind: _state is not correct\n");
+		return FALSE;
+	}
 
 	memset(&sin, 0, sizeof(sockaddr_in));
 	sin.sin_family = AF_INET;
@@ -309,7 +309,7 @@ int Sock::bind(
 		int error = WSAGetLastError();
 		dprintf( D_ALWAYS, "bind failed: WSAError = %d\n", error );
 #else
-		dprintf( D_ALWAYS, "bind failed: errno = %d\n", errno );
+		dprintf(D_NETWORK, "bind failed errno = %d\n", errno);
 #endif
 		return FALSE;
 	}
@@ -398,12 +398,9 @@ int Sock::setsockopt(int level, int optname, const char* optval, int optlen)
 }
 
 
-int Sock::do_connect(
-	char	*host,
-	int		port
-	)
+int Sock::do_connect(char *host, int port)
 {
-	hostent			*hostp;
+	hostent		*hostp;
 	unsigned long	inaddr;
 
 	if (!host || port < 0) return FALSE;
