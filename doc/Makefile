@@ -69,11 +69,20 @@ ref.html: $(TARGETDIR)
 	latex ref.tex
 	latex ref.tex
 	latex ref.tex
-	latex2html -address condor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers ref.tex
+	latex2html -address condor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons ref.tex
 	rm -f ref.dvi
-	mv ref ref.new
+	mv ref condor-$(SUBVER)-Manual
+	tar cvf condor-$(SUBVER)-Manual.tar condor-$(SUBVER)-Manual
+
+	gzip -c condor-$(SUBVER)-Manual.tar > condor-$(SUBVER)-Manual.tar.gz
+	compress condor-$(SUBVER)-Manual.tar
+
+	mv condor-$(SUBVER)-Manual.tar.gz condor-$(SUBVER)-Manual
+	mv condor-$(SUBVER)-Manual.tar.Z condor-$(SUBVER)-Manual
+
+	mv condor-$(SUBVER)-Manual ref.new
+
 	mv -f ref.new/* $(TARGETDIR)
-	mv -f ref.new/.??* $(TARGETDIR)
 	rmdir ref.new
 	touch ref.html
 
@@ -81,7 +90,7 @@ release-html: ref.html $(TARGETDIR)
 	rm -rf $(MANDIR).old
 	mv -f $(MANDIR) $(MANDIR).old
 	mv -f $(TARGETDIR) $(MANDIR)
-	/p/condor/public/cgi-bin/manual/$(SUBDIR)-links/human_header_links.pl
+	/p/condor/public/cgi-bin/manual/human_header_links.$(SUBDIR).pl
 	rm -f ref.html
 
 admin-man/machine-states.eps: admin-man/machine-states.fig
@@ -106,7 +115,7 @@ $(TARGETDIR):
 	mkdir $(TARGETDIR)
 
 clean:
-	rm -rf ref man user admin *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log
+	rm -rf ref ref.new man user admin *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log 
 
 reallyclean: clean
 	rm -rf $(TARGETDIR)
