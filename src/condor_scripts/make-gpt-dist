@@ -30,6 +30,7 @@ my $all_server, $all_client, $all_sdk;
 my $dm_server, $dm_client, $dm_sdk;
 my $is_server, $is_client, $is_sdk;
 my $rm_server, $rm_client, $rm_sdk;
+my $native;
 my $os_val = `uname`;
 chomp $os_val;
 my $put_dev_pkg_in_bin_bundle=0;
@@ -41,6 +42,7 @@ GetOptions (
 	'tar=s' => \$TarExec, 
 	'log=s' => \$log, 
 	'all' => \$all,
+	'native' => \$native,
 	'method' => \$method,
 	'gpt-file=s' => \$GPT_Tarfile,
 	'globus-core-pkg=s' => \$GT_Core_Tarfile,
@@ -175,7 +177,11 @@ sub buildCondorGPackages {
 	System("gpt-build");
 
 	chdir("$GlobusDir");
-	System("gpt-pkg --rpmlicense=Condor -all");
+	if($native) {
+		System("gpt-pkg --rpmlicense=Condor -native -all");
+	} else {
+		System("gpt-pkg --rpmlicense=Condor -all");
+	}
 }
 
 
