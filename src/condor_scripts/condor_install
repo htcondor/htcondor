@@ -1343,11 +1343,9 @@ sub configure_full_install {
     "***************************************************************************\n";
     $has_config=0;
 
-    print "\nCondor searches a few locations to find its main config file.  The first\n",
-    "is the home directory of user condor, if that user exists.  The second is in\n",
-    "/etc/condor/.  If neither of those locations contain a valid \"condor_config\"\n",
-    "file, you will have to set the CONDOR_CONFIG environment variable so the Condor\n",
-    "daemons and tools can find their config file.\n";
+	print "\nCondor searches a few locations to find it main config file. The first place\n",
+	"is the envionment variable CONDOR_CONFIG. The second place it searches is\n",
+	"/etc/condor/condor_config, and the third place is ~condor/condor_config.\n";
 
     if( $condor_home ) {
 	if( -f "$condor_home/condor_config" ) {
