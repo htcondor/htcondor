@@ -20,6 +20,8 @@ my $RelTarBallPat = "Hawkeye-%s.tar.gz";
 my $Version = "0.1";
 my $Usage = "$0 version";
 
+sub CopyAll( $$$ );
+
 # Process command line..
 foreach my $Arg ( @ARGV )
 {
@@ -126,7 +128,7 @@ system( "rm -r $Temp" );
 exit 0;
 
 # Stupid subroutine to copy files
-sub CopyAll()
+sub CopyAll( $$$ )
 {
     my ( $SrcDir, $DestDir, $FilePat ) = @_;
     print "Copy '$FilePat' from '$SrcDir' to '$DestDir':\n";
