@@ -1,3 +1,7 @@
+07/27/04 V6_6_6
+   The official 6.6.6 release tag (at long last!).  this lives on
+   V6_6_ALL and V6_6_6_EXT 
+
 07/27/04 V6_6-merge-18
    The state of the V6_6-branch for yet another merge into
    V6_7-branch.  This merges the Directory object bug dealing with
