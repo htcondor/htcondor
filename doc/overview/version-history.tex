@@ -37,7 +37,7 @@ advertised.
 
 \item Fixed bug in ClassAd printing when you tried to display an
 integer or float attribute that didn't exist in the given ClassAd. 
-This could show up in condor_status, condor_q, condor_history, etc.
+This could show up in \Condor{status}, \Condor{q}, \Condor{history}, etc.
   
 \item Various commands sent to the Condor daemons now have seperate
 debug levels associated with them.
@@ -56,7 +56,7 @@ page~\pageref{sec:Daemon-Logging-Config-File-Entries} for details on
 debug levels in Condor.
 
 \item New debug levels added to Condor: 
-\begin{itmeize}
+\begin{itemize}
 \item \Dflag{NETWORK}, used by various daemons in Condor to report
 various network statistics about the Condor daemons. 
 \item \Dflag{KEYBOARD}, used by the \Condor{startd} to print out
@@ -70,6 +70,10 @@ the information stored to a seperate file.
 \item Fixed up bug in the SMP-Startd's load average computation that
 could cause certain rare exceptions to be treated as fatal, when in
 fact, the Startd could recover from them.
+
+\item Added a \Opt{-run} option to \Condor{q}, which diplays
+information for running jobs, including the remote host where each job
+is running.
 
 \end{itemize}
 
@@ -105,6 +109,7 @@ from \Condor{starter.pvm} into the \File{ShadowLog} file of the
 machine that submitted the job (as opposed to the \File{StarterLog}
 file on the machine executing the job).  
 
+\end{itemize}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
