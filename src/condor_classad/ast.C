@@ -1546,6 +1546,8 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 			successful_eval = FunctionScript(number_of_args, evaluated_args, result);
 		} else if (!strcasecmp(name, "gettime")) {
 			successful_eval = FunctionGetTime(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "random")) {
+			successful_eval = FunctionRandom(number_of_args, evaluated_args, result);
 		} else {
 			successful_eval = FunctionSharedLibrary(number_of_args, 
 													evaluated_args, result);
@@ -1777,6 +1779,45 @@ int Function::FunctionGetTime(
 	result->i = (int) current_time;
 	result->type = LX_INTEGER;
 	return TRUE;
+}
+
+extern "C" int get_random_int();
+
+int Function::FunctionRandom(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+    int   random_number;
+    bool  success;
+
+    if (number_of_args == 0) {
+        // If we get no arguments, we return a random number between 0 and MAXINT
+        random_number = get_random_int();
+        success = true;
+    } else if (number_of_args == 1) {
+        // If we get one integer argument, we return a random number
+        // between 0 and that number
+        if (evaluated_args[0].type == LX_INTEGER) {
+            random_number = get_random_int() % evaluated_args[0].i;
+            success = true;
+        } else if (evaluated_args[0].type == LX_FLOAT) {
+            random_number = get_random_int() % (int) evaluated_args[0].f;
+            success = true;
+        } else {
+            success = false;
+        }
+    } else {
+        success = false;
+    }
+
+    if (success) {
+        result->i    = random_number;
+        result->type = LX_INTEGER;
+    } else {
+        result->type = LX_ERROR;
+    }
+	return success;
 }
 
 #endif
