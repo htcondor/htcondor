@@ -73,6 +73,14 @@ CommandLine( @ARGV );
 $#ARGV = -1;
 $| = 1;
 
+# Find the release tarball
+if ( ! -f "$Config{SourceDir}/release.tar" )
+{
+    print STDERR "\nUnable to access 'release.tar' in $Config{SourceDir}\n";
+    print STDERR "You may need to specify --source=<dir>\n";
+    die "No release tarball found\n";
+}
+
 # Find the config file to use
 $ENV{$ConfigEnv} = $Config{BaseConfigFile} if ( ! exists $ENV{$ConfigEnv} );
 FindConfigFile( );
@@ -497,10 +505,17 @@ sub FindConfigToUpdate( $ )
 # ******************************************************
 sub InstallFiles( )
 {
+    # Extract the tarball
+    print "Extracting release tarball... ";
+    my $TarBall = "$Config{SourceDir}/release.tar";
+    system( "tar xf $TarBall" );
+    print "Done\n";
+
+    # Walk through the expected files...
     print "\nInstalling files:\n";
     while( my ( $File, $Dest) = each ( %InstallFiles ) )
     {
-	my $Full = $Config{SourceDir} . "/" . $File;
+	my $Full = "./" . $File;
 	if ( ! -f $Full )
 	{
 	    print STDERR "\nUnable to access $File in $Config{SourceDir}\n";
@@ -511,6 +526,7 @@ sub InstallFiles( )
 	my $Cmd = "/bin/cp -f $Full $Config{$Dest}";
 	system( $Cmd ) == 0 or die "Failed to run '$Cmd': $?";
 	print "ok\n";
+	unlink( $Full );
     }
 
     return 1;
