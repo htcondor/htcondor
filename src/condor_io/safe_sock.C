@@ -117,9 +117,15 @@ int SafeSock::end_of_message()
 		case stream_encode:
 			sent = _outMsg.sendMsg(_sock, (struct sockaddr *)&_who, _outMsgID);
 			_outMsgID.msgNo++; // It doesn't hurt to increment msgNO even if fails
-			if(sent < 0)
+			if ( allow_empty_message_flag ) {
+				allow_empty_message_flag = FALSE;
+				return TRUE;
+			}
+			if (sent < 0) {
 				return FALSE;
-			else return TRUE;
+			} else {
+				return TRUE;
+			}
 
 		case stream_decode:
 			if(_msgReady) {
@@ -146,14 +152,21 @@ int SafeSock::end_of_message()
 					_shortMsg.reset();
 				}
 				_msgReady = false;
+			} else { 
+				// message is not ready
+				ret_val = TRUE;
 			}
-			else // message is not ready
-				return TRUE;
 			break;
 
 		default:
 			break;
 	}
+			
+	if ( allow_empty_message_flag ) {
+		allow_empty_message_flag = FALSE;
+		ret_val = TRUE;
+	}
+
 	return ret_val;
 }
 
@@ -214,11 +227,11 @@ int SafeSock::connect(
 int SafeSock::put_bytes(const void *data, int sz)
 {
 	int bytesPut, l_out;
-        char * dta = 0;
+    unsigned char * dta = 0;
 
         // Check to see if we need to encrypt
         if (get_encryption()) {
-            if (wrap((unsigned char *)data, sz, (unsigned char *) dta , l_out)) { 
+            if (wrap((unsigned char *)data, sz, dta , l_out)) { 
                 dprintf(D_SECURITY, "Encrypted size is %d\n", l_out);
             }
             else {
@@ -227,7 +240,7 @@ int SafeSock::put_bytes(const void *data, int sz)
             }
         }
         else {
-            dta = (char *) malloc(sz);
+            dta = (unsigned char *) malloc(sz);
             memcpy(dta, data, sz);
         }
 
@@ -284,7 +297,7 @@ int SafeSock::get_bytes(void *dta, int size)
 
 	char *tempBuf = (char *)malloc(size);
 	int readSize, length;
-        char * dec;
+    unsigned char * dec;
 
 	if(_longMsg) {
             // long message 
@@ -296,7 +309,7 @@ int SafeSock::get_bytes(void *dta, int size)
 
 	if(readSize == size) {
             if (get_encryption()) {
-                unwrap((unsigned char *) tempBuf, readSize, (unsigned char *)dec, length);
+                unwrap((unsigned char *) tempBuf, readSize, dec, length);
                 memcpy(dta, dec, readSize);
                 free(dec);
             }
