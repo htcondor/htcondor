@@ -3,5 +3,5 @@
 01/06/94	Preliminary_Ultrix4_3a:A
 	Installed on Ultrix 4.3a with AFS DecStations - does not support
 	checkpointing or access to files within the AFS file tree.
-01/10/94	Sparc_Sunos4.1:A
+01/10/94	Sparc_Sunos4_1:A
 	Installed on both instructional and research suns.
