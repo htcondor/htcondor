@@ -43,6 +43,7 @@
 const int MATCH = 0;	// for strcmp()
 
 int check_dir( const char *path );
+int check_exec( const char *path );
 char * xlate_tilde( const char *path );
 char * lookup_tilde( char *orig,  const char *user );
 int check_host( const char *name );
@@ -79,12 +80,49 @@ Macro local_dir(
 	"Directory for things local to an individual machine",
 	"$(TILDE)"
 );
+Macro has_afs(
+	"HAS_AFS",
+	"Does this machine run AFS?",
+	"TRUE"
+);
+Macro use_afs(
+	"USE_AFS",
+	"Do you want to use AFS for condor file access?",
+	"FALSE"
+);
+Macro fs_path(
+	"FS_PATHNAME",
+	"Pathname of the AFS \"fs\" command",
+	"/usr/afsws/bin/fs"
+);
+Macro vos_path(
+	"VOS_PATHNAME",
+	"Pathname of the AFS \"vos\" command",
+	"/usr/afsws/etc/vos"
+);
+Macro mailer_path(
+	"MAIL",
+	"Pathname of program to send mail",
+	"/bin/mail"
+);
+Macro uid_domain(
+	"UID_DOMAIN",
+	"Internet domain of machines sharing a common UID space",
+	"cs.wisc.edu"
+);
+Macro filesystem_domain(
+	"FILESYSTEM_DOMAIN",
+	"Internet domain of machines sharing a common file space",
+	"cs.wisc.edu"
+);
 
 int
 main()
 {
-	ConfigFile *file;
-	char dir[_POSIX_PATH_MAX];
+	ConfigFile	*file;
+	char		dir[_POSIX_PATH_MAX];
+	int			we_have_afs = 0;
+	int			we_have_fs_domain = 0;
 
 		// Customize the macros by dialoging with the user
 	condor_host.init( check_host );
@@ -92,6 +130,25 @@ main()
 	condor_developers.init();
 	release_dir.init( check_dir );
 	local_dir.init( check_dir );
+	if( confirm("Does this machine run AFS? ") ) {
+		we_have_afs = 1;
+		has_afs.init( TRUE );
+		if( confirm("Do you want to use AFS for condor file access? ") ) {
+			use_afs.init( TRUE );
+		} else {
+			use_afs.init( FALSE );
+		}
+		fs_path.init( check_exec );
+		vos_path.init( check_exec );
+	} else {
+		has_afs.init( FALSE );
+	}
+	mailer_path.init( check_exec );
+	uid_domain.init();
+	if( confirm("Does this site have a common filesystem? ") ) {
+		we_have_fs_domain = 1;
+		filesystem_domain.init();
+	}
 
 		// Make user confirm that everything is correct
 	printf( "Please Confirm:\n" );
@@ -100,6 +157,17 @@ main()
 	printf( "\t%s\n", condor_admin.gen() );
 	printf( "\t%s\n", condor_developers.gen() );
 	printf( "\t%s\n", local_dir.gen() );
+	printf( "\t%s\n", has_afs.gen() );
+	printf( "\t%s\n", use_afs.gen() );
+	if( we_have_afs ) {
+		printf( "\t%s\n", fs_path.gen() );
+		printf( "\t%s\n", vos_path.gen() );
+	}
+	printf( "\t%s\n", mailer_path.gen() );
+	printf( "\t%s\n", uid_domain.gen() );
+	if( we_have_fs_domain ) {
+		printf( "\t%s\n", filesystem_domain.gen() );
+	}
 	if( !confirm("Are all the above settings correct? ") ) {
 		printf( "Configuration Aborted\n" );
 		return 1;
@@ -117,6 +185,17 @@ main()
 	file->add_macro( condor_admin.gen() );
 	file->add_macro( condor_developers.gen() );
 	file->add_macro( local_dir.gen() );
+	file->add_macro( has_afs.gen() );
+	if( we_have_afs ) {
+		file->add_macro( use_afs.gen() );
+		file->add_macro( fs_path.gen() );
+		file->add_macro( vos_path.gen() );
+	}
+	file->add_macro( mailer_path.gen() );
+	file->add_macro( uid_domain.gen() );
+	if( we_have_fs_domain ) {
+		file->add_macro( filesystem_domain.gen() );
+	}
 	file->end();
 
 		// Customize "config_off"
@@ -245,6 +324,37 @@ int check_host( const char *name )
 		return TRUE;
 	} else {
 		printf( "Warning: Can't locate host \"%s\"\n", name );
+		return FALSE;
+	}
+}
+
+/*
+  Check a pathname for an executable program for validity.  The
+  pathname may contain the component $(TILDE) which is interpreted to
+  mean "~condor".
+*/
+int
+check_exec( const char *path )
+{
+	struct stat	buf;
+	char		*tmp;
+
+	if( path[0] != '/' && path[0] != '$' ) {
+		printf( "Must supply a full pathname starting with \"/\"\n" );
+		return FALSE;
+	}
+
+	tmp = xlate_tilde( path );
+
+	if( stat(tmp,&buf) < 0 ) {
+		printf( "Warning: \"%s\" is not a valid pathname\n", path );
+		return FALSE;
+	}
+
+	if( S_IXUSR & buf.st_mode ) {
+		return TRUE;
+	} else {
+		printf( "Warning: \"%s\" is not an executable file\n", path );
 		return FALSE;
 	}
 }
