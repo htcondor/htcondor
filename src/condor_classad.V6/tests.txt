@@ -1,0 +1,160 @@
+######################################################################
+#
+# File: tests.txt
+# Purpose: This is a series of tests for the ClassAd library. 
+#          Currently there is no good documentation for how to write
+#          tests, you'll just have to look in test_classads.C
+#
+######################################################################
+
+######################################################################
+#
+# Test the lexer
+#
+######################################################################
+test-lexer-one-token    123    LEX_INTEGER_VALUE
+test-lexer-one-token 123.456 LEX_REAL_VALUE
+test-lexer-one-token true LEX_BOOLEAN_VALUE
+test-lexer-one-token false LEX_BOOLEAN_VALUE
+test-lexer-one-token "blah" LEX_STRING_VALUE
+test-lexer-one-token "new\nline" LEX_STRING_VALUE
+test-lexer-one-token "blue bibs be big" LEX_STRING_VALUE
+test-lexer-one-token blah LEX_IDENTIFIER
+test-lexer-one-token __ LEX_IDENTIFIER
+test-lexer-one-token undefined LEX_UNDEFINED_VALUE
+test-lexer-one-token error LEX_ERROR_VALUE
+test-lexer-one-token . LEX_SELECTION
+test-lexer-one-token * LEX_MULTIPLY
+test-lexer-one-token / LEX_DIVIDE
+test-lexer-one-token % LEX_MODULUS
+test-lexer-one-token + LEX_PLUS
+test-lexer-one-token - LEX_MINUS
+test-lexer-one-token & LEX_BITWISE_AND
+test-lexer-one-token | LEX_BITWISE_OR
+test-lexer-one-token ~ LEX_BITWISE_NOT
+test-lexer-one-token ^ LEX_BITWISE_XOR
+test-lexer-one-token << LEX_LEFT_SHIFT
+test-lexer-one-token >> LEX_RIGHT_SHIFT
+test-lexer-one-token >>> LEX_URIGHT_SHIFT
+test-lexer-one-token && LEX_LOGICAL_AND
+test-lexer-one-token || LEX_LOGICAL_OR
+test-lexer-one-token ! LEX_LOGICAL_NOT
+test-lexer-one-token < LEX_LESS_THAN
+test-lexer-one-token <= LEX_LESS_OR_EQUAL
+test-lexer-one-token > LEX_GREATER_THAN
+test-lexer-one-token >= LEX_GREATER_OR_EQUAL
+test-lexer-one-token == LEX_EQUAL
+test-lexer-one-token != LEX_NOT_EQUAL
+test-lexer-one-token is LEX_META_EQUAL
+test-lexer-one-token isnt LEX_META_NOT_EQUAL
+test-lexer-one-token = LEX_BOUND_TO
+test-lexer-one-token ? LEX_QMARK
+test-lexer-one-token : LEX_COLON
+test-lexer-one-token ; LEX_SEMICOLON
+test-lexer-one-token , LEX_COMMA
+test-lexer-one-token [ LEX_OPEN_BOX
+test-lexer-one-token ] LEX_CLOSE_BOX
+test-lexer-one-token ( LEX_OPEN_PAREN
+test-lexer-one-token ) LEX_CLOSE_PAREN
+test-lexer-one-token { LEX_OPEN_BRACE
+test-lexer-one-token } LEX_CLOSE_BRACE
+test-lexer-one-token 'Wed Nov 11 13:11:47 1998 (CST) +6:00' LEX_ABSOLUTE_TIME_VALUE
+test-lexer-one-token '+6:00:00' LEX_RELATIVE_TIME_VALUE
+test-lexer-one-token '-6d6:00' LEX_RELATIVE_TIME_VALUE
+
+# I think this should evaluate to LEX_BACKSLASH. Apparently
+# it's not actually used anywhere, so it's an error instead. 
+test-lexer-one-token \ LEX_TOKEN_ERROR
+
+######################################################################
+#
+# ClassAds
+#
+######################################################################
+begin-classad Job-1
+[
+  Requirements = (other.Type == "Machine" && other.memory >= 4000);
+  Type = "Job";
+  Memoryused = 6000;
+]
+end-classad
+
+begin-classad Machine-1
+[
+  Type = "machine";
+  Requirements = (other.Type == "job" && other.memoryused < 8000);
+  Memory = 5000;
+]
+end-classad
+
+begin-classad Machine-2
+[
+  Type = "Machine";
+  Requirements = other.mytype == "Job";
+  Memory = 3000
+]
+end-classad
+
+begin-classad Machine-3
+[
+  Type = "Machine";
+  Requirements = other.mytype == "Job";
+  Memory = 6000
+]
+end-classad
+
+######################################################################
+#
+# Basic Evaluation Tests
+#
+######################################################################
+evaluate Job-1 mytype
+evaluate Machine-1 memory
+
+######################################################################
+#
+# Matching tests
+#
+######################################################################
+test-match symmetricMatch Job-1 Machine-1 ExpectMatch
+test-match leftMatchesRight Job-1 Machine-1 ExpectMatch
+test-match rightMatchesLeft Job-1 Machine-1 ExpectMatch
+test-match symmetricMatch Job-1 Machine-2 ExpectDontMatch
+
+######################################################################
+#
+# Collections
+#
+######################################################################
+make-collection Machines
+add-to-collection Machines Machine-1
+add-to-collection Machines Machine-2
+add-to-collection Machines Machine-3
+
+create-subview Machines root Machine-View (other.Memory >= 4000)
+check-in-view Machines Machine-View Machine-1 ExpectIn
+check-in-view Machines Machine-View Machine-2 ExpectNotIn
+check-in-view Machines Machine-View Machine-3 ExpectIn
+
+create-subview Machines Machine-View BigMachine-View (other.Memory > 5000)
+check-in-view Machines BigMachine-View Machine-1 ExpectNotIn
+check-in-view Machines BigMachine-View Machine-2 ExpectNotIn
+check-in-view Machines BigMachine-View Machine-3 ExpectIn
+
+begin-classad Group-1
+[
+  Type = "Group";
+  Users = {"Alain", "Peter"};
+]
+end-classad
+
+begin-classad Group-2
+[
+  Type = "Group";
+  Users = {"Annalisa", "David"};
+]
+end-classad
+
+make-collection Groups groups-log
+add-to-collection Groups Group-1
+add-to-collection Groups Group-2
