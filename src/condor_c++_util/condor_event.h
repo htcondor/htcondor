@@ -13,10 +13,14 @@
 #	endif
 #endif   /* IRIX62 */
 
-#include "condor_common.h"
-#include "_condor_fix_resource.h"
-
 #define GENERIC_EVENT 1
+
+/* Since this is a Condor API header file, we want to minimize our
+   reliance on other Condor files to ease distribution.  -Jim B. */
+
+#include <stdio.h>				/* for FILE type */
+#include <sys/resource.h>		/* for struct rusage */
+#include <limits.h>				/* for _POSIX_PATH_MAX */
 
 enum ULogEventNumber
 {
