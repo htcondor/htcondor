@@ -25,9 +25,6 @@ NULL=
 NULL=nul
 !ENDIF 
 
-CPP=cl.exe
-RSC=rc.exe
-
 !IF  "$(CFG)" == "condor_starter - Win32 Debug"
 
 OUTDIR=.\..\Debug
@@ -67,6 +64,9 @@ CLEAN :
 	-@erase "$(INTDIR)\NTsenders.obj"
 	-@erase "$(INTDIR)\os_proc.obj"
 	-@erase "$(INTDIR)\script_proc.obj"
+	-@erase "$(INTDIR)\soap_starterC.obj"
+	-@erase "$(INTDIR)\soap_starterServer.obj"
+	-@erase "$(INTDIR)\soap_starterStub.obj"
 	-@erase "$(INTDIR)\starter_class.obj"
 	-@erase "$(INTDIR)\starter_v61_main.obj"
 	-@erase "$(INTDIR)\stream_handler.obj"
@@ -82,13 +82,46 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP_PROJ=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
+CPP=cl.exe
+CPP_PROJ=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) /c 
+
+.c{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.c{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_starter.bsc" 
 BSC32_SBRS= \
 	
 LINK32=link.exe
-LINK32_FLAGS=../Debug/condor_common.obj ..\Debug\condor_common_c.obj kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib pdh.lib ws2_32.lib mswsock.lib netapi32.lib imagehlp.lib Crypt32.lib mpr.lib psapi.lib /nologo /subsystem:console /incremental:yes /pdb:"$(OUTDIR)\condor_starter.pdb" /debug /machine:I386 /out:"$(OUTDIR)\condor_starter.exe" /pdbtype:sept 
+LINK32_FLAGS=../Debug/condor_common.obj ..\Debug\condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) /nologo /subsystem:console /incremental:yes /pdb:"$(OUTDIR)\condor_starter.pdb" /debug /machine:I386 /out:"$(OUTDIR)\condor_starter.exe" /pdbtype:sept 
 LINK32_OBJS= \
 	"$(INTDIR)\io_proxy.obj" \
 	"$(INTDIR)\io_proxy_handler.obj" \
@@ -106,6 +139,9 @@ LINK32_OBJS= \
 	"$(INTDIR)\NTsenders.obj" \
 	"$(INTDIR)\os_proc.obj" \
 	"$(INTDIR)\script_proc.obj" \
+	"$(INTDIR)\soap_starterC.obj" \
+	"$(INTDIR)\soap_starterServer.obj" \
+	"$(INTDIR)\soap_starterStub.obj" \
 	"$(INTDIR)\starter_class.obj" \
 	"$(INTDIR)\starter_v61_main.obj" \
 	"$(INTDIR)\stream_handler.obj" \
@@ -165,6 +201,9 @@ CLEAN :
 	-@erase "$(INTDIR)\NTsenders.obj"
 	-@erase "$(INTDIR)\os_proc.obj"
 	-@erase "$(INTDIR)\script_proc.obj"
+	-@erase "$(INTDIR)\soap_starterC.obj"
+	-@erase "$(INTDIR)\soap_starterServer.obj"
+	-@erase "$(INTDIR)\soap_starterStub.obj"
 	-@erase "$(INTDIR)\starter_class.obj"
 	-@erase "$(INTDIR)\starter_v61_main.obj"
 	-@erase "$(INTDIR)\stream_handler.obj"
@@ -178,51 +217,8 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP_PROJ=/nologo /MT /W3 /GX /Z7 /O1 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /I "..\src\condor_schedd.V6" /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
-BSC32=bscmake.exe
-BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_starter.bsc" 
-BSC32_SBRS= \
-	
-LINK32=link.exe
-LINK32_FLAGS=../Release/condor_common.obj ../Release/condor_common_c.obj kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib pdh.lib ws2_32.lib mswsock.lib netapi32.lib imagehlp.lib Crypt32.lib mpr.lib psapi.lib /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_starter.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_starter.exe" 
-LINK32_OBJS= \
-	"$(INTDIR)\io_proxy.obj" \
-	"$(INTDIR)\io_proxy_handler.obj" \
-	"$(INTDIR)\java_detect.obj" \
-	"$(INTDIR)\java_proc.obj" \
-	"$(INTDIR)\jic_local.obj" \
-	"$(INTDIR)\jic_local_config.obj" \
-	"$(INTDIR)\jic_local_file.obj" \
-	"$(INTDIR)\jic_local_schedd.obj" \
-	"$(INTDIR)\jic_shadow.obj" \
-	"$(INTDIR)\job_info_communicator.obj" \
-	"$(INTDIR)\local_user_log.obj" \
-	"$(INTDIR)\mpi_comrade_proc.obj" \
-	"$(INTDIR)\mpi_master_proc.obj" \
-	"$(INTDIR)\NTsenders.obj" \
-	"$(INTDIR)\os_proc.obj" \
-	"$(INTDIR)\script_proc.obj" \
-	"$(INTDIR)\starter_class.obj" \
-	"$(INTDIR)\starter_v61_main.obj" \
-	"$(INTDIR)\stream_handler.obj" \
-	"$(INTDIR)\tool_daemon_proc.obj" \
-	"$(INTDIR)\user_proc.obj" \
-	"$(INTDIR)\vanilla_proc.obj" \
-	"$(OUTDIR)\condor_classad.lib" \
-	"$(OUTDIR)\condor_cpp_util.lib" \
-	"$(OUTDIR)\condor_daemon_core.lib" \
-	"$(OUTDIR)\condor_io.lib" \
-	"..\src\condor_util_lib\condor_util.lib" \
-	"$(OUTDIR)\condor_procapi.lib" \
-	"$(OUTDIR)\condor_sysapi.lib" \
-	"$(OUTDIR)\condor_qmgmt.lib"
-
-"$(OUTDIR)\condor_starter.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
-    $(LINK32) @<<
-  $(LINK32_FLAGS) $(LINK32_OBJS)
-<<
-
-!ENDIF 
+CPP=cl.exe
+CPP_PROJ=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) /c 
 
 .c{$(INTDIR)}.obj::
    $(CPP) @<<
@@ -253,6 +249,55 @@ LINK32_OBJS= \
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
+
+RSC=rc.exe
+BSC32=bscmake.exe
+BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_starter.bsc" 
+BSC32_SBRS= \
+	
+LINK32=link.exe
+LINK32_FLAGS=../Release/condor_common.obj ../Release/condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_starter.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_starter.exe" 
+LINK32_OBJS= \
+	"$(INTDIR)\io_proxy.obj" \
+	"$(INTDIR)\io_proxy_handler.obj" \
+	"$(INTDIR)\java_detect.obj" \
+	"$(INTDIR)\java_proc.obj" \
+	"$(INTDIR)\jic_local.obj" \
+	"$(INTDIR)\jic_local_config.obj" \
+	"$(INTDIR)\jic_local_file.obj" \
+	"$(INTDIR)\jic_local_schedd.obj" \
+	"$(INTDIR)\jic_shadow.obj" \
+	"$(INTDIR)\job_info_communicator.obj" \
+	"$(INTDIR)\local_user_log.obj" \
+	"$(INTDIR)\mpi_comrade_proc.obj" \
+	"$(INTDIR)\mpi_master_proc.obj" \
+	"$(INTDIR)\NTsenders.obj" \
+	"$(INTDIR)\os_proc.obj" \
+	"$(INTDIR)\script_proc.obj" \
+	"$(INTDIR)\soap_starterC.obj" \
+	"$(INTDIR)\soap_starterServer.obj" \
+	"$(INTDIR)\soap_starterStub.obj" \
+	"$(INTDIR)\starter_class.obj" \
+	"$(INTDIR)\starter_v61_main.obj" \
+	"$(INTDIR)\stream_handler.obj" \
+	"$(INTDIR)\tool_daemon_proc.obj" \
+	"$(INTDIR)\user_proc.obj" \
+	"$(INTDIR)\vanilla_proc.obj" \
+	"$(OUTDIR)\condor_classad.lib" \
+	"$(OUTDIR)\condor_cpp_util.lib" \
+	"$(OUTDIR)\condor_daemon_core.lib" \
+	"$(OUTDIR)\condor_io.lib" \
+	"..\src\condor_util_lib\condor_util.lib" \
+	"$(OUTDIR)\condor_procapi.lib" \
+	"$(OUTDIR)\condor_sysapi.lib" \
+	"$(OUTDIR)\condor_qmgmt.lib"
+
+"$(OUTDIR)\condor_starter.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
+    $(LINK32) @<<
+  $(LINK32_FLAGS) $(LINK32_OBJS)
+<<
+
+!ENDIF 
 
 
 !IF "$(NO_EXTERNAL_DEPS)" != "1"
@@ -570,6 +615,78 @@ SOURCE=..\src\condor_starter.V6.1\script_proc.C
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+SOURCE=..\src\condor_starter.V6.1\soap_starterC.C
+
+!IF  "$(CFG)" == "condor_starter - Win32 Debug"
+
+CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) /c 
+
+"$(INTDIR)\soap_starterC.obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) @<<
+  $(CPP_SWITCHES) $(SOURCE)
+<<
+
+
+!ELSEIF  "$(CFG)" == "condor_starter - Win32 Release"
+
+CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) /c 
+
+"$(INTDIR)\soap_starterC.obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) @<<
+  $(CPP_SWITCHES) $(SOURCE)
+<<
+
+
+!ENDIF 
+
+SOURCE=..\src\condor_starter.V6.1\soap_starterServer.C
+
+!IF  "$(CFG)" == "condor_starter - Win32 Debug"
+
+CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) /c 
+
+"$(INTDIR)\soap_starterServer.obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) @<<
+  $(CPP_SWITCHES) $(SOURCE)
+<<
+
+
+!ELSEIF  "$(CFG)" == "condor_starter - Win32 Release"
+
+CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) /c 
+
+"$(INTDIR)\soap_starterServer.obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) @<<
+  $(CPP_SWITCHES) $(SOURCE)
+<<
+
+
+!ENDIF 
+
+SOURCE=..\src\condor_starter.V6.1\soap_starterStub.C
+
+!IF  "$(CFG)" == "condor_starter - Win32 Debug"
+
+CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) /c 
+
+"$(INTDIR)\soap_starterStub.obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) @<<
+  $(CPP_SWITCHES) $(SOURCE)
+<<
+
+
+!ELSEIF  "$(CFG)" == "condor_starter - Win32 Release"
+
+CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) /c 
+
+"$(INTDIR)\soap_starterStub.obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) @<<
+  $(CPP_SWITCHES) $(SOURCE)
+<<
+
+
+!ENDIF 
+
 SOURCE=..\src\condor_starter.V6.1\starter_class.C
 
 "$(INTDIR)\starter_class.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
@@ -586,7 +703,7 @@ SOURCE=..\src\condor_starter.V6.1\stream_handler.C
 
 !IF  "$(CFG)" == "condor_starter - Win32 Debug"
 
-CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
+CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) /c 
 
 "$(INTDIR)\stream_handler.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) @<<
@@ -596,7 +713,7 @@ CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /I "..\src\h" /I "..\src\condo
 
 !ELSEIF  "$(CFG)" == "condor_starter - Win32 Release"
 
-CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /I "..\src\condor_schedd.V6" /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
+CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) /c 
 
 "$(INTDIR)\stream_handler.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) @<<

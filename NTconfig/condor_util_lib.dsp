@@ -99,12 +99,20 @@ SOURCE=..\src\condor_util_lib\ckpt_name.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_util_lib\condor_blkng_full_disk_io.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_util_lib\condor_common_c.C
 # ADD CPP /Yc"condor_common.h"
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\condor_includes\condor_email.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_util_lib\condor_full_io.c
 # End Source File
 # Begin Source File
 
@@ -274,7 +282,7 @@ SOURCE=..\src\h\syscall_numbers.tmpl
 
 # PROP Ignore_Default_Tool 1
 # Begin Custom Build
-InputDir=..\src\h
+InputDir=\condor\workspaces\v67-clean\src\h
 InputPath=..\src\h\syscall_numbers.tmpl
 
 "..\src\h\syscall_numbers.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
@@ -287,7 +295,7 @@ InputPath=..\src\h\syscall_numbers.tmpl
 # PROP BASE Ignore_Default_Tool 1
 # PROP Ignore_Default_Tool 1
 # Begin Custom Build
-InputDir=..\src\h
+InputDir=\condor\workspaces\v67-clean\src\h
 InputPath=..\src\h\syscall_numbers.tmpl
 
 "..\src\h\syscall_numbers.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
