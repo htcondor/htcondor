@@ -54,7 +54,7 @@ Foo::com1(int command, Stream* stream)
 {
 	char *thestring = NULL;
 
-	printf("*** In com1()\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+	printf("*** In com1()\n");
 	if ( !stream->code(thestring) ) {
 		printf("ERROR DECODING THESTRING!\n");
 	} else {
@@ -95,6 +95,8 @@ main_init(int argc, char *argv[])
 	Foo*	f;
 	
 	printf("*** In main_init()\n");
+
+	printf("*** Command Sock = %s\n",daemonCore->InfoCommandSinfulString());
 
 	f = new Foo();
 

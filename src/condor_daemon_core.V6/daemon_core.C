@@ -30,6 +30,7 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 #include "condor_timer_manager.h"
 #include "condor_daemon_core.h"
 #include "condor_io.h"
+#include "internet.h"
 
 extern "C" 
 {
@@ -277,6 +278,24 @@ int DaemonCore::InfoCommandPort()
 	return( sockTable[initial_command_sock].iosock->get_port() );
 }
 
+char * DaemonCore::InfoCommandSinfulString()
+{
+	sockaddr_in	addr;
+	int			addr_len;
+
+	if ( initial_command_sock == -1 ) {
+		// there is no command sock!
+		return NULL;
+	}
+									
+	if (getsockname(sockTable[initial_command_sock].sockd, (sockaddr *)&addr, &addr_len) < 0) 
+		return NULL;
+
+	if ( get_inet_address(&addr.sin_addr) == -1 )
+		return NULL;
+
+	return ( sin_to_string( &addr ) );
+}
 
 int DaemonCore::Register_Signal(int sig, char* sig_descrip, SignalHandler handler, 
 					SignalHandlercpp handlercpp, char* handler_descrip, Service* s,	

@@ -110,6 +110,7 @@ class DaemonCore : public Service
 					char *handler_descrip, Service* s, DCpermission perm = ALLOW);
 		int		Cancel_Command( int command );
 		int		InfoCommandPort();
+		char*	InfoCommandSinfulString();
 
 		int		Register_Signal(int sig, char *sig_descrip, SignalHandler handler, 
 					char *handler_descrip, Service* s = NULL, DCpermission perm = ALLOW);
