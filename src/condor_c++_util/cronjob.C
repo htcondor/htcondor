@@ -666,24 +666,15 @@ RunProcess( void )
 	set_user_ids( uid, gid );
 #endif
 
-	// Copy out the path; we won't need to do this when
-	// daeomon_core.C version 1.81.4.74.2.12 is merged into the 65 branch...
-	// Also, we won't need the (char *) casts of env & cwd
-	char	*pathCopy = NULL;	// TODO
-	if ( path.Length() ) {
-		pathCopy = strdup( path.GetCStr() );
-	}
-	dprintf( D_ALWAYS, "%s: Env = %s\n", GetName(), env.GetCStr() );
-
 	// Create the process, finally..
 	pid = daemonCore->Create_Process(
-		pathCopy,		// Path to executable TODO: should be path.GetCStr()
+		path.GetCStr(),		// Path to executable
 		argBuf,				// argv
 		priv,				// Priviledge level
 		reaperId,			// ID Of reaper
 		FALSE,				// Command port?  No
-		(char *) env.GetCStr(),		// Env to give to child TODO: cast
-		(char *) cwd.GetCStr(),		// Starting CWD TODO: cast
+		env.GetCStr(),		// Env to give to child
+		cwd.GetCStr(),		// Starting CWD
 		FALSE,				// New process group?
 		NULL,				// Socket list
 		childFds,			// Stdin/stdout/stderr
