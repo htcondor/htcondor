@@ -36,7 +36,6 @@
 #endif
 
 using namespace std;
-extern DLL_IMPORT_MAGIC long timezone;
 
 BEGIN_NAMESPACE( classad )
 
@@ -1139,10 +1138,10 @@ timeZoneOffset (const char *, const ArgumentList &argList, EvalState &,
 		// POSIX says that timezone is positive west of GMT;  we reverse it
 		// here to make it more intuitive
 	if(tms->tm_isdst > 0) { //check for daylight saving
-	  val.SetRelativeTimeValue( (int) (-timezone+3600) );
+	  val.SetRelativeTimeValue( (int) (-timezone_offset()+3600) );
 	}
 	else {
-	  val.SetRelativeTimeValue( (int) (-timezone));
+	  val.SetRelativeTimeValue( (int) (-timezone_offset()));
 	}
 	return( true );
 }
@@ -1252,7 +1251,7 @@ makeDate( const char*, const ArgumentList &argList, EvalState &state,
 		return( true );
 	}
 	abst.secs = clock;	
-	abst.offset = -timezone;
+	abst.offset = -timezone_offset();
 	// alter absolute time parameters based on current day-light saving status
 	if(tms->tm_isdst > 0) { 
 		abst.offset += 3600;
@@ -1288,7 +1287,7 @@ getField(const char* name, const ArgumentList &argList, EvalState &state,
 	}
 
 	if( arg.IsAbsoluteTimeValue( asecs ) ) {
-	 	clock = asecs.secs + asecs.offset + timezone;
+	 	clock = asecs.secs + asecs.offset + timezone_offset();
 		getLocalTime( &clock, &tms );
 		if( strcasecmp( name, "getyear" ) == 0 ) {
 			 // tm_year is years since 1900 --- make it y2k compliant :-)
@@ -2065,16 +2064,24 @@ bool FunctionCall::
 matchPattern( const char*,const ArgumentList &argList,EvalState &state,
 	Value &result )
 {
-	Value 		arg0, arg1;
+    bool        have_options;
+	Value 		arg0, arg1, arg2;
 	const char	*pattern=NULL, *target=NULL;
+    string      options_string;
 	regex_t		re;
+    int         options;
 	int			status;
 
-		// need two arguments; first is pattern, second is string
-	if( argList.size() != 2 ) {
+		// need two or three arguments: pattern, string, optional settings
+	if( argList.size() != 2 && argList.size() != 3) {
 		result.SetErrorValue( );
 		return( true );
 	}
+    if (argList.size() == 2) {
+        have_options = false;
+    } else {
+        have_options = true;
+    }
 
 		// Evaluate args
 	if( !argList[0]->Evaluate( state, arg0 ) || 
@@ -2082,18 +2089,30 @@ matchPattern( const char*,const ArgumentList &argList,EvalState &state,
 		result.SetErrorValue( );
 		return( false );
 	}
+    if( have_options && !argList[2]->Evaluate( state, arg2 ) ) {
+		result.SetErrorValue( );
+		return( false );
+    }
 
 		// if either arg is error, the result is error
 	if( arg0.IsErrorValue( ) || arg1.IsErrorValue( ) ) {
 		result.SetErrorValue( );
 		return( true );
 	}
+    if( have_options && arg2.IsErrorValue( ) ) {
+        result.SetErrorValue( );
+        return( true );
+    }
 
 		// if either arg is undefined, the result is undefined
 	if( arg0.IsUndefinedValue( ) || arg1.IsUndefinedValue( ) ) {
 		result.SetUndefinedValue( );
 		return( true );
 	}
+    if( have_options && arg2.IsUndefinedValue( ) ) {
+		result.SetUndefinedValue( );
+		return( true );
+    }
 
 		// if either argument is not a string, the result is undefined
 	if( !arg0.IsStringValue( pattern ) || !arg1.IsStringValue( target ) ) {
@@ -2101,8 +2120,23 @@ matchPattern( const char*,const ArgumentList &argList,EvalState &state,
 		return( true );
 	}
 
+    options = REG_EXTENDED | REG_NOSUB;
+    if( have_options ){
+        if ( !arg2.IsStringValue( options_string ) ) {
+            result.SetErrorValue( );
+            return( true );
+        } else {
+            // We look for the options we understand, and ignore
+            // any others that we might find, hopefully allowing
+            // forwards compatibility.
+            if ( options_string.find( 'i' ) != string::npos ) {
+                options |= REG_ICASE;
+            }
+        }
+    }
+
 		// compile the patern
-	if( regcomp( &re, pattern, REG_EXTENDED|REG_NOSUB ) != 0 ) {
+	if( regcomp( &re, pattern, options ) != 0 ) {
 			// error in pattern
 		result.SetErrorValue( );
 		return( true );
