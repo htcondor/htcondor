@@ -51,7 +51,7 @@ format_date( time_t date )
 char *
 format_date_year( time_t date )
 {
-    static char buf[ 15 ];
+    static char buf[ 18 ];
     struct tm   *tm;
 
 	if (date<0) {
