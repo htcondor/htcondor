@@ -30,7 +30,7 @@
 #include "condor_rw.h"
 
 #ifdef WIN32
-#include <mswsock.h>	// For TransferFile()
+#include <mswsock.h>	// For TransmitFile()
 #endif
 
 /**************************************************************/

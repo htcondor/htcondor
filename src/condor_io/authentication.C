@@ -37,6 +37,10 @@
 gss_cred_id_t Authentication::credential_handle = GSS_C_NO_CREDENTIAL;
 #endif defined(GSS_AUTHENTICATION)
 
+#if !defined(SKIP_AUTHENTICATION) && defined(WIN32)
+extern HINSTANCE _condor_hSecDll;	// handle to SECURITY.DLL in sock.C
+PSecurityFunctionTable Authentication::pf = NULL;
+#endif
 
 Authentication::Authentication( ReliSock *sock )
 {
@@ -50,6 +54,7 @@ Authentication::Authentication( ReliSock *sock )
 	authComms.buffer = NULL;
 	authComms.size = 0;
 	canUseFlags = CAUTH_NONE;
+	serverShouldTry = NULL;
 #endif
 }
 
@@ -61,6 +66,11 @@ Authentication::~Authentication()
 	if ( claimToBe ) {
 		delete [] claimToBe;
 		claimToBe = NULL;
+	}
+
+	if ( serverShouldTry ) {
+		free( serverShouldTry );
+		serverShouldTry = NULL;
 	}
 #endif
 }
@@ -189,22 +199,336 @@ Authentication::getOwner()
 #if !defined(SKIP_AUTHENTICATION)
 
 #if defined(WIN32)
+int 
+Authentication::sspi_client_auth( CredHandle& cred, CtxtHandle& cliCtx, 
+								 const char *tokenSource )
+{
+	int rc;
+	SecPkgInfo *secPackInfo;
+	char *myTokenSource;
+	
+	//	myTokenSource = _strdup( tokenSource );
+	myTokenSource = NULL;
+
+	dprintf( D_FULLDEBUG,"sspi_client_auth() entered\n" );
+
+	rc = (pf->QuerySecurityPackageInfo)( "NTLM", &secPackInfo );
+
+	TimeStamp useBefore;
+
+	rc = (pf->AcquireCredentialsHandle)( NULL, "NTLM", SECPKG_CRED_OUTBOUND,
+		NULL, NULL, NULL, NULL, &cred, &useBefore );
+
+	// input and output buffers
+	SecBufferDesc obd, ibd;
+	SecBuffer ob, ib;
+
+	DWORD ctxReq, ctxAttr;
+
+	ctxReq = ISC_REQ_REPLAY_DETECT | ISC_REQ_SEQUENCE_DETECT |
+		ISC_REQ_CONFIDENTIALITY | ISC_REQ_DELEGATE;
+
+	bool haveInbuffer = false;
+	bool haveContext = false;
+	ib.pvBuffer = NULL;
+
+	while ( 1 )
+	{
+		obd.ulVersion = SECBUFFER_VERSION;
+		obd.cBuffers = 1;
+		obd.pBuffers = &ob; // just one buffer
+		ob.BufferType = SECBUFFER_TOKEN; // preping a token here
+		ob.cbBuffer = secPackInfo->cbMaxToken;
+		ob.pvBuffer = LocalAlloc( 0, ob.cbBuffer );
+
+		rc = (pf->InitializeSecurityContext)( &cred, 
+			haveContext? &cliCtx: NULL,
+			myTokenSource, ctxReq, 0, SECURITY_NATIVE_DREP, 
+			haveInbuffer? &ibd: NULL,
+			0, &cliCtx, &obd, &ctxAttr, &useBefore );
+
+		if ( ib.pvBuffer != NULL )
+		{
+			LocalFree( ib.pvBuffer );
+			ib.pvBuffer = NULL;
+		}
+
+		if ( rc == SEC_I_COMPLETE_AND_CONTINUE || rc == SEC_I_COMPLETE_NEEDED )
+		{
+			if ( pf->CompleteAuthToken != NULL ) // only if implemented
+				(pf->CompleteAuthToken)( &cliCtx, &obd );
+			if ( rc == SEC_I_COMPLETE_NEEDED )
+				rc = SEC_E_OK;
+			else if ( rc == SEC_I_COMPLETE_AND_CONTINUE )
+				rc = SEC_I_CONTINUE_NEEDED;
+		}
+
+		// send the output buffer off to the server
+		if ( ob.cbBuffer != 0 )
+		{
+			mySock->encode();
+
+			// send the size of the blob, then the blob data itself
+			if ( !mySock->code(ob.cbBuffer) || 
+				 !mySock->end_of_message() ||
+				 !mySock->put_bytes((const char *) ob.pvBuffer, ob.cbBuffer) ||
+				 !mySock->end_of_message() ) {
+				dprintf(D_ALWAYS,
+					"ERROR sspi_client_auth() failed to send blob to server!\n");
+				LocalFree( ob.pvBuffer );
+				ob.pvBuffer = NULL;
+				(pf->FreeContextBuffer)( secPackInfo );
+				if ( myTokenSource ) {
+					free( myTokenSource );
+				}
+				return 0;
+			}			
+		}
+		LocalFree( ob.pvBuffer );
+		ob.pvBuffer = NULL;
+
+		if ( rc != SEC_I_CONTINUE_NEEDED )
+			break;
+
+		// prepare to get the server's response
+		ibd.ulVersion = SECBUFFER_VERSION;
+		ibd.cBuffers = 1;
+		ibd.pBuffers = &ib; // just one buffer
+		ib.BufferType = SECBUFFER_TOKEN; // preping a token here
+
+		// receive the server's response
+		ib.pvBuffer = NULL;
+		mySock->decode();
+		if ( !mySock->code(ib.cbBuffer) ||
+			 !mySock->end_of_message() ||
+			 !(ib.pvBuffer = LocalAlloc( 0, ib.cbBuffer )) ||
+			 !mySock->get_bytes( (char *) ib.pvBuffer, ib.cbBuffer ) ||
+			 !mySock->end_of_message() ) 
+		{
+			dprintf(D_ALWAYS,
+				"ERROR sspi_client_auth() failed to receive blob from server!\n");
+			if (ib.pvBuffer) {
+				LocalFree(ib.pvBuffer);
+				ib.pvBuffer = NULL;
+			}
+			(pf->FreeContextBuffer)( secPackInfo );
+			if ( myTokenSource ) {
+				free( myTokenSource );
+			}
+			return 0;
+		}
+
+		// by now we have an input buffer and a client context
+
+		haveInbuffer = true;
+		haveContext = true;
+
+		// loop back for another round
+		dprintf( D_FULLDEBUG,"sspi_client_auth() looping\n" );
+	}
+
+	// we arrive here as soon as InitializeSecurityContext()
+	// returns != SEC_I_CONTINUE_NEEDED.
+
+	if ( rc != SEC_E_OK ) {
+		dprintf( D_ALWAYS,"sspi_client_auth(): Oops! ISC() returned %d!\n",
+			rc );
+	}
+
+	(pf->FreeContextBuffer)( secPackInfo );
+	dprintf( D_FULLDEBUG,"sspi_client_auth() exiting" );
+	if ( myTokenSource ) {
+		free( myTokenSource );
+	}
+
+	// return success
+	return 1;
+}
+
+int 
+Authentication::sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx)
+{
+	int rc;
+	SecPkgInfo *secPackInfo;
+
+	dprintf(D_FULLDEBUG, "sspi_server_auth() entered\n" );
+
+	rc = (pf->QuerySecurityPackageInfo)( "NTLM", &secPackInfo );
+
+	TimeStamp useBefore;
+
+	rc = (pf->AcquireCredentialsHandle)( NULL, "NTLM", SECPKG_CRED_INBOUND,
+		NULL, NULL, NULL, NULL, &cred, &useBefore );
+
+	// input and output buffers
+	SecBufferDesc obd, ibd;
+	SecBuffer ob, ib;
+
+	DWORD ctxAttr;
+
+	bool haveContext = false;
+
+	while ( 1 )
+	{
+		// prepare to get the server's response
+		ibd.ulVersion = SECBUFFER_VERSION;
+		ibd.cBuffers = 1;
+		ibd.pBuffers = &ib; // just one buffer
+		ib.BufferType = SECBUFFER_TOKEN; // preping a token here
+
+		// receive the client's POD
+		ib.pvBuffer = NULL;
+		mySock->decode();
+		if ( !mySock->code(ib.cbBuffer) ||
+			 !mySock->end_of_message() ||
+			 !(ib.pvBuffer = LocalAlloc( 0, ib.cbBuffer )) ||
+			 !mySock->get_bytes((char *) ib.pvBuffer, ib.cbBuffer) ||
+			 !mySock->end_of_message() )
+		{
+			dprintf(D_ALWAYS,
+				"ERROR sspi_server_auth() failed to received client POD\n");
+			if ( ib.pvBuffer ) {
+				LocalFree( ib.pvBuffer );
+				ib.pvBuffer = NULL;
+			}
+			(pf->FreeContextBuffer)( secPackInfo );			
+			return 0;
+		}
+
+		// by now we have an input buffer
+
+		obd.ulVersion = SECBUFFER_VERSION;
+		obd.cBuffers = 1;
+		obd.pBuffers = &ob; // just one buffer
+		ob.BufferType = SECBUFFER_TOKEN; // preping a token here
+		ob.cbBuffer = secPackInfo->cbMaxToken;
+		ob.pvBuffer = LocalAlloc( 0, ob.cbBuffer );
+
+		rc = (pf->AcceptSecurityContext)( &cred, haveContext? &srvCtx: NULL,
+			&ibd, 0, SECURITY_NATIVE_DREP, &srvCtx, &obd, &ctxAttr,
+			&useBefore );
+
+		if ( ib.pvBuffer != NULL )
+		{
+			LocalFree( ib.pvBuffer );
+			ib.pvBuffer = NULL;
+		}
+
+		if ( rc == SEC_I_COMPLETE_AND_CONTINUE || rc == SEC_I_COMPLETE_NEEDED )
+		{
+			if ( pf->CompleteAuthToken != NULL ) // only if implemented
+				(pf->CompleteAuthToken)( &srvCtx, &obd );
+			if ( rc == SEC_I_COMPLETE_NEEDED )
+				rc = SEC_E_OK;
+			else if ( rc == SEC_I_COMPLETE_AND_CONTINUE )
+				rc = SEC_I_CONTINUE_NEEDED;
+		}
+
+		// send the output buffer off to the server
+		if ( ob.cbBuffer != 0 )
+		{
+			mySock->encode();
+			if ( !mySock->code(ob.cbBuffer) ||
+				 !mySock->end_of_message() ||
+				 !mySock->put_bytes( (const char *) ob.pvBuffer, ob.cbBuffer ) ||
+				 !mySock->end_of_message() ) 
+			{
+				dprintf(D_ALWAYS,
+					"ERROR sspi_server_auth() failed to send output blob\n");
+				LocalFree( ob.pvBuffer );
+				ob.pvBuffer = NULL;
+				(pf->FreeContextBuffer)( secPackInfo );			
+				return 0;
+			}
+		}
+		LocalFree( ob.pvBuffer );
+		ob.pvBuffer = NULL;
+
+		if ( rc != SEC_I_CONTINUE_NEEDED )
+			break;
+
+		haveContext = true;
+
+		// loop back for another round
+		dprintf(D_FULLDEBUG,"sspi_server_auth() looping\n");
+	}
+
+	// we arrive here as soon as InitializeSecurityContext()
+	// returns != SEC_I_CONTINUE_NEEDED.
+
+	if ( rc != SEC_E_OK ) {
+		dprintf( D_ALWAYS,"sspi_server_auth(): Oops! ASC() returned %d!\n", 
+			rc );
+	}
+
+	// now we try to use the context to Impersonate and thereby get the login
+	rc = (pf->ImpersonateSecurityContext)( &srvCtx );
+	if ( rc != SEC_E_OK ) {
+		dprintf( D_ALWAYS,
+			"sspi_server_auth(): Failed to impersonate (returns %d)!\n", rc );
+	} else {
+		char buf[256];
+		DWORD bufsiz = sizeof buf;
+		GetUserName( buf, &bufsiz );
+		dprintf( D_FULLDEBUG,
+			"sspi_server_auth(): user name is: \"%s\"\n", buf );
+		setOwner(buf);
+		(pf->RevertSecurityContext)( &srvCtx );
+	}
+
+	(pf->FreeContextBuffer)( secPackInfo );
+
+	dprintf( D_FULLDEBUG,"sspi_server_auth() exiting\n" );
+
+	// return success
+	return 1;
+}
+
 int
 Authentication::authenticate_nt()
 {
+	int ret_value;
+	CredHandle cred;
+	CtxtHandle theCtx;
+
+
+	if ( pf == NULL ) {
+		PSecurityFunctionTable (*pSFT)( void );
+
+		pSFT = (PSecurityFunctionTable (*)( void )) 
+			GetProcAddress( _condor_hSecDll, "InitSecurityInterfaceA" );
+		if ( pSFT )
+		{
+			pf = pSFT();
+		}
+
+		if ( pf == NULL )
+		{
+			EXCEPT("SECURITY.DLL load messed up!");
+		}
+	}
+
 	if ( mySock->isClient() ) {
 		//client authentication
+		
+		ret_value = sspi_client_auth(cred,theCtx,NULL);
 	}
 	else {
 		//server authentication
+
+		ret_value = sspi_server_auth(cred,theCtx);
 	}
+
+	// clean up
+	(pf->DeleteSecurityContext)( &theCtx );
+	(pf->FreeCredentialHandle)( &cred );
+
 	//return 1 for success, 0 for failure. Server should send sucess/failure
 	//back to client so client can know what to return.
 	
-	// return 0 (failure) until this function is implemented
-	return 0;
+	return ret_value;
 }
-#endif
+#endif	// of if defined(WIN32)
 
 void 
 Authentication::setupEnv( char *hostAddr )
@@ -224,7 +548,10 @@ Authentication::setupEnv( char *hostAddr )
 
 	}
 	else {   //server
-		serverShouldTry = NULL;
+		if ( serverShouldTry ) {
+			delete serverShouldTry;
+			serverShouldTry = NULL;
+		}
 		serverShouldTry = param( "AUTHENTICATION_METHODS" );
 
 		char *X509CertDir = NULL;
@@ -392,6 +719,11 @@ Authentication::handshake()
 		mySock->end_of_message();
 		break;
 	}
+
+	dprintf(D_FULLDEBUG,
+		"handshake: canUse=%d,clientCanUse=%d,shouldUseMethod=%d\n",
+		canUse,clientCanUse,shouldUseMethod);
+
 	return( shouldUseMethod );
 }
 
@@ -486,12 +818,10 @@ Authentication::selectAuthenticationType( int clientCanUse )
 		//wasn't specified in config file [param("AUTHENTICATION_METHODS")]
 		//default to generic authentication:
 #if defined(WIN32)
-		retval = CAUTH_NTSSPI;
+		serverShouldTry = strdup("NTSSPI");
 #else
-		retval = CAUTH_FILESYSTEM;
+		serverShouldTry = strdup("FS");
 #endif
-		dprintf(D_FULLDEBUG,"auth handshake: selected method: %d\n", retval );
-		return( retval );
 	}
 	StringList server( serverShouldTry );
 	char *tmp = NULL;

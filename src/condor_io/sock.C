@@ -43,6 +43,14 @@ Sock::Sock() : Stream() {
 
 
 #if defined(WIN32)
+
+#if !defined(SKIP_AUTHENTICATION)
+#include "authentication.h"
+HINSTANCE _condor_hSecDll = NULL;
+#endif
+
+	// This class has a global ctor/dtor, and loads in 
+	// WINSOCK.DLL and, if security support is compiled in, SECURITY.DLL.
 class SockInitializer
 {
 public:
@@ -61,17 +69,30 @@ public:
 			fprintf( stderr, "Warning: using WinSock version %d.%d, requested 1.1\n",
 				LOBYTE( wsaData.wVersion ), HIBYTE( wsaData.wVersion ) );
 		}
-	}
+
+#if !defined(SKIP_AUTHENTICATION)
+		if ( (_condor_hSecDll = LoadLibrary( "security.dll" )) == NULL ) {
+			fprintf(stderr,"Can't find SECURITY.DLL!\n");
+			exit(1);
+		}
+#endif
+	}	// end of SockInitializer() ctor
 
 	~SockInitializer() {
-		if (WSACleanup() < 0)
+		if (WSACleanup() < 0) {
 			fprintf(stderr, "WSACleanup() failed, errno = %d\n", 
 					WSAGetLastError());
 		}
+#if !defined(SKIP_AUTHENTICATION)
+		if ( _condor_hSecDll ) {
+			FreeLibrary(_condor_hSecDll);			
+		}
+#endif
+	}	// end of ~SockInitializer() dtor
 };
 
 static SockInitializer _SockInitializer;
-#endif
+#endif	// of ifdef WIN32
 
 /*
 **	Methods shared by all Socks
