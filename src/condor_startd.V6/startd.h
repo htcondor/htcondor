@@ -28,7 +28,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 // Condor includes
-#include "daemon.h"
+#include "dc_collector.h"
 #include "condor_classad.h"
 #include "condor_adtypes.h"
 #include "condor_debug.h"
@@ -95,8 +95,8 @@ extern	StringList* console_devices;
 extern	StringList* startd_job_exprs;
 
 // Hosts
-extern	Daemon*	Collector;
-extern	Daemon*	View_Collector;
+extern	DCCollector*	Collector;
+extern	DCCollector*	View_Collector;
 extern	char*	condor_view_host;
 extern	char*	accountant_host;
 

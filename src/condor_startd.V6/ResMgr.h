@@ -173,8 +173,6 @@ private:
 
 	Resource**	resources;		// Array of pointers to Resource objects
 	int			nresources;		// Size of the array
-	SafeSock*	coll_sock;
-	SafeSock*	view_sock;
 
 	IdDispenser* id_disp;
 	bool 		is_shutting_down;

@@ -41,6 +41,7 @@ int CollectorDaemon::QueryTimeout;
 char* CollectorDaemon::CollectorName;
 Daemon* CollectorDaemon::View_Collector;
 Sock* CollectorDaemon::view_sock;
+SocketCache* CollectorDaemon::sock_cache;
 
 ClassAd* CollectorDaemon::__query__;
 Stream* CollectorDaemon::__sock__;
@@ -57,7 +58,7 @@ int CollectorDaemon::machinesClaimed;
 int CollectorDaemon::machinesOwner;
 
 ClassAd* CollectorDaemon::ad;
-SafeSock CollectorDaemon::updateSock;
+DCCollector* CollectorDaemon::updateCollector;
 int CollectorDaemon::UpdateTimerId;
 
 ClassAd *CollectorDaemon::query_any_result;
@@ -85,6 +86,8 @@ void CollectorDaemon::Init()
 	View_Collector=NULL;
 	view_sock=NULL;
 	UpdateTimerId=-1;
+	sock_cache = NULL;
+	updateCollector = NULL;
 	Config();
 
 
@@ -117,6 +120,12 @@ void CollectorDaemon::Init()
 	daemonCore->Register_Command(QUERY_ANY_ADS,"QUERY_ANY_ADS",
 		(CommandHandler)receive_query,"receive_query",NULL,READ);
 	
+		// // // // // // // // // // // // // // // // // // // // //
+		// WARNING!!!! If you add other invalidate commands here, you
+		// also need to add them to the switch statement in the
+		// sockCacheHandler() method!!!
+		// // // // // // // // // // // // // // // // // // // // //
+
 	// install command handlers for invalidations
 	daemonCore->Register_Command(INVALIDATE_STARTD_ADS,"INVALIDATE_STARTD_ADS",
 		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,DAEMON);
@@ -139,6 +148,12 @@ void CollectorDaemon::Init()
 	daemonCore->Register_Command(INVALIDATE_STORAGE_ADS,
 		"INVALIDATE_STORAGE_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,DAEMON);
+
+		// // // // // // // // // // // // // // // // // // // // //
+		// WARNING!!!! If you add other update commands here, you
+		// also need to add them to the switch statement in the
+		// sockCacheHandler() method!!!
+		// // // // // // // // // // // // // // // // // // // // //
 
 	// install command handlers for updates
 	daemonCore->Register_Command(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
@@ -259,7 +274,9 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 	sock->timeout(ClientTimeout);
     if( !ad.initFromStream(*sock) || !sock->eom() )
     {
-        dprintf(D_ALWAYS,"Failed to receive query on TCP: aborting\n");
+        dprintf( D_ALWAYS, 
+				 "Failed to receive invalidation on %s: aborting\n",
+				 sock->type() == Stream::reli_sock ? "TCP" : "UDP" );
         return FALSE;
     }
 
@@ -327,9 +344,17 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 		(command == INVALIDATE_SUBMITTOR_ADS)) ) {
 		send_classad_to_sock(command, View_Collector, &ad);
 	}	
+
+	if( sock_cache && sock->type() == Stream::reli_sock ) {
+			// if this is a TCP update and we've got a cache, stash
+			// this socket for future updates...
+		return stashSocket( sock );
+	}
+
     // all done; let daemon core will clean up connection
 	return TRUE;
 }
+
 
 int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 {
@@ -337,10 +362,10 @@ int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 	sockaddr_in *from;
 	ClassAd *ad;
 
-	
-	// TCP commands should not allow for classad updates.  In fact the collector
-	// will not collect on TCP to discourage use of TCP for classad updates.
-	if ( sock->type() == Stream::reli_sock ) {
+  		// unless the collector has been configured to use a socket
+  		// cache for TCP updates, refuse any update commands that come
+  		// in via TCP... 
+	if( ! sock_cache && sock->type() == Stream::reli_sock ) {
 		// update via tcp; sorry buddy, use udp or you're outa here!
 		dprintf(D_ALWAYS,"Received UPDATE command via TCP; ignored\n");
 		// let daemon core clean up the socket
@@ -366,9 +391,112 @@ int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 			(command == UPDATE_SUBMITTOR_AD)) ) {
 		send_classad_to_sock(command, View_Collector, ad);
 	}	
+
+	if( sock_cache && sock->type() == Stream::reli_sock ) {
+			// if this is a TCP update and we've got a cache, stash
+			// this socket for future updates...
+		return stashSocket( sock );
+	}
+
 	// let daemon core clean up the socket
 	return TRUE;
 }
+
+
+int
+CollectorDaemon::stashSocket( Stream* sock )
+{
+		
+	ReliSock* rsock;
+	char* addr = sin_to_string( ((Sock*)sock)->endpoint() );
+	rsock = sock_cache->findReliSock( addr );
+	if( ! rsock ) {
+			// don't have it in the socket already, see if the cache
+			// is full.  if not, add this socket to the cache so we
+			// can reuse it for future updates.  if we're full, we're
+			// going to have to screw this connection and not cache
+			// it, to allow the cache to be useful for the other
+			// daemons.
+		if( sock_cache->isFull() ) {
+			dprintf( D_ALWAYS, "WARNING: socket cache (size: %d) "
+					 "is full - NOT caching TCP updates from %s\n", 
+					 sock_cache->size(), addr );
+			return TRUE;
+		} 
+		sock_cache->addReliSock( addr, (ReliSock*)sock );
+
+			// now that it's in our socket, we want to register this
+			// socket w/ DaemonCore so we wake up if there's more data
+			// to read...
+		daemonCore->Register_Socket( sock, "TCP Cached Socket", 
+									 (SocketHandler)sockCacheHandler,
+									 "sockCacheHandler", NULL, DAEMON );
+	}
+
+		// if we're here, it means the sock is in the cache (either
+		// because it was there already, or because we just added it).
+		// either, way, we don't want daemonCore to mess with the
+		// socket...
+	return KEEP_STREAM;
+}
+
+
+int
+CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
+{
+	int cmd;
+	char* addr = sin_to_string( ((Sock*)sock)->endpoint() );
+	sock->decode();
+	dprintf( D_FULLDEBUG, "Activity on stashed TCP socket from %s\n", 
+			 addr ); 
+
+	if( ! sock->code(cmd) ) {
+			// can't read an int, the other side probably closed the
+			// socket, which is why select() woke up.
+		dprintf( D_FULLDEBUG,
+				 "Socket has been closed, removing from cache\n" );
+		daemonCore->Cancel_Socket( sock );
+		sock_cache->invalidateSock( addr );
+		return KEEP_STREAM;
+	}
+
+	switch( cmd ) {
+	case UPDATE_STARTD_AD:
+	case UPDATE_SCHEDD_AD:
+	case UPDATE_MASTER_AD:
+	case UPDATE_GATEWAY_AD:
+	case UPDATE_CKPT_SRVR_AD:
+	case UPDATE_SUBMITTOR_AD:
+	case UPDATE_COLLECTOR_AD:
+	case UPDATE_LICENSE_AD:
+	case UPDATE_STORAGE_AD:
+		return receive_update( NULL, cmd, sock );
+		break;
+
+	case INVALIDATE_STARTD_ADS:
+	case INVALIDATE_SCHEDD_ADS:
+	case INVALIDATE_MASTER_ADS:
+	case INVALIDATE_GATEWAY_ADS:
+	case INVALIDATE_CKPT_SRVR_ADS:
+	case INVALIDATE_SUBMITTOR_ADS:
+	case INVALIDATE_COLLECTOR_ADS:
+	case INVALIDATE_LICENSE_ADS:
+	case INVALIDATE_STORAGE_ADS:
+		return receive_invalidation( NULL, cmd, sock );
+		break;
+
+	default:
+		dprintf( D_ALWAYS,
+				 "ERROR: invalid command %d on stashed TCP socket\n", cmd );
+		daemonCore->Cancel_Socket( sock );
+		sock_cache->invalidateSock( addr );
+		return KEEP_STREAM;
+		break;
+    }
+	EXCEPT( "Should never reach here" );
+	return FALSE;
+}
+
 
 int CollectorDaemon::query_scanFunc (ClassAd *ad)
 {
@@ -654,8 +782,6 @@ void CollectorDaemon::Config()
             UpdateTimerId = -1;
     }
 
-    updateSock.close();
-
     tmp = param ("CONDOR_DEVELOPERS_COLLECTOR");
     if (tmp == NULL) {
             tmp = strdup("condor.cs.wisc.edu");
@@ -672,11 +798,31 @@ void CollectorDaemon::Config()
             i = 900;                // default to 15 minutes
     }
     if ( tmp && i ) {
-        if ( updateSock.connect(tmp,COLLECTOR_PORT) == TRUE ) {
-                UpdateTimerId = daemonCore->Register_Timer(1,i,
-                        (TimerHandler)sendCollectorAd, "sendCollectorAd");
+		if( updateCollector ) {
+				// we should just delete it.  since we never use TCP
+				// for these updates, we don't really loose anything
+				// by destroying the object and recreating it...  
+			delete updateCollector;
+			updateCollector = NULL;
         }
-    }
+		updateCollector = new DCCollector( tmp, COLLECTOR_PORT, 
+										   DCCollector::UDP );
+		if( UpdateTimerId < 0 ) {
+			UpdateTimerId = daemonCore->
+				Register_Timer( 1, i, (TimerHandler)sendCollectorAd,
+								"sendCollectorAd" );
+		}
+    } else {
+		if( updateCollector ) {
+			delete updateCollector;
+			updateCollector = NULL;
+		}
+		if( UpdateTimerId > 0 ) {
+			daemonCore->Cancel_Timer( UpdateTimerId );
+			UpdateTimerId = -1;
+		}
+	}
+
 	init_classad(i);
 
     if (tmp)
@@ -711,6 +857,28 @@ void CollectorDaemon::Config()
        }
     }
 
+	tmp = param( "COLLECTOR_SOCKET_CACHE_SIZE" );
+	if( tmp ) {
+		int size = atoi( tmp );
+		if( size ) {
+			if( sock_cache ) {
+				if( size > sock_cache->size() ) {
+					sock_cache->resize( size );
+				}
+			} else {
+				sock_cache = new SocketCache( size );
+			}
+		} 
+		free( tmp );
+	}
+	if( sock_cache ) {
+		dprintf( D_FULLDEBUG, 
+				 "Using a SocketCache for TCP updates (size: %d)\n",
+				 sock_cache->size() );
+	} else {
+		dprintf( D_FULLDEBUG, "No SocketCache, will refuse TCP updates\n" );
+	}		
+		
     return;
 }
 
@@ -763,25 +931,12 @@ int CollectorDaemon::sendCollectorAd()
     ad->Insert(line);
 
     // send the ad
-    int             cmd = UPDATE_COLLECTOR_AD;
-
-    updateSock.encode();
-    if(!updateSock.code(cmd))
-    {
-            dprintf(D_ALWAYS, "Can't send UPDATE_MASTER_AD to the collector\n");
-            return 0;
+	if( ! updateCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad) ) {
+		dprintf( D_ALWAYS, "Can't send UPDATE_COLLECTOR_AD to collector "
+				 "(%s): %s\n", updateCollector->fullHostname(),
+				 updateCollector->error() );
+		return 0;
     }
-    if(!ad->put(updateSock))
-    {
-            dprintf(D_ALWAYS, "Can't send ClassAd to the collector\n");
-            return 0;
-    }
-    if(!updateSock.end_of_message())
-    {
-            dprintf(D_ALWAYS, "Can't send endofrecord to the collector\n");
-            return 0;
-    }
-
     return 1;
 }
  

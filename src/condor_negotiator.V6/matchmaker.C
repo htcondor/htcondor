@@ -839,10 +839,41 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 	char		prioExpr[128], remoteUser[128];
 
 	// 0.  connect to the schedd --- ask the cache for a connection
-	if (!sockCache->getReliSock((Sock *&)sock, scheddAddr, NEGOTIATE, NegotiatorTimeout))
-	{
-		dprintf (D_ALWAYS, "    Failed to connect to %s\n", scheddAddr);
-		return MM_ERROR;
+	sock = sockCache->findReliSock( scheddAddr );
+	if( ! sock ) {
+		dprintf( D_FULLDEBUG, "Socket to %s not in cache, creating one\n", 
+				 scheddAddr );
+			// not in the cache already, create a new connection and
+			// add it to the cache.  We want to use a Daemon object to
+			// send the first command so we setup a security session. 
+		Daemon schedd( DT_SCHEDD, scheddAddr, 0 );
+		sock = schedd.reliSock( NegotiatorTimeout );
+		if( ! sock ) {
+			dprintf( D_ALWAYS, "    Failed to connect to %s\n", scheddAddr );
+			return MM_ERROR;
+		}
+		if( ! schedd.startCommand(NEGOTIATE, sock, NegotiatorTimeout) ) {
+			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE to %s\n",
+					 scheddAddr );
+			return MM_ERROR;
+		}
+			// finally, add it to the cache for later...
+		sockCache->addReliSock( scheddAddr, sock );
+	} else { 
+		dprintf( D_FULLDEBUG, "Socket to %s already in cache, reusing\n", 
+				 scheddAddr );
+			// this address is already in our socket cache.  since
+			// we've already got a TCP connection, we do *NOT* want to
+			// use a Daemon::startCommand() to create a new security
+			// session, we just want to encode the NEGOTIATE int on
+			// the socket...
+		sock->encode();
+		if( ! sock->put(NEGOTIATE) ) {
+			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE to %s\n",
+					 scheddAddr );
+			sockCache->invalidateSock( scheddAddr );
+			return MM_ERROR;
+		}
 	}
 
 	// 1.  send NEGOTIATE command, followed by the scheddName (user@uiddomain)

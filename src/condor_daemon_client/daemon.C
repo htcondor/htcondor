@@ -889,7 +889,7 @@ Daemon::getCmInfo( const char* subsys, int port )
 //////////////////////////////////////////////////////////////////////
 
 void
-Daemon::newError( char* str )
+Daemon::newError( const char* str )
 {
 	if( _error ) {
 		delete [] _error;

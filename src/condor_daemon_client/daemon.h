@@ -368,7 +368,7 @@ protected:
 		  is already set, deallocate the existing string.  Then, make
 		  a copy of the given string and store that in _error.
 		  */
-	void newError( char* );
+	void newError( const char* );
 
 		/** Returns a string containing the local daemon's name.  If
 		  the <subsys>_NAME parameter is set in the config file, we

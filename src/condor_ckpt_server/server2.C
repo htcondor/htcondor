@@ -29,6 +29,7 @@
 #include "string_list.h"
 #include "internet.h"
 #include "my_hostname.h"
+#include "condor_version.h"
 
 #include "server2.h"
 #include "gen_lib.h"
@@ -47,6 +48,9 @@ Alarm  rt_alarm;
 static bool ManageBandwidth = false;
 static int NetworkHorizon = 300;
 #endif
+
+char* mySubSystem = "CKPT_SERVER";
+char* myName = NULL;
 
 extern "C" {
 ssize_t stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes );
@@ -105,11 +109,21 @@ void Server::Init()
 	num_replicate_xfers = 0;
 
 	config();
-	dprintf_config( "CKPT_SERVER", 2 );
+	dprintf_config( mySubSystem, 2 );
 
 		// We have to do this after we call config, not in the Server
 		// constructor, or we won't have NETWORK_INTERFACE yet.
 	server_addr.s_addr = htonl( my_ip_addr() );
+
+	dprintf( D_ALWAYS,
+			 "******************************************************\n" );
+	dprintf( D_ALWAYS, "** %s (CONDOR_%s) STARTING UP\n", myName, 
+			 mySubSystem );
+	dprintf( D_ALWAYS, "** %s\n", CondorVersion() );
+	dprintf( D_ALWAYS, "** %s\n", CondorPlatform() );
+	dprintf( D_ALWAYS, "** PID = %lu\n", getpid() );
+	dprintf( D_ALWAYS,
+			 "******************************************************\n" );
 
 	ckpt_server_dir = param( "CKPT_SERVER_DIR" );
 	if( ckpt_server_dir ) {
@@ -369,6 +383,10 @@ void Server::Execute()
 	struct timeval poll;
 	
 	current_time = last_reclaim_time = last_clean_time = time(NULL);
+
+	dprintf( D_FULLDEBUG, "Sending initial ckpt server ad to collector" );
+	xfer_summary.time_out(current_time);
+
 	while (more) {                          // Continues until SIGUSR2 signal
 		poll.tv_sec = reclaim_interval - ((unsigned int)current_time -
 										  (unsigned int)last_reclaim_time);
@@ -2067,6 +2085,7 @@ void UnblockSignals()
 int main( int argc, char **argv )
 {
 	set_condor_priv();
+	myName = argv[0];
 	server.Init();
 	server.Execute();
 	return 0;                            // Should never execute

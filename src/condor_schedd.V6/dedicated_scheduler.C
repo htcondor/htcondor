@@ -2611,8 +2611,7 @@ DedicatedScheduler::publishRequestAd( void )
 
 		// Now, we can actually send this off to the CM:
 		// Port doesn't matter, since we've got the sinful string. 
-	scheduler.updateCentralMgr( UPDATE_SUBMITTOR_AD, &ad,
-								scheduler.Collector->addr(), 0 );  
+	scheduler.Collector->sendUpdate( UPDATE_SUBMITTOR_AD, &ad );
 }
 
 

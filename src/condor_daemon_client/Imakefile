@@ -6,7 +6,8 @@ LIB = $(STD_LIBS)
 
 ### NOTE!  If you add anything here, also add it to the
 ### DAEMON_CLIENT_OBJ line in condor_c++_util/Imakefile   
-OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o dc_schedd.o
+OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o dc_schedd.o \
+	dc_collector.o	
 
 library_target(libdaemonclient.a,$(OBJ))
 

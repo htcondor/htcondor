@@ -24,7 +24,7 @@
 #define _CONDOR_MASTER_H
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
-#include "daemon.h"
+#include "dc_collector.h"
 #include "killfamily.h"
 
 enum AllGoneT { MASTER_RESTART, MASTER_EXIT, MASTER_RESET };

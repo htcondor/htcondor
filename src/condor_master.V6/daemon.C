@@ -48,7 +48,7 @@ extern int		new_bin_delay;
 extern char*	FS_Preen;
 extern			ClassAd* ad;
 extern int		NT_ServiceFlag; // TRUE if running on NT as an NT Service
-extern Daemon*	Collector;
+extern DCCollector*	Collector;
 extern StringList *secondary_collectors;
 
 extern time_t	GetTimeStamp(char* file);
@@ -1526,33 +1526,11 @@ Daemons::UpdateCollector()
 
 	Update(ad);
     
-    SafeSock sock;
-	sock.timeout(2);
-
-    // Port doesn't matter, since we've got the sinful string. 
-	if (!sock.connect(Collector->addr(), 0)) {
-		dprintf( error_debug, "Can't locate collector %s\n", 
-				 Collector->fullHostname() );
+	if( !Collector->sendUpdate(UPDATE_MASTER_AD, ad) ) {
+		dprintf( D_ALWAYS, 
+				 "Can't send UPDATE_MASTER_AD to collector %s: %s\n", 
+				 Collector->updateDestination(), Collector->error() );
 		return;
-	}
-
-    if (!Collector->startCommand(UPDATE_MASTER_AD, &sock)) {
-		dprintf( D_ALWAYS, "Can't send UPDATE_MASTER_AD to collector (%s)\n", 
-				 Collector->fullHostname() );
-		return;
-	}
-
-	sock.encode();
-
-	if(!ad->put(sock)) {
-		dprintf( D_ALWAYS, "Can't send ClassAd to the collector (%s)\n",
-				 Collector->fullHostname() );
-		return;
-	}
-
-	if(!sock.end_of_message()) {
-		dprintf( D_ALWAYS, "Can't send EOM to the collector (%s)\n",
-				 Collector->fullHostname() );
 	}
 
 	if (secondary_collectors) {

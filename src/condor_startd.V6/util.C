@@ -401,45 +401,6 @@ configInsert( ClassAd* ad, const char* param_name,
 }
 
 
-int
-send_classad_to_sock( int cmd, Daemon * d, ClassAd* pubCA, ClassAd*
-					  privCA )  
-{
-    Sock * sock = d->safeSock();
-    if (! d->startCommand(cmd, sock)) {
-		dprintf( D_ALWAYS, "Can't send command\n");
-		sock->end_of_message();
-		delete sock;
-		return FALSE;
-	}
-
-	if( pubCA ) {
-		if( ! pubCA->put( *sock ) ) {
-			dprintf( D_ALWAYS, "Can't send public classad\n");
-			sock->end_of_message();
-			delete sock;
-			return FALSE;
-		}
-	}
-	if( privCA ) {
-		if( ! privCA->put( *sock ) ) {
-			dprintf( D_ALWAYS, "Can't send private classad\n");
-			sock->end_of_message();
-			delete sock;
-			return FALSE;
-		}
-	}
-	if( ! sock->end_of_message() ) {
-		dprintf( D_ALWAYS, "Can't send end_of_message\n");
-		delete sock;
-		return FALSE;
-	}
-
-	delete sock;
-	return TRUE;
-}
-
-
 /* 
    This function reads of a capability string and an eom from the
    given stream.  It looks up that capability in the resmgr to find

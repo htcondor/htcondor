@@ -262,8 +262,8 @@ Scheduler::Scheduler()
 	N_RejectedClusters = 0;
 	N_Owners = 0;
 	LastTimeout = time(NULL);
-	CondorViewHost = NULL;
 	Collector = NULL;
+	ViewCollector = NULL;
 	Negotiator = NULL;
 	CondorAdministrator = NULL;
 	Mail = NULL;
@@ -324,12 +324,15 @@ Scheduler::~Scheduler()
 		// they're already getting cleaned up, so if we do it again,
 		// we'll seg fault.
 
-	if (Collector)
-		delete(Collector);
-	if (Negotiator)
-		delete(Negotiator);
-	if (CondorViewHost)
-		free(CondorViewHost);
+	if( Collector ) {
+		delete( Collector );
+	}
+	if( ViewCollector ) {
+		delete( ViewCollector );
+	}
+	if( Negotiator ) {
+		delete( Negotiator );
+	}
 	if (CondorAdministrator)
 		free(CondorAdministrator);
 	if (Mail)
@@ -600,8 +603,7 @@ Scheduler::count_jobs()
 	sprintf(tmp, "%s = True", ATTR_WANT_RESOURCE_AD );
 	ad->InsertOrUpdate(tmp);
 
-		// Port doesn't matter, since we've got the sinful string. 
-	updateCentralMgr( UPDATE_SCHEDD_AD, ad, Collector->addr(), 0 ); 
+	Collector->sendUpdate( UPDATE_SCHEDD_AD, ad );
 	dprintf( D_FULLDEBUG, 
 			 "Sent HEART BEAT ad to central mgr: Number of submittors=%d\n",
 			 N_Owners );
@@ -678,8 +680,7 @@ Scheduler::count_jobs()
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
-		  // Port doesn't matter, since we've got the sinful string. 
-	  updateCentralMgr( UPDATE_SUBMITTOR_AD, ad, Collector->addr(), 0 ); 
+	  Collector->sendUpdate( UPDATE_SUBMITTOR_AD, ad ); 
 
 	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
 				SubmittingOwners[i].Name, UidDomain );
@@ -688,13 +689,12 @@ Scheduler::count_jobs()
 	  // an independant daemon. In the future condor view will be the
 	  // accountant
 
-		  // The CondorViewHost MAY BE NULL!!!!!  It's optional
+		  // The ViewCollector MAY BE NULL!!!!!  It's optional
 		  // whether you define it or not.  This will cause a seg
 		  // fault if we assume it's defined and use it.  
 		  // -Derek Wright 11/4/98 
-	  if( CondorViewHost && CondorViewHost[0] != '\0' ) {
-		  updateCentralMgr( UPDATE_SUBMITTOR_AD, ad, CondorViewHost, 
-							CONDOR_VIEW_PORT );
+	  if( ViewCollector ) {
+		  ViewCollector->sendUpdate( UPDATE_SUBMITTOR_AD, ad );
 	  }
 	}
 
@@ -821,8 +821,7 @@ Scheduler::count_jobs()
 	  ad->InsertOrUpdate(tmp);
 
 	  dprintf (D_ALWAYS, "Sent owner (0 jobs) ad to central manager\n");
-		  // Port doesn't matter, since we've got the sinful string. 
-	  updateCentralMgr( UPDATE_SUBMITTOR_AD, ad, Collector->addr(), 0 ); 
+	  Collector->sendUpdate( UPDATE_SUBMITTOR_AD, ad ); 
 
 	  // also update all of the flock hosts
 	  char *host;
@@ -5749,11 +5748,17 @@ Scheduler::Init()
 		EXCEPT( "No spool directory specified in config file" );
 	}
 
-	if( CondorViewHost ) free( CondorViewHost );
-	CondorViewHost = param("CONDOR_VIEW_HOST");
-
-	if( Collector ) delete( Collector );
-	Collector = new Daemon( DT_COLLECTOR );
+	if( ViewCollector ) {
+		delete ViewCollector;
+	}; 
+	tmp = param("CONDOR_VIEW_HOST");
+	if( tmp ) {
+		ViewCollector = new DCCollector( tmp, CONDOR_VIEW_PORT );
+	}
+	if( Collector ) {
+		delete( Collector );
+	}
+	Collector = new DCCollector;
 
 	if( Negotiator ) delete( Negotiator );
 	Negotiator = new Daemon( DT_NEGOTIATOR );
@@ -6342,7 +6347,7 @@ Scheduler::invalidate_ads()
     sprintf( line, "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, 
              Name );
     ad->Insert( line );
-	updateCentralMgr( INVALIDATE_SCHEDD_ADS, ad, Collector->addr(), 0 );
+	Collector->sendUpdate( INVALIDATE_SCHEDD_ADS, ad );
 
 	if (N_Owners == 0) return;	// no submitter ads to invalidate
 
@@ -6350,7 +6355,7 @@ Scheduler::invalidate_ads()
 	sprintf( line, "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_SCHEDD_NAME,
 			 Name );
     ad->InsertOrUpdate( line );
-	updateCentralMgr( INVALIDATE_SUBMITTOR_ADS, ad, Collector->addr(), 0 );
+	Collector->sendUpdate( INVALIDATE_SUBMITTOR_ADS, ad );
 	if( FlockCollectors && FlockLevel > 0 ) {
 		for( i=1, FlockCollectors->rewind();
 			 i <= FlockLevel && (host = FlockCollectors->next()); i++ ) {
@@ -6797,7 +6802,9 @@ Scheduler::dumpState(int, Stream* s) {
 	intoAd ( ad, "startJobsDelayBit", startJobsDelayBit );
 	intoAd ( ad, "num_reg_contacts", num_reg_contacts );
 	intoAd ( ad, "MAX_STARTD_CONTACTS", MAX_STARTD_CONTACTS );
-	intoAd ( ad, "CondorViewHost", CondorViewHost );
+	if( ViewCollector ) {
+		intoAd ( ad, "CondorViewHost", ViewCollector->fullHostname() );
+	}
 	intoAd ( ad, "CondorAdministrator", CondorAdministrator );
 	intoAd ( ad, "Mail", Mail );
 	intoAd ( ad, "filename", filename );

@@ -2,6 +2,15 @@
     The state of the V6_5_0 branch before merging in
     V6_5_0-tcp_update-branch as tagged at V6_5_0-tcp_update-merge-1.  
 
+03/13/03 V6_5_0-tcp_update-merge-1
+    The state of the V6_5_0-tcp_update-branch when it was merged back
+    into V6_5_0-branch.
+
+03/07/05 V6_5_0-tcp_update-branch
+    A new branch off of V6_5_0-branch for developing the feature where
+    we can optionally send updates to the collector (or a tree of
+    collectors) via TCP.
+
 03/07/03 V6_5_0-post_merge-V6_4-merge-7
     The state of the V6_5_0 branch after merging in V6_4-branch as
     tagged at V6_4-merge-7. The last merge was at V6_4-merge-6

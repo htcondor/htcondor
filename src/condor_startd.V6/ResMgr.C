@@ -32,8 +32,6 @@ template class SimpleList<NamedClassAd*>;
 ResMgr::ResMgr()
 {
 	startTime = time( NULL );
-	coll_sock = NULL;
-	view_sock = NULL;
 	totals_classad = NULL;
 	config_classad = NULL;
 	up_tid = -1;
@@ -59,10 +57,6 @@ ResMgr::~ResMgr()
 	if( totals_classad ) delete totals_classad;
 	if( id_disp ) delete id_disp;
 	delete m_attr;
-	delete coll_sock;
-	if( view_sock ) {
-		delete view_sock;
-	}
 	if( resources ) {
 		for( i = 0; i < nresources; i++ ) {
 			delete resources[i];
@@ -713,25 +707,6 @@ ResMgr::compute_phys_mem( float share )
 
 
 void
-ResMgr::init_socks( void )
-{
-	if( coll_sock ) {
-		delete coll_sock;
-		coll_sock = NULL;
-	}
-	coll_sock = Collector->safeSock();
-
-	if( view_sock ) {
-		delete view_sock;
-		view_sock = NULL;
-	}
-    if (View_Collector) {
-        view_sock = View_Collector->safeSock();
-    }
-}
-
-
-void
 ResMgr::walk( int(*func)(Resource*) )
 {
 	if( ! resources ) {
@@ -1092,40 +1067,27 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad )
 	sprintf( tmp, "%s=%ld", ATTR_DAEMON_START_TIME, (long) startTime );
 	public_ad->InsertOrUpdate( tmp );
 
-	if( coll_sock ) {
-		if( DebugFlags & D_FULLDEBUG ) {
-			dprintf( D_FULLDEBUG, 
-					 "Attempting to send update to collector <%s:%d>\n", 
-					 coll_sock->endpoint_ip_str(), coll_sock->endpoint_port() );
-			dprintf( D_FULLDEBUG, 
-					 "Collector Daemon Object: %s (%s)\n",
-					 Collector->addr(), Collector->fullHostname() );
-		}
-
-		if( send_classad_to_sock(cmd, Collector, public_ad, private_ad) ) {
+	if( Collector ) {
+		if( Collector->sendUpdate(cmd, public_ad, private_ad) ) {
 			num++;
 		} else {
 			dprintf( D_FAILURE|D_ALWAYS,
-					 "Error sending UDP update to the collector (%s)\n", 
-					 Collector->fullHostname() );
+					 "Error sending update to the collector %s: %s \n", 
+					 Collector->updateDestination(), Collector->error() );
 		}
 	}  
 
 		// If we have an alternate collector, send public CA there.
-	if( view_sock ) {
-		if( DebugFlags & D_FULLDEBUG ) {
-			dprintf( D_FULLDEBUG, 
-					 "Attempting to send update to view collector <%s:%d>\n", 
-					 view_sock->endpoint_ip_str(), view_sock->endpoint_port() );
-		}
-		if( send_classad_to_sock(cmd, View_Collector, public_ad, NULL) ) {
+	if( View_Collector ) {
+		if( View_Collector->sendUpdate(cmd, public_ad, private_ad) ) {
 			num++;
 		} else {
-			dprintf( D_ALWAYS, 
-					 "Error sending UDP update to the collector (%s)\n", 
-					 condor_view_host );
+			dprintf( D_FAILURE|D_ALWAYS,
+					 "Error sending update to the view collector %s: %s\n", 
+					 View_Collector->updateDestination(), 
+					 View_Collector->error() );
 		}
-	}
+	}  
 
 		// Increment the resmgr's count of updates.
 	num_updates++;
@@ -1169,15 +1131,15 @@ ResMgr::report_updates( void )
 	if( !num_updates ) {
 		return;
 	}
-	if( coll_sock ) {
+	if( Collector ) {
 		dprintf( D_FULLDEBUG,
 				 "Sent %d update(s) to the collector (%s)\n", 
 				 num_updates, Collector->fullHostname() );
 	}  
-	if( view_sock ) {
+	if( View_Collector ) {
 		dprintf( D_FULLDEBUG, 
 				 "Sent %d update(s) to the condor_view host (%s)\n",
-				 num_updates, condor_view_host );
+				 num_updates, View_Collector->fullHostname() );
 	}
 }
 
