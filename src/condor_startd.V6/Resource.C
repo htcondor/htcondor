@@ -52,6 +52,7 @@ Resource::Resource( CpuAttributes* cap, int rid )
 
 	r_load_num_called = 8;
 	kill_tid = -1;
+	update_tid = -1;
 
 	if( r_attr->type() ) {
 		dprintf( D_ALWAYS, "New machine resource of type %d allocated\n",  
@@ -65,6 +66,11 @@ Resource::Resource( CpuAttributes* cap, int rid )
 Resource::~Resource()
 {
 	this->cancel_kill_timer();
+
+	if ( update_tid != -1 ) {
+		daemonCore->Cancel_Timer(update_tid);
+		update_tid = -1;
+	}
 
 	delete r_state;
 	delete r_classad;
@@ -380,9 +386,41 @@ Resource::force_benchmark( void )
 	return TRUE;
 }
 
-
 int
 Resource::update( void )
+{
+	int timeout = 3;
+	int ret_value = TRUE;
+
+	if ( update_tid == -1 ) {
+			// Send no more than 16 ClassAds per second to help
+			// minimize the odds of overwhelming the collector
+			// on very large SMP machines.  So, we mod our resource num
+			// by 8 and add that to the timeout
+			// (why 8? since each update sends 2 ads).
+		if ( r_id > 0 ) {
+			timeout += r_id % 8;
+		}
+
+		// set a timer for the update
+		update_tid = daemonCore->Register_Timer( 
+						timeout,
+						(TimerHandlercpp)&Resource::do_update,
+						"do_update",
+						this );
+	}
+
+	if ( update_tid < 0 ) {
+		// Somehow, the timer could not be set.  Ick!
+		update_tid = -1;
+		ret_value = FALSE;
+	}
+		
+	return ret_value;
+}
+
+int
+Resource::do_update( void )
 {
 	int rval;
 	ClassAd private_ad;
@@ -400,8 +438,10 @@ Resource::update( void )
 		dprintf( D_ALWAYS, "Error sending update to collector(s)\n" );
 	}
 
-		// Set a flag to indicate that we've done an update.
-	did_update = TRUE;
+	// We _must_ reset update_tid to -1 before we return so
+	// the class knows there is no pending update.
+	update_tid = -1;
+
 	return rval;
 }
 
@@ -428,16 +468,13 @@ Resource::final_update( void )
 int
 Resource::eval_and_update( void )
 {
-	did_update = FALSE;
-
 		// Evaluate the state of this resource.
 	eval_state();
 
 		// If we didn't update b/c of the eval_state, we need to
 		// actually do the update now.
-	if( ! did_update ) {
-		update();
-	}
+	update();
+
 	return TRUE;
 }
 

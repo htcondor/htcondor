@@ -107,7 +107,8 @@ public:
 	int		give_classad( Stream* stream );	// Send this VM's classad
 											// to the given Stream
 
-	int		update( void );				// Update the central manager.
+	int		update( void );				// Schedule to update the central manager.
+	int		do_update( void );			// Actually update the CM
 	int		eval_and_update( void );	// Evaluate state and update CM. 
 	void	final_update( void );		// Send a final update to the CM
 									    // with Requirements = False.
@@ -142,8 +143,8 @@ public:
 
 private:
 	int		kill_tid;	// DaemonCore timer id for kiling timer.
+	int		update_tid;	// DaemonCore timer id for update delay
 
-	int		did_update;		// Flag set when we do an update.
 	int		fast_shutdown;	// Flag set if we're in fast shutdown mode.
 	int		r_load_num_called;	// Counter used for CondorLoadAvg
 	void	remove_pre( void );	// If r_pre is set, refuse and delete it.
