@@ -660,7 +660,7 @@ Stream::code(struct rlimit &rl)
 		STREAM_ASSERT(code(rl.rlim_cur));
 		STREAM_ASSERT(code(rl.rlim_max));
 	}
-#elif
+#else
 	STREAM_ASSERT(code(rl.rlim_cur));
 	STREAM_ASSERT(code(rl.rlim_max));
 #endif
