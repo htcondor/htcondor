@@ -623,7 +623,12 @@ NUM_CPUS = 1
 ##+	to be set
 ##    MODULE grid:grid_:grid_probe:0:continuous
 ##+	Monitors the status of a Condor/Globus grid
-##+	You may want set the grid_ parameters by hand (quite a few)
+##+	You will NEED to set the grid_ parameters by hand (quite a few)
+##    MODULE gass_cache:cache_:gass_cache:20m
+##+	Monitors the status of a Globus GASS cache
+##+	You will NEED to set the gass_cache_ parameters by hand
+##+	In particular, the Hawkeye_gass_cache_directory is most likely
+##+	not valid for your system
 ##
 ##--------------------------------------------------------------------
 MODULES = $(HAWKEYE)/modules
@@ -669,6 +674,17 @@ Hawkeye_vmstat_period = 30s
 ## Condor node monitoring
 ##  None
 Hawkeye_condor_env=PATH=/bin:/sbin:/usr/bin:/home/hawkeye/bin:/home/condor/bin:/home/condor/scripts
+
+## Globus GASS cache
+##  HAWKEYE_GASS_CACHE_DIRECTORY
+##   Sets the "base" directory of the GASS cache to monitor
+##  HAWKEYE_GASS_CACHE_MAXAGE
+##   Data files older than this are labeled as "old" (i.e. 12h, 2d)
+##  HAWKEYE_GASS_CACHE_MAXSIZE
+##   Data files larger than this are labeled as "big" (i.e. 200m, 1.5g)
+Hawkeye_gass_cache_directory=$(HOME)/.globus/.gass_cache
+Hawkeye_gass_cache_maxage=1d
+Hawkeye_gass_cache_maxsize=100m
 
 ## Condor pool monitoring
 Hawkeye_pool_absent = true
