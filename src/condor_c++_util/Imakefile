@@ -1,6 +1,4 @@
-all_target(cplus_lib.a liburl.a libcondorapi.a test_libcondorapi \
-	test_check_events check_log_files test_multi_log test_log_writer \
-	test_log_reader test_write_term)
+all_target(cplus_lib.a liburl.a libcondorapi.a test_libcondorapi)
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 CFLAGS = $(STD_C_FLAGS)
