@@ -90,6 +90,11 @@ extern "C" {
 extern "C" int _sigreturn();
 #endif
 
+#if defined(Solaris)
+/* for undocumented calls in GETPAGESIZE() */
+#include <sys/sysconfig.h>
+#endif
+
 void terminate_with_sig( int sig );
 static void find_stack_location( RAW_ADDR &start, RAW_ADDR &end );
 static int SP_in_data_area();
@@ -805,12 +810,17 @@ static int mystrcmp(const char *str1, const char *str2)
 
 #if defined(HAS_DYNAMIC_USER_JOBS)
 extern "C"  int GETPAGESIZE(void);
-#if defined(SYS_getpagesize)
+
 static int GETPAGESIZE(void)
 {
+#if defined(SYS_getpagesize)
 	return SYSCALL(SYS_getpagesize);
-}
+#elif defined(SYS_sysconfig)
+	return SYSCALL(SYS_sysconfig, _CONFIG_PAGESIZE);
+#else
+#error "Please port me.  I need a safe method of getting the pagesize."
 #endif
+}
 #endif
 
 void
