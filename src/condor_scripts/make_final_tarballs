@@ -23,6 +23,10 @@ while( $_ = shift( @ARGV ) ) {
 	$versarg = shift(@ARGV);
 	last SWITCH;
     }
+    if( /-t.*/ ) {
+        $target = shift(@ARGV);
+        last SWITCH;
+    }
     if( /-l.*/ ) {
 	$libc = shift(@ARGV);
 	last SWITCH;
@@ -56,7 +60,6 @@ BEGIN {
 }
 
 require 5.002;
-use Archive::Tar;
 
 ######################################################################
 # Settings you may want to customize
@@ -107,7 +110,6 @@ use Archive::Tar;
 # Some paths of interest:
 $skel="release_skeleton";
 $realskel="condor_release";
-$target="/p/condor/public/binaries";
 
 %releaselocation = (
   "static"        => "static_dir",
@@ -119,6 +121,7 @@ $target="/p/condor/public/binaries";
   "sun4x_55"      => "solaris251",
   "sun4x_56"      => "solaris26",
   "sun4x_57"      => "solaris27",
+  "sun4x_58"      => "solaris28",
   "sunx86_55"     => "solaris251",
   "sunx86_56"     => "solaris26",
   "sunx86_57"     => "solaris27",
@@ -139,6 +142,7 @@ $target="/p/condor/public/binaries";
   "sun4x_55"      => "Sparc",
   "sun4x_56"      => "Sparc",
   "sun4x_57"      => "Sparc",
+  "sun4x_58"      => "Sparc",
   "sunx86_55"     => "x86",
   "sunx86_56"     => "x86",
   "sunx86_57"     => "x86",
@@ -170,6 +174,10 @@ umask(022);
 ######################################################################
 # Actual work begins...
 ######################################################################
+
+if( ! $target) {
+   $target="/p/condor/public/binaries";
+}
 
 # Make sure we know what platform we are... If we weren't told on the
 # command-line, run "sys" and use that.
@@ -263,20 +271,19 @@ foreach $module ( @modules ) {
 	}
 
 	# Copy the tarfile with the right permissions into the skeleton. 
-	fix_tar( "$releaselocation{$linktype}/$tarfile", 
-		"$skel/$release/$tarfile" );
+	`cp $releaselocation{$linktype}/$tarfile $skel/$release/$tarfile`;
 
 	# Create full archive 
 	chdir( $skel ) || die "Can't chdir to $skel: $!\n";
 	print "Creating full archive: $release.tar\n";
-	print `tar -cvf $release.tar $release`;
+	print `tar -cvf $release.tar --owner=root --group=root $release`;
 	chdir( ".." ) || die "Can't chdir to ..: $!\n";
 
 	# Delete the release.tar we're now done with.
 	unlink( "$skel/$release/$tarfile" );
 
 	# Fix ownerships in the full archive.
-	fix_tar( "$skel/$release.tar", "$skel/$release-$platform.tar" );
+	`cp $skel/$release.tar $skel/$release-$platform.tar`;
 
 	# Delete the tar file we're now done with.
 	unlink( "$skel/$release.tar" );
@@ -307,21 +314,6 @@ foreach $module ( @modules ) {
 	    print "done.\n";
 	}
     }
-}
-
-sub fix_tar {
-    local( $src, $target ) = @_;
-    my $tar;
-
-    $tar = Archive::Tar->new();
-
-    print "\nReading $src\n";
-    $tar->read( $src );
-    print "Fixing ownerships\n";
-    $tar->change_owner( 0,0 );
-    print "Writing $target ... ";
-    $tar->write( $target );
-    print "done.\n";
 }
 
 sub customize {
