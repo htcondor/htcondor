@@ -850,7 +850,7 @@ int Condor_Auth_Kerberos :: map_domain_name(const char * domain)
         if (RealmMap->lookup(from, to) != -1) {
 			if (DebugFlags & D_FULLDEBUG) {
 				dprintf (D_SECURITY, "KERBEROS: mapping realm %s to domain %s.\n", 
-					from, to);
+					from.Value(), to.Value());
 			}
             setRemoteDomain(to.Value());
             return TRUE;
