@@ -38,18 +38,16 @@ int main_init (int, char *[])
 
 int main_shutdown_graceful()
 {
-	exit(0);
+	DC_Exit(0);
 	return 0;
 }
 
 
 int main_shutdown_fast()
 {
-	exit(0);
+	DC_Exit(0);
 	return 0;
 }
-
-
 
 int main_config ()
 {
