@@ -29,3 +29,21 @@ GCC_LIBC = @gcc_libc@
 CRT_BEGIN = @crt_begin@
 GCC_STATIC_LD_FLAG = @gcc_static_ld_flag@
 GCC_STATIC_LIBS = $(GCC_STATIC_LD_FLAG) -lstdc++ -lgcc
+
+/* Settings related to the vendor compilers used for the test suites */
+
+#define HAS_GNU_G77 @has_gnu_g77@
+GNU_G77 = @_cv_gnu_g77@ 
+
+#define HAS_VENDOR_F77 @has_vendor_f77@
+VENDOR_F77 = @_cv_vendor_f77@ 
+
+#define HAS_VENDOR_F90 @has_vendor_f90@
+VENDOR_F90 = @_cv_vendor_f90@ 
+
+#define HAS_VENDOR_CC  @has_vendor_cc@
+VENDOR_CC = @_cv_vendor_cc@ 
+
+#define HAS_VENDOR_CPLUS @has_vendor_cplus@
+VENDOR_CPLUS = @_cv_vendor_cplus@ 
+VENDOR_CPLUS_NAME = @_cv_vendor_cplus_name@ 
