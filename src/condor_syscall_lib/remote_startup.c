@@ -390,8 +390,10 @@ MAIN( int argc, char *argv[], char **envp )
 
 		_condor_file_table_init();
 
-		dprintf( D_ALWAYS | D_NOHEADER , "User Job - %s\n", CondorVersion() );
 		dprintf( D_ALWAYS | D_NOHEADER , "User Job - %s\n", CondorPlatform() );
+		dprintf( D_ALWAYS | D_NOHEADER , "User Job - %s\n", CondorVersion() );
+			// Also, register the version with the shadow
+		REMOTE_syscall( CONDOR_register_syscall_version, CondorVersion() );
 
 		SetSyscalls( SYS_REMOTE | SYS_MAPPED );
 
