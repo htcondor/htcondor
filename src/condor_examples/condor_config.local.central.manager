@@ -107,6 +107,21 @@ NEGOTIATOR    = $(SBIN)/condor_negotiator
 ##  The interval (in seconds) between samples for history logging
 #POOL_HISTORY_SAMPLING_INTERVAL = 60
 
+##  If your pool requires TCP updates to the collector (and you
+##  defined "UPDATE_COLLECTOR_WITH_TCP = True", you need to enable a
+##  "socket cache" so that the collector keeps the TCP sockets used
+##  for updates open.  This vastly improves performance.  Each daemon
+##  will have 1 socket open to the collector, so if you have N
+##  machines in your pool, all of them running a master, schedd, and
+##  startd, you'd want a socket cache that has at least 3*N entries.
+##  If you have machines with "personal Condor" added to your pool,
+##  you'll need another 2 entries (the master and schedd) for each
+##  one.  Each entry in this cache uses another file descriptor in the
+##  collector, so be careful not to use more of those than your system
+##  allocates for a single process.  If you do not enable a socket
+##  cache, TCP updates will be refused by the collector.
+#COLLECTOR_SOCKET_CACHE_SIZE = 300
+
 ##--------------------------------------------------------------------
 ##  condor_negotiator
 ##--------------------------------------------------------------------

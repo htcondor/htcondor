@@ -682,6 +682,17 @@ RESERVED_DISK		= 5
 ##  user@UID_DOMAIN won't work.
 #EMAIL_DOMAIN = $(FULL_HOSTNAME)
 
+##  If your site needs to use TCP updates to the collector, instead of
+##  UDP, you can enable this feature.  HOWEVER, WE DO NOT RECOMMEND
+##  THIS FOR MOST SITES!  In general, the only sites that might want
+##  this feature are pools made up of machines connected via a
+##  wide-area network where UDP packets are frequently or always
+##  dropped.  If you enable this feature, you *MUST* turn on the
+##  COLLECTOR_SOCKET_CACHE_SIZE setting at your collector, and each
+##  entry in the socket cache uses another file descriptor.  If not
+##  defined, this feature is disabled by default.
+#UPDATE_COLLECTOR_WITH_TCP = True
+
 
 ######################################################################
 ##  Daemon-specific settings:
