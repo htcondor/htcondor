@@ -777,9 +777,10 @@ PREEN_ARGS			= -m -r
 ##  condor_startd
 ##--------------------------------------------------------------------
 ##  Where are the various condor_starter binaries installed?
+STARTER_LIST = STARTER, STARTER_PVM, STARTER_STANDARD
 STARTER			= $(SBIN)/condor_starter
-ALTERNATE_STARTER_1	= $(SBIN)/condor_starter.pvm
-ALTERNATE_STARTER_2	= $(SBIN)/condor_starter.v63
+STARTER_PVM		= $(SBIN)/condor_starter.pvm
+STARTER_STANDARD	= $(SBIN)/condor_starter.std
 
 ##  When the startd starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -999,11 +1000,10 @@ STARTD_JOB_EXPRS = ImageSize, ExecutableSize, JobUniverse, NiceUser
 ##  condor_schedd
 ##--------------------------------------------------------------------
 ##  Where are the various shadow binaries installed?
+SHADOW_LIST = SHADOW, SHADOW_PVM, SHADOW_STANDARD
 SHADOW			= $(SBIN)/condor_shadow
 SHADOW_PVM		= $(SBIN)/condor_shadow.pvm
-SHADOW_GLOBUS		= $(SBIN)/condor_shadow.globus
-SHADOW_NT		= $(SBIN)/condor_shadow.v63
-SHADOW_JAVA             = $(SBIN)/condor_shadow.v63
+SHADOW_STANDARD		= $(SBIN)/condor_shadow.std
 
 ##  When the schedd starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
