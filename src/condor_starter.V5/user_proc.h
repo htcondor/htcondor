@@ -28,6 +28,10 @@
 
 #include "environ.h"
 
+#ifdef IRIX62
+#include "killfamily.h"
+#endif
+
 #define EXECFAILED 129 // exit status if call to execv() fails
 
 	// Reason user process exited (or didn't execute)
@@ -206,6 +210,11 @@ private:
 		// CPU guaranteed by transfer of ckpt or termination of job
 	clock_t	guaranteed_user_time;
 	clock_t	guaranteed_sys_time;
+
+#ifdef IRIX62
+	ProcFamily *family;
+#endif
+
 };
 
 
