@@ -95,9 +95,6 @@ public:
 	// function.  
 	void resource_sort( ComparisonFunc );
 
-	// Hack function
-	Resource*	rip() {return resources[0];};
-
 	// Methods to control various timers
 	void	check_polling();		// See if we need to poll frequently
 	int		start_update_timer();	// Timer for updating the CM(s)
@@ -110,7 +107,7 @@ public:
 	Resource*	get_by_cur_cap(char*);	// Find rip by r_cur->capab
 	Resource*	get_by_any_cap(char*);	// Find rip by r_cur or r_pre
 	Resource*	get_by_name(char*);		// Find rip by r_name
-	State	state();					// Return the machine state
+	State		state();				// Return the machine state
 
 	int	force_benchmark();		// Force a resource to benchmark
 	
@@ -121,11 +118,14 @@ public:
 	
 	ProcAPI*		m_proc;		// Info from /proc about this machine 
 
+	ClassAd*	totals_classad;
+
 private:
 	Resource**	resources;		// Array of pointers to resource objects
 	int			nresources;		// Size of the array
 	SafeSock*	coll_sock;
 	SafeSock*	view_sock;
+
 	int			currentVMType;		// Current virtual machine type
 		// we're parsing. 
 
