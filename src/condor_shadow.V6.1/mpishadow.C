@@ -575,6 +575,11 @@ MPIShadow::modifyNodeAd( ClassAd* ad )
 
 		  MPICH_ROOT  - host or ip and port of the root node.
 
+		  If we're the root node, we need to set MPICH_ROOT, but we
+		  just want to use the hostname of the root node, not
+		  specifying a port, since we'll let the master bind to
+		  whatever it can and tell us where it's listening via the
+		  MPICH_EXTRA env var.
 		*/
 
 	bool had_env = false;
@@ -647,6 +652,15 @@ MPIShadow::modifyNodeAd( ClassAd* ad )
 		env += env_delim_str;
 		sprintf( buf, "MPICH_ROOT=%s", master_addr );
 		env += buf;
+	} else {
+			// For the root node, we need to set MPICH_ROOT just to
+			// the hostname of the resource where it's executing
+		env += env_delim_str;
+		char* resource_name = NULL;
+		ResourceList[0]->getMachineName( resource_name );
+		sprintf( buf, "MPICH_ROOT=%s", resource_name );
+		env += buf;
+		delete [] resource_name;
 	}
 
 		// Now that we're done appending stuff, we've got to terminate
