@@ -813,7 +813,7 @@ find_stack_location( RAW_ADDR &start, RAW_ADDR &end )
 {
 	if( SP_in_data_area() ) {
 		dprintf( D_ALWAYS, "Stack pointer in data area\n" );
-		if( StackGrowsDown ) {
+		if( StackGrowsDown() ) {
 			end = stack_end_addr();
 			start = end - StackSaveSize;
 		} else {
