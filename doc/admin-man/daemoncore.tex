@@ -1,0 +1,110 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{DaemonCore}
+\label{sec:DaemonCore}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This section is a brief description of \Term{DaemonCore}.  DaemonCore
+is a library that is shared among most of the Condor daemons which
+provides common functionality.  Currently, the following daemons use
+DaemonCore:
+
+\begin{itemize}
+\item \Condor{master}
+\item \Condor{startd}
+\item \Condor{schedd}
+\item \Condor{collector}
+\item \Condor{negotiator}
+\item \Condor{kbdd}
+\end{itemize}
+
+Most of DaemonCore's details are not interesting for administrators.
+However, DaemonCore does provide a uniform interface for the daemons
+to various UNIX signals, and provides a common set of command-line
+options that can be used to start up each daemon.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{DaemonCore and UNIX signals}
+\label{sec:DaemonCore-Signals}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+One of the most visible features DaemonCore provides for
+administrators is that all daemons which use it behave the same way on
+certain UNIX signals.  The signals and the behavior DaemonCore
+provides are listed below:
+
+\begin{description}
+\item[SIGHUP] Causes the daemon to reconfigure itself.
+\item[SIGTERM] Causes the daemon to gracefully shutdown.
+\item[SIGQUIT] Causes the daemon to quickly shutdown.
+\end{description}
+
+Exactly what ``gracefully'' and ``quickly'' means varies from daemon
+to daemon.  For daemons with little or no state (the kbdd, collector and
+negotiator) there's no difference and both signals result in the
+daemon shutting itself down basically right away.  For the master,
+graceful shutdown just means it asks all of its children to perform
+their own graceful shutdown methods, while fast shutdown means it asks
+its children to perform their own fast shutdown methods.  In both
+cases, the master only exits once all its children have exited.  In
+the startd, if the machine is not claimed and running a job, both
+result in an immediate exit.  However, if the startd is running a job,
+graceful shutdown results in that job being checkpointed, while fast
+shutdown does not.  In the schedd, if there are no jobs currently
+running (i.e. no \Condor{shadow} processes), both signals result in an
+immediate exit.  With jobs running, however, graceful shutdown means
+that the schedd asks each shadow to gracefully vacate whatever job it
+is serving, while fast shutdown results in a hard kill of every shadow
+with no chance of checkpointing.  
+
+For all daemons, ``reconfigure'' just means that the daemon re-reads
+its config file(s) and any settings that have change take effect.  For
+example, changing the level of debugging output, the value of timers
+that determine how often daemons perform certain actions, the paths to
+the binaries you want the \Condor{master} to spawn, etc.  See
+section~\ref{sec:Configuring-Condor} on ``Configuring Condor'' for
+full details on what settings are in the config files and what they
+do.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{DaemonCore and Command-line Arguments}
+\label{sec:DaemonCore-Arguments}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The other visible feature that DaemonCore provides to administrators
+is a common set of command-line arguments that all daemons understand.
+The arguments and what they do are described below:
+
+\begin{description}
+
+\item[-b] Causes the daemon to start up in the background.  When a
+  DaemonCore process starts up with this option, disassociates itself
+  from the terminal and forks itself so that it runs in the
+  background.  This is the default behavior for Condor daemons, and
+  what you get if you specify no options at all.
+
+\item[-f] Causes the daemon to start up in the foreground.  Instead of
+  forking, the daemon just runs in the foreground.  
+
+  \textbf{NOTE:} when the \Condor{master} starts up daemons, it does
+  so with the -f option since it has already forked a process for the
+  new daemon.  That is why you will see -f in the argument list of all
+  Condor daemons that the master spawns.
+
+\item[-c filename] Causes the daemon to use the specified filename
+  (you must use a full path) as its global config file.  This
+  overrides the \Env{CONDOR\_CONFIG} environment variable, and the
+  regular locations that Condor checks for its config file: the condor
+  user's home directory and \File{/etc/condor/\condor{config}}.  
+
+\item[-p port] Causes the daemon to bind to the specified port for its
+  \Term{command socket}.  The master uses this option to make sure the
+  \Condor{collector} and \Condor{negotiator} start up on the
+  well-known ports that the rest of Condor depends on them using.  In
+  addition, you could
+
+\item[-t] Causes the daemon to print out its error message to
+  \File{stderr} instead of its specified log file.  This option forces
+  the -f option described above.
+
+\end{description}
+
