@@ -278,9 +278,9 @@ OpenFileTable::DoOpen(
 					_condor_file_warning("File '%s' is open on fd %d and fd %d",file[i].pathname,user_fd,i);
 					_condor_file_warning("Files opened twice cannot be buffered.");
 					_condor_file_warning("This limitation will be fixed in a later version of Condor.");
+					BufferGlueCloseHook(&file[i]);
+					file[i].bufferable = 0;
 				}
-				BufferGlueCloseHook(&file[i]);
-				file[i].bufferable = 0;
 				file[user_fd].bufferable = 0;
 			}
 		}
