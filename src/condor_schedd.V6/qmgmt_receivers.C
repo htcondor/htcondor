@@ -332,6 +332,8 @@ do_Q_request(AuthSock *syscall_sock)
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
 		assert( syscall_sock->code(attr_value) );
 		assert( syscall_sock->code(attr_name) );
+		if (attr_name) dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name);
+		if (attr_value) dprintf(D_SYSCALLS,"\tattr_value = %s\n",attr_value);
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
@@ -671,14 +673,15 @@ do_Q_request(AuthSock *syscall_sock)
 		rval = SendSpoolFile( filename );
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
-
+#if 0
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {
 			assert( syscall_sock->code(terrno) );
 		}
-		free( (char *)filename );
 		assert( syscall_sock->end_of_message() );;
+#endif
+		free( (char *)filename );
 		return 0;
 	}
 
