@@ -10,7 +10,7 @@ extern "C" {
 #endif
 
 /* Solaris specific change ..dhaval 6/25 */
-#if defined(Solaris) 
+#if defined(Solaris) && !defined(Solaris251)
 #	include <sys/time.h>
 #	include "condor_fix_timeval.h"
 #	include </usr/ucbinclude/sys/rusage.h>
