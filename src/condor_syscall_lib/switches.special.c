@@ -30,18 +30,9 @@
   System call stubs which need special treatment and cannot be generated
   automatically go here...
 *******************************************************************/
-#define _POSIX_SOURCE
-
-#if defined(Solaris) || defined(SUNOS41)
-#include "../condor_includes/_condor_fix_types.h"
-#if !defined(Solaris251) && !defined(SUNOS41)
-#include </usr/ucbinclude/sys/rusage.h>
-#endif
-#endif 
+#include "condor_common.h"
 
 #if defined(LINUX)
-#include <sys/stat.h>
-#include <unistd.h>
 int _xstat(int, const char *, struct stat *);
 int _fxstat(int, int, struct stat *);
 int _lxstat(int, const char *, struct stat *);
@@ -52,27 +43,15 @@ int _lxstat(int, const char *, struct stat *);
 
 #include "syscall_numbers.h"
 #include "condor_syscall_mode.h"
-#include "condor_constants.h"
 #include "file_table_interf.h"
-#include <stdio.h>
-#include <limits.h>
+
 #if defined(HPUX9)
 #	ifdef _PROTOTYPES   /* to remove compilation errors unistd.h */
 #	undef _PROTOTYPES
 #	endif
 #endif
 
-#if defined(IRIX62)
-#include "condor_fdset.h"
-#endif
-
-#include <unistd.h>
-
-#include "_condor_fix_types.h"
-#include "_condor_fix_resource.h"
-#include "condor_fix_timeval.h"
 #include <sys/uio.h>
-#include <errno.h>
 #include "debug.h"
 
 #if defined(IRIX53)
@@ -448,17 +427,13 @@ linux_fake_writev( int fd, const struct iovec *iov, int iovcnt )
 }
 #endif
 
-#if defined(SUNOS41)
-#	include <sys/termio.h>
-#	include <sys/mtio.h>
-#endif
 
 #if defined(HPUX9)
 #	include <sys/mib.h>
 #	include <sys/ioctl.h>
 #endif
 
-#if defined(Solaris)
+#if defined(Solaris) || defined(LINUX) || defined(OSF1)
 /* int
 ioctl( int fd, int request, ...) */
 #else
@@ -838,8 +813,13 @@ _sysconf(int name)
    so we can't override them.  Instead, we override the following three
    xstat definitions.  */
 
-#if defined(Solaris) || defined(IRIX53)
+#if defined(IRIX53) || (Solairs)
+
+#if defined(IRIX53)
 int _xstat(int ver, char *path, struct stat *buf)
+#elif defined(Solaris)
+int _xstat(const int ver, const char *path, struct stat *buf)
+#endif
 {
 	int	rval;
 
@@ -852,7 +832,11 @@ int _xstat(int ver, char *path, struct stat *buf)
 	return rval;
 }
 
+#if defined(IRIX53)
 int _lxstat(int ver, char *path, struct stat *buf)
+#elif defined(Solaris)
+int _lxstat(const int ver, const char *path, struct stat *buf)
+#endif
 {
 	int	rval;
 
@@ -865,7 +849,11 @@ int _lxstat(int ver, char *path, struct stat *buf)
 	return rval;
 }
 
+#if defined(IRIX53)
 int _fxstat(int ver, int fd, struct stat *buf)
+#elif defined(Solaris)
+int _fxstat(const int ver, int fd, struct stat *buf)
+#endif
 {
 	int	rval;
 	int	user_fd;
@@ -886,7 +874,8 @@ int _fxstat(int ver, int fd, struct stat *buf)
 
 	return rval;
 }
-#endif
+#endif /* IRIX || Solaris */
+
 
 /* getlogin needs to be special because it returns a char*, and until
  * we make stub_gen return longs instead of ints, casting char* to an int
