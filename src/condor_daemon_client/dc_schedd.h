@@ -87,6 +87,7 @@ public:
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* holdJobs( const char* constraint, const char* reason,
+					   CondorError * errstack,
 					   action_result_type_t result_type = AR_TOTALS,
 					   bool notify_scheduler = true );
 
@@ -102,6 +103,7 @@ public:
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* removeJobs( const char* constraint, const char* reason,
+						 CondorError * errstack,
 						 action_result_type_t result_type = AR_TOTALS,
 						 bool notify_scheduler = true );
 
@@ -119,6 +121,7 @@ public:
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* removeXJobs( const char* constraint, const char* reason,
+						  CondorError * errstack,
 						  action_result_type_t result_type = AR_TOTALS,
 						  bool notify_scheduler = true );
 
@@ -134,6 +137,7 @@ public:
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* releaseJobs( const char* constraint, const char* reason,
+						  CondorError * errstack,
 						  action_result_type_t result_type = AR_TOTALS,
 						  bool notify_scheduler = true );
 
@@ -150,6 +154,7 @@ public:
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* holdJobs( StringList* ids, const char* reason,
+					   CondorError * errstack,
 					   action_result_type_t result_type = AR_LONG,
 					   bool notify_scheduler = true );
 
@@ -167,6 +172,7 @@ public:
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* removeJobs( StringList* ids, const char* reason,
+						 CondorError * errstack,
 						 action_result_type_t result_type = AR_LONG,
 						 bool notify_scheduler = true );
 
@@ -185,6 +191,7 @@ public:
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* removeXJobs( StringList* ids, const char* reason,
+						  CondorError * errstack,
 						  action_result_type_t result_type = AR_LONG,
 						  bool notify_scheduler = true );
 
@@ -202,6 +209,7 @@ public:
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* releaseJobs( StringList* ids, const char* reason,
+						  CondorError * errstack,
 						  action_result_type_t result_type = AR_LONG,
 						  bool notify_scheduler = true );
 
@@ -211,7 +219,7 @@ public:
 		*/
 	bool reschedule();
 
-	bool spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[]);
+	bool spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError * errstack);
 
 private:
 		/** This method actually does all the brains for all versions
@@ -241,7 +249,7 @@ private:
 						const char* constraint, StringList* ids, 
 						const char* reason, const char* reason_attr,
 						action_result_type_t result_type,
-						bool notify_scheduler );
+						bool notify_scheduler, CondorError * errstack );
 
 		// I can't be copied (yet)
 	DCSchedd( const DCSchedd& );

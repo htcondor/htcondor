@@ -1949,7 +1949,7 @@ Scheduler::spoolJobFilesWorkerThread(void *arg, Stream* s)
 
 
 int
-Scheduler::spoolJobFiles(int, Stream* s, CondorError* errstack)
+Scheduler::spoolJobFiles(int, Stream* s)
 {
 	ReliSock* rsock = (ReliSock*)s;
 	int JobAdsArrayLen = 0;
@@ -1973,7 +1973,8 @@ Scheduler::spoolJobFiles(int, Stream* s, CondorError* errstack)
 		} else {
 			methods = SecMan::getDefaultAuthenticationMethods();
 		}
-		if( ! rsock->authenticate(methods.Value(), errstack) ) {
+		CondorError errstack;
+		if( ! rsock->authenticate(methods.Value(), &errstack) ) {
 				// we failed to authenticate, we should bail out now
 				// since we don't know what user is trying to perform
 				// this action.
@@ -1981,9 +1982,9 @@ Scheduler::spoolJobFiles(int, Stream* s, CondorError* errstack)
 				// need better error propagation for that...
 			dprintf( D_ALWAYS, "spoolJobFiles(): "
 					 "failed to authenticate, aborting\n" );
-			errstack->push( "SCHEDD", SCHEDD_ERR_SPOOL_FILES_FAILED,
+			errstack.push( "SCHEDD", SCHEDD_ERR_SPOOL_FILES_FAILED,
 					"Failure to spool job files: Authentication failed");
-			dprintf( D_ALWAYS, "%s", errstack->get_full_text());
+			dprintf( D_ALWAYS, "%s", errstack.get_full_text());
 			refuse( s );
 			return FALSE;
 		}
@@ -2054,7 +2055,7 @@ Scheduler::spoolJobFiles(int, Stream* s, CondorError* errstack)
 }
 
 int
-Scheduler::actOnJobs(int, Stream* s, CondorError* errstack)
+Scheduler::actOnJobs(int, Stream* s)
 {
 	ClassAd command_ad;
 	int action = -1;
@@ -2089,8 +2090,8 @@ Scheduler::actOnJobs(int, Stream* s, CondorError* errstack)
 		} else {
 			methods = SecMan::getDefaultAuthenticationMethods();
 		}
-
-		if( ! rsock->authenticate(methods.Value(), errstack) ) {
+		CondorError errstack;
+		if( ! rsock->authenticate(methods.Value(), &errstack) ) {
 				// we failed to authenticate, we should bail out now
 				// since we don't know what user is trying to perform
 				// this action.
@@ -2098,9 +2099,9 @@ Scheduler::actOnJobs(int, Stream* s, CondorError* errstack)
 				// need better error propagation for that...
 			dprintf( D_ALWAYS, "actOnJobs(): "
 					 "failed to authenticate, aborting\n" );
-			errstack->push( "SCHEDD", SCHEDD_ERR_JOB_ACTION_FAILED,
+			errstack.push( "SCHEDD", SCHEDD_ERR_JOB_ACTION_FAILED,
 					"Failed to act on jobs:  Authentication failed");
-			dprintf( D_ALWAYS, "%s", errstack->get_full_text());
+			dprintf( D_ALWAYS, "%s", errstack.get_full_text());
 			refuse( s );
 			return FALSE;
 		}

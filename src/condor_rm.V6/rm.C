@@ -39,6 +39,7 @@
 #include "dc_schedd.h"
 #include "dc_collector.h"
 #include "condor_distribution.h"
+#include "CondorError.h"
 
 
 char	*MyName;
@@ -58,7 +59,7 @@ void procArg(const char*);
 void usage();
 void handleAll();
 void handleConstraints( void );
-ClassAd* doWorkByList( StringList* ids );
+ClassAd* doWorkByList( StringList* ids, CondorError * errstack );
 void printOldMessages( ClassAd* result_ad, StringList* ids );
 void printNewMessages( ClassAd* result_ad, StringList* ids );
 
@@ -356,7 +357,11 @@ main( int argc, char *argv[] )
 		// Finally, do the actual work for all our args which weren't
 		// constraints...
 	if( job_ids ) {
-		ClassAd* result_ad = doWorkByList( job_ids );
+		CondorError errstack;
+		ClassAd* result_ad = doWorkByList( job_ids, &errstack );
+		if (had_error) {
+			fprintf (stderr, "%s", errstack.get_full_text());
+		}
 		if( old_messages ) {
 			printOldMessages( result_ad, job_ids );
 		} else {
@@ -370,7 +375,10 @@ main( int argc, char *argv[] )
 		// reschedule command now.
 	if ( mode == IDLE && had_error == false ) {
 		Daemon  my_schedd(DT_SCHEDD, NULL, NULL);
-		my_schedd.sendCommand(RESCHEDULE, Stream::safe_sock, 0);
+		CondorError errstack;
+		if (!my_schedd.sendCommand(RESCHEDULE, Stream::safe_sock, 0, &errstack)) {
+			fprintf( stderr, "%s", errstack.get_full_text() );
+		}
 	}
 
 	return had_error;
@@ -383,23 +391,23 @@ main( int argc, char *argv[] )
 // advantage of all the slick info the schedd gives us back about this
 // request.  
 bool
-doWorkByConstraint( const char* constraint )
+doWorkByConstraint( const char* constraint, CondorError * errstack )
 {
 	ClassAd* ad;
 	bool rval = true;
 	switch( mode ) {
 	case IDLE:
-		ad = schedd->releaseJobs( constraint, "via condor_release" );
+		ad = schedd->releaseJobs( constraint, "via condor_release", errstack );
 		break;
 	case REMOVED:
 		if( forceX ) {
-			ad = schedd->removeXJobs( constraint, "via condor_rm -forceX" );
+			ad = schedd->removeXJobs( constraint, "via condor_rm -forceX", errstack );
 		} else {
-			ad = schedd->removeJobs( constraint, "via condor_rm" );
+			ad = schedd->removeJobs( constraint, "via condor_rm", errstack );
 		}
 		break;
 	case HELD:
-		ad = schedd->holdJobs( constraint, "via condor_hold" );
+		ad = schedd->holdJobs( constraint, "via condor_hold", errstack );
 		break;
 	}
 	if( ! ad ) {
@@ -417,22 +425,22 @@ doWorkByConstraint( const char* constraint )
 
 
 ClassAd*
-doWorkByList( StringList* ids )
+doWorkByList( StringList* ids, CondorError *errstack )
 {
 	ClassAd* rval;
 	switch( mode ) {
 	case IDLE:
-		rval = schedd->releaseJobs( ids, "via condor_release" );
+		rval = schedd->releaseJobs( ids, "via condor_release", errstack );
 		break;
 	case REMOVED:
 		if( forceX ) {
-			rval = schedd->removeXJobs( ids, "via condor_rm -forcex" );
+			rval = schedd->removeXJobs( ids, "via condor_rm -forcex", errstack );
 		} else {
-			rval = schedd->removeJobs( ids, "via condor_rm" );
+			rval = schedd->removeJobs( ids, "via condor_rm", errstack );
 		}
 		break;
 	case HELD:
-		rval = schedd->holdJobs( ids, "via condor_hold" );
+		rval = schedd->holdJobs( ids, "via condor_hold", errstack );
 		break;
 	}
 	if( ! rval ) {
@@ -468,8 +476,9 @@ procArg(const char* arg)
 		if(*tmp == '\0')
 		// delete the cluster
 		{
+			CondorError errstack;
 			sprintf( constraint, "%s == %d", ATTR_CLUSTER_ID, c );
-			if( doWorkByConstraint(constraint) ) {
+			if( doWorkByConstraint(constraint, &errstack) ) {
 				fprintf( old_messages ? stderr : stdout, 
 						 "Cluster %d %s.\n", c,
 						 (mode == REMOVED && forceX == false) ?
@@ -478,6 +487,7 @@ procArg(const char* arg)
 						 "has been removed locally (remote state unknown)" :
 						 (mode==HELD)?"held":"released" );
 			} else {
+				fprintf( stderr, "%s", errstack.get_full_text());
 				fprintf( stderr, 
 						 "Couldn't find/%s all jobs in cluster %d.\n",
 						 (mode==REMOVED)?"remove":(mode==HELD)?"hold":
@@ -510,8 +520,9 @@ procArg(const char* arg)
 	else if(isalpha(*arg))
 	// process by user name
 	{
+		CondorError errstack;
 		sprintf( constraint, "%s == \"%s\"", ATTR_OWNER, arg );
-		if( doWorkByConstraint(constraint) ) {
+		if( doWorkByConstraint(constraint, &errstack) ) {
 			fprintf( stdout, "User %s's job(s) %s.\n", arg,
 					 (mode == REMOVED && forceX == false) ?
 					 "have been marked for removal" :
@@ -519,6 +530,7 @@ procArg(const char* arg)
 					 "have been removed locally (remote state unknown)" :
 					 (mode==HELD)?"held":"released" );
 		} else {
+			fprintf( stderr, "%s", errstack.get_full_text() );
 			fprintf( stderr, 
 					 "Couldn't find/%s all of user %s's job(s).\n",
 					 (mode==REMOVED)?"remove":(mode==HELD)?"hold":
@@ -553,7 +565,8 @@ handleAll()
 	char constraint[128];
 	sprintf( constraint, "%s >= 0", ATTR_CLUSTER_ID );
 
-	if( doWorkByConstraint(constraint) ) {
+	CondorError errstack;
+	if( doWorkByConstraint(constraint, &errstack) ) {
 		fprintf( stdout, "All jobs %s.\n",
 				 (mode == REMOVED && forceX == false) ?
 				 "marked for removal" :
@@ -561,6 +574,7 @@ handleAll()
 				 "removed locally (remote state unknown)" :
 				 (mode==HELD)?"held":"released" );
 	} else {
+		fprintf( stderr, "%s", errstack.get_full_text() );
 		fprintf( stderr, "Could not %s all jobs.\n",
 				 (mode==REMOVED)?"remove":
 				 (mode==HELD)?"hold":"release" );
@@ -577,7 +591,8 @@ handleConstraints( void )
 	}
 	const char* tmp = global_constraint.Value();
 
-	if( doWorkByConstraint(tmp) ) {
+	CondorError errstack;
+	if( doWorkByConstraint(tmp, &errstack) ) {
 		fprintf( stdout, "Jobs matching constraint %s %s\n", tmp,
 				 (mode == REMOVED && forceX == false) ?
 				 "have been marked for removal" :
@@ -585,6 +600,7 @@ handleConstraints( void )
 				 "have been removed locally (remote state unknown)" :
 				 (mode==HELD)?"held":"released" );
 	} else {
+		fprintf( stderr, "%s", errstack.get_full_text() );
 		fprintf( stderr, 
 				 "Couldn't find/%s all jobs matching constraint %s\n",
 				 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release",

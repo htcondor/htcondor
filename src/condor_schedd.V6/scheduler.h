@@ -214,8 +214,8 @@ class Scheduler : public Service
 	friend	void	job_prio(ClassAd *);
 	friend  int		find_idle_sched_universe_jobs(ClassAd *);
 	void			display_shadow_recs();
-	int				actOnJobs(int, Stream *, CondorError*);
-	int				spoolJobFiles(int, Stream *, CondorError*);
+	int				actOnJobs(int, Stream *);
+	int				spoolJobFiles(int, Stream *);
 	static int		spoolJobFilesWorkerThread(void *, Stream*);
 	int				spoolJobFilesReaper(int,int);
 	void				PeriodicExprHandler( void );

@@ -670,10 +670,13 @@ main( int argc, char *argv[] )
 		bool result;
 			// perhaps check for proper schedd version here?
 		fprintf(stdout,"Spooling data files for %d jobs...\n",JobAdsArrayLen);
+		CondorError errstack;
 		result = MySchedd->spoolJobFiles( JobAdsArrayLen,
-										  JobAdsArray.getarray() );
+										  JobAdsArray.getarray(),
+										  &errstack );
 		if ( !result ) {
-			fprintf( stderr, "\nERROR: Failed to spool job files.\n" );
+			fprintf( stderr, "\n%s", errstack.get_full_text() );
+			fprintf( stderr, "ERROR: Failed to spool job files.\n" );
 			exit(1);
 		}
 	}

@@ -50,6 +50,7 @@ DCSchedd::~DCSchedd( void )
 
 ClassAd*
 DCSchedd::holdJobs( const char* constraint, const char* reason,
+					CondorError * errstack,
 					action_result_type_t result_type,
 					bool notify_scheduler )
 {
@@ -60,12 +61,13 @@ DCSchedd::holdJobs( const char* constraint, const char* reason,
 	}
 	return actOnJobs( JA_HOLD_JOBS, "hold", constraint, NULL, 
 					  reason, ATTR_HOLD_REASON, result_type,
-					  notify_scheduler );
+					  notify_scheduler, errstack );
 }
 
 
 ClassAd*
 DCSchedd::removeJobs( const char* constraint, const char* reason,
+					  CondorError * errstack,
 					  action_result_type_t result_type,
 					  bool notify_scheduler )
 {
@@ -76,12 +78,13 @@ DCSchedd::removeJobs( const char* constraint, const char* reason,
 	}
 	return actOnJobs( JA_REMOVE_JOBS, "remove", constraint, NULL,
 					  reason, ATTR_REMOVE_REASON, result_type,
-					  notify_scheduler );
+					  notify_scheduler, errstack );
 }
 
 
 ClassAd*
 DCSchedd::removeXJobs( const char* constraint, const char* reason,
+					   CondorError * errstack,
 					   action_result_type_t result_type,
 					   bool notify_scheduler )
 {
@@ -92,12 +95,13 @@ DCSchedd::removeXJobs( const char* constraint, const char* reason,
 	}
 	return actOnJobs( JA_REMOVE_X_JOBS, "removeX", constraint, NULL,
 					  reason, ATTR_REMOVE_REASON, result_type,
-					  notify_scheduler );
+					  notify_scheduler, errstack );
 }
 
 
 ClassAd*
 DCSchedd::releaseJobs( const char* constraint, const char* reason,
+					   CondorError * errstack,
 					   action_result_type_t result_type,
 					   bool notify_scheduler )
 {
@@ -108,12 +112,13 @@ DCSchedd::releaseJobs( const char* constraint, const char* reason,
 	}
 	return actOnJobs( JA_RELEASE_JOBS, "release", constraint, NULL,
 					  reason, ATTR_RELEASE_REASON, result_type,
-					  notify_scheduler );
+					  notify_scheduler, errstack );
 }
 
 
 ClassAd*
 DCSchedd::holdJobs( StringList* ids, const char* reason,
+					CondorError * errstack,
 					action_result_type_t result_type,
 					bool notify_scheduler )
 {
@@ -124,12 +129,13 @@ DCSchedd::holdJobs( StringList* ids, const char* reason,
 	}
 	return actOnJobs( JA_HOLD_JOBS, "hold", NULL, ids, reason,
 					  ATTR_HOLD_REASON, result_type,
-					  notify_scheduler );
+					  notify_scheduler, errstack );
 }
 
 
 ClassAd*
 DCSchedd::removeJobs( StringList* ids, const char* reason,
+					CondorError * errstack,
 					action_result_type_t result_type,
 					bool notify_scheduler )
 {
@@ -140,12 +146,13 @@ DCSchedd::removeJobs( StringList* ids, const char* reason,
 	}
 	return actOnJobs( JA_REMOVE_JOBS, "remove", NULL, ids,
 					  reason, ATTR_REMOVE_REASON, result_type,
-					  notify_scheduler );
+					  notify_scheduler, errstack );
 }
 
 
 ClassAd*
 DCSchedd::removeXJobs( StringList* ids, const char* reason,
+					   CondorError * errstack,
 					   action_result_type_t result_type,
 					   bool notify_scheduler )
 {
@@ -156,12 +163,13 @@ DCSchedd::removeXJobs( StringList* ids, const char* reason,
 	}
 	return actOnJobs( JA_REMOVE_X_JOBS, "removeX", NULL, ids,
 					  reason, ATTR_REMOVE_REASON, result_type,
-					  notify_scheduler );
+					  notify_scheduler, errstack );
 }
 
 
 ClassAd*
 DCSchedd::releaseJobs( StringList* ids, const char* reason,
+					   CondorError * errstack,
 					   action_result_type_t result_type,
 					   bool notify_scheduler )
 {
@@ -172,7 +180,7 @@ DCSchedd::releaseJobs( StringList* ids, const char* reason,
 	}
 	return actOnJobs( JA_RELEASE_JOBS, "release", NULL, ids,
 					  reason, ATTR_RELEASE_REASON, result_type,
-					  notify_scheduler );
+					  notify_scheduler, errstack );
 }
 
 
@@ -183,7 +191,7 @@ DCSchedd::reschedule()
 }
 
 bool 
-DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[])
+DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError * errstack)
 {
 	int reply;
 	int i;
@@ -199,7 +207,7 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[])
 				 "Failed to connect to schedd (%s)\n", _addr );
 		return false;
 	}
-	if( ! startCommand(SPOOL_JOB_FILES, (Sock*)&rsock) ) {
+	if( ! startCommand(SPOOL_JOB_FILES, (Sock*)&rsock, 0, errstack) ) {
 		dprintf( D_ALWAYS, "DCSchedd::spoolJobFiles: "
 				 "Failed to send command (SPOOL_JOB_FILES) to the schedd\n" );
 		return false;
@@ -207,9 +215,8 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[])
 
 
 		// First, if we're not already authenticated, force that now. 
-	CondorError errstack;
-	if (!forceAuthentication( &rsock, &errstack )) {
-		dprintf(D_ALWAYS,"DCSchedd: authentication failure\n%s", errstack.get_full_text());
+	if (!forceAuthentication( &rsock, errstack )) {
+		dprintf(D_ALWAYS,"DCSchedd: authentication failure\n%s", errstack->get_full_text());
 		return false;
 	}
 
@@ -273,7 +280,8 @@ DCSchedd::actOnJobs( job_action_t action, const char* action_str,
 					 const char* constraint, StringList* ids, 
 					 const char* reason, const char* reason_attr,
 					 action_result_type_t result_type,
-					 bool notify_scheduler )
+					 bool notify_scheduler,
+					 CondorError * errstack )
 {
 	char* tmp = NULL;
 	char buf[512];
@@ -354,15 +362,14 @@ DCSchedd::actOnJobs( job_action_t action, const char* action_str,
 				 "Failed to connect to schedd (%s)\n", _addr );
 		return NULL;
 	}
-	if( ! startCommand(ACT_ON_JOBS, (Sock*)&rsock) ) {
+	if( ! startCommand(ACT_ON_JOBS, (Sock*)&rsock, 0, errstack) ) {
 		dprintf( D_ALWAYS, "DCSchedd::actOnJobs: "
 				 "Failed to send command (ACT_ON_JOBS) to the schedd\n" );
 		return NULL;
 	}
 		// First, if we're not already authenticated, force that now. 
-	CondorError errstack;
-	if (!forceAuthentication( &rsock, &errstack )) {
-		dprintf(D_ALWAYS,"DCSchedd: authentication failure\n%s", errstack.get_full_text());
+	if (!forceAuthentication( &rsock, errstack )) {
+		dprintf(D_ALWAYS,"DCSchedd: authentication failure\n%s", errstack->get_full_text());
 		return NULL;
 	}
 
