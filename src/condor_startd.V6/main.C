@@ -28,7 +28,6 @@
  */
 #define _STARTD_NO_DECLARE_GLOBALS 1
 #include "startd.h"
-static char *_FileName_ = __FILE__;
 
 // Define global variables
 
@@ -101,7 +100,7 @@ usage( char* MyName)
 
 
 int
-main_init( int argc, char* argv[] )
+main_init( int, char* argv[] )
 {
 	int		skip_benchmarks = FALSE;
 	int		rval;
