@@ -784,7 +784,6 @@ Wrapup( )
 	}
 }
 
-
 void
 update_job_status( struct rusage *localp, struct rusage *remotep )
 {
@@ -809,13 +808,17 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 					ATTR_JOB_REMOTE_WALL_CLOCK, accum_time);
 
 	if( status == REMOVED ) {
-		dprintf( D_ALWAYS, "update_job_status(): Job %d.%d has been removed by condor_rm\n",
-											Proc->id.cluster, Proc->id.proc );
+		dprintf( D_ALWAYS, "update_job_status(): Job %d.%d has been removed "
+				 "by condor_rm\n", Proc->id.cluster, Proc->id.proc );
 	} else {
 
-		dprintf(D_FULLDEBUG,"TIME DEBUG 1 USR remotep=%lu Proc=%lu utime=%f\n",remotep->ru_utime.tv_sec, Proc->remote_usage[0].ru_utime.tv_sec, utime);
+		dprintf(D_FULLDEBUG,"TIME DEBUG 1 USR remotep=%lu Proc=%lu utime=%f\n",
+				remotep->ru_utime.tv_sec,
+				Proc->remote_usage[0].ru_utime.tv_sec, utime);
 
-		dprintf(D_FULLDEBUG,"TIME DEBUG 2 SYS remotep=%lu Proc=%lu utime=%f\n",remotep->ru_stime.tv_sec, Proc->remote_usage[0].ru_stime.tv_sec, stime);
+		dprintf(D_FULLDEBUG,"TIME DEBUG 2 SYS remotep=%lu Proc=%lu utime=%f\n",
+				remotep->ru_stime.tv_sec,
+				Proc->remote_usage[0].ru_stime.tv_sec, stime);
 
 		/* Here we keep usage info on the job when the Shadow first starts in
 		 * tstartup_local/remote, so we can "reset" it back each subsequent
@@ -826,16 +829,18 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 		 * here.... -Todd */
 		if (tstartup_flag == 0 ) {
 			tstartup_flag = 1;
-			memcpy(&tstartup_local, &Proc->local_usage, sizeof(struct rusage) );
-			memcpy(&tstartup_remote, &Proc->remote_usage[0], sizeof(struct rusage) );
+			memcpy(&tstartup_local, &Proc->local_usage, sizeof(struct rusage));
+			memcpy(&tstartup_remote, &Proc->remote_usage[0],
+				   sizeof(struct rusage));
 		} else {
 			memcpy(&Proc->local_usage,&tstartup_local,sizeof(struct rusage));
-			/* Now only copy if time in remotep > 0.  Otherwise, we'll erase the
-			 * time updates from any periodic checkpoints if the job ends up 
-			 * exiting without a checkpoint on this run.  -Todd, 6/97. 
-			*/
+			/* Now only copy if time in remotep > 0.  Otherwise, we'll
+			 * erase the time updates from any periodic checkpoints if
+			 * the job ends up exiting without a checkpoint on this
+			 * run.  -Todd, 6/97.  */
 			if ( remotep->ru_utime.tv_sec + remotep->ru_stime.tv_sec > 0 )
-				memcpy(&Proc->remote_usage[0],&tstartup_remote, sizeof(struct rusage) );
+				memcpy(&Proc->remote_usage[0],&tstartup_remote,
+					   sizeof(struct rusage) );
 		}
 
 		update_rusage( &Proc->local_usage, localp );
@@ -844,28 +849,28 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 
 		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_IMAGE_SIZE, 
 						ImageSize);
-		// SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS, 
-		//				Proc->status);
-		// SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_CURRENT_HOSTS, 0);
 
 		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_EXIT_STATUS,
 						JobExitStatus);
 
 		rusage_to_float( Proc->local_usage, &utime, &stime );
-		SetAttributeFloat(Proc->id.cluster, Proc->id.proc, ATTR_JOB_LOCAL_USER_CPU, 
-						  utime);
-		SetAttributeFloat(Proc->id.cluster, Proc->id.proc, ATTR_JOB_LOCAL_SYS_CPU, 
-						  stime);
+		SetAttributeFloat(Proc->id.cluster, Proc->id.proc,
+						  ATTR_JOB_LOCAL_USER_CPU, utime);
+		SetAttributeFloat(Proc->id.cluster, Proc->id.proc,
+						  ATTR_JOB_LOCAL_SYS_CPU, stime);
 
 		rusage_to_float( Proc->remote_usage[0], &utime, &stime );
-		SetAttributeFloat(Proc->id.cluster, Proc->id.proc, ATTR_JOB_REMOTE_USER_CPU, 
-						  utime);
-		SetAttributeFloat(Proc->id.cluster, Proc->id.proc, ATTR_JOB_REMOTE_SYS_CPU, 
-						  stime);
-		dprintf(D_FULLDEBUG,"TIME DEBUG 3 USR remotep=%lu Proc=%lu utime=%f\n",remotep->ru_utime.tv_sec, Proc->remote_usage[0].ru_utime.tv_sec, utime);
-		dprintf(D_FULLDEBUG,"TIME DEBUG 4 SYS remotep=%lu Proc=%lu utime=%f\n",remotep->ru_stime.tv_sec, Proc->remote_usage[0].ru_stime.tv_sec, stime);
+		SetAttributeFloat(Proc->id.cluster, Proc->id.proc,
+						  ATTR_JOB_REMOTE_USER_CPU, utime);
+		SetAttributeFloat(Proc->id.cluster, Proc->id.proc,
+						  ATTR_JOB_REMOTE_SYS_CPU, stime);
+		dprintf(D_FULLDEBUG,"TIME DEBUG 3 USR remotep=%lu Proc=%lu utime=%f\n",
+				remotep->ru_utime.tv_sec,
+				Proc->remote_usage[0].ru_utime.tv_sec, utime);
+		dprintf(D_FULLDEBUG,"TIME DEBUG 4 SYS remotep=%lu Proc=%lu utime=%f\n",
+				remotep->ru_stime.tv_sec,
+				Proc->remote_usage[0].ru_stime.tv_sec, stime);
 
-		// dprintf( D_ALWAYS, "Shadow: marked job status %s\n", JobStatusNames[Proc->status] );
 		if (LastCkptServer) {
 			SetAttributeString(Proc->id.cluster, Proc->id.proc,
 							   ATTR_LAST_CKPT_SERVER, LastCkptServer);
