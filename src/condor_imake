@@ -38,6 +38,16 @@ elif [ -f /usr/kerberos/lib/libkrb5.a ] ; then
 	fi
 
 	KerbFlags="$KerbPath $HasKerb $KerbK5"
+elif [ -f /usr/local/lib/libkrb5.a ] ; then
+	KerbPath="-DKERBEROS_PATH=/usr/local"
+	HasKerb="-DHAS_KERBEROS=YES"
+	if [ -f /usr/local/lib/libk5crypto.a ] ; then
+		KerbK5="-DKERBEROS_K5=YES"
+	else
+		KerbK5="-DKERBEROS_K5=NO"
+	fi
+
+	KerbFlags="$KerbPath $HasKerb $KerbK5"
 fi
 
 # figure out where that annoying libgcc is... 
@@ -85,6 +95,8 @@ elif [ $os = "SunOS" ]; then
 		Opsys="-DIS_SOLARIS27"
 	elif [ $osversion = "5.8" ] ; then
 		Opsys="-DIS_SOLARIS28"
+	elif [ $osversion = "5.9" ] ; then
+		Opsys="-DIS_SOLARIS29"
 	fi
 
 elif [ $os = "IRIX" ] ; then
@@ -95,7 +107,7 @@ elif [ $os = "IRIX" ] ; then
 	fi
 fi
 
-echo imake -s Makefile $ArchFlag $Opsys $Other $Other2 $EgcsLib $KerbFlags -I../config -I../../config $*
+#echo imake -s Makefile $ArchFlag $Opsys $Other $Other2 $EgcsLib $KerbFlags -I../config -I../../config $*
 
 imake -s Makefile $ArchFlag $Opsys $Other $Other2 $EgcsLib $KerbFlags -I../config -I../../config $*
 
