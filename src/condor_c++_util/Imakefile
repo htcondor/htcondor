@@ -88,6 +88,7 @@ CONLIBAPI_OBJ = \
 	distribution.o \
 	my_distribution.o \
 	$(CLASSAD_OBJ) \
+	../condor_util_lib/get_random_num.o \
 	$(DH_OBJ) \
 	c++_util_instantiate.o \
 	libcondorapi_stubs.o \
