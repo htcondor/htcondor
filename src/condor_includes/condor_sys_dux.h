@@ -92,4 +92,13 @@ END_C_DECLS
 #include <netdb.h>
 #undef gethostid
 
+
+/* On Digital Unix, basename() has the wrong prototype.  Normally,
+   we'd "hide" it, but the system header files are already doing wierd
+   things with it, like "#define basename _Ebasename", etc.  So, to
+   effectively hide it, all we have to do is undef what the system
+   header files have done. -Derek Wright 10/30/98 */
+#include <string.h>
+#undef basename
+
 #endif /* CONDOR_SYS_DUX_H */
