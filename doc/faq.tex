@@ -1,3 +1,4 @@
+
 \index{Condor!FAQ|(}
 \index{Condor!Frequently Asked Questions|(}
 \index{FAQ|(}
@@ -6,20 +7,22 @@
 This is where you can find quick answers to some commonly asked
 questions about Condor.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Obtaining \& Installing Condor}
-\index{Condor!downloading|(}
-\index{Condor!distribution|(}
-\index{Condor!getting|(}
-\index{Condor!binaries|(}
 
-\subsection*{Where can I download Condor?}
+\begin{description}
+\item[Where can I download Condor?]
+\index{Condor!downloading}
+\index{Condor!distribution}
+\index{Condor!getting}
+\index{Condor!binaries}
 
 Condor can be downloaded from
 \URL{http://www.cs.wisc.edu/condor/downloads} (Madison, Wisconsin,
 USA) or \URL{http://www.bo.infn.it/condor-mirror/downloads} (a mirror
 site at the Istituto Nazionale di Fisica Nucleare in Bologna, Italy).
 
-\subsection*{When I click to download Condor, it sends me back to the downloads page!}
+\item[When I click to download Condor, it sends me back to the downloads page!]
 
 If you are trying to download Condor through a web proxy, try
 disabling it.
@@ -27,26 +30,23 @@ Our web site uses the ``referring page'' as you navigate through our
 download menus in order to give you the right version of Condor, but
 sometimes proxies block this information from reaching our web site.
 
-\subsection*{What platforms do you support?}
+\item[What platforms do you support?]
 
 See Section~\ref{sec:Availability}, on
 page~\pageref{sec:Availability}.
 
-\index{Condor!binaries|)}
 
-\subsection*{Do you distribute source code?}
-\index{Condor!source code|(}
+\item[Do you distribute source code?]
+\index{Condor!source code}
 
 At this time we do \Bold{not} distribute source code publicly, but
 instead consider requests on a case-by-case basis.
-If you need the source code, please email us at
+If you need the source code, please e-mail us at
 \Email{condor-admin@cs.wisc.edu} explaining why, and we'll get back to
 you.
 
-\index{Condor!source code|)}
 
-%%%%%%%%%%%%%%%%
-\subsection*{How do I upgrade the Unix machines in my pool from 6.2.x to 6.4.x?}
+\item[How do I upgrade the Unix machines in my pool from 6.2.x to 6.4.x?]
 \index{upgrade!version 6.2.x to version 6.4.x}
 
 This series of steps explains how to upgrade a pool of machines
@@ -192,7 +192,7 @@ Release all jobs in the queue, but running \Condor{release}.
 The \File{man} directory is new with Condor version 6.4.
 It contains manual pages.
 Note that installation of manual pages is optional;
-the manual pages are available in the manual, in
+the chapter containing manual pages are in
 section~\ref{sec:command-reference}.
 
 To install the manual pages, move the \File{man} directory
@@ -210,29 +210,22 @@ Add the path name to this directory to the
 %pvm
 %condorview server
 
-%%%%%%%%%%%%%%%%
-
-\subsection*{What is ``Personal Condor''?}
-\index{Condor!Personal|(}
-\index{Personal Condor|(}
+\item[What is Personal Condor?]
+\index{Condor!Personal}
+\index{Personal Condor}
 
 Personal Condor is a term used to describe a specific style of Condor
 installation suited for individual users who do not have their own
 pool of machines, but want to submit Condor jobs to run elsewhere.
 
 A Personal Condor is essentially a one-machine, self-contained Condor
-pool which can use ``flocking'' to access resources in other Condor
+pool which can use \Term{flocking} to access resources in other Condor
 pools.
 See Section~\ref{sec:Flocking}, on page~\pageref{sec:Flocking} for
 more information on flocking.
 
-\index{Personal Condor|)}
-\index{Condor!Personal|)}
-\index{Condor!downloading|)}
-\index{Condor!distribution|)}
-\index{Condor!getting|)}
 
-\subsection*{What do I do now? My installation of Condor does not work.}
+\item[What do I do now? My installation of Condor does not work.]
 
 What to do to get Condor running properly depends on what sort of
 error occurs. 
@@ -297,23 +290,28 @@ local Condor configuration file:
 Where \verb@machine-ip-address@ is the IP address of the interface you wish
 Condor to use.
 
-\section{Setting up Condor}
+\end{description}
 
-\subsection*{How do I set up a central manager on a machine with multiple
-network interfaces?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Setting up Condor}
+\index{running a job!on only certain machines}
+\index{running a job!only at night|)}
+\index{running a job!at certain times of day|)}
+
+\begin{description}
+\item[How do I set up a central manager on a machine with multiple network interfaces?]
 
 Please see section~\ref{sec:Multiple-Interfaces} on 
 page~\pageref{sec:Multiple-Interfaces}.
 
-\subsection*{How do I get more than one job to run on my SMP machine?}
+\item[How do I get more than one job to run on my SMP machine?]
 
 Condor will automatically recognize a SMP machine and advertise each
 CPU of the machine separately.
 For more details, see section~\ref{sec:Configuring-SMP} on
 page~\pageref{sec:Configuring-SMP}.
 
-\subsection*{How do I set up my machines so that only certain users's
-jobs will run on them?}
+\item[How do I set up my machines so that only certain users's jobs will run on them?]
 
 Restrictions on what jobs will run on a given resource can be easily
 specified in the resource's Requirements statement.
@@ -327,9 +325,7 @@ machine's Condor configuration file:
 To configure multiple machines to do so, simply create a common
 configuration file containing this requirement for them to share.
 
-\subsection*{How do I configure Condor to run my jobs only on machines
-that have the right packages installed?}
-\index{running a job!on only certain machines|(}
+\item[How do I configure Condor to run my jobs only on machines that have the right packages installed?]
 
 This is a two-step process.
 First, you need to tell the machines to report that they have special
@@ -359,26 +355,19 @@ the HAS\_MY\_SOFTWARE parameter defined, the job's Requirements
 expression will not evaluate to ``undefined'', preventing it from
 running anywhere!
 
-\index{running a job!on only certain machines|)}
 
-\subsection*{How do I configure Condor to only run jobs at night?}
+\item[How do I configure Condor to only run jobs at night?]
 
 A commonly requested policy for running batch jobs is to only allow
 them to run at night, or at other pre-specified times of the day.
 Condor allows you to configure this policy with the use of the
 \Attr{ClockMin} and \Attr{ClockDay} \Condor{startd} attributes.  
 A complete example of how to use these attributes for this kind of
-policy is discussed in subsection~\ref{sec:Time-Of-Day-Policy} on
-page~\pageref{sec:Time-Of-Day-Policy}, ``A Policy for Only Running
-Jobs at Certain Times of the Day'', inside
-section~\ref{sec:Configuring-Policy} on ``Configuring The Startd
-Policy''
-\index{running a job!only at night|)}
-\index{running a job!at certain times of day|)}
+policy is discussed in subsubsection~\ref{sec:Policy-Examples} on
+page~\pageref{sec:Policy-Examples}.
 
 
-\subsection*{Why will the \Condor{master} not run when a local
-configuration file is missing?}
+\item[Why will the \Condor{master} not run when a local configuration file is missing?]
 
 If a \Macro{LOCAL\_CONFIG\_FILE} 
 is specified in the global configuration file,
@@ -419,10 +408,18 @@ and Condor might do bad things if it started without those settings.
 
 If supplied it with an empty file, the \Condor{master} works fine.
 
-\section{Running Condor Jobs}
+\end{description}
 
-\subsection*{I'm at the University of Wisconsin-Madison Computer
-Science Dept., and I am having problems!}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Running Condor Jobs}
+\index{job!exiting with signal 9 \(Unix\)}
+\index{Solaris26}
+\index{Solaris27}
+\index{vanilla jobs!cycling between suspended and unsuspended}
+
+\begin{description}
+\item[I'm at the University of Wisconsin-Madison Computer Science Dept., and I am having problems!]
 
 Please see the web page \URL{http://www.cs.wisc.edu/condor/uwcs}.
 As
@@ -431,7 +428,7 @@ access control restrictions which can prevent Condor jobs from running
 properly.
 The above URL will explain how to solve the problem.
 
-\subsection*{I'm getting a lot of email from Condor.  Can I just delete it all?}
+\item[I'm getting a lot of e-mail from Condor.  Can I just delete it all?]
 
 Generally you shouldn't ignore \Bold{all} of the mail Condor sends,
 but you can reduce the amount you get by telling Condor that you don't
@@ -445,8 +442,7 @@ See the Notification parameter in the \Condor{q} man page on
 page~\pageref{man-condor-submit-notification} of this manual for more
 information.
 
-\subsection*{Why will my vanilla jobs only run on the machine where I
-submitted them from?}
+\item[Why will my vanilla jobs only run on the machine where I submitted them from?]
 
 Check the following:
 \begin {enumerate}
@@ -469,9 +465,8 @@ See Section~\ref{sec:Non-Root}, on page~\pageref{sec:Non-Root}.
 
 \end{enumerate}
 
-\subsection*{My job starts but exits right away with signal 9.}
+\item[My job starts but exits right away with signal 9.]
 
-\index{job!exiting!signal 9 \(Unix\)|(}
 
 This can occur when the machine your job is running on is missing a
 shared library required by your program.
@@ -480,9 +475,8 @@ may execute on.
 Another, easier, solution is to try to re-link your program statically
 so it contains all the routines it needs.
 
-\index{job!exiting!signal 9 \(Unix\)|)}
 
-\subsection*{Why aren't any or all of my jobs running?}
+\item[Why aren't any or all of my jobs running?]
 
 Problems like the following are often reported to us:
 
@@ -520,19 +514,14 @@ Look for messages about priority, "no more machines", or similar.
 
 \end{enumerate}
 
-\subsection*{Can I submit my standard universe SPARC Solaris 2.6 jobs
-and have them run on a SPARC Solaris 2.7 machine?}
-\index{Solaris26}
-\index{Solaris27}
+\item[Can I submit my standard universe SPARC Solaris 2.6 jobs and have them run on a SPARC Solaris 2.7 machine?]
 
 No. You may only use binary compatibility between SPARC Solaris 2.5.1
 and SPARC Solaris 2.6 and between SPARC Solaris 2.7 and SPARC Solaris
 2.8, but not between SPARC Solaris 2.6 and SPARC Solaris 2.7.  We may
 implement support for this feature in a future release of Condor.
 
-\subsection*{Why do my vanilla jobs keep cycling between suspended and
-unsuspended?}
-\index{vanilla jobs!cycling between suspended and unsuspended}
+\item[Why do my vanilla jobs keep cycling between suspended and unsuspended?]
 
 This is a load sampling error that Condor performs when starting a many
 process vanilla job with heavy initial load.
@@ -557,7 +546,7 @@ The above policy says to only suspend the job if the cpu has been busy
 with non-Condor load at least three minutes and it has been at least 90
 seconds since the start of the job.
 
-\subsection*{Why might my job be preempted (evicted)?}
+\item[Why might my job be preempted (evicted)?]
 
 There are four circumstances under which Condor may evict a job.
 They are controlled by different expressions.
@@ -605,10 +594,17 @@ Reason number 4 is if Condor is to be shutdown:
 on a machine that is currently running a job.
 Condor evicts the currently running job before proceding
 with the shutdown.
+\end{description}
 
-\section{Condor on Windows NT / Windows 2000}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Condor on Windows}
+\index{job!exiting with status 128 \(NT\)}
+\index{decimal point!problems with}
+\index{DEFAULT\_DOMAIN\_NAME macro@\texttt{DEFAULT\_DOMAIN\_NAME} macro}
+\index{configuration macro!\texttt{DEFAULT\_DOMAIN\_NAME}}
 
-\subsection*{Will Condor work on a network of mixed Unix and NT machines?}
+\begin{description}
+\item[Will Condor work on a network of mixed Unix and NT machines?]
 
 You can have a Condor pool that consists of both Unix and NT machines.
 
@@ -641,7 +637,16 @@ NT or Unix machines.}
 \end{enumerate}
 
 
-\subsection*{Job submitted from Unix to execute on NT do not work properly.}
+\item[What versions of Windows will Condor run on?]
+
+Condor does run under Windows 2000 Professional and Server and
+also under Windows XP.
+
+Personal Condor also works.
+
+
+\item[Job submitted from Unix to execute on NT do not work properly.]
+
 A difficulty with defaults causes jobs submitted from Unix for execution
 on an NT platform to remain in the queue, but make no progress.
 For jobs with this problem, log files will contain error messages
@@ -657,8 +662,7 @@ into the submit description file for jobs submitted from a Unix
 machine for execution on a Windows NT machine.
 
 
-\subsection*{When I run \Condor{status} I get a communication error, or the
-Condor daemon log files report a failure to bind.}
+\item[When I run \Condor{status} I get a communication error, or the Condor daemon log files report a failure to bind.]
 
 Condor uses the first network interface it sees on your machine.
 This problem usually means you have an extra, inactive network
@@ -675,8 +679,7 @@ Condor config file:
 Where ``ip-address'' is the IP address of the interface you wish
 Condor to use.
 
-\subsection*{My job starts but exits right away with status 128.}
-\index{job!exiting!status 128 \(NT\)|(}
+\item[My job starts but exits right away with status 128.]
 
 This can occur when the machine your job is running on is missing a
 DLL (Dynamically Linked Library) required by your program.
@@ -686,12 +689,10 @@ the TRANSFER\_INPUT\_FILES list in the job's submit file.
 To find out what DLLs your program depends on, right-click the program
 in Explorer, choose Quickview, and look under ``Import List''.
 
-\index{job!exiting!status 128 \(NT\)|)}
 
-\subsection*{Why does the startd crash on CondorNT with the error\\
-"caInsert: Can't insert CpuBusy into target classad."?}
+\item[Why does the startd crash on CondorNT with the error\\
+"caInsert: Can't insert CpuBusy into target classad."?]
 
-\index{decimal point!problems with}
 This is a common problem with European installations on Windows.
 The problem is Condor expects all decimal points to be the
 period character (.),
@@ -701,7 +702,7 @@ however we have users who have fixed the problem by
 changing the following registry value to a period instead of a comma:
 \verb@HKEY_USERS\.DEFAULT\Control Panel\International\sDecimal@
 
-\subsection*{How can I access network files with Condor on NT?}
+\item[How can I access network files with Condor on NT?]
 
 Features to allow Condor NT to work well with a network file server are 
 coming very soon.  However, there are a couple of work-arounds which you 
@@ -806,7 +807,7 @@ their own module for starting jobs under Condor NT to access file
 servers.  It involves storing submitting user's passwords on a centralized 
 server.  Below I have included the README from this contrib module, which 
 will soon appear on our website within a week or two.  If you want it 
-before that, let me know, and I could email it to you.
+before that, let me know, and I could e-mail it to you.
 
 Here is the README from the Bristol Condor NT contrib module:
 
@@ -982,20 +983,58 @@ A basic installation script for use with the Inno Setup installation
 package compiler can be found in the Install folder.
 \end{verbatim}
 
-\subsection*{Does Condor run under Windows 2000?}
+\item[\Condor{off} cannot find my host, and \Condor{status} does not give me a complete host name.  What is wrong?]
 
-Condor does run under Windows 2000 Professional and Server.
+Given the command
+\begin{verbatim}
+  condor_off hostname2
+\end{verbatim}
+an error message of the form
+\begin{verbatim}
+  Can't find address for master hostname2.somewhere.edu
+\end{verbatim}
+appears.
+Yet, when looking at the hostnames with
+\begin{verbatim}
+  condor_status -master
+\end{verbatim}
+the output is of the form 
+\begin{verbatim}
+  hostname1.somewhere.edu
+  hostname2
+  hostname3.somewhere.edu
+\end{verbatim}
 
-There will be problems if 
-you have more than 2 Gigabytes of RAM or swap space.
+To correct this incomplete host name, add an entry to the
+configuration file for
+\MacroNI{DEFAULT\_DOMAIN\_NAME} 
+that specifies the domain name to be used.
+For the example given, the configuration entry will be
+\begin{verbatim}
+  DEFAULT_DOMAIN_NAME = somewhere.edu
+\end{verbatim}
 
-A Personal Condor installation will \emph{not} work.
+After adding this configuration file entry, use \Condor{restart}
+to restart the Condor daemons and effect the change.
 
+%To correct this incomplete host name on Windows 2000 or XP,
+%use the ``Append parent suffixes of the primary DNS suffix''
+%checkbox for the TCP/IP Advanced Properties.
+%Disable and reenable the connection to make the change take
+%effect.
+%
+%To correct this incomplete host name on Windows NT Version 4,
+%set the domain in the TCP/IP Properties dialog box.
+%Restart Condor after making this change.
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Troubleshooting}
+\index{crashes}
+\index{recovery from crashes}
 
-\subsection*{What happens if the central manager crashes?} 
-\index{crashes|(}
-\index{recovery from crashes|(}
+\begin{description}
+\item[What happens if the central manager crashes?]
 
 If the central manager crashes, jobs that are already running will
 continue to run unaffected.
@@ -1004,13 +1043,10 @@ running until the central manager is restarted and begins matchmaking
 again.
 Nothing special needs to be done after the central manager is brought
 back online.
-\index{crashes|)}
-\index{recovery from crashes|)}
 
-
-\subsection*{When I ssh/telnet to a machine to check particulars of how
+\item[When I ssh/telnet to a machine to check particulars of how
 Condor is doing something, it is always vacating or unclaimed when I
-know a job had been running there!}
+know a job had been running there!]
 
 Depending on how your policy is set up, Condor will track \emph{any} tty
 on the machine for the purpose of determining if a job is to be vacated
@@ -1019,8 +1055,8 @@ there, Condor notices activity on the tty allocated to your connection
 and then vacates the job.
 
 
-\subsection*{What is wrong? I get no output from \Condor{status}, but
-the Condor daemons are running.} 
+\item[What is wrong? I get no output from \Condor{status}, but the Condor daemons are running.]
+
 One likely error message within the collector log of the form
 \begin{verbatim}
 DaemonCore: PERMISSION DENIED to host <xxx.xxx.xxx.xxx> for command 0 (UPDATE_STARTD_AD)
@@ -1089,11 +1125,18 @@ indicates a similar problem as above, but read permission
 is the problem (as opposed to write permission).
 Use the solutions given above.
 
+\end{description}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Other questions}
+\index{Condor!Y2K}
+\index{Y2K}
+\index{Condor!mailing-list}
+\index{Condor!new versions, notification of}
+\index{upgrading!6.0 to 6.2}
 
-\subsection*{Is Condor Y2K-compliant?}
-\index{Condor!Y2K|(}
-\index{Y2K|(}
+\begin{description}
+
+\item[Is Condor Y2K-compliant?]
 
 Yes.
 Internally, Condor uses the standard UNIX time representation (the
@@ -1105,27 +1148,20 @@ The output of Condor tools from some older versions (pre-6.2) may
 display years incorrectly, but their internal representation is still
 correct and their display bugs do not affect the operation of Condor.
 
-\index{Condor!Y2K|)}
-\index{Y2K|)}
 
-\subsection*{Is there a Condor mailing-list?}
-\index{Condor!mailing-list|(}
-\index{Condor!new versions, notification of|(}
+\item[Is there a Condor mailing-list?]
 
 Yes.
 We run an extremely low traffic mailing list solely to announce new
 versions of Condor.
-To subscribe, email \Email{majordomo@cs.wisc.edu} with a message body
+To subscribe, e-mail \Email{majordomo@cs.wisc.edu} with a message body
 of:
 
 \begin{verbatim}subscribe condor-world\end{verbatim}
 
-\index{Condor!mailing list|)}
-\index{Condor!new versions, notification of|)}
 
 
-\subsection*{What is the process for upgrading from 6.0 to 6.2?}
-\index{upgrading!6.0 to 6.2}
+\item[What is the process for upgrading from 6.0 to 6.2?]
 
 The usual process for upgrading is to copy the original 6.0 binaries
 to $<$name$>$.old versions and then copy the 6.2 binaries over the 6.0
@@ -1142,22 +1178,22 @@ the 6.2 supplied libraries. Backwards compatibility to 6.0 from 6.2 had
 been intentionally broken because of an evolution of features that the
 standard universe now supports.
 
-\subsection*{My question isn't in the FAQ!}
+\item[My question isn't in the FAQ!]
 
 If you have any questions that are not listed in this FAQ, try looking
 through the rest of the manual.
 If you still can't find an answer, feel free to contact us at
 \Email{condor-admin@cs.wisc.edu}.
 
-Note that Condor's free email support is provided on a best-effort
+Note that Condor's free e-mail support is provided on a best-effort
 basis, and at times we may not be able to provide a timely response.
 If guaranteed support is important to you, please inquire about our
 paid support services.
+\end{description}
+
 
 
 \index{Condor!FAQ|)}
 \index{Condor!Frequently Asked Questions|)}
 \index{FAQ|)}
 \index{Frequently Asked Questions|)}
-
-
