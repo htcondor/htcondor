@@ -229,9 +229,6 @@ FILE *
 debug_lock()
 {
 	int			length;
-#if !defined(WIN32)
-	int			oumask;
-#endif
 	priv_state	priv;
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
@@ -250,14 +247,12 @@ debug_lock()
 		}
 #else
 		if( LockFd < 0 ) {
-			oumask = umask( 0 );
 			LockFd = open(DebugLock,O_CREAT|O_WRONLY,0660);
 			if( LockFd < 0 ) {
 				fprintf( stderr, "Can't open \"%s\"\n", DebugLock );
 				dprintf_exit();
 
 			}
-			(void) umask( oumask );
 		}
 
 		if( flock(LockFd,LOCK_EX) < 0 ) {
@@ -465,9 +460,6 @@ FILE *
 open_debug_file(char flags[])
 {
 	FILE		*fp;
-#if !defined(WIN32)
-	int			oumask;
-#endif
 	priv_state	priv;
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
@@ -489,7 +481,6 @@ open_debug_file(char flags[])
 #endif
 		dprintf_exit();
 	}
-	// (void) umask( oumask );  // perhaps no longer need this...
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
 
