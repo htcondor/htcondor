@@ -1531,7 +1531,12 @@ These macros control the \Condor{schedd}.
   having to deal
   with their startup activity all at once.  This macro determines how
   how long the \Condor{schedd} should wait in between spawning each
-  \Condor{shadow}.  Defined in terms of seconds and defaults to 2. 
+  \Condor{shadow}.  
+  Similarly, this macro is also used during the graceful shutdown of the
+  \Condor{schedd}.
+  During graceful shutdown, this macro determines how long to wait in
+  between asking each \Condor{shadow} to gracefully shutdown.  
+  Defined in terms of seconds and defaults to 2. 
   
 \item[\Macro{ALIVE\_INTERVAL}] \label{param:AliveInterval} This
   macro determines how often the \Condor{schedd} should send a keep alive
