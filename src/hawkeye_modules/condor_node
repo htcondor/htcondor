@@ -240,6 +240,40 @@ sub RunIt {
 	}
     }
 
+    # Search for core files laying around
+    {
+	my $LogDir = `condor_config_val LOG`;
+	chomp $LogDir;
+
+	if ( ( $LogDir ne "" ) && ( -d $LogDir ) )
+	{
+	    if ( ! opendir( LOG, $LogDir ) )
+	    {
+		warn "Can't read log directory '$LogDir'";
+	    }
+	    else
+	    {
+		my @CoreFiles = grep( /^core/, readdir( LOG ) );
+		$CondorInfo{CoreFilesNum} = $#CoreFiles + 1;
+		my $CoreNum = 0;
+		my $Now = time( );
+		foreach my $Core ( @CoreFiles )
+		{
+		    my $File = "$LogDir/$Core";
+		    if ( my @Stat = stat( $File ) )
+		    {
+			my $Name = "CoreFiles_$CoreNum";
+			$CondorInfo{$Name."_Name"} = $Core;
+			$CondorInfo{$Name."_Size"} = $Stat[7];
+			$CondorInfo{$Name."_Age"} = $Now - $Stat[9];
+			$CondorInfo{$Name."_TimeStamp"} = $Stat[9];
+		    }
+		}
+	    }
+	    closedir( LOG );
+	}
+    }
+
     # Publish 'em all
     foreach my $Key ( keys %CondorInfo )
     {
