@@ -974,7 +974,7 @@ void CollectorDaemon::Config()
 		int	size = atoi( tmp );
         collectorStats.setClassHistorySize( size );
     } else {
-        collectorStats.setClassHistorySize( 0 );
+        collectorStats.setClassHistorySize( 1024 );
     }
 
     tmp = param ("COLLECTOR_DAEMON_STATS");
@@ -986,7 +986,7 @@ void CollectorDaemon::Config()
 		}
 		free( tmp );
 	} else {
-		collectorStats.setDaemonStats( false );
+		collectorStats.setDaemonStats( true );
 	}
 
     tmp = param ("COLLECTOR_DAEMON_HISTORY_SIZE");
@@ -994,7 +994,7 @@ void CollectorDaemon::Config()
 		int	size = atoi( tmp );
         collectorStats.setDaemonHistorySize( size );
     } else {
-        collectorStats.setDaemonHistorySize( 0 );
+        collectorStats.setDaemonHistorySize( 128 );
     }
 
     tmp = param ("COLLECTOR_QUERY_WORKERS");
