@@ -64,9 +64,8 @@ int free_fs_blocks_test(int trials, double tolerance, double warn_ok_ratio) {
 	int		dfree1 = 0;				/* Free disk space *before* write */
 	int		dfree2_raw = 0;			/* "Raw" free disk space *after* write */
 	int		dfree2 = 0;				/* Free disk space *after* write */
-	int		i, j;
+	int		i;
 	FILE *	stream;
-	char *	empty;
 	char	filename[512];
 	int		return_val = 0;
 	int		num_warnings = 0;

@@ -29,17 +29,11 @@
 #include "time.h"
 
 int idle_time_test(int trials, int interval, int tolerance, double warn_ok_ratio) {
-	int		foo = 0;
-	int		foo2 = 0;
-	int		bar = 0;
-	int		bar2 = 0;
-	int		i, j;
+	int		i;
 	time_t	raw_t1, raw_t2, cook_t1, cook_t2;
 	time_t	raw_t3, raw_t4, cook_t3, cook_t4;
 	int		raw_diff, cook_diff;
 	int		unslept;
-	FILE *	stream;
-	char	filename[512];
 	int		return_val = 0;
 	int		num_warnings = 0;
 	int		num_tests = 0;

@@ -30,11 +30,9 @@
 
 int arch_test(int trials)
 {
-	const char *foo,  *foo2;
-	const char *bar, *bar2;
-	time_t	t0, t1;
+	const char *foo = NULL, *foo2 = NULL;
+	const char *bar = NULL, *bar2 = NULL;
 	int		return_val = 0;
-	int		bad_string = 0;
 	int i;
 
 	foo = sysapi_condor_arch();

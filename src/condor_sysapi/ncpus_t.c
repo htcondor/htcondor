@@ -31,9 +31,7 @@ int ncpus_test(int trials, double warn_ok_ratio)
 {
 	int foo,  bar;
 	int foo2,  bar2;
-	time_t	t0, t1;
 	int		return_val = 0;
-	int		bad_string = 0;
 	int i;
 	int	num_tests = 0;
 	int	num_warnings = 0;
