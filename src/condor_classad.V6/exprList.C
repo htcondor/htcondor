@@ -229,7 +229,7 @@ NextExpr( )
 {
 	if( l && itr != l->exprList.end( ) ) {
 		itr++;
-		return( *itr );
+		return( itr==l->exprList.end() ? NULL : *itr );
 	}
 	return( NULL );
 }
