@@ -136,7 +136,7 @@ class ExprListIterator
 				an internal EvalState object will be used. 
 			@return true if the operation succeeded, false otherwise.
 		*/
-    	bool CurrentValue( Value& v, EvalState *es=NULL ) const;
+    	bool CurrentValue( Value& v, EvalState *es=NULL );
 
 		/** Gets the value of the previous expression in the list.
 			@param v The value of the expression.
@@ -169,7 +169,7 @@ class ExprListIterator
 				an internal EvalState object will be used. 
 			@return true if the operation succeeded, false otherwise.
 		*/
-    	bool CurrentValue( Value& v, ExprTree*& t, EvalState *es=NULL ) const;
+    	bool CurrentValue( Value& v, ExprTree*& t, EvalState *es=NULL );
 
 		/** Gets the value of the previous expression in the list, and 
 				identifies sub-expressions that caused that value.

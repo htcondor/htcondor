@@ -297,7 +297,7 @@ NextValue( Value& val, EvalState *es )
 
 
 bool ExprListIterator::
-CurrentValue( Value& val, EvalState *es ) const
+CurrentValue( Value& val, EvalState *es )
 {
 	return GetValue( val, CurrentExpr( ), es );
 }
@@ -354,7 +354,7 @@ NextValue( Value& val, ExprTree*& sig, EvalState *es )
 
 
 bool ExprListIterator::
-CurrentValue( Value& val, ExprTree*& sig, EvalState *es ) const
+CurrentValue( Value& val, ExprTree*& sig, EvalState *es )
 {
 	return GetValue( val, sig, CurrentExpr( ), es );
 }
