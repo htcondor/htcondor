@@ -49,6 +49,7 @@ extern "C" {
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/file.h>
+#include <sys/socket.h>
 #include <rpc/types.h>
 #include "condor_fix_stdio.h"    
 #include <sys/resource.h>
@@ -132,6 +133,7 @@ extern "C"
 	int		udp_unconnect();
 	void	fill_dgram_io_handle(DGRAM_IO_HANDLE*, char*, int, int); 
 	XDR*	xdr_Udp_unconnect_Init(DGRAM_IO_HANDLE*, XDR*); 
+	int		get_inet_address(struct in_addr*); 
 }
 
 extern	int		Parse(const char*, ExprTree*&);
@@ -1375,18 +1377,29 @@ int GetConfig(char* config_server_name, char* condor_dir)
 
 int IsSameHost(const char* host)
 {
-	struct hostent*			local = gethostent();
-	struct hostent*			remote = gethostbyname(host);
-
-	if(memcmp(local->h_addr, remote->h_addr, local->h_length) != 0)
+	struct in_addr		local;
+	struct hostent*		hostp;
+	
+	if(get_inet_address(&local) < 0)
+	{
+		EXCEPT("Can't find address");
+	}
+	
+	hostp = gethostbyname(host);
+	if(!hostp)
+	{
+		EXCEPT("Can't find host %s", host);
+	}
+	if(hostp->h_addrtype != AF_INET)
+	{
+		EXCEPT("host (%s) address isn't AF_INET type", host);
+	}
+	
+	if(memcmp((char*)&local, hostp->h_addr_list[0], sizeof(local)) != 0)
 	{
 		return FALSE;
-	} 
-	if(local->h_length != remote->h_length)
-	{
-		return FALSE;
-	} 
-	return TRUE;
+	}
+	return TRUE; 
 }
 
 void StartConfigServer()
