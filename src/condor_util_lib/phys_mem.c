@@ -180,7 +180,7 @@ calc_phys_memory()
 int
 calc_phys_memory()
 {
-	long pages, pagesz;
+	unsigned long pages, pagesz;
 
 	pages = sysconf(_SC_PHYS_PAGES);
 	pagesz = sysconf(_SC_PAGESIZE);
@@ -188,7 +188,7 @@ calc_phys_memory()
 	if (pages == -1 || pagesz == -1)
 		return -1;
  
-        return (int)((pages * pagesz) / (1024 * 1024));
+	return (int) ((pages * pagesz) / (1024 * 1024));
 }
 #elif defined(LINUX)
 #include <stdio.h>
@@ -197,7 +197,7 @@ int calc_phys_memory()
 {	
 
 	FILE        *proc;
-	long        phys_mem;
+	unsigned long phys_mem;
 	char        tmp_c[20];
 	long        tmp_l;
 	char   		c;
@@ -222,7 +222,7 @@ int calc_phys_memory()
 	  //SwapFree:     33656 kB
 	  */	  
 	while((c=fgetc(proc))!='\n');
-	fscanf(proc, "%s %d", tmp_c, &phys_mem);
+	fscanf(proc, "%s %ul", tmp_c, &phys_mem);
 	fclose(proc);
 	return (int)(phys_mem/(1024000));
 }
