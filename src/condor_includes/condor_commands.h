@@ -26,9 +26,13 @@
 **	stand for "friggin'"...
 */
 #define CONTINUE_FRGN_JOB	(SCHED_VERS+1)
+#define CONTINUE_CLAIM		(SCHED_VERS+1)		// New name for CONTINUE_FRGN_JOB
 #define SUSPEND_FRGN_JOB	(SCHED_VERS+2)
-#define CKPT_FRGN_JOB		(SCHED_VERS+3)
+#define SUSPEND_CLAIM		(SCHED_VERS+2)		// New name for SUSPEND_FRGN_JOB
+#define CKPT_FRGN_JOB		(SCHED_VERS+3)		
+#define DEACTIVATE_CLAIM	(SCHED_VERS+3)		// New name for CKPT_FRGN_JOB
 #define KILL_FRGN_JOB		(SCHED_VERS+4)
+#define DEACTIVATE_CLAIM_FORCIBLY	(SCHED_VERS+4)		// New name for KILL_FRGN_JOB
 
 #define LOCAL_STATUS		(SCHED_VERS+5)
 #define LOCAL_STATISTICS	(SCHED_VERS+6)
@@ -76,10 +80,10 @@
 #define RELINQUISH_SERVICE	(SCHED_VERS+43)		// Old name for RELEASE_CLAIM
 #define VACATE_SERVICE		(SCHED_VERS+43)		// Old name for RELEASE_CLAIM
 #define ACTIVATE_CLAIM	 	(SCHED_VERS+44)
-#define DEACTIVATE_CLAIM	(SCHED_VERS+45)
-#define PRIORITY_INFO       (SCHED_VERS+46)     /* negotiator to accountant */
-#define PCKPT_ALL_JOBS		(SCHED_VERS+47)
-#define VACATE_ALL_CLAIMS	(SCHED_VERS+48)
+#define PRIORITY_INFO       (SCHED_VERS+45)     /* negotiator to accountant */
+#define PCKPT_ALL_JOBS		(SCHED_VERS+46)
+#define VACATE_ALL_CLAIMS	(SCHED_VERS+47)
+#define GIVE_STATE			(SCHED_VERS+48)
 
 
 
@@ -87,18 +91,17 @@
 /************
 *** Command ids used by the collector 
 ************/
-const int UPDATE_STARTD_AD       = 0;
-const int UPDATE_SCHEDD_AD       = 1;
-const int UPDATE_MASTER_AD       = 2;
-const int UPDATE_GATEWAY_AD      = 3;
-const int UPDATE_CKPT_SRVR_AD  = 4;
+const int UPDATE_STARTD_AD		= 0;
+const int UPDATE_SCHEDD_AD		= 1;
+const int UPDATE_MASTER_AD		= 2;
+const int UPDATE_GATEWAY_AD		= 3;
+const int UPDATE_CKPT_SRVR_AD	= 4;
 
-const int QUERY_STARTD_ADS       = 5;
-const int QUERY_SCHEDD_ADS       = 6;
-const int QUERY_MASTER_ADS       = 7;
-const int QUERY_GATEWAY_ADS      = 8;
-const int QUERY_CKPT_SRVR_ADS  = 9;
-
-const int QUERY_STARTD_PVT_ADS   = 10;
+const int QUERY_STARTD_ADS		= 5;
+const int QUERY_SCHEDD_ADS		= 6;
+const int QUERY_MASTER_ADS		= 7;
+const int QUERY_GATEWAY_ADS		= 8;
+const int QUERY_CKPT_SRVR_ADS	= 9;
+const int QUERY_STARTD_PVT_ADS	= 10;
 
 #endif  /* of ifndef _CONDOR_COMMANDS_H */
