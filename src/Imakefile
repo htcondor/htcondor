@@ -53,7 +53,7 @@
 #endif
 
 #if WANT_CONDOR_G && HAS_GLOBUS
-#define GlobusProgs globus
+#define GlobusProgs globus gridmanager
 #else
 #define GlobusProgs
 #endif

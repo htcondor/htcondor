@@ -2222,10 +2222,12 @@ SetGlobusParams()
 
 	free( globushost );
 
-	sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_CONTACT_STRING, "X" );
+	sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_CONTACT_STRING,
+			 NULL_JOB_CONTACT );
 	InsertJobExpr (buffer, false );
 
-	sprintf( buffer, "%s = %d", ATTR_GLOBUS_STATUS, G_UNSUBMITTED );
+	sprintf( buffer, "%s = %d", ATTR_GLOBUS_STATUS,
+			 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED );
 	InsertJobExpr (buffer, false );
 
 	if ( tmp = condor_param(GlobusRSL) ) {

@@ -44,7 +44,7 @@ GlobusFlavor = gcc32dbg
 /* Top should be the root of the source directory you want to use if
 you want our top-level Makefile to build the directory tree with all
 the soft links.  The links will point back to Top/src/... */
-#define Top /p/condor/workspaces/zmiller/V6_3
+#define Top /p/condor/workspaces/jfrey/merge/arena/
 
 #define TmpDir		/tmp
 
@@ -81,11 +81,11 @@ the soft links.  The links will point back to Top/src/... */
 
 #define WANT_NETMAN	YES
 
-#define WANT_X509       NO
+#define WANT_X509       YES
 #define WANT_KERBEROS   NO
-#define WANT_MD         NO
-#define WANT_3DES       NO
-#define WANT_BLOWFISH   NO
+#define WANT_MD         YES
+#define WANT_3DES       YES
+#define WANT_BLOWFISH   YES
 
 /*------------------------------------------
  * Condor Credential API related

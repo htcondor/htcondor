@@ -962,29 +962,7 @@ format_globusStatus( int globusStatus, AttrList *ad )
 {
 	static char result[64];
 
-
-	switch ( globusStatus ) {
-	case G_UNSUBMITTED:
-		strcpy( result, GlobusJobStatusNames[G_UNSUBMITTED] );
-		break;
-	case G_PENDING:
-		strcpy( result, GlobusJobStatusNames[G_PENDING] );
-		break;
-	case G_ACTIVE:
-		strcpy( result, GlobusJobStatusNames[G_ACTIVE] );
-		break;
-	case G_FAILED:
-		strcpy( result, GlobusJobStatusNames[G_FAILED] );
-		break;
-	case G_DONE:
-		strcpy( result, GlobusJobStatusNames[G_DONE] );
-		break;
-	case G_SUSPENDED:
-		strcpy( result, GlobusJobStatusNames[G_SUSPENDED] );
-		break;
-	default:
-		strcpy( result, "[?????]" );
-	}
+	strcpy( result, GlobusJobStatusName( globusStatus ) );
 
 	return result;
 }

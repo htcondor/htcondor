@@ -30,21 +30,38 @@
 #   include "sslutils.h"
 #endif
 
+#if defined(CONDOR_G)
+#   include "globus_gram_protocol_constants.h"
+#endif
+
 #define DEFAULT_MIN_TIME_LEFT 8*60*60;
 
 
-char *GlobusJobStatusNames[] = {
-	"UNSUBMITTED",
-	"SUBMITTED",
-	"PENDING",
-	"ACTIVE",
-	"FAILED",
-	"DONE",
-	"SUSPENDED",
-	"CANCELED"
-};
-
 static char * _globus_error_message = NULL;
+
+char *GlobusJobStatusName( int status )
+{
+#if defined(CONDOR_G)
+	switch ( status ) {
+	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING:
+		return "PENDING";
+	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE:
+		return "ACTIVE";
+	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED:
+		return "FAILED";
+	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE:
+		return "DONE";
+	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED:
+		return "SUSPENDED";
+	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED:
+		return "UNSUBMITTED";
+	default:
+		return "??????";
+	}
+#else
+	return "??????";
+#endif
+}
 
 const char *
 x509_error_string()
@@ -129,7 +146,7 @@ x509_proxy_seconds_until_expire( char *proxy_file )
 
 	return result;
 
-#endif
+#endif /* !defined(GSS_AUTHENTICATION) */
 }
 
 int
@@ -174,7 +191,7 @@ check_x509_proxy( char *proxy_file )
 
 	return 0;
 
-#endif
+#endif /* !defined(GSS_AUTHENTICATION) */
 }
 
 
@@ -255,7 +272,7 @@ retrieve_attr_values(
 	return cnt;
 
 } /* retrieve_attr_values */
-#endif
+#endif /* defined(GLOBUS_SUPPORT) */
 
 #if defined(GLOBUS_SUPPORT) && defined(HAS_LDAP)
 /*
@@ -273,7 +290,7 @@ set_ld_timeout(LDAP  *ld, int timeout_val, char *env_string)
 	}
 }
 */
-#endif
+#endif /* defined(GLOBUS_SUPPORT) */
 
 #if defined(GLOBUS_SUPPORT) && defined(HAS_LDAP)
 static
@@ -368,7 +385,7 @@ simple_query_ldap(
 		return rc;
 
 } /* simple_query_ldap() */
-#endif
+#endif /* defined(GLOBUS_SUPPORT) */
 
 
 int
@@ -439,7 +456,7 @@ check_globus_rm_contacts(char* resource)
 		return 1;
 	}
 
-#endif
+#endif /* !defined(GLOBUS_SUPPORT) */
 
 } /* check_globus_rm_contact() */
 

@@ -856,14 +856,14 @@ count( ClassAd *job )
 			}
 		}
 		if ( universe == CONDOR_UNIVERSE_GLOBUS ) {
-			// for Globus, count jobs in G_UNSUBMITTED state by owner.
+			// for Globus, count jobs in UNSUBMITTED state by owner.
 			// later we make certain there is a grid manager daemon
 			// per owner.
 			int thisJobGlobusUnsubmitted = 0;
 			scheduler.Owners[OwnerNum].GlobusJobs++;
-			globus_status = G_UNSUBMITTED;
+			globus_status = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
 			job->LookupInteger(ATTR_GLOBUS_STATUS, globus_status);
-			if ( globus_status == G_UNSUBMITTED ) {
+			if ( globus_status == GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
 				scheduler.Owners[OwnerNum].GlobusUnsubmittedJobs++;
 				thisJobGlobusUnsubmitted = 1;
 			}
