@@ -84,10 +84,16 @@ core_is_valid( char *name )
 	file_size = lseek( fd, (off_t)0, SEEK_END );
 	(void)close( fd );
 
+#if 0
+	/* Don't need core for checkpointing in V5, so if we get one it's
+	a user core.  In that case, the user program may very well not have
+	set the special flag requesting a full dump - but might want the
+	core anyway. */
 	if( !(header.c_flag & FULL_CORE) ) {
 		dprintf( D_ALWAYS, "Core not complete - no data\n" );
 		return FALSE;
 	}
+#endif
 
 	if( !(header.c_flag & UBLOCK_VALID) ) {
 		dprintf( D_ALWAYS, "Core not valid - no uarea\n" );
@@ -109,8 +115,12 @@ core_is_valid( char *name )
 		return FALSE;
 	}
 
-	total_size = (off_t)header.c_stack + (off_t)header.c_size +
-				 (off_t)header.c_u.u_dsize;
+	if( (header.c_flag & FULL_CORE) ) {
+		total_size = (off_t)header.c_stack + (off_t)header.c_size +
+					 (off_t)header.c_u.u_dsize;
+	} else {
+		total_size = (off_t)header.c_stack + (off_t)header.c_size;
+	}
 
 	if( file_size != total_size ) {
 		dprintf( D_ALWAYS,
