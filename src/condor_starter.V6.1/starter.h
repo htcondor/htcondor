@@ -31,6 +31,7 @@
 #include "io_proxy.h"
 #include "NTsenders.h"
 #include "condor_ver_info.h"
+#include "condor_daemon_client.h"
 
 void set_resource_limits();
 extern ReliSock *syscall_sock;
@@ -101,7 +102,7 @@ public:
 		/** Return a pointer to the version object for the Shadow  */
 	CondorVersionInfo* GetShadowVersion() const { return ShadowVersion; }
 
-	char* GetShadowAddr() { return &ShadowAddr[0]; };
+	DCShadow* shadow;
 
 protected:
 	List<UserProc> JobList;
@@ -152,13 +153,8 @@ private:
 		// Private Data Members
 		// // // // // // // //
 
-	char *InitiatingHost;
-
 		/** The version of the shadow if known; otherwise NULL */
 	CondorVersionInfo* ShadowVersion;
-
-		/// sinful string of our shadow
-	char ShadowAddr[35];
 
 	char *Execute;
 	char *UIDDomain;
@@ -176,8 +172,6 @@ private:
 	// timer id for periodically sending info on job to Shadow
 	int shadowupdate_tid;
 
-	// UDP socket back to the shadow command port
-	SafeSock *shadowsock;
 };
 
 #endif
