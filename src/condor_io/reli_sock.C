@@ -198,6 +198,8 @@ int ReliSock::handle_incoming_packet()
 
 int ReliSock::end_of_message()
 {
+	int ret_val = FALSE;
+
 	switch(_coding){
 		case stream_encode:
 			if (!snd_msg.buf.empty()){
@@ -206,10 +208,11 @@ int ReliSock::end_of_message()
 			break;
 
 		case stream_decode:
-			if (rcv_msg.ready && rcv_msg.buf.consumed()){
-				rcv_msg.ready = FALSE;
-				rcv_msg.buf.reset();
-				return TRUE;
+			if ( rcv_msg.ready ) {
+				 if ( rcv_msg.buf.consumed() )
+					 ret_val = TRUE;
+				 rcv_msg.ready = FALSE;
+				 rcv_msg.buf.reset();
 			}
 			break;
 
@@ -217,7 +220,7 @@ int ReliSock::end_of_message()
 			assert(0);
 	}
 
-	return FALSE;
+	return ret_val;
 }
 
 
