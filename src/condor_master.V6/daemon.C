@@ -635,7 +635,10 @@ daemon::Obituary( int status )
 				"\"%s\" on \"%s\" exited with status %d\n",
 				process_name, my_full_hostname(), WEXITSTATUS(status) );
     }
-    tail_log( mailer, log_name, Lines );
+
+	if( log_name ) {
+		tail_log( mailer, log_name, Lines );
+	}
 
 	/* Don't do a pclose here, it wait()'s, and may steal an
 	 ** exit notification of one of our daemons.  Instead we'll clean

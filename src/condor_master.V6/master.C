@@ -613,6 +613,10 @@ tail_log( FILE* output, char* file, int lines )
 	long	loc;
 	QUEUE	queue, *q = &queue;
 
+	if( !file ) {
+		return;
+	}		
+
 	if( (input=fopen(file,"r")) == NULL ) {
 		fprintf( stderr, "Can't open %s\n", file );
 		return;
