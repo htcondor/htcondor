@@ -115,6 +115,12 @@ c_plus_target(test_user_job_policy,test_user_job_policy.o,$(LIB))
 c_plus_target(test_classad_support,test_classad_support.o,$(LIB))
 c_plus_target(test_classad_merge,test_classad_merge.o,$(LIB))
 c_plus_target(test_mystring,test_mystring.o,$(LIB))
+
+/* this needs to be built more like a user would use the library, so it */
+/* can't have all of our usual cflags... */
+test_libcondorapi.o: test_libcondorapi.C
+	$(CPlusPlus) -I../h -I../condor_includes -c test_libcondorapi.C
+
 c_plus_target(test_libcondorapi,test_libcondorapi.o,libcondorapi.a)
 
 c_plus_target(cat_url,cat_url.o,liburl.a)
