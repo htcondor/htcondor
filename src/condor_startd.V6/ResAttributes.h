@@ -46,7 +46,7 @@ public:
 	void init( ClassAd* );		// Initialize all static info into classad
 	void refresh( ClassAd*, ResAttr_t );  // Refresh given CA w/ desired info
 	void compute( ResAttr_t );		// Actually recompute desired stats.  
-	void benchmark();			// Compute kflops and mips
+	void benchmark(int);			// Compute kflops and mips
 
 private:
 	Resource*	 	rip;

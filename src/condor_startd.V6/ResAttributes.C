@@ -133,17 +133,19 @@ ResAttributes::refresh( ClassAd* cp, ResAttr_t how_much)
 
 
 void
-ResAttributes::benchmark(void)
+ResAttributes::benchmark(int force = 0)
 {
-	if( rip->state() != unclaimed_state &&
-		rip->activity() != idle_act ) {
-		dprintf( D_ALWAYS, 
-				 "Tried to run benchmarks when not idle, aborting.\n" );
-		return;
-	}
 
-		// Enter benchmarking activity
-	rip->change_state( benchmarking_act );
+	if( ! force ) {
+		if( rip->state() != unclaimed_state &&
+			rip->activity() != idle_act ) {
+			dprintf( D_ALWAYS, 
+					 "Tried to run benchmarks when not idle, aborting.\n" );
+			return;
+		}
+			// Enter benchmarking activity
+		rip->change_state( benchmarking_act );
+	}
 
 	dprintf( D_FULLDEBUG, "About to compute mips\n" );
 	int new_mips_calc = calc_mips();
@@ -173,7 +175,9 @@ ResAttributes::benchmark(void)
 
 	r_last_benchmark = (int)time(NULL);
 
-	rip->change_state( idle_act );
+	if( ! force ) {
+		rip->change_state( idle_act );
+	}
 }
 
 
