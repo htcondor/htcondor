@@ -1,6 +1,6 @@
 NAME=condor_gridmanager
 GT3GAHP_WRAPPER_NAME = gt3_gahp
-all_target($(NAME) grid_monitor.sh $(GT3GAHP_WRAPPER_NAME) gt3gahp)
+all_target($(NAME) grid_monitor.sh $(GT3GAHP_WRAPPER_NAME))
 
 #if WANT_ORACLE_UNIVERSE
 ORACLE_JOB_FLAGS = -DORACLE_UNIVERSE -I/p/condor/workspaces/jfrey/oracle/OraHome1/rdbms/demo -I/p/condor/workspaces/jfrey/oracle/OraHome1/rdbms/public
@@ -50,9 +50,9 @@ grid_monitor.sh: grid_monitor_wrapper grid_manager_monitor_agent
 	cat grid_monitor_wrapper grid_manager_monitor_agent > grid_monitor.sh
 	chmod 755 grid_monitor.sh
 
-gt3gahp: 
-	cp -R $(GT3GAHP_DIR)/gt3 $(RELEASE_DIR)/lib/
-	chmod -R 0644 $(RELEASE_DIR)/lib/gt3/*
+release_recursive_copy_target($(GT3GAHP_DIR)/gt3,lib/gt3)
+static_recursive_copy_target($(GT3GAHP_DIR)/gt3,lib/gt3)
+strip_recursive_copy_target($(GT3GAHP_DIR)/gt3,lib/gt3)
 
 $(GAHP_DIR)/gahp_server:
 	/bin/true
