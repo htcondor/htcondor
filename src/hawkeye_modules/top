@@ -29,7 +29,7 @@ my %Config =
      Debug	=> 0,
      TopPeriod	=> 30,
      RunOnce	=> 0,
-     MaxLoops	=> 100,
+     MaxLoops	=> 1000,
      TopOpt	=> {
 		    Batch => "-b ",
 		    Delay => "-d ",
@@ -343,24 +343,29 @@ sub Configure( )
     my $ConfigStringPeriod = HawkeyeLib::ReadConfig( "_period", "30" );
 
     # Max loops
-    $Config{MaxLoops} = HawkeyeLib::ReadConfig( "_maxloops", "100" );
+    $Config{MaxLoops} = HawkeyeLib::ReadConfig( "_maxloops", "1000" );
     $Config{MaxLoops} = 1 if ( $Config{RunOnce} );
 
     # Check the config period string
     if ( $ConfigStringPeriod =~ /(\d+)([sSmMhH]?)/ )
     {
 	$Config{TopPeriod} = $1;
-	if (  ( $2 eq "s" ) || ( $2 eq "s" ) )
+	my $Modifier = ( defined $2 ? uc( $2 ) : "" );
+	if ( $Modifier eq "S" )
 	{
 	    # Do nothing
 	}
-	elsif ( ( $2 eq "m" ) || ( $2 eq "M" ) )
+	elsif ( $Modifier eq "M" )
 	{
 	    $Config{TopPeriod} *= 60;
 	}
-	elsif ( ( $2 eq "h" ) || ( $2 eq "H" ) )
+	elsif ( $Modifier eq "H" )
 	{
-	    $Config{TopPeriod} *= 3600;
+	    $Config{TopPeriod} *= ( 60 * 60 );
+	}
+	elsif ( $Modifier ne "" )
+	{
+	    print STDERR "Ignoring unknown period modifier '$2'\n";
 	}
     }
     else
@@ -527,6 +532,7 @@ sub RunIt( )
 		       HawkeyePublish::TypeString,
 		       $TopVersion );
 
+
 	# Read the header
       READHEADER:
 	my @Buffer;
@@ -543,8 +549,9 @@ sub RunIt( )
 		# And, add it to our summary
 		foreach my $Attr ( keys %Uptime )
 		{
-		    my $Type = ( $Attr =~ /string/i ) ?
-			HawkeyePublish::TypeString:HawkeyePublish::TypeNumber;
+		    my $Type = ( ( $Attr =~ /string/i ) ?
+				 HawkeyePublish::TypeString :
+				 HawkeyePublish::TypeNumber );
 		    $Summary->Add( $Attr, $Type, $Uptime{$Attr} );
 		}
 	    }
@@ -582,8 +589,9 @@ sub RunIt( )
 		    # And, add it to our summary
 		    foreach my $Attr ( keys %Load )
 		    {
-			my $Type = ( $Attr =~ /string/i ) ?
-			    HawkeyePublish::TypeString:HawkeyePublish::TypeNumber;
+			my $Type = ( ( $Attr =~ /string/i ) ?
+				     HawkeyePublish::TypeString :
+				     HawkeyePublish::TypeNumber );
 			$Summary->Add( $Attr, $Type, $Load{$Attr} );
 		    }
 		}
@@ -647,7 +655,7 @@ sub RunIt( )
 	    }
 
 	    # Memory info
-	    elsif ( /^(Mem|Swap|Memory):(.+)/ )
+	    elsif ( /^(Mem|Swap):(.+)/ )
 	    {
 		my $MemSwap = $1;
 		my $Rest = $2;
@@ -914,7 +922,7 @@ sub FixString( $ )
     my $String = shift;
 
     # Convert Megs to * 10^6, etc
-    if ( $$String =~ /^(\d+)([KMG])$/ )
+    if ( $$String =~ /^(\d+(?:\.\d+)?)([KMG])$/ )
     {
 	my $Value = $1;
 	my $Modifier = $2;
