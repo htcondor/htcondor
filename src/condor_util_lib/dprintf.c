@@ -155,7 +155,7 @@ dprintf(int flags, ...)
 
 	scm = SetSyscalls( SYS_LOCAL | SYS_RECORDED );
 
-#if !defined(WIN32) /* signals don't exist in WIN32 */
+#if !defined(WIN32) /* signals and umasks don't exist in WIN32 */
 
 	/* Block any signal handlers which might try to print something */
 	sigfillset( &mask );
@@ -169,14 +169,14 @@ dprintf(int flags, ...)
 	sigdelset( &mask, SIGCHLD );
 	sigprocmask( SIG_BLOCK, &mask, &omask );
 
-#endif
-
 		/* Make sure our umask is reasonable, in case we're the shadow
 		   and the remote job has tried to set its umask or
 		   something.  -Derek Wright 6/11/98 */
 	old_umask = umask( 022 );
 
-		/* log files owned by condor system acct */
+#endif
+
+	/* log files owned by condor system acct */
 		/* avoid priv macros so we can bypass priv logging */
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
@@ -205,10 +205,10 @@ dprintf(int flags, ...)
 		/* restore privileges */
 	_set_priv(priv, __FILE__, __LINE__, 0);
 
+#if !defined(WIN32) // signals and umasks don't exist in WIN32
+
 		/* restore umask */
 	(void)umask( old_umask );
-
-#if !defined(WIN32) // signals don't exist in WIN32
 
 		/* Let them signal handlers go!! */
 	(void) sigprocmask( SIG_SETMASK, &omask, 0 );
