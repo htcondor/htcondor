@@ -79,7 +79,6 @@ extern "C" {
 				int *jobstatus, char *coredir );
 	void get_local_rusage( struct rusage *bsd_rusage );
 	int calc_virt_memory();
-	int close_kmem();
 	void NotifyUser( char *buf, PROC *proc, char *email_addr );
 	void MvTmpCkpt();
 	FILE	*fdopen();
@@ -269,7 +268,6 @@ main(int argc, char *argv[], char *envp[])
 	}
 
 	free_swap = calc_virt_memory();
-	close_kmem(); /* only calc virt mem once, so close unneeded fs's */
 
 	dprintf( D_FULLDEBUG, "*** Reserved Swap = %d\n", reserved_swap );
 	dprintf( D_FULLDEBUG, "*** Free Swap = %d\n", free_swap );
@@ -943,7 +941,7 @@ start_job( char *cluster_id, char *proc_id )
 	DisconnectQ(0);
 
 #define TESTING
-#if !defined(HPUX9) && !defined(TESTING)
+#if !defined(HPUX) && !defined(TESTING)
 	if( Proc->status != RUNNING ) {
 		dprintf( D_ALWAYS, "Shadow: Asked to run proc %d.%d, but status = %d\n",
 							Proc->id.cluster, Proc->id.proc, Proc->status );
@@ -1209,7 +1207,7 @@ reaper()
 
 	int			status;
 
-#ifdef HPUX9
+#ifdef HPUX
 #undef _BSD
 #endif
 
@@ -1284,7 +1282,7 @@ reaper()
 
 #endif
 
-#ifdef HPUX9
+#ifdef HPUX
 #define _BSD
 #endif
 }
