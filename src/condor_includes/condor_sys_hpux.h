@@ -52,8 +52,13 @@
 #	define WCOREFLG 0x0200
 #endif
 
+#define _LARGEFILE64_SOURCE
+#include <sys/fcntl.h>
+#undef _LARGEFILE64_SOURCE
+
 /* Define all the 64-bit types and structures we need. */
 #include "condor_hpux_64bit_types.h"
+
 
 /****************************************
 ** Condor-specific system definitions
