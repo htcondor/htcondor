@@ -225,4 +225,13 @@ const int QUERY_HIST_CKPTSRVR_LIST = 31;
 #define DC_OFF_FAST			(DC_BASE+6)
 #define DC_CONFIG_VAL		(DC_BASE+7)
 
+
+/*
+*** Condor Password Daemon Commands
+*/
+#define PW_BASE 70000
+#define PW_SETPASS			(PW_BASE+1)
+#define PW_GETPASS			(PW_BASE+2)
+#define PW_CLEARPASS		(PW_BASE+3)
+
 #endif  /* of ifndef _CONDOR_COMMANDS_H */
