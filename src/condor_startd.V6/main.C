@@ -102,78 +102,87 @@ main_init( int, char* [] )
 
 		// register daemoncore stuff
 
+		//////////////////////////////////////////////////
 		// Commands
-		// RegisterCommand( int cmd, char* "name_of_command",
-		// 					(CommandHandler)handler_function,
-		//					char* "name_of_handler_function" );
+		//////////////////////////////////////////////////
 
 		// These commands all read the capability off the wire, find
 		// the resource with that capability, and call appropriate
 		// action on that resource.  Plus, all of these commands only
 		// make sense when we're in the claimed state.  So, we can
-		// handle them all with a common handler.
+		// handle them all with a common handler.  For all of them,
+		// you need WRITE permission.
 	daemonCore->Register_Command( ALIVE, "ALIVE", 
 								  (CommandHandler)command_handler,
-								  "command_handler" );
+								  "command_handler", 0, WRITE );
 	daemonCore->Register_Command( RELEASE_CLAIM, "RELEASE_CLAIM", 
 								  (CommandHandler)command_handler,
-								  "command_handler" );
+								  "command_handler", 0, WRITE );
 	daemonCore->Register_Command( DEACTIVATE_CLAIM,
 								  "DEACTIVATE_CLAIM",  
 								  (CommandHandler)command_handler,
-								  "command_handler" );
+								  "command_handler", 0, WRITE );
 	daemonCore->Register_Command( DEACTIVATE_CLAIM_FORCIBLY, 
 								  "DEACTIVATE_CLAIM_FORCIBLY", 
 								  (CommandHandler)command_handler,
-								  "command_handler" );
+								  "command_handler", 0, WRITE );
 	daemonCore->Register_Command( PCKPT_FRGN_JOB, "PCKPT_FRGN_JOB", 
 								  (CommandHandler)command_handler,
-								  "command_handler" );
+								  "command_handler", 0, WRITE );
 	daemonCore->Register_Command( REQ_NEW_PROC, "REQ_NEW_PROC", 
 								  (CommandHandler)command_handler,
-								  "command_handler" );
+								  "command_handler", 0, WRITE );
 
 		// These commands are special and need their own handlers
-	daemonCore->Register_Command( ACTIVATE_CLAIM, "ACTIVATE_CLAIM",
-								  (CommandHandler)command_activate_claim,
-								  "command_activate_claim", NULL, WRITE );
-	daemonCore->Register_Command( REQUEST_CLAIM, "REQUEST_CLAIM", 
-								  (CommandHandler)command_request_claim,
-								  "command_request_claim", NULL, WRITE );
-	daemonCore->Register_Command( PCKPT_ALL_JOBS, "PCKPT_ALL_JOBS", 
-								  (CommandHandler)command_pckpt_all,
-								  "command_pckpt_all", NULL, WRITE );
-	daemonCore->Register_Command( X_EVENT_NOTIFICATION,
-								  "X_EVENT_NOTIFICATION",
-								  (CommandHandler)command_x_event,
-								  "command_x_event", NULL, WRITE );
-	daemonCore->Register_Command( VACATE_ALL_CLAIMS,
-								  "VACATE_ALL_CLAIMS",
-								  (CommandHandler)command_vacate,
-								  "command_vacate", NULL, WRITE);
+		// READ permission commands
 	daemonCore->Register_Command( GIVE_STATE,
 								  "GIVE_STATE",
 								  (CommandHandler)command_give_state,
-								  "command_give_state", NULL, READ );
+								  "command_give_state", 0, READ );
 	daemonCore->Register_Command( GIVE_CLASSAD,
 								  "GIVE_CLASSAD",
 								  (CommandHandler)command_give_classad,
-								  "command_give_classad", NULL, READ );
+								  "command_give_classad", 0, READ );
 	daemonCore->Register_Command( GIVE_REQUEST_AD, "GIVE_REQUEST_AD",
 								  (CommandHandler)command_give_request_ad,
-								  "command_give_request_ad", NULL, READ );
+								  "command_give_request_ad", 0, READ );
 
-		// This command should be registered with negotiator permission
+		// WRITE permission commands
+	daemonCore->Register_Command( ACTIVATE_CLAIM, "ACTIVATE_CLAIM",
+								  (CommandHandler)command_activate_claim,
+								  "command_activate_claim", 0, WRITE );
+	daemonCore->Register_Command( REQUEST_CLAIM, "REQUEST_CLAIM", 
+								  (CommandHandler)command_request_claim,
+								  "command_request_claim", 0, WRITE );
+	daemonCore->Register_Command( X_EVENT_NOTIFICATION,
+								  "X_EVENT_NOTIFICATION",
+								  (CommandHandler)command_x_event,
+								  "command_x_event", 0, WRITE );
+	daemonCore->Register_Command( PCKPT_ALL_JOBS, "PCKPT_ALL_JOBS", 
+								  (CommandHandler)command_pckpt_all,
+								  "command_pckpt_all", 0, WRITE );
+
+		// OWNER permission commands
+	daemonCore->Register_Command( VACATE_ALL_CLAIMS,
+								  "VACATE_ALL_CLAIMS",
+								  (CommandHandler)command_vacate,
+								  "command_vacate", 0, OWNER );
+
+		// NEGOTIATOR permission commands
 	daemonCore->Register_Command( MATCH_INFO, "MATCH_INFO",
 								  (CommandHandler)command_match_info,
-								  "command_match_info", NULL, NEGOTIATOR );
+								  "command_match_info", 0, NEGOTIATOR );
 
+		//////////////////////////////////////////////////
 		// Signals 
+		//////////////////////////////////////////////////
 	daemonCore->Register_Signal( DC_SIGCHLD, "DC_SIGCHLD", 
 								 (SignalHandler)handle_dc_sigchld,
 								 "handle_dc_sigchld" );
 
+		//////////////////////////////////////////////////
 		// Reapers (not yet, since we're doing it outside DC)
+		//////////////////////////////////////////////////
 
 		// Walk through all resources and start an update timer for
 		// each one.  
