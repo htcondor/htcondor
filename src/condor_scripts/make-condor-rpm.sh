@@ -147,7 +147,7 @@ This RPM contains Condor version ${condor_version}.
 %clean
 
 %post
-cd \${RPM_INSTALL_PREFIX}
+
 
 # Figure out the user
 owner="condor"
