@@ -133,36 +133,40 @@ PLATFORM_C_FLAGS = -qsrcmsg
 OS_FLAG = OperatingSystem
 ARCH_FLAG = Architecture
 
+#if IS_ALPHA_OSF1
+DEBUG_FLAG = -ggdb
+#else
 DEBUG_FLAG = -g		/* undefine this if you don't want debugging */
+#endif
 
 #if IS_I386_LINUX
 STD_C_PLUS_FLAGS = \
-	-m486 CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX DbmFlag SigFlag CompatFlags UidFlags $(DEBUG_FLAG) $(STATIC) 
+	-m486 CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX SigFlag CompatFlags UidFlags $(DEBUG_FLAG) $(STATIC)
 STD_C_FLAGS = $(STD_C_PLUS_FLAGS)
 STATIC = -static
 #elif (IS_SUN4M_SOLARIS251)
 STD_C_PLUS_FLAGS =  \
-	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) -I$(X11_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DSolaris251 -DNFSFIX DbmFlag SigFlag CompatFlags UidFlags $(DEBUG_FLAG)
+	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) -I$(X11_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DSolaris251 -DNFSFIX SigFlag CompatFlags UidFlags $(DEBUG_FLAG)
 STD_C_FLAGS =  $(STD_C_PLUS_FLAGS)
 STATIC = StaticFlag
 #elif (IS_SUN4M_SOLARIS)
 STD_C_PLUS_FLAGS =  \
-	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) -I$(X11_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX DbmFlag SigFlag CompatFlags UidFlags $(DEBUG_FLAG)
+	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) -I$(X11_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX SigFlag CompatFlags UidFlags $(DEBUG_FLAG)
 STD_C_FLAGS =  $(STD_C_PLUS_FLAGS)
 STATIC = StaticFlag
 #elif (IS_X86_SOLARIS25)
 STD_C_PLUS_FLAGS =  \
-	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) -I$(X11_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DSolaris251 -DNFSFIX DbmFlag SigFlag CompatFlags UidFlags $(DEBUG_FLAG)
+	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) -I$(X11_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DSolaris251 -DNFSFIX SigFlag CompatFlags UidFlags $(DEBUG_FLAG)
 STD_C_FLAGS =  $(STD_C_PLUS_FLAGS)
 STATIC = StaticFlag
 #elif (IS_X86_SOLARIS)
 STD_C_PLUS_FLAGS =  \
-	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) -I$(X11_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX DbmFlag SigFlag CompatFlags UidFlags $(DEBUG_FLAG)
+	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) -I$(X11_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX SigFlag CompatFlags UidFlags $(DEBUG_FLAG)
 STD_C_FLAGS =  $(STD_C_PLUS_FLAGS)
 STATIC = StaticFlag
 #else
 STD_C_PLUS_FLAGS =  \
-	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX DbmFlag SigFlag CompatFlags UidFlags $(DEBUG_FLAG)
+	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX SigFlag CompatFlags UidFlags $(DEBUG_FLAG)
 STD_C_FLAGS =  $(STD_C_PLUS_FLAGS)
 STATIC = StaticFlag
 #endif
