@@ -728,13 +728,13 @@ obtainAdsFromCollector (
 	allAds.Open();
 	while( ad=allAds.Next() ) {
 
-		// Insert a *copy* of each into the appropriate list.
-		// This is needed because each list destructs its elements.
+		// Insert each ad into the appropriate list.
+		// After we insert it into a list, do not delete the ad...
 
 		if( !strcmp(ad->GetMyTypeName(),STARTD_ADTYPE) ) {
-			startdAds.Insert(new ClassAd(*ad));
+			startdAds.Insert(ad);
 		} else if( !strcmp(ad->GetMyTypeName(),SUBMITTER_ADTYPE) ) {
-			scheddAds.Insert(new ClassAd (*ad));
+			scheddAds.Insert(ad);
 		}
 	}
 	allAds.Close();
