@@ -35,40 +35,50 @@
 
 /**************************************************************/
 
-ReliSock::ReliSock() : Sock(), ignore_next_encode_eom(FALSE),
-		ignore_next_decode_eom(FALSE), _bytes_sent(0.0), _bytes_recvd(0.0)
+/* 
+   NOTE: All SafeSock constructors initialize with this, so you can
+   put any shared initialization code here.  -Derek Wright 3/12/99
+*/
+void
+ReliSock::init()
 {
+	ignore_next_encode_eom = FALSE;
+	ignore_next_decode_eom = FALSE;
+	_bytes_sent = 0.0;
+	_bytes_recvd = 0.0;
+	_special_state = relisock_none;
 	is_client = 0;
 	authob = NULL;
 	hostAddr = NULL;
+}
+
+
+ReliSock::ReliSock()
+	: Sock()
+{
+	init();
 }
 
 
 /* listen on port	*/
 ReliSock::ReliSock( int port )
-	: Sock(), ignore_next_encode_eom(FALSE), ignore_next_decode_eom(FALSE),
-	  _bytes_sent(0.0), _bytes_recvd(0.0)
+	: Sock()
 {
+	init();
 	if (!listen(port)) {
 		dprintf(D_ALWAYS, "failed to listen on port %d!\n", port);
 	}
-	is_client = 0;
-	authob = NULL;
-	hostAddr = NULL;
 }
 
 
 /* listen on serv		*/
 ReliSock::ReliSock( char *serv )
-	: Sock(), ignore_next_encode_eom(FALSE), ignore_next_decode_eom(FALSE),
-	  _bytes_sent(0.0), _bytes_recvd(0.0)
+	: Sock()
 {
+	init();
 	if (!listen(serv)) {
 		dprintf(D_ALWAYS, "failed to listen on serv %s!\n", serv);
 	}
-	is_client = 0;
-	authob = NULL;
-	hostAddr = NULL;
 }
 
 
@@ -77,18 +87,16 @@ ReliSock::ReliSock(
 	int		port,
 	int		timeout_val
 	)
-	: Sock(), ignore_next_encode_eom(FALSE), ignore_next_decode_eom(FALSE),
-	  _bytes_sent(0.0), _bytes_recvd(0.0)
+	: Sock()
 {
+	init();
 	timeout(timeout_val);
 	if (!connect(host, port)) {
 		dprintf(D_ALWAYS, "failed to connect to %s:%d!\n", host, port);
 	}
 	is_client = 1;
-	authob = NULL;
 	hostAddr = strdup( host );
 }
-
 
 
 ReliSock::ReliSock(
@@ -96,18 +104,16 @@ ReliSock::ReliSock(
 	char	*serv,
 	int		timeout_val
 	)
-	: Sock(), ignore_next_encode_eom(FALSE), ignore_next_decode_eom(FALSE),
-	  _bytes_sent(0.0), _bytes_recvd(0.0)
+	: Sock()
 {
+	init();
 	timeout(timeout_val);
 	if (!Sock::connect(host, serv)) {
 		dprintf(D_ALWAYS, "failed to connect to %s:%s!\n", host, serv);
 	}
 	is_client = 1;
-	authob = NULL;
 	hostAddr = strdup( host );
 }
-
 
 
 ReliSock::~ReliSock()
@@ -873,7 +879,7 @@ ReliSock::setOwner( char *newOwner ) {
 	}
 }
 
-char *
+const char *
 ReliSock::getOwner() {
 	if ( this && authob ) {
 		return( authob->getOwner() );
