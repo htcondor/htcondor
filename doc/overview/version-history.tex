@@ -27,6 +27,28 @@ remove files it shouldn't remove if the \Condor{schedd} and/or
 \Condor{startd} were down at the time \Condor{preen} ran.
 This was causing jobs to mysteriously disappear from the job queue.
 
+\item Added preliminary support to Condor for running on machines with
+multiple network interfaces.
+On such machines, users can specify the IP address Condor should use
+in the \Macro{NETWORK_INTERFACE} config file parameter on each host. 
+In addition, if the pool's central manager is on such a machine, users
+should set the \Macro{CM_IP_ADDR} parameter to the ip address you wish
+to use on that machine.
+See section~\ref{sec:Multiple-Interfaces} on
+page~\pageref{sec:Multiple-Interfaces} for more details.
+
+\item Fixed a bug in the remote system call library that was
+preventing certain Fortran operations from working correctly on
+Linux.  
+
+\item The Linux binaries for GLIBC we now distribute are compiled on a
+RedHat 5.2 machine.
+If you're using this version of RedHat, you might have better luck
+with the dynamically linked version of Condor than previous releases
+of Condor.
+Sites using other GLIBC Linux distributions should continue to use the
+statically linked version of Condor.
+
 \item Fixed a bug in the \Condor{shadow} that could cause it to die
 with signal 11 (segmentation violation) under certain rare
 circumstances. 
@@ -45,6 +67,9 @@ checkpointing: \Macro{COMPRESS\_PERIODIC\_CKPT},
 \Macro{SLOW\_CKPT\_SPEED}.  See
 section~\ref{sec:Shadow-Config-File-Entries} on
 page~\pageref{sec:Shadow-Config-File-Entries} for more details.
+In addition, the shadow now honors the \Attr{CkptWanted} flag in a job
+classad, and if it is set to ``False'', the job will never
+checkpoint.
 
 \item Fixed a bug in the \Condor{startd} that could cause it to
 report negative values for the CondorLoadAvg on rare occasions. 
@@ -60,11 +85,30 @@ out but not in matched state''}.
 could cause a job to be left in the ``Running'' state even after the
 \Condor{shadow} for that job had exited.
 
+\item Fixed a bug in the \Condor{schedd} and various tools that
+prevented remote read-only access to the job queue from working.
+So, for example, \texttt{condor\_q -name foo}, if run on any machine
+other than foo, wouldn't display any jobs from foo's queue. 
+This fix re-enables the following options to \Condor{q} to work:
+\Opt{submitter}, \Opt{name}, \Opt{global}, etc.
+
 \item Changed the \Condor{schedd} so that when starting jobs, it
 always sorts on the cluster number, in addition to the date the jobs
 were enqueued and the process number within clusters, so that if many
 clusters were submitted at the same time, the jobs are started in
 order.
+
+\item Fixed a bug in \Condor{compile} that was modifying the
+\Env{PATH} environment variable by adding things to the front of it.
+This would potentially cause jobs to be compiled and linked with a
+different version of a compiler than they thought they were getting.  
+
+\item Minor change in the way the \Condor{startd} handles the
+\Dflag{LOAD} and \Dflag{KEYBOARD} debug flags.  
+Now, each one, when set, will only display every
+\Macro{UPDATE\_INTERVAL}, regardless of the startd state.
+If you wish to see the values for keyboard activity or load average
+every \Macro{POLLING\_INTERVAL}, you must enable \Dflag{FULLDEBUG}. 
 
 \end{itemize}
 
