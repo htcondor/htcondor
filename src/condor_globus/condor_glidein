@@ -57,8 +57,8 @@ sub do_submit() {
 	if ( $project ) {
 		$GLOBUSRSL .= "(project=$project)";
 	}
-	if ( $run_time ) {
-		$GLOBUSRSL .= "(maxTime=$run_time)";
+	if ( $globus_run_time ) {
+		$GLOBUSRSL .= "(maxTime=$globus_run_time)";
 	}
 	if ( $memory ) {
 		$GLOBUSRSL .= "(maxMemory=$memory)";
@@ -123,7 +123,16 @@ sub do_submit() {
 		$GLOBUSENV .= "_condor_SKIP_AUTHENTICATION=$skipauth;";
 	}
 
+	if ( $master_run_time ) {
+		$GLOBUSENV .= "_condor_DaemonStopTime=DaemonStartTime+(${master_run_time}*60);";
+	}
+
 	chop $GLOBUSENV;
+
+	$arguments = "-dyn -f";
+	if ( $master_run_time ) {
+		$arguments .= " -r $master_run_time";
+	}
 
 		##Escape '$' in submit file entries
 	$archdir =~ s/\$/\$(DOLLAR)/g;
@@ -138,8 +147,7 @@ Universe = Globus
 
 Executable = $archdir/condor_master
 
-#Arguments = -dyn -f -n $SUBDIR
-Arguments = -dyn -f 
+Arguments = $arguments
 
 Environment = ${GLOBUSENV}
 
@@ -301,7 +309,7 @@ sub parse_command_line() {
 		"memory=i" => \$memory,
 		"count=i" => \$cpucount,
 		"vms=i" => \$vmcount,
-		"runtime=i" => \$run_time,
+		"runtime=i" => \$globus_run_time,
 		"idletime=i" => \$idle_time,
 		"anybody" => \$anybody,
 		"admin=s" => \$CONDOR_ADMIN,
@@ -325,6 +333,15 @@ sub parse_command_line() {
 
 	if ( $setuponly && $runonly ) {
 		return( "ERROR: $NAME --setuponly and --runonly are mutually exclusive");
+	}
+
+	if ( $globus_run_time ) {
+		if ( $globus_run_time > 0 ) {
+			# Tell the master to shutdown a minute before the Globus limit
+			$master_run_time = $globus_run_time - 1;
+		} else {
+			return( "ERROR: $NAME --runtime must be positive" );
+		}
 	}
 
 	if ( $help ) {
@@ -421,7 +438,8 @@ sub gen_main_config() {
 	KILL : False
 	UPDATE_INTERVAL = 20
 	IS_GLIDEIN = True
-	STARTD_EXPRS = IS_GLIDEIN, START
+	STARTD_EXPRS = IS_GLIDEIN, START, DaemonStopTime
+
 	PREEN_INTERVAL = 0
 EOF
 	close CONDOR_CONFIG;
