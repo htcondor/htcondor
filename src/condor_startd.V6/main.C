@@ -76,7 +76,7 @@ char	*alt_collector_host=NULL;
 int	last_timeout;
 int	capab_timeout;
 int	memory;
-int	termlog;
+extern int	Termlog;
 char	*MyName;
 char	*admin;
 char	*def_owner = "Owner = \"nobody\"";
@@ -143,7 +143,7 @@ int main(int argc, char** argv)
 			fgflag = 1;
 			break;
 		case 't':
-			termlog++;
+			Termlog++;
 			break;
 		default:
 			usage(argv[0]);
