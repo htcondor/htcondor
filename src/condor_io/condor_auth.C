@@ -64,15 +64,17 @@ Condor_Auth_Base :: Condor_Auth_Base(ReliSock * sock, int mode)
 
     free(username);
   
-    const char * tmp = param( "UID_DOMAIN" );
+    char * tmp = param( "UID_DOMAIN" );
     if (tmp) {
         localDomain_ = strdup(tmp);
     }
     else {
         // This is not right!
         dprintf(D_SECURITY, "Unable to determine local UID domain!");
+        localDomain_ = 0;
     }
 
+    free(tmp);
     setRemoteHost(inet_ntoa(mySock_->endpoint()->sin_addr));
     // This is done for protocols such as fs, anonymous. Kerberos should
     // override this with the ip address from Kerbeos

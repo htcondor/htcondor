@@ -775,7 +775,7 @@ returnfailure:
 int
 send_cmd_to_startd(char *sin_host, char *capability, int cmd)
 {
-	ReliSock* sock;
+	ReliSock* sock = NULL;
 
 	Daemon startd (DT_STARTD, sin_host, NULL);
 	if (!(sock = (ReliSock*)startd.startCommand(cmd, Stream::reli_sock, 20))) {
@@ -788,12 +788,14 @@ send_cmd_to_startd(char *sin_host, char *capability, int cmd)
   dprintf(D_FULLDEBUG, "send capability %s\n", capability);
   if(!sock->code(capability)){
     dprintf( D_ALWAYS, "sock->code(%s) failed.\n", capability );
+    delete sock;
     return -3;
   }
 
   // send end of message
   if( !sock->end_of_message() ) {
     dprintf( D_ALWAYS, "end_of_message failed\n" );
+    delete sock;
     return -4;
   }
   dprintf( D_FULLDEBUG, "Sent command %d to startd at %s with cap %s\n",
