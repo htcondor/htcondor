@@ -115,14 +115,22 @@ clean::								@@\
 ** Copy the given file to the specified directory, with the given mode.
 */
 #ifndef release_target
+#if RELEASE_IS_STATIC
 #define release_target( file, dir, mode )		@@\
-$(RELEASE_DIR)/##dir##/##file: file					@@\
-	/bin/rm -f $(RELEASE_DIR)/##dir##/##file				@@\
-	cp file $(RELEASE_DIR)/##dir					@@\
-	chmod mode $(RELEASE_DIR)/##dir##/##file				@@\
+$(RELEASE_DIR)/##dir##/##file: file##.static		@@\
+	/bin/rm -f $(RELEASE_DIR)/##dir##/##file	@@\
+	cp file##.static $(RELEASE_DIR)/##dir##/##file	@@\
+	chmod mode $(RELEASE_DIR)/##dir##/##file	@@\
 release:: $(RELEASE_DIR)/##dir##/##file
-#endif  /* release_target */
-
+#else /* ! RELEASE_IS_STATIC */
+#define release_target( file, dir, mode )		@@\
+$(RELEASE_DIR)/##dir##/##file: file			@@\
+	/bin/rm -f $(RELEASE_DIR)/##dir##/##file	@@\
+	cp file $(RELEASE_DIR)/##dir			@@\
+	chmod mode $(RELEASE_DIR)/##dir##/##file	@@\
+release:: $(RELEASE_DIR)/##dir##/##file
+#endif   /* ! RELEASE_IS_STATIC */
+#endif /* release_target */
 
 /*
 ** Copy the given library to the specified directory, and run ranlib.
@@ -270,12 +278,13 @@ $(STRIP_DIR)/##dir##/##dest##: 			@@\
 */
 #ifndef	static_target
 #define	static_target( program, objlist, libs, dir )		@@\
-dir##/##program: objlist libs					@@\
-	$(CC_LINK) $(STATIC)  $(C_PLUS_FLAGS) -o program##.static objlist libs $(ALL_LDFLAGS) $(DEMANGLE) @@\
-	strip program##.static					@@\
+dir##/##program: program##.static				@@\
 	/bin/rm -f dir##/##program				@@\
 	cp program##.static dir##/##program			@@\
 	chmod EXECUTABLE_MODE dir##/##program			@@\
+	strip dir##/##program					@@\
+program##.static: objlist libs					@@\
+	$(CC_LINK) $(STATIC)  $(C_PLUS_FLAGS) -o program##.static objlist libs $(ALL_LDFLAGS) $(DEMANGLE) @@\
 clean:: 							@@\
 	rm -f program##.static objlist				@@\
 static:: dir##/##program
