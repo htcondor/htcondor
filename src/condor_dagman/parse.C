@@ -43,7 +43,7 @@ void exampleSyntax (const char * example) {
 bool isKeyWord (char *token) {
     const unsigned int numKeyWords = 6;
     const char * keywords[numKeyWords] = {
-        "JOB", "PARENT", "CHILD", "PRE", "POST", "DONE"
+        "JOB", "PARENT", "CHILD", "PRE", "POST", "DONE", "Retry",
     };
     for (unsigned int i = 0 ; i < numKeyWords ; i++) {
         if (!strcasecmp (token, keywords[i])) return true;

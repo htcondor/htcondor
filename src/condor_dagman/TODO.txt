@@ -21,6 +21,8 @@
 
 === bugs
 
+- naming a job "executable" in the dag file hangs DAGMan? (per Jim Amundson)
+
 x dagman needs to return failure if a node fails
 x termq bug
 x segfault bugs
