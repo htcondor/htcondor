@@ -898,11 +898,11 @@ SetRank()
 
 	if ( JobUniverse == STANDARD ) 
 	{
-		ptr = param("APPEND_PREF_STANDARD");
+		ptr = param("APPEND_RANK_STANDARD");
 	} 
 	if ( JobUniverse == VANILLA ) 
 	{
-		ptr = param("APPEND_PREF_VANILLA");
+		ptr = param("APPEND_RANK_VANILLA");
 	} 
 
 	if ( ptr != NULL ) {
