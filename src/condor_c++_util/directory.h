@@ -35,6 +35,7 @@ enum si_error_t { SIGood = 0, SINoFile, SIFailure };
     NT.  This class is used by the Directory class defined below.
 	@see Directory
 */
+class StatBuf;
 class StatInfo
 {
 public:
@@ -57,6 +58,14 @@ public:
 		@see Error()
 	*/
 	StatInfo( const char *dirpath, const char *filename );
+
+	/** Alternate Constructor.  This does the same thing as the other
+  	    constructor, except that a file descriptor is passed instead
+		of a file path.
+		@param fd The file descriptor
+		@see Error()
+	*/
+	StatInfo( int fd );
 
 #ifdef WIN32
 	/** NT's other constructor.  This just stores the given values
@@ -138,7 +147,7 @@ public:
 	/** Get file size.
 		@return size of the file in bytes
 	*/
-	unsigned long GetFileSize() { return file_size; }
+	filesize_t GetFileSize() { return file_size; }
 
 	/** Determine if the file is the name of a subdirectory,
 		or just a file.  This also returns true for symlinks
@@ -183,17 +192,14 @@ private:
 	uid_t owner;
 	gid_t group;
 #endif
-	unsigned long file_size;
+	filesize_t file_size;
 	char* dirpath;
 	char* filename;
 	char* fullpath;
-	void do_stat( const char *path );
+	void stat_file( const char *path );
+	void stat_file( int fd );
+	void init( StatBuf *buf = NULL );
 	char* make_dirpath( const char* dir );
-#ifndef WIN32
-	int unix_do_stat( const char *path, struct stat *buf );
-#else
-	int nt_do_stat( const char *path, struct stat *buf );
-#endif
 };
 
 

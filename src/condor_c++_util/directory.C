@@ -51,6 +51,106 @@
 static bool GetIds( const char *path, uid_t *owner, gid_t *group );
 #endif
 
+	// Define a "standard" StatBuf type
+#if defined HAS_STAT64
+typedef struct stat64 StatStructType;
+#elif defined HAS__STATI64
+typedef struct _stati64 StatStructType;
+#else
+typedef struct stat StatStructType;
+#endif
+
+class StatBuf
+{
+public:
+	StatBuf( const char *path );
+	StatBuf( int fd );
+	~StatBuf( );
+	int Retry( void );
+
+	const char *GetStatFn( void ) { return name; };
+	int GetStatus( void ) { return status; };
+	int GetErrno( void ) { return stat_errno; };
+	const StatStructType *GetStatBuf( void ) { return &buf; };
+
+private:
+	int DoStat( const char *path );
+	int DoStat( int fd );
+	StatStructType	buf;
+	const char *name;
+	int status;
+	int stat_errno;
+	int	fd;
+	const char *path;
+};
+
+StatBuf::StatBuf( const char *path )
+{
+	this->path = strdup( path );
+	this->fd = -1;
+	DoStat( this->path );
+}
+
+StatBuf::StatBuf( int fd )
+{
+	this->path = NULL;
+	this->fd = fd;
+	DoStat( fd );
+}
+
+StatBuf::~StatBuf( void )
+{
+	if ( path ) {
+		free ( (void*) path );
+		path = NULL;
+	}
+}
+
+int
+StatBuf::Retry( void )
+{
+	if ( fd ) {
+		return DoStat( fd );
+	} else {
+		return DoStat( path );
+	}
+}
+
+int
+StatBuf::DoStat( const char *path )
+{
+#if defined HAS_STAT64
+	name = "stat64";
+	status = ::stat64( path, &buf );
+#elif defined HAS__STATI64
+	name = "_stati64";
+	status = ::_stati64( path, &buf );
+#else
+	name = "stat";	
+	status = ::stat( path, &buf );
+#endif
+
+	stat_errno = errno;
+	return status;
+}
+
+int
+StatBuf::DoStat( int fd )
+{
+#if defined HAS_STAT64
+	name = "fstat64";
+	status = ::fstat64( fd, &buf );
+#elif defined HAS__STATI64
+	name = "_fstati64";
+	status = ::_fstati64( fd, &buf );
+#else
+	name = "fstat";
+	status = ::fstat( fd, &buf );
+#endif
+
+	stat_errno = errno;
+	return status;
+}
 
 StatInfo::StatInfo( const char *path )
 {
@@ -74,23 +174,31 @@ StatInfo::StatInfo( const char *path )
 	} else {
 		filename = NULL;
 	}
-	do_stat( (const char*)fullpath );
+	stat_file( (const char*)fullpath );
 }
-
 
 StatInfo::StatInfo( const char *dirpath, const char *filename )
 {
 	this->filename = strnewp( filename );
 	this->dirpath = make_dirpath( dirpath );
 	fullpath = dircat( dirpath, filename );
-	do_stat( (const char*)fullpath );
+	stat_file( (const char*)fullpath );
 }
 
+StatInfo::StatInfo( int fd )
+{
+	filename = NULL;
+	fullpath = NULL;
+	dirpath = NULL;
+
+	stat_file( fd );
+}
 
 #ifdef WIN32
 StatInfo::StatInfo( const char* dirpath, const char* filename, 
 					time_t time_access, time_t time_create, 
-					time_t time_modify, unsigned long fsize, bool is_dir, bool is_symlink )
+					time_t time_modify, unsigned long fsize,
+					bool is_dir, bool is_symlink )
 {
 	this->dirpath = strnewp( dirpath );
 	this->filename = strnewp( filename );
@@ -109,124 +217,145 @@ StatInfo::StatInfo( const char* dirpath, const char* filename,
 
 StatInfo::~StatInfo()
 {
-	delete [] filename;
-	delete [] dirpath;
-	delete [] fullpath;
+	if ( filename ) delete [] filename;
+	if ( dirpath )  delete [] dirpath;
+	if ( fullpath ) delete [] fullpath;
+}
+
+
+/*
+  UNIX note:
+  We want to stat the given file. We may be operating as root, but
+  root == nobody across most NFS file systems, so we may have to do it
+  as condor.  If we succeed, we proceed, if the file has already been
+  removed we handle it.  If we cannot do it as either root or condor,
+  we report an error.
+*/
+void
+StatInfo::stat_file( const char *path )
+{
+		// Initialize
+	init( );
+
+		// Ok, run stat
+	StatBuf statbuf( path );
+	int status = statbuf.GetStatus( );
+
+		// How'd it go?
+	if ( status ) {
+		si_errno = statbuf.GetErrno( );
+
+# if (! defined WIN32 )
+		if ( EACCES == si_errno ) {
+				// permission denied, try as condor
+			priv_state priv = set_condor_priv();
+			status = statbuf.Retry( );
+			set_priv( priv );
+
+			if( status < 0 ) {
+				si_errno = statbuf.GetErrno( );
+			}
+		}
+# endif
+	}
+
+		// If we've failed, just bail out
+	if ( status ) {
+		if ( ENOENT == si_errno ) {
+			si_error = SINoFile;
+		} else {
+			dprintf( D_ALWAYS, 
+					 "StatInfo::%s(%s) failed, errno: %d = %s\n",
+					 statbuf.GetStatFn(), path, errno, strerror( errno ) );
+		}
+		return;
+	}
+
+	init( &statbuf );
+
+}
+void
+StatInfo::stat_file( int fd )
+{
+		// Initialize
+	init( );
+
+		// Ok, run stat
+	StatBuf statbuf( fd );
+	int status = statbuf.GetStatus( );
+
+		// How'd it go?
+	if ( status ) {
+		si_errno = statbuf.GetErrno( );
+
+# if (! defined WIN32 )
+		if ( EACCES == si_errno ) {
+				// permission denied, try as condor
+			priv_state priv = set_condor_priv();
+			status = statbuf.Retry( );
+			set_priv( priv );
+
+			if( status < 0 ) {
+				si_errno = statbuf.GetErrno( );
+			}
+		}
+# endif
+	}
+
+		// If we've failed, just bail out
+	if ( status ) {
+		if ( ENOENT == si_errno ) {
+			si_error = SINoFile;
+		} else {
+			dprintf( D_ALWAYS, 
+					 "StatInfo::%s(fd=%d) failed, errno: %d = %s\n",
+					 statbuf.GetStatFn(), fd, errno, strerror( errno ) );
+		}
+		return;
+	}
+
+	init( &statbuf );
 }
 
 void
-StatInfo::do_stat( const char *path )
+StatInfo::init( StatBuf *statbuf )
 {
 		// Initialize
-	si_error = SIFailure;
-	access_time = 0;
-	modify_time = 0;
-	create_time = 0;
-	isdirectory = false;
-	isexecutable = false;
-	issymlink = false;
+	if ( NULL == statbuf )
+	{
+		si_error = SIFailure;
+		access_time = 0;
+		modify_time = 0;
+		create_time = 0;
+		isdirectory = false;
+		isexecutable = false;
+		issymlink = false;
+	}
+	else
+	{
+		// the do_stat succeeded
+		const StatStructType *sb = statbuf->GetStatBuf( );
 
-	struct stat statbuf;	
-
-#ifndef WIN32
-	int stat_status = unix_do_stat( path, &statbuf );
-#else
-	int stat_status = nt_do_stat( path, &statbuf );
-#endif /* WIN32 */
-
-	switch( stat_status ) {
-	case FALSE:
-		si_error = SINoFile;
-		break;
-	case TRUE:
-			// the do_stat succeeded
 		si_error = SIGood;
-		access_time = statbuf.st_atime;
-		create_time = statbuf.st_ctime;
-		modify_time = statbuf.st_mtime;
-		file_size = statbuf.st_size;
-#ifndef WIN32
-		isdirectory = S_ISDIR(statbuf.st_mode);
+		access_time = sb->st_atime;
+		create_time = sb->st_ctime;
+		modify_time = sb->st_mtime;
+		file_size = sb->st_size;
+
+# if (! defined WIN32)
+		isdirectory = S_ISDIR(sb->st_mode);
 		// On Unix, if any execute bit is set (user, group, other), we
 		// consider it to be executable.
-		isexecutable = ((statbuf.st_mode & (S_IXUSR|S_IXGRP|S_IXOTH)) != 0 );
-		issymlink = S_ISLNK(statbuf.st_mode);
-		owner = statbuf.st_uid;
-		group = statbuf.st_gid;
-#else
-		isdirectory = ((_S_IFDIR & statbuf.st_mode) != 0);
-		isexecutable = ((_S_IEXEC & statbuf.st_mode) != 0);
-#endif
-		break;
-	default:
-			// Failure
-		break;
+		isexecutable = ((sb->st_mode & (S_IXUSR|S_IXGRP|S_IXOTH)) != 0 );
+		issymlink = S_ISLNK(sb->st_mode);
+		owner = sb->st_uid;
+		group = sb->st_gid;
+# else
+		isdirectory = ((_S_IFDIR & sb->st_mode) != 0);
+		isexecutable = ((_S_IEXEC & sb->st_mode) != 0);
+# endif
 	}
 }
-
-
-#ifndef WIN32
-/*
-  We want to stat the given file. We may be operating as root, but root
-  == nobody across most NFS file systems, so we may have to do it as
-  condor.  If we succeed, we return TRUE, and if the file has already
-  been removed we return FALSE.  If we cannot do it as either root
-  or condor, we return -1.
-*/
-int
-StatInfo::unix_do_stat( const char *path, struct stat *buf )
-{
-	priv_state priv;
-
-	errno = 0;
-	if( stat( path, buf ) < 0 ) {
-		si_errno = errno;
-		switch( errno ) {
-		case ENOENT:	// got rm'd while we were doing this
-			return FALSE;
-		case EACCES:	// permission denied, try as condor
-			priv = set_condor_priv();
-			if( stat( path, buf ) < 0 ) {
-				si_errno = errno;
-				set_priv( priv );
-				if ( errno == ENOENT ) {
-					return FALSE;	// got rm'd while we were doing this
-				}
-				dprintf( D_ALWAYS, 
-						 "StatInfo::do_stat(%s,0x%x) failed, errno: %d\n",
-						 path, &buf, errno );
-				return -1;
-			}
-			set_priv( priv );
-		}
-	}
-	return TRUE;
-}
-#else /* WIN32 */
-/*
-  We want to stat the given file.  Since we're NT here, there's no
-  need to mess w/ priv_state stuff, (yet?).  If we succeed, we return
-  TRUE, and if the file has already been removed we return FALSE.  If
-  we failed for some other reason, we return -1.
-*/
-int
-StatInfo::nt_do_stat( const char *path, struct stat *buf )
-{
-	if( stat( path, buf ) < 0 ) {
-		si_errno = errno;
-		switch( errno ) {
-		case ENOENT:	// got rm'd while we were doing this
-			return FALSE;
-		default:
-			dprintf( D_ALWAYS, 
-					 "StatInfo::do_stat(%s,0x%x) failed, errno: %d\n",
-					 path, &buf, errno );
-			return -1;
-		}
-	}
-	return TRUE;
-}
-#endif /* WIN32 */
 
 
 char*
