@@ -1,5 +1,5 @@
 /* 
-** Copyright 1986, 1987, 1988, 1989, 1990, 1991 by the Condor Design Team
+** Copyright 1986, 1987, 1988, 1989, 1990, 1991, 1997 by the Condor Design Team
 ** 
 ** Permission to use, copy, modify, and distribute this software and its
 ** documentation for any purpose and without fee is hereby granted,
@@ -28,15 +28,14 @@
 ** 
 */ 
 
-/*
-** These routines used to switch back and forth from condor to root.
-*/
+/* See condor_uid.h for description. */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <pwd.h>
 #include <sys/types.h>
 #include <grp.h>
+#include <time.h>
 
 #if defined(AIX31) || defined(AIX32)
 #include <sys/types.h>
@@ -70,6 +69,8 @@ char *_FileName_ = __FILE__;
 
 #define ROOT 0
 
+#define HISTORY_LENGTH 32
+
 static uid_t CondorUid, UserUid;
 static gid_t CondorGid, UserGid;
 static int CondorIdsInited = FALSE;
@@ -86,6 +87,23 @@ static int set_user_rgid();
 static int set_root_euid();
 static int set_condor_ruid();
 static int set_condor_rgid();
+
+/* must be listed in the same order as enum priv_state in condor_uid.h */
+static char *priv_state_name[] = {
+	"PRIV_UNKNOWN",
+	"PRIV_ROOT",
+	"PRIV_CONDOR",
+	"PRIV_USER",
+	"PRIV_USER_FINAL"
+};
+
+static struct {
+	time_t		timestamp;
+	priv_state	priv;
+	char 		*file;
+	int			line;
+} priv_history[HISTORY_LENGTH];
+static int ph_head=0, ph_count=0;
 
 
 /* We don't use EXCEPT here because this file is used in
@@ -136,11 +154,13 @@ init_condor_ids()
 				exit(1);
 			}
 		}
+		dprintf(D_PRIV, "running as root; privilege switching in effect\n");
 	} else {
 		/* Non-root.  Set the CondorUid/Gid to our current uid/gid */
 		CondorUid = myuid;
 		CondorGid = mygid;
 		/* no need to try to switch ids when running as non-root */
+		dprintf(D_PRIV, "running as non-root; no privilege switching\n");
 		SwitchIds = FALSE;
 	}
 	
@@ -152,7 +172,7 @@ init_condor_ids()
 
 
 void
-init_user_ids(char username[])
+init_user_ids(const char username[])
 {
     struct passwd       *pwd, *getpwnam();
 	int					scm;
@@ -170,33 +190,69 @@ init_user_ids(char username[])
 	(void)endpwent();
 	(void)SetSyscalls( scm );
 
-	UserUid = pwd->pw_uid;
-	UserGid = pwd->pw_gid;
 	initgroups(username, UserGid);
-	UserIdsInited = TRUE;
+	set_user_ids(pwd->pw_uid, pwd->pw_gid);
 }
 
 
 void
 set_user_ids(uid_t uid, gid_t gid)
 {
+	if (UserIdsInited && UserUid != uid) {
+		dprintf(D_ALWAYS, "warning: setting UserUid to %d, was %d previosly\n",
+				uid, UserUid);
+	}
 	UserUid = uid;
 	UserGid = gid;
 	UserIdsInited = TRUE;
 }
 
 
+void
+log_priv(priv_state prev, priv_state new, char file[], int line)
+{
+	dprintf(D_PRIV, "%s --> %s at %s:%d\n",	priv_state_name[prev],
+			priv_state_name[new], file, line);
+	priv_history[ph_head].timestamp = time(NULL);
+	priv_history[ph_head].priv = new;
+	priv_history[ph_head].file = file; /* should be a constant - no alloc */
+	priv_history[ph_head].line = line;
+	ph_head = (ph_head + 1) % HISTORY_LENGTH;
+	if (ph_count < HISTORY_LENGTH) ph_count++;
+}
+
+
+void
+display_priv_log()
+{
+	int i, idx;
+	if (SwitchIds) {
+		dprintf(D_ALWAYS, "running as root; privilege switching in effect\n");
+	} else {
+		dprintf(D_ALWAYS, "running as non-root; no privilege switching\n");
+	}		
+	for (i=0; i < ph_count && i < HISTORY_LENGTH; i++) {
+		idx = (ph_head-i-1+HISTORY_LENGTH)%HISTORY_LENGTH;
+		dprintf(D_ALWAYS, "--> %s at %s:%d %s",
+				priv_state_name[priv_history[idx].priv],
+				priv_history[idx].file, priv_history[idx].line,
+				ctime(&priv_history[idx].timestamp));
+	}
+}
+
+
 priv_state
-set_priv(priv_state s)
+_set_priv(priv_state s, char file[], int line, int dologging)
 {
 	priv_state PrevPrivState = CurrentPrivState;
 	if (s == CurrentPrivState) return s;
 	if (CurrentPrivState == PRIV_USER_FINAL) {
 		dprintf(D_ALWAYS,
 				"warning: attempted switch out of PRIV_USER_FINAL\n");
-		return s;
+		return PRIV_USER_FINAL;
 	}
 	CurrentPrivState = s;
+	if (dologging) log_priv(PrevPrivState, CurrentPrivState, file, line);
 	if (SwitchIds) {
 		switch (s) {
 		case PRIV_ROOT:
@@ -222,37 +278,9 @@ set_priv(priv_state s)
 		default:
 			dprintf("unknown priv state %d\n", (int)s);
 		}
-		return PrevPrivState;
 	}
+	return PrevPrivState;
 }	
-
-
-priv_state
-set_condor_priv()
-{
-	return set_priv(PRIV_CONDOR);
-}
-
-
-priv_state
-set_user_priv()
-{
-	return set_priv(PRIV_USER);
-}
-
-
-void
-set_user_priv_final()
-{
-	set_priv(PRIV_USER_FINAL);
-}
-
-
-priv_state
-set_root_priv()
-{
-	return set_priv(PRIV_ROOT);
-}
 
 
 uid_t
