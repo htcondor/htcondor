@@ -251,13 +251,21 @@ DEBUG_FLAG = DebugFlag
 
 AUTH_FLAGS = GssAuthFlags
 
+#if WANT_NETMAN
+NETMAN_LIB = ../condor_netman/libnetman.a
+NETMAN_FLAGS = -DWANT_NETMAN
+#else
+NETMAN_LIB =
+NETMAN_FLAGS =
+#endif
+
 #define ImakeFlags ImakeArchFlag ImakeOpsysFlag ImakeOtherFlag ImakeGssFlag
 #define IMAKE_FLAGS ImakeFlags -I../../config -s Makefile
 
 VENDOR_C_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG)=$(ARCH_FLAG) \
 		 -D$(OS_FLAG)=$(OS_FLAG) \
-		 $(SITE_C_FLAGS) $(AUTH_FLAGS) $(GLOBUS_FLAGS)
+		 $(SITE_C_FLAGS) $(AUTH_FLAGS) $(GLOBUS_FLAGS) $(NETMAN_FLAGS)
 
 /*
 Generally, compile with -fPIC for position-independent code.
@@ -293,7 +301,6 @@ PROCAPI_LIB = ../condor_procapi/libprocapi.a
 SYSAPI_LIB = ../condor_sysapi/libsysapi.a
 ACCT_LIB    = ../condor_accountant.V6/libacct.a
 DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a
-NETMAN_LIB = ../condor_netman/libnetman.a
 
 ALL_LDFLAGS = -lm $(LDFLAGS) $(PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
 TEST_LDFLAGS = -lm $(LDFLAGS) $(TEST_PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
