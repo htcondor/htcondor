@@ -30,7 +30,12 @@
 #ifndef SAFE_SOCK_H
 #define SAFE_SOCK_H
 
+#if defined(WIN32)
+#include <winsock.h>
+#else
 #include <netinet/in.h>
+#endif
+
 #include "buffers.h"
 #include "sock.h"
 #include "condor_constants.h"
@@ -53,7 +58,6 @@ public:
 	//
 	virtual int handle_incoming_packet();
 	virtual int end_of_message();
-	virtual int close();
 	virtual int connect(char *, int);
 	inline int connect(char *h, char *s) { return connect(h,getportbyserv(s));}
 
@@ -64,8 +68,8 @@ public:
 	SafeSock() : Sock() {}		/* virgin safe_sock		*/
 	SafeSock(int);				/* listen on port		*/
 	SafeSock(char *);			/* listen on serv 		*/
-	SafeSock(char *, int);		/* connect to host/port	*/
-	SafeSock(char *, char *);	/* connect to host/serv	*/
+	SafeSock(char *, int, int timeout_val=0);		/* connect to host/port	*/
+	SafeSock(char *, char *, int timeout_val=0);	/* connect to host/serv	*/
 	~SafeSock();
 
 	int listen();
@@ -73,12 +77,13 @@ public:
 	inline int listen(char *s) { if (!bind(s)) return FALSE; return listen(); }
 
 	int get_port();
-	int get_file_desc();
-	int attach_to_file_desc(int);
 	struct sockaddr_in *endpoint();
 	char *endpoint_IP();
 	int endpoint_port();
 
+	int get_file_desc();
+	int attach_to_file_desc(int);
+	
 	/*
 	**	Stream protocol
 	*/
@@ -91,14 +96,6 @@ public:
 	virtual int get_bytes(void *, int);
 	virtual int get_ptr(void *&, char);
 	virtual int peek(char &);
-
-
-	/*
-	** 	Condor Types
-	*/
-
-	int snd_int(int val, int end_of_record);
-	int rcv_int(int &val, int end_of_record);
 
 
 //	PRIVATE INTERFACE TO SAFE SOCKS

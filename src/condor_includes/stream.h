@@ -29,7 +29,7 @@
 
 
 /*
-	* COMPONANTS:
+	* COMPONENTS:
 
 	The condor stream library consists of (for now):
 	- File streams (file.h)
@@ -59,7 +59,7 @@
 	* PROTOCOL:
 
 	The Stream base class defines the private protocol for all Streams.
-	This protocol consists of 6 virtual functions:
+	This protocol consists of 10 virtual functions:
 
 	1) Destructor()
 		- Local destructor.
@@ -88,6 +88,19 @@
 		- gets the next character in the stream without consuming it.
 		  returns 1 on success, 0 on error.
 
+	7) struct sockaddr_in *endpoint();
+		- get the sockaddr_in structure which defines the connections
+		peer address/port 
+
+	8) int get_port()
+		- get the IP port of the underlying socket
+
+	9) int timeout()
+		- set a timeout value for all connects/accepts/reads/writes of socket
+
+	10) int end_of_message()
+		- on encode, flush stream and send record delimiter.  on decode, discard
+		data up until the next record delimiter.
 
 	* CODE/PUT/GET:
 
@@ -115,13 +128,14 @@
 #include <assert.h>
 
 #include "condor_common.h"
+
 #include "proc.h"
 
 /* now include sched.h.  cleanup namespace if user has not
  * already included condor_mach_status.h, otherwise leave alone.
  * this silliness is needed because other parts of the code use
  * an enumerated type which has CHECKPOINTING and SUSPENDED defined,
- * and g++ apparently handles enums via #defines behind the scence. -Todd 7/97
+ * and g++ apparently handles enums via #defines behind the scene. -Todd 7/97
  */
 #ifndef _MACH_STATUS
 #	include "sched.h"
@@ -133,6 +147,9 @@
 
 #include "condor_constants.h"	/* to get BOOLEAN typedef... */
 #include "startup.h"
+
+#if !defined(WIN32)
+
 #include <sys/stat.h>
 
 #if defined(OSF1)
@@ -142,6 +159,8 @@
 #else
 #  include <sys/statfs.h>
 #endif
+
+#endif // !defined(WIN32)
 
 class Stream {
 
@@ -197,19 +216,26 @@ public:
 
 	//	Condor types
 
-	int signal(int &);
-
 	int code(PROC_ID &);
-	int code(struct rusage &);
 	int code(PROC &);
 	int code(STARTUP_INFO &);
+	int code(PORTS &);
+	int code(StartdRec &);
+
+#if !defined(WIN32)
+
+	//  UNIX types
+
+	int signal(int &);
+
+	int code(struct rusage &);
 	int code(struct stat &);
 	int code(struct statfs &);
 	int code(struct timezone &);
 	int code(struct timeval &);
 	int code(struct rlimit &);
-	int code(PORTS &);
-	int code(StartdRec &);
+
+#endif // !defined(WIN32)
 
 	//   allow pointers instead of references to ease XDR compatibility
 	//
@@ -224,6 +250,8 @@ public:
 	int code(float *x) 				{ return code(*x); }
 	int code(double *x) 			{ return code(*x); }
 
+#if !defined(WIN32)
+	
 	int signal(int *x)				{ return signal(*x); }
 
 	int code(PROC_ID *x)			{ return code(*x); }
@@ -237,6 +265,8 @@ public:
 	int code(struct rlimit *x)		{ return code(*x); }
 	int code(PORTS *x)				{ return code(*x); }
 	int code(StartdRec *x)			{ return code(*x); }
+
+#endif // !defined(WIN32)
 
 	//	Put operations
 	//
@@ -271,8 +301,6 @@ public:
 	int get(char *&);
 	int get(char *&, int &);
 
-
-
 	/*
 	**	Stream protocol
 	*/
@@ -285,11 +313,28 @@ public:
 	virtual int get_bytes(void *, int) { assert(0); return 0; }
 	virtual int get_ptr(void *&, char) { assert(0); return 0; }
 	virtual int peek(char &) { assert(0); return 0; }
+	virtual int end_of_message() { assert(0); return 0; }
+	inline int eom() { return end_of_message(); }
 
+	// peer information operations (virtually defined by each stream)
+	//
+	virtual struct sockaddr_in *endpoint() { assert(0); return (struct sockaddr_in *)0; }
+
+	// local port information (virtually defined by each stream)
+	//
+	virtual int get_port() { assert(0); return 0; }
+
+	// set a timeout for an underlying socket
+	//
+	virtual int timeout(int) { assert(0); return 0; }
 
 	//	type operation
 	//
 	virtual stream_type type() { assert(0); return (stream_type)0; }
+
+	// Condor Compatibility Ops
+	int snd_int(int val, int end_of_record);
+	int rcv_int(int &val, int end_of_record);
 
 
 /*

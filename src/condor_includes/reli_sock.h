@@ -51,7 +51,6 @@ public:
 	//
 	virtual int handle_incoming_packet();
 	virtual int end_of_message();
-	virtual int close();
 	virtual int connect(char *, int);
 
 
@@ -61,8 +60,8 @@ public:
 	ReliSock() : Sock() {}		/* virgin reli_sock		*/
 	ReliSock(int);				/* listen on port		*/
 	ReliSock(char *);			/* listen on serv 		*/
-	ReliSock(char *, int);		/* connect to host/port	*/
-	ReliSock(char *, char *);	/* connect to host/serv	*/
+	ReliSock(char *, int, int timeout_val=0);		/* connect to host/port	*/
+	ReliSock(char *, char *, int timeout_val=0);	/* connect to host/serv	*/
 	~ReliSock();
 
 	int listen();
@@ -74,10 +73,11 @@ public:
 	int accept(ReliSock *);
 
 	int get_port();
+	struct sockaddr_in *endpoint();
+
 	int get_file_desc();
+
 	int attach_to_file_desc(int);
-
-
 
 	/*
 	**	Stream protocol
@@ -92,13 +92,6 @@ public:
 	virtual int get_ptr(void *&, char);
 	virtual int peek(char &);
 
-
-	/*
-	** 	Condor Types
-	*/
-
-	int snd_int(int val, int end_of_record);
-	int rcv_int(int &val, int end_of_record);
 
 	
 //	PRIVATE INTERFACE TO RELIABLE SOCKS
@@ -123,7 +116,7 @@ protected:
 	class RcvMsg {
 	public:
 		RcvMsg() : ready(0) {}
-		int rcv_packet(int);
+		int rcv_packet(int, int);
 
 		ChainBuf	buf;
 		int			ready;
@@ -131,12 +124,13 @@ protected:
 
 	class SndMsg {
 	public:
-		int snd_packet(int, int);
+		int snd_packet(int, int, int);
 
 		Buf			buf;
 	} snd_msg;
 
 	relisock_state	_special_state;
+	struct sockaddr_in _who;  // updated when endpoint() called
 };
 
 

@@ -5,6 +5,10 @@
 
 void sanity_check();
 
+#if !defined(WIN32)
+typedef int SOCKET;
+#endif
+
 class Buf {
 public:
 	Buf(int sz=CONDOR_IO_BUF_SIZE);
@@ -25,10 +29,10 @@ public:
 	inline int consumed() const { return _dta_pt == _dta_sz; }
 
 
-	int write_to_fd(int fd, int sz=-1);
-	int read_frm_fd(int fd, int sz=-1);
+	int write(SOCKET sockd, int sz=-1, int timeout=0);
+	int read(SOCKET sockd, int sz=-1, int timeout=0);
 
-	int flush_to_fd(int fd, void * hdr=0, int sz=0);
+	int flush(SOCKET sockd, void * hdr=0, int sz=0, int timeout=0);
 
 	int put_max(const void *, int);
 	int get_max(void *, int);
@@ -56,7 +60,8 @@ private:
 class ChainBuf {
 public:
 	ChainBuf() : _head(0), _tail(0), _curr(0),_tmp(0) {}
-	~ChainBuf() { reset(); } 	// reset() in destructor to delete all bufs
+	~ChainBuf() { if (_tmp) delete [] _tmp; }
+
 
 	inline int consumed() { return !_tail || (_tail && _tail->consumed()); }
 
