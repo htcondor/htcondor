@@ -1,27 +1,19 @@
 NAME = condor_startd
 all_target( $(NAME) )
 
-# Use "-O2" in CFLAGS for benchmark code, i.e. clinpack.c & dhry*.c
-CFLAGS = $(STD_C_FLAGS) -O2 
+#if IS_SGI_IRIX62
+#undef MldLib
+#define MldLib /usr/lib/libelf.a
+#endif 
+
+CFLAGS = $(STD_C_FLAGS)
+
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LIB= $(DAEMONCORE_LIB) $(STD_LIBS)
 
-#if IS_ALPHA_OSF1
-#	define LOAD_AVG_OBJ load_avg.OSF1.o
-#elif IS_LINUX
-#	define LOAD_AVG_OBJ load_avg.LINUX.o
-#elif IS_SOLARIS
-#       define LOAD_AVG_OBJ load_avg.Solaris.o load_avg.uptime.o
-#elif IS_SGI_IRIX62 || IS_SGI_IRIX53
-#       define LOAD_AVG_OBJ load_avg.IRIX.o load_avg.uptime.o
-#elif IS_HPUX
-#	define LOAD_AVG_OBJ load_avg.HPUX.o
-#endif
-
 OBJ = LoadQueue.o Match.o Reqexp.o ResAttributes.o ResMgr.o ResState.o \
-	Resource.o Starter.o calc.o command.o LOAD_AVG_OBJ main.o util.o \
-	clinpack.o dhry21a.o dhry21b.o timers_b.o setsyscalls.o \
-	startd_instantiate.o
+	Resource.o Starter.o command.o main.o util.o \
+	setsyscalls.o startd_instantiate.o
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
