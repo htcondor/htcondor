@@ -588,6 +588,7 @@ RemoteResource::setExitReason( int reason )
 		exit_reason = reason;
 	}
 
+		// record that this resource is really finished
 	setResourceState( RR_FINISHED );
 }
 
@@ -749,6 +750,11 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			setResourceState( new_state );
 		}
 	}
+		// now that we've gotten an update, we should evaluate our
+		// periodic user policy again, since we have new information
+		// and something might now evaluate to true which we should
+		// act on.
+	shadow->evalPeriodicUserPolicy();
 }
 
 
