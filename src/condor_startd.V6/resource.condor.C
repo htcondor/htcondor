@@ -305,6 +305,12 @@ resource_free(resource_id_t rid)
 		return -1;
 
 	if( rip->r_client ) {
+		if( ! rip->r_timed_out ) {
+				// If the schedd/startd connection didn't time out,
+				// tell the schedd and accountant we're terminating
+				// the match
+			vacate_client( rid );
+		}
 		free(rip->r_client);
 		rip->r_client = NULL;
 	}
@@ -332,6 +338,8 @@ resource_free(resource_id_t rid)
 	if (rip->r_pid != NO_PID && rip->r_pid != getpid()) {
 		kill_starter( rip->r_pid, SIGTSTP );
 		resmgr_changestate(rip->r_rid, CHECKPOINTING);
+	} else {
+		resmgr_changestate(rip->r_rid, NO_JOB);
 	}
 	
 	rip->r_claimed = FALSE;
@@ -647,13 +655,9 @@ event_vacate(resource_id_t rid, job_id_t jid,task_id_t tid)
 		dprintf(D_ALWAYS, "vacate: could not find resource.\n");
 		return -1;
 	}
-
-		// If the resource is claimed, send VACATE_SERVICE to the
-		// schedd and accountant. 
-	if( rip->r_claimed ) {
-		vacate_client( rip->r_rid );
-	}
-		// Relinquish the match, checkpoint the job, set claimed to false. 
+		// Relinquish the match, checkpoint the job, set claimed to
+		// false, if the resource is claimed, tell the schedd and
+		// accountant the match is going away, etc.
 	resource_free( rip->r_rid );
 	return 0;
 }
@@ -840,7 +844,7 @@ event_exited(resource_id_t rid, job_id_t jid, task_id_t tid)
 	if( rip->r_claimed == FALSE ) {
 		resmgr_changestate(rip->r_rid, NO_JOB);
 	} else {
-			/* resmgr_changestate(rip->r_rid, CLAIMED); */
+		resmgr_changestate(rip->r_rid, CLAIMED);
 	}
 
 	cleanup_execute_dir();

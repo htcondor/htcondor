@@ -81,6 +81,7 @@ int resmgr_init()
 		resources[index].r_interval = 0;
 		resources[index].r_receivetime = 0;
 		resources[index].r_universe = STANDARD;
+		resources[index].r_timed_out = 0;
 		dprintf(D_FULLDEBUG, "create_classad returned %x\n",
 			resources[index].r_classad);
 		resources[index].r_port = create_port(&resources[index].r_sock);
@@ -265,6 +266,8 @@ state_to_string(int state)
 		return "Blocked";
 	case SYSTEM:
 		return "System";
+	case CLAIMED:
+		return "Claimed";
 	}
 	return "Unknown";
 }
@@ -313,6 +316,9 @@ void resmgr_changestate(resource_id_t rid, int new_state)
 	  break;
   case SYSTEM:
 	  set_machine_status(SYSTEM);
+	  break;
+  case CLAIMED:
+	  set_machine_status(CLAIMED);
 	  break;
   default:
 	  EXCEPT("Change states, unknown state (%d)", new_state);

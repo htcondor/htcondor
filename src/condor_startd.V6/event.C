@@ -212,12 +212,14 @@ check_claims(resource_info_t* rip)
 		if ((time(NULL) - rip->r_receivetime) > 2 * rip->r_interval) {
 			dprintf(D_ALWAYS, "Capability (%s) timed out\n",
 					rip->r_capab);
+			rip->r_timed_out = 1;
 			resource_free( rip->r_rid );
 		}
 	} else if (rip->r_capab) {
 		if (time(NULL) - rip->r_captime > capab_timeout) {
 			dprintf(D_ALWAYS, "Capability (%s) timed out\n",
 					rip->r_capab);
+			rip->r_timed_out = 1;
 			resource_free( rip->r_rid );
 		}
 	}

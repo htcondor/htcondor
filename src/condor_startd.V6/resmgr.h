@@ -24,6 +24,7 @@ typedef struct {
 	time_t r_receivetime;
 	int r_interval;
 	char *r_origreqexp;
+	int r_timed_out;
 } resource_info_t;
 
 int resmgr_init(void);
