@@ -348,10 +348,18 @@ clean::							@@\
 clean:: 						@@\
 	rm -f program objlist
 
+
+#define	quantify_c_plus_target( program, objlist, libs )	@@\
+##program: objlist libs						@@\
+	quantify -g++=yes -collector=PureCollector $(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(LDFLAGS)	                                 @@\
+clean::		 						@@\
+	rm -f program objlist
+
 #else 
 
 #define	pure_c_plus_target( program, objlist, libs )	/* NULL MACRO */
 #define	purecov_c_plus_target( program, objlist, libs )	/* NULL MACRO */
+#define	quantify_c_plus_target( program, objlist, libs ) /* NULL MACRO */
 
 #endif	/* IS_SUN4M_SOLARIS251 */
 
