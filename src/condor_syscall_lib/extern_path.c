@@ -47,7 +47,7 @@ extern int		errno;
 
 char	*index();
 char	*getwd(), *malloc(), *strcat(), *strcpy();
-#if !defined(AIX32) && !defined(OSF1) &&!defined(HPUX)
+#if !defined(AIX32) && !defined(OSF1) &&!defined(HPUX9)
 char	*sprintf();
 #endif
 
