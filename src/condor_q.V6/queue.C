@@ -817,7 +817,7 @@ format_globusHostJMAndExec( char  *globusArgs, AttrList * )
 		tmp += 4; // 4==strlen("-r '")
 
 		// copy the hostname
-		p = strcspn( tmp, ":'" );
+		p = strcspn( tmp, ":/'" );
 		if ( p > sizeof(host) )
 			p = sizeof(host) - 1;
 		strncpy( host, tmp, p );
