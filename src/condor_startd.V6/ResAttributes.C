@@ -421,7 +421,7 @@ CpuAttributes::compute( amask_t how_much )
 void
 CpuAttributes::display( amask_t how_much )
 {
-	if( IS_TIMEOUT(how_much) ) {
+	if( IS_UPDATE(how_much) ) {
 		dprintf( D_KEYBOARD, 
 				 "Idle time: %s %-8d %s %d\n",  
 				 "Keyboard:", (int)c_idle, 
@@ -432,9 +432,22 @@ CpuAttributes::display( amask_t how_much )
 				 "SystemLoad:", c_condor_load + c_owner_load,
 				 "CondorLoad:", c_condor_load,
 				 "OwnerLoad:", c_owner_load );
+	} else {
+		if( DebugFlags & D_LOAD ) {
+			dprintf( D_FULLDEBUG, 
+					 "%s %.3f  %s %.3f  %s %.3f\n",  
+					 "SystemLoad:", c_condor_load + c_owner_load,
+					 "CondorLoad:", c_condor_load,
+					 "OwnerLoad:", c_owner_load );
+		}
+		if( DebugFlags & D_KEYBOARD ) {
+			dprintf( D_FULLDEBUG, 
+					 "Idle time: %s %-8d %s %d\n",  
+					 "Keyboard:", (int)c_idle, 
+					 "Console:", (int)c_console_idle );
+		}
 	}
-}
-
+}	
 
 
 void
