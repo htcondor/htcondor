@@ -13,10 +13,16 @@ del condor_util_lib.mak
 ren ~temp2.mak condor_util_lib.mak
 
 
-if defined INCLUDE goto :compiler_ready
+if defined INCLUDE goto :check_sdk
 call VCVARS32.BAT
-if defined INCLUDE goto :compiler_ready
-echo *** Visual C++ bin direcotory not in the path, or compiler not installed.
+if defined INCLUDE goto :check_sdk
+echo *** Visual C++ bin directory not in the path, or compiler not installed.
+goto failure
+:check_sdk
+if defined MSSDK goto :compiler_ready
+call setenv.bat" /2000 /RETAIL
+if defined MSSDK goto :compiler_ready
+echo *** Microsoft SDK directory not in the path, or not installed.
 goto failure
 :compiler_ready
 set conf=Release

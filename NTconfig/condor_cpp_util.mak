@@ -92,6 +92,7 @@ CLEAN :
 	-@erase "$(INTDIR)\linebuffer.obj"
 	-@erase "$(INTDIR)\log.obj"
 	-@erase "$(INTDIR)\log_transaction.obj"
+	-@erase "$(INTDIR)\lower_case.obj"
 	-@erase "$(INTDIR)\lsa_mgr.obj"
 	-@erase "$(INTDIR)\metric_units.obj"
 	-@erase "$(INTDIR)\misc_utils.obj"
@@ -170,6 +171,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\access.obj" \
 	"$(INTDIR)\ad_printmask.obj" \
 	"$(INTDIR)\classad_collection.obj" \
+	"$(INTDIR)\classad_command_util.obj" \
 	"$(INTDIR)\classad_hashtable.obj" \
 	"$(INTDIR)\classad_helpers.obj" \
 	"$(INTDIR)\classad_log.obj" \
@@ -247,7 +249,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\user_job_policy.obj" \
 	"$(INTDIR)\user_log.obj" \
 	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\classad_command_util.obj"
+	"$(INTDIR)\lower_case.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -321,6 +323,7 @@ CLEAN :
 	-@erase "$(INTDIR)\linebuffer.obj"
 	-@erase "$(INTDIR)\log.obj"
 	-@erase "$(INTDIR)\log_transaction.obj"
+	-@erase "$(INTDIR)\lower_case.obj"
 	-@erase "$(INTDIR)\lsa_mgr.obj"
 	-@erase "$(INTDIR)\metric_units.obj"
 	-@erase "$(INTDIR)\misc_utils.obj"
@@ -398,6 +401,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\access.obj" \
 	"$(INTDIR)\ad_printmask.obj" \
 	"$(INTDIR)\classad_collection.obj" \
+	"$(INTDIR)\classad_command_util.obj" \
 	"$(INTDIR)\classad_hashtable.obj" \
 	"$(INTDIR)\classad_helpers.obj" \
 	"$(INTDIR)\classad_log.obj" \
@@ -475,7 +479,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\user_job_policy.obj" \
 	"$(INTDIR)\user_log.obj" \
 	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\classad_command_util.obj"
+	"$(INTDIR)\lower_case.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -866,6 +870,30 @@ SOURCE="..\src\condor_c++_util\log_transaction.C"
 "$(INTDIR)\log_transaction.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
+
+SOURCE="..\src\condor_c++_util\lower_case.C"
+
+!IF  "$(CFG)" == "condor_cpp_util - Win32 Debug"
+
+CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /D "WIN32" /D "_DEBUG" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
+
+"$(INTDIR)\lower_case.obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) @<<
+  $(CPP_SWITCHES) $(SOURCE)
+<<
+
+
+!ELSEIF  "$(CFG)" == "condor_cpp_util - Win32 Release"
+
+CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /D "WIN32" /D "NDEBUG" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
+
+"$(INTDIR)\lower_case.obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) @<<
+  $(CPP_SWITCHES) $(SOURCE)
+<<
+
+
+!ENDIF 
 
 SOURCE="..\src\condor_c++_util\lsa_mgr.C"
 

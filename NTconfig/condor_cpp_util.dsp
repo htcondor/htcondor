@@ -107,6 +107,14 @@ SOURCE="..\src\condor_c++_util\classad_collection.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\classad_command_util.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\classad_command_util.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\classad_hashtable.C"
 # End Source File
 # Begin Source File

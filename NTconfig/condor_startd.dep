@@ -2,6 +2,7 @@
 
 ..\src\condor_startd.V6\AvailStats.C : \
 	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\classad_command_util.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_version.h"\
 	"..\src\condor_c++_util\enum_utils.h"\
@@ -53,7 +54,6 @@
 	"..\src\condor_includes\condor_state.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -91,6 +91,7 @@
 
 ..\src\condor_startd.V6\claim.C : \
 	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\classad_command_util.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_version.h"\
 	"..\src\condor_c++_util\enum_utils.h"\
@@ -142,7 +143,6 @@
 	"..\src\condor_includes\condor_state.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -180,6 +180,7 @@
 
 ..\src\condor_startd.V6\cod_mgr.C : \
 	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\classad_command_util.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_version.h"\
 	"..\src\condor_c++_util\enum_utils.h"\
@@ -231,7 +232,6 @@
 	"..\src\condor_includes\condor_state.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -269,6 +269,7 @@
 
 ..\src\condor_startd.V6\command.C : \
 	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\classad_command_util.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_version.h"\
 	"..\src\condor_c++_util\enum_utils.h"\
@@ -320,7 +321,6 @@
 	"..\src\condor_includes\condor_state.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -363,7 +363,6 @@
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_startd.V6\CondorSystrayCommon.h"\
 	"..\src\condor_startd.V6\CondorSystrayNotifier.h"\
 	"..\src\condor_sysapi\sysapi.h"\
@@ -372,6 +371,7 @@
 
 ..\src\condor_startd.V6\LoadQueue.C : \
 	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\classad_command_util.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_version.h"\
 	"..\src\condor_c++_util\enum_utils.h"\
@@ -423,7 +423,6 @@
 	"..\src\condor_includes\condor_state.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -480,7 +479,6 @@
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_network.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_includes\stream.h"\
@@ -494,6 +492,7 @@
 
 ..\src\condor_startd.V6\Reqexp.C : \
 	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\classad_command_util.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_version.h"\
 	"..\src\condor_c++_util\enum_utils.h"\
@@ -545,7 +544,6 @@
 	"..\src\condor_includes\condor_state.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -583,6 +581,7 @@
 
 ..\src\condor_startd.V6\ResAttributes.C : \
 	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\classad_command_util.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_version.h"\
 	"..\src\condor_c++_util\enum_utils.h"\
@@ -634,7 +633,6 @@
 	"..\src\condor_includes\condor_state.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -672,6 +670,7 @@
 
 ..\src\condor_startd.V6\ResMgr.C : \
 	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\classad_command_util.h"\
 	"..\src\condor_c++_util\classad_merge.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_version.h"\
@@ -724,7 +723,6 @@
 	"..\src\condor_includes\condor_state.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -762,6 +760,7 @@
 
 ..\src\condor_startd.V6\Resource.C : \
 	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\classad_command_util.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_version.h"\
 	"..\src\condor_c++_util\enum_utils.h"\
@@ -813,7 +812,6 @@
 	"..\src\condor_includes\condor_state.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -852,6 +850,7 @@
 
 ..\src\condor_startd.V6\ResState.C : \
 	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\classad_command_util.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_version.h"\
 	"..\src\condor_c++_util\enum_utils.h"\
@@ -903,7 +902,6 @@
 	"..\src\condor_includes\condor_state.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -941,6 +939,7 @@
 
 ..\src\condor_startd.V6\startd_cronjob.C : \
 	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\classad_command_util.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_version.h"\
 	"..\src\condor_c++_util\enum_utils.h"\
@@ -993,7 +992,6 @@
 	"..\src\condor_includes\condor_state.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -1033,6 +1031,7 @@
 
 ..\src\condor_startd.V6\startd_cronmgr.C : \
 	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\classad_command_util.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_version.h"\
 	"..\src\condor_c++_util\enum_utils.h"\
@@ -1087,7 +1086,6 @@
 	"..\src\condor_includes\condor_state.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -1128,6 +1126,7 @@
 
 ..\src\condor_startd.V6\startd_main.C : \
 	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\classad_command_util.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_version.h"\
 	"..\src\condor_c++_util\enum_utils.h"\
@@ -1183,7 +1182,6 @@
 	"..\src\condor_includes\condor_state.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -1223,6 +1221,7 @@
 
 ..\src\condor_startd.V6\Starter.C : \
 	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\classad_command_util.h"\
 	"..\src\condor_c++_util\classad_merge.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_version.h"\
@@ -1276,7 +1275,6 @@
 	"..\src\condor_includes\condor_state.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -1314,6 +1312,7 @@
 
 ..\src\condor_startd.V6\starter_mgr.C : \
 	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\classad_command_util.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_version.h"\
 	"..\src\condor_c++_util\enum_utils.h"\
@@ -1365,7 +1364,6 @@
 	"..\src\condor_includes\condor_state.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -1403,6 +1401,7 @@
 
 ..\src\condor_startd.V6\util.C : \
 	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\classad_command_util.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_version.h"\
 	"..\src\condor_c++_util\directory.h"\
@@ -1456,7 +1455,6 @@
 	"..\src\condor_includes\condor_state.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
