@@ -85,9 +85,6 @@ main_init( int, char* [] )
 	daemonCore->Register_Command( RELEASE_CLAIM, "RELEASE_CLAIM", 
 								  (CommandHandler)command_handler,
 								  "command_handler" );
-	daemonCore->Register_Command( ACTIVATE_CLAIM, "ACTIVATE_CLAIM",
-								  (CommandHandler)command_handler,
-								  "command_handler" );
 	daemonCore->Register_Command( DEACTIVATE_CLAIM,
 								  "DEACTIVATE_CLAIM",  
 								  (CommandHandler)command_handler,
@@ -104,30 +101,36 @@ main_init( int, char* [] )
 								  "command_handler" );
 
 		// These commands are special and need their own handlers
+	daemonCore->Register_Command( ACTIVATE_CLAIM, "ACTIVATE_CLAIM",
+								  (CommandHandler)command_activate_claim,
+								  "command_activate_claim", NULL, WRITE );
 	daemonCore->Register_Command( REQUEST_CLAIM, "REQUEST_CLAIM", 
 								  (CommandHandler)command_request_claim,
-								  "command_request_claim" );
+								  "command_request_claim", NULL, WRITE );
 	daemonCore->Register_Command( PCKPT_ALL_JOBS, "PCKPT_ALL_JOBS", 
 								  (CommandHandler)command_pckpt_all,
-								  "command_pckpt_all" );
+								  "command_pckpt_all", NULL, WRITE );
 	daemonCore->Register_Command( X_EVENT_NOTIFICATION,
 								  "X_EVENT_NOTIFICATION",
 								  (CommandHandler)command_x_event,
-								  "command_x_event" );
+								  "command_x_event", NULL, WRITE );
 	daemonCore->Register_Command( VACATE_ALL_CLAIMS,
 								  "VACATE_ALL_CLAIMS",
 								  (CommandHandler)command_vacate,
-								  "command_vacate" );
+								  "command_vacate", NULL, WRITE);
 	daemonCore->Register_Command( GIVE_STATE,
 								  "GIVE_STATE",
 								  (CommandHandler)command_give_state,
-								  "command_give_state" );
+								  "command_give_state", NULL, READ );
+	daemonCore->Register_Command( GIVE_CLASSAD,
+								  "GIVE_CLASSAD",
+								  (CommandHandler)command_give_classad,
+								  "command_give_classad", NULL, READ );
 
 		// This command should be registered with negotiator permission
 	daemonCore->Register_Command( MATCH_INFO, "MATCH_INFO",
 								  (CommandHandler)command_match_info,
-								  "command_match_info", NULL,
-								  NEGOTIATOR ); 
+								  "command_match_info", NULL, NEGOTIATOR );
 
 		// Signals 
 	daemonCore->Register_Signal( DC_SIGCHLD, "DC_SIGCHLD", 
