@@ -44,7 +44,7 @@ public:
 	void rewind (void) { strings.Rewind(); }
 	void append (char* str) { strings.Append( strdup(str) ); }
 	char *next (void) { return strings.Next(); }
-	void deleteCurrent (void) { strings.DeleteCurrent(); }
+	void deleteCurrent();
 	int number (void) { return strings.Number(); }
 private:
 	List<char> strings;

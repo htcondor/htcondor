@@ -69,8 +69,7 @@ StringList::~StringList ()
 	strings.Rewind ();
 	while (x = strings.Next ())
 	{
-		FREE (x);
-		strings.DeleteCurrent ();
+		deleteCurrent();
 	}
 }
 
@@ -182,4 +181,13 @@ StringList::contains_withwildcard(const char *string)
 	}	// end of while loop
 
 	return FALSE;
+}
+
+
+void
+StringList::deleteCurrent() {
+	if( strings.Current() ) {
+		FREE( strings.Current() );
+	}
+	strings.DeleteCurrent();
 }
