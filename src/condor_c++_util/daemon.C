@@ -421,7 +421,7 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 
 	dprintf ( D_SECURITY, "negotiating auth for command %i.\n", cmd);
 
-        // package the ClassAd together
+	// package the ClassAd together
 
 	// allocate a buffer big enough to work with all fields
 	int buflen = 128;
@@ -429,6 +429,7 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 	paramer = param("AUTHENTICATION_METHODS");
 	if (paramer != NULL) {
 		dprintf ( D_SECURITY, "STARTCOMMAND: param(AUTHENTICATION_METHODS) == %s\n", paramer );
+		// expand the buffer to hold the names of all the methods
 		buflen += strlen(paramer);
 	} else {
 		dprintf ( D_SECURITY, "STARTCOMMAND: param(AUTHENTICATION_METHODS) failed!\n" );
@@ -438,6 +439,9 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 	if (buf == NULL) {
 		dprintf ( D_ALWAYS, "STARTCOMMAND: new failed!\n" );
 		delete sock;
+		if (paramer) {
+			delete paramer;
+		}
 		return NULL;
 	}
 
@@ -446,8 +450,11 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 		sprintf(buf, "%s=\"%s\"", ATTR_AUTH_TYPES, paramer);
 		free(paramer);
 	} else {
-		// ZKM
-		sprintf(buf, "%s=\"\"", ATTR_AUTH_TYPES);
+#if defined(WIN32)
+		sprintf(buf, "%s=\"NTSSPI\"", ATTR_AUTH_TYPES);
+#else
+		sprintf(buf, "%s=\"FS\"", ATTR_AUTH_TYPES);
+#endif
 	}
 
 	auth_info.Insert(buf);
