@@ -200,6 +200,7 @@ class Scheduler : public Service
 	friend	void	job_prio(ClassAd *);
 	friend  int		find_idle_sched_universe_jobs(ClassAd *);
 	void			display_shadow_recs();
+	int				actOnJobs(int, Stream *);
 
 	// match managing
     match_rec*      AddMrec(char*, char*, PROC_ID*, ClassAd*, char*, char*);
@@ -361,6 +362,7 @@ class Scheduler : public Service
 	void			clean_shadow_recs();
 	void			preempt(int);
 	void			preempt_one_job();
+	void			refuse( Stream* s );
 
 		/** We add a match record (AddMrec), then open a ReliSock to the
 			startd.  We push the capability and the jobAd, then register
