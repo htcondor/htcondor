@@ -61,7 +61,7 @@ class DaemonCore
 
 		void				Register(Service*, int, void*, int);
 		int					Register(Service*, time_t, void*, time_t, int);
-		void				Register(Service*, void*);
+		void				Register(Service*, void*, int = FALSE);
 		void				Delete(int);
 		
 		int					OpenTcp(char*, u_short = 0, int = CONDOR_IO_SOCK);
@@ -89,6 +89,7 @@ class DaemonCore
 		{
 		    void*			func;
 			Service*		service; 
+			int				only_on_timeout;	
 		};
 
 		void				DumpSigHandlerTable(int, char* = "");
