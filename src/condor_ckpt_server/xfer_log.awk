@@ -84,11 +84,11 @@ END {
 	if (TimeSending[User] > 0 && TimeReceiving[User] > 0) {
 	    printf("%-16.16s %9.2f %6.0f%% %9.2f %6.0f%% %9.2f %6.0f%%\n",
 		   User,
-		   BytesSent[User]*8/TimeSending[User]/1024000,
+		   BytesSent[User]*8/TimeSending[User]/1024/1024,
 		   CompletedSends[User]/AttemptedSends[User]*100,
-		   BytesRecvd[User]*8/TimeReceiving[User]/1024000,
+		   BytesRecvd[User]*8/TimeReceiving[User]/1024/1024,
 		   CompletedRecvs[User]/AttemptedRecvs[User]*100,
-		   Bytes*8/Time/1024000,
+		   Bytes*8/Time/1024/1024,
 		   Completed/Attempted*100);
 	}
     }
@@ -102,11 +102,11 @@ END {
 	if (TimeSending[Host] > 0 && TimeReceiving[Host] > 0) {
 	    printf("%-16.16s %9.2f %6.0f%% %9.2f %6.0f%% %9.2f %6.0f%%\n",
 		   Host,
-		   BytesSent[Host]*8/TimeSending[Host]/1024000,
+		   BytesSent[Host]*8/TimeSending[Host]/1024/1024,
 		   CompletedSends[Host]/AttemptedSends[Host]*100,
-		   BytesRecvd[Host]*8/TimeReceiving[Host]/1024000,
+		   BytesRecvd[Host]*8/TimeReceiving[Host]/1024/1024,
 		   CompletedRecvs[Host]/AttemptedRecvs[Host]*100,
-		   Bytes*8/Time/1024000,
+		   Bytes*8/Time/1024/1024,
 		   Completed/Attempted*100);
 	}
 	TotalBytesSent += BytesSent[Host];
@@ -128,11 +128,11 @@ END {
 	if (TimeSending[Subnet] > 0 && TimeReceiving[Subnet] > 0) {
 	    printf("%-16.16s %9.2f %6.0f%% %9.2f %6.0f%% %9.2f %6.0f%%\n",
 		   Subnet,
-		   BytesSent[Subnet]*8/TimeSending[Subnet]/1024000,
+		   BytesSent[Subnet]*8/TimeSending[Subnet]/1024/1024,
 		   CompletedSends[Subnet]/AttemptedSends[Subnet]*100,
-		   BytesRecvd[Subnet]*8/TimeReceiving[Subnet]/1024000,
+		   BytesRecvd[Subnet]*8/TimeReceiving[Subnet]/1024/1024,
 		   CompletedRecvs[Subnet]/AttemptedRecvs[Subnet]*100,
-		   Bytes*8/Time/1024000,
+		   Bytes*8/Time/1024/1024,
 		   Completed/Attempted*100);
 	}
     }
@@ -143,21 +143,21 @@ END {
     if (TotalTimeSending > 0 && TotalTimeReceiving > 0) {
 	printf("\n%-16.16s %9.2f %6.0f%% %9.2f %6.0f%% %9.2f %6.0f%%\n\n",
 	       "Overall",
-	       TotalBytesSent*8/TotalTimeSending/1024000,
+	       TotalBytesSent*8/TotalTimeSending/1024/1024,
 	       TotalCompletedSends/TotalAttemptedSends*100,
-	       TotalBytesRecvd*8/TotalTimeReceiving/1024000,
+	       TotalBytesRecvd*8/TotalTimeReceiving/1024/1024,
 	       TotalCompletedRecvs/TotalAttemptedRecvs*100,
-	       TotalBytes*8/TotalTime/1024000,
+	       TotalBytes*8/TotalTime/1024/1024,
 	       TotalCompleted/TotalAttempted*100);
     }
     printf("\n%-16.16s %25.25s %25.25s\n\n", "User", "MB Sent", "MB Received");
     for (i=0; i < num_users; i++) {
 	User = Users[i];
 	printf("%-16.16s %25.0f %25.0f\n",
-	       User, BytesSent[User]/1024000, BytesRecvd[User]/1024000);
+	       User, BytesSent[User]/1024/1024, BytesRecvd[User]/1024/1024);
     }
     printf("\n%-16.16s %25.0f %25.0f\n",
-	   "Total", TotalBytesSent/1024000, TotalBytesRecvd/1024000);
+	   "Total", TotalBytesSent/1024/1024, TotalBytesRecvd/1024/1024);
 }
 function qsort(v, left, right) {
   if (left >= right) return;
