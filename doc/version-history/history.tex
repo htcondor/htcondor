@@ -1,0 +1,114 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:History-Intro}Introduction to Condor Versions}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This chapter provides descriptions of what features have been added or
+bugs fixed for each version of Condor.
+The first section describes the Condor version numbering scheme, what
+the numbers mean, and what the different \Term{release series} are.
+The rest of the sections each describe a specific release series, and
+all the Condor versions found in that series.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Version-Number-Scheme}
+Condor Version Number Scheme}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Starting with version 6.0.1, Condor adopted a new, hopefully easy to
+understand version numbering scheme.
+It reflects the fact that Condor is both a production system and a
+research project.
+The numbering scheme was primarily taken from the Linux kernel's
+version numbering, so if you are familiar with that, it should seem
+quite natural.
+
+There will usually be two Condor versions available at any given time,
+the \Term{stable} version, and the \Term{development} version.
+Gone are the days of ``patch level 3'', ``beta2'', or any other random
+words in the version string.
+All versions of Condor now have exactly three numbers, seperated by
+``.''   
+
+\begin{itemize}
+
+\item The first number represents the major version number, and will
+change very infrequently.
+
+\item \emph{The thing that determines whether a version of Condor is
+``stable'' or ``development'' is the second digit.
+Even numbers represent stable versions, while odd numbers represent
+development versions.}
+
+\item The final digit represents the minor version number, which
+defines a particular version in a given release series.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Stable-Series}The Stable Release Series}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+People expecting the stable, production Condor system should download
+the stable version, denoted with an even number in the second digit of
+the version string.
+Most people are encouraged to use this version.  
+We will only offer our paid support for versions of Condor from the
+stable release series.
+
+\emph{On the stable series, new minor version releases will only
+be made for bug fixes and to support new platforms.}
+No new features will be added to the stable series.
+People are encouraged to install new stable versions of Condor when
+they appear, since they probably fix bugs you care about.
+Hopefully, there won't be many minor version releases for any given
+stable series.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Developement-Series}
+The Development Release Series}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Only people who are interested in the latest research, new features
+that haven't been fully tested, etc, should download the development
+version, denoted with an odd number in the second digit of the version
+string.  
+We will make a best effort to ensure that the development series will
+work, but we make no guarantees.
+
+On the development series, new minor version releases will probably
+happen frequently.
+People should not feel compelled to install new minor versions unless
+they know they want features or bug fixes from the newer development
+version.
+
+\emph{Most sites will probably never want to install a development
+version of Condor for any reason.}
+Only if you know what you are doing (and like pain), or were
+explicitly instructed to do so by someone on the Condor Team, should
+you install a development version at your site.
+
+\Note Different releases within a development series cannot be
+installed side-by-side within the same pool. 
+For example, the protocols used by version 6.1.6 are not compatible with the
+protocols used in version 6.1.5.  
+When you upgrade to a new development release, make certain you upgrade all
+machines in your pool to the same version.
+
+After the feature set of the development series is satisfactory to the
+Condor Team, we will put a code freeze in place, and from that point
+forward, only bug fixes will be made to that development series.
+When we have fully tested this version, we will release a new stable
+series, resetting the minor version number, and start work on a new
+development release from there.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% The rest of this file just inputs other files which contain sections
+% describing each release series in detail.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{version-history/6-2.history.tex}
+\input{version-history/6-1.history.tex}
+\input{version-history/6-0.history.tex}
+
