@@ -2988,7 +2988,7 @@ read_condor_file( FILE *fp )
 {
 	char	*name, *value;
 	char	*ptr;
-	int		force = 0, queue_modifier;
+	int		force = 0, queue_modifier = 0;
 
 	char* justSeenQueue = NULL;
 
@@ -3069,7 +3069,8 @@ read_condor_file( FILE *fp )
 				return( -1 );
 			}
 			name = expand_macro( name, ProcVars, PROCVARSIZE );
-			if (sscanf(name+strlen("queue"), "%d", &queue_modifier) == EOF) {
+			int rval = sscanf(name+strlen("queue"), "%d", &queue_modifier); 
+			if( rval == EOF || rval == 0 ) {
 				queue_modifier = 1;
 			}
 			queue(queue_modifier);
