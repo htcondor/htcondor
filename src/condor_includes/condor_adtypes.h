@@ -36,5 +36,6 @@ static char CKPT_SRVR_ADTYPE	[] = "CkptServer";
 static char JOB_ADTYPE	 		[] = "Job";
 static char QUERY_ADTYPE		[] = "Query";
 static char COLLECTOR_ADTYPE	[] = "Collector";
+static char CKPT_FILE_ADTYPE	[] = "CkptFile";
 
 #endif
