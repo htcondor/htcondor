@@ -46,7 +46,7 @@ void Scanner(char*& s, Token& t)
 
     // skip white space
     t.length = 0;
-    while(*s == ' ')
+    while(isspace(*s))
     {
         s = s + 1;
 		t.length++;
