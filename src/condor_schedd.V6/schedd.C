@@ -908,11 +908,12 @@ shadow_rec* Scheduler::start_std(Mrec* mrec , PROC_ID* job_id)
 	(void)sprintf( cluster, "%d", job_id->cluster );
 	(void)sprintf( proc, "%d", job_id->proc );
 	argv[0] = "condor_shadow";
-	argv[1] = mrec->peer;
-	argv[2] = mrec->id;
-	argv[3] = cluster;
-	argv[4] = proc;
-	argv[5] = 0;
+	argv[1] = MySockName;
+	argv[2] = mrec->peer;
+	argv[3] = mrec->id;
+	argv[4] = cluster;
+	argv[5] = proc;
+	argv[6] = 0;
 
 #ifdef NOTDEF
 	{
