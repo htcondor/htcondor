@@ -970,8 +970,9 @@ from storage when a file is opened, but before any read has taken place.
 \begin{description}
 
 \item[\Macro{BUFFER\_BLOCK\_SIZE}] The block size, in bytes,
-to use in buffer operations.  The buffer will try very hard to read and
-write data in multiples of this number.  This number should be a multiple
+to use in buffer operations.  The buffer will attempt to combine read
+and write operations into packets of this size.
+This number should be a multiple
 of your disk block size, which is typically 4096 bytes.  Default is zero.
 
 \item[\Macro{BUFFER\_BLOCK\_COUNT}] The number of blocks to be kept
