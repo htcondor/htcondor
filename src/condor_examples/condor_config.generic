@@ -146,6 +146,12 @@ USE_CKPT_SERVER		= False
 ##  If so, what's the hostname?
 #CKPT_SERVER_HOST	= checkpoint-server-hostname.your.domain
 
+##  Do you want the starter on the execute machine to choose the
+##  checkpoint server?  If False, the CKPT_SERVER_HOST set on
+##  the submit machine is used.  The default is false.
+#STARTER_CHOOSES_CKPT_SERVER = False
+
+
 ##--------------------------------------------------------------------
 ##  Miscellaneous:
 ##--------------------------------------------------------------------
