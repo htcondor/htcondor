@@ -1338,7 +1338,7 @@ getField(const char* name, const ArgumentList &argList, EvalState &state,
 			val.SetErrorValue( );
 			return( true );
 		} else {
-			EXCEPT( "Should not reach here" );
+			CLASSAD_EXCEPT( "Should not reach here" );
 			val.SetErrorValue( );
 			return( false );
 		}
@@ -1361,7 +1361,7 @@ getField(const char* name, const ArgumentList &argList, EvalState &state,
 		} else if( strcasecmp( name, "getseconds" ) == 0 ) {
 			val.SetIntegerValue( rsecs % 60 );
 		} else {
-			EXCEPT( "Should not reach here" );
+			CLASSAD_EXCEPT( "Should not reach here" );
 			val.SetErrorValue( );
 			return( false );
 		}
@@ -1880,7 +1880,7 @@ convBool( const char*, const ArgumentList &argList, EvalState &state,
 			}
 
 		default:
-			EXCEPT( "Should not reach here" );
+			CLASSAD_EXCEPT( "Should not reach here" );
 	}
 	return( false );
 }
@@ -2038,7 +2038,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 			}
 
 		default:
-			EXCEPT( "Should not reach here" );
+			CLASSAD_EXCEPT( "Should not reach here" );
 			return( false );
 	}
 }

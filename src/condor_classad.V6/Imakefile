@@ -9,11 +9,11 @@ CFLAGS 			= -Wall $(STD_C_FLAGS)
 
 
 /* The basic classad source and object files */
-CLASSAD_SRC_0 		= lexer.C lexerSource.C source.C operators.C attrrefs.C fnCall.C   \
+CLASSAD_SRC_0 		= debug.C lexer.C lexerSource.C source.C operators.C attrrefs.C fnCall.C   \
                       literals.C exprTree.C classad.C exprList.C value.C \
                       instantiations.C sink.C matchClassad.C condorUtil.C      \
                       util.C xmlLexer.C xmlSink.C xmlSource.C cclassad.C
-CLASSAD_OBJ_0 		= lexer.o lexerSource.o source.o operators.o attrrefs.o fnCall.o   \
+CLASSAD_OBJ_0 		= debug.o lexer.o lexerSource.o source.o operators.o attrrefs.o fnCall.o   \
                       literals.o exprTree.o classad.o exprList.o value.o \
                       instantiations.o sink.o  matchClassad.o condorUtil.o     \
                       util.o xmlLexer.o xmlSink.o xmlSource.o cclassad.o

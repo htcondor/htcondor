@@ -318,7 +318,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 	}	
 	
 	// should not reach here
-	EXCEPT ("Should not get here");
+	CLASSAD_EXCEPT ("Should not get here");
 	return SIG_NONE;
 }
 
@@ -441,7 +441,7 @@ _Evaluate( EvalState &state, Value &result, ExprTree *& tree ) const
 					tree = t2;
 					return( true );
 				} 
-				EXCEPT( "Should not reach here" );
+				CLASSAD_EXCEPT( "Should not reach here" );
 			} else {
 				// the node is also significant
 				tree = MakeOperation( operation, t1, t2 );
@@ -467,7 +467,7 @@ _Evaluate( EvalState &state, Value &result, ExprTree *& tree ) const
 				tree = t2;
 				return( true );
 			} else {
-				EXCEPT( "Shouldn't reach here" );
+				CLASSAD_EXCEPT( "Shouldn't reach here" );
 			}
 		}
 		// non-strict ternary operator (conditional operator) s ? t : f
@@ -496,7 +496,7 @@ _Evaluate( EvalState &state, Value &result, ExprTree *& tree ) const
 		}
 	}
 
-	EXCEPT( "Should not reach here" );
+	CLASSAD_EXCEPT( "Should not reach here" );
 	return( false );
 }
 
@@ -706,7 +706,7 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 		}
 	}
 
-	EXCEPT( "Should not reach here" );
+	CLASSAD_EXCEPT( "Should not reach here" );
 	return false;
 }
 
@@ -812,7 +812,7 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 
 		default:
 			// should not get here
-			EXCEPT ("Should not get here");
+			CLASSAD_EXCEPT ("Should not get here");
 			return( SIG_CHLD1 | SIG_CHLD2 );
 	}
 }
@@ -891,7 +891,7 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 							
 				default:
 					// should not reach here
-					EXCEPT ("Should not get here");
+					CLASSAD_EXCEPT ("Should not get here");
 					return( SIG_CHLD1 | SIG_CHLD2 );
 			}
 
@@ -904,7 +904,7 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 
 		default:
 			// should not get here
-			EXCEPT ("Should not get here");
+			CLASSAD_EXCEPT ("Should not get here");
 	}
 
 	return( SIG_NONE );
@@ -978,7 +978,7 @@ doLogical (OpKind op, Value &v1, Value &v2, Value &result)
 		return( SIG_CHLD1 | SIG_CHLD2 );
 	}
 
-	EXCEPT( "Shouldn't reach here" );
+	CLASSAD_EXCEPT( "Shouldn't reach here" );
 	return( SIG_NONE );
 }
 
@@ -1043,7 +1043,7 @@ doBitwise (OpKind op, Value &v1, Value &v2, Value &result)
 
 		default:
 			// should not get here
-			EXCEPT ("Should not get here");
+			CLASSAD_EXCEPT ("Should not get here");
 	}
 
 	if( op == BITWISE_NOT_OP ) {
@@ -1079,7 +1079,7 @@ doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
     sigemptyset (&(sa1.sa_mask));
     sa1.sa_flags = 0;
     if (sigaction (SIGFPE, &sa1, &sa2)) {
-       EXCEPT("Warning! ClassAd: Failed sigaction for SIGFPE (errno=%d)\n",
+       CLASSAD_EXCEPT("Warning! ClassAd: Failed sigaction for SIGFPE (errno=%d)\n",
 			errno);
     }
 #endif
@@ -1096,7 +1096,7 @@ doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 
 		default:
 			// should not reach here
-			EXCEPT ("Should not get here");
+			CLASSAD_EXCEPT ("Should not get here");
 			return( SIG_NONE );
 	}
 
@@ -1110,7 +1110,7 @@ doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 #if 0
 #ifndef WIN32 
     if (sigaction (SIGFPE, &sa2, &sa1)) {
-        EXCEPT( "Warning! ClassAd: Failed sigaction for SIGFPE (errno=%d)\n",
+        CLASSAD_EXCEPT( "Warning! ClassAd: Failed sigaction for SIGFPE (errno=%d)\n",
 			errno);
     }
 #endif
@@ -1299,7 +1299,7 @@ compareAbsoluteTimes( OpKind op, Value &v1, Value &v2, Value &result )
 		case GREATER_OR_EQUAL_OP: 	compResult = (asecs1.secs >= asecs2.secs); 	break;
 		default:
 			// should not get here
-			EXCEPT ("Should not get here");
+			CLASSAD_EXCEPT ("Should not get here");
 			return;
 	}
 
@@ -1342,7 +1342,7 @@ compareRelativeTimes( OpKind op, Value &v1, Value &v2, Value &result )
 
 		default:
 			// should not get here
-			EXCEPT ("Should not get here");
+			CLASSAD_EXCEPT ("Should not get here");
 			return;
 	}
 
@@ -1367,7 +1367,7 @@ compareBools( OpKind op, Value &v1, Value &v2, Value &result )
 		case GREATER_OR_EQUAL_OP: 	compResult = (b1 >= b2); 	break;
 		default:
 			// should not get here
-			EXCEPT ("Should not get here");
+			CLASSAD_EXCEPT ("Should not get here");
 			return;
 	}
 
@@ -1393,7 +1393,7 @@ compareIntegers (OpKind op, Value &v1, Value &v2, Value &result)
 		case GREATER_OR_EQUAL_OP: 	compResult = (i1 >= i2); 	break;
 		default:
 			// should not get here
-			EXCEPT ("Should not get here");
+			CLASSAD_EXCEPT ("Should not get here");
 			return;
 	}
 
@@ -1419,7 +1419,7 @@ compareReals (OpKind op, Value &v1, Value &v2, Value &result)
 		case GREATER_OR_EQUAL_OP:   compResult = (r1 >= r2);    break;
 		default:
 			// should not get here
-			EXCEPT ("Should not get here");
+			CLASSAD_EXCEPT ("Should not get here");
 			return;
 	}
 
@@ -1673,7 +1673,7 @@ flattenSpecials( EvalState &state, Value &val, ExprTree *&tree ) const
 			return true;
 
 		default:
-			EXCEPT( "Should not get here" );
+			CLASSAD_EXCEPT( "Should not get here" );
 	}
 
 	return true;

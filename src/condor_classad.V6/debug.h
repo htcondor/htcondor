@@ -28,7 +28,7 @@
 
 BEGIN_NAMESPACE( classad )
 
-#define EXCEPT \
+#define CLASSAD_EXCEPT \
     _except_line_number = __LINE__, \
     _except_file_name   = __FILE__, \
     _classad_except

@@ -348,7 +348,7 @@ tokenizeNumber (void)
 		 * or a selection. This should really never happen, so we
 		 * bomb if it does. It should be reported as a bug.
 		 */
-			EXCEPT("Should not reach here");
+			CLASSAD_EXCEPT("Should not reach here");
 	}
 
 	switch( toupper( ch ) ) {

@@ -259,7 +259,7 @@ GetViewInfo( )
 	Literal				*lit;
 
 	if( !ad ) {
-		EXCEPT( "internal error: view has no view info!" );
+		CLASSAD_EXCEPT( "internal error: view has no view info!" );
 	}
 	
 	if( !( newAd = (ClassAd*) ad->Copy( ) ) ) {
@@ -339,7 +339,7 @@ SetConstraintExpr( ClassAdCollection *coll, ExprTree *constraint )
 	for( vmi = viewMembers.begin( ); vmi != viewMembers.end( ); vmi++ ) {
 		vmi->GetKey( key );
 		if( ( ad = coll->GetClassAd( key ) ) == NULL ) {
-			EXCEPT( "internal error: classad in view but not in collection" );
+			CLASSAD_EXCEPT( "internal error: classad in view but not in collection" );
 		}
 		evalEnviron.ReplaceRightAd( ad );
 		match = evalEnviron.EvaluateAttrBool("RightMatchesLeft",match) && match;
@@ -379,7 +379,7 @@ SetRankExpr( ClassAdCollection *coll, ExprTree *rank )
 
 		// insert expression into ad in left context
 	if( !( ad=evalEnviron.GetLeftAd() ) ) {
-		EXCEPT( "internal error:  view has no view info" );
+		CLASSAD_EXCEPT( "internal error:  view has no view info" );
 	}
 	
 	if( !ad->Insert( ATTR_RANK, rank ) ) {
@@ -397,7 +397,7 @@ SetRankExpr( ClassAdCollection *coll, ExprTree *rank )
 			!evalEnviron.ReplaceRightAd( ad )			||
 			!evalEnviron.EvaluateAttr( "LeftRankValue", rankValue ) ) {
 				// internal error
-			EXCEPT( "internal error:  could not determine 'Rank' value" );
+			CLASSAD_EXCEPT( "internal error:  could not determine 'Rank' value" );
 		}
 
 			// insert into member list
@@ -472,7 +472,7 @@ SetPartitionExprs( ClassAdCollection *coll, ExprList *el )
 			// get signature of this ad
 		vmi->GetKey( key );
 		if( ( ad = coll->GetClassAd( key ) ) == NULL ) {
-			EXCEPT( "internal error:  classad %s in view but not in collection",
+			CLASSAD_EXCEPT( "internal error:  classad %s in view but not in collection",
 				key.c_str( ) );
 		}
 		signature = makePartitionSignature( ad );
@@ -514,7 +514,7 @@ GetConstraintExpr( )
 	ExprTree	*tree;
 		// get requirements expression from ad in left context
 	if( !(lAd = evalEnviron.GetLeftAd( ) ) ) {
-		EXCEPT( "internal error:  no view info in view" );
+		CLASSAD_EXCEPT( "internal error:  no view info in view" );
 	}
 	if( !(tree = lAd->Lookup( ATTR_REQUIREMENTS ) ) ) {
 		CondorErrno = ERR_NO_REQUIREMENTS_EXPR;
@@ -532,7 +532,7 @@ GetRankExpr( )
 	ExprTree	*tree;
 		// get rank expression from ad in left context
 	if( !(lAd = evalEnviron.GetLeftAd( ) ) ) {
-		EXCEPT( "internal error:  no view info in view" );
+		CLASSAD_EXCEPT( "internal error:  no view info in view" );
 	}
 	if( !(tree = lAd->Lookup( ATTR_RANK ) ) ) {
 		CondorErrno = ERR_NO_RANK_EXPR;
@@ -600,7 +600,7 @@ InsertSubordinateView( ClassAdCollection *coll, ClassAd *viewInfo )
 	for( vmi = viewMembers.begin( ); vmi != viewMembers.end( ); vmi++ ) {
 		vmi->GetKey( key );
 		if( ( ad = coll->GetClassAd( key ) ) == NULL ) {
-			EXCEPT( "internal error:  classad %s in view but not in collection",
+			CLASSAD_EXCEPT( "internal error:  classad %s in view but not in collection",
 				key.c_str( ) );
 		}
 		if( !newView->ClassAdInserted( coll, key, ad ) ) {
@@ -969,7 +969,7 @@ ClassAdModified( ClassAdCollection *coll, const string &key,
 				mi = partitionedViews.find( oldAdSignature );
 				if( mi == partitionedViews.end( ) ) {
 						// partition of ad not found; some internal error
-					EXCEPT( "internal error:  partition of classad with "
+					CLASSAD_EXCEPT( "internal error:  partition of classad with "
 						"signature %s not found", oldAdSignature.c_str( ) );
 				}
 					// delete from old partition
@@ -1065,7 +1065,7 @@ ClassAdDeleted( ClassAdCollection *coll, const string &key,
 		PartitionedViews::iterator mi = partitionedViews.find( signature );
 		if( mi == partitionedViews.end( ) ) {
 				// an internal error
-			EXCEPT( "classad %s doesn't have a partition", signature.c_str( ) );
+			CLASSAD_EXCEPT( "classad %s doesn't have a partition", signature.c_str( ) );
 		}
 
 			// delete from the partition
@@ -1088,7 +1088,7 @@ makePartitionSignature( ClassAd *ad )
 	oad = evalEnviron.RemoveRightAd( );
 	evalEnviron.ReplaceRightAd( ad );
 	if( !( info = evalEnviron.GetLeftAd( ) ) ) {
-		EXCEPT( "internal error:  view doesn't have view info" );
+		CLASSAD_EXCEPT( "internal error:  view doesn't have view info" );
 	}
 	vector<ExprTree*> exprs;
 	if( !info->EvaluateAttr( ATTR_PARTITION_EXPRS, value ) ||

@@ -557,7 +557,7 @@ parseEqualityExpression(ExprTree *&tree)
 			case Lexer::LEX_META_NOT_EQUAL:	
 				op = Operation::META_NOT_EQUAL_OP;	
 				break;
-			default:	EXCEPT( "ClassAd:  Should not reach here" );
+			default:	CLASSAD_EXCEPT( "ClassAd:  Should not reach here" );
 		}
 		if(treeL && treeR&&(newTree=Operation::MakeOperation(op,treeL,treeR))){
 			tree = newTree;
@@ -606,7 +606,7 @@ parseRelationalExpression(ExprTree *&tree)
             case Lexer::LEX_GREATER_OR_EQUAL:  	
 				op = Operation::GREATER_OR_EQUAL_OP;
 				break;
-            default:    EXCEPT( "ClassAd:  Should not reach here" );
+            default:    CLASSAD_EXCEPT( "ClassAd:  Should not reach here" );
         }
 		if(treeL && treeR&&(newTree=Operation::MakeOperation(op,treeL,treeR))){
 			tree = newTree;
@@ -653,7 +653,7 @@ parseShiftExpression(ExprTree *&tree)
             case Lexer::LEX_URIGHT_SHIFT:	
 				op = Operation::URIGHT_SHIFT_OP;  	
 				break;
-            default:    EXCEPT( "ClassAd:  Should not reach here" );
+            default:    CLASSAD_EXCEPT( "ClassAd:  Should not reach here" );
         }
 		if(treeL && treeR&&(newTree=Operation::MakeOperation(op,treeL,treeR))){
 			tree = newTree;
@@ -732,7 +732,7 @@ parseMultiplicativeExpression(ExprTree *&tree)
 			case Lexer::LEX_MODULUS:	
 				op = Operation::MODULUS_OP;		
 				break;
-			default: EXCEPT( "ClassAd:  Should not reach here" );
+			default: CLASSAD_EXCEPT( "ClassAd:  Should not reach here" );
 		}
 		if( treeL && treeR && ( newTree=Operation::MakeOperation( op,treeL, 
 				treeR ) ) ) {
@@ -779,7 +779,7 @@ parseUnaryExpression(ExprTree *&tree)
 			case Lexer::LEX_LOGICAL_NOT:	
 				op = Operation::LOGICAL_NOT_OP;	
 				break;
-			default: EXCEPT( "ClassAd: Shouldn't Get here" );
+			default: CLASSAD_EXCEPT( "ClassAd: Shouldn't Get here" );
 		}
 		if( treeM && (newTree = Operation::MakeOperation( op, treeM ) ) ) {
 			tree = newTree;

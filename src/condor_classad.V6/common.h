@@ -50,7 +50,6 @@
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
-#include "debug.h"
 #ifndef WIN32
 	#include <unistd.h>
 	#define DLL_IMPORT_MAGIC  /* a no-op on Unix */
@@ -105,6 +104,7 @@
 #endif /* CLASSAD_DISTRIBUTION */
 
 #include "classad_features.h"
+#include "debug.h"
 
 #ifdef __cplusplus
 #include <string>

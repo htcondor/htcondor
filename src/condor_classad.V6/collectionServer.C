@@ -574,7 +574,7 @@ HandleReadOnlyCommands( int command, ClassAd *rec, Sock *clientSock )
 		}
 
 		default:
-			EXCEPT( "invalid command: %d should not get here", command );
+			CLASSAD_EXCEPT( "invalid command: %d should not get here", command );
 			return( false );
 	}
 

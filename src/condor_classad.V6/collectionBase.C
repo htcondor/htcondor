@@ -360,7 +360,7 @@ OperateInRecoveryMode( ClassAd *logRec )
 		  };
 		}
 	}
-	EXCEPT( "illegal operation in log:  should not reach here" );
+	CLASSAD_EXCEPT( "illegal operation in log:  should not reach here" );
 	return( false );
 }
 
@@ -465,7 +465,7 @@ PlayXactionOp( int opType, const string &xactionName, ClassAd *logRec,
 		}
 
 		default:
-			EXCEPT( "not a transaction op:  should not reach here" );
+			CLASSAD_EXCEPT( "not a transaction op:  should not reach here" );
 			return( false );
 	}
 }
@@ -591,7 +591,7 @@ PlayViewOp( int opType, ClassAd *logRec )
         }
 
 		default:
-			EXCEPT( "not a view op:  should not reach here" );
+			CLASSAD_EXCEPT( "not a view op:  should not reach here" );
 			return( false );
 	}
 }
@@ -832,7 +832,7 @@ PlayClassAdOp( int opType, ClassAd *rec )
 	  break;
 	}
 	
-	EXCEPT( "internal error:  Should not reach here" );
+	CLASSAD_EXCEPT( "internal error:  Should not reach here" );
 	return( false );
 }
 

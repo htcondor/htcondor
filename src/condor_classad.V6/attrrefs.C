@@ -207,7 +207,7 @@ _Evaluate (EvalState &state, Value &val) const
 
 			return rval;
 
-		default:  EXCEPT( "ClassAd:  Should not reach here" );
+		default:  CLASSAD_EXCEPT( "ClassAd:  Should not reach here" );
 	}
 	return false;
 }
@@ -267,7 +267,7 @@ _Evaluate (EvalState &state, Value &val, ExprTree *&sig ) const
 
 			break;
 
-		default:  EXCEPT( "ClassAd:  Should not reach here" );
+		default:  CLASSAD_EXCEPT( "ClassAd:  Should not reach here" );
 	}
 	if(!rval || !(sig=new AttributeReference(exprSig,attributeStr,absolute))){
 		if( rval ) {
@@ -365,7 +365,7 @@ _Flatten( EvalState &state, Value &val, ExprTree*&ntree, int*) const
 			state.curAd = curAd;
 			return rval;
 
-		default:  EXCEPT( "ClassAd:  Should not reach here" );
+		default:  CLASSAD_EXCEPT( "ClassAd:  Should not reach here" );
 	}
 	return false;
 }

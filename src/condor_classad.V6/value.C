@@ -441,7 +441,7 @@ bool convertValueToRealValue(const Value value, Value &realValue)
             break;
 
 		default:
-			EXCEPT( "Should not reach here" );
+			CLASSAD_EXCEPT( "Should not reach here" );
     }
     return could_convert;
 }
@@ -524,7 +524,7 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
             break;
 
 		default:
-			EXCEPT( "Should not reach here" );
+			CLASSAD_EXCEPT( "Should not reach here" );
     }
     return could_convert;
 }
@@ -577,7 +577,7 @@ bool convertValueToStringValue(const Value value, Value &stringValue)
             break;
 
 		default:
-			EXCEPT( "Should not reach here" );
+			CLASSAD_EXCEPT( "Should not reach here" );
     }
     return could_convert;
 }
