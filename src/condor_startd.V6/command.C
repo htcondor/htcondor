@@ -120,10 +120,11 @@ command_pckpt_all( Service*, int, Stream* )
 
 
 int
-command_x_event( Service*, int, Stream* ) 
+command_x_event( Service*, int, Stream* crap ) 
 {
 	dprintf( D_FULLDEBUG, "command_x_event() called.\n" );
 	last_x_event = (int)time( NULL );
+	crap->end_of_message();
 	return TRUE;
 }
 
