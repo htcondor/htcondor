@@ -153,7 +153,7 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 				new_timer->next = NULL;
 				trail_ptr->next = new_timer;
 			} else {
-				new_timer->next = timer_ptr->next;
+				new_timer->next = timer_ptr;
 				trail_ptr->next = new_timer;
 			}
 		}
