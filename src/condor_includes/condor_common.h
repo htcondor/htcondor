@@ -27,7 +27,9 @@
 /**********************************************************************
 ** autoconf/configure generated configuration header
 *********************************************************************/
+#if HAVE_CONFIG_H
 #include <config.h>
+#endif
 
 /**********************************************************************
 ** Special macros and things we always want our header files to have
