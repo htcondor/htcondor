@@ -3,7 +3,8 @@ all_target($(NAME))
 
 CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LIB = $(STD_LIBS) $(QMGMT_LIB) ../condor_classad_analysis/libanalysis.a
+LIB = ../condor_classad_analysis/libanalysis.a $(STD_LIBS) $(QMGMT_LIB)
+
 
 OBJ = queue.o queue_instantiate.o
 
