@@ -1,3 +1,9 @@
+12/10/03 V6_7-unicore-branch
+   A new branch off of V6_7-branch for adding support for Unicore jobs
+   to Condor-G.
+   Created from the V6_7-unicore-root tag. We will merge this branch
+   back into V6_7-branch once we're done and sure it's stable.
+
 12/08/03 V6_7-core-branch
    A new branch off of V6_7-branch for adding some custom features for
    CORE.  These include:
