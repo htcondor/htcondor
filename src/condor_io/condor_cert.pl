@@ -1,38 +1,33 @@
 #!/s/std/bin/perl
 
-###NEED TO GENERATE RANDOM STATE!!!!!!
-### use different policies??
 ### need to do CRL stuff
 ### set SSLEAY_CONFIG to something else like condor_ssleay.cnf
 
 
-$DAYS="-days 365";
-
-#macro variables
-
-$REQ="ssleay req $SSLEAY_CONFIG";
-$CA="ssleay ca $SSLEAY_CONFIG";
-$VERIFY="ssleay verify";
-$X509="ssleay x509";
-
-
-
-#parse command line, get rid of ARGV because it screws up reading from STDIN
+###### INITIAL SETUP ####################################################
+###parse command line, get rid of ARGV because it screws up reading from STDIN
+### this isn't currently necessary until I fix reading from stdin for signing
 @HOLDARGS = @ARGV;
 @ARGV = ();
 $USERDIR = $HOLDARGS[$#HOLDARGS]; #directory or maybe signcert output file
 $_ = $HOLDARGS[0];
 
-#if ( ! /^-createca/i ) {
-	#ensure that ssl is installed, so we can keep a copy of CA's cert there
-	$SSLEAY=`which ssleay|sed 's/ssleay//'`;
-	chomp( $SSLEAY );
-	$SSLEAYLIB="$SSLEAY/../lib/";
-	if ( ! -r "$SSLEAYLIB/ssleay.cnf" ) {
-	 print "SSL-eay doesn't seem to be installed as expected and in your PATH\n";
-		exit $!;
-	}
-#}
+#ensure that ssl is installed, so we can keep a copy of CA's cert there
+$SSLEAY=`which ssleay|sed 's/ssleay//'`;
+chomp( $SSLEAY );
+$SSLEAYLIB="$SSLEAY/../lib/";
+if ( ! -r "$SSLEAYLIB/ssleay.cnf" ) {
+	print "SSL-eay doesn't seem to be installed as expected and in your PATH\n";
+	exit $!;
+}
+
+$DAYS="-days 365";
+$SSLEAY_CONFIG="";
+$RAND="$SSLEAYLIB/rand.dat";
+
+###### END INITIAL SETUP ################################################
+
+
 
 if ( /^-createca/i || /^-user/i || /^-daemon/i ) {
 	if ( $#HOLDARGS != 1 ) {
@@ -92,11 +87,12 @@ if ( /^-signcert/i || /^-user/i || /^-daemon/i ) {
 if ( /^-user/i || /^-daemon/i ) {
 	if ( /^-daemon/i ) {
 		#we don't want daemon certificates to be pass-phrase protected!
-		$PARAM = "-nodes";
+#		$PARAM = "-nodes";
 
 		print "doing -daemon\n";
 	}
 	else {
+		$PARAM = "-des3 1024";
 		print "doing -user\n";
 	}
 
@@ -112,15 +108,21 @@ if ( /^-user/i || /^-daemon/i ) {
 		rmdir $USERDIR;
 		exit $!;
 	}
-	if ( system( "$REQ -new $PARAM -keyout $USERDIR/private/newkey.pem -out "
-		. "$USERDIR/newreq.pem $DAYS" ) ) {
+$USERKEY = "$USERDIR/private/newkey.pem";
+system( "ssleay genrsa -rand $RAND $PARAM > $USERKEY" );
+print "DEBUG A\n";
+if ( system("ssleay req -new -key $USERKEY -out $USERDIR/newreq.pem $DAYS") ) {
+print "DEBUG Z\n";
 		print "error generating certificate request and private key\n";
 		print "interactively removing newly created directory tree \"$USERDIR\"\n";
 		system( "rm -ir $USERDIR" );
 		exit 1;
 	}
+print "DEBUG B\n";
 	chmod 0600, "$USERDIR/private/newkey.pem";
+print "DEBUG 1, $SSLEAYLIB\n";
 	$SYMLINK = `c_hash $SSLEAYLIB/cacert.pem|sed 's/ .*//'`;
+print "DEBUG 2\n";
 	chomp( $SYMLINK );
 	if ( ! symlink( "$SSLEAYLIB/cacert.pem", "$USERDIR/$SYMLINK" ) ) {
 		print "error creating symlink to CA certificate, $!\n";
@@ -137,7 +139,7 @@ if ( /^-user/i || /^-daemon/i ) {
 elsif ( /^-signcert/i ) {
 	print "doing -signcert\n";
 
-	if (system("$CA -in $INPUT_FILE -out $USERDIR")){
+	if (system("ssleay ca $SSLEAY_CONFIG -in $INPUT_FILE -out $USERDIR")){
 		print "error signing certificate, no output written to \"$USERDIR\"\n";
 		eval $CLEANUP;
 		exit 1;
@@ -147,6 +149,9 @@ elsif ( /^-signcert/i ) {
 }
 elsif ( /^-createca/i ) {
 	print "doing -createca\n";
+
+	print "generating random state to $RAND\n";
+	system( "ps -Aaf>$RAND" );
 
 	print "creating certificate authority (CA) directory \"$USERDIR\"\n";
 	if ( ! mkdir $USERDIR, 0744 ) {
@@ -160,9 +165,10 @@ elsif ( /^-createca/i ) {
 	mkdir "$USERDIR/private", 0700;
 	system( "echo \"01\" > $USERDIR/serial" );
 	system( "touch $USERDIR/index.txt" );
-	print "Making CA certificate ...\n";
-   system( "$REQ -new -x509 -keyout $USERDIR/private/cakey.pem " 
-		. "-out $USERDIR/cacert.pem $DAYS" );
+	print "Making CA certificate and key...\n";
+#	system( "ssleay req -new -x509 -keyout $USERDIR/private/cakey.pem -out $USERDIR/cacert.pem $DAYS" );
+system("ssleay genrsa -rand $RAND -des3 1024 > $USERDIR/private/cakey.pem" );
+system("ssleay req -new -x509 -key $USERDIR/private/cakey.pem -out $USERDIR/cacert.pem $DAYS");
 	chmod 0600, "$USERDIR/private/cakey.pem";
 	print "certificate authority (CA) directory is in \"$USERDIR\"\n";
 
