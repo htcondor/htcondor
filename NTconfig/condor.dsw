@@ -123,6 +123,33 @@ Package=<4>
 
 ###############################################################################
 
+Project: "condor_schedd"=.\condor_schedd.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "condor_startd"=.\condor_startd.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name condor_util_lib
+    End Project Dependency
+}}}
+
+###############################################################################
+
 Project: "condor_util_lib"=.\condor_util_lib.dsp - Package Owner=<4>
 
 Package=<5>
