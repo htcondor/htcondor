@@ -227,16 +227,16 @@ delay( int sec )
 {
 	int		i;
 	int		j, k;
+
 #if defined(SPARC)
 	int		lim = 250000;
-#endif
-#if defined(R6000)
+#elif defined(R6000)
 	int		lim = 250000;
-#endif
-#if defined(MIPS)
+#elif defined(MIPS)
 	int		lim = 200000;
-#endif
-#if defined(ALPHA)
+#elif defined(ALPHA)
+	int		lim = 300000;
+#elif defined(HPPAR)
 	int		lim = 300000;
 #endif
 
