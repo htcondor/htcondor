@@ -86,8 +86,7 @@ typedef struct request {
 	int			id;            /* world condor id : dhruba */
 	CONTEXT		*job_context;
 	int			result;
-	char		*server;
-	PORTS		ports;
+	StartdRec	stRec;
 	int			child_fd;     /* pipe from world-schedd to child */
 } REQUEST;
 
