@@ -1,3 +1,8 @@
+10/25/04 V6_7-tdp_3-branch
+   Branch for TDP development. Created a new branch to avoid confusion
+   after using V6_7-tdp_2-no_tracing-branch to get initial TDP support
+   into V6_7-branch.  Created from V6_7-tdp_3-root.
+
 10/22/04 V6_7-post_merge-V6_6-merge-23
    The state of the V6_7-branch before after a merge from V6_6-branch.
 
