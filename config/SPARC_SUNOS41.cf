@@ -34,8 +34,8 @@
 #define HAS_X					NO
 #define HAS_X_EXTENSIONS		NO
 
-#define DOES_CHECKPOINTING      NO
-#define DOES_REMOTE_SYSCALLS    NO
+#define DOES_CHECKPOINTING      YES
+#define DOES_REMOTE_SYSCALLS    YES
 
 #define HAS_NDBM				YES
 #define HAS_FSTATFS				YES
