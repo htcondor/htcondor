@@ -4,20 +4,23 @@
 #
 # Perl script that performs platform-specific customization of the
 # various files here and creates the proper versions in the
-# release_dir. 
+# target directory specified on the command line.
 #
 # Written by Derek Wright <wright@cs.wisc.edu> on 2/27/98
 #
 
+$target = $ARGV[0];
+-d $target || die "$target is not a directory.\n";
+
 &get_platform_defaults();
 &customize_config_file( "condor_config.generic",
-		       "../strip_dir/etc/examples/condor_config.generic" );
+		       "$target/etc/examples/condor_config.generic" );
 &customize_config_file( "condor_config.root.generic",
-		       "../strip_dir/etc/examples/condor_config.root.generic" );
+		       "$target/etc/examples/condor_config.root.generic" );
 &customize_config_file( "condor_config.submit.generic",
-		       "../strip_dir/etc/examples/condor_config.submit.generic" );
+		       "$target/etc/examples/condor_config.submit.generic" );
 &customize_config_file( "condor_config.local.central.manager",
-	       "../strip_dir/etc/examples/condor_config.local.central.manager" );
+	       "$target/etc/examples/condor_config.local.central.manager" );
 &customize_boot_script();
 
 
@@ -178,7 +181,7 @@ sub customize_config_file {
 sub customize_boot_script {
     open( GENERIC, "<condor.boot.generic" ) || 
 	die "Can't open condor.boot.generic: $!\n";
-    open( TARGET, ">../strip_dir/etc/examples/condor.boot" ) ||
+    open( TARGET, ">$target/etc/examples/condor.boot" ) ||
 	die "Can't open target condor.boot: $!\n";
 
     print "Configuring condor.boot.generic ... ";
@@ -191,5 +194,5 @@ sub customize_boot_script {
     print "done.\n";
     close TARGET;
     close GENERIC;
-    chmod( 0755, "../strip_dir/etc/examples/condor.boot" );
+    chmod( 0755, "$target/etc/examples/condor.boot" );
 }    
