@@ -1,7 +1,7 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post_success.pl,v 1.1.2.4 2004-06-24 21:35:35 wright Exp $
+# $Id: remote_post_success.pl,v 1.1.2.5 2004-06-25 02:35:59 wright Exp $
 # post script for a successful Condor testsuite run   
 ######################################################################
 

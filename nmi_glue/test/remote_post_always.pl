@@ -1,7 +1,7 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post_always.pl,v 1.1.2.6 2004-06-24 19:48:10 wright Exp $
+# $Id: remote_post_always.pl,v 1.1.2.7 2004-06-25 02:35:59 wright Exp $
 # post script for Condor testsuite that is run regardless of the
 # testsuite end status  
 ######################################################################

@@ -1,7 +1,7 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_declare.pl,v 1.1.2.9 2004-06-25 02:23:51 wright Exp $
+# $Id: remote_declare.pl,v 1.1.2.10 2004-06-25 02:35:59 wright Exp $
 # generate list of all tests to run
 ######################################################################
 

@@ -1,7 +1,7 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.1.2.1 2004-06-25 01:38:10 wright Exp $
+# $Id: remote_pre.pl,v 1.1.2.2 2004-06-25 02:35:59 wright Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
