@@ -628,8 +628,32 @@ Stream::code(struct utimbuf &ut)
 int 
 Stream::code(struct rlimit &rl)
 {
+#ifdef LINUX
+	// Oh crap, Cedar is too damn smart for us.  
+	// The issue is Linux changed the type for rlimits
+	// from a signed long (RedHat 6.2 and before) into
+	// an unsigned long (starting w/ RedHat 7.x).  So if
+	// the shadow is on RedHat 7.2 and sends the results
+	// of getrlimits to a RedHat 6.2 syscall lib, for instance,
+	// it could overflow.  And Cedar is sooo smart.  Sooo very, very
+	// smart.  It return an error if there is an overflow, which
+	// in turn causes an ASSERT to fail in senders/receivers land,
+	// which is bad news for us.  Thus this hack.  -Todd,Erik,Hao Feb 2002
+	long oh_crap = 0x7fffffff;
+	if ( ((unsigned long)rl.rlim_cur) > oh_crap ) {
+		STREAM_ASSERT(code(oh_crap));
+	} else {
+		STREAM_ASSERT(code(rl.rlim_cur));
+	}
+	if ( ((unsigned long)rl.rlim_max) > oh_crap ) {
+		STREAM_ASSERT(code(oh_crap));
+	} else {
+		STREAM_ASSERT(code(rl.rlim_max));
+	}
+#elif
 	STREAM_ASSERT(code(rl.rlim_cur));
 	STREAM_ASSERT(code(rl.rlim_max));
+#endif
 
 	return TRUE;
 }
