@@ -48,7 +48,7 @@ EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o  \
 		  MMAP.o PIPE.o GETWD.o GETLOGIN.o
 #	elif IS_I386_LINUX
 EXTRACT = GETWD.o MMAP.o SYSCALL.o __GETEUID.o __GETEGID.o __GETPPID.o \
-		__FORK.o __PIPE.o __SIGACT.o ____SIG.o ____SIG2.o GETLOGIN.o \
+		__FORK.o __PIPE.o __SIGACT.o ____SIG.o GETLOGIN.o \
 		__PREV_FSTAT.o __PREV_LSTAT.o __PREV_STAT.o
 #	elif IS_ALPHA_OSF1
 EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
@@ -213,8 +213,14 @@ uppercase_target($(SIMPLE_LIBC),__kill.o,__KILL.o,__kill,__KILL)
 uppercase_target($(SIMPLE_LIBC),__sigact.o,__SIGACT.o,__sigaction,__SIGACTION)
 uppercase_target($(SIMPLE_LIBC),__fork.o,__FORK.o,__fork,__FORK)
 uppercase_target($(SIMPLE_LIBC),__pipe.o,__PIPE.o,__pipe,__PIPE)
-uppercase_target($(SIMPLE_LIBC),____sig.o,____SIG.o,___sig_restore,___SIG_RESTORE)
-uppercase_target($(SIMPLE_LIBC),____sig.o,____SIG2.o,___masksig_restore,___MASKSIG_RESTORE)
+
+#if (IS_I386_LINUX)
+____SIG.o : ToUpper $(SIMPLE_LIBC)
+	ar x $(SIMPLE_LIBC) ____sig.o
+	./ToUpper ____sig.o ____SIG_TMP.o ___sig_restore ___SIG_RESTORE
+	./ToUpper ____SIG_TMP.o ____SIG.o ___masksig_restore ___MASKSIG_RESTORE
+	rm -f ____sig.o ____SIG_TMP.o
+#endif
 
 #if (IS_I386_LINUX) || (IS_ALPHA_OSF1)
 uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL.o,syscall,SYSCALL)
