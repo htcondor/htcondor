@@ -1746,6 +1746,9 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 
 
 		if ( no_startd_ad || attribute_not_found ) {
+			MyString hold_reason;
+			hold_reason.sprintf("Cannot expand $$(%s).",name);
+
 			// no ClassAd in the match record; probably
 			// an older negotiator.  put the job on hold and send email.
 			dprintf( D_ALWAYS, 
@@ -1754,13 +1757,12 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 			// SetAttribute does security checks if Q_SOCK is not NULL.
 			// So, set Q_SOCK to be NULL before placing the job on hold
 			// so that SetAttribute knows this request is not coming from
-			// a client.  Then restork Q_SOCK back to the original value.
+			// a client.  Then restore Q_SOCK back to the original value.
 			ReliSock* saved_sock = Q_SOCK;
 			Q_SOCK = NULL;
-			SetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, HELD );
-			SetAttributeInt( cluster_id, proc_id,
-							 ATTR_ENTERED_CURRENT_STATUS, (int)time(0) ); 
+			holdJob(cluster_id, proc_id, hold_reason.Value());
 			Q_SOCK = saved_sock;
+
 			char buf[256];
 			sprintf(buf,"Your job (%d.%d) is on hold",cluster_id,proc_id);
 			FILE* email = email_user_open(ad,buf);
