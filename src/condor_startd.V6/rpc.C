@@ -54,7 +54,7 @@ call_incoming(int s, int socktype, resource_id_t rid)
 		len = sizeof from;
 		memset((char *)&from, 0, len);
 		sd = accept(s, (struct sockaddr *)&from, &len);
-		dprintf(D_ALWAYS, "call_incoming(SOCK_STREAM) from %s\n",
+		dprintf(D_ALWAYS, "handling incoming TCP command from %s\n",
 			inet_ntoa(from.sin_addr));
 		if (sd < 0 && errno != EINTR) {
 			EXCEPT("accept");
@@ -65,12 +65,11 @@ call_incoming(int s, int socktype, resource_id_t rid)
 		((ReliSock *)sock)->attach_to_file_desc(sd);
 		ip = &from;
 	} else {
-		dprintf(D_ALWAYS, "call_incoming(SOCK_DGRAM)\n");
+		dprintf(D_ALWAYS, "handling incoming UDP command\n");
 		sock - new SafeSock();	// need to set IP:PORT here???
 		((SafeSock *)sock)->attach_to_file_desc(s);
 		ip = &From;	/* XXX UGH! */
 	}
-	dprintf(D_ALWAYS, "call_incoming: call command_main\n");
 	ret = command_main(sock, ip, rid);
 	delete sock;
 	return ret;
