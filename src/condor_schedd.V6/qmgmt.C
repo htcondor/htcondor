@@ -69,10 +69,10 @@ extern "C" {
 	char *sin_to_string(struct sockaddr_in *sin);
 	int get_inet_address(struct in_addr* buffer);
 	int	prio_compar(prio_rec*, prio_rec*);
-	void abort_job_myself(PROC_ID job_id);
 }
 
 extern	int		Parse(const char*, ExprTree*&);
+extern  void    cleanup_ckpt_files(int, int, char*);
 static ReliSock *Q_SOCK;
 
 int		do_Q_request(ReliSock *);
@@ -476,17 +476,8 @@ int DestroyProc(int cluster_id, int proc_id)
 	log = new LogDestroyClassAd(key);
 	JobQueue->AppendLog(log);
 
-	// notify schedd to abort job
-	// should probably wait until we commit the transaction to do this...
-	job_id.cluster = cluster_id;
-	job_id.proc = proc_id;
-	abort_job_myself( job_id );
-
-	ckpt_file_name =
-		gen_ckpt_name( Spool, cluster_id, proc_id, 0 );
-	(void)unlink( ckpt_file_name );
-	/* Also, try to get rid of it from the checkpoint server */
-	RemoveRemoteFile(active_owner, ckpt_file_name);
+	// Remove checkpoint files
+	cleanup_ckpt_files(cluster_id,proc_id,active_owner);
 
 	/* If this is the last job in the cluster, then remove the initial
 	   checkpoint file. */
@@ -546,12 +537,6 @@ int DestroyCluster(int cluster_id)
 				sprintf(key, "%d.%d", cluster_id, proc_id);
 				log = new LogDestroyClassAd(key);
 				JobQueue->AppendLog(log);
-
-				// notify schedd to abort job
-				// should probably wait until commit time to do this...
-				job_id.cluster = cluster_id;
-				job_id.proc = proc_id;
-				abort_job_myself( job_id );
 			}
 		}
 	}
@@ -622,10 +607,6 @@ int DestroyClusterByConstraint(const char* constraint)
 					JobQueue->AppendLog(log);
 					flag = 0;
 
-					// notify schedd to abort job
-					// should probably wait until commit time to do this...
-					abort_job_myself( job_id );
-
 					if (prev_cluster != job_id.cluster) {
 						ickpt_file_name =
 							gen_ckpt_name( Spool, job_id.cluster, ICKPT, 0 );
@@ -643,6 +624,37 @@ int DestroyClusterByConstraint(const char* constraint)
 	return 0;
 }
 
+
+int
+SetAttributeByConstraint(const char *constraint, const char *attr_name, char *attr_value)
+{
+	ClassAd	*ad;
+	int cluster_num, proc_num;	
+	int found_one = 0;
+
+	if(CheckConnection() < 0) {
+		return -1;
+	}
+
+	JobQueue->table.startIterations();
+	while(JobQueue->table.iterate(ad) == 1) {
+		// check for CLUSTER_ID to avoid queue header ad
+		if ((ad->LookupInteger(ATTR_CLUSTER_ID, cluster_num) == 1) &&
+			(ad->LookupInteger(ATTR_PROC_ID, proc_num) == 1) &&
+			EvalBool(ad, constraint)) {
+			found_one = 1;
+			SetAttribute(cluster_num,proc_num,attr_name,attr_value);
+			FreeJobAd(ad);	// a no-op on the server side
+		}
+	}
+
+	// return success (0) if any job matched the constraint, else return
+	// failure (-1)
+	if ( found_one )
+		return 0;
+	else
+		return -1;
+}
 
 int
 SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_value)
