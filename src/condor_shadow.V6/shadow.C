@@ -841,7 +841,7 @@ void static_policy(void)
 	else
 	{
 		dprintf( D_ALWAYS, "Static policy: don't remove on exit\n" );
-		EXCEPT( "Job didn't exit under conditions specifed in %s\n",
+		EXCEPT( "Job didn't exit under conditions specifed in %s",
 			ATTR_ON_EXIT_REMOVE_CHECK );
 	}
 }
