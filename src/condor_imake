@@ -18,10 +18,10 @@ Other=""
 Other2=""
 
 # kerberos discovery
-if [ -f /s/krb5/lib/libkrb5.a ] ; then
-	KerbPath="-DKERBEROS_PATH=/s/krb5"
+if [ -f /p/condor/workspaces/kerberos/lib/libkrb5.a ] ; then
+	KerbPath="-DKERBEROS_PATH=/p/condor/workspaces/kerberos"
 	HasKerb="-DHAS_KERBEROS=YES"
-	if [ -f /s/krb5/lib/libk5crypto.a ] ; then
+	if [ -f /p/condor/workspaces/kerberos/lib/libk5crypto.a ] ; then
 		KerbK5="-DKERBEROS_K5=YES"
 	else
 		KerbK5="-DKERBEROS_K5=NO"
