@@ -1,10 +1,29 @@
+OS = OperatingSystem
 CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 		  MMAP.o PIPE.o
 STUBS = switches.o switches.special.o
-UTIL = syscall_mode.o remote_syscall.o syscall_connect.o senders.o
+UTIL =	remote_syscall.o syscall_connect.o senders.o remote_startup.o
 NAME_TAB = ../h/syscall_numbers.o
-LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL) $(NAME_TAB)
+
+XDR_OBJ = \
+ 	xdr_rusage.o \
+ 	xdr_proc.o \
+	xdr_stat.o \
+ 	xdr_statfs.OSF1.o \
+ 	xdr_timeval.o \
+ 	xdr_timezone.o \
+ 	xdr_rlimit.o \
+ 	xdr_utsname.o
+
+CKPT_OBJ = file_state.o image.o tmp_stack.o machdep.$(OS).o syscall_mode.o 
+
+UTIL_OBJ = dprintf.o dprintf_config.o except.o update_rusage.o condor_errlst.o
+
+LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL) $(NAME_TAB) $(XDR_OBJ) $(UTIL_OBJ) $(CKPT_OBJ)
+
 all_target(condor_syscall_lib.a condor_rt0.o)
 stubs: switches.c senders.c receivers.c
 
@@ -59,3 +78,9 @@ clean::
 	rm -f lex.yy.c y.tab.c y.tab.h switches.c senders.c receivers.c *.o
 
 program_target(stub_gen,y.tab.o lex.yy.o,$(NULL),no_realeas)
+
+
+IMPORT_LINKS = ../../config/import_links
+import(../condor_xdr_lib,$(XDR_OBJ))
+import(../condor_util_lib,$(UTIL_OBJ))
+import(../condor_ckpt,$(CKPT_OBJ))
