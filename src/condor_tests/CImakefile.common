@@ -56,11 +56,18 @@ DEPS(job_rsc_fread_std,x_data.in)
 RUN(job_rsc_fread_std)
 TESTCLASS(job_rsc_fread_std,quick)
 
+DESC(job_rsc_ftell_std,"Does ftell() work remotely?")
+CBUILD($(CC),job_rsc_ftell_std,c)
+DEPS(job_rsc_ftell_std,x_data.in)
+RUN(job_rsc_ftell_std)
+TESTCLASS(job_rsc_ftell_std,quick)
+
 DESC(job_rsc_stat_std,"Does stat() work remotely?")
 CBUILD($(CC),job_rsc_stat_std,c)
 DEPS(job_rsc_stat_std,x_data.in)
 RUN(job_rsc_stat_std)
 TESTCLASS(job_rsc_stat_std,quick)
+
 
 /****************************
  * Checkpointing
