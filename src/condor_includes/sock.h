@@ -65,7 +65,7 @@ public:
 	*/
 
 	/// Virtual socket services
-	virtual int handle_incoming_packet() { assert(0); return 0; }
+	virtual int handle_incoming_packet() = 0;
 
 	/** Connect the socket to a remote peer.
 		@param host Hostname of peer, either a DNS name or an IP address, or 
@@ -76,7 +76,7 @@ public:
 		@param port The port to connect to.  If host is in the form <IP:PORT>,
 		then the port parameter is ignored.
 	*/
-	virtual int connect(char *, int port=0) { assert(0); return port; }
+	virtual int connect(char *host, int port=0) = 0;
 
 	/** Connect the socket to a remote peer.
 		@param host Hostname of the peer, either a DNS name or IP address.

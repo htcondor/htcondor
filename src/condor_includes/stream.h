@@ -418,14 +418,14 @@ public:
         @param n The number of bytes to put
         @return the number actually put, or a negative value on errors
     */
-	virtual int put_bytes(const void *data, int n) { assert(0); return 0; }
+	virtual int put_bytes(const void *data, int n) = 0;
 
     /** Get bytes from the stream
         @param data The buffer where bytes should be put
         @param maxn maximum number of bytes to get from stream
         @return the actual number of bytes read, or negative value on errors
     */
-	virtual int get_bytes(void *data, int maxn) { assert(0); return 0; }
+	virtual int get_bytes(void *data, int maxn) = 0;
 
     //@}
 
@@ -436,29 +436,29 @@ public:
         @return the number of bytes returned in the temporary space, or
                 a negative value on error.
     */
-	virtual int get_ptr(void *& ptr, char d) { assert(0); return 0; }
+	virtual int get_ptr(void *& ptr, char d) = 0;
 
     /** Gets the next character in the stream without consuming it.
         @param c the character to get
         @return 1 on success, 0 on error
     */
-	virtual int peek(char &c) { assert(0); return 0; }
+	virtual int peek(char &c) = 0;
 
     /** Two behaviors depending on (en/de)code mode.
         On encode, flush stream and send record delimiter.
         On decode, discard data up until the next record delimiter.
         @return TRUE or FALSE
     */
-	virtual int end_of_message() { assert(0); return 0; }
+	virtual int end_of_message() = 0;
 //	int eom() { return end_of_message(); }
 
 	/// set a timeout for an underlying socket
-	virtual int timeout(int) { assert(0); return 0; }
+	virtual int timeout(int) = 0;
 
-	/** Get this stream's type
+	/** Get this stream's type.
         @return the type of this stream
     */
-	virtual stream_type type() { assert(0); return (stream_type)0; }
+	virtual stream_type type() = 0;
 
 	/** @name Condor Compatibility Ops
      */
@@ -476,7 +476,7 @@ protected:
 
 	// serialize object (save/restore object state to an ascii string)
 	//
-	virtual char * serialize(char *) { assert(0); return (char *)0; }
+	virtual char * serialize(char *) = 0;
 	// virtual char * serialize(char *) = 0;
 	inline char * serialize() { return(serialize(NULL)); }
 
