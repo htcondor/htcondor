@@ -3247,7 +3247,23 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 	// DaemonCore to do something.
 	switch (sig) {
 		case SIGTERM:
-			return Shutdown_Graceful(pid);
+			if ( pid != mypid ) {
+					/* 
+					   If the pid you're shutting down is a DaemonCore
+					   process (including ourself) Shutdown_Graceful()
+					   just turns around and sends some kind of
+					   SIGTERM.  This would result in an infinite
+					   loop.  So, instead of using the special
+					   shutdown method, we just fall through and
+					   actually send a real DC SIGTERM to ourselves.
+					   We want to do this here, since on UNIX there's
+					   more to it than just raising the signal, we
+					   also want to write to the async pipe to make
+					   sure select() wakes up, etc, etc.
+					   -Derek Wright <wright@cs.wisc.edu> 5/17/02 
+					*/
+				return Shutdown_Graceful(pid);
+			}
 			break;
 		case SIGKILL:
 			return Shutdown_Fast(pid);
@@ -3550,17 +3566,29 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 
 	// UNIX 
 
-	int status;
+		/*
+		  We convert unix SIGTERM into DC SIGTERM via a signal handler
+		  which calls Send_Signal.  When we want to Send_Signal() a
+		  SIGTERM, we usually call Shutdown_Graceful().  But, if
+		  Shutdown_Graceful() turns around and sends a unix signal to
+		  ourselves, we're in an infinite loop.  So, Send_Signal()
+		  checks the pid, and if it's sending a SIGTERM to itself, it
+		  just does the regular stuff to raise a DC SIGTERM, instead
+		  of using this special method.  However, if someone else
+		  other than Send_Signal() called Shutdown_Graceful with our
+		  own pid, we'd still have the infinite loop.  To be safe, we
+		  check again here to catch future programmer errors...
+		  -Derek Wright <wright@cs.wisc.edu> 5/17/02 
+		*/
 	if( pid == mypid ) {
-			// if we're doing this to ourselves, just raise the DC
-			// signal directly, so we don't get into an infinite loop.
-		HandleSig( _DC_RAISESIGNAL, SIGTERM );
-		status = 0;
-	} else { 
-		priv_state priv = set_root_priv();
-		status = kill(pid, SIGTERM);
-		set_priv(priv);
+		EXCEPT( "Called Shutdown_Graceful() on yourself, "
+				"which would cause an infinite loop on UNIX" );
 	}
+
+	int status;
+	priv_state priv = set_root_priv();
+	status = kill(pid, SIGTERM);
+	set_priv(priv);
 	return (status >= 0);		// return 1 if kill succeeds, 0 otherwise
 
 #endif
