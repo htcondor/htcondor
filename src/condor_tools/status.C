@@ -73,7 +73,11 @@ void      display_context ( CONTEXT *context );
 int       xdr_status_line(XDR *xdrs, STATUS_LINE *line );
 XDR*      xdr_Init( int *sock, XDR *xdrs );
 void      config( char *a_out_name, CONTEXT *context );
+#if defined(OSF1)
+void*     memset( void *,int, long unsigned int );  
+#else
 void*     memset( void *,int, unsigned int );  
+#endif
 char*     strdup();              
 void       printTimeAndColl();
 }
