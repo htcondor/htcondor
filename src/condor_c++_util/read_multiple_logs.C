@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "read_multiple_logs.h"
+#include "condor_string.h" // for strnewp()
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -314,45 +315,23 @@ ReadMultipleUserLogs::loadLogFileNameFromSubFile(const MyString &strSubFilename)
 {
 	MyString strSubFile = readFileToString(strSubFilename);
 	
-	// Note: StringList constructor removes leading whitespace from lines.
+		// Note: StringList constructor removes leading whitespace from lines.
 	StringList listLines( strSubFile.Value(), "\r\n");
 
 	listLines.rewind();
+
+	MyString	logFileName("");
+
 	const char *psLine;
-	MyString strPreviousLogFilename;
-	while( (psLine = listLines.next()) ) {
-		MyString strLine = psLine;
-		if (!stricmp(strLine.Substr(0, 2).Value(), "log")) {
-			int iEqPos = strLine.FindChar('=',0);
-				// There is a bug here!  if there is another submit
-				// file command that begins with the string "log"
-				// (e.g., "LogOnlyBlah = True"), then it will
-				// mistakenly be interpreted as the userlog filename!
-				// --pfc
-			if (iEqPos == -1) {
-				return "";
-			}
-
-			iEqPos++;
-			while (iEqPos < strLine.Length() && (strLine[iEqPos] == ' ' ||
-					strLine[iEqPos] == '\t')) {
-				iEqPos++;
-			}
-
-			if (iEqPos >= strLine.Length()) {
-				return "";
-			}
-
-			MyString strToReturn = strLine.Substr(iEqPos, strLine.Length());
-
-				// There may be another bug here... what if "log" is
-				// redefined later in the submit file?  The first,
-				// obsolete value will be returned!  --pfc
-
-			return strToReturn;
+	while( (psLine = listLines.next()) != NULL ) {
+		MyString	submitLine(psLine);
+		MyString	tmpLogName = getLogFileFromSubmitLine(submitLine);
+		if ( tmpLogName != "" ) {
+			logFileName = tmpLogName;
 		}
 	}
-	return "";
+
+	return logFileName;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -426,4 +405,32 @@ ReadMultipleUserLogs::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 	}	
 
 	return "";
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+MyString
+ReadMultipleUserLogs::getLogFileFromSubmitLine(MyString submitLine)
+{
+	MyString	logFileName("");
+
+		// We need to copy the string here because strtok modifies its
+		// argument...
+	char *		lineBuf = strnewp(submitLine.Value());
+	const char *DELIM = " \t";
+
+	char *		token = strtok(lineBuf, DELIM);
+	if ( token && !strcasecmp(token, "log") ) {
+		token = strtok(NULL, DELIM);
+		if ( token && !strcasecmp(token, "=") ) {
+			token = strtok(NULL, DELIM);
+			if ( token ) {
+				logFileName = token;
+			}
+		}
+	}
+
+	delete [] lineBuf;
+
+	return logFileName;
 }

@@ -76,6 +76,15 @@ public:
     static MyString loadLogFileNameFromSubFile(const MyString &strSubFilename);
 
 private:
+		/**
+		 * Get the log file name, if any, defined in the given submit file
+		 * line.
+		 * @param The submit file line.
+		 * @return The log file defined in that line, or "" if no log
+		 *   file is defined.
+		 */
+	static MyString getLogFileFromSubmitLine(MyString submitLine);
+
 	void cleanup();
 
 	struct LogFileEntry
