@@ -78,6 +78,7 @@ main(int argc, char* argv[])
   int SetPrio=0;
   bool ResetAll=false;
   int GetResList=0;
+  MyString NegotiatorHost;
 
   MinLastUsageTime=time(0)-60*60*24;  // Default to show only users active in the last day
 
@@ -122,9 +123,15 @@ main(int argc, char* argv[])
       DetailFlag=2;
     }
     else if (strcmp(argv[i],"-getreslist")==0) {
+      if (argc-i<=1) usage(argv[0]);
       GetResList=i;
       i+=1;
     }
+    else if (strcmp(argv[i],"-pool")==0) {
+      if (argc-i<=1) usage(argv[0]);
+      NegotiatorHost=argv[i+1];
+      i++;
+	}
     else {
       usage(argv[0]);
     }
@@ -132,11 +139,17 @@ main(int argc, char* argv[])
       
   //----------------------------------------------------------
 
-  config( 0 );
-  char* NegotiatorHost = param( "NEGOTIATOR_HOST" );
-  if (!NegotiatorHost) {
-    fprintf( stderr, "No NegotiatorHost host specified in config file\n" );
-	exit(1);
+  if (NegotiatorHost.Length()==0) {
+    config( 0 );
+    char* tmp=param("NEGOTIATOR_HOST");
+    if (!tmp) {
+      tmp=param("NEGOTIATOR_HOST");
+      if (!tmp) {
+        fprintf( stderr, "No NegotiatorHost host specified in config file\n" );
+	    exit(1);
+      }
+    }
+    NegotiatorHost=tmp;
   }
 
   if (SetPrio) { // set priority
@@ -153,7 +166,7 @@ main(int argc, char* argv[])
     float Priority=atof(argv[SetPrio+2]);
 
     // send request
-    ReliSock sock(NegotiatorHost, NEGOTIATOR_PORT);
+    ReliSock sock(NegotiatorHost.Value(), NEGOTIATOR_PORT);
     sock.encode();
     if (!sock.put(SET_PRIORITY) ||
         !sock.put(argv[SetPrio+1]) ||
@@ -181,7 +194,7 @@ main(int argc, char* argv[])
     float Factor=atof(argv[SetFactor+2]);
 
     // send request
-    ReliSock sock(NegotiatorHost, NEGOTIATOR_PORT);
+    ReliSock sock(NegotiatorHost.Value(), NEGOTIATOR_PORT);
     sock.encode();
     if (!sock.put(SET_PRIORITYFACTOR) ||
         !sock.put(argv[SetFactor+1]) ||
@@ -208,7 +221,7 @@ main(int argc, char* argv[])
 	}
 
     // send request
-    ReliSock sock(NegotiatorHost, NEGOTIATOR_PORT);
+    ReliSock sock(NegotiatorHost.Value(), NEGOTIATOR_PORT);
     sock.encode();
     if (!sock.put(RESET_USAGE) ||
         !sock.put(argv[ResetUsage+1]) ||
@@ -224,7 +237,7 @@ main(int argc, char* argv[])
   else if (ResetAll) {
 
     // send request
-    ReliSock sock(NegotiatorHost, NEGOTIATOR_PORT);
+    ReliSock sock(NegotiatorHost.Value(), NEGOTIATOR_PORT);
     sock.encode();
     if (!sock.put(RESET_ALL_USAGE) ||
         !sock.end_of_message()) {
@@ -249,7 +262,7 @@ main(int argc, char* argv[])
 	}
 
     // send request
-    ReliSock sock(NegotiatorHost, NEGOTIATOR_PORT);
+    ReliSock sock(NegotiatorHost.Value(), NEGOTIATOR_PORT);
     sock.encode();
     if (!sock.put(GET_RESLIST) ||
         !sock.put(argv[GetResList+1]) ||
@@ -274,7 +287,7 @@ main(int argc, char* argv[])
   else {  // list priorities
 
     // send request
-    ReliSock sock(NegotiatorHost, NEGOTIATOR_PORT);
+    ReliSock sock(NegotiatorHost.Value(), NEGOTIATOR_PORT);
     sock.encode();
     if (!sock.put(GET_PRIORITY) ||
         !sock.end_of_message()) {
