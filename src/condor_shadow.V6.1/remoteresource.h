@@ -143,6 +143,16 @@ class RemoteResource : public Service {
 		*/
 	void getStarterAddress( char *& starterAddr );
 
+		/** Return the arch string of the starter.
+			@param arch Will contain the starter's arch string.
+		*/
+	void getStarterArch( char *& arch );
+
+		/** Return the opsys string of the starter.
+			@param opsys Will contain the starter's opsys string.
+		*/
+	void getStarterOpsys( char *& opsys );
+
 		/** Return the claim socket associated with this remote host.  
 			@return The claim socket for this host.
 		*/ 
@@ -172,6 +182,16 @@ class RemoteResource : public Service {
 			@param The starter's sinful string 
 		*/
 	void setStarterAddress( const char *starterAddr );
+	
+		/** Set the Starter's Arch
+			@param arch The starter's arch string 
+		*/
+	void setStarterArch( const char *arch );
+	
+		/** Set the Starter's Opsys
+			@param arch The starter's opsys string 
+		*/
+	void setStarterOpsys( const char *opsys );
 	
 		/** Set the reason this host exited.  
 			@param reason Why did it exit?  Film at 11.
@@ -241,6 +261,8 @@ class RemoteResource : public Service {
 	char *machineName;
 	char *capability;
 	char *starterAddress;
+	char *starterArch;
+	char *starterOpsys;
 	char *fs_domain;
 	char *uid_domain;
 	ReliSock *claimSock;

@@ -67,6 +67,8 @@ RemoteResource::init( BaseShadow *shad )
 	shadow = shad;
 	machineName = NULL;
 	starterAddress = NULL;
+	starterArch = NULL;
+	starterOpsys = NULL;
 	jobAd = NULL;
 	fs_domain = NULL;
 	uid_domain = NULL;
@@ -83,6 +85,8 @@ RemoteResource::~RemoteResource()
 	if ( machineName   ) delete [] machineName;
 	if ( capability    ) delete [] capability;
 	if ( starterAddress) delete [] starterAddress;
+	if ( starterArch   ) delete [] starterArch;
+	if ( starterOpsys  ) delete [] starterOpsys;
 	if ( uid_domain	   ) delete [] uid_domain;
 	if ( fs_domain     ) delete [] fs_domain;
 	if ( claimSock     ) delete claimSock;
@@ -380,6 +384,36 @@ RemoteResource::getStarterAddress( char *& starterAddr )
 }
 
 
+void
+RemoteResource::getStarterArch( char *& arch )
+{
+	if(! arch ) {
+		arch = strnewp( starterArch );
+	} else {
+		if ( starterArch ) {
+			strcpy( arch, starterArch );
+		} else {
+			arch[0] = '\0';
+		}
+	}
+}
+
+
+void
+RemoteResource::getStarterOpsys( char *& opsys )
+{
+	if(! opsys ) {
+		opsys = strnewp( starterOpsys );
+	} else {
+		if ( starterOpsys ) {
+			strcpy( opsys, starterOpsys );
+		} else {
+			opsys[0] = '\0';
+		}
+	}
+}
+
+
 ReliSock*
 RemoteResource::getClaimSock()
 {
@@ -476,11 +510,30 @@ RemoteResource::setCapability( const char * cbility )
 void
 RemoteResource::setStarterAddress( const char * starterAddr )
 {
-
-	if ( starterAddress )
+	if( starterAddress ) {
 		delete [] starterAddress;
-	
+	}	
 	starterAddress = strnewp( starterAddr );
+}
+
+
+void
+RemoteResource::setStarterArch( const char * arch )
+{
+	if( starterArch ) {
+		delete [] starterArch;
+	}	
+	starterArch = strnewp( arch );
+}
+
+
+void
+RemoteResource::setStarterOpsys( const char * opsys )
+{
+	if( starterOpsys ) {
+		delete [] starterOpsys;
+	}	
+	starterOpsys = strnewp( opsys );
 }
 
 
