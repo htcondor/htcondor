@@ -35,7 +35,7 @@
 // matchmaker class in order to preserve its static-ness.  (otherwise, it
 // is forced to be extern.)
 
-static int comparisonFunction (ClassAd *, ClassAd *, void *);
+static int comparisonFunction (AttrList *, AttrList *, void *);
 #include "matchmaker.h"
 
 // possible outcomes of negotiating with a schedd
@@ -44,7 +44,7 @@ enum { MM_ERROR, MM_DONE, MM_RESUME };
 // possible outcomes of a matchmaking attempt
 enum { _MM_ERROR, MM_NO_MATCH, MM_GOOD_MATCH, MM_BAD_MATCH };
 
-typedef int (*lessThanFunc)(AttrListAbstract*, AttrListAbstract*, void*);
+typedef int (*lessThanFunc)(AttrList*, AttrList*, void*);
 
 Matchmaker::
 Matchmaker ()
@@ -657,12 +657,14 @@ negotiationTime ()
 
 
 static int
-comparisonFunction (ClassAd *ad1, ClassAd *ad2, void *m)
+comparisonFunction (AttrList *ad1, AttrList *ad2, void *m)
 {
 	char	scheddName1[64];
 	char	scheddName2[64];
 	double	prio1, prio2;
 	Matchmaker *mm = (Matchmaker *) m;
+
+
 
 	if (!ad1->LookupString (ATTR_NAME, scheddName1) ||
 		!ad2->LookupString (ATTR_NAME, scheddName2))

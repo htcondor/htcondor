@@ -887,7 +887,7 @@ ClassAd* ClassAdList::Lookup(const char* name)
 }
 
 void ClassAdList::
-Sort(int(*SmallerThan)(AttrListAbstract*, AttrListAbstract*, void*), void* info)
+Sort(int(*SmallerThan)(AttrList*, AttrList*, void*), void* info)
 {
 /*
 	dprintf(D_ALWAYS,"head=%08x , tail=%08x\n",head,tail);
@@ -912,10 +912,31 @@ Sort(int(*SmallerThan)(AttrListAbstract*, AttrListAbstract*, void*), void* info)
 int ClassAdList::
 SortCompare(const void* v1, const void* v2)
 {
-	AttrListAbstract** a = (AttrListAbstract**)v1;
-	AttrListAbstract** b = (AttrListAbstract**)v2;
+	AttrListAbstract** a1 = (AttrListAbstract**)v1;
+	AttrListAbstract** b1 = (AttrListAbstract**)v2;
+	AttrListAbstract *abstract_ad1 = *a1;
+	AttrListAbstract *abstract_ad2 = *b1;
+	AttrList* a;
+	AttrList* b;
 
+	// Convert AttrListAbstracts to AttrList
+	if ( abstract_ad1->Type() == ATTRLISTENTITY ) {
+		// this represents an AttrList in one AttrListList
+		a = (AttrList *)abstract_ad1;
+	} else {
+		// this represents an AttrList in multiple AttrListLists
+		// thus, it is an AttrListRep not an AttrList
+		a = (AttrList *)((AttrListRep *)abstract_ad1)->GetOrigAttrList();
+	}
 
+	if ( abstract_ad2->Type() == ATTRLISTENTITY ) {
+		// this represents an AttrList in one AttrListList
+		b = (AttrList *)abstract_ad2;
+	} else {
+		// this represents an AttrList in multiple AttrListLists
+		// thus, it is an AttrListRep not an AttrList
+		b = (AttrList *)((AttrListRep *)abstract_ad2)->GetOrigAttrList();
+	}
 	// The user supplied SortSmallerThan() func returns a 1
 	// if a is smaller than b, and that is _all_ we know about
 	// SortSmallerThan().  Some tools implement a SortSmallerThan()
@@ -923,7 +944,7 @@ SortCompare(const void* v1, const void* v2)
 	// it is chaos.  Just chaos I tell you.  _SO_ we only check for
 	// a "1" if it is smaller than, and do not assume anything else.
 	// qsort() wants a -1 for smaller.
-	if ( SortSmallerThan(*a,*b,SortInfo) == 1 ) {
+	if ( SortSmallerThan(a,b,SortInfo) == 1 ) {
 			// here we know that a is less than b
 		return -1;
 	} else {
@@ -931,7 +952,7 @@ SortCompare(const void* v1, const void* v2)
 			// we still need to figure out if a is equal to b or not.
 			// Do this by calling the user supplied compare function
 			// again and ask if b is smaller than a.
-		if ( SortSmallerThan(*b,*a,SortInfo) == 1 ) {
+		if ( SortSmallerThan(b,a,SortInfo) == 1 ) {
 				// now we know that a is greater than b
 			return 1;
 		} else {

@@ -120,7 +120,7 @@ class ClassAd : public AttrList
 		// (sequence number is stored in attrlist)
 };
 
-typedef int (*SortFunctionType)(AttrListAbstract*,AttrListAbstract*,void*);
+typedef int (*SortFunctionType)(AttrList*,AttrList*,void*);
 
 class ClassAdList : public AttrListList
 {
