@@ -1,3 +1,8 @@
+9/12/03 V6_7-tdp-branch
+   A new branch off V6_7-branch for continued work on the TDP (Tool
+   Daemon Protocol).  Created from the V6_7-tdp-root tag.  We will
+   attempt to merge the older V6_5-tdp-2-branch into this.
+
 9/11/03 V6_7-branch
    A new branch off the end of the V6_5-branch for the 6.7.x
    development series.  Created from the V6_6-root tag.  Includes the
