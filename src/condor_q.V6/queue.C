@@ -479,7 +479,11 @@ format_remote_host (char *, AttrList *ad)
 		} else if (universe == PVM) {
 			int current_hosts;
 			if (ad->LookupInteger( ATTR_CURRENT_HOSTS, current_hosts ) == 1) {
-				sprintf(result, "%d hosts", current_hosts);
+				if (current_hosts == 1) {
+					sprintf(result, "1 host");
+				} else {
+					sprintf(result, "%d hosts", current_hosts);
+				}
 				return result;
 			}
 		}
