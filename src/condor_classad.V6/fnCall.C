@@ -40,20 +40,20 @@ FunctionCall( )
 	if( !initialized ) {
 		// load up the function dispatch table
 			// type predicates
-		functionTable["isundefined"	] = isType;
-		functionTable["iserror"		] =	isType;
-		functionTable["isstring"	] =	isType;
-		functionTable["isinteger"	] =	isType;
-		functionTable["isreal"		] =	isType;
-		functionTable["islist"		] =	isType;
-		functionTable["isclassad"	] =	isType;
-		functionTable["isboolean"	] =	isType;
-		functionTable["isabstime"	] =	isType;
-		functionTable["isreltime"	] =	isType;
+		functionTable["isundefined"	] = (void*)isType;
+		functionTable["iserror"		] =	(void*)isType;
+		functionTable["isstring"	] =	(void*)isType;
+		functionTable["isinteger"	] =	(void*)isType;
+		functionTable["isreal"		] =	(void*)isType;
+		functionTable["islist"		] =	(void*)isType;
+		functionTable["isclassad"	] =	(void*)isType;
+		functionTable["isboolean"	] =	(void*)isType;
+		functionTable["isabstime"	] =	(void*)isType;
+		functionTable["isreltime"	] =	(void*)isType;
 
 			// list membership
-		functionTable["member"		] =	testMember;
-		functionTable["ismember"	] =	testMember;
+		functionTable["member"		] =	(void*)testMember;
+		functionTable["ismember"	] =	(void*)testMember;
 
 			// basic apply-like functions
 		/*
@@ -64,47 +64,47 @@ FunctionCall( )
 		*/
 
 			// time management
-		functionTable["currenttime"	] =	currentTime;
-		functionTable["timezoneoffset"] =timeZoneOffset;
-		functionTable["daytime"		] =	dayTime;
-		functionTable["makedate"	] =	makeDate;
-		functionTable["makeabstime"	] =	makeTime;
-		functionTable["makereltime"	] =	makeTime;
-		functionTable["getyear"		] =	getField;
-		functionTable["getmonth"	] =	getField;
-		functionTable["getdayofyear"] =	getField;
-		functionTable["getdayofmonth"] =getField;
-		functionTable["getdayofweek"] =	getField;
-		functionTable["getdays"		] =	getField;
-		functionTable["gethours"	] =	getField;
-		functionTable["getminutes"	] =	getField;
-		functionTable["getseconds"	] =	getField;
-		functionTable["indays"		] =	inTimeUnits;
-		functionTable["inhours"		] =	inTimeUnits;
-		functionTable["inminutes"	] =	inTimeUnits;
-		functionTable["inseconds"	] =	inTimeUnits;
+		functionTable["currenttime"	] =	(void*)currentTime;
+		functionTable["timezoneoffset"] =(void*)timeZoneOffset;
+		functionTable["daytime"		] =	(void*)dayTime;
+		functionTable["makedate"	] =	(void*)makeDate;
+		functionTable["makeabstime"	] =	(void*)makeTime;
+		functionTable["makereltime"	] =	(void*)makeTime;
+		functionTable["getyear"		] =	(void*)getField;
+		functionTable["getmonth"	] =	(void*)getField;
+		functionTable["getdayofyear"] =	(void*)getField;
+		functionTable["getdayofmonth"] =(void*)getField;
+		functionTable["getdayofweek"] =	(void*)getField;
+		functionTable["getdays"		] =	(void*)getField;
+		functionTable["gethours"	] =	(void*)getField;
+		functionTable["getminutes"	] =	(void*)getField;
+		functionTable["getseconds"	] =	(void*)getField;
+		functionTable["indays"		] =	(void*)inTimeUnits;
+		functionTable["inhours"		] =	(void*)inTimeUnits;
+		functionTable["inminutes"	] =	(void*)inTimeUnits;
+		functionTable["inseconds"	] =	(void*)inTimeUnits;
 
 			// string manipulation
-		functionTable["strcat"		] =	strCat;
-		functionTable["toupper"		] =	changeCase;
-		functionTable["tolower"		] =	changeCase;
-		functionTable["substr"		] =	subString;
+		functionTable["strcat"		] =	(void*)strCat;
+		functionTable["toupper"		] =	(void*)changeCase;
+		functionTable["tolower"		] =	(void*)changeCase;
+		functionTable["substr"		] =	(void*)subString;
 
 			// pattern matching (regular expressions) 
-		functionTable["regexp"		] =	matchPattern;
+		functionTable["regexp"		] =	(void*)matchPattern;
 
 			// conversion functions
-		functionTable["int"			] =	convInt;
-		functionTable["real"		] =	convReal;
-		functionTable["string"		] =	convString;
-		functionTable["bool"		] =	convBool;
-		functionTable["abstime"		] =	convTime;
-		functionTable["reltime"		] = convTime;
+		functionTable["int"			] =	(void*)convInt;
+		functionTable["real"		] =	(void*)convReal;
+		functionTable["string"		] =	(void*)convString;
+		functionTable["bool"		] =	(void*)convBool;
+		functionTable["abstime"		] =	(void*)convTime;
+		functionTable["reltime"		] = (void*)convTime;
 
 			// mathematical functions
-		functionTable["floor"		] =	doMath;
-		functionTable["ceil"		] =	doMath;
-		functionTable["round"		] =	doMath;
+		functionTable["floor"		] =	(void*)doMath;
+		functionTable["ceil"		] =	(void*)doMath;
+		functionTable["round"		] =	(void*)doMath;
 
 		initialized = true;
 	}
@@ -171,7 +171,7 @@ MakeFunctionCall( const string &str, vector<ExprTree*> &args )
 
 	FuncTable::iterator	itr = functionTable.find( str );
 	if( itr != functionTable.end( ) ) {
-		fc->function = itr->second;
+		fc->function = (ClassAdFunc)itr->second;
 	} else {
 		fc->function = NULL;
 	}

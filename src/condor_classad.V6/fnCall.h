@@ -50,7 +50,7 @@ class FunctionCall : public ExprTree
 
 		typedef	bool(*ClassAdFunc)(const char*, const ArgumentList&, EvalState&,
 					Value&);
-		typedef map<string, ClassAdFunc, CaseIgnLTStr > FuncTable;
+		typedef map<string, void*, CaseIgnLTStr > FuncTable;
 
 	private:
 		virtual void _SetParentScope( const ClassAd* );
