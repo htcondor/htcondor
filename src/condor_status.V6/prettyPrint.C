@@ -2,10 +2,13 @@
 #include "condor_api.h"
 #include "status_types.h"
 #include "totals.h"
+#include "format_time.h"
 
 extern ppOption				ppStyle;
 extern AttrListPrintMask 	pm;
 extern int					wantOnlyTotals;
+
+extern char *format_time( int );
 
 void printStartdNormal 	(ClassAd *);
 void printScheddNormal 	(ClassAd *);
@@ -16,6 +19,7 @@ void printServer 		(ClassAd *);
 void printRun    		(ClassAd *);
 void printVerbose   	(ClassAd *);
 void printCustom    	(ClassAd *);
+
 
 void
 prettyPrint (ClassAdList &adList, TrackTotals *totals)
@@ -88,6 +92,8 @@ printStartdNormal (ClassAd *ad)
 {
 	static bool first = true;
 	static AttrListPrintMask pm; 
+	static time_t now;
+	int	   actvty;
 
 	if (ad)
 	{
@@ -95,9 +101,9 @@ printStartdNormal (ClassAd *ad)
 		if (first)
 		{
 			printf ("\n%-10.10s %-8.8s %-12.12s %-10.10s %-10.10s %-6.6s "
-					"%-6.6s  %-7.7s\n\n", 
+					"%-4.4s %s\n\n", 
 				ATTR_NAME, ATTR_ARCH, ATTR_OPSYS, ATTR_STATE, ATTR_ACTIVITY, 
-				ATTR_LOAD_AVG, ATTR_MEMORY, ATTR_DISK);
+				ATTR_LOAD_AVG, "Mem", "ActvtyTime");
 		
 			pm.registerFormat("%-10.10s ", ATTR_NAME, "[????????] ");
 			pm.registerFormat("%-8.8s " , ATTR_ARCH, "[??????] ");
@@ -105,13 +111,24 @@ printStartdNormal (ClassAd *ad)
 			pm.registerFormat("%-10.10s ",  ATTR_STATE), "[????????] ";
 			pm.registerFormat("%-10.10s ",  ATTR_ACTIVITY, "[????????] ");
 			pm.registerFormat("%-.3f  ",  ATTR_LOAD_AVG, "[????]  ");
-			pm.registerFormat("%-6d  ",  ATTR_MEMORY, "[????]  ");
-			pm.registerFormat("%-6d\n",  ATTR_DISK, "[????]\n");
+			pm.registerFormat("%-4d",  ATTR_MEMORY, "[????]  ");
+
+			(void) time( &now );
 
 			first = false;
 		}
 
 		pm.display (stdout, ad);
+		if( ad->LookupInteger( ATTR_ENTERED_CURRENT_ACTIVITY , actvty ) &&
+			now != (time_t) -1 )
+		{
+			actvty = now - actvty;
+			printf( "%s\n", format_time( actvty ) );
+		}
+		else
+		{
+			printf(" [Unknown]\n");
+		}
 	}
 }
 
