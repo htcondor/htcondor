@@ -1,0 +1,24 @@
+CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+
+SRC = network2.C gen_lib.C fileinfo2.C fileindex2.C imds2.C xferstat2.C \
+	signal2.C alarm2.C server2.C
+
+OBJ = network2.o gen_lib.o fileinfo2.o fileindex2.o imds2.o xferstat2.o \
+	signal2.o alarm2.o server2.o
+
+UTIL_LIB = ../condor_util_lib/util_lib.a
+
+LIB = $(UTIL_LIB) -lm
+
+SERVER_STAT_OBJ = server_stat.o gen_lib.o network2.o
+
+SERVER_API_OBJ = network2.o server_interface.o
+
+all_target(server2 server_stat ckpt_server_api.a)
+
+c_plus_target(server2,$(OBJ),$(LIB))
+
+c_plus_target(server_stat,$(SERVER_STAT_OBJ),$(LIB))
+
+library_target(ckpt_server_api.a,$(SERVER_API_OBJ))

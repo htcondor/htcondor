@@ -1,0 +1,5 @@
+executable = jobsim
+requirements = Memory >= 4
+image_size = 4
+output = /afs/cs.wisc.edu/u/t/s/tsao/public/jobsim.out
+queue
