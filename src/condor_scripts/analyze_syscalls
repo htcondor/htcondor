@@ -1,15 +1,65 @@
 #!/bin/sh 
 # Analyzes and compares condor_syscall_lib.a to libc.a
 # Todd Tannenbaum, 7/97
- 
+# Made portable by Derek Wright, 6/98
+
+# Figure out the platform-specific crap:
+
+UNAME=`uname`
+
+if [ -f /lib/libc.a ]; then
+	LIBC=/lib/libc.a
+elif [ -f /usr/lib/libc.a ]; then
+	LIBC=/usr/lib/libc.a
+elif [ -f /lib/libc.so.1 ]; then
+	LIBC=/lib/libc.so.1
+else 
+	echo "Can't find libc.a"
+	exit 1
+fi
+
+if [ -f /usr/include/syscall-list.h ]; then
+	SYSCALL=/usr/include/syscall-list.h
+elif [ -f /usr/include/sys.s ]; then
+	SYSCALL=/usr/include/sys.s
+elif [ -f /usr/include/sys/syscall.h ]; then
+	SYSCALL=/usr/include/sys/syscall.h
+else
+	echo "Can't find syscall.h"
+	exit 1
+fi
+
+if [ $UNAME = "IRIX" ]; then
+	NM="/usr/gnu/bin/nm -P"
+else 
+	NM="nm -P"
+fi
+
+if [ -d /usr/man/man2 ]; then
+	MANDIR=/usr/man/man2
+else 
+	MANDIR=/notthere
+fi
+
+if [ -f $MANDIR/open.2 ]; then
+	MANEXT=2
+	CAT=cat
+elif [ -f $MANDIR/open.2.gz ]; then
+	MANEXT=2.gz
+	CAT=zcat
+elif [ -f $MANDIR/open.2.Z ]; then
+	MANEXT=2.Z
+	CAT=zcat
+fi
+
 # place all the system calls on this platform sorted into /tmp/asc1.$$
-grep "#define" /usr/include/sys/syscall.h | grep "SYS_" | awk -F'_' '{print $2}' - | awk '{print $1}' | tr "[:upper:]" "[:lower:]" | sort | uniq > /tmp/asc1.$$
+grep "#define" $SYSCALL | grep "SYS_" | awk -F'_' '{print $2}' - | awk '{print $1}' | tr "[:upper:]" "[:lower:]" | sort | uniq > /tmp/asc1.$$
 
 # place all global functions in condor_syscall_lib into /tmp/asc2.$$
 # for C++ objects, just report the object with "[C++]" appended instead
 # of all the C++ methods.
-nm -pv ../condor_syscall_lib/condor_syscall_lib.a | grep " T " | c++filt | \
-   sed 's/::[^ ]*/\[C++\]/' | awk '{print $3}' - | sort | uniq  > /tmp/asc2.$$
+$NM ../condor_syscall_lib/condor_syscall_lib.a | grep " T " | c++filt | \
+   sed 's/::[^ ]*/\[C++\]/' | awk '{print $1}' - | sort | uniq  > /tmp/asc2.$$
 
 # store trapped calls into /tmp/asc3.$$ and pretty print them 
 echo "*** SYSTEM CALLS TRAPPED BY CONDOR"
@@ -35,7 +85,7 @@ END { if ( i != 0 )
 # first take everything in switches.o out of asc2.$$, cuz we wanna
 # use the output from stub-gen as more authoratative on if it is
 # supported or not.  save into asc4.$$
-nm -pv ../condor_syscall_lib/switches.o | grep " T " | awk '{print $3}' - | \
+$NM ../condor_syscall_lib/switches.o | grep " T " | awk '{print $1}' - | \
    sort | uniq | comm -23 /tmp/asc2.$$ - > /tmp/asc4.$$
 # Now list the supported calls
 echo "*** SYSTEM CALLS TRAPPED AND _SUPPORTED_ BY CONDOR"
@@ -95,24 +145,29 @@ END { if ( i != 0 )
 
 echo "*** SYSTEM CALLS NOT TRAPPED AT ALL BY CONDOR"
 NOTTRAPPED=`comm -23 /tmp/asc1.$$ /tmp/asc3.$$`
-#MANDIR=/afs/cs.wisc.edu/common/usr/man/vendor/hp700_ux90/man2.Z
-MANDIR=/usr/man
+
 for SYSCALL in $NOTTRAPPED 
 do
 	echo $SYSCALL | awk '{printf "%20.20s - ",sprintf("%s()",$0)}' - 
-	if [ -f $MANDIR/$SYSCALL.2 ]; then
-		zcat $MANDIR/$SYSCALL.2 | awk -F\- \
-'$0 ~ /^\.SH NAME/ { i = 1 }
-$0 ~ /^\.SH SYNOPSIS/ { i = 0 }
-{ if ( i == 2 ) {
-	 printf "%s", $2
-  }
-  if ( i > 2 ) {
-	 printf "\n  %s", $0
-  }
-  if ( i != 0 )
-	 i++
-}' - 
+	if [ -f $MANDIR/$SYSCALL.$MANEXT ]; then
+		$CAT $MANDIR/$SYSCALL.$MANEXT |			\
+		perl -e 'undef $/;' -e '$_ = <STDIN>;'		\
+			-e '/.*SH NAME(.|\n)*?\\-(.*)/;'	\
+			-e 'print $2;'
+
+# This perl one-liner does the following:
+# "undef $/" just undefines the line delimiter, so that we can grab
+#            the whole file all at once.
+# "$_ = <STDIN>" grabs all of STDIN and puts it in $_
+# "/.*SH NAME(.|\n)*?\\-(.*)/" = match a regexp to find the synopsis: 
+#   ".*SH NAME" = everything upto and including "SH NAME"
+#   "(.|\n)*" = anything, including a newline
+#   "?" = only match what you need, not everything you can
+#   "\\-" = match exactly "\-", which is what begins the synopsis
+#   "(.*)" = everything upto a newline, save it into $2 ($2, since we 
+#           already used ()'s around something earlier in this regexp)  
+# "print $2" just prints out the synopsis we matched to STDOUT.
+
 	fi
 	echo " "
 done
@@ -137,7 +192,13 @@ END { if ( i != 0 )
 ' -
 
 echo "*** ALL UNDERSCORE SYSTEM CALLS FOUND IN LIBC"
-nm -p /lib/libc.a | awk '{print $3}' -  | sort | uniq > /tmp/asc5.$$
+if [ $UNAME = "IRIX" ]; then
+# We've got to use /bin/nm on IRIX since libc is really a dynamic
+# library and the /usr/gnu/bin/nm doesn't handle those.
+	/bin/nm -pv /lib/libc.so.1 | cut -f 7 -d\| | sort | uniq > /tmp/asc5.$$
+else 
+	$NM $LIBC | awk '{print $1}' -  | sort | uniq > /tmp/asc5.$$
+fi
 awk '{printf "_%s\n__%s\n___%s\n____%s\n",$0,$0,$0,$0}' /tmp/asc1.$$  |\
    cat - /tmp/asc5.$$ | sort | uniq -d  | tee /tmp/asc6.$$ | awk \
 '{ printf "%20.20s",sprintf("%s()",$0)
@@ -228,7 +289,7 @@ echo " "
 
 
 echo "*** LIKELY VARIABLE NAMESPACE CLUTTER IN condor_syscall_lib"
-nm -pv ../condor_syscall_lib/condor_syscall_lib.a | grep " D " | c++filt | \
+$NM ../condor_syscall_lib/condor_syscall_lib.a | grep " D " | c++filt | \
    sed 's/::[^ ]*/\[C++\]/' | awk '{print $1}' - | sort | uniq |\
    grep -v -i '^_condor' | awk \
 '{ printf "%20.20s",sprintf("%s",$0)
