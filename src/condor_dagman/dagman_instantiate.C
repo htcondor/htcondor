@@ -11,3 +11,4 @@ template class ListIterator<Job>;
 template class SimpleListIterator<JobID_t>;
 template class HashTable<int, Script*>;
 template class Queue<Script*>;
+template class Queue<Job*>;

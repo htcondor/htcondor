@@ -173,7 +173,8 @@ class Dag {
     */
 	bool SubmitCondor( Job* job );
 
-    //  Update the state of a job to "Done", and run child jobs if possible.
+    // add job to termination queue and report termination to all
+    // child jobs by removing job ID from each child's waiting queue
     void TerminateJob (Job * job);
   
     /*  Get the first appearing job in the termination queue marked SUBMITTED.
@@ -231,6 +232,10 @@ class Dag {
         unlimited
     */
     int _maxJobsSubmitted;
+
+	// list of submitted jobs not yet matched with submit events in
+	// the Condor job log
+    Queue<Job*>* _submitQ;
 
 	ScriptQ* _scriptQ;
 };
