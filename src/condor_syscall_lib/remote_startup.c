@@ -174,7 +174,6 @@ static BOOLEAN condor_migrate_to( const char *host_addr, const char *port_num );
 static BOOLEAN condor_migrate_from( const char *fd_no );
 static BOOLEAN condor_exit( const char *status );
 static int open_tcp_stream( unsigned int ip_addr, unsigned short port );
-void _condor_unblock_signals( void );
 void display_ip_addr( unsigned int addr );
 void open_std_file( int which );
 void _condor_set_iwd();
@@ -429,9 +428,8 @@ MAIN( int argc, char *argv[], char **envp )
 		}
 	}
 
-	_condor_unblock_signals();
-
 	InRestart = FALSE;
+
 
 	#if defined(HPUX)
 		exit(_start( argc, argv, envp ));
@@ -707,25 +705,6 @@ int
 _set_priv()
 {
 	return 0;
-}
-
-void
-_condor_unblock_signals( void )
-{
-	sigset_t	sig_mask;
-	int			scm;
-
-	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-
-		/* unblock signals */
-	sigfillset( &sig_mask );
-	if( sigprocmask(SIG_UNBLOCK,&sig_mask,0) < 0 ) {
-		_condor_error_retry("sigprocmask failed: %s",strerror(errno));
-	}
-
-	SetSyscalls( scm );
-
-	dprintf( D_ALWAYS, "Unblocked all signals\n" );
 }
 
 #define UNIT 10000
