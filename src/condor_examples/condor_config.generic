@@ -451,8 +451,7 @@ UWCS_WANT_VACATE 	= $(ActivationTimer) > 10 * $(MINUTE) \
 ##  (Where the first ## is not there, and 12 is the number of megabytes
 ##  of RAM they are going to use)
 ##  If they do NOT specify this (which is often), we'll assume that they'll
-##  need 113 megabytes of RAM (128 - 15 megabytes that we typically save for the
-##  operating system.)
+##  need 128 megabytes of RAM.
 ##  So, the expression below is, if the CPU & Keyboard are both idle,
 ##  and the MemoryRequirements fit (or are not defined and this machine
 ##  has 128 or greater megabytes of RAM), then the job can start here.
@@ -462,8 +461,8 @@ UWCS_WANT_VACATE 	= $(ActivationTimer) > 10 * $(MINUTE) \
 ##  jobs will *NOT* start unless you specify MemoryRequirements in 
 ##  your command file!
 #UWCS_START		= ( ($(CPU_Idle) && KeyboardIdle > $(StartIdleTime)) \
-#			   && (TARGET.ImageSize <= ((Memory - 15)*1024)) \
-#			   && ( (MemoryRequirements < (Memory - 15)) || \
+#			   && (TARGET.ImageSize <= (Memory*1024)) \
+#			   && ( (MemoryRequirements < Memory) || \
 #			   (MemoryRequirements =?= UNDEFINED && \
 #			   (RemoteUserCpu > 0.0 || Memory > 127)) ) )
 
@@ -787,6 +786,19 @@ STARTD_JOB_EXPRS = ImageSize, JobUniverse
 ##  must be an integer ("N" isn't a valid setting, that's just used to
 ##  represent the default).
 #NUM_CPUS = N
+
+##  Normally, Condor will automatically detect the amount of physical
+##  memory available on your machine.  Define MEMORY to tell Condor
+##  how much physical memory (in MB) your machine has, overriding the
+##  value Condor computes automatically.  For example:
+#MEMORY = 128
+
+##  How much memory would you like reserved from Condor?  By default,
+##  Condor considers all the physical memory of your machine as
+##  available to be used by Condor jobs.  If RESERVED_MEMORY is
+##  defined, Condor subtracts it from the amount of memory it
+##  advertises as available.
+#RESERVED_MEMORY = 0
 
 ######
 ##  SMP startd settings
