@@ -1203,11 +1203,6 @@ By default, any files that are modified or created by the job in the
 temporary directory at the remote site are transferred back
 to the machine from which the job was submitted.
 Most of the time, this is the best option.
-(Note that in globus universe, the default behavior is different.
-\emph{No} output files are transferred back by default.  You must
-explicitly list output files if you want them to be transferred.)
-
-
 To restrict the files that are transferred,
 specify the exact list with \verb@transfer_output_files@.
 Again, filenames are delimited with a comma.
