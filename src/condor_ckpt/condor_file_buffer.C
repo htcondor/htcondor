@@ -384,12 +384,14 @@ void CondorFileBuffer::flush( int deallocate )
 {
 	CondorChunk *c,*n;
 
-	for(c=head;c;c=n) {
+	c=head;
+	while(c) {
 		clean(c);
 		n = c->next;
 		if(deallocate) {
 			delete c;
 		}
+		c = n;
 	}
 
 	if(deallocate) head=0;
