@@ -42,13 +42,13 @@ extern "C" char *get_startd_addr(const char *);
 
 usage( char *str )
 {
-	fprintf( stderr, "Usage: %s hostname-list\n", str );
+	fprintf( stderr, "Usage: %s hostname [other hostnames]\n", str );
 	exit( 1 );
 }
 
 main( int argc, char *argv[] )
 {
-	int			cmd;
+	int			cmd = VACATE_ALL_CLAIMS;
 	int			i;
 	char		*startdAddr;
 	char		*fullname;
@@ -84,7 +84,6 @@ main( int argc, char *argv[] )
 		}
 
 		sock.encode();
-		cmd = VACATE_ALL_CLAIMS;
 		if (!sock.code(cmd) || !sock.eom()) {
 			fprintf( stderr, "Can't send VACATE_ALL_CLAIMS command to "
 					 "condor startd (%s)\n", startdAddr);
