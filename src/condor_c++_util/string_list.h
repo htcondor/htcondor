@@ -33,7 +33,7 @@
 */
 class StringList {
 public:
-	StringList(char *s = NULL, char *delim = "," ); 
+	StringList(char *s = NULL, char *delim = " ," ); 
 	~StringList();
 	void initializeFromString (char *);
 	BOOLEAN contains( const char * );

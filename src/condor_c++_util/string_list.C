@@ -36,9 +36,6 @@ char *strnewp( const char * );
 int
 StringList::isSeparator( char x )
 {
-	if ( isspace( x ) ) {
-		return 1;
-	}
 	for ( char *sep = delimiters; *sep; sep++ ) {
 		if ( x == ( *sep ) ) {
 			return 1;
@@ -64,8 +61,9 @@ StringList::initializeFromString (char *s)
 
 	while (*ptr != '\0')
 	{
-		// skip leading separators
-		while (isSeparator (*ptr) && *ptr != '\0') 
+		// skip leading separators & whitespace
+		while ((isSeparator (*ptr) || isspace(*ptr)) 
+					&& *ptr != '\0') 
 			ptr++;
 
 		// copy filename into buffer
