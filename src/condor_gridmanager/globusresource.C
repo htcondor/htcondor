@@ -1,15 +1,17 @@
 
 
 #include "condor_common.h"
+#include "condor_config.h"
+#include "string_list.h"
 
 #include "globusresource.h"
 #include "gridmanager.h"
 
+#define DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE	5
+#define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		100
 
 int GlobusResource::probeInterval = 300;	// default value
 int GlobusResource::probeDelay = 15;		// default value
-int GlobusResource::submitLimit = 5;		// default value
-int GlobusResource::jobLimit = 100;			// default value
 int GlobusResource::gahpCallTimeout = 300;	// default value
 
 GlobusResource::GlobusResource( char *resource_name )
@@ -25,6 +27,10 @@ GlobusResource::GlobusResource( char *resource_name )
 	gahp.setMode( GahpClient::normal );
 	gahp.setTimeout( gahpCallTimeout );
 	resourceName = strdup( resource_name );
+	submitLimit = DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE;
+	jobLimit = DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE;
+
+	Reconfig();
 }
 
 GlobusResource::~GlobusResource()
@@ -37,7 +43,58 @@ GlobusResource::~GlobusResource()
 
 void GlobusResource::Reconfig()
 {
+	char *param_value;
+
 	gahp.setTimeout( gahpCallTimeout );
+
+//	submitLimit = param_integer( "GRIDMANAGER_MAX_PENDING_SUBMITS", 5 );
+	submitLimit = -1;
+	param_value = param( "GRIDMANAGER_MAX_PENDING_SUBMITS_PER_RESOURCE" );
+	if ( param_value == NULL ) {
+		// Check old parameter name
+		param_value = param( "GRIDMANAGER_MAX_PENDING_SUBMITS" );
+	}
+	if ( param_value != NULL ) {
+		char *tmp1;
+		char *tmp2;
+		StringList limits( param_value );
+		limits.rewind();
+		if ( limits.number() > 0 ) {
+			submitLimit = atoi( limits.next() );
+			while ( (tmp1 = limits.next()) && (tmp2 = limits.next()) ) {
+				if ( strcmp( tmp1, resourceName ) == 0 ) {
+					submitLimit = atoi( tmp2 );
+				}
+			}
+		}
+		free( param_value );
+	}
+	if ( submitLimit <= 0 ) {
+		submitLimit = DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE;
+	}
+
+//	jobLimit = param_integer("GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE",
+//							 100 );
+	jobLimit = -1;
+	param_value = param( "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE" );
+	if ( param_value != NULL ) {
+		char *tmp1;
+		char *tmp2;
+		StringList limits( param_value );
+		limits.rewind();
+		if ( limits.number() > 0 ) {
+			jobLimit = atoi( limits.next() );
+			while ( (tmp1 = limits.next()) && (tmp2 = limits.next()) ) {
+				if ( strcmp( tmp1, resourceName ) == 0 ) {
+					jobLimit = atoi( tmp2 );
+				}
+			}
+		}
+		free( param_value );
+	}
+	if ( jobLimit <= 0 ) {
+		jobLimit = DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE;
+	}
 
 dprintf(D_FULLDEBUG,"*** enterting Reconfig\n");
 	// If the jobLimit was widened, move jobs from Wanted to Allowed and

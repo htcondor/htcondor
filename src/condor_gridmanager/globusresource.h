@@ -37,12 +37,6 @@ class GlobusResource : public Service
 	static void setProbeDelay( int new_delay )
 		{ probeDelay = new_delay; }
 
-	static void setSubmitLimit( int new_limit )
-		{ submitLimit = new_limit; }
-
-	static void setJobLimit( int new_limit )
-		{ jobLimit = new_limit; }
-
 	static void setGahpCallTimeout( int new_timeout )
 		{ gahpCallTimeout = new_timeout; }
 
@@ -67,8 +61,8 @@ class GlobusResource : public Service
 	List<GlobusJob> submitsWanted;
 	static int probeInterval;
 	static int probeDelay;
-	static int submitLimit;		// max number of submit actions
-	static int jobLimit;		// max number of submitted jobs
+	int submitLimit;		// max number of submit actions
+	int jobLimit;			// max number of submitted jobs
 	static int gahpCallTimeout;
 
 	GahpClient gahp;

@@ -272,7 +272,6 @@ void
 Reconfig()
 {
 	int tmp_int;
-	char *tmp = NULL;
 
 	// This method is called both at startup [from method Init()], and
 	// when we are asked to reconfig.
@@ -293,14 +292,6 @@ Reconfig()
 	tmp_int = param_integer( "GRIDMANAGER_RESOURCE_PROBE_INTERVAL", 5 * 60 );
 	GlobusResource::setProbeInterval( tmp_int );
 
-	int max_pending_submits = param_integer( "GRIDMANAGER_MAX_PENDING_SUBMITS",
-											 5 );
-	GlobusResource::setSubmitLimit( max_pending_submits );
-
-	int max_submitted_jobs = param_integer(
-						"GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE", 100 );
-	GlobusResource::setJobLimit( max_submitted_jobs );
-
 	tmp_int = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT", 5 * 60 );
 	GlobusJob::setGahpCallTimeout( tmp_int );
 	GlobusResource::setGahpCallTimeout( tmp_int );
@@ -314,9 +305,9 @@ Reconfig()
 	minProxy_time = param_integer( "GRIDMANAGER_MINIMUM_PROXY_TIME", 3 * 60 );
 
 	int max_requests = param_integer( "GRIDMANAGER_MAX_PENDING_REQUESTS", 50 );
-	if ( max_requests < max_pending_submits * 5 ) {
-		max_requests = max_pending_submits * 5;
-	}
+//	if ( max_requests < max_pending_submits * 5 ) {
+//		max_requests = max_pending_submits * 5;
+//	}
 	GahpMain.setMaxPendingRequests(max_requests);
 
 	// Tell all the job objects to deal with their new config values
