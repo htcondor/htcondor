@@ -836,7 +836,6 @@ SetUniverse()
 		JobUniverse = CONDOR_UNIVERSE_PVM;
 		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_PVM);
 		InsertJobExpr (buffer);
-		InsertJobExpr ("Checkpoint = 0");
 
 		free(univ);
 		return;
@@ -875,7 +874,6 @@ SetUniverse()
 		JobUniverse = CONDOR_UNIVERSE_MPI;
 		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_MPI);
 		InsertJobExpr (buffer);
-		InsertJobExpr ("Checkpoint = 0");
 		
 		free(univ);
 		return;
@@ -885,7 +883,6 @@ SetUniverse()
 		JobUniverse = CONDOR_UNIVERSE_JAVA;
 		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_JAVA);
 		InsertJobExpr (buffer);
-		InsertJobExpr ("Checkpoint = 0");
 		free(univ);
 		return;
 	}
