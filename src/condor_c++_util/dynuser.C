@@ -81,8 +81,7 @@ bool dynuser::init_user() {
 		char* tmp = NULL;
 		char vm_num[10];
 	 
-		if ( mySubSystem && (strcmp(mySubSystem,"STARTER")==0) 
-				&& reuse_account ) {
+		if ( reuse_account ) {
 	
 			logappend = param("STARTER_LOG");
 			tmp = strrchr(logappend, '.');
@@ -93,13 +92,18 @@ bool dynuser::init_user() {
 	
 				strncpy(vm_num, tmp+1, 10);
 				vm_num[9] = '\0'; // make sure it's terminated
-			
+
 			} else {
 	
 				// must not be an smp machine, so just use vm #1
 		 		
 				dprintf(D_FULLDEBUG, "Dynuser: Couldn't param VM# - using 1 by default\n");
 				sprintf(vm_num,"vm1");
+		 	}
+			int ret=snprintf(accountname, 100, 
+				"condor-reuse-%s", vm_num);
+		 	if ( ret < 0 ) {
+		 		EXCEPT("account name to create too long");
 		 	}
 		} else { 
 			// don't reuse accounts, so just name the
@@ -110,15 +114,12 @@ bool dynuser::init_user() {
 			// don't have to link in DC to everything non-DC that uses
 			// Uids.C and Dynuser.C -stolley 7/2002
 			int current_pid = GetCurrentProcessId();
-			sprintf(vm_num,"%d",current_pid);
+			int ret=snprintf(accountname, 100, 
+				"condor-run-%d", current_pid);
+		 	if ( ret < 0 ) {
+		 		EXCEPT("account name to create too long");
+		 	}
 		}
-		
-
-	 	int ret=snprintf(accountname, 100, 
-				"condor-reuse-%s", vm_num);
-	 	if ( ret < 0 ) {
-	 		EXCEPT("account name to create too long");
-	 	}
 
 		if ( logappend ) { free(logappend); logappend = NULL; tmp = NULL; }
 		
@@ -797,3 +798,4 @@ bool dynuser::cleanup_condor_users(char* user_prefix) {
 
 	return retval;
 }
+
