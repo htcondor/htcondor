@@ -561,10 +561,11 @@ part_send_job(
   }
 
   /* Send the job info */
-  if (JobAd) FreeJobAd(JobAd);
-  ConnectQ(schedd);
-  JobAd = GetJobAd( proc->id.cluster, proc->id.proc );
-  DisconnectQ(NULL);
+  if (!JobAd) {   // just get the job ad from the schedd once
+  	ConnectQ(schedd);
+  	JobAd = GetJobAd( proc->id.cluster, proc->id.proc );
+  	DisconnectQ(NULL);
+  }
   if (!JobAd) {
 	  EXCEPT( "failed to get job ad" );
   }
