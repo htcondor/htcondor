@@ -155,6 +155,7 @@ protected:
 	char	*out;
 	char	*err;
 	char	*rootdir;
+	char	*iwd;
 	char	*cmd;
 	char	*args;
 	char	*env;
