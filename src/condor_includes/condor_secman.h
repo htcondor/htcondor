@@ -85,6 +85,8 @@ public:
 	bool  					invalidateHost(const char * sin);
     void                    invalidateExpiredCache();
 
+	void					send_invalidate_packet ( char* sinful, char* sessid );
+
 	bool	FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 									bool otherside_can_neg = true);
 	ClassAd * 				ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad);
