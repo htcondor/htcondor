@@ -10,7 +10,7 @@
 # platform to platform. 
 #
 # To customize, all you need to do is edit the MASTER line below.
-# condor_install (if run as root) can do that for you.  The PS line
+# condor_install (if run as root) will do that for you.  The PS line
 # should be the full path and arguments to a ps command that dumps out
 # all running processes.  This should be correct on all platforms.
 #
@@ -38,7 +38,7 @@ case $1 in
         # shutdown method.  The master itself will start sending
         # SIGKILL to all it's children if they're not gone in 20
         # seconds. 
-        echo "Shutting down Condor (quickly)"
+        echo "Shutting down Condor (fast-shutdown mode)"
         kill -QUIT $pid
     else
         echo "Condor not running"
@@ -46,7 +46,7 @@ case $1 in
     ;;
 
 *)
-    echo "usage: /etc/init.d/condor {start|stop}"
+    echo "Usage: condor {start|stop}"
     ;;
 
 esac
