@@ -466,7 +466,13 @@ class ExecuteEvent : public ULogEvent
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 
-    /// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
+	/** Identifier for the machine the job executed on.
+		For Vanilla, Standard, and other non-Grid Universes, a
+		host string in the form: "<128.105.165.12:32779>".
+		For the Globus GridType a hostname.
+		This may be an empty string for some JobUniverses
+		or GridTyps.
+	*/
     char executeHost[128];
 };
 

@@ -1279,12 +1279,25 @@ writeEvent (FILE *file)
 int ExecuteEvent::
 readEvent (FILE *file)
 {
-	int retval  = fscanf (file, "Job executing on host: %s", executeHost);
-	if (retval != 1)
+	MyString line;
+	if ( ! line.readLine(file) ) 
 	{
-		return 0;
+		return 0; // EOF or error
 	}
-	return 1;
+
+	int retval  = sscanf (line.Value(), "Job executing on host: %s", executeHost);
+	if (retval == 1)
+	{
+		return 1;
+	}
+
+	if(strcmp(line.Value(), "Job executing on host: \n") == 0) {
+		// Simply lacks a hostname.  Allow.
+		executeHost[0] = 0;
+		return 1;
+	}
+
+	return 0;
 }
 
 ClassAd* ExecuteEvent::
