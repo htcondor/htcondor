@@ -637,8 +637,22 @@ GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, float *val
 {
 	ClassAd	*ad;
 	char	key[_POSIX_PATH_MAX];
+	char	*attr_val;
+	int		rval;
 
 	sprintf(key, "%d.%d", cluster_id, proc_id);
+
+	rval = JobQueue->LookupInTransaction(key, attr_name, attr_val);
+	switch (rval) {
+	case 1:
+		sscanf(attr_val, "%f", val);
+		return 1;
+	case 0:
+		break;
+	default:
+		return -1;
+	}
+
 	if (JobQueue->table.lookup(HashKey(key), ad) != 0) {
 		return -1;
 	}
@@ -652,8 +666,22 @@ GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 {
 	ClassAd	*ad;
 	char	key[_POSIX_PATH_MAX];
+	char	*attr_val;
+	int		rval;
 
 	sprintf(key, "%d.%d", cluster_id, proc_id);
+
+	rval = JobQueue->LookupInTransaction(key, attr_name, attr_val);
+	switch (rval) {
+	case 1:
+		sscanf(attr_val, "%d", val);
+		return 1;
+	case 0:
+		break;
+	default:
+		return -1;
+	}
+
 	if (JobQueue->table.lookup(HashKey(key), ad) != 0) {
 		return -1;
 	}
@@ -667,8 +695,22 @@ GetAttributeString(int cluster_id, int proc_id, const char *attr_name, char *val
 {
 	ClassAd	*ad;
 	char	key[_POSIX_PATH_MAX];
+	char	*attr_val;
+	int		rval;
 
 	sprintf(key, "%d.%d", cluster_id, proc_id);
+
+	rval = JobQueue->LookupInTransaction(key, attr_name, attr_val);
+	switch (rval) {
+	case 1:
+		strcpy(val, attr_val);
+		return 1;
+	case 0:
+		break;
+	default:
+		return -1;
+	}
+
 	if (JobQueue->table.lookup(HashKey(key), ad) != 0) {
 		return -1;
 	}
@@ -683,8 +725,22 @@ GetAttributeExpr(int cluster_id, int proc_id, const char *attr_name, char *val)
 	ClassAd		*ad;
 	char		key[_POSIX_PATH_MAX];
 	ExprTree	*tree;
+	char		*attr_val;
+	int			rval;
 
 	sprintf(key, "%d.%d", cluster_id, proc_id);
+
+	rval = JobQueue->LookupInTransaction(key, attr_name, attr_val);
+	switch (rval) {
+	case 1:
+		strcpy(val, attr_val);
+		return 1;
+	case 0:
+		break;
+	default:
+		return -1;
+	}
+
 	if (JobQueue->table.lookup(HashKey(key), ad) != 0) {
 		return -1;
 	}
@@ -706,10 +762,14 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 	ClassAd				*ad;
 	char				key[_POSIX_PATH_MAX];
 	LogDeleteAttribute	*log;
+	char				*attr_val;
 
 	sprintf(key, "%d.%d", cluster_id, proc_id);
+
 	if (JobQueue->table.lookup(HashKey(key), ad) != 0) {
-		return -1;
+		if (JobQueue->LookupInTransaction(key, attr_name, attr_val) != 1) {
+			return -1;
+		}
 	}
 
 	if (!OwnerCheck(ad, active_owner)) {
@@ -887,9 +947,7 @@ PrintQ()
 // seperate. 
 int get_job_prio(ClassAd *job)
 {
-    int prio;
     int job_prio;
-    int status;
     int job_status;
     PROC_ID id;
     int     q_date;
@@ -969,8 +1027,6 @@ int get_job_prio(ClassAd *job)
 int
 all_job_prio(int cluster, int proc)
 {
-    int prio;
-    int status;
     int job_prio;
     int job_status;
     PROC_ID job_id;
