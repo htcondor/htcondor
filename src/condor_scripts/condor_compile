@@ -12,11 +12,11 @@
 # correct for most installations, however.
 CONDOR_LIBDIR=`condor_config_val LIB`
 CONDOR_CLIB=$CONDOR_LIBDIR/condor_syscall_lib.a
-CONDOR_ZCLIB="$CONDOR_LIBDIR/condor_syscall_zlib.a /usr/lib/libz.a"
+STATIC_ZLIB=/usr/lib/libz.a
+CONDOR_ZCLIB=$CONDOR_LIBDIR/condor_syscall_zlib.a
 CONDOR_RT0=$CONDOR_LIBDIR/condor_rt0.o
 CONDOR_CPLUS=$CONDOR_LIBDIR/c_plus_alloc.o
 CONDOR_LD_DIR=$CONDOR_LIBDIR
-CONDOR_COMPRESS_CKPT=no
 
 # --------------------------------------------------
 
@@ -61,7 +61,7 @@ do
 
 	if [ $1 = "-condor_standalone" ]; then
 		CONDOR_CLIB=$CONDOR_LIBDIR/libckpt.a
-		CONDOR_ZCLIB="$CONDOR_LIBDIR/libzckpt.a /usr/lib/libz.a"
+		CONDOR_ZCLIB=$CONDOR_LIBDIR/libzckpt.a
 		shift
 		continue
 	fi
@@ -72,16 +72,10 @@ do
 		shift
 		# Reset anything based off of the libdir by default
 		CONDOR_CLIB=$CONDOR_LIBDIR/condor_syscall_lib.a
-		CONDOR_ZCLIB="$CONDOR_LIBDIR/condor_syscall_zlib.a /usr/lib/libz.a"
+		CONDOR_ZCLIB=$CONDOR_LIBDIR/condor_syscall_zlib.a
 		CONDOR_RT0=$CONDOR_LIBDIR/condor_rt0.o
 		CONDOR_CPLUS=$CONDOR_LIBDIR/c_plus_alloc.o
 		CONDOR_LD_DIR=$CONDOR_LIBDIR
-		continue
-	fi
-
-	if [ $1 = "-condor_compress_ckpt" ]; then
-		shift
-		CONDOR_COMPRESS_CKPT=yes
 		continue
 	fi
 
@@ -89,8 +83,8 @@ do
 	break
 done
 
-if [ $CONDOR_COMPRESS_CKPT = yes ]; then
-	CONDOR_CLIB=$CONDOR_ZCLIB
+if [ -r $STATIC_ZLIB -a -r $CONDOR_ZCLIB ]; then
+	CONDOR_CLIB="$CONDOR_ZCLIB $STATIC_ZLIB"
 fi
 
 # Export these so our special "ld" script can find them
