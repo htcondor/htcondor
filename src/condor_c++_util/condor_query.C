@@ -339,6 +339,9 @@ fetchAds (ClassAdList &adList, const char *poolName)
 	if (!(sock = my_collector.startCommand(command, Stream::reli_sock, 0)) ||
 	    !queryAd.put (*sock) || !sock->end_of_message()) {
 
+		if (sock) {
+			delete sock;
+		}
 		return Q_COMMUNICATION_ERROR;
 	}
 	
@@ -349,6 +352,7 @@ fetchAds (ClassAdList &adList, const char *poolName)
 	{
 		if (!sock->code (more)) {
 			sock->end_of_message();
+			delete sock;
 			return Q_COMMUNICATION_ERROR;
 		}
 		if (more) {
@@ -356,6 +360,7 @@ fetchAds (ClassAdList &adList, const char *poolName)
 			if( !ad->initFromStream(*sock) ) {
 				sock->end_of_message();
 				delete ad;
+				delete sock;
 				return Q_COMMUNICATION_ERROR;
 			}
 			adList.Insert (ad);
