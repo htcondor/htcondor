@@ -1,3 +1,11 @@
+01/16/04 V6_7-core-2-branch
+   A new branch off of V6_7-branch for adding the 2nd round of custom
+   features for CORE.  These include:
+   - schedd replication/fail-over
+   - condor_vacate_job <job.id>
+   Created from the V6_7-core-2-root tag.  We will merge this branch 
+   back into V6_7-branch once we're done and sure it's stable. 
+
 01/16/04 V6_7-post_merge-V6_6-merge-3
    The state of the V6_7-branch after merging in the V6_6-branch as
    tagged at V6_6-merge-3.
