@@ -475,7 +475,7 @@ init_params( int first_time)
 
 	tmp = param( "MAX_CLAIM_ALIVES_MISSED" );
 	if( !tmp ) {
-		max_claim_alives_missed = 3;
+		max_claim_alives_missed = 6;
 	} else {
 		max_claim_alives_missed = atoi( tmp );
 		free( tmp );
