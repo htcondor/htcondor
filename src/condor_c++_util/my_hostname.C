@@ -76,7 +76,7 @@ void
 init_hostnames()
 {
 	char *tmp, hostbuf[MAXHOSTNAMELEN];
-	int i;
+
 	hostbuf[0]='\0';
 
 	if( hostname ) {
