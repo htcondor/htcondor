@@ -4,6 +4,7 @@
 %token UNKNOWN
 %token MAP
 %token EXTRACT
+%token DL_EXTRACT
 %token PSEUDO
 %token ARRAY
 %token IN
@@ -18,7 +19,7 @@
 %type <node> stub_body action_func_list
 %type <node> action_param action_param_list action_func xfer_func alloc_func
 %type <node> return_func
-%type <tok> TYPE_NAME CONST IDENTIFIER UNKNOWN MAP EXTRACT ARRAY opt_mult
+%type <tok> TYPE_NAME CONST IDENTIFIER UNKNOWN MAP DL_EXTRACT ARRAY opt_mult
 %type <bool> opt_const opt_ptr opt_ptr_to_const opt_array
 %type <bool> opt_reference
 %type <param_mode> use_type
@@ -51,6 +52,8 @@ void output_switch_decl( struct node * );
 void output_local_call(  char *id, struct node *list );
 void output_remote_call(  char *id, struct node *list );
 void output_extracted_call(  char *id, struct node *list );
+void output_dl_extracted_call(  char *id, char *rtn_type, int is_ptr,
+							  struct node *list );
 void output_param_list( struct node *list );
 struct node *mk_list();
 void copy_file( FILE *in_fp, FILE *out_fp );
@@ -78,6 +81,7 @@ int Ignored = FALSE;
 int	Mode = 0;
 int ErrorEncountered = 0;
 int IsExtracted = FALSE;
+int IsDLExtracted = FALSE;
 int IsPseudo = FALSE;
 
 
@@ -301,6 +305,11 @@ pseudo_or_extract
 		{
 		Trace( "pseudo_or_extract (2)" );
 		IsExtracted = TRUE;
+		}
+	|  DL_EXTRACT
+		{
+		Trace( "pseudo_or_extract (3)" );
+		IsDLExtracted = TRUE;
 		}
 	;
 
@@ -573,6 +582,8 @@ mk_func_node( char *type, char *name, struct node * p_list,
 	answer->is_ptr = is_ptr;
 	answer->extract = IsExtracted;
 	IsExtracted = FALSE;
+	answer->dl_extract = IsDLExtracted;
+	IsDLExtracted = FALSE;
 	answer->pseudo = IsPseudo;
 	IsPseudo = FALSE;
 	answer->param_list = p_list;
@@ -661,6 +672,30 @@ output_vararg( struct node *n )
 {
 	assert( n->node_type == PARAM );
 	printf( "\t\t%s = va_arg( ap, %s );\n", n->id, n->type_name );
+}
+
+void
+output_param_type( struct node *n )
+{
+	assert( n->node_type == PARAM );
+
+	if( n->is_const ) {
+		printf( "const " );
+	}
+
+	printf( "%s", n->type_name );
+
+	if( n->is_ptr ) {
+		printf( " *" );
+	}
+
+	if( n->is_const_ptr ) {
+		printf( " const " );
+	}
+
+	if( n->is_array ) {
+		printf( " []" );
+	}
 }
 
 void
@@ -774,6 +809,41 @@ output_extracted_call( char *id, struct node *list )
 }
 
 void
+output_dl_extracted_call( char *id, char *rtn_type, int is_ptr,
+						 struct node *list )
+{
+	struct node	*p;
+
+	printf( "		void *handle;\n");
+	printf( "		%s%s (*fptr)(", rtn_type, is_ptr ? " *" : "" );
+	for( p=list->next; p != list; p = p->next ) {
+		output_param_type( p );
+		if( p->next != list ) {
+			printf( ", " );
+		}
+	}
+	printf( ");\n" );
+
+	printf( "		if ((handle = dlopen(\"/usr/lib/libc.so\", "
+		   "RTLD_LAZY)) == NULL) {\n");
+	printf( "			return (%s%s)-1;\n", rtn_type, is_ptr ? " *" : "");
+	printf( "		}\n\n" );
+	printf( "		if ((fptr = (%s%s (*)(", rtn_type, is_ptr ? " *" : "" );
+	for( p=list->next; p != list; p = p->next ) {
+		output_param_type( p );
+		if( p->next != list ) {
+			printf( ", " );
+		}
+	}
+	printf( "))dlsym(handle, \"%s\")) == NULL) {\n", id );
+	printf( "			return (%s%s)-1;\n", rtn_type, is_ptr ? " *" : "" );
+	printf( "		}\n\n" );
+	printf( "		return (*fptr)(" );
+	output_param_list( list );
+	printf( ");\n" );
+}
+
+void
 output_param_list( struct node *list )
 {
 	struct node	*p;
@@ -866,8 +936,6 @@ output_mapping( char *func_type_name, int is_ptr,  struct node *list )
 		printf( "	if( LocalSysCalls() ) {\n" );
 	}
 }
-
-
 
 /*
   Output code for one system call receiver.
@@ -1190,6 +1258,9 @@ output_switch( struct node *n )
 		output_mapping( n->type_name, n->is_ptr, n->param_list );
 		if( n->extract ) {
 			output_extracted_call( n->id, n->param_list );
+		} else if ( n->dl_extract ) {
+			output_dl_extracted_call( n->id, n->type_name, n->is_ptr,
+									 n->param_list );
 		} else {
 			output_local_call( n->id, n->param_list );
 		}
@@ -1219,7 +1290,6 @@ output_switch( struct node *n )
 		printf( "#endif\n\n" );
 	}
 }
-
 
 /*
    Output a stub for the call which also marshalls and sends parameters 
@@ -1326,8 +1396,6 @@ output_send_stub( struct node *n )
 	printf( "}\n\n" );
 
 }
-
-
 
 FILE *
 open_file( char *name )
