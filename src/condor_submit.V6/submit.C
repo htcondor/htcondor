@@ -129,6 +129,10 @@ char	*UserLogFile	= "log";
 char	*CoreSize		= "coresize";
 char	*NiceUser		= "nice_user";
 char	*X509CertDir	= "x509certdir";
+char	*FileRemaps = "file_remaps";
+char	*BufferSize = "buffer_size";
+char	*BufferBlockSize = "buffer_block_size";
+
 #if !defined(WIN32)
 char	*KillSig			= "kill_sig";
 #endif
@@ -159,6 +163,7 @@ void	SetRank();
 void 	SetIWD();
 void	SetUserLog();
 void	SetCoreSize();
+void	SetFileOptions();
 #if !defined(WIN32)
 void	SetKillSig();
 #endif
@@ -735,6 +740,31 @@ SetImageSize()
 	(void)sprintf (buffer, "%s = %d", ATTR_EXECUTABLE_SIZE, executablesize);
 	InsertJobExpr (buffer);
 }
+
+void SetFileOptions()
+{
+	char *tmp;
+	char buffer[ATTRLIST_MAX_EXPRESSION];
+
+	tmp = condor_param(FileRemaps);
+	if(tmp) {
+		sprintf(buffer,"%s = %s",ATTR_FILE_REMAPS,tmp);
+		InsertJobExpr(buffer);
+	}
+
+	tmp = condor_param(BufferSize);
+	if(tmp) {
+		sprintf(buffer,"%s = %s",ATTR_BUFFER_SIZE,tmp);
+		InsertJobExpr(buffer);
+	}
+
+	tmp = condor_param(BufferBlockSize);
+	if(tmp) {
+		sprintf(buffer,"%s = %s",ATTR_BUFFER_BLOCK_SIZE,tmp);
+		InsertJobExpr(buffer);
+	}
+}
+
 
 /*
 ** Make a wild guess at the size of the image represented by this a.out.
@@ -1503,6 +1533,7 @@ queue(int num)
 		SetStdFile( 0 );
 		SetStdFile( 1 );
 		SetStdFile( 2 );
+		SetFileRemaps();
 		SetImageSize();
 		SetForcedAttributes();
 
