@@ -39,10 +39,6 @@
 
 XferSummary	xfer_summary;
 
-template class Set<RankedClassAd>;
-template class Set<int>;
-template class HashTable<int, BaseCollection *>;
-
 Server server;
 Alarm  rt_alarm;
 
