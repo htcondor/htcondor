@@ -24,6 +24,8 @@ sub RunSubmit(  );
 # Setup the hawkeye stuff
 my $Hawkeye;
 my %Config = (
+	      PoolProg => "condor_pool",
+	      PoolName => "",
 	      Cluster => "",
 	      Reserved => "",
 	      DoAbsent => 1,
@@ -53,20 +55,27 @@ sub Init()
     # Read the config info..
     my $Tmp;
 
-    $Config{PoolDescription} =
-	HawkeyeLib::ReadConfig( "_description", "" );
-
-    $Tmp = HawkeyeLib::ReadConfig( "_roster_dir", "" );
-    $ENV{CONDOR_ROSTER_DIR} = $Tmp if ( $Tmp ne "" );
-
     $Tmp = HawkeyeLib::ReadConfig( "_pathadd", "" );
     $ENV{PATH} = "$Tmp:$ENV{PATH}" if ( $Tmp ne "" );
 
+    $Tmp = HawkeyeLib::ReadConfig( "_pool_prog", "" );
+    $Config{PoolProg} = $Tmp if ( $Tmp ne "" );
+
+    $Tmp = HawkeyeLib::ReadConfig( "_pool_dir", "" );
+    push( @{$Config{Options}}, "--dir=$Tmp" ) if ( $Tmp ne "" );
+
+    $Tmp = HawkeyeLib::ReadConfig( "_pool_name", "" );
+    $Config{PoolName} = $Tmp if ( $Tmp ne "" );
+
     $Tmp = HawkeyeLib::ReadConfig( "_cluster", "true" );
-    $Config{Cluster} = " -cluster -down-cluster" if ( $Tmp =~ /true/i );
+    if ( $Tmp =~ /true/i )
+    {
+	push( @{$Config{Options}}, "--down=cluster" );
+	push( @{$Config{Options}}, "--downlist=cluster" );
+    }
 
     $Tmp = HawkeyeLib::ReadConfig( "_reserved", "false" );
-    $Config{Reserved} = " -reserved" if ( $Tmp =~ /true/i );
+    push( @{$Config{Options}}, "--reserved" );
 
     $Tmp = HawkeyeLib::ReadConfig( "_absent", "true" );
     $Config{DoAbsent} = ( $Tmp =~ /true/i ) ? 1 : 0;
@@ -102,7 +111,9 @@ sub RunIt()
     # Description?
     if ( $Config{PoolDescription} ne "" )
     {
-	$Hash->Add( "Description", "s", $Config{PoolDescription} );
+	$Hash->Add( "Description",
+		    HawkeyePublish::TypeString,
+		    $Config{PoolDescription} );
 	$Hawkeye->StoreIndex( "Description" );
     }
 
@@ -129,8 +140,14 @@ sub RunAbsent()
     my @NotDown;
 
     # Now, run condor_status and gather some more info...
-    my $Cmd = "condor_absent -ping -pingok -script" .
-	$Config{Cluster} . $Config{Reserved};
+    push( @{$Config{Options}}, "--absent" );
+    push( @{$Config{Options}}, "--no-rcfile" );
+    push( @{$Config{Options}}, "--script" );
+    push( @{$Config{Options}}, "--ping" );
+    push( @{$Config{Options}}, "--pingok" );
+    push( @{$Config{Options}}, "--bygroup" );
+    my $Cmd = "$Config{PoolProg} $Config{PoolName} ".
+	  join( " ", @{$Config{Options}} );
     print STDERR "Running '$Cmd'\n";
     if ( ! open( ABSENT, "$Cmd|" ) )
     {
@@ -139,106 +156,125 @@ sub RunAbsent()
     }
 
     # Parse the output...
+    my $Section;
+    my $Cluster;
+    my $Count;
     while ( <ABSENT> )
     {
 	chomp;
 
-	# Ignore empty/blank lines
-	next if ( $_ =~ /^\s*$/ );
-
-	# Summary info?
-	if ( /^\#\s+(.*)/ )
+	my ( $Attr, @Values );
+	if ( /^(\w+)=(.*)/ )
 	{
-	    # Roster count
-	    if ( $1 =~ /(\d+).*roster/ )
+	    $Attr = $1;
+	    @Values = split( /\,/, $2 );
+	}
+	else
+	{
+	    next;
+	}
+
+	# What have we got?
+	if ( $Attr eq "Section" )
+	{
+	    $Section = shift @Values;
+	    $Cluster = shift @Values;
+	    $Count = shift @Values;
+	    next;
+	}
+	# Listed node
+	elsif ( $Attr eq "Node" )
+	{
+	    my $Host = shift @Values;
+	    if ( $Section eq "Absent" )
 	    {
-		$Hash->Add( "Count", "n", $1 );
-		$Hawkeye->StoreIndex( "Count" );
-	    }
-	    # Cluster summary
-	    elsif ( $1 =~ /Cluster:\s+(.*)/ )
-	    {
-		foreach my $Str ( split( /,/, $1 ) )
+		if ( $Cluster eq "<NONE>" )
 		{
-		    $Str =~ s/^\s//g;
-		    my ( $Value, $Attr ) = split( /\s+/, $Str );
-		    my $AttrUc = uc( substr( $Attr, 0, 1 ) );
-		    substr( $Attr, 0, 1, $AttrUc );
-		    $Hash->Add( "Cluster_" . $Attr, "n", $Value );
-		    $Hawkeye->StoreIndex( "Cluster_" . $Attr );
+		    push( @Absent, $Host );
+		}
+		else
+		{
+		    push( @ClusterAbsent, "$Host" );
 		}
 	    }
-	    # Absent summary
-	    elsif ( $1 =~ /(\d+).*absent/ )
+	    elsif ( $Section eq "MarkedDown" )
 	    {
-		$Hash->Add( "Absent_count", "n", $1 );
-		$Hawkeye->StoreIndex( "Absent_Count" );
+		if ( $Cluster ne "<NONE>" && $Cluster ne "<ALL>" )
+		{
+		    push @ClusterKnownDown, $Host;
+		}
+	    }
+	    elsif ( $Section eq "DownPingOk" )
+	    {
+		push @NotDown, $Host;
+	    }
+	    elsif ( $Section eq "Down" )
+	    {
+		if ( $Cluster ne "<NONE>" && $Cluster ne "<ALL>" )
+		{
+		    push( @ClusterDown, $1 );
+		}
 	    }
 	}
-
-	# Absent cluster nodes
-	elsif ( /Cluster node absent: '(.*)'/ )
+	elsif ( $Attr eq "Roster" )
 	{
-	    push( @ClusterAbsent, $1 );
+	    $Hash->Add( "Count", HawkeyePublish::TypeNumber, shift @Values );
+	    $Hawkeye->StoreIndex( "Count" );
 	}
-
-	# Down cluster nodes
-	elsif ( /Cluster '(.*)' is down/ )
+	elsif ( $Attr =~ /^Cluster(\w+)$/ )
 	{
-	    push( @ClusterDown, $1 );
+	    my $What = $1;
+	    $Hash->Add( "Cluster_$What", HawkeyePublish::TypeAuto, shift @Values );
+	    $Hawkeye->StoreIndex( "Cluster_$What" );
 	}
-	# New syntax
-	elsif ( /Cluster node down: '(.*)'/ )
+	elsif ( $Attr eq /NodesAbsent/ )
 	{
-	    push( @ClusterDown, $1 );
+	    $Hash->Add( "Absent_Count", HawkeyePublish::TypeNumber, shift @Values );
+	    $Hawkeye->StoreIndex( "Absent_Count" );
 	}
-
-	# Cluster nodes "known" to be down
-	elsif ( /Cluster node known to be down: '(.*)'/ )
+	elsif ( $Attr eq "Description" )
 	{
-	    push @ClusterKnownDown, $1;
-	}
-
-	# Cluster nodes "known" to be down
-	elsif ( /Host marked down, but ping ok: '(.*)'/ )
-	{
-	    push @NotDown, $1;
-	}
-
-	# Absent machines
-	elsif ( /^(\S+)$/ )
-	{
-	    push( @Absent, $_ );
+	    $Hash->Add( "Description", HawkeyePublish::TypeString, shift @Values );
+	    $Hawkeye->StoreIndex( "Description" );
 	}
     }
     close( ABSENT );
 
     # Cluster Down list
-    $Hash->Add( "Cluster_AbsentList", "s",
+    $Hash->Add( "Cluster_AbsentList",
+		HawkeyePublish::TypeString,
 		join( " ", sort @ClusterAbsent ) );
     $Hawkeye->StoreIndex( "Cluster_AbsentList" );
 
     # Cluster Down list
-    $Hash->Add( "Cluster_DownList", "s",
+    $Hash->Add( "Cluster_DownList",
+		HawkeyePublish::TypeString,
 		join( " ", sort @ClusterDown ) );
     $Hawkeye->StoreIndex( "Cluster_DownList" );
 
     # Cluster Down list
-    $Hash->Add( "Cluster_KnownDownList", "s",
+    $Hash->Add( "Cluster_KnownDownList",
+		HawkeyePublish::TypeString,
 		join( " ", sort @ClusterKnownDown ) );
     $Hawkeye->StoreIndex( "Cluster_KnownDownList" );
-    $Hash->Add( "Cluster_KnownDownCount", "n", $#ClusterKnownDown + 1 );
+    $Hash->Add( "Cluster_KnownDownCount",
+		HawkeyePublish::TypeNumber,
+		scalar @ClusterKnownDown );
     $Hawkeye->StoreIndex( "Cluster_KnownDownCount" );
 
     # Absent list
-    $Hash->Add( "Absent_List", "s",
+    $Hash->Add( "Absent_List",
+		HawkeyePublish::TypeString,
 		join( " ", sort @Absent ) );
     $Hawkeye->StoreIndex( "Absent_List" );
 
     # Number of nodes listed as down, but ping ok
-    $Hash->Add( "Down_PingOkCount", "n", $#NotDown + 1 );
+    $Hash->Add( "Down_PingOkCount",
+		HawkeyePublish::TypeNumber,
+		scalar @NotDown );
     $Hawkeye->StoreIndex( "Down_PingOkCount" );
-    $Hash->Add( "Down_PingOkList", "s",
+    $Hash->Add( "Down_PingOkList",
+		HawkeyePublish::TypeString,
 		join( " ", sort @NotDown ) );
     $Hawkeye->StoreIndex( "Down_PingOkList" );
 }
@@ -289,11 +325,13 @@ sub RunTotal( $$ )
 	    foreach my $Field ( 0 .. $#Values )
 	    {
 		my $Attr = $Prefix . $Arch . "_" . $FieldNames[$Field];
-		$Hash->Add( $Attr, "n", $Values[$Field] );
+		$Hash->Add( $Attr, HawkeyePublish::TypeAuto, $Values[$Field] );
 	    }
 	}
     }
-    $Hash->Add( $Prefix . "ArchList", "s", join( " ", @ArchList ) )
+    $Hash->Add( $Prefix . "ArchList",
+		HawkeyePublish::TypeString,
+		join( " ", @ArchList ) )
 	if ( $#ArchList >= 0 );
 
     # Done
@@ -306,11 +344,26 @@ sub RunSubmit(  )
     # Run it..
     my @Fields =
 	(
-	 { Format => "%s", Type => "s", Name => "Name",		Munge => 1 },
-	 { Format => "%s", Type => "s", Name => "Machine",	Munge => 0 },
-	 { Format => "%d", Type => "n", Name => "RunningJobs",	Munge => 0 },
-	 { Format => "%d", Type => "n", Name => "IdleJobs",	Munge => 0 },
-	 { Format => "%d", Type => "n", Name => "HeldJobs",	Munge => 0 },
+	 { Format => "%s",
+	   Type => HawkeyePublish::TypeString,
+	   Name => "Name",
+	   Munge => 1 },
+	 { Format => "%s",
+	   Type => HawkeyePublish::TypeString,
+	   Name => "Machine",
+	   Munge => 0 },
+	 { Format => "%d",
+	   Type => HawkeyePublish::TypeNumber,
+	   Name => "RunningJobs",
+	   Munge => 0 },
+	 { Format => "%d",
+	   Type => HawkeyePublish::TypeNumber,
+	   Name => "IdleJobs",
+	   Munge => 0 },
+	 { Format => "%d",
+	   Type => HawkeyePublish::TypeNumber,
+	   Name => "HeldJobs",
+	   Munge => 0 },
 	);
 
     my $Cmd = "condor_status -submit";
@@ -353,17 +406,21 @@ sub RunSubmit(  )
 	    # Finally, publish it
 	    $Hash->Add( $Attr, $Fields[$FieldNo]->{Type}, $Values[$FieldNo] )
 		if ( $Config{DoSubmitDetail} );
-	    if ( $Fields[$FieldNo]->{Type} eq "n" )
+
+	    # If it's a number, sum it up
+	    if ( $Fields[$FieldNo]->{Type} eq HawkeyePublish::TypeNumber )
 	    {
 		$Totals{$Name} = 0 if ( ! exists $Totals{$Name} );
 		$Totals{$Name} += $Values[$FieldNo];
 	    }
 	}
     }
-    $Hash->Add( "Submit_Count", "n", $SubmitNo );
+    $Hash->Add( "Submit_Count", HawkeyePublish::TypeNumber, $SubmitNo );
     foreach my $Name ( keys %Totals )
     {
-	$Hash->Add( "Submit_Total_$Name", "n", $Totals{$Name} );
+	$Hash->Add( "Submit_Total_$Name",
+		    HawkeyePublish::TypeNumber,
+		    $Totals{$Name} );
     }
 
     # Done
@@ -396,8 +453,8 @@ sub RunCheckPoint(  )
 	# Total line
 	if ( $Values[0] eq "Total" )
 	{
-	    $Hash->Add( "Ckpt_Total_Servers", "n", $Values[1] );
-	    $Hash->Add( "Ckpt_Total_AvailDisk", "n", $Values[2] );
+	    $Hash->Add( "Ckpt_Total_Servers", HawkeyePublish::TypeNumber, $Values[1] );
+	    $Hash->Add( "Ckpt_Total_AvailDisk", HawkeyePublish::TypeNumber, $Values[2] );
 	}
 	# Server line
 	elsif ( $Values[1] =~ /^\d+$/ )
@@ -421,12 +478,14 @@ sub RunCheckPoint(  )
     }
 
     # Publish it all...
-    my %Types = ( FullName => "s", AvailDisk => "n", Subnet => "s", );
+    my %Types = ( FullName => HawkeyePublish::TypeString,
+		  AvailDisk => HawkeyePublish::TypeNumber,
+		  Subnet => HawkeyePublish::TypeString, );
     foreach my $Server ( keys %Servers )
     {
 	foreach my $Field ( keys %{$Servers{$Server}} )
 	{
-	    my $Type = "s";
+	    my $Type = HawkeyePublish::TypeAuto;
 	    $Type = $Types{$Field} if ( exists $Types{$Field} );
 	    $Hash->Add( "Ckpt_" . $Server . "_" . $Field, $Type,
 			$Servers{$Server}{$Field} );
@@ -434,7 +493,7 @@ sub RunCheckPoint(  )
     }
 
     # And, the server list
-    $Hash->Add( "Ckpt_Servers", "s", join( " ", keys %Servers  ) );
+    $Hash->Add( "Ckpt_Servers", HawkeyePublish::TypeString, join( " ", keys %Servers  ) );
 
     # Done
     close( CKPT );
