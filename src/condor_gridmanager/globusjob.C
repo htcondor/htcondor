@@ -1264,6 +1264,11 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 				gmState = GM_RESTART;
 			} else if ( globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED ) {
 				gmState = GM_PROXY_EXPIRED;
+			} else if ( jmVersion >= GRAM_V_1_6 ) {
+				// The job may still be submitted and/or recoverable,
+				// so stop the jobmanager and restart it.
+				gmState = GM_STOP_AND_RESTART;
+				break;
 			} else {
 				if ( jmVersion >= GRAM_V_1_5 ) {
 					// Sending a COMMIT_END here means we no longer care
