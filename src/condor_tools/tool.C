@@ -224,13 +224,13 @@ do_command( char *host )
 		break;
 	case SCHEDD:
 		if ((daemonAddr = get_schedd_addr(host)) == NULL) {
-			fprintf( stderr, "Can't find master address on %s\n", host );
+			fprintf( stderr, "Can't find schedd address on %s\n", host );
 			return;
 		}
 		break;
 	case STARTD:
 		if ((daemonAddr = get_startd_addr(host)) == NULL) {
-			fprintf( stderr, "Can't find master address on %s\n", host );
+			fprintf( stderr, "Can't find startd address on %s\n", host );
 			return;
 		}
 		break;
