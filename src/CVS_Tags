@@ -1,3 +1,7 @@
+4/3/01 V6_3-bandwidth-branch
+   A new branch off of V6_3 for all the bandwidth control stuff.  This
+   branch contains modifications to condor_io and condor_includes.
+
 4/3/01 V6_3-pre-bandwidth-branch-fix
    The state of the V6_3-branch before I started doing all the
    trickery to create the V6_3-bandwidth-branch, just in case we need
