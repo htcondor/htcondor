@@ -279,10 +279,12 @@ int main_init (int argc, char ** const argv) {
       debug_printf( DEBUG_SILENT, "Warning: No DaP Log file was specified\n" );
     }
     //<--DAP
+    /*
     if (condorLogName == NULL) {
         debug_printf( DEBUG_SILENT, "No Condor Log file was specified\n" );
         Usage();
     }
+    */
     if (lockFileName == NULL) {
         debug_printf( DEBUG_SILENT, "No DAG lock file was specified\n" );
         Usage();
@@ -404,7 +406,8 @@ int main_init (int argc, char ** const argv) {
 			     dapLogName );
             }
 
-	    //            touch (condorLogName);  //<-- DAP
+	    if (condorLogName != NULL) touch (condorLogName);  //<-- DAP
+	    if (dapLogName != NULL) touch (dapLogName);
             touch (lockFileName);
         }
 

@@ -55,13 +55,17 @@ Dag::Dag( const char* condorLogName, const int maxJobsSubmitted,
     _dapLogInitialized    (false),             //<--DAP
     _dapLogSize           (0)                  //<--DAP
 {
-    _condorLogName = strnewp (condorLogName);
-	ASSERT( _condorLogName );
-	if( dapLogName ) {
-		_dapLogName = strnewp( dapLogName );
-		ASSERT( _dapLogName );
-	}
 
+  if (condorLogName){
+    _condorLogName = strnewp (condorLogName);
+    ASSERT( _condorLogName );
+  }
+  
+  if( dapLogName ) {
+    _dapLogName = strnewp( dapLogName );
+    ASSERT( _dapLogName );
+  }
+  
  	_readyQ = new SimpleList<Job*>;
 	_preScriptQ = new ScriptQ( this );
 	_postScriptQ = new ScriptQ( this );
@@ -87,7 +91,7 @@ Dag::Dag( const char* condorLogName, const int maxJobsSubmitted,
 
 //-------------------------------------------------------------------------
 Dag::~Dag() {
-    delete [] _condorLogName;
+    if (_condorLogName != NULL) delete [] _condorLogName;
     if (_dapLogName != NULL) delete [] _dapLogName;  //<--DAP
 
     delete _preScriptQ;
@@ -113,14 +117,14 @@ bool Dag::Bootstrap (bool recovery) {
 
     // update dependencies for pre-completed jobs (jobs marked DONE in
     // the DAG input file)
-	jobs.ToBeforeFirst();
+    jobs.ToBeforeFirst();
     while( jobs.Next( job ) ) {
-        if( job->GetStatus() == Job::STATUS_DONE ) {
-			TerminateJob( job, true );
-		}
+      if( job->GetStatus() == Job::STATUS_DONE ) {
+	TerminateJob( job, true );
+      }
     }
-	debug_printf( DEBUG_VERBOSE, "Number of pre-completed jobs: %d\n",
-                   NumJobsDone() );
+    debug_printf( DEBUG_VERBOSE, "Number of pre-completed jobs: %d\n",
+		  NumJobsDone() );
     
     if (recovery) {
         debug_printf( DEBUG_NORMAL, "Running in RECOVERY mode...\n" );
@@ -131,28 +135,28 @@ bool Dag::Bootstrap (bool recovery) {
 	//<-- DAP
 
 		// all jobs stuck in STATUS_POSTRUN need their scripts run
-		jobs.ToBeforeFirst();
-		while( jobs.Next( job ) ) {
-			if( job->GetStatus() == Job::STATUS_POSTRUN ) {
-				_postScriptQ->Run( job->_scriptPost );
-			}
-		}
-    }
-
-	if( DEBUG_LEVEL( DEBUG_DEBUG_2 ) ) {
-		PrintJobList();
-		PrintReadyQ( DEBUG_DEBUG_2 );
-	}	
-
 	jobs.ToBeforeFirst();
 	while( jobs.Next( job ) ) {
-		if( job->GetStatus() == Job::STATUS_READY &&
-			job->IsEmpty( Job::Q_WAITING ) ) {
-			StartNode( job );
-		}
+	  if( job->GetStatus() == Job::STATUS_POSTRUN ) {
+	    _postScriptQ->Run( job->_scriptPost );
+	  }
 	}
+    }
 
-	return true;
+    if( DEBUG_LEVEL( DEBUG_DEBUG_2 ) ) {
+      PrintJobList();
+      PrintReadyQ( DEBUG_DEBUG_2 );
+    }	
+    
+    jobs.ToBeforeFirst();
+    while( jobs.Next( job ) ) {
+      if( job->GetStatus() == Job::STATUS_READY &&
+	  job->IsEmpty( Job::Q_WAITING ) ) {
+	StartNode( job );
+      }
+    }
+    
+    return true;
 }
 
 //-------------------------------------------------------------------------
@@ -183,8 +187,10 @@ Job * Dag::GetJob (const JobID_t jobID) const {
 //-------------------------------------------------------------------------
 bool Dag::DetectCondorLogGrowth () {
     if (!_condorLogInitialized) {
-        _condorLog.initialize(_condorLogName);
+      if (_condorLog.initialize(_condorLogName))
         _condorLogInitialized = true;
+      else
+	return 0;
     }
     
     int fd = _condorLog.getfd();
@@ -192,7 +198,8 @@ bool Dag::DetectCondorLogGrowth () {
     struct stat buf;
     
     if( fstat( fd, &buf ) == -1 ) {
-		debug_error( 2, DEBUG_QUIET, "Error: can't stat condor log: %s\n", _condorLogName );
+      //debug_error( 2, DEBUG_QUIET, "Error: can't stat condor log: %s\n", _condorLogName );
+      debug_printf( DEBUG_QUIET, "Error: can't stat dap log : %s\n", _dapLogName );
 	}
     
     int oldSize = _condorLogSize;
