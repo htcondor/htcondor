@@ -648,7 +648,9 @@ Job * Dag::GetJob (const char * jobName) const {
     ListIterator<Job> iList (_jobs);
     Job * job;
     while ((job = iList.Next())) {
-        if (strcmp(job->GetJobName(), jobName) == 0) return job;
+		if( strcasecmp( job->GetJobName(), jobName ) == 0 ) {
+			return job;
+		}
     }
     return NULL;
 }
