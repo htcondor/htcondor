@@ -194,6 +194,7 @@ main( void )
 }
 
 
+// Print help information for the hapless user
 void 
 help( void )
 {
