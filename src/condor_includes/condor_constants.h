@@ -65,4 +65,7 @@ static const char DIR_DELIM_CHAR = '\\';
 static const char DIR_DELIM_CHAR = '/';
 #endif
 
+/* This is the username of the NiceUser (i.e., dirt user) */
+const char NiceUserName[] = "nice-user";
+
 #endif CONDOR_CONSTANTS_H
