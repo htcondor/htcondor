@@ -636,10 +636,11 @@ send_cmd_to_startd(char *sin_host, char *capability, int cmd)
 {
   // create a relisock to communicate with startd
   ReliSock sock;
-  if( !sock.timeout( 20 ) ) {
+  if( sock.timeout( 20 ) < 0 ) {
 	  dprintf( D_ALWAYS, "Can't set timeout on sock.\n" );
 	  return -5;
   }
+
   if( !sock.connect( sin_host, 0 ) ) {
 	  dprintf( D_ALWAYS, "Can't connect to startd at %s\n", sin_host );
 	  return -1;
