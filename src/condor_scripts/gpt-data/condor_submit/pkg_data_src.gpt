@@ -22,7 +22,7 @@
        <Build_Step>mkdir -p INSTALLDIR_GPTMACRO/sbin</Build_Step>
         <Build_Step>cp $DIST_DIR/sbin/condor_schedd INSTALLDIR_GPTMACRO/sbin/condor_schedd</Build_Step>
         <Build_Step>cp $DIST_DIR/sbin/condor_gridmanager INSTALLDIR_GPTMACRO/sbin/condor_gridmanager</Build_Step>
-        <Build_Step>cp /p/condor/workspaces/epaulson/gahp/@sys/gahp_server INSTALLDIR_GPTMACRO/sbin/gahp_server</Build_Step>
+        <Build_Step>cp $DIST_DIR/sbin/gahp_server INSTALLDIR_GPTMACRO/sbin/gahp_server</Build_Step>
         <Build_Step>cp $DIST_DIR/bin/condor_history INSTALLDIR_GPTMACRO/bin/condor_history</Build_Step>
         <Build_Step>cp $DIST_DIR/bin/condor_hold INSTALLDIR_GPTMACRO/bin/condor_hold</Build_Step>
         <Build_Step>cp $DIST_DIR/bin/condor_q INSTALLDIR_GPTMACRO/bin/condor_q</Build_Step>
