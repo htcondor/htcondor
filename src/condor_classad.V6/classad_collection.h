@@ -60,6 +60,7 @@ friend class CollContentIterator;
 friend class LogCollNewClassAd;
 friend class LogCollDestroyClassAd;
 friend class LogCollUpdateClassAd;
+friend class LogCollModifyClassAd;
 
 public:
 
@@ -110,7 +111,7 @@ public:
   /** Commit a transaction
     @return nothing
   */
-  void CommitTransaction();
+  bool CommitTransaction();
 
   /** Abort a transaction
     @return nothing
@@ -125,7 +126,7 @@ public:
   /** Truncate the log file by creating a new "checkpoint" of the repository
     @return nothing
   */
-  void TruncLog();
+  bool TruncLog();
 
   //@}
   //------------------------------------------------------------------------
@@ -158,13 +159,17 @@ public:
   */
   void UpdateClassAd(const char* key, ClassAd* ad);
 
+  void ModifyClassAd(const char *key, ClassAd *ad);
+  void ModifyClassAd(ClassAd *ad);
+  void QueryCollection( int CoID, ClassAd *query, Sink &s );
+
   /** Get a class-ad from the repository.
       Note that the class-ad returned cannot be modified directly.
       @param key The class-ad's key.
-      @return a pointer to a new class-ad which is the value of the
-        original ad including the changes in the current transaction,
+      @return a pointer to a class-ad which is the value of the
+        original ad {\em without} changes in the current transaction,
         or null if a class-ad with the specified key doesn't exist.
-      @return true on success, false otherwise.
+		This classad should {\em not} be deleted by the user.
   */
   ClassAd* LookupClassAd(const char* key);
   
@@ -174,7 +179,8 @@ public:
 	  	repository.
       @return a pointer to a new class-ad which is the value of the
         original ad including the changes in the current transaction,
-        or null if a class-ad with the specified key doesn't exist.
+        or null if a class-ad with the specified key doesn't exist. The
+		user is responsible for deleteing the returned classad.
   */
   ClassAd* LookupInTransaction(const char *key);
   
@@ -280,21 +286,21 @@ public:
   /** Initialize a collection content iterator to iterate over the ads in a
    		collection.
 		@param CoID The ID of the collection whose ads are to be iterated over
-		@param i The content iterator to be initialized
+		@param i Pointer to the content iterator to be initialized
 		@return true if the operation succeeded, false otherwise
 		@see CollContentIterator
   */
-  bool InitializeIterator( int CoID, CollContentIterator& i );
+  bool InitializeIterator( int CoID, CollContentIterator* i );
 
   /** Initialize a collection child iterator to iterate over the child 
    		collections of a collection.
 		@param CoID The ID of the collection whose children are to be iterated 
 			over
-		@param i The child iterator to be initialized
+		@param i Pointer to the child iterator to be initialized
 		@return true if the operation succeeded, false otherwise
 		@see CollChildIterator
   */
-  bool InitializeIterator( int CoID, CollChildIterator& i );
+  bool InitializeIterator( int CoID, CollChildIterator* i );
 
   /** Get the next class-ad key in the repository.
       @param key a pointer whick will be assigned the next key value.
@@ -368,18 +374,20 @@ private:
   bool TraverseTree(int CoID, 
 		  bool (ClassAdCollection::*Func)(int,BaseCollection*));
   static bool EqualSets(StringSet& S1, StringSet& S2);
-  bool CheckClassAd(int CoID, BaseCollection* Coll, const MyString& OID, ClassAd* Ad);
+  bool CheckClassAd(int CoID, BaseCollection* Coll, const MyString& OID, 
+		  ClassAd* Ad);
   BaseCollection* GetCollection(int CoID);
 
-  void PlayDestroyClassAd(const char* key);
-  void PlayNewClassAd(const char* key, ClassAd* ad);
-  void PlayUpdateClassAd(const char* key, ClassAd* ad);
+  bool PlayDestroyClassAd(const char* key);
+  bool PlayNewClassAd(const char* key, ClassAd* ad);
+  bool PlayUpdateClassAd(const char* key, ClassAd* ad);
+  bool PlayModifyClassAd(const char* key, ClassAd* ad);
 
-  void AppendLog(LogRecord *log);
+  bool AppendLog(LogRecord *log);
   
   ClassAdHashTable table;  // Hash table of class ads in memory
 
-    void ReadLog(const char* filename);
+    bool ReadLog(const char* filename);
     LogRecord* ReadLogEntry(FILE* fp);
     LogRecord* InstantiateLogEntry(FILE* fp, int type);
 

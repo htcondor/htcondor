@@ -38,7 +38,7 @@ ClassAdCollection::ClassAdCollection(const char* filename, const MyString& rank)
 
 //-----------------------------------------------------------------------
 
-void ClassAdCollection::ReadLog(const char *filename)
+bool ClassAdCollection::ReadLog(const char *filename)
 {
     strcpy(log_filename, filename);
     int fd;
@@ -46,10 +46,14 @@ void ClassAdCollection::ReadLog(const char *filename)
         // open the file with open to get the permissions right (in case the
         // the file is being created)  then wrap a FILE  around it
     if( ( fd = open(log_filename, O_RDWR | O_CREAT, 0600) ) < 0 ) {
-        EXCEPT("failed to open log %s, errno = %d", log_filename, errno);
+        dprintf(D_ALWAYS, "failed to open log %s, errno = %d", log_filename, 
+			errno);
+		return( false );
     }
     if( ( log_fp = fdopen( fd, "r+" ) ) == NULL ) {
-        EXCEPT( "failed to fdopen() log %s, errno = %d", log_filename, errno );
+        dprintf( D_ALWAYS, "failed to fdopen() log %s, errno = %d", 
+			log_filename, errno );
+		return( false );
     }
 
         // Read all of the log records
@@ -93,6 +97,8 @@ void ClassAdCollection::ReadLog(const char *filename)
         active_transaction = NULL;
     }
 	TruncLog();
+
+	return( true );
 }
 
 //-----------------------------------------------------------------------------
@@ -115,9 +121,11 @@ ClassAdCollection::~ClassAdCollection()
 
 //-----------------------------------------------------------------------------
 
-void
+bool
 ClassAdCollection::AppendLog(LogRecord *log)
 {
+	bool rval;
+
     if (active_transaction) {
         if (EmptyTransaction) {
             LogBeginTransaction *log = new LogBeginTransaction;
@@ -125,6 +133,7 @@ ClassAdCollection::AppendLog(LogRecord *log)
             EmptyTransaction = false;
         }
         active_transaction->AppendLog(log);
+		return( true );
     } else {
         if( log_fp ) {
             if (!log->Write(log_fp)) {
@@ -135,33 +144,34 @@ ClassAdCollection::AppendLog(LogRecord *log)
                 EXCEPT("fsync of %s failed, errno = %d", log_filename, errno);
             }
         }
-        log->Play((void *)this);
+        rval = log->Play((void *)this);
         delete log;
+		return( rval );
     }
 }
 
 //----------------------------------------------------------------------------
 
-void
+bool
 ClassAdCollection::TruncLog()
 {
     char    tmp_log_filename[_POSIX_PATH_MAX];
     int     new_log_fd;
     FILE    *new_log_fp;
 
-	if (!log_fp) return;
+	if (!log_fp) return( false );
 
     sprintf(tmp_log_filename, "%s.tmp", log_filename);
     new_log_fd = open(tmp_log_filename, O_RDWR | O_CREAT | O_TRUNC , 0600);
     if (new_log_fd < 0) {
         dprintf(D_ALWAYS, "failed to truncate log: open(%s) returns %d\n",
                 tmp_log_filename, new_log_fd);
-        return;
+        return false;
     }
     if( ( new_log_fp = fdopen( new_log_fd, "r+" ) ) == NULL ) {
         dprintf( D_ALWAYS, "failed to truncate log: fdopen(%s) failed, "
             "errno = %d\n", tmp_log_filename, errno );
-        return;
+        return false;
     }
 
     LogState(new_log_fp);
@@ -172,19 +182,21 @@ ClassAdCollection::TruncLog()
             == 0) {
         dprintf(D_ALWAYS, "failed to truncate log: MoveFileEx failed with "
             "error %d\n", GetLastError());
-        return;
+        return false;
     }
 #else
     if (rename(tmp_log_filename, log_filename) < 0) {
         dprintf(D_ALWAYS, "failed to truncate log: rename(%s, %s) returns "
                 "errno %d", tmp_log_filename, log_filename, errno);
-        return;
+        return( false );
     }
 #endif
 
     if( ( log_fp = fopen( log_filename, "a+" ) ) == NULL ) {
         EXCEPT( "Failed to reopen %s, errno = %d", log_filename, errno );
     }
+
+	return( false );
 }
 
 //----------------------------------------------------------------------------
@@ -214,17 +226,18 @@ ClassAdCollection::AbortTransaction()
 // Commit a transaction
 //----------------------------------------------------------------------------
 
-void
+bool
 ClassAdCollection::CommitTransaction()
 {
     assert(active_transaction);
     if (!EmptyTransaction) {
         LogEndTransaction *log = new LogEndTransaction;
         active_transaction->AppendLog(log);
-        active_transaction->Commit(log_fp, (void*)this);
+        if( !active_transaction->Commit(log_fp, (void*)this) ) return( false );
     }
     delete active_transaction;
     active_transaction = NULL;
+	return( true );
 }
 
 //----------------------------------------------------------------------------
@@ -277,6 +290,16 @@ ClassAd* ClassAdCollection::LookupInTransaction(const char *key)
 						}
 						tmpAd=((LogCollUpdateClassAd*)log)->get_ad();
 						Ad->Update(*tmpAd);
+					}
+					break;
+				case CondorLogOp_CollModifyClassAd:
+					if(strcmp(((LogCollModifyClassAd*)log)->get_key(),key)==0){
+						if( !Duplicated ) {
+							Ad = new ClassAd( *Ad );
+							Duplicated = false;
+						}
+						tmpAd = ((LogCollModifyClassAd*)log)->get_ad();
+						Ad->Modify( *tmpAd );
 					}
 					break;
 				case CondorLogOp_CollDestroyClassAd:
@@ -355,6 +378,9 @@ LogRecord* ClassAdCollection::InstantiateLogEntry(FILE* fp, int type)
         case CondorLogOp_CollUpdateClassAd:
             log_rec = new LogCollUpdateClassAd(NULL, NULL);
             break;
+		case CondorLogOp_CollModifyClassAd:
+			log_rec = new LogCollModifyClassAd(NULL, NULL);
+			break;
         case CondorLogOp_BeginTransaction:
             log_rec = new LogBeginTransaction();
             break;
@@ -403,16 +429,15 @@ void ClassAdCollection::NewClassAd(const char* key, ClassAd* ad)
 
 //-----------------------------------------------------------------------
 
-void ClassAdCollection::PlayNewClassAd(const char* key, ClassAd* ad)
+bool ClassAdCollection::PlayNewClassAd(const char* key, ClassAd* ad)
 {
     HashKey hkey(key);
     ClassAd* dummy;
-    if (table.lookup(hkey, dummy) == 0) {
+    if( table.lookup(hkey, dummy) == 0 ) {
         // Class-ad already exists in collection!
-        PlayDestroyClassAd(key);
+        return( false );
     }
-    table.insert(key, ad);
-    AddClassAd(0,key,ad);
+    return( table.insert(key, ad) >= 0 && AddClassAd(0,key,ad) );
 }
 
 //-----------------------------------------------------------------------
@@ -427,16 +452,17 @@ void ClassAdCollection::DestroyClassAd(const char *key)
 
 //-----------------------------------------------------------------------
 
-void ClassAdCollection::PlayDestroyClassAd(const char* key)
+bool ClassAdCollection::PlayDestroyClassAd(const char* key)
 {
     HashKey hkey(key);
     ClassAd *ad;
     if (table.lookup(hkey, ad) < 0) {
-        return;
+        return( false );
     }
     table.remove(hkey);
     RemoveClassAd(0,key);
     delete ad;
+	return( true );
 }
 
 //-----------------------------------------------------------------------
@@ -451,16 +477,126 @@ void ClassAdCollection::UpdateClassAd(const char *key, ClassAd* ad)
 
 //-----------------------------------------------------------------------
 
-void ClassAdCollection::PlayUpdateClassAd(const char *key, ClassAd* upd_ad)
+bool ClassAdCollection::PlayUpdateClassAd(const char *key, ClassAd* upd_ad)
 {
     ClassAd* ad;
     if (table.lookup(HashKey(key), ad) < 0) {
-		ad=new ClassAd(*upd_ad);
-		PlayNewClassAd(key,ad);
- 		return;
+		if( !( ad=new ClassAd(*upd_ad) ) || !PlayNewClassAd( key,ad ) ) {
+			return( false );
+		}
 	}
     ad->Update(*upd_ad);
     ChangeClassAd(key);
+	return( true );
+}
+
+//-----------------------------------------------------------------------
+// Modify a class ad - this operation is logged.
+//-----------------------------------------------------------------------
+void ClassAdCollection::ModifyClassAd( ClassAd *ad )
+{
+	char *key;
+	if( ad->EvaluateAttrString( ATTR_KEY, key ) ) {
+		ModifyClassAd( key, ad );
+	}
+}
+
+void ClassAdCollection::ModifyClassAd( const char *key, ClassAd *mod_ad )
+{
+	LogRecord *log = new LogCollModifyClassAd( key, mod_ad );
+	AppendLog( log );
+}
+
+
+void ClassAdCollection::QueryCollection( int CoID, ClassAd *query, Sink &s )
+{
+	CollConstrContentItor	itor;
+	bool					wantPrelude;
+	bool					wantList;
+	bool					wantResults;
+	bool					wantSummary;
+	ExprList				*projectionAttrs;
+	Value					value;
+	ClassAd					*ad;
+	ByteSink				*bs;
+	bool					first;
+
+		// sanity checks
+	if( !query || ( ( bs = s.GetSink( ) ) == NULL ) ) {
+		return;
+	}
+
+		// options check and default setttings
+	if( !query->EvaluateAttrBool( ATTR_WANT_LIST, wantList ) ) {
+		wantList = false;
+	}
+	if( !query->EvaluateAttrBool( ATTR_WANT_PRELUDE, wantPrelude ) ) {
+		wantPrelude = false;
+	}
+	if( !query->EvaluateAttrBool( ATTR_WANT_RESULTS, wantResults ) ) {
+		wantResults = true;
+	}
+	if( !query->EvaluateAttrBool( ATTR_WANT_SUMMARY, wantSummary ) ) {
+		wantSummary = true;
+	}
+	if( !query->EvaluateAttr( ATTR_PROJECT_THROUGH, value ) || 
+		!value.IsListValue( projectionAttrs ) ) {
+		projectionAttrs = NULL;
+	}
+
+	if( wantList && !bs->PutBytes( "{", 1 ) ) {
+		return;
+	}
+
+	itor.RegisterQuery( query );
+	InitializeIterator( CoID, &itor );
+	first = true;
+	while( !itor.AtEnd( ) ) {
+		itor.CurrentAd( ad );
+		if( wantList && !first && !bs->PutBytes( ",", 1 ) ) {
+			return;
+		}
+		if( !ad->ToSink( s ) ) {
+			return;
+		}
+		itor.NextAd( );
+		first = false;
+	}
+
+	if( wantList && !bs->PutBytes( "}", 1 ) ) {
+		return;
+	}
+
+	return;
+}
+
+
+bool ClassAdCollection::PlayModifyClassAd( const char *key, ClassAd *mod_ad )
+{
+	ClassAd *ad;
+	bool	del;
+	Value	val;
+
+	if( !mod_ad ) return( false );
+
+	if( mod_ad->EvaluateAttr(ATTR_NEW_AD,val) && val.IsClassAdValue(ad) ) {
+		PlayNewClassAd( key, ad->Copy( ) );
+		return( true );
+	}
+
+	if( mod_ad->EvaluateAttrBool( ATTR_DELETE_AD, del ) && del ) {
+		PlayDestroyClassAd( key );
+		return( true );
+	}
+		
+	if( table.lookup( HashKey( key ), ad ) < 0 ) {
+		if( !( ad = new ClassAd( ) ) || !PlayNewClassAd( key, ad ) ) {
+			return( false );
+		}
+	}
+	ad->Modify( *mod_ad );
+	ChangeClassAd( key );
+	return( true );
 }
 
 //-----------------------------------------------------------------------
@@ -775,25 +911,25 @@ bool ClassAdCollection::RemoveCollection(int CoID, BaseCollection* Coll)
 /// Start iterating on class ads in a collection
 //-----------------------------------------------------------------------
 bool ClassAdCollection::
-InitializeIterator( int CoID, CollContentIterator& itor )
+InitializeIterator( int CoID, CollContentIterator* itor )
 {
     BaseCollection *bc;
 
-    if( Collections.lookup( CoID, bc ) == -1 ) return false;
-    bc->RegisterContentItor( &itor, this, CoID );
+    if( !itor || Collections.lookup( CoID, bc ) == -1 ) return false;
+    bc->RegisterContentItor( itor, this, CoID );
 		// spool iterator once to get it out of BEFORE_START state
-	itor.NextAd( );
+	itor->NextAd( );
     return( true );
 }
 
 bool ClassAdCollection::
-InitializeIterator( int CoID, CollChildIterator& itor )
+InitializeIterator( int CoID, CollChildIterator* itor )
 {
     BaseCollection *bc;
-    if( Collections.lookup( CoID, bc ) == -1 ) return false;
-    bc->RegisterChildItor( &itor, this, CoID );
+    if( !itor || Collections.lookup( CoID, bc ) == -1 ) return false;
+    bc->RegisterChildItor( itor, this, CoID );
 		// spool iterator once to get it out of BEFORE_START state
-	itor.NextCollection( );
+	itor->NextCollection( );
     return( true );
 }
 
@@ -1344,6 +1480,82 @@ invalidate( )
 	collManager = NULL;
 	baseCollection = NULL;
 }
+
+
+CollConstrContentItor::
+CollConstrContentItor( )
+{
+	RegisterConstraint( "true" );
+}
+
+
+CollConstrContentItor::
+CollConstrContentItor( const CollConstrContentItor& i ) : mad( i.mad ) 
+{
+}
+
+
+CollConstrContentItor::
+CollConstrContentItor( const char *c )
+{
+	RegisterConstraint( c );
+}
+
+
+CollConstrContentItor::
+CollConstrContentItor( ExprTree *c )
+{
+	ClassAd *ad = mad.GetLeftAd( );
+	if( ad ) ad->Insert( ATTR_REQUIREMENTS, c );
+}
+
+
+CollConstrContentItor::
+~CollConstrContentItor( )
+{
+}
+
+
+bool CollConstrContentItor::
+RegisterConstraint( const char *c )
+{
+	ClassAd *ad = mad.GetLeftAd( );
+	return( ad ? ad->Insert( ATTR_REQUIREMENTS, c ) : false );
+}
+
+
+bool CollConstrContentItor::
+RegisterConstraint( ExprTree *c )
+{
+	ClassAd *ad = mad.GetLeftAd( );
+	return( ad ? ad->Insert( ATTR_REQUIREMENTS, c ) : false );
+}
+
+
+bool CollConstrContentItor::
+RegisterQuery( ClassAd *q )
+{
+	if( !q ) return( false );
+	return( mad.ReplaceLeftAd( q ) );
+}
+
+
+int CollConstrContentItor::
+NextAd( const ClassAd *&res )
+{
+	int 	rval;
+	bool	match, matched = false;
+	ClassAd	*ad=NULL;
+
+	while( !matched && ( rval = CollContentIterator::NextAd( ad ) ) ) {
+		mad.ReplaceRightAd( ad );
+		matched = mad.EvaluateAttrBool( "rightmatchesleft", match ) && match;
+		mad.RemoveRightAd( );
+	}
+	res = ad;
+	return( rval );
+}
+
 
 int hashFunction( const MyString& key, int numBkts )
 {
