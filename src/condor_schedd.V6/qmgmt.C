@@ -43,6 +43,7 @@
 #include "condor_email.h"
 
 extern char *Spool;
+extern char *Name;
 extern char* JobHistoryFileName;
 extern Scheduler scheduler;
 
@@ -209,7 +210,7 @@ InitJobQueue(const char *job_queue_name)
 	ClassAd *ad;
 	ClassAd *clusterad;
 	HashKey key;
-	int 	cluster_num, cluster, proc;
+	int 	cluster_num, cluster, proc, universe;
 	int		stored_cluster_num;
 	int 	*numOfProcs = NULL;	
 	bool	CreatedAd = false;
@@ -218,6 +219,8 @@ InitJobQueue(const char *job_queue_name)
 	char	user[_POSIX_PATH_MAX];
 	char	correct_user[_POSIX_PATH_MAX];
 	char	buf[_POSIX_PATH_MAX];
+	char	attr_scheduler[_POSIX_PATH_MAX];
+	char	correct_scheduler[_POSIX_PATH_MAX];
 
 	if (!JobQueue->LookupClassAd(HeaderKey, ad)) {
 		// we failed to find header ad, so create one
@@ -234,6 +237,13 @@ InitJobQueue(const char *job_queue_name)
 		// computed value 
 		stored_cluster_num = 0;
 	}
+
+		// Figure out what the correct ATTR_SCHEDULER is for any
+		// dedicated jobs in this queue.  Since it'll be the same for
+		// all jobs, we only have to figure it out once.  We use '%'
+		// as the delimiter, since ATTR_NAME might already have '@' in
+		// it, and we don't want to confuse things any further.
+	sprintf( correct_scheduler, "DedicatedScheduler!%s", Name );
 
 	next_cluster_num = 1;
 	JobQueue->StartIterateAllClassAds();
@@ -285,6 +295,14 @@ InitJobQueue(const char *job_queue_name)
 				continue;
 			}
 
+			if( !ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) ) {
+				dprintf( D_ALWAYS,
+						 "Job %s has no %s attribute.  Removing....\n", 
+						 tmp, ATTR_JOB_UNIVERSE );
+				JobQueue->DestroyClassAd( tmp );
+				continue;
+			}
+
 				// Figure out what ATTR_USER *should* be for this job
 			int nice_user = 0;
 			ad->LookupInteger( ATTR_NICE_USER, nice_user );
@@ -298,6 +316,7 @@ InitJobQueue(const char *job_queue_name)
 						tmp, ATTR_USER);
 				sprintf( buf, "%s = \"%s\"", ATTR_USER, correct_user );
 				ad->Insert( buf );
+				JobQueueDirty = true;
 			} else {
 					// ATTR_USER exists, make sure it's correct, and
 					// if not, insert the new value now.
@@ -309,9 +328,41 @@ InitJobQueue(const char *job_queue_name)
 							 tmp, ATTR_USER );
 					sprintf( buf, "%s = \"%s\"", ATTR_USER, correct_user );
 					ad->Insert( buf );
+					JobQueueDirty = true;
 				}
 			}
 
+				// Make sure ATTR_SCHEDULER is correct.
+				// XXX TODO: Need a better way than hard-coded
+				// universe check to decide if a job is "dedicated" 
+			if( universe == MPI ) {
+				if( !ad->LookupString(ATTR_SCHEDULER, attr_scheduler) ) { 
+					dprintf( D_FULLDEBUG, "Job %s has no %s attribute.  "
+							 "Inserting one now...\n", tmp,
+							 ATTR_SCHEDULER );
+					sprintf( buf, "%s = \"%s\"", ATTR_SCHEDULER,
+							 correct_scheduler ); 
+					ad->Insert( buf );
+					JobQueueDirty = true;
+				} else {
+
+						// ATTR_SCHEDULER exists, make sure it's correct,
+						// and if not, insert the new value now.
+					if( strcmp(attr_scheduler,correct_scheduler) ) {
+							// They're different, so insert the right
+							// value 
+						dprintf( D_FULLDEBUG,
+								 "Job %s has stale %s attribute.  "
+								 "Inserting correct value now...\n",
+								 tmp, ATTR_SCHEDULER );
+						sprintf( buf, "%s = \"%s\"", ATTR_SCHEDULER,
+								 correct_scheduler ); 
+						ad->Insert( buf );
+						JobQueueDirty = true;
+					}
+				}
+			}
+				
 
 			// count up number of procs in cluster, update ClusterSizeHashTable
 			if ( ClusterSizeHashTable->lookup(cluster_num,numOfProcs) == -1 ) {
@@ -1944,4 +1995,11 @@ static void AppendHistory(ClassAd* ad)
   fprintf(LogFile,"***\n");   // separator
   fclose(LogFile);
   return;
+}
+
+
+void
+dirtyJobQueue()
+{
+	JobQueueDirty = true;
 }
