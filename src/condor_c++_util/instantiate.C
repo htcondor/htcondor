@@ -26,6 +26,7 @@
 #include "simplelist.h"
 #include "extArray.h"
 #include "stringSpace.h"
+#include "killfamily.h"
 
 template class List<FilterObj>; template class Item<FilterObj>;
 template class List<char>; 		template class Item<char>;
@@ -35,3 +36,4 @@ template class SimpleList<float>;
 template class ExtArray<char *>;
 template class ExtArray<StringSpace::SSStringEnt>;
 template class ExtArray<StringSpace*>;
+template class ExtArray<ProcFamily::a_pid>;
