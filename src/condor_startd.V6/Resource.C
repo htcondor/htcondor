@@ -31,7 +31,7 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	int size = (int)ceil(60.0 / (double)polling_interval);
 	r_classad = NULL;
 	r_state = new ResState( this );
-	r_starter = new Starter( this );
+	r_starter = NULL;
 	r_cur = new Match( this );
 	r_pre = NULL;
 	r_reqexp = new Reqexp( this );
@@ -105,7 +105,9 @@ Resource::~Resource()
 
 	delete r_state;
 	delete r_classad;
-	delete r_starter;
+	if( r_starter ) {
+		delete r_starter;
+	}
 	delete r_cur;		
 	if( r_pre ) {
 		delete r_pre;		
@@ -131,8 +133,11 @@ Resource::release_claim( void )
 			// we're in any other state.  If there's no starter, this
 			// will just return without doing anything.  If there is a
 			// starter, it shouldn't be there.
-		return r_starter->kill( DC_SIGSOFTKILL );
+		if( r_starter ) {
+			return r_starter->kill( DC_SIGSOFTKILL );
+		}
 	}
+	return TRUE;
 }
 
 
@@ -182,7 +187,7 @@ Resource::periodic_checkpoint( void )
 		return FALSE;
 	}
 	dprintf( D_ALWAYS, "Performing a periodic checkpoint on %s.\n", r_name );
-	if( r_starter->kill( DC_SIGPCKPT ) < 0 ) {
+	if( r_starter && r_starter->kill( DC_SIGPCKPT ) < 0 ) {
 		return FALSE;
 	}
 	r_cur->setlastpckpt((int)time(NULL));
@@ -199,7 +204,7 @@ Resource::periodic_checkpoint( void )
 int
 Resource::request_new_proc( void )
 {
-	if( state() == claimed_state ) {
+	if( state() == claimed_state && r_starter) {
 		return r_starter->kill( DC_SIGHUP );
 	} else {
 		return FALSE;
@@ -212,7 +217,7 @@ Resource::deactivate_claim( void )
 {
 	dprintf(D_ALWAYS, "Called deactivate_claim()\n");
 	if( state() == claimed_state ) {
-		if( r_starter->active() ) {
+		if( r_starter && r_starter->active() ) {
 				// Set a flag to avoid a potential race in our
 				// protocol.  
 			r_is_deactivating = true;
@@ -232,7 +237,7 @@ Resource::deactivate_claim_forcibly( void )
 {
 	dprintf(D_ALWAYS, "Called deactivate_claim_forcibly()\n");
 	if( state() == claimed_state ) {
-		if( r_starter->active() ) {
+		if( r_starter && r_starter->active() ) {
 				// Set a flag to avoid a potential race in our
 				// protocol.  
 			r_is_deactivating = true;
@@ -250,7 +255,7 @@ Resource::deactivate_claim_forcibly( void )
 int
 Resource::hardkill_starter( void )
 {
-	if( ! r_starter->active() ) {
+	if( ! r_starter || ! r_starter->active() ) {
 		return TRUE;
 	}
 	if( r_starter->kill( DC_SIGHARDKILL ) < 0 ) {
@@ -268,7 +273,7 @@ Resource::sigkill_starter( void )
 {
 		// Now that the timer has gone off, clear out the tid.
 	kill_tid = -1;
-	if( r_starter->active() ) {
+	if( r_starter && r_starter->active() ) {
 			// Kill all of the starter's children.
 		r_starter->killkids( DC_SIGKILL );
 			// Kill the starter's entire process group.
@@ -292,6 +297,9 @@ Resource::in_use( void )
 void
 Resource::starter_exited( void )
 {
+	if( ! r_starter ) {
+		EXCEPT( "starter_exited() called with no starter!" );
+	}
 	dprintf( D_ALWAYS, "Starter pid %d has exited.\n",
 			 r_starter->pid() );
 
@@ -304,6 +312,10 @@ Resource::starter_exited( void )
 		// Now that this starter has exited, cancel the timer that
 		// would send it SIGKILL.
 	cancel_kill_timer();
+
+		// now we can actually delete the starter object
+	delete( r_starter );
+	r_starter = NULL;
 
 		// All of the potential paths from here result in a state
 		// change, and all of them are triggered by the starter
@@ -338,7 +350,7 @@ Resource::spawn_starter( start_info_t* info, time_t now )
 	if( ! r_starter ) {
 			// Big error!
 		dprintf( D_ALWAYS, "ERROR! Resource::spawn_starter() called "
-				 "w/ no Starter object! Returning failure\n" );
+				 "w/o a Starter object! Returning failure\n" );
 		return 0;
 	}
 
@@ -354,6 +366,17 @@ Resource::spawn_starter( start_info_t* info, time_t now )
 									  pid_snapshot_interval );
 	} 
 	return rval;
+}
+
+
+void
+Resource::setStarter( Starter* s )
+{
+	if( r_starter ) {
+		EXCEPT( "Resource::setStarter() called with existing starter!" );
+	}
+	r_starter = s;
+	s->setResource( this );
 }
 
 
@@ -617,7 +640,7 @@ Resource::wants_vacate( void )
 	int want_vacate = 0;
 	bool unknown = true;
 
-	if( ! r_starter->active() ) {
+	if( ! r_starter || ! r_starter->active() ) {
 			// There's no job here, so chances are good that some of
 			// the job attributes that WANT_VACATE might be defined in
 			// terms of won't exist.  So, instead of getting
@@ -1062,7 +1085,7 @@ Resource::compute_condor_load( void )
 	int numcpus = resmgr->num_cpus();
 	int i;
 
-	if( r_starter->active() ) { 
+	if( r_starter && r_starter->active() ) { 
 		time_t now = time(NULL);
 		if( now - r_starter->last_snapshot() >= pid_snapshot_interval ) { 
 			r_starter->recompute_pidfamily( now );
