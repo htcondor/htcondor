@@ -2,9 +2,12 @@
 **  Common settings shared by all compiler-specific Imakefiles
 ***********************************************************************/
 
+/* in the compiler subdirs, the PRE_BUILT_RELEASE is another level up */
+PRE_BUILT_RELEASE = ../$(PRE_BUILT_RELEASE)
+
 LD_DIR = -condor_ld_dir ../../condor_scripts
 LIB_DIR = -condor_lib ../../condor_syscall_lib
-INCLUDE_FLAGS = -I.. -I../../condor_includes -I../../h -I../../condor_c++_util
+INCLUDE_FLAGS = -I$(PRE_BUILT_RELEASE)/include -I.. -I../../condor_includes -I../../h -I../../condor_c++_util
 BUILD_FLAGS = dollar_paren(FLAGS_MACRO_NAME)
 
 all_symlink_target(../../condor_scripts/Condor.pm,Condor.pm)

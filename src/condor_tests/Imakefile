@@ -24,7 +24,7 @@ all_lists:: compiler_list
 
 LD_DIR = -condor_ld_dir ../condor_scripts
 LIB_DIR = -condor_lib ../condor_syscall_lib
-INCLUDE_FLAGS = -I../condor_includes -I../h -I../condor_c++_util
+INCLUDE_FLAGS = -I$(PRE_BUILT_RELEASE)/include -I../condor_includes -I../h -I../condor_c++_util
 BUILD_FLAGS = $(TESTSUITE_FLAGS_GCC)
 CC = gcc
 CPlusPlus = g++

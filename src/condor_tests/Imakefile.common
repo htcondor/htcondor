@@ -2,6 +2,12 @@
 **  Common settings shared by *all* test-related Imakefiles
 ***********************************************************************/
 
+/*
+   Location of the pre-built condor release directory, which we use
+   for testing...
+*/
+PRE_BUILT_RELEASE = ../release_dir
+
 CONDOR_COMPILE_FLAGS = $(LIB_DIR) $(LD_DIR) 
 
 /*
