@@ -267,9 +267,25 @@ Authentication::setupEnv( char *hostAddr )
 	char *hostname;
 
 	//client needs to know name of the schedd, I stashed hostAddr in 
-	//Authentication::connect(), which should only be called by clients
+	//applicable ReliSock::ReliSock() or ReliSock::connect(), which should 
+	//only be called by clients. 
 	if ( mySock->isClient() ) {
-		if ( string_to_sin( hostAddr, &sin ) 
+		char tmpStr[1024];
+
+		if ( hostAddr[0] != '<' ) { //not already sinful
+			if ( strchr( tmpStr, ':' ) ) { //already has port info
+				sprintf( tmpStr, "<%s>", hostAddr );
+			}
+			else {
+				//add a bogus port number (0) because we just want hostname
+				sprintf( tmpStr, "<%s:0>", hostAddr );
+			}
+		}
+		else {
+			strcpy( tmpStr, hostAddr );
+		}
+		
+		if ( string_to_sin( tmpStr, &sin ) 
 				&& ( hostname = sin_to_hostname( &sin, NULL ) ) ) 
 		{
 			sprintf( tmpstring, "CONDOR_GATEKEEPER=/CN=schedd@%s", hostname );

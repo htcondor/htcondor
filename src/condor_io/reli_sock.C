@@ -242,6 +242,7 @@ int
 ReliSock::connect( char	*host, int port )
 {
 	is_client = 1;
+   hostAddr = strdup( host );
 	return do_connect( host, port );
 }
 
