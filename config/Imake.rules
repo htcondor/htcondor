@@ -919,35 +919,25 @@ CONDOR_COMPILE = ../../condor_scripts/condor_compile
 CONDOR_ARCH_LINK = perl ../../condor_scripts/condor_arch_link
 
 /*
-** Link all three types of binaries
-*/
-#ifndef LINK
-#define LINK(compiler,remotetarg,vanillatarg,obj)	@@\
-XCOMM Begin translation of func(LINK)		@@\
-RLINK(compiler,remotetarg,obj);			@@\
-VLINK(compiler,vanillatarg,obj);		@@\
-XCOMM End translation of func(LINK)	
-#endif /* LINK */
-
-
-/*
 ** Link a program for running remotely
 */
 #ifndef RLINK
 #if IS_CLIPPED
-#define RLINK(compiler,remotetarg,obj)	/* */ @@\
+#define RLINK(compiler,name,obj)	/* */ @@\
 XCOMM Begin translation of func(RLINK)		@@\
-XCOMM NULL BODY!							@@\
+XCOMM NULL BODY!				@@\
 XCOMM End translation of func(RLINK)
 #else
-#define RLINK(compiler,remotetarg,obj)	@@\
+#define RLINK(compiler,name,obj)		@@\
 XCOMM Begin translation of func(RLINK)		@@\
-remotetarg: obj					@@\
-	$(CONDOR_COMPILE) $(CONDOR_COMPILE_FLAGS) compiler -o remotetarg obj $(TEST_LDFLAGS) @@\
-	$(CONDOR_ARCH_LINK) remotetarg		@@\
+all:: name.remote				@@\
+name:: name.remote				@@\
+       @/bin/true				@@\
+name.remote: obj				@@\
+	$(CONDOR_COMPILE) $(CONDOR_COMPILE_FLAGS) compiler -o name.remote obj $(TEST_LDFLAGS) @@\
+	$(CONDOR_ARCH_LINK) name.remote		@@\
 clean::						@@\
-	rm -f remotetarg obj			@@\
-all:: remotetarg					@@\
+	rm -f name.remote obj			@@\
 XCOMM End translation of func(RLINK)
 #endif /* IS_CLIPPED */
 #endif /* RLINK */
@@ -956,16 +946,18 @@ XCOMM End translation of func(RLINK)
 ** Link a program to run normally (no condor at all)
 */
 #ifndef VLINK
-#define VLINK(compiler,vanillatarg,obj)			@@\
+#define VLINK(compiler,name,obj)		@@\
 XCOMM Begin translation of func(VLINK)		@@\
-vanillatarg: obj fake_ckpt.o					@@\
-	compiler -o vanillatarg obj fake_ckpt.o	$(TEST_LDFLAGS)	@@\
-									@@\
-clean::								@@\
-	rm -f vanillatarg obj			@@\
-all:: vanillatarg					@@\
+all:: name.vanilla				@@\
+name:: name.vanilla				@@\
+       @/bin/true				@@\
+name.vanilla: obj fake_ckpt.o			@@\
+	compiler -o name.vanilla obj fake_ckpt.o $(TEST_LDFLAGS)	@@\
+clean::						@@\
+	rm -f name.vanilla obj			@@\
 XCOMM End translation of func(VLINK)
 #endif /* VLINK */
+
 
 
 /***********************************************************************
@@ -973,7 +965,6 @@ XCOMM End translation of func(VLINK)
 **
 ** Rules to build, submit, and verify the test suite
 ***********************************************************************/
-
 
 /*
 ** Make directory and Makefile for a compiler in the test suite.
@@ -1059,9 +1050,9 @@ compiledir/Makefile: compiledir compiledir/Imakefile	@@\
 clean::								@@\
 	rm -rf compiledir compiler_list				@@\
 								@@\
-compiler_list:: compiler_list_compiledir			@@\
+compiler_list:: Concat(compiler_list_,compiledir)		@@\
 								@@\
-compiler_list_compiledir:: safe_append.pl			@@\
+Concat(compiler_list_,compiledir):: safe_append.pl		@@\
 	@perl safe_append.pl -v -f compiler_list -a compiledir	@@\
 XCOMM End translation of func(F_COMPILER_TARGET)
 #endif /* F_COMPILER_TARGET */
@@ -1072,10 +1063,10 @@ XCOMM End translation of func(F_COMPILER_TARGET)
 */
 #ifndef BUILD
 #define BUILD(cmplr,name,ext)		@@\
-XCOMM Begin translation of func(BUILD) @@\
+XCOMM Begin translation of func(BUILD)	@@\
 BUILD_FILES(name,ext)			@@\
-RLINK(cmplr,name.remote,name.o)		@@\
-VLINK(cmplr,name.vanilla,name.o) @@\
+RLINK(cmplr,name,name.o)		@@\
+VLINK(cmplr,name,name.o)		@@\
 XCOMM End translation of func(BUILD)
 #endif /* BUILD */
 
@@ -1083,8 +1074,8 @@ XCOMM End translation of func(BUILD)
 #define BUILD_EXTRA(cmplr,name,ext,obj)	@@\
 XCOMM Begin translation of func(BUILD_EXTRA) @@\
 BUILD_FILES(name,ext)			@@\
-RLINK(cmplr,name.remote,obj name.o)	@@\
-VLINK(cmplr,name.vanilla,obj name.o) @@\
+RLINK(cmplr,name,obj name.o)	@@\
+VLINK(cmplr,name,obj name.o) @@\
 XCOMM End translation of func(BUILD_EXTRA)
 #endif /* BUILD_EXTRA */
 
@@ -1092,7 +1083,7 @@ XCOMM End translation of func(BUILD_EXTRA)
 #define RBUILD(cmplr,name,ext)		@@\
 XCOMM Begin translation of func(RBUILD) @@\
 BUILD_FILES(name,ext)			@@\
-RLINK(cmplr,name.remote,name.o)	@@\
+RLINK(cmplr,name,name.o)	@@\
 XCOMM End translation of func(RBUILD)
 #endif /* RBUILD */
 
@@ -1100,7 +1091,9 @@ XCOMM End translation of func(RBUILD)
 #ifndef BUILD_FILES
 #define BUILD_FILES(name,ext)		@@\
 XCOMM Begin translation of func(BUILD_FILES) @@\
-all:: name.ext				     @@\
+name:: name.ext					@@\
+       @/bin/true				@@\
+all:: name.ext					@@\
 name.ext:					@@\
 	ln -s ../name.ext .			@@\
 clean::						@@\
@@ -1113,16 +1106,31 @@ XCOMM End translation of func(BUILD_FILES)
 #define RUN(name)	@@\
 XCOMM Begin translation of func(RUN)		@@\
 all:: name.run name.cmd				@@\
-name.run:					@@\
+name:: name.run name.cmd			@@\
+       @/bin/true				@@\
+name.run: Condor.pm CondorTest.pm		@@\
+	rm -f name.run				@@\
 	ln -s ../name.run .			@@\
 name.cmd:					@@\
+	rm -f name.cmd				@@\
 	ln -s ../name.cmd .			@@\
 clean::						@@\
 	rm -f name.run name.cmd run_list	@@\
-run_list:: run_list_name			@@\
-run_list_name:: safe_append.pl name.run		@@\
+run_list:: Concat(run_list_,name)		@@\
+Concat(run_list_,name):: safe_append.pl name.run	@@\
 	@perl safe_append.pl -v -f run_list -a name	@@\
 XCOMM End translation of func(RUN)
+#endif /* RUN */
+
+#ifndef BUILD_DEPS
+#define BUILD_DEPS(name,deps)	@@\
+XCOMM Begin translation of func(RUN_DEPS)	@@\
+all:: deps					@@\
+name:: deps					@@\
+       @/bin/true				@@\
+clean::						@@\
+	rm -f deps				@@\
+XCOMM End translation of func(RUN_DEPS)
 #endif /* RUN */
 
 
