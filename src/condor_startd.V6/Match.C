@@ -234,7 +234,7 @@ Match::match_timed_out()
 
 	if( rip->r_cur->cap()->matches( capab() ) ) {
 		if( rip->state() != matched_state ) {
-			EXCEPT( "Match timed out but not in matched state." );
+			EXCEPT( "Current match timed out but not in matched state." );
 		}
 		delete rip->r_cur;
 		rip->r_cur = new Match( rip );
