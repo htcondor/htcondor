@@ -1023,16 +1023,36 @@ These settings control the \Condor{master}.
   Generally speaking, these would be defined relative to the
   \Macro{SBIN} macro.
   
+\item[\Macro{SUBSYS\_ARGS}] \label{param:SubsysArgs} This setting
+  allows you to specify additional command line arguments for any
+  process spawned by the \Condor{master}.
+  You simply list the arguments you want, as if you were typing the
+  command line into your config file.  
+  You have to set arguments for a specific daemon with this setting,
+  and the settings will only effect that daemon, but you can define
+  one of these for each daemon the \Condor{master} is controlling.
+  For example, you would set \Macro{STARTD\_ARGS} to specify any extra
+  command line arguments to the \Condor{startd}.
+
 \item[\Macro{PREEN}] \label{param:Preen} In addition to the daemons
   defined in \Macro{DAEMON\_LIST}, the \Condor{master} also starts up
   a special process, \Condor{preen} to clean out junk files that have
   been left lying around by Condor.  This macro determines where the
-  \Condor{master} finds the preen binary.  It also controls how
-  \Condor{preen} behaves by the command-line arguments you pass to
+  \Condor{master} finds the preen binary.
+  If you don't want preen to run at all, just comment out this
+  setting.
+
+\item[\Macro{PREEN\_ARGS}] \label{param:PreenArgs} This setting
+  controls how \Condor{preen} behaves by allowing you to specify
+  command line arguments.
+  This works just like \Macro{SUBSYS\_ARGS} explained above.
+  The only difference is that you must specify this setting for
+  \Condor{preen} if you want it to do anything.
+  It's only because of command line arguments that \Condor{preen}
+  takes any action at all.
   ``-m'' means you want email about files \Condor{preen} finds that it
-  thinks it should remove.  ``-r'' means you want \Condor{preen} to
-  actually remove these files.  If you don't want preen to run at all,
-  just comment out this setting.
+  thinks it should remove.
+  ``-r'' means you want \Condor{preen} to actually remove these files.
 
 \item[\Macro{PREEN\_INTERVAL}] \label{param:PreenInterval} This macro
   determines how often \Condor{preen} should be started.  It is
