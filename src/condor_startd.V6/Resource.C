@@ -1295,6 +1295,9 @@ Resource::publish( ClassAd* cap, amask_t mask )
 	// Publish the supplemental Class Ads
 	resmgr->adlist_publish( cap, mask );
 
+    // Publish the monitoring information
+    daemonCore->monitor_data.ExportData( cap );
+
 	// Build the MDS/LDIF file
 	char	*tmp;
 	if ( ( tmp = param( "STARTD_MDS_OUTPUT" ) ) != NULL ) {
