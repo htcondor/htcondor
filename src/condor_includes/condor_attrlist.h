@@ -101,6 +101,8 @@ class AttrListRep: public AttrListAbstract
 
         AttrListRep(AttrList*, AttrListList*);	// constructor
 
+		const AttrList* GetOrigAttrList() { return attrList; }
+
 		friend			AttrList;
 		friend			AttrListList;
 
