@@ -31,10 +31,29 @@
 #define XDR_BLOCKSIZ (1024*4)
 #define UDP_BLOCKSIZ (16 * 1024)
 
-#define xdr_dev_t(x,v)	xdr_short(x,(short *)v)
-#define xdr_ino_t(x,v)	xdr_u_long(x,(u_long *)v)
+#if defined(OSF1)
+#	define xdr_dev_t(x,v)	xdr_int(x,(int *)v)
+#	define xdr_ino_t(x,v)	xdr_u_int(x,(u_int *)v)
+#	define xdr_time_t(x,v)	xdr_int(x,(int *)v)
+#	define xdr_uid_t(x,v)	xdr_u_int(x,(u_int *)v)
+#	define xdr_mode_t(x,v)	xdr_u_int(x,(u_int *)v)
+#	define xdr_gid_t(x,v)	xdr_u_int(x,(u_int *)v)
+#	define xdr_key_t(x,v)	xdr_int(x,(int *)v)
+#else
+#	define xdr_dev_t(x,v)	xdr_u_long(x,(u_long *)v)
+#	define xdr_ino_t(x,v)	xdr_u_long(x,(u_long *)v)
+#	define xdr_time_t(x,v)	xdr_long(x,(long *)v)
+#	define xdr_uid_t(x,v)	xdr_u_long(x,(u_long *)v)
+#	define xdr_mode_t(x,v)	xdr_u_long(x,(u_long *)v)
+#	define xdr_gid_t(x,v)	xdr_u_long(x,(u_long *)v)
+#	define xdr_key_t(x,v)	xdr_long(x,(long *)v)
+#endif
+
+#define xdr_pid_t(x,v)	xdr_int(x,(int *)v)
+#define xdr_size_t(x,v)	xdr_u_long(x,(u_long *)v)
 #define xdr_off_t(x,v)	xdr_long(x,(long *)v)
-#define xdr_time_t(x,v)	xdr_long(x,(long *)v)
+
+#define xdr_ulong_t(x,v)	xdr_u_long(x,(u_long *)v)
 
 #define XDR_ASSERT(cond) \
 	if( !(cond) ) { \
