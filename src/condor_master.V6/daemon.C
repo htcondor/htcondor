@@ -32,9 +32,11 @@
 #include "basename.h"
 #include "condor_email.h"
 #include "condor_environ.h"
+#include "condor_parameters.h"
 #include "string_list.h"
 #include "sig_name.h"
 #include "env.h"
+
 
 // these are defined in master.C
 extern int		RestartsPerHour;
@@ -433,10 +435,10 @@ daemon::Start()
 		// Collector needs to listen on a well known port, as does the
 		// Negotiator.
 	if ( strcmp(name_in_config_file,"COLLECTOR") == 0 ) {
-		command_port = COLLECTOR_PORT;
+		command_port = param_get_collector_port();
 	}
 	if ( strcmp(name_in_config_file,"NEGOTIATOR") == 0 ) {
-		command_port = NEGOTIATOR_PORT;
+		command_port = param_get_negotiator_port();
 	}
 
 	priv_state priv_mode = PRIV_ROOT;
@@ -1562,9 +1564,9 @@ Daemons::UpdateCollector()
 			SafeSock s;
 			s.timeout(2);
 			s.encode();
-            // COLLECTOR_PORT need to be added in there?  Bueller?
 			Daemon col(collector);
-			if (!s.connect(collector, COLLECTOR_PORT)     || 
+			int collector_port = param_get_collector_port();
+			if (!s.connect(collector, collector_port)     || 
                 !col.startCommand(UPDATE_MASTER_AD, &s)   ||
                 !ad->put(s) || !s.end_of_message()) {
 				dprintf( D_ALWAYS,

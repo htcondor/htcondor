@@ -32,6 +32,7 @@
 #include "condor_collector.h"
 #include "scheduler.h"
 #include "condor_attributes.h"
+#include "condor_parameters.h"
 #include "condor_classad.h"
 #include "classad_helpers.h"
 #include "condor_adtypes.h"
@@ -442,6 +443,9 @@ Scheduler::count_jobs()
 	int		prio_compar();
 	char	tmp[512];
 
+	int collector_port = param_get_collector_port();
+	int view_port      = param_get_condor_view_port();
+
 	 // copy owner data to old-owners table
 	ExtArray<OwnerData> OldOwners(Owners);
 	int Old_N_Owners=N_Owners;
@@ -606,7 +610,7 @@ Scheduler::count_jobs()
 		char *host = FlockCollectors->next();
 		for (i=0; host && i < FlockLevel; i++) {
 			updateCentralMgr( UPDATE_SCHEDD_AD, ad, host,
-							  COLLECTOR_UDP_COMM_PORT );
+							  collector_port );
 			host = FlockCollectors->next();
 		}
 	}
@@ -661,7 +665,7 @@ Scheduler::count_jobs()
 		  // -Derek Wright 11/4/98 
 	  if( CondorViewHost && CondorViewHost[0] != '\0' ) {
 		  updateCentralMgr( UPDATE_SUBMITTOR_AD, ad, CondorViewHost, 
-							CONDOR_VIEW_PORT );
+							view_port );
 	  }
 	}
 
@@ -727,11 +731,11 @@ Scheduler::count_jobs()
 				ad->InsertOrUpdate(tmp);
 				updateCentralMgr( UPDATE_SUBMITTOR_AD, ad,
 								  flock_collector,
-								  COLLECTOR_UDP_COMM_PORT ); 
+								  collector_port ); 
 				if (flock_view_server && flock_view_server[0] != '\0') {
 					updateCentralMgr( UPDATE_SUBMITTOR_AD, ad, 
 									  flock_view_server,
-									  CONDOR_VIEW_PORT );
+									  view_port );
 				}
 			}
 		}
@@ -800,7 +804,7 @@ Scheduler::count_jobs()
 			  i <= OldOwners[i].OldFlockLevel &&
 				  (host = FlockCollectors->next()); i++) {
 			 updateCentralMgr( UPDATE_SUBMITTOR_AD, ad, host,
-							   COLLECTOR_UDP_COMM_PORT );
+							   collector_port );
 		 }
 	  }
 	}
@@ -6314,11 +6318,12 @@ Scheduler::invalidate_ads()
 			 Name );
     ad->InsertOrUpdate( line );
 	updateCentralMgr( INVALIDATE_SUBMITTOR_ADS, ad, Collector->addr(), 0 );
+	int collector_port = param_get_collector_port();
 	if( FlockCollectors && FlockLevel > 0 ) {
 		for( i=1, FlockCollectors->rewind();
 			 i <= FlockLevel && (host = FlockCollectors->next()); i++ ) {
 			updateCentralMgr( INVALIDATE_SUBMITTOR_ADS, ad, host, 
-							  COLLECTOR_UDP_COMM_PORT );
+							  collector_port );
 		}
 	}
 }
@@ -6359,10 +6364,11 @@ Scheduler::sendReschedule( void )
 
 	if( FlockNegotiators ) {
 		FlockNegotiators->rewind();
+		int port = param_get_negotiator_port();
 		char *negotiator = FlockNegotiators->next();
 		for( int i=0; negotiator && i < FlockLevel;
 			negotiator = FlockNegotiators->next(), i++ ) {
-			Daemon d(negotiator, NEGOTIATOR_PORT);
+			Daemon d(negotiator, port);
 			if (!d.sendCommand(RESCHEDULE, Stream::safe_sock, NEGOTIATOR_CONTACT_TIMEOUT)) {
 				dprintf( D_ALWAYS, "failed to send RESCHEDULE command to %s\n",
 						 negotiator );

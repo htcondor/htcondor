@@ -31,6 +31,7 @@
 #include "condor_network.h"
 #include "condor_collector.h"
 #include "condor_attributes.h"
+#include "condor_parameters.h"
 #include "my_hostname.h"
 
 extern "C" {
@@ -179,8 +180,9 @@ XferSummary::time_out(time_t now)
 	// Send to collector
 	if (CollectorHost) {
         SafeSock sock;
+		int collector_port = param_get_collector_port();
         sock.encode();
-        if (!sock.connect(CollectorHost, COLLECTOR_PORT) ||
+        if (!sock.connect(CollectorHost, collector_port) ||
 			!sock.put(command) ||
             !info.put(sock) ||
             !sock.end_of_message()) {
@@ -192,7 +194,8 @@ XferSummary::time_out(time_t now)
 	if (CondorViewHost) {
         SafeSock sock;
 		sock.encode();
-        if (!sock.connect(CondorViewHost, CONDOR_VIEW_PORT) ||
+		int view_port = param_get_condor_view_port();
+        if (!sock.connect(CondorViewHost, view_port) ||
 			!sock.put(command) ||
             !info.put(sock) ||
             !sock.end_of_message()) {

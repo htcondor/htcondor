@@ -10,6 +10,7 @@
 #include "fdprintf.h"
 #include "condor_io.h"
 #include "condor_attributes.h"
+#include "condor_parameters.h"
 #include "condor_email.h"
 #include "condor_classad_lookup.h"
 #include "condor_query.h"
@@ -672,7 +673,8 @@ void CollectorDaemon::Config()
             i = 900;                // default to 15 minutes
     }
     if ( tmp && i ) {
-        if ( updateSock.connect(tmp,COLLECTOR_PORT) == TRUE ) {
+		int collector_port = param_get_collector_port();
+        if ( updateSock.connect(tmp, collector_port) == TRUE ) {
                 UpdateTimerId = daemonCore->Register_Timer(1,i,
                         (TimerHandler)sendCollectorAd, "sendCollectorAd");
         }
@@ -702,8 +704,9 @@ void CollectorDaemon::Config()
     tmp = param("CONDOR_VIEW_HOST");
     if(tmp) {
        if(!same_host(my_full_hostname(), tmp) ) {
+		   int view_port = param_get_condor_view_port();
            dprintf(D_ALWAYS, "Will forward ads on to View Server %s\n", tmp);
-           View_Collector = new Daemon(tmp, CONDOR_VIEW_PORT);
+           View_Collector = new Daemon(tmp, view_port);
        } 
        free(tmp);
        if(View_Collector) {

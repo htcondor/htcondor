@@ -22,7 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-
+#include "condor_parameters.h"
 /*
  * Main routine and function for the startd.
  */
@@ -443,7 +443,8 @@ init_params( int first_time)
         delete View_Collector;
     }
     if (condor_view_host) {
-        View_Collector = new Daemon(condor_view_host, CONDOR_VIEW_PORT);
+		int view_port = param_get_collector_port();
+        View_Collector = new Daemon(condor_view_host, view_port);
     }
 
 	tmp = param( "POLLING_INTERVAL" );

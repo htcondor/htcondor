@@ -29,6 +29,7 @@
 #include "daemon.h"
 #include "condor_string.h"
 #include "condor_attributes.h"
+#include "condor_parameters.h"
 #include "condor_adtypes.h"
 #include "condor_query.h"
 #include "get_daemon_addr.h"
@@ -574,6 +575,7 @@ Daemon::locate( void )
 {
 	char buf[256], *tmp;
 	bool rval;
+	int  port;
 
 		// Make sure we only call locate() once.
 	if( _tried_locate ) {
@@ -610,19 +612,23 @@ Daemon::locate( void )
 		rval = getDaemonInfo( "MASTER", MASTER_AD );
 		break;
 	case DT_COLLECTOR:
-		rval = getCmInfo( "COLLECTOR", COLLECTOR_PORT );
+		port = param_get_collector_port();
+		rval = getCmInfo( "COLLECTOR", port );
 		break;
 	case DT_NEGOTIATOR:
-		rval = getCmInfo( "NEGOTIATOR", NEGOTIATOR_PORT );
+		port = param_get_negotiator_port();
+		rval = getCmInfo( "NEGOTIATOR", port );
 		break;
 	case DT_VIEW_COLLECTOR:
-		if( (rval = getCmInfo("CONDOR_VIEW", COLLECTOR_PORT)) ) {
+		port = param_get_condor_view_port();
+		if( (rval = getCmInfo("CONDOR_VIEW", port)) ) {
 				// If we found it, we're done.
 			break;
 		} 
 			// If there's nothing CONDOR_VIEW-specific, try just using
 			// "COLLECTOR".
-		rval = getCmInfo( "COLLECTOR", COLLECTOR_PORT ); 
+		port = param_get_collector_port();
+		rval = getCmInfo( "COLLECTOR", port ); 
 		break;
 	default:
 		EXCEPT( "Unknown daemon type (%d) in Daemon::init", (int)_type );
