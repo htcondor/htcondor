@@ -79,7 +79,11 @@
 
 #include "condor_exprtype.h"
 
-#undef USE_STRING_SPACE_IN_CLASSADS
+#define USE_STRING_SPACE_IN_CLASSADS
+
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+#include "stringSpace.h"
+#endif
 
 class AttrList;
 class EvalResult;
@@ -117,9 +121,27 @@ class ExprTree
 		// and now init sumFlag as well... not sure if it should be
 		// FALSE or TRUE! but it needs to be initialized -Todd, 9/10
 		// and now init evalFlag as well (to detect circular eval'n) -Rajesh
-		ExprTree::ExprTree():unit('\0'), sumFlag(FALSE), evalFlag(FALSE) {};
-
-
+		ExprTree::ExprTree():unit('\0'), sumFlag(FALSE), evalFlag(FALSE)
+		{
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+			if (string_space_references == 0) {
+				string_space = new StringSpace;
+			}
+			string_space_references++;
+#endif
+			return;
+		}
+		virtual ~ExprTree()
+		{
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+			string_space_references--;
+			if (string_space_references == 0) {
+				delete string_space;
+				string_space = NULL;
+			}
+#endif
+			return;
+		}
     protected :
 		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
 		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
@@ -129,6 +151,12 @@ class ExprTree
 		int                 cardinality;  // number of children
 		int		    		sumFlag;      // used by the SumTree functions
 		bool				evalFlag;	  // to check for circular evaluation
+
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+		static StringSpace  *string_space;
+		static int          string_space_references;
+#endif
+
 };
 
 class VariableBase : public ExprTree
