@@ -1055,7 +1055,16 @@ daemon::SetupHighAvailability( void )
 							  poll_period,
 							  lock_hold_time,
 							  true );
+
+	// Log the new lock creation (if successful)
+	if ( ha_lock ) {
+		dprintf( D_FULLDEBUG,
+				 "Created HA lock for %s; URL='%s' poll=%ds hold=%ds\n",
+				 name_in_config_file, url, poll_period, lock_hold_time );
+	}
 	free( url );
+
+	// And, if it failed, log it
 	if ( ! ha_lock ) {
 		dprintf( D_ALWAYS, "HA Lock creation failed for URL '%s' / '%s'\n",
 				 url, name_in_config_file );
