@@ -61,6 +61,9 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	update_tid = -1;
 	r_is_deactivating = false;
 
+	r_cpu_busy = 0;
+	r_cpu_busy_start_time = 0;
+
 	if( r_attr->type() ) {
 		dprintf( D_ALWAYS, "New machine resource of type %d allocated\n",  
 				 r_attr->type() );
@@ -399,23 +402,20 @@ Resource::init_classad( void )
 	r_classad = new ClassAd( *resmgr->config_classad );
 
 		// Publish everything we know about.
-	this->publish( r_classad, A_PUBLIC | A_ALL );
+	this->publish( r_classad, A_PUBLIC | A_ALL | A_EVALUATED );
 	
 	return TRUE;
 }
 
 
 void
-Resource::timeout_classad( void )
+Resource::refresh_classad( amask_t mask )
 {
-	publish( r_classad, A_PUBLIC | A_TIMEOUT );
-}
-
-
-void
-Resource::update_classad( void )
-{
-	publish( r_classad, A_PUBLIC | A_UPDATE );
+	if( ! r_classad ) {
+			// Nothing to do (except prevent a segfault *grin*)
+		return;
+	}
+	this->publish( r_classad, (A_PUBLIC | mask) );
 }
 
 
@@ -467,7 +467,7 @@ Resource::do_update( void )
 	ClassAd private_ad;
 	ClassAd public_ad;
 
-	this->publish( &public_ad, A_PUBLIC | A_ALL );
+	this->publish( &public_ad, A_PUBLIC | A_ALL | A_EVALUATED );
 	this->publish( &private_ad, A_PRIVATE | A_ALL );
 
 		// Send class ads to collector(s)
@@ -777,6 +777,27 @@ Resource::eval_start( void )
 }
 
 
+int
+Resource::eval_cpu_busy( void )
+{
+	int tmp = 0;
+	if( ! r_classad ) {
+			// We don't have our classad yet, so just return that
+			// we're not busy.
+		return 0;
+	}
+	if( (r_classad->EvalBool( ATTR_CPU_BUSY, r_cur->ad(), tmp )) == 0 ) {
+			// Undefined, try "cpu_busy"
+		if( (r_classad->EvalBool( "CPU_BUSY", r_cur->ad(), 
+								  tmp )) == 0 ) {   
+				// Totally undefined, return false;
+			return 0;
+		}
+	}
+	return tmp;
+}
+
+
 void
 Resource::publish( ClassAd* cap, amask_t mask ) 
 {
@@ -811,9 +832,20 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			// undefined in r_classad, we need to insert a default
 			// value, since we don't want to use the job ClassAd's
 			// Rank expression when we evaluate our Rank value.
-		if (!caInsert( cap, r_classad, ATTR_RANK )) {
+		if( !caInsert(cap, r_classad, ATTR_RANK) ) {
 			sprintf( line, "%s = 0.0", ATTR_RANK );
 			cap->Insert( line );
+		}
+
+			// Similarly, the CpuBusy expression only lives in the
+			// config file and in the r_classad.  So, we have to
+			// insert it here, too.  This is just the expression that
+			// defines what "CpuBusy" means, not the current value of
+			// it and how long it's been true.  Those aren't static,
+			// and need to be re-published after they're evaluated. 
+		if( !caInsert(cap, r_classad, ATTR_CPU_BUSY) ) {
+			EXCEPT( "%s not in internal resource classad, but default "
+					"should be added by ResMgr!", ATTR_CPU_BUSY );
 		}
 
 			// Include everything from STARTD_EXPRS.
@@ -865,6 +897,18 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		// Put in ResMgr-specific attributes 
 	resmgr->publish( cap, mask );
 
+		// If this is a public ad, publish anything we had to evaluate
+		// to "compute"
+	if( IS_PUBLIC(mask) && IS_EVALUATED(mask) ) {
+		sprintf( line, "%s=%d", ATTR_CPU_BUSY_TIME,
+				 (int)cpu_busy_time() ); 
+		cap->Insert(line); 
+
+		sprintf( line, "%s=%s", ATTR_CPU_IS_BUSY, 
+				 r_cpu_busy ? "True" : "False" );
+		cap->Insert(line); 
+	}
+
 		// Put in state info
 	r_state->publish( cap, mask );
 
@@ -881,6 +925,25 @@ Resource::publish( ClassAd* cap, amask_t mask )
 void
 Resource::compute( amask_t mask ) 
 {
+	if( IS_EVALUATED(mask) ) {
+			// We need to evaluate some classad expressions to
+			// "compute" their values.  We don't want to propagate
+			// this mask to any other objects, since this bit only
+			// applies to the Resource class
+
+			// If we don't have a classad, we can bail now, since none
+			// of this is going to work.
+		if( ! r_classad ) {
+			return;
+		}
+
+			// Evaluate the CpuBusy expression and compute CpuBusyTime
+			// and CpuIsBusy.
+		compute_cpu_busy();
+
+		return;
+	}
+
 		// Only resource-specific things that need to be computed are
 		// in the CpuAttributes object.
 	r_attr->compute( mask );
@@ -888,7 +951,6 @@ Resource::compute( amask_t mask )
 		// Actually, we'll have the Reqexp object compute too, so that
 		// we get static stuff recomputed on reconfig, etc.
 	r_reqexp->compute( mask );
-
 }
 
 
@@ -1001,6 +1063,46 @@ Resource::resize_load_queue( void )
 	delete r_load_queue;
 	r_load_queue = new LoadQueue( size );
 	r_load_queue->setval( val );
+}
+
+
+void
+Resource::compute_cpu_busy( void )
+{
+	int old_cpu_busy;
+	old_cpu_busy = r_cpu_busy;
+	r_cpu_busy = eval_cpu_busy();
+	
+	if( ! old_cpu_busy && r_cpu_busy ) {
+			// It's busy now and it wasn't before, so set the
+			// start time to now
+		r_cpu_busy_start_time = time( NULL );
+	}
+	if( old_cpu_busy && ! r_cpu_busy ) {
+			// It was busy before, but isn't now, so clear the 
+			// start time
+		r_cpu_busy_start_time = 0;
+	}
+}	
+
+
+time_t
+Resource::cpu_busy_time( void )
+{
+	time_t now;
+	int val;
+
+	if( r_cpu_busy ) {
+		now = time(NULL);
+		val = now - r_cpu_busy_start_time;
+		if( val < 0 ) {
+			dprintf( D_ALWAYS, "ERROR in CpuAttributes::cpu_busy_time() "
+					 "- negative cpu busy time!, returning 0\n" );
+			return 0;
+		}
+		return val;
+	} 
+	return 0;
 }
 
 
