@@ -130,6 +130,7 @@ char *gen_ckpt_name();
 static PROC_ID ClusterId = { 0, 0 };
 static datum	ClusterKey = { (char *)&ClusterId, sizeof(ClusterId) };
 static ClusterVersion;
+static int		LockFd = -1;
 
 typedef void (*PROC_FUNC_PTR)( PROC * );
 
@@ -153,7 +154,9 @@ void terminate_proc( PROC *p );
 void check_empty_cluster( PROC *p );
 void delete_cluster( DBM *Q, int cluster );
 void data_too_big( int size );
-
+static void OpenLockFile();
+static void CloseLockFile();
+char *param( const char * );
 
 
 
@@ -168,6 +171,7 @@ void data_too_big( int size );
 DBM	*
 OpenJobQueue( char *path, int flags, int mode )
 {
+	OpenLockFile();
 	return dbm_open(path,flags,mode);
 }
 
@@ -176,7 +180,37 @@ OpenJobQueue( char *path, int flags, int mode )
 */
 CloseJobQueue( DBM *Q )
 {
+	CloseLockFile();
 	dbm_close( Q );
+}
+
+
+static void
+OpenLockFile()
+{
+	char 	*file_name;
+	mode_t	omask;
+
+	file_name = param( "QUEUE_LOCK" );
+	if( !file_name ) {
+		EXCEPT( "No job queue lock file specified in config file\n" );
+	}
+
+	omask = umask( 0 );
+
+	if( (LockFd = open(file_name,O_RDWR|O_CREAT,0664)) < 0 ) {
+		EXCEPT( "Cannot open job queue lock file \"%s\"", file_name );
+	}
+
+	umask( omask );
+
+}
+
+static void
+CloseLockFile()
+{
+	close( LockFd );
+	LockFd = -1;
 }
 
 #include "file_lock.h"
@@ -187,14 +221,18 @@ LockJobQueue( DBM *Q, int op )
 {
 	int		blocking;
 
+	if( LockFd < 0 ) {
+		EXCEPT( "In LockJobQueue(), but lock file not initialized" );
+	}
+
 	blocking = ~(op & LOCK_NB);
 
 	if( op & LOCK_SH ) {
-		return lock_file( Q->dbm_pagf, READ_LOCK, blocking );
+		return lock_file( LockFd, READ_LOCK, blocking );
 	} else if (op & LOCK_EX) {
-		return lock_file( Q->dbm_pagf, WRITE_LOCK, blocking );
+		return lock_file( LockFd, WRITE_LOCK, blocking );
 	} else if (op & LOCK_UN ) {
-		return lock_file( Q->dbm_pagf, UN_LOCK, blocking );
+		return lock_file( LockFd, UN_LOCK, blocking );
 	} else {
 		errno = EINVAL;
 		return -1;
