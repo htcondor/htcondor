@@ -83,21 +83,38 @@ int Registration::RegisterType(const char *type)
                                            // this is a new type.
     if(regiNumber >= regiTableSize)
     {                                      // table is full, reallocation
+		int i;
         int tempSize = 2 * regiTableSize;  // necessary. 
-        regiTable = (char **) realloc(regiTable, tempSize*sizeof(char *));
-        if(regiTable == NULL) {
-            EXCEPT("Warning : you ran out of memory -- quitting !");
+		char **tmp = NULL;
+
+		/* This code mimics a realloc, but for new'ed memory */
+
+		/* make a new array of the desired size */
+		tmp = new char*[tempSize];
+        if(tmp == NULL) {
+            EXCEPT("Registration::RegisterType(): out of memory!");
         }
-        for(int i=regiTableSize; i<tempSize; i++) {
-			regiTable[i] = NULL;
+
+		/* copy the known bits over */
+        for(i=0; i<regiTableSize; i++) {
+			tmp[i] = regiTable[i];
 		}
+
+		/* initialize the rest to NULL */
+        for(i=regiTableSize; i<tempSize; i++) {
+			tmp[i] = NULL;
+		}
+
+		/* delete the old array and move the pointer */
 		regiTableSize = tempSize;
+		delete [] regiTable;
+		regiTable = tmp;
     }
   
     regiTable[regiNumber] = new char[strlen(type)+1];
     if(regiTable[regiNumber] == NULL)
     {
-        EXCEPT("Warning : you ran out of memory -- quitting !");
+		EXCEPT("Registration::RegisterType(): out of memory!");
     }
     strcpy(regiTable[regiNumber], type);
     regiNumber++;
