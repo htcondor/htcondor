@@ -110,6 +110,7 @@ main(int argc, char *argv[])
 
 	if (argc == 1) {
 		fprintf(stderr, usage, argv[0]);
+		exit(1);
 	}
 
 	for (int i=1; i < argc; i++) {
@@ -145,7 +146,12 @@ main(int argc, char *argv[])
 				break;
 			}
 			case 'h': {
-				avoid_dns = false;
+				if (argv[i][2] == 'o') {
+					avoid_dns = false;
+				} else {
+					fprintf(stderr, usage, argv[0]);
+					exit(1);
+				}
 				break;
 			}
 			default:
@@ -186,9 +192,9 @@ void
 display_stats()
 {
 	const char TitleFormat[] =
-		"%-14.14s %9.9s %9.9s %9.9s %9.9s %9.9s %8.8s %6.6s\n";
+		"%-15.15s %9.9s %9.9s %9.9s %9.9s %9.9s %7.7s %6.6s\n";
 	const char RecordFormat[] =
-		"%-14.14s %9.0f %9.0f %9.0f %9.0f %9.0f %7.1f%% %5.1f%%\n";
+		"%-15.15s %9.0f %9.0f %9.0f %9.0f %9.0f %6.1f%% %5.1f%%\n";
 
 	// display HostStatistics
 	printf(TitleFormat, "", "Wall Time", "Good Time", "CPU Usage",
