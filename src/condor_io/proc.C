@@ -24,12 +24,7 @@
  
 
 #include "condor_common.h"
-#include <sys/param.h>
-#include <sys/time.h>
-
-
-#include "trace.h"
-#include "except.h"
+#include "condor_debug.h"
 #include "condor_io.h"
 
 #ifndef NEW_PROC
@@ -37,7 +32,6 @@
 #endif
 #include "proc.h"
 
-#include "debug.h"
 
 #ifndef LINT
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
