@@ -1,0 +1,3 @@
+- dagman doesn't dump pre/post script arguments to recovery DAGs!
+
+- if condor_submit hangs (which it can), DAGMan hangs -- we need a timeout
