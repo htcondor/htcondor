@@ -239,7 +239,6 @@ void TestFilePermissions()
 	}
 }
 
-
 int
 main( int argc, char *argv[] )
 {
@@ -1670,7 +1669,9 @@ DoCleanup()
 char *
 get_owner()
 {
-	if (Remote && !GSSAuthenticate ) return ("nobody");
+	if (Remote && !GSSAuthenticate ) {
+		 return ("nobody");
+	}
 
 #if defined(WIN32)
 	char username[UNLEN+1];
