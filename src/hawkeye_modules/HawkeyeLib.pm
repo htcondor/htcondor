@@ -37,7 +37,7 @@ sub ReadConfig
     if ( exists( $HardConfigs{$Label} )  ) {
 	$String = $HardConfigs{$Label};
     } else {
-	$String = `condor_config_val -startd hawkeye_$Module$Ext`;
+	$String = `hawkeye_config_val -startd hawkeye_$Module$Ext`;
     }
 
     # Parse it
