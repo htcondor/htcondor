@@ -49,6 +49,7 @@ extern "C" {
 	int  set_runtime_config(char *admin, char *config);
 	char * expand_macro ( const char *value, BUCKET *table[], int table_size,
 						  char *self=NULL );
+	void lower_case( char *str );
 #endif
 
 #if defined(__STDC__) || defined(__cplusplus)
