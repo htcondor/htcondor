@@ -401,8 +401,8 @@ init_condor_ids()
 		RealCondorUid = pwd->pw_uid;
 		RealCondorGid = pwd->pw_gid;
 	} else {
-		RealCondorUid = -1;
-		RealCondorGid = -1;
+		RealCondorUid = (uid_t)-1;
+		RealCondorGid = (gid_t)-1;
 	}
 
 	/* If we're root, set the Condor Uid and Gid to the value
