@@ -104,28 +104,33 @@ XferSummary::Result(transferinfo *tinfo, bool success_flag,
 
 	now = time(0);
 
-	xfer_len = now - xfer_begin;
+	// only include statistics on successful transfers
+	if (success_flag) {
 
-	if (xfer_len != 0) {
-		xfer_bandwidth = xfer_size / xfer_len;
+		xfer_len = now - xfer_begin;
+		
+		if (xfer_len != 0) {
+			xfer_bandwidth = xfer_size / xfer_len;
+		}
+
+		if (type == RECV) {
+			dprintf(D_ALWAYS, "RECV ");
+			num_recvs++;
+			bytes_recv += xfer_size;
+			tot_recv_bandwidth += xfer_bandwidth;
+			time_recving += xfer_len;
+		} else if (type == XMIT) {
+			dprintf(D_ALWAYS, "SEND ");
+			num_sends++;
+			bytes_sent += xfer_size;
+			tot_send_bandwidth += xfer_bandwidth;
+			time_sending += xfer_len;
+		}
+		dprintf(D_ALWAYS | D_NOHEADER,
+				"transferred %d bytes in %d seconds (%d bytes / sec)\n", 
+				xfer_size, xfer_len, xfer_bandwidth);
 	}
 
-	if (type == RECV) {
-		dprintf(D_ALWAYS, "RECV ");
-		num_recvs++;
-		bytes_recv += xfer_size;
-		tot_recv_bandwidth += xfer_bandwidth;
-		time_recving += xfer_len;
-	} else if (type == XMIT) {
-		dprintf(D_ALWAYS, "SEND ");
-		num_sends++;
-		bytes_sent += xfer_size;
-		tot_send_bandwidth += xfer_bandwidth;
-		time_sending += xfer_len;
-	}
-	dprintf(D_ALWAYS | D_NOHEADER,
-			"transferred %d bytes in %d seconds (%d bytes / sec)\n", 
-			xfer_size, xfer_len, xfer_bandwidth);
 	log_transfer(now, tinfo, success_flag, peer);
 }
 
