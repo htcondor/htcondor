@@ -1,7 +1,3 @@
-#if defined(LINUX)
-#pragma implementation "proc_obj_tmpl.h"
-#endif
-
 #pragma implementation "proc_obj_tmpl.h"
 
 /* 
