@@ -92,3 +92,4 @@ Major differences between version 6 and previous version (5.6):
 		a longer time before restarting the trouble daemon instead of trying
 		to restart it immediately in the hope that sooner or later the daemon
 		will be fixed.
+	2.	The master gets configuration files from the configuration server.

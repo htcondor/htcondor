@@ -369,7 +369,7 @@ int daemon::Restart()
 		recoverTimer = -1;
 	}
 	dprintf(D_ALWAYS, "Adding timer for restarting %s\n", process_name);
-	tMgr.NewTimer(this, n, (Event)StartDaemon);
+	tMgr.NewTimer(this, n, (void*)StartDaemon);
 	dprintf(D_ALWAYS, "restarting %s in %d seconds\n", process_name, n);
 	return 1;
 }
@@ -416,7 +416,7 @@ int daemon::StartDaemon()
 		// if this is a restart, start recover process
 		if(restarts > 0)
 		{
-			recoverTimer = tMgr.NewTimer(this, r_factor, (Event)Recover);
+			recoverTimer = tMgr.NewTimer(this, r_factor, (void*)Recover);
 			dprintf(D_FULLDEBUG, "start recover timer (%d)\n", recoverTimer);
 		}
 

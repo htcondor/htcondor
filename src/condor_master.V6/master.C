@@ -64,7 +64,10 @@ extern "C" {
 #include "condor_timer_manager.h"
 #include "condor_classad.h"
 #include "condor_collector.h"
-
+#include "files.h"
+#include "cctp_msg.h"
+#include "condor_attributes.h"
+#include "condor_network.h"
 
 #if defined(HPUX9)
 #include "fake_flock.h"
@@ -153,6 +156,7 @@ void 	dump_core();
 void	usage(const char* );
 int		hourly_housekeeping(void);
 void	report_to_collector();
+int		GetConfig(char*);
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 int	DoCleanup();
@@ -195,12 +199,15 @@ char	*default_daemon_list[] = {
 	"CKPT_SERVER",
 	0};
 
-
 // create an object of class daemons.
 class Daemons daemons;
+char*				configServer;
+extern BUCKET	*ConfigTab[];
+
 extern "C" 
 {
 	void	add_to_path(char* name);
+    int		read_config(char*, char*, CONTEXT*, BUCKET**, int, int); 
 }
 
 void
@@ -227,13 +234,6 @@ main( int argc, char* argv[] )
 
 	MyName = argv[0];
 
-#if 0
-	if( getuid() != 0 ) {
-		dprintf( D_ALWAYS, "%s must be run as ROOT\n", MyName );
-		exit( 1 );
-	}
-#endif
-
 #if defined(X86) && defined(Solaris)
 /* Set the environment for the X11 dynamic library for condor_kbdd */
 putenv("LD_LIBRARY_PATH=/s/X11R6-2/sunx86_54/lib");
@@ -259,8 +259,46 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 	*/
 	set_condor_euid();
 
-
-	config( MyName, (CONTEXT *)0 );
+	// Weiru
+	// Look for the master configuration file condor_config.master. If found,
+	// get configuration files from the configuration server. Use default
+	// otherwise.
+	if(read_config(".", MASTER_CONFIG, NULL, ConfigTab, 20,
+				   EXPAND_LAZY) < 0)
+	// use default configuration files
+	{
+		config( MyName, (CONTEXT*)0 );
+	}
+	else
+	// try to use configuration server
+	{
+		configServer = param("CONFIG_SERVER_HOST");
+		if(!configServer)
+		// use default configuration files
+		{
+			config(MyName, (CONTEXT*)0);
+		}
+		else
+		// use configuration server
+		{
+			// GetConfig will add the configuration file timestamp attribute
+			// into the master's classad. If a configuration server location is
+			// specified in the master configuration file but the connection
+			// attempt failed, this attribute will still be inserted with the
+			// timestamp value being negative infinity. This is so that if the
+			// config server come back up sometime in the future it will
+			// notify this master to get new configuration files if there are
+			// any.
+			if(GetConfig(configServer) < 0)
+			{
+				config(MyName, (CONTEXT*)0);
+			}
+			else
+			{
+				config(MyName, NULL, TRUE);
+			}
+		}
+	}
 
 	init_params();
 	add_to_path( "/etc" );
@@ -345,13 +383,13 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 
 
 		// once a day at 3:30 a.m.
-	tMgr.NewTimer(NULL, 3600, (Event)daily_housekeeping, 3600 * 24);
+	tMgr.NewTimer(NULL, 3600, (void*)daily_housekeeping, 3600 * 24);
 
 		// 6:00 am and 3:30 pm so somebody is around to respond
-	tMgr.NewTimer( NULL, 7200, (Event)hourly_housekeeping, 3600 * 24 );
-	tMgr.NewTimer( NULL, 32400, (Event)hourly_housekeeping, 3600 * 24 );
-	tMgr.NewTimer( &daemons, 100, (Event)(daemons.CheckForNewExecutable), 300);
-	tMgr.NewTimer(NULL, 100, (Event)report_to_collector, interval);
+	tMgr.NewTimer( NULL, 7200, (void*)hourly_housekeeping, 3600 * 24 );
+	tMgr.NewTimer( NULL, 32400, (void*)hourly_housekeeping, 3600 * 24 );
+	tMgr.NewTimer( &daemons, 100, (void*)(daemons.CheckForNewExecutable), 300);
+	tMgr.NewTimer(NULL, 100, (void*)report_to_collector, interval);
 
 	daemons.StartAllDaemons();
 
@@ -489,8 +527,8 @@ init_params()
 	Parse(tmp, tree);
 	ad.Insert(tree);
 	delete tmp;
-	//ad.SetMyTypeName("ScheddAd");
-	//ad.SetTargetTypeName("");
+	ad.SetMyTypeName("MasterAd");
+	ad.SetTargetTypeName("");
 
 	if( param("MASTER_DEBUG") ) {
 		if( boolean("MASTER_DEBUG","Foreground") ) {
@@ -1077,4 +1115,183 @@ void report_to_collector()
 	xdr_destroy(xdrs);
 	close(sd);
 	dprintf(D_FULLDEBUG, "exit report_to_collector\n");
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Get the configuration file from the config server. If for any reason the
+// operation wasn't successful, set the value of the attribute LastUpdate in
+// the master ad to negative infinity (0). Otherwise take it from the classad
+// from configuration server.
+////////////////////////////////////////////////////////////////////////////////
+const	char	DELIMITOR	=	'#';
+const	char*	DELIMITOR_STRING = "#";
+
+int GetConfig(char* config_server_name)
+{
+	char*	hostname;
+	char	cond[100]; 
+	char*	arch;
+	char*	opSys;
+	char	*listPtr, *ptr, *listPtr1, *ptr1;
+	char	reqAd[1000];
+	char	tmp[1000];
+	int		reqNum, reqFor;
+	CCTP_Status	status;
+	char	id[30];
+	char	reason[100];
+	FILE*	conf_fp;
+	char	file_name[1024];
+	char	configList[4096];
+	time_t	timestamp;
+	int		len, len1;
+	char	macronames[200];
+	char	macroname[100];
+	
+	// prepare request
+	hostname = param("hostname");
+	if(!hostname)
+	{
+		fprintf(stderr, "Can't find host name\n");
+		exit(1);
+	}
+	arch = param("ARCH");
+	opSys = param("OPSYS");
+	sprintf(reqAd, "MyType = \"machine\"%sTargetType = \"config\"%sRequirement = MY.Host == \"%s\"", DELIMITOR_STRING, DELIMITOR_STRING, hostname);
+	free(hostname);
+	if(arch)
+	{
+		strcat(reqAd, DELIMITOR_STRING);
+		strcat(reqAd, "Arch = \"");
+		strcat(reqAd, arch);
+		strcat(reqAd, "\"");
+		free(arch);
+	}
+	if(opSys)
+	{
+		strcat(reqAd, DELIMITOR_STRING);
+		strcat(reqAd, "OpSys = \"");
+		strcat(reqAd, opSys);
+		strcat(reqAd, "\"");
+		free(opSys);
+	}
+
+	sprintf(tmp, "%s = 0", ATTR_LAST_UPDATE);
+
+	// connect to config server
+	if(!config_server_connect(config_server_name, CONFIG_SERVER_PORT))
+	{
+		ad.Insert(tmp);
+		return -1;
+	}
+	tMgr.NewTimer(NULL, 60, (void*)config_server_disconnect, 0);
+	reqNum = send_request(CONDOR_MASTER, ACTION_GET, reqAd, DELIMITOR, "", 0);
+	if(!reqNum)
+	{
+		ad.Insert(tmp);
+		return -1;
+	}
+	reqFor = get_response(id, &status, configList, DELIMITOR, reason, &timestamp);
+	if(!reqFor)
+	{
+		ad.Insert(tmp);
+		return -1;
+	}
+	if(reqNum != reqFor)
+	{
+		config_server_disconnect();
+		ad.Insert(tmp);
+		return -1;
+	}
+	if(status != STATUS_SUCCESS)
+	{
+		config_server_disconnect();
+		ad.Insert(tmp);
+		return -1;
+	}
+	config_server_disconnect();
+
+	sprintf(tmp, "%s = %d", ATTR_LAST_UPDATE, timestamp);
+	ad.Insert(tmp);
+	// formatting the response
+    listPtr = configList;
+    do {
+        ptr = listPtr;
+        len = 0;
+        while(*ptr != ' ') {
+            ptr++;
+        len++;
+        }
+        strncpy(cond, listPtr, len);
+        cond[len] = '\0';
+        if(strcmp(cond, "COPY_TO_CONTEXT") == 0) {
+            len = 0;
+            while((*ptr == ' ') || (*ptr == '=')) { ptr++; }
+        listPtr = ptr;
+        while((*ptr != DELIMITOR) && (*ptr != '\0')) {
+            ptr++; len++;
+        }
+        strncpy(macronames, listPtr, len);
+        macronames[len] = '\0';
+        break;
+        }
+        while((*ptr != DELIMITOR) && (*ptr != '\0')) { ptr++; }
+        listPtr = ptr;
+        if(*listPtr == DELIMITOR) { listPtr++; }
+    }while(*listPtr != '\0');
+
+    listPtr1 = macronames;
+    ptr1 = listPtr1;
+    while(*listPtr1 != '\0') {
+        len1 = 0;
+        while(*ptr1 != ' ') { ptr1++; len1++; }
+        strncpy(macroname, listPtr1, len1);
+        macroname[len1] = '\0';
+        listPtr = configList;
+        do {
+          ptr = listPtr;
+          len = 0;
+          while(*ptr != ' '){
+            ptr++;
+        len++;
+          }
+          strncpy(cond, listPtr, len);
+          cond[len] = '\0';
+          if(strcmp(cond, macroname) == 0) {
+            while(*ptr == ' ') { ptr++; }
+        if(*ptr == '=') {
+            *ptr = ':';
+            break;
+        }
+          }
+          while((*ptr != DELIMITOR) && (*ptr != '\0')) { ptr++; }
+          if(*ptr == DELIMITOR) { ptr++; }
+          listPtr = ptr;
+        }while(*listPtr != '\0');
+
+        while(*ptr1 == ' ') { ptr1++; }
+        listPtr1 = ptr1;
+    }
+
+
+    /* write configs to local file */
+    conf_fp = fopen(SERVER_CONFIG, "w");
+    if( conf_fp == NULL) {
+		fprintf(stderr, "Cannot open %s, errno = %d\n", SERVER_CONFIG, errno);
+		ad.Insert(tmp);
+		return -1;
+    }
+
+    listPtr = configList;
+    while((*listPtr != '\0') || (*listPtr != DELIMITOR)) {
+        if(*listPtr == DELIMITOR) {
+            *listPtr = '\n';
+        }
+        else if(*listPtr == '\0') {
+            break;
+        }
+        else listPtr++;
+    }
+
+    fprintf(conf_fp, "%s", configList);
+    fclose(conf_fp);
 }
