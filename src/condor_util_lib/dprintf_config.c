@@ -65,14 +65,20 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 	static int did_truncate = 0;
 	int want_truncate = 0;
 
+	/*  
+	**  We want to initialize this here so if we reconfig and the
+	**	debug flags have changed, we actually use the new
+	**  flags.  -Derek Wright 12/8/97 
+	*/
+	DebugFlags = D_ALWAYS;
+
 	/*
-	**	Pick up the subsys_DEBUG parameters
+	**	Pick up the subsys_DEBUG parameters.   Note: if we don't have
+	**  anything set, we just leave it as D_ALWAYS.
 	*/
 	(void)sprintf(pname, "%s_DEBUG", subsys);
 	pval = param(pname);
-	if( pval == NULL ) {
-		DebugFlags = D_ALWAYS;
-	} else {
+	if( pval ) {
 		set_debug_flags( pval );
 		free( pval );
 	}
