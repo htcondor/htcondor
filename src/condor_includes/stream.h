@@ -221,6 +221,8 @@ public:
 	int code(unsigned int &);
 	int code(long &);
 	int code(unsigned long &);
+	int code(long long &);
+	int code(unsigned long long &);
 	int code(short &);
 	int code(unsigned short &);
 	int code(float &);
@@ -293,6 +295,8 @@ public:
 	int put(unsigned int);
 	int put(long);
 	int put(unsigned long);
+	int put(long long);
+	int put(unsigned long long);
 	int put(short);
 	int put(unsigned short);
 	int put(float);
@@ -310,6 +314,8 @@ public:
 	int get(unsigned int &);
 	int get(long &);
 	int get(unsigned long &);
+	int get(long long &);
+	int get(unsigned long long &);
 	int get(short &);
 	int get(unsigned short &);
 	int get(float &);
