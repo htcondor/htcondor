@@ -41,6 +41,7 @@
 **
 *************************************************************/
 
+#include <string.h>
 #define _POSIX_SOURCE
 #if defined(AIX32)
 #	define _G_USE_PROTOS
@@ -55,7 +56,6 @@ typedef struct fd_set fd_set;
 #include <signal.h>
 #include "fcntl.h"
 #include <errno.h>
-#include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include "condor_syscalls.h"
@@ -80,12 +80,23 @@ static char *_FileName_ = __FILE__;
 #include "image.h"
 extern Image MyImage;
 
+extern int ioserver_open(const char *path, int oflag, mode_t mode);
+
+extern int ioserver_close(int filedes);
+
+extern "C" {
+extern off_t ioserver_lseek(int filedes, off_t offset, int whence);
+
+extern ssize_t ioserver_read(int filedes, char *buf, unsigned int size);
+
+extern ssize_t ioserver_write(int filedes, const char *buf, unsigned int size);
+}
+
+
 OpenFileTable	*FileTab;
 static char				Condor_CWD[ _POSIX_PATH_MAX ];
 static int				MaxOpenFiles;
 static int				Condor_isremote;
-
-
 
 char * shorten( char *path );
 extern "C" void Set_CWD( const char *working_dir );
@@ -95,12 +106,29 @@ extern "C" void restore_condor_sigmask(sigset_t omask);
 extern int errno;
 extern volatile int check_sig;
 
+extern "C" {
+void printft(void)
+{
+  FileTab->Display();
+}
+
+void filetabdup2(int ofd, int nfd)
+{
+  FileTab->DoDup2(ofd, nfd);
+}
+
+void filetabclose(int fd)
+{
+  FileTab->DoClose(fd);
+}
+}
 void
 File::Init()
 {
 	open = FALSE;
 	firstBuf = NULL;
 	pathname = 0;
+	ioserversocket=-1;
 }
 
 extern "C" char *getwd( char * );
@@ -113,6 +141,7 @@ OpenFileTable::Init()
 	SetSyscalls( SYS_UNMAPPED | SYS_LOCAL );
 
 	MaxOpenFiles = sysconf(_SC_OPEN_MAX);
+	
 	file = new File[ MaxOpenFiles ];
 	bufCount = 0;
 	for( i=0; i<MaxOpenFiles; i++ ) {
@@ -141,7 +170,7 @@ OpenFileTable::Display()
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 
 	dprintf( D_ALWAYS, "%4s %3s %3s %3s %3s %3s %3s %8s %6s %6s %s\n",
-		"   ", "Dup", "Pre", "Rem", "Sha", "Rd", "Wr", "Offset", "RealFd", "DupOf", "Pathname" );
+		"   ", "Dup", "Pre", "Rem", "IO " "Sha", "Rd", "Wr", "Offset", "RealFd", "Sockfd" "DupOf", "Pathname" );
 	for( i=0; i<MaxOpenFiles; i++ ) {
 		if( !file[i].isOpen() ) {
 			continue;
@@ -160,11 +189,13 @@ File::Display()
 	dprintf( D_ALWAYS, "%3c ", isDup() ? 'T' : 'F' );
 	dprintf( D_ALWAYS, "%3c ", isPreOpened() ? 'T' : 'F' );
 	dprintf( D_ALWAYS, "%3c ", isRemoteAccess() ? 'T' : 'F' );
-	dprintf( D_ALWAYS, "%3c ", isShadowSock() ? 'T' : 'F' );
+	dprintf( D_ALWAYS, "%3c ", isIOServerAccess() ? 'T' : 'F' );
+ 	dprintf( D_ALWAYS, "%3c ", isShadowSock() ? 'T' : 'F' );
 	dprintf( D_ALWAYS, "%3c ", isReadable() ? 'T' : 'F' );
 	dprintf( D_ALWAYS, "%3c ", isWriteable() ? 'T' : 'F' );
 	dprintf( D_ALWAYS, "%8d ", offset );
 	dprintf( D_ALWAYS, "%6d ", real_fd );
+	dprintf( D_ALWAYS, "%6d ", ioserversocket );
 	if( isDup() ) {
 		dprintf( D_ALWAYS, "%6d ", dup_of );
 	} else {
@@ -177,10 +208,23 @@ File::Display()
 	}
 }
 
+extern "C" {
+
+void PatchSockets( int oldsockfd, int newsockfd )
+{
+ 	for ( int i = 0 ; i < MaxOpenFiles; i++)
+	  if ( FileTab->getSockFd(i) == oldsockfd )
+	  {
+	    FileTab->setSockFd(i,newsockfd);
+	    return ;
+          }
+}
+
+}
 
 int
 OpenFileTable::DoOpen(
-	const char *path, int flags, int real_fd, int is_remote )
+	const char *path, int flags, int real_fd, int is_remote, int filetype = -1 )
 {
 	int	user_fd;
 	int     rval;
@@ -220,6 +264,7 @@ OpenFileTable::DoOpen(
 	file[user_fd].duplicate = FALSE;
 	file[user_fd].pre_opened = FALSE;
 	file[user_fd].remote_access = is_remote;
+	file[user_fd].ioserver_access = (filetype==IS_IOSERVER?1:0);
 	file[user_fd].shadow_sock = FALSE;
 	file[user_fd].offset = 0;
 
@@ -400,36 +445,51 @@ OpenFileTable::Map( int user_fd )
 int
 OpenFileTable::IsLocalAccess( int user_fd )
 {
-	return !file[user_fd].isRemoteAccess();
+	return ( !file[user_fd].isRemoteAccess() && !file[user_fd].isIOServerAccess() );
 }
+
+int
+OpenFileTable::isIOServerAccess( int fd )
+{
+  if ( !file[fd].isOpen() ) return 0 ;
+  return file[fd].isIOServerAccess();
+}
+
+
 
 int
 OpenFileTable::DoDup2( int orig_fd, int new_fd )
 {
 		// error if orig_fd not open
-	if( ! file[orig_fd].isOpen() ) {
-		errno = EBADF;
-		return -1;
-	}
-
-		// error if new_fd out of range for file descriptors
-	if( new_fd < 0 || new_fd >= MaxOpenFiles ) {
-		errno = EBADF;
-		return -1;
-	}
-
-		// POSIX.1 says do it this way, AIX does it differently - any
-		// AIX programs which depend on that behavior are now hosed...
-	if( file[new_fd].isOpen() ) {
-		DoClose( new_fd );
-	}
-
-		// make new fd a duplicate of the original one
-	file[new_fd] = file[orig_fd];
-	file[new_fd].duplicate = TRUE;
-	file[new_fd].dup_of = orig_fd;
-
-	return new_fd;
+  if( ! file[orig_fd].isOpen() ) {
+    errno = EBADF;
+    return -1;
+  }
+  
+  // error if new_fd out of range for file descriptors
+  if( new_fd < 0 || new_fd >= MaxOpenFiles ) {
+    errno = EBADF;
+    return -1;
+  }
+  
+  dprintf(D_ALWAYS,"Just before closing %d\n",new_fd);
+  Display();
+  // POSIX.1 says do it this way, AIX does it differently - any
+  // AIX programs which depend on that behavior are now hosed...
+  if( file[new_fd].isOpen() ) {
+    DoClose( new_fd );
+  }
+  dprintf(D_ALWAYS,"Just after closing %d\n",new_fd);
+  
+  Display();
+  // make new fd a duplicate of the original one
+  file[new_fd] = file[orig_fd];
+  file[new_fd].duplicate = TRUE;
+  file[new_fd].dup_of = orig_fd;
+  
+  dprintf(D_ALWAYS,"Just after duplicating %d\n",new_fd);
+  Display();
+  return new_fd;
 }
 
 int
@@ -463,6 +523,9 @@ OpenFileTable::DoSocket(int addr_family, int type, int protocol )
 	int	user_fd;
 	int	real_fd;
 	char	buf[ _POSIX_PATH_MAX ];
+
+//	dprintf(D_ALWAYS,"Dosocket called ......\n");
+	
 #if defined(LINUX)
 	unsigned long	socket_args[4] = {
 		(unsigned long)addr_family,
@@ -509,7 +572,7 @@ OpenFileTable::DoSocket(int addr_family, int type, int protocol )
 		}
 	}
 
-	fprintf(stderr, "JCP: DoSocket returning %d\n", user_fd); fflush(stderr);
+//	fprintf(stderr, "JCP: DoSocket returning %d\n", user_fd); fflush(stderr);
 
 	file[user_fd].readable = TRUE;
 	file[user_fd].writeable = TRUE;
@@ -519,6 +582,7 @@ OpenFileTable::DoSocket(int addr_family, int type, int protocol )
 	file[user_fd].remote_access = RemoteSysCalls();
 	file[user_fd].shadow_sock = FALSE;
 	file[user_fd].offset = 0;
+	file[user_fd].ioserversocket=-1;
 	file[user_fd].real_fd = real_fd;
 	file[user_fd].pathname = (char *) 0;
 	return user_fd;
@@ -580,7 +644,7 @@ OpenFileTable::DoAccept(int s, struct sockaddr *addr, int *addrlen )
 void
 OpenFileTable::Save()
 {
-	int		i;
+	int		i, scm;
 	off_t	pos;
 	File	*f;
 
@@ -589,7 +653,14 @@ OpenFileTable::Save()
 	for( i=0; i<MaxOpenFiles; i++ ) {
 		f = &file[i];
 		if( f->isOpen() && !f->isDup() ) {
-			if( f->isRemoteAccess() ) {
+			dprintf(D_ALWAYS,"**** Current file entry is %d\n",i);
+			if ( f->isIOServerAccess() ) {
+				scm = SetSyscalls( SYS_LOCAL | SYS_MAPPED);
+				pos = ioserver_lseek( i, (off_t)0, SEEK_CUR);
+				dprintf(D_ALWAYS,">>>>> IO server seek returns %d\n",pos);
+				SetSyscalls( scm );
+			}
+			else if( f->isRemoteAccess() ) {
 				pos = REMOTE_syscall( CONDOR_lseek, f->real_fd, (off_t)0,SEEK_CUR);
 			} else {
 				pos = syscall( SYS_lseek, f->real_fd, (off_t)0, SEEK_CUR);
@@ -612,6 +683,15 @@ OpenFileTable::Save()
 			if( (f->isRemoteAccess()) && (check_sig == SIGTSTP) ) {
 				REMOTE_syscall( CONDOR_close, f->real_fd );
 			}
+	/*
+			if ((f->isIOServerAccess()) && (check_sig == SIGTSTP)) {
+				scm = SetSyscalls( SYS_LOCAL | SYS_MAPPED );
+				char *path = strdup(f->pathname);
+//				ioserver_close( i );
+//				DoOpen(path,f->flags,-1,0,IS_IOSERVER);
+				SetSyscalls( scm );
+			}
+			*/
 
 		}
 	}
@@ -626,22 +706,22 @@ OpenFileTable::Save()
 void
 OpenFileTable::fix_dups( int user_fd  )
 {
-	int		i;
-
-	for( i=0; i<MaxOpenFiles; i++ ) {
-		if( file[i].isOpen() && file[i].isDup() && file[i].dup_of == user_fd ) {
-			file[i].real_fd = file[user_fd].real_fd;
-			// If we're in STANDALONE mode, this must be an actual dup
-			// of the fd.  -Jim B.
-			if (MyImage.GetMode() == STANDALONE) {
+  int		i;
+  
+  for( i=0; i<MaxOpenFiles; i++ ) {
+    if( file[i].isOpen() && file[i].isDup() && file[i].dup_of == user_fd ) {
+      file[i].real_fd = file[user_fd].real_fd;
+      // If we're in STANDALONE mode, this must be an actual dup
+	    // of the fd.  -Jim B.
+      if (MyImage.GetMode() == STANDALONE) {
 #if defined(SYS_dup2)
-				syscall( SYS_dup2, user_fd, i );
+	syscall( SYS_dup2, user_fd, i );
 #else
-				dup2( user_fd, i );
+	dup2( user_fd, i );
 #endif
-			}
-		}
-	}
+      }
+    }
+  }
 }
 
 void
@@ -651,19 +731,44 @@ OpenFileTable::Restore()
 	off_t	pos;
 	File	*f;
 	mode_t	mode;
-	int		scm;
+	int		scm, init_scm;
+	
+	// restoring state of IOserver files..
+	for(i=0;i<MaxOpenFiles;i++)
+	  {
+	    f = &file[i];
+	    if (f->isOpen())
+	      {
+//		dprintf(D_ALWAYS,"%d : pathname = %s, isopen = %d",i,file[i].pathname, f->isOpen());
+	      }
+	    
+	    
+	    if (f->isOpen() && !(strcmp(file[i].pathname, "/IO_Socket")))
+	      {
+		file[i].open = FALSE;
+		delete [] file[i].pathname;
+		file[i].pathname = NULL;
+	      }
+	  }
+	// 
+
 
 	if( RemoteSysCalls() ) {
-		scm = SetSyscalls( SYS_REMOTE | SYS_UNMAPPED );
+		init_scm = SetSyscalls( SYS_REMOTE | SYS_UNMAPPED );
 	} else {
-		scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+		init_scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	}
 
 
 	chdir( cwd );
+	Display();
 	for( i=0; i<MaxOpenFiles; i++ ) {
 		f = &file[i];
+		if ( (f->pathname) && (!strcmp(f->pathname,"/IO_Socket") ))
+		  continue;
+		
 		if( f->isOpen() && !f->isDup() && !f->isPreOpened() ) {
+//			dprintf(D_ALWAYS,"Current restoring file is %d\n",i);
 			if( f->isWriteable() && f->isReadable() ) {
 				mode = O_RDWR;
 			} else if( f->isWriteable() ) {
@@ -673,51 +778,90 @@ OpenFileTable::Restore()
 			} else {
 				mode = (mode_t)0;
 			}
+			
+			
+			if (f->ioserver_access)
+			  {
+			    scm=SetSyscalls(SYS_LOCAL|SYS_MAPPED);
+			    int temp  = ioserver_open( f->pathname, f->flags, f->mode);
+			    file[temp].offset = file[i].offset;
 
-			f->real_fd = open( f->pathname, mode );
+			    SetSyscalls(scm);
+			    
+			    dprintf(D_ALWAYS,"before duping... \n");
+			    printft();
+			    
+			    file[i] = file[temp];
+			    file[i].duplicate = TRUE;
+			    file[i].dup_of = temp;
+
+			    dprintf(D_ALWAYS,"after duping... \n");
+			    printft();
+
+			    dprintf(D_ALWAYS,"---  table printed done \n");
+			    FileTab->DoClose( temp );
+			    dprintf(D_ALWAYS,"---  close done \n");
+			    printft();
+			  }
+			
+			else
+			  f->real_fd = open( f->pathname, mode );
 			if( f->real_fd < 0 ) {
-				fprintf(stderr, "i=%d, filename=%s\n", i, f->pathname);
-				perror( "open" );
-				abort();
+			  fprintf(stderr, "i=%d, filename=%s\n", i, f->pathname);
+			  perror( "open" );
+			  abort();
 			}
 			
-				// the open above saved in a global variable whether or not
-				// the file is remote (i.e. accessable only via shadow) or not.
-				// we must now save this into the file state table immediately,
-				// because we assume it is correct in what follows...
-				// Todd Tannenbaum, 3/14/95
-			f->remote_access = Condor_isremote;
-
+			// the open above saved in a global variable whether or not
+			// the file is remote (i.e. accessable only via shadow) or not.
+			// we must now save this into the file state table immediately,
+			// because we assume it is correct in what follows...
+			// Todd Tannenbaum, 3/14/95
+			if ( !f->ioserver_access )
+			   f->remote_access = Condor_isremote;
+			else
+			   f->remote_access = FALSE ;
+			
 			// In STANDALONE mode, we must make sure that the real_fd
 			// returned by the OS is the same as the "user_fd" that we've
 			// previously given to the App.  JCP 8/96
 
 			if (MyImage.GetMode() == STANDALONE && f->real_fd != i) {
 #if defined(SYS_dup2)
-				syscall( SYS_dup2, f->real_fd, i);
+			  syscall( SYS_dup2, f->real_fd, i);
 #else
-				dup2(f->real_fd, i);
+			  dup2(f->real_fd, i);
 #endif
-				syscall( SYS_close, f->real_fd );
-				f->real_fd = i;
+			  syscall( SYS_close, f->real_fd );
+			  f->real_fd = i;
 			}
-
-				// No need to seek if offset is 0, but more importantly, this
-				// fd could be a tty if offset is 0.
+			
+			// No need to seek if offset is 0, but more importantly, this
+			// fd could be a tty if offset is 0.
 			if( f->offset != 0 ) {
-				if( f->isRemoteAccess() ) {
-					pos = REMOTE_syscall( CONDOR_lseek,
-						  f->real_fd, f->offset, SEEK_SET );
-				} else {
-					pos = syscall( SYS_lseek, f->real_fd, f->offset, SEEK_SET );
-				}
+			  // for seeking to right position
+			  // restoring state of IOserver files..
+			  if (f->ioserver_access)
+			  {
+			    scm = SetSyscalls( SYS_LOCAL | SYS_MAPPED );
+			    pos = ioserver_lseek(i,f->offset,SEEK_SET);
+			    SetSyscalls( scm );
+			  }
+			  else
+			    if( f->isRemoteAccess() ) {
+			      pos = REMOTE_syscall( CONDOR_lseek,
+						   f->real_fd, f->offset, SEEK_SET );
+			    } else {
+			      pos = syscall( SYS_lseek, f->real_fd, f->offset, SEEK_SET );
+			    }
 
-				if( pos != f->offset ) {
-					perror( "lseek" );
-					abort();
-				}
+			  
+			  if( pos != f->offset ) {
+			    perror( "lseek" );
+			    abort();
+			  }
 			}
-
+			
 			fix_dups( i );
 		}
 	}
@@ -725,8 +869,88 @@ OpenFileTable::Restore()
 		SetSyscalls( SYS_REMOTE | SYS_MAPPED );
 	} else {
 		// SetSyscalls( SYS_LOCAL | SYS_MAPPED );
-		SetSyscalls( scm);
+		SetSyscalls( init_scm);
 	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
+//  Methods for setting and accessing various IO server related parameters
+//
+///////////////////////////////////////////////////////////////////////////////
+
+int 
+OpenFileTable::setServerName( int user_fd, char *name )
+{
+        if( !file[user_fd].isOpen() ) {
+		errno = EBADF;
+		return -1;
+	}
+
+	file[user_fd].ioservername = strdup( name ) ;
+	return 0 ;
+}
+
+int
+OpenFileTable::setServerPort( int user_fd, int port )
+{
+        if( !file[user_fd].isOpen() ) {
+		errno = EBADF;
+		return -1;
+	}
+
+	file[user_fd].ioserverport = port ;
+	return 0;
+}
+
+int
+OpenFileTable::setSockFd( int user_fd, int sockfd )
+{
+        if( !file[user_fd].isOpen() ) {
+		errno = EBADF;
+		return -1;
+	}
+
+	file[user_fd].ioserversocket = sockfd ;
+	return 0;
+}
+
+int
+OpenFileTable::setRemoteFd( int user_fd, int fd )
+{
+        if( !file[user_fd].isOpen() ) {
+		errno = EBADF;
+		return -1;
+	}
+
+	file[user_fd].real_fd = fd ;
+	return 0;
+}
+
+
+int
+OpenFileTable::setOffset( int user_fd, int off )
+{
+        if( !file[user_fd].isOpen() ) {
+		errno = EBADF;
+		return -1;
+	}
+
+	file[user_fd].offset = off ;
+	return 0;
+}
+
+
+int
+OpenFileTable::setFileName( int user_fd, char *name )
+{
+        if( !file[user_fd].isOpen() ) {
+		errno = EBADF;
+		return -1;
+	}
+
+	file[user_fd].pathname = strdup( name );
+	return 0;
 } 
 
 //
@@ -1071,6 +1295,125 @@ OpenFileTable::PreFetch( int user_fd, void *buf, size_t nbyte )
 	    }
 	}
 	return InsertR( user_fd, buf, tempPos, tempRead, tempFetch, prevP, afterP );
+}
+
+int
+OpenFileTable::setFlag( int user_fd, int flags )
+{
+        if( !file[user_fd].isOpen() ) {
+		errno = EBADF;
+		return -1;
+	}
+
+	file[user_fd].flags = flags ;
+	return 0;
+}
+
+int
+OpenFileTable::setMode( int user_fd, mode_t mode )
+{
+        if( !file[user_fd].isOpen() ) {
+		errno = EBADF;
+		return -1;
+	}
+
+	file[user_fd].mode = mode ;
+	return 0;
+}
+
+char *
+OpenFileTable::getServerName( int user_fd )
+{
+        if( !file[user_fd].isOpen() ) {
+		errno = EBADF;
+		return NULL;
+	}
+
+	return strdup( file[user_fd].ioservername ) ;
+}
+
+
+int
+OpenFileTable::getServerPort( int user_fd )
+{
+        if( !file[user_fd].isOpen() ) {
+		errno = EBADF;
+		return -1;
+	}
+
+	return file[user_fd].ioserverport;
+}
+
+
+int
+OpenFileTable::getSockFd( int user_fd )
+{
+        if( !file[user_fd].isOpen() ) {
+		errno = EBADF;
+		return -1;
+	}
+
+	return file[user_fd].ioserversocket;
+}
+
+
+int
+OpenFileTable::getRemoteFd( int user_fd )
+{
+        if( !file[user_fd].isOpen() ) {
+		errno = EBADF;
+		return -1;
+	}
+
+	return file[user_fd].real_fd;
+}
+
+
+int
+OpenFileTable::getOffset( int user_fd )
+{
+        if( !file[user_fd].isOpen() ) {
+		errno = EBADF;
+		return -1;
+	}
+
+	return file[user_fd].offset;
+}
+
+
+char *
+OpenFileTable::getFileName( int user_fd )
+{
+        if( !file[user_fd].isOpen() ) {
+		errno = EBADF;
+		return NULL;
+	}
+
+	return strdup( file[user_fd].pathname ) ;
+}
+
+
+int
+OpenFileTable::getFlag( int user_fd )
+{
+        if( !file[user_fd].isOpen() ) {
+		errno = EBADF;
+		return -1;
+	}
+
+	return file[user_fd].flags;
+}
+
+
+mode_t
+OpenFileTable::getMode( int user_fd )
+{
+        if( !file[user_fd].isOpen() ) {
+		errno = EBADF;
+		return -1;
+	}
+
+	return file[user_fd].mode  ;
 }
 
 //
@@ -1692,7 +2035,7 @@ open( const char *path, int flags, ... )
 	int		creat_mode = 0;
 	char	local_path[ _POSIX_PATH_MAX ];	// pathname on this machine
 	int		pipe_fd;	// fd number if this file is already open as a pipe
-	int		fd;
+	int		fd, scm;
 	int		status;
 	int		is_remote = FALSE;
 	sigset_t omask;
@@ -1718,6 +2061,19 @@ open( const char *path, int flags, ... )
 		  case IS_PRE_OPEN:
 			fd = pipe_fd;
 			break;
+		  case IS_IOSERVER:
+			dprintf(D_ALWAYS," Calling ioserver_open.. %s, %d, %d \n", local_path, flags, creat_mode);
+			
+			scm = SetSyscalls( SYS_LOCAL | SYS_MAPPED );
+			fd = ioserver_open( local_path, flags, creat_mode ) ;
+			
+			char str[10];
+			sprintf(str,"fd = %d\n",fd);
+			
+			dprintf(D_ALWAYS,str);
+			SetSyscalls( scm );
+			
+			break ;
 		  case IS_NFS:
 		  case IS_AFS:
 			fd = syscall( SYS_open, local_path, flags, creat_mode );
@@ -1742,7 +2098,7 @@ open( const char *path, int flags, ... )
 		return -1;
 	}
 
-	if( MappingFileDescriptors() ) {
+	if( MappingFileDescriptors() && status != IS_IOSERVER) {
 		fd = FileTab->DoOpen( local_path, flags, fd, is_remote );
 	}
 
@@ -1827,6 +2183,15 @@ openx( const char *path, int flags, mode_t creat_mode, int ext )
 int
 close( int fd )
 {
+  if ( !LocalSysCalls() && MappingFileDescriptors() && IOServerAccess(fd)) 
+    {
+      int scm = SetSyscalls(SYS_LOCAL | SYS_MAPPED);
+      int rval=ioserver_close(fd);
+      SetSyscalls(scm);
+      return rval;
+    }
+  
+        
 	if( MappingFileDescriptors() ) {
 		return FileTab->DoClose( fd );
 	} else {
@@ -1997,6 +2362,13 @@ int
 LocalAccess( int user_fd )
 {
 	return FileTab->IsLocalAccess( user_fd );
+}
+
+int 
+IOServerAccess( int user_fd )
+{
+  dprintf(D_ALWAYS,"Calling ioserveraccess with fd :%d (%d)\n",user_fd, FileTab->isIOServerAccess(user_fd));
+  return FileTab->isIOServerAccess( user_fd );
 }
 
 int

@@ -30,6 +30,7 @@
 #define _FILE_STATE_H
 
 #include <limits.h>
+#include <string.h>
 #include <sys/types.h>
 
 const int MAXBUF = 131072;
@@ -70,6 +71,7 @@ public:
 	BOOL	isDup()			{ return duplicate; }
 	BOOL	isPreOpened()		{ return pre_opened; }
 	BOOL	isRemoteAccess()	{ return remote_access; }
+	BOOL	isIOServerAccess()	{ return ioserver_access; }
 	BOOL	isShadowSock()		{ return shadow_sock; }
 	BOOL	isReadable()		{ return readable; }
 	BOOL	isWriteable()		{ return writeable; }
@@ -78,11 +80,21 @@ private:
 	Bit	duplicate : 1;		// file is dup of another fd
 	Bit	pre_opened : 1;		// file was pre_opened (stdin, stdout, stderr)
 	Bit	remote_access : 1;	// access via remote sys calls (via the shadow)
+	Bit	ioserver_access : 1;	// access via IO server
 	Bit	shadow_sock : 1;	// TCP connection to the shadow
 	Bit	readable : 1;		// File open for read or read/write
 	Bit	writeable : 1;		// File open for write or read/write
 	off_t   size;                   // File size
 	off_t	offset;			// File pointer position
+	char	*ioservername;		// The hostname of the IO server
+	int	ioserverport;		// The port for contacting IO server
+	int	ioserversocket;		// The socket descriptor for contacting
+					// the IO server
+	int	flags;			// The flags when the file was opened
+					// This was not needed initially but
+					// with the addition of IO server files
+					// may be reopened.
+	mode_t	mode;			// Mode when file was opened.
 	FD		real_fd;	// File descriptor number
 	FD		dup_of;		// File descriptor this is a dup of
 	char	*pathname;		// *FULL* pathname of the file
@@ -99,7 +111,7 @@ public:
 #if 0
 	int DoOpen( const char *path, int flags, int mode, int fd, int is_remote );
 #else
-	int DoOpen( const char *path, int flags, int fd, int is_remote );
+	int DoOpen( const char *path, int flags, int fd, int is_remote, int status = -1);
 #endif
 	off_t DoLseek(int fd, off_t offset, int whence);
 	int DoClose( int fd );
@@ -107,8 +119,31 @@ public:
 	int DoDup2( int fd, int dupfd );
 	int DoSocket( int addr_family, int type, int protocol );
 	int DoAccept( int s, struct sockaddr *addr, int *addrlen );
+	int	Map( int user_fd );
+
+	// Methods for setting various parameters needed to contact 
+	// another IO server if necessary.
+
+	int setServerName( int fd, char *name );
+	int setServerPort( int fd, int port );
+	int setSockFd( int fd, int sockfd );
+	int setRemoteFd( int fd, int realfd );
+	int setOffset( int fd, int off );
+	int setFileName( int fd, char *name );
+	int setFlag( int fd, int flag );
+	int setMode( int fd, mode_t modes );
+
+	char	*getServerName( int fd );
+	int	getServerPort( int fd );
+	int	getSockFd( int fd );
+	int	getRemoteFd( int fd );
+	int	getOffset( int fd );
+	char	*getFileName( int fd ) ;
+	int	getFlag( int fd );
+	mode_t	getMode( int fd );
 	int Map( int user_fd );
 	BOOL IsLocalAccess( int user_fd );
+	BOOL isIOServerAccess( int fd );
 	BOOL IsDup( int user_fd );
 	void SetOffset(int i, off_t temp)  { file[i].setOffset(temp); }
 	void SetSize(int i, off_t temp)    { file[i].setSize(temp); }
