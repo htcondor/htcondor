@@ -37,6 +37,9 @@ description.
      within the DAG that will be submitted to Condor at one time.
      \Arg{NumberOfJobs} is a positive integer. If the option is
      omitted, the default number of jobs is unlimited.}
+  \OptItem{\OptArg{-dagman}{DagmanExecutable}}{Allows the specification of an 
+     alternate \Condor{dagman} executable to be used instead of the one found 
+     in the user's path. This must be a fully qualified path.}
   \OptItem{\OptArg{-maxpre}{NumberOfPREscripts}}{Sets the maximum number of PRE
      scripts within the DAG that may be running at one time.
      \Arg{NumberOfPREScripts} is a positive integer. If this option is
