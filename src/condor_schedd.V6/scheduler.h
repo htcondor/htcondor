@@ -193,7 +193,7 @@ class Scheduler : public Service
 		// Here we enqueue calls to 'contactStartd' when we can't just 
 		// call it any more.  See contactStartd and the call to it...
 	Queue<contactStartdArgs*> startdContactQueue;
-	int             checkContactQueue();
+	void            checkContactQueue();
 	int             MAX_STARTD_CONTACTS;
 	
 	// useful names
