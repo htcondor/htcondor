@@ -22,6 +22,7 @@
 
 #include "classad_distribution.h"
 #include "lexerSource.h"
+#include "xmlSink.h"
 #include <fstream>
 #include <iostream>
 #include <ctype.h>
@@ -96,6 +97,9 @@ static void process_classad(
     int token_start, int *line_number, 
 	const Parameters &parameters, ErrorCount *errors);
 static void process_print_classad(
+	const string &line, int token_start, int line_number, 
+    const Parameters &parameters, ErrorCount *errors);
+static void process_print_classad_xml(
 	const string &line, int token_start, int line_number, 
     const Parameters &parameters, ErrorCount *errors);
 static void process_test_match(
@@ -265,6 +269,9 @@ process_file(ifstream &input_file, const Parameters &parameters,
 		} else if (!first_token.compare("print-classad")) {
 			process_print_classad(line, token_start, line_number, parameters,
 							   errors);
+		} else if (!first_token.compare("print-classad-xml")) {
+			process_print_classad_xml(line, token_start, line_number, parameters,
+                                      errors);
 		} else if (!first_token.compare("test-match")) {
 			process_test_match(line, token_start, line_number, parameters,
 							   errors);
@@ -411,6 +418,54 @@ static void process_print_classad(const string &line,
 	} else {
 		PrettyPrint  printer;
 		string       text;
+
+		printer.Unparse(text, classad);
+		cout << "ClassAd " << classad_name << ":\n";
+		cout << text;
+		cout << endl;
+	}
+	return;
+}
+
+/*********************************************************************
+ *
+ * Function: process_print_classad_xml
+ * Purpose:  Print a ClassAd in XML
+ *           The line in the file looks like:
+ *             print-classad-xml ClassAd-1
+ *
+ *********************************************************************/
+static void process_print_classad_xml(const string &line,
+							  	      int token_start, int line_number, 
+								      const Parameters &parameters,
+								      ErrorCount *errors)
+{
+	string classad_name, extra;
+
+	classad_name = extract_token(&token_start, line);
+	extra = extract_token(&token_start, line);
+	if (!classad_name.compare("")) {
+		cout << "Error: Missing ClassAd name on line " << line_number 
+			 << "." << endl;
+		cout << "       Format: print-classad <classad>" << endl;
+		errors->IncrementErrors();
+	}
+	else if (extra.compare("")) {
+		cout << "Ignored extra input (" << extra << ") on line "
+			 << line_number << "." << endl;
+	}
+	
+	ClassAd *classad;
+
+	classad = classads[classad_name];
+
+	if (classad == NULL) {
+		cout << "Error: Unknown ClassAd: \"" << classad_name
+			 << "\" on line " << line_number << "." << endl;
+		errors->IncrementErrors();
+	} else {
+		ClassAdXMLUnParser  printer;
+		string              text;
 
 		printer.Unparse(text, classad);
 		cout << "ClassAd " << classad_name << ":\n";
