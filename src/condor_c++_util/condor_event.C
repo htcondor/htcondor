@@ -137,7 +137,7 @@ instantiateEvent (ULogEventNumber event)
 		return new GlobusResourceUpEvent;
 
 	  default:
-        EXCEPT( "Invalid ULogEventNumber" );
+        EXCEPT( "Invalid ULogEventNumber %d",event );
 
 	}
 
