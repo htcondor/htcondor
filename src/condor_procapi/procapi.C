@@ -2002,8 +2002,9 @@ ProcAPI::getFileOwner(int fd) {
 	
 	struct stat si;
 
-	if ( fstat(fd, &si) == 0 ) {
-		dprintf(D_ALWAYS, "ProcAPI: fstat failed in /proc!\n");
+	if ( fstat(fd, &si) != 0 ) {
+		dprintf(D_ALWAYS, 
+			"ProcAPI: fstat failed in /proc! (errno=%d)\n", errno);
 		return 0; 	// 0 is probably wrong, but this should never
 					// happen (unless things are really screwed)
 	}
