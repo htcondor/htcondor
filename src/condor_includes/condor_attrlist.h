@@ -13,6 +13,7 @@
 #include "condor_expressions.h"
 #include "condor_exprtype.h"
 #include "condor_astbase.h"
+#include "proc_obj.h"
 
 //for the shipping functions -- added by Lei Cao
 #include <rpc/types.h>
@@ -147,14 +148,14 @@ class AttrListList
         AttrListList(AttrListList&);	// copy constructor
         ~AttrListList();				// destructor
 
-        void 	  	OpenList();			// set pointer to the head of the queue
-        void 	  	CloseList();		// set pointer to NULL
-        AttrList* 	NextAttrList();		// return AttrList pointed to by "ptr"
+        void 	  	Open();				// set pointer to the head of the queue
+        void 	  	Close();			// set pointer to NULL
+        AttrList* 	Next();				// return AttrList pointed to by "ptr"
         ExprTree* 	Lookup(char*, AttrList*&);	// look up an expression
       	ExprTree* 	Lookup(char*);
 
-      	void 	  	Insert(AttrList*); 		// insert at the tail of the list
-      	int			Delete(AttrList*); 		// delete a AttrList
+      	void 	  	Insert(AttrList*);	// insert at the tail of the list
+      	int			Delete(AttrList*); 	// delete a AttrList
 
       	void  	  	fPrintAttrListList(FILE *); 	// print out the list
       	int 	  	MyLength() { return length; } 	// length of this list
