@@ -13,10 +13,23 @@ BEGIN
 use HawkeyePublish;
 use HawkeyeLib;
 
-my $SortOffset;
+# Prototypes
+sub Init( );
+sub MainLoop( );
+sub Configure( );
+sub RunIt( $ );
+sub ProcessData( $ );
+sub FixString( $ );
+
+# Hawkeye data
 my $Hawkeye;
-my $Debug = 0;
-my $TopPeriod = 30;
+
+my %Config =
+    (
+     Debug	=> 0,
+     TopPeriod	=> 30,
+     RunOnce	=> 0,
+    );
 
 # Valid field list:
 my %TopFields =
@@ -47,8 +60,9 @@ my %SortOut;
 # Main logic
 $| = 1;
 print STDERR "My pid = $$\n";
+
+# Global state variables
 my $Reconfig = 0;
-my $RunOnce = 0;
 my $AllDone = 0;
 my $TopPid = -1;
 my @TopHeader;
@@ -72,19 +86,21 @@ $SIG{CHLD} = sub {
     if ( ( $Pid > 0 ) && ( $Pid == $TopPid ) ) {
 	print STDERR "\"top\" process $Pid died\n";
     }
+    $TopPid = -1;
 };
 
-# Initialize...
-Init();
+# Initialize & Run
+Init( );
+MainLoop( );
 
 # Loop 'til we're done
+sub MainLoop( )
 {
     my $LastTime = -1;
     my $FastCount = 0;
     my $LastSleepTime = 0;
-    while( ! $AllDone )
+    do
     {
-
 	# Timing logic
 	my $CurTime = time();
 	my $TimeDiff = $CurTime - $LastTime - $LastSleepTime;
@@ -109,12 +125,22 @@ Init();
 	}
 
 	# Run the test
-	RunIt();
-	exit 0 if ( $RunOnce );
+	RunIt( $Config{RunOnce} );
+
+	# If we're in run once mode, we're "all done"
+	if ( $Config{RunOnce} ) {
+	    $AllDone++;
+	}
     }
+    while( ! $AllDone );
+
+    # Done
+    exit 0;
 }
 
-sub Init {
+# Initialization logic
+sub Init( )
+{
 
     # Do the initial configuration stuff
     HawkeyeLib::DoConfig( );
@@ -123,7 +149,7 @@ sub Init {
     foreach my $Arg ( @ARGV )
     {
 	if ( $Arg =~ /^-1$/ ) {
-	    $RunOnce = 1;
+	    $Config{RunOnce} = 1;
 	} elsif ( $Arg =~ /^-c$/ ) {
 	    HawkeyeLib::HardConfig( "_sort" );
 	    HawkeyeLib::HardConfig( "_fields" );
@@ -146,8 +172,9 @@ sub Init {
     Configure( );
 }
 
-
-sub Configure {
+# Configuration logic
+sub Configure( )
+{
     ### Valid fields are:
     ###   pid, user, priority, nice, size, rss, share, status, lib,
     ###    cpu,mem,time,command
@@ -165,18 +192,18 @@ sub Configure {
     # Check the config period string
     if ( $ConfigStringPeriod =~ /(\d+)([sSmMhH]?)/ )
     {
-	$TopPeriod = $1;
+	$Config{TopPeriod} = $1;
 	if ( ( $2 eq "s" ) || ( $2 eq "S" ) )
 	{
 	    # Do nothing
 	}
 	elsif ( ( $2 eq "m" ) || ( $2 eq "M" ) )
 	{
-	    $TopPeriod *= 60;
+	    $Config{TopPeriod} *= 60;
 	}
 	elsif ( ( $2 eq "h" ) || ( $2 eq "H" ) )
 	{
-	    $TopPeriod *= 3600;
+	    $Config{TopPeriod} *= 3600;
 	}
     }
     else
@@ -251,20 +278,20 @@ sub Configure {
 	my ( @List ) = split ( /,+/, $ConfigStringFields );
 	if ( $List[0] eq "*" )
 	{
-	    print STDERR "Enabling: " if ( $Debug );
+	    print STDERR "Enabling: " if ( $Config{Debug} );
 	    foreach $Name ( keys %TopFields )
 	    {
 		next if ( $TopFields{$Name}{offset} < 0 );
 		$TopFields{$Name}{enabled} = 1;
 		my $Type = $TopFields{$Name}{type};
 		$Fields = $Fields . $TopTypes{$Type}{prefix} . $Name . " ";
-		print STDERR "$Name " if ( $Debug );
+		print STDERR "$Name " if ( $Config{Debug} );
 	    }
-	    print STDERR "\n" if ( $Debug );
+	    print STDERR "\n" if ( $Config{Debug} );
 	}
 	else
 	{
-	    print STDERR "Enabling: " if ( $Debug );
+	    print STDERR "Enabling: " if ( $Config{Debug} );
 	    foreach $Name ( @List )
 	    {
 		chomp $Name;
@@ -278,9 +305,9 @@ sub Configure {
 		$TopFields{$Name}{enabled} = 1;
 		my $Type = $TopFields{$Name}{type};
 		$Fields = $Fields . $TopTypes{$Type}{prefix} . $Name . " ";
-		print STDERR "$Name " if ( $Debug );
+		print STDERR "$Name " if ( $Config{Debug} );
 	    }
-	    print STDERR "\n" if ( $Debug );
+	    print STDERR "\n" if ( $Config{Debug} );
 	}
 	$Hawkeye->Store( "FIELDS" , $Fields );
     }
@@ -290,11 +317,14 @@ sub Configure {
 ###
 ### Get top output for the top n processes
 ###
-sub RunIt
+sub RunIt( $ )
 {
+    # Process args
+    my $RunOnce = shift;
+
+    # Build the command & start it
     my $Summary = HawkeyeHash->new( \$Hawkeye, "Summary_" );
-    #my $Cmd = "/bin/nice -20 top -b -n 1";
-    my $Cmd = "/bin/nice -20 top -b -d $TopPeriod";
+    my $Cmd = "/bin/nice -20 top -b -d $Config{TopPeriod}";
     $TopPid = open ( TOP, "$Cmd|" );
     Carp::confess( "Can't run top '$Cmd'" ) if ( ! $TopPid );
     print STDERR "$Cmd => $TopPid\n";
@@ -305,12 +335,15 @@ sub RunIt
     # Flag to skip the first input line
     my $SkipFirst = 0;
 
+    # Are we done yet (yes if in 'run once' mode
+    my $Done = $RunOnce;
+
     # Timing info
     my $LastTime = -1;
     my $FastCount = 0;
 
     # Loop til top dies..
-    while( 1 )
+    do
     {
 	# Throw away the first line
 	$_ = <TOP> if ( $SkipFirst );
@@ -428,34 +461,30 @@ sub RunIt
 	# Timing logic
 	my $CurTime = time();
 	my $TimeDiff = $CurTime - $LastTime;
-	my $MaxTime = $TopPeriod * 1.5;
-	if ( ( $LastTime > 0 ) && ( $TimeDiff < $TopPeriod ) ) {
+	my $MaxTime = $Config{TopPeriod} * 1.5;
+	if ( ( $LastTime > 0 ) && ( $TimeDiff < $Config{TopPeriod} ) ) {
 	    print STDERR "output looped in $TimeDiff seconds!\n";
-	    if ( ++$FastCount > 1 ) {
-		print STDERR "Killing top (PID = $TopPid )\n";
-		kill( "TERM", $TopPid );
-		last;
-	    }
+	    $Done++ if ( ++$FastCount > 1 );
 	} else {
 	    $FastCount-- if ( $FastCount > 0 );
 	}
 	$LastTime = $CurTime;
 
-	# Run once mode?
-	$AllDone++ if ( $RunOnce );
-
 	# Check for reconfig
-	last if ( $Reconfig );
+	$Done++ if ( $Reconfig );
     }
+    while( ! $Done );
 
     # All done reading!
+    print STDERR "Killing top (PID = $TopPid )\n";
+    kill( "TERM", $TopPid ) if ( $TopPid >= 0 );
     close( TOP );
 }
 
 ###
 ### Process the collected data....
 ###
-sub ProcessData
+sub ProcessData( $ )
 {
     my $ProcessHash = shift;
 
@@ -466,7 +495,7 @@ sub ProcessData
     foreach $SortKey ( keys %SortOut )
     {
 	my $Count = $SortOut{$SortKey};
-	print STDERR "Sorting on $SortKey ($Count)\n" if ( $Debug );
+	print STDERR "Sorting on $SortKey ($Count)\n" if ( $Config{Debug} );
 
 	my @SortedProcs;
 	my $SortOk = 1;
@@ -552,7 +581,7 @@ sub ProcessData
     $Hawkeye->Publish( );
 }
 
-sub FixString
+sub FixString( $ )
 {
     my $String = shift;
 
