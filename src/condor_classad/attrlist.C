@@ -2450,7 +2450,10 @@ Assign(char const *variable,char const *value)
 	else {
 		buf += " = \"";
 		while(*value) {
-			size_t len = strcspn(value,"\"\\");
+			// NOTE: in old classads, we do not escape backslashes.
+			// There is a hacky provision for dealing with the case
+			// where a backslash comes at the end of the string.
+			size_t len = strcspn(value,"\"");
 
 			buf.sprintf_cat("%.*s",len,value);
 			value += len;
