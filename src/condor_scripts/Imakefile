@@ -35,7 +35,6 @@ static_copy_target(condor_compile,$(STATIC_DIR)/bin,condor_compile, \
 		EXECUTABLE_MODE)
 static_copy_target(ld,$(STATIC_DIR)/lib,ld,EXECUTABLE_MODE)
 static_link_target($(STATIC_DIR)/lib/ld,lib,real-ld)
-static_copy_target(condor_cleanckpts,$(STATIC_CONTRIB)/sbin,condor_cleanckpts,EXECUTABLE_MODE)
 #endif /* IS_CLIPPED */
 
 
