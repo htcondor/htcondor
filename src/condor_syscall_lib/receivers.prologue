@@ -10,7 +10,10 @@
 #include "condor_sys.h"
 #include "condor_jobqueue.h"
 #include "condor_fix_assert.h"
+
 #include <sys/types.h>
+#define MODE_T unsigned int	/* use 32 bits on all platforms */
+
 #include <sys/stat.h>
 #include "_condor_fix_resource.h"
 #include <sys/utsname.h>

@@ -3,15 +3,18 @@
 #endif
 
 #include "condor_common.h"
+#define MODE_T unsigned int	/* use 32 bits on all platforms */
+
 #include "condor_debug.h"
 #include <stdarg.h>
-#include <assert.h>
+#include "condor_fix_assert.h"
 #include "condor_syscall_mode.h"
 #include "condor_xdr.h"
 #include "condor_constants.h"
 #include "condor_sys.h"
 #include "condor_jobqueue.h"
 #include "xdr_lib.h"
+#include "condor_fdset.h"
 
 #if defined(ULTRIX43) || defined(OSF1)
 #	include <sys/param.h>
@@ -20,7 +23,7 @@
 #	include <sys/mount.h>
 #endif
 
-#if defined(OSF1)
+#if defined(OSF1) || defined(SUNOS41)
 #	include <sys/poll.h>
 #endif
 

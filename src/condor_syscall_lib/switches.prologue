@@ -16,13 +16,25 @@
 #include "condor_syscall_mode.h"
 #include "file_table_interf.h"
 #include <stdio.h>
-#include "unistd.h"
+
 #include <sys/types.h>
+#define MODE_T unsigned int /* use 32 bits on all platforms */
+
+#define umask _hide_umask
+#define mkdir _hide_mkdir
+#define chmod _hide_chmod
+
 #include <sys/stat.h>
+
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/socket.h>
 #include <sys/utsname.h>
+
+#if defined(SUNOS41)
+#	include <sys/poll.h>
+#	include <signal.h>
+#endif
 
 #if defined(OSF1)
 #	include <sys/poll.h>
@@ -49,11 +61,20 @@
 #	include <sys/mount.h>
 #endif
 
-#if defined(ULTRIX42) || defined(ULTRIX43) || defined(SUNOS41)
-	typedef int ssize_t;
-#endif
+#include "condor_fix_unistd.h"
 
 #if defined(SUNOS41) || defined(HPUX9)
 #	include <sys/vfs.h>		 /* for struct statfs */
 #endif
 
+#if defined(SUNOS41)
+#	define TRUE 1
+#	define FALSE 0
+#endif
+
+#undef umask
+#undef mkdir
+#undef chmod
+MODE_T	umask( MODE_T mask );
+int mkdir( const char *path, MODE_T mode );
+int chmod( const char *path, MODE_T mode);

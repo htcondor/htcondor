@@ -3,7 +3,7 @@
 	  {
 		char	*local;
 		char	*remote;
-		mode_t	mode;
+		MODE_T		mode;
 		int		loc_fd;
 		int		read_status = 0, write_status;
 		char	buf[ XDR_BLOCKSIZ ];
@@ -15,7 +15,7 @@
 
 		local = va_arg( ap, char *);
 		remote = va_arg( ap, char *);
-		mode = va_arg( ap, mode_t );
+		mode = va_arg( ap, MODE_T );
 
 			/* Do the local open */
 		if( (loc_fd = open(local,O_RDONLY)) < 0 ) {
@@ -26,7 +26,7 @@
 			/* Send over the file name, and mode */
 		xdr_syscall->x_op = XDR_ENCODE;
 		assert(xdr_int(xdr_syscall,&CurrentSysCall) );
-		assert( xdr_mode_t(xdr_syscall,&mode) );
+		assert( xdr_u_int(xdr_syscall,&mode) );
 		assert( xdr_string(xdr_syscall,&remote, _POSIX_PATH_MAX) );
 		assert( xdrrec_endofrecord(xdr_syscall,TRUE) );
 
