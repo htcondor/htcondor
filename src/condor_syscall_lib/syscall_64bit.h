@@ -11,7 +11,7 @@
 #if defined(HPUX)
 #	include "condor_hpux_64bit_types.h"
 #else 
-#if !defined(_CONDOR_OFF64_T)
+#if defined(Solaris26) && !defined(_CONDOR_OFF64_T)
     typedef long long off64_t;
 #endif
     struct stat64;
