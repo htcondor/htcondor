@@ -24,7 +24,10 @@
 #define CONFIG_H
 
 #include "condor_expressions.h"
+
+#if defined(__cplusplus)
 #include "condor_classad.h"
+#endif
 
 typedef struct bucket {
 	char	*name;
@@ -41,11 +44,12 @@ typedef struct bucket {
 
 #if defined(__cplusplus)
 extern "C" {
+	void config( ClassAd* classAd=NULL, int wantsQuiet=0 );
+	void config_host( ClassAd* classAd=NULL, char* host=NULL );
+	void config_fill_ad( ClassAd* );
 #endif
 
 #if defined(__STDC__) || defined(__cplusplus)
-	void config( ClassAd* classAd=NULL, int wantsQuiet=0 );
-	void config_host( ClassAd* classAd=NULL, char* host=NULL );
 	int	 config_from_server(char*, char*, CONTEXT*);
 	char * get_tilde();
 	char * param ( char *name );
@@ -56,7 +60,6 @@ extern "C" {
 	int param_in_pattern ( char *parameter, char *pattern);
 	void init_config ( void );
 	void clear_config ( void );
-	void config_fill_ad( ClassAd* );
 	void set_debug_flags( char * );
 	void config_insert( char*, char* );
 #else
