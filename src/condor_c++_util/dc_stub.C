@@ -23,6 +23,7 @@
 
 /* Dummy definition of ZZZ_dc_sinful to be included in Condor
    libraries where needed. */
+#include "condor_common.h"
 
 char* ZZZ_dc_sinful() { return 0; }
 
