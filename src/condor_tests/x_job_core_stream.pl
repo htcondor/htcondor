@@ -3,14 +3,13 @@
 my $target = $ARGV[0];
 my $count = $ARGV[1];
 
-sleep 1;
 if( $target eq "stderr" )
 {
 	while( $count > 0 )
 	{
 		if( ($count % 1000) == 0 )
 		{
-			sleep 1;
+			sleep 2;
 		}
 		print STDERR "$target\n";
 		$count -= 1;
@@ -22,7 +21,7 @@ elsif( $target eq "stdout" )
 	{
 		if( ($count % 1000) == 0 )
 		{
-			sleep 1;
+			sleep 2;
 		}
 		print STDOUT "$target\n";
 		$count -= 1;
@@ -34,7 +33,7 @@ else
 	{
 		if( ($count % 1000) == 0 )
 		{
-			sleep 1;
+			sleep 2;
 		}
 		print STDERR "$target\n";
 		$count -= 1;

@@ -5,20 +5,58 @@ $cmd = 'job_core_streamerr-false_van.cmd';
 $testname = 'Environment is preserved - vanilla U';
 
 
+#$execute = sub
+#{
+#	my %info = @_;
+#	my $name = $info{"error"};
+#	my $size1 = -s $name;
+#	print "Size 1 of $name is $size1\n";
+#	sleep 2;
+#	my $size2 = -s $name;
+#	print "Size 2 of $name is $size2\n";
+#	if( $size1 != $size2 )
+#	{
+#		print "Error size should be stable if not streaming\n";
+#		exit(1);
+#	}
+#};
+
 $execute = sub
 {
 	my %info = @_;
 	my $name = $info{"error"};
+	my $cluster = $info{"cluster"};
+	CondorTest::RegisterTimed($testname, $timed, 180);
 	my $size1 = -s $name;
+	#print "Size 1 of $name is $size1\n";
+	while($size1 == 0)
+	{
+		#print "Size 1 of $name is $size1\n";
+		$size1 = -s $name;
+	}
 	print "Size 1 of $name is $size1\n";
-	sleep 2;
+	sleep 4;
 	my $size2 = -s $name;
 	print "Size 2 of $name is $size2\n";
 	if( $size1 != $size2 )
 	{
-		print "Error size should be stable if not streaming\n";
-		exit(1);
+		die "Error size should be stable if not streaming\n";
 	}
+
+	print "OK remove the job!\n";
+	system("condor_rm $cluster");
+};
+
+$timed = sub
+{
+	die "Test should have eneded by now.... stuck!\n";
+};
+
+$aborted = sub 
+{
+	my %info = @_;
+	my $done;
+	print "Abort event expected as we clear job\n";
 };
 
 $ExitSuccess = sub {
@@ -28,6 +66,7 @@ $ExitSuccess = sub {
 
 # before the test let's throw some weird crap into the environment
 
+CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 CondorTest::RegisterExecute($testname, $execute);
 

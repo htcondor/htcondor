@@ -5,7 +5,7 @@ output = job_core_streamout_van.out
 error = job_core_streamout_van.err
 when_to_transfer_output = ON_EXIT_OR_EVICT
 stream_output = false
-arguments = stdout 80000
+arguments = stdout 10000
 getenv=false
 Notification = NEVER
 queue
