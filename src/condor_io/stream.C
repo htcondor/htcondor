@@ -1696,7 +1696,7 @@ Stream::rcv_int(
 
 bool Stream :: get_encryption()
 {
-    return (crypto_ != NULL);
+    return (crypto_ != 0);
 }
 
 bool Stream :: wrap(unsigned char* d_in,int l_in, 
