@@ -219,8 +219,10 @@ class RemoteResource : public Service {
 		*/
 	virtual void setExitReason( int reason );
 
-		/** Set this resource's jobAd */
-	void setJobAd( ClassAd *jA ) { this->jobAd = jA; };
+		/** Set this resource's jobAd, and initialize any relevent
+			local variables from the ad if the attributes are there.
+		*/
+	void setJobAd( ClassAd *jA );
 
 		/** Get this resource's jobAd */
 	ClassAd* getJobAd() { return this->jobAd; };

@@ -666,6 +666,37 @@ RemoteResource::bytesReceived()
 
 
 void
+RemoteResource::setJobAd( ClassAd *jA )
+{
+	this->jobAd = jA;
+
+		// now, see if anything we care about is defined in the ad.
+		// this prevents us (for example) from logging another
+		// ImageSizeEvent everytime we start running, even if the
+		// image size hasn't changed at all...
+
+	int int_value;
+	float float_value;
+
+	if( jA->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, float_value) ) {
+		remote_rusage.ru_stime.tv_sec = (int) float_value; 
+	}
+			
+	if( jA->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, float_value) ) {
+		remote_rusage.ru_utime.tv_sec = (int) float_value; 
+	}
+
+	if( jA->LookupInteger(ATTR_IMAGE_SIZE, int_value) ) {
+		image_size = int_value;
+	}
+			
+	if( jA->LookupInteger(ATTR_DISK_USAGE, int_value) ) {
+		disk_usage = int_value;
+	}
+}
+
+
+void
 RemoteResource::updateFromStarter( ClassAd* update_ad )
 {
 	int int_value;
