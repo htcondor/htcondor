@@ -41,7 +41,7 @@ int blankline ( char *str );
 char * gen_exec_name ( int cluster, int proc, int subproc );
 
 void lower_case ( register char *str );
-int hash ( register char *string, register int size );
+int config_hash ( register char *string, register int size );
 char * getline ( FILE *fp );
 
 int rotate_file(const char *new_filename, const char *old_filename);
@@ -94,7 +94,7 @@ int blankline ();
 char * gen_exec_name ();
 
 void lower_case ();
-int hash ();
+int config_hash ();
 char * getline ();
 
 
