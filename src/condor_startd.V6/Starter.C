@@ -243,7 +243,9 @@ Starter::killkids( int signo )
 bool
 Starter::reallykill( int signo, int type )
 {
+#ifndef WIN32
 	struct stat st;
+#endif
 	int 		ret = 0, sig = 0;
 	priv_state	priv;
 	char		signame[32];
