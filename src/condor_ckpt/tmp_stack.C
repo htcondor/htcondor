@@ -40,7 +40,8 @@ static jmp_buf Env;
 // machines. This is required so that double's can be pushed
 // on the stack without any alignment problems.
 
-const int	TmpStackSize = sizeof(char)*131072/sizeof(double);
+static const int KILO=1024;
+static const int TmpStackSize = sizeof(char)*512*KILO/sizeof(double);
 
 #ifdef COMPRESS_CKPT
 static double	*TmpStack;
