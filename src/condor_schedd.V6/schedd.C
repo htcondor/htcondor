@@ -3869,27 +3869,6 @@ Scheduler::child_exit(int pid, int status)
 					}
 				}
 				break;
-			case DPRINTF_ERROR:
-				dprintf( D_ALWAYS, 
-						 "ERROR: Shadow had fatal error writing to its log file.\n" );
-					// We don't want to break, we want to fall through 
-					// and treat this like a shadow exception for now.
-			case JOB_EXCEPTION:
-					// some exception happened in this job --  
-					// record that we had one.  This function will
-					// relinquish the match if we get too many
-					// exceptions 
-				if( !srec->removed ) {
-						/* See if it's an mpi job here... */
-					if ( (srec->match) && (srec->match->isMatchedMPI) ) {
-							/* I'm doing this so we don't leave Claimed/Idle
-							   nodes lying around all the time.  There 
-							   may be a better way to do this... */
-						nuke_mpi( srec );
-					}
-					HadException(srec->match);
-				}
-				break;
 			case JOB_SHADOW_USAGE:
 				EXCEPT("shadow exited with incorrect usage!\n");
 				break;
@@ -3911,6 +3890,41 @@ Scheduler::child_exit(int pid, int status)
 						 srec->job_id.cluster, srec->job_id.proc );
 				SetAttributeInt( srec->job_id.cluster, srec->job_id.proc, 
 								 ATTR_JOB_STATUS, HELD );
+				break;
+			case DPRINTF_ERROR:
+				dprintf( D_ALWAYS, 
+						 "ERROR: Shadow had fatal error writing to its log file.\n" );
+				// We don't want to break, we want to fall through 
+				// and treat this like a shadow exception for now.
+			case JOB_EXCEPTION:
+				if ( WEXITSTATUS(status) == JOB_EXCEPTION ){
+					dprintf( D_ALWAYS,
+						"ERROR: Shadow exited with job exception code!\n");
+				}
+				// We don't want to break, we want to fall through 
+				// and treat this like a shadow exception for now.
+			default:
+				/* the default case is now a shadow exception in case ANYTHING
+					goes wrong with the shadow exit status */
+				if ( (WEXITSTATUS(status) != DPRINTF_ERROR) &&
+					(WEXITSTATUS(status) != JOB_EXCEPTION) )
+				{
+					dprintf( D_ALWAYS,
+						"ERROR: Shadow exited with unknown value!\n");
+				}
+				// record that we had an exception.  This function will
+				// relinquish the match if we get too many
+				// exceptions 
+				if( !srec->removed ) {
+						/* See if it's an mpi job here... */
+					if ( (srec->match) && (srec->match->isMatchedMPI) ) {
+							/* I'm doing this so we don't leave Claimed/Idle
+							   nodes lying around all the time.  There 
+							   may be a better way to do this... */
+						nuke_mpi( srec );
+					}
+					HadException(srec->match);
+				}
 				break;
 			}
 	 	} else if( WIFSIGNALED(status) ) {
