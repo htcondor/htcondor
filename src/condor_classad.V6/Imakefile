@@ -1,0 +1,47 @@
+SRC_DIR = $(SRC_TREE)/condor_classad.V6
+
+C_PLUS_FLAGS = -Wall $(STD_C_PLUS_FLAGS) -fexternal-templates
+CFLAGS = -Wall $(STD_C_FLAGS)
+
+SRC = domain.C memman.C grammar.C operators.C attrrefs.C \
+		constants.C exprTree.C classad.C evalContext.C arguments.C  values.C \
+		fnCall.C functions.C instantiations.C source.C sink.C predefContexts.C \
+		exprList.C classadList.C
+		
+OBJ = lexer.o domain.o memman.o grammar.o operators.o attrrefs.o \
+		constants.o exprTree.o classad.o evalContext.o arguments.o values.o\
+		fnCall.o functions.o instantiations.o source.o sink.o predefContexts.o \
+		exprList.o classadList.o
+
+LIB =  ./libclassad.a ../condor_c++_util/cplus_lib.a \
+      ../condor_util_lib/util_lib.a ../condor_io/libcondor.a \
+      RpcLib SocketLib
+
+all_target(libclassad.a)
+
+library_target(libclassad.a,$(OBJ))
+c_plus_target (testlist, testlist.o, $(LIB))
+c_plus_target (testads, testads.o, $(LIB))
+
+grammar.C: grammar.y
+	bison -d -v -o intermediate grammar.y
+	cat intermediate | awk -f ansify_yyparse.awk > grammar.C
+
+lexer.o: lexer.h grammar.C lexer.C
+	$(CPlusPlus) $(C_PLUS_FLAGS) -c lexer.C
+
+instantiations.o: grammar.C
+	$(CPlusPlus) $(C_PLUS_FLAGS) -c instantiations.C
+
+source.o: grammar.C
+	$(CPlusPlus) $(C_PLUS_FLAGS) -c source.C
+
+domain.o: grammar.C
+	$(CPlusPlus) $(C_PLUS_FLAGS) -c domain.C
+
+clean::
+	rm -f *.o intermediate* grammar.C
+
+depend_target($(SRC))
+
+release:
