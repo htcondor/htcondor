@@ -6,7 +6,8 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LIB = $(STD_LIBS) 
 
 OBJ = network2.o gen_lib.o fileinfo2.o fileindex2.o imds2.o xferstat2.o \
-	signal2.o alarm2.o server2.o xfer_summary.o replication.o
+	signal2.o alarm2.o server2.o xfer_summary.o replication.o \
+    ../condor_classad.V6/instantiations.o
 
 SERVER_API_OBJ = network2.o server_interface.o
 
