@@ -266,6 +266,17 @@ int Stream::code(
 	return FALSE;	/* will never get here	*/
 }
 
+
+int Stream::code_bytes_bool(void *p, int l)
+{
+	if( code_bytes( p, l ) < 0 ) {
+		return FALSE;
+	} else {
+		return TRUE;
+	}
+}
+
+
 int Stream::code_bytes(void *p, int l)
 {
 	switch(_coding) {
