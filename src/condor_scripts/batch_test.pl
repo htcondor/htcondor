@@ -195,9 +195,9 @@ foreach $compiler (@compilers)
 
         if ($isXML){
           print XML "<test_result>\n<name>$compiler.$test_name</name>\n<description></description>\n";
-          printf( "%-18s ", $test_name );
+          printf( "%-40s ", $test_name );
         } else {
-          printf( "%-18s ", $test_name );
+          printf( "%-40s ", $test_name );
         }
 
         if( WIFEXITED( $status ) && WEXITSTATUS( $status ) == 0 )
