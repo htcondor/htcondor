@@ -1,3 +1,7 @@
+01/14/04 V6_7-pre_merge-V6_7-core-merge-1
+   The state of the V6_7-branch before merging in the V6_7-core-branch
+   as tagged at V6_7-core-merge-1.
+
 01/09/04 V6_7-classad_history-branch
    A new branch off of V6_7-branch for Nandita's work to save and
    query historical classad information, particularly startd ads.
