@@ -75,19 +75,19 @@ public:
 	char	*get_arch();
 	char	*get_opsys();
 	char    *get_requirements();
-	char    *get_date() {};
-	time_t  get_time() {};
-	char    *get_cmd() {};
+	char    *get_date() {return (char *) NULL;};
+	time_t  get_time() {return (time_t) 0;};
+	char    *get_cmd() {return (char *) NULL;};
 	int		get_cluster_id();
 	int		get_proc_id();
 	float	get_local_cpu();
 	float	get_remote_cpu();
 
-	int     get_procId() {};
-	float   get_procCpu() {};
-	char    get_procStatus() {};
-	float   get_procSize() {};
-	char**  get_proc_long_info() {};
+	int     get_procId() {return 0;};
+	float   get_procCpu() {return 0.0;};
+	char    get_procStatus() {return '\0';};
+	float   get_procSize() {return 0.0;};
+	char**  get_proc_long_info() {return (char **) NULL;};
 	
 	// Modification functions
 	void	set_prio( int prio );
