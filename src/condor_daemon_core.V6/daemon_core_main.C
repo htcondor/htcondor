@@ -102,6 +102,7 @@ DC_Exit( int status )
 
 		// Now, delete the daemonCore object, since we allocated it. 
 	delete daemonCore;
+	daemonCore = NULL;
 
 		// Finally, exit with the status we were given.
 	exit( status );
