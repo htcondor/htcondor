@@ -3,8 +3,8 @@
 
 #define RpcLib /**/
 #define MldLib /**/
-#define KernLib /usr/lib/libelf.a /* ..dhaval 6/28 */
-#define MallocLib /lib/libkvm.a
+#define KernLib /usr/lib/libkvm.so /usr/lib/libelf.a
+#define MallocLib /**/
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC  
 #define SocketLib -lnsl -lsocket  /* ..dhaval 6/28 */
