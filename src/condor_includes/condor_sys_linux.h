@@ -25,6 +25,10 @@
 
 #define _BSD_SOURCE
 
+#if defined(GLIBC)
+#define _GNU_SOURCE
+#endif
+
 #include <sys/types.h>
 typedef long rlim_t;
 #define HAS_U_TYPES
@@ -57,10 +61,12 @@ END_C_DECLS
    we've got hide since we've got our own. */
 #if defined(GLIBC)
 #	define dprintf _hide_dprintf
+#	define getline _hide_getline
 #endif
 #include <stdio.h>
 #if defined(GLIBC)
 #	undef dprintf
+#	undef getline
 #endif
 
 #define SignalHandler _hide_SignalHandler
