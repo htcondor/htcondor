@@ -162,6 +162,7 @@ print STDERR "My pid = $$\n";
 # Global state variables
 my $Reconfig = 0;
 my $AllDone = 0;
+my $AlarmPending = 0;
 my $TopPid = -1;
 my @TopHeader;
 
@@ -194,6 +195,21 @@ $SIG{CHLD} = sub {
 	print STDERR "\"top\" process $Pid died\n";
     }
     $TopPid = -1;
+};
+$SIG{ALRM} = sub {
+    if ( $TopPid > 0 ) {
+	print STDERR "Got SIGALRM; killing top (PID = $TopPid)\n";
+	kill( "TERM", $TopPid ) || print STDERR "Can't kill $TopPid\n";
+    } else {
+	print STDERR "Got SIGALRM (no top to kill)\n";
+    }
+    if ( $AlarmPending ) {
+	print STDERR "Previous alarm pending; bailing out\n";
+	exit 1;
+    }
+    alarm( $Config{TopPeriod} * 4 );
+    $AllDone++;
+    $AlarmPending++;
 };
 
 # Initialize & Run
@@ -492,6 +508,10 @@ sub RunIt( )
     # Loop til top dies..
     while( ! $Done )
     {
+	# Fire off an alarm if we get hung up...
+	$AlarmPending = 0;
+	alarm( $Config{TopPeriod} * 4 );
+
 	# Throw away the first line
 	$_ = <TOP> if ( $SkipFirst );
 	last if ( eof TOP );
