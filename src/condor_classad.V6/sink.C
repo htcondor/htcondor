@@ -33,12 +33,15 @@ ClassAdUnParser::
 ClassAdUnParser()
 {
 	oldClassAd = false;
+	xmlUnparse = false;
+	return;
 }
 
 
 ClassAdUnParser::
 ~ClassAdUnParser()
 {
+	return;
 }
 
 
@@ -82,6 +85,15 @@ char *ClassAdUnParser::opString[] =
 };
 
 void ClassAdUnParser::
+setXMLUnparse(bool doXMLUnparse) 
+{
+	xmlUnparse = doXMLUnparse;
+	return;
+}
+
+
+
+void ClassAdUnParser::
 Unparse( string &buffer, const Value &val )
 {
 	char	tempBuf[512];
@@ -114,7 +126,16 @@ Unparse( string &buffer, const Value &val )
 							sprintf( tempBuf, "\\%x", (int)*itr );
 							buffer += tempBuf;
 						} else {
-							buffer += *itr;
+							if (!xmlUnparse) {
+								buffer += *itr;
+							} else {
+								switch (*itr) {
+								case '&': buffer += "&amp;"; break;
+								case '<': buffer += "&lt;";  break;
+								case '>': buffer += "&gt;";  break;
+								default:  buffer += *itr;    break;
+								}
+							}
 						}
 				}
 			}
@@ -387,7 +408,22 @@ UnparseAux(string &buffer, Operation::OpKind op, ExprTree *t1, ExprTree *t2,
 
 		// all others are binary ops
 	Unparse( buffer, t1 );
-	buffer += opString[op];
+	if (!xmlUnparse) {
+		buffer += opString[op];
+	} else {
+		char *opstring = opString[op];
+		int  length    = strlen(opstring);
+		for(int i = 0; i < length; i++) {
+			char c = *opstring;
+			switch (c) {
+			case '&':  buffer += "&amp;";  break;
+			case '<':  buffer += "&lt;";   break;
+			case '>':  buffer += "&gt;";   break;
+			default: buffer += c; break;
+			}
+			opstring++;
+		}
+	}
 	Unparse( buffer, t2 );
 }
 

@@ -94,6 +94,7 @@ Unparse(
 		case ExprTree::FN_CALL_NODE: {
 			ClassAdUnParser unparser;
 			add_tag(buffer, XMLLexer::tagID_Expr, XMLLexer::tagType_Start);
+			unparser.setXMLUnparse(true);
 			unparser.Unparse(buffer, tree);
 			add_tag(buffer, XMLLexer::tagID_Expr, XMLLexer::tagType_End);
 			break;

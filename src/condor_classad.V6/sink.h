@@ -41,6 +41,10 @@ class ClassAdUnParser
 		/// Destructor
 		virtual ~ClassAdUnParser( );
 
+		// Function to be called by the ClassAdXMLUnParser with a true
+		// flag before doing an XMLUnparse
+		void setXMLUnparse(bool doXMLUnparse);
+
 		/** Unparse a value 
 		 * 	@param buffer The string to unparse to
 		 * 	@param val The value to unparse
@@ -75,6 +79,7 @@ class ClassAdUnParser
 
  protected:
 		bool oldClassAd;
+		bool xmlUnparse;
 };
 
 
