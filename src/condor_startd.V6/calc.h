@@ -12,13 +12,9 @@ extern "C" {
 	int dhry_mips();
 	int clinpack_kflops();
 }
-void calc_idle_time(int &, int &);
-
-int tty_idle_time(char*);
-#if !defined(OSF1)
-int tty_pty_idle_time();
-#else
-time_t tty_pty_idle_time();
-#endif
+void calc_idle_time(time_t &, time_t &);
+time_t utmp_pty_idle_time( time_t );
+time_t all_pty_idle_time( time_t );
+time_t dev_idle_time( char*, time_t );
 
 #endif _CALC_H
