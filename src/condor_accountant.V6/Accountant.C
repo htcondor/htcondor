@@ -4,6 +4,7 @@
 #endif
 
 #include <math.h>
+#include <iomanip.h>
 
 #include "condor_accountant.h"
 #include "condor_debug.h"
@@ -23,10 +24,12 @@ Accountant::Accountant(int MaxCustomers, int MaxResources)
   LastUpdateTime=Time::Now();
   MinPriority=0.5;
   Epsilon=0.001;
-  PriorityFileName=MatchFileName=param("SPOOL");
-  PriorityFileName+="/Priority.log";
-  MatchFileName+="/Match.log";
+  LogFileName=param("SPOOL");
+  LogFileName+="/p/condor/workspaces/adiel/local/spool";
+  LogFileName+="/Accountant.log";
   LoadState();
+  LogEnabled=1;
+  UpdatePriorities();
 }
 
 //------------------------------------------------------------------
@@ -48,6 +51,8 @@ double Accountant::GetPriority(const MyString& CustomerName)
 
 void Accountant::SetPriority(const MyString& CustomerName, double Priority) 
 {
+  AppendLogEntry("SetPriority",CustomerName,"*",Priority);
+
   CustomerRecord* Customer;
   if (Customers.lookup(CustomerName,Customer)==-1) {
     if (Priority==0) return;
@@ -65,10 +70,7 @@ void Accountant::SetPriority(const MyString& CustomerName, double Priority)
 
 void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd) 
 {
-  Time T=Time::Now();
-  MyString ResourceName=GetResourceName(ResourceAd);
-  AddMatch(CustomerName,ResourceName,T);
-  LogAction(1,CustomerName,ResourceName,T);
+  AddMatch(CustomerName,GetResourceName(ResourceAd),Time::Now());
 }
 
 void Accountant::AddMatch(const MyString& CustomerName, const MyString& ResourceName, const Time& T) 
@@ -92,7 +94,10 @@ void Accountant::AddMatch(const MyString& CustomerName, const MyString& Resource
   Resource->StartTime=T;
 
   // add negative "uncharged" time if match starts after last update
-  if (T>LastUpdateTime) Customer->UnchargedTime-=Time::DiffTime(LastUpdateTime, T);
+  if (T>LastUpdateTime) Customer->UnchargedTime-=T-LastUpdateTime;
+
+  // add entry to log
+  AppendLogEntry("AddMatch",CustomerName,ResourceName,(double) T);
 }
 
 //------------------------------------------------------------------
@@ -101,9 +106,7 @@ void Accountant::AddMatch(const MyString& CustomerName, const MyString& Resource
 
 void Accountant::RemoveMatch(const MyString& ResourceName)
 {
-  Time T=Time::Now();
-  RemoveMatch(ResourceName,T);
-  LogAction(0,"*",ResourceName,T);
+  RemoveMatch(ResourceName,Time::Now());
 }
 
 void Accountant::RemoveMatch(const MyString& ResourceName, const Time& T)
@@ -112,6 +115,9 @@ void Accountant::RemoveMatch(const MyString& ResourceName, const Time& T)
   if (Resources.lookup(ResourceName,Resource)==-1) return;
   Resources.remove(ResourceName);
   MyString CustomerName=Resource->CustomerName;
+
+  // add entry to log
+  AppendLogEntry("RemoveMatch",CustomerName,ResourceName,(double) T);
   
   Time StartTime=Resource->StartTime;
   delete Resource;
@@ -121,7 +127,7 @@ void Accountant::RemoveMatch(const MyString& ResourceName, const Time& T)
   Customer->ResourceNames.Remove(ResourceName);
 
   if (StartTime<LastUpdateTime) StartTime=LastUpdateTime;
-  if (T>LastUpdateTime) Customer->UnchargedTime+=Time::DiffTime(StartTime, T);
+  if (T>LastUpdateTime) Customer->UnchargedTime+=T-StartTime;
 }
 
 //------------------------------------------------------------------
@@ -131,10 +137,14 @@ void Accountant::RemoveMatch(const MyString& ResourceName, const Time& T)
 
 void Accountant::UpdatePriorities() 
 {
-  Time CurUpdateTime=Time::Now();
-  double TimePassed=Time::DiffTime(LastUpdateTime,CurUpdateTime);
+  UpdatePriorities(Time::Now());
+}
+
+void Accountant::UpdatePriorities(const Time& T) 
+{
+  double TimePassed=T-LastUpdateTime;
   double AgingFactor=pow(0.5,TimePassed/HalfLifePeriod);
-  LastUpdateTime=CurUpdateTime;
+  LastUpdateTime=T;
 
   dprintf(D_ALWAYS,"Updating Priorities: AgingFactor=%8.3f , TimePassed=%5.3f\n",AgingFactor,TimePassed);
 
@@ -161,6 +171,8 @@ void Accountant::UpdatePriorities()
       Customers.remove(CustomerName);
     }
   }
+
+  SaveState();
 }
 
 //------------------------------------------------------------------
@@ -178,30 +190,22 @@ void Accountant::CheckMatches(ClassAdList& ResourceList) {
 }
 
 //------------------------------------------------------------------
-// Write Match Log Entry
-//------------------------------------------------------------------
-
-void Accountant::WriteLogEntry(ofstream& os, int AddMatch, const MyString& CustomerName, const MyString& ResourceName, const Time& T)
-{
-  os << (AddMatch ? "A" : "R");
-  os << " " << CustomerName << " " << ResourceName << " " << T << endl; 
-}
-
-//------------------------------------------------------------------
 // Append action to matches log file
 //------------------------------------------------------------------
 
-void Accountant::LogAction(int AddMatch, const MyString& CustomerName, const MyString& ResourceName, const Time& T)
+void Accountant::AppendLogEntry(const MyString& Action, const MyString& CustomerName, const MyString& ResourceName, double d)
 {
-  ofstream MatchFile(MatchFileName,ios::app);
-  if (!MatchFile) {
-    dprintf(D_ALWAYS, "ERROR in Accountant::LogMatchAction - failed to open match file %s\n",(const char*) MatchFileName);
+  if (!LogEnabled) return;
+
+  ofstream LogFile(LogFileName,ios::app);
+  if (!LogFile) {
+    dprintf(D_ALWAYS, "ERROR in Accountant::AppendLogEntry - failed to open match file %s\n",LogFileName.Value());
     return;
   }
-  WriteLogEntry(MatchFile, AddMatch, CustomerName, ResourceName, T); 
-  int FilePos=MatchFile.tellp();
-  MatchFile.close(); 
-  if (FilePos>=64000) SaveState();
+  LogFile << setprecision(3);
+  LogFile.setf(ios::fixed);
+  LogFile << Action << " " << CustomerName << " " << ResourceName << " " << d << endl;
+  LogFile.close(); 
 }
 
 //------------------------------------------------------------------
@@ -213,32 +217,28 @@ void Accountant::SaveState()
   dprintf(D_FULLDEBUG,"Saving State\n");
   MyString CustomerName, ResourceName;
 
-  ofstream PriorityFile(PriorityFileName);
-  if (!PriorityFile) {
-    dprintf(D_ALWAYS, "ERROR in Accountant::SaveState - failed to open priorities file %s\n",(const char*) PriorityFileName);
+  ofstream LogFile(LogFileName);
+  if (!LogFile) {
+    dprintf(D_ALWAYS, "ERROR in Accountant::SaveState - failed to open log file %s\n",LogFileName.Value());
     return;
   }
-  PriorityFile << LastUpdateTime << endl;
+  LogFile << setprecision(3);
+  LogFile.setf(ios::fixed);
+  LogFile << LastUpdateTime << endl;
 
   CustomerRecord* Customer;
   Customers.startIterations();
   while (Customers.iterate(CustomerName, Customer)) {
-    PriorityFile << CustomerName << " " << Customer->Priority << endl;
+    LogFile << "SetPriority "<< CustomerName << " * " << Customer->Priority << endl;
   }
-  PriorityFile.close();
   
-  ofstream MatchFile(MatchFileName);
-  if (!MatchFile) {
-    dprintf(D_ALWAYS, "ERROR in Accountant::SaveState - failed to open match file %s\n",(const char*) MatchFileName);
-    return;
-  }
-
   ResourceRecord* Resource;
   Resources.startIterations();
   while (Resources.iterate(ResourceName, Resource)) {
-    WriteLogEntry(MatchFile,1,Resource->CustomerName,ResourceName,Resource->StartTime);
+    LogFile << "AddMatch " << Resource->CustomerName << " " << ResourceName;
+	LogFile << " " << ((double) Resource->StartTime) << endl;
   }
-  MatchFile.close(); 
+  LogFile.close(); 
   
   return;
 }
@@ -250,55 +250,30 @@ void Accountant::SaveState()
 void Accountant::LoadState()
 {
   dprintf(D_FULLDEBUG,"Loading State\n");
-  MyString CustomerName, ResourceName;
-  MyString S;
-  double Priority;
-  Time T;
+  MyString Action, CustomerName, ResourceName;
+  double d;
 
-  // Clear all match & priority information
-  CustomerRecord* Customer;
-  Customers.startIterations();
-  while (Customers.iterate(CustomerName, Customer)) delete Customer;
-  Customers.clear();
-  ResourceRecord* Resource;
-  Resources.startIterations();
-  while (Resources.iterate(ResourceName, Resource)) delete Resource;
-  Resources.clear();
+  LogEnabled=0;  // disable logging while reading the log file
 
-  // Open priority log file
-  ifstream PriorityFile(PriorityFileName);
-  if (!PriorityFile) {
-    dprintf(D_ALWAYS, "ERROR in Accountant::LoadState - failed to open priorities file %s\n",(const char*) PriorityFileName);
+  // Open log file
+  ifstream LogFile(LogFileName);
+  if (!LogFile) {
+    dprintf(D_ALWAYS, "Accountant::LoadState - can't open Log file %s - starting with no previous match information\n",LogFileName.Value());
     return;
   }
 
-  // Read priority log file
-  PriorityFile >> LastUpdateTime;
+  // Read log file
+  LogFile >> d;
+  LastUpdateTime=Time(d);
+
   while(1) {
-    PriorityFile >> CustomerName >> Priority;
-    if (PriorityFile.eof()) break;
-    SetPriority(CustomerName, Priority);
+    LogFile >> Action >> CustomerName >> ResourceName >> d;
+    if (LogFile.eof()) break;
+    if (Action=="SetPriority") SetPriority(CustomerName,d);
+	else if (Action=="AddMatch") AddMatch(CustomerName,ResourceName,Time(d));
+	else if (Action=="RemoveMatch") RemoveMatch(ResourceName,Time(d));	
   }
-  PriorityFile.close();
-
-  // Open match log file
-  ifstream MatchFile(MatchFileName);
-  if (!MatchFileName) {
-    dprintf(D_ALWAYS, "ERROR in Accountant::LoadState - failed to open match file %s\n",(const char*) MatchFileName);
-    return;
-  }
-
-  // Read match log file
-  while(1) {
-    MatchFile >> S >> CustomerName >> ResourceName >> T;
-    if (MatchFile.eof()) break;
-    if (S==MyString("A")) AddMatch(CustomerName,ResourceName,T);
-    else RemoveMatch(ResourceName);
-  }
-  MatchFile.close();
-
-  UpdatePriorities();
-
+  LogFile.close();
   return;
 }
 

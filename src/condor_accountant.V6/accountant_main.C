@@ -34,7 +34,7 @@ int main_init(int argc, char* argv[])
   Accountant accountant;
   
   ClassAd* AccountantClassAd=new ClassAd();
-  config(AccountantClassAd);
+  // config(AccountantClassAd);
 
 #if 1
 
@@ -50,13 +50,13 @@ int main_init(int argc, char* argv[])
   ClassAd* Ad6=new ClassAd("Name = \"6\",StartdIpAddr = \"fred\"",',');
 
   accountant.AddMatch("Arieh",Ad1);
-  accountant.AddMatch("Arieh",Ad2);
+  accountant.AddMatch("Yuval",Ad2);
   accountant.AddMatch("Arieh",Ad3);
   accountant.AddMatch("Shlomo",Ad4);
   accountant.AddMatch("Yuval",Ad5);
   accountant.AddMatch("Yuval",Ad6);
 
-  accountant.UpdatePriorities();
+  // accountant.UpdatePriorities();
 
   // accountant.SetPriority("Arieh",3);
   // accountant.SetPriority("Shlomo",2);
@@ -93,3 +93,6 @@ int main_shutdown_graceful()
 {
   return TRUE;
 }
+
+int main(int argc, char* argv[]) { return main_init(argc, argv); }
+
