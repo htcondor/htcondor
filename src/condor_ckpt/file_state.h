@@ -132,6 +132,9 @@ public:
 	/** Write out any buffered data */
 	void	flush();
 
+	/** Report all cached I/O summaries */
+	void	report_all();
+
 	/** If flush mode is set to 1, all writes are immediately flushed */
 	void	set_flush_mode( int on_off );
 
@@ -230,7 +233,7 @@ public:
 private:
 
 	int	resume( int fd );
-	int	install_special( int real_fd );
+	int	install_special( int real_fd, char *kind );
 	int	find_empty();
 	int	count_file_uses( CondorFile *f );
 	int	count_pointer_uses( CondorFilePointer *f );
@@ -255,6 +258,7 @@ private:
 	int	got_buffer_info;
 	int	flush_mode;
 	int	aggravate_mode;
+	int	info_count;
 };
 
 
