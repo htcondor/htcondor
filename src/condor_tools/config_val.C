@@ -56,7 +56,6 @@ daemonType dt = MASTER;
 // stuff to stderr, which is where we normally put our error
 // messages.  To enable config_val.test to produce easily readable
 // output, even with pure-tools, we just write everything to stdout.  
-#undef PURE_DEBUG
 #if defined( PURE_DEBUG ) 
 #	define stderr stdout
 #endif
