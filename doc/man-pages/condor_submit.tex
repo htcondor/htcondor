@@ -69,19 +69,27 @@ must be a compiled \File{.class} file.
 \item[input = $<$pathname$>$] Condor assumes that its jobs are
 long-running, and that the user will not wait at the terminal for their
 completion. Because of this, the standard files which normally access
-the terminal, (stdin, stdout, and stderr), must refer to files. Thus,
+the terminal, (\File{stdin}, \File{stdout}, and \File{stderr}),
+must refer to files. Thus,
 the filename specified with \Opt{input} should contain any keyboard
-input the program requires (i.e. this file becomes stdin). If not
-specified, the default value of /dev/null is used. 
+input the program requires (that is, this file becomes \File{stdin}).
+If not specified, the default value
+of \File{/dev/null} is used for submission to a Unix machine.
+If not specified, input is ignored
+for submission to an NT machine.
 
 %%%%%%%%%%%%%%%%%%%
 %% output
 %%%%%%%%%%%%%%%%%%%
 
 \item[output = $<$pathname$>$] The \Opt{output} filename will capture
-any information the program would normally write to the screen (i.e.
-this file becomes stdout). If not specified, the default value of
-/dev/null is used. More than one job should not use the same output
+any information the program would normally write to the screen
+(that is, this file becomes \File{stdout}).
+If not specified, the default value of
+\File{/dev/null} is used for submission to a Unix machine.
+If not specified, output is ignored
+for submission to an NT machine.
+More than one job should not use the same output
 file, since this will cause one job to overwrite the output of
 another.
 
@@ -90,9 +98,13 @@ another.
 %%%%%%%%%%%%%%%%%%%
 
 \item[error = $<$pathname$>$] The \Opt{error} filename will capture any
-error messages the program would normally write to the screen (i.e. this
-file becomes stderr). If not specified, the default value of /dev/null
-is used. More than one job should not use the same error file, since
+error messages the program would normally write to the screen
+(that is, this file becomes \File{stderr}).
+If not specified, the default value of
+\File{/dev/null} is used for submission to a Unix machine.
+If not specified, error messages are ignored
+for submission to an NT machine.
+More than one job should not use the same error file, since
 this will cause one job to overwrite the errors of another.
 
 %%%%%%%%%%%%%%%%%%%
@@ -130,11 +142,11 @@ that Condor picks a machine with enough local disk space for the job,
 add to the \Opt{Requirements}
 expression in the submit description file such that it includes
 the \AdAttr{Disk} attribute.
-A \Opt{requirements} example of that specifies only the \AdAttr{Disk} attribute:
+A \Opt{requirements} example that specifies only the \AdAttr{Disk} attribute:
 \begin{verbatim}
         # The machine which runs the job must have more than
-	# 10Mbytes of free disk space.  The "Disk" attribute
-        # is expressed in kilobytes; 10 Mbytes is 10000 kbytes.
+	# 10 Mbytes of free disk space.  The Disk attribute
+        # is expressed in kilobytes; 10 Mbytes is 10000 Kbytes.
         requirements = Disk > 10000
 \end{verbatim}
 
@@ -158,10 +170,10 @@ This is usually the desired behavior.
 Explicitly listing output files is typically only done when the job creates
 many files, and the user wants to keep a subset of
 those files. 
-\Warn Do not specify \Opt{transfer\_output\_file} in the
+\Warn Do not specify \Opt{transfer\_output\_files} in the
 submit description file unless there is a really good reason -- it is
 best to let Condor figure things out by itself based upon what
-the job.
+the job produces.
 
 %%%%%%%%%%%%%%%%%%%
 %% transfer_files
@@ -697,28 +709,28 @@ access specifier, \verb@local:@ or \verb@remote:@.  If left unspecified,
 the default access specifier is \verb@remote:@.  Multiple remaps can be 
 specified by separating each with a semicolon.
 
-This option only applies to standard-universe jobs.
+This option only applies to standard universe jobs.
 
 If you wish to remap file names that contain equals signs or semicolons,
 these special characters may be escaped with a backslash.
 
-This option only applies to standard-universe jobs.
-
 \begin{description}
 \item[Example One:]
-Suppose that your job reads a file named \verb@dataset.1@.  To instruct Condor
-to force your job to read \verb@other.dataset@ instead, 
+Suppose that your job reads a file named \File{dataset.1}.
+To instruct Condor
+to force your job to read \File{other.dataset} instead, 
 add this to the submit file:
 \begin{verbatim}
 file_remaps = "dataset.1=other.dataset"
 \end{verbatim}
 \item[Example Two:]
 Suppose that your run many jobs which all read in the same large file,
-called \verb@very.big@.  If this file can be found in the same place on
+called \File{very.big}.
+If this file can be found in the same place on
 a local disk in every machine in the pool,
-(say \verb@/bigdisk/bigfile@,) you can
-instruct Condor of this fact by remapping \verb@very.big@ to
-\verb@/bigdisk/bigfile@ and specifying that the file is to be read locally,
+(say \File{/bigdisk/bigfile},) you can
+instruct Condor of this fact by remapping \File{very.big} to
+\File{/bigdisk/bigfile} and specifying that the file is to be read locally,
 which will be much faster than reading over the network.
 \begin{verbatim}
 file_remaps = "very.big = local:/bigdisk/bigfile"
@@ -745,8 +757,8 @@ The default settings should produce reasonable results for most programs.
 These options only apply to standard-universe jobs.
 
 If needed, you may set the buffer controls individually for each file using
-the buffer\_files option. For example, to set the buffer size to 1MB and
-the block size to 256KB for the file 'input.data', use this command:
+the buffer\_files option. For example, to set the buffer size to 1 Mbyte and
+the block size to 256 KBytes for the file \File{input.data}, use this command:
 
 \begin{verbatim}
 buffer_files = "input.data=(1000000,256000)"
@@ -761,22 +773,23 @@ buffer_block_size = 256000
 \end{verbatim}
 
 If you do not set these, Condor will use the values given by these
-two config file macros:
+two configuration file macros:
 
 \begin{verbatim}
 DEFAULT_IO_BUFFER_SIZE = 1000000
 DEFAULT_IO_BUFFER_BLOCK_SIZE = 256000
 \end{verbatim}
 
-Finally, if no other settings are present, Condor will use a buffer of 512KB
-and a block size of 32KB.
+Finally, if no other settings are present, Condor will use
+a buffer of 512 Kbytes
+and a block size of 32 Kbytes.
 
 %%%%%%%%%%%%%%%%%%%
 %% rendezvousdir
 %%%%%%%%%%%%%%%%%%%
 
 \item[rendezvousdir = $<$directory-path$>$] Used to specify the 
-shared-filesystem directory to be used for filesystem authentication
+shared file system directory to be used for file system authentication
 when submitting to a remote scheduler.  Should be a path to a preexisting 
 directory.  
 
@@ -786,7 +799,8 @@ directory.
 
 \item[x509directory = $<$directory-path$>$] Used to specify the directory 
 which contains the certificate, private key, and trusted certificate directory
-for GSS authentication. If this attribute is set, the environment variables 
+for GSS authentication.
+If this attribute is set, the environment variables 
 X509\_USER\_KEY, X509\_USER\_CERT, and X509\_CERT\_DIR are exported with 
 default values. See section~\ref{sec:X509-Authentication} for more info.
 
@@ -796,11 +810,15 @@ default values. See section~\ref{sec:X509-Authentication} for more info.
 
 \item[x509userproxy = $<$full-pathname$>$] Used to override the default
 pathname for X509 user certificates. The default location for X509 proxies
-is the /tmp directory, which is generally a local filesystem. Setting
-this value would allow Condor to access the proxy in a shared filesystem
-(e.g., AFS). Condor will use the proxy specified in the submit file
-first. If nothing is specified in the submit file, it will use the
-environment variable X509\_USER\_CERT. If that variable is not present,
+is the \File{/tmp} directory,
+which is generally a local file system.
+Setting
+this value would allow Condor to access the proxy in a shared file system
+(for example, AFS).
+Condor will use the proxy specified in the submit description file first.
+If nothing is specified in the submit description file,
+it will use the environment variable X509\_USER\_CERT.
+If that variable is not present,
 it will search in the default location. See 
 section~\ref{sec:X509-Authentication} for more info.
 
@@ -811,14 +829,14 @@ section~\ref{sec:X509-Authentication} for more info.
 \item[globusscheduler = $<$scheduler-name$>$] Used to specify the 
 Globus resource to which the job should be submitted. More than one scheduler
 can be submitted to, simply place a \Arg{queue} command after each instance
-of globusscheduler. Each instance should be a valid Globus scheduler, using
+of \Opt{globusscheduler}.
+Each instance should be a valid Globus scheduler, using
 either the full Globus contact string or the host/scheduler format shown below:
 \begin{description}
 \item[Example:]
 To submit to the LSF scheduler of the Globus gatekeeper on lego at 
 Boston University:
 \begin{verbatim}
-...
 GlobusScheduler = lego.bu.edu/jobmanager-lsf
 queue
 \end{verbatim}
@@ -829,16 +847,19 @@ queue
 %%%%%%%%%%%%%%%%%%%
 
 \item[globusrsl = $<$RSL-string$>$] Used to provide any additional Globus RSL
-string attributes which are not covered by regular submit file parameters.
+string attributes which are not covered by regular submit description
+file parameters.
 
 %%%%%%%%%%%%%%%%%%%
 %% Transfer_Executable
 %%%%%%%%%%%%%%%%%%%
 
 \item[transfer\_executable = $<$True \Bar\ False$>$] If \Opt{transfer\_executable} is set to
-\Arg{false}, then Condor look for the executable on the remote machine, and
-not transfer it over. This is useful if you have already pre-staged your
-executable, and wish to have Condor behave more like rsh. Defaults to \Arg{True}.
+\Arg{false}, then Condors look for the executable on the remote machine, and
+does not transfer the executable over.
+This is useful if you have already pre-staged your
+executable and wish to have Condor behave more like rsh.
+Defaults to \Arg{True}.
 This option is only used in the Globus universe.
 
 %%%%%%%%%%%%%%%%%%%
@@ -846,7 +867,7 @@ This option is only used in the Globus universe.
 %%%%%%%%%%%%%%%%%%%
 
 \item[+$<$attribute$>$ = $<$value$>$] A line which begins with a '+'
-(plus) character instructs \Condor{submit} to simply insert the
+(plus) character instructs \Condor{submit} to insert the
 following \Arg{attribute} into the job ClasssAd with the given 
 \Arg{value}. 
 
@@ -865,11 +886,13 @@ the Condor queue. If desired, new \Opt{input}, \Opt{output},
 \Opt{error}, \Opt{initialdir}, \Opt{arguments}, \Opt{nice\_user},
 \Opt{priority}, \Opt{kill\_sig}, \Opt{coresize}, or \Opt{image\_size}
 commands may be issued between \Opt{queue} commands. This is very handy
-when submitting multiple runs into one cluster with one submit file; for
-example, by issuing an \Opt{initialdir} between each \Opt{queue}
-command, each run can work in its own subdirectory. The optional
+when submitting multiple runs into one cluster with one submit description
+file;
+for example, by issuing an \Opt{initialdir} between each \Opt{queue}
+command, each run can work in its own subdirectory.
+The optional
 argument \Arg{number-of-procs} specifies how many times to submit the
-job to the queue, and defaults to 1.
+job to the queue, and it defaults to 1.
 
 %%%%%%%%%%%%%%%%%%%
 %% allow_startup_script
