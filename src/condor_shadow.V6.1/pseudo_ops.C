@@ -614,5 +614,71 @@ static int lookup_boolean_param( const char *name )
 	return result;
 }
 
+int
+pseudo_ulog( ClassAd *ad )
+{
+	ULogEvent *event = instantiateEvent(ad);
+	int result = 0;
+	char const *critical_error = NULL;
+	MyString CriticalErrorBuf;
 
+	if(!event) {
+		MyString add_str;
+		ad->sPrint(add_str);
+		dprintf(
+		  D_ALWAYS,
+		  "invalid event ClassAd in pseudo_ulog: %s\n",
+		  add_str.GetCStr());
+		return -1;
+	}
+
+	if( event->eventNumber == ULOG_REMOTE_ERROR ) {
+		RemoteErrorEvent *err = (RemoteErrorEvent *)event;
+
+		if(!err->getExecuteHost() || !*err->getExecuteHost()) {
+			//Insert remote host information.
+			char *execute_host = NULL;
+			thisRemoteResource->getMachineName(execute_host);
+			err->setExecuteHost(execute_host);
+			delete execute_host;
+		}
+
+		if(err->isCriticalError()) {
+			CriticalErrorBuf.sprintf(
+			  "Error from %s on %s: %s",
+			  err->getDaemonName(),
+			  err->getExecuteHost(),
+			  err->getErrorText());
+
+			critical_error = CriticalErrorBuf.GetCStr();
+
+			//Temporary: the following line causes critical remote errors
+			//to be logged as ShadowExceptionEvents, rather than
+			//RemoteErrorEvents.  The result is ugly, but guaranteed to
+			//be compatible with other user-log reading tools.
+			EXCEPT((char *)critical_error);
+		}
+	}
+
+	if( !Shadow->uLog.writeEvent( event ) ) {
+		MyString add_str;
+		ad->sPrint(add_str);
+		dprintf(
+		  D_ALWAYS,
+		  "unable to log event in pseudo_ulog: %s\n",
+		  add_str.GetCStr());
+		result = -1;
+	}
+
+	if( critical_error ) {
+		//Suppress ugly "Shadow exception!"
+		Shadow->exception_already_logged = true;
+
+		//lame: at the time of this writing, EXCEPT does not want const:
+		EXCEPT((char *)critical_error);
+	}
+
+	delete event;
+	return result;
+}
 

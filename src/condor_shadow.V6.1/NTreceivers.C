@@ -759,6 +759,23 @@ do_REMOTE_syscall()
 		return 0;
 	}
 
+	case CONDOR_ulog:
+	{
+		ClassAd ad;
+
+		result = ( ad.initFromStream(*syscall_sock) );
+		assert( result );
+		result = ( syscall_sock->end_of_message() );
+		assert( result );
+
+		rval = pseudo_ulog(&ad);
+		dprintf( D_SYSCALLS, "\trval = %d\n", rval );
+
+		//NOTE: caller does not expect a response.
+
+		return 0;
+	}
+
 	default:
 	{
 		EXCEPT( "unknown syscall %d received\n", condor_sysnum );

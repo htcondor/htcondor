@@ -241,6 +241,9 @@ class BaseShadow : public Service
 		/// Called by EXCEPT handler to log to user log
 	static void BaseShadow::log_except(char *msg);
 
+	//set by pseudo_ulog() to suppress "Shadow exception!"
+	bool exception_already_logged;
+
 		/// Used by static and global functions to access shadow object
 	static BaseShadow* myshadow_ptr;
 

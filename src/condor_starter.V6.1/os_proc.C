@@ -273,11 +273,18 @@ OsProc::StartJob()
             }
 			strcat ( infile, filename );
 			if ( (fds[0]=open( infile, O_RDONLY ) ) < 0 ) {
+				char const *errno_str = strerror(errno);
+
 				dprintf(D_ALWAYS,"failed to open stdin file %s, errno %d\n",
 						infile, errno);
 				failedStdin = 1;
+
+				REMOTE_CONDOR_ulog_printf(
+				  "Failed to open standard input file '%s': %s",
+				  infile,
+				  errno_str);
 			}
-		dprintf ( D_ALWAYS, "Input file: %s\n", infile );
+			dprintf ( D_ALWAYS, "Input file: %s\n", infile );
 		}
 	} else {
 	#ifndef WIN32
@@ -305,10 +312,18 @@ OsProc::StartJob()
 			if ((fds[1]=open(outfile,O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 ) {
 					// if failed, try again without O_TRUNC
 				if ( (fds[1]=open( outfile, O_WRONLY | O_CREAT, 0666)) < 0 ) {
+					char const *errno_str = strerror(errno);
+
 					dprintf(D_ALWAYS,
 							"failed to open stdout file %s, errno %d\n",
 							outfile, errno);
 					failedStdout = 1;
+
+
+					REMOTE_CONDOR_ulog_printf(
+					  "Failed to open standard output file '%s': %s",
+					  infile,
+					  errno_str);
 				}
 			}
 			dprintf ( D_ALWAYS, "Output file: %s\n", outfile );
@@ -343,10 +358,17 @@ OsProc::StartJob()
 			if ((fds[2]=open( errfile,O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 ) {
 					// if failed, try again without O_TRUNC
 				if ((fds[2]=open( errfile,O_WRONLY|O_CREAT, 0666)) < 0 ) {
+					char const *errno_str = strerror(errno);
+
 					dprintf(D_ALWAYS,
 							"failed to open stderr file %s, errno %d\n",
 							errfile, errno);
 					failedStderr = 1;
+
+					REMOTE_CONDOR_ulog_printf(
+					  "Failed to open standard error file '%s': %s",
+					  infile,
+					  errno_str);
 				}
 			}
 			dprintf ( D_ALWAYS, "Error file: %s\n", errfile );
@@ -430,6 +452,11 @@ OsProc::StartJob()
 				   FALSE, env_str, job_iwd, TRUE, NULL, fds, nice_inc,
 				   DCJOBOPT_NO_ENV_INHERIT );
 
+	//NOTE: Create_Process() saves the errno for us if it is an
+	//"interesting" error.
+	char const *create_process_error = NULL;
+	if(JobPid == FALSE && errno) create_process_error = strerror(errno);
+
 	// now close the descriptors in fds array.  our child has inherited
 	// them already, so we should close them so we do not leak descriptors.
 	for (i=0;i<3;i++) {
@@ -443,6 +470,15 @@ OsProc::StartJob()
 
 	if ( JobPid == FALSE ) {
 		JobPid = -1;
+
+		if(create_process_error) {
+			REMOTE_CONDOR_ulog_printf(
+			  "Failed to execute '%s %s': %s",
+			  JobName,
+			  Args,
+			  create_process_error);
+		}
+
 		EXCEPT("Create_Process(%s,%s, ...) failed",
 			JobName, Args );
 		return 0;

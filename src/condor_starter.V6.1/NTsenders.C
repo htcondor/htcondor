@@ -29,6 +29,7 @@
 #include "condor_classad.h"
 #include "condor_sys.h"
 #include "starter.h"
+#include "condor_event.h"
 
 #include "NTsenders.h"
 
@@ -82,7 +83,6 @@ REMOTE_CONDOR_register_machine_info(char *uiddomain, char *fsdomain,
 	assert( result );
 	return rval;
 }
-
 
 int
 REMOTE_CONDOR_register_starter_info( ClassAd* ad )
@@ -735,5 +735,59 @@ REMOTE_CONDOR_get_file_info_new(char *  logical_name , char *  actual_url)
 
         return rval;
 }                                                                              
+
+int REMOTE_CONDOR_ulog_printf( char const *str, ... )
+{
+	MyString buf;
+	va_list args;
+	int retval;
+
+	va_start(args,str);
+	buf.vsprintf(str,args);
+	retval = REMOTE_CONDOR_ulog_error( buf.GetCStr() );
+	va_end(args);
+
+	return retval;
+}
+
+int
+REMOTE_CONDOR_ulog_error( char const *str )
+{
+	RemoteErrorEvent event;
+	//NOTE: "ExecuteHost" info will be inserted by the shadow.
+	event.setDaemonName("starter"); //TODO: where should this come from?
+	event.setErrorText( str );
+	event.setCriticalError( true );
+	return REMOTE_CONDOR_ulog( event.toClassAd() );
+}
+
+int
+REMOTE_CONDOR_ulog( ClassAd *ad )
+{
+	condor_errno_t		terrno;
+	int		rval=-1;
+	int result = 0;
+
+	dprintf ( D_SYSCALLS, "Doing CONDOR_ulog\n" );
+
+	CurrentSysCall = CONDOR_ulog;
+
+	if( ! ad ) {
+		EXCEPT( "CONDOR_ulog called with NULL ClassAd!" ); 
+		return -1;
+	}
+
+	syscall_sock->encode();
+	result = syscall_sock->code(CurrentSysCall);
+	assert( result );
+	result = ad->put(*syscall_sock);
+	assert( result );
+	result = syscall_sock->end_of_message();
+	assert( result );
+
+	//NOTE: we expect no response.
+
+	return 0;
+}
 
 } // extern "C"

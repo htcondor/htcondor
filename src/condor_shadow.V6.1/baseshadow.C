@@ -59,6 +59,7 @@ BaseShadow::BaseShadow() {
 	remove_job_queue_attrs = NULL;
 	requeue_job_queue_attrs = NULL;
 	terminate_job_queue_attrs = NULL;
+	exception_already_logged = false;
 }
 
 BaseShadow::~BaseShadow() {
@@ -901,21 +902,26 @@ BaseShadow::log_except(char *msg)
 {
 	// log shadow exception event
 	ShadowExceptionEvent event;
+	bool exception_already_logged = false;
+
+	if(!msg) msg = "";
 	sprintf(event.message, msg);
 
-	
 	if ( BaseShadow::myshadow_ptr ) {
+		BaseShadow *shadow = BaseShadow::myshadow_ptr;
+
 		// we want to log the events from the perspective of the
 		// user job, so if the shadow *sent* the bytes, then that
 		// means the user job *received* the bytes
-		event.recvd_bytes = BaseShadow::myshadow_ptr->bytesSent();
-		event.sent_bytes = BaseShadow::myshadow_ptr->bytesReceived();
+		event.recvd_bytes = shadow->bytesSent();
+		event.sent_bytes = shadow->bytesReceived();
+		exception_already_logged = shadow->exception_already_logged;
 	} else {
 		event.recvd_bytes = 0.0;
 		event.sent_bytes = 0.0;
 	}
 
-	if (!uLog.writeEvent (&event))
+	if (!exception_already_logged && !uLog.writeEvent (&event))
 	{
 		::dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event\n");
 	}

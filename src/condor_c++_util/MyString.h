@@ -22,6 +22,7 @@
  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include <string.h>
 #include <iostream>
+#include <stdarg.h>
 #include "simplelist.h"
 
 #ifndef _MyString_H_
@@ -195,6 +196,18 @@ class MyString
 	 *  The returns true if it succeeded, false otherwise.
 	 */
 	bool sprintf(const char *format, ...);
+
+	/** Fills a MyString with what you would have gotten from vsprintf.
+	 *  This is handy if you define your own printf-like functions.
+	 */
+
+	bool vsprintf(const char *format, va_list args);
+
+	/** Like sprintf, but this appends to existing data. */
+	bool sprintf_cat(const char *format, ...);
+
+	/** Like vsprintf, but this appends to existing data. */
+	bool vsprintf_cat(const char *format, va_list args);
 
 	//@}
 

@@ -59,6 +59,7 @@ const char * ULogEventNumberNames[] = {
 	"ULOG_GLOBUS_SUBMIT_FAILED",	// Globus Submit Failed 
 	"ULOG_GLOBUS_RESOURCE_UP",		// Globus Machine UP 
 	"ULOG_GLOBUS_RESOURCE_DOWN",	// Globus Machine Down
+	"ULOG_REMOTE_ERROR",            // Remote Error
 };
 
 const char * ULogEventOutcomeNames[] = {
@@ -68,6 +69,18 @@ const char * ULogEventOutcomeNames[] = {
   "ULOG_UNK_ERROR"
 };
 
+
+ULogEvent *
+instantiateEvent (ClassAd *ad)
+{
+	ULogEvent *event;
+	int eventNumber;
+	if(!ad->LookupInteger("EventTypeNumber",eventNumber)) return NULL;
+
+	event = instantiateEvent((ULogEventNumber)eventNumber);
+	if(event) event->initFromClassAd(ad);
+	return event;
+}
 
 ULogEvent *
 instantiateEvent (ULogEventNumber event)
@@ -136,6 +149,9 @@ instantiateEvent (ULogEventNumber event)
 
 	  case ULOG_GLOBUS_RESOURCE_UP:
 		return new GlobusResourceUpEvent;
+
+	case ULOG_REMOTE_ERROR:
+		return new RemoteErrorEvent;
 
 	  default:
         EXCEPT( "Invalid ULogEventNumber" );
@@ -317,6 +333,9 @@ toClassAd()
 		break;
 	  case ULOG_GLOBUS_RESOURCE_DOWN:
 		myad->SetMyTypeName("GlobusResourceDownEvent");
+		break;
+	case ULOG_REMOTE_ERROR:
+		myad->SetMyTypeName("RemoteErrorEvent");
 		break;
 	  default:
 		return NULL;
@@ -1017,6 +1036,194 @@ initFromClassAd(ClassAd* ad)
 	if( ad->LookupString("Info", info, 128) ) {
 		info[127] = 0;
 	}
+}
+
+void GenericEvent::
+setInfoText(char const *str)
+{
+	strncpy(info,str,sizeof(info));
+	info[sizeof(info)] = '\0'; //ensure null-termination
+}
+
+// ----- the RemoteErrorEvent class
+RemoteErrorEvent::RemoteErrorEvent()
+{	
+	error_str = NULL;
+	execute_host[0] = daemon_name[0] = '\0';
+	eventNumber = ULOG_REMOTE_ERROR;
+	critical_error = true;
+}
+
+RemoteErrorEvent::~RemoteErrorEvent()
+{
+	delete error_str;
+}
+
+int
+RemoteErrorEvent::writeEvent(FILE *file)
+{
+	char const *error_type = "Error";
+
+	if(!critical_error) error_type = "Warning";
+
+    int retval = fprintf(
+	  file,
+	  "%s from %s on %s:\n",
+	  error_type,
+	  daemon_name,
+	  execute_host);
+
+    if (retval < 0)
+    {
+	return 0;
+    }
+
+	//output each line of error_str, indented by one tab
+	char const *line = error_str;
+	if(line)
+	while(*line) {
+		char *next_line = strchr(line,'\n');
+		if(next_line) *next_line = '\0';
+
+		retval = fprintf(file,"\t%s\n",line);
+		if(retval < 0) return 0;
+
+		if(!next_line) break;
+		*next_line = '\n';
+		line = next_line+1;
+	}
+
+    return 1;
+}
+
+int
+RemoteErrorEvent::readEvent(FILE *file)
+{
+	char line[8192];
+	char error_type[128];
+    int retval = fscanf(
+	  file,
+	  "%127s from %127s on %127s\n",
+	  error_type,
+	  daemon_name,
+	  execute_host);
+
+    if (retval < 0)
+    {
+	return 0;
+    }
+
+	error_type[sizeof(error_type)-1] = '\0';
+	daemon_name[sizeof(daemon_name)-1] = '\0';
+	execute_host[sizeof(execute_host)-1] = '\0';
+
+	if(!strcmp(error_type,"Error")) critical_error = true;
+	else if(!strcmp(error_type,"Warning")) critical_error = false;
+
+	//Now read one or more error_str lines from the body.
+	MyString lines;
+
+	while(!feof(file)) {
+		// see if the next line contains an optional event notes string,
+		// and, if not, rewind, because that means we slurped in the next
+		// event delimiter looking for it...
+
+		fpos_t filep;
+		fgetpos( file, &filep );
+     
+		if( !fgets(line, sizeof(line), file) || strcmp(line, "...\n") == 0 ) {
+			fsetpos( file, &filep );
+			break;
+		}
+
+		char *l = strchr(line,'\n');
+		if(l) *l = '\0';
+
+		l = line;
+		if(l[0] == '\t') l++;
+
+		if(lines.Length()) lines += "\n";
+		lines += l;
+	}
+
+	setErrorText(lines.GetCStr());
+    return 1;
+}
+
+ClassAd*
+RemoteErrorEvent::toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+
+	if(*daemon_name) {
+		myad->Assign("Daemon",daemon_name);
+	}
+	if(*execute_host) {
+		myad->Assign("ExecuteHost",execute_host);
+	}
+	if(error_str) {
+		myad->Assign("ErrorMsg",error_str);
+	}
+	if(!critical_error) { //default is true
+		myad->Assign("CriticalError",(int)critical_error);
+	}
+
+	return myad;
+}
+
+void
+RemoteErrorEvent::initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+	char buf[ATTRLIST_MAX_EXPRESSION];
+	int crit_err = 0;
+
+	if( !ad ) return;
+
+	if( ad->LookupString("Daemon", daemon_name, sizeof(daemon_name)) ) {
+		daemon_name[sizeof(daemon_name)-1] = '\0';
+	}
+	if( ad->LookupString("ExecuteHost", execute_host, sizeof(execute_host)) ) {
+		execute_host[sizeof(execute_host)-1] = '\0';
+	}
+	if( ad->LookupString("ErrorMsg", buf, sizeof(buf)) ) {
+		buf[sizeof(buf)-1] = '\0';
+		setErrorText(buf);
+	}
+	if( ad->LookupInteger("CriticalError",crit_err) ) {
+		critical_error = (crit_err != 0);
+	}
+}
+
+void
+RemoteErrorEvent::setCriticalError(bool f)
+{
+	critical_error = f;
+}
+
+void
+RemoteErrorEvent::setErrorText(char const *str)
+{
+	char *s = strnewp(str);
+	delete [] error_str;
+	error_str = s;
+}
+
+void
+RemoteErrorEvent::setDaemonName(char const *str)
+{
+	if(!str) str = "";
+	strncpy(daemon_name,str,sizeof(daemon_name));
+	daemon_name[sizeof(daemon_name)-1] = '\0';
+}
+
+void
+RemoteErrorEvent::setExecuteHost(char const *str)
+{
+	if(!str) str = "";
+	strncpy(execute_host,str,sizeof(execute_host));
+	execute_host[sizeof(execute_host)-1] = '\0';
 }
 
 // ----- the ExecuteEvent class

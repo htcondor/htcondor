@@ -79,6 +79,7 @@ enum ULogEventNumber {
 	/** Globus Submit failed      */  ULOG_GLOBUS_SUBMIT_FAILED 	= 18,
 	/** Globus Resource Up        */  ULOG_GLOBUS_RESOURCE_UP 		= 19,
 	/** Globus Resource Down      */  ULOG_GLOBUS_RESOURCE_DOWN 	= 20,
+	/** Remote Error              */  ULOG_REMOTE_ERROR             = 21,
 };
 
 /// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
@@ -256,6 +257,13 @@ class ULogEvent {
 */
 ULogEvent *instantiateEvent (ULogEventNumber event);
 
+
+/** Create an event object from a ClassAd.
+	@param ad The ClassAd
+	@return a new object, subclass of ULogEvent
+*/
+ULogEvent *instantiateEvent (ClassAd *ad);
+
 //----------------------------------------------------------------------------
 /** Framework for a single Submit Log Event object.  Below is an example
     Submit Log entry from Condor v6. <p>
@@ -304,6 +312,64 @@ class SubmitEvent : public ULogEvent
     char* submitEventUserNotes;
 };
 
+//----------------------------------------------------------------------------
+/** RemoteErrorEvent object.
+	This subclass of ULogEvent is used by condor_starter to report
+	errors that the user needs to know about, such as failure to
+	access input files.  At this time, such events are not written
+    directly into the user log.  Instead, they are translated into
+    ShadowExceptionEvents in the shadow.
+*/
+class RemoteErrorEvent : public ULogEvent
+{
+ public:
+	RemoteErrorEvent();
+	~RemoteErrorEvent();
+
+    /** Read the body of the next Generic event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next Generic event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+	/** Return a ClassAd representation of this GenericEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+
+	//Methods for accessing the error description.
+	void setErrorText(char const *str);
+	char const *getErrorText() {return error_str;}
+
+	void setDaemonName(char const *name);
+	char const *getDaemonName() {return daemon_name;}
+
+	void setExecuteHost(char const *host);
+	char const *getExecuteHost() {return execute_host;}
+
+	bool isCriticalError() {return critical_error;}
+	void setCriticalError(bool f);
+
+ private:
+    /// A host string in the form: "<128.105.165.12:32779>".
+    char execute_host[128];
+	/// Normally "condor_starter":
+	char daemon_name[128];
+	char *error_str;
+	bool critical_error; //tells shadow to give up
+};
+
 
 //----------------------------------------------------------------------------
 /** Framework for a Generic User Log Event object.
@@ -346,6 +412,10 @@ class GenericEvent : public ULogEvent
 		@param a pointer to the ClassAd to initialize from
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
+
+	//Preferred methods for accessing the info text.
+	void setInfoText(char const *str);
+	char const *getInfoText() {return info;}
 
     /// A string with unspecified format.
     char info[128];

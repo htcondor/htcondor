@@ -180,7 +180,7 @@ MyString::reserve( const int sz )
     Data = buf;
     return true;
 }
-    
+
 // I hope this doesn't seem strange. There are times when we do lots
 // of operations on a MyString. For example, in xml_classads.C, we
 // add characters one at a time to the string (see
@@ -196,7 +196,7 @@ MyString::reserve_at_least(const int sz)
 {
 	int twice_as_much;
 	bool success;
-	
+
 	twice_as_much = 2 * capacity;
 	if (twice_as_much > sz) {
 		success = reserve(twice_as_much);
@@ -235,7 +235,7 @@ MyString::operator+=(const char *s)
 		return *this;
 	}
     int s_len = strlen( s );
-    if( s_len + Len > capacity ) {
+    if( s_len + Len > capacity || !Data ) {
 		reserve_at_least( Len + s_len );
     }
     //strcat( Data, s );
@@ -247,7 +247,7 @@ MyString::operator+=(const char *s)
 MyString& 
 MyString::operator+=(const char c) 
 {
-    if( Len + 1 > capacity ) {
+    if( Len + 1 > capacity || !Data ) {
        reserve_at_least( Len + 1 );
     }
 	Data[Len] = c;
@@ -411,31 +411,50 @@ MyString::replaceString(
 	return true;
 }
 
-bool 
-MyString::sprintf(
-	const char *format, 
-	...)
+bool
+MyString::vsprintf_cat(const char *format,va_list args) 
 {
-	int     newLen;
-	char    *newData;
+    if( !format || *format == '\0' ) {
+		return true;
+	}
+    int s_len = vprintf_length(format,args);
+    if( Len + s_len > capacity || !Data ) {
+		if(!reserve_at_least( Len + s_len )) return false;
+    }
+	::vsprintf(Data + Len, format, args);
+	Len += s_len;
+    return true;
+}
+
+bool 
+MyString::sprintf_cat(const char *format,...)
+{
 	bool    succeeded;
 	va_list args;
 
 	va_start(args, format);
+	succeeded = vsprintf_cat(format,args);
+	va_end(args);
 
-	newLen = vprintf_length(format, args);
-	newData = new char[newLen + 1];
-	if (NULL != newData) {
-		vsprintf(newData, format, args);
-		delete [] Data;
-		Data      = newData;
-		Len       = newLen;
-		capacity  = newLen;
-		succeeded = true;
-	} else {
-		succeeded = false;
-	}
+	return succeeded;
+}
 
+bool
+MyString::vsprintf(const char *format,va_list args)
+{
+	Len = 0;
+	if(Data) Data[0] = '\0';
+	return vsprintf_cat(format,args);
+}
+
+bool 
+MyString::sprintf(const char *format,...)
+{
+	bool    succeeded;
+	va_list args;
+
+	va_start(args, format);
+	succeeded = vsprintf(format,args);
 	va_end(args);
 
 	return succeeded;

@@ -4299,13 +4299,19 @@ int DaemonCore::Create_Process(
 	int numInheritSockFds = 0;
 	int exec_results;
 
+	//saved errno (if any) to pass back to caller
+	//Currently, only stuff that would be of interest to the user
+	//is saved (so the error can be reported in the user-log).
+	int return_errno = 0;
+	pid_t newpid = FALSE; //return FALSE to caller, by default
+
 	char inheritbuf[_INHERITBUF_MAXSIZE];
 		// note that these are on the stack; they go away nicely
 		// upon return from this function.
 	ReliSock rsock;
 	SafeSock ssock;
+	PidEntry *pidtmp;
 
-	pid_t newpid;
 
 #ifdef WIN32  // sheesh, this shouldn't be necessary
 	BOOL inherit_handles = FALSE;
@@ -4321,13 +4327,13 @@ int DaemonCore::Create_Process(
 	if ( (reaper_id < 1) || (reaper_id > maxReap) 
 		 || (reapTable[reaper_id - 1].num == 0) ) {
 		dprintf(D_ALWAYS,"Create_Process: invalid reaper_id\n");
-		return FALSE;
+		goto wrapup;
 	}
 
 	// check name validity
 	if ( !name ) {
 		dprintf(D_ALWAYS,"Create_Process: null name to exec\n");
-		return FALSE;
+		goto wrapup;
 	}
 
 	sprintf(inheritbuf,"%lu ",(unsigned long)mypid);
@@ -4349,7 +4355,7 @@ int DaemonCore::Create_Process(
                 numInheritSockFds++;
                     // make certain that this socket is inheritable
                 if ( !(tempSock->set_inheritable(TRUE)) ) {
-                    return FALSE;
+					goto wrapup;
                 }
             } 
             else {
@@ -4387,12 +4393,12 @@ int DaemonCore::Create_Process(
 			// choose any old port (dynamic port)
 			if (!BindAnyCommandPort(&rsock, &ssock)) {
 				// dprintf with error message already in BindAnyCommandPort
-				return FALSE;
+				goto wrapup;
 			}
 			if ( !rsock.listen() ) {
 				dprintf( D_ALWAYS, "Create_Process:Failed to post listen "
 						 "on command ReliSock\n");
-				return FALSE;
+				goto wrapup;
 			}
 		} else {
 			// use well-known port specified by command_port
@@ -4409,14 +4415,14 @@ int DaemonCore::Create_Process(
 									(char*)&on, sizeof(on))) )
 		    {
 				dprintf(D_ALWAYS,"ERROR: setsockopt() SO_REUSEADDR failed\n");
-				return FALSE;
+				goto wrapup;
 			}
 
 			if ( (!rsock.listen( want_command_port)) ||
 				 (!ssock.bind( want_command_port)) ) {
 				dprintf(D_ALWAYS,"Create_Process:Failed to post listen "
 						"on command socket(s)\n");
-				return FALSE;
+				goto wrapup;
 			}
 		}
 
@@ -4425,7 +4431,7 @@ int DaemonCore::Create_Process(
 			 (!(ssock.set_inheritable(TRUE))) ) {
 			dprintf(D_ALWAYS,"Create_Process:Failed to set command "
 					"socks inheritable\n");
-			return FALSE;
+			goto wrapup;
 		}
 
 		// and now add these new command sockets to the inheritbuf
@@ -4512,7 +4518,7 @@ int DaemonCore::Create_Process(
 	if (InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION) == 0) {
 		dprintf(D_ALWAYS, "Create_Process: InitializeSecurityDescriptor "
 				"failed, errno = %d\n",GetLastError());
-		return FALSE;
+		goto wrapup;
 	}
 #endif
 
@@ -4571,7 +4577,7 @@ int DaemonCore::Create_Process(
 		if( !SetEnv( EnvGetName( ENV_INHERIT ), inheritbuf) ) {
 			dprintf(D_ALWAYS, "Create_Process: Failed to set %s env.\n",
 					EnvGetName( ENV_INHERIT ) );
-			return FALSE;
+			goto wrapup;
 		}
 	
 	}	// end of dealing with the environment....
@@ -4669,7 +4675,7 @@ int DaemonCore::Create_Process(
 		if ( newenv ) {
 			delete [] newenv;
 		}
-		return FALSE;
+		goto wrapup;
 	}
 	if ( newenv ) {
 		delete [] newenv;
@@ -4707,26 +4713,28 @@ int DaemonCore::Create_Process(
 
 	// First, check to see that the specified executable exists.
 	if( access(name,F_OK | X_OK) < 0 ) {
+		return_errno = errno;
 		dprintf( D_ALWAYS, "Create_Process: "
 				 "Cannot access specified executable \"%s\": " 
 				 "errno = %d (%s)\n", name, errno, strerror(errno) );
 		if ( priv != PRIV_UNKNOWN ) {
 			set_priv( current_priv );
 		}
-		return FALSE;
+		goto wrapup;
 	}
 
 	// Next, check to see that the cwd exists.
 	struct stat stat_struct;
 	if( cwd && (cwd[0] != '\0') ) {
 		if( stat(cwd, &stat_struct) == -1 ) {
+			return_errno = errno;
 			dprintf( D_ALWAYS, "Create_Process: "
 					 "Cannot access specified cwd \"%s\": "
 					 "errno = %d (%s)\n", cwd, errno, strerror(errno) ); 
 			if ( priv != PRIV_UNKNOWN ) {
 				set_priv( current_priv );
 			}	
-			return FALSE;
+			goto wrapup;
 		}
 	}
 
@@ -4750,7 +4758,7 @@ int DaemonCore::Create_Process(
 	if (pipe(errorpipe) < 0) {
 		dprintf(D_ALWAYS,"Create_Process: pipe() failed with errno %d (%s).\n",
 				errno, strerror(errno));
-		return FALSE;
+		goto wrapup;
 	}
 
 	newpid = fork();
@@ -5031,7 +5039,8 @@ int DaemonCore::Create_Process(
 						 strerror(errno) );
 			}
 			close(errorpipe[0]);
-			return FALSE;
+			newpid = FALSE;
+			goto wrapup;
 		}
 		close(errorpipe[0]);
 		
@@ -5041,12 +5050,12 @@ int DaemonCore::Create_Process(
 		dprintf(D_ALWAYS, "Create Process: fork() failed: %s (%d)\n", 
 				strerror(errno), errno );
 		close(errorpipe[0]); close(errorpipe[1]);
-		return FALSE;
+		goto wrapup;
 	}
 #endif
 
 	// Now that we have a child, store the info in our pidTable
-	PidEntry *pidtmp = new PidEntry;
+	pidtmp = new PidEntry;
 	pidtmp->pid = newpid;
 	pidtmp->new_process_group = new_process_group;
 	if ( want_command_port != FALSE )
@@ -5077,7 +5086,9 @@ int DaemonCore::Create_Process(
 	// Now that child exists, we (the parent) should close up our copy of
 	// the childs command listen cedar sockets.  Since these are on
 	// the stack (rsock and ssock), they will get closed when we return.
-	
+
+ wrapup:
+	errno = return_errno;
 	return newpid;	
 }
 

@@ -26,6 +26,9 @@ extern "C" {
 	int REMOTE_CONDOR_rmdir( char *path );
 	int REMOTE_CONDOR_fsync( int fd );
 	int REMOTE_CONDOR_get_file_info_new( char *path, char *url );
+	int REMOTE_CONDOR_ulog_printf( char const *str, ... );
+	int REMOTE_CONDOR_ulog_error( char const *str );
+	int REMOTE_CONDOR_ulog( ClassAd *ad );
 }
 
 #endif
