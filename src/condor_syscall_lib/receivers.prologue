@@ -75,7 +75,7 @@ do_REMOTE_syscall()
 		} else {
 			error = strerror(errno);
 		}
-		dprintf(D_ALWAYS,"Unable to talk to job: %s\n",errno);
+		dprintf(D_ALWAYS,"Unable to talk to job: %s\n",error);
 		return -1;
 	}
 
