@@ -733,6 +733,16 @@ sub GetJobState( $ )
     # Get the job's status
     my $JobStatus = $JobManager->poll( );
 
+    # If we get back an Error, return FAILED
+    # TODO: There should be a way to pass the failure code along with
+    #   the FAILED status. We'd want to do it in a way that doesn't break
+    #   compatibility, as recent versions of the jobmanager read the
+    #   status file.
+    if(UNIVERSAL::isa($JobStatus, 'Globus::GRAM::Error')) {
+        # job status 4 is FAILED
+        return 4;
+    }
+
     # Some versions of Globus return a scalar instead of a hash
     if(ref $JobStatus eq '') {
         $JobStatus = { JOB_STATE => $JobStatus };

@@ -473,6 +473,8 @@ extern bool sendAlive( match_rec* mrec );
 extern void fixReasonAttrs( PROC_ID job_id, JobAction action );
 extern bool moveStrAttr( PROC_ID job_id, const char* old_attr,  
 						 const char* new_attr, bool verbose );
+extern bool moveIntAttr( PROC_ID job_id, const char* old_attr,  
+						 const char* new_attr, bool verbose );
 extern bool abortJob( int cluster, int proc, const char *reason, bool use_transaction );
 extern bool holdJob( int cluster, int proc, const char* reason = NULL, 
 					 bool use_transaction = false, 

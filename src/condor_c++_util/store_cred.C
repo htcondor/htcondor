@@ -94,68 +94,31 @@ void store_cred_handler(void *, int i, Stream *s) {
 		dprintf(D_ALWAYS, "store_cred: code_store_cred failed.\n");
 		return;
 	} else {
+		// we'll need a wide-char version of the user name later
 		if ( user ) {
 			swprintf(userbuf, L"%S", user);
 		}
 	}
 
-	dprintf( D_FULLDEBUG, "store_cred: Switching to root priv\n");
 	priv = set_root_priv();
 	
 	switch(mode) {
 	case ADD_MODE:
-		HANDLE usrHnd;
 		bool retval;
-		char* dom;
-		DWORD LogonUserError;
 
 		dprintf( D_FULLDEBUG, "Adding %S to credential storage.\n", 
 			userbuf );
 
-		usrHnd = NULL;
-		retval = false;
-	
-		// split the domain and the user name for LogonUser
-		dom = strchr(user, '@');
-		*dom = '\0';
-		dom++;
-		// now see if we can get a user token from this password
-		retval = LogonUser(
-			user,						// user name
-			dom,						// domain or server - local for now
-			pw,							// password
-			LOGON32_LOGON_NETWORK,		// NETWORK is fastest. 
-			LOGON32_PROVIDER_DEFAULT,	// logon provider
-			&usrHnd						// receive tokens handle
-		);
-		LogonUserError = GetLastError();
-		
-		if ( (LogonUserError == ERROR_PRIVILEGE_NOT_HELD ) || 
-			 (LogonUserError == ERROR_LOGON_TYPE_NOT_GRANTED ) ) {
-			
-			dprintf(D_FULLDEBUG, "NETWORK logon failed. Attempting INTERACTIVE\n");
+		retval = isValidCredential(user, pw);
 
-			retval = LogonUser(
-				user,						// user name
-				dom,						// domain or server - local for now
-				pw,							// password
-				LOGON32_LOGON_INTERACTIVE,	// INTERACTIVE is should be held by everyone.
-				LOGON32_PROVIDER_DEFAULT,	// logon provider
-				&usrHnd						// receive tokens handle
-			);
-			LogonUserError = GetLastError();
+		if ( ! retval ) {
+			answer=FAILURE_BAD_PASSWORD; 
+			break; // bail out 
 		}
 
 		if (pw) {
 			swprintf(pwbuf, L"%S", pw); // make a wide-char copy first
 			ZeroMemory(pw, strlen(pw));
-		}
-		if ( ! retval ) {
-			dprintf(D_FULLDEBUG, "store_cred: Credential not valid (err=%d)\n", LogonUserError);
-			answer=FAILURE_BAD_PASSWORD; //fail
-			break;
-		} else {
-			CloseHandle(usrHnd); // don't leak the handle
 		}
 
 		// call lsa_mgr api
@@ -181,15 +144,32 @@ void store_cred_handler(void *, int i, Stream *s) {
 		}
 		break;
 	case QUERY_MODE:
+		{
 		dprintf( D_FULLDEBUG, "Checking for %S in credential storage.\n", 
 			userbuf );
 		swprintf(userbuf, L"%S", user);
-		if (!lsa_man.isStored(userbuf)) {
+
+		char passw[MAX_PASSWORD_LENGTH];
+		wchar_t *pw_wc = NULL;
+		pw_wc = lsa_man.query(userbuf);
+
+		if ( !pw_wc ) {
 			answer = FAILURE;
 		} else {
-			answer = SUCCESS;
+			sprintf(passw, "%S", pw_wc);
+			ZeroMemory(pw_wc, wcslen(pw_wc));
+			delete[] pw_wc;
+
+			if ( isValidCredential(user, passw) ) {
+				answer = SUCCESS;
+			} else {
+				answer = FAILURE_BAD_PASSWORD;
+			}
+
+			ZeroMemory(passw, MAX_PASSWORD_LENGTH);
 		}
 		break;
+		}
 	default:
 		dprintf( D_ALWAYS, "store_cred: Unknown access mode (%d).\n", mode );
 		answer=0;
@@ -323,43 +303,76 @@ read_no_echo(char* buf, int maxlength) {
 
 char*
 get_password() {
-	int failure;
-	char *buf, *buf2;
+	char *buf;
 	
 	buf = new char[MAX_PASSWORD_LENGTH];
-	buf2 = new char[MAX_PASSWORD_LENGTH];
-	failure = 0;
 	
+	if (! buf) { fprintf(stderr, "Out of Memory!\n\n"); return NULL; }
 	
-	if ((! buf) || (! buf2)) { fprintf(stderr, "Out of Memory!\n\n"); exit(1); }
-	
-	do {
 		
-		printf("Enter password: ");
-		if ( ! read_no_echo(buf, MAX_PASSWORD_LENGTH) ) {
-			delete[] buf;
-			delete[] buf2;
-			return NULL;
-		}
-		
-		printf("\nConfirm password: ");
-		if ( ! read_no_echo(buf2, MAX_PASSWORD_LENGTH) ) {
-			delete[] buf;
-			delete[] buf2;
-			return NULL;
-		}
-
-		failure = strcmp(buf, buf2);
-		
-		if ( failure ) {
-			fprintf(stderr, "\n\nPasswords don't match!\n\n");
-		} 
-	} while ( failure );	
+	printf("Enter password: ");
+	if ( ! read_no_echo(buf, MAX_PASSWORD_LENGTH) ) {
+		delete[] buf;
+		return NULL;
+	}
 	
-	ZeroMemory(buf2, MAX_PASSWORD_LENGTH);	
-	delete[] buf2;
-
 	return buf;
+}
+
+// takes user@domain format for user argument
+bool
+isValidCredential( char *user, char* pw ) {
+	// see if we can get a user token from this password
+	HANDLE usrHnd;
+	char* dom;
+	DWORD LogonUserError;
+	int retval;
+
+	retval = 0;
+	usrHnd = NULL;
+	
+	// split the domain and the user name for LogonUser
+	dom = strchr(user, '@');
+
+	if ( dom ) {
+		*dom = '\0';
+		dom++;
+	}
+
+	retval = LogonUser(
+		user,						// user name
+		dom,						// domain or server - local for now
+		pw,							// password
+		LOGON32_LOGON_NETWORK,		// NETWORK is fastest. 
+		LOGON32_PROVIDER_DEFAULT,	// logon provider
+		&usrHnd						// receive tokens handle
+	);
+	LogonUserError = GetLastError();
+	
+	if ( (retval == 0) && ((LogonUserError == ERROR_PRIVILEGE_NOT_HELD ) || 
+		 (LogonUserError == ERROR_LOGON_TYPE_NOT_GRANTED )) ) {
+		
+		dprintf(D_FULLDEBUG, "NETWORK logon failed. Attempting INTERACTIVE\n");
+
+		retval = LogonUser(
+			user,						// user name
+			dom,						// domain or server - local for now
+			pw,							// password
+			LOGON32_LOGON_INTERACTIVE,	// INTERACTIVE should be held by everyone.
+			LOGON32_PROVIDER_DEFAULT,	// logon provider
+			&usrHnd						// receive tokens handle
+		);
+		LogonUserError = GetLastError();
+	}
+
+	if ( retval == 0 ) {
+		dprintf(D_ALWAYS, "Failed to log in %s@%s with err=%d\n", user, dom,
+				LogonUserError);
+		return false;
+	} else {
+		CloseHandle(usrHnd);
+		return true;
+	}
 }
 
 int deleteCredential( char* user ) {

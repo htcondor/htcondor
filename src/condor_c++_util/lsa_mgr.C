@@ -230,6 +230,7 @@ lsa_mgr::isStored( const LPWSTR Login ) {
 	pw = query(Login);
 	if ( pw ) {
 		// we found something, but don't leak memory
+		ZeroMemory(pw, wcslen(pw));
 		delete[] pw;
 		return true;
 	} else {

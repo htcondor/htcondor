@@ -1854,7 +1854,14 @@ int GlobusJob::doEvaluateState()
 					connect_failure_jobmanager = true;
 					break;
 				}
-				if ( rc != GLOBUS_SUCCESS ) {
+				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_QUERY_DENIAL ) {
+						// The jobmanager is already in either FAILED or
+						// DONE state and ready to shut down. Go to
+						// GM_CANCEL_WAIT, where we'll deal with it
+						// appropriately.
+					gmState = GM_CANCEL_WAIT;
+					break;
+				} else if ( rc != GLOBUS_SUCCESS ) {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_cancel()", rc );
 					globusError = rc;
@@ -3132,6 +3139,16 @@ bool GlobusJob::FailureIsRestartable( int error_code )
 	case GLOBUS_GRAM_PROTOCOL_ERROR_SUBMIT_UNKNOWN:
 	case GLOBUS_GRAM_PROTOCOL_ERROR_JOBTYPE_NOT_SUPPORTED:
 	case GLOBUS_GRAM_PROTOCOL_ERROR_TEMP_SCRIPT_FILE_FAILED:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_RSL_DIRECTORY:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_RSL_EXECUTABLE:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_RSL_STDIN:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_RSL_ENVIRONMENT:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_RSL_ARGUMENTS:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_JOB_EXECUTION_FAILED:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_INVALID_COUNT:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_OPENING_CACHE:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_OPENING_USER_PROXY:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_RSL_SCHEDULER_SPECIFIC:
 		return false;
 	case GLOBUS_GRAM_PROTOCOL_ERROR_STAGE_OUT_FAILED:
 	case GLOBUS_GRAM_PROTOCOL_ERROR_TTL_EXPIRED:

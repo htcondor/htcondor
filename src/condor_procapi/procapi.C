@@ -1340,15 +1340,28 @@ ProcAPI::makeFamily( pid_t dadpid, pid_t *allpids, int numpids,
 	fampids[0] = dadpid;
 	int numadditions = 1;
 
+	CSysinfo csi;
+
 	while( numadditions > 0 ) {
 		numadditions = 0;
 		for( int j=0; j<numpids; j++ ) {
 			if( isinfamily(fampids, famsize, parentpids[j]) ) {
-				fampids[famsize] = allpids[j];
-				parentpids[j] = 0;
-				allpids[j] = 0;
-				famsize++;
-				numadditions++;
+
+				// now make sure the parent pid is older than its child
+				if (csi.ComparePidAge(allpids[j], parentpids[j]) == -1 ) {
+
+					dprintf(D_FULLDEBUG, "ProcAPI: pid %d is older than "
+							"its (presumed) parent (%d), so we're leaving it "
+						   "out.\n", allpids[j], parentpids[j]);	
+
+				} else { 
+				
+					fampids[famsize] = allpids[j];
+					parentpids[j] = 0;
+					allpids[j] = 0;
+					famsize++;
+					numadditions++;
+				}
 			}
 		}
 	}

@@ -863,7 +863,7 @@ SetExecutable()
 		exit( 1 );
 	}
 
-	macro_value = condor_param( TransferExecutable ) ;
+	macro_value = condor_param( TransferExecutable, ATTR_TRANSFER_EXECUTABLE );
 	if ( macro_value ) {
 		if ( macro_value[0] == 'F' || macro_value[0] == 'f' ) {
 			sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_EXECUTABLE );
@@ -1267,7 +1267,7 @@ void SetFileOptions()
 		free(tmp);
 	}
 
-	tmp = condor_param(BufferFiles);
+	tmp = condor_param( BufferFiles, ATTR_BUFFER_FILES );
 	if(tmp) {
 		sprintf(buffer,"%s = %s",ATTR_BUFFER_FILES,tmp);
 		InsertJobExpr(buffer);
@@ -1521,15 +1521,15 @@ SetTransferFiles()
 	*/
 
 	if( should_transfer!=STF_NO && JobUniverse==CONDOR_UNIVERSE_JAVA ) {
+		macro_value = condor_param( Executable, ATTR_JOB_CMD );
 
-		macro_value = condor_param(Executable);
 		if(macro_value) {
 			MyString executable_str = macro_value;
 			input_file_list.append(executable_str.Value());
 			free(macro_value);
 		}
 
-		macro_value = condor_param(JarFiles);
+		macro_value = condor_param( JarFiles, ATTR_JAR_FILES );
 		if(macro_value) {
 			StringList files(macro_value);
 			files.rewind();
@@ -1622,7 +1622,8 @@ SetTransferFiles()
 		JobUniverse != CONDOR_UNIVERSE_JAVA )
 	{
 		char *transfer_exe;
-		transfer_exe = condor_param(TransferExecutable);
+		transfer_exe = condor_param( TransferExecutable,
+									 ATTR_TRANSFER_EXECUTABLE );
 		if(transfer_exe && *transfer_exe != 'F' && *transfer_exe != 'f') {
 			//User explicitly requested transfer_executable = true,
 			//but they did not turn on transfer_files, so they are
@@ -1942,7 +1943,7 @@ SetFetchFiles()
 	char buffer[ATTRLIST_MAX_EXPRESSION];
 	char *value;
 
-	value = condor_param( FetchFiles );
+	value = condor_param( FetchFiles, ATTR_FETCH_FILES );
 	if(value) {
 		sprintf(buffer,"%s = \"%s\"",ATTR_FETCH_FILES,value);
 		InsertJobExpr (buffer);
@@ -1955,7 +1956,7 @@ SetCompressFiles()
 	char buffer[ATTRLIST_MAX_EXPRESSION];
 	char *value;
 
-	value = condor_param( CompressFiles );
+	value = condor_param( CompressFiles, ATTR_COMPRESS_FILES );
 	if(value) {
 		sprintf(buffer,"%s = \"%s\"",ATTR_COMPRESS_FILES,value);
 		InsertJobExpr (buffer);
@@ -1968,7 +1969,7 @@ SetAppendFiles()
 	char buffer[ATTRLIST_MAX_EXPRESSION];
 	char *value;
 
-	value = condor_param( AppendFiles );
+	value = condor_param( AppendFiles, ATTR_APPEND_FILES );
 	if(value) {
 		sprintf(buffer,"%s = \"%s\"",ATTR_APPEND_FILES,value);
 		InsertJobExpr (buffer);
@@ -1981,7 +1982,7 @@ SetLocalFiles()
 	char buffer[ATTRLIST_MAX_EXPRESSION];
 	char *value;
 
-	value = condor_param( LocalFiles );
+	value = condor_param( LocalFiles, ATTR_LOCAL_FILES );
 	if(value) {
 		sprintf(buffer,"%s = \"%s\"",ATTR_LOCAL_FILES,value);
 		InsertJobExpr (buffer);
@@ -1994,7 +1995,7 @@ SetJarFiles()
 	char buffer[ATTRLIST_MAX_EXPRESSION];
 	char *value;
 
-	value = condor_param( JarFiles );
+	value = condor_param( JarFiles, ATTR_JAR_FILES );
 	if(value) {
 		sprintf(buffer,"%s = \"%s\"",ATTR_JAR_FILES,value);
 		InsertJobExpr (buffer);
@@ -2007,12 +2008,13 @@ SetParallelStartupScripts() //JDB
 	char buffer[ATTRLIST_MAX_EXPRESSION];
 	char *value;
 
-	value = condor_param( ParallelScriptShadow );
+	value = condor_param( ParallelScriptShadow, ATTR_PARALLEL_SCRIPT_SHADOW );
 	if(value) {
 		sprintf(buffer,"%s = \"%s\"",ATTR_PARALLEL_SCRIPT_SHADOW,value);
 		InsertJobExpr (buffer);
 	}
-	value = condor_param( ParallelScriptStarter );
+	value = condor_param( ParallelScriptStarter,
+						  ATTR_PARALLEL_SCRIPT_STARTER );
 	if(value) {
 		sprintf(buffer,"%s = \"%s\"",ATTR_PARALLEL_SCRIPT_STARTER,value);
 		InsertJobExpr (buffer);
@@ -2550,7 +2552,8 @@ void
 SetMatchListLen()
 {
 	int len = 0;
-	char* tmp = condor_param( LastMatchListLength, ATTR_LAST_MATCH_LIST_LENGTH );
+	char* tmp = condor_param( LastMatchListLength,
+							  ATTR_LAST_MATCH_LIST_LENGTH );
 	if( tmp ) {
 		len = atoi(tmp);
 		(void) sprintf( buffer, "%s = %d", ATTR_LAST_MATCH_LIST_LENGTH, len );
@@ -2562,10 +2565,7 @@ SetMatchListLen()
 void
 SetDAGNodeName()
 {
-	char* name = condor_param( DAGNodeName );
-	if( !name ) {
-		name = condor_param( "DAGNodeName" );
-	}
+	char* name = condor_param( DAGNodeName, ATTR_DAG_NODE_NAME );
 	if( name ) {
 		(void) sprintf( buffer, "%s = \"%s\"", ATTR_DAG_NODE_NAME, name );
 		InsertJobExpr( buffer );
@@ -2576,10 +2576,7 @@ SetDAGNodeName()
 void
 SetDAGManJobId()
 {
-	char* id = condor_param( DAGManJobId );
-	if( !id ) {
-		id = condor_param( "DAGManJobId" );
-	}
+	char* id = condor_param( DAGManJobId, ATTR_DAGMAN_JOB_ID );
 	if( id ) {
 		(void) sprintf( buffer, "%s = \"%s\"", ATTR_DAGMAN_JOB_ID, id );
 		InsertJobExpr( buffer );
@@ -2600,23 +2597,13 @@ SetLogNotes()
 void
 SetUserNotes()
 {
-	UserNotesVal = condor_param( UserNotesCommand );
-	// just in case the user forgets the underscores
-	if( !UserNotesVal ) {
-		UserNotesVal = condor_param( "SubmitEventUserNotes" );
-	}
+	UserNotesVal = condor_param( UserNotesCommand, "SubmitEventUserNotes" );
 }
 
 void
 SetRemoteInitialDir()
 {
-	char *who = condor_param(RemoteInitialDir);
-
-	if( ! who ) {
-			// isn't there, try ClassAd flavor
-		who = condor_param( ATTR_JOB_REMOTE_IWD );
-	}
-
+	char *who = condor_param( RemoteInitialDir, ATTR_JOB_REMOTE_IWD );
 	if (who) {
 		(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_REMOTE_IWD, who);
 		InsertJobExpr (buffer);
@@ -3250,12 +3237,21 @@ SetGlobusParams()
 		 stricmp (JobGridType, "nordugrid") == MATCH ) {
 
 		char *globushost;
-
-		if ( !(globushost = condor_param( GlobusScheduler ) ) ) {
-			fprintf(stderr, "\nERROR: Globus/gt3 jobs require a \"%s\" parameter\n",
-					GlobusScheduler );
-			DoCleanup( 0, 0, NULL );
-			exit( 1 );
+		globushost = condor_param( GlobusScheduler, "globus_scheduler" );
+		if( !globushost ) {
+				// this is stupid, the "GlobusScheduler" global
+				// variable doesn't follow our usual conventions, so
+				// its value is "globusscheduler". *sigh* so, our
+				// first condor_param() uses the "old-style" format as
+				// the alternate.  if we don't have a value, we want
+				// to try again with the actual job classad value:
+			globushost = condor_param( ATTR_GLOBUS_RESOURCE, NULL );
+			if( ! globushost ) { 
+				fprintf( stderr, "Globus/gt3 universe jobs require a "
+						 "\"GlobusScheduler\" parameter\n" );
+				DoCleanup( 0, 0, NULL );
+				exit( 1 );
+			}
 		}
 
 		sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_RESOURCE, globushost );
@@ -3288,7 +3284,7 @@ SetGlobusParams()
 		}
 	}
 
-	if ( (use_gridshell = condor_param(GridShell)) ) {
+	if ( (use_gridshell = condor_param(GridShell, ATTR_USE_GRID_SHELL)) ) {
 		if( use_gridshell[0] == 't' || use_gridshell[0] == 'T' ) {
 			MyString tmp;
 			tmp.sprintf( "%s = TRUE", ATTR_USE_GRID_SHELL );
@@ -3318,7 +3314,7 @@ SetGlobusParams()
 		InsertJobExpr (buff, false );
 	}
 
-	if( (tmp = condor_param(GlobusRSL)) ) {
+	if( (tmp = condor_param(GlobusRSL, "globus_rsl")) ) {
 		sprintf( buff, "%s = \"%s\"", ATTR_GLOBUS_RSL, tmp );
 		free( tmp );
 		InsertJobExpr ( buff );
@@ -3828,7 +3824,6 @@ queue(int num)
 			  stricmp (JobGridType, "nordugrid") == MATCH)) {
 
 			proxy_file = get_x509_proxy_filename();
-
 			if ( proxy_file == NULL ) {
 
 				fprintf( stderr, "\nERROR: can't determine proxy filename\n" );
@@ -4381,7 +4376,7 @@ check_open( const char *name, int flags )
 
 	/* If this file as marked as append-only, do not truncate it here */
 
-	temp = condor_param( AppendFiles );
+	temp = condor_param( AppendFiles, ATTR_APPEND_FILES );
 	if(temp) {
 		list = new StringList(temp);
 		if(list->contains_withwildcard(name)) {
