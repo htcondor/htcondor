@@ -1,3 +1,8 @@
+05/16/04 V6_6-merge-12
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  fixes getExecPath() on OSX which was breaking the
+   builds. 
+
 05/14/04 V6_6-merge-11
    The state of the V6_6-branch for yet another merge into
    V6_7-branch.  Lots of random fixes, especially the schedd fix for
