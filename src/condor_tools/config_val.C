@@ -80,13 +80,15 @@ void
 usage()
 {
 	fprintf( stderr, "Usage: %s [options] variable [variable] ...\n", MyName );
-	fprintf( stderr, "   or: %s [options] -set variable value ...\n",
+	fprintf( stderr,
+			 "   or: %s [options] -set variable value [variable value] ...\n",
 			 MyName );
-	fprintf( stderr, "   or: %s [options] -rset variable value ...\n",
+	fprintf( stderr,
+			 "   or: %s [options] -rset variable value [variable value] ...\n",
 			 MyName );
-	fprintf( stderr, "   or: %s [options] -unset variable ...\n",
+	fprintf( stderr, "   or: %s [options] -unset variable [variable] ...\n",
 			 MyName );
-	fprintf( stderr, "   or: %s [options] -runset variable ...\n",
+	fprintf( stderr, "   or: %s [options] -runset variable [variable] ...\n",
 			 MyName );
 	fprintf( stderr, "   or: %s [options] -tilde\n", MyName );
 	fprintf( stderr, "   or: %s [options] -owner\n", MyName );
