@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "condor_constants.h"
+#include "condor_config.h"
 #include "condor_io.h"
 #include "sock.h"
 #include "condor_network.h"
@@ -30,10 +31,12 @@
 #include "my_hostname.h"
 #include "condor_debug.h"
 #include "condor_socket_types.h"
+#include "get_port_range.h"
 
 #if !defined(WIN32)
 #define closesocket close
 #endif
+
 
 Sock::Sock() : Stream() {
 	_sock = INVALID_SOCKET;
@@ -314,22 +317,77 @@ int Sock::assign(SOCKET sockd)
 }
 
 
+int Sock::bindWithin(const int low_port, const int high_port)
+{
+	// Use hash function with pid to get the starting point
+    struct timeval curTime;
+    (void) gettimeofday(&curTime, NULL);
+
+	// int pid = (int) getpid();
+	int range = high_port - low_port + 1;
+	// this line must be changed to use the hash function of condor
+	int start_trial = low_port + (curTime.tv_usec * 73/*some prime number*/ % range);
+
+	int this_trial = start_trial;
+	do {
+		sockaddr_in		sin;
+
+		memset(&sin, 0, sizeof(sockaddr_in));
+		sin.sin_family = AF_INET;
+		sin.sin_addr.s_addr = htonl(my_ip_addr());
+		sin.sin_port = htons((u_short)this_trial++);
+
+		if ( ::bind(_sock, (sockaddr *)&sin, sizeof(sockaddr_in)) == 0 ) { // success
+			dprintf(D_NETWORK, "Sock::bindWithin - bound to %d...\n", this_trial-1);
+			return TRUE;
+		} else {
+			dprintf(D_NETWORK, "Sock::bindWithin - failed to bind: %s\n", strerror(errno));
+		}
+
+		if ( this_trial > high_port )
+			this_trial = low_port;
+	} while(this_trial != start_trial);
+
+	dprintf(D_ALWAYS, "Sock::bindWithin - failed to bind any port within (%d ~ %d)\n",
+	        low_port, high_port);
+
+	return FALSE;
+}
+
 
 int Sock::bind(int port)
 {
 	sockaddr_in		sin;
-	
-	/* if stream not assigned to a sock, do it now	*/
+
+	// Following lines are added because some functions in condor call
+	// this method without checking the port numbers returned from
+	// such as 'getportbyserv'
+	if (port < 0) return FALSE;
+
+	// if stream not assigned to a sock, do it now	*/
 	if (_state == sock_virgin) assign();
 
 	if (_state != sock_assigned) {
-		dprintf(D_NETWORK, "Sock::bind: _state is not correct\n");
+		dprintf(D_ALWAYS, "Sock::bind - _state is not correct\n");
 		return FALSE;
 	}
 
+	// If 'port' equals 0 and if we have 'LOWPORT' and 'HIGHPORT' defined
+	// in the config file for security, we will bind this Sock to one of
+	// the port within the range defined by these variables rather than
+	// an arbitrary free port. /* 07/27/2000 - sschang */
+	int lowPort, highPort;
+	if ( port == 0 && get_port_range(&lowPort, &highPort) == TRUE ) {
+		if ( bindWithin(lowPort, highPort) == TRUE ) {
+			_state = sock_bound;
+			return TRUE;
+		} else return FALSE;
+	}
+	// end of insertion /* 07/27/2000 - sschang */
+
 	memset(&sin, 0, sizeof(sockaddr_in));
 	sin.sin_family = AF_INET;
-	sin.sin_addr.s_addr = htonl( my_ip_addr() );
+	sin.sin_addr.s_addr = htonl(my_ip_addr());
 	sin.sin_port = htons((u_short)port);
 
 	if (::bind(_sock, (sockaddr *)&sin, sizeof(sockaddr_in)) < 0) {
