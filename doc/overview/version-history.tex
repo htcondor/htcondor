@@ -130,6 +130,15 @@ chance to clean up.
 \item Fixed a bug in the \Opt{-negotiator} option for most Condor
 tools that was causing it to get the wrong address.
 
+\item Fixed a couple of bugs in the \Condor{master} that could cause
+improper shutdowns. 
+There were cases during shutdown where we would restart a daemon
+(because we previously noticed a new executable, for example).
+Now, once you begin a shutdown, the \Condor{master} will not restart
+anything. 
+Also, fixed a rare bug that could cause the \Condor{master} to stop
+checking the timestamps on a daemon.
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1307,4 +1316,3 @@ a site that already had Condor installed.
 \item Initial Version 6.0 release.
 
 \end{itemize}
-
