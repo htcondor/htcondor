@@ -81,7 +81,7 @@ Compress( ClassAdCollectionServer *server, LocalCollectionQuery *query,
             // get signature of current ad
         if( !MakeSignature( ad, refs, sig ) ) {
                 // can't make signature --- can't compress
-            rest.push_back( ad->Copy( ) );
+            rest.push_back( (ClassAd*) ad->Copy( ) );
         }
 
             // get bin
