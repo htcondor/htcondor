@@ -753,16 +753,21 @@ ClassAdXMLUnparser::add_empty_tag(
  *
  **************************************************************************/
 void ClassAdXMLUnparser::fix_characters(
-	char     *source,
-	MyString &dest)
+	const char *source,
+	MyString   &dest) // XML attribute, that is.
 {
 	while (*source != 0) {
 		switch (*source) {
 		case '&':   dest += "&amp;";   break;
 		case '<':   dest += "&lt;";    break;
 		case '>':   dest += "&gt;";    break;
-		case '"':   dest += "&quot;";  break;
-		case '\'':  dest += "&apos;";  break;
+		// We skip these cases: they are only necessary in 
+		// XML attributes, and this won't happen in the old ClassAds.
+		// (Our only relevant attributes are names in the attribute tag,
+		// and these won't contain quotes--or ampersands or brackets, 
+		// for that matter)
+		//case '"': 	dest += "&quot;";  break; 
+		//case '\'':  dest += "&apos;";  break;
 		default:
 			dest += *source;
 		}
