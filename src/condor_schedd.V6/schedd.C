@@ -1494,7 +1494,9 @@ Scheduler::actOnJobs(int, Stream* s)
 	ReliSock* rsock = (ReliSock*)s;
 	bool notify = true;
 	action_result_type_t result_type = AR_TOTALS;
-
+	ClassAdUnParser unp;
+	string bufString;
+	
 		// Setup array to hold ids of the jobs we're acting on.
 	ExtArray<PROC_ID> jobs;
 	PROC_ID tmp_id;
@@ -1618,15 +1620,20 @@ Scheduler::actOnJobs(int, Stream* s)
 	StringList job_ids;
 		// NOTE: ATTR_ACTION_CONSTRAINT needs to be treated as a bool,
 		// not as a string...
-	ExprTree *tree, *rhs;
+//	ExprTree *tree, *rhs;
+	ExprTree *tree;
 	tree = command_ad.Lookup(ATTR_ACTION_CONSTRAINT);
 	if( tree ) {
-		rhs = tree->RArg();
-		if( ! rhs ) {
+//		rhs = tree->RArg();
+//		if( ! rhs ) {
 				// TODO: deal with this kind of error
-			return false;
-		}
-		rhs->PrintToNewStr( &tmp );
+//			return false;
+//		}
+//		rhs->PrintToNewStr( &tmp );
+		unp.Unparse( bufString, tree );
+		const char *bufCString = bufString.c_str( );
+		tmp = (char *) malloc( strlen( bufCString ) + 1 );
+		strcpy( tmp, bufCString );
 
 			// we want to tack on another clause to make sure we're
 			// not doing something invalid
