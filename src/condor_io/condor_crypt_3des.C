@@ -29,7 +29,7 @@ Condor_Crypt_3des :: Condor_Crypt_3des(const KeyInfo& key)
     : Condor_Crypt_Base(CONDOR_3DES, key)
 {
     KeyInfo k(key);
-    unsigned char * keyData = k.getKeyData();
+    const unsigned char * keyData = k.getKeyData();
 
     assert(k.getKeyLength() >= 24);
     
