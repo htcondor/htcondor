@@ -8,7 +8,7 @@
 #ifndef FSA_H
 #define FSA_H
 
-#include <signal.h>
+#include "condor_fix_signal.h"
 
 #define N_POSIX_SIGS 19
 
