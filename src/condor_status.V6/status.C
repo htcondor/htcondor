@@ -272,7 +272,7 @@ main (int argc, char *argv[])
 				fprintf(stderr, "\n");
 				print_wrapped_text("Extra Info: the condor_collector is a process "
 								   "that runs on the central manager of your Condor "
-								   "pool and collecting the status of all the machines "
+								   "pool and collects the status of all the machines "
 								   "and jobs in the Condor pool. "
 								   "The condor_collector might not be running, "
 								   "it might be refusing to communicate with you, "
