@@ -186,7 +186,12 @@ REMAP_THREE( writev, __writev, int, int, const struct iovec *, size_t )
 
 #if defined(GLIBC)
 
+#if !defined(GLIBC22)
+/* clone has a much different prototype not supported by the stub generator
+	under glibc22 and later machines */
 REMAP_TWO( clone, __clone, pid_t , void *, unsigned long )
+#endif
+
 REMAP_TWO( fstat, __fstat, int , int , struct stat *)
 REMAP_TWO( getrusage, __getrusage, int, int, struct rusage *)
 REMAP_THREE( mknod, __mknod, int , const char *, mode_t , dev_t )
