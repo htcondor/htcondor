@@ -116,6 +116,10 @@ be cleaned up. This bug first appeared in 6.5.0.
 Windows (such as when \verb@condor_vacate@  is called) to fail to
 complete.
 
+\item The gahp_server helper program, which provides Globus services to
+Condor-G, was always dynamically linked, even in statically-linked releases. 
+The statically linked distributions of Condor now include a static gahp_server.
+
 \end{itemize}
 
 \noindent Known Bugs:
