@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.1.2.3 2004-06-25 02:53:06 wright Exp $
+# $Id: remote_pre.pl,v 1.1.2.4 2004-06-26 03:12:31 wright Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -12,6 +12,9 @@ my $BaseDir = $ENV{BASE_DIR} || die "BASE_DIR not in environment!\n";
 my $SrcDir = $ENV{SRC_DIR} || die "SRC_DIR not in environment!\n";
 
 my $logsize = "50000000"; # size for logs of personal Condor
+
+# Hard-coded filename, defined in test_platform_pre
+my $tarball_file = "CONDOR-TARBALL-NAME";
 
 if( -z "tasklist.nmi" ) {
     # our tasklist is empty, so don't do any real work
@@ -24,12 +27,20 @@ if( -z "tasklist.nmi" ) {
 # untar pre-built tarball
 ######################################################################
 
-print "Untarring RELEASE tarball\n";
-chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
-my $release_tarball = $ENV{"_NMI_BUILD_condor_binary_tarball"} ||
-    die "_NMI_BUILD_condor_binary_tarball not in environment!\n";
-print "Release tarball is: $release_tarball\n";
-
+print "Finding release tarball\n";
+open( TARBALL_FILE, "$tarball_file" ) || 
+    die "Can't open $tarball_file: $!\n";
+my $release_tarball;
+while( <TARBALL_FILE> ) {
+    chomp;
+    $release_tarball = $_;
+}
+if( ! $release_tarball ) {
+    die "$tarball_file does not contain a filename!\n";
+}
+if( ! -f $release_tarball ) {
+    die "$release_tarball (from $tarball_file) does not exist!\n";
+}
 my $configure;
 my $reltar;
 open( UNTAR, "tar -zxvf $release_tarball |" ) ||
