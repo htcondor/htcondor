@@ -30,7 +30,7 @@
 #define CCTP_MSG_H_
 
 #include "stream.h"
-#include "condor_attrlist.h"
+//#include "condor_attrlist.h"
 #include "condor_classad.h"
 #include "cctp.h"
 
