@@ -113,18 +113,12 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 	bool match;			// NAC
 	bool boolValue;		// NAC
 
-			// FOR BACK COMPATIBILITY
-			// Add the 'TARGET' keyword to any external references
-	mad.ReplaceLeftAd( request.AddExplicitTargetRefs( ) );	// NAC
-
+	mad.ReplaceLeftAd( &request );	// NAC
 	// scan the offer ads
 
 	startdAds.Open ();
 	while ((candidate = startdAds.Next ())) {
 
-			// FOR BACK COMPATIBILITY
-			// Add the 'TARGET' keyword to any external references
-		candidate = candidate->AddExplicitTargetRefs( );
 			// Add conditional operators to offer Rank expression if needed
 		ExprTree* rankExpr = candidate->Lookup( ATTR_RANK );
 		ExprTree* newRankExpr = NULL;

@@ -746,8 +746,8 @@ customLessThanFunc( ClassAd *ad1, ClassAd *ad2, void *)
 	bool		boolValue = false;		// NAC
 	
 	MatchClassAd mad;			// NAC
-	mad.ReplaceLeftAd( ad1->AddExplicitTargetRefs( ) );	// NAC
-	mad.ReplaceRightAd( ad2->AddExplicitTargetRefs( ) );	// NAC
+	mad.ReplaceLeftAd( ad1 );	// NAC
+	mad.ReplaceRightAd( ad2 );	// NAC
 
 	for( int i = 0 ; i <= last ; i++ ) {
 //		sortLessThanExprs[i]->EvalTree( ad1, ad2, &result );
