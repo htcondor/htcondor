@@ -32,9 +32,6 @@
 #	else
 #		define MMAP_T void*
 #	endif
-#	if !defined(MAP_FAILED)
-#		define MAP_FAILED ((MMAP_T)-1)
-#	endif
 #elif defined(IRIX62)
 #	define MA_SHARED	0x0008	/* mapping is a shared or mapped object */
 #	define MMAP_T void*
@@ -46,6 +43,9 @@
 #	define MMAP_T void*
 #endif
 
+#if !defined(MAP_FAILED)
+#	define MAP_FAILED ((MMAP_T)-1)
+#endif
 
 #if defined(__cplusplus)
 extern "C" {
