@@ -185,6 +185,7 @@ const char ATTR_TOTAL_IDLE_JOBS			 [] = "TotalIdleJobs";
 const char ATTR_TOTAL_LOAD_AVG			 [] = "TotalLoadAvg";
 const char ATTR_TOTAL_MEMORY			 [] = "TotalMemory";
 const char ATTR_TOTAL_RUNNING_JOBS		 [] = "TotalRunningJobs";
+const char ATTR_TOTAL_VIRTUAL_MACHINES	 [] = "TotalVirtualMachines";
 const char ATTR_TOTAL_VIRTUAL_MEMORY	 [] = "TotalVirtualMemory";
 const char ATTR_UID_DOMAIN               [] = "UidDomain";
 const char ATTR_ULOG_FILE				 [] = "UserLog";
