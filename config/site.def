@@ -49,7 +49,7 @@
 #define WANT_CLASSAD_FUNCTIONS YES
 #define WANT_DAGMAN_HELPER     YES
 
-GAHP_DIR = /p/condor/workspaces/epaulson/gahp/bin
+GAHP_DIR = /p/condor/workspaces/epaulson/gahp.V65/bin
 
 #define USE_GLOBUS_OPENSSL YES
 OpenSSLPath        = /unsup/globus-2.0-latest
@@ -62,7 +62,7 @@ GlobusPath = /unsup/globus-2.0-latest
 /* Top should be the root of the source directory you want to use if
 you want our top-level Makefile to build the directory tree with all
 the soft links.  The links will point back to Top/src/... */
-#define Top /p/condor/workspaces/zmiller/merge/arena
+#define Top /p/condor/workspaces/epaulson/build/V65
 
 #define TmpDir		/tmp
 
