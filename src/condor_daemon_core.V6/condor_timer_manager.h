@@ -44,6 +44,8 @@
 const	int		STAR = -1;
 
 class Service {
+public:
+	virtual ~Service() { };
 };
 
 typedef	int		(*Event)(Service*);
