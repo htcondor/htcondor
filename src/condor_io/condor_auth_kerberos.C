@@ -848,7 +848,7 @@ int Condor_Auth_Kerberos :: map_domain_name(const char * domain)
     if (RealmMap) {
         MyString from(domain), to;
         if (RealmMap->lookup(from, to) != -1) {
-            setRemoteDomain(to.GetCStr());
+            setRemoteDomain(to.Value());
             return TRUE;
         }
     }
