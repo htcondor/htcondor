@@ -24,7 +24,7 @@ class Sink
 		friend class ClassAdList;
 		friend class ClassAd;
 		friend class ExprTree;
-		friend class EvalValue;
+		friend class Value;
 		friend class Literal;
 		friend class AttributeReference;
 		friend class Operation;	
