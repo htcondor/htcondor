@@ -335,6 +335,11 @@ GlobusJob::~GlobusJob()
 	}
 }
 
+void GlobusJob::Reconfig()
+{
+	gahp.setTimeout( gahpCallTimeout );
+}
+
 void GlobusJob::UpdateJobAd( const char *name, const char *value )
 {
 	char buff[1024];

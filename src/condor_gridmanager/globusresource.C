@@ -34,6 +34,11 @@ GlobusResource::~GlobusResource()
 	}
 }
 
+void GlobusResource::Reconfig()
+{
+	gahp.setTimeout( gahpCallTimeout );
+}
+
 void GlobusResource::RegisterJob( GlobusJob *job )
 {
 	registeredJobs.Append( job );

@@ -389,6 +389,24 @@ Reconfig()
 	}
 	GahpMain.setMaxPendingRequests(max_requests);
 
+	// Tell all the job objects to deal with their new config values
+	GlobusJob *next_job;
+
+	JobsByProcID.startIterations();
+
+	while ( JobsByProcID.iterate( next_job ) != 0 ) {
+		next_job->Reconfig();
+	}
+
+	// Tell all the resource objects to deal with their new config values
+	GlobusResource *next_resource;
+
+	ResourcesByName.startIterations();
+
+	while ( ResourcesByName.iterate( next_resource ) != 0 ) {
+		next_resource->Reconfig();
+	}
+
 	// Always check the proxy on a reconfig.
 	checkProxy();
 

@@ -22,6 +22,7 @@ class GlobusJob : public Service
 
 	~GlobusJob();
 
+	void Reconfig();
 	void SetEvaluateState();
 	int doEvaluateState();
 	void NotifyResourceDown();

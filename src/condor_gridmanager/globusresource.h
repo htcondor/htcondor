@@ -17,6 +17,7 @@ class GlobusResource : public Service
 	GlobusResource( char *resource_name );
 	~GlobusResource();
 
+	void Reconfig();
 	void RegisterJob( GlobusJob *job );
 	void UnregisterJob( GlobusJob *job );
 	void RequestPing( GlobusJob *job );
