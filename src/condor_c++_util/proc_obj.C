@@ -337,6 +337,10 @@ string_copy( const char *str )
 {
 	char	*answer;
 
+	if(!str)
+	{
+		return NULL;
+	}
 	answer = new char [ strlen(str) + 1 ];
 	strcpy( answer, str );
 	return answer;
