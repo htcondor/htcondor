@@ -56,6 +56,7 @@ static bool scan_keyword(char *&input, Token &token);
 static void scan_variable(char *&input, Token &token);
 static void scan_number(char *&input, Token &token);
 static void scan_string(char *&input, Token &token);
+static void scan_time(char *&input, Token  &token);
 static void scan_operator(char *&input, Token &token);
 #endif
 
@@ -114,15 +115,15 @@ void Scanner(char*& input, Token& token)
 			scan_variable(input, token);
 			token.isString = TRUE; // scan_variable is not a friend, can't set this
 		}
-	}
-	else if (isdigit(*input)) {
+	} else if (isdigit(*input)) {
 		scan_number(input, token);
-	}
-	else if (*input == '"') {
+	} else if (*input == '"') {
 		scan_string(input, token);
 		token.isString = TRUE; // scan_string is not a friend, can't set this
-	}
-	else {
+	} else if (*input == '\'') { 
+		scan_time(input, token);
+		token.isString = TRUE;
+	} else {
 		scan_operator(input, token);
 	}
 	return;
@@ -218,8 +219,7 @@ static void scan_number(
 		// Convert the float
 		token.floatVal = (float) strtod(input, &input);
 		token.type = LX_FLOAT; 
-	}
-	else {
+	} else {
 		// It's just a plain integer
 		token.intVal = strtol(input, &input, 10);
 		token.type = LX_INTEGER; 
@@ -259,8 +259,7 @@ static void scan_string(
 	if (*s == '\0') {
 		token.type = LX_ERROR;
 		token.length = 0;			 
-	}
-	else {
+	} else {
 		// Make sure we have space to store the string.
 		if (string_length > token.strValLength) {
 			free(token.strVal);
@@ -292,7 +291,60 @@ static void scan_string(
 		input++;        // for the final quote
 		token.length++; // for the final quote
 		token.type = LX_STRING;
-		//token.isString = TRUE;
+	}
+	return;
+}
+
+// We can time, which is just a string.
+static void scan_time(
+    char   *&input,
+	Token  &token)
+{
+	int   string_length;
+	char *s;
+
+	// skip the initial quote mark 
+	input++;
+	token.length++;
+
+	s = input;
+	string_length = 0;
+
+	// First count the length of the string. 
+	while (*s != '\'' && *s != '\0') {
+		s++;
+		string_length++;
+	}
+
+	// Check if the string is not properly terminated with a quote mark. 
+	if (*s == '\0') {
+		token.type = LX_ERROR;
+		token.length = 0;			 
+	} else {
+		// Make sure we have space to store the string.
+		if (string_length > token.strValLength) {
+			free(token.strVal);
+			token.strVal = (char *) malloc(string_length + 1);
+			token.strValLength = string_length;
+		}
+
+		// Copy the string.
+		char *dest;
+		dest = token.strVal;
+        while(*input != '\'' && *input != '\0')
+		{
+			*dest = *input;
+			input++;
+            dest++;
+			token.length++;
+        }
+
+		token.strVal[string_length] = 0;
+
+		// Update our tracking.
+		input++;        // for the final quote
+		token.length++; // for the final quote
+		token.type = LX_TIME;
 	}
 	return;
 }
@@ -435,7 +487,7 @@ static void scan_operator(
 	return;
 }
 
-#else /* USE_EXTENSIBLE_ARRAY is not defined */
+#else /* USE_NEW_SCANNER is not defined */
 void Scanner(char*& s, Token& t)
 { 
     char	str[MAXVARNAME];
