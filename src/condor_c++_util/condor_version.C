@@ -64,7 +64,7 @@ static char* CondorVersionString = "$HawkeyeVersion: 0.1.1 " __DATE__ " $";
 #define str(s) #s
 
 /* Here is the platform string.  You don't need to edit this */
-static char* CondorPlatformString = "$CondorPlatform: " xstr(PLATFORM) " $";
+static char* CondorPlatformString = "$HawkeyePlatform: " xstr(PLATFORM) " $";
 
 extern "C" {
 
