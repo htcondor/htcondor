@@ -602,12 +602,32 @@ AddExplicitConditionals( ExprTree *expr )
 			  oKind <= Operation::__LOGIC_END__ ) ) {
 				// Comparison/Logic Operation expression
 				// replace "expr" with "expr ? 1 : 0"
+
+			ExprTree *newExpr = expr;
+			if( oKind == Operation::LESS_THAN_OP ||
+				oKind == Operation::LESS_OR_EQUAL_OP ||
+				oKind == Operation::GREATER_OR_EQUAL_OP ||
+				oKind == Operation::GREATER_THAN_OP ) {				
+				ExprTree *newExpr1 = AddExplicitConditionals( expr1 );
+				ExprTree *newExpr2 = AddExplicitConditionals( expr2 );
+				if( newExpr1 != NULL || newExpr2 != NULL ) {
+					if( newExpr1 == NULL ) {
+						newExpr1 = expr1->Copy( );
+					}
+					if( newExpr2 == NULL ) {
+						newExpr2 = expr2->Copy( );
+					}
+					newExpr = Operation::MakeOperation( oKind, newExpr1,
+														newExpr2, NULL );
+				}
+			}
+
 			Value val0, val1;
 			val0.SetIntegerValue( 0 );
 			val1.SetIntegerValue( 1 );
 			ExprTree *tern = NULL;
 			tern = Operation::MakeOperation( Operation::TERNARY_OP,
-											 expr->Copy( ),
+											 newExpr->Copy( ),
 											 Literal::MakeLiteral( val1 ),
 											 Literal::MakeLiteral( val0 ) );
 			return Operation::MakeOperation( Operation::PARENTHESES_OP,
