@@ -202,10 +202,18 @@ VanillaProc::StartJob()
 		// reset iwd of job to the starter directory
 		sprintf(tmp,"%s=\"%s\"",ATTR_JOB_IWD,Starter->GetWorkingDir());
 		JobAd->InsertOrUpdate(tmp);		
+
+		// Only rename the executable if it is transferred.
 	
-			// rename executable to 'condor_exec'
-		sprintf(tmp,"%s=\"%s\"",ATTR_JOB_CMD,CONDOR_EXEC);
-		JobAd->InsertOrUpdate(tmp);		
+		int xferExec;
+		if(!JobAd->LookupBool(ATTR_TRANSFER_EXECUTABLE,xferExec)) {
+			xferExec = 1;
+		}
+
+		if(xferExec) {
+			sprintf(tmp,"%s=\"%s\"",ATTR_JOB_CMD,CONDOR_EXEC);
+			JobAd->InsertOrUpdate(tmp);
+		}
 
 		filetrans = new FileTransfer();
 		ASSERT( filetrans->Init(JobAd, false, PRIV_USER) );
