@@ -460,6 +460,7 @@ find_file(const char *env_name, const char *file_name)
 		// If we were given an environment variable name, try that first. 
 	if( env_name && (env = getenv( env_name )) ) {
 		config_file = strdup( env );
+
 		if( (fd = open( config_file, O_RDONLY)) < 0 ) {
 			fprintf( stderr, "File specified in %s environment ", env_name );
 			fprintf( stderr, "variable:\n\"%s\" does not exist.", config_file ); 
@@ -697,6 +698,7 @@ reinsert_specials( char* host )
 	}
 	insert( "full_hostname", my_full_hostname(), ConfigTab, TABLESIZE );
 	insert( "subsystem", mySubSystem, ConfigTab, TABLESIZE );
+	insert( "ip_address", my_ip_str(), ConfigTab, TABLESIZE );
 }
 
 
