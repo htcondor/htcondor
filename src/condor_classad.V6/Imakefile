@@ -15,11 +15,9 @@ LIB =  ./libclassad.a ../condor_c++_util/cplus_lib.a \
       ../condor_util_lib/util_lib.a ../condor_io/libcedar.a \
       RpcLib SocketLib
 
-COLL_SRC = classad_collection.C classad_collection_ops.C \
-		classad_collection_types.C 
+COLL_SRC = view.C collection.C collection_ops.C
 
-COLL_OBJ = classad_collection.o classad_collection_ops.o \
-		classad_collection_types.o
+COLL_OBJ = view.o collection.o collection_ops.o
 
 
 /* The S_* files are for standalone classads */
@@ -44,12 +42,14 @@ all_target(libclassad.a)
 library_target(libclassad.a,$(OBJ))
 
 
+/* my template instantiations are in here */
+template_inst( instantiations.C, instantiations.o )
+
+
 /* Standalone classad library (single .a); still need all condor's headers */
 standalone: libclassads.a
 library_target(libclassads.a,$(OBJ) $(S_OBJ))
 
-
-template_inst( instantiations.C )
 
 /* Headers required for standalone classad tarball */
 CONDOR_HEADERS = ../condor_c++_util/list.h ../condor_c++_util/stringSpace.h \
@@ -87,5 +87,7 @@ clean::
 	rm -f -r *.o *.gz html
 
 /* The Classad eXpression Interpreter */
+c_plus_target (test, testcoll.o, $(LIB))
+pure_c_plus_target (test.pure, testcoll.o, $(LIB))
 c_plus_target (cxi, cxi.o, $(LIB))
 pure_c_plus_target(cxi.pure, cxi.o, $(LIB))
