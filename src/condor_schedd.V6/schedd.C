@@ -6772,6 +6772,7 @@ Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, ClassAd* my_match_ad,
 		  Derek Wright <wright@cs.wisc.edu>
 		*/
 	if( (addr = string_to_ipstr(peer)) ) {
+		daemonCore->AddAllowHost( addr, WRITE );
 		daemonCore->AddAllowHost( addr, DAEMON );
 	} else {
 		dprintf( D_ALWAYS, "ERROR: Can't convert \"%s\" to an IP address!\n", 
