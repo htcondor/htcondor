@@ -3,6 +3,7 @@
 	ProjectType="Visual C++"
 	Version="7.00"
 	Name="condor_store_cred"
+	ProjectGUID="{8651B128-F160-44FE-8A8C-3570BB81F441}"
 	SccProjectName=""
 	SccLocalPath="">
 	<Platforms>
