@@ -1,0 +1,116 @@
+M###########################################################################
+# WISDOM for the Condor C++ Util Library
+###########################################################################
+
+This file contains wisdom about various components of the Condor C++
+Util Library, interactions between them, and other miscellaneous
+wisdom.  When you add entries, please add both an item in the Table of
+Contents, and add a new section, using the existing format.  Thank you.
+
+
+###########################################################################
+# Table of Contents
+###########################################################################
+
+1) The interaction of my_hostname.C and condor_config.C
+2) Always use the Daemon Object to locate daemons
+
+
+###########################################################################
+# 1) The interaction of my_hostname.C and condor_config.C
+###########################################################################
+
+On Mon, 9 Oct 2000 16:03:47 -0500 (CDT)  Jim Basney wrote:
+
+> The my_hostname() function calls gethostname() to find the machine's
+> hostname.  If NETWORK_INTERFACE is set to something other than the
+> default interface, my_hostname() isn't going to agree with the
+> hostname associated with Condor's sockets on that machine.  Is that a
+> bug, or am I confused?
+
+   You're not confused.  That's how it really works.  Yes, some might
+see that as a bug.  However, it's really a design feature. :)
+
+   What we'd like to do is perform all the initialization in
+my_hostname.C at once, instead of splitting it up and trying to "only"
+initialize what we need.  We should first decide what our IP address
+is, either by NETWORK_INTERFACE, or, if that's not there, use the
+default interface.  Then, we should resolve that IP into a hostname
+and a full hostname, using gethostbyaddr().  That'd be Right(tm).
+However, we just can't do that as Condor stands now...
+
+   In effect, you have a chicken and the egg problem: you need to be
+able to param() for NETWORK_INTERFACE while you initialize hostname
+and full_hostname.  However, you need to know hostname and/or
+full_hostname to param() for NETWORK_INTERFACE, since, in the common
+case, that'd be defined in the local config file, which we can only
+find if we can resolve the $(HOSTNAME) macro. :(
+
+   I'm still not sure what's the right way to handle this chicken/egg
+problem.  We have a similar problem with the DEFAULT_DOMAIN_NAME macro
+(which admins can set if their DNS/NIS stuff is so fucked that they
+can't get fully-resolved hostnames).  The way we resolved that was we
+said that if you wanted to define DEFAULT_DOMAIN_NAME, you had to do
+it in your global config file.  When we read in the global config
+file, we still haven't initialized my_hostname, since we don't need it
+yet.  Once that's done, we initialize my_hostname(), param() for
+DEFAULT_DOMAIN_NAME, insert the right HOSTNAME and FULL_HOSTNAME
+macros, and everything is peachy.  However, that won't work with
+NETWORK_INTERFACE, since it *needs* to be done in the local config
+files.
+
+   One option would be to use the default interface's name for the
+purposes of the HOSTNAME and FULL_HOSTNAME config macros (or even,
+just for the purpose of finding the local config file), and then use
+the "real" hostname for everything else (even other uses of HOSTNAME
+and FULL_HOSTNAME config macros).  However, we decided that was more
+evil and confusing than just always using the default hostnames, even
+if they might disagree with the NETWORK_INTERFACE stuff.  Do you agree
+with that?
+
+   If there was a good way to define NETWORK_INTERFACE in a way that
+worked globally, instead of having it define a specific IP address, we
+could use the same trick as DEFAULT_DOMAIN_NAME.  For example, if
+NETWORK_INTERFACE told you "default" or "alt1", or "alt2" or
+something, which was how many hops down the h_aliases and h_addr_list
+you wanted to go to find the right interface, that'd work for the
+chicken/egg, since you might be able to define that globally.
+However, that wouldn't really work in practice, since the interface
+you want to use might not always be in the same position in your
+lists, you might have a pool where you want some hosts using the
+default interface, and others not, etc, etc. :(
+
+   One possible, really ugly thought would be to expose a
+DEFAULT_IP_ADDR config macro, and tell people to use that to define
+their local config files, instead of hostnames, if they want to use
+NETWORK_INTERFACE.  We could always compute that automatically,
+without any help from the admins, and we'd have no chicken/egg.
+However, I'm not sold on the usability of this option.  It's pretty
+sucky, if you ask me.  
+
+   If anyone has any great ideas, I'd love to hear them.  I'm kind of
+at a loss (though honestly, I haven't thought about this at all for a
+really long time).  Thanks for the watchful eyes and note, Jim.  I
+just wish the answer wasn't so complicated and nasty. 
+
+ -Derek
+
+
+###########################################################################
+# 2) Always use the Daemon Object to locate daemons
+###########################################################################
+
+   The object defined in daemon.C is used to locate Condor daemons.
+You instantiate a new object, pass in the appropriate type of daemon
+you care about (e.g. DT_MASTER, DT_STARTD, etc), the name of the
+daemon you're looking for, and the pool that daemon lives in.  If the
+pool arg is NULL, it assumes the local pool, and if the name arg is
+NULL, it assumes the local daemon.  There are Doc++ comments in the
+daemon.h header file that describe the object in detail.  The
+important things is that *everyone* trying to locate a daemon in
+Condor *MUST USE THE DAEMON OBJECT*.  There is a lot of code to handle
+special cases and rules for locating daemons in there.  Do *NOT* just
+try to query the collector yourself, since you won't get it right.
+Thanks. 
+
+
