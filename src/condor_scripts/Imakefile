@@ -131,8 +131,10 @@ static_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
 
 
 #if WANT_MAN_PAGES
+man_target(condor_advertise.1)
 man_target(condor_checkpoint.1)
 man_target(condor_compile.1)
+man_target(condor_configure.1)
 man_target(condor_config_val.1)
 man_target(condor_findhost.1)
 man_target(condor_glidein.1)
@@ -155,6 +157,7 @@ man_target(condor_rm.1)
 man_target(condor_run.1)
 man_target(condor_stats.1)
 man_target(condor_status.1)
+man_target(condor_store_cred.1)
 man_target(condor_submit.1)
 man_target(condor_submit_dag.1)
 man_target(condor_userlog.1)
