@@ -214,16 +214,31 @@ ScheduledShutdownEvent::ScheduledShutdownEvent(const char name[],
 
 		// read the DURATION section of the record
 	errno = 0;
-	duration = atoi(record+offset);
+	int hour = atoi(record+offset);
 	if (errno) {
 		dprintf(D_ALWAYS,
-				"Error parsing duration field of event record %s.\n",
+				"Error parsing duration field (hour) of event record %s.\n",
 				name);
 		return;
 	}
-
-	while(!isspace(record[++offset])); // skip the duration field
-	while(isspace(record[offset])) offset++; // skip the whitespace
+	while(record[offset++] != ':') { // skip the ':'
+		if (record[offset] == '\0') {
+			dprintf(D_ALWAYS, "Error parsing time field of event record "
+					"\"%s\".  No ':' found before end of string.\n", name);
+			return;
+		}
+	}
+	errno = 0;
+	int minute = atoi(record+offset);
+	if (errno) {
+		dprintf(D_ALWAYS,
+				"Error parsing duration field (minute) of event record %s.\n",
+				name);
+		return;
+	}
+	duration = (hour*60+minute)*60;
+	while(isdigit(record[++offset])); // skip the duration field
+	while(isspace(record[++offset])); // skip the whitespace
 
 	// read the BANDWIDTH section of the record
 	errno = 0;
@@ -236,7 +251,7 @@ ScheduledShutdownEvent::ScheduledShutdownEvent(const char name[],
 	}
 
 	while(!isspace(record[++offset])); // skip the bandwidth field
-	while(isspace(record[offset])) offset++; // skip the whitespace
+	while(isspace(record[++offset])); // skip the whitespace
 
 	int len;
 	for (len = 0; record[offset+len] != '\0' &&
@@ -258,7 +273,7 @@ ScheduledShutdownEvent::ScheduledShutdownEvent(const char name[],
 	free(tmp);
 
 	offset += len;			// skip the constraint field
-	while(isspace(record[offset])) offset++; // skip the whitespace
+	while(isspace(record[++offset])); // skip the whitespace
 
 	for (len = 0; record[offset+len] != '\0' &&
 			 !isspace(record[offset+len]); len++);
@@ -525,11 +540,11 @@ ScheduledShutdownEvent::Timeout()
 		// continue if we have already vacated a job
 		if (time_to_vacate > 0) continue;
 		int ImageSize = 0, JobUniverse;
-		// only send vacates to startds that have jobs (i.e., which have
-		// ImageSize and JobUniverse defined) and which are not already
-		// in the preempting state
+		// only send vacates to startds that have jobs (i.e., which
+		// have ImageSize and JobUniverse defined) and which are still
+		// in the claimed state
 		if (ad->LookupString(ATTR_STATE, startd_state) != 1 ||
-			strcmp(startd_state, "Preempting") == MATCH ||
+			strcmp(startd_state, "Claimed") != MATCH ||
 			ad->LookupInteger(ATTR_IMAGE_SIZE, ImageSize) != 1 || 
 			ad->LookupInteger(ATTR_JOB_UNIVERSE, JobUniverse) != 1) {
 			continue;
