@@ -1,5 +1,10 @@
 #ifdef BeforeVendorCF
 
+/* BEGIN Things passed in from condor_imake */
+EGCS_LIBC = LIB_GCC
+#define Crt0 CRT_BEGIN
+/* END Things passed in from condor_imake */
+
 #define HasGcc		YES
 #define HasGPlusPlus	YES
 
@@ -62,7 +67,7 @@ GlobusPath = /unsup/globus-2.2.4
 /* Top should be the root of the source directory you want to use if
 you want our top-level Makefile to build the directory tree with all
 the soft links.  The links will point back to Top/src/... */
-#define Top /p/condor/workspaces/nleroy/v65-tru64merge-2
+#define Top /p/condor/workspaces/psilord/v65/v65-dirty
 
 #define TmpDir		/tmp
 
@@ -89,20 +94,6 @@ the soft links.  The links will point back to Top/src/... */
 
 #define CondorAdministrator	condor-admin
 #define YpLib
-
-#define WANT_JAVA       YES
-
-#define WANT_PVM	YES
-
-#define WANT_CONDOR_G	YES
-
-#define WANT_NETMAN	YES
-
-#define WANT_GSI        YES
-#define WANT_KERBEROS   YES
-#define WANT_MD         YES
-#define WANT_3DES       YES
-#define WANT_BLOWFISH   YES
 
 /*------------------------------------------
  * Condor Credential API related
