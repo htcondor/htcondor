@@ -1,3 +1,6 @@
+5/20/04 stork-gsi-support-branch
+   A branch created off the trunk for adding GSI/MyPorxy suppport to  Stork
+
 4/12/04 trunk-merge-V6_7-branch-1
    A branch created off the trunk for the purpose of merging V6_7
    branch to the trunk.  We will merge from the V6_6_ROOT tag to 
