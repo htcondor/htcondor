@@ -52,7 +52,12 @@ class AttrListElem
 
         AttrListElem(ExprTree*);			// constructor
         AttrListElem(AttrListElem&);		// copy constructor
-        ~AttrListElem() { delete tree; }	// destructor
+        ~AttrListElem() 
+			{
+				// Notice that this calls our ExprTree::operator delete()
+				// in astbase.C
+				delete tree; 
+			}
 
         friend class AttrList;
         friend class ClassAd;
