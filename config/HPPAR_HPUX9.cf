@@ -67,6 +67,7 @@
 #define HAS_SETEUID				NO
 #define HAS_GETWD				NO
 #define HAS_INSQUE				NO
+#define DO_BENCHMARKING			YES
 #define HAS_PVM					NO
 
 #define PVM_ARCH			HPPA
