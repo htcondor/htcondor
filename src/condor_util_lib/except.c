@@ -80,7 +80,7 @@ _EXCEPT_(char *fmt, ...)
 	}
 
 	if( _EXCEPT_Cleanup ) {
-		(*_EXCEPT_Cleanup)( _EXCEPT_Line, _EXCEPT_Errno );
+		(*_EXCEPT_Cleanup)( _EXCEPT_Line, _EXCEPT_Errno, buf );
 	}
 
 	va_end(pvar);
