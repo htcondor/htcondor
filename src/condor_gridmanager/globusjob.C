@@ -589,7 +589,7 @@ int GlobusJob::doEvaluateState()
 			// Start a new gram submission for this job.
 			char *job_contact;
 			if ( condorState == REMOVED || condorState == HELD ) {
-				myResource->SubmitComplete(this);
+				myResource->CancelSubmit(this);
 				gmState = GM_UNSUBMITTED;
 				break;
 			}
