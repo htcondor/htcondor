@@ -478,6 +478,10 @@ class ClassAd : public ExprTree
 		int         EvalFloat (const char *, class ClassAd *, float &);
 		int         EvalBool  (const char *, class ClassAd *, int &);
 
+		// chaining
+//	    void		ChainToAd( ClassAd * );
+//		void		unchain( void );
+
 // ClassAd methods
 
         ClassAd(FILE*,char*,int&,int&,int&);	// Constructor, read from file.
