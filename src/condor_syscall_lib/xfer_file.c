@@ -138,7 +138,7 @@ get_file( const char *remote, const char *local, int mode )
 	for(bytes_to_go = len; bytes_to_go; bytes_to_go -= nbytes ) {
 		nbytes = MIN( CHUNK_SIZE, bytes_to_go );
 		nbytes = read( remote_fd, buf, nbytes );
-		if( nbytes < 0 ) {
+		if( nbytes <= 0 ) {
 			dprintf( D_ALWAYS, "Can't read fd %d, errno = %d\n",
 														remote_fd, errno );
 			(void)close( local_fd );
