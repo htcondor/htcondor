@@ -1900,6 +1900,13 @@ int Scheduler::startdContactSockHandler( Stream *sock )
 		mrec->status = M_ACTIVE;
 	}
 
+	// Now, we set the timeout on the socket to 1 second.  Since we 
+	// were called by as a Register_Socket callback, this should not 
+	// block if things are working as expected.  
+	// However, if the Startd wigged out and sent a 
+	// partial int or some such, we cannot afford to block. -Todd 3/2000
+	sock->timeout(1);
+
  	if( !sock->rcv_int(reply, TRUE) ) {
 		dprintf( D_ALWAYS, "Response problem from startd.\n" );	
 		BAILOUT;
