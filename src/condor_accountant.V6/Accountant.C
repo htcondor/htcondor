@@ -137,11 +137,7 @@ void Accountant::Initialize()
 	  EXCEPT( "SPOOL not defined!" );
   }
   if (!AcctLog) {
-    // struct stat statbuf;
-    // bool ConvertOldFile=false;
-    // if (stat(OldLogFileName.Value(),&statbuf)==0 && stat(LogFileName.Value(),&statbuf)==-1) ConvertOldFile=true;
     AcctLog=new ClassAdLog(LogFileName.Value());
-    // if (ConvertOldFile) LoadState(OldLogFileName);
     dprintf(D_FULLDEBUG,"Accountant::Initialize - LogFileName=%s\n",LogFileName.Value());
   }
 
@@ -806,36 +802,4 @@ MyString Accountant::GetDomain(const MyString& CustomerName)
   if (pos==-1) return S;
   S=CustomerName.Substr(pos+1,CustomerName.Length()-1);
   return S;
-}
-
-//------------------------------------------------------------------
-// Load State
-//------------------------------------------------------------------
-
-bool Accountant::LoadState(const MyString& OldLogFileName)
-{
-  dprintf(D_FULLDEBUG,"Loading State from old file\n");
-  MyString Action, CustomerName, ResourceName;
-  float d;
-
-  // Open log file
-  ifstream LogFile(OldLogFileName.Value());
-  if (!LogFile) {
-    dprintf(D_ALWAYS, "Accountant::LoadState - can't open Log file %s - starting with no previous match information\n",OldLogFileName.Value());
-    return false;
-  }
-
-  // Read log file
-  LogFile >> d;
-  LastUpdateTime=int(d);
-
-  while(1) {
-    LogFile >> Action >> CustomerName >> ResourceName >> d;
-    if (LogFile.eof()) break;
-    if (Action=="SetPriority") SetPriority(CustomerName,d);
-    else if (Action=="AddMatch") AddMatch(CustomerName,ResourceName,int(d));
-    else if (Action=="RemoveMatch") RemoveMatch(ResourceName,int(d));
-  }
-  LogFile.close();
-  return true;
 }
