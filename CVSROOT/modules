@@ -338,6 +338,13 @@ V6_7_SOAP_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/gsoap/2.6 \
 		   externals/bundles/gt3gahp/1.0
 
+# The V6_7-soap-3-branch is more like V6_7_2, but with the gsoap external
+V6_7_SOAP_3_EXT	-a V6_7_COMMON_EXT \
+		   externals/bundles/gahp/1.0.12 \
+		   externals/bundles/globus/2.4.3.vdt.1.1.14 \
+		   externals/bundles/gsoap/2.6 \
+		   externals/bundles/gt3gahp/2.0
+
 # Externals needed for V6_7_2 (same as V6_7_1)
 V6_7_2_EXT	-a V6_7_1_EXT
 
