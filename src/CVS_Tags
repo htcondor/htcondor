@@ -1,3 +1,7 @@
+7/01/04 stork-release-0_9_0
+   stork-0.9.0 release snapshot of src directory [not config, imake
+   directories].
+
 6/09/04 stork-start-staff-maint
    Snapshot of src/condor_data_manager (Stork) at beginning of Staff 
    maintenance.  Branched from trunk.
