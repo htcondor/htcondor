@@ -243,11 +243,11 @@ char *filename;
 }
 #endif /* VAX && ULTRIX */
 
-#if (defined(I386) && defined(DYNIX)) || defined(LINUX) || (defined(VAX) && defined(BSD43)) || (defined(MC68020) && defined(SUNOS41)) || (defined(IBM032) && defined(BSD43)) || (defined(MC68020) && defined(BSD43)) || (defined(SPARC) && defined(SUNOS41)) || (defined(R6000) && defined(AIX31)) || defined(AIX32) || defined(IRIX331) || (defined(SPARC) && defined(CMOS)) || defined(HPUX) || defined(OSF1) || defined(Solaris) || defined(IRIX53) || defined(IRIX65) || defined(IRIX62) || defined(Darwin)
+#if defined(LINUX) || defined(AIX) || defined(HPUX) || defined(OSF1) || defined(Solaris) || defined(IRIX) || defined(Darwin)
 
 #include <limits.h>
 
-#if defined(AIX31) || defined(AIX32) || defined(IRIX53) || defined(IRIX65) || defined(IRIX62)
+#if defined(AIX) || defined(IRIX65)
 #include <sys/statfs.h>
 #elif defined(Solaris)
 #include <sys/statvfs.h>
@@ -255,7 +255,7 @@ char *filename;
 #include <sys/mount.h>
 #endif
 
-#if defined(IRIX331) || defined(IRIX53) || defined(IRIX65) || defined(IRIX62)
+#if defined(IRIX)
 /* There is no f_bavail on IRIX */
 #define f_bavail f_bfree
 #endif
