@@ -5,7 +5,7 @@
 
 #define NEEDS_64BIT_SYSCALLS    YES
 #define NEEDS_64BIT_STRUCTS YES
-#define HAS_PVM	NO
+#define HAS_PVM	YES
 
 
 #if IS_X86
