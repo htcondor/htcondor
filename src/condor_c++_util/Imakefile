@@ -42,7 +42,7 @@ c_plus_target(access.t, access.t.o, $(LIB) SocketLib )
 c_plus_target(killfamily.t, killfamily.t.o, $(LIB) )
 pure_c_plus_target(killfamily.t.pure, killfamily.t.o, $(LIB) )
 purecov_c_plus_target(killfamily.t.pc, killfamily.t.o, $(LIB) )
-html_target( classad_collection.h condor_event.h list.h simplelist.h user_log.c++.h )
+html_target( classad_collection.h condor_event.h list.h simplelist.h user_log.c++.h directory.h )
 
 all-tests: access.t killfamily.t test_locks 
 
