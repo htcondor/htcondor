@@ -133,6 +133,7 @@ extern "C"
 	void	install_sig_handler( int sig, SIG_HANDLER handler );
 	char*	param(char*); 
 	EXPR   	*build_expr(char*, ELEM*);
+	int		get_random_int();
 }
 
 #define NEG_INFINITY	(1<<31)	/* ASSUMES 32 bit 2's COMPLIMENT ARITHMETIC! */
@@ -1906,9 +1907,11 @@ string. This function can be improved to generate the random string by some
 better method as it is just a black box as far as the negotiator is concerned 
 ..dhaval */
 
+/* Use get_random_int from condor_util_lib.  -Jim B. */
+
 int get_random_number()
 {
-	return rand()%100;
+	return get_random_int()%100;
 }
 
 char *get_random_string(char **temp)
@@ -1926,7 +1929,7 @@ random3=get_random_number();
 random4=get_random_number();
 random5=get_random_number();
 
-sprintf(str,"%d%d%d%d%d",random1,random2,random3,random4,random5);
+sprintf(str,"%02d%02d%02d%02d%02d",random1,random2,random3,random4,random5);
 *temp=strdup(str);
 return 0;
 }
