@@ -105,6 +105,8 @@ same int(3.9), 3
 same int("3.9"), 3
 same int(absTime("1970-01-01T:00:00:01Z")), 1
 same int(reltime("01:00:01")), 3601
+eval y = int(absTime("1970-01-01T:00:00:01Z"))
+same $y, 1
 
 same real(3), 3.0
 same real(3.9), 3.9
@@ -151,3 +153,28 @@ same member(4, {1, 2, 3}), false
 same regexp("Alain.*Roy", "Alain Aslag Roy"), true
 same regexp("alain.*roy", "Alain Aslag Roy"), false
 same regexp("alain.*roy", "Alain Aslag Roy", "i"), true
+
+eval t = absTime("1970-01-02T:03:04:05Z")
+same splitTime($t).year, 1970
+same splitTime($t).month, 1
+same splitTime($t).day, 2
+same splitTime($t).hours, 3
+same splitTime($t).minutes, 4
+same splitTime($t).seconds, 5
+same splitTime($t).offset, 0
+
+eval t = absTime("1970-01-02T:03:04:05-06:00")
+same splitTime($t).year, 1970
+same splitTime($t).month, 1
+same splitTime($t).day, 2
+same splitTime($t).hours, 3
+same splitTime($t).minutes, 4
+same splitTime($t).seconds, 5
+same splitTime($t).offset, -360
+
+eval t = relTime("1d2h3m4.5s")
+eval tt = splitTime($t)
+same splitTime($t).days, 1
+same splitTime($t).hours, 2
+same splitTime($t).minutes, 3
+same splittime($t).seconds, 4.5
