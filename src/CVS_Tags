@@ -1,3 +1,9 @@
+12/23/04 V6_7-condorg_gt4-branch
+   A branch of getting Condor-G to submit to GT4. Created off V6_7-branch 
+at tag "V6_7-condorg_gt4-root" by ckireyev. Should be merged into 6.7 as 
+soon as the damn thing works. As of this writing the latest GT4 release is 
+3.9.4.
+
 12/21/04 V6_7_3-branch
    Release branch for 6.7.3, off of the V6_7-branch, from V6_7_3-root.
 
