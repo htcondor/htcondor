@@ -25,9 +25,9 @@
 
 #include "dag.h"
 
-class Global {
+class Dagman {
   public:
-    inline Global ():
+    inline Dagman ():
         dag          (NULL),
         maxJobs      (0),
         maxPreScripts (0),
@@ -46,6 +46,6 @@ class Global {
 	StringList condorLogFiles;
 };
 
-extern Global G;
+extern Dagman dagman;
 
 #endif	// ifndef DAGMAN_MAIN_H
