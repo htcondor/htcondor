@@ -99,8 +99,6 @@ LIBDBM = DbmLibrary
 #define RANLIB_TOUCH(libname) ranlib libname
 #endif
 
-#endif	/* HP or SGI */
-
 #ifdef XIncludeFlag
 #define XInclude XIncludeFlag
 #else
@@ -116,6 +114,7 @@ PLATFORM_C_FLAGS = -qsrcmsg
 STD_C_PLUS_FLAGS =  \
 	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) XInclude -D/**/Architecture -D/**/OperatingSystem -DNFSFIX DbmFlag SigFlag CompatFlags -g
 STD_C_FLAGS =  $(STD_C_PLUS_FLAGS)
+STATIC = StaticFlag
 
 
 /*
