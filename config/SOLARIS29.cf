@@ -12,14 +12,12 @@
 #define		IS_X86_SOLARIS29	YES
 #define		GccArch			i386-pc-solaris2.9
 #define		Platform		INTEL-SOLARIS29
-#define IS_EGCS_BUILD	YES
 #endif
 
 #if IS_SUN4X
 #define		IS_SUN4X_SOLARIS29	YES
 #define		Platform		SUN4X-SOLARIS29
 #define		GccArch			sparc-sun-solaris2.9
-#define IS_EGCS_BUILD	YES
 #define HAS_GLOBUS 			YES
 #define HAS_GSI				YES
 #define HAS_OPENSSL			YES

@@ -39,7 +39,6 @@
 #define UnixName /stand/vmunix		/* pathname of the system executable */
 
 #define TypicalMemory 64
-#define IS_EGCS_BUILD			YES
 
 #undef IS_CLIPPED
 #define IS_CLIPPED YES

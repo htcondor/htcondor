@@ -43,7 +43,6 @@
 
 #define UnixName /unix		/* pathname of the system executable */
 
-#define IS_EGCS_BUILD			YES
 
 #define VendorCTestFlags 
 #define VendorCPPTestFlags 

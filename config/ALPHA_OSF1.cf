@@ -6,7 +6,6 @@
 #define PlatformLdFlags -lmld
 #define VendorFTestFlags -assume recursive 
 
-#define IS_EGCS_BUILD YES
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC
 
