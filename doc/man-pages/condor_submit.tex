@@ -1194,36 +1194,50 @@ For jobs submitted to the globus universe only,
 the path specifies the directory in which the job is to be
 executed on the remote machine.
 
+%%%%%%%%%%%%%%%%%%%
+%% stream_input
+%%%%%%%%%%%%%%%%%%%
+\item[stream\_input = $<$True \Bar\ False$>$] 
+\index{submit commands!stream\_output}
+if \Expr{True}, then \File{stdout} is streamed back to
+the machine from which the job was submitted. 
+If \Expr{False}, \File{stdout} is stored locally
+and transferred back when the job completes.
+This command is ignored if the job ClassAd attribute
+\Attr{TransferOut} is
+\Expr{False}.
+The default value is \Expr{True} in the Globus
+universe and \Expr{False} otherwise.
 
 %%%%%%%%%%%%%%%%%%%
 %% stream_output
 %%%%%%%%%%%%%%%%%%%
 \item[stream\_output = $<$True \Bar\ False$>$] 
 \index{submit commands!stream\_output}
-For jobs submitted to the globus universe only,
 if \Expr{True}, then \File{stdout} is streamed back to
 the machine from which the job was submitted. 
-If \Expr{False}, \File{stdout} is stored by the Globus jobmanager 
+If \Expr{False}, \File{stdout} is stored locally
 and transferred back when the job completes.
 This command is ignored if the job ClassAd attribute
 \Attr{TransferOut} is
 \Expr{False}.
-The default value is \Expr{True}.
+The default value is \Expr{True} in the Globus
+universe and \Expr{False} otherwise.
 
 %%%%%%%%%%%%%%%%%%%
 %% stream_error
 %%%%%%%%%%%%%%%%%%%
 \item[stream\_error = $<$True \Bar\ False$>$] 
 \index{submit commands!stream\_error}
-For jobs submitted to the globus universe only,
 if \Expr{True}, then \File{stderr} is streamed back to
 the machine from which the job was submitted. 
-If \Expr{False}, \File{stderr} is stored by the Globus jobmanager 
+If \Expr{False}, \File{stderr} is stored locally
 and transferred back when the job completes.
 This command is ignored if the job ClassAd attribute
 \Attr{TransferErr} is
 \Expr{False}.
-The default value is \Expr{True}.
+The default value is \Expr{True} in the Globus
+universe and \Expr{False} otherwise.
 
 %%%%%%%%%%%%%%%%%%%
 % +
