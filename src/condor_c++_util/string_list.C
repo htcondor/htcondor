@@ -21,7 +21,7 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
+#include "condor_common.h" 
 
 #include "string_list.h"
 #include "condor_debug.h"
@@ -69,8 +69,7 @@ StringList::~StringList ()
 	strings.Rewind ();
 	while (x = strings.Next ())
 	{
-		FREE (x);
-		strings.DeleteCurrent ();
+		deleteCurrent();
 	}
 }
 
@@ -182,4 +181,13 @@ StringList::contains_withwildcard(const char *string)
 	}	// end of while loop
 
 	return FALSE;
+}
+
+
+void
+StringList::deleteCurrent() {
+	if( strings.Current() ) {
+		FREE( strings.Current() );
+	}
+	strings.DeleteCurrent();
 }
