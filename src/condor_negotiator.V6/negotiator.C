@@ -61,11 +61,12 @@
 #include "debug.h"
 #include "except.h"
 #include "trace.h"
-#include "expr.h"
+//#include "expr.h"
 #include "sched.h"
-#include "manager.h"
 #include "clib.h"
 #include "proc.h"
+#include "condor_query.h"
+#include "manager.h"
 #include <sys/wait.h>
 
 #if defined(AIX32)
@@ -74,25 +75,64 @@
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
-char		*param(), *strdup(), *index();
+char		*strdup(), *index();
 XDR			*xdr_Init(), *xdr_Udp_Init();
 CONTEXT		*create_context();
-MACH_REC	*create_mach_rec(), *find_rec(), *find_server();
-EXPR		*build_expr();
+MACH_REC	*create_mach_rec(MACH_REC*), *find_rec(MACH_REC*), *find_server(CONTEXT*);
 void 		say_goodby( XDR *xdrs, const char *name );
 void 		unblock_signals();
 char*		get_random_string(char**);
-void		find_update_prio(struct in_addr, int);
+void		find_update_prio(const char*, int);
 void		reset_priorities();
+void		init_params();
+int			init_tcp_sock(char*, int);
+void		reschedule();
+void		accept_tcp_connection();
+void		do_command(XDR*);
+int			connect_to_collector();
+void		update_machine_info(MACH_REC*);
+void		do_negotiations();
+void		update_accountant();
+int			connect_to_accountant();
+void		update_context(CONTEXT*, CONTEXT*);
+void		create_prospective_list(int, CONTEXT*);
 
 typedef void (*SIG_HANDLER)();
-void install_sig_handler( int sig, SIG_HANDLER handler );
 
 void		alarm_handler();
 void		sigpipe_handler();
 void		sighup_handler();
 void		sigint_handler();
 void		sigchld_handler();
+
+extern "C"
+{
+	void	dprintf(int, char*...);
+	int		set_condor_euid();
+	void	config(char*, CONTEXT*);
+	int		config_from_server(char*, char*, CONTEXT*);
+	void	_EXCEPT_(char*...);
+	void    dprintf_config(char*, int);
+	int		udp_connect(char*, int);	
+	int		xdr_mach_rec(XDR*, MACH_REC*); 
+	int		snd_int(XDR*, int, int);
+	int		xdr_in_addr(XDR*, struct in_addr*); 
+	int		boolean(char*, char*); 
+	void	insque(struct qelem*, struct qelem*); 
+	int		rcv_int(XDR*, int*, int);
+	int		rcv_context(XDR*, CONTEXT*, int); 
+	int		evaluate_string(char*, char**, CONTEXT*, CONTEXT*);
+	int		evaluate_bool(char*, int*, CONTEXT*, CONTEXT*); 
+	int		evaluate_int(char*, int*, CONTEXT*, CONTEXT*);
+	int		snd_int(XDR*, int, int); 
+	int		snd_string(XDR*, const char*, int); 
+	void	string_to_sin(char*, struct sockaddr_in*); 
+	void	display_context(CONTEXT*);
+	int		check_string(char*, char*, CONTEXT*, CONTEXT*); 
+	void	install_sig_handler( int sig, SIG_HANDLER handler );
+	char*	param(char*); 
+	EXPR   	*build_expr(char*, ELEM*);
+}
 
 #define NEG_INFINITY	(1<<31)	/* ASSUMES 32 bit 2's COMPLIMENT ARITHMETIC! */
 
@@ -132,21 +172,23 @@ typedef struct xx				/* dhruba 					   */
 }	VacateList;
 VacateList*		vacateList;
 int 			emptyVacateList();
-int 			presentInVacate();
-int 			insertInVacate();
+int 			presentInVacate(char*);
+int 			insertInVacate(char*);
 VacateList*		createVacateList();
 
-int ContextError;
+int 			ContextError;
 
 
-extern int	DebugFlags;
+extern int		DebugFlags;
 
-MACH_REC	*MachineList;
-CONTEXT		*NegotiatorContext;
-PRIO_REC	 DummyPrioRec, *Endmarker = &DummyPrioRec;
+MACH_REC*		MachineList;
+CONTEXT*		NegotiatorContext;
+PRIO_REC	 	DummyPrioRec, *Endmarker = &DummyPrioRec;
+CondorQuery		queryObj(SCHEDD_AD);
+ClassAdList*	scheddAds;
 
-char *MyName;
-char		config_file[MAXPATHLEN] = "";
+char*			MyName;
+char			config_file[MAXPATHLEN] = "";
 
 #if !defined(MAX)
 #	define MAX(a,b) ((a)>(b)?(a):(b))
@@ -156,17 +198,14 @@ char		config_file[MAXPATHLEN] = "";
 #	define MIN(a,b) ((a)<(b)?(a):(b))
 #endif
 
-usage( name )
-char	*name;
+usage( char* name )
 {
 	dprintf( D_ALWAYS, "Usage: %s [-f] [-t] [-c config_file_name]\n", name );
 	exit( 1 );
 }
 
 
-main( argc, argv )
-int		argc;
-char	*argv[];
+main( int argc, char** argv )
 {
 	int		count;
 	char	**ptr;
@@ -288,9 +327,7 @@ char	*argv[];
 }
 
 
-init_tcp_sock( service, port )
-char	*service;
-int		port;
+init_tcp_sock( char* service, int port )
 {
 	struct sockaddr_in	sin;
 	struct servent *servp;
@@ -328,11 +365,11 @@ int		port;
 	return sock;
 }
 
-accept_tcp_connection()
+void accept_tcp_connection()
 {
 	struct sockaddr_in	from;
 	int		len;
-	XDR		xdr, *xdrs, *xdr_Init();
+	XDR		xdr, *xdrs; 
 
 	len = sizeof from;
 	memset( (char *)&from, 0,sizeof from );
@@ -367,8 +404,7 @@ accept_tcp_connection()
 ** Somebody has connected to our socket with a request.  Read the request
 ** and handle it.
 */
-do_command( xdrs )
-XDR		*xdrs;
+void do_command( XDR* xdrs )
 {
 	int		cmd;
 
@@ -404,7 +440,7 @@ XDR		*xdrs;
 	(void)close( sock ); \
 	dprintf( D_FULLDEBUG, "Closed %d at %d\n", sock, __LINE__ );
 
-reschedule()
+void reschedule()
 {
 	int			sock = -1;
 	int			cmd;
@@ -461,14 +497,16 @@ reschedule()
 		free_context( rec->machine_context );
 		FREE( rec->name );
 	}
-
 	CLOSE_XDR_STREAM;
+	scheddAds = new ClassAdList();
+	queryObj.fetchAds(*scheddAds); 
 	do_negotiations();
 	update_accountant();
+	delete scheddAds;
 }
 #undef CLOSE_XDR_STREAM
 
-update_accountant()
+void update_accountant()
 {
 	struct in_addr	endMarker;
 	int			cmd;
@@ -529,7 +567,7 @@ update_accountant()
 	dprintf( D_FULLDEBUG, "Done sending priorities\n" );
 }
 
-init_params()
+void init_params()
 {
 	struct sockaddr_in	sin;
 	struct servent 		*servp;
@@ -667,17 +705,23 @@ init_params()
 		VanillapreemptionTime = atoi(tmp)*60;
 		free( tmp );
 	}
+	
+	char	constraint[100];
+	sprintf(constraint, "%s > 0", ATTR_IDLE_JOBS); 
+	queryObj.addConstraint(constraint); 
 }
 
-SetSyscalls(){}
+extern "C"
+{
+	SetSyscalls(){}
+}
 
-update_machine_info( template )
-MACH_REC	*template;
+void update_machine_info( MACH_REC* templateRec )
 {
 	MACH_REC	*rec;
 
-	if( (rec = find_rec(template)) == NULL ) {
-		rec = create_mach_rec( template );
+	if( (rec = find_rec(templateRec)) == NULL ) {
+		rec = create_mach_rec( templateRec );
 		insque( (struct qelem *)rec, (struct qelem *)MachineList );
 		/*
 		** dprintf(D_FULLDEBUG,"Createing new record for \"%s\"\n",rec->name);
@@ -688,54 +732,50 @@ MACH_REC	*template;
 		*/
 	}
 
-	update_context( template->machine_context, rec->machine_context );
-	rec->time_stamp = template->time_stamp;
-	rec->busy = template->busy;
+	update_context( templateRec->machine_context, rec->machine_context );
+	rec->time_stamp = templateRec->time_stamp;
+	rec->busy = templateRec->busy;
 }
 
 MACH_REC	*
-create_mach_rec( template )
-MACH_REC	*template;
+create_mach_rec( MACH_REC* templateRec )
 {
-	MACH_REC	*new;
+	MACH_REC	*newRec;
 
-	new = (MACH_REC *)CALLOC( 1, sizeof(MACH_REC) );
+	newRec = (MACH_REC *)CALLOC( 1, sizeof(MACH_REC) );
 
-	new->next = new;
-	new->prev = new;
+	newRec->next = newRec;
+	newRec->prev = newRec;
 
-	if( template == NULL ) {
-		return new;
+	if( templateRec == NULL ) {
+		return newRec;
 	}
 
-	new->name = strdup( template->name );
-	new->net_addr = template->net_addr;
-	new->net_addr_type = template->net_addr_type;
-	new->machine_context = create_context();
+	newRec->name = strdup( templateRec->name );
+	newRec->net_addr = templateRec->net_addr;
+	newRec->net_addr_type = templateRec->net_addr_type;
+	newRec->machine_context = create_context();
 
 		/* possible bug fix */
-	new->prio = template->prio;
+	newRec->prio = templateRec->prio;
 
-	return new;
+	return newRec;
 }
 
 MACH_REC	*
-find_rec( new )
-MACH_REC	*new;
+find_rec( MACH_REC* newRec )
 {
 	MACH_REC	*ptr;
 
 	for( ptr = MachineList->next; ptr->name; ptr = ptr->next ) {
-		if( ptr->net_addr.s_addr == new->net_addr.s_addr ) {
+		if( ptr->net_addr.s_addr == newRec->net_addr.s_addr ) {
 			return ptr;
 		}
 	}
 	return NULL;
 }
 
-update_context( src, dst )
-CONTEXT	*src;
-CONTEXT	*dst;
+void update_context( CONTEXT* src, CONTEXT* dst )
 {
 	int		i;
 
@@ -746,42 +786,41 @@ CONTEXT	*dst;
 	src->len = 0;
 }
 
-do_negotiations()
-{
-	MACH_REC	*ptr, *find_next();
-	int			idle;
+int		get_priorities();
+void	sort_schedd_list();
+void	negotiate(char*, ClassAd*);
 
+void do_negotiations()
+{
+	ClassAd*	ptr; 
+	int			idle;
+	char*		scheddAddr;
+	
 	get_priorities();
 	/*update_priorities();*/
-	sort_machine_list();
+	sort_schedd_list();
 
-	dprintf(D_ALWAYS, "---------- Begin negotiating\n");
-	for( ptr = MachineList->next; ptr->name; ptr = ptr->next ) {
-
-		if( (int)time( (time_t *)0 ) - ptr->time_stamp >
+	dprintf(D_ALWAYS, "---------- Begin negotiating ----------\n");
+	scheddAds->Open(); 
+	for( ptr = scheddAds->Next(); ptr; ptr = scheddAds->Next() ) {
+/*
+		if( (int)time( (time_t *)0 ) - ptr->GetIntValue(ATTR_TIME >
 													MachineUpdateInterval ) {
-			/*
-			** dprintf( D_FULLDEBUG,
-			** "Not negotiating with %s - stale record\n", ptr->name );
-			*/
 			continue;
 		}
-
-		if( evaluate_int("Idle",&idle,ptr->machine_context,(CONTEXT *)0) < 0 ) {
+*/
+		scheddAddr = new char[100]; 
+		if(ptr->EvalString(ATTR_SCHEDD_IP_ADDR, NULL, scheddAddr) == 0)
+		{	
 			dprintf( D_ALWAYS,
-			"Not negotiating with %s - can't evaluate \"Idle\"\n", ptr->name );
+					"Not negotiating with %s - can't evaluate \"%s\"\n", ATTR_SCHEDD_IP_ADDR );
+			delete scheddAddr;
 			continue;
 		}
-		if( idle <= 0 ) {
-			/*
-			** dprintf( D_FULLDEBUG,
-			** "Not negotiating with %s - no idle jobs\n", ptr->name );
-			*/
-			continue;
-		}
-
-		dprintf( D_FULLDEBUG, "Negotiating with %s\n", ptr->name );
-		negotiate( ptr );
+		
+		dprintf( D_FULLDEBUG, "Negotiating with %s\n", scheddAddr );
+		negotiate( scheddAddr, ptr );
+		delete scheddAddr; 
 	}
 	dprintf(D_ALWAYS, "---------- End negotiating\n");
 }
@@ -791,29 +830,34 @@ do_negotiations()
 #undef TRACE
 #define TRACE dprintf(D_ALWAYS,"%s:%d\n",__FILE__,__LINE__)
 
-negotiate( rec )
-MACH_REC	*rec;
+int		call_schedd(char*, int);
+int		simple_negotiate(char*, ClassAd*, XDR*, int&);
+
+void negotiate( char* addr, ClassAd* rec )
 {
 
-	MACH_REC	*next, *find_next();
-	XDR			xdr, *xdrs = NULL, *xdr_Init();
-	int		next_prio;
-	int		status;
+	XDR			xdr, *xdrs = NULL; 
+	int			prio, next_prio;
+	int			status;
+	ClassAd*	next; 
 
-	if( next = find_next(rec) ) {
-		next_prio = next->prio;
+	if(next = rec->FindNext()) {
+		if(next->LookupInteger(ATTR_PRIO, next_prio) == FALSE)
+		{
+			next_prio = NEG_INFINITY;
+		} 
 	} else {
 		next_prio = NEG_INFINITY;
 	}
 
-	if( (ClientSock = call_schedd(rec,10)) < 0 ) {
-		dprintf( D_ALWAYS, "Can't connect to SchedD on %s\n", rec->name );
+	if( (ClientSock = call_schedd(addr,10)) < 0 ) {
+		dprintf( D_ALWAYS, "Can't connect to SchedD on %s\n", addr );
 		return;
 	}
 	dprintf( D_FULLDEBUG,
-		"\tOpened ClientSock (%d) at %d\n",
-		ClientSock, __LINE__
-	);
+			"\tOpened ClientSock (%d) at %d\n",
+			ClientSock, __LINE__
+			);
 
 	(void)alarm( (unsigned)ClientTimeout );	/* don't hang here forever */
 	xdrs = xdr_Init( &ClientSock, &xdr );
@@ -821,15 +865,20 @@ MACH_REC	*rec;
 	(void)alarm( 0 );				/* cancel alarm */
 
 	if( !status ) {
-		dprintf( D_ALWAYS, "\t1.Error negotiating with %s\n", rec->name );
+		dprintf( D_ALWAYS, "\t1.Error negotiating with %s\n", addr); 
 		xdr_destroy( xdrs );
 		return;
 	}
 
-	while( rec->prio >= next_prio ) {
+	if(rec->LookupInteger(ATTR_PRIO, prio) == FALSE)
+	{
+		prio = 0;
+	}
+		
+	while( prio >= next_prio ) {
 
 		(void)alarm( (unsigned)ClientTimeout );	/* don't hang here forever */
-		status = simple_negotiate( rec, xdrs );
+		status = simple_negotiate( addr, rec, xdrs, prio );
 		(void)alarm( (unsigned)0 );
 
 		if( status != SUCCESS ) {
@@ -841,7 +890,7 @@ MACH_REC	*rec;
 		   we must tell it we are done.  Otherwise, it ran out of jobs
 		   to send us, and has already broken the connection. */
 	if( status == SUCCESS ) {
-		say_goodby( xdrs, rec->name );
+		say_goodby( xdrs, addr );
 	}
 
 	xdr_destroy( xdrs );
@@ -849,15 +898,17 @@ MACH_REC	*rec;
 		(void)close( ClientSock );
 		dprintf( D_FULLDEBUG,
 			"Closed ClientSock (%d) to %s\n",
-			ClientSock, rec->name
+			ClientSock, addr
 		);
 		ClientSock = -1;
 	}
 }
 
-simple_negotiate( rec, xdrs )
-MACH_REC	*rec;
-XDR			*xdrs;
+int		send_to_startd(const char*);
+int		send_to_accountant(const char*);
+void	decrement_idle(char*, ClassAd*);
+
+int simple_negotiate( char* addr, ClassAd* rec, XDR* xdrs, int& prio )
 {
 	int			op;
 	MACH_REC	*server;
@@ -868,13 +919,13 @@ XDR			*xdrs;
 	for(;;) {
 		(void)alarm( (unsigned)ClientTimeout );	/* reset the alarm every time */
 		if( !snd_int(xdrs,SEND_JOB_INFO,TRUE) ) {
-			dprintf( D_ALWAYS, "\t3.Error negotiating with %s\n", rec->name );
+			dprintf( D_ALWAYS, "\t3.Error negotiating with %s\n", addr );
 			return ERROR;
 		}
 
 		errno = 0;
 		if( !rcv_int(xdrs,&op,FALSE) ) {
-			dprintf( D_ALWAYS, "\t4.Error negotiating with %s\n", rec->name );
+			dprintf( D_ALWAYS, "\t4.Error negotiating with %s\n", addr );
 			dprintf( D_ALWAYS, "\terrno = %d\n", errno );
 			return ERROR;
 		}
@@ -884,7 +935,7 @@ XDR			*xdrs;
 				job_context = create_context();
 				if( !rcv_context(xdrs,job_context,TRUE) ) {
 					dprintf(D_ALWAYS,
-							"\t5.Error negotiating with %s\n", rec->name );
+							"\t5.Error negotiating with %s\n", addr );
 					free_context( job_context );
 					return ERROR;
 				}
@@ -892,7 +943,7 @@ XDR			*xdrs;
 
 				if( server = find_server(job_context) ) {
 					dprintf( D_ALWAYS, "\tAllowing %s to run on %s\n",
-						rec->name, server->name);
+						addr, server->name);
 					if( evaluate_string("STARTD_IP_ADDR",&address,server->machine_context,0 ) < 0 ) {
 						dprintf(D_ALWAYS,"\tDidn't receive startd_ip_addr\n");
 					}
@@ -908,7 +959,7 @@ XDR			*xdrs;
 					dprintf(D_ALWAYS, "\tmatch %s\n", final_string);
 					if(send_to_startd(final_string)!=0) {
 						dprintf( D_ALWAYS,
-								"\t6.Error negotiating with %s\n", rec->name );
+								"\t6.Error negotiating with %s\n", addr );
 						free_context( job_context );
 						free(final_string);
 						free(random_string);
@@ -922,7 +973,7 @@ XDR			*xdrs;
 
 					if( !snd_int(xdrs,PERMISSION,TRUE) ) {
 						dprintf( D_ALWAYS,
-								"\t8.Error negotiating with %s\n", rec->name );
+								"\t8.Error negotiating with %s\n", addr );
 						free_context( job_context );
 						free(final_string);
 						free(random_string);
@@ -931,7 +982,7 @@ XDR			*xdrs;
 					}
 					if( !snd_string(xdrs,final_string,TRUE) ) { /* dhaval */
 						dprintf( D_ALWAYS,
-								"\t9.Error negotiating with %s\n", rec->name );
+								"\t9.Error negotiating with %s\n", addr );
 						free_context( job_context );
 						free(final_string);
 						free(random_string);
@@ -942,18 +993,18 @@ XDR			*xdrs;
 					free(final_string);
 					free(address);
 					free(random_string);
-					decrement_idle( rec );
+					decrement_idle( addr, rec );
 					server->busy = TRUE;
-					rec->prio -= 1;
+					prio -= 1;
 					free_context( job_context );
 					return SUCCESS;
 				} else {	/* Can't find a server for it */
 					/* PREEMPTION : dhruba */
-					create_prospective_list(rec->prio,job_context);
+					create_prospective_list(prio,job_context);
 
 					if( !snd_int(xdrs,REJECTED,TRUE) ) {
 						dprintf( D_ALWAYS,
-						"\t9.Error negotiating with %s\n", rec->name );
+						"\t9.Error negotiating with %s\n", addr );
 						free_context( job_context );
 						return ERROR;
 					}
@@ -962,95 +1013,103 @@ XDR			*xdrs;
 				break;
 			case NO_MORE_JOBS:
 				xdrrec_skiprecord( xdrs );
-				dprintf( D_FULLDEBUG, "Done negotiating with %s\n", rec->name );
+				dprintf( D_FULLDEBUG, "Done negotiating with %s\n", addr );
 				return FAIL;
 			default:
-				dprintf( D_ALWAYS, "\t%s sent unknown op (%d)\n", rec->name, op );
+				dprintf( D_ALWAYS, "\t%s sent unknown op (%d)\n", addr, op );
 				return ERROR;
 		}
 	}
 }
 
-get_priorities()
+// Weiru
+// Get priorities from the accountant for each schedd
+int get_priorities()
 {
     int         	sock;
 	XDR         	xdr, *xdrs;
     int         	cmd = GIVE_PRIORITY;
-    struct in_addr 	mach;
+    char*		 	scheddName;
     int         	prio;
 
 	dprintf(D_FULLDEBUG, "Getting priorities from the accountant...\n");
-    reset_priorities();
 	if((sock = connect_to_accountant()) < 0)
 	{
 		dprintf(D_ALWAYS, "Can't connect to accountant\n");
+		return 0; 
 	}
-	else
-	{
-		dprintf(D_FULLDEBUG, "connected to accountant\n");
-		xdrs = xdr_Init(&sock,&xdr);
-		xdrs->x_op = XDR_ENCODE;
-		if(!snd_int(xdrs, cmd, TRUE))
-		{
-			xdr_destroy( xdrs );
-			close(sock);
-			dprintf(D_ALWAYS, "can't send GIVE_PRIORITY to accountant\n");
+   	dprintf(D_FULLDEBUG, "connected to accountant\n");
+   	xdrs = xdr_Init(&sock,&xdr);
+   	xdrs->x_op = XDR_ENCODE;
+   	if(!snd_int(xdrs, cmd, TRUE))
+   	{
+   		xdr_destroy( xdrs );
+   		close(sock);
+   		dprintf(D_ALWAYS, "can't send GIVE_PRIORITY to accountant\n");
+   		return -1;
+   	}
+   	dprintf(D_FULLDEBUG, "sent GIVE_PRIORITY to accountant\n");
+   	xdrs->x_op = XDR_DECODE;
+   	while(1)
+   	{
+   		if(!xdr_string(xdrs, &scheddName, 1000))
+   		{
+   			xdr_destroy( xdrs );
+   			close(sock);
+   			dprintf(D_ALWAYS, "can't receive machine addr\n");
+   			return -1;
+   		}
+   		if(scheddName == NULL)
+   		/* end of record */
+   		{
+   			if(!xdrrec_skiprecord(xdrs))
+   			{
+   				xdr_destroy(xdrs);
+   				close(sock);
+   				dprintf(D_ALWAYS, "xdrrec_skiprecord, errno = %d\n", errno);
+   				return -1;
+   			}
+   			xdr_destroy(xdrs);
+   			close(sock);
+   			dprintf(D_FULLDEBUG, "Done getting priority info\n");
+   			return 0;
+   		}
+   		if(!xdr_int(xdrs, &prio))
+   		{
+   			xdr_destroy(xdrs);
+   			close(sock);
+   			dprintf(D_ALWAYS, "can't receive priority info\n");
+   			free(scheddName);
 			return -1;
-		}
-		dprintf(D_FULLDEBUG, "sent GIVE_PRIORITY to accountant\n");
-		xdrs->x_op = XDR_DECODE;
-		while(1)
-		{
-			if(!xdr_in_addr(xdrs, &mach))
-			{
-				xdr_destroy( xdrs );
-				close(sock);
-				dprintf(D_ALWAYS, "can't receive machine addr\n");
-				return -1;
-			}
-			if(mach.s_addr == 0)
-			/* end of record */
-			{
-				if(!xdrrec_skiprecord(xdrs))
-				{
-					xdr_destroy(xdrs);
-					close(sock);
-					dprintf(D_ALWAYS, "xdrrec_skiprecord, errno = %d\n", errno);
-					return -1;
-				}
-				xdr_destroy(xdrs);
-				close(sock);
-				dprintf(D_FULLDEBUG, "Done getting priority info\n");
-				return 0;
-			}
-			if(!xdr_int(xdrs, &prio))
-			{
-				xdr_destroy(xdrs);
-				close(sock);
-				dprintf(D_ALWAYS, "can't receive priority info\n");
-				return -1;
-			}
-			dprintf(D_FULLDEBUG, "Got (%d, %d)\n", mach.s_addr, prio);
-			find_update_prio(mach, prio);
-		}
+   		}
+		dprintf(D_FULLDEBUG, "Got (%s, %d)\n", scheddName, prio);
+	   	find_update_prio(scheddName, prio);
+		free(scheddName); 
 	}
-	return 0;
+   	return 0;
 }
 
-void find_update_prio(struct in_addr mach, int p)
+void find_update_prio(const char* scheddName, int p)
 {
-	MACH_REC*	rec;
-
-    for(rec = MachineList->next; rec->name; rec = rec->next )
+	ClassAd*	ad;
+	char		tmp[100];
+	
+	if(scheddAds == NULL)
 	{
-        if( rec->net_addr.s_addr == mach.s_addr )
-		{
-			rec->prio = p;
-			dprintf(D_FULLDEBUG, "%s new priority %d\n", rec->name, rec->prio);
-			return;
-        }
-    }
+		EXCEPT("ERROR: Can't find schedd ads");
+	}
+	ad = scheddAds->Lookup(scheddName);
+	if(ad == NULL)
+	{
+		dprintf(D_ALWAYS, "Can't find schedd %s\n", scheddName);
+		return;
+	}
+	sprintf(tmp, "%s = %d", ATTR_PRIO, p); 
+	ad->InsertOrUpdate(tmp);
+   	dprintf(D_FULLDEBUG, "%s new priority %d\n", scheddName, p);
 }
+
+int		update_prio(CONTEXT*, MACH_REC*);
 
 update_priorities()
 {
@@ -1066,17 +1125,16 @@ update_priorities()
 	}
 }
 
+int		up_down_incr(int); 
 
-update_prio( nego, rec )
-CONTEXT		*nego;
-MACH_REC	*rec;
+int update_prio( CONTEXT* nego, MACH_REC* rec )
 {
 	int		new_prio;
 	int		inactive;
 	ELEM	tmp;
 
 	tmp.type = INT;
-	tmp.i_val = rec->prio;
+	tmp.val.integer_val = rec->prio;
 	store_stmt( build_expr("Prio",&tmp), rec->machine_context );
 
 	if( evaluate_bool("INACTIVE",&inactive,nego,rec->machine_context) < 0 ) {
@@ -1101,7 +1159,7 @@ MACH_REC	*rec;
 		new_prio = MinPrio;
 	}
 
-	tmp.i_val = new_prio;
+	tmp.val.integer_val = new_prio;
 	store_stmt( build_expr("Prio",&tmp), rec->machine_context );
 	return new_prio;
 }
@@ -1116,27 +1174,22 @@ void reset_priorities(int prio)
 	}
 }
 
-sort_machine_list()
+int ScheddAdCmp(ClassAd* ad1, ClassAd* ad2)
 {
-	MACH_REC	*sorted_list;
-	MACH_REC	*tmp;
-	MACH_REC	*ptr;
-
-	sorted_list = create_mach_rec( (MACH_REC *)0 );
-
-	for( ptr=MachineList->next; ptr->name; ptr = tmp ) {
-		tmp = ptr->next;
-		remque( (struct qelem *)ptr );
-		prio_insert( ptr, sorted_list );
-	}
-	tmp = MachineList;
-	MachineList = sorted_list;
-	free_mach_rec( tmp );
+	int		prio1 = 0, prio2 = 0;
+	char	name[100];
+	
+    ad1->LookupInteger(ATTR_PRIO, prio1);
+	ad2->LookupInteger(ATTR_PRIO, prio2);
+	return prio1 > prio2;
 }
 
-prio_insert( elem, list )
-MACH_REC	*elem;
-MACH_REC	*list;
+void sort_schedd_list()
+{
+	scheddAds->Sort(ScheddAdCmp); 
+}
+
+void prio_insert( MACH_REC* elem, MACH_REC* list )
 {
 	MACH_REC	*ptr;
 
@@ -1150,8 +1203,7 @@ MACH_REC	*list;
 }
 
 MACH_REC *
-find_next( ptr )
-MACH_REC	*ptr;
+find_next( MACH_REC* ptr )
 {
 	int		idle;
 
@@ -1170,9 +1222,7 @@ MACH_REC	*ptr;
 	return NULL;
 }
 
-call_schedd( host, timeout )
-MACH_REC *host;
-int		timeout; /* seconds */
+call_schedd( char* schedd_address, int timeout )
 {
 	struct sockaddr_in	sin;
 	int					scheduler;
@@ -1182,21 +1232,17 @@ int		timeout; /* seconds */
 	int					nfound;
 	int					nfds;
 	int					tmp_errno;
-	char 				*schedd_address;
 
 	if( (scheduler=socket(AF_INET,SOCK_STREAM,0)) < 0 ) {
 		EXCEPT( "socket" );
 	}
 
-    if( evaluate_string("SCHEDD_IP_ADDR",&schedd_address,host->machine_context,0
- ) < 0 ) {
-		dprintf(D_ALWAYS, "\tdid'nt receive schedd_ip_addr and using backward compatibility mode\n");
-		memset( (char *)&sin, 0,sizeof sin );
-		memcpy( (char *)&sin.sin_addr, (char *)&host->net_addr,
-				sizeof(sin.sin_addr) );
-		sin.sin_family = host->net_addr_type;
-		sin.sin_port = SchedD_Port;
-	} else {
+	if(!schedd_address)
+	{
+		dprintf(D_ALWAYS, "\tdid'nt receive schedd_ip_addr\n");
+		close(scheduler); 
+		return -1; 
+  	} else {
 		dprintf(D_FULLDEBUG, "SCHEDD_IP_ADDR = %s\n", schedd_address);
 		string_to_sin(schedd_address,&sin); /* dhaval */
 	}
@@ -1220,7 +1266,7 @@ int		timeout; /* seconds */
 			default:
 				dprintf( D_ALWAYS,
 					"Can't connect to host \"%s\", errno = %d\n",
-					host->name, tmp_errno );
+					schedd_address, tmp_errno );
 				(void)close( scheduler );
 				return -1;
 		}
@@ -1254,9 +1300,10 @@ int		timeout; /* seconds */
 	}
 }
 
+int		check_bool(char*, CONTEXT*, CONTEXT*); 
+
 MACH_REC	*
-find_server( job_context )
-CONTEXT		*job_context;
+find_server( CONTEXT* job_context )
 {
 	MACH_REC	*ptr;
 	int			curTime;
@@ -1359,10 +1406,7 @@ CONTEXT		*job_context;
 	return NULL;
 }
 
-check_bool( name, context_1, context_2 )
-char	*name;
-CONTEXT	*context_1;
-CONTEXT	*context_2;
+check_bool( char* name, CONTEXT* context_1, CONTEXT* context_2 )
 {
 	int		answer;
 
@@ -1380,11 +1424,7 @@ CONTEXT	*context_2;
 	return answer;
 }
 
-check_string( name, pattern, context_1, context_2 )
-char	*name;
-char	*pattern;
-CONTEXT	*context_1;
-CONTEXT	*context_2;
+check_string(char* name, char* pattern, CONTEXT* context_1, CONTEXT* context_2)
 {
 	char	*tmp;
 	int		answer;
@@ -1408,24 +1448,21 @@ CONTEXT	*context_2;
 	return answer;
 }
 
-decrement_idle( rec )
-MACH_REC	*rec;
+void decrement_idle( char* addr, ClassAd* rec )
 {
 	int		idle;
-	ELEM	tmp;
-
-	if( evaluate_int("Idle",&idle,rec->machine_context,(CONTEXT *)0) < 0 ) {
-		dprintf( D_ALWAYS, "Can't evaluate \"Idle\" for %s\n", rec->name );
+	char	tmp[100];
+	
+	if( rec->LookupInteger(ATTR_IDLE_JOBS, idle) == FALSE ) {
+		dprintf( D_ALWAYS, "Can't evaluate \"Idle\" for %s\n", addr );
 		return;
 	}
 
-	tmp.type = INT;
-	tmp.i_val = idle - 1;;
-	store_stmt( build_expr("Idle",&tmp), rec->machine_context );
+	sprintf(tmp, "%s = %d", ATTR_IDLE_JOBS, idle - 1); 
+	rec->InsertOrUpdate(tmp); 
 }
 
-free_mach_rec( rec )
-MACH_REC	*rec;
+void free_mach_rec( MACH_REC* rec )
 {
 	if( rec->name ) {
 		FREE( rec->name );
@@ -1437,7 +1474,7 @@ MACH_REC	*rec;
 	FREE( (char *)rec );
 }
 
-connect_to_collector()
+int connect_to_collector()
 {
 	int					status;
 	int					fd;
@@ -1587,8 +1624,7 @@ sigchld_handler()
 ** we return what the new priority should be.
 */
 int
-up_down_incr( old_prio )
-int		old_prio;
+up_down_incr(int old_prio )
 {
 	if( old_prio > 0 ) {
 		return MAX( old_prio - UpDownIncr, 0 );
@@ -1607,8 +1643,7 @@ typedef struct data
 	MACH_REC *rec;
 }Prospect;
 
-static int compare(a1, a2) /* compares priorities */
-void*	a1, *a2;
+static int compare(const void* a1, const void* a2) /* compares priorities */
 {
 	if ( *(int*)a1 > *(int*)a2 ) return 1;/*a1 points to prospect.prio*/
 	if ( *(int*)a1 < *(int*)a2 ) return -1;
@@ -1616,9 +1651,7 @@ void*	a1, *a2;
 }
 	
 
-create_prospective_list( prio , job_context)
-int 		prio;
-CONTEXT*	job_context;
+void create_prospective_list( int prio , CONTEXT* job_context)
 {
 	MACH_REC    *ptr, *p; 
 	Prospect*	prospect;
@@ -1637,7 +1670,7 @@ CONTEXT*	job_context;
 	for( ptr=MachineList->next; ptr->name; ptr = ptr->next ) 
 		count++;
 	if ( count == 0 ) return;
-	prospect = malloc(count * sizeof(Prospect));
+	prospect = (Prospect*)malloc(count * sizeof(Prospect));
 	if ( prospect == NULL ) return ;
 	count = 0;
 
@@ -1866,6 +1899,10 @@ string. This function can be improved to generate the random string by some
 better method as it is just a black box as far as the negotiator is concerned 
 ..dhaval */
 
+int get_random_number()
+{
+	return rand()%100;
+}
 
 char *get_random_string(char **temp)
 {
@@ -1885,11 +1922,6 @@ random5=get_random_number();
 sprintf(str,"%d%d%d%d%d",random1,random2,random3,random4,random5);
 *temp=strdup(str);
 return 0;
-}
-
-int get_random_number()
-{
-	return rand()%100;
 }
 
 /* addr is in the format "<xxx.xxx.xxx.xxx:xxxx> xxxxxxxxxxxxxxx#xxx" */
@@ -1931,7 +1963,7 @@ int send_to_startd(const char *addr)
 	return 0;
 }
 
-int send_to_accountant(char* capability)
+int send_to_accountant(const char* capability)
 {
 	int		sock;
 	XDR		xdr, *xdrs;
