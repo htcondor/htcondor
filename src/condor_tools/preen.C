@@ -67,10 +67,6 @@ BOOLEAN		RmFlag;				// true if we should remove extraneous files
 List<ProcObj>	*ProcList;		// all processes in current job queue
 List<char>	*BadFiles;			// list of files which don't belong
 
-#ifdef MATCH
-#undef MATCH
-#endif
-const int MATCH = 0;			// for strcmp()
 
 	// prototypes of local interest
 void usage();

@@ -66,8 +66,6 @@ private:
 List<UserRec>	*UserList;
 UserRec			*Totals = new UserRec( "TOTAL" );
 
-const int MATCH = 0;	// for strcmp()
-
 char		*MyName;	// Name by which this program was invoked
 char		*Spool;		// Name of job queue directory
 BOOLEAN		PrintTotals = TRUE;	// Whether or not to print totals for all users
