@@ -38,7 +38,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_attributes.h"
-#include "filter.h"
 #include "alloc.h"
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
@@ -80,8 +79,7 @@ int
 main( int argc, char *argv[] )
 {
 	char	*arg;
-	int		prio_adj;
-	char			*args[argc - 1];
+	char	**args = (char **)malloc(sizeof(char *)*(argc - 1));
 	int				nArgs = 0;
 	int				i;
 	Qmgr_connection	*q;
