@@ -121,6 +121,7 @@ block_condor_signals()
 	sigemptyset( &mask );
 	sigaddset( &mask, SIGTSTP );
 	sigaddset( &mask, SIGUSR1 );
+	sigaddset( &mask, SIGUSR2 );
 	if( sigprocmask(SIG_BLOCK,&mask,&omask) < 0 ) {
 		dprintf(D_ALWAYS, "sigprocmask failed: %s\n", strerror(errno));
 		return omask;
