@@ -729,7 +729,7 @@ activate_claim( Resource* rip, Stream* stream )
 
 	rip->r_cur->setad( req_classad );
 	if( !rip->r_cur->ad() ||
-		((rip->r_cur->ad())->EvalInteger("UNIVERSE",
+		((rip->r_cur->ad())->EvalInteger( ATTR_JOB_UNIVERSE,
 										  rip->r_classad,universe)==0) ) {
 		universe = STANDARD;
 		dprintf( D_ALWAYS,
