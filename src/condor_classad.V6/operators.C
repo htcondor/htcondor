@@ -286,8 +286,12 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 			val1.IsClassAdValue(classad);
 			val2.IsStringValue(index);
 			
+            if (!classad->Lookup(index)) {
+				result.SetErrorValue();
+				return SIG_CHLD2;
+            }
 			if (!classad->EvaluateAttr(index, result)) {
-				result.SetUndefinedValue();
+				result.SetErrorValue();
 				return SIG_CHLD2;
 			}
 
@@ -302,7 +306,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 			// check bounds
 			ExprListIterator itr( elist );
 			if( index < 0 || !itr.ToNth( index ) ) {
-				result.SetUndefinedValue();
+				result.SetErrorValue();
 				return SIG_CHLD2;
 			}
 			
