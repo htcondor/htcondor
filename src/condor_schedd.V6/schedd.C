@@ -90,8 +90,6 @@ extern int getJobAd(int cluster_id, int proc_id, ClassAd *new_ad);
 
 #include "condor_qmgr.h"
 
-#define MAX_PRIO_REC 2048
-#define MAX_SHADOW_RECS 512
 #define MAX_SCHED_UNIVERSE_RECS 16
 
 extern "C"
@@ -145,10 +143,11 @@ extern	int			ScheddName;
 // shadow records and priority records
 shadow_rec      ShadowRecs[MAX_SHADOW_RECS];
 int             NShadowRecs;
-extern prio_rec	PrioRec[];
+extern prio_rec	*PrioRec;
 extern int		N_PrioRecs;
 PROC_ID			IdleSchedUniverseJobIDs[MAX_SCHED_UNIVERSE_RECS];
 int				NSchedUniverseJobIDs;
+extern int		grow_prio_recs(int);
 
 void	check_zombie(int, PROC_ID*);
 void	send_vacate(Mrec*, int);
@@ -279,6 +278,13 @@ Scheduler::count_jobs()
 	dprintf( D_FULLDEBUG, "N_Owners = %d\n", N_Owners );
 	dprintf( D_FULLDEBUG, "MaxJobsRunning = %d\n", MaxJobsRunning );
 
+	// later when we compute job priorities, we will need PrioRec
+	// to have as many elements as there are jobs in the queue.  since
+	// we just counted the jobs, lets make certain that PrioRec is 
+	// large enough.  this keeps us from guessing to small and constantly
+	// growing PrioRec... Add 5 just to be sure... :^) -Todd 8/97
+	grow_prio_recs( JobsRunning + JobsIdle + 5 );
+
 	for ( i=0; i<N_Owners; i++) {
 		FREE( Owners[i] );
 	}
@@ -347,6 +353,9 @@ Scheduler::insert_owner(char* owner)
 	}
 	Owners[i] = strdup( owner );
 	N_Owners +=1;
+	if ( N_Owners == MAX_NUM_OWNERS ) {
+		EXCEPT( "Reached MAX_NUM_OWNERS" );
+	}
 }
 
 void
@@ -456,14 +465,6 @@ Scheduler::negotiate(ReliSock* s, struct sockaddr_in*)
 	qsort((char *)PrioRec, N_PrioRecs, sizeof(PrioRec[0]),
 		  (int(*)(const void*, const void*))prio_compar);
 	jobs = N_PrioRecs;
-
-	dprintf(D_UPDOWN,"USER\t\tPID\tUPDOWN_PRIO\tJOB_PRIO\tSTATUS\tQDATE\n");
-	for( i=0; i<N_PrioRecs; i++ ) {
-		dprintf( D_UPDOWN, "%s\t:%d.%d\t%d\t\t%d\t\t%d\t%s\n",
-				PrioRec[i].owner, PrioRec[i].id.cluster, PrioRec[i].id.proc, 
-				PrioRec[i].prio ,PrioRec[i].job_prio, PrioRec[i].status,
-				ctime( (time_t*) &(PrioRec[i].qdate)));
-	}
 
 	N_RejectedClusters = 0;
 	SwapSpaceExhausted = FALSE;
@@ -1255,6 +1256,9 @@ add_shadow_rec( int pid, PROC_ID* job_id, Mrec* mrec, int fd )
 	dprintf( D_FULLDEBUG, "Added shadow record for PID %d, job (%d.%d)\n",
 			pid, job_id->cluster, job_id->proc );
 	sched->display_shadow_recs();
+	if ( NShadowRecs == MAX_SHADOW_RECS ) {
+		EXCEPT( "Reached MAX_SHADOW_RECS" );
+	}
 	return &(ShadowRecs[NShadowRecs - 1]);
 }
 
@@ -1358,6 +1362,9 @@ Scheduler::mark_cluster_rejected(int cluster)
 {
 	int		i;
 
+	if ( N_RejectedClusters + 1 == MAX_REJECTED_CLUSTERS ) {
+		EXCEPT("Reached MAX_REJECTED_CLUSTERS");
+	}
 	for( i=0; i<N_RejectedClusters; i++ ) {
 		if( RejectedClusters[i] == cluster ) {
 			return;
