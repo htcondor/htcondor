@@ -1,8 +1,10 @@
 This section provides a brief summary of what can be done once your jobs
-begin execution.  The basic mechanisms for monitoring a job are introduced,
-but the commands that are discussed include a lot more functionality than is
-displayed in this section.  You are encouraged to look at the man pages of 
-the commands referred to for more information.
+begin execution. The basic mechanisms for monitoring a job are
+introduced, but the commands that are discussed include a lot more
+functionality than is displayed in this section. You are encouraged to
+look at the man pages of the commands referred to (located in
+Chapter~\ref{command-reference} beginning on
+page~\pageref{command-reference}) for more information. 
 
 Once your jobs have been submitted, Condor will attempt to find resources
 to run your jobs.  The existence of your requests is communicated to the
@@ -45,16 +47,23 @@ To identify jobs which are running, type
 
 3 jobs; 1 unexpanded, 1 idle, 1 running, 0 malformed
 
-\end{verbatim}
-The \verb@ST@ column (for status) shows the status of current jobs in the queue.
-The ``U'' stands for unexpanded, which means that the job has never run,
-``R'' means the the job is running and ``I'' stands for idle, which means the
-job has run before, but is not currently running.
+\end{verbatim} 
+The \verb@ST@ column (for status) shows the status of
+current jobs in the queue. The ``U'' stands for unexpanded, which means
+that the job has never checkpointed and when it starts running it will
+start running from the beginning. ``R'' means the the job is currently
+running. Finally, ``I'' stands for idle, which means the job has run
+before and has checkpointed, and when it starts running again it will
+resume where it left off, but is not running right now because it is
+waiting for a machine to become available.
 
 \textbf{Note:} The CPU time reported for a job is the time that has been
 committed to the job.  Thus, the CPU time is not updated for a job until
 the job checkpoints, at which time the job has made guaranteed forward 
-progress.
+progress.  Depening upon how the site administrator configured the pool,
+several hours may pass between checkpoints, so do not worry if you do
+not observe CPU changing by the hour.  Also note that this is actual CPU
+time as reported by the operating system; this is not wall-clock time.
 
 Another useful method of tracking the progress of jobs is through the
 \Term{user log} mechanism.  If you have specified a \texttt{log} command in 
@@ -141,6 +150,7 @@ bardolph.c INTEL    SOLARIS251   1.000  nice-user.condor@cs. chevre.cs.wisc.
 \end{verbatim}
 
 \subsection{Changing the priority of jobs}
+\label{sec:job-prio}
 In addition to the priorities assigned to each user, Condor also provides
 each user with the capability of assigning priorities to each submitted job.
 These job priorities are local to each queue and range from -20 to +20, with
