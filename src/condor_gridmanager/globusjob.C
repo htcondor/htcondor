@@ -1408,6 +1408,7 @@ char *GlobusJob::buildSubmitRSL()
 	int transfer;
 	char rsl[15000];
 	char buff[11000];
+	char buff2[1024];
 	char iwd[_POSIX_PATH_MAX];
 
 	buff[0] = '\0';
@@ -1427,15 +1428,18 @@ char *GlobusJob::buildSubmitRSL()
 	}
 
 	//We're assuming all job clasads have a command attribute
+	buff2[0] = '\0';
 	ad->LookupString( ATTR_JOB_CMD, buff );
 	strcpy( rsl, "&(executable=" );
 	if ( !ad->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer ) || transfer ) {
-		strcat( rsl, gassServerUrl );
 		if ( buff[0] != '/' ) {
-			strcat( rsl, iwd );
+			strcat( buff2, iwd );
 		}
+		strcat( buff2, buff );
+
+		sprintf( buff, "%s%s", gassServerUrl, buff2 );
 	}
-	strcat( rsl, buff );
+	strcat( rsl, rsl_stringify( buff ) );
 
 	buff[0] = '\0';
 	if ( ad->LookupString(ATTR_JOB_REMOTE_IWD, buff) && *buff ) {
@@ -1450,39 +1454,44 @@ char *GlobusJob::buildSubmitRSL()
 	}
 
 	buff[0] = '\0';
+	buff2[0] = '\0';
 	if ( ad->LookupString(ATTR_JOB_INPUT, buff) && *buff &&
 		 strcmp( buff, NULL_FILE ) ) {
 		strcat( rsl, ")(stdin=" );
 		if ( !ad->LookupBool( ATTR_TRANSFER_INPUT, transfer ) || transfer ) {
-			strcat( rsl, gassServerUrl );
 			if ( buff[0] != '/' ) {
-				strcat( rsl, iwd );
+				strcat( buff2, iwd );
 			}
+			strcat( buff2, buff );
+
+			sprintf( buff, "%s%s", gassServerUrl, buff2 );
 		}
-		strcat( rsl, buff );
+		strcat( rsl, rsl_stringify( buff ) );
 	}
 
 	if ( localOutput != NULL ) {
-		sprintf( buff, ")(stdout=%s%s", gassServerUrl, localOutput );
-		strcat( rsl, buff );
+		strcat( rsl, ")(stdout=" );
+		sprintf( buff, "%s%s", gassServerUrl, localOutput );
+		strcat( rsl, rsl_stringify( buff ) );
 	} else {
 		buff[0] = '\0';
 		if ( ad->LookupString(ATTR_JOB_OUTPUT, buff) && *buff &&
 			 strcmp( buff, NULL_FILE ) ) {
 			strcat( rsl, ")(stdout=" );
-			strcat( rsl, buff );
+			strcat( rsl, rsl_stringify( buff ) );
 		}
 	}
 
 	if ( localError != NULL ) {
-		sprintf( buff, ")(stderr=%s%s", gassServerUrl, localError );
-		strcat( rsl, buff );
+		strcat( rsl, ")(stderr=" );
+		sprintf( buff, "%s%s", gassServerUrl, localError );
+		strcat( rsl, rsl_stringify( buff ) );
 	} else {
 		buff[0] = '\0';
 		if ( ad->LookupString(ATTR_JOB_ERROR, buff) && *buff &&
 			 strcmp( buff, NULL_FILE ) ) {
 			strcat( rsl, ")(stderr=" );
-			strcat( rsl, buff );
+			strcat( rsl, rsl_stringify( buff ) );
 		}
 	}
 
@@ -1534,8 +1543,9 @@ char *GlobusJob::buildRestartRSL()
 		if ( rc < 0 ) {
 			file_status.st_size = 0;
 		}
-		sprintf( buff, "(stdout=%s%s)(stdout_position=%d)",
-				 gassServerUrl, localOutput, file_status.st_size );
+		sprintf( buff, "%s%s", gassServerUrl, localOutput );
+		sprintf( buff, "(stdout=%s)(stdout_position=%d)",
+				 rsl_stringify( buff ), file_status.st_size );
 		strcat( rsl, buff );
 	}
 	if ( localError ) {
@@ -1543,8 +1553,9 @@ char *GlobusJob::buildRestartRSL()
 		if ( rc < 0 ) {
 			file_status.st_size = 0;
 		}
-		sprintf( buff, "(stderr=%s%s)(stderr_position=%d)",
-				 gassServerUrl, localError, file_status.st_size );
+		sprintf( buff, "%s%s", gassServerUrl, localError );
+		sprintf( buff, "(stderr=%s)(stderr_position=%d)",
+				 rsl_stringify( buff ), file_status.st_size );
 		strcat( rsl, buff );
 	}
 
@@ -1564,8 +1575,9 @@ char *GlobusJob::buildStdioUpdateRSL()
 		if ( rc < 0 ) {
 			file_status.st_size = 0;
 		}
-		sprintf( buff, "(stdout=%s%s)(stdout_position=%d)",
-				 gassServerUrl, localOutput, file_status.st_size );
+		sprintf( buff, "%s%s", gassServerUrl, localOutput );
+		sprintf( buff, "(stdout=%s)(stdout_position=%d)",
+				 rsl_stringify( buff ), file_status.st_size );
 		strcat( rsl, buff );
 	}
 	if ( localError ) {
@@ -1573,8 +1585,9 @@ char *GlobusJob::buildStdioUpdateRSL()
 		if ( rc < 0 ) {
 			file_status.st_size = 0;
 		}
-		sprintf( buff, "(stderr=%s%s)(stderr_position=%d)",
-				 gassServerUrl, localError, file_status.st_size );
+		sprintf( buff, "%s%s", gassServerUrl, localError );
+		sprintf( buff, "(stderr=%s)(stderr_position=%d)",
+				 rsl_stringify( buff ), file_status.st_size );
 		strcat( rsl, buff );
 	}
 
