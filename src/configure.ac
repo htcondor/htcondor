@@ -1069,6 +1069,15 @@ else
 fi
 
 
+AC_MSG_CHECKING([what globus "flavor" we should use on this platform])
+_cv_globus_flavor=gcc32dbg
+if test "$_cv_arch" = "ALPHA" -o "$_cv_arch" = "IA64" ; then
+  _cv_globus_flavor=gcc64dbg
+fi
+AC_MSG_RESULT([$_cv_globus_flavor])
+AC_SUBST(globus_flavor,$_cv_globus_flavor)
+
+
 ############################################################
 # Configure-generated output
 ############################################################
