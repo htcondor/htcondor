@@ -39,6 +39,8 @@ extern char*	InitiatingHost;
 extern char*	mySubSystem;
 extern ReliSock	*SyscallStream;	// stream to shadow for remote system calls
 
+char VirtualMachineName[25];
+
 /*
   Unblock all signals except those which will encode asynchronous
   events.  Those will be unblocked at the proper moment by the finite
@@ -118,6 +120,14 @@ initial_bookeeping( int argc, char *argv[] )
 		config_insert( "STARTER_LOG", tmp2 );
 		free( tmp1 );
 		free( tmp2 );
+
+		// Stash logAppend as the VirtualMachineName
+		sprintf(VirtualMachineName,"CONDOR_VM=%s\0",logAppend);
+	} else {
+		// We were not told to append anything to the name of the
+		// log file.  This means we are not on an SMP machine,
+		// so set VirtualMachineName to be vm1 (i.e. cpu 1).
+		sprintf(VirtualMachineName,"CONDOR_VM=vm1\0");
 	}
 
 	init_logging();

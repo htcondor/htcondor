@@ -64,6 +64,7 @@ const mode_t LOCAL_DIR_MODE =
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
 extern char	*Execute;			// Name of directory where user procs execute
+extern char VirtualMachineName[];  // Virtual machine where we're allocated (SMP)
 
 extern "C" {
 	void _updateckpt( char *, char *, char * );
@@ -1089,6 +1090,9 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 	strcpy( env, s.env );
 
 	env_obj.add_string( env );  // set up environment as an object
+
+		// add name of SMP virtual machine (from startd) into environment
+	env_obj.add_string(VirtualMachineName);	
 
 
 		// Generate a directory where process can run and do its checkpointing
