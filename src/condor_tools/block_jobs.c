@@ -40,7 +40,9 @@ void do_block_condor();
 void unblock_condor();
 
 int
-main( int argc, char *argv[] )
+main( argc, argv )
+int argc;
+char *argv[];
 {
 	char	buf[512];
 
