@@ -37,11 +37,15 @@ ASCII string version of the local host's IP address.
 \noindent Bugs Fixed:
 \begin{itemize}
 
+\item Fixed a bug with the scheduler universe where if one or more of
+the stderr, stdout, or stdin files of a scheduler universe job couldn't
+be opened, the \Condor{schedd} would leak file descriptors.
+
 \item Fixed the default startd policy expressions that are shipped
 with Condor.
 When you upgrade Condor, if you keep your old \File{condor\_config}
 file and do not use the new one we ship with the Condor binaries, we
-highly recommend you open the \Release{etc/condor\config.generic}
+highly recommend you open the \Release{etc/condor/config.generic}
 file and see what's changed.
 Carefully read part 3, see what's different from your existing policy
 expressions, and make the relevent changes to your own expressions.
