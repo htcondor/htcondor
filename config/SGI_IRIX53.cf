@@ -1,7 +1,6 @@
 #define OperatingSystem IRIX53
 #define Architecture SGI
 
-#define Tilde /home/caepub/src.sgi/condor.v56
 #define RpcSvc	/usr/lib/librpcsvc.a
 #define RpcSun	/usr/lib/libsun.a
 #define MallocLib	/usr/lib/libmalloc.a
@@ -20,56 +19,56 @@
 #define DbmLibrary
 
 #define IS_SGI_IRIX53			YES
-#define IS_V5					YES
+#define IS_V5				YES
 
-#define HAS_X					NO
+#define HAS_X				NO
 #define HAS_X_EXTENSIONS		NO
 
-#define DOES_CHECKPOINTING		NO 
-#define DOES_REMOTE_SYSCALLS    YES  /* was YES, but clipped condor */
-#define DOES_SAVE_SIGSTATE		NO
+#define DOES_CHECKPOINTING		YES
+#define DOES_REMOTE_SYSCALLS		YES
+#define DOES_SAVE_SIGSTATE		YES
 #define DO_BENCHMARKING			YES
 
-#define HAS_NDBM				YES
-#define HAS_FSTATFS				YES
+#define HAS_NDBM			YES
+#define HAS_FSTATFS			YES
 #define NEEDS_XDR_FLOAT			NO
 #define NEEDS_GROW_STACK		NO
-#define NEEDS_SPECIAL_SIGVEC	NO
+#define NEEDS_SPECIAL_SIGVEC		NO
 #define NEEDS_FAKE_GETMNT		YES
-#define HAS_VOID_SIGNAL_RETURN	NO
+#define HAS_VOID_SIGNAL_RETURN		NO
 #define HAS_AR_S_OPTION			YES
 #define HAS_RANLIB_TOUCH		NO
 #define HAS_CP_PRESERVE			YES
-#define NEEDS_SPECIAL_SETJMP	NO
-#define HAS_FORTRAN				YES
-#define HAS_FLOCK				YES
-#define HAS_ADJTIME				YES
+#define NEEDS_SPECIAL_SETJMP		NO
+#define HAS_FORTRAN			YES
+#define HAS_FLOCK			YES
+#define HAS_ADJTIME			YES
 #define HAS_GETDTABLESIZE		YES
 #define HAS_GETHOSTNAME			YES
-#define HAS__UTSSYS				NO
+#define HAS__UTSSYS			NO
 #define HAS_GETPAGESIZE			YES
-#define HAS_GETPGRP				YES
+#define HAS_GETPGRP			YES
 #define HAS_GETPGRP2			NO
-#define HAS_KILLPG				YES
+#define HAS_KILLPG			YES
 #define HAS_SETHOSTNAME			YES
 #define HAS_SETREGID			YES
 #define HAS_SETREUID			YES
-#define HAS_UTIMES				YES
-#define HAS_UTIME				NO
-#define HAS_VHANGUP				YES
+#define HAS_UTIMES			YES
+#define HAS_UTIME			NO
+#define HAS_VHANGUP			YES
 #define HAS_SETRESUID			NO
 #define HAS_SETRESGID			NO
-#define HAS_SETEGID				YES
-#define HAS_SETEUID				YES
-#define HAS_GETWD				YES
-#define HAS_INSQUE				YES
-#define HAS_PVM					NO
+#define HAS_SETEGID			YES
+#define HAS_SETEUID			YES
+#define HAS_GETWD			YES
+#define HAS_INSQUE			YES
+#define HAS_PVM				NO
 
-#define PVM_ARCH				IRIX
+#define PVM_ARCH			IRIX
 
 #define CCompiler gcc
 #define CPlusCompiler g++
-#define StaticFlag -static
+#define StaticFlag /**/
 #define UnixName /unix          /* pathname of the system executable */
 #define syscall_lib syscall_lib_irix
 #define PsAllFlag -ef               /* "Ps" flag when you want everything */
