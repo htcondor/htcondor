@@ -22,16 +22,14 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-#include "sink.h"
-#include "formatOptions.h"
 #include "exprTree.h"
+#include "sink.h"
 
 BEGIN_NAMESPACE( classad )
 
 ClassAdUnParser::
 ClassAdUnParser()
 {
-	pp = NULL;
 }
 
 
@@ -85,6 +83,10 @@ Unparse( string &buffer, Value &val )
 {
 	char	tempBuf[512];
 	switch( val.GetType( ) ) {
+		case NULL_VALUE: 
+			buffer += "(null-value)";
+			break;
+
 		case STRING_VALUE: {
 			string	s;
 			val.IsStringValue( s );
@@ -220,7 +222,7 @@ Unparse( string &buffer, Value &val )
 			vector< pair<string,ExprTree*> > attrs;
 			val.IsClassAdValue( ad );
 			ad->GetComponents( attrs );
-			Unparse( buffer, attrs );
+			UnparseAux( buffer, attrs );
 			return;
 		}
 		case LIST_VALUE: {
@@ -228,7 +230,7 @@ Unparse( string &buffer, Value &val )
 			vector<ExprTree*> exprs;
 			val.IsListValue( el );
 			el->GetComponents( exprs );
-			Unparse( buffer, exprs );
+			UnparseAux( buffer, exprs );
 			return;
 		}
 	}
@@ -248,7 +250,7 @@ Unparse( string &buffer, ExprTree *tree )
 			Value			val;
 			NumberFactor	factor;
 			((Literal*)tree)->GetComponents( val, factor );
-			Unparse( buffer, val, factor );
+			UnparseAux( buffer, val, factor );
 			return;
 		}
 
@@ -257,7 +259,7 @@ Unparse( string &buffer, ExprTree *tree )
 			string	ref;
 			bool	absolute;
 			((AttributeReference*)tree)->GetComponents( expr, ref, absolute );
-			Unparse( buffer, expr, ref, absolute );
+			UnparseAux( buffer, expr, ref, absolute );
 			return;
 		}
 
@@ -265,29 +267,29 @@ Unparse( string &buffer, ExprTree *tree )
 			OpKind		op;
 			ExprTree	*t1, *t2, *t3;
 			((Operation*)tree)->GetComponents( op, t1, t2, t3 );
-			Unparse( buffer, op, t1, t2, t3 );
+			UnparseAux( buffer, op, t1, t2, t3 );
 			return;
 		}
 
 		case FN_CALL_NODE: {
-			string				fnName;
-			vector<ExprTree*> 	args;
+			string					fnName;
+			vector<ExprTree*> args;
 			((FunctionCall*)tree)->GetComponents( fnName, args );
-			Unparse( buffer, fnName, args );
+			UnparseAux( buffer, fnName, args );
 			return;
 		}
 
 		case CLASSAD_NODE: {
 			vector< pair<string, ExprTree*> > attrs;
 			((ClassAd*)tree)->GetComponents( attrs );
-			Unparse( buffer, attrs );
+			UnparseAux( buffer, attrs );
 			return;
 		}
 
 		case EXPR_LIST_NODE: {
 			vector<ExprTree*> exprs;
 			((ExprList*)tree)->GetComponents( exprs );
-			Unparse( buffer, exprs );
+			UnparseAux( buffer, exprs );
 			return;
 		}
 
@@ -302,7 +304,7 @@ Unparse( string &buffer, ExprTree *tree )
 
 
 void ClassAdUnParser::
-Unparse( string &buffer, Value &val, NumberFactor factor )
+UnparseAux( string &buffer, Value &val, NumberFactor factor )
 {
 	Unparse( buffer, val );
 	if( val.IsNumber( ) && factor != NO_FACTOR ) {
@@ -315,7 +317,7 @@ Unparse( string &buffer, Value &val, NumberFactor factor )
 }
 
 void ClassAdUnParser::
-Unparse( string &buffer, ExprTree *expr, const string &attrName, bool absolute )
+UnparseAux( string &buffer, ExprTree *expr, string &attrName, bool absolute )
 {
 	if( expr ) {
 		Unparse( buffer, expr );
@@ -327,7 +329,7 @@ Unparse( string &buffer, ExprTree *expr, const string &attrName, bool absolute )
 }
 
 void ClassAdUnParser::
-Unparse( string &buffer, OpKind op, ExprTree *t1, ExprTree *t2, ExprTree *t3 )
+UnparseAux(string &buffer, OpKind op, ExprTree *t1, ExprTree *t2, ExprTree *t3)
 {
 		// case 0: parentheses op
 	if( op==PARENTHESES_OP ) {
@@ -367,9 +369,9 @@ Unparse( string &buffer, OpKind op, ExprTree *t1, ExprTree *t2, ExprTree *t3 )
 }
 
 void ClassAdUnParser::
-Unparse( string &buffer, const string &fnName, vector<ExprTree*>& args )
+UnparseAux( string &buffer, string &fnName, vector<ExprTree*>& args )
 {
-	vector<ExprTree*>::iterator	itr;
+	vector<ExprTree*>::const_iterator	itr;
 
 	buffer += fnName + "(";
 	for( itr=args.begin( ); itr!=args.end( ); itr++ ) {
@@ -380,9 +382,9 @@ Unparse( string &buffer, const string &fnName, vector<ExprTree*>& args )
 }
 
 void ClassAdUnParser::
-Unparse( string &buffer, vector< pair<string,ExprTree*> >& attrs )
+UnparseAux( string &buffer, vector< pair<string,ExprTree*> >& attrs )
 {
-	vector< pair<string, ExprTree*> >::iterator	itr;
+	vector< pair<string,ExprTree*> >::const_iterator itr;
 
 	buffer += "[ ";
 	for( itr=attrs.begin( ); itr!=attrs.end( ); itr++ ) {
@@ -395,9 +397,9 @@ Unparse( string &buffer, vector< pair<string,ExprTree*> >& attrs )
 
 
 void ClassAdUnParser::
-Unparse( string &buffer, vector<ExprTree*>& exprs )
+UnparseAux( string &buffer, vector<ExprTree*>& exprs )
 {
-	vector<ExprTree*>::iterator	itr;
+	vector<ExprTree*>::const_iterator	itr;
 
 	buffer += "{ ";
 	for( itr=exprs.begin( ); itr!=exprs.end( ); itr++ ) {
@@ -408,121 +410,192 @@ Unparse( string &buffer, vector<ExprTree*>& exprs )
 }
 
 
-FormatOptions::
-FormatOptions( )
+// PrettyPrint object implementation
+PrettyPrint::
+PrettyPrint( )
 {
-	indentClassAds = false;
-	indentLists = false;
+	classadIndent = 4;
+	listIndent = 3;
+	wantStringQuotes = true;
+	minimalParens = false;
 	indentLevel = 0;
-	classadIndentLen = 4;
-	listIndentLen = 4;
-	wantQuotes = true;
-	precedenceLevel = -1;
-	marginWrapCols = 79;
-	marginIndentLen = 3;
-	minimalParens = true;
 }
 
 
-FormatOptions::
-~FormatOptions( )
+PrettyPrint::
+~PrettyPrint( )
 {
 }
 
-
-void FormatOptions::
-SetClassAdIndentation( bool i, int len )
+void PrettyPrint::
+SetClassAdIndentation( int len )
 {
-	indentClassAds = i;
-	classadIndentLen = len;
+	classadIndent = len;
 }
 
-
-void FormatOptions::
-SetListIndentation( bool i, int len )
+int PrettyPrint::
+GetClassAdIndentation( )
 {
-	indentLists = i;
-	listIndentLen = len;
-}	
-
-void FormatOptions::
-GetClassAdIndentation( bool &i, int &len )
-{
-	i = indentClassAds;
-	len = classadIndentLen;
+	return( classadIndent );
 }
 
-
-void FormatOptions::
-GetListIndentation( bool &i, int &len )
+void PrettyPrint::
+SetListIndentation( int len )
 {
-	i = indentLists;
-	len = listIndentLen;
-}	
-
-
-
-void FormatOptions::
-SetIndentLevel( int i )
-{
-	indentLevel = i;
+	listIndent = len;
 }
 
-
-int FormatOptions::
-GetIndentLevel( )
+int PrettyPrint::
+GetListIndentation( )
 {
-	return indentLevel;
+	return( listIndent );
 }
 
-void FormatOptions::
-SetWantQuotes( bool wq )
+void PrettyPrint::
+SetWantStringQuotes( bool b )
 {
-	wantQuotes = wq;
+	wantStringQuotes = b;
 }
 
-bool FormatOptions::
-GetWantQuotes( )
+bool PrettyPrint::
+GetWantStringQuotes( )
 {
-	return( wantQuotes );
+	return( wantStringQuotes );
 }
 
-void FormatOptions::
-SetMinimalParentheses( bool m )
+void PrettyPrint::
+SetMinimalParentheses( bool b )
 {
-	minimalParens = m;
+	minimalParens = b;
 }
 
-bool FormatOptions::
+bool PrettyPrint::
 GetMinimalParentheses( )
 {
 	return( minimalParens );
 }
 
-void FormatOptions::
-SetPrecedenceLevel( int pl )
+void PrettyPrint::
+UnparseAux(string &buffer,OpKind op,ExprTree *op1,ExprTree *op2,ExprTree *op3)
 {
-	precedenceLevel = pl;
+	if( !minimalParens ) {
+		return( ClassAdUnParser::UnparseAux( buffer, op, op1, op2, op3 ) );
+	}
+
+		// case 0: parentheses op
+	if( op==PARENTHESES_OP ) {
+		Unparse( buffer, op1 );
+		return;
+	}
+		// case 1: check for unary ops
+	if( op==UNARY_PLUS_OP || op==UNARY_MINUS_OP || op==LOGICAL_NOT_OP ||
+			op==BITWISE_NOT_OP ) {
+		buffer += opString[op];
+		Unparse( buffer, op1 );
+		return;
+	}
+		// case 2: check for ternary op
+	if( op==TERNARY_OP ) {
+		Unparse( buffer, op1 );
+		buffer += " ? ";
+		Unparse( buffer, op2 );
+		buffer += " : ";
+		Unparse( buffer, op3 );
+		return;
+	}
+		// case 3: check for subscript op
+	if( op==SUBSCRIPT_OP ) {
+		Unparse( buffer, op1 );
+		buffer += '[';
+		Unparse( buffer, op2 );
+		buffer += ']';
+		return;
+	}
+		// all others are binary ops
+	OpKind		top;
+	ExprTree	*t1, *t2, *t3;
+
+	if( op1->GetKind( ) == OP_NODE ) {
+		((Operation*)op1)->GetComponents( top, t1, t2, t3 );
+		if( Operation::PrecedenceLevel(top)<Operation::PrecedenceLevel(op) ) {
+			buffer += " ( ";
+			UnparseAux( buffer, top, t1, t2, t3 );
+			buffer += " ) ";
+		}
+	} else {
+		Unparse( buffer, t1 );
+	}
+	buffer += opString[op];
+	if( op2->GetKind( ) == OP_NODE ) {
+		((Operation*)op2)->GetComponents( top, t1, t2, t3 );
+		if( Operation::PrecedenceLevel(top)<Operation::PrecedenceLevel(op) ) {
+			buffer += " ( ";
+			UnparseAux( buffer, top, t1, t2, t3 );
+			buffer += " ) ";
+		}
+	} else {
+		Unparse( buffer, t1 );
+	}
 }
 
-int FormatOptions::
-GetPrecedenceLevel( )
+
+void PrettyPrint::
+UnparseAux( string &buffer, vector< pair<string,ExprTree*> >& attrs )
 {
-	return( precedenceLevel );
+	vector< pair<string, ExprTree*> >::iterator	itr;
+
+	if( classadIndent > 0 ) {
+		indentLevel += classadIndent;
+		buffer += '\n' + string( indentLevel, ' ' ) + '[';
+		indentLevel += classadIndent;
+	} else {
+		buffer += "[ ";
+	}
+	for( itr=attrs.begin( ); itr!=attrs.end( ); itr++ ) {
+		if( classadIndent > 0 ) {
+			buffer += '\n' + string( indentLevel, ' ' );
+		}
+		buffer += itr->first + " = ";
+		Unparse( buffer, itr->second );
+		if( itr+1 != attrs.end( ) ) buffer += "; ";
+	}
+	if( classadIndent > 0 ) {
+		indentLevel -= classadIndent;
+		buffer += '\n' + string( indentLevel, ' ' ) + ']';
+		indentLevel -= classadIndent;
+	} else {
+		buffer += " ]";
+	}
 }
 
-void FormatOptions::
-SetMarginWrap( int cols, int indentLen )
+
+void PrettyPrint::
+UnparseAux( string &buffer, vector<ExprTree*>& exprs )
 {
-	marginWrapCols = cols;
-	marginIndentLen = indentLen;
+	vector<ExprTree*>::iterator	itr;
+
+	if( listIndent > 0 ) {
+		indentLevel += listIndent;
+		buffer += '\n' + string( indentLevel, ' ' ) + '{';
+		indentLevel += listIndent;
+	} else {
+		buffer += "{ ";
+	}
+	for( itr=exprs.begin( ); itr!=exprs.end( ); itr++ ) {
+		if( listIndent > 0 ) {
+			buffer += '\n' + string( indentLevel, ' ' );
+		}
+		ClassAdUnParser::Unparse( buffer, *itr );
+		if( itr+1 != exprs.end( ) ) buffer += ',';
+	}
+	if( listIndent > 0 ) {
+		indentLevel -= listIndent;
+		buffer += '\n' + string( indentLevel, ' ' ) + '}';
+		indentLevel -= listIndent;
+	} else {
+		buffer += " }";
+	}
 }
 
-void FormatOptions::
-GetMarginWrap( int &cols, int &indentLen )
-{
-	cols = marginWrapCols;
-	indentLen = marginIndentLen;
-}
 
 END_NAMESPACE // classad
