@@ -104,6 +104,14 @@ class XMLLexer
 	bool GrabTag(void);
 	void BreakdownTag(const char *complete_tag);
 	bool GrabText(void);
+ private:
+    
+    // The copy constructor and assignment operator are defined
+    // to be private so we don't have to write them, or worry about
+    // them being inappropriately used. The day we want them, we can 
+    // write them. 
+    XMLLexer(const XMLLexer &lexer)            { return;       }
+    XMLLexer &operator=(const XMLLexer &lexer) { return *this; }
 };
 
 struct xml_tag_mapping
