@@ -12,14 +12,6 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 //---------------------------------------------------------------------------
-void TQI::Print () const {
-    printf ("Job: ");
-    job_print(parent);
-    printf (", Children: ");
-    children.Display(cout);
-}
-
-//---------------------------------------------------------------------------
 Dag::Dag(const char *condorLogName, const char *lockFileName,
          const int maxJobsSubmitted, const int maxScriptsRunning ) :
 	_maxScriptsRunning    (maxScriptsRunning),
@@ -34,17 +26,18 @@ Dag::Dag(const char *condorLogName, const char *lockFileName,
     _condorLogName = strnewp (condorLogName);
     _lockFileName  = strnewp (lockFileName);
 
+ 	_readyQ = new SimpleList<Job*>;
 	_scriptQ = new ScriptQ( this );
 	_submitQ = new Queue<Job*>;
+
+	if( !_readyQ || !_submitQ || !_scriptQ ) {
+		EXCEPT( "ERROR: out of memory (%s() in %s:%d)!\n",
+				__FUNCTION__, __FILE__, __LINE__ );
+	}
 
 	debug_printf( DEBUG_DEBUG_4,
 				  "_maxJobsSubmitted = %d, _maxScriptsRunning = %d\n",
 				  _maxJobsSubmitted, _maxScriptsRunning );
-
-	if( _scriptQ == NULL || _submitQ == NULL ) {
-		EXCEPT( "ERROR: out of memory (%s() in %s:%d)!\n",
-				__FUNCTION__, __FILE__, __LINE__ );
-	}
 }
 
 //-------------------------------------------------------------------------
@@ -54,6 +47,7 @@ Dag::~Dag() {
     delete [] _lockFileName;
 	delete _scriptQ;
 	delete _submitQ;
+	delete _readyQ;
 }
 
 //-------------------------------------------------------------------------
@@ -72,30 +66,6 @@ bool Dag::Bootstrap (bool recovery) {
 	debug_println( DEBUG_VERBOSE, "Number of pre-completed jobs: %d",
                    NumJobsDone() );
     
-    // Add a virtual dependency for jobs that have no parent.  In
-    // other words, pretend that there is an invisible "God" job that
-    // has the orphan jobs as its children.  The God job will have the
-    // value (Job *) NULL.
-	TQI* god = new TQI;
-	if( god == NULL ) {
-		debug_error( 1, DEBUG_SILENT,
-					 "ERROR: out of memory (%s() in %s:%d)!\n",
-					 __FUNCTION__, __FILE__, __LINE__ );
-	}
-	jobs.ToBeforeFirst();
-	while( jobs.Next( job ) ) {
-		if( job->IsEmpty( Job::Q_WAITING ) ) {
-			god->children.Append( job->GetJobID() );
-		}
-	}
-
-	// if there are no such jobs, remove the god job
-	if( god->children.IsEmpty() ) {
-		delete god;
-	}
-
-	_termQ.Append( god );
-
     if (recovery) {
         debug_println (DEBUG_NORMAL, "Running in RECOVERY mode...");
         if (!ProcessLogEvents (recovery)) return false;
@@ -103,10 +73,18 @@ bool Dag::Bootstrap (bool recovery) {
 
 	if( DEBUG_LEVEL( DEBUG_DEBUG_1 ) ) {
 		PrintJobList();
-		Print_TermQ();
+		PrintReadyQ( DEBUG_DEBUG_1 );
 	}	
 
-    return SubmitReadyJobs();
+	jobs.ToBeforeFirst();
+	while( jobs.Next( job ) ) {
+		if( job->_Status != Job::STATUS_DONE &&
+			job->IsEmpty( Job::Q_WAITING ) ) {
+			Submit( job );
+		}
+	}
+
+	return true;
 }
 
 //-------------------------------------------------------------------------
@@ -173,7 +151,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
         CondorID condorID;
         if (e != NULL) condorID = CondorID (e->cluster, e->proc, e->subproc);
         
-        debug_printf( DEBUG_DEBUG_1, " Log outcome: %s",
+        debug_printf( DEBUG_DEBUG_1, " Log outcome: %s\n",
                       ULogEventOutcomeNames[outcome] );
         
         if (outcome != ULOG_UNK_ERROR) log_unk_count = 0;
@@ -182,7 +160,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
             
             //----------------------------------------------------------------
           case ULOG_NO_EVENT:      
-//            debug_printf (DEBUG_VERBOSE, "\n");
+            debug_printf (DEBUG_DEBUG_1, "\n");
             done = true;
             break;
             //----------------------------------------------------------------
@@ -204,8 +182,6 @@ bool Dag::ProcessLogEvents (bool recovery) {
             //----------------------------------------------------------------
           case ULOG_OK:
             
-//			debug_printf( DEBUG_VERBOSE, " " );
-//			condorID.Print();
 			debug_printf( DEBUG_VERBOSE, "Event: %s for Job ",
 						  ULogEventNumberNames[e->eventNumber] );
             
@@ -240,13 +216,21 @@ bool Dag::ProcessLogEvents (bool recovery) {
               case ULOG_CHECKPOINTED:
               case ULOG_JOB_EVICTED:
               case ULOG_IMAGE_SIZE:
+			case ULOG_JOB_SUSPENDED:
+			case ULOG_JOB_UNSUSPENDED:
+			case ULOG_JOB_HELD:
+			case ULOG_JOB_RELEASED:
+				// FYI, these next two events do not refer to DAGMan
+				// nodes, but rather to MPI "nodes"
+			case ULOG_NODE_EXECUTE:
+			case ULOG_NODE_TERMINATED:
               case ULOG_SHADOW_EXCEPTION:
               case ULOG_GENERIC:
               case ULOG_EXECUTE:
                 if (DEBUG_LEVEL(DEBUG_VERBOSE)) {
                     Job * job = GetJob (condorID);
-                    job_print(job,true);
-                    putchar ('\n');
+					job_print( job, true );
+					debug_printf( DEBUG_VERBOSE, "\n" );
                 }
                 break;
                 
@@ -257,7 +241,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
                   
                   if (DEBUG_LEVEL(DEBUG_VERBOSE)) {
                     job_print(job, true);
-                    putchar ('\n');
+                    debug_printf( DEBUG_VERBOSE, "\n" );
                   }
                   
                   if (job == NULL) {
@@ -317,6 +301,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
 
 					  job->_Status = Job::STATUS_POSTRUN;
 					  _scriptQ->Run( job->_scriptPost );
+					  SubmitReadyJobs();					  
 					  done = true;
 					  break;
 				  }
@@ -325,88 +310,51 @@ bool Dag::ProcessLogEvents (bool recovery) {
 				  // dependencies given our successful completion
 
 				  job->_Status = Job::STATUS_DONE;
-				  TerminateJob( job );
-
-				  if( !recovery ) {
-//					  debug_printf( DEBUG_VERBOSE, "\n" );
-					  // submit any waiting child jobs
-					  if( SubmitReadyJobs() == false ) {
-						  // if submit fails for any reason, abort
-
-						  // is this really what we want to do?  why
-						  // not let the rest of the DAG run as far as
-						  // possible?  --pfc
-						  done   = true;
-						  result = false;
-					  }
-				  }
-
-				  if( DEBUG_LEVEL( DEBUG_DEBUG_1 ) )
-					  Print_TermQ();
+				  TerminateJob( job, recovery );
+				  SubmitReadyJobs();
+				  PrintReadyQ( DEBUG_DEBUG_1 );
 			  }
 			  break;
               
               //--------------------------------------------------
               case ULOG_SUBMIT:
                 
-				// find the first job in the termQ that hasn't yet
-				// been matched with a submit event, and match it with
-				// this one
-
-				// WARNING: THIS IS KNOWN TO BE BUGGY!
-				// See GetSubmittedJob() for details...
-
-				Job* job = GetSubmittedJob( recovery );
-				if( job == NULL ) {
-					if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
-						printf( "Unknown submitted job found in log\n" );
-					}
-					done = true;
-					result = false;
-					break;
-				}
-
-				// for now, we simply detect the bug when it occurs
-				// and abort the DAG, since that's better than
-				// silently incorrect behavior...
-
 				SubmitEvent* submit_event = (SubmitEvent*) e;
-				char submit_event_job_name[1024];
+				char job_name[1024];
 				sscanf( submit_event->submitEventLogNotes, "DAG Node: %1023s",
-						submit_event_job_name );
-				Job* submit_event_job = GetJob( submit_event_job_name );
-				if( ! submit_event_job ) {
+						job_name );
+				Job* job = GetJob( job_name );
+				if( ! job ) {
 					debug_printf( DEBUG_QUIET,
 								  "Unknown submit event (job \"%s\") found "
-								  "in log\n", submit_event_job_name );
+								  "in log\n", job_name );
                     done = true;
                     result = false;
                     break;
 				}
-				if( job != submit_event_job ) {
-					debug_printf( DEBUG_QUIET,
-								  "\nknown GetSubmittedJob() bug: "
-								  "Job \"%s\" != Submit Event Job \"%s\"\n",
-								  job->GetJobName(),
-								  submit_event_job->GetJobName() );
-					done = TRUE;
-					result = FALSE;
-					break;
-				}
 
-				// sanity-check to compare then job we see in the
-				// submit event to the job we expect to see based on
-				// our submit queue
 				if( !recovery ) {
-					Job* submitQ_job = NULL;
-					if( (_submitQ->dequeue( submitQ_job ) == -1) || 
-						(submitQ_job != submit_event_job) ) {
+					// as a sanity check, compare the job from the
+					// submit event to the job we expected to see from
+					// our submit queue
+ 					Job* expectedJob = NULL;
+					if( _submitQ->dequeue( expectedJob ) == -1 ) {
 						debug_printf( DEBUG_QUIET,
-									  "Unknown submit event found in log\n"
-									  "submit_event_job = \"%s\", "
-									  "submitQ_job = \"%s\"\n",
-									  submit_event_job->GetJobName(),
-									  submitQ_job->GetJobName() );
+									  "Unrecognized submit event (for job "
+									  "\"%s\") found in log (none expected)\n",
+									  job->GetJobName() );
+						done = true;
+						result = false;
+						break;
+					}
+					assert( expectedJob != NULL );
+					if( job != expectedJob ) {
+						debug_printf( DEBUG_QUIET,
+                                      "Unexpected submit event (for job "
+                                      "\"%s\") found in log; job \"%s\" "
+									  "was expected.\n",
+									  job->GetJobName(),
+									  expectedJob->GetJobName() );
 						done = true;
 						result = false;
 						break;
@@ -416,10 +364,10 @@ bool Dag::ProcessLogEvents (bool recovery) {
 				job->_CondorID = condorID;
 				if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
 					job_print( job, true );
-					printf( "\n" );
+					debug_printf( DEBUG_VERBOSE, "\n" );
 				}
                 
-                if (DEBUG_LEVEL(DEBUG_DEBUG_1)) Print_TermQ();
+				PrintReadyQ( DEBUG_DEBUG_1 );
 				done = true;
                 break;
             }
@@ -459,6 +407,7 @@ Job * Dag::GetJob (const CondorID condorID) const {
 //-------------------------------------------------------------------------
 bool Dag::Submit (Job * job) {
     assert (job != NULL);
+	assert( job->CanSubmit() );
 
 	// if a PRE script exists and hasn't already been run, run that
 	// first -- the PRE script's reaper function will submit the
@@ -471,35 +420,42 @@ bool Dag::Submit (Job * job) {
 		_scriptQ->Run( job->_scriptPre );
 		return true;
     }
-	// no PRE script exists, so submit the job to condor right away
-	return SubmitCondor( job );
+	// no PRE script exists or is done, so add job to the queue of ready jobs
+	_readyQ->Append( job );
+	SubmitReadyJobs();
+	return TRUE;
 }
 
-//-------------------------------------------------------------------------
-bool
-Dag::SubmitCondor( Job* job )
+// returns number of jobs submitted
+int
+Dag::SubmitReadyJobs()
 {
-    assert( job != NULL );
-    assert( job->_Status == Job::STATUS_READY );
+//	debug_printf( DEBUG_DEBUG_1, "%s(): %d ready job%s to submit.\n",
+//				  __FUNCTION__,
+//				  _readyQ->Number(), _readyQ->Number() == 1 ? "" : "s" );	
 
-	if( ! job->CanSubmit() ) {
-		// when would this ever happen? why not assert()?  --pfc (2000-12-01)
-		if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
-			printf( "Warning: trying to submit unready job " );
-			job->Print( true );
-			printf( "\n" );
-		}
-		return false;
-	}
-
-    // if we've already submitted max jobs, return
-    if( _maxJobsSubmitted != 0 && _numJobsSubmitted >= _maxJobsSubmitted ) {
-        assert( _numJobsSubmitted <= _maxJobsSubmitted );
-        debug_printf( DEBUG_DEBUG_1,
-                      "%s(): max scripts (%d) already running\n",
-                      __FUNCTION__, _maxJobsSubmitted );
-        return true;
+	// no jobs ready to submit
+    if( _readyQ->IsEmpty() ) {
+        return 0;
     }
+    // max jobs already submitted
+    if( _maxJobsSubmitted && _numJobsSubmitted >= _maxJobsSubmitted ) {
+		assert( _numJobsSubmitted <= _maxJobsSubmitted );
+        debug_printf( DEBUG_DEBUG_1,
+                      "Max jobs (%d) already running; "
+					  "deferring submission of %d ready job%s.\n",
+                      _maxJobsSubmitted, _readyQ->Number(),
+					  _readyQ->Number() == 1 ? "" : "s" );
+        return 0;
+    }
+
+	// remove & submit first job from ready queue
+	Job* job;
+	_readyQ->Rewind();
+	_readyQ->Next( job );
+	_readyQ->DeleteCurrent();
+	assert( job != NULL );
+	assert( job->_Status == Job::STATUS_READY );
 
 	debug_printf( DEBUG_VERBOSE, "Submitting Job %s ...\n",
 				  job->GetJobName() );
@@ -509,7 +465,8 @@ Dag::SubmitCondor( Job* job )
         job->_Status = Job::STATUS_ERROR;
         _numJobsFailed++;
 		sprintf( job->error_text, "Job submit failed" );
-        return true;
+		// the problem might be specific to that job, so keep submitting...
+        return SubmitReadyJobs();
     }
 
 	// append job to the submit queue so we can match it with its
@@ -520,12 +477,12 @@ Dag::SubmitCondor( Job* job )
 	_numJobsSubmitted++;
 
 	if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
-		printf( "\tAssigned Condor ID " );
+		printf( "\tassigned Condor ID " );
 		condorID.Print();
-		printf( "\n" );		
+		debug_printf( DEBUG_VERBOSE, "\n" );		
 	}
 
-    return true;
+    return SubmitReadyJobs() + 1;
 }
 
 //---------------------------------------------------------------------------
@@ -556,7 +513,8 @@ Dag::PreScriptReaper( Job* job, int status )
 		debug_printf( DEBUG_QUIET, "PRE Script of Job %s completed "
 					  "successfully.\n", job->GetJobName() );
 		job->_Status = Job::STATUS_READY;
-		SubmitCondor( job );
+		_readyQ->Append( job );
+		SubmitReadyJobs();
 	}
 	return true;
 }
@@ -595,20 +553,13 @@ Dag::PostScriptReaper( Job* job, int status )
 			// update DAG dependencies given our successful completion
 			job->_Status = Job::STATUS_DONE;
 			TerminateJob( job );
-			
-			// submit any waiting child jobs
-			if( SubmitReadyJobs() == false ) {
-				// if submit fails for any reason, abort
-				// TODO: abort the DAG somehow
-			}
 		}
 		else {
 			// restore STATUS_ERROR if the job had failed
 			job->_Status = Job::STATUS_ERROR;
 		}
 
-		if( DEBUG_LEVEL( DEBUG_DEBUG_1 ) )
-			Print_TermQ();
+		PrintReadyQ( DEBUG_DEBUG_1 );
 	}
 	return true;
 }
@@ -641,21 +592,23 @@ Dag::PrintJobList( Job::status_t status ) const
     printf( "---------------------------------------\n" );
 }
 
-//---------------------------------------------------------------------------
-void Dag::Print_TermQ () const {
-    printf ("Termination Queue:");
-    if (_termQ.IsEmpty()) {
-        printf (" <empty>\n");
-        return;
-    } else putchar('\n');
-
-    ListIterator<TQI> q_iter (_termQ);
-    TQI * tqi;
-    while (q_iter.Next(tqi)) {
-        printf ("  ");
-        tqi->Print();
-        putchar ('\n');
-    }
+void
+Dag::PrintReadyQ( debug_level_t level ) const {
+	debug_printf( level, "Ready Queue: " );
+	if( _readyQ->IsEmpty() ) {
+		debug_printf( level, "<empty>\n" );
+		return;
+	}
+	_readyQ->Rewind();
+	Job* job;
+	_readyQ->Next( job );
+	if( job ) {
+		debug_printf( level, "%s", job->GetJobName() );
+	}
+	while( _readyQ->Next( job ) ) {
+		debug_printf( level, ", %s", job->GetJobName() );
+	}
+	debug_printf( level, "\n" );
 }
 
 //---------------------------------------------------------------------------
@@ -818,151 +771,11 @@ Dag::TerminateJob( Job* job, bool bootstrap )
         Job * child = GetJob(childID);
         assert (child != NULL);
         child->Remove(Job::Q_WAITING, job->GetJobID());
+		// if child has no more parents in its waiting queue, submit it
+		if( child->IsEmpty( Job::Q_WAITING ) && bootstrap == FALSE ) {
+			Submit( child );
+		}
     }
     _numJobsDone++;
     assert (_numJobsDone <= _jobs.Number());
-
-	// add job to the termination queue if it has any children
-	if( !bootstrap && !job->IsEmpty( Job::Q_CHILDREN ) ) {
-		TQI* tqi = new TQI( job, qp );
-		if( tqi == NULL ) {
-			debug_error( 1, DEBUG_SILENT, "\nERROR: out of memory "
-						 "(%s() in %s:%d)!\n",
-						 __FUNCTION__, __FILE__, __LINE__ );
-		}
-		_termQ.Append(tqi);
-	}
-}
-
-//---------------------------------------------------------------------------
-Job * Dag::GetSubmittedJob (bool recovery) {
-
-    Job * job_found = NULL;
-
-    // The following loop scans the entire termination queue (_termQ)
-    // It has two purposes.  First it looks for a submittable child of
-    // a terminated job.  If no terminated job has such a child, then
-    // the loop ends, and this function will return NULL (no job
-    // found).
-	//
-	// [This function is called only after we've just seen a new
-	// submit event in the log, and assumes that that submit event
-	// must correspond to the first unsubmitted child found in the
-	// termination queue, since that's the first one we would have
-	// submitted.  With the advent of asynchronous PRE/POST scripts
-	// this is no longer a safe assumption, and can result in buggy
-	// behavior... this needs to be fixed.  --pfc]
-	//
-    // If such a child job is found, it is removed from its parent's list
-    // of unsubmitted jobs.  If that causes the parent's child list to
-    // become empty, then the parent itself is removed from the termination
-    // queue.
-    //
-    // The rest of the termination queue is scanned for duplicates of the
-    // earlier found child job.  Those duplicates are removed exactly the
-    // same way the original child job was removed.
-
-    bool found = false;  // Flag signally the discovery of a submitted child
-    TQI * tqi;           // The current termination queue item being scanned
-    _termQ.Rewind();
-    while (_termQ.Next(tqi)) {
-        assert (!tqi->children.IsEmpty());
-        JobID_t match_ID;  // The current Job ID being examined
-        JobID_t found_ID;  // The ID of the original child found
-
-        bool found_on_this_line = false;  // for debugging
-
-        tqi->children.Rewind();
-        while (tqi->children.Next(match_ID)) {
-            bool kill = false;  // Flag whether this child should be removed
-            if (found) {
-                if (match_ID == found_ID) {
-                    assert (!found_on_this_line);
-                    found_on_this_line = true;
-                    kill = true;
-                }
-            } else {
-                Job * job = GetJob(match_ID);
-                assert (job != NULL);
-                if (job->_Status == (recovery ?
-                                     Job::STATUS_READY :
-                                     Job::STATUS_SUBMITTED)) {
-                    found_ID           = match_ID;
-                    found              = true;
-                    kill               = true;
-                    job_found          = job;
-                    found_on_this_line = true;
-                }
-            }
-
-            if (kill) {
-                tqi->children.DeleteCurrent();
-                if (tqi->children.IsEmpty()) _termQ.DeleteCurrent();
-
-				// there shouldn't be duplicate children of the same job
-                break; 
-            }
-        }
-    }
-    if (recovery && job_found != NULL) {
-        job_found->_Status = Job::STATUS_SUBMITTED;
-		_numJobsSubmitted++;
-		assert( _maxJobsSubmitted == 0 || 
-				(_numJobsSubmitted <= _maxJobsSubmitted) );
-    }
-    return job_found;
-}
-
-//-------------------------------------------------------------------------
-bool Dag::SubmitReadyJobs () {
-
-	// if the termination queue is empty, return
-	if( _termQ.IsEmpty() ) {
-		debug_printf( DEBUG_DEBUG_1, "%s(): termination queue is empty\n",
-					  __FUNCTION__ );
-        return true;
-    }
-
-	// if we've already submitted max jobs, return
-	if( _maxJobsSubmitted != 0 && _numJobsSubmitted >= _maxJobsSubmitted ) {
-		assert( _numJobsSubmitted <= _maxJobsSubmitted );
-		debug_printf( DEBUG_DEBUG_1,
-					  "%s(): max scripts (%d) already running\n",
-					  __FUNCTION__, _maxJobsSubmitted );
-		return true;
-	}
-
-	// look at the children of each terminated job to see if any of
-	// them are submittable, and if so, submit them
-
-    TQI* tqi;
-    _termQ.Rewind();
-	while( (tqi = _termQ.Next()) ) {
-		tqi->children.Rewind();
-		JobID_t childID;
-		while( tqi->children.Next( childID ) &&
-			   ( (_maxJobsSubmitted == 0) ||
-				 (_numJobsSubmitted < _maxJobsSubmitted)) ) {
-			debug_printf( DEBUG_DEBUG_4,
-						  "%s() examining JobID #%d ... ", __FUNCTION__,
-						  childID );
-			Job* child = GetJob( childID );
-			assert( child != NULL );
-			if( child->CanSubmit() ) {
-				debug_printf( DEBUG_DEBUG_4, "submittable!\n" );
-				if( !Submit( child ) ) {
-					if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
-						printf( "Fatal error submitting job " );
-						child->Print( true );
-						printf( "\n" );
-					}
-					return false;
-				}
-			}
-			else {
-				debug_printf( DEBUG_DEBUG_4, "not submittable\n" );
-			}
-		}
-	}
-    return true;
 }
