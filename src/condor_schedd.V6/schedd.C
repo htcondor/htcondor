@@ -1988,8 +1988,8 @@ Scheduler::Register(DaemonCore* core)
 	install_sig_handler(SIGPIPE, SIG_IGN);
 
 	// these functions are called after the select call in daemon core's loop
-	core->Register(this, (void*)StartJobs);
-	core->Register(this, (void*)send_alive);
+	core->Register(this, (void*)StartJobs, FALSE);	// call anytime we break from select()
+	core->Register(this, (void*)send_alive, TRUE);  // call only on a select timeout
 }
 
 extern "C" {
@@ -2439,7 +2439,7 @@ Scheduler::AlreadyMatched(PROC_ID* id)
 void
 Scheduler::send_alive()
 {
-	ReliSock	*sock;
+	SafeSock	*sock;
     int     	i, j;
 
 	if(aliveFrequency == 0)
@@ -2460,20 +2460,21 @@ Scheduler::send_alive()
             rec[i]->alive_countdown = aliveInterval;
 			dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n",rec[i]->peer);
 			j++;
-			sock = new ReliSock(rec[i]->peer, 0);
+			sock = new SafeSock(rec[i]->peer, 0);
             if(!sock->snd_int(ALIVE, TRUE))
             {
+				// UDP transport out of buffer space!
                 dprintf(D_ALWAYS, "\t(Can't send alive message to %d)\n",
                         rec[i]->peer);
 				delete sock;
-				/* If we can't contact the startd to send an alive message,
-				   and we don't have a job running on this machine, then
-				   throw away the record -- the startd is probably dead. */
-				if (rec[i]->shadowRec == NULL) {
-					DelMrec(rec[i]);
-				}
                 continue;
             }
+				/* TODO: Someday, espcially once the accountant is done, the startd
+				should send a keepalive ACK back to the schedd.  if there is no shadow
+				to this machine, and we have not had a startd keepalive ACK in X amount
+				of time, then we should relinquish the match.  Since the accountant 
+				is not done and we are in fire mode, leave this for V6.1.  :^) -Todd 9/97
+				*/
 			delete sock;
         }
     }
