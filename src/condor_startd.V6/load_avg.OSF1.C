@@ -32,7 +32,6 @@
 
 static char *_FileName_ = __FILE__;
 
-
 class LoadVector {
 public:
 	LoadVector();
@@ -48,7 +47,6 @@ private:
 
 extern "C" {
 	float calc_load_avg();
-	int table(int id, int idx, char *addr, int nel, u_int lel );
 	void get_k_vars();
 }
 
