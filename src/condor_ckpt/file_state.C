@@ -243,19 +243,20 @@ OpenFileTable::DoOpen(
 	file[user_fd].shadow_sock = FALSE;
 	file[user_fd].offset = 0;
 
+#if defined( BufferCondorIO )
 	        // set the initial file size
 	if( LocalSysCalls() || FileTab->IsLocalAccess( user_fd ) ) {
-	        tempSize = syscall( SYS_lseek, real_fd, 0, SEEK_END );
+		tempSize = syscall( SYS_lseek, real_fd, 0, SEEK_END );
 		if( tempSize > 0 ) {
-		        rval = syscall( SYS_lseek, real_fd, -tempSize, SEEK_END );
+			rval = syscall( SYS_lseek, real_fd, -tempSize, SEEK_END );
 			if( rval < 0 ) {
-			        return -1;
+				return -1;
 			}
 			file[user_fd].size = tempSize; 
 		} else if( tempSize < 0 ) {
-		        return -1;
+			return -1;
 		} else {
-		        file[user_fd].size = 0;
+			file[user_fd].size = 0;
 		}
 	} else {
 	        tempSize = REMOTE_syscall( CONDOR_lseek, real_fd, 0, SEEK_END );
@@ -271,6 +272,7 @@ OpenFileTable::DoOpen(
 		        file[user_fd].size = 0;
 		}		        
 	 }
+#endif /* defined( BufferCondorIO ) */
 
 	file[user_fd].real_fd = real_fd;
 	if( path[0] == '/' ) {
