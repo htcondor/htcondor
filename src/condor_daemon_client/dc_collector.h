@@ -70,15 +70,12 @@ class DCCollector : public Daemon {
 public:
 	enum UpdateType { UDP, TCP, CONFIG };
 
-		/** Constructor.  Same as a Daemon object.
-		  @param name The name (or sinful string) of the daemon, NULL
-		              if you want local  
-		  @param pool The name of the pool, NULL if you want local
+		/** Constructor
+			@param name The name (or sinful string) of the collector, 
+			NULL if you want local
+			@param type What kind up updates to use for it
 		*/
-	DCCollector( const char* name = NULL, const char* pool = NULL, 
-				 UpdateType type = CONFIG );
-
-	DCCollector( const char* addr, int port = 0, UpdateType = CONFIG );
+	DCCollector( const char* name = NULL, UpdateType type = CONFIG );
 
 		/// Destructor
 	~DCCollector();

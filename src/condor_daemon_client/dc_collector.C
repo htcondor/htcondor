@@ -34,19 +34,9 @@
 // Instantiate things
 template class ExtArray<DCCollectorAdSeq *>;
 
-DCCollector::DCCollector( const char* name, const char* pool, 
-						  UpdateType type ) 
-	: Daemon( DT_COLLECTOR, name, pool )
+DCCollector::DCCollector( const char* name, UpdateType type ) 
+	: Daemon( DT_COLLECTOR, name, NULL )
 {
-	up_type = type;
-	init();
-}
-
-
-DCCollector::DCCollector( const char* addr, int port, UpdateType type ) 
-	: Daemon( addr, port )
-{
-	_type = DT_COLLECTOR;
 	up_type = type;
 	init();
 }
@@ -176,7 +166,7 @@ DCCollector::parseTCPInfo( void )
 		if( !(colon = strchr(host, ':')) ) {
 				// no colon, use the default port, and treat the given
 				// string as the address.
-			tcp_collector_port = param_get_collector_port();
+			tcp_collector_port = COLLECTOR_PORT;
 			tcp_collector_addr = strnewp( tcp_collector_host );
 		} else { 
 				// there's a colon, so grab what's after it for the
