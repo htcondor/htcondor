@@ -163,8 +163,9 @@ const int QUERY_HIST_CKPTSRVR_LIST = 31;
 /*
 *** Daemon Core Signals
 */
-// Generic Unix signals
-// defines for signals; compatibility with traditional UNIX values maintained where possible.
+// Generic Unix signals.
+// defines for signals; compatibility with traditional UNIX 
+// values maintained where possible.
 #define	DC_SIGHUP	1	/* hangup */
 #define	DC_SIGINT	2	/* interrupt (rubout) */
 #define	DC_SIGQUIT	3	/* quit (ASCII FS) */
@@ -193,6 +194,13 @@ const int QUERY_HIST_CKPTSRVR_LIST = 31;
 #define	DC_SIGSTOP 23	/* stop (cannot be caught or ignored) */
 #define	DC_SIGTSTP 24	/* user stop requested from tty */
 #define	DC_SIGCONT 25	/* stopped process has been continued */
+#define DC_SIGTTIN 26
+#define DC_SIGTTOU 27
+#define DC_SIGXCPU 28
+#define DC_SIGXFSZ 29
+#define DC_SIGVTALRM 30
+#define DC_SIGPROF 31
+#define DC_SIGINFO 32
 
 // Signals used for Startd -> Starter communication
 #define DC_SIGSUSPEND	100
