@@ -20,6 +20,7 @@
 #include <sys/time.h>
 #include <rpc/types.h>
 #include <rpc/xdr.h>
+#include "condor_io.h"
 #if defined(Solaris)
 #undef __EXTENSIONS__
 #endif
@@ -31,9 +32,16 @@ const	int	 MAXDC	= 5;
 // functions to register.
 enum{SIGNAL, REQUEST, TIMER};
 
+// need to specify which type of Tcp or Udp socket we want to use
+enum{XDR_SOCK, CONDOR_IO_SOCK};
+
 // these are for internal use.
-typedef	int	  	(*SReqHandler)(Service*, XDR*, struct sockaddr_in*); 
-typedef	int	  	(*ReqHandler)(XDR*, struct sockaddr_in*); 
+typedef int     (*SReqHandler)(Service*, void*, struct sockaddr_in*);
+typedef	int	  	(*XDR_SReqHandler)(Service*, XDR*, struct sockaddr_in*); 
+typedef	int	  	(*IO_SReqHandler)(Service*, Stream*, struct sockaddr_in*);
+typedef int		(*ReqHandler)(void*, struct sockaddr_in*);
+typedef	int	  	(*XDR_ReqHandler)(XDR*, struct sockaddr_in*); 
+typedef	int	  	(*IO_ReqHandler)(Stream*, struct sockaddr_in*);
 typedef	void	(*SSigHandler)(Service*, int, int, void*);
 typedef	void	(*SigHandler)(int, int, void*);
 typedef void	(*SFunction)(Service*);
@@ -51,8 +59,8 @@ class DaemonCore
 		void				Register(Service*, void*);
 		void				Delete(int);
 		
-		int					OpenTcp(char*, u_short = 0);
-		int					OpenUdp(char*, u_short = 0);
+		int					OpenTcp(char*, u_short = 0, int = XDR_SOCK);
+		int					OpenUdp(char*, u_short = 0, int = XDR_SOCK);
 		
 		void				Dump(int, char*);
 
@@ -81,7 +89,7 @@ class DaemonCore
 		void				DumpSigHandlerTable(int, char* = "");
 		void				DumpReqHandlerTable(int, char* = "");
 		void				DumpTimerList(int, char* = "");
-		void				HandleReq(int, char);
+		void				HandleReq(int, char, int);
 		friend	void		HandleSig(int, int, void*); 
 		int					SigHandled(int, int, void*);
 		void				Register(Service*, int, SigHandler);
@@ -102,8 +110,10 @@ class DaemonCore
 		u_short				ports[32];
 		int					nPorts; 
 		fd_set				readfds; 
+		int					tcp_XdrOrIo[32];// is the socket xdr or condor_io
 		int					tcpSds[32];		// tcp socket descriptors
 		int					nTcp;
+		int					udp_XdrOrIo[32];// is the socket xdr or condor_io
 		int					udpSds[32];		// udp socket descriptors
 		int					nUdp;
 };
