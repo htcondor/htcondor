@@ -1122,6 +1122,11 @@ PVMGS			= $(SBIN)/condor_pvmgs
 ##  process gets on your machines.
 #JOB_RENICE_INCREMENT	= 10
 
+##  Should the starter do local logging to its own log file, or send
+##  debug information back to the condor_shadow where it will end up
+##  in the ShadowLog? 
+#STARTER_LOCAL_LOGGING	= TRUE
+
 ##  If the UID_DOMAIN settings match on both the execute and submit
 ##  machines, but the UID of the user who submitted the job isn't in
 ##  the passwd file of the execute machine, the starter will normally
