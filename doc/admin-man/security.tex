@@ -3,8 +3,1275 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This section describes various aspects of security within Condor.
+It is not yet complete.
 
-\input{admin-man/non-root.tex}
-\input{admin-man/uid.tex}
-\input{admin-man/root-config.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Non-Root}Running Condor as Non-Root}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+While we strongly recommend starting up the Condor daemons as root, we
+understand that that's not always possible.  The main problems this
+causes are if you've got one Condor installation shared by many users
+on a single machine, or if you're setting up your machines to execute
+Condor jobs.  If you're just setting up a submit-only installation for
+a single user, there's no need for (or benefit from) running as
+root.  
+
+What follows are the details of what effect running without root
+access has on the various parts of Condor:
+
+\begin{description}
+
+\item[\Condor{startd}] If you're setting up a machine to run Condor
+   jobs and don't start the \Condor{startd} as root, you're basically
+   relying on the goodwill of your Condor users to agree to the policy
+   you configure the startd to enforce as far as starting, suspending,
+   vacating and killing Condor jobs under certain conditions.  If you
+   run as root, however, you can enforce these policies regardless of
+   malicious users.  By running as root, the Condor daemons run with a
+   different UID than the Condor job that gets started (since the
+   user's job is started as either the UID of the user who submitted
+   it, or as user ``nobody'', depending on the \Macro{UID\_DOMAIN}
+   settings).  Therefore, the Condor job cannot do anything to the
+   Condor daemons.  If you don't start the daemons as root, all
+   processes started by Condor, including the end user's job, run with
+   the same UID (since you can't switch UIDs unless you're root).
+   Therefore, a user's job could just kill the \Condor{startd} and
+   \Condor{starter} as soon as it starts up and by doing so, avoid
+   getting suspended or vacated when a user comes back to the machine.
+   This is nice for the user, since they get unlimited access to the
+   machine, but awful for the machine owner or administrator.  If you
+   trust the users submitting jobs to Condor, this might not be a
+   concern.  However, to ensure that the policy you choose is
+   effectively enforced by Condor, the \Condor{startd} should be
+   started as root.
+
+   In addition, some system information cannot be obtained without
+   root access on some platforms (such as load average on IRIX).  As a
+   result, when we're running without root access, the startd has to
+   call other programs (for example, ``uptime'') to get this
+   information.  This is much less efficient than getting the
+   information directly from the kernel (which is what we do if we're
+   running as root).  On Linux and Solaris, we can get this
+   information directly without root access, so this is not a concern
+   on those platforms.
+
+   If you can't have all of Condor running as root, at least consider
+   whether you can install the Condor{startd} as setuid root.  That
+   would solve both of these problems.  If you can't do that, you
+   could also install it as a setgid sys or kmem program (depending on
+   whatever group has read access to \File{/dev/kmem} on your system)
+   and that would at least solve the system information problem.
+
+\item[\Condor{schedd}] The biggest problem running the schedd
+    without root access is that the \Condor{shadow} processes which it
+    spawns are stuck with the same UID the \Condor{schedd} has.  This
+    means that users submitting their jobs have to go out of their way
+    to grant write access to user or group condor (or whoever the
+    schedd is running as) for any files or directories their jobs
+    write or create.  Similarly, read access must be granted to their
+    input files.
+
+    You might consider installing \Condor{submit} as a setgid condor
+    program so that at least the \File{stdout}, \File{stderr} and
+    \File{UserLog} files get created with the right permissions.  If
+    \Condor{submit} is a setgid program, it will automatically set
+    it's umask to 002, so that creates group-writable files.  This
+    way, the simple case of a job that just writes to \File{stdout}
+    and \File{stderr} will work.  If users have programs that open
+    their own files, they'll have to know to set the right permissions
+    on the directories they submit from.
+
+\item[\Condor{master}] The \Condor{master} is what spawns the
+    \Condor{startd} and \Condor{schedd}, so if want them both running
+    as root, you should have the master run as root.  This happens
+    automatically if you start the master from your boot scripts.
+
+\item[\Condor{negotiator}]
+\item[\Condor{collector}] There is no need to have either of these
+daemons running as root.
+
+\item[\Condor{kbdd}] On platforms that need the \Condor{kbdd} (Digital
+    Unix and IRIX) the \Condor{kbdd} has to run as root.  If it is
+    started as any other user, it will not work.  You might consider
+    installing this program as a setuid root binary if you can't run
+    the \Condor{master} as root.  Without the \Condor{kbdd}, the
+    startd has no way to monitor mouse activity at all, and the only
+    keyboard activity it will notice is activity on ttys (such as
+    xterms, remote logins, etc).
+
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Config-Security} Security through Configuration}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Condor adds strong authentication and encryption to its network
+communications.
+These security features are not visible to the user (one who submits
+jobs).
+They are enabled through the use of configuration macros.
+The macros describe the authentication, encryption, and
+integrity assurance used by various portions of Condor in its communications.
+
+Authentication provides an assurance of the identity of one of the
+communicating parties.
+Mutual authentication provides an assurance of the identities of
+both of the communicating parties.
+Encoding information such that its contents is hidden from outsiders
+is called encryption.
+The integrity of a message is assured when any form of
+tampering with an encrypted message can be detected. 
+Nothing can be added, deleted, or modified.
+
+When Condor is installed, default configuration settings
+use no authentication or encryption.
+This allows newer versions of Condor with macros
+that enable secure communications to work or interact
+with previous versions that had no security.
+An administrator must modify the configuration settings to
+enable the security features.
+
+Inside Condor, daemons or tools or user-issued commands
+are accomplished by communication with a Condor daemon.
+The sender is also called a client.
+Based on the configuration settings,
+these communications can require authentication, encryption,
+and integrity checks.
+
+The messages are requests that include
+a specification of the functionality required,
+together with any of the sender's (client's) information with
+respect to secure communication.
+For each type of request, there is a predefined access level
+required for the request to be completed.
+
+When a daemon receives a request,
+it uses a combination of the client's security information
+(included with the request)
+together with its own configuration settings to decide upon
+the security aspects of the communication.
+This can be considered a negotiation between the sender and
+the daemon.
+The daemon replies to the client with a confirmation of
+the security aspects of the communication.
+If this includes a required authentication, then the
+client must follow the chosen protocol.
+
+After a required authentication, the client can again send its
+request to the daemon. 
+The daemon identifies the access level required for the specific
+request,
+and it checks the configuration settings to determine if the client 
+has the required access level.
+If the client has the required access level,
+permission is granted, and the request is filled. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Security-access-levels} Access Level Descriptions}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The following enumerate and describe the various access levels.
+The list is hierarchical, although two extra levels are
+not included in the hierarchy.
+This list is given in order, with the level of lowest ability first.
+
+\begin{description}
+
+% editted
+\item[\DCPerm{READ}] \label{dcperm:read} \DCPerm{READ} level
+   access can obtain or read information about Condor.
+   Examples that require only \DCPerm{READ} access are
+   viewing the status of the pool, seeing the job queue(s),
+   or viewing user permissions.
+   \DCPerm{READ} access does not allow any
+   changes, and it does not allow job submission.
+
+% needs an example
+\item[\DCPerm{WRITE}] \label{dcperm:write} \DCPerm{WRITE} access
+   is required to send (write) information to Condor.
+   %Most notably, a machine can join a pool by sending ClassAd
+   %updates to the central manager. 
+   %The machine can talk to the other machines
+   %in a pool in order to submit or run jobs.
+   %In addition, any machine with
+   %\DCPerm{WRITE} access can request the \Condor{startd} daemon to perform a
+   %periodic checkpoint on a currently executing job. After a
+   %periodic checkpoint, the job will continue to execute, and the
+   %machine will still be claimed by whatever \Condor{schedd} daemon had claimed it.
+   %This allows users on the machines where they submitted their jobs
+
+\item[\DCPerm{ADMINISTRATOR}] \label{dcperm:administrator} The
+   \DCPerm{ADMINISTRATOR} access level has additional Condor
+   administrator rights to the pool.  This includes the ability to
+   change user priorities (with the command \Condor{userprio -set}),
+   and the ability to turn Condor on and off
+   (as with the command \Condor{off}).
+
+\item[\DCPerm{CONFIG}] \label{dcperm:config} This access level is
+   required to modify a daemon's configuration using
+   the \Condor{config\_val} command.
+   By default, this level of access is allowed
+   to change any configuration parameters, except those specified in
+   the \File{condor\_config.root} configuration file.
+
+\item[\DCPerm{DAEMON}] \label{dcperm:config} This access level is ?
+
+\end{description}
+
+The two access levels that are not included in the hierarchy:
+\begin{description}
+% editted
+\item[\DCPerm{OWNER}] \label{dcperm:owner} This level of access is
+   required for commands that the owner of a machine (any local user)
+   should be able to use, in addition to the Condor administrators.
+   An example that requires the \DCPerm{OWNER} access level is
+   the \Condor{vacate} command.
+   The command causes the \Condor{startd} daemon to vacate any
+   Condor job currently running on a machine.
+   The owner of that machine should be able to cause the removal
+   of a job running on the machine.
+
+\item[\DCPerm{NEGOTIATOR}] \label{dcperm:negotiator} This 
+   access level is used specifically to verify that commands are
+   sent by the \Condor{negotiator} daemon.
+   The \Condor{negotiator} daemon runs on the central manager of
+   the pool.
+   Commands requiring this access
+   level are the ones that tell the \Condor{schedd} daemon to begin
+   negotiating, and those that tell an available \Condor{startd} daemon
+   that it has been matched to a \Condor{schedd} with jobs to run.
+
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Security-macros} Security Configuration Macro Definitions}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% server-side 
+\index{configuration macro!SEC\_DEFAULT\_AUTHENTICATION}
+\index{configuration macro!SEC\_DEFAULT\_ENCRYPTION}
+\index{configuration macro!SEC\_DEFAULT\_INTEGRITY}
+%\index{configuration macro!SEC\_DEFAULT\_NEGOTIATION}
+\index{configuration macro!SEC\_READ\_AUTHENTICATION}
+\index{configuration macro!SEC\_READ\_ENCRYPTION}
+\index{configuration macro!SEC\_READ\_INTEGRITY}
+%\index{configuration macro!SEC\_READ\_NEGOTIATION}
+\index{configuration macro!SEC\_WRITE\_AUTHENTICATION}
+\index{configuration macro!SEC\_WRITE\_ENCRYPTION}
+\index{configuration macro!SEC\_WRITE\_INTEGRITY}
+%\index{configuration macro!SEC\_WRITE\_NEGOTIATION}
+\index{configuration macro!SEC\_ADMIN\_AUTHENTICATION}
+\index{configuration macro!SEC\_ADMIN\_ENCRYPTION}
+\index{configuration macro!SEC\_ADMIN\_INTEGRITY}
+%\index{configuration macro!SEC\_ADMIN\_NEGOTIATION}
+\index{configuration macro!SEC\_DAEMON\_AUTHENTICATION}
+\index{configuration macro!SEC\_DAEMON\_ENCRYPTION}
+\index{configuration macro!SEC\_DAEMON\_INTEGRITY}
+%\index{configuration macro!SEC\_DAEMON\_NEGOTIATION}
+\index{configuration macro!SEC\_CONFIG\_AUTHENTICATION}
+\index{configuration macro!SEC\_CONFIG\_ENCRYPTION}
+\index{configuration macro!SEC\_CONFIG\_INTEGRITY}
+%\index{configuration macro!SEC\_CONFIG\_NEGOTIATION}
+
+\index{configuration macro!SEC\_OWNER\_AUTHENTICATION}
+\index{configuration macro!SEC\_OWNER\_ENCRYPTION}
+\index{configuration macro!SEC\_OWNER\_INTEGRITY}
+%\index{configuration macro!SEC\_OWNER\_NEGOTIATION}
+\index{configuration macro!SEC\_NEGOTIATOR\_AUTHENTICATION}
+\index{configuration macro!SEC\_NEGOTIATOR\_ENCRYPTION}
+\index{configuration macro!SEC\_NEGOTIATOR\_INTEGRITY}
+%\index{configuration macro!SEC\_NEGOTIATOR\_NEGOTIATION}
+
+% client-side 
+\index{configuration macro!SEC\_DEFAULT\_AUTHENTICATION}
+\index{configuration macro!SEC\_DEFAULT\_ENCRYPTION}
+\index{configuration macro!SEC\_DEFAULT\_INTEGRITY}
+%\index{configuration macro!SEC\_DEFAULT\_NEGOTIATION}
+\index{configuration macro!SEC\_CLIENT\_AUTHENTICATION}
+\index{configuration macro!SEC\_CLIENT\_ENCRYPTION}
+\index{configuration macro!SEC\_CLIENT\_INTEGRITY}
+%\index{configuration macro!SEC\_CLIENT\_NEGOTIATION}
+
+There are many macros that define security.
+The configuration macro names follow a pattern.
+Each of the names starts with the string
+\MacroNI{SEC\_}.
+This string is followed by a string that describes an
+authorization or access level.
+The authorization levels are
+\begin{description}
+    \item[DEFAULT]
+    \item[READ]
+    \item[WRITE]
+    \item[ADMIN]
+    \item[DAEMON]
+    \item[CONFIG]
+    \item[OWNER]
+    \item[NEGOTIATOR]
+    \item[CLIENT]
+\end{description}
+Still within the name of a configuration macro,
+the authorization level is followed by another underscore
+character and then a string describing the communication type.
+The communication types are
+\begin{description}
+    \item[AUTHENTICATION]
+    \item[ENCRYPTION]
+    \item[INTEGRITY]
+    %\item[NEGOTIATION]
+\end{description}
+This combination of 9 authorization levels and 3 communication types
+enumerates 27 different configuration variables.
+Two examples of the macro names are
+\MacroNI{SEC\_ADMIN\_AUTHENTICATION}
+and
+\MacroNI{SEC\_DEFAULT\_INTEGRITY}.
+
+Each of these 27 would be defined with one of four predefined values.
+The values are
+\begin{description}
+    \item[REQUIRED]
+    \item[PREFERRED]
+    \item[OPTIONAL]
+    \item[NEVER] 
+\end{description}
+
+The daemon uses the settings of both the sender and the daemon
+to choose if the communication type given by configuration
+macros (authentication, encryption, or integrity check) is used.
+The following table  defines whether or not (Yes or No) the
+communication type will be used, or if the interaction cannot
+continue (Fail) due to a mismatch in the configuration settings.
+
+\begin{verbatim}
+sender     daemon       Yes/No/Fail
+
+REQUIRED   REQUIRED       Yes
+REQUIRED   PREFERRED      Yes
+REQUIRED   OPTIONAL       Yes
+REQUIRED   NEVER          Fail
+
+PREFERRED  REQUIRED       Yes
+PREFERRED  PREFERRED      Yes
+PREFERRED  OPTIONAL       Yes
+PREFERRED  NEVER          No
+
+OPTIONAL   REQUIRED       Yes
+OPTIONAL   PREFERRED      Yes
+OPTIONAL   OPTIONAL       No
+OPTIONAL   NEVER          No
+
+NEVER      REQUIRED       Fail
+NEVER      PREFERRED      No
+NEVER      OPTIONAL       No
+NEVER      NEVER          No
+\end{verbatim}
+
+\index{configuration macro!SEC\_DEFAULT\_AUTHENTICATION\_METHODS}
+\index{configuration macro!SEC\_READ\_AUTHENTICATION\_METHODS}
+\index{configuration macro!SEC\_WRITE\_AUTHENTICATION\_METHODS}
+\index{configuration macro!SEC\_ADMIN\_AUTHENTICATION\_METHODS}
+\index{configuration macro!SEC\_DAEMON\_AUTHENTICATION\_METHODS}
+\index{configuration macro!SEC\_CONFIG\_AUTHENTICATION\_METHODS}
+\index{configuration macro!SEC\_OWNER\_AUTHENTICATION\_METHODS}
+\index{configuration macro!SEC\_NEGOTIATOR\_AUTHENTICATION\_METHODS}
+\index{configuration macro!SEC\_CLIENT\_AUTHENTICATION\_METHODS}
+\index{configuration macro!SEC\_DEFAULT\_CRYPTO\_METHODS}
+\index{configuration macro!SEC\_READ\_CRYPTO\_METHODS}
+\index{configuration macro!SEC\_WRITE\_CRYPTO\_METHODS}
+\index{configuration macro!SEC\_ADMIN\_CRYPTO\_METHODS}
+\index{configuration macro!SEC\_DAEMON\_CRYPTO\_METHODS}
+\index{configuration macro!SEC\_CONFIG\_CRYPTO\_METHODS}
+\index{configuration macro!SEC\_OWNER\_CRYPTO\_METHODS}
+\index{configuration macro!SEC\_NEGOTIATOR\_CRYPTO\_METHODS}
+\index{configuration macro!SEC\_CLIENT\_CRYPTO\_METHODS}
+
+18 additional configuration variables are formed by using one
+of two other communication types:
+AUTHENTICATION\_METHODS and
+CRYPTO\_METHODS.
+For AUTHENTICATION\_METHODS,
+the defined values are a comma-separated list of acceptable values.
+These variables list the authentication methods that are available
+to be used.
+The values will be 
+\begin{description}
+    \item[KERBEROS]
+    \item[FS]
+    \item[X509]
+    \item[CLAIMTOBE]
+    \item[ANONYMOUS]
+    \item[NTS]
+\end{description}
+
+For CRYPTO\_METHODS,
+the defined values are a comma-separated list of acceptable values.
+These variables list the methods of encryption that may be used.
+The values will be 
+\begin{description}
+    \item[3DES]
+    \item[BLOWFISH]
+\end{description}
+
+These configuration macros are implemented such that the
+\MacroNI{SEC\_DEFAULT\_*} sets all access levels for a
+communication type, if the specific macros are not present.
+Where the specific macros are present, their values take
+precedence over any default given.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Security-sample} Example Configuration for Security}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+A configuration file is provided when Condor is installed.
+No security features are enabled within the configuration as
+distributed.
+Included in the configuration file is an example setting
+that enables security.
+Here is that portion of the configuration file.
+
+% from Zach
+\begin{verbatim}
+SEC_DEFAULT_AUTHENTICATION=REQUIRED
+SEC_DEFAULT_ENCRYPTION=REQUIRED
+SEC_DEFAULT_INTEGRITY=REQUIRED
+
+SEC_DEFAULT_AUTHENTICATION_METHODS = KERBEROS
+SEC_DEFAULT_CRYPTO_METHODS = 3DES
+
+KERBEROS_MAP_FILE = /unsup/condor-test/etc/condor.kmap
+
+\end{verbatim}
+
+This set of configuration macros forces all security features
+to be used at all times.
+All communication is authenticated (defaulting to Kerberos),
+and all communication is both encrypted and has its
+integrity checked to make sure that messages
+are not modified or corrupted (defaulting to triple DES).
+
+This configuration requires that all Condor daemons be
+version 6.3.2 or later, since previous versions will not have
+the ability to do secure communication.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Security-FQU}Security based on Fully Qualified Users}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The security of a Condor pool is also based on a set of configuration
+macros that list which user/daemon may be allowed to issue what request.
+
+A previous, first-pass implementation of this is described in
+section~\ref{sec:Host-Security}
+on Setting Up IP/Host-Based Security in Condor.
+The IP/Host-Based security still exists, and can be used,
+but significantly stronger security is achieved with the newer allow/deny 
+configuration macros based on fully qualified user names.
+
+These configuration variables define a set of users that will be
+allowed to (or denied from) carrying out various Condor commands.
+% NAMES OF ALL THE MACROS
+\index{configuration macro!ALLOW\_READ}
+\index{configuration macro!ALLOW\_WRITE}
+\index{configuration macro!ALLOW\_ADMINISTRATOR}
+\index{configuration macro!ALLOW\_CONFIG}
+\index{configuration macro!ALLOW\_DAEMON}
+\index{configuration macro!DENY\_READ}
+\index{configuration macro!DENY\_WRITE}
+\index{configuration macro!DENY\_ADMINISTRATOR}
+\index{configuration macro!DENY\_CONFIG}
+\index{configuration macro!DENY\_DAEMON}
+
+\index{configuration macro!ALLOW\_OWNER}
+\index{configuration macro!ALLOW\_NEGOTIATOR}
+\index{configuration macro!DENY\_OWNER}
+\index{configuration macro!DENY\_NEGOTIATOR}
+
+The configuration macro names
+begin with either the string
+\MacroNI{ALLOW\_} or the string \MacroNI{DENY\_}.
+This string is followed by another string which describes
+the access level that is to be allowed or denied:
+% These will be hierarchical in nature?
+\begin{description}
+    \item[READ]
+    \item[WRITE]
+    \item[ADMINISTRATOR]
+    \item[DAEMON]
+    \item[CONFIG]
+\end{description}
+Outside the hierarchy are two other access levels:
+\begin{description}
+    % spelling of this one?
+    \item[NEGOTIATOR]
+    \item[OWNER]
+\end{description}
+This enumerates 14 configuration variables.
+
+%Need description here about whether allow or deny takes precedence.
+
+Each macro is defined by a comma-separated list of fully qualified
+users.
+Each
+fully qualified user
+is described using the following format:
+\begin{verbatim}
+username@domain/hostname
+\end{verbatim}
+The information to the left of the slash character describes
+a user within a domain.
+The information to the right of the slash character describes
+a machine from which the user would be issuing a command. 
+An example is
+\begin{verbatim}
+zmiller@cs.wisc.edu/bird.cs.wisc.edu
+\end{verbatim}
+
+Within the format, wildcard characters (the asterisk, *) are allowed.
+The use of wildcards is limited to one wildcard on either side
+of the slash character.
+For example,
+\begin{verbatim}
+*@cs.wisc.edu/bird.cs.wisc.edu
+\end{verbatim}
+refers to any user that comes from \verb@cs.wisc.edu@,
+where the command is originating from the machine
+\verb@bird.cs.wisc.edu@.
+Another example,
+\begin{verbatim}
+zmiller@cs.wisc.edu/*.cs.wisc.edu
+\end{verbatim}
+refers to commands coming from any machine within the 
+\verb@cs.wisc.edu@ domain, and issued by \verb@zmiller@.
+
+%The default access configuration is ???
+%\begin{verbatim}
+%\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\subsection{\label{sec:uids}UIDs in Condor}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\Todo
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\subsection{\label{sec:Root-Config}Root Config Files}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\Todo
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Host-Security}Setting Up IP/Host-Based Security in
+Condor} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This section describes the mechanisms for setting up Condor's
+host-based security.  
+This is now an outdated form of implementing security at
+the level of machine access. 
+It remains available and documented for purposes of backward compatibility.
+
+The host-based security allows control over what machines can
+join a Condor pool, what machines can find out information about
+your pool, and what machines within your pool can perform
+administrative commands.  By default, Condor is configured to allow
+anyone to view or join your pool.  You probably want to change that.
+
+This section discusses how the host-based security works inside Condor.
+It lists the different levels of access and what
+parts of Condor use which levels.
+There is a description of how to configure
+your pool to grant (or deny) certain levels of access to various
+machines.
+Configuration examples and the settings of configuration variables
+using the \Condor{config\_val} command complete this section.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:How-Host-Security-Works}How does it work?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Inside the Condor daemons or tools that use DaemonCore (see
+section~\ref{sec:DaemonCore} for details), most
+things are accomplished by sending commands to another Condor daemon.
+These commands are formed from an integer to specify which command,
+followed
+by any optional information that the protocol requires at that point
+(such as a ClassAd, capability string, etc).
+When the daemons start up,
+they register which commands they are willing to accept, what to
+do with arriving commands, and the access level required for
+that command.
+When a command arrives, Condor identifies the  access level
+required, and checks the IP address of the sender to be
+sure it passes the various allow/deny settings
+in the configuration file for the given access level.
+If permission is granted, the command continues. 
+If not, the command is aborted.
+%% What does it mean for a command to be aborted?  Is it just
+%% thrown away (ignored), or is a reply sent indicating failure?
+
+As expected, settings for the access levels in the global
+configuration file affect all the machines in the pool.
+Settings in a local configuration file only affect the specific machine.
+The settings for a given machine determine what other hosts can send
+commands to that machine.
+So, if machine foo is to be given 
+administrator access on machine bar, place foo in
+bar's configuration file access list (not the other way around).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Security-Access-Levels}Security Access Levels} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The following are the various access levels that commands within
+Condor can be registered with:
+
+\begin{description}
+
+\item[\DCPerm{READ}] \label{dcperm:read} Machines with \DCPerm{READ}
+   access can read information from Condor.  For example, they can
+   view the status of the pool, see the job queue(s) or view user
+   permissions.  \DCPerm{READ} access does not allow a machine to
+   change anything, and it does not allow
+   job submission. A machine listed
+   with \DCPerm{READ} permission cannot join a Condor pool; the machine can
+   only view information about the pool.
+
+\item[\DCPerm{WRITE}] \label{dcperm:write} Machines with
+   \DCPerm{WRITE} access can write information to Condor.
+   Most notably, a machine can join a pool by sending ClassAd
+   updates to the central manager. 
+   The machine can talk to the other machines
+   in a pool in order to submit or run jobs.
+   In addition, any machine with
+   \DCPerm{WRITE} access can request the \Condor{startd} daemon to perform a
+   periodic checkpoint on a currently executing job. After a
+   periodic checkpoint, the job will continue to execute, and the
+   machine will still be claimed by whatever \Condor{schedd} daemon had claimed it.
+   This allows users on the machines where they submitted their jobs
+   to use the \Condor{checkpoint} command to get their jobs to
+   periodically checkpoint, even if the users do not have an account on the
+   machine where the jobs execute.
+
+   \textbf{IMPORTANT:} For a machine to join a Condor pool, the machine must
+   have both \DCPerm{WRITE} permission \textbf{AND} \DCPerm{READ} permission.
+   \DCPerm{WRITE} permission is not enough.
+
+\item[\DCPerm{ADMINISTRATOR}] \label{dcperm:administrator} Machines
+   with \DCPerm{ADMINISTRATOR} access have additional Condor
+   administrator rights to the pool.  This includes the ability to
+   change user priorities (with the command \Code{userprio -set}),
+   and the ability to turn Condor on and off
+   (with the command \Code{off \Sinful{machine}}).
+   Typically, very few
+   machines are in this list, perhaps only the workstations where the
+   Condor administrators or system administrators work,
+   or perhaps only the pool's central manager.
+
+   \textbf{IMPORTANT:} This access is given to a machine,
+   and it applies to an entire pool.
+   So, \DCPerm{ADMINISTRATOR} access for a given machine provides
+   \textbf{ANY USER} on that machine \DCPerm{ADMINISTRATOR}
+   rights (including users who can run Condor jobs on that machine).
+   Therefore, grant \DCPerm{ADMINISTRATOR} access carefully.
+
+\item[\DCPerm{OWNER}] \label{dcperm:owner} This level of access is
+   required for commands that the owner of a machine (any local user)
+   should be able to use, in addition to the Condor administrators.
+   For example, the \Condor{vacate} command causes the
+   \Condor{startd} daemon to vacate any running Condor job.
+   It requires \DCPerm{OWNER} permission,
+   so that any user logged into a local machine
+   can issue a \Condor{vacate} command.
+
+\item[\DCPerm{NEGOTIATOR}] \label{dcperm:negotiator} This 
+   access level is used specifically to verify that commands are
+   sent by the \Condor{negotiator} daemon.
+   The \Condor{negotiator} daemon runs on the central manager of
+   the pool.
+   Commands requiring this access
+   level are the ones that tell the \Condor{schedd} daemon to begin
+   negotiating, and those that tell an available \Condor{startd} daemon
+   that it has been matched to a \Condor{schedd} with jobs to run.
+
+\item[\DCPerm{CONFIG}] \label{dcperm:config} This access level is
+   required to modify a daemon's configuration using
+   the \Condor{config\_val} command.
+   By default, machines with this level of access are able 
+   to change any configuration parameters, except those specified in
+   the \File{condor\_config.root} configuration file.
+   Therefore, granting this level of host-wide access requires
+   extreme caution.
+   By default, \DCPerm{CONFIG} access is denied for all hosts.
+
+   Starting with version 6.3.2, Condor provides a mechanism for more
+   fine-grained control over the configuration settings that can be
+   modified remotely with \Condor{config\_val}.  
+   Please see section~\ref{sec:Config-Val-Security} below on Host
+   Security for \Condor{config\_val}.
+
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Config-DCPerms}Configuring your Pool}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Host-based security access
+permissions are specified in configuration files.
+
+\DCPerm{ADMINISTRATOR} and \DCPerm{NEGOTIATOR} access default to 
+the central manager machine.
+\DCPerm{OWNER} access defaults to the local machine, as well as
+any machines
+given with \DCPerm{ADMINISTRATOR} access.
+\DCPerm{CONFIG} access is not granted to any machine
+as its default.
+These defaults work well, and should not be changed without
+a compelling reason.
+If machines other than the default are to have to have \DCPerm{OWNER}
+access, they probably should also have \DCPerm{ADMINISTRATOR} access.
+By granting machines \DCPerm{ADMINISTRATOR} access, they
+will automatically have \DCPerm{OWNER} access, given how
+\DCPerm{OWNER} access is set within the configuration.
+
+The default access configuration is
+\begin{verbatim}
+HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST)
+HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
+HOSTALLOW_READ = *
+HOSTALLOW_WRITE = *
+HOSTALLOW_NEGOTIATOR = $(NEGOTIATOR_HOST)
+HOSTALLOW_NEGOTIATOR_SCHEDD = $(NEGOTIATOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
+HOSTALLOW_WRITE_COLLECTOR = $(HOSTALLOW_WRITE), $(FLOCK_FROM)
+HOSTALLOW_WRITE_STARTD    = $(HOSTALLOW_WRITE), $(FLOCK_FROM)
+HOSTALLOW_READ_COLLECTOR  = $(HOSTALLOW_READ), $(FLOCK_FROM)
+HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
+\end{verbatim}
+
+For each access level, an ALLOW or a DENY may be added.
+\begin{itemize}
+
+\item If you have an ALLOW, it means "only allow these machines".  No
+    ALLOW means allow anyone.
+
+\item If you have a DENY, it means "deny these machines".  No DENY
+    means to deny nobody.
+
+\item If you have both an ALLOW and a DENY, it means allow the
+    machines listed in ALLOW except for the machines listed in DENY.
+
+\item Exclusively for the \DCPerm{CONFIG} access,
+    no ALLOW means allow no one.
+    Note that this is different than the other ALLOW configurations.
+    It is different to enable more stringent security where
+    older configurations are used, since
+    older configuration files would not have a 
+    \DCPerm{CONFIG} configuration entry.
+\end{itemize}
+
+Multiple machine entries
+in the configuration files
+may be separated by either a space or a comma.
+The machines may be listed by
+
+\begin{itemize}
+\item Individual host names - for example: condor.cs.wisc.edu
+\item Individual IP address - for example: 128.105.67.29
+\item IP subnets (use a trailing ``*'') - for example: 144.105.*, 128.105.67.*
+\item Host names with a wildcard ``*'' character (only one ``*'' is
+    allowed per name) - for example: *.cs.wisc.edu, sol*.cs.wisc.edu
+\end{itemize}
+
+To resolve an entry that falls into both allow and deny:
+individual
+machines have a higher order of precedence than wildcard entries, and
+host names with a wildcard have a higher order of precedence than IP
+subnets.
+Otherwise, DENY has a higher order of precedence than ALLOW.
+(this is how most people would intuitively expect it to work).  
+
+In addition, the above access levels may be specified on a
+per-daemon basis, instead of machine-wide for all daemons.
+Do this with the subsystem string (described in
+section~\ref{sec:Condor-Subsystem-Names} on Subsystem Names),
+which is one of: STARTD, SCHEDD, MASTER, NEGOTIATOR,
+or COLLECTOR.
+For example, to grant different read access for the \Condor{schedd}:
+\begin{verbatim}
+        HOSTALLOW_READ_SCHEDD = <list of machines>
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:DCPerm-per-Daemon}The Access Levels that Daemons
+Use} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The following is a list of registered commands that daemons will
+accept.  The list is ordered by daemon.
+For each daemon, the commands are grouped by the access level
+required for a daemon to accept the command from a
+given machine.
+
+ALL DAEMONS:
+
+\begin{description}
+\item[\DCPerm{WRITE}]
+
+  The command sent as a result of \Condor{reconfig} to reconfigure a daemon.
+
+\item[\DCPerm{ADMINISTRATOR}]
+
+  The command sent as a result of \Code{reconfig -full}
+  to perform a full reconfiguration on a daemon. 
+\end{description}
+
+STARTD:
+
+\begin{description}
+\item[\DCPerm{WRITE}] 
+
+All commands that relate to a \Condor{schedd} daemon claiming
+  a machine, starting jobs there, or stopping those jobs.
+
+The command that \Condor{checkpoint} sends to periodically checkpoint
+  all running jobs.
+
+\item[\DCPerm{READ}]
+
+The command that \Condor{preen} sends to request the
+  current state of the \Condor{startd} daemon.
+
+\item[\DCPerm{OWNER}]
+The command that \Condor{vacate} sends to cause
+  any running jobs to stop running.
+
+\item[\DCPerm{NEGOTIATOR}]
+The command that the \Condor{negotiator} daemon sends to
+  match a machine's \Condor{startd} daemon with a given \Condor{schedd}
+  daemon.
+\end{description}
+
+NEGOTIATOR:
+
+\begin{description}
+\item[\DCPerm{WRITE}]
+The command that initiates a new negotiation
+  cycle. It is sent by the \Condor{schedd} when new jobs are submitted
+  or a \Condor{reschedule} command is issued.
+
+\item[\DCPerm{READ}]
+The command that can retrieve the current state
+  of user priorities in the pool (sent by the \Condor{userprio} command).
+
+\item[\DCPerm{ADMINISTRATOR}]
+The command that can set the current
+  values of user priorities (sent as a result of the \Code{userprio -set}
+  command).
+\end{description}
+
+COLLECTOR:
+
+\begin{description}
+\item[\DCPerm{WRITE}]
+All commands that update the \Condor{collector} daemon with new ClassAds.
+
+\item[\DCPerm{READ}]
+All commands that query the \Condor{collector} daemon for ClassAds.
+\end{description}
+
+SCHEDD: 
+
+\begin{description}
+\item[\DCPerm{NEGOTIATOR}]
+The command that the \Condor{negotiator} sends to
+  begin negotiating with this \Condor{schedd} to match its jobs with available
+  \Condor{startds}.
+
+\item[\DCPerm{WRITE}]
+The command which \Condor{reschedule} sends to
+  the \Condor{schedd} to get it to update the \Condor{collector} with a current ClassAd
+  and begin a negotiation cycle.
+
+  The commands that a \Condor{startd} sends to the \Condor{schedd} when it must vacate
+  its jobs and release the \Condor{schedd's} claim.
+
+  The commands which write information into the job queue (such as
+  \Condor{submit} and \Condor{hold}).  
+  Note that for most commands which attempt to write to the job queue, Condor
+  will perform an additional user-level authentication step.  
+  This additional user-level authentication prevents, for example, an
+  ordinary user from removing a different user's jobs.
+
+\item[\DCPerm{READ}]
+The command from any
+  tool to view the status of the job queue.  
+\end{description}
+
+MASTER:  All commands are registered with \DCPerm{ADMINISTRATOR}
+access:
+
+\begin{description}
+\item[restart] : Master restarts itself (and all its children)	
+\item[off] : Master shuts down all its children
+\item[off -master] : Master shuts down all its children and exits
+\item[on] : Master spawns all the daemons it is configured to spawn
+\end{description}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:DCPerm-Examples}Access Level Examples}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This section provides examples of configuration settings.
+Notice that \DCPerm{ADMINISTRATOR} access is
+only granted through a HOSTALLOW setting to explicitly grant access to
+a small number of machines.  We recommend this.
+
+\begin{itemize}
+
+\item Let any machine join your pool.
+Only the central manager has
+administrative access (this is the default that ships with Condor)
+\begin{verbatim}
+HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST)
+HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
+\end{verbatim}
+
+\item Only allow machines at NCSA to join or view the pool.
+The central manager is the only machine with \DCPerm{ADMINISTRATOR} access.
+\begin{verbatim}
+HOSTALLOW_READ = *.ncsa.uiuc.edu
+HOSTALLOW_WRITE = *.ncsa.uiuc.edu
+HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST)
+HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
+\end{verbatim}
+
+\item Only allow machines at NCSA and the U of I Math department join the
+pool, EXCEPT do \textbf{not} allow lab machines to do so.
+Also, do not
+allow the 177.55 subnet (perhaps this is the dial-in subnet).
+Allow anyone to view pool statistics.  The machine named
+bigcheese administers the pool (not the central manager).
+\begin{verbatim}
+HOSTALLOW_WRITE = *.ncsa.uiuc.edu, *.math.uiuc.edu
+HOSTDENY_WRITE = lab-*.edu, *.lab.uiuc.edu, 177.55.*
+HOSTALLOW_ADMINISTRATOR = bigcheese.ncsa.uiuc.edu
+HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
+\end{verbatim}
+
+\item Only allow machines at NCSA and UW-Madison's CS department to
+view the pool.  Only NCSA machines and the machine raven.cs.wisc.edu can join
+the pool.
+(Note: the machine raven has the read access it needs through the
+wildcard setting in \Macro{HOSTALLOW\_READ}).
+This example also shows
+how to use ``\verb@\@'' to continue a long list of machines
+onto multiple lines, making it more readable (this works for all
+configuration file entries, not just host access entries)
+\begin{verbatim}
+HOSTALLOW_READ = *.ncsa.uiuc.edu, *.cs.wisc.edu
+HOSTALLOW_WRITE = *.ncsa.uiuc.edu, raven.cs.wisc.edu
+HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST), bigcheese.ncsa.uiuc.edu, \
+                          biggercheese.uiuc.edu
+HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
+\end{verbatim}
+
+\item Allow anyone except the military to view the status of the
+pool, but only let machines at NCSA view the job queues.
+Only NCSA machines can join the pool.
+The central manager, bigcheese, and
+biggercheese can perform most administrative functions.
+However, only biggercheese can update user priorities.
+\begin{verbatim}
+HOSTDENY_READ = *.mil
+HOSTALLOW_READ_SCHEDD = *.ncsa.uiuc.edu 
+HOSTALLOW_WRITE = *.ncsa.uiuc.edu
+HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST), bigcheese.ncsa.uiuc.edu, \
+                          biggercheese.uiuc.edu
+HOSTALLOW_ADMINISTRATOR_NEGOTIATOR = biggercheese.uiuc.edu
+HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
+\end{verbatim}
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Config-Val-Security} Host Security for
+\Condor{config\_val}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+A new security feature introduced in
+Condor version 6.3.2 enables more fine-grained control over the
+configuration settings that can be modified remotely with the
+\Condor{config\_val} command.
+The manual page for \Condor{config\_val} on
+page~\pageref{man-condor-config-val} details how to use 
+\Condor{config\_val} to modify configuration settings remotely. 
+Since certain configuration attributes can have a large impact on the 
+functioning of the Condor system and the security of the machines in a
+Condor pool, it is important to restrict the ability to change
+attributes remotely.
+
+For each security access level described,
+the Condor
+administrator can define which configuration settings a host at that
+access level is allowed to change.
+Optionally, the administrator can define separate lists of settable
+attributes for each Condor daemon, or the administrator
+can define one list that is used by all daemons.
+
+For each command that requests a change in configuration setting,
+Condor searches all the different possible security access
+levels to see which, if any, the request satisfies.
+(Some hosts can qualify for multiple access levels. For example, any
+host with \DCPerm{ADMINISTRATOR} permission probably has
+\DCPerm{WRITE} permission also).
+Within the qualified access level,
+Condor searches for the list of attributes that may be modified.
+If the request is covered by the list,
+the request will be granted.
+If not covered, the request will be refused.
+
+The default configuration shipped with Condor is exceedingly
+restrictive.
+Condor users or administrators cannot set
+configuration values from remote hosts with \Condor{config\_val}.
+Enabling this feature requires a change to the
+settings in the configuration file.
+Use this security feature carefully.
+Grant access only for attributes which you need to be able to modify
+in this manner, and grant access only at the most restrictive
+security level possible.
+
+The most secure use of this feature allows Condor users to set
+attributes in the configuration file which are not used by Condor
+directly.
+These are custom attributes published by various Condor
+daemons with the \Macro{SUBSYS\_EXPRS} setting described in
+section~\ref{param:SubsysExprs} on page~\pageref{param:SubsysExprs}.
+It is secure to grant access only to modify attributes that are used by Condor
+to publish information.
+Granting access to modify
+settings used to control the behavior of Condor is
+not secure.
+The goal is to
+ensure no
+one can use the power to change configuration attributes to compromise 
+the security of your Condor pool.
+
+The control lists are defined by configuration settings that contain 
+\Macro{SETTABLE\_ATTRS} in their name.
+The name of the control lists have the following form: 
+
+\begin{verbatim}
+SUBSYS_SETTABLE_ATTRS_PERMISSION-LEVEL
+\end{verbatim}
+
+The two parts of this name that can vary are
+PERMISSION-LEVEL and the SUBSYS.
+The PERMISSON-LEVEL can be any of the security access levels
+described earlier in this section.
+Examples include \DCPerm{WRITE}, \DCPerm{OWNER}, and \DCPerm{CONFIG}.
+
+The SUBSYS is an optional portion of the name. 
+It can be used to
+define separate rules for which configuration attributes can be set
+for each kind of Condor daemon (for example, STARTD, SCHEDD, MASTER).
+There are many configuration settings that can be defined differently
+for each daemon that use this SUBSYS naming convention.
+See section~\ref{sec:Condor-Subsystem-Names} on
+page~\pageref{sec:Condor-Subsystem-Names} for a list.
+If there is no daemon-specific value for a given daemon, Condor will
+look for \Macro{SETTABLE\_ATTRS\_PERMISSION-LEVEL}.
+
+Each control list is defined by a comma-separated list of attribute
+names which should be allowed to be modified.
+The lists can contain wildcards characters (`*'). 
+
+Some examples of valid definitions of control lists with explanations:
+
+\begin{itemize}
+
+\item \begin{verbatim}SETTABLE_ATTRS_CONFIG = *\end{verbatim}
+Grant unlimited access to modify configuration attributes
+to any request that came from a machine in the \DCPerm{CONFIG} access
+level. 
+This was the default behavior before Condor version 6.3.2.
+
+\item \begin{verbatim}SETTABLE_ATTRS_ADMINISTRATOR = *_DEBUG, MAX_*_LOG\end{verbatim} 
+Grant access to change any configuration setting that ended
+with ``\_DEBUG'' (for example, \Macro{STARTD\_DEBUG}) and any
+attribute that matched ``MAX\_*\_LOG'' (for example,
+\Macro{MAX\_SCHEDD\_LOG}) to any host with \DCPerm{ADMINISTRATOR}
+access. 
+
+\item \begin{verbatim}STARTD_SETTABLE_ATTRS_OWNER = HasDataSet\end{verbatim}
+Allows any request to modify the \Macro{HasDataSet} 
+attribute that came from a host with \DCPerm{OWNER} access.
+By default, \DCPerm{OWNER} covers any request originating from the
+local host, plus any machines listed in the \DCPerm{ADMINISTRATOR}
+level.
+Therefore, any Condor job would qualify for OWNER access to the
+machine where it is running. 
+So, this setting would allow any process running on a given host,
+including a Condor job, to modify the \Macro{HasDataSet} variable for
+that host. 
+\Macro{HasDataSet} is not used by Condor, it is an invented attribute
+included in the \Macro{STARTD\_EXPRS} setting in order for this
+example to make sense.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:X509-Authentication}Using X.509 Certificates for
+Authentication} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:General-X509-Authentication}Introduction to X.509 
+Authentication}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Condor can use the same authentication technology as that used for secure
+connections in web browsers, i.e., SSL authentication with X.509 certificates.
+
+SSL, an abbreviation for "secure sockets layer", was developed in the 
+Netscape web browser and has since become a de-facto industry standard.
+Versions of Condor which include this technology supports the authentication
+method GSS, an abbreviation of "Generic Security Services". The
+primary difference between SSL and GSS is that GSS is a security API which
+uses the underlying mechanisms of SSL to accomplish such tasks as user
+authentication, key exchange, and secure communication. The implementation
+of SSL used is OpenSSL.
+The implementation of GSS used in
+Condor is part of the Globus software \Url{http://www.globus.org}.
+The export restrictions in effect at the time of
+this writing precludes the Condor team from making this capability available
+to the general public, and can only be distributed on a case-by-case basis.
+Email \Email{condor-admin@cs.wisc.edu} for information.
+
+These technologies use an X.509 certificate hierarchy with public-key 
+cryptography to accomplish two tasks: key distribution and user authentication.
+
+Here is a \emph{simplified} version of how it works:
+A public/private key pair (usually RSA) is generated by a 
+certificate authority (CA).
+All private
+keys must be safeguarded by their owner against compromise. Public keys are
+incorporated into a certificate, which is a binding between an X.500
+hierarchical name identity and a public key. Public keys (and likewise,
+certificates) do not need to be protected from disclosure to unauthorized
+parties (a.k.a. compromise), and can be distributed with software or by
+insecure electronic means, such as web sites, information servers, etc.
+
+A user wishing to acquire an X.509 certificate also creates a key pair, 
+safeguarding his private key. The public key is incorporated into a 
+"certificate request", which is usually an email message to the CA 
+requesting identity verification and the issuance of a certificate.
+
+If approved, the CA returns to the user a certificate, signed by the CA.
+A signed certificate is simply the user's public key and X.509 identity
+encrypted with the CA's private key. Anyone who has access to a copy of
+the CA's certificate can verify the authenticity of the user's certificate 
+by decrypting the user's certificate with the public key contained in the
+CA's certificate. Again, the actual implementation is more complicated, but
+here is a simplified version of how two entities perform mutual authentication:
+Both the client and server have valid copies of the issuing CA's certificate.
+A client informs the server that it wishes to mutually authenticate, so the
+parties exchange certificates Each party verifies the authenticity of the
+certificate by decrypting the information in the certificate with the public
+key of the CA.
+The server can then send some value to the client, encrypted with the public 
+key of the client.  Only the client can decrypt the ciphertext and read the 
+value. The client performs a transformation of the value, and encrypts the 
+result with the public key of the server and returns this information. Once
+the parties are satisfied as to the identity of the other party, it is possible
+to establish a secure connection between the client and server by negotiating 
+a session key and security. Globus (and therefore, Condor) do not perform
+this final step of establishing a secure connection because of cryptographic 
+export controls.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Condor-X509-Authentication}Using X.509 Authentication
+in Condor}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+To use GSS authentication in Condor, the pool administrator(s) must also
+act as a Certification Authority (CA), as well as maintaining an authorization
+list. Although these are actually two separate but related activities, for
+the purposes of simplification, consider both these tasks to be the 
+responsibility of a CA. The CA may perform several tasks, including:
+\begin{enumerate}
+\item Create a local CA with the tool \Prog{create\_ca}
+\item Use the tool \Prog{\Condor{ca} } to issue host certificates, as well
+as to sign host and user certificate requests. The \Condor{ca} utility
+is a script which automates, configures and simplifies several of the complex
+tasks in the setup and maintenance of a CA. 
+\end{enumerate}
+
+
+Instructions for installing SSLeay and creating a Condor CA
+\begin{enumerate}
+\item Download and install SSLeay. See \Url{http://www2.psy.uq.edu.au/~ftp/Crypto/\#Where to get SSLeay - FTP site list} for download sites. See \Url{http://www2.psy.uq.edu.au/~ftp/Crypto/} for general information.
+\Note{There is an error in the SSLeay Makefile. For compilation on Solaris, you have to add -lsocket -nsl to the EX\_LIB line in Makefile.ssl}
+
+\item The SSL executables \Prog{ssleay} and \Prog{c\_hash} must be in the path of the administrator and any users who want to create certificate requests. If not already normally installed at your site, just symlink these files to the condor bin directory.
+
+\item Use \Prog{perl} to run the \Prog{create\_ca.pl} script, providing the fully-qualified pathname of the install directory (e.g., perl create\_ca.pl /usr/local/condor/ca).
+This will create the install directory and install several needed files there.
+\Note{During installation, you will be asked to create a pass-phrase, verify it, and then enter it when your key is used to generate the CA certificate. If you mistype your passphrase, the SSL programs die in a messy manner. This script tries to at least do some graceful cleanup.}
+
+\item Create a symbolic link from <CA install directory>/condor\_cert to a directory in the user's path, preferably the condor bin directory
+
+\item Create certificate directories for daemons using authentication by running: <CA install directory>/\Condor{ca} -daemon <daemon certificate directory>
+\Note{Daemon names in the certificate must be of the form: schedd$@$$<$fully qualified host name$>$}
+
+\item Sign certificate requests ONLY when you are VERY sure of the identity
+of the requester. For example, have the user email you their certificate
+request, and verify their existence with out of band means.
+to sign certificates: 
+\begin{verbatim}
+	condor_ca <in cert request> <out signed cert file>
+\end{verbatim}
+
+\item Add a line to the local condor configuration file defining
+\begin{verbatim}
+	CONDOR_CERT_DIR = <full path of this daemon's certificate directory>.
+\end{verbatim}
+
+\item The local condor configuration file must also have the \Macro{AUTHENTICATION\_METHODS} value defined, and it must include the value GSS.
+
+\item Restart the daemon.
+\end{enumerate}
+
+Instructions for Acquiring User Certificates for X.509 Authentication
+
+\begin{enumerate}
+\item The SSL executables \Prog{ssleay} and \Prog{c\_hash} must be in the path of the administrator and any users who want to create certificate requests. If not already normally installed at your site, just symlink these files to the condor bin directory.
+
+\item
+\begin{verbatim}
+run: condor_cert <certificate directory to create> 
+	[suggested directory: $HOME/.condorcerts]
+\end{verbatim}
+
+\item Upon success, mail the certificate request (<cert dir>/usercert\_request.pem) to your CA account or condor admin account (at cs.wisc.edu, it's "condorca")
+
+\item If approved, the admin will send you a signed certificate, which you must save as <cert dir>/usercert.pem
+
+\item Authenticated submissions require a variable "x509Directory" to be 
+specified in the submit file, which is set to the full path of their 
+certificate directory.  Under the current configuration, the new schedd will 
+allow remote submission if its AUTHENTICATION\_METHODS includes GSS.  Here is 
+a sample submission file:
+\begin{verbatim}
+   x509Directory = /home/yourname/.condorcerts
+   notify_user = mikeu@cs.wisc.edu
+   executable = testit
+   input = in.$(Process)
+   output = out.$(Process)
+   queue 2
+\end{verbatim}
+\end{enumerate}
 
