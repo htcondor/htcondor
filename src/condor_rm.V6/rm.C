@@ -38,7 +38,7 @@
 #include "match_prefix.h"
 #include  "list.h"
 #include "sig_install.h"
-
+#include "condor_version.h"
 
 #include "condor_qmgr.h"
 
@@ -83,7 +83,8 @@ usage()
 	}
 	fprintf( stderr, "Usage: %s [options] [constraints]\n", MyName );
 	fprintf( stderr, " where [options] is one of:\n" );
-	fprintf( stderr, "  -help               Display this message\n" );
+	fprintf( stderr, "  -help               Display this message and exit\n" );
+	fprintf( stderr, "  -version            Display version information and exit\n" );
 	fprintf( stderr, "  -name <schedd_name> Connect to the given schedd\n" );
 	fprintf( stderr, " and where [constraints] is one or more of:\n" );
 	fprintf( stderr, "  <cluster.proc>      %s the given job\n", word );
@@ -92,6 +93,14 @@ usage()
 	fprintf( stderr, "  -all                %s all jobs "
 			 "(Cannot be used with other constraints)\n", word );
 	exit( 1 );
+}
+
+
+void
+version( void )
+{
+	printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
+	exit( 0 );
 }
 
 
@@ -153,6 +162,9 @@ main( int argc, char *argv[] )
 							 MyName, get_host_part(*argv) );
 					exit(1);
 				}
+				break;
+			case 'v':
+				version();
 				break;
 			default:
 					// This gets hit for "-h", too.
