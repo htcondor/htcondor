@@ -9,6 +9,15 @@ For example:
 
 \begin{itemize}
 
+\item Support for Kerberos and X.509 authentication.
+
+\item Support for transfering files needed by jobs (for all universes
+except standard and PVM)
+
+\item Support for MPICH jobs.
+
+\item Support for JAVA jobs.
+
 \item 
 Condor DAGMan is dramatically more reliable and efficient, and offers
 a number of new features.
@@ -27,6 +36,50 @@ and known bugs of each version are described below in detail.
 \noindent New Features:
 
 \begin{itemize}
+
+\item Added support for Kerberos and X.509 authentication in Condor.  
+
+\item Added the ability for vanilla jobs on Unix to use Condor's file
+transfer mechanism so that you don't have to rely on a shared file
+system.  
+
+\item Added support for MPICH jobs on Windows NT and 2000.
+
+\item When you use \Condor{hold} and \Condor{release}, you now see an
+entry about the event in the UserLog file for the job.
+
+\item When you use \Condor{rm} to remove a Condor job, you now see a
+string saying the job was removed by \Condor{rm} in the UserLog file
+for the job, instead of just seeing ``Job was aborted by the user''.
+
+\item The error messages you get from \Condor{rm}, \Condor{hold} and
+\Condor{release} have all been updated to be more specific and
+accurate. 
+
+\item Condor users can now specify a policy for when their jobs should
+leave the queue or be put on hold.
+They can specify expressions that are evaluated periodically, and
+whenever the job exits.
+This policy can be used to ensure that the job remains in the queue
+and is re-run until it exits with a certain exit code, that the job
+should be put on hold if a certain condition is true, and so on. 
+If any of these policy expressions result in the job being removed
+from the queue or put on hold, the UserLog entry for the event
+includes a string describing why the action was taken.
+
+\item Changed the way Condor finds the various \Condor{shadow} and
+\Condor{starter} binaries you have installed on your machine.
+Now, you can specify a \Macro{SHADOW\_LIST} and a
+\Macro{STARTER\_LIST}.
+These are treated much like the \Macro{DAEMON\_LIST} setting, they
+specify a list of attribute names, each of which point to the actual
+binary you want to use.
+On startup, Condor will check these lists, make sure all the binaries
+specified exist, and find out what abilities each program provides.
+This information is used during matchmaking to ensure that a job which
+requires a certain ability (like having a new enough version of Condor
+to support transfering files on Unix) can find a resource that
+provides that ability.
 
 \item Added new security feature to offer fine-grained control over
 what configuration values can be modified by \Condor{config\_val}
@@ -280,6 +333,13 @@ if exception handling is enabled with +eh.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:New-6-3-0}Version 6.3.0}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent New Features:
+\begin{itemize}
+
+\item Added support for running MPICH jobs under Condor.
+
+\end{itemize}
 
 \noindent
 Many Condor DAGMan improvements and bug fixes:
