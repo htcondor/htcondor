@@ -724,13 +724,22 @@ server, shadow, and starter, none of which use DaemonCore yet).
   in this list that both the server and client are able to perform.
   Possible values are:
   \begin{itemize}
+		\item NTSSPI Use NT's standard LAN-MANAGER challenge-reponse protocol.
+			\Note This is the default method used on Windows NT.
 		\item FS Use the filesystem to authenticate the user.  
 			The server requests the client to create a specified temporary
 			file, then the server verifies the ownership of that file. \Note
 			This is the default method used on Unix systems.
-		\item NTSSPI Use NT's standard LAN-MANAGER challenge-reponse protocol.
-			\Note This is the default method used on Windows NT.
-		\item GSS Use Generic Security Subsystem, which is implemented in
+		\item FS_REMOTE Use a shared filesystem to authenticate the user.
+			This is useful for submitting jobs to a remote schedd.
+			Similar to FS authentication, except the temporary file to be
+			created by the user must be on a shared filesystem (AFS, NFS, etc.)
+			If the client's submit description file does not define the 
+			command \Opt{rendezvousdir}, the \Opt{initialdir} value is used 
+			as the default directory in which to create the temporary file.
+			\Note Normal AFS issues apply here: Condor must be able to write
+			to the directory used.
+		\item GSS Use Generic Security Services, which is implemented in
 			Condor with X.509 certificates.  
 			These X.509 certificates are compatible with the Globus system from
 			Argonne National Labs.
