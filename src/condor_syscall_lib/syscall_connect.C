@@ -91,8 +91,6 @@ init_syscall_connection( int want_debug_mode )
 #endif
 
 	answer = RSC_Init( RSC_SOCK, CLIENT_LOG );
-	dprintf_init( CLIENT_LOG );
-	DebugFlags = D_ALWAYS | D_NOHEADER;
 
 	return answer;
 }
