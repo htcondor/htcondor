@@ -81,18 +81,22 @@ Init();
 {
     my $LastTime = -1;
     my $FastCount = 0;
+    my $LastSleepTime = 0;
     while( ! $AllDone )
     {
 
 	# Timing logic
 	my $CurTime = time();
 	my $TimeDiff = $CurTime - $LastTime;
-	if ( ( $LastTime > 0 ) && ( $TimeDiff < 30 ) ) {
-	    print STDERR "top died after $TimeDiff seconds\n";
+	my $MaxDiff = $LastSleepTime + 10;
+	$LastSleepTime = 0;
+	if ( ( $LastTime > 0 ) && ( $TimeDiff < $MaxDiff ) ) {
+	    print STDERR "\"top\" died after $TimeDiff seconds\n";
 	    if ( ++$FastCount > 1 ) {
 		my $SleepTime = $FastCount * 10;
 		print STDERR "Sleeping for $SleepTime seconds\n";
 		sleep( $SleepTime );
+		$LastSleepTime = $SleepTime;
 	    }
 	} else {
 	    $FastCount-- if ( $FastCount > 0 );
