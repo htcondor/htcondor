@@ -85,6 +85,12 @@ char	*rendevous_file = 0;
 
 Transaction *trans = 0;
 
+prio_rec	PrioRecArray[INITIAL_MAX_PRIO_REC];
+prio_rec	* PrioRec = &PrioRecArray[0];
+int			N_PrioRecs = 0;
+static int 	MAX_PRIO_REC=INITIAL_MAX_PRIO_REC ;	// INITIAL_MAX_* in prio_rec.h
+
+
 void
 InvalidateConnection()
 {
@@ -96,6 +102,40 @@ InvalidateConnection()
 	connection_state = CONNECTION_CLOSED;
 }
 
+
+int
+grow_prio_recs( int newsize )
+{
+	int i;
+	prio_rec *tmp;
+
+	// just return if PrioRec already equal/larger than the size requested
+	if ( MAX_PRIO_REC >= newsize ) {
+		return 0;
+	}
+
+	dprintf(D_FULLDEBUG,"Dynamically growing PrioRec to %d\n",newsize);
+
+	tmp = new prio_rec[newsize];
+	if ( tmp == NULL ) {
+		EXCEPT( "grow_prio_recs: out of memory" );
+	}
+
+	/* copy old PrioRecs over */
+	for (i=0;i<N_PrioRecs;i++)
+		tmp[i] = PrioRec[i];
+
+	/* delete old too-small space, but only if we new-ed it; the
+	 * first space came from the heap, so check and don't try to 
+	 * delete that */
+	if ( &PrioRec[0] != &PrioRecArray[0] )
+		delete [] PrioRec;
+
+	/* replace with spanky new big one */
+	PrioRec = tmp;
+	MAX_PRIO_REC = newsize;
+	return 0;
+}
 
 /*
    This makes the connection look active, so any local calls to manipulate
@@ -1493,8 +1533,6 @@ PrintQ()
 }
 
 
-prio_rec	PrioRec[MAX_PRIO_REC];
-int			N_PrioRecs = 0;
 // Returns cur_hosts so that another function in the scheduler can
 // update JobsRunning and keep the scheduler and queue manager
 // seperate. 
@@ -1551,10 +1589,17 @@ int get_job_prio(int cluster, int proc)
     PrioRec[N_PrioRecs].qdate    = q_date;
     if ( DebugFlags & D_UPDOWN )
     {
-        PrioRec[N_PrioRecs].owner= (char *)malloc(strlen(owner) + 1 );
-        strcpy( PrioRec[N_PrioRecs].owner, owner);
+		if ( PrioRec[N_PrioRecs].owner ) {
+			free( PrioRec[N_PrioRecs].owner );
+		}
+        PrioRec[N_PrioRecs].owner = strdup( owner );
     }
+	dprintf(D_UPDOWN,"get_job_prio(): added PrioRec %d - id = %d.%d, owner = %s\n",N_PrioRecs,PrioRec[N_PrioRecs].id.cluster,PrioRec[N_PrioRecs].id.proc,PrioRec[N_PrioRecs].owner);
     N_PrioRecs += 1;
+	if ( N_PrioRecs == MAX_PRIO_REC ) {
+		grow_prio_recs( 2 * N_PrioRecs );
+	}
+
 	return cur_hosts;
 }
 
@@ -1592,6 +1637,9 @@ all_job_prio(int cluster, int proc)
     PrioRec[N_PrioRecs].status = job_status;
     PrioRec[N_PrioRecs].qdate = job_q_date;
     N_PrioRecs += 1;
+	if ( N_PrioRecs == MAX_PRIO_REC ) {
+		grow_prio_recs( 2 * N_PrioRecs );
+	}
 }
 
 int mark_idle(int cluster, int proc)
