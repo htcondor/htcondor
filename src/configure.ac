@@ -567,7 +567,8 @@ fi
 ############################################################
 # Configure-generated output
 ############################################################
-AC_OUTPUT(../config/externals.cf)
+AC_CONFIG_FILES(../config/configure.cf ../config/externals.cf)
+AC_OUTPUT
 
 # Finally, call Condor's imake script to generate Makefile using imake
 # (yes, we know it seems crazy to use configure to setup Imake to make
