@@ -781,17 +781,25 @@ it supports(gcc, g77, cc, CC, ld, etc.) where a special linker script
 provided by Condor must be invoked during the final linking stages of
 the supplied compiler/linker.
 
-In some rare cases, as in gcc compiled simultaneously with
-\Opt{--without-gnu-ld} and and \Opt{--with-ld}, the enforcement mechanism
-we rely upon to have gcc choose our supplied linker script is ignored.
+In some rare cases, as in gcc compiled with
+\Opt{--with-as} or \Opt{--with-ld}, the enforcement mechanism
+we rely upon to have gcc choose our supplied linker script is not honored
+by the compiler.
 
-When this happens, an executable is produced, but it is bereft of the
+When this happens, an executable is produced, but it is devoid of the
 Condor libraries which both identify it as a Condor executable linked
 for the Standard Universe and implement the feature sets of remote I/O
 and transparent process checkpointing and migration.
 
-This specific case can be fixed by recompiling gcc so that those to flags
-are not used in conjunction.
+Often the only fix, in order to use the compiler desired, is to
+reconfigure and recompile the compiler such that it does not use those
+configure flags mentioned above. 
+
+With Condor's standard universe, we highly recommend that all of your
+source files for your project are compiled with the recommended compiler
+for your architecture. Under the Linux platform, specifically, you must
+simply use the default compiler that came with the distribution, which
+is often found in /usr/bin.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Can I submit my standard universe SPARC Solaris 2.6 jobs and have them run on a SPARC Solaris 2.7 machine?}
