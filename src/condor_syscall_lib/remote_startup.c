@@ -227,7 +227,7 @@ MAIN( int argc, char *argv[], char **envp )
 	init_syscall_connection( FALSE );
 #endif
 
-#if 1
+#if 0
 	dprintf( D_ALWAYS, "User process started\n" );
 	dprintf( D_ALWAYS, "\nOriginal\n" );
 	DumpOpenFds();
@@ -242,7 +242,7 @@ MAIN( int argc, char *argv[], char **envp )
 	assert( argc >= 3 );
 
 	if( strcmp("-_condor_cmd_fd",argv[1]) == MATCH ) {
-#if 1
+#if 0
 		dprintf( D_ALWAYS, "Found condor_cmd_fd\n" );
 		delay();
 #endif
@@ -251,14 +251,14 @@ MAIN( int argc, char *argv[], char **envp )
 			dprintf( D_ALWAYS, "Can't parse cmd stream fd (%s)\n", argv[2]);
 			exit( 1 );
 		}
-#if 1
+#if 0
 		dprintf( D_ALWAYS, "fd number is %d\n", cmd_fd );
 		delay();
 #endif
 		/* scm = SetSyscalls( SYS_LOCAL | SYS_MAPPED ); */
 		pre_open( cmd_fd, TRUE, FALSE );
 
-#if 1
+#if 0
 		dprintf( D_ALWAYS, "\nBefore reading commands\n" );
 		DumpOpenFds();
 		dprintf( D_ALWAYS, "END\n\n" );
@@ -281,12 +281,12 @@ MAIN( int argc, char *argv[], char **envp )
 		assert( FALSE );
 	}
 
-#if 1
+#if 0
 	dprintf( D_ALWAYS, "\nCalling cmd stream processor\n" );
 	delay();
 #endif
 	_condor_interp_cmd_stream( cmd_fd );
-#if 1
+#if 0
 	dprintf( D_ALWAYS, "Done\n\n" );
 	delay();
 #endif
@@ -298,7 +298,7 @@ MAIN( int argc, char *argv[], char **envp )
 	unblock_signals();
 	SetSyscalls( SYS_REMOTE | SYS_MAPPED );
 
-#if 1
+#if 0
 	dprintf( D_ALWAYS, "\nBefore calling main()\n" );
 	DumpOpenFds();
 	dprintf( D_ALWAYS, "END\n\n" );
@@ -415,7 +415,7 @@ find_cmd( const char *str )
 static BOOLEAN
 condor_iwd( const char *path )
 {
-#if 1
+#if 0
 	dprintf( D_ALWAYS, "condor_iwd: path = \"%s\"\n", path );
 	delay();
 #endif
@@ -433,7 +433,7 @@ condor_fd( const char *num, const char *path, const char *open_mode )
 	int		remote_fd;
 	int		scm;
 
-#if 1
+#if 0
 	dprintf( D_ALWAYS, "condor_fd( %s, %s, %s\n", num, path, open_mode );
 	delay();
 #endif
