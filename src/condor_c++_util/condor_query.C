@@ -129,6 +129,13 @@ CondorQuery (AdTypes qType)
 		command = QUERY_SUBMITTOR_ADS;
 		break;
 
+	  case LICENSE_AD:
+		query.setNumStringCats (0);
+		query.setNumIntegerCats(0);
+		query.setNumFloatCats  (0);
+		command = QUERY_LICENSE_ADS;
+		break;
+
 	  case MASTER_AD:
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
@@ -276,6 +283,10 @@ fetchAds (ClassAdList &adList, const char *poolName)
 		queryAd.SetTargetTypeName (SCHEDD_ADTYPE);
 		break;
 
+	  case LICENSE_AD:
+		queryAd.SetTargetTypeName (LICENSE_ADTYPE);
+		break;
+
 	  case MASTER_AD:
 		queryAd.SetTargetTypeName (MASTER_ADTYPE);
 		break;
@@ -350,6 +361,10 @@ getQueryAd (ClassAd &queryAd)
 	  case SCHEDD_AD:
 	  case SUBMITTOR_AD:
 		queryAd.SetTargetTypeName (SCHEDD_ADTYPE);
+		break;
+
+	  case LICENSE_AD:
+		queryAd.SetTargetTypeName (LICENSE_ADTYPE);
 		break;
 
 	  case MASTER_AD:
