@@ -56,6 +56,7 @@
 #include "condor_updown.h"
 #include "condor_uid.h"
 #include "my_hostname.h"
+#include "get_daemon_addr.h"
 
 #define DEFAULT_SHADOW_SIZE 125
 
@@ -118,6 +119,14 @@ bool operator==(const PROC_ID a, const PROC_ID b)
 	return a.cluster == b.cluster && a.proc == b.proc;
 }
 #endif
+
+int
+dc_reconfig()
+{
+	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGHUP );
+	return TRUE;
+}
+
 
 match_rec::match_rec(char* i, char* p, PROC_ID* id)
 {
@@ -2340,33 +2349,7 @@ Scheduler::Init()
 {
 	char*					tmp;
 	char					expr[1024];
-
-		//////////////////////////////////////////////////////////////
-		// Initialize our classad
-		//////////////////////////////////////////////////////////////
-	if( ad ) delete ad;
-	ad = new ClassAd();
-
-	config_fill_ad( ad, mySubSystem );
-
-	ad->SetMyTypeName(SCHEDD_ADTYPE);
-	ad->SetTargetTypeName("");
-
-		// Throw name and machine into the classad.
-	sprintf( expr, "%s = \"%s\"", ATTR_NAME, Name );
-	ad->Insert(expr);
-
-	sprintf( expr, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() ); 
-	ad->Insert(expr);
-
-		// Put in our sinful string
-	if( MySockName ) {
-		free( MySockName);
-	}
-	MySockName = strdup( daemonCore->InfoCommandSinfulString() );
-
-	sprintf( expr, "%s = \"%s\"", ATTR_SCHEDD_IP_ADDR, MySockName );
-	ad->Insert(expr);
+	static	int				schedd_name_in_config = 0;
 
 		////////////////////////////////////////////////////////////////////
 		// Grab all the essential parameters we need from the config file.
@@ -2410,6 +2393,25 @@ Scheduler::Init()
 		////////////////////////////////////////////////////////////////////
 		// Grab all the optional parameters from the config file.
 		////////////////////////////////////////////////////////////////////
+
+	if( schedd_name_in_config ) {
+		free( Name );
+		tmp = param( "SCHEDD_NAME" );
+		Name = strdup( build_valid_daemon_name(tmp) );
+		free( tmp );
+	} else {
+		if( ! Name ) {
+			tmp = param( "SCHEDD_NAME" );
+			if( tmp ) {
+				Name = strdup( build_valid_daemon_name(tmp) );
+				schedd_name_in_config = 1;
+				free( tmp );
+			} else {
+				Name = strdup( my_full_hostname() );
+			}
+		}
+	}
+	dprintf( D_FULLDEBUG, "Using name: %s\n", Name );
 
 	if( AccountantName ) free( AccountantName );
 	if( ! (AccountantName = param("ACCOUNTANT_HOST")) ) {
@@ -2495,6 +2497,33 @@ Scheduler::Init()
 		// Initialize the queue managment code
 		////////////////////////////////////////////////////////////////////	
 	InitQmgmt();
+
+
+		//////////////////////////////////////////////////////////////
+		// Initialize our classad
+		//////////////////////////////////////////////////////////////
+	if( ad ) delete ad;
+	ad = new ClassAd();
+
+	ad->SetMyTypeName(SCHEDD_ADTYPE);
+	ad->SetTargetTypeName("");
+
+	config_fill_ad( ad, mySubSystem );
+
+		// Throw name and machine into the classad.
+	sprintf( expr, "%s = \"%s\"", ATTR_NAME, Name );
+	ad->Insert(expr);
+
+	sprintf( expr, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() ); 
+	ad->Insert(expr);
+
+		// Put in our sinful string.  Note, this is never going to
+		// change, so we only need to initialize it once.
+	if( ! MySockName ) {
+		MySockName = strdup( daemonCore->InfoCommandSinfulString() );
+	}
+	sprintf( expr, "%s = \"%s\"", ATTR_SCHEDD_IP_ADDR, MySockName );
+	ad->Insert(expr);
 }
 
 void
@@ -2506,6 +2535,8 @@ Scheduler::Register()
     daemonCore->Register_Command(RESCHEDULE, "RESCHEDULE", 
 			(CommandHandlercpp)reschedule_negotiator, "reschedule_negotiator", 
                                this, ALLOW);
+    daemonCore->Register_Command(RECONFIG, "RECONFIG", 
+			(CommandHandler)dc_reconfig, "reconfig", 0, ALLOW);
     daemonCore->Register_Command(VACATE_SERVICE, "VACATE_SERVICE", 
 			(CommandHandlercpp)vacate_service, "vacate_service", this, WRITE);
     daemonCore->Register_Command(KILL_FRGN_JOB, "KILL_FRGN_JOB", 
@@ -2607,8 +2638,6 @@ prio_compar(prio_rec* a, prio_rec* b)
 void
 Scheduler::reconfig()
 {
-    dprintf( D_ALWAYS, "Re-reading config file\n" );
-
 	Init();
 	RegisterTimers();			// reset timers
     timeout();
