@@ -241,6 +241,9 @@ int pclose(FILE *stream);
 #include <sys/stat.h>
 #include <sys/statfs.h>
 
+/* need some dirent support */
+#include <dirent.h>
+
 #if defined(IRIX62)
 /* Needed to get TIOCNOTTY defined - not needed after IRIX62 */
 #include <sys/ttold.h>
@@ -252,8 +255,10 @@ int pclose(FILE *stream);
 
 #if defined(IRIX65)
 #	include <sys/file.h>
-#	define HAS_64BIT_SYSCALLS 1
 #endif
+
+#define HAS_64BIT_SYSCALLS 1
+
 
 #define HAS_U_TYPES			1
 #define SIGSET_CONST			const
