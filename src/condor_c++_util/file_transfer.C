@@ -491,9 +491,25 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 				continue;
 			if ( strcmp(f,"condor_exec.bat")==MATCH )
 				continue;
+			
 			// don't send back any input files on the final transfer.
-			if ( final_transfer && InputFiles && InputFiles->contains(f) ) 
-				continue;
+			// compare the filename to the basename of the files listed
+			// in the transfer_file_input attribute.
+			bool is_input_file = false;
+			const char *fname;
+			if ( final_transfer && InputFiles ) {				
+				InputFiles->rewind();
+				while ( (fname=InputFiles->next()) ) {
+					if ( strcmp(basename(fname), f) == MATCH ) {
+						is_input_file = true;
+						break;
+					}
+				}
+				if ( is_input_file ) {
+					continue;
+				}
+			}
+				
 			// if this file is has been modified since last download,
 			// add it to the list of files to transfer.
 			if ( dir.GetModifyTime() > last_download_time ) {
