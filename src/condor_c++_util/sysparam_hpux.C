@@ -94,6 +94,7 @@ Hpux::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 		break;
 
 	case LoadAvg:						// lookup_load_avg()
+		{
 		double avenrun[3];
     	off_t addr = specific.nl[X_AVENRUN].n_value;
 		if( lseek(specific.kd,addr,0) != addr ) 
@@ -109,11 +110,13 @@ Hpux::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 		t    =  Float;
 		buffer = (char *)new  float[1];
 		*(float *)buffer = ((float)avenrun[0]);
+		}
 		break;
 
 	case SwapSpace:  					// calc_virt_memory()
+		{
 		int	freeswap;
-    	addr = specific.nl[X_SWAPCNT].n_value;
+    	off_t addr = specific.nl[X_SWAPCNT].n_value;
 		if( lseek(specific.kd,addr,0) != addr ) 
 		{
         	dprintf( D_ALWAYS,"Can't seek to addr 0x%x in /dev/kmem\n", addr );
@@ -127,11 +130,13 @@ Hpux::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 		t    =  Integer;
 		buffer = (char *)new  int[1];
 		*(int *)buffer = 4 * freeswap;
+		}
 		break;
 
 	case PhyMem:						//  calc_phys_memory()
+		{
 		int	physmem;
-    	addr = specific.nl[X_PHYMEM].n_value;
+    	off_t addr = specific.nl[X_PHYMEM].n_value;
 		if( lseek(specific.kd,addr,0) != addr ) 
 		{
         	dprintf( D_ALWAYS,"Can't seek to addr 0x%x in /dev/kmem\n", addr );
@@ -146,6 +151,7 @@ Hpux::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 		t    =  Integer;
 		buffer = (char *)new  int[1];
 		*(int *)buffer = physmem;
+		}
 		break;
 
 	case CpuType:
