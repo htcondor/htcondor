@@ -26,40 +26,40 @@ information:
 \item[Host] The host where the job ran.  By default, the host's IP
 address is displayed.  If \Opt{-hostname} is specified, the hostname
 will be displayed instead.
-\item[Evict Time] The Unix time (see the time(2) Unix man page) when
+\item[Start Time] The time (month/day hour:minute) when the job began
+running on the host.
+\item[Evict Time] The time (month/day hour:minute) when
 the job was evicted from the host.
-\item[Wall Time] The number of seconds for which this workstation was
+\item[Wall Time] The time (days+hours:minutes) for which this workstation was
 allocated to the job.
-\item[Good Time] The number of seconds of the allocation which
+\item[Good Time] The allocated time (days+hours:min) which
 contributed to the completion of this job.  If the job exited during
 the allocation, then this value will equal ``Wall Time.''  If the job
 performed a checkpoint, then the value equals the work saved in
 the checkpoint during this allocation.  If the job did not exit or
-perform a checkpoint during this allocation, the value will be 0.
+perform a checkpoint during this allocation, the value will be 0+00:00.
 This value can be greater than 0 and less than ``Wall Time'' if the
 application completed a periodic checkpoint during the allocation but
 failed to checkpoint when evicted.
-\item[CPU Usage] The CPU time (seconds) which contributed to the completion of
-this job.
-\item[Start] The hour [0-23] when the allocation began.
-\item[End] The hour [0-23] when the allocation ended.
-\item[Day] The day of the week [0-6] when the allocation ended.
-Sunday is represented by 0 and Saturday is represented by 6.
+\item[CPU Usage] The CPU time (days+hours:min) which contributed to
+the completion of this job.
 \end{description}
 
 \Condor{userlog} will then display summary statistics per host:
 
 \begin{description}
 \item[Host/Job] The IP address or hostname for the host.
-\item[Wall Time] The number of hours of workstation time allocated by
+\item[Wall Time] The workstation time (days+hours:minutes) allocated by
 this host to the jobs specified in the query.  By default, all jobs in
 the log are included in the query.
-\item[Good Time] The number of hours allocated on this host which
+\item[Good Time] The time (days+hours:minutes) allocated on this host which
 contributed to the completion of the jobs specified in the query.
-\item[CPU Usage] The CPU time (hours) obtained from this host which
+\item[CPU Usage] The CPU time (days+hours:minutes) obtained from this
+host which
 contributed to the completion of the jobs specified in the query.
-\item[Avg Alloc] The average length of an allocation on this host in minutes.
-\item[Avg Lost] The average number of minutes of work lost when a job
+\item[Avg Alloc] The average length of an allocation on this host
+(days+hours:minutes).
+\item[Avg Lost] The average amount of work lost (days+hours:minutes) when a job
 was evicted from this host without successfully performing a checkpoint.
 \item[Goodput] This percentage is computed as Good Time divided by
 Wall Time.
@@ -71,15 +71,18 @@ Time.
 
 \begin{description}
 \item[Host/Job] The cluster/process id of the Condor job.
-\item[Wall Time] The total number of hours of workstation time allocated to
+\item[Wall Time] The total workstation time (days+hours:minutes) allocated to
 this job.
-\item[Good Time] The total number of hours allocated to this job which
+\item[Good Time] The total time (days+hours:minutes) allocated to this
+job which 
 contributed to the job's completion.
-\item[CPU Usage] The total CPU time (hours) which contributed to this
+\item[CPU Usage] The total CPU time (days+hours:minutes) which
+contributed to this 
 job's completion.
 \item[Avg Alloc] The average length of a workstation allocation
-obtained by this job in minutes.
-\item[Avg Lost] The average number of minutes of work lost when this job
+obtained by this job in minutes (days+hours:minutes).
+\item[Avg Lost] The average amount of work lost (days+hours:minutes)
+when this job 
 was evicted from a host without successfully performing a checkpoint.
 \item[Goodput] This percentage is computed as Good Time divided by
 Wall Time.
