@@ -450,6 +450,12 @@ main( int argc, char *argv[] )
 	(void) sprintf (buffer, "%s = 0", ATTR_JOB_EXIT_STATUS);
 	InsertJobExpr (buffer);
 
+	(void) sprintf (buffer, "%s = 0", ATTR_NUM_CKPTS);
+	InsertJobExpr (buffer);
+
+	(void) sprintf (buffer, "%s = 0", ATTR_NUM_RESTARTS);
+	InsertJobExpr (buffer);
+
 	config_fill_ad( job );
 
 	if (Quiet) {
