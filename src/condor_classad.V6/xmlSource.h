@@ -51,7 +51,8 @@ class ClassAdXMLParser
 		ExprTree *ParseNumberOrString(XMLLexer::TagID tag_id);
 		ExprTree *ParseBool(void);
 		ExprTree *ParseUndefinedOrError(XMLLexer::TagID tag_id);
-		ExprTree *ParseTime(void);
+		ExprTree *ParseAbsTime(void);
+		ExprTree *ParseRelTime(void);
 		ExprTree *ParseExpr(void);
 
 		XMLLexer lexer;

@@ -1051,32 +1051,40 @@ doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 int Operation::
 doTimeArithmetic( OpKind op, Value &v1, Value &v2, Value &result )
 {
-	time_t secs1=0, secs2=0;
+  abstime_t asecs1,asecs2;
+  asecs1.secs = 0;
+  asecs1.offset =0;
+asecs2.secs = 0;
+  asecs2.offset =0;
+	time_t rsecs1=0;
+	time_t rsecs2=0;
 	Value::ValueType vt1=v1.GetType( ), vt2=v2.GetType( );
 
 		// addition
 	if( op==ADDITION_OP ) {
 		if( vt1==Value::ABSOLUTE_TIME_VALUE && 
 				vt2==Value::RELATIVE_TIME_VALUE ) {
-			v1.IsAbsoluteTimeValue( secs1 );
-			v2.IsRelativeTimeValue( secs2 );
-			result.SetAbsoluteTimeValue( secs1 + secs2 );
+			v1.IsAbsoluteTimeValue( asecs1 );
+			v2.IsRelativeTimeValue( rsecs2 );
+			asecs1.secs += rsecs2;
+			result.SetAbsoluteTimeValue( asecs1 );
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 
 		if( vt1==Value::RELATIVE_TIME_VALUE && 
 				vt2==Value::ABSOLUTE_TIME_VALUE ) {
-			v1.IsRelativeTimeValue( secs1 );
-			v2.IsAbsoluteTimeValue( secs2 );
-			result.SetAbsoluteTimeValue( secs1 + secs2 );
+			v1.IsRelativeTimeValue( rsecs1 );
+			v2.IsAbsoluteTimeValue( asecs2 );
+			asecs2.secs += rsecs1;
+			result.SetAbsoluteTimeValue( asecs2 );
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 
 		if( vt1==Value::RELATIVE_TIME_VALUE && 
 				vt2==Value::RELATIVE_TIME_VALUE ) {
-			v1.IsRelativeTimeValue( secs1 );
-			v2.IsRelativeTimeValue( secs2 );
-			result.SetRelativeTimeValue( secs1 + secs2 );
+			v1.IsRelativeTimeValue( rsecs1 );
+			v2.IsRelativeTimeValue( rsecs2 );
+			result.SetRelativeTimeValue( rsecs1 + rsecs2 );
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 	}
@@ -1084,25 +1092,26 @@ doTimeArithmetic( OpKind op, Value &v1, Value &v2, Value &result )
 	if( op == SUBTRACTION_OP ) {
 		if( vt1==Value::ABSOLUTE_TIME_VALUE && 
 				vt2==Value::ABSOLUTE_TIME_VALUE ) {
-			v1.IsAbsoluteTimeValue( secs1 );
-			v2.IsAbsoluteTimeValue( secs2 );
-			result.SetRelativeTimeValue( secs1 - secs2 );
+			v1.IsAbsoluteTimeValue( asecs1 );
+			v2.IsAbsoluteTimeValue( asecs2 );
+			result.SetRelativeTimeValue( asecs1.secs - asecs2.secs );
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 
 		if( vt1==Value::ABSOLUTE_TIME_VALUE && 
 				vt2==Value::RELATIVE_TIME_VALUE ) {
-			v1.IsAbsoluteTimeValue( secs1 );
-			v2.IsRelativeTimeValue( secs2 );
-			result.SetAbsoluteTimeValue( secs1 - secs2 );
+			v1.IsAbsoluteTimeValue( asecs1 );
+			v2.IsRelativeTimeValue( rsecs2 );
+			asecs1.secs = asecs1.secs - rsecs2;
+			result.SetAbsoluteTimeValue( asecs1 );
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 
 		if( vt1==Value::RELATIVE_TIME_VALUE && 
 				vt2==Value::RELATIVE_TIME_VALUE ) {
-			v1.IsRelativeTimeValue( secs1 );
-			v2.IsRelativeTimeValue( secs2 );
-			result.SetRelativeTimeValue( secs1 - secs2 );
+			v1.IsRelativeTimeValue( rsecs1 );
+			v2.IsRelativeTimeValue( rsecs2 );
+			result.SetRelativeTimeValue( rsecs1 - rsecs2 );
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 	}
@@ -1110,12 +1119,12 @@ doTimeArithmetic( OpKind op, Value &v1, Value &v2, Value &result )
 	if( op == MULTIPLICATION_OP || op == DIVISION_OP ) {
 		if( vt1==Value::RELATIVE_TIME_VALUE && vt2==Value::INTEGER_VALUE ) {
 			int num, msecs;
-			v1.IsRelativeTimeValue( secs1 );
+			v1.IsRelativeTimeValue( rsecs1 );
 			v2.IsIntegerValue( num );
 			if( op == MULTIPLICATION_OP ) {
-				msecs = secs1 * num;
+				msecs = rsecs1 * num;
 			} else {
-				msecs = secs1 / num;
+				msecs = rsecs1 / num;
 			}
 			result.SetRelativeTimeValue( msecs );
 			return( SIG_CHLD1 | SIG_CHLD2 );
@@ -1124,12 +1133,12 @@ doTimeArithmetic( OpKind op, Value &v1, Value &v2, Value &result )
 		if( vt1==Value::RELATIVE_TIME_VALUE &&  vt2==Value::REAL_VALUE ) {
 			double 	num;
 			int		msecs;
-			v1.IsRelativeTimeValue( secs1 );
+			v1.IsRelativeTimeValue( rsecs1 );
 			v2.IsRealValue( num );
 			if( op == MULTIPLICATION_OP ) {
-				msecs = (int) ( secs1 * num );
+				msecs = (int) ( rsecs1 * num );
 			} else {
-				msecs = (int) ( secs1 / num );
+				msecs = (int) ( rsecs1 / num );
 			}
 			result.SetRelativeTimeValue( msecs );
 			return( SIG_CHLD1 | SIG_CHLD2 );
@@ -1139,17 +1148,17 @@ doTimeArithmetic( OpKind op, Value &v1, Value &v2, Value &result )
 				op==MULTIPLICATION_OP ) {
 			int num;
 			v1.IsIntegerValue( num );
-			v2.IsRelativeTimeValue( secs1 );
-			result.SetRelativeTimeValue( num * secs1 );
+			v2.IsRelativeTimeValue( rsecs1 );
+			result.SetRelativeTimeValue( num * rsecs1 );
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 
 		if( vt2==Value::RELATIVE_TIME_VALUE &&  vt1==Value::REAL_VALUE &&
 				op==MULTIPLICATION_OP ) {
 			double 	num;
-			v1.IsRelativeTimeValue( secs1 );
+			v1.IsRelativeTimeValue( rsecs1 );
 			v2.IsRealValue( num );
-			result.SetRelativeTimeValue( (int) ( secs1 * num ) );
+			result.SetRelativeTimeValue( (int) ( rsecs1 * num ) );
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 	}
@@ -1203,19 +1212,19 @@ compareStrings (OpKind op, Value &v1, Value &v2, Value &result, bool exact)
 void Operation::
 compareAbsoluteTimes( OpKind op, Value &v1, Value &v2, Value &result )
 {
-	time_t asecs1, asecs2;
+	abstime_t asecs1, asecs2;
 	bool compResult;
 
 	v1.IsAbsoluteTimeValue( asecs1 );
 	v2.IsAbsoluteTimeValue( asecs2 );
 
 	switch( op ) {
-		case LESS_THAN_OP: 			compResult = (asecs1 < asecs2); 	break;
-		case LESS_OR_EQUAL_OP: 		compResult = (asecs1 <= asecs2); 	break;
-		case EQUAL_OP: 				compResult = (asecs1 == asecs2); 	break;
-		case NOT_EQUAL_OP: 			compResult = (asecs1 != asecs2); 	break;
-		case GREATER_THAN_OP: 		compResult = (asecs1 > asecs2); 	break;
-		case GREATER_OR_EQUAL_OP: 	compResult = (asecs1 >= asecs2); 	break;
+		case LESS_THAN_OP: 			compResult = (asecs1.secs < asecs2.secs); 	break;
+		case LESS_OR_EQUAL_OP: 		compResult = (asecs1.secs <= asecs2.secs); 	break;
+		case EQUAL_OP: 				compResult = (asecs1.secs == asecs2.secs); 	break;
+		case NOT_EQUAL_OP: 			compResult = (asecs1.secs != asecs2.secs); 	break;
+		case GREATER_THAN_OP: 		compResult = (asecs1.secs > asecs2.secs); 	break;
+		case GREATER_OR_EQUAL_OP: 	compResult = (asecs1.secs >= asecs2.secs); 	break;
 		default:
 			// should not get here
 			EXCEPT ("Should not get here");

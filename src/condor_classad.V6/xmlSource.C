@@ -131,8 +131,11 @@ ParseClassAd(void)
 			}
 		} else {
 			if (   token.token_type == XMLLexer::tokenType_Tag) {
-				if (   token.tag_id   == XMLLexer::tagID_Attribute
-					   && token.tag_type == XMLLexer::tagType_Start) {
+			  if (   token.tag_id   == XMLLexer::tagID_Attribute ) {
+			    if(token.tag_type == XMLLexer::tagType_Invalid) {
+			      return NULL;
+			    }
+			    else if( token.tag_type == XMLLexer::tagType_Start) {
 					string attribute_name;
 					ExprTree *tree;
 					
@@ -140,7 +143,12 @@ ParseClassAd(void)
 					if (tree != NULL) {
 						classad->Insert(attribute_name, tree);
 					}
-				} else if (   token.tag_id != XMLLexer::tagID_XML
+					else {
+					  return NULL;
+					}
+			    } 
+			  }
+			  else if (   token.tag_id != XMLLexer::tagID_XML
 							  && token.tag_id != XMLLexer::tagID_XMLStylesheet
 							  && token.tag_id != XMLLexer::tagID_Doctype
 							  && token.tag_id != XMLLexer::tagID_ClassAds) {
@@ -207,7 +215,8 @@ ParseThing(void)
 		case XMLLexer::tagID_List:
 			tree = ParseList();
 			break;
-		case XMLLexer::tagID_Number:
+		case XMLLexer::tagID_Integer:
+		case XMLLexer::tagID_Real:
 		case XMLLexer::tagID_String:
 			tree = ParseNumberOrString(token.tag_id);
 			break;
@@ -218,8 +227,11 @@ ParseThing(void)
 		case XMLLexer::tagID_Error:
 			tree = ParseUndefinedOrError(token.tag_id);
 			break;
-		case XMLLexer::tagID_Time:
-			tree = ParseTime();
+		case XMLLexer::tagID_AbsoluteTime:
+			tree = ParseAbsTime();
+			break;
+		case XMLLexer::tagID_RelativeTime:
+			tree = ParseRelTime();
 			break;
 		case XMLLexer::tagID_Expr:
 			tree = ParseExpr();
@@ -266,6 +278,7 @@ ParseList(void)
 ExprTree *ClassAdXMLParser::
 ParseNumberOrString(XMLLexer::TagID tag_id)
 {
+
 	bool             have_token;
 	ExprTree         *tree;
 	XMLLexer::Token  token;
@@ -277,25 +290,36 @@ ParseNumberOrString(XMLLexer::TagID tag_id)
 
 	// Get text of number or string
 	have_token = lexer.PeekToken(&token);
+
 	if (have_token && token.token_type == XMLLexer::tokenType_Text) {
 		lexer.ConsumeToken(&token);
 		Value value;
-		if (tag_id == XMLLexer::tagID_Number) {
-			if (strchr(token.text.c_str(), '.')) {
-				// This is a floating point number
-				double number;
-				number = strtod(token.text.c_str(), NULL);
-				value.SetRealValue(number);
-			} else {
-				// This is an integer.
-				int number;
-				sscanf(token.text.c_str(), "%d", &number);
-				value.SetIntegerValue(number);
-			}
-		} else {
-			value.SetStringValue(token.text);
+		if (tag_id == XMLLexer::tagID_Integer) {
+		  int number;
+		  sscanf(token.text.c_str(), "%d", &number);
+		  value.SetIntegerValue(number);
 		}
-		tree = Literal::MakeLiteral(value);
+		else if (tag_id == XMLLexer::tagID_Real) {
+		  union { double d; long long l; } u;
+		  if (sscanf(token.text.c_str(), "%llx", &u.l) != 1) {
+		    return NULL;
+		  }
+		  value.SetRealValue(u.d);  
+		} 
+		else {        // its a string
+		  bool validStr = true;
+		  token.text += " ";
+		  Lexer::convert_escapes(token.text, validStr );
+		  if(!validStr) {  // invalid string because it had /0 escape sequence
+		    return NULL;
+		  }
+		  else {
+		    value.SetStringValue(token.text);
+		  }
+		}
+	
+		  tree = Literal::MakeLiteral(value);
+		
 	} else if (tag_id == XMLLexer::tagID_String) {
 		// We were expecting text and got none, so we had
 		// the empty string, which was skipped by the lexer.
@@ -393,58 +417,37 @@ ParseUndefinedOrError(XMLLexer::TagID tag_id)
 }
 
 ExprTree *ClassAdXMLParser::
-ParseTime(void)
+ParseAbsTime(void)
 {
-	bool             have_token;
+  	bool             have_token;
 	ExprTree         *tree;
 	XMLLexer::Token  token;
 
 	tree = NULL;
 	lexer.ConsumeToken(&token);
-	assert(token.tag_id == XMLLexer::tagID_Time);
-
+	assert(token.tag_id == XMLLexer::tagID_AbsoluteTime);
 	have_token = lexer.PeekToken(&token);
 	if (have_token && token.token_type == XMLLexer::tokenType_Text) {
 		lexer.ConsumeToken(&token);
+		tree = Literal::MakeAbsTime(token.text);
+	}
+	return tree;
+}
 
-		struct 	tm timeValue;
-		time_t  asecs;
-		time_t	secs;
-		time_t	absTime=0;
-		char *tzStr, *tzOff=NULL;
-		char *time_rep = strdup(token.text.c_str());
+ExprTree *ClassAdXMLParser::
+ParseRelTime(void)
+{
+  	bool             have_token;
+	ExprTree         *tree;
+	XMLLexer::Token  token;
 
-		// format of abstime:  `Wed Nov 11 13:11:47 1998 (CST) +6:00`
-		// get the position of the timezone string and timezone offSet
-		if(    ((tzStr = strchr(time_rep, '(' ) ) == NULL) 
-			|| ((tzOff = strchr(time_rep, ')' ) ) == NULL)){
-			tree = NULL;
-		} else {
-			// delimit ctime()-like segment, timezone string and timezone offSet
-			*(tzStr-1) = '\0';
-			*(tzOff+1) = '\0';
-			tzOff += 2;
-
-			// convert the ctime() like segment into a time_t
-			if((strptime(time_rep, "%a %b %d %H:%M:%S %Y", &timeValue) == 0) ||
-				(absTime = mktime(&timeValue)) == -1) {
-				tree = NULL;
-			} else {
-				// treat the timezone offSet as a relative time value
-				if(!Lexer::tokenizeRelativeTime(tzOff, secs)) {
-					tree = NULL;
-				} else {
-					//	wierd:  POSIX says that regions west of GMT have *positive*
-					//	offSets.  We have negative offSets to not confuse users.
-					secs = -secs;
-
-					// the actual is the abstime - foreign offSet - timezone (which got
-					// added in by mktime()
-					asecs = (int)absTime + secs - timezone;
-					tree = Literal::MakeAbsTime(asecs);
-				}
-			}
-		}
+	tree = NULL;
+	lexer.ConsumeToken(&token);
+	assert(token.tag_id == XMLLexer::tagID_RelativeTime);
+	have_token = lexer.PeekToken(&token);
+	if (have_token && token.token_type == XMLLexer::tokenType_Text) {
+		lexer.ConsumeToken(&token);
+		tree = Literal::MakeRelTime(token.text);
 	}
 	return tree;
 }
@@ -467,7 +470,7 @@ ParseExpr(void)
 		lexer.ConsumeToken(&token);
 		ClassAdParser  parser;
 		
-		tree = parser.ParseExpression(token.text, true);
+		tree = parser.ParseExpression(token.text);
 	}
 
 	// Get end tag
