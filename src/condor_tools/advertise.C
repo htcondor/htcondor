@@ -136,13 +136,13 @@ int main( int argc, char *argv[] )
 		return 1;
 	}
 
-	DaemonList * collectors;
+	CollectorList * collectors;
 	if ( pool ) {
 		collector = new Daemon( DT_COLLECTOR, pool, 0 );
-		collectors = new DaemonList();
+		collectors = new CollectorList();
 		collectors->append (collector);
 	} else {
-		collectors = DCCollector::getCollectors();
+		collectors = CollectorList::create();
 	}
 
 	bool had_error = false;

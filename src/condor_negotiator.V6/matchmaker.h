@@ -104,7 +104,7 @@ class Matchmaker : public Service
 		ExprTree *NegotiatorPreJobRank;  // rank applied before job rank
 		ExprTree *NegotiatorPostJobRank; // rank applied after job rank
 
-		DaemonList* Collectors;
+		CollectorList* Collectors;
 
 		typedef HashTable<MyString, MapEntry*> AdHash;
 		AdHash *stashedAds;	

@@ -24,9 +24,15 @@
 #ifndef _CONDOR_DAEMON_LIST_H
 #define _CONDOR_DAEMON_LIST_H
 
+#include "condor_common.h"
 #include "daemon.h"
 #include "simplelist.h"
+#include "condor_classad.h"
+#include "condor_query.h"
 
+
+class CondorQuery;
+class ClassAdList;
 
 /** Basically, a SimpleList of Daemon objects.  This is slightly
 	more complicated than that, and provides some useful, shared
@@ -42,7 +48,7 @@ class DaemonList {
 public:
 
 	DaemonList();
-	~DaemonList();
+	virtual ~DaemonList();
 
 		/** Initialize the list with Daemons of the given type,
 			specified with the given list of contact info
@@ -74,7 +80,10 @@ public:
 	void deleteCurrent();
 	void DeleteCurrent();
 
-private:
+ protected:
+
+
+ private:
 
 		/** Helper which constructs a Daemon object of the given type
 			and contact info.  This is used to initalize the list. 
@@ -87,6 +96,27 @@ private:
 	DaemonList( const DaemonList& );
 	DaemonList& operator = ( const DaemonList& );
 };
+
+
+class CollectorList : public DaemonList {
+ public:
+	CollectorList();
+	virtual ~CollectorList();
+
+		// Create the list of collectors for the pool
+		// based on configruation settings
+	static CollectorList * create();
+
+		// Send updates to all the collectors
+		// return - number of successfull updates
+	int sendUpdates (int cmd, ClassAd* ad1, ClassAd* ad2 = NULL);
+	
+		// Try querying all the collectors until you get a good one
+	QueryResult query (CondorQuery & query, ClassAdList & adList);
+
+
+};
+
 
 
 #endif /* _CONDOR_DAEMON_LIST_H */

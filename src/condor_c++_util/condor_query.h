@@ -131,7 +131,7 @@ class CondorQuery
 
 	// fetch from collector
 	QueryResult fetchAds (ClassAdList &adList, const char * pool, CondorError* errstack = NULL);
-	QueryResult fetchAds (ClassAdList &adList, DaemonList * daemon_list, CondorError* errstack = NULL);
+
 
 	// filter list of ads; arg1 is 'in', arg2 is 'out'
 	QueryResult filterAds (ClassAdList &, ClassAdList &);

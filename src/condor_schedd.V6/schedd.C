@@ -641,15 +641,11 @@ Scheduler::count_jobs()
 	ad->InsertOrUpdate(tmp);
 
 		// Update collectors
-	Collectors->rewind();
-	Daemon * collector = NULL;
-	while (Collectors->next (collector)) {
-		((DCCollector*)collector)->sendUpdate( UPDATE_SCHEDD_AD, ad );
-		dprintf( D_FULLDEBUG, 
-			 "Sent HEART BEAT ad to collector %s: Number of submittors=%d\n",
-				 collector->name(),
+	int num_updates = Collectors->sendUpdates ( UPDATE_SCHEDD_AD, ad );
+	dprintf( D_FULLDEBUG, 
+			 "Sent HEART BEAT ad to %d collectors. Number of submittors=%d\n",
+			 num_updates,
 				 N_Owners );   
-	}
 
 	// send the schedd ad to our flock collectors too, so we will
 	// appear in condor_q -global and condor_status -schedd
@@ -728,16 +724,10 @@ Scheduler::count_jobs()
 
 
 		// Update collectors
-	  Collectors->rewind();
-	  Daemon * collector = NULL;
-	  while (Collectors->next (collector)) {
-		((DCCollector*)collector)->sendUpdate( UPDATE_SUBMITTOR_AD, ad );
-
-		dprintf( D_ALWAYS, "Sent ad to collector %s for %s@%s\n", 
-				 collector->name(),
+	  int num_updates = Collectors->sendUpdates( UPDATE_SUBMITTOR_AD, ad );
+	  dprintf( D_ALWAYS, "Sent ad to %d collectors for %s@%s\n", 
+				 num_updates,
 				 SubmittingOwners[i].Name, UidDomain );
-
-	  }	
 	}
 
 	// update collector of the pools with which we are flocking, if
@@ -867,14 +857,9 @@ Scheduler::count_jobs()
 	  ad->InsertOrUpdate(tmp);
 
 		// Update collectors
-	  Collectors->rewind();
-	  Daemon * collector = NULL;
-	  while (Collectors->next (collector)) {
-		  ((DCCollector*)collector)->sendUpdate( UPDATE_SUBMITTOR_AD, ad );
-		  dprintf (D_ALWAYS, "Sent owner (0 jobs) ad to collector %s\n", collector->name());
-	  }
-
-
+	  int num_updates = 
+		  Collectors->sendUpdates( UPDATE_SUBMITTOR_AD, ad );
+	  dprintf (D_ALWAYS, "Sent owner (0 jobs) ad to %d collectors\n", num_updates);
 
 	  // also update all of the flock hosts
 	  int i;
@@ -4167,10 +4152,8 @@ Scheduler::checkReconnectQueue( void )
 		query.addORConstraint( constraint.Value() );
 	}
 
-	CondorError errstack;
-	if( query.fetchAds(ads, Collectors, &errstack) != Q_OK ) {
-		dprintf( D_ALWAYS, "ERROR: failed to query collector (%s)\n",
-				 errstack.getFullText() );
+	if (Collectors->query (query, ads) != Q_OK) {
+		dprintf( D_ALWAYS, "ERROR: failed to query collectors\n");
 			// TODO! deal violently with this failure. ;)
 		jobsToReconnect.Rewind();
 		while( jobsToReconnect.Next(job) ) {
@@ -6890,7 +6873,7 @@ Scheduler::Init()
 	}
 
 	if ( Collectors ) delete ( Collectors );
-	Collectors = DCCollector::getCollectors();
+	Collectors = CollectorList::create();
 
 	if( Negotiator ) delete( Negotiator );
 	Negotiator = new Daemon( DT_NEGOTIATOR );
@@ -7520,11 +7503,7 @@ Scheduler::invalidate_ads()
 
 
 		// Update collectors
-	Collectors->rewind();
-	Daemon * collector = NULL;
-	while (Collectors->next (collector)) {
-		((DCCollector*)collector)->sendUpdate( INVALIDATE_SCHEDD_ADS, ad );
-	}
+	Collectors->sendUpdates ( INVALIDATE_SCHEDD_ADS, ad );
 
 	if (N_Owners == 0) return;	// no submitter ads to invalidate
 
@@ -7533,10 +7512,7 @@ Scheduler::invalidate_ads()
 			 Name );
     ad->InsertOrUpdate( line );
 
-	Collectors->rewind();
-	while (Collectors->next (collector)) {
-		((DCCollector*)collector)->sendUpdate( INVALIDATE_SUBMITTOR_ADS, ad );
-	}
+	Collectors->sendUpdates ( INVALIDATE_SUBMITTOR_ADS, ad );
 
 
 	Daemon* d;

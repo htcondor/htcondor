@@ -952,8 +952,8 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 	if (pool_addr) {
 		q_result = query.fetchAds(ads, pool_addr, &errstack);
 	} else {
-		DaemonList * collectors = DCCollector::getCollectors();
-		q_result =  query.fetchAds(ads, collectors, &errstack);
+		CollectorList * collectors = CollectorList::create();
+		q_result = collectors->query (query, ads);
 		delete collectors;
 	}
 	if( q_result != Q_OK ) {

@@ -98,14 +98,6 @@ public:
 
 	const char* updateDestination( void );
 
-
-	/** As of 6.7.2, the COLLECTOR_HOST param can contain a list of collectors
-		This static method retruns a DaemonList of DCCollector objects, corresponding
-	    to the entries sepcified in the COLLECTOR_HOST list
-	**/
-
-	static DaemonList * getCollectors( void );
-
 private:
 
 	void init( void );

@@ -470,7 +470,7 @@ DCCollector::initDestinationStrings( void )
 		tcp_update_destination = strnewp( dest.Value() );
 	}
 }
-
+/*
 DaemonList *
 DCCollector::getCollectors() {
 
@@ -504,6 +504,7 @@ DCCollector::getCollectors() {
 
 	return result;
 }
+*/
 
 // Constructor for the Ad Sequence Number
 DCCollectorAdSeq::DCCollectorAdSeq( const char *inName,

@@ -53,7 +53,7 @@ StringList *startd_vm_exprs = NULL;
 static StringList *valid_cod_users = NULL; 
 
 // Hosts
-DaemonList*	Collectors = NULL;
+CollectorList*	Collectors = NULL;
 char*	accountant_host = NULL;
 
 // Others
@@ -414,7 +414,7 @@ init_params( int first_time)
 	}
 #endif
 
-    DaemonList* new_collector_list = DCCollector::getCollectors();
+    CollectorList* new_collector_list = CollectorList::create();
 
 	if( Collectors ) {
 			// The list of collectors may have changed.

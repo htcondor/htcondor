@@ -50,7 +50,7 @@ extern int		new_bin_delay;
 extern char*	FS_Preen;
 extern			ClassAd* ad;
 extern int		NT_ServiceFlag; // TRUE if running on NT as an NT Service
-extern DaemonList*	Collectors;
+extern CollectorList*	Collectors;
 extern DaemonList* secondary_collectors;
 
 extern time_t	GetTimeStamp(char* file);
@@ -497,7 +497,7 @@ int daemon::RealStart( )
 			// get the port from that entry
 
 		if (!Collectors) {
-			Collectors =  DCCollector::getCollectors();
+			Collectors =  CollectorList::create();
 		}
 
 
@@ -1872,15 +1872,7 @@ Daemons::UpdateCollector()
 	Update(ad);
     
 	if (Collectors) {
-		Collectors->rewind();
-		Daemon * d;
-		while (Collectors->next (d)) {
-			if( !((DCCollector*)d)->sendUpdate(UPDATE_MASTER_AD, ad) ) {
-				dprintf( D_ALWAYS, 
-						 "Can't send UPDATE_MASTER_AD to collector %s: %s\n", 
-						 ((DCCollector*)d)->updateDestination(), d->error() );
-			}
-		}
+		Collectors->sendUpdates (UPDATE_MASTER_AD, ad);
 	}
 
 	if (secondary_collectors) {

@@ -69,8 +69,8 @@ ClassAd * ClassAdLookupGlobal( const char *constraint )
 
 	dprintf(D_ALWAYS,"ClassAd: Contacting collector to find \"%s\"\n",constraint);
 
-	DaemonList * collectorList = DCCollector::getCollectors();
-	if(query.fetchAds(list, collectorList)!=Q_OK) {
+	CollectorList * collectorList = CollectorList::create();
+	if (collectorList->query (query, list) != Q_OK) {
 		delete collectorList;
 		dprintf(D_FULLDEBUG,"ClassAd Warning: couldn't contact collector!\n");
 		return 0;

@@ -273,12 +273,20 @@ main( int argc, char* argv[] )
 		if( addr ) {
 			target = new Daemon( dt, addr, NULL );
 		} else {
-			DCCollector col( pool );
-			if( ! col.addr() ) {
-				fprintf( stderr, "%s: %s\n", MyName, col.error() );
+			CollectorList * collectors = CollectorList::create();
+			Daemon * collector;
+			while (collectors->next (collector)) {
+				if (collector->locate()) break;
+			}
+
+			if( (!collector) || (!collector->addr()) ) {
+				fprintf( stderr, 
+						 "%s, Unable to locate a collector\n", 
+						 MyName);
 				my_exit( 1 );
 			}
-			target = new Daemon( dt, name, col.addr() );
+			target = new Daemon( dt, name, collector->addr() );
+			delete collectors;
 		}
 		if( ! target->locate() ) {
 			fprintf( stderr, "Can't find address for this %s\n", 

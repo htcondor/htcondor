@@ -79,8 +79,8 @@ obtainAdsFromCollector (ClassAdList &startdAds, const char *constraint)
 		result = startdQuery.fetchAds(startdAds,pool);
 	}
 	else {
-		DaemonList * collectors = DCCollector::getCollectors();
-		result = startdQuery.fetchAds(startdAds, collectors);
+		CollectorList * collectors = CollectorList::create();
+		result = collectors->query (startdQuery, startdAds);
 		delete collectors;
 	}
 

@@ -119,12 +119,17 @@ int main( int argc, char *argv[] )
 	Daemon *daemon;
 	ReliSock *sock;
 
-	DCCollector col( pool );
-	if( ! col.addr() ) {
-		fprintf( stderr, "Error: %s\n", col.error() );
-		exit(1);
+	if (pool) {
+		DCCollector col( pool );
+		if( ! col.addr() ) {
+			fprintf( stderr, "Error: %s\n", col.error() );
+			exit(1);
+		}
+		daemon = new Daemon( type, machine_name, col.addr() );
+	} else {
+		daemon = new Daemon( type, machine_name );
 	}
-	daemon = new Daemon( type, machine_name, col.addr() );
+
 		
 	dprintf(D_FULLDEBUG,"Locating daemon process on %s...\n",machine_name);
 

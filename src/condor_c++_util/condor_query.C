@@ -264,40 +264,6 @@ addORConstraint (const char *value)
 }
 
 
-QueryResult CondorQuery::
-fetchAds (ClassAdList &adList, DaemonList * daemon_list, CondorError* errstack) {
-	if (!daemon_list) {
-		return Q_NO_COLLECTOR_HOST;
-	}
-
-	if (daemon_list->IsEmpty())
-		return Q_NO_COLLECTOR_HOST;
-
-	Daemon * daemon;
-	QueryResult result;
-
-		// Try different daemons in the list
-	daemon_list->rewind();
-	while (daemon_list->next(daemon)) {
-		if ((!daemon) || (!daemon->locate())) {
-			dprintf (D_ALWAYS, "Unable to locate daemon %s\n", daemon->name());
-			continue;
-		}
-
-		result  = fetchAds (
-						   adList,
-						   daemon->addr(),
-						   errstack);
-
-		if (result == Q_OK) {
-			return result;
-		}
-	}
-
-		// Return the last result
-	return result; 
-}
-
 // fetch all ads from the collector that satisfy the constraints
 QueryResult CondorQuery::
 fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)

@@ -91,7 +91,7 @@ int		check_new_exec_interval;
 int		preen_interval;
 int		new_bin_delay;
 char	*MasterName = NULL;
-DaemonList *Collectors = NULL;
+CollectorList *Collectors = NULL;
 DaemonList* secondary_collectors = NULL;
 
 int		ceiling = 3600;
@@ -551,8 +551,8 @@ init_params()
 	if( Collectors ) {
 		delete( Collectors );
 	}
-	Collectors = DCCollector::getCollectors();
-	
+	Collectors = CollectorList::create();
+		
 	StartDaemons = TRUE;
 	tmp = param("START_DAEMONS");
 	if( tmp ) {

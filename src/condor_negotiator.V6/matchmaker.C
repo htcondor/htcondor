@@ -241,7 +241,7 @@ reinitialize ()
 	if (Collectors) {
 		delete Collectors;
 	}
-	Collectors = DCCollector::getCollectors();
+	Collectors = CollectorList::create();
 
 	// done
 	return TRUE;
@@ -796,7 +796,7 @@ obtainAdsFromCollector (
 	char    remoteHost[MAXHOSTNAMELEN];
 
 	dprintf(D_ALWAYS, "  Getting all public ads ...\n");
-	result = publicQuery.fetchAds(allAds, Collectors);
+	result = Collectors->query (publicQuery, allAds);
 	if( result!=Q_OK ) {
 		dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
 		return false;
@@ -876,7 +876,7 @@ obtainAdsFromCollector (
 	allAds.Close();
 
 	dprintf(D_ALWAYS,"  Getting startd private ads ...\n");
-	result = privateQuery.fetchAds(startdPvtAds, Collectors);
+	result = Collectors->query (privateQuery, startdPvtAds);
 	if( result!=Q_OK ) {
 		dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
 		return false;

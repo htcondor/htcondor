@@ -268,8 +268,8 @@ main (int argc, char *argv[])
 	if (addr) {
 		q = query->fetchAds (result, addr, &errstack);
 	} else {
-		DaemonList * collectors = DCCollector::getCollectors();
-		q = query->fetchAds (result, collectors, &errstack);
+		CollectorList * collectors = CollectorList::create();
+		q = collectors->query (*query, result);
 		delete collectors;
 	}
 		

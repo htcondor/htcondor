@@ -1822,13 +1822,18 @@ DedicatedScheduler::getDedicatedResourceInfo( void )
 
 		// This should fill in resources with all the classads we care
 		// about
-	DaemonList * collectors = DCCollector::getCollectors();
-	query.fetchAds( *resources , collectors );
-	delete collectors;
+	CollectorList * collectors = CollectorList::create();
+	if (collectors->query (query, *resources) == Q_OK) {
+		delete collectors;
 
-	dprintf( D_FULLDEBUG, "Found %d potential dedicated resources\n",
-			 resources->Length() );
-	return true;
+		dprintf( D_FULLDEBUG, "Found %d potential dedicated resources\n",
+				 resources->Length() );
+		return true;
+	}
+
+	delete collectors;
+	dprintf (D_ALWAYS, "Unable to run query %s\n",  constraint);
+	return false;
 }
 
 
@@ -2681,11 +2686,7 @@ DedicatedScheduler::publishRequestAd( void )
 
 		// Now, we can actually send this off to the CM:
 		// Port doesn't matter, since we've got the sinful string. 
-	scheduler.Collectors->rewind();
-	Daemon * collector;
-	while (scheduler.Collectors->next(collector)) {
-		((DCCollector*)collector)->sendUpdate( UPDATE_SUBMITTOR_AD, &ad );
-	}
+	scheduler.Collectors->sendUpdates( UPDATE_SUBMITTOR_AD, &ad );
 }
 
 

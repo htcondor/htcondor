@@ -616,8 +616,8 @@ ScheduledShutdownEvent::GetStartdList()
 		return -1;
 	}
 
-	DaemonList * collectors = DCCollector::getCollectors();
-	if (StartdQuery.fetchAds(*StartdList, collectors) != Q_OK) {
+	CollectorList collectors = CollectorList::create();
+	if (collectors->query (StartdQuery, *StartdList) != Q_OK ) {
 		delete collectors;
 		return -1;
 	}
@@ -1118,8 +1118,8 @@ CleanupShutdownModeConfigs()
 	if (StartdQuery.addANDConstraint(CleanupConstraint) != Q_OK) {
 		return -1;
 	}
-	DaemonList * collectors = DCCollector::getCollectors();
-	if (StartdQuery.fetchAds(StartdList, collectors) != Q_OK) {
+	CollectorList * collectors = CollectorList::create();
+	if (collectors->query (StartdQuery,StartdList) != Q_OK) { 
 		delete collectors;
 		return -1;
 	}

@@ -116,7 +116,7 @@ static	char		constraint[4096];
 static	DCCollector* pool = NULL; 
 static	char		scheddAddr[64];	// used by format_remote_host()
 static	AttrListPrintMask 	mask;
-static DaemonList * Collectors = NULL;
+static CollectorList * Collectors = NULL;
 
 // for run failure analysis
 static  int			findSubmittor( char * );
@@ -168,7 +168,7 @@ int main (int argc, char **argv)
 	processCommandLineArguments (argc, argv);
 
 	if (Collectors == NULL) {
-		Collectors = DCCollector::getCollectors();
+		Collectors = CollectorList::create();
 	}
 
 	// check if analysis is required
@@ -250,10 +250,9 @@ int main (int argc, char **argv)
 
 	// get the list of ads from the collector
 	if( querySchedds ) { 
-		result = scheddQuery.fetchAds( scheddList, Collectors );
-
+		result = Collectors->query ( scheddQuery, scheddList );
 	} else {
-		result = scheddQuery.fetchAds( scheddList, Collectors );
+		result = Collectors->query ( submittorQuery, scheddList );
 	}
 
 	switch( result ) {
@@ -383,7 +382,7 @@ processCommandLineArguments (int argc, char *argv[])
 				}
 				exit(1);
 			}
-			Collectors = new DaemonList();
+			Collectors = new CollectorList();
 			Collectors->append (pool);
 		} 
 		else
@@ -1483,7 +1482,7 @@ setupAnalysis()
 	int			index;
 
 	// fetch startd ads
-	rval = query.fetchAds( startdAds , Collectors );
+	rval = Collectors->query (query, startdAds);
 	if( rval != Q_OK ) {
 		fprintf( stderr , "Error:  Could not fetch startd ads\n" );
 		exit( 1 );

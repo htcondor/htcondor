@@ -73,10 +73,10 @@ Daemon::Daemon( daemon_t type, const char* name, const char* pool )
 {
 		// We are no longer allowed to create a "default" collector
 		// since there can be more than one
-		// Use DCCollector::getCollectors()
-	if ((type == DT_COLLECTOR) && (name == NULL)) {
+		// Use CollectorList::create()
+/*	if ((type == DT_COLLECTOR) && (name == NULL)) {
 		EXCEPT ( "Daemon constructor (type=COLLECTOR, name=NULL) called" );
-	}
+		}*/
 
 	common_init();
 	_type = type;
@@ -954,11 +954,11 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 		}
 		query.addANDConstraint(buf);
 
-			// We need to query the collector(s0
+			// We need to query the collector
 
-		DaemonList * collectors = DCCollector::getCollectors();
+		CollectorList * collectors = CollectorList::create();
 		CondorError errstack;
-		if (query.fetchAds(ads, collectors, &errstack) != Q_OK) {
+		if (collectors->query (query, ads) != Q_OK) {
 			delete collectors;
 			newError( CA_LOCATE_FAILED, errstack.getFullText() );
 			return false;
