@@ -521,8 +521,10 @@ static bool EvalBool(ClassAd *ad, const char *constraint)
 	// have the same semantics as the collector queries.  --RR
 	if (!tree->EvalTree(NULL, ad, &result)) {
 		dprintf(D_ALWAYS, "can't evaluate constraint: %s\n", constraint);
+		delete tree;
 		return false;
 	}
+	delete tree;
 	if (result.type == LX_BOOL) {
 		return (bool)result.b;
 	}
