@@ -1479,7 +1479,7 @@ is_lib_init()
 {
     int result = 0;
 #ifdef WIN32
-    if (is_init_lock_initailized){
+    if (is_init_lock_initialized){
 	EnterCriticalSection(&is_init_lock);
 	if (is_init)
 	    result = 1;

@@ -1383,14 +1383,13 @@ get_base_dir(char** buf)
     }
 
 #ifdef WIN32
-    if (dir[strlen(dir)-1) == '\\')
+    if (dir[strlen(dir)-1] == '\\') {
 #else
     if (dir[strlen(dir)-1] == '/'){
 #endif
 	*buf = (char*)malloc(strlen(dir) + strlen(DRMAA_DIR) + 1);
 	strcpy(*buf, dir);
-    }
-    else {
+    } else {
 	*buf = (char*)malloc(strlen(dir) + strlen(DRMAA_DIR) + 2);
 	strcpy(*buf, dir);
 #ifdef WIN32
