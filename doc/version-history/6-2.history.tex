@@ -32,6 +32,13 @@ specify them properly.
 \noindent Bugs Fixed:
 \begin{itemize}
 
+\item If \Condor{compile} can not find the \Condor{config\_val}
+program, \Condor{compile} can not work.
+In previous versions, \Condor{compile}  would try to perform the
+compilation and fail in an unclear way with cryptic error messages. 
+Now, \Condor{compile} detects this case, prints out a verbose error
+message, and exits.
+
 \item The \MacroNI{FILESYSTEM\_DOMAIN} and \MacroNI{UID\_DOMAIN} settings were
 not being automatically append to the requirements of a Vanilla-universe job,
 possibly causing it to run on machines where it will not successfully run. This
