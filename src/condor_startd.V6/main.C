@@ -24,7 +24,6 @@
 /*
  * Condor include files.
  */
-#include "cdefs.h"
 #include "debug.h"
 #include "trace.h"
 #include "except.h"
@@ -43,10 +42,11 @@
 /*
  * Polling vars.
  */
-int	polling_freq;
+static int	polling_freq;
+static int	owner_polling_freq;
 int	polls_per_update;
-int	polls_per_update_kbdd;
-int	polls_per_update_load;
+static int	polls_per_update_kbdd; // never used!
+static int	polls_per_update_load; // never used!
 
 /*
  * Flags from the commandline.
@@ -78,7 +78,6 @@ int	memory;
 extern int	Termlog;
 char	*MyName;
 char	*admin;
-char	*def_owner = "Owner = \"nobody\"";
 int run_benchmarks;
 
 ClassAd* template_ClassAd;
@@ -115,11 +114,11 @@ extern void event_sigchld(int);
  * Prototypes of static functions.
  */
 
-static void usage		__P((const char *s));
-static void init_params		__P((void));
-static void mainloop		__P((void));
-static char *get_full_hostname	__P((void));
-static int res_config_context   __P((resource_info_t *));
+static void usage(const char *s);
+static void init_params(void);
+static void mainloop(void);
+static char *get_full_hostname(void);
+static int res_config_context(resource_info_t *);
 
 int main(int argc, char** argv)
 {
@@ -153,14 +152,8 @@ int main(int argc, char** argv)
 	}
 
 	// build the classAd, create a hash table
-
-	/* conv all contexts to classAds - N Anand*/
 	template_ClassAd = new ClassAd();
 	config( template_ClassAd );
-
-	// CHANGE -> N Anand
-	template_ClassAd->Insert(def_owner);
-	template_ClassAd->SetRequirements("Requirements = START");
 
 	dprintf_config("STARTD", 2);
 
@@ -172,10 +165,6 @@ int main(int argc, char** argv)
 	CondorPrefExps::Initialize(template_ClassAd);
 
 	resmgr_init();
-	// call *res_config_context for all resources
-	// *res_config_context fills in the classAd by reading 
-	// the config file
-	resmgr_walk(res_config_context);
 	init_params();
 	resource_init();
 	
@@ -216,7 +205,7 @@ int main(int argc, char** argv)
 
 static int res_config_context(resource_info_t* rip)
 {
-  config( rip->r_context );
+	config( rip->r_context );
 }
 
 static void usage(const char* s)
@@ -245,13 +234,12 @@ static void mainloop()
 #if defined(AIX31) || defined(AIX32)
 		errno = EINTR;
 #endif
-		dprintf(D_ALWAYS, "timeout = %d sec\n", timer.tv_sec);
 		count = select(FD_SETSIZE, &readfds, (fd_set *)0, (fd_set *)0,
 			       &timer);
 
-		dprintf(D_ALWAYS, "out of select()\n");
 		if (want_reconfig) {
 			dprintf( D_ALWAYS, "Re reading config file\n" );
+			dprintf_config("STARTD", 2);
 			resmgr_walk(res_config_context);
 			init_params();
 			want_reconfig = 0;
@@ -266,12 +254,10 @@ static void mainloop()
 			}
 		}
 
-		block_signal(SIGCHLD);	/* XXX */
 		if (NFDS(count) == 0)
 			event_timeout();
 		else
 			resmgr_call(&readfds);
-		sigsetmask(0);		/* XXX */
 	}
 }
 
@@ -310,6 +296,14 @@ static void init_params()
 		polling_freq = 30;
 	} else {
 		polling_freq = atoi(tmp);
+		free(tmp);
+	}
+
+	tmp = param("OWNER_POLLING_FREQUENCY");
+	if (tmp == NULL) {
+		owner_polling_freq = 30;
+	} else {
+		owner_polling_freq = atoi(tmp);
 		free(tmp);
 	}
 
