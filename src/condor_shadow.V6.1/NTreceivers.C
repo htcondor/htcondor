@@ -135,7 +135,11 @@ do_REMOTE_syscall()
 
 	rval = syscall_sock->code(condor_sysnum);
 	if (!rval) {
-	 EXCEPT("Can no longer communicate with condor_starter on execute machine");
+		char *execute_machine_ip;
+
+		execute_machine_ip = syscall_sock->endpoint_ip_str();
+		EXCEPT("Can no longer talk to condor_starter on execute machine (%s)",
+			   (execute_machine_ip != NULL) ? execute_machine_ip : "Unknown");
 	}
 
 	dprintf(D_SYSCALLS,
