@@ -725,6 +725,8 @@ or fail with its own error.
 
 int CondorFileTable::fcntl( int fd, int cmd, int arg )
 {
+	struct flock *f;
+
 	if( (fd<0) || (fd>=length) || (pointers[fd]==0) ) {
 		errno = EBADF;
 		return -1;
@@ -742,6 +744,31 @@ int CondorFileTable::fcntl( int fd, int cmd, int arg )
 		case F_DUP2FD:
 		#endif
 			return dup2(fd,arg);
+
+
+		#ifdef F_FREESP
+		case F_FREESP:
+		#endif
+
+		#ifdef F_FREESP64
+		case F_FREESP64:
+		#endif
+
+			/*
+			A length of zero to FREESP indicates the file should
+			be truncated at the start value.
+
+			Truncation must be handled at this level, and not at an individual object,
+			because the entire chain of objects, e.g. CFBuffer->CFCompress->CFRemote,
+			must all be informed about a truncate in turn.
+			*/
+
+			f = (struct flock *)arg;
+			if( (f->l_whence==0) && (f->l_len==0) ) {
+				return FileTab->ftruncate(fd,f->l_start);
+			}
+
+			/* Otherwise, fall through here. */
 
 		default:
 			return pointers[fd]->file->fcntl(cmd,arg);

@@ -47,8 +47,6 @@ int CondorFileRemote::fcntl( int cmd, int arg )
 {
 	int result, scm;
 
-	struct flock *f;
-
 	switch(cmd) {
 		#ifdef F_GETFD
 		case F_GETFD:
@@ -70,25 +68,6 @@ int CondorFileRemote::fcntl( int cmd, int arg )
 			SetSyscalls(scm);
 			return result;
 
-		#ifdef F_FREESP
-		case F_FREESP:
-		#endif
-
-		#ifdef F_FREESP64
-		case F_FREESP64:
-		#endif
-
-			/* When all fields of the lockarg are zero,
-			   this is the same as truncate, and we know
-			   how to do that already. */
-
-			f = (struct flock *)arg;
-			if( (f->l_whence==0) && (f->l_start==0) && (f->l_len==0) ) {
-				return ftruncate(0);
-			}
-
-			/* Otherwise, fall through here. */
-
 		default:
 
 			_condor_warning("fcntl(%d,%d,...) is not supported for remote files.",fd,cmd);
@@ -99,18 +78,21 @@ int CondorFileRemote::fcntl( int cmd, int arg )
 
 int CondorFileRemote::ioctl( int cmd, int arg )
 {
-	#ifdef I_SETSIG
-	if(cmd==I_SETSIG) {
-		int scm = SetSyscalls(syscall_mode);
-		int result = ::ioctl( fd, cmd, arg );
-		SetSyscalls(scm);
-		return result;
-	}
-	#endif
-	
 	_condor_warning("ioctl(%d,%d,...) is not supported for remote files.",fd,cmd);
 	errno = EINVAL;
 	return -1;
+}
+
+/*
+This needs to make a remote system call directly, because ftruncate is often
+implemented in terms of fcntl, which (see CondorFileTable) can arrive here, resulting
+in an infinite loop.
+*/
+
+int CondorFileRemote::ftruncate( size_t s )
+{
+	set_size(s);
+	return REMOTE_syscall( CONDOR_ftruncate, fd, s );
 }
 
 /* This file cannot be accessed locally */

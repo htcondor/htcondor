@@ -18,13 +18,20 @@ CondorFileBasic::CondorFileBasic( int mode )
 	fcntl_fd = 0;
 	syscall_mode = mode;
 	resume_count = 0;
+	open_flags = 0;
 }
 
 int CondorFileBasic::open(const char *path, int flags, int mode)
 {
 	strncpy(name,path,_POSIX_PATH_MAX);
 
-	// Store the read and write flags
+	// Store the open flags we will use on a restart
+	open_flags = flags;
+
+	// APPEND must be simulated for checkpoint safety
+	open_flags &= ~O_APPEND;
+
+	// Summarize read and write for convenience
 
 	switch( flags & O_ACCMODE ) {
 		case O_RDONLY:
@@ -46,13 +53,16 @@ int CondorFileBasic::open(const char *path, int flags, int mode)
 	// Open the file
 
 	int scm = SetSyscalls(syscall_mode);
-	fd = ::open(path,flags,mode);
+	fd = ::open(path,open_flags,mode);
 	SetSyscalls(scm);
 
 	if(fd<0) return fd;
 
-	// Find the size of the file
+	// CREAT and TRUNC must be applied the first time, but not afterwards
+	open_flags &= ~O_CREAT;
+	open_flags &= ~O_TRUNC;
 
+	// Figure out the size of the file
 	scm = SetSyscalls(syscall_mode);
 	size = ::lseek(fd,0,SEEK_END);
 	SetSyscalls(scm);
@@ -60,9 +70,16 @@ int CondorFileBasic::open(const char *path, int flags, int mode)
 	if(size==-1) {
 		size=0;
 	} else {
-		scm = SetSyscalls(syscall_mode);
-		::lseek(fd,0,SEEK_SET);
-		SetSyscalls(scm);
+		// If opened for append, leave it there
+		// Otherwise, seek back to zero
+
+		if( flags & O_APPEND ) {
+			/* do nothing */
+		} else {
+			scm = SetSyscalls(syscall_mode);
+			::lseek(fd,0,SEEK_SET);
+			SetSyscalls(scm);
+		}
 	}
 
 	return fd;
@@ -84,10 +101,6 @@ int CondorFileBasic::close()
 void CondorFileBasic::checkpoint()
 {
 	int scm = SetSyscalls(syscall_mode);
-
-	#ifdef I_GETSIG
-	ioctl_sig = ::ioctl( fd, I_GETSIG, 0 );
-	#endif
 
 	fcntl_fl = ::fcntl( fd, F_GETFL, 0 );
 	fcntl_fd = ::fcntl( fd, F_GETFD, 0 );
@@ -123,18 +136,9 @@ void CondorFileBasic::resume( int count )
 	// has this file already been resumed?
 	if( resume_count==count ) return;
 
-	int flags;
-
-	if( readable&&writeable ) {
-		flags = O_RDWR;
-	} else if( writeable ) {
-		flags = O_WRONLY;
-	} else {
-		flags = O_RDONLY;
-	}
-
+	// now re-open it
 	int scm = SetSyscalls(syscall_mode);
-	fd = ::open(name,flags,0);
+	fd = ::open(name,open_flags,0);
 	SetSyscalls(scm);
 
 	if(fd<0) {
@@ -145,16 +149,34 @@ void CondorFileBasic::resume( int count )
 
 	scm = SetSyscalls(syscall_mode);
 
-	#ifdef I_SETSIG
-	::ioctl( fd, I_SETSIG, ioctl_sig );
-	#endif
-
 	::fcntl( fd, F_SETFL, fcntl_fl );
 	::fcntl( fd, F_SETFD, fcntl_fd );
 
 	SetSyscalls(scm);
 
 	resume_count = count;
+}
+
+int CondorFileBasic::ioctl( int cmd, int arg )
+{
+	int scm, result;
+
+	scm = SetSyscalls( syscall_mode );
+	result = ::ioctl( fd, cmd, arg );
+	SetSyscalls( scm );
+
+	return result;
+}
+
+int CondorFileBasic::fcntl( int cmd, int arg )
+{
+	int scm, result;
+
+	scm = SetSyscalls( syscall_mode );
+	result = ::fcntl( fd, cmd, arg );
+	SetSyscalls( scm );
+
+	return result;
 }
 
 int CondorFileBasic::ftruncate( size_t length )

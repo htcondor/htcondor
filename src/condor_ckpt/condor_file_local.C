@@ -46,32 +46,6 @@ int CondorFileLocal::write(int pos, char *data, int length) {
 	return result;
 }
 
-/*
-We can happily support any fcntl or ioctl command in local mode.
-*/
-
-int CondorFileLocal::fcntl( int cmd, int arg )
-{
-	int result, scm;
-
-	scm = SetSyscalls(syscall_mode);
-	result = ::fcntl(fd,cmd,arg);
-	SetSyscalls(scm);
-
-	return result;
-}
-
-int CondorFileLocal::ioctl( int cmd, int arg )
-{
-	int result, scm;
-
-	scm = SetSyscalls(syscall_mode);
-	result = ::ioctl(fd,cmd,arg);
-	SetSyscalls(scm);
-
-	return result;
-}
-
 int CondorFileLocal::local_access_hack()
 {
 	return 1;

@@ -21,6 +21,7 @@ public:
 
 	virtual int fcntl( int cmd, int arg );
 	virtual int ioctl( int cmd, int arg );
+	virtual int ftruncate( size_t length );
 
 	virtual int local_access_hack();
 	virtual char * get_kind();

@@ -18,6 +18,9 @@ public:
 	virtual int open( const char *path, int flags, int mode );
 	virtual int close();
 
+	virtual int ioctl( int cmd, int arg );
+	virtual int fcntl( int cmd, int arg );
+
 	virtual int ftruncate( size_t s );
 	virtual int fsync();
 
@@ -43,6 +46,7 @@ protected:
 	int	writeable;	// can this file be written?
 	int	size;		// number of bytes in the file
 	int	attached;	// was I attached or opened?
+	int	open_flags;	// what flags to use at re-open?
 
 	int	ioctl_sig;	// signal flag stored by ioctl
 	int	fcntl_fl;	// file flags stored by fcntl
