@@ -30,8 +30,6 @@
 
 #define _POSIX_SOURCE
 
-#include <stdio.h>	// for sprintf
-
 #include "condor_common.h"
 #include "condor_constants.h"
 #include "condor_io.h"
