@@ -37,6 +37,10 @@
   TEST_SUITE_F = test_suite_F.V5
 #endif
 
+#if WANT_PVM
+  TEST_SUITE_PVM = test_suite_pvm
+#endif
+
 #if WANT_JAVA
   TEST_SUITE_JAVA = test_suite_java
 #endif
@@ -58,6 +62,9 @@ TEST_SUITE_C = test_suite_C.V5
 #define PvmProgs
 #endif
 
+#define StdUnvProgs shadow.V6 starter.V5 
+#define StdUnvLibs ckpt syscall_lib
+
 #if WANT_CONDOR_G && HAS_GLOBUS
 #define GlobusProgs gridmanager globus
 #else
@@ -77,7 +84,7 @@ TEST_SUITE_C = test_suite_C.V5
 #define Programs \
 		procapi sysapi accountant.V6 ckpt_server \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
-		scripts shadow.V6 startd.V6 starter.V5 submit.V6 status.V6 \
+		scripts startd.V6 StdUnvProgs submit.V6 status.V6 \
 		tools kbdd collector.V6 PvmProgs dagman userlog Eventd \
 		GlobusProgs starter.V6.1 shadow.V6.1 dcskel
 
@@ -87,7 +94,7 @@ TEST_SUITE_C = test_suite_C.V5
 		daemon_core.V6 \
 		condor_ckpt_server/ckpt_server_api.a \
 		condor_schedd.V6/libqmgmt.a condor_accountant.V6/libacct.a \
-		ckpt syscall_lib NetmanLibs chirp
+		StdUnvLibs NetmanLibs chirp
 
 #if HAS_STATIC
 #define StaticDirectories \
@@ -186,11 +193,15 @@ object_target(procapi)
 object_target(sysapi)
 object_target(tools)
 object_target(examples)
+#if WANT_NETMAN
 object_target(eventd)
+#endif
 object_target(accountant.V6)
 object_target(ckpt_server)
+
 object_target(shadow.V6)
 object_target(starter.V5)
+
 object_target(startd.V6)
 object_target(schedd.V6)
 object_target(status.V6)
@@ -205,8 +216,10 @@ object_target(master.V6)
 object_target(q.V6)
 object_target(rm.V6)
 object_target(submit.V6)
+
 object_target(ckpt)
 object_target(syscall_lib)
+
 #if WANT_NETMAN
 object_target(netman)
 #endif
@@ -249,6 +262,9 @@ object_target(test_suite_C.V5)
 #if WANT_JAVA
    object_target($(TEST_SUITE_JAVA))
 #endif
+#if WANT_PVM
+/*   object_target($(TEST_SUITE_PVM))*/
+#endif
 
 h_all: h/Makefile h/syscall_numbers.h h/syscall_numbers.o
 
@@ -286,8 +302,10 @@ pure_target(condor_startd.V6,condor_startd.pure)
 pure_target(condor_gridmanager,condor_gridmanager.pure)
 pure_target(condor_schedd.V6,condor_schedd.pure)
 pure_target(condor_master.V6,condor_master.pure)
+
 pure_target(condor_shadow.V6,condor_shadow.std.pure)
 pure_target(condor_starter.V5,condor_starter.std.pure)
+
 pure_target(condor_shadow.V6.1,condor_shadow.pure)
 pure_target(condor_starter.V6.1,condor_starter.pure)
 pure_target(condor_collector.V6,condor_collector.pure)
@@ -295,21 +313,21 @@ pure_target(condor_negotiator.V6,condor_negotiator.pure)
 pure_target(condor_dagman,condor_dagman.pure)
 
 
-ext_target(EXT_ZLIB_VERSION,)
+ext_target(EXT_ZLIB_VERSION,$(NULL))
 #if WANT_EXT_GLIBC
-ext_target(EXT_GLIBC_VERSION,)
+ext_target(EXT_GLIBC_VERSION,$(NULL))
 #endif
 #if WANT_KERBEROS
-ext_target(EXT_KERBEROS_VERSION,)
+ext_target(EXT_KERBEROS_VERSION,$(NULL))
 #endif
 #if HAS_GLOBUS
 ext_target(EXT_GLOBUS_VERSION,$(EXT_TRIGGER)/$(EXT_GPT_VERSION))
 ext_target(EXT_GAHP_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION))
-ext_target(EXT_GPT_VERSION,)
+ext_target(EXT_GPT_VERSION,$(NULL))
 #endif
-ext_target(EXT_MAN_VERSION,)
+ext_target(EXT_MAN_VERSION,$(NULL))
 #if WANT_PVM
-ext_target(EXT_PVM_VERSION,)
+ext_target(EXT_PVM_VERSION,$(NULL))
 #endif
 
 clean::
@@ -320,7 +338,14 @@ today:
 	cd condor_c++_util; make
 
 contrib_tarball(ckpt_server.tar,CkptServerFiles)
+
+#if WANT_NETMAN
+#define EventdTar eventd.tar
 contrib_tarball(eventd.tar,EventdFiles)
+#else
+#define EventdTar
+#endif
+
 release_tarball(dagman.tar,DAGManFiles)
 
 #if WANT_PVM
@@ -350,7 +375,7 @@ strip.tar: stripped
 	rm -f strip_dir/release.tar
 	cd strip_dir; $(TAR_CMD) -cvf release.tar AllFiles
 
-all_tarballs: strip.tar StaticTar ckpt_server.tar eventd.tar dagman.tar PvmTar CondorGTar
+all_tarballs: strip.tar StaticTar ckpt_server.tar EventdTar dagman.tar PvmTar CondorGTar
 
 public: release all_tarballs
 	if test ! -d ../public; then mkdir ../public; fi
