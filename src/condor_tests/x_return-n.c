@@ -34,14 +34,16 @@
 #include <signal.h>
 #include <unistd.h>
 
-#define ITERATIONS_PER_SECOND 2000000
+#include "x_waste_second.h"
 
 int main( int argc, char* argv[] )
 {
 	int i, arg;
 
 	if( argc > 2 ) {
-		for( i = 0; i < atoi ( argv[2] ) * ITERATIONS_PER_SECOND; i++ ) { }
+		for( i = 0; i < atoi(argv[2]); i++ ) {
+			x_waste_a_second();
+		}
 	}
 
 	printf("Output from return-n\n");
