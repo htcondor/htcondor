@@ -145,12 +145,17 @@ VanillaProc::StartJob()
 		// is specifed in the config file, and the account's password
 		// is properly stored in our credential stash.
 
-		char *run_jobs_as = param("RUN_JOBS_AS");
+		char vm_user[255];
+		int vm_num = Starter->getMyVMNumber();
+
+		sprintf(vm_user, "VM%d_USER", vm_num);
+		char *run_jobs_as = param(vm_user);
 		if (run_jobs_as) {
 			char *domain, *name;
-			// set ProcFamily to find decendants via a common login name
+				// set ProcFamily to find decendants via a common login name
 			getDomainAndName(run_jobs_as, domain, name);
-			family->setFamilyLogin(name);
+				// don't set family login since we want to use procapi for now
+			// family->setFamilyLogin(name);
 			free(run_jobs_as);
 		} else {
 			

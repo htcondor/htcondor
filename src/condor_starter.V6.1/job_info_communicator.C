@@ -25,8 +25,11 @@
 #include "condor_debug.h"
 #include "condor_attributes.h"
 #include "job_info_communicator.h"
+#include "starter.h"
 #include "condor_config.h"
 #include "domain_tools.h"
+
+extern CStarter *Starter;
 
 
 JobInfoCommunicator::JobInfoCommunicator()
@@ -202,7 +205,12 @@ JobInfoCommunicator::initUserPrivWindows( void )
 	// is properly stored in our credential stash.
 
 	bool init_priv_succeeded = true;
-	char *run_jobs_as = param("RUN_JOBS_AS");
+	char vm_user[255];
+	
+	int vm_num = Starter->getMyVMNumber();
+	sprintf(vm_user, "VM%d_USER", vm_num);
+	char *run_jobs_as = param(vm_user);
+
 	if (run_jobs_as) {
 		char *domain, *name;
 		getDomainAndName(run_jobs_as, domain, name);

@@ -121,6 +121,10 @@ public:
 		*/
 	JobInfoCommunicator* jic;
 
+		/** Returns the VM number we're running on
+		*/
+	int getMyVMNumber( void );
+
 protected:
 	List<UserProc> JobList;
 	List<UserProc> CleanedUpJobList;
