@@ -1983,7 +1983,9 @@ get_cred_from_credd (const char * request, void *& buff, int & size) {
 
 	Daemon my_credd (DT_CREDD, NULL, NULL);
 
-	Sock * sock = my_credd.startCommand (CREDD_GET_CRED, Stream::reli_sock, 0);
+	Sock * socket =
+		my_credd.startCommand (CREDD_GET_CRED, Stream::reli_sock, 0);
+	ReliSock * sock = (ReliSock*)socket;
 
 	if (!sock) {
 		set_priv (priv);
@@ -1993,6 +1995,25 @@ get_cred_from_credd (const char * request, void *& buff, int & size) {
 			errno, strerror(errno)
 		);
 		return FALSE;
+	}
+
+	
+	// Authenticate
+	if (!sock->isAuthenticated()) {
+		char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS",
+				"CLIENT");
+		MyString methods;
+		if (p) {
+		  methods = p;
+		  free (p);
+		} else {
+		  methods = SecMan::getDefaultAuthenticationMethods();
+		}
+		CondorError errstack;
+		if( ! sock->authenticate(methods.Value(), &errstack) ) {
+		  dprintf (D_ALWAYS, "Unable to authenticate, qutting\n");
+		  return FALSE;
+		}
 	}
 
 	sock->encode();
