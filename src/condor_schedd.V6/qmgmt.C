@@ -1805,10 +1805,22 @@ int get_job_prio(ClassAd *job)
 	job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
 	job->LookupInteger(ATTR_PROC_ID, id.proc);
 
+	
+    // No longer judge whether or not a job can run by looking at its status.
+    // Rather look at if it has all the hosts that it wanted.
+    if (cur_hosts>=max_hosts || job_status==HELD)
+        return cur_hosts;
+
     PrioRec[N_PrioRecs].id       = id;
     PrioRec[N_PrioRecs].job_prio = job_prio;
     PrioRec[N_PrioRecs].status   = job_status;
     PrioRec[N_PrioRecs].qdate    = q_date;
+	int auto_id = scheduler.autocluster.getAutoClusterid(job);
+	if ( auto_id == -1 ) {
+		PrioRec[N_PrioRecs].auto_cluster_id = id.cluster;
+	} else {
+		PrioRec[N_PrioRecs].auto_cluster_id = auto_id;
+	}
 
 	strcpy(PrioRec[N_PrioRecs].owner,owner);
 

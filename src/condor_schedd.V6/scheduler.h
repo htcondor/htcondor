@@ -44,6 +44,7 @@
 #include "classad_hashtable.h"	// for HashKey class
 #include "Queue.h"
 #include "user_log.c++.h"
+#include "autocluster.h"
 #include "shadow_mgr.h"
 
 const 	int			MAX_NUM_OWNERS = 512;
@@ -200,6 +201,7 @@ class Scheduler : public Service
 	int				negotiate(int, Stream *);
 	void			reschedule_negotiator(int, Stream *);
 	void			vacate_service(int, Stream *);
+	AutoCluster		autocluster;
 	void			sendReschedule( void );
 
 	// job managing

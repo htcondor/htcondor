@@ -25,6 +25,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "scheduler.h"
 #include "proc.h"
+#include "MyString.h"
 #include "dedicated_scheduler.h"
 #include "grid_universe.h"
 #include "simplelist.h"
@@ -46,6 +47,8 @@ template class Item<shadow_rec*>;
 template class List<PROC_ID>;
 template class Item<PROC_ID>;
 template class ExtArray<int>;
+template class ExtArray<MyString*>;
+template class ExtArray<bool>;
 template class ExtArray<PROC_ID>;
 template class SimpleList<Shadow*>;
 

@@ -785,6 +785,14 @@ renice_shadow()
 #endif
 }
 
+
+int 
+clear_autocluster_id( ClassAd *job )
+{
+	job->Delete(ATTR_AUTO_CLUSTER_ID);
+	return 0;
+}
+
 int
 count( ClassAd *job )
 {
@@ -2198,6 +2206,7 @@ Scheduler::negotiate(int, Stream* s)
 		// If we got this far, we're negotiating for a regular user,
 		// so go ahead and do our expensive setup operations.
 
+	autocluster.mark();
 	N_PrioRecs = 0;
 
 	WalkJobQueue( (int(*)(ClassAd *))job_prio );
@@ -2217,6 +2226,7 @@ Scheduler::negotiate(int, Stream* s)
 			   (int(*)(const void*, const void*))prio_compar );
 	}
 	jobs = N_PrioRecs;
+	autocluster.sweep();
 
 	N_RejectedClusters = 0;
 	JobsStarted = 0;
@@ -2266,7 +2276,7 @@ Scheduler::negotiate(int, Stream* s)
 		serviced_other_commands += daemonCore->ServiceCommandSocket();
 
 		id = PrioRec[i].id;
-		if( cluster_rejected(id.cluster) ) {
+		if( cluster_rejected(PrioRec[i].auto_cluster_id) ) {
 			continue;
 		}
 
@@ -2419,9 +2429,10 @@ Scheduler::negotiate(int, Stream* s)
 								"Can't send job eom to mgr\n" );
 						return (!(KEEP_STREAM));
 					}
+					cur_cluster = PrioRec[i].auto_cluster_id;
 					dprintf( D_FULLDEBUG,
-							"Sent job %d.%d\n", id.cluster, id.proc );
-					cur_cluster = id.cluster;
+							"Sent job %d.%d (autocluster=%d)\n", id.cluster, 
+							id.proc, cur_cluster );
 					break;
 				}
 				case PERMISSION:
@@ -5487,7 +5498,7 @@ Scheduler::Init()
 
 		sent_shadow_failure_email = FALSE;
 	}
-
+		
 		// initialize our ShadowMgr, too.
 	shadow_mgr.init();
 
@@ -5636,6 +5647,10 @@ Scheduler::reconfig()
 {
 	Init();
 	RegisterTimers();			// reset timers
+	if ( autocluster.config() ) {
+		// clear out auto cluster id attributes
+		WalkJobQueue( (int(*)(ClassAd *))clear_autocluster_id );
+	}
 	timeout();
 }
 

@@ -51,6 +51,7 @@ extern "C"
 	int		ReadLog(char*);
 }
 extern	void	mark_jobs_idle();
+extern  int     clear_autocluster_id( ClassAd *job );
 
 
 // global variables to control the daemon's running and logging
@@ -102,6 +103,12 @@ main_init(int argc, char* argv[])
 	sprintf(job_queue_name, "%s/job_queue.log", Spool);
 	InitJobQueue(job_queue_name);
 	mark_jobs_idle();
+
+		// The below must happen _after_ InitJobQueue is called.
+	if ( scheduler.autocluster.config() ) {
+		// clear out auto cluster id attributes
+		WalkJobQueue( (int(*)(ClassAd *))clear_autocluster_id );
+	}
 
 		// Initialize the dedicated scheduler stuff
 	dedicated_scheduler.initialize();
