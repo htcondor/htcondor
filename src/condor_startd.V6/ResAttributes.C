@@ -39,21 +39,21 @@ MachAttributes::MachAttributes()
 		// Number of CPUs.  Since this is used heavily by the ResMgr
 		// instantiation and initialization, we need to have a real
 		// value for this as soon as the MachAttributes object exists.
-	m_num_cpus = calc_ncpus();
+	m_num_cpus = sysapi_ncpus();
 
 		// The same is true of physical memory.  First, try to param
 		// for it.  If it's defined, use what they say.  If not, try
 		// to figure it out for ourselves.  If we had an error in
-		// calc_phys_mem(), we can't param() (since we'd only call
-		// calc_phys_mem() if param() returned NULL), so we need to
+		// sysapi_phys_memory(), we can't param() (since we'd only call
+		// sysapi_phys_memory() if param() returned NULL), so we need to
 		// just EXCEPT with a message telling the user to define
-		// MEMORY manually.  Derek Wright 1/8/99
+		// MEMORY manually.  Derek Wright 1/8/99 amended Keller 06/1/99
 	char* ptr;
 	if( (ptr = param("MEMORY")) != NULL ) {
 		m_phys_mem = atoi(ptr);
 		free(ptr);
 	} else {
-		m_phys_mem = calc_phys_memory();
+		m_phys_mem = sysapi_phys_memory();
 		if( m_phys_mem <= 0 ) {
 			dprintf( D_ALWAYS, 
 					 "Error computing physical memory with calc_phys_mem().\n" );
@@ -132,18 +132,18 @@ MachAttributes::compute( amask_t how_much )
 
 
 	if( IS_UPDATE(how_much) && IS_SHARED(how_much) ) {
-		m_virt_mem = calc_virt_memory();
+		m_virt_mem = sysapi_swap_space();
 		dprintf( D_FULLDEBUG, "Swap space: %lu\n", m_virt_mem );
 		
-		m_disk = calc_disk();
+		m_disk = sysapi_disk_space(exec_path);
 		dprintf( D_FULLDEBUG, "Disk space: %lu\n", m_disk );
 	}
 
 
 	if( IS_TIMEOUT(how_much) && IS_SHARED(how_much) ) {
-		m_load = calc_load_avg();
+		m_load = sysapi_load_avg();
 
-		calc_idle_time( m_idle, m_console_idle );
+		sysapi_idle_time( &m_idle, &m_console_idle );
 
 		time_t my_timer;
 		struct tm *the_time;
@@ -252,7 +252,7 @@ MachAttributes::benchmark( Resource* rip, int force )
 	}
 
 	dprintf( D_FULLDEBUG, "About to compute mips\n" );
-	int new_mips_calc = calc_mips();
+	int new_mips_calc = sysapi_mips();
 	dprintf( D_FULLDEBUG, "Computed mips: %d\n", new_mips_calc );
 
 	if ( m_mips == -1 ) {
@@ -264,7 +264,7 @@ MachAttributes::benchmark( Resource* rip, int force )
 	}
 
 	dprintf( D_FULLDEBUG, "About to compute kflops\n" );
-	int new_kflops_calc = calc_kflops();
+	int new_kflops_calc = sysapi_kflops();
 	dprintf( D_FULLDEBUG, "Computed kflops: %d\n", new_kflops_calc );
 	if ( m_kflops == -1 ) {
 			// first time we've done benchmarks
