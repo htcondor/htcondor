@@ -74,6 +74,8 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 {
 	char pname[ BUFSIZ ];
 	char *pval, *param();
+	static int did_truncate = 0;
+	int want_truncate = 0;
 
 	/*
 	**	Pick up the subsys_DEBUG parameters
@@ -106,10 +108,14 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 		(void)sprintf(pname, "TRUNC_%s_LOG_ON_OPEN", subsys);
 		pval = param(pname);
 		if( pval ) {
-			if( *pval == 't' || *pval == 'T') {
-				DebugFP = open_debug_file("w");
+			if( *pval == 't' || *pval == 'T' ) {
+				want_truncate = 1;
 			} 
 			free(pval);
+		}
+		if( !did_truncate && want_truncate ) {
+			DebugFP = open_debug_file("w");
+			did_truncate = 1;
 		} else {
 			DebugFP = open_debug_file("a");
 		}
