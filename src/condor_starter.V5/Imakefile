@@ -28,9 +28,12 @@ LDFLAGS = -lmld
 */
 #if IS_MIPS_ULTRIX43
 OS = ULTRIX42
+#elif IS_HPPAR_HPUX9
+OS = HPUX
 #else
 OS = OperatingSystem
 #endif
+
 
 #if IS_V5
 CLASS_LIB_SRC = alarm.C
