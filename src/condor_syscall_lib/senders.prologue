@@ -1,0 +1,37 @@
+#include "condor_common.h"
+#include "condor_debug.h"
+#include <stdarg.h>
+#include <assert.h>
+#include "condor_syscall_mode.h"
+#include "condor_xdr.h"
+#include "condor_constants.h"
+#include "condor_sys.h"
+
+#if defined(ULTRIX42) || defined(ULTRIX43) || defined(OSF1)
+#	include <sys/param.h>
+#	include <sys/mount.h>
+#else
+#	include <sys/mount.h>
+#endif
+
+static char *_FileName_ = __FILE__;
+
+
+int CurrentSysCall;
+
+extern XDR *xdr_syscall;
+
+int
+REMOTE_syscall( int syscall_num, ... )
+{
+	int		scm;
+	int		terrno;
+	int		rval;
+	va_list ap;
+
+
+	scm = SetSyscalls( SYS_LOCAL | SYS_MAPPED );
+	va_start( ap, syscall_num );
+
+	switch( syscall_num ) {
+

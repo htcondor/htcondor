@@ -1,0 +1,14 @@
+
+	  default:
+		scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+		fprintf(
+			stderr,
+			"Don't know how to do system call %d remotely - yet\n",
+			syscall_num
+		);
+		rval =  -1;
+	}
+
+	SetSyscalls( scm );
+	return rval;
+}
