@@ -1,6 +1,9 @@
 #ifndef EXPRESSIONS_H
 #define EXPRESSIONS_H
 
+static const MAX_EXPR_LIST	= 512;
+
+
 typedef struct {
 	int		type;
 	union {
@@ -22,6 +25,10 @@ typedef struct {
 	EXPR	**data;
 } CONTEXT;
 
+typedef struct {
+	int     top;
+	ELEM    *data[MAX_EXPR_LIST];
+} STACK;
 
 #if !defined(__STDC__) && !defined(__cplusplus)
 #define const
