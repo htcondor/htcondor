@@ -99,7 +99,7 @@ like.  However, there are serious security consequences of this.
 Please see section~\ref{sec:Non-Root} on page~\pageref{sec:Non-Root}
 in the manual for details on running Condor as non-root.
 
-\subsubsection{ Who will be administering Condor on the machines in your pool?}
+\subsubsection{Who will be administering Condor on the machines in your pool?}
 
 Either root will be administering Condor directly, or someone else
 would be acting as the Condor administrator.  If root has delegated
@@ -136,23 +136,24 @@ the ownership of various Condor files.  See section~\ref{sec:uids} on
 ``UIDs in Condor'' on page~\pageref{sec:uids} in the Administrator's
 Manual for details.
 
-\subsubsection{ Where should the machine-specific directories for Condor go?}
+\subsubsection{Where should the machine-specific directories for Condor go?}
 
 Condor needs a few directories that are unique on every machine in
 your pool.  These are 'spool', 'log', and 'execute'.  Generally, all
 three are subdirectories of a single machine specific directory called
-the 'local directory' (specified by the \Macro{LOCAL\_DIR} parameter in the
-config file).
+the 'local directory' (specified by the \Macro{LOCAL\_DIR} parameter
+in the config file).
 
 If you have a 'condor' user with a local home directory on each
-machine, the \Macro{LOCAL\_DIR} could just be user condor's home directory
-('\Macro{LOCAL\_DIR} = \MacroU{TILDE}' in the config file).  If this user's home
-directory is shared among all machines in your pool, you would want to
-create a directory for each host (named by hostname) for the local
-directory ('\Macro{LOCAL\_DIR} = \MacroU{TILDE}/hosts/\MacroU{HOSTNAME}' for example).  If
-you don't have a condor account on your machines, you can put these
-directories wherever you'd like.  However, where to place them will
-require some thought, as each one has its own resource needs:
+machine, the \Macro{LOCAL\_DIR} could just be user condor's home
+directory ('\Macro{LOCAL\_DIR} = \MacroU{TILDE}' in the config file).
+If this user's home directory is shared among all machines in your
+pool, you would want to create a directory for each host (named by
+hostname) for the local directory ('\Macro{LOCAL\_DIR} =
+\MacroU{TILDE}/hosts/\MacroU{HOSTNAME}' for example).  If you don't
+have a condor account on your machines, you can put these directories
+wherever you'd like.  However, where to place them will require some
+thought, as each one has its own resource needs:
 
 \begin{description}
 \item[execute] This is the directory that acts as the current working
@@ -210,7 +211,7 @@ problems for your machines.  Ideally, you'd have a separate partition
 for the Condor directories that the only consequence of filling up
 would be Condor's malfunction, not your whole machine.
 
-\subsubsection{ Where should the parts of the Condor system be installed? }
+\subsubsection{Where should the parts of the Condor system be installed?}
 	\begin{itemize}
 	\item Config Files
 	\item Release directory
@@ -224,14 +225,19 @@ would be Condor's malfunction, not your whole machine.
 	\end{itemize}
 
 \begin{description}
-\item[Config Files]
-There are a number of config files that allow you different
-levels of control over how Condor is configured at each machine in
-your pool.  In general, you will have 1 global configuration file for
-each platform.  In addition, there is a local config file for each
-machine, where you can override settings in the global file.  This
-allows you to have different daemons running, different policies for
-when to start and stop Condor jobs, and so on.  
+\item[Config Files] There are a number of config files that allow you
+different levels of control over how Condor is configured at each
+machine in your pool.  In general, you will have 1 global
+configuration file for each platform.  In addition, there is a local
+config file for each machine, where you can override settings in the
+global file.  This allows you to have different daemons running,
+different policies for when to start and stop Condor jobs, and so on.
+Beginning with Condor version 6.0.1, you can use a single config file
+which is shared among all platforms in your pool, and have both
+platform-specific and machine-specific files.  See
+section~\ref{sec:Multiple-Platforms} on
+page~\pageref{sec:Multiple-Platforms} about ``Configuring Condor for
+Multiple Platforms'' for details.
 
 In addition, because we recommend that you start the Condor daemons as
 root, we allow you to create config files that are owned and
@@ -257,19 +263,20 @@ error message and exit:
 Next, Condor tries to load the machine-specific, or local config file.
 The only way to specify the local config file is in the global config
 file, with the \Macro{LOCAL\_CONFIG\_FILE} macro.  If that macro isn't
-set, no local config file is used.
+set, no local config file is used.  Beginning with Condor version
+6.0.1, this macro can be a list of files instead of a single file.
 
 The root config files come in last.  The global file is searched for
 in the following places:
 \begin{enumerate}
-   \item File specified in CONDOR\_CONFIG\_ROOT environment variable
    \item \File{/etc/condor/condor\_config.root}
    \item \File{\Tilde condor/condor\_config.root}
 \end{enumerate}
 
 The local root config file is found with the
 \Macro{LOCAL\_ROOT\_CONFIG\_FILE} macro.  If that isn't set, no local
-root config file is used.
+root config file is used.  Beginning with Condor version 6.0.1, this
+macro can also be a list of files instead of a single file.
 
 \item[Release Directory]
 
@@ -332,7 +339,7 @@ documentation on the web at:
 
 \end{description}
 
-\subsubsection{ Am I using AFS? }
+\subsubsection{Am I using AFS?}
 
 If you are using AFS at your site, be sure to read the
 section~\ref{sec:Condor-AFS} on page~\pageref{sec:Condor-AFS} in the
@@ -346,7 +353,7 @@ centralized location.  You will also have to do something special if
 you submit jobs to Condor from a directory on AFS.  Again, read manual
 section~\ref{sec:Condor-AFS} for all the gory details.
 
-\subsubsection{ Do I have enough disk space for Condor? }
+\subsubsection{Do I have enough disk space for Condor?}
 
 The Condor release directory takes up a fair amount of space.  This is
 another reason why it's a good idea to have it on a shared
@@ -672,32 +679,13 @@ things you should check before you start up Condor.
     will be reported in the \condor{startd}'s classad as
     \AdAttr{ConsoleIdleTime}.
 
-\item   (Linux only) Condor needs to be able to find the 'utmp' file.
+\item  (Linux only) Condor needs to be able to find the 'utmp' file.
     According to the Linux File System Standard, this file should be
     \File{/var/run/utmp}.  If Condor can't find it there, it looks in
     \File{/var/adm/utmp}.  If it still can't find it, it gives up.  So, if
     your Linux distribution puts this file somewhere else, be sure to
     put a soft link from \File{/var/run/utmp} to point to the real location.
 
-\item   (HPUX 10 and Solaris machines only) Set the ARCH parameter in the
-    \condor{config} file.  On HPUX 10 and Solaris machines, there are
-    multiple CPU architectures that your machine could be using.  Our
-    Condor programs are binary compatible across these platforms.
-    Therefore, you only need one release directory for each OS.
-    However, Condor jobs can NOT checkpoint on one architecture and
-    restart on a different one.  So, you have to specify which
-    architecture you have on each of your machines to prevent Condor
-    from trying to migrate jobs between them.  If all of your machines
-    are the same architecture you don't really need to worry about
-    this, but you might as well set the parameter correctly in case
-    you add machines later.  You can just edit the site-wide
-    condor\_config file in \Release{etc/condor\_config}.  In the
-    'things you may want to customize section', you will see entries
-    for ARCH and OPSYS.  Uncomment the proper ARCH for your machines.
-    If you have some machines of each kind in your pool, set the one
-    in the site-wide config file to be the architecture you have the
-    most of, and for machines of the other kind, put an ARCH line in
-    the the local config file for the proper architecture.
 \end{enumerate}
 
 \subsection{Starting up the Condor daemons}
