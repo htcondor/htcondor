@@ -88,7 +88,15 @@ int
 ReliSock::listen()
 {
 	if (_state != sock_bound) return FALSE;
-	if (::listen(_sock, 5) < 0) return FALSE;
+
+	// many modern OS's now support a >5 backlog, so we ask for 200,
+	// but since we don't know how they behave when you ask for too
+	// many, if 200 doesn't work we try 5 before returning failure
+	if( ::listen( _sock, 200 ) < 0 ) {
+		if( ::listen( _sock, 5 ) < 0 ) {
+			return FALSE;
+		}
+	}
 
 	dprintf( D_NETWORK, "LISTEN %s fd=%d\n", sock_to_string(_sock),
 			 _sock );
