@@ -6,6 +6,7 @@ following order:
 README.filenames    Describes the filename convention in place
 README.imake        Describes the Imake rules and files in use
 README.testclass    Describes how and why tests can be categorized
+README.running      Describes how to run tests in the test suite
 
 The WISDOM.* files are specific wisdom about various languages, tests,
 etc, and is not particularly current or accurate...
