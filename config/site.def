@@ -1,7 +1,7 @@
 #ifdef BeforeVendorCF
 
 /* BEGIN Things passed in from condor_imake */
-EGCS_LIBC = LIB_GCC
+GCC_LIBC = LIB_GCC
 #define Crt0 CRT_BEGIN
 /* END Things passed in from condor_imake */
 
