@@ -2521,16 +2521,11 @@ DedicatedScheduler::generateRequest( ClassAd* machine_ad )
 {
 	char tmp[1024];
 	char namebuf[1024];
-	char arch[128];
-	char opsys[128];
-	int	memory;
 
 		// First, grab some things out of the machine ad so we can
-		// figure out what requirements + rank should be.  
+		// figure out what requirements should be.  
 	
 	namebuf[0] = '\0';
-	arch[0] = '\0';
-	opsys[0] = '\0';
 	if( ! machine_ad->LookupString(ATTR_NAME, namebuf) ) {
 		dprintf( D_ALWAYS, "ERROR in DedicatedScheduler::generateRequest():"
 				 " %s not defined in machine ClassAd\n", ATTR_NAME );
@@ -2551,43 +2546,22 @@ DedicatedScheduler::generateRequest( ClassAd* machine_ad )
 		return;
 	}
 
-	if( ! machine_ad->LookupString(ATTR_ARCH, arch) ) {
-		dprintf( D_ALWAYS, "ERROR in DedicatedScheduler::generateRequest():"
-				 " %s not defined in machine ClassAd\n", ATTR_ARCH );
-		return;
-	}
-	if( ! machine_ad->LookupString(ATTR_OPSYS, opsys) ) {
-		dprintf( D_ALWAYS, "ERROR in DedicatedScheduler::generateRequest():"
-				 " %s not defined in machine ClassAd\n", ATTR_OPSYS );
-		return;
-	}
-	if( ! machine_ad->LookupInteger(ATTR_MEMORY, memory) ) {
-		dprintf( D_ALWAYS, "ERROR in DedicatedScheduler::generateRequest():"
-				 " %s not defined in machine ClassAd\n", ATTR_MEMORY );
-		return;
-	}
-
-		// Now, we're in good shape.
-
 		// First, generate the request ad itself.
 	req = new ClassAd;
 	req->SetMyTypeName(JOB_ADTYPE);
 	req->SetTargetTypeName(STARTD_ADTYPE);
 
-		// We'll require that we get a machine of the same arch, opsys
-		// and at least as much memory...
-	sprintf( tmp, "%s = (%s == \"%s\") && (%s == \"%s\") && (%s >= %d)", 
-			 ATTR_REQUIREMENTS, ATTR_ARCH, arch, ATTR_OPSYS, opsys, 
-			 ATTR_MEMORY, memory );
-	req->InsertOrUpdate( tmp );
-
-		// But we'll prefer to get the exact machine we were given.
-	sprintf( tmp, "%s = (%s == \"%s\")", ATTR_RANK, ATTR_NAME, namebuf );
+		// We'll require we get the exact machine we were given.
+	sprintf( tmp, "%s = (%s == \"%s\")", ATTR_REQUIREMENTS, ATTR_NAME,
+			 namebuf ); 
 	req->InsertOrUpdate( tmp );
 	
 		// Now, fill in a bunch of stuff about ourself to identify us,
 		// and make it seem like this is a real job...
 	sprintf( tmp, "%s = \"%s\"", ATTR_USER, name() );
+	req->InsertOrUpdate( tmp );
+
+	sprintf( tmp, "%s = \"%s\"", ATTR_SCHEDULER, name() );
 	req->InsertOrUpdate( tmp );
 
 	sprintf( tmp, "%s = \"%s\"", ATTR_OWNER, owner() );
@@ -2855,11 +2829,11 @@ void
 displayRequest( ClassAd* ad, char* str, int debug_level )
 {
 	ExprTree* expr;
-	expr = ad->Lookup( ATTR_RANK );
-	char rank[1024];
-	rank[0] = '\0';
-	expr->PrintToStr( rank );
-	dprintf( debug_level, "%s%s\n", str, rank );
+	expr = ad->Lookup( ATTR_REQUIREMENTS );
+	char req[1024];
+	req[0] = '\0';
+	expr->PrintToStr( req );
+	dprintf( debug_level, "%s%s\n", str, req );
 }
 
 
