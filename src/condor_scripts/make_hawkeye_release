@@ -1,0 +1,94 @@
+#! /s/std/bin/perl -w
+use strict;
+
+# Version info, dirs, etc
+my $HawkeyeVersion = "";
+my $Temp = "../tmp";
+my $HawkeyeDir = "hawkeye_dir";
+my @BinDirs = ( "bin", "sbin" );
+my $Modules = "hawkeye_modules";
+my $ModulesTarget = "modules";
+my $Examples = "condor_examples";
+my $ReleaseDir = "../Hawkeye-Release";
+my $TarBallPat = "$ReleaseDir/Hawkeye-%s.tar.gz";
+
+# Script version, etc
+my $Version = "0.1";
+my $Usage = "$0 version";
+
+# Process command line..
+foreach my $Arg ( @ARGV )
+{
+    # Option (no options supported for now)
+    if ( $Arg =~ /^-/ )
+    {
+	die "$Usage";
+    }
+
+    # Grab the version
+    $HawkeyeVersion = $Arg;
+}
+
+# Make stdout unbufferred...
+$| = 1;
+
+# Version specified?
+die "$Usage" if ( $HawkeyeVersion eq "" );
+
+# Temp better not exist!
+die "$Temp exists" if ( -d $Temp );
+
+# Make the hawkeye release dir
+print "Creating the Hawkeye directory..\n";
+die "Can't make hawkeye!" if ( system( "./condor_scripts/make_hawkeye" ) );
+
+# Make the temp directory...
+die "Can't create $Temp" if ( ! mkdir( $Temp, 0755 ) );
+
+# Let the user know what's going on
+print "\n == Filling temp release directory ==\n\n";
+
+# Start populating it..
+foreach my $Bin ( @BinDirs )
+{
+    CopyAll( "$HawkeyeDir/$Bin", "$Temp/$Bin", "*" );
+}
+
+# Copy the modules
+CopyAll( "$Modules", "$Temp/$ModulesTarget", "*" );
+
+# Copy the example configs
+CopyAll( $Examples, "$Temp", "*hawkeye*" );
+
+# Create the release directory
+mkdir( $ReleaseDir, 0755 ) if ( ! -d $ReleaseDir );
+
+# Finally, make the damn tarball
+my $TarBall = sprintf( $TarBallPat, $HawkeyeVersion );
+print "Creating tarball '$TarBall'...  ";
+system( "gtar --gzip -C $Temp -cf $TarBall ." );
+print "Done\n";
+system( "ls -l $TarBall" );
+
+# Clean up the temp dir
+print "Cleaning up the $Temp directory...\n";
+system( "rm -r $Temp" );
+exit 0;
+
+# Stupid subroutine to copy files
+sub CopyAll()
+{
+    my ( $SrcDir, $DestDir, $FilePat ) = @_;
+    print "Copy '$FilePat' from '$SrcDir' to '$DestDir':\n";
+    if ( ! -d $DestDir )
+    {
+	die "Can't create $DestDir" if ( ! mkdir( "$DestDir", 0755 ) );
+    }
+    my @FileList = split( /\s+/, `cd $SrcDir; /bin/ls -1 $FilePat` );
+    foreach my $File ( @FileList )
+    {
+	next if ( ! -f "$SrcDir/$File" );
+	print "   $SrcDir/$File -> $DestDir\n";
+	system( "/bin/cp $SrcDir/$File $DestDir" );
+    }
+}
