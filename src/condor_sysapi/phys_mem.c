@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "sysapi.h"
+#include "sysapi_externs.h"
  
 #if defined(HPUX)
 
@@ -239,13 +240,14 @@ sysapi_phys_memory_raw(void)
 int
 sysapi_phys_memory(void)
 {
+	int mem;
 	sysapi_internal_reconfig();
-	/* right now, it is an idenity mapping from the raw version */
-	return sysapi_phys_memory_raw();
+	mem = _sysapi_memory;
+	if (!_sysapi_memory) {
+		mem = sysapi_phys_memory_raw();
+	}
+	if (mem < 0) return mem;
+	mem -= _sysapi_reserve_memory;
+	if (mem < 0) return 0;
+	return mem;
 }
-
-
-
-
-
-
