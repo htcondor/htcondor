@@ -28,12 +28,14 @@ BOOL RemoteSysCalls();
 BOOL MappingFileDescriptors();
 int REMOTE_syscall( int syscall_num, ... );
 
+#if 0
 #if defined(AIX32) && defined(__cplusplus)
 	int syscall( ... );
 #elif defined(ULTRIX42) && defined(__cplusplus)
 	int syscall( ... );
 #else
 	int syscall( int, ... );
+#endif
 #endif
 
 
