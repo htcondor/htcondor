@@ -93,6 +93,7 @@ private:
   float HalfLifePeriod;     // The time in sec in which the priority is halved by aging
   MyString LogFileName;      // Name of Log file
   int	MaxAcctLogSize;		// Max size of log file
+  bool   DiscountSuspendedResources;
   StringList *GroupNamesList;
 
   //--------------------------------------------------------
@@ -128,8 +129,8 @@ private:
   //--------------------------------------------------------
 
   static MyString GetResourceName(ClassAd* Resource);
-  static int IsClaimed(ClassAd* ResourceAd, MyString& CustomerName);
-  static int CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& CustomerName);
+  int IsClaimed(ClassAd* ResourceAd, MyString& CustomerName);
+  int CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& CustomerName);
   static ClassAd* FindResourceAd(const MyString& ResourceName, ClassAdList& ResourceList);
   static MyString GetDomain(const MyString& CustomerName);
 
