@@ -47,6 +47,7 @@ int cmd = 0;
 daemonType dt;
 char* pool = NULL;
 int fast = 0;
+int all = 0;
 
 
 // The pure-tools (PureCoverage, Purify, etc) spit out a bunch of
@@ -298,6 +299,7 @@ main( int argc, char *argv[] )
 				}
 				break;
 			case 'a':
+				all = 1;
 				switch( cmd ) {
 				case VACATE_CLAIM:
 					cmd = VACATE_ALL_CLAIMS;
@@ -396,27 +398,40 @@ do_command( char *name )
 	sock.encode();
 	switch(cmd) {
 	case VACATE_CLAIM:
-	case PCKPT_JOB:
-		if( name && *name != '<' && strchr(name, '@')) {
+	case VACATE_ALL_CLAIMS:
+		// if no name is specified, or if name is a sinful string or
+		// hostname, we must send VACATE_ALL_CLAIMS instead
+		if ( !all && name && *name != '<' && strchr(name, '@')) {
+			cmd = VACATE_CLAIM;
 			if( !sock.code(cmd) || !sock.code(name) || !sock.eom() ) {
 				fprintf( stderr, "Can't send %s %s command to %s\n", 
 						 cmd_to_str(cmd), name, daemon_string(dt) );
 				return;
 			}
-			break;
-		}
-		// if no name is specified, or if name is a sinful string, we
-		// must send VACATE_ALL_CLAIMS or PCKPT_ALL_JOBS instead
-		switch(cmd) {
-		case VACATE_CLAIM:
+		} else {
 			cmd = VACATE_ALL_CLAIMS;
-			break;
-		case PCKPT_JOB:
-			cmd = PCKPT_ALL_JOBS;
-			break;
 		}
-		// no break: we fall through to the default case
+		break;
+	case PCKPT_JOB:
+	case PCKPT_ALL_JOBS:
+		// if no name is specified, or if name is a sinful string or
+		// hostname, we must send PCKPT_ALL_JOBS instead
+		if( !all && name && *name != '<' && strchr(name, '@')) {
+			cmd = PCKPT_JOB;
+			if( !sock.code(cmd) || !sock.code(name) || !sock.eom() ) {
+				fprintf( stderr, "Can't send %s %s command to %s\n", 
+						 cmd_to_str(cmd), name, daemon_string(dt) );
+				return;
+			}
+		} else {
+			cmd = PCKPT_ALL_JOBS;
+		}
+		break;
 	default:
+		break;
+	}
+
+	if( cmd != VACATE_CLAIM && cmd != PCKPT_JOB ) {
 		if( !sock.code(cmd) || !sock.eom() ) {
 			fprintf( stderr, "Can't send %s command to %s\n", 
 					 cmd_to_str(cmd), daemon_string(dt) );
