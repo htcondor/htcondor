@@ -20,7 +20,8 @@
 
 #define EventdFiles sbin/condor_eventd etc/examples/condor_config.local.eventd
 
-#define SMPFiles sbin/condor_startd sbin/condor_preen bin/condor_status
+#define SMPFiles sbin/condor_startd sbin/condor_preen bin/condor_status \
+  sbin/condor_vacate sbin/condor_checkpoint
 
 #define SMPContribFiles etc/examples/condor_config.local.smp \
   sbin/condor_starter
