@@ -26,16 +26,7 @@
 **
 */ 
 
-#define _POSIX_SOURCE
-
-#if defined(IRIX62)
-typedef struct fd_set fd_set;
-#endif
-
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <assert.h>
+#include "condor_common.h"
 #include "image.h"
 
 void test_func();
