@@ -16,7 +16,9 @@ IOProxy::IOProxy()
 
 IOProxy::~IOProxy()
 {
-	daemonCore->Cancel_Socket(server);
+	if( daemonCore ) {
+		daemonCore->Cancel_Socket(server);
+	}
 	server->close();
 	delete server;
 	if(cookie) free(cookie);
