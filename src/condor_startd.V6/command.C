@@ -57,14 +57,14 @@ command_handler( Service*, int cmd, Stream* stream )
 		if( (s == claimed_state) || (s == matched_state) ) {
 			return rip->release_claim();
 		} else {
-			log_ignore( cmd, s );
+			rip->log_ignore( cmd, s );
 			return FALSE;
 		}
 	}
 
 		// The rest of these only make sense in claimed state 
 	if( s != claimed_state ) {
-		log_ignore( cmd, s );
+		rip->log_ignore( cmd, s );
 		return FALSE;
 	}
 	switch( cmd ) {
@@ -114,7 +114,7 @@ command_activate_claim( Service*, int, Stream* stream )
 	State s = rip->state();
 	Activity a = rip->activity();
 	if( s != claimed_state || a != idle_act ) {
-		log_ignore( ACTIVATE_CLAIM, s );
+		rip->log_ignore( ACTIVATE_CLAIM, s );
 		stream->end_of_message();
 		reply( stream, NOT_OK );
 		return FALSE;
@@ -209,7 +209,7 @@ command_request_claim( Service*, int, Stream* stream )
 		rval = request_claim( rip, cap, stream );
 		break;
 	default:
-		log_ignore( REQUEST_CLAIM, s );
+		rip->log_ignore( REQUEST_CLAIM, s );
 		rval = FALSE;
 		break;
 	}
@@ -247,7 +247,7 @@ command_match_info( Service*, int, Stream* stream )
 	if( s == claimed_state || s == unclaimed_state ) {
 		rval = match_info( rip, cap );
 	} else {
-		log_ignore( MATCH_INFO, s );
+		rip->log_ignore( MATCH_INFO, s );
 		rval = FALSE;
 	}
 	free( cap );
@@ -522,7 +522,7 @@ accept_request_claim( Resource* rip )
 
 		// Figure out the hostname of our client.
 	if( ! (tmp = sin_to_hostname(stream->endpoint(), NULL)) ) {
-		dprintf( D_ALWAYS, "Can't find hostname of client machine\n");
+		rip->dprintf( D_ALWAYS, "Can't find hostname of client machine\n");
 		ABORT;
 	} 
 	client_host = strdup( tmp );
@@ -530,7 +530,7 @@ accept_request_claim( Resource* rip )
 		// Try to make sure we've got a fully-qualified hostname.
 	full_client_host = get_full_hostname( client_host );
 	if( ! full_client_host ) {
-		dprintf( D_ALWAYS, "Error finding full hostname of %s\n", 
+		rip->dprintf( D_ALWAYS, "Error finding full hostname of %s\n", 
 				 client_host );
 		rip->r_cur->client()->sethost( client_host );
 	} else {
@@ -658,7 +658,6 @@ activate_claim( Resource* rip, Stream* stream )
 		req_classad->fPrint(stdout);
 		fprintf( stdout, "\n" );
 	}
-
 	  
 	rip->dprintf( D_MACHINE, "MACHINE_CLASSAD:\n" );
 	if( DebugFlags & D_MACHINE ) {
@@ -800,9 +799,9 @@ activate_claim( Resource* rip, Stream* stream )
 				 universe );
 	}
 	if( universe == VANILLA ) {
-		rip->dprintf( D_ALWAYS, "Startd using *_VANILLA control params.\n" );
+		rip->dprintf( D_ALWAYS, "Startd using *_VANILLA control expressions.\n" );
 	} else {
-		rip->dprintf( D_ALWAYS, "Startd using standard control params.\n" );
+		rip->dprintf( D_ALWAYS, "Startd using standard control expressions.\n" );
 	}
 	rip->r_cur->setuniverse(universe);
 
@@ -831,7 +830,7 @@ int
 match_info( Resource* rip, char* cap )
 {
 	int rval = FALSE;
-	dprintf(D_ALWAYS, "match_info called\n");
+	rip->dprintf(D_ALWAYS, "match_info called\n");
 
 	if( rip->state() == claimed_state ) {
 		if( rip->r_cur->cap()->matches(cap) ) {
