@@ -960,7 +960,6 @@ void StartConfigServer()
 	}
 
 	newDaemon->StartDaemon();
-	newDaemon->timeStamp = GetTimeStamp(newDaemon->process_name);
 	
 	// sleep for a while because we want the config server to stable down
 	// before doing anything else

@@ -322,7 +322,7 @@ void Daemons::StartAllDaemons()
 	}
 	daemon_ptr[index]->timeStamp = 
 		GetTimeStamp(daemon_ptr[index]->process_name);
-	daemon_ptr[index]->pid       = getpid();
+	daemon_ptr[index]->pid       = daemonCore->getpid();
 
 	for ( int i=0; i < no_daemons; i++) {
 		// create only those processes that exists in this machine
@@ -333,7 +333,6 @@ void Daemons::StartAllDaemons()
 		} 
 		if ( daemon_ptr[i]->flag == FALSE ) continue;
 		daemon_ptr[i]->StartDaemon();
-		daemon_ptr[i]->timeStamp = GetTimeStamp(daemon_ptr[i]->process_name);
 	}
 }
 
@@ -453,6 +452,9 @@ int daemon::StartDaemon()
 	dprintf( D_ALWAYS, "Started \"%s\", pid and pgroup = %d\n",
 		shortname, pid );
 	
+	// update the timestamp so we do not restart accidently a second time
+	timeStamp = GetTimeStamp(process_name);
+
 	return pid;	
 }
 
