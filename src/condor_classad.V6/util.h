@@ -37,11 +37,6 @@ struct abstime_t
 	int    offset; // seconds east of Greenwich 
 };
 
-bool hex_to_double(const std::string &hex, double &number);
-
-// The char buffer must be at least 17 bytes long. 
-void double_to_hex(double number, char *hex);
-
 /* This converts a string so that sequences like \t
  * (two-characters, slash and t) are converted into the 
  * correct characters like tab. It also converts octal sequences. 

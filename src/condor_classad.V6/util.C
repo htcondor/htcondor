@@ -28,40 +28,6 @@ using namespace std;
 
 BEGIN_NAMESPACE( classad )
 
-union RealHexUnion
-{ 
-	double     real; 
-#ifndef WIN32
-	long long  hex; 
-#else
-	__int64 hex;
-#endif
-};
-
-bool hex_to_double(const string &hex, double &number)
-{
-	RealHexUnion  u;
-	bool          success;
-
-	if (sscanf(hex.c_str(), "%llx", &u.hex) != 1) {
-		success = false;
-		number  = 0;
-	} else {
-		number  = u.real;
-		success = true;
-	}
-	return success;
-}
-
-void double_to_hex(double number, char *hex)
-{
-	RealHexUnion u;
-
-	u.real = number;
-	snprintf(hex, 17, "%016llx", u.hex);
-	return;
-}
-
 void convert_escapes(string &text, bool &validStr)
 {
 	char *copy;
