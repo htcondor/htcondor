@@ -54,10 +54,13 @@ and it is located within
 the \File{<release>/lib} directory in the Condor download.
 Its header file  is called \File{lib\_condor\_drmaa.h}, and it is located within
 the \File{<release>/include} directory in the Condor download.
+Also within \File{<release>/include} is the file
+\File{lib\_condor\_drmaa.README},
+which gives further details on the implementation.
 
 Use of the library requires that a
-local \Condor{schedd} daemon  must be running.
-And, the program linked to the library must have
+local \Condor{schedd} daemon  must be running,
+and the program linked to the library must have
 sufficient spool space.
 This space should be in \File{/tmp}
 or specified by the environment variables
