@@ -524,7 +524,6 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     krb5_keytab       keytab = 0;
     int               time, message, rc = FALSE;
     krb5_ticket *     ticket = NULL;
-    char *       name;  
 
     request.data = 0;
     reply.data   = 0;
@@ -1012,6 +1011,7 @@ int Condor_Auth_Kerberos :: init_server_info()
     }
 
     free(name);
+    name = 0;
     krb5_unparse_name(krb_context_, *server, &name);
     dprintf(D_SECURITY, "Server principal is %s\n", name);
 
