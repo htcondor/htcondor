@@ -95,6 +95,7 @@ main_shutdown_fast()
 
 int main_shutdown_graceful() {
     G.CleanUp();
+	unlink( lockFileName ); 
 	DC_Exit( 1 );
     return FALSE;
 }
@@ -106,7 +107,6 @@ int main_shutdown_remove(Service *, int) {
         debug_printf( DEBUG_NORMAL, "Writing Rescue DAG file...\n" );
         G.dag->Rescue(G.rescue_file, G.datafile);
     }
-	unlink( lockFileName ); 
 	main_shutdown_graceful();
 	return FALSE;
 }
@@ -479,7 +479,6 @@ void condor_event_timer () {
             G.dag->RemoveRunningJobs();
             debug_printf( DEBUG_NORMAL, "Writing Rescue DAG file...\n");
             G.dag->Rescue(G.rescue_file, G.datafile);
-			unlink( lockFileName );
 			main_shutdown_graceful();
 			return;
         }
@@ -545,7 +544,6 @@ void condor_event_timer () {
 		else {
 			debug_printf( DEBUG_NORMAL, "Rescue file not defined...\n" );
 		}
-		unlink( lockFileName );
 		main_shutdown_graceful();
     }
 }
@@ -580,7 +578,6 @@ void dap_event_timer () {
             G.dag->RemoveRunningJobs();
             debug_printf( DEBUG_NORMAL, "Writing Rescue DAG file...\n");
             G.dag->Rescue(G.rescue_file, G.datafile);
-			unlink( lockFileName );
 			main_shutdown_graceful();
 			return;
         }
@@ -642,7 +639,6 @@ void dap_event_timer () {
 		else {
 			debug_printf( DEBUG_NORMAL, "Rescue file not defined...\n" );
 		}
-		unlink( lockFileName );
 		main_shutdown_graceful();
     }
 }
