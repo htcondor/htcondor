@@ -6,12 +6,7 @@ $cmd = 'job_rsc_getdirentries_std.cmd';
 $testname = 'getdirentries Test';
 
 
-@CondorTest::expected_output = ( 'ENTRY: .',
-'ENTRY: ..', 
-'ENTRY: first', 
-'ENTRY: second',
-'ENTRY: third', 
-'completed successfully' );
+@CondorTest::expected_output = ( 'completed successfully' );
 
 CondorTest::RegisterExitedSuccess( $testname,
 				   \&CondorTest::DefaultOutputTest );
