@@ -300,8 +300,6 @@ Resource::starter_exited( void )
 	if( ! r_starter ) {
 		EXCEPT( "starter_exited() called with no starter!" );
 	}
-	dprintf( D_ALWAYS, "Starter pid %d has exited.\n",
-			 r_starter->pid() );
 
 		// Now that the starter is gone, we can clear this flag.
 	r_is_deactivating = false;
