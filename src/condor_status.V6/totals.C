@@ -488,7 +488,7 @@ makeTotalObject (ppOption ppo)
 int ClassTotal::
 makeKey (MyString &key, ClassAd *ad, ppOption ppo)
 {
-	char p1[32], p2[32], buf[64];
+	char p1[200], p2[32], buf[64];
 
 	switch (ppo)
 	{
