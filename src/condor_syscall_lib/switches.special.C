@@ -1178,6 +1178,10 @@ sync( void )
 	int rval;
 	pid_t my_pid;	
 
+	/* Always flush buffered data from the file table */
+	_condor_file_table_init();
+	FileTab->flush();
+
 	/* Always want to do a local sync() */
 	SYSCALL( SYS_sync );
 
