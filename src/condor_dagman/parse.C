@@ -10,19 +10,6 @@ static const char   COMMENT    = '#';
 static const char * DELIMITERS = " \t";
 static const int    MAX_LENGTH = 255;
 
-static const unsigned int numSigs = 2;
-
-static const char * SigString[numSigs] = {
-    "### DAGMan 1.0",
-    "### DAGMan 1.1",
-};
-
-enum SigIndex {
-    SigInvalid   = -1,
-    DAGMAN_1_0,
-    DAGMAN_1_1
-};
-
 //-----------------------------------------------------------------------------
 void exampleSyntax (const char * example) {
     debug_println (DEBUG_QUIET, "Example syntax is: %s", example);
@@ -64,8 +51,6 @@ bool parse (char *filename, Dag *dag) {
     int len;
     bool done = false;
 
-    SigIndex   sigIndex  = SigInvalid; // Default invalid signature index
-    
     while (!done && (len = util_getline(fp, line, MAX_LENGTH)) >= 0) {
         lineNumber++;
 
@@ -75,30 +60,6 @@ bool parse (char *filename, Dag *dag) {
         char * endline = line;
         while (*endline != '\0') endline++;
 
-        //
-        //  Detect the Signature line
-        //
-        if (lineNumber == 1) {
-            for (unsigned int i = 0 ; i < numSigs ; i++) {
-                if (!strcmp (line, SigString[i])) {
-                    sigIndex = (SigIndex) i;
-                    break;
-                }
-            }
-            if (sigIndex == SigInvalid) {
-                debug_printf (DEBUG_QUIET,
-                              "First line of %s must be one of the following"
-                              "signatures:\n", filename);
-                for (unsigned int i = 0 ; i < numSigs ; i++) {
-                    printf ("\t%s\n", SigString[i]);
-                }
-                fclose(fp);
-                return false;
-            }
-        }
-
-        assert (sigIndex != SigInvalid);
-      
         if (len == 0) continue;            // Ignore blank lines
         if (line[0] == COMMENT) continue;  // Ignore comments
 
@@ -173,8 +134,7 @@ bool parse (char *filename, Dag *dag) {
         //
         // Example Syntax is:  SCRIPT (PRE|POST) JobName ScriptName Args ...
         //
-        else if (sigIndex == DAGMAN_1_1 &&
-                 strcasecmp(token, "SCRIPT") == 0) {
+        else if ( strcasecmp(token, "SCRIPT") == 0 ) {
             const char * example = "SCRIPT (PRE|POST) JobName Script Args ...";
             Job * job = NULL;
 
@@ -337,10 +297,9 @@ bool parse (char *filename, Dag *dag) {
             //
             // Bad token in the input file
             //
-            debug_println (DEBUG_QUIET,
-                           "%s(%d): Expected JOB %sor PARENT token",
-                           filename, lineNumber,
-                           sigIndex == DAGMAN_1_1 ? ", SCRIPT, " : "");
+            debug_println( DEBUG_QUIET,
+                           "%s(%d): Expected JOB, SCRIPT, or PARENT token",
+                           filename, lineNumber );
             fclose(fp);
             return false;
         }
