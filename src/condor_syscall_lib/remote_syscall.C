@@ -22,20 +22,9 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
  
-
-#define _POSIX_SOURCE
-
-/* Solaris specific change ..dhaval 6/28 */
-#if defined(Solaris)
-#include "_condor_fix_types.h"
-#endif
-
 #include "condor_common.h"
 #include "condor_debug.h"
-#include <stdarg.h>
-#include "condor_fix_assert.h"
 #include "condor_syscall_mode.h"
-#include "condor_constants.h"
 #include "condor_sys.h"
 #include "condor_io.h"
 
