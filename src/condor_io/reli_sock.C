@@ -234,6 +234,50 @@ ReliSock::connect( char	*host, int port, bool non_blocking_flag )
 }
 
 int 
+ReliSock::put_line_raw( char *buffer )
+{
+	int result;
+	int length = strlen(buffer);
+	result = put_bytes_raw(buffer,length);
+	if(result!=length) return -1;
+	result = put_bytes_raw("\n",1);
+	if(result!=1) return -1;
+	return length;
+}
+
+int
+ReliSock::get_line_raw( char *buffer, int length )
+{
+	int total=0;
+	int actual;
+
+	while( length>0 ) {
+		actual = get_bytes_raw(buffer,1);
+		if(actual<=0) break;
+		if(*buffer=='\n') break;
+
+		buffer++;
+		length--;
+		total++;
+	}
+	
+	*buffer = 0;
+	return total;
+}
+
+int 
+ReliSock::put_bytes_raw( char *buffer, int length )
+{
+	return condor_write(_sock,buffer,length,_timeout);
+}
+
+int 
+ReliSock::get_bytes_raw( char *buffer, int length )
+{
+	return condor_read(_sock,buffer,length,_timeout);
+}
+
+int 
 ReliSock::put_bytes_nobuffer( char *buffer, int length, int send_size )
 {
 	int i, result, l_out;
