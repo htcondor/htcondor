@@ -285,7 +285,14 @@ Scheduler::count_jobs()
 	  dprintf (D_ALWAYS, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
-	  sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, Owners[i].Name, UidDomain);
+	  // the nice-owner is not per uid domain, so don't decorate it with
+	  // the "@uidDomain"
+	  if( strcmp( Owners[i].Name, NiceUserName ) == 0 ) {
+		sprintf( tmp, "%s = \"%s\"", ATTR_NAME, NiceUserName );
+	  } else {
+	  	sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, Owners[i].Name, UidDomain);
+	  }
+
 	  dprintf (D_ALWAYS, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
@@ -299,6 +306,7 @@ int
 count( ClassAd *job )
 {
 	int		status;
+	int		niceUser;
 	char 	buf[100];
 	char*	owner;
 	int		cur_hosts;
@@ -326,6 +334,14 @@ count( ClassAd *job )
 		scheduler.JobsIdle += (max_hosts - cur_hosts);
 
 		// Per owner info
+		// (This is actually *submittor* information.  With NiceUser's, the
+		// number of owners is not the same as the number of submittors.  So,
+		// we first check if this job is being submitted by a NiceUser, and
+		// if so, insert it as a new entry in the "Owner" table
+		if( job->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
+			owner = NiceUserName;
+		}
+
 		int OwnerNum = scheduler.insert_owner( owner );
 		scheduler.Owners[OwnerNum].JobsRunning += cur_hosts;
 		scheduler.Owners[OwnerNum].JobsIdle += (max_hosts - cur_hosts);
