@@ -16,6 +16,7 @@
 #define DOES_CHECKPOINTING		YES
 #define DOES_REMOTE_SYSCALLS    YES
 #define DOES_SAVE_SIGSTATE      YES
+#define DO_BENCHMARKING                 YES
 
 #define XLibPath /usr/sup/X11/lib/libX11.a
 #define XExtLibPath /usr/sup/X11/lib/libXext.a
@@ -60,9 +61,9 @@
 #define HAS_PVM					NO
 
 
-#define CCompiler /usr/psup/gcc-2.6.0/bin/gcc
+#define CCompiler /usr/psup/gcc-2.6.3/bin/gcc
 #define StaticFlag -static
-#define CPlusCompiler /usr/psup/gcc-2.6.0/bin/g++
+#define CPlusCompiler /usr/psup/gcc-2.6.3/bin/g++
 #define UnixName /vmunix			/* pathname of the system executable */
 #define syscall_lib syscall_lib_ultrix
 #define PsAllFlag -ax				/* "Ps" flag when you want everything */
