@@ -412,7 +412,7 @@ Starter::exec_starter( char* starter, char* hostname,
 		if( resmgr->is_smp() ) {
 			(void)execl(starter, "condor_starter", hostname, 
 						daemonCore->InfoCommandSinfulString(), 
-						"-l", rip->r_id, 0 );
+						"-a", rip->r_id, 0 );
 		} else {			
 			(void)execl(starter, "condor_starter", hostname, 
 						daemonCore->InfoCommandSinfulString(), 0 );
