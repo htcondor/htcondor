@@ -32,7 +32,7 @@ int command_main(Sock *sock, struct sockaddr_in *from, resource_id_t rid);
 
 static char *_FileName_ = __FILE__;
 
-extern struct sockaddr_in From;
+struct sockaddr_in From;
 extern char *IP;
 extern char *AccountantHost;
 extern char *client;
