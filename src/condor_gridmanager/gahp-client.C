@@ -107,13 +107,16 @@ GahpServer::GahpServer(const char *id, const char *path, const char *args)
 	m_reaperid = -1;
 	m_gahp_readfd = -1;
 	m_gahp_writefd = -1;
+	m_gahp_errorfd = -1;
 	m_reference_count = 0;
 	m_commands_supported = NULL;
 	m_pollInterval = 5;
 	poll_tid = -1;
+	poll_err_tid = -1;
 	max_pending_requests = param_integer( "GRIDMANAGER_MAX_PENDING_REQUESTS", 50 );
 	num_pending_requests = 0;
 	poll_pending = false;
+	poll_err_pending = false;
 	use_prefix = false;
 	requestTable = NULL;
 	current_proxy = NULL;
@@ -546,6 +549,7 @@ GahpServer::Startup()
 	char *gahp_args = NULL;
 	int stdin_pipefds[2];
 	int stdout_pipefds[2];
+	int stderr_pipefds[2];
 	int low_port;
 	int high_port;
 	char *newenv = NULL;
@@ -601,7 +605,8 @@ GahpServer::Startup()
 		// Create two pairs of pipes which we will use to 
 		// communicate with the GAHP server.
 	if ( (daemonCore->Create_Pipe(stdin_pipefds) == FALSE) ||
-		 (daemonCore->Create_Pipe(stdout_pipefds) == FALSE) ) 
+	     (daemonCore->Create_Pipe(stdout_pipefds) == FALSE) ||
+	     (daemonCore->Create_Pipe(stderr_pipefds, TRUE) == FALSE)) 
 	{
 		dprintf(D_ALWAYS,"GahpClient::Initialize - pipe() failed, errno=%d\n",
 			errno);
@@ -614,21 +619,7 @@ GahpServer::Startup()
 	int io_redirect[3];
 	io_redirect[0] = stdin_pipefds[0];	// stdin gets read side of in pipe
 	io_redirect[1] = stdout_pipefds[1]; // stdout get write side of out pipe
-	io_redirect[2] = -1;				// stderr we don't care about
-
-	// we don't care about stderr - on UNIX, set it to /dev/null. On Windows,
-	// leave it set to -1
-#ifndef WIN32
-	if ((io_redirect[2]=open("/dev/null",
-								O_WRONLY|O_CREAT|O_TRUNC,0666)) < 0 ) {
-		// if failed, try again without O_TRUNC
-		if ( (io_redirect[2]=open( "/dev/null", 
-									O_WRONLY | O_CREAT, 0666)) < 0 ) {
-			dprintf(D_ALWAYS,
-				"failed to open stderr file /dev/null, errno %d\n", errno);
-		}
-	}
-#endif
+	io_redirect[2] = stderr_pipefds[1]; // stderr get write side of err pipe
 
 	m_gahp_pid = daemonCore->Create_Process(
 			gahp_path,		// Name of executable
@@ -664,9 +655,9 @@ GahpServer::Startup()
 		// we want to keep in an object data member.
 	daemonCore->Close_Pipe( io_redirect[0] );
 	daemonCore->Close_Pipe( io_redirect[1] );
-	if( io_redirect[2] > -1 ) {
-		close(io_redirect[2]);
-	}
+	daemonCore->Close_Pipe( io_redirect[2] );
+
+	m_gahp_errorfd = stderr_pipefds[0];
 	m_gahp_readfd = stdout_pipefds[0];
 	m_gahp_writefd = stdin_pipefds[1];
 
@@ -708,6 +699,11 @@ GahpServer::Startup()
 		        // temporary kludge to work around gahp server hanging
 		        setPollInterval(m_pollInterval * 12);
 		}
+
+		result = daemonCore->Register_Pipe(m_gahp_errorfd,
+			  "m_gahp_errorfd",(PipeHandlercpp)&GahpServer::err_pipe_ready,
+			   "&GahpServer::err_pipe_ready",this);
+		// If this fails, too fucking bad
 	}
 		
 	return true;
@@ -1130,6 +1126,21 @@ GahpServer::poll_real_soon()
 }
 
 
+void
+GahpServer::poll_err_real_soon()
+{
+	// Poll for results asap via a timer, unless a request
+	// to poll for resuts is already pending.
+	if (!poll_err_pending) {
+		int tid = daemonCore->Register_Timer(0,
+			(TimerHandlercpp)&GahpServer::poll_err,
+			"GahpServer::poll from poll_err_real_soon",this);
+		if ( tid != -1 ) {
+			poll_err_pending = true;
+		}
+	}
+}
+
 int
 GahpServer::pipe_ready()
 {
@@ -1137,6 +1148,14 @@ GahpServer::pipe_ready()
 	poll_real_soon();
 	return TRUE;
 }
+
+int
+GahpServer::err_pipe_ready()
+{
+  poll_err_real_soon();
+  return TRUE;
+}
+
 
 
 bool
@@ -1952,6 +1971,27 @@ GahpClient::get_pending_result(const char *,const char *)
 
 	return r;
 }
+
+int
+GahpServer::poll_err() {
+  MyString errStr;
+  int count = 0;
+
+  char buff[5001];
+  buff[1] = '\0';
+
+  while (((count = (read(m_gahp_errorfd, &buff, 5000))))>0) {
+    buff[count]='\0';
+    errStr += buff;
+  }
+
+  dprintf (D_FULLDEBUG, "Error from gahp (%d):\n-----\n %s \n-----\n", m_gahp_pid, errStr.Value()); 
+
+  poll_err_pending = false;
+
+  return TRUE;
+}
+
 
 int
 GahpServer::poll()

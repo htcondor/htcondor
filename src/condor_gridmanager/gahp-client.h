@@ -95,6 +95,7 @@ class GahpServer : public Service {
 	void write_line(const char *command,int req,const char *args);
 	void Reaper(Service*,int pid,int status);
 	int pipe_ready();
+	int err_pipe_ready();
 
 	void AddGahpClient( GahpClient *client );
 	void RemoveGahpClient( GahpClient *client );
@@ -136,6 +137,10 @@ class GahpServer : public Service {
 
 	void poll_real_soon();
 
+	int poll_err();
+	void poll_err_real_soon();
+
+
 	bool cacheProxyFromFile( GahpProxyInfo *new_proxy );
 	bool uncacheProxy( GahpProxyInfo *gahp_proxy );
 	bool useCachedProxy( GahpProxyInfo *new_proxy, bool force = false );
@@ -164,12 +169,17 @@ class GahpServer : public Service {
 	int m_reaperid;
 	int m_gahp_readfd;
 	int m_gahp_writefd;
+	int m_gahp_errorfd;
 	char m_gahp_version[150];
 	StringList * m_commands_supported;
 	bool use_prefix;
 	unsigned int m_pollInterval;
 	int poll_tid;
 	bool poll_pending;
+
+	int poll_err_tid;
+	bool poll_err_pending;
+
 	int max_pending_requests;
 	int num_pending_requests;
 	GahpProxyInfo *current_proxy;
