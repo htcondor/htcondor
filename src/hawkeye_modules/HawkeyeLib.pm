@@ -4,20 +4,34 @@ use HawkeyePublish;
 
 # Hard config from the command line
 my %HardConfigs;
+my $ModuleName = $0;
+if ( $ModuleName =~ /\/([^\/]+)$/ )
+{
+    $ModuleName = $1;
+}
 
 # Config stuff
-sub DoConfig
+sub DoConfig( );
+sub DoConfig( )
 {
+    $ModuleName = shift( @ARGV) if ( $#ARGV >= 0 );
+
     chop( $ENV{OS_TYPE} = `uname -s` );
     chop( $ENV{OS_REV} = `uname -r` );
 }
 
-# Hard coded / command line config
-sub HardConfig
+# Get my name..
+sub GetModuleName( )
 {
-    my $Module = shift;
+    return $ModuleName;
+}
+
+# Hard coded / command line config
+sub HardConfig( $;$ )
+{
     my $Name = shift;
-    my $Label = "$Module$Name";
+    my $Label = "$ModuleName$Name";
+
     if ( $#_ >= 0 ) {
 	$HardConfigs{$Label} = shift;
     } else {
@@ -25,19 +39,18 @@ sub HardConfig
     }
 }
 
-sub ReadConfig
+sub ReadConfig( $$ )
 {
-    my $Module = shift;
     my $Ext = shift;
     my $Default = shift;
 
     # Get the config
-    my $Label = "$Module$Ext";
+    my $Label = "$ModuleName$Ext";
     my $String;
     if ( exists( $HardConfigs{$Label} )  ) {
 	$String = $HardConfigs{$Label};
     } else {
-	$String = `hawkeye_config_val -startd hawkeye_$Module$Ext`;
+	$String = `hawkeye_config_val -startd hawkeye_$ModuleName$Ext`;
 	$String = "not defined" if ( -1 == $? );
     }
 
@@ -54,7 +67,7 @@ sub ReadConfig
     }
 }
 
-sub ParseUptime
+sub ParseUptime( $$ )
 {
     local $_ = shift;
     my $HashRef = shift;
@@ -98,7 +111,7 @@ sub ParseUptime
     $HashRef->{Load15} = $Fields[11];
 }
 
-sub AddHash
+sub AddHash( $$$$ )
 {
     my $HashRef = shift;
     my $Name = shift;
@@ -111,10 +124,11 @@ sub AddHash
     ${$HashRef}{$Name} = $NewElem;
 }
 
-sub StoreHash
+sub StoreHash( $$ )
 {
     my $Label = shift;
     my $HashRef = shift;
+
     foreach my $Key ( keys %$HashRef )
     {
 	if ( ${$HashRef}{$Key}->{type} =~ /n/i )

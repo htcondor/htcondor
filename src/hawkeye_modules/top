@@ -59,19 +59,20 @@ while( 1 )
 }
 
 sub Init {
+
+    HawkeyeLib::DoConfig( );
+
     # Parse command line args
     foreach my $Arg ( @ARGV )
     {
 	if ( $Arg =~ /^-1$/ ) {
 	    $RunOnce = 1;
 	} elsif ( $Arg =~ /^-c$/ ) {
-	    HawkeyeLib::HardConfig( "top", "_sort" );
-	    HawkeyeLib::HardConfig( "top", "_fields" );
-	    HawkeyeLib::HardConfig( "top", "_time" );
+	    HawkeyeLib::HardConfig( "_sort" );
+	    HawkeyeLib::HardConfig( "_fields" );
+	    HawkeyeLib::HardConfig( "_time" );
 	}
     }
-
-    HawkeyeLib::DoConfig( );
 
     # Setup the hawkeye stuff
     $Hawkeye = HawkeyePublish->new;
@@ -91,9 +92,9 @@ sub Configure {
     ###  15:*
 
     #ReadConfig();
-    my $ConfigStringSort = HawkeyeLib::ReadConfig( "top", "_sort", ":5" );
-    my $ConfigStringFields = HawkeyeLib::ReadConfig( "top", "_fields", "*" );
-    my $ConfigStringTime = HawkeyeLib::ReadConfig( "top", "_time", "30" );
+    my $ConfigStringSort = HawkeyeLib::ReadConfig( "_sort", ":5" );
+    my $ConfigStringFields = HawkeyeLib::ReadConfig( "_fields", "*" );
+    my $ConfigStringTime = HawkeyeLib::ReadConfig( "_time", "30" );
 
     # Check the config time string
     if ( $ConfigStringTime =~ /(\d+)([sSmMhH]?)/ )

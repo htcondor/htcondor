@@ -35,6 +35,9 @@ while( 1 )
 }
 
 sub Init {
+
+    HawkeyeLib::DoConfig( );
+
     # Parse command line args
     foreach my $Arg ( @ARGV )
     {
@@ -44,8 +47,6 @@ sub Init {
 	    HawkeyeLib::HardConfig( "vmstat", "_period" );
 	}
     }
-
-    HawkeyeLib::DoConfig( );
 
     # Setup the hawkeye stuff
     $Hawkeye = HawkeyePublish->new;
@@ -63,9 +64,8 @@ sub Configure {
     ###  10:pid,command
     ###  15:*
 
-    #ReadConfig();
     my $ConfigStringPeriod =
-	HawkeyeLib::ReadConfig( "vmstat", "_period", "30" );
+	HawkeyeLib::ReadConfig( "_period", "30" );
 
     # Check the config time string
     if ( $ConfigStringPeriod =~ /(\d+)([sSmMhH]?)/ )

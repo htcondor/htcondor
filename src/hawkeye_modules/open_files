@@ -87,10 +87,6 @@ sub RunIt
     ### Monitors memory usage
     ###
 
-    # Read my config string
-    my $ConfigString = HawkeyeLib::ReadConfig( "open_files", "", "" );
-
-
 	my %of_info = ();
 	my $of_output = '';
 

@@ -84,7 +84,7 @@ sub RunIt
     ###
 
     # Read my config string
-    my $ConfigString = HawkeyeLib::ReadConfig( "memory_used", "", "" );
+    my $ConfigString = HawkeyeLib::ReadConfig( "", "" );
 
     my %mem_info = ();
     my $mem_output = `$OS->{cmd}`;

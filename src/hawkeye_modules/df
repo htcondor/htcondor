@@ -115,7 +115,7 @@ sub RunIt
     ###
 
     # Read my config string
-    my $ConfigString = HawkeyeLib::ReadConfig( "df", "", "" );
+    my $ConfigString = HawkeyeLib::ReadConfig(  "", "" );
     my @MountPoints = split( /,/, $ConfigString );
 
     ###

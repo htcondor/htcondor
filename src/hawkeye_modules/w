@@ -20,6 +20,8 @@ Init();
 RunIt();
 
 sub Init {
+    HawkeyeLib::DoConfig( );
+
     # Setup the hawkeye stuff
     $Hawkeye = HawkeyePublish->new;
     $Hawkeye->Quiet( 1 );

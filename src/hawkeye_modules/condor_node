@@ -24,6 +24,7 @@ sub Init {
     $Hawkeye = HawkeyePublish->new;
     $Hawkeye->Quiet( 1 );
     $Hawkeye->AutoIndexSet( 1 );
+
 }
 
 # Do the real work here...

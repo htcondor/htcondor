@@ -30,7 +30,6 @@ my $ConfigDoSummary = 1;
 my $ConfigDoRun = 1;
 my $ConfigDoSubmit = 1;
 my $Hash;
-my $ModuleName = "condor_pool";
 
 # Do it
 Init();
@@ -38,31 +37,30 @@ RunIt();
 
 sub Init()
 {
+    HawkeyeLib::DoConfig( );
+
     $Hawkeye = HawkeyePublish->new;
     $Hawkeye->Quiet( 1 );
     $Hawkeye->AutoIndexSet( 0 );
 
-    # Get my name from the command line
-    $ModuleName = shift( @ARGV) if ( $#ARGV >= 0 );
-
     # Read the config info..
     my $Tmp;
-    $Tmp = HawkeyeLib::ReadConfig( $ModuleName, "_cluster", "true" );
+    $Tmp = HawkeyeLib::ReadConfig( "_cluster", "true" );
     $ConfigCluster = " -cluster" if ( $Tmp =~ /true/i );
 
-    $Tmp = HawkeyeLib::ReadConfig( $ModuleName, "_reserved", "true" );
+    $Tmp = HawkeyeLib::ReadConfig( "_reserved", "true" );
     $ConfigReserved = " -reserved" if ( $Tmp =~ /true/i );
 
-    $Tmp = HawkeyeLib::ReadConfig( $ModuleName, "_absent", "true" );
+    $Tmp = HawkeyeLib::ReadConfig( "_absent", "true" );
     $ConfigDoAbsent = ( $Tmp =~ /true/i ) ? 1 : 0;
 
-    $Tmp = HawkeyeLib::ReadConfig( $ModuleName, "_summary", "true" );
+    $Tmp = HawkeyeLib::ReadConfig( "_summary", "true" );
     $ConfigDoSummary = ( $Tmp =~ /true/i ) ? 1 : 0;
 
-    $Tmp = HawkeyeLib::ReadConfig( $ModuleName, "_run", "true" );
+    $Tmp = HawkeyeLib::ReadConfig( "_run", "true" );
     $ConfigDoRun = ( $Tmp =~ /true/i ) ? 1 : 0;
 
-    $Tmp = HawkeyeLib::ReadConfig( $ModuleName, "_submit", "true" );
+    $Tmp = HawkeyeLib::ReadConfig( "_submit", "true" );
     $ConfigDoSubmit = ( $Tmp =~ /true/i ) ? 1 : 0;
 
     # Finally, parse the command line...

@@ -20,9 +20,8 @@ sub RunIt( );
 # Setup the hawkeye stuff
 my $Hawkeye;
 my $Hash;
-my $ModuleName = "test";
 my @Params = "";
-my $CmdLine = join( " ", @ARGV );
+my $CmdLine = join( " ", $0, @ARGV );
 
 # Do it
 Init();
@@ -30,19 +29,18 @@ RunIt();
 
 sub Init()
 {
+    HawkeyeLib::DoConfig( );
+
     $Hawkeye = HawkeyePublish->new;
     $Hawkeye->Quiet( 1 );
     $Hawkeye->AutoIndexSet( 1 );
 
-    # Get my name from the command line
-    $ModuleName = shift( @ARGV) if ( $#ARGV >= 0 );
-
     # Read the config info..
-    $Params[0] = HawkeyeLib::ReadConfig( $ModuleName, "_Param0", "true" );
-    $Params[1] = HawkeyeLib::ReadConfig( $ModuleName, "_Param1", "xyzzy" );
-    $Params[2] = HawkeyeLib::ReadConfig( $ModuleName, "_Param2", 1 );
-    $Params[3] = HawkeyeLib::ReadConfig( $ModuleName, "_Param3", "/bin/echo");
-    $Params[4] = HawkeyeLib::ReadConfig( $ModuleName, "_Param4", 0 );
+    $Params[0] = HawkeyeLib::ReadConfig( "_Param0", "true" );
+    $Params[1] = HawkeyeLib::ReadConfig( "_Param1", "xyzzy" );
+    $Params[2] = HawkeyeLib::ReadConfig( "_Param2", 1 );
+    $Params[3] = HawkeyeLib::ReadConfig( "_Param3", "/bin/echo");
+    $Params[4] = HawkeyeLib::ReadConfig( "_Param4", 0 );
 
     # Finally, parse the command line...
     foreach my $Arg ( @ARGV )
@@ -72,7 +70,7 @@ sub RunIt()
     $Hash = HawkeyeHash->new( \$Hawkeye, "" );
 
     $Hash->Add( "CmdLine", "s", $CmdLine );
-    $Hash->Add( "ModuleName", "s", $ModuleName );
+    $Hash->Add( "ModuleName", "s", HawkeyeLib::GetModuleName() );
 
     foreach my $Num ( 0 .. $#Params )
     {
