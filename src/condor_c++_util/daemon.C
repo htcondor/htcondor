@@ -351,6 +351,21 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 		_is_auth_cap = (cmpres <= 0);
 	}
 
+	paramer = param("DISABLE_AUTH_NEGOTIATION");
+	if (paramer) {
+		dprintf (D_SECURITY, "STARTCOMMAND: param(DISABLE_AUTH_NEGOTIATION)"
+					" == %s\n", paramer);
+		if ((stricmp(paramer, "YES") == 0) ||
+		    (stricmp(paramer, "TRUE") == 0)) {
+			dprintf ( D_SECURITY, "STARTCOMMAND: "
+					      "disabling negotiationg for authentication.\n");
+			_auth_cap_known = true;
+			_is_auth_cap = false;
+		}
+		free(paramer);
+	}
+
+
 
 	// possible courses of action:
 	const int AUTH_FAIL = 0;
@@ -399,7 +414,7 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 
 		// just code the command and be done
 		sock->code(cmd);
-		free(paramer);
+		sock->end_of_message();
 		return sock;
 	}
 
