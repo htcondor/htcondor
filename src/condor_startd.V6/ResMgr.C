@@ -23,7 +23,7 @@
 
 #include "condor_common.h"
 #include "startd.h"
-#include "classad_merge.h"
+//#include "classad_merge.h"
 
 // Instantiate the Named Class Ad list
 template class SimpleList<NamedClassAd*>;
@@ -937,7 +937,8 @@ ResMgr::adlist_publish( ClassAd *resAd, amask_t mask )
 		if ( NULL != ad ) {
 			dprintf( D_FULLDEBUG,
 					 "Publishing ClassAd for '%s'\n", cur->GetName() );
-			MergeClassAds( resAd, ad, true );
+//			MergeClassAds( resAd, ad, true );
+			resAd->Update( *ad );
 		}
 	}
 
