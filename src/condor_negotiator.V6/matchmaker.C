@@ -131,7 +131,6 @@ reinitialize ()
 		if( Parse(tmp, PreemptionHold) ) {
 			EXCEPT ("Error parsing PREEMPTION_HOLD expression: %s", tmp);
 		}
-		free( tmp );
 	}
 
 	dprintf (D_ALWAYS,"ACCOUNTANT_HOST     = %s\n", AccountantHost ? 
@@ -139,6 +138,8 @@ reinitialize ()
 	dprintf (D_ALWAYS,"NEGOTIATOR_INTERVAL = %d sec\n",NegotiatorInterval);
 	dprintf (D_ALWAYS,"NEGOTIATOR_TIMEOUT  = %d sec\n",NegotiatorTimeout);
 	dprintf (D_ALWAYS,"PREEMPTION_HOLD     = %s\n", (tmp?tmp:"None"));
+
+	if( tmp ) free( tmp );
 
 	// done
 	return TRUE;
