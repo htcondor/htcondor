@@ -313,11 +313,13 @@ pseudo_or_extract
 		{
 		Trace( "pseudo_or_extract (2)" );
 		IsExtracted = TRUE;
+		DoSysChk = FALSE;
 		}
 	|  DL_EXTRACT
 		{
 		Trace( "pseudo_or_extract (3)" );
 		IsDLExtracted = TRUE;
+		DoSysChk = FALSE;
 		}
 	|  NO_SYS_CHK
 		{
