@@ -181,13 +181,13 @@ int
 my_spawnl( const char* cmd, int wait_for_child, ... )
 {
 	int		rval;
+	int		argno = 0;
 
     va_list va;
 	const char * argv[MAXARGS + 1];
 
 	/* Convert the args list into an argv array */
     va_start( va, wait_for_child );
-	int argno = 0;
 	for( argno = 0;  argno < MAXARGS;  argno++ ) {
 		const char	*p;
 		p = va_arg( va, const char * );
@@ -200,8 +200,7 @@ my_spawnl( const char* cmd, int wait_for_child, ... )
     va_end( va );
 
 	/* Invoke the real spawnl to do the work */
-	char *const *argvtmp = (char * const *)argv;
-    rval = my_spawnv( cmd, wait_for_child, argvtmp );
+    rval = my_spawnv( cmd, wait_for_child, (char *const*) argv );
 
 	/* Done */
 	return rval;
@@ -226,7 +225,8 @@ my_spawnl( const char* cmd, int wait_for_child, ... )
 int
 my_spawnv( const char* cmd, int wait_for_child, char *const argv[] )
 {
-	struct sigaction act;
+	struct sigaction	act;
+	int					status;
 
 		/* Use ChildPid as a simple semaphore-like lock */
 	if ( ChildPid ) {
@@ -268,7 +268,6 @@ my_spawnv( const char* cmd, int wait_for_child, char *const argv[] )
 	}
 
 		/* Wait for child process to exit and get its status */
-	int		status;
 	while( waitpid(ChildPid,&status,0) < 0 ) {
 		if( errno != EINTR ) {
 			status = -1;
