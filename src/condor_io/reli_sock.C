@@ -492,33 +492,44 @@ int
 ReliSock::put_file(const char *source)
 {
 	int fd;
+	int result;
+
+#if defined(WIN32)
+	if ((fd = ::open(source, O_RDONLY | _O_BINARY | _O_SEQUENTIAL, 0)) < 0)
+#else
+	if ((fd = ::open(source, O_RDONLY, 0)) < 0)
+#endif
+	{
+		dprintf(D_ALWAYS, "ReliSock: put_file: Failed to open file %s, errno = %d.\n", source, errno);
+		return -1;
+	}
+
+	result = put_file(fd);
+
+	if (::close(fd) < 0) {
+		dprintf(D_ALWAYS, "ReliSock: put_file: close failed, errno = %d\n", errno);
+		return -1;
+	}
+
+	return result;
+}
+
+int
+ReliSock::put_file( int fd )
+{
 	struct stat filestat;
 	unsigned int filesize;
 	unsigned int eom_num = 666;
 	unsigned int total = 0;
 
-#if defined(WIN32)
-	if ((fd = ::open(source, O_RDONLY | _O_BINARY | _O_SEQUENTIAL, 0)) < 0)
-#else
-	char buf[65536];
-	int nbytes, nrd;
-	if ((fd = ::open(source, O_RDONLY, 0)) < 0)
-#endif
-	{
-		dprintf(D_ALWAYS, "Failed to open file %s, errno = %d.\n", source, errno);
-		return -1;
-	}
-
 	if (::fstat(fd, &filestat) < 0) {
-		dprintf(D_ALWAYS, "fstat of %s failed\n", source);
-		::close(fd);
+		dprintf(D_ALWAYS, "ReliSock: put_file: fstat failed\n");
 		return -1;
 	}
 
 	filesize = filestat.st_size;
 	if ( !put(filesize) || !end_of_message() ) {
-		dprintf(D_ALWAYS, "Failed to send filesize in ReliSock::put_file\n");
-		::close(fd);
+		dprintf(D_ALWAYS, "ReliSock: put_file: Failed to send filesize.\n");
 		return -1;
 	}
 	
@@ -527,8 +538,7 @@ ReliSock::put_file(const char *source)
 #if defined(WIN32)
 	// First drain outgoing buffers
 	if ( !prepare_for_nobuffering(stream_encode) ) {
-		dprintf(D_ALWAYS,"Relisock::put_file() failed to drain buffers!\n");
-		::close(fd);
+		dprintf(D_ALWAYS,"ReliSock: put_file: failed to drain buffers!\n");
 		return -1;
 	}
 
@@ -536,28 +546,27 @@ ReliSock::put_file(const char *source)
 	// Only transfer if filesize > 0.
 	if ( (filesize > 0) && (TransmitFile(_sock,(HANDLE)_get_osfhandle(fd),
 			filesize,0,NULL,NULL,0) == FALSE) ) {
-		dprintf(D_ALWAYS,"put_file: TransmitFile() failed, errno=%d\n",
+		dprintf(D_ALWAYS,"ReliSock: put_file: TransmitFile() failed, errno=%d\n",
 			GetLastError() );
-		::close(fd);
 		return -1;
 	} else {
 		total = filesize;
 	}
 #else
+	char buf[65536];
+	int nbytes, nrd;
+
 	// On Unix, send file using put_bytes_nobuffer()
 	while (total < filestat.st_size &&
 		(nrd = ::read(fd, buf, sizeof(buf))) > 0) {
-		// dprintf(D_FULLDEBUG, "read %d bytes\n", nrd);
 		if ((nbytes = put_bytes_nobuffer(buf, nrd, 0)) < nrd) {
-			dprintf(D_ALWAYS, "failed to put %d bytes in ReliSock::put_file "
+			dprintf(D_ALWAYS, "ReliSock: put_file: failed to put %d bytes "
 				"(only wrote %d)\n", nrd, nbytes);
-			::close(fd);
 			return -1;
 		}
-		// dprintf(D_FULLDEBUG, "wrote %d bytes\n", nbytes);
 		total += nbytes;
 	}
-	dprintf(D_FULLDEBUG, "done with transfer (errno = %d)\n", errno);
+	dprintf(D_FULLDEBUG, "ReliSock: put_file: done with transfer (errno = %d)\n", errno);
 #endif
 	
 	} // end of if filesize > 0
@@ -566,15 +575,10 @@ ReliSock::put_file(const char *source)
 		put(eom_num);
 	}
 
-	dprintf(D_FULLDEBUG, "sent file %s (%d bytes)\n", source, total);
-
-	if (::close(fd) < 0) {
-		dprintf(D_ALWAYS, "close failed in ReliSock::put_file, errno = %d\n", errno);
-		return -1;
-	}
+	dprintf(D_FULLDEBUG, "ReliSock: put_file: sent %d bytes\n", total);
 
 	if (total < (int)filesize) {
-		dprintf(D_ALWAYS,"put_file(): ERROR, only sent %d bytes out of %d\n",
+		dprintf(D_ALWAYS,"ReliSock: put_file: only sent %d bytes out of %d\n",
 			total, filesize);
 		return -1;
 	}

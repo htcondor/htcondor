@@ -110,6 +110,8 @@ public:
 	int get_file(int fd, bool flush_buffers=false);
     /// returns -1 on failure, else number of bytes transferred
 	int put_file(const char *source);
+    /// returns -1 on failure, else number of bytes transferred
+	int put_file( int fd );
     ///
 	float get_bytes_sent() { return _bytes_sent; }
     ///
