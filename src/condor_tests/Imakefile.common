@@ -4,6 +4,21 @@
 
 CONDOR_COMPILE_FLAGS = $(LIB_DIR) $(LD_DIR) 
 
+
+
+/***************************************************
+* Test "Class" declarations
+***************************************************/
+
+TESTCLASS_DECL(quick)
+TESTCLASS_DECL(critical)
+TESTCLASS_DECL(long)
+
+
+/***************************************************
+* Special-case rules for building helpers, etc.
+***************************************************/
+
 all:: run_list
 
 clean::
