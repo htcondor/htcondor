@@ -37,6 +37,11 @@
  *************************************************************************
  */
 
+#ifdef WIN32
+/* Get rid of warnings; we cannot change this code */
+#pragma warning( disable: 4033 4305 4013 4101 4013 4716 )
+#endif
+
 #include "dhry.h"
 
 #ifndef REG

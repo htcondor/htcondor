@@ -39,6 +39,12 @@ To obtain unrolled source BLAS, add -DUNROLL to the command lines.
 PLEASE NOTE: You can also just 'uncomment' one of the options below.
 */
 
+
+#ifdef WIN32
+/* Get rid of warnings; we cannot change this code */
+#pragma warning( disable: 4033 4305 4013 4101 4013 4716 )
+#endif
+
 /* #define SP     */
 #define DP
 /* #define ROLL   */
