@@ -43,7 +43,7 @@ static int reserve_for_afs_cache();
 #include <limits.h>
 
 int
-sysapi_diskspace_raw(const char *filename)
+sysapi_disk_space_raw(const char *filename)
 {
 	ULARGE_INTEGER FreeBytesAvailableToCaller, TotalNumberOfBytes, TotalNumberOfFreeBytes;
 
@@ -157,14 +157,14 @@ reserve_for_fs()
 
 
 #if defined(__STDC__)
-int sysapi_diskspace_raw( const char *filename);
+int sysapi_disk_space_raw( const char *filename);
 #else
-int sysapi_diskspace_raw();
+int sysapi_disk_space_raw();
 #endif
 
 #if defined(ULTRIX42) || defined(ULTRIX43)
 int
-sysapi_diskspace_raw(filename)
+sysapi_disk_space_raw(filename)
 const char *filename;
 {
 	struct fs_data statfsbuf;
@@ -174,7 +174,7 @@ const char *filename;
 	sysapi_internal_reconfig();
 
 	if(statfs(filename, &statfsbuf) < 0) {
-		dprintf(D_ALWAYS, "sysapi_diskspace_raw: statfs(%s,0x%x) failed\n",
+		dprintf(D_ALWAYS, "sysapi_disk_space_raw: statfs(%s,0x%x) failed\n",
 													filename, &statfsbuf );
 		return(LOTS_OF_FREE);
 	}
@@ -194,7 +194,7 @@ const char *filename;
 #if defined(VAX) && defined(ULTRIX)
 /* statfs() did not work on our VAX_ULTRIX machine.  use getmnt() instead. */
 int
-sysapi_diskspace_raw(filename)
+sysapi_disk_space_raw(filename)
 char *filename;
 {
 	struct fs_data mntdata;
@@ -205,7 +205,7 @@ char *filename;
 	sysapi_internal_reconfig();
 
 	if( getmnt(&start, &mntdata, sizeof(mntdata), NOSTAT_ONE, filename) < 0) {
-		dprintf(D_ALWAYS, "sysapi_diskspace_raw(): getmnt failed");
+		dprintf(D_ALWAYS, "sysapi_disk_space_raw(): getmnt failed");
 		return(LOTS_OF_FREE);
 	}
 	
@@ -239,7 +239,7 @@ char *filename;
 #endif
 
 int
-sysapi_diskspace_raw(filename)
+sysapi_disk_space_raw(filename)
 const char *filename;
 {
 #if defined(Solaris)
@@ -261,7 +261,7 @@ const char *filename;
 #else
 	if(statfs(filename, &statfsbuf) < 0) {
 #endif
-		dprintf(D_ALWAYS, "sysapi_diskspace_raw: statfs(%s,0x%x) failed\n",
+		dprintf(D_ALWAYS, "sysapi_disk_space_raw: statfs(%s,0x%x) failed\n",
 													filename, &statfsbuf );
 		dprintf(D_ALWAYS, "errno = %d\n", errno );
 		return(LOTS_OF_FREE);
@@ -286,8 +286,8 @@ const char *filename;
 		return(LOTS_OF_FREE);
 	}
 
-	dprintf(D_FULLDEBUG, "number of kbytes available for (%s): %d\n", 
-			filename, (int)free_kbytes);
+	dprintf(D_FULLDEBUG, "number of kbytes available for (%s): %f\n", 
+			filename, free_kbytes);
 
 	return (int)free_kbytes;
 }
@@ -308,21 +308,21 @@ const char *filename;
   implementation would check whether the filesystem being asked about
   is the one containing the cache.  This is messy to do if the
   filesystem name we are given isn't a full pathname, e.g.
-  sysapi_diskspace("."), which is why it isn't implemented here. -- mike
+  sysapi_disk_space("."), which is why it isn't implemented here. -- mike
 
 */
 int
-sysapi_diskspace(const char *filename)
+sysapi_disk_space(const char *filename)
 {
 
 #if defined(WIN32)
 	sysapi_internal_reconfig();
 	/* XXX fixme, this might not be right */
-	return sysapi_diskspace_raw(filename);
+	return sysapi_disk_space_raw(filename);
 #else
 	int		answer;
 	sysapi_internal_reconfig();
-	answer =  sysapi_diskspace_raw(filename)
+	answer =  sysapi_disk_space_raw(filename)
 			- reserve_for_afs_cache()
 			- reserve_for_fs();
 	return answer < 0 ? 0 : answer;
