@@ -1102,7 +1102,6 @@ void MirrorJob::ProcessRemoteAdActive( ClassAd *remote_ad )
 
 	diff_ad->Delete( ATTR_CLUSTER_ID );
 	diff_ad->Delete( ATTR_PROC_ID );
-	diff_ad->Delete( ATTR_MIRROR_JOB );
 	diff_ad->Delete( ATTR_MIRROR_ACTIVE );
 	diff_ad->Delete( ATTR_MIRROR_RELEASED );
 	diff_ad->Delete( ATTR_MIRROR_SCHEDD );
@@ -1174,7 +1173,6 @@ ClassAd *MirrorJob::buildSubmitAd()
 
 	submit_ad->Delete( ATTR_CLUSTER_ID );
 	submit_ad->Delete( ATTR_PROC_ID );
-	submit_ad->Delete( ATTR_MIRROR_JOB );
 	submit_ad->Delete( ATTR_MIRROR_REMOTE_LEASE_TIME );
 	submit_ad->Delete( ATTR_MIRROR_ACTIVE );
 	submit_ad->Delete( ATTR_MIRROR_RELEASED );
