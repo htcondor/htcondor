@@ -37,7 +37,7 @@ static bool submit_try (const char *exe,
   
   FILE * fp = popen(command, "r");
   if (fp == NULL) {
-    debug_println (DEBUG_QUIET, "%s: popen() failed!", command);
+    debug_printf( DEBUG_QUIET, "%s: popen() failed!\n", command);
     return false;
   }
   
@@ -70,18 +70,13 @@ static bool submit_try (const char *exe,
   {
     int status = pclose(fp);
     if (status == -1) {
-      perror (command);
+		debug_error( 1, DEBUG_QUIET, "%s: pclose() failed!\n", command );
       return false;
     }
   }
 
   if (1 == sscanf(buffer, "1 job(s) submitted to cluster %d",
                   & condorID._cluster)) {
-//    if (DEBUG_LEVEL(DEBUG_DEBUG_2)) {
-//      printf ("%s assigned condorID ", exe);
-//      condorID.Print();
-//      putchar('\n');
-//    }
   }
   
   return true;
@@ -110,9 +105,8 @@ submit_submit( const char* cmdFile, CondorID& condorID,
   cmdLen = strlen( exe ) + strlen( prependLines ) + strlen( cmdFile ) + 16;
   command = new char[cmdLen];
   if (command == NULL) {
-	  printf( "\nERROR: out of memory (%s() in %s:%d)!\n", __FUNCTION__,
-			  __FILE__, __LINE__ );
-	  return false;
+	  debug_error( 1, DEBUG_SILENT, "\nERROR: out of memory (%s:%d)!\n",
+				   __FILE__, __LINE__ );
   }
 
   // we use 2>&1 to make sure we get both stdout and stderr from command
@@ -124,7 +118,7 @@ submit_submit( const char* cmdFile, CondorID& condorID,
   
   success = submit_try( exe, command, condorID );
   for (int i = 1 ; i < tries && !success ; i++) {
-      debug_println( DEBUG_NORMAL, "condor_submit try %d/%d failed, "
+      debug_printf( DEBUG_NORMAL, "condor_submit try %d/%d failed, \n"
                      "will try again in %d second%s", i, tries, wait,
 					 wait == 1 ? "" : "s" );
       sleep( wait );
@@ -132,9 +126,9 @@ submit_submit( const char* cmdFile, CondorID& condorID,
 	  wait = wait * 2;
   }
   if (!success && DEBUG_LEVEL(DEBUG_QUIET)) {
-    printf( "condor_submit failed after %d tr%s.\n", tries,
+    dprintf( D_ALWAYS, "condor_submit failed after %d tr%s.\n", tries,
 			tries == 1 ? "y" : "ies" );
-    printf("submit command was: %s\n", command );
+    dprintf( D_ALWAYS, "submit command was: %s\n", command );
 	delete[] command;
 	return false;
   }

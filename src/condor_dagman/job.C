@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "job.h"
 #include "condor_string.h"
+#include "condor_debug.h"
 
 //---------------------------------------------------------------------------
 JobID_t Job::_jobID_counter = 0;  // Initialize the static data memeber
@@ -83,44 +84,50 @@ bool Job::Remove (const queue_t queue, const JobID_t jobID) {
 
 //---------------------------------------------------------------------------
 void Job::Dump () const {
-    printf ("Job -------------------------------------\n");
-    printf ("          JobID: %d\n", _jobID);
-    printf ("       Job Name: %s\n", _jobName);
-    printf ("     Job Status: %s\n", status_t_names[_Status]);
+    dprintf( D_ALWAYS, "---------------------- Job ----------------------\n");
+    dprintf( D_ALWAYS, "      Node Name: %s\n", _jobName );
+    dprintf( D_ALWAYS, "         NodeID: %d\n", _jobID );
+    dprintf( D_ALWAYS, "    Node Status: %s\n", status_t_names[_Status] );
 	if( _Status == STATUS_ERROR ) {
-		printf( "          Error: %s\n", error_text ? error_text : "unknown" );
+		dprintf( D_ALWAYS, "          Error: %s\n",
+				 error_text ? error_text : "unknown" );
 	}
-    printf ("       Cmd File: %s\n", _cmdFile);
+    dprintf( D_ALWAYS, "Job Submit File: %s\n", _cmdFile );
 	if( _scriptPre ) {
-		printf( "     PRE Script: %s\n", _scriptPre->GetCmd() );
+		dprintf( D_ALWAYS, "     PRE Script: %s\n", _scriptPre->GetCmd() );
 	}
 	if( _scriptPost ) {
-		printf( "    POST Script: %s\n", _scriptPost->GetCmd() );
+		dprintf( D_ALWAYS, "    POST Script: %s\n", _scriptPost->GetCmd() );
 	}
-    printf ("      Condor ID: ");
-    _CondorID.Print();
-    putchar('\n');
+	if( _CondorID._cluster == -1 ) {
+		dprintf( D_ALWAYS, "  Condor Job ID: (not yet submitted)\n" );
+	} else {
+		dprintf( D_ALWAYS, "  Condor Job ID: (%d.%d.%d)\n", _CondorID._cluster,
+				 _CondorID._proc, _CondorID._subproc );
+	}
   
     for (int i = 0 ; i < 3 ; i++) {
-        printf ("%15s: ", queue_t_names[i]);
+        dprintf( D_ALWAYS, "%15s: ", queue_t_names[i] );
         SimpleListIterator<JobID_t> iList (_queues[i]);
         JobID_t jobID;
-        while (iList.Next(jobID)) printf ("%d, ", jobID);
-        printf ("<END>\n");
+        while( iList.Next( jobID ) ) {
+			dprintf( D_ALWAYS | D_NOHEADER, "%d, ", jobID );
+		}
+        dprintf( D_ALWAYS | D_NOHEADER, "<END>\n" );
     }
 }
 
 //---------------------------------------------------------------------------
 void Job::Print (bool condorID) const {
-    printf ("ID: %4d Name: %s", _jobID, _jobName);
+    dprintf( D_ALWAYS, "ID: %4d Name: %s", _jobID, _jobName);
     if (condorID) {
-        printf ("  CondorID: ");
-        _CondorID.Print();
+        dprintf( D_ALWAYS, "  CondorID: (%d.%d.%d)", _CondorID._cluster,
+				 _CondorID._proc, _CondorID._subproc );
     }
 }
 
 //---------------------------------------------------------------------------
 void job_print (Job * job, bool condorID) {
-    if (job == NULL) printf ("(UNKNOWN)");
+    if (job == NULL) dprintf( D_ALWAYS, "(UNKNOWN)");
     else job->Print(condorID);
 }

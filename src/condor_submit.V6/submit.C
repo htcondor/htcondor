@@ -2805,9 +2805,8 @@ usage()
 	fprintf( stderr, 
 			 "	-r schedd_name\tsubmit to the specified remote schedd\n" );
 	fprintf( stderr,
-			 "	-a line\tadd line to submit file before processing\n"
-			 "         \t(overrides lines in the submit file;"
-			 "         \t multiple -a arguments are supported)" );
+			 "	-a line       \tadd line to submit file before processing\n"
+			 "                \t(overrides submit file; multiple -a lines ok)\n" );
 	fprintf( stderr, "	-d\t\tdisable file permission checks\n\n" );
 	fprintf( stderr, "	If [cmdfile] is omitted, input is read from stdin\n" );
 	exit( 1 );

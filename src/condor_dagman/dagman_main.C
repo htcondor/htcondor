@@ -64,7 +64,7 @@ Global G;
 
 //---------------------------------------------------------------------------
 static void Usage() {
-    printf ("\nUsage: condor_dagman -f -t -l .\n"
+    debug_printf( DEBUG_SILENT, "\nUsage: condor_dagman -f -t -l .\n"
             "\t\t[-Debug <level>]\n"
             "\t\t-Condorlog <NAME.dag.condor.log>\n"
             "\t\t-Lockfile <NAME.dag.lock>\n"
@@ -85,7 +85,7 @@ static void Usage() {
 void touch (const char * filename) {
     int fd = open(filename, O_RDWR | O_CREAT, 0600);
     if (fd == -1) {
-        debug_perror (1, DEBUG_QUIET, filename);
+        debug_error( 1, DEBUG_QUIET, "Error: can't open %s\n", filename );
     }
     close (fd);
 }
@@ -112,10 +112,10 @@ int main_shutdown_graceful() {
 }
 
 int main_shutdown_remove(Service *, int) {
-    debug_println (DEBUG_NORMAL, "Received SIGUSR1, removing running jobs");
+    debug_printf( DEBUG_NORMAL, "Received SIGUSR1, removing running jobs\n" );
     G.dag->RemoveRunningJobs();
     if (G.rescue_file != NULL) {
-        debug_println (DEBUG_NORMAL, "Writing Rescue DAG file...");
+        debug_printf( DEBUG_NORMAL, "Writing Rescue DAG file...\n" );
         G.dag->Rescue(G.rescue_file, G.datafile);
     }
 	unlink( lockFileName ); 
@@ -142,7 +142,7 @@ int main_init (int argc, char **argv) {
     char *condorLogName  = NULL;
 
     for (int i = 0 ; i < argc ; i++) {
-        printf ("argv[%d] == \"%s\"\n", i, argv[i]);
+        debug_printf( DEBUG_NORMAL, "argv[%d] == \"%s\"\n", i, argv[i] );
     }
   
     if (argc < 2) Usage();  //  Make sure an input file was specified
@@ -160,21 +160,21 @@ int main_init (int argc, char **argv) {
         if (!strcmp("-Debug", argv[i])) {
             i++;
             if (argc <= i) {
-                debug_println (DEBUG_SILENT, "No debug level specified");
+                debug_printf( DEBUG_SILENT, "No debug level specified\n" );
                 Usage();
             }
             debug_level = (debug_level_t) atoi (argv[i]);
         } else if (!strcmp("-Condorlog", argv[i])) {
             i++;
             if (argc <= i) {
-                debug_println (DEBUG_SILENT, "No condor log specified");
+                debug_printf( DEBUG_SILENT, "No condor log specified" );
                 Usage();
             }
             condorLogName = argv[i];
         } else if (!strcmp("-Lockfile", argv[i])) {
             i++;
             if (argc <= i) {
-                debug_println (DEBUG_SILENT, "No DagMan lockfile specified");
+                debug_printf( DEBUG_SILENT, "No DagMan lockfile specified\n" );
                 Usage();
             }
             lockFileName = argv[i];
@@ -183,41 +183,42 @@ int main_init (int argc, char **argv) {
         } else if (!strcmp("-Dag", argv[i])) {
             i++;
             if (argc <= i) {
-                debug_println (DEBUG_SILENT, "No DAG specified");
+                debug_printf( DEBUG_SILENT, "No DAG specified\n" );
                 Usage();
             }
             G.datafile = argv[i];
         } else if (!strcmp("-Rescue", argv[i])) {
             i++;
             if (argc <= i) {
-                debug_println (DEBUG_SILENT, "No Rescue DAG specified");
+                debug_printf( DEBUG_SILENT, "No Rescue DAG specified\n" );
                 Usage();
             }
             G.rescue_file = argv[i];
         } else if (!strcmp("-MaxJobs", argv[i])) {
             i++;
             if (argc <= i) {
-                debug_println (DEBUG_SILENT, "Integer missing after -MaxJobs");
+                debug_printf( DEBUG_SILENT,
+							  "Integer missing after -MaxJobs\n" );
                 Usage();
             }
             G.maxJobs = atoi (argv[i]);
         } else if( !strcmp( "-MaxScripts", argv[i] ) ) {
-			debug_println( DEBUG_SILENT, "-MaxScripts has been replaced with "
-						   "-MaxPre and -MaxPost arguments" );
+			debug_printf( DEBUG_SILENT, "-MaxScripts has been replaced with "
+						   "-MaxPre and -MaxPost arguments\n" );
 			Usage();
         } else if( !strcmp( "-MaxPre", argv[i] ) ) {
             i++;
             if( argc <= i ) {
-                debug_println( DEBUG_SILENT,
-							   "Integer missing after -MaxPre" );
+                debug_printf( DEBUG_SILENT,
+							  "Integer missing after -MaxPre\n" );
                 Usage();
             }
             G.maxPreScripts = atoi( argv[i] );
         } else if( !strcmp( "-MaxPost", argv[i] ) ) {
             i++;
             if( argc <= i ) {
-                debug_println( DEBUG_SILENT,
-							   "Integer missing after -MaxPost" );
+                debug_printf( DEBUG_SILENT,
+							  "Integer missing after -MaxPost\n" );
                 Usage();
             }
             G.maxPostScripts = atoi( argv[i] );
@@ -231,50 +232,50 @@ int main_init (int argc, char **argv) {
     //
 
     if (G.datafile == NULL) {
-        debug_println (DEBUG_SILENT, "No DAG file was specified");
+        debug_printf( DEBUG_SILENT, "No DAG file was specified\n" );
         Usage();
     }
     if (condorLogName == NULL) {
-        debug_println (DEBUG_SILENT, "No Condor Log file was specified");
+        debug_printf( DEBUG_SILENT, "No Condor Log file was specified\n" );
         Usage();
     }
     if (lockFileName == NULL) {
-        debug_println (DEBUG_SILENT, "No DAG lock file was specified");
+        debug_printf( DEBUG_SILENT, "No DAG lock file was specified\n" );
         Usage();
     }
     if (G.maxJobs < 0) {
-        debug_println (DEBUG_SILENT, "-MaxJobs must be non-negative");
+        debug_printf( DEBUG_SILENT, "-MaxJobs must be non-negative\n");
         Usage();
     }
     if( G.maxPreScripts < 0 ) {
-        debug_println( DEBUG_SILENT, "-MaxPre must be non-negative" );
+        debug_printf( DEBUG_SILENT, "-MaxPre must be non-negative\n" );
         Usage();
     }
     if( G.maxPostScripts < 0 ) {
-        debug_println( DEBUG_SILENT, "-MaxPost must be non-negative" );
+        debug_printf( DEBUG_SILENT, "-MaxPost must be non-negative\n" );
         Usage();
     }
  
-    debug_println (DEBUG_VERBOSE,"Condor log will be written to %s",
+    debug_printf( DEBUG_VERBOSE, "Condor log will be written to %s\n",
                    condorLogName);
-    debug_println (DEBUG_VERBOSE,"DAG Lockfile will be written to %s",
+    debug_printf( DEBUG_VERBOSE, "DAG Lockfile will be written to %s\n",
                    lockFileName);
-    debug_println (DEBUG_VERBOSE,"DAG Input file is %s", G.datafile);
+    debug_printf( DEBUG_VERBOSE, "DAG Input file is %s\n", G.datafile);
 
     if (G.rescue_file != NULL) {
-        debug_println (DEBUG_VERBOSE,"Rescue DAG will be written to %s",
+        debug_printf( DEBUG_VERBOSE, "Rescue DAG will be written to %s\n",
                        G.rescue_file);
     }
 
     {
         char *temp;
-        debug_println (DEBUG_DEBUG_1,"Current path is %s",
+        debug_printf( DEBUG_DEBUG_1, "Current path is %s\n",
                        (temp=getcwd(NULL, _POSIX_PATH_MAX)) ? temp : "<null>");
 		if( temp ) {
 			free( temp );
 		}
 		temp = my_username();
-		debug_println( DEBUG_DEBUG_1, "Current user is %s",
+		debug_printf( DEBUG_DEBUG_1, "Current user is %s\n",
 					   temp ? temp : "<null>" );
 		if( temp ) {
 			free( temp );
@@ -297,12 +298,12 @@ int main_init (int argc, char **argv) {
     // Parse the input file.  The parse() routine
     // takes care of adding jobs and dependencies to the DagMan
     //
-    debug_println (DEBUG_VERBOSE, "Parsing %s ...", G.datafile);
+    debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n", G.datafile);
     if (!parse (G.datafile, G.dag)) {
-        debug_error (1, DEBUG_QUIET, "Failed to parse %s", G.datafile);
+        debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n", G.datafile);
     }
 
-    debug_println (DEBUG_VERBOSE, "Dag contains %d total jobs",
+    debug_printf( DEBUG_VERBOSE, "Dag contains %d total jobs\n",
                    G.dag->NumJobs());
 
     //------------------------------------------------------------------------
@@ -320,7 +321,7 @@ int main_init (int argc, char **argv) {
                          access(condorLogName, F_OK) == 0);
     
         if (recovery) {
-            debug_println (DEBUG_VERBOSE, "Lock file %s detected, ",
+            debug_printf( DEBUG_VERBOSE, "Lock file %s detected, \n",
                            lockFileName);
         } else {
       
@@ -328,20 +329,21 @@ int main_init (int argc, char **argv) {
             // we need to delete these.
       
             if ( access( condorLogName, F_OK) == 0 ) {
-                debug_println (DEBUG_VERBOSE, "Deleting older version of %s",
+                debug_printf( DEBUG_VERBOSE, "Deleting older version of %s\n",
                                condorLogName);
                 if (remove (condorLogName) == -1)
-                    debug_perror (1, DEBUG_QUIET, condorLogName);
+                    debug_error( 1, DEBUG_QUIET, "Error: can't remove %s\n",
+								 condorLogName );
             }
 
             touch (condorLogName);
             touch (lockFileName);
         }
 
-        debug_println (DEBUG_VERBOSE, "Bootstrapping...");
+        debug_printf( DEBUG_VERBOSE, "Bootstrapping...\n");
         if (!G.dag->Bootstrap (recovery)) {
             G.dag->PrintReadyQ( DEBUG_DEBUG_1 );
-            debug_error (1, DEBUG_QUIET, "ERROR while bootstrapping");
+            debug_error( 1, DEBUG_QUIET, "ERROR while bootstrapping\n");
         }
     }
 
@@ -352,20 +354,12 @@ int main_init (int argc, char **argv) {
 
 void
 print_status() {
-    time_t clock;
-    struct tm *tm;
-
-    (void)time( (time_t*)&clock );
-    tm = localtime( (time_t*)&clock );
-	debug_printf( DEBUG_VERBOSE, "%02d/%02d %02d:%02d:%02d: %d/%d done, "
-				  "%d failed, %d submitted, %d ready, %d:%d script%s\n",
-				  tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min,
-				  tm->tm_sec, G.dag->NumJobsDone(), G.dag->NumJobs(),
-				  G.dag->NumJobsFailed(), G.dag->NumJobsSubmitted(),
-				  G.dag->NumJobsReady(), G.dag->NumPreScriptsRunning(),
-				  G.dag->NumPostScriptsRunning(),
-				  G.dag->NumScriptsRunning() == 1 ? "" : "s" );
-	return;
+	debug_printf( DEBUG_VERBOSE, "%d/%d done, %d failed, %d submitted, "
+				  "%d ready, %d pre, %d post\n", G.dag->NumJobsDone(),
+				  G.dag->NumJobs(), G.dag->NumJobsFailed(),
+				  G.dag->NumJobsSubmitted(), G.dag->NumJobsReady(),
+				  G.dag->NumPreScriptsRunning(),
+				  G.dag->NumPostScriptsRunning() );
 }
 
 void main_timer () {
@@ -392,10 +386,10 @@ void main_timer () {
     if (G.dag->DetectLogGrowth()) {
         if (G.dag->ProcessLogEvents() == false) {
 			G.dag->PrintReadyQ( DEBUG_DEBUG_1 );
-            debug_println (DEBUG_QUIET, "Aborting DAG..."
+            debug_printf( DEBUG_QUIET, "Aborting DAG...\n"
                            "removing running jobs");
             G.dag->RemoveRunningJobs();
-            debug_println (DEBUG_NORMAL, "Writing Rescue DAG file...");
+            debug_printf( DEBUG_NORMAL, "Writing Rescue DAG file...\n");
             G.dag->Rescue(G.rescue_file, G.datafile);
 			unlink( lockFileName );
 			main_shutdown_graceful();
@@ -439,15 +433,15 @@ void main_timer () {
     if( G.dag->NumJobsSubmitted() == 0 &&
 		G.dag->NumScriptsRunning() == 0 ) {
 		if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
-			printf( "ERROR: the following job(s) failed:\n" );
+			debug_printf( DEBUG_QUIET, "ERROR: the following job(s) failed:\n" );
 			G.dag->PrintJobList( Job::STATUS_ERROR );
 		}
 		if( G.rescue_file != NULL ) {
-			debug_println (DEBUG_NORMAL, "Writing Rescue DAG file...");
+			debug_printf( DEBUG_NORMAL, "Writing Rescue DAG file...\n");
 			G.dag->Rescue(G.rescue_file, G.datafile);
 		}
 		else {
-			debug_println( DEBUG_NORMAL, "Rescue file not defined..." );
+			debug_printf( DEBUG_NORMAL, "Rescue file not defined...\n" );
 		}
 		unlink( lockFileName );
 		main_shutdown_graceful();

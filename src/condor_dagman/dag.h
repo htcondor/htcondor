@@ -209,7 +209,7 @@ class Dag {
     */
     int SubmitReadyJobs();
   
-	void PrintEvent( debug_level_t level, Job* job );
+	void PrintEvent( debug_level_t level, const char* eventName, Job* job );
 
     // name of consolidated condor log
     char        * _condorLogName;

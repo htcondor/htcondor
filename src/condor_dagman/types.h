@@ -25,6 +25,7 @@
 #define _TYPES_H_
 
 #include "condor_common.h"    /* for <stdio.h> */
+#include "condor_debug.h"
 
 //---------------------------------------------------------------------------
 #ifndef __cplusplus
@@ -71,13 +72,6 @@ class CondorID {
         return Compare (condorID) == 0;
     }
     
-    /** Send a printable string of this CondorID to a file
-        @param The FILE * to send to
-    */
-    inline void Print (FILE * file = stdout) const {
-        fprintf (file, "(%d.%d)", _cluster, _proc);
-    }
-
     /// The job cluster
     int _cluster;
 

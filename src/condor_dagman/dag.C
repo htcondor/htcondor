@@ -84,11 +84,11 @@ bool Dag::Bootstrap (bool recovery) {
 			TerminateJob( job, true );
 		}
     }
-	debug_println( DEBUG_VERBOSE, "Number of pre-completed jobs: %d",
+	debug_printf( DEBUG_VERBOSE, "Number of pre-completed jobs: %d\n",
                    NumJobsDone() );
     
     if (recovery) {
-        debug_println (DEBUG_NORMAL, "Running in RECOVERY mode...");
+        debug_printf( DEBUG_NORMAL, "Running in RECOVERY mode...\n" );
         if (!ProcessLogEvents (recovery)) return false;
 
 		// all jobs stuck in STATUS_POSTRUN need their scripts run
@@ -149,7 +149,9 @@ bool Dag::DetectLogGrowth () {
     assert (fd != 0);
     struct stat buf;
     
-    if (fstat (fd, & buf) == -1) debug_perror (2, DEBUG_QUIET, _condorLogName);
+    if( fstat( fd, &buf ) == -1 ) {
+		debug_error( 2, DEBUG_QUIET, "Error: can't stat %s\n", _condorLogName );
+	}
     
     int oldSize = _condorLogSize;
     _condorLogSize = buf.st_size;
@@ -175,8 +177,11 @@ bool Dag::ProcessLogEvents (bool recovery) {
 
     while (!done) {
         
-        ULogEvent * e;  // refer to condor_event.h
+        ULogEvent* e = NULL;
         ULogEventOutcome outcome = _condorLog.readEvent(e);
+
+		Job* job = NULL;
+		const char* eventName = NULL;
         
         CondorID condorID;
         if (e != NULL) condorID = CondorID (e->cluster, e->proc, e->subproc);
@@ -225,17 +230,17 @@ bool Dag::ProcessLogEvents (bool recovery) {
             //----------------------------------------------------------------
           case ULOG_OK:
             
-			debug_printf( DEBUG_VERBOSE, "Event: %s for ",
-						  ULogEventNumberNames[e->eventNumber] );
+			assert( e != NULL);
 
-			Job* job = GetJob( condorID );
+			job = GetJob( condorID );
+			eventName = ULogEventNumberNames[e->eventNumber];
 
             switch(e->eventNumber) {
                 
               case ULOG_EXECUTABLE_ERROR:
               case ULOG_JOB_ABORTED:
 
-				  PrintEvent( DEBUG_VERBOSE, job );
+				  PrintEvent( DEBUG_VERBOSE, eventName, job );
 				  if( !job ) {
 					  break;
 				  }
@@ -267,7 +272,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
               
               case ULOG_JOB_TERMINATED:
 			  {	
-				  PrintEvent( DEBUG_VERBOSE, job );
+				  PrintEvent( DEBUG_VERBOSE, eventName, job );
                   if( !job ) {
                       break;
                   }
@@ -334,7 +339,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
 
 			case ULOG_POST_SCRIPT_TERMINATED:
 			{
-				PrintEvent( DEBUG_VERBOSE, job );
+				PrintEvent( DEBUG_VERBOSE, eventName, job );
 				if( !job ) {
 					break;
 				}
@@ -376,7 +381,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
 						// update DAG dependencies given our
 						// successful completion
 						job->_Status = Job::STATUS_DONE;
-						TerminateJob( job );
+						TerminateJob( job, recovery );
 					}
 					else {
 						// restore STATUS_ERROR from the job failure
@@ -395,12 +400,12 @@ bool Dag::ProcessLogEvents (bool recovery) {
 								  "found in userlog (submit event)\n" );
 				}
 				job = GetJob( job_name );
-				PrintEvent( DEBUG_VERBOSE, job );
-				if( !job ) {
-					break;
-				}
 				if( job ) {
 					job->_CondorID = condorID;
+				}
+				PrintEvent( DEBUG_VERBOSE, eventName, job );
+				if( !job ) {
+					break;
 				}
 
 				if( recovery ) {
@@ -450,7 +455,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
 			case ULOG_EXECUTE:
 			default:
 
-                PrintEvent( DEBUG_VERBOSE, job );
+                PrintEvent( DEBUG_VERBOSE, eventName, job );
                 break;
 			}
         }
@@ -460,9 +465,9 @@ bool Dag::ProcessLogEvents (bool recovery) {
 		}
     }
     if (DEBUG_LEVEL(DEBUG_VERBOSE) && recovery) {
-        printf ("    -----------------------\n");
-        printf ("       Recovery Complete\n");
-        printf ("    -----------------------\n");
+        debug_printf( DEBUG_QUIET, "    -----------------------\n");
+        debug_printf( DEBUG_QUIET, "       Recovery Complete\n");
+        debug_printf( DEBUG_QUIET, "    -----------------------\n");
     }
     return result;
 }
@@ -554,11 +559,8 @@ Dag::SubmitReadyJobs()
     job->_Status = Job::STATUS_SUBMITTED;
 	_numJobsSubmitted++;
 
-	if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
-		printf( "\tassigned Condor ID " );
-		condorID.Print();
-		debug_printf( DEBUG_VERBOSE, "\n" );		
-	}
+	debug_printf( DEBUG_VERBOSE, "\tassigned Condor ID (%d.%d.%d)\n",
+				  condorID._cluster, condorID._proc, condorID._subproc );
 
     return SubmitReadyJobs() + 1;
 }
@@ -669,12 +671,9 @@ void Dag::PrintJobList() const {
     Job * job;
     ListIterator<Job> iList (_jobs);
     while ((job = iList.Next()) != NULL) {
-        printf ("---------------------------------------");
         job->Dump();
-        putchar ('\n');
     }
-    printf ("---------------------------------------");
-    printf ("\t<END>\n");
+    dprintf( D_ALWAYS, "---------------------------------------\t<END>\n" );
 }
 
 void
@@ -684,31 +683,31 @@ Dag::PrintJobList( Job::status_t status ) const
     ListIterator<Job> iList( _jobs );
     while( ( job = iList.Next() ) != NULL ) {
 		if( job->_Status == status ) {
-			printf( "---------------------------------------" );
 			job->Dump();
-			printf( "\n" );
 		}
     }
-    printf( "---------------------------------------\n" );
+    dprintf( D_ALWAYS, "---------------------------------------\t<END>\n" );
 }
 
 void
 Dag::PrintReadyQ( debug_level_t level ) const {
-	debug_printf( level, "Ready Queue: " );
-	if( _readyQ->IsEmpty() ) {
-		debug_printf( level, "<empty>\n" );
-		return;
+	if( DEBUG_LEVEL( level ) ) {
+		dprintf( D_ALWAYS, "Ready Queue: " );
+		if( _readyQ->IsEmpty() ) {
+			dprintf( D_ALWAYS | D_NOHEADER, "<empty>\n" );
+			return;
+		}
+		_readyQ->Rewind();
+		Job* job;
+		_readyQ->Next( job );
+		if( job ) {
+			dprintf( D_ALWAYS | D_NOHEADER, "%s", job->GetJobName() );
+		}
+		while( _readyQ->Next( job ) ) {
+			dprintf( D_ALWAYS | D_NOHEADER, ", %s", job->GetJobName() );
+		}
+		dprintf( D_ALWAYS | D_NOHEADER, "\n" );
 	}
-	_readyQ->Rewind();
-	Job* job;
-	_readyQ->Next( job );
-	if( job ) {
-		debug_printf( level, "%s", job->GetJobName() );
-	}
-	while( _readyQ->Next( job ) ) {
-		debug_printf( level, ", %s", job->GetJobName() );
-	}
-	debug_printf( level, "\n" );
 }
 
 //---------------------------------------------------------------------------
@@ -743,8 +742,8 @@ void Dag::RemoveRunningJobs () const {
 void Dag::Rescue (const char * rescue_file, const char * datafile) const {
     FILE *fp = fopen(rescue_file, "w");
     if (fp == NULL) {
-        debug_println (DEBUG_QUIET,
-                       "Could not open %s for writing.", rescue_file);
+        debug_printf( DEBUG_QUIET, "Could not open %s for writing.\n",
+					  rescue_file);
         return;
     }
 
@@ -843,15 +842,15 @@ Dag::TerminateJob( Job* job, bool bootstrap )
 }
 
 void Dag::
-PrintEvent( debug_level_t level, Job* job )
+PrintEvent( debug_level_t level, const char* eventName, Job* job )
 {
 	if( job ) {
-		debug_printf( level, "Job %s (%d.%d.%d)\n",
+		debug_printf( level, "Event: %s for Job %s (%d.%d.%d)\n", eventName,
 					  job->GetJobName(), job->_CondorID._cluster,
 					  job->_CondorID._proc, job->_CondorID._subproc );
 	} else {
-		debug_printf( level, "Unknown Job (%d.%d.%d)\n",
-					  job->_CondorID._cluster, job->_CondorID._proc,
+		debug_printf( level, "Event: %s for Unknown Job (%d.%d.%d)\n",
+					  eventName, job->_CondorID._cluster, job->_CondorID._proc,
 					  job->_CondorID._subproc );
 	}
 }

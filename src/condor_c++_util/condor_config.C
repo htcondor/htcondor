@@ -60,7 +60,6 @@
 #include "my_hostname.h"
 #include "condor_version.h"
 #include "util_lib_proto.h"
-#include "condor_scanner.h"		// for MAXVARNAME, etc
 #include "my_username.h"
 #ifdef WIN32
 #	include "ntsysinfo.h"		// for WinNT getppid
@@ -270,40 +269,47 @@ real_config(char* host, int wantsQuiet)
 
 		// Now, insert any macros defined in the environment.  Note we do
 		// this before the root config file!
-	{
-		char varname[MAXVARNAME];
-		char *thisvar;
-		int i,j;
-		char *varvalue;
+	for( int i = 0; environ[i]; i++ ) {
+		char* magic_prefix = "_condor_";			// case-insensitive
+		int prefix_len = strlen( magic_prefix );
 
-		for (i=0; environ[i]; i++) {
-		
-			if (strncmp(environ[i],"_condor_",8)!=0) 
-				continue;
-
-			thisvar = environ[i];
-
-			varname[8] = '\0';
-			for (j=0; thisvar[j] && thisvar[j] != '='; j++) {
-				varname[j] = thisvar[j];
-			}
-			varname[j] = '\0';
-			
-			if ( varname[8] && (varvalue=getenv(varname)) ) {
-				//dprintf(D_ALWAYS,"TODD at line %d insert var %s val %s\n",__LINE__,&(varname[8]), varvalue);
-
-				if ( !strncmp( &( varname[8] ), "START_owner", 11 ) ) {
-					char *tmp = (char *) malloc( strlen( varvalue ) 
-								+ strlen( "Owner == \"   \"" ) );
-					sprintf( tmp, "Owner == \"%s\"", varvalue );
-					insert( "START", tmp, ConfigTab, TABLESIZE );
-					free( tmp );
-				}
-				else {
-					insert( &(varname[8]), varvalue, ConfigTab, TABLESIZE );
-				}
-			}
+		// proceed only if we see the magic prefix
+		if( strncasecmp( environ[i], magic_prefix, prefix_len ) != 0 ) {
+			continue;
 		}
+
+		char *varname = strdup( environ[i] );
+		if( !varname ) {
+			EXCEPT( "Out of memory in %s:%s\n", __FILE__, __LINE__ );
+		}
+
+		// isolate variable name by finding & nulling the '='
+		int equals_offset = index( varname, '=' ) - varname;
+		varname[equals_offset] = '\0';
+		// isolate value by pointing to everything after the '='
+		char *varvalue = varname + equals_offset + 1;
+//		assert( !strcmp( varvalue, getenv( varname ) ) );
+		// isolate Condor macro_name by skipping magic prefix
+		char *macro_name = varname + prefix_len;
+
+		// special macro START_owner needs to be expanded (for the
+		// glide-in code) [which should probably be fixed to use
+		// the general mechanism and set START itself --pfc]
+		if( !strcmp( macro_name, "START_owner" ) ) {
+			char *pretext = "Owner == \"";
+			char *posttext = "\"";
+			char *tmp = (char *)malloc( strlen( pretext ) + strlen( varvalue )
+										+ strlen( posttext ) );
+			sprintf( tmp, "%s%s%s", pretext, varvalue, posttext );
+			insert( "START", tmp, ConfigTab, TABLESIZE );
+			free( tmp );
+		}
+		// ignore "_CONDOR_" without any macro name attached
+		else if( macro_name[0] != '\0' ) {
+			insert( macro_name, varvalue, ConfigTab, TABLESIZE );
+		}
+
+		free( varname );
 	}
 
 		// Re-insert the special macros.  We don't want the user to 

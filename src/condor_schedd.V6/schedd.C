@@ -3136,8 +3136,11 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 
 		// Don't use a_out_name for argv[0], use
 		// "condor_scheduniv_exec.cluster.proc" instead. 
-	sprintf(job_args, "condor_scheduniv_exec.%d.%d %s",
-			job_id->cluster, job_id->proc, args);
+    // NOTE: a trailing space with no args causes Create_Process to
+    // call the program with a single arg consisting of the null
+    // string (''), so we have to avoid that
+    sprintf(job_args, "condor_scheduniv_exec.%d.%d%s%s",
+            job_id->cluster, job_id->proc, args[0] != '\0' ? " " : "", args );
 
 	pid = daemonCore->Create_Process( a_out_name, job_args, PRIV_USER_FINAL, 
 								1, FALSE, env, iwd, FALSE, NULL, inouterr );
