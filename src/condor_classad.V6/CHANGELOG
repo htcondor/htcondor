@@ -1,7 +1,61 @@
 Changes for version 0.9.5: (not yet released)
+* Identifiers can be quoted with almost anything between the
+  quotes. This means you can have a ClassAd like:
+
+  [
+    A = 3;
+   'B' = 4;
+   'C&* X"' = 5; 
+  ]
+
+Unquoted identifiers must still begin with an alphabetic character or
+underscore and be followed by alpanumeric characters or underscores. 
+
+* Time representation has changed. Absolute times are represented in
+  ISO8601 format. Absolute and relative times looks like function
+  calls now:
+
+  [
+     birthday = abstime("1972-02-23:08:04:13-0600");
+     jobtime  = reltime("2+13:15:36"); 
+  ]
+
+  The relative time is days + hours : minutes : seconds. See the
+  online manual for more details. 
+
+* The XML output is different in the following ways:
+
+  - The <n> (number) tag has been replaced by <i> (integer) and <r>
+    (real) tags. Real numbers are always represented by a hexadecimal
+    64-bit IEEE754 number to maintain precision.
+
+  - <at> is now absolute time, and <rt> is relative time. Between the
+    tags, they are identical to the above representation. 
+
+* Real numbers can be identified precisely with a hexadecimal number,
+  like this: 
+
+  [
+    X = ieee754(????);
+  ]
+
+  This is equivalent to:
+
+  [
+    X = ????;
+  ]
+
+  When you print a ClassAd with the ClassAdUnparser, you will see the
+  ieee754 format, to preserve precision, but a comment will be
+  inserted so you can see the real value. The PrettyPrinter will only
+  show the floating point representation you are used it, like 3.14. [fix]
+
 * We now compile on gcc 3.2.x, in addition to other versions of gcc.
 
 * Various bug fixes, particularly in the XML output.
+
+* ClassAd::MakeClassAd is now static (it's a factory method) and now
+  works. It didn't work before. 
 
 Changes for version 0.9.4: (release 21-Nov-2002)
 * Added user-defined functions
