@@ -434,6 +434,8 @@ ClassAdXMLUnparser::ClassAdXMLUnparser()
 {
 	debug_check();
 	_use_compact_spacing = true;
+	_output_type = true;
+	_output_target_type = true;
 	return;
 }
 
@@ -475,6 +477,57 @@ ClassAdXMLUnparser::SetUseCompactSpacing(bool use_compact_spacing)
 	_use_compact_spacing = use_compact_spacing;
 	return;
 }
+
+/**************************************************************************
+ *
+ * Function: GetOutputType
+ * Purpose:  Tells you if we print out the Type Attribute
+ *
+ **************************************************************************/
+bool 
+ClassAdXMLUnparser::GetOutputType(void)
+{
+	return _output_type;
+}
+
+/**************************************************************************
+ *
+ * Function: SetOutputType
+ * Purpose:  Sets if we print out the Type Attribute or not
+ *
+ **************************************************************************/
+void 
+ClassAdXMLUnparser::SetOutputType(bool output_type)
+{
+	_output_type = output_type;
+	return;
+}
+
+/**************************************************************************
+ *
+ * Function: GetOutputTargetType
+ * Purpose:  Tells you if we print out the TargetType Attribute
+ *
+ **************************************************************************/
+bool 
+ClassAdXMLUnparser::GetOuputTargetType(void)
+{
+	return _output_target_type;
+}
+
+/**************************************************************************
+ *
+ * Function: SetOutputTargettype
+ * Purpose:  Sets if we print out the TargetType Attribute or not
+ *
+ **************************************************************************/
+void 
+ClassAdXMLUnparser::SetOutputTargetType(bool output_target_type)
+{
+	_output_target_type = output_target_type;
+	return;
+}
+
 
 /**************************************************************************
  *
@@ -528,27 +581,32 @@ ClassAdXMLUnparser::Unparse(ClassAd *classad, MyString &buffer)
 	// First get the MyType and TargetType expressions 
 	const char *mytype, *mytarget;
 
-	mytype = classad->GetMyTypeName();
-	if (*mytype != 0) {
-		MyString  type_expr_string("MyType = \"");
-		ExprTree  *type_expr;
-
-		type_expr_string += mytype;
-		type_expr_string += '\"';
-		Parse(type_expr_string.Value(), type_expr);
-		Unparse(type_expr, buffer);
-		delete type_expr;
+	if (_output_type) {
+		mytype = classad->GetMyTypeName();
+		if (*mytype != 0) {
+			MyString  type_expr_string("MyType = \"");
+			ExprTree  *type_expr;
+			
+			type_expr_string += mytype;
+			type_expr_string += '\"';
+			Parse(type_expr_string.Value(), type_expr);
+			Unparse(type_expr, buffer);
+			delete type_expr;
+		}
 	}
-    mytarget = classad->GetTargetTypeName();
-	if (*mytype != 0) {
-		MyString  target_expr_string("TargetType = \"");
-		ExprTree  *target_expr;
 
-		target_expr_string += mytarget;
-		target_expr_string += '\"';
-		Parse(target_expr_string.Value(), target_expr);
-		Unparse(target_expr, buffer);
-		delete target_expr;
+	if (_output_target_type) {
+		mytarget = classad->GetTargetTypeName();
+		if (*mytype != 0) {
+			MyString  target_expr_string("TargetType = \"");
+			ExprTree  *target_expr;
+			
+			target_expr_string += mytarget;
+			target_expr_string += '\"';
+			Parse(target_expr_string.Value(), target_expr);
+			Unparse(target_expr, buffer);
+			delete target_expr;
+		}
 	}
 
 	// Then loop through all the other expressions in the ClassAd
