@@ -80,6 +80,7 @@ public:
 	int DoDup( int fd );
 	int DoDup2( int fd, int dupfd );
 	int DoSocket( int addr_family, int type, int protocol );
+	int DoAccept( int s, struct sockaddr *addr, int *addrlen );
 	int	Map( int user_fd );
 	BOOL IsLocalAccess( int user_fd );
 	BOOL IsDup( int user_fd );

@@ -64,6 +64,8 @@
 #include "condor_debug.h"
 static char *_FileName_ = __FILE__;
 
+#include "image.h"
+extern Image MyImage;
 
 OpenFileTable	*FileTab;
 static char				Condor_CWD[ _POSIX_PATH_MAX ];
@@ -95,6 +97,9 @@ OpenFileTable::Init()
 	file = new File[ MaxOpenFiles ];
 	for( i=0; i<MaxOpenFiles; i++ ) {
 		file[i].Init();
+		if (i > 2) {
+			syscall( SYS_close, i );
+		}
 	}
 
 	// getcwd( Condor_CWD, sizeof(Condor_CWD) );
@@ -156,10 +161,14 @@ OpenFileTable::DoOpen(
 	int	user_fd;
 	char	buf[ _POSIX_PATH_MAX ];
 
+	if (MyImage.GetMode() == STANDALONE) {
+		user_fd = real_fd;
+	} else {
 		// find an unused fd
-	if( (user_fd = find_avail(0)) < 0 ) {
-		errno = EMFILE;
-		return -1;
+		if( (user_fd = find_avail(0)) < 0 ) {
+			errno = EMFILE;
+			return -1;
+		}
 	}
 
 		// set the file access mode
@@ -377,7 +386,7 @@ OpenFileTable::DoSocket(int addr_family, int type, int protocol )
 	int	real_fd;
 	char	buf[ _POSIX_PATH_MAX ];
 
-		// Try to open the file
+		// Try to create the socket
 	if( LocalSysCalls() ) {
 #if defined(LINUX)
 		real_fd = syscall( SYS_socketcall, addr_family, type, protocol );
@@ -393,16 +402,22 @@ OpenFileTable::DoSocket(int addr_family, int type, int protocol )
 		return -1;
 	}
 
+	if (MyImage.GetMode() == STANDALONE) {
+		user_fd = real_fd;
+	} else {
 		// find an unused fd
-	if( (user_fd = find_avail(0)) < 0 ) {
-		errno = EMFILE;
-		return -1;
+		if( (user_fd = find_avail(0)) < 0 ) {
+			errno = EMFILE;
+			return -1;
+		}
 	}
+
+	fprintf(stderr, "JCP: DoSocket returning %d\n", user_fd); fflush(stderr);
 
 	file[user_fd].readable = TRUE;
 	file[user_fd].writeable = TRUE;
 	file[user_fd].open = TRUE;
-	file[user_fd].duplicate = TRUE;
+	file[user_fd].duplicate = FALSE;
 	file[user_fd].pre_opened = TRUE;  /* Make it not be re-opened */
 	file[user_fd].remote_access = RemoteSysCalls();
 	file[user_fd].shadow_sock = FALSE;
@@ -411,6 +426,51 @@ OpenFileTable::DoSocket(int addr_family, int type, int protocol )
 	file[user_fd].pathname = (char *) 0;
 	return user_fd;
 }
+
+
+int
+OpenFileTable::DoAccept(int s, struct sockaddr *addr, int *addrlen )
+{
+	int	user_fd;
+	int	real_fd;
+	char	buf[ _POSIX_PATH_MAX ];
+
+		// Try to create the socket
+	if( LocalSysCalls() ) {
+		real_fd = syscall( SYS_accept, s, addr, addrlen );
+	} else {
+		real_fd = -1;
+	}
+
+
+		// Stop here if there was an error
+	if( real_fd < 0 ) {
+		return -1;
+	}
+
+	if (MyImage.GetMode() == STANDALONE) {
+		user_fd = real_fd;
+	} else {
+		// find an unused fd
+		if( (user_fd = find_avail(0)) < 0 ) {
+			errno = EMFILE;
+			return -1;
+		}
+	}
+
+	file[user_fd].readable = TRUE;
+	file[user_fd].writeable = TRUE;
+	file[user_fd].open = TRUE;
+	file[user_fd].duplicate = FALSE;
+	file[user_fd].pre_opened = TRUE;  /* Make it not be re-opened */
+	file[user_fd].remote_access = RemoteSysCalls();
+	file[user_fd].shadow_sock = FALSE;
+	file[user_fd].offset = 0;
+	file[user_fd].real_fd = real_fd;
+	file[user_fd].pathname = (char *) 0;
+	return user_fd;
+}
+
 
 extern "C" char *getwd( char * );
 
@@ -508,6 +568,16 @@ OpenFileTable::Restore()
 				// because we assume it is correct in what follows...
 				// Todd Tannenbaum, 3/14/95
 			f->remote_access = Condor_isremote;
+
+			// In STANDALONE mode, we must make sure that the real_fd
+			// returned by the OS is the same as the "user_fd" that we've
+			// previously given to the App.  JCP 8/96
+
+			if (MyImage.GetMode() == STANDALONE && f->real_fd != i) {
+				syscall( SYS_dup2, f->real_fd, i);
+				syscall( SYS_close, f->real_fd );
+				f->real_fd = i;
+			}
 
 				// No need to seek if offset is 0, but more importantly, this
 				// fd could be a tty if offset is 0.
