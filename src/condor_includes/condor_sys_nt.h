@@ -24,7 +24,6 @@
 #define CONDOR_SYS_NT_H
 
 #define NOGDI
-#define NOUSER
 #define NOSOUND
 #include <winsock2.h>
 #include <windows.h>
@@ -38,13 +37,17 @@
 #define O_RDWR _O_RDWR
 #define O_CREAT _O_CREAT
 #define O_APPEND _O_APPEND
+#define O_TRUNC _O_TRUNC
 #include <sys/stat.h>
 typedef unsigned short mode_t;
+typedef DWORD pid_t;
 #define stat _stat
 #define fstat _fstat
 #define MAXPATHLEN 1024
 #define MAXHOSTNAMELEN 64
 #define	_POSIX_PATH_MAX 255
+#define popen _popen
+#define pclose _pclose
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
 #define strincmp _strnicmp
@@ -52,6 +55,9 @@ typedef unsigned short mode_t;
 #define chdir _chdir
 #define fsync _commit
 #define access _access
+#define execl _execl  
+#define execv _execv
+#define putenv _putenv
 #define R_OK 4
 #define W_OK 2
 #define X_OK 4
@@ -77,6 +83,18 @@ typedef unsigned short mode_t;
 #include <math.h>
 #include <errno.h>
 #include "condor_file_lock.h"
+#include "condor_fix_assert.h"
+
+#define getwd(path) (int)_getcwd(path, _POSIX_PATH_MAX)
+#define mkdir(path,mode) (int)_mkdir(path)
+#define S_IRWXU 0
+#define S_IRWXG 1
+#define S_IRWXO 2
+#define S_ISDIR(mode) (((mode)&_S_IFDIR) == _S_IFDIR)
+#define S_ISREG(mode) (((mode)&_S_IFREG) == _S_IFREG)
+#define rint(num) floor(num + .5)
+
+typedef fd_set *SELECT_FDSET_PTR;
 
 #endif /* CONDOR_SYS_NT_H */
 
