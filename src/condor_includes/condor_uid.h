@@ -71,12 +71,12 @@ void init_user_nobody_loginname(const char *);
 
 void _condor_disable_uid_switching();
 void init_condor_ids();
-void init_user_ids(const char username[]);
 void uninit_user_ids();
+int init_user_ids(const char username[]);
+int set_user_ids(uid_t uid, gid_t gid);
 priv_state _set_priv(priv_state s, char file[], int line, int dologging);
 uid_t get_my_uid();
 gid_t get_my_gid();
-void set_user_ids(uid_t uid, gid_t gid);
 priv_state get_priv();
 
 #if !defined(WIN32)
