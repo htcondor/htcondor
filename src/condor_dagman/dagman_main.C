@@ -396,6 +396,11 @@ int main_init (int argc, char ** const argv) {
 	MyString jobKeyword("job");
 	MyString msg = ReadMultipleUserLogs::getJobLogsFromSubmitFiles(
 				dagFileName, jobKeyword, G.condorLogFiles);
+	if ( msg != "" ) {
+    	debug_printf( DEBUG_VERBOSE, "Possible error when parsing DAG: %s\n",
+				msg.Value());
+		
+	}
 
 		// The "&& !dapLogName" check below is kind of a kludgey fix to allow
 		// DaP jobs that have no "regular" Condor jobs to run.  Kent Wenger

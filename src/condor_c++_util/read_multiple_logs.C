@@ -405,26 +405,25 @@ ReadMultipleUserLogs::loadLogFileNameFromSubFile(const MyString &strSubFilename)
 		}
 	}
 
-		// Prepend initialdir to log file name if log file name is not
-		// an absolute path.
-	if ( initialDir != "" && logFileName[0] != '/' ) {
-		logFileName = initialDir + "/" + logFileName;
-	}
+	if ( logFileName != "" ) {
+			// Prepend initialdir to log file name if log file name is not
+			// an absolute path.
+		if ( initialDir != "" && logFileName[0] != '/' ) {
+			logFileName = initialDir + "/" + logFileName;
+		}
 
-		// We do this in case the same log file is specified with a
-		// relative and an absolute path.  If we don't identify them as the
-		// same log file, the multi-log-reading code will get goofed
-		// up.  Note that we should actually do even more checking, so
-		// we catch things like symbolic links and paths with ".." in
-		// them, but that is more work.  Realpath() does what we need,
-		// but it's not available on Windows. :-( wenger 2004-05-03.
-	if ( logFileName[0] != '/' ) {
-		if ( currentDir != "" ) {
-			logFileName = currentDir + "/" + logFileName;
-		} else {
-				// We should generate some kind of better error message
-				// here.
-			logFileName = "";
+			// We do this in case the same log file is specified with a
+			// relative and an absolute path.  
+			// Note: we now do further checking that doesn't rely on
+			// comparing paths to the log files.  wenger 2004-05-27.
+		if ( logFileName[0] != '/' ) {
+			if ( currentDir != "" ) {
+				logFileName = currentDir + "/" + logFileName;
+			} else {
+					// We should generate some kind of better error message
+					// here.
+				logFileName = "";
+			}
 		}
 	}
 
