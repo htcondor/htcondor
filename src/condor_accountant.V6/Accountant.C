@@ -93,7 +93,7 @@ double Accountant::GetPriority(const MyString& CustomerName)
 {
   CustomerRecord* Customer;
   double PriorityFactor=1;
-  if (strncmp(CustomerName,NiceUserName,strlen(NiceUserName))==0) PriorityFactor=NiceUserPriorityFactor;
+  if (strncmp(CustomerName.Value(),NiceUserName,strlen(NiceUserName))==0) PriorityFactor=NiceUserPriorityFactor;
   if (Customers.lookup(CustomerName,Customer)) {
 	// if its a new customer, create a new customer record
 	SetPriority(CustomerName, MinPriority*PriorityFactor);
@@ -232,9 +232,9 @@ void Accountant::UpdatePriorities(const Time& T)
   struct stat buf;
   int TraceFlag=0;
   ofstream TraceFile;
-  if (stat(TraceFileName, &buf)==0) {
+  if (stat(TraceFileName.Value(), &buf)==0) {
     TraceFlag=1;
-    TraceFile.open(TraceFileName,ios::app);
+    TraceFile.open(TraceFileName.Value(),ios::app);
     TraceFile << setprecision(3);
     TraceFile.setf(ios::fixed);
     if (!TraceFile) TraceFlag=0;
@@ -348,7 +348,7 @@ void Accountant::AppendLogEntry(const MyString& Action, const MyString& Customer
 {
   if (!LogEnabled) return;
 
-  ofstream LogFile(LogFileName,ios::app);
+  ofstream LogFile(LogFileName.Value(),ios::app);
   if (!LogFile) {
     dprintf(D_ALWAYS, "ERROR in Accountant::AppendLogEntry - failed to open match file %s\n",LogFileName.Value());
     return;
@@ -370,7 +370,9 @@ void Accountant::SaveState()
   dprintf(D_FULLDEBUG,"Saving State\n");
   MyString CustomerName, ResourceName;
 
-  ofstream LogFile(LogFileName);
+  MyString TmpFileName=LogFileName+".tmp";
+
+  ofstream LogFile(TmpFileName.Value());
   if (!LogFile) {
     dprintf(D_ALWAYS, "ERROR in Accountant::SaveState - failed to open log file %s\n",LogFileName.Value());
     return;
@@ -392,6 +394,10 @@ void Accountant::SaveState()
 	LogFile << " " << ((double) Resource->StartTime) << endl;
   }
   LogFile.close(); 
+
+  if (rename(TmpFileName.Value(),LogFileName.Value())) {
+	dprintf(D_ALWAYS,"Error %d: Cannot rename log file %s to %s\n",errno,TmpFileName.Value(),LogFileName.Value());
+  }
   
   return;
 }
@@ -409,7 +415,7 @@ void Accountant::LoadState()
   LogEnabled=0;  // disable logging while reading the log file
 
   // Open log file
-  ifstream LogFile(LogFileName);
+  ifstream LogFile(LogFileName.Value());
   if (!LogFile) {
     dprintf(D_ALWAYS, "Accountant::LoadState - can't open Log file %s - starting with no previous match information\n",LogFileName.Value());
     return;
