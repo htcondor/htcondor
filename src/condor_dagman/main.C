@@ -6,7 +6,6 @@
 #include "parse.h"
 
 //---------------------------------------------------------------------------
-static char *_FileName_ = __FILE__;   // used by EXCEPT
 char* mySubSystem = "DAGMAN";         // used by Daemon Core
 
 // Required for linking with condor libs
@@ -75,6 +74,10 @@ int main_shutdown_graceful() {
 int main_shutdown_remove(Service *, int) {
     debug_println (DEBUG_NORMAL, "Received SIGUSR1, removing running jobs");
     G.dag->RemoveRunningJobs();
+    if (G.rescue_file != NULL) {
+        debug_println (DEBUG_NORMAL, "Writing Rescue DAG file...");
+        G.dag->Rescue(G.rescue_file, G.datafile);
+    }
     G.CleanUp();
     DC_Exit(0);
     return TRUE;
@@ -283,6 +286,8 @@ void main_timer () {
             debug_println (DEBUG_QUIET, "Aborting DAG..."
                            "removing running jobs");
             G.dag->RemoveRunningJobs();
+            debug_println (DEBUG_NORMAL, "Writing Rescue DAG file...");
+            G.dag->Rescue(G.rescue_file, G.datafile);
             G.CleanUp();
             DC_Exit(0);
         }
