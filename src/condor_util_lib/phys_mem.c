@@ -29,23 +29,16 @@
 int
 calc_phys_memory()
 {
-  int pagesize;
-  struct pst_static s;
-  unsigned long ram;
-  int ret_value;	// phys mem in megabytes
-  
-  if (pstat_getstatic(&s, sizeof(s), (size_t)1, 0) != -1) {
-		  // cast to unsigned longs to make certain the calculation
-		  // is performed as an unsigned long to prevent overflow
-		  // on machines with 2 gig or more RAM.
-	ram = ( (unsigned long)s.physical_memory * (unsigned long)s.page_size );
-		// convert to megabytes
-	ret_value =  ram >> 20;
-	return( ret_value );
-  }
-  else {
-    return -1;
-  }
+	struct pst_static s;
+	unsigned long pages, pagesz;
+						   
+	if (pstat_getstatic(&s, sizeof(s), (size_t)1, 0) != -1) {
+		pages = s.physical_memory;
+		pagesz = s.page_size >> 10;
+		return( (int)((pages * pagesz) >> 10) );
+	} else {
+		return -1;
+	}
 }
 
 #elif defined(IRIX62)
@@ -58,11 +51,11 @@ int
 calc_phys_memory()
 {
 	struct rminfo rmstruct;
-	long pages;
-	long pagesz = sysconf( _SC_PAGESIZE );
+	unsigned long pages, pagesz;
+	pagesz = (sysconf(_SC_PAGESIZE) >> 10);		// We want kbytes.
 	
 	if( (sysmp(MP_SAGET,MPSA_RMINFO,&rmstruct,sizeof(rmstruct)) < 0) ||
-		(pagesz < 0) ) { 
+		(pagesz <= 0) ) { 
 		return -1;
 	}
 		/* Correct what appears to be some kind of rounding error */
@@ -71,8 +64,9 @@ calc_phys_memory()
 	} else {
 		pages = rmstruct.physmem;
 	}
+
 		/* Return the answer in megs */
-	return( ((pages * pagesz) >> 20) );
+	return( (int)((pages * pagesz) >> 10) );
 }
 
 #elif defined(Solaris) 
@@ -86,16 +80,13 @@ int
 calc_phys_memory()
 {
 	unsigned long pages, pagesz, hack;
-	int factor;
 
 	pages = sysconf(_SC_PHYS_PAGES);
-	pagesz = sysconf(_SC_PAGESIZE);
+	pagesz = (sysconf(_SC_PAGESIZE) >> 10);		// We want kbytes.
 
-	if (pages == -1 || pagesz == -1)
+	if (pages == -1 || pagesz <= 0 ) {
 		return -1;
-
-		/* pagesz is in bytes, this gives us kbytes */
-	factor = pagesz >> 10;
+	}
 
 #if defined(X86)
 		/* 
@@ -104,7 +95,7 @@ calc_phys_memory()
 		   These values just came from a little trail and error and
 		   seem to work pretty well.  -Derek Wright (1/29/98)
  	    */
-	hack = (pages * factor);
+	hack = (pages * pagesz);
 	if( hack > 260000 ) {
 		return (int) (hack / 1023);		
 	} else if( hack > 130000 ) {
@@ -115,7 +106,7 @@ calc_phys_memory()
 		return (int) (hack / 1000);
 	}
 #else
-	return (int) ((pages * factor) / 1024);
+	return( (int)((pages * pagesz) >> 10) );
 #endif
 }
 
@@ -126,9 +117,8 @@ int calc_phys_memory()
 {	
 
 	FILE        *proc;
-	unsigned long phys_mem;
+	unsigned long long phys_mem;
 	char        tmp_c[20];
-	long        tmp_l;
 	char   		c;
 
 	proc=fopen("/proc/meminfo","r");
@@ -187,7 +177,7 @@ calc_phys_memory()
 	if (table(TBL_PMEMSTATS,0,(void *)&s,1,sizeof(s)) < 0) {
 		return -1;
 	}
-	return s.physmem/(1024*1024);
+	return (int)(s.physmem/(1024*1024));
 }
 
 #else	/* Don't know how to do this on other than SunOS and HPUX yet */
