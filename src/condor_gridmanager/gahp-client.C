@@ -2029,7 +2029,7 @@ GahpServer::poll()
 			// Check and see if this is a gt3 gram_client_callback.  If so,
 			// deal with it here and now.
 		if ( result_reqid == globus_gt3_gram_callback_reqid ) {
-			if ( result->argc == 3 ) {
+			if ( result->argc == 4 ) {
 				(*globus_gt3_gram_callback_func)( globus_gt3_gram_user_callback_arg, result->argv[1], 
 								atoi(result->argv[2]), 0 );
 			} else {
