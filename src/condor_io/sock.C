@@ -682,18 +682,8 @@ Sock::endpoint_ip_str()
 	unsigned char   this_byte;
 
 		// We need to recompute this each time because _who might have changed.
-	_endpoint_ip_buf[0] = '\0';
-
-	cur_byte = (char *) &(_who.sin_addr);
-	for (i = 0; i < sizeof(_who.sin_addr); i++) {
-		this_byte = (unsigned char) *cur_byte;
-		sprintf(tmp_buf, "%u.", this_byte);
-		cur_byte++;
-		strcat(_endpoint_ip_buf, tmp_buf);
-	}
-		// Chop off the trailing '.' and terminate our string.
-	_endpoint_ip_buf[strlen(_endpoint_ip_buf) - 1] = '\0';
-
+	memset(&_endpoint_ip_buf, 0, _ENDPOINT_BUF_SIZE );
+	strcpy( _endpoint_ip_buf, inet_ntoa(_who.sin_addr) );
 	return &(_endpoint_ip_buf[0]);
 }
 
