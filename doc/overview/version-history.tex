@@ -28,16 +28,33 @@ machines in your pool to the same version.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{itemize}
+
+\item Added \Term{file\_remaps} as command in the job submit file given to
+
+\item submit buffer
+
+\item The \Condor{schedd} is much more memory efficient handling clusters
+with hundreds/thousands of jobs.  
+If you submit large clusters, your submit machine will only use a fraction
+of the amount of RAM it used to require.  
+\Note The memory savings will only be realized for new clusters submitted
+after the upgrade to v6.1.8 -- clusters which previously existed in the
+queue at upgrade time will still use the same amount of RAM in the
+\Condor{schedd}.
+
+\item Submitting jobs, especially submitting large clusters containing many
+jobs, is much faster.
+
 \item Added a \Opt{-goodput} option to \Condor{q}, which displays
 statistics about the execution efficiency of STANDARD universe jobs.
 
 \item Added FS\_REMOTE method of user authentication to possible values
-of the configuration option AUTHENTICATION\_METHODS to fix problems
+of the configuration option \Macro{AUTHENTICATION\_METHODS} to fix problems
 with using the \Opt{-r} remote scheduler option of \Condor{submit}.
 Additionally, the user authentication protocol has changed, so previous
 versions of Condor programs cannot co-exist with this new protocol.
 
-\item Added a new utility and documentation of, \Condor{glidein} which uses 
+\item Added a new utility and documentation for \Condor{glidein} which uses 
 Globus resources to extend your local pool to use remote Globus machines as 
 part of your Condor pool.
 
@@ -50,6 +67,13 @@ related problems on glibc Linux will probably be solved now.
 \Condor{user\_prio}, \Condor{config\_val}, and \Condor{stats}) that
 would cause them to seg fault on bad input to the \Opt{-pool} option. 
 
+\item Fixed a bug with the \Opt{-rset} option to \Condor{config\_val} which
+could crash the Condor daemon whose configuration was being changed.
+
+\item Added \Term{allow\_startup\_script} command to the job submit
+description file which is given to \Condor{submit}.  This allows the
+submission of a startup script to the STANDARD universe.  See 
+
 \item Fixed a bug in the \Condor{schedd} where it would get into an
 infinite loop if the persistant log of the job queue got corrupted.  
 The \Condor{schedd} now correctly handles corrupted log files.
@@ -58,6 +82,42 @@ The \Condor{schedd} now correctly handles corrupted log files.
 subdirectory in the \File{examples} directory.
 This subdirectory includes an example DAGMan job, including a README
 (in both ASCII and HTML), a Makefile, and so on.
+
+\item Condor will now insert an environment variable, \Env{CONDOR\_VM}, into
+the environment of the user job.  
+This variable specifies which SMP ``virtual machine'' the was started on.
+It will equal either vm1, vm2, vm3, \Dots , depending upon which virtual
+machine was matched.
+On a non-SMP machine, \Env{CONDOR\_VM} will always be set to vm1.
+
+\item Fixed some timing bugs introduced in v6.1.6 which could occur when
+Condor tries to simultaneously start a large number of jobs submitted from a
+single machine.
+
+\item Fixed a bug which could cause the \Condor{master} process to exit if
+the Condor daemons have been hung for a while by the operating system (if,
+for instance, the LOG directory was placed on an NFS volume and the NFS
+server is down for an extended period).
+
+\item Added new configuration parameter \Macro{COLLECTOR\_SOCKET\_BUFSIZE}
+which controls the size of TCP/IP buffers used by the \Condor{collector}.
+For more info, see section~ref{param:CollectorSocketBufsize} on
+page~pageref{param:CollectorSocketBufsize}.
+
+\item Fixed a bug with the \Opt{-analyze} option to \Condor{q}: in some
+cases, the RANK expression would not be evaluated correctly.  This could
+cause the output from \Opt{-analyze} to be in error.
+
+\item The \Condor{startd} no longer rapidly sends multiple ClassAds one
+right after another to the Central Manager when its state/activity is in
+rapid transition.  Also, on SMP machines, the \Condor{startd} will only send
+updates for 4 nodes per second (to avoid overflowing the central manager when
+reporting the state of a very large SMP machine with dozens of CPUs).
+
+\item Reading a parameter with \Condor{config\_val} is now allowed from any
+machine with Host-IP READ permission.
+Previsouly, you needed ADMINISTRATOR permission.  
+Of course, setting a parameter still requires ADMINISTRATOR permission.
 
 \item Worked around a bug in the StreamTokenizer Java class from Sun
 that we use in the CondorView client Java applet.
@@ -106,6 +166,13 @@ compilers and versions of libc.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{itemize}
+
+\item Added \Term{file\_remaps} as command in the job submit file given to
+\Condor{submit}.
+This allows the user to explicitly specify where to find a given file (e.g.
+either on the submit or execute machine), as well as remap file access to a
+different filename altogether.
+
 \item Changed the way that \Condor{master} spawns daemons and
 \Condor{preen} which allows you to specify command line arguments for
 any of them, though a \Macro{SUBSYS\_ARGS} setting.
