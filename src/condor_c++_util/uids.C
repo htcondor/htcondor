@@ -112,7 +112,7 @@ get_priv()
 
 // Lots of functions just stubs on Win NT for now....
 void init_condor_ids() {}
-int set_user_ids(uid_t uid, gid_t gid) { return FALSE }
+int set_user_ids(uid_t uid, gid_t gid) { return FALSE; }
 uid_t get_my_uid() { return 999999; }
 gid_t get_my_gid() { return 999999; }
 
