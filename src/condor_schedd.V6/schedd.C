@@ -2337,6 +2337,12 @@ void Scheduler::StartJobHandler() {
 	Shadow = param("SHADOW");
 	sh_is_dc = TRUE;
 #else
+ 	char opsys_buf[100], *match_opsys=opsys_buf;       
+ 	match_opsys[0] = '\0';
+ 	if (mrec->my_match_ad) {
+ 		mrec->my_match_ad->LookupString(ATTR_OPSYS,match_opsys);
+	}
+
 	if ( strincmp(match_opsys,"winnt",5) == MATCH ) {
 		Shadow = param("SHADOW_NT");
 		if( ! Shadow ) {
