@@ -66,6 +66,15 @@ class Authentication {
     // RETURNS: -1 -- failure
     //------------------------------------------
     
+    char* getMethodUsed();
+    //------------------------------------------
+    // PURPOSE: Return the method of authentication
+    // REQUIRE: That authentication has already happened
+    // RETURNS: pointer to a string you should NOT free
+	//          which is the name of the method, or NULL
+	//          if not currently authenticated, see next.
+    //------------------------------------------
+
     int isAuthenticated();
     //------------------------------------------
     // PURPOSE: Return the state of the authentication
@@ -180,6 +189,7 @@ class Authentication {
     ReliSock         *   mySock;
     transfer_mode        t_mode;
     int                  auth_status;
+    char*                method_used;
 };
 
 #endif /* AUTHENTICATION_H */

@@ -48,8 +48,9 @@ Authentication::Authentication( ReliSock *sock )
 #if !defined(SKIP_AUTHENTICATION)
 	mySock              = sock;
 	auth_status         = CAUTH_NONE;
+	method_used         = NULL;
 	t_mode              = NORMAL;
-        authenticator_      = NULL;
+	authenticator_      = NULL;
 #endif
 }
 
@@ -58,7 +59,12 @@ Authentication::~Authentication()
 #if !defined(SKIP_AUTHENTICATION)
 	mySock = NULL;
 
-        delete authenticator_;
+	delete authenticator_;
+
+	if (method_used) {
+		free (method_used);
+	}
+
 #endif
 }
 
@@ -99,6 +105,7 @@ Condor_Auth_Base * auth = NULL;
 	MyString methods_to_try = auth_methods;
 
 	auth_status = CAUTH_NONE;
+	method_used == NULL;
  
 	while (auth_status == CAUTH_NONE ) {
 		if (DebugFlags & D_FULLDEBUG) {
@@ -112,41 +119,45 @@ Condor_Auth_Base * auth = NULL;
 			break;
 		}
 
-		if (DebugFlags & D_FULLDEBUG) {
-			dprintf(D_SECURITY, "AUTHENTICATE: will try to use %d\n", firm);
-		}
-
+		char* method_name = NULL;
 		switch ( firm ) {
 #if defined(GSI_AUTHENTICATION)
 			case CAUTH_GSI:
 				auth = new Condor_Auth_X509(mySock);
+				method_name = strdup("GSI");
 				break;
 #endif /* GSI_AUTHENTICATION */
 
 #if defined(KERBEROS_AUTHENTICATION) 
 			case CAUTH_KERBEROS:
 				auth = new Condor_Auth_Kerberos(mySock);
+				method_name = strdup("KERBEROS");
 				break;
 #endif
  
 #if defined(WIN32)
 			case CAUTH_NTSSPI:
 				auth = new Condor_Auth_SSPI(mySock);
+				method_name = strdup("NTSSPI");
 				break;
 #else
 			case CAUTH_FILESYSTEM:
 				auth = new Condor_Auth_FS(mySock);
+				method_name = strdup("FS");
 				break;
 			case CAUTH_FILESYSTEM_REMOTE:
 				auth = new Condor_Auth_FS(mySock, 1);
+				method_name = strdup("FS_REMOTE");
 				break;
 #endif /* !defined(WIN32) */
 			case CAUTH_CLAIMTOBE:
 				auth = new Condor_Auth_Claim(mySock);
+				method_name = strdup("CLAIMTOBE");
 				break;
  
 			case CAUTH_ANONYMOUS:
 				auth = new Condor_Auth_Anonymous(mySock);
+				method_name = strdup("ANONYMOUS");
 				break;
  
 			case CAUTH_NONE:
@@ -159,6 +170,11 @@ Condor_Auth_Base * auth = NULL;
 				return 0;
 		}
 
+
+		if (DebugFlags & D_FULLDEBUG) {
+			dprintf(D_SECURITY, "AUTHENTICATE: will try to use %d (%s)\n", firm,
+					(method_name?method_name:"?!?") );
+		}
 
 		//------------------------------------------
 		// Now authenticate
@@ -194,17 +210,30 @@ Condor_Auth_Base * auth = NULL;
 				methods_to_try = new_list;
 			}
 
-			dprintf(D_SECURITY,"AUTHENTICATE: method %i failed.\n", firm);
+			dprintf(D_SECURITY,"AUTHENTICATE: method %d (%s) failed.\n", firm,
+					(method_name?method_name:"?!?"));
 		} else {
+			// authentication succeeded.  store the object (we may call upon
+			// its wrapper functions) and set the auth_status of this sock to
+			// the bitmask method we used and the method_used to the string
+			// name.  (string name is obtained above because there is currently
+			// no bitmask -> string map)
 			authenticator_ = auth;
 			auth_status = authenticator_->getMode();
+			if (method_name) {
+				method_used = strdup(method_name);
+			} else {
+				method_used = NULL;
+			}
 		}
+		free (method_name);
 	}
 
 	//if none of the methods succeeded, we fall thru to default "none" from above
 	int retval = ( auth_status != CAUTH_NONE );
 	if (DebugFlags & D_FULLDEBUG) {
-		dprintf(D_SECURITY, "AUTHENTICATE: auth_status == %i\n", auth_status);
+		dprintf(D_SECURITY, "AUTHENTICATE: auth_status == %i (%s)\n", auth_status,
+				(method_used?method_used:"?!?") );
 	}
 	dprintf(D_SECURITY, "Authentication was a %s.\n", retval == 1 ? "Success" : "FAILURE" );
 
@@ -228,12 +257,25 @@ void Authentication::unAuthenticate()
 {
 #if !defined(SKIP_AUTHENTICATION)
     auth_status = CAUTH_NONE;
-    delete authenticator_;
-    authenticator_ = 0;
+	if (authenticator_) {
+    	delete authenticator_;
+    	authenticator_ = 0;
+	}
+	if (method_used) {
+		free (method_used);
+		method_used = 0;
+	}
 #endif
 }
 
 
+char* Authentication::getMethodUsed() {
+#if !defined(SKIP_AUTHENTICATION)
+	return method_used;
+#else
+	return NULL;
+#endif
+}
 /*
 void Authentication::setAuthAny()
 {
