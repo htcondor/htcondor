@@ -570,7 +570,11 @@ DCCollectorAdSeqMan::DCCollectorAdSeqMan( void )
 // Destructor for the Ad Sequence Number Manager
 DCCollectorAdSeqMan::~DCCollectorAdSeqMan( void )
 {
-	//delete adSeqInfo;
+	int				adNum;
+
+	for ( adNum = 0;  adNum < numAds;  adNum++ ) {
+		delete adSeqInfo[adNum];
+	}
 }
 
 // Get the sequence number
