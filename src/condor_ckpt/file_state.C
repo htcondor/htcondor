@@ -46,6 +46,7 @@
 #endif
 
 #include <stdio.h>
+#include <signal.h>
 #include "fcntl.h"
 #include <errno.h>
 #include <string.h>
