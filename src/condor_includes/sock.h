@@ -255,7 +255,7 @@ protected:
     ///
 	virtual int authenticate(KeyInfo *&ki, const char * auth_methods, CondorError* errstack);
     ///
-	virtual int isAuthenticated();
+	virtual int isAuthenticated() const;
     ///
 	virtual void unAuthenticate();
     ///

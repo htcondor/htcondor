@@ -76,7 +76,7 @@ class Authentication {
 	//          if not currently authenticated, see next.
     //------------------------------------------
 
-    int isAuthenticated();
+    int isAuthenticated() const;
     //------------------------------------------
     // PURPOSE: Return the state of the authentication
     // REQUIRE: None

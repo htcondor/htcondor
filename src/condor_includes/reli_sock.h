@@ -160,7 +160,7 @@ public:
     ///
     const char * getHostAddress();
     ///
-	int isAuthenticated();
+	int isAuthenticated() const;
     ///
 	void unAuthenticate();
 	///
