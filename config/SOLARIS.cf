@@ -109,6 +109,14 @@
 */
 #define TestPlatformLdFlags -lnsl -lsocket 
 
+/*
+    When we're linking for purify, we don't want all the static crap,
+    either, but we need more libs than just the test suite.  So, we 
+    define this here to specify the flags we want to give to the
+    linker when we're building the Condor Daemons under purify.
+*/ 
+#define PurifyPlatformLdFlags -ldl -lkstat -lelf -lnsl -lsocket
+
 
 /**************************************************************************
 ** Include OS version and Arch-specific config files
