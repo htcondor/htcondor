@@ -11,7 +11,7 @@
 
 extern "C" {
 	char *param();
-#if defined(LINUX)	
+#if defined(LINUX) || defined(HPUX9)	
 	int gethostname(char *name, unsigned int namelen);
 #else
 	int gethostname(char *name, int namelen);
