@@ -40,6 +40,7 @@
 #include "condor_attributes.h"
 #include "condor_random_num.h"
 #include "../condor_sysapi/sysapi.h"
+#include "perm.h"
 
 
 extern "C" int get_random_int();
