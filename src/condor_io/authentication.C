@@ -168,7 +168,7 @@ int Authentication::authenticate( char *hostAddr, int clientFlags )
     }
     clientCanUse = 0;
   }
-  
+
   //if none of the methods succeeded, we fall thru to default "none" from above
   int retval = ( auth_status != CAUTH_NONE );
   dprintf(D_FULLDEBUG, "Authentication::authenticate %s\n", 
@@ -393,7 +393,7 @@ int Authentication::exchangeKey(KeyInfo *& key)
 {
     int retval = 1;
     int hasKey, keyLength, protocol, duration;
-    int outputLen;
+    int outputLen, inputLen;
     char * encryptedKey = 0, * decryptedKey = 0;
 
     if (mySock->isClient()) {
@@ -401,16 +401,17 @@ int Authentication::exchangeKey(KeyInfo *& key)
         mySock->code(hasKey);
         mySock->end_of_message();
         if (hasKey) {
-            mySock->code(keyLength);
+            mySock->code(keyLength);// this is not good
             mySock->code(protocol);
             mySock->code(duration);
-            encryptedKey = (char *) malloc(keyLength);
-            mySock->get_bytes(encryptedKey, keyLength);
+            mySock->code(inputLen);
+            encryptedKey = (char *) malloc(inputLen);
+            mySock->get_bytes(encryptedKey, inputLen);
             mySock->end_of_message();
 
             // Now, unwrap it
-            authenticator_->unwrap(encryptedKey,  keyLength, decryptedKey, outputLen);
-            key = new KeyInfo((unsigned char *)decryptedKey, outputLen, (Protocol) protocol, duration);
+            authenticator_->unwrap(encryptedKey,  inputLen, decryptedKey, outputLen);
+            key = new KeyInfo((unsigned char *)decryptedKey, keyLength,(Protocol) protocol,duration);
         }
     }
     else {  // server sends the key!
@@ -431,9 +432,10 @@ int Authentication::exchangeKey(KeyInfo *& key)
             duration  = key->getDuration();
 
             authenticator_->wrap((char *)key->getKeyData(), keyLength, encryptedKey, outputLen);
-            mySock->code(keyLength);
+            mySock->code(keyLength);       // this is not good
             mySock->code(protocol);
             mySock->code(duration);
+            mySock->code(outputLen);
             mySock->put_bytes(encryptedKey, outputLen);
             mySock->end_of_message();
         }
