@@ -53,5 +53,5 @@ CKPT_SERVER_DIR	= /ckpt_server
 ######################################################################
 
 CKPT_SERVER_LOG		= $(LOG)/CkptServerLog
-MAX_CKPT_SERVER_LOG	= 640000
+MAX_CKPT_SERVER_LOG	= 1000000
 CKPT_SERVER_DEBUG	= D_ALWAYS

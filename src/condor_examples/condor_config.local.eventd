@@ -84,5 +84,5 @@ EVENTD		= $(SBIN)/condor_eventd
 ######################################################################
 
 EVENTD_LOG	= $(LOG)/EventdLog
-MAX_EVENTD_LOG	= 640000
+MAX_EVENTD_LOG	= 1000000
 EVENTD_DEBUG	= D_ALWAYS

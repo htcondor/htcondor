@@ -18,7 +18,7 @@ GAHP				= $(SBIN)/gahp_server
 ##  Another option is to use /tmp as the location of the GridManager log.
 ## 
 
-MAX_GRIDMANAGER_LOG	= 64000
+MAX_GRIDMANAGER_LOG	= 1000000
 GRIDMANAGER_DEBUG	= D_COMMAND
 
 GRIDMANAGER_LOG = $(LOG)/GridLogs/GridmanagerLog.$(USERNAME)
