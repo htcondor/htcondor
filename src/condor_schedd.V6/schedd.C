@@ -418,6 +418,10 @@ Scheduler::count_jobs()
 		Owners[i].NegotiationTimestamp = current_time;
 	}
 
+		// Clear out the DedicatedScheduler's list of idle dedicated
+		// job cluster ids, since we're about to re-create it.
+	dedicated_scheduler.clearDedicatedClusters();
+
 	WalkJobQueue((int(*)(ClassAd *)) count );
 
 		// set JobsRunning/JobsFlocked for owners
@@ -827,6 +831,13 @@ count( ClassAd *job )
 			if ( globus_status == G_UNSUBMITTED ) 
 				scheduler.Owners[OwnerNum].GlobusUnsubmittedJobs++;
 		}
+			// We want to record the cluster id of all idle MPI jobs  
+		if( universe == MPI && status == IDLE ) {
+			int cluster = 0;
+			job->LookupInteger( ATTR_CLUSTER_ID, cluster );
+			dedicated_scheduler.addDedicatedCluster( cluster );
+		}
+
 		// bailout now, since all the crud below is only for jobs
 		// which the schedd needs to service
 		return 0;
