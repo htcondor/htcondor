@@ -73,9 +73,6 @@ int Buf::write(
 	)
 {
 	int	nw;
-	int nwo;
-	unsigned int start_time, curr_time;
-
 	if (sz < 0 || sz > num_untouched()) {
         sz = num_untouched();
     }
@@ -137,8 +134,6 @@ int Buf::read(
 	)
 {
 	int	nr;
-	int nro;
-	unsigned int start_time, curr_time;
 
 	if (sz < 0 || sz > num_free()){
 		dprintf(D_ALWAYS, "IO: Buffer too small\n");
