@@ -3,7 +3,7 @@
 
 #define RpcLib /**/
 #define MldLib /**/
-#define KernLib /usr/lib/libelf.a /usr/lib/libkvm.a /* ..dhaval 6/28 */
+#define KernLib /usr/lib/libelf.a /usr/lib/libkstat.a
 #define MallocLib /lib/libkvm.a
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC  

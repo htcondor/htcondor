@@ -3,7 +3,7 @@
 
 #define RpcLib /**/
 #define MldLib /**/
-#define KernLib /usr/lib/libkvm.so /usr/lib/libelf.so
+#define KernLib /usr/lib/libkstat.so /usr/lib/libelf.so
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC  
 #define SocketLib /usr/lib/libsocket.so /usr/lib/libnsl.so
