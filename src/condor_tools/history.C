@@ -4,9 +4,6 @@
 #include "condor_debug.h"
 #include "condor_attributes.h"
 
-#include "MyString.h"
-#include "TimeClass.h"
-
 //------------------------------------------------------------------------
 
 static void displayJobShort(ClassAd *ad);
@@ -18,38 +15,77 @@ static void shorten (char *, int);
 static char* format_date( time_t date );
 static char* format_time( int tot_secs );
 static char encode_status( int status );
+static bool EvalBool(ClassAd *ad, const char *constraint);
 
 //------------------------------------------------------------------------
 
 static void Usage(char* name) 
 {
-  printf("Usage: %s [-v]\n",name);
+  printf("Usage: %s [-l] [-f history-filename] [ cluster_id | cluster_id.proc_id | owner]\n",name);
+  exit(1);
 }
 
 //------------------------------------------------------------------------
 
 main(int argc, char* argv[])
 {
-  if (argc>2 || (argc==2 && strcmp(argv[1],"-v")!=0)) {
-    Usage(argv[0]);
-    exit(1);
+  char* JobHistoryFileName=NULL;
+  int LongFormat=FALSE;
+  char* constraint=NULL;
+  int cluster, proc;
+  char tmp[512];
+  int i;
+
+  for(i=1; i<argc; i++) {
+    if (strcmp(argv[i],"-l")==0) {
+      LongFormat=TRUE;   
+    }
+    else if (strcmp(argv[i],"-f")==0) {
+      if (i+1==argc || JobHistoryFileName) break;
+      i++;
+	  JobHistoryFileName=argv[i];
+    }
+    else if (sscanf (argv[i], "%d.%d", &cluster, &proc) == 2) {
+      if (constraint) break;
+      sprintf (tmp, "((%s == %d) && (%s == %d))", 
+               ATTR_CLUSTER_ID, cluster,ATTR_PROC_ID, proc);
+      constraint=tmp;
+    }
+    else if (sscanf (argv[i], "%d", &cluster) == 1) {
+      if (constraint) break;
+      sprintf (tmp, "(%s == %d)", ATTR_CLUSTER_ID, cluster);
+      constraint=tmp;
+    }
+    else {
+      if (constraint) break;
+      sprintf(tmp, "(%s == \"%s\")", ATTR_OWNER, argv[i]);
+      constraint=tmp;
+    }
   }
- 
+  if (i<argc) Usage(argv[0]);
+
   config( 0 );
-  MyString LogFileName=param("SPOOL");
-  LogFileName+="/job_history.log";
-  FILE* LogFile=fopen(LogFileName,"r");
+  if (!JobHistoryFileName) {
+    JobHistoryFileName=param("JOB_HISTORY_FILE");
+  }
+
+  FILE* LogFile=fopen(JobHistoryFileName,"r");
   if (!LogFile) {
     fprintf(stderr,"No jobs logged in the history file.\n");
     exit(1);
   }
-  
+
+  // printf("HistroyFile=%s\nLongFormat=%d\n",JobHistoryFileName,LongFormat);
+  // if (constraint) printf("constraint=%s\n",constraint);
+
   int EndFlag=0;
   short_header();
   while(!EndFlag) {
     ClassAd* ad=new ClassAd(LogFile,"***",EndFlag);
-    if (argc==1) displayJobShort(ad);
-    else { ad->fPrint(stdout); printf("\n"); }
+    if (!constraint || EvalBool(ad, constraint)) {
+      if (LongFormat) { ad->fPrint(stdout); printf("\n"); }
+      else displayJobShort(ad);
+    }
   }
  
   fclose(LogFile);
@@ -217,5 +253,32 @@ encode_status( int status )
           default:
                 return ' ';
         }
+}
+
+//------------------------------------------------------------------------
+
+static bool EvalBool(ClassAd *ad, const char *constraint)
+{
+    ExprTree *tree;
+    EvalResult result;
+
+    if (Parse(constraint, tree) != 0) {
+        // dprintf(D_ALWAYS, "can't parse constraint: %s\n", constraint);
+        return false;
+    }
+
+    // Evaluate constraint with ad in the target scope so that constraints
+    // have the same semantics as the collector queries.  --RR
+    if (!tree->EvalTree(NULL, ad, &result)) {
+        // dprintf(D_ALWAYS, "can't evaluate constraint: %s\n", constraint);
+        delete tree;
+        return false;
+    }
+    delete tree;
+    if (result.type == LX_INTEGER) {
+        return (bool)result.i;
+    }
+    // dprintf(D_ALWAYS, "contraint (%s) does not evaluate to bool\n", constraint);
+    return false;
 }
 
