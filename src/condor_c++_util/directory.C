@@ -560,8 +560,8 @@ Directory::do_remove_file( const char* path )
 				// If on NT, remove read-only access if exists.
 #ifdef WIN32
 				// Make file read/write on NT.
-			_chmod( path ,_S_IWRITE );
-#endif
+			_chmod( path, _S_IWRITE );
+#else /* UNIX */
 			if( want_priv_change && (desired_priv_state == PRIV_ROOT) ) {
 				priv_state priv = setOwnerPriv( path );
 				if( priv == PRIV_UNKNOWN ) {
@@ -572,6 +572,7 @@ Directory::do_remove_file( const char* path )
 					return false;
 				}
 			}
+#endif /* WIN32 vs. UNIX */
 			if( unlink(path) < 0 ) {
 				ret_val = false;
 			} else {
