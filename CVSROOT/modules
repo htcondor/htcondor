@@ -28,13 +28,6 @@
 # Convenient aliases
 world		-a .
 
-# CVSROOT support; run mkmodules whenever anything changes.
-CVSROOT			-i mkmodules CVSROOT
-modules			-i mkmodules CVSROOT modules
-loginfo			-i mkmodules CVSROOT loginfo
-commitinfo		-i mkmodules CVSROOT commitinfo
-rcsinfo			-i mkmodules CVSROOT rcsinfo
-editinfo		-i mkmodules CVSROOT editinfo
 validate_user	-i co validate_user
 
 # Add other modules here...
