@@ -71,7 +71,7 @@ Accountant::~Accountant()
 }
 
 //------------------------------------------------------------------
-// Initialize and read configuration parameters
+// Initialize (or re-configure) and read configuration parameters
 //------------------------------------------------------------------
 
 void Accountant::Initialize() 
@@ -90,7 +90,6 @@ void Accountant::Initialize()
 	  HalfLifePeriod=(float)atof(tmp);
 	  free(tmp);
   }
-  dprintf(D_FULLDEBUG,"Accountant::Initialize - HalfLifePeriod=%f\n",HalfLifePeriod);
 
   // get nice users priority factor
 
@@ -119,9 +118,11 @@ void Accountant::Initialize()
       RemoteUserPriorityFactor=1;
   }
 
-  dprintf(D_FULLDEBUG,"Accountant::Initialize - NiceUserPriorityFactor=%f\n",NiceUserPriorityFactor);
-  dprintf(D_FULLDEBUG,"Accountant::Initialize - RemoteUserPriorityFactor=%f\n",RemoteUserPriorityFactor);
-  dprintf(D_FULLDEBUG,"Accountant::Initialize - AccountantLocalDomain=%s\n",AccountantLocalDomain.Value());
+  dprintf(D_ALWAYS,"PRIORITY_HALFLIFE=%f\n",HalfLifePeriod);
+  dprintf(D_ALWAYS,"NICE_USER_PRIO_FACTOR=%f\n",NiceUserPriorityFactor);
+  dprintf(D_ALWAYS,"REMOTE_PRIO_FACTOR=%f\n",RemoteUserPriorityFactor);
+  dprintf(D_ALWAYS,"ACCOUNTANT_LOCAL_DOMAIN=%s\n",
+				  AccountantLocalDomain.Value());
 
   // get log filename
 
@@ -137,7 +138,8 @@ void Accountant::Initialize()
   }
   if (!AcctLog) {
     AcctLog=new ClassAdLog(LogFileName.Value());
-    dprintf(D_FULLDEBUG,"Accountant::Initialize - LogFileName=%s\n",LogFileName.Value());
+    dprintf(D_FULLDEBUG,"Accountant::Initialize - LogFileName=%s\n",
+					LogFileName.Value());
   }
 
   // get last update time
