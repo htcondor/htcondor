@@ -354,9 +354,13 @@ int ReliSock::RcvMsg::rcv_packet(
 	int		len, len_t;
 	int		tmp_len;
 
-	if (read(_sock, hdr, 5) != 5){
-		return FALSE;
-	}
+    len = 0;
+    while (len < 5) {
+        tmp_len = read(_sock, hdr+len, 5-len);
+        if (tmp_len < 0)
+            return FALSE;
+        len += tmp_len;
+    }
 	end = (int) ((char *)hdr)[0];
 	memcpy(&len_t,  &hdr[1], 4);
 	len = (int) ntohl(len_t);
