@@ -112,16 +112,26 @@ initialize( const char *file, int c, int p, int s )
 
 	if (fp) fclose(fp);
 
+#ifndef WIN32
 	if( (fd = open( path, O_CREAT | O_WRONLY, 0664 )) < 0 ) {
-		dprintf( D_ALWAYS, "open(%s) failed with errno %d", path, errno );
+		dprintf( D_ALWAYS, 
+			"UserLog::initialize: open(%s) failed - errno %d", path, errno );
 		return;
 	}
 
 		// attach it to stdio stream
-	if( (fp = fdopen(fd,"w")) == NULL ) {
-		dprintf( D_ALWAYS, "fdopen(%d) failed in UserLog::initialize", fd );
-		return;
+	if( (fp = fdopen(fd,"a")) == NULL ) {
+		dprintf( D_ALWAYS, 
+			"UserLog::initialize: fdopen() failed - errno %d", path, errno );
 	}
+#else
+	if( (fp = fopen(path,"a+t")) == NULL ) {
+		dprintf( D_ALWAYS, 
+			"UserLog::initialize: fopen failed - errno %d", path, errno );
+	}
+
+	fd = _fileno(fp);
+#endif
 
 		// set the stdio stream for line buffering
 	if( setvbuf(fp,NULL,_IOLBF,BUFSIZ) < 0 ) {
@@ -138,39 +148,14 @@ void UserLog::
 initialize( const char *owner, const char *file, int c, int p, int s )
 {
 	priv_state		priv;
-	int 			fd;
-
-		// Save parameter info
-	path = new char[ strlen(file) + 1 ];
-	strcpy( path, file );
-	in_block = FALSE;
 
 	init_user_ids(owner);
 
+		// switch to user priv, saving the current user
 	priv = set_user_priv();
 
-	if (fp) fclose(fp);
-
-	if( (fd = open( path, O_CREAT | O_WRONLY, 0664 )) < 0 ) {
-		dprintf( D_ALWAYS, "open(%s) failed with errno %d", path, errno );
-		return;
-	}
-
-		// attach it to stdio stream
-	if( (fp = fdopen(fd,"w")) == NULL ) {
-		dprintf( D_ALWAYS, "fdopen(%d) failed in UserLog::initialize", fd );
-		return;
-	}
-
-		// set the stdio stream for line buffering
-	if( setvbuf(fp,NULL,_IOLBF,BUFSIZ) < 0 ) {
-		dprintf( D_ALWAYS, "setvbuf failed in UserLog::initialize" );
-	}
-
-		// prepare to lock the file
-	lock = new FileLock( fd );
-
-	initialize(c, p, s);
+		// initialize log file
+	initialize(file,c,p,s);
 
 		// get back to whatever UID and GID we started with
 	set_priv(priv);
