@@ -125,8 +125,8 @@ static void PrintInfo(AttrList* ad)
   // printf("%f\n",d);
   printf("Last Priority Update: %s\n",T.Asc());
 
-  char* Fmt1="%-30s   %8.3f   %4d\n"; 
-  char* Fmt2="%-30s   %-8s   %-4s\n"; 
+  char* Fmt1="%-30s   %12.3f   %4d\n"; 
+  char* Fmt2="%-30s   %12s   %4s\n"; 
 
   printf(Fmt2,"Name","Priority","Resources Used");
   printf(Fmt2,"----","--------","--------------");
