@@ -281,7 +281,7 @@ int DaemonCore::InfoCommandPort()
 char * DaemonCore::InfoCommandSinfulString()
 {
 	sockaddr_in	addr;
-	int			addr_len;
+	int			addr_len = sizeof(addr);
 
 	if ( initial_command_sock == -1 ) {
 		// there is no command sock!
@@ -294,7 +294,8 @@ char * DaemonCore::InfoCommandSinfulString()
 	if ( get_inet_address(&addr.sin_addr) == -1 )
 		return NULL;
 
-	return ( sin_to_string( &addr ) );
+	return( sin_to_string( &addr ) );
+
 }
 
 int DaemonCore::Register_Signal(int sig, char* sig_descrip, SignalHandler handler, 
