@@ -382,7 +382,7 @@ class DaemonCore : public Service
 
 	// Function to call when you want your daemon to really exit.
 	// This allows DaemonCore a chance to clean up.
-extern "C" void DC_Exit( int status );	
+extern void DC_Exit( int status );	
 
 extern DaemonCore* daemonCore;
 #endif
