@@ -34,9 +34,17 @@ main_activate_globus()
 {
 	int err;
 	static int first_time = true;
-
+	char *proxyString;
+	
 	if(gridmanager.X509Proxy && first_time) {
-		setenv("X509_USER_PROXY", gridmanager.X509Proxy, 1);
+		 proxyString = (char *)malloc(strlen("X509_USER_PROXY=") +
+                strlen(gridmanager.X509Proxy)+1);
+        sprintf(proxyString, "X509_USER_PROXY=%s",
+            gridmanager.X509Proxy);
+        if(putenv(proxyString) < 0) {
+            dprintf(D_ALWAYS, "putenv(\"%s\") failed!\n",
+                proxyString);
+		}
 		first_time = false;
 	}		
 
