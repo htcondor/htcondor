@@ -938,6 +938,12 @@ of the subsystem corresponding to the daemon.
   reason, you decide to change this setting, be sure to change the
   \MacroUNI{VALID\_LOG\_FILES} entry that \Condor{preen} uses as well.
 
+\item[\Macro{ENABLE\_USERLOG\_LOCKING}] \label{param:EnableUserlogLocking}
+  When \Expr{True} (the default value),
+  a user's job log (as specified in a submit description file)
+  will be locked before being written to.
+  If \Expr{False}, Condor will not lock the file before writing.
+
 \item[\Macro{SUBSYS\_DEBUG}] \label{param:SubsysDebug} All of the
   Condor daemons can produce different levels of output depending on
   how much information you want to see.  The various levels of
