@@ -19,6 +19,7 @@ static char *names[] = {
 	"MPI",
 	"GLOBUS",
 	"JAVA",
+	"PARALLEL",
 };
 
 const char * CondorUniverseName( int u )

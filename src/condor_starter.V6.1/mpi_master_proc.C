@@ -212,7 +212,7 @@ MPIMasterProc::alterEnv()
 		return 0;
 	}
 
-    sprintf( foo, ";MPI_SHADOW_SINFUL=%s", shad );
+    sprintf( foo, ";PARALLEL_SHADOW_SINFUL=%s", shad );
     strcat( env, foo );
 
 		// In case the user job is linked with a newer version of

@@ -33,6 +33,8 @@
 #include "java_proc.h"
 #include "mpi_master_proc.h"
 #include "mpi_comrade_proc.h"
+#include "parallel_master_proc.h"
+#include "parallel_comrade_proc.h"
 #include "syscall_numbers.h"
 #include "my_hostname.h"
 #include "internet.h"
@@ -592,6 +594,20 @@ CStarter::TransferCompleted( FileTransfer *ftrans )
 			} else {
 				dprintf ( D_FULLDEBUG, "Starting a MPIComradeProc\n" );
 				job = new MPIComradeProc( jobAd );
+			}
+			break;
+		}
+		case CONDOR_UNIVERSE_PARALLEL: {
+			int is_master = FALSE;
+			if ( jobAd->LookupBool(ATTR_PARALLEL_IS_MASTER, is_master) < 1 ) {
+				is_master = FALSE;
+			}
+			if ( is_master ) {
+				dprintf ( D_FULLDEBUG, "Starting a ParallelMasterProc\n" );
+				job = new ParallelMasterProc( jobAd );
+			} else {
+				dprintf ( D_FULLDEBUG, "Starting a ParallelComradeProc\n" );
+				job = new ParallelComradeProc( jobAd );
 			}
 			break;
 		}

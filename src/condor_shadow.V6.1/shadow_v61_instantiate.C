@@ -24,11 +24,14 @@
 #include "condor_common.h"
 #include "list.h"
 #include "mpiresource.h"
+#include "parallelresource.h"
 #include "file_transfer.h"
 #include "HashTable.h"
 
 // for the MPIShadow, a list of remote resource classes....
 template class ExtArray<MpiResource *>;
+// for the ParallelShadow, a list of remote resource classes....
+template class ExtArray<ParallelResource *>;
 
 // for the file transfer object.
 template class HashTable<MyString, FileTransfer *>;

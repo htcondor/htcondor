@@ -194,6 +194,9 @@ char	*DAGManJobId = "dagman_job_id";
 char	*LogNotes = "submit_event_notes";
 char	*JarFiles = "jar_files";
 
+char    *ParallelScriptShadow  = "parallel_script_shadow";  
+char    *ParallelScriptStarter = "parallel_script_starter"; 
+
 #if !defined(WIN32)
 char	*KillSig			= "kill_sig";
 char	*RmKillSig			= "remove_kill_sig";
@@ -257,7 +260,8 @@ void	SetExitRemoveCheck(void);
 void SetDAGNodeName();
 void SetDAGManJobId();
 void SetLogNotes();
-void	SetJarFiles();
+void SetJarFiles();
+void SetParallelStartupScripts(); //JDB
 
 char *owner = NULL;
 
@@ -754,6 +758,7 @@ SetExecutable()
 	case CONDOR_UNIVERSE_VANILLA:
 	case CONDOR_UNIVERSE_SCHEDULER:
 	case CONDOR_UNIVERSE_MPI:  // for now
+	case CONDOR_UNIVERSE_PARALLEL:
 	case CONDOR_UNIVERSE_GLOBUS:
 	case CONDOR_UNIVERSE_JAVA:
 		(void) sprintf (buffer, "%s = FALSE", ATTR_WANT_REMOTE_SYSCALLS);
@@ -873,6 +878,16 @@ SetUniverse()
 		free(univ);
 		return;
 	};
+
+	if( univ && stricmp(univ,"parallel") == MATCH ) {
+		JobUniverse = CONDOR_UNIVERSE_PARALLEL;
+		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_PARALLEL);
+		InsertJobExpr (buffer);
+		
+		free(univ);
+		return;
+	}
+
 #endif  // of !defined(WIN32)
 
 	if( univ && stricmp(univ,"vanilla") == MATCH ) {
@@ -968,7 +983,8 @@ SetMachineCount()
 			InsertJobExpr ("MaxHosts = 1");
 		}
 
-	} else if (JobUniverse == CONDOR_UNIVERSE_MPI) {
+	} else if (JobUniverse == CONDOR_UNIVERSE_MPI ||
+			   JobUniverse == CONDOR_UNIVERSE_PARALLEL ) {
 
 		mach_count = condor_param( MachineCount, "MachineCount" );
 		if( ! mach_count ) { 
@@ -1440,6 +1456,24 @@ SetJarFiles()
 	value = condor_param( JarFiles );
 	if(value) {
 		sprintf(buffer,"%s = \"%s\"",ATTR_JAR_FILES,value);
+		InsertJobExpr (buffer);
+	}
+}
+
+void
+SetParallelStartupScripts() //JDB
+{
+	char buffer[ATTRLIST_MAX_EXPRESSION];
+	char *value;
+
+	value = condor_param( ParallelScriptShadow );
+	if(value) {
+		sprintf(buffer,"%s = \"%s\"",ATTR_PARALLEL_SCRIPT_SHADOW,value);
+		InsertJobExpr (buffer);
+	}
+	value = condor_param( ParallelScriptStarter );
+	if(value) {
+		sprintf(buffer,"%s = \"%s\"",ATTR_PARALLEL_SCRIPT_STARTER,value);
 		InsertJobExpr (buffer);
 	}
 }
@@ -2720,6 +2754,8 @@ queue(int num)
 			   corresponding to the mpi node's number. */
 		if ( JobUniverse == CONDOR_UNIVERSE_MPI ) {
 			set_condor_param ( "NODE", "#MpInOdE#" );
+		} else if ( JobUniverse == CONDOR_UNIVERSE_PARALLEL ) {
+			set_condor_param ( "NODE", "#pArAlLeLnOdE#" );
 		}
 
 		// Note: Due to the unchecked use of global variables everywhere in
@@ -2760,6 +2796,7 @@ queue(int num)
 		SetDAGNodeName();
 		SetDAGManJobId();
 		SetJarFiles();
+		SetParallelStartupScripts(); //JDB
 
 		rval = SaveClassAd();
 
@@ -2907,6 +2944,7 @@ check_requirements( char *orig )
 	}
 	if( (JobUniverse == CONDOR_UNIVERSE_VANILLA) 
 		|| (JobUniverse == CONDOR_UNIVERSE_MPI) 
+		|| (JobUniverse == CONDOR_UNIVERSE_PARALLEL) 
 		|| (JobUniverse == CONDOR_UNIVERSE_JAVA) ) {
 		if( never_transfer ) {
 			checks_fsdomain = findClause( answer,
@@ -3014,6 +3052,7 @@ check_requirements( char *orig )
 
 	if( (JobUniverse == CONDOR_UNIVERSE_VANILLA) 
 		|| (JobUniverse == CONDOR_UNIVERSE_MPI) 
+		|| (JobUniverse == CONDOR_UNIVERSE_PARALLEL) 
 		|| (JobUniverse == CONDOR_UNIVERSE_JAVA) ) {
 			/* 
 			   This is a kind of job that might be using file transfer
@@ -3124,7 +3163,10 @@ check_open( const char *name, int flags )
 		   we will really only try and access the 0th file only */
 	if ( JobUniverse == CONDOR_UNIVERSE_MPI ) {
 		strPathname.replaceString("#MpInOdE#", "0");
+	} else if ( JobUniverse == CONDOR_UNIVERSE_PARALLEL ) {
+		strPathname.replaceString("#pArAlLeLnOdE#", "0");
 	}
+
 
 	/* If this file as marked as append-only, do not truncate it here */
 
