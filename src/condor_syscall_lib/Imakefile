@@ -29,7 +29,7 @@ HAS_64BIT_STRUCTS = -DHAS_64BIT_STRUCTS
 #endif
 
 FILE_TABLE = -DFILE_TABLE -I ZIncludePath
-FILE_TABLE_OBJ = file_state.o condor_file.o condor_file_basic.o condor_file_local.o condor_file_remote.o condor_file_special.o condor_file_agent.o condor_file_buffer.o condor_file_fd.o condor_file_compress.o file_table_interf.o
+FILE_TABLE_OBJ = file_state.o condor_file.o condor_file_basic.o condor_file_local.o condor_file_remote.o condor_file_special.o condor_file_agent.o condor_file_buffer.o condor_file_fd.o condor_file_compress.o condor_file_append.o file_table_interf.o
 
 #if IS_IRIX
 /* This silliness is because gcc 2.7.2 on IRIX cannot
