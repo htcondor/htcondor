@@ -63,6 +63,10 @@ options} may be specified.
 		resource state information}
     \OptItem{\Opt{-submitters}}{(Query option) Query ads sent by submitters and
 		display important submitter attributes}
+    \OptItem{\Opt{-cod}}{(Display option) Display only machine ClassAds
+		that have COD claims. Information displayed includes
+		the claim ID, the owner of the claim, and the state
+		of the COD claim.}
     \OptItem{\Opt{-verbose}}{(Display option) Display entire classads.  Implies
 		that totals will not be displayed.}
     \OptItem{\Opt{-long}}{(Display option) Display entire classads 
@@ -191,6 +195,23 @@ of more than 750, use
 \begin{verbatim}
 % condor_status -constraint 'Mips>750' 
 \end{verbatim}
+
+\underline{-cod option example}
+
+The \Opt{-cod} option displays the status of COD
+claims within a given Condor pool. 
+
+\begin{verbatim}
+Name        ID   ClaimState TimeInState RemoteUser JobId Keyword
+astro.cs.wi COD1 Idle        0+00:00:04 wright
+chopin.cs.w COD1 Running     0+00:02:05 wright     3.0   fractgen
+chopin.cs.w COD2 Suspended   0+00:10:21 wright     4.0   fractgen
+
+               Total  Idle  Running  Suspended  Vacating  Killing
+ INTEL/LINUX       3     1        1          1         0        0
+       Total       3     1        1          1         0        0
+\end{verbatim}
+
 
 \ExitStatus
 
