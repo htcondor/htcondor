@@ -199,6 +199,7 @@ public:
 	/// Copy constructor -- this also dups the underlying socket
 	Sock(const Sock &);
 
+	void doNotEnforceMinimalCONNECT_TIMEOUT() ;		// Used by HA Daemon
 
 //	PRIVATE INTERFACE TO ALL SOCKS
 //
@@ -286,6 +287,7 @@ protected:
 
 	static int timeout_multiplier;
 
+	bool ignore_connect_timeout;	// Used by HA Daemon
 private:
 	int _condor_read(SOCKET fd, char *buf, int sz, int timeout);
 	int _condor_write(SOCKET fd, char *buf, int sz, int timeout);

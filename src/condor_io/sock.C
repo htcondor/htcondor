@@ -43,6 +43,7 @@ Sock::Sock() : Stream() {
 	_sock = INVALID_SOCKET;
 	_state = sock_virgin;
 	_timeout = 0;
+	ignore_connect_timeout = FALSE;		// Used by the HA Daemon
 	connect_state.host = NULL;
 	memset(&_who, 0, sizeof(struct sockaddr_in));
 	memset(&_endpoint_ip_buf, 0, _ENDPOINT_BUF_SIZE);
@@ -89,6 +90,7 @@ Sock::Sock(const Sock & orig) : Stream() {
 		EXCEPT("ERROR: dup() failed in Sock copy ctor");
 	}
 #endif
+	ignore_connect_timeout = orig.ignore_connect_timeout;	// Used by HAD
 }
 
 Sock::~Sock()
@@ -536,6 +538,15 @@ int Sock::do_connect(
 	} else {
 		connect_state.timeout_interval = _timeout;
 	}
+
+	// Used by HAD
+	// if doNotEnforceMinimalCONNECT_TIMEOUT() was previously called
+	// than we don't enforce a minimal amount of CONNECT_TIMEOUT seconds
+	// for connect_state.timeout_interval
+	if(ignore_connect_timeout == TRUE){
+		connect_state.timeout_interval = _timeout;
+	}
+
 	connect_state.timeout_time = time(NULL) + connect_state.timeout_interval;
 	connect_state.connect_failed = false;
 	connect_state.failed_once = false;
@@ -776,6 +787,12 @@ bool Sock::do_connect_tryit()
 time_t Sock::connect_timeout_time()
 {
 	return _state == sock_connect_pending ? connect_state.timeout_time : 0;
+}
+
+// Added for the HA Daemon
+void Sock::doNotEnforceMinimalCONNECT_TIMEOUT()
+{
+	ignore_connect_timeout = TRUE;
 }
 
 bool Sock::test_connection()

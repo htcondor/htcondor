@@ -74,7 +74,7 @@ TEST_SUITE_BASE = test_suite_base
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts startd.V6 StdUnvProgs submit.V6 status.V6 \
 		tools KbddProgs collector.V6 PvmProgs dagman userlog Eventd \
-		GlobusProgs starter.V6.1 shadow.V6.1 dcskel c-gahp \
+		GlobusProgs starter.V6.1 shadow.V6.1 dcskel c-gahp had \
 		CreddProgs StorkProgs
 
 #define Libraries \
@@ -201,6 +201,7 @@ condor_object_target(starter.V5)
 
 condor_object_target(startd.V6)
 condor_object_target(schedd.V6)
+condor_object_target(had)
 condor_object_target(status.V6)
 condor_object_target(dagman)
 condor_object_target(userlog)

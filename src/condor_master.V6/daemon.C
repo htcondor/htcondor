@@ -452,7 +452,7 @@ daemon::Start()
 // we've acquired the lock
 int daemon::RealStart( )
 {
-	char	*shortname, *tmp;
+	char	*shortname;
 	int 	command_port = isDC ? TRUE : FALSE;
 	char	buf[512];
 
@@ -548,7 +548,7 @@ int daemon::RealStart( )
 
 	priv_state priv_mode = PRIV_ROOT;
 	
-	sprintf(buf,"%s_USERID",name_in_config_file);
+	snprintf(buf, sizeof(buf), "%s_USERID",name_in_config_file);
 	char * username = param( buf );
 	if(username) {
 		// domain is set to NULL since we don't care about the domain
@@ -586,32 +586,57 @@ int daemon::RealStart( )
 #endif /* WIN32 */
 	}
 
-	sprintf( buf, "%s_ARGS", name_in_config_file );
-	tmp = param( buf );
+	snprintf( buf, sizeof( buf ), "%s_ARGS", name_in_config_file );
+	char *daemon_args = param( buf );
 	if( (strcmp(name_in_config_file,"SCHEDD") == 0) && MasterName ) {
-		if( tmp ) { 
-			sprintf( buf, "%s -f %s -n %s", shortname, tmp,
+		if( daemon_args ) { 
+			sprintf( buf, "%s -f %s -n %s", shortname, daemon_args,
 					 MasterName ); 
-			free( tmp );
 		} else {
 			sprintf( buf, "%s -f -n %s", shortname, MasterName ); 
 		}
 	} else {
 		if( isDC ) {
-			if( tmp ) { 
-				sprintf( buf, "%s -f %s", shortname, tmp );
-				free( tmp );
+			if( daemon_args ) { 
+				sprintf( buf, "%s -f %s", shortname, daemon_args );
 			} else {
 				sprintf( buf, "%s -f", shortname );
 			}
 		} else {
-			if( tmp ) { 
-				sprintf( buf, "%s %s", shortname, tmp );
-				free( tmp );
+			if( daemon_args ) { 
+				sprintf( buf, "%s %s", shortname, daemon_args );
 			} else {
 				sprintf( buf, "%s", shortname );
 			}
 		}
+	}
+
+    // The below chunk is for HAD support
+
+    // take command port from arguments( buf )
+    // Don't mess with buf or tmp (they are not our variables) -
+    // allocate them again
+    if ( isDC && daemon_args ) {
+		StringList args_list;
+		args_list.initializeFromString( daemon_args );
+
+		char* cur_arg;
+		bool is_port = false;
+
+		args_list.rewind();
+		while( (cur_arg = args_list.next()) )
+		{
+			if( is_port ){
+				command_port =  atoi( cur_arg );
+				is_port = false;
+			}
+			if(strcmp( cur_arg, "-p" ) == 0 ) {
+				is_port = true;
+			}
+		}
+    }
+	if ( daemon_args ) {
+		free( daemon_args );
 	}
 
 	pid = daemonCore->Create_Process(
