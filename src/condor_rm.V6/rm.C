@@ -67,26 +67,45 @@ bool has_constraint;
 MyString global_constraint;
 StringList global_id_list;
 
-void
-usage()
+const char* 
+actionWord( JobAction action, bool past )
 {
-	char word[10];
-	switch( mode ) {
+	switch( action ) {
 	case JA_RELEASE_JOBS:
-		sprintf( word, "Release" );
+		return past ? "released" : "release";
 		break;
+
 	case JA_HOLD_JOBS:
-		sprintf( word, "Hold" );
+		return past ? "held" : "hold";
 		break;
+
 	case JA_REMOVE_JOBS:
 	case JA_REMOVE_X_JOBS:
-		sprintf( word, "Remove" );
+		return past ? "removed" : "remove";
 		break;
+
+	case JA_VACATE_JOBS:
+		return past ? "vacated" : "vacate";
+		break;
+
+	case JA_VACATE_FAST_JOBS:
+		return past ? "fast-vacated" : "fast-vacate";
+		break;
+
 	default:
-		fprintf( stderr, "ERROR: Unknown mode: %d\n", mode );
+		fprintf( stderr, "ERROR: Unknown action: %d\n", action );
 		exit( 1 );
 		break;
 	}
+	return NULL;
+}
+
+
+void
+usage()
+{
+	char word[32];
+	sprintf( word, getJobActionString(mode) );
 	fprintf( stderr, "Usage: %s [options] [constraints]\n", MyName );
 	fprintf( stderr, " where [options] is zero or more of:\n" );
 	fprintf( stderr, "  -help               Display this message and exit\n" );
@@ -103,6 +122,10 @@ usage()
 		fprintf( stderr,
 				     "  -forcex             Force the immediate local removal of jobs in the X state\n"
 		         "                      (only affects jobs already being removed)\n" );
+	}
+	if( mode == JA_VACATE_JOBS || mode == JA_VACATE_FAST_JOBS ) {
+		fprintf( stderr,
+				     "  -fast               Use a fast vacate (hardkill)\n" );
 	}
 	fprintf( stderr, " and where [constraints] is one or more of:\n" );
 	fprintf( stderr, "  cluster.proc        %s the given job\n", word );
@@ -165,6 +188,11 @@ main( int argc, char *argv[] )
 			strncmp( cmd_str, "_rm", strlen("_rm") ) == MATCH ) {
 
 		mode = JA_REMOVE_JOBS;
+
+	} else if( cmd_str && ! strncmp(cmd_str, "_vacate_job",
+									strlen("_vacate_job")) ) {  
+
+		mode = JA_VACATE_JOBS;
 
 	} else {
 		// don't know what mode we're using, so bail.
@@ -237,7 +265,14 @@ main( int argc, char *argv[] )
                              "-forcex is only valid with condor_rm\n" );
 					usage();
 				}
-
+            } else if (match_prefix(arg, "-fast")) {
+				if( mode == JA_VACATE_JOBS ) {
+					mode = JA_VACATE_FAST_JOBS;
+				} else {
+                    fprintf( stderr, 
+                             "-fast is only valid with condor_vacate_job\n" );
+					usage();
+				}
             } else if (match_prefix(arg, "-name")) {
 				// use the given name as the schedd name to connect to
 				argv++;
@@ -395,6 +430,12 @@ doWorkByConstraint( const char* constraint, CondorError * errstack )
 		ad = schedd->removeXJobs( constraint, "via condor_rm -forceX",
 								  errstack );
 		break;
+	case JA_VACATE_JOBS:
+		ad = schedd->vacateJobs( constraint, VACATE_GRACEFUL, errstack );
+		break;
+	case JA_VACATE_FAST_JOBS:
+		ad = schedd->vacateJobs( constraint, VACATE_FAST, errstack );
+		break;
 	case JA_REMOVE_JOBS:
 		ad = schedd->removeJobs( constraint, "via condor_rm", errstack );
 		break;
@@ -428,6 +469,12 @@ doWorkByList( StringList* ids, CondorError *errstack )
 		break;
 	case JA_REMOVE_X_JOBS:
 		rval = schedd->removeXJobs( ids, "via condor_rm -forcex", errstack );
+		break;
+	case JA_VACATE_JOBS:
+		rval = schedd->vacateJobs( ids, VACATE_GRACEFUL, errstack );
+		break;
+	case JA_VACATE_FAST_JOBS:
+		rval = schedd->vacateJobs( ids, VACATE_FAST, errstack );
 		break;
 	case JA_REMOVE_JOBS:
 		rval = schedd->removeJobs( ids, "via condor_rm", errstack );
@@ -480,13 +527,12 @@ procArg(const char* arg)
 						 "has been marked for removal" :
 						 (mode == JA_REMOVE_X_JOBS) ?
 						 "has been removed locally (remote state unknown)" :
-						 (mode==JA_HOLD_JOBS)?"held":"released" );
+						 actionWord(mode,true) );
 			} else {
 				fprintf( stderr, "%s\n", errstack.getFullText(true) );
 				fprintf( stderr, 
 						 "Couldn't find/%s all jobs in cluster %d.\n",
-						 (mode==JA_REMOVE_JOBS||mode==JA_REMOVE_X_JOBS) ?
-						 "remove":(mode==JA_HOLD_JOBS)?"hold":"release", c );
+						 actionWord(mode,false), c );
 			}
 			return;
 		}
@@ -523,13 +569,12 @@ procArg(const char* arg)
 					 "have been marked for removal" :
 					 (mode == JA_REMOVE_X_JOBS) ?
 					 "have been removed locally (remote state unknown)" :
-					 (mode==JA_HOLD_JOBS)?"held":"released" );
+					 actionWord(mode,true) );
 		} else {
 			fprintf( stderr, "%s\n", errstack.getFullText(true) );
 			fprintf( stderr, 
 					 "Couldn't find/%s all of user %s's job(s).\n",
-					 (mode==JA_REMOVE_JOBS||mode==JA_REMOVE_X_JOBS)?"remove":
-					 (mode==JA_HOLD_JOBS)?"hold":"release", arg );
+					 actionWord(mode,false), arg );
 		}
 	} else {
 		fprintf( stderr, "Warning: unrecognized \"%s\" skipped\n", arg );
@@ -567,13 +612,11 @@ handleAll()
 				 "marked for removal" :
 				 (mode == JA_REMOVE_X_JOBS) ?
 				 "removed locally (remote state unknown)" :
-				 (mode==JA_HOLD_JOBS)?"held":"released" );
+				 actionWord(mode,true) );
 	} else {
 		fprintf( stderr, "%s\n", errstack.getFullText(true) );
 		fprintf( stderr, "Could not %s all jobs.\n",
-				 (mode==JA_REMOVE_JOBS||mode==JA_REMOVE_X_JOBS)?"remove":
-				 (mode==JA_HOLD_JOBS)?"hold":"release" );
-
+				 actionWord(mode,false) );
 	}
 }
 
@@ -593,14 +636,13 @@ handleConstraints( void )
 				 "have been marked for removal" :
 				 (mode == JA_REMOVE_X_JOBS) ?
 				 "have been removed locally (remote state unknown)" :
-				 (mode==JA_HOLD_JOBS)?"held":"released" );
+				 actionWord(mode,true) );
+
 	} else {
 		fprintf( stderr, "%s\n", errstack.getFullText(true) );
 		fprintf( stderr, 
 				 "Couldn't find/%s all jobs matching constraint %s\n",
-				 (mode==JA_REMOVE_JOBS||mode==JA_REMOVE_X_JOBS)?"remove":
-				 (mode==JA_HOLD_JOBS)?"hold":"release",
-				 tmp );
+				 actionWord(mode,false), tmp );
 	}
 }
 
@@ -609,9 +651,7 @@ void
 printOldFailure( PROC_ID job_id )
 {
 	fprintf( stderr, "Couldn't find/%s job %d.%d.\n",
-			 (mode==JA_REMOVE_JOBS||mode==JA_REMOVE_X_JOBS)?"remove":
-			 (mode==JA_HOLD_JOBS)?"hold":"release", 
-			 job_id.cluster, job_id.proc );
+			 actionWord(mode,false), job_id.cluster, job_id.proc );
 }
 
 
@@ -626,7 +666,7 @@ printOldMessage( PROC_ID job_id, action_result_t result )
 				 "marked for removal" :
 				 (mode == JA_REMOVE_X_JOBS) ?
 				 "removed locally (remote state unknown)" :
-				 (mode==JA_HOLD_JOBS)?"held":"released" );
+				 actionWord(mode,true) );
 		break;
 
 	case AR_NOT_FOUND:
@@ -660,7 +700,7 @@ printOldMessage( PROC_ID job_id, action_result_t result )
 				 "marked for removal" :
 				 (mode == JA_REMOVE_X_JOBS) ?
 				 "removed locally (remote state unknown)" :
-				 (mode==JA_HOLD_JOBS)?"held":"released" );
+				 actionWord(mode,true) );
 		break;
 
 	case AR_ERROR:
