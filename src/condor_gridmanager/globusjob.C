@@ -1388,7 +1388,7 @@ char *GlobusJob::buildRSL( ClassAd *classad )
 	buff[0] = '\0';
 	if ( classad->LookupString(ATTR_JOB_ARGUMENTS, buff) && *buff ) {
 		strcat( rsl, ")(arguments=" );
-		strcat( rsl, rsl_stringify( buff ) );
+		strcat( rsl, buff );
 	}
 
 	buff[0] = '\0';
