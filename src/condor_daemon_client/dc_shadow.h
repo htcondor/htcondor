@@ -65,10 +65,10 @@ public:
 		/** Send a ClassAd update with information about a job the
 			shadow is running.
 			@param ad ClassAd with info about the job
-			@param confirm_update Should we confirm the update gets there?
+			@param insure_update Should we insure the update gets there?
 			@return true on success, false on failure
 		*/
-	bool updateJobInfo( ClassAd* ad, bool confirm_update = false );
+	bool updateJobInfo( ClassAd* ad, bool insure_update = false );
 
  private:
 	bool is_initialized;

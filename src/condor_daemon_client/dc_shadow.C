@@ -99,7 +99,7 @@ DCShadow::locate( void )
 
 
 bool
-DCShadow::updateJobInfo( ClassAd* ad, bool confirm_update )
+DCShadow::updateJobInfo( ClassAd* ad, bool insure_update )
 {
 	if( ! ad ) {
 		dprintf( D_FULLDEBUG, 
@@ -107,7 +107,7 @@ DCShadow::updateJobInfo( ClassAd* ad, bool confirm_update )
 		return false;
 	}
 
-	if( ! shadow_safesock && ! confirm_update ) {
+	if( ! shadow_safesock && ! insure_update ) {
 		shadow_safesock = new SafeSock;
 		shadow_safesock->timeout(20);   // years of research... :)
 		if( ! shadow_safesock->connect(_addr) ) {
@@ -122,7 +122,7 @@ DCShadow::updateJobInfo( ClassAd* ad, bool confirm_update )
 	ReliSock reli_sock;
 	Sock* tmp;
 
-	if( confirm_update ) {
+	if( insure_update ) {
 			// For now, if we have to ensure that the update gets
 			// there, we use a ReliSock (TCP).
 		reli_sock.timeout(20);   // years of research... :)
