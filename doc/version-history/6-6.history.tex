@@ -39,6 +39,11 @@ the continued lines.  This has been corrected.
 \item The Grid Monitor now will automatically probe for and work with
 ``unknown'' batch systems.
 
+\item Fixed a bug where under certain circumstances \Condor{dagman}
+      would fail to detect an unsuccessful invocation of
+      \Condor{submit}, and would instead report the job as
+      successfully submitted with job id 0.0.
+
 \end{itemize}
 
 \noindent Known Bugs:
