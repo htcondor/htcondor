@@ -72,7 +72,6 @@ void
 init_hostnames()
 {
 	char* tmp;
-	int len;
 
 		// Get our local hostname, and strip off the domain if
 		// gethostname returns it.
@@ -95,13 +94,6 @@ init_hostnames()
 	ip_addr = ntohl( ip_addr );
 
 	strcpy( full_hostname, host_ptr->h_name );
-		// Make sure we've got a trailing '.' to signify a fully
-		// qualified name.
-	len = strlen( full_hostname );
-	if( full_hostname[len-1] != '.' ) {
-		full_hostname[len] = '.';
-		full_hostname[len+1] = '\0';
-	}		
 	
 	hostnames_initialized = TRUE;
 }
