@@ -172,7 +172,16 @@ class DedicatedScheduler : public Service {
 		*/
 	void publishRequestAd( void );
 
-	void generateRequest( ClassAd* machine_ad );
+	void generateRequest( ClassAd* job );
+
+		/** Clear out all existing resource requests.  Used at the
+			begining of computeSchedule(), since, if there are still
+			resource requests from the last schedule that we haven't
+			negotiated for, we want to get rid of those and figure out 
+			everything we need to request given the current state of
+			things.
+		*/
+	void clearResourceRequests( void );
  
 		// Set the correct value of ATTR_SCHEDULER in the queue for
 		// the given job ad.
@@ -310,9 +319,8 @@ class DedicatedScheduler : public Service {
 		// is only given a capability to identify the lost claim).
 	HashTable <HashKey, match_rec*>* all_matches_by_cap;
 
-		// hashed on resource name, each resource we're requesting
-		// that we need to negotiate for
-	HashTable <HashKey, ClassAd*>* resource_requests;
+		// Queue for resource requests we need to negotiate for. 
+	Queue<ClassAd*>* resource_requests;
 
 	int		num_matches;	// Total number of matches in all_matches 
 
