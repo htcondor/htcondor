@@ -333,12 +333,17 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 			job = GetJob( condorID );
 			eventName = ULogEventNumberNames[e->eventNumber];
 
+			if( e->eventNumber != ULOG_SUBMIT ) {
+				PrintEvent( DEBUG_VERBOSE, eventName, job, condorID );
+			}
+				// submit events are printed specially below, since we
+				// want to match them with their DAG nodes first...
+
             switch(e->eventNumber) {
-                
+
               case ULOG_EXECUTABLE_ERROR:
               case ULOG_JOB_ABORTED:
 
-				  PrintEvent( DEBUG_VERBOSE, eventName, job, condorID );
 				  if( !job ) {
 					  break;
 				  }
@@ -380,7 +385,6 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
               
               case ULOG_JOB_TERMINATED:
 			  {	
-				  PrintEvent( DEBUG_VERBOSE, eventName, job, condorID );
                   if( !job ) {
                       break;
                   }
@@ -462,7 +466,6 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 
 			case ULOG_POST_SCRIPT_TERMINATED:
 			{
-				PrintEvent( DEBUG_VERBOSE, eventName, job, condorID );
 				if( !job ) {
 					break;
 				}
@@ -617,8 +620,6 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 			case ULOG_GENERIC:
 			case ULOG_EXECUTE:
 			default:
-
-                PrintEvent( DEBUG_VERBOSE, eventName, job, condorID );
                 break;
 			}
         }
@@ -977,17 +978,17 @@ void Dag::RemoveRunningJobs () const {
 			ASSERT( job->_scriptPre->_pid != 0 );
 			if (daemonCore->Shutdown_Fast(job->_scriptPre->_pid) == FALSE) {
 				debug_printf(DEBUG_QUIET,
-				             "WARNING: shutdown_fast() failed on pid %d: %s",
+				             "WARNING: shutdown_fast() failed on pid %d: %s\n",
 				             job->_scriptPre->_pid, strerror(errno));
 			}
         }
 		// if node is running a POST script, hard kill it
         else if( job->GetStatus() == Job::STATUS_POSTRUN ) {
 			ASSERT( job->_scriptPost->_pid != 0 );
-			if(daemonCore->Shutdown_Fast(job->_scriptPre->_pid) == FALSE) {
+			if(daemonCore->Shutdown_Fast(job->_scriptPost->_pid) == FALSE) {
 				debug_printf(DEBUG_QUIET,
-				             "WARNING: shutdown_fast() failed on pid %d: %s",
-				             job->_scriptPre->_pid, strerror(errno));
+				             "WARNING: shutdown_fast() failed on pid %d: %s\n",
+				             job->_scriptPost->_pid, strerror( errno ));
 			}
         }
 	}
