@@ -213,13 +213,19 @@ RemoteResource::dprintfSelf( int debugLevel )
 void
 RemoteResource::printExit( FILE *fp )
 {
-		/* Add more cases to the switch as they develop... */
+	char ename[ATTRLIST_MAX_EXPRESSION];
+	int got_exception = jobAd->LookupString(ATTR_EXCEPTION_NAME,ename);
 
 	switch ( exitReason ) {
 	case JOB_EXITED: {
 		if ( WIFSIGNALED(exitStatus) ) {
-			fprintf ( fp, "died on %s.\n", 
-					  daemonCore->GetExceptionString(WTERMSIG(exitStatus)) );
+			
+			if(got_exception) {
+				fprintf ( fp, "died with exception %s\n", ename );
+			} else {
+				fprintf ( fp, "died on %s.\n", 
+						  daemonCore->GetExceptionString(WTERMSIG(exitStatus)) );
+			}
 		}
 		else {
 #ifndef WIN32
