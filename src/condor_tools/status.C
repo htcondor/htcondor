@@ -43,7 +43,9 @@
 #include <time.h>
 
 
-#include "condor_types.h"  
+extern "C" {
+#include "condor_types.h"
+}
 #include "manager.h"
 #include "expr.h"
 #include "debug.h"
