@@ -28,6 +28,7 @@
 #include "condor_common.h"
 #include "classad_log.h"
 #include "condor_debug.h"
+#include "util_lib_proto.h"
 
 static char *_FileName_ = __FILE__;	/* Used by EXCEPT (See condor_debug.h) */
 
@@ -145,22 +146,12 @@ ClassAdLog::TruncLog()
 	}
 	LogState(new_log_fd);
 	close(log_fd);
-#if defined(WIN32)
 	close(new_log_fd);	// avoid sharing violation on move
-	if (MoveFileEx(tmp_log_filename, log_filename, MOVEFILE_REPLACE_EXISTING) == 0) {
-		dprintf(D_ALWAYS, "failed to truncate log: MoveFileEx failed with error %d\n",
-			GetLastError());
+	if (rotate_file(tmp_log_filename, log_filename) < 0) {
+		dprintf(D_ALWAYS, "failed to truncate job queue log!\n");
 		return;
 	}
 	log_fd = open(log_filename, O_RDWR | O_APPEND, 0600);
-#else
-	log_fd = new_log_fd;
-	if (rename(tmp_log_filename, log_filename) < 0) {
-		dprintf(D_ALWAYS, "failed to truncate log: rename(%s, %s) returns errno %d\n",
-				tmp_log_filename, log_filename, errno);
-		return;
-	}
-#endif
 }
 
 void
