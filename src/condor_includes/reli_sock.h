@@ -39,6 +39,8 @@
 class Authentication;
 #endif
 
+/** The ReliSock class implements the Sock interface with TCP. */
+
 class ReliSock : public Sock {
 #if !defined(SKIP_AUTHENTICATION)
 	friend class Authentication;

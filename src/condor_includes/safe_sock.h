@@ -41,6 +41,8 @@
 **	S A F E    S O C K
 */
 
+/** The SafeSock class implements the Sock interface with UDP. */
+
 class SafeSock : public Sock {
 
 //	PUBLIC INTERFACE TO SAFE SOCKS
