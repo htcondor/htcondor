@@ -34,54 +34,61 @@
 
 
 #include <stdio.h>
-#include <rpc/types.h>
-#include <rpc/xdr.h>
-#include "debug.h"
-#include "except.h"
-#include "trace.h"
-#include "sched.h"
-#include "expr.h"
+#include "condor_common.h"
+#include "condor_config.h"
+#include "condor_debug.h"
+#include "condor_io.h"
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
-XDR		*xdr_Init();
+extern "C" char *get_startd_addr(const char *);
 
-usage( str )
-char	*str;
+usage( char *str )
 {
-	fprintf( stderr, "Usage: %s hostname\n", str );
+	fprintf( stderr, "Usage: %s hostname-list\n", str );
 	exit( 1 );
 }
 
-main( argc, argv )
-int		argc;
-char	*argv[];
+main( int argc, char *argv[] )
 {
-	int			sock = -1;
 	int			cmd;
-	XDR			xdr, *xdrs = NULL;
+	int			i;
+	char		*startdAddr;
 
-	if( argc != 2 ) {
+	if( argc < 2 ) {
 		usage( argv[0] );
 	}
 
-	config( argv[0], (CONTEXT *)0 );
+	config( argv[0], 0 ); /* ugh! */
 
-		/* Connect to the specified host */
-	if( (sock = do_connect(argv[1], "condor_startd", START_PORT)) < 0 ) {
-		dprintf( D_ALWAYS, "Can't connect to startd on %s\n", argv[1] );
-		exit( 1 );
+	if ((startdAddr = get_startd_addr(argv[1])) == NULL)
+	{
+		EXCEPT("Can't find startd address on %s\n", argv[1]);
 	}
-	xdrs = xdr_Init( &sock, &xdr );
-	xdrs->x_op = XDR_ENCODE;
 
-	cmd = PCKPT_FRGN_JOB;
-	ASSERT( xdr_int(xdrs, &cmd) );
-	ASSERT( xdrrec_endofrecord(xdrs,TRUE) );
+	for (i = 1; i < argc; i++) {
 
-	printf( "Sent PCKPT_FRGN_JOB command to startd on %s\n", argv[1] );
+		    /* Connect to the specified host */
+		ReliSock sock(startdAddr, START_PORT);
+		if(sock.get_file_desc() < 0) {
+			dprintf( D_ALWAYS, "Can't connect to condor startd (%s)\n",
+					startdAddr );
+			continue;
+		}
+
+		sock.encode();
+		cmd = PCKPT_FRGN_JOB;
+		if (!sock.code(cmd) || !sock.eom()) {
+			dprintf(D_ALWAYS, "Can't send PCKPT_FRGN_JOB command to "
+					"condor startd (%s)\n", startdAddr);
+			continue;
+		}
+		
+		printf( "Sent PCKPT_FRGN_JOB command to startd on %s\n", argv[i] );
+
+	}
 
 	exit( 0 );
 }
 
-SetSyscalls(){}
+extern "C" SetSyscalls(){}

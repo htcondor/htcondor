@@ -36,28 +36,23 @@
 
 
 #include <stdio.h>
-#include <rpc/types.h>
-#include <rpc/xdr.h>
-#include "debug.h"
-#include "except.h"
-#include "trace.h"
-#include "sched.h"
-#include "expr.h"
+#include "condor_common.h"
+#include "condor_config.h"
+#include "condor_debug.h"
+#include "condor_io.h"
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
-XDR		*xdr_Init();
+extern "C" char *get_schedd_addr(const char *);
+void reconfig( char *host );
 
-usage( str )
-char	*str;
+void usage( char *str )
 {
 	fprintf( stderr, "Usage: %s hostname\n", str );
 	exit( 1 );
 }
 
-main( argc, argv )
-int		argc;
-char	*argv[];
+int main( int argc, char *argv[] )
 {
 	char	hostname[512];
 
@@ -72,42 +67,37 @@ char	*argv[];
 	for( argv++; *argv; argv++ ) {
 		reconfig( *argv );
 	}
+	exit( 0 );
 }
 
 
-reconfig( host )
-char	*host;
+void reconfig( char *host )
 {
-	int			sock = -1;
 	int			cmd = RECONFIG;
-	XDR			xdr, *xdrs = NULL;
+	char		*scheddAddr;
 
-		/* Connect to the specified host */
-	if( (sock = do_connect(host, "condor_schedd", SCHED_PORT)) < 0 ) {
-		fprintf( stderr, "Can't connect to schedd on %s\n", host );
-		return;
-	}
-	xdrs = xdr_Init( &sock, &xdr );
-	xdrs->x_op = XDR_ENCODE;
 
-	if( !xdr_int(xdrs, &cmd) ) {
-		fprintf( stderr, "Can't send to schedd on %s\n", host );
-		xdr_destroy( xdrs );
-		close( sock );
+	if ((scheddAddr = get_schedd_addr(host)) == NULL) {
+		dprintf( D_ALWAYS, "Can't find schedd address on %s\n", host );
 		return;
 	}
 
-	if( !xdrrec_endofrecord(xdrs,TRUE) ) {
-		fprintf( stderr, "Can't send to schedd on %s\n", host );
-		xdr_destroy( xdrs );
-		close( sock );
+		/* Connect to the schedd */
+	ReliSock sock(scheddAddr, SCHED_PORT);
+	if(sock.get_file_desc() < 0) {
+		dprintf( D_ALWAYS, "Can't connect to condor scheduler (%s)\n",
+				 scheddAddr );
 		return;
 	}
 
+	sock.encode();
+	if( !sock.code(cmd) || !sock.eom() ) {
+		dprintf( D_ALWAYS,
+				 "Can't send RECONFIG command to condor scheduler\n" );
+		return;
+	}
 
 	printf( "Sent RECONFIG command to schedd on %s\n", host );
-	xdr_destroy( xdrs );
-	close( sock );
 }
 
-SetSyscalls(){}
+extern "C" int SetSyscalls(){}
