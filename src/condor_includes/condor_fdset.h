@@ -1,6 +1,7 @@
-#ifndef FDSET_H
-#define FDSET_H
+#if !defined(_FDSET_H)
+#define _FDSET_H
 
+#include "condor_fix_timeval.h"
 
 #define NBBY 8
 
