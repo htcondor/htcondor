@@ -37,10 +37,10 @@ int main(int argc, char **argv)
 
 	string  xml = "<?xml version=\"1.0\"?>< c >"
                   "<a n=\"A\"><s> Alain &lt;Aslag&gt; Roy&#172;</s></a>"
-                  "<a n=\"B\"><n> 3 </n></a>"
+                  "<a n=\"B\"><i> 3 </i></a>"
 		          "<a n=\"C\"><b v=\"t\"/></a>"
-		          "<a n=\"D\"><l><n>10</n><un/><er/><n>14</n></l></a>"
-		          "<a n=\"E\"><c><a n=\"AA\"><n>4</n><a n=\"BB\"><s>x</s></a></c></a>"
+		          "<a n=\"D\"><l><i>10</i><un/><er/><i>14</i></l></a>"
+		          "<a n=\"E\"><c><a n=\"AA\"><i>4</i><a n=\"BB\"><s>x</s></a></c></a>"
 		          "<a n=\"F\"><e>(x >= 10)</e></a>"
 		          "<a n=\"G\"><s></s></a></c>";
 
@@ -70,7 +70,7 @@ int main(int argc, char **argv)
 		          "< c >"
                   "<a n=\"A\"><s> Alain &quot;Aslag&quot; Roy</s></a>"
                   "</c><c>"
-                  "<a n=\"B\"><n> 3 </n></a>"
+                  "<a n=\"B\"><i> 3 </i></a>"
 		          "</c></classads>";
 	int offset = 0;
 	ClassAd *classad2;
