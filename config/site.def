@@ -10,11 +10,14 @@
 
 #define X11LibPath /s/X11R6-2/lib
 #define X11Include /s/X11R6-2/include
+
+#define ZLibPath /p/condor/workspaces/glibc/zlib/lib
+#define ZIncludePath /p/condor/workspaces/glibc/zlib/include
+
 #define MkDepend ../../GENERIC/mdepend.sh
 #define IS_V6			YES
 #define USE_QMGMT		YES
 #define HAS_NEW_FORTRAN         YES
-
 
 #endif  /* BeforeVendorCF */
 
