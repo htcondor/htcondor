@@ -46,11 +46,9 @@ do
 			install_dir=$1
 			;;
 		--enable-shlib)
-			shift
 			enable_shlib=1
 			;;
 		--enable-namespace)
-			shift
 			enable_namespace=1
 			;;
 		-h | -help | --h | --help)
