@@ -10,6 +10,14 @@ typedef int				FD;
 
 class OpenFileTable;
 
+#if defined(TRUE)
+#       undef TRUE
+#       undef FALSE
+#endif
+ 
+const BOOL      TRUE = 1;
+const BOOL      FALSE = 0;
+
 class File {
 friend class OpenFileTable;
 public:
