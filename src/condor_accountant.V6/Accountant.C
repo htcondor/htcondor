@@ -370,6 +370,14 @@ void Accountant::UpdatePriorities()
   int T=time(0);
   int TimePassed=T-LastUpdateTime;
   if (TimePassed==0) return;
+
+  // TimePassed might be less than zero for a number of reasons, including
+  // the clock being reset on this machine, and somehow getting a really
+  // bad entry in the Accountnew.log  -- Ballard 5/17/00
+  if (TimePassed < 0) {
+	LastUpdateTime=T;
+	return;
+  }
   float AgingFactor=(float) pow(0.5,float(TimePassed)/HalfLifePeriod);
   LastUpdateTime=T;
   SetAttributeInt(AcctRecord,LastUpdateTimeAttr,LastUpdateTime);
