@@ -65,9 +65,8 @@ print "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
     "default, just press return.\n",
     "\n",
     "If you have problems installing or using Condor, please consult the\n",
-    "Condor Administrator's Manual, which is included in your binary\n",
-    "distrubution in the \"doc\" directory.  The Condor Manual can also be\n",
-    "found on the World Wide Web at: http://www.cs.wisc.edu/condor/manual/\n",
+    "Condor Administrator's Manual, which is can be found on the World Wide\n",
+    "Web at: http://www.cs.wisc.edu/condor/manual/\n",
     "If you still have problems, send email to condor-admin\@cs.wisc.edu.\n\n",
     "Press enter to begin Condor installation\n";
 $_ = <STDIN>;
@@ -614,7 +613,7 @@ sub configure_pool {
 	    exit(1);
 	}
 	foreach $mach (@machines) {
-	    &condor_init( "$pool_dir/$mach", $<, "log", "spool" );
+	    &condor_init( "$pool_dir/$mach", "log", "spool" );
 	}
 	$local_dir_str = "$pool_dir/\$(HOSTNAME)";
 	$local_config_str = &prompt_local_config_file( $pool_dir, $pool_dir, 1, 0 );
@@ -622,7 +621,7 @@ sub configure_pool {
     } else {
 	# Single machine
 	$local_dir_str = "$pool_dir";
-	&condor_init( $pool_dir, $<, "log", "spool" );
+	&condor_init( $pool_dir, "log", "spool" );
     }
 
     $lock = &find_lock_dir();
