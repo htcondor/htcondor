@@ -84,6 +84,8 @@ int		GotQueueCommand;
 
 char	IckptName[_POSIX_PATH_MAX];	/* Pathname of spooled initial ckpt file */
 
+char GlobusArgs[8192]; /* need to build large string */
+char GlobusExec[_POSIX_PATH_MAX];
 char	*MyName;
 int		Quiet = 1;
 int	  ClusterId = -1;
@@ -133,6 +135,7 @@ char	*RendezvousDir	= "rendezvousdir";
 char	*FileRemaps = "file_remaps";
 char	*BufferSize = "buffer_size";
 char	*BufferBlockSize = "buffer_block_size";
+char	*GlobusScheduler    = "globusscheduler";
 
 #if !defined(WIN32)
 char	*KillSig			= "kill_sig";
@@ -561,57 +564,95 @@ check_path_length(const char *path, char *lhs)
 void
 SetExecutable()
 {
-  char	*ename;
+	char	*ename;
 
-  ename = condor_param(Executable);
+	ename = condor_param(Executable);
 
-  if( ename == NULL ) {
-	EXCEPT("No '%s' parameter was provided", Executable);
-  }
+	if( ename == NULL ) {
+		EXCEPT("No '%s' parameter was provided", Executable);
+	}
 
-  check_path_length(ename, Executable);
+#if !defined(WIN32)
+	if ( JobUniverse == GLOBUS_UNIVERSE ) {
+			//extract "GLOBUSRUN" value from config file
+		char *globusrun;
+		struct stat statbuf;
+		char size[32];
+		if ( !(globusrun = param( "GLOBUSRUN" )) ) {
+			EXCEPT( "\"GLOBUSRUN\" value not in configuration file\n" );
+		}
+			//check for existence & size of globusrun pgm
+		if ( stat( globusrun, &statbuf ) ) {
+			EXCEPT( "cannot get stat() on %s\n", globusrun );
+		}
+			//value in submit file is probably for globus job, not globusrun pgm
+			//so just override it here
+		sprintf(size,"%d", ( statbuf.st_size / 1024 ) + 1 );
+		forcedAttributes.remove( MyString( "MemoryRequirements" ) );
+		forcedAttributes.insert( MyString( "MemoryRequirements" ), MyString( size ) );
 
-  (void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_CMD, ename);
-  InsertJobExpr (buffer);
+			//executable named in the submit file should be inserted in the
+			//arguments of the REAL submit file.
+		strcpy( GlobusExec, "&(executable=$(GLOBUSRUN_GASS_URL)" );
+		if ( ename[0] != '/' ) {
+			//GLOBUSRUN_GASS_URL notation for CWD
+			strcat( GlobusExec, "/./" );
+		}
+		strcat( GlobusExec, ename );
+		strcat( GlobusExec, ")" );
 
-  InsertJobExpr ("MinHosts = 1");
-  InsertJobExpr ("MaxHosts = 1");
-  InsertJobExpr ("CurrentHosts = 0");
+			//now, replace ename with globusrun value from config file
+			//ename wasn't getting freed anywhere, free old value anyway
+		free( ename );
+			//we want (full path to) globusrun placed in the ad as the executable
+		ename = globusrun;
+	}
+#endif !defined(WIN32)
 
-  (void) sprintf (buffer, "%s = %d", ATTR_JOB_STATUS, IDLE);
-  InsertJobExpr (buffer);
+	check_path_length(ename, Executable);
 
-  SetUniverse();
-	
-  switch(JobUniverse) 
+	(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_CMD, ename);
+	InsertJobExpr (buffer);
+
+	InsertJobExpr ("MinHosts = 1");
+	InsertJobExpr ("MaxHosts = 1");
+	InsertJobExpr ("CurrentHosts = 0");
+
+	(void) sprintf (buffer, "%s = %d", ATTR_JOB_STATUS, IDLE);
+	InsertJobExpr (buffer);
+
+	switch(JobUniverse) 
 	{
 	case STANDARD:
-	  (void) sprintf (buffer, "%s = TRUE", ATTR_WANT_REMOTE_SYSCALLS);
-	  InsertJobExpr (buffer);
-	  (void) sprintf (buffer, "%s = TRUE", ATTR_WANT_CHECKPOINT);
-	  InsertJobExpr (buffer);
-	  break;
+		(void) sprintf (buffer, "%s = TRUE", ATTR_WANT_REMOTE_SYSCALLS);
+		InsertJobExpr (buffer);
+		(void) sprintf (buffer, "%s = TRUE", ATTR_WANT_CHECKPOINT);
+		InsertJobExpr (buffer);
+		break;
 	case PVM:
 	case PIPE:
-	  (void) sprintf (buffer, "%s = TRUE", ATTR_WANT_REMOTE_SYSCALLS);
-	  InsertJobExpr (buffer);
-	  (void) sprintf (buffer, "%s = FALSE", ATTR_WANT_CHECKPOINT);
-	  InsertJobExpr (buffer);
-	  break;
+		(void) sprintf (buffer, "%s = TRUE", ATTR_WANT_REMOTE_SYSCALLS);
+		InsertJobExpr (buffer);
+		(void) sprintf (buffer, "%s = FALSE", ATTR_WANT_CHECKPOINT);
+		InsertJobExpr (buffer);
+		break;
 	case VANILLA:
 	case SCHED_UNIVERSE:
 	case MPI:  // for now
-	  (void) sprintf (buffer, "%s = FALSE", ATTR_WANT_REMOTE_SYSCALLS);
-	  InsertJobExpr (buffer);
-	  (void) sprintf (buffer, "%s = FALSE", ATTR_WANT_CHECKPOINT);
-	  InsertJobExpr (buffer);
-	  break;
+#if !defined(WIN32)
+	case GLOBUS_UNIVERSE:
+		(void) sprintf (buffer, "%s = FALSE", ATTR_WANT_REMOTE_SYSCALLS);
+		InsertJobExpr (buffer);
+		(void) sprintf (buffer, "%s = FALSE", ATTR_WANT_CHECKPOINT);
+		InsertJobExpr (buffer);
+		break;
+#endif
 	default:
-	  EXCEPT( "Unknown universe (%d)", JobUniverse );
+		EXCEPT( "Unknown universe (%d)", JobUniverse );
 	}
 
-  // generate initial checkpoint file
-  strcpy( IckptName, gen_ckpt_name(0,ClusterId,ICKPT,0) );
+	// generate initial checkpoint file
+	strcpy( IckptName, gen_ckpt_name(0,ClusterId,ICKPT,0) );
 
 	if (SendSpoolFile(IckptName) < 0) {
 		EXCEPT("permission to transfer executable %s denied", IckptName);
@@ -708,7 +749,22 @@ SetUniverse()
 		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, SCHED_UNIVERSE);
 		InsertJobExpr (buffer);
 		return;
-	}
+	};
+
+#if !defined(WIN32)
+	if( univ && stricmp(univ,"globus") == MATCH ) {
+			//Globus universe jobs need to be transformed to be scheduler
+			//universe jobs, use JobUniverse as the signal for that, but the 
+			//end result should be a scheduler universe job with the globusrun 
+			//program as the scheduler, and modified executable, arguments, 
+			//universe, in/out/err job attributes. Also, force getenv to be 
+			//True, find globusrun, and clear & set MemoryRequirements.
+		JobUniverse = GLOBUS_UNIVERSE;
+		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, SCHED_UNIVERSE);
+		InsertJobExpr (buffer);
+		return;
+	};
+#endif
 
 #if defined( CLIPPED )
 		// If we got this far, we must be a standard job.  Since we're
@@ -855,6 +911,34 @@ SetStdFile( int which_file )
 
 	check_path_length(macro_value, generic_name);
 
+#if !defined(WIN32)
+		//if GLOBUS universe, we don't want stdin/out/err in the ads, we
+		//want them to be passed on to globus to deal with them!
+	if ( JobUniverse == GLOBUS_UNIVERSE ) {
+		char tmpbuf[8192];
+		char *fileneeded;
+
+		switch( which_file ) {
+		case 0:
+			fileneeded = "stdin";
+			break;
+		case 1:
+			fileneeded = "stdout";
+			break;
+		case 2:
+			fileneeded = "stderr";
+			break;
+		}
+		strcpy( tmpbuf, GlobusArgs );
+			//if fileneeded not an absolute pathname, use "/./", Globus
+			//GASS notation for CWD
+		sprintf( GlobusArgs, "%s(%s=$(GLOBUSRUN_GASS_URL)%s%s)", tmpbuf, 
+				fileneeded, macro_value[0] == '/' ? "" : "/./", macro_value );
+
+		return;
+	}
+#endif
+
 	switch( which_file ) 
 	{
 	  case 0:
@@ -947,9 +1031,8 @@ SetArguments()
 
 	if( args == NULL ) {
 		args = "";
-	}
-
-	if (strlen(args) > _POSIX_ARG_MAX) {
+	} 
+	else if (strlen(args) > _POSIX_ARG_MAX) {
 		fprintf(stderr, "\nERROR: arguments are too long:\n"
 				"\tPosix limits argument lists to %d bytes\n",
 				_POSIX_ARG_MAX);
@@ -957,7 +1040,29 @@ SetArguments()
 		exit( 1 );
 	}
 
-	sprintf (buffer, "%s = \"%s\"", ATTR_JOB_ARGUMENTS, args);
+#if !defined(WIN32)
+	if ( JobUniverse == GLOBUS_UNIVERSE ) {
+			//put specified args into RSL, then insert GlobusArgs into Ad
+		if ( strcmp( args, "" ) ) {
+			strcat( GlobusArgs, "(arguments=\\\"" );
+			strcat( GlobusArgs, args );
+			strcat( GlobusArgs, "\\\")" ); 
+		}
+         //if the universe is Globus, need to specify GlobusScheduler
+      char *globushost;
+      if ( !(globushost = condor_param( GlobusScheduler ) ) ) {
+         EXCEPT( "Globus universe jobs require a \"%s\" parameter\n",
+               GlobusScheduler );
+      }
+		strcat( GlobusArgs, " -w -r " );
+		strcat( GlobusArgs, globushost );
+		sprintf( buffer, "%s = \"%s\"", ATTR_JOB_ARGUMENTS, GlobusArgs );
+	}
+	else 
+#endif
+	{
+		sprintf (buffer, "%s = \"%s\"", ATTR_JOB_ARGUMENTS, args);
+	}
 	InsertJobExpr (buffer);
 }
 
@@ -994,7 +1099,8 @@ SetEnvironment()
 	envlen = strlen(newenv);
 
 	// grab user's environment if getenv == TRUE
-	if (shouldgetenv && (shouldgetenv[0] == 'T' || shouldgetenv[0] == 't')) {
+	if ( shouldgetenv && ( shouldgetenv[0] == 'T' || shouldgetenv[0] == 't' ) )
+ 	{
 
 		for (int i=0; environ[i] && envlen < ATTRLIST_MAX_EXPRESSION; i++) {
 
@@ -1553,7 +1659,11 @@ queue(int num)
 				exit(1);
 			}
 			ProcId = -1;
+			SetUniverse();
 			SetExecutable();
+		}
+		if ( JobUniverse == GLOBUS_UNIVERSE ) {
+			strcpy( GlobusArgs, GlobusExec );
 		}
 
 		if ( ClusterId == -1 ) {
@@ -1578,7 +1688,6 @@ queue(int num)
 #endif
 		SetIWD();
 		SetPriority();
-		SetArguments();
 		SetEnvironment();
 		SetNotification();
 		SetNotifyUser();
@@ -1595,6 +1704,7 @@ queue(int num)
 		SetFileOptions();
 		SetImageSize();
 		SetForcedAttributes();
+		SetArguments(); //this needs to be last for Globus universe args
 
 		rval = SaveClassAd( job );
 
@@ -1714,10 +1824,10 @@ check_requirements( char *orig )
 	if ( JobUniverse == PVM ) {
 		(void)strcat( answer, " && (Machine != \"" );
 		(void)strcat( answer, my_full_hostname() );
-            // XXX Temporary hack:  we only want to run on the first node
-            // of an SMP machine for pvm jobs.
+	         // XXX Temporary hack:  we only want to run on the first node
+	         // of an SMP machine for pvm jobs.
 		(void)strcat( answer, "\" && ((VirtualMachineID =?= UNDEFINED ) "
-                      "|| (VirtualMachineID =?= 1)) )" );
+	                   "|| (VirtualMachineID =?= 1)) )" );
 	} 
 
 	if ( JobUniverse == VANILLA ) {
@@ -2054,4 +2164,3 @@ check_umask()
 	}
 #endif
 }
-
