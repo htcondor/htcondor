@@ -99,6 +99,18 @@ SOURCE="..\src\condor_c++_util\ad_printmask.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\check_events.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\check_events.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\check_log_files.C"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\classad_collection.C"
 # End Source File
 # Begin Source File
