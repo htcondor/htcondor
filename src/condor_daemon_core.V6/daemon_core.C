@@ -2933,12 +2933,12 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 }
 
 #ifdef WIN32
-char *DaemonCore::ParseEnvArgsString(char *incomming, int reserve, env)
+char *DaemonCore::ParseEnvArgsString(char *incoming, int reserve, bool sep_flag)
 {
 	
-	char *answer = strdup(env);
+	char *answer = strdup(incoming);
 	char *temp = answer;
-	while( (temp = strchr(temp, env?';':' ') ) )
+	while( (temp = strchr(temp, sep_flag?';':' ') ) )
 	{
 		temp = 0;
 	}

@@ -381,7 +381,7 @@ class DaemonCore : public Service
 		// end of thread local storage
 		
 #ifdef WIN32
-	static char *ParseEnvArgsString(char *env, int reserve, bool env);
+	static char *ParseEnvArgsString(char *env, int reserve, bool sep_flag);
 #else
 	static char **ParseEnvArgsString(char *env, int reserve, bool env);
 #endif
