@@ -52,6 +52,8 @@ class HashTable {
   HashTable( int tableSize,
 			 int (*hashfcn)( const Index &index, int numBuckets ),
 			 duplicateKeyBehavior_t behavior = allowDuplicateKeys );
+  HashTable( const HashTable &copy);
+  const HashTable& operator=(const HashTable &copy);
   ~HashTable();
 
   int insert(const Index &index, const Value &value);
@@ -81,6 +83,7 @@ class HashTable {
 
 
  private:
+  void copy_deep(const HashTable<Index, Value> &copy);
 #ifdef DEBUGHASH
   void dump();                                  // dump contents of hash table
 #endif
@@ -161,6 +164,80 @@ HashTable<Index,Value>::HashTable( int tableSz,
   endOfFreeList = 0 - tableSize - 10;
   chainsUsedFreeList = endOfFreeList;
   duplicateKeyBehavior = behavior;
+}
+
+// Copy constructor
+
+template <class Index, class Value>
+HashTable<Index,Value>::HashTable( const HashTable<Index,Value>& copy ) {
+  copy_deep(copy);
+}
+
+// Assignment
+
+template <class Index, class Value>
+const HashTable<Index,Value>& HashTable<Index,Value>::operator=( const HashTable<Index,Value>& copy ) {
+  // don't copy ourself!
+  if (this != &copy) {
+    clear();
+    delete [] ht;
+    delete [] chainsUsed;
+    copy_deep(copy);
+  }
+
+  // return a reference to ourself
+  return *this;
+}
+
+// Do a deep copy into ourself
+
+template <class Index, class Value>
+void HashTable<Index,Value>::copy_deep( const HashTable<Index,Value>& copy ) {
+  // we don't need to verify that tableSize is valid and prime, as this will
+  // already have been taken care of when the copy was constructed.
+  tableSize = copy.tableSize;
+
+  if (!(ht = new HashBucket<Index, Value>* [tableSize])) {
+    cerr << "Insufficient memory for hash table" << endl;
+    exit(1);
+  }
+  if (!(chainsUsed = new int[tableSize])) {
+    cerr << "Insufficient memory for hash table (chainsUsed array)" << endl;
+    exit(1);
+  }
+  for(int i = 0; i < tableSize; i++) {
+    // duplicate this chain
+    HashBucket<Index, Value> **our_next = &ht[i];
+    HashBucket<Index, Value> *copy_next = copy.ht[i];
+    while (copy_next) {
+      // copy this bucket
+      *our_next = new HashBucket<Index, Value>(*copy_next);
+
+      // if this is the copy's current item, make it ours as well,
+	  // but point to _our_ bucket, not the copy's.
+      if (copy_next == copy.currentItem) {
+        currentItem = *our_next;
+      }
+
+      // move to the next item
+      our_next = &((*our_next)->next);
+      copy_next = copy_next->next;
+    }
+
+    // terminate the chain
+    *our_next = NULL;
+
+    chainsUsed[i] = copy.chainsUsed[i];
+  }
+
+  // take the rest of the object (it's all shallow data)
+  currentBucket = copy.currentBucket;
+  chainsUsedLen = copy.chainsUsedLen;
+  numElems = copy.numElems;
+  endOfFreeList = copy.endOfFreeList;
+  chainsUsedFreeList = copy.chainsUsedFreeList;
+  hashfcn = copy.hashfcn;
+  duplicateKeyBehavior = copy.duplicateKeyBehavior;
 }
 
 // Insert entry into hash table mapping Index to Value.
