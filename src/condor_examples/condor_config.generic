@@ -166,6 +166,14 @@ HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
 HOSTALLOW_NEGOTIATOR = $(NEGOTIATOR_HOST)
 #HOSTALLOW_NEGOTIATOR_SCHEDD = $(NEGOTIATOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
 
+##  Config access.  Machines listed here can use the condor_config_val
+##  tool to modify all daemon configurations except those specified in
+##  the condor_config.root file.  This level of host-wide access
+##  should only be granted with extreme caution.  By default, config
+##  access is denied from all hosts.
+#HOSTALLOW_CONFIG = trusted-host.your.domain
+
+
 ##--------------------------------------------------------------------
 ##  Network filesystem parameters:
 ##--------------------------------------------------------------------
@@ -411,6 +419,10 @@ RESERVED_DISK		= 5
 ##--------------------------------------------------------------------
 ##  Daemons you want the master to keep running for you:
 DAEMON_LIST			= MASTER, STARTD, SCHEDD
+
+##  Which daemons use the Condor DaemonCore library (i.e., not the
+##  checkpoint server or custom user daemons)?
+#DC_DAEMON_LIST = MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD
 
 ##  Where are the binaries for these daemons?
 MASTER				= $(SBIN)/condor_master
