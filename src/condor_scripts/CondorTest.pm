@@ -532,4 +532,41 @@ sub verbose_system
 	}
 }
 
+sub MergeOutputFiles
+{
+	my $Testhash = shift || croak "Missing Test hash to Merge Output\n";
+	my $basename = $Testhash->{corename};
+
+	foreach my $m ( 0 .. $#{$Testhash->{extensions}} )
+	{
+		my $newlog = $basename . $Testhash->{extensions}[$m];
+		print "Creating core log $newlog\n";
+		open(LOG,">$newlog") || return "1";
+		print LOG "***************************** Merge Sublogs ***************************\n";
+		foreach my $n ( 0 .. $#{$Testhash->{tests}} )
+		{
+			# get file if it exists
+			print "Add logs for test $Testhash->{tests}[$n]\n";
+			my $sublog = $Testhash->{tests}[$n] . $Testhash->{extensions}[$m];
+			if( -e "$sublog" )
+			{
+				print LOG "\n\n***************************** $sublog ***************************\n\n";
+				open(INLOG,"<$sublog") || return "1";
+				while(<INLOG>)
+				{
+					print LOG "$_";
+				}
+				close(INLOG);
+			}
+			else
+			{
+				print "Can not find $sublog\n";
+			}
+			#print "$n = $Testhash->{tests}[$n]\n";
+			#print "$m = $Testhash->{extensions}[$m]\n";
+		}
+		close(LOG);
+	}
+}
+
 1;
