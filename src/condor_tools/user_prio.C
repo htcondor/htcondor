@@ -222,7 +222,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
 
   int Res=0;
   for (int i=0; i<NumElem; i++) {
-    printf(Fmt1,(const char*)LR[i].Name,LR[i].Priority,LR[i].Res);
+    printf(Fmt1,LR[i].Name.Value(),LR[i].Priority,LR[i].Res);
 	Res+=LR[i].Res;
   }
 
