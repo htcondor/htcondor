@@ -36,6 +36,7 @@ static const int D_PROTOCOL		= (1<<17);
 static const int D_PRIV			= (1<<18);
 static const int D_TAPENET		= (1<<19);
 static const int D_DAEMONCORE	= (1<<20);
+static const int D_COMMAND		= (1<<21);
 static const int D_MAXFLAGS		= 32;
 static const int D_ALL			= (~(1<<5));
 

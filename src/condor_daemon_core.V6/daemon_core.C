@@ -1075,7 +1075,7 @@ int DaemonCore::HandleReq(int socki)
 			stream = insock;
 		}
 
-		dprintf( D_ALWAYS, "DaemonCore: Command received via TCP from %s\n", 
+		dprintf( D_COMMAND, "DaemonCore: Command received via TCP from %s\n", 
 				 sin_to_string(stream->endpoint()) );
 
 	}
@@ -1108,7 +1108,7 @@ int DaemonCore::HandleReq(int socki)
 	
 	// If UDP, display who message is from now, since we could not do it above
 	if ( !is_tcp ) {		
-		dprintf( D_ALWAYS, "DaemonCore: Command received via UDP from %s\n", 
+		dprintf( D_COMMAND, "DaemonCore: Command received via UDP from %s\n", 
 				 sin_to_string(stream->endpoint()) );
 	}
 
@@ -1135,7 +1135,7 @@ int DaemonCore::HandleReq(int socki)
 	}
 
 	if ( reqFound == TRUE )
-		dprintf(D_ALWAYS, "DaemonCore: received command %d (%s), calling handler (%s)\n", req,
+		dprintf(D_COMMAND, "DaemonCore: received command %d (%s), calling handler (%s)\n", req,
 			comTable[index].command_descrip, comTable[index].handler_descrip);
 	else
 		dprintf(D_ALWAYS,"DaemonCore: received unregistered command request %d !\n",req);
