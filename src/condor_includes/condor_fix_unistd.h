@@ -27,6 +27,7 @@ typedef struct fd_set fd_set;
 
 #if defined(LINUX)
 #	define idle _hide_idle
+#	define __USE_BSD
 #endif
 
 /**********************************************************************
