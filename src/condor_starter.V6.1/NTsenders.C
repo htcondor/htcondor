@@ -110,6 +110,7 @@ REMOTE_syscall( int syscall_num, ... )
 		break;
 	}
 
+#if 0
 	case CONDOR_get_executable:
 	{
 		char *destination;
@@ -130,10 +131,11 @@ REMOTE_syscall( int syscall_num, ... )
 			errno = terrno;
 			break;
 		}
-		assert( syscall_sock->get_file(destination) );
+		assert( syscall_sock->get_file(destination) > -1 );
 		assert( syscall_sock->end_of_message() );
 		break;
 	}
+#endif
 
 	case CONDOR_job_exit:
 	{
