@@ -110,7 +110,7 @@ class passwd_cache {
 		/* stashes the user's uid in our cache, using information
 		   from the supplied passwd struct. Returns true
 		   on success. */
-		bool cache_uid(const char* user, struct passwd *pwent);
+		bool cache_uid(const struct passwd *pwent);
 
 		/* allocates and zeros out a cache entry */
 		void init_uid_entry(uid_entry *&uce);

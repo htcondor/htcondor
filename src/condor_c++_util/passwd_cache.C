@@ -143,7 +143,7 @@ passwd_cache::cache_uid(const char* user) {
 				"with error %s\n", __LINE__, strerror(errno));
 		return false;
 	} else {
-	   	return cache_uid(user, pwent);
+	   	return cache_uid(pwent);
 	}
 }
 
@@ -154,16 +154,20 @@ passwd_cache::cache_uid(const char* user) {
  * own passwd struct if we've already looked it up for some other
  * reason. */
 bool
-passwd_cache::cache_uid(const char* user, struct passwd *pwent) {
+passwd_cache::cache_uid(const struct passwd *pwent) {
 	
 	uid_entry *cache_entry;
+	MyString index;
+
    
-	if ( user == NULL || pwent == NULL ) {
+	if ( pwent == NULL ) {
 			/* a little sanity check */
 		return false;
 	} else {
 
-		if ( !lookup_uid(user, cache_entry) ) {
+		index = pwent->pw_name;
+
+		if ( !lookup_uid(index.Value(), cache_entry) ) {
 				/* if we don't already have this entry, create a new one */
 			init_uid_entry(cache_entry);
 		}
@@ -172,7 +176,7 @@ passwd_cache::cache_uid(const char* user, struct passwd *pwent) {
 	   	cache_entry->gid = pwent->pw_gid;
 			/* reset lastupdated */
 		cache_entry->lastupdated = time(NULL);
-		uid_table->insert(user, cache_entry);
+		uid_table->insert(index, cache_entry);
 		return true;
 	}
 }
@@ -304,7 +308,7 @@ passwd_cache::get_user_name(const uid_t uid, char *&user) {
 	if ( pwd ) {
 
 		/* get the user in the cache */
-		cache_uid(pwd->pw_name);
+		cache_uid(pwd);
 
 		user = strdup(pwd->pw_name);
 		return true;
