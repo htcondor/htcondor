@@ -32,9 +32,18 @@
 #endif
 
 #ifdef CLASSAD_DISTRIBUTION
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE /* to get definition for strptime on Linux */
+#endif
+
+#ifndef __EXTENSIONS__
 #define __EXTENSIONS__ /* to get gmtime_r and localtime_r on Solaris */
+#endif
+
+#ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 199506L /* To get asctime_r */
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -42,9 +51,17 @@
 #include "debug.h"
 #include <unistd.h>
 #include <errno.h>
+
+#ifndef WORD_BIT
 #define WORD_BIT 32
-#else
+#endif
+
+#else /* CLASSAD_DISTRIBUTION isn't defined */
+
+#ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 199506L /* To get asctime_r */
+#endif
+
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
