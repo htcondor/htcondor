@@ -54,7 +54,8 @@ ReliSock::ReliSock() : Sock(), ignore_next_encode_eom(FALSE),
 
 /* listen on port	*/
 ReliSock::ReliSock( int port )
-	: Sock(), ignore_next_encode_eom(FALSE), ignore_next_decode_eom(FALSE)
+	: Sock(), ignore_next_encode_eom(FALSE), ignore_next_decode_eom(FALSE),
+	  _bytes_sent(0.0), _bytes_recvd(0.0)
 {
 	if (!listen(port)) {
 		dprintf(D_ALWAYS, "failed to listen on port %d!\n", port);
@@ -70,7 +71,8 @@ ReliSock::ReliSock( int port )
 
 /* listen on serv		*/
 ReliSock::ReliSock( char *serv )
-	: Sock(), ignore_next_encode_eom(FALSE), ignore_next_decode_eom(FALSE)
+	: Sock(), ignore_next_encode_eom(FALSE), ignore_next_decode_eom(FALSE),
+	  _bytes_sent(0.0), _bytes_recvd(0.0)
 {
 	if (!listen(serv)) {
 		dprintf(D_ALWAYS, "failed to listen on serv %s!\n", serv);
@@ -89,7 +91,8 @@ ReliSock::ReliSock(
 	int		port,
 	int		timeout_val
 	)
-	: Sock(), ignore_next_encode_eom(FALSE), ignore_next_decode_eom(FALSE)
+	: Sock(), ignore_next_encode_eom(FALSE), ignore_next_decode_eom(FALSE),
+	  _bytes_sent(0.0), _bytes_recvd(0.0)
 {
 	timeout(timeout_val);
 	if (!connect(host, port)) {
@@ -304,6 +307,9 @@ ReliSock::put_bytes_nobuffer( char *buf, int length, int send_size )
 			i += pagesize;
 		}
 	}
+	if (i > 0) {
+		_bytes_sent += i;
+	}
 	return i;
 }
 
@@ -346,6 +352,7 @@ ReliSock::get_bytes_nobuffer(char *buffer, int max_length, int receive_size)
 			"ReliSock::get_bytes_nobuffer: Failed to receive file.\n");
 		return -1;
 	} else {
+		_bytes_recvd += result;
 		return result;
 	}
 }
@@ -559,6 +566,9 @@ ReliSock::put_bytes(const void *dta, int sz)
 			break;
 		}
 	}
+	if (nw > 0) {
+		_bytes_sent += nw;
+	}
 	return nw;
 }
 
@@ -566,6 +576,8 @@ ReliSock::put_bytes(const void *dta, int sz)
 int 
 ReliSock::get_bytes(void *dta, int max_sz)
 {
+	int		bytes;
+
 	if (!valid()) {
 		return -1;
 	}
@@ -577,8 +589,12 @@ ReliSock::get_bytes(void *dta, int max_sz)
 			return FALSE;
 		}
 	}
-	
-	return rcv_msg.buf.get(dta, max_sz);
+
+	bytes = rcv_msg.buf.get(dta, max_sz);
+	if (bytes > 0) {
+		_bytes_recvd += bytes;
+	}
+	return bytes;
 }
 
 

@@ -90,6 +90,11 @@ public:
 
 	int get_file_desc();
 
+	float get_bytes_sent() { return _bytes_sent; }
+	float get_bytes_recvd() { return _bytes_recvd; }
+	void reset_bytes_sent() { _bytes_sent = 0; }
+	void reset_bytes_recvd() { _bytes_recvd = 0; }
+
 #ifndef WIN32
 	// interface no longer supported 
 	int attach_to_file_desc(int);
@@ -157,6 +162,7 @@ protected:
 	relisock_state	_special_state;
 	int	ignore_next_encode_eom;
 	int	ignore_next_decode_eom;
+	float _bytes_sent, _bytes_recvd;
 
 #if !defined(SKIP_AUTHENTICATION)
 	Authentication * authob;
