@@ -1,0 +1,7 @@
+This is the new checkpointing scheme which utilizes a direct dump and
+restore of data and stack segments to and from a file - no core
+dumps or rewriting of executables.  It is not yet part of the production
+Condor code.
+
+Jan 21, 1994
+-- mike

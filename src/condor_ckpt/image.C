@@ -1,0 +1,437 @@
+#define _POSIX_SOURCE
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/vmparam.h>
+#include "image.h"
+#include "stubs.h"
+#include <setjmp.h>
+
+Image MyImage;
+jmp_buf Env;
+
+#define DATA_ALIGN  0x2000
+#define ALIGN(x)    (((x)+DATA_ALIGN-1)/DATA_ALIGN*DATA_ALIGN)
+#define SETJMP _setjmp
+#define LONGJMP _longjmp
+
+Header::Header()
+{
+	Init( -1, -1, "" );
+}
+
+Header::Header( int c, int p, const char *o )
+{
+	Init( c, p, o );
+}
+
+void
+Header::Init( int c, int p, const char *o )
+{
+	magic = MAGIC;
+	n_segs = 0;
+	cluster = c;
+	proc = p;
+	strcpy( owner, o );
+}
+
+void
+Header::Display()
+{
+	DUMP( " ", magic, 0x%X );
+	DUMP( " ", n_segs, %d );
+	DUMP( " ", cluster, %d );
+	DUMP( " ", proc, %d );
+	DUMP( " ", owner, "%s" );
+}
+
+SegMap::SegMap()
+{
+	Init( "", 0, 0L );
+}
+
+SegMap::SegMap( const char *n, RAW_ADDR c, long l )
+{
+	Init( n, c, l );
+}
+
+void
+SegMap::Init( const char *n, RAW_ADDR c, long l )
+{
+	strcpy( name, n );
+	file_loc = -1;
+	core_loc = c;
+	len = l;
+}
+
+void
+SegMap::Display()
+{
+	DUMP( " ", name, %s );
+	printf( " file_loc = %Lu (0x%X)\n", file_loc, file_loc );
+	printf( " core_loc = %Lu (0x%X)\n", core_loc, core_loc );
+	printf( " len = %d (0x%X)\n", len, len );
+}
+
+Image::Image()
+{
+	struct sigaction action;
+
+		// Initialize saved image data structures
+	head.Init( -1, -1, "" );
+	max_segs = SEG_INCR;
+	map = new SegMap[max_segs];
+	valid = FALSE;
+
+		// set up to catch SIGTSTP and do a checkpoint
+	action.sa_handler = Checkpoint;
+	sigemptyset( &action.sa_mask );
+	action.sa_flags = 0;
+
+		// install the SIGTSTP handler
+	if( sigaction(SIGTSTP,&action,NULL) < 0 ) {
+		perror( "sigaction" );
+		exit( 1 );
+	}
+
+	fd = -1;
+	pos = 0;
+}
+
+void
+Image::Save()
+{
+	int		cluster;
+	int		proc;
+	char	*owner;
+
+	cluster = get_cluster();
+	proc = get_proc();
+	owner = get_owner();
+
+	Save( cluster, proc, owner );
+}
+
+extern char *etext;
+extern char *edata;
+void
+Image::Save( int c, int p, const char *o )
+{
+	RAW_ADDR	data_start, data_end;
+	RAW_ADDR	stack_start, stack_end;
+	ssize_t		pos;
+	int			i;
+
+		// Set up header
+	head.Init( c, p, o );
+
+		// Set up data segment
+	data_start = ALIGN( (RAW_ADDR)&etext );
+	data_end = (RAW_ADDR)sbrk( 0 );
+	AddSegment( "DATA", data_start, data_end );
+
+		// Set up stack segment
+	stack_start = GetStackLimit();
+	stack_end = USRSTACK;
+	AddSegment( "STACK", stack_start, stack_end );
+
+		// Calculate positions of segments in ckpt file
+	pos = sizeof(Header) + head.N_Segs() * sizeof(SegMap);
+	for( i=0; i<head.N_Segs(); i++ ) {
+		pos = map[i].SetPos( pos );
+	}
+
+	valid = TRUE;
+}
+
+ssize_t
+SegMap::SetPos( ssize_t my_pos )
+{
+	file_loc = my_pos;
+	return file_loc + len;
+}
+
+void
+Image::Display()
+{
+	int		i;
+
+	printf( "===========\n" );
+	DUMP( "", max_segs, %d );
+	printf( "Ckpt File Header:\n" );
+	head.Display();
+	for( i=0; i<head.N_Segs(); i++ ) {
+		printf( "Segment %d:\n", i );
+		map[i].Display();
+	}
+	printf( "===========\n" );
+}
+
+void
+Image::AddSegment( const char *name, RAW_ADDR start, RAW_ADDR end )
+{
+	long	len = end - start;
+	int idx = head.N_Segs();
+
+	if( idx >= max_segs ) {
+		fprintf( stderr, "Don't know how to grow segment map yet!\n" );
+		exit( 1 );
+	}
+	head.IncrSegs();
+	map[idx].Init( name, start, len );
+}
+
+char *
+Image::FindSeg( void *addr )
+{
+	int		i;
+	if( !valid ) {
+		return NULL;
+	}
+	for( i=0; i<head.N_Segs(); i++ ) {
+		if( map[i].Contains(addr) ) {
+			return map[i].GetName();
+		}
+	}
+	return NULL;
+}
+
+BOOL
+SegMap::Contains( void *addr )
+{
+	return ((RAW_ADDR)addr >= core_loc) && ((RAW_ADDR)addr < core_loc + len);
+}
+
+// extern "C" int	setjmp( jmp_buf );
+const int SP = 2;	// index of Stack Pointer in jmp_buf
+
+RAW_ADDR
+Image::GetStackLimit()
+{
+	RAW_ADDR	sp;
+	jmp_buf	env;
+
+	(void)SETJMP( env );
+	sp = env[SP];
+	return (sp / 1024L) * 1024L;	// round downward to 1 K boundary
+}
+
+const int TmpStackSize = 4096;
+char	TmpStack[ TmpStackSize ];
+
+void
+Image::Restore()
+{
+	int		save_fd = fd;
+
+		// Overwrite our data segment with the one saved at checkpoint
+		// time.
+	RestoreSeg( "DATA" );
+
+		// We have just overwritten our data segment, so the image
+		// we are working with has been overwritten too.  Fortunately,
+		// the only thing that has changed is the file descriptor.
+	fd = save_fd;
+
+	SwitchStack( TmpStack, TmpStackSize );
+	fprintf( stderr, "Error, should never get here\n" );
+}
+
+void
+Image::RestoreSeg( const char *seg_name )
+{
+	int		i;
+
+	for( i=0; i<head.N_Segs(); i++ ) {
+		if( strcmp(seg_name,map[i].GetName()) == 0 ) {
+			if( (pos = map[i].Read(fd,pos)) < 0 ) {
+				perror( "SegMap::Read()" );
+				exit( 1 );
+			} else {
+				return;
+			}
+		}
+	}
+	fprintf( stderr, "Can't find segment \"%s\"\n", seg_name );
+	exit( 1 );
+}
+
+void ReadStack();
+
+void
+Image::SwitchStack( char *base, size_t len )
+{
+	jmp_buf	env;
+
+	if( SETJMP(env) == 0 ) {
+			// First time through - move SP
+		if( StackGrowsDown ) {
+			env[SP] = (RAW_ADDR)base + len;
+		} else {
+			env[SP] = (RAW_ADDR)base;
+		}
+		LONGJMP( env, 1 );
+	} else {
+			// Second time through - restore stack
+		MyImage.RestoreSeg( "STACK" );
+		fprintf( stderr, "About to longjmp back to restored stack\n" );
+		LONGJMP( Env, 1 );
+	}
+}
+
+void
+ReadStack()
+{
+	int		local;
+
+	DUMP( "", &local, 0x%X );
+	exit( 0 );
+}
+
+int
+Image::Write( const char *file_name )
+{
+	int	fd;
+	int	status;
+
+	if( (fd=open(file_name,O_CREAT|O_TRUNC|O_WRONLY,0664)) < 0 ) {
+		perror( "open" );
+		exit( 1 );
+	}
+	status = Write( fd );
+	(void)close( fd );
+
+	return status;
+}
+
+int
+Image::Write( int fd )
+{
+	int		i;
+	ssize_t	pos = 0;
+	ssize_t	nbytes;
+
+		// Write out the header
+	if( (nbytes=write(fd,&head,sizeof(head))) < 0 ) {
+		return -1;
+	}
+	pos += nbytes;
+
+		// Write out the SegMaps
+	for( i=0; i<head.N_Segs(); i++ ) {
+		if( (nbytes=write(fd,&map[i],sizeof(map[i]))) < 0 ) {
+			return -1;
+		}
+		pos += nbytes;
+	}
+
+		// Write out the Segments
+	for( i=0; i<head.N_Segs(); i++ ) {
+		if( (nbytes=map[i].Write(fd,pos)) < 0 ) {
+			return -1;
+		}
+		pos += nbytes;
+	}
+	return 0;
+}
+
+int
+Image::Read( const char *file_name )
+{
+	int	status;
+
+	if( (fd=open(file_name,O_RDONLY,0)) < 0 ) {
+		perror( "open" );
+		exit( 1 );
+	}
+	status = Read( fd );
+
+	return status;
+}
+
+int
+Image::Read( int fd )
+{
+	int		i;
+	ssize_t	nbytes;
+
+		// Read in the header
+	if( (nbytes=read(fd,&head,sizeof(head))) < 0 ) {
+		return -1;
+	}
+	pos += nbytes;
+
+		// Read in the segment maps
+	for( i=0; i<head.N_Segs(); i++ ) {
+		if( (nbytes=read(fd,&map[i],sizeof(SegMap))) < 0 ) {
+			return -1;
+		}
+		pos += nbytes;
+	}
+
+	return 0;
+}
+
+ssize_t
+SegMap::Read( int fd, ssize_t pos )
+{
+	ssize_t nbytes;
+
+	if( pos != file_loc ) {
+		fprintf( stderr, "Checkpoint sequence error\n" );
+		exit( 1 );
+	}
+	nbytes =  read(fd,core_loc,len);
+	if( nbytes < 0 ) {
+		return -1;
+	}
+	return pos + nbytes;
+}
+
+ssize_t
+SegMap::Write( int fd, ssize_t pos )
+{
+	if( pos != file_loc ) {
+		fprintf( stderr, "Checkpoint sequence error\n" );
+	}
+	return write(fd,core_loc,len);
+}
+
+extern "C" {
+void
+Checkpoint( )
+{
+
+	fprintf( stderr, "Got SIGTSTP\n" );
+	if( SETJMP(Env) == 0 ) {
+		fprintf( stderr, "About to save MyImage\n" );
+		MyImage.Save();
+		MyImage.Write( "Ckpt.13.13" );
+		fprintf( stderr, "Ckpt exit\n" );
+		exit( 0 );
+	} else {
+		fprintf( stderr, "About to return to user code\n" );
+		return;
+	}
+}
+}
+
+extern "C" {
+void
+restart()
+{
+	MyImage.Read( "Ckpt.13.13" );
+	MyImage.Restore();
+}
+
+void
+ckpt()
+{
+	kill( getpid(), SIGTSTP );
+}
+}
