@@ -2,11 +2,11 @@
 static char *_FileName_ = __FILE__;
 
 int
-command_handler( Service* serv, int cmd, Stream* stream )
+command_handler( Service*, int cmd, Stream* stream )
 {
 	char* cap = NULL;
 	Resource* rip;
-	int rval;
+	int rval = FALSE;
 
 	if( ! stream->code(cap) ) {
 		dprintf( D_ALWAYS, "Can't read capability\n" );
@@ -59,7 +59,7 @@ command_handler( Service* serv, int cmd, Stream* stream )
 
 
 int
-command_vacate( Service* serv, int cmd, Stream* stream ) 
+command_vacate( Service*, int, Stream* ) 
 {
 	dprintf( D_ALWAYS, "command_vacate() called.\n" );
 	resmgr->walk( release_claim );
@@ -68,7 +68,7 @@ command_vacate( Service* serv, int cmd, Stream* stream )
 
 
 int
-command_pckpt_all( Service* serv, int cmd, Stream* stream ) 
+command_pckpt_all( Service*, int, Stream* ) 
 {
 	dprintf( D_ALWAYS, "command_pckpt_all() called.\n" );
 	resmgr->walk( periodic_checkpoint );
@@ -77,7 +77,7 @@ command_pckpt_all( Service* serv, int cmd, Stream* stream )
 
 
 int
-command_x_event( Service* serv, int cmd, Stream* stream ) 
+command_x_event( Service*, int, Stream* ) 
 {
 	dprintf( D_FULLDEBUG, "command_x_event() called.\n" );
 	last_x_event = (int)time( NULL );
@@ -86,18 +86,21 @@ command_x_event( Service* serv, int cmd, Stream* stream )
 
 
 int
-command_give_state( Service* serv, int cmd, Stream* stream ) 
+command_give_state( Service*, int, Stream* stream ) 
 {
+	char* tmp;
 	dprintf( D_FULLDEBUG, "command_give_state() called.\n" );
 	stream->encode();
-	stream->put( (int) resmgr->state() );
-	stream->eom();
+	tmp = strdup( state_to_string(resmgr->state()) );
+	stream->code( tmp );
+	stream->end_of_message();
+	free( tmp );
 	return TRUE;
 }
 
 
 int
-command_request_claim( Service* serv, int cmd, Stream* stream ) 
+command_request_claim( Service*, int, Stream* stream ) 
 {
 	char* cap = NULL;
 	Resource* rip;
@@ -135,12 +138,11 @@ command_request_claim( Service* serv, int cmd, Stream* stream )
 }
 
 int
-command_match_info( Service* serv, int cmd, Stream* stream ) 
+command_match_info( Service*, int, Stream* stream ) 
 {
 	char* cap = NULL;
 	Resource* rip;
 	int rval;
-	char *str = NULL;
 
 	if( ! stream->code(cap) ) {
 		dprintf( D_ALWAYS, "Can't read capability\n" );
@@ -149,9 +151,6 @@ command_match_info( Service* serv, int cmd, Stream* stream )
 	}
 
 		// Find Resource object for this capability
-#ifdef OLD_PROTOCOL
-	rip = resmgr->rip();
-#else 
 	rip = resmgr->get_by_any_cap( cap );
 	if( !rip ) {
 		dprintf( D_ALWAYS, 
@@ -160,22 +159,12 @@ command_match_info( Service* serv, int cmd, Stream* stream )
 		free( cap );
 		return FALSE;
 	}
-#endif
+
 
 		// Check resource state.  If we're in claimed or unclaimed,
 		// process the command.  Otherwise, ignore it.  
 	State s = rip->state();
 	if( s == claimed_state || s == unclaimed_state ) {
-
-#ifdef OLD_PROTOCOL
-			// Peel off the sequence number on the capability
-		str = (char *)strchr(cap,'#');
-		if( str ) {
-			*str = '\0';
-		}
-		rip->r_cur->cap()->setcapab( cap );
-#endif
-
 		rval = match_info( rip, cap );
 	} else {
 		log_ignore( MATCH_INFO, s );
