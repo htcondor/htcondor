@@ -355,3 +355,130 @@ same_host(const char *h1, const char *h2)
 
 	return (strcmp(cn1, he2->h_name) == MATCH);
 }
+
+
+/*
+  is_ipaddr() returns TRUE if buf is an ascii IP address (like
+  "144.11.11.11") and false if not (like "cs.wisc.edu").  Allow
+  wildcard "*".  If we return TRUE, and we were passed in a non-NULL 
+  sin_addr, it's filled in with the integer version of the ip address. 
+*/
+int
+is_ipaddr(const char *inbuf, struct in_addr *sin_addr)
+{
+	int len;
+	char buf[17];
+	int part = 0;
+	int i,j,x;
+	char save_char;
+	unsigned char *cur_byte = NULL;
+	if( sin_addr ) {
+		cur_byte = (unsigned char *) sin_addr;
+	}
+
+	len = strlen(inbuf);
+	if ( len < 3 || len > 16 ) 
+		return FALSE;	// shortest possible IP addr is "1.*" - 3 chars
+	
+	// copy to our local buf
+	strcpy(buf,inbuf);
+
+	// on IP addresses, wildcards only permitted at the end, 
+	// i.e. 144.92.* , _not_ *.92.11
+	if ( buf[0] == '*' ) 
+		return FALSE;
+
+	// strip off any trailing wild card or '.'
+	if ( buf[len-1] == '*' || buf[len-1] == '.' ) {
+		if ( buf[len-2] == '.' )
+			buf[len-2] = '\0';
+		else
+			buf[len-1] = '\0';
+	}
+
+	// Make certain we have a valid IP address, and count the parts,
+	// and fill in sin_addr
+	i = 0;
+	for(;;) {
+		
+		j = i;
+		while (buf[i] >= '0' && buf[i] <= '9') i++;
+		// make certain a number was here
+		if ( i == j )
+			return FALSE;	
+		// now that we know there was a number, check it is between 0 & 255
+		save_char = buf[i];
+		buf[i] = '\0';
+		x = atoi( &(buf[j]) );
+		if( x < 0 || x > 255 ) {
+			return FALSE;
+		}
+		if( cur_byte ) {
+			*cur_byte = x;	/* save into sin_addr */
+			cur_byte++;
+		}
+		buf[i] = save_char;
+
+		part++;
+		
+		if ( buf[i] == '\0' ) 
+			break;
+		
+		if ( buf[i] == '.' )
+			i++;
+		else
+			return FALSE;
+
+		if ( part >= 4 )
+			return FALSE;
+	}
+	
+	if( cur_byte ) {
+		for (i=0; i < 4 - part; i++) {
+			*cur_byte = (unsigned char) 255;
+			cur_byte++;
+		}
+	}
+	return TRUE;
+}
+
+
+int
+string_to_port( const char* addr )
+{
+	char *sinful, *tmp;
+	int port = 0;
+
+	sinful = strdup( addr );
+	if( (tmp = strrchr(sinful, '>')) ) {
+		*tmp = '\0';
+		tmp = strchr( sinful, ':' );
+		if( tmp && tmp[1] ) {
+			port = atoi( &tmp[1] );
+		} 
+	}
+	free( sinful );
+	return port;
+}
+
+
+unsigned int
+string_to_ip( const char* addr )
+{
+	char *sinful, *tmp;
+	unsigned int ip = 0;
+	struct in_addr sin_addr;
+
+	sinful = strdup( addr );
+	if( sinful[0] == '<' && sinful[1] ) {
+		tmp = strchr( sinful, ':' );
+		if( tmp ) {
+			*tmp = '\0';
+		} 
+		if( is_ipaddr(&sinful[1], &sin_addr) ) {
+			ip = sin_addr.s_addr;
+		}
+	}
+	free( sinful );
+	return ip;
+}
