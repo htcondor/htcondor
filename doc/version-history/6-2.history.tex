@@ -31,7 +31,12 @@ specify them properly.
 
 \noindent Bugs Fixed:
 \begin{itemize}
-\item None.
+\item The \MacroNI{FILESYSTEM\_DOMAIN} and \MacroNI{UID\_DOMAIN} settings were
+not being automatically appened to the requriements of a Vanilla-universe job,
+possibly causing it to run on machines where it will not sucessfully run. This
+has been fixed.
+\item The getdirentries call was not being trapped, causing a few applications
+to fail running inside of Condor.
 \end{itemize}
 
 \noindent Known Bugs:
