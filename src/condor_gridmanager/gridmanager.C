@@ -277,8 +277,6 @@ Reconfig()
 	// This method is called both at startup [from method Init()], and
 	// when we are asked to reconfig.
 
-
-dprintf(D_FULLDEBUG,"reconfig called!!!!\n");
 	if ( checkResources_tid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer(checkResources_tid);
 		checkResources_tid = TIMER_UNSET;
@@ -287,106 +285,37 @@ dprintf(D_FULLDEBUG,"reconfig called!!!!\n");
 												(TimerHandler)&checkResources,
 												"checkResources", NULL );
 
-	contactScheddDelay = -1;
-	tmp = param("GRIDMANAGER_CONTACT_SCHEDD_DELAY");
-	if ( tmp ) {
-		contactScheddDelay = atoi(tmp);
-		free(tmp);
-	} 
-	if ( contactScheddDelay < 0 ) {
-		contactScheddDelay = 5; // default delay = 5 seconds
-	}
+	contactScheddDelay = param_integer("GRIDMANAGER_CONTACT_SCHEDD_DELAY", 5);
 
-	tmp_int = -1;
-	tmp = param("GRIDMANAGER_JOB_PROBE_INTERVAL");
-	if ( tmp ) {
-		tmp_int = atoi(tmp);
-		free(tmp);
-	}
-	if ( tmp_int < 0 ) {
-		tmp_int = 5 * 60; // default interval is 5 minutes
-	}
+	tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL", 5 * 60 );
 	GlobusJob::setProbeInterval( tmp_int );
 
-	tmp_int = -1;
-	tmp = param("GRIDMANAGER_RESOURCE_PROBE_INTERVAL");
-	if ( tmp ) {
-		tmp_int = atoi(tmp);
-		free(tmp);
-	}
-	if ( tmp_int < 0 ) {
-		tmp_int = 5 * 60; // default interval is 5 minutes
-	}
+	tmp_int = param_integer( "GRIDMANAGER_RESOURCE_PROBE_INTERVAL", 5 * 60 );
 	GlobusResource::setProbeInterval( tmp_int );
 
-	int max_pending_submits = -1;
-	tmp = param("GRIDMANAGER_MAX_PENDING_SUBMITS");
-	if ( tmp ) {
-		max_pending_submits = atoi(tmp);
-		free(tmp);
-	}
-	if ( max_pending_submits < 0 ) {
-		max_pending_submits = 5; // default limit is 5
-	}
+	int max_pending_submits = param_integer( "GRIDMANAGER_MAX_PENDING_SUBMITS",
+											 5 );
 	GlobusResource::setSubmitLimit( max_pending_submits );
 
-	int max_submitted_jobs = -1;
-	tmp = param("GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE");
-	if ( tmp ) {
-		max_submitted_jobs = atoi(tmp);
-		free(tmp);
-	}
-	if ( max_submitted_jobs < 0 ) {
-		max_submitted_jobs = 100; // default limit is 100
-	}
+	int max_submitted_jobs = param_integer(
+						"GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE", 100 );
 	GlobusResource::setJobLimit( max_submitted_jobs );
 
-	tmp_int = -1;
-	tmp = param("GRIDMANAGER_GAHP_CALL_TIMEOUT");
-	if ( tmp ) {
-		tmp_int = atoi(tmp);
-		free(tmp);
-	}
-	if ( tmp_int < 0 ) {
-		tmp_int = 5 * 60; // default interval is 5 minutes
-	}
+	tmp_int = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT", 5 * 60 );
 	GlobusJob::setGahpCallTimeout( tmp_int );
 	GlobusResource::setGahpCallTimeout( tmp_int );
 
 	tmp_int = param_integer("GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT",3);
 	GlobusJob::setConnectFailureRetry( tmp_int );
 
-	checkProxy_interval = -1;
-	tmp = param("GRIDMANAGER_CHECKPROXY_INTERVAL");
-	if ( tmp ) {
-		checkProxy_interval = atoi(tmp);
-		free(tmp);
-	} 
-	if ( checkProxy_interval < 0 ) {
-		checkProxy_interval = 10 * 60 ; // default interval = 10 minutes
-	}
+	checkProxy_interval = param_integer( "GRIDMANAGER_CHECKPROXY_INTERVAL",
+										 10 * 60 );
 
-	minProxy_time = -1;
-	tmp = param("GRIDMANAGER_MINIMUM_PROXY_TIME");
-	if ( tmp ) {
-		minProxy_time = atoi(tmp);
-		free(tmp);
-	} 
-	if ( minProxy_time < 0 ) {
-		minProxy_time = 3 * 60 ; // default = 3 minutes
-	}
+	minProxy_time = param_integer( "GRIDMANAGER_MINIMUM_PROXY_TIME", 3 * 60 );
 
-	int max_requests = 50;
-	tmp = param("GRIDMANAGER_MAX_PENDING_REQUESTS");
-	if ( tmp ) {
-		max_requests = atoi(tmp);
-		free(tmp);
-		if ( max_requests < 1 ) {
-			max_requests = 50;
-		}
-		if ( max_requests < max_pending_submits * 5 ) {
-		        max_requests = max_pending_submits * 5;
-		}
+	int max_requests = param_integer( "GRIDMANAGER_MAX_PENDING_REQUESTS", 50 );
+	if ( max_requests < max_pending_submits * 5 ) {
+		max_requests = max_pending_submits * 5;
 	}
 	GahpMain.setMaxPendingRequests(max_requests);
 
