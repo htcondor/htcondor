@@ -328,6 +328,10 @@ bool Dag::ProcessLogEvents (bool recovery) {
 					  // submit any waiting child jobs
 					  if( SubmitReadyJobs() == false ) {
 						  // if submit fails for any reason, abort
+
+						  // is this really what we want to do?  why
+						  // not let the rest of the DAG run as far as
+						  // possible?  --pfc
 						  done   = true;
 						  result = false;
 					  }
@@ -364,7 +368,13 @@ bool Dag::ProcessLogEvents (bool recovery) {
 					result = false;
 					break;
 				}
-				assert( job == double_check_job );
+				if( job != double_check_job ) {
+					debug_printf( DEBUG_DEBUG_1,
+								  "GetSubmittedJob() bug: Job %s != Job %s\n",
+								  job->GetJobName(),
+								  double_check_job->GetJobName() );
+					assert( job == double_check_job );
+				}
 
 				job->_CondorID = condorID;
 				if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
@@ -447,6 +457,8 @@ Dag::SubmitCondor( Job* job )
     if (!submit_submit (job->GetCmdFile(), condorID)) {
         job->_Status = Job::STATUS_ERROR;
         _numJobsFailed++;
+		// we need to have some way of recording why this job failed,
+		// so when everything's done the user will know
         return true;
     }
 
@@ -786,7 +798,9 @@ Job * Dag::GetSubmittedJob (bool recovery) {
 	// submit event in the log, and assumes that that submit event
 	// must correspond to the first unsubmitted child found in the
 	// termination queue, since that's the first one we would have
-	// submitted. --pfc]
+	// submitted.  With the advent of asynchronous PRE/POST scripts
+	// this is no longer a safe assumption, and can result in buggy
+	// behavior... this needs to be fixed.  --pfc]
 	//
     // If such a child job is found, it is removed from its parent's list
     // of unsubmitted jobs.  If that causes the parent's child list to
