@@ -121,6 +121,9 @@ V6_7_SRC		-a V6_6_SRC \
 
 V_TRUNK_SRC		-a \
 			V6_COMMON \
+			src/configure.ac \
+			src/aclocal.m4 \
+			src/.cvsignore \
 			src/condor_c-gahp \
 			src/condor_chirp \
 			src/condor_classad.V6 \
