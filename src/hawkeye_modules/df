@@ -198,15 +198,7 @@ sub RunIt
     }
 
     # Store the fields used
-    {
-	my $Fields = "";
-	my $Key;
-	foreach $Key ( keys %DfFields )
-	{
-	    $Fields = $Fields . "$Key ";
-	}
-	$Hawkeye->Store( "FIELDS" , $Fields );
-    }
+    $Hawkeye->Store( "FIELDS" , join( " ", keys %DfFields )  );
 
     # Now, walk through the point point array
     foreach $MountPoint ( keys %DfOut )
