@@ -27,7 +27,11 @@ fi
 if [ -n "$CONDOR_LOG" ]; then
 	if [ ! -d $CONDOR_LOG ]; then
 		echo "Creating $CONDOR_LOG"
-		mkdir $CONDOR_LOG
+		mkdir $CONDOR_LOG 2> /dev/null
+		if [ ! -d $CONDOR_LOG ]; then
+			echo "Error creating $CONDOR_LOG"
+			exit 1
+		fi
 		chmod 755 $CONDOR_LOG
 	else
 		echo "$CONDOR_LOG already exists."
