@@ -82,6 +82,15 @@ my_sin_addr()
 	return &sin_addr;
 }
 
+char *
+my_ip_string()
+{
+	if( ! ipaddr_initialized ) {
+		init_ipaddr(0);
+	}
+
+	return inet_ntoa(sin_addr);	
+}
 
 void
 init_full_hostname()
@@ -168,7 +177,6 @@ void
 init_hostnames()
 {
     char *tmp, hostbuf[MAXHOSTNAMELEN];
-    int i;
     hostbuf[0]='\0';
 #ifdef WIN32
 	// There are a  tools in Condor, like
