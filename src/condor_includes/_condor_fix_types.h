@@ -19,8 +19,16 @@ need these extra definitions...
 
 typedef unsigned int u_int;
 
+#if defined(AIX32)
+typedef unsigned short ushort;
+#endif
+
 #if defined(ULTRIX42) ||  defined(ULTRIX43)
 typedef char * caddr_t;
+#endif
+
+#if defined(AIX32)
+typedef unsigned long rlim_t;
 #endif
 
 #endif
