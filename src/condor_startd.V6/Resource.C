@@ -53,6 +53,7 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	r_load_num_called = 8;
 	kill_tid = -1;
 	update_tid = -1;
+	r_is_deactivating = false;
 
 	if( r_attr->type() ) {
 		dprintf( D_ALWAYS, "New machine resource of type %d allocated\n",  
@@ -177,6 +178,9 @@ Resource::deactivate_claim( void )
 {
 	dprintf(D_ALWAYS, "Called deactivate_claim()\n");
 	if( state() == claimed_state ) {
+			// Set a flag to avoid a potential race in our protocol.
+		r_is_deactivating = true;
+			// Singal the starter.
 		return r_starter->kill( DC_SIGSOFTKILL );
 	} else {
 		return FALSE;
@@ -189,6 +193,9 @@ Resource::deactivate_claim_forcibly( void )
 {
 	dprintf(D_ALWAYS, "Called deactivate_claim_forcibly()\n");
 	if( state() == claimed_state ) {
+			// Set a flag to avoid a potential race in our protocol.
+		r_is_deactivating = true;
+			// Singal the starter.
 		return hardkill_starter();
 	} else {
 		return FALSE;
@@ -243,6 +250,9 @@ Resource::starter_exited( void )
 {
 	dprintf( D_ALWAYS, "Starter pid %d has exited.\n",
 			 r_starter->pid() );
+
+		// Now that the starter is gone, we can clear this flag.
+	r_is_deactivating = false;
 
 		// Let our starter object know it's starter has exited.
 	r_starter->exited();

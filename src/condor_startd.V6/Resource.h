@@ -63,6 +63,7 @@ public:
 	Activity	activity( void )	{return r_state->activity();};
 	int		eval_state( void )		{return r_state->eval();};
 	bool	in_use( void );
+	bool	is_deactivating( void ) {return r_is_deactivating;};
 
 		// Methods for computing and publishing resource attributes 
 	void	compute( amask_t mask);
@@ -145,6 +146,7 @@ private:
 	int		fast_shutdown;	// Flag set if we're in fast shutdown mode.
 	int		r_load_num_called;	// Counter used for CondorLoadAvg
 	void	remove_pre( void );	// If r_pre is set, refuse and delete it.
+	bool	r_is_deactivating;	// Are we in the middle of deactivating a claim?
 };
 
 #endif _STARTD_RESOURCE_H
