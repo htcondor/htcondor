@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
+#include "condor_config.h"
 #include "condor_debug.h"
 #include "user_proc.h"
 #include "os_proc.h"
@@ -61,6 +62,7 @@ int
 OsProc::StartJob()
 {
 	int i;
+	int nice_inc = 0;
 
 	dprintf(D_FULLDEBUG,"in OsProc::StartJob()\n");
 
@@ -90,7 +92,10 @@ OsProc::StartJob()
 	{
 		perm dirperm;
 		dirperm.init(nobody_login);
-		dirperm.set_acls(Starter->GetWorkingDir());
+		int ret_val = dirperm.set_acls(Starter->GetWorkingDir());
+		if ( ret_val < 0 ) {
+			EXCEPT("UNABLE TO SET PREMISSIONS ON STARTER DIRECTORY");
+		}
 	}
 #endif
 
@@ -113,19 +118,14 @@ OsProc::StartJob()
 		return 0;
 	}
 
-	if ( chmod ( JobName, S_IRWXU | S_IRWXO | S_IRWXG ) == -1 ) {
-		dprintf ( D_ALWAYS, "Failed to chmod condor_exec.  Huh?\n" );
-		return 0;
-	}
-
 	// get sinfullstring of our shadow, if shadow told us
 	JobAd->LookupString(ATTR_MY_ADDRESS, ShadowAddr);
 
 	// if name is condor_exec, we transferred it, so make certain
 	// it is executable.
-	if ( strcmp("condor_exec",JobName) == 0 ) {
+	if ( strcmp(CONDOR_EXEC,JobName) == 0 ) {
 		if ( chmod ( JobName, S_IRWXU | S_IRWXO | S_IRWXG ) == -1 ) {
-			dprintf ( D_ALWAYS, "Failed to chmod condor_exec.  Huh?\n" );
+			dprintf ( D_ALWAYS, "Failed to chmod %s!\n",JobName );
 			return 0;
 		}
 	}
@@ -140,7 +140,7 @@ OsProc::StartJob()
 	}
 		// for now, simply prepend "condor_exec" to the args - this
 		// becomes argv[0].  This should be made smarter later....
-	strcpy ( Args, "condor_exec" );
+	strcpy ( Args, CONDOR_EXEC );
 	strcat ( Args, " " );
 	strcat ( Args, tmp );
 
@@ -226,14 +226,24 @@ OsProc::StartJob()
 		}
 	}
 
+	// handle JOB_RENICE_INCREMENT
+	char* ptmp = param( "JOB_RENICE_INCREMENT" );
+	if ( ptmp ) {
+		nice_inc = atoi(ptmp);
+		free(ptmp);
+	} else {
+		nice_inc = 0;
+	}
+
 	// in below dprintf, display &(Args[11]) to skip past argv[0] 
 	// which we know will always be condor_exec
-	dprintf(D_ALWAYS,"About to exec %s %s\n",JobName,&(Args[11]));
+	dprintf(D_ALWAYS,"About to exec %s %s\n",JobName,
+		&(Args[strlen(CONDOR_EXEC)]));
 
 	set_priv ( priv );
 
 	JobPid = daemonCore->Create_Process(JobName, Args, PRIV_USER_FINAL, 1,
-				   FALSE, Env, Cwd, TRUE, NULL, fds );
+				   FALSE, Env, Cwd, TRUE, NULL, fds, nice_inc );
 
 	// now close the descriptors in fds array.  our child has inherited
 	// them already, so we should close them so we do not leak descriptors.
@@ -244,6 +254,7 @@ OsProc::StartJob()
 	}
 
 	if ( JobPid == FALSE ) {
+		JobPid = -1;
 		EXCEPT("ERROR Create_Process(%s,%s, ...) failed",
 			JobName, Args );
 		return 0;
@@ -289,7 +300,7 @@ OsProc::Continue()
 	job_suspended = FALSE;
 }
 
-void
+bool
 OsProc::ShutdownGraceful()
 {
 	if ( job_suspended == TRUE )
@@ -297,10 +308,10 @@ OsProc::ShutdownGraceful()
 
 	Requested_Exit = TRUE;
 	daemonCore->Send_Signal(JobPid, DC_SIGTERM);
-		
+	return false;	// return false says shutdown is pending	
 }
 
-void
+bool
 OsProc::ShutdownFast()
 {
 	// We purposely do not do a SIGCONT here, since there is no sense
@@ -308,4 +319,5 @@ OsProc::ShutdownFast()
 	// step is to hard kill it.
 	Requested_Exit = TRUE;
 	daemonCore->Send_Signal(JobPid, DC_SIGKILL);
+	return false;	// return false says shutdown is pending
 }
