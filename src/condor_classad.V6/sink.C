@@ -37,6 +37,8 @@ ClassAdUnParser()
 {
 	oldClassAd = false;
 	xmlUnparse = false;
+	printRealsInIEEE = true;
+	commentsForIEEE = true;
 	delimiter = '\"';
 	return;
 }
@@ -171,11 +173,30 @@ Unparse( string &buffer, const Value &val )
 		}
 		case Value::REAL_VALUE: {
 			double real;
-			val.IsRealValue(real);   
-			double_to_hex(real, tempBuf);
-			buffer += "ieee754(\"";
-			buffer += tempBuf;
-			buffer += "\")";
+			val.IsRealValue(real);
+			if (printRealsInIEEE) {
+				double_to_hex(real, tempBuf);
+				buffer += "ieee754(\"";
+				buffer += tempBuf;
+				buffer += "\")";
+
+				if (commentsForIEEE) {
+					sprintf(tempBuf, "%g", real);
+					buffer += "/* ";
+					buffer += tempBuf;
+					buffer += " */";
+				}
+
+			} else {
+				sprintf(tempBuf, "%g", real);
+				buffer += tempBuf;
+				if ((strchr(tempBuf, '.') == NULL)  && !isnan(real)){
+					// There is no decimal in there, so when
+					// we reparse this later, we'll think it's
+					// an integer unless we tack an a .0
+					buffer += ".0";
+				}
+			}
 			return;
 		}
 		case Value::BOOLEAN_VALUE: {
@@ -545,6 +566,9 @@ GetOldClassAd()
 PrettyPrint::
 PrettyPrint( )
 {
+	printRealsInIEEE = false;
+	commentsForIEEE = true;
+
 	classadIndent = 4;
 	listIndent = 3;
 	wantStringQuotes = true;
@@ -605,6 +629,8 @@ GetMinimalParentheses( )
 {
 	return( minimalParens );
 }
+
+
 
 void PrettyPrint::
 UnparseAux(string &buffer,Operation::OpKind op,ExprTree *op1,ExprTree *op2,
@@ -690,28 +716,9 @@ UnparseAux( string &buffer, vector< pair<string,ExprTree*> >& attrs )
 		ClassAdUnParser::UnparseAux( buffer, itr->first );
 		buffer +=  " = ";
 		Unparse( buffer, itr->second );
-		// if the expression is a real-literal node, then it is unparsed as...
-		// ieee754("...")  /* xx.xxx */
-		if((itr->second)->GetKind() == ExprTree::LITERAL_NODE) {
-			Value val;
-			Value::NumberFactor factor;
-			((Literal *)itr->second)->GetComponents(val, factor);
-			double r;
-			if(val.IsRealValue(r)) {
-				char tempBuf[20];
-				sprintf( tempBuf, "%g", r );
-				if ((strchr(tempBuf, '.') == NULL)  && !isnan(r)){
-					// There is no decimal in there, so when
-					// we reparse this later, we'll think it's
-					// an integer unless we tack an a .0
-					strcat(tempBuf, ".0");
-				}
-				buffer += "/* ";
-				buffer += tempBuf;
-				buffer += " */";
-			} 
+		if ( itr+1 != attrs.end( ) ) {
+			buffer += "; ";
 		}
-		if( itr+1 != attrs.end( ) ) buffer += "; ";
 	}
 	if( classadIndent > 0 ) {
 		indentLevel -= classadIndent;

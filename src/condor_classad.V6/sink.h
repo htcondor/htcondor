@@ -41,13 +41,36 @@ class ClassAdUnParser
 		/// Destructor
 		virtual ~ClassAdUnParser( );
 
-		// Function to be called by the ClassAdXMLUnParser with a true
-		// flag before doing an XMLUnparse
+		/** Function to be called by the ClassAdXMLUnParser with a true
+		 *     flag before doing an XMLUnparse
+		 */
 		void setXMLUnparse(bool doXMLUnparse);
 
 		// The default delimiter for strings is '\"'
 		// This can be changed to '\'' to unparse quoted attributes, with this function
 		void setDelimiter(char delim);
+
+		/// Set output representation for reals. False by default.
+		void SetUseIEEE754ForReals( bool _printRealsInIEEE )
+		{ 
+			printRealsInIEEE = _printRealsInIEEE;
+		}
+		/// Return output representation for reals
+		bool GetUseIEEE754ForReals( void )
+		{
+			return printRealsInIEEE;
+		}
+
+		void SetCommentsForIEEE754( bool _commentsForIEEE )
+		{
+			commentsForIEEE = _commentsForIEEE;
+		}
+
+		bool GetCommentsForIEEE754( void )
+		{
+			return commentsForIEEE;
+		}
+
 
 		/** Unparse a value 
 		 * 	@param buffer The string to unparse to
@@ -85,6 +108,8 @@ class ClassAdUnParser
 		static char *opString[];
 
  protected:
+		bool printRealsInIEEE;
+		bool commentsForIEEE;
 		bool oldClassAd;
 		bool xmlUnparse;
 		char delimiter; // string delimiter - initialized to '\"' in the constructor
@@ -104,12 +129,15 @@ class PrettyPrint : public ClassAdUnParser
         void SetClassAdIndentation( int=4 );
 		/// Get the indentation width for displaying classads
         int  GetClassAdIndentation( );
+
 		/// Set the indentation width for displaying lists
         void SetListIndentation( int=4 );
 		/// Get the indentation width for displaying lists
         int  GetListIndentation( );
+
         void SetWantStringQuotes( bool );
         bool GetWantStringQuotes( );
+
 		/// Set minimal parentheses mode
         void SetMinimalParentheses( bool );
 		/// Get minimal parentheses mode
