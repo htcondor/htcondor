@@ -546,7 +546,11 @@ buffer_io_display( ClassAd *ad )
 
 	sprintf(return_buff, "%4d.%-3d %-8s",cluster,proc,owner);
 
-	if(wall_clock<0) {
+	/* If the jobAd values are not set, OR the values are all zero,
+	   report no data collected.  This could be true for a vanilla
+	   job, or for a standard job that has not checkpointed yet. */
+
+	if(wall_clock<0 || (!read_bytes && !write_bytes && !seek_count) ) {
 		strcat(return_buff, "          [ no i/o data collected yet ]\n");
 	} else {
 		if(wall_clock==0) wall_clock=1;
