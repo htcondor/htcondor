@@ -58,6 +58,7 @@
 #include "MyString.h"
 #include "string_list.h"
 #include "which.h"
+#include "sig_name.h"
 
 #include "my_username.h"
 #include "globus_utils.h"
@@ -2233,87 +2234,68 @@ SetGlobusParams()
 }
 
 #if !defined(WIN32)
-struct SigTable { int v; char *n; };
 
-static struct SigTable SigNameArray[] = {
-	{ SIGABRT, "SIGABRT" },
-	{ SIGALRM, "SIGALRM" },
-	{ SIGFPE, "SIGFPE" },
-	{ SIGHUP, "SIGHUP" },
-	{ SIGILL, "SIGILL" },
-	{ SIGINT, "SIGINT" },
-	{ SIGKILL, "SIGKILL" },
-	{ SIGPIPE, "SIGPIPE" },
-	{ SIGQUIT, "SIGQUIT" },
-	{ SIGSEGV, "SIGSEGV" },
-	{ SIGTERM, "SIGTERM" },
-	{ SIGUSR1, "SIGUSR1" },
-	{ SIGUSR2, "SIGUSR2" },
-	{ SIGCHLD, "SIGCHLD" },
-	{ SIGTSTP, "SIGTSTP" },
-	{ SIGTTIN, "SIGTTIN" },
-	{ SIGTTOU, "SIGTTOU" },
-	{ -1, 0 }
-};
-
-int
-sig_name_lookup(char sig[])
+// this allocates memory, free() it when you're done.
+char*
+findKillSigName( const char* submit_name, const char* attr_name )
 {
-	for (int i = 0; SigNameArray[i].n != 0; i++) {
-		if (stricmp(SigNameArray[i].n, sig) == 0) {
-			return SigNameArray[i].v;
-		}
-	}
-	fprintf( stderr, "\nERROR: unknown signal %s\n", sig );
-	exit(1);
-	return -1;
-}
-
-void
-SetKillSig()
-{
-	char *sig = condor_param( KillSig, ATTR_KILL_SIG );
+	char *sig = condor_param( submit_name, attr_name );
+	char *signame = NULL;
+	const char *tmp;
 	int signo;
 
 	if (sig) {
 		signo = atoi(sig);
-		if (signo == 0 && isalnum(sig[0])) {
-			signo = sig_name_lookup(sig);
+		if( signo ) {
+				// looks like they gave us an actual number, map that
+				// into a string for the classad:
+			tmp = signalName( signo );
+			if( ! tmp ) {
+				fprintf( stderr, "\nERROR: invalid signal %s\n", sig );
+				exit( 1 );
+			}
+			signame = strdup( tmp );
+		} else {
+				// should just be a string, let's see if it's valid:
+			signo = signalNumber( sig );
+			if( signo == -1 ) {
+				fprintf( stderr, "\nERROR: invalid signal %s\n", sig );
+				exit( 1 );
+			}
+				// cool, just use what they gave us.
+			signame = strupr(sig);
 		}
-		if( signo == 0 ) {
-			fprintf( stderr, "\nERROR: invalid signal %s\n", sig );
-			exit( 1 );
-		}
-		free(sig);
-	} else {
+	}
+	return signame;
+}
+
+
+void
+SetKillSig()
+{
+	char* sig_name;
+
+	sig_name = findKillSigName( KillSig, ATTR_KILL_SIG );
+	if( ! sig_name ) {
 		switch(JobUniverse) {
 		case CONDOR_UNIVERSE_STANDARD:
-			signo = SIGTSTP;
+			sig_name = strdup( "SIGTSTP" );
 			break;
 		default:
-			signo = SIGTERM;
+			sig_name = strdup( "SIGTERM" );
 			break;
 		}
 	}
+	sprintf( buffer, "%s=\"%s\"", ATTR_KILL_SIG, sig_name );
+	InsertJobExpr( buffer );
+	free( sig_name );
 
-	(void) sprintf (buffer, "%s = %d", ATTR_KILL_SIG, signo);
-	InsertJobExpr(buffer);
-
-	sig = condor_param( RmKillSig, ATTR_REMOVE_KILL_SIG );
-
-	if (sig) {
-		signo = atoi(sig);
-		if (signo == 0 && isalnum(sig[0])) {
-			signo = sig_name_lookup(sig);
-		}
-		if( signo == 0 ) {
-			fprintf( stderr, "\nERROR: invalid signal %s\n", sig );
-			exit( 1 );
-		}
-		free(sig);
-		(void) sprintf (buffer, "%s = %d", ATTR_REMOVE_KILL_SIG, signo);
-		InsertJobExpr(buffer);
-	} 
+	sig_name = findKillSigName( RmKillSig, ATTR_REMOVE_KILL_SIG );
+	if( sig_name ) {
+		sprintf( buffer, "%s=\"%s\"", ATTR_REMOVE_KILL_SIG, sig_name );
+		InsertJobExpr( buffer );
+		free( sig_name );
+	}
 }
 #endif  // of ifndef WIN32
 
