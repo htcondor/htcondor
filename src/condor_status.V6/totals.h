@@ -182,6 +182,7 @@ class CkptSrvrNormalTotal : public ClassTotal
 
 	protected:
 		int numServers;
+		int disk;
 };
 
 

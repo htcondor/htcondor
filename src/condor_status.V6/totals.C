@@ -434,22 +434,30 @@ CkptSrvrNormalTotal()
 }
 
 int CkptSrvrNormalTotal::
-update (ClassAd *)
+update (ClassAd *ad)
 {
+	int attrDisk = 0;
+
 	numServers++;
+
+	if (!ad->LookupInteger(ATTR_DISK, attrDisk))
+		return 0;
+
+	disk += attrDisk;
+
 	return 1;
 }
 
 void CkptSrvrNormalTotal::
 displayHeader(FILE *file)
 {
-	fprintf (file, "%-10.10s\n", "NumCkptServers");
+	fprintf (file, "%8.8s %-9.9s", "Servers", "AvailDisk");
 }
 
 void CkptSrvrNormalTotal::
 displayInfo (FILE *file, int tl)
 {
-	if (tl) fprintf (file, "%10d\n", numServers);
+	if (tl) fprintf (file, "%8d %9d\n", numServers, disk);
 }
 
 ClassTotal::
