@@ -1,0 +1,114 @@
+#! /usr/bin/perl -w
+use strict;
+
+# Update the module include path
+BEGIN
+{
+    my $Dir = $0;
+    if ( $Dir =~ /(.*)\/.*/ )
+    {
+	push @INC, "$1";
+    }
+}
+use HawkeyePublish;
+use HawkeyeLib;
+
+# Setup the hawkeye stuff
+my $Hawkeye;
+my $ConfigCluster = "";
+my $ConfigReserved = "";
+my $Hash;
+
+# Do it
+Init();
+RunIt();
+
+sub Init {
+    $Hawkeye = HawkeyePublish->new;
+    $Hawkeye->Quiet( 1 );
+    $Hawkeye->AutoIndexSet( 1 );
+
+    # Read the config info..
+    my $Tmp;
+    $Tmp = HawkeyeLib::ReadConfig( "condor_pool", "_cluster", "true" );
+    $ConfigCluster = " -cluster" if ( $Tmp =~ /true/i );
+
+    $Tmp = HawkeyeLib::ReadConfig( "condor_pool", "_reserved", "true" );
+    $ConfigReserved = " -reserved" if ( $Tmp =~ /true/i );
+}
+
+# Do the real work here...
+sub RunIt {
+
+    # Start things off
+    $Hash = HawkeyeHash->new( \$Hawkeye, "" );
+
+    RunAbsent();
+
+    # Ok, summary is done...
+    $Hash->Store( );
+    $Hawkeye->Publish( );
+}
+
+# Do the real work here...
+sub RunAbsent {
+
+    # Lists
+    my @ClusterDown;
+    my @Absent;
+
+    # Now, run condor_status and gather some more info...
+    my $Cmd = "condor_absent -ping" . $ConfigCluster . $ConfigReserved;
+    print "$Cmd\n";
+    open( ABSENT, "$Cmd|" ) || die "Can't get absent info";
+    while ( <ABSENT> )
+    {
+	chomp;
+
+	# Summary info?
+	if ( /^\#\s+(.*)/ )
+	{
+	    # Roster count
+	    if ( $1 =~ /(\d+).*roster/ )
+	    {
+		$Hash->Add( "Count", "n", $1 );
+	    }
+	    # Cluster summary
+	    elsif ( $1 =~ /Cluster:\s+(.*)/ )
+	    {
+		foreach my $Str ( split( /,/, $1 ) )
+		{
+		    $Str =~ s/^\s//g;
+		    my ( $Value, $Attr ) = split( /\s+/, $Str );
+		    my $AttrUc = uc( substr( $Attr, 0, 1 ) );
+		    substr( $Attr, 0, 1, $AttrUc );
+		    $Hash->Add( "Cluster" . $Attr, "n", $Value );
+		}
+	    }
+	    # Absent summary
+	    elsif ( $1 =~ /(\d+).*absent/ )
+	    {
+		$Hash->Add( "Absent", "n", $1 );
+	    }
+	}
+
+	# Down cluster nodes
+	elsif ( /Cluster '.*' is down/ )
+	{
+	    push( @ClusterDown, $1 );
+	}
+
+	# Absent machines
+	else
+	{
+	    push( @Absent, $_ );
+	}
+    }
+    close( ABSENT );
+
+    # Cluster Down list
+    $Hash->Add( "ClusterDownList", "s", join( ",", @ClusterDown ) );
+
+    # Absent list
+    $Hash->Add( "AbsentList", "s", join( ",", @Absent ) );
+}
