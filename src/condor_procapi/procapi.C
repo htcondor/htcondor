@@ -341,8 +341,11 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 
 	sprintf( path, "/proc/%d/stat", pid );
 
-	if( (fp = fopen(path, "r")) > 0 ) {
-		fscanf( fp, "%d %s %c %d "
+	int number_of_attempts = 0;
+	while (number_of_attempts < 2) {
+		number_of_attempts++;
+		if( (fp = fopen(path, "r")) != NULL ) {
+			fscanf( fp, "%d %s %c %d "
 				"%d %d %d %d "
 				"%u %u %u %u %u "
 				"%ld %ld %ld %ld %d %d "
@@ -354,19 +357,47 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 				&usert, &syst, &i, &i, &i, &i, 
 				&u, &u, &jiffie_start_time, &vsize, &rss, &u, &u, &u, 
 				&u, &u, &u, &i, &i, &i, &i, &u );
-		fclose( fp );
-	} else {
-		if( errno == ENOENT ) {
+			fclose( fp );
+			// Perform sanity check on the data we just read, as
+			// sometimes Linux screws it up.  
+			if ( pid == pi->pid ) {
+					// data looks ok.  set rval to success.
+					rval = 0;
+					// and break out of the loop.
+					break;
+			}
+			// if we've made it here, pid != pi->pid, which tells
+			// us that Linux screwed up and the info we just
+			// read from /proc is screwed.  so set rval appropriately,
+			// and we'll either try again or give up based on
+			// number_of_attempts.
+			rval = -3;
+		} else {
+			if( errno == ENOENT ) {
 				// /proc/pid doesn't exist
-			dprintf( D_FULLDEBUG, "ProcAPI: pid %d does not exist.\n", pid );
-			rval = -1;
-		} else if ( errno == EACCES ) {
-			dprintf( D_FULLDEBUG, "ProcAPI: No permission to open %s.\n", 
+				dprintf( D_FULLDEBUG, "ProcAPI: pid %d does not exist.\n", 
+					 pid );
+				rval = -1;
+				break;
+			} else if ( errno == EACCES ) {
+				dprintf( D_FULLDEBUG, "ProcAPI: No permission to open %s.\n", 
 					 path );
-			rval = -2;
-		} else { 
-			dprintf( D_ALWAYS, "ProcAPI: Error opening %s, errno: %d.\n", 
+				rval = -2;
+				break;
+			} else { 
+				dprintf( D_ALWAYS, "ProcAPI: Error opening %s, errno: %d.\n", 
 					 path, errno );
+				rval = -2;
+				break;
+			}
+		}
+	} 	// end of while number_of_attempts < 0
+
+	if ( rval < 0 ) {
+		if ( rval == -3 ) {
+			dprintf(D_ALWAYS,
+				"ProcAPI: ERROR: /proc has bad data for pid %d\n",pid);
+			// change rval to be -2; callers expect to see just -1 or -2
 			rval = -2;
 		}
 		delete pi;
@@ -374,7 +405,6 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 		set_priv( priv );
 		return rval;
 	}
-
 		// if the page size has not yet been found, get it.
 	if( pagesize == 0 ) {
 		pagesize = getpagesize() / 1024;
