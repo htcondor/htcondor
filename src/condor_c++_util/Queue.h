@@ -30,7 +30,9 @@
 template <class Value>
 class Queue {
  public:
-  Queue(int tableSize=32);
+  typedef int (*QueueCompare)(Value lhs, Value rhs);
+
+  Queue( int tableSize=32, QueueCompare fn_ptr = NULL );
   ~Queue();
 
   int enqueue(const Value& value);
@@ -46,12 +48,13 @@ class Queue {
   Value* ht;    
   int length;
   int head,tail;
+  QueueCompare compare_func;
 };
 
 //--------------------------------------------------------------------
 
 template <class Value>
-Queue<Value>::Queue( int tableSz )
+Queue<Value>::Queue( int tableSz, QueueCompare fn_ptr )
 {
    if( tableSz > 0 ) {
 	   tableSize = tableSz;
@@ -61,6 +64,7 @@ Queue<Value>::Queue( int tableSz )
    ht = new Value[tableSize];
    length = 0;
    head = tail = 0;
+   compare_func = fn_ptr;
 }
 
 //--------------------------------------------------------------------
@@ -163,7 +167,15 @@ bool Queue<Value>::IsMember(const Value &value)
 		int i, j;
 		j = tail;
 		for (i = 0; i < length; i++) {
-			if(ht[j] == value ) return true;
+			if( compare_func ) {
+				if( compare_func(ht[j], value) == 0 ) {
+					return true;
+				}
+			} else {
+				if( ht[j] == value ) {
+					return true;
+				}
+			}
 			j = (j+1) % tableSize;
 		}
 		return false;
