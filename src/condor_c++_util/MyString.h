@@ -298,6 +298,25 @@ class MyString
 	 */
 	bool readLine( FILE* fp, bool append = false);
 
+	// ----------------------------------------
+	//           Tokenize (safe replacement for strtok())
+	// ----------------------------------------
+	/**@name Tokenize */
+	//@{ 
+
+	/** Initialize the tokenizing of this string.  */
+	void Tokenize();
+
+	/** Get the next token, with tokens separated by the characters
+	    in delim.  Note that the value of delim may change from call to
+		call.
+		WARNING: changing the value of this object between a call to
+		Tokenize() and a call to GetNextToken() will result in an error
+		(incorrect value from GetNextToken()).
+	    */
+	const char *GetNextToken(const char *delim);
+	//@}
+
 private:
 
     void init();
@@ -308,6 +327,9 @@ private:
 				// a const, but compiler doesn't like that)
   int Len;		// the length of the string
   int capacity;	// capacity of the data array, not counting null terminator
+
+  char *tokenBuf;
+  char *nextToken;
   
 };
 

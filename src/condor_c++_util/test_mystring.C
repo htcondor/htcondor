@@ -399,7 +399,49 @@ int main (int argc, char **argv)
 		everythingOkay = false;
 	}
 
+    // ---- Test tokenizing functions.
+	MyString tt1("To  be or not to be; that is the question");
+	MyString tt2("Ottavio Bottechia_");
+	tt1.Tokenize();
+	tt2.Tokenize();
 
+	const char *token = tt2.GetNextToken(" ");
+	if ( token != NULL && !strcmp(token, "Ottavio") ) {
+	   	printf("OK: GetNextToken() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: GetNextToken() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
+
+	const char *tokens[] = {"To", "", "be", "or", "not", "to", "be", "",
+			"that", "is", "the", "question"};
+	int tokCount = sizeof(tokens) / sizeof(tokens[0]);
+	for ( int tokNum = 0; tokNum < tokCount; tokNum++ ) {
+		token = tt1.GetNextToken(" ;");
+		if ( token != NULL && !strcmp(token, tokens[tokNum]) ) {
+	    	printf("OK: GetNextToken() worked in line %d.\n", __LINE__);
+		} else {
+	    	printf("FAILED: GetNextToken() error in line %d.\n", __LINE__);
+			everythingOkay = false;
+		}
+	}
+	if ( tt1.GetNextToken(" ;") == NULL ) {
+	   	printf("OK: GetNextToken() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: GetNextToken() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
+
+	token = tt2.GetNextToken("_");
+	if ( token != NULL && !strcmp(token, "Bottechia") ) {
+	   	printf("OK: GetNextToken() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: GetNextToken() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
+
+
+    // ---- Final summary.
 	printf("\n");
 	if (everythingOkay) {
 	    printf("All tests OK!\n");

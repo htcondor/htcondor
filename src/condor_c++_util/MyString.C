@@ -41,6 +41,7 @@ MyString::MyString()
   
 MyString::MyString(int i) 
 {
+	init();
 	const int bufLen = 50;
     char tmp[bufLen];
 	::snprintf(tmp,bufLen,"%d",i);
@@ -71,6 +72,7 @@ MyString::~MyString()
     if (Data) {
 		delete[] Data;
 	}
+	delete [] tokenBuf;
 	init(); // for safety -- errors if you try to re-use this object
 	return;
 }
@@ -571,6 +573,8 @@ MyString::init()
     Data=NULL;
     Len=0;
     capacity = 0;
+	tokenBuf = NULL;
+	nextToken = NULL;
 }
 
 /*--------------------------------------------------------------------
@@ -696,6 +700,48 @@ MyString::readLine( FILE* fp, bool append )
 	}
 }
 
+/*--------------------------------------------------------------------
+ *
+ * Tokenize
+ *
+ *--------------------------------------------------------------------*/
+
+void
+MyString::Tokenize()
+{
+	delete [] tokenBuf;
+	tokenBuf = new char[strlen(Data) + 1];
+	strcpy(tokenBuf, Data);
+	nextToken = tokenBuf;
+}
+
+const char *
+MyString::GetNextToken(const char *delim)
+{
+	const char *result = nextToken;
+
+	if ( result != NULL ) {
+		while ( *nextToken != '\0' && index(delim, *nextToken) == NULL ) {
+			nextToken++;
+		}
+
+		if ( *nextToken != '\0' ) {
+			*nextToken = '\0';
+			nextToken++;
+		} else {
+			nextToken = NULL;
+		}
+	}
+
+	return result;
+}
+
+
+/*--------------------------------------------------------------------
+ *
+ * Private
+ *
+ *--------------------------------------------------------------------*/
 
 int MyStringHash( const MyString &str, int buckets )
 {
