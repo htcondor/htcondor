@@ -5,12 +5,6 @@
 \index{Globus}
 \index{Condor commands!condor\_glidein}
 
-Condor works together with Globus software to provide the capability
-of submitting Condor jobs to remote computer systems that are
-not part of the local Condor pool of machines.
-Globus software provides mechanisms to access and utilize
-remote resources.
-
 Glidein is a mechanism by which one or more Grid resources (remote machines)
 temporarily join a local Condor pool. 
 The program \Condor{glidein} is used to add a machine
@@ -32,65 +26,30 @@ specifically on the added resource.
 \subsubsection{\Condor{glidein} Requirements}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Use of \Condor{glidein} requires prior set up of two
-categories of items.
-The first category enable the use of Globus software.
-The second category are specific to Condor.
+The local Condor pool configuration file(s) must 
+give \Macro{HOSTALLOW\_WRITE} permission
+to every resource that will be added using \Condor{glidein}. 
+Wildcards are permitted in this specification.
+For example, you can add every machine at
+cs.wisc.edu by adding *.cs.wisc.edu to the
+\Macro{HOSTALLOW\_WRITE} list.
+Recall that you must run \Condor{reconfig} for configuration
+file changes to take effect.
 
-To use Globus for the purpose of \Condor{glidein}:
-\begin{enumerate}
-
-\item Obtain an X.509 certificate issued by a certificate authority.
-
-\item Have valid access to a Globus resource.
-You must be a valid Globus user and be mapped to a valid login account by
-the site's Globus administrator on every Globus resource that will be
-added to the local Condor pool using \Condor{glidein}.
-More information can be found at \URL{http://www.globus.org}
-
-\item The environment variables \Env{HOME} and \Env{GLOBUS\_LOCATION}
-must be set.
-
-\end{enumerate}
-
-In order to use \Condor{glidein} to add a Globus resource to the
-local Condor pool,
-there are several requirements beyond the general Globus requirements
-given above.
-
-\begin{enumerate}
-\item Use Globus v1.1 or better.
-
-\item The local Condor pool configuration file(s) must 
-  give \Macro{HOSTALLOW\_WRITE} permission
-  to every resource that will be added using \Condor{glidein}. 
-  Wildcards are permitted in this specification.
-  An example is of adding every machine at
-  cs.wisc.edu by adding *.cs.wisc.edu to the
-  \Macro{HOSTALLOW\_WRITE} list.
-  Recall that the changes take effect when all machines
-  in the local pool are sent a reconfigure command.
-
-\item Included in the \Env{PATH} must be the common user programs
-  directory \File{/bin}, globus tools, and the Condor user program
-  directory.
-
-\end{enumerate}
+Make sure that the Condor and Globus tools are in your \Env{PATH}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{What \Condor{glidein} Does}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\Condor{glidein} first checks that there is a valid proxy
-and that the necessary files are available to \Condor{glidein}.
-
-\Condor{glidein} then contacts the Globus resource and checks for the
+\Condor{glidein} first contacts the Globus resource and checks for the
 presence of the necessary configuration files and Condor executables.
 If the executables are not present for the machine architecture,
 operating system version, and Condor version required, a
 server running at UW is contacted to transfer the needed executables.
-To gain access to the server, send email to \Email{condor-admin@cs.wisc.edu}
-that includes the name of your X.509 certificate.
+You can also set up your own server for \Condor{glidein} to contact.
+To gain access to the server or learn how to set up your own server,
+send email to \Email{condor-admin@cs.wisc.edu}.
 
 When the files are correctly in place,
 Condor daemons are started.
