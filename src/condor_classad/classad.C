@@ -812,7 +812,24 @@ ClassAd* ClassAdList::Lookup(const char* name)
 void ClassAdList::
 Sort(int(*SmallerThan)(AttrListAbstract*, AttrListAbstract*, void*), void* info)
 {
+/*
+	dprintf(D_ALWAYS,"head=%08x , tail=%08x\n",head,tail);
+	int count=1;
+	for (AttrListAbstract* xx=head; xx; xx=xx->next, count++ ) {
+	  dprintf(D_ALWAYS, "%02d: prev=%08x , cur=%08x , next=%08x\n",count,xx->prev,xx,xx->next);
+    }
+*/
+
 	Sort(SmallerThan, info, head);
+
+/*
+	dprintf(D_ALWAYS,"head=%08x , tail=%08x\n",head,tail);
+	count=1;
+	for (AttrListAbstract* xx=head; xx; xx=xx->next, count++ ) {
+	  dprintf(D_ALWAYS, "%02d: prev=%08x , cur=%08x , next=%08x\n",count,xx->prev,xx,xx->next);
+    }
+*/
+
 }
 
 void ClassAdList::
@@ -848,6 +865,7 @@ Sort( int(*SmallerThan)(AttrListAbstract*,AttrListAbstract*,void*),
 	if (smallestPrev != NULL)
 	{
 		if (smallest==tail) tail=smallestPrev;
+		else smallest->next->prev=smallestPrev;
 		smallestPrev->next = smallest->next;
 		smallest->next = head;
 		head = smallest;
@@ -856,6 +874,7 @@ Sort( int(*SmallerThan)(AttrListAbstract*,AttrListAbstract*,void*),
 
 	// recursively sort the rest of the list
 	Sort(SmallerThan, info, head->next);
+	if (head->next) head->next->prev=head;
 }
 
 
