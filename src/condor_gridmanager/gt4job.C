@@ -1724,6 +1724,12 @@ xsi:schemaLocation=\"http://www.globus.org/namespaces/2004/06/job \
 		attr_value = NULL;
 	}
 
+		// For stdin/out/err, always give a full pathname, because GT4
+		// doesn't resolve relative paths before handing to the local
+		// scheduler, which can interpret relative paths as relative to
+		// the user's home directory. Details in globus bugzilla ticket
+		// 2886.
+
 		// standard input
 	if ( ad->LookupString(ATTR_JOB_INPUT, &attr_value) && *attr_value &&
 		 strcmp( attr_value, NULL_FILE ) ) {
@@ -1732,9 +1738,15 @@ xsi:schemaLocation=\"http://www.globus.org/namespaces/2004/06/job \
 		ad->LookupBool( ATTR_TRANSFER_INPUT, transfer );
 
 		if ( transfer == false ) {
-			*rsl += printXMLParam( "stdin", attr_value );
+			if ( attr_value[0] != '/' ) {
+				buff.sprintf( "%s/%s", remote_iwd.Value(), attr_value );
+			} else {
+				buff.sprintf( "%s", attr_value );
+			}
+			*rsl += printXMLParam( "stdin", buff.Value() );
 		} else {
-			*rsl += printXMLParam( "stdin", basename(attr_value) );
+			buff.sprintf( "%s/%s", remote_iwd.Value(), basename(attr_value) );
+			*rsl += printXMLParam( "stdin", buff.Value() );
 			stage_in_list.append( attr_value );
 		}
 	}
@@ -1751,9 +1763,15 @@ xsi:schemaLocation=\"http://www.globus.org/namespaces/2004/06/job \
 		ad->LookupBool( ATTR_TRANSFER_OUTPUT, transfer );
 
 		if ( transfer == false ) {
-			*rsl += printXMLParam( "stdout", attr_value );
+			if ( attr_value[0] != '/' ) {
+				buff.sprintf( "%s/%s", remote_iwd.Value(), attr_value );
+			} else {
+				buff.sprintf( "%s", attr_value );
+			}
+			*rsl += printXMLParam( "stdout", buff.Value() );
 		} else {
-			*rsl += printXMLParam( "stdout", basename(attr_value) );
+			buff.sprintf( "%s/%s", remote_iwd.Value(), basename(attr_value) );
+			*rsl += printXMLParam( "stdout", buff.Value() );
 			stage_out_list.append( attr_value );
 		}
 	}
@@ -1770,9 +1788,15 @@ xsi:schemaLocation=\"http://www.globus.org/namespaces/2004/06/job \
 		ad->LookupBool( ATTR_TRANSFER_ERROR, transfer );
 
 		if ( transfer == false ) {
-			*rsl += printXMLParam( "stderr", attr_value );
+			if ( attr_value[0] != '/' ) {
+				buff.sprintf( "%s/%s", remote_iwd.Value(), attr_value );
+			} else {
+				buff.sprintf( "%s", attr_value );
+			}
+			*rsl += printXMLParam( "stderr", buff.Value() );
 		} else {
-			*rsl += printXMLParam( "stderr", basename(attr_value) );
+			buff.sprintf( "%s/%s", remote_iwd.Value(), basename(attr_value) );
+			*rsl += printXMLParam( "stderr", buff.Value() );
 			stage_out_list.append( attr_value );
 		}
 	}
