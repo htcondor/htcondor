@@ -208,6 +208,9 @@ tty_idle_time(char* file)
 #if defined(LINUX)
 #include <linux/smp.h>
 #endif
+#if defined(IRIX53)
+#include <sys/sysmp.h>
+#endif
 
 int
 calc_ncpus()
