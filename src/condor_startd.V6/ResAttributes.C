@@ -20,6 +20,8 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+#include "condor_common.h"
 #include "startd.h"
 static char *_FileName_ = __FILE__;
 
@@ -156,11 +158,13 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 
 	if( IS_STATIC(how_much) || IS_PUBLIC(how_much) ) {
 
+#ifndef WIN32
 		if( m_afs_info->my_cell() ) {
 			sprintf( line, "%s = \"%s\"", ATTR_AFS_CELL,
 					 m_afs_info->my_cell() );
 			cp->Insert( line );
 		}
+#endif
 
 			// STARTD_IP_ADDR 
 		sprintf( line, "%s = \"%s\"", ATTR_STARTD_IP_ADDR, 

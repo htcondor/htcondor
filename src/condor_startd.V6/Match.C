@@ -46,6 +46,7 @@
 	Written 9/29/97 by Derek Wright <wright@cs.wisc.edu>	
 */
 
+#include "condor_common.h"
 #include "startd.h"
 static char *_FileName_ = __FILE__;
 
