@@ -26,7 +26,8 @@
 #define STREAM_H
 
 #include "condor_common.h"
-
+#include "condor_crypt.h"             // For now, we include it
+#include "CryptKey.h"                 // KeyInfo
 // This #define is a desperate move. GNU g++ seems to choke at runtime on our
 // inline function for eom.  Someday not needed ?
 #define eom end_of_message
@@ -416,7 +417,7 @@ public:
 	*/
 
     ///
-	virtual ~Stream() {} 
+	virtual ~Stream(); 
 
 	/** @name Byte Operations. Virtually defined by each stream
      */
@@ -473,15 +474,75 @@ public:
      */
     //@{
 	///
-    int snd_int(int val, int end_of_record);
-    ///
+        int snd_int(int val, int end_of_record);
+        ///
 	int rcv_int(int &val, int end_of_record);
-    //@}
 
+        //------------------------------------------
+        // Encryption support below
+        //------------------------------------------
+        bool set_encryption_protocol(KeyInfo * key);
+        //------------------------------------------
+        // PURPOSE: set sock to use a particular encryptio
+        // REQUIRE: KeyInfo -- a wrapper for keyData, if key == NULL
+        //          encryption is disabled. I don't like this somehow
+        // RETURNS: true -- success; false -- failure
+        //------------------------------------------
+
+        bool get_encryption_protocol(KeyInfo * key);
+        //------------------------------------------
+        // PURPOSE: return the current encryption protocol used,
+        //          if any
+        // REQUIRE: None
+        // RETURNS: true -- key matched; false -- otherwise
+        //------------------------------------------
+
+        void set_encryption_off();
+        //------------------------------------------
+        // PURPOSE: Turn encryption off
+        // REQUIRE: None
+        // RETURNS: None
+        //------------------------------------------
+
+        bool get_encryption();
+        //------------------------------------------
+        // PURPOSE: Return encryption mode
+        // REQUIRE: None
+        // RETURNS: true -- on, false -- off
+        //------------------------------------------
+
+	bool wrap(unsigned char* input, int input_len, 
+                  unsigned char*& output, int& outputlen);
+        //------------------------------------------
+        // PURPOSE: encrypt some data
+        // REQUIRE: Protocol, keydata. set_encryption_procotol
+        //          must have been called and encryption_mode is on
+        // RETURNS: TRUE -- success, FALSE -- failure
+        //------------------------------------------
+
+	bool unwrap(unsigned char* input, int input_len, 
+                    unsigned char*& output, int& outputlen);
+        //------------------------------------------
+        // PURPOSE: decrypt some data
+        // REQUIRE: Protocol, keydata. set_encryption_procotol
+        //          must have been called and encryption_mode is on
+        // RETURNS: TRUE -- success, FALSE -- failure
+        //------------------------------------------
+
+    //@}
+ private:
+        bool initialize_crypto(KeyInfo * key);
+        //------------------------------------------
+        // PURPOSE: initialize crypto
+        // REQUIRE: KeyInfo
+        // RETURNS: None
+        //------------------------------------------
+        
 /*
 **		PRIVATE INTERFACE TO ALL STREAMS
 */
 protected:
+
 
 	// serialize object (save/restore object state to an ascii string)
 	//
@@ -501,17 +562,15 @@ protected:
 
 	//	constructor
 	//
-	Stream(stream_code c=external)
-		: _code(c), _coding(stream_encode)
-		{}
-
-
+	Stream(stream_code c=external);
 	/*
 	**	Data structures
 	*/
 
-	stream_code		_code;
-	stream_coding	_coding;
+        Condor_Crypt_Base * crypto_;         // The actual crypto
+        bool                encrypt_;        // Encryption mode
+	stream_code	    _code;
+	stream_coding	    _coding;
 };
 
 

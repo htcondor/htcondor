@@ -184,10 +184,6 @@ public:
 
 	/// is a non-blocking connect outstanding?
 	bool is_connect_pending() { return _state == sock_connect_pending; }
-	///
-	int condor_read(SOCKET fd, char *buf, int sz, int timeout);
-	///
-	int condor_write(SOCKET fd, char *buf, int sz, int timeout); 
 
     /// 
 	virtual ~Sock();
@@ -274,11 +270,6 @@ private:
 	int _condor_write(SOCKET fd, char *buf, int sz, int timeout);
 	int bindWithin(const int low, const int high);
 	///
-	virtual int wrap(char*,int,char*& ,int&);
-	///
-	virtual	int unwrap(char*,int,char*&, int&);
-
-	
 	// Buffer to hold the string version of our endpoint's IP address. 
 	char _endpoint_ip_buf[_ENDPOINT_BUF_SIZE];	
 

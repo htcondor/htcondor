@@ -151,10 +151,6 @@ public:
 	///
 	bool is_hdr_encrypt();
 	///
-	int  wrap(char* input, int input_len,char*& output,int& output_len);
-	///
-	int  unwrap(char* input,int input_len,char*& output, int& output_len);
-	///
 	int isClient() { return is_client; };
 
 //	PROTECTED INTERFACE TO RELIABLE SOCKS
