@@ -1708,7 +1708,7 @@ WriteCheckPoint(){
       LatestCheckpoint.tv_sec=ctime.tv_sec;
 	  LatestCheckpoint.tv_usec=ctime.tv_usec;
 	  char arr[20];
-	  sprintf(arr,"%ld.%ld",ctime.tv_sec,ctime.tv_usec);
+	  sprintf(arr,"%d.%d",(int)ctime.tv_sec,(int)ctime.tv_usec);
 	  string arr_s=arr;
 	  ClassAd cla;
 	  //Dump all the dirty ClassAd into storagefile
