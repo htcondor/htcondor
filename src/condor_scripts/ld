@@ -251,7 +251,7 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 					ldargs=`echo $ldargs -lm -lc`
 				elif [ $LINUX_LIB = "glibc21" ]; then
 
-					ldargs=`echo $ldargs -lc -lnss_files -lnss_dns -lresolv -lc`
+					ldargs=`echo $ldargs -L$CONDOR_LIBDIR -lc -lnss_files -lnss_dns -lresolv -lc`
 				else
 					ldargs=`echo $ldargs -lc `
 				fi
