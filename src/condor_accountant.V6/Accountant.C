@@ -417,7 +417,7 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
 		"(ACCOUNTANT) Removed match between customer %s and resource %s\n",
 			CustomerName.Value(),ResourceName.Value());
   } else {  
-      DeleteClassAd(ResourceRecord+ResourceName);\
+      DeleteClassAd(ResourceRecord+ResourceName);
   }
 }
 
