@@ -305,6 +305,7 @@ ResTimeNode::satisfyJob( ClassAd* job, int max_hosts,
 						 CAList* candidates ) 
 {
 	ClassAd* candidate;
+	int req;
 	
 	dprintf( D_FULLDEBUG, "Checking resources available at time %d\n", 
 			 (int)time );
@@ -312,7 +313,13 @@ ResTimeNode::satisfyJob( ClassAd* job, int max_hosts,
 	res_list->Rewind();
 	num_matches = 0;
 	while( (candidate = res_list->Next()) ) {
-		if( *candidate == *job ) {
+			// Make sure the job requirements are satisfied with this
+			// resource.
+		if( job->EvalBool(ATTR_REQUIREMENTS, candidate, req) == 0 ) { 
+				// If it's undefined, treat it as false.
+			req = 0;
+		}
+		if( req ) {
 				// There's a match
 			candidates->Insert( candidate );
 			num_matches++;
