@@ -884,7 +884,11 @@ server, shadow, and starter, none of which use DaemonCore yet).
   the job ClassAds that \Condor{submit} creates.  This is equivalent
   to the ``+'' syntax in submit files.  See the
   the \Condor{submit} manual page
-  on page~\pageref{man-condor-submit} for details.
+  on page~\pageref{man-condor-submit} for details on using the ``+''
+  syntax to add attributes to the job ClassAd.
+  Attributes defined in the submit description file with ``+'' will
+  override attributes defined in the config file with
+  \MacroU{SUBMIT\_EXPRS}. 
 
   The \Condor{startd} \MacroU{STARTD\_EXPRS} defaults to
   ``JobUniverse''.
