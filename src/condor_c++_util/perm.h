@@ -35,9 +35,9 @@ public:
 	int set_acls( const char *location );
 
 protected:
-	int get_permissions( const char *location );
+	int get_permissions( const char *location, ACCESS_MASK &rights );
 	bool volume_has_acls( const char *path );
-	int userInExplicitAccess( const EXPLICIT_ACCESS &EAS, const char *account, const char *domain );
+	int userInAce( const LPVOID cur_ace, const char *account, const char *domain );
 
 private:
 
@@ -61,9 +61,8 @@ private:
 		}
 	};
 	
-	int processUserTrustee( const char *account, const char *domain, const TRUSTEE *trustee );
-	int processLocalGroupTrustee( const char *account, const char *domain, const TRUSTEE *trustee );
-	int processGlobalGroupTrustee( const char *account, const char *domain, const TRUSTEE *trustee );
+	int userInLocalGroup( const char *account, const char *domain, const char* group_name );
+	int userInGlobalGroup( const char *account, const char *domain, const char* group_name, const char* group_domain );
 	
 	
 	// SID stuff.  Should one day be moved to a uid_t structure

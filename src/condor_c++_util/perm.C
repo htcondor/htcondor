@@ -6,10 +6,8 @@
 //
 // get_permissions:  1 = yes, 0 = no, -1 = unknown/error
 //
-int perm::get_permissions( const char *file_name ) {
+int perm::get_permissions( const char *file_name, ACCESS_MASK &AccessRights ) {
 	DWORD retVal;
-	TRUSTEE Trustee;
-	ACCESS_MASK AccessRights;
 	PACL pacl;
 	
 	PSECURITY_DESCRIPTOR pSD;
@@ -56,13 +54,13 @@ int perm::get_permissions( const char *file_name ) {
 			
 			// Now that we've chopped off more of the filename, call get_permissions
 			// again...
-			DWORD retval = get_permissions( new_file_name );
+			retVal = get_permissions( new_file_name, AccessRights );
 			delete[] new_file_name;
 			
 			// ... and return what it returns. (after deleting the string that was
 			// allocated.
 			
-			return retval;
+			return retVal;
 		}
 		dprintf(D_ALWAYS, "perm::GetFileSecurity failed (err=%d)\n", GetLastError());
 		return -1;
@@ -99,73 +97,62 @@ int perm::get_permissions( const char *file_name ) {
 		return -1;
 	}
 	
-	// The block below won't get used anymore under NT4 since the 
-	// GetEffectiveRightsFromAcl() API is screwed for a variety of reasons. 
-	// Mainly it just doesn't return the right values, except if you're running
-	// NT SP6a with the hotfix explained in MS KB Q258437. For Windows2000 
-	// we'll assume it's ok however. We prefer to use 
-	// GetEffectiveRightsFromAcl() on Win2k because it allows nested groups,
-	// which would complicate things even further for our workaround.
-	
-	const char* OS = sysapi_opsys();
-	
-	
-    if ( strcmp( OS, "WINNT50" ) == 0 )
-	{
-		
-		// Fill in the Trustee thing-a-ma-jig(tm).	What's a thing-a-ma-jig(tm) you ask?
-		// Frankly, I don't know.  Its a Microsoft thing...
-		
-		Trustee.pMultipleTrustee = NULL;
-		Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
-		Trustee.TrusteeForm = TRUSTEE_IS_SID;
-		Trustee.TrusteeType = TRUSTEE_IS_USER;
-		Trustee.ptstrName = (char *)psid;
-		
-		retVal = GetEffectiveRightsFromAcl( pacl,	// ACL to get trustee's rights from
-			&Trustee,						// trustee to get rights for
-			&AccessRights					// receives trustee's access rights
-			);
-		
-		if( retVal != ERROR_SUCCESS ) {
-			dprintf(D_ALWAYS, "perm::GetEffectiveRightsFromAcl failed (file=%s err=%d)\n", file_name, GetLastError());
+	// This is the workaround for the broken API GetEffectiveRightsFromAcl().
+	// It should be guaranteed to work on all versions of NT and 2000 but be aware
+	// that nested global group permissions are not supported.
+	// C. Stolley - June 2001
+
+	ACL_SIZE_INFORMATION* acl_info = new ACL_SIZE_INFORMATION();
+		// Structure contains the following members:
+		//  DWORD   AceCount; 
+		//  DWORD   AclBytesInUse; 
+		//  DWORD   AclBytesFree; 
+
+
+
+	// first get the number of ACEs in the ACL
+		if (! GetAclInformation( pacl,		// acl to get info from
+								acl_info,	// buffer to receive info
+								24,			// size in bytes of buffer
+								AclSizeInformation // class of info to retrieve
+								) ) {
+			dprintf(D_ALWAYS, "Perm::GetAclInformation failed with error %d\n", GetLastError() );
 			return -1;
 		}
-		
-	} else { // if not Windows 2000, we have to do the dirty work ourselves
-		
-		unsigned long pEntriesCount = 0;
-		EXPLICIT_ACCESS* pList;
-		
-		// Get explicit permissions entries for our ACL
-		retVal = GetExplicitEntriesFromAcl( pacl,	// ACL to get Explicit Entries from
-			&pEntriesCount, 				// pointer to number of Explicit Access Entries
-			&pList							// pointer to array of EXPLICIT_ACCESS structures
-			);
-		
-		if( retVal != ERROR_SUCCESS ) {
-			dprintf(D_ALWAYS, "perm::GetExplicitEntriesFromAcl failed (file=%s err=%d)\n", file_name, GetLastError());
-			LocalFree( pList );
-			return -1;
-		}
-		
-		// Walk through array of EXPLICIT_ACCESS structures
-		
+
 		ACCESS_MASK allow = 0x0;
 		ACCESS_MASK deny = 0x0;
+
+		unsigned int aceCount = acl_info->AceCount;
+
+		delete acl_info; // all we wanted was the ACE count
 		
 		int result;
-		for (int i=0; i < (int) pEntriesCount; i++) {
-			result = userInExplicitAccess( pList[i], Account_name, Domain_name );		
+		
+		// now look at each ACE in the ACL and see if it contains the user we're looking for
+		for (unsigned int i=0; i < aceCount; i++) {
+			LPVOID current_ace;
+
+			if (! GetAce(	pacl,	// pointer to ACL 
+							i,		// index of ACE we want
+							&current_ace	// pointer to ACE
+							) ) {
+				dprintf(D_ALWAYS, "Perm::GetAce() failed! Error code %d\n", GetLastError() );
+				return -1;
+			}
+
+			dprintf(D_FULLDEBUG, "Calling Perm::userInAce() for %s\\%s\n", (Account_name) ? Account_name : "NULL", (Domain_name) ? Domain_name : "NULL" );
+			result = userInAce ( current_ace, Account_name, Domain_name );		
 			
 			if (result == 1) {
-				switch ( pList[i].grfAccessMode ) {				
-				case GRANT_ACCESS:
-				case SET_ACCESS:
-					allow |= pList[i].grfAccessPermissions;
+				switch ( ( (PACE_HEADER) current_ace)->AceType ) {				
+				case ACCESS_ALLOWED_ACE_TYPE:
+				case ACCESS_ALLOWED_OBJECT_ACE_TYPE:
+					allow |= ( (ACCESS_ALLOWED_ACE*) current_ace)->Mask;
 					break;
-				case DENY_ACCESS:
-					deny |= pList[i].grfAccessPermissions;
+				case ACCESS_DENIED_ACE_TYPE:
+				case ACCESS_DENIED_OBJECT_ACE_TYPE:
+					deny |= ( (ACCESS_DENIED_ACE*) current_ace)->Mask;
 					break;
 				}
 			}
@@ -173,10 +160,9 @@ int perm::get_permissions( const char *file_name ) {
 		
 		AccessRights = allow;
 		AccessRights &= ~deny;
-		LocalFree( pList );
-	}
-	// And now, we have the access rights, so return those.
-	return AccessRights;
+
+	// and now if we've made this far everything's happy so return true
+	return 1;
 }
 
 //
@@ -188,7 +174,7 @@ int perm::get_permissions( const char *file_name ) {
 bool perm::domainAndNameMatch( const char *account1, const char *account2, const char *domain1, const char *domain2 ) {
 	
 	// for debugging
-	//	cout << account1 << "\\" << ( domain1 ? domain1 : "NULL" ) << " " << account2 << "\\" << domain2 << endl;
+//		printf("%s\\%s\t%s\\%s\n", ( domain1 ? domain1 : "NULL" ), account1, ( domain2 ? domain2 : "NULL" ), account2);
 	
 	return ( ( strcmp ( account1, account2 ) == 0 ) && 
 		( domain1 == NULL || domain1 == "" || 
@@ -243,112 +229,21 @@ int perm::getAccountFromSid( LPTSTR Sid, char* &account, char* &domain ) {
 }
 
 //
-// determines if user and domain matches the user and domain specifed in trustee
-// 1 = yes, 0 = no, -1 = unknown/error
-//
-int perm::processUserTrustee( const char *account, const char *domain, const TRUSTEE *trustee ) {
-	
-	char *trustee_name = NULL;		// name of the trustee we're looking at
-	char *trustee_domain = NULL;	// domain of the trustee we're looking at
-	
-	// if we have a user, we'll get the name of the user either 
-	// from a string or Sid inside the trustee
-	
-	dprintf(D_FULLDEBUG,"in perm::processUserTrustee()\n");
-
-	if ( trustee->TrusteeForm == TRUSTEE_IS_NAME ) // buffer that identifies Trustee is a string
-	{			
-		// break the trustee string down into domain and name
-		
-		char *trustee_str = new char[ strlen(trustee->ptstrName)+1];
-		strcpy( trustee_str, trustee->ptstrName );
-		getDomainAndName( trustee_str , trustee_domain, trustee_name );
-		
-		if ( domainAndNameMatch( account, trustee_name, domain, trustee_domain ) )
-		{
-			delete[] trustee_str;
-			return 1;
-		}
-		delete[] trustee_str;
-		return 0;
-		
-	} else if ( trustee->TrusteeForm == TRUSTEE_IS_SID ) {
-		
-		if ( getAccountFromSid( trustee->ptstrName, trustee_name, trustee_domain ) != 0 ) {
-			// something bad went down when looking up the account sid, getAccountFromSid()
-			// dprintf'd it, so we just need to get out of here and terminate with an error.
-			return -1;
-		}
-		
-		
-		if ( domainAndNameMatch( account, trustee_name, domain, trustee_name ) )
-		{				
-			// Free buffers
-			delete[] trustee_name;
-			delete[] trustee_domain;
-			return 1;
-			
-		} else {
-			
-			//Free Buffers
-			delete[] trustee_name;
-			delete[] trustee_domain;
-			
-			// account doesn't match anything in EXPLICIT_ACCESS structure, so return NO (0)
-			return 0;
-		}
-		
-	} else {
-		
-		// So the trustee is a user, but it isn't in the form of a
-		// name or a SID. This case shouldn't happen, but even if it did 
-		// I don't know what to do anyways, so just return error.
-		
-		dprintf(D_ALWAYS, "perm::userInExplicitAccess failed: Trustee object form is unrecognized");
-		return -1;
-	}
-}
-
-//
-// Determines if user is a member of the local group specified in trustee
+// Determines if user is a member of the local group group_name
 //
 //  1 = yes, 0 = no, -1 = error
 //
-int perm::processLocalGroupTrustee( const char *account, const char *domain, const TRUSTEE *trustee ) {
+int perm::userInLocalGroup( const char *account, const char *domain, const char *group_name ) {
 	
 	LOCALGROUP_MEMBERS_INFO_3 *buf, *cur; // group members output buffer pointers
 	
-	dprintf(D_FULLDEBUG,"in perm::processLocalGroupTrustee()\n");
+	dprintf(D_FULLDEBUG,"in perm::userInLocalGroup() looking at group '%s'\n", (group_name) ? group_name : "NULL");
 
-	char *trustee_name = NULL;		// name of the trustee we're looking at
-	char *trustee_domain = NULL;	// domain of the trustee we're looking at
-	
-	if ( trustee->TrusteeForm == TRUSTEE_IS_SID )
-	{
-		if ( getAccountFromSid( trustee->ptstrName, trustee_name, trustee_domain ) != 0 ) {
-			// something bad went down when looking up the account sid, getAccountFromSid()
-			// dprintf'd it, so we just need to get out of here and terminate with an error.
-			return -1;
-		}
-	}
-	else if ( trustee->TrusteeForm == TRUSTEE_IS_NAME )
-	{
-		char *trustee_str = new char[ strlen(trustee->ptstrName)+1];
-		
-		strcpy( trustee_str, trustee->ptstrName );
-		getDomainAndName( trustee_str , trustee_domain, trustee_name );
-	}
-	else {
-		// TRUSTEE is not a name or SID, which should never happen, but if it does then return 
-		// an error because something must be really screwed
-		return -1;
-	}
-	
 	unsigned long entries_read;	
 	unsigned long total_entries;
 	NET_API_STATUS status;
-	wchar_t *trustee_name_unicode = new wchar_t[strlen(trustee_name)+1]; 
-	MultiByteToWideChar(CP_ACP, 0, trustee_name, -1, trustee_name_unicode, strlen(trustee_name)+1);
+	wchar_t *group_name_unicode = new wchar_t[strlen(group_name)+1]; 
+	MultiByteToWideChar(CP_ACP, 0, group_name, -1, group_name_unicode, strlen(group_name)+1);
 	
 	DWORD resume_handle = 0;
 	
@@ -356,7 +251,7 @@ int perm::processLocalGroupTrustee( const char *account, const char *domain, con
 		
 		status = NetLocalGroupGetMembers ( 
 			NULL,									// servername
-			trustee_name_unicode,					// name of group
+			group_name_unicode,					// name of group
 			3,										// information level
 			(BYTE**) &buf,							// pointer to buffer that receives data
 			16384,									// preferred length of data
@@ -369,25 +264,25 @@ int perm::processLocalGroupTrustee( const char *account, const char *domain, con
 		case ERROR_ACCESS_DENIED:
 			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: ERROR_ACCESS_DENIED\n");
 			NetApiBufferFree( buf );
-			delete[] trustee_name_unicode;	
-			delete[] trustee_domain; 
-			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: (total entries: %d, entries read: %d )\n", total_entries, entries_read );
+			delete[] group_name_unicode;	
+			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: (total entries: %d, entries read: %d )\n", 
+				total_entries, entries_read );
 			return -1;
 			break;
 		case NERR_InvalidComputer:
 			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: ERROR_InvalidComputer\n");
 			NetApiBufferFree( buf );
-			delete[] trustee_name_unicode;	
-			delete[] trustee_domain; 
-			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: (total entries: %d, entries read: %d )\n", total_entries, entries_read );
+			delete[] group_name_unicode;	
+			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: (total entries: %d, entries read: %d )\n", 
+				total_entries, entries_read );
 			return -1;
 			break;
 		case ERROR_NO_SUCH_ALIAS:
 			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: ERROR_NO_SUCH_ALIAS\n");
 			NetApiBufferFree( buf );
-			delete[] trustee_name_unicode;	
-			delete[] trustee_domain; 
-			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: (total entries: %d, entries read: %d )\n", total_entries, entries_read );
+			delete[] group_name_unicode;			
+			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: (total entries: %d, entries read: %d )\n", 
+				total_entries, entries_read );
 			return -1;
 			break;
 		}
@@ -409,16 +304,14 @@ int perm::processLocalGroupTrustee( const char *account, const char *domain, con
 			if ( domainAndNameMatch (account, member_name, domain, member_domain) )
 			{
 				delete[] member;
-				delete[] trustee_name_unicode;	
-				delete[] trustee_domain; 
+				delete[] group_name_unicode;
 				NetApiBufferFree( buf );
 				return 1;
 			}
 			delete[] member;
 		}
 	} while ( status == ERROR_MORE_DATA );
-	delete[] trustee_name_unicode;	
-	delete[] trustee_domain; 
+	delete[] group_name_unicode;
 	// having exited the for loop without finding anything, we conclude
 	// that the account does not exist in the explicit access structure
 	
@@ -427,42 +320,20 @@ int perm::processLocalGroupTrustee( const char *account, const char *domain, con
 } // end if is a local group
 
 //
-// Determines if user is a member of the global group specified in trustee
+// Determines if user is a member of the global group group_name on domain group_domain
 //
 //  1 = yes, 0 = no, -1 = error
 //
-int perm::processGlobalGroupTrustee( const char *account, const char *domain, const TRUSTEE *trustee ) {
+int perm::userInGlobalGroup( const char *account, const char *domain, const char* group_name, const char* group_domain ) {
 	
-	char *trustee_name = NULL;		// name of the trustee we're looking at
-	char *trustee_domain = NULL;	// domain of the trustee we're looking at
+	dprintf(D_FULLDEBUG,"in perm::processGlobalGroupTrustee() looking at group '%s\\%s'\n", 
+		(group_name) ? group_name : "NULL", (group_domain) ? group_domain : "NULL" );
 
-	dprintf(D_FULLDEBUG,"in perm::processGlobalGroupTrustee()\n");
-
-	if ( trustee->TrusteeForm == TRUSTEE_IS_SID )
-	{
-		if ( getAccountFromSid( trustee->ptstrName, trustee_name, trustee_domain ) != 0 ) {
-			// something bad went down when looking up the account sid, getAccountFromSid()
-			// dprintf'd it, so we just need to get out of here and terminate with an error.
-			return -1;
-		}
-		
-	} else if ( trustee->TrusteeForm == TRUSTEE_IS_NAME ) {
-		
-		char *trustee_str = new char[ strlen(trustee->ptstrName)+1];
-		strcpy( trustee_str, trustee->ptstrName );
-		getDomainAndName( trustee_str , trustee_domain, trustee_name );
-		
-	} else {
-		// TrusteeForm is not name or SID, so return error
-		return -1;
-	}
-	
 	unsigned char* BufPtr; // buffer pointer
-	wchar_t* trustee_domain_unicode = new wchar_t[strlen(trustee_domain)+1];
-	wchar_t* trustee_name_unicode = new wchar_t[strlen(trustee_name)+1];
-	MultiByteToWideChar(CP_ACP, 0, trustee_domain, -1, trustee_domain_unicode, strlen(trustee_domain)+1);
-	MultiByteToWideChar(CP_ACP, 0, trustee_name, -1, trustee_name_unicode, strlen(trustee_name)+1);
-	delete[] trustee_domain;
+	wchar_t* group_domain_unicode = new wchar_t[strlen(group_domain)+1];
+	wchar_t* group_name_unicode = new wchar_t[strlen(group_name)+1];
+	MultiByteToWideChar(CP_ACP, 0, group_domain, -1, group_domain_unicode, strlen(group_domain)+1);
+	MultiByteToWideChar(CP_ACP, 0, group_name, -1, group_name_unicode, strlen(group_name)+1);
 	
 	GROUP_USERS_INFO_0* group_members;
 	unsigned long entries_read, total_entries;
@@ -470,22 +341,22 @@ int perm::processGlobalGroupTrustee( const char *account, const char *domain, co
 	
 	// get domain controller name for the domain in question
 	status = NetGetDCName( NULL,	// servername
-		trustee_domain_unicode,		// domain to lookup
+		group_domain_unicode,		// domain to lookup
 		&BufPtr						// pointer to buffer containing the name (Unicode string) of the Domain Controller
 		);
 	
 	if (status == NERR_DCNotFound ) {
-		dprintf(D_ALWAYS, "perm::NetGetDCName() failed: DCNotFound (domain looked up: %s)", trustee_domain);
+		dprintf(D_ALWAYS, "perm::NetGetDCName() failed: DCNotFound (domain looked up: %s)", group_domain);
 		NetApiBufferFree( BufPtr );
-		delete[] trustee_domain_unicode;
-		delete[] trustee_name_unicode;
+		delete[] group_domain_unicode;
+		delete[] group_name_unicode;
 		
 		return -1;
 	} else if ( status == ERROR_INVALID_NAME ) {
-		dprintf(D_ALWAYS, "perm::NetGetDCName() failed: Error Invalid Name (domain looked up: %s)", trustee_domain);
+		dprintf(D_ALWAYS, "perm::NetGetDCName() failed: Error Invalid Name (domain looked up: %s)", group_domain);
 		NetApiBufferFree( BufPtr );
-		delete[] trustee_domain_unicode;
-		delete[] trustee_name_unicode;
+		delete[] group_domain_unicode;
+		delete[] group_name_unicode;
 		return -1;
 	}
 	
@@ -494,7 +365,7 @@ int perm::processGlobalGroupTrustee( const char *account, const char *domain, co
 	do {
 		
 		status = NetGroupGetUsers( DomainController,	// domain controller name
-			trustee_name_unicode,						// domain to query
+			group_name_unicode,							// domain to query
 			0,											// level of info
 			&BufPtr,									// pointer to buffer containing group members
 			16384,										// preferred size of buffer
@@ -514,10 +385,11 @@ int perm::processGlobalGroupTrustee( const char *account, const char *domain, co
 		case NERR_GroupNotFound:
 			char* DCname = new char[ wcslen( DomainController )+1 ];
 			wsprintf(DCname, "%ws", DomainController);
-			dprintf(D_ALWAYS, "perm::NetGroupGetUsers failed: (domain: %s, domain controller: %s, total entries: %d, entries read: %d, err=%d)", trustee_domain, DCname, total_entries, entries_read, GetLastError());
+			dprintf(D_ALWAYS, "perm::NetGroupGetUsers failed: (domain: %s, domain controller: %s, total entries: %d, entries read: %d, err=%d)",
+				group_domain, DCname, total_entries, entries_read, GetLastError());
 			delete[] DCname;
-			delete[] trustee_domain_unicode;
-			delete[] trustee_name_unicode;
+			delete[] group_domain_unicode;
+			delete[] group_name_unicode;
 			NetApiBufferFree( BufPtr );
 			NetApiBufferFree( DomainController );
 			return -1;
@@ -530,14 +402,14 @@ int perm::processGlobalGroupTrustee( const char *account, const char *domain, co
 			
 			char* t_domain;
 			char* t_name;
-			char *t_str = new char[ strlen(trustee->ptstrName)+1];
+			char *t_str = new char[ strlen((char*) group_members->grui0_name)+1];
 			strcpy( t_str, (char*)group_members->grui0_name );
 			getDomainAndName( t_str, t_domain, t_name);	
 			
 			if ( domainAndNameMatch( account, t_name, domain, t_domain ) )
 			{
-				delete[] trustee_domain_unicode;
-				delete[] trustee_name_unicode;
+				delete[] group_domain_unicode;
+				delete[] group_name_unicode;
 				delete[] t_str;
 				NetApiBufferFree( BufPtr );
 				NetApiBufferFree( DomainController );
@@ -547,8 +419,8 @@ int perm::processGlobalGroupTrustee( const char *account, const char *domain, co
 	}while ( status == ERROR_MORE_DATA ); // loop if there's more group members to look at
 	
 	// exiting the for loop means we didn't find anything
-	delete[] trustee_domain_unicode;
-	delete[] trustee_name_unicode;
+	delete[] group_domain_unicode;
+	delete[] group_name_unicode;
 	NetApiBufferFree( BufPtr );
 	NetApiBufferFree( DomainController );
 	return 0;			
@@ -560,27 +432,62 @@ int perm::processGlobalGroupTrustee( const char *account, const char *domain, co
 //
 // return 0 = No, 1 = yes, -1 = unknown/error
 //
-int perm::userInExplicitAccess( const EXPLICIT_ACCESS &EAS, const char *account, const char *domain ) {
+int perm::userInAce ( const LPVOID cur_ace, const char *account, const char *domain ) {
 	
-	char *trustee_name;		// name of the trustee we're looking at
-	char *trustee_domain;	// domain of the trustee we're looking at
+	char *trustee_name = NULL;		// name of the trustee we're looking at
+	char *trustee_domain =NULL;	// domain of the trustee we're looking at
+	unsigned long name_buffer_size = 0;
+	unsigned long domain_name_size = 0;
+	SID_NAME_USE peSid;
+
+	LPVOID psid = &((ACCESS_ALLOWED_ACE*) cur_ace)->SidStart;
 	
-	if ( EAS.Trustee.TrusteeType == TRUSTEE_IS_USER ) 
+	// lookup the ACE's SID
+	// get buffer sizes first
+	int success = LookupAccountSid( NULL,	// name of local or remote computer
+		psid,								// security identifier
+		trustee_name ,						// account name buffer
+		&name_buffer_size,					// size of account name buffer
+		trustee_domain,						// domain name
+		&domain_name_size,					// size of domain name buffer
+		&peSid								// SID type
+		);	
+	
+	// set buffer sizes
+	trustee_name = new char[name_buffer_size];
+	trustee_domain = new char[domain_name_size];
+	
+	// now look up the sid and get the name and domain so we can compare 
+	// them to what we're searching for
+	success = LookupAccountSid( NULL,		// computer to lookup on (NULL means local)
+		psid,								// security identifier
+		trustee_name,						// account name buffer
+		&name_buffer_size,					// size of account name buffer
+		trustee_domain,						// domain name
+		&domain_name_size,					// size of domain name buffer
+		&peSid								// SID type
+		);	
+
+	if ( ! success ) {
+		dprintf(D_ALWAYS, "perm::LookupAccountSid failed (err=%d)\n", GetLastError());
+		if (trustee_name) { delete[] trustee_name; trustee_name = NULL; }
+		if (trustee_domain) { delete[] trustee_domain; trustee_domain = NULL; }
+		return -1;
+	}
+	
+	
+	if ( peSid == SidTypeUser ) 
 	{
-		return processUserTrustee( account, domain, &EAS.Trustee );
+		int result = domainAndNameMatch( account, trustee_name, domain, trustee_domain );
+		if (trustee_name) { delete[] trustee_name; trustee_name = NULL; }
+		if (trustee_domain) { delete[] trustee_domain; trustee_domain = NULL; }
+		return result;
 	} 
-	else if ( ( EAS.Trustee.TrusteeType == TRUSTEE_IS_GROUP ) ||
-		( EAS.Trustee.TrusteeType == TRUSTEE_IS_ALIAS ) ||
-		( EAS.Trustee.TrusteeType == TRUSTEE_IS_WELL_KNOWN_GROUP ) )	// the trustee is a group, not a specific user
+	else if ( ( peSid == SidTypeGroup ) ||
+		( peSid == SidTypeAlias ) ||
+		( peSid == SidTypeWellKnownGroup ) )	// the trustee is a group, not a specific user
 	{
 		// Determine whether group is local or global
-		
-		char *trustee_str = new char[ strlen(EAS.Trustee.ptstrName)+1];
-		strcpy( trustee_str, EAS.Trustee.ptstrName );
-		getDomainAndName( trustee_str , trustee_domain, trustee_name );
-		
-		// for debugging
-		//cout << "Name of trustee found is: " << trustee_name << endl;
 		
 		char computerName[MAX_COMPUTERNAME_LENGTH+1];
 		unsigned long nameLength = MAX_COMPUTERNAME_LENGTH+1;
@@ -589,27 +496,31 @@ int perm::userInExplicitAccess( const EXPLICIT_ACCESS &EAS, const char *account,
 		
 		if (! success ) {
 			dprintf(D_ALWAYS, "perm::GetComputerName failed: (Err: %d)", GetLastError());
-			delete[] trustee_str;
+//			delete[] trustee_str;
 			return -1;
 		}
 		
-		
 		if ( strcmp( trustee_name, "Everyone" ) == 0 ) // if file is in group Everyone, we're done.
 		{
-			delete[] trustee_str;
 			return 1;
-		} else if ( trustee_domain == NULL || trustee_domain == "" || // if domain is local to this machine
+		} else if ( 
+			(trustee_domain == NULL) || 
+			( strcmp( trustee_domain, "" ) == 0 ) ||
 			( strcmp(trustee_domain, "BUILTIN") == 0 ) ||
 			( strcmp(trustee_domain, "NT AUTHORITY") == 0 ) ||
 			( strcmp(trustee_domain, computerName ) == 0 ) ) {
 			
-			delete[] trustee_str;			
-			return processLocalGroupTrustee( account, domain, &EAS.Trustee );			
+			int result = userInLocalGroup( account, domain, trustee_name );			
+			if (trustee_name) { delete[] trustee_name; trustee_name = NULL; }
+			if (trustee_domain) { delete[] trustee_domain; trustee_domain = NULL; }
+			return result;
+
 		}
 		else { // if group is global
-			
-			delete[] trustee_str;			
-			return processGlobalGroupTrustee( account, domain, &EAS.Trustee );
+			int result = userInGlobalGroup( account, domain, trustee_name, trustee_domain );
+			if (trustee_name) { delete[] trustee_name; trustee_name = NULL; }
+			if (trustee_domain) { delete[] trustee_domain; trustee_domain = NULL; }
+			return result;
 		}
 		
 	} // is group
@@ -652,7 +563,7 @@ bool perm::init( char *accountname, char *domain )
 	
 	psid = (PSID) &sidBuffer;
 
-	dprintf(D_FULLDEBUG,"perm::init() starting up for account (%s) domain (%s)\n", accountname, domain);
+	dprintf(D_FULLDEBUG,"perm::init() starting up for account (%s) domain (%s)\n", accountname, ( domain ? domain : "NULL"));
 	
 	Account_name = new char[ strlen(accountname) +1 ];
 	strcpy( Account_name, accountname );
@@ -661,6 +572,8 @@ bool perm::init( char *accountname, char *domain )
 	{
 		Domain_name = new char[ strlen(domain) +1 ];
 		strcpy( Domain_name, domain );
+	} else {
+		Domain_name = NULL;
 	}
 	
 	if ( !LookupAccountName( domain,		// Domain
@@ -700,10 +613,12 @@ int perm::read_access( const char * filename ) {
 		return 1;
 	}
 	
-	int p = get_permissions( filename );
+	ACCESS_MASK rights = NULL;
+
+	int p = get_permissions( filename, rights );
 	
 	if ( p < 0 ) return -1;
-	return ( p & FILE_GENERIC_READ ) == FILE_GENERIC_READ;
+	return ( rights & FILE_GENERIC_READ ) == FILE_GENERIC_READ;
 }
 
 int perm::write_access( const char * filename ) {
@@ -711,11 +626,23 @@ int perm::write_access( const char * filename ) {
 		return 1;
 	}
 	
-	int p = get_permissions( filename );
-	
+	ACCESS_MASK rights = NULL;
+
+	int p = get_permissions( filename, rights );
+
 	if ( p < 0 ) return -1;
 	
-	return ( p & FILE_GENERIC_WRITE ) == FILE_GENERIC_WRITE;
+/*	Just some harmless debugging output
+
+	printf("Rights mask: 0x%08x\n", rights);
+	printf("FILE_GENERIC_WRITE mask: 0x%08x\n", FILE_GENERIC_WRITE);
+	printf("GENERIC_WRITE mask: 0x%08x\n", GENERIC_WRITE);
+	rights = ( rights & FILE_GENERIC_WRITE );
+	printf("Logical AND result mask: 0x%08x\n", rights);
+
+	bool test = ( rights == FILE_GENERIC_WRITE );
+*/
+	return (rights & FILE_GENERIC_WRITE) == FILE_GENERIC_WRITE;
 }
 
 int perm::execute_access( const char * filename ) {
@@ -723,10 +650,12 @@ int perm::execute_access( const char * filename ) {
 		return 1;
 	}
 	
-	int p = get_permissions( filename );
-	
+	ACCESS_MASK rights = NULL;
+
+	int p = get_permissions( filename, rights );
+
 	if ( p < 0 ) return -1;
-	return ( p & FILE_GENERIC_EXECUTE ) == FILE_GENERIC_EXECUTE;
+	return ( rights & FILE_GENERIC_EXECUTE ) == FILE_GENERIC_EXECUTE;
 }
 
 
@@ -1076,7 +1005,7 @@ int perm::set_acls( const char *filename )
 	return 1;
 }
 
-#ifdef WANT_FULL_DEBUG
+#ifdef _DEBUG
 // Main method for testing the Perm functions
 int 
 main(int argc, char* argv[]) {
@@ -1090,7 +1019,7 @@ main(int argc, char* argv[]) {
 		return (1);
 	}
 	
-	foo->init("stolley", "OWL");
+	foo->init("stolley", NULL);
 	
 	cout << "Checking write access for " << argv[1] << endl;
 	
