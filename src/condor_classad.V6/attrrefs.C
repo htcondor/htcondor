@@ -286,7 +286,7 @@ int AttributeReference::
 FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 {
 	ClassAd	*current=NULL;
-	ExprList *adList = NULL;
+	const ExprList *adList = NULL;
 	Value	val;
 	bool	rval;
 
@@ -335,14 +335,15 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 				if( !rval ) {
 					return( EVAL_FAIL );
 				}
+				
 				ClassAd *evaledAd = NULL;
-				ExprList *evaledList = NULL;
+				const ExprList *evaledList = NULL;
 				if( val.IsClassAdValue( evaledAd ) ) {
 					eVector.push_back( evaledAd );
 					continue;
 				}
 				else if( val.IsListValue( evaledList ) ) {
-					eVector.push_back( evaledList );
+					eVector.push_back( evaledList->Copy( ) );
 					continue;
 				}
 				else {
