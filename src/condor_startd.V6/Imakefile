@@ -1,5 +1,6 @@
 NAME = condor_startd
 INFO_CLASS = CondorJavaInfo.class
+BENCHMARK_CLASS = scimark2lib.jar
 
 all_target( $(NAME) )
 
@@ -38,6 +39,10 @@ c_plus_target(AvailStats.t,AvailStats.o AvailStats.t.o startd_instantiate.o,$(LI
 release_copy_target($(INFO_CLASS),$(RELEASE_DIR)/lib,$(INFO_CLASS),EXECUTABLE_MODE)
 strip_copy_target($(INFO_CLASS),$(STRIP_DIR)/lib,$(INFO_CLASS),EXECUTABLE_MODE)
 static_copy_target($(INFO_CLASS),$(STATIC_DIR)/lib,$(INFO_CLASS),EXECUTABLE_MODE)
+
+release_copy_target($(BENCHMARK_CLASS),$(RELEASE_DIR)/lib,$(BENCHMARK_CLASS),EXECUTABLE_MODE)
+strip_copy_target($(BENCHMARK_CLASS),$(STRIP_DIR)/lib,$(BENCHMARK_CLASS),EXECUTABLE_MODE)
+static_copy_target($(BENCHMARK_CLASS),$(STATIC_DIR)/lib,$(BENCHMARK_CLASS),EXECUTABLE_MODE)
 
 html:
 

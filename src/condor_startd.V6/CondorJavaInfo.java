@@ -33,22 +33,26 @@ all platforms.
 
 /*
 This program queries the JVM for system properties and
-displays them as a ClassAd.  The single argument
+displays them as a ClassAd.  The first argument
 must be either "new" or "old" and controls whether the
-output is in the format of new or old ClassAds.
+output is in the format of new or old ClassAds.  The
+second argument controls how long to run the scimark2
+benchmark, measured in seconds.
 */
 
 import java.lang.*;
 import java.util.*;
 import java.io.*;
+import jnt.scimark2.*;
 
 public class CondorJavaInfo {
 
 	public static void main( String[] args ) {
 		boolean newmode=false;
+		double btime;
 
-		if( args.length!=1 ) {
-			System.err.println("use: CondorJavaInfo <new|old>");
+		if( args.length==2 ) {
+			System.err.println("use: CondorJavaInfo <new|old> <benchmark-time>");
 			System.exit(1);
 		}
 
@@ -67,6 +71,24 @@ public class CondorJavaInfo {
 
 		if( newmode ) {
 			System.out.println("[");
+		}
+
+		btime = Float.parseFloat(args[1])/5.0;
+		if(btime>0) {
+			double result = 0;
+	                jnt.scimark2.Random r = new jnt.scimark2.Random(Constants.RANDOM_SEED);
+			result += kernel.measureFFT(Constants.FFT_SIZE,btime,r);
+			result += kernel.measureSOR(Constants.SOR_SIZE,btime,r);
+			result += kernel.measureMonteCarlo(btime,r);
+			result += kernel.measureSparseMatmult(Constants.SPARSE_SIZE_M,Constants.SPARSE_SIZE_nz,btime,r);
+			result += kernel.measureLU( Constants.LU_SIZE, btime, r);
+			result /= 5.0;
+			System.out.print( "JavaMFlops = "+result);
+			if( newmode ) {
+				System.out.println(";");
+			} else {
+				System.out.print("\n");
+			}
 		}
 
 		while( e.hasMoreElements() ) {

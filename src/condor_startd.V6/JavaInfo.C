@@ -16,6 +16,7 @@ JavaInfo::JavaInfo()
 	error_file[0] = 0;
 	java_vendor[0] = 0;
 	java_version[0] = 0;
+	java_mflops = 0;
 	has_java = false;
 }
 
@@ -70,6 +71,11 @@ int JavaInfo::publish( ClassAd *ad, amask_t how_much )
 					sprintf(tmp,"%s = \"%s\"",ATTR_JAVA_VERSION,java_version);
 					ad->InsertOrUpdate(tmp);
 				}		
+
+				if(java_mflops>0) {
+					sprintf(tmp,"%s = %f",ATTR_JAVA_MFLOPS,java_mflops);
+					ad->InsertOrUpdate(tmp);
+				}		
 			}
 		}
 	}
@@ -89,6 +95,7 @@ void JavaInfo::query_create()
 	char real_args[_POSIX_ARG_MAX];
 	int output_fd=-1, error_fd=-1;
 	int fds[3];
+	int btime;
 
 	if(!java_config(java,java_args,0)) {
 		dprintf(D_FULLDEBUG,"JavaInfo: JAVA is not configured.\n");
@@ -96,11 +103,14 @@ void JavaInfo::query_create()
 		goto cleanup;
 	}
 
+	btime = param_integer("JAVA_BENCHMARK_TIME",0);
+
 	tmpnam(output_file);
 	output_fd = open(output_file,O_CREAT|O_TRUNC|O_WRONLY,0700);
 	if(output_fd<0) {
 		dprintf( D_ALWAYS, "JavaInfo: couldn't open %s: %s\n", 
 				 output_file, strerror(errno) );
+		unlink(output_file);
 		goto cleanup;
 	}
 
@@ -109,6 +119,8 @@ void JavaInfo::query_create()
 	if(error_fd<0) {
 		dprintf( D_ALWAYS, "JavaInfo: couldn't open %s: %s\n", 
 				 error_file, strerror(errno) );
+		unlink(output_file);
+		unlink(error_file);
 		goto cleanup;
 	}
 
@@ -129,7 +141,7 @@ void JavaInfo::query_create()
 	fds[1] = output_fd;
 	fds[2] = error_fd;
 
-	sprintf(real_args,"%s %s CondorJavaInfo old",java,java_args);
+	sprintf(real_args,"%s %s CondorJavaInfo old %d",java,java_args,btime);
 
 	/*
 	We must run this as a normal user.
@@ -161,14 +173,8 @@ void JavaInfo::query_create()
 	state = JAVA_INFO_STATE_RUNNING;
 
 	cleanup:
-	if(output_fd>=0) {
-		close(output_fd);
-		unlink(output_file);
-	}
-	if(error_fd>=0) {
-		close(error_fd);
-		unlink(error_file);
-	}
+	if(output_fd>=0) close(output_fd);
+	if(error_fd>=0) close(error_fd);
 }
 
 /*
@@ -228,6 +234,12 @@ int JavaInfo::query_reaper( int pid, int status )
 				} else {
 					dprintf( D_FULLDEBUG, "JavaInfo: JavaVendor=%s\n",
 							 java_vendor );
+				}
+				if(ad.LookupFloat(ATTR_JAVA_MFLOPS,java_mflops)!=1) {
+					java_mflops = 0;
+				} else {
+					dprintf( D_FULLDEBUG, "JavaInfo: JavaMFlops=%f\n",
+							 java_mflops );
 				}
 			}
 			fclose(file);

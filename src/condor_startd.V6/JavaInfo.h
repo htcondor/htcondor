@@ -31,6 +31,7 @@ private:
 	char error_file[_POSIX_PATH_MAX];
 	char java_vendor[ATTRLIST_MAX_EXPRESSION];
 	char java_version[ATTRLIST_MAX_EXPRESSION];
+	float java_mflops;
 	bool has_java;
 };
 
