@@ -7,7 +7,7 @@ attributes (based on the "top" program) You may want set the top
 parameters by hand
 
 Default: top
-options: continuous
+options: ReConfig WaitForExit
 period: 1s
 prefix: top_
 
