@@ -1349,6 +1349,9 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 				if(ki) {
 					delete ki;
 				}
+            	if (auth_methods) {  
+                	free(auth_methods);
+            	}
 				return false;
 			}
             if (auth_methods) {  
@@ -1422,7 +1425,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 			if (!post_auth_info.initFromStream(*sock) || !sock->eom()) {
 				dprintf (D_ALWAYS, "SECMAN: could not receive session info, failing!\n");
 				errstack->push ("SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
-							"could not recieve post_auth_info" );
+							"could not receive post_auth_info" );
 				return false;
 			} else {
 				if (DebugFlags & D_FULLDEBUG) {
