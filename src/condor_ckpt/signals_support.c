@@ -26,7 +26,7 @@
 ** 
 */ 
 
-#if !defined(SUNOS41) && !defined(OSF1) && !defined(ULTRIX43) && !defined(Solaris)
+#if !defined(SUNOS41) && !defined(OSF1) && !defined(ULTRIX43) && !defined(Solaris) && !defined(IRIX53)
 #define _POSIX_SOURCE
 #endif
 
@@ -62,7 +62,7 @@ void display_sigstate( int line, const char * file );
 
 #if defined(LINUX)
 typedef int				SS_TYPE;
-#elif defined(Solaris)
+#elif defined(Solaris) || defined(IRIX53)
 typedef struct sigaltstack SS_TYPE;
 #else
 typedef struct sigstack SS_TYPE;
@@ -89,7 +89,6 @@ condor_save_sigstates()
 	int sig;
 
     scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
-
 
 	/* Save the user's signal mask */
 	sigprocmask(SIG_SETMASK,(sigset_t *)0L,&(signal_states.user_mask));
@@ -121,7 +120,7 @@ condor_save_sigstates()
 	}
 
 	/* Save pointer to signal stack (not POSIX, but widely supported) */	
-#if defined(Solaris)
+#if defined(Solaris) || defined(IRIX53)
 	sigaltstack( (SS_TYPE *) 0, &(signal_states.sig_stack) ); 
 #elif !defined(LINUX)
 	sigstack( (struct sigstack *) 0, &(signal_states.sig_stack) ); 
@@ -185,7 +184,7 @@ condor_restore_sigstates()
 	sigprocmask(SIG_SETMASK,&(signal_states.user_mask),NULL);
 
 	/* Restore signal stack pointer */
-#if defined(Solaris)
+#if defined(Solaris) || defined(IRIX53)
 	sigaltstack( &(signal_states.sig_stack), (SS_TYPE *) 0 );  
 #elif !defined(LINUX)
 	sigstack( &(signal_states.sig_stack), (struct sigstack *) 0 );  
@@ -400,6 +399,8 @@ sigaction( int sig, const struct sigaction *act, struct sigaction *oact )
 
 #if defined(OSF1) || defined(ULTRIX43) || defined(Solaris)
 	return SIGACTION( sig, my_act, oact);
+#elif defined(IRIX53)
+	return syscall(SYS_ksigaction, sig, my_act, oact);
 #else
 	return syscall(SYS_sigaction, sig, my_act, oact);
 #endif
