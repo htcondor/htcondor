@@ -261,6 +261,11 @@ DELETE_OBJS_signalHandler( Service *srvc, int signal )
 		ObjectDeleteList.Rewind();
 	}
 
+	if ( JobsByProcID.getNumElements() == 0 ) {
+		dprintf( D_ALWAYS, "No jobs left, shutting down\n" );
+		daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGTERM );
+	}
+
 	return TRUE;
 }
 
@@ -871,6 +876,14 @@ doContactSchedd()
 	}
 
 	pendingScheddUpdates.clear();
+
+	// Need to check here in case we found no jobs to manage on startup.
+	// Of course, the schedd shouldn't have started us up in this case,
+	// but it may be acting brain-dead.
+	if ( JobsByProcID.getNumElements() == 0 ) {
+		dprintf( D_ALWAYS, "No jobs left, shutting down\n" );
+		daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGTERM );
+	}
 
 dprintf(D_FULLDEBUG,"leaving doContactSchedd()\n");
 	return TRUE;
