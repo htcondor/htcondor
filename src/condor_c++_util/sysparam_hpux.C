@@ -54,7 +54,11 @@ Hpux::Hpux()
         EXCEPT( "open(/dev/kmem,O_RDONLY,0)" );
     }
     // Get the kernel's name list 
+#if defined(HPUX10)
+    (void)nlist( "/stand/vmunix", specific.nl );
+#else
 	(void)nlist( "/hp-ux", specific.nl );
+#endif
 	
 	set_condor_euid();
 }
@@ -94,7 +98,7 @@ Hpux::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 		break;
 
 	case LoadAvg:						// lookup_load_avg()
-		{
+		{		
 		double avenrun[3];
     	off_t addr = specific.nl[X_AVENRUN].n_value;
 		if( lseek(specific.kd,addr,0) != addr ) 

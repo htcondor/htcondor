@@ -28,8 +28,8 @@
 
 #define _POSIX_SOURCE
 
-/* To remove warning in HPUX about implicit decl of select() ... */
-#if defined (HPUX9)
+/* To remove warning in HPUX9 about implicit decl of select() ... */
+#if defined (HPUX9) && !defined (HPUX10)
 #include <sys/time.h>
 #endif
 
@@ -49,12 +49,12 @@
 #include "selector.h"
 
 /*
-   In HPUX, the select call takes (int *) params, wheras SunOS, Solaris
+   In HPUX9, the select call takes (int *) params, wheras SunOS, Solaris
    take (fd_set *) params.  We define an intermediate type to handle
    this.    -- Rajesh
 */
 
-#if defined (HPUX9)
+#if defined (HPUX9) && !defined(HPUX10)
 typedef int *SELECT_FDSET_PTR;
 #else
 typedef fd_set *SELECT_FDSET_PTR;
