@@ -22,6 +22,7 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "condor_debug.h"
 #include "condor_universe.h"
 
 /*
@@ -96,4 +97,25 @@ CondorUniverseNumber( const char* univ )
 		return CONDOR_UNIVERSE_MPI;
 	}
 	return 0;
+}
+
+
+BOOLEAN
+universeCanReconnect( int universe )
+{
+	switch (universe) {
+	case CONDOR_UNIVERSE_STANDARD:
+	case CONDOR_UNIVERSE_PVM:
+	case CONDOR_UNIVERSE_SCHEDULER:
+	case CONDOR_UNIVERSE_MPI:
+	case CONDOR_UNIVERSE_GLOBUS:
+	case CONDOR_UNIVERSE_PARALLEL:
+		return FALSE;
+	case CONDOR_UNIVERSE_VANILLA:
+	case CONDOR_UNIVERSE_JAVA:
+		return TRUE;
+	default:
+		EXCEPT( "Unknown universe (%d) in universeCanReconnect()", universe );
+	}
+	return FALSE;
 }

@@ -40,6 +40,7 @@
 #include "condor_ckpt_name.h"
 #include "scheduler.h"	// for shadow_rec definition
 #include "condor_email.h"
+#include "condor_universe.h"
 #include "globus_utils.h"
 #include "env.h"
 
@@ -817,6 +818,20 @@ NewProc(int cluster_id)
 		(*numOfProcs)++;
 	}
 
+		// now that we have a real job ad with a valid proc id, then
+		// also insert the appropriate GlobalJobId while we're at it.
+	MyString gjid = "\"";
+	gjid += Name;             // schedd's name
+	int now = (int)time(0);
+	gjid += "#";
+	gjid += now;
+	gjid += "#";
+	gjid += cluster_id;
+	gjid += ".";
+	gjid += proc_id;
+	gjid += "\"";
+	JobQueue->SetAttribute( key, ATTR_GLOBAL_JOB_ID, gjid.Value() );
+
 	return proc_id;
 }
 
@@ -1307,25 +1322,29 @@ SetMyProxyPassword (int cluster_id, int proc_id, const char *pwd) {
 }
 
 
-int DestroyMyProxyPassword (int cluster_id, int proc_id) {
-	char filename[_POSIX_PATH_MAX];
-	sprintf (filename, "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
-
-	dprintf (D_ALWAYS ,"Destroy MPP %d, %d - %s\n", cluster_id, proc_id, filename);
+int
+DestroyMyProxyPassword( int cluster_id, int proc_id )
+{
+	MyString filename;
+	filename.sprintf( "%s%cmpp.%d.%d", Spool, DIR_DELIM_CHAR,
+					  cluster_id, proc_id );
 
 	// Delete the file
 	struct stat stat_buff;
-	if (stat (filename, &stat_buff) == 0) {
-		// If the exists, delete it
-		if (unlink (filename)) {
-			dprintf (D_ALWAYS, "unlink failed\n");
+	if( stat(filename.Value(), &stat_buff) == 0 ) {
+			// If the exists, delete it
+		if( unlink( filename.Value()) < 0 ) {
+			dprintf( D_ALWAYS, "unlink(%s) failed: errno %d (%s)\n",
+					 filename.Value(), errno, strerror(errno) );
 			return -1;
 
 		}
+		dprintf( D_FULLDEBUG, "Destroyed MPP %d.%d: %s\n", cluster_id, 
+				 proc_id, filename.Value() );
 	}
-
 	return 0;
 }
+
 
 int GetMyProxyPassword (int cluster_id, int proc_id, char ** value) {
 	// Create filename
@@ -2219,7 +2238,11 @@ int get_job_prio(ClassAd *job)
 		strcpy(owner,NiceUserName);
 		strcat(owner,".");
 	}
-    job->LookupString(ATTR_OWNER, buf);
+	buf[0] = '\0';
+	job->LookupString(ATTR_ACCOUNTING_GROUP,buf,sizeof(buf));  // TODDCORE
+	if ( buf[0] == '\0' ) {
+		job->LookupString(ATTR_OWNER, buf, sizeof(buf));  
+	}
 	strcat(owner,buf);
 		// Note, we should use this method instead of just looking up
 		// ATTR_USER directly, since that includes UidDomain, which we
@@ -2253,6 +2276,35 @@ int get_job_prio(ClassAd *job)
 	}
 
 	return cur_hosts;
+}
+
+static bool
+jobLeaseIsValid( ClassAd* job, int cluster, int proc )
+{
+	int last_renewal, duration;
+	time_t now;
+	if( ! job->LookupInteger(ATTR_JOB_LEASE_DURATION, duration) ) {
+		return false;
+	}
+	if( ! job->LookupInteger(ATTR_LAST_JOB_LEASE_RENEWAL, last_renewal) ) {
+		return false;
+	}
+	now = time(0);
+	int diff = now - last_renewal;
+	int remaining = duration - diff;
+	dprintf( D_FULLDEBUG, "%d.%d: %s is defined: %d\n", cluster, proc, 
+			 ATTR_JOB_LEASE_DURATION, duration );
+	dprintf( D_FULLDEBUG, "%d.%d: now: %d, last_renewal: %d, diff: %d\n", 
+			 cluster, proc, (int)now, last_renewal, diff );
+
+	if( remaining <= 0 ) {
+		dprintf( D_ALWAYS, "%d.%d: %s remaining: EXPIRED!\n", 
+				 cluster, proc, ATTR_JOB_LEASE_DURATION );
+		return false;
+	} 
+	dprintf( D_ALWAYS, "%d.%d: %s remaining: %d\n", cluster, proc,
+			 ATTR_JOB_LEASE_DURATION, remaining );
+	return true;
 }
 
 extern void mark_job_stopped(PROC_ID* job_id);
@@ -2313,7 +2365,15 @@ int mark_idle(ClassAd *job)
 						 (int)time(0) );
 	}
 	else if ( status == RUNNING || hosts > 0 ) {
-		mark_job_stopped(&job_id);
+		if( universeCanReconnect(universe) &&
+			jobLeaseIsValid(job, cluster, proc) )
+		{
+			dprintf( D_FULLDEBUG, "Job %d.%d might still be alive, "
+					 "spawning shadow to reconnect\n", cluster, proc );
+			scheduler.enqueueReconnectJob( job_id );
+		} else {
+			mark_job_stopped(&job_id);
+		}
 	}
 		
 	int wall_clock_ckpt = 0;
@@ -2460,7 +2520,8 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 			constraint += strlen(constraintbuf);
 		}
 
-		sprintf(constraint, "(%s == \"%s\")", ATTR_OWNER, user);
+		sprintf(constraint, "((%s =?= \"%s\") || (%s =?= UNDEFINED && %s =?= \"%s\"))", 
+			ATTR_ACCOUNTING_GROUP,user,ATTR_ACCOUNTING_GROUP,ATTR_OWNER,user);  // TODDCORE
 
 			// OK, we're finished building the constraint now, so set
 			// the constraint pointer to the head of the string.

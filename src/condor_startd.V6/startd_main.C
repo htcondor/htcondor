@@ -148,9 +148,6 @@ main_init( int, char* argv[] )
 		}
 	}
 
-	// Seed the random number generator for capability generation.
-	set_seed( 0 );
-
 		// Record the time we started up for use in determining
 		// keyboard idle time on SMP machines, etc.
 	startd_startup = time( 0 );
@@ -222,8 +219,8 @@ main_init( int, char* argv[] )
 		// Commands
 		//////////////////////////////////////////////////
 
-		// These commands all read the capability off the wire, find
-		// the resource with that capability, and call appropriate
+		// These commands all read the ClaimId off the wire, find
+		// the resource with that ClaimId, and call appropriate
 		// action on that resource.  Plus, all of these commands only
 		// make sense when we're in the claimed state.  So, we can
 		// handle them all with a common handler.  For all of them,

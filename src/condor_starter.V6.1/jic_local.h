@@ -106,13 +106,17 @@ public:
 			whatever we have to do to cleanup and notify our
 			controller. 
 		*/
-	void allJobsDone( void );
+	bool allJobsDone( void );
 
 		/** The last job this starter is controlling has been
    			completely cleaned up.  Since there's no shadow to tell us
 			to go away, we have to exit ourselves.
 		*/
 	void allJobsGone( void );
+
+		/** Someone is attempting to reconnect to this job.
+		 */
+	int reconnect( ReliSock* s, ClassAd* ad );
 
 
 		// // // // // // // // // // // //

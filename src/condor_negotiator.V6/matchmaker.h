@@ -55,6 +55,7 @@ class Matchmaker : public Service
 		int RESCHEDULE_commandHandler (int, Stream*);
 		int RESET_ALL_USAGE_commandHandler(int, Stream*);
 		int RESET_USAGE_commandHandler(int, Stream*);
+		int DELETE_USER_commandHandler(int, Stream*);
 		int SET_PRIORITYFACTOR_commandHandler(int, Stream*);
 		int SET_PRIORITY_commandHandler(int, Stream*);
 		int GET_PRIORITY_commandHandler(int, Stream*);

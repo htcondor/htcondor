@@ -109,22 +109,23 @@ UniShadow::updateFromStarter(int command, Stream *s)
 }
 
 
-void UniShadow::init( ClassAd *jobAd, char schedd_addr[], char host[], 
-					  char capability[], char cluster[], char proc[])
+
+void
+UniShadow::init( ClassAd* job_ad, const char* schedd_addr )
 {
-	if ( !jobAd ) {
-		EXCEPT("No jobAd defined!");
+	if ( !job_ad ) {
+		EXCEPT("No job_ad defined!");
 	}
 
-		// we're only dealing with one host, so this is trivial:
-	remRes->setStartdInfo( host, capability );
-		// for now, set this to the sinful string.  when the starter
-		// spawns, it'll do an RSC to register a real hostname...
-	remRes->setMachineName( host );
-	
 		// base init takes care of lots of stuff:
-	baseInit( jobAd, schedd_addr, cluster, proc );
+	baseInit( job_ad, schedd_addr );
 
+		// we're only dealing with one host, so the rest is pretty
+		// trivial.  we can just lookup everything we need in the job
+		// ad, since it'll have the ClaimId, address (in the ClaimId)
+		// startd's name (RemoteHost) and pool (RemotePool).
+	remRes->setStartdInfo( jobAd );
+	
 		// In this case we just pass the pointer along...
 	remRes->setJobAd( jobAd );
 	
@@ -137,11 +138,32 @@ void UniShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 						  (CommandHandlercpp)&UniShadow::updateFromStarter, 
 						  "UniShadow::updateFromStarter", this, DAEMON );
 
-		// finally, we can attempt to activate our claim.
+}
+
+
+void
+UniShadow::spawn( void )
+{
 	if( ! remRes->activateClaim() ) {
 			// we're screwed, give up:
 		shutDown( JOB_NOT_STARTED );
 	}
+}
+
+
+void
+UniShadow::reconnect( void )
+{
+	remRes->reconnect();
+}
+
+
+bool 
+UniShadow::supportsReconnect( void )
+{
+		// For the UniShadow, the answer to this depends on our remote
+		// starter.  If that supports it, so do we.  If not, we don't. 
+	return remRes->supportsReconnect();
 }
 
 
@@ -297,8 +319,15 @@ UniShadow::emailTerminateEvent( int exitReason )
 
 int UniShadow::handleJobRemoval(int sig) {
     dprintf ( D_FULLDEBUG, "In handleJobRemoval(), sig %d\n", sig );
-	remRes->setExitReason( JOB_KILLED );
-	remRes->killStarter();
+	remove_requested = true;
+		// if we're not in the middle of trying to reconnect, we
+		// should immediately kill the starter.  if we're
+		// reconnecting, we'll do the right thing once a connection is
+		// established now that the remove_requested flag is set... 
+	if( remRes->getResourceState() != RR_RECONNECT ) {
+		remRes->setExitReason( JOB_KILLED );
+		remRes->killStarter();
+	}
 		// more?
 	return 0;
 }
@@ -377,3 +406,88 @@ UniShadow::resourceBeganExecution( RemoteResource* rr )
 }
 
 
+void
+UniShadow::resourceReconnected( RemoteResource* rr )
+{
+	ASSERT( rr == remRes );
+
+		// We've only got one remote resource, so if it successfully
+		// reconnected, we can safely log our reconnect event
+	logReconnectedEvent();
+
+		// if we're trying to remove this job, now that connection is
+		// reestablished, we can kill the starter, evict the job, and
+		// handle any output/update messages from the starter.
+	if( remove_requested ) {
+		remRes->setExitReason( JOB_KILLED );
+		remRes->killStarter();
+	}
+
+		// Start the timer for the periodic user job policy  
+	shadow_user_policy.startTimer();
+
+		// Start the timer for updating the job queue for this job 
+	startQueueUpdateTimer();
+}
+
+
+void
+UniShadow::logDisconnectedEvent( const char* reason )
+{
+	JobDisconnectedEvent event;
+	event.setDisconnectReason( reason );
+
+	DCStartd* dc_startd = remRes->getDCStartd();
+	if( ! dc_startd ) {
+		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
+	}
+	event.setStartdAddr( dc_startd->addr() );
+	event.setStartdName( dc_startd->name() );
+
+	if( !uLog.writeEvent(&event) ) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_DISCONNECTED event\n" );
+	}
+}
+
+
+void
+UniShadow::logReconnectedEvent( void )
+{
+	JobReconnectedEvent event;
+
+	DCStartd* dc_startd = remRes->getDCStartd();
+	if( ! dc_startd ) {
+		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
+	}
+	event.setStartdAddr( dc_startd->addr() );
+	event.setStartdName( dc_startd->name() );
+
+	char* starter = NULL;
+	remRes->getStarterAddress( starter );
+	event.setStarterAddr( starter );
+	delete [] starter;
+	starter = NULL;
+
+	if( !uLog.writeEvent(&event) ) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECTED event\n" );
+	}
+}
+
+
+void
+UniShadow::logReconnectFailedEvent( const char* reason )
+{
+	JobReconnectFailedEvent event;
+
+	event.setReason( reason );
+
+	DCStartd* dc_startd = remRes->getDCStartd();
+	if( ! dc_startd ) {
+		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
+	}
+	event.setStartdName( dc_startd->name() );
+
+	if( !uLog.writeEvent(&event) ) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECT_FAILED event\n" );
+	}
+}

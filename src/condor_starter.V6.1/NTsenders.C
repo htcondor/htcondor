@@ -245,40 +245,57 @@ REMOTE_CONDOR_job_exit(int status, int reason, ClassAd *ad)
 {
 	condor_errno_t		terrno;
 	int		rval=-1;
-	int result = 0;
 	
 	dprintf ( D_SYSCALLS, "Doing CONDOR_job_exit\n" );
 
 	CurrentSysCall = CONDOR_job_exit;
 
-	syscall_sock->encode();
-	result = syscall_sock->code(CurrentSysCall);
-	ASSERT( result );
-	result = syscall_sock->code(status);
-	ASSERT( result );
-	result = syscall_sock->code(reason);
-	ASSERT( result );
-	if ( ad ) {
-		result = ad->put(*syscall_sock);
-		ASSERT( result );
-	}
-	result = syscall_sock->end_of_message();
-	ASSERT( result );
+		/*
+		  This RSC is a special-case.  if there are any network
+		  failures at all, instead of blowing an ASSERT(), we want to
+		  just return an error code.  The shadow never returns failure
+		  for this pseudo call, so if the starter sees -1 from this,
+		  it knows there was a network error.  in this case, it sets a
+		  timer to wait for the DisconnectedRunTimeout to expire,
+		  hoping to get a request for a reconnect.
+		*/
 
+	syscall_sock->encode();
+	if( ! syscall_sock->code(CurrentSysCall) ) {
+		return -1;
+	}
+	if( ! syscall_sock->code(status) ) {
+		return -1;
+	}
+	if( ! syscall_sock->code(reason) ) {
+		return -1;
+	}
+	if ( ad ) {
+		if( ! ad->put(*syscall_sock) ) {
+			return -1;
+		}
+	}
+	if( ! syscall_sock->end_of_message() ) {
+		return -1;
+	}
 	syscall_sock->decode();
-	result = syscall_sock->code(rval);
-	ASSERT( result );
+	if( ! syscall_sock->code(rval) ) {
+		return -1;
+	}
 	if( rval < 0 ) {
-		result = syscall_sock->code(terrno);
-		ASSERT( result );
-		result = syscall_sock->end_of_message();
-		ASSERT( result );
+		if( ! syscall_sock->code(terrno) ) {
+			return -1;
+		}
+		if( ! syscall_sock->end_of_message() ) {
+			return -1;
+		}
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 		return rval;
 	}
-	result = syscall_sock->end_of_message();
-	ASSERT( result );
+	if( ! syscall_sock->end_of_message() ) {
+		return -1;
+	}
 	return rval;
 }
 

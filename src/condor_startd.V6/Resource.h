@@ -115,6 +115,9 @@ public:
 		// Return a pointer to the Claim object with the given ClaimId
 	Claim*	findClaimById( const char* id );
 
+		// Return a pointer to the Claim object with the given GlobalJobId
+	Claim*	findClaimByGlobalJobId( const char* id );
+
 	bool	claimIsActive( void ); 
 
 	Claim*	newCODClaim( void );

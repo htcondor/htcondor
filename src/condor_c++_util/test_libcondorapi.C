@@ -65,6 +65,32 @@ int main()
 				printf( " (code=%d subcode=%d)",ee->getReasonCode(),ee->getReasonSubCode());
 			}
 
+			if( e->eventNumber == ULOG_JOB_DISCONNECTED ) {
+				JobDisconnectedEvent* ee = (JobDisconnectedEvent*) e;
+				if( ee->canReconnect() ) {
+					printf( " (can_reconnect=True addr=%s name=%s "
+							"reason=\"%s\")", ee->getStartdAddr(),
+							ee->getStartdName(), ee->getDisconnectReason() );
+				} else {
+					printf( " (can_reconnect=False addr=%s name=%s "
+							"dis_reason=\"%s\" no_reconnect=\"%s\")",
+							ee->getStartdAddr(), ee->getStartdName(),
+							ee->getDisconnectReason(),
+							ee->getNoReconnectReason() );
+				}
+			}
+			if( e->eventNumber == ULOG_JOB_RECONNECTED ) {
+				JobReconnectedEvent* ee = (JobReconnectedEvent*) e;
+				printf( " (name=%s startd=%s starter=%s)",
+						ee->getStartdName(), ee->getStartdAddr(),
+						ee->getStarterAddr() );
+			}
+			if( e->eventNumber == ULOG_JOB_RECONNECT_FAILED ) {
+				JobReconnectFailedEvent* ee = (JobReconnectFailedEvent*) e;
+				printf( " (name=%s reason=\"%s\")", ee->getStartdName(),
+						ee->getReason() );
+			}
+
 			printf( "\n" );
 
 			break;

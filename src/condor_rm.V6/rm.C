@@ -345,7 +345,7 @@ main( int argc, char *argv[] )
 		CondorError errstack;
 		ClassAd* result_ad = doWorkByList( job_ids, &errstack );
 		if (had_error) {
-			fprintf (stderr, "%s", errstack.get_full_text());
+			fprintf( stderr, "%s\n", errstack.getFullText(true) );
 		}
 		if( old_messages ) {
 			printOldMessages( result_ad, job_ids );
@@ -362,7 +362,7 @@ main( int argc, char *argv[] )
 		Daemon  my_schedd(DT_SCHEDD, NULL, NULL);
 		CondorError errstack;
 		if (!my_schedd.sendCommand(RESCHEDULE, Stream::safe_sock, 0, &errstack)) {
-			fprintf( stderr, "%s", errstack.get_full_text() );
+			fprintf( stderr, "%s\n", errstack.getFullText(true) );
 		}
 	}
 
@@ -472,7 +472,7 @@ procArg(const char* arg)
 						 "has been removed locally (remote state unknown)" :
 						 (mode==HELD)?"held":"released" );
 			} else {
-				fprintf( stderr, "%s", errstack.get_full_text());
+				fprintf( stderr, "%s\n", errstack.getFullText(true) );
 				fprintf( stderr, 
 						 "Couldn't find/%s all jobs in cluster %d.\n",
 						 (mode==REMOVED)?"remove":(mode==HELD)?"hold":
@@ -515,7 +515,7 @@ procArg(const char* arg)
 					 "have been removed locally (remote state unknown)" :
 					 (mode==HELD)?"held":"released" );
 		} else {
-			fprintf( stderr, "%s", errstack.get_full_text() );
+			fprintf( stderr, "%s\n", errstack.getFullText(true) );
 			fprintf( stderr, 
 					 "Couldn't find/%s all of user %s's job(s).\n",
 					 (mode==REMOVED)?"remove":(mode==HELD)?"hold":
@@ -559,7 +559,7 @@ handleAll()
 				 "removed locally (remote state unknown)" :
 				 (mode==HELD)?"held":"released" );
 	} else {
-		fprintf( stderr, "%s", errstack.get_full_text() );
+		fprintf( stderr, "%s\n", errstack.getFullText(true) );
 		fprintf( stderr, "Could not %s all jobs.\n",
 				 (mode==REMOVED)?"remove":
 				 (mode==HELD)?"hold":"release" );
@@ -585,7 +585,7 @@ handleConstraints( void )
 				 "have been removed locally (remote state unknown)" :
 				 (mode==HELD)?"held":"released" );
 	} else {
-		fprintf( stderr, "%s", errstack.get_full_text() );
+		fprintf( stderr, "%s\n", errstack.getFullText(true) );
 		fprintf( stderr, 
 				 "Couldn't find/%s all jobs matching constraint %s\n",
 				 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release",

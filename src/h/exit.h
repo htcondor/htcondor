@@ -89,6 +89,11 @@
 /* The job should be removed */
 #define JOB_SHOULD_REMOVE (13 + EXIT_CODE_OFFSET)
 
+/*
+  WARNING: don't go above 27 with these, or we run out of bits in the
+  exit status code
+*/
+
 /* There is a fatal error with dprintf() */
 #define DPRINTF_ERROR 44
 

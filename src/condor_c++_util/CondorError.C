@@ -113,18 +113,29 @@ void CondorError::pushf( char* the_subsys, int the_code, char* the_format, ... )
 	_next = tmp;
 }
 
-const char* CondorError::get_full_text() {
+const char*
+CondorError::getFullText( bool want_newline )
+{
 	static MyString errbuf;
+	bool printed_one = false;
 
 	errbuf = "";
 	CondorError* walk = _next;
 	while (walk) {
+		if( printed_one ) {
+			if( want_newline ) {
+				errbuf += '\n';
+			} else {
+				errbuf += '|';
+			}
+		} else {
+			printed_one = true;
+		}
 		errbuf += walk->_subsys;
 		errbuf += ':';
 		errbuf += walk->_code;
 		errbuf += ':';
 		errbuf += walk->_message;
-		errbuf += '\n';
 		walk = walk->_next;
 	}
 	return errbuf.Value();

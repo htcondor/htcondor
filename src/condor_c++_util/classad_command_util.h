@@ -37,5 +37,6 @@ int sendErrorReply( Stream* s, const char* cmd_str, CAResult result,
 
 int unknownCmd( Stream* s, const char* cmd_str );
 
+int getCmdFromReliSock( ReliSock* s, ClassAd* ad, bool force_auth );
 
 #endif /* _CONDOR_CLASSAD_COMMAND_UTIL_H */

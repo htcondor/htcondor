@@ -75,8 +75,8 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only, CondorError* errstack
 												 errstack_select);
 		ok = qmgmt_sock != NULL;
 		if( !ok && !errstack) {
-			dprintf(D_ALWAYS, "Can't connect to queue manager\n%s",
-					errstack_select->get_full_text() );
+			dprintf(D_ALWAYS, "Can't connect to queue manager: %s\n",
+					errstack_select->getFullText() );
 		}
 	}
 
@@ -149,8 +149,8 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only, CondorError* errstack
                 delete qmgmt_sock;
                 qmgmt_sock = NULL;
 				if (!errstack) {
-					dprintf (D_ALWAYS, "Authentication Error\n%s",
-							errstack_select->get_full_text());
+					dprintf( D_ALWAYS, "Authentication Error: %s\n",
+							 errstack_select->getFullText() );
 				}
                 return 0;
             }

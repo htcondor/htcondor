@@ -41,12 +41,12 @@ class AllocationNode {
 
 		// Methods
 	void addResource( ClassAd* r, int proc );
-	void setCapability( const char* new_capab );
+	void setClaimId( const char* new_claim_id );
 	void display( void );
 
 		// Data
 	int status;
-	char* capability;	// The capability for the first match in the cluster 
+	char* claim_id;	// The ClaimId for the first match in the cluster 
 	int cluster;		// cluster id of the job(s) for this allocation
 	int num_procs;			// How many procs are in the cluster
 	ExtArray< ClassAd* >* jobs;		// Both arrays are indexed by proc
@@ -153,7 +153,7 @@ class DedicatedScheduler : public Service {
 
 		// These are public, since the Scheduler class needs to call
 		// them from vacate_service and possibly other places, too.
-	bool DelMrec( char* cap );
+	bool DelMrec( char* id );
 	bool DelMrec( match_rec* rec );
 
 		/** Remove the given shadow record from any match records that
@@ -316,12 +316,12 @@ class DedicatedScheduler : public Service {
 		// hashed on resource name, each claim we have
 	HashTable <HashKey, match_rec*>* all_matches;
 
-		// hashed on capability, each claim we have.  only store
+		// hashed on ClaimId, each claim we have.  only store
 		// pointers in here into the real match records we store in
 		// all_matches.  This is needed for some functions that only
-		// know the capability (like DelMrec(), since vacate_service()
-		// is only given a capability to identify the lost claim).
-	HashTable <HashKey, match_rec*>* all_matches_by_cap;
+		// know the ClaimId (like DelMrec(), since vacate_service()
+		// is only given a ClaimId to identify the lost claim).
+	HashTable <HashKey, match_rec*>* all_matches_by_id;
 
 		// Queue for resource requests we need to negotiate for. 
 	Queue<ClassAd*>* resource_requests;

@@ -684,3 +684,23 @@ getHostFromAddr( const char* addr )
 	free( copy );
 	return host;
 }
+
+
+char*
+getAddrFromClaimId( const char* id )
+{
+	char* tmp;
+	char* addr;
+	char* copy = strdup( id );
+	tmp = strchr( copy, '#' );
+	if( tmp ) {
+		*tmp = '\0';
+		if( is_valid_sinful(copy) ) { 
+			addr = strdup( copy );
+			free( copy );
+			return addr;
+		}
+	}
+	free( copy );
+	return NULL;
+}

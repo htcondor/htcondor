@@ -100,6 +100,9 @@ initialize ()
     daemonCore->Register_Command (RESET_USAGE, "ResetUsage",
             (CommandHandlercpp) &Matchmaker::RESET_USAGE_commandHandler, 
 			"RESET_USAGE_commandHandler", this, ADMINISTRATOR);
+    daemonCore->Register_Command (DELETE_USER, "DeleteUser",
+            (CommandHandlercpp) &Matchmaker::DELETE_USER_commandHandler, 
+			"DELETE_USER_commandHandler", this, ADMINISTRATOR);
     daemonCore->Register_Command (SET_PRIORITYFACTOR, "SetPriorityFactor",
             (CommandHandlercpp) &Matchmaker::SET_PRIORITYFACTOR_commandHandler, 
 			"SET_PRIORITYFACTOR_commandHandler", this, ADMINISTRATOR);
@@ -239,6 +242,27 @@ RESET_ALL_USAGE_commandHandler (int, Stream *strm)
 	return TRUE;
 }
 
+int Matchmaker::
+DELETE_USER_commandHandler (int, Stream *strm)
+{
+	char	scheddName[64];
+	char	*sn = scheddName;
+	int		len = 64;
+
+	// read the required data off the wire
+	if (!strm->get(sn, len) 	|| 
+		!strm->end_of_message())
+	{
+		dprintf (D_ALWAYS, "Could not read accountant record name\n");
+		return FALSE;
+	}
+
+	// reset usage
+	dprintf (D_ALWAYS,"Deleting accountanting record of %s\n",scheddName);
+	accountant.DeleteRecord (scheddName);
+	
+	return TRUE;
+}
 
 int Matchmaker::
 RESET_USAGE_commandHandler (int, Stream *strm)

@@ -216,7 +216,8 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 
 		// First, if we're not already authenticated, force that now. 
 	if (!forceAuthentication( &rsock, errstack )) {
-		dprintf(D_ALWAYS,"DCSchedd: authentication failure\n%s", errstack->get_full_text());
+		dprintf( D_ALWAYS, "DCSchedd: authentication failure: %s\n",
+				 errstack->getFullText() );
 		return false;
 	}
 
@@ -369,7 +370,8 @@ DCSchedd::actOnJobs( job_action_t action, const char* action_str,
 	}
 		// First, if we're not already authenticated, force that now. 
 	if (!forceAuthentication( &rsock, errstack )) {
-		dprintf(D_ALWAYS,"DCSchedd: authentication failure\n%s", errstack->get_full_text());
+		dprintf( D_ALWAYS, "DCSchedd: authentication failure: %s\n",
+				 errstack->getFullText() );
 		return NULL;
 	}
 

@@ -32,6 +32,7 @@
 #include "internet.h"
 #include "condor_string.h"  // for strnewp
 #include "condor_attributes.h"
+#include "classad_command_util.h"
 #include "directory.h"
 #include "nullfile.h"
 #include "basename.h"
@@ -172,11 +173,12 @@ JICLocal::Continue( void )
 }
 
 
-void
+bool
 JICLocal::allJobsDone( void )
 {
 		// we don't care about anything at this stage.  we'll tell the
 		// user about the jobs exiting when we get the notifyJobExit()
+	return true;
 }
 
 
@@ -187,6 +189,16 @@ JICLocal::allJobsGone( void )
 		// exit ourselves.
 	dprintf( D_ALWAYS, "All jobs have exited... starter exiting\n" );
 	DC_Exit(0);
+}
+
+
+int
+JICLocal::reconnect( ReliSock* s, ClassAd* ad )
+{
+		// Someday this might mean something, for now it doesn't.
+	sendErrorReply( s, getCommandString(CA_RECONNECT_JOB), CA_FAILURE, 
+					"Starter using JICLocal does not support reconnect" );
+	return FALSE;
 }
 
 
@@ -446,7 +458,6 @@ JICLocal::checkUniverse( int univ )
 	case CONDOR_UNIVERSE_SCHEDULER:
 	case CONDOR_UNIVERSE_MPI:
 	case CONDOR_UNIVERSE_GLOBUS:
-	case CONDOR_UNIVERSE_PARALLEL:
 			// these are at least valid tries, but we don't work with
 			// any of them in stand-alone starter mode... yet.
 		dprintf( D_ALWAYS, "ERROR: %s %s (%d) not supported without the "

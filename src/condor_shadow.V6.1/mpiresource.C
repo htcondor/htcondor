@@ -143,3 +143,25 @@ MpiResource::beginExecution( void )
 	RemoteResource::beginExecution();
 }
 
+
+void
+MpiResource::reconnect( void )
+{
+	EXCEPT( "The MpiResource class does not support reconnect" ); 
+}
+
+
+void
+MpiResource::attemptReconnect( void )
+{
+	EXCEPT( "The MpiResource class does not support reconnect" ); 
+}
+
+
+bool
+MpiResource::supportsReconnect( void )
+{
+	return false;
+}
+
+

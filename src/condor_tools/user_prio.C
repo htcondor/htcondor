@@ -77,6 +77,7 @@ main(int argc, char* argv[])
 
   bool LongFlag=false;
   int ResetUsage=0;
+  int DeleteUser=0;
   int SetFactor=0;
   int SetPrio=0;
   bool ResetAll=false;
@@ -100,6 +101,11 @@ main(int argc, char* argv[])
     else if (strcmp(argv[i],"-resetusage")==0) {
       if (i+1>=argc) usage(argv[0]);
       ResetUsage=i;
+      i+=1;
+    }
+    else if (strcmp(argv[i],"-delete")==0) {
+      if (i+1>=argc) usage(argv[0]);
+      DeleteUser=i;
       i+=1;
     }
     else if (strcmp(argv[i],"-resetall")==0) {
@@ -249,6 +255,35 @@ main(int argc, char* argv[])
     delete sock;
 
     printf("The accumulated usage of %s was reset\n",argv[ResetUsage+1]);
+
+  }
+
+  else if (DeleteUser) { // remove a user record from the accountant
+
+    char* tmp;
+	if( ! (tmp = strchr(argv[DeleteUser+1], '@')) ) {
+		fprintf( stderr, 
+				 "%s: You must specify the full name of the record you wish\n",
+				 argv[0] );
+		fprintf( stderr, "\tto delete (%s or %s)\n", 
+				 "user@uid.domain", "user@full.host.name" );
+		exit(1);
+	}
+
+    // send request
+    Sock* sock;
+    if( !(sock = negotiator.startCommand(DELETE_USER,
+										 Stream::reli_sock, 0) ) ||
+        !sock->put(argv[DeleteUser+1]) ||
+        !sock->end_of_message()) {
+      fprintf( stderr, "failed to send DELETE_USER command to negotiator\n" );
+      exit(1);
+    }
+
+    sock->close();
+    delete sock;
+
+    printf("The accountant record named %s was deleted\n",argv[DeleteUser+1]);
 
   }
 
@@ -498,7 +533,9 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
 //-----------------------------------------------------------------
 
 static void usage(char* name) {
-  fprintf( stderr, "usage: %s [ -pool hostname ] [ -all | -usage | { -setprio | -setfactor }  user value | -resetusage user | -resetall | -getreslist user ] [-allusers | -activefrom month day year] [-l]\n", name );
+  fprintf( stderr, "usage: %s [ -pool hostname ] [ -all | -usage | { -setprio | -setfactor }  user value | "
+			"-resetusage user | -resetall | -getreslist user | -delete user ] "
+			"[-allusers | -activefrom month day year] [-l]\n", name );
   exit(1);
 }
 

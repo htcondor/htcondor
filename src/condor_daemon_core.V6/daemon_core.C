@@ -2829,9 +2829,8 @@ int DaemonCore::HandleReq(int socki)
 					if (!sock->authenticate(the_key, auth_methods, &errstack)) {
 						free( auth_methods );
 						dprintf( D_ALWAYS, 
-								 "DC_AUTHENTICATE: authenticate failed\n" );
-						dprintf( D_ALWAYS, 
-								 "%s", errstack.get_full_text() );
+								 "DC_AUTHENTICATE: authenticate failed: %s\n",
+								 errstack.getFullText() );
 						result = FALSE;
 						goto finalize;
 					}

@@ -986,6 +986,23 @@ ResMgr::getClaimById( const char* id )
 }
 
 
+Claim*
+ResMgr::getClaimByGlobalJobId( const char* id )
+{
+	Claim* foo = NULL;
+	if( ! resources ) {
+		return NULL;
+	}
+	int i;
+	for( i = 0; i < nresources; i++ ) {
+		if( (foo = resources[i]->findClaimByGlobalJobId(id)) ) {
+			return foo;
+		}
+	}
+	return NULL;
+}
+
+
 Resource*
 ResMgr::findRipForNewCOD( ClassAd* ad )
 {
@@ -1027,14 +1044,14 @@ ResMgr::findRipForNewCOD( ClassAd* ad )
 
 
 Resource*
-ResMgr::get_by_cur_cap( char* cap )
+ResMgr::get_by_cur_id( char* id )
 {
 	if( ! resources ) {
 		return NULL;
 	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
-		if( resources[i]->r_cur->cap()->matches(cap) ) {
+		if( resources[i]->r_cur->idMatches(id) ) {
 			return resources[i];
 		}
 	}
@@ -1043,18 +1060,18 @@ ResMgr::get_by_cur_cap( char* cap )
 
 
 Resource*
-ResMgr::get_by_any_cap( char* cap )
+ResMgr::get_by_any_id( char* id )
 {
 	if( ! resources ) {
 		return NULL;
 	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
-		if( resources[i]->r_cur->cap()->matches(cap) ) {
+		if( resources[i]->r_cur->idMatches(id) ) {
 			return resources[i];
 		}
 		if( resources[i]->r_pre &&
-			resources[i]->r_pre->cap()->matches(cap) ) {
+			resources[i]->r_pre->idMatches(id) ) {
 			return resources[i];
 		}
 	}

@@ -76,8 +76,8 @@ do_Q_request(ReliSock *syscall_sock)
 			CondorError errstack;
 			if( ! syscall_sock->authenticate(methods.Value(), &errstack) ) {
 					// Failed to authenticate
-				dprintf( D_ALWAYS, "SCHEDD: authentication failed\n");
-				dprintf( D_ALWAYS, "%s", errstack.get_full_text() );
+				dprintf( D_ALWAYS, "SCHEDD: authentication failed: %s\n", 
+						 errstack.getFullText() );
 				authenticated = false;
 			}
 		}

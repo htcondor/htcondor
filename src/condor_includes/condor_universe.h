@@ -54,6 +54,8 @@ const char *CondorUniverseName( int universe );
    0 if the given string doesn't correspond to a known universe */
 int CondorUniverseNumber( const char* univ );
 
+BOOLEAN universeCanReconnect( int universe );
+
 END_C_DECLS
 
 #endif

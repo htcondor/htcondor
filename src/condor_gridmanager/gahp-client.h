@@ -185,7 +185,7 @@ class GahpServer : public Service {
 ///
 class GahpClient : public Service {
 	
-	friend GahpServer;
+	friend class GahpServer;
 	public:
 		
 		/** @name Instantiation. 

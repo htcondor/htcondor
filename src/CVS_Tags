@@ -2,10 +2,19 @@
    The state of the V6_7-branch before merging in the V6_7-core-branch
    as tagged at V6_7-core-merge-1.
 
+01/14/04 V6_7-core-merge-1
+   The state of the V6_7-core-branch that was merged back into the
+   V6_7-branch.  The V6_7-core-branch will be abandoned after this
+   merge in favor of the V6_7-core-2-branch.
+	 
 01/09/04 V6_7-classad_history-branch
    A new branch off of V6_7-branch for Nandita's work to save and
    query historical classad information, particularly startd ads.
    Created from the V6_7-classad_history-root tag.  
+
+12/22/03 V6_7_0-core_snapshot_0
+   The state of the V6_7-core-branch that was given to CORE as
+   snapshot 0 (it's was a 6.7.0 pre-release).
 
 12/10/03 V6_7-unicore-branch
    A new branch off of V6_7-branch for adding support for Unicore jobs

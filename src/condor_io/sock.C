@@ -790,7 +790,6 @@ int Sock::close()
 
 	_sock = INVALID_SOCKET;
 	_state = sock_virgin;
-	_timeout = 0;
     if (connect_state.host) {
         free(connect_state.host);
     }

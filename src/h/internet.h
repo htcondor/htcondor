@@ -95,6 +95,11 @@ int getPortFromAddr( const char* addr );
    allocated string which must be de-allocated with free(). */ 
 char* getHostFromAddr( const char* addr );
 
+/* returns the address from a given ClaimId.  the string returned is a
+   newly allocated string which must be de-allocated with free().
+*/ 
+char* getAddrFromClaimId( const char* id );
+
 /* Binds the given fd to any port on the correct local interface for
    this machine.   Returns 1 if successful, 0 on error. */
 int _condor_local_bind( int fd );

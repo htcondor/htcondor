@@ -140,6 +140,22 @@ class FileTransfer {
 		*/
 	bool addOutputFile( const char* filename );
 
+		/** Allows the client side of the filetransfer object to 
+			point to a different server.
+			@param transkey Value of ATTR_TRANSFER_KEY set by server
+			@param transsock Value of ATTR_TRANSFER_SOCKET set by server
+			@return true on success, false on failure
+		*/
+	bool changeServer( const char* transkey, const char* transsock );
+
+		/** Specify the socket timeout to use on the client (starter)
+			side of the FileTransfer.  Defaults to 30 seconds if
+			unspecified.
+			@param timeout Specified in seconds, a value of 0 means disable
+			@return Previous timeout value
+		*/
+	int	setClientSocketTimeout(int timeout);
+
   protected:
 
 	int Download(ReliSock *s, bool blocking);
@@ -192,6 +208,7 @@ class FileTransfer {
 	static int CommandsRegistered;
 	static int SequenceNum;
 	static int ReaperId;
+	int clientSockTimeout;
 	bool did_init;
 	bool simple_init;
 	ReliSock *simple_sock;

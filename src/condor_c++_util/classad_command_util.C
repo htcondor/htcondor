@@ -26,6 +26,7 @@
 #include "condor_attributes.h"
 #include "condor_version.h"
 #include "condor_io.h"
+#include "condor_secman.h"
 #include "command_strings.h"
 
 
@@ -101,3 +102,69 @@ unknownCmd( Stream* s, const char* cmd_str )
 						   line.Value() ); 
 }
 
+
+int
+getCmdFromReliSock( ReliSock* s, ClassAd* ad, bool force_auth )
+{
+		// make sure this connection is authenticated, and we know who
+        // the user is.  also, set a timeout, since we don't want to
+        // block long trying to read from our client.   
+    s->timeout( 10 );  
+    s->decode();
+    if( force_auth && ! s->isAuthenticated() ) {
+		char* p = SecMan::getSecSetting( "SEC_%s_AUTHENTICATION_METHODS",
+										 "WRITE" );
+        MyString methods;
+        if( p ) {
+            methods = p;
+            free( p );
+        } else {
+            methods = SecMan::getDefaultAuthenticationMethods();
+        }
+		CondorError errstack;
+        if( ! s->authenticate(methods.Value(), &errstack) ) {
+                // we failed to authenticate, we should bail out now
+                // since we don't know what user is trying to perform
+                // this action.
+			sendErrorReply( s, "CA_CMD", CA_NOT_AUTHENTICATED,
+							"Server: client failed to authenticate" );
+			dprintf( D_ALWAYS, "getCmdFromSock: authenticate failed\n" );
+			dprintf( D_ALWAYS, "%s\n", errstack.getFullText() );
+			return FALSE;
+        }
+    }
+	
+	if( ! ad->initFromStream(*s) ) { 
+		dprintf( D_ALWAYS, 
+				 "Failed to read ClassAd from network, aborting\n" ); 
+		return FALSE;
+	}
+	if( ! s->eom() ) { 
+		dprintf( D_ALWAYS, 
+				 "Error, more data on stream after ClassAd, aborting\n" ); 
+		return FALSE;
+	}
+
+	if( DebugFlags & D_FULLDEBUG && DebugFlags & D_COMMAND ) {
+		dprintf( D_COMMAND, "Command ClassAd:\n" );
+		ad->dPrint( D_COMMAND );
+		dprintf( D_COMMAND, "*** End of Command ClassAd***\n" );
+	}
+
+	char* cmd_str = NULL;
+	int cmd;
+	if( ! ad->LookupString(ATTR_COMMAND, &cmd_str) ) {
+		dprintf( D_ALWAYS, "Failed to read %s from ClassAd, aborting\n", 
+				 ATTR_COMMAND );
+		sendErrorReply( s, "CA_CMD", CA_INVALID_REQUEST,
+						"Command not specified in request ClassAd" );
+		return FALSE;
+	}		
+	cmd = getCommandNum( cmd_str );
+	if( cmd < 0 ) {
+		unknownCmd( s, cmd_str );
+		free( cmd_str );
+		return FALSE;
+	}
+	return cmd;
+}

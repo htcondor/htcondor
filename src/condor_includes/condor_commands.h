@@ -134,7 +134,7 @@
 #define STORE_CRED			(SCHED_VERS+79)		// schedd, store a credential
 #define SPOOL_JOB_FILES		(SCHED_VERS+80)	// spool all job files via filetransfer object
 #define GET_MYPROXY_PASSWORD (SCHED_VERS+81) // gmanager->schedd: Give me MyProxy password
-
+#define DELETE_USER			(SCHED_VERS+82)		// negotiator  (actually, accountant)
 
 /*
   The ClassAd-only protocol.  CA_CMD is the base command that's sent
@@ -153,6 +153,9 @@
 #define CA_DEACTIVATE_CLAIM     (CA_CMD_BASE+4)
 #define CA_SUSPEND_CLAIM        (CA_CMD_BASE+5)
 #define CA_RESUME_CLAIM         (CA_CMD_BASE+6)
+// other commands that use the ClassAd-only protocol 
+#define CA_LOCATE_STARTER       (CA_CMD_BASE+7)
+#define CA_RECONNECT_JOB        (CA_CMD_BASE+8)
 
 
 /************
@@ -318,6 +321,7 @@ const int QUERY_ANY_ADS = 48;
 
 /* Other replies */
 #define CONDOR_TRY_AGAIN	2
+#define CONDOR_ERROR	3
 
 
 #endif  /* of ifndef _CONDOR_COMMANDS_H */

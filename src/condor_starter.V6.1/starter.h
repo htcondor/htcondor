@@ -148,6 +148,9 @@ public:
 	void closeSavedStdout( void );
 	void closeSavedStderr( void );
 
+		/** Command handler for ClassAd-only protocol commands */
+	int classadCommand( int, Stream* );
+
 protected:
 	List<UserProc> JobList;
 	List<UserProc> CleanedUpJobList;

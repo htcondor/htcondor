@@ -565,14 +565,25 @@ InitJobAd(int cluster, int proc)
 	if ( IpcFile ) {
 		// get the jobad file a file
 		priv_state priv = set_condor_priv();
-		FILE* ipc_fp = fopen(IpcFile,"r");
+		bool is_stdin = false;
+		FILE* ipc_fp = NULL;
+		if( IpcFile[0] == '-' && IpcFile[1] == '\0' ) {
+			ipc_fp = stdin;
+			is_stdin = true;
+		} else {
+			ipc_fp = fopen(IpcFile,"r");
+		}
+		dprintf( D_FULLDEBUG, "Reading job ClassAd from %s\n",
+				 is_stdin ? "STDIN" : IpcFile );
 		int isEOF = 0;
 		int isError = 0;
 		int isEmpty = 0;
 		if ( ipc_fp ) {
 			JobAd = new ClassAd(ipc_fp,"***",isEOF,isError,isEmpty);
-			fclose(ipc_fp);
-			unlink(IpcFile);
+			if( ! is_stdin ) {
+				fclose( ipc_fp );
+				unlink( IpcFile );
+			}
 		}
 		set_priv(priv);
 		// if constructor failed, remove the JobAd, and

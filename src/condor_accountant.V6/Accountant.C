@@ -319,6 +319,18 @@ void Accountant::ResetAccumulatedUsage(const MyString& CustomerName)
 }
 
 //------------------------------------------------------------------
+// Delete the record of a customer
+//------------------------------------------------------------------
+
+void Accountant::DeleteRecord(const MyString& CustomerName) 
+{
+  dprintf(D_ACCOUNTANT,"Accountant::DeleteRecord - CustomerName=%s\n",CustomerName.Value());
+  AcctLog->BeginTransaction();
+  DeleteClassAd(CustomerRecord+CustomerName);
+  AcctLog->CommitTransaction();
+}
+
+//------------------------------------------------------------------
 // Set the priority of a customer
 //------------------------------------------------------------------
 
@@ -750,9 +762,11 @@ int Accountant::IsClaimed(ClassAd* ResourceAd, MyString& CustomerName) {
   if (string_to_state(state)!=claimed_state) return 0;
   
   char RemoteUser[512];
-  if (!ResourceAd->LookupString(ATTR_REMOTE_USER, RemoteUser)) {
-    dprintf (D_ALWAYS, "Could not lookup remote user --- assuming not claimed\n");
-    return 0;
+  if (!ResourceAd->LookupString(ATTR_ACCOUNTING_GROUP, RemoteUser)) {
+	  if (!ResourceAd->LookupString(ATTR_REMOTE_USER, RemoteUser)) {	// TODDCORE
+		dprintf (D_ALWAYS, "Could not lookup remote user --- assuming not claimed\n");
+		return 0;
+	  }
   }
 
   CustomerName=RemoteUser;
@@ -780,9 +794,11 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& Custo
   }
 
   char RemoteUser[512];
-  if (!ResourceAd->LookupString(ATTR_REMOTE_USER, RemoteUser)) {
-    dprintf (D_ALWAYS, "Could not lookup remote user --- assuming not claimed\n");
-    return 0;
+  if (!ResourceAd->LookupString(ATTR_ACCOUNTING_GROUP, RemoteUser)) {
+	  if (!ResourceAd->LookupString(ATTR_REMOTE_USER, RemoteUser)) {	// TODDCORE
+		dprintf (D_ALWAYS, "Could not lookup remote user --- assuming not claimed\n");
+		return 0;
+	  }
   }
 
   if (CustomerName!=MyString(RemoteUser)) {

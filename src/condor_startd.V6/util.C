@@ -368,36 +368,35 @@ configInsert( ClassAd* ad, const char* param_name,
 
 
 /* 
-   This function reads of a capability string and an eom from the
-   given stream.  It looks up that capability in the resmgr to find
+   This function reads of a ClaimId string and an eom from the
+   given stream.  It looks up that ClaimId in the resmgr to find
    the corresponding Resource*.  If such a Resource is found, we
    return the pointer to it, otherwise, we return NULL.  */
 Resource*
 stream_to_rip( Stream* stream )
 {
-	char* cap = NULL;
+	char* id = NULL;
 	Resource* rip;
 
 	stream->decode();
-	if( ! stream->code(cap) ) {
-		dprintf( D_ALWAYS, "Can't read capability\n" );
-		free( cap );
+	if( ! stream->code(id) ) {
+		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
+		free( id );
 		return NULL;
 	}
 	if( ! stream->end_of_message() ) {
 		dprintf( D_ALWAYS, "Can't read end_of_message\n" );
-		free( cap );
+		free( id );
 		return NULL;
 	}
-	rip = resmgr->get_by_cur_cap( cap );
+	rip = resmgr->get_by_cur_id( id );
 	if( !rip ) {
 		dprintf( D_ALWAYS, 
-				 "Error: can't find resource with capability (%s)\n",
-				 cap );
-		free( cap );
+				 "Error: can't find resource with ClaimId (%s)\n", id );
+		free( id );
 		return NULL;
 	}
-	free( cap );
+	free( id );
 	return rip;
 }
 

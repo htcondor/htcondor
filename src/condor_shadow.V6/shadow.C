@@ -260,6 +260,7 @@ printClassAd( void )
 	printf( "%s = True\n", ATTR_HAS_REMOTE_SYSCALLS );
 	printf( "%s = True\n", ATTR_HAS_CHECKPOINTING );
 	printf( "%s = True\n", ATTR_HAS_OLD_VANILLA );
+	printf( "%s = True\n", ATTR_HAS_JOB_AD_FROM_FILE );
 	printf( "%s = \"%s\"\n", ATTR_VERSION, CondorVersion() );
 }
 
@@ -281,16 +282,6 @@ main(int argc, char *argv[] )
 		printClassAd();
 		exit( 0 );
 	}
-
-	/* on OSF/1 as installed currently on our machines, attempts to read from
-	   the FILE * returned by popen() fail if the underlying file descriptor
-	   is 1.  This is ugly, but we have 4K fd's so we won't miss these few */
-
-#if !defined(OSF1) && !defined(Solaris)
-	close( 0 );
-	close( 1 );
-	close( 2 );
-#endif
 
 #if defined(SYSCALL_DEBUG)
 	SyscallLabel = argv[0] + 7;

@@ -84,6 +84,8 @@ public:
 
 	void	printInfo( int debug_level );
 
+	char*	getIpAddr( void );
+
 private:
 
 		// methods

@@ -33,6 +33,7 @@
 #include "daemon_types.h"
 #include "KeyCache.h"
 #include "CondorError.h"
+#include "command_strings.h"
 
 
 /** 
@@ -122,6 +123,14 @@ public:
 		  string desribing it.  Returns NULL if there's no error.
 		  */
 	char* error( void )	{ return _error; }
+
+ 		/** Return the result code of the previous action.  If there's
+			a problem and the error() string above is set, this result
+			code will specify the type of error encountered.  The
+			CAResult enum and some helper functions to convert it
+			to/from strings are in condor_c++_util/command_string.[Ch]
+		*/
+	CAResult errorCode( void ) { return _error_code; }
 
 		// //////////////////////////////////////////////////////////
 		/// Methods for getting information about the daemon.
@@ -324,6 +333,7 @@ protected:
 	char* _platform;
 	char* _pool;
 	char* _error;
+	CAResult _error_code;
 	char* _id_str;
 	char* _subsys;
 	int _port;
@@ -401,7 +411,7 @@ protected:
 		  is already set, deallocate the existing string.  Then, make
 		  a copy of the given string and store that in _error.
 		  */
-	void newError( const char* );
+	void newError( CAResult, const char* );
 
 		/** Returns a string containing the local daemon's name.  If
 		  the <subsys>_NAME parameter is set in the config file, we
@@ -439,15 +449,15 @@ protected:
 	char* _cmd_str;
 
 		/** 
+
  		   Helper method for the client-side of the ClassAd-only
 		   protocol.  This method will try to: locate our daemon,
-		   create a ReliSock, try to connect(), send the CA_CMD int,
-		   send a ClassAd and an EOM, read back a ClassAd and EOM,
-		   lookup the ATTR_RESULT in the reply, and if it's FALSE,
-		   lookup ATTR_ERROR_STRING.  This deals with everything for
-		   you, so all you have to do if you want to use this protocol
-		   is define a method that sets up up the right request ad and
-		   calls this.
+		   connect(), send the CA_CMD int, send a ClassAd and an EOM,
+		   read back a ClassAd and EOM, lookup the ATTR_RESULT in the
+		   reply, and if it's FALSE, lookup ATTR_ERROR_STRING.  This
+		   deals with everything for you, so all you have to do if you
+		   want to use this protocol is define a method that sets up
+		   up the right request ad and calls this.
 		   @param req Pointer to the request ad (you fill it in)
 		   @param reply Pointer to the reply ad (from the server)
 		   @param force_auth Should we force authentication for this cmd?
@@ -458,6 +468,15 @@ protected:
 		*/
 	bool sendCACmd( ClassAd* req, ClassAd* reply, bool force_auth,
 					int timeout = -1 );
+
+		/** Same as above, except the socket for the command is passed
+			in as an argument.  This way, you can keep the ReliSock
+			object around and the connection open once the command is
+			over, in case you need that.  Otherwise, you should just
+			call the above version.
+		*/
+	bool sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* sock,
+					bool force_auth, int timeout = -1 );
 
 		/** 
 		   Helper method for commands to see if we've already got the

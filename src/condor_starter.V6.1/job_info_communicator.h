@@ -144,8 +144,13 @@ public:
 		/** The last job this starter is controlling has exited.  Do
 			whatever we have to do to cleanup and notify our
 			controller. 
+			@return true if it worked and the starter can continue
+			cleaning up, false if there was an error (e.g. we're
+			disconnected from our shadow) and the starter needs to go
+			back to DaemonCore awaiting other events before it can
+			finish the task...
 		*/
-	virtual void allJobsDone( void ) = 0;
+	virtual bool allJobsDone( void ) = 0;
 
 		/** The last job this starter is controlling has been
 			completely cleaned up.  Do whatever final work we want to
@@ -161,6 +166,10 @@ public:
 		 */
 	virtual void gotShutdownGraceful( void );
 
+		/** Someone is attempting to reconnect to this job.
+		 */
+	virtual int reconnect( ReliSock* s, ClassAd* ad ) = 0;
+	
 
 		// // // // // // // // // // // //
 		// Notfication to our controller

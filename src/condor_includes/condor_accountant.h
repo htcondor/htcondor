@@ -57,6 +57,7 @@ public:
 
   void SetPriorityFactor(const MyString& CustomerName, float PriorityFactor);
   void ResetAccumulatedUsage(const MyString& CustomerName);
+  void DeleteRecord(const MyString& CustomerName); 
   void ResetAllUsage();
 
   void AddMatch(const MyString& CustomerName, ClassAd* ResourceAd); // Add new match

@@ -42,16 +42,17 @@ public:
 		*/
 	DCStartd( const char* const name = NULL, const char* pool = NULL );
 
+		/** Alternate constructor that takes more info if have it
+			@param name The name of the daemon, NULL for local  
+			@param pool The name of the pool, NULL for local
+			@param addr The address (sinful string), NULL if unknown
+			@param id The ClaimId, NULL if unknown
+		*/
+	DCStartd( const char* const name, const char* const pool,
+			  const char* const addr, const char* const id );
+
 		/// Destructor.
 	~DCStartd();
-
-		/** Set the capability for use when talking to this startd.
-			This method is deprecated.  You should use setClaimId(),
-			instead.  
-			@param cap_str The capability string
-			@return true on success, false on invalid input (NULL)
-		*/
-	bool setCapability( const char* cap_str );
 
 		/** Set the ClaimId to use when talking to this startd. 
 			@param id The ClaimID string
@@ -60,12 +61,9 @@ public:
 	bool setClaimId( const char* id );
 
 
-		/** @return the capability string for this startd, NULL if we
-			don't have a value yet.  This method is deprecated.  You
-			should use getClaimId(), instead.  
-
+		/** @return the ClaimId string for this startd, NULL if we
+			don't have a value yet.
 		*/
-	char* getCapability( void ) { return claim_id; };
 	char* getClaimId( void ) { return claim_id; };
 
 		/** Send the command to this startd to deactivate the claim 
@@ -105,6 +103,9 @@ public:
 						  int timeout = -1 );
 
 	bool releaseClaim( VacateType type, ClassAd* reply,
+					   int timeout = -1 );
+
+	bool locateStarter( const char* global_job_id, ClassAd* reply, 
 					   int timeout = -1 );
 
  private:

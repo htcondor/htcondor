@@ -95,7 +95,7 @@ CONLIBAPI_OBJ = \
 	$(SETEGID_OBJ)
 
 DAEMON_CLIENT_OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o \
-	dc_schedd.o dc_collector.o daemon_list.o
+	dc_schedd.o dc_collector.o dc_starter.o daemon_list.o
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	alarm.o alloc.o user_job_policy.o classad_support.o \

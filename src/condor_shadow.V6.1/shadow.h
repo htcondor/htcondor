@@ -71,9 +71,19 @@ class UniShadow : public BaseShadow
 			The parameters passed are all gotten from the 
 			command line and should be easy to figure out.
 		*/
-	void init( ClassAd *jobAd, char schedd_addr[], char host[], 
-			   char capability[], char cluster[], char proc[]);
+	void init( ClassAd* job_ad, const char* schedd_addr );
 	
+		/** Shadow should spawn a new starter for this job.
+		 */
+	void spawn( void );
+
+		/** Shadow should attempt to reconnect to a disconnected
+			starter that might still be running for this job.  
+		 */
+	void reconnect( void );
+
+	bool supportsReconnect( void );
+
 		/**
 		 */
 	int handleJobRemoval(int sig);
@@ -124,6 +134,16 @@ class UniShadow : public BaseShadow
 	virtual void gracefulShutDown( void );
 
 	virtual void resourceBeganExecution( RemoteResource* rr );
+
+	virtual void resourceReconnected( RemoteResource* rr );
+
+	virtual void logDisconnectedEvent( const char* reason );
+
+ protected:
+
+	virtual void logReconnectedEvent( void );
+
+	virtual void logReconnectFailedEvent( const char* reason );
 
  private:
 	RemoteResource *remRes;

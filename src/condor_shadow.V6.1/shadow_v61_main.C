@@ -26,23 +26,31 @@
 #include "baseshadow.h"
 #include "shadow.h"
 #include "mpishadow.h"
-#include "parallelshadow.h"
 #include "exit.h"
 #include "condor_debug.h"
 #include "condor_version.h"
 #include "condor_attributes.h"
-#include "condor_qmgr.h"
-#include "shadow_initializer.h"
 
 BaseShadow *Shadow = NULL;
-ShadowInitializer *shad_init = NULL;
+
+// settings we're given on the command-line
+static const char* schedd_addr = NULL;
+static const char* job_ad_file = NULL;
+static bool is_reconnect = false;
+static int cluster = -1;
+static int proc = -1;
 
 static void
-usage()
+usage( int argc, char* argv[] )
 {
-	printf( "Usage: condor_shadow schedd_addr host capability cluster proc\n" );
+	dprintf( D_ALWAYS, "Usage: %s cluster.proc schedd_addr file_name\n",
+			 argv[0] );
+	for (int i=0; i < argc; i++) {
+		dprintf(D_ALWAYS, "argv[%d] = %s\n", i, argv[i]);
+	}
 	exit( JOB_SHADOW_USAGE );
 }
+
 
 extern "C" {
 int
@@ -64,29 +72,175 @@ dummy_reaper(Service *,int pid,int)
 	return TRUE;
 }
 
+
+void
+parseArgs( int argc, char *argv[] )
+{
+	char *opt;
+	int args_handled = 0;
+
+	char** tmp = argv;
+	for( tmp++; *tmp; tmp++ ) {
+		opt = tmp[0];
+		if( sscanf(opt, "%d.%d", &cluster, &proc) == 2 ) {
+			if( cluster < 0 || proc < 0 ) {
+				dprintf(D_ALWAYS, 
+						"ERROR: invalid cluster.proc specified: %s\n", opt);
+				usage(argc, argv);
+			}
+				// great, it was a job id, we're done with this option
+			args_handled++;
+			continue;
+		}
+		if( opt[0] == '<' ) { 
+				// might be the schedd's address
+			if( is_valid_sinful(opt) ) {
+				schedd_addr = opt;
+				args_handled++;
+				continue;
+			} else {
+				dprintf(D_ALWAYS, 
+						"ERROR: invalid schedd_addr specified: %s\n", opt);
+				usage(argc, argv);
+			}
+		}
+		if( !strcmp(opt, "--reconnect") || !strcmp(opt, "-reconnect") ) {
+			is_reconnect = true;
+			args_handled++;
+			continue;
+		}
+			// the only other argument we understand is the
+			// filename we should read our ClassAd from, "-" for
+			// STDIN.  There's no further checking we need to do 
+		if( job_ad_file ) {
+				// already were here, bail out
+			dprintf( D_ALWAYS, "ERROR: unrecognized option (%s)\n", opt );
+			usage(argc, argv);
+		}
+		job_ad_file = opt;
+		args_handled++;
+	}
+	if( args_handled < 3 || args_handled != (argc-1) ) {
+		dprintf( D_ALWAYS, "ERROR: missing command-line arguments!" );
+		usage(argc, argv);
+	}
+}
+
+
+ClassAd* 
+readJobAd( void )
+{
+	ClassAd* ad = NULL;
+	FILE* fp = NULL;
+	bool is_stdin = false;
+	bool read_something = false;
+
+	ASSERT( job_ad_file );
+
+	if( job_ad_file[0] == '-' && job_ad_file[1] == '\0' ) {
+		fp = stdin;
+		is_stdin = true;
+	} else {
+		fp = fopen( job_ad_file, "r" );
+		if( ! fp ) {
+			EXCEPT( "Failed to open ClassAd file (%s): %s (errno %d)",
+					job_ad_file, strerror(errno), errno );
+		}
+	}
+
+	dprintf( D_FULLDEBUG, "Reading job ClassAd from %s\n",
+			 is_stdin ? "STDIN" : job_ad_file );
+
+	ad = new ClassAd;
+	MyString line;
+	while( line.readLine(fp) ) {
+        read_something = true;
+		line.chomp();
+		if( line[0] == '#' ) {
+			dprintf( D_JOB, "IGNORING COMMENT: %s\n", line.Value() );
+			continue;
+		}
+		if( line == "***" ) {
+			dprintf( D_JOB, "Saw ClassAd delimitor, stopping\n" );
+			break;
+		}
+		if( (DebugFlags & D_JOB) && (DebugFlags & D_FULLDEBUG) ) {
+			dprintf( D_JOB, "FILE: %s\n", line.Value() );
+		} 
+        if( ! ad->Insert(line.Value()) ) {
+			EXCEPT( "Failed to insert \"%s\" into ClassAd!", line.Value() );
+        }
+    }
+	if( ! read_something ) {
+		EXCEPT( "ERROR reading ClassAd from (%s): file is empty",
+				is_stdin ? "STDIN" : job_ad_file );
+	}
+	if( ! is_stdin ) {
+		fclose( fp );
+	}
+
+	// For debugging, see if there's a special attribute in the
+	// job ad that sends us into an infinite loop, waiting for
+	// someone to attach with a debugger
+	int shadow_should_wait = 0;
+	ad->LookupInteger( ATTR_SHADOW_WAIT_FOR_DEBUG,
+					   shadow_should_wait );
+	if( shadow_should_wait ) {
+		dprintf( D_ALWAYS, "Job requested shadow should wait for "
+			"debugger with %s=%d, going into infinite loop\n",
+			ATTR_SHADOW_WAIT_FOR_DEBUG, shadow_should_wait );
+		while( shadow_should_wait );
+	}
+
+	return ad;
+}
+
+
+void
+initShadow( ClassAd* ad )
+{
+	int universe; 
+	if( ! ad->LookupInteger(ATTR_JOB_UNIVERSE, universe) ) {
+			// change to the right universes when everything works.
+		dprintf( D_ALWAYS, "WARNING %s not specified, assuming VANILLA\n", 
+				 ATTR_JOB_UNIVERSE );
+		universe = CONDOR_UNIVERSE_VANILLA;
+	}
+
+	dprintf( D_ALWAYS, "Initializing a %s shadow for job %d.%d\n", 
+			 CondorUniverseName(universe), cluster, proc );
+
+	switch ( universe ) {
+	case CONDOR_UNIVERSE_VANILLA:
+	case CONDOR_UNIVERSE_JAVA:
+		Shadow = new UniShadow();
+		break;
+	case CONDOR_UNIVERSE_MPI:
+		Shadow = new MPIShadow();
+		break;
+	case CONDOR_UNIVERSE_PVM:
+			// some day we'll support this.  for now, fall through and
+			// print out an error message that might mean something to
+			// our user, not "PVM...hopefully one day..."
+//		Shadow = new PVMShadow();
+//		break;
+	default:
+		dprintf( D_ALWAYS, "This version of the shadow cannot support "
+				 "universe %d (%s)\n", universe,
+				 CondorUniverseName(universe) );
+		EXCEPT( "Universe not supported" );
+	}
+	Shadow->init( ad, schedd_addr );
+}
+
+
 int
 main_init(int argc, char *argv[])
 {
-	if (argc != 6) {
-		dprintf(D_ALWAYS, "Bad usage, argc = %d\n", argc);
-		for (int i=0; i < argc; i++) {
-			dprintf(D_ALWAYS, "argv[%d] = %s\n", i, argv[i]);
-		}
-		usage();
-	}
-
-	if (argv[1][0] != '<') {
-		EXCEPT("schedd_addr not specified with sinful string.");
-	}
-	
-	if (argv[2][0] != '<') {
-		EXCEPT("host not specified with sinful string.");
-	}
+	_EXCEPT_Cleanup = ExceptCleanup;
 
 		/* Start up with condor.condor privileges. */
 	set_condor_priv();
-
-	_EXCEPT_Cleanup = ExceptCleanup;
 
 		// Register a do-nothing reaper.  This is just because the
 		// file transfer object, which could be instantiated later,
@@ -97,38 +251,36 @@ main_init(int argc, char *argv[])
 							(ReaperHandler)&dummy_reaper,
 							"dummy_reaper",NULL);
 
-	/* Get the job ad and figure what kind of shadow to instantiate. */
-	shad_init = new ShadowInitializer(argc, argv);
-	if (shad_init == NULL)
-	{
-		EXCEPT("Out of memory in main_init()!");
+
+	parseArgs( argc, argv );
+
+	ClassAd* ad = readJobAd();
+	if( ! ad ) {
+		EXCEPT( "Failed to read job ad!" );
 	}
-	shad_init->Bootstrap();
+	initShadow( ad );
+
+	if( is_reconnect ) {
+		Shadow->reconnect();
+	} else {
+		Shadow->spawn();
+	}		
+
 	return 0;
 }
+
 
 int
 main_config( bool is_full )
 {
-	if (Shadow == NULL)
-	{
-		dprintf(D_ALWAYS,
-			"Failed to config shadow because it is of unknown type.\n");
-		return 0;
-	}
 	Shadow->config();
 	return 0;
 }
 
+
 int
 main_shutdown_fast()
 {
-	if (Shadow == NULL)
-	{
-		dprintf(D_ALWAYS,
-			"Failed to fast shutdown shadow because it is of unknown type.\n");
-		return 0;
-	}
 	Shadow->shutDown( JOB_NOT_CKPTED );
 	return 0;
 }
@@ -168,6 +320,8 @@ printClassAd( void )
 	printf( "%s = True\n", ATTR_HAS_FILE_TRANSFER );
 	printf( "%s = True\n", ATTR_HAS_MPI );
 	printf( "%s = True\n", ATTR_HAS_JAVA );
+	printf( "%s = True\n", ATTR_HAS_RECONNECT );
+	printf( "%s = True\n", ATTR_HAS_JOB_AD_FROM_FILE );
 	printf( "%s = \"%s\"\n", ATTR_VERSION, CondorVersion() );
 }
 

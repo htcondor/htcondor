@@ -64,8 +64,8 @@ struct shadow_rec
     int             preempted;
     int             conn_fd;
 	int				removed;
-    char*           sinfulString;  // added for V6.1 Shadow by MEY
 	bool			isZombie;	// added for Maui by stolley
+	bool			is_reconnect;
 }; 
 
 struct OwnerData {
@@ -85,14 +85,13 @@ struct OwnerData {
   JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=GlobusJobs=GlobusUnmanagedJobs=0; }
 };
 
-#define SIZE_OF_CAPABILITY_STRING 40 /* see also matchmater.C */
 class match_rec
 {
  public:
     match_rec(char*, char*, PROC_ID*, ClassAd*, char*, char* pool);
 	~match_rec();
-    char    		id[SIZE_OF_CAPABILITY_STRING];
-    char    		peer[50];
+    char*    		id;
+    char*   		peer;
 	
 		// cluster of the job we used to obtain the match
 	int				origcluster; 
@@ -134,6 +133,7 @@ typedef enum {
 	NO_SHADOW_WIN32,
 	NO_SHADOW_DC_VANILLA,
 	NO_SHADOW_OLD_VANILLA,
+	NO_SHADOW_RECONNECT,
 } NoShadowFailure_t;
 
 
@@ -141,13 +141,13 @@ typedef enum {
 class ContactStartdArgs
 {
 public:
-	ContactStartdArgs( char* the_capab, char* the_owner, char*
+	ContactStartdArgs( char* the_claim_id, char* the_owner, char*
 					   the_sinful, PROC_ID the_id, ClassAd* match,
 					   char* the_pool, bool is_dedicated );
 	~ContactStartdArgs();
 
 	char*		sinful( void )		{ return csa_sinful; };
-	char*		capability( void )	{ return csa_capability; };
+	char*		claimId( void )		{ return csa_claim_id; };
 	char*		owner( void )		{ return csa_owner; };
 	char*		pool( void )		{ return csa_pool; };
 	ClassAd*	matchAd( void )		{ return csa_match_ad; };
@@ -156,7 +156,7 @@ public:
 	int			proc( void )		{ return csa_id.proc; };
 
 private:
-	char *csa_capability;
+	char *csa_claim_id;
 	char *csa_owner;
 	char *csa_sinful;
 	PROC_ID csa_id;
@@ -170,7 +170,7 @@ private:
 // a pointer to this state so we can restore it after a non-blocking connect.
 struct contactStartdState {
     match_rec* mrec;
-    char* capability;
+    char* claim_id;
     char* server;
     ClassAd *jobAd;
 };
@@ -231,6 +231,7 @@ class Scheduler : public Service
 	void			StartJobs();
 	void			StartSchedUniverseJobs();
 	void			sendAlives();
+	void			RecomputeAliveInterval(int cluster, int proc);
 	void			StartJobHandler();
 	UserLog*		InitializeUserLog( PROC_ID job_id );
 	bool			WriteAbortToUserLog( PROC_ID job_id );
@@ -268,6 +269,13 @@ class Scheduler : public Service
 			@return FALSE on denial/problems, TRUE on success
 		*/
 	int             startdContactSockHandler( Stream *sock );
+
+		/** Used to enqueue another disconnected job that we need to
+			spawn a shadow to attempt to reconnect to.
+		*/
+	bool			enqueueReconnectJob( PROC_ID job );
+	void			checkReconnectQueue( void );
+	void			makeReconnectRecords( PROC_ID* job, ClassAd* match_ad );
 
 		// Useful public info
 	char*			shadowSockSinful( void ) { return MyShadowSockName; };
@@ -357,7 +365,13 @@ private:
 	Queue<ContactStartdArgs*> startdContactQueue;
 	int             MAX_STARTD_CONTACTS;
 	int				checkContactQueue_tid;	// DC Timer ID to check queue
-	
+
+		// If we we need to reconnect to disconnected starters, we
+		// stash the proc IDs in here while we read through the job
+		// queue.  Then, we can spawn all the shadows after the fact. 
+	SimpleList<PROC_ID> jobsToReconnect;
+	int				checkReconnectQueue_tid;
+
 	// useful names
 	char*			CondorAdministrator;
 	char*			Mail;
@@ -388,7 +402,7 @@ private:
 
 
 		/** We add a match record (AddMrec), then open a ReliSock to the
-			startd.  We push the capability and the jobAd, then register
+			startd.  We push the ClaimId and the jobAd, then register
 			the Socket with startdContactSockHandler and put the new mrec
 			into the daemonCore data pointer.  
 			@param args An object that holds all the info we care about 
@@ -417,11 +431,14 @@ private:
 	HashTable <int, ExtArray<PROC_ID> *> *spoolJobFileWorkers;
 	int				numMatches;
 	int				numShadows;
-	List <PROC_ID>	*IdleSchedUniverseJobIDs;
 	DaemonList		*FlockCollectors, *FlockNegotiators;
 	int				MaxFlockLevel;
 	int				FlockLevel;
     int         	alive_interval;  // how often to broadcast alive
+		// leaseAliveInterval is the minimum interval we need to send
+		// keepalives based upon ATTR_JOB_LEASE_DURATION...
+	int				leaseAliveInterval;  
+	int				aliveid;	// timer id for sending keepalives to startd
 	int				MaxExceptions;	 // Max shadow excep. before we relinquish
 	bool			ManageBandwidth;
 

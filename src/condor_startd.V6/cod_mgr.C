@@ -84,7 +84,7 @@ CODMgr::findClaimById( const char* id )
 	Claim* tmp_claim;
 	claims.Rewind();
 	while( claims.Next(tmp_claim) ) {
-		if( tmp_claim->cap()->matches(id) ) {
+		if( tmp_claim->idMatches(id) ) {
 			return tmp_claim;
 		}
 	}

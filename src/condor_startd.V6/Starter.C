@@ -926,6 +926,16 @@ Starter::printInfo( int debug_level )
 }
 
 
+char*
+Starter::getIpAddr( void )
+{
+	if( ! s_pid ) {
+		return NULL;
+	}
+	return daemonCore->InfoCommandSinfulString( s_pid );
+}
+
+
 bool
 Starter::killHard( void )
 {

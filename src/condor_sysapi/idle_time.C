@@ -549,8 +549,10 @@ dev_idle_time( char *path, time_t now )
 	
 	/* ok, just check the device idle time for normal devices using stat() */
 	if (stat(pathname,&buf) < 0) {
-		dprintf( D_FULLDEBUG, "Error on stat(%s,0x%x), errno = %d(%s)\n",
-				 pathname, &buf, errno, strerror(errno) );
+		if( errno != ENOENT ) {
+			dprintf( D_FULLDEBUG, "Error on stat(%s,0x%x), errno = %d(%s)\n",
+					 pathname, &buf, errno, strerror(errno) );
+		}
 		buf.st_atime = 0;
 	}
 	if ( null_major_device > -1 && null_major_device == major(buf.st_rdev) ) {

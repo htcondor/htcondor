@@ -65,18 +65,17 @@ MPIShadow::~MPIShadow() {
 }
 
 void 
-MPIShadow::init( ClassAd *jobAd, char schedd_addr[], char host[], 
-                 char capability[], char cluster[], char proc[])
+MPIShadow::init( ClassAd* job_ad, const char* schedd_addr )
 {
 
 	char buf[256];
 
-    if ( !jobAd ) {
-        EXCEPT( "No jobAd defined!" );
+    if( ! job_ad ) {
+        EXCEPT( "No job_ad defined!" );
     }
 
         // BaseShadow::baseInit - basic init stuff...
-    baseInit( jobAd, schedd_addr, cluster, proc );
+    baseInit( job_ad, schedd_addr );
 
 		// Register command which gets updates from the starter
 		// on the job's image size, cpu usage, etc.  Each kind of
@@ -105,10 +104,7 @@ MPIShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 
         // make first remote resource the "master".  Put it first in list.
     MpiResource *rr = new MpiResource( this );
-	rr->setStartdInfo( host, capability );
-		// for now, set this to the sinful string.  when the starter
-		// spawns, it'll do an RSC to register a real hostname...
-	rr->setMachineName( host );
+
     ClassAd *temp = new ClassAd( *(getJobAd() ) );
 
     sprintf( buf, "%s = %s", ATTR_MPI_IS_MASTER, "TRUE" );
@@ -123,6 +119,8 @@ MPIShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 	temp->InsertOrUpdate( buf );
     rr->setJobAd( temp );
 
+	rr->setStartdInfo( temp );
+
     ResourceList[ResourceList.getlast()+1] = rr;
 
 		// now, we want to re-initialize the shadow_user_policy object
@@ -131,10 +129,40 @@ MPIShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 		// exit status, info about the run, etc, etc.
 	shadow_user_policy.init( temp, this );
 
+}
+
+
+void
+MPIShadow::reconnect( void )
+{
+	EXCEPT( "reconnect is not supported for MPI universe!" );
+}
+
+
+bool 
+MPIShadow::supportsReconnect( void )
+{
+	return false;
+}
+
+
+void
+MPIShadow::spawn( void )
+{
+		/*
+		  This is lame.  We should really do a better job of dealing
+		  with the multiple ClassAds for MPI universe via the classad
+		  file mechanism (pipe to STDIN, usually), instead of this
+		  whole mess, and spawn() should really just call
+		  "startMaster()".  however, in the race to get disconnected
+		  operation working for vanilla, we cut a few corners and
+		  leave this as it is.  whenever we're seriously looking at
+		  MPI support again, we should fix this, too.
+		*/
 		/*
 		  Finally, register a timer to call getResources(), which
 		  sends a command to the schedd to get all the job classads,
-		  startd sinful strings, and capabilities for all the matches
+		  startd sinful strings, and ClaimIds for all the matches
 		  for our computation.  
 		  In the future this will just be a backup way to get the
 		  info, since the schedd will start to push all this info to
@@ -157,7 +185,7 @@ MPIShadow::getResources( void )
     dprintf ( D_FULLDEBUG, "Getting machines from schedd now...\n" );
 
     char *host = NULL;
-    char *capability = NULL;
+    char *claim_id = NULL;
     MpiResource *rr;
 	int cluster;
 	char buf[128];
@@ -171,10 +199,10 @@ MPIShadow::getResources( void )
 
 	cluster = getCluster();
     rr = ResourceList[0];
-	rr->getCapability( capability );
+	rr->getClaimId( claim_id );
 
 		// First, contact the schedd and send the command, the
-		// cluster, and the capability
+		// cluster, and the ClaimId
 	Daemon my_schedd (DT_SCHEDD, NULL, NULL);
 
 	if(!(sock = (ReliSock*)my_schedd.startCommand(GIVE_MATCHES))) {
@@ -185,14 +213,14 @@ MPIShadow::getResources( void )
 	if( ! sock->code(cluster) ) {
 		EXCEPT( "Can't send cluster (%d) to schedd\n", cluster );
 	}
-	if( ! sock->code(capability) ) {
-		EXCEPT( "Can't send capability to schedd\n" );
+	if( ! sock->code(claim_id) ) {
+		EXCEPT( "Can't send ClaimId to schedd\n" );
 	}
 
 		// Now that we sent this, free the memory that was allocated
-		// with getCapability() above
-	delete [] capability;
-	capability = NULL;
+		// with getClaimId() above
+	delete [] claim_id;
+	claim_id = NULL;
 
 	if( ! sock->end_of_message() ) {
 		EXCEPT( "Can't send EOM to schedd\n" );
@@ -222,10 +250,10 @@ MPIShadow::getResources( void )
 
         for ( int j=0 ; j<numInProc ; j++ ) {
             if ( !sock->code( host ) ||
-                 !sock->code( capability ) ) {
+                 !sock->code( claim_id ) ) {
                 EXCEPT( "Problem getting resource %d, %d", i, j );
             }
-            dprintf ( D_FULLDEBUG, "Got host: %s   cap: %s\n",host,capability);
+            dprintf( D_FULLDEBUG, "Got host: %s id: %s\n", host, claim_id );
             
             if ( i==0 && j==0 ) {
 					/* 
@@ -238,14 +266,14 @@ MPIShadow::getResources( void )
                        have it!  We ignore it here.... */
 
                 free( host );
-                free( capability );
+                free( claim_id );
                 host = NULL;
-                capability = NULL;
+                claim_id = NULL;
                 continue;
             }
 
             rr = new MpiResource( this );
-            rr->setStartdInfo( host, capability );
+            rr->setStartdInfo( host, claim_id );
  				// for now, set this to the sinful string.  when the
  				// starter spawns, it'll do an RSC to register a real
 				// hostname... 
@@ -266,9 +294,9 @@ MPIShadow::getResources( void )
 
                 /* free stuff so next code() works correctly */
             free( host );
-            free( capability );
+            free( claim_id );
             host = NULL;
-            capability = NULL;
+            claim_id = NULL;
 
         } // end of for loop for this proc
         
@@ -877,6 +905,7 @@ int
 MPIShadow::handleJobRemoval( int sig ) {
 
     dprintf ( D_FULLDEBUG, "In handleJobRemoval, sig %d\n", sig );
+	remove_requested = true;
 
 	ResourceState s;
 
@@ -1160,3 +1189,30 @@ MPIShadow::resourceBeganExecution( RemoteResource* rr )
 	}
 }
 
+
+void
+MPIShadow::resourceReconnected( RemoteResource* rr )
+{
+	EXCEPT( "impossible: MPIShadow doesn't support reconnect" );
+}
+
+
+void
+MPIShadow::logDisconnectedEvent( const char* reason )
+{
+	EXCEPT( "impossible: MPIShadow doesn't support reconnect" );
+}
+
+
+void
+MPIShadow::logReconnectedEvent( void )
+{
+	EXCEPT( "impossible: MPIShadow doesn't support reconnect" );
+}
+
+
+void
+MPIShadow::logReconnectFailedEvent( const char* reason )
+{
+	EXCEPT( "impossible: MPIShadow doesn't support reconnect" );
+}

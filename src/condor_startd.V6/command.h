@@ -26,23 +26,23 @@
 class Service;
 
 /*
-  command_handler reads a capability off the socket, tries to find
-  the resource that the capability belongs to, does a switch on the
+  command_handler reads a ClaimId off the socket, tries to find
+  the resource that the ClaimId belongs to, does a switch on the
   command, and calls the proper action with the pointer to the
-  resource the capability matched.  None of the commands send
-  anything other than the command and the capability.  
+  resource the ClaimId matched.  None of the commands send
+  anything other than the command and the ClaimId.  
 */
 int command_handler( Service*, int, Stream* );
 
 /*
   ACTIVATE_CLAIM is a special case of the above case, in that more
   stuff is sent over the wire than just the command and the
-  capability, and if anything goes wrong, the shadow wants a reply. 
+  ClaimId, and if anything goes wrong, the shadow wants a reply. 
 */
 int command_activate_claim( Service*, int, Stream* );
 
 /*
-  These commands are a special case, since the capability they get might
+  These commands are a special case, since the ClaimId they get might
   be for the preempting match.  Therefore, they must be handled 
   differently.
 */
@@ -64,7 +64,7 @@ int command_query_ads( Service*, int, Stream* );
 /*
    This command handler deals with commands that send a name as part
    of the protocol to specify which resource they should effect,
-   instead of a capability.
+   instead of a ClaimId.
 */
 int command_name_handler( Service*, int, Stream* );
 

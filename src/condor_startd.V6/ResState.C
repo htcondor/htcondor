@@ -254,7 +254,7 @@ ResState::eval( void )
 	case matched_state:
 			// Nothing to do here.  If we're matched, we only want to
 			// leave if the match timer goes off, or if someone with
-			// the right capability tries to claim us.  We can't check
+			// the right ClaimId tries to claim us.  We can't check
 			// the START expression, since we don't have a job ad, and
 			// we can't check IS_OWNER, since that isn't what you want
 			// (IS_OWNER might be true, while the START expression
@@ -327,7 +327,7 @@ ResState::leave_action( State s, Activity a,
 			}
 		}
 		if( statechange ) {
-			rip->r_cur->cancel_claim_timer();	
+			rip->r_cur->cancelLeaseTimer();	
 		}
 		break;
 	default:

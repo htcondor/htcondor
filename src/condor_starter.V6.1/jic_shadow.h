@@ -93,7 +93,7 @@ public:
 			the timer for updating the shadow, initiate the final file
 			transfer, if needed.
 		*/
-	void allJobsDone( void );
+	bool allJobsDone( void );
 
 		/** The last job this starter is controlling has been
    			completely cleaned up.  We don't care, since we just wait
@@ -106,6 +106,10 @@ public:
 			Also, set a flag so we know we were asked to vacate. 
 		 */
 	void gotShutdownFast( void );
+
+		/** Someone is attempting to reconnect to this job.
+		 */
+	int reconnect( ReliSock* s, ClassAd* ad );
 
 
 		// // // // // // // // // // // //
@@ -198,14 +202,17 @@ private:
 	bool getJobAdFromShadow( void );
 
 		/** Initialize information about the shadow's version and
-			sinful string from the job ad.  Also, try to initialize
-			our ShadowVersion object.  If there's no shadow version,
-			we leave our ShadowVersion NULL.  If we know the version,
-			we instantiate a CondorVersionInfo object so we can
-			perform checks on the version in the various places in the
-			starter where we need to know this for compatibility.
+			sinful string from the given ClassAd.  At startup, we just
+			pass the job ad, since that should have everything in it.
+			But on reconnect, we call this with the request ad.  Also,
+			try to initialize our ShadowVersion object.  If there's no
+			shadow version, we leave our ShadowVersion NULL.  If we
+			know the version, we instantiate a CondorVersionInfo
+			object so we can perform checks on the version in the
+			various places in the starter where we need to know this
+			for compatibility.
 		*/
-	void initShadowInfo( void );
+	void initShadowInfo( ClassAd* ad );
 
 		/** Register some important information about ourself that the
 			shadow might need.
@@ -213,6 +220,13 @@ private:
 		*/
 	virtual	bool registerStarterInfo( void );
 	
+		/** All the attributes the shadow cares about that we send via
+			a ClassAd is handled in this method, so that we can share
+			the code between registerStarterInfo() and when we're
+			replying to accept an attempted reconnect.
+		*/ 
+	void publishStarterInfo( ClassAd* ad );
+
 		/** Initialize the priv_state code with the appropriate user
 			for this job.  This function deals with all the logic for
 			checking UID_DOMAIN compatibility, SOFT_UID_DOMAIN
@@ -359,6 +373,13 @@ private:
 	char* fs_domain;
 	bool trust_uid_domain;
 
+		/** A flag to keep track of the case where we were trying to
+			cleanup our job but we discovered that we were
+			disconnected from the shadow.  This way, if there's a
+			successful reconnect, we know we can try to clean up the
+			job again...
+		*/
+	bool job_cleanup_disconnected;
 };
 
 

@@ -502,12 +502,37 @@ Resource::findClaimById( const char* id )
 	}
 
 		// otherwise, try our opportunistic claims
-	if( r_cur && r_cur->cap()->matches(id) ) {
+	if( r_cur && r_cur->idMatches(id) ) {
 		return r_cur;
 	}
-	if( r_pre && r_pre->cap()->matches(id) ) {
+	if( r_pre && r_pre->idMatches(id) ) {
 		return r_pre;
 	}
+		// if we're still here, we couldn't find it anywhere
+	return NULL;
+}
+
+
+Claim*
+Resource::findClaimByGlobalJobId( const char* id )
+{
+		// first, try our active claim, since that's the only one that
+		// should have it...  
+	if( r_cur && r_cur->globalJobIdMatches(id) ) {
+		return r_cur;
+	}
+
+	if( r_pre && r_pre->globalJobIdMatches(id) ) {
+			// this is bogus, there's no way this should happen, since
+			// the globalJobId is never set until a starter is
+			// activated, and that requires the claim being r_cur, not
+			// r_pre.  so, if for some totally bizzare reason this
+			// becomes true, it's a developer error.
+		EXCEPT( "Preepmting claims should *never* have a GlobalJobId!" );
+	}
+
+		// TODO: ask our CODMgr?
+
 		// if we're still here, we couldn't find it anywhere
 	return NULL;
 }
@@ -1087,14 +1112,18 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 		// Things you only need in private ads
 	if( IS_PRIVATE(mask) && IS_UPDATE(mask) ) {
-			// Add currently useful capability.  If r_pre exists, we  
-			// need to advertise it's capability.  Otherwise, we
-			// should  get the capability from r_cur.
+			// Add currently useful ClaimId.  If r_pre exists, we  
+			// need to advertise it's ClaimId.  Otherwise, we
+			// should get the ClaimId from r_cur.
+			// CRUFT: This shouldn't still be called ATTR_CAPABILITY
+			// in the ClassAd, but for backwards compatibility it is.
+			// When we finally remove all the evil startd private ad
+			// junk this can go away, too.
 		if( r_pre ) {
-			sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_pre->capab() );
+			sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_pre->id() );
 			cap->Insert( line );
 		} else if( r_cur ) {
-			sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_cur->capab() );
+			sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_cur->id() );
 			cap->Insert( line );
 		}		
 	}

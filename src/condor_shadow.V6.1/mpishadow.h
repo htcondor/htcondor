@@ -71,7 +71,7 @@ class MPIShadow : public BaseShadow
 		/**	Does the following:
 			<ul>
 			 <li>Checks some parameters
-			 <li>Talks to the schedd to get all the hosts and capabilities
+			 <li>Talks to the schedd to get all the hosts and ClaimIds
 			       we'll need for this mpi job
 			 <li>Calls BaseShadow::init()
 			 <li>Requests all the remote resources
@@ -81,8 +81,20 @@ class MPIShadow : public BaseShadow
 			The parameters passed are all gotten from the 
 			command line and should be easy to figure out.
 		 */
-	void init( ClassAd *jobAd, char schedd_addr[], char host[], 
-			   char capability[], char cluster[], char proc[]);
+	void init( ClassAd* job_ad, const char* schedd_addr );
+
+		/** Shadow should spawn a new starter for this job.
+		 */
+	void spawn( void );
+
+		/** Shadow should attempt to reconnect to a disconnected
+			starter that might still be running for this job.  
+			TODO: this does not yet work for MPI universe!
+		 */
+	void reconnect( void );
+
+	bool supportsReconnect( void );
+
 
 		/** Shut down properly.  We have MPI-specific logic in this
 			version which decides if we're really ready to shutdown or
@@ -144,6 +156,16 @@ class MPIShadow : public BaseShadow
 	virtual void gracefulShutDown( void );
 
 	virtual void resourceBeganExecution( RemoteResource* rr );
+
+	virtual void resourceReconnected( RemoteResource* rr );
+
+	virtual void logDisconnectedEvent( const char* reason );
+
+ protected:
+
+	virtual void logReconnectedEvent( void );
+
+	virtual void logReconnectFailedEvent( const char* reason );
 
  private:
 

@@ -80,7 +80,6 @@ void printOutput( ClassAd* reply, DCStartd* startd );
 void fillRequestAd( ClassAd* );
 void fillActivateAd( ClassAd* );
 bool dumpAdIntoRequest( ClassAd* );
-char* getAddrFromId( const char* id );
 
 /*********************************************************************
    main()
@@ -337,25 +336,6 @@ dumpAdIntoRequest( ClassAd* req )
 	return read_something;
 }
 
-
-char*
-getAddrFromId( const char* id )
-{
-	char* tmp;
-	char* addr;
-	char* copy = strdup( id );
-	tmp = strchr( copy, '#' );
-	if( tmp ) {
-		*tmp = '\0';
-		if( is_valid_sinful(copy) ) { 
-			addr = strdup( copy );
-			free( copy );
-			return addr;
-		}
-	}
-	free( copy );
-	return NULL;
-}
 
 
 /*********************************************************************
@@ -789,7 +769,7 @@ parseArgv( int argc, char* argv[] )
 	}
 
 	if( needs_id ) {
-		target = getAddrFromId( claim_id );
+		target = getAddrFromClaimId( claim_id );
 		if( ! target ) {
 			fprintf( stderr, 
 					 "ERROR: Invalid ClaimId specified with -id (%s)\n",

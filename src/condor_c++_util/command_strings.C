@@ -92,6 +92,7 @@ struct Translation DCTranslation[] = {
 	{ "MASTER_OFF", MASTER_OFF },
 	{ "CONFIG_VAL", CONFIG_VAL },
 	{ "RESET_USAGE", RESET_USAGE },
+	{ "DELETE_USER", DELETE_USER },
 	{ "SET_PRIORITYFACTOR", SET_PRIORITYFACTOR },
 	{ "RESET_ALL_USAGE", RESET_ALL_USAGE },
 	{ "DAEMONS_OFF_FAST", DAEMONS_OFF_FAST },
@@ -119,6 +120,8 @@ struct Translation DCTranslation[] = {
 	{ "CA_DEACTIVATE_CLAIM", CA_DEACTIVATE_CLAIM },
 	{ "CA_SUSPEND_CLAIM", CA_SUSPEND_CLAIM },
 	{ "CA_RESUME_CLAIM", CA_RESUME_CLAIM },
+	{ "CA_LOCATE_STARTER", CA_LOCATE_STARTER },
+	{ "CA_RECONNECT_JOB", CA_RECONNECT_JOB },
 	{ "DC_SIGSUSPEND", DC_SIGSUSPEND },
 	{ "DC_SIGCONTINUE", DC_SIGCONTINUE },
 	{ "DC_SIGSOFTKILL", DC_SIGSOFTKILL },
@@ -196,6 +199,10 @@ struct Translation CAResultTranslation[] = {
 	{ "NotAuthorized", CA_NOT_AUTHORIZED },
 	{ "InvalidRequest", CA_INVALID_REQUEST },
 	{ "InvalidState", CA_INVALID_STATE },
+	{ "InvalidReply", CA_INVALID_REPLY },
+	{ "LocateFailed", CA_LOCATE_FAILED },
+	{ "ConnectFailed", CA_CONNECT_FAILED },
+	{ "CommunicationError", CA_COMMUNICATION_ERROR },
 	{ NULL, 0 }
 };
 

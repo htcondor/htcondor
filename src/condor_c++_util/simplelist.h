@@ -64,9 +64,6 @@ class SimpleList
 	bool	ReplaceCurrent(const ObjType &);
 	bool IsMember( const ObjType & ) const;
 
-    // Debugging
-    void Display (ostream & out) const;
-
     private:
 	bool resize (int);
 	int maximum_size;
@@ -200,19 +197,6 @@ ReplaceCurrent (const ObjType &item)
     return false;
 }
 
-template <class ObjType>
-void SimpleList<ObjType>::
-Display (ostream & out) const
-{
-  out << '(';
-  if (items != NULL) {
-    for (int i = 0; i < size; i++) {
-      if (i > 0) cout << ',';
-      cout << items[i];
-    }
-  }
-  cout << ')';
-}
 
 template <class ObjType>
 bool SimpleList<ObjType>::
