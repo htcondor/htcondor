@@ -31,6 +31,11 @@
 #include "globus_gss_assist.h"
 #endif
 
+#ifdef WIN32
+#define	SECURITY_WIN32 1
+#include "sspi.NT.h"
+#endif
+
 #include "reli_sock.h"
 
 #define MAX_USERNAMELEN 128
@@ -88,6 +93,10 @@ private:
 	void setAuthType( authentication_state state );
 	int authenticate_claimtobe();
 #if defined(WIN32)
+	static PSecurityFunctionTable pf;
+	int sspi_client_auth(CredHandle& cred,CtxtHandle& cliCtx, 
+		const char *tokenSource);
+	int sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx);
 	int authenticate_nt();
 #else
 	int authenticate_filesystem();
