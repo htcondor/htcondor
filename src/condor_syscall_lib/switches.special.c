@@ -1313,55 +1313,39 @@ getlogin()
 		return NULL;  
 }
 
+/* The Linux C library uses mmap for several purposes.  The I/O system uses mmap() to get a nicely aligned buffer.  The memory system also uses mmap() for large allocation requests.  In general, we don't support mmap(), but we can support calls with particular flags (MAP_ANON|MAP_PRIVATE) because they translate to "give me a clean new segment".  In these cases, we turn around and malloc() some new memory and trust that the caller doesn't really care that it came from the heap. */
 
 #if defined( LINUX  )
-/* 
-	I have turned off mmap for good under linux. This means that
-	libc's buffered io(which called mmap directly to basically act
-	like malloc) stuff will suck to no end, but I branched before
-	thain checked in his bufferring code. When I remerge the branches,
-	I will turn on local bufferring in his code, and then it won't
-	matter if mmap fails from libc's point of view. I left this
-	function in so that if mmap gets called it will report as not
-	supported by the shadow if called from a user job. Otherwise it
-	will be brought in elsewhere and cause a conflict while linking.
-
-	-pete 08/18/99
-
-*/
-
 #include "condor_mmap.h"
 MMAP_T
 mmap( MMAP_T a, size_t l, int p, int f, int fd, off_t o )
 {
-	MMAP_T	rval;
-	int		user_fd;
-	int		use_local_access = FALSE;
-	sigset_t omask;
+        MMAP_T rval;
+        static int recursive=0;
 
-	omask = condor_block_signals();
+        if( (f==(MAP_ANONYMOUS|MAP_PRIVATE)) ) {
+                if(recursive) {
+                        rval = MAP_FAILED;
+                } else {
+                        recursive = 1;
+                        rval = (MMAP_T) malloc( l );
+                        recursive = 0;
+                }
+        } else {
+                if( LocalSysCalls() ) {
+                        rval = MAP_FAILED;
+                } else {
+                        rval = REMOTE_syscall( CONDOR_mmap, a, l, p, f, fd, o );
+                }
+        }
 
-	if( f & MAP_ANONYMOUS ) {
-			/* If the MAP_ANONYMOUS flag is set, ignore the fd we were
-			   passed and do the mmap locally */
-		use_local_access = TRUE;
-	} else {
-		if( (user_fd=MapFd(fd)) < 0 ) {
-			return MAP_FAILED;
-		}
-		if( LocalAccess(fd) ) {
-			use_local_access = TRUE;
-		}
-	}
-	if( use_local_access || LocalSysCalls() ) {
-		condor_restore_sigmask(omask);
-		return MAP_FAILED;
-	} else {
-		rval = (MMAP_T)REMOTE_syscall( CONDOR_mmap, a, l, p, f, user_fd, o );
-	}
-	
-	condor_restore_sigmask(omask);
-	return rval;
+        return rval;
+}
+
+int munmap( MMAP_T addr, size_t length ) 
+{
+        if(addr) free(addr);
+        return 0;
 }
 #endif /* defined( LINUX ) */
 
