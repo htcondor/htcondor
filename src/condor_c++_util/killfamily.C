@@ -401,8 +401,15 @@ ProcFamily::takesnapshot()
 	new_pids = new ExtArray<a_pid>(10);
 	newpidindex = 0;
 
-	// On some systems, we can only see process we own, so set_priv
-	priv = set_priv(mypriv);
+	// On some systems, we can only see process we own, so we must be either
+	// the user or root. However, being the user in this function causes many,
+	// many priv state changes from user to root and back again since 
+	// getProcInfo changes to root(and back again) to look at the pid. This
+	// smashes the NIS master with too many calls and the load on it
+	// skyrockets so, we are root here. The real way to solve this problem is
+	// to cache the groups in the code so changes from/to the user uid don't
+	// talk to the NIS master. But that is for another day. -psilord 8/22/02
+	priv = set_root_priv();
 
 	// grab all pids in the family we can see now
 	if ( searchLogin ) {
@@ -410,6 +417,7 @@ ProcFamily::takesnapshot()
 	} else {
 		ret_val = ProcAPI::getPidFamily(daddy_pid,pidfamily);
 	}
+
 	if ( ret_val < 0 ) {
 		// daddy_pid must be gone!
 		dprintf( D_PROCFAMILY, 
