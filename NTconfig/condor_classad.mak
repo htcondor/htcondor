@@ -172,9 +172,9 @@ CLEAN :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
 CPP=cl.exe
-CPP_PROJ=/nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes"\
- /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_WINDOWS"\
- /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h"\
+CPP_PROJ=/nologo /MTd /W3 /GX /Z7 /Od /Ob2 /I "..\src\h" /I\
+ "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D\
+ "_WINDOWS" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h"\
  /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 CPP_OBJS=..\src\condor_classad/
 CPP_SBRS=.
@@ -264,6 +264,9 @@ DEP_CPP_AST_C=\
 
 
 SOURCE=..\src\condor_classad\astbase.C
+
+!IF  "$(CFG)" == "condor_classad - Win32 Release"
+
 DEP_CPP_ASTBA=\
 	"..\src\condor_includes\condor_astbase.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -275,10 +278,26 @@ DEP_CPP_ASTBA=\
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+!ELSEIF  "$(CFG)" == "condor_classad - Win32 Debug"
+
+DEP_CPP_ASTBA=\
+	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_exprtype.h"\
+	
+
+"$(INTDIR)\astbase.obj" : $(SOURCE) $(DEP_CPP_ASTBA) "$(INTDIR)"\
+ "..\src\condor_c++_util\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+!ENDIF 
+
 SOURCE=..\src\condor_classad\attrlist.C
 DEP_CPP_ATTRL=\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_attributes.h"\
 	"..\src\condor_includes\condor_attrlist.h"\
 	"..\src\condor_includes\condor_commands.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -297,6 +316,9 @@ DEP_CPP_ATTRL=\
 
 
 SOURCE=..\src\condor_classad\buildtable.C
+
+!IF  "$(CFG)" == "condor_classad - Win32 Release"
+
 DEP_CPP_BUILD=\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
@@ -308,6 +330,22 @@ DEP_CPP_BUILD=\
  "..\src\condor_c++_util\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
+
+!ELSEIF  "$(CFG)" == "condor_classad - Win32 Debug"
+
+DEP_CPP_BUILD=\
+	"..\src\condor_includes\condor_ast.h"\
+	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_buildtable.h"\
+	"..\src\condor_includes\condor_exprtype.h"\
+	
+
+"$(INTDIR)\buildtable.obj" : $(SOURCE) $(DEP_CPP_BUILD) "$(INTDIR)"\
+ "..\src\condor_c++_util\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+!ENDIF 
 
 SOURCE=..\src\condor_classad\classad.C
 DEP_CPP_CLASS=\
@@ -334,6 +372,9 @@ DEP_CPP_CLASS=\
 
 
 SOURCE=..\src\condor_classad\classad_util.C
+
+!IF  "$(CFG)" == "condor_classad - Win32 Release"
+
 DEP_CPP_CLASSA=\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
@@ -354,6 +395,31 @@ DEP_CPP_CLASSA=\
  "..\src\condor_c++_util\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
+
+!ELSEIF  "$(CFG)" == "condor_classad - Win32 Debug"
+
+DEP_CPP_CLASSA=\
+	"..\src\condor_includes\condor_ast.h"\
+	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_attrlist.h"\
+	"..\src\condor_includes\condor_classad.h"\
+	"..\src\condor_includes\condor_classad_util.h"\
+	"..\src\condor_includes\condor_commands.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_exprtype.h"\
+	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\h\proc.h"\
+	"..\src\h\sched.h"\
+	"..\src\h\startup.h"\
+	
+
+"$(INTDIR)\classad_util.obj" : $(SOURCE) $(DEP_CPP_CLASSA) "$(INTDIR)"\
+ "..\src\condor_c++_util\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+!ENDIF 
 
 SOURCE=..\src\condor_classad\classifiedjobs.C
 DEP_CPP_CLASSI=\
@@ -378,6 +444,9 @@ DEP_CPP_CLASSI=\
 
 
 SOURCE=..\src\condor_classad\environment.C
+
+!IF  "$(CFG)" == "condor_classad - Win32 Release"
+
 DEP_CPP_ENVIR=\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
@@ -389,7 +458,25 @@ DEP_CPP_ENVIR=\
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+!ELSEIF  "$(CFG)" == "condor_classad - Win32 Debug"
+
+DEP_CPP_ENVIR=\
+	"..\src\condor_includes\condor_ast.h"\
+	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_exprtype.h"\
+	
+
+"$(INTDIR)\environment.obj" : $(SOURCE) $(DEP_CPP_ENVIR) "$(INTDIR)"\
+ "..\src\condor_c++_util\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+!ENDIF 
+
 SOURCE=..\src\condor_classad\evaluateOperators.C
+
+!IF  "$(CFG)" == "condor_classad - Win32 Release"
+
 DEP_CPP_EVALU=\
 	"..\src\condor_classad\operators.h"\
 	"..\src\condor_classad\value.h"\
@@ -412,7 +499,36 @@ DEP_CPP_EVALU=\
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+!ELSEIF  "$(CFG)" == "condor_classad - Win32 Debug"
+
+DEP_CPP_EVALU=\
+	"..\src\condor_classad\operators.h"\
+	"..\src\condor_classad\value.h"\
+	"..\src\condor_includes\condor_ast.h"\
+	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_attrlist.h"\
+	"..\src\condor_includes\condor_classad.h"\
+	"..\src\condor_includes\condor_commands.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_exprtype.h"\
+	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\h\proc.h"\
+	"..\src\h\sched.h"\
+	"..\src\h\startup.h"\
+	
+
+"$(INTDIR)\evaluateOperators.obj" : $(SOURCE) $(DEP_CPP_EVALU) "$(INTDIR)"\
+ "..\src\condor_c++_util\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+!ENDIF 
+
 SOURCE=..\src\condor_classad\operators.C
+
+!IF  "$(CFG)" == "condor_classad - Win32 Release"
+
 DEP_CPP_OPERA=\
 	"..\src\condor_classad\operators.h"\
 	"..\src\condor_classad\value.h"\
@@ -425,12 +541,39 @@ DEP_CPP_OPERA=\
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+!ELSEIF  "$(CFG)" == "condor_classad - Win32 Debug"
+
+DEP_CPP_OPERA=\
+	"..\src\condor_classad\operators.h"\
+	"..\src\condor_classad\value.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	
+
+"$(INTDIR)\operators.obj" : $(SOURCE) $(DEP_CPP_OPERA) "$(INTDIR)"\
+ "..\src\condor_c++_util\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+!ENDIF 
+
 SOURCE=..\src\condor_classad\parser.C
+
+!IF  "$(CFG)" == "condor_classad - Win32 Release"
+
 DEP_CPP_PARSE=\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_attrlist.h"\
+	"..\src\condor_includes\condor_commands.h"\
+	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
+	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_scanner.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\h\proc.h"\
+	"..\src\h\sched.h"\
+	"..\src\h\startup.h"\
 	
 
 "$(INTDIR)\parser.obj" : $(SOURCE) $(DEP_CPP_PARSE) "$(INTDIR)"\
@@ -438,7 +581,34 @@ DEP_CPP_PARSE=\
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+!ELSEIF  "$(CFG)" == "condor_classad - Win32 Debug"
+
+DEP_CPP_PARSE=\
+	"..\src\condor_includes\condor_ast.h"\
+	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_attrlist.h"\
+	"..\src\condor_includes\condor_commands.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_exprtype.h"\
+	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_scanner.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\h\proc.h"\
+	"..\src\h\sched.h"\
+	"..\src\h\startup.h"\
+	
+
+"$(INTDIR)\parser.obj" : $(SOURCE) $(DEP_CPP_PARSE) "$(INTDIR)"\
+ "..\src\condor_c++_util\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+!ENDIF 
+
 SOURCE=..\src\condor_classad\registration.C
+
+!IF  "$(CFG)" == "condor_classad - Win32 Release"
+
 DEP_CPP_REGIS=\
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_registration.h"\
@@ -449,16 +619,65 @@ DEP_CPP_REGIS=\
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+!ELSEIF  "$(CFG)" == "condor_classad - Win32 Debug"
+
+DEP_CPP_REGIS=\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_registration.h"\
+	
+
+"$(INTDIR)\registration.obj" : $(SOURCE) $(DEP_CPP_REGIS) "$(INTDIR)"\
+ "..\src\condor_c++_util\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+!ENDIF 
+
 SOURCE=..\src\condor_classad\scanner.C
+
+!IF  "$(CFG)" == "condor_classad - Win32 Release"
+
 DEP_CPP_SCANN=\
+	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_attrlist.h"\
+	"..\src\condor_includes\condor_commands.h"\
+	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
+	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_scanner.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\h\proc.h"\
+	"..\src\h\sched.h"\
+	"..\src\h\startup.h"\
 	
 
 "$(INTDIR)\scanner.obj" : $(SOURCE) $(DEP_CPP_SCANN) "$(INTDIR)"\
  "..\src\condor_c++_util\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
+
+!ELSEIF  "$(CFG)" == "condor_classad - Win32 Debug"
+
+DEP_CPP_SCANN=\
+	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_attrlist.h"\
+	"..\src\condor_includes\condor_commands.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_exprtype.h"\
+	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_scanner.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\h\proc.h"\
+	"..\src\h\sched.h"\
+	"..\src\h\startup.h"\
+	
+
+"$(INTDIR)\scanner.obj" : $(SOURCE) $(DEP_CPP_SCANN) "$(INTDIR)"\
+ "..\src\condor_c++_util\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+!ENDIF 
 
 SOURCE=..\src\condor_classad\value.C
 DEP_CPP_VALUE=\

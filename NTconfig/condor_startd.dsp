@@ -51,7 +51,8 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /machine:I386
-# ADD LINK32 condor_c++_util\condor_common.obj kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib pdh.lib ws2_32.lib mswsock.lib /nologo /subsystem:console /machine:I386
+# ADD LINK32 condor_c++_util\condor_common.obj kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib pdh.lib ws2_32.lib mswsock.lib /nologo /subsystem:console /machine:I386 /SWAPRUN:NET
+# SUBTRACT LINK32 /pdb:none
 
 !ELSEIF  "$(CFG)" == "condor_startd - Win32 Debug"
 
@@ -76,8 +77,8 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 ../src/condor_c++_util/condor_common.obj ../src/condor_util_lib/condor_common.obj kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib pdh.lib ws2_32.lib mswsock.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
-# SUBTRACT LINK32 /incremental:no /map
+# ADD LINK32 ../src/condor_c++_util/condor_common.obj ../src/condor_util_lib/condor_common.obj kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib pdh.lib ws2_32.lib mswsock.lib netapi32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept /SWAPRUN:NET
+# SUBTRACT LINK32 /pdb:none
 
 !ENDIF 
 
@@ -85,14 +86,6 @@ LINK32=link.exe
 
 # Name "condor_startd - Win32 Release"
 # Name "condor_startd - Win32 Debug"
-# Begin Source File
-
-SOURCE=..\src\condor_startd.V6\calc.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_startd.V6\calc.h
-# End Source File
 # Begin Source File
 
 SOURCE=..\src\condor_startd.V6\command.C

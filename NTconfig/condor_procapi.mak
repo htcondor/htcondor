@@ -303,6 +303,9 @@ LIB32_OBJS= \
 !ENDIF 
 
 SOURCE=..\src\condor_procapi\procapi.C
+
+!IF  "$(CFG)" == "condor_procapi - Win32 Release"
+
 DEP_CPP_PROCA=\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -318,7 +321,29 @@ DEP_CPP_PROCA=\
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+!ELSEIF  "$(CFG)" == "condor_procapi - Win32 Debug"
+
+DEP_CPP_PROCA=\
+	"..\src\condor_c++_util\extArray.h"\
+	"..\src\condor_c++_util\HashTable.h"\
+	"..\src\condor_c++_util\ntsysinfo.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_uid.h"\
+	"..\src\condor_procapi\procapi.h"\
+	
+
+"$(INTDIR)\procapi.obj" : $(SOURCE) $(DEP_CPP_PROCA) "$(INTDIR)"\
+ "..\src\condor_c++_util\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+!ENDIF 
+
 SOURCE=..\src\condor_procapi\procinterface.C
+
+!IF  "$(CFG)" == "condor_procapi - Win32 Release"
+
 DEP_CPP_PROCI=\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -345,6 +370,37 @@ DEP_CPP_PROCI=\
  "..\src\condor_c++_util\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
+
+!ELSEIF  "$(CFG)" == "condor_procapi - Win32 Debug"
+
+DEP_CPP_PROCI=\
+	"..\src\condor_c++_util\extArray.h"\
+	"..\src\condor_c++_util\HashTable.h"\
+	"..\src\condor_c++_util\ntsysinfo.h"\
+	"..\src\condor_includes\condor_ast.h"\
+	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_attrlist.h"\
+	"..\src\condor_includes\condor_classad.h"\
+	"..\src\condor_includes\condor_commands.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_exprtype.h"\
+	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_uid.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\condor_procapi\procapi.h"\
+	"..\src\condor_procapi\procinterface.h"\
+	"..\src\h\proc.h"\
+	"..\src\h\sched.h"\
+	"..\src\h\startup.h"\
+	
+
+"$(INTDIR)\procinterface.obj" : $(SOURCE) $(DEP_CPP_PROCI) "$(INTDIR)"\
+ "..\src\condor_c++_util\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+!ENDIF 
 
 
 !ENDIF 

@@ -298,7 +298,29 @@ CPP_SWITCHES=/nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I\
 
 SOURCE=..\src\condor_startd.V6\load_avg.WIN32.c
 DEP_CPP_LOAD_=\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_file_lock.h"\
+	"..\src\condor_includes\condor_fix_assert.h"\
+	"..\src\condor_includes\condor_fix_string.h"\
+	"..\src\condor_includes\condor_header_features.h"\
+	"..\src\condor_includes\condor_hpux_64bit_types.h"\
+	"..\src\condor_includes\condor_macros.h"\
+	"..\src\condor_includes\condor_sys_dux.h"\
+	"..\src\condor_includes\condor_sys_hpux.h"\
+	"..\src\condor_includes\condor_sys_irix.h"\
+	"..\src\condor_includes\condor_sys_linux.h"\
+	"..\src\condor_includes\condor_sys_nt.h"\
+	"..\src\condor_includes\condor_sys_solaris.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\h\fake_flock.h"\
+	"..\src\h\file_lock.h"\
+	{$(INCLUDE)}"sys\stat.h"\
+	{$(INCLUDE)}"sys\types.h"\
+	
+NODEP_CPP_LOAD_=\
+	"..\src\condor_includes\gssapi.h"\
 	
 
 "$(INTDIR)\load_avg.WIN32.obj" : $(SOURCE) $(DEP_CPP_LOAD_) "$(INTDIR)"\
@@ -307,6 +329,10 @@ DEP_CPP_LOAD_=\
 
 
 SOURCE=..\src\condor_startd.V6\timers_b.c
+DEP_CPP_TIMER=\
+	{$(INCLUDE)}"sys\timeb.h"\
+	{$(INCLUDE)}"sys\types.h"\
+	
 
 !IF  "$(CFG)" == "condor_startd_lib - Win32 Release"
 
@@ -314,7 +340,7 @@ CPP_SWITCHES=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes"\
  /I "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS"\
  /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
 
-"$(INTDIR)\timers_b.obj" : $(SOURCE) "$(INTDIR)"
+"$(INTDIR)\timers_b.obj" : $(SOURCE) $(DEP_CPP_TIMER) "$(INTDIR)"
 	$(CPP) @<<
   $(CPP_SWITCHES) $(SOURCE)
 <<
@@ -326,7 +352,7 @@ CPP_SWITCHES=/nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I\
  "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D\
  "_WINDOWS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
 
-"$(INTDIR)\timers_b.obj" : $(SOURCE) "$(INTDIR)"
+"$(INTDIR)\timers_b.obj" : $(SOURCE) $(DEP_CPP_TIMER) "$(INTDIR)"
 	$(CPP) @<<
   $(CPP_SWITCHES) $(SOURCE)
 <<

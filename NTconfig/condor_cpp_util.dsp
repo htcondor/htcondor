@@ -169,6 +169,14 @@ SOURCE="..\src\condor_c++_util\config.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\daemon.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\daemon.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\daemon_types.C"
 # End Source File
 # Begin Source File
@@ -186,6 +194,14 @@ SOURCE="..\src\condor_c++_util\directory.h"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\disk.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\dynuser.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\dynuser.h"
 # End Source File
 # Begin Source File
 
@@ -273,10 +289,6 @@ SOURCE="..\src\condor_c++_util\misc_utils.C"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c++_util\my_arch.C"
-# End Source File
-# Begin Source File
-
 SOURCE="..\src\condor_c++_util\my_hostname.C"
 # End Source File
 # Begin Source File
@@ -303,6 +315,14 @@ SOURCE="..\src\condor_c++_util\ntsysinfo.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\ntsysinfo.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\perm.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\perm.h"
 # End Source File
 # Begin Source File
 
@@ -335,6 +355,10 @@ SOURCE="..\src\condor_c++_util\string_list.h"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\strnewp.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\uids.C"
 # End Source File
 # Begin Source File
 

@@ -30,9 +30,6 @@ Package=<4>
     Project_Dep_Name condor_negotiator
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name condor_status
-    End Project Dependency
-    Begin Project Dependency
     Project_Dep_Name condor_startd
     End Project Dependency
     Begin Project Dependency
@@ -67,6 +64,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_stats
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_qedit
     End Project Dependency
 }}}
 
@@ -131,6 +131,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_io
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -154,6 +157,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_util_lib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
     End Project Dependency
 }}}
 
@@ -202,6 +208,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_util_lib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
     End Project Dependency
 }}}
 
@@ -254,6 +263,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_io
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -284,6 +296,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_acct
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -311,6 +326,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_qmgmt
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -337,6 +355,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_qmgmt
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
     End Project Dependency
 }}}
 
@@ -401,6 +422,39 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_qmgmt
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "condor_qedit"=.\condor_qedit.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name condor_classad
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_cpp_util
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_io
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_qmgmt
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_util_lib
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -440,6 +494,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_qmgmt
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -466,6 +523,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_classad
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
     End Project Dependency
 }}}
 
@@ -497,6 +557,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_ckpt_server_api
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -527,6 +590,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_qmgmt
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -555,26 +621,14 @@ Package=<4>
     Project_Dep_Name condor_daemon_core
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name condor_startd_lib
-    End Project Dependency
-    Begin Project Dependency
     Project_Dep_Name condor_procapi
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_kbdd_dll
     End Project Dependency
-}}}
-
-###############################################################################
-
-Project: "condor_startd_lib"=.\condor_startd_lib.dsp - Package Owner=<4>
-
-Package=<5>
-{{{
-}}}
-
-Package=<4>
-{{{
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -605,6 +659,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_procapi
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -629,6 +686,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_classad
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -642,16 +702,19 @@ Package=<5>
 Package=<4>
 {{{
     Begin Project Dependency
-    Project_Dep_Name condor_util_lib
+    Project_Dep_Name condor_classad
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_cpp_util
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name condor_classad
+    Project_Dep_Name condor_io
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name condor_io
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_util_lib
     End Project Dependency
 }}}
 
@@ -680,6 +743,21 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_qmgmt
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "condor_sysapi"=.\condor_sysapi.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
 }}}
 
 ###############################################################################
@@ -704,6 +782,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_classad
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -727,6 +808,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_classad
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
     End Project Dependency
 }}}
 

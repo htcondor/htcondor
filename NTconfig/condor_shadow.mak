@@ -42,10 +42,10 @@ ALL : "$(OUTDIR)\condor_shadow.exe"
 
 !ELSE 
 
-ALL : "condor_qmgmt - Win32 Release" "condor_util_lib - Win32 Release"\
- "condor_io - Win32 Release" "condor_daemon_core - Win32 Release"\
- "condor_cpp_util - Win32 Release" "condor_classad - Win32 Release"\
- "$(OUTDIR)\condor_shadow.exe"
+ALL : "condor_sysapi - Win32 Release" "condor_qmgmt - Win32 Release"\
+ "condor_util_lib - Win32 Release" "condor_io - Win32 Release"\
+ "condor_daemon_core - Win32 Release" "condor_cpp_util - Win32 Release"\
+ "condor_classad - Win32 Release" "$(OUTDIR)\condor_shadow.exe"
 
 !ENDIF 
 
@@ -53,12 +53,14 @@ ALL : "condor_qmgmt - Win32 Release" "condor_util_lib - Win32 Release"\
 CLEAN :"condor_classad - Win32 ReleaseCLEAN"\
  "condor_cpp_util - Win32 ReleaseCLEAN"\
  "condor_daemon_core - Win32 ReleaseCLEAN" "condor_io - Win32 ReleaseCLEAN"\
- "condor_util_lib - Win32 ReleaseCLEAN" "condor_qmgmt - Win32 ReleaseCLEAN" 
+ "condor_util_lib - Win32 ReleaseCLEAN" "condor_qmgmt - Win32 ReleaseCLEAN"\
+ "condor_sysapi - Win32 ReleaseCLEAN" 
 !ELSE 
 CLEAN :
 !ENDIF 
 	-@erase "$(INTDIR)\baseshadow.obj"
 	-@erase "$(INTDIR)\main.obj"
+	-@erase "$(INTDIR)\mpiresource.obj"
 	-@erase "$(INTDIR)\mpishadow.obj"
 	-@erase "$(INTDIR)\NTreceivers.obj"
 	-@erase "$(INTDIR)\pseudo_ops.obj"
@@ -122,6 +124,7 @@ LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
 LINK32_OBJS= \
 	"$(INTDIR)\baseshadow.obj" \
 	"$(INTDIR)\main.obj" \
+	"$(INTDIR)\mpiresource.obj" \
 	"$(INTDIR)\mpishadow.obj" \
 	"$(INTDIR)\NTreceivers.obj" \
 	"$(INTDIR)\pseudo_ops.obj" \
@@ -132,6 +135,7 @@ LINK32_OBJS= \
 	"..\src\condor_daemon_core.V6\condor_daemon_core.lib" \
 	"..\src\condor_io\condor_io.lib" \
 	"..\src\condor_schedd.V6\condor_qmgmt.lib" \
+	"..\src\condor_startd.V6\condor_sysapi.lib" \
 	"..\src\condor_util_lib\condor_util.lib"
 
 "$(OUTDIR)\condor_shadow.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
@@ -153,22 +157,24 @@ ALL : "$(OUTDIR)\condor_shadow.exe"
 
 !ELSE 
 
-ALL : "condor_qmgmt - Win32 Debug" "condor_util_lib - Win32 Debug"\
- "condor_io - Win32 Debug" "condor_daemon_core - Win32 Debug"\
- "condor_cpp_util - Win32 Debug" "condor_classad - Win32 Debug"\
- "$(OUTDIR)\condor_shadow.exe"
+ALL : "condor_sysapi - Win32 Debug" "condor_qmgmt - Win32 Debug"\
+ "condor_util_lib - Win32 Debug" "condor_io - Win32 Debug"\
+ "condor_daemon_core - Win32 Debug" "condor_cpp_util - Win32 Debug"\
+ "condor_classad - Win32 Debug" "$(OUTDIR)\condor_shadow.exe"
 
 !ENDIF 
 
 !IF "$(RECURSE)" == "1" 
 CLEAN :"condor_classad - Win32 DebugCLEAN" "condor_cpp_util - Win32 DebugCLEAN"\
  "condor_daemon_core - Win32 DebugCLEAN" "condor_io - Win32 DebugCLEAN"\
- "condor_util_lib - Win32 DebugCLEAN" "condor_qmgmt - Win32 DebugCLEAN" 
+ "condor_util_lib - Win32 DebugCLEAN" "condor_qmgmt - Win32 DebugCLEAN"\
+ "condor_sysapi - Win32 DebugCLEAN" 
 !ELSE 
 CLEAN :
 !ENDIF 
 	-@erase "$(INTDIR)\baseshadow.obj"
 	-@erase "$(INTDIR)\main.obj"
+	-@erase "$(INTDIR)\mpiresource.obj"
 	-@erase "$(INTDIR)\mpishadow.obj"
 	-@erase "$(INTDIR)\NTreceivers.obj"
 	-@erase "$(INTDIR)\pseudo_ops.obj"
@@ -228,7 +234,7 @@ BSC32_SBRS= \
 LINK32=link.exe
 LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
  advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib\
- odbccp32.lib pdh.lib ws2_32.lib mswsock.lib\
+ odbccp32.lib pdh.lib ws2_32.lib mswsock.lib netapi32.lib\
  ../src/condor_c++_util/condor_common.obj\
  ../src/condor_util_lib/condor_common.obj /nologo /subsystem:console\
  /incremental:yes /pdb:"$(OUTDIR)\condor_shadow.pdb" /debug /machine:I386\
@@ -236,6 +242,7 @@ LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
 LINK32_OBJS= \
 	"$(INTDIR)\baseshadow.obj" \
 	"$(INTDIR)\main.obj" \
+	"$(INTDIR)\mpiresource.obj" \
 	"$(INTDIR)\mpishadow.obj" \
 	"$(INTDIR)\NTreceivers.obj" \
 	"$(INTDIR)\pseudo_ops.obj" \
@@ -246,6 +253,7 @@ LINK32_OBJS= \
 	"..\src\condor_daemon_core.V6\condor_daemon_core.lib" \
 	"..\src\condor_io\condor_io.lib" \
 	"..\src\condor_schedd.V6\condor_qmgmt.lib" \
+	"..\src\condor_startd.V6\condor_sysapi.lib" \
 	"..\src\condor_util_lib\condor_util.lib"
 
 "$(OUTDIR)\condor_shadow.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
@@ -437,9 +445,38 @@ LINK32_OBJS= \
 
 !ENDIF 
 
+!IF  "$(CFG)" == "condor_shadow - Win32 Release"
+
+"condor_sysapi - Win32 Release" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_sysapi.mak\
+ CFG="condor_sysapi - Win32 Release" 
+   cd "."
+
+"condor_sysapi - Win32 ReleaseCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) CLEAN /F .\condor_sysapi.mak\
+ CFG="condor_sysapi - Win32 Release" RECURSE=1 
+   cd "."
+
+!ELSEIF  "$(CFG)" == "condor_shadow - Win32 Debug"
+
+"condor_sysapi - Win32 Debug" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_sysapi.mak\
+ CFG="condor_sysapi - Win32 Debug" 
+   cd "."
+
+"condor_sysapi - Win32 DebugCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) CLEAN /F .\condor_sysapi.mak\
+ CFG="condor_sysapi - Win32 Debug" RECURSE=1 
+   cd "."
+
+!ENDIF 
+
 SOURCE=..\src\condor_shadow.V6.1\baseshadow.C
 DEP_CPP_BASES=\
-	"..\src\condor_c++_util\afs.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -479,6 +516,7 @@ DEP_CPP_BASES=\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
+	"..\src\h\shadow.h"\
 	"..\src\h\startup.h"\
 	
 
@@ -491,9 +529,12 @@ SOURCE=..\src\condor_shadow.V6.1\main.C
 DEP_CPP_MAIN_=\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\extArray.h"\
+	"..\src\condor_c++_util\file_transfer.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\list.h"\
+	"..\src\condor_c++_util\MyString.h"\
 	"..\src\condor_c++_util\ntsysinfo.h"\
+	"..\src\condor_c++_util\perm.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\user_log.c++.h"\
 	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
@@ -521,6 +562,7 @@ DEP_CPP_MAIN_=\
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
 	"..\src\condor_shadow.V6.1\baseshadow.h"\
+	"..\src\condor_shadow.V6.1\mpiresource.h"\
 	"..\src\condor_shadow.V6.1\mpishadow.h"\
 	"..\src\condor_shadow.V6.1\remoteresource.h"\
 	"..\src\condor_shadow.V6.1\shadow.h"\
@@ -528,6 +570,7 @@ DEP_CPP_MAIN_=\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
+	"..\src\h\shadow.h"\
 	"..\src\h\startup.h"\
 	
 
@@ -536,13 +579,16 @@ DEP_CPP_MAIN_=\
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_shadow.V6.1\mpishadow.C
-DEP_CPP_MPISH=\
+SOURCE=..\src\condor_shadow.V6.1\mpiresource.C
+DEP_CPP_MPIRE=\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\extArray.h"\
+	"..\src\condor_c++_util\file_transfer.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\list.h"\
+	"..\src\condor_c++_util\MyString.h"\
 	"..\src\condor_c++_util\ntsysinfo.h"\
+	"..\src\condor_c++_util\perm.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\user_log.c++.h"\
 	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
@@ -568,13 +614,70 @@ DEP_CPP_MPISH=\
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
 	"..\src\condor_shadow.V6.1\baseshadow.h"\
-	"..\src\condor_shadow.V6.1\mpishadow.h"\
+	"..\src\condor_shadow.V6.1\mpiresource.h"\
 	"..\src\condor_shadow.V6.1\remoteresource.h"\
-	"..\src\condor_shadow.V6.1\shadow.h"\
 	"..\src\h\exit.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
+	"..\src\h\shadow.h"\
+	"..\src\h\startup.h"\
+	
+
+"$(INTDIR)\mpiresource.obj" : $(SOURCE) $(DEP_CPP_MPIRE) "$(INTDIR)"\
+ "..\src\condor_c++_util\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_shadow.V6.1\mpishadow.C
+DEP_CPP_MPISH=\
+	"..\src\condor_c++_util\condor_event.h"\
+	"..\src\condor_c++_util\extArray.h"\
+	"..\src\condor_c++_util\file_transfer.h"\
+	"..\src\condor_c++_util\HashTable.h"\
+	"..\src\condor_c++_util\list.h"\
+	"..\src\condor_c++_util\MyString.h"\
+	"..\src\condor_c++_util\ntsysinfo.h"\
+	"..\src\condor_c++_util\perm.h"\
+	"..\src\condor_c++_util\string_list.h"\
+	"..\src\condor_c++_util\user_log.c++.h"\
+	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
+	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\condor_adtypes.h"\
+	"..\src\condor_includes\condor_ast.h"\
+	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_attributes.h"\
+	"..\src\condor_includes\condor_attrlist.h"\
+	"..\src\condor_includes\condor_classad.h"\
+	"..\src\condor_includes\condor_commands.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_email.h"\
+	"..\src\condor_includes\condor_expressions.h"\
+	"..\src\condor_includes\condor_exprtype.h"\
+	"..\src\condor_includes\condor_io.h"\
+	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_qmgr.h"\
+	"..\src\condor_includes\condor_uid.h"\
+	"..\src\condor_includes\reli_sock.h"\
+	"..\src\condor_includes\safe_sock.h"\
+	"..\src\condor_includes\sock.h"\
+	"..\src\condor_includes\sockCache.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\condor_shadow.V6.1\baseshadow.h"\
+	"..\src\condor_shadow.V6.1\mpiresource.h"\
+	"..\src\condor_shadow.V6.1\mpishadow.h"\
+	"..\src\condor_shadow.V6.1\remoteresource.h"\
+	"..\src\h\exit.h"\
+	"..\src\h\expr.h"\
+	"..\src\h\file_lock.h"\
+	"..\src\h\internet.h"\
+	"..\src\h\proc.h"\
+	"..\src\h\sched.h"\
+	"..\src\h\shadow.h"\
 	"..\src\h\startup.h"\
 	
 
@@ -619,12 +722,14 @@ DEP_CPP_NTREC=\
 
 SOURCE=..\src\condor_shadow.V6.1\pseudo_ops.C
 DEP_CPP_PSEUD=\
-	"..\src\condor_c++_util\afs.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\extArray.h"\
+	"..\src\condor_c++_util\file_transfer.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\list.h"\
+	"..\src\condor_c++_util\MyString.h"\
 	"..\src\condor_c++_util\ntsysinfo.h"\
+	"..\src\condor_c++_util\perm.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\user_log.c++.h"\
 	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
@@ -658,6 +763,7 @@ DEP_CPP_PSEUD=\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
+	"..\src\h\shadow.h"\
 	"..\src\h\startup.h"\
 	
 
@@ -670,9 +776,12 @@ SOURCE=..\src\condor_shadow.V6.1\remoteresource.C
 DEP_CPP_REMOT=\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\extArray.h"\
+	"..\src\condor_c++_util\file_transfer.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\list.h"\
+	"..\src\condor_c++_util\MyString.h"\
 	"..\src\condor_c++_util\ntsysinfo.h"\
+	"..\src\condor_c++_util\perm.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\user_log.c++.h"\
 	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
@@ -712,6 +821,7 @@ DEP_CPP_REMOT=\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
+	"..\src\h\shadow.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
 	
@@ -725,9 +835,12 @@ SOURCE=..\src\condor_shadow.V6.1\shadow.C
 DEP_CPP_SHADO=\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\extArray.h"\
+	"..\src\condor_c++_util\file_transfer.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\list.h"\
+	"..\src\condor_c++_util\MyString.h"\
 	"..\src\condor_c++_util\ntsysinfo.h"\
+	"..\src\condor_c++_util\perm.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\user_log.c++.h"\
 	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
@@ -762,6 +875,7 @@ DEP_CPP_SHADO=\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
+	"..\src\h\shadow.h"\
 	"..\src\h\startup.h"\
 	
 

@@ -149,11 +149,6 @@ SOURCE=..\src\condor_includes\fdprintf.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_util_lib\free_fs_blocks.c
-# SUBTRACT CPP /YX /Yc /Yu
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\condor_util_lib\get_random_num.c
 # End Source File
 # Begin Source File
@@ -182,11 +177,6 @@ SOURCE=..\src\condor_util_lib\mkargv.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_util_lib\phys_mem.c
-# SUBTRACT CPP /YX /Yc /Yu
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\condor_util_lib\rotate_file.c
 # End Source File
 # Begin Source File
@@ -211,25 +201,6 @@ SOURCE=..\src\condor_util_lib\strcmp_until.c
 
 !ENDIF 
 
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_util_lib\uids.c
-
-!IF  "$(CFG)" == "condor_util_lib - Win32 Release"
-
-# SUBTRACT CPP /YX /Yc /Yu
-
-!ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
-
-# ADD CPP /Yu
-
-!ENDIF 
-
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_util_lib\virt_mem.c
 # End Source File
 # End Target
 # End Project

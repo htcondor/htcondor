@@ -141,6 +141,10 @@ SOURCE=..\src\condor_includes\sockCache.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_io\sspi.NT.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_io\stream.C
 # End Source File
 # Begin Source File

@@ -42,10 +42,10 @@ ALL : "$(OUTDIR)\condor_schedd.exe"
 
 !ELSE 
 
-ALL : "condor_ckpt_server_api - Win32 Release" "condor_io - Win32 Release"\
- "condor_daemon_core - Win32 Release" "condor_classad - Win32 Release"\
- "condor_cpp_util - Win32 Release" "condor_util_lib - Win32 Release"\
- "$(OUTDIR)\condor_schedd.exe"
+ALL : "condor_sysapi - Win32 Release" "condor_ckpt_server_api - Win32 Release"\
+ "condor_io - Win32 Release" "condor_daemon_core - Win32 Release"\
+ "condor_classad - Win32 Release" "condor_cpp_util - Win32 Release"\
+ "condor_util_lib - Win32 Release" "$(OUTDIR)\condor_schedd.exe"
 
 !ENDIF 
 
@@ -53,7 +53,8 @@ ALL : "condor_ckpt_server_api - Win32 Release" "condor_io - Win32 Release"\
 CLEAN :"condor_util_lib - Win32 ReleaseCLEAN"\
  "condor_cpp_util - Win32 ReleaseCLEAN" "condor_classad - Win32 ReleaseCLEAN"\
  "condor_daemon_core - Win32 ReleaseCLEAN" "condor_io - Win32 ReleaseCLEAN"\
- "condor_ckpt_server_api - Win32 ReleaseCLEAN" 
+ "condor_ckpt_server_api - Win32 ReleaseCLEAN"\
+ "condor_sysapi - Win32 ReleaseCLEAN" 
 !ELSE 
 CLEAN :
 !ENDIF 
@@ -116,7 +117,7 @@ LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
  advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib\
  odbccp32.lib ws2_32.lib /nologo /subsystem:console /incremental:no\
  /pdb:"$(OUTDIR)\condor_schedd.pdb" /machine:I386\
- /out:"$(OUTDIR)\condor_schedd.exe" 
+ /out:"$(OUTDIR)\condor_schedd.exe" /SWAPRUN:NET 
 LINK32_OBJS= \
 	"$(INTDIR)\qmgmt.obj" \
 	"$(INTDIR)\qmgmt_common.obj" \
@@ -128,6 +129,7 @@ LINK32_OBJS= \
 	"..\src\condor_classad\condor_classad.lib" \
 	"..\src\condor_daemon_core.V6\condor_daemon_core.lib" \
 	"..\src\condor_io\condor_io.lib" \
+	"..\src\condor_startd.V6\condor_sysapi.lib" \
 	"..\src\condor_util_lib\condor_util.lib"
 
 "$(OUTDIR)\condor_schedd.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
@@ -149,10 +151,10 @@ ALL : "$(OUTDIR)\condor_schedd.exe"
 
 !ELSE 
 
-ALL : "condor_ckpt_server_api - Win32 Debug" "condor_io - Win32 Debug"\
- "condor_daemon_core - Win32 Debug" "condor_classad - Win32 Debug"\
- "condor_cpp_util - Win32 Debug" "condor_util_lib - Win32 Debug"\
- "$(OUTDIR)\condor_schedd.exe"
+ALL : "condor_sysapi - Win32 Debug" "condor_ckpt_server_api - Win32 Debug"\
+ "condor_io - Win32 Debug" "condor_daemon_core - Win32 Debug"\
+ "condor_classad - Win32 Debug" "condor_cpp_util - Win32 Debug"\
+ "condor_util_lib - Win32 Debug" "$(OUTDIR)\condor_schedd.exe"
 
 !ENDIF 
 
@@ -160,7 +162,7 @@ ALL : "condor_ckpt_server_api - Win32 Debug" "condor_io - Win32 Debug"\
 CLEAN :"condor_util_lib - Win32 DebugCLEAN"\
  "condor_cpp_util - Win32 DebugCLEAN" "condor_classad - Win32 DebugCLEAN"\
  "condor_daemon_core - Win32 DebugCLEAN" "condor_io - Win32 DebugCLEAN"\
- "condor_ckpt_server_api - Win32 DebugCLEAN" 
+ "condor_ckpt_server_api - Win32 DebugCLEAN" "condor_sysapi - Win32 DebugCLEAN" 
 !ELSE 
 CLEAN :
 !ENDIF 
@@ -223,10 +225,11 @@ BSC32_SBRS= \
 LINK32=link.exe
 LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
  advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib\
- odbccp32.lib ws2_32.lib mswsock.lib ../src/condor_c++_util/condor_common.obj\
+ odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib\
+ ../src/condor_c++_util/condor_common.obj\
  ..\src\condor_util_lib/condor_common.obj /nologo /subsystem:console\
  /incremental:yes /pdb:"$(OUTDIR)\condor_schedd.pdb" /debug /machine:I386\
- /out:"$(OUTDIR)\condor_schedd.exe" /pdbtype:sept 
+ /out:"$(OUTDIR)\condor_schedd.exe" /pdbtype:sept /SWAPRUN:NET 
 LINK32_OBJS= \
 	"$(INTDIR)\qmgmt.obj" \
 	"$(INTDIR)\qmgmt_common.obj" \
@@ -238,6 +241,7 @@ LINK32_OBJS= \
 	"..\src\condor_classad\condor_classad.lib" \
 	"..\src\condor_daemon_core.V6\condor_daemon_core.lib" \
 	"..\src\condor_io\condor_io.lib" \
+	"..\src\condor_startd.V6\condor_sysapi.lib" \
 	"..\src\condor_util_lib\condor_util.lib"
 
 "$(OUTDIR)\condor_schedd.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
@@ -429,6 +433,36 @@ LINK32_OBJS= \
 
 !ENDIF 
 
+!IF  "$(CFG)" == "condor_schedd - Win32 Release"
+
+"condor_sysapi - Win32 Release" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_sysapi.mak\
+ CFG="condor_sysapi - Win32 Release" 
+   cd "."
+
+"condor_sysapi - Win32 ReleaseCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) CLEAN /F .\condor_sysapi.mak\
+ CFG="condor_sysapi - Win32 Release" RECURSE=1 
+   cd "."
+
+!ELSEIF  "$(CFG)" == "condor_schedd - Win32 Debug"
+
+"condor_sysapi - Win32 Debug" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_sysapi.mak\
+ CFG="condor_sysapi - Win32 Debug" 
+   cd "."
+
+"condor_sysapi - Win32 DebugCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) CLEAN /F .\condor_sysapi.mak\
+ CFG="condor_sysapi - Win32 Debug" RECURSE=1 
+   cd "."
+
+!ENDIF 
+
 SOURCE=..\src\condor_schedd.V6\qmgmt.C
 DEP_CPP_QMGMT=\
 	"..\src\condor_c++_util\classad_collection.h"\
@@ -436,13 +470,18 @@ DEP_CPP_QMGMT=\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\classad_log.h"\
 	"..\src\condor_c++_util\condor_updown.h"\
+	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\list.h"\
 	"..\src\condor_c++_util\log.h"\
 	"..\src\condor_c++_util\log_transaction.h"\
 	"..\src\condor_c++_util\MyString.h"\
+	"..\src\condor_c++_util\ntsysinfo.h"\
 	"..\src\condor_c++_util\Set.h"\
 	"..\src\condor_c++_util\string_list.h"\
+	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
 	"..\src\condor_includes\buffers.h"\
 	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_ast.h"\
@@ -532,16 +571,20 @@ DEP_CPP_SCHED=\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\condor_updown.h"\
+	"..\src\condor_c++_util\daemon.h"\
 	"..\src\condor_c++_util\daemon_types.h"\
 	"..\src\condor_c++_util\environ.h"\
 	"..\src\condor_c++_util\extArray.h"\
+	"..\src\condor_c++_util\generic_query.h"\
 	"..\src\condor_c++_util\get_daemon_addr.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\list.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_c++_util\ntsysinfo.h"\
+	"..\src\condor_c++_util\query_result_type.h"\
 	"..\src\condor_c++_util\Queue.h"\
 	"..\src\condor_c++_util\renice_self.h"\
+	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\user_log.c++.h"\
 	"..\src\condor_ckpt_server\constants2.h"\
@@ -566,6 +609,7 @@ DEP_CPP_SCHED=\
 	"..\src\condor_includes\condor_config.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_email.h"\
 	"..\src\condor_includes\condor_expressions.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_getmnt.h"\
@@ -603,6 +647,7 @@ DEP_CPP_SCHED=\
 SOURCE=..\src\condor_schedd.V6\schedd_main.C
 DEP_CPP_SCHEDD=\
 	"..\src\condor_c++_util\classad_hashtable.h"\
+	"..\src\condor_c++_util\daemon.h"\
 	"..\src\condor_c++_util\daemon_types.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\get_daemon_addr.h"\
@@ -622,6 +667,7 @@ DEP_CPP_SCHEDD=\
 	"..\src\condor_includes\condor_attributes.h"\
 	"..\src\condor_includes\condor_attrlist.h"\
 	"..\src\condor_includes\condor_classad.h"\
+	"..\src\condor_includes\condor_collector.h"\
 	"..\src\condor_includes\condor_commands.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_config.h"\

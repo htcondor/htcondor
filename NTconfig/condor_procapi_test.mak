@@ -199,7 +199,7 @@ BSC32_SBRS= \
 LINK32=link.exe
 LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
  advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib\
- odbccp32.lib ws2_32.lib ../src/condor_c++_util/condor_common.obj\
+ odbccp32.lib ws2_32.lib netapi32.lib ../src/condor_c++_util/condor_common.obj\
  ..\src\condor_util_lib/condor_common.obj /nologo /subsystem:console\
  /incremental:yes /pdb:"$(OUTDIR)\condor_procapi_test.pdb" /debug /machine:I386\
  /out:"$(OUTDIR)\condor_procapi_test.exe" /pdbtype:sept 
@@ -269,6 +269,7 @@ DEP_CPP_NTSYS=\
 	"..\src\condor_includes\condor_sys_nt.h"\
 	"..\src\condor_includes\condor_sys_solaris.h"\
 	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	{$(INCLUDE)}"sys\stat.h"\
@@ -306,6 +307,7 @@ DEP_CPP_TESTP=\
 	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_procapi\procapi.h"\
+	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	{$(INCLUDE)}"sys\stat.h"\
