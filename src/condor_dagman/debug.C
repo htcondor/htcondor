@@ -1,12 +1,7 @@
-#include "debug.h"
-#include <stdio.h>
-#include <stdarg.h>
+#include "condor_common.h"
 
-/* Declare DC_Exit so we don't have to include
-   "../condor_daemon_core.V6/condor_daemon_core.h"
-   and open a huge can of C++ worms.
-*/
-extern void DC_Exit( int status );	
+#include "debug.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 debug_level_t debug_level    = DEBUG_NORMAL;
 char *        debug_progname = NULL;
