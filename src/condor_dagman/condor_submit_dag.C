@@ -81,7 +81,6 @@ struct SubmitDagOptions
 int printUsage(); // NOTE: printUsage calls exit(1), so it doesnt return
 void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[]);
 void submitDag(SubmitDagOptions &opts);
-bool isWhiteSpace(const char c);
 bool readFileToString(const MyString &strFilename, MyString &strFileData);
 
 int main(int argc, char *argv[])
@@ -368,7 +367,7 @@ void getJobLogFilenameFromSubmitFiles(SubmitDagOptions &opts)
 	{
 		MyString strLine = psLine;
 		
-		// this internal loop is for '/' line continuation
+		// this loop is for '/' line continuation
 		while (strLine[strLine.Length()-1] == '\\')
 		{
 			strLine.setChar( strLine.Length()-1, '\0' );
@@ -539,8 +538,10 @@ MyString loadLogFileNameFromSubFile(const MyString &strSubFilename,
 	const SubmitDagOptions &opts)
 {
 	MyString strSubFile;
+    MyString strLogFileName;
 	bool status = false;
 
+    strLogFileName = "";
 	status = readFileToString(strSubFilename, strSubFile);
 
 	if ( status == false ) {
@@ -566,32 +567,31 @@ MyString loadLogFileNameFromSubFile(const MyString &strSubFilename,
 	MyString strPreviousLogFilename;
 	while( (psLine = listLines.next()) )
 	{
-		// skip leading whitespace
-		while ( isWhiteSpace(*psLine) ) { psLine++; }
-
 		MyString strLine = psLine;
-		if (!stricmp(strLine.Substr(0, 2).Value(), "log"))
+        const char *token;
+
+		// Get continuations
+		while (strLine[strLine.Length()-1] == '\\')
 		{
-			int iEqPos = strLine.FindChar('=',0);
-			if (iEqPos == -1)
-				return "";
-
-			iEqPos++;
-			while (iEqPos < strLine.Length() && isWhiteSpace(strLine[iEqPos]))
-				iEqPos++;
-
-			if (iEqPos >= strLine.Length())
-				return "";
-
-			MyString strToReturn = strLine.Substr(iEqPos, strLine.Length());
-
-			return strToReturn;
+			strLine.setChar( strLine.Length()-1, '\0' );
+			psLine = listLines.next();
+			if (psLine)
+				strLine += psLine;
 		}
-	}
-	return "";
+
+        strLine.Tokenize();
+        token = strLine.GetNextToken("\t ", true);
+        if (token != NULL && strcasecmp(token, "log") == 0) {
+            token = strLine.GetNextToken("\t ", true);
+            if (token != NULL && strcasecmp(token, "=") == 0) {
+                token = strLine.GetNextToken("\t ", true);
+                if (token != NULL) {
+                    strLogFileName = token;
+                    break;
+                }
+            }
+        }
+    }
+    return strLogFileName;
 }
 
-bool 
-isWhiteSpace(const char c) {
-	return ( c == ' ' || c == '\t' );
-}
