@@ -39,7 +39,7 @@ to specific parameters. It is not unusual for the cooked version of a
 function to return the true raw value. This is called an identity mapping.
 There shall ALWAYS be a cooked and raw pair for functions that return things
 where a cooked and raw version make sense.
-A 'uility' function either changes state in the library some how, or returns
+A 'utility' function either changes state in the library some how, or returns
 a value or set of values that don't have a raw/cooked analogy.
 
 Example of cooked/raw pair:
