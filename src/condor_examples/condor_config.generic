@@ -60,6 +60,14 @@ MAIL			= /usr/bin/mail
 ######################################################################
 
 ##--------------------------------------------------------------------
+##  Flocking: Submitting jobs to more than one pool
+##--------------------------------------------------------------------
+##  If you would like to run your jobs in other pools, add the central
+##  manager hosts for those pools here.  You must also add
+##  $(FLOCK_HOSTS) to HOSTALLOW_NEGOTIATOR_SCHEDD below.
+# FLOCK_HOSTS = condor.friendly.domain, condor.cs.wisc.edu
+
+##--------------------------------------------------------------------
 ##  Host/IP access levels
 ##--------------------------------------------------------------------
 ##  Please see the administrator's manual for details on these
@@ -95,6 +103,11 @@ HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
 ##  jobs, etc.
 #HOSTALLOW_WRITE = *.your.domain, your-friend's-machine.other.domain
 #HOSTDENY_WRITE = bad-machine.your.domain
+
+##  Negotiator access.  Machines listed here are trusted central
+##  managers.
+HOSTALLOW_NEGOTIATOR = $(NEGOTIATOR_HOST)
+#HOSTALLOW_NEGOTIATOR_SCHEDD = $(NEGOTIATOR_HOST), $(FLOCK_HOSTS)
 
 ##--------------------------------------------------------------------
 ##  Network filesystem parameters:
