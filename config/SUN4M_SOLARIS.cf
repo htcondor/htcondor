@@ -10,7 +10,7 @@
 #define SocketLib /lib/libsocket.a  /lib/libnsl.a  /lib/libdl.so /lib/libintl.a /* ..dhaval 6/28 */
 /* #define SocketLib /lib/libsocket.a   ..dhaval 6/28 */
 
-#define Crt0 /s/std/bin/gcc /* Checked all the files listed in cc -v for file 
+#define Crt0 /s/gcc-2.6.3/sun4m_54/lib/gcc-lib/sparc-sun-solaris2.4/2.6.3/crt1.o /* Checked all the files listed in cc -v for file 
                          containing the string "main" but could not find it */
 #define SyscallsExp /**/
 
@@ -57,7 +57,7 @@ find /usr/sup/X11/lib/libXext.a and also could be libXext.so.6.0 */
 #define HAS_CP_PRESERVE			YES
 #define NEEDS_SPECIAL_SETJMP	NO
 #define HAS_FORTRAN				NO
-#define HAS_FLOCK				YES
+#define HAS_FLOCK				NO
 #define HAS_ADJTIME				YES
 #define HAS_GETDTABLESIZE		NO  /* solaris specific ..dhaval 6/28 */
 #define HAS_GETHOSTNAME			YES
@@ -67,8 +67,8 @@ find /usr/sup/X11/lib/libXext.a and also could be libXext.so.6.0 */
 #define HAS_GETPGRP2			NO
 #define HAS_KILLPG				YES
 #define HAS_SETHOSTNAME			YES
-#define HAS_SETREGID			YES
-#define HAS_SETREUID			YES
+#define HAS_SETREGID			NO
+#define HAS_SETREUID			NO
 #define HAS_UTIMES				YES
 #define HAS_UTIME				NO
 #define HAS_VHANGUP				YES
@@ -76,7 +76,7 @@ find /usr/sup/X11/lib/libXext.a and also could be libXext.so.6.0 */
 #define HAS_SETRESGID			NO
 #define HAS_SETEGID				YES
 #define HAS_SETEUID				YES
-#define HAS_GETWD				YES
+#define HAS_GETWD				NO
 #define HAS_INSQUE				YES
 #define DO_BENCHMARKING			YES
 #define HAS_PVM					NO
