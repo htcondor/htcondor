@@ -8,8 +8,8 @@
 
 #define HAS_GLOBUS	YES
 
-#ifdef IS_C_COMP_MAJOR_GCC_3
-#define IS_CLIPPED YES
+#ifdef IS_GLIBC23
+#define IS_CLIPPED	YES
 #define WANT_PVM	NO
 #else
 #define WANT_PVM	YES
