@@ -1489,7 +1489,12 @@ not_supported {
 not_supported {
 	pid_t fork() : EXTRACT;
 	#if defined(LINUX)
-		pid_t clone(void *sp, unsigned long flags);
+		#if defined(GLIBC22)
+			/* XXX the stub generator doesn't understand function prototypes */
+/*			pid_t clone(int (*)(void*), void *sp, int *, void *);*/
+		#else
+			pid_t clone(void *sp, unsigned long flags);
+		#endif
 	#elif defined(Solaris)
 		pid_t fork1();
 	#endif
