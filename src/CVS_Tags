@@ -53,3 +53,17 @@
     Version actually checked out earlier on AIX 3.2.5.  Checked in
     now using "cvs tag" (not rtag), to make sure I can reproduce.
     Intend to give this version to Bob Mikrut of DoIt on 4/28/94.
+4/28/94 DoIt_1
+	Version with no AFS access and some AIX 3.2.5 problems fixed up.  Can
+	at least build, run, and run the "loop" program.
+5/14/94 DecApha_CKPT_Local_Remote_2
+	This one works for both local and remote checkpoint/restart on the
+	alpha.  Only tested in the "debugging" mode where we use named
+	pipes to communicate with the shadow.  Also not tested under the
+	starter, but in the mode where the user program makes its shadow
+	connections itself and reads the command stream from a file.
+	Many previous "hacks" fixed up.  No longer depends on constructors
+	to initialize objects at global scope - all constructors removed
+	from the checkpointing code.  Also uses CONDOR_get_file_stream
+	to read checkpoint files and CONDOR_put_file_stream to write
+	them - faster and symmetric.
