@@ -1305,7 +1305,7 @@ shorten( char *buf, const char *str1, const char *str2, int len )
 
 	src = str1;
 	dst = buf;
-	while( len && *src ) {
+	while( len && src ) {
 		*dst++ = *src++;
 		len -= 1;
 	}
@@ -1314,7 +1314,7 @@ shorten( char *buf, const char *str1, const char *str2, int len )
 		len -= 1;
 	}
 	src = str2;
-	while( len && *src ) {
+	while( len && src ) {
 		*dst++ = *src++;
 		len -= 1;
 	}
