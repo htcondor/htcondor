@@ -726,12 +726,13 @@ int AttrList::Insert(ExprTree* expr)
 		return FALSE;
     }
 
-    AttrListElem* newNode = new AttrListElem(expr);
-
 	if(Lookup(expr->LArg()))
 	{
-		return FALSE;
+		Delete(((Variable*)expr->LArg())->Name());
 	}
+
+    AttrListElem* newNode = new AttrListElem(expr);
+
     if(!tail)
     {
 		exprList = newNode;
@@ -1718,12 +1719,6 @@ int AttrList::get(Stream& s)
     char*           line;
     int             numExprs;
 
-    exprList       = NULL;
-    associatedList = NULL;
-    tail           = NULL;
-    ptrExpr        = NULL;
-    ptrName        = NULL;
-
     s.decode();
 
     if(!s.code(numExprs))
@@ -1795,11 +1790,6 @@ int AttrList::get(XDR *xdrs)
 	int             errorFlag = 0;
 
 	xdrs->x_op = XDR_DECODE;
-    exprList       = NULL;
-    associatedList = NULL;
-    tail           = NULL;
-    ptrExpr        = NULL;
-    ptrName        = NULL;
 
     if(!xdr_int (xdrs, &numExprs))
         return 0;

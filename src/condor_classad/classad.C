@@ -71,8 +71,6 @@ ClassAd::ClassAd() : AttrList()
 {
 	myType = NULL;
 	targetType = NULL;
-	requirementExpr = NULL;
-	rankExpr = NULL;
 	SetRankExpr ("Rank = 0");
 	SetRequirement ("Requirement = TRUE");
 }
@@ -81,8 +79,6 @@ ClassAd::ClassAd(class ProcObj* procObj) : AttrList(procObj)
 {
 	myType = NULL;
 	targetType = NULL;
-	requirementExpr = NULL;
-	 rankExpr = NULL;
     SetRankExpr ("Rank = 0");
 	SetRequirement ("Requirement = TRUE");
 }
@@ -91,10 +87,15 @@ ClassAd::ClassAd(const CONTEXT* context) : AttrList((CONTEXT *) context)
 {
 	myType = NULL;
 	targetType = NULL;
-	requirementExpr = NULL;
-    rankExpr = NULL;
-    SetRankExpr ("Rank = 0");
-	SetRequirement ("Requirement = TRUE");
+	if (!Lookup ("Requirement"))
+	{
+		SetRequirement ("Requirement = TRUE");
+	}
+
+	if (!Lookup ("Rank"))
+	{
+    	SetRankExpr ("Rank = 0");
+	}
 }
 
 ClassAd::ClassAd(FILE* f, char* d, int& i) : AttrList(f, d, i)
@@ -102,12 +103,9 @@ ClassAd::ClassAd(FILE* f, char* d, int& i) : AttrList(f, d, i)
     ExprTree *tree;
     EvalResult *val;
 
-	myType = NULL;
-	targetType = NULL;
-	requirementExpr = NULL;
-    rankExpr = NULL;
     SetRankExpr ("Rank = 0");
 	SetRequirement ("Requirement = TRUE");
+
 	val = new EvalResult;
     tree = Lookup("MyType");
 	if(!tree)
@@ -161,8 +159,6 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
 
 	myType = NULL;
 	targetType = NULL;
-	requirementExpr = NULL;
-    rankExpr = NULL;
     SetRankExpr ("Rank = 0");
 	SetRequirement ("Requirement = TRUE");
     val = new EvalResult;
@@ -222,10 +218,16 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
 
 ClassAd::ClassAd(const ClassAd& old) : AttrList((AttrList&) old)
 {
-	myType = NULL;
-	targetType = NULL;
-	SetRankExpr (old.rankExpr);
-	SetRequirement (old.requirementExpr);
+	if (myType) 
+	{
+		delete myType; 
+		myType = NULL;
+	}
+	if (targetType)
+	{
+		delete targetType;
+		targetType = NULL;
+	}
     if(old.myType)
     {
         this->myType = new AdType(old.myType->name);
@@ -253,12 +255,6 @@ ClassAd::~ClassAd()
         exprList = exprList->next;
         delete tmp;
     }
-
-	// free storage used by the requirement expression
-	delete requirementExpr;
-
-	// free storage used by the rank expression
-	delete rankExpr;
 
     if(associatedList)
     {
@@ -405,19 +401,11 @@ SetRequirement (char *expr)
 void ClassAd::
 SetRequirement (ExprTree *tree)
 {
-	// the requirement expression is maintained both in requirementExpr *and*
-    // in the attribute list.  We have to make sure that a copy of the tree is
-	// made (i.e., reference counted) to prevent unexpected results.  Also,
-    // delete both copies to prevent leaks  --RR
-
-	if (requirementExpr != NULL)
+	if (!AttrList::Insert (tree))
 	{
-		Delete (ATTR_REQUIREMENT);
-		delete (requirementExpr);
+		AttrList::UpdateExpr (tree);
+		delete tree;
 	}
-
-	requirementExpr = tree->Copy();
-	Insert (tree);
 }
 
 
@@ -447,14 +435,11 @@ SetRankExpr (char *expr)
 void ClassAd::
 SetRankExpr (ExprTree *tree)
 {
-    if (rankExpr != NULL)
-    {
-        Delete (ATTR_RANK);
-        delete (rankExpr);
-    }
-
-    rankExpr = tree->Copy();
-    Insert (tree);
+	if (!AttrList::Insert (tree))
+	{
+		AttrList::UpdateExpr (tree);
+		delete tree;
+	}
 }
 
 
@@ -480,6 +465,7 @@ GetSequenceNumber (void)
 {
 	return seq;
 }
+
 
 //
 // This member function tests whether two ClassAds match mutually.
@@ -664,14 +650,6 @@ int ClassAd::get(Stream& s)
     char*           line;
     int             numExprs;
 
-    exprList       = NULL;
-    associatedList = NULL;
-    tail           = NULL;
-    ptrExpr        = NULL;
-    ptrName        = NULL;
-    myType         = NULL;
-    targetType     = NULL;
-
     s.decode();
 
     if(!s.code(numExprs)) 
@@ -794,7 +772,7 @@ ExchangeExpressions (ClassAd *ad)
     SWAP(tail, ad->tail, tmp1);
     SWAP(ptrExpr, ad->ptrExpr, tmp1);
     SWAP(ptrName, ad->ptrName, tmp1);
-    SWAP (seq, ad->seq, tmp3);                      // this is an int
+    SWAP(seq, ad->seq, tmp3);                      // this is an int
 
     // undefine macro to decrease name-space pollution
 #   undef SWAP
