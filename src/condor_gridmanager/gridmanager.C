@@ -852,6 +852,24 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 				next_job->UpdateCondorState( curr_status );
 				num_ads++;
 
+				// Save the remove reason in our local copy of the job ad
+				// so that we can write it in the abort log event.
+				if ( curr_status == REMOVED ) {
+					int rc;
+					char remove_reason[256];
+					// GetAttributeStringNew() isn't available through the
+					// Qmgmt interface, although it is in the header file.
+					// How evil.
+					rc = GetAttributeString( procID.cluster,
+											 procID.proc,
+											 ATTR_REMOVE_REASON,
+											 remove_reason );
+					if ( rc == 0 ) {
+						next_job->UpdateJobAdString( ATTR_REMOVE_REASON,
+													 remove_reason );
+					}
+				}
+
 			} else if ( curr_status == REMOVED ) {
 
 				// If we don't know about the job, remove it immediately
@@ -1069,6 +1087,7 @@ bool
 WriteAbortEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
+	char removeReason[256];
 	UserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {
 		// User doesn't want a log
@@ -1083,6 +1102,13 @@ WriteAbortEventToUserLog( ClassAd *job_ad )
 			 cluster, proc );
 
 	JobAbortedEvent event;
+
+	removeReason[0] = '\0';
+	job_ad->LookupString( ATTR_REMOVE_REASON, removeReason,
+						   sizeof(removeReason) - 1 );
+
+	event.setReason( removeReason );
+
 	int rc = ulog->writeEvent(&event);
 	delete ulog;
 
