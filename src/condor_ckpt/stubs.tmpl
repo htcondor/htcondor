@@ -33,3 +33,5 @@ int readv( map(int fd), char *buf, int nbytes );
 int writev( map(int fd), char *buf, int nbytes );
 int fcntl( map(int fd), int req, int arg );
 caddr_t mmap( caddr_t a, size_t l, int p, int f, map(int fd), off_t o );
+int getdirentries( map(int fd), char *buf, int nbytes, long *basep );
+
