@@ -111,11 +111,10 @@ void job_report_display_errors( FILE *f )
 /* A linked list for storing file reports */
 
 struct file_info {
-	char kind[_POSIX_PATH_MAX];
 	char name[_POSIX_PATH_MAX];
-	int open_count;
-	int read_count, write_count, seek_count;
-	int read_bytes, write_bytes;
+	long long open_count;
+	long long read_count, write_count, seek_count;
+	long long read_bytes, write_bytes;
 	struct file_info *next;
 };
 
@@ -123,7 +122,7 @@ static struct file_info *file_list=0;
 
 /* Store the current number of I/O ops performed */
 
-void job_report_store_file_info( char *kind, char *name, int oc, int rc, int wc, int sc, int rb, int wb )
+void job_report_store_file_info( char *name, long long oc, long long rc, long long wc, long long sc, long long rb, long long wb )
 {
 	struct file_info *i;
 
@@ -132,7 +131,7 @@ void job_report_store_file_info( char *kind, char *name, int oc, int rc, int wc,
 	/* Has this file been opened and closed before? */
 
 	for( i=file_list; i; i=i->next ) {
-		if(!strcmp(i->name,name) && !strcmp(i->kind,kind)) {
+		if(!strcmp(i->name,name)) {
 			i->open_count = oc;
 			i->read_count = rc;
 			i->write_count = wc;
@@ -148,7 +147,6 @@ void job_report_store_file_info( char *kind, char *name, int oc, int rc, int wc,
 	i = (struct file_info *) malloc(sizeof(struct file_info));
 	if(!i) return;
 
-	strcpy( i->kind, kind );
 	strcpy( i->name, name );
 	i->open_count = oc;
 	i->read_count = rc;
@@ -208,23 +206,23 @@ void job_report_display_file_info( FILE *f, int total_time )
 		fprintf(f,"\t%s/s effective throughput\n",
 			metric_units((total.read_bytes+total.write_bytes)/total_time));
 	}
-	fprintf(f,"\t%d files opened\n", total.open_count );
-	fprintf(f,"\t%d reads totaling %s\n",
+	fprintf(f,"\t%lld files opened\n", total.open_count );
+	fprintf(f,"\t%lld reads totaling %s\n",
 		total.read_count, metric_units(total.read_bytes) );
-	fprintf(f,"\t%d writes totaling %s\n",
+	fprintf(f,"\t%lld writes totaling %s\n",
 		total.write_count, metric_units(total.write_bytes) );
-	fprintf(f,"\t%d seeks\n", total.seek_count );
+	fprintf(f,"\t%lld seeks\n", total.seek_count );
 
 	fprintf(f,"\nI/O by File:\n");
 
 	for( i=file_list; i; i=i->next ) {
-		fprintf(f,"\n%s %s\n",i->kind,i->name);
-		fprintf(f,"\topened %d times\n",i->open_count );
-		fprintf(f,"\t%d reads totaling %s\n",
+		fprintf(f,"\n %s\n",i->name);
+		fprintf(f,"\topened %lld times\n",i->open_count );
+		fprintf(f,"\t%lld reads totaling %s\n",
 			i->read_count, metric_units(i->read_bytes) );
-		fprintf(f,"\t%d writes totaling %s\n",
+		fprintf(f,"\t%lld writes totaling %s\n",
 			i->write_count, metric_units(i->write_bytes) );
-		fprintf(f,"\t%d seeks\n", i->seek_count );
+		fprintf(f,"\t%lld seeks\n", i->seek_count );
 	}
 }
 
@@ -236,11 +234,11 @@ void job_report_update_queue( PROC *proc )
 
 	sum_file_info( &total );
 
-	SetAttributeInt( proc->id.cluster, proc->id.proc, ATTR_FILE_READ_COUNT, total.read_count );
-	SetAttributeInt( proc->id.cluster, proc->id.proc, ATTR_FILE_READ_BYTES, total.read_bytes );
-	SetAttributeInt( proc->id.cluster, proc->id.proc, ATTR_FILE_WRITE_COUNT, total.write_count );
-	SetAttributeInt( proc->id.cluster, proc->id.proc, ATTR_FILE_WRITE_BYTES, total.write_bytes );
-	SetAttributeInt( proc->id.cluster, proc->id.proc, ATTR_FILE_SEEK_COUNT, total.seek_count );
+	SetAttributeFloat( proc->id.cluster, proc->id.proc, ATTR_FILE_READ_COUNT, total.read_count );
+	SetAttributeFloat( proc->id.cluster, proc->id.proc, ATTR_FILE_READ_BYTES, total.read_bytes );
+	SetAttributeFloat( proc->id.cluster, proc->id.proc, ATTR_FILE_WRITE_COUNT, total.write_count );
+	SetAttributeFloat( proc->id.cluster, proc->id.proc, ATTR_FILE_WRITE_BYTES, total.write_bytes );
+	SetAttributeFloat( proc->id.cluster, proc->id.proc, ATTR_FILE_SEEK_COUNT, total.seek_count );
 }
 
 

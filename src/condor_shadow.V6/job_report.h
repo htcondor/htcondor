@@ -27,7 +27,7 @@ to the currently open ClassAd Q.
 
 int  job_report_store_call( int call );
 int  job_report_store_error( char *format, ... );
-void job_report_store_file_info( char *kind, char *name, int oc, int rc, int wc, int sc, int rb, int wb );
+void job_report_store_file_info( char *name, long long oc, long long rc, long long wc, long long sc, long long rb, long long wb );
 
 void job_report_display_calls( FILE *f );
 void job_report_display_errors( FILE *f );

@@ -285,7 +285,14 @@ pseudo_report_error( char *msg )
 int
 pseudo_report_file_info( char *kind, char *name, int open_count, int read_count, int write_count, int seek_count, int read_bytes, int write_bytes )
 {
-	job_report_store_file_info( kind, name, open_count, read_count, write_count, seek_count, read_bytes, write_bytes );
+	job_report_store_file_info( name, open_count, read_count, write_count, seek_count, read_bytes, write_bytes );
+	return 0;
+}
+
+int
+pseudo_report_file_info_new( char *name, long long open_count, long long read_count, long long write_count, long long seek_count, long long read_bytes, long long write_bytes )
+{
+	job_report_store_file_info( name, open_count, read_count, write_count, seek_count, read_bytes, write_bytes );
 	return 0;
 }
 
