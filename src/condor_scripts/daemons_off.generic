@@ -34,6 +34,6 @@ if ( $#pid > 0 ) then
 	echo "${bell}Warning: Some Condor daemons on `hostname` have not died yet."
 	echo "Check on process(es): $pid"
 else
-	echo "All condor processes have been terminated!"
+	echo "All condor processes have been terminated\!"
 endif
 
