@@ -170,7 +170,7 @@ sysapi_swap_space_raw ()
 
 #include <sys/stat.h>
 #include <sys/swap.h>
-#incldue <sys/types.h>
+#include <sys/types.h>
 
 close_kmem() {}
 
