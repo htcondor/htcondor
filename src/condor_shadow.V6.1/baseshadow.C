@@ -363,11 +363,6 @@ void BaseShadow::endingUserLog( int exitStatus, int exitReason,
 			}
 			break;	
 
-		default:
-			dprintf(D_ALWAYS,"Error - Received unrecognized exit reason"
-				"(%d) from starter\n",exitReason);
-			break;
-
 	}	// end of switch
 }
 
