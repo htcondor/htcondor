@@ -37,15 +37,14 @@ struct _condorMsgID {
 /*******************************************************************
  * Classes for SafeSock buffer management 
  *******************************************************************/
+static const int SAFE_MSG_NO_OF_DIR_ENTRY = 41;
 class _condorDirPage
 {
 	friend class _condorInMsg;
 	private:
-		static const int NO_OF_DIR_ENTRY = 41;
-
 		_condorDirPage* prevDir;
 		int dirNo;
-		_condorDEntry dEntry[NO_OF_DIR_ENTRY];
+		_condorDEntry dEntry[SAFE_MSG_NO_OF_DIR_ENTRY];
 		_condorDirPage* nextDir;
 
 	public:
@@ -112,6 +111,9 @@ class _condorInMsg
 						 * from possibly multiple packets */
 };
 
+static const int SAFE_MSG_MAX_PACKET_SIZE = 60000;
+static const int SAFE_MSG_HEADER_SIZE = 25;
+static const char* const SAFE_MSG_MAGIC = "MaGic6.0";
 
 class _condorPacket
 {
@@ -163,16 +165,12 @@ class _condorPacket
 
 	// next line should be uncommented after testing
 	private:
-		static const int MAX_PACKET_SIZE = 60000;
-		static const int HEADER_SIZE = 25;
-		static char* const MAGIC = "MaGic6.0";
-
 		int length;			// length of this packet
 		char* data;			// data portion of this packet
 						/* this just points the starting index
 						   of data of dataGram[] */
 		int curIndex;		// current index into this packet
-		char dataGram[MAX_PACKET_SIZE];/* marshalled packet
+		char dataGram[SAFE_MSG_MAX_PACKET_SIZE];/* marshalled packet
 		                                * including header and data */
 		_condorPacket* next;	// next packet
 };
