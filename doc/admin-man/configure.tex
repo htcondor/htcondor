@@ -558,6 +558,10 @@ system.
   to whatever behavior you want Condor to enforce.  This parameter has
   no default value, and is commented out in the default configuration file. 
 
+\item[\Macro{Q\_QUERY\_TIMEOUT}] \label{param:QQueryTimeout}
+  Defines the timeout (in seconds) that \Condor{q} uses when trying to
+  connect to the \Condor{schedd}.  Defaults to 20.
+
 \end{description}
 
 
@@ -2449,7 +2453,7 @@ These macros affect the \Condor{collector}.
   daemons, but not from the \Condor{master} (\Term{orphaned daemons})
   and send e-mail about it.  It is defined in seconds and 
   defaults to 10800 (3 hours).
-  
+
 \item[\Macro{CLIENT\_TIMEOUT}] \label{param:ClientTimeout} Network
   timeout when talking to daemons that are sending an update.  
   It is defined in seconds and defaults to 30.
