@@ -5259,9 +5259,12 @@ Scheduler::send_alive()
             */
 		delete sock;
 	 }
-	 dprintf(D_PROTOCOL,"## 6. (Done sending alive messages to %d startds)\n",
-			numsent);
+	if( numsent ) {
+		dprintf( D_PROTOCOL, "Done sending alive messages to %d startds\n", 
+				 numsent);
+	}
 }
+
 
 void
 job_prio(ClassAd *ad)
