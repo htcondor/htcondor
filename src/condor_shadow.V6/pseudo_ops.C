@@ -34,7 +34,9 @@
 #include "my_hostname.h"
 #include "pseudo_ops.h"
 #include "condor_ckpt_name.h"
+#include "condor_ckpt_mode.h"
 #include "../condor_ckpt_server/server_interface.h"
+#include "internet.h"
 
 #ifdef CARMI_OPS
 #include <ProcList.h>
@@ -205,24 +207,35 @@ pseudo_image_size( int size )
 	return 0;
 }
 
-int
-pseudo_send_rusage( struct rusage *use_p )
+static struct rusage uncommitted_rusage;
+
+void
+commit_rusage()
 {
 	struct rusage local_rusage;
 
+	get_local_rusage( &local_rusage );
+	update_job_status( &local_rusage, &uncommitted_rusage );
+
+	// log the event
+	log_checkpoint (&local_rusage, &uncommitted_rusage);
+}
+
+int
+pseudo_send_rusage( struct rusage *use_p )
+{
 	/* A periodic checkpoint (checkpoint and keep running) now results in the 
 	 * condor_syscall_lib calling send_rusage.  So, we do what we did before
 	 * (which is add to AccumRusage, used by the PVM code??), _AND_ now we
 	 * also update the CPU usages in the job queue. -Todd Tannenbaum 10/95. */
+
+	/* Change (11/30/98): we now receive the rusage before the job has
+	 * committed the checkpoint, so we store it in uncommitted_rusage
+	 * until the checkpoint is committed or until the job exits.  -Jim B */
 	
 	memcpy( &AccumRusage, use_p, sizeof(struct rusage) );
+	memcpy( &uncommitted_rusage, use_p, sizeof(struct rusage) );
 
-	get_local_rusage( &local_rusage );
-	update_job_status( &local_rusage, use_p );
-
-	// log the event
-	log_checkpoint (&local_rusage, use_p);
-	
 	return 0;
 }
 
@@ -475,6 +488,7 @@ pseudo_rename(char *from, char *to)
 		if (CkptFile) {
 			(void)umask( omask );
 			set_priv(priv);
+			commit_rusage();
 		}
 
 		if (rval == 0 || rval == -1 && errno != ENOENT) {
@@ -496,6 +510,7 @@ pseudo_rename(char *from, char *to)
 		}
 		if (LastCkptServer) free(LastCkptServer);
 		LastCkptServer = strdup(CkptServerHost);
+		commit_rusage();
 	}
 
 	return 0;
@@ -644,6 +659,9 @@ pseudo_get_file_stream(
 					exit(1);
 				}
 
+#if 0	/* For compressed checkpoints, we need to close the socket
+		   so the client knows we are done sending (i.e., so the client's
+		   read will return), so we no longer require this confirmation. */
 				/*
 				 Here we should get a confirmation that our peer was able to
 				 read the same number of bytes we sent, but the starter doesn't
@@ -659,7 +677,7 @@ pseudo_get_file_stream(
 				assert( status == *len );
 				dprintf( D_ALWAYS,
 						"\tSTREAM FILE SENT OK (%d bytes)\n", status );
-				
+#endif
 				exit( 0 );
 			default:	/* the parent */
 				close( file_fd );
@@ -1126,6 +1144,21 @@ pseudo_get_ckpt_name( char *path )
 	strcpy( path, RCkptName );
 	dprintf( D_SYSCALLS, "\tanswer = \"%s\"\n", path );
 	return 0;
+}
+
+/*
+  Specify checkpoint mode parameters.  See
+  condor_includes/condor_ckpt_mode.h definitions.
+*/
+int
+pseudo_get_ckpt_mode( int sig )
+{
+	if (sig == SIGTSTP) {
+		return 0;				// default mode
+	} else if (sig == SIGUSR2) { // periodic checkpoint 
+		return CKPT_MODE_USE_COMPRESSION;
+	}
+	return -1;
 }
 
 /*
