@@ -1,3 +1,6 @@
+- one-at-a-time node constraint feature for Ewa Deelman (miron has
+  thoughts on how this should be done more generally)
+
 - add check for situation where dagman thinks there should be jobs in
   the queue but there are none... abort w/rescue file
 
@@ -29,6 +32,9 @@ generate a rescue DAG, etc.)
 
 - add an option to have DAGMan clean up all its temp/log files when
   it's done, if it finished successfully
+
+- Add DAGManJobID to submti event so that two DAGMans with jobs
+  writing to the same log can keep each other straight
 
 ? recursive-DAG-aware tools (condor_submit DAG-hunting, etc.)
 
