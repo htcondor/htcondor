@@ -580,8 +580,8 @@ CStarter::TransferCompleted( FileTransfer *ftrans )
 		// update the shadow every 20 minutes.  years of study say
 		// this is the optimal value. :^).
 		shadowupdate_tid = daemonCore->Register_Timer(8,(20*60)+6,
-			(TimerHandlercpp)&CStarter::UpdateShadow,
-			"CStarter::UpdateShadow", this);
+			(TimerHandlercpp)&CStarter::PeriodicShadowUpdate,
+			"CStarter::PeriodicShadowUpdate", this);
 
 		return TRUE;
 	} else {
@@ -771,8 +771,10 @@ CStarter::Suspend(int)
 		job->Suspend();
 	}
 		// Now that everything is suspended, we want to send another
-		// update to the shadow to let it know the job state.
-	UpdateShadow();
+		// update to the shadow to let it know the job state.  We want
+		// to confirm the update gets there on this important state
+		// change, to pass in "true" to UpdateShadow() for that.
+	UpdateShadow( true );
 	return 0;
 }
 
@@ -792,8 +794,10 @@ CStarter::Continue(int)
 		job->Continue();
 	}
 		// Now that everything is running again, we want to send
-		// another update to the shadow to let it know the job state. 
-	UpdateShadow();
+		// another update to the shadow to let it know the job state.
+		// We want to confirm the update gets there on this important
+		// state change, to pass in "true" to UpdateShadow() for that.
+	UpdateShadow( true );
 
 	return 0;
 }
@@ -941,8 +945,24 @@ CStarter::PublishUpdateAd( ClassAd* ad )
 }
 
 
+/* 
+   We can't just have our periodic timer call UpdateShadow() directly,
+   since it passes in arguments that screw up the default bool that
+   determines if we want TCP or UDP for the update.  So, the periodic
+   updates call this function instead, which forces the UDP version.
+*/
 int
-CStarter::UpdateShadow( void )
+CStarter::PeriodicShadowUpdate( void )
+{
+	if( UpdateShadow(false) ) {
+		return TRUE;
+	}
+	return FALSE;
+}
+
+
+bool
+CStarter::UpdateShadow( bool insure_update )
 {
 	ClassAd ad;
 
@@ -964,14 +984,17 @@ CStarter::UpdateShadow( void )
 	}
 
 	if( ! found_one ) {
-		dprintf( D_FULLDEBUG, "Leaving CStarter::UpdateShadow(): "
+		dprintf( D_FULLDEBUG, "CStarter::UpdateShadow(): "
 				 "Didn't find any info to update!\n" );
-		return FALSE;
+		return false;
 	}
 
-		// Send it to the shadow
-	shadow->updateJobInfo( &ad );
-
-	dprintf( D_FULLDEBUG, "Leaving CStarter::UpdateShadow(): success\n" );
-	return TRUE;
+		// Try to send it to the shadow
+	if( shadow->updateJobInfo(&ad, insure_update) ) {
+		dprintf( D_FULLDEBUG, "Leaving CStarter::UpdateShadow(): success\n" );
+		return true;
+	}
+	dprintf( D_FULLDEBUG, "CStarter::UpdateShadow(): "
+			 "failed to send update\n" );
+	return false;
 }
