@@ -103,6 +103,7 @@ directory. If not specified, \Condor{submit} will automatically insert
 the user's current working directory at the time \Condor{submit} was run
 as the value for \Opt{initialdir}. 
 
+
 %%%%%%%%%%%%%%%%%%%
 %% requirements
 %%%%%%%%%%%%%%%%%%%
@@ -198,7 +199,6 @@ to :
 \begin{verbatim}
         job-owner@submit-machine-name
 \end{verbatim}
-
 
 %%%%%%%%%%%%%%%%%%%
 %% getenv
@@ -324,6 +324,45 @@ to the Standard Universe, the default value is the number for
 \verb@SIGTSTP@ which tells the Condor libraries to initiate a checkpoint
 of the process.  For jobs submitted to the Vanilla Universe, the default 
 is \verb@SIGTERM@ which is the standard way to terminate a program in UNIX.  
+
+%%%%%%%%%%%%%%%%%%%
+%% file_remaps
+%%%%%%%%%%%%%%%%%%%
+
+\item[file\_remaps $=$ $<$ `` name $=$ newname ; name2 $=$ newname2 ... ''$>$ ]
+Directs Condor to use a new filename in place of an old one.  \Arg{name}
+describes a filename that your job may attempt to open, and \Arg{newname}
+describes the filename it should be replaced with.
+\Arg{newname} may include an optional leading
+access specifier, \verb@local:@ or \verb@remote:@.  If left unspecified,
+the default access specifier is \verb@remote:@.  Multiple remaps can be 
+specified by separating each with a semicolon.
+
+\begin{description}
+\item[Example One:]
+Suppose that your job reads a file named \verb@dataset.1@.  To instruct Condor
+to force your job to read \verb@other.dataset@ instead, 
+add this to the submit file:
+\begin{verbatim}
+file_remaps = "dataset.1=other.dataset"
+\end{verbatim}
+\item[Example Two:]
+Suppose that your run many jobs which all read in the same large file,
+called \verb@very.big@.  If this file can be found in the same place on
+a local disk in every machine in the pool,
+(say \verb@/bigdisk/bigfile@,) you can
+instruct Condor of this fact by remapping \verb@very.big@ to
+\verb@/bigdisk/bigfile@ and specifying that the file is to be read locally,
+which will be much faster than reading over the network.
+\begin{verbatim}
+file_remaps = "very.big = local:/bigdisk/bigfile"
+\end{verbatim}
+\item[Example Three:]
+Several remaps can be applied at once by separating each with a semicolon.
+\begin{verbatim}
+file_remaps = "very.big = local:/bigdisk/bigfile ; dataset.1 = other.dataset"
+\end{verbatim}
+\end{description}
 
 %%%%%%%%%%%%%%%%%%%
 % +
