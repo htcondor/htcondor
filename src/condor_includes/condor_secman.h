@@ -77,7 +77,12 @@ public:
 
 	bool 					startCommand( int cmd, Sock* sock, bool can_neg = true, int subcmd = 0);
 
-	void 					ClearCache();
+    //------------------------------------------
+    // invalidate cache
+    //------------------------------------------
+	void 					invalidateAllCache();
+	bool  					invalidateKey(const char * keyid);
+	bool  					invalidateHost(const char * sin);
 
 	ClassAd *				CreateSecurityPolicyAd(const char *auth_level, bool otherside_can_neg = true);
 	ClassAd * 				ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad);
@@ -101,6 +106,9 @@ public:
 	int 					sec_char_to_auth_method( char* method );
 
 	bool 					sec_copy_attribute( ClassAd &dest, ClassAd &source, const char* attr );
+
+ private:
+    void                    remove_commands(KeyCacheEntry * keyEntry);
 
 };
 
