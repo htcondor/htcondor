@@ -84,6 +84,8 @@ typedef struct {
 	int		umbilical;
 } SHADOW_REC;
 
+#if !defined(WIN32)	// no time_t in WIN32
+
 typedef struct {
 	int		clusterId;
 	int		procId;
@@ -106,6 +108,8 @@ typedef struct {
 	char*	host;
 } RUNNING_JOB_INFO;
 
+#endif // if !defined(WIN32)
+
 typedef struct {        /* record sent by startd to shadow */
 	int		version_num;/* always negative */
 	PORTS	ports;
@@ -115,66 +119,7 @@ typedef struct {        /* record sent by startd to shadow */
 	/* Startd version numbers : always negative  */
 #define VERSION_FOR_FLOCK   -1
 
-	/* Scheduler Commands */
-/*
-**	Scheduler version number
-*/
-#define SCHED_VERS			400
-#define ALT_STARTER_BASE 70
-
-/*
-**	In the following definitions 'FRGN' does not
-**	stand for "friggin'"...
-*/
-#define CONTINUE_FRGN_JOB	(SCHED_VERS+1)
-#define SUSPEND_FRGN_JOB	(SCHED_VERS+2)
-#define CKPT_FRGN_JOB		(SCHED_VERS+3)
-#define KILL_FRGN_JOB		(SCHED_VERS+4)
-
-#define LOCAL_STATUS		(SCHED_VERS+5)
-#define LOCAL_STATISTICS	(SCHED_VERS+6)
-
-#define PERMISSION			(SCHED_VERS+7)
-#define SET_DEBUG_FLAGS		(SCHED_VERS+8)
-#define PREEMPT_LOCAL_JOBS	(SCHED_VERS+9)
-
-#define RM_LOCAL_JOB		(SCHED_VERS+10)
-#define START_FRGN_JOB		(SCHED_VERS+11)
-
-#define AVAILABILITY		(SCHED_VERS+12)		/* Not used */
-#define NUM_FRGN_JOBS		(SCHED_VERS+13)
-#define STARTD_INFO			(SCHED_VERS+14)
-#define SCHEDD_INFO			(SCHED_VERS+15)
-#define NEGOTIATE			(SCHED_VERS+16)
-#define SEND_JOB_INFO		(SCHED_VERS+17)
-#define NO_MORE_JOBS		(SCHED_VERS+18)
-#define JOB_INFO			(SCHED_VERS+19)
-#define GIVE_STATUS			(SCHED_VERS+20)
-#define RESCHEDULE			(SCHED_VERS+21)
-#define PING				(SCHED_VERS+22)
-#define NEGOTIATOR_INFO		(SCHED_VERS+23)
-#define GIVE_STATUS_LINES	(SCHED_VERS+24)
-#define END_NEGOTIATE		(SCHED_VERS+25)
-#define REJECTED			(SCHED_VERS+26)
-#define X_EVENT_NOTIFICATION (SCHED_VERS+27)
-#define RECONFIG 			(SCHED_VERS+28)
-#define GET_HISTORY              (SCHED_VERS+29)
-#define UNLINK_HISTORY_FILE      (SCHED_VERS+30)
-#define UNLINK_HISTORY_FILE_DONE (SCHED_VERS+31)
-#define DO_NOT_UNLINK_HISTORY_FILE      (SCHED_VERS+32)
-#define SEND_ALL_JOBS		(SCHED_VERS+33)
-#define SEND_ALL_JOBS_PRIO	(SCHED_VERS+34)
-#define REQ_NEW_PROC		(SCHED_VERS+35)
-#define PCKPT_FRGN_JOB                (SCHED_VERS+36)
-#define SEND_RUNNING_JOBS     (SCHED_VERS+37)
-#define CHECK_CAPABILITY    (SCHED_VERS+38)
-#define GIVE_PRIORITY		(SCHED_VERS+39)
-#define	MATCH_INFO			(SCHED_VERS+40)
-#define	ALIVE				(SCHED_VERS+41)
-#define	REQUEST_SERVICE		(SCHED_VERS+42)
-#define	RELINQUISH_SERVICE	(SCHED_VERS+43)
-#define	VACATE_SERVICE		(SCHED_VERS+44)
-#define PRIORITY_INFO       (SCHED_VERS+45)     /* negotiator to accountant */
+#include "condor_commands.h" /* for command id constants */
 
 #include "condor_network.h"	/* for port numbers */
 
@@ -203,8 +148,6 @@ typedef struct {        /* record sent by startd to shadow */
 
 #define OK		TRUE
 #define NOT_OK	FALSE
-
-#include "condor_mach_status.h"
 
 #define LOCK_JOB_QUEUE(q,m) GuardQueue(q,m,__FILE__,__LINE__)
 #define CLOSE_JOB_QUEUE(q) GuardQueue(q,LOCK_UN,__FILE__,__LINE__)
