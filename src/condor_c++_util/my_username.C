@@ -16,7 +16,7 @@ my_username( int uuid = 0 ) {
 
 	int tryUid = uuid;
 	if ( !tryUid ) {
-		tryUid = getuid();
+		tryUid = geteuid();
 	}
 
    if( (pwd=getpwuid(tryUid)) == NULL ) {
