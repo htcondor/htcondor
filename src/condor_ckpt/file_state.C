@@ -1409,6 +1409,9 @@ int	_condor_open( const char *path, int flags, va_list ap )
 		creat_mode = va_arg( ap, int );
 	}
 
+	// For the sake of buffering, write-only must translate to read-and-write
+	if( creat_mode==O_WRONLY ) creat_mode=O_RDWR;
+
 	if( LocalSysCalls() ) {
 		fd = syscall( SYS_open, path, flags, creat_mode );
 		dprintf(D_FULLDEBUG, "_condor_open_1: fd=%d(%s)\n", fd, path);
