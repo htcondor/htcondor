@@ -360,11 +360,7 @@ Transition TransTab[] = {
 { TERMINATE_WAIT,	ALARM,				END,			cleanup				},
 { TERMINATE_WAIT,	CHILD_EXIT,			TERMINATE,		reaper				},
 
-#if defined(NO_CKPT)
-{ SUPERVISE,		VACATE,				TERMINATE,		req_die				},
-#else
 { SUPERVISE,		VACATE,				TERMINATE,		req_vacate			},
-#endif
 { SUPERVISE,		DIE,				TERMINATE,		req_die				},
 { SUPERVISE,		CHILD_EXIT,			PROC_EXIT,		reaper				},
 { SUPERVISE,		GET_NEW_PROC,		GET_PROC,		susp_ckpt_timer		},
