@@ -1,3 +1,7 @@
+10/11/04 V6_6_7
+   The official 6.6.7 release tag (at long last!).  this lives on
+   V6_6_ALL and V6_6_7_EXT 
+   
 10/06/04 V6_6-krb5_1_3-branch + V6_6-krb5_1_3-root
    This is a new branch off the end of the V6_6-branch for changes to
    get Condor to link with and use Kerberos5 version 1.3.x.  The
