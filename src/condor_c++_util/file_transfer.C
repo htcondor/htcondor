@@ -266,7 +266,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 		// lookup the domain
 		char ntdomain[80];
 		char *p_ntdomain = ntdomain;
-		if (!Ad->EvaluateAttrString(ATTR_NT_DOMAIN, ntdomain)) {
+		if (!Ad->EvaluateAttrString(ATTR_NT_DOMAIN, ntdomain, 80)) {
 			// no nt domain specified in the ad; assume local account
 			p_ntdomain = NULL;
 		}
