@@ -205,6 +205,7 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 	  else  
 	  {  
 	    rip->r_clientmachine = strdup(hp->h_name);
+		client = strdup(hp->h_name);
 	    dprintf(D_ALWAYS, "Got start_job_request from %s\n",
 		    rip->r_clientmachine);
 	  }
@@ -347,8 +348,8 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 	      // Higher priority job
 	      CondorPendingJobs::StoreRespondInfo(sock,from,rid);
 	      CondorPendingJobs::RecordJob(rid,job);
-	      client = rip->r_client;
-
+		  if (client) free(client);
+	      client = strdup(rip->r_client);
 
 	      event_vacate(rid, NO_JID, NO_TID);	    
 
