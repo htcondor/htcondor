@@ -1128,54 +1128,44 @@ AC_MSG_NOTICE([determining versions of external packages])
 # For now, we hardcode that non-i386 platforms are clipped and don't
 # need an external glibc for anything...
 if test "x$_cv_libc_kind" = "xGLIBC" -a "x$_cv_arch" = "xI386" ; then
-  AC_MSG_CHECKING([glibc])
   _cv_libc_full_vers="$_cv_libc_major.$_cv_libc_minor.$_cv_libc_patch"
   case "$_cv_libc_full_vers" in
   "2.2.4" )
-    _cv_ext_glibc_version="glibc-2.2.2"
+    CONDOR_EXTERNAL_VERSION([glibc],[2.2.2])
     ;;
   "2.2.5" )
-    _cv_ext_glibc_version="glibc-2.2.2"
+    CONDOR_EXTERNAL_VERSION([glibc],[2.2.2])
     ;;
   "2.2.93" )
-    _cv_ext_glibc_version="glibc-2.2.93"
+    CONDOR_EXTERNAL_VERSION([glibc],[2.2.93])
     ;;
   "2.3.2" )
     # the glibc 2.3.2 from redhat's source rpms are very different than the
 	# stock 2.3.2 you can download off of the web.
-    _cv_ext_glibc_version="glibc-2.3.2.27.9.7"
+    CONDOR_EXTERNAL_VERSION([glibc],[2.3.2.27.9.7])
     ;;
   * )  
+    AC_MSG_CHECKING(glibc)
     AC_MSG_RESULT([ERROR])
     AC_MSG_ERROR([Condor does NOT know what glibc external to use with glibc-$_cv_libc_full_vers])
   esac
-  AC_MSG_RESULT([$_cv_ext_glibc_version])
-  AC_SUBST(ext_glibc_version,$_cv_ext_glibc_version)
   AC_SUBST(want_ext_glibc,YES)
 else
   AC_SUBST(want_ext_glibc,NO)
   AC_SUBST(ext_glibc_version,UNUSED)
 fi
 
-
-AC_MSG_CHECKING([kerberos])
 if test "$os" = "AIX" ; then
-_cv_ext_kerberos_version="krb5-1.3.1"
+  CONDOR_EXTERNAL_VERSION([krb5],[1.3.1])
 else
-_cv_ext_kerberos_version="krb5-1.2.5"
+  CONDOR_EXTERNAL_VERSION([krb5],[1.2.5])
 fi
-AC_MSG_RESULT([$_cv_ext_kerberos_version])
-AC_SUBST(ext_kerberos_version,$_cv_ext_kerberos_version)
 
-AC_MSG_CHECKING([globus])
 if test "$_cv_opsys_vers" = "DUX4"; then
-  _cv_ext_globus_version="globus-2.2.4"
+  CONDOR_EXTERNAL_VERSION([globus],[2.2.4])
 else
-  _cv_ext_globus_version="globus-2.4.3.vdt.1.1.14"
+  CONDOR_EXTERNAL_VERSION([globus],[2.4.3.vdt.1.1.14])
 fi
-AC_MSG_RESULT([$_cv_ext_globus_version])
-AC_SUBST(ext_globus_version,$_cv_ext_globus_version)
-
 AC_MSG_CHECKING([globus flavor])
 _cv_globus_flavor=gcc32dbg
 if test "$_cv_arch" = "ALPHA" -o "$_cv_arch" = "IA64" ; then
@@ -1186,29 +1176,13 @@ fi
 AC_MSG_RESULT([$_cv_globus_flavor])
 AC_SUBST(globus_flavor,$_cv_globus_flavor)
 
+CONDOR_EXTERNAL_VERSION([gpt],[3.0])
 
-AC_MSG_CHECKING([gpt])
-_cv_ext_gpt_version="gpt-3.0"
-AC_MSG_RESULT([$_cv_ext_gpt_version])
-AC_SUBST(ext_gpt_version,$_cv_ext_gpt_version)
+CONDOR_EXTERNAL_VERSION([gahp],[1.0.12])
 
+CONDOR_EXTERNAL_VERSION([zlib],[1.1.3])
 
-AC_MSG_CHECKING([gahp])
-_cv_ext_gahp_version="gahp-1.0.12"
-AC_MSG_RESULT([$_cv_ext_gahp_version])
-AC_SUBST(ext_gahp_version,$_cv_ext_gahp_version)
-
-
-AC_MSG_CHECKING([zlib])
-_cv_ext_zlib_version="zlib-1.1.3"
-AC_MSG_RESULT([$_cv_ext_zlib_version])
-AC_SUBST(ext_zlib_version,$_cv_ext_zlib_version)
-
-
-AC_MSG_CHECKING([pvm])
-_cv_ext_pvm_version="pvm-3.4.2"
-AC_MSG_RESULT([$_cv_ext_pvm_version])
-AC_SUBST(ext_pvm_version,$_cv_ext_pvm_version)
+CONDOR_EXTERNAL_VERSION([pvm],[3.4.2])
 
 else
 # if there's no externals at all, we still need to define these to
