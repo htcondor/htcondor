@@ -382,6 +382,19 @@ OsProc::StartJob()
 					 "eval to int!  Using default of 10...\n", ptmp );
 			nice_inc = 10;
 		}
+
+			// enforce valid ranges for nice_inc
+		if( nice_inc < 0 ) {
+			dprintf( D_FULLDEBUG, "WARNING: job renice value (%d) is too "
+					 "low: adjusted to 0\n", nice_inc );
+			nice_inc = 0;
+		}
+		else if( nice_inc > 19 ) {
+			dprintf( D_FULLDEBUG, "WARNING: job renice value (%d) is too "
+					 "high: adjusted to 19\n", nice_inc );
+			nice_inc = 19;
+		}
+
 		ASSERT( ptmp );
 		free( ptmp );
 		ptmp = NULL;
