@@ -635,7 +635,7 @@ makeDate( char*, ArgumentList &argList, EvalState &state, Value &val )
 			return( true );
 		}
 	} else if( arg1.IsStringValue( month, 32, tmp ) ) {
-		if( snprintf( buffer, 64, "%d %s %d", dd, month, yy ) > 63 ||
+		if( sprintf( buffer, "%d %s %d", dd, month, yy ) > 63 ||
 			strptime( buffer, "%d %b %Y", &tms ) == NULL ) {
 			val.SetErrorValue( );
 			return( true );
