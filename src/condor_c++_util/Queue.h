@@ -41,6 +41,7 @@ class Queue {
   int IsFull();
   int Length();   // # of elements
   void clear();
+  bool IsMember(const Value& value);
 
  private:
   int tableSize;  
@@ -150,6 +151,20 @@ void Queue<Value>::clear()
 {
   length = 0;
   head=tail=0;
+}
+
+//--------------------------------------------------------------------
+
+template <class Value>
+bool Queue<Value>::IsMember(const Value &value)
+{
+		int i, j;
+		j = tail;
+		for (i = 0; i < length; i++) {
+			if(ht[j] == value ) return true;
+			j = (j+1) % tableSize;
+		}
+		return false;
 }
 
 #endif
