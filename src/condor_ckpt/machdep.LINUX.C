@@ -110,7 +110,9 @@ stack_start_addr()
   This value is a constant for any given Linux system, but depends
   on the memory configuration given when the kernel was compiled.
   On 1GB systems, this will be 0xc0000000.  On 2GB systems, it will
-  be 0x80000000, and so on.
+  be 0x80000000, and so on. On 2.6 kernels with the fast syscall page
+  and the exec_domain set to PER_LINUX32 (i386), it will be 0xff000000--
+  I don't know if there is a large/small memory model yet.
 
   The environment is always stored very close to the top of the stack,
   so we nab that value and lop off any page offset.  That gives us the
