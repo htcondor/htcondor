@@ -37,7 +37,7 @@ void _classad_except(char *format, ...)
 
 	va_start(arguments, format);
 	vfprintf(stderr, format, arguments);
-	va_end(args);
+	va_end(arguments);
 	exit(1);
 	return;
 }
