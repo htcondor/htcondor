@@ -170,6 +170,7 @@ char	*BufferBlockSize = "buffer_block_size";
 char	*FetchFiles = "fetch_files";
 char	*CompressFiles = "compress_files";
 char	*AppendFiles = "append_files";
+char	*LocalFiles = "local_files";
 
 char	*TransferInputFiles = "transfer_input_files";
 char	*TransferOutputFiles = "transfer_output_files";
@@ -1231,6 +1232,18 @@ SetAppendFiles()
 	}
 }
 
+void
+SetLocalFiles()
+{
+	char buffer[ATTRLIST_MAX_EXPRESSION];
+	char *value;
+
+	value = condor_param( LocalFiles );
+	if(value) {
+		sprintf(buffer,"%s = \"%s\"",ATTR_LOCAL_FILES,value);
+		InsertJobExpr (buffer);
+	}
+}
 
 void
 SetStdFile( int which_file )
@@ -2471,6 +2484,7 @@ queue(int num)
 		SetFetchFiles();
 		SetCompressFiles();
 		SetAppendFiles();
+		SetLocalFiles();
 		SetTransferFiles();	 // must be called _before_ SetImageSize() 
 		SetImageSize();		// must be called _after_ SetTransferFiles()
 		SetRequirements();	// must be called _after_ SetTransferFiles()
