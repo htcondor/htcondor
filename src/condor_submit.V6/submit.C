@@ -649,7 +649,7 @@ SetExecutable()
 
 			//executable named in the submit file should be inserted in the
 			//arguments list to be passed to the globus shadow
-		sprintf( GlobusExec, "'&(executable=%s)",ename );
+		sprintf( GlobusExec, "&(executable=%s)",ename );
 
 			//now, replace ename with globusshadow value from config file
 			//ename wasn't getting freed anywhere, free old value anyway
@@ -824,11 +824,11 @@ SetUniverse()
 
 	if( univ && stricmp(univ,"globus") == MATCH ) {
 			//Globus universe jobs need to be transformed to be scheduler
-			//universe jobs, use JobUniverse as the signal for that, but the 
-			//end result should be a scheduler universe job with the globusrun 
+			//universe jobs, use JobUniverse as the signal for that, but the end 
+			//result should be a scheduler universe job with the globus shadow 
 			//program as the scheduler, and modified executable, arguments, 
-			//universe, in/out/err job attributes. Also, force getenv to be 
-			//True, find globusrun, and clear & set MemoryRequirements.
+			//universe, in/out/err job attributes. 
+			//Also, find globusrun, and clear & set MemoryRequirements.
 		JobUniverse = GLOBUS_UNIVERSE;
 		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, SCHED_UNIVERSE);
 		InsertJobExpr (buffer);
@@ -1372,7 +1372,7 @@ SetArguments()
 		InsertJobExpr (buffer, false );
 
 			//this is the command line string to pass to globusrun itself
-		sprintf( buffer, "%s = \"-b -r '%s' %s'\"", "GlobusArgs", globushost, 
+		sprintf( buffer, "%s = \"-b -r '%s' '%s'\"", "GlobusArgs", globushost, 
 				GlobusArgs );
 		InsertJobExpr (buffer, false );
 		delete [] GlobusTmp;
