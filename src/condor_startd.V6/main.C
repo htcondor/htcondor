@@ -17,8 +17,11 @@ int	update_interval;	// Interval to update CM
 
 // Paths
 char*	exec_path = NULL;
-char*	kbd_dev = NULL;
-char*	mouse_dev = NULL;
+
+// String Lists
+StringList *console_devices = NULL;
+StringList *startd_exprs = NULL;
+StringList *startd_job_exprs = NULL;
 
 // Starter paths
 char*	PrimaryStarter = NULL;
@@ -279,21 +282,44 @@ init_params( int first_time)
 
 	tmp = param( "KILLING_TIMEOUT" );
 	if( !tmp ) {
-		killing_timeout = 15;
+		killing_timeout = 30;
 	} else {
 		killing_timeout = atoi( tmp );
 		free( tmp );
 	}
 
-	if( kbd_dev ) {
-		free( kbd_dev );
+	if( console_devices ) {
+		delete( console_devices );
+		console_devices = NULL;
 	}
-	kbd_dev = param("KBD_DEVICE");
+	tmp = param( "CONSOLE_DEVICES" );
+	if( tmp ) {
+		console_devices = new StringList();
+		console_devices->initializeFromString( tmp );
+		free( tmp );
+	}
 
-	if( mouse_dev ) {
-		free( mouse_dev );
+	if( startd_exprs ) {
+		delete( startd_exprs );
+		startd_exprs = NULL;
 	}
-	mouse_dev = param("MOUSE_DEVICE");
+	tmp = param( "STARTD_EXPRS" );
+	if( tmp ) {
+		startd_exprs = new StringList();
+		startd_exprs->initializeFromString( tmp );
+		free( tmp );
+	}
+
+	if( startd_job_exprs ) {
+		delete( startd_job_exprs );
+		startd_job_exprs = NULL;
+	}
+	tmp = param( "STARTD_JOB_EXPRS" );
+	if( tmp ) {
+		startd_job_exprs = new StringList();
+		startd_job_exprs->initializeFromString( tmp );
+		free( tmp );
+	}
 
 	return TRUE;
 }

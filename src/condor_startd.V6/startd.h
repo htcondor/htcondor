@@ -51,8 +51,11 @@ extern	int		update_interval;	// Interval to update CM
 
 // Paths
 extern	char*	exec_path;
-extern	char*	kbd_dev;
-extern	char*	mouse_dev;
+
+// Sting Lists
+extern	StringList* console_devices;
+extern	StringList* startd_exprs;
+extern	StringList* startd_job_exprs;
 
 // Starter paths
 extern	char*	PrimaryStarter;
