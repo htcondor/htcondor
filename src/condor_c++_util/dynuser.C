@@ -42,24 +42,46 @@ char* getSystemAccountName() {
 // language-independant way to get at the BUILTIN\Users group name
 // delete[] the result!
 char* getUserGroupName() {
-	return getWellKnownName(SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_USERS);
+	return getWellKnownName(
+		SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_USERS);
 }
 
-// looks up well known SIDs and RIDs and returns the account name.
+// looks up Users group and returns the BUILTIN domain
+// which for example is VORDEFINIERT on German systems
+char*
+getBuiltinDomainName() {
+	return getWellKnownName(
+		SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_USERS, true);
+}
+
+// looks up SYSTEM account and returns the NT AUTHORITY
+// domain, which for example is NT-AUTHORITAT on German systems.
+char*
+getNTAuthorityDomainName() {
+	return getWellKnownName(SECURITY_LOCAL_SYSTEM_RID, 0, true);
+}
+
+// looks up well known SIDs and RIDs. The optional domainname,
+// parameter, when true, causes it to return the domain name
+// instead of the account name.
 // Seems like two sub-authorities should be enough for what we need.
 // delete[] the result!
-char* getWellKnownName( DWORD subAuth1, DWORD subAuth2 ) {
+char* 
+getWellKnownName( DWORD subAuth1, DWORD subAuth2, bool domainname ) {
 	
 	PSID pSystemSID;
 	SID_IDENTIFIER_AUTHORITY auth = SECURITY_NT_AUTHORITY;
-	char* systemName;
-	char systemDomain[255];
+	char *systemName;
+	char *systemDomain;
+	char *well_known_name;
 	DWORD name_size, domain_size;
 	SID_NAME_USE sidUse;
 	bool result;
 	
 	name_size = domain_size = 255;
-	
+	systemName =	new char[name_size];
+	systemDomain =	new char[domain_size];
+
 	// Create a well-known SID for the Users Group.
 	
 	if(! AllocateAndInitializeSid( &auth, ((subAuth2) ? 2 : 1),
@@ -70,9 +92,6 @@ char* getWellKnownName( DWORD subAuth1, DWORD subAuth2 ) {
 		printf( "AllocateAndInitializeSid Error %u\n", GetLastError() );
 		return NULL;
 	}
-	
-	
-	systemName = new char[name_size];
 	
 	// Now lookup whatever the account name is for this SID
 	
@@ -89,9 +108,12 @@ char* getWellKnownName( DWORD subAuth1, DWORD subAuth2 ) {
 	
 	if ( ! result ) {
 		printf( "LookupAccountSid Error %u\n", GetLastError() );
-		delete[] systemName;
 		return NULL;
+	} else if ( domainname ) {
+		delete[] systemName;
+		return systemDomain;	
 	} else {
+		delete[] systemDomain;
 		return systemName;
 	}
 }

@@ -25,6 +25,7 @@
 #include "perm.h"
 #include "domain_tools.h"
 #include "Lm.h"
+#include "dynuser.h"
 
 //
 // get_permissions:  1 = yes, 0 = no, -1 = unknown/error
@@ -384,6 +385,7 @@ int perm::userInAce ( const LPVOID cur_ace, const char *account, const char *dom
 	unsigned long name_buffer_size = 0;
 	unsigned long domain_name_size = 0;
 	SID_NAME_USE peSid;
+	int result;
 
 	LPVOID ace_sid = &((ACCESS_ALLOWED_ACE*) cur_ace)->SidStart;
 	
@@ -425,10 +427,7 @@ int perm::userInAce ( const LPVOID cur_ace, const char *account, const char *dom
 
 	if ( peSid == SidTypeUser ) 
 	{
-		int result = domainAndNameMatch( account, trustee_name, domain, trustee_domain );
-		if (trustee_name) { delete[] trustee_name; trustee_name = NULL; }
-		if (trustee_domain) { delete[] trustee_domain; trustee_domain = NULL; }
-		return result;
+		result = domainAndNameMatch( account, trustee_name, domain, trustee_domain );
 	} 
 	else if ( ( peSid == SidTypeGroup ) ||
 		( peSid == SidTypeAlias ) ||
@@ -438,43 +437,43 @@ int perm::userInAce ( const LPVOID cur_ace, const char *account, const char *dom
 		
 		char computerName[MAX_COMPUTERNAME_LENGTH+1];
 		unsigned long nameLength = MAX_COMPUTERNAME_LENGTH+1;
+		char* builtin = getBuiltinDomainName();
+		char* nt_authority = getNTAuthorityDomainName();
+
 		
 		int success = GetComputerName( computerName, &nameLength );
 		
 		if (! success ) {
+			// this should never happen
 			dprintf(D_ALWAYS, "perm::GetComputerName failed: (Err: %d)", GetLastError());
-//			delete[] trustee_str;
-			return -1;
-		}
-		
-		if ( strcmp( trustee_name, "Everyone" ) == 0 ) // if file is in group Everyone, we're done.
-		{
-			return 1;
-		} else if ( 
-			(trustee_domain == NULL) || 
+			result = -1; // failure
+		} else if ( strcmp( trustee_name, "Everyone" ) == 0 ) { 
+			// if file is in group Everyone, we're done.
+			result = 1; 
+		} else if ((trustee_domain == NULL) || 
 			( strcmp( trustee_domain, "" ) == 0 ) ||
-			( strcmp(trustee_domain, "BUILTIN") == 0 ) ||
-			( strcmp(trustee_domain, "NT AUTHORITY") == 0 ) ||
+			( strcmp(trustee_domain, builtin) == 0 ) ||
+			( strcmp(trustee_domain, nt_authority) == 0 ) ||
 			( strcmp(trustee_domain, computerName ) == 0 ) ) {
 			
-			int result = userInLocalGroup( account, domain, trustee_name );			
-			if (trustee_name) { delete[] trustee_name; trustee_name = NULL; }
-			if (trustee_domain) { delete[] trustee_domain; trustee_domain = NULL; }
-			return result;
-
-		}
-		else { // if group is global
-			int result = userInGlobalGroup( account, domain, trustee_name, trustee_domain );
-			if (trustee_name) { delete[] trustee_name; trustee_name = NULL; }
-			if (trustee_domain) { delete[] trustee_domain; trustee_domain = NULL; }
-			return result;
-		}
+			result = userInLocalGroup( account, domain, trustee_name );			
 		
+		} else { // if group is global
+			result = userInGlobalGroup( account, domain, trustee_name, trustee_domain );
+		}
+
+		delete[] builtin;
+		delete[] nt_authority;
 	} // is group
 	else {
 		// If it's not a user and not a group, I don't know what it is, so return error
-		return -1;
+		result = -1;
 	}	
+
+	if (trustee_name) { delete[] trustee_name; trustee_name = NULL; }
+	if (trustee_domain) { delete[] trustee_domain; trustee_domain = NULL; }
+
+	return result;
 } 
 
 perm::perm() {
