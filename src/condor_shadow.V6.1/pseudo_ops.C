@@ -107,15 +107,12 @@ int
 pseudo_get_job_info(ClassAd *&ad)
 {
 	ClassAd * the_ad;
-	static bool called_init = false;
 
 	the_ad = thisRemoteResource->getJobAd();
 	ASSERT( the_ad );
 
-	if ( called_init == false ) {
-		thisRemoteResource->filetrans.Init( the_ad, true, PRIV_USER );
-		called_init = true;
-	}
+		// FileTransfer now makes sure we only do Init() once
+	thisRemoteResource->filetrans.Init( the_ad, true, PRIV_USER );
 
 	// let the starter know the version of the shadow
 	int size = 10 + strlen(CondorVersion()) + strlen(ATTR_SHADOW_VERSION);
