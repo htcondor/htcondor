@@ -28,7 +28,7 @@ AvailStats::AvailStats()
 {
 	as_start_avail = 0;
 	as_avail_estimate = 0;
-	as_avail_confidence = 0.8;
+	as_avail_confidence = 0.8f;
 	as_last_avail_interval = 0;
 	as_avail_time = 0.0;
 	as_num_avail_periods = 0;
@@ -139,7 +139,7 @@ AvailStats::compute( amask_t how_much )
 		if( tmp ) {
 			as_avail_confidence = atof(tmp);
 			if( as_avail_confidence < 0.0 || as_avail_confidence > 1.0 ) {
-				as_avail_confidence = 0.8;
+				as_avail_confidence = 0.8f;
 			}
 			free(tmp);
 		}
