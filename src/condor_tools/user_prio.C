@@ -48,7 +48,7 @@ struct LineRec {
 static void usage(char* name);
 static void ProcessInfo(AttrList* ad);
 static int CountElem(AttrList* ad);
-static void CollectInfo(AttrList* ad, LineRec* LR);
+static void CollectInfo(int numElem, AttrList* ad, LineRec* LR);
 static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem);
 
 //-----------------------------------------------------------------
@@ -56,6 +56,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem);
 extern "C" {
 int CompPrio(LineRec* a, LineRec* b);
 }
+
 
 //-----------------------------------------------------------------
 
@@ -137,7 +138,7 @@ static void ProcessInfo(AttrList* ad)
 {
   int NumElem=CountElem(ad);
   LineRec* LR=new LineRec[NumElem];
-  CollectInfo(ad,LR);
+  CollectInfo(NumElem,ad,LR);
   qsort(LR,NumElem,sizeof(LineRec),CompPrio);  
   PrintInfo(ad,LR,NumElem);
 } 
@@ -146,10 +147,11 @@ static void ProcessInfo(AttrList* ad)
 
 static int CountElem(AttrList* ad)
 {
-  int count=0;
-  ad->ResetExpr();
-  while(ad->NextExpr()) count++;
-  return (count-1)/3;
+	int numSubmittors;
+	if( ad->LookupInteger( "NumSubmittors", numSubmittors ) ) 
+		return numSubmittors;
+	else
+		return -1;
 } 
 
 //-----------------------------------------------------------------
@@ -164,17 +166,26 @@ int CompPrio(LineRec* a, LineRec* b)
 
 //-----------------------------------------------------------------
 
-static void CollectInfo(AttrList* ad, LineRec* LR)
+static void CollectInfo(int numElem, AttrList* ad, LineRec* LR)
 {
-  ExprTree* exp;
-  ad->ResetExpr();
-  exp=ad->NextExpr();
-  int i=0;
-  while(exp=ad->NextExpr()) {
-    LR[i].Name=((String*) exp->RArg())->Value();
-    LR[i].Priority=((Float*) ad->NextExpr()->RArg())->Value();
-    LR[i].Res=((Integer*) ad->NextExpr()->RArg())->Value();
-    i++;
+  char  attrName[32], attrPrio[32], attrResUsed[32];
+  char  name[128];
+  float priority;
+  int   resUsed;
+
+  for( int i=1; i<=numElem; i++) {
+    sprintf( attrName , "Name%d", i );
+    sprintf( attrPrio , "Priority%d", i );
+    sprintf( attrResUsed , "ResourcesUsed%d", i );
+
+    if( !ad->LookupString	( attrName, name ) 		|| 
+		!ad->LookupFloat	( attrPrio, priority )	||
+		!ad->LookupInteger	( attrResUsed, resUsed ) ) 
+			continue;
+
+    LR[i-1].Name=name;
+    LR[i-1].Priority=priority;
+    LR[i-1].Res=resUsed;
   }
 
   return;
@@ -184,12 +195,10 @@ static void CollectInfo(AttrList* ad, LineRec* LR)
 
 static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
 {
-  // ad->AttrList::fPrint(stdout);
   ExprTree* exp;
   ad->ResetExpr();
   exp=ad->NextExpr();
   Time T=((Integer*) exp->RArg())->Value();
-  // printf("%f\n",d);
   printf("Last Priority Update: %s\n",T.Asc());
 
   char* Fmt1="%-30s   %12.3f   %4d\n"; 
