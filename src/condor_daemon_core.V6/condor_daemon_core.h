@@ -826,6 +826,7 @@ class DaemonCore : public Service
         char*           handler_descrip;
         void*           data_ptr;
 		bool			is_connect_pending;
+		bool			call_handler;
     };
     void              DumpSocketTable(int, const char* = NULL);
     int               maxSocket;  // number of socket handlers to start with

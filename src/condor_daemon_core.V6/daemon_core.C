@@ -651,13 +651,24 @@ int DaemonCore::Register_Socket(Stream *iosock, char* iosock_descrip,
 	}
 
 	// Verify that this socket has not already been registered
-	for ( j=0; j < nSock; j++ ) {
+	int fd_to_register = ((Sock *)iosock)->get_file_desc();
+	for ( j=0; j < nSock; j++ ) 
+	{
 		if ( (*sockTable)[j].iosock == iosock ) {
 			EXCEPT("DaemonCore: Same socket registered twice");
         }
+		if ( (*sockTable)[j].iosock ) { 	// if valid entry
+			if ( ((Sock *)(*sockTable)[j].iosock)->get_file_desc() == 
+								fd_to_register ) 
+			{
+				EXCEPT("DaemonCore: Same socket fd registered twice (fd=%d)",
+									fd_to_register);
+			}
+		}
 	}
 
 	// Found a blank entry at index i. Now add in the new data.
+	(*sockTable)[i].call_handler = false;
 	(*sockTable)[i].iosock = iosock;
 	switch ( iosock->type() ) {
 		case Stream::reli_sock :
@@ -1205,6 +1216,7 @@ void DaemonCore::Driver()
 		FD_ZERO(&exceptfds);
 		for (i = 0; i < nSock; i++) {
 			if ( (*sockTable)[i].iosock ) {	// if a valid entry....
+					// Setup our fdsets
 				if ( (*sockTable)[i].is_connect_pending ) {
 						// we want to be woken when a non-blocking
 						// connect is ready to write.  when connect
@@ -1271,7 +1283,8 @@ void DaemonCore::Driver()
 #endif
 		
 		if (rv > 0) {	// connection requested
-			// scan through the socket table to find which one select() set
+
+			// scan through the socket table to find which ones select() set
 			for(i = 0; i < nSock; i++) {
 				
 				if ( (*sockTable)[i].iosock ) {	// if a valid entry...
@@ -1279,7 +1292,7 @@ void DaemonCore::Driver()
 					// figure out if we should call a handler.  to do this,
 					// if the socket was doing a connect(), we check the
 					// writefds and excepfds.  otherwise, check readfds.
-					bool call_handler = false;	
+					(*sockTable)[i].call_handler = false;	
 					if ( (*sockTable)[i].is_connect_pending ) {					
 						if ( (FD_ISSET((*sockTable)[i].sockd, &writefds)) ||
 							 (FD_ISSET((*sockTable)[i].sockd, &exceptfds)) ) 
@@ -1290,17 +1303,26 @@ void DaemonCore::Driver()
 							if ( ((Sock *)(*sockTable)[i].iosock)->
 											do_connect_finish() )
 							{
-								call_handler = true;
+								(*sockTable)[i].call_handler = true;
 							}
 						}
 					} else {
 						if (FD_ISSET((*sockTable)[i].sockd, &readfds)) 
 						{
-							call_handler = true;
+							(*sockTable)[i].call_handler = true;
 						}
 					}
+				}	// end of if valid sock entry
+			}	// end of for loop through all sock entries
 
-					if ( call_handler ) {
+			for(i = 0; i < nSock; i++) {
+				
+				if ( (*sockTable)[i].iosock ) {	// if a valid entry...
+
+					if ( (*sockTable)[i].call_handler ) {
+
+						(*sockTable)[i].call_handler = false;
+
 						// ok, select says this socket table entry has new data.
 
 						// if this sock is a safe_sock, then call the method
