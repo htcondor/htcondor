@@ -479,8 +479,10 @@ accept_request_claim( Resource* rip )
 		dprintf( D_FULLDEBUG, "gethostbyaddr failed. errno= %d\n", errno );
 		EXCEPT("Can't find host name");
 	}
-	rip->r_cur->client()->sethost( hp->h_name );
-	sprintf( tmp, "%s=\"%s\"", ATTR_CLIENT_MACHINE, hp->h_name );
+		// Add a trailing '.' to signify a fully qualified name
+	sprintf( tmp, "%s.", hp->h_name );
+	rip->r_cur->client()->sethost( tmp );
+	sprintf( tmp, "%s=\"%s\"", ATTR_CLIENT_MACHINE, rip->r_cur->client()->host() );
 	(rip->r_classad)->Insert( tmp );
 
 		// Get the owner of this claim out of the request classad and
