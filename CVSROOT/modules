@@ -397,7 +397,8 @@ V6_7_5_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/srb/3.2.1
 
 # Externals needed for the head of the V6_7-branch
-V6_7_EXT	-a V6_7_5_EXT
+V6_7_EXT	-a V6_7_5_EXT \
+		   externals/bundles/gt4gahp/1.1
 
 # Externals needed for Stork trunk build
 STORK_EXT	-a EXT_COMMON \
