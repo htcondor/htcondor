@@ -749,6 +749,18 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 	float utime = 0.0;
 	float stime = 0.0;
 
+	// If the job completed, and there is no HISTORY file specified,
+	// the don't bother to update the job ClassAd since it is about to be
+	// flushed into the bit bucket by the schedd anyway.
+	char *myHistoryFile = param("HISTORY");
+	if ((Proc->status == COMPLETED) && (myHistoryFile==NULL)) {
+		return;
+	}
+
+	if (myHistoryFile) {
+		free(myHistoryFile);
+	}
+
 	//new syntax, can use filesystem to authenticate
 	if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT) ||
 		GetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS,
