@@ -162,12 +162,10 @@ void EmitDirtyAttrList(int mode, ClassAd *ad)
 		ad->LookupString(ATTR_DIRTY_ATTR_LIST, dirty);
 
 		dprintf(mode, "%s = %s\n", ATTR_DIRTY_ATTR_LIST, dirty);
-		printf("%s = %s\n", ATTR_DIRTY_ATTR_LIST, dirty);
 	}
 	else
 	{
 		dprintf(mode, "%s = UNDEFINED\n", ATTR_DIRTY_ATTR_LIST);
-		printf("%s = UNDEFINED\n", ATTR_DIRTY_ATTR_LIST);
 		return;
 	}
 }
