@@ -2492,9 +2492,9 @@ int DaemonCore::HandleReq(int socki)
 		}
 
         if (who.length() > 0) {
-            ((SafeSock*)stream)->setFullyQualifiedUser((char *)who.data());
+            ((SafeSock*)stream)->setFullyQualifiedUser((char *)who.c_str());
             ((SafeSock*)stream)->setAuthenticated(true);
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticated UDP message is from %s.\n", who.data());
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticated UDP message is from %s.\n", who.c_str());
         }
 	}
 	
@@ -2546,7 +2546,7 @@ int DaemonCore::HandleReq(int socki)
 			PrettyPrint pp;
 			std::string buf;
 			pp.Unparse ( buf, &auth_info );
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: received following ClassAd:\n%s\n", buf.data());
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: received following ClassAd:\n%s\n", buf.c_str());
 		}
 
 		char buf[ATTRLIST_MAX_EXPRESSION];
@@ -2604,7 +2604,7 @@ int DaemonCore::HandleReq(int socki)
 		if( auth_info.EvaluateAttrString(ATTR_SEC_COOKIE, incoming_cookie)) {
 			// compare it to the one we have internally
 
-			valid_cookie = cookie_is_valid((unsigned char*)incoming_cookie.data());
+			valid_cookie = cookie_is_valid((unsigned char*)incoming_cookie.c_str());
 
 			if ( valid_cookie ) {
 				// we have a match... trust this command.
@@ -2633,17 +2633,17 @@ int DaemonCore::HandleReq(int socki)
 				}
 
 				// lookup the suggested key
-				if (!sec_man->session_cache->lookup(the_sid.data(), session)) {
+				if (!sec_man->session_cache->lookup(the_sid.c_str(), session)) {
 
 					// the key id they sent was not in our cache.  this is a
 					// problem.
 
 					dprintf (D_ALWAYS, "DC_AUTHENTICATE: attempt to open "
-							   "invalid session %s, failing.\n", the_sid.data());
+							   "invalid session %s, failing.\n", the_sid.c_str());
 
-					std::string return_addr = NULL;
+					std::string return_addr;
 					if( auth_info.EvaluateAttrString(ATTR_SEC_SERVER_COMMAND_SOCK, return_addr)) {
-						sec_man->send_invalidate_packet( (char*)return_addr.data(), (char*)the_sid.data() );
+						sec_man->send_invalidate_packet( (char*)return_addr.c_str(), (char*)the_sid.c_str() );
 					}
 
 					// close the connection.
@@ -2678,7 +2678,7 @@ int DaemonCore::HandleReq(int socki)
 
 					if (the_user != "") {
 						// copy this to the HandleReq() scope
-						strcpy (user, the_user.data());
+						strcpy (user, the_user.c_str());
 					}
 				}
 				new_session = false;
@@ -2766,16 +2766,16 @@ int DaemonCore::HandleReq(int socki)
 
 						switch (toupper(crypto_method[0])) {
 							case 'B': // blowfish
-								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating BLOWFISH key for session %s...\n", the_sid.data());
+								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating BLOWFISH key for session %s...\n", the_sid.c_str());
 								the_key = new KeyInfo(rbuf, 24, CONDOR_BLOWFISH);
 								break;
 							case '3': // 3des
 							case 'T': // Tripledes
-								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating 3DES key for session %s...\n", the_sid.data());
+								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating 3DES key for session %s...\n", the_sid.c_str());
 								the_key = new KeyInfo(rbuf, 24, CONDOR_3DES);
 								break;
 							default:
-								dprintf ( D_SECURITY, "DC_AUTHENTICATE: this version doesn't support %s crypto.\n", crypto_method.data() );
+								dprintf ( D_SECURITY, "DC_AUTHENTICATE: this version doesn't support %s crypto.\n", crypto_method.c_str() );
 								break;
 						}
 
@@ -2880,7 +2880,7 @@ int DaemonCore::HandleReq(int socki)
 						dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticating RIGHT NOW.\n");
 					}
 
-					if (!sock->authenticate(the_key, auth_methods.data(), &errstack)) {
+					if (!sock->authenticate(the_key, auth_methods.c_str(), &errstack)) {
 						dprintf( D_ALWAYS, 
 								 "DC_AUTHENTICATE: authenticate failed: %s\n",
 								 errstack.getFullText() );
@@ -2937,7 +2937,7 @@ int DaemonCore::HandleReq(int socki)
 						result = FALSE;
 						goto finalize;
 					} else {
-						dprintf (D_SECURITY, "DC_AUTHENTICATE: message authenticator enabled with key id %s.\n", the_sid.data());
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: message authenticator enabled with key id %s.\n", the_sid.c_str());
 #ifdef SECURITY_HACK_ENABLE
 						zz2printf (the_key);
 #endif
@@ -2959,7 +2959,7 @@ int DaemonCore::HandleReq(int socki)
 						result = FALSE;
 						goto finalize;
 					} else {
-						dprintf (D_SECURITY, "DC_AUTHENTICATE: encryption enabled for session %s\n", the_sid.data());
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: encryption enabled for session %s\n", the_sid.c_str());
 					}
 				}
 
@@ -2979,7 +2979,7 @@ int DaemonCore::HandleReq(int socki)
 					}
 
 					// session id
-					pa_ad.InsertAttr(ATTR_SEC_SID, the_sid.data());
+					pa_ad.InsertAttr(ATTR_SEC_SID, the_sid.c_str());
 
 					// other commands this session is good for
 					pa_ad.InsertAttr(ATTR_SEC_VALID_COMMANDS, GetCommandsInAuthLevel(comTable[cmd_index].perm).Value());
@@ -3001,10 +3001,10 @@ int DaemonCore::HandleReq(int socki)
 					sock->encode();
 					if (! pa_ad.put(*sock) ||
 						! sock->eom() ) {
-						dprintf (D_SECURITY, "DC_AUTHENTICATE: unable to send session %s info!\n", the_sid.data());
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: unable to send session %s info!\n", the_sid.c_str());
 					} else {
 						if (DebugFlags & D_FULLDEBUG) {
-							dprintf (D_SECURITY, "DC_AUTHENTICATE: sent session %s info!\n", the_sid.data());
+							dprintf (D_SECURITY, "DC_AUTHENTICATE: sent session %s info!\n", the_sid.c_str());
 						}
 					}
 
@@ -3012,12 +3012,13 @@ int DaemonCore::HandleReq(int socki)
 					std::string dur;
 					the_policy->EvaluateAttrString(ATTR_SEC_SESSION_DURATION, dur);
 
-					int expiration_time = time(0) + atoi(dur.data());
+					int expiration_time = time(0) + atoi(dur.c_str());
 
 					// add the key to the cache
-					KeyCacheEntry tmp_key(the_sid.data(), sock->endpoint(), the_key, the_policy, expiration_time);
+					KeyCacheEntry tmp_key(the_sid.c_str(), sock->endpoint(), the_key, the_policy, expiration_time);
 					sec_man->session_cache->insert(tmp_key);
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: added session id %s to cache for %s seconds!\n", the_sid.data(), dur.data());
+
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: added session id %s to cache for %s seconds!\n", the_sid.c_str(), dur.c_str());
 					if (DebugFlags & D_FULLDEBUG) {
 						the_policy->dPrint(D_SECURITY);
 					}

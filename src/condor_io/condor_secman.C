@@ -122,7 +122,7 @@ SecMan::sec_lookup_feat_act( ClassAd &ad, const char* pname ) {
 
 	if ( ad.EvaluateAttrString(pname, name) ) {
         char buf[2];
-        strncpy (buf, name.data(), 1);
+        strncpy (buf, name.c_str(), 1);
 		buf[1] = 0;
 
 		return sec_alpha_to_sec_feat_act(buf);
@@ -201,7 +201,7 @@ SecMan::sec_lookup_req( ClassAd &ad, const char* pname ) {
     string res;
 	if (ad.EvaluateAttrString(pname, res)) {
 		char buf[2];
-		strncpy (buf, res.data(), 1);
+		strncpy (buf, res.c_str(), 1);
 		buf[1] = 0;
 
 		return sec_alpha_to_sec_req(buf);
@@ -376,6 +376,7 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
         v.Clear();
         v.SetStringValue(buf);
 		ad->InsertAttr(ATTR_SEC_AUTHENTICATION_METHODS, buf);
+		ad->InsertAttr(ATTR_SEC_AUTHENTICATION_METHODS_LIST, buf);
 		if (DebugFlags & D_FULLDEBUG ) {
 			dprintf ( D_SECURITY, "SECMAN: inserted '%s'\n", buf);
 		}
@@ -560,8 +561,8 @@ SecMan::ReconcileSecurityAttribute(const char* attr,
 	srv_ad.EvaluateAttrString(attr, srv_buf);
 
 	// convert it to an enum
-	cli_req = sec_alpha_to_sec_req((char*)cli_buf.data());
-	srv_req = sec_alpha_to_sec_req((char*)srv_buf.data());
+	cli_req = sec_alpha_to_sec_req((char*)cli_buf.c_str());
+	srv_req = sec_alpha_to_sec_req((char*)srv_buf.c_str());
 
 	// this policy is moderately complicated.  make sure you know
 	// the implications if you monkey with the below code.  -zach
@@ -692,7 +693,7 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 		srv_ad.EvaluateAttrString( ATTR_SEC_AUTHENTICATION_METHODS, srv_methods)) {
 
 		// send the list for 6.5.0 and higher
-		MyString the_methods = ReconcileMethodLists( (char *)cli_methods.data(), (char *)srv_methods.data() );
+		MyString the_methods = ReconcileMethodLists( (char *)cli_methods.c_str(), (char *)srv_methods.c_str() );
 		sprintf (buf, "%s", the_methods.Value());
 		v.Clear();
         v.SetStringValue(buf);
@@ -706,14 +707,14 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 		if (first) {
 			v.Clear();
         	v.SetStringValue(first);
-        	action_ad->InsertAttr(ATTR_SEC_AUTHENTICATION_METHODS_LIST, buf);
+        	action_ad->InsertAttr(ATTR_SEC_AUTHENTICATION_METHODS, buf);
 		}
 	}
 
 	if (cli_ad.EvaluateAttrString( ATTR_SEC_CRYPTO_METHODS, cli_methods) &&
 		srv_ad.EvaluateAttrString( ATTR_SEC_CRYPTO_METHODS, srv_methods)) {
 
-		MyString the_methods = ReconcileMethodLists( (char *)cli_methods.data(), (char *)srv_methods.data() );
+		MyString the_methods = ReconcileMethodLists( (char *)cli_methods.c_str(), (char *)srv_methods.c_str() );
 		sprintf (buf, "%s", the_methods.Value());
 		v.Clear();
         v.SetStringValue(buf);
@@ -1399,15 +1400,15 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 
 			string auth_methods;
 			auth_info.EvaluateAttrString(ATTR_SEC_AUTHENTICATION_METHODS_LIST, auth_methods );
-			if (auth_methods != "") {
+			if (auth_methods.length() != 0) {
 				if (DebugFlags & D_FULLDEBUG) {
-					dprintf (D_SECURITY, "SECMAN: AuthMethodsList: %s\n", auth_methods.data());
+					dprintf (D_SECURITY, "SECMAN: AuthMethodsList: %s\n", auth_methods.c_str());
 				}
 			} else {
 				// lookup the 6.4 attribute name
 				auth_info.EvaluateAttrString(ATTR_SEC_AUTHENTICATION_METHODS, auth_methods );
    				if (DebugFlags & D_FULLDEBUG) {
-					dprintf (D_SECURITY, "SECMAN: AuthMethods: %s\n", auth_methods.data());
+					dprintf (D_SECURITY, "SECMAN: AuthMethods: %s\n", auth_methods.c_str());
 				}
 			}
 
@@ -1421,7 +1422,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 				dprintf ( D_SECURITY, "SECMAN: Auth methods: %s\n", auth_methods.c_str());
 			}
 
-			if (!sock->authenticate(ki, auth_methods.data(), errstack)) {
+			if (!sock->authenticate(ki, auth_methods.c_str(), errstack)) {
 				if(ki) {
 					delete ki;
 				}
@@ -1548,9 +1549,9 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 
 				// This makes a copy of the policy ad, so we don't
 				// have to. 
-			KeyCacheEntry tmp_key( (char*)sid.data(), sock->endpoint(), ki,
+			KeyCacheEntry tmp_key( (char*)sid.c_str(), sock->endpoint(), ki,
 								   &auth_info, expiration_time ); 
-			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %d seconds.\n", sid.data(), sessdur);
+			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %d seconds.\n", sid.c_str(), sessdur);
 
 			// stick the key in the cache
 			session_cache->insert(tmp_key);
@@ -1559,7 +1560,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 			// now add entrys which map all the {<sinful_string>,<command>} pairs
 			// to the same key id (which is in the variable sid)
 
-			StringList coms((char*)cmd_list.data());
+			StringList coms((char*)cmd_list.c_str());
 			char *p;
 
 			coms.rewind();
@@ -1567,10 +1568,10 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 				sprintf (keybuf, "{%s,<%s>}", sin_to_string(sock->endpoint()), p);
 
 				// NOTE: HashTable returns ZERO on SUCCESS!!!
-				if (command_map->insert(keybuf, sid.data()) == 0) {
+				if (command_map->insert(keybuf, sid.c_str()) == 0) {
 					// success
 					if (DebugFlags & D_FULLDEBUG) {
-						dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf, sid.data());
+						dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf, sid.c_str());
 					}
 				} else {
 					// perhaps there is an old entry under the same name.  we should
@@ -1579,18 +1580,18 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 					// NOTE: HashTable's remove returns ZERO on SUCCESS!!!
 					if (command_map->remove(keybuf) == 0) {
 						// now let's try to insert again (zero on success)
-						if (command_map->insert(keybuf, sid.data()) == 0) {
+						if (command_map->insert(keybuf, sid.c_str()) == 0) {
 							if (DebugFlags & D_FULLDEBUG) {
-								dprintf (D_SECURITY, "SECMAN: command %s remapped to session %s!\n", keybuf, sid.data());
+								dprintf (D_SECURITY, "SECMAN: command %s remapped to session %s!\n", keybuf, sid.c_str());
 							}
 						} else {
 							if (DebugFlags & D_FULLDEBUG) {
-								dprintf (D_SECURITY, "SECMAN: command %s NOT mapped (insert failed!)\n", keybuf, sid.data());
+								dprintf (D_SECURITY, "SECMAN: command %s NOT mapped (insert failed!)\n", keybuf, sid.c_str());
 							}
 						}
 					} else {
 						if (DebugFlags & D_FULLDEBUG) {
-							dprintf (D_SECURITY, "SECMAN: command %s NOT mapped (remove failed!)\n", keybuf, sid.data());
+							dprintf (D_SECURITY, "SECMAN: command %s NOT mapped (remove failed!)\n", keybuf, sid.c_str());
 						}
 					}
 				}
@@ -1679,7 +1680,7 @@ void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
             // Remove all commands from the command map
             if (commands.length() > 0) {
                 char keybuf[128];
-                StringList cmd_list((char*)commands.data());
+                StringList cmd_list((char*)commands.c_str());
         
                 if (command_map) {
                     cmd_list.rewind();

@@ -734,6 +734,12 @@ Daemon::locate( void )
 	case DT_MASTER:
 		rval = getDaemonInfo( "MASTER", MASTER_AD );
 		break;
+	case DT_CREDD:
+	  rval = getDaemonInfo( "CREDD", ANY_AD, false );
+	  break;
+	case DT_STORK:
+	  rval = getDaemonInfo( "STORK", ANY_AD, false );
+	  break;
 	case DT_COLLECTOR:
 		rval = getCmInfo( "COLLECTOR" );
 		break;
@@ -783,7 +789,7 @@ Daemon::locate( void )
 
 
 bool
-Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
+Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector )
 {
 	char				buf[512], tmpname[512];
     int                 BUF_LEN = 512; // Change this if you also change buf
@@ -915,6 +921,11 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 			free( addr_file );
 		} 
 	}
+
+	if ((! _addr) && (!query_collector)) {
+          return false;
+        }
+
 
 	if( ! _addr ) {
 			// If we still don't have it (or it wasn't local), query

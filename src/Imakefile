@@ -89,7 +89,7 @@ TEST_SUITE_BASE = test_suite_base
 		scripts startd.V6 StdUnvProgs submit.V6 status.V6 \
 		tools kbdd collector.V6 PvmProgs dagman userlog Eventd \
 		GlobusProgs starter.V6.1 shadow.V6.1 dcskel data_manager \
-		cluster_tool c-gahp
+		cluster_tool c-gahp credd.TEMPORARY
 
 #define Libraries \
 		util_lib daemon_client  c++_util condor_procapi/libprocapi.a \
@@ -213,6 +213,7 @@ object_target(dagman)
 object_target(data_manager)
 object_target(userlog)
 object_target(cluster_tool)
+object_target(credd.TEMPORARY)
 #if NEEDS_KBDD
    object_target(kbdd)
 #endif

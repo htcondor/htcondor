@@ -294,6 +294,11 @@ const int QUERY_ANY_ADS = 48;
 #define RECEIVE_JOBAD		   (DCSHADOW_BASE+4)
 
 
+#define STORK_BASE 80000
+#define STORK_SUBMIT (STORK_BASE+0)
+#define STORK_REMOVE (STORK_BASE+1)
+#define STORK_STATUS (STORK_BASE+2)
+
 /*
 *** Used only in THE TOOL to choose the condor_squawk option.
 */
@@ -330,5 +335,11 @@ const int QUERY_ANY_ADS = 48;
 #define CONDOR_TRY_AGAIN	2
 #define CONDOR_ERROR	3
 
+
+#define CREDD_BASE 81000
+#define CREDD_STORE_CRED (CREDD_BASE+0)
+#define CREDD_GET_CRED (CREDD_BASE+1)
+#define CREDD_REMOVE_CRED (CREDD_BASE+2)
+#define CREDD_QUERY_CRED (CREDD_BASE+3)
 
 #endif  /* of ifndef _CONDOR_COMMANDS_H */

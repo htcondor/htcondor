@@ -383,6 +383,12 @@ Daemon::locate( void )
 	case DT_MASTER:
 		rval = getDaemonInfo( "MASTER", ATTR_MASTER_IP_ADDR, MASTER_AD );
 		break;
+	case DT_STORK:
+			// For now don't look it up from collector
+		rval = true;
+		break;
+
+
 	case DT_COLLECTOR:
 		rval = getCmInfo( "COLLECTOR", COLLECTOR_PORT );
 		break;
