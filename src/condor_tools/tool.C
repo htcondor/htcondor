@@ -29,6 +29,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
+#include "condor_debug.h"
 #include "condor_version.h"
 #include "condor_io.h"
 #include "my_hostname.h"
@@ -383,6 +384,10 @@ main( int argc, char *argv[] )
 						 MyName );
 				usage( NULL );
 			}
+			break;
+		case 'd':
+			Termlog = 1;
+			dprintf_config ("TOOL", 2);
 			break;
 		case 'g':
 			fast = 0;
