@@ -510,7 +510,7 @@ class JobAbortedEvent : public ULogEvent
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 
-	const char* getReason();
+	const char* getReason() const;
 	void setReason( const char* );
 
  private:
@@ -622,7 +622,7 @@ class JobEvictedEvent : public ULogEvent
     /// The signal that terminated it (valid only on abnormal exit)
     int     signal_number;
 
-	const char* getReason();
+	const char* getReason() const;
 	void setReason( const char* );
 
 	const char* getCoreFile();
@@ -1186,7 +1186,7 @@ class JobHeldEvent : public ULogEvent
 	virtual void initFromClassAd(ClassAd* ad);
 
 		/// @return pointer to our copy of the reason, or NULL if not set
-	const char* getReason();
+	const char* getReason() const;
 
 		/// makes a copy of the string in our "reason" member
 	void setReason( const char* );
@@ -1232,7 +1232,7 @@ class JobReleasedEvent : public ULogEvent
 	virtual void initFromClassAd(ClassAd* ad);
 
 		/// @return pointer to our copy of the reason, or NULL if not set
-	const char* getReason();
+	const char* getReason() const;
 
 		/// makes a copy of the string in our "reason" member
 	void setReason( const char* );

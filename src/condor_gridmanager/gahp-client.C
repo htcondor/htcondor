@@ -430,6 +430,20 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 	io_redirect[1] = stdout_pipefds[1]; // stdout get write side of out pipe
 	io_redirect[2] = -1;				// stderr we don't care about
 
+	// we don't care about stderr - on UNIX, set it to /dev/null. On Windows,
+	// leave it set to -1
+#ifndef WIN32
+	if ((io_redirect[2]=open("/dev/null",
+								O_WRONLY|O_CREAT|O_TRUNC,0666)) < 0 ) {
+		// if failed, try again without O_TRUNC
+		if ( (io_redirect[2]=open( "/dev/null", 
+									O_WRONLY | O_CREAT, 0666)) < 0 ) {
+			dprintf(D_ALWAYS,
+				"failed to open stderr file /dev/null, errno %d\n", errno);
+		}
+	}
+#endif
+
 	m_gahp_pid = daemonCore->Create_Process(
 			gahp_path,		// Name of executable
 			gahp_args,		// Args
@@ -464,6 +478,9 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 		// we want to keep in an object data member.
 	daemonCore->Close_Pipe( io_redirect[0] );
 	daemonCore->Close_Pipe( io_redirect[1] );
+	if( io_redirect[2] > -1 ) {
+		close(io_redirect[2]);
+	}
 	m_gahp_readfd = stdout_pipefds[0];
 	m_gahp_writefd = stdin_pipefds[1];
 

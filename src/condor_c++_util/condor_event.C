@@ -170,8 +170,10 @@ ULogEvent::
 int ULogEvent::
 getEvent (FILE *file)
 {
-	if (!file) return 0;
-	
+	if( !file ) {
+		dprintf( D_ALWAYS, "ERROR: file == NULL in ULogEvent::getEvent()\n" );
+		return 0;
+	}
 	return (readHeader (file) && readEvent (file));
 }
 
@@ -179,8 +181,10 @@ getEvent (FILE *file)
 int ULogEvent::
 putEvent (FILE *file)
 {
-	if (!file) return 0;
-
+	if( !file ) {
+		dprintf( D_ALWAYS, "ERROR: file == NULL in ULogEvent::putEvent()\n" );
+		return 0;
+	}
 	return (writeHeader (file) && writeEvent (file));
 }
 
@@ -418,9 +422,8 @@ readEvent (FILE *file)
 {
 	char s[8192];
 	s[0] = '\0';
-	if( submitEventLogNotes ) {
-		delete[] submitEventLogNotes;
-	}
+	delete[] submitEventLogNotes;
+	submitEventLogNotes = NULL;
 	if( fscanf( file, "Job submitted from host: %s\n", submitHost ) != 1 ) {
 		return 0;
 	}
@@ -530,12 +533,8 @@ GlobusSubmitEvent()
 GlobusSubmitEvent::
 ~GlobusSubmitEvent()
 {
-    if( rmContact ) {
-        delete[] rmContact;
-    }
-    if( jmContact ) {
-        delete[] jmContact;
-    }
+	delete[] rmContact;
+	delete[] jmContact;
 }
 
 int GlobusSubmitEvent::
@@ -581,14 +580,10 @@ readEvent (FILE *file)
 {
 	char s[8192];
 
-	if ( rmContact ) {
-		delete [] rmContact;
-		rmContact = NULL;
-	} 
-	if ( jmContact ) {
-		delete [] jmContact;
-		jmContact = NULL;
-	}
+	delete[] rmContact;
+	delete[] jmContact;
+	rmContact = NULL;
+	jmContact = NULL;
 	int retval = fscanf (file, "Job submitted to Globus\n");
     if (retval != 0)
     {
@@ -691,9 +686,7 @@ GlobusSubmitFailedEvent()
 GlobusSubmitFailedEvent::
 ~GlobusSubmitFailedEvent()
 {
-    if( reason ) {
-        delete [] reason;
-    }
+	delete[] reason;
 }
 
 int GlobusSubmitFailedEvent::
@@ -723,10 +716,8 @@ readEvent (FILE *file)
 {
 	char s[8192];
 
-	if ( reason ) {
-		delete [] reason;
-		reason = NULL;
-	} 
+	delete[] reason;
+	reason = NULL;
 	int retval = fscanf (file, "Globus job submission failed!\n");
     if (retval != 0)
     {
@@ -793,9 +784,7 @@ GlobusResourceUpEvent()
 GlobusResourceUpEvent::
 ~GlobusResourceUpEvent()
 {
-    if( rmContact ) {
-        delete[] rmContact;
-    }
+	delete[] rmContact;
 }
 
 int GlobusResourceUpEvent::
@@ -825,10 +814,8 @@ readEvent (FILE *file)
 {
 	char s[8192];
 
-	if ( rmContact ) {
-		delete [] rmContact;
-		rmContact = NULL;
-	} 
+	delete[] rmContact;
+	rmContact = NULL;
 	int retval = fscanf (file, "Globus Resource Back Up\n");
     if (retval != 0)
     {
@@ -888,9 +875,7 @@ GlobusResourceDownEvent()
 GlobusResourceDownEvent::
 ~GlobusResourceDownEvent()
 {
-    if( rmContact ) {
-        delete[] rmContact;
-    }
+	delete[] rmContact;
 }
 
 int GlobusResourceDownEvent::
@@ -920,10 +905,8 @@ readEvent (FILE *file)
 {
 	char s[8192];
 
-	if ( rmContact ) {
-		delete [] rmContact;
-		rmContact = NULL;
-	} 
+	delete[] rmContact;
+	rmContact = NULL;
 	int retval = fscanf (file, "Detected Down Globus Resource\n");
     if (retval != 0)
     {
@@ -1302,31 +1285,27 @@ JobEvictedEvent::JobEvictedEvent()
 
 JobEvictedEvent::~JobEvictedEvent()
 {
-	if( reason ) {
-		delete [] reason;
-	}
-	if( core_file ) {
-		delete [] core_file;
-		core_file = NULL;
-	}
+	delete[] reason;
+	delete[] core_file;
 }
 
 
 void
 JobEvictedEvent::setReason( const char* reason_str )
 {
-	if( reason ) {
-		delete [] reason;
-		reason = NULL;
-	}
-	if( reason_str ) {
-		reason = strnewp( reason_str );
-	}
+    delete[] reason; 
+    reason = NULL; 
+    if( reason_str ) { 
+        reason = strnewp( reason_str ); 
+        if( !reason ) { 
+            EXCEPT( "ERROR: out of memory!\n" ); 
+        } 
+    } 
 }
 
 
-const char*
-JobEvictedEvent::getReason( void )
+const char* JobEvictedEvent::
+getReason( void ) const
 {
 	return reason;
 }
@@ -1335,12 +1314,13 @@ JobEvictedEvent::getReason( void )
 void
 JobEvictedEvent::setCoreFile( const char* core_name )
 {
-	if( core_file ) {
-		delete [] core_file;
-		core_file = NULL;
-	}
+	delete[] core_file;
+	core_file = NULL;
 	if( core_name ) {
 		core_file = strnewp( core_name );
+		if( !core_file ) {
+			EXCEPT( "ERROR: out of memory!\n" );  
+		}
 	}
 }
 
@@ -1437,17 +1417,28 @@ JobEvictedEvent::readEvent( FILE *file )
 		}
 	}
 		// finally, see if there's a reason.  this is optional.
-	if( !fgets(buffer, 128, file) ) {
+
+	// if we get a reason, fine. If we don't, we need to 
+	// rewind the file position.
+	fpos_t filep;
+	fgetpos( file, &filep );
+
+    char reason_buf[BUFSIZ];
+    if( !fgets( reason_buf, BUFSIZ, file ) ||
+		strcmp( reason_buf, "...\n" ) == 0 ) {
+
+		fsetpos( file, &filep );
 		return 1;  // not considered failure
 	}
-	chomp( buffer );
+
+	chomp( reason_buf );
 		// This is strange, sometimes we get the \t from fgets(), and
 		// sometimes we don't.  Instead of trying to figure out why,
 		// we just check for it here and do the right thing...
-	if( buffer[0] == '\t' && buffer[1] ) {
-		setReason( &buffer[1] );
+	if( reason_buf[0] == '\t' && reason_buf[1] ) {
+		setReason( &reason_buf[1] );
 	} else {
-		setReason( buffer );
+		setReason( reason_buf );
 	}
 	return 1;
 }
@@ -1643,27 +1634,26 @@ JobAbortedEvent ()
 JobAbortedEvent::
 ~JobAbortedEvent()
 {
-	if( reason ) {
-		delete [] reason;
-	}
+	delete[] reason;
 }
 
 
 void JobAbortedEvent::
 setReason( const char* reason_str )
 {
-	if( reason ) {
-		delete [] reason;
-		reason = NULL;
-	}
+	delete[] reason;
+	reason = NULL;
 	if( reason_str ) {
 		reason = strnewp( reason_str );
+		if( !reason ) {
+			EXCEPT( "ERROR: out of memory!\n" );
+		}
 	}
 }
 
 
 const char* JobAbortedEvent::
-getReason( void )
+getReason( void ) const
 {
 	return reason;
 }
@@ -1690,24 +1680,26 @@ readEvent (FILE *file)
 	if( fscanf(file, "Job was aborted by the user.\n") == EOF ) {
 		return 0;
 	}
-		// also try to read the reason, but for backwards
-		// compatibility, don't fail if it's not there.
-	if( reason ) {
-		delete [] reason;
-		reason = NULL;
-	}
+	// try to read the reason, but if its not there,
+	// rewind so we don't slurp up the next event delimiter
+	fpos_t filep;
+	fgetpos( file, &filep );
 	char reason_buf[BUFSIZ];
-	if( fgets(reason_buf, BUFSIZ, file) == NULL) {
+	if( !fgets( reason_buf, BUFSIZ, file ) ||
+		   	strcmp( reason_buf, "...\n" ) == 0 ) {
+		setReason( NULL );
+		fsetpos( file, &filep );
 		return 1;	// backwards compatibility
 	}
+ 
 	chomp( reason_buf );  // strip the newline, if it's there.
 		// This is strange, sometimes we get the \t from fgets(), and
 		// sometimes we don't.  Instead of trying to figure out why,
 		// we just check for it here and do the right thing...
 	if( reason_buf[0] == '\t' && reason_buf[1] ) {
-		reason = strnewp( &reason_buf[1] );
+		setReason( &reason_buf[1] );
 	} else {
-		reason = strnewp( reason_buf );
+		setReason( reason_buf );
 	}
 	return 1;
 }
@@ -1753,22 +1745,20 @@ TerminatedEvent::TerminatedEvent()
 
 TerminatedEvent::~TerminatedEvent()
 {
-	if( core_file ) {
-		delete [] core_file;
-		core_file = NULL;
-	}
+	delete[] core_file;
 }
 
 
 void
 TerminatedEvent::setCoreFile( const char* core_name )
 {
-	if( core_file ) {
-		delete [] core_file;
-		core_file = NULL;
-	}
+	delete[] core_file;
+	core_file = NULL;
 	if( core_name ) {
 		core_file = strnewp( core_name );
+		if( !core_file ) {
+            EXCEPT( "ERROR: out of memory!\n" );
+		}
 	}
 }
 
@@ -2307,27 +2297,26 @@ JobHeldEvent::JobHeldEvent ()
 
 JobHeldEvent::~JobHeldEvent ()
 {
-	if( reason ) {
-		delete [] reason;
-	}
+	delete[] reason;
 }
 
 
 void
 JobHeldEvent::setReason( const char* reason_str )
 {
-	if( reason ) {
-		delete [] reason;
-		reason = NULL;
-	}
-	if( reason_str ) { 
-		reason = strnewp( reason_str );
-	}
+    delete[] reason; 
+    reason = NULL; 
+    if( reason_str ) { 
+        reason = strnewp( reason_str ); 
+        if( !reason ) { 
+            EXCEPT( "ERROR: out of memory!\n" ); 
+        } 
+    } 
 }
 
 
-const char* 
-JobHeldEvent::getReason( void )
+const char* JobHeldEvent::
+getReason( void ) const
 {
 	return reason;
 }
@@ -2339,17 +2328,18 @@ JobHeldEvent::readEvent( FILE *file )
 	if( fscanf(file, "Job was held.\n") == EOF ) { 
 		return 0;
 	}
-		// try to read the reason, but don't fail if it's not there.
-		// a user of this event might not set a reason before calling
-		// writeEvent()
-	if( reason ) {
-		delete [] reason;
-		reason = NULL;
-	}
+	// try to read the reason, but if its not there,
+	// rewind so we don't slurp up the next event delimiter
+	fpos_t filep;
+	fgetpos( file, &filep );
 	char reason_buf[BUFSIZ];
-	if( fgets(reason_buf, BUFSIZ, file) == NULL) {
-		return 1;		// fake it :)
+	if( !fgets( reason_buf, BUFSIZ, file ) ||
+		   	strcmp( reason_buf, "...\n" ) == 0 ) {
+		setReason( NULL );
+		fsetpos( file, &filep );
+		return 1;	// backwards compatibility
 	}
+
 	chomp( reason_buf );  // strip the newline
 		// This is strange, sometimes we get the \t from fgets(), and
 		// sometimes we don't.  Instead of trying to figure out why,
@@ -2418,27 +2408,26 @@ JobReleasedEvent::JobReleasedEvent()
 
 JobReleasedEvent::~JobReleasedEvent()
 {
-	if( reason ) {
-		delete [] reason;
-	}
+	delete[] reason;
 }
 
 
 void
 JobReleasedEvent::setReason( const char* reason_str )
 {
-	if( reason ) {
-		delete [] reason;
-		reason = NULL;
-	}
-	if( reason_str ) { 
-		reason = strnewp( reason_str );
-	}
+    delete[] reason; 
+    reason = NULL; 
+    if( reason_str ) { 
+        reason = strnewp( reason_str ); 
+        if( !reason ) { 
+            EXCEPT( "ERROR: out of memory!\n" ); 
+        } 
+    } 
 }
 
 
-const char* 
-JobReleasedEvent::getReason( void )
+const char* JobReleasedEvent::
+getReason( void ) const
 {
 	return reason;
 }
@@ -2450,17 +2439,18 @@ JobReleasedEvent::readEvent( FILE *file )
 	if( fscanf(file, "Job was released.\n") == EOF ) { 
 		return 0;
 	}
-		// try to read the reason, but don't fail if it's not there.
-		// a user of this event might not set a reason before calling
-		// writeEvent()
-	if( reason ) {
-		delete [] reason;
-		reason = NULL;
-	}
+	// try to read the reason, but if its not there,
+	// rewind so we don't slurp up the next event delimiter
+	fpos_t filep;
+	fgetpos( file, &filep );
 	char reason_buf[BUFSIZ];
-	if( fgets(reason_buf, BUFSIZ, file) == NULL) {
-		return 1;		// fake it :)
+	if( !fgets( reason_buf, BUFSIZ, file ) ||
+		   	strcmp( reason_buf, "...\n" ) == 0 ) {
+		setReason( NULL );
+		fsetpos( file, &filep );
+		return 1;	// backwards compatibility
 	}
+
 	chomp( reason_buf );  // strip the newline
 		// This is strange, sometimes we get the \t from fgets(), and
 		// sometimes we don't.  Instead of trying to figure out why,
