@@ -33,7 +33,8 @@ void	check_perms(void);
 float	compute_rank( ClassAd*, ClassAd* );
 int 	create_port( ReliSock* );
 char*	command_to_string( int );
-int		reply( Stream*, int );
+bool	reply( Stream*, int );
+bool	refuse( Stream* );
 bool	caInsert( ClassAd* target, ClassAd* source, const char* attr,
 				  int verbose = 0 ); 
 bool	configInsert( ClassAd* ad, const char* attr, bool is_fatal );

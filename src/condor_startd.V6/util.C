@@ -169,15 +169,30 @@ command_to_string( int cmd )
 }
 
 
-int
+bool
 reply( Stream* s, int cmd )
 {
 	s->encode();
 	if( !s->code( cmd ) || !s->end_of_message() ) {
-		return FALSE;
+		return false;
 	} else {
-		return TRUE;
+		return true;
 	}
+}
+
+
+bool
+refuse( Stream* s )
+{
+	s->end_of_message();
+	s->encode();
+	if( !s->put(NOT_OK) ) {
+		return false;
+	} 
+	if( !s->end_of_message() ) {
+		return false;
+	}
+	return true;
 }
 
 
