@@ -27,11 +27,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 
-#if defined(GSS_AUTHENTICATION)
-#include "auth_sock.h"
-#else
-#define AuthSock ReliSock
-#endif
 
 static char *_FileName_ = __FILE__;	 /* Used by EXCEPT (see condor_debug.h) */
 
@@ -49,6 +44,8 @@ static char *_FileName_ = __FILE__;	 /* Used by EXCEPT (see condor_debug.h) */
 
 extern char *Spool;
 extern char* JobHistoryFileName;
+extern int canTryGSS;
+extern int canTryFilesystem;
 
 extern "C" {
 /*
@@ -64,26 +61,27 @@ extern "C" {
 
 extern	int		Parse(const char*, ExprTree*&);
 extern  void    cleanup_ckpt_files(int, int, char*);
-static AuthSock *Q_SOCK;
-//mju took out GSSAuthenticated to use Q_SOCK->isAuthenticated() instead.
-//int GSSAuthenticated = 0;
+static ReliSock *Q_SOCK;
 
-int		do_Q_request(AuthSock *);
+int		do_Q_request(ReliSock *);
 void	FindRunnableJob(int, int&);
 void	FindPrioJob(int&);
 int		Runnable(PROC_ID*);
 int		get_job_prio(ClassAd *ad);
 
+#if 0
 enum {
 	CONNECTION_CLOSED,
 	CONNECTION_ACTIVE,
 } connection_state = CONNECTION_ACTIVE;
 
+char	*active_owner = 0;
+char	*rendevous_file = 0;
+#endif 0
+
 #if !defined(WIN32)
 uid_t	active_owner_uid = 0;
 #endif
-char	*active_owner = 0;
-char	*rendevous_file = 0;
 
 static ClassAdCollection *JobQueue = 0;
 static int next_cluster_num = -1;
@@ -167,6 +165,7 @@ InitQmgmt()
 	if( tmp ) {
 		if( *tmp == 'T' || *tmp == 't' ) {
 			allow_remote_submit = TRUE;
+			
 		}			
 		free( tmp );
 	}
@@ -252,21 +251,6 @@ CleanJobQueue()
 }
 
 
-void
-InvalidateConnection()
-{
-	if (active_owner != 0) {
-		free(active_owner);
-	}
-	active_owner = 0;
-#if !defined(WIN32)
-	active_owner_uid = 0;
-#endif
-	connection_state = CONNECTION_CLOSED;
-	active_cluster_num = -1;
-}
-
-
 int
 grow_prio_recs( int newsize )
 {
@@ -301,24 +285,52 @@ grow_prio_recs( int newsize )
 	return 0;
 }
 
+
+void
+InvalidateConnection()
+{
+#if 0
+	if (active_owner != 0) {
+		free(active_owner);
+	}
+	active_owner = 0;
+	connection_state = CONNECTION_CLOSED;
+#endif 0
+	Q_SOCK->setOwner( "" );
+
+#if !defined(WIN32)
+	active_owner_uid = 0;
+#endif
+	active_cluster_num = -1;
+}
+
 /*
    This makes the connection look active, so any local calls to manipulate
    the queue succeed.  This is the normal state of the connection except when
    we receive a request from the outside.
 */
 
+//this is a VERY bad idea! there should be an owner of every connection,
+//either the (s)uid of the program, or the authenticated name, or "nobody"
+
 void
 FreeConnection()
 {
+#if 0
 	if (active_owner != 0) {
 		free(active_owner);
 	}
 	active_owner = 0;
+	connection_state = CONNECTION_ACTIVE;
+#endif
+
+	Q_SOCK->setOwner( "" );
+	Q_SOCK->setAuthType( ReliSock::CAUTH_ANY ); //generic OK type
+
 #if !defined(WIN32)
 	active_owner_uid = 0;
 #endif
 	uninit_user_ids();
-	connection_state = CONNECTION_ACTIVE;
 }
 
 
@@ -332,6 +344,8 @@ UnauthenticatedConnection()
 #if !defined(WIN32)
 	active_owner_uid = get_user_uid();
 #endif
+
+#if 0
 	if (active_owner != 0)
 		free(active_owner);
 	dprintf(D_FULLDEBUG,"in UnauthenticatedConnection, setting active_owner "
@@ -341,67 +355,14 @@ UnauthenticatedConnection()
 		free(rendevous_file);
 	rendevous_file = 0;
 	connection_state = CONNECTION_ACTIVE;
+#endif 0
+	dprintf(D_FULLDEBUG,"in UnauthenticatedConnection, setting active_owner "
+			"to \"nobody\"\n" );
+	Q_SOCK->setOwner( "nobody" );
+	Q_SOCK->setFile( NULL );
+
 	return 0;
 }
-
-
-int
-ValidateRendevous()
-{
-	struct stat stat_buf;
-
-	dprintf(D_FULLDEBUG,"in ValidateRendevous, active_owner is \"%s\"\n",
-			active_owner );
-	/* user "nobody" represents an unauthenticated user */
-	if (strcmp(active_owner, "nobody") == 0) {
-		return 0;
-	}
-
-//mju: changed logic to use Q_SOCK->isAuthenticated()
-//	if (rendevous_file == 0 && !GSSAuthenticated) {
-	if (rendevous_file == 0 && !Q_SOCK->isAuthenticated() ) {
-		UnauthenticatedConnection();
-		return 0;
-	}
-
-#if !defined(WIN32)
-	// note we do an lstat() instead of a stat() so we do _not_ follow
-	// a symbolic link.  this prevents a security attack via sym links.
-//	if ( !GSSAuthenticated ) {
-	if ( !Q_SOCK->isAuthenticated() ) {
-		if (lstat(rendevous_file, &stat_buf) < 0) {
-			UnauthenticatedConnection();
-			return 0;
-		}
-	}
-	
-#endif
-
-//	if ( !GSSAuthenticated ) {
-	if ( !Q_SOCK->isAuthenticated() ) {
-		unlink(rendevous_file);
-	}
-
-
-#if !defined(WIN32)
-//	if ( !GSSAuthenticated ) {
-	if ( !Q_SOCK->isAuthenticated() ) {
-		// Authentication should fail if a) owner match fails, or b) the
-		// file is either a hard or soft link (no links allowed because they
-		// could spoof the owner match).  -Todd 3/98
-		if ( (stat_buf.st_uid != active_owner_uid) ||
-			(stat_buf.st_nlink > 1) ||		// check for hard link
-			(S_ISLNK(stat_buf.st_mode)) ) {
-			UnauthenticatedConnection();
-			return 0;
-		}
-	}
-#endif
-
-	connection_state = CONNECTION_ACTIVE;
-	return 0;
-}
-
 
 // Test if this owner matches my owner, so they're allowed to update me.
 int
@@ -413,6 +374,7 @@ OwnerCheck(ClassAd *ad, char *test_owner)
 	// If we get passed a null test_owner, its probably an internal call,
 	// and we let internal callers do anything.
 	if (test_owner == 0) {
+		dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success), null test_owner\n" );
 		return 1;
 	}
 
@@ -421,6 +383,7 @@ OwnerCheck(ClassAd *ad, char *test_owner)
 	// file.  Defaults to root and condor.
 	for( i=0; i<num_super_users; i++) {
 		if( strcmp( test_owner, super_users[i] ) == 0 ) {
+			dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success), super_user\n" );
 			return 1;
 		}
 	}
@@ -431,13 +394,12 @@ OwnerCheck(ClassAd *ad, char *test_owner)
 	uid_t 	my_uid = get_my_uid();
 	if( my_uid != 0 && my_uid != get_real_condor_uid() ) {
 		if( active_owner_uid == my_uid ) {
+			dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success), its me\n" );
 			return 1;
 		} 
 		else {
-//			if ( GSSAuthenticated ) {
 			if ( Q_SOCK->isAuthenticated() ) {
-				dprintf( D_FULLDEBUG,"OwnerCheck authorized %s for remote submit\n",
-						test_owner );
+				dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success),already auth\n");
 				return( 1 );
 			}
 #if !defined(WIN32)
@@ -463,9 +425,11 @@ OwnerCheck(ClassAd *ad, char *test_owner)
 		// If we don't have an Owner attribute (or classad) and we've 
 		// gotten this far, how can we deny service?
 	if( !ad ) {
+		dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success),no ad\n");
 		return 1;
 	}
 	if( ad->LookupString(ATTR_OWNER, my_owner) == 0 ) {
+		dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success),no owner\n");
 		return 1;
 	}
 
@@ -478,7 +442,8 @@ OwnerCheck(ClassAd *ad, char *test_owner)
 		dprintf( D_FULLDEBUG, "ad owner: %s, queue submit owner: %s\n",
 				my_owner, test_owner );
 		return 0;
-	} else {
+	} 
+	else {
 		return 1;
 	}
 }
@@ -488,15 +453,26 @@ int
 CheckConnection()
 {
 
-	if (connection_state == CONNECTION_ACTIVE) {
+#if 0
+	if (Q_SOCK->getConnectionState() == CONNECTION_ACTIVE) {
 		return 0;
 	}
-	if (connection_state == CONNECTION_CLOSED && rendevous_file != 0) {
-		return ValidateRendevous();
-	}
-	if ( Q_SOCK->isAuthenticated() ) {
+#endif
+	if ( !Q_SOCK ) {
+		// no one connected yet, clearing out queue from previous jobs
 		return 0;
 	}
+	if ( Q_SOCK && Q_SOCK->getState() != ReliSock::CAUTH_NONE ) {
+		return 0;
+	}
+
+	if ( Q_SOCK 
+			&& Q_SOCK->isAuthenticated() ) {
+		return 0;
+	}
+	//there was code here to ValidateRendevous if CONNECTION_CLOSED,
+	//but that makes no sense now, since filesystem authentication
+	//does the validation then.
 	return -1;
 }
 
@@ -513,12 +489,18 @@ handle_q(Service *, int, Stream *sock)
 
 	JobQueue->BeginTransaction();
 
-	Q_SOCK = (AuthSock *)sock;
+	Q_SOCK = (ReliSock *)sock;
 
 	InvalidateConnection();
+	if ( canTryGSS ) {
+		Q_SOCK->canTryGSS();
+	}
+	if ( canTryFilesystem ) {
+		Q_SOCK->canTryFilesystem();
+	}
 	do {
 		/* Probably should wrap a timer around this */
-		rval = do_Q_request( (AuthSock *)sock );
+		rval = do_Q_request( (ReliSock *)Q_SOCK );
 	} while(rval >= 0);
 	FreeConnection();
 	dprintf(D_FULLDEBUG, "QMGR Connection closed\n");
@@ -527,51 +509,40 @@ handle_q(Service *, int, Stream *sock)
 	// be committed in CloseConnection().
 	JobQueue->AbortTransaction();
 
+#if 0
 	if (rendevous_file != 0) {
 		unlink(rendevous_file);
 		free(rendevous_file);
 		rendevous_file = 0;
 	}
+#endif 0
+	Q_SOCK->setFile( NULL );
 	return 0;
 }
 
 
 int
-InitializeConnection( char *owner, char *tmp_file, int auth )
+InitializeConnection( char *owner )
 {
-	char	*new_file;
+//	init_user_ids( owner );
 
-	if ( !auth ) {
-		new_file = tempnam("/tmp", "qmgr_");
-		strcpy(tmp_file, new_file);
-		// man page says string returned by tempnam has been malloc()'d
-		free(new_file);
-	}
-	else {
-//mju took this out, should only be authorizing them DURING auth process!
-//		GSSAuthenticated = 1;
-	}
-
-	init_user_ids( owner );
 #if !defined(WIN32)
 	active_owner_uid = get_user_uid();
+	Q_SOCK->setOwnerUid( active_owner_uid );
+
 	if (active_owner_uid == (uid_t)-1) {
 		UnauthenticatedConnection();
 		return 0;
 	}
 #endif
-	active_owner = strdup( owner );
-	if ( !auth ) {
-		rendevous_file = strdup( tmp_file );
-		dprintf(D_FULLDEBUG, "QMGR InitializeConnection returning 0 (%s)\n",
-			tmp_file);
-	}
-	else {
-		dprintf(D_FULLDEBUG, "QMGR InitializeConnection returning 0 "
-			"(NO temp file, GSS authenticated)\n" );
-	}
+
+	Q_SOCK->setState( ReliSock::CAUTH_SERVER );
+
+
 	return 0;
 }
+
+
 
 
 int
@@ -585,7 +556,7 @@ NewCluster()
 		return -1;
 	}
 
-	if( !OwnerCheck(NULL, active_owner) ) {
+	if( !OwnerCheck(NULL, Q_SOCK->getOwner() ) ) {
 		dprintf( D_FULLDEBUG, "NewCluser(): OwnerCheck failed\n" );
 		return -1;
 	}
@@ -612,7 +583,7 @@ NewProc(int cluster_id)
 		return -1;
 	}
 
-	if( !OwnerCheck(NULL, active_owner) ) {
+	if( !OwnerCheck(NULL, Q_SOCK->getOwner() ) ) {
 		return -1;
 	}
 
@@ -657,12 +628,12 @@ int DestroyProc(int cluster_id, int proc_id)
 	}
 
 	// Only the owner can delete a proc.
-	if (!OwnerCheck(ad, active_owner)) {
+	if (!OwnerCheck(ad, Q_SOCK->getOwner() )) {
 		return -1;
 	}
 
 	// Remove checkpoint files
-	cleanup_ckpt_files(cluster_id,proc_id,active_owner);
+	cleanup_ckpt_files(cluster_id,proc_id,Q_SOCK->getOwner() );
 
     // Append to history file
     AppendHistory(ad);
@@ -713,7 +684,7 @@ int DestroyCluster(int cluster_id)
 				ad->LookupInteger(ATTR_PROC_ID, proc_id);
 
 				// Only the owner can delete a cluster
-				if (!OwnerCheck(ad, active_owner)) {
+				if (!OwnerCheck(ad, Q_SOCK->getOwner() )) {
 					return -1;
 				}
 
@@ -784,7 +755,7 @@ int DestroyClusterByConstraint(const char* constraint)
 	while(JobQueue->IterateAllClassAds(ad)) {
 		// check cluster first to avoid header ad
 		if (ad->LookupInteger(ATTR_CLUSTER_ID, job_id.cluster) == 1) {
-			if (OwnerCheck(ad, active_owner)) {
+			if (OwnerCheck(ad, Q_SOCK->getOwner() )) {
 				if (EvalBool(ad, constraint)) {
 					ad->LookupInteger(ATTR_PROC_ID, job_id.proc);
 
@@ -864,9 +835,9 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_valu
 
 	sprintf(key, "%d.%d", cluster_id, proc_id);
 	if (JobQueue->LookupClassAd(key, ad)) {
-		if (!OwnerCheck(ad, active_owner)) {
+		if (!OwnerCheck(ad, Q_SOCK->getOwner() )) {
 			dprintf(D_ALWAYS, "OwnerCheck(%s) failed in SetAttribute for job %d.%d\n",
-					active_owner, cluster_id, proc_id);
+					Q_SOCK->getOwner() , cluster_id, proc_id);
 			return -1;
 		}
 	} else {
@@ -880,8 +851,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_valu
 		
 	// check for security violations
 	if (strcmp(attr_name, ATTR_OWNER) == 0) {
-		char *test_owner = new char [strlen(active_owner)+3];
-		sprintf(test_owner, "\"%s\"", active_owner);
+		char *test_owner = new char [strlen(Q_SOCK->getOwner() )+3];
+		sprintf(test_owner, "\"%s\"", Q_SOCK->getOwner() );
 		if (strcmp(attr_value, test_owner) != 0) {
 #if !defined(WIN32)
 			errno = EACCES;
@@ -901,7 +872,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_valu
 				atoi(attr_value), cluster_id);
 			return -1;
 		}
-	} else if (strcmp(attr_name, ATTR_PROC_ID) == 0) {
+	} 
+	else if (strcmp(attr_name, ATTR_PROC_ID) == 0) {
 		if (atoi(attr_value) != proc_id) {
 #if !defined(WIN32)
 			errno = EACCES;
@@ -1075,7 +1047,7 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 		}
 	}
 
-	if (!OwnerCheck(ad, active_owner)) {
+	if (!OwnerCheck(ad, Q_SOCK->getOwner() )) {
 		return -1;
 	}
 

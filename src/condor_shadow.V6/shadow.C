@@ -433,7 +433,7 @@ main(int argc, char *argv[], char *envp[])
 
 	/* Set CurrentHosts to 0 before we call Wrapup(), since Wrapup will
 	   delete the job from the queue if it just finished. */
-	// ConnectQ(schedd);
+	// ConnectQ(schedd,0,0,1);
 	// SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_CURRENT_HOSTS, 0);
 	// DisconnectQ(NULL);
 
@@ -742,7 +742,8 @@ Wrapup( )
      * should go.  this info is in the classad, and must be gotten from the
      * Qmgr *before* the job status is updated (i.e., classad is dequeued).
      */
-    ConnectQ (schedd);
+	//new syntax, can use filesystem to authenticate
+    ConnectQ (schedd,0,0,1);
     if (-1 == GetAttributeString (Proc->id.cluster,Proc->id.proc,"NotifyUser",
                 email_addr))
     {
@@ -797,7 +798,8 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 	time_t	new_time;
 	float	accum_time=0.0;
 
-	ConnectQ(schedd);
+	//new syntax, can use filesystem to authenticate
+	ConnectQ(schedd,0,0,1);
 	GetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS, &status);
 	GetAttributeFloat(Proc->id.cluster, Proc->id.proc,
 					ATTR_JOB_REMOTE_WALL_CLOCK, &accum_time);
@@ -972,7 +974,8 @@ start_job( char *cluster_id, char *proc_id )
 	cluster_num = atoi( cluster_id );
 	proc_num = atoi( proc_id );
 
-	ConnectQ(schedd);
+	//new syntax, can use filesystem to authenticate
+	ConnectQ(schedd,0,0,1);
 #ifdef CARMI_OPS
 	if (GetProc(cluster_num, proc_num, &(Proc->proc)) < 0) {
 		EXCEPT("GetProc(%d.%d)", cluster_num, proc_num);
@@ -1076,7 +1079,8 @@ DoCleanup()
 	}
 
 	if( Proc->id.cluster ) {
-		ConnectQ(schedd);
+		//new syntax, can use filesystem to authenticate
+		ConnectQ(schedd,0,0,1);
 		fetch_rval = GetAttributeInt(Proc->id.cluster, Proc->id.proc, 
 									 ATTR_JOB_STATUS, &status);
 

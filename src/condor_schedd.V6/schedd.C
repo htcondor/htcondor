@@ -51,64 +51,61 @@
 #define SUCCESS 1
 #define CANT_RUN 0
 
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
+static char *_FileName_ = __FILE__;	/* Used by EXCEPT (see except.h)	  */
 extern char *gen_ckpt_name();
 
 #include "condor_qmgr.h"
 
-#if defined(GSS_AUTHENTICATION)
-#include "auth_sock.h"
-#else
-#define AuthSock ReliSock
-#endif
-
 extern "C"
 {
-/*	int		SetCkptServerHost(const char *host);
-	int 	RemoveLocalOrRemoteFile(const char *, const char *);
-	int		FileExists(const char *, const char *);
-	char* 	gen_ckpt_name(char*, int, int, int);
-	int	 	getdtablesize();
+/*	int SetCkptServerHost(const char *host);
+	int RemoveLocalOrRemoteFile(const char *, const char *);
+	int FileExists(const char *, const char *);
+	char* gen_ckpt_name(char*, int, int, int);
+	int getdtablesize();
 */
-	int	 	calc_virt_memory();
-	void	handle_q(Service *, int, Stream *sock);
-	int		prio_compar(prio_rec*, prio_rec*);
+	int calc_virt_memory();
+	void handle_q(Service *, int, Stream *sock);
+	int prio_compar(prio_rec*, prio_rec*);
 }
 
-extern	int		get_job_prio(ClassAd *ad);
-extern	void	FindRunnableJob(int, int&);
-extern	int		Runnable(PROC_ID*);
-extern 	bool	operator==( PROC_ID, PROC_ID );
+extern int get_job_prio(ClassAd *ad);
+extern void	FindRunnableJob(int, int&);
+extern int Runnable(PROC_ID*);
+extern bool	operator==( PROC_ID, PROC_ID );
 
-extern	char*		Spool;
-extern	char*		Name;
-extern	char*		JobHistoryFileName;
-extern	char*		mySubSystem;
-extern	char*		CondorCertDir;
+extern char* Spool;
+extern char * Name;
+extern char * JobHistoryFileName;
+extern char * mySubSystem;
+extern char * CondorCertDir;
 
 extern FILE *DebugFP;
 extern char *DebugFile;
 extern char *DebugLock;
 
-extern	Scheduler	scheduler;
+extern Scheduler scheduler;
+
+int canTryGSS = 0;  //make global so handle_q() can see it
+int canTryFilesystem = 1;  //make global so handle_q() can see it
 
 // priority records
-extern prio_rec	*PrioRec;
-extern int		N_PrioRecs;
-extern int		grow_prio_recs(int);
+extern prio_rec *PrioRec;
+extern int N_PrioRecs;
+extern int grow_prio_recs(int);
 
-void	cleanup_ckpt_files(int , int , char*);
-void	send_vacate(match_rec*, int);
-void	mark_job_stopped(PROC_ID*);
-shadow_rec*     find_shadow_rec(PROC_ID*);
-shadow_rec*     add_shadow_rec(int, PROC_ID*, match_rec*, int);
+void cleanup_ckpt_files(int , int , char*);
+void send_vacate(match_rec*, int);
+void mark_job_stopped(PROC_ID*);
+shadow_rec * find_shadow_rec(PROC_ID*);
+shadow_rec * add_shadow_rec(int, PROC_ID*, match_rec*, int);
 
 
 #ifdef CARMI_OPS
 struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
 #endif
 
-#ifdef WIN32    // on unix, this is in instantiate.C
+#ifdef WIN32	 // on unix, this is in instantiate.C
 bool operator==(const PROC_ID a, const PROC_ID b)
 {
 	return a.cluster == b.cluster && a.proc == b.proc;
@@ -125,11 +122,11 @@ dc_reconfig()
 
 match_rec::match_rec(char* i, char* p, PROC_ID* id)
 {
-    strcpy(this->id, i);
-    strcpy(peer, p);
-    cluster = id->cluster;
-    proc = id->proc;
-    status = M_INACTIVE;
+	strcpy(this->id, i);
+	strcpy(peer, p);
+	cluster = id->cluster;
+	proc = id->proc;
+	status = M_INACTIVE;
 	agentPid = -1;
 	shadowRec = NULL;
 	alive_countdown = 0;
@@ -138,34 +135,34 @@ match_rec::match_rec(char* i, char* p, PROC_ID* id)
 
 Scheduler::Scheduler()
 {
-    ad = NULL;
-    MySockName = NULL;
+	ad = NULL;
+	MySockName = NULL;
 	MyShadowSockName = NULL;
 	shadowCommandrsock = NULL;
 	shadowCommandssock = NULL;
-    SchedDInterval = 0;
-	QueueCleanInterval = 0;
-    JobStartDelay = 0;
-    MaxJobsRunning = 0;
-    JobsStarted = 0;
-    JobsRunning = 0;
-    ReservedSwap = 0;
+	SchedDInterval = 0;
+	QueueCleanInterval = 0; JobStartDelay = 0;
+	MaxJobsRunning = 0;
+	JobsStarted = 0;
+	JobsRunning = 0;
+	ReservedSwap = 0;
 	SwapSpace = 0;
 
-    ShadowSizeEstimate = 0;
+	ShadowSizeEstimate = 0;
 
 	LastTimeout = time(NULL);
 	CondorViewHost = NULL;
-    CollectorHost = NULL;
-    NegotiatorHost = NULL;
-    Shadow = NULL;
-    CondorAdministrator = NULL;
-    Mail = NULL;
-    filename = NULL;
+	CollectorHost = NULL;
+	NegotiatorHost = NULL;
+	Shadow = NULL;
+	CondorAdministrator = NULL;
+	Mail = NULL;
+	filename = NULL;
 	aliveInterval = 0;
 	ExitWhenDone = FALSE;
 	matches = NULL;
 	shadowsByPid = NULL;
+
 	shadowsByProcID = NULL;
 	numMatches = 0;
 	numShadows = 0;
@@ -180,11 +177,11 @@ Scheduler::Scheduler()
 
 Scheduler::~Scheduler()
 {
-    delete ad;
-    if (MySockName)
-        free(MySockName);
-    if (MyShadowSockName)
-        free(MyShadowSockName);
+	delete ad;
+	if (MySockName)
+		free(MySockName);
+	if (MyShadowSockName)
+		free(MyShadowSockName);
 	if (shadowCommandrsock && daemonCore) {
 		daemonCore->Cancel_Socket(shadowCommandrsock);
 		delete shadowCommandrsock;
@@ -205,7 +202,7 @@ Scheduler::~Scheduler()
 		free(CondorAdministrator);
 	if (Mail)
 		free(Mail);
-    delete []filename;
+	delete []filename;
 	if (matches) {
 		matches->startIterations();
 		match_rec *rec;
@@ -266,9 +263,9 @@ Scheduler::count_jobs()
 
 	static int OldFlockLevel = 0;
 
-    // copy owner data to old-owners table
-    OwnerData OldOwners[MAX_NUM_OWNERS];
-    int Old_N_Owners=N_Owners;
+	 // copy owner data to old-owners table
+	 OwnerData OldOwners[MAX_NUM_OWNERS];
+	 int Old_N_Owners=N_Owners;
 	for ( i=0; i<N_Owners; i++) {
 		OldOwners[i].Name = Owners[i].Name;
 	}
@@ -310,11 +307,11 @@ Scheduler::count_jobs()
 	sprintf(tmp, "%s = %d", ATTR_MAX_JOBS_RUNNING, MaxJobsRunning);
 	ad->InsertOrUpdate(tmp);
 	
-    sprintf(tmp, "%s = \"%s\"", ATTR_NAME, Name);
-    ad->InsertOrUpdate(tmp);
+	 sprintf(tmp, "%s = \"%s\"", ATTR_NAME, Name);
+	 ad->InsertOrUpdate(tmp);
 
-    sprintf(tmp, "%s = %d", ATTR_VIRTUAL_MEMORY, SwapSpace );
-    ad->InsertOrUpdate(tmp);
+	 sprintf(tmp, "%s = %d", ATTR_VIRTUAL_MEMORY, SwapSpace );
+	 ad->InsertOrUpdate(tmp);
 
 	// The schedd's ad should not have idle and running job counts --- 
 	// only the per user queue ads should.  Instead, the schedd has
@@ -327,7 +324,7 @@ Scheduler::count_jobs()
 	ad->Insert (tmp);
 
 	update_central_mgr(UPDATE_SCHEDD_AD, CollectorHost,
-					   COLLECTOR_UDP_COMM_PORT); // always send
+						COLLECTOR_UDP_COMM_PORT); // always send
 	dprintf( D_FULLDEBUG, 
 			 "Sent HEART BEAT ad to central mgr: Number of submittors=%d\n",
 			 N_Owners );
@@ -368,7 +365,7 @@ Scheduler::count_jobs()
 						 COLLECTOR_UDP_COMM_PORT);
 
 	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
-			   Owners[i].Name, UidDomain );
+				Owners[i].Name, UidDomain );
 
 	  // condor view uses the acct port - because the accountant today is not
 	  // an independant daemon. In the future condor view will be the
@@ -388,7 +385,7 @@ Scheduler::count_jobs()
 		  char *host;
 		  int i;
 		  for (i=1, FlockHosts->rewind();
-			   i <= FlockLevel && (host = FlockHosts->next()); i++) {
+				i <= FlockLevel && (host = FlockHosts->next()); i++) {
 			  update_central_mgr(UPDATE_SUBMITTOR_AD, host,
 								 COLLECTOR_UDP_COMM_PORT);
 		  }
@@ -403,7 +400,7 @@ Scheduler::count_jobs()
 		  sprintf(tmp, "%s = 0", ATTR_IDLE_JOBS);
 		  ad->InsertOrUpdate(tmp);
 		  for (i=1, FlockHosts->rewind();
-			   i <= OldFlockLevel && (host = FlockHosts->next()); i++) {
+				i <= OldFlockLevel && (host = FlockHosts->next()); i++) {
 			  if (i > FlockLevel) {
 				  update_central_mgr(UPDATE_SUBMITTOR_AD, host,
 									 COLLECTOR_UDP_COMM_PORT);
@@ -412,8 +409,8 @@ Scheduler::count_jobs()
 	  }
 	}
 
-    // send info about deleted owners
-    // put 0 for idle & running jobs
+	 // send info about deleted owners
+	 // put 0 for idle & running jobs
 
 	sprintf(tmp, "%s = 0", ATTR_RUNNING_JOBS);
 	ad->InsertOrUpdate(tmp);
@@ -427,20 +424,20 @@ Scheduler::count_jobs()
 
 	  sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, OldOwners[i].Name, UidDomain);
 
-      // check that the old name is not in the new list
-      int k;
-      for(k=0; k<N_Owners;k++) {
-        if (!strcmp(OldOwners[i].Name,Owners[k].Name)) break;
-      }
+		// check that the old name is not in the new list
+		int k;
+		for(k=0; k<N_Owners;k++) {
+		  if (!strcmp(OldOwners[i].Name,Owners[k].Name)) break;
+		}
 	  // Now that we've finished using OldOwners[i].Name, we can
 		  // free it.
-      FREE( OldOwners[i].Name );
+		FREE( OldOwners[i].Name );
 
 		  // If k < N_Owners, we found this OldOwner in the current
 		  // Owners table, therefore, we don't want to send the
 		  // submittor ad with 0 jobs, so we continue to the next
 		  // entry in the OldOwner table.
-      if (k<N_Owners) continue;
+		if (k<N_Owners) continue;
 
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
@@ -454,11 +451,11 @@ Scheduler::count_jobs()
 	  int i;
 	
 	  if (FlockHosts) {
-	    for (i=1, FlockHosts->rewind();
-		     i <= OldFlockLevel && (host = FlockHosts->next()); i++) {
-		    update_central_mgr(UPDATE_SUBMITTOR_AD, host,
-			  				   COLLECTOR_UDP_COMM_PORT);
-	    }
+		 for (i=1, FlockHosts->rewind();
+			  i <= OldFlockLevel && (host = FlockHosts->next()); i++) {
+			 update_central_mgr(UPDATE_SUBMITTOR_AD, host,
+			  					COLLECTOR_UDP_COMM_PORT);
+		 }
 	  }
 	}
 
@@ -669,8 +666,8 @@ bool Scheduler::WriteAbortToUserLog(PROC_ID job_id)
 {
 	char tmp[_POSIX_PATH_MAX];
 
-    if (GetAttributeString(job_id.cluster, job_id.proc, ATTR_ULOG_FILE,
-						   tmp) < 0) {
+	 if (GetAttributeString(job_id.cluster, job_id.proc, ATTR_ULOG_FILE,
+							tmp) < 0) {
 		// if there is no userlog file defined, then our work is done...
 		return true;
 	}
@@ -679,7 +676,7 @@ bool Scheduler::WriteAbortToUserLog(PROC_ID job_id)
 	char logfilename[_POSIX_PATH_MAX];
 	char iwd[_POSIX_PATH_MAX];
 
-    GetAttributeString(job_id.cluster, job_id.proc, ATTR_JOB_IWD, iwd);
+	 GetAttributeString(job_id.cluster, job_id.proc, ATTR_JOB_IWD, iwd);
 	if (tmp[0] == '/') {
 		strcpy(logfilename, tmp);
 	} else {
@@ -690,7 +687,7 @@ bool Scheduler::WriteAbortToUserLog(PROC_ID job_id)
 
 	dprintf(D_FULLDEBUG,"Writing abort record to user logfile=%s owner=%s\n",logfilename,owner);
 
-    UserLog* ULog=new UserLog();
+	 UserLog* ULog=new UserLog();
 	ULog->initialize(owner, logfilename, job_id.cluster, job_id.proc, 0);
 
 	JobAbortedEvent event;
@@ -890,7 +887,7 @@ Scheduler::negotiate(int, Stream* s)
 						 !match && (addr = hent->h_addr_list[a]);
 						 a++) {
 						if (memcmp(addr, &endpoint_addr,
-								   sizeof(struct in_addr)) == 0){
+									sizeof(struct in_addr)) == 0){
 							match = true;
 							which_negotiator = n;
 						}
@@ -1039,17 +1036,17 @@ Scheduler::negotiate(int, Stream* s)
 			}
 
 			switch( op ) {
-			    case REJECTED:
-				    mark_cluster_rejected( cur_cluster );
+				 case REJECTED:
+					 mark_cluster_rejected( cur_cluster );
 					host_cnt = max_hosts + 1;
 					break;
 				case SEND_JOB_INFO: {
 					/* Really, we're trying to make sure we don't have too
-					   many shadows running, so compare here against
-					   curr_num_active_shadows rather than JobsRunning 
-					   as in the past.  Furthermore, we do not want to use
-					   just numShadows, because this does not take into account
-					   the shadows which have been enqueued (slow shadow start) 
+						many shadows running, so compare here against
+						curr_num_active_shadows rather than JobsRunning 
+						as in the past.  Furthermore, we do not want to use
+						just numShadows, because this does not take into account
+						the shadows which have been enqueued (slow shadow start) 
 					 */
 					if( curr_num_active_shadows >= MaxJobsRunning ) {
 						if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
@@ -1216,7 +1213,7 @@ Scheduler::negotiate(int, Stream* s)
 		// to pull this command off the wire and flush it down the
 		// bit-bucket before we stash this socket for future use.  If
 		// we got told SEND_JOB_INFO, we need to tell the negotiator
-		// we have NO_MORE_JOBS.   -Derek Wright 1/8/98
+		// we have NO_MORE_JOBS.	-Derek Wright 1/8/98
 	s->decode();
 	if( !s->code(op) || !s->end_of_message() ) {
 		dprintf( D_ALWAYS, "Error: Can't read command from negotiator.\n" );
@@ -1352,38 +1349,38 @@ Scheduler::permission(char* id, char *user, char* server, PROC_ID* jobId)
 
 	int	pid;
 	switch((pid = fork())) 	{
-	    case -1:	/* error */
+		 case -1:	/* error */
 
-            if(errno == ENOMEM) {
-                dprintf(D_ALWAYS, "fork() failed, due to lack of swap space\n");
-                swap_space_exhausted();
-            } else {
-                dprintf(D_ALWAYS, "fork() failed, errno = %d\n", errno);
-            }
+				if(errno == ENOMEM) {
+					 dprintf(D_ALWAYS, "fork() failed, due to lack of swap space\n");
+					 swap_space_exhausted();
+				} else {
+					 dprintf(D_ALWAYS, "fork() failed, errno = %d\n", errno);
+				}
 			DelMrec(mrec);
 			FreeJobAd(jobAd);
 			// delete jobAdCopy;
 			return 0;
 
-        case 0:     /* the child */
+		  case 0:	  /* the child */
 
-            close(0);
+				close(0);
 
 			/* don't do these closes here because we still need the
-			   DebugLock fd in dprintf.c.  -Jim B. */
+				DebugLock fd in dprintf.c.  -Jim B. */
 #if 0
-            for(i = 3; i < lim; i++) {
-                close(i);
-            }
+				for(i = 3; i < lim; i++) {
+					 close(i);
+				}
 #endif
 
-            exit( Agent(server, id, MySockName, user, aliveInterval, jobAd) );
+				exit( Agent(server, id, MySockName, user, aliveInterval, jobAd) );
 			
 
-        default:    /* the parent */
+		  default:	 /* the parent */
 
 			dprintf(D_FULLDEBUG,"Forked Agent with pid=%d for job=%d.%d\n",pid,jobId->cluster,jobId->proc);
-            mrec->agentPid = pid;
+				mrec->agentPid = pid;
 			FreeJobAd(jobAd);
 			// delete jobAdCopy;	// THREAD SHARED MEMORY WARNING
 			return 1;
@@ -1524,7 +1521,7 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 	int		rval;
 
 	rval = GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE, 
-						   &universe);
+							&universe);
 	if (universe == PVM) {
 		return start_pvm(mrec, job_id);
 	} else {
@@ -1544,14 +1541,14 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 
 void Scheduler::StartJobHandler() {
 
-    StartJobTimer=-1;
+	 StartJobTimer=-1;
 	PROC_ID* job_id=NULL;
 	match_rec* mrec=NULL;
 	shadow_rec* srec;
 
 	// get job from runnable job queue
 	while(!mrec) {	
-	    if (RunnableJobQueue.dequeue(srec)) return;
+		 if (RunnableJobQueue.dequeue(srec)) return;
 		job_id=&srec->job_id;
 		mrec=srec->match;
 		if (!mrec) {
@@ -1579,12 +1576,12 @@ void Scheduler::StartJobHandler() {
 	if (srp != NULL) /* mean that the shadow exists */
 	{
 		if (!find_shadow_rec( job_id )) /* means the shadow rec for this
-					      process does not exist */
+							process does not exist */
 			add_shadow_rec( srp->pid, job_id, server, srp->conn_fd);
 		  /* next write out the server cluster and proc on conn_fd */
 		dprintf( D_ALWAYS, "Sending job %d.%d to shadow pid %d\n", 
 			job_id->cluster, job_id->proc, srp->pid);
-	    sprintf(out_buf, "%s %d %d\n", server, job_id->cluster, 
+		 sprintf(out_buf, "%s %d %d\n", server, job_id->cluster, 
 			job_id->proc);
 		dprintf( D_ALWAYS, "sending %s", out_buf);
 		if (write(srp->conn_fd, out_buf, strlen(out_buf)) <= 0)
@@ -1594,7 +1591,7 @@ void Scheduler::StartJobHandler() {
 		return 1;	
 	}
 	
-    /* now the case when the shadow is absent */
+	 /* now the case when the shadow is absent */
 	socketpair(AF_UNIX, SOCK_STREAM, 0, pipes);
 	dprintf(D_ALWAYS, "Got the socket pair %d %d \n", pipes[0], pipes[1]);
 #endif  // of CARMI_OPS
@@ -1653,11 +1650,11 @@ void Scheduler::StartJobHandler() {
 #	ifdef CARMI_OPS
 			if ((retval = dup2( pipes[0], 0 )) < 0)
 			  {
-			    dprintf(D_ALWAYS, "Dup2 returns %d\n", retval);  
-			    EXCEPT("Could not dup pipe to stdin\n");
+				 dprintf(D_ALWAYS, "Dup2 returns %d\n", retval);  
+				 EXCEPT("Could not dup pipe to stdin\n");
 			  }
-		        else
-			    dprintf(D_ALWAYS, " Duped 0 to %d \n", pipes[0]);
+				  else
+				 dprintf(D_ALWAYS, " Duped 0 to %d \n", pipes[0]);
 #	endif		
 			// Close descriptors we do not want inherited by the shadow
 			lim = getdtablesize();
@@ -1683,11 +1680,11 @@ void Scheduler::StartJobHandler() {
 			add_shadow_rec(srec);
 	}
 
-    // Re-set timer if there are any jobs left in the queue
-    if (!RunnableJobQueue.IsEmpty()) {
-        StartJobTimer=daemonCore->Register_Timer(JobStartDelay,
+	 // Re-set timer if there are any jobs left in the queue
+	 if (!RunnableJobQueue.IsEmpty()) {
+		  StartJobTimer=daemonCore->Register_Timer(JobStartDelay,
 						(Eventcpp)&Scheduler::StartJobHandler,"start_job", this);
-    } else {
+	 } else {
 		// if there are no more jobs in the queue, this is a great time to
 		// update the central manager since things are pretty "stable".
 		// this way, "condor_status -sub" and other views such as 
@@ -1715,7 +1712,7 @@ Scheduler::start_std(match_rec* mrec , PROC_ID* job_id)
 	if (StartJobTimer<0) {
 		StartJobTimer=daemonCore->Register_Timer(0,
 						(Eventcpp)&Scheduler::StartJobHandler,"start_job", this);
-    }
+	 }
 
 	return srec;
 }
@@ -1735,7 +1732,7 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 	char			**ptr;
 	struct shadow_rec *srp;
 	int				c;							// current hosts
-	int    old_proc;  // the class in the cluster.  needed by the multi_shadow -Bin
+	int	 old_proc;  // the class in the cluster.  needed by the multi_shadow -Bin
 
 	dprintf( D_FULLDEBUG, "Got permission to run job %d.%d on %s...\n",
 			job_id->cluster, job_id->proc, mrec->peer);
@@ -1755,7 +1752,7 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 	old_proc = job_id->proc;  
 	
 	/* For PVM/CARMI, all procs in a cluster are considered part of the same
-	   job, so just clear out the proc number */
+		job, so just clear out the proc number */
 	job_id->proc = 0;
 
 	(void)sprintf( cluster, "%d", job_id->cluster );
@@ -1770,8 +1767,8 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 		int pipes[2];
 		socketpair(AF_UNIX, SOCK_STREAM, 0, pipes);
 		switch( (pid=fork()) ) {
-		    case -1:	/* error */
-			    if( errno == ENOMEM ) {
+			 case -1:	/* error */
+				 if( errno == ENOMEM ) {
 					dprintf(D_ALWAYS, 
 							"fork() failed, due to lack of swap space\n");
 					swap_space_exhausted();
@@ -1833,10 +1830,10 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 		dprintf( D_ALWAYS, "Existing shadow connected on fd %d\n", shadow_fd);
 	}
 	
-    dprintf( D_ALWAYS, "Sending job %d.%d to shadow pid %d\n", 
+	 dprintf( D_ALWAYS, "Sending job %d.%d to shadow pid %d\n", 
 			job_id->cluster, job_id->proc, srp->pid);
 
-    sprintf(out_buf, "%d %d %d\n", job_id->cluster, job_id->proc, 1);
+	 sprintf(out_buf, "%d %d %d\n", job_id->cluster, job_id->proc, 1);
 	
 	dprintf( D_ALWAYS, "First Line: %s", out_buf );
 	write(shadow_fd, out_buf, strlen(out_buf));
@@ -1859,7 +1856,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	char 	output[_POSIX_PATH_MAX];
 	char 	error[_POSIX_PATH_MAX];
 	char	env[ATTRLIST_MAX_EXPRESSION];		// fixed size is bad here!!
-	char   	job_args[_POSIX_ARG_MAX];
+	char		job_args[_POSIX_ARG_MAX];
 	char	args[_POSIX_ARG_MAX];
 	char	owner[20], iwd[_POSIX_PATH_MAX];
 	Environ	env_obj;
@@ -1879,31 +1876,31 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	}
 
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_INPUT,
-						   input) < 0) {
+							input) < 0) {
 		sprintf(input, "/dev/null");
 	}
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_OUTPUT,
-						   output) < 0) {
+							output) < 0) {
 		sprintf(output, "/dev/null");
 	}
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_ERROR,
-						   error) < 0) {
+							error) < 0) {
 		sprintf(error, "/dev/null");
 	}
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_ENVIRONMENT,
-						   env) < 0) {
+							env) < 0) {
 		sprintf(env, "");
 	}
 	env_obj.add_string(env);
 	envp = env_obj.get_vector();
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_ARGUMENTS,
-						   args) < 0) {
+							args) < 0) {
 		sprintf(args, "");
 	}
 	sprintf(job_args, "%s %s", a_out_name, args);
 	mkargv(&argc, argv, job_args);
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_OWNER,
-						   owner) < 0) {
+							owner) < 0) {
 		dprintf(D_FULLDEBUG,"Scheduler::start_sched_universe_job--setting owner"
 				" to \"nobody\"\n" );
 		sprintf(owner, "nobody");
@@ -1914,7 +1911,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		return NULL;
 	}
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_IWD,
-						   iwd) < 0) {
+							iwd) < 0) {
 		sprintf(owner, "/tmp");
 	}
 
@@ -2104,7 +2101,7 @@ mark_job_stopped(PROC_ID* job_id)
 	float 	cpu_time;
 
 	had_orig = GetAttributeInt(job_id->cluster, job_id->proc, 
-							   ATTR_ORIG_MAX_HOSTS, &orig_max);
+								ATTR_ORIG_MAX_HOSTS, &orig_max);
 
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, &status);
 
@@ -2170,7 +2167,7 @@ Scheduler::is_alive(shadow_rec* srec)
 	if (IsSchedulerUniverse(srec)) {
 		char owner[_POSIX_PATH_MAX];
 		GetAttributeString(srec->job_id.cluster, srec->job_id.proc, ATTR_OWNER, owner);
-   		init_user_ids(owner);
+			init_user_ids(owner);
 		priv_state priv = set_user_priv();
 		status=daemonCore->Is_Pid_Alive(srec->pid);
 		set_priv(priv);
@@ -2254,7 +2251,7 @@ send_vacate(match_rec* match,int cmd)
 	ReliSock	sock;
 
 	dprintf( D_FULLDEBUG, "Called send_vacate( %s, %d )\n", match->peer, cmd );
-    
+	 
 	/* Connect to the specified host with 20 second timeout */
 	sock.timeout(20);
 	if (!sock.connect(match->peer,START_PORT)) {
@@ -2264,18 +2261,18 @@ send_vacate(match_rec* match,int cmd)
 	
 	sock.encode();
 
-    if( !sock.code(cmd) ) {
-        dprintf( D_ALWAYS, "Can't initialize sock to %s\n", match->peer);
+	 if( !sock.code(cmd) ) {
+		  dprintf( D_ALWAYS, "Can't initialize sock to %s\n", match->peer);
 		return;
 	}
 
-    if( !sock.put(match->id) ) {
-        dprintf( D_ALWAYS, "Can't initialize sock to %s\n", match->peer);
+	 if( !sock.put(match->id) ) {
+		  dprintf( D_ALWAYS, "Can't initialize sock to %s\n", match->peer);
 		return;
 	}
 
-    if( !sock.eom() ) {
-        dprintf( D_ALWAYS, "Can't send EOM to %s\n", match->peer);
+	 if( !sock.eom() ) {
+		  dprintf( D_ALWAYS, "Can't send EOM to %s\n", match->peer);
 		return;
 	}
 
@@ -2372,7 +2369,7 @@ Scheduler::mail_problem_message()
 	dprintf( D_ALWAYS, "Mailing administrator (%s)\n", CondorAdministrator );
 
 	(void)sprintf( cmd, "%s -s \"CONDOR Problem\" %s", Mail, 
-				   CondorAdministrator );
+					CondorAdministrator );
 	if( (mailer=popen(cmd,"w")) == NULL ) {
 		EXCEPT( "popen(\"%s\",\"w\")", cmd );
 	}
@@ -2383,7 +2380,7 @@ Scheduler::mail_problem_message()
 	fprintf( mailer, "but we already have a shadow record for it.\n" );
 
 		/* don't use 'pclose()' here, it does its own wait, and messes
-	       with our handling of SIGCHLD! */
+			 with our handling of SIGCHLD! */
 		/* except on HPUX it is both safe and required */
 #if defined(HPUX)
 	pclose( mailer );
@@ -2431,9 +2428,9 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 	}
 
 	if (GetAttributeString(srec->job_id.cluster, srec->job_id.proc,
-						   ATTR_NOTIFY_USER, owner) < 0) {
+							ATTR_NOTIFY_USER, owner) < 0) {
 		if (GetAttributeString(srec->job_id.cluster, srec->job_id.proc,
-							   ATTR_OWNER, owner) < 0) {
+								ATTR_OWNER, owner) < 0) {
 			EXCEPT("GetAttributeString(%d, %d, \"%s\")",
 					srec->job_id.cluster,
 					srec->job_id.proc, ATTR_OWNER);
@@ -2441,14 +2438,14 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 	}
 
 	if (GetAttributeString(srec->job_id.cluster, srec->job_id.proc, "cmd",
-						   cmd) < 0) {
+							cmd) < 0) {
 		EXCEPT("GetAttributeString(%d, %d, \"cmd\")", srec->job_id.cluster,
-			   srec->job_id.proc);
+				srec->job_id.proc);
 	}
 	if (GetAttributeString(srec->job_id.cluster, srec->job_id.proc,
-						   ATTR_JOB_ARGUMENTS, args) < 0) {
+							ATTR_JOB_ARGUMENTS, args) < 0) {
 		EXCEPT("GetAttributeString(%d, %d, \"%s\"", srec->job_id.cluster,
-			   srec->job_id.proc, ATTR_JOB_ARGUMENTS);
+				srec->job_id.proc, ATTR_JOB_ARGUMENTS);
 	}
 
 	// Send mail to user
@@ -2510,26 +2507,26 @@ static int IsSchedulerUniverse(shadow_rec* srec)
 void
 Scheduler::reaper(int sig)
 {
-	pid_t   		pid;
-    int     		status;
+	pid_t			pid;
+	 int	  		status;
 
-    if( sig == 0 ) {
-        dprintf( D_FULLDEBUG, "***********  Begin Extra Checking ********\n" );
-    } else {
-        dprintf( D_ALWAYS, "Entered reaper( %d, %d )\n", sig );
-    }
+	 if( sig == 0 ) {
+		  dprintf( D_FULLDEBUG, "***********  Begin Extra Checking ********\n" );
+	 } else {
+		  dprintf( D_ALWAYS, "Entered reaper( %d, %d )\n", sig );
+	 }
 
 	for(;;) {
-        if( (pid = waitpid(-1,&status,WNOHANG)) <= 0 ) {
-            dprintf( D_FULLDEBUG, "waitpid() returned %d, errno = %d\n",
-                                                            pid, errno );
-            break;
-        }
+		  if( (pid = waitpid(-1,&status,WNOHANG)) <= 0 ) {
+				dprintf( D_FULLDEBUG, "waitpid() returned %d, errno = %d\n",
+																				pid, errno );
+				break;
+		  }
 		child_exit(pid, status);
 	}
-    if( sig == 0 ) {
-        dprintf( D_FULLDEBUG, "***********  End Extra Checking ********\n" );
-    }
+	 if( sig == 0 ) {
+		  dprintf( D_FULLDEBUG, "***********  End Extra Checking ********\n" );
+	 }
 }
 #endif
 
@@ -2538,27 +2535,27 @@ Scheduler::child_exit(int pid, int status)
 {
 	match_rec*		mrec;
 	shadow_rec*		srec;
-    int				StartJobsFlag=TRUE;
+	 int				StartJobsFlag=TRUE;
 
 	mrec = FindMrecByPid(pid);
 	srec = FindSrecByPid(pid);
 
 	if(mrec) {
 		if(WIFEXITED(status)) {
-               dprintf(D_FULLDEBUG, "agent pid %d exited with status %d\n",
-                       pid, WEXITSTATUS(status) );
-               if(WEXITSTATUS(status) == EXITSTATUS_NOTOK) {
-                   dprintf(D_ALWAYS, "capability rejected by startd\n");
-                   DelMrec(mrec);
-               } else {
-                   dprintf(D_ALWAYS, "Agent contacting startd successful\n");
+					dprintf(D_FULLDEBUG, "agent pid %d exited with status %d\n",
+							  pid, WEXITSTATUS(status) );
+					if(WEXITSTATUS(status) == EXITSTATUS_NOTOK) {
+						 dprintf(D_ALWAYS, "capability rejected by startd\n");
+						 DelMrec(mrec);
+					} else {
+						 dprintf(D_ALWAYS, "Agent contacting startd successful\n");
 					mrec->status = M_ACTIVE;
-               }
-        } else if(WIFSIGNALED(status)) {
-               dprintf(D_ALWAYS, "Agent pid %d died with signal %d\n",
-                       pid, WTERMSIG(status));
-               DelMrec(mrec);
-        }
+					}
+		  } else if(WIFSIGNALED(status)) {
+					dprintf(D_ALWAYS, "Agent pid %d died with signal %d\n",
+							  pid, WTERMSIG(status));
+					DelMrec(mrec);
+		  }
 	} else if (IsSchedulerUniverse(srec)) {
 		// scheduler universe process
 		if(WIFEXITED(status)) {
@@ -2567,7 +2564,7 @@ Scheduler::child_exit(int pid, int status)
 					"exited with status %d\n", srec->job_id.cluster,
 					srec->job_id.proc, pid, WEXITSTATUS(status) );
 			NotifyUser(srec, "exited with status ",
-				   WEXITSTATUS(status) , COMPLETED);
+					WEXITSTATUS(status) , COMPLETED);
 			SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
 							ATTR_JOB_STATUS, COMPLETED);
 			SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
@@ -2578,7 +2575,7 @@ Scheduler::child_exit(int pid, int status)
 					"with signal %d\n", srec->job_id.cluster,
 					srec->job_id.proc, pid, WTERMSIG(status));
 			NotifyUser(srec, "was killed by signal ",
-					   WTERMSIG(status), REMOVED);
+						WTERMSIG(status), REMOVED);
 			SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
 							ATTR_JOB_STATUS, REMOVED);
 		}
@@ -2594,13 +2591,13 @@ Scheduler::child_exit(int pid, int status)
 	} else if (srec) {
 		// A real shadow
 		if( WIFEXITED(status) ) {
-            dprintf( D_FULLDEBUG, "Shadow pid %d exited with status %d\n",
-                                               pid, WEXITSTATUS(status) );
+				dprintf( D_FULLDEBUG, "Shadow pid %d exited with status %d\n",
+															  pid, WEXITSTATUS(status) );
 			switch( WEXITSTATUS(status) ) {
 				case JOB_NO_MEM:
 					swap_space_exhausted();
-                case JOB_EXEC_FAILED:
-                    StartJobsFlag=FALSE;
+					 case JOB_EXEC_FAILED:
+						  StartJobsFlag=FALSE;
 					break;
 				case JOB_CKPTED:
 				case JOB_NOT_CKPTED:
@@ -2637,15 +2634,15 @@ Scheduler::child_exit(int pid, int status)
 					SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, ATTR_JOB_STATUS, COMPLETED);
 					break;
 			}
-    	} else if( WIFSIGNALED(status) ) {
-                dprintf( D_FULLDEBUG, "Shadow pid %d died with signal %d\n",
-                                                pid, WTERMSIG(status) );
-        }
+	 	} else if( WIFSIGNALED(status) ) {
+					 dprintf( D_FULLDEBUG, "Shadow pid %d died with signal %d\n",
+																pid, WTERMSIG(status) );
+		  }
 		delete_shadow_rec( pid );
 	} else {
 		// mrec and srec are NULL - agent dies after deleting match
 		StartJobsFlag=FALSE;
-    }  // big if..else if...
+	 }  // big if..else if...
 	if( ExitWhenDone && numShadows == 0 ) {
 		dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
 		DC_Exit(0);
@@ -2664,12 +2661,12 @@ Scheduler::kill_zombie(int pid, PROC_ID* job_id )
 #if 0
 		// This always happens now, no need for a dprintf() 
 		// Derek 3/13/98
-    dprintf( D_ALWAYS,
-        "Shadow %d died, and left job %d.%d marked RUNNING\n",
-        pid, job_id->cluster, job_id->proc );
+	 dprintf( D_ALWAYS,
+		  "Shadow %d died, and left job %d.%d marked RUNNING\n",
+		  pid, job_id->cluster, job_id->proc );
 #endif
 
-    mark_job_stopped( job_id );
+	 mark_job_stopped( job_id );
 }
 
 /*
@@ -2685,38 +2682,38 @@ void
 Scheduler::check_zombie(int pid, PROC_ID* job_id)
 {
  
-    int     status;
+	 int	  status;
 
-    if (GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS,
+	 if (GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS,
 						&status) < 0){
-        dprintf(D_ALWAYS,"ERROR fetching job status in check_zombie !\n");
+		  dprintf(D_ALWAYS,"ERROR fetching job status in check_zombie !\n");
 		return;
-    }
+	 }
 
-    dprintf( D_FULLDEBUG, "Entered check_zombie( %d, 0x%x, st=%d )\n", pid, job_id, status );
+	 dprintf( D_FULLDEBUG, "Entered check_zombie( %d, 0x%x, st=%d )\n", pid, job_id, status );
 
 	// set cur-hosts to zero
 	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 0);
 
-    switch( status ) {
-        case RUNNING:
-            kill_zombie( pid, job_id );
-            break;
-        case REMOVED:
+	 switch( status ) {
+		  case RUNNING:
+				kill_zombie( pid, job_id );
+				break;
+		  case REMOVED:
 		case COMPLETED:
-            DestroyProc(job_id->cluster,job_id->proc);
-            break;
-        default:
-            break;
-    }
+				DestroyProc(job_id->cluster,job_id->proc);
+				break;
+		  default:
+				break;
+	 }
 
-    dprintf( D_FULLDEBUG, "Exited check_zombie( %d, 0x%x )\n", pid, job_id );
+	 dprintf( D_FULLDEBUG, "Exited check_zombie( %d, 0x%x )\n", pid, job_id );
 }
 
 void
 cleanup_ckpt_files(int cluster, int proc, char *owner)
 {
-    char    ckpt_name[MAXPATHLEN];
+	 char	 ckpt_name[MAXPATHLEN];
 	char	buf[_POSIX_PATH_MAX];
 	char	server[_POSIX_PATH_MAX];
 	char	*tmp;
@@ -2733,7 +2730,7 @@ cleanup_ckpt_files(int cluster, int proc, char *owner)
 	}
 
 	if (GetAttributeString(cluster, proc, ATTR_LAST_CKPT_SERVER,
-						   server) == 0) {
+							server) == 0) {
 		SetCkptServerHost(server);
 	} else {
 		tmp = param("CKPT_SERVER_HOST");
@@ -2743,18 +2740,18 @@ cleanup_ckpt_files(int cluster, int proc, char *owner)
 		}
 	}
 
-        /* Remove any checkpoint files.  If for some reason we do 
+		  /* Remove any checkpoint files.  If for some reason we do 
 		 * not know the owner, don't bother sending to the ckpt
 		 * server.
 		 */
-    strcpy(ckpt_name, gen_ckpt_name(Spool,cluster,proc,0) );
+	 strcpy(ckpt_name, gen_ckpt_name(Spool,cluster,proc,0) );
 	if ( owner )
 		RemoveLocalOrRemoteFile(owner,ckpt_name);
 	else
 		unlink(ckpt_name);
 
-        /* Remove any temporary checkpoint files */
-    strcat( ckpt_name, ".tmp");
+		  /* Remove any temporary checkpoint files */
+	 strcat( ckpt_name, ".tmp");
 	if ( owner )
 		RemoveLocalOrRemoteFile(owner,ckpt_name);
 	else
@@ -2797,10 +2794,11 @@ Scheduler::Init()
 	if ( CondorCertDir ) 
 		free( CondorCertDir );
 	if( ! (CondorCertDir = param("CONDOR_CERT_DIR")) ) {
-		dprintf( D_ALWAYS, "no CONDOR_CERT_DIR, submits not authenticated\n");
+		dprintf( D_ALWAYS, "no CONDOR_CERT_DIR, no GSS authentication\n");
 	}
 	else {
-		dprintf( D_ALWAYS, "read CONDOR_CERT_DIR, submits are authenticated\n");
+		canTryGSS = 1;
+		dprintf( D_ALWAYS, "read CONDOR_CERT_DIR, can use GSS authentication\n");
 		char tmpstring[MAXPATHLEN];
 
 		//didn't bother re-putting vars which shouldn't change
@@ -2819,43 +2817,52 @@ Scheduler::Init()
 			putenv( strdup( tmpstring ) );
 		}
 
-      if ( !getenv( "SSLEAY_CONF" ) ) {
-         sprintf(tmpstring,"SSLEAY_CONF=%s/condor_ssl.cnf",CondorCertDir);
-         putenv( strdup( tmpstring ) );
-      }
+		if ( !getenv( "SSLEAY_CONF" ) ) {
+			sprintf(tmpstring,"SSLEAY_CONF=%s/condor_ssl.cnf",CondorCertDir);
+			putenv( strdup( tmpstring ) );
+		}
 
 //		free( CondorCertDir );
 	}
 #endif
 
+	//for now, default to can use unless set to false, but should 
+	//change this because it's inconsistent with other methods
+	char * tryFilesystem = param( "ALLOW_FILESYSTEM_AUTHENTICATION" );
+	if ( tryFilesystem ) {
+		if ( tryFilesystem[0] == 'F' || tryFilesystem[0] == 'f' ) {
+			canTryFilesystem = 1;
+		}
+		free( tryFilesystem );
+	}
 
 	if( CondorViewHost ) free( CondorViewHost );
 	CondorViewHost = param("CONDOR_VIEW_HOST");
 
 	if( CollectorHost ) free( CollectorHost );
 	if( ! (CollectorHost = param("COLLECTOR_HOST")) ) {
-        EXCEPT( "No Collector host specified in config file" );
-    }
+		  EXCEPT( "No Collector host specified in config file" );
+	 }
 
 	if( NegotiatorHost ) free( NegotiatorHost );
-    if( ! (NegotiatorHost = param("NEGOTIATOR_HOST")) ) {
-        EXCEPT( "No NegotiatorHost host specified in config file" );
-    }
+	 if( ! (NegotiatorHost = param("NEGOTIATOR_HOST")) ) {
+		  EXCEPT( "No NegotiatorHost host specified in config file" );
+	 }
 
 	if( Shadow ) free( Shadow );
-    if( ! (Shadow = param("SHADOW")) ) {
-        EXCEPT( "SHADOW not specified in config file\n" );
-    }
+	 if( ! (Shadow = param("SHADOW")) ) {
+		  EXCEPT( "SHADOW not specified in config file\n" );
+	 }
 
 	if( CondorAdministrator ) free( CondorAdministrator );
-    if( ! (CondorAdministrator = param("CONDOR_ADMIN")) ) {
-        EXCEPT( "CONDOR_ADMIN not specified in config file" );
-    }
+	 if( ! (CondorAdministrator = param("CONDOR_ADMIN")) ) {
+		  EXCEPT( "CONDOR_ADMIN not specified in config file" );
+	 }
 
 	if( Mail ) free( Mail );
-    if( ! (Mail=param("MAIL")) ) {
-        EXCEPT( "MAIL not specified in config file\n" );
-    }
+	 if( ! (Mail=param("MAIL")) ) {
+		  EXCEPT( "MAIL not specified in config file\n" );
+	 }
 
 		// UidDomain will always be defined, since config() will put
 		// in my_full_hostname() if it's not defined in the file.
@@ -2888,21 +2895,21 @@ Scheduler::Init()
 
 	if( AccountantName ) free( AccountantName );
 	if( ! (AccountantName = param("ACCOUNTANT_HOST")) ) {
-        dprintf(D_FULLDEBUG, "No Accountant host specified in config file\n" );
-    }
+		  dprintf(D_FULLDEBUG, "No Accountant host specified in config file\n" );
+	 }
 
 	if( JobHistoryFileName ) free( JobHistoryFileName );
 	if( ! (JobHistoryFileName = param("HISTORY")) ) {
-        dprintf(D_FULLDEBUG, "No history file specified in config file\n" );
+		  dprintf(D_FULLDEBUG, "No history file specified in config file\n" );
 	}
 
-    tmp = param( "SCHEDD_INTERVAL" );
-    if( ! tmp ) {
-        SchedDInterval = 300;
-    } else {
-        SchedDInterval = atoi( tmp );
-        free( tmp );
-    }
+	 tmp = param( "SCHEDD_INTERVAL" );
+	 if( ! tmp ) {
+		  SchedDInterval = 300;
+	 } else {
+		  SchedDInterval = atoi( tmp );
+		  free( tmp );
+	 }
 
 	tmp = param( "QUEUE_CLEAN_INTERVAL" );
 	if( ! tmp ) {
@@ -2913,20 +2920,20 @@ Scheduler::Init()
 	}
 
 	tmp = param( "JOB_START_DELAY" );
-    if( ! tmp ) {
-        JobStartDelay = 2;
-    } else {
-        JobStartDelay = atoi( tmp );
-        free( tmp );
-    }
+	 if( ! tmp ) {
+		  JobStartDelay = 2;
+	 } else {
+		  JobStartDelay = atoi( tmp );
+		  free( tmp );
+	 }
 
 	tmp = param( "MAX_JOBS_RUNNING" );
-    if( ! tmp ) {
-        MaxJobsRunning = 200;
-    } else {
-        MaxJobsRunning = atoi( tmp );
-        free( tmp );
-    }
+	 if( ! tmp ) {
+		  MaxJobsRunning = 200;
+	 } else {
+		  MaxJobsRunning = atoi( tmp );
+		  free( tmp );
+	 }
 
 	/* Initialize the hash tables to size MaxJobsRunning * 1.2 */
 		// Someday, we might want to actually resize these hashtables
@@ -2934,7 +2941,7 @@ Scheduler::Init()
 		// have the code for that and it's not too important.
 	if (matches == NULL) {
 	matches = new HashTable <HashKey, match_rec *> ((int)(MaxJobsRunning*1.2),
-												   hashFunction);
+													hashFunction);
 	shadowsByPid = new HashTable <int, shadow_rec *>((int)(MaxJobsRunning*1.2),
 													  pidHash);
 	shadowsByProcID =
@@ -2955,36 +2962,36 @@ Scheduler::Init()
 	if (tmp) free(tmp);
 
 	tmp = param( "RESERVED_SWAP" );
-    if( !tmp ) {
-        ReservedSwap = 5 * 1024;            /* 5 megabytes */
-    } else {
-        ReservedSwap = atoi( tmp ) * 1024;  /* Value specified in megabytes */
-        free( tmp );
-    }
+	 if( !tmp ) {
+		  ReservedSwap = 5 * 1024;				/* 5 megabytes */
+	 } else {
+		  ReservedSwap = atoi( tmp ) * 1024;  /* Value specified in megabytes */
+		  free( tmp );
+	 }
 
 	tmp = param( "SHADOW_SIZE_ESTIMATE" );
-    if( ! tmp ) {
-        ShadowSizeEstimate = DEFAULT_SHADOW_SIZE;
-    } else {
-        ShadowSizeEstimate = atoi( tmp );   /* Value specified in kilobytes */
-        free( tmp );
-    }
+	 if( ! tmp ) {
+		  ShadowSizeEstimate = DEFAULT_SHADOW_SIZE;
+	 } else {
+		  ShadowSizeEstimate = atoi( tmp );	/* Value specified in kilobytes */
+		  free( tmp );
+	 }
 
 	tmp = param("ALIVE_INTERVAL");
-    if(!tmp) {
+	 if(!tmp) {
 		aliveInterval = 300;
-    } else {
-        aliveInterval = atoi(tmp);
-        free(tmp);
+	 } else {
+		  aliveInterval = atoi(tmp);
+		  free(tmp);
 	}
 
 
 	tmp = param("MAX_SHADOW_EXCEPTIONS");
-    if(!tmp) {
+	 if(!tmp) {
 		MaxExceptions = 5;
-    } else {
-        MaxExceptions = atoi(tmp);
-        free(tmp);
+	 } else {
+		  MaxExceptions = atoi(tmp);
+		  free(tmp);
 	}
 
 		////////////////////////////////////////////////////////////////////
@@ -3022,9 +3029,7 @@ Scheduler::Init()
 		// Now create another command port to be used exclusively by shadows.
 		// Stash the sinfull string of this new command port in MyShadowSockName.
 	if ( ! MyShadowSockName ) {
-//		shadowCommandrsock = new ReliSock;
-// mju changed to AuthSock
-		shadowCommandrsock = new AuthSock;
+		shadowCommandrsock = new ReliSock;
 		shadowCommandssock = new SafeSock;
 
 		if ( !shadowCommandrsock || !shadowCommandssock ) {
@@ -3055,17 +3060,17 @@ Scheduler::Init()
 void
 Scheduler::Register()
 {
-    // message handlers for schedd commands
-    daemonCore->Register_Command( NEGOTIATE, "NEGOTIATE", 
+	 // message handlers for schedd commands
+	 daemonCore->Register_Command( NEGOTIATE, "NEGOTIATE", 
 			(CommandHandlercpp)doNegotiate, "negotiate", this, NEGOTIATOR );
-    daemonCore->Register_Command( RESCHEDULE, "RESCHEDULE", 
+	 daemonCore->Register_Command( RESCHEDULE, "RESCHEDULE", 
 			(CommandHandlercpp)reschedule_negotiator, "reschedule_negotiator", 
-                               this, WRITE);
-    daemonCore->Register_Command( RECONFIG, "RECONFIG", 
+										 this, WRITE);
+	 daemonCore->Register_Command( RECONFIG, "RECONFIG", 
 			(CommandHandler)dc_reconfig, "reconfig", 0, OWNER );
-    daemonCore->Register_Command(VACATE_SERVICE, "VACATE_SERVICE", 
+	 daemonCore->Register_Command(VACATE_SERVICE, "VACATE_SERVICE", 
 			(CommandHandlercpp)vacate_service, "vacate_service", this, WRITE);
-    daemonCore->Register_Command(KILL_FRGN_JOB, "KILL_FRGN_JOB", 
+	 daemonCore->Register_Command(KILL_FRGN_JOB, "KILL_FRGN_JOB", 
 			(CommandHandlercpp)abort_job, "abort_job", this, WRITE);
 
 	// Command handler for testing file access.  I set this as WRITE as we
@@ -3075,19 +3080,19 @@ Scheduler::Register()
 								  "attempt_access_handler", NULL, WRITE, 
 								  D_FULLDEBUG );
 
-    // handler for queue management commands
-    // Note: This could either be a READ or a WRITE command.  Too bad we have 
+	 // handler for queue management commands
+	 // Note: This could either be a READ or a WRITE command.  Too bad we have 
 	// to lump both together here.
-    daemonCore->Register_Command( QMGMT_CMD, "QMGMT_CMD",
+	 daemonCore->Register_Command( QMGMT_CMD, "QMGMT_CMD",
 								  (CommandHandler)handle_q, 
 								  "handle_q", NULL, READ, D_FULLDEBUG );
 
-    // reaper
+	 // reaper
 #ifdef WIN32
 	daemonCore->Register_Reaper( "reaper", (ReaperHandlercpp)&Scheduler::child_exit,
 								 "child_exit", this );
 #else
-    daemonCore->Register_Signal( DC_SIGCHLD, "SIGCHLD", (SignalHandlercpp)&Scheduler::reaper, 
+	 daemonCore->Register_Signal( DC_SIGCHLD, "SIGCHLD", (SignalHandlercpp)&Scheduler::reaper, 
 								 "reaper", this );
 #endif
 
@@ -3113,13 +3118,13 @@ Scheduler::RegisterTimers()
 		daemonCore->Cancel_Timer(cleanid);
 	}
 
-    // timer handlers
-    timeoutid = daemonCore->Register_Timer(10,(Eventcpp)timeout,
-										   "timeout",this);
+	 // timer handlers
+	 timeoutid = daemonCore->Register_Timer(10,(Eventcpp)timeout,
+											"timeout",this);
 	startjobsid = daemonCore->Register_Timer(10,
 											 (Eventcpp)StartJobs,"StartJobs",
 											 this);
-    aliveid = daemonCore->Register_Timer(aliveInterval, aliveInterval,
+	 aliveid = daemonCore->Register_Timer(aliveInterval, aliveInterval,
 										 (Eventcpp)send_alive, 
 										 "send_alive", this);
 	cleanid = daemonCore->Register_Timer(QueueCleanInterval,
@@ -3133,28 +3138,28 @@ extern "C" {
 int
 prio_compar(prio_rec* a, prio_rec* b)
 {
-    /* compare job priorities: higher values have more priority */
-    if( a->job_prio < b->job_prio ) {
-        return 1;
-    }
-    if( a->job_prio > b->job_prio ) {
-        return -1;
-    }
+	 /* compare job priorities: higher values have more priority */
+	 if( a->job_prio < b->job_prio ) {
+		  return 1;
+	 }
+	 if( a->job_prio > b->job_prio ) {
+		  return -1;
+	 }
 
-    /* here,updown priority and job_priority are both equal */
-    /* check existence of checkpoint files */
-    if (( a->status == UNEXPANDED) && ( b->status != UNEXPANDED))
-        return ( 1);
-    if (( a->status != UNEXPANDED) && ( b->status == UNEXPANDED))
-        return (-1);
+	 /* here,updown priority and job_priority are both equal */
+	 /* check existence of checkpoint files */
+	 if (( a->status == UNEXPANDED) && ( b->status != UNEXPANDED))
+		  return ( 1);
+	 if (( a->status != UNEXPANDED) && ( b->status == UNEXPANDED))
+		  return (-1);
 
-    /* check for job submit times */
-    if( a->qdate < b->qdate ) {
-        return -1;
-    }
-    if( a->qdate > b->qdate ) {
-        return 1;
-    }
+	 /* check for job submit times */
+	 if( a->qdate < b->qdate ) {
+		  return -1;
+	 }
+	 if( a->qdate > b->qdate ) {
+		  return 1;
+	 }
 
 	/* finally, go in order of the proc id 
 	 * we already are likely in "cluster" order because of the qdate comparison 
@@ -3177,7 +3182,7 @@ Scheduler::reconfig()
 {
 	Init();
 	RegisterTimers();			// reset timers
-    timeout();
+	 timeout();
 }
 
 
@@ -3190,10 +3195,10 @@ Scheduler::shutdown_graceful()
 		DC_Exit(0);
 	} else {
 			/* 
-			   There are shadows running, so set a flag that tells the
-			   reaper to exit when all the shadows are gone, and start
-			   shutting down shadows.
- 		    */
+				There are shadows running, so set a flag that tells the
+				reaper to exit when all the shadows are gone, and start
+				shutting down shadows.
+ 			 */
 		MaxJobsRunning = 0;
 		ExitWhenDone = TRUE;
 		preempt( numShadows );
@@ -3221,12 +3226,12 @@ Scheduler::shutdown_fast()
 void
 Scheduler::reschedule_negotiator(int, Stream *)
 {
-    int     	cmd = RESCHEDULE;
+	 int	  	cmd = RESCHEDULE;
 	ReliSock	sock(NegotiatorHost, NEGOTIATOR_PORT);
 
 	// relsock->end_of_message();
 
-    dprintf( D_ALWAYS, "Called reschedule_negotiator()\n" );
+	 dprintf( D_ALWAYS, "Called reschedule_negotiator()\n" );
 
 	timeout();							// update the central manager now
 
@@ -3245,7 +3250,7 @@ Scheduler::reschedule_negotiator(int, Stream *)
 		StartSchedUniverseJobs();
 	}
 
-    return;
+	 return;
 }
 
 match_rec*
@@ -3344,7 +3349,7 @@ int
 Scheduler::Agent(char* server, char* capability, 
 				 char* name, char *user, int aliveInterval, ClassAd* jobAd) 
 {
-    int     	reply;                              /* reply from the startd */
+	 int	  	reply;										/* reply from the startd */
 	ReliSock 	sock;
 
 
@@ -3450,7 +3455,7 @@ void
 Scheduler::Relinquish(match_rec* mrec)
 {
 	ReliSock	*sock;
-	int	   		flag = FALSE;
+	int				flag = FALSE;
 
 	if (!mrec) {
 		dprintf(D_ALWAYS, "Scheduler::Relinquish - mrec is NULL, can't relinquish\n");
@@ -3580,7 +3585,7 @@ void
 Scheduler::send_alive()
 {
 	SafeSock	*sock;
-    int     	numsent=0;
+	 int	  	numsent=0;
 	int			alive = ALIVE;
 	char		*id = NULL;
 	match_rec	*rec;
@@ -3606,14 +3611,14 @@ Scheduler::send_alive()
 			continue;
 		}
 			/* TODO: Someday, espcially once the accountant is done, the startd
-			   should send a keepalive ACK back to the schedd.  if there is no shadow
-			   to this machine, and we have not had a startd keepalive ACK in X amount
-			   of time, then we should relinquish the match.  Since the accountant 
-			   is not done and we are in fire mode, leave this for V6.1.  :^) -Todd 9/97
-			   */
+				should send a keepalive ACK back to the schedd.  if there is no shadow
+				to this machine, and we have not had a startd keepalive ACK in X amount
+				of time, then we should relinquish the match.  Since the accountant 
+				is not done and we are in fire mode, leave this for V6.1.  :^) -Todd 9/97
+				*/
 		delete sock;
-    }
-    dprintf(D_PROTOCOL,"## 6. (Done sending alive messages to %d startds)\n",
+	 }
+	 dprintf(D_PROTOCOL,"## 6. (Done sending alive messages to %d startds)\n",
 			numsent);
 }
 

@@ -56,9 +56,8 @@ static int shipcount =0;
 
 
 
-int Stream::code(
-	char	&c
-	)
+int 
+Stream::code( char	&c)
 {
 	switch(_coding){
 		case stream_encode:
@@ -72,9 +71,8 @@ int Stream::code(
 
 
 
-int Stream::code(
-	unsigned char	&c
-	)
+int 
+Stream::code( unsigned char	&c)
 {
 	switch(_coding){
 		case stream_encode:
@@ -88,9 +86,8 @@ int Stream::code(
 
 
 
-int Stream::code(
-	int		&i
-	)
+int 
+Stream::code( int		&i)
 {
 	switch(_coding){
 		case stream_encode:
@@ -104,9 +101,8 @@ int Stream::code(
 
 
 
-int Stream::code(
-	unsigned int		&i
-	)
+int 
+Stream::code( unsigned int		&i)
 {
 	switch(_coding){
 		case stream_encode:
@@ -119,9 +115,8 @@ int Stream::code(
 }
 
 
-int Stream::code(
-	long	&l
-	)
+int 
+Stream::code( long	&l)
 {
 	switch(_coding){
 		case stream_encode:
@@ -134,9 +129,8 @@ int Stream::code(
 }
 
 
-int Stream::code(
-	unsigned long	&l
-	)
+int 
+Stream::code( unsigned long	&l)
 {
 	switch(_coding){
 		case stream_encode:
@@ -149,9 +143,8 @@ int Stream::code(
 }
 
 #ifndef WIN32		// MS VC++ does not understand long long's
-int Stream::code(
-	long long	&l
-	)
+int 
+Stream::code( long long	&l)
 {
 	switch(_coding){
 		case stream_encode:
@@ -163,9 +156,8 @@ int Stream::code(
 	return FALSE;	/* will never get here	*/
 }
 
-int Stream::code(
-	unsigned long long	&l
-	)
+int 
+Stream::code( unsigned long long	&l)
 {
 	switch(_coding){
 		case stream_encode:
@@ -178,9 +170,8 @@ int Stream::code(
 }
 #endif
 
-int Stream::code(
-	short	&s
-	)
+int 
+Stream::code( short	&s)
 {
 	switch(_coding){
 		case stream_encode:
@@ -194,9 +185,8 @@ int Stream::code(
 
 
 
-int Stream::code(
-	unsigned short	&s
-	)
+int 
+Stream::code( unsigned short	&s)
 {
 	switch(_coding){
 		case stream_encode:
@@ -210,9 +200,8 @@ int Stream::code(
 
 
 
-int Stream::code(
-	float	&f
-	)
+int 
+Stream::code( float	&f)
 {
 	switch(_coding){
 		case stream_encode:
@@ -226,9 +215,8 @@ int Stream::code(
 
 
 
-int Stream::code(
-	double	&d
-	)
+int 
+Stream::code( double	&d)
 {
 	switch(_coding){
 		case stream_encode:
@@ -242,9 +230,8 @@ int Stream::code(
 
 
 
-int Stream::code(
-	char	*&s
-	)
+int 
+Stream::code( char	*&s)
 {
 	switch(_coding){
 		case stream_encode:
@@ -258,10 +245,8 @@ int Stream::code(
 
 
 
-int Stream::code(
-	char	*&s,
-	int		&len
-	)
+int 
+Stream::code( char	*&s, int		&len)
 {
 	switch(_coding){
 		case stream_encode:
@@ -274,7 +259,8 @@ int Stream::code(
 }
 
 
-int Stream::code_bytes_bool(void *p, int l)
+int 
+Stream::code_bytes_bool(void *p, int l)
 {
 	if( code_bytes( p, l ) < 0 ) {
 		return FALSE;
@@ -284,7 +270,8 @@ int Stream::code_bytes_bool(void *p, int l)
 }
 
 
-int Stream::code_bytes(void *p, int l)
+int 
+Stream::code_bytes(void *p, int l)
 {
 	switch(_coding) {
 	case stream_encode:
@@ -302,7 +289,8 @@ int Stream::code_bytes(void *p, int l)
 
 #define STREAM_ASSERT(cond) if (!(cond)) { return FALSE; }
 
-int Stream::code(PROC_ID &id)
+int 
+Stream::code(PROC_ID &id)
 {
 	STREAM_ASSERT(code(id.cluster));
 	STREAM_ASSERT(code(id.proc));
@@ -315,7 +303,8 @@ int Stream::code(PROC_ID &id)
 /* extern int stream_proc_vers2( Stream *s, V2_PROC *proc ); */
 extern int stream_proc_vers3( Stream *s, PROC *proc );
 
-int Stream::code(PROC &proc)
+int 
+Stream::code(PROC &proc)
 {
 	if (!code(proc.version_num))
 		return FALSE;
@@ -336,7 +325,8 @@ int Stream::code(PROC &proc)
 
 #endif
 
-int Stream::code(STARTUP_INFO &start)
+int 
+Stream::code(STARTUP_INFO &start)
 {
 	STREAM_ASSERT(code(start.version_num));
 	STREAM_ASSERT(code(start.cluster));
@@ -362,7 +352,8 @@ int Stream::code(STARTUP_INFO &start)
 	return TRUE;
 }
 
-int Stream::code(PORTS &p)
+int 
+Stream::code(PORTS &p)
 {
 	STREAM_ASSERT(code(p.port1));
 	STREAM_ASSERT(code(p.port2));
@@ -403,7 +394,8 @@ Stream::code(StartdRec &rec)
 extern "C" int sig_num_encode( int sig_num );
 extern "C" int sig_num_decode( int sig_num );
 
-int Stream::code(signal_t &sig_num)
+int 
+Stream::code(signal_t &sig_num)
 {
 	int real_sig_num, rval;
 	
@@ -423,7 +415,8 @@ int Stream::code(signal_t &sig_num)
 extern "C" int open_flags_encode( int flags );
 extern "C" int open_flags_decode( int flags );
 
-int Stream::code(open_flags_t &flags)
+int 
+Stream::code(open_flags_t &flags)
 {
 	int real_flags, rval;
 
@@ -443,7 +436,8 @@ int Stream::code(open_flags_t &flags)
 extern "C" int fcntl_cmd_encode( int cmd );
 extern "C" int fcntl_cmd_decode( int cmd );
 
-int Stream::code(fcntl_cmd_t &cmd)
+int 
+Stream::code(fcntl_cmd_t &cmd)
 {
 	int real_cmd, rval;
 
@@ -460,7 +454,8 @@ int Stream::code(fcntl_cmd_t &cmd)
 	return rval;
 }
 
-int Stream::code(struct rusage &r)
+int 
+Stream::code(struct rusage &r)
 {
 	STREAM_ASSERT(code(r.ru_utime));
 	STREAM_ASSERT(code(r.ru_stime));
@@ -482,7 +477,8 @@ int Stream::code(struct rusage &r)
 	return TRUE;
 }
 
-int Stream::code(struct stat &s)
+int 
+Stream::code(struct stat &s)
 {
 	STREAM_ASSERT(code(s.st_dev));
 	STREAM_ASSERT(code(s.st_ino));
@@ -502,7 +498,8 @@ int Stream::code(struct stat &s)
 }
 
 #if HAS_64BIT_STRUCTS
-int Stream::code(struct stat64 &s)
+int 
+Stream::code(struct stat64 &s)
 {
 	STREAM_ASSERT(code(s.st_dev));
 	STREAM_ASSERT(code(s.st_ino));
@@ -521,7 +518,8 @@ int Stream::code(struct stat64 &s)
 	return TRUE;
 }
 
-int Stream::code(struct rlimit64 &rl)
+int 
+Stream::code(struct rlimit64 &rl)
 {
 	STREAM_ASSERT(code(rl.rlim_cur));
 	STREAM_ASSERT(code(rl.rlim_max));
@@ -531,12 +529,14 @@ int Stream::code(struct rlimit64 &rl)
 
 #endif /* HAS_64BIT_STRUCTS */
 
-int Stream::code(struct statfs &s)
+int 
+Stream::code(struct statfs &s)
 {
 	return FALSE;
 }
 
-int Stream::code(struct timezone &tz)
+int 
+Stream::code(struct timezone &tz)
 {
 	STREAM_ASSERT(code(tz.tz_minuteswest));
 	STREAM_ASSERT(code(tz.tz_dsttime));
@@ -544,7 +544,8 @@ int Stream::code(struct timezone &tz)
 	return TRUE;
 }
 
-int Stream::code(struct timeval &tv)
+int 
+Stream::code(struct timeval &tv)
 {
 	STREAM_ASSERT(code(tv.tv_sec));
 	STREAM_ASSERT(code(tv.tv_usec));
@@ -552,7 +553,8 @@ int Stream::code(struct timeval &tv)
 	return TRUE;
 }
 
-int Stream::code(struct rlimit &rl)
+int 
+Stream::code(struct rlimit &rl)
 {
 	STREAM_ASSERT(code(rl.rlim_cur));
 	STREAM_ASSERT(code(rl.rlim_max));
@@ -568,9 +570,8 @@ int Stream::code(struct rlimit &rl)
 
 
 
-int Stream::put(
-	char	c
-	)
+int 
+Stream::put( char	c)
 {
   getcount =0;
   NETWORK_TRACE("put char " << c << " c(" << ++putcount << ") ");
@@ -589,9 +590,8 @@ int Stream::put(
 
 
 
-int Stream::put(
-	unsigned char	c
-	)
+int 
+Stream::put( unsigned char	c)
 {
   getcount =0;
   NETWORK_TRACE("put char " << c << " c(" << ++putcount << ") ");
@@ -610,9 +610,8 @@ int Stream::put(
 
 
 
-int Stream::put(
-	int		i
-	)
+int 
+Stream::put( int		i)
 {
 	int		tmp;
 	char	pad;
@@ -645,9 +644,8 @@ int Stream::put(
 
 
 
-int Stream::put(
-	unsigned int		i
-	)
+int 
+Stream::put( unsigned int		i)
 {
 	unsigned int		tmp;
 	char				pad;
@@ -738,9 +736,8 @@ static unsigned long long ntohLL(unsigned long long netint)
 }
 #endif
 
-int Stream::put(
-	long	l
-	)
+int 
+Stream::put( long	l)
 {
 	char	pad;
   NETWORK_TRACE("put long " << l);
@@ -777,9 +774,8 @@ int Stream::put(
 
 
 
-int Stream::put(
-	unsigned long	l
-	)
+int 
+Stream::put( unsigned long	l)
 {
 	char	pad;
   NETWORK_TRACE("put long " << l);
@@ -815,9 +811,8 @@ int Stream::put(
 }
 
 #ifndef WIN32		// MS VC++ does not understand long long's
-int Stream::put(
-	long long	l
-	)
+int 
+Stream::put( long long	l)
 {
 	char	pad;
   NETWORK_TRACE("put long long" << l);
@@ -854,9 +849,8 @@ int Stream::put(
 
 
 
-int Stream::put(
-	long long unsigned	l
-	)
+int 
+Stream::put( long long unsigned	l)
 {
 	char	pad;
   NETWORK_TRACE("put long long" << l);
@@ -893,9 +887,8 @@ int Stream::put(
 #endif
 
 
-int Stream::put(
-	short	s
-	)
+int 
+Stream::put( short	s)
 {
   NETWORK_TRACE("put short " << s);
 	if (!valid()) return FALSE;
@@ -917,9 +910,8 @@ int Stream::put(
 
 
 
-int Stream::put(
-	unsigned short	s
-	)
+int 
+Stream::put( unsigned short	s)
 {
   NETWORK_TRACE("put short " << s);
 	if (!valid()) return FALSE;
@@ -941,9 +933,8 @@ int Stream::put(
 
 
 
-int Stream::put(
-	float	f
-	)
+int 
+Stream::put( float	f)
 {
   NETWORK_TRACE("put float " << f);
 	if (!valid()) return FALSE;
@@ -965,9 +956,8 @@ int Stream::put(
 
 
 
-int Stream::put(
-	double	d
-	)
+int 
+Stream::put( double	d)
 {
   NETWORK_TRACE("put double " << d);
 	int		frac, exp;
@@ -993,9 +983,8 @@ int Stream::put(
 
 
 
-int Stream::put(
-	char	*s
-	)
+int 
+Stream::put( char	*s)
 {
 	int		len;
 
@@ -1023,10 +1012,8 @@ int Stream::put(
 
 
 
-int Stream::put(
-	char	*s,
-	int		l
-	)
+int 
+Stream::put( char	*s, int		l)
 {
     NETWORK_TRACE("put string \"" << s << "\" and int " <<   l);
 	if (!valid()) return FALSE;
@@ -1059,9 +1046,8 @@ int Stream::put(
 
 
 
-int Stream::get(
-	char	&c
-	)
+int 
+Stream::get( char	&c)
 {
    putcount =0;
 	if (!valid()) return FALSE;
@@ -1079,9 +1065,8 @@ int Stream::get(
 
 
 
-int Stream::get(
-	unsigned char	&c
-	)
+int 
+Stream::get( unsigned char	&c)
 {
    putcount =0;
 	if (!valid()) return FALSE;
@@ -1099,9 +1084,8 @@ int Stream::get(
 
 
 
-int Stream::get(
-	int		&i
-	)
+int 
+Stream::get( int		&i)
 {
 	int		tmp;
 	char	pad[INT_SIZE-sizeof(int)], sign;
@@ -1142,9 +1126,8 @@ int Stream::get(
 
 
 
-int Stream::get(
-	unsigned int	&i
-	)
+int 
+Stream::get( unsigned int	&i)
 {
 	unsigned int	tmp;
 	char			pad[INT_SIZE-sizeof(int)];
@@ -1184,9 +1167,8 @@ int Stream::get(
 
 
 
-int Stream::get(
-	long	&l
-	)
+int 
+Stream::get( long	&l)
 {
 	int		i;
 	char	pad[INT_SIZE-sizeof(long)], sign;
@@ -1231,9 +1213,8 @@ int Stream::get(
 
 
 
-int Stream::get(
-	unsigned long	&l
-	)
+int 
+Stream::get( unsigned long	&l)
 {
 	unsigned int		i;
 	char	pad[INT_SIZE-sizeof(long)];
@@ -1276,9 +1257,8 @@ int Stream::get(
 }
 
 #ifndef WIN32		// MS VC++ does not understand long long's
-int Stream::get(
-	long long	&l
-	)
+int 
+Stream::get( long long	&l)
 {
 	int		i;
 	char	pad[INT_SIZE-sizeof(long long)], sign;
@@ -1323,9 +1303,8 @@ int Stream::get(
 
 
 
-int Stream::get(
-	unsigned long long	&l
-	)
+int 
+Stream::get( unsigned long long	&l)
 {
 	unsigned int		i;
 	char	pad[INT_SIZE-sizeof(long long)];
@@ -1369,9 +1348,8 @@ int Stream::get(
 #endif
 
 
-int Stream::get(
-	short	&s
-	)
+int 
+Stream::get( short	&s)
 {
 	int		i;
 
@@ -1396,9 +1374,8 @@ int Stream::get(
 
 
 
-int Stream::get(
-	unsigned short	&s
-	)
+int 
+Stream::get( unsigned short	&s)
 {
 	unsigned int		i;
 
@@ -1423,9 +1400,8 @@ int Stream::get(
 
 
 
-int Stream::get(
-	float	&f
-	)
+int 
+Stream::get( float	&f)
 {
 	double	d;
 
@@ -1450,9 +1426,8 @@ int Stream::get(
 
 
 
-int Stream::get(
-	double	&d
-	)
+int 
+Stream::get( double	&d)
 {
 	int		frac, exp;
 
@@ -1478,9 +1453,8 @@ int Stream::get(
 
 
 
-int Stream::get(
-	char	*&s
-	)
+int 
+Stream::get( char	*&s)
 {
 	char	c;
 	void	*tmp_ptr;
@@ -1499,10 +1473,12 @@ int Stream::get(
 			else{
 				/* tmp_ptr = s; */
 				if (get_ptr(tmp_ptr, '\0') <= 0) return FALSE;
-				if (s)
+				if (s) {
 					strcpy(s, (char *)tmp_ptr);
-				else
+				}
+				else {
 					s = strdup((char *)tmp_ptr);
+				}
 			}
 			break;
 
@@ -1515,10 +1491,8 @@ int Stream::get(
 
 
 
-int Stream::get(
-	char	*&s,
-	int		&l
-	)
+int 
+Stream::get( char	*&s, int		&l)
 {
 	char	c;
 	void	*tmp_ptr;
@@ -1551,7 +1525,8 @@ int Stream::get(
 	return TRUE;
 }
 
-int Stream::snd_int(
+int 
+Stream::snd_int(
 	int val, 
 	int end_of_record
 	)
@@ -1571,7 +1546,8 @@ int Stream::snd_int(
 }
 
 
-int Stream::rcv_int(
+int 
+Stream::rcv_int(
 	int &val,
 	int end_of_record
 	)

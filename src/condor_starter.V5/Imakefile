@@ -49,7 +49,7 @@ REMOTE_SYSCALL_LIB = \
 	$(UTIL_LIB) \
 	$(IO_LIB) 
 
-LIB = $(REMOTE_SYSCALL_LIB) ../condor_procapi/libprocapi.a
+LIB = $(REMOTE_SYSCALL_LIB) ../condor_procapi/libprocapi.a $(AUTH2_LIB)
 
 #if (IS_I386_LINUX)
 LDFLAGS = KernLib RpcLib MldLib -lbfd -liberty

@@ -29,6 +29,7 @@
 
 #include "condor_common.h"
 #include "condor_constants.h"
+#include "condor_adtypes.h"
 #include "condor_io.h"
 #include "condor_debug.h"
 #include "internet.h"
@@ -178,8 +179,12 @@ AuthSock::authenticate_user()
 
 	//use gss-assist to verify user (not connection)
 	//this method will prompt for password if private key is encrypted!
+	int time = timeout(60 * 5);  //allow user 5 min to type passwd
+
 	major_status = globus_gss_assist_acquire_cred(&minor_status,
 		GSS_C_BOTH, &credential_handle);
+
+	timeout(time); //put it back to what it was before
 
 	if (major_status != GSS_S_COMPLETE)
 	{
@@ -315,7 +320,6 @@ AuthSock::auth_connection_server( AuthSock &authsock)
 AuthSock::AuthSock():ReliSock() {
 	conn_type = auth_none;
 	auth_setup();
-//	authenticate_user();
 }
 
 /*******************************************************************/
@@ -326,7 +330,6 @@ AuthSock::AuthSock(					/* listen on port		*/
 {
 	conn_type = auth_server;
 	auth_setup();
-//	authenticate_user();
 }
 
 /*******************************************************************/
@@ -337,7 +340,6 @@ AuthSock::AuthSock(					/* listen on serv		*/
 {
 	conn_type = auth_server;
 	auth_setup();
-//	authenticate_user();
 }
 
 /*******************************************************************/
@@ -350,7 +352,6 @@ AuthSock::AuthSock(
 {
 	conn_type = auth_client;
 	auth_setup();
-//	authenticate_user();
 }
 
 /*******************************************************************/
@@ -363,7 +364,6 @@ AuthSock::AuthSock(
 {
 	conn_type = auth_client;
 	auth_setup();
-//	authenticate_user();
 }
 
 /*******************************************************************/
@@ -412,27 +412,50 @@ int AuthSock::connect(
 }
 
 /*******************************************************************/
-int AuthSock::authenticate() {
+ClassAd * 
+AuthSock::authenticate() {
+	int status = 1;
 	//don't just return TRUE if isAuthenticated() == TRUE, since 
 	//we should BALANCE calls of authenticate() on client/server side
 	//just like end_of_message() calls must balance!
 
 	if ( !authenticate_user() ) {
 		dprintf( D_ALWAYS, "authenticate: user creds not established\n" );
-		return FALSE;
+		status = 0;
 	}
 
-	switch ( conn_type ) {
-		case auth_server : 
-			dprintf(D_FULLDEBUG,"about to authenticate client from server\n" );
-			return ( auth_connection_server( *this ) );
-		case auth_client : 
-			dprintf(D_FULLDEBUG,"about to authenticate server from client\n" );
-			return ( auth_connection_client() );
-		default : 
-			dprintf( D_ALWAYS,"authenticate:needed to have connected/accepted\n" );
-			return FALSE;
+	if ( status ) {
+		//temporarily change timeout to 5 minutes so the user can type passwd
+		//MUST do this even on server side, since client side might call
+		//authenticate_user() while server is waiting on authenticate!!
+		int time = timeout(60 * 5); 
+
+		switch ( conn_type ) {
+			case auth_server : 
+				dprintf(D_FULLDEBUG,"about to authenticate client from server\n" );
+				status = auth_connection_server( *this );
+				break;
+			case auth_client : 
+				dprintf(D_FULLDEBUG,"about to authenticate server from client\n" );
+				status = auth_connection_client();
+				break;
+			default : 
+				dprintf(D_ALWAYS,"authenticate:should have connected/accepted\n");
+		}
+		timeout(time); //put it back to what it was before
 	}
+
+	ClassAd *ad = new ClassAd();
+	char tmp[128];
+
+	if ( status ) {
+		sprintf( tmp, "%s = %s", USERAUTH_ADTYPE, "GSS-SSL" );
+	}
+	else {
+		sprintf( tmp, "%s = %s", USERAUTH_ADTYPE, "none" );
+	}
+	ad->Insert( tmp );
+	return( ad );
 }
 
 /*******************************************************************/

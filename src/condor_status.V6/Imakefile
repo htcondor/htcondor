@@ -4,7 +4,7 @@ LDFLAGS = RpcLib SocketLib -lm
 
 SRC = setflags.C status.C totals.C prettyPrint.C
 OBJ = setflags.o status.o totals.o prettyPrint.o
-LIB = ../condor_c++_util/cplus_lib.a ../condor_c++_util/libapi.a ../condor_io/libcondor.a ../condor_util_lib/util_lib.a ../condor_classad/expr_lib.a 
+LIB = ../condor_c++_util/cplus_lib.a ../condor_c++_util/libapi.a ../condor_io/libcondor.a ../condor_util_lib/util_lib.a ../condor_classad/expr_lib.a $(AUTH2_LIB)
 LIBDIRS= ../condor_util_lib ../condor_xdr_lib ../condor_c++_util ../condor_classad
 
 all_target(condor_status)

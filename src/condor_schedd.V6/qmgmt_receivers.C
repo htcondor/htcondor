@@ -27,12 +27,6 @@
 #include "condor_debug.h"
 #include "condor_fix_assert.h"
 
-#if defined(GSS_AUTHENTICATION)
-#include "auth_sock.h"
-#else
-#define AuthSock ReliSock
-#endif
-
 #include "../condor_syscall_lib/syscall_param_sizes.h"
 
 #include "condor_qmgr.h"
@@ -49,20 +43,10 @@
 extern char *CondorCertDir;
 
 int
-do_Q_request(AuthSock *syscall_sock)
+do_Q_request(ReliSock *syscall_sock)
 {
 	int	request_num;
 	int	rval;
-	int auth = 0;
-
-#if defined(GSS_AUTHENTICATION)
-//	if ( CondorCertDir ) {
-	//mju: added check for authenticate_user so don't bother doing any
-   //auth stuff if it's gonna fail later.
-	if ( CondorCertDir && syscall_sock->authenticate_user() ) {
-		auth = 1;
-	}
-#endif
 
 	syscall_sock->decode();
 
@@ -72,105 +56,14 @@ do_Q_request(AuthSock *syscall_sock)
 
 	switch( request_num ) {
 
-	case CONDOR_InitializeConnectionAuth:
-	{
-		char *owner=NULL;
-		// XXX: shouldn't need a fixed size here -- at least keep
-		// it off the stack to avoid overflow attacks
-		char *tmp_file=(char *)malloc(_POSIX_PATH_MAX);
-
-		qmgmt_sock->end_of_message();
-		qmgmt_sock->encode();
-		qmgmt_sock->code( auth ); 
-		qmgmt_sock->end_of_message();
-#if defined(GSS_AUTHENTICATION)
-		if ( auth ) {
-			dprintf( D_ALWAYS, "Starting GSS handshake\n" );
-			int time = qmgmt_sock->timeout(60 * 5); //wait 5 min for user to type
-      	assert( qmgmt_sock->authenticate() );
-			qmgmt_sock->timeout(time);
-
-			//lazy alloc-- owner can't be longer than clientname
-			assert( qmgmt_sock->GSSClientname != NULL );
-			owner = strdup( qmgmt_sock->GSSClientname );
-			char *tmp;
-			tmp = strchr( qmgmt_sock->GSSClientname, '=' );
-			if ( tmp ) {
-			   tmp++;
-			   sprintf( owner, "%*.*s", strcspn( tmp, "@" ), 
-						strcspn( tmp, "@" ), tmp );
-			}
-			else {
-			   strcpy( owner, qmgmt_sock->GSSClientname );
-			}
-			dprintf( D_FULLDEBUG,"accepted GSS connection for %s\n", 
-					qmgmt_sock->GSSClientname );
-		}
-		else 
-#else
-/* nothing for now */
-#endif
-		//this always occurs if not compiled for GSS_AUTHENTICATION
-		//or if compiled for GSS, but auth is not set above.
-		{
-			syscall_sock->decode();
-			assert( syscall_sock->code(owner) );
-			assert( syscall_sock->end_of_message() );
-		}
-
-		//this is similar to CONDOR_InitializeConnection, could combine??
-		int terrno;
-
-		errno = 0;
-		rval = InitializeConnection( owner, tmp_file, auth );
-		terrno = errno;
-		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
-
-		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
-		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
-		}
-		if( rval >= 0 ) {
-			if ( !auth ) {
-				assert( syscall_sock->code(tmp_file) );
-			}
-		}
-		free( (char *)tmp_file );
-		free( (char *)owner );
-		assert( syscall_sock->end_of_message() );
-		return 0;
-	}
-
 	case CONDOR_InitializeConnection:
 	{
-		char *owner=NULL;
-		// XXX: shouldn't need a fixed size here -- at least keep
-		// it off the stack to avoid overflow attacks
-		char *tmp_file=(char *)malloc(_POSIX_PATH_MAX);
-		int terrno;
 
-		assert( syscall_sock->code(owner) );
-		assert( syscall_sock->end_of_message() );
-
-		errno = 0;
-		dprintf(D_FULLDEBUG,"InitializeConnection with owner: %s\n", owner );
-		rval = InitializeConnection( owner, tmp_file );
-		terrno = errno;
-		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
-
-		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
-		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+		if ( syscall_sock->authenticate() ) {
+			InitializeConnection( syscall_sock->getOwner() );
+			return 0;
 		}
-		if( rval >= 0  ) {
-			assert( syscall_sock->code(tmp_file) );
-		}
-		free( (char *)tmp_file );
-		free( (char *)owner );
-		assert( syscall_sock->end_of_message() );
-		return 0;
+		return -1;
 	}
 
 	case CONDOR_NewCluster:

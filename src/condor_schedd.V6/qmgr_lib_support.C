@@ -33,21 +33,16 @@ static char *_FileName_ = __FILE__;
 #include "my_hostname.h"
 #include "get_daemon_addr.h"
 
-#if defined(GSS_AUTHENTICATION)
-#include "auth_sock.h"
-#else
-#define AuthSock ReliSock
-#endif
-
 int open_url(char *, int, int);
 extern "C" char*	get_schedd_addr(const char*, const char*); 
 extern "C" int		strcmp_until(const char *, const char *, const char);
 
-AuthSock *qmgmt_sock;
+ReliSock *qmgmt_sock;
 static Qmgr_connection *connection = 0;
 
 Qmgr_connection *
-ConnectQ(char *qmgr_location, int auth )
+ConnectQ(char *qmgr_location, char *& owner = (char *) 0, int canTryGSS = 0,
+		int canTryFilesystem = 0 )
 {
 	int		rval;
 	char	tmp_file[255];
@@ -59,6 +54,7 @@ ConnectQ(char *qmgr_location, int auth )
 	char*	scheddAddr = get_schedd_addr(0);
 	char*	localScheddAddr = NULL;
 	int		is_local = FALSE;
+
 
 	if( scheddAddr ) {
 		localScheddAddr = strdup( scheddAddr );
@@ -90,7 +86,7 @@ ConnectQ(char *qmgr_location, int auth )
 	}
 		
 	if(scheddAddr) {
-		qmgmt_sock = new AuthSock(scheddAddr, QMGR_PORT);
+		qmgmt_sock = new ReliSock(scheddAddr, QMGR_PORT);
 	} else {
 		if( qmgr_location ) {
 			dprintf( D_ALWAYS, "Can't find address of queue manager %s\n", 
@@ -113,8 +109,8 @@ ConnectQ(char *qmgr_location, int auth )
 		/* Figure out if we're trying to connect to a remote queue, in
 		   which case we'll set our username to "nobody" */
 	if( localScheddAddr ) {
-//		if( ! is_local && ! strcmp(localScheddAddr, scheddAddr) ) {
 		//mju replaced strcmp with new method that strcmp until char (:)
+		//so that we don't worry about the port number
 		if( ! is_local && ! strcmp_until(localScheddAddr, scheddAddr, ':' ) ) {
 			is_local = TRUE;
 		}
@@ -152,29 +148,40 @@ ConnectQ(char *qmgr_location, int auth )
 	}
 #endif
 
-	tmp_file[0] = '\0';
+//	tmp_file[0] = '\0';
+	char *tmp_user;
+
 	if( username && *username ) {
-		rval = InitializeConnection(username, tmp_file, auth );
-		dprintf(D_FULLDEBUG,"Connecting to queue as user \"%s\"\n",
-				username);
+		tmp_user = username;
 	} 
 	else {
-		rval = InitializeConnection("nobody", tmp_file, auth );
-		dprintf(D_FULLDEBUG,"Connecting to queue as user \"nobody\"\n");
+		tmp_user = "nobody";
 	}
+
+	dprintf(D_FULLDEBUG,"Connecting to queue as user \"%s\"\n", tmp_user);
+	rval = InitializeConnection( tmp_user );
 
 	if (rval < 0) {
 		free(connection);
 		return 0;
 	}
-	//if tmp_file is NULL, GSS authentication was sucessful, so don't do
-	//rendevous_file stuff. 
-	//TODO: make this less of a hack
-	if ( tmp_file ) { 
-		fd = open(tmp_file, O_RDONLY | O_CREAT | O_TRUNC, 0666);
-		close(fd);
-		connection->rendevous_file = strdup(tmp_file);
+
+	if ( canTryGSS ) {
+		qmgmt_sock->canTryGSS();
 	}
+
+	if ( canTryFilesystem && is_local ) {
+		qmgmt_sock->canTryFilesystem();
+	}
+
+	qmgmt_sock->authenticate();
+
+	//this is a hack-around to use the owner name extracted from
+	//the certificate if authentication was GSS
+	if ( qmgmt_sock->isAuthenticated() && qmgmt_sock->getOwner() ) {
+		owner = strdup( qmgmt_sock->getOwner() );
+	}
+
 	connection->count = 1;
 	return connection;
 }
@@ -192,6 +199,7 @@ DisconnectQ(Qmgr_connection *conn)
 		CloseConnection();
 		delete qmgmt_sock;
 		qmgmt_sock = NULL;
+		//this is conn->rendevous_file, not rendevous_file
 		if (conn->rendevous_file != 0) {
 			unlink(conn->rendevous_file);
 			free(conn->rendevous_file);
@@ -460,7 +468,8 @@ GetProc(int cl, int pr, PROC *p)
 	if (s) {
 		s++;
 		p->requirements = strdup(s);
-	} else {
+	} 
+	else {
 		p->requirements = strdup(buf);
 	}
 	GetAttributeExpr(cl, pr, ATTR_PREFERENCES, buf);
@@ -468,7 +477,8 @@ GetProc(int cl, int pr, PROC *p)
 	if (s) {
 		s++;
 		p->preferences = strdup(s);
-	} else {
+	} 
+	else {
 		p->preferences = strdup(buf);
 	}
 

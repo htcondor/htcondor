@@ -50,12 +50,6 @@
 #include "sig_install.h"
 #include "access.h"
 
-#if defined(GSS_AUTHENTICATION)
-#include "auth_sock.h"
-#else
-#define AuthSock ReliSock
-#endif
-
 #include "extArray.h"
 #include "HashTable.h"
 #include "MyString.h"
@@ -176,7 +170,6 @@ char * 	check_requirements( char *orig );
 void 	check_open( char *name, int flags );
 void 	usage();
 char * 	get_owner();
-char * 	get_owner();
 void 	init_params();
 int 	whitespace( char *str);
 void 	delete_commas( char *ptr );
@@ -187,7 +180,9 @@ void 	get_time_conv( int &hours, int &minutes );
 int	  SaveClassAd (ClassAd &);
 void	InsertJobExpr (char *expr);
 void	check_umask();
+
 int setupAuthentication( FILE * &infp );
+char *owner = NULL;
 
 extern char **environ;
 
@@ -211,7 +206,6 @@ ExtArray <char *> CheckFilesRead(4);
 ExtArray <char *> CheckFilesWrite(4);
 int NumCheckFilesRead = 0;
 int NumCheckFilesWrite = 0;
-int GSSAuthenticate = 0;
 
 // explicit template instantiations
 template class HashTable<MyString, MyString>;
@@ -364,11 +358,9 @@ main( int argc, char *argv[] )
 		exit(1);
 	}
 
-#if defined(GSS_AUTHENTICATION)
-	GSSAuthenticate = setupAuthentication( fp );
-#endif
+	int canTryGSS = setupAuthentication( fp );
 
-	if (ConnectQ(ScheddAddr, GSSAuthenticate ) == 0) {
+	if (ConnectQ(ScheddAddr, owner, canTryGSS, !Remote ) == 0) {
 		if( ScheddName ) {
 			fprintf( stderr, "ERROR: Failed to connect to queue manager %s\n",
 					 ScheddName );
@@ -413,6 +405,8 @@ main( int argc, char *argv[] )
 		fprintf(stdout, "Submitting job(s)");
 	}
 
+		//NOTE: this is actually the SECOND time file gets (at least partially)
+		//read. setupAuthentication needs to read it before call to ConnectQ
 	//  Parse the file and queue the jobs 
 	if( read_condor_file(fp) < 0 ) {
 		fprintf(stderr, "\nERROR: Failed to parse command file.\n");
@@ -1692,7 +1686,7 @@ DoCleanup()
 char *
 get_owner()
 {
-	if (Remote && !GSSAuthenticate ) {
+	if ( ( owner && !strcmp( owner, "nobody" ) ) || (Remote && !owner ) ) {
 		 return ("nobody");
 	}
 
@@ -1936,7 +1930,11 @@ setupAuthentication( FILE * &infp )
 	//this section sets up env vars needed by authentication code. //mju
 	char *CondorCertDir;
 	char tmpstring[MAXPATHLEN];
-	int useAuth = 0;
+	int canTryGSS = 0;
+
+#if !defined(GSS_AUTHENTICATION)
+	return( 0 );
+#endif
 
 	//  Parse the file, stopping at "queue" command
 	if( read_condor_file( infp, 1 ) < 0 ) {
@@ -1947,25 +1945,25 @@ setupAuthentication( FILE * &infp )
 	//if defined in file, set up to use condor cert dir
 	if ( CondorCertDir = condor_param( CertDir ) ) {
 		dprintf( D_FULLDEBUG, "setting CONDOR_CERT_DIR from submit file\n" );
-		useAuth = 1;
+		canTryGSS = 1;
 	}
 
-	if ( useAuth ) {
+	if ( canTryGSS ) {
 		struct stat statbuf;
 
 		if ( stat( CondorCertDir, &statbuf ) ) {
-			useAuth = 0;
+			canTryGSS = 0;
 		}
 		else if ( !( statbuf.st_mode & ( S_IFDIR | S_IREAD ) ) ) {
-			useAuth = 0;
+			canTryGSS = 0;
 		}
-		if ( !useAuth ) {
+		if ( !canTryGSS ) {
 			fprintf( stderr, "unable to read cert_dir %s directory\n",
 					CondorCertDir );
 		}
 	}
 
-	if ( useAuth ) {
+	if ( canTryGSS ) {
 		//didn't bother re-putting vars which shouldn't change
 		if ( !getenv( "CONDOR_GATEKEEPER" ) ) {
 			struct hostent *host;
@@ -2007,5 +2005,6 @@ setupAuthentication( FILE * &infp )
 		free( CondorCertDir );
 		//end of authentication setup
 	}
-	return( useAuth );
+	
+	return( canTryGSS );
 }

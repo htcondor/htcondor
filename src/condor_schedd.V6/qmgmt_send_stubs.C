@@ -28,12 +28,6 @@
 #include "condor_fix_assert.h"
 #include "qmgmt_constants.h"
 
-#if defined(GSS_AUTHENTICATION)
-#include "auth_sock.h"
-#else
-#define AuthSock ReliSock
-#endif
-
 #if defined(assert)
 #undef assert
 #endif
@@ -41,7 +35,7 @@
 #define assert(x) if (!(x)) return -1
 
 int CurrentSysCall;
-extern AuthSock *qmgmt_sock;
+extern ReliSock *qmgmt_sock;
 int terrno;
 
 #if defined(__cplusplus)
@@ -49,74 +43,18 @@ extern "C" {
 #endif
 
 int
-InitializeConnection( char *owner, char *tmp_file, int auth=0 )
+InitializeConnection( char *owner )
 {
 	int	rval;
 
-	if ( auth )
-		CurrentSysCall = CONDOR_InitializeConnectionAuth;
-	else
-		CurrentSysCall = CONDOR_InitializeConnection;
+	CurrentSysCall = CONDOR_InitializeConnection;
 
 	qmgmt_sock->encode();
 	assert( qmgmt_sock->code(CurrentSysCall) );
 
-	int shouldAuth = 0;
-	if ( auth ) {
-
-		qmgmt_sock->end_of_message();
-		qmgmt_sock->decode();
-		qmgmt_sock->code( shouldAuth ); //server decides if we should auth
-		qmgmt_sock->end_of_message();
-		if ( shouldAuth ) {
-			fprintf(stderr,"Configured for authentication,\n" );
-			int time = qmgmt_sock->timeout(60 * 5); //give time to type passwd
-			assert( qmgmt_sock->authenticate_user() );
-			qmgmt_sock->timeout(time);
-			assert( qmgmt_sock->authenticate() );
-		}
-		else {
-			fprintf( stderr, "Submits NOT AUTHENTICATED, server not prepared\n" );
-			qmgmt_sock->encode();
-			assert( qmgmt_sock->code(owner) );
-			assert( qmgmt_sock->end_of_message() );
-		}
-
-//this is copied from below
-   qmgmt_sock->decode();
-   assert( qmgmt_sock->code(rval) );
-   if( rval < 0 ) {
-      assert( qmgmt_sock->code(terrno) );
-      assert( qmgmt_sock->end_of_message() );
-      errno = terrno;
-      return rval;
-   }
-
-	if ( !shouldAuth ) {
-	   assert( qmgmt_sock->code(tmp_file) );
-	}
-   assert( qmgmt_sock->end_of_message() );
-
-   return rval;
-
-	}
-
-	assert( qmgmt_sock->code(owner) );
-	assert( qmgmt_sock->end_of_message() );
-
-	qmgmt_sock->decode();
-	assert( qmgmt_sock->code(rval) );
-	if( rval < 0 ) {
-		assert( qmgmt_sock->code(terrno) );
-		assert( qmgmt_sock->end_of_message() );
-		errno = terrno;
-		return rval;
-	}
-
-	assert( qmgmt_sock->code(tmp_file) );
-	assert( qmgmt_sock->end_of_message() );
-
-	return rval;
+	qmgmt_sock->setOwner( owner );
+//	return( qmgmt_sock->authenticate() );
+	return( 0 );
 }
 
 
