@@ -83,6 +83,12 @@ page~\pageref{sec:Config-File-Macros} for more details.
 variables.  See the man page on page~\pageref{man-condor-config-val}
 for more details.
 
+\item The job log file now contains a record of network activity.  The
+evict, terminate, and shadow exception events indicate the number of
+bytes sent and received by the job for the specific run.  
+The terminate event additionally indicates totals for the life of the
+job.
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
