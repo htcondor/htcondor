@@ -927,6 +927,13 @@ class DaemonCore : public Service
 	{
 		pid_t child_pid;
 		int exit_status;
+		bool operator==( const struct WaitpidEntry_s &target) { 
+			if(child_pid == target.child_pid) {
+				return true;
+			}
+			return false;
+		}
+
 	};
 	typedef struct WaitpidEntry_s WaitpidEntry;
 	Queue<WaitpidEntry> WaitpidQueue;

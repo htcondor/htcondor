@@ -4571,12 +4571,30 @@ BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock)
 	return FALSE;
 }
 
-// Is_Pid_Alive() returns TRUE is pid lives, FALSE is that pid has exited.
+/**  Is_Pid_Alive() returns TRUE is pid lives, FALSE is that pid has exited.
+     By Alive, (at least on UNIX), we mean either the process is still running,
+     or the process is no longer running but we've called wait() so it no 
+     no longer exists in the kernel's process table, but we haven't called the
+     application's reaper function yet
+*/
+
 int DaemonCore::Is_Pid_Alive(pid_t pid)
 {
 	int status = FALSE;
-
+	
 #ifndef WIN32
+
+	// First, let's try and make sure that it's not already dead but
+	// maybe in our Queue of pids we've called wait() on but haven't
+	// reaped...
+
+	WaitpidEntry wait_entry;
+	wait_entry.child_pid = pid;
+
+	if(WaitpidQueue.IsMember(wait_entry)) {
+		status = TRUE;
+		return status;
+	}
 	// on Unix, just try to send pid signal 0.  if sucess, pid lives.
 	// first set priv_state to root, to make certain kill() does not fail
 	// due to permissions.
