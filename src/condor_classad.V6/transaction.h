@@ -46,12 +46,12 @@ public:
 	bool operator< ( const XactionRecord &xrec ) { return false; }
 
 	int 	op;
-	string	key;
+	std::string	key;
 	ClassAd	*rec;
 	ClassAd	*backup;
 };
 
-typedef list<XactionRecord> CollectionOpList;
+typedef std::list<XactionRecord> CollectionOpList;
 
 class ServerTransaction {
 public:
@@ -60,13 +60,13 @@ public:
 
 	inline void SetCollectionServer( ClassAdCollection *c ) { server=c; }
 	inline void GetCollectionServer( ClassAdCollection *&c ){ c=server; } 
-	inline void SetXactionName( const string &n ) { xactionName = n; }
-	inline void GetXactionName( string &n ) const { n = xactionName; }
+	inline void SetXactionName( const std::string &n ) { xactionName = n; }
+	inline void GetXactionName(std::string &n ) const { n = xactionName; }
 	inline void SetLocalXaction( bool l ) { local = l; }
 	inline bool GetLocalXaction( ) const { return( local ); }
 
 	void ClearRecords( );
-	void AppendRecord( int, const string &, ClassAd * );
+	void AppendRecord( int, const std::string &, ClassAd * );
 	bool Commit( );
 	bool Log( FILE *fp, ClassAdUnParser *unp );
 	ClassAd *ExtractErrorCause( );
@@ -74,13 +74,13 @@ public:
 	enum { ABSENT, ACTIVE, COMMITTED };
 
 private:
-	string					xactionName;
+	std::string				xactionName;
 	bool					local;
 	ClassAdCollection    	*server;
 	CollectionOpList		opList;
 
 	int						xactionErrno;
-	string					xactionErrMsg;
+	std::string				xactionErrMsg;
 	ClassAd					*xactionErrCause;
 };
 
@@ -92,10 +92,10 @@ public:
 	ClientTransaction( );
 	~ClientTransaction( );
 
-	inline void SetServerAddr( const string &a, int p ) { addr=a; port=p; }
-	inline void GetServerAddr( string &a, int &p ) const { a=addr; p=port; }
-	inline void SetXactionName( const string &n ) { xactionName = n; }
-	inline void GetXactionName( string &n ) const { n = xactionName; }
+	inline void SetServerAddr( const std::string &a, int p ) { addr=a; port=p; }
+	inline void GetServerAddr( std::string &a, int &p ) const { a=addr; p=port; }
+	inline void SetXactionName( const std::string &n ) { xactionName = n; }
+	inline void GetXactionName( std::string &n ) const { n = xactionName; }
 	inline void SetXactionState( char s ) { state = s; }
 	inline char GetXactionState( ) const { return( state ); }
 
@@ -106,7 +106,7 @@ public:
 	enum { ACTIVE, PENDING };
 
 private:
-	string	xactionName, addr;
+	std::string	xactionName, addr;
 	int		port;
 	char	state;
 };

@@ -44,7 +44,7 @@ class AttributeReference : public ExprTree
 				expr is not NULL
 		*/
     	static AttributeReference *MakeAttributeReference(ExprTree *expr, 
-					const string &attrName, bool absolute=false);
+					const std::string &attrName, bool absolute=false);
 
 		/** Deconstructor to get the components of an attribute reference
 		 * 	@param expr The expression part of the reference (NULL for
@@ -52,7 +52,7 @@ class AttributeReference : public ExprTree
 		 * 	@param attr The name of the attribute being referred to
 		 * 	@param abs  true iff the reference is absolute (i.e., .attr)
 		 */
-		void GetComponents( ExprTree *&expr,string &attr, bool &abs ) const;
+		void GetComponents( ExprTree *&expr,std::string &attr, bool &abs ) const;
 
 		/// Make a deep copy of the expression
 		virtual AttributeReference* Copy( ) const;
@@ -63,7 +63,7 @@ class AttributeReference : public ExprTree
 
   	private:
 		// private ctor for internal use
-		AttributeReference( ExprTree*, const string &, bool );
+		AttributeReference( ExprTree*, const std::string &, bool );
 		virtual void _SetParentScope( const ClassAd* p );
     	virtual bool _Evaluate( EvalState & , Value & ) const;
     	virtual bool _Evaluate( EvalState & , Value &, ExprTree*& ) const;
@@ -72,7 +72,7 @@ class AttributeReference : public ExprTree
 
 		ExprTree	*expr;
 		bool		absolute;
-    	string      attributeStr;
+    	std::string attributeStr;
 };
 
 END_NAMESPACE // classad

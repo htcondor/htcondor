@@ -39,21 +39,21 @@ public:
 	~LocalCollectionQuery( );
 
 	void Bind( ClassAdCollection * );
-	bool Query( const string &viewName, ExprTree *constraint=NULL );
+	bool Query( const std::string &viewName, ExprTree *constraint=NULL );
 	void Clear( );
 
 	void ToFirst(void);
 	bool IsAtFirst( ) const { return( itr==keys.begin( ) ); }
-	bool Current( string &key );
-	bool Next( string &key );
-	bool Prev( string &key );
+	bool Current( std::string &key );
+	bool Next( std::string &key );
+	bool Prev( std::string &key );
 	void ToAfterLast(void);
 	bool IsAfterLast(void) const { return( itr==keys.end( ) ); }
 
 private:
-	ClassAdCollection		    *collection;
-	vector<string>				keys;
-	vector<string>::iterator	itr;
+	ClassAdCollection                   *collection;
+	std::vector<std::string>            keys;
+	std::vector<std::string>::iterator  itr;
 };
 
 

@@ -40,7 +40,7 @@ class ExprTree;
 class ClassAd;
 class MatchClassAd;
 
-typedef hash_map< const ExprTree*, Value, ExprHash > EvalCache;
+typedef std::hash_map< const ExprTree*, Value, ExprHash > EvalCache;
 
 class EvalState {
 	public:

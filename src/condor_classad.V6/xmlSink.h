@@ -48,20 +48,20 @@ class ClassAdXMLUnParser
 	 * 	@param buffer The string to unparse to
 	 * 	@param expr The expression to unparse
 		 */
-	void Unparse(string &buffer, ExprTree *expr);
+	void Unparse(std::string &buffer, ExprTree *expr);
 
  private:
 	/** Unparse a value 
 	 * 	@param buffer The string to unparse to
 	 * 	@param val The value to unparse
 	 */
-	void Unparse(string &buffer, ExprTree *expr, int indent);
+	void Unparse(std::string &buffer, ExprTree *expr, int indent);
 
-	void Unparse(string &buffer, Value &val, int indent);
-	virtual void UnparseAux(string &buffer, 
-							vector< pair< string, ExprTree*> >& attrlist,
+	void Unparse(std::string &buffer, Value &val, int indent);
+	virtual void UnparseAux(std::string &buffer, 
+							std::vector< std::pair< std::string, ExprTree*> >& attrlist,
 							int indent);
-	virtual void UnparseAux(string &buffer, vector<ExprTree*>&, 
+	virtual void UnparseAux(std::string &buffer, std::vector<ExprTree*>&, 
 							int indent);
 
 	bool compact_spacing;

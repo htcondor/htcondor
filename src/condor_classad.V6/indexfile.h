@@ -48,24 +48,24 @@ struct eqstr
 class IndexFile {
  public:
 	void Init(int file_handler);
-	bool FindInFile(string key,tag &offset);
+	bool FindInFile(std::string key,tag &offset);
 	/** the cache in mem is full, so we write one classad back to file
 		and wri
 		@param s_id  the pointer to the ID
 	*/
-	bool UpdateIndex(string key);
-	bool WriteBack(string key, string ad);  
+	bool UpdateIndex(std::string key);
+	bool WriteBack(std::string key, std::string ad);  
 	//should delete it from file and index
-	bool DeleteFromStorageFile(string key);
-	bool UpdateIndex(string key, int offset);
-	int First(string &key);
-	int Next(string &key);
-	string GetClassadFromFile(string key, int offset);
+	bool DeleteFromStorageFile(std::string key);
+	bool UpdateIndex(std::string key, int offset);
+	int First(std::string &key);
+	int Next(std::string &key);
+	std::string GetClassadFromFile(std::string key, int offset);
 	bool  TruncateStorageFile();
 	int  dump_index();
  private:
-	hash_map<string,int,StringHash> Index;
-	hash_map<string,int,StringHash>::iterator index_itr;
+	std::hash_map<std::string,int,StringHash> Index;
+	std::hash_map<std::string,int,StringHash>::iterator index_itr;
 	int filed;
 };
 

@@ -69,14 +69,14 @@ class ClassAdIterator
             @return false if the iterator has crossed the last attribute in the
                 ClassAd, or true otherwise.
         */
-        bool NextAttribute( string& attr, const ExprTree*& expr );
+        bool NextAttribute( std::string& attr, const ExprTree*& expr );
 
         /** Gets the attribute currently referred to by the iterator.
             @param attr The name of the next attribute in the ClassAd.
             @param expr The expression of the next attribute in the ClassAd.
             @return false if the operation failed, true otherwise.
         */
-        bool CurrentAttribute( string& attr, const ExprTree*& expr ) const;
+        bool CurrentAttribute( std::string& attr, const ExprTree*& expr ) const;
 
         /** Predicate to check the position of the iterator.
             @return true iff the iterator is before the first element.

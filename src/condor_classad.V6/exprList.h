@@ -43,12 +43,12 @@ class ExprList : public ExprTree
 		 * 		list
 		 * 	@return The constructed expression list
 		 */
-		static ExprList *MakeExprList( const vector< ExprTree* > &list );
+		static ExprList *MakeExprList( const std::vector< ExprTree* > &list );
 
 		/** Deconstructor to obtain the components of an expression list
 		 * 	@param list The list of expressions
 		 */
-		void GetComponents( vector<ExprTree*>& list) const;
+		void GetComponents( std::vector<ExprTree*>& list) const;
 
 		/// Make a deep copy of the expression
 		virtual ExprList* Copy( ) const;
@@ -60,7 +60,7 @@ class ExprList : public ExprTree
 	private:
 		friend class ExprListIterator;
 
-		vector<ExprTree*> exprList;
+		std::vector<ExprTree*> exprList;
 
 		void Clear (void);
 		virtual void _SetParentScope( const ClassAd* p );
@@ -204,9 +204,9 @@ class ExprListIterator
     	bool IsAfterLast( ) const;
 
 	private:
-		const ExprList				*l;
-		EvalState					state;
-		vector<ExprTree*>::const_iterator itr;
+		const ExprList                          *l;
+		EvalState                               state;
+		std::vector<ExprTree*>::const_iterator  itr;
 
     	bool GetValue( Value& v, const ExprTree *tree, EvalState *es=NULL );
 		bool GetValue( Value& v, ExprTree*& t, const ExprTree *tree, EvalState *es=NULL );

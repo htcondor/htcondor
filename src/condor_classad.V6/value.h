@@ -114,7 +114,7 @@ class Value
 		/** Sets a string value; previous value discarded.
 			@param str The string value.
 		*/
-		void SetStringValue( const string &str );
+		void SetStringValue( const std::string &str );
 
 		/** Sets a string value; previous value discarded.
 			@param str The string value.
@@ -169,7 +169,7 @@ class Value
 				string value.
 			@return true iff the value is a string.
 		*/
-		bool IsStringValue( string &str ) const; 	
+		bool IsStringValue( std::string &str ) const; 	
 		/** Checks if the value is a string.  
 			@param str A reference to a C string, which will point to the 
 				string value.  This pointer must <b>not</b> be deallocated or
@@ -252,7 +252,7 @@ class Value
 		*/
 		bool IsRelativeTimeValue( time_t& secs ) const;
 
-		friend ostream& operator<<(ostream &stream, Value &value);
+		friend std::ostream& operator<<(std::ostream &stream, Value &value);
 
 	private:
 		friend class Literal;
@@ -268,7 +268,7 @@ class Value
 			ClassAd			*classadValue;
 			time_t			timeValueSecs;
 		};
-		string			strValue;		// has ctor/dtor cannot be in the union
+		std::string			strValue;		// has ctor/dtor cannot be in the union
 };
 
 
@@ -359,7 +359,7 @@ IsStringValue( char *s, int len ) const
 }
 
 inline bool Value::
-IsStringValue( string &s ) const
+IsStringValue( std::string &s ) const
 {
 	if ( valueType == STRING_VALUE ) {
 		s = strValue;

@@ -29,7 +29,7 @@
 
 BEGIN_NAMESPACE( classad );
 
-typedef vector<ExprTree*> ArgumentList;
+typedef std::vector<ExprTree*> ArgumentList;
 
 /// Node of the expression which represents a call to an inbuilt function
 class FunctionCall : public ExprTree
@@ -43,14 +43,14 @@ class FunctionCall : public ExprTree
 		 * 	@param argList	A vector representing the argument list
 		 * 	@return The constructed function call expression
 		 */
-		static FunctionCall *MakeFunctionCall( const string &fnName, 
-					vector<ExprTree*> &argList );
+		static FunctionCall *MakeFunctionCall( const std::string &fnName, 
+					std::vector<ExprTree*> &argList );
 
 		/** Deconstructor to get the components of a function call
 		 * 	@param fnName	The name of the function being called
 		 * 	@param argList  The argument list
 		 */
-		void GetComponents( string &, vector<ExprTree*> &) const;
+		void GetComponents( std::string &, std::vector<ExprTree*> &) const;
 
 		/// Make a deep copy of the expression
 		virtual FunctionCall* Copy( ) const;
@@ -61,7 +61,7 @@ class FunctionCall : public ExprTree
 
 		typedef	bool(*ClassAdFunc)(const char*, const ArgumentList&, EvalState&,
 					Value&);
-		typedef map<string, void*, CaseIgnLTStr > FuncTable;
+		typedef std::map<std::string, void*, CaseIgnLTStr > FuncTable;
 
 	private:
 		virtual void _SetParentScope( const ClassAd* );
@@ -75,7 +75,7 @@ class FunctionCall : public ExprTree
 		static bool		 initialized;
 
 		// function call specific information
-		string			functionName;
+		std::string		functionName;
 		ClassAdFunc		function;
 		ArgumentList	arguments;
 

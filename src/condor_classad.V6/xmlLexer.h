@@ -28,8 +28,8 @@
 
 BEGIN_NAMESPACE( classad );
 
-typedef map<string, string> XMLAttributes;
-typedef map<string, string>::iterator XMLAttributesIterator;
+typedef std::map<std::string, std::string> XMLAttributes;
+typedef std::map<std::string, std::string>::iterator XMLAttributesIterator;
 
 // the lexical analyzer class
 class XMLLexer
@@ -78,14 +78,14 @@ class XMLLexer
 		TokenType      token_type;
 		TagType        tag_type;
 		TagID          tag_id;
-		string         text;
+		std::string    text;
 		XMLAttributes  attributes;
 	};
 
 	XMLLexer ();
 	~XMLLexer ();
 
-	void SetLexText( const string &new_lex_buffer);
+	void SetLexText( const std::string &new_lex_buffer);
 
 	// the 'extract token' functions
 	bool PeekToken(Token* token);

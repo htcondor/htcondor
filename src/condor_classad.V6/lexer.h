@@ -118,7 +118,7 @@ class Lexer
 					boolValue = b;
 				}
 
-				void SetStringValue( const string &str) {
+				void SetStringValue( const std::string &str) {
 					strValue = str;
 				}
 
@@ -148,7 +148,7 @@ class Lexer
 					b = boolValue;
 				}
 
-				void GetStringValue( string &str ) {
+				void GetStringValue( std::string &str ) {
 					str = strValue;	
 				}	
 
@@ -176,7 +176,7 @@ class Lexer
 				int 				intValue;
 				double 				realValue;
 				bool 				boolValue;
-				string 				strValue;
+				std::string			strValue;
 				time_t				secs;
 		};
 
@@ -185,7 +185,7 @@ class Lexer
 		~Lexer ();
 
 		// initialize methods
-		bool Initialize( const string &buf );
+		bool Initialize( const std::string &buf );
 		bool Reinitialize( );
 
 		// cleanup function --- purges strings from string space
@@ -196,7 +196,7 @@ class Lexer
 		TokenType ConsumeToken( TokenValue* = 0 );
 
 		// internal buffer for token accumulation
-		string lexBuffer;					        // the buffer itselfw
+		std::string lexBuffer;					    // the buffer itselfw
 
 		// miscellaneous functions
 		static char *strLexToken (int);				// string rep'n of token
@@ -239,7 +239,7 @@ class Lexer
 		static bool	tokenizeRelativeTime(const char*,time_t&);// relative time
 		static bool	tokenizeAbsoluteTime(const char*,time_t&);// absolute time
 
-		void convert_escapes(string &text);
+		void convert_escapes(std::string &text);
 };
 
 END_NAMESPACE // classad

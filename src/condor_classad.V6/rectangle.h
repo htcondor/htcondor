@@ -40,10 +40,10 @@ struct Interval {
 };
 
 
-typedef map<int, int> KeyMap;
-typedef map<string, set<int>, CaseIgnLTStr > DimRectangleMap;
-typedef map<int, Interval> OneDimension;
-typedef map<string, OneDimension, CaseIgnLTStr> AllDimensions;
+typedef std::map<int, int> KeyMap;
+typedef std::map<std::string, std::set<int>, CaseIgnLTStr > DimRectangleMap;
+typedef std::map<int, Interval> OneDimension;
+typedef std::map<string, OneDimension, CaseIgnLTStr> AllDimensions;
 
 
 class Rectangles {
@@ -57,13 +57,13 @@ public:
 	int NewPort( int id=-1 );
 	int NewRectangle( int id=-1 );
 
-	int AddUpperBound(const string&attr,Value& val,bool open, bool constraint,
+	int AddUpperBound(const std::string&attr,Value& val,bool open, bool constraint,
 				int rkey=-1);
-	int AddLowerBound(const string&attr,Value& val,bool open, bool constraint,
+	int AddLowerBound(const std::string&attr,Value& val,bool open, bool constraint,
 				int rkey=-1);
 	void AddExportedVerificationRequest( int rkey=-1 );
-	void AddImportedVerificationRequest( const string&, int rkey=-1 );
-	void AddUnexportedDimension( const string&, int rkey=-1 );
+	void AddImportedVerificationRequest( const std::string&, int rkey=-1 );
+	void AddUnexportedDimension( const std::string&, int rkey=-1 );
 
 	void Typify( const References &exported, int srec, int erec );
 	void Display( FILE * );

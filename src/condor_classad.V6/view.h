@@ -53,16 +53,16 @@ public:
 	ViewMember(const ViewMember &other);
 	~ViewMember( );
 
-	void SetKey( const string &key );
+	void SetKey( const std::string &key );
 	void SetRankValue( const Value &rankValue );
 
-	void GetKey( string &key ) const;
+	void GetKey( std::string &key ) const;
 	void GetRankValue( Value &rankValue ) const;
 
 	ViewMember	operator=( const ViewMember& );
 	friend bool operator<(const ViewMember &vm1, const ViewMember &vm2);
 private:
-	string	key;
+	std::string	key;
 	Value	rank;
 };
 
@@ -72,11 +72,11 @@ struct ViewMemberLT {
 };
 
 
-typedef string ViewName;
-typedef multiset<ViewMember, ViewMemberLT> ViewMembers;
-typedef slist<View*> SubordinateViews;
-typedef hash_map<string,View*,StringHash> PartitionedViews;
-typedef hash_map<string,ViewMembers::iterator,StringHash> MemberIndex;
+typedef std::string ViewName;
+typedef std::multiset<ViewMember, ViewMemberLT> ViewMembers;
+typedef std::slist<View*> SubordinateViews;
+typedef std::hash_map<std::string,View*,StringHash> PartitionedViews;
+typedef std::hash_map<std::string,ViewMembers::iterator,StringHash> MemberIndex;
 
 
 /* View class */
@@ -88,13 +88,13 @@ public:
 		// view control
 	bool SetViewName( const ViewName &viewName );
 	bool SetConstraintExpr( ClassAdCollection *coll,
-			const string &constraint );
+			const std::string &constraint );
 	bool SetConstraintExpr( ClassAdCollection *coll,
 			ExprTree *constraint );
-	bool SetRankExpr( ClassAdCollection *coll, const string &expr );
+	bool SetRankExpr( ClassAdCollection *coll, const std::string &expr );
 	bool SetRankExpr( ClassAdCollection *coll, ExprTree *tree );
 	bool SetPartitionExprs( ClassAdCollection *coll, 
-			const string &exprList );
+			const std::string &exprList );
 	bool SetPartitionExprs( ClassAdCollection *coll, ExprList *el );
 	bool SetViewInfo( ClassAdCollection *coll, ClassAd *viewInfo );
 
@@ -106,9 +106,9 @@ public:
 	ExprTree 	*GetRankExpr( );
 	ExprList	*GetPartitionAttributes( );
 	ClassAd		*GetViewInfo( );
-	bool		IsMember( const string &key );
-	void		GetSubordinateViewNames( vector<string>& );
-	void		GetPartitionedViewNames( vector<string>& );
+	bool		IsMember( const std::string &key );
+	void		GetSubordinateViewNames( std::vector<std::string>& );
+	void		GetPartitionedViewNames( std::vector<std::string>& );
 	bool		FindPartition( ClassAd *rep, ViewName &partition );
 
 		// child view manipulation
@@ -125,12 +125,12 @@ public:
 			
 		// classad manipulation
 	bool ClassAdInserted ( ClassAdCollection *coll, 
-			const string &key, ClassAd *ad );
+			const std::string &key, ClassAd *ad );
 	void ClassAdPreModify( ClassAdCollection *coll, ClassAd *ad );
 	bool ClassAdModified ( ClassAdCollection *coll, 
-			const string &key, ClassAd *ad );
+			const std::string &key, ClassAd *ad );
 	void ClassAdDeleted  ( ClassAdCollection *coll, 
-			const string &key, ClassAd *ad );
+			const std::string &key, ClassAd *ad );
 
 		// misc
 	bool Display( FILE * );
@@ -141,8 +141,8 @@ private:
 	friend class LocalCollectionQuery;
 
 		// private helper function
-	string 	makePartitionSignature( ClassAd *ad );
-	void	DeleteView( ClassAdCollection * );
+	std::string makePartitionSignature( ClassAd *ad );
+	void        DeleteView( ClassAdCollection * );
 
 	ViewName			viewName;			// name of the view
 	View				*parent;			// pointer to parent view
@@ -150,7 +150,7 @@ private:
 	MemberIndex			memberIndex;		// keys->ViewMember mapping
 	PartitionedViews	partitionedViews;	// views created by partitioning
 	SubordinateViews	subordinateViews;	// views explicitly added
-	string				oldAdSignature;		// old signature of ad to be changed
+	std::string			oldAdSignature;		// old signature of ad to be changed
 	MatchClassAd		evalEnviron;		// also stores view info
 };
 

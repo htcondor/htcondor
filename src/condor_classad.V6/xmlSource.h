@@ -34,14 +34,14 @@ class ClassAdXMLParser
 	public:
 		ClassAdXMLParser();
 		~ClassAdXMLParser();
-		ClassAd *ParseClassAd( const string &buffer);
-		ClassAd *ParseClassAd( const string &buffer, int &offset);
-		bool ParseClassAd( const string &buffer, ClassAd &ad, int &offset);
-		bool ParseClassAd( const string &buffer, ClassAd &ad);
+		ClassAd *ParseClassAd( const std::string &buffer);
+		ClassAd *ParseClassAd( const std::string &buffer, int &offset);
+		bool ParseClassAd( const std::string &buffer, ClassAd &ad, int &offset);
+		bool ParseClassAd( const std::string &buffer, ClassAd &ad);
 	private:
 
 		ClassAd *ClassAdXMLParser::ParseClassAd(void);
-		ExprTree *ParseAttribute(string &attribute_name);
+		ExprTree *ParseAttribute(std::string &attribute_name);
 		ExprTree *ParseThing(void);
 		ExprTree *ParseList(void);
 		ExprTree *ParseNumberOrString(XMLLexer::TagID tag_id);

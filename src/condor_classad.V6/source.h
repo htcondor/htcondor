@@ -52,7 +52,7 @@ class ClassAdParser
 			@return pointer to the ClassAd object if successful, or NULL 
 				otherwise
 		*/
-		ClassAd *ParseClassAd( const string &buffer, bool full=false );
+		ClassAd *ParseClassAd( const std::string &buffer, bool full=false );
 
 		/** Parse a ClassAd 
 			@param buffer Buffer containing the string representation of the
@@ -63,7 +63,7 @@ class ClassAdParser
 				other tokens follow the ClassAd.
 			@return true on success, false on failure
 		*/
-		bool ParseClassAd( const string &buffer, ClassAd &ad, bool full=false );
+		bool ParseClassAd( const std::string &buffer, ClassAd &ad, bool full=false );
 
 		/** Parse an expression 
 			@param expr Reference to a ExprTree pointer, which will be pointed
@@ -74,7 +74,7 @@ class ClassAdParser
 				other tokens follow the expression.
 			@return true if the parse succeeded, false otherwise.
 		*/
-		bool ParseExpression( const string &buffer, ExprTree*& expr, 
+		bool ParseExpression( const std::string &buffer, ExprTree*& expr, 
 					bool full=false);
 
 		/** Parse an expression
@@ -86,7 +86,7 @@ class ClassAdParser
 			@return pointer to the expression object if successful, or NULL 
 				otherwise
 		*/
-		ExprTree *ParseExpression( const string &buffer, bool full=false);
+		ExprTree *ParseExpression( const std::string &buffer, bool full=false);
 
 		void SetDebug( bool d ) { lexer.SetDebug( d ); }
 	private:
@@ -110,7 +110,7 @@ class ClassAdParser
 		bool parseUnaryExpression( ExprTree*& );
 		bool parsePostfixExpression( ExprTree*& );
 		bool parsePrimaryExpression( ExprTree*& );
-		bool parseArgumentList( vector<ExprTree*>& );
+		bool parseArgumentList( std::vector<ExprTree*>& );
 };
 
 END_NAMESPACE // classad

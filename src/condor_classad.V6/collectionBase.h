@@ -46,9 +46,9 @@ public:
 };
 
 
-typedef hash_map<string,View*,StringHash> ViewRegistry;
-typedef hash_map<string,ClassAdProxy,StringHash> ClassAdTable;
-typedef hash_map<string,ServerTransaction*,StringHash> XactionTable;
+typedef std::hash_map<std::string,View*,StringHash> ViewRegistry;
+typedef std::hash_map<std::string,ClassAdProxy,StringHash> ClassAdTable;
+typedef std::hash_map<std::string,ServerTransaction*,StringHash> XactionTable;
 
 class ClassAdCollection : public ClassAdCollectionInterface {
 public:
@@ -56,53 +56,55 @@ public:
 	virtual ~ClassAdCollection( );
         ClassAdCollection(bool CacheOn);
 	// Logfile control
-	virtual bool InitializeFromLog( const string &filename,const string storagefile, const string checkpointfile  );
+	virtual bool InitializeFromLog( const std::string &filename,
+									const std::string storagefile="", 
+									const std::string checkpointfile=""  );
 
 
 	// View creation/deletion/interrogation
         virtual bool CreateSubView( const ViewName &viewName,
 				const ViewName &parentViewName,
-				const string &constraint, const string &rank,
-				const string &partitionExprs );
+				const std::string &constraint, const std::string &rank,
+				const std::string &partitionExprs );
 	virtual bool CreatePartition( const ViewName &viewName,
 				const ViewName &parentViewName,
-				const string &constraint, const string &rank,
-				const string &partitionExprs, ClassAd *rep );
+				const std::string &constraint, const std::string &rank,
+				const std::string &partitionExprs, ClassAd *rep );
 	virtual bool DeleteView( const ViewName &viewName );
 	virtual bool SetViewInfo( const ViewName &viewName,
-				const string &constraint, const string &rank,
-				const string &partitionAttrs );
+				const std::string &constraint, const std::string &rank,
+				const std::string &partitionAttrs );
 	virtual bool GetViewInfo( const ViewName &viewName, ClassAd *&viewInfo );
 	// Child view interrogation
 	virtual bool GetSubordinateViewNames( const ViewName &viewName,
-				vector<string>& views );
+				std::vector<std::string>& views );
 	virtual bool GetPartitionedViewNames( const ViewName &viewName,
-				vector<string>& views );
+				std::vector<std::string>& views );
 	virtual bool FindPartitionName( const ViewName &viewName, ClassAd *rep, 
 				ViewName &partition );
 
 
 	// ClassAd manipulation 
-	virtual bool AddClassAd( const string &key, ClassAd *newAd );
-	virtual bool UpdateClassAd( const string &key, ClassAd *updateAd );
-	virtual bool ModifyClassAd( const string &key, ClassAd *modifyAd );
-	virtual bool RemoveClassAd( const string &key );
+	virtual bool AddClassAd( const std::string &key, ClassAd *newAd );
+	virtual bool UpdateClassAd( const std::string &key, ClassAd *updateAd );
+	virtual bool ModifyClassAd( const std::string &key, ClassAd *modifyAd );
+	virtual bool RemoveClassAd( const std::string &key );
 
 	// ClassAd interrogation
-	virtual ClassAd *GetClassAd(const string &key );
+	virtual ClassAd *GetClassAd(const std::string &key );
 
 		 
 	// Transaction management
-	virtual bool OpenTransaction( const string &transactionName );
-	virtual bool CloseTransaction(const string &transactionName,bool commit,
+	virtual bool OpenTransaction( const std::string &transactionName );
+	virtual bool CloseTransaction(const std::string &transactionName,bool commit,
 				int &outcome);
 
-	virtual bool IsMyActiveTransaction( const string &transactionName );
-	virtual void GetMyActiveTransactions( vector<string>& );
-	virtual bool IsActiveTransaction( const string &transactionName );
-	virtual bool GetAllActiveTransactions( vector<string>& );
-	virtual bool IsCommittedTransaction( const string &transactionName );
-	virtual bool GetAllCommittedTransactions( vector<string>& );
+	virtual bool IsMyActiveTransaction( const std::string &transactionName );
+	virtual void GetMyActiveTransactions( std::vector<std::string>& );
+	virtual bool IsActiveTransaction( const std::string &transactionName );
+	virtual bool GetAllActiveTransactions( std::vector<std::string>& );
+	virtual bool IsCommittedTransaction( const std::string &transactionName );
+	virtual bool GetAllCommittedTransactions( std::vector<std::string>& );
 								
 	// Debugging function
 	bool DisplayView( const ViewName &viewName, FILE * );
@@ -127,7 +129,7 @@ protected:
 
 	// low level execution modules
 	bool PlayClassAdOp ( int, ClassAd * );
-	bool PlayXactionOp ( int, const string &, ClassAd *, ServerTransaction *& );
+	bool PlayXactionOp ( int, const std::string &, ClassAd *, ServerTransaction *& );
 	bool PlayViewOp ( int, ClassAd * );
 
 	// View registry interface
@@ -144,19 +146,19 @@ protected:
         void Setup(bool CacheOn);
         bool Cache;
 //#ifdef  ADDCACHE
-        bool ReplaceClassad(string &key);
-	bool SetDirty(string key);
-        bool ClearDirty(string key);
-	bool CheckDirty(string key);
-        bool GetStringClassAd(string key,string &WriteBackClassad);       
-        bool SwitchInClassAd(string key);
-        int  ReadStorageEntry(int sfiled, int &offset,string &ckey);        
+        bool ReplaceClassad(std::string &key);
+	bool SetDirty(std::string key);
+        bool ClearDirty(std::string key);
+	bool CheckDirty(std::string key);
+        bool GetStringClassAd(std::string key,std::string &WriteBackClassad);       
+        bool SwitchInClassAd(std::string key);
+        int  ReadStorageEntry(int sfiled, int &offset,std::string &ckey);        
         bool ReadCheckPointFile();
 	int Max_Classad;
         int CheckPoint;      
-	map<string,int> DirtyClassad;
+	std::map<std::string,int> DirtyClassad;
         timeval LatestCheckpoint;
-        string CheckFileName;
+        std::string CheckFileName;
         int test_checkpoint;
 //#endif
 

@@ -45,28 +45,28 @@ class ClassAdUnParser
 		 * 	@param buffer The string to unparse to
 		 * 	@param val The value to unparse
 		 */
-		void Unparse( string &buffer, Value &val );
+		void Unparse( std::string &buffer, Value &val );
 
 		/** Unparse an expression 
 		 * 	@param buffer The string to unparse to
 		 * 	@param expr The expression to unparse
 		 */
-		void Unparse( string &buffer, ExprTree *expr );
+		void Unparse( std::string &buffer, ExprTree *expr );
 
 			//	for backcompatibility only - NAC
 		void SetOldClassAd( bool );
 		bool GetOldClassAd();
 
-		virtual void UnparseAux( string &buffer,Value&,Value::NumberFactor );	
-		virtual void UnparseAux( string &buffer, ExprTree *tree, 
-					string &ref, bool absolute=false );
-		virtual void UnparseAux( string &buffer, Operation::OpKind op, 
+		virtual void UnparseAux( std::string &buffer,Value&,Value::NumberFactor );	
+		virtual void UnparseAux( std::string &buffer, ExprTree *tree, 
+					std::string &ref, bool absolute=false );
+		virtual void UnparseAux( std::string &buffer, Operation::OpKind op, 
 					ExprTree *op1, ExprTree *op2, ExprTree *op3 );
-		virtual void UnparseAux(string &buffer, string &fnName, 
-					vector<ExprTree*>& args);
-		virtual void UnparseAux( string &buffer, 
-					vector< pair< string, ExprTree*> >& attrlist );
-		virtual void UnparseAux( string &buffer, vector<ExprTree*>& );
+		virtual void UnparseAux(std::string &buffer, std::string &fnName, 
+					std::vector<ExprTree*>& args);
+		virtual void UnparseAux( std::string &buffer, 
+					std::vector< std::pair< std::string, ExprTree*> >& attrlist );
+		virtual void UnparseAux( std::string &buffer, std::vector<ExprTree*>& );
 
 		// table of string representation of operators
 		static char *opString[];
@@ -100,11 +100,11 @@ class PrettyPrint : public ClassAdUnParser
 		/// Get minimal parentheses mode
         bool GetMinimalParentheses( );
 
-        virtual void UnparseAux( string &buffer, Operation::OpKind op, 
+        virtual void UnparseAux( std::string &buffer, Operation::OpKind op, 
 					ExprTree *op1, ExprTree *op2, ExprTree *op3 );
-        virtual void UnparseAux( string &buffer,
-                    vector< pair< string, ExprTree*> >& attrlist );
-        virtual void UnparseAux( string &buffer, vector<ExprTree*>& );
+        virtual void UnparseAux( std::string &buffer,
+                    std::vector< std::pair< std::string, ExprTree*> >& attrlist );
+        virtual void UnparseAux( std::string &buffer, std::vector<ExprTree*>& );
 
     private:
         int  classadIndent;
