@@ -150,6 +150,10 @@ SOURCE=..\src\h\expr.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_util_lib\free_fs_blocks.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_util_lib\internet.c
 # End Source File
 # Begin Source File
@@ -166,6 +170,10 @@ SOURCE=..\src\condor_util_lib\mkargv.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_util_lib\phys_mem.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\h\proc.h
 # End Source File
 # Begin Source File
@@ -175,6 +183,10 @@ SOURCE=..\src\h\syscall_numbers.h
 # Begin Source File
 
 SOURCE=..\src\condor_util_lib\uids.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_util_lib\virt_mem.c
 # End Source File
 # End Target
 # End Project
