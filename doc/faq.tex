@@ -231,6 +231,12 @@ What to do to get Condor running properly depends on what sort of
 error occurs. 
 One common error category are communication errors.
 Condor daemon log files report a failure to bind.
+For example:
+
+\begin{verbatim}
+(date and time) Failed to bind to command ReliSock
+\end{verbatim}
+
 Or, the errors in the various log files may be of the form:
 
 \begin{verbatim}
@@ -253,7 +259,8 @@ To solve this problem, understand that
 Condor uses the first network interface it sees on the machine.
 Since machines often have more than one interface,
 this problem usually implies that the wrong network
-interface is being used.
+interface is being used.  It also may be the case that
+the system simply has the wrong IP address configured.
 
 It is incorrect to use the localhost network interface.
 This has IP address 127.0.0.1 on all machines.
@@ -1119,7 +1126,6 @@ on the machine for the purpose of determining if a job is to be vacated
 or suspended on the machine. It could be the case that after you ssh
 there, Condor notices activity on the tty allocated to your connection
 and then vacates the job.
-
 
 \item[What is wrong? I get no output from \Condor{status}, but the Condor daemons are running.]
 
