@@ -5,6 +5,7 @@
 #include "condor_classad.h"
 #include "condor_commands.h"
 #include "../condor_status.V6/totals.h"
+#include "forkwork.h"
 
 #include "collector_engine.h"
 #include "collector_stats.h"
@@ -103,6 +104,8 @@ protected:
 	static ClassAd *ad;
 	static DCCollector* updateCollector;
 	static int UpdateTimerId;
+
+	static ForkWork forkQuery;
 
 	static SocketCache* sock_cache;
 	static int sockCacheHandler( Service*, Stream* sock );

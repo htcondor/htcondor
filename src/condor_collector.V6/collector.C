@@ -63,6 +63,8 @@ int CollectorDaemon::machinesUnclaimed;
 int CollectorDaemon::machinesClaimed;
 int CollectorDaemon::machinesOwner;
 
+ForkWork CollectorDaemon::forkQuery;
+
 ClassAd* CollectorDaemon::ad;
 DCCollector* CollectorDaemon::updateCollector;
 int CollectorDaemon::UpdateTimerId;
@@ -181,6 +183,7 @@ void CollectorDaemon::Init()
 	// ClassAd evaluations use this function to resolve names
 	ClassAdLookupRegister( process_global_query, this );
 
+	forkQuery.Initialize( );
 }
 
 int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
@@ -262,7 +265,18 @@ int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
 
 	// Process the query
     if (whichAds != (AdTypes) -1) {
-		process_query (whichAds, ad, sock);
+		ForkStatus	status = forkQuery.NewJob( );
+		if ( FORK_FAILED == status || FORK_BUSY == status ) {
+			// Fork failed / busy
+			process_query (whichAds, ad, sock);
+		} else if ( FORK_CHILD == status ) {
+			// Fork ok, worker
+			process_query (whichAds, ad, sock);
+			sleep( 5 );
+			forkQuery.WorkerDone( );		// Never returns
+		} else {
+			// Fork ok, parent
+		}
 	}
 
     // all done; let daemon core will clean up connection
@@ -949,6 +963,14 @@ void CollectorDaemon::Config()
         collectorStats.setDaemonHistorySize( 0 );
     }
 
+    tmp = param ("COLLECTOR_QUERY_WORKERS");
+    if( tmp ) {
+		int	num = atoi( tmp );
+        forkQuery.setMaxWorkers( num );
+    } else {
+        forkQuery.setMaxWorkers( 0 );
+    }
+
     return;
 }
 
@@ -1119,7 +1141,6 @@ CollectorUniverseStats::Reset( void )
 {
 	int		univ;
 
-	dprintf( D_ALWAYS, "%p: Reseting\n", this );
 	for( univ=0;  univ<CONDOR_UNIVERSE_MAX;  univ++) {
 		perUniverse[univ] = 0;
 	}
@@ -1129,7 +1150,6 @@ CollectorUniverseStats::Reset( void )
 void
 CollectorUniverseStats::accumulate(int univ )
 {
-	dprintf( D_ALWAYS, "%p: Accumulating %d\n", this, univ );
 	if (  ( univ >= 0 ) && ( univ < CONDOR_UNIVERSE_MAX ) ) {
 		perUniverse[univ]++;
 		count++;
@@ -1157,7 +1177,6 @@ CollectorUniverseStats::setMax( CollectorUniverseStats &ref )
 {
 	int		univ;
 
-	dprintf( D_ALWAYS, "%p: Maxing\n", this );
 	for( univ=0;  univ<CONDOR_UNIVERSE_MAX;  univ++) {
 		if ( ref.perUniverse[univ] > perUniverse[univ] ) {
 			perUniverse[univ] = ref.perUniverse[univ];
@@ -1212,7 +1231,6 @@ CollectorUniverseStats::publish( const char *label, ClassAd *ad )
 	}
 	sprintf( line, "%s%s = %d", label, "All", count );
 	ad->Insert(line);
-	dprintf( D_ALWAYS, "%p: Publishing %s = %d\n", this, label, count );
 
 	return 0;
 }
