@@ -22,6 +22,7 @@ private:
 
 	char *cookie;
 	ReliSock *server;
+	bool socket_registered;
 };
 
 #endif
