@@ -114,11 +114,26 @@ clearFormats (void)
 int AttrListPrintMask::
 display (FILE *file, AttrList *al)
 {
+	char * temp = display(al);
+
+	if (temp != NULL) {
+		fputs(temp, file);
+		delete [] temp;
+		return 0;
+	}
+	return 1;
+
+}
+
+// returns a new char * that is your responsibility to delete.
+char * AttrListPrintMask::
+display (AttrList *al)
+{
 	Formatter *fmt;
 	char 	*attr, *alt;
 	ExprTree *tree;
 	EvalResult result;
-	int 	retval = 1;
+	char * 	retval = new char[1024 * 8];
 	int		intValue;
 	float 	floatValue;
 	char  	stringValue[1024];
@@ -126,6 +141,8 @@ display (FILE *file, AttrList *al)
 	formats.Rewind();
 	attributes.Rewind();
 	alternates.Rewind();
+
+	retval[0] = '\0'; // Clear the return value;
 
 	// for each item registered in the print mask
 	while ((fmt=formats.Next()) && (attr=attributes.Next()) &&
@@ -137,7 +154,10 @@ display (FILE *file, AttrList *al)
 				// get the expression tree of the attribute
 				if (!(tree = al->Lookup (attr)))
 				{
-					if (alt) fprintf (file, "%s", alt);
+					if ( alt ) {
+						sprintf( stringValue, "%s", alt );
+						strcat( retval, stringValue );
+					}
 					continue;
 				}
 
@@ -147,20 +167,23 @@ display (FILE *file, AttrList *al)
 					switch (result.type)
 					{
 					case LX_STRING:
-						fprintf(file,fmt->printfFmt,collapse_escapes(result.s));
+						sprintf( stringValue, fmt->printfFmt,
+							collapse_escapes(result.s) );
+						strcat( retval, stringValue );
 						break;
 
 					case LX_FLOAT:
-						fprintf (file, fmt->printfFmt, result.f);
+						sprintf( stringValue, fmt->printfFmt, result.f);
+						strcat( retval, stringValue );
 						break;
 
 					case LX_INTEGER:
-						fprintf (file, fmt->printfFmt, result.i);
+						sprintf( stringValue, fmt->printfFmt, result.i);
+						strcat( retval, stringValue );
 						break;
 
 					default:
-						fputs( alt , file );
-						retval = 0;
+						strcat( retval, alt );
 						continue;
 					}
 				}
@@ -168,34 +191,30 @@ display (FILE *file, AttrList *al)
 
 		  	case INT_CUSTOM_FMT:
 				if( al->EvalInteger( attr, NULL, intValue ) ) {
-					fputs( (fmt->df)( intValue , al ) , file );
+					strcat( retval, (fmt->df)( intValue , al ) );
 				} else {
-					fputs( alt, file );
-					retval = 0;
+					strcat( retval, alt );
 				}
 				break;
 
 		  	case FLT_CUSTOM_FMT:
 				if( al->EvalFloat( attr, NULL, floatValue ) ) {
-					fputs( (fmt->ff)( floatValue , al ) , file );
+					strcat( retval, (fmt->ff)( floatValue , al ) );
 				} else {
-					fputs( alt, file );
-					retval = 0;
+					strcat( retval, alt );
 				}
 				break;
 
 		  	case STR_CUSTOM_FMT:
 				if( al->EvalString( attr, NULL, stringValue ) ) {
-					fputs( (fmt->sf)( stringValue , al ) , file );
+					strcat( retval, (fmt->sf)( stringValue , al ) );
 				} else {
-					fputs( alt, file );
-					retval = 0;
+					strcat( retval, alt );
 				}
 				break;
 	
 			default:
-				fputs( alt, file );
-				retval = 0;
+				strcat( retval, alt );
 		}
 	}
 

@@ -63,8 +63,9 @@ class AttrListPrintMask
 	void clearFormats (void);
 
 	// display functions
-	int display (FILE *, AttrList *);		// output to FILE *
-	int display (FILE *, AttrListList *);
+	int   display (FILE *, AttrList *);		// output to FILE *
+	int   display (FILE *, AttrListList *); // output a list -> FILE *
+	char *display ( AttrList * );			// return a string
 
   private:
 	List<Formatter> formats;
