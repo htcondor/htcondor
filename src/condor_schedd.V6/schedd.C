@@ -167,6 +167,7 @@ Scheduler::Scheduler()
 	JobsIdle = 0;
 	JobsRunning = 0;
 	JobsHeld = 0;
+	JobsFlocked = 0;
 	JobsRemoved = 0;
 	SchedUniverseJobsIdle = 0;
 	SchedUniverseJobsRunning = 0;
@@ -329,6 +330,7 @@ Scheduler::count_jobs()
 	JobsRunning = 0;
 	JobsIdle = 0;
 	JobsHeld = 0;
+	JobsFlocked = 0;
 	JobsRemoved = 0;
 	SchedUniverseJobsIdle = 0;
 	SchedUniverseJobsRunning = 0;
@@ -340,6 +342,7 @@ Scheduler::count_jobs()
 		Owners[i].JobsRunning = 0;
 		Owners[i].JobsIdle = 0;
 		Owners[i].JobsHeld = 0;
+		Owners[i].JobsFlocked = 0;
 		Owners[i].FlockLevel = 0;
 		Owners[i].OldFlockLevel = 0;
 		Owners[i].GlobusJobs = 0;
@@ -348,16 +351,19 @@ Scheduler::count_jobs()
 
 	WalkJobQueue((int(*)(ClassAd *)) count );
 
-		// set JobsRunning for owners
+		// set JobsRunning/JobsFlocked for owners
 	matches->startIterations();
 	match_rec *rec;
 	while(matches->iterate(rec) == 1) {
+		char *at_sign = strchr(rec->user, '@');
+		if (at_sign) *at_sign = '\0';
+		int OwnerNum = insert_owner( rec->user );
+		if (at_sign) *at_sign = '@';
 		if (rec->shadowRec && !rec->pool) {
-			char *at_sign = strchr(rec->user, '@');
-			if (at_sign) *at_sign = '\0';
-			int OwnerNum = insert_owner( rec->user );
-			if (at_sign) *at_sign = '@';
 			Owners[OwnerNum].JobsRunning++;
+		} else {				// in remote pool, so add to Flocked count
+			Owners[OwnerNum].JobsFlocked++;
+			JobsFlocked++;
 		}
 	}
 
@@ -433,6 +439,8 @@ Scheduler::count_jobs()
 	// TotalIdleJobs and TotalRunningJobs.
 	ad->Delete (ATTR_IDLE_JOBS);
 	ad->Delete (ATTR_RUNNING_JOBS);
+	ad->Delete (ATTR_HELD_JOBS);
+	ad->Delete (ATTR_FLOCKED_JOBS);
 	// The schedd's ad doesn't need ATTR_SCHEDD_NAME either.
 	ad->Delete (ATTR_SCHEDD_NAME);
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_IDLE_JOBS, JobsIdle);
@@ -440,6 +448,8 @@ Scheduler::count_jobs()
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_RUNNING_JOBS, JobsRunning);
 	ad->Insert (tmp);
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_HELD_JOBS, JobsHeld);
+	ad->Insert (tmp);
+	sprintf(tmp, "%s = %d", ATTR_TOTAL_FLOCKED_JOBS, JobsFlocked);
 	ad->Insert (tmp);
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_REMOVED_JOBS, JobsRemoved);
 	ad->Insert (tmp);
@@ -472,6 +482,9 @@ Scheduler::count_jobs()
 	ad->Delete (ATTR_NUM_USERS);
 	ad->Delete (ATTR_TOTAL_RUNNING_JOBS);
 	ad->Delete (ATTR_TOTAL_IDLE_JOBS);
+	ad->Delete (ATTR_TOTAL_HELD_JOBS);
+	ad->Delete (ATTR_TOTAL_FLOCKED_JOBS);
+	ad->Delete (ATTR_TOTAL_REMOVED_JOBS);
 	sprintf(tmp, "%s = \"%s\"", ATTR_SCHEDD_NAME, Name);
 	ad->InsertOrUpdate(tmp);
 
@@ -485,6 +498,10 @@ Scheduler::count_jobs()
 	  ad->InsertOrUpdate(tmp);
 
 	  sprintf(tmp, "%s = %d", ATTR_HELD_JOBS, Owners[i].JobsHeld);
+	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
+	  ad->InsertOrUpdate(tmp);
+
+	  sprintf(tmp, "%s = %d", ATTR_FLOCKED_JOBS, Owners[i].JobsFlocked);
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
@@ -526,17 +543,26 @@ Scheduler::count_jobs()
 				(FlockViewServers) ? FlockViewServers->next() : NULL;
 			for (i=0; i < N_Owners; i++) {
 				Owners[i].JobsRunning = 0;
+				Owners[i].JobsFlocked = 0;
 			}
 			matches->startIterations();
 			match_rec *rec;
 			while(matches->iterate(rec) == 1) {
+				char *at_sign = strchr(rec->user, '@');
+				if (at_sign) *at_sign = '\0';
+				int OwnerNum = insert_owner( rec->user );
+				if (at_sign) *at_sign = '@';
 				if (rec->shadowRec && rec->pool &&
 					!strcmp(rec->pool, flock_negotiator)) {
-					char *at_sign = strchr(rec->user, '@');
-					if (at_sign) *at_sign = '\0';
-					int OwnerNum = insert_owner( rec->user );
-					if (at_sign) *at_sign = '@';
 					Owners[OwnerNum].JobsRunning++;
+				} else {
+						// This is a little weird.  We're sending an update
+						// to a pool we're flocking with.  We count jobs
+						// running in that pool as "RunningJobs" and jobs
+						// running in other pools (including the local pool)
+						// as "FlockedJobs".  It bends the terminology a bit,
+						// but it's the best I can think of for now.
+					Owners[OwnerNum].JobsFlocked++;
 				}
 			}
 			// update submitter ad in this pool for each owner
@@ -556,6 +582,9 @@ Scheduler::count_jobs()
 				ad->InsertOrUpdate(tmp);
 				sprintf(tmp, "%s = %d", ATTR_RUNNING_JOBS,
 						Owners[i].JobsRunning);
+				ad->InsertOrUpdate(tmp);
+				sprintf(tmp, "%s = %d", ATTR_FLOCKED_JOBS,
+						Owners[i].JobsFlocked);
 				ad->InsertOrUpdate(tmp);
 				sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, Owners[i].Name,
 						UidDomain);
@@ -1262,6 +1291,11 @@ Scheduler::negotiate(int, Stream* s)
 		char *addr;
 		bool match = false;
 		hent = gethostbyname(Negotiator->fullHostname());
+		if (!hent) {
+			dprintf(D_ALWAYS, "gethostbyname for local negotiator (%s) failed!"
+					"  Aborting negotiation.\n", Negotiator->fullHostname());
+			return (!(KEEP_STREAM));
+		}
 		if (hent->h_addrtype == AF_INET) {
 			for (int a=0; !match && (addr = hent->h_addr_list[a]); a++) {
 				if (memcmp(addr, &endpoint_addr, sizeof(struct in_addr)) == 0){
@@ -1277,7 +1311,7 @@ Scheduler::negotiate(int, Stream* s)
 				 !match && (host = FlockNegotiators->next());
 				 n++) {
 				hent = gethostbyname(host);
-				if (hent->h_addrtype == AF_INET) {
+				if (hent && hent->h_addrtype == AF_INET) {
 					for (int a=0;
 						 !match && (addr = hent->h_addr_list[a]);
 						 a++) {
@@ -3831,7 +3865,6 @@ void
 Scheduler::mail_problem_message()
 {
 #if !defined(WIN32)
-	char	cmd[512];
 	FILE	*mailer;
 
 	dprintf( D_ALWAYS, "Mailing administrator (%s)\n", CondorAdministrator );
@@ -5261,7 +5294,7 @@ Scheduler::send_alive()
 			!sock->code(id) || 
 			!sock->end_of_message() ) {
 				// UDP transport out of buffer space!
-			dprintf(D_ALWAYS, "\t(Can't send alive message to %d)\n",
+			dprintf(D_ALWAYS, "\t(Can't send alive message to %s)\n",
 					rec->peer);
 			delete sock;
 			continue;
