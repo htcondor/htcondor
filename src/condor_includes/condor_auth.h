@@ -33,13 +33,13 @@
 
 const int CAUTH_NONE                    = 0;
 const int CAUTH_ANY                     = 1;
-const int CAUTH_ANONYMOUS               = 2;
-const int CAUTH_CLAIMTOBE               = 4;
-const int CAUTH_FILESYSTEM              = 8;
-const int CAUTH_FILESYSTEM_REMOTE       = 16;
-const int CAUTH_NTSSPI                  = 32;
-const int CAUTH_X509                    = 64;
-const int CAUTH_KERBEROS                = 128;
+const int CAUTH_CLAIMTOBE               = 2;
+const int CAUTH_FILESYSTEM              = 4;
+const int CAUTH_FILESYSTEM_REMOTE       = 8;
+const int CAUTH_NTSSPI                  = 16;
+const int CAUTH_X509                    = 32;
+const int CAUTH_KERBEROS                = 64;
+const int CAUTH_ANONYMOUS               = 128;
 
 const char STR_DEFAULT_CONDOR_USER[]    = "condor";    // Default condor user
 const char STR_DEFAULT_CONDOR_SPOOL[]   = "SPOOL";
