@@ -11,18 +11,16 @@ const 	int		INITIAL_MAX_PRIO_REC = 2048;
 
 /* this record contains all the parameters required for
  * assigning priorities to all jobs */
-typedef struct rec
-{
+
+class prio_rec {
+public:
     PROC_ID     id;
-
-#if 0
-    int         prio;                           /* UPDOWN */
-#endif
-
     int         job_prio;
     int         status;
     int         qdate;
-    char        *owner;                         /* valid only if D_UPDOWN */
-} prio_rec;
+    char        owner[100];                         /* valid only if D_UPDOWN */
+
+	prio_rec() { *owner='\0'; }
+};
 
 #endif

@@ -1252,8 +1252,8 @@ int get_job_prio(ClassAd *job)
     // No longer judge whether or not a job can run by looking at its status.
     // Rather look at if it has all the hosts that it wanted.
     if (cur_hosts >= max_hosts) {
-		dprintf (D_FULLDEBUG,"In get_job_prio() cur_hosts(%d)>=max_hosts(%d)\n",
-								cur_hosts, max_hosts);
+		//dprintf (D_FULLDEBUG,"In get_job_prio() cur_hosts(%d)>=max_hosts(%d)\n",
+		//						cur_hosts, max_hosts);
         return cur_hosts;
     }
 
@@ -1262,11 +1262,14 @@ int get_job_prio(ClassAd *job)
     PrioRec[N_PrioRecs].status   = job_status;
     PrioRec[N_PrioRecs].qdate    = q_date;
 
+	strcpy(PrioRec[N_PrioRecs].owner,owner);
+/*
 	if ( PrioRec[N_PrioRecs].owner ) {
 		free( PrioRec[N_PrioRecs].owner );
 		PrioRec[N_PrioRecs].owner=NULL;
 	}
 	PrioRec[N_PrioRecs].owner = strdup( owner );
+*/
 
 	dprintf(D_UPDOWN,"get_job_prio(): added PrioRec %d - id = %d.%d, owner = %s\n",N_PrioRecs,PrioRec[N_PrioRecs].id.cluster,PrioRec[N_PrioRecs].id.proc,PrioRec[N_PrioRecs].owner);
     N_PrioRecs += 1;
