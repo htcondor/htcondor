@@ -134,7 +134,6 @@ command_request_claim( Service* serv, int cmd, Stream* stream )
 	return rval;
 }
 
-#define OLD_PROTOCOL 1
 int
 command_match_info( Service* serv, int cmd, Stream* stream ) 
 {
