@@ -61,6 +61,8 @@ FunctionCall( )
 		functionTable["avg"         ] = (void*)sumAvg;
 		functionTable["min"         ] = (void*)minMax;
 		functionTable["max"         ] = (void*)minMax;
+		functionTable["anycompare"  ] = (void*)listCompare;
+		functionTable["allcompare"  ] = (void*)listCompare;
 
 			// basic apply-like functions
 		/*
@@ -709,6 +711,146 @@ minMax(const char *fn, const ArgumentList &argList,
 	val.CopyFrom(result);
 	return true;
 }
+
+bool FunctionCall::
+listCompare(
+	const char         *fn, 
+	const ArgumentList &argList, 
+	EvalState          &state, 
+	Value              &val)
+{
+	Value		       listElementValue, listVal, compareVal;
+	Value              stringValue;
+	const ExprTree     *listElement;
+	ExprList           *listToCompare;
+	ExprListIterator   listIterator;
+    bool		       needAllMatch;
+	string             comparison_string;
+	Operation::OpKind  comparisonOperator;
+
+	// We take three arguments:
+	// The operator to use, as a string.
+	// The list
+	// The thing we are comparing against.
+	if (argList.size() != 3) {
+		val.SetErrorValue();
+		return true;
+	}
+
+	// The first argument must be a string
+	if (!argList[0]->Evaluate(state, stringValue)) {
+		val.SetErrorValue();
+		return false;
+	} else if (stringValue.IsUndefinedValue()) {
+		val.SetUndefinedValue();
+		return true;
+	} else if (!stringValue.IsStringValue(comparison_string)) {
+		val.SetErrorValue();
+		return true;
+	}
+	
+	// Decide which comparison to do, or give an error
+	if (comparison_string == "<") {
+		comparisonOperator = Operation::LESS_THAN_OP;
+	} else if (comparison_string == "<=") {
+		comparisonOperator = Operation::LESS_OR_EQUAL_OP;
+	} else if (comparison_string == "!=") {
+		comparisonOperator = Operation::NOT_EQUAL_OP;
+	} else if (comparison_string == "==") {
+		comparisonOperator = Operation::EQUAL_OP;
+	} else if (comparison_string == ">") {
+		comparisonOperator = Operation::GREATER_THAN_OP;
+	} else if (comparison_string == ">=") {
+		comparisonOperator = Operation::GREATER_OR_EQUAL_OP;
+	} else if (comparison_string == "is") {
+		comparisonOperator = Operation::META_EQUAL_OP;
+	} else if (comparison_string == "isnt") {
+		comparisonOperator = Operation::META_NOT_EQUAL_OP;
+	} else {
+		val.SetErrorValue();
+		return true;
+	}
+
+	// The second argument must Evaluate to a list
+	if (!argList[1]->Evaluate(state, listVal)) {
+		val.SetErrorValue();
+		return false;
+	} else if (listVal.IsUndefinedValue()) {
+		val.SetUndefinedValue();
+		return true;
+	} else if (!listVal.IsListValue(listToCompare)) {
+		val.SetErrorValue();
+		return true;
+	}
+
+	// The third argument is something to compare against.
+	if (!argList[2]->Evaluate(state, compareVal)) {
+		val.SetErrorValue();
+		return false;
+	} else if (listVal.IsUndefinedValue()) {
+		val.SetUndefinedValue();
+		return true;
+	}
+
+	// Finally, we decide what to do exactly, based on our name.
+	if (!strcasecmp(fn, "anycompare")) {
+		needAllMatch = false;
+	} else {
+		needAllMatch = true;
+	}
+
+	listIterator.Initialize(listToCompare);
+
+	// Walk over the list
+	for (listElement = listIterator.CurrentExpr();
+		 listElement != NULL;
+		 listElement = listIterator.NextExpr()) {
+		if (listElement != NULL) {
+
+			// For this element of the list, make sure it is 
+			// acceptable.
+			if(!listElement->Evaluate(state, listElementValue)) {
+				val.SetErrorValue();
+				return false;
+			} else {
+				Value  compareResult;
+				bool   b;
+
+				Operation::Operate(comparisonOperator, listElementValue,
+								   compareVal, compareResult);
+				if (!compareResult.IsBooleanValue(b)) {
+					// We got an error or undefined
+					val.CopyFrom(compareResult);
+					return true;
+				} else if (b) {
+					if (!needAllMatch) {
+						val.SetBooleanValue(true);
+						return true;
+					}
+				} else {
+					if (needAllMatch) {
+						// we failed, because it didn't match
+						val.SetBooleanValue(false);
+						return true;
+					}
+				}
+			}
+		}
+	}
+
+	if (needAllMatch) {
+		// They must have all matched, because nothing failed,
+		// which would have returned.
+		val.SetBooleanValue(true);
+	} else {
+		// Nothing must have matched, since we would have already
+		// returned.
+		val.SetBooleanValue(false);
+	}
+
+	return true;
+}
+
 
 bool FunctionCall::
 currentTime (const char *, const ArgumentList &argList, EvalState &, Value &val)

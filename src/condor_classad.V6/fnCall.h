@@ -98,6 +98,8 @@ class FunctionCall : public ExprTree
 					Value&);
 		static bool minMax(const char*,const ArgumentList&,EvalState&,
 					Value&);
+		static bool listCompare(const char*,const ArgumentList&,EvalState&,
+					Value&);
 
 			// time management (constructors)
 		static bool currentTime(const char*,const ArgumentList&,EvalState&,
