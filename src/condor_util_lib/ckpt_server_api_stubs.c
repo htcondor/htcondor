@@ -98,6 +98,11 @@ int RemoveRemoteFile(const char* owner,
 { return -1; }
 
 
+int RemoveLocalOrRemoteFile(const char* owner,
+							const char* filename)
+{ return unlink(filename); }
+
+
 int RenameRemoteFile(const char* owner,
 					 const char* filename,
 					 const char* new_filename)
