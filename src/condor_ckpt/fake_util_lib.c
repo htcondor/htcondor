@@ -21,13 +21,11 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
 
 /* Avoid linking with util lib functions for standalone checkpointing. */
 
 
 #include "condor_common.h"
-#include <varargs.h>
 
 int		_EXCEPT_Line;
 int		_EXCEPT_Errno;
@@ -35,14 +33,12 @@ char	*_EXCEPT_File;
 int		(*_EXCEPT_Cleanup)();
 
 void
-dprintf(va_alist)
-va_dcl
+dprintf(int flags, ... )
 {
 }
 
 void
-_EXCEPT_(va_alist)
-va_dcl
+_EXCEPT_(char* fmt, ...)
 {
 	abort();
 }
