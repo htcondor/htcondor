@@ -4,6 +4,7 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
+#include "MyString.h"
 #include "globus_utils.h"
 #include "gahp-client.h"
 #include "globusresource.h"
@@ -79,9 +80,9 @@ class GlobusJob : public Service
 
 	GahpClient gahp;
 
-	char *buildSubmitRSL();
-	char *buildRestartRSL();
-	char *buildStdioUpdateRSL();
+	MyString *buildSubmitRSL();
+	MyString *buildRestartRSL();
+	MyString *buildStdioUpdateRSL();
 
 	void UpdateJobAd( const char *name, const char *value );
 	void UpdateJobAdInt( const char *name, int value );
@@ -95,7 +96,7 @@ class GlobusJob : public Service
 		// the RSL is stored here (so that we don't have to reconstruct the
 		// RSL every time we test the call for completion). It should be
 		// freed and reset to NULL once the call completes.
-	char *RSL;
+	MyString *RSL;
 	char *localOutput;
 	char *localError;
 	int globusError;
