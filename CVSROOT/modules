@@ -78,7 +78,8 @@ V6_COMMON    		-a \
 			src/condor_userlog \
 			src/condor_util_lib \
 			src/h \
-			src/html
+			src/html \
+			src/mw
 
 V6_SRC			-a \
 			V6_COMMON \
