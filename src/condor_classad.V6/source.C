@@ -892,6 +892,11 @@ parsePrimaryExpression(ExprTree *&tree)
 				// string literal
 				if (shouldEvaluateAtParseTime(fnName.c_str(), argList)){
 					tree = evaluateFunction(fnName, argList);
+                    vector<ExprTree*>::iterator arg = argList.begin( );
+                    while(arg != argList.end()) {
+                        delete *arg;
+                        arg++;
+                    }
 				} else {
 					tree = FunctionCall::MakeFunctionCall(fnName, argList ); 
 				}
@@ -1256,8 +1261,8 @@ bool ClassAdParser::shouldEvaluateAtParseTime(
 
 	should_eval = false;
 	c_function_name = functionName.c_str();
-	if (   strcasecmp(c_function_name, "absTime")
-		|| strcasecmp(c_function_name, "relTime")) {
+	if (   strcasecmp(c_function_name, "absTime") == 0 
+		|| strcasecmp(c_function_name, "relTime") == 0) {
 		if (argList.size() == 1 && argList[0]->GetKind() == ExprTree::LITERAL_NODE) {
 			should_eval = true;
 		}
