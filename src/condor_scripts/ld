@@ -353,11 +353,38 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 					# This is to ensure that the glibc we ship gets linked
 					# against it the correct nss reolution libraries we ship 
 					# that are also from the condor lib dir.
-					ldargs=`echo -L$CONDOR_LIBDIR $ldargs -lc -lnss_files -lnss_dns -lresolv -lc -lnss_files -lnss_dns -lresolv -lc`
+					ldargs=`echo -L$CONDOR_LIBDIR $ldargs -lcondor_c -lcondor_nss_files -lcondor_nss_dns -lcondor_resolv -lcondor_c -lcondor_nss_files -lcondor_nss_dns -lcondor_resolv -lcondor_c`
 				else
 					ldargs=`echo $ldargs -lc `
 				fi
               fi ;;
+
+	# do some renaming of the glibc libraries we compiled which we name
+	# mangle to prevent unexpected behavior from people including our lib
+	# directory in with their other stuff like for libcondorapi.a.
+	-lresolv)
+		if [ $os = "Linux" ]; then
+			ldargs=`echo $ldargs -lcondor_resolv `
+		else
+			ldargs=`echo $ldargs $argument `
+		fi	
+		;;
+
+	-lnss_files)
+		if [ $os = "Linux" ]; then
+			ldargs=`echo $ldargs -lcondor_nss_files `
+		else
+			ldargs=`echo $ldargs $argument `
+		fi
+		;;
+
+	-lnss_dns)
+		if [ $os = "Linux" ]; then
+			ldargs=`echo $ldargs -lcondor_nss_dns `
+		else
+			ldargs=`echo $ldargs $argument `
+		fi
+		;;
 
 	 # Make certain condor_syscall_lib appears on the link line before any of
 	 # the following language-helper libraries.  Note variable $brokenbase is
