@@ -77,7 +77,9 @@ int		flag;
 }
 
 
-init_condor_uid()
+uid_t
+get_user_uid(user_name)
+char *user_name;
 {
     struct passwd       *pwd, *getpwnam();
 	int					scm;
@@ -88,13 +90,23 @@ init_condor_uid()
 	** mapping will occur.  Thus we must be in LOCAL/UNRECORDED mode here.
 	*/
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
-    if( (pwd=getpwnam("condor")) == NULL ) {
-        EXCEPT( "condor not in passwd file" );
+    if( (pwd=getpwnam(user_name)) == NULL ) {
+        dprintf(D_ALWAYS, "%s not in passwd file", user_name );
+		return -1;
     }
 	(void)endpwent();
 	(void)SetSyscalls( scm );
 
-    CondorUid = pwd->pw_uid;
+	return pwd->pw_uid;
+}
+
+
+init_condor_uid()
+{
+    CondorUid = get_user_uid("condor");
+	if (CondorUid == -1) {
+		EXCEPT("Couldn't find \"condor\" in the password file\n");
+	}
 	CondorUidInited = TRUE;
 }
 
