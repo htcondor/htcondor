@@ -166,10 +166,10 @@ fetchQueueFromHost (ClassAdList &list, char *host)
 		return Q_SCHEDD_COMMUNICATION_ERROR;
 
 	// get the ads and filter them
-	getAndFilterAds (filterAd, list);
+	result = getAndFilterAds (filterAd, list);
 
 	DisconnectQ (qmgr);
-	return Q_OK;
+	return result;
 }
 
 int CondorQ::
@@ -195,6 +195,13 @@ getAndFilterAds (ClassAd &queryad, ClassAdList &list)
 			list.Insert(adCopy);	// insert copy
 			FreeJobAd(ad);
 		}
+	}
+
+	// here GetNextJobByConstraint returned NULL.  check if it was
+	// because of the network or not.  if qmgmt had a problem with
+	// the net, then errno is set to ETIMEDOUT, and we should fail.
+	if ( errno == ETIMEDOUT ) {
+		return Q_SCHEDD_COMMUNICATION_ERROR;
 	}
 
 	return Q_OK;
