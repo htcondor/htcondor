@@ -64,6 +64,7 @@ int Read_config(char*, ClassAd*, BUCKET**, int, int);
 char *get_arch();
 char *get_op_sys();
 int SetSyscalls(int);
+void FillSubsysExprs( ClassAd*, char* );
 
 
 // External variables
@@ -79,13 +80,8 @@ BUCKET	*ConfigTab[TABLESIZE];
 void 
 config(ClassAd *classAd, char *mySubsystem)
 {
-	char 		buffer[1024];
-	char 		*tmp;
-	char		*expr;
-	StringList	reqdExprs;
-
 	if( real_config("CONDOR_CONFIG", "condor_config", 
-					"condor_config.local", (mySubsystem ? NULL : classAd)) ) {
+					"condor_config.local", (mySubsystem ? (ClassAd*)NULL : classAd)) ) {
 		fprintf(stderr,"\nNeither the environment variable CONDOR_CONFIG,\n" );
 		fprintf(stderr,"/etc/condor/, nor ~condor/ contain a condor_config "
 				"file.\n" );
@@ -96,39 +92,20 @@ config(ClassAd *classAd, char *mySubsystem)
 		fprintf( stderr, "Exiting.\n\n" );
 		exit( 1 );
 	}
-
-	if (!mySubsystem) return;
-
-	sprintf (buffer, "%s_EXPRS", mySubsystem);
-	tmp = param (buffer);
-	if (tmp && classAd)
-	{
-		reqdExprs.initializeFromString (tmp);	
-		free (tmp);
-
-		reqdExprs.rewind();
-		while ((tmp = reqdExprs.next()))
-		{
-			expr = param(tmp);
-			if (expr == NULL) continue;
-			sprintf (buffer, "%s = %s", tmp, expr);
-			classAd->Insert (buffer);
-			free (expr);
-		}	
-	}
+	FillSubsysExprs( classAd, mySubsystem );
 }
 
 void
 config_master(ClassAd *classAd)
 {
 	int rval = real_config("CONDOR_CONFIG_MASTER", "condor_config.master", 
-						   "condor_config.master.local", (ClassAd*)classAd);
+						   "condor_config.master.local", NULL);
 
 	if( rval ) {
 			// Trying to find things in with the .master names failed,
 			// try the regular config files.  
 		rval = real_config("CONDOR_CONFIG", "condor_config", 
-						   "condor_config.local", classAd);
+						   "condor_config.local", NULL);
 		if( rval ) {
 				// Everything failed, give up.
 			fprintf( stderr, "\nNeither the environment variables %s nor\n",
@@ -145,6 +122,36 @@ config_master(ClassAd *classAd)
 			fprintf( stderr, "Exiting.\n\n" );
 			exit( 1 );
 		}
+	}
+	FillSubsysExprs( classAd, "MASTER" );
+
+}
+
+
+void
+FillSubsysExprs(ClassAd* ad, char* mySubsys)
+{
+	char 		buffer[1024];
+	char 		*tmp;
+	char		*expr;
+	StringList	reqdExprs;
+	
+	if (!mySubsys || !ad) return;
+
+	sprintf (buffer, "%s_EXPRS", mySubsys);
+	tmp = param (buffer);
+	if( tmp ) {
+		reqdExprs.initializeFromString (tmp);	
+		free (tmp);
+
+		reqdExprs.rewind();
+		while ((tmp = reqdExprs.next())) {
+			expr = param(tmp);
+			if (expr == NULL) continue;
+			sprintf (buffer, "%s = %s", tmp, expr);
+			ad->Insert (buffer);
+			free (expr);
+		}	
 	}
 }
 
