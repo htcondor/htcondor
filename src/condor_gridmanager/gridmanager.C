@@ -696,6 +696,8 @@ doContactSchedd()
 	if ( addJobsSignaled ) {
 		int num_ads = 0;
 
+		dprintf( D_FULLDEBUG, "querying for new jobs\n" );
+
 		// Make sure we grab all Globus Universe jobs when we first start up
 		// in case we're recovering from a shutdown/meltdown.
 		if ( grabAllJobs ) {
@@ -772,6 +774,8 @@ doContactSchedd()
 	/////////////////////////////////////////////////////
 	if ( removeJobsSignaled ) {
 		int num_ads = 0;
+
+		dprintf( D_FULLDEBUG, "querying for removed/held jobs\n" );
 
 		sprintf( expr_buf, "%s && %s == %d && (%s == %d || $s == %d)",
 				 owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
@@ -941,8 +945,8 @@ WriteExecuteToUserLog( GlobusJob *job )
 	}
 
 	dprintf( D_FULLDEBUG, 
-		"Writing execute record to user logfile=%s job=%d.%d owner=%s\n",
-			 job->userLogFile, job->procID.cluster, job->procID.proc, Owner );
+			 "(%d.%d) Writing execute record to user logfile=%s\n",
+			 job->procID.cluster, job->procID.proc, job->userLogFile );
 
 	int hostname_len = strcspn( job->myResource->ResourceName(), ":/" );
 
@@ -954,7 +958,9 @@ WriteExecuteToUserLog( GlobusJob *job )
 	delete ulog;
 
 	if (!rc) {
-		dprintf( D_ALWAYS, "Unable to log ULOG_EXECUTE event\n" );
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Unable to log ULOG_EXECUTE event\n",
+				 job->procID.cluster, job->procID.proc );
 		return false;
 	}
 
@@ -971,15 +977,17 @@ WriteAbortToUserLog( GlobusJob *job )
 	}
 
 	dprintf( D_FULLDEBUG, 
-		"Writing abort record to user logfile=%s job=%d.%d owner=%s\n",
-			 job->userLogFile, job->procID.cluster, job->procID.proc, Owner );
+			 "(%d.%d) Writing abort record to user logfile=%s\n",
+			 job->procID.cluster, job->procID.proc, job->userLogFile );
 
 	JobAbortedEvent event;
 	int rc = ulog->writeEvent(&event);
 	delete ulog;
 
 	if (!rc) {
-		dprintf( D_ALWAYS, "Unable to log ULOG_ABORT event\n" );
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Unable to log ULOG_ABORT event\n",
+				 job->procID.cluster, job->procID.proc );
 		return false;
 	}
 
@@ -996,8 +1004,8 @@ WriteTerminateToUserLog( GlobusJob *job )
 	}
 
 	dprintf( D_FULLDEBUG, 
-		"Writing terminate record to user logfile=%s job=%d.%d owner=%s\n",
-			 job->userLogFile, job->procID.cluster, job->procID.proc, Owner );
+			 "(%d.%d) Writing terminate record to user logfile=%s\n",
+			 job->procID.cluster, job->procID.proc, job->userLogFile );
 
 	JobTerminatedEvent event;
 	event.coreFile[0] = '\0';
@@ -1024,7 +1032,9 @@ WriteTerminateToUserLog( GlobusJob *job )
 	delete ulog;
 
 	if (!rc) {
-		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_TERMINATED event\n" );
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Unable to log ULOG_JOB_TERMINATED event\n",
+				 job->procID.cluster, job->procID.proc );
 		return false;
 	}
 
@@ -1041,8 +1051,8 @@ WriteEvictToUserLog( GlobusJob *job )
 	}
 
 	dprintf( D_FULLDEBUG, 
-		"Writing evict record to user logfile=%s job=%d.%d owner=%s\n",
-			 job->userLogFile, job->procID.cluster, job->procID.proc, Owner );
+			 "(%d.%d) Writing evict record to user logfile=%s\n",
+			 job->procID.cluster, job->procID.proc, job->userLogFile );
 
 	JobEvictedEvent event;
 	struct rusage r;
@@ -1061,7 +1071,9 @@ WriteEvictToUserLog( GlobusJob *job )
 	delete ulog;
 
 	if (!rc) {
-		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_EVICTED event\n" );
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Unable to log ULOG_JOB_EVICTED event\n",
+				 job->procID.cluster, job->procID.proc );
 		return false;
 	}
 
@@ -1079,8 +1091,8 @@ WriteGlobusSubmitEventToUserLog( GlobusJob *job )
 	}
 
 	dprintf( D_FULLDEBUG, 
-		"Writing globus submit record to user logfile=%s job=%d.%d owner=%s\n",
-			 job->userLogFile, job->procID.cluster, job->procID.proc, Owner );
+			 "(%d.%d) Writing globus submit record to user logfile=%s\n",
+			 job->procID.cluster, job->procID.proc, job->userLogFile );
 
 	GlobusSubmitEvent event;
 
@@ -1092,7 +1104,9 @@ WriteGlobusSubmitEventToUserLog( GlobusJob *job )
 	delete ulog;
 
 	if (!rc) {
-		dprintf( D_ALWAYS, "Unable to log ULOG_GLOBUS_SUBMIT event\n" );
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Unable to log ULOG_GLOBUS_SUBMIT event\n",
+				 job->procID.cluster, job->procID.proc );
 		return false;
 	}
 
@@ -1111,8 +1125,8 @@ WriteGlobusSubmitFailedEventToUserLog( GlobusJob *job )
 	}
 
 	dprintf( D_FULLDEBUG, 
-		"Writing submit-failed record to user logfile=%s job=%d.%d owner=%s\n",
-			 job->userLogFile, job->procID.cluster, job->procID.proc, Owner );
+			 "(%d.%d) Writing submit-failed record to user logfile=%s\n",
+			 job->procID.cluster, job->procID.proc, job->userLogFile );
 
 	GlobusSubmitFailedEvent event;
 	
@@ -1122,7 +1136,9 @@ WriteGlobusSubmitFailedEventToUserLog( GlobusJob *job )
 	delete ulog;
 
 	if (!rc) {
-		dprintf( D_ALWAYS, "Unable to log ULOG_GLOBUS_SUBMIT_FAILED event\n" );
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Unable to log ULOG_GLOBUS_SUBMIT_FAILED event\n",
+				 job->procID.cluster, job->procID.proc);
 		return false;
 	}
 
@@ -1139,8 +1155,8 @@ WriteGlobusResourceUpEventToUserLog( GlobusJob *job )
 	}
 
 	dprintf( D_FULLDEBUG, 
-		"Writing globus up record to user logfile=%s job=%d.%d owner=%s\n",
-			 job->userLogFile, job->procID.cluster, job->procID.proc, Owner );
+			 "(%d.%d) Writing globus up record to user logfile=%s\n",
+			 job->procID.cluster, job->procID.proc, job->userLogFile );
 
 	GlobusResourceUpEvent event;
 
@@ -1150,7 +1166,9 @@ WriteGlobusResourceUpEventToUserLog( GlobusJob *job )
 	delete ulog;
 
 	if (!rc) {
-		dprintf( D_ALWAYS, "Unable to log ULOG_GLOBUS_RESOURCE_UP event\n" );
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Unable to log ULOG_GLOBUS_RESOURCE_UP event\n",
+				 job->procID.cluster, job->procID.proc );
 		return false;
 	}
 
@@ -1167,8 +1185,8 @@ WriteGlobusResourceDownEventToUserLog( GlobusJob *job )
 	}
 
 	dprintf( D_FULLDEBUG, 
-		"Writing globus down record to user logfile=%s job=%d.%d owner=%s\n",
-			 job->userLogFile, job->procID.cluster, job->procID.proc, Owner );
+			 "(%d.%d) Writing globus down record to user logfile=%s\n",
+			 job->procID.cluster, job->procID.proc, job->userLogFile );
 
 	GlobusResourceDownEvent event;
 
@@ -1178,7 +1196,9 @@ WriteGlobusResourceDownEventToUserLog( GlobusJob *job )
 	delete ulog;
 
 	if (!rc) {
-		dprintf( D_ALWAYS, "Unable to log ULOG_GLOBUS_RESOURCE_DOWN event\n" );
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Unable to log ULOG_GLOBUS_RESOURCE_DOWN event\n",
+				 job->procID.cluster, job->procID.proc );
 		return false;
 	}
 
