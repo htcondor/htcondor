@@ -61,6 +61,12 @@
 FILE	*debug_lock();
 FILE	*fdopen();
 
+void SetCondorAccessPriv();
+void RestoreAccessPriv();
+uid_t switch_euid( uid_t new );
+uid_t get_condor_uid();
+int open_debug_file( int flags );
+
 extern int	errno;
 
 int		DebugFlags = D_ALWAYS;
@@ -217,6 +223,8 @@ debug_lock()
 {
 	int	length;
 
+	SetCondorAccessPriv();
+
 		/* Acquire the lock */
 	if( DebugLock ) {
 		if( LockFd < 0 ) {
@@ -239,7 +247,8 @@ debug_lock()
 
 	if( DebugFile ) {
 		errno = 0;
-		DebugFP = fopen(DebugFile, "a");
+
+		DebugFP = fdopen(open_debug_file(O_CREAT|O_WRONLY), "a");
 
 		if( DebugFP == NULL ) {
 			if( errno == EMFILE ) {
@@ -260,6 +269,8 @@ debug_lock()
 			preserve_log_file();
 		}
 	}
+
+	RestoreAccessPriv();
 	return DebugFP;
 }
 
@@ -290,7 +301,6 @@ preserve_log_file()
 {
 	char	old[MAXPATHLEN + 4];
 	int		fd;
-	int		oumask;
 
 	(void)sprintf( old, "%s.old", DebugFile );
 	fprintf( DebugFP, "Saving log file to \"%s\"\n", old );
@@ -302,27 +312,22 @@ preserve_log_file()
 		perror( "rename" );
 		exit( errno );
 	}
+	fclose( DebugFP );
 
-	/* The log file MUST be group writeable */
-	oumask = umask( 0 );
-	if( (fd=open(DebugFile,O_CREAT|O_WRONLY,0664)) < 0 ) {
-		if( errno == EMFILE ) {
-			fd_panic( __LINE__, __FILE__ );
-		}
-		fprintf( DebugFP, "Can't re-open \"%s\"\n", DebugFile );
-		perror( "open" );
-		exit( errno );
-	}
-	(void) umask( oumask );
+	fd = open_debug_file( O_CREAT | O_WRONLY );
 
+#if 0
 	(void)close( fileno(DebugFP) );
-#if defined(HPUX9)
+#	if defined(HPUX9)
 	DebugFP->__fileL = fd & 0xf0;	/* Low byte of fd */
 	DebugFP->__fileH = fd & 0x0f;	/* High byte of fd */
-#elif defined(ULTRIX43) || defined(IRIX331)
+#	elif defined(ULTRIX43) || defined(IRIX331)
 	((DebugFP)->_file) = fd;
-#else
+#	else
 	fileno(DebugFP) = fd;
+#	endif
+#else
+	DebugFP = fdopen( fd, "a" );
 #endif
 }
 
@@ -383,3 +388,87 @@ char	*name;
 
 sigset(){}
 #endif
+
+/*
+  When logging for the Shadow we must be very careful since we will be running
+  with effective uid and effective gid of the owner of the job.  The files
+  should be created with "condor" as the owner.  These next serveral routines
+  are for switching privileges back to "condor" for this purpose.
+*/
+
+uid_t Saved_euid;
+
+void
+SetCondorAccessPriv()
+{
+
+	Saved_euid = switch_euid( get_condor_uid() );
+}
+
+void
+RestoreAccessPriv()
+{
+	switch_euid( Saved_euid );
+}
+
+uid_t
+switch_euid( uid_t new )
+{
+	uid_t old;
+
+	old = geteuid();
+	if( old == new ) {
+		return old;
+	}
+	if( seteuid(0) < 0 ) {
+		fprintf( stderr, "Can't set euid to root\n" );
+		exit( errno );
+	}
+	if( seteuid(new) < 0 ) {
+		fprintf( stderr, "Can't set euid to %d\n", new );
+		exit( errno );
+	}
+
+	return old;
+}
+
+#include <pwd.h>
+uid_t
+get_condor_uid()
+{
+	struct passwd	*pwd;
+	static	uid_t	condor_uid;
+
+	if( !condor_uid ) {
+	}
+		
+	pwd = getpwnam("condor");
+	if( pwd == NULL ) {
+		fprintf( stderr, "Can't find password entry for user 'condor'");
+		exit( errno );
+	}
+
+	condor_uid = pwd->pw_gid;
+	return condor_uid;
+}
+
+int
+open_debug_file( int flags)
+{
+	int		fd;
+	int		oumask;
+
+	/* The log file MUST be group writeable */
+	oumask = umask( 0 );
+	if( (fd=open(DebugFile,flags,0664)) < 0 ) {
+		if( errno == EMFILE ) {
+			fd_panic( __LINE__, __FILE__ );
+		}
+		fprintf( DebugFP, "Can't open \"%s\"\n", DebugFile );
+		perror( "open" );
+		exit( errno );
+	}
+	(void) umask( oumask );
+
+	return fd;
+}

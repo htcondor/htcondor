@@ -84,9 +84,9 @@ int logfd;		/* The descriptor to use if the log output goes to a tty */
 		(void)sprintf(pname, "TRUNC_%s_LOG_ON_OPEN", subsys);
 		pval = param(pname);
 		if( pval && (*pval == 't' || *pval == 'T') ) {
-			DebugFP = fopen( DebugFile, "w" );
+			DebugFP = fdopen( open_debug_file(O_CREAT|O_TRUNC|O_WRONLY), "a" );
 		} else {
-			DebugFP = fopen( DebugFile, "a" );
+			DebugFP = fdopen( open_debug_file(O_CREAT|O_WRONLY), "a" );
 		}
 
 		if( DebugFP == NULL ) {
