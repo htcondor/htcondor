@@ -24,6 +24,8 @@
  
 
 #include "image.h"
+#include "condor_debug.h"
+
 /*
   Switch to a temporary stack area in the DATA segment, then execute the
   given function.  Note: we save the address of the function in a
@@ -37,18 +39,38 @@ static jmp_buf Env;
 // machines. This is required so that double's can be pushed
 // on the stack without any alignment problems.
 
-#if defined(LINUX)
-/* Not sure why I have to do this... */
-const int	TmpStackSize = sizeof(char)*65536/sizeof(double);
-#else
-const int	TmpStackSize = sizeof(char)*4096/sizeof(double);
-#endif
+const int	TmpStackSize = sizeof(char)*131072/sizeof(double);
+
 static double	TmpStack[ TmpStackSize ];
-void
-ExecuteOnTmpStk( void (*func)() )
+
+/*
+Suppose we use up all the stack space while in ExecuteOnTmpStk.
+This causes all sorts of crazy errors in other parts of the program.
+So, we will put a marker at the end of the stack to catch this case.
+
+After some experimentation, it seems that this doesn't catch all
+stack overruns.  Still, it can't hurt...
+*/
+
+static const long OverrunFlag = 0xdeadbeef;
+
+/* This function returns the address at which the marker should go. */
+
+static long *GetOverrunPos()
+{
+	if( StackGrowsDown() ) {
+		return (long*)TmpStack;
+	} else {
+		return (long*)(TmpStack+TmpStackSize-2);
+	}
+}
+
+void ExecuteOnTmpStk( void (*func)() )
 {
 	jmp_buf	env;
 	SaveFunc = func;
+
+	*(GetOverrunPos()) = OverrunFlag;
 
 	if( SETJMP(env) == 0 ) {
 			// First time through - move SP
@@ -64,5 +86,9 @@ ExecuteOnTmpStk( void (*func)() )
 	} else {
 			// Second time through - call the function
 		SaveFunc();
+	}
+
+	if( *(GetOverrunPos()) != OverrunFlag ) {
+		EXCEPT("Stack overrun in ExecuteOnTmpStack.");
 	}
 }
