@@ -38,7 +38,7 @@ typedef int (*scan_func)(ClassAd *ad);
 extern "C" {
 #endif
 
-int InitializeConnection(const char * );
+int InitializeConnection(const char *, const char *);
 int InitializeReadOnlyConnection(const char * );
 
 /** Initiate connection to schedd job queue and begin transaction.

@@ -444,7 +444,10 @@ daemon::Start()
 	sprintf(buf,"%s_USERID",name_in_config_file);
 	char * username = param( buf );
 	if(username) {
-		int result = init_user_ids(username);
+		// domain is set to NULL since we don't care about the domain
+		// unless we're on Windows, and on Windows the master
+		// always runs as SYSTEM (as a service). --stolley
+		int result = init_user_ids(username, NULL);
 		if(result) {
 			priv_mode = PRIV_USER_FINAL;
 		} else {

@@ -388,6 +388,7 @@ class BaseShadow : public Service
 	int cluster;
 	int proc;
 	char owner[_POSIX_PATH_MAX];
+	char domain[_POSIX_PATH_MAX];
 	char iwd[_POSIX_PATH_MAX];
 	char *scheddAddr;
 	bool jobExitedGracefully;

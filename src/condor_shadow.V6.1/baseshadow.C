@@ -87,6 +87,8 @@ void BaseShadow::baseInit( ClassAd *jobAd, char schedd_addr[],
 	if ( !jobAd->LookupString(ATTR_OWNER, owner)) {
 		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_OWNER);
 	}
+	// grab the NT domain if we've got it
+	jobAd->LookupString(ATTR_NT_DOMAIN, domain);
 	if ( !jobAd->LookupString(ATTR_JOB_IWD, iwd)) {
 		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_JOB_IWD);
 	}
@@ -136,7 +138,11 @@ void BaseShadow::baseInit( ClassAd *jobAd, char schedd_addr[],
 
 	// handle system calls with Owner's privilege
 // XXX this belong here?  We'll see...
-	init_user_ids(owner);
+	if ( !init_user_ids(owner, domain)) {
+		dprintf(D_ALWAYS, "init_user_ids() failed!\n");
+		// uids.C will EXCEPT when we set_user_priv() now
+		// so there's not much we can do at this point
+	}
 	set_user_priv();
 	daemonCore->Register_Priv_State( PRIV_USER );
 
@@ -703,7 +709,7 @@ void BaseShadow::initUserLog()
 		} else {
 			sprintf(logfilename, "%s/%s", iwd, tmp);
 		}
-		uLog.initialize (owner, logfilename, cluster, proc, 0);
+		uLog.initialize (owner, domain, logfilename, cluster, proc, 0);
 		if (jobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml)
 			&& use_xml) {
 			uLog.setUseXML(true);

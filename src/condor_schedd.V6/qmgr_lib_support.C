@@ -115,6 +115,7 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
 
     // This could be a problem
 	char *username = my_username();
+	char *domain = my_domainname();
 
 	if ( !username ) {
 		dprintf(D_FULLDEBUG,"Failure getting my_username()\n", username );
@@ -141,7 +142,7 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
         if ( read_only ) {
             rval = InitializeReadOnlyConnection( username );
         } else {
-            rval = InitializeConnection( username );
+            rval = InitializeConnection( username, domain );
         }
 
         if (rval < 0) {

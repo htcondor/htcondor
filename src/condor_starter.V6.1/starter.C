@@ -811,7 +811,9 @@ CStarter::InitUserPriv( void )
 		}
 	} else {
 		dprintf( D_FULLDEBUG, "Submit host is in different UidDomain\n" ); 
-		if( ! init_user_ids("nobody") ) { 
+
+		// passing NULL for the domain is ok here since this is UNIX code
+		if( ! init_user_ids("nobody", NULL) ) { 
 			dprintf( D_ALWAYS, "ERROR: Could not initialize user_priv "
 					 "as \"nobody\"\n" );
 			free( owner );
@@ -839,7 +841,8 @@ CStarter::InitUserPriv( void )
 #endif
 	
 	// just init a new nobody user; dynuser handles the rest.
-	init_user_ids("nobody");
+	// the "." means Local Machine to LogonUser
+	init_user_ids("nobody", ".");
 #endif
 
 	return true;

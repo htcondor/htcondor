@@ -79,9 +79,10 @@ do_Q_request(ReliSock *syscall_sock)
 		}
 
 		if ( authenticated ) {
-			InitializeConnection( syscall_sock->getOwner() );			
+			InitializeConnection( syscall_sock->getOwner(), 
+					syscall_sock->getDomain() );			
 		} else {
-			InitializeConnection( NULL );			
+			InitializeConnection( NULL, NULL );			
 		}
 		return 0;
 	}
@@ -89,7 +90,7 @@ do_Q_request(ReliSock *syscall_sock)
 	case CONDOR_InitializeReadOnlyConnection:
 	{
 			// same as InitializeConnection but no authenticate()
-		InitializeConnection( NULL );			
+		InitializeConnection( NULL, NULL );			
 		return 0;
 	}
 

@@ -597,7 +597,8 @@ setQSock( ReliSock* rsock )
 		return false;
 	}
 	Q_SOCK = rsock;
-	if( InitializeConnection(rsock->getOwner()) < 0 ) {
+	if( InitializeConnection(rsock->getOwner(), 
+				rsock->getDomain()) < 0 ) {
 		return false;
 	}
 	return true;
@@ -608,8 +609,8 @@ void
 unsetQSock( void )
 {
 	Q_SOCK = NULL;
-	uninit_user_ids();
 #ifndef WIN32
+	uninit_user_ids();
 	active_owner_uid = 0;
 #endif
 }
@@ -649,7 +650,10 @@ handle_q(Service *, int, Stream *sock)
 	// the QMGMT code the request originated internally, and it should
 	// be permitted (i.e. we only call OwnerCheck if Q_SOCK is not NULL).
 	//Q_SOCK->unAuthenticate();
+#ifndef WIN32
+	// lets not do this on win32
 	uninit_user_ids();
+#endif
 	// note: Q_SOCK is static...
 	Q_SOCK = NULL;
 
@@ -703,12 +707,16 @@ handle_q(Service *, int, Stream *sock)
 
 
 int
-InitializeConnection( const char *owner )
+InitializeConnection( const char *owner, const char *domain )
 {
 	
 	if ( owner ) {
-		dprintf(D_SECURITY,"in qmgmt InitializeConnection(owner=%s)\n",owner);
-		init_user_ids( owner );
+		dprintf(D_SECURITY,"in qmgmt InitializeConnection"
+				"(owner=%s, domain=%s)\n",owner, (domain)?domain:"NULL");
+		if (!init_user_ids( owner, domain )) {
+			dprintf(D_ALWAYS, "init_user_ids() failed.\n");
+			return -1;
+		}
 	}
 	else {
 		//this is a relic, but better than setting to NULL!

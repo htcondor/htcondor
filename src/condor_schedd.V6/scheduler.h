@@ -69,6 +69,7 @@ struct shadow_rec
 
 struct OwnerData {
   char* Name;
+  char* Domain;
   char* X509;
   int JobsRunning;
   int JobsIdle;

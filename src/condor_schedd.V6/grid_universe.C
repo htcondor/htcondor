@@ -93,8 +93,8 @@ GridUniverseLogic::~GridUniverseLogic()
 
 
 void 
-GridUniverseLogic::JobCountUpdate(const char* owner, const char* proxy, 
-			int cluster, int proc, int num_globus_jobs,
+GridUniverseLogic::JobCountUpdate(const char* owner, const char* domain,
+	   	const char* proxy, int cluster, int proc, int num_globus_jobs,
 			int num_globus_unmanaged_jobs)
 {
 	// Quick sanity checks - this should never be...
@@ -106,7 +106,7 @@ GridUniverseLogic::JobCountUpdate(const char* owner, const char* proxy,
 	// does not know they are in the queue. so tell it some jobs
 	// were added.
 	if ( num_globus_unmanaged_jobs > 0 ) {
-		JobAdded(owner, proxy, cluster, proc);
+		JobAdded(owner, domain, proxy, cluster, proc);
 		return;
 	}
 
@@ -114,7 +114,7 @@ GridUniverseLogic::JobCountUpdate(const char* owner, const char* proxy,
 	// are any globus jobs at all.  if there are, make certain that there
 	// is a grid manager watching over the jobs and start one if there isn't.
 	if ( num_globus_jobs > 0 ) {
-		StartOrFindGManager(owner, proxy, cluster, proc);
+		StartOrFindGManager(owner, domain, proxy, cluster, proc);
 		return;
 	}
 
@@ -124,12 +124,12 @@ GridUniverseLogic::JobCountUpdate(const char* owner, const char* proxy,
 
 
 void 
-GridUniverseLogic::JobAdded(const char* owner, const char* proxy,
-					int cluster, int proc)
+GridUniverseLogic::JobAdded(const char* owner, const char* domain,
+	   	const char* proxy, int cluster, int proc)
 {
 	gman_node_t* node;
 
-	node = StartOrFindGManager(owner, proxy, cluster, proc);
+	node = StartOrFindGManager(owner, domain, proxy, cluster, proc);
 
 	if (!node) {
 		// if we cannot find nor start a gridmanager, there's
@@ -150,12 +150,12 @@ GridUniverseLogic::JobAdded(const char* owner, const char* proxy,
 }
 
 void 
-GridUniverseLogic::JobRemoved(const char* owner, const char* proxy,
-			int cluster, int proc)
+GridUniverseLogic::JobRemoved(const char* owner, const char* domain,
+	   	const char* proxy, int cluster, int proc)
 {
 	gman_node_t* node;
 
-	node = StartOrFindGManager(owner, proxy, cluster, proc);
+	node = StartOrFindGManager(owner, domain, proxy, cluster, proc);
 
 	if (!node) {
 		// if we cannot find nor start a gridmanager, there's
@@ -310,8 +310,8 @@ GridUniverseLogic::lookupGmanByOwner(const char* owner, const char* proxy,
 }
 
 GridUniverseLogic::gman_node_t *
-GridUniverseLogic::StartOrFindGManager(const char* owner, const char* proxy,
-					int cluster, int proc)
+GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
+	   	const char* proxy, int cluster, int proc)
 {
 	gman_node_t* gman_node;
 	int pid;
@@ -369,7 +369,10 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* proxy,
 	}
 	dprintf(D_FULLDEBUG,"Really Execing %s\n",gman_final_args);
 
-	init_user_ids(owner);
+	if (!init_user_ids(owner, domain)) {
+		dprintf(D_ALWAYS,"ERROR - init_user_ids() failed in GRIDMANAGER\n");
+		return NULL;
+	}
 
 	pid = daemonCore->Create_Process( 
 		gman_binary,			// Program to exec

@@ -77,7 +77,7 @@ const char *get_user_loginname();
 void _condor_disable_uid_switching();
 void init_condor_ids();
 void uninit_user_ids();
-int init_user_ids(const char username[]);
+int init_user_ids(const char username[], const char domain[]);
 int init_user_ids_quiet(const char username[]);
 int set_user_ids(uid_t uid, gid_t gid);
 int set_user_ids_quiet(uid_t uid, gid_t gid);

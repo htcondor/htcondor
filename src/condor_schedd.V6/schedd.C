@@ -734,8 +734,9 @@ Scheduler::count_jobs()
 	if ( !gridman_per_job ) {
 		for (i=0; i < N_Owners; i++) {
 			if ( Owners[i].GlobusJobs > 0 ) {
-				GridUniverseLogic::JobCountUpdate(Owners[i].Name,Owners[i].X509,
-					0, 0, Owners[i].GlobusJobs,Owners[i].GlobusUnmanagedJobs);
+				GridUniverseLogic::JobCountUpdate(Owners[i].Name, 
+						Owners[i].Domain,Owners[i].X509, 0, 0, 
+						Owners[i].GlobusJobs,Owners[i].GlobusUnmanagedJobs);
 			}
 		}
 	}
@@ -833,6 +834,7 @@ count( ClassAd *job )
 	char 	buf2[_POSIX_PATH_MAX];
 	char*	x509userproxy;
 	char*	owner;
+	char 	domain[_POSIX_PATH_MAX];
 	int		cur_hosts;
 	int		max_hosts;
 	int		universe;
@@ -887,6 +889,10 @@ count( ClassAd *job )
 		return 0;
 	}
 	owner = buf;
+
+	// grab the domain too, if it exists
+	job->LookupString(ATTR_NT_DOMAIN, domain);
+	
 	// With NiceUsers, the number of owners is
 	// not the same as the number of submittors.  So, we first
 	// check if this job is being submitted by a NiceUser, and
@@ -960,7 +966,7 @@ count( ClassAd *job )
 			int proc = 0;
 			job->LookupInteger(ATTR_CLUSTER_ID, cluster);
 			job->LookupInteger(ATTR_PROC_ID, proc);
-			GridUniverseLogic::JobCountUpdate(owner,x509userproxy,
+			GridUniverseLogic::JobCountUpdate(owner,domain,x509userproxy,
 				cluster, proc, needs_management, job_managed ? 0 : 1);
 		}
 			// If we do not need to do matchmaking on this job (i.e.
@@ -1143,15 +1149,17 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
 			// bottom of this function will handle the operation.
 		if ( job_managed  ) {
 			char owner[_POSIX_PATH_MAX];
+			char domain[_POSIX_PATH_MAX];
 			char proxy[_POSIX_PATH_MAX];
 			owner[0] = '\0';
 			proxy[0] = '\0';
 			job_ad->LookupString(ATTR_OWNER,owner);
+			job_ad->LookupString(ATTR_NT_DOMAIN,domain);
 			job_ad->LookupString(ATTR_X509_USER_PROXY,proxy);
 			if ( gridman_per_job ) {
-				GridUniverseLogic::JobRemoved(owner,proxy,job_id.cluster,job_id.proc);
+				GridUniverseLogic::JobRemoved(owner, domain ,proxy,job_id.cluster,job_id.proc);
 			} else {
-				GridUniverseLogic::JobRemoved(owner,proxy,0,0);
+				GridUniverseLogic::JobRemoved(owner, domain, proxy,0,0);
 			}
 			return;
 		}
@@ -1210,9 +1218,24 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
                      job_id.cluster, job_id.proc);
             
 			char owner[_POSIX_PATH_MAX];
+			char domain[_POSIX_PATH_MAX];
 			owner[0] = '\0';
 			job_ad->LookupString(ATTR_OWNER,owner);
-			init_user_ids(owner);
+			job_ad->LookupString(ATTR_NT_DOMAIN,domain);
+			if (! init_user_ids(owner, domain) ) {
+				char tmpstr[255];
+				dprintf(D_ALWAYS, "init_user_ids() failed - putting job on "
+					   "hold.\n");
+#ifdef WIN32
+				snprintf(tmpstr, 255,
+					   	"Bad or missing credential for user: %s", owner);
+#else
+				snprintf(tmpstr, 255, "Unable to switch to user: %s", owner);
+#endif
+				holdJob(job_id.cluster, job_id.proc, tmpstr, 
+					false, false, true, false, false);
+				return;
+			}
 			int kill_sig;
 			kill_sig = findRmKillSig( job_ad );
 			if( kill_sig <= 0 ) {
@@ -1282,6 +1305,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 	}
 	
 	char owner[_POSIX_PATH_MAX];
+	char domain[_POSIX_PATH_MAX];
 	char logfilename[_POSIX_PATH_MAX];
 	char iwd[_POSIX_PATH_MAX];
 	int use_xml;
@@ -1294,7 +1318,9 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 	}
 
 	owner[0] = '\0';
+	domain[0] = '\0';
 	GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
+	GetAttributeString(job_id.cluster, job_id.proc, ATTR_NT_DOMAIN, domain);
 
 	dprintf( D_FULLDEBUG, 
 			 "Writing record to user logfile=%s owner=%s\n",
@@ -1308,7 +1334,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 	} else {
 		ULog->setUseXML(false);
 	}
-	if (ULog->initialize(owner, logfilename, job_id.cluster, job_id.proc, 0)) {
+	if (ULog->initialize(owner, domain, logfilename, job_id.cluster, job_id.proc, 0)) {
 		return ULog;
 	} else {
 		dprintf ( D_ALWAYS,
@@ -3856,33 +3882,6 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 #endif /* !defined(WIN32) */
 }
 
-void
-email_and_hold_failed_sched_univ_job(PROC_ID* job_id,
-	   	const char* failure_reason)
-{
-	dprintf( D_ALWAYS, "Putting job %d.%d on hold\n",
-		job_id->cluster, job_id->proc );
-	SetAttributeInt( job_id->cluster, job_id->proc,
-		ATTR_JOB_STATUS, HELD );
-	ClassAd *jobAd = GetJobAd( job_id->cluster, job_id->proc );
-	char buf[256];
-	sprintf( buf, "Your job (%d.%d) is on hold", job_id->cluster,
-		job_id->proc ); 
-	FILE* email = email_user_open( jobAd, buf );
-	if( ! email ) {
-		return;
-	}
-	fprintf( email, "Condor failed to start your scheduluer universe " );
-	fprintf( email, "job (%d.%d).\n", job_id->cluster, job_id->proc );
-	fprintf( email, "The reason for the failure was:\n%s", failure_reason );
-	fprintf( email, "\nPlease correct this problem and release your "
-		"job with:\n" );
-	fprintf( email, "\"condor_release %d.%d\"\n\n", job_id->cluster,
-		job_id->proc ); 
-	email_close ( email );
-	return;
-}
-
 
 shadow_rec*
 Scheduler::start_sched_universe_job(PROC_ID* job_id)
@@ -3895,7 +3894,8 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	char	*env = NULL;
 	char	job_args[_POSIX_ARG_MAX];
 	char	args[_POSIX_ARG_MAX];
-	char	owner[20], iwd[_POSIX_PATH_MAX];
+	char	owner[_POSIX_PATH_MAX], iwd[_POSIX_PATH_MAX];
+	char	domain[_POSIX_PATH_MAX];
 	int		pid;
 	StatInfo* filestat;
 	bool is_executable;
@@ -3933,8 +3933,9 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		userJob->LookupString(ATTR_JOB_CMD,a_out_name,sizeof(a_out_name));
 		FreeJobAd(userJob);
 		if (a_out_name[0]=='\0') {
-			email_and_hold_failed_sched_univ_job(job_id,
-				"Executable unknown - not specified in job ad!");
+			holdJob(job_id->cluster, job_id->proc, 
+				"Executable unknown - not specified in job ad!",
+				false, false, true, false, false );
 			return NULL;
 		}
 		
@@ -3949,7 +3950,8 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		if ( !is_executable ) {
 			char tmpstr[255];
 			snprintf(tmpstr, 255, "File '%s' is missing or not executable", a_out_name);
-			email_and_hold_failed_sched_univ_job(job_id, tmpstr);
+			holdJob(job_id->cluster, job_id->proc, tmpstr,
+					false, false, true, false, false);
 			return NULL;
 		}
 	}
@@ -3960,21 +3962,24 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			"--setting owner to \"nobody\"\n" );
 		sprintf(owner, "nobody");
 	}
+	// get the nt domain too, if we have it
+	GetAttributeString(job_id->cluster, job_id->proc, ATTR_NT_DOMAIN, domain);
+
 	if (stricmp(owner, "root") == 0 ) {
 		dprintf(D_ALWAYS, "Aborting job %d.%d.  Tried to start as root.\n",
 			job_id->cluster, job_id->proc);
 		return NULL;
 	}
 	
-	if (! init_user_ids(owner) ) {
+	if (! init_user_ids(owner, domain) ) {
 		char tmpstr[255];
 #ifdef WIN32
 		snprintf(tmpstr, 255, "Bad or missing credential for user: %s", owner);
 #else
 		snprintf(tmpstr, 255, "Unable to switch to user: %s", owner);
 #endif
-		email_and_hold_failed_sched_univ_job(job_id,
-			tmpstr);
+		holdJob(job_id->cluster, job_id->proc, tmpstr,
+				false, false, true, false, false);
 		return NULL;
 	}
 	
