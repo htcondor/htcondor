@@ -45,17 +45,39 @@ int
 sysapi_disk_space_raw(const char *filename)
 {
 	ULARGE_INTEGER FreeBytesAvailableToCaller, TotalNumberOfBytes, TotalNumberOfFreeBytes;
-
+	unsigned int t_hi, t_lo, temp;
+	const unsigned int lowest_ten_mask = 0x00000cff;
+	
+	t_hi = t_lo = temp = 0;
 	sysapi_internal_reconfig();
 
+	
 	if (GetDiskFreeSpaceEx(filename, &FreeBytesAvailableToCaller, &TotalNumberOfBytes, 
 		&TotalNumberOfFreeBytes) == 0) {
 		return -1;
 	} else {
-		if (FreeBytesAvailableToCaller.HighPart > 0) {
+		
+		// we have to shift everything down 10 bits since we report the number
+		// of kbytes free. There's a HighPart and a LowPart, so it gets a little ugly.
+
+		// first shift the low part (divide by 1024 to get it into kbytes)
+		t_lo = FreeBytesAvailableToCaller.LowPart;
+		t_lo = t_lo >> 10;
+		// now grab the lowest 10 bits in the high part
+		t_hi = FreeBytesAvailableToCaller.HighPart;
+		temp = lowest_ten_mask & t_hi;
+		// shift the high part 10 bits to get it into kbytes
+		t_hi = t_hi >> 10;
+		
+		// shift the lowest 10 bits from the high part up to the 
+		// highest 10 bits, and stick them into the low part
+		temp = temp << 22;
+		t_lo |= temp;
+
+		if (t_hi > 0) {
 			return INT_MAX;
 		} else {
-			return (int)(FreeBytesAvailableToCaller.LowPart/1024);
+			return (int)t_lo;
 		}
 	}
 }
