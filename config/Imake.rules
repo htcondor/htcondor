@@ -956,8 +956,10 @@ compiledir/Makefile: compiledir compiledir/Imakefile		@@\
 clean::								@@\
 	rm -rf compiledir compiler_list				@@\
 								@@\
-compiler_list:: safe_append.pl					@@\
-	perl safe_append.pl -f compiler_list -a compiledir	@@\
+compiler_list:: compiler_list_compiledir			@@\
+								@@\
+compiler_list_compiledir:: safe_append.pl			@@\
+	@perl safe_append.pl -v -f compiler_list -a compiledir	@@\
 XCOMM End translation of func(C_COMPILER_TARGET)
 #endif /* C_COMPILER_TARGET */
 
@@ -983,8 +985,10 @@ compiledir/Makefile: compiledir compiledir/Imakefile		@@\
 clean::								@@\
 	rm -rf compiledir compiler_list				@@\
 								@@\
-compiler_list:: safe_append.pl					@@\
-	perl safe_append.pl -f compiler_list -a compiledir	@@\
+compiler_list:: compiler_list_compiledir			@@\
+								@@\
+compiler_list_compiledir:: safe_append.pl			@@\
+	@perl safe_append.pl -v -f compiler_list -a compiledir	@@\
 XCOMM End translation of func(CPP_COMPILER_TARGET)
 #endif /* CPP_COMPILER_TARGET */
 
@@ -1011,8 +1015,10 @@ compiledir/Makefile: compiledir compiledir/Imakefile	@@\
 clean::								@@\
 	rm -rf compiledir compiler_list				@@\
 								@@\
-compiler_list:: safe_append.pl					@@\
-	perl safe_append.pl -f compiler_list -a compiledir	@@\
+compiler_list:: compiler_list_compiledir			@@\
+								@@\
+compiler_list_compiledir:: safe_append.pl			@@\
+	@perl safe_append.pl -v -f compiler_list -a compiledir	@@\
 XCOMM End translation of func(F_COMPILER_TARGET)
 #endif /* F_COMPILER_TARGET */
 
@@ -1069,8 +1075,9 @@ name.cmd:					@@\
 	ln -s ../name.cmd .			@@\
 clean::						@@\
 	rm -f name.run name.cmd run_list	@@\
-run_list:: safe_append.pl name.run 		@@\
-	perl safe_append.pl -f run_list -a name	@@\
+run_list:: run_list_name			@@\
+run_list_name:: safe_append.pl name.run		@@\
+	@perl safe_append.pl -v -f run_list -a name	@@\
 XCOMM End translation of func(RUN)
 #endif /* RUN */
 
