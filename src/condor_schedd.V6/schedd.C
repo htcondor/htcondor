@@ -42,6 +42,7 @@
 #include "renice_self.h"
 #include "user_log.c++.h"
 #include "access.h"
+#include "internet.h"
 
 #define DEFAULT_SHADOW_SIZE 125
 
@@ -63,8 +64,6 @@ extern "C"
 	char* 	gen_ckpt_name(char*, int, int, int);
 	void	handle_q(Service *, int, Stream *sock);
 	int		udp_unconnect();
-	char*	sin_to_string(struct sockaddr_in*);
-	void	get_inet_address(struct in_addr*);
 	int		prio_compar(prio_rec*, prio_rec*);
 }
 
@@ -133,6 +132,9 @@ Scheduler::Scheduler()
 {
     ad = NULL;
     MySockName = NULL;
+	MyShadowSockName = NULL;
+	shadowCommandrsock = NULL;
+	shadowCommandssock = NULL;
     SchedDInterval = 0;
 	QueueCleanInterval = 0;
     JobStartDelay = 0;
@@ -173,6 +175,16 @@ Scheduler::~Scheduler()
     delete ad;
     if (MySockName)
         free(MySockName);
+    if (MyShadowSockName)
+        free(MyShadowSockName);
+	if (shadowCommandrsock) {
+		daemonCore->Cancel_Socket(shadowCommandrsock);
+		delete shadowCommandrsock;
+	}
+	if (shadowCommandssock) {
+		daemonCore->Cancel_Socket(shadowCommandssock);
+		delete shadowCommandssock;
+	}
 	if (CondorViewHost)
 		free(CondorViewHost);
 	if (CollectorHost)
@@ -770,23 +782,38 @@ Scheduler::negotiatorSocketHandler (Stream *stream)
 	return rval;	
 }
 
+int
+Scheduler::delayedNegotiatorHandler(Stream *stream)
+{
+	int rval;
+
+	rval = negotiate(NEGOTIATE, stream);
+	return rval;
+}
 
 int
 Scheduler::doNegotiate (int i, Stream *s)
 {
+	if ( daemonCore->InServiceCommandSocket() == TRUE ) {
+		// We are currently in the middle of a negotiate with a
+		// different negotiator.  Stash this request to handle it later.
+		dprintf(D_FULLDEBUG,"Received Negotiate command while negotiating; stashing for later\n");
+		daemonCore->Register_Socket(s,"<Another-Negotiator-Socket>",
+			(SocketHandlercpp)delayedNegotiatorHandler,
+			"delayedNegotiatorHandler()", this, ALLOW);
+		return KEEP_STREAM;
+	}
+
 	int rval = negotiate(i, s);
 	if (rval == KEEP_STREAM)
 	{
-		// if socket is not already registered, then register it
-		if (daemonCore->Lookup_Socket(s) == -1) {
-			dprintf (D_ALWAYS,
-					 "Stashing socket to negotiator for future reuse\n");
-			daemonCore->
+		dprintf (D_FULLDEBUG,
+				 "Stashing socket to negotiator for future reuse\n");
+		daemonCore->
 				Register_Socket(s, "<Negotiator Socket>", 
 								(SocketHandlercpp)negotiatorSocketHandler,
 								"<Negotiator Command>",
 								this, ALLOW);
-		}
 	}
 	return rval;
 }
@@ -818,6 +845,7 @@ Scheduler::negotiate(int, Stream* s)
 	int		shadow_num_increment;
 	int		job_universe;
 	int		which_negotiator = 0; 		// >0 implies flocking
+	int		serviced_other_commands = 0;	
 
 	dprintf( D_FULLDEBUG, "\n" );
 	dprintf( D_FULLDEBUG, "Entered negotiate\n" );
@@ -948,9 +976,21 @@ Scheduler::negotiate(int, Stream* s)
 			continue;
 		}
 
+		serviced_other_commands += daemonCore->ServiceCommandSocket();
+
 		id = PrioRec[i].id;
 		if( cluster_rejected(id.cluster) ) {
 			continue;
+		}
+
+		if ( serviced_other_commands ) {
+			// we have run some other schedd command, like condor_rm or condor_q,
+			// while negotiating.  check and make certain the job is still
+			// runnable, since things may have changed since we built the 
+			// prio_rec array (like, perhaps condor_hold or condor_rm was done).
+			if ( Runnable(&id) == FALSE ) {
+				continue;
+			}
 		}
 
 		if (GetAttributeInt(PrioRec[i].id.cluster, PrioRec[i].id.proc,
@@ -1041,10 +1081,10 @@ Scheduler::negotiate(int, Stream* s)
 					ClassAd *ad;
 					ad = GetJobAd( id.cluster, id.proc );
 					if (!ad) {
-						dprintf( D_ALWAYS, "Can't get job ad %d.%d\n",
-								 id.cluster, id.proc );
+						dprintf(D_ALWAYS,"Can't get job ad %d.%d\n",
+								id.cluster, id.proc );
 						return (!(KEEP_STREAM));
-					}
+					}	
 
 					// Figure out if this request would result in another 
 					// shadow process if matched.  If non-PVM, the answer
@@ -1476,7 +1516,7 @@ void Scheduler::StartJobHandler() {
 	(void)sprintf( cluster, "%d", job_id->cluster );
 	(void)sprintf( proc, "%d", job_id->proc );
 	argv[0] = "condor_shadow";
-	argv[1] = MySockName;
+	argv[1] = MyShadowSockName;
 	argv[2] = mrec->peer;
 	argv[3] = mrec->id;
 	argv[4] = cluster;
@@ -1670,7 +1710,7 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 						return NULL;
 					}
 				}
-				argv[1] = MySockName;
+				argv[1] = MyShadowSockName;
 				argv[2] = 0;
 				
 				renice_shadow();
@@ -2884,6 +2924,31 @@ Scheduler::Init()
 	}
 	sprintf( expr, "%s = \"%s\"", ATTR_SCHEDD_IP_ADDR, MySockName );
 	ad->Insert(expr);
+
+		// Now create another command port to be used exclusively by shadows.
+		// Stash the sinfull string of this new command port in MyShadowSockName.
+	if ( ! MyShadowSockName ) {
+		shadowCommandrsock = new ReliSock;
+		shadowCommandssock = new SafeSock;
+
+		if ( !shadowCommandrsock || !shadowCommandssock ) {
+			EXCEPT("Failed to create Shadow Command socket");
+		}
+		// Note: BindAnyCommandPort() is in daemon core
+		if ( !BindAnyCommandPort(shadowCommandrsock,shadowCommandssock)) {
+			EXCEPT("Failed to bind Shadow Command socket");
+		}
+		if ( !shadowCommandrsock->listen() ) {
+			EXCEPT("Failed to post a listen on Shadow Command socket");
+		}
+		daemonCore->Register_Command_Socket( (Stream*)shadowCommandrsock );
+		daemonCore->Register_Command_Socket( (Stream*)shadowCommandssock );
+
+		char nameBuf[50];
+		sprintf(nameBuf,"<127.0.0.1:%d>",shadowCommandrsock->get_port());
+		MyShadowSockName = strdup( nameBuf );
+	}
+
 }
 
 void
@@ -3368,8 +3433,10 @@ Scheduler::AlreadyMatched(PROC_ID* id)
 	match_rec *rec;
 
 	if (GetAttributeInt(id->cluster, id->proc,
-						ATTR_JOB_UNIVERSE, &universe) < 0)
-		dprintf(D_ALWAYS, "GetAttributeInt() failed\n");
+						ATTR_JOB_UNIVERSE, &universe) < 0) {
+		dprintf(D_FULLDEBUG, "GetAttributeInt() failed\n");
+		return FALSE;
+	}
 
 	if (universe == PVM)
 		return FALSE;
