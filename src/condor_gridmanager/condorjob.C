@@ -468,7 +468,9 @@ int CondorJob::doEvaluateState()
 				break;
 			}
 			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
-				errorString = gahp->getErrorString();
+				errorString = "Repeated submit attempts (GAHP reports:";
+				errorString += gahp->getErrorString();
+				errorString += ")";
 				gmState = GM_HOLD;
 				break;
 			}
@@ -481,6 +483,7 @@ int CondorJob::doEvaluateState()
 					gahpAd = buildSubmitAd();
 				}
 				if ( gahpAd == NULL ) {
+					errorString = "Internal Error: Failed to build submit ad.";
 					gmState = GM_HOLD;
 					break;
 				}
@@ -572,6 +575,7 @@ int CondorJob::doEvaluateState()
 				gahpAd = buildStageInAd();
 			}
 			if ( gahpAd == NULL ) {
+				errorString = "Internal Error: Failed to build stage in ad.";
 				gmState = GM_HOLD;
 				break;
 			}
@@ -829,6 +833,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too old!\n",procID.cluster,procID
 			// TODO: Let our action here be dictated by the user preference
 			// expressed in the job ad.
 			if ( remoteJobId.cluster != 0 && condorState != REMOVED ) {
+				errorString.sprintf("Internal error: Attempting to clear request, but remoteJobId.cluster(%d) != and condorState(%d) != REMOVED", remoteJobId.cluster, condorState);
 				gmState = GM_HOLD;
 				break;
 			}
