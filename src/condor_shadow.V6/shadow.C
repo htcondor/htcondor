@@ -614,7 +614,7 @@ HandleSyscalls()
 
 	nfds = (RSC_SOCK > CLIENT_LOG ) ? (RSC_SOCK + 1) : (CLIENT_LOG + 1);
 
-	init_user_ids(Proc->owner);
+	init_user_ids(Proc->owner, NULL);
 	set_user_priv();
 
 	dprintf(D_FULLDEBUG, "HandleSyscalls: about to chdir(%s)\n", Proc->iwd);
