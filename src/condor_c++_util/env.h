@@ -41,11 +41,11 @@ class Env {
 	Env();
 	~Env();
 
-	bool Merge( const char **stringArray ) const;
-	bool Merge( const char *delimitedString ) const;
-	bool Put( const char *nameValueExpr ) const;
-	bool Put( const char *var, const char *val ) const;
-	bool Put( const MyString, const MyString ) const;
+	bool Merge( const char **stringArray );
+	bool Merge( const char *delimitedString );
+	bool Put( const char *nameValueExpr );
+	bool Put( const char *var, const char *val );
+	bool Put( const MyString, const MyString );
 	char *getDelimitedString( const char delim = env_delimiter );
 	char *getNullDelimitedString();
 	char **getStringArray();

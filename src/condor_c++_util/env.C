@@ -127,7 +127,7 @@ Env::~Env()
 }
 
 bool
-Env::Merge( const char **stringArray ) const
+Env::Merge( const char **stringArray )
 {
 	if( !stringArray ) {
 		return false;
@@ -142,7 +142,7 @@ Env::Merge( const char **stringArray ) const
 }
 
 bool
-Env::Merge( const char *delimitedString ) const
+Env::Merge( const char *delimitedString )
 {
 	const char *startp, *endp;
 	char *expr;
@@ -175,7 +175,7 @@ Env::Merge( const char *delimitedString ) const
 }
 
 bool
-Env::Put( const char *nameValueExpr ) const
+Env::Put( const char *nameValueExpr )
 {
 	char *expr, *delim;
 	int retval;
@@ -207,7 +207,7 @@ Env::Put( const char *nameValueExpr ) const
 }
 
 bool
-Env::Put( const char* var, const char* val ) const
+Env::Put( const char* var, const char* val )
 {
 	MyString myVar = var;
 	MyString myVal = val;
@@ -215,7 +215,7 @@ Env::Put( const char* var, const char* val ) const
 }
 
 bool
-Env::Put( const MyString var, const MyString val ) const
+Env::Put( const MyString var, const MyString val )
 {
 	if( var.Length() == 0 ) {
 		return false;
