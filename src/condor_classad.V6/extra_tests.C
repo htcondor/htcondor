@@ -26,7 +26,7 @@
 #include "classad_distribution.h"
 #include "classad_features.h"
 #include "lexerSource.h"
-#include <fstream.h>
+#include <fstream>
 #include <iostream>
 #include <ctype.h>
 
