@@ -73,7 +73,7 @@
 #endif
 
 #define Directories \
-	condor_shadow.V6.1 condor_starter.V6.1 html \
+	condor_shadow.V6.1 condor_starter.V6.1 html condor_release \
 	release_dir release_dir/bin release_dir/lib release_dir/sbin \
 	release_dir/include pure_bin \
 	strip_dir strip_dir/bin strip_dir/sbin strip_dir/lib \
@@ -83,7 +83,7 @@
 	strip_contrib/etc/examples strip_contrib/include StaticDirectories
 
 all: h h_all condor_includes makefiles Directories Libraries \
-	Programs examples condor_release_all
+	Programs examples 
 release:: all
 stripped:: all
 static:: all
@@ -236,7 +236,6 @@ object_target(scripts)
 object_dir_target(h)
 object_dir_target(condor_includes)
 object_dir_target(condor_release)
-object_dir_target(condor_release/examples)
 object_dir_target(condor_shadow.V6.1)
 object_dir_target(condor_starter.V6.1)
 object_dir_target(html)
@@ -244,11 +243,6 @@ object_dir_target(html)
 single_target(condor_schedd.V6, libqmgmt.a)
 single_target(condor_accountant.V6, libacct.a)
 single_target(condor_ckpt_server, ckpt_server_api.a)
-
-condor_release_all:
-	make condor_release
-	rm -rf condor_release/examples
-	make condor_release/examples
 
 h_all: h/Makefile h/syscall_numbers.h h/syscall_numbers.o
 
