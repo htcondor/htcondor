@@ -2,55 +2,17 @@
 #include "dap_constants.h"
 #include "dap_error.h"
 #include "dap_utility.h"
-#include "dap_classad_reader.h"
-#include <unistd.h>
+#include "MyString.h"
 
-//default value for DCACHE_SRM_BIN_DIR, will be overwritten by stork.config
-char DCACHE_SRM_BIN_DIR[MAXSTR] = "/opt/d-cache-client/srm/bin";
-
-/* ==========================================================================
- * read the stork config file to get DCACHE_SRM_BIN_DIR
- * ==========================================================================*/
-void read_config_file()
-{
-  char dcache_srm_bin_dir[MAXSTR];
-
-  char * STORK_CONFIG_FILE = getenv ("STORK_CONFIG_FILE");
-  if (STORK_CONFIG_FILE == NULL) {
-    fprintf (stderr, "ERROR: STORK_CONFIG_FILE not set!\n");
-    exit (1);
-  }
-
-  ClassAd_Reader configreader(STORK_CONFIG_FILE);
-  
-  if ( !configreader.readAd()) {
-    printf("ERROR in parsing the Stork Config file: %s\n", STORK_CONFIG_FILE);    
-    return;
-  }
-
-  //get value for DCACHE_SRM_BIN_DIR
-  if (configreader.getValue("dcache_srm_bin_dir", dcache_srm_bin_dir) == DAP_SUCCESS){
-    strncpy(DCACHE_SRM_BIN_DIR, strip_str(dcache_srm_bin_dir), MAXSTR);
-  }
-
-  printf("dcache_srm_bin_dir = %s\n", DCACHE_SRM_BIN_DIR);  
-}
+#define SRMCP	"srmcp"
 
 int transfer_from_to_dcache_srm(char *src_url, char *dest_url, 
 			     char *arguments, char *error_str)
 {
   FILE *pipe = 0;
-  char pipecommand[MAXSTR], executable[MAXSTR];
+  char pipecommand[MAXSTR];
   char linebuf[MAXSTR];
   int ret;
-  struct stat filestat;
-
-  snprintf(executable, MAXSTR, "%s/srmcp", DCACHE_SRM_BIN_DIR);
-
-  if (lstat(executable, &filestat)){  //if file does not exists
-    fprintf(stderr, "Executable %s not found!\n", executable);
-    return DAP_ERROR;
-  }
 
   // Stork server should set X509_USER_PROXY env variable when applicable
   MyString x509proxy;
@@ -62,7 +24,7 @@ int transfer_from_to_dcache_srm(char *src_url, char *dest_url,
   }
 
   snprintf(pipecommand, MAXSTR, "%s %s %s %s %s", 
-	   executable, 
+	   SRMCP,
 	   arguments, 
 	   src_url, 
 	   dest_url,
@@ -71,7 +33,7 @@ int transfer_from_to_dcache_srm(char *src_url, char *dest_url,
   pipe = popen (pipecommand, "r");
 
   if ( pipe == 0 ) {
-    fprintf(stderr,"Error:couldn't open pipe to srmcp!\n");
+    fprintf(stderr,"Error:couldn't open pipe to %s!\n", SRMCP);
     return -1;
   }
 
@@ -121,8 +83,6 @@ int main(int argc, char *argv[])
     exit(-1);
   }
 
-  read_config_file();
-  
   strncpy(src_url, argv[1], MAXSTR);
   strncpy(dest_url, argv[2], MAXSTR);
 

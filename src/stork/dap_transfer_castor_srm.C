@@ -2,63 +2,24 @@
 #include "dap_constants.h"
 #include "dap_error.h"
 #include "dap_utility.h"
-#include "dap_classad_reader.h"
 #include <unistd.h>
 
-//default value for CASTOR_SRM_BIN_DIR, will be overwritten by stork.config
-char CASTOR_SRM_BIN_DIR[MAXSTR] = "/opt/srm/bin";
-
-/* ==========================================================================
- * read the stork config file to get CASTOR_SRM_BIN_DIR
- * ==========================================================================*/
-void read_config_file()
-{
-  char castor_srm_bin_dir[MAXSTR];
-
-  char * STORK_CONFIG_FILE = getenv ("STORK_CONFIG_FILE");
-  if (STORK_CONFIG_FILE == NULL) {
-    fprintf (stderr, "ERROR: STORK_CONFIG_FILE not set!\n");
-    exit (1);
-  }
-  
-  ClassAd_Reader configreader(STORK_CONFIG_FILE);
-
-  
-  if ( !configreader.readAd()) {
-    printf("ERROR in parsing the Stork Config file: %s\n", STORK_CONFIG_FILE);    
-    return;
-  }
-
-  //get value for CASTOR_SRM_BIN_DIR
-  if (configreader.getValue("castor_srm_bin_dir", castor_srm_bin_dir) == DAP_SUCCESS){
-    strncpy(CASTOR_SRM_BIN_DIR, strip_str(castor_srm_bin_dir), MAXSTR);
-  }
-
-  printf("castor_srm_bin_dir = %s\n", CASTOR_SRM_BIN_DIR);  
-}
+#define SRMCOPY	"srmCopy"
 
 int transfer_from_to_castor_srm(char *src_url, char *dest_url, 
 			     char *arguments, char *error_str)
 {
   FILE *pipe = 0;
-  char pipecommand[MAXSTR], executable[MAXSTR];
+  char pipecommand[MAXSTR];
   char linebuf[MAXSTR];
   int ret;
-  struct stat filestat;
 
-  snprintf(executable, MAXSTR, "%s/srmCopy", CASTOR_SRM_BIN_DIR);
-
-  if (lstat(executable, &filestat)){  //if file does not exists
-    fprintf(stderr, "Executable %s not found!\n", executable);
-    return DAP_ERROR;
-  }
-
-  snprintf(pipecommand, MAXSTR, "%s %s %s %s", executable, arguments, src_url, dest_url);
+  snprintf(pipecommand, MAXSTR, "%s %s %s %s", SRMCOPY, arguments, src_url, dest_url);
 
   pipe = popen (pipecommand, "r");
 
   if ( pipe == 0 ) {
-    fprintf(stderr,"Error:couldn't open pipe to srmCopy!\n");
+    fprintf(stderr,"Error:couldn't open pipe to %s!\n", SRMCOPY);
     return -1;
   }
 
@@ -110,8 +71,6 @@ int main(int argc, char *argv[])
     exit(-1);
   }
 
-  read_config_file();
-  
   strncpy(src_url, argv[1], MAXSTR);
   strncpy(dest_url, argv[2], MAXSTR);
 

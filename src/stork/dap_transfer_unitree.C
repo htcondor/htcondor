@@ -2,66 +2,28 @@
 #include "dap_constants.h"
 #include "dap_error.h"
 #include "dap_utility.h"
-#include "dap_classad_reader.h"
 
 #include <unistd.h>
 #include <errno.h>
 
-//default value for MSSCMD_BIN_DIR, will be overwritten by stork.config
-char MSSCMD_BIN_DIR[MAXSTR] = "";
-
-/* ==========================================================================
- * read the stork config file to get MSSCMD_BIN_DIR
- * ==========================================================================*/
-void read_config_file()
-{
-  char msscmd_bin_dir[MAXSTR];
-
-  char * STORK_CONFIG_FILE = getenv ("STORK_CONFIG_FILE");
-  if (STORK_CONFIG_FILE == NULL) {
-    fprintf (stderr, "ERROR: STORK_CONFIG_FILE not set!\n");
-    exit (1);
-  }
-
-  
-  ClassAd_Reader configreader(STORK_CONFIG_FILE);
-  
-  if ( !configreader.readAd()) {
-    printf("ERROR in parsing the Stork Config file: %s\n", STORK_CONFIG_FILE);    
-    return;
-  }
-
-  //get value for MSSCMD_BIN_DIR
-  if (configreader.getValue("msscmd_bin_dir", msscmd_bin_dir) == DAP_SUCCESS){
-    strncpy(MSSCMD_BIN_DIR, strip_str(msscmd_bin_dir), MAXSTR);
-  }
-
-  printf("msscmd_bin_dir = %s\n", MSSCMD_BIN_DIR);  
-}
+#define MSSCMD	"msscmd"
 
 int transfer_from_unitree_to_file(char *src_file, char *dest_file)
 {
 
   FILE *pipe = 0;
-  char pipecommand[MAXSTR], executable[MAXSTR], t[MAXSTR];
+  char pipecommand[MAXSTR], t[MAXSTR];
   int ret = -1;
   struct stat filestat;
   unsigned long src_filesize = 1, dest_filesize = 0;
   char linebuf[MAXSTR] = "";
 
-  snprintf(executable, MAXSTR, "%s/msscmd", MSSCMD_BIN_DIR);
-
-  if (lstat(executable, &filestat)){  //if file does not exists
-    fprintf(stderr, "Executable %s not found!\n", executable);
-    return DAP_ERROR;
-  }
-
   //get the source file size
-  snprintf(pipecommand, MAXSTR, "%s ls %s", executable, src_file);
+  snprintf(pipecommand, MAXSTR, "%s ls %s", MSSCMD, src_file);
 
   pipe = popen (pipecommand, "r");
   if ( pipe == 0 ) {
-    fprintf(stderr,"Error:couldn't open pipe to msscmd!\n");
+    fprintf(stderr,"Error:couldn't open pipe to %s ls!\n", MSSCMD);
     return DAP_ERROR;
   }
 
@@ -76,11 +38,11 @@ int transfer_from_unitree_to_file(char *src_file, char *dest_file)
   fprintf(stdout, ">source_filesize: %lu\n", src_filesize);
 
   //get the file
-  snprintf(pipecommand, MAXSTR, "%s get %s %s", executable, src_file, dest_file);
+  snprintf(pipecommand, MAXSTR, "%s get %s %s", MSSCMD, src_file, dest_file);
 
   pipe = popen (pipecommand, "r");
   if ( pipe == 0 ) {
-    fprintf(stderr,"Error:couldn't open pipe to msscmd!\n");
+    fprintf(stderr,"Error:couldn't open pipe to %s get!\n", MSSCMD);
     return DAP_ERROR;
   }
   /*
@@ -128,31 +90,24 @@ int transfer_from_file_to_unitree(char *src_file, char *dest_file)
 {
 
   FILE *pipe = 0;
-  char pipecommand[MAXSTR], executable[MAXSTR];
+  char pipecommand[MAXSTR];
   int ret = -1;
   struct stat filestat;
   unsigned long src_filesize = 0, dest_filesize = 0;
   float time;
   char linebuf[MAXSTR] = "";
   
-  snprintf(executable, MAXSTR, "%s/msscmd", MSSCMD_BIN_DIR);
-  
-  if (lstat(executable, &filestat)){  //if file does not exists
-    fprintf(stderr, "Executable %s not found!\n",executable);
-    return DAP_ERROR;
-  }
-
   //check source filesize
   if (!lstat(src_file, &filestat)){//if file exist
     src_filesize = filestat.st_size;
   }
 
   snprintf(pipecommand, MAXSTR, "%s put %s %s", 
-  	   executable, src_file, dest_file);
+  	   MSSCMD, src_file, dest_file);
 
   pipe = popen (pipecommand, "r");
   if ( pipe == 0 ) {
-    fprintf(stderr,"Error:couldn't open pipe to msscmd!\n");
+    fprintf(stderr,"Error:couldn't open pipe to %s put!\n", MSSCMD);
     return -1;
   }
 
@@ -196,8 +151,6 @@ int main(int argc, char *argv[])
     fprintf(stderr, "==============================================================\n");
     exit(-1);
   }
-
-  read_config_file();
 
   strncpy(src_url, argv[1], MAXSTR);
   strncpy(dest_url, argv[2], MAXSTR);

@@ -2,7 +2,6 @@
 #include "dap_constants.h"
 #include "dap_error.h"
 #include "dap_utility.h"
-#include "dap_classad_reader.h"
 #include "condor_string.h"
 #include <unistd.h>
 #include <string>
@@ -17,6 +16,7 @@ static globus_bool_t error = GLOBUS_FALSE;
 
 #define SIZE 42
 #define SIZE_UNKNOWN	( (unsigned long)(-1) )
+#define GLOBUS_URL_COPY	"globus-url-copy"
 
 /* ========================================================================== */
 static void done_cb(void *user_arg, 
@@ -86,63 +86,25 @@ int get_filesize_from_gridftp(char *src_url, unsigned long &filesize)
   
 }
 
-//default value for GLOBUS_BIN_DIR, will be overwritten by stork.config
-char GLOBUS_BIN_DIR[MAXSTR] = "/unsup/globus-2.0-latest/bin";
-
-/* ==========================================================================
- * read the stork config file to get GLOBUS_BIN_DIR
- * ==========================================================================*/
-void read_config_file()
-{
-  char globus_bin_dir[MAXSTR];
-
-  char * STORK_CONFIG_FILE = getenv ("STORK_CONFIG_FILE");
-  if (STORK_CONFIG_FILE == NULL) {
-    fprintf (stderr, "ERROR: STORK_CONFIG_FILE not set!\n");
-    exit (1);
-  }
-
-  ClassAd_Reader configreader(STORK_CONFIG_FILE);
-  
-  if ( !configreader.readAd()) {
-    printf("ERROR in parsing the Stork Config file: %s\n", STORK_CONFIG_FILE);    
-    return;
-  }
-
-  //get value for GLOBUS_URL_COPY
-  if (configreader.getValue("globus_bin_dir", globus_bin_dir) == DAP_SUCCESS){
-    strncpy(GLOBUS_BIN_DIR, strip_str(globus_bin_dir), MAXSTR);
-  }
-
-  //fprintf(stdout, "globus_bin_dir = %s\n", GLOBUS_BIN_DIR);  
-}
-
 /* ========================================================================== */
 int transfer_globus_url_copy(char *src_url, char *dest_url, 
 			     char *arguments, char *error_str)
 {
   FILE *pipe = 0;
-  char pipecommand[MAXSTR], executable[MAXSTR];
+  char pipecommand[MAXSTR];
   char linebuf[MAXSTR] = "";
   int ret;
-  struct stat filestat;
-
-  snprintf(executable, MAXSTR, "%s/globus-url-copy", GLOBUS_BIN_DIR);
-
-  if (lstat(executable, &filestat)){  //if file does not exists
-    fprintf(stderr, "Executable %s not found!\n", executable);
-    return DAP_ERROR;
-  }
 
   snprintf(pipecommand, MAXSTR, "%s %s %s %s 2>&1", 
-  	   executable, arguments, src_url, dest_url);
+  	   GLOBUS_URL_COPY, arguments, src_url, dest_url);
 
   //  "-tcp-bs 208896 -bs 1048576 -p 4"
 
   pipe = popen (pipecommand, "r");
 
   if ( pipe == 0 ) {
-    fprintf(stderr,"Error:couldn't open pipe to globus-url-copy !\n");
+    fprintf(stderr,"Error:couldn't open pipe to %s!\n",
+			GLOBUS_URL_COPY);
     return -1;
   }
 
@@ -185,8 +147,6 @@ int main(int argc, char *argv[])
     fprintf(stderr, "==============================================================\n");
     exit(-1);
    }
-
-  read_config_file();
 
   strncpy(src_url, argv[1], MAXSTR);
   strncpy(dest_url, argv[2], MAXSTR);
