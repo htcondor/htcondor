@@ -24,6 +24,12 @@ TESTCLASS(job_core_bigenv_std,quick)
  * Remote System Calls
  ***************************/
 
+DESC(job_rsc_all-syscalls_std,"Tests nearly all remote syscalls")
+CBUILD($(CC),job_rsc_all-syscalls_std,c)
+RUN(job_rsc_all-syscalls_std)
+TESTCLASS(job_rsc_all-syscalls_std,quick)
+TESTCLASS(job_rsc_all-syscalls_std,critical)
+
 DESC(job_rsc_hello_std,"Tests various RSC I/O methods")
 CBUILD($(CC),job_rsc_hello_std,c)
 DEPS(job_rsc_hello_std,x_hello.in)
