@@ -241,15 +241,32 @@ V6_4_ALL	-a DOC TOOLS NT_TOOLS V6_4_SRC
 V6_5_CODE	-a TOOLS V6_5_SRC
 V6_5_NT_CODE	-a NT_TOOLS NT_PROGRAMS V6_5_SRC
 V6_5_ALL	-a DOC TOOLS NT_TOOLS NT_PROGRAMS V6_5_SRC 
-V6_6_CODE	-a TOOLS V6_6_SRC
+
+# Starting in 6.6.x with the dawn of the new build system (including
+# the externals tree and all its glory), the *_CODE module now means
+# "everything in *_ALL except DOC.  This is useful for specifying the
+# modules to use for creating nightly build tags when DOC is coming
+# from a different branch.  so, the old *_CODE modules are now called
+# *_UNIX_CODE, since that's really what they are: UNIX-specific code. 
+# Finally, we're adding *_BUILD modules, which are only useful for
+# checking out a specific nightly build tag.  they include everything,
+# including the right externals.  however, since externals isn't
+# getting branched, trying to do something like this: 
+#  "cvs co -r V6_6-branch V6_6_BUILD" would fail, since there's no
+# V6_6-branch tag on externals.  however, the script to generate
+# nightly build tags *will* tag externals, so something like:
+#  "cvs co -r V6_6-branch-2003-10-11 V6_6_BUILD" would work.
+V6_6_UNIX_CODE	-a TOOLS V6_6_SRC
 V6_6_NT_CODE	-a NT_TOOLS NT_PROGRAMS V6_6_SRC
-V6_6_ALL	-a DOC TOOLS NT_TOOLS NT_PROGRAMS V6_6_SRC 
+V6_6_CODE	-a TOOLS NT_TOOLS NT_PROGRAMS V6_6_SRC 
+V6_6_ALL	-a DOC V6_6_CODE
 V6_6_BUILD	-a V6_6_ALL V6_6_EXTERNALS
-# For now, V6_7 also shares the same directories as V6_5.
-# This might change, but until then, we leave it like this.
-V6_7_CODE	-a TOOLS V6_5_SRC
-V6_7_NT_CODE	-a NT_TOOLS NT_PROGRAMS V6_5_SRC
-V6_7_ALL	-a DOC TOOLS NT_TOOLS NT_PROGRAMS V6_5_SRC 
+
+# For now, the 6.7 modules share the same source as 6.6.
+V6_7_UNIX_CODE	-a TOOLS V6_6_SRC
+V6_7_NT_CODE	-a NT_TOOLS NT_PROGRAMS V6_6_SRC
+V6_7_CODE	-a TOOLS NT_TOOLS NT_PROGRAMS V6_6_SRC 
+V6_7_ALL	-a DOC V6_7_CODE
 V6_7_BUILD	-a V6_7_ALL V6_7_EXTERNALS
 
 
@@ -257,12 +274,14 @@ V6_7_BUILD	-a V6_7_ALL V6_7_EXTERNALS
 # For now, they're just called "TRUNK", since it's not obvious what
 # actual version is on the trunk these days...
 #TRUNK_CODE	-a V6_7_CODE
+#TRUNK_UNIX_CODE	-a V6_7_UNIX_CODE
 #TRUNK_NT_CODE	-a V6_7_NT_CODE
 #TRUNK_ALL	-a V6_7_ALL
 TRUNK_SRC	-a V_TRUNK_SRC
-TRUNK_CODE	-a TOOLS V_TRUNK_SRC
+TRUNK_UNIX_CODE	-a TOOLS V_TRUNK_SRC
 TRUNK_NT_CODE	-a NT_TOOLS V_TRUNK_SRC
-TRUNK_ALL	-a DOC TOOLS NT_TOOLS V_TRUNK_SRC
+TRUNK_CODE	-a TOOLS NT_TOOLS V_TRUNK_SRC
+TRUNK_ALL	-a DOC TRUNK_CODE
 
 JAVA_SRC	-a \
 		src_java/Makefile \
