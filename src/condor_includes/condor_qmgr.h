@@ -74,7 +74,7 @@ int SendSpoolFile(char *filename);		/* prepare for file xfer */
 int SendSpoolFileBytes(char *filename); /* actually do file xfer */
 
 Qmgr_connection *ConnectQ(char *qmgr_location );
-void DisconnectQ(Qmgr_connection *);
+int DisconnectQ(Qmgr_connection *);
 void WalkJobQueue(scan_func);
 
 void InitQmgmt();
