@@ -213,7 +213,9 @@ void CollectorDaemon::Init()
 	forkQuery.Initialize( );
 }
 
-int CollectorDaemon::receive_query_cedar(Service* s, int command, Stream* sock)
+int CollectorDaemon::receive_query_cedar(Service* s,
+										 int command,
+										 Stream* sock)
 {
 	ClassAd ad;
 
@@ -228,9 +230,23 @@ int CollectorDaemon::receive_query_cedar(Service* s, int command, Stream* sock)
 		// here we set up a network timeout of a longer duration
 	sock->timeout(QueryTimeout);
 
-	// perform the query
+	// Initial query handler
+	AdTypes whichAds = receive_query_public( command );
+
+	// Perform the query
 	List<ClassAd> results;
-	receive_query_public(command, &ad, &results);
+	ForkStatus	fork_status = FORK_FAILED;
+	int	   		return_status = 0;
+    if (whichAds != (AdTypes) -1) {
+		fork_status = forkQuery.NewJob( );
+		if ( FORK_PARENT == fork_status ) {
+			return 1;
+		} else {
+			// Child / Fork failed / busy
+			ad.fPrint(stderr);
+			process_query_public (whichAds, &ad, &results);
+		}
+	}
 
 	// send the results via cedar
 	sock->encode();
@@ -244,7 +260,8 @@ int CollectorDaemon::receive_query_cedar(Service* s, int command, Stream* sock)
         {
             dprintf (D_ALWAYS, 
                     "Error sending query result to client -- aborting\n");
-            return 0;
+            return_status = 0;
+			goto END;
         }
     }
 
@@ -260,13 +277,19 @@ int CollectorDaemon::receive_query_cedar(Service* s, int command, Stream* sock)
 	{
 		dprintf (D_ALWAYS, "Error flushing CEDAR socket\n");
 	}
+	return_status = 1;
 
 
     // all done; let daemon core will clean up connection
-	return TRUE;
+  END:
+	if ( FORK_CHILD == fork_status ) {
+		forkQuery.WorkerDone( );		// Never returns
+	}
+	return return_status;
 }
 
-int CollectorDaemon::receive_query_public(int command, ClassAd* request, List<ClassAd>* result)
+AdTypes
+CollectorDaemon::receive_query_public( int command )
 {
 	AdTypes whichAds;
 
@@ -328,29 +351,13 @@ int CollectorDaemon::receive_query_public(int command, ClassAd* request, List<Cl
 		break;
 
 	  default:
-		dprintf(D_ALWAYS,"Unknown command %d in receive_query_public()\n", command);
+		dprintf(D_ALWAYS,
+				"Unknown command %d in receive_query_public()\n",
+				command);
 		whichAds = (AdTypes) -1;
     }
 
-	// Process the query
-    if (whichAds != (AdTypes) -1) {
-		ForkStatus	status = forkQuery.NewJob( );
-		if ( FORK_FAILED == status || FORK_BUSY == status ) {
-			// Fork failed / busy
-			dprintf(D_ALWAYS,"TODD - here is the query ad:");
-			request->fPrint(stderr);
-
-			process_query (whichAds, request, result);
-		} else if ( FORK_CHILD == status ) {
-			// Fork ok, worker
-			process_query (whichAds, request, result);			
-			forkQuery.WorkerDone( );		// Never returns
-		} else {
-			// Fork ok, parent
-		}
-	}
-
-	return TRUE;
+	return whichAds;
 }
 
 int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
@@ -670,7 +677,9 @@ ClassAd * CollectorDaemon::process_global_query( const char *constraint, void *a
 }
 #endif
 
-void CollectorDaemon::process_query (AdTypes whichAds, ClassAd *query, List<ClassAd>* results)
+void CollectorDaemon::process_query_public (AdTypes whichAds,
+											ClassAd *query,
+											List<ClassAd>* results)
 {
 	// set up for hashtable scan
 	__query__ = query;

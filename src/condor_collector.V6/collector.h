@@ -70,11 +70,11 @@ public:
 
 	// command handlers
 	static int receive_query_cedar(Service*, int, Stream*);
-	static int receive_query_public(int, ClassAd*, List<ClassAd>*);
+	static AdTypes receive_query_public( int );
 	static int receive_invalidation(Service*, int, Stream*);
 	static int receive_update(Service*, int, Stream*);
 
-	static void process_query(AdTypes, ClassAd*, List<ClassAd>*);
+	static void process_query_public(AdTypes, ClassAd*, List<ClassAd>*);
 	static ClassAd * process_global_query( const char *constraint, void *arg );
 	static int select_by_match( ClassAd *ad );
 	static void process_invalidation(AdTypes, ClassAd&, Stream*);

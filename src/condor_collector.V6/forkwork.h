@@ -26,7 +26,12 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 // Return values of ForkerWorker::Fork()
-enum ForkStatus { FORK_FAILED = -1, FORK_PARENT = 0, FORK_BUSY = 1, FORK_CHILD = 2 };
+enum ForkStatus {
+	FORK_FAILED = -1,
+	FORK_PARENT = 0,
+	FORK_BUSY = 1,
+	FORK_CHILD = 2
+};
 
 // A fork worker process
 class ForkWorker

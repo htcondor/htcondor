@@ -164,7 +164,8 @@ ForkWork::KillAll( bool force )
 
 	// If we killed some, log it...
 	if ( num_killed ) {
-		dprintf( D_JOB, "ForkWork %d: Killed %d jobs\n", mypid, workerList.Number() );
+		dprintf( D_JOB, "ForkWork %d: Killed %d jobs\n",
+				 mypid, workerList.Number() );
 	}
 	return 0;
 }
@@ -202,6 +203,9 @@ ForkWork::NewJob( void )
 void
 ForkWork::WorkerDone( int exit_status )
 {
+	dprintf( D_JOB,
+			 "ForkWork: Child %d done, status %d\n",
+			 getpid(), exit_status );
 	exit( exit_status );
 }
 

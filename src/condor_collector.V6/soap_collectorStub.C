@@ -52,13 +52,17 @@ static int receive_query_soap(int command,struct soap *s,char *constraint,
 	}
 	query_ad.Insert(req.Value());
 
+	// Initial query handler
+	AdTypes whichAds = CollectorDaemon::receive_query_public( command );
+
 	// actually process the query
 	List<ClassAd> adList;
-	int result = CollectorDaemon::receive_query_public(command,&query_ad,&adList);
+	query_ad.fPrint(stderr);
+	CollectorDaemon::process_query_public (whichAds, &query_ad, &adList);
 
 	// and fill in our soap struct response
 	if ( !convert_adlist_to_adStructArray(s,&adList,&ads) ) {
-		dprintf(D_ALWAYS,"receive_query_soap: convert_adlist_to_adStructArray failed!\n");
+		dprintf(D_ALWAYS, "receive_query_soap: convert_adlist_to_adStructArray failed!\n");
 	}
 	return SOAP_OK;
 }
