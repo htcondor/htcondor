@@ -32,7 +32,7 @@
    Any questions?  See Todd or Derek.  Note: if you mess it up, DaemonCore
    will EXCEPT at startup time.  
 */
-static char* CondorVersionString = "$CondorVersion: 6.4.2 " __DATE__ " PRE-RELEASE-1 $";
+static char* CondorVersionString = "$CondorVersion: 6.5.0 " __DATE__ " PRE-RELEASE-1 $";
 
 /* 
    This is some wisdom from Cygnus's web page.  If you just try to use
