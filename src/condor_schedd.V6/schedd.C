@@ -156,6 +156,7 @@ Scheduler::Scheduler()
     ShadowSizeEstimate = 0;
 
 	LastTimeout = time(NULL);
+	CondorViewHost = NULL;
     CollectorHost = NULL;
     NegotiatorHost = NULL;
     Shadow = NULL;
@@ -178,6 +179,8 @@ Scheduler::~Scheduler()
     delete ad;
     if (MySockName)
         free(MySockName);
+	if (CondorViewHost)
+		free(CondorViewHost);
 	if (CollectorHost)
 		free(CollectorHost);
 	if (NegotiatorHost)
@@ -464,11 +467,24 @@ Scheduler::update_central_mgr(int command)
 {
 	SafeSock	sock(CollectorHost, COLLECTOR_UDP_COMM_PORT);
 
+	// Send update to collector
 	sock.encode();
 	if (!sock.put(command) ||
 		!ad->put(sock) ||
 		!sock.end_of_message())
 		dprintf(D_ALWAYS, "failed to update central manager!\n");
+
+	// Send update to condor view server
+	if (CondorViewHost && command==UPDATE_SUBMITTOR_AD) {
+		SafeSock sock(CondorViewHost, CONDOR_VIEW_PORT);  
+		// condor view uses the acct port - because the accountant today is not
+		// an independant daemon. In the future condor view will be the accountant
+		sock.encode();
+		if (!sock.put(command) ||
+			!ad->put(sock) ||
+			!sock.end_of_message())
+			dprintf(D_ALWAYS, "failed to update condor view server!\n");
+	}
 }
 
 static int IsSchedulerUniverse(shadow_rec* srec);
@@ -2366,6 +2382,9 @@ Scheduler::Init()
 	if( !(Spool = param("SPOOL")) ) {
 		EXCEPT( "No spool directory specified in config file" );
 	}
+
+	if( CondorViewHost ) free( CondorViewHost );
+	CondorViewHost = param("CONDOR_VIEW_HOST");
 
 	if( CollectorHost ) free( CollectorHost );
 	if( ! (CollectorHost = param("COLLECTOR_HOST")) ) {

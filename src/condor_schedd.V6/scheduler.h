@@ -150,6 +150,7 @@ class Scheduler : public Service
 	int				StartJobTimer;
 	
 	// useful names
+	char*			CondorViewHost;
 	char*			CollectorHost;
 	char*			NegotiatorHost;
 	char*			Shadow;
