@@ -978,8 +978,9 @@ not_supported {
 	int settimeofday( struct timeval *tp, struct timezone *tzp );
 	int setdomainname( char *name, int namelen );
 	int swapon( char *path, int flags, int lo_water, int hi_water );
-}
 #endif  /* of not LINUX */
+
+}  /* of not_supported { (Must be after the #endif Linux - Derek) */
 
 	/* Calls having to do with multiple process jobs */
 not_supported {
