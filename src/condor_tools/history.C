@@ -82,7 +82,7 @@ main(int argc, char* argv[])
   // if (constraint) printf("constraint=%s\n",constraint);
 
   int EndFlag=0;
-  short_header();
+  if (!LongFormat) short_header();
   while(!EndFlag) {
     ClassAd* ad=new ClassAd(LogFile,"***",EndFlag);
     if (!constraint || EvalBool(ad, constraint)) {
