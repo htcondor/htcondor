@@ -124,11 +124,50 @@ command_activate_claim( Service*, int, Stream* stream )
 
 
 int
-command_vacate( Service*, int, Stream* ) 
+command_vacate_all( Service*, int, Stream* ) 
 {
-	dprintf( D_ALWAYS, "command_vacate() called.\n" );
+	dprintf( D_ALWAYS, "command_vacate_all() called.\n" );
 	resmgr->walk( &Resource::release_claim );
 	return TRUE;
+}
+
+
+int
+command_vacate( Service*, int cmd, Stream* stream ) 
+{
+	dprintf( D_ALWAYS, "command_vacate() called.\n" );
+	char* name = NULL;
+	Resource* rip;
+
+	if( ! stream->code(name) ) {
+		dprintf( D_ALWAYS, "Can't read name\n" );
+		free( name );
+		return FALSE;
+	}
+	if( ! stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "Can't read end_of_message\n" );
+		free( name );
+		return FALSE;
+	}
+	rip = resmgr->get_by_name( name );
+	if( !rip ) {
+		dprintf( D_ALWAYS, 
+				 "Error: can't find resource with name (%s)\n",
+				 name );
+		free( name );
+		return FALSE;
+	}
+	free( name );
+
+	State s = rip->state();
+
+		// VACATE_CLAIM only makes sense in two states
+	if( (s == claimed_state) || (s == matched_state) ) {
+		return rip->release_claim();
+	} else {
+		rip->log_ignore( cmd, s );
+		return FALSE;
+	}
 }
 
 

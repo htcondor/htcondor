@@ -54,6 +54,7 @@ int command_match_info( Service*, int, Stream* );
    seperately. 
 */
 int command_vacate( Service*, int, Stream* );
+int command_vacate_all( Service*, int, Stream* );
 int command_pckpt_all( Service*, int, Stream* );
 int command_x_event( Service*, int, Stream* );
 int	command_give_state( Service*, int, Stream* );
