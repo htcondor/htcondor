@@ -87,28 +87,28 @@ initialize ()
 
     // register commands
     daemonCore->Register_Command (RESCHEDULE, "Reschedule", 
-            (CommandHandlercpp) RESCHEDULE_commandHandler, 
+            (CommandHandlercpp) &RESCHEDULE_commandHandler, 
 			"RESCHEDULE_commandHandler", (Service*) this, WRITE);
     daemonCore->Register_Command (RESET_ALL_USAGE, "ResetAllUsage",
-            (CommandHandlercpp) RESET_ALL_USAGE_commandHandler, 
+            (CommandHandlercpp) &RESET_ALL_USAGE_commandHandler, 
 			"RESET_ALL_USAGE_commandHandler", this, ADMINISTRATOR);
     daemonCore->Register_Command (RESET_USAGE, "ResetUsage",
-            (CommandHandlercpp) RESET_USAGE_commandHandler, 
+            (CommandHandlercpp) &RESET_USAGE_commandHandler, 
 			"RESET_USAGE_commandHandler", this, ADMINISTRATOR);
     daemonCore->Register_Command (SET_PRIORITYFACTOR, "SetPriorityFactor",
-            (CommandHandlercpp) SET_PRIORITYFACTOR_commandHandler, 
+            (CommandHandlercpp) &SET_PRIORITYFACTOR_commandHandler, 
 			"SET_PRIORITYFACTOR_commandHandler", this, ADMINISTRATOR);
     daemonCore->Register_Command (SET_PRIORITY, "SetPriority",
-            (CommandHandlercpp) SET_PRIORITY_commandHandler, 
+            (CommandHandlercpp) &SET_PRIORITY_commandHandler, 
 			"SET_PRIORITY_commandHandler", this, ADMINISTRATOR);
     daemonCore->Register_Command (GET_PRIORITY, "GetPriority",
-            (CommandHandlercpp) GET_PRIORITY_commandHandler, 
+            (CommandHandlercpp) &GET_PRIORITY_commandHandler, 
 			"GET_PRIORITY_commandHandler", this, READ);
 
 	// Set a timer to renigotiate.  This timer gets reset to 
 	// Negotiator interval after each negotiation.
     negotiation_timerID = daemonCore->Register_Timer (0,  NegotiatorInterval,
-			(TimerHandlercpp)negotiationTime, "Time to negotiate", this);
+			(TimerHandlercpp)&negotiationTime, "Time to negotiate", this);
 
 }
 
