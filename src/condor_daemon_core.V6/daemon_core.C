@@ -1545,6 +1545,7 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 			// into the equivelent Unix signal on this platform.
 			if ( target_has_dcpm == FALSE ) {
 #define TRANSLATE_SIG( x ) case DC_##x: unixsig = x; unixsigname = #x; break;
+
 				int unixsig;
 				char *unixsigname;
 				switch( sig ) {
@@ -1567,23 +1568,33 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 					TRANSLATE_SIG( SIGPIPE )
 					TRANSLATE_SIG( SIGALRM )
 					TRANSLATE_SIG( SIGTERM )
+#if defined(SIGURG)
 					TRANSLATE_SIG( SIGURG )
+#endif
 					TRANSLATE_SIG( SIGSTOP )
 					TRANSLATE_SIG( SIGTSTP )
 					TRANSLATE_SIG( SIGCONT )
 					TRANSLATE_SIG( SIGCHLD )
 					TRANSLATE_SIG( SIGTTIN )
 					TRANSLATE_SIG( SIGTTOU )
+#if defined(SIGIO)
 					TRANSLATE_SIG( SIGIO )
+#endif
 #if defined(SIGXCPU)
 					TRANSLATE_SIG( SIGXCPU )
 #endif
 #if defined(SIGXFSZ)
 					TRANSLATE_SIG( SIGXFSZ )
 #endif
+#if defined(SIGVTALRM)
 					TRANSLATE_SIG( SIGVTALRM )
+#endif
+#if defined(SIGPROF)
 					TRANSLATE_SIG( SIGPROF )
+#endif
+#if defined(SIGWINCH)
 					TRANSLATE_SIG( SIGWINCH )
+#endif
 #if defined(SIGINFO)
 					TRANSLATE_SIG( SIGINFO )
 #endif
