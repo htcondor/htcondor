@@ -375,6 +375,8 @@ V6_7_CODE	-a TOOLS NT_TOOLS NT_PROGRAMS V6_7_SRC
 V6_7_ALL	-a DOC V6_7_CODE
 V6_7_BUILD	-a V6_7_ALL V6_7_EXT
 
+V6_7_0_BUILD	-a V6_7_ALL V6_7_0_EXT
+
 # The V6_7-mirror-branch has condor_c-gahp, so we need to use
 # different modules for it
 V6_7_MIRROR_UNIX_CODE	-a TOOLS V6_7_MIRROR_SRC
