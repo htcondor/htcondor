@@ -13,9 +13,7 @@
 #define Crt0 /s/gcc-2.6.3/sunx86_54/lib/gcc-lib/i386-sun-solaris2.4/2.6.3/crt1.o /*solaris specific */
 #define SyscallsExp /**/
 
-#define XLibPath /usr/X11R6/lib/libX11.so /* doubtful because could not find 
-					   /usr/sup/X11/lib/libX11 and also 
-                                            could be libX11.so */
+#define XLibPath /s/X11R6-2/sunx86_54/lib/libX11.so
 #define XExtLibPath /usr/X11R6/lib/libXext.so /* doubtful because could not 
 find /usr/sup/X11/lib/libXext.a and also could be libXext.so.6.0 */
 #define DbmLibrary 
@@ -41,7 +39,7 @@ find /usr/sup/X11/lib/libXext.a and also could be libXext.so.6.0 */
 #define HAS_X_EXTENSIONS		NO
 
 #define DOES_CHECKPOINTING      NO /* was YES, but clipped condor */
-#define DOES_REMOTE_SYSCALLS    NO /* was YES, but clipped condor */
+#define DOES_REMOTE_SYSCALLS    YES /* was YES, but clipped condor */
 #define DOES_SAVE_SIGSTATE		YES /* ask Jim */
 
 #define HAS_NDBM				YES
@@ -88,8 +86,8 @@ find /usr/sup/X11/lib/libXext.a and also could be libXext.so.6.0 */
 #define StaticFlag -static
 #define UnixName /vmunix			/* pathname of the system executable */
 #define syscall_lib syscall_lib_bsd /* ask Jim */
-#define PsAllFlag -axwww				/* "Ps" flag when you want everything */
-#define PsAwkProg '{ print $1 }'	/* Pick out pid from "ps" output */
+#define PsAllFlag -ef				/* "Ps" flag when you want everything */
+#define PsAwkProg '{ print $2 }'	/* Pick out pid from "ps" output */
 #define CompatFlags /**/
 
 #ifndef Ctags
