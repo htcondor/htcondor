@@ -57,6 +57,7 @@ extern unsigned int _condor_numrestarts;  /* in image.C */
 extern "C" {
 
 int GETRUSAGE(...);
+int _WAITPID(...);
 int _libc_FORK(...);
 int SYSCONF(...);
 int SYSCALL(...);
@@ -1740,6 +1741,198 @@ int gettimeofday (struct timeval *tp, void *tzp)
 	return rval;
 }
 #endif
+
+
+/* This function call performs a true system() call in local mode, and in
+	remote mode calls back to a pseudo call to the shadow, which
+	performs the actual system() invocation.  The reason it is a pseudo call
+	in the shadow is we have to write a process wrapper around the invocation
+	if the system() because it can block indefinitely, and if the job ends up
+	getting killed or must be evicted, the shadow can still have control
+	over the situation on the remote end.
+
+	Obviously, there are serious issues with system(), checkpointing, and
+	hetergeneous submission...
+	like the fact it is probably not idempotent across checkpointins...
+*/
+extern "C" int REMOTE_CONDOR_shell( char *, int );
+static int local_system_posix(const char *command);
+static int remote_system_posix(const char *command, int len);
+static int shell ( const char *command, int len )
+{
+	int rval, do_local=0;
+	errno = 0;
+
+	sigset_t condor_omask = _condor_signals_disable();
+
+	if( LocalSysCalls() || do_local ) {
+		rval = local_system_posix( command );
+	} else {
+		rval = remote_system_posix( (char*)command, len );
+	}
+
+	_condor_signals_enable( condor_omask );
+
+	return rval;
+}
+
+/* here is the actual system() libc entrance call */
+int system( const char *command )
+{
+	/* include space for a terminating nul character on the receiver side */
+	return shell( command, strlen(command) + 1 );
+}
+
+/* this props up the environment string for the job and passes the entire thing
+	to the shadow for execution. */
+static int remote_system_posix(const char *command, int len)
+{
+	extern char **environ;
+	char **ev;
+	int rval;
+	int envsize = 0;
+	char *str;
+
+	/* if this process has an environment, then preserve it when the shadow
+		executes this subprocess by prepending the job's environment before the
+		command the user wanted to execute. XXX This function does not perform
+		any escaping of any environment variables, so things like spaces and
+		other things could be interpreted badly if they are in the environment.
+	*/
+	if (*environ != NULL) {
+
+		/* count up how much environment I need */
+		for (ev = environ; *ev != NULL; ev++) {
+			/* add three for ' ; ' at the end of each env var */
+			envsize += strlen(*ev) + 3;
+		}
+
+		/* add the size of the executing command */
+		envsize += len;
+
+		/* add one for the nul character at the end of it all */
+		envsize += 1;
+	
+		/* get some memory */
+		str = (char*)malloc(sizeof(char*) * envsize);
+		memset(str, 0, envsize);
+		if (str == NULL) {
+			EXCEPT( "remote_system_posix(): Out of memory!");
+		}
+
+		/* append everything together */
+		strcpy(str, *environ);
+		strcat(str, " ; ");
+		for (ev = environ + 1; *ev != NULL; ev++) {
+			strcat(str, *ev);
+			strcat(str, " ; ");
+		}
+
+		/* add the command at the end */
+		strcat(str, command);
+
+		/* execute the entire ball of wax with the remote shell */
+		rval = REMOTE_CONDOR_shell( str, envsize );
+
+		free(str);
+
+		return rval;
+	}
+
+	/* else just do what the user wanted of me */
+	rval = REMOTE_CONDOR_shell( (char*)command, len );
+	return rval;
+}
+
+/* here is the standalone implementation of system() */
+static int local_system_posix(const char *command)
+{
+	pid_t pid;
+	int status;
+	struct sigaction ignore, saveintr, savequit;
+	sigset_t chldmask, savemask;
+	char *argv[4];
+	extern char **environ;
+
+	if (command == NULL) {
+		/* always a command processor under unix */
+		return 1;
+	}
+
+	/* ignore sigint and sigquit. Do this BEFORE the fork() */
+	ignore.sa_handler = SIG_IGN;
+	sigemptyset(&ignore.sa_mask);
+	ignore.sa_flags = 0;
+	if (sigaction(SIGINT, &ignore, &saveintr) < 0) {
+		return -1;
+	}
+	if (sigaction(SIGQUIT, &ignore, &savequit) < 0) {
+		return -1;
+	}
+
+	/* Now block SIGCHLD */
+	sigemptyset(&chldmask);
+	sigaddset(&chldmask, SIGCHLD);
+	if (sigprocmask(SIG_BLOCK, &chldmask, &savemask) < 0) {
+		return -1;
+	}
+
+#if defined(LINUX)
+	if ((pid = SYSCALL(SYS_fork)) < 0) {
+#else
+	if ((pid = _libc_FORK()) < 0) {
+#endif
+		status = -1;
+	} else if (pid == 0) { 
+		/* child */
+		
+		SetSyscalls(SYS_LOCAL | SYS_UNMAPPED);
+
+		sigaction(SIGINT, &saveintr, NULL);
+		sigaction(SIGQUIT, &savequit, NULL);
+		sigprocmask(SIG_SETMASK, &savemask, NULL);
+
+		argv[0] = "sh";
+		argv[1] = "-c";
+		argv[2] = (char*)command;
+		argv[3] = NULL;
+		syscall(SYS_execve, "/bin/sh", argv, environ);
+
+		_exit(127);
+
+	} else {
+		/* parent */
+#if defined(LINUX)
+		while(SYSCALL(SYS_waitpid, pid, &status, 0) < 0) {
+#elif defined(Solaris)
+		while(_WAITPID(pid, &status, 0) < 0) {
+#endif
+
+			if (errno != EINTR) {
+				status = -1;
+				break;
+			}
+		}
+	}
+	
+	/* restore previous signal actions and reset signal mask */
+	if (sigaction(SIGINT, &saveintr, NULL) < 0) {
+		return -1;
+	}
+	if (sigaction(SIGQUIT, &savequit, NULL) < 0) {
+		return -1;
+	}
+	if (sigprocmask(SIG_SETMASK, &savemask, NULL) < 0) {
+		return -1;
+	}
+
+	return status;
+}
+
+
+
+
+
 
 
 /*
