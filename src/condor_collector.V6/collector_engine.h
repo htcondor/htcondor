@@ -100,13 +100,7 @@ class CollectorEngine : public Service
 	static ClassAd* LONG_GONE;
 	static ClassAd* THRESHOLD;
 
-	static char* CondorAdministrator;
-
 };
 
-#ifndef WIN32
-// export a utility function
-int email (char *, char * = NULL);
-#endif  // of ifndef WIN32
 
 #endif // __COLLECTOR_ENGINE_H__
