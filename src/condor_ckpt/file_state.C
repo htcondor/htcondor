@@ -1055,7 +1055,7 @@ int CondorFileTable::cfile_fcntl( int fd, int cmd, int arg )
 				struct flock *f = (struct flock *)arg;
 
 				if( (f->l_whence==0) && (f->l_len==0) ) {
-					return FileTab->ftruncate(fd,f->l_start);
+					return FileTab->cfile_ftruncate(fd,f->l_start);
 				}
 				return pointers[fd]->file->cfile_fcntl(cmd,arg);
 			}
@@ -1068,7 +1068,7 @@ int CondorFileTable::cfile_fcntl( int fd, int cmd, int arg )
 				struct flock64 *f64 = (struct flock64 *)arg;
 
 				if( (f64->l_whence==0) && (f64->l_len==0) ) {
-					return FileTab->ftruncate(fd,f64->l_start);
+					return FileTab->cfile_ftruncate(fd,f64->l_start);
 				}
 
 				return pointers[fd]->file->cfile_fcntl(cmd,arg);
