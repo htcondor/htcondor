@@ -53,12 +53,16 @@ class Queue {
 //--------------------------------------------------------------------
 
 template <class Value>
-Queue<Value>::Queue(int tableSz)
+Queue<Value>::Queue( int tableSz )
 {
-  tableSize=tableSz;
-  ht=new Value[tableSize];
-  length = 0;
-  head=tail=0;
+   if( tableSz > 0 ) {
+	   tableSize = tableSz;
+   } else {
+	   tableSize = 32;
+   }
+   ht = new Value[tableSize];
+   length = 0;
+   head = tail = 0;
 }
 
 //--------------------------------------------------------------------
