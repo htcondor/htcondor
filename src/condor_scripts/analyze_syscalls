@@ -44,7 +44,8 @@ fi
 
 
 # place all the system calls on this platform sorted into /tmp/asc1.$$
-grep "#define" $SYSCALL | grep "SYS_" | awk -F'_' '{print $2}' - | awk '{print $1}' | tr "[:upper:]" "[:lower:]" | sort | uniq > /tmp/asc1.$$
+grep "#define" $SYSCALL | grep "SYS_" | awk '{print $2}' | sed 's/SYS_//' \
+	| tr "[:upper:]" "[:lower:]" | sort | uniq > /tmp/asc1.$$
 
 # place all global functions in condor_syscall_lib into /tmp/asc2.$$
 # for C++ objects, just report the object with "[C++]" appended instead
