@@ -221,9 +221,21 @@ int display_proc_long ();
 int display_v2_proc_long ();
 int setegid ();
 int seteuid ();
+<<<<<<< util_lib_proto.h
+
 #if 0
+||||||| 1.2
+=======
+#if 0
+>>>>>>> /usr/tmp/T4026760
 int setlinebuf ();
+<<<<<<< util_lib_proto.h
 #endif
+
+||||||| 1.2
+=======
+#endif
+>>>>>>> /usr/tmp/T4026760
 int setregid ();
 int setreuid ();
 int setrgid ();
