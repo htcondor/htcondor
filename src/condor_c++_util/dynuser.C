@@ -1,4 +1,28 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
 #include "condor_common.h"
+#include "condor_uid.h"
 #include "dynuser.h"
 #include <windows.h>
 #include <lmaccess.h>
@@ -108,7 +132,10 @@ dynuser::~dynuser() {
 	if ( password )			delete [] password;
 	if ( password_t )		delete [] password_t;
 	
-	if ( logon_token )		CloseHandle ( logon_token );
+	if ( logon_token )	{
+		CloseHandle ( logon_token );
+		logon_token = NULL;
+	}
 }
 
 
@@ -357,6 +384,28 @@ bool dynuser::deleteuser(char* username ) {
 
 	bool retval = true;
 
+	if (!username) {
+		return false;
+	}
+
+	// Must be privledged user to go deleting accounts, buster!!!
+	priv_state old_priv = set_root_priv();
+
+	// Close any token we may have to the account we are about to delete
+	if ( accountname && strcmp(accountname,username)==0 ) {
+		if ( logon_token )	{
+			// logon token is a handle to the account we are about to kill,
+			// so we need to close it.  But first, check if the priv state
+			// code (in uids.C) has a copy of this handle.  If so, clear it
+			// out.
+			if ( logon_token == priv_state_get_handle() ) {
+				uninit_user_ids();
+			}
+			CloseHandle ( logon_token );
+			logon_token = NULL;
+		}
+	}
+
 	// allocate working buffers if needed
 	if (!accountname) 
 		accountname = new char[100];
@@ -370,6 +419,9 @@ bool dynuser::deleteuser(char* username ) {
 
 
 	// get machine name
+	// Todd <tannenba@cs.wisc.edu> - not needed; we'll just pass a NULL
+	// to LsaOpenPolicy to specify the local machine. - 1/02
+#if 0
 	UNICODE_STRING machine;
 	{
 		PWKSTA_INFO_100 pwkiWorkstationInfo;
@@ -381,14 +433,15 @@ bool dynuser::deleteuser(char* username ) {
 		InitString( machine, 
 			(wchar_t *)pwkiWorkstationInfo->wki100_computername);
 	}
+#endif
 
 	// open a policy
 	LSA_HANDLE hPolicy = 0;
 	LSA_OBJECT_ATTRIBUTES oa;//	= { sizeof oa };
 	ZeroMemory(&oa, sizeof(oa));
-	if (LsaOpenPolicy(&machine,		// Computer Name (NULL == this machine?)
+	if (LsaOpenPolicy(NULL,		// Computer Name (NULL == this machine?)
 		&oa,						// Object Attributes
-		POLICY_LOOKUP_NAMES | POLICY_CREATE_ACCOUNT,	// Type of access required
+		POLICY_LOOKUP_NAMES | POLICY_CREATE_ACCOUNT | POLICY_ALL_ACCESS, // Type of access required
 		&hPolicy ) != STATUS_SUCCESS)					// Pointer to the policy handles
 	{
 		dprintf(D_ALWAYS,"dynuser::deleteuser() LsaOpenPolicy failed\n");
@@ -399,27 +452,49 @@ bool dynuser::deleteuser(char* username ) {
 
 	// according to microsoft docs, LsaRemoveAccountRights will remove
 	// the account and all rights if the 3rd param is TRUE, so NetUserDel
-	// doesn't need to be called.
+	// doesn't need to be called.  But "only from a certain perspective", says
+	// Richter in "Programming Server-Side Applications for Microsoft Windows 2000".
+	// Confusing, eh?  So we call NetUserDel as well after we blow away the rights.
 	NTSTATUS result;
 	result = LsaRemoveAccountRights( hPolicy, psid, 1, 0, 0 );
-	if (retval && result != STATUS_SUCCESS) {
+	if (!retval || result != STATUS_SUCCESS) {
+		// Failed to remove all Account Rights
+
+		dprintf(D_ALWAYS,"dynuser: LsaRemoveAccountRights Failed winerr=%ul\n",
+			LsaNtStatusToWinError(result));
+
+		// We do NOT do a NetUserDel here, since we want to either remove
+		// all traces of the account or nothing at all.  We don't want to remove
+		// just the visible part and leave policy crap bloating the registry behind
+		// the scenes.
+
+	} else {
+
+		// Able to remove all Account Rights, so remove account as well.
+
         NET_API_STATUS nerr = NetUserDel( NULL, accountname_t );
-        if ( nerr != NERR_Success ) {			
-			dprintf(D_ALWAYS,"dynuser::deleteuser() failed!\n", result);
+        if ( nerr != NERR_Success && nerr != NERR_UserNotFound ) {			
+			dprintf(D_ALWAYS,"dynuser::deleteuser() failed! nerr=%d\n", nerr);
 			retval = false;
 		} else {
-			dprintf(D_FULLDEBUG,"dynuser::deleteuser() Successfully deleted NT user %s\n", username);
+			dprintf(D_FULLDEBUG,
+				"dynuser::deleteuser() Successfully deleted user %s\n", 
+				 username);
 		}
-	} else {
-		dprintf(D_FULLDEBUG,"dynuser::deleteuser() Successfully removed NT user %s\n", username);
+
+
 	}
 
 	LsaClose( hPolicy );
+
 
 	// Delete accountname_t so destructor does not try to remove the account again
 	delete [] accountname_t;
 	accountname_t = NULL;
 	
+	// Set our priv state back how it used to be
+	set_priv(old_priv);
+
 	return retval;
 
 }
