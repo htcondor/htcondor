@@ -98,8 +98,6 @@ usage()
 int
 main( int argc, char *argv[] )
 {
-	char *str;
-
 #ifndef WIN32
 		// Ignore SIGPIPE so if we cannot connect to a daemon we do
 		// not blowup with a sig 13.
@@ -171,7 +169,6 @@ produce_output()
 {
 	char	*str;
 	FILE	*mailer;
-	char	cmd[ 1024 ];
 	char	*subject = "Junk Condor Files";
 
 	if( MailFlag ) {
@@ -189,7 +186,7 @@ produce_output()
 		);
 	}
 
-	for( BadFiles->rewind(); str = BadFiles->next(); ) {
+	for( BadFiles->rewind(); (str = BadFiles->next()); ) {
 		fprintf( mailer, "%s\n", str );
 	}
 
@@ -227,7 +224,7 @@ check_spool_dir()
 	}
 
 		// Check each file in the directory
-	while( f = dir.Next() ) {
+	while( (f = dir.Next()) ) {
 			// see if it's on the list
 		if( well_known_list.contains(f) ) {
 			good_file( Spool, f );
@@ -295,7 +292,7 @@ grab_val( const char *str, const char *pattern )
 {
 	char	*ptr;
 
-	if( ptr = strstr(str,pattern) ) {
+	if( (ptr = strstr(str,pattern)) ) {
 		return atoi(ptr + strlen(pattern) );
 	}
 	return -1;
@@ -355,10 +352,6 @@ is_v3_ckpt( const char *name )
 		return proc_exists( cluster, proc );
 	}
 }
-
-static BOOLEAN	__exists;
-static int		__cluster;
-static int		__proc;
 
 /*
   Check to see whether a given cluster number exists in the job queue.
@@ -435,7 +428,7 @@ check_execute_dir()
 		return;
 	}
 
-	while( f = dir.Next() ) {
+	while( (f = dir.Next()) ) {
 		if( busy ) {
 			good_file( Execute, f );	// let anything go here
 		} else {
@@ -457,7 +450,7 @@ check_log_dir()
 
 	invalid.initializeFromString (InvalidLogFiles);
 
-	while( f = dir.Next() ) {
+	while( (f = dir.Next()) ) {
 		if( invalid.contains(f) ) {
 			bad_file( Log, f, dir );
 		} else {
