@@ -3,7 +3,8 @@
 use POSIX ":sys_wait_h";
 
 	##these are the files that need to be staged on the remote machine
-$config = "condor_config.glidein";
+$config_name = "glidein_condor_config";
+$startup_name = "glidein_startup";
 @DAEMONS = ( "condor_master", "condor_startd", "condor_starter",
 			 "condor_starter.std", "condor_pvmd", "condor_starter.pvm" );
 
@@ -22,9 +23,20 @@ if ( $gen_config ) {
 	    exit( 1 );
 	}
 	print "Generated $glidein_condor_config\n";
-	exit( 0 );
+}
+if ( $gen_glidein_startup ) {
+	my $glidein_startup = "glidein_startup$suffix";
+	gen_glidein_startup($glidein_startup);
+	if ( ! -f $glidein_startup ) {
+	    print STDERR "Failed to create $glidein_startup.\n";
+	    exit( 1 );
+	}
+	print "Generated $glidein_startup\n";
 }
 
+if ( $gen_config || $gen_glidein_startup ) {
+    exit( 0 );
+}
 
 foreach $CONTACT ( @CONTACTS ) {
 	if ( host_info() ) {
@@ -43,6 +55,11 @@ foreach $CONTACT ( @CONTACTS ) {
 			exit( 3 );
 		}
 	}
+}
+
+if ( $#ARGV == -1 ) {
+    print "No target resource specified.  Use -help for usage information.\n";
+    exit( -1 );
 }
 
 exit( 0 );
@@ -81,7 +98,7 @@ sub do_submit() {
 		$GLOBUSRSL .= "(count=$cpucount)(jobtype=single)";
 	}
 
-	$GLOBUSENV .= "CONDOR_CONFIG=$basedir/$config;";
+	$GLOBUSENV .= "CONDOR_CONFIG=$basedir/$config_name;";
 	$GLOBUSENV .= "_condor_CONDOR_HOST=$CONDOR_HOST;";
 
 	chomp( $my_hostname = `$G_HOSTNAME` );
@@ -171,7 +188,7 @@ sub do_submit() {
 	print SUBMIT <<"EOF";
 Universe = Globus
 
-Executable = $archdir/condor_master
+Executable = $archdir/$startup_name
 
 Arguments = $arguments
 
@@ -318,8 +335,10 @@ print STDERR "	Valid options:\n"
 . "                            without running a Condor job [default=20]\n"
 . "   -anybody                Allow any user to run jobs on your glideins\n"
 . "   -admin <email address>  Who to email with problems [default=<you>]\n"
-. "   -genconfig              Generate condor_config.glidein\n"
+. "   -genconfig              Generate glidein_condor_config; do not submit\n"
 . "   -useconfig <file>       Use the specifed config file\n"
+. "   -genstartup             Generate glidein_startup; do not submit\n"
+. "   -usestartup <file>      Use the specifed glidein startup file\n"
 . "   -gensubmit              Generate submit files; do not submit\n"
 . "   -suffix X               Suffix to append to submit file names.\n"
 . "   -edg                    Use EDG MDS schema to query GRIS\n"
@@ -337,6 +356,7 @@ sub parse_command_line() {
 	$suffix = ".$$";
 	$localdir = "";
 	$use_config = "";
+	$use_glidein_startup = "";
 	chomp( $username = `whoami` );
 
 	use Getopt::Long;
@@ -359,6 +379,8 @@ sub parse_command_line() {
 		"admin=s" => \$condor_admin,
 		"genconfig" => \$gen_config,
 		"useconfig=s" => \$use_config,
+		"genstartup" => \$gen_glidein_startup,
+		"usestartup=s" => \$use_glidein_startup,
 		"gensubmit" => \$gen_submit,
 		"edg" => \$edg_mds_schema,
 		"setup_jobmanager=s" => \$setup_jobmanager,
@@ -418,11 +440,6 @@ sub parse_command_line() {
 	}
 	chomp( @CONTACTS );
 
-	if ( $#ARGV == -1 ) {
-	    print "No target resource specified.  Use -help for usage information.\n";
-	    exit( -1 );
-	}
-
 	return( 0 );
 }
 
@@ -442,6 +459,24 @@ sub silently {
 		exec( @_ );
 	}
 	return $?;
+}
+
+sub gen_glidein_startup {
+	my $filename = shift(@_);
+	open( GLIDEIN_STARTUP, ">$filename")
+	    or die "Can't write to $filename: $!";
+
+	print GLIDEIN_STARTUP <<"EOF";
+#!/bin/sh
+
+if [ "\$_condor_LOCAL_DIR" = "." ]; then
+  export _condor_LOCAL_DIR=\$(pwd)
+fi
+
+exec \${_condor_SBIN}/condor_master "\$@"
+EOF
+	close GLIDEIN_STARTUP
+	    or die "Error writing to $filename: $!";
 }
 
 sub gen_main_config {
@@ -772,6 +807,8 @@ sub do_remote_setup() {
 	my $DAEMONS = join( ' ', @DAEMONS );
 	my $glidein_condor_config;
 	my $glidein_condor_config_is_temporary = 0;
+	my $glidein_startup;
+	my $glidein_startup_is_temporary = 0;
 
 	if ( $use_config ne "" ) {
 		$glidein_condor_config = $use_config;
@@ -785,6 +822,45 @@ sub do_remote_setup() {
 		return( "accessing Condor config file: $glidein_condor_config" );
 	}
 
+	if ( $use_glidein_startup ne "" ) {
+		$glidein_startup = $use_glidein_startup;
+	} else {
+		$glidein_startup = "glidein_startup$suffix";
+		$glidein_startup_is_temporary = 1;
+		gen_glidein_startup($glidein_startup);
+	}
+
+	if ( ! -f $glidein_startup ) {
+		return( "accessing glidein startup file: $glidein_startup" );
+	}
+
+	my $glidein_condor_config_text;
+	my $glidein_startup_text;
+
+	open( CONFIG_FILE, "<$glidein_condor_config")
+	    or return ("reading $glidein_condor_config: $!");
+	$glidein_condor_config_text = join("",readline(CONFIG_FILE));
+	close(CONFIG_FILE);
+	if( $glidein_condor_config_is_temporary ) {
+		unlink( $glidein_condor_config );
+	}
+
+	open( STARTUP_FILE, "<$glidein_startup")
+	    or return ("reading $glidein_startup: $!");
+	$glidein_startup_text = join("",readline(STARTUP_FILE));
+	close(STARTUP_FILE);
+	if( $glidein_startup_is_temporary ) {
+		unlink( $glidein_startup );
+	}
+
+	#For maximum portability and to avoid extra problems that may
+	#result from file transfers, the condor_config and startup
+	#files are inserted into the remote setup script.
+
+	#Escape $ characters.
+	$glidein_condor_config_text =~ s/\$/\\\$/g;
+	$glidein_startup_text =~ s/\$/\\\$/g;
+
 	my $glidein_remote_setup = "glidein_remote_setup$suffix";
 	open( REM_SETUP, ">$glidein_remote_setup" );
 	print REM_SETUP<<"EOF";
@@ -796,7 +872,8 @@ sub do_remote_setup() {
 	TARBALL_SERVERS=\$5
 	FORCE=\$6
 
-	CONFIG=\$BASEDIR/$config
+	CONFIG=\$BASEDIR/$config_name
+	STARTUP=\$ARCHDIR/$startup_name
 
 	if [ "$GLOBUS_SH_TAR" = "" ]; then
 		#We must not have gotten executed via globus-sh-exec.
@@ -807,6 +884,7 @@ sub do_remote_setup() {
 		GLOBUS_SH_RM=rm;
 		GLOBUS_SH_GREP=grep;
 		GLOBUS_SH_SED=sed;
+		GLOBUS_SH_MKDIR=mkdir;
 		export LD_LIBRARY_PATH=\$GLOBUS_LOCATION/lib:\$LD_LIBRARY_PATH
 	fi
 
@@ -814,15 +892,24 @@ sub do_remote_setup() {
 		if [ ! -d \$newdir ];
 			then \$GLOBUS_SH_MKDIR \$newdir;
 		fi
-		if [ ! -d \$newdir ];
+	if [ ! -d \$newdir ];
 			then echo "ERROR mkdir \$newdir"
 			exit 1;
 		fi
 	done
 
-	#Read condor_config from stdin
-	cat > \$CONFIG.\$\$;
+	#Write config file
+	cat > \$CONFIG.\$\$ <<END_CONFIG
+$glidein_condor_config_text
+END_CONFIG
 	mv -f \$CONFIG.\$\$ \$CONFIG;
+
+	#Write startup file
+	cat > \$STARTUP.\$\$ <<END_STARTUP
+$glidein_startup_text
+END_STARTUP
+	chmod a+x \$STARTUP.\$\$
+	mv -f \$STARTUP.\$\$ \$STARTUP;
 
 	cd \$ARCHDIR
 	GETFILES=0
@@ -905,7 +992,6 @@ EOF
 	arguments = $basedir_arg $archdir_arg $arch $localdir_arg $SERVER_URL $force_setup
 	#avoid trouble with scratch directory creation
 	remote_initialdir = /tmp
-	input = $glidein_condor_config
 	output = $glidein_setup_output
 	error = $glidein_setup_error
 	log = $glidein_setup_log
@@ -915,6 +1001,12 @@ EOF
 
 	if( $gen_submit ) {
 	    print "Saving glidein setup submit file: $glidein_setup_submit\n";
+	    if( $use_config ) {
+		print "NOTE: $use_config has been inserted into $glidein_setup_submit, so if you make further changes to the config file, you should regenerate the setup script if you plan to use it directly.\n";
+	    }
+	    if( $use_glidein_startup ) {
+		print "NOTE: $use_glidein_startup has been inserted into $glidein_setup_submit, so if you make further changes to the startup file, you should regenerate the setup script if you plan to use it directly.\n";
+	    }
 	    return;
 	}
 
@@ -978,8 +1070,5 @@ EOF
 	unlink( $glidein_setup_log);
 	unlink( $glidein_remote_setup );
 
-	if( $glidein_condor_config_is_temporary ) {
-		unlink( $glidein_condor_config );
-	}
 	return( 0 );
 }
