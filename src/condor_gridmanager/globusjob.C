@@ -62,6 +62,11 @@
 bool durocControlInited = false;
 globus_duroc_control_t durocControl;
 
+#define LOG_GLOBUS_ERROR(func,error) \
+    dprintf(D_ALWAYS, \
+			"gmState %d, globusState %d: %s return Globus error %d\n", \
+            gmState,globusState,func,error)
+
 GlobusJob::GlobusJob( GlobusJob& copy )
 {
 	dprintf(D_ALWAYS, "GlobusJob copy constructor called. This is a No-No!\n");
@@ -138,6 +143,9 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	jmUnreachable = false;
 	evaluateStateTid = TIMER_UNSET;
 	lastProbeTime = 0;
+	enteredCurrentGmState = time(NULL);
+	enteredCurrentGlobusState = time(NULL);
+	numSubmitAttempts = 0;
 	// ad = NULL;
 
 	myResource = resource;
@@ -280,6 +288,8 @@ int GlobusJob::doEvaluateState()
 					gmState = GM_RESTART;
 				} else {
 					// unhandled error
+					LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(0)", rc );
+					gmState = GM_STOP_AND_RESTART
 				}
 			}
 			break;
@@ -297,7 +307,11 @@ int GlobusJob::doEvaluateState()
 			}
 			if ( rc != GLOBUS_SUCCESS ) {
 				// unhandled error
+				LOG_GLOBUS_ERROR( "globus_gram_client_job_callback_register()", rc );
+				gmState = GM_STOP_AND_RESTART;
+				break;
 			}
+			callbackRegistered = true;
 			globusStatus = status;
 			globusError = error;
 			addScheddUpdateAction( this, UA_UPDATE_GLOBUS_STATE );
@@ -343,6 +357,9 @@ int GlobusJob::doEvaluateState()
 			}
 			if ( rc != GLOBUS_SUCCESS ) {
 				// unhandled error
+				LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(STDIO_UPDATE)", rc );
+				gmState = GM_STOP_AND_RESTART;
+				break;
 			}
 			if ( globusState == UNSUBMITTED ) {
 				gmState = GM_SUBMIT_SAVED;
@@ -368,13 +385,16 @@ int GlobusJob::doEvaluateState()
 					connect_failure = true;
 					break;
 				}
+				numSubmitAttempts++;
 				if ( rc == GLOBUS_SUCCESS ) {
 					newJM = false;
+					callbackRegistered = true;
 					jobContact = strdup( job_contact );
 					globus_gram_client_job_contact_free( job_contact );
 					gmState = GM_SUBMIT_UNCOMMITTED;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
 					newJM = true;
+					callbackRegistered = true;
 					jobContact = strdup( job_contact );
 					globus_gram_client_job_contact_free( job_contact );
 					gmState = GM_SUBMIT_UNCOMMITTED;
@@ -415,8 +435,11 @@ int GlobusJob::doEvaluateState()
 				}
 				if ( rc != GLOBUS_SUCCESS ) {
 					// unhandled error
+					LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_REQUEST)", rc );
+					gmState = GM_CANCEL;
+				} else {
+					gmState = GM_SUBMITTED;
 				}
-				gmState = GM_SUBMITTED;
 			}
 			break;
 		case GM_SUBMITTED:
@@ -466,6 +489,8 @@ int GlobusJob::doEvaluateState()
 							gmState = GM_STOP_AND_RESTART;
 						} else {
 							// unhandled error
+							LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(STDIO_SIZE)", rc );
+							gmState = GM_STOP_AND_RESTART;
 						}
 					} else {
 						condorState = COMPLETED;
@@ -492,12 +517,18 @@ int GlobusJob::doEvaluateState()
 							}
 							if ( rc != GLOBUS_SUCCESS ) {
 								// unhandled error
+								LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_END)", rc );
+								gmState = GM_STOP_AND_RESTART;
+								break;
 							}
 						}
 						gmState = GM_CLEAR_REQUEST;
 					}
 				} else {
 					time_t now = time(NULL);
+					if ( lastProbeTime < enteredCurrentGmState ) {
+						lastProbeTime = enteredCurrentGmState;
+					}
 					if ( now >= lastProbeTime + JOB_PROBE_INTERVAL ) {
 						rc = globus_gram_client_job_status( jobContact,
 															&status, &error );
@@ -510,8 +541,14 @@ int GlobusJob::doEvaluateState()
 						}
 						if ( rc != GLOBUS_SUCCESS ) {
 							// unhandled error
+							LOG_GLOBUS_ERROR( "globus_gram_client_job_status()", rc );
+							gmState = GM_STOP_AND_RESTART;
+							break;
 						}
-						globusState = state;
+						if ( globusState != state ) {
+							globusState = state;
+							enteredCurrentGlobusState = now;
+						}
 						globusError = error;
 						lastProbeTime = now;
 					}
@@ -544,8 +581,11 @@ int GlobusJob::doEvaluateState()
 			}
 			if ( rc != GLOBUS_SUCCESS ) {
 				// unhandled error
-			}	
-			gmState = GM_DELETE;
+				LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_END)", rc );
+				gmState = GM_STOP_AND_RESTART;
+			} else {
+				gmState = GM_DELETE;
+			}
 			break;
 		case GM_STOP_AND_RESTART:
 			rc = globus_gram_client_job_signal( jobContact,
@@ -560,8 +600,11 @@ int GlobusJob::doEvaluateState()
 			}
 			if ( rc != GLOBUS_SUCCESS ) {
 				// unhandled error
-			}	
-			gmState = GM_RESTART;
+				LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(STOP_MANAGER)", rc );
+				gmState = GM_CANCEL;
+			} else {
+				gmState = GM_RESTART;
+			}
 			break;
 		case GM_RESTART:
 			if ( jobContact == NULL ) {
@@ -612,6 +655,8 @@ int GlobusJob::doEvaluateState()
 					globus_gram_client_job_contact_free( job_contact );
 					gmState = GM_SUBMIT_UNCOMMITTED;
 				} else {
+					// unhandled error
+					LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
 					gmState = GM_CLEAR_REQUEST;
 				}
 			}
@@ -637,6 +682,8 @@ int GlobusJob::doEvaluateState()
 			}
 			if ( rc != GLOBUS_SUCCESS ) {
 				// unhandled error
+				LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_REQUEST)", rc );
+				gmState = GM_STOP_AND_RESTART;
 			}
 			gmState = GM_SUBMITTED;
 			break;
@@ -652,9 +699,22 @@ int GlobusJob::doEvaluateState()
 				}
 				if ( rc != GLOBUS_SUCCESS ) {
 					// unhandled error
+					LOG_GLOBUS_ERROR( "globus_gram_client_job_cancel()", rc );
+					gmState = GM_CLEAR_REQUEST;
+					break;
 				}
 			}
-			gmState = GM_CANCEL_WAIT;
+			if ( callbackRegistered ) {
+				gmState = GM_CANCEL_WAIT;
+			} else {
+				// This can happen if we're restarting and fail to
+				// reattach to a running jobmanager
+				if ( condorState == REMOVED ) {
+					gmState = GM_DELETE;
+				} else {
+					gmState = GM_CLEAR_REQUEST;
+				}
+			}
 			break;
 		case GM_CANCEL_WAIT:
 			if ( globusState == DONE ) {
@@ -671,6 +731,8 @@ int GlobusJob::doEvaluateState()
 					}
 					if ( rc != GLOBUS_SUCCESS ) {
 						// unhandled error
+						LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_END)", rc );
+						gmState = GM_CLEAR_REQUEST;
 					}
 				}
 				if ( condorState == REMOVED ) {
@@ -698,6 +760,8 @@ int GlobusJob::doEvaluateState()
 						}
 						if ( rc != GLOBUS_SUCCESS ) {
 							// unhandled error
+							LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_END)", rc );
+							gmState = GM_CLEAR_REQUEST;
 						}
 					}
 					if ( condorState == REMOVED ) {
@@ -708,6 +772,9 @@ int GlobusJob::doEvaluateState()
 				}
 			} else {
 				time_t now = time(NULL);
+				if ( lastProbeTime < enteredCurrentGmState ) {
+					lastProbeTime = enteredCurrentGmState;
+				}
 				if ( now >= lastProbeTime + JOB_PROBE_INTERVAL ) {
 					rc = globus_gram_client_job_status( jobContact, &status,
 														&error );
@@ -720,6 +787,8 @@ int GlobusJob::doEvaluateState()
 					}
 					if ( rc != GLOBUS_SUCCESS ) {
 						// unhandled error
+						LOG_GLOBUS_ERROR( "globus_gram_client_job_status()", rc );
+						gmState = GM_CLEAR_REQUEST;
 					}
 					globusState = state;
 					globusError = error;
@@ -757,9 +826,11 @@ int GlobusJob::doEvaluateState()
 		if ( gmState != old_gm_state || globusState != old_globus_state ) {
 			reevaluate_state = true;
 		}
+		if ( globusState != old_globus_state ) {
+			enteredCurrentGlobusState = time(NULL);
+		}
 		if ( gmState != old_gm_state ) {
-			// reset lastProbeTime whenever we enter a new state
-			lastProbeTime = time(NULL);
+			enteredCurrentGmState = time(NULL);
 		}
 
 	} while ( reevaluate_state );
@@ -790,6 +861,7 @@ void GlobusJob::NotifyResourceUp()
 	resourceDown = false;
 	if ( jmUnreachable ) {
 		gmState = GM_RESTART;
+		enteredCurrentGmState = time(NULL);
 	}
 	jmUnreachable = false;
 	SetEvaluateState();
@@ -803,10 +875,13 @@ void GlobusJob::UpdateCondorState( int new_state )
 
 void GlobusJob::UpdateGlobusState( int new_state )
 {
-	globusState = new_state;
-	// where to put logging of events: here or in EvaluateState?
-	addScheddUpdateAction( this, UA_UPDATE_GLOBUS_STATE, 0 );
-	SetEvaluateState();
+	if ( globusState != new_state ) {
+		globusState = new_state;
+		enteredCurrentGlobusState = time(NULL);
+		// where to put logging of events: here or in EvaluateState?
+		addScheddUpdateAction( this, UA_UPDATE_GLOBUS_STATE, 0 );
+	}
+	SetEvaluateState(); // should this be inside the if statement?
 }
 
 GlobusResrouce *GlobusJob::GetResource()

@@ -15,20 +15,24 @@ GM_INIT
     gm_state = GM_UNSUBMITTED
   other
     signal(invalid signal type)
-    if (QUERY_DENIAL or JOB_QUERY_DENIAL)
+    if (QUERY_DENIAL or JOB_QUERY_DENIAL error)
       set old jm
       if (transfering stdout or stderr)
         gm_state = GM_CANCEL
       else
         gm_state = GM_REGISTER
-    else if (UNKNOWN_SIGNAL_TYPE)
+    else if (UNKNOWN_SIGNAL_TYPE error)
       set new jm
       gm_state = GM_REGISTER
-    if (CONNECTION_FAILED)
+    if (CONNECTION_FAILED error)
       gm_state = GM_RESTART
+    if (other error)
+      gm_state = GM_STOP_AND_RESTART
 
 GM_REGISTER
-  register callbacks
+  register callbacks()
+  if (other error)
+    gm_state = GM_STOP_AND_RESTART
   set globusState and errorCode
   update_schedd(globusState)
   new jm
@@ -37,7 +41,9 @@ GM_REGISTER
     gm_state = GM_SUBMITTED
 
 GM_STDIO_UPDATE
-  update stdio
+  update stdio()
+  if (other error)
+    gm_state = GM_STOP_AND_RESTART
   UNSUBMITTED
     gm_state = GM_SUBMIT_SAVED
   other
@@ -65,6 +71,8 @@ GM_SUBMIT_SAVED
     gm_state = GM_CANCEL
   other
     commit(request)
+    if (other error)
+      gm_state = GM_CANCEL
     gm_state = GM_SUBMITTED
 
 GM_SUBMITTED
@@ -72,7 +80,9 @@ GM_SUBMITTED
     gm_state = GM_CANCEL
   other
     UNSUBMITTED/PENDING/ACTIVE/SUSPENDED
-      probe
+      probe()
+      if (other error)
+        gm_state = GM_STOP_AND_RESTART
     DONE
       old jm
         update_schedd(condor_state = COMPLETED); //don't wait
@@ -84,11 +94,16 @@ GM_SUBMITTED
           gm_state = GM_DONE_UNCOMITTED
         if (output incomplete)
           gm_state = GM_STOP_AND_RESTART
+        if (other error)
+          gm_state = GM_STOP_AND_RESTART
     FAILED
       COMMIT_TIMED_OUT/TTL_EXPIRED/JM_STOPPED/USER_PROXY_EXPIRED
         gm_state = GM_RESTART
       other
-        commit(end) (skip for old jm)
+        if (new jm)
+          commit(end)
+          if (other error)
+            gm_state = GM_STOP_AND_RESTART
         gm_state = GM_CLEAR_REQUEST
 
 GM_DONE_UNCOMITTED
@@ -97,10 +112,14 @@ GM_DONE_UNCOMITTED
 
 GM_DONE_SAVED
   commit(end)
+  if (other error)
+    gm_state = GM_STOP_AND_RESTART
   gm_state = GM_DELETE
 
 GM_STOP_AND_RESTART
   stop_jm()
+  if (other_error)
+    gm_state = GM_CANCEL
   gm_state = GM_RESTART
 
 GM_RESTART
@@ -110,7 +129,7 @@ GM_RESTART
     restart()
     if (JM_ALREADY_RUNNING error)
       gm_state = GM_INIT
-    if (other failure)
+    if (other error)
       gm_state = GM_CLEAR_REQUEST
     gm_state = GM_RESTART_UNCOMMITTED
 
@@ -120,19 +139,33 @@ GM_RESTART_UNCOMMITTED
 
 GM_RESTART_SAVED
   commit(request)
+  if (other error)
+    gm_state = GM_STOP_AND_RESTART
   gm_state = GM_SUBMITTED
 
 GM_CANCEL
   if (!DONE and !FAILED)
     cancel()
-  gm_state = GM_CANCEL_WAIT
+    if (other error)
+      gm_state = GM_CLEAR_REQUEST
+  if (callbackRegistered)
+    gm_state = GM_CANCEL_WAIT
+  else
+    REMOVED
+      gm_state = GM_DELETE
+    other
+      gm_state = GM_CLEAR_REQUEST
 
 GM_CANCEL_WAIT
   UNSUBMITTED/PENDING/ACTIVE/SUSPENDED
     probe
+    if (other error)
+      gm_state = GM_CLEAR_REQUEST
   DONE
     if (new jm)
       commit(end)
+      if (other error)
+        gm_state = GM_CLEAR_REQUEST
     REMOVED
       gm_state = GM_DELETE
     other
@@ -142,6 +175,8 @@ GM_CANCEL_WAIT
       gm_state = GM_RESTART
     other
       commit(end)
+      if (other error)
+        gm_state = GM_CLEAR_REQUEST
       REMOVED
         gm_state = GM_DELETE
       other
