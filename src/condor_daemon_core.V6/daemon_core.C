@@ -2529,15 +2529,12 @@ int DaemonCore::HandleReq(int socki)
 
 			KeyCacheEntry *session = NULL;
 
-            char * tmp_sid = NULL;
-			if( ! auth_info.LookupString(ATTR_SEC_SID, &tmp_sid)) {
+			if( ! auth_info.LookupString(ATTR_SEC_SID, &the_sid)) {
 				dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
 						   "extract auth_info.%s!\n", ATTR_SEC_SID);
 				result = FALSE;	
 				goto finalize;
 			}
-
-            the_sid = strdup(tmp_sid);
 
 			// lookup the suggested key
 			if (!sec_man->session_cache->lookup(the_sid, session)) {
