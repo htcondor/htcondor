@@ -542,7 +542,7 @@ bad_file( const char *dirpath, const char *name, Directory & dir )
 	}
 
 	if( RmFlag ) {
-		if( dir.Remove_File( pathname ) ) {
+		if( dir.Remove_Full_Path( pathname ) ) {
 			sprintf( buf, "%s - Removed", pathname );
 		} else {
 			sprintf( buf, "%s - Can't Remove", pathname );

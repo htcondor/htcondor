@@ -41,7 +41,7 @@ hashFuncUInt( const unsigned int& n, int numBuckets )
 
 
 int
-hashFuncJobIdStr( const char* & key, int numBuckets )
+hashFuncJobIdStr( char* const & key, int numBuckets )
 {
     unsigned int bkt = 0;
 	int i,j,size;

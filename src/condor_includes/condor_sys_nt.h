@@ -37,9 +37,13 @@
 
 #define _WIN32_WINNT 0x0500 // ray's stupid kludge to get jobobject stuff to build
 
+// Make sure to define this *before* we include winsock2.h
+#define FD_SETSIZE 1024
+
 // the ordering of the two following header files 
 // is important! Starting with the new SDK, we want 
 // winsock2.h not winsock.h, so we include it first. 
+
 #include <winsock2.h>
 #include <windows.h>
 

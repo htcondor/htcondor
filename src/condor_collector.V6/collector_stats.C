@@ -413,7 +413,7 @@ CollectorClassStatsList::publish( ClassAd *ad )
 			sprintf( line, "%s_%s = \"0x%s\"", ATTR_UPDATESTATS_HISTORY,
 					 name, tmp );
 			ad->Insert(line);
-			delete tmp;
+			delete [] tmp;
 		}
 	}
 	return 0;
@@ -458,6 +458,17 @@ CollectorDaemonStatsList::CollectorDaemonStatsList( bool enable,
 CollectorDaemonStatsList::~CollectorDaemonStatsList( void )
 {
 	if ( hashTable ) {
+
+		// iterate through hash table
+		CollectorBaseStats *ent;
+		StatsHashKey key;
+	
+		hashTable->startIterations();
+		while ( hashTable->iterate(key, ent) ) {
+			delete ent;
+			hashTable->remove(key);
+		}
+	
 		delete hashTable;
 		hashTable = NULL;
 	}

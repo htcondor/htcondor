@@ -1085,30 +1085,25 @@ void CollectorDaemon::init_classad(int interval)
     ad->SetMyTypeName(COLLECTOR_ADTYPE);
     ad->SetTargetTypeName("");
 
-    char line[100], *tmp;
-    sprintf(line, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() );
-    ad->Insert(line);
+    char *tmp;
+    ad->Assign(ATTR_MACHINE, my_full_hostname());
 
     tmp = param( "CONDOR_ADMIN" );
     if( tmp ) {
-        sprintf(line, "%s = \"%s\"", ATTR_CONDOR_ADMIN, tmp );
-        ad->Insert(line);
+        ad->Assign( ATTR_CONDOR_ADMIN, tmp );
         free( tmp );
     }
 
     if( CollectorName ) {
-            sprintf(line, "%s = \"%s\"", ATTR_NAME, CollectorName );
+            ad->Assign( ATTR_NAME, CollectorName );
     } else {
-            sprintf(line, "%s = \"%s\"", ATTR_NAME, my_full_hostname() );
+            ad->Assign( ATTR_NAME, my_full_hostname() );
     }
-    ad->Insert(line);
 
-    sprintf(line, "%s = \"%s\"", ATTR_COLLECTOR_IP_ADDR, global_dc_sinful() );
-    ad->Insert(line);
+    ad->Assign( ATTR_COLLECTOR_IP_ADDR, global_dc_sinful() );
 
     if ( interval > 0 ) {
-            sprintf(line,"%s = %d",ATTR_UPDATE_INTERVAL,24*interval);
-            ad->Insert(line);
+            ad->Assign( ATTR_UPDATE_INTERVAL, 24*interval );
     }
 
     // In case COLLECTOR_EXPRS is set, fill in our ClassAd with those

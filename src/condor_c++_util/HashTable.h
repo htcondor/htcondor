@@ -688,7 +688,7 @@ int hashFuncInt( const int& n, int numBuckets );
 int hashFuncUInt( const unsigned int& n, int numBuckets );
 
 /// hash function for string versions of job id's ("cluster.proc")
-int hashFuncJobIdStr( const char* & key, int numBuckets );
+int hashFuncJobIdStr( char* const & key, int numBuckets );
 
 
 #endif // HASH_H

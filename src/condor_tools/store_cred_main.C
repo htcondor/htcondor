@@ -130,7 +130,11 @@ int main(int argc, char *argv[]) {
 
 
 	
-	return result;
+	if ( result == SUCCESS ) {
+	   	return 0;
+	} else {
+		return 1;
+	}
 }
 
 void

@@ -1057,36 +1057,36 @@ Daemon::getCmInfo( const char* subsys )
 		_is_local = false;
 	}
 
-	if( ! host ) {
+	if( ! host  || !host[0] ) {
 			// Try the config file for a subsys-specific IP addr 
 		sprintf( buf, "%s_IP_ADDR", subsys );
 		host = param( buf );
-		if( host ) {
+		if( host && host[0] ) {
 			dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf, host );
 		}
 	}
 
-	if( ! host ) {
+	if( ! host || !host[0]) {
 			// Try the config file for a subsys-specific hostname 
 		sprintf( buf, "%s_HOST", subsys );
 		host = param( buf );
-		if( host ) {
+		if( host && host[0] ) {
 			dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf, 
 					 host ); 
 		}
 	}
 
-	if( ! host ) {
+	if( ! host || !host[0]) {
 			// Try the generic CM_IP_ADDR setting (subsys-specific
 			// settings should take precedence over this). 
 		host = param( "CM_IP_ADDR" );
-		if( host ) {
+		if( host && host[0] ) {
 			dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf, 
 					 host ); 
 		}
 	}
 
-	if( ! host ) {
+	if( ! host || !host[0]) {
 		sprintf( buf, "%s address or hostname not specified in config file",
 				 subsys ); 
 		newError( CA_LOCATE_FAILED, buf );
@@ -1124,6 +1124,16 @@ Daemon::getCmInfo( const char* subsys )
 	free( host );
 	host = tmp;
 	tmp = NULL;
+
+
+	if ( !host ) {
+		sprintf( buf, "%s address or hostname not specified in config file",
+				 subsys ); 
+		newError( CA_LOCATE_FAILED, buf );
+		_is_configured = false;
+		return false;
+	}
+
 
 	if( is_ipaddr(host, &sin_addr) ) {
 		sprintf( buf, "<%s:%d>", host, _port );

@@ -186,10 +186,9 @@ if( $job_log ) {
     print "Using \"$job_log\" as the log file shared by all jobs in this DAG.\n";
     print "Please be sure you know what you're doing and that all jobs use this file.\n";
 } else {
-    print "Checking your DAG input file and all submit files it references.\n";
-    print "This might take a while... \n";
-    $job_log = &parse_dag_file();
-    print "Done.\n";
+	# With the new multi-log-reader code, DAGMan doesn't do much with
+	# this anyhow, but it complains if nothing is specified.
+	$job_log = "$dagfile.dummy_log";
 }
 
 # Create the submit file used to submit DAGMan as a scheduler universe
@@ -253,59 +252,6 @@ sub usage {
     print "         See the condor_submit man page for details.)\n";
     exit( 1 );
 }
-
-sub parse_dag_file {
-    local( %cmd_files, %log_names, $log_name, $had_error, $did_one );
-    $had_error = 0;
-    $did_one = 0;
-    open( DAG, "<$dagfile" ) || die "Can't open $dagfile for reading: $!\n";
-    while( <DAG> ) {
-		while (/^(.*[^\s])\s+\\\s*$/) { 	# This is the stuff to do the \ continuation
-			$thisdl = $1;					# lose the end space and slash
-			$nextdl = <DAG>; 				# grab the next line
-			$nextdl =~ s/^\s*//;			# remove the beginning whitespace
-			$_ = $thisdl ." ". $nextdl;		# slam them together
-		}
-	if( /^job\s+(\S+)\s+(\S+)/i ) {
-	    $cmd_files{$2} = 1;
-	}
-    }
-    close DAG;
-    foreach $file (sort keys %cmd_files ) {
-	if( ! open( FOO, "<$file" ) ) {
-	    print "\nCan't open command file $file for reading: $!\n";
-	    print "Either create $file or re-run with the \"-log\" option.\n";
-	    if( ! $verbose ) {
-		print "Use the \"-verbose\" option for a more verbose error message.\n";
-		exit( 1 );
-	    }	    
-	    print "If all the command files in your DAG don't exist now, consider running\n";
-	    print "condor_submit_dag with the \"-log filename\" option to specify the log file\n";
-	    print "shared by all jobs in your DAG.  This avoids this check.\n";
-	    print "If you do so, you must be sure those files are created when they are needed,\n";
-	    print "probably by using the PRE and POST directives in your DAG file.\n";
-	    print "See the DAGMan manual for more details.\n";
-	    exit( 1 );
-	}
-	while( <FOO> ) {
-	    if( /^\s*log\s*=\s*(.*)/i ) {
-		$log_names{$file} = $1;
-		if( ! $log_name ) { $log_name = $1; }
-	    }
-	}
-	close FOO;
-	$did_one = 1;
-    }
-    # -->DAP
-    # if( ! $did_one ) {
-    # print "\nERROR: Your input file, \"$dagfile\" contains no jobs.\n",
-    # "Please verify that this is really your DAG input file.\n";
-    # exit( 1 );
-    # }
-    # <--DAP
-    return $log_name;
-}
-
 
 sub write_submit_file {
     local( $args );

@@ -1,6 +1,7 @@
 /* shared BSD-specific settings... */
 
 #define HAS_ADJTIME			YES
+#define HAS_GETDIRENTRIES		YES
 #define HAS_GETDTABLESIZE		YES
 #define HAS_GETHOSTNAME			YES
 #define HAS_GETPAGESIZE			YES

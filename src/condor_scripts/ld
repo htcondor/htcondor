@@ -47,6 +47,14 @@ PATH=/bin:/usr/bin:$PATH
 # On linux and SunOS5, they are simply in a directory other than /bin.
 CONDOR_FULLINSTALL=false
 
+# touch the activity file if it is available to us in our environment. It is
+# the root invocation(in the process tree) condor_compile's responsibility to 
+# check for and clean this file up under normal and signalling circumstances
+if [ "X$CONDOR_LD_IN_USE_FILE" != "X" ]; then
+	touch $CONDOR_LD_IN_USE_FILE
+	chmod 600 $CONDOR_LD_IN_USE_FILE
+fi
+
 # Call uname to get the OS. IRIX sometimes reports as IRIX64, strip it.
 os=`uname -s | sed 's/IRIX.*/IRIX/'`
 osver=`uname -r`
@@ -190,32 +198,6 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
   osfull="$os$osmajver"
   oscrt0="crt0.o"
   osldalt="/bin/ld"
-
-  LINUX_LIB="NOT_SO_LINUX"
-  if [ $os = "Linux" ]; then
-		# some redunancy here, not sure why. But it doesn't hurt anything.
-        libc=`condor_version -syscall -libc`
-        if [ $libc = "GLIBC23" ]; then
-                LINUX_LIB="glibc23"
-        elif [ $libc = "GLIBC22" ]; then
-                LINUX_LIB="glibc22"
-        elif [ -f /lib/libc-2.3* ]; then
-                LINUX_LIB="glibc23"
-        elif [ -f /lib/libc-2.2* ]; then
-                LINUX_LIB="glibc22"
-        elif [ $libc = "GLIBC21" ]; then
-                LINUX_LIB="glibc21"
-        elif [ -f /lib/libc-2.1* ]; then
-                LINUX_LIB="glibc21"
-        elif [ $libc = "GLIBC20" ]; then
-                LINUX_LIB="glibc20"
-        elif [ -f /lib/libc-2.0* ]; then
-                LINUX_LIB="glibc20"
-        else
-                LINUX_LIB="libc5"
-        fi
-  fi
-
 
   case $os in
 
@@ -367,8 +349,10 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
               else
 				if [ $os = "OSF1" ]; then				
 					ldargs=`echo $ldargs -lm -lc`
-				elif [ $LINUX_LIB = "glibc21" -o $LINUX_LIB = "glibc22" -o $LINUX_LIB = "glibc23" ]; then
-
+				elif [ $os = "Linux" ]; then
+					# This is to ensure that the glibc we ship gets linked
+					# against it the correct nss reolution libraries we ship 
+					# that are also from the condor lib dir.
 					ldargs=`echo -L$CONDOR_LIBDIR $ldargs -lc -lnss_files -lnss_dns -lresolv -lc -lnss_files -lnss_dns -lresolv -lc`
 				else
 					ldargs=`echo $ldargs -lc `

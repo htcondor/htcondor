@@ -25,7 +25,6 @@
 #
 ############################Copyright-DO-NOT-REMOVE-THIS-LINE##
 
-
 # First, make sure we can find condor_config_val.  If not, print 
 # out an error message so the user can fix the problem, instead of
 # having condor_compile fail in mysterious ways.
@@ -36,6 +35,75 @@ if [ $? != 0 ]; then
     echo "in your \$PATH for condor_compile to work."
     exit 1
 fi
+
+# This is an env var used to see if a condor specific ld call had
+# been invoked. It is set to an environment variable that if it is not 
+# defined means that this is the "root" call of a possibly recursive
+# invocation of condor_compile(true via a full install). If it is defined
+# then it represents a file which must exist when the root invocation is
+# finished. If the file doesn't exist, it means that our ld didn't get called.
+#
+# This algorithm only checks to see if our ld got called AT LEAST ONCE, 
+# not that it got called correctly in every instance of say a 
+# "condor_compile make" or something like that.
+CONDOR_LD_IN_USE_FILE=$CONDOR_LD_IN_USE_FILE
+# if the above is not set, then we know we are the root invocation, and later
+# this has meaning when we create and remove this file.
+if [ "X$CONDOR_LD_IN_USE_FILE" = "X" ]; then
+	CONDOR_LD_ROOT_INVOCATION=yes
+	# if it was undefined, then set it right here.
+	CONDOR_LD_IN_USE_FILE="/tmp/.condor_ld_in_use.$$"
+else
+	# we are some child of another condor_compile.
+	CONDOR_LD_ROOT_INVOCATION=no
+	# we will transparently transfer the in use file name to this invocation
+	# as well.
+fi
+# make it available to all future children of condor_compile
+export CONDOR_LD_IN_USE_FILE
+
+# When we invoke a compiler/linker/whatever, make sure it eventually ends
+# up calling our linker. We check for that by seeing if the file we exported
+# into the environment is touched. This feature doesn't check all cases of
+# our linker being called correctly, it only checks if our linker
+# wasn't called AT LEAST ONCE.
+invoke_linker () {
+
+	# trap on various signals to not leave around the in use file.
+	trap 'echo "Signal Caught... cleaning up."; test "X$CONDOR_LD_IN_USE_FILE" != "X" && rm -f $CONDOR_LD_IN_USE_FILE; exit 1' 1 2 3 15
+	
+	# invoke the program specified, but don't use exec
+	eval "$@"
+	linker_ret_code=$?
+
+	# if I am the root node, then simply invoke whatever linker I was asked to
+	# and when it returns, check to see if the in use file was touched. If
+	# it was, then our linker was called at least once
+
+	if [ "X$CONDOR_LD_ROOT_INVOCATION" = "Xyes" ]; then
+		# I'm the root invocation, see if the file my children made exists,
+		# and raise an error if it doesn't
+		if [ ! -f "$CONDOR_LD_IN_USE_FILE" ]; then
+			echo 'ERROR: Internal ld was not invoked!'
+			echo 'ERROR: Executable may not be linked properly for Condor!'
+			echo 'ERROR: To learn more about this error, visit this web page:'
+			echo 'ERROR: http://www.cs.wisc.edu/condor/manual/faq.html'
+			echo 'ERROR: and read the FAQ entry about this problem.'
+			rm -f $CONDOR_LD_IN_USE_FILE
+			exit 1;
+		fi
+		
+		# get rid of the in use file.
+		rm -f $CONDOR_LD_IN_USE_FILE
+	fi
+	
+	# if we weren't the root node, then just transparently fall backwards up
+	# the process call chain. I'm assuming some children underneath me had
+	# touched the file in question and the root invocation will know for sure.
+
+	exit $linker_ret_code
+}
+
 
 # Here are the default paths/directories to use.
 # These defaults can be overidden with command-line args.
@@ -50,20 +118,6 @@ CONDOR_RT0=$CONDOR_LIBDIR/condor_rt0.o
 CONDOR_CPLUS=$CONDOR_LIBDIR/libcondorc++support.a
 CONDOR_LD_DIR=$CONDOR_LIBDIR
 CONDOR_SPECIAL_CLIB=/not-there-bull
-
-# if I am on a linux box, determine where I should be looking
-LINUX_LIB=
-if [ `uname` = "Linux" ]; then
-	if [ -f /lib/libc-2.2* ]; then
-		LINUX_LIB="glibc22"
-	elif [ -f /lib/libc-2.1* ]; then
-		LINUX_LIB="glibc21"
-	elif [ -f /lib/libc-2.0* ]; then
-		LINUX_LIB="glibc20"
-	else
-		LINUX_LIB="libc5"
-	fi
-fi
 
 # --------------------------------------------------
 
@@ -134,26 +188,6 @@ do
 	# if we made it here, there are no more command-line options
 	break
 done
-
-# if these files exist, then keep them, otherwise append the correct lib dir
-# this is so a developer using make release can still use the libs
-if [ `uname` = "Linux" ]; then
-	if [ ! -f "$CONDOR_CLIB" ]; then
-		CONDOR_CLIB=$CONDOR_LIBDIR/$LINUX_LIB/libcondorsyscall.a
-	fi
-
-	if [ ! -f "$CONDOR_ZCLIB" ]; then
-		CONDOR_ZCLIB=$CONDOR_LIBDIR/$LINUX_LIB/libcondorzsyscall.a
-	fi
-
-	if [ ! -f "$CONDOR_RT0" ]; then
-		CONDOR_RT0=$CONDOR_LIBDIR/$LINUX_LIB/condor_rt0.o
-	fi
-
-	if [ ! -f "$CONDOR_CPLUS" ]; then
-		CONDOR_CPLUS=$CONDOR_LIBDIR/$LINUX_LIB/libcondorc++support.a
-	fi
-fi
 
 #
 # If the compressed ckpt library is available, use it.
@@ -280,7 +314,7 @@ fi
 # hit our special ld
 
 if [ $CONDOR_FULLINSTALL = true ]; then
-	exec $*
+	invoke_linker $*
 fi
 
 # If we were passed a -c, we're not going to be used for linking, so
@@ -311,15 +345,15 @@ myname=`echo $NAME | sed "s/.*\///"`
 # Handle GNU compilers
 
 if [ $myname = "gcc" ]; then
-	exec $ARGS -B$CONDOR_LD_DIR/
+	invoke_linker $ARGS -B$CONDOR_LD_DIR/
 fi 
 
 if [ $myname = "g++" ]; then
-	exec $ARGS -B$CONDOR_LD_DIR/
+	invoke_linker $ARGS -B$CONDOR_LD_DIR/
 fi 
 
 if [ $myname = "g77" ]; then
-	exec $ARGS -B$CONDOR_LD_DIR/
+	invoke_linker $ARGS -B$CONDOR_LD_DIR/
 fi 
 
 # Handle Portland compilers.
@@ -327,19 +361,19 @@ fi
 # Their run-time support libraries conflict with libcondorc++support.a
 
 if [ $myname = "pgcc" ]; then
-	exec $ARGS -Yl,$CONDOR_LD_DIR/
+	invoke_linker $ARGS -Yl,$CONDOR_LD_DIR/
 fi 
 
 if [ $myname = "pgf77" ]; then
-	exec $ARGS -Yl,$CONDOR_LD_DIR/
+	invoke_linker $ARGS -Yl,$CONDOR_LD_DIR/
 fi 
 
 if [ $myname = "pgf90" ]; then
-	exec $ARGS -Yl,$CONDOR_LD_DIR/
+	invoke_linker $ARGS -Yl,$CONDOR_LD_DIR/
 fi 
 
 if [ $myname = "pghpf" ]; then
-	exec $ARGS -Yl,$CONDOR_LD_DIR/
+	invoke_linker $ARGS -Yl,$CONDOR_LD_DIR/
 fi 
 
 # Handle ld (linker).  Since the user might have specified a full path
@@ -347,7 +381,7 @@ fi
 # call our ld directly with the remaining arguments.
 if [ $myname = "ld" ]; then
 	shift;
-	exec $CONDOR_LD_DIR/ld $ARGS
+	invoke_linker $CONDOR_LD_DIR/ld $ARGS
 fi
 
 # Handle all the vendor system compilers ---------------
@@ -364,45 +398,45 @@ case $os in
 		if [ $myname = "cc" ]; then
 			VCCRET=`cc -tul 2>&1 | head -1 | grep 'WARNING'`
 			if [ "X$VCCRET" = "X" ]; then
-				exec $ARGS -tul -h$CONDOR_LD_DIR -B
+				invoke_linker $ARGS -tul -h$CONDOR_LD_DIR -B
 			else
-				exec $ARGS -Y l,$CONDOR_LD_DIR -B dynamic
+				invoke_linker $ARGS -Y l,$CONDOR_LD_DIR -B dynamic
 			fi
 		fi
 
 		if [ $myname = "CC" ]; then
 			VCPPRET=`CC -tul 2>&1 | head -1 | grep 'WARNING'`
 			if [ "X$VCPPRET" = "X" ]; then
-				exec $ARGS -tul -h$CONDOR_LD_DIR -B
+				invoke_linker $ARGS -tul -h$CONDOR_LD_DIR -B
 			else
-				exec $ARGS -Y l,$CONDOR_LD_DIR -B dynamic
+				invoke_linker $ARGS -Y l,$CONDOR_LD_DIR -B dynamic
 			fi
 		fi
 
 		if [ $myname = "c89" ]; then
 			VC89RET=`c89 -tul 2>&1 | head -1 | grep 'WARNING'`
 			if [ "X$VC89RET" = "X" ]; then
-				exec $ARGS -tul -h$CONDOR_LD_DIR -B
+				invoke_linker $ARGS -tul -h$CONDOR_LD_DIR -B
 			else
-				exec $ARGS -Y l,$CONDOR_LD_DIR -B dynamic
+				invoke_linker $ARGS -Y l,$CONDOR_LD_DIR -B dynamic
 			fi
 		fi
 
 		if [ $myname = "f77" ]; then
 			VF77RET=`f77 -tul 2>&1 | head -1 | grep 'WARNING'`
 			if [ "X$VF77RET" = "X" ]; then
-				exec $ARGS -tul -h$CONDOR_LD_DIR -B
+				invoke_linker $ARGS -tul -h$CONDOR_LD_DIR -B
 			else
-				exec $ARGS -Y l,$CONDOR_LD_DIR -B dynamic
+				invoke_linker $ARGS -Y l,$CONDOR_LD_DIR -B dynamic
 			fi
 		fi 
 	
 		if [ $myname = "f90" ]; then	
 			VF90RET=`f90 -tul 2>&1 | head -1 | grep 'WARNING'`
 			if [ "X$VF90RET" = "X" ]; then
-				exec $ARGS -tul -h$CONDOR_LD_DIR -B
+				invoke_linker $ARGS -tul -h$CONDOR_LD_DIR -B
 			else
-				exec $ARGS -Y l,$CONDOR_LD_DIR -B dynamic
+				invoke_linker $ARGS -Y l,$CONDOR_LD_DIR -B dynamic
 			fi
 		fi 
 
@@ -410,31 +444,31 @@ case $os in
 	
 	OSF1 )
 		if [ $myname = "cc" ]; then
-			exec $ARGS -tl -h$CONDOR_LD_DIR -B
+			invoke_linker $ARGS -tl -h$CONDOR_LD_DIR -B
 		fi
 
 		if [ $myname = "CC" ]; then
-			exec $ARGS -tl -h$CONDOR_LD_DIR -B
+			invoke_linker $ARGS -tl -h$CONDOR_LD_DIR -B
 		fi
 
 		if [ $myname = "cxx" ]; then
-			exec $ARGS -tl -h$CONDOR_LD_DIR -B
+			invoke_linker $ARGS -tl -h$CONDOR_LD_DIR -B
 		fi
 
 		if [ $myname = "c89" ]; then
-			exec $ARGS -tl -h$CONDOR_LD_DIR -B
+			invoke_linker $ARGS -tl -h$CONDOR_LD_DIR -B
 		fi
 
 		if [ $myname = "f77" ]; then
-			exec $ARGS -tl -h$CONDOR_LD_DIR -B
+			invoke_linker $ARGS -tl -h$CONDOR_LD_DIR -B
 		fi 
 	
 		if [ $myname = "f90" ]; then	
-			exec $ARGS -tl -h$CONDOR_LD_DIR -B
+			invoke_linker $ARGS -tl -h$CONDOR_LD_DIR -B
 		fi 
 
 		if [ $myname = "KCC" ]; then	
-			exec $ARGS --backend -tl --backend \
+			invoke_linker $ARGS --backend -tl --backend \
 			-h$CONDOR_LD_DIR --backend -B
 		fi 
 
@@ -442,27 +476,27 @@ case $os in
 
 	HP-UX )
 		if [ $myname = "cc" ]; then
-			exec $ARGS -tl,$CONDOR_LD_DIR/ld
+			invoke_linker $ARGS -tl,$CONDOR_LD_DIR/ld
 		fi
 
 		if [ $myname = "CC" ]; then
-			exec $ARGS +A -tl,$CONDOR_LD_DIR/ld
+			invoke_linker $ARGS +A -tl,$CONDOR_LD_DIR/ld
 		fi
 
 		if [ $myname = "aCC" ]; then
-			exec $ARGS +A -tl,$CONDOR_LD_DIR/ld
+			invoke_linker $ARGS +A -tl,$CONDOR_LD_DIR/ld
 		fi
 
 		if [ $myname = "c89" ]; then
-			exec $ARGS -tl,$CONDOR_LD_DIR/ld
+			invoke_linker $ARGS -tl,$CONDOR_LD_DIR/ld
 		fi
 
 		if [ $myname = "f77" ]; then
-			exec $ARGS -tl,$CONDOR_LD_DIR/ld
+			invoke_linker $ARGS -tl,$CONDOR_LD_DIR/ld
 		fi 
 
 		if [ $myname = "fort77" ]; then
-			exec $ARGS -tl,$CONDOR_LD_DIR/ld
+			invoke_linker $ARGS -tl,$CONDOR_LD_DIR/ld
 		fi 
 		
 		;;
@@ -470,26 +504,26 @@ case $os in
 	SunOS )
 		use_qpath=`cc -help -flags | grep Qpath | wc -l`
 		if [ $myname = "cc" -a $use_qpath = 0 ]; then
-			exec $ARGS -Yl,$CONDOR_LD_DIR
+			invoke_linker $ARGS -Yl,$CONDOR_LD_DIR
 		fi
 		if [ $myname = "cc" -a $use_qpath != 0 ]; then
-			exec $ARGS -Qpath $CONDOR_LD_DIR
+			invoke_linker $ARGS -Qpath $CONDOR_LD_DIR
 		fi
 
 		if [ $myname = "acc" ]; then
-			exec $ARGS -Qpath $CONDOR_LD_DIR
+			invoke_linker $ARGS -Qpath $CONDOR_LD_DIR
 		fi
 
 		if [ $myname = "CC" ]; then
-			exec $ARGS -Qpath $CONDOR_LD_DIR
+			invoke_linker $ARGS -Qpath $CONDOR_LD_DIR
 		fi
 
 		if [ $myname = "f77" ]; then
-			exec $ARGS -Qpath $CONDOR_LD_DIR
+			invoke_linker $ARGS -Qpath $CONDOR_LD_DIR
 		fi 
 		
 		if [ $myname = "f90" ]; then
-			exec $ARGS -Qpath $CONDOR_LD_DIR
+			invoke_linker $ARGS -Qpath $CONDOR_LD_DIR
 		fi 
 		
 		;;
@@ -497,19 +531,19 @@ case $os in
 	Linux )
 		# Linux's system compilers are GNU 
 		if [ $myname = "cc" ]; then
-			exec $ARGS -B$CONDOR_LD_DIR/
+			invoke_linker $ARGS -B$CONDOR_LD_DIR/
 		fi 
 
 		if [ $myname = "CC" ]; then
-			exec $ARGS -B$CONDOR_LD_DIR/
+			invoke_linker $ARGS -B$CONDOR_LD_DIR/
 		fi 
 
 		if [ $myname = "c++" ]; then
-			exec $ARGS -B$CONDOR_LD_DIR/
+			invoke_linker $ARGS -B$CONDOR_LD_DIR/
 		fi 
 
 		if [ $myname = "f77" ]; then
-			exec $ARGS -B$CONDOR_LD_DIR/
+			invoke_linker $ARGS -B$CONDOR_LD_DIR/
 		fi 
 		
 		;;

@@ -211,6 +211,8 @@ protected:
 	char * serialize() const;	// save state into buffer
 
 	int prepare_for_nobuffering( stream_coding = stream_unknown);
+	int perform_authenticate( bool with_key, KeyInfo *& key, 
+							  const char* methods, CondorError* errstack );
 
 	/*
 	**	Data structures

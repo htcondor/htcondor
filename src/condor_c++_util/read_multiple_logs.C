@@ -26,9 +26,12 @@
 #include "read_multiple_logs.h"
 #include "condor_string.h" // for strnewp()
 
+#define LOG_HASH_SIZE 37
+
 ///////////////////////////////////////////////////////////////////////////////
 
-ReadMultipleUserLogs::ReadMultipleUserLogs()
+ReadMultipleUserLogs::ReadMultipleUserLogs() :
+	logHash(LOG_HASH_SIZE, hashFuncJobID, rejectDuplicateKeys)
 {
 	pLogFileEntries = NULL;
 	iLogFileCount = 0;
@@ -36,7 +39,8 @@ ReadMultipleUserLogs::ReadMultipleUserLogs()
 
 ///////////////////////////////////////////////////////////////////////////////
 
-ReadMultipleUserLogs::ReadMultipleUserLogs(StringList &listLogFileNames)
+ReadMultipleUserLogs::ReadMultipleUserLogs(StringList &listLogFileNames) :
+	logHash(LOG_HASH_SIZE, hashFuncJobID, rejectDuplicateKeys)
 {
 	pLogFileEntries = NULL;
 	iLogFileCount = 0;
@@ -72,6 +76,8 @@ ReadMultipleUserLogs::initialize(StringList &listLogFileNames)
 	for (int i = 0; i < iLogFileCount; i++) {
 		char *psFilename = listLogFileNames.next();
 		pLogFileEntries[i].isInitialized = FALSE;
+		pLogFileEntries[i].isValid = FALSE;
+		pLogFileEntries[i].haveReadEvent = FALSE;
 		pLogFileEntries[i].pLastLogEvent = NULL;
 		pLogFileEntries[i].strFilename = psFilename;
 		pLogFileEntries[i].logSize = 0;
@@ -132,14 +138,14 @@ ReadMultipleUserLogs::readEvent (ULogEvent * & event)
 
 	int iOldestEventIndex = -1;
 
-	for (int i = 0; i < iLogFileCount; i++) {
+	for ( int i = 0; i < iLogFileCount; i++ ) {
 		LogFileEntry &log = pLogFileEntries[i];
-		if (log.isInitialized) {
+		if ( log.isInitialized && log.isValid ) {
 		    ULogEventOutcome eOutcome = ULOG_OK;
-		    if (!log.pLastLogEvent) {
-			    eOutcome = log.readUserLog.readEvent(log.pLastLogEvent);
+		    if ( !log.pLastLogEvent ) {
+				eOutcome = readEventFromLog(log);
 
-		        if (eOutcome == ULOG_RD_ERROR || eOutcome == ULOG_UNK_ERROR) {
+		        if ( eOutcome == ULOG_RD_ERROR || eOutcome == ULOG_UNK_ERROR ) {
 			        // peter says always return an error immediately,
 			        // then go on our merry way trying again if they
 					// call us again.
@@ -149,7 +155,7 @@ ReadMultipleUserLogs::readEvent (ULogEvent * & event)
 		        }
 		    }
 
-		    if (eOutcome != ULOG_NO_EVENT) {
+		    if ( eOutcome != ULOG_NO_EVENT ) {
 			    if (iOldestEventIndex == -1 || 
 				        (pLogFileEntries[iOldestEventIndex].pLastLogEvent->eventTime >
 				        log.pLastLogEvent->eventTime)) {
@@ -159,7 +165,7 @@ ReadMultipleUserLogs::readEvent (ULogEvent * & event)
 		}
 	}
 
-	if (iOldestEventIndex == -1) {
+	if ( iOldestEventIndex == -1 ) {
 		return ULOG_NO_EVENT;
 	}
 	
@@ -241,6 +247,7 @@ ReadMultipleUserLogs::initializeUninitializedLogs()
 		if (!log.isInitialized) {
 		    if (log.readUserLog.initialize(log.strFilename.GetCStr())) {
 				log.isInitialized = true;
+				log.isValid = true;
 			    result = true;
 			}
 		}
@@ -257,7 +264,7 @@ ReadMultipleUserLogs::LogGrew(LogFileEntry &log)
     dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::LogGrew(%s)\n",
 			log.strFilename.GetCStr());
 
-	if (!log.isInitialized) {
+	if ( !log.isInitialized || !log.isValid ) {
 	    return false;
 	}
 
@@ -279,6 +286,33 @@ ReadMultipleUserLogs::LogGrew(LogFileEntry &log)
 				  grew ? "Log GREW!" : "No log growth..." );
 
 	return grew;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ULogEventOutcome
+ReadMultipleUserLogs::readEventFromLog(LogFileEntry &log)
+{
+
+	ULogEventOutcome	result;
+
+	result = log.readUserLog.readEvent(log.pLastLogEvent);
+
+   	if ( result == ULOG_OK ) {
+			// Check for duplicate logs.  We only need to do that the
+			// first time we've successfully read an event from this
+			// log.
+		if ( !log.haveReadEvent ) {
+			log.haveReadEvent = true;
+
+			if ( DuplicateLogExists(log.pLastLogEvent, &log) ) {
+				result = ULOG_NO_EVENT;
+				log.isValid = FALSE;
+			}
+		}
+	}
+
+	return result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -371,26 +405,25 @@ ReadMultipleUserLogs::loadLogFileNameFromSubFile(const MyString &strSubFilename)
 		}
 	}
 
-		// Prepend initialdir to log file name if log file name is not
-		// an absolute path.
-	if ( initialDir != "" && logFileName[0] != '/' ) {
-		logFileName = initialDir + "/" + logFileName;
-	}
+	if ( logFileName != "" ) {
+			// Prepend initialdir to log file name if log file name is not
+			// an absolute path.
+		if ( initialDir != "" && logFileName[0] != '/' ) {
+			logFileName = initialDir + "/" + logFileName;
+		}
 
-		// We do this in case the same log file is specified with a
-		// relative and an absolute path.  If we don't identify them as the
-		// same log file, the multi-log-reading code will get goofed
-		// up.  Note that we should actually do even more checking, so
-		// we catch things like symbolic links and paths with ".." in
-		// them, but that is more work.  Realpath() does what we need,
-		// but it's not available on Windows. :-( wenger 2004-05-03.
-	if ( logFileName[0] != '/' ) {
-		if ( currentDir != "" ) {
-			logFileName = currentDir + "/" + logFileName;
-		} else {
-				// We should generate some kind of better error message
-				// here.
-			logFileName = "";
+			// We do this in case the same log file is specified with a
+			// relative and an absolute path.  
+			// Note: we now do further checking that doesn't rely on
+			// comparing paths to the log files.  wenger 2004-05-27.
+		if ( logFileName[0] != '/' ) {
+			if ( currentDir != "" ) {
+				logFileName = currentDir + "/" + logFileName;
+			} else {
+					// We should generate some kind of better error message
+					// here.
+				logFileName = "";
+			}
 		}
 	}
 
@@ -534,4 +567,48 @@ ReadMultipleUserLogs::CombineLines(StringList &listIn, char continuation,
 	}
 
 	return ""; // blank means okay
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool
+ReadMultipleUserLogs::DuplicateLogExists(ULogEvent *event, LogFileEntry *log)
+{
+	bool	result = false;
+
+	JobID	id;
+	id.cluster = event->cluster;
+	id.proc = event->proc;
+	id.subproc = event->subproc;
+
+	LogFileEntry *	oldLog;
+	if ( logHash.lookup(id, oldLog) == 0 ) {
+			// We already have an event for this job ID.  See whether
+			// the log matches the one we already have.
+		if ( log == oldLog ) {
+			result = false;
+		} else {
+			dprintf(D_FULLDEBUG,
+					"ReadMultipleUserLogs found duplicate log\n");
+			result = true;
+		}
+	} else {
+			// First event for this job ID.  Insert the given log into
+			// the hash table.
+		logHash.insert(id, log);
+		result = false;
+	}
+
+	return result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+int
+ReadMultipleUserLogs::hashFuncJobID(const JobID &key, int numBuckets)
+{
+	int		result = key.cluster ^ key.proc ^ key.subproc;
+	result %= numBuckets;
+
+	return result;
 }

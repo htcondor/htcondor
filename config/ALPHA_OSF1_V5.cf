@@ -1,6 +1,7 @@
 #define PlatformFlags	-DDUX=DUX -DDUX5=DUX5
 
 #define IS_CLIPPED	YES
-#define WANT_PVM	NO
-#undef NEED_SNPRINTF	NO
+#undef NEED_SNPRINTF
+
+#define PVM_ARCH       ALPHA
 

@@ -105,7 +105,7 @@ libs:: h h_all condor_includes makefiles Directories Libraries
 
 ALL_TEST_SUITE = $(TEST_SUITE_C) $(TEST_SUITE_F) $(TEST_SUITE_JAVA) $(TEST_SUITE_BASE)
 
-test_suite: all $(ALL_TEST_SUITE)
+test_suite: $(ALL_TEST_SUITE)
 
 simple_dir_target(release_dir)
 simple_dir_target(release_dir/bin)
@@ -272,8 +272,7 @@ really-clean:: clean-up
 
 clean-up:
 	rm -rf *.out Makefile */Makefile* release_* \
-		strip_dir strip_contrib static_dir static_contrib pure_bin \
-		g gpt gpt-2.1  BUILD binaries \
+		strip_dir strip_contrib static_dir static_contrib pure_bin
 
 reallyclean: really-clean
 

@@ -6,6 +6,9 @@ sub ParseHex($);
 sub DumpHistories( $$ );
 sub DumpHistory( $$$ );
 
+sub Usage ( $$ );
+sub Help ( $ );
+
 my %Config =
 (
  HistMin	=> 0,
@@ -14,6 +17,29 @@ my %Config =
  UpdateInterval => 0,
  DumpTime	=> 1,
 );
+
+
+my $Program = "condor_updates_stats";
+my $RevisionString = '$Revision: 1.1.4.2 $';
+my %Help =
+    (
+     Usage => "$Program [options]",
+     Options =>
+     {
+      "[--long|-l]"
+      => "Enable long output <off>",
+      "[--history=[min][-max]]"
+      => "Set history range from min to max",
+      "[--[no]time]"
+      => "Enable / disable time output (if available) <on>",
+      "[--interval=seconds]"
+      => "Force ad update interval to seconds <no default>",
+      "[--version]"
+      => "Displays version information <off>",
+      "[--help|-h]"
+      => "Dump help",
+     },
+    );
 
 # Parse command line...
 foreach my $Arg ( @ARGV )
@@ -28,28 +54,35 @@ foreach my $Arg ( @ARGV )
 	$Config{UpdateInterval} = $1;
 	$Config{DumpTime} = 1;
     }
-    elsif ( $Arg =~ /^--time/ )
+    elsif ( $Arg eq "--time" )
     {
 	$Config{DumpTime} = 1;
     }
-    elsif ( $Arg =~ /^--notime/ )
+    elsif ( $Arg eq "--notime" )
     {
 	$Config{DumpTime} = 0;
     }
-    elsif (  ( $Arg =~ /^--long$/ ) || ( $Arg =~ /^-l$/ ) )
+    elsif (  ( $Arg eq "--long" ) || ( $Arg eq "-l" ) )
     {
 	$Config{Long} = 1;
     }
+    elsif( $Arg eq "--version" )
+    {
+	if ( $RevisionString =~ /([\d\.]+)/ )
+	{
+	    $RevisionString = $1;
+	}
+	print "$Program version: $RevisionString\n";
+	exit 0;
+    }
+    elsif(  ( $Arg eq "--help" ) || ( $Arg eq "-h" ) )
+    {
+	Help( \%Help );
+	exit 0;
+    }
     else
     {
-	print( STDERR
-	       "usage: condor_updates_stats [options]\n" .
-	       "\t[--long or -l]\t\tEnables long output\n" .
-	       "\t[--history=[min][-max]]\tSet history range from min to max\n" .
-	       "\t[--interval=seconds]\tForce update interval to seconds\n" .
-	       "\t[--time]\t\tEnables time dump (if available)\n" .
-	       "\t[--notime]\t\tDisables time dump\n"
-	       );
+	Usage( \%Help, $Arg );
 	exit 1;
     }
 }
@@ -266,3 +299,39 @@ sub ParseHex( $ )
     }
     \@History;
 }
+
+# ******************************************************
+# Dump out usage
+# ******************************************************
+sub Usage ( $$ )
+{
+    my $Help = shift;
+    my $Unknown = shift;
+
+    print "$Program: unknown argument: '$Unknown'\n"
+	if ( $Unknown ne "" );
+    printf "usage: " . $Help->{Usage} . "\n";
+    print "use '-h' for more help\n";
+
+    exit 1;
+
+} # usage ()
+# ******************************************************
+
+# ******************************************************
+# Dump out help
+# ******************************************************
+sub Help ( $ )
+{
+    my $Help = shift;
+    my ($opt, $text);
+
+    printf "usage: " . $Help->{Usage} . "\n";
+    foreach $opt (sort {lc($a) cmp lc($b) } keys %{$Help->{Options}})
+    {
+	printf ("  %32s : %-40s\n", $opt, $Help->{Options}{$opt} );
+    }
+    exit 0;
+
+} # help ()
+# ******************************************************

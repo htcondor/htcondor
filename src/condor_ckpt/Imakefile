@@ -6,11 +6,11 @@
 CC_PIC_FLAG =
 
 
-CMNT
-CMNT Set the following if you want a PVM ready checkpointing library
-CMNT compiled.  This will require that the PVM library be linked into
-CMNT the application.
-CMNT
+XCOMM
+XCOMM Set the following if you want a PVM ready checkpointing library
+XCOMM compiled.  This will require that the PVM library be linked into
+XCOMM the application.
+XCOMM
 
 PVM_CHECKPOINT = -DPVM_CHECKPOINTING
 
@@ -287,11 +287,11 @@ clean::
 	rm -f $(COMPRESS_LIB) $(COMPRESS_OBJ)
 #endif /* DOES_COMPRESS_CKPT */
 
-CMNT
-CMNT Create a replacement for crt0.o to be linked with condor programs.
-CMNT N.B. This is done differently than other objects in that we start out
-CMNT with a copy of crt0.o, and change the name of "main" to "MAIN".
-CMNT
+XCOMM
+XCOMM Create a replacement for crt0.o to be linked with condor programs.
+XCOMM N.B. This is done differently than other objects in that we start out
+XCOMM with a copy of crt0.o, and change the name of "main" to "MAIN".
+XCOMM
 #if IS_HPUX
 condor_rt0.o: $(CRT_BEGIN) ToUpper
 	./ToUpper $(CRT_BEGIN) tmp1 _start _START 

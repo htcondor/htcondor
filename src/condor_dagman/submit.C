@@ -32,8 +32,6 @@
 #include "util.h"
 #include "debug.h"
 
-extern char * DAP_SERVER;
-
 static bool
 submit_try( const char *exe, const char *command, CondorID &condorID )
 {
@@ -252,7 +250,7 @@ dap_submit( const char* cmdFile, CondorID& condorID,
 
   // we use 2>&1 to make sure we get both stdout and stderr from command
   sprintf( command, "%s %s %s -lognotes \"DAG Node: %s\" 2>&1", 
-  	   exe, DAP_SERVER, cmdFile, DAGNodeName );
+  	   exe, dagman.stork_server, cmdFile, DAGNodeName );
 
 
   //  dprintf( D_ALWAYS, "submit command is: %s\n", command );

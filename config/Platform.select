@@ -13,7 +13,7 @@
 #  elif defined( IS_DUX5 )
 #    define OSVersionIncludeFile <ALPHA_OSF1_V5.cf>
 #  else
-#    error CONDOR DOES NOT YET SUPPORT THIS PLATFORM 
+#    error CONDOR DOES NOT YET SUPPORT THIS DUX PLATFORM 
 #  endif
 
 
@@ -32,7 +32,7 @@
 #  elif defined( IS_SOLARIS29 )
 #    define OSVersionIncludeFile <SOLARIS29.cf>
 #  else
-#    error CONDOR DOES NOT YET SUPPORT THIS PLATFORM 
+#    error CONDOR DOES NOT YET SUPPORT THIS SOLARIS PLATFORM 
 #  endif
 
 #elif defined( IS_HPUX )
@@ -42,7 +42,7 @@
 #  elif defined( IS_HPUX11 )
 #    define OSVersionIncludeFile <HPUX11.cf>
 #  else
-#    error CONDOR DOES NOT YET SUPPORT THIS PLATFORM 
+#    error CONDOR DOES NOT YET SUPPORT THIS HPUX PLATFORM 
 #  endif
 
 
@@ -55,7 +55,7 @@
 #  elif defined( IS_IA64 )
 #    define ArchIncludeFile <LINUX_IA64.cf>
 #  else
-#    error CONDOR DOES NOT YET SUPPORT THIS PLATFORM 
+#    error CONDOR DOES NOT YET SUPPORT THIS LINUX PLATFORM 
 #  endif
 
 #elif defined( IS_IRIX )
@@ -63,7 +63,7 @@
 #  if defined( IS_IRIX65 )
 #    define OSVersionIncludeFile <SGI_IRIX65.cf>
 #  else
-#    error CONDOR DOES NOT YET SUPPORT THIS PLATFORM 
+#    error CONDOR DOES NOT YET SUPPORT THIS IRIX PLATFORM 
 #  endif
 
 #elif defined( IS_AIX )
@@ -72,9 +72,15 @@
 #  if defined( IS_AIX5 )
 #    define OSVersionIncludeFile <AIX5.cf>
 #  else
-#    error CONDOR DOES NOT YET SUPPORT THIS PLATFORM 
+#    error CONDOR DOES NOT YET SUPPORT THIS AIX PLATFORM 
 #  endif
 
 #else
-#  error CONDOR DOES NOT YET SUPPORT THIS PLATFORM 
+
+#  error CONDOR DOES NOT YET SUPPORT THIS UNKNOWN PLATFORM 
+
 #endif
+
+
+
+

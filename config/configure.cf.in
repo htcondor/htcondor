@@ -185,9 +185,7 @@ CP_CMD = @CpCmd@
 
 TMP_DIR = @TMPDIR@
 
-#if HAS_PURIFY
 PURE_CACHE_DIR = @pure_cache_dir@
-#endif
 
 #define HAS_CONDOR_ANALYZE @has_condor_analyze@
 CONDOR_ANALYZE_RELEASE = @condor_analyze_release@

@@ -34,6 +34,7 @@
 #include "user_log.c++.h"
 #include "MyString.h"
 #include "string_list.h"
+#include "HashTable.h"
 
 class ReadMultipleUserLogs
 {
@@ -80,15 +81,50 @@ private:
 
 	struct LogFileEntry
 	{
-		bool isInitialized;
-		MyString strFilename;
-		ReadUserLog readUserLog;
-		ULogEvent *pLastLogEvent;
-		off_t logSize;
+		bool		isInitialized;
+		bool		isValid;
+		bool		haveReadEvent;
+		MyString	strFilename;
+		ReadUserLog	readUserLog;
+		ULogEvent *	pLastLogEvent;
+		off_t		logSize;
 	};
 
-	int iLogFileCount;
-	LogFileEntry *pLogFileEntries;
+	int				iLogFileCount;
+	LogFileEntry *	pLogFileEntries;
+
+	class JobID 
+	{
+	public:
+		int			cluster;
+		int			proc;
+		int			subproc;
+
+		JobID() {
+			cluster = proc = subproc = 0;
+		}
+
+		JobID(const JobID &other) {
+			cluster = other.cluster;
+			proc = other.proc;
+			subproc = other.subproc;
+		}
+
+		int operator==(const JobID &other) {
+			return (cluster == other.cluster && proc == other.proc &&
+					subproc == other.subproc);
+		}
+	};
+
+	static int hashFuncJobID(const JobID &key, int numBuckets);
+
+	HashTable<JobID, LogFileEntry *>	logHash;
+
+	// For instantiation in programs that use this class.
+#define MULTI_LOG_HASH_INSTANCE template class \
+		HashTable<ReadMultipleUserLogs::JobID, \
+		ReadMultipleUserLogs::LogFileEntry *>
+
 
 	    /** Goes through the list of logs and tries to initialize (open
 		    the file of) any that aren't initialized yet.
@@ -102,7 +138,19 @@ private:
 		 */
 	static bool LogGrew(LogFileEntry &log);
 
+		/**
+		 * Read an event from a log, including checking whether this log
+		 * is actually a duplicate of another log.  Note that if this *is*
+		 * a duplicate log, the method will return ULOG_NO_EVENT, even
+		 * though an event was read.
+		 * @param The log to read from.
+		 * @return The outcome of trying to read an event.
+		 */
+	ULogEventOutcome readEventFromLog(LogFileEntry &log);
+
 	    /** Read the entire contents of the given file into a MyString.
+		 * @param The name of the file.
+		 * @return The contents of the file.
 		 */
     static MyString readFileToString(const MyString &strFilename);
 
@@ -123,9 +171,23 @@ private:
 		 * @param Input string list of "physical" lines.
 		 * @param Continuation character.
 		 * @param Output string list of "logical" lines.
+		 * @return "" if okay, or else an error message.
 		 */
 	static MyString CombineLines(StringList &listIn, char continuation,
 			StringList &listOut);
+
+		/**
+		 * Determine whether a log object exists that is a logical duplicate
+		 * of the one given (in other words, points to the same log file).
+		 * We're checking this in case we have submit files that point to
+		 * the same log file with different paths -- if submit files have
+		 * the same path to the log file, we already recognize that it's
+		 * a single log.
+		 * @param The event we just read.
+		 * @param The log object from which we read that event.
+		 * @return True iff a duplicate log exists.
+		 */
+	bool DuplicateLogExists(ULogEvent *event, LogFileEntry *log);
 };
 
 #endif

@@ -92,6 +92,11 @@ int sysapi_disk_space(const char *filename);
 int calc_disk_needed( PROC * proc );
 PROC *ConstructProc( int, PROC *);
 
+FILE *my_popen( const char *cmd, const char * mode );
+int my_pclose(FILE *fp);
+int my_spawnl( const char* cmd, ... );
+int my_spawnv( const char* cmd, char *const argv[] );
+
 #else /* HAS_PROTO */
 
 int blankline ();

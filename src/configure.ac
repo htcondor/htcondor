@@ -181,7 +181,7 @@ elif test $os = "Linux" ; then
      * )
        AC_MSG_WARN([Condor is not yet ported to redhat version $_rh_vers])
        AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
-       _cv_linux_distro="RH-UNKNOWN"
+       _cv_linux_distro="RH_UNKNOWN"
        ;;
     esac
   elif test -f "/etc/SuSE-release" ; then
@@ -193,12 +193,12 @@ elif test $os = "Linux" ; then
      * )
        AC_MSG_WARN([Condor is not yet ported to SuSE version $_suse_vers])
        AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
-       _cv_linux_distro="SuSE-UNKNOWN"
+       _cv_linux_distro="SuSE_UNKNOWN"
        ;;
     esac
   elif test -f "/etc/debian_version" ; then
     _deb_vers=`cat /etc/debian_version | sed 's/\./_/g'`;
-    _cv_linux_distro="DEBIAN-`echo _deb_vers`"
+    _cv_linux_distro="DEBIAN_`echo _deb_vers`"
     AC_MSG_WARN([Condor is not yet ported to Debian Linux distributions])
     AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
   else
@@ -209,7 +209,7 @@ elif test $os = "Linux" ; then
   # this perl 1-liner takes all space-delimited input, sticks it
   # together with '_' marks, and lower-cases the whole thing
   _cv_sysname="`echo $_cv_arch $_cv_linux_distro | perl -ane 'print lc join('_',@F)'`"
-  _cv_opsys_vers="LINUX-$_cv_linux_distro"
+  _cv_opsys_vers="LINUX_$_cv_linux_distro"
 
 elif test $os = "SunOS" ; then
   _cv_op_sys="Solaris"
@@ -277,13 +277,13 @@ elif test $os = "Darwin" ; then
   _cv_op_sys="Darwin"
   _cv_opsys="DARWIN"
   if test "$osrelease" = "6.8" ; then
-    _cv_opsys_vers="DARWIN-6_8"
+    _cv_opsys_vers="DARWIN_6_8"
     _cv_sysname="ppc_macosx"
   elif test "$osrelease" = "7.0.0" ; then
-    _cv_opsys_vers="DARWIN-7_0"
+    _cv_opsys_vers="DARWIN_7_0"
     _cv_sysname="ppc_macosx_7_0"
   else
-    _cv_opsys_vers="DARWIN-UNKNOWN"
+    _cv_opsys_vers="DARWIN_UNKNOWN"
     AC_MSG_WARN([Unrecognised MacOSX/Darwin version])
     AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
   fi  
@@ -371,15 +371,18 @@ AC_SUBST(_cv_ext_config_sh,"$_root_dir/config/config.sh")
 # Check for command-line arguments and environment variables
 ############################################################
 
+ac_cv_has_externals=YES
+ac_cv_externals=none
 AC_ARG_WITH(externals,
  AC_HELP_STRING([--with-externals=DIR],
    [Root of directory tree for external programs needed for building Condor (default is to search in ../externals)]),
  [if test $withval = no; then
-    AC_MSG_WARN([You can not use --without-externals or use "no"])
-    AC_MSG_ERROR([--with-externals must define a directory (see --help)])
+    AC_MSG_WARN([By not using --with-externals, most of Condor will not build])
+    ac_cv_has_externals=NO
+  else
+    CONDOR_VERIFY_EXTERNALS_DIR([$withval],
+      [directory specified with --with-externals ($withval) is not valid])
   fi
-  CONDOR_VERIFY_EXTERNALS_DIR([$withval],
-    [directory specified with --with-externals ($withval) is not valid])
  ],
  [
   # nothing specified, try ../externals.  using this as a default
@@ -396,6 +399,7 @@ AC_ARG_WITH(externals,
   fi
  ]
 )
+AC_SUBST(has_externals,$ac_cv_has_externals)
 AC_SUBST(ext_root,$ac_cv_externals)
 
 # Now, try to find condor_analyze binaries.  In any directory we're
@@ -431,7 +435,9 @@ AC_ARG_WITH(condor_analyze,
   fi
  ],
  [
-  CONDOR_VERIFY_ANALYZE_DIR([$ac_cv_externals/install/condor_analyze])
+  if test $ac_cv_has_externals = "YES" ; then
+    CONDOR_VERIFY_ANALYZE_DIR([$ac_cv_externals/install/condor_analyze])
+  fi
   if test $ac_has_condor_analyze = "NO" ; then
     CONDOR_VERIFY_ANALYZE_DIR([/usr/local/condor/analyze])
   fi
@@ -1185,8 +1191,8 @@ fi
 ############################################################
 # What versions of what externals do we need
 ############################################################
+if test $ac_cv_has_externals = "YES" ; then
 AC_MSG_NOTICE([determining versions of external packages])
-
 
 # For now, we hardcode that non-i386 platforms are clipped and don't
 # need an external glibc for anything...
@@ -1230,12 +1236,11 @@ fi
 AC_MSG_RESULT([$_cv_ext_kerberos_version])
 AC_SUBST(ext_kerberos_version,$_cv_ext_kerberos_version)
 
-
 AC_MSG_CHECKING([globus])
-if test "$os" = "Darwin"; then
-  _cv_ext_globus_version="globus-2.4.3"
-else
+if test "$_cv_opsys_vers" = "DUX4"; then
   _cv_ext_globus_version="globus-2.2.4"
+else
+  _cv_ext_globus_version="globus-2.4.3.vdt.1.1.14"
 fi
 AC_MSG_RESULT([$_cv_ext_globus_version])
 AC_SUBST(ext_globus_version,$_cv_ext_globus_version)
@@ -1280,6 +1285,13 @@ _cv_ext_pvm_version="pvm-3.4.2"
 AC_MSG_RESULT([$_cv_ext_pvm_version])
 AC_SUBST(ext_pvm_version,$_cv_ext_pvm_version)
 
+else
+# if there's no externals at all, we still need to define these to
+# avoid imake troubles...
+  AC_SUBST(want_ext_glibc,NO)
+  AC_SUBST(ext_glibc_version,UNUSED)
+fi
+# end of if $ac_cv_has_externals = "YES" 
 
 ############################################################
 # Configure-generated output

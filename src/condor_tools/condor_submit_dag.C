@@ -35,11 +35,12 @@ struct SubmitDagOptions
 	bool bForce;
 	MyString strNotification;
 	MyString strJobLog;
+        MyString strStorkLog;
 	int iMaxJobs;
 	int iMaxPre;
 	int iMaxPost;
-	bool bNoPostFail;
-	MyString strRemoteSchedd;
+        bool bNoPostFail;
+        MyString strRemoteSchedd;
 	int iDebugLevel;
 	MyString strDagFile;
 	
@@ -57,6 +58,7 @@ struct SubmitDagOptions
 		bForce = false;
 		strNotification = "";
 		strJobLog = "";
+		strStorkLog = "";
 		iMaxJobs = 0;
 		iMaxPre = 0;
 		iMaxPost = 0;
@@ -281,6 +283,11 @@ void writeSubmitFile(const MyString &strDagmanPath, const SubmitDagOptions &opts
 	strArgs = "-f -l . -Debug " + makeString(opts.iDebugLevel) + " -Lockfile " + opts.strDagFile + ".lock";
     strArgs += " -Condorlog " + opts.strJobLog + " -Dag " + opts.strDagFile;
     strArgs += " -Rescue " + opts.strRescueFile;
+    if(opts.strStorkLog != "")
+        {
+	strArgs += " -Storklog " + opts.strStorkLog;
+    }
+    
     if(opts.iMaxJobs) 
 	{
 		strArgs += " -MaxJobs " + makeString(opts.iMaxJobs);
@@ -447,6 +454,12 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 				printUsage();
 			opts.iMaxPost = atoi(argv[++iArg]);
 		}
+		else if (strArg.find("-Storklog") != -1)
+		{
+		  if (bIsLastArg)
+		    printUsage();
+		  opts.strStorkLog = argv[++iArg];
+	        }
 		else if (strArg.find("-NoPo") != -1)
 		{
 			opts.bNoPostFail = true;
@@ -485,6 +498,7 @@ int printUsage()
     printf("    -MaxPost number     (Maximum number of POST scripts to run at once)\n");
     printf("    -NoPostFail         (Don't run POST scripts after failed jobs)\n");
     printf("    -log filename       (Specify the log file shared by all jobs in the DAG)\n");
+    printf("    -Storklog filename  (Specify the Stork log file for jobs in this DAG)\n");
     printf("    -notification value (Determines how much email you get from Condor)\n");
     printf("    -debug number       (Determines how verbosely DAGMan logs its work)\n");
     printf("         about the life of the condor_dagman job.  'value' must be\n");
