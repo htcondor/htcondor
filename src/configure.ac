@@ -1263,6 +1263,12 @@ AC_MSG_RESULT([$_cv_ext_gahp_version])
 AC_SUBST(ext_gahp_version,$_cv_ext_gahp_version)
 
 
+AC_MSG_CHECKING([gt3gahp])
+_cv_ext_gt3gahp_version="gt3gahp-1.0"
+AC_MSG_RESULT([$_cv_ext_gt3gahp_version])
+AC_SUBST(ext_gt3gahp_version,$_cv_ext_gt3gahp_version)
+
+
 AC_MSG_CHECKING([zlib])
 _cv_ext_zlib_version="zlib-1.1.3"
 AC_MSG_RESULT([$_cv_ext_zlib_version])
@@ -1273,11 +1279,6 @@ AC_MSG_CHECKING([pvm])
 _cv_ext_pvm_version="pvm-3.4.2"
 AC_MSG_RESULT([$_cv_ext_pvm_version])
 AC_SUBST(ext_pvm_version,$_cv_ext_pvm_version)
-
-AC_MSG_CHECKING([gt3gahp])
-_cv_ext_gt3gahp_version="gt3gahp-1.0"
-AC_MSG_RESULT([$_cv_ext_gt3gahp_version])
-AC_SUBST(ext_gt3gahp_version,$_cv_ext_gt3gahp_version)
 
 
 ############################################################
