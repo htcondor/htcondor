@@ -182,14 +182,14 @@ sub DoConfig( $$ )
 	    foreach my $i ( 0 .. $#Modules )
 	    {
 		my $Module = $Modules[$i];
-		my $Name = $Module->{Name};
+		my $ModName = $Module->{Name};
 		my $Prefix = $Module->{Prefix};
 		my $Path = $Module->{Path};
 		my $Period = $Module->{Period};
 		my $Opt = $Module->{Options};
 		my $Cont = ( $i == $#Modules ) ? "" : "\\";
 		print OUT
-		      "\t$Name: not supported by cvs2svn $Prefix:$Path:$Period:$Opt $Cont\n"; # Write it
+		    "\t$ModName:$Prefix:$Path:$Period:$Opt $Cont\n";
 	    }
 	    next;
 	}
