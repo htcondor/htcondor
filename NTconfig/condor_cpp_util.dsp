@@ -297,14 +297,6 @@ SOURCE="..\src\condor_c++_util\HashTable.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c++_util\interpreter.C"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c++_util\interpreter.h"
-# End Source File
-# Begin Source File
-
 SOURCE="..\src\condor_c++_util\killfamily.C"
 # End Source File
 # Begin Source File
@@ -359,6 +351,10 @@ SOURCE="..\src\condor_c++_util\my_username.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\my_username.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\MyString.C"
 # End Source File
 # Begin Source File
 
