@@ -455,7 +455,7 @@ tokenizeString(char delim)
 		}
 		
 		if( ch == delim ) {
-			char tempch = ' ';
+			int tempch = ' ';
 			// read past the whitespace characters
 			while (isspace(tempch)) {
 				tempch = lexSource->ReadCharacter();
