@@ -139,6 +139,8 @@ extern "C" {
 	int waitpid(int pid, int *statusp, int options);
 }
 
+extern int getJobAd(int cluster_id, int proc_id, ClassAd *new_ad);
+
 int do_REMOTE_syscall();
 
 #if !defined(AIX31) && !defined(AIX32)
@@ -1288,7 +1290,6 @@ send_job( V2_PROC *proc, char *host, char *cap)
 	PORTS	ports;
 	int		sd;
 	ReliSock	*sock;
-	CONTEXT	*context;
 	StartdRec   stRec;
 	char*	capability = strdup(cap);
 
@@ -1335,18 +1336,16 @@ send_job( V2_PROC *proc, char *host, char *cap)
     free(capability);
 
 		/* Send the job info */
-	context = build_job_context( proc );
-	display_context( context );
-	ClassAd ad(context);
-	ad.SetMyTypeName(JOB_ADTYPE);
-	ad.SetTargetTypeName(STARTD_ADTYPE);
+	ClassAd ad;
+	ConnectQ(schedd);
+	getJobAd( proc->id.cluster, proc->id.proc, &ad );
+	DisconnectQ(NULL);
 	if( !ad.put(*sock) ) {
-		EXCEPT( "failed to send context 0x%x", context );
+		EXCEPT( "failed to send job ad" );
 	}
 	if( !sock->end_of_message() ) {
 		EXCEPT( "end_of_message failed" );
 	}
-	free_context( context );
 
 	sock->decode();
 	ASSERT( sock->code(reply) );
