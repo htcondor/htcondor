@@ -110,11 +110,15 @@ OpenFileTable::Init()
 #endif
 	}
 
-	getwd( Condor_CWD );
 	PreOpen( 0, TRUE, FALSE, FALSE );
 	PreOpen( 1, FALSE, TRUE, FALSE );
 	PreOpen( 2, FALSE, TRUE, FALSE );
 
+#if defined(Solaris)
+	getcwd( Condor_CWD, sizeof(Condor_CWD) );
+#else
+	getwd( Condor_CWD );
+#endif
 }
 
 
@@ -695,7 +699,7 @@ shorten( char *path )
 {
 	char	*ptr;
 
-	if( ptr = strrchr(path,'/') ) {
+	if( ptr = (char *)strrchr((const char *)path,'/') ) {
 		return ptr;
 	} else {
 		return path;
@@ -789,7 +793,7 @@ open_stream( const char *local_path, int flags, int *_FileStreamLen )
 	EXCEPT( "Should never get here" );
 }
 
-#if defined(OSF1) || defined(Solaris)
+#if defined(OSF1) || defined(Solaris) || defined(IRIX53)
 	int
 	_open( const char *path, int flags, ... )
 	{
@@ -873,7 +877,7 @@ close( int fd )
 /* these definitions of _close and __close match definitions of
    _open and __open above */
 
-#if defined(OSF1) || defined(Solaris)
+#if defined(OSF1) || defined(Solaris) || defined(IRIX53)
 int
 _close( int fd )
 {
