@@ -1,3 +1,9 @@
+09/17/04 V6_7-db_logs-branch
+   This branch was created off the V6_7-branch at V6_7-db_logs-root
+   and will be used by Profs. DeWitt and Naughton and their
+   students. Initially, they will work on putting the Condor logs into
+   a database.
+
 09/15/04 V6_7-pre_merge-V6_6-cdf-merge-1
    The state of the V6_7-branch before merging in the V6_6-cdf-branch
    from V6_6-cdf-root through V6_6-cdf-merge-1
