@@ -58,7 +58,9 @@ DBM		*Q, *OpenJobQueue();
 #endif
 
 char	*MyName;
+#if DBM_QUEUE
 char	*Spool;
+#endif
 BOOLEAN	TroubleReported;
 BOOLEAN All;
 static BOOLEAN Force = FALSE;
@@ -69,10 +71,10 @@ ProcFilter	*PFilter = new ProcFilter();
 	// Prototypes of local interest
 #if DBM_QUEUE
 void do_it( ProcObj * );
+void init_params();
 #else
 void ProcArg(const char*);
 #endif
-void init_params();
 void notify_schedd( int cluster, int proc );
 void usage();
 #if DBM_QUEUE
@@ -115,7 +117,9 @@ main( int argc, char *argv[] )
 	MyName = argv[0];
 
 	config( MyName, (CONTEXT *)0 );
+#if DBM_QUEUE
 	init_params();
+#endif
 
 	if( argc < 2 ) {
 		usage();
@@ -195,6 +199,7 @@ main( int argc, char *argv[] )
 extern "C" int SetSyscalls( int foo ) { return foo; }
 
 
+#if DBM_QUEUE
 void
 init_params()
 {
@@ -203,6 +208,7 @@ init_params()
 		EXCEPT( "SPOOL not specified in config file\n" );
 	}
 }
+#endif
 
 #if DBM_QUEUE
 void

@@ -5,7 +5,7 @@ LDFLAGS = $(LIBDBM)
 
 SRC = rm.C
 OBJ = rm.o
-LIB = ../condor_schedd/libqmgmt.a ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a KernLib SocketLib
+LIB = ../condor_schedd.V6/libqmgmt.a ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a KernLib SocketLib
 LIBDIRS = ../condor_util_lib ../condor_xdr_lib ../condor_c++_util
 #LDFLAGS = $(LIBDBM)
 
