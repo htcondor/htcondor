@@ -636,6 +636,15 @@ doContactSchedd()
 			curr_job->ad->SetDirtyFlag( ATTR_JOB_STATUS, false );
 			curr_job->ad->SetDirtyFlag( ATTR_HOLD_REASON, false );
 		} else if ( curr_action->actions & UA_HOLD_JOB ) {
+			char buffer[256];
+			if ( GetAttributeString( curr_job->procID.cluster,
+									 curr_job->procID.proc,
+									 ATTR_RELEASE_REASON, buffer )
+				 >= 0 ) {
+				SetAttributeString( curr_job->procID.cluster,
+									curr_job->procID.proc,
+									ATTR_LAST_RELEASE_REASON, buffer );
+			}
 			DeleteAttribute(curr_job->procID.cluster,
 							curr_job->procID.proc,
 							ATTR_RELEASE_REASON );
