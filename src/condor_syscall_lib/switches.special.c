@@ -459,7 +459,7 @@ ioctl( int fd, int request, ...) */
 int
 ioctl( int fd, int request, caddr_t arg )
 {
-#if defined(HPUX9)
+#if defined(HPUX9) && 0  /* leave this out cuz it breaks Fortran on HPUX9 */
 	static int first_time = 1;
 	static int MaxOpenFiles;
 	static struct nmparms *parmset;
@@ -491,7 +491,7 @@ ioctl( int fd, int request, caddr_t arg )
 				ptr->objid, ptr->buffer, ptr->len );
 		return 0;
 	}		
-#endif
+#endif   /* HPUX9 */
 	switch( request ) {
 #if defined(SUNOS41)
 	  case MTIOCGET:
