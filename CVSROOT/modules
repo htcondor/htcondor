@@ -269,14 +269,19 @@ V6_6_3_EXT	-a V6_6_2_EXT
 # Externals needed for V6_6_4 (same as V6_6_3)
 V6_6_4_EXT	-a V6_6_3_EXT
 
-# Externals needed for V6_6_4 (same as V6_6_4)
+# Externals needed for V6_6_5 (same as V6_6_4)
 V6_6_5_EXT	-a V6_6_4_EXT
+
+# Externals needed for V6_6_6 
+V6_6_6_EXT   -a V6_6_5_EXT \
+			externals/bundles/gahp/1.0.12
 
 # Externals needed for the head of the V6_6-branch
 V6_6_EXT	-a V6_6_COMMON_EXT \
 		   externals/bundles/gahp/1.0.10 \
 		   externals/bundles/glibc/2.2.93 \
-		   externals/bundles/glibc/2.3.2.27.9.7
+		   externals/bundles/glibc/2.3.2.27.9.7 \
+		   externals/bundles/gahp/1.0.12
 
 # For now, V6_7-branch uses all the same externals as the V6_6-branch
 V6_7_EXT	-a V6_6_EXT \
