@@ -10,8 +10,6 @@ ResAttributes::ResAttributes( Resource* rip )
 	r_kflops = -1;
 	r_last_benchmark = 0;
 	this->rip = rip;
-	update( rip->r_classad );
-	timeout( rip->r_classad );
 }
 
 
@@ -24,67 +22,77 @@ ResAttributes::~ResAttributes()
 
 
 void
-ResAttributes::update( ClassAd* cp) 
+ResAttributes::compute( ResAttr_t how_much )
 {
-	char line[100];
+	if( how_much != TIMEOUT ) {
+		r_virtmem = calc_virt_memory();
+		dprintf( D_FULLDEBUG, "Swap space: %lu\n", r_virtmem );
 
-	r_virtmem = calc_virt_memory();
-	dprintf( D_FULLDEBUG, "Swap space: %lu\n", r_virtmem );
-	sprintf( line, "%s=%lu", ATTR_VIRTUAL_MEMORY, r_virtmem );
- 	cp->Insert( line ); 
-
-	r_disk = calc_disk();
-	dprintf( D_FULLDEBUG, "Disk space: %lu\n", r_disk );
-	sprintf( line, "%s=%lu", ATTR_DISK, r_disk );
-	cp->Insert( line ); 
-
-	// KFLOPS and MIPS are only conditionally computed; thus, only
-	// advertise them if we computed them.
-	if ( r_kflops > 0 ) {
-		sprintf( line, "%s=%d", ATTR_KFLOPS, r_kflops );
-		cp->Insert( line );
+		r_disk = calc_disk();
+		dprintf( D_FULLDEBUG, "Disk space: %lu\n", r_disk );
 	}
-	if ( r_mips > 0 ) {
-		sprintf( line, "%s=%d", ATTR_MIPS, r_mips );
-		cp->Insert( line );
+
+	if( how_much != UPDATE ) {
+		r_load = calc_load_avg();
+		r_condor_load = rip->condor_load();
+		float tmp = r_load - r_condor_load;
+		if( tmp < 0 ) {
+			tmp = 0;
+		}
+		dprintf( D_LOAD, 
+				 "SystemLoad: %.3f\tCondorLoad: %.3f\tNonCondorLoad: %.3f\n",  
+				 r_load, r_condor_load, tmp );
+
+		calc_idle_time( r_idle, r_console_idle );
 	}
-	sprintf( line, "%s=%d", ATTR_LAST_BENCHMARK, r_last_benchmark );
-	cp->Insert( line );
 }
 
 
 void
-ResAttributes::timeout( ClassAd* cp ) 
+ResAttributes::refresh( ClassAd* cp, ResAttr_t how_much) 
 {
 	char line[100];
-	float tmp;
 
-	r_load = calc_load_avg();
-	sprintf( line, "%s=%f", ATTR_LOAD_AVG, r_load );
-	cp->Insert(line);
+	if( how_much != TIMEOUT ) {
+		sprintf( line, "%s=%lu", ATTR_VIRTUAL_MEMORY, r_virtmem );
+		cp->Insert( line ); 
 
-	r_condor_load = rip->condor_load();
-	sprintf( line, "%s=%f", ATTR_CONDOR_LOAD_AVG, r_condor_load );
-	cp->Insert(line);
+		sprintf( line, "%s=%lu", ATTR_DISK, r_disk );
+		cp->Insert( line ); 
 
-	tmp = r_load - r_condor_load;
-	if( tmp < 0 ) {
-		tmp = 0;
+			// KFLOPS and MIPS are only conditionally computed; thus, only
+			// advertise them if we computed them.
+		if ( r_kflops > 0 ) {
+			sprintf( line, "%s=%d", ATTR_KFLOPS, r_kflops );
+			cp->Insert( line );
+		}
+		if ( r_mips > 0 ) {
+			sprintf( line, "%s=%d", ATTR_MIPS, r_mips );
+			cp->Insert( line );
+		}
 	}
-	dprintf( D_LOAD, 
-			 "SystemLoad: %.3f\tCondorLoad: %.3f\tNonCondorLoad: %.3f\n", 
-			 r_load, r_condor_load, tmp );
+		// We don't want this inserted into the public ad automatically
+	if( how_much == UPDATE || how_much == ALL ) {
+		sprintf( line, "%s=%d", ATTR_LAST_BENCHMARK, r_last_benchmark );
+		cp->Insert( line );
+	}
 
-	calc_idle_time( r_idle, r_console_idle );
-
-	sprintf(line, "%s=%d", ATTR_KEYBOARD_IDLE, r_idle );
-	cp->Insert(line); 
-  
-	// ConsoleIdle cannot be determined on all platforms; thus, only
-	// advertise if it is not -1.
-	if( r_console_idle != -1 ) {
-		sprintf( line, "%s=%d", ATTR_CONSOLE_IDLE, r_console_idle );
+	if( how_much != UPDATE ) {
+		sprintf( line, "%s=%f", ATTR_LOAD_AVG, r_load );
+		cp->Insert(line);
+		
+		sprintf( line, "%s=%f", ATTR_CONDOR_LOAD_AVG, r_condor_load );
+		cp->Insert(line);
+		
+		sprintf(line, "%s=%d", ATTR_KEYBOARD_IDLE, r_idle );
 		cp->Insert(line); 
+  
+			// ConsoleIdle cannot be determined on all platforms; thus, only
+			// advertise if it is not -1.
+		if( r_console_idle != -1 ) {
+			sprintf( line, "%s=%d", ATTR_CONSOLE_IDLE, r_console_idle );
+			cp->Insert(line); 
+		}
 	}
 }
 
@@ -134,15 +142,6 @@ ResAttributes::benchmark(void)
 }
 
 
-#if !defined(WIN32)
-char*
-ResAttributes::afs_cell()
-{
-	return r_afs_info->my_cell();
-}
-#endif
-
-
 void
 deal_with_benchmarks( Resource* rip )
 {
@@ -156,4 +155,45 @@ deal_with_benchmarks( Resource* rip )
 	if( run_benchmarks ) {
 		rip->r_attr->benchmark();
 	}
+}
+
+
+void
+ResAttributes::init(ClassAd* ca)
+{
+	char* ptr;
+	char tmp[512];
+
+		// Compute and insert all static info
+
+#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
+		// AFS cell
+	if( r_afs_info->my_cell() ) {
+		sprintf( tmp, "%s = \"%s\"", ATTR_AFS_CELL,
+				 r_afs_info->my_cell() );
+		ca->Insert( tmp );
+		dprintf( D_FULLDEBUG, "%s\n", tmp );
+	} else {
+		dprintf( D_FULLDEBUG, "AFS_Cell not set\n" );
+	}
+#endif
+
+		// Physical memory
+	r_phys_mem = calc_phys_memory();
+	if( r_phys_mem <= 0 ) {
+			// calc_phys_memory() failed to give us something useful,
+			// try paraming. 
+		if( (ptr = param("MEMORY")) != NULL ) {
+			r_phys_mem = atoi(ptr);
+			free(ptr);
+		}
+	}
+	if( r_phys_mem > 0 ) {
+		sprintf( tmp, "%s = %d", ATTR_MEMORY, r_phys_mem );
+		ca->Insert( tmp );
+	}
+
+		// Compute and insert all dynamic info
+	this->compute( ALL );
+	this->refresh( ca, ALL );
 }

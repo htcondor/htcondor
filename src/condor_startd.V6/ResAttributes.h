@@ -13,28 +13,22 @@
 #include "afs.h"
 #endif
 
+enum ResAttr_t { UPDATE, TIMEOUT, ALL, PUBLIC };
+
 class ResAttributes
 {
 public:
-	ResAttributes(Resource *);
+	ResAttributes( Resource* );
 	~ResAttributes();
 
-	void update( ClassAd* );	// Refresh attributes only needed for updating CM
-	void timeout( ClassAd* );	// Refresh attributes needed at every timeout
-	void benchmark();	// Compute kflops and mips
-
-	float 		load()			{return r_load;};
-	float		condor_load()	{return r_condor_load;};
-	int			idle() 			{return r_idle;};
-	int			console_idle()	{return r_console_idle;};
-	unsigned long	virtmem()	{return r_virtmem;};
-	unsigned long	disk()		{return r_disk;};
-#if !defined(WIN32)
-	char*		afs_cell();
-#endif
+	void init( ClassAd* );		// Initialize all static info into classad
+	void refresh( ClassAd*, ResAttr_t );  // Refresh given CA w/ desired info
+	void compute( ResAttr_t );		// Actually recompute desired stats.  
+	void benchmark();			// Compute kflops and mips
 
 private:
 	Resource*	 	rip;
+		// Dynamic info
 	float			r_load;
 	float			r_condor_load;
 	unsigned long   r_virtmem;
@@ -44,12 +38,14 @@ private:
 	int				r_mips;
 	int				r_kflops;
 	int				r_last_benchmark;   // Last time we computed benchmarks
+		// Static info
+	int				r_phys_mem;
 #if !defined(WIN32)
 	AFS_Info*		r_afs_info;
 #endif
-
 };	
 
 void deal_with_benchmarks( Resource* );
 
 #endif _RES_ATTRIBUTES_H
+
