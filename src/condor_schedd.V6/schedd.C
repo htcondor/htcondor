@@ -3740,6 +3740,12 @@ Scheduler::child_exit(int pid, int status)
 				SetAttributeInt( srec->job_id.cluster, srec->job_id.proc,
 								 ATTR_JOB_STATUS, COMPLETED );
 				break;
+			case JOB_SHOULD_HOLD:
+				dprintf( D_ALWAYS, "Putting job %d.%d on hold\n",
+						 srec->job_id.cluster, srec->job_id.proc );
+				SetAttributeInt( srec->job_id.cluster, srec->job_id.proc, 
+								 ATTR_JOB_STATUS, HELD );
+				break;
 			}
 	 	} else if( WIFSIGNALED(status) ) {
 			dprintf( D_ALWAYS, "Shadow pid %d died with %s\n",
