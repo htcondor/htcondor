@@ -1628,7 +1628,7 @@ mk_upper( char *str )
 		if( islower(*src) ) {
 			*dst++ = toupper(*src++);
 		} else {
-			*dst++ = *str++;
+			*dst++ = *src++;
 		}
 	}
 	*dst = '\0';
