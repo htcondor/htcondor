@@ -358,7 +358,7 @@ extern "C" SetSyscalls(){}
 #define _POSIX_SOURCE
 #       if defined(OSF1)
 #               include <time.h>                        /* need POSIX CLK_TCK */
-#       elif !defined(HPUX9)
+#       elif !defined(HPUX)
 #               define _SC_CLK_TCK      3               /* shouldn't do this */
 #       endif
 #undef _POSIX_SOURCE

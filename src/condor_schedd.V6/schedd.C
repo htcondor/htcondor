@@ -2048,7 +2048,7 @@ Scheduler::mail_problem_message()
 		/* don't use 'pclose()' here, it does its own wait, and messes
 	       with our handling of SIGCHLD! */
 		/* except on HPUX it is both safe and required */
-#if defined(HPUX9)
+#if defined(HPUX)
 	pclose( mailer );
 #else
 	(void)fclose( mailer );

@@ -644,7 +644,7 @@ daemon::Obituary( int status )
 	 ** exit notification of one of our daemons.  Instead we'll clean
 	 ** up popen's child in our SIGCHLD handler.
 	 */
-#if defined(HPUX9)
+#if defined(HPUX)
     /* on HPUX, however, do a pclose().  This is because pclose() on HPUX
 	 ** will _not_ steal an exit notification, and just doing an fclose
 	 ** can cause problems the next time we try HPUX's popen(). -Todd */
