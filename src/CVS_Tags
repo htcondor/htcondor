@@ -1,3 +1,10 @@
+12/08/03 V6_6-merge-2
+   The state of the V6_6-branch for another merge into V6_7-branch.
+   Just want to get all of the bug fixes and other minor changes since
+   the last merge into V6_7-branch before we start making lots of
+   other branches off of that (core, unicore, stork, stale-classads,
+   etc).  
+
 12/02/03 V6_6-merge-1
    The state of the V6_6-branch when first merged into V6_7-branch.
    This is after V6_6_0, but before V6_6_1.  This is the first merge
