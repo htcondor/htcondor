@@ -321,6 +321,7 @@ DedicatedScheduler::DedicatedScheduler()
 
 	num_matches = 0;
 
+	ds_scheduler = NULL;
 	ds_owner = NULL;
 	ds_name = NULL;
 }
@@ -331,6 +332,7 @@ DedicatedScheduler::~DedicatedScheduler()
 	if(	idle_jobs ) { delete idle_jobs; }
 	if(	resources ) { delete resources; }
 	if(	avail_time_list ) { delete avail_time_list; }
+	if( ds_scheduler ) { delete [] ds_scheduler; }
 	if( ds_owner ) { delete [] ds_owner; }
 	if( ds_name ) { delete [] ds_name; }
 
@@ -374,7 +376,8 @@ DedicatedScheduler::initialize( void )
 	char *tmp, *tmpname;
 	
 
-		// First, figure out what ds_owner and ds_name should be.
+		// First, figure out what ds_owner, ds_name, and ds_scheduler
+		// should be.  
 	if( ! Name ) {
 		EXCEPT( "DedicatedScheduler::initialize(): Name is NULL" ); 
 	}
@@ -391,6 +394,9 @@ DedicatedScheduler::initialize( void )
 	ds_owner = strnewp( buf );
 	sprintf( buf, "%s@%s", ds_owner, my_full_hostname() );
 	ds_name = strnewp( buf );
+	sprintf( buf, "DedicatedScheduler!%s", Name );
+	ds_scheduler = strnewp( buf );
+
 
 		// Call our reconfig() method, since that will register 
 		// the DaemonCore timer for us, if we need it at all.
@@ -405,6 +411,8 @@ DedicatedScheduler::initialize( void )
 	sprintf( buf, "%s = \"%s\"", ATTR_OWNER, ds_owner );
 	dummy_job.Insert( buf );
 	sprintf( buf, "%s = \"%s\"", ATTR_USER, ds_name );
+	dummy_job.Insert( buf );
+	sprintf( buf, "%s = \"%s\"", ATTR_SCHEDULER, ds_scheduler );
 	dummy_job.Insert( buf );
 	sprintf( buf, "%s = %d", ATTR_JOB_UNIVERSE, MPI );
 	dummy_job.Insert( buf );
@@ -1567,8 +1575,10 @@ DedicatedScheduler::getDedicatedJobs( void )
 		// versions at all.
 	i = 0;
 	(*idle_jobs)[i++] = job;
+	setScheduler( job );
 	while( (job = GetNextJobByConstraint(constraint,0)) ) {
 		(*idle_jobs)[i++] = job;
+		setScheduler( job );
 	}
 
 	dprintf( D_FULLDEBUG, "Found %d dedicated job(s)\n", i );
@@ -2592,4 +2602,24 @@ deallocMatchRec( match_rec* mrec )
 	mrec->num_exceptions = 0;
 		// Status is no longer active, but we're still claimed
 	mrec->status = M_CLAIMED;
+}
+
+
+bool
+DedicatedScheduler::setScheduler( ClassAd* job_ad )
+{
+	int cluster;
+	int proc;
+
+	if( ! job_ad->LookupInteger(ATTR_CLUSTER_ID, cluster) ) {
+		return false;
+	}
+	if( ! job_ad->LookupInteger(ATTR_PROC_ID, proc) ) {
+		return false;
+	}
+	if( SetAttributeString(cluster, proc, ATTR_SCHEDULER,
+						   schedulerName()) < 0 ) {
+		return false;
+	}
+	return true;
 }
