@@ -129,6 +129,21 @@ void store_cred_handler(void *, int i, Stream *s) {
 			&usrHnd						// receive tokens handle
 		);
 		LogonUserError = GetLastError();
+		
+		if (LogonUserError == ERROR_PRIVILEGE_NOT_HELD ) {
+			
+			dprintf(D_FULLDEBUG, "NETWORK logon failed. Attempting INTERACTIVE\n");
+
+			retval = LogonUser(
+				user,						// user name
+				dom,						// domain or server - local for now
+				pw,							// password
+				LOGON32_LOGON_INTERACTIVE,	// INTERACTIVE is should be held by everyone.
+				LOGON32_PROVIDER_DEFAULT,	// logon provider
+				&usrHnd						// receive tokens handle
+			);
+			LogonUserError = GetLastError();
+		}
 
 		if (pw) {
 			swprintf(pwbuf, L"%S", pw); // make a wide-char copy first
