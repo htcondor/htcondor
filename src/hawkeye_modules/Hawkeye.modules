@@ -1,0 +1,71 @@
+# Master Hawkeye targets data file
+directory: /scratch/nleroy/workspace/Hawkeye-Release/modules
+
+target: all
+version: 1.0-rc1
++condor_node
++condor_pool
++df
++gass_cache
++gdmphb
++grid_probe
++memory
++network_errors
++open_files
++top
++uptime
++w
++who
+
+target: condor_node
+version: 1.0-rc1
++condor_node
+
+target: condor_pool
+version: 1.0-rc1
++condor_pool
+
+target: df
+version: 1.0-rc1
++df
+
+target: gass_cache
+version: 1.0-rc1
++gass_cache
+
+target: gdmphb
+version: 1.0-rc1
++gdmphb
+
+target: grid_probe
+version: 1.0-rc1
++grid_probe
+
+target: memory
+version: 1.0-rc1
++memory
+
+target: network_errors
+version: 1.0-rc1
++network_errors
+
+target: open_files
+version: 1.0-rc1
++open_files
+
+target: top
+version: 1.0-rc1
++top
+
+target: uptime
+version: 1.0-rc1
++uptime
+
+target: w
+version: 1.0-rc1
++w
+
+target: who
+version: 1.0-rc1
++who
+
