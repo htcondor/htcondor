@@ -717,22 +717,28 @@ abort_job_myself(PROC_ID job_id)
 } /* End of extern "C" */
 
 
-// Write to userlog
-bool Scheduler::WriteAbortToUserLog(PROC_ID job_id)
+// Initialize a UserLog object for a given job and return a pointer to
+// the UserLog object created.  This object can then be used to write
+// events and must be deleted when you're done.  This returns NULL if
+// the user didn't want a UserLog, so you must check for NULL before
+// using the pointer you get back.
+UserLog*
+Scheduler::InitializeUserLog( PROC_ID job_id ) 
 {
 	char tmp[_POSIX_PATH_MAX];
-
-	 if (GetAttributeString(job_id.cluster, job_id.proc, ATTR_ULOG_FILE,
-							tmp) < 0) {
-		// if there is no userlog file defined, then our work is done...
-		return true;
+	
+	if( GetAttributeString(job_id.cluster, job_id.proc, ATTR_ULOG_FILE,
+							tmp) < 0 ) {
+			// if there is no userlog file defined, then our work is
+			// done...  
+		return NULL;
 	}
 	
 	char owner[_POSIX_PATH_MAX];
 	char logfilename[_POSIX_PATH_MAX];
 	char iwd[_POSIX_PATH_MAX];
 
-	 GetAttributeString(job_id.cluster, job_id.proc, ATTR_JOB_IWD, iwd);
+	GetAttributeString(job_id.cluster, job_id.proc, ATTR_JOB_IWD, iwd);
 	if (tmp[0] == '/') {
 		strcpy(logfilename, tmp);
 	} else {
@@ -742,20 +748,127 @@ bool Scheduler::WriteAbortToUserLog(PROC_ID job_id)
 	owner[0] = '\0';
 	GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
 
-	dprintf(D_FULLDEBUG,"Writing abort record to user logfile=%s owner=%s\n",logfilename,owner);
+	dprintf( D_FULLDEBUG, 
+			 "Writing record to user logfile=%s owner=%s\n",
+			 logfilename, owner );
 
-	 UserLog* ULog=new UserLog();
+	UserLog* ULog=new UserLog();
 	ULog->initialize(owner, logfilename, job_id.cluster, job_id.proc, 0);
+	return ULog;
+}
 
+
+bool
+Scheduler::WriteAbortToUserLog( PROC_ID job_id )
+{
+	UserLog* ULog = this->InitializeUserLog( job_id );
+	if( ! ULog ) {
+			// User didn't want log
+		return true;
+	}
 	JobAbortedEvent event;
-	int status=ULog->writeEvent(&event);
-
+	int status = ULog->writeEvent(&event);
 	delete ULog;
 
-	if (!status) return false;
+	if (!status) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_ABORTED event\n" );
+		return false;
+	}
 	return true;
 }
 		
+
+bool
+Scheduler::WriteExecuteToUserLog( PROC_ID job_id, const char* sinful )
+{
+	UserLog* ULog = this->InitializeUserLog( job_id );
+	if( ! ULog ) {
+			// User didn't want log
+		return true;
+	}
+
+	char* host;
+	if( sinful ) {
+		host = (char*)sinful;
+	} else {
+		host = MySockName;
+	}
+
+	ExecuteEvent event;
+	strcpy( event.executeHost, host );
+	int status = ULog->writeEvent(&event);
+	delete ULog;
+	
+	if (!status) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_EXECUTE event\n" );
+		return false;
+	}
+	return true;
+}
+
+
+bool
+Scheduler::WriteEvictToUserLog( PROC_ID job_id, bool checkpointed ) 
+{
+	UserLog* ULog = this->InitializeUserLog( job_id );
+	if( ! ULog ) {
+			// User didn't want log
+		return true;
+	}
+	JobEvictedEvent event;
+	event.checkpointed = checkpointed;
+	int status = ULog->writeEvent(&event);
+	delete ULog;
+	if (!status) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_EVICTED event\n" );
+		return false;
+	}
+	return true;
+}
+
+
+bool
+Scheduler::WriteTerminateToUserLog( PROC_ID job_id, int status ) 
+{
+	UserLog* ULog = this->InitializeUserLog( job_id );
+	if( ! ULog ) {
+			// User didn't want log
+		return true;
+	}
+	JobTerminatedEvent event;
+	event.coreFile[0] = '\0';
+	struct rusage r;
+	memset( &r, 0, sizeof(struct rusage) );
+
+#if !defined(WIN32)
+	event.run_local_rusage = r;
+	event.run_remote_rusage = r;
+	event.total_local_rusage = r;
+	event.total_remote_rusage = r;
+#endif /* LOOSE32 */
+	event.sent_bytes = 0;
+	event.recvd_bytes = 0;
+	event.total_sent_bytes = 0;
+	event.total_recvd_bytes = 0;
+
+	if( WIFEXITED(status) ) {
+			// Normal termination
+		event.normal = true;
+		event.returnValue = WEXITSTATUS(status);
+	} else {
+		event.normal = false;
+		event.signalNumber = WTERMSIG(status);
+	}
+	int rval = ULog->writeEvent(&event);
+	delete ULog;
+
+	if (!rval) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_TERMINATED event\n" );
+		return false;
+	}
+	return true;
+}
+
 
 int
 Scheduler::abort_job(int, Stream* s)
@@ -1756,17 +1869,24 @@ Scheduler::StartJobs()
 				if ( !sent_shadow_failure_email ) {
 					sent_shadow_failure_email = TRUE;
 					FILE *email = email_admin_open("Failed to start shadow.");
-					fprintf(email,"Condor failed to start the " );
-					fprintf(email,"condor_shadow.\n\nThis may be a ");
-					fprintf(email,"configuration problem or a problem with\n");
-					fprintf(email,"permissions on the condor_shadow ");
-					fprintf(email,"binary.\n");
-					char *schedlog = param ( "SCHEDD_LOG" );
-					if ( schedlog ) {
-						email_asciifile_tail( email, schedlog, 50 );
-						free ( schedlog );
+					if( email ) {
+						fprintf(email,"Condor failed to start the " );
+						fprintf(email,"condor_shadow.\n\nThis may be a ");
+						fprintf(email,"configuration problem or a problem with\n");
+						fprintf(email,"permissions on the condor_shadow ");
+						fprintf(email,"binary.\n");
+						char *schedlog = param ( "SCHEDD_LOG" );
+						if ( schedlog ) {
+							email_asciifile_tail( email, schedlog, 50 );
+							free ( schedlog );
+						}
+						email_close ( email );
+					} else {
+							// Error sending the message
+						dprintf( D_ALWAYS, 
+								 "ERROR: Can't send email to the Condor "
+								 "Administrator\n" );
 					}
-					email_close ( email );
 				}
                 continue;
             } else {
@@ -2523,8 +2643,33 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 
 	// make sure file is executable
 	strcpy(a_out_name, gen_ckpt_name(Spool, job_id->cluster, ICKPT, 0));
-	if (chmod(a_out_name, 0755) < 0) {
-		EXCEPT("chmod(%s, 0755)", a_out_name);
+	errno = 0;
+	if( chmod(a_out_name, 0755) < 0 ) {
+		dprintf( D_ALWAYS, "ERROR: Can't chmod(%s, 0755), errno: %d\n",
+				 a_out_name, errno );
+		dprintf( D_ALWAYS, "Putting job %d.%d on hold\n",
+				 job_id->cluster, job_id->proc );
+		SetAttributeInt( job_id->cluster, job_id->proc,
+						 ATTR_JOB_STATUS, HELD );
+		ClassAd *jobAd = GetJobAd( job_id->cluster, job_id->proc );
+		char buf[256];
+		sprintf( buf, "Your job (%d.%d) is on hold", job_id->cluster,
+				 job_id->proc ); 
+		FILE* email = email_user_open( jobAd, buf );
+		if( ! email ) {
+			return NULL;
+		}
+		fprintf( email, "Condor failed to start your scheduluer universe " );
+		fprintf( email, "job (%d.%d).\n", job_id->cluster, job_id->proc );
+		fprintf( email, "The initial executable for the job,\n\"%s\"\n",
+				 a_out_name );
+		fprintf( email, "is not executable or does not exist.\n" );
+		fprintf( email, "\nPlease correct this problem and release your "
+				 "job with:\n" );
+		fprintf( email, "\"condor_release %d.%d\"\n\n", job_id->cluster,
+				 job_id->proc ); 
+		email_close ( email );
+		return NULL;
 	}
 
 	if (GetAttributeString(job_id->cluster, job_id->proc, 
@@ -2576,11 +2721,11 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		dprintf ( D_ALWAYS, "Open of %s failed, errno %d\n", input, errno );
 		cannot_open_files = true;
 	}
-	if ((inouterr[1] = open(output, O_WRONLY, 0)) < 0) {
+	if ((inouterr[1] = open(output, O_WRONLY | O_CREAT | O_TRUNC, 0)) < 0) {
 		dprintf ( D_ALWAYS, "Open of %s failed, errno %d\n", output, errno );
 		cannot_open_files = true;
 	}
-	if ((inouterr[2] = open(error, O_WRONLY, 0)) < 0) {
+	if ((inouterr[2] = open(error, O_WRONLY | O_CREAT | O_TRUNC, 0)) < 0) {
 		dprintf ( D_ALWAYS, "Open of %s failed, errno %d\n", error, errno );
 		cannot_open_files = true;
 	}
@@ -2605,7 +2750,11 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 							args) < 0) {
 		args[0] = '\0';
 	}
-	sprintf(job_args, "%s %s", a_out_name, args);
+
+		// Don't use a_out_name for argv[0], use
+		// "condor_scheduniv_exec.cluster.proc" instead. 
+	sprintf(job_args, "condor_scheduniv_exec.%d.%d %s",
+			job_id->cluster, job_id->proc, args);
 
 	pid = daemonCore->Create_Process( a_out_name, job_args, PRIV_USER_FINAL, 
 								1, FALSE, env, iwd, FALSE, NULL, inouterr );
@@ -2626,6 +2775,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	// SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, RUNNING);
 	mark_job_running(job_id);
 	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 1);
+	WriteExecuteToUserLog( *job_id );
 	return add_shadow_rec(pid, job_id, NULL, -1);
 #endif /* of WANT_DC_PM code */
 #else
@@ -3279,6 +3429,10 @@ Scheduler::child_exit(int pid, int status)
 	srec = FindSrecByPid(pid);
 
 	if (IsSchedulerUniverse(srec)) {
+		PROC_ID jobId;
+		jobId.cluster = srec->job_id.cluster;
+		jobId.proc = srec->job_id.proc;
+
 		// scheduler universe process
 		if(WIFEXITED(status)) {
 			dprintf(D_FULLDEBUG,
@@ -3292,6 +3446,9 @@ Scheduler::child_exit(int pid, int status)
 								ATTR_JOB_STATUS, COMPLETED);
 				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
 								ATTR_JOB_EXIT_STATUS, WEXITSTATUS(status) );
+				WriteTerminateToUserLog( jobId, status );
+			} else {
+				WriteEvictToUserLog( jobId );
 			}
 		} else if(WIFSIGNALED(status)) {
 			dprintf(D_ALWAYS,
@@ -3304,6 +3461,9 @@ Scheduler::child_exit(int pid, int status)
 						   WTERMSIG(status), REMOVED);
 				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
 								ATTR_JOB_STATUS, REMOVED);
+				WriteTerminateToUserLog( jobId, status );
+			} else {
+				WriteEvictToUserLog( jobId );
 			}
 		}
 /*
