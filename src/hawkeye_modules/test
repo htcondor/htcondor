@@ -94,6 +94,7 @@ sub RunIt()
     $Hash->Add( "pi", HawkeyePublish::TypeAuto, "3.1415926" );
     $Hash->Add( "IP", HawkeyePublish::TypeAuto, "192.168.1.1" );
     $Hash->Add( "three", HawkeyePublish::TypeAuto, "3" );
+    $Hash->Add( "point_two_percent", HawkeyePublish::TypeAuto, ".2%" );
     $Hash->Add( "three_percent", HawkeyePublish::TypeAuto, "3%" );
     $Hash->Add( "four_percent", HawkeyePublish::TypeAuto, "4.0%" );
     $Hash->Add( "five_percent", HawkeyePublish::TypePercent, .05 );

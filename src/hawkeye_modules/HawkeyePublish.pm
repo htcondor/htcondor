@@ -68,9 +68,9 @@ sub StoreValue {
 	{
 	    $Type = HawkeyePublish::TypeNumber;
 	}
-	elsif ( ( $Value =~ /^\d+%$/ ) || ( $Value =~ /^\d*\.\d+%$/ ) )
+	elsif ( ( $Value =~ /^(\d+)\%$/ ) || ( $Value =~ /^(\d*\.\d+)\%$/ ) )
 	{
-	    $Value *= 0.01;
+	    $Value = $1 * 0.01;
 	    $Type = HawkeyePublish::TypePercent;
 	}
 	elsif ( $Value =~ /(^true$)|(^false$)/i )
