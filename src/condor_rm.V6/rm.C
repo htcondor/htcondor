@@ -146,14 +146,29 @@ main( int argc, char *argv[] )
 	}
 
 	cmd_str = strchr( MyName, '_');
-	if (cmd_str && (stricmp(cmd_str, "_hold") == MATCH ||
-			stricmp(cmd_str, "_hold.exe") == MATCH)) { // added for Windows
+
+	// we match modes based on characters after the '_'. This means
+	// 'condor_hold.exe' or 'condor_hold_wrapped' are all legal argv[0]'s
+	// for condor_hold.
+
+	if (cmd_str && strncmp( cmd_str, "_hold", strlen("_hold") ) == MATCH) { 
+
 		mode = HELD;
-	} else if( cmd_str && (stricmp( cmd_str, "_release") == MATCH || 
-			stricmp(cmd_str, "_release.exe") == MATCH)) { // added for Windows
+
+	} else if ( cmd_str && 
+			strncmp( cmd_str, "_release", strlen("_release") ) == MATCH ) {
+
 		mode = IDLE;
-	} else {
+
+	} else if ( cmd_str && 
+			strncmp( cmd_str, "_rm", strlen("_rm") ) == MATCH ) {
+
 		mode = REMOVED;
+
+	} else {
+		// don't know what mode we're using, so bail.
+		fprintf( stderr, "Unrecognized command name, \"%s\"\n", MyName ); 
+		usage();
 	}
 
 	config();
