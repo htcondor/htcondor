@@ -116,6 +116,19 @@ main_init(int argc, char *argv[])
 		EXCEPT("Failed to get job ad from schedd.");
 	}
 
+		// For debugging, see if there's a special attribute in the
+		// job ad that sends us into an infinite loop, waiting for
+		// someone to attach with a debugger
+	int shadow_should_wait = 0;
+	jobAd->LookupInteger( ATTR_SHADOW_WAIT_FOR_DEBUG,
+						  shadow_should_wait );
+	if( shadow_should_wait ) {
+		dprintf( D_ALWAYS, "Job requested shadow should wait for "
+				 "debugger with %s=%d, going into infinite loop\n",
+				 ATTR_SHADOW_WAIT_FOR_DEBUG, shadow_should_wait ); 
+		while( shadow_should_wait );
+	}
+
 	int universe;
 	if (jobAd->LookupInteger(ATTR_JOB_UNIVERSE, universe) < 0) {
 			// change to standard when they work...
