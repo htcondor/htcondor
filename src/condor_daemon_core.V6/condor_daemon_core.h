@@ -40,8 +40,13 @@
 #include "condor_timer_manager.h"
 #include "condor_ipverify.h"
 #include "condor_commands.h"
+#include "condor_classad.h"
 #include "HashTable.h"
 #include "list.h"
+#include "extArray.h"
+#ifdef WIN32
+#include "ntsysinfo.h"
+#endif
 
 #if defined(GSS_AUTHENTICATION)
 #include "auth_sock.h"
@@ -50,6 +55,7 @@
 #endif
 
 static const int KEEP_STREAM = 100;
+static const int MAX_SOCKS_INHERITED = 4;
 static char* EMPTY_DESCRIP = "<NULL>";
 
 // typedefs for callback procedures
@@ -67,11 +73,11 @@ typedef int		(Service::*ReaperHandlercpp)(int pid,int exit_status);
 
 // other typedefs and macros needed on WIN32
 #ifdef WIN32
-typedef DWORD pid_t;
 #define WIFEXITED(stat) ((int)(1))
 #define WEXITSTATUS(stat) ((int)(stat))
 #define WIFSIGNALED(stat) ((int)(0))
 #define WTERMSIG(stat) ((int)(0))
+#define WIFSTOPPED(stat) ((int)(0))
 #endif  // of ifdef WIN32
 
 // some constants for HandleSig().
@@ -86,12 +92,16 @@ typedef DWORD pid_t;
 #define WANT_DC_PM
 #endif
 
+// helper function for finding available port for both TCP and UDP command socket
+int BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock);
+
 class DaemonCore : public Service
 {
 	friend class TimerManager; 
 #ifdef WIN32
 	friend dc_main( int argc, char** argv );
-	friend DWORD pidWatcherThread(void*);	
+	friend DWORD pidWatcherThread(void*);
+	friend BOOL CALLBACK DCFindWindow(HWND, LPARAM);
 #else
 	friend main(int, char**);
 #endif
@@ -101,6 +111,8 @@ class DaemonCore : public Service
 		~DaemonCore();
 
 		void	Driver();
+		int		ServiceCommandSocket();
+		int		InServiceCommandSocket() 	{ return inServiceCommandSocket_flag; }
 
 		int		ReInit();
 
@@ -112,7 +124,7 @@ class DaemonCore : public Service
 					char *handler_descrip, Service* s, DCpermission perm = ALLOW);
 		int		Cancel_Command( int command );
 		int		InfoCommandPort();
-		char*	InfoCommandSinfulString();
+		char*	InfoCommandSinfulString(int pid=-1);
 
 		int		Register_Signal(int sig, char *sig_descrip, SignalHandler handler, 
 					char *handler_descrip, Service* s = NULL, DCpermission perm = ALLOW);
@@ -156,10 +168,19 @@ class DaemonCore : public Service
 
 		void	Dump(int, char* = NULL );
 
-		inline pid_t getpid() { return mypid; };
-		inline pid_t getppid() { return ppid; };
+		inline	pid_t getpid() { return mypid; };
+		inline	pid_t getppid() { return ppid; };
+		int		Is_Pid_Alive(pid_t pid);
 
+				// Send_Signal to daemonCore processes only
 		int		Send_Signal(pid_t pid, int sig);
+
+				// methods for process management.  these work
+				// on any process, not just daemon core processes.
+		int		Shutdown_Fast(pid_t pid);
+		int		Shutdown_Graceful(pid_t pid);
+		int		Suspend_Process(pid_t pid);
+		int		Continue_Process(pid_t pid);
 
 		int		SetDataPtr( void * );
 		int		Register_DataPtr( void * );
@@ -178,6 +199,9 @@ class DaemonCore : public Service
 			Stream		*sock_inherit_list[] = NULL 			
 			);
 
+		// NULL terminated array of inherited sockets
+		Stream **GetInheritedSocks() { return (Stream **)inheritedSocks; }
+
 #ifdef FUTURE		
 		int		Create_Thread()
 		int		Kill_Process()
@@ -186,13 +210,14 @@ class DaemonCore : public Service
 
 
 		
-	private:
+	private:		
 		int		HandleSigCommand(int command, Stream* stream);
 		int		HandleReq(int socki);
 		int		HandleSig(int command, int sig);
 		void	Inherit( AuthSock* &rsock, SafeSock* &ssock );  // called in main()
 		int		HandleProcessExitCommand(int command, Stream* stream);
 		int		HandleProcessExit(pid_t pid, int exit_status);
+		int		HandleDC_SIGCHLD(int sig);
 
 		int		Register_Command(int command, char *com_descip, CommandHandler handler, 
 					CommandHandlercpp handlercpp, char *handler_descrip, Service* s, 
@@ -261,9 +286,9 @@ class DaemonCore : public Service
 			void*			data_ptr;
 		};
 		void				DumpSocketTable(int, const char* = NULL);
-		int					maxSocket;		// max number of socket handlers
+		int					maxSocket;		// number of socket handlers to start with
 		int					nSock;		// number of socket handlers used
-		SockEnt*			sockTable;		// socket table
+		ExtArray<SockEnt>	*sockTable;		// socket table; grows dynamically if needed
 		int					initial_command_sock;  
 
 		struct ReapEnt
@@ -288,6 +313,7 @@ class DaemonCore : public Service
 #ifdef WIN32
 			HANDLE hProcess;
 			HANDLE hThread;
+			HWND hWnd;
 #endif
 			char sinful_string[28];
 			char parent_sinful_string[28];
@@ -299,6 +325,7 @@ class DaemonCore : public Service
 		PidHashTable* pidTable;
 		pid_t mypid;
 		pid_t ppid;
+		int Send_WM_CLOSE(pid_t pid);
 
 #ifdef WIN32
 		// note: as of WinNT 4.0, MAXIMUM_WAIT_OBJECTS == 64
@@ -331,6 +358,7 @@ class DaemonCore : public Service
 
 #ifdef WIN32
 		DWORD	dcmainThreadId;		// the thread id of the thread running the main daemon core
+		static CSysinfo ntsysinfo;	// class to do undocumented NT process management
 #endif
 
 #ifndef WIN32
@@ -338,9 +366,12 @@ class DaemonCore : public Service
 		volatile int async_sigs_unblocked;
 #endif
 
+		Stream *inheritedSocks[MAX_SOCKS_INHERITED+1];
+
 		// these need to be in thread local storage someday
 		void **curr_dataptr;
 		void **curr_regdataptr;
+		int inServiceCommandSocket_flag;
 		// end of thread local storage
 };
 
