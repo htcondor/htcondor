@@ -38,6 +38,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
+#include "condor_uid.h"
 #include "match_prefix.h"
 #include "string_list.h"
 
@@ -59,6 +60,7 @@ main( int argc, char* argv[] )
 	char	*value, *tmp, *host = NULL;
 	int		i;
 	StringList params;
+	int		print_owner = FALSE;
 
 	MyName = argv[0];
 
@@ -73,6 +75,8 @@ main( int argc, char* argv[] )
 			} else {
 				usage();
 			}
+		} else if( match_prefix( argv[i], "-owner" ) ) {
+			print_owner = TRUE;
 		} else if( match_prefix( argv[i], "-" ) ) {
 			usage();
 		} else {
@@ -86,6 +90,11 @@ main( int argc, char* argv[] )
 		config( 0 );
 	}
 		
+	if( print_owner ) {
+		printf( "%s\n", get_condor_username() );
+		exit( 0 );
+	}
+
 	params.rewind();
 	while( (tmp = params.next()) ) {
 		value = param( tmp );
