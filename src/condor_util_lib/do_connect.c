@@ -55,6 +55,18 @@ definition of FIONBIO in Solaris */
 #endif
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
+/*
+   The HPUX version of select takes (int *) params, unlike SunOS, Solaris
+   which take (fd_set *).  Define an intermediate type for this.  -- Rajesh
+*/
+
+#if defined(HPUX9)
+typedef int *SELECT_FDSET_PTR;
+#else
+typedef fd_set *SELECT_FDSET_PTR;
+#endif
+
+
 extern int	errno;
 
 #if defined(__STDC__)
@@ -91,7 +103,7 @@ int		timeout;
 		EXCEPT( "socket" );
 	}
 
-	if( setsockopt(fd,SOL_SOCKET,SO_KEEPALIVE,(caddr_t *)&true,sizeof(true)) < 0 ) {
+	if( setsockopt(fd,SOL_SOCKET,SO_KEEPALIVE,(const char *)&true,sizeof(true)) < 0 ) {
 		EXCEPT( "setsockopt( SO_KEEPALIVE )" );
 	}
 
@@ -367,8 +379,13 @@ int tcp_connect_timeout( int sockfd, struct sockaddr *sin, int len,
 	nfds = sockfd + 1;
 	FD_ZERO( &writefds );
 	FD_SET( sockfd, &writefds );
-	nfound = select( nfds, (int *)0, (int *) &writefds, (int *)0,
+
+	nfound = select( nfds, 
+					(SELECT_FDSET_PTR) 0, 
+					(SELECT_FDSET_PTR) &writefds, 
+					(SELECT_FDSET_PTR )0,
 					(struct timeval *)&timer );
+
 	switch( nfound ) {
 	    case 0:
 		    (void)close( sockfd );
@@ -413,7 +430,10 @@ int tcp_accept_timeout(int ConnectionSock, struct sockaddr *sin, int *len,
 #if defined(AIX31) || defined(AIX32)
 	errno = EINTR;  /* Shouldn't have to do this... */
 #endif
-    count = select(FD_SETSIZE, (int *)&readfds, (int *)0, (int *)0,
+    count = select(FD_SETSIZE, 
+				   (SELECT_FDSET_PTR) &readfds, 
+				   (SELECT_FDSET_PTR) 0, 
+				   (SELECT_FDSET_PTR) 0,
                    (struct timeval *)&timer );
     if( count < 0 ) {
 		if( errno == EINTR ) {

@@ -36,5 +36,5 @@ char *
 getwd( path )
 char	*path;
 {
-	return getcwd( path, MAXPATHLEN );
+	return ((char *) getcwd( path, MAXPATHLEN ));
 }

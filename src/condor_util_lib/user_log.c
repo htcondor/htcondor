@@ -46,6 +46,7 @@
 #define _POSIX_SOURCE
 
 #include "condor_common.h"
+#include "condor_config.h"
 #include "condor_debug.h"
 #include "file_lock.h"
 #include <pwd.h>

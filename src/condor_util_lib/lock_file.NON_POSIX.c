@@ -53,6 +53,13 @@
 #include <errno.h>
 #include "file_lock.h"
 
+/* 
+   #include "fake_flock.h"  was here originally inserted by Dhaval; relocated
+   by Rajesh to remove redefinitions of LOCK_EX et al. and warnings caused due
+   to this  -- Rajesh 3/14
+*/
+
+
 #if defined( HPUX9 )
 #define USE_FLOCK 0
 #include "fake_flock.h" /* to get the definition of LOCK_UN */
@@ -100,6 +107,10 @@ ERROR: DONT KNOW WHETHER TO USE FLOCK or FCNTL
 #if USE_FLOCK
 
 #include <sys/file.h>
+#include "fake_flock.h" 
+
+/* Solaris specific change because of the enclosure of this header in HPUX9 
+   definition but is used unconditionally in following code ..dhaval 6/24 */
 
 extern int errno;
 
@@ -148,6 +159,11 @@ int do_block;
 #ifndef F_RDLCK
 #include <fcntl.h>
 #endif
+
+#include "fake_flock.h"  /* For completeness' sake -- Rajesh */
+/* Solaris specific change because of the enclosure of this header in HPUX9 
+definition but is used unconditionally in following code ..dhaval 6/24 */
+
 
 #ifndef SEEK_SET
 #define SEEK_SET 0
