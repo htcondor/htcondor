@@ -20,14 +20,21 @@
 #     prints the status of Condor on the given hosts
 
 ##################################################
-# Global variables
+# Config variables
 ##################################################
 $RELEASE_DIR = "/unsup/condor";
+$NUMNODES = 64;
+$CONDOR_CM = "condor.cs.wisc.edu";
+$CLUSTER_CONSTRAINT = "-const 'OpSys == \"LINUX\" && IsDedicated == True'";
+
+##################################################
+# Global variables (not user-servicable)
+##################################################
 $SBIN = "$RELEASE_DIR/sbin";
 $BIN = "$RELEASE_DIR/bin";
-$CONDOR_OFF = "$SBIN/condor_off -pool condor";
-$CONDOR_ON = "$SBIN/condor_on -pool condor";
-$CONDOR_STATUS = "$BIN/condor_status -pool condor";
+$CONDOR_OFF = "$SBIN/condor_off -pool $CONDOR_CM";
+$CONDOR_ON = "$SBIN/condor_on -pool $CONDOR_CM";
+$CONDOR_STATUS = "$BIN/condor_status -pool $CONDOR_CM";
 
 ##################################################
 # The guts
@@ -84,37 +91,66 @@ sub start {
 
 sub stop {
     my( $num ) = @_;
-    my( @hosts );
+    my( $host, @hosts );
     if( ($num =~ /.*\D.*/) ) {
 	die "Error: $num is not a number, try again\n";
     }
-    @hosts = find_avail( $num );
-    kill_condor( @hosts );
+    if( $num > $NUMNODES ) {
+	die "Error: The cluster only has $NUMNODES machines, try again\n";
+    }
+
+    @hosts = find_avail($num);
+    foreach $host ( @hosts ) {
+	kill_condor( $host );
+    }
+
+    # Maybe we should wait here until Condor is really gone...
+
+    foreach $host ( @hosts ) {
+	print $host . "\n";
+    }
 }
 
 
 sub find_avail {
     my( $num ) = @_;
-    my( $i, $host, @hosts );
-    # First, trivial pass: just give them the first N nodes
-    for( $i = 1; $i <= $num; $i++ ) {
+    my( $found, $host, @avail );
+    parse_cluster_status();
+    $found = 0;
+    for( $i = 1; $i <= $NUMNODES; $i++ ) {
 	if( $i < 10 ) {
 	    $host = "c0$i";
 	} else {
 	    $host = "c$i";
 	}
-	push @hosts, $host;
+	if( @status{"vm1\@$host.cs.wisc.edu"} ) {
+	    # This node is up, give it up.
+	    push @avail, $host;
+	    $found++;
+	} 
+	if( $found == $num ) {
+	    return @avail;
+	}
     }
-    return @hosts;
+    die "Not enough nodes running Condor to satisfy your request\n"
+}
+
+
+sub parse_cluster_status {
+    my( $format, $name, $state, $act );
+    $format = "-format \"%s:\" Name -format \"%s:\" State -format \"%s\n\" Activity";
+    open( CMD, "$CONDOR_STATUS $CLUSTER_CONSTRAINT $format |" );
+    while( <CMD> ) {
+	chomp;
+	($name, $state, $act) = split /:/;
+	@status{$name} = ($state, $act);
+    }
 }
 
 
 sub kill_condor {
-    my( @hosts ) = @_;
-    foreach $host ( @hosts ) {
-	`$CONDOR_OFF $host`;
-	print $host . "\n";
-    }
+    my( $host ) = @_;
+    `$CONDOR_OFF $host`;
 }
 
 
