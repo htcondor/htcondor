@@ -896,6 +896,9 @@ dc_config_auth()
 
 			sprintf(buffer,"%s=%s/condor_ssl.cnf", STR_SSLEAY_CONF, pbuf);
 			putenv( strdup ( buffer ) );
+				// now that we're done with pbuf, we have to free it
+				// so we don't leak memory!
+			free( pbuf );
 		} else {
 			dprintf (D_ALWAYS, "ZKM: running personal condor and "
 				" no %s specified! gsi won't work.\n",
