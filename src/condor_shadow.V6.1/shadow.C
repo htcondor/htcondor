@@ -166,141 +166,109 @@ UniShadow::logExecuteEvent( void )
 
 
 void
-UniShadow::shutDown( int reason ) 
+UniShadow::cleanUp( void )
 {
-
 		// Deactivate the claim
 	if ( remRes ) {
 		remRes->killStarter();
 	}
+}
 
-		// exit now if there is no job ad
-	if ( !getJobAd() ) {
-		DC_Exit( reason );
+
+int
+UniShadow::getExitReason( void )
+{
+	if( remRes ) {
+		return remRes->getExitReason();
 	}
-	
-		// if we are being called from the exception handler, return
-		// now to prevent infinite loop in case we call EXCEPT below.
-	if ( reason == JOB_EXCEPTION ) {
+	return -1;
+}
+
+
+void
+UniShadow::emailTerminateEvent( int exitReason )
+{
+	FILE* mailer;
+	mailer = shutDownEmail( exitReason );
+	if( ! mailer ) {
+			// nothing to do
 		return;
 	}
 
-	int exit_value;
-	if( exitedBySignal() ) {
-		exit_value = exitSignal();
-	} else {
-		exit_value = exitCode();
-	}
-
-		// if job exited, check and see if it meets the user's
-		// ExitRequirements, and/or update the job ad in the schedd
-		// so that the exit status is recoreded in the history file.
-	if ( reason == JOB_EXITED ) {
-		char buf[ATTRLIST_MAX_EXPRESSION];
-		sprintf(buf,"%s=%d",ATTR_JOB_EXIT_STATUS, exit_value);
-		jobAd->InsertOrUpdate(buf);
-		int exit_requirements = TRUE;	// default to TRUE if not specified
-		jobAd->EvalBool(ATTR_JOB_EXIT_REQUIREMENTS,jobAd,exit_requirements);
-		if ( exit_requirements ) {
-			// exit requirements are met; update the classad with
-			// the exit status so it is properly recorded in the
-			// history file.
-			updateJobInQueue( U_TERMINATE );
-		} else {
-			// exit requirements expression is FALSE! 
-			EXCEPT("Job exited with status %d; failed %s expression",
-				exit_value,ATTR_JOB_EXIT_REQUIREMENTS);
-		}
-	}
-
-		// write stuff to user log:
-	endingUserLog( reason );
-
-		// returns a mailer if desired
-	FILE* mailer;
-	mailer = shutDownEmail( reason );
-	if ( mailer ) {
 		// gather all the info out of the job ad which we want to 
 		// put into the email message.
-		char JobName[_POSIX_PATH_MAX];
-		JobName[0] = '\0';
-		jobAd->LookupString( ATTR_JOB_CMD, JobName );
+	char JobName[_POSIX_PATH_MAX];
+	JobName[0] = '\0';
+	jobAd->LookupString( ATTR_JOB_CMD, JobName );
 
-		char Args[_POSIX_ARG_MAX];
-		Args[0] = '\0';
-		jobAd->LookupString(ATTR_JOB_ARGUMENTS, Args);
-
-		int q_date = 0;
-		jobAd->LookupInteger(ATTR_Q_DATE,q_date);
-
-		float remote_sys_cpu = 0.0;
-		jobAd->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, remote_sys_cpu);
-
-		float remote_user_cpu = 0.0;
-		jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, remote_user_cpu);
-
-		int image_size = 0;
-		jobAd->LookupInteger(ATTR_IMAGE_SIZE, image_size);
-
-		int shadow_bday = 0;
-		jobAd->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
-
-		float previous_runs = 0;
-		jobAd->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, previous_runs );
-
-		time_t arch_time=0;	/* time_t is 8 bytes some archs and 4 bytes on other
-								archs, and this means that doing a (time_t*)
-								cast on & of a 4 byte int makes my life hell.
-								So we fix it by assigning the time we want to
-								a real time_t variable, then using ctime()
-								to convert it to a string */
-
-
-		fprintf( mailer, "Your Condor job %d.%d \n",getCluster(),getProc());
-		if ( JobName[0] ) {
-			fprintf(mailer,"\t%s %s\n",JobName,Args);
-		}
-		
-		fprintf(mailer,"has ");
-		remRes->printExit( mailer );
-
-		arch_time = q_date;
-        fprintf(mailer, "\n\nSubmitted at:        %s", ctime(&arch_time));
-
-        if( reason == JOB_EXITED ) {
-                double real_time = time(NULL) - q_date;
-				arch_time = time(NULL);
-                fprintf(mailer, "Completed at:        %s", ctime(&arch_time));
-
-                fprintf(mailer, "Real Time:           %s\n", 
-					d_format_time(real_time));
-        }
-        fprintf( mailer, "\n" );
-
-		fprintf(mailer, "Virtual Image Size:  %d Kilobytes\n\n", image_size);
-
-        double rutime = remote_user_cpu;
-        double rstime = remote_sys_cpu;
-        double trtime = rutime + rstime;
-		double wall_time = time(NULL) - shadow_bday;
-		fprintf(mailer, "Statistics from last run:\n");
-		fprintf(mailer, "Allocation/Run time:     %s\n",d_format_time(wall_time) );
-        fprintf(mailer, "Remote User CPU Time:    %s\n", d_format_time(rutime) );
-        fprintf(mailer, "Remote System CPU Time:  %s\n", d_format_time(rstime) );
-        fprintf(mailer, "Total Remote CPU Time:   %s\n\n", d_format_time(trtime));
-
-		double total_wall_time = previous_runs + wall_time;
-		fprintf(mailer, "Statistics totaled from all runs:\n");
-		fprintf(mailer, "Allocation/Run time:     %s\n",
-										d_format_time(total_wall_time) );
-
-		email_close(mailer);
-	}
-
-	remRes->dprintfSelf( D_FULLDEBUG );
+	char Args[_POSIX_ARG_MAX];
+	Args[0] = '\0';
+	jobAd->LookupString(ATTR_JOB_ARGUMENTS, Args);
 	
-		// does not return.
-	DC_Exit( reason );
+	int q_date = 0;
+	jobAd->LookupInteger(ATTR_Q_DATE,q_date);
+	
+	float remote_sys_cpu = 0.0;
+	jobAd->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, remote_sys_cpu);
+	
+	float remote_user_cpu = 0.0;
+	jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, remote_user_cpu);
+	
+	int image_size = 0;
+	jobAd->LookupInteger(ATTR_IMAGE_SIZE, image_size);
+	
+	int shadow_bday = 0;
+	jobAd->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
+	
+	float previous_runs = 0;
+	jobAd->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, previous_runs );
+	
+	time_t arch_time=0;	/* time_t is 8 bytes some archs and 4 bytes on other
+						   archs, and this means that doing a (time_t*)
+						   cast on & of a 4 byte int makes my life hell.
+						   So we fix it by assigning the time we want to
+						   a real time_t variable, then using ctime()
+						   to convert it to a string */
+	
+	
+	fprintf( mailer, "Your Condor job %d.%d \n",getCluster(),getProc());
+	if ( JobName[0] ) {
+		fprintf(mailer,"\t%s %s\n",JobName,Args);
+	}
+	
+	fprintf(mailer,"has ");
+	remRes->printExit( mailer );
+	
+	arch_time = q_date;
+	fprintf(mailer, "\n\nSubmitted at:        %s", ctime(&arch_time));
+	
+	if( exitReason == JOB_EXITED ) {
+		double real_time = time(NULL) - q_date;
+		arch_time = time(NULL);
+		fprintf(mailer, "Completed at:        %s", ctime(&arch_time));
+		
+		fprintf(mailer, "Real Time:           %s\n", 
+				d_format_time(real_time));
+        }	
+	fprintf( mailer, "\n" );
+	
+	fprintf(mailer, "Virtual Image Size:  %d Kilobytes\n\n", image_size);
+	
+	double rutime = remote_user_cpu;
+	double rstime = remote_sys_cpu;
+	double trtime = rutime + rstime;
+	double wall_time = time(NULL) - shadow_bday;
+	fprintf(mailer, "Statistics from last run:\n");
+	fprintf(mailer, "Allocation/Run time:     %s\n",d_format_time(wall_time) );
+	fprintf(mailer, "Remote User CPU Time:    %s\n", d_format_time(rutime) );
+	fprintf(mailer, "Remote System CPU Time:  %s\n", d_format_time(rstime) );
+	fprintf(mailer, "Total Remote CPU Time:   %s\n\n", d_format_time(trtime));
+	
+	double total_wall_time = previous_runs + wall_time;
+	fprintf(mailer, "Statistics totaled from all runs:\n");
+	fprintf(mailer, "Allocation/Run time:     %s\n",
+			d_format_time(total_wall_time) );
+	email_close(mailer);
 }
 
 int UniShadow::handleJobRemoval(int sig) {
