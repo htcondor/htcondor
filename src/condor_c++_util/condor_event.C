@@ -54,10 +54,10 @@ const char * ULogEventNumberNames[] = {
 	"ULOG_NODE_EXECUTE",  			// MPI Node executing
 	"ULOG_NODE_TERMINATED",  		// MPI Node terminated
 	"ULOG_POST_SCRIPT_TERMINATED",	// POST script terminated
-	"ULOG_GLOBUS_SUBMIT"			// Job Submitted to Globus
-	"ULOG_GLOBUS_SUBMIT_FAILED"		// Globus Submit Failed 
-	"ULOG_GLOBUS_RESOURCE_UP"		// Globus Machine UP 
-	"ULOG_GLOBUS_RESOURCE_DOWN"		// Globus Machine Down
+	"ULOG_GLOBUS_SUBMIT",			// Job Submitted to Globus
+	"ULOG_GLOBUS_SUBMIT_FAILED",	// Globus Submit Failed 
+	"ULOG_GLOBUS_RESOURCE_UP",		// Globus Machine UP 
+	"ULOG_GLOBUS_RESOURCE_DOWN",	// Globus Machine Down
 };
 
 const char * ULogEventOutcomeNames[] = {
