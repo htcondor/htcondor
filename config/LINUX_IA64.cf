@@ -39,9 +39,9 @@
 
 #define IS_CLIPPED YES
 
-/*#define HAS_GLOBUS	NO*/
-/*#define HAS_GSI		NO*/
-/*#define HAS_OPENSSL NO*/
+#define HAS_GLOBUS	YES
+#define HAS_GSI		YES
+#define HAS_OPENSSL YES
 
 #undef  HAS_PVM
 #define HAS_PVM NO
@@ -49,7 +49,7 @@
 #undef WANT_MAN_PAGES
 
 #undef GLOBUS_FLAVOR
-#define GLOBUS_FLAVOR gcc64dbg
+#define GLOBUS_FLAVOR gcc64
 
 /*#undef OpenSSLPath*/
 /*#undef GlobusPath*/
