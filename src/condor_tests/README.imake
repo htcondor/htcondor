@@ -1,0 +1,222 @@
+**********************************************************************
+INTRODUCTION
+**********************************************************************
+
+This README gives an explaination of how the imake build system works
+for the Condor test suite.  First, the various imake control files in
+use and what they do are explained.  Then, the rules available to test
+authors are described.  After reading this file, the existing imake
+files and rules should make sense, and can be used as a working
+example if you're just starting out. 
+
+
+**********************************************************************
+IMAKE FILES USED
+**********************************************************************
+
+There are a couple of different files used as input to imake within
+the Condor test suite.  There are a number of rules already defined
+that control various aspects of the test suite build process itself.
+The most important thing to describe here is where to put the imake
+rules when you're adding a new test to the test suite.  In general,
+the rules for a new test should only go into a single Imakefile.
+However, which file to add them to depends on what kind of test it is
+and how you want it built.  
+
+The most important distinction in the test suite are between tests
+that can be built with a single compiler and tests that should be
+built and run seperately for multiple compilers.  In general, the only
+tests that should be run with multiple compilers are standard universe
+tests that are linking with Condor libraries, where we want to ensure
+that the same test works with GNU and vendor compilers on a given
+platform.  Things are a little more complicated in this case, so we'll
+start by looking at tests that do *NOT* need multiple compilers
+
+
+--------------------------------------------------
+Tests that need a single compiler (or no compiler)
+--------------------------------------------------
+
+All imake rules for tests that only need a single compiler, or tests
+that involve scripts or other programs that don't need to be compiled
+at all, should be placed in the top-level condor_tests/Imakefile.
+There is a section in this file specifically for these rules, labeled
+with the following comment: 
+
+   Rules for all the single-compiler (or no compiler) tests
+
+All the rules for a given test should be placed next to each other,
+without newlines between them.  Blocks of rules for different tests
+should be seperated by a single newline.  The various rules you can
+use are described in detail below.
+
+
+--------------------------------------------------
+Tests that need multiple compilers
+--------------------------------------------------
+
+If a given test is a standard universe test or for some other reason
+should be built with all the possible compilers on a given platform
+that understand the given kind of input source file, the imake rule
+block for the test needs to go into a compiler-specific Imakefile.
+There are seperate Imakefiles used for Fortran ("FImakefile"), C
+("CImakefile") and C++ ("CPPImakefile") source files.  Any test which
+has its imake rule block in one of these files will be built by all
+the valid compilers for that type of source on the system.  For
+example, on a platform with both GNU g77 and a vendor-supplied f77,
+tests listed in the FImakefile would be built in both a "g77" and
+"f77" subdirectory, where all files built in each directory are
+built using the corresponding compiler.
+
+One special case is that in general, any C-specific standard universe
+test we add to the test suite should probably also be compiled and
+tested using the C++ compilers on the system.  So, any C test that can
+be shared across both C and C++ compilers should be placed in the
+"CImakefile.common" file.  This way, we don't have to duplicate the
+Imake rules for the tests, but can still get the same test built with
+many different compilers.
+
+
+--------------------------------------------------
+Imakefile summary
+--------------------------------------------------
+
+Imakefile
+   Rules for tests that don't need multiple compilers, or that don't
+   need to be compiled at all.  Also contains rules that control
+   various aspects of the compiler-specific subdirectories.
+
+FImakefile
+   Rules for tests that should be built with all the Fortran compilers
+   on a given platform.
+
+CImakefile
+   Rules for tests that should only be built with all the C compilers
+   on a given platform.
+
+CPPImakefile
+   Rules for tests that should only be built with all the C++
+   compilers on a given platform.  This should only include tests that
+   rely on C++ functionality and require a C++ compiler.
+
+CImakefile.common
+   Rules for all C tests that can be built and run with all the C
+   *and* C++ compilers on the system.
+
+Imakefile.common
+   Rules and settings shared across *all* of the test-related
+   Imakefiles.  test-specific rules should never go into this file,
+   but settings are rules that are shared across multiple tests can go
+   in here.  
+
+Imakefile.common.compiler
+   Rules and settings shared across all of the compiler-specific
+   Imakefiles.  test-specific rules should never go into this file,
+   but settings are rules that are shared across multiple tests can go
+   in here.  
+
+
+
+**********************************************************************
+IMAKE RULES
+**********************************************************************
+
+This section describes the Imake rules that are used to define a given
+test in the build system.  All rules for a given test should be in the
+same file, should be together (not seperated by a newline).  This is
+what we refer to as a test's "rule block".  The rule blocks for
+seperate tests should be seperated from eachother by a newline.
+
+
+DESC(testname,"description string")
+
+   This rule provides a human-readable string that describes the
+   test.  This string will eventually be used while displaying test
+   results to make them more easily understood.  There should be
+   exactly 1 DESC() rule for every test.
+
+
+RUN(testname)
+
+   This rule indicates that the given test should be run.  In most
+   cases, all tests should have a corresponding RUN() rule.  However,
+   there might be times when we add a test that we just want to build,
+   and not necessarily run it, in which case the test would not have a
+   RUN() rule associated with it.  There can be at most one RUN() for
+   each unique testname.
+
+
+TESTCLASS(testname,test_class)
+
+   This rule indicates that the given test is part of the specified
+   test "class", or category.  See "README.testclasses" for details.
+   Tests can belong to multiple classes, so there can be multiple
+   TESTCLASS rules for each test.
+
+
+BUILD(cmplr,testname,extension)
+
+   Tells the build system how to compile the test into a valid
+   executable.  The file "testname.extension" is compiled with the
+   given "cmplr" and told to produce an executable "testname.exe". 
+   Additional dependencies are added in case a BUILD() rule is placed
+   in a compiler-specific Imakefile, in which case the compiling and
+   linking is done in a subdirectory of condor_tests, and the source
+   file lives in the parent directory. 
+
+
+BUILD_DEP(cmplr,testname,extension,deps)
+
+   This rule is identical to the BUILD() rule described above, except
+   that when the program is finally being linked into testname.exe,
+   the additional linker dependencies specified with "deps" are
+   included.  The "deps" should be a space-separated list of .o files
+   to link in, along with testname.o (which is done automatically).
+
+
+CBUILD(cmplr,testname,extension)
+
+   The CBUILD() rule works much like the BUILD() rule.  However,
+   CBUILD() is used for tests that should be linked with the Condor
+   libraries for the standard universe (using condor_compile).  The
+   resulting executable linked for checkpointing is called
+   "testname.cndr.exe".  Additionally, a version is built without the
+   Condor libraries and is just named "testname.exe".
+
+
+CBUILD_DEP(cmplr,testname,extension,deps)
+
+   This rule is a combination of the CBUILD() and BUILD_DEP() rules.
+   It's for tests that should be linked with the Condor libraries that
+   require more than one .o file.
+
+
+DEPS(testname,dependencyA dependencyB ...)
+
+   The DEPS() rule is used to specify additional dependencies (if any)
+   a given test requires.  This way, "make testname" always knows what
+   files need to be "made" to allow a given test to run.  For example,
+   if a given executable program is shared across multiple tests,
+   you'd want to added DEPS() rules for each test name that mentioned
+   the executable you need built.  Or, if a given test depends on
+   input files, those should be listed with a DEPS() rule.
+
+
+SYM_FILE(testname,ext)
+
+   Inside the compiler-specific Imakefiles, if a given test depends on
+   some input files that live in the parent condor_tests directory,
+   this rule can be used to add a symlink in the compiler-specific
+   directory for "testname.exe" that points to the to the same file in
+   the parent directory.  Creating this symlink is added as a
+   dependency for building the given testname.
+
+
+In general, the CBUILD* rules should go into compiler-specific
+Imakefiles (CImakefile, CPPImakefile, or FImakefile as appropriate),
+since we're almost always going to want any standard universe tests we
+define to be built and run with all the different compilers available
+on a given machine.  The BUILD* rules can go either in the main
+condor_tests/Imakefile or in compiler-specific Imakfiles as needed.
+
+

@@ -1,0 +1,40 @@
+----------------------------------------------------------------------
+INTRODUCTION
+----------------------------------------------------------------------
+
+Tests in the Condor test suite can belong to various "classes" or
+categories.  These classes are used to manage tests to allow building
+and/or runing certain logical subsets of all the tests.  For example,
+if you only want to run very short running tests, you might define a
+class called "quick", and all tests that execute quickly would be
+added to that class.  Similarly, very long running tests that we only
+want to attempt to execute once a week could go into a seperate test
+class called "weekly" or "long".  Defining test classes will allow
+test authors a lot of flexibility in deciding when test should be
+run and potentially how it is displayed.
+
+
+----------------------------------------------------------------------
+DEFINING TEST CLASSES
+----------------------------------------------------------------------
+
+To define a test class, all you have to do is pick a name and start
+adding tests to it.  To add a test to a given class, you add a
+"TESTCLASS()" imake rule for that test and class to the appropriate
+Imakefile.  For help with imake files and rules, see "README.imake". 
+You don't have to seperately declare the class names or define them
+anywhere, you just start using them.  The Condor imake build system is
+smart enough to generate a file called "<classname>_list" that
+contains all the testnames that belong to the given classname.
+Additionally, it generates a file called "class_list", which contains
+the names of all the valid test classes currently in use.
+
+
+----------------------------------------------------------------------
+DESCRIPTION OF CURRENTLY USED TEST CLASSES
+----------------------------------------------------------------------
+
+quick        - very short-running tests
+long	     - long-running tests that should run less frequently
+
+TODO!!!

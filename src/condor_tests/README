@@ -1,0 +1,11 @@
+The README files in this directory will help you figure out what's
+going on and to understand where and how to add new tests to the test
+suite.  For maximum clarity, these files should be read in the
+following order:
+
+README.filenames    Describes the filename convention in place
+README.imake        Describes the Imake rules and files in use
+README.testclass    Describes how and why tests can be categorized
+
+The WISDOM.* files are specific wisdom about various languages, tests,
+etc, and is not particularly current or accurate...
