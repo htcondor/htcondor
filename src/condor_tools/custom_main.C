@@ -34,6 +34,7 @@
 #define _POSIX_SOURCE
 
 #include <stdio.h>
+#include "condor_fix_unistd.h"		// get geteuid()
 #include <stdlib.h>		// for system() (yuck!)
 #include <limits.h>
 #include <string.h>
@@ -41,7 +42,6 @@
 #include <sys/stat.h>
 #include <pwd.h>
 #include <grp.h>
-#include <unistd.h>		// get geteuid()
 #include "custom.h"
 
 const int MATCH = 0;	// for strcmp()
@@ -121,6 +121,14 @@ Macro mailer_path(
 	"Pathname of user level program Condor software should use to send mail",
 #if defined(SUNOS41) || defined(ULTRIX43)
 	"/usr/ucb/mail"
+#elif defined(OSF1)
+	"/usr/ucb/mailx"
+#elif defined(IRIX62)
+	"/usr/sbin/mailx"
+#elif defined(IRIX53)
+	"/usr/sbin/Mail"
+#elif defined(HPUX)
+	"/bin/mailx"
 #else
 	"/bin/mail"
 #endif
@@ -166,10 +174,11 @@ main()
 
 		// Check and see if we are running as root
 	if ( geteuid() != 0 ) {
-		printf("condor_customize needs to run as super-user (root) in order to\n\
-		set default permission/ownerships on Condor files.  Please re-run me\n\
-		as root.  Goodbye!\n");
-		exit(1);
+		printf("\ncondor_customize needs to run as super-user (root) in order to\nset default permission/ownerships on Condor files.  Please re-run me\nas root.  \n\n");
+		if ( !confirm("Do you wish to continue anyhow, even though you are not root ? ") ) {
+			printf("Goodbye!\n");
+			exit(1);
+		}
 	}
 
 		// Check and see if there is a user condor and a group condor
@@ -305,11 +314,19 @@ main()
 	delete file;
 	printf( "\nCustomization Complete\n" );
 
-	if( !confirm("Would you like me to now set correct ownership/permissions \non all Condor files (it's a good idea) ? ") ) {
+	if( !confirm("\nWould you like me to now set default ownership/permissions \non all Condor files (it's a good idea) ? ") ) {
 		printf( "Permissions/Ownerships not set.  Goodbye!\n" );
 		// it is not an error, just a user preference, so return ok
 		return 0;
 	}
+
+	if ( set_all_permissions( release_dir.get_val() ) ) {
+		printf("\nErrors encountered setting ownerships/permissions!\n");
+		return 1;
+	} else {
+		printf("\nCompleted setting ownerships/permissions sucuessfully\n");
+	}
+
 	return 0;
 }
 
@@ -440,7 +457,6 @@ check_exec( const char *path )
 /*
  Set all permissions/owners in the release_dir (bin/lib)
 */
-#include <grp.h>     // for getgrnam()
 int
 set_all_permissions( const char *path )
 {
@@ -467,6 +483,18 @@ set_all_permissions( const char *path )
 	result += set_a_permission(CHMOD_OP,"755",buf);
 	sprintf(buf,"%s/lib/*",path);
 	result += set_a_permission(CHMOD_OP,"644",buf);
+	sprintf(buf,"%s/lib/ld",path);
+	result += set_a_permission(CHMOD_OP,"755",buf);
+	sprintf(buf,"%s/lib/real-ld",path);
+	result += set_a_permission(CHMOD_OP,"755",buf);
+#if defined(IRIX62)
+	sprintf(buf,"%s/lib/old_ld",path);
+	result += set_a_permission(CHMOD_OP,"755",buf);
+#endif
+#if defined(IRIX53) || defined (IRIX62)
+	sprintf(buf,"%s/lib/uld",path);
+	result += set_a_permission(CHMOD_OP,"755",buf);
+#endif
 
 	// and finally set some commands to set-gid condor...
 	sprintf(buf,"%s/bin/condor_globalq",path);
@@ -486,8 +514,6 @@ set_all_permissions( const char *path )
 	sprintf(buf,"%s/bin/condor_submit",path);
 	result += set_a_permission(CHMOD_OP,"g+s",buf);
 	sprintf(buf,"%s/bin/condor_summary",path);
-	result += set_a_permission(CHMOD_OP,"g+s",buf);
-	sprintf(buf,"%s/bin/condor_throttle",path);
 	result += set_a_permission(CHMOD_OP,"g+s",buf);
 
 	return(result);
