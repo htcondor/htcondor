@@ -228,7 +228,7 @@ main(int argc, char* argv[])
     CondorViewHost=tmp;
   }
 
-  int MaxLen=200;
+  const int MaxLen=200;
   char Line[MaxLen+1];
   char* LinePtr=Line;
 
