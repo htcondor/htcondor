@@ -203,6 +203,13 @@ class RemoteResource : public Service {
 		*/
 	void setUidDomain( const char *uidDomain );
 
+		/// The number of bytes sent to this resource.
+	float bytesSent();
+		
+		/// The number of bytes received from this resource.
+	float bytesRecvd();
+
+
 	FileTransfer filetrans;
 
  protected:
@@ -237,10 +244,6 @@ class RemoteResource : public Service {
 
 		// The rusage at the remote machine...to be implemented.
 	// struct rusage remote_rusage;
-
-		// The number of bytes sent and received to/from this resource.
-		// To be implemented.
-	int bytesSent, bytesRecvd;
 
 		// More resource-specific stuff goes here.
 
