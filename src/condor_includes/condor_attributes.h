@@ -89,6 +89,7 @@ const char ATTR_DAGMAN_JOB_ID			 [] = "DAGManJobId";
 const char ATTR_DESTINATION				 [] = "Destination";
 const char ATTR_DISK                     [] = "Disk";
 const char ATTR_DISK_USAGE				 [] = "DiskUsage";
+const char ATTR_EMAIL_ATTRIBUTES         [] = "EmailAttributes";
 const char ATTR_ENTERED_CURRENT_ACTIVITY [] = "EnteredCurrentActivity";
 const char ATTR_ENTERED_CURRENT_STATE	 [] = "EnteredCurrentState";
 const char ATTR_ENTERED_CURRENT_STATUS	 [] = "EnteredCurrentStatus";
