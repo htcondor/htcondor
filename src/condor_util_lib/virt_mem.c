@@ -46,6 +46,26 @@ int HasSigchldHandler = 0;
 
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
+#ifdef OSF1
+/*
+** Try to determine the swap space available on our own machine.  The answer
+** is in kilobytes.
+
+** Don't know how to do this one.  We just return the soft limit on data
+** space for any children of the calling process.
+*/
+calc_virt_memory()
+{
+	struct rlimit	lim;
+
+	if( getrlimit(RLIMIT_DATA,&lim) < 0 ) {
+		dprintf( D_ALWAYS, "getrlimit() failed - errno = %d", errno );
+		return -1;
+	}
+	return lim.rlim_cur / 1024;
+}
+#endif OSF1
+
 #ifdef IRIX331
 /*
 ** Try to determine the swap space available on our own machine.  The answer
@@ -196,7 +216,7 @@ calc_virt_memory()
 }
 #endif
 	
-#if !defined(IRIX331) && !defined(AIX31) && !defined(AIX32) && !defined(SUNOS40) && !defined(SUNOS41) && !defined(CMOS) && !defined(HPUX8)
+#if !defined(IRIX331) && !defined(AIX31) && !defined(AIX32) && !defined(SUNOS40) && !defined(SUNOS41) && !defined(CMOS) && !defined(HPUX8) && !defined(OSF1)
 /*
 ** Try to determine the swap space available on our own machine.  The answer
 ** is in kilobytes.
