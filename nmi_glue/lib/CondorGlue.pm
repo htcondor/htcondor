@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.2.2 2004-12-31 03:23:20 wright Exp $
+# $Id: CondorGlue.pm,v 1.1.2.3 2004-12-31 06:15:21 wright Exp $
 #
 ######################################################################
 
@@ -27,12 +27,22 @@ sub printPrereqs
     my $fh = shift;
 
     # global prereqs
-    print $fh "prereqs = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, coreutils-5.2.1, binutils-2.15\n";
+    print $fh "prereqs = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, binutils-2.15\n";
 
     # platform-specific prereqs
-    print $fh "prereqs_sun4u_sol_5.9 = gcc-2.95.3\n";
-    print $fh "prereqs_sun4u_sol_5.8 = gcc-2.95.3\n";
-    print $fh "prereqs_ppc_aix_5.2 = vac-6, vacpp-6\n";
+    print $fh "prereqs_sun4u_sol_5.9 = gcc-2.95.3, coreutils-5.2.1\n";
+    print $fh "prereqs_sun4u_sol_5.8 = gcc-2.95.3, coreutils-5.2.1\n";
+    print $fh "prereqs_ppc_aix_5.2 = vac-6, vacpp-6, coreutils-5.2.1\n";
+    print $fh "prereqs_x86_rh_9 = coreutils-5.2.1\n";
+    print $fh "prereqs_x86_rh_8.0 = coreutils-5.2.1\n";
+    print $fh "prereqs_x86_rh_7.2 = coreutils-5.2.1\n";
+
+    # it's not clear that we need coreutils at all, but until we have
+    # a chance to experiment and be sure, we'll keep including them.
+    # it's a dangerous prereq, since it's got 89 programs in it,
+    # including a busted version of uname that confused the gpt build
+    # on the osx box...
+
 }
 
 
