@@ -43,7 +43,7 @@ IntervalTree *IntervalTree::
 MakeIntervalTree( const OneDimension& intervals )
 {
 	OneDimension::const_iterator	itr;
-	set<double> 					endPoints;
+	std::set<double> 					endPoints;
 	double							tmpL, tmpR;
 
 	// 1.Sort the endpoints, and eliminate duplicates
@@ -78,7 +78,7 @@ MakeIntervalTree( const OneDimension& intervals )
 	intTree->nodes = nodes;
 
 		// 2e. insert leaf values at level (depth+1)
-	set<double>::iterator sitr = endPoints.begin( );
+	std::set<double>::iterator sitr = endPoints.begin( );
 	for( int i = frontStart ; i < frontStart+overflow ; i++, sitr++ ) {
 		nodes[i].max = nodes[i].min = nodes[i].nodeValue = *sitr;
 	}

@@ -29,9 +29,9 @@
 
 class ClassAdIndex;
 class IntervalTree;
-typedef map<string,ClassAdIndex*,CaseIgnLTStr> Indexes;
-typedef set<int> IndexEntries;
-typedef map<int, KeySet> QueryOutcome;
+typedef std::map<std::string,ClassAdIndex*,CaseIgnLTStr> Indexes;
+typedef std::set<int> IndexEntries;
+typedef std::map<int, KeySet> QueryOutcome;
 
 class QueryProcessor {
 public:
@@ -103,7 +103,7 @@ private:
 	IntervalTree	*intervalTree;
 };
 
-typedef map<string, IndexEntries, CaseIgnLTStr> StringIndex;
+typedef std::map<std::string, IndexEntries, CaseIgnLTStr> StringIndex;
 class ClassAdStringIndex : public ClassAdIndex {
 public:
 	virtual ~ClassAdStringIndex( );
