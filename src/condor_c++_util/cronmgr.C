@@ -42,7 +42,22 @@ CondorCronMgr::CondorCronMgr( const char *name )
 // Basic destructor
 CondorCronMgr::~CondorCronMgr( )
 {
+	// Reconfigure all running jobs
+	Cron.KillAll( );
+
+	// Log our death
 	dprintf( D_FULLDEBUG, "CronMgr: bye\n" );
+}
+
+// Kill all running jobs
+int
+CondorCronMgr::KillAll( )
+{
+	// Log our death
+	dprintf( D_FULLDEBUG, "CronMgr: Killing all jobs\n" );
+
+	// Reconfigure all running jobs
+	Cron.KillAll( );
 }
 
 // Handle Reconfig

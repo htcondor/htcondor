@@ -40,6 +40,14 @@ CondorCron::CondorCron( )
 // Basic destructor
 CondorCron::~CondorCron( )
 {
+	// Walk through the list
+	KillAll( );
+}
+
+// Kill all running jobs
+int
+CondorCron::KillAll( )
+{
 	CondorCronJob	*curJob;
 
 	// Walk through the list
@@ -48,7 +56,7 @@ CondorCron::~CondorCron( )
 		JobList.DeleteCurrent( );
 		delete curJob;
 	}
-
+	return 0;
 }
 
 // Reconfigure all jobs

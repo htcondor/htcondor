@@ -594,7 +594,7 @@ CondorCronJob::StdoutHandler ( int pipe )
 	}
 
 	// Negative is an error; check for EWOULDBLOCK
-	else if ( errno != EWOULDBLOCK )
+	else if (  ( errno != EWOULDBLOCK ) && ( errno != EAGAIN )  )
 	{
 		dprintf( D_ALWAYS,
 				 "Cron: read STDOUT failed for '%s' %d: '%s'\n",
@@ -635,7 +635,7 @@ CondorCronJob::StderrHandler ( int pipe )
 	}
 
 	// Negative is an error; check for EWOULDBLOCK
-	else if ( errno != EWOULDBLOCK )
+	else if (  ( errno != EWOULDBLOCK ) && ( errno != EAGAIN )  )
 	{
 		dprintf( D_ALWAYS,
 				 "Cron: read STDERR failed for '%s' %d: '%s'\n",
@@ -718,7 +718,7 @@ void
 CondorCronJob::CleanFd ( int *fd )
 {
 	if ( *fd >= 0 ) {
-		close( *fd );
+		daemonCore->Close_Pipe( *fd );
 		*fd = -1;
 	}
 }
@@ -736,14 +736,22 @@ CondorCronJob::KillJob( bool force )
 	if ( ( force ) || ( CRON_TERMSENT == state )  ) {
 		dprintf( D_JOB, "Cron: Killing job '%s' with SIGKILL, pid = %d\n", 
 				 name, pid );
-		daemonCore->Send_Signal( 0 - pid, SIGKILL );
+		if ( daemonCore->Send_Signal( 0 - pid, SIGKILL ) != 0 ) {
+			dprintf( D_ALWAYS,
+					 "Cron: job '%s': Failed to send SIGKILL to %d\n",
+					 name, pid );
+		}
 		state = CRON_KILLSENT;
 		KillTimer( TIMER_NEVER );	// Cancel the timer
 		return 0;
 	} else if ( CRON_RUNNING == state ) {
 		dprintf( D_JOB, "Cron: Killing job '%s' with SIGTERM, pid = %d\n", 
 				 name, pid );
-		daemonCore->Send_Signal( 0 - pid, SIGTERM );
+		if ( daemonCore->Send_Signal( 0 - pid, SIGTERM ) != 0 ) {
+			dprintf( D_ALWAYS,
+					 "Cron: job '%s': Failed to send SIGTERM to %d\n",
+					 name, pid );
+		}
 		state = CRON_TERMSENT;
 		KillTimer( 1 );				// Schedule hard kill in 1 sec
 		return 1;
