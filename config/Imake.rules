@@ -382,7 +382,7 @@ CONDOR_COMPILE = ../condor_scripts/condor_compile
 #define LINK( compiler, remotetarg, vanillatarg, standalonetarg, obj ) @@\
 all::						@@\
 	RLINK( compiler, remotetarg, obj );	@@\
-	VLINK( vanillatarg, obj );		@@\
+	VLINK( compiler, vanillatarg, obj );		@@\
 	SLINK( compiler, standalonetarg, obj );
 
 /*
@@ -410,9 +410,9 @@ all:: standalonetarg
 /*
 ** Link a program to run normally (no condor at all)
 */
-#define VLINK( vanillatarg, obj )				@@\
+#define VLINK( compiler, vanillatarg, obj )			@@\
 vanillatarg: obj						@@\
-	program_target( vanillatarg, obj, fake_ckpt.o )		@@\
+	compiler -o vanillatarg obj fake_ckpt.o			@@\
 								@@\
 clean::								@@\
 	rm -f vanillatarg obj					@@\
