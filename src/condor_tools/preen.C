@@ -113,6 +113,7 @@ char *ValidSpoolFiles[] = {
 	"job_queue.pag",
 	"history",
 	"UserPrio",
+	"OldFiles",		// AFS backup directory
 	0
 };
 
@@ -144,6 +145,7 @@ char *ValidLogFiles[] = {
 	"priorities.dir",
 	"machine_status",
 	"QueueLock",
+	"OldFiles",		// AFS backup directory
 	0
 };
 
