@@ -832,6 +832,14 @@ void inc_summary( STATUS_LINE *line )
 {
 	SUMMARY	*s;                    
                                      
+	if(!line->arch)
+	{
+		line->arch = "Unknown";
+	}
+	if(!line->op_sys)
+	{
+		line->op_sys = "Unknown";
+	}
 	s = get_summary( line->arch, line->op_sys );
 	s->machines += 1;
 	s->jobs += line->tot;
