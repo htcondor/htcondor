@@ -138,5 +138,8 @@ The arguments and what they do are described below:
   that you start up with ``-k'' will wait until the daemon it is
   trying to kill has exited.  
 
+\item[-r minutes] Causes the daemon to set a timer, upon expiration
+  of which, sends itself a SIGTERM for graceful shutdown.
+
 \end{description}
 
