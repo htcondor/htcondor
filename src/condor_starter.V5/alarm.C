@@ -54,21 +54,21 @@ void
 Alarm::set( int sec )
 {
 	alarm( sec );
-	dprintf( D_ALWAYS, "Set alarm for %d seconds\n", sec );
+	dprintf( D_FULLDEBUG, "Set alarm for %d seconds\n", sec );
 }
 
 void
 Alarm::suspend( )
 {
 	saved = alarm( 0 );
-	dprintf( D_ALWAYS, "Suspended alarm with %d seconds remaining\n", saved );
+	dprintf( D_FULLDEBUG, "Suspended alarm with %d seconds remaining\n", saved );
 }
 
 void
 Alarm::resume()
 {
 	(void)alarm( saved );
-	dprintf( D_ALWAYS, "Resumed alarm with %d seconds remaining\n", saved );
+	dprintf( D_FULLDEBUG, "Resumed alarm with %d seconds remaining\n", saved );
 	saved = 0;
 }
 
@@ -76,7 +76,7 @@ void
 Alarm::cancel()
 {
 	alarm( 0 );
-	dprintf( D_ALWAYS, "Canceled alarm\n" );
+	dprintf( D_FULLDEBUG, "Canceled alarm\n" );
 }
 
 CkptTimer::CkptTimer( int min_val, int max_val )
