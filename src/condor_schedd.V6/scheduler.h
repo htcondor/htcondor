@@ -112,17 +112,37 @@ enum MrecStatus {
     M_ACTIVE
 };
 
+	
 // These are the args to contactStartd that get stored in the queue.
-struct contactStartdArgs {
-	char *capability;
-	char *owner;
-	char *host;
-	PROC_ID id;
-	ClassAd *my_match_ad;
-	char *pool;
+class ContactStartdArgs
+{
+public:
+	ContactStartdArgs( char* the_capab, char* the_owner, char*
+					   the_sinful, PROC_ID the_id, ClassAd* match,
+					   char* the_pool, bool is_dedicated );
+	~ContactStartdArgs();
+
+	char*		sinful( void )		{ return csa_sinful; };
+	char*		capability( void )	{ return csa_capability; };
+	char*		owner( void )		{ return csa_owner; };
+	char*		pool( void )		{ return csa_pool; };
+	ClassAd*	matchAd( void )		{ return csa_match_ad; };
+	bool		isDedicated( void )	{ return csa_is_dedicated; };
+	int			cluster( void ) 	{ return csa_id.cluster; };
+	int			proc( void )		{ return csa_id.proc; };
+
+private:
+	char *csa_capability;
+	char *csa_owner;
+	char *csa_sinful;
+	PROC_ID csa_id;
+	ClassAd *csa_match_ad;
+	char *csa_pool;	
+	bool csa_is_dedicated;
 };
 
-// SC2000 This struct holds the state in contactStartdArgs.  We register
+
+// SC2000 This struct holds the state in ContactStartdArgs.  We register
 // a pointer to this state so we can restore it after a non-blocking connect.
 struct contactStartdState {
     match_rec* mrec;
@@ -195,6 +215,17 @@ class Scheduler : public Service
 	void			delRegContact( void ) { num_reg_contacts--; };
 	int				numRegContacts( void ) { return num_reg_contacts; };
 	void            checkContactQueue();
+
+		/** Used to enqueue another set of information we need to use
+			to contact a startd.  This is called by both
+			Scheduler::negotiate() and DedicatedScheduler::negotiate()
+			once a match is made.  This function will also start a
+			timer to check the contact queue, if needed.
+			@param args A structure that holds all the information
+			@return true on success, false on failure (to enqueue).
+		*/
+	bool			enqueueStartdContact( ContactStartdArgs* args );
+
 		/** Registered in contactStartd, this function is called when
 			the startd replies to our request.  If it replies in the 
 			positive, the mrec->status is set to M_ACTIVE, else the 
@@ -217,6 +248,19 @@ class Scheduler : public Service
 	shadow_rec*     add_shadow_rec(int, PROC_ID*, match_rec*, int);
 	shadow_rec*		add_shadow_rec(shadow_rec*);
 	void			HadException( match_rec* );
+
+
+		// Used by both the Scheduler and DedicatedScheduler during
+		// negotiation
+	bool canSpawnShadow( int started_jobs, int total_jobs );  
+	void addActiveShadows( int num ) { CurNumActiveShadows += num; };
+	
+	// info about our central manager
+	Daemon*			Collector;
+	Daemon*			Negotiator;
+
+	void			updateCentralMgr( int command, ClassAd* ca, 
+									  char* host, int port ); 
 
   private:
 	
@@ -241,6 +285,8 @@ class Scheduler : public Service
 	int				ShadowSizeEstimate;	// Estimate of swap needed to run a job
 	int				SwapSpaceExhausted;	// True if job died due to lack of swap space
 	int				ReservedSwap;		// for non-condor users
+	int				MaxShadowsForSwap;
+	int				CurNumActiveShadows;
 	int				JobsIdle; 
 	int				JobsRunning;
 	int				JobsHeld;
@@ -268,7 +314,7 @@ class Scheduler : public Service
 	int             num_reg_contacts;  
 		// Here we enqueue calls to 'contactStartd' when we can't just 
 		// call it any more.  See contactStartd and the call to it...
-	Queue<contactStartdArgs*> startdContactQueue;
+	Queue<ContactStartdArgs*> startdContactQueue;
 	int             MAX_STARTD_CONTACTS;
 	int				checkContactQueue_tid;	// DC Timer ID to check queue
 	
@@ -280,10 +326,6 @@ class Scheduler : public Service
 	char*			filename;					// save UpDown object
 	char*			AccountantName;
     char*			UidDomain;
-
-	// info about our central manager
-	Daemon*			Collector;
-	Daemon*			Negotiator;
 
 	bool reschedule_request_pending;
 
@@ -297,7 +339,6 @@ class Scheduler : public Service
 	int				cluster_rejected(int);
 	void   			mark_cluster_rejected(int); 
 	int				count_jobs();
-	void			update_central_mgr(int command, char *host, int port);
 	int				insert_owner(char*);
 #ifndef WANT_DC_PM
 	void			reaper(int);
@@ -311,18 +352,10 @@ class Scheduler : public Service
 			startd.  We push the capability and the jobAd, then register
 			the Socket with startdContactSockHandler and put the new mrec
 			into the daemonCore data pointer.  
-			@param capability AKA id, this identifies the mrec
-			@param user The submitting "owner@uiddomain"
-			@param server The startd to contact
-			@param jobId Put in the mrec and used to get the jobAd
-			@param my_match_ad The matching startd ad - put in the mrec
-			@param pool If we are flocking, pool points to the hostname of
-			       negotiator in the remote pool.  Otherwise, it is NULL.
-			@return 0 on failure and 1 on success
+			@param args An object that holds all the info we care about 
+			@return false on failure and true on success
 		 */
-	int		 		contactStartd(char *capability , char *user, 
-								  char *server, PROC_ID *jobId,
-								  ClassAd *my_match_ad, char *pool);
+	bool	contactStartd( ContactStartdArgs* args );
 
 	shadow_rec*		StartJob(match_rec*, PROC_ID*);
 	shadow_rec*		start_std(match_rec*, PROC_ID*);
@@ -362,7 +395,8 @@ class Scheduler : public Service
 	int sent_shadow_failure_email;
 
 };
-	
+
+
 // Other prototypes
 extern void set_job_status(int cluster, int proc, int status);
 extern bool claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated );
