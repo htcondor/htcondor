@@ -323,7 +323,7 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 		case PRIV_UNKNOWN:		/* silently ignore */
 			break;
 		default:
-			dprintf("unknown priv state %d\n", (int)s);
+			dprintf(D_ALWAYS, "unknown priv state %d\n", (int)s);
 		}
 	}
 	return PrevPrivState;
