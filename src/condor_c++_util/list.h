@@ -40,6 +40,7 @@
 	  Append		- append one element
 	  Display		- primitive display of contents of list - for debugging
 	  IsEmpty		- return TRUE if list is empty and FALSE otherwise
+	  Number		- return the number of elements in the list
 	Scans
 	  Rewind		- set scan pointer before beginning first obj in list
 	  Next			- advance scan pointer one obj & return ref or ptr to it
@@ -133,6 +134,7 @@ public:
 	void	Append( ObjType & obj );
 	void	Append( ObjType * obj );
 	int		IsEmpty();
+	int		Number();
 
 		// Scans
 	void	Rewind();
@@ -149,6 +151,7 @@ private:
 	void	RemoveItem( Item<ObjType> * );
 	Item<ObjType>	*dummy;
 	Item<ObjType>	*current;
+	int				num_elem;
 };
 
 template <class ObjType>
@@ -204,6 +207,15 @@ List<ObjType>::List()
 	dummy->prev = dummy;
 	current = dummy;
 	// cout << "Constructed List" << endl;
+	num_elem = 0;
+}
+
+
+template <class ObjType>
+int
+List<ObjType>::Number()
+{
+	return num_elem;
 }
 
 /*
@@ -247,6 +259,7 @@ List<ObjType>::Append( ObjType & obj )
 	dummy->prev = item;
 	item->next = dummy;
 	current = item;
+	num_elem++;
 }
 
 /*
@@ -266,7 +279,9 @@ List<ObjType>::Append( ObjType * obj )
 	dummy->prev = item;
 	item->next = dummy;
 	current = item;
+	num_elem++;
 }
+
 
 
 /*
@@ -402,6 +417,7 @@ List<ObjType>::RemoveItem( Item<ObjType> * item )
 	item->prev->next = item->next;
 	item->next->prev = item->prev;
 	delete item;
+	num_elem--;
 }
 
 /*
