@@ -113,6 +113,16 @@ with the message, "caInsert: Can't insert CpuBusy into target classad."
   commands written with syntax both of
   \verb@ThisStyle@ and \verb@this_style@ will work.
 
+\item Fixed a very rare but serious bug in Condor that was originally
+  introduced in version 6.3.0.
+  Under exceptional circumstances (a very heavily loaded machine where
+  a huge number of processes are being spawned all the time, and where
+  the \Condor{schedd} is managing many thousands of jobs in the
+  queue), it was possible for the \Condor{schedd} to run a job twice.
+  We have fixed the underlying problem that lead to the
+  \Condor{schedd} making this mistake, rendering this error
+  impossible.
+
 \end{itemize}
 
 \noindent Known Bugs:
