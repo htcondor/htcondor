@@ -37,6 +37,7 @@ my %Config = (
 	      DoArchDetail => 1,
 	      PoolDescription => "",
 	      JobHistoryConst => "",
+	      JobHistoryLong => 0,
 	     );
 my $Hash;
 
@@ -93,6 +94,12 @@ sub Init()
 
     $Tmp = HawkeyeLib::ReadConfig( "_job_history", "false" );
     $Config{DoJobHistory} = ( $Tmp =~ /true/i ) ? 1 : 0;
+
+    $Tmp = HawkeyeLib::ReadConfig( "_job_history_long", "false" );
+    $Config{JobHistoryLong} = ( $Tmp =~ /true/i ) ? 1 : 0;
+
+    $Tmp = HawkeyeLib::ReadConfig( "_job_history_const", "" );
+    $Config{JobHistoryConst} = $Tmp;
 
     $Tmp = HawkeyeLib::ReadConfig( "_ckpt", "true" );
     $Config{DoCheckpoint} = ( $Tmp =~ /true/i ) ? 1 : 0;
@@ -538,14 +545,29 @@ sub RunJobHistory(  )
     }
 
     # Array of interesting stuff...
-    my %Interesting = 
-	( ExitStatus => "n", NumRestarts => "n", JobStatus => "n", Owner=>"s", );
+    my %Interesting =
+	( ExitStatus => "n",
+	  NumRestarts => "n",
+	  JobStatus => "n",
+	  Owner => "s",
+	  ClusterId => "",
+	  ProcId => "",
+	);
 
     # Job information..
     my @Jobs;
-    my %CurJob;
+    my @JobStatusMap = (
+			{ Count => 0, String => "Unexpanded", },
+			{ Count => 0, String => "Idle", },
+			{ Count => 0, String => "Running", },
+			{ Count => 0, String => "Removed", },
+			{ Count => 0, String => "Completed", },
+			{ Count => 0, String => "Held", },
+			{ Count => 0, String => "SubmissionError", },
+		       );
 
     # Parse the output...
+    my $CurJob;
     while ( <HIST> )
     {
 	s/^\s+//g;
@@ -554,14 +576,16 @@ sub RunJobHistory(  )
 	# Ad separator; sum it up here...
 	if ( $_ eq "" )
 	{
-	    if ( exists $CurJob{ExitStatus} )
+	    if ( exists $CurJob->{ExitStatus} )
 	    {
-		push @Jobs, \%CurJob;
-		print \%CurJob . ":"; ; foreach my $Attr ( keys %CurJob ) { print "$Attr "; }
-		print "\n";
-		%CurJob = ();
+		push @Jobs, $CurJob;
+		if ( exists $CurJob->{JobStatus} )
+		{
+		    my $JobStatus = $CurJob->{JobStatus};
+		    $JobStatusMap[$JobStatus]{Count}++;
+		}
 	    }
-	    last;
+	    $CurJob = {};
 	    next;
 	}
 
@@ -571,28 +595,37 @@ sub RunJobHistory(  )
 	    my $Value = $2;
 	    if ( exists ( $Interesting{$Attr} ) )
 	    {
-		$CurJob{$Attr} = $Value;
+		$Value =~ s/^\"//;
+		$Value =~ s/\"$//;
+		$CurJob->{$Attr} = $Value;
 	    }
 	}
     }
     close( HIST );
 
-    # Publish it all...
-    foreach my $Job ( @Jobs )
+    # Publish the status summary info
+    foreach my $Status ( 0 .. $#JobStatusMap )
     {
-	print "$Job"; foreach my $Attr ( keys %{$Job} ) { print "$Attr "; }
-	foreach my $Attr ( keys %{$Job} )
-	{
-	    print $Attr .  "=" . $Job->{$Attr} . "; ";
-	}
-	print "\n";
-	exit 0;
+	$Hash->Add( "JobStatus_" . $JobStatusMap[$Status]{String},
+		    "n",
+		    $JobStatusMap[$Status]{Count} );
     }
 
-    # And, the server list
-    exit 0;
-    # $Hash->Add( "Ckpt_Servers", "s", join( " ", keys %Servers  ) );
-
-    # Done
-    close( CKPT );
+    # Publish it all...
+    if ( $Config{JobHistoryLong} )
+    {
+	foreach my $Job ( @Jobs )
+	{
+	    my $JobId = $Job->{ClusterId} . "_" . $Job->{ProcId};
+	    foreach my $Attr ( keys %{$Job} )
+	    {
+		next if ( ! exists $Interesting{$Attr} );
+		next if ( $Interesting{$Attr} eq "" );
+		$Hash->Add( "Job_" . $JobId . "_" . $Attr,
+			    $Interesting{$Attr},
+			    $Job->{$Attr}
+			  );
+	    }
+	}
+    }
 }
