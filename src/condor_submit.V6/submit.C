@@ -2870,7 +2870,7 @@ SetGlobusParams()
 
 	free( globushost );
 
-	if ( use_gridshell = condor_param( GridShell ) ) {
+	if ( (use_gridshell = condor_param(GridShell)) ) {
 		if( use_gridshell[0] == 't' || use_gridshell[0] == 'T' ) {
 			MyString tmp;
 			tmp.sprintf( "%s = TRUE", ATTR_USE_GRID_SHELL );
