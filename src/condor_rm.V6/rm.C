@@ -47,7 +47,9 @@
 #include "condor_network.h"
 #include "condor_io.h"
 #include "sched.h"
+#if DBM_QUEUE
 #include "proc_obj.h"
+#endif
 #include "alloc.h"
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
