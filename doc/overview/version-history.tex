@@ -56,6 +56,8 @@ many programs on IRIX and Solaris platforms.
 \item Sometimes submitted jobs report back as having no owner and have
 \Bold{-????-} in the status line for the job. This has been fixed.
 
+\item \Condor{q} \Opt{-io} has been fixed in this release.
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -82,11 +84,11 @@ There are a number of possible solutions to this problem, but the Condor
 developers are not yet agreed on the best one, so this limitation might not
 be resolved by 6.1.13.
 
-\item In HP-UX 10.20, Condor is currently broken with the vendor C++
-compilers. 
-However, the GNU C/C++ and the vendor C compilers work just fine.
-
-\item \Condor{q} \Opt{-io} has not yet been fixed in this release.
+\item In HP-UX 10.20, \Condor{compile} will not work correctly with HP's
+C++ compiler. 
+The jobs might link, but they will produce incorrect output, or die with
+a signal such as SIGSEGV during restart after a checkpoint/vacate cycle.
+However, the GNU C/C++ and the HP C compilers work just fine.
 
 \item When writing output to a file, \Syscall{stat}--and variant calls,
 will return zero for the size of the file if the program has not yet
@@ -94,17 +96,18 @@ read from the file or flushed the file descriptors,
 This is a side effect of the file buffering code in Condor and will be
 corrected to the expected semantic.
 
-\item On IRIX 6.2 with the GNU C++ 2.7.2 compiler, global object constructors
-are broken when linked with \Condor{compile}.
+\item On IRIX 6.2, C++ programs compiled with GNU C++ (g++) 2.7.2 and
+linked with the Condor libraries (using \Condor{compile}) will not
+execute the constructors for any global objects.
+There is a work-around for this bug, so if this is a problem for you,
+please send email to \Email{condor-admin@cs.wisc.edu}.
 
-\item On Digital Unix 4.0, the threads.C test program does not behave correctly
-when compiled with the vendor C++.
+\item The \Opt{-format} option in \Condor{q} has no effect when querying
+remote machines with the \Opt{-n} option.
 
-\item \Condor{q} \Opt{-format} does not work when querying remote
-machines with the \Opt{-n} option.
-
-\item \Condor{dagman} is currently broken but should be fixed in the next
-release.
+\item \Condor{dagman} does not work at all in this release. 
+The behaviour of it's failure is to exit immediately with a success and
+to not perform any work. It will be fixed in the next release of Condor.
 
 \end{itemize}
 
