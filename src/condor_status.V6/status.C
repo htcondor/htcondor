@@ -27,6 +27,7 @@
 #include "status_types.h"
 #include "totals.h"
 #include "get_daemon_addr.h"
+#include "daemon.h"
 #include "get_full_hostname.h"
 #include "extArray.h"
 #include "sig_install.h"
@@ -42,6 +43,7 @@ int			wantOnlyTotals 	= 0;
 int			summarySize = -1;
 Mode		mode	= MODE_NOTSET;
 int			diagnose = 0;
+char*		direct = NULL;
 CondorQuery *query;
 char		buffer[1024];
 ClassAdList result;
@@ -216,7 +218,43 @@ main (int argc, char *argv[])
 		exit (1);
 	}
 
-	if ((q = query->fetchAds (result, pool)) != Q_OK) {
+	char* addr = pool;
+	if( direct ) {
+		Daemon *d = NULL;
+		switch( mode ) {
+		case MODE_MASTER_NORMAL:
+			d = new Daemon( DT_MASTER, direct, pool );
+			break;
+		case MODE_STARTD_NORMAL:
+		case MODE_STARTD_AVAIL:
+		case MODE_STARTD_RUN:
+			d = new Daemon( DT_STARTD, direct, pool );
+			break;
+		case MODE_SCHEDD_NORMAL: 
+		case MODE_SCHEDD_SUBMITTORS:
+			d = new Daemon( DT_SCHEDD, direct, pool );
+			break;
+		case MODE_CKPT_SRVR_NORMAL:
+		case MODE_COLLECTOR_NORMAL:
+		case MODE_LICENSE_NORMAL:
+				// These have to go to the collector, anyway.
+			break;
+		default:
+            fprintf( stderr, "Error:  Illegal mode %d\n", mode );
+			exit( 1 );
+			break;
+		}
+		if( d ) {
+			if( d->locate() ) {
+				addr = d->addr();
+			} else {
+				fprintf( stderr, "%s: %s\n", myName, d->error() );
+				exit( 1 );
+			}
+		}
+	}
+
+	if ((q = query->fetchAds (result, addr)) != Q_OK) {
 		fprintf (stderr, "Error:  Could not fetch ads --- error %s\n", 
 					getStrQueryResult(q));
 		exit (1);
@@ -259,11 +297,12 @@ usage ()
 		"\t-ckptsrvr\t\tDisplay checkpoint server attributes\n"
 		"\t-claimed\t\tPrint information about claimed resources\n"
 //		"\t-collector\t\tSame as -world\n"
+		"\t-direct <host>\t\t\tGet attributes directly from a given daemon\n"
+		"\t-license\t\t\tDisplay attributes of licenses\n"
 		"\t-master\t\t\tDisplay daemon master attributes\n"
 		"\t-pool <name>\t\tGet information from collector <name>\n"
 		"\t-run\t\t\tSame as -claimed [deprecated]\n"
 		"\t-schedd\t\t\tDisplay attributes of schedds\n"
-		"\t-license\t\t\tDisplay attributes of licenses\n"
 		"\t-server\t\t\tDisplay important attributes of resources\n"
 		"\t-startd\t\t\tDisplay resource attributes\n"
 		"\t-state\t\t\tDisplay state of resources\n"
@@ -331,6 +370,19 @@ firstPass (int argc, char *argv[])
 				fprintf( stderr, "Use \"%s -help\" for details\n", myName ); 
 				exit( 1 );
 			}
+		} else
+		if (matchPrefix (argv[i], "-direct")) {
+			i++;
+			if( ! argv[i] ) {
+				fprintf( stderr, "%s: -direct requires another argument\n", 
+						 myName ); 
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName ); 
+				exit( 1 );
+			}
+			if( direct ) {
+				free( direct );
+			}
+			direct = strdup( argv[i] );
 		} else
 		if (matchPrefix (argv[i], "-diagnose")) {
 			diagnose = 1;
@@ -435,7 +487,8 @@ secondPass (int argc, char *argv[])
 	char *daemonname;
 	for (int i = 1; i < argc; i++) {
 		// omit parameters which qualify switches
-		if (matchPrefix (argv[i], "-pool") || matchPrefix( argv[i], "-sort")) {
+		if (matchPrefix (argv[i], "-pool") || matchPrefix( argv[i], "-sort")
+			|| matchPrefix( argv[i], "-direct") ) {
 			i++;
 			continue;
 		}
