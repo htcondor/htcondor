@@ -945,11 +945,11 @@ void SetFileOptions()
 		free(tmp);
 	}
 
-	/* If no buffer size is given, use 128 KB */
+	/* If no buffer size is given, use 512 KB */
 
 	tmp = condor_param(BufferSize);
 	if(!tmp) {
-		tmp = strdup("131072");
+		tmp = strdup("524288");
 	}
 	sprintf(buffer,"%s = %s",ATTR_BUFFER_SIZE,tmp);
 	InsertJobExpr(buffer);
