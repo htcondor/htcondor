@@ -59,7 +59,10 @@ CStarter::CStarter()
 	Opsys = NULL;
 	ShuttingDown = FALSE;
 	ShadowVersion = NULL;
+	jobAd = NULL;
+	jobUniverse = CONDOR_UNIVERSE_VANILLA;
 }
+
 
 CStarter::~CStarter()
 {
@@ -80,6 +83,9 @@ CStarter::~CStarter()
 	}
 	if( ShadowVersion ) {
 		delete ShadowVersion;
+	}
+	if( jobAd ) {
+		delete jobAd;
 	}
 }
 
@@ -199,7 +205,7 @@ CStarter::ShutdownFast(int)
 
 
 void
-CStarter::InitShadowVersion( ClassAd* jobAd )
+CStarter::InitShadowVersion( void )
 {
 	if( ! jobAd ) {
 		EXCEPT( "InitShadowVersion called with NULL jobAd" );
@@ -299,21 +305,25 @@ CStarter::StartJob()
         // type of starter, *then* call StartJob() on it.
     dprintf ( D_FULLDEBUG, "In CStarter::StartJob()\n" );
 
-    ClassAd *jobAd = new ClassAd;
-
+		// Instantiate a new ClassAd for the job we'll be starting,
+		// and get a copy of it from the shadow.
+	if( jobAd ) {
+		delete jobAd;
+	}
+    jobAd = new ClassAd;
 	if (REMOTE_CONDOR_get_job_info(jobAd) < 0) {
 		dprintf(D_FAILURE|D_ALWAYS, 
 				"Failed to get job info from Shadow.  Aborting StartJob.\n");
 		return false;
 	}
 
-	int universe = CONDOR_UNIVERSE_STANDARD;
-	if ( jobAd->LookupInteger( ATTR_JOB_UNIVERSE, universe ) < 1 ) {
-		dprintf( D_ALWAYS, "Job doesn't specify universe, assuming STANDARD\n" );
+	if ( jobAd->LookupInteger( ATTR_JOB_UNIVERSE, jobUniverse ) < 1 ) {
+		dprintf( D_ALWAYS, 
+				 "Job doesn't specify universe, assuming VANILLA\n" ); 
 	}
 
 		// Grab the version of the Shadow from the job ad
-	InitShadowVersion( jobAd );
+	InitShadowVersion();
 
 		// Now that we know what version of the shadow we're talking
 		// to, we can register information about ourselves with the
@@ -322,7 +332,7 @@ CStarter::StartJob()
 
 		// Now that we have the job ad, figure out what the owner
 		// should be and initialize our priv_state code:
-	if( ! InitUserPriv(jobAd) ) {
+	if( ! InitUserPriv() ) {
 		dprintf( D_ALWAYS, "ERROR: Failed to determine what user "
 				 "to run this job as, aborting\n" );
 		return false;
@@ -382,7 +392,7 @@ CStarter::StartJob()
 				 want_io_proxy ? "true" : "false" );
 	}
 
-	if( want_io_proxy || universe==CONDOR_UNIVERSE_JAVA ) {
+	if( want_io_proxy || jobUniverse==CONDOR_UNIVERSE_JAVA ) {
 		sprintf(io_proxy_config_file,"%s%cchirp.config",WorkingDir,DIR_DELIM_CHAR);
 		if(!io_proxy.init(io_proxy_config_file)) {
 			dprintf(D_FAILURE|D_ALWAYS,"StartJob: Couldn't initialize proxy.\n");
@@ -405,11 +415,11 @@ CStarter::StartJob()
 		// kind of job we're starting up, instantiate the appropriate
 		// userproc class, and actually start the job.
 
-	dprintf( D_ALWAYS, "Starting a %s universe job.\n",CondorUniverseName(universe));
+	dprintf( D_ALWAYS, "Starting a %s universe job.\n",
+			 CondorUniverseName(jobUniverse) );
 
 	UserProc *job;
-
-	switch ( universe )  
+	switch ( jobUniverse )  
 	{
 		case CONDOR_UNIVERSE_VANILLA:
 			job = new VanillaProc( jobAd );
@@ -436,7 +446,8 @@ CStarter::StartJob()
 			break;
 		}
 		default:
-			dprintf( D_ALWAYS, "I don't support universe %d (%s)\n",universe,CondorUniverseName(universe));
+			dprintf( D_ALWAYS, "I don't support universe %d (%s)\n",
+					 jobUniverse, CondorUniverseName(jobUniverse) );
 			return false;
 	} /* switch */
 
@@ -450,8 +461,9 @@ CStarter::StartJob()
 }
 
 
+
 bool
-CStarter::InitUserPriv( ClassAd* jobAd )
+CStarter::InitUserPriv( void )
 {
 
 #ifndef WIN32
@@ -476,7 +488,7 @@ CStarter::InitUserPriv( ClassAd* jobAd )
 		return false;
 	}
 
-	if( SameUidDomain(jobAd) ) {
+	if( SameUidDomain() ) {
 			// Cool, we can try to use ATTR_OWNER directly.
 			// NOTE: we want to use the "quiet" version of
 			// init_user_ids, since if we're dealing with a
@@ -674,7 +686,7 @@ CStarter::Reaper(int pid, int exit_status)
 
 
 bool
-CStarter::SameUidDomain( ClassAd* jobAd ) 
+CStarter::SameUidDomain( void ) 
 {
 	char* job_uid_domain = NULL;
 	bool same_domain = false;
