@@ -1553,7 +1553,7 @@ int main( int argc, char** argv )
 	}
 #endif
 
-	daemonCore->Register_Timer( 5 * 60, 0,
+	daemonCore->Register_Timer( 0, 5 * 60,
 				(TimerHandler)check_session_cache, "check_session_cache" );
 	
 
