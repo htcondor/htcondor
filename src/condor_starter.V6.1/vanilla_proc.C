@@ -56,8 +56,6 @@ VanillaProc::~VanillaProc()
 int
 VanillaProc::StartJob()
 {
-	char tmp[_POSIX_ARG_MAX];
-
 	dprintf(D_FULLDEBUG,"in VanillaProc::StartJob()\n");
 
 	// vanilla jobs, unlike standard jobs, are allowed to run 

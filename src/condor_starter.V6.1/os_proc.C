@@ -338,9 +338,6 @@ OsProc::StartJob()
 int
 OsProc::JobCleanup( int pid, int status )
 {
-	int reason;	
-	bool job_exit_wants_ad = true;
-
 	dprintf( D_FULLDEBUG, "Inside OsProc::JobCleanup()\n" );
 
 		// There's nothing special for us to do here, except save the
