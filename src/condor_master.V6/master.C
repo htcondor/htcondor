@@ -782,8 +782,6 @@ NewExecutable(char* file, time_t *tsp)
 	return( cts != *tsp );
 }
 
-char	*Shell = "/bin/sh";
-
 int
 run_preen(Service*)
 {
