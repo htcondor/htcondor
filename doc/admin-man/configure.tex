@@ -275,6 +275,7 @@ the library routine which parses the configuration files.
   \item CKPT\_SERVER
   \item SUBMIT
   \item GRIDMANAGER
+  \item TOOL
   \label{list:subsystem names}
   \end{itemize}
 
@@ -299,14 +300,35 @@ determined automatically at runtime but which can be overwritten.
   on page~\pageref{man-condor-submit} for details.
 
 \item[\MacroU{OPSYS}] \label{param:OpSys}
-  Defines the
-  string used to identify the operating system of the local machine to
-  Condor.
+  Defines the string used to identify the operating system
+  of the local machine to Condor.
   If it is not defined in the configuration file, Condor will
   automatically insert the operating system of this machine as
   determined by \Prog{uname}.
 
+\item[\MacroU{UNAME\_ARCH}] \label{param:UnameArch}
+  The architecture as reported by \Prog{uname}(2)'s \Code{machine} field.
+  Always the same as \MacroNI{ARCH} on Windows.
+
+\item[\MacroU{UNAME\_OPSYS}] \label{param:UnameOpsys}
+  The operating system as reported by \Prog{uname}(2)'s \Code{sysname} field.
+  Always the same as \MacroNI{OPSYS} on Windows.
+
+\item[\MacroU{PID}] \label{param:Pid}
+  The process ID for the daemon or tool.
+
+\item[\MacroU{PPID}] \label{param:Ppid}
+  The process ID of the parent process for the daemon or tool.
+
+\item[\MacroU{USERNAME}] \label{param:Username}
+  The user name of the UID of the daemon or tool.
+  It is useful for setting \MacroNI{GRIDMANAGER\_LOG},
+  as that needs to be done on a per-user basis.
+  For daemons started as root, but running under another UID
+  (typically the user condor), this will be the other UID.
+
 \item[\MacroU{FILESYSTEM\_DOMAIN}]
+  \label{param:FilesystemDomain}
   Defaults to the fully
   qualified hostname of the machine it is evaluated on.  See
   section~\ref{sec:Shared-Filesystem-Config-File-Entries}, Shared
@@ -314,6 +336,7 @@ determined automatically at runtime but which can be overwritten.
   its use and under what conditions you would want to change it.
 
 \item[\MacroU{UID\_DOMAIN}]
+  \label{param:UIDDomain}
   Defaults to the fully
   qualified hostname of the machine it is evaluated on.  See
   section~\ref{sec:Shared-Filesystem-Config-File-Entries} on ``Shared
@@ -3286,6 +3309,19 @@ is one hour (3600 seconds).
 \index{configuration!condor\_gridmanager configuration variables}
 These macros affect the \Condor{gridmanager}.
 \begin{description}
+
+\item[\Macro{GRIDMANAGER\_LOG}]
+\label{param:GridmanagerLog} Logs for the \Condor{gridmanager} 
+  will be written as the user who submitted the individual jobs.
+  As a result \MacroNI{GRIDMANAGER\_LOG} should defined to incorporate
+  \MacroUNI{USERNAME} to specify a different file for each user
+  in a directory that users will be able to write into.
+  An example definition:
+\footnotesize
+\begin{verbatim}
+  GRIDMANAGER_LOG = /tmp/GridmanagerLog.$(USERNAME)
+\end{verbatim}
+\normalsize
 
 \item[\Macro{GRIDMANAGER\_CHECKPROXY\_INTERVAL}]
 \label{param:GridmanagerCheckproxyInterval} The number of seconds
