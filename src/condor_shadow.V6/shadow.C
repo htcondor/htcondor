@@ -79,7 +79,7 @@ extern "C" {
 	void handle_termination( PROC *proc, char *notification,
 				int *jobstatus, char *coredir );
 	void get_local_rusage( struct rusage *bsd_rusage );
-	void NotifyUser( char *buf, PROC *proc, char *email_addr );
+	void NotifyUser( char *buf, PROC *proc );
 	void MvTmpCkpt();
 	FILE	*fdopen();
 	int		whoami();
@@ -619,7 +619,6 @@ Wrapup( )
 {
 	struct rusage local_rusage;
 	char notification[ BUFSIZ ];
-	char email_addr[ 256 ]; 
 	int pid;
 	int	cnt;
 	int	nfds;
@@ -649,24 +648,6 @@ Wrapup( )
 	if( sock_RSC1 ) {
 	} 
 
-	/*
-	 * the job may have an email address to whom the notification message
-     * should go.  this info is in the job classad
-     */
-	email_addr[0] = '\0';
-	if (!JobAd->LookupString(ATTR_NOTIFY_USER, email_addr)) {
-        dprintf (D_ALWAYS, "Job %d.%d did not have 'NotifyUser'\n",
-				 Proc->id.cluster, Proc->id.proc);
-        strcpy (email_addr, Proc->owner);
-    }
-    else if (!email_addr[0])
-    {
-        dprintf (D_ALWAYS,
-		    "Job %d.%d has NULL email address - using owner instead\n",
-                                Proc->id.cluster, Proc->id.proc);
-        strcpy (email_addr, Proc->owner);
-    }
-
 	/* fill in the Proc structure's exit_status with JobStatus, so that when
 	 * we call update_job_status the exit status is written into the job queue,
 	 * so that the history file will have exit status information for the job.
@@ -685,7 +666,7 @@ Wrapup( )
 	log_termination (&local_rusage, &JobRusage);
 
 	if( notification[0] ) {
-		NotifyUser( notification, Proc, email_addr );
+		NotifyUser( notification, Proc );
 	}
 }
 
