@@ -175,5 +175,10 @@ extern "C" {
 };
 #endif
 
-#	define JMP_BUF_SP(env) (((long *)(env))[JmpBufSP_Index()])
+#if defined(IRIX)
+#	define JMP_BUF_SP(env) ((env)[JmpBufSP_Index()])
+#else
+#	define JMP_BUF_SP(env) (((long*)(env))[JmpBufSP_Index()])
+#endif
+
 #endif
