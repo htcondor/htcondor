@@ -290,7 +290,7 @@ specified in the command file, the system's user resource limit
 %% nice_user
 %%%%%%%%%%%%%%%%%%%
 
-\item[nice\_user = $<$True \Bar\ False$>$] Normally, when a machine
+\item[nice\_user = $<$True \Bar\ False$>$] \label{man-condor-submit-nice}Normally, when a machine
 becomes available to Condor, Condor decides which job to run based upon
 user and job priorities. Setting \Opt{nice\_user} equal to \Arg{True}
 tells Condor not to use your regular user priority, but that this job
@@ -315,6 +315,15 @@ to the Standard Universe, the default value is the number for
 \verb@SIGTSTP@ which tells the Condor libraries to initiate a checkpoint
 of the process.  For jobs submitted to the Vanilla Universe, the default 
 is \verb@SIGTERM@ which is the standard way to terminate a program in UNIX.  
+
+%%%%%%%%%%%%%%%%%%%
+% +
+%%%%%%%%%%%%%%%%%%%
+
+\item[+$<$attribute$>$ = $<$value$>$] A line which begins with a '+'
+(plus) character instructs \Condor{submit} to simply insert the
+following \Arg{attribute} into the job ClasssAd with the given 
+\Arg{value}. 
 
 %%%%%%%%%%%%%%%%%%%
 %% queue
@@ -406,16 +415,16 @@ appear in 'foo.error'.
 \end{verbatim}
 
 \underline{Example 2}: This submit-description file example queues 150
-runs of program "foo" which must have been compiled and linked for
+runs of program 'foo' which must have been compiled and linked for
 Silicon Graphics workstations running IRIX 6.x. Condor will not attempt
 to run the processes on machines which have less than 32 megabytes of
 physical memory, and will run them on machines which have at least 64
 megabytes if such machines are available. Stdin, stdout, and stderr will
-refer to "in.0", "out.0", and "err.0" for the first run of this program
-(process 0). Stdin, stdout, and stderr will refer to "in.1", "out.1",
-and "err.1" for process 1, and so forth. A log file containing entries
+refer to ``in.0'', ``out.0'', and ``err.0'' for the first run of this program
+(process 0). Stdin, stdout, and stderr will refer to ``in.1'', ``out.1'',
+and ``err.1'' for process 1, and so forth. A log file containing entries
 about where/when Condor runs, checkpoints, and migrates processes in this
-cluster will be written into file "foo.log".
+cluster will be written into file ``foo.log''.
 
 \begin{verbatim}
       ####################                                                    
@@ -427,7 +436,7 @@ cluster will be written into file "foo.log".
                                                                           
       Executable     = foo                                                    
       Requirements   = Memory >= 32 && OpSys == "IRIX6" && Arch =="SGI"     
-      Preferences    = Memory >= 64
+      Rank		     = Memory >= 64
       Image_Size     = 28 Meg                                                 
                                                                           
       Error   = err.$(Process)                                                
