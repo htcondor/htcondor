@@ -883,7 +883,6 @@ dc_config_auth()
 		if (pbuf) {
 			sprintf( buffer, "X509_DIRECTORY=%s", pbuf);
 			putenv( strdup( buffer ) );
-			free(pbuf);
 
 			dprintf (D_ALWAYS, "Assuming personal condor, specifying cert.");
 			sprintf( buffer, "%s=%s/certificates", STR_GSI_CERT_DIR, pbuf);
