@@ -60,6 +60,7 @@ extern "C" {
 #if defined(__STDC__) || defined(__cplusplus)
 	char * get_tilde();
 	char * param ( const char *name );
+	int param_integer( const char *name, int default_value );
 	void insert ( const char *name, const char *value, BUCKET *table[], int table_size );
 	char * lookup_macro ( const char *name, BUCKET *table[], int table_size );
 	char * macro_expand ( const char *name );
