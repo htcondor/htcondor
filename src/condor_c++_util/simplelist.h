@@ -60,6 +60,7 @@ class SimpleList
     inline bool    AtEnd() const { return (current >= size-1); }
     void    DeleteCurrent();
 	bool	ReplaceCurrent(ObjType &);
+	bool IsMember( const ObjType & ) const;
 
     // Debugging
     void Display (ostream & out) const;
@@ -191,6 +192,19 @@ resize (int newsize)
 		current = maximum_size;
 
 	return true;
+}
+
+template <class ObjType>
+bool SimpleList<ObjType>::
+IsMember( const ObjType& obj ) const
+{
+	int i;
+	for( i = 0; i < size; i++ ) {
+		if( items[i] == obj ) {
+			return true;
+		}
+	}
+	return false;
 }
 
 //--------------------------------------------------------------------------
