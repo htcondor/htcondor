@@ -627,7 +627,7 @@ GahpClient::globus_gass_server_superez_init( char **gass_url, int port )
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc = atoi(result->argv[1]);
-		if ( rc == 0 && result->argv[2] ) {
+		if ( result->argv[2] && strcasecmp(result->argv[2], NULLSTRING) ) {
 			*gass_url = strdup(result->argv[2]);
 		}
 		delete result;
@@ -706,7 +706,7 @@ GahpClient::globus_gram_client_job_request(
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc = atoi(result->argv[1]);
-		if ( rc == 0 && result->argv[2] ) {
+		if ( result->argv[2] && strcasecmp(result->argv[2], NULLSTRING) ) {
 			*job_contact = strdup(result->argv[2]);
 		}
 		delete result;
