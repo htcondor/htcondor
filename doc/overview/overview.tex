@@ -263,16 +263,21 @@ transparently checkpoint and migrate:
 has been asked to transparently checkpoint.  If job checkpointing is not
 desired, the limitations above do not apply.
 
-	\item[Security Implications.] Condor does a significant amount of work to prevent 
-security hazards, but loopholes are known to exist.  Condor can be instructed 
-to run user programs only as the UNIX user nobody, a user login which traditionally has very 
-restricted access.  But even with access solely as user nobody, a sufficiently 
-malicious individual could do such things as fill up /tmp (which is world writable) and/or gain 
-read access to world readable files.
-Furthermore, where the security of machines in the pool is a high concern, 
-only machines where the UNIX user root on that machine can be trusted should be admitted
-into the pool. Condor provides the administrator with IP-based security mechanisms 
-to enforce this.
+	\item[Security Implications.] Condor does a significant amount of
+	work to prevent security hazards, but loopholes are known to exist.
+	Condor can be instructed to run user programs only as the UNIX
+	user nobody, a user login which traditionally has very 
+	restricted access.
+	But even with access solely as user nobody,
+	a sufficiently malicious individual could do such things as fill up
+	\File{/tmp} (which is world writable) and/or gain read access to
+	world readable files.
+	Furthermore, where the security of machines in the pool is a
+	high concern, 
+	only machines where the UNIX user root on that machine can be
+	trusted should be admitted into the pool.
+	Condor provides the administrator with extensive security mechanisms 
+	to enforce desired policies.
 
 	\item[Jobs Need to be Re-linked to get Checkpointing and Remote System Calls] Although 
 typically no source code changes are required,
@@ -323,9 +328,8 @@ Sun SPARC Sun4m,Sun4c, Sun UltraSPARC & Solaris 2.6, 2.7, 8, 9 \\ \hline
 Silicon Graphics MIPS (R5000, R8000, R10000) & IRIX 6.5 (clipped) \\ \hline
 Intel x86 & Red Hat Linux 7.1, 7.2, 7.3, 8.0 \\
  & Red Hat Linux 9 \\
- & Windows NT 4.0 Workstation and Server (clipped) \\
- & Windows 2000 Professional and Server, 2003 Server (clipped) \\ 
- & Windows XP Professional (clipped) \\ \hline
+ & Windows 2000 Professional and Server, 2003 Server (Win NT 5.0) (clipped) \\ 
+ & Windows XP Professional (Win NT 5.1) (clipped) \\ \hline
 ALPHA & Digital Unix 4.0 \\
  & Red Hat Linux 7.1, 7.2, 7.3 (clipped) \\
  & Tru64 5.1 (clipped) \\ \hline
@@ -409,21 +413,29 @@ High-Throughput Computing
 research can be found at the official web site for Condor at  
 \URL{http://www.cs.wisc.edu/condor}.
 
-In addition, there is an e-mail list at condor-world@cs.wisc.edu.  The Condor Team 
-uses this e-mail list to announce new releases of Condor and other major Condor-related 
-news items.  Membership into condor-world is automated by MajorDomo software.  To 
-subscribe or unsubscribe from the the list, follow the instructions at  
-\URL{http://www.cs.wisc.edu/condor/condor-world/condor-world.html}.  Because many of us receive 
-too much e-mail as it is, you'll be happy to know that the condor-world e-mail listgroup is 
-moderated and only major announcements of wide interest are distributed.
+In addition, there is an e-mail list at condor-world@cs.wisc.edu.
+The Condor Team uses this e-mail list to announce new releases of
+Condor and other major Condor-related news items.
+Membership into condor-world is automated by MajorDomo software.
+To subscribe or unsubscribe from the the list, follow the instructions at  
+\URL{http://www.cs.wisc.edu/condor/mail-lists/}.
+Because many of us receive 
+too much e-mail as it is, you will be happy to know that the
+condor-world e-mail listgroup is 
+moderated, and only major announcements of wide interest are distributed.
 
-Finally, you can reach the Condor Team directly.  The Condor Team is comprised of the 
-developers and administrators of Condor at the University of Wisconsin-Madison. Condor 
-questions, comments, pleas for help, and requests for commercial contract consultation or support 
-are all welcome; just send Internet e-mail to \URL{mailto:condor-admin@cs.wisc.edu}.  Please include your 
-name, organization, and telephone number in your message.  If you are having trouble with 
-Condor, please help us troubleshoot by including as much pertinent information as you can, 
-including snippets of Condor log files. 
+Finally, you can reach the Condor Team directly.
+The Condor Team is comprised of the 
+developers and administrators of Condor at the University of Wisconsin-Madison.
+Condor questions, comments, pleas for help,
+and requests for commercial contract consultation or support 
+are all welcome;
+send Internet e-mail to
+\URL{mailto:condor-admin@cs.wisc.edu}.
+Please include your name, organization, and telephone number in your message.
+If you are having trouble with Condor,
+please help us troubleshoot by including as much pertinent information
+as you can, including snippets of Condor log files. 
 
 \section{\label{privacy}Privacy Notice}
 

@@ -131,6 +131,20 @@ For backward compatibility, you can still use ``:'' instead of ``=''
 in your config files, and these attributes will just be treated as
 macros.
 
+All entries in a configuration file must have an operator,
+which will be an equals sign (``='')
+or a colon character (``:'').
+Identifiers must be alphanumerics combined with the underscore character.
+As a special case,
+a line without an operator that begins with a left square bracket
+will be ignored.
+The following two-line example treats the first line as a comment,
+and correctly handles the second line.
+\begin{verbatim}
+[Condor Settings]
+my_classad = [ foo=bar ]
+\end{verbatim}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Config-File-Special}
 Special Configuration File Macros}
@@ -1103,41 +1117,42 @@ server, shadow, and starter, none of which use DaemonCore yet).
   before they do a hard shutdown.  It is defined in terms of seconds.
   The default is 1800 (30 minutes).
 
-\item[\Macro{AUTHENTICATION\_METHODS}]\label{param:AuthenticationMethods}
-  There are many instances when the Condor system needs to authenticate
-  the identity of the user.  For instance, when a job is submitted with
-  \Condor{submit}, Condor needs to authenticate the user so that the job
-  goes into the queue and runs with the proper credentials.  The
-  \MacroNI{AUTHENTICATION\_METHODS} parameter is a list of
-  permitted authentication methods.  The list is ordered by
-  preference.  The actual authentication method used is the first method
-  in this list that both the server and client are able to perform.
-  Possible values are:
-  \begin{itemize}
-	\item NTSSPI Use NT's standard LAN-MANAGER challenge-response protocol.
-	\Note This is the default method used on Windows NT.
-	\item FS Use the filesystem to authenticate the user.  
-		The server requests the client to create a specified temporary
-		file, then the server verifies the ownership of that file. \Note
-		This is the default method used on Unix systems.
-	\item FS\_REMOTE Use a shared filesystem to authenticate the user.
-		This is useful for submitting jobs to a remote schedd.
-		Similar to FS authentication, except the temporary file to be
-		created by the user must be on a shared filesystem (AFS, NFS, etc.)
-		If the client's submit description file does not define the 
-		command \Opt{rendezvousdir}, the \Opt{initialdir} value is used 
-		as the default directory in which to create the temporary file.
-		\Note Normal AFS issues apply here: Condor must be able to write
-		to the directory used.
+% This macro existed for 6.2.x, but does not exist any more.
+%\item[\Macro{AUTHENTICATION\_METHODS}]\label{param:AuthenticationMethods}
+%  There are many instances when the Condor system needs to authenticate
+%  the identity of the user.  For instance, when a job is submitted with
+%  \Condor{submit}, Condor needs to authenticate the user so that the job
+%  goes into the queue and runs with the proper credentials.  The
+%  \MacroNI{AUTHENTICATION\_METHODS} parameter is a list of
+%  permitted authentication methods.  The list is ordered by
+%  preference.  The actual authentication method used is the first method
+%  in this list that both the server and client are able to perform.
+%  Possible values are:
+%  \begin{itemize}
+%	\item NTSSPI Use NT's standard LAN-MANAGER challenge-response protocol.
+%	\Note This is the default method used on Windows NT.
+%	\item FS Use the filesystem to authenticate the user.  
+%		The server requests the client to create a specified temporary
+%		file, then the server verifies the ownership of that file. \Note
+%		This is the default method used on Unix systems.
+%	\item FS\_REMOTE Use a shared filesystem to authenticate the user.
+%		This is useful for submitting jobs to a remote schedd.
+%		Similar to FS authentication, except the temporary file to be
+%		created by the user must be on a shared filesystem (AFS, NFS, etc.)
+%		If the client's submit description file does not define the 
+%		command \Opt{rendezvousdir}, the \Opt{initialdir} value is used 
+%		as the default directory in which to create the temporary file.
+%		\Note Normal AFS issues apply here: Condor must be able to write
+%		to the directory used.
 % commented out by Karen for 6.4.3
 %       \item GSS Use Generic Security Services, which is implemented in Condor 
 %		with X.509 certificates. See section~\ref{sec:X509-Authentication}.
 %		These X.509 certificates are compatible with the Globus system from
 %		Argonne National Labs.
-	\item CLAIMTOBE The server should simply trust the client.  
-		\Note You had better trust all users who have access to your Condor
-		pool if you enable CLAIMTOBE authentication.
-  \end{itemize}
+%	\item CLAIMTOBE The server should simply trust the client.  
+%		\Note You had better trust all users who have access to your Condor
+%		pool if you enable CLAIMTOBE authentication.
+%  \end{itemize}
 
 \item[\Macro{SUBSYS\_ADDRESS\_FILE}]
   \label{param:SubsysAddressFile} Every Condor daemon that uses
@@ -1158,7 +1173,8 @@ server, shadow, and starter, none of which use DaemonCore yet).
   for the collector or negotiator, since their command sockets are at
   well-known ports.  
   
-\item[\Macro{SUBSYS\_EXPRS}] \label{param:SubsysExprs}
+\item[\Macro{SUBSYS\_ATTRS} or \label{param:SubsysExprs}
+\Macro{SUBSYS\_EXPRS}] \label{param:SubsysAttrs}
   Allows any DaemonCore daemon to advertise arbitrary
   expressions from the configuration file in its ClassAd.  Give the
   comma-separated list of entries from the configuration file you want in the
@@ -1185,7 +1201,7 @@ server, shadow, and starter, none of which use DaemonCore yet).
   override attributes defined in the config file with
   \MacroU{SUBMIT\_EXPRS}. 
 
-  The \Condor{startd} \MacroU{STARTD\_EXPRS} defaults to
+  The \Condor{startd} \MacroU{STARTD\_ATTRS} defaults to
   ``JobUniverse''.
 
   Because of the different syntax of the configuration
@@ -1202,7 +1218,7 @@ server, shadow, and starter, none of which use DaemonCore yet).
         BOOL1 = True
         BOOL2 = CurrentTime >= $(NUMBER_MACRO) || $(BOOL1)
         MY_STRING = "$(STRING_MACRO)"
-        STARTD_EXPRS = MY_STRING, NUMBER, BOOL1, BOOL2
+        STARTD_ATTRS = MY_STRING, NUMBER, BOOL1, BOOL2
 \end{verbatim}
 
 \end{description}
@@ -1745,9 +1761,9 @@ the defaults work quite well, and you probably
 will not want to change them for any reason.
 \begin{description}
 
-\item[\Macro{MASTER\_EXPRS}] \label{param:MasterExprs} This macro is
+\item[\Macro{MASTER\_ATTRS}] \label{param:MasterExprs} This macro is
   described in section~\ref{param:SubsysExprs} as
-  \MacroNI{SUBSYS\_EXPRS}.
+  \MacroNI{SUBSYS\_ATTRS}.
 
 \item[\Macro{MASTER\_DEBUG}] \label{param:MasterDebug} This macro
   is described in section~\ref{param:SubsysDebug} as
@@ -1903,9 +1919,9 @@ control state or activity transitions within the
   these are already ClassAd expressions, do not do anything
   unusual with strings.
 
-\item[\Macro{STARTD\_EXPRS}] \label{param:StartdExprs} This macro is
-  described in section~\ref{param:SubsysExprs} as
-  \Macro{SUBSYS\_EXPRS}.
+\item[\Macro{STARTD\_ATTRS}] \label{param:StartdAttrs} This macro is
+  described in section~\ref{param:SubsysAttrs} as
+  \Macro{SUBSYS\_ATTRS}.
 
 \item[\Macro{STARTD\_DEBUG}] \label{param:StartdDebug} This macro
   (and other settings related to debug logging in the startd) is
@@ -1943,7 +1959,7 @@ control state or activity transitions within the
 
   \Note If you use this setting on a given machine, you should
   probably advertise that fact in the machine's ClassAd by using the
-  \MacroNI{STARTD\_EXPRS} setting (described above).
+  \MacroNI{STARTD\_ATTRS} setting (described above).
   This way, jobs submitted in your pool could specify that they did or
   did not want to be matched with machines that were only really
   offering ``fractional CPUs''.
@@ -2475,9 +2491,9 @@ These macros control the \Condor{schedd}.
   be sure to change the \MacroUNI{VALID\_LOG\_FILES} entry that
   \Condor{preen} uses as well.
 
-\item[\Macro{SCHEDD\_EXPRS}] \label{param:ScheddExprs} This macro is
+\item[\Macro{SCHEDD\_ATTRS}] \label{param:ScheddAttrs} This macro is
   correctly used as \MacroNI{SUBMIT\_EXPRS}, as described in
-  section~\ref{param:SubsysExprs} on \MacroNI{SUBSYS\_EXPRS}.
+  section~\ref{param:SubsysAttrs} on \MacroNI{SUBSYS\_ATTRS}.
 
 \item[\Macro{SCHEDD\_DEBUG}] \label{param:ScheddDebug} This macro
   (and other settings related to debug logging in the schedd) is
@@ -2578,6 +2594,12 @@ These settings affect the \Condor{shadow}.
   (and other settings related to debug logging in the shadow) is
   described in section~\ref{param:SubsysDebug} as
   \MacroNI{SUBSYS\_DEBUG}.
+
+\item[\Macro{SHADOW\_QUEUE\_UPDATE\_INTERVAL}]
+\label{param:ShadowQueueUpdateInterval}
+The amount of time (in seconds) between ClassAd updates that the
+\Condor{shadow} daemon sends to the \Condor{schedd} daemon.
+Defaults to 900 (15 minutes).
 
 \item[\Macro{COMPRESS\_PERIODIC\_CKPT}]
   \label{param:CompressPeriodicCkpt} This boolean macro specifies
@@ -2695,6 +2717,11 @@ These settings affect the \Condor{starter}.
   (and other settings related to debug logging in the starter) is
   described above in section~\ref{param:SubsysDebug} as
   \MacroUNI{SUBSYS\_DEBUG}.
+
+\item[\Macro{STARTER\_UPDATE\_INTERVAL}] \label{param:StarterUpdateInterval}
+The amount of time (in seconds) between ClassAd updates that the
+\Condor{starter} daemon sends to the \Condor{shadow} daemon.
+Defaults to 1200 (20 minutes).
 
 \item[\Macro{USER\_JOB\_WRAPPER}] \label{param:UserJobWrapper} This macro
   allows the administrator to specify a ``wrapper'' script to handle the
@@ -3418,7 +3445,27 @@ Configuration File Entries Relating to Security}
 
 \index{configuration!security configuration variables}
 These macros affect the secure operation of Condor.
+Many of these macros are described in
+section~\ref{sec:Security} on Security In Condor.
+
 \begin{description}
+\item[\Macro{SEC\_*\_AUTHENTICATION}]
+\label{param:SecAuthentication} \Todo
+
+\item[\Macro{SEC\_*\_ENCRYPTION}]
+\label{param:SecEncryption} \Todo
+
+\item[\Macro{SEC\_*\_INTEGRITY}]
+\label{param:SecIntegrity} \Todo
+
+\item[\Macro{SEC\_*\_NEGOTIATION}]
+\label{param:SecNegotiation} \Todo
+
+\item[\Macro{SEC\_*\_AUTHENTICATION\_METHODS}]
+\label{param:SecAuthenticationMethods} \Todo
+
+\item[\Macro{SEC\_*\_CRYPTO\_METHODS}]
+\label{param:SecCryptoMethods} \Todo
 
 \item[\Macro{GSI\_DAEMON\_NAME}]
 \label{param:GSIDaemonName} A comma separated list of the subject

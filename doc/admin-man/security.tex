@@ -2041,8 +2041,8 @@ The most secure use of this feature allows Condor users to set
 attributes in the configuration file which are not used by Condor
 directly.
 These are custom attributes published by various Condor
-daemons with the \Macro{SUBSYS\_EXPRS} setting described in
-section~\ref{param:SubsysExprs} on page~\pageref{param:SubsysExprs}.
+daemons with the \Macro{SUBSYS\_ATTRS} setting described in
+section~\ref{param:SubsysAttrs} on page~\pageref{param:SubsysAttrs}.
 It is secure to grant access only to modify attributes that are used by Condor
 to publish information.
 Granting access to modify
@@ -2111,7 +2111,7 @@ So, this setting would allow any process running on a given host,
 including a Condor job, to modify the \Macro{HasDataSet} variable for
 that host. 
 \Macro{HasDataSet} is not used by Condor, it is an invented attribute
-included in the \Macro{STARTD\_EXPRS} setting in order for this
+included in the \Macro{STARTD\_ATTRS} setting in order for this
 example to make sense.
 
 \end{itemize}

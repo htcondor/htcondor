@@ -300,18 +300,18 @@ Rank              = TARGET.Name != LastMatchName0
 This will prefer to run at a grid site that was not just tried, but it
 will allow the job to be run there if there is no other option. 
 
-When you specify match\_list\_length, you provide an integer N, and
+When you specify \Opt{match\_list\_length}, you provide an integer N, and
 Condor will keep track of the last N matches. The oldest match will be
 LastMatchName0, and next oldest will be LastMatchName1, and so on. (See
 the \Condor{submit} manual page for more details.) The Rank expression
 allows you to specify a numerical ranking for different matches. When
-combined with match\_list\_length, you can prefer to avoid sites that
+combined with \Opt{match\_list\_length}, you can prefer to avoid sites that
 you have already run at. 
 
 In addition, \Condor{submit} has two options to help you control
-Condor-G job resubmissions and rematching.  See globus\_resubmit and
-globus\_rematch in the \Condor{submit} manual page. These options are
-independent of match\_list\_length.
+Condor-G job resubmissions and rematching.  See \Opt{globus\_resubmit} and
+\Opt{globus\_rematch} in the \Condor{submit} manual page.
+These options are independent of \Opt{match\_list\_length}.
 
 There are some new attributes that will be added to the Job ClassAd,
 and may be useful to you when you write your rank, requirements,
@@ -329,6 +329,33 @@ Section~\ref{user-man-jobad} and read about the following option:
 \item LastRejMatchTime
 \item LastRejMatchReason
 \end{itemize}
+
+The following example of a command within the submit description file
+releases jobs 5 minutes after being held,
+increasing the time between releases by 5 minutes each time.
+It will continue to retry up to 4 times per Globus
+submission, plus 4.
+The plus 4 is necessary in case
+the job goes on hold before being submitted to Globus, although
+this is unlikely.
+
+\footnotesize
+\begin{verbatim}
+periodic_release = ( NumSystemHolds <= ((NumGlobusSubmits * 4) + 4) ) \
+   && (NumGlobusSubmits < 4) && \
+   ( HoldReason != "via condor_hold (by user $ENV(USER))" ) && \
+   ((CurrentTime - EnteredCurrentStatus) > ( NumSystemHolds *60*5 ))
+\end{verbatim}
+\normalsize
+
+The following example forces Globus resubmission after a job has
+been held 4 times per Globus submission.
+
+\footnotesize
+\begin{verbatim}
+globus_resubmit = NumSystemHolds == (NumGlobusSubmits + 1) * 4
+\end{verbatim}
+\normalsize
 
 If you are concerned about unknown or malicious grid sites reporting
 to your \Condor{collector}, you should use Condor's security options,

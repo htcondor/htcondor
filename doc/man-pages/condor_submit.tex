@@ -159,14 +159,33 @@ See section~\ref{sec:CondorG-Submit-Args} for further details.
 
 \item[initialdir = $<$directory-path$>$] 
 \index{submit commands!initialdir}
-Used to specify the current
-working directory for the Condor job. Should be a path to a preexisting
-directory. If not specified, \Condor{submit} will automatically insert
-the user's current working directory at the time \Condor{submit} was run
-as the value for \Opt{initialdir}.  If \Opt{initialdir} is specified,
-and is not an absolute path, the \Opt{initialdir} value will be appended
-to the current working directory, and that will become the working
-directory for the Condor job.
+Used to give jobs a directory with respect to file input and output.
+Also provides a directory 
+(on the machine from which the job is submitted)
+for the user log, when a full path is not specified. 
+
+For vanilla or MPI universe jobs where there is a shared file system,
+it is the current working directory on the machine where the
+job is executed.
+
+For vanilla, globus, or MPI universe jobs where file transfer mechanisms are
+utilized (there is \emph{not} a shared file system),
+it is the directory on the machine from which the job is submitted
+where the input files come from, and where the job's output
+files go to.
+
+For standard universe jobs,
+it is the directory on the machine from which the job is submitted
+where the \Condor{shadow} daemon runs;
+the current working directory for file input and output accomplished
+through remote system calls.
+
+For scheduler universe jobs,
+it is the directory on the machine from which the job is submitted
+where the job runs;
+the current working directory for file input and output with
+respect to relative path names.
+
 
 %%%%%%%%%%%%%%%%%%%
 %% should_transfer_files
@@ -535,15 +554,13 @@ If the expression becomes \Expr{True}, the job will be released.
 %So the short answer: by default, every SCHEDD_INTERVAL (5 minutes by 
 %default) or more often as needed.
 
-% what universes (other than universe=globus) does this apply to?
-
-This expression is available for the vanilla and java universes.
+This expression is available for the vanilla, java, and globus universes.
 It is additionally available, when submitted from a Unix machine,
 for the standard universe.  Note that the \Condor{schedd} daemon,
 by default, only checks
 periodic expressions once every 300 seconds.  The period of
 these evaluations can be adjusted by setting the
-\Macro{PERIODIC\_EXPR\_INTERVAL} configuration macro.
+\MacroNI{PERIODIC\_EXPR\_INTERVAL} configuration macro.
 
 
 %%%%%%%%%%%%%%%%%%%
@@ -764,12 +781,46 @@ default value is \Opt{False}.
 \item[kill\_sig = $<$signal-number$>$] When Condor needs to kick a job
 \index{submit commands!kill\_sig}
 off of a machine, it will send the job the signal specified by
-\Arg{signal-number}.  \Arg{signal-number} needs to be an integer which
+\Opt{signal-number}.  \Opt{signal-number} needs to be an integer which
 represents a valid signal on the execution machine.  For jobs submitted
-to the Standard Universe, the default value is the number for
+to the standard universe, the default value is the number for
 \verb@SIGTSTP@ which tells the Condor libraries to initiate a checkpoint
-of the process.  For jobs submitted to the Vanilla Universe, the default 
-is \verb@SIGTERM@ which is the standard way to terminate a program in UNIX.  
+of the process.  For jobs submitted to the vanilla universe,
+the default 
+is \verb@SIGTERM@ which is the standard way to terminate a program in Unix.  
+
+%%%%%%%%%%%%%%%%%%%
+%% remove_kill_sig
+%%%%%%%%%%%%%%%%%%%
+
+\item[remove\_kill\_sig = $<$signal-number$>$] For the scheduler universe only,
+\index{submit commands!remove\_kill\_sig}
+\Opt{signal-number} is the signal delivered
+to the job when the job is removed
+with \Condor{rm}.
+\Opt{signal-number} may be either the platform-specific name or value
+of the signal.
+This example shows it both ways for a Linux signal:
+\begin{verbatim}
+remove_kill_sig = SIGUSR1
+remove_kill_sig = 10
+\end{verbatim}
+If this command is not present,
+the value of \Opt{kill\_sig} is used. 
+
+%%%%%%%%%%%%%%%%%%%
+%% remove_kill_sig
+%%%%%%%%%%%%%%%%%%%
+
+\item[hold\_kill\_sig = $<$signal-number$>$] For the scheduler universe only,
+\index{submit commands!hold\_kill\_sig}
+\Opt{signal-number} is the signal delivered
+to the job when the job is put on hold
+with \Condor{hold}.
+\Opt{signal-number} may be either the platform-specific name or value
+of the signal.
+If this command is not present,
+the value of \Opt{kill\_sig} is used. 
 
 %%%%%%%%%%%%%%%%%%%
 %% compress_files

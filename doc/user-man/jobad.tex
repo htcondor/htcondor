@@ -37,6 +37,16 @@ number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
 \item[\AdAttr{CumulativeSuspensionTime}] : A running total of the number of
 seconds the job has spent in suspension for the life of the job.
 
+%%% ClassAd attribute: EnteredCurrentStatus
+\index{ClassAd job attribute!EnteredCurrentStatus}
+\item[\AdAttr{EnteredCurrentStatus}] : An integer containing the
+epoch time of when the job entered into its current status
+So for example, if the job is on hold, the ClassAd expression
+\begin{verbatim}
+    CurrentTime - EnteredCurrentStatus
+\end{verbatim}
+will equal the number of seconds that the job has been on hold.
+
 %%% ClassAd attribute: ExecutableSize
 \index{ClassAd job attribute!ExecutableSize}
 \item[\AdAttr{ExecutableSize}] : Size of the executable in kbytes.
@@ -73,6 +83,20 @@ Instead, see the attributes: \AdAttr{ExitBySignal},
 \AdAttr{ExitCode}, and
 \AdAttr{ExitSignal}.
 
+%%% ClassAd attribute: HoldKillSig
+\index{ClassAd job attribute!HoldKillSig}
+\item[\AdAttr{HoldKillSig}] :   Currently only for scheduler universe jobs,
+a string containing a name of
+a signal to be sent to the job if the job is put on hold.
+
+%%% ClassAd attribute: HoldReason
+\index{ClassAd job attribute!HoldReason}
+\item[\AdAttr{HoldReason}] :   A string containing a human-readable
+message about why a job is on hold.
+This is the message that will be displayed in response to
+the command \verb@condor\_q -hold@.
+It can be used to determine if a job should be released or not.
+
 %%% ClassAd attribute: ImageSize
 \index{ClassAd job attribute!ImageSize}
 \item[\AdAttr{ImageSize}] : Estimate of the memory image size of the
@@ -81,6 +105,8 @@ submit file.  Otherwise, the initial value is equal to the size of the
 executable.  When the job checkpoints, the \AdAttr{ImageSize}
 attribute is set to the size of the checkpoint file (since the
 checkpoint file contains the job's memory image).
+A vanilla universe job's \AdAttr{ImageSize} is recomputed
+internally every 15 seconds.
 
 %%% ClassAd attribute: JobPrio
 \index{ClassAd job attribute!JobPrio}
@@ -121,6 +147,24 @@ servers, this tells the job where to find its checkpoint file.
 successful checkpoint.  Measured in the number of seconds since the
 epoch (00:00:00 UTC, Jan 1, 1970).
 
+%%% ClassAd attribute: LastMatchTime
+\index{ClassAd job attribute!LastMatchTime}
+\item[\AdAttr{LastMatchTime}] : An integer containing the epoch time
+when the job was last successfully matched with a resource (gatekeeper) Ad.
+
+%%% ClassAd attribute: LastRejMatchReason
+\index{ClassAd job attribute!LastRejMatchReason}
+\item[\AdAttr{LastRejMatchReason}] :  If, at any point in the past,
+this job failed to match with a resource ad,
+this attribute will contain a string with a
+human-readable message about why the match failed.
+
+%%% ClassAd attribute: LastRejMatchTime
+\index{ClassAd job attribute!LastRejMatchTime}
+\item[\AdAttr{LastRejMatchTime}] :  An integer containing the epoch
+time when Condor-G last tried to find a match for the job,
+but failed to do so.
+
 %%% ClassAd attribute: LastSuspensionTime
 \index{ClassAd job attribute!LastSuspensionTime}
 \item[\AdAttr{LastSuspensionTime}] : Time at which the job last performed a
@@ -133,20 +177,40 @@ epoch (00:00:00 UTC, Jan 1, 1970).
 evicted from a remote workstation.  Measured in the number of seconds
 since the epoch (00:00:00 UTC, Jan 1, 1970).
 
+%%% ClassAd attribute: NiceUser
+\index{ClassAd job attribute!NiceUser}
+\item[\AdAttr{NiceUser}] : Boolean value which indicates whether
+this is a nice-user job.
+
 %%% ClassAd attribute: NumCkpts
 \index{ClassAd job attribute!NumCkpts}
 \item[\AdAttr{NumCkpts}] : A count of the number of checkpoints
 written by this job during its lifetime.
+
+%%% ClassAd attribute: NumGlobusSubmits
+\index{ClassAd job attribute!NumGlobusSubmits}
+\item[\AdAttr{NumGlobusSubmits}] :  An integer that is incremented each
+time the \Condor{gridmanager} receives confirmation of a successful job
+submission into Globus.
+
+%%% ClassAd attribute: NumJobMatches
+\index{ClassAd job attribute!NumJobMatches}
+\item[\AdAttr{NumJobMatches}] : An integer that is incremented by the
+\Condor{schedd} each time the job is matched with a resource ad by the
+negotiator.
 
 %%% ClassAd attribute: NumRestarts
 \index{ClassAd job attribute!NumRestarts}
 \item[\AdAttr{NumRestarts}] : A count of the number of restarts from a
 checkpoint attempted by this job during its lifetime.
 
-%%% ClassAd attribute: NiceUser
-\index{ClassAd job attribute!NiceUser}
-\item[\AdAttr{NiceUser}] : Boolean value which indicates whether
-this is a nice-user job.
+%%% ClassAd attribute: NumSystemHolds
+\index{ClassAd job attribute!NumSystemHolds}
+\item[\AdAttr{NumSystemHolds}] :  An integer that is incremented each time
+Condor-G places a job on hold due to some sort of error condition.  This
+counter is useful, since Condor-G will always place a job on hold when it
+gives up on some error condition.  Note that if the user places the job
+on hold using the \Condor{hold} command, this attribute is not incremented.
 
 %%% ClassAd attribute: Owner
 \index{ClassAd job attribute!Owner}
@@ -158,6 +222,17 @@ job.
 \item[\AdAttr{ProcId}] : Integer process identifier for this job.  In
 a cluster of many jobs, each job will have the same ClusterId but will
 have a unique ProcId.
+
+%%% ClassAd attribute: QDate
+\index{ClassAd job attribute!QDate}
+\item[\AdAttr{QDate}] : Time at which the job was submitted to the job
+queue.  Measured in the
+number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
+
+%%% ClassAd attribute: ReleaseReason
+\index{ClassAd job attribute!ReleaseReason}
+\item[\AdAttr{ReleaseReason}] :    A string containing a human-readable
+message about why the job was released from hold.
 
 %%% ClassAd attribute: RemoteIwd
 \index{ClassAd job attribute!RemoteIwd}
@@ -187,90 +262,11 @@ RemoteWallClockTime - CumulativeSuspensionTime
 Note that this number does not get reset to
 zero when a job is forced to migrate from one machine to another.
 
-%%% ClassAd attribute: TotalSuspensions
-\index{ClassAd job attribute!TotalSuspensions}
-\item[\AdAttr{TotalSuspensions}] : A count of the number of times this job
-has been suspended during its lifetime.
-
-%%% ClassAd attribute: QDate
-\index{ClassAd job attribute!QDate}
-\item[\AdAttr{QDate}] : Time at which the job was submitted to the job
-queue.  Measured in the
-number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
-
-%%% ClassAd attribute: NumJobMatches
-\index{ClassAd job attribute!NumJobMatches}
-\item[\AdAttr{NumJobMatches}] : An integer that is incremented by the
-\Condor{schedd} each time the job is matched with a resource ad by the
-negotiator.
-
-%%% ClassAd attribute: NumGlobusSubmits
-\index{ClassAd job attribute!NumGlobusSubmits}
-\item[\AdAttr{NumGlobusSubmits}] :  An integer that is incremented each
-time the \Condor{gridmanager} receives confirmation of a successful job
-submission into Globus.
-
-%%% ClassAd attribute: NumSystemHolds
-\index{ClassAd job attribute!NumSystemHolds}
-\item[\AdAttr{NumSystemHolds}] :  An integer that is incremented each time
-Condor-G places a job on hold due to some sort of error condition.  This
-counter is useful, since Condor-G will always place a job on hold when it
-gives up on some error condition.  Note that if the user places the job
-on hold using the \Condor{hold} command, this attribute is not incremented.
-
-%%% ClassAd attribute: HoldReason
-\index{ClassAd job attribute!HoldReason}
-\item[\AdAttr{HoldReason}] :   A string containing a human-readable
-message about why a job is on hold.
-This is the message that will be displayed in response to
-the command \verb@condor\_q -hold@.
-It can be used to determine if a job should be released or not.
-
-%%% ClassAd attribute: ReleaseReason
-\index{ClassAd job attribute!ReleaseReason}
-\item[\AdAttr{ReleaseReason}] :    A string containing a human-readable
-message about why the job was released from hold.
-
-%%% ClassAd attribute: EnteredCurrentStatus
-\index{ClassAd job attribute!EnteredCurrentStatus}
-\item[\AdAttr{EnteredCurrentStatus}] : An integer containing the
-epoch time of when the job entered into its current status
-So for example, if the job is on hold, the ClassAd expression
-\begin{verbatim}
-    CurrentTime - EnteredCurrentStatus
-\end{verbatim}
-will equal the number of seconds that the job has been on hold.
-
-%%% ClassAd attribute: LastMatchTime
-\index{ClassAd job attribute!LastMatchTime}
-\item[\AdAttr{LastMatchTime}] : An integer containing the epoch time
-when the job was last successfully matched with a resource (gatekeeper) Ad.
-
-%%% ClassAd attribute: LastRejMatchTime
-\index{ClassAd job attribute!LastRejMatchTime}
-\item[\AdAttr{LastRejMatchTime}] :  An integer containing the epoch
-time when Condor-G last tried to find a match for the job,
-but failed to do so.
-
-%%% ClassAd attribute: LastRejMatchReason
-\index{ClassAd job attribute!LastRejMatchReason}
-\item[\AdAttr{LastRejMatchReason}] :  If, at any point in the past,
-this job failed to match with a resource ad,
-this attribute will contain a string with a
-human-readable message about why the match failed.
-
-%%% ClassAd attribute: StreamOut
-\index{ClassAd job attribute!StreamOut}
-\item[\AdAttr{StreamOut}] :  
-An attribute utilized only for globus universe jobs.
-The default value is \Arg{True}.
-If \Arg{True}, and \Attr{TransferOut} is \Arg{True}, then 
-job output is streamed back to the submit machine, instead
-of doing the transfer (as a whole) after the job completes.
-If \Arg{False}, then
-job output is transferred back to the submit machine
-(as a whole) after the job completes.
-If \Attr{TransferOut} is \Arg{False}, then this job attribute is ignored.
+%%% ClassAd attribute: RemoveKillSig
+\index{ClassAd job attribute!RemoveKillSig}
+\item[\AdAttr{RemoveKillSig}] :   Currently only for scheduler universe jobs,
+a string containing a name of
+a signal to be sent to the job if the job is removed.
 
 %%% ClassAd attribute: StreamErr
 \index{ClassAd job attribute!StreamErr}
@@ -285,38 +281,23 @@ standard error is transfered back to the submit machine
 (as a whole) after the job completes.
 If \Attr{TransferErr} is \Arg{False}, then this job attribute is ignored.
 
-%  Jaime will check on this before they get documented.
-%%%% Vanilla universe assumes value of True for
-%%% ClassAd attribute: TransferOut
-%%% ClassAd attribute: TransferIn
-%%% ClassAd attribute: TransferErr
-%%% ClassAd attribute: TransferExecutable
-
-%%% ClassAd attribute: TransferOut
-\index{ClassAd job attribute!TransferOut}
-\item[\AdAttr{TransferOut}] :  
+%%% ClassAd attribute: StreamOut
+\index{ClassAd job attribute!StreamOut}
+\item[\AdAttr{StreamOut}] :  
 An attribute utilized only for globus universe jobs.
 The default value is \Arg{True}.
-If \Arg{True}, then the output from the job
-is transferred from the remote machine back to the submit machine.
-The name of the file after transfer is the file referred to
-by job attribute \Attr{Out}.
-If \Arg{False}, no transfer takes place (remote to submit machine),
-and the name of the file is the file referred to
-by job attribute \Attr{Out}.
+If \Arg{True}, and \Attr{TransferOut} is \Arg{True}, then 
+job output is streamed back to the submit machine, instead
+of doing the transfer (as a whole) after the job completes.
+If \Arg{False}, then
+job output is transferred back to the submit machine
+(as a whole) after the job completes.
+If \Attr{TransferOut} is \Arg{False}, then this job attribute is ignored.
 
-%%% ClassAd attribute: TransferIn
-\index{ClassAd job attribute!TransferIn}
-\item[\AdAttr{TransferIn}] :  
-An attribute utilized only for globus universe jobs.
-The default value is \Arg{True}.
-If \Arg{True}, then the job input is transferred from the submit
-machine to the remote machine.
-The name of the file that is transferred is given by the
-job attribute \Attr{In}.
-If \Arg{False}, then the job's input is taken from a file on the
-remote machine (pre-staged), and 
-the name of the file is given by the job attribute \Attr{In}.
+%%% ClassAd attribute: TotalSuspensions
+\index{ClassAd job attribute!TotalSuspensions}
+\item[\AdAttr{TotalSuspensions}] : A count of the number of times this job
+has been suspended during its lifetime.
 
 %%% ClassAd attribute: TransferErr
 \index{ClassAd job attribute!TransferErr}
@@ -344,5 +325,31 @@ job attribute \Attr{Cmd}.
 If \Arg{False}, no transfer takes place, and
 the name of the file used (on the remote machine) will be as
 given in the job attribute \Attr{Cmd}.
+
+%%% ClassAd attribute: TransferIn
+\index{ClassAd job attribute!TransferIn}
+\item[\AdAttr{TransferIn}] :  
+An attribute utilized only for globus universe jobs.
+The default value is \Arg{True}.
+If \Arg{True}, then the job input is transferred from the submit
+machine to the remote machine.
+The name of the file that is transferred is given by the
+job attribute \Attr{In}.
+If \Arg{False}, then the job's input is taken from a file on the
+remote machine (pre-staged), and 
+the name of the file is given by the job attribute \Attr{In}.
+
+%%% ClassAd attribute: TransferOut
+\index{ClassAd job attribute!TransferOut}
+\item[\AdAttr{TransferOut}] :  
+An attribute utilized only for globus universe jobs.
+The default value is \Arg{True}.
+If \Arg{True}, then the output from the job
+is transferred from the remote machine back to the submit machine.
+The name of the file after transfer is the file referred to
+by job attribute \Attr{Out}.
+If \Arg{False}, no transfer takes place (remote to submit machine),
+and the name of the file is the file referred to
+by job attribute \Attr{Out}.
 
 \end{description}
