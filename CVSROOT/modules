@@ -228,11 +228,13 @@ TOOLS		-a config imake
 DOC		-a doc
 NT_TOOLS	-a NTconfig
 
+######################################################################
 # Modules for the externals tree used by different branches of the
 # source.  NOTE: externals itself is never branched or merged.  The
 # externals directory *always* lives on the trunk.  This is just so we
 # can select the subsets of externals needed for each particular
 # branch of the code...
+######################################################################
 
 # These are common to all branches
 EXT_COMMON	-a externals/.cvsignore \
@@ -272,23 +274,45 @@ V6_6_4_EXT	-a V6_6_3_EXT
 # Externals needed for V6_6_5 (same as V6_6_4)
 V6_6_5_EXT	-a V6_6_4_EXT
 
-# Externals needed for V6_6_6 
-V6_6_6_EXT   -a V6_6_5_EXT \
-			externals/bundles/gahp/1.0.12
-
-# Externals needed for the head of the V6_6-branch
-V6_6_EXT	-a V6_6_COMMON_EXT \
-		   externals/bundles/gahp/1.0.10 \
+# Externals needed for V6_6_6
+# We switched the version of the gahp server for this
+V6_6_6_EXT	-a V6_6_COMMON_EXT \
 		   externals/bundles/glibc/2.2.93 \
 		   externals/bundles/glibc/2.3.2.27.9.7 \
 		   externals/bundles/gahp/1.0.12
 
-# For now, V6_7-branch uses all the same externals as the V6_6-branch
-V6_7_EXT	-a V6_6_EXT \
-		externals/bundles/gt3gahp/1.0
+# Externals needed for the head of the V6_6-branch
+V6_6_EXT	-a V6_6_6_EXT
+
+# The common externals needed for all V6_7_* releases
+V6_7_COMMON_EXT	-a EXT_COMMON \
+		   externals/bundles/glibc/2.2.2 \
+		   externals/bundles/glibc/2.2.93 \
+		   externals/bundles/glibc/2.3.2.27.9.7 \
+		   externals/bundles/globus/2.2.4 \
+		   externals/bundles/globus/2.4.3 \
+		   externals/bundles/globus/2.4.3.vdt.1.1.14 \
+		   externals/bundles/gpt/3.0 \
+		   externals/bundles/gt3gahp/1.0 \
+		   externals/bundles/krb5/1.2.5 \
+		   externals/bundles/pvm/3.4.2 \
+		   externals/bundles/zlib/1.1.3
 
 # Externals needed for V6_7_0
-V6_7_0_EXT  -a V6_7_EXT
+V6_7_0_EXT	-a V6_7_COMMON_EXT \
+		   externals/bundles/gahp/1.0.10
+
+# Externals needed for V6_7_1
+V6_7_1_EXT	-a V6_7_COMMON_EXT \
+		   externals/bundles/gahp/1.0.12
+
+# Externals needed for the head of the V6_7-branch
+V6_7_EXT	-a V6_7_1_EXT
+
+######################################################################
+# end of externals
+######################################################################
+
 
 # Windows-only programs. dagedit will be added here too.
 NT_PROGRAMS -a src/condor_birdwatcher 
