@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.2.10 2005-01-05 19:51:35 wright Exp $
+# $Id: CondorGlue.pm,v 1.1.2.11 2005-01-05 20:18:25 wright Exp $
 #
 ######################################################################
 
@@ -61,8 +61,7 @@ sub ProcessOptions
     );
 
     if( defined($opt_help) ) {
-        printBuildUsage();
-        exit 0;
+        printBuildUsage( 0 );
     }
 
     if( defined($opt_platforms) ) {
@@ -83,10 +82,7 @@ sub ProcessOptions
             $tags{"$opt_tag"} = $opt_module;
         } else {
             print "ERROR: You need to specify both --tag and --module\n";
-            printBuildUsage();
-            chdir($init_cwd);
-            run("rm -rf $workspace", 0);
-            exit 1;
+            printBuildUsage( 1 );
         }
     }
     elsif ( defined($opt_nightly) ) {
@@ -94,10 +90,7 @@ sub ProcessOptions
     }
     else {
         print "You need to have --tag with --module or --nightly\n";
-        printBuildUsage();
-        chdir($init_cwd);
-        run("rm -rf $workspace", 0);
-        exit 1;
+        printBuildUsage( 1 );
     }
 }
 
@@ -284,6 +277,7 @@ sub getNightlyTags
 
 sub printBuildUsage
 {
+    my $exit_code = shift;
     print <<END_USAGE;
 
 --help
@@ -305,6 +299,10 @@ List of users to be notified about the results
 List of platforms to build (default: all currently known-working)
 
 END_USAGE
+
+    chdir($init_cwd);
+    run("rm -rf $workspace", 0);
+    exit $exit_code;
 }
 
 
