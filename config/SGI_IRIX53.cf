@@ -65,7 +65,7 @@
 #define HAS_INSQUE			YES
 #define HAS_PVM				NO
 
-#define PVM_ARCH			IRIX
+#define PVM_ARCH			SGI5
 
 #define CCompiler gcc
 #define CPlusCompiler g++
