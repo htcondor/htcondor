@@ -61,7 +61,7 @@ display (FILE *file, AttrList *al)
 		// get the expression tree of the attribute
 		if (!(tree = al->Lookup (attr)))
 		{
-			if (alt) printf ("%s", alt);
+			if (alt) fprintf (file, "%s", alt);
 			continue;
 		}
 
@@ -87,7 +87,7 @@ display (FILE *file, AttrList *al)
 				break;
 
 			  default:
-				fprintf (file, "(Unknown type)");
+				fprintf (file, "%s", alt);
 				retval = 0;
 				continue;
 			}
