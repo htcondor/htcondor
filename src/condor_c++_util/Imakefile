@@ -20,7 +20,7 @@ API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
 			condor_event.o user_log.o
 
 SRC = state_machine_driver.C event_handler.C name_tab.C NON_POSIX.select.C \
-	alarm.C string_set.C alloc.C \
+	alarm.C alloc.C \
 	directory.C my_hostname.C file_lock.C disk.C up_down.C \
 	environ.C afs.C subproc.C \
 	instantiate.C string_list.C condor_event.C $(URL_SRC) get_daemon_addr.C \
@@ -32,7 +32,7 @@ SRC = state_machine_driver.C event_handler.C name_tab.C NON_POSIX.select.C \
 	access.C access.t.C
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
-	alarm.o string_set.o alloc.o \
+	alarm.o alloc.o \
 	directory.o my_hostname.o file_lock.o disk.o up_down.o \
 	environ.o afs.o subproc.o \
 	instantiate.o string_list.o condor_event.o $(URL_OBJ) get_daemon_addr.o \
