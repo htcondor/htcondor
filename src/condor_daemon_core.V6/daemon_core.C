@@ -298,6 +298,7 @@ DaemonCore::~DaemonCore()
 	}
 
 	if (sec_man) {
+		sec_man->invalidateAllCache();
 		delete sec_man;
 	}
 
