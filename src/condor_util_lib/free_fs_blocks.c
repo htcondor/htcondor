@@ -33,12 +33,13 @@
 */
 
 #include <stdio.h>
+#include <string.h>
 
 #if defined(ULTRIX42) || defined(ULTRIX43)
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/mount.h>
-#else
+#else	/* ULTRIX */
 #include <sys/types.h>
 
 
@@ -49,17 +50,136 @@
 #endif
 
 
-#endif
+#endif	/* ULTRIX */
 
 #include "debug.h"
+
+#define TRUE 1
+#define FALSE 0
 
 #define LOTS_OF_FREE 50000
 
 extern int	errno;
+char	*param();
+static char	*Afs_Cache_Name;
+
+
+#define FS_PROGRAM "/usr/afsws/bin/fs"
+#define FS_COMMAND "getcacheparms"
+#define FS_OUTPUT_FORMAT "\nAFS using %d of the cache's available %d"
+
+/*
+  How much disk space we need to reserve for the AFS cache.  Answer is
+  in kilobytes.
+*/
+int
+reserve_for_afs_cache()
+{
+	int		answer;
+	FILE	*fp;
+	char	cmd[512];
+	int		cache_size, cache_in_use;
+	static int	do_it = -1;
+	char	*str;
+
+		/* See if we're configured to deal with an AFS cache */
+	if( do_it < 0 ) {
+		str = param( "RESERVE_AFS_CACHE" );
+		if( str && (*str == 'T' || *str == 't') ) {
+			do_it = TRUE;
+		} else {
+			do_it = FALSE;
+		}
+	}
+
+		/* If we're not configured to deal with AFS cache, just return 0 */
+	if( !do_it ) {
+		return 0;
+	}
+
+		/* Run an AFS utility program to learn how big the cache is and
+		   how much is in use. */
+	dprintf( D_FULLDEBUG, "Checking AFS cache parameters\n" );
+	sprintf( cmd, "%s %s", FS_PROGRAM, FS_COMMAND );
+	fp = popen( cmd, "r" );
+	fscanf( fp, FS_OUTPUT_FORMAT, &cache_in_use, &cache_size );
+	fclose( fp );
+	dprintf( D_FULLDEBUG, "cache_in_use = %d, cache_size = %d\n",
+		cache_in_use,
+		cache_size
+	);
+	answer = cache_size - cache_in_use;
+
+		/* The cache may be temporarily over size, in this case AFS will
+		   clean up itself, so we don't have to allow for that. */
+	if( answer < 0 ) {
+		answer = 0;
+	}
+
+	dprintf( D_ALWAYS, "Reserving %d kbytes for AFS cache\n", answer );
+	return answer;
+}
+
+/*
+  How much disk space we need to reserve for the regular file system.
+  Answer is in kilobytes.
+*/
+int
+reserve_for_fs()
+{
+	static int	answer = -1;
+	char	*str;
+
+	if( answer < 0 ) {
+		dprintf( D_ALWAYS, "Looking up RESERVED_DISK parameter\n" );
+		str = param( "RESERVED_DISK" );
+		if( str ) {
+			answer = atoi( str ) * 1024;	/* Parameter is in meg */
+		}
+		if( answer < 0 ) {
+			answer = 0;
+		}
+	}
+	dprintf( D_ALWAYS, "Reserving %d kbytes for file system\n", answer );
+	return answer;
+}
+
+
+#if defined(__STDC__)
+int raw_free_fs_blocks( char *filename);
+#else
+int raw_free_fs_blocks();
+#endif
+
+/*
+  Return number of kbytes condor may play with in the named file
+  system.  System administrators may reserve space which condor should
+  leave alone.  This could be either a static amount of space, or an
+  amount of space based on the current size of the AFS cache (or
+  both).
+
+  Note: This code assumes that if we have an AFS cache, that cache is
+  on the filesystem we are asking about.  This is not true in general,
+  but it is the case at the developer's home site.  A more correct
+  implementation would check whether the filesystem being asked about
+  is the one containing the cache.  This is messy to do if the
+  filesystem name we are given isn't a full pathname, e.g.
+  free_fs_blocks("."), which is why it isn't implemented here. -- mike
+*/
+int
+free_fs_blocks(filename)
+char *filename;
+{
+	int		answer;
+	answer =  raw_free_fs_blocks(filename)
+			- reserve_for_afs_cache()
+			- reserve_for_fs();
+	return answer < 0 ? 0 : answer;
+}
 
 #if defined(ULTRIX42) || defined(ULTRIX43)
 int
-free_fs_blocks(filename)
+raw_free_fs_blocks(filename)
 char *filename;
 {
 	struct fs_data statfsbuf;
@@ -87,7 +207,7 @@ char *filename;
 #if defined(VAX) && defined(ULTRIX)
 /* statfs() did not work on our VAX_ULTRIX machine.  use getmnt() instead. */
 int
-free_fs_blocks(filename)
+raw_free_fs_blocks(filename)
 char *filename;
 {
 	struct fs_data mntdata;
@@ -123,7 +243,7 @@ char *filename;
 #endif
 
 int
-free_fs_blocks(filename)
+raw_free_fs_blocks(filename)
 char *filename;
 {
 	struct statfs statfsbuf;
