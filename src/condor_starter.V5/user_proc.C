@@ -769,11 +769,6 @@ UserProc::execute()
 		if( set_root_euid() < 0 ) {
 			EXCEPT( "set_root_euid()" );
 		}
-#if defined(AIX32)
-		if( setuidx( ID_LOGIN, uid ) < 0 ) {
-			EXCEPT( "setuidx(ID_LOGIN,%d)", uid );
-		}
-#endif
 		if( setgid( gid ) < 0 ) {
 			EXCEPT( "setgid(%d)", gid );
 		}
