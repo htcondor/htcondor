@@ -54,6 +54,7 @@ Starter::~Starter()
 	}
 	if( s_pidfamily ) {
 		delete [] s_pidfamily;
+		s_pidfamily = NULL;
 	}
 }
 
@@ -641,6 +642,7 @@ Starter::recompute_pidfamily()
 	s_procfam->takesnapshot();
 	if( s_pidfamily ) {
 		delete [] s_pidfamily;
+		s_pidfamily = NULL;
 	}
 	s_family_size = s_procfam->currentfamily( s_pidfamily );
 }
