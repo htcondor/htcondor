@@ -320,7 +320,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		// since submittor ads always follow a schedd ad, and a master check is
 		// performed for schedd ads, we don't need a master check in here
 		sprintf (hashString, "< %s , %s >", hk.name, hk.ip_addr);
-		retVal=updateClassAd (ScheddAds, "SubmittorAd  ", clientAd, hk,
+		retVal=updateClassAd (SubmittorAds, "SubmittorAd  ", clientAd, hk,
 							  hashString, insert);
 		break;
 
