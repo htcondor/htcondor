@@ -277,13 +277,13 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 	   * See if machine and job meet each other's requirements, if so
 	   * start the job and tell shadow, otherwise refuse and clean up
 	   */
-	  if(MachineContext->EvalBool("START",job_context,start) == 0)
+	  if(MachineContext->EvalBool(ATTR_REQUIREMENTS,job_context,start) == 0)
 	  {
 	    start = 0;
 	  }
 	  /* fvdl XXX sometimes fails somehow */
 	
-	  if(job_context->EvalBool("Requirements",MachineContext,job_reqs) == 0)
+	  if(job_context->EvalBool(ATTR_REQUIREMENTS,MachineContext,job_reqs) == 0)
 	  {
 	    job_reqs = 0;
 	  }
@@ -389,11 +389,11 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 	resmgr_changestate(rid, JOB_RUNNING);
 	polls = 0;
 	
-	sprintf(tmp,"ClientMachine=\"%s\"",rip->r_clientmachine);
+	sprintf(tmp,"%s=\"%s\"",ATTR_CLIENT_MACHINE, rip->r_clientmachine);
 	(rip->r_context)->Insert(tmp);
 	
 	rip->r_user = strdup(RemoteUser);
-	sprintf(tmp,"RemoteUser=\"%s\"",rip->r_user);
+	sprintf(tmp,"%s=\"%s\"",ATTR_REMOTE_USER, rip->r_user);
 	(rip->r_context)->Insert(tmp);
 	
 	sprintf(tmp,"JobId=\"%s\"",JobId);
@@ -527,17 +527,17 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 	/* Polls = 0; TODO ?*/
 
 	/* PREEMPTION : dhruba */
-	sprintf(tmp,"ClientMachine=\"%s\"",rip->r_clientmachine);
+	sprintf(tmp,"%s=\"%s\"",ATTR_CLIENT_MACHINE, rip->r_clientmachine);
 	(rip->r_context)->Insert(tmp);
 
 	int tempo = (int)time((time_t *)0);
-	sprintf(tmp,"JobStart=%d",tempo);
+	sprintf(tmp,"%s=%d",ATTR_JOB_START, tempo);
 	(rip->r_context)->Insert(tmp);
 
-	sprintf(tmp,"LastPeriodicCkpt=%d",tempo);
+	sprintf(tmp,"%s=%d",ATTR_LAST_PERIODIC_CHECKPOINT, tempo);
 	(rip->r_context)->Insert(tmp);
 
-	sprintf(tmp,"RemoteUser=\"%s\"",rip->r_user);
+	sprintf(tmp,"%s=\"%s\"",ATTR_REMOTE_USER, rip->r_user);
 	(rip->r_context)->Insert(tmp);
 
 	event_timeout();
