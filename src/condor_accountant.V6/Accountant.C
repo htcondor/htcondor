@@ -21,7 +21,7 @@
 Accountant::Accountant(int MaxCustomers, int MaxResources)
   : Customers(MaxCustomers, HashFunc), Resources(MaxResources, HashFunc)
 {
-  HalfLifePeriod=1.5;
+  HalfLifePeriod=600;
   MinPriority=0.5;
   Epsilon=0.001;
   LastUpdateTime=Time::Now();
@@ -29,12 +29,16 @@ Accountant::Accountant(int MaxCustomers, int MaxResources)
 }
 
 //------------------------------------------------------------------
-// Initialize log file
+// Initialize and read configuration parameters
 //------------------------------------------------------------------
 
 void
 Accountant::Initialize() 
 {
+  char* tmp=param("PRIORITY_HALFLIFE");
+  if (tmp) HalfLifePeriod=atoi(tmp);
+  dprintf(D_FULLDEBUG,"Accountant::Initialize - HalfLifePeriod=%f\n",HalfLifePeriod);
+
   LogFileName=param("SPOOL");
   // LogFileName+="/p/condor/workspaces/adiel/local/spool";
   LogFileName+="/Accountant.log";
