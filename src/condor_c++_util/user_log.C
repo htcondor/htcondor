@@ -43,6 +43,7 @@ extern "C" char *get_env_val (const char *);
 
 UserLog::UserLog (const char *owner, const char *file, int c, int p, int s)
 {
+	UserLog();
 	initialize (owner, file, c, p, s);
 }
 
@@ -106,18 +107,18 @@ void UserLog::
 initialize( const char *owner, const char *file, int c, int p, int s )
 {
 	priv_state		priv;
+	int 			fd;
 
 		// Save parameter info
 	path = new char[ strlen(file) + 1 ];
 	strcpy( path, file );
-	cluster = c;
-	proc = p;
-	subproc = s;
 	in_block = FALSE;
 
 	init_user_ids(owner);
 
 	priv = set_user_priv();
+
+	if (fp) fclose(fp);
 
 	if( (fd = open( path, O_CREAT | O_WRONLY, 0664 )) < 0 ) {
 		EXCEPT( "open(%s) failed with errno %d", path, errno );
@@ -136,8 +137,18 @@ initialize( const char *owner, const char *file, int c, int p, int s )
 		// prepare to lock the file
 	lock = new FileLock( fd );
 
+	initialize(c, p, s);
+
 		// get back to whatever UID and GID we started with
 	set_priv(priv);
+}
+
+void UserLog::
+initialize( int c, int p, int s )
+{
+	cluster = c;
+	proc = p;
+	subproc = s;
 }
 
 UserLog::UserLog( )
@@ -164,7 +175,6 @@ UserLog::display()
 	dprintf( D_ALWAYS, "Path = \"%s\"\n", path );
 	dprintf( D_ALWAYS, "Job = %d.%d.%d\n", proc, cluster, subproc );
 	dprintf( D_ALWAYS, "fp = 0x%x\n", fp );
-	dprintf( D_ALWAYS, "fd = %d\n", fd );
 	lock->display();
 	dprintf( D_ALWAYS, "in_block = %s\n", in_block ? "TRUE" : "FALSE" );
 }
@@ -327,20 +337,21 @@ ReadUserLog::
 ReadUserLog ()
 {
 	fp = 0;
-	fd = -1;
 }
 
 
 ReadUserLog::
 ~ReadUserLog ()
 {
-	close (fd);
+	if (fp) fclose(fp);
 }
 
 
 int ReadUserLog::
 initialize (const char *file)
 {	
+	int fd;
+
 	if ((fd = open (file, O_RDONLY, 0)) == -1)
 	{
 		EXCEPT ("open(%s)", file);
