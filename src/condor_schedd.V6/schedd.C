@@ -156,12 +156,17 @@ Scheduler::Scheduler()
 	QueueCleanInterval = 0; JobStartDelay = 0;
 	MaxJobsRunning = 0;
 	JobsStarted = 0;
+	JobsIdle = 0;
 	JobsRunning = 0;
+	SchedUniverseJobsIdle = 0;
+	SchedUniverseJobsRunning = 0;
 	ReservedSwap = 0;
 	SwapSpace = 0;
 
 	ShadowSizeEstimate = 0;
 
+	N_RejectedClusters = 0;
+	N_Owners = 0;
 	LastTimeout = time(NULL);
 	CondorViewHost = NULL;
 	Collector = NULL;
