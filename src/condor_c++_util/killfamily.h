@@ -77,10 +77,6 @@ private:
 
 	priv_state mypriv;
 
-#ifdef WIN32
-	CSysinfo sysinfo;
-#endif
-
 	class a_pid {
 		public:
 			// Constructor - just zero out everything

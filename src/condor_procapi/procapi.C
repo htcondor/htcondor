@@ -27,6 +27,7 @@
 
 HashTable <pid_t, procHashNode *> * ProcAPI::procHash = 
     new HashTable <pid_t, procHashNode *> ( PHBUCKETS, hashFunc );  
+
 #ifndef WIN32
 piPTR ProcAPI::procFamily	= NULL;
 piPTR ProcAPI::allProcInfos = NULL;
@@ -40,6 +41,7 @@ long unsigned ProcAPI::boottime_expiration = 0;
 #include "ntsysinfo.h"
 static CSysinfo ntSysInfo;	// for getting parent pid on NT
 PPERF_DATA_BLOCK ProcAPI::pDataBlock	= NULL;
+ExtArray<HANDLE> ProcAPI::familyHandles;
 struct Offset * ProcAPI::offsets		= NULL;
 #endif // WIN32
 
@@ -2305,7 +2307,7 @@ ProcAPI::getPidFamilyByLogin(const char *searchLogin, pid_t *pidFamily)
 	ASSERT(searchLogin);
 
 	// get a list of all pids on the system
-	num_pids = sysinfo.GetPIDs(pids);
+	num_pids = ntSysInfo.GetPIDs(pids);
 
 	// loop through pids comparing process owner
 	for (int s=0; s<num_pids; s++) {

@@ -30,6 +30,7 @@
 #include "condor_common.h"
 #include "condor_uid.h"
 #include "HashTable.h"
+#include "extArray.h"
 
 #ifndef WIN32 // all the below is for UNIX
 
@@ -469,7 +470,7 @@ class ProcAPI {
   
   static struct Offset *offsets;
   static ExtArray<HANDLE> familyHandles;
-  
+
 #endif // WIN32 poop.
 
   /* Using condor's HashTable template class.  I'm storing a procHashNode, 
