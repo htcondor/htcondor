@@ -125,8 +125,11 @@ int main_init (int argc, char **argv) {
   
     if (argc < 2) Usage();  //  Make sure an input file was specified
 
-	// get dagman job id from argv[0]
-	DAGManJobId = strdup( "(-1.-1)" );
+	// get dagman job id from environment
+	DAGManJobId = getenv( "CONDOR_ID" );
+	if( DAGManJobId == NULL ) {
+		DAGManJobId = strdup( "unknown (requires condor_schedd >= v6.3.1)" );
+	}
   
     //
     // Process command-line arguments
