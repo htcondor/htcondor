@@ -192,6 +192,11 @@ int classad_isinf(double x)
 		return 0;
 	}
 }
+#elif defined (__APPLE_CC__)
+int classad_isinf(double x)
+{
+    return __isinf(x);
+}
 #elif defined (__SVR4) && defined (__sun)
 #include <ieeefp.h>
 int classad_isinf(double x) 
@@ -214,11 +219,7 @@ int classad_isinf(double x)
 #ifdef  __APPLE_CC__
 int classad_isnan(double x)
 {
-    if (x != x) {
-        return 1;
-    } else {
-        return 0;
-    }
+    return __isnan(x);
 }
 #else
 int classad_isnan(double x)
