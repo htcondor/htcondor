@@ -353,6 +353,15 @@ LOCK		= $(LOCAL_DIR)/log
 ##  developers debug any problems you might be having.
 #CREATE_CORE_FILES	= True
 
+##  Condor Glidein downloads binaries from a remote server for the
+##  machines into which you're gliding. This saves you from manually
+##  downloading and installing binaries for every architecture you
+##  might want to glidein to. The default server is one maintained at
+##  The University of Wisconsin. If you don't want to use the UW
+##  server, you can set up your own (it needs to be running a gsiftp
+##  daemon) and change the following values to point to it, instead.
+GLIDEIN_SERVER_NAME = vulture.cs.wisc.edu
+GLIDEIN_SERVER_DIR = /p/condor/public/binaries/glidein
 
 ##--------------------------------------------------------------------
 ##  Settings that control the daemon's debugging output:
