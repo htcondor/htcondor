@@ -1,7 +1,7 @@
 SRC_DIR = $(SRC_TREE)/condor_submit.jim
 CFLAGS = $(STD_C_FLAGS) -DNEW_PROC -I../condor_c++_util
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -I../condor_c++_util -DALLOC_DEBUG
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -I../condor_c++_util -DALLOC_DEBUG -fexternal-templates
 
 LDFLAGS =
 
