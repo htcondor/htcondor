@@ -77,12 +77,18 @@ TEST_SUITE_BASE = test_suite_base
 #define EventdTar
 #endif
 
+#if WANT_DRMAA
+#define DrmaaLibs drmaa
+#else
+#define DrmaaLibs
+#endif
+
 #define Programs \
 		procapi sysapi accountant.V6 ckpt_server \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts startd.V6 StdUnvProgs submit.V6 status.V6 \
 		tools kbdd collector.V6 PvmProgs dagman userlog Eventd \
-		GlobusProgs starter.V6.1 shadow.V6.1 dcskel drmaa c-gahp
+		GlobusProgs starter.V6.1 shadow.V6.1 dcskel c-gahp
 
 #define Libraries \
 		util_lib daemon_client classad c++_util condor_procapi/libprocapi.a \
@@ -90,7 +96,7 @@ TEST_SUITE_BASE = test_suite_base
 		daemon_core.V6 \
 		condor_ckpt_server/ckpt_server_api.a \
 		condor_schedd.V6/libqmgmt.a condor_accountant.V6/libacct.a \
-		StdUnvLibs NetmanLibs chirp
+		StdUnvLibs NetmanLibs chirp DrmaaLibs
 
 #if HAS_STATIC
 #define StaticDirectories \
@@ -237,7 +243,9 @@ object_target(starter.V6.1)
 object_target(shadow.V6.1)
 object_target(c-gahp)
 object_target(dcskel)
+#if WANT_DRMAA
 object_target(drmaa)
+#endif
 object_target(chirp)
 
 object_dir_target(h)
