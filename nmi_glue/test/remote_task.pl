@@ -1,27 +1,26 @@
 #!/usr/bin/perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.1.2.5 2004-06-24 21:33:59 wright Exp $
+# $Id: remote_task.pl,v 1.1.2.6 2004-06-24 23:13:51 wright Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
-# 0 = good
+# 0 = built and passed
 # 1 = build failed
 # 2 = run failed
 # 3 = internal fatal error (a.k.a. die)
 ######################################################################
 
-my $fulltestname = $ARGV[0] || die "Task name not passed as argument!\n";
-
-###
-### We want to re-define die to exit with status 3 !!!!
-###
-
 ######################################################################
-# set up path 
+###### WARNING!!!  The return value of this script has special  ######
+###### meaning, so you can NOT just call die().  you MUST       ######
+###### use the special c_die() method so we return 3!!!!        ######
 ######################################################################
 
-my $BaseDir = $ENV{BASE_DIR} || die "BASE_DIR is not in environment!\n";
-my $SrcDir = $ENV{SRC_DIR} || die "SRC_DIR is not in environment!\n";
+my $fulltestname = $ARGV[0] || c_die("Task name not passed as argument!\n");
+
+my $BaseDir = $ENV{BASE_DIR} || c_die("BASE_DIR is not in environment!\n");
+my $SrcDir = $ENV{SRC_DIR} || c_die("SRC_DIR is not in environment!\n");
+
 
 ######################################################################
 # get the testname and group
@@ -31,7 +30,7 @@ my $SrcDir = $ENV{SRC_DIR} || die "SRC_DIR is not in environment!\n";
 my $compiler = @testinfo[0];
 my $testname = @testinfo[1];
 if( ! $compiler || ! $testname ) {
-    die "Invalid input for compiler/testname\n";
+    c_die("Invalid input for compiler/testname\n");
 }
 print "compiler is $compiler\n";
 print "testname is $testname\n";
@@ -43,7 +42,7 @@ if( ($compiler =~ m/gcc/) || ($compiler =~ m/g\+\+/) ||
 	  ($compiler =~ /f90/) ) {
     $testdir = "condor_test_suite_F.V5";
 } else {
-    die "compiler $compiler is not valid\n";
+    c_die("compiler $compiler is not valid\n");
 }
 
 ######################################################################
@@ -51,10 +50,10 @@ if( ($compiler =~ m/gcc/) || ($compiler =~ m/g\+\+/) ||
 ######################################################################
 
 chdir( "$SrcDir/$testdir/$compiler" ) || 
-    die "Can't chdir($SrcDir/$testdir/$compiler): $!\n";
+    c_die("Can't chdir($SrcDir/$testdir/$compiler): $!\n");
 
 open( TESTBUILD, "make $testname 2>&1 |" ) || 
-    die "Can't run make $testname\n";
+    c_die("Can't run make $testname\n");
 while( <TESTBUILD> ) {
     print $_;
 }
@@ -72,23 +71,23 @@ if( $buildstatus != 0 ) {
 ######################################################################
 
 print "RUNNING $compiler/$testname\n";
-chdir("$SrcDir/$testdir") || die "Can't chdir($SrcDir/$testdir): $!\n";
+chdir("$SrcDir/$testdir") || c_die("Can't chdir($SrcDir/$testdir): $!\n");
 
 system( "make batch_test.pl" );
 if( $? >> 8 ) {
-    die "Can't build batch_test.pl\n";
+    c_die("Can't build batch_test.pl\n");
 }
 system( "make CondorTest.pm" );
 if( $? >> 8 ) {
-    die "Can't build CondorTest.pm\n";
+    c_die("Can't build CondorTest.pm\n");
 }
 system( "make Condor.pm" );
 if( $? >> 8 ) {
-    die "Can't build Condor.pm\n";
+    c_die("Can't build Condor.pm\n");
 }
 
 open(BATCHTEST, "perl ./batch_test.pl -d $compiler -t $testname 2>&1 |" ) || 
-    die "Can't open \"batch_test.pl -d $compiler -t $testname\": $!\n";
+    c_die("Can't open \"batch_test.pl -d $compiler -t $testname\": $!\n");
 while ( <BATCHTEST> ) {
     print $_;
 }
@@ -109,14 +108,14 @@ if( $batchteststatus != 0 ) {
 
 if( ! -d "$BaseDir/results" ) {
     mkdir( "$BaseDir/results" ) || 
-	die "Can't mkdir($BaseDir/results): $!\n";
+	c_die("Can't mkdir($BaseDir/results): $!\n");
 }
 if( ! -d "$BaseDir/results/$compiler" ) {
     mkdir( "$BaseDir/results/$compiler" ) || 
-	die "Can't mkdir($BaseDir/results/$compiler): $!\n";
+	c_die("Can't mkdir($BaseDir/results/$compiler): $!\n");
 }
 chdir( "$SrcDir/$testdir/$compiler" ) || 
-    die "Can't chdir($SrcDir/$testdir/$compiler): $!\n";
+    c_die("Can't chdir($SrcDir/$testdir/$compiler): $!\n");
 
 $copy_failure = 0;
 
@@ -127,7 +126,7 @@ safe_copy( "$testname.run.out", "$BaseDir/results/$compiler" );
 safe_copy( "$testname.cmd.out", "$BaseDir/results/$compiler" );
 
 if( $copy_failure ) {
-    die "Failed to copy some output to results!\n";
+    c_die("Failed to copy some output to results!\n");
 }
 
 exit $teststatus;
@@ -142,4 +141,11 @@ sub safe_copy {
     } else {
 	print "Copied $src to $dest\n";
     }
+}
+
+
+sub c_die {
+    my( $msg ) = @_;
+    print $msg;
+    exit 3;
 }
