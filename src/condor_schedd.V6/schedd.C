@@ -3108,8 +3108,8 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	}
 
 	// stick a CONDOR_ID environment variable in job's environment
-	char condor_id_string[32];
-	snprintf( condor_id_string, 32, "%d.%d", job_id->cluster, job_id->proc );
+	char condor_id_string[64];
+	sprintf( condor_id_string, "%d.%d", job_id->cluster, job_id->proc );
 	AppendEnvVariable( env, "CONDOR_ID", condor_id_string );
 
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_ARGUMENTS,
