@@ -669,9 +669,8 @@ BaseShadow::logTerminateEvent( int exitReason )
 	event.recvd_bytes = bytesSent();
 	event.sent_bytes = bytesReceived();
 
-		// TODO: total sent and recvd
-	event.total_recvd_bytes = bytesSent();
-	event.total_sent_bytes = bytesReceived();
+	event.total_recvd_bytes = prev_run_bytes_recvd + bytesSent();
+	event.total_sent_bytes = prev_run_bytes_sent + bytesReceived();
 	
 	if( exitReason == JOB_COREDUMPED ) {
 		event.setCoreFile( core_file_name );
