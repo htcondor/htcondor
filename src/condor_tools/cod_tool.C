@@ -35,11 +35,11 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_version.h"
-#include "get_full_hostname.h"
 #include "get_daemon_addr.h"
 #include "internet.h"
 #include "daemon.h"
 #include "dc_startd.h"
+#include "dc_collector.h"
 #include "sig_install.h"
 
 
@@ -47,7 +47,7 @@
 int cmd = 0;
 char* addr = NULL;
 char* name = NULL;
-char* pool = NULL;
+DCCollector* pool = NULL;
 char* target = NULL;
 char* my_name = NULL;
 char* claim_id = NULL;
@@ -99,7 +99,7 @@ main( int argc, char *argv[] )
 	
 	parseArgv( argc, argv );
 
-	DCStartd startd( target, pool );
+	DCStartd startd( target, pool ? pool->addr() : NULL );
 
 	if( needs_id ) {
 		assert( claim_id );
@@ -489,9 +489,9 @@ parsePOpt( char* opt, char* arg )
 	}
 
 	if( target == _pool ) {
-		pool = get_full_hostname( (const char *)(arg) );
-		if( !pool ) {
-			fprintf( stderr, "%s: unknown host %s\n", my_name, arg );
+		pool = new DCCollector( arg );
+		if( ! pool->addr() ) {
+			fprintf( stderr, "%s: %s\n", my_name, pool->error() );
 			exit( 1 );
 		}
 	} else {

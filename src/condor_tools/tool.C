@@ -35,8 +35,8 @@
 #include "my_hostname.h"
 #include "get_daemon_addr.h"
 #include "internet.h"
-#include "get_full_hostname.h"
 #include "daemon.h"
+#include "dc_collector.h"
 #include "daemon_types.h"
 #include "sig_install.h"
 #include "command_strings.h"
@@ -55,7 +55,7 @@ int  printAdToFile(ClassAd *ad, char* filename);
 // Global variables
 int cmd = 0;
 daemon_t dt = DT_NONE;
-char* pool = NULL;
+DCCollector* pool = NULL;
 bool fast = false;
 bool full = false;
 int all = 0;
@@ -384,9 +384,10 @@ main( int argc, char *argv[] )
 		case 'p':
 			tmp++;
 			if( tmp && *tmp ) {
-				if( (pool = get_full_hostname((const char *)(*tmp))) == NULL ) {
-					fprintf( stderr, "%s: unknown host %s\n", MyName, *tmp );
-					exit( 1 );	
+				pool = new DCCollector( *tmp );
+				if( ! pool->addr() ) {
+					fprintf( stderr, "%s: %s\n", MyName, pool->error() );
+					exit( 1 );
 				}
 			} else {
 				fprintf( stderr, "ERROR: -pool requires another argument\n" );
@@ -748,7 +749,7 @@ doCommand( char *name )
 
 
 	if( ! addr ) {
-		addr = get_daemon_addr( dt, name, pool );
+		addr = get_daemon_addr( dt, name, pool ? pool->addr() : NULL );
 	}
 	if( ! addr ) {
 		namePrintf( stderr, name, "Can't find address for" );
@@ -1131,12 +1132,12 @@ doSquawkReconnect( char *addr ) {
 		}
 		
 		if ( pool ) delete pool;
-		
-		if( (pool = get_full_hostname((const char *)(tmp))) == NULL ) {
-			fprintf( stderr, "Unknown host %s\n", tmp );
+		pool = new DCCollector( tmp );
+		if( ! pool->addr() ) {
+			fprintf( stderr, "%s\n", pool->error() );
 			return FALSE;
 		} else {
-			printf ( "Using pool %s.\n", tmp );
+			printf ( "Using pool %s.\n", pool->name() );
 		}
 	}
 	
@@ -1172,7 +1173,7 @@ doSquawkReconnect( char *addr ) {
 			dt = DT_MASTER;
 		}
 	}
-	char *tmp = get_daemon_addr( dt, hostname, pool );
+	char *tmp = get_daemon_addr( dt, hostname, pool ? pool->addr() : NULL );
 	if ( !tmp ) {
 		printf ( "Failed to contact daemon.\n" );
 		return FALSE;
