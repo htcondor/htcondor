@@ -48,6 +48,7 @@
 
 #include "mirrorjob.h"
 #include "gt3job.h"
+#include "infnbatchjob.h"
 
 #define QMGMT_TIMEOUT 15
 
@@ -337,6 +338,15 @@ Init()
 	new_type->AdMatchConst = MirrorJobAdConst;
 	new_type->AdMustExpandFunc = MirrorJobAdMustExpand;
 	new_type->CreateFunc = MirrorJobCreate;
+	jobTypes.Append( new_type );
+
+	new_type = new JobType;
+	new_type->Name = strdup( "INFNBatch" );
+	new_type->InitFunc = INFNBatchJobInit;
+	new_type->ReconfigFunc = INFNBatchJobReconfig;
+	new_type->AdMatchConst = INFNBatchJobAdConst;
+	new_type->AdMustExpandFunc = INFNBatchJobAdMustExpand;
+	new_type->CreateFunc = INFNBatchJobCreate;
 	jobTypes.Append( new_type );
 
 	new_type = new JobType;

@@ -1,0 +1,775 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+
+#include "condor_common.h"
+#include "condor_attributes.h"
+#include "condor_debug.h"
+#include "environ.h"  // for Environ object
+#include "condor_string.h"	// for strnewp and friends
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "basename.h"
+#include "condor_ckpt_name.h"
+#include "daemon.h"
+#include "dc_schedd.h"
+
+#include "gridmanager.h"
+#include "infnbatchjob.h"
+#include "condor_config.h"
+
+
+// GridManager job states
+#define GM_INIT					0
+#define GM_REGISTER				1
+#define GM_STDIO_UPDATE			2
+#define GM_UNSUBMITTED			3
+#define GM_SUBMIT				4
+#define GM_SUBMIT_SAVE			5
+#define GM_SUBMITTED			6
+#define GM_DONE_SAVE			7
+#define GM_DONE_COMMIT			8
+#define GM_CANCEL				9
+#define GM_FAILED				10
+#define GM_DELETE				11
+#define GM_CLEAR_REQUEST		12
+#define GM_HOLD					13
+#define GM_PROXY_EXPIRED		14
+#define GM_REFRESH_PROXY		15
+#define GM_START				16
+#define GM_POLL_ACTIVE			17
+
+static char *GMStateNames[] = {
+	"GM_INIT",
+	"GM_REGISTER",
+	"GM_STDIO_UPDATE",
+	"GM_UNSUBMITTED",
+	"GM_SUBMIT",
+	"GM_SUBMIT_SAVE",
+	"GM_SUBMITTED",
+	"GM_DONE_SAVE",
+	"GM_DONE_COMMIT",
+	"GM_CANCEL",
+	"GM_FAILED",
+	"GM_DELETE",
+	"GM_CLEAR_REQUEST",
+	"GM_HOLD",
+	"GM_PROXY_EXPIRED",
+	"GM_REFRESH_PROXY",
+	"GM_START",
+	"GM_POLL_ACTIVE"
+};
+
+#define JOB_STATE_UNKNOWN				-1
+#define JOB_STATE_UNSUBMITTED			UNEXPANDED
+
+// TODO: Let the maximum submit attempts be set in the job ad or, better yet,
+// evalute PeriodicHold expression in job ad.
+#define MAX_SUBMIT_ATTEMPTS	1
+
+#define LOG_GLOBUS_ERROR(func,error) \
+    dprintf(D_ALWAYS, \
+		"(%d.%d) gmState %s, remoteState %d: %s returned error %d\n", \
+        procID.cluster,procID.proc,GMStateNames[gmState],remoteState, \
+        func,error)
+
+
+#define HASH_TABLE_SIZE			500
+
+template class HashTable<HashKey, INFNBatchJob *>;
+template class HashBucket<HashKey, INFNBatchJob *>;
+
+HashTable <HashKey, INFNBatchJob *> INFNBatchJobsById( HASH_TABLE_SIZE,
+													   hashFunction );
+
+
+void INFNBatchJobInit()
+{
+}
+
+void INFNBatchJobReconfig()
+{
+	int tmp_int;
+
+	tmp_int = param_integer( "INFN_JOB_POLL_INTERVAL", 5 * 60 );
+	INFNBatchJob::setPollInterval( tmp_int );
+
+	tmp_int = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT", 5 * 60 );
+	INFNBatchJob::setGahpCallTimeout( tmp_int );
+
+	tmp_int = param_integer("GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT",3);
+	INFNBatchJob::setConnectFailureRetry( tmp_int );
+}
+
+const char *INFNBatchJobAdConst = "JobUniverse =?= 9 && ((JobGridType == \"infn\") =?= True || (JobGridType == \"blah\") =?= True)";
+
+bool INFNBatchJobAdMustExpand( const ClassAd *jobad )
+{
+	int must_expand = 0;
+
+	jobad->LookupBool(ATTR_JOB_MUST_EXPAND, must_expand);
+
+	return must_expand != 0;
+}
+
+BaseJob *INFNBatchJobCreate( ClassAd *jobad )
+{
+	return (BaseJob *)new INFNBatchJob( jobad );
+}
+
+
+int INFNBatchJob::pollInterval = 300;			// default value
+int INFNBatchJob::submitInterval = 300;			// default value
+int INFNBatchJob::gahpCallTimeout = 300;		// default value
+int INFNBatchJob::maxConnectFailures = 3;		// default value
+
+INFNBatchJob::INFNBatchJob( ClassAd *classad )
+	: BaseJob( classad )
+{
+	char buff[4096];
+	char *error_string = NULL;
+	char *gahp_path;
+
+	gahpAd = NULL;
+	gmState = GM_INIT;
+	remoteState = JOB_STATE_UNKNOWN;
+	enteredCurrentGmState = time(NULL);
+	enteredCurrentRemoteState = time(NULL);
+	lastSubmitAttempt = 0;
+	numSubmitAttempts = 0;
+	remoteJobId = NULL;
+	lastPollTime = 0;
+	pollNow = false;
+	gahp = NULL;
+
+	// This is a BaseJob variable. At no time do we want BaseJob mucking
+	// around with job runtime attributes, so set it to false and leave it
+	// that way.
+	calcRuntimeStats = false;
+
+	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
+	// sure it's unset when we start.
+	if ( ad->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
+		UpdateJobAd( ATTR_HOLD_REASON, "UNDEFINED" );
+	}
+
+	buff[0] = '\0';
+	ad->LookupString( "RemoteJobId", buff );
+	if ( buff[0] != '\0' ) {
+		SetRemoteJobId( buff );
+	} else {
+		remoteState = JOB_STATE_UNSUBMITTED;
+	}
+
+	gahp_path = param("BLAH_GAHP");
+	if ( gahp_path == NULL ) {
+		error_string = "BLAH_GAHP not defined";
+		goto error_exit;
+	}
+	gahp = new GahpClient( "BLAH", gahp_path );
+	free( gahp_path );
+
+	gahp->setNotificationTimerId( evaluateStateTid );
+	gahp->setMode( GahpClient::normal );
+	gahp->setTimeout( gahpCallTimeout );
+
+	return;
+
+ error_exit:
+		// We must ensure that the code-path from GM_HOLD doesn't depend
+		// on any initialization that's been skipped.
+	gmState = GM_HOLD;
+	if ( error_string ) {
+		UpdateJobAdString( ATTR_HOLD_REASON, error_string );
+	}
+	return;
+}
+
+INFNBatchJob::~INFNBatchJob()
+{
+	if ( remoteJobId != NULL ) {
+		INFNBatchJobsById.remove( HashKey( remoteJobId ) );
+		free( remoteJobId );
+	}
+	if ( gahpAd ) {
+		delete gahpAd;
+	}
+	if ( gahp != NULL ) {
+		delete gahp;
+	}
+}
+
+void INFNBatchJob::Reconfig()
+{
+	BaseJob::Reconfig();
+	gahp->setTimeout( gahpCallTimeout );
+}
+
+int INFNBatchJob::doEvaluateState()
+{
+	int old_gm_state;
+	int old_remote_state;
+	bool reevaluate_state = true;
+	time_t now;	// make sure you set this before every use!!!
+
+	bool done;
+	int rc;
+
+	daemonCore->Reset_Timer( evaluateStateTid, TIMER_NEVER );
+
+    dprintf(D_ALWAYS,
+			"(%d.%d) doEvaluateState called: gmState %s, remoteState %d\n",
+			procID.cluster,procID.proc,GMStateNames[gmState],remoteState);
+
+	if ( gahp ) {
+		gahp->setMode( GahpClient::normal );
+	}
+
+	do {
+		reevaluate_state = false;
+		old_gm_state = gmState;
+		old_remote_state = remoteState;
+
+		switch ( gmState ) {
+		case GM_INIT: {
+			// This is the state all jobs start in when the GlobusJob object
+			// is first created. Here, we do things that we didn't want to
+			// do in the constructor because they could block (the
+			// constructor is called while we're connected to the schedd).
+			if ( gahp->Startup() == false ) {
+				dprintf( D_ALWAYS, "(%d.%d) Error starting GAHP\n",
+						 procID.cluster, procID.proc );
+
+				UpdateJobAdString( ATTR_HOLD_REASON, "Failed to start GAHP" );
+				gmState = GM_HOLD;
+				break;
+			}
+
+			gmState = GM_START;
+			} break;
+		case GM_START: {
+			// This state is the real start of the state machine, after
+			// one-time initialization has been taken care of.
+			// If we think there's a running jobmanager
+			// out there, we try to register for callbacks (in GM_REGISTER).
+			// The one way jobs can end up back in this state is if we
+			// attempt a restart of a jobmanager only to be told that the
+			// old jobmanager process is still alive.
+			errorString = "";
+			if ( remoteJobId == NULL ) {
+				gmState = GM_CLEAR_REQUEST;
+			} else {
+				gmState = GM_SUBMITTED;
+			}
+			} break;
+		case GM_UNSUBMITTED: {
+			// There are no outstanding remote submissions for this job (if
+			// there is one, we've given up on it).
+			if ( condorState == REMOVED ) {
+				gmState = GM_DELETE;
+			} else if ( condorState == HELD ) {
+				gmState = GM_DELETE;
+				break;
+			} else if ( condorState == COMPLETED ) {
+				gmState = GM_DELETE;
+			} else {
+				gmState = GM_SUBMIT;
+			}
+			} break;
+		case GM_SUBMIT: {
+			// Start a new remote submission for this job.
+			if ( condorState == REMOVED || condorState == HELD ) {
+				gmState = GM_UNSUBMITTED;
+				break;
+			}
+			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
+				UpdateJobAdString( ATTR_HOLD_REASON,
+									"Attempts to submit failed" );
+				gmState = GM_HOLD;
+				break;
+			}
+			now = time(NULL);
+			// After a submit, wait at least submitInterval before trying
+			// another one.
+			if ( now >= lastSubmitAttempt + submitInterval ) {
+				char *job_id_string = NULL;
+				if ( gahpAd == NULL ) {
+					gahpAd = buildSubmitAd();
+				}
+				if ( gahpAd == NULL ) {
+					gmState = GM_HOLD;
+					break;
+				}
+				rc = gahp->blah_job_submit( gahpAd, &job_id_string );
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
+					break;
+				}
+				lastSubmitAttempt = time(NULL);
+				numSubmitAttempts++;
+				if ( rc == GLOBUS_SUCCESS ) {
+					SetRemoteJobId( job_id_string );
+					gmState = GM_SUBMIT_SAVE;
+				} else {
+					// unhandled error
+					dprintf( D_ALWAYS,
+							 "(%d.%d) blah_job_submit() failed: %s\n",
+							 procID.cluster, procID.proc,
+							 gahp->getErrorString() );
+					gmState = GM_UNSUBMITTED;
+					reevaluate_state = true;
+				}
+				if ( job_id_string != NULL ) {
+					free( job_id_string );
+				}
+			} else if ( condorState == REMOVED || condorState == HELD ) {
+				gmState = GM_UNSUBMITTED;
+			} else {
+				unsigned int delay = 0;
+				if ( (lastSubmitAttempt + submitInterval) > now ) {
+					delay = (lastSubmitAttempt + submitInterval) - now;
+				}				
+				daemonCore->Reset_Timer( evaluateStateTid, delay );
+			}
+			} break;
+		case GM_SUBMIT_SAVE: {
+			// Save the job id for a new remote submission.
+			if ( condorState == REMOVED || condorState == HELD ) {
+				gmState = GM_CANCEL;
+			} else {
+				done = requestScheddUpdate( this );
+				if ( !done ) {
+					break;
+				}
+				gmState = GM_SUBMITTED;
+			}
+			} break;
+		case GM_SUBMITTED: {
+			// The job has been submitted. Wait for completion or failure,
+			// and poll the remote schedd occassionally to let it know
+			// we're still alive.
+			if ( condorState == REMOVED || condorState == HELD ) {
+				gmState = GM_CANCEL;
+			} else if ( remoteState == COMPLETED ) {
+				gmState = GM_DONE_SAVE;
+			} else {
+				now = time(NULL);
+				if ( lastPollTime < enteredCurrentGmState ) {
+					lastPollTime = enteredCurrentGmState;
+				}
+				if ( pollNow ) {
+					lastPollTime = 0;
+					pollNow = false;
+				}
+				if ( now >= lastPollTime + pollInterval ) {
+					gmState = GM_POLL_ACTIVE;
+					break;
+				}
+				unsigned int delay = 0;
+				if ( (lastPollTime + pollInterval) > now ) {
+					delay = (lastPollTime + pollInterval) - now;
+				}
+				daemonCore->Reset_Timer( evaluateStateTid, delay );
+			}
+			} break;
+		case GM_POLL_ACTIVE: {
+			ClassAd *status_ad = NULL;
+			rc = gahp->blah_job_status( remoteJobId, &status_ad );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+			if ( rc != GLOBUS_SUCCESS ) {
+				// unhandled error
+				dprintf( D_ALWAYS,
+						 "(%d.%d) blah_job_status() failed: %s\n",
+						 procID.cluster, procID.proc, gahp->getErrorString() );
+				gmState = GM_CANCEL;
+				break;
+			}
+			ProcessRemoteAd( status_ad );
+			delete status_ad;
+			lastPollTime = time(NULL);
+			gmState = GM_SUBMITTED;
+			} break;
+		case GM_DONE_SAVE: {
+			// Report job completion to the schedd.
+			JobTerminated();
+			if ( condorState == COMPLETED ) {
+				done = requestScheddUpdate( this );
+				if ( !done ) {
+					break;
+				}
+			}
+			gmState = GM_DONE_COMMIT;
+			} break;
+		case GM_DONE_COMMIT: {
+			// Tell the remote schedd it can remove the job from the queue.
+
+			// Nothing to do for this job type
+			if ( condorState == COMPLETED || condorState == REMOVED ) {
+				gmState = GM_DELETE;
+			} else {
+				// Clear the contact string here because it may not get
+				// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
+				SetRemoteJobId( NULL );
+				requestScheddUpdate( this );
+				gmState = GM_CLEAR_REQUEST;
+			}
+			} break;
+		case GM_CANCEL: {
+			// We need to cancel the job submission.
+
+			// Should this if-stmt be here? Even if the job is completed,
+			// we may still want to remove it (say if we have trouble
+			// fetching the output files).
+			if ( remoteState != COMPLETED ) {
+				rc = gahp->blah_job_cancel( remoteJobId );
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
+					break;
+				}
+				if ( rc != GLOBUS_SUCCESS ) {
+					// unhandled error
+					dprintf( D_ALWAYS,
+							 "(%d.%d) blah_job_cancel() failed: %s\n",
+							 procID.cluster, procID.proc, gahp->getErrorString() );
+					gmState = GM_CLEAR_REQUEST;
+					break;
+				}
+				SetRemoteJobId( NULL );
+			}
+			if ( condorState == REMOVED ) {
+				gmState = GM_DELETE;
+			} else {
+				gmState = GM_CLEAR_REQUEST;
+			}
+			} break;
+		case GM_DELETE: {
+			// We are done with the job. Propagate any remaining updates
+			// to the schedd, then delete this object.
+			DoneWithJob();
+			// This object will be deleted when the update occurs
+			} break;
+		case GM_CLEAR_REQUEST: {
+			// Remove all knowledge of any previous or present job
+			// submission, in both the gridmanager and the schedd.
+
+			// For now, put problem jobs on hold instead of
+			// forgetting about current submission and trying again.
+			// TODO: Let our action here be dictated by the user preference
+			// expressed in the job ad.
+			if ( remoteJobId != NULL && condorState != REMOVED ) {
+				gmState = GM_HOLD;
+				break;
+			}
+			errorString = "";
+			SetRemoteJobId( NULL );
+			JobIdle();
+			if ( submitLogged ) {
+				JobEvicted();
+			}
+
+			// If there are no updates to be done when we first enter this
+			// state, requestScheddUpdate will return done immediately
+			// and not waste time with a needless connection to the
+			// schedd. If updates need to be made, they won't show up in
+			// schedd_actions after the first pass through this state
+			// because we modified our local variables the first time
+			// through. However, since we registered update events the
+			// first time, requestScheddUpdate won't return done until
+			// they've been committed to the schedd.
+			done = requestScheddUpdate( this );
+			if ( !done ) {
+				break;
+			}
+			submitLogged = false;
+			executeLogged = false;
+			submitFailedLogged = false;
+			terminateLogged = false;
+			abortLogged = false;
+			evictLogged = false;
+			gmState = GM_UNSUBMITTED;
+			remoteState = JOB_STATE_UNSUBMITTED;
+			} break;
+		case GM_HOLD: {
+			// Put the job on hold in the schedd.
+			// TODO: what happens if we learn here that the job is removed?
+
+			// If the condor state is already HELD, then someone already
+			// HELD it, so don't update anything else.
+			if ( condorState != HELD ) {
+
+				// Set the hold reason as best we can
+				// TODO: set the hold reason in a more robust way.
+				char holdReason[1024];
+				holdReason[0] = '\0';
+				holdReason[sizeof(holdReason)-1] = '\0';
+				ad->LookupString( ATTR_HOLD_REASON, holdReason,
+								  sizeof(holdReason) - 1 );
+				if ( holdReason[0] == '\0' && errorString != "" ) {
+					strncpy( holdReason, errorString.Value(),
+							 sizeof(holdReason) - 1 );
+				}
+				if ( holdReason[0] == '\0' ) {
+					strncpy( holdReason, "Unspecified gridmanager error",
+							 sizeof(holdReason) - 1 );
+				}
+
+				JobHeld( holdReason );
+			}
+			gmState = GM_DELETE;
+			} break;
+		default:
+			EXCEPT( "(%d.%d) Unknown gmState %d!", procID.cluster,procID.proc,
+					gmState );
+		}
+
+		if ( gmState != old_gm_state || remoteState != old_remote_state ) {
+			reevaluate_state = true;
+		}
+		if ( remoteState != old_remote_state ) {
+//			dprintf(D_FULLDEBUG, "(%d.%d) remote state change: %s -> %s\n",
+//					procID.cluster, procID.proc,
+//					JobStatusNames(old_remote_state),
+//					JobStatusNames(remoteState));
+			enteredCurrentRemoteState = time(NULL);
+		}
+		if ( gmState != old_gm_state ) {
+			dprintf(D_FULLDEBUG, "(%d.%d) gm state change: %s -> %s\n",
+					procID.cluster, procID.proc, GMStateNames[old_gm_state],
+					GMStateNames[gmState]);
+			enteredCurrentGmState = time(NULL);
+			// If we were waiting for a pending gahp call, we're not
+			// anymore so purge it.
+			if ( gahp ) {
+				gahp->purgePendingRequests();
+			}
+			// If we were calling a gahp func that used gahpAd, we're done
+			// with it now, so free it.
+			if ( gahpAd ) {
+				delete gahpAd;
+				gahpAd = NULL;
+			}
+		}
+
+	} while ( reevaluate_state );
+
+	return TRUE;
+}
+
+void INFNBatchJob::SetRemoteJobId( const char *job_id )
+{
+	if ( remoteJobId != NULL && job_id != NULL &&
+		 strcmp( remoteJobId, job_id ) == 0 ) {
+		return;
+	}
+	if ( remoteJobId != NULL ) {
+		INFNBatchJobsById.remove( HashKey( remoteJobId ) );
+		free( remoteJobId );
+		remoteJobId = NULL;
+		UpdateJobAd("RemoteJobId", "UNDEFINED" );
+	}
+	if ( job_id != NULL ) {
+		remoteJobId = strdup( job_id );
+		INFNBatchJobsById.insert( HashKey( remoteJobId ), this );
+		UpdateJobAdString( "RemoteJobId", job_id );
+	}
+	requestScheddUpdate( this );
+}
+
+void INFNBatchJob::ProcessRemoteAd( ClassAd *remote_ad )
+{
+	int new_remote_state;
+	MyString buff;
+	ExprTree *new_expr, *old_expr;
+
+	int index;
+	const char *attrs_to_copy[] = {
+		ATTR_BYTES_SENT,
+		ATTR_BYTES_RECVD,
+		ATTR_COMPLETION_DATE,
+		ATTR_JOB_RUN_COUNT,
+		ATTR_JOB_START_DATE,
+		ATTR_ON_EXIT_BY_SIGNAL,
+		ATTR_ON_EXIT_SIGNAL,
+		ATTR_ON_EXIT_CODE,
+		ATTR_EXIT_REASON,
+		ATTR_JOB_CURRENT_START_DATE,
+		ATTR_JOB_LOCAL_SYS_CPU,
+		ATTR_JOB_LOCAL_USER_CPU,
+		ATTR_JOB_REMOTE_SYS_CPU,
+		ATTR_JOB_REMOTE_USER_CPU,
+		ATTR_NUM_CKPTS,
+		ATTR_NUM_GLOBUS_SUBMITS,
+		ATTR_NUM_MATCHES,
+		ATTR_NUM_RESTARTS,
+		ATTR_JOB_REMOTE_WALL_CLOCK,
+		ATTR_JOB_CORE_DUMPED,
+		ATTR_EXECUTABLE_SIZE,
+		ATTR_IMAGE_SIZE,
+		NULL };		// list must end with a NULL
+
+	if ( remote_ad == NULL ) {
+		return;
+	}
+
+	dprintf( D_FULLDEBUG, "(%d.%d) ***ProcessRemoteAd\n",
+			 procID.cluster, procID.proc );
+
+	remote_ad->LookupInteger( ATTR_JOB_STATUS, new_remote_state );
+
+	if ( new_remote_state == IDLE ) {
+		JobIdle();
+	}
+	if ( new_remote_state == RUNNING ) {
+		JobRunning();
+	}
+	// If the job has been removed locally, don't propagate a hold from
+	// the remote schedd. 
+	// If HELD is the first job status we get from the remote schedd,
+	// assume that it's an old hold that was also reflected in the local
+	// schedd and has since been released locally (and should be released
+	// remotely as well). This won't always be true, but releasing the
+	// remote job anyway shouldn't cause any major trouble.
+	if ( new_remote_state == HELD && condorState != REMOVED &&
+		 remoteState != JOB_STATE_UNKNOWN ) {
+		char *reason = NULL;
+		int code = 0;
+		int subcode = 0;
+		if ( remote_ad->LookupString( ATTR_HOLD_REASON, &reason ) ) {
+			remote_ad->LookupInteger( ATTR_HOLD_REASON_CODE, code );
+			remote_ad->LookupInteger( ATTR_HOLD_REASON_SUBCODE, subcode );
+			JobHeld( reason, code, subcode );
+			free( reason );
+		} else {
+			JobHeld( "held remotely with no hold reason" );
+		}
+	}
+	remoteState = new_remote_state;
+
+
+	index = -1;
+	while ( attrs_to_copy[++index] != NULL ) {
+		old_expr = ad->Lookup( attrs_to_copy[index] );
+		new_expr = remote_ad->Lookup( attrs_to_copy[index] );
+
+		if ( new_expr != NULL && ( old_expr == NULL || !(*old_expr == *new_expr) ) ) {
+			ad->Insert( new_expr->DeepCopy() );
+		}
+	}
+
+	requestScheddUpdate( this );
+
+	return;
+}
+
+BaseResource *INFNBatchJob::GetResource()
+{
+	return (BaseResource *)NULL;
+}
+
+ClassAd *INFNBatchJob::buildSubmitAd()
+{
+	int now = time(NULL);
+	MyString expr;
+	ClassAd *submit_ad;
+	ExprTree *next_expr;
+
+	int index;
+	const char *attrs_to_copy[] = {
+		ATTR_JOB_CMD,
+		ATTR_JOB_ARGUMENTS,
+		ATTR_JOB_ENVIRONMENT,
+		ATTR_JOB_INPUT,
+		ATTR_JOB_OUTPUT,
+		ATTR_JOB_ERROR,
+//		ATTR_REQUIREMENTS,
+//		ATTR_RANK,
+//		ATTR_OWNER,
+//		ATTR_DISK_USAGE,
+//		ATTR_IMAGE_SIZE,
+//		ATTR_EXECUTABLE_SIZE,
+//		ATTR_MAX_HOSTS,
+//		ATTR_MIN_HOSTS,
+//		ATTR_JOB_PRIO,
+		ATTR_JOB_IWD,
+		NULL };		// list must end with a NULL
+
+	submit_ad = new ClassAd;
+
+	index = -1;
+	while ( attrs_to_copy[++index] != NULL ) {
+		if ( ( next_expr = ad->Lookup( attrs_to_copy[index] ) ) != NULL ) {
+			submit_ad->Insert( next_expr->DeepCopy() );
+		}
+	}
+
+//	submit_ad->Assign( ATTR_JOB_STATUS, IDLE );
+//submit_ad->Assign( ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_VANILLA );
+
+//	submit_ad->Assign( ATTR_Q_DATE, now );
+//	submit_ad->Assign( ATTR_CURRENT_HOSTS, 0 );
+//	submit_ad->Assign( ATTR_COMPLETION_DATE, 0 );
+//	submit_ad->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, (float)0.0 );
+//	submit_ad->Assign( ATTR_JOB_LOCAL_USER_CPU, (float)0.0 );
+//	submit_ad->Assign( ATTR_JOB_LOCAL_SYS_CPU, (float)0.0 );
+//	submit_ad->Assign( ATTR_JOB_REMOTE_USER_CPU, (float)0.0 );
+//	submit_ad->Assign( ATTR_JOB_REMOTE_SYS_CPU, (float)0.0 );
+//	submit_ad->Assign( ATTR_JOB_EXIT_STATUS, 0 );
+//	submit_ad->Assign( ATTR_NUM_CKPTS, 0 );
+//	submit_ad->Assign( ATTR_NUM_RESTARTS, 0 );
+//	submit_ad->Assign( ATTR_NUM_SYSTEM_HOLDS, 0 );
+//	submit_ad->Assign( ATTR_JOB_COMMITTED_TIME, 0 );
+//	submit_ad->Assign( ATTR_TOTAL_SUSPENSIONS, 0 );
+//	submit_ad->Assign( ATTR_LAST_SUSPENSION_TIME, 0 );
+//	submit_ad->Assign( ATTR_CUMULATIVE_SUSPENSION_TIME, 0 );
+//	submit_ad->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
+//	submit_ad->Assign( ATTR_CURRENT_HOSTS, 0 );
+//	submit_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, now  );
+//	submit_ad->Assign( ATTR_JOB_NOTIFICATION, NOTIFY_NEVER );
+//	submit_ad->Assign( ATTR_JOB_LEAVE_IN_QUEUE, true );
+//	submit_ad->Assign( ATTR_SHOULD_TRANSFER_FILES, false );
+
+//	expr.sprintf( "%s = (%s >= %s) =!= True && CurrentTime > %s + %d",
+//				  ATTR_PERIODIC_REMOVE_CHECK, ATTR_STAGE_IN_FINISH,
+//				  ATTR_STAGE_IN_START, ATTR_Q_DATE, 1800 );
+//	submit_ad->Insert( expr.Value() );
+
+	ad->ResetExpr();
+	while ( (next_expr = ad->NextExpr()) != NULL ) {
+		if ( strncmp( ((Variable*)next_expr->LArg())->Name(), "REMOTE_", 7 ) == 0 ) {
+			char *attr_value;
+			MyString buf;
+			next_expr->RArg()->PrintToNewStr(&attr_value);
+			buf.sprintf( "%s = %s", &((Variable*)next_expr->LArg())->Name()[7],
+						 attr_value );
+			submit_ad->Insert( buf.Value() );
+			free(attr_value);
+		}
+	}
+
+
+		// worry about ATTR_JOB_[OUTPUT|ERROR]_ORIG
+
+	return submit_ad;
+}
