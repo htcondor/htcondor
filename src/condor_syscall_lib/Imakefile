@@ -243,10 +243,16 @@ SIMPLE_OBJ = condor_rt0.o extern_path.o xfer_file.o libcondorc++support.a
 SYSCALL_LIB = libcondorsyscall.a
 
 #if DOES_REMOTE_SYSCALLS
-all_target($(SYSCALL_LIB) $(COMPRESS_LIB) receivers.o $(SIMPLE_OBJ) syscall-list libz.a)
+all_target(tmp_dir $(SYSCALL_LIB) $(COMPRESS_LIB) receivers.o $(SIMPLE_OBJ) syscall-list libz.a)
 #else 
-all_target($(SYSCALL_SUPPORT_OBJ) extern_path.o file_stream.o)
+all_target(tmp_dir $(SYSCALL_SUPPORT_OBJ) extern_path.o file_stream.o)
 #endif
+
+TMP_DIR = tmp_dir
+tmp_dir:
+	mkdir tmp_dir; chmod 755 tmp_dir
+clean::
+	/bin/rm -rf tmp_dir
 
 stubs: switches.C senders.C receivers.C
 
