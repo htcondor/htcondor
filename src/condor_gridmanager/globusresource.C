@@ -67,6 +67,7 @@ void GlobusResource::RequestPing( GlobusJob *job )
 bool GlobusResource::RequestSubmit( GlobusJob *job )
 {
 	GlobusJob *jobptr;
+	static int oldSubmitLimit = -1;
 
 	submitsQueued.Rewind();
 	while ( submitsQueued.Next( jobptr ) ) {
@@ -84,10 +85,14 @@ dprintf(D_FULLDEBUG,"*** Job %d.%d already in submitsInProgress\n",job->procID.c
 		}
 	}
 
+		// don't EXCEPT here if submitLimit changed due to a condor_reconfig.
+		// we check against oldSumitLimit to check for this case...
 	if ( submitsInProgress.Length() < submitLimit &&
+		 submitLimit == oldSubmitLimit && 
 		 submitsQueued.Length() > 0 ) {
 		EXCEPT("In GlobusResource for %s, SubmitsQueued is not empty and SubmitsToProgress is not full\n");
 	}
+	oldSubmitLimit = submitLimit;
 	if ( submitsInProgress.Length() < submitLimit ) {
 		submitsInProgress.Append( job );
 dprintf(D_FULLDEBUG,"*** Job %d.%d appended to submitsInProgress\n",job->procID.cluster,job->procID.proc);
