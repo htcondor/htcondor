@@ -462,7 +462,11 @@ static int needs_reopen( int old_flags, int new_flags )
 }
 
 /*
-Create and open a file object from a logical name.  If either the logical name or url are already in the file table AND the file was previously opened with compatible flags, then share the object.  If not, elevate the flags to a common denominator and open a new object suitable for both purposes.
+Create and open a file object from a logical name.  If either the logical
+name or url are already in the file table AND the file was previously
+opened with compatible flags, then share the object.  If not, elevate
+the flags to a common denominator and open a new object suitable for
+both purposes.
 */
 
 CondorFile * CondorFileTable::open_file_unique( char *logical_name, int flags, int mode, int allow_buffer )
@@ -991,6 +995,58 @@ int CondorFileTable::fsync( int fd )
 {
 	if( resume(fd)<0 ) return -1;
 	return pointers[fd]->file->fsync();
+}
+
+int CondorFileTable::fstat( int fd, struct stat *buf)
+{
+	if( resume(fd)<0 ) return -1;
+	return pointers[fd]->file->fstat(buf);
+}
+
+int CondorFileTable::stat( char *name, struct stat *buf)
+{
+	int fd;
+	int scm, oscm;
+	int ret;
+
+	/* See if the file is open, if so, then just do an fstat. If it isn't open
+		then call the normal stat in unmapped mode and hope it gets the right
+		thing */
+	fd = find_logical_name(name);
+	if (fd == -1)
+	{
+		oscm = scm = GetSyscallMode();
+		scm |= SYS_UNMAPPED; /* turn on SYS_UNMAPPED */
+		scm &= ~(SYS_MAPPED); /* turn off SYS_MAPPED */
+		ret = ::stat(name, buf);
+		SetSyscalls(oscm); /* set it back to what it was */
+		
+		return ret;
+	}
+	return fstat(fd, buf);
+}
+
+int CondorFileTable::lstat( char *name, struct stat *buf)
+{
+	int fd;
+	int scm, oscm;
+	int ret;
+
+	/* See if the file is open, if so, then just do an fstat. If it isn't open
+		then call the normal lstat in unmapped mode and hope it gets the right
+		thing */
+	fd = find_logical_name(name);
+	if (fd == -1)
+	{
+		oscm = scm = GetSyscallMode();
+		scm |= SYS_UNMAPPED; /* turn on SYS_UNMAPPED */
+		scm &= ~(SYS_MAPPED); /* turn off SYS_MAPPED */
+		ret = ::lstat(name, buf);
+		SetSyscalls(oscm); /* set it back to what it was */
+		
+		return ret;
+	}
+	return fstat(fd, buf);
 }
 
 /*
