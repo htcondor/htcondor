@@ -1324,6 +1324,14 @@ int pseudo_get_buffer_info( int *blocks_out, int *block_size_out, int *prefetch_
 {
 	int buffer_size=0,block_size=0,blocks=0,prefetch=0;
 
+	/* If this is Linux, the default is to have a 1 MB buffer.
+	   If the user wants to disable it, he/she can do so
+	   by specifying buffer_size=0 in the submit file */
+
+#if defined(LINUX)
+	buffer_size = 1024*1024;
+#endif
+
 	JobAd->LookupInteger(ATTR_BUFFER_SIZE,buffer_size);
 	JobAd->LookupInteger(ATTR_BUFFER_PREFETCH_SIZE,prefetch);
 	JobAd->LookupInteger(ATTR_BUFFER_BLOCK_SIZE,block_size);
