@@ -25,9 +25,9 @@ umask 0022;
 	       "reschedule", "restart", "vacate" );
 @bin_names=( "q", "rm", "submit", "status", "prio", "userprio", 
 		"compile", "history", "config_val" );
+@full_lib_names=( "ld", "libcondorc++support.a", "condor_rt0.o",
+		  "libcondorsyscall.a", "libcondorckpt.a", );
 @sbin_master_names=( "master", "preen" );
-@lib_names=( "c_plus_alloc.o", "condor_rt0.o", "condor_syscall_lib.a",
-	    "libckpt.a", "ld" );
 @perl_scripts=( "sbin/condor_install", "bin/condor_submit_dag" );
 $needs_lock=0;
 $fs_domain="";
@@ -1031,6 +1031,7 @@ sub find_release_dir {
 sub check_release_dir {
     local( $dir ) = @_;
     local( $tmp );
+    local( @lib_names );
     -d $dir || return "";
     -d "$dir/lib" || return "";
     -d "$dir/bin" || return "";
@@ -1042,14 +1043,31 @@ sub check_release_dir {
     -f "$dir/etc/examples/condor_config.submit.generic" || return "";
     -f "$dir/etc/examples/condor_config.root.generic" || return "";
     -f "$dir/etc/examples/condor_config.local.central.manager" || return "";
-    foreach $tmp( @lib_names ) {
-	-f "$dir/lib/$tmp" || return "";
-    }
     foreach $tmp( @bin_names ) {
 	-x "$dir/bin/condor_$tmp" || return "";
     }
     foreach $tmp( @sbin_master_names ) {
 	-x "$dir/sbin/condor_$tmp" || return "";
+    }
+
+    # See if we've got a "clipped" version of condor_compile, in which
+    # case, we don't need anything in lib.
+    $is_clipped=0;
+    open( FOO, "<$dir/bin/condor_compile" ) || return "";
+    while( <FOO> ) {
+	last if $is_clipped;
+	if( /.*clipped.*/ ) {
+	    $is_clipped = 1;
+	}
+    }
+    close( FOO );
+    if( $is_clipped ) {
+        @lib_names=();
+    } else {
+	@lib_names = @full_lib_names;
+    }
+    foreach $tmp( @lib_names ) {
+	-f "$dir/lib/$tmp" || return "";
     }
     return $dir;
 }
