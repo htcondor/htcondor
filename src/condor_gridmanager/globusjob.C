@@ -599,8 +599,10 @@ int GlobusJob::doEvaluateState()
 					gahp.globus_gram_client_job_contact_free( job_contact );
 					gmState = GM_SUBMIT_SAVE;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
-					jmVersion = GRAM_V_1_6;
-					UpdateJobAdInt( ATTR_GLOBUS_GRAM_VERSION, GRAM_V_1_6 );
+					if ( jmVersion == GRAM_V_UNKNOWN ) {
+						jmVersion = GRAM_V_1_6;
+						UpdateJobAdInt( ATTR_GLOBUS_GRAM_VERSION, GRAM_V_1_6 );
+					}
 					callbackRegistered = true;
 					rehashJobContact( this, jobContact, job_contact );
 					jobContact = strdup( job_contact );
