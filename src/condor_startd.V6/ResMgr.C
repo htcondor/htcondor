@@ -306,6 +306,7 @@ ResMgr::buildCpuAttrs( int total, int* type_num_array, bool except )
 					cap->show_totals( D_ALWAYS );
 					dprintf( D_ALWAYS | D_NOHEADER, "\tAvailable:  " );
 					avail.show_totals( D_ALWAYS );
+					delete cap;	// This isn't in our array yet.
 					if( except ) {
 						EXCEPT( "Ran out of system resources" );
 					} else {
