@@ -45,6 +45,7 @@ class ExtArray
 	Element *getarray (void);
 	void resize (int);
 	void fill (Element);
+	void setFiller( Element );
 
   private:
 
@@ -207,5 +208,11 @@ fill (Element elt)
 	filler = elt;
 }
 
+template <class Element>
+void ExtArray<Element>::
+setFiller( Element elt )
+{
+	filler = elt;
+}
 
 #endif//__EXT_ARRAY_H__
