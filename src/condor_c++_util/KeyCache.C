@@ -227,8 +227,7 @@ bool KeyCache::insert(KeyCacheEntry &e) {
 bool KeyCache::lookup(const char *key_id, KeyCacheEntry *&e_ptr) {
 
 	// use a temp pointer so that e_ptr is not modified
-	// if a match is not found, or if the match we found
-	// was expired and we are going to lie.
+	// if a match is not found
 
 	KeyCacheEntry *tmp_ptr = NULL;
 
@@ -236,21 +235,8 @@ bool KeyCache::lookup(const char *key_id, KeyCacheEntry *&e_ptr) {
 	bool res = (key_table->lookup(key_id, tmp_ptr) == 0);
 
 	if (res) {
-		// automatically check the expiration of this session
-
-		// draw the line
-		time_t cutoff_time = time(0);
-
-		if (tmp_ptr && tmp_ptr->expiration() && (tmp_ptr->expiration() < cutoff_time) ) {
-			// session is expired
-			expire(tmp_ptr);
-
-			// now lie and just say we didn't find it!
-			res = false;
-		} else {
-			// hand over the pointer
-			e_ptr = tmp_ptr;
-		}
+		// hand over the pointer
+		e_ptr = tmp_ptr;
 	}
 
 	return res;
@@ -279,7 +265,7 @@ void KeyCache::expire(KeyCacheEntry *e) {
 	char* key_id = strdup (e->id());
 	time_t key_exp = e->expiration();
 
-	dprintf (D_SECURITY, "KEYCACHE: Session %s expired at %s.\n", e->id(), ctime(&key_exp) );
+	dprintf (D_SECURITY, "KEYCACHE: Session %s expired at %s", e->id(), ctime(&key_exp) );
 
 	// remove its reference from the hash table
 	remove(key_id);       // This should do it

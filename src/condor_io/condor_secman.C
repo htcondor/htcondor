@@ -786,6 +786,16 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 		dprintf (D_SECURITY, "SECMAN: using session %s for %s.\n", sid.Value(), keybuf);
 		// we have the session id, now get the session from the cache
 		have_session = session_cache->lookup(sid.Value(), enc_key);
+
+		// check the expiration.
+		time_t cutoff_time = time(0);
+		if (enc_key->expiration() && enc_key->expiration() <= cutoff_time) {
+			session_cache->expire(enc_key);
+			have_session = false;
+			enc_key = NULL;
+		}
+
+
 		if (!have_session) {
 			// the session is no longer in the cache... might as well
 			// delete this mapping to it.  (we could delete them all, but
