@@ -1,3 +1,6 @@
+7/16/99 V6_1-linux-1-branch
+	Branch for porting to new Linuxes (2.2 kernel, etc)
+
 6/16/99 V6_1-pre-merge-V6_1_7
 	The trunk, before merging in the V6_1_6-branch, as tagged at
 	V6_1_7.  The merge was completed at 7:50pm on 6/16/99
