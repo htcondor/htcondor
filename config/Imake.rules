@@ -1,7 +1,7 @@
 #if IS_MIPS_ULTRIX43
-#define IMAKE_FLAGS	-I../../config -Dultrix43a -DTilde=$(TILDE) -s Makefile
+#define IMAKE_FLAGS	-I../../config -Dultrix43a -s Makefile
 #else
-#define IMAKE_FLAGS	-I../../config -DTilde=$(TILDE) -s Makefile
+#define IMAKE_FLAGS	-I../../config -s Makefile
 #endif
 
 /*
