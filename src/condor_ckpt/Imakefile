@@ -25,7 +25,12 @@ ASSEMBLER_OBJ = _longjmp.AIX32.o
 	m4 /usr/include/sys/asdef.s $*.s | as -o $*.o
 #endif
 
+#if IS_R6000_AIX32
+UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o flock.o
+#else
 UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o
+#endif
+
 SRC =	image.C machdep.$(OS).C file_state.C tmp_stack.C syscall_mode.c \
 		local_startup.c fake_remote_syscall.c
 
@@ -36,8 +41,12 @@ OBJ =	image.o machdep.$(OS).o file_state.o tmp_stack.o syscall_mode.o \
 OBJ =	syscall_mode.o
 #endif
 
+#if IS_R6000_AIX32
+RELEASE_OBJ = $(LIB_DIR)/libckpt.a $(LIB_DIR)/c_plus_alloc.o
+#endif
+
 #if DOES_CHECKPOINTING
-	all_target(machdep_test libckpt.a c_plus_alloc.o)
+	all_target(machdep_test libckpt.a c_plus_alloc.o $(RELEASE_OBJ))
 	library_target(libckpt.a,$(OBJ))
 	release_library(libckpt.a,$(RELEASE_DIR)/lib)
 	release_target(c_plus_alloc.o,$(RELEASE_DIR)/lib,OBJECT_MODE)
