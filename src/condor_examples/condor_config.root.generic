@@ -36,6 +36,7 @@ PREEN			= $(SBIN)/condor_preen
 PREEN_ARGS		= -m -r
 SHADOW			= $(SBIN)/condor_shadow
 SHADOW_PVM		= $(SBIN)/condor_shadow.pvm
+SHADOW_GLOBUS		= $(SBIN)/condor_shadow.globus
 PVMD			= $(SBIN)/condor_pvmd
 STARTER			= $(SBIN)/condor_starter
 ALTERNATE_STARTER_1	= $(SBIN)/condor_starter.pvm
