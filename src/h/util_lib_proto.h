@@ -10,7 +10,7 @@ extern "C" {
 #endif
 
 #ifndef __CEXTRACT__
-#if defined(HAS_PROTO) || defined(__STDC__) || defined(__cplusplus)
+#if defined(HAS_PROTO) || defined(__STDC__) || defined(__cplusplus) || !defined(Solaris)
 
 int blankline ( char *str );
 char * gen_ckpt_name ( char *directory, int cluster, int proc, int subproc );
@@ -35,7 +35,7 @@ void ProcessLogging ( int request, int extraInteger );
 void detach ( void );
 int do_connect ( char *host, char *service, u_int port );
 int udp_connect ( char *host, u_int port );
-void dprintf_init ( int fd );
+/* void dprintf_init ( int fd ); change */
 void dprintf ( int flags, char *fmt, ... );
 FILE * debug_lock ( void );
 void debug_unlock ( void );
@@ -111,8 +111,10 @@ int display_proc_short ( PROC *proc );
 char * format_time ( float fp_secs );
 int display_proc_long ( PROC *proc );
 int display_v2_proc_long ( PROC *proc );
-int setegid ( int egid );
-int seteuid ( int euid );
+int setegid ( long int egid );
+/* Solaris specific change ..dhaval 6/27 */
+int seteuid ( long int euid );
+/* Solaris specific change ..dhaval 6/27 */
 
 #if 0
 int setlinebuf ( FILE *fp );

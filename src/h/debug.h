@@ -86,6 +86,14 @@ char	*malloc(), *realloc(), *calloc();
 #endif
 #endif
 
+#if defined(AIX31) || defined(AIX32)
+#define BIN_MAIL "/usr/bin/mail"
+#elif defined(HPUX9)
+#define BIN_MAIL "/usr/ucb/mail"
+#else
+#define BIN_MAIL "/bin/mail"
+#endif
+
 #define D_RUSAGE( flags, ptr ) { \
 	dprintf( flags, "(ptr)->ru_utime = %d.%06d\n", (ptr)->ru_utime.tv_sec, \
 											(ptr)->ru_utime.tv_usec ); \

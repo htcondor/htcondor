@@ -35,8 +35,14 @@
 #include <sys.s>
 #endif
 
-#if !defined(AIX31) && !defined(AIX32)  && !defined(IRIX331)
-#include <syscall.h>
+/* Solaris specific change ..dhaval 6/23
+*/
+#if defined(Solaris)
+#include <sys/syscall.h>
+#endif
+
+#if !defined(AIX31) && !defined(AIX32)  && !defined(IRIX331) && !defined(Solaris) /* Solaris specific change */
+#include <syscall.h> 
 #endif
 
 #if defined(AIX31) || defined(AIX32)

@@ -27,7 +27,7 @@
 ** 
 */ 
 
-#ifndef _POSIX_SOURCE
+#if !defined(_POSIX_SOURCE) &&  !defined(Solaris)/* Pentium Solaris specific change*/
 typedef unsigned short ushort_t;
 typedef unsigned long ulong_t;
 #endif

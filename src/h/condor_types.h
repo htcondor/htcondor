@@ -106,8 +106,8 @@ struct fs_data {
 #endif	/* RUSAGE_SELF */
 
 /* XDR is not POSIX.1 conforming, and requires the following typedefs */
-#ifdef _POSIX_SOURCE
-#if defined(__cplusplus)
+#if defined(_POSIX_SOURCE)
+#if defined(__cplusplus) 
 typedef unsigned int u_int;
 typedef char * caddr_t;
 #endif	/* __cplusplus */
