@@ -82,6 +82,7 @@ public:
 	bool  					invalidateKey(const char * keyid);
 	bool  					invalidateHost(const char * sin);
     void                    invalidateExpiredCache();
+	bool					invalidateByParentAndPid(const char * parent, int pid);
 
 	void					send_invalidate_packet ( char* sinful, char* sessid );
 
@@ -112,9 +113,16 @@ public:
 
 	bool 					sec_copy_attribute( ClassAd &dest, ClassAd &source, const char* attr );
 
+	bool		set_parent_unique_id(const char *v);
+	char*		my_parent_unique_id();
+	char*		my_unique_id();
+
  private:
     void                    remove_commands(KeyCacheEntry * keyEntry);
 
+	static char*		_my_unique_id;
+	static char*		_my_parent_unique_id;
+	static bool			_should_check_env_for_unique_id;
 };
 
 
