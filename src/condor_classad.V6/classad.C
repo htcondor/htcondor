@@ -76,6 +76,7 @@ CopyFrom( const ClassAd &ad )
 			CondorErrMsg = "";
 			return( false );
 		}
+		tree->SetParentScope(this); // ajr
 		attrList[itr->first] = tree;
 	}
 
@@ -512,6 +513,7 @@ Copy( ) const
 			CondorErrMsg = "";
 			return( NULL );
 		}
+		tree->SetParentScope(newAd); // ajr
 		newAd->attrList[itr->first] = tree;
 	}
 	return newAd;
