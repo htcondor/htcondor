@@ -824,11 +824,13 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 	int		i1, i2;
 	double	t1;
 	double 	r1;
+    bool    b1;
 
 	// ensure the operands have arithmetic types
 	if( ( !v1.IsIntegerValue() && !v1.IsRealValue() && !v1.IsAbsoluteTimeValue()
-			&& !v1.IsRelativeTimeValue() ) || ( op!=UNARY_MINUS_OP 
-			&& !v2.IsIntegerValue() && !v2.IsRealValue() 
+			&& !v1.IsRelativeTimeValue() && !v1.IsBooleanValue()) 
+        || ( op!=UNARY_MINUS_OP 
+            && !v2.IsBooleanValue() && !v2.IsIntegerValue() && !v2.IsRealValue()
 			&& !v2.IsAbsoluteTimeValue() && !v2.IsRelativeTimeValue() ) ) {
 		result.SetErrorValue ();
 		return( SIG_CHLD1 | SIG_CHLD2 );
@@ -845,6 +847,8 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 		} else if( v1.IsRelativeTimeValue( t1 ) ) {
 			result.SetRelativeTimeValue( -t1 );
 			return( SIG_CHLD1 );
+        } else if (v1.IsBooleanValue( b1 ) ) {
+            result.SetBooleanValue( !b1 );
 		} else if( v1.IsExceptional() ) {
 			// undefined or error --- same as operand
 			result.CopyFrom( v1 );
@@ -1437,6 +1441,7 @@ coerceToNumber (Value &v1, Value &v2)
 {
 	int	 	i;
 	double 	r;
+    bool    b;
 
 	// either of v1, v2 not numerical?
 	if (v1.IsClassAdValue()   || v2.IsClassAdValue())   
@@ -1449,12 +1454,27 @@ coerceToNumber (Value &v1, Value &v2)
 		return Value::UNDEFINED_VALUE;
 	if (v1.IsErrorValue ()    || v2.IsErrorValue ())    
 		return Value::ERROR_VALUE;
-	if (v1.IsBooleanValue()	  || v2.IsBooleanValue())	
-		return Value::BOOLEAN_VALUE;
 	if (v1.IsAbsoluteTimeValue()||v2.IsAbsoluteTimeValue()) 
 		return Value::ABSOLUTE_TIME_VALUE;
 	if( v1.IsRelativeTimeValue() || v2.IsRelativeTimeValue() )
 		return Value::RELATIVE_TIME_VALUE;
+
+    // promote booleans to integers
+    if (v1.IsBooleanValue(b)) {
+        if (b) {
+            v1.SetIntegerValue(1);
+        } else {
+            v1.SetIntegerValue(0);
+        }
+    }
+
+    if (v2.IsBooleanValue(b)) {
+        if (b) {
+            v2.SetIntegerValue(1);
+        } else {
+            v2.SetIntegerValue(0);
+        }
+    }
 
 	// both v1 and v2 of same numerical type
 	if(v1.IsIntegerValue(i) && v2.IsIntegerValue(i))return Value::INTEGER_VALUE;
