@@ -338,6 +338,15 @@ main(
 #ifdef USE_STRING_SPACE_IN_CLASSADS
 	//classad_string_space.dump();
 #endif
+
+	// Clean up when we're done.
+	for (  int classad_index = 0; 
+		   classad_index < (int) NUMBER_OF_CLASSAD_STRINGS;
+		   classad_index++) {
+		delete classads[classad_index];
+	}
+	delete [] classads;
+
 	return 0;
 }
 
@@ -551,7 +560,5 @@ print_truncated_string(
 		printf("%s", s);
 	}
 	return;
-
-
 }
 
