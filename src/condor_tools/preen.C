@@ -31,7 +31,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "condor_constants.h"
 #include "condor_io.h"
 #include "condor_config.h"
 #include "condor_uid.h"
@@ -42,9 +41,9 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "my_hostname.h"
+#include "get_daemon_addr.h"
 #include "condor_state.h"
 
-extern "C" char *get_startd_addr(const char *);
 State get_machine_state();
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
