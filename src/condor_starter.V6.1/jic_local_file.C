@@ -139,6 +139,10 @@ JICLocalFile::readClassAdFromFile( void )
 	while( line.readLine(fp) ) {
         read_something = true;
 		line.chomp();
+		if( line[0] == '#' ) {
+			dprintf( D_JOB, "IGNORING COMMENT: %s\n", line.GetCStr() );
+			continue;
+		}
 		if( DebugFlags & D_JOB ) {
 			dprintf( D_JOB, "FILE: %s\n", line.GetCStr() );
 		} 
