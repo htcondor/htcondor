@@ -209,7 +209,7 @@ main(
 	ClassAd              **classads;
 	struct parameters    parameters;
 	TestResults          test_results;
-
+	int                  classad_index = 0; 
 	parse_command_line(argc, argv, &parameters);
 
 	if (parameters.verbose) {
@@ -224,7 +224,7 @@ main(
 		test_scanner(&test_results);
 	}
 
-	classads = new (ClassAd *)[NUMBER_OF_CLASSAD_STRINGS];
+	classads = new ClassAd *[NUMBER_OF_CLASSAD_STRINGS];
 
 	printf("\nCreating ClassAds...\n");
 	if (parameters.test_copy_constructor) {
@@ -233,7 +233,7 @@ main(
 	else if (parameters.test_assignment) {
 		printf("(Will test assignment at the same time.)\n");
 	}
-	for (  int classad_index = 0; 
+	for (  classad_index = 0; 
 		   classad_index < (int) NUMBER_OF_CLASSAD_STRINGS;
 		   classad_index++) {
 		ClassAd *original, *duplicate;
@@ -438,7 +438,7 @@ main(
 #endif
 
 	// Clean up when we're done.
-	for (  int classad_index = 0; 
+	for (  classad_index = 0; 
 		   classad_index < (int) NUMBER_OF_CLASSAD_STRINGS;
 		   classad_index++) {
 		delete classads[classad_index];
