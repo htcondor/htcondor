@@ -36,6 +36,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_classad.h"
 #include "../condor_netman/netres.h"
+#include "classadList.h"
 
 enum ScheduledEventType { SHUTDOWN };
 
