@@ -4,6 +4,7 @@
 #include <lmaccess.h>
 #include <lmerr.h>
 #include <lmwksta.h>
+#include <lmapibuf.h>
 
 
 ////
@@ -14,8 +15,8 @@
 
 dynuser::dynuser() {
 	psid =(PSID) &sidBuffer;
-	sidBufferSize = 100;
-	domainBufferSize = 80;
+	sidBufferSize = max_sid_length;
+	domainBufferSize = max_domain_length;
 	logon_token = NULL;
 	accountname = NULL;
 	password = NULL;
@@ -337,6 +338,9 @@ bool dynuser::dump_groups() {
 void dynuser::update_psid() {
 	SID_NAME_USE snu;
 
+	sidBufferSize = max_sid_length;
+	domainBufferSize = max_domain_length;
+
 	if ( !LookupAccountName( 0,				// Domain
 		accountname,						// Acocunt name
 		psid, &sidBufferSize,				// Sid
@@ -395,9 +399,18 @@ bool dynuser::deleteuser(char* username ) {
 	// according to microsoft docs, LsaRemoveAccountRights will remove
 	// the account and all rights if the 3rd param is TRUE, so NetUserDel
 	// doesn't need to be called.
-	if (retval && LsaRemoveAccountRights( hPolicy, psid, 1, 0, 0 ) != STATUS_SUCCESS) {
-		dprintf(D_ALWAYS,"dynuser::deleteuser() LsaRemoveAccountRights failed\n");
-		retval = false;
+	NTSTATUS result;
+	result = LsaRemoveAccountRights( hPolicy, psid, 1, 0, 0 );
+	if (retval && result != STATUS_SUCCESS) {
+        NET_API_STATUS nerr = NetUserDel( NULL, accountname_t );
+        if ( nerr != NERR_Success ) {			
+			dprintf(D_ALWAYS,"dynuser::deleteuser() failed!\n", result);
+			retval = false;
+		} else {
+			dprintf(D_FULLDEBUG,"dynuser::deleteuser() Successfully deleted NT user %s\n", username);
+		}
+	} else {
+		dprintf(D_FULLDEBUG,"dynuser::deleteuser() Successfully removed NT user %s\n", username);
 	}
 
 	LsaClose( hPolicy );
@@ -411,3 +424,86 @@ bool dynuser::deleteuser(char* username ) {
 }
 
 
+// this function will remove all accounts starting with user_prefix
+
+bool dynuser::cleanup_condor_users(char* user_prefix) {
+
+	LPUSER_INFO_10 pBuf = NULL;
+	LPUSER_INFO_10 pTmpBuf;
+	DWORD dwEntriesRead = 0;
+	DWORD dwTotalEntries = 0;
+	DWORD dwResumeHandle = 0;
+	DWORD dwTotalCount = 0;
+	NET_API_STATUS nStatus;
+
+	bool retval = true;
+
+
+    // check for valid user_prefix
+	if (!user_prefix || !*user_prefix) {
+		dprintf(D_ALWAYS,"dynuser::cleanup_condor_users() called with no user_prefix\n");
+		return false;
+	}
+
+	do {
+		nStatus = NetUserEnum(NULL,                     // NULL means local server
+								10,                     // accounts, names, and comments
+								FILTER_NORMAL_ACCOUNT,  // global users
+								(LPBYTE*)&pBuf,
+								MAX_PREFERRED_LENGTH,   // buffer size
+								&dwEntriesRead,
+								&dwTotalEntries,
+								&dwResumeHandle);
+
+		// If the call succeeds,
+		if ((nStatus == NERR_Success) || (nStatus == ERROR_MORE_DATA)) {
+			if ((pTmpBuf = pBuf) != NULL) {
+		
+				// Loop through the entries.
+				for (DWORD i = 0; (i < dwEntriesRead); i++) {
+					assert(pTmpBuf != NULL);
+
+					if (pTmpBuf == NULL) {
+						dprintf(D_ALWAYS,"dynuser::cleanup_condor_users() Access violation\n");
+						retval = false;
+						break;
+					}
+
+					// convert from unicode to ascii
+					char buf[1024]; // this is the max size sprintf will print into anyways
+					wsprintf(buf, "%ws", pTmpBuf->usri10_name);
+
+					
+					if (strnicmp( buf, user_prefix, strlen(user_prefix)) == 0) {
+						dprintf(D_FULLDEBUG,"dynuser::cleanup_condor_users() Found orphaned account: %s\n", buf);
+						{
+							dynuser du;
+							retval = retval && du.deleteuser(buf);
+						}
+					}
+
+					pTmpBuf++;
+					dwTotalCount++;
+				}
+			}
+		} else {
+			dprintf(D_ALWAYS,"dynuser::cleanup_condor_users() Got bad status (%d) from NetUserEnum\n", nStatus);
+			retval = false;
+		}
+
+		// Free the allocated buffer.
+		if (pBuf != NULL) {
+			NetApiBufferFree(pBuf);
+			pBuf = NULL;
+		}
+	} while (nStatus == ERROR_MORE_DATA);
+
+
+	// Check again for allocated memory.
+	if (pBuf != NULL) {
+		NetApiBufferFree(pBuf);
+		pBuf = NULL;
+	}
+
+	return retval;
+}

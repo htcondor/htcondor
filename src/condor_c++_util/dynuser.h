@@ -7,7 +7,7 @@
 #include "ntsecapi.h"
 
 const int max_sid_length = 100;
-const int max_name_length = 100;
+const int max_domain_length = 100;
 
 #ifndef STATUS_SUCCESS 
 #define STATUS_SUCCESS              ((NTSTATUS)0x00000000L) 
@@ -24,6 +24,8 @@ public:
 
 	HANDLE get_token();
 
+    bool cleanup_condor_users(char* user_prefix);
+
 private:
 
 	// SID stuff.  Should be moved to a uid_t structure
@@ -33,7 +35,7 @@ private:
 	char				sidBuffer[max_sid_length];
 	PSID				psid;
 	unsigned long		sidBufferSize;
-	char				domainBuffer[80];
+	char				domainBuffer[max_domain_length];
 	unsigned long		domainBufferSize;
 
 	// End of SID stuff

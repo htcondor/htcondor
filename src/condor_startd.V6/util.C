@@ -59,6 +59,7 @@ cleanup_execute_dir(int pid)
 	char buf[2048];
 
 #if defined(WIN32)
+
 	dynuser nobody_login;
 
 	if( pid ) {
@@ -81,23 +82,15 @@ cleanup_execute_dir(int pid)
 		// get rid of everything in the execute directory
 		Directory dir(exec_path);
 
-		// loop through the subdirs we find, and remove any nobody
-		// accounts left laying about by the starter.
-		const char *curdir = dir.Next();
-		while (curdir) {
-			if ( dir.IsDirectory() && (strncmp(curdir,"dir_",4)==0) ) {
-				sprintf(buf,"condor-run-%s",curdir);
-				if ( nobody_login.deleteuser(buf) ) {
-					dprintf(D_FULLDEBUG,
-						"Removed account %s left by starter\n",buf);
-				}
-			}
-			curdir = dir.Next();
-		}	
+		// remove all users matching this prefix
+		nobody_login.cleanup_condor_users("condor-run-");
+
 		// now that we took care of any old nobody accounts, blow away
 		// everything in the execute directory.
 		dir.Remove_Entire_Directory();
 	}
+
+
 #else
 	if( pid ) {
 		sprintf( buf, "/bin/rm -rf %.256s/dir_%d",
