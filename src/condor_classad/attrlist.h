@@ -10,12 +10,10 @@
 
 #include <stdio.h>
 
-#include "proc_obj.h"
 #include "condor_expressions.h"
 #include "exprtype.h"
 #include "astbase.h"
 
-enum {RANGE, FIXED};			// used by VarTypeTable and Sel_best_mach()
 enum							// various AttrLists
 {
     ATTRLISTENTITY,
@@ -85,7 +83,7 @@ class AttrList : public AttrListAbstract
 		AttrList();							// No associated AttrList list
         AttrList(AttrListList*);			// Associated with AttrList list
         AttrList(FILE *, char *, int &);	// Constructor, read from file.
-		AttrList(ProcObj*);					// create from a proc object
+		AttrList(class ProcObj*);			// create from a proc object
 		AttrList(CONTEXT*);					// create from a CONTEXT
         AttrList(char *, char);				// Constructor, from string.
         AttrList(AttrList&);				// copy constructor

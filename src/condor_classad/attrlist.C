@@ -13,6 +13,7 @@
 # include "except.h"
 # include "astbase.h"
 # include "condor_expressions.h"
+# include "proc_obj.h"
 # include "attrlist.h"
 # include "parser.h"
 
@@ -130,8 +131,7 @@ AttrList::AttrList(FILE *file, char *delimitor, int &isEOF) : AttrListAbstract(A
     char *buffer = new char[buffer_size];
     if(!buffer)
     {
-        cerr << "Warning : you ran out of memory -- quitting !" << endl;
-	exit(1);
+        EXCEPT("Warning : you ran out of memory");
     }
 
     isEOF = 0;
@@ -200,8 +200,7 @@ AttrList::AttrList(FILE *file, char *delimitor, int &isEOF) : AttrListAbstract(A
 	    buffer = new char[buffer_size];
 	    if(!buffer)
 	    {
-	        cerr << "Warning : you ran out of memory -- quitting !" << endl;
-		exit(1);
+        	EXCEPT("Warning : you ran out of memory");
 	    }	    
 	}
 	else
@@ -212,8 +211,7 @@ AttrList::AttrList(FILE *file, char *delimitor, int &isEOF) : AttrListAbstract(A
 			buffer = (char *) realloc(buffer, buffer_size*sizeof(char));
 			if(!buffer)
 			{
-				cerr << "Warning : you ran out of memory -- quitting !" << endl;
-				exit(1);
+        		EXCEPT("Warning : you ran out of memory");
 			}
 	    }
 	    buffer[current] = c;
@@ -247,8 +245,7 @@ AttrList::AttrList(char *AttrList, char delimitor) : AttrListAbstract(ATTRLISTEN
     char *buffer = new char[buffer_size];
     if(!buffer)
     {
-        cerr << "Warning : you ran out of memory -- quitting !" << endl;
-	exit(1);
+		EXCEPT("Warning : you ran out of memory");
     }
     int i=0;
     while(isspace(c = AttrList[i]))
@@ -268,14 +265,12 @@ AttrList::AttrList(char *AttrList, char delimitor) : AttrListAbstract(ATTRLISTEN
 		{
 		    if(tree->MyType() == LX_ERROR)
 		    {
-		        cerr << "Parse error in the input string -- quitting !" << endl;
-			exit(1);
+				EXCEPT("Warning : you ran out of memory");
 		    }
 		}
 		else
 		{
-		    cerr << "Parse error in the input string -- quitting !" << endl;
-		    exit(1);
+			EXCEPT("Parse error in the input string");
 		}
 		Insert(tree);
 		delete tree;
@@ -300,8 +295,7 @@ AttrList::AttrList(char *AttrList, char delimitor) : AttrListAbstract(ATTRLISTEN
 	    buffer = new char[buffer_size];
 	    if(!buffer)
 	    {
-	        cerr << "Warning : you ran out of memory -- quitting !" << endl;
-		exit(1);
+	        EXCEPT("Warning: you ran out of memory");
 	    }	    
 	}
 	else
@@ -312,8 +306,7 @@ AttrList::AttrList(char *AttrList, char delimitor) : AttrListAbstract(ATTRLISTEN
 		buffer = (char *) realloc(buffer, buffer_size*sizeof(char));
 		if(!buffer)
 		{
-		    cerr << "Warning : you ran out of memory -- quitting !" << endl;
-		    exit(1);
+	        EXCEPT("Warning: you ran out of memory");
 		}
 	    }
 	    buffer[current] = c;
@@ -425,8 +418,11 @@ ExprTree* AttrList::ProcToTree(char* var, LexemeType t, int i, float f, char* s)
 	ExprTree*	tmpVarTree;		// Variable node
 	ExprTree*	tmpTree;		// Value tree
 	char*		tmpStr;			// used to add "" to a string
+	char*		tmpVarStr;		// make a copy of "var"
 
-	tmpVarTree = new Variable(var);
+	tmpVarStr = new char[strlen(var)+1];
+	strcpy(tmpVarStr, var);
+	tmpVarTree = new Variable(tmpVarStr);
 	switch(t)
 	{
 		case LX_INTEGER :
@@ -468,7 +464,7 @@ class Stack
 {
 	public :
 
-		Stack();
+		Stack() { top = 0; }
 		~Stack();
 
 		ELEM*	Pop();
@@ -918,18 +914,16 @@ char* AttrList::NextName()
 ////////////////////////////////////////////////////////////////////////////////
 ExprTree* AttrList::Lookup(char* name)
 {
-    AttrListElem* tmpNode;
-    char*	 tmpChar;	// variable name
+    AttrListElem*	tmpNode;
+    char*	 		tmpChar;	// variable name
 
     for(tmpNode = exprList; tmpNode; tmpNode = tmpNode->next)
     {
-	tmpChar = ((Variable*)tmpNode->tree->LArg())->Name();
+		tmpChar = ((Variable*)tmpNode->tree->LArg())->Name();
         if(!strcasecmp(tmpChar, name))
         {
-	    delete []tmpChar;
             return(tmpNode->tree);
         }
-	delete []tmpChar;
     }
     return NULL;
 }
