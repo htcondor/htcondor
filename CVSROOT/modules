@@ -103,6 +103,7 @@ V6_SRC		-a \
 			src/condor_test_suite_C.V5 \
 			src/condor_test_suite_F.V5 \
 			src/condor_tools \
+			src/condor_userlog \
 			src/condor_util_lib \
 			src/condor_dagman \
 			src/condor_eventd \
