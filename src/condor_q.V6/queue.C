@@ -850,10 +850,13 @@ usage (char *myName)
 }
 
 int
-output_sorter( char ** a, char ** b ) {
+output_sorter( const void * va, const void * vb ) {
 
+	char ** a, ** b;
 	int daa, dab, dba, dbb;
 
+	a = ( char ** ) va;
+	b = ( char ** ) vb;
 	if( analyze ) {
 		sscanf( *a, "---\n%d.%d", &daa, &dab );
 		sscanf( *b, "---\n%d.%d", &dba, &dbb );
@@ -886,6 +889,12 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 	the_output = &(*output_buffer)[0];
 	qsort(the_output, output_buffer->getlast()+1, sizeof(char*), output_sorter);
 
+	if( querySchedds ) {
+		printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
+	} else {
+		printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
+				scheddAddr, scheddMachine);	
+	}
 	// Print the output header
 
 	short_header();
