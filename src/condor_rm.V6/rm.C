@@ -155,7 +155,7 @@ main( int argc, char *argv[] )
 				usage();
 			}
 			switch( arg[1] ) {
-			case 'g':
+			case 'd':
 				// dprintf to console
 				Termlog = 1;
 				dprintf_config ("RM", 2 );
