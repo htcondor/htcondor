@@ -20,7 +20,6 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#define _POSIX_SOURCE
 
 #include "condor_common.h"
 #include "condor_constants.h"
@@ -359,10 +358,11 @@ Directory::Remove_Entire_Directory( dir_rempriv_t rem_priv )
 bool 
 Directory::Remove_Entry( const char* name, dir_rempriv_t rem_priv )
 {
-	char	path[_POSIX_PATH_MAX];
-
-	sprintf( path, "%s%c%s", curr_dir, DIR_DELIM_CHAR, name );
-	return do_remove( path, false, rem_priv );
+	MyString path;
+	path = curr_dir;
+	path += DIR_DELIM_CHAR;
+	path += name;
+	return do_remove( path.Value(), false, rem_priv );
 }
 
 bool
@@ -386,7 +386,7 @@ Directory::Remove_Current_File( dir_rempriv_t rem_priv )
 bool 
 Directory::do_remove( const char* path, bool is_curr, dir_rempriv_t rem_priv )
 {
-	char buf[_POSIX_PATH_MAX];
+	MyString buf;
 	bool ret_val = true;
 	bool is_dir = false;
 	priv_state priv;
@@ -408,15 +408,18 @@ Directory::do_remove( const char* path, bool is_curr, dir_rempriv_t rem_priv )
 		int try_2_rc = 0;
 
 #ifdef WIN32
-		sprintf( buf, "rmdir /s /q \"%s\"", path );
+		buf = "rmdir /s /q \"";
+		buf += path;
+		buf += '"';
 #else
-		sprintf( buf, "/bin/rm -rf %s", path );
+		buf = "/bin/rm -rf ";
+		buf += path;
 #endif
 
 #if DEBUG_DIRECTORY_CLASS
-		dprintf(D_ALWAYS,"Directory: about to call %s\n", buf);
+		dprintf(D_ALWAYS,"Directory: about to call %s\n", buf.Value());
 #elif defined( WIN32 )
-		try_1_rc = system( buf );
+		try_1_rc = system( buf.Value() );
 #else
 		try_1_rc = my_spawnl( "/bin/rm", "/bin/rm", "-rf", path, NULL );
 #endif
@@ -461,8 +464,9 @@ Directory::do_remove( const char* path, bool is_curr, dir_rempriv_t rem_priv )
 
 				// Finally, do the work
 #if DEBUG_DIRECTORY_CLASS
-			dprintf(D_ALWAYS,
-				"Directory: with \"owner\" priv about to call %s\n",buf);
+			dprintf( D_ALWAYS,
+					 "Directory: with \"owner\" priv about to call %s\n",
+					 buf.Value() );
 #else
 			try_2_rc = my_spawnl( "/bin/rm", "/bin/rm", "-rf", path, NULL );
 #endif
@@ -486,14 +490,14 @@ Directory::do_remove( const char* path, bool is_curr, dir_rempriv_t rem_priv )
 					 "Removing %s as condor user\n", curr->FullPath() );
 
 #if DEBUG_DIRECTORY_CLASS
-			dprintf(D_ALWAYS,
-				"Directory: with condor priv about to call %s\n",buf);
+			dprintf( D_ALWAYS,
+					 "Directory: with condor priv about to call %s\n",
+					 buf.Value() );
 #elif defined( WIN32 )
-			try_2_rc = system( buf );
+			try_2_rc = system( buf.Value() );
 #else
 			try_2_rc = my_spawnl( "/bin/rm", "/bin/rm", "-rf", path, NULL );
 #endif
-
 			set_priv(priv);
 		}
 
@@ -501,7 +505,7 @@ Directory::do_remove( const char* path, bool is_curr, dir_rempriv_t rem_priv )
 		// the current file is not a directory, just a file	
 
 #if DEBUG_DIRECTORY_CLASS
-		dprintf(D_ALWAYS,"Directory: about to unlink %s\n",buf);
+		dprintf( D_ALWAYS, "Directory: about to unlink %s\n", path );
 #else
 		errno = 0;
 		if ( unlink( path ) < 0 ) {
@@ -570,7 +574,7 @@ Directory::Rewind()
 const char *
 Directory::Next()
 {
-	char path[_POSIX_PATH_MAX];
+	MyString path;
 	bool done = false;
 	Set_Access_Priv();
 	if( curr ) {
@@ -589,8 +593,10 @@ Directory::Next()
 			continue;
 		}
 		if ( dirent->d_name ) {
-			sprintf( path, "%s/%s", curr_dir, dirent->d_name );
-			curr = new StatInfo( path );
+			path = curr_dir;
+			path += DIR_DELIM_CHAR;
+			path += dirent->d_name;
+			curr = new StatInfo( path.Value() );
 			switch( curr->Error() ) {
 			case SINoFile:
 					// This file was deleted, continue with the next file. 
@@ -601,7 +607,7 @@ Directory::Next()
 					// do_stat failed with an error!
 				dprintf( D_ALWAYS,
 						 "Directory:: stat() failed for file %s, errno: %d\n",
-						 path, curr->Errno() );
+						 path.Value(), curr->Errno() );
 				delete curr;
 				curr = NULL;
 				break;
@@ -615,12 +621,14 @@ Directory::Next()
 #else 
 	// Win32
 	int result;
-	sprintf(path,"%s\\*.*",curr_dir);
+	path = curr_dir;
+	path += "\\*.*";
+
 	// do findfirst/findnext until we find a file which
 	// is not "." or ".." or until there are no more files.
 	do {
 		if ( dirp == -1 ) {
-			dirp = _findfirst(path,&filedata);
+			dirp = _findfirst(path.Value(),&filedata);
 			result = dirp;
 		} else {
 			result = _findnext(dirp,&filedata);
