@@ -86,7 +86,7 @@ LINK32=link.exe
 # Name "condor_submit_dag - Win32 Release"
 # Begin Source File
 
-SOURCE=..\src\condor_tools\condor_submit_dag.C
+SOURCE=..\src\condor_dagman\condor_submit_dag.C
 # End Source File
 # Begin Source File
 

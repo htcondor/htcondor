@@ -65,8 +65,6 @@ CLEAN :
 	-@erase "$(INTDIR)\mpi_master_proc.obj"
 	-@erase "$(INTDIR)\NTsenders.obj"
 	-@erase "$(INTDIR)\os_proc.obj"
-	-@erase "$(INTDIR)\parallel_comrade_proc.obj"
-	-@erase "$(INTDIR)\parallel_master_proc.obj"
 	-@erase "$(INTDIR)\script_proc.obj"
 	-@erase "$(INTDIR)\starter_class.obj"
 	-@erase "$(INTDIR)\starter_v61_main.obj"
@@ -103,8 +101,6 @@ LINK32_OBJS= \
 	"$(INTDIR)\mpi_master_proc.obj" \
 	"$(INTDIR)\NTsenders.obj" \
 	"$(INTDIR)\os_proc.obj" \
-	"$(INTDIR)\parallel_comrade_proc.obj" \
-	"$(INTDIR)\parallel_master_proc.obj" \
 	"$(INTDIR)\script_proc.obj" \
 	"$(INTDIR)\starter_class.obj" \
 	"$(INTDIR)\starter_v61_main.obj" \
@@ -160,8 +156,6 @@ CLEAN :
 	-@erase "$(INTDIR)\mpi_master_proc.obj"
 	-@erase "$(INTDIR)\NTsenders.obj"
 	-@erase "$(INTDIR)\os_proc.obj"
-	-@erase "$(INTDIR)\parallel_comrade_proc.obj"
-	-@erase "$(INTDIR)\parallel_master_proc.obj"
 	-@erase "$(INTDIR)\script_proc.obj"
 	-@erase "$(INTDIR)\starter_class.obj"
 	-@erase "$(INTDIR)\starter_v61_main.obj"
@@ -196,8 +190,6 @@ LINK32_OBJS= \
 	"$(INTDIR)\mpi_master_proc.obj" \
 	"$(INTDIR)\NTsenders.obj" \
 	"$(INTDIR)\os_proc.obj" \
-	"$(INTDIR)\parallel_comrade_proc.obj" \
-	"$(INTDIR)\parallel_master_proc.obj" \
 	"$(INTDIR)\script_proc.obj" \
 	"$(INTDIR)\starter_class.obj" \
 	"$(INTDIR)\starter_v61_main.obj" \
@@ -523,18 +515,6 @@ SOURCE=..\src\condor_starter.V6.1\NTsenders.C
 SOURCE=..\src\condor_starter.V6.1\os_proc.C
 
 "$(INTDIR)\os_proc.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-SOURCE=..\src\condor_starter.V6.1\parallel_comrade_proc.C
-
-"$(INTDIR)\parallel_comrade_proc.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-SOURCE=..\src\condor_starter.V6.1\parallel_master_proc.C
-
-"$(INTDIR)\parallel_master_proc.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

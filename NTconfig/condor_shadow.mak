@@ -55,12 +55,9 @@ CLEAN :
 	-@erase "$(INTDIR)\mpiresource.obj"
 	-@erase "$(INTDIR)\mpishadow.obj"
 	-@erase "$(INTDIR)\NTreceivers.obj"
-	-@erase "$(INTDIR)\parallelresource.obj"
-	-@erase "$(INTDIR)\parallelshadow.obj"
 	-@erase "$(INTDIR)\pseudo_ops.obj"
 	-@erase "$(INTDIR)\remoteresource.obj"
 	-@erase "$(INTDIR)\shadow.obj"
-	-@erase "$(INTDIR)\shadow_initializer.obj"
 	-@erase "$(INTDIR)\shadow_user_policy.obj"
 	-@erase "$(INTDIR)\shadow_v61_main.obj"
 	-@erase "$(INTDIR)\vc60.idb"
@@ -84,12 +81,9 @@ LINK32_OBJS= \
 	"$(INTDIR)\mpiresource.obj" \
 	"$(INTDIR)\mpishadow.obj" \
 	"$(INTDIR)\NTreceivers.obj" \
-	"$(INTDIR)\parallelresource.obj" \
-	"$(INTDIR)\parallelshadow.obj" \
 	"$(INTDIR)\pseudo_ops.obj" \
 	"$(INTDIR)\remoteresource.obj" \
 	"$(INTDIR)\shadow.obj" \
-	"$(INTDIR)\shadow_initializer.obj" \
 	"$(INTDIR)\shadow_user_policy.obj" \
 	"$(INTDIR)\shadow_v61_main.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
@@ -132,12 +126,9 @@ CLEAN :
 	-@erase "$(INTDIR)\mpiresource.obj"
 	-@erase "$(INTDIR)\mpishadow.obj"
 	-@erase "$(INTDIR)\NTreceivers.obj"
-	-@erase "$(INTDIR)\parallelresource.obj"
-	-@erase "$(INTDIR)\parallelshadow.obj"
 	-@erase "$(INTDIR)\pseudo_ops.obj"
 	-@erase "$(INTDIR)\remoteresource.obj"
 	-@erase "$(INTDIR)\shadow.obj"
-	-@erase "$(INTDIR)\shadow_initializer.obj"
 	-@erase "$(INTDIR)\shadow_user_policy.obj"
 	-@erase "$(INTDIR)\shadow_v61_main.obj"
 	-@erase "$(INTDIR)\vc60.idb"
@@ -159,12 +150,9 @@ LINK32_OBJS= \
 	"$(INTDIR)\mpiresource.obj" \
 	"$(INTDIR)\mpishadow.obj" \
 	"$(INTDIR)\NTreceivers.obj" \
-	"$(INTDIR)\parallelresource.obj" \
-	"$(INTDIR)\parallelshadow.obj" \
 	"$(INTDIR)\pseudo_ops.obj" \
 	"$(INTDIR)\remoteresource.obj" \
 	"$(INTDIR)\shadow.obj" \
-	"$(INTDIR)\shadow_initializer.obj" \
 	"$(INTDIR)\shadow_user_policy.obj" \
 	"$(INTDIR)\shadow_v61_main.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
@@ -430,18 +418,6 @@ SOURCE=..\src\condor_shadow.V6.1\NTreceivers.C
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_shadow.V6.1\parallelresource.C
-
-"$(INTDIR)\parallelresource.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-SOURCE=..\src\condor_shadow.V6.1\parallelshadow.C
-
-"$(INTDIR)\parallelshadow.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
 SOURCE=..\src\condor_shadow.V6.1\pseudo_ops.C
 
 "$(INTDIR)\pseudo_ops.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
@@ -457,12 +433,6 @@ SOURCE=..\src\condor_shadow.V6.1\remoteresource.C
 SOURCE=..\src\condor_shadow.V6.1\shadow.C
 
 "$(INTDIR)\shadow.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-SOURCE=..\src\condor_shadow.V6.1\shadow_initializer.C
-
-"$(INTDIR)\shadow_initializer.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

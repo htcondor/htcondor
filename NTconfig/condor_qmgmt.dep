@@ -62,6 +62,7 @@
 	
 
 ..\src\condor_schedd.V6\qmgr_lib_support.C : \
+	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -71,6 +72,7 @@
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
 	"..\src\condor_daemon_client\daemon.h"\
 	"..\src\condor_daemon_client\daemon_types.h"\
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\

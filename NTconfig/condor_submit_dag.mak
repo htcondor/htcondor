@@ -310,7 +310,7 @@ LINK32_OBJS= \
 
 !ENDIF 
 
-SOURCE=..\src\condor_tools\condor_submit_dag.C
+SOURCE=..\src\condor_dagman\condor_submit_dag.C
 
 "$(INTDIR)\condor_submit_dag.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)

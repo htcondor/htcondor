@@ -88,6 +88,22 @@ LINK32=link.exe
 # Name "condor_gridmanager - Win32 Release"
 # Begin Source File
 
+SOURCE=..\src\condor_gridmanager\basejob.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\basejob.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\baseresource.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\baseresource.h
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_gridmanager\gahp-client.C"
 # End Source File
 # Begin Source File
@@ -121,6 +137,22 @@ SOURCE=..\src\condor_gridmanager\gridmanager.h
 # Begin Source File
 
 SOURCE=..\src\condor_gridmanager\gridmanager_main.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\gt3job.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\gt3job.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\gt3resource.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\gt3resource.h
 # End Source File
 # Begin Source File
 

@@ -72,6 +72,7 @@ CLEAN :
 	-@erase "$(INTDIR)\dc_schedd.obj"
 	-@erase "$(INTDIR)\dc_shadow.obj"
 	-@erase "$(INTDIR)\dc_startd.obj"
+	-@erase "$(INTDIR)\dc_starter.obj"
 	-@erase "$(INTDIR)\directory.obj"
 	-@erase "$(INTDIR)\distribution.obj"
 	-@erase "$(INTDIR)\domain_tools.obj"
@@ -223,7 +224,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\user_job_policy.obj" \
 	"$(INTDIR)\user_log.obj" \
 	"$(INTDIR)\utc_time.obj" \
-	"$(INTDIR)\which.obj"
+	"$(INTDIR)\which.obj" \
+	"$(INTDIR)\dc_starter.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -274,6 +276,7 @@ CLEAN :
 	-@erase "$(INTDIR)\dc_schedd.obj"
 	-@erase "$(INTDIR)\dc_shadow.obj"
 	-@erase "$(INTDIR)\dc_startd.obj"
+	-@erase "$(INTDIR)\dc_starter.obj"
 	-@erase "$(INTDIR)\directory.obj"
 	-@erase "$(INTDIR)\distribution.obj"
 	-@erase "$(INTDIR)\domain_tools.obj"
@@ -424,7 +427,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\user_job_policy.obj" \
 	"$(INTDIR)\user_log.obj" \
 	"$(INTDIR)\utc_time.obj" \
-	"$(INTDIR)\which.obj"
+	"$(INTDIR)\which.obj" \
+	"$(INTDIR)\dc_starter.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -705,6 +709,12 @@ SOURCE=..\src\condor_daemon_client\dc_shadow.C
 SOURCE=..\src\condor_daemon_client\dc_startd.C
 
 "$(INTDIR)\dc_startd.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_daemon_client\dc_starter.C
+
+"$(INTDIR)\dc_starter.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

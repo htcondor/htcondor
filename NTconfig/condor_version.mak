@@ -70,8 +70,8 @@ BSC32_SBRS= \
 LINK32=link.exe
 LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib ../Debug/condor_common.obj ..\Debug\condor_common_c.obj /nologo /subsystem:console /incremental:yes /pdb:"$(OUTDIR)\condor_version.pdb" /debug /machine:I386 /out:"$(OUTDIR)\condor_version.exe" /pdbtype:sept 
 LINK32_OBJS= \
-	"$(INTDIR)\version.obj" \
 	"$(INTDIR)\dc_stub.obj" \
+	"$(INTDIR)\version.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_sysapi.lib" \
@@ -123,8 +123,8 @@ BSC32_SBRS= \
 LINK32=link.exe
 LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib ../Release/condor_common.obj ../Release/condor_common_c.obj /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_version.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_version.exe" 
 LINK32_OBJS= \
-	"$(INTDIR)\version.obj" \
 	"$(INTDIR)\dc_stub.obj" \
+	"$(INTDIR)\version.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_sysapi.lib" \

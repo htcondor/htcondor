@@ -52,6 +52,7 @@ CLEAN :"condor_cpp_util - Win32 DebugCLEAN" "condor_daemon_core - Win32 DebugCLE
 CLEAN :
 !ENDIF 
 	-@erase "$(INTDIR)\dag.obj"
+	-@erase "$(INTDIR)\dagman_commands.obj"
 	-@erase "$(INTDIR)\dagman_instantiate.obj"
 	-@erase "$(INTDIR)\dagman_main.obj"
 	-@erase "$(INTDIR)\dagman_submit.obj"
@@ -81,6 +82,7 @@ LINK32=link.exe
 LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib ../Debug/condor_common.obj ..\Debug\condor_common_c.obj imagehlp.lib /nologo /subsystem:console /incremental:yes /pdb:"$(OUTDIR)\condor_dagman.pdb" /debug /machine:I386 /out:"$(OUTDIR)\condor_dagman.exe" /pdbtype:sept /SWAPRUN:NET 
 LINK32_OBJS= \
 	"$(INTDIR)\dag.obj" \
+	"$(INTDIR)\dagman_commands.obj" \
 	"$(INTDIR)\dagman_instantiate.obj" \
 	"$(INTDIR)\dagman_main.obj" \
 	"$(INTDIR)\dagman_submit.obj" \
@@ -129,6 +131,7 @@ CLEAN :"condor_cpp_util - Win32 ReleaseCLEAN" "condor_daemon_core - Win32 Releas
 CLEAN :
 !ENDIF 
 	-@erase "$(INTDIR)\dag.obj"
+	-@erase "$(INTDIR)\dagman_commands.obj"
 	-@erase "$(INTDIR)\dagman_instantiate.obj"
 	-@erase "$(INTDIR)\dagman_main.obj"
 	-@erase "$(INTDIR)\dagman_submit.obj"
@@ -156,6 +159,7 @@ LINK32=link.exe
 LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib ../Release/condor_common.obj ../Release/condor_common_c.obj imagehlp.lib /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_dagman.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_dagman.exe" /SWAPRUN:NET 
 LINK32_OBJS= \
 	"$(INTDIR)\dag.obj" \
+	"$(INTDIR)\dagman_commands.obj" \
 	"$(INTDIR)\dagman_instantiate.obj" \
 	"$(INTDIR)\dagman_main.obj" \
 	"$(INTDIR)\dagman_submit.obj" \
@@ -409,6 +413,12 @@ LINK32_OBJS= \
 SOURCE=..\src\condor_dagman\dag.C
 
 "$(INTDIR)\dag.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_dagman\dagman_commands.C
+
+"$(INTDIR)\dagman_commands.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
