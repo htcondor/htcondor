@@ -132,7 +132,7 @@ int logfd;		/* The descriptor to use if the log output goes to a tty */
 #if defined(HPUX9)
 			stderr->__fileL = logfd & 0xf0;	/* Low byte of fd */
 			stderr->__fileH = logfd & 0x0f;	/* High byte of fd */
-#elif defined(ULTRIX43) || defined(IRIX331) || defined(Solaris551)
+#elif defined(ULTRIX43) || defined(IRIX331) || defined(Solaris251)
 			((stderr)->_file) = logfd;
 #elif defined(LINUX)
 			stderr->_fileno = logfd;
