@@ -142,9 +142,7 @@ va_dcl
 	struct tm *tm, *localtime();
 	long *clock;
 	int scm;
-#if !defined(OSF1)
 	sigset_t	mask, omask;
-#endif
 	int saved_errno;
 	int	saved_flags;
 
