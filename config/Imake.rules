@@ -331,7 +331,7 @@ $(STATIC_DIR)/##dir##/##dest##: src			@@\
 ** for either purify, or purecoverage.
 ***********************************************************************/
 
-#if IS_SUN4M_SOLARIS251
+#if IS_SUN4X
 
 #define PureCollector concat3(-collector=,CrtLibPath,/ld)
 
