@@ -27,7 +27,10 @@
 /* We need to define _OSF_SOURCE so that type quad, and
    u_int and friends get defined.  We should leave it on since we'll
    need it later as well.*/
+#define _XOPEN_SOURCE_EXTENDED
+#define _XOPEN_SOURCE
 #define _OSF_SOURCE
+
 #endif
 
 #if	defined(ULTRIX43)
@@ -62,7 +65,8 @@ we should use memset().
 #if defined(OSF1)
 #undef FD_ZERO
 #define FD_ZERO(p)     memset((char *)(p), 0, sizeof(*(p)))
-#endif
+
+#endif /* OSF1 */
 
 /*
 Various non-POSIX conforming files which depend on sys/types.h will
