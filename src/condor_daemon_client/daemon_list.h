@@ -107,6 +107,8 @@ class CollectorList : public DaemonList {
 		// based on configruation settings
 	static CollectorList * create();
 
+	static CollectorList * createForNegotiator();
+
 		// Send updates to all the collectors
 		// return - number of successfull updates
 	int sendUpdates (int cmd, ClassAd* ad1, ClassAd* ad2 = NULL);

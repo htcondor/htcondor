@@ -241,7 +241,7 @@ reinitialize ()
 	if (Collectors) {
 		delete Collectors;
 	}
-	Collectors = CollectorList::create();
+	Collectors = CollectorList::createForNegotiator();
 
 	// done
 	return TRUE;

@@ -27,7 +27,7 @@
 #include "condor_string.h"
 #include "daemon_list.h"
 #include "dc_collector.h"
-
+#include "internet.h"
 
 DaemonList::DaemonList()
 {
@@ -168,7 +168,67 @@ CollectorList::create() {
 	return result;
 }
 
+/***
+ * 
+ * This returns the same list as create() but re-orders it to
+ * prioritize the collector that is best suited for the negotiator
+ * running on this machine. This minimizes the delay for fetching
+ * ads from the Collector by the Negotiator, which some people
+ * consider more critical.
+ *
+ ***/
 
+// This
+CollectorList *
+CollectorList::createForNegotiator() {
+
+	CollectorList * collector_list =
+		CollectorList::create();
+
+		// Find the collector in the list that is best suited for 
+		// this host. This is determined either by
+		// a) COLLECTOR_HOST_FOR_NEGOTIATOR = ... in config, or
+        // b) the collector that has the same hostname as this negotiator
+
+	char * collector_for_negotiator = param ("COLLECTOR_HOST_FOR_NEGOTIATOR");
+	if (!collector_for_negotiator) {
+        // figure out our hostname for plan b) above
+		const char * _hostname = my_full_hostname();
+		if ((!_hostname) || !(*_hostname)) {
+				// Can't get our hostname??? fuck off
+			return collector_list;
+		}
+
+		collector_for_negotiator = strdup(_hostname);
+	}
+
+	CollectorList * new_list = new CollectorList();
+	Daemon * daemon = NULL;
+	collector_list->rewind();
+
+		// First, pick out collector(s) that is on this host
+	while (collector_list->next(daemon)) {
+		if (same_host (collector_for_negotiator, 
+					   daemon->fullHostname())) {
+                // This is a match, move it to the new list
+			collector_list->deleteCurrent();
+			new_list->append (daemon);
+		}
+	}
+
+
+
+       // Then add all the other collectors
+	collector_list->rewind();
+	while (collector_list->next(daemon)) {
+		collector_list->deleteCurrent();
+		new_list->append (daemon);
+	}
+
+	free (collector_for_negotiator);
+	delete collector_list;
+	return new_list;
+}
 
 
 int
