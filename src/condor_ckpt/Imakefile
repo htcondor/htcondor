@@ -90,7 +90,7 @@ ASSEMBLER_OBJ = SYSCALL.MIPS.IRIX65.o MMAP.MIPS.IRIX65.o
 #if IS_SGI_IRIX62
 ASSEMBLER_OBJ = SYSCALL.MIPS.IRIX62.o MMAP.MIPS.IRIX62.o
 .s.o:
-	gas $(STD_C_FLAGS) -o $*.o $*.s
+	gas -o $*.o $*.s
 #endif
 
 CPP_UTIL_OBJ = condor_version.o
