@@ -63,7 +63,7 @@ use Archive::Tar;
 ######################################################################
 
 # These are the modules you actually want to build.
-@modules = ( "condor", "smp_startd", "view_server", "ckpt_server", "pvm" );
+@modules = ( "condor", "smp_startd", "view_server", "ckpt_server", "pvm", "mpi" );
 #@modules = ( "smp_startd", "view_server", "ckpt_server", "pvm" );
 #@modules = ( "condor" );
 
@@ -96,6 +96,7 @@ use Archive::Tar;
   "dagman"        => "DagMan contrib module",
   "pvm"           => "PVM contrib module",
   "ckpt_server"   => "Checkpoint Server contrib module",
+  "mpi"           => "MPI contrib module"
 );	   
 
 ######################################################################
