@@ -156,7 +156,7 @@ my_daemon_name( const char* subsys )
 
 char*
 real_get_daemon_addr( const char* constraint_attr, 
-				 const char* name, AdTypes adtype,
+				 const char* name, CondorAdType adtype,
 				 const char* attribute, const char* subsys, 
 				 const char* pool )
 {
@@ -203,21 +203,19 @@ real_get_daemon_addr( const char* constraint_attr,
 		}
 	}
 
-	CondorQuery			query(adtype);
-	ClassAd*			scan;
-	ClassAdList			ads;
+	CondorQuery	query(adtype);
+	ExprTree*	scan;
+	ExprList	adList;
+	ClassAd*	ad;
+	Value		val;
+	int			alen;
 
-	sprintf(constraint, "%s == \"%s\"", constraint_attr, fullname ); 
-	query.addConstraint(constraint);
-	query.fetchAds(ads, pool);
-	ads.Open();
-	scan = ads.Next();
-	if(!scan)
-	{
-		return NULL; 
-	}
-	if(scan->EvalString(attribute, NULL, daemonAddr) == FALSE)
-	{
+	sprintf( constraint, "%s == \"%s\"", constraint_attr, fullname ); 
+	query.addConstraint( constraint );
+	query.fetchAds( adList, pool );
+	scan = adList.Next();
+	if( !scan || !scan->Evaluate( val ) || !val.IsClassAdValue( ad ) ||
+		!ad->EvaluateAttrString( attribute, daemonAddr, 100, alen ) ) {
 		return NULL; 
 	}
 	return daemonAddr;
@@ -227,7 +225,7 @@ real_get_daemon_addr( const char* constraint_attr,
 char*
 get_schedd_addr(const char* name, const char* pool)
 {
-	return real_get_daemon_addr( ATTR_NAME, name, SCHEDD_AD, 
+	return real_get_daemon_addr( ATTR_NAME, name, SCHEDD_ADTYPE, 
 								 ATTR_SCHEDD_IP_ADDR, "SCHEDD", pool );
 } 
 
@@ -243,7 +241,7 @@ get_startd_addr(const char* name, const char* pool)
 char*
 get_master_addr(const char* name, const char* pool)
 {
-	return real_get_daemon_addr( ATTR_NAME, name, MASTER_AD, 
+	return real_get_daemon_addr( ATTR_NAME, name, MASTER_ADTYPE, 
 								 ATTR_MASTER_IP_ADDR, "MASTER", pool );
 } 
 
