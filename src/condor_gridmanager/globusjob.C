@@ -118,7 +118,7 @@ const char *rsl_stringify( const MyString& src )
 		var_pos1 = src.find( "$(", src_pos );
 		var_pos2 = var_pos1 == -1 ? -1 : src.find( ")", var_pos1 );
 		quote_pos = src.find( "'", src_pos );
-		if ( var_pos1 == -1 && var_pos2 == -1 && quote_pos == -1 ) {
+		if ( var_pos2 == -1 && quote_pos == -1 ) {
 			dst += "'";
 			dst += src.Substr( src_pos, src.Length() - 1 );
 			dst += "'";
@@ -244,7 +244,8 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	if ( buff[0] != '\0' && strcmp( buff, NULL_JOB_CONTACT ) != 0 ) {
 		if ( jmVersion == GRAM_V_UNKNOWN ) {
 			dprintf(D_ALWAYS,
-					"Non-NULL contact string and unknown gram version!\n");
+					"(%d.%d) Non-NULL contact string and unknown gram version!\n",
+					procID.cluster, procID.proc);
 		}
 		rehashJobContact( this, jobContact, buff );
 		jobContact = strdup( buff );
@@ -409,6 +410,7 @@ int GlobusJob::doEvaluateState()
 			// The one way jobs can end up back in this state is if we
 			// attempt a restart of a jobmanager only to be told that the
 			// old jobmanager process is still alive.
+			errorString = "";
 			if ( resourceStateKnown == false ) {
 				break;
 			}
@@ -439,8 +441,9 @@ int GlobusJob::doEvaluateState()
 						// NOTE: This means that if you upgrade from v6.4.x 
 						// Condor-G to v6.5.x Condor-G, you had better
 						// remove all jobs from the queue first!
-					dprintf(D_ALWAYS,"Bad GRAM version %d in GM_INIT!\n",
-							jmVersion);
+					dprintf(D_ALWAYS,
+							"(%d.%d) Bad GRAM version %d in GM_INIT!\n",
+							procID.cluster, procID.proc,jmVersion);
 					gmState = GM_HOLD;
 				}
 			}
@@ -560,6 +563,10 @@ int GlobusJob::doEvaluateState()
 				if ( RSL == NULL ) {
 					RSL = buildSubmitRSL();
 				}
+				if ( RSL == NULL ) {
+					gmState = GM_HOLD;
+					break;
+				}
 				rc = gahp.globus_gram_client_job_request( 
 										myResource->ResourceName(),
 										RSL->Value(),
@@ -592,8 +599,8 @@ int GlobusJob::doEvaluateState()
 					gahp.globus_gram_client_job_contact_free( job_contact );
 					gmState = GM_SUBMIT_SAVE;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
-					jmVersion = GRAM_V_1_5;
-					UpdateJobAdInt( ATTR_GLOBUS_GRAM_VERSION, GRAM_V_1_5 );
+					jmVersion = GRAM_V_1_6;
+					UpdateJobAdInt( ATTR_GLOBUS_GRAM_VERSION, GRAM_V_1_6 );
 					callbackRegistered = true;
 					rehashJobContact( this, jobContact, job_contact );
 					jobContact = strdup( job_contact );
@@ -601,10 +608,24 @@ int GlobusJob::doEvaluateState()
 									   job_contact );
 					gahp.globus_gram_client_job_contact_free( job_contact );
 					gmState = GM_SUBMIT_SAVE;
+				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_RSL_EVALUATION_FAILED &&
+							(jmVersion == GRAM_V_UNKNOWN || jmVersion >= GRAM_V_1_6) ) {
+					dprintf(D_ALWAYS,
+							"(%d.%d) gram request failed, will retry with older format\n",
+							procID.cluster, procID.proc);
+					jmVersion = GRAM_V_1_5;
+					UpdateJobAdInt( ATTR_GLOBUS_GRAM_VERSION, GRAM_V_1_5 );
+					// TODO Should we be changing these?
+					numSubmitAttempts--;
+					lastSubmitAttempt = 0;
+					delete RSL;
+					RSL = NULL;
+					reevaluate_state = true;
 				} else {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
-					dprintf(D_ALWAYS,"    RSL='%s'\n", RSL->Value());
+					dprintf(D_ALWAYS,"(%d.%d)    RSL='%s'\n",
+							procID.cluster, procID.proc,RSL->Value());
 					submitFailureCode = globusError = rc;
 					WriteGlobusSubmitFailedEventToUserLog( ad,
 														   submitFailureCode );
@@ -757,14 +778,17 @@ int GlobusJob::doEvaluateState()
 				} else if ( rc ==  GLOBUS_GRAM_PROTOCOL_ERROR_STDIO_SIZE ) {
 					globusError = rc;
 					gmState = GM_STOP_AND_RESTART;
-					dprintf( D_FULLDEBUG, "Requesting jobmanager restart because of GLOBUS_GRAM_PROTOCOL_ERROR_STDIO_SIZE\n" );
-					dprintf( D_FULLDEBUG, "output_size = %d, error_size = %d\n", output_size, error_size );
+					dprintf( D_FULLDEBUG, "(%d.%d) Requesting jobmanager restart because of GLOBUS_GRAM_PROTOCOL_ERROR_STDIO_SIZE\n",
+							 procID.cluster, procID.proc);
+					dprintf( D_FULLDEBUG, "(%d.%d) output_size = %d, error_size = %d\n",
+							 procID.cluster, procID.proc,output_size, error_size );
 				} else {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(STDIO_SIZE)", rc );
 					globusError = rc;
 					gmState = GM_STOP_AND_RESTART;
-					dprintf( D_FULLDEBUG, "Requesting jobmanager restart because of unknown error\n" );
+					dprintf( D_FULLDEBUG, "(%d.%d) Requesting jobmanager restart because of unknown error\n",
+							 procID.cluster, procID.proc);
 				}
 			}
 			} break;
@@ -843,9 +867,9 @@ int GlobusJob::doEvaluateState()
 			if ( jobContact == NULL ) {
 				gmState = GM_CLEAR_REQUEST;
 			} else if ( globusError != 0 && globusError == lastRestartReason ) {
-				dprintf( D_FULLDEBUG, "Restarting jobmanager for same reason "
+				dprintf( D_FULLDEBUG, "(%d.%d) Restarting jobmanager for same reason "
 						 "two times in a row: %d, aborting request\n",
-						 globusError );
+						 procID.cluster, procID.proc,globusError );
 				gmState = GM_CLEAR_REQUEST;
 			} else if ( now < lastRestartAttempt + restartInterval ) {
 				// After a restart, wait at least restartInterval before
@@ -1174,7 +1198,8 @@ int GlobusJob::doEvaluateState()
 			} else {
 				// unhandled error
 				LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
-				dprintf(D_ALWAYS,"    RSL='%s'\n", cleanup_rsl);
+				dprintf(D_ALWAYS,"(%d.%d)    RSL='%s'\n",
+						procID.cluster, procID.proc,cleanup_rsl);
 				globusError = rc;
 				gmState = GM_CLEAR_REQUEST;
 			}
@@ -1197,7 +1222,7 @@ int GlobusJob::doEvaluateState()
 			if ( wantResubmit ) {
 				wantResubmit = 0;
 				dprintf(D_ALWAYS,
-					"(%d.%d) Resubmitting to Globus because %s==TRUE\n",
+						"(%d.%d) Resubmitting to Globus because %s==TRUE\n",
 						procID.cluster, procID.proc, ATTR_GLOBUS_RESUBMIT_CHECK );
 			}
 			if ( doResubmit ) {
@@ -1217,6 +1242,7 @@ int GlobusJob::doEvaluateState()
 			lastRestartReason = 0;
 			numRestartAttemptsThisSubmit = 0;
 			jmVersion = GRAM_V_UNKNOWN;
+			errorString = "";
 			ClearCallbacks();
 			if ( jobContact != NULL ) {
 				rehashJobContact( this, jobContact, NULL );
@@ -1295,6 +1321,10 @@ int GlobusJob::doEvaluateState()
 			holdReason[sizeof(holdReason)-1] = '\0';
 			ad->LookupString( ATTR_HOLD_REASON, holdReason,
 							  sizeof(holdReason) - 1 );
+			if ( holdReason[0] == '\0' && errorString != "" ) {
+				strncpy( holdReason, errorString.Value(),
+						 sizeof(holdReason) - 1 );
+			}
 			if ( holdReason[0] == '\0' && globusStateErrorCode != 0 ) {
 				snprintf( holdReason, 1024, "Globus error %d: %s",
 						  globusStateErrorCode,
@@ -1305,7 +1335,8 @@ int GlobusJob::doEvaluateState()
 						gahp.globus_gram_client_error_string( globusError ) );
 			}
 			if ( holdReason[0] == '\0' ) {
-				strcpy( holdReason, "Unspecified gridmanager error" );
+				strncpy( holdReason, "Unspecified gridmanager error",
+						 sizeof(holdReason) - 1 );
 			}
 			UpdateJobAdString( ATTR_HOLD_REASON, holdReason );
 			addScheddUpdateAction( this, schedd_actions, GM_HOLD );
@@ -1662,11 +1693,22 @@ MyString *GlobusJob::buildSubmitRSL()
 		attr_value = NULL;
 	}
 
+	//Start off the RSL
+	rsl->sprintf( "&(rsl_substitution=(GRIDMANAGER_GASS_URL %s))",
+				  gassServerUrl );
+
+	//This is the ugly hack to determine if the jobmanager is pre-gram 1.6.
+	//This attribute will cause an error in older jobmanagers. It will be
+	//over-ridden by the real executable attribute in later jobmanagers.
+	if ( jmVersion == GRAM_V_UNKNOWN || jmVersion >= GRAM_V_1_6 ) {
+		*rsl += "(executable=$(GLOBUS_CACHED_STDOUT))";
+	}
+
 	//We're assuming all job clasads have a command attribute
 	ad->LookupString( ATTR_JOB_CMD, &attr_value );
-	*rsl += "&(executable=";
+	*rsl += "(executable=";
 	if ( !ad->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer ) || transfer ) {
-		buff = gassServerUrl;
+		buff = "$(GRIDMANAGER_GASS_URL)";
 		if ( attr_value[0] != '/' ) {
 			buff += iwd;
 		}
@@ -1681,6 +1723,11 @@ MyString *GlobusJob::buildSubmitRSL()
 	if ( ad->LookupString(ATTR_JOB_REMOTE_IWD, &attr_value) && *attr_value ) {
 		*rsl += ")(directory=";
 		*rsl += rsl_stringify( attr_value );
+	} else if ( jmVersion == GRAM_V_UNKNOWN || jmVersion >= GRAM_V_1_6 ) {
+		// The user didn't specify a remote IWD, so tell the jobmanager to
+		// create a scratch directory in its default location and make that
+		// the remote IWD.
+		*rsl += ")(scratchdir='')(directory=$(SCRATCH_DIRECTORY)";
 	}
 	if ( attr_value != NULL ) {
 		free( attr_value );
@@ -1700,7 +1747,7 @@ MyString *GlobusJob::buildSubmitRSL()
 		 strcmp( attr_value, NULL_FILE ) ) {
 		*rsl += ")(stdin=";
 		if ( !ad->LookupBool( ATTR_TRANSFER_INPUT, transfer ) || transfer ) {
-			buff = gassServerUrl;
+			buff = "$(GRIDMANAGER_GASS_URL)";
 			if ( attr_value[0] != '/' ) {
 				buff += iwd;
 			}
@@ -1717,7 +1764,7 @@ MyString *GlobusJob::buildSubmitRSL()
 
 	if ( localOutput != NULL ) {
 		*rsl += ")(stdout=";
-		buff.sprintf( "%s%s", gassServerUrl, localOutput );
+		buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localOutput );
 		*rsl += rsl_stringify( buff.Value() );
 	} else {
 		if ( ad->LookupString(ATTR_JOB_OUTPUT, &attr_value) && *attr_value &&
@@ -1733,7 +1780,7 @@ MyString *GlobusJob::buildSubmitRSL()
 
 	if ( localError != NULL ) {
 		*rsl += ")(stderr=";
-		buff.sprintf( "%s%s", gassServerUrl, localError );
+		buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localError );
 		*rsl += rsl_stringify( buff.Value() );
 	} else {
 		if ( ad->LookupString(ATTR_JOB_ERROR, &attr_value) && *attr_value &&
@@ -1745,6 +1792,80 @@ MyString *GlobusJob::buildSubmitRSL()
 			free( attr_value );
 			attr_value = NULL;
 		}
+	}
+
+	if ( ad->LookupString(ATTR_TRANSFER_INPUT_FILES, &attr_value) &&
+		 *attr_value ) {
+		if ( jmVersion < GRAM_V_1_6 && jmVersion != GRAM_V_UNKNOWN ) {
+			// the jobmanager doesn't support file transfers.
+			dprintf(D_ALWAYS,
+					"(%d.%d) jobmanager doesn't support file transfer\n",
+					procID.cluster, procID.proc );
+			free( attr_value );
+			delete rsl;
+			errorString = "Remote jobmanager doesn't support file transfer";
+			return NULL;
+		}
+		StringList filelist( attr_value, "," );
+		if ( !filelist.isEmpty() ) {
+			char *filename;
+			*rsl += ")(file_stage_in=";
+			filelist.rewind();
+			while ( (filename = filelist.next()) != NULL ) {
+				// append file pairs to rsl
+				*rsl += '(';
+				buff = "$(GRIDMANAGER_GASS_URL)";
+				if ( filename[0] != '/' ) {
+					buff += iwd;
+				}
+				buff += filename;
+				*rsl += rsl_stringify( buff );
+				*rsl += ' ';
+				*rsl += rsl_stringify( basename( filename ) );
+				*rsl += ')';
+			}
+		}
+	}
+	if ( attr_value ) {
+		free( attr_value );
+		attr_value = NULL;
+	}
+
+	if ( ad->LookupString(ATTR_TRANSFER_OUTPUT_FILES, &attr_value) &&
+		 *attr_value ) {
+		if ( jmVersion < GRAM_V_1_6 && jmVersion != GRAM_V_UNKNOWN ) {
+			// the jobmanager doesn't support file transfers.
+			dprintf(D_ALWAYS,
+					"(%d.%d) jobmanager doesn't support file transfer\n",
+					procID.cluster, procID.proc );
+			free( attr_value );
+			delete rsl;
+			errorString = "Remote jobmanager doesn't support file transfer";
+			return NULL;
+		}
+		StringList filelist( attr_value, "," );
+		if ( !filelist.isEmpty() ) {
+			char *filename;
+			*rsl += ")(file_stage_out=";
+			filelist.rewind();
+			while ( (filename = filelist.next()) != NULL ) {
+				// append file pairs to rsl
+				*rsl += '(';
+				*rsl += rsl_stringify( basename( filename ) );
+				*rsl += ' ';
+				buff = "$(GRIDMANAGER_GASS_URL)";
+				if ( filename[0] != '/' ) {
+					buff += iwd;
+				}
+				buff += filename;
+				*rsl += rsl_stringify( buff );
+				*rsl += ')';
+			}
+		}
+	}
+	if ( attr_value ) {
+		free( attr_value );
+		attr_value = NULL;
 	}
 
 	if ( ad->LookupString(ATTR_JOB_ENVIRONMENT, &attr_value) && *attr_value ) {
@@ -1773,8 +1894,9 @@ MyString *GlobusJob::buildSubmitRSL()
 		attr_value = NULL;
 	}
 
-	buff.sprintf( ")(save_state=yes)(two_phase=%d)(remote_io_url=%s)",
-					 JM_COMMIT_TIMEOUT, gassServerUrl );
+	buff.sprintf( ")(save_state=yes)(two_phase=%d)"
+				  "(remote_io_url=$(GRIDMANAGER_GASS_URL))",
+				  JM_COMMIT_TIMEOUT );
 	*rsl += buff;
 
 	if ( rsl_suffix != NULL ) {
@@ -1792,15 +1914,16 @@ MyString *GlobusJob::buildRestartRSL()
 	MyString buff;
 	struct stat file_status;
 
-	rsl->sprintf( "&(restart=%s)(remote_io_url=%s)", jobContact,
-				  gassServerUrl );
+	rsl->sprintf( "&(rsl_substitution=(GRIDMANAGER_GASS_URL %s))(restart=%s)"
+				  "(remote_io_url=$(GRIDMANAGER_GASS_URL))", gassServerUrl,
+				  jobContact );
 	if ( localOutput ) {
 		rc = stat( localOutput, &file_status );
 		if ( rc < 0 ) {
 			file_status.st_size = 0;
 		}
 		*rsl += "(stdout=";
-		buff.sprintf( "%s%s", gassServerUrl, localOutput );
+		buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localOutput );
 		*rsl += rsl_stringify( buff.Value() );
 		buff.sprintf( ")(stdout_position=%lu)", file_status.st_size );
 		*rsl += buff;
@@ -1811,7 +1934,7 @@ MyString *GlobusJob::buildRestartRSL()
 			file_status.st_size = 0;
 		}
 		*rsl += "(stderr=";
-		buff.sprintf( "%s%s", gassServerUrl, localError );
+		buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localError );
 		*rsl += rsl_stringify( buff.Value() );
 		buff.sprintf( ")(stderr_position=%lu)", file_status.st_size );
 		*rsl += buff;
@@ -1825,6 +1948,7 @@ MyString *GlobusJob::buildStdioUpdateRSL()
 	int rc;
 	MyString *rsl = new MyString;
 	MyString buff;
+	char *attr_value;
 	struct stat file_status;
 
 	rsl->sprintf( "&(remote_io_url=%s)", gassServerUrl );
@@ -1849,6 +1973,30 @@ MyString *GlobusJob::buildStdioUpdateRSL()
 		*rsl += rsl_stringify( buff.Value() );
 		buff.sprintf( ")(stderr_position=%lu)", file_status.st_size );
 		*rsl += buff;
+	}
+
+	if ( ad->LookupString(ATTR_TRANSFER_INPUT_FILES, &attr_value) &&
+		 *attr_value ) {
+		// GRAM 1.6 won't let you change file transfer info in a
+		// stdio-update, so force it to fail, resulting in a stop-and-
+		// restart
+		*rsl += "(invalid=bad)";
+	}
+	if ( attr_value ) {
+		free( attr_value );
+		attr_value = NULL;
+	}
+
+	if ( ad->LookupString(ATTR_TRANSFER_OUTPUT_FILES, &attr_value) &&
+		 *attr_value ) {
+		// GRAM 1.6 won't let you change file transfer info in a
+		// stdio-update, so force it to fail, resulting in a stop-and-
+		// restart
+		*rsl += "(invalid=bad)";
+	}
+	if ( attr_value ) {
+		free( attr_value );
+		attr_value = NULL;
 	}
 
 	return rsl;
