@@ -675,3 +675,4 @@ readRusage (FILE *file, rusage &usage)
 	return (1);
 }
 #endif
+
