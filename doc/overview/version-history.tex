@@ -22,6 +22,11 @@ being added, many bugs fixed, etc.
 
 \begin{itemize}
 
+\item Fixed a nasty bug in \Condor{preen} that would cause it to
+remove files it shouldn't remove if the \Condor{schedd} and/or
+\Condor{startd} were down at the time \Condor{preen} ran.
+This was causing jobs to mysteriously disappear from the job queue.
+
 \item Fixed a bug in the \Condor{shadow} that could cause it to die
 with signal 11 (segmentation violation) under certain rare
 circumstances. 
@@ -42,11 +47,14 @@ section~\ref{sec:Shadow-Config-File-Entries} on
 page~\pageref{sec:Shadow-Config-File-Entries} for more details.
 
 \item Fixed a bug in the \Condor{startd} that could cause it to
-die with a fatal exception in situations where the process of getting
-claimed by a remote schedd failed for some reason.
+report negative values for the CondorLoadAvg on rare occasions. 
+
+\item Fixed a bug in the \Condor{startd} that could cause it to die
+with a fatal exception in situations where the act of getting claimed
+by a remote schedd failed for some reason.  
 This resulted in the \Condor{startd} exiting on rare occasions with a
 message in its log file to the effect of \texttt{ERROR ``Match timed
-out but not in matched state''}. 
+out but not in matched state''}.
 
 \item Fixed a bug in the \Condor{schedd} that under rare circumstances
 could cause a job to be left in the ``Running'' state even after the
