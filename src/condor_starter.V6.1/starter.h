@@ -127,6 +127,14 @@ public:
 		*/
 	void InitShadowVersion( ClassAd* jobAd );
 
+		/** Perform an RSC to the shadow to register some important
+			information about ourself that the shadow needs.  This
+			checks the version of the shadow and sends the appropriate
+			RSC to be backwards compatible, etc
+			@return true on success, false on failure
+		*/
+	bool RegisterStarterInfo( void );
+
 protected:
 	List<UserProc> JobList;
 
@@ -137,6 +145,8 @@ private:
 	char *Execute;
 	char *UIDDomain;
 	char *FSDomain;
+	char *Arch;
+	char *Opsys;
 	char WorkingDir[_POSIX_PATH_MAX]; // The iwd given to the job
 	char ExecuteDir[_POSIX_PATH_MAX]; // The scratch dir created for the job
 	int Key;

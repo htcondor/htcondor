@@ -55,6 +55,8 @@ CStarter::CStarter()
 	Execute = NULL;
 	UIDDomain = NULL;
 	FSDomain = NULL;
+	Arch = NULL;
+	Opsys = NULL;
 	Key = get_random_int()%get_random_int();
 	ShuttingDown = FALSE;
 	ShadowVersion = NULL;
@@ -65,6 +67,8 @@ CStarter::~CStarter()
 	if (Execute) free(Execute);
 	if (UIDDomain) free(UIDDomain);
 	if (FSDomain) free(FSDomain);
+	if (Arch) free(Arch);
+	if (Opsys) free(Opsys);
 	if (ShadowVersion) delete ShadowVersion;
 }
 
@@ -96,14 +100,6 @@ CStarter::Init( char peer[] )
 	daemonCore->Register_Reaper("Reaper", (ReaperHandlercpp)&CStarter::Reaper,
 		"Reaper", this);
 
-	// init environment info
-	char *mfhn = strnewp ( my_full_hostname() );
-	REMOTE_CONDOR_register_machine_info(UIDDomain, FSDomain,
-				   daemonCore->InfoCommandSinfulString(), 
-				   mfhn, Key);
-	delete [] mfhn;
-
-
 	set_resource_limits();
 
 	return StartJob();
@@ -126,6 +122,14 @@ CStarter::Config()
 	if ((FSDomain = param("FILESYSTEM_DOMAIN")) == NULL) {
 		EXCEPT("FILESYSTEM_DOMAIN not specified in config file.");
 	}
+
+		// Arch and Opsys can never be NULL, since the config code
+		// inserts these automatically using sysapi.
+	if( Arch ) free( Arch );
+	Arch = param( "ARCH" );
+
+	if( Opsys ) free( Opsys );
+	Opsys = param( "OPSYS" );
 }
 
 int
@@ -206,6 +210,79 @@ CStarter::InitShadowVersion( ClassAd* jobAd )
 }
 
 
+bool
+CStarter::RegisterStarterInfo( void )
+{
+	int rval;
+
+		// If the shadow is older than 6.3.2, we need to use the
+		// CONDOR_register_machine_info method, which sends a bunch of
+		// strings over the wire.  If we're 6.3.2 or later, we can use
+		// CONDOR_register_starter_info, which just sends a ClassAd
+		// with all the relevent info.
+	if( ShadowVersion && ShadowVersion->built_since_version(6,3,2) ) {
+		ClassAd* starter_info = new ClassAd;
+		char *tmp = NULL;
+		int size;
+
+		size = strlen(UIDDomain) + strlen(ATTR_UID_DOMAIN) + 5;
+		tmp = (char*) malloc( size * sizeof(char) );
+		sprintf( tmp, "%s=\"%s\"", ATTR_UID_DOMAIN, UIDDomain );
+		starter_info->Insert( tmp );
+		free( tmp );
+
+		size = strlen(FSDomain) + strlen(ATTR_FILE_SYSTEM_DOMAIN) + 5;
+		tmp = (char*) malloc( size * sizeof(char) );
+		sprintf( tmp, "%s=\"%s\"", ATTR_FILE_SYSTEM_DOMAIN, FSDomain ); 
+		starter_info->Insert( tmp );
+		free( tmp );
+
+		size = strlen(my_full_hostname()) + strlen(ATTR_MACHINE) + 5;
+		tmp = (char*) malloc( size * sizeof(char) );
+		sprintf( tmp, "%s=\"%s\"", ATTR_MACHINE, my_full_hostname() );
+		starter_info->Insert( tmp );
+		free( tmp );
+
+		size = strlen(daemonCore->InfoCommandSinfulString()) +
+			strlen(ATTR_STARTER_IP_ADDR) + 5;
+		tmp = (char*) malloc( size * sizeof(char) );
+		sprintf( tmp, "%s=\"%s\"", ATTR_STARTER_IP_ADDR,
+				 daemonCore->InfoCommandSinfulString() );
+		starter_info->Insert( tmp );
+		free( tmp );
+
+		size = strlen(Arch) + strlen(ATTR_ARCH) + 5;
+		tmp = (char*) malloc( size * sizeof(char) );
+		sprintf( tmp, "%s=\"%s\"", ATTR_ARCH, Arch );
+		starter_info->Insert( tmp );
+		free( tmp );
+
+		size = strlen(Opsys) + strlen(ATTR_OPSYS) + 5;
+		tmp = (char*) malloc( size * sizeof(char) );
+		sprintf( tmp, "%s=\"%s\"", ATTR_OPSYS, Opsys );
+		starter_info->Insert( tmp );
+		free( tmp );
+
+		dprintf( D_ALWAYS, "starter_info classad:\n" );
+		starter_info->dPrint( D_ALWAYS );
+
+		rval = REMOTE_CONDOR_register_starter_info( starter_info );
+		
+	} else {
+			// We've got to use the old method.
+		char *mfhn = strnewp ( my_full_hostname() );
+		rval = REMOTE_CONDOR_register_machine_info( UIDDomain,
+			     FSDomain, daemonCore->InfoCommandSinfulString(), 
+				 mfhn, Key );
+		delete [] mfhn;
+	}
+
+	if( rval < 0 ) {
+		return false;
+	}
+	return true;
+}
+
 
 bool
 CStarter::StartJob()
@@ -229,6 +306,11 @@ CStarter::StartJob()
 
 		// Grab the version of the Shadow from the job ad
 	InitShadowVersion( jobAd );
+
+		// Now that we know what version of the shadow we're talking
+		// to, we can register information about ourselves with the
+		// shadow in a method that it understands.  
+	RegisterStarterInfo();
 
 		// Now that we have the job ad, figure out what the owner
 		// should be and initialize our priv_state code:
