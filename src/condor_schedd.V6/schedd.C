@@ -79,7 +79,7 @@ extern "C"
 }
 
 extern int get_job_prio(ClassAd *ad);
-extern void	FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad, 
+extern void	FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, 
 					 char * user);
 extern int Runnable(PROC_ID*);
 extern int Runnable(ClassAd*);
