@@ -270,7 +270,7 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 				&& attribute_name.Length() > 0) {
 				
 				bool      add_to_classad = true;
-				MyString  to_insert(attribute_name);
+				MyString  to_insert;
 				char      *token_text_raw;
 				MyString  token_text("");
 				
@@ -312,17 +312,10 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 					}
 					break;
 				case tag_Bool:
-					{
-						MyString bool_attribute_name, bool_attribute_value;
-						token->GetAttribute(bool_attribute_name, bool_attribute_value);
-						if (bool_attribute_name == "value") {
-							if (bool_attribute_value == "true") {
-								to_insert += "TRUE";
-							} else {
-								to_insert += "FALSE";
-							}
-						}
-					}
+					// We should never have text in a bool, because
+					// it should always be defined within the tag
+					// itself. 
+					add_to_classad = false;
 					break;
 				case tag_Number:
 				case tag_Expr:
@@ -391,6 +384,27 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 			break;
 		case tag_Bool:
 			attribute_type = tag_Bool;
+			printf("Got bool.\n");
+			{
+				MyString  to_insert;
+				
+				to_insert = attribute_value;
+				to_insert += " = ";
+
+				MyString bool_attribute_name, bool_attribute_value;
+				token->GetAttribute(bool_attribute_name, bool_attribute_value);
+				printf("name = %s, value = %s\n",
+					   bool_attribute_name.GetCStr(),
+					   bool_attribute_value.GetCStr());
+				if (bool_attribute_name == "v") {
+					if (bool_attribute_value == "t") {
+						to_insert += "TRUE";
+					} else {
+						to_insert += "FALSE";
+					}
+				}
+				classad->Insert(to_insert.Value());
+			}
 			break;
 		case tag_Undefined:
 			attribute_type = tag_Undefined;

@@ -43,7 +43,7 @@ extern StringSpace classad_string_space; // for debugging only!
 #define NUMBER_OF_CLASSAD_STRINGS (sizeof(classad_strings)/sizeof(char *))
 char *classad_strings[] = 
 {
-	"A = 1, B=2, C = 3, D='2001-04-05T12:14:15'",
+	"A = 1, B=2, C = 3, D='2001-04-05T12:14:15', E=TRUE",
 	"A = 1, B=2, C = 3, D = \"alain\", MyType=\"foo\", TargetType=\"blah\"",
 
 	"Rank = (Memory >= 50)",
