@@ -125,7 +125,8 @@ scheduleHousekeeper (int timeout)
 	{
 		// schedule housekeeper
 		housekeeperTimerID = daemonCore->Register_Timer(machineUpdateInterval,
-						machineUpdateInterval,(TimerHandlercpp)&housekeeper,
+						machineUpdateInterval,
+						(TimerHandlercpp)&CollectorEngine::housekeeper,
 						"CollectorEngine::housekeeper",this);
 		if (housekeeperTimerID == -1)
 			return 0;
@@ -201,7 +202,8 @@ scheduleDownMasterCheck (int timeout)
     if (timeout > 0) {
         // schedule master checks
 		masterCheckTimerID = daemonCore->Register_Timer(masterCheckInterval,
-						masterCheckInterval,(TimerHandlercpp)&masterCheck,
+						masterCheckInterval,
+						(TimerHandlercpp)&CollectorEngine::masterCheck,
 						"CollectorEngine::masterCheck",this);
         if (masterCheckTimerID == -1)
             return 0;
