@@ -1,7 +1,7 @@
 SRC_DIR = $(SRC_TREE)/condor_tools
 CFLAGS = $(STD_C_FLAGS) -DNEW_PROC -DSYSCALL_DEBUG
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -DSYSCALL_DEBUG
-LDFLAGS = $(LIBDBM)
+LDFLAGS = RpcLib KernLib SocketLib
 
 #if NEEDS_FAKE_GETMNT
 #define FAKE_GETMNT_SRC getmnt.c
@@ -31,8 +31,7 @@ LIB =   $(CKPT_SERV_LIB) \
 		$(QMGMT_LIB) \
 		../condor_c++_util/cplus_lib.a \
 		$(CLASSAD_LIB) \
-		$(UTIL_LIB) \
-		RpcLib KernLib SocketLib
+		$(UTIL_LIB)
 
 LIBDIRS = ../condor_util_lib
 
