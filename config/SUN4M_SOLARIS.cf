@@ -41,7 +41,7 @@ find /usr/sup/X11/lib/libXext.a and also could be libXext.so.6.0 */
 #define HAS_X					NO
 #define HAS_X_EXTENSIONS		NO
 
-#define DOES_CHECKPOINTING      NO /* was YES, but clipped condor */
+#define DOES_CHECKPOINTING      YES /* jbasney */
 #define DOES_REMOTE_SYSCALLS    YES 
 #define DOES_SAVE_SIGSTATE		YES /* ask Jim */
 
