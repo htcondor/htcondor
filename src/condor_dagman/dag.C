@@ -210,6 +210,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
                   // If this is one of our jobs, then we must inform the user
                   // that UNDO is not yet handled
                   if (job != NULL) {
+					  _numJobsRunning--;
                       if (DEBUG_LEVEL(DEBUG_QUIET)) {
                           printf ("\n------------------------------------\n");
                           job->Print(true);
