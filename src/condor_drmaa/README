@@ -1,0 +1,66 @@
+
+Last Updated: 2/16/2004
+This README file describes the DRMAA Condor UNIX C library.  
+
+GENERAL: libDrmaa.a
+
+  This library was developed from the Distributed Resource Management Application
+API Specification 1.0 of January 2004 and the DRMAA C Bindings v0.9 of September
+2003.  Both were available at time of writing at www.drmaa.org.
+   This is a static C library.  It expects a POSIX thread model on UNIX systems
+and a Windows thread model on Windows.  Unix systems that don't support POSIX
+threads are not guaranteed thread safety when calling the library's functions.
+It contains support for the Condor DRMS only and has been tested with Condor
+6.6.0.
+  The library supports most of the functionality of the DRMAA 1.0 API, certainly
+the core functionality.  See the "Items Not Supported" section below for
+details about what has not yet been fully implemented.
+
+REQUIRMENTS:
+
+  The library requires the following in order to operate.  The program linked
+to the library is referred to as the "user process".
+   1) A local schedd must be running
+   2) The user process must have sufficient spool space.  This space should be
+in /tmp or specified by the environment variables TEMP, TMP, or SPOOL.  The
+user process and local schedd must have read, write, and traverse rights to the
+ spool space.
+
+ITEMS NOT SUPPORTED:
+	
+   The following list includes all API specifications not currently supported,
+organized by section number of the specification.
+
+- 2.4.1 job categories 
+- 3.2.3.1  the following mandatory attributes:
+	job working directory (DRMAA_WD),
+	job category (DRMAA_JOB_CATEGORY),
+	job start time (DRMAA_START_TIME),
+	job name (DRMAA_JOB_NAME),
+	join files (DRMAA_JOIN_FILES)
+- 3.2.3.2 none of the optional attributes
+- 3.2.4 drmaa_run_bulk_jobs()
+- 3.2.5 
+   drmaa_synchronize() - DRMAA_JOB_IDS_SESSION_ALL functionality
+   drmaa_wait() - DRMAA_JOB_IDS_SESSION_ANY functionality
+   drmaa_synchronize() - DRMAA_JOB_IDS_SESSION_ALL functionality
+   drmaa_wtermsig()
+   drmaa_wcoredump()
+
+SUPPORTED JOB ATTRIBUTES:
+
+   The library currently supports the following job attributes:
+     DRMAA_REMOTE_COMMAND,
+     DRMAA_JS_STATE,
+     DRMAA_NATIVE_SPECIFICATION,
+     DRMAA_BLOCK_EMAIL, 
+     DRMAA_INPUT_PATH, 
+     DRMAA_OUTPUT_PATH, 
+     DRMAA_ERROR_PATH, 
+     DRMAA_V_ARGV,  
+     DRMAA_V_ENV, 
+     DRMAA_V_EMAIL
+Note that DRMAA_NATIVE_SPECIFICATION can be used to set all attributes supported
+in Condor submit discription files (see Condor manual's man page for
+condor_submit).
+
