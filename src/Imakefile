@@ -65,6 +65,9 @@ release.tar: stripped
 submit.tar: stripped
 	cd strip_dir; rm -f submit.tar; tar -cvf submit.tar etc bin lib SubmitSbinFiles
 
+ckpt.tar: stripped
+	cd strip_ckpt_server; rm -f release.tar; tar -cvf release.tar etc sbin
+
 #if WANT_PVM && HAS_PVM
 pvm.tar: stripped
 	cd strip_pvm; rm -f pvm.tar; tar -cvf pvm.tar lib sbin
