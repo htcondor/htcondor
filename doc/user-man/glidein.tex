@@ -11,63 +11,91 @@ will be referred to as the remote node.
 These requirements are general to using any Globus resource:
 \begin{enumerate}
 
-\item You must have a Globus X.509 identity to use any Globus resource.
-   See \Url{http://www-fp.globus.org/security/tutorial.html} for information.
+\item You must be a valid Globus user and be mapped to a valid login account by
+the site's Globus administrator on every Globus node you will glide to.
+See \Url{http://www.globus.org} for information.
 
-\item The local node (machine where you will run \Condor{glidein} from)
-   must have the Globus tools in your PATH environment variable.
-   Example for a user running the "csh" shell at UW:
-   setenv \Env{PATH} "\$PATH:/p/condor/workspaces/globus/tools"
+\item You must have HOME and either {GLOBUS_INSTALL_PATH or GLOBUS_DEPLOY_PATH}
+set in your environment.
 
-\item You must have access on the local node to your Globus X.509 credentials. 
-   Normally, these are located in the \$HOME/.globus/ subdirectory of your 
-   account on the local node. If they are located elsewhere, but accessible
-   from the local node, see \Url{http://www-fp.globus.org/security/environment.html} 
-   for requirements. If not, you should copy the entire .globus/ subdirectory
-   tree to the local node. If you use the \Prog{tar} utility to do this, use the
-   'h' option to follow symbolic links.
-   Example:
-    (at the node where \texttt{\$HOME}/.globus/ exists) \Prog{tar} cfh globuscert.tar .globus
-    (then, copy globuscert.tar to the local node you want to run
-       \Condor{glidein} from)
-    (at the local Condor node, in your \texttt{\$HOME} directory) \Prog{tar} xf globuscert.tar
-   
-\item Ensure the resource to which you want to glide in is running
-   a Globus gatekeeper.
+\item You must have valid Globus credentials (X509 certificate directory).
 
-\item Ensure that you have the proper authorization to run as a Globus
-   user on the remote resource. This generally includes a regular
-   user account on the remote resource, as well as authorization to
-   use Globus on that resource (2 separate steps!). 
-   \Url{http://www.globus.org} has some information on Globus contacts for
-   various Globus sites. The contact for MCS at Argonne is 
-   bester@mcs.anl.gov
-
-\item You can test to ensure all the Globus requirements above are met by 
-   using the authentication-only feature of the Globus tool, \Prog{globusrun}.
-   Example: haha@cs.wisc.edu\% \Prog{globusrun} -a -r goshen.mcs.anl.gov-fork
-   This example contacts the "fork" gatekeeper for the remote node
-   "goshen" at Argonne Labs. A message indicating failure means that
-   one of these steps is not configured correctly.
-
+\item Testing the Globus requirements:
+\begin{verbatim}
+     --You can run globusrun -version to display the version number.
+     --You can run globusrun -a -r <FQHN>/jobmanager-fork to authenticate 
+       to the host, as well as testing the validity of your credentials 
+       and environment variables.
+\end{verbatim}
 \end{enumerate}
 
-\subsection{Condor requirements}
+\subsection{Requirements for running \Condor{glidein}}
 \begin{enumerate}
+\item You must meet all Globus requirements (see above), and use Globus v1.1 or higher.
+
 \item You must be an authorized user of the local Condor pool.
 
-\item Your pool's Condor configuration file(s) must have the remote Globus node's
-   hostname in the HOSTALLOW\_WRITE list. Your Condor administrator should
-   do this for you.
-   Example- to allow ALL machines from MCS at Argonne Labs to glide into the
-     Condor pool at UW, add to the HOSTALLOW\_WRITE line in the appropriate
-     \condor{config} file:
-        HOSTALLOW\_WRITE = *.cs.wisc.edu 
-        ===> (change to)
-        HOSTALLOW\_WRITE = *.cs.wisc.edu, *.mcs.anl.gov
+\item Your Condor pool's configuration file(s) must give HOSTALLOW_WRITE
+  permission to every machine you want to glide to. Since wildcards
+  are permitted in this value, you can glide in to every machine at
+  mcs.anl.gov by adding "*.mcs.anl.gov" to the HOSTALLOW_WRITE list.
+  All machines in the pool must be sent a reconfigure command when
+  changes are made to the HOSTALLOW_WRITE list.
+
+\item You must have X509_USER_PROXY set in your environment, pointing to a
+  valid user proxy.
+
+\item You must have the common user programs (/bin), globus tools, and Condor
+  tools included in your PATH.
 \end{enumerate}
 
-\subsection{Usage example}
+\subsection{Requirements for running \Condor{glidein} as a Condor job}
+\begin{enumerate}
+\item Files must be prestaged (once per machine, not each time) by running
+\Condor{glidein} --setuponly <FQHN> outside of Condor.
+
+\item Use the --runonly option.
+
+\item Run condor_glidein as a vanilla universe job or as a scheduler universe 
+job. Since scheduler universe jobs run on the submitting machine, some potential
+PATH and X509_USER_PROXY problems might be avoided by running as scheduler universe jobs (completely unrelated to the --scheduler option to \Condor{glidein}).
+
+\item The proxy (located by X509_USER_PROXY env var) must be readable by
+Condor. At UW, that means that AFS acls apply, and must be readable by net:cs. 
+This is a security hole and is being addressed.
+
+\item The environment variables {GLOBUS_INSTALL_PATH | GLOBUS_DEPLOY_PATH},
+PATH, X509_USER_PROXY, and HOME must be exported using the submit description 
+file options of Getenv = True, or by setting these values with the Environment 
+option.
+
+\item Remember that, unless you run \Condor{glidein} with the --runfor option,
+the daemons will run on the Globus resource indefinitely. When you no longer
+need the daemons, run \Condor{glidein} with the --kill option.
+\end{enumerate}
+
+Here is a sample submit description file:
+
+\begin{verbatim}
+   universe = vanilla
+   Executable = /unsup/condor/bin/condor_glidein
+   arguments = --runonly pitcairn.mcs.anl.gov
+
+   environment = \
+   PATH=/bin:/unsup/condor/bin:/p/condor/workspaces/globus/bin;\
+   HOME=/u/m/y/myhome;\
+   GLOBUS_INSTALL_PATH=/p/condor/workspaces/globus/common;\
+   X509_USER_PROXY=/u/m/y/myhome/proxy/proxyfile
+
+   Output = outglide.\$(Process)
+   Error = errglide.\$(Process)
+
+   +memoryrequirements = 20
+
+   queue
+\end{verbatim}
+
+subsection{Usage example}
 Example: a Condor user at UW has access to Globus resources at 
 Argonne, and wants to add the resources to his local Condor pool.
 
@@ -79,16 +107,11 @@ Argonne, and wants to add the resources to his local Condor pool.
 
 monterey6@cs.wisc.edu\% \Condor{glidein} goshen.mcs.anl.gov
 
-\item The user is prompted for his Globus identity's secret key passphrase
-   (PEM passphrase). If the passphrase is not correct, the script exits,
-   at which point the user may try again.
-
 \item The remote node is checked to see if the user has permission to
-   use the remote node as a resource.
-
-\item If the necessary files are not on the remote node, the user
-   is asked where the files are located for the correct versions of
-   the Condor executables, which are then copied to the remote node.
+   use the remote node as a resource. The remote node is also checked
+   to ensure the necessary Condor configuration files and executables
+   are correctly located. If not, they are placed there by the glidein
+   script.
 
 \item The executables are run on the remote node and join the pool.
    After a couple of seconds you can see the remote resources in your 
@@ -96,9 +119,8 @@ monterey6@cs.wisc.edu\% \Condor{glidein} goshen.mcs.anl.gov
 
    monterey6@cs.wisc.edu\% \Condor{status} | grep goshen
       vm1@goshen.mc SOLARIS26   SUN4u  Unclaimed  Idle       0.000   128 ...
-      vm2@goshen.mc SOLARIS26   SUN4u  Unclaimed  Idle       0.355   128 ...
 
-\item \Condor{glidein} offers you several option to manage the remote resource. 
+\item \Condor{glidein} offers you several options to manage the remote resource
    Use "\Condor{glidein} --help" for details.
 
 \item You are ready to submit job(s) to your Condor pool. If you wish to force
@@ -119,21 +141,16 @@ monterey6@cs.wisc.edu\% \Condor{glidein} goshen.mcs.anl.gov
 \end{enumerate}
 
 \subsection{How it works}
-\Condor{glidein} creates a Globus proxy certificate (prompting the user
-for their "PEM passphrase" if their Globus private key is passphrase
-protected) to authenticate the user to the Globus gatekeeper running
-on the Globus machine to which he is gliding in (remote node). The
-(temporary) proxy certificate is destroyed upon completion of the 
-\Condor{glidein} program.
+\Condor{glidein} ensures that you have a valid proxy and that the files
+necessary for performing glidein setup are available to the glidein
+program. 
 
 \Condor{glidein} then contacts the remote node and checks for the
 presence of the necessary configuration files and Condor executables.
 If the executables are not present for the machine architecture, 
-operating system version, and Condor pool version required, the
-user is prompted for the path to the local Condor version of the
-executables to copy to the remote node.
-Copying these files is performed only once for a given combination of
-architecture, OS and pool versions.
+operating system version, and Condor pool version required, a 
+globus-gass-server running at UW is contacted to stage the needed
+executables.
 
 Once \Condor{glidein} determines that the files are correctly in place,
 it runs a script on the remote node that runs the Condor executables.
@@ -150,58 +167,18 @@ jobs submitted through Condor, although this can be overridden by
 editing the configuration file installed on the remote node by the
 \Condor{glidein} program.
 
-\subsection{Configuration options}
-Default values you can configure:
-\begin{verbatim}
-$CONDOR_ADMIN
-   The address that condor daemon problems are emailed to.
-   (Not all problems generate email messages). Because of Perl's
-   syntax, the address must either be in single quotes, or the @ sign
-   must be escaped (e.g. $CONDOR_ADMIN = "user\@host.cs.wisc.edu").
-
-$BASE_DIR
-   This directory is searched for the necessary files. If the files
-   aren't there, they are generated or copied in (in the case of
-   executables).  If a fully qualfied path name (from /) is not
-   specified, it will be relative to your $HOME directory on the
-   remote Globus host.
-
-OTHER USEFUL INFORMATION
-   PVM user \Note If you are using Condor-PVM, PVM jobs only use one
-   (of potentially many) of the CPUs on a multi-processor machine.
-   What this means is that flying into a multiprocessor machine may
-   look like you have several processors available to your jobs, but
-   only one CPU per machine will be utilized by PVM. If you need to
-   add more than one CPU to your pool, you will therefore need to fly
-   in to multiple hosts.
-\end{verbatim}
-
 \subsection{Invocation options}
---scheduler
+--scheduler <name>
 	Select the scheduler type to be used by Globus. Defaults to "fork".
 
---queue
+--queue <name>
 	Specify which queue=<queuename> to submit to for the Globus scheduler.
 
---runfor[ mins]
+--runfor <mins>
    How many minutes the condor daemons should run for before gracefully
-   exiting. Use of this option overrides the \texttt{\$RUN\_FOR} default value.
-   If you don't know how long you need the daemons to run for, you
-   can use this option without a value (or specify 0).
+   exiting.  
    Be aware that if you do this, the daemons will stay running indefinitely
    until you shut them down with the "kill" option.
-
-   An example of using this is:
-
-      /* if you don't know how long your Condor jobs will take */
-      \Condor{glidein} --runfor 0 globushost1.some.edu globushost2.other.gov
-      \Condor{submit} <submit file using these resources>
-      /* wait for your jobs to complete */
-      \Condor{glidein} --kill globushost1.some.edu globushost2.other.gov
-
-      /* if you know your jobs will all be done in 60 mins */
-      \Condor{glidein} --runfor 60 globushost1.some.edu globushost2.other.gov
-      \Condor{submit} <submit file using these resources>
 
 --setuponly
    Performs only the setup of files on the remote host, but does not
@@ -225,13 +202,22 @@ OTHER USEFUL INFORMATION
 --help
    Prints terse description and usage, then exits.
 
---showdefaults
-   Prints the current settings of configuration values and exits.
+--count <CPU count>
+	Number of CPUs to request, default 1.
 
-\subsection{Future plans}
---Utilize a Globus GASS server with the necessary Condor executables 
-so the user need not be bothered with trying to figure out the location 
-of the executable files needed on the remote host.
+--dump		
+	Prints the generated globusrun string to stdout.
 
---Add support to utilize ssh and rsh tools as an alternative to Globus
-tools to perform a glidein.
+--probe
+	Calculate and display values for the local Condor pool.
+
+--admin <address>
+	Who to email with problems. Defaults to <your_login>@<Condor UID_DOMAIN>.
+
+--pool <FQHN of collector>
+	Specify fully-qualified hostname of the collector of your Condor pool.
+	Defaults to the value for CONDOR_HOST for the local Condor pool.
+
+--condorversion <version>
+	Specify the version of Condor running in the pool to which you are gliding.
+	Defaults to the version of the local Condor pool.
