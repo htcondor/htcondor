@@ -59,7 +59,9 @@ The commands which can appear in the submit description file are:
 %% executable
 %%%%%%%%%%%%%%%%%%%
 
-\item[executable = $<$name$>$]The name of the executable file for this
+\item[executable = $<$name$>$]
+\index{submit commands!executable}
+The name of the executable file for this
 job cluster. Only one executable command may be present in a description
 file. If submitting into the Standard Universe, which is the default,
 then the named executable must have been re-linked with the Condor
@@ -74,7 +76,9 @@ must be a compiled \File{.class} file.
 %% input
 %%%%%%%%%%%%%%%%%%%
 
-\item[input = $<$pathname$>$] Condor assumes that its jobs are
+\item[input = $<$pathname$>$]
+\index{submit commands!input}
+Condor assumes that its jobs are
 long-running, and that the user will not wait at the terminal for their
 completion. Because of this, the standard files which normally access
 the terminal, (\File{stdin}, \File{stdout}, and \File{stderr}),
@@ -90,7 +94,9 @@ for submission to an NT machine.
 %% output
 %%%%%%%%%%%%%%%%%%%
 
-\item[output = $<$pathname$>$] The \Opt{output} file name will capture
+\item[output = $<$pathname$>$]
+\index{submit commands!output}
+The \Opt{output} file name will capture
 any information the program would normally write to the screen
 (that is, this file becomes \File{stdout}).
 If not specified, the default value of
@@ -105,7 +111,9 @@ another.
 %% error
 %%%%%%%%%%%%%%%%%%%
 
-\item[error = $<$pathname$>$] The \Opt{error} file name will capture any
+\item[error = $<$pathname$>$]
+\index{submit commands!error}
+The \Opt{error} file name will capture any
 error messages the program would normally write to the screen
 (that is, this file becomes \File{stderr}).
 If not specified, the default value of
@@ -119,7 +127,9 @@ this will cause one job to overwrite the errors of another.
 %% arguments
 %%%%%%%%%%%%%%%%%%%
 
-\item[arguments = $<$argument\_list$>$] List of arguments to be supplied
+\item[arguments = $<$argument\_list$>$]
+\index{submit commands!arguments}
+List of arguments to be supplied
 to the program on the command line.   In the Java Universe, the first
 argument must be the name of the class containing \Code{main}.
 Arguments are delimited (separated) by space characters.
@@ -128,7 +138,9 @@ Arguments are delimited (separated) by space characters.
 %% initialdir
 %%%%%%%%%%%%%%%%%%%
 
-\item[initialdir = $<$directory-path$>$] Used to specify the current
+\item[initialdir = $<$directory-path$>$] 
+\index{submit commands!initialdir}
+Used to specify the current
 working directory for the Condor job. Should be a path to a preexisting
 directory. If not specified, \Condor{submit} will automatically insert
 the user's current working directory at the time \Condor{submit} was run
@@ -139,6 +151,7 @@ as the value for \Opt{initialdir}.
 %%%%%%%%%%%%%%%%%%%
 
 \item[transfer\_input\_files = $<$ file1, file2, file... $>$] 
+\index{submit commands!transfer\_input\_files}
 Lists all the files to be transferred into the 
 working directory for the job before the job is started.
 Separate multiple file names with a comma.
@@ -167,6 +180,7 @@ subdirectories is not supported.
 %%%%%%%%%%%%%%%%%%%
 
 \item[transfer\_output\_files = $<$ file1, file2, file... $>$] This
+\index{submit commands!transfer\_output\_files}
 command forms an explicit list of output files to be transferred
 back from the
 temporary working directory on the execute machine to the submit machine.
@@ -189,6 +203,7 @@ the job produces.
 %%%%%%%%%%%%%%%%%%%
 
 \item[transfer\_files = $<$ONEXIT \Bar\ ALWAYS \Bar\ NEVER$>$] Setting
+\index{submit commands!transfer\_files}
 \Opt{transfer\_files} equal to \Arg{ONEXIT} will cause Condor to transfer the
 job's output files back to the submitting machine only when the job
 completes (exits).
@@ -208,7 +223,9 @@ out again as input files when the job restarts.
 %% requirements
 %%%%%%%%%%%%%%%%%%%
 
-\item[requirements = $<$ClassAd Boolean Expression$>$] The requirements
+\item[requirements = $<$ClassAd Boolean Expression$>$]
+\index{submit commands!requirements}
+The requirements
 command is a boolean ClassAd expression which uses C-like operators. In
 order for any job in this cluster to run on a given machine, this
 requirements expression must evaluate to true on the given machine. For
@@ -256,7 +273,9 @@ that can be used in the ClassAd expression.
 %% rank
 %%%%%%%%%%%%%%%%%%%
 
-\item[rank = $<$ClassAd Float Expression$>$] A ClassAd Floating-Point 
+\item[rank = $<$ClassAd Float Expression$>$]
+\index{submit commands!rank}
+A ClassAd Floating-Point 
 expression that states how to rank machines which have already met the requirements
 expression. Essentially, rank expresses preference.  A higher numeric value 
 equals better rank. Condor will give the job the machine with the 
@@ -276,6 +295,7 @@ that can be used in the ClassAd expression.
 
 \item[universe = $<$vanilla \Bar\ standard \Bar\ pvm \Bar\ scheduler
 \Bar\ globus \Bar\ mpi \Bar\ java$>$] 
+\index{submit commands!universe}
 Specifies which Condor Universe to use when running this job.  The Condor 
 Universe specifies a Condor execution environment.  The standard 
 Universe is the default (except where the configuration variable
@@ -300,6 +320,7 @@ See the Condor User's Manual for more information about using Universe.
 %%%%%%%%%%%%%%%%%%%
 
 \item[on\_exit\_remove = $<$ClassAd Boolean Expression$>$] This expression
+\index{submit commands!on\_exit\_remove}
 is checked when the job exits and if true, then it allows the job to leave the
 queue normally. If false, then the job is placed back into the Idle state.
 If the user job is a vanilla job then it restarts from the beginning. If the
@@ -334,6 +355,7 @@ for the standard universe.
 %%%%%%%%%%%%%%%%%%%
 
 \item[on\_exit\_hold = $<$ClassAd Boolean Expression$>$] This expression
+\index{submit commands!on\_exit\_hold}
 is checked when the job exits and if true, places the job on hold. If false
 then nothing happens and the \AdAttr{on\_exit\_remove} expression is
 checked to determine if that needs to be applied.
@@ -366,7 +388,7 @@ for the standard universe.
 %%%%%%%%%%%%%%%%%%%
 
 \item[periodic\_remove = $<$ClassAd Boolean Expression$>$]
-\index{periodic\_remove}
+\index{submit commands!periodic\_remove}
 This expression is checked every 20 seconds(non-configurable,
 but might be in future) and if it becomes true, the job will
 leave the queue. \AdAttr{periodic\_remove} takes precedent over
@@ -405,6 +427,7 @@ for the standard universe.
 %%%%%%%%%%%%%%%%%%%
 
 \item[periodic\_hold = $<$ClassAd Boolean Expression$>$] This expression
+\index{submit commands!periodic\_hold}
 is checked every 20 seconds(non-configurable, but might be in future) and
 if it becomes true, the job will be placed on hold.
 
@@ -431,12 +454,36 @@ This expression is available for the vanilla and java universes.
 It is additionally available, when submitted from a Unix machine,
 for the standard universe.
 
+%%%%%%%%%%%%%%%%%%%
+%% periodic_release
+%%%%%%%%%%%%%%%%%%%
+
+\item[periodic\_release = $<$ClassAd Boolean Expression$>$] This expression
+\index{submit commands!periodic\_release}
+is reevaluated every 20 seconds(non-configurable, but might be in future)
+when the job is in the Hold state.
+If the expression becomes \Expr{True}, the job will be placed on released.
+
+% The expression is evaluated:
+%- every time there is a condor_reconfig
+%- every time condor_reschedule happens
+%- every time condor_submit happens
+%- BUT never more often than condor_config SCHEDD_MIN_INTERVAL seconds 
+%(default of 5 seconds)
+%- AND never less often than condor_config SCHEDD_INTERVAL seconds (defaults 
+%to 5 minutes).
+%
+%So the short answer: by default, every SCHEDD_INTERVAL (5 minutes by 
+%default) or more often as needed.
+
+% what universes (other than universe=globus) does this apply to?
 
 %%%%%%%%%%%%%%%%%%%
 %% priority
 %%%%%%%%%%%%%%%%%%%
 
 \item[priority = $<$priority$>$] Condor job priorities range from -20 to
+\index{submit commands!priority}
 +20, with 0 being the default. Jobs with higher numerical priority will
 run before jobs with lower numerical priority. Note that this priority
 is on a per user basis; setting the priority will determine the order in
@@ -448,6 +495,7 @@ not your jobs will run ahead of another user's jobs.
 %%%%%%%%%%%%%%%%%%%
 
 \item[notification = $<$when$>$]\label{man-condor-submit-notification} Owners of Condor jobs are notified by
+\index{submit commands!notification}
 email when certain events occur.
 If \Arg{when} is set to \mbox{Always}, the owner will be notified
 whenever the job is checkpointed, and when it completes.
@@ -466,6 +514,7 @@ page~\pageref{sec:job-completion}.
 %%%%%%%%%%%%%%%%%%%
 
 \item[notify\_user = $<$email-address$>$]\label{man-condor-submit-notify-user} Used to specify the email
+\index{submit commands!notify\_user}
 address to use when Condor sends email about a job.  If not specified,
 Condor will default to using :
 \begin{verbatim}
@@ -483,20 +532,22 @@ to :
 %%%%%%%%%%%%%%%%%%%
 
 \item[copy\_to\_spool = $<$True \Bar\ False$>$] If \Opt{copy\_to\_spool} is set to
-\Arg{True}, then \Condor{submit} will copy the executable to the local spool 
+\index{submit commands!copy\_to\_spool}
+\Expr{True}, then \Condor{submit} will copy the executable to the local spool 
 directory before running it on a remote host. Oftentimes this can be quite
-time consuming and unnecessary. By setting it to \Arg{False}, \Condor{submit}
-will skip this step.  Defaults to \Arg{True}.
+time consuming and unnecessary. By setting it to \Expr{False}, \Condor{submit}
+will skip this step.  Defaults to \Expr{True}.
 
 %%%%%%%%%%%%%%%%%%%
 %% getenv
 %%%%%%%%%%%%%%%%%%%
 
 \item[getenv = $<$True \Bar\ False$>$] If \Opt{getenv} is set to
-\Arg{True}, then \Condor{submit} will copy all of the user's current
+\index{submit commands!getenv}
+\Expr{True}, then \Condor{submit} will copy all of the user's current
 shell environment variables at the time of job submission into the job
 ClassAd. The job will therefore execute with the same set of environment
-variables that the user had at submit time. Defaults to \Arg{False}.
+variables that the user had at submit time. Defaults to \Expr{False}.
 %You must be careful when using this feature, since the maximum allowed
 %size of the environment in Condor is 10240 characters.  
 %If your environment is larger than that, Condor will not allow you to
@@ -508,7 +559,8 @@ variables that the user had at submit time. Defaults to \Arg{False}.
 %%%%%%%%%%%%%%%%%%%
 
 \item[hold = $<$True \Bar\ False$>$] If \Opt{hold} is set to
-True, then the job will be submitted in the hold state.  Jobs in
+\index{submit commands!hold}
+\Expr{True}, then the job will be submitted in the hold state.  Jobs in
 the hold state will not run until released by \Condor{release}.
 Defaults to false.
 
@@ -517,6 +569,7 @@ Defaults to false.
 %%%%%%%%%%%%%%%%%%%
 
 \item[environment = $<$parameter\_list$>$] List of environment variables
+\index{submit commands!environment}
 of the form :
 \begin{verbatim}
         <parameter>=<value>
@@ -537,6 +590,7 @@ Place spaces within the parameter list only if required.
 %%%%%%%%%%%%%%%%%%%
 
 \item[log = $<$pathname$>$] Use \Opt{log} to specify a file name where
+\index{submit commands!log}
 Condor will write a log file of what is happening with this job cluster.
 For example, Condor will log into this file when and where the job
 begins running, when the job is checkpointed and/or migrated, when the
@@ -557,6 +611,7 @@ single log file, it is up to you to make sure that all of them specify
 %%%%%%%%%%%%%%%%%%%
 
 \item[jar\_files = $<$file\_list$>$]
+\index{submit commands!jar\_files}
 Specifies a list of additional JAR files to include when using
 the Java universe.  JAR files will be transferred along with
 the executable and automatically added to the classpath.
@@ -566,6 +621,7 @@ the executable and automatically added to the classpath.
 %%%%%%%%%%%%%%%%%%%
 
 \item[image\_size = $<$size$>$] This command tells Condor the maximum
+\index{submit commands!image\_size}
 virtual image size to which you believe your program will grow during
 its execution. Condor will then execute your job only on machines which
 have enough resources, (such as virtual memory), to support executing
@@ -583,6 +639,7 @@ an image size of 8 megabytes, use a \Arg{size} of 8000.
 %%%%%%%%%%%%%%%%%%%
 
 \item[machine\_count = $<$min..max$>$ \Bar\ $<$max$>$] 
+\index{submit commands!machine\_count}
 For the PVM universe,
 both \Arg{min} and \Arg{max} or just
 \Arg{max} may be defined. 
@@ -604,6 +661,7 @@ the number of machines to be dedicated toward running the job.
 %%%%%%%%%%%%%%%%%%%
 
 \item[coresize = $<$size$>$] Should the user's program abort and produce
+\index{submit commands!coresize}
 a core file, \Opt{coresize} specifies the maximum size in bytes of the
 core file which the user wishes to keep. If \Opt{coresize} is not
 specified in the command file, the system's user resource limit
@@ -614,8 +672,9 @@ specified in the command file, the system's user resource limit
 %%%%%%%%%%%%%%%%%%%
 
 \item[nice\_user = $<$True \Bar\ False$>$] \label{man-condor-submit-nice}Normally, when a machine
+\index{submit commands!nice\_user}
 becomes available to Condor, Condor decides which job to run based upon
-user and job priorities. Setting \Opt{nice\_user} equal to \Arg{True}
+user and job priorities. Setting \Opt{nice\_user} equal to \Expr{True}
 tells Condor not to use your regular user priority, but that this job
 should have last priority among all users and all jobs. So jobs
 submitted in this fashion run only on machines which no other
@@ -626,11 +685,13 @@ submitted in this fashion have ``nice-user.'' pre-appended in front of
 the owner name when viewed from \Condor{q} or \Condor{userprio}.  The
 default value is \Opt{False}.
 
+
 %%%%%%%%%%%%%%%%%%%
 %% kill_sig
 %%%%%%%%%%%%%%%%%%%
 
 \item[kill\_sig = $<$signal-number$>$] When Condor needs to kick a job
+\index{submit commands!kill\_sig}
 off of a machine, it will send the job the signal specified by
 \Arg{signal-number}.  \Arg{signal-number} needs to be an integer which
 represents a valid signal on the execution machine.  For jobs submitted
@@ -644,6 +705,7 @@ is \verb@SIGTERM@ which is the standard way to terminate a program in UNIX.
 %%%%%%%%%%%%%%%%%%%
 
 \item[compress\_files = file1, file2, ...]
+\index{submit commands!compress\_files}
 
 If your job attempts to access any of the files mentioned in this list,
 Condor will automatically compress them (if writing) or decompress them (if reading).
@@ -673,6 +735,7 @@ This option only applies to standard-universe jobs.
 
 \item[fetch\_files = file1, file2, ...]
 
+\index{submit commands!fetch\_files}
 If your job attempts to access a file mentioned in this list,
 Condor will automatically copy the whole file to the executing machine,
 where it can be accessed quickly.  When your job closes the file,
@@ -686,6 +749,7 @@ This option only applies to standard-universe jobs.
 %%%%%%%%%%%%%%%%%%%
 
 \item[append\_files = file1, file2, ...]
+\index{submit commands!append\_files}
 
 If your job attempts to access a file mentioned in this list,
 Condor will force all writes to that file to be appended to the end.
@@ -706,6 +770,7 @@ This option only applies to standard-universe jobs.
 %%%%%%%%%%%%%%%%%%%
 
 \item[local\_files = file1, file2, ...]
+\index{submit commands!local\_files}
 
 If your job attempts to access a file mentioned in this list,
 Condor will cause it to be read or written at the execution machine.
@@ -723,6 +788,7 @@ This option only applies to standard-universe jobs.
 %%%%%%%%%%%%%%%%%%%
 
 \item[file\_remaps $=$ $<$ `` name $=$ newname ; name2 $=$ newname2 ... ''$>$ ]
+\index{submit commands!file\_remaps}
 
 Directs Condor to use a new file name in place of an old one.  \Arg{name}
 describes a file name that your job may attempt to open, and \Arg{newname}
@@ -772,6 +838,9 @@ file_remaps = "very.big = local:/bigdisk/bigfile ; dataset.1 = other.dataset"
 \item[buffer\_files $=$ $<$ `` name $=$ (size,block-size) ; name2 $=$ (size,block-size) ... '' $>$ ]
 \item[buffer\_size $=$ $<$bytes-in-buffer$>$]
 \item[buffer\_block\_size $=$ $<$bytes-in-block$>$]
+\index{submit commands!buffer\_files}
+\index{submit commands!buffer\_size}
+\index{submit commands!buffer\_block\_size}
 Condor keeps a buffer of recently-used data for each file a job accesses.
 This buffer is used both to cache commonly-used data and to consolidate small
 reads and writes into larger operations that get better throughput.
@@ -812,6 +881,7 @@ and a block size of 32 Kbytes.
 %%%%%%%%%%%%%%%%%%%
 
 \item[rendezvousdir = $<$directory-path$>$] Used to specify the 
+\index{submit commands!rendezvousdir}
 shared file system directory to be used for file system authentication
 when submitting to a remote scheduler.  Should be a path to a preexisting 
 directory.  
@@ -821,6 +891,7 @@ directory.
 %%%%%%%%%%%%%%%%%%%
 
 \item[x509directory = $<$directory-path$>$] Used to specify the directory 
+\index{submit commands!x509directory}
 which contains the certificate, private key, and trusted certificate directory
 for GSS authentication.
 If this attribute is set, the environment variables 
@@ -834,6 +905,7 @@ default values.
 %%%%%%%%%%%%%%%%%%%
 
 \item[x509userproxy = $<$full-pathname$>$] Used to override the default
+\index{submit commands!x509userproxy}
 pathname for X509 user certificates. The default location for X509 proxies
 is the \File{/tmp} directory,
 which is generally a local file system.
@@ -851,6 +923,7 @@ it will search in the default location.
 %%%%%%%%%%%%%%%%%%%
 
 \item[globusscheduler = $<$scheduler-name$>$] Used to specify the 
+\index{submit commands!globusscheduler}
 Globus resource to which the job should be submitted. More than one scheduler
 can be submitted to, simply place a \Arg{queue} command after each instance
 of \Opt{globusscheduler}.
@@ -871,33 +944,84 @@ queue
 %%%%%%%%%%%%%%%%%%%
 
 \item[globusrsl = $<$RSL-string$>$] Used to provide any additional Globus RSL
+\index{submit commands!globusrsl}
 string attributes which are not covered by regular submit description
 file parameters.
+
+%%%%%%%%%%%%%%%%%%%
+%% globus_resubmit
+%%%%%%%%%%%%%%%%%%%
+
+\item[globus\_resubmit = $<$ClassAd Boolean Expression$>$]
+\index{submit commands!globus\_resubmit}
+The expression is evaluated by the \Condor{gridmanager} each time
+the \Condor{gridmanager} gets a job ad to manage.
+Therefore, the expression is evaluated:
+\begin{enumerate}
+\item
+   when a globus universe job is first submitted to Condor-G
+\item
+   when a globus universe job is released from the hold state
+\item
+   when Condor-G is restarted (specifically, whenever the \Condor{gridmanager}
+   is restarted)
+\end{enumerate}
+If the expression evaluates to \Expr{True},
+then any previous submission to the globus universe will be
+forgotten and this job will be submitted again as a fresh submission to
+the globus universe.
+This may be useful if there is a desire to give up on a
+previous submission and try again.
+Note that this may result in the same job running more than
+once.  Do not treat this operation lightly.
+
+%%%%%%%%%%%%%%%%%%%
+%% globus_rematch
+%%%%%%%%%%%%%%%%%%%
+
+\item[globus\_rematch = $<$ClassAd Boolean Expression$>$]
+\index{submit commands!globus\_rematch}
+This expression is evaluated by the \Condor{gridmanager} whenever:
+\begin{enumerate}
+\item
+   the \Opt{globus\_resubmit} expression evaluates to \Expr{True}
+\item
+   the \Condor{gridmanager} decides it needs to retry a submission
+   (as when a previous submission failed to commit)
+\end{enumerate}
+If \Opt{globus\_rematch} evaluates to \Expr{True},
+then \emph{before} the job is submitted again to globus,
+the \Condor{gridmanager} will request that the \Condor{schedd}
+daemon renegotiate
+with the matchmaker (the \Condor{negotiator}).
+The result is this job will be matched again.
 
 %%%%%%%%%%%%%%%%%%%
 %% leave_in_queue
 %%%%%%%%%%%%%%%%%%%
 
 \item[leave\_in\_queue = $<$ClassAd Boolean Expression$>$] 
-When the ClassAd Expression evaluates to \Arg{True}, the job is
+\index{submit commands!leave\_in\_queue}
+When the ClassAd Expression evaluates to \Expr{True}, the job is
 not removed from the queue upon completion.
 The job remains in the queue until the user runs \Condor{rm}
 to remove the job from the queue.
 This allows the user of a remotely spooled job to retrieve output
 files in cases where Condor would have removed them as part of
 the cleanup associated with completion.
-Defaults to \Arg{False}.
+Defaults to \Expr{False}.
 
 %%%%%%%%%%%%%%%%%%%
 %% Transfer_Executable
 %%%%%%%%%%%%%%%%%%%
 
 \item[transfer\_executable = $<$True \Bar\ False$>$] If \Opt{transfer\_executable} is set to
-\Arg{false}, then Condor looks for the executable on the remote machine, and
+\index{submit commands!transfer\_executable}
+\Expr{false}, then Condor looks for the executable on the remote machine, and
 does not transfer the executable over.
 This is useful if you have already pre-staged your
 executable and wish to have Condor behave more like rsh.
-Defaults to \Arg{True}.
+Defaults to \Expr{True}.
 This option is only used in the Globus universe.
 
 %%%%%%%%%%%%%%%%%%%
@@ -919,6 +1043,7 @@ following \Arg{attribute} into the job ClasssAd with the given
 % this also doesn't work, but Karen doesn't know what else to try,
 % and it isn't worth the time.
 \item[queue \oOptnm{number-of-procs}] Places one or more
+\index{submit commands!queue}
 copies of the job into
 the Condor queue. If desired, new \Opt{input}, \Opt{output},
 \Opt{error}, \Opt{initialdir}, \Opt{arguments}, \Opt{nice\_user},
@@ -936,6 +1061,7 @@ job to the queue, and it defaults to 1.
 %% allow_startup_script
 %%%%%%%%%%%%%%%%%%%
 \item[allow\_startup\_script = $<$True \Bar\ False$>$]
+\index{submit commands!allow\_startup\_script}
 If True, a standard universe job will execute a script
 instead of submitting the job,
 and the consistency check to see if the executable has
