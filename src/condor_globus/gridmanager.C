@@ -601,9 +601,9 @@ GridManager::SUBMIT_JOB_signalHandler( int signal )
 				} else {
 
 					dprintf(D_ALWAYS,
-							"ERROR: Job %d.%d Submit failed because %s\n",
+							"ERROR: Job %d.%d Submit failed because %s (%d)\n",
 							new_job->procID.cluster, new_job->procID.proc,
-							new_job->errorString());
+							new_job->errorString(), new_job->errorCode );
 					if (new_job->RSL) {
 						dprintf(D_ALWAYS,"Job %d.%d RSL is: %s\n",
 								new_job->procID.cluster,new_job->procID.proc,
@@ -660,13 +660,15 @@ GridManager::SUBMIT_JOB_signalHandler( int signal )
 					} else {
 						// Error
 						dprintf(D_ALWAYS,
-							"ERROR: JM register for %d.%d failed because %s\n",
+							"ERROR: JM register for %d.%d failed because %s (%d)\n",
 							new_job->procID.cluster, new_job->procID.proc,
-							new_job->errorString());
+							new_job->errorString(), new_job->errorCode );
 						// TODO what now?  try later ?
 					}
 				}
 			}
+		} else if ( new_job->jobState == G_CANCELED ) {
+			addJobUpdateEvent( new_job, JOB_UE_CANCELED );
 		} else {
 			// bad state
 			dprintf(D_ALWAYS,
@@ -837,9 +839,9 @@ GridManager::CANCEL_JOB_signalHandler( int signal )
 					// the final callback.
 					// Error
 					dprintf(D_ALWAYS,
-						"ERROR: Job cancel for %d.%d failed because %s\n",
+						"ERROR: Job cancel for %d.%d failed because %s (%d)\n",
 						curr_job->procID.cluster, curr_job->procID.proc,
-						curr_job->errorString());
+						curr_job->errorString(), curr_job->errorCode );
 					// TODO what now?  try later ?
 				}
 			} else {
@@ -960,9 +962,9 @@ GridManager::COMMIT_JOB_signalHandler( int signal )
 			} else {
 				// Error
 				dprintf(D_ALWAYS,
-						"ERROR: Job commit for %d.%d failed because %s\n",
+						"ERROR: Job commit for %d.%d failed because %s (%d)\n",
 						curr_job->procID.cluster, curr_job->procID.proc,
-						curr_job->errorString());
+						curr_job->errorString(), curr_job->errorCode );
 				// TODO what now?  try later ?
 			}
 
@@ -1112,10 +1114,11 @@ GridManager::RESTART_JM_signalHandler( int signal = 0 )
 				// submission. Resubmit the job (or let a
 				// cancel complete).
 				dprintf(D_ALWAYS,
-						"JM restart failed for job %d.%d because %s\n",
+						"JM restart failed for job %d.%d because %s (%d)\n",
 						curr_job->procID.cluster,
 						curr_job->procID.proc,
-						curr_job->errorString());
+						curr_job->errorString(),
+						curr_job->errorCode);
 
 				JobsByContact->remove(HashKey(curr_job->jobContact));
 				free( curr_job->jobContact );
