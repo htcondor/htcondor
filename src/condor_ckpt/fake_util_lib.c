@@ -26,29 +26,47 @@
 
 
 #include "condor_common.h"
+#include "condor_sys.h"
+#include "exit.h"
 
 int		_EXCEPT_Line;
 int		_EXCEPT_Errno;
 char	*_EXCEPT_File;
 int		(*_EXCEPT_Cleanup)();
 
-int		condor_debug_output = 0;
+extern	int		DebugFlags;
+
 
 void
-dprintf(int flags, char *fmt, ...)
+_condor_dprintf_va( int flags, char* fmt, va_list args )
 {
-	if (condor_debug_output) {
-		va_list args;
-		va_start( args, fmt );
-		vfprintf( stderr, fmt, args );
-		va_end( args );
+	int scm;
+
+		/* See if this is one of the messages we are logging */
+	if( !(flags&DebugFlags) ) {
+		return;
 	}
+
+	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+
+		/* Actually print the message */
+	vfprintf( stderr, fmt, args );
+
+	(void) SetSyscalls( scm );
 }
+
+
+void
+_condor_dprintf_exit( void )
+{
+	exit( DPRINTF_ERROR );
+}
+
 
 void
 _EXCEPT_(char* fmt, ...)
 {
-	if (condor_debug_output) {
+	if (DebugFlags) {
 		va_list args;
 		va_start( args, fmt );
 		vfprintf( stderr, fmt, args );
@@ -56,3 +74,4 @@ _EXCEPT_(char* fmt, ...)
 	}
 	abort();
 }
+
