@@ -1237,7 +1237,7 @@ DedicatedScheduler::reaper( int pid, int status )
 		case JOB_NOT_CKPTED:
 		case JOB_NOT_STARTED:
 			if (!srec->removed) {
-				nukeMpi( srec );
+				shutdownMpiJob( srec );
 			}
 			break;
 		case JOB_SHADOW_USAGE:
@@ -1256,14 +1256,14 @@ DedicatedScheduler::reaper( int pid, int status )
 			dprintf(D_FULLDEBUG, "Reaper: JOB_EXITED\n");
 			set_job_status( srec->job_id.cluster, srec->job_id.proc,
 							COMPLETED );
-			nukeMpi( srec );
+			shutdownMpiJob( srec );
 			break;
 		case JOB_SHOULD_HOLD:
 			dprintf( D_ALWAYS, "Putting job %d.%d on hold\n",
 					 srec->job_id.cluster, srec->job_id.proc );
 			set_job_status( srec->job_id.cluster, srec->job_id.proc, 
 							HELD );
-			nukeMpi( srec );
+			shutdownMpiJob( srec );
 			break;
 		case DPRINTF_ERROR:
 			dprintf( D_ALWAYS, 
@@ -1290,8 +1290,8 @@ DedicatedScheduler::reaper( int pid, int status )
 				// relinquish the match if we get too many
 				// exceptions 
 			if( !srec->removed ) {
-				nukeMpi( srec );
-				scheduler.HadException(srec->match);
+				shutdownMpiJob( srec );
+				scheduler.HadException( srec->match );
 			}
 			break;
 		}
@@ -1299,7 +1299,14 @@ DedicatedScheduler::reaper( int pid, int status )
 		dprintf( D_ALWAYS, "Shadow pid %d died with %s\n",
 				 pid, daemonCore->GetExceptionString(status) );
 	}
+
+		// Regardless of what happened, we need to remove the
+		// allocation for this shadow.
+	removeAllocation( srec );
+
+		// Tell the Scheduler class this shadow pid is gone...
 	scheduler.delete_shadow_rec( pid );
+
 	return TRUE;
 }
 
@@ -1769,7 +1776,8 @@ DedicatedScheduler::spawnJobs( void )
 				(*(*allocation->matches)[p])[i]->status = M_ACTIVE;
 			}
 		}
-			// TODO: Deal w/ push/pulling matches!
+			// TODO: Deal w/ pushing matches (this is just a
+			// performance optimization, not a correctness thing). 
 	}
 
 	free( shadow );
@@ -1965,27 +1973,37 @@ DedicatedScheduler::computeSchedule( void )
 }	
 
 
+// This function is used to remove the allocation associated with the
+// given shadow and perform any other clean-up related to the shadow
+// exiting. 
 void
-DedicatedScheduler::nukeMpi ( shadow_rec* srec )
+DedicatedScheduler::removeAllocation( shadow_rec* srec )
 {
-		/* remove all in cluster */
 	AllocationNode* alloc;
 	MRecArray* matches;
 	int i, n, m;
 
-	if( allocations->lookup( srec->job_id.cluster, alloc ) != -1 ) {
-		alloc->status = A_DYING;
-		for( i=0; i<alloc->num_procs; i++ ) {
-			matches = (*alloc->matches)[i];
-			n = matches->getlast();
-			for( m=0 ; m <= n ; m++ ) {
-				deactivateClaim( (*matches)[m] );
-				(*matches)[m]->allocated = false;
-			}
-			matches->fill( NULL );
-			matches->truncate(-1);
+	dprintf( D_FULLDEBUG, "DedicatedScheduler::removeAllocation, "
+			 "cluster %d\n", srec->job_id.cluster );
+
+	if( ! srec ) {
+		EXCEPT( "DedicatedScheduler::removeAllocation: srec is NULL!" );
+	}
+	if( allocations->lookup( srec->job_id.cluster, alloc ) < 0 ) {
+		EXCEPT( "DedicatedScheduler::removeAllocation(): can't find " 
+				"allocation node for cluster %d! Aborting", 
+				srec->job_id.cluster ); 
+	}
+
+		// First, mark all match records as no longer allocated.
+	for( i=0; i<alloc->num_procs; i++ ) {
+		matches = (*alloc->matches)[i];
+		n = matches->getlast();
+		for( m=0 ; m <= n ; m++ ) {
+			(*matches)[m]->allocated = false;
 		}
 	}
+
 		/* it may be that the mpi shadow crashed and left around a 
 		   file named 'procgroup' in the IWD of the job.  We should 
 		   check and delete it here. */
@@ -1996,6 +2014,44 @@ DedicatedScheduler::nukeMpi ( shadow_rec* srec )
 		if ( errno != ENOENT ) {
 			dprintf ( D_FULLDEBUG, "Couldn't remove %s. errno %d.\n", 
 					  pg_file, errno );
+		}
+	}
+
+		// This "allocation" is no longer valid.  So, delete the
+		// allocation node from our table.
+	allocations->remove( srec->job_id.cluster );
+
+		// Finally, delete the object itself so we don't leak it. 
+	delete alloc;
+}
+
+
+// This function is used to deactivate all the claims used by a
+// given shadow.
+void
+DedicatedScheduler::shutdownMpiJob( shadow_rec* srec )
+{
+	AllocationNode* alloc;
+	MRecArray* matches;
+	int i, n, m;
+
+	dprintf( D_FULLDEBUG, "DedicatedScheduler::shutdownMpiJob, cluster %d\n",
+			 srec->job_id.cluster );
+
+	if( ! srec ) {
+		EXCEPT( "DedicatedScheduler::shutdownMpiJob: srec is NULL!" );
+	}
+	if( allocations->lookup( srec->job_id.cluster, alloc ) < 0 ) {
+		EXCEPT( "DedicatedScheduler::shutdownMpiJob(): can't find " 
+				"allocation node for cluster %d! Aborting", 
+				srec->job_id.cluster ); 
+	}
+	alloc->status = A_DYING;
+	for( i=0; i<alloc->num_procs; i++ ) {
+		matches = (*alloc->matches)[i];
+		n = matches->getlast();
+		for( m=0 ; m <= n ; m++ ) {
+			deactivateClaim( (*matches)[m] );
 		}
 	}
 }

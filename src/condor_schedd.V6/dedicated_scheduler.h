@@ -208,8 +208,15 @@ class DedicatedScheduler : public Service {
 		// them. 
     int giveMPIMatches( Service*, int cmd, Stream* stream );
 
-		// Remove all startds from a given match.
-	void nukeMpi ( shadow_rec* srec );
+		// Deactivate the claim on all resources used by this shadow
+	void shutdownMpiJob( shadow_rec* srec );
+
+		/** Update internal data structures to remove the allocation  
+			associated with this shadow.
+			@param srec Shadow record of the allocation to remove
+		*/
+	void removeAllocation( shadow_rec* srec );
+
 
 		// // // // // // 
 		// Data members 
