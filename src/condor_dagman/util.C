@@ -22,6 +22,7 @@
  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"   /* for <ctype.h>, <assert.h> */
+#include "condor_debug.h"
 #include "debug.h"
 #include "util.h"
 
@@ -31,10 +32,10 @@ extern "C" {
 int util_getline(FILE *fp, char *line, int max) {
   int c, i = 0;
     
-  assert (EOF  == -1);
-  assert (fp   != NULL);
-  assert (line != NULL);
-  assert (max  > 0);      /* Need at least 1 slot for '\0' character */
+  ASSERT( EOF  == -1 );
+  ASSERT( fp   != NULL );
+  ASSERT( line != NULL );
+  ASSERT( max  > 0 );      /* Need at least 1 slot for '\0' character */
 
   for (c = getc(fp) ; c != '\n' && c != EOF ; c = getc(fp)) {
     if ( !(i == 0 && isspace(c)) && (i+1 < max)) line[i++] = c;

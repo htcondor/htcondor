@@ -136,8 +136,8 @@ bool Dag::Bootstrap (bool recovery) {
 
 //-------------------------------------------------------------------------
 bool Dag::AddDependency (Job * parent, Job * child) {
-    assert (parent != NULL);
-    assert (child  != NULL);
+    ASSERT( parent != NULL );
+    ASSERT( child  != NULL );
     
     if (!parent->Add (Job::Q_CHILDREN,  child->GetJobID())) return false;
     if (!child->Add  (Job::Q_PARENTS, parent->GetJobID())) return false;
@@ -164,7 +164,7 @@ bool Dag::DetectLogGrowth () {
     }
     
     int fd = _condorLog.getfd();
-    assert (fd != 0);
+    ASSERT( fd != 0 );
     struct stat buf;
     
     if( fstat( fd, &buf ) == -1 ) {
@@ -248,7 +248,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
             //----------------------------------------------------------------
           case ULOG_OK:
             
-			assert( e != NULL);
+			ASSERT( e != NULL );
 
 			job = GetJob( condorID );
 			eventName = ULogEventNumberNames[e->eventNumber];
@@ -270,7 +270,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
 
 				  job->_Status = Job::STATUS_ERROR;
                   _numJobsSubmitted--;
-                  assert( _numJobsSubmitted >= 0 );
+                  ASSERT( _numJobsSubmitted >= 0 );
 
 				  sprintf( job->error_text, "Condor reported %s event",
 						   ULogEventNumberNames[e->eventNumber] );
@@ -305,7 +305,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
                   }
 
 				  _numJobsSubmitted--;
-				  assert( _numJobsSubmitted >= 0 );
+				  ASSERT( _numJobsSubmitted >= 0 );
 
                   JobTerminatedEvent * termEvent = (JobTerminatedEvent*) e;
 
@@ -351,7 +351,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
                   }
 				  else {
 					  // job succeeded
-					  assert( termEvent->returnValue == 0 );
+					  ASSERT( termEvent->returnValue == 0 );
 					  job->retval = 0;
 					  debug_printf( DEBUG_NORMAL,
 									"Job %s completed successfully.\n",
@@ -386,7 +386,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
 				if( !job ) {
 					break;
 				}
-				assert( job->_Status == Job::STATUS_POSTRUN );
+				ASSERT( job->_Status == Job::STATUS_POSTRUN );
 
 				PostScriptTerminatedEvent *termEvent =
 					(PostScriptTerminatedEvent*) e;
@@ -510,7 +510,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
 						break;
 					}
 					else if( job != expectedJob ) {
-						assert( expectedJob != NULL );
+						ASSERT( expectedJob != NULL );
 						debug_printf( DEBUG_QUIET,
                                       "Unexpected submit event (for job "
                                       "\"%s\") found in log; job \"%s\" "
@@ -599,8 +599,8 @@ Job * Dag::GetJob (const CondorID condorID) const {
 bool
 Dag::StartNode( Job *node )
 {
-    assert( node != NULL );
-	assert( node->CanSubmit() );
+    ASSERT( node != NULL );
+	ASSERT( node->CanSubmit() );
 
 	// if a PRE script exists and hasn't already been run, run that
 	// first -- the PRE script's reaper function will submit the
@@ -642,8 +642,8 @@ Dag::SubmitReadyJobs()
 	_readyQ->Rewind();
 	_readyQ->Next( job );
 	_readyQ->DeleteCurrent();
-	assert( job != NULL );
-	assert( job->_Status == Job::STATUS_READY );
+	ASSERT( job != NULL );
+	ASSERT( job->_Status == Job::STATUS_READY );
 
 	debug_printf( DEBUG_VERBOSE, "Submitting Job %s ...\n",
 				  job->GetJobName() );
@@ -706,8 +706,8 @@ Dag::SubmitReadyJobs()
 int
 Dag::PreScriptReaper( Job* job, int status )
 {
-	assert( job != NULL );
-	assert( job->_Status == Job::STATUS_PRERUN );
+	ASSERT( job != NULL );
+	ASSERT( job->_Status == Job::STATUS_PRERUN );
 
 	if( WIFSIGNALED( status ) || WEXITSTATUS( status ) != 0 ) {
 		// if script returned failure or was killed by a signal
@@ -759,8 +759,8 @@ Dag::PreScriptReaper( Job* job, int status )
 int
 Dag::PostScriptReaper( Job* job, int status )
 {
-	assert( job != NULL );
-	assert( job->_Status == Job::STATUS_POSTRUN );
+	ASSERT( job != NULL );
+	ASSERT( job->_Status == Job::STATUS_POSTRUN );
 
 	PostScriptTerminatedEvent e;
 	UserLog ulog;
@@ -842,13 +842,13 @@ void Dag::RemoveRunningJobs () const {
         }
 		// if node is running a PRE script, hard kill it
         else if( job->_Status == Job::STATUS_PRERUN ) {
-			assert( job->_scriptPre->_pid != 0 );
+			ASSERT( job->_scriptPre->_pid != 0 );
 			sprintf( cmd, "kill -9 %d", job->_scriptPre->_pid );
 			util_popen( cmd );
         }
 		// if node is running a POST script, hard kill it
         else if( job->_Status == Job::STATUS_POSTRUN ) {
-			assert( job->_scriptPost->_pid != 0 );
+			ASSERT( job->_scriptPost->_pid != 0 );
 			sprintf( cmd, "kill -9 %d", job->_scriptPost->_pid );
 			util_popen( cmd );
         }
@@ -901,7 +901,7 @@ void Dag::Rescue (const char * rescue_file, const char * datafile) const {
                      job->_scriptPost->GetCmd());
         }
 		if( job->retry_max > 0 ) {
-			assert( job->retries <= job->retry_max );
+			ASSERT( job->retries <= job->retry_max );
 			// print (job->retry_max - job->retries) so that
 			// job->retries isn't reset upon recovery
 			int retries = (job->retry_max - job->retries);
@@ -927,7 +927,7 @@ void Dag::Rescue (const char * rescue_file, const char * datafile) const {
             JobID_t jobID;
             while (jobit.Next(jobID)) {
                 Job * child = GetJob(jobID);
-                assert (child != NULL);
+                ASSERT( child != NULL );
                 fprintf (fp, " %s", child->GetJobName());
             }
             fprintf (fp, "\n");
@@ -946,8 +946,8 @@ void Dag::Rescue (const char * rescue_file, const char * datafile) const {
 void
 Dag::TerminateJob( Job* job, bool bootstrap )
 {
-    assert (job != NULL);
-    assert (job->_Status == Job::STATUS_DONE);
+    ASSERT( job != NULL );
+    ASSERT( job->_Status == Job::STATUS_DONE );
 
     //
     // Report termination to all child jobs by removing parent's ID from
@@ -958,7 +958,7 @@ Dag::TerminateJob( Job* job, bool bootstrap )
     JobID_t childID;
     while (iList.Next(childID)) {
         Job * child = GetJob(childID);
-        assert (child != NULL);
+        ASSERT( child != NULL );
         child->Remove(Job::Q_WAITING, job->GetJobID());
 		// if child has no more parents in its waiting queue, submit it
 		if( child->_Status == Job::STATUS_READY &&
@@ -967,7 +967,7 @@ Dag::TerminateJob( Job* job, bool bootstrap )
 		}
     }
     _numJobsDone++;
-    assert (_numJobsDone <= _jobs.Number());
+    ASSERT( _numJobsDone <= _jobs.Number() );
 }
 
 void Dag::

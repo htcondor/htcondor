@@ -440,13 +440,13 @@ void main_timer () {
 		}
 	}
 
-    assert (G.dag->NumJobsDone() + G.dag->NumJobsFailed() <= G.dag->NumJobs());
+    ASSERT( G.dag->NumJobsDone() + G.dag->NumJobsFailed() <= G.dag->NumJobs() );
 
     //
     // If DAG is complete, hurray, and exit.
     //
     if( G.dag->Done() ) {
-        assert (G.dag->NumJobsSubmitted() == 0);
+        ASSERT( G.dag->NumJobsSubmitted() == 0 );
         debug_printf( DEBUG_NORMAL, "All jobs Completed!\n" );
 		G.CleanUp();
 		DC_Exit( 0 );

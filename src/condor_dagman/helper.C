@@ -24,7 +24,7 @@
 // File: Helper.cpp
 // Author: Francesco Giacomini, INFN <Francesco.Giacomini@cnaf.infn.it>
 
-// $Id: helper.C,v 1.1.4.2 2003-01-10 23:16:05 stolley Exp $
+// $Id: helper.C,v 1.1.4.3 2003-01-14 03:53:46 pfc Exp $
 
 #include "condor_common.h"
 #include "helper.h"
@@ -44,7 +44,7 @@ public:
 Helper::Helper()
   : m_impl(new HelperImpl)
 {
-  assert(m_impl != 0);
+  ASSERT( m_impl != 0 );
 }
 
 Helper::~Helper()
@@ -61,7 +61,7 @@ Helper::resolve(std::string const& input_file) const
 std::string
 Helper::HelperImpl::resolve(std::string const& input_file)
 {
-  assert(! input_file.empty());
+  ASSERT( ! input_file.empty() );
   {
     std::string valid_chars("abcdefghijklmnopqrstuvwxyz"
 			    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -74,11 +74,11 @@ Helper::HelperImpl::resolve(std::string const& input_file)
     std::string::size_type s = input_file.find_first_not_of(valid_chars.c_str());
 				     
     bool input_file_name_is_valid = s == std::string::npos;
-    assert(input_file_name_is_valid);
+    ASSERT( input_file_name_is_valid );
   }
   {
     std::ifstream input_file_exists(input_file.c_str());
-    assert(input_file_exists);
+    ASSERT( input_file_exists );
   }
     
   std::string output_file;
@@ -103,7 +103,7 @@ Helper::HelperImpl::resolve(std::string const& input_file)
   std::cout << helper_command << '\n';
 
   int status = system(helper_command.c_str());
-  assert(status == 0);
+  ASSERT( status == 0 );
 
   return output_file;
 }
