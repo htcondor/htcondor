@@ -149,7 +149,7 @@ int CondorFileCompress::read_data( char *data, int length )
 			}
 
 		} else if( result!=Z_OK && stream.avail_in!=0 ) {
-			_condor_warning("Error %d while uncompressing %s\n",result,url);
+			_condor_warning(CONDOR_WARNING_KIND_NOTICE, "Error %d while uncompressing %s\n",result,url);
 			failure=1;
 			break;
 		}
@@ -197,19 +197,19 @@ int CondorFileCompress::read_header()
 	}
 
 	if( header.magic0!=GZIP_MAGIC0 || header.magic1!=GZIP_MAGIC1 ) {
-		_condor_warning("%s does not appear to be a valid gzip file",url);
+		_condor_warning(CONDOR_WARNING_KIND_BADURL, "%s does not appear to be a valid gzip file",url);
 		return 0;
 	}
 
 	poffset += sizeof(header);
 
 	if( header.method!=GZIP_METHOD_DEFLATED ) {
-		_condor_warning("I don't know how to read compression method %d in gzip %s",header.method,url);
+		_condor_warning(CONDOR_WARNING_KIND_BADURL, "I don't know how to read compression method %d in gzip %s",header.method,url);
 		return 0;
 	}
 
 	if( header.flags&GZIP_FLAG_MULTI ) {
-		_condor_warning("I don't know how to read multi-part gzip %s",url);
+		_condor_warning(CONDOR_WARNING_KIND_BADURL, "I don't know how to read multi-part gzip %s",url);
 		return 0;
 	}
 
@@ -227,12 +227,12 @@ int CondorFileCompress::read_header()
 	}
 
 	if( header.flags&GZIP_FLAG_ENCRYPTED ) {
-		_condor_warning("I don't know how to read encrypted gzip %s",url);
+		_condor_warning(CONDOR_WARNING_KIND_BADURL, "I don't know how to read encrypted gzip %s",url);
 		return 0;
 	}
 
 	if( header.flags&GZIP_FLAG_RESERVED ) {
-		_condor_warning("I don't understand flags 0x%x in %s",header.flags,url);
+		_condor_warning(CONDOR_WARNING_KIND_BADURL, "I don't understand flags 0x%x in %s",header.flags,url);
 		return 0;
 	}
 
@@ -412,7 +412,7 @@ int CondorFileCompress::ioctl( int cmd, int arg )
 
 int CondorFileCompress::ftruncate( size_t length )
 {
-	_condor_warning( "You can't ftruncate() a compressed file (%s).",
+	_condor_warning(CONDOR_WARNING_KIND_BADURL, "You can't ftruncate() a compressed file (%s).",
 					 get_url() ); 
 	errno = EINVAL;
 	return -1;
@@ -420,7 +420,7 @@ int CondorFileCompress::ftruncate( size_t length )
 
 int CondorFileCompress::fstat( struct stat* buf )
 {
-	_condor_warning( "You can't fstat() a compressed file (%s).", 
+	_condor_warning(CONDOR_WARNING_KIND_BADURL, "You can't fstat() a compressed file (%s).", 
 					 get_url() );
 	errno = EINVAL;
 	return -1;

@@ -42,6 +42,17 @@ debug_printf( debug_level_t level, char *fmt, ... ) {
 
 /*--------------------------------------------------------------------------*/
 void
+debug_dprintf( int flags, debug_level_t level, char *fmt, ... ) {
+	if( DEBUG_LEVEL( level ) ) {
+		va_list args;
+		va_start( args, fmt );
+		_condor_dprintf_va( flags, fmt, args );
+		va_end( args );
+	}
+}
+
+/*--------------------------------------------------------------------------*/
+void
 debug_error( int error, debug_level_t level, char *fmt, ... ) {
     if( DEBUG_LEVEL( level ) ) {
         va_list args;

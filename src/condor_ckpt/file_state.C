@@ -454,6 +454,8 @@ CondorFile * CondorFileTable::create_url_chain( char *url )
 		if(f) return new CondorFileAppend( f );
 		else return 0;
 	} else {
+		_condor_warning(CONDOR_WARNING_KIND_BADURL,"I don't understand url (%s).",url);
+		errno = ENOENT;
 		return 0;
 	}
 }
@@ -465,7 +467,7 @@ CondorFile * CondorFileTable::open_url( char *url, int flags, int mode )
 	CondorFile *f = create_url_chain( url );
 
 	if( !f ) {
-		_condor_warning("I can't parse url type (%s).",url);
+		_condor_warning(CONDOR_WARNING_KIND_BADURL,"I can't parse url type (%s).",url);
 		errno = ENOENT;
 		return 0;
 	} else {
@@ -821,7 +823,7 @@ void CondorFileTable::check_safety( CondorFilePointer *fp )
 {
 	if( fp->info->read_bytes && fp->info->write_bytes && !fp->info->already_warned ) {
 		fp->info->already_warned = 1;
-		_condor_warning("File '%s' used for both reading and writing.  This is not checkpoint-safe.\n",fp->logical_name);
+		_condor_warning(CONDOR_WARNING_KIND_READWRITE,"File '%s' used for both reading and writing.  This is not checkpoint-safe.\n",fp->logical_name);
 	}
 }
 
@@ -1149,7 +1151,7 @@ int CondorFileTable::poll( struct pollfd *fds, int nfds, int timeout )
 			realfds[i].fd = _condor_get_unmapped_fd(fds[i].fd);
 			realfds[i].events = fds[i].events;
 		} else {
-			_condor_warning("poll() is not supported for remote files");
+			_condor_warning(CONDOR_WARNING_KIND_UNSUP,"poll() is not supported for remote files");
 			free(realfds);
 			errno = EINVAL;
 			return -1;
@@ -1202,7 +1204,7 @@ int CondorFileTable::select( int n, fd_set *r, fd_set *w, fd_set *e, struct time
 				if( (r && FD_ISSET(fd,r)) ||
 				    (w && FD_ISSET(fd,w)) ||
 				    (e && FD_ISSET(fd,e)) ) {
-					_condor_warning("select() is not supported for remote files.");
+					_condor_warning(CONDOR_WARNING_KIND_UNSUP,"select() is not supported for remote files.");
 					errno = EINVAL;
 					return -1;
 				}
@@ -1335,13 +1337,12 @@ int CondorFileTable::is_fd_local( int fd )
 	return pointers[fd]->file->is_file_local();
 }
 
-int CondorFileTable::is_file_name_local( const char *incomplete_name )
+int CondorFileTable::is_file_name_local( const char *incomplete_name, char *local_name )
 {
 	char url[_POSIX_PATH_MAX];
 	char logical_name[_POSIX_PATH_MAX];
 
 	// Convert the incomplete name into a complete path
-
 	complete_path( incomplete_name, logical_name );
 
 	// Now look to see if the file is already open.
@@ -1349,12 +1350,18 @@ int CondorFileTable::is_file_name_local( const char *incomplete_name )
 
 	int match = find_logical_name( logical_name );
 	if(match!=-1) {
+		CondorFile *file;
 		resume(match);
-		return pointers[match]->file->is_file_local();
+		file = pointers[match]->file;
+		strcpy(local_name,strchr(file->get_url(),':')+1); 
+		return file->is_file_local();
 	}
 
 	// Otherwise, resolve the url by normal methods.
 	lookup_url( logical_name, url );
+
+	// Copy the local path name out
+	strcpy(local_name,strrchr(url,':')+1);
 
 	// Create a URL chain and ask it if it is local.
 	CondorFile *f = create_url_chain(url);
@@ -1366,8 +1373,6 @@ int CondorFileTable::is_file_name_local( const char *incomplete_name )
 			delete f;
 			return 0;
 		}
-	} else {
-		return 0;
 	}
 }
 

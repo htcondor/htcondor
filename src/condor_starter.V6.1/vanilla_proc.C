@@ -204,7 +204,6 @@ VanillaProc::StartJob()
 		JobAd->InsertOrUpdate(tmp);		
 
 		// Only rename the executable if it is transferred.
-	
 		int xferExec;
 		if(!JobAd->LookupBool(ATTR_TRANSFER_EXECUTABLE,xferExec)) {
 			xferExec = 1;
@@ -212,6 +211,7 @@ VanillaProc::StartJob()
 
 		if(xferExec) {
 			sprintf(tmp,"%s=\"%s\"",ATTR_JOB_CMD,CONDOR_EXEC);
+			dprintf(D_FULLDEBUG, "Changing the executable\n");
 			JobAd->InsertOrUpdate(tmp);
 		}
 

@@ -100,6 +100,7 @@ void display_startup_info( const STARTUP_INFO *, int );
 
 int pseudo_getrusage(int who, struct rusage *use_p );
 int pseudo_sync();
+int pseudo_statfs( const char *path, struct statfs *buf );
 
 END_C_DECLS
 

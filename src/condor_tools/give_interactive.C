@@ -368,7 +368,7 @@ fetchSubmittorPrios()
 	// connect to negotiator
 
 	sock->decode();
-	if( !al.get(*sock) || !sock->end_of_message() ) {
+	if( !al.initFromStream(*sock) || !sock->end_of_message() ) {
 		fprintf( stderr, 
 				 "Error:  Could not get priorities from negotiator (%s)\n",
 				 negotiator.fullHostname() );

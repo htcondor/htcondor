@@ -108,13 +108,12 @@ bool	NewExecutable = false;
 bool	IsFirstExecutable;
 bool	UserLogSpecified = false;
 bool never_transfer = false;  // never transfer files or do transfer files
+
 // environment vars in the ClassAd attribute are seperated via
 // the env_delimiter character; currently a '|' on NT and ';' on Unix
-#ifdef WIN32
-	char env_delimiter[] = "|";
-#else
-	char env_delimiter[] = ";";
-#endif
+// env_delimiter is a static const chat defined in condor_constants.h.
+// Here we define a char* env_delimiter_string for use with strcat.
+static char env_delimiter_string[5];
 
 char* LogNotesVal = NULL;
 
@@ -232,8 +231,9 @@ void	SetKillSig();
 void	SetForcedAttributes();
 void 	check_iwd( char *iwd );
 int	read_condor_file( FILE *fp );
-char * 	condor_param( const char *name );
-void 	set_condor_param( char *name, char *value );
+char * 	condor_param( const char* name, const char* alt_name );
+char * 	condor_param( const char* name ); // call param with NULL as the alt
+void 	set_condor_param( const char* name, char* value );
 void 	queue(int num);
 char * 	check_requirements( char *orig );
 void 	check_open( const char *name, int flags );
@@ -352,7 +352,8 @@ init_job_ad()
 			*slash = '\0';
 			if ( strlen(ntdomain) > 0 ) {
 				if ( strlen(ntdomain) > 80 ) {
-					fprintf(stderr,"NT DOMAIN OVERFLOW (%s)\n",ntdomain);
+					fprintf( stderr, "\nERROR: NT Domain Overflow (%s)\n",
+							 ntdomain );
 					exit(1);
 				}
 				(void) sprintf (buffer, "%s = \"%s\"", ATTR_NT_DOMAIN, 
@@ -409,7 +410,12 @@ main( int argc, char *argv[] )
 	FILE	*fp;
 	char	**ptr;
 	char	*cmd_file = NULL;
-	
+	int dag_pause = 0;
+
+	// Initialize env_delimiter string... note that 
+	// const char env_delimiter is defined in condor_constants.h
+	sprintf(env_delimiter_string,"%c\0",env_delimiter);
+
 	setbuf( stdout, NULL );
 
 #if !defined(WIN32)	
@@ -597,13 +603,16 @@ main( int argc, char *argv[] )
 
 	ActiveQueueConnection = FALSE; 
 
-	if(ProcId != -1 ) 
-	{
+	if(ProcId != -1 ) {
 		reschedule();
 	}
 
 	if ( !DisableFileChecks ) {
 		TestFilePermissions( ScheddAddr );
+	}
+
+	if( dag_pause ) {
+		sleep(4);
 	}
 
 	return 0;
@@ -617,15 +626,13 @@ main( int argc, char *argv[] )
 void
 reschedule()
 {
-
-        Daemon  my_schedd(DT_SCHEDD, NULL, NULL);
+	Daemon  my_schedd(DT_SCHEDD, NULL, NULL);
 
  	if ( ! my_schedd.sendCommand(RESCHEDULE, Stream::reli_sock, 0) ) {
 		fprintf(stderr, "Can't send RESCHEDULE command to condor scheduler\n" );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
-
 }
 
 
@@ -686,7 +693,7 @@ SetExecutable()
 	char	*copySpool = NULL;
 	char	*macro_value = NULL;
 
-	ename = condor_param(Executable);
+	ename = condor_param( Executable, ATTR_JOB_CMD );
 
 	if( ename == NULL ) {
 		fprintf( stderr, "No '%s' parameter was provided\n", Executable);
@@ -756,12 +763,12 @@ SetExecutable()
 		InsertJobExpr (buffer);
 		break;
 	default:
-		fprintf(stderr, "Unknown universe (%d)\n", JobUniverse );
+		fprintf(stderr, "\nERROR: Unknown universe (%d)\n", JobUniverse );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
 
-	copySpool = condor_param(CopyToSpool);
+	copySpool = condor_param( CopyToSpool, "CopyToSpool" );
 	if( copySpool == NULL)
 	{
 		copySpool = (char *)malloc(16);
@@ -777,13 +784,16 @@ SetExecutable()
 		 transfer_it ) {
 
 		if (SendSpoolFile(IckptName) < 0) {
-			fprintf(stderr,"permission to transfer executable %s denied\n",IckptName);
+			fprintf( stderr, "\nERROR: Permission to transfer executable "
+					 "%s denied\n", IckptName );
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
 
-		if (SendSpoolFileBytes(full_ename) < 0) {
-			fprintf(stderr,"failed to transfer executable file %s\n", ename);
+		if (SendSpoolFileBytes(full_path(ename,false)) < 0) {
+			fprintf( stderr,
+					 "\nERROR: failed to transfer executable file %s\n", 
+					 ename );
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
@@ -803,7 +813,7 @@ SetUniverse()
 {
 	char	*univ;
 
-	univ = condor_param(Universe);
+	univ = condor_param( Universe, ATTR_JOB_UNIVERSE );
 
 #if !defined(WIN32)
 	if( univ && stricmp(univ,"pvm") == MATCH ) 
@@ -811,7 +821,7 @@ SetUniverse()
 		char *pvmd = param("PVMD");
 
 		if (!pvmd || access(pvmd, R_OK|X_OK) != 0) {
-			fprintf(stderr, "Error: Condor PVM support is not installed.\n"
+			fprintf(stderr, "\nERROR: Condor PVM support is not installed.\n"
 					"You must install the Condor PVM Contrib Module before\n"
 					"submitting PVM universe jobs\n");
 			if (!pvmd) {
@@ -928,7 +938,7 @@ SetMachineCount()
 
 	if (JobUniverse == PVM) {
 
-		mach_count = condor_param(MachineCount);
+		mach_count = condor_param( MachineCount, "MachineCount" );
 
 		int tmp;
 		if (mach_count != NULL) {
@@ -957,15 +967,18 @@ SetMachineCount()
 
 	} else if (JobUniverse == MPI) {
 
-		mach_count = condor_param( MachineCount );
-		
+		mach_count = condor_param( MachineCount, "MachineCount" );
+		if( ! mach_count ) { 
+				// try an alternate name
+			mach_count = condor_param( "node_count", "NodeCount" );
+		}
 		int tmp;
 		if ( mach_count != NULL ) {
 			tmp = atoi(mach_count);
 			free(mach_count);
 		}
 		else {
-			fprintf(stderr, "No machine_count specified!\n" );
+			fprintf(stderr, "\nERROR: No machine_count specified!\n" );
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
@@ -988,7 +1001,7 @@ SetImageSize()
 	char	*p;
 	char    buff[2048];
 
-	tmp = condor_param(ImageSize);
+	tmp = condor_param( ImageSize, ATTR_IMAGE_SIZE );
 
 	// we should only call calc_image_size on the first
 	// proc in the cluster, since the executable cannot change.
@@ -1011,7 +1024,7 @@ SetImageSize()
 		}
 		free( tmp );
 		if( size < 1 ) {
-			fprintf(stderr, "Image Size must be positive\n" );
+			fprintf(stderr, "\nERROR: Image Size must be positive\n" );
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
@@ -1041,7 +1054,7 @@ void SetFileOptions()
 	char *tmp;
 	char buffer[ATTRLIST_MAX_EXPRESSION];
 
-	tmp = condor_param(FileRemaps);
+	tmp = condor_param( FileRemaps, ATTR_FILE_REMAPS );
 	if(tmp) {
 		sprintf(buffer,"%s = %s",ATTR_FILE_REMAPS,tmp);
 		InsertJobExpr(buffer);
@@ -1057,7 +1070,7 @@ void SetFileOptions()
 
 	/* If no buffer size is given, use 512 KB */
 
-	tmp = condor_param(BufferSize);
+	tmp = condor_param( BufferSize, ATTR_BUFFER_SIZE );
 	if(!tmp) {
 		tmp = param("DEFAULT_IO_BUFFER_SIZE");
 		if (!tmp) {
@@ -1070,7 +1083,7 @@ void SetFileOptions()
 
 	/* If not buffer block size is given, use 32 KB */
 
-	tmp = condor_param(BufferBlockSize);
+	tmp = condor_param( BufferBlockSize, ATTR_BUFFER_BLOCK_SIZE );
 	if(!tmp) {
 		tmp = param("DEFAULT_IO_BUFFER_BLOCK_SIZE");
 		if (!tmp) {
@@ -1123,7 +1136,7 @@ SetTransferFiles()
 
 	buffer[0] = input_files[0] = output_files[0] = '\0';
 
-	macro_value = condor_param( TransferInputFiles ) ;
+	macro_value = condor_param( TransferInputFiles, "TransferInputFiles" ) ;
 	TransferInputSize = 0;
 
 	if( JobLanguage ) {
@@ -1154,7 +1167,8 @@ SetTransferFiles()
 	}
 
 
-	macro_value = condor_param( TransferOutputFiles ) ;
+	macro_value = condor_param( TransferOutputFiles,
+								"TransferOutputFiles" ); 
 	if( macro_value ) 
 	{
 		StringList files(macro_value,",");
@@ -1173,7 +1187,7 @@ SetTransferFiles()
 		free(macro_value);
 	}
 
-	macro_value = condor_param( TransferFiles ) ;
+	macro_value = condor_param( TransferFiles, ATTR_TRANSFER_FILES );
 	if( macro_value ) 
 	{
 		// User explicitly specified TransferFiles; do what user says
@@ -1197,8 +1211,8 @@ SetTransferFiles()
 				break;
 			default:
 				// Unrecognized
-				fprintf(stderr,"Unrecognized argument for parameter '%s'\n", 
-						TransferFiles);
+				fprintf( stderr, "\nERROR: Unrecognized argument for "
+						 "parameter '%s'\n", TransferFiles );
 				DoCleanup(0,0,NULL);
 				exit( 1 );
 				break;
@@ -1210,12 +1224,15 @@ SetTransferFiles()
 		if ( files_specified ) {
 			sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_FILES,"ONEXIT");
 		} else {
-#ifdef WIN32
-			sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_FILES,"ONEXIT");
-#else
-			sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_FILES,"NEVER");
-			never_transfer = true;
-#endif
+			// MPI currently relies on not transfering the files, and staying
+			// in the submit directory. Otherwise, we should copy the
+			// executable over. 
+			if(JobUniverse == MPI) { 
+				sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_FILES,"NEVER");
+				never_transfer = true;
+			} else {
+				sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_FILES,"ONEXIT");
+			}
 		}
 	}
 
@@ -1309,7 +1326,8 @@ SetStdFile( int which_file )
 		macro_value = condor_param( TransferError );
 		break;
 	default:
-		fprintf(stderr, "Unknown standard file descriptor (%d)\n", which_file );
+		fprintf( stderr, "\nERROR: Unknown standard file descriptor (%d)\n",
+				 which_file ); 
 		DoCleanup(0,0,NULL);
 	}
 
@@ -1320,7 +1338,7 @@ SetStdFile( int which_file )
 		free( macro_value );
 	}
 
-	macro_value = condor_param( generic_name );
+	macro_value = condor_param( generic_name, NULL );
 	
 	if( !macro_value || *macro_value == '\0') 
 	{
@@ -1330,8 +1348,8 @@ SetStdFile( int which_file )
 	
 	if( whitespace(macro_value) ) 
 	{
-		fprintf(stderr,"The '%s' takes exactly one argument (%s)\n", 
-				generic_name, macro_value);
+		fprintf( stderr,"\nERROR: The '%s' takes exactly one argument (%s)\n", 
+				 generic_name, macro_value );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}	
@@ -1372,14 +1390,15 @@ SetStdFile( int which_file )
 		break;
 	}
 		
-	if ( macro_value )
+	if( macro_value ) {
 		free(macro_value);
+	}
 }
 
 void
 SetJobStatus()
 {
-	char *hold = condor_param(Hold);
+	char *hold = condor_param( Hold, NULL );
 
 	if( hold && (hold[0] == 'T' || hold[0] == 't') ) {
 		(void) sprintf (buffer, "%s = %d", ATTR_JOB_STATUS, HELD);
@@ -1389,13 +1408,15 @@ SetJobStatus()
 		InsertJobExpr (buffer);
 	}
 
-	if( hold ) free(hold);
+	if( hold ) {
+		free(hold);
+	}
 }
 
 void
 SetPriority()
 {
-	char *prio = condor_param(Priority);
+	char *prio = condor_param( Priority, ATTR_PRIO );
 	int  prioval = 0;
 
 	if( prio != NULL ) 
@@ -1403,8 +1424,8 @@ SetPriority()
 		prioval = atoi (prio);
 		if( prioval < -20 || prioval > 20 ) 
 		{
-			fprintf(stderr,"Priority must be in the range -20 thru 20 (%d)\n", 
-					prioval );
+			fprintf( stderr, "\nERROR: Priority must be in the range "
+					 "-20 thru 20 (%d)\n", prioval );
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
@@ -1414,7 +1435,7 @@ SetPriority()
 	InsertJobExpr (buffer);
 
 	// also check if the job is "dirt user" priority (i.e., nice_user==True)
-	char *nice_user = condor_param(NiceUser);
+	char *nice_user = condor_param( NiceUser, ATTR_NICE_USER );
 	if( nice_user && (*nice_user == 'T' || *nice_user == 't') )
 	{
 		sprintf( buffer, "%s = TRUE", ATTR_NICE_USER );
@@ -1512,7 +1533,7 @@ SetExitRemoveCheck(void)
 void
 SetNotification()
 {
-	char *how = condor_param(Notification);
+	char *how = condor_param( Notification, ATTR_JOB_NOTIFICATION );
 	int notification;
 
 	if( (how == NULL) || (stricmp(how, "COMPLETE") == 0) ) {
@@ -1528,8 +1549,8 @@ SetNotification()
 		notification = NOTIFY_ERROR;
 	} 
 	else {
-		fprintf(stderr,"Notification must be 'Never', 'Always', 'Complete', "
-		"or 'Error'\n");
+		fprintf( stderr, "\nERROR: Notification must be 'Never', "
+				 "'Always', 'Complete', or 'Error'\n" );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
@@ -1537,21 +1558,45 @@ SetNotification()
 	(void) sprintf (buffer, "%s = %d", ATTR_JOB_NOTIFICATION, notification);
 	InsertJobExpr (buffer);
 
-	if ( how )
+	if ( how ) {
 		free(how);
+	}
 }
 
 void
 SetNotifyUser()
 {
-	char *who = condor_param(NotifyUser);
+	bool needs_warning = false;
+	static bool did_warning = false;
 
-	if( ! who ) {
-			// If "notify_user" isn't there, try "NotifyUser" 
-		who = condor_param( "NotifyUser" );
-	}
+	char *who = condor_param( NotifyUser, ATTR_NOTIFY_USER );
 
 	if (who) {
+		if( ! did_warning ) {
+			if( !stricmp(who, "false") ) {
+				needs_warning = true;
+			}
+			if( !stricmp(who, "never") ) {
+				needs_warning = true;
+			}
+		}
+		if( needs_warning && ! did_warning ) {
+			char* tmp = param( "UID_DOMAIN" );
+			if( ! tmp ) {
+				tmp = strdup( my_full_hostname() );
+			}
+			fprintf( stderr, "\nWARNING: You used \"%s = %s\" in your "
+					 "submit file.\n", NotifyUser, who );
+			fprintf( stderr, "This means notification email will go to "
+					 "user \"%s@%s\".\n", who, tmp );
+			free( tmp );
+			fprintf( stderr, "This is probably not what you expect!\n"
+					 "If you do not want notification email, put "
+					 "\"notification = never\"\n"
+					 "into your submit file, instead.\n" );
+
+			did_warning = true;
+		}
 		(void) sprintf (buffer, "%s = \"%s\"", ATTR_NOTIFY_USER, who);
 		InsertJobExpr (buffer);
 		free(who);
@@ -1615,15 +1660,11 @@ SetRemoteInitialDir()
 void
 SetExitRequirements()
 {
-	char *who = condor_param(ExitRequirements);
-
-	if( ! who ) {
-			// If "exit_requirements" isn't there, try "ExitRequirements" 
-		who = condor_param( "ExitRequirements" );
-	}
+	char *who = condor_param( ExitRequirements,
+							  ATTR_JOB_EXIT_REQUIREMENTS );
 
 	if (who) {
-		(void) sprintf (buffer, "%s = %s", ATTR_JOB_EXIT_REQUIREMENTS, who);
+		sprintf( buffer, "%s = %s", ATTR_JOB_EXIT_REQUIREMENTS, who ); 
 		InsertJobExpr (buffer);
 		free(who);
 	}
@@ -1634,7 +1675,7 @@ SetArguments()
 {
 	char	*args = NULL;
 
-	args = condor_param(Arguments);
+	args = condor_param( Arguments, ATTR_JOB_ARGUMENTS );
 
 	if( args == NULL ) {
 		args = strdup("");
@@ -1656,9 +1697,10 @@ SetArguments()
 void
 SetEnvironment()
 {
-	char *env = condor_param(Environment);
-	char *shouldgetenv = condor_param(GetEnv);
-	char *allowscripts = condor_param(AllowStartupScript);
+	char *env = condor_param( Environment, ATTR_JOB_ENVIRONMENT );
+	char *shouldgetenv = condor_param( GetEnv, "get_env" );
+	char *allowscripts = condor_param( AllowStartupScript,
+									   "AllowStartupScript" );
 	Environ envobject;
 	char newenv[ATTRLIST_MAX_EXPRESSION];
 	char varname[MAXVARNAME];
@@ -1676,7 +1718,7 @@ SetEnvironment()
 
 	if (allowscripts && (*allowscripts=='T' || *allowscripts=='t') ) {
 		if ( !first ) {
-			strcat(newenv,env_delimiter);
+			strcat(newenv,env_delimiter_string);
 		}
 		strcat(newenv,"_CONDOR_NOCHECK=1");
 		first = false;
@@ -1695,7 +1737,7 @@ SetEnvironment()
 			// ignore env settings that contain env_delimiter to avoid 
 			// syntax problems
 
-			if (strchr(environ[i], env_delimiter[0]) == NULL) {
+			if (strchr(environ[i], env_delimiter) == NULL) {
 				envlen += strlen(environ[i]);
 				if (envlen < ATTRLIST_MAX_EXPRESSION) {
 
@@ -1711,7 +1753,7 @@ SetEnvironment()
 						if (first) {
 							first = false;
 						} else {
-							strcat(newenv, env_delimiter);
+							strcat(newenv, env_delimiter_string);
 						}
 						strcat(newenv, environ[i]);
 					}
@@ -1724,17 +1766,19 @@ SetEnvironment()
 	strcat(newenv, "\"");
 
 	InsertJobExpr (newenv);
-	if ( env )
+	if( env ) {
 		free(env);
-	if ( shouldgetenv ) 
+	}
+	if( shouldgetenv ) {
 		free(shouldgetenv);
+	}
 }
 
 #if !defined(WIN32)
 void
 ComputeRootDir()
 {
-	char *rootdir = condor_param(RootDir);
+	char *rootdir = condor_param( RootDir, ATTR_JOB_ROOT_DIR );
 
 	if( rootdir == NULL ) 
 	{
@@ -1743,7 +1787,8 @@ ComputeRootDir()
 	else 
 	{
 		if( access(rootdir, F_OK|X_OK) < 0 ) {
-			fprintf(stderr,"No such directory: %s\n", rootdir);
+			fprintf( stderr, "\nERROR: No such directory: %s\n",
+					 rootdir );
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
@@ -1766,7 +1811,7 @@ SetRootDir()
 void
 SetRequirements()
 {
-	char *requirements = condor_param(Requirements);
+	char *requirements = condor_param( Requirements, NULL );
 	char *tmp;
 	if( requirements == NULL ) 
 	{
@@ -1789,20 +1834,20 @@ void
 SetRank()
 {
 	static char rank[ATTRLIST_MAX_EXPRESSION];
-	char *orig_pref = condor_param(Preferences);
-	char *orig_rank = condor_param(Rank);
+	char *orig_pref = condor_param( Preferences, NULL );
+	char *orig_rank = condor_param( Rank, NULL );
 	char *default_rank = NULL;
 	char *append_rank = NULL;
 	rank[0] = '\0';
 
 	switch( JobUniverse ) {
 	case STANDARD:
-		default_rank = param("DEFAULT_RANK_STANDARD");
-		append_rank = param("APPEND_RANK_STANDARD");
+		default_rank = param( "DEFAULT_RANK_STANDARD" );
+		append_rank = param( "APPEND_RANK_STANDARD" );
 		break;
 	case VANILLA:
-		default_rank = param("DEFAULT_RANK_VANILLA");
-		append_rank = param("APPEND_RANK_VANILLA");
+		default_rank = param( "DEFAULT_RANK_VANILLA" );
+		append_rank = param( "APPEND_RANK_VANILLA" );
 		break;
 	default:
 		default_rank = NULL;
@@ -1834,8 +1879,8 @@ SetRank()
 	}		
 
 	if( orig_pref && orig_rank ) {
-		fprintf(stderr,"\nERROR: %s and %s may not both be specified for a job\n",
-			   Preferences, Rank);
+		fprintf( stderr, "\nERROR: %s and %s may not both be specified "
+				 "for a job\n", Preferences, Rank );
 		exit(1);
 	} else if( orig_rank ) {
 		(void)strcat( rank, orig_rank );
@@ -1873,7 +1918,6 @@ SetRank()
 		free(orig_pref);
 	if ( orig_rank )
 		free(orig_rank);
-
 }
 
 void
@@ -1886,7 +1930,12 @@ ComputeIWD()
 	memset(iwd, 0, sizeof(iwd));
 	memset(cwd, 0, sizeof(cwd));
 
-	shortname = condor_param( InitialDir );
+	shortname = condor_param( InitialDir, ATTR_JOB_IWD );
+	if( ! shortname ) {
+			// neither "initialdir" nor "iwd" were there, try some
+			// others, just to be safe:
+		shortname = condor_param( "initial_dir", "job_iwd" );
+	}
 
 #if !defined(WIN32)
 	ComputeRootDir();
@@ -1952,7 +2001,7 @@ check_iwd( char *iwd )
 	compress( pathname );
 
 	if( access(pathname, F_OK|X_OK) < 0 ) {
-		fprintf(stderr, "No such directory: %s\n", pathname);
+		fprintf( stderr, "\nERROR: No such directory: %s\n", pathname );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
@@ -1961,16 +2010,28 @@ check_iwd( char *iwd )
 void
 SetUserLog()
 {
-	char *ulog_entry = condor_param(UserLogFile);
+	char *ulog_entry = condor_param( UserLogFile, ATTR_ULOG_FILE );
 
 	if (ulog_entry) {
 		if (whitespace(ulog_entry)) {
-			fprintf(stderr,"Only one %s can be specified.\n", UserLogFile);
+			fprintf( stderr, "\nERROR: Only one %s can be specified.\n",
+					 UserLogFile );
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
 		char *ulog = full_path(ulog_entry);
 		free(ulog_entry);
+
+		// check that the log is a valid path
+		FILE* test = fopen(ulog, "a+");
+		if (!test) {
+			fprintf(stderr,
+				"\nERROR: Invalid log file: \"%s\"\n", ulog);
+			exit( 1 );
+		} else {
+			fclose(test);
+		}
+
 		check_path_length(ulog, UserLogFile);
 		(void) sprintf(buffer, "%s = \"%s\"", ATTR_ULOG_FILE, ulog);
 		InsertJobExpr(buffer);
@@ -1988,7 +2049,7 @@ SetUserLog()
 void
 SetCoreSize()
 {
-	char *size = condor_param(CoreSize);
+	char *size = condor_param( CoreSize, "core_size" );
 	long coresize;
 
 	if (size == NULL) {
@@ -2030,8 +2091,8 @@ SetForcedAttributes()
 		exValue = expand_macro( (char*)value.Value(), ProcVars, PROCVARSIZE );
 		if( !exValue )
 		{
-			fprintf( stderr, "\nWarning:  Unable to expand macros in \"%s\"."
-							"  Ignoring.\n", value.Value() );
+			fprintf( stderr, "\nWarning: Unable to expand macros in \"%s\"."
+					 "  Ignoring.\n", value.Value() );
 			continue;
 		}
 		sprintf( buffer, "%s = %s", name.Value(), exValue );
@@ -2121,7 +2182,7 @@ sig_name_lookup(char sig[])
 void
 SetKillSig()
 {
-	char *sig = condor_param(KillSig);
+	char *sig = condor_param( KillSig, ATTR_KILL_SIG );
 	int signo;
 
 	if (sig) {
@@ -2148,7 +2209,7 @@ SetKillSig()
 	(void) sprintf (buffer, "%s = %d", ATTR_KILL_SIG, signo);
 	InsertJobExpr(buffer);
 
-	sig = condor_param(RmKillSig);
+	sig = condor_param( RmKillSig, ATTR_REMOVE_KILL_SIG );
 
 	if (sig) {
 		signo = atoi(sig);
@@ -2212,9 +2273,9 @@ read_condor_file( FILE *fp )
 		}
 
 			/* Skip over comments */
-		if( *name == '#' || blankline(name) )
+		if( *name == '#' || blankline(name) ) {
 			continue;
-		
+		}
 		/* check if the user wants to force a parameter into/outof the job ad */
 		if (*name == '+') {
 			force = 1;
@@ -2248,8 +2309,8 @@ read_condor_file( FILE *fp )
 			name = expand_macro( name, ProcVars, PROCVARSIZE );
 			if( name == NULL ) {
 				(void)fclose( fp );
-				fprintf(stderr, 
-					"\nERROR: Failed to expand macros in: %s\n", name);
+				fprintf( stderr, "\nERROR: Failed to expand macros "
+						 "in: %s\n", name );
 				return( -1 );
 			}
 			name = expand_macro( name, ProcVars, PROCVARSIZE );
@@ -2259,7 +2320,7 @@ read_condor_file( FILE *fp )
 			queue(queue_modifier);
 			continue;
 		}	
-		
+
 #define isop(c)		((c) == '=')
 		
 		/* Separate out the parameter name */
@@ -2310,7 +2371,8 @@ read_condor_file( FILE *fp )
 			name = expand_macro( name, ProcVars, PROCVARSIZE );
 			if( name == NULL ) {
 				(void)fclose( fp );
-				fprintf(stderr, "\nERROR: Failed to expand macros in: %s\n", name);
+				fprintf( stderr, "\nERROR: Failed to expand macros in: %s\n",
+						 name );
 				return( -1 );
 			}
 		}
@@ -2325,8 +2387,12 @@ read_condor_file( FILE *fp )
 
 		lower_case( name );
 
-		if ( strcmp(name, Executable) == 0 )
-		{
+		if( strcmp(name, Executable) == 0 ) {
+			NewExecutable = true;
+		}
+			// Also, see if we're hitting "cmd", instead (we've
+			// already lower-cased the name we're looking at)
+		if( strcmp(name, "cmd") == 0 ) {
 			NewExecutable = true;
 		}
 
@@ -2341,26 +2407,40 @@ read_condor_file( FILE *fp )
 }
 
 char *
-condor_param( const char *name )
+condor_param( const char* name) 
 {
-	char *pval = lookup_macro(name, ProcVars, PROCVARSIZE);
+	return condor_param(name, NULL);
+}
 
-	if( pval == NULL ) {
+char *
+condor_param( const char* name, const char* alt_name )
+{
+	bool used_alt = false;
+	char *pval = lookup_macro( name, ProcVars, PROCVARSIZE );
+
+	if( ! pval && alt_name ) {
+		pval = lookup_macro( alt_name, ProcVars, PROCVARSIZE );
+		used_alt = true;
+	}
+
+	if( ! pval ) {
 		return( NULL );
 	}
 
-	pval = expand_macro(pval, ProcVars, PROCVARSIZE);
+	pval = expand_macro( pval, ProcVars, PROCVARSIZE );
 
-	if (pval == NULL) {
-		fprintf(stderr, "\nERROR: Failed to expand macros in: %s\n", name);
+	if( pval == NULL ) {
+		fprintf( stderr, "\nERROR: Failed to expand macros in: %s\n",
+				 used_alt ? alt_name : name );
 		exit(1);
 	}
 
 	return( pval );
 }
 
+
 void
-set_condor_param( char *name, char *value )
+set_condor_param( const char *name, char *value )
 {
 	char *tval = strdup( value );
 
@@ -2371,7 +2451,9 @@ set_condor_param( char *name, char *value )
 int
 strcmpnull(const char *str1, const char *str2)
 {
-	if (str1 && str2) return strcmp(str1, str2);
+	if( str1 && str2 ) {
+		return strcmp(str1, str2);
+	}
 	return (str1 || str2);
 }
 
@@ -2432,8 +2514,8 @@ queue(int num)
 		}
 
 		if ( ClusterId == -1 ) {
-			fprintf(stderr,
-			"\nERROR: Used queue command without specifying an executable\n");
+			fprintf( stderr, "\nERROR: Used queue command without "
+					 "specifying an executable\n" );
 			exit(1);
 		}
 
@@ -2562,7 +2644,7 @@ queue(int num)
 				job->fPrint (stdout);
 			}
 
-		logfile = condor_param(UserLogFile);
+		logfile = condor_param( UserLogFile, ATTR_ULOG_FILE );
 		// Convert to a pathname using IWD if needed
 		if ( logfile ) {
 			logfile = full_path(logfile);
@@ -2819,7 +2901,9 @@ check_open( const char *name, int flags )
 	StringList *list;
 
 	/* No need to check for existence of the Null file. */
-	if (strcmp(name, NULL_FILE) == MATCH) return;
+	if( strcmp(name, NULL_FILE) == MATCH ) {
+		return;
+	}
 
 	pathname = full_path(name);
 
@@ -2846,7 +2930,8 @@ check_open( const char *name, int flags )
 	}
 
 	if( (fd=open(pathname,flags,0664)) < 0 ) {
-		fprintf(stderr, "\nCan't open \"%s\"  with flags 0%o\n", pathname, flags );
+		fprintf( stderr, "\nERROR: Can't open \"%s\"  with flags 0%o\n",
+				 pathname, flags );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
@@ -3011,7 +3096,9 @@ log_submit()
 	 UserLog usr_log;
 	 SubmitEvent jobSubmit;
 
-	if (Quiet) fprintf(stdout, "Logging submit event(s)");
+	if( Quiet ) {
+		fprintf(stdout, "Logging submit event(s)");
+	}
 
 	strcpy (jobSubmit.submitHost, ScheddAddr);
 
@@ -3033,14 +3120,18 @@ log_submit()
 			// Output the information
 			for (int j=SubmitInfo[i].firstjob; j<=SubmitInfo[i].lastjob; j++) {
 				usr_log.initialize(SubmitInfo[i].cluster, j, 0);
-				if (!usr_log.writeEvent (&jobSubmit))
+				if( ! usr_log.writeEvent(&jobSubmit) ) {
 					fprintf(stderr, "\nERROR: Failed to log submit event.\n");
-				if (Quiet) fprintf(stdout, ".");
+				}
+				if( Quiet ) {
+					fprintf(stdout, ".");
+				}
 			}
 		}
 	}
-
-	if (Quiet) fprintf(stdout, "\n");
+	if( Quiet ) {
+		fprintf( stdout, "\n" );
+	}
 }
 
 
@@ -3062,16 +3153,15 @@ SaveClassAd ()
 	
 
 	job->ResetExpr();
-	while (tree = job->NextExpr())
-	{
+	while( (tree = job->NextExpr()) ) {
 		lhstr[0] = '\0';
 		rhstr[0] = '\0';
-		if (lhs = tree->LArg()) lhs->PrintToStr (lhstr);
-		if (rhs = tree->RArg()) rhs->PrintToStr (rhstr);
-		if (!lhs || !rhs) retval = -1;
-		if (SetAttribute (ClusterId, myprocid, lhstr, rhstr) == -1) {
-			fprintf(stderr, "\nERROR: Failed to set %s=%s for job %d.%d\n", 
-				lhstr, rhstr, ClusterId, ProcId);
+		if( (lhs = tree->LArg()) ) { lhs->PrintToStr (lhstr); }
+		if( (rhs = tree->RArg()) ) { rhs->PrintToStr (rhstr); }
+		if( !lhs || !rhs ) { retval = -1; }
+		if( SetAttribute(ClusterId, myprocid, lhstr, rhstr) == -1 ) {
+			fprintf( stderr, "\nERROR: Failed to set %s=%s for job %d.%d\n", 
+					 lhstr, rhstr, ClusterId, ProcId );
 			retval = -1;
 		}
 	}
@@ -3119,10 +3209,9 @@ InsertJobExpr (char *expr, bool clustercheck)
 		exit( 1 );
 	}
 
-	if (lhs = tree->LArg()) 
+	if( (lhs = tree->LArg()) ) {
 		lhs->PrintToStr (name);
-	else
-	{
+	} else {
 		fprintf (stderr, "\nERROR: Expression not assignment: %s\n", expr);
 		fprintf(stderr,"Error in submit file\n");
 		DoCleanup(0,0,NULL);
@@ -3131,7 +3220,7 @@ InsertJobExpr (char *expr, bool clustercheck)
 	
 	if (!job->InsertOrUpdate (expr))
 	{	
-		fprintf(stderr,"Unable to insert expression: %s\n", expr);
+		fprintf(stderr,"\nERROR: Unable to insert expression: %s\n", expr);
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
@@ -3140,7 +3229,8 @@ InsertJobExpr (char *expr, bool clustercheck)
 		// We are working on building the ad which will serve as our
 		// cluster ad.  Thus insert this expr into our hashtable.
 		if ( ClusterAdAttrs.insert(hashkey,unused) < 0 ) {
-			fprintf(stderr,"Unable to insert expression into hashtable: %s\n", expr);
+			fprintf( stderr,"\nERROR: Unable to insert expression into "
+					 "hashtable: %s\n", expr );
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
@@ -3183,13 +3273,18 @@ setupAuthentication()
 {
 		//RendezvousDir for remote FS auth can be specified in submit file.
 	char *Rendezvous = NULL;
-	if ( Rendezvous = condor_param( RendezvousDir ) )
-	{
+	Rendezvous = condor_param( RendezvousDir, "rendezvous_dir" );
+	if( ! Rendezvous ) {
+			// If those didn't work, try a few other variations, just
+			// to be safe:
+		Rendezvous = condor_param( "rendezvousdirectory",
+								   "rendezvous_directory" );
+	}
+	if( Rendezvous ) {
 		dprintf( D_FULLDEBUG,"setting RENDEZVOUS_DIRECTORY=%s\n", Rendezvous );
 		sprintf( buffer, "RENDEZVOUS_DIRECTORY=%s", Rendezvous );
 			//putenv because Authentication::authenticate() expects them there.
 		putenv( strdup( buffer ) );
 		free( Rendezvous );
 	}
-
 }

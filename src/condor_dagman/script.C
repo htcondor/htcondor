@@ -30,7 +30,10 @@
 #include "types.h"
 
 #include "HashTable.h"
+#include "env.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+
+extern DLL_IMPORT_MAGIC char **environ;
 
 //-----------------------------------------------------------------------------
 Script::Script( bool post, char* cmd, Job* job ) :
@@ -71,9 +74,11 @@ Script::BackgroundRun( int reaperId )
         send += ' ';
     }
 
+	char *env = environToString( (const char**)environ );
 	_pid = daemonCore->Create_Process( cmd, (char*) send.str(),
 									   PRIV_UNKNOWN, reaperId, TRUE,
-									   NULL, NULL, FALSE, NULL, NULL, 0 );
+									   env, NULL, FALSE, NULL, NULL, 0 );
+	delete [] env;
     delete [] cmd;
 	return _pid;
 }

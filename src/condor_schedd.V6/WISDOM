@@ -1,0 +1,65 @@
+************************************************************
+MPI Wisdom
+************************************************************
+
+The protocol for getting matches from the schedd to the MPI shadow is
+as follows:
+
+1) shadow is spawned w/ 1st capability as a command line arg
+
+Ideally, we would then do the following:
+
+2) schedd sends UDP message to shadow's command socket to push all the
+   classads, and other info needed so that it has it as soon as it
+   spawns w/o having to do a TCP connect to the job queue, or to get
+   the MPI matches.  This would be the "PUSH_JOB_INFO" command.
+
+3) shadow, on startup, sets a timer so that if the UDP message is lost
+   or never gets sent, it turns around and either does the ConnectQ to
+   get the job ad, or, in the case of an MPI job, sends a GIVE_MATCHES
+   command, to get everything.
+
+GIVE_MATCHES works like this:
+
+A) The shadow connects to the schedd and sends the following schema:
+
+int cmd
+int cluster
+char* capability string (capability of the master MPI process)
+EOM
+
+B) Schedd looks up the cluster and confirms the capability is good.
+   Then, it sends the following reply:
+
+int num_procs (job "classes", for different requirements, etc)
+for( p=0, p<num_procs, p++ ) {
+    ClassAd job_ad[p]
+    int num_matches[p]
+    for( m=0, m<num_matches, m++ ) {
+        char* capability[p][m]
+    }
+}
+EOM
+
+PUSH_JOB_INFO works like this:
+A) The schedd sends a UDP message to the shadow's command socket with
+the following schema:
+
+int cmd
+int num_procs (job "classes", for different requirements, etc)
+for( p=0, p<num_procs, p++ ) {
+    ClassAd job_ad[p]
+    int num_matches[p]
+    for( m=0, m<num_matches, m++ ) {
+        char* sinful_string_of_startd[p][m]
+        char* capability[p][m]
+    }
+}
+EOM
+
+
+
+************************************************************
+Other Wisdom
+************************************************************
+

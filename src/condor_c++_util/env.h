@@ -26,4 +26,7 @@
 // appends a new environment variable to env string
 bool AppendEnvVariable( char* env, char* name, char* value );
 
+// converts unix environ array to a single semicolon-delimited string
+char* environToString( const char** unix_env );
+
 #endif	// _ENV_H

@@ -43,3 +43,20 @@ AppendEnvVariable( char* env, char* name, char* value )
     sprintf( env, "%s%s=%s", env, name, value );
     return true;
 }
+
+char*
+environToString( const char** unix_env ) {
+	// fixed size is bad here but consistent with existing code
+	char *env = new char[ATTRLIST_MAX_EXPRESSION];
+	int envLen = 0;
+	env[0] = '\0';
+	for( int i=0; (unix_env[i] && unix_env[i][0]); i++) {
+		envLen += strlen( unix_env[i] ) + 1;
+		if ( envLen > ATTRLIST_MAX_EXPRESSION ) {
+			return env;
+		}
+		strcat( env, ";" );
+		strcat( env, unix_env[i] );
+	}
+	return env;
+}

@@ -94,10 +94,9 @@ class ClassAd : public AttrList
 		friend bool operator>=(class ClassAd&,class ClassAd&);// lhs satisfies rhs
 		friend bool operator<=(class ClassAd&,class ClassAd&);// rhs satisifes lhs
 
-        // shipping functions -- added by Lei Cao
+        // shipping functions
         int put(Stream& s);
-        int get(Stream& s);
-        int code(Stream& s);
+		int initFromStream(Stream& s);
 
 #if defined(USE_XDR)
 		// xdr shipping
@@ -109,6 +108,7 @@ class ClassAd : public AttrList
 		class ClassAd*	FindNext();
         virtual int	fPrint(FILE*);				// print the AttrList to a file
 		void		dPrint( int );				// dprintf to given dprintf level
+		void		clear( void );				// clear out all attributes
 
 		// poor man's update function until ClassAd Update Protocol  --RR
 		 void ExchangeExpressions (class ClassAd *);

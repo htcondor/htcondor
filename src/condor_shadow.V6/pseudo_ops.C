@@ -60,6 +60,9 @@ extern "C" {
 	int use_append( char *method, char *path );
 	void HoldJob( const char* buf );
 	void reaper();
+	#if defined(OSF1)
+		int statfs(const char *, struct statfs*);
+	#endif
 }
 
 extern int JobStatus;
@@ -2440,5 +2443,18 @@ pseudo_register_syscall_version( const char *version )
 	HoldJob( buf );  // This sends the email and exits with JOB_SHOULD_HOLD. 
 	return 0;
 }
+
+
+int
+pseudo_statfs( const char *path, struct statfs *buf )
+{
+#if defined(Solaris) || defined(IRIX)
+	return statfs( path, buf, 0, 0);
+#else
+	return statfs( path, buf );
+#endif
+}
+
+
 
 } /* extern "C" */

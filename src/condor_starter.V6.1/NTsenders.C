@@ -89,7 +89,7 @@ REMOTE_CONDOR_get_job_info(ClassAd *ad)
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 		return rval;
 	}
-	assert( ad->get(*syscall_sock) );
+	assert( ad->initFromStream(*syscall_sock) );
 	assert( syscall_sock->end_of_message() );
 	return rval;
 }

@@ -486,7 +486,7 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 	dprintf ( D_SECURITY, "STARTCOMMAND: sending following classad:\n");
 	auth_info.dPrint ( D_SECURITY );
 
-	if (! auth_info.code(*sock)) {
+	if (! auth_info.put(*sock)) {
 		dprintf ( D_ALWAYS, "STARTCOMMAND: failed to send auth_info\n");
 		delete sock;
 		return NULL;
@@ -503,7 +503,7 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 	if (authentication_action == AUTH_ASK) {
 		ClassAd auth_response;
 		sock->decode();
-		auth_response.code(*sock);
+		auth_response.initFromStream(*sock);
 		sock->end_of_message();
 
 		dprintf ( D_SECURITY, "STARTCOMMAND: server responded with:\n");

@@ -27,6 +27,7 @@ $max_pre = 0;
 $max_post = 0;
 $notification = "";
 $NoPostFail = 0;
+$dagman_debug = 3;
 while( $_ = shift ) {
   SWITCH: {	    
     if( /^-no_s.*/i ) {
@@ -103,6 +104,18 @@ while( $_ = shift ) {
 	}
 	$remote_schedd = "-r $remote_schedd";
 	last SWITCH;
+    }
+    if( /^-d.*/i ) {
+	$dagman_debug = shift;
+        if( ! $dagman_debug ) {
+            &usage();
+        }
+        if( !($dagman_debug =~ /^\d+$/) ) {
+            print "ERROR: Invalid argument \"$dagman_debug\" to -debug.\n",
+            "You must specify a number.\n\n";
+            &usage();
+        }
+        last SWITCH;
     }
     $dagfile = $_;
   }
@@ -187,12 +200,14 @@ sub usage {
     print "    -no_submit          (DAG is not submitted to Condor)\n";
     print "    -verbose            (Verbose error messages from condor_submit_dag)\n";
     print "    -force              (Overwrite files condor_submit_dag uses if they exist)\n";
+    print "    -r schedd_name      (Submit to the specified remote schedd)\n";
     print "    -maxjobs number     (Maximum number of jobs ever submitted at once)\n";
     print "    -MaxPre number      (Maximum number of PRE scripts to run at once)\n";
     print "    -MaxPost number     (Maximum number of POST scripts to run at once)\n";
     print "    -NoPostFail         (Don't run POST scripts after failed jobs)\n";
     print "    -log filename       (Specify the log file shared by all jobs in the DAG)\n";
-    print "    -notification value (Determines how much email you get from Condor\n";
+    print "    -notification value (Determines how much email you get from Condor)\n";
+    print "    -debug number       (Determines how verbosely DAGMan logs its work)\n";
     print "         about the life of the condor_dagman job.  'value' must be\n";
     print "         one of \"always\", \"never\", \"error\", or \"complete\".\n";
     print "         See the condor_submit man page for details.)\n";
@@ -286,7 +301,7 @@ sub write_submit_file {
     print SUBMIT "output\t\t= $lib_log\n";
     print SUBMIT "error\t\t= $lib_log\n";
     print SUBMIT "log\t\t= $sched_log\n";
-    $args = "-f -l . -Debug 3 -Lockfile $dagfile.lock";
+    $args = "-f -l . -Debug $dagman_debug -Lockfile $dagfile.lock";
     $args = $args . " -Condorlog $job_log -Dag $dagfile";
     $args = $args . " -Rescue $rescue_file";
     if( $max_jobs ) {
@@ -302,7 +317,7 @@ sub write_submit_file {
 	$args = $args . " -NoPostFail";
     }
     print SUBMIT "arguments\t= $args\n";
-    print SUBMIT "environment\t= _CONDOR_DAGMAN_LOG=$debug_log;PATH=$path\n";
+    print SUBMIT "environment\t= _CONDOR_DAGMAN_LOG=$debug_log;_CONDOR_MAX_DAGMAN_LOG=0;PATH=$path\n";
     if( $notification ) {
 	print SUBMIT "notification\t= $notification\n";
     }

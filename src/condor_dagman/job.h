@@ -187,8 +187,13 @@ class Job {
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
 
-	// the return code of the job
-	int retval;
+    // maximum number of times to retry this node
+    int retry_max;
+    // number of retries so far
+    int retries;
+
+    // the return code of the job
+    int retval;
   
   private:
   

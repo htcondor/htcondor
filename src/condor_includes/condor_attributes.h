@@ -251,6 +251,7 @@ const char ATTR_TRANSFER_INPUT			 [] = "TransferIn";
 const char ATTR_TRANSFER_OUTPUT			 [] = "TransferOut";
 const char ATTR_TRANSFER_ERROR			 [] = "TransferErr";
 const char ATTR_TRANSFER_INPUT_FILES	 [] = "TransferInput";
+const char ATTR_TRANSFER_INTERMEDIATE_FILES [] = "TransferIntermediate";
 const char ATTR_TRANSFER_OUTPUT_FILES	 [] = "TransferOutput";
 const char ATTR_TRANSFER_SOCKET			 [] = "TransferSocket";
 const char ATTR_SERVER_TIME				 [] = "ServerTime";

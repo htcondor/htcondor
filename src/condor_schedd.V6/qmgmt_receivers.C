@@ -490,7 +490,7 @@ do_Q_request(ReliSock *syscall_sock)
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			assert( ad->code(*syscall_sock) );
+			assert( ad->put(*syscall_sock) );
 		}
 		// Here we must really, truely delete the ad.  Why? Because
 		// when GetJobAd is called with the third bool argument set
@@ -523,7 +523,7 @@ do_Q_request(ReliSock *syscall_sock)
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			assert( ad->code(*syscall_sock) );
+			assert( ad->put(*syscall_sock) );
 		}
 		FreeJobAd(ad);
 		free( (char *)constraint );
@@ -553,7 +553,7 @@ do_Q_request(ReliSock *syscall_sock)
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			assert( ad->code(*syscall_sock) );
+			assert( ad->put(*syscall_sock) );
 		}
 		FreeJobAd(ad);
 		assert( syscall_sock->end_of_message() );;
@@ -584,7 +584,7 @@ do_Q_request(ReliSock *syscall_sock)
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			assert( ad->code(*syscall_sock) );
+			assert( ad->put(*syscall_sock) );
 		}
 		FreeJobAd(ad);
 		free( (char *)constraint );

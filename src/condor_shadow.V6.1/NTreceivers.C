@@ -124,7 +124,7 @@ do_REMOTE_syscall()
 
 		assert( syscall_sock->code(status) );
 		assert( syscall_sock->code(reason) );
-		assert( ad.get(*syscall_sock) );
+		assert( ad.initFromStream(*syscall_sock) );
 		assert( syscall_sock->end_of_message() );
 
 		errno = 0;

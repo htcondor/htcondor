@@ -25,11 +25,12 @@
 #include "condor_debug.h"
 #include "environ.h"
 
+
 inline int
 is_white( char ch )
 {
 	switch( ch ) {
-	  case ';':
+	  case env_delimiter:
 	  case '\n':
 	  case ' ':
 	  case '\t':
@@ -77,7 +78,7 @@ Environ::add_string( char *str )
 			return;
 		}
 		dst = buf;
-		while( *ptr && *ptr != '\n' && *ptr !=';' ) {
+		while( *ptr && *ptr != '\n' && *ptr != env_delimiter ) {
 			*dst++ = *ptr++;
 		}
 		*dst = '\0';

@@ -1594,7 +1594,7 @@ int DaemonCore::HandleReq(int socki)
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: entry value of result == %i\n", result);
 
 		ClassAd auth_info;
-		if( !auth_info.code(*sock) || !sock->end_of_message()) {
+		if( !auth_info.initFromStream(*sock) || !sock->end_of_message()) {
 			dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
 					   "receive auth_info!\n");
 			return FALSE;	
@@ -1648,7 +1648,7 @@ int DaemonCore::HandleReq(int socki)
 			sock->encode();
 			dprintf (D_SECURITY, "DC_AUTHENTICATE: sending following classad to client: \n");
 			auth_response.dPrint (D_SECURITY);
-			auth_response.code(*sock);
+			auth_response.put(*sock);
 			sock->end_of_message();
 
 			if (always_authenticate) {

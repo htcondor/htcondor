@@ -113,6 +113,7 @@ extern char *        debug_progname;
     @return Refer to printf() documentation
 */
 void debug_printf( debug_level_t level, char *fmt, ... );
+void debug_dprintf( int flags, debug_level_t level, char *fmt, ... );
 
 /** The conditional expression that controls whether output is
     actually printed.

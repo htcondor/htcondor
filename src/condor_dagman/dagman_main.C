@@ -427,15 +427,25 @@ void main_timer () {
     }
 
     //
-    // If no jobs are submitted, but the dag is not complete,
-    // then at least one job failed, or a cycle exists.
+
+    // If no jobs are submitted and no scripts are running, but the
+    // dag is not complete, then at least one job failed, or a cycle
+    // exists.
     // 
     if( G.dag->NumJobsSubmitted() == 0 &&
 		G.dag->NumScriptsRunning() == 0 ) {
-		if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
-			debug_printf( DEBUG_QUIET, "ERROR: the following job(s) failed:\n" );
-			G.dag->PrintJobList( Job::STATUS_ERROR );
+		if( G.dag->NumJobsFailed() > 0 ) {
+			if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
+				debug_printf( DEBUG_QUIET,
+							  "ERROR: the following job(s) failed:\n" );
+				G.dag->PrintJobList( Job::STATUS_ERROR );
+			}
 		}
+		else {
+			// no jobs failed, so a cycle must exist
+			debug_printf( DEBUG_QUIET, "ERROR: a cycle exists in the DAG\n" );
+		}
+
 		if( G.rescue_file != NULL ) {
 			debug_printf( DEBUG_NORMAL, "Writing Rescue DAG file...\n");
 			G.dag->Rescue(G.rescue_file, G.datafile);

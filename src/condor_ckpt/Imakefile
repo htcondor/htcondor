@@ -80,6 +80,8 @@ DYNAMIC_FLAGS =
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(SAVE_SIGSTATE) $(STATIC) \
 	$(FILE_TABLE) $(PVM_CHECKPOINT) -DIN_CKPT_LIB $(DYNAMIC_FLAGS) $(DL_EXTRACT)
+TOUPPER_C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(SAVE_SIGSTATE) \
+	$(FILE_TABLE) $(PVM_CHECKPOINT) -DIN_CKPT_LIB $(DYNAMIC_FLAGS) $(DL_EXTRACT)
 
 #if IS_HPUX10
 CFLAGS = $(STD_C_FLAGS) $(STATIC) -DIN_CKPT_LIB $(DYNAMIC_FLAGS)
@@ -274,8 +276,7 @@ program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBL
 ToUpper.o: ToUpper.c
 	gcc $(C_FLAGS) -c ToUpper.c
 
-ToUpper: ToUpper.o
-	gcc $(CFLAGS) -o ToUpper ToUpper.o $(ALL_LDFLAGS)
+c_plus_target_complex(ToUpper,ToUpper.o,$(TOUPPER_C_PLUS_FLAGS), $(ALL_LDFLAGS), $(NULL))
 
 clean::
 	rm -f ToUpper ToUpper.o

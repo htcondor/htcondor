@@ -180,6 +180,20 @@ circumstances:
 	receiver stub should be used for both CONDOR_fstat and for
 	CONDOR_fstat64 remote system calls.
 
+   not_supported
+
+	A number of system calls Condor can simply not service.
+	In this case, the system call is sent remotely, and it becomes
+	the shadow's responsibility to pass the message along to the 
+	user.
+
+    ignored
+
+	This is slightly different than not_supported.  Some system calls
+	(like msync and getsysinfo) should not actually be executed, but
+	should also not give any error indication to the user.  In this
+	case, the call simply returns success.
+
   Some system calls simply must be handled specially.  Examples
   are those system calls which directly affect the open files
   table used for checkpoint/restart.  Unfortunately, this
@@ -552,11 +566,11 @@ version.
 	int fchmod( map(int fd), mode_t mode );
 
 	#if defined(Solaris) || defined(IRIX)
-		int statfs( const char *path, struct statfs *buf, int len, int fstyp ) {
+		int statfs( const char *path, struct statfs *buf, rdiscard(int len), rdiscard(int fstyp) ) : pseudo {
 	#elif defined(OSF1)
-		int statfs( char *path, struct statfs *buf, int len ) {
+		int statfs( char *path, struct statfs *buf, rdiscard(int len) ) : pseudo {
 	#else
-		int statfs( const char *path, struct statfs *buf ) {
+		int statfs( const char *path, struct statfs *buf ) : pseudo {
 	#endif
 			SEND_PATH( path );
 			ALLOC_PATH( path );
@@ -567,7 +581,7 @@ version.
 	#if defined(IRIX) || defined(Solaris)
 		int fstatfs( map(int fd), struct statfs *buf, int len, int fstyp ) {
 	#elif defined(OSF1)
-		int fstatfs( map(int fd), struct statfs *buf, int len ) {
+		int fstatfs( map(int fd), struct statfs *buf, int len) {
 	#else
 		int fstatfs( map(int fd), struct statfs *buf ) {
 	#endif
@@ -580,8 +594,13 @@ version.
 	int lockf64( map(int fd), int op, off64_t where )
 		: remote_name(lockf);
 
-	#if defined(HPUX) || defined(OSF1)
+	#if defined(HPUX) || defined(OSF1) || defined(LINUX)
+	    #if defined(LINUX)
+		int getdirentries( map(int fd), char *buf, size_t nbytes, off_t *basep )
+	    #else
 		int getdirentries( map(int fd), struct dirent *buf, size_t nbytes, off_t *basep )
+	    #endif
+
 		{
 			out code_bytes_bool( buf, rval );
 			in code_bytes_bool( basep, EIGHT );
@@ -589,7 +608,7 @@ version.
 			alloc( buf, nbytes );
 			alloc( basep, LONG_SIZE );
 		}
-	#elif defined(Solaris) || defined(IRIX)
+	#elif defined(Solaris) || defined(IRIX) || defined(LINUX)
 		int getdents( map(int fd), struct dirent *buf, size_t nbytes ) :
 			also_implements(getdents64)
 		{

@@ -80,8 +80,7 @@ test: test.o util_lib.a
 
 library_target(util_lib.a,ObjectFiles)
 
-y.tab.o: y.tab.c
-	gcc $(CFLAGS) -c y.tab.c
+c_plus_target(stub_gen,y.tab.o lex.yy.o, $(NULL))
 
 lex.yy.o: lex.yy.c
 	gcc $(CFLAGS) -c lex.yy.c

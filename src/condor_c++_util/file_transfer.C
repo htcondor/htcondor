@@ -33,9 +33,19 @@
 #include "directory.h"
 #include "condor_config.h"
 #include "condor_ckpt_name.h"
+#include "condor_string.h"
 #include "util_lib_proto.h"
 
 #define COMMIT_FILENAME ".ccommit.con"
+
+// Filenames are case insensitive on Win32, but case sensitive on Unix
+#ifdef WIN32
+#	define file_strcmp _stricmp
+#	define file_contains contains_anycase
+#else
+#	define file_strcmp strcmp
+#	define file_contains contains
+#endif
 
 TranskeyHashTable* FileTransfer::TranskeyTable = NULL;
 TransThreadHashTable *FileTransfer::TransThreadTable = NULL;
@@ -75,6 +85,7 @@ FileTransfer::FileTransfer()
 	InputFiles = NULL;
 	OutputFiles = NULL;
 	IntermediateFiles = NULL;
+	SpooledIntermediateFiles = NULL;
 	FilesToSend = NULL;
 	ExecFile = NULL;
 	TransSock = NULL;
@@ -116,6 +127,7 @@ FileTransfer::~FileTransfer()
 	if (InputFiles) delete InputFiles;
 	if (OutputFiles) delete OutputFiles;
 	if (IntermediateFiles) delete IntermediateFiles;
+	if (SpooledIntermediateFiles) delete SpooledIntermediateFiles;
 	// Note: do _not_ delete FileToSend!  It points to OutputFile or Intermediate.
 	if (TransSock) free(TransSock);
 	if (TransKey) {
@@ -273,8 +285,8 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 	}
 	if (Ad->LookupString(ATTR_JOB_INPUT, buf) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
-		if ( strcmp(buf,NULL_FILE) != 0 ) {			
-			if ( !InputFiles->contains(buf) )
+		if ( file_strcmp(buf,NULL_FILE) != 0 ) {			
+			if ( !InputFiles->file_contains(buf) )
 				InputFiles->append(buf);			
 		}
 	}
@@ -296,8 +308,11 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 			SpoolSpace = strdup( gen_ckpt_name(Spool,Cluster,Proc,0) );
 			TmpSpoolSpace = (char*)malloc( strlen(SpoolSpace) + 10 );
 			sprintf(TmpSpoolSpace,"%s.tmp",SpoolSpace);
+
 			priv_state old_priv = set_condor_priv();
+			
 			if( (mkdir(SpoolSpace,0777) < 0) ) {
+				// mkdir can return 17 = EEXIST (dirname exists) or 2 = ENOENT (path not found)
 				dprintf( D_FULLDEBUG, 
 						 "FileTransfer::Init(): mkdir(%s) failed, errno: %d\n",
 						 SpoolSpace, errno );
@@ -331,13 +346,18 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 			ExecFile = strdup(buf);
 		}
 
+		// If we don't already have this on our list of things to transfer, 
+		// and we haven't set TRANSFER_EXECTUABLE to false, send it along.
+		// If we didn't set TRANSFER_EXECUTABLE, default to true 
+
 		int xferExec;
 		if(!Ad->LookupBool(ATTR_TRANSFER_EXECUTABLE,xferExec)) {
 			xferExec=1;
 		}
 
-		if ( xferExec && !InputFiles->contains(ExecFile) )
+		if ( xferExec && !InputFiles->contains(ExecFile) ) {
 			InputFiles->append(ExecFile);	
+		}	
 	}
 
 	// Set OutputFiles to be ATTR_TRANSFER_OUTPUT_FILES if specified.
@@ -352,9 +372,9 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 	// and now check stdout/err
 	if (Ad->LookupString(ATTR_JOB_OUTPUT, buf) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
-		if ( strcmp(buf,NULL_FILE) != 0 ) {
+		if ( file_strcmp(buf,NULL_FILE) != 0 ) {
 			if ( OutputFiles ) {
-				if ( !OutputFiles->contains(buf) )
+				if ( !OutputFiles->file_contains(buf) )
 					OutputFiles->append(buf);
 			} else
 				OutputFiles = new StringList(buf,",");
@@ -362,9 +382,9 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 	}
 	if (Ad->LookupString(ATTR_JOB_ERROR, buf) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
-		if ( strcmp(buf,NULL_FILE) != 0 ) {
+		if ( file_strcmp(buf,NULL_FILE) != 0 ) {
 			if ( OutputFiles ) {
-				if ( !OutputFiles->contains(buf) )
+				if ( !OutputFiles->file_contains(buf) )
 					OutputFiles->append(buf);
 			} else
 				OutputFiles = new StringList(buf,",");
@@ -376,6 +396,50 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 		return 0;		
 	}
 	TransSock = strdup(buf);
+
+
+	// If we are acting as the server side and we are uploading
+	// any changed files, make a list of "intermediate" files
+	// stored in our spool space (i.e. if transfer_files=ALWAYS).
+	// This list is stored in the ClassAd which is sent to the 
+	// client side, so that when the client does a final transfer
+	// it can send changed files from that run + all intermediate
+	// files.  -Todd Tannenbaum <tannenba@cs.wisc.edu> 6/8/01
+	buf[0] = '\0';
+	if ( IsServer() && upload_changed_files ) {
+		CommitFiles();
+		MyString filelist;
+		const char* current_file = NULL;
+		bool print_comma = false;
+		Directory spool_space( SpoolSpace, PRIV_CONDOR );
+		while ( (current_file=spool_space.Next()) ) {
+			if ( print_comma ) {
+				filelist += ",";
+			} else {
+				print_comma = true;
+			}
+			filelist += current_file;			
+		}
+		if ( print_comma ) {
+			// we know that filelist has at least one entry, so
+			// insert it as an attribute into the ClassAd which
+			// will get sent to our peer.
+			sprintf(buf,"%s=\"%s\"",
+				ATTR_TRANSFER_INTERMEDIATE_FILES,filelist.Value());
+			Ad->InsertOrUpdate(buf);
+			dprintf(D_FULLDEBUG,"%s\n",buf);
+		}
+	}
+	if ( IsClient() && upload_changed_files ) {
+		buf[0] = '\0';
+		Ad->LookupString(ATTR_TRANSFER_INTERMEDIATE_FILES,buf);
+		if ( buf[0] ) {
+			SpooledIntermediateFiles = strnewp(buf);
+		}
+		dprintf(D_FULLDEBUG,"%s=\"%s\"\n",
+				ATTR_TRANSFER_INTERMEDIATE_FILES,buf);
+	}
+	
 
 	// if we are acting as the server side, insert this key 
 	// into our hashtable if it is not already there.
@@ -479,25 +543,26 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 	// set flag saying if this is the last upload (i.e. job exited)
 	m_final_transfer_flag = final_transfer ? 1 : 0;
 
-	// if this is the last upload, we want to fudge with 
-	// last_download_time so we do not send back just the files which
-	// changed (if upload_changed_files is true), since we want to 
-	// send back _all_ output files irregardless of if they were modified
-	// since the last file transfer.  Note: if last_download_time is
-	// zero, leave it that way, since that signifies we did not download
-	// anything.
-	if ( final_transfer && (last_download_time > 0) ) {
-		last_download_time = 1;  // pretend we downloaded in 1970!  ;^)
-	}
-
-	FilesToSend = NULL;
 	if (IntermediateFiles) delete(IntermediateFiles);
 	IntermediateFiles = NULL;
+	FilesToSend = NULL;
+
 	if ( upload_changed_files && last_download_time > 0 ) {
 		// Here we will upload only files in the Iwd which have changed
 		// since we downloaded last.  We only do this if 
 		// upload_changed_files it true, and if last_download_time > 0
 		// which means we have already downloaded something.
+
+		// If this is the file transfer, be certain to send back
+		// not only the files which have been modified during this run,
+		// but also the files which have been modified during
+		// previous runs (i.e. the SpooledIntermediateFiles).
+		if ( final_transfer && SpooledIntermediateFiles ) {
+			IntermediateFiles = 
+				new StringList(SpooledIntermediateFiles,",");
+			FilesToSend = IntermediateFiles;
+		}
+	
 		Directory* dir;
 		if( want_priv_change ) {
 			dir = new Directory( Iwd, desired_priv_state );
@@ -507,29 +572,11 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 		const char *f;
 		while ( (f=dir->Next()) ) {
 			// don't send back condor_exec.exe
-			if ( strcmp(f,CONDOR_EXEC)==MATCH )
+			if ( file_strcmp(f,CONDOR_EXEC)==MATCH )
 				continue;
-			if ( strcmp(f,"condor_exec.bat")==MATCH )
+			if ( file_strcmp(f,"condor_exec.bat")==MATCH )
 				continue;
-			
-			// don't send back any input files on the final transfer.
-			// compare the filename to the basename of the files listed
-			// in the transfer_file_input attribute.
-			bool is_input_file = false;
-			const char *fname;
-			if ( final_transfer && InputFiles ) {				
-				InputFiles->rewind();
-				while ( (fname=InputFiles->next()) ) {
-					if ( strcmp(basename(fname), f) == MATCH ) {
-						is_input_file = true;
-						break;
-					}
-				}
-				if ( is_input_file ) {
-					continue;
-				}
-			}
-				
+							
 			// if this file is has been modified since last download,
 			// add it to the list of files to transfer.
 			if ( dir->GetModifyTime() > last_download_time ) {
@@ -537,10 +584,16 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 						 "Sending changed file %s, mod=%ld, dow=%ld\n",	
 						 f, dir->GetModifyTime(), last_download_time );
 				if (!IntermediateFiles) {
+					// Initialize it with intermediate files
+					// which we already have spooled.  We want to send
+					// back these files + any that have changed this time.
 					IntermediateFiles = new StringList(NULL,",");
 					FilesToSend = IntermediateFiles;
 				}
-				IntermediateFiles->append(f);
+				// now append changed file to list only if not already there 
+				if ( IntermediateFiles->file_contains(f) == FALSE ) {
+					IntermediateFiles->append(f);
+				}
 			}
 		}
 		delete dir;
@@ -853,20 +906,13 @@ FileTransfer::DoDownload(ReliSock *s)
 			return_and_resetpriv( -1 );
 		}
 		if ( want_fsync ) {
-#ifdef WIN32
-			struct _utimbuf timewrap;
-#else
 			struct utimbuf timewrap;
-#endif
+
 			time_t current_time = time(NULL);
 			timewrap.actime = current_time;		// set access time to now
 			timewrap.modtime = current_time - 180;	// set modify time to 3 min ago
-#ifdef WIN32
-			_utime(fullname,&timewrap);
-#else
-			utime(fullname,&timewrap);
-#endif
 
+			utime(fullname,&timewrap);
 		}
 
 		if( !s->end_of_message() ) {
@@ -928,7 +974,7 @@ FileTransfer::CommitFiles()
 		// the commit file exists, so commit the files.
 		while ( (file=tmpspool.Next()) ) {
 			// don't commit the commit file!
-			if ( strcmp(file,COMMIT_FILENAME) == MATCH )
+			if ( file_strcmp(file,COMMIT_FILENAME) == MATCH )
 				continue;
 			sprintf(buf,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,file);
 			sprintf(newbuf,"%s%c%s",SpoolSpace,DIR_DELIM_CHAR,file);
@@ -1051,7 +1097,7 @@ FileTransfer::DoUpload(ReliSock *s)
 			return_and_resetpriv( -1 );
 		}
 
-		if ( ExecFile && ( strcmp(ExecFile,filename)==0 ) ) {
+		if ( ExecFile && ( file_strcmp(ExecFile,filename)==0 ) ) {
 			// this file is the job executable
 			is_the_executable = true;
 			basefilename = (char *)CONDOR_EXEC ;

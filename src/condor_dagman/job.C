@@ -67,6 +67,9 @@ Job::Job (const char *jobName, const char *cmdFile):
 
     // jobID is a primary key (a database term).  All should be unique
     _jobID = _jobID_counter++;
+
+    retry_max = 0;
+    retries = 0;
 }
 
 //---------------------------------------------------------------------------
@@ -99,8 +102,11 @@ void Job::Dump () const {
 	if( _scriptPost ) {
 		dprintf( D_ALWAYS, "    POST Script: %s\n", _scriptPost->GetCmd() );
 	}
+	if( retry_max > 0 ) {
+		dprintf( D_ALWAYS, "          Retry: %d\n", retry_max );
+	}
 	if( _CondorID._cluster == -1 ) {
-		dprintf( D_ALWAYS, "  Condor Job ID: (not yet submitted)\n" );
+		dprintf( D_ALWAYS, "  Condor Job ID: [not yet submitted]\n" );
 	} else {
 		dprintf( D_ALWAYS, "  Condor Job ID: (%d.%d.%d)\n", _CondorID._cluster,
 				 _CondorID._proc, _CondorID._subproc );

@@ -16,6 +16,9 @@
 #define PvmFiles sbin/condor_pvmd sbin/condor_pvmgs \
   sbin/condor_shadow.pvm sbin/condor_starter.pvm
 
+#define DAGManFiles bin/condor_dagman bin/condor_submit_dag \
+  bin/condor_submit
+
 #define CkptServerFiles sbin/condor_ckpt_server sbin/condor_cleanckpts \
   etc/examples/condor_config.local.ckpt.server
 
@@ -130,6 +133,7 @@ afs_static.tar: static.tar
 release_tarball( submit.tar, SubmitOnlyFiles )
 release_tarball( link.tar, LinkOnlyFiles  )
 release_tarball( master.tar, MasterFiles )
+release_tarball( dagman.tar, DAGManFiles )
 
 /* contrib_tarball( view_client.tar, ViewClientFiles ) */
 contrib_tarball( ckpt_server.tar, CkptServerFiles )
@@ -146,7 +150,7 @@ contrib_tarball( pvm.tar, PvmFiles )
 #define AfsPvmTar 
 #endif 
 
-all_tarballs: ckpt_server.tar EventdTar PvmTar
+all_tarballs: ckpt_server.tar eventd.tar PvmTar dagman.tar
 
 afs_tarballs: afs_release.tar afs_ckpt_server.tar AfsEventdTar AfsPvmTar 
 

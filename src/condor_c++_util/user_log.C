@@ -122,20 +122,20 @@ initialize( const char *file, int c, int p, int s )
 	// Unix
 	if( (fd = open( path, O_CREAT | O_WRONLY, 0664 )) < 0 ) {
 		dprintf( D_ALWAYS, 
-			"UserLog::initialize: open(%s) failed - errno %d", path, errno );
+			"UserLog::initialize: open(%s) failed - errno %d\n", path, errno );
 		return;
 	}
 
 		// attach it to stdio stream
 	if( (fp = fdopen(fd,"a")) == NULL ) {
 		dprintf( D_ALWAYS, 
-			"UserLog::initialize: fdopen() failed - errno %d", path, errno );
+			"UserLog::initialize: fdopen(%i) failed - errno %d\n", fd, errno );
 	}
 #else
 	// Windows (Visual C++)
 	if( (fp = fopen(path,"a+tc")) == NULL ) {
 		dprintf( D_ALWAYS, 
-			"UserLog::initialize: fopen failed - errno %d", path, errno );
+			"UserLog::initialize: fopen(%s) failed - errno %d\n", path, errno );
 	}
 
 	fd = _fileno(fp);
@@ -143,7 +143,7 @@ initialize( const char *file, int c, int p, int s )
 
 		// set the stdio stream for line buffering
 	if( setvbuf(fp,NULL,_IOLBF,BUFSIZ) < 0 ) {
-		dprintf( D_ALWAYS, "setvbuf failed in UserLog::initialize" );
+		dprintf( D_ALWAYS, "setvbuf failed in UserLog::initialize\n" );
 	}
 
 	// prepare to lock the file

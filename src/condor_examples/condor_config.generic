@@ -376,9 +376,11 @@ LastCkpt	= (CurrentTime - LastPeriodicCheckpoint)
 STANDARD	= 1
 PVM		= 4
 VANILLA		= 5
-IsPVM           = (JobUniverse == $(PVM))
-IsVanilla       = (JobUniverse == $(VANILLA))
-IsStandard      = (JobUniverse == $(STANDARD))
+MPI		= 8
+IsPVM           = (TARGET.JobUniverse == $(PVM))
+IsMPI           = (TARGET.JobUniverse == $(MPI))
+IsVanilla       = (TARGET.JobUniverse == $(VANILLA))
+IsStandard      = (TARGET.JobUniverse == $(STANDARD))
 
 NonCondorLoadAvg	= (LoadAvg - CondorLoadAvg)
 BackgroundLoad		= 0.3
@@ -393,9 +395,9 @@ ConsoleBusy		= (ConsoleIdle  < $(MINUTE))
 CPU_Idle		= ($(NonCondorLoadAvg) <= $(BackgroundLoad))
 CPU_Busy		= ($(NonCondorLoadAvg) >= $(HighLoad))
 
-BigJob		= (ImageSize >= (50 * 1024))
-MediumJob	= (ImageSize >= (15 * 1024) && ImageSize < (50 * 1024))
-SmallJob	= (ImageSize <  (15 * 1024))
+BigJob		= (TARGET.ImageSize >= (50 * 1024))
+MediumJob	= (TARGET.ImageSize >= (15 * 1024) && TARGET.ImageSize < (50 * 1024))
+SmallJob	= (TARGET.ImageSize <  (15 * 1024))
 
 JustCPU			= ($(CPU_Busy) && ($(KeyboardBusy) == False))
 MachineBusy		= ($(CPU_Busy) || $(KeyboardBusy))
@@ -497,7 +499,7 @@ UWCS_PERIODIC_CHECKPOINT	= $(LastCkpt) > (3 * $(HOUR))
 ##  example of this is below.  For jobs smaller than 60 megabytes, we
 ##  periodic checkpoint every 6 hours.  For larger jobs, we only
 ##  checkpoint every 12 hours.
-#UWCS_PERIODIC_CHECKPOINT	= ( (ImageSize < 60000) && \
+#UWCS_PERIODIC_CHECKPOINT	= ( (TARGET.ImageSize < 60000) && \
 #			    ($(LastCkpt) > (6 * $(HOUR))) ) || \ 
 #			  ( $(LastCkpt) > (12 * $(HOUR)) )
 

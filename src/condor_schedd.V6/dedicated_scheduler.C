@@ -897,7 +897,7 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 			if ( op == PERMISSION_AND_AD ) {
 					// get startd ad from negotiator as well
 				my_match_ad = new ClassAd();
-				if( !my_match_ad->get(*s) ) {
+				if( !my_match_ad->initFromStream(*s) ) {
 					dprintf( D_ALWAYS, "Can't get my match ad from mgr\n" ); 
 					delete my_match_ad;
 					free( capability );

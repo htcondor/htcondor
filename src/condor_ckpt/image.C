@@ -313,12 +313,22 @@ Image::SetFd( int f )
 void
 Image::SetFileName( char *ckpt_name )
 {
-		// Save the checkpoint file name
+	static bool done_once = false;
+	if(done_once && file_name) 
+		delete[] file_name;
+
+	// Save the checkpoint file name
 	file_name = new char [ strlen(ckpt_name) + 1 ];
+	if(file_name == NULL) {
+		dprintf(D_ALWAYS,
+				"Internal error: Could not allocate memory for ckpt_filename\n");
+		Suicide();
+	}
 	strcpy( file_name, ckpt_name );
 
 	fd = -1;
 	pos = 0;
+	done_once = true;
 }
 
 void
@@ -1777,7 +1787,9 @@ Checkpoint( int sig, int code, void *scp )
 void
 init_image_with_file_name( char *ckpt_name )
 {
+	_condor_ckpt_disable();
 	MyImage.SetFileName( ckpt_name );
+	_condor_ckpt_enable();
 }
 
 void

@@ -929,12 +929,10 @@ handleSquawk( char *line, char *addr ) {
 		sock.put( DUMP_STATE );
 		sock.eom();
 		sock.decode();
-		ClassAd *ad = new ClassAd;
-		ad->get ( sock );
 
-		printAdToFile( ad, NULL );
-		
-		delete ad;
+		ClassAd ad;
+		ad.initFromStream( sock );
+		printAdToFile( &ad, NULL );
 		
 		return TRUE;
 	}

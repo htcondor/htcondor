@@ -180,7 +180,7 @@ int CondorFileBuffer::open( const char *url_in, int flags, int mode )
 	strcpy(url,url_in);
 	result = sscanf( url, "%[^:]:%s", junk, sub_url );
 	if(result!=2) {
-		_condor_warning("Couldn't understand url '%s'",url_in);
+		_condor_warning(CONDOR_WARNING_KIND_BADURL, "Couldn't understand url '%s'",url_in);
 		errno = EINVAL;
 		return -1;
 	}
@@ -189,12 +189,12 @@ int CondorFileBuffer::open( const char *url_in, int flags, int mode )
 		char path[_POSIX_PATH_MAX];
 		result = sscanf(sub_url,"(%d,%d)%s",&buffer_size,&buffer_block_size,path);
 		if(result!=3) {
-			_condor_warning("Couldn't understand url '%s'",sub_url);
+			_condor_warning(CONDOR_WARNING_KIND_BADURL, "Couldn't understand url '%s'",sub_url);
 			errno = EINVAL;
 			return -1;
 		}
 		if( buffer_size<0 || buffer_block_size<0 || buffer_size<buffer_block_size ) {
-			_condor_warning("Invalid buffer configuration: (%d,%d)",buffer_size,buffer_block_size);
+			_condor_warning(CONDOR_WARNING_KIND_NOTICE, "Invalid buffer configuration: (%d,%d)",buffer_size,buffer_block_size);
 			errno = EINVAL;
 			return -1;
 		}

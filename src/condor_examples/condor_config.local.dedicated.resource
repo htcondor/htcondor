@@ -44,21 +44,49 @@ DedicatedScheduler = "DedicatedScheduler@full.host.name"
 ######################################################################
 ######################################################################
 
-##  There are two basic options for the policy on dedicated resources:
-##  only run dedicated jobs, or, prefer to run dedicated jobs, but if
-##  none are waiting, allow non-dedicated jobs to run on an
-##  opportunistic basis.  You should uncomment the set of policy
-##  expressions you want to use at your site.
+##  There are three basic options for the policy on dedicated
+##  resources: 
+##  1) Only run dedicated jobs
+##  2) Always run jobs, but prefer dedicated ones
+##  3) Always run dedicated jobs, but only allow non-dedicated jobs to
+##     run on an opportunistic basis.   
+##  You MUST uncomment the set of policy expressions you want to use
+##  at your site.
 
 ##--------------------------------------------------------------------
-## Run both dedicated and opportunistic jobs here
+## 1) Only run dedicated jobs
 ##--------------------------------------------------------------------
-##  Allowing both dedicated and opportunistic jobs on your dedicated
-##  resources requires that you have an opportunistic policy already
-##  defined.  These are the only settings that need to be modified
-##  from your existing policy expressions to allow dedicated jobs to
-##  always run without suspending, or ever being preempted (either
-##  from activity on the machine, or other jobs in the system). 
+#START		= Scheduler =?= $(DedicatedScheduler)
+#SUSPEND	= False
+#CONTINUE	= True
+#PREEMPT	= False
+#KILL		= False
+#WANT_SUSPEND	= False
+#WANT_VACATE	= False
+#RANK		= Scheduler =?= $(DedicatedScheduler)
+
+##--------------------------------------------------------------------
+## 2) Always run jobs, but prefer dedicated ones
+##--------------------------------------------------------------------
+#START		= True
+#SUSPEND	= False
+#CONTINUE	= True
+#PREEMPT	= False
+#KILL		= False
+#WANT_SUSPEND	= False
+#WANT_VACATE	= False
+#RANK		= Scheduler =?= $(DedicatedScheduler)
+
+##--------------------------------------------------------------------
+## 3) Always run dedicated jobs, but only allow non-dedicated jobs to
+##    run on an opportunistic basis.   
+##--------------------------------------------------------------------
+##  Allowing both dedicated and opportunistic jobs on your resources
+##  requires that you have an opportunistic policy already defined.
+##  These are the only settings that need to be modified from your
+##  existing policy expressions to allow dedicated jobs to always run
+##  without suspending, or ever being preempted (either from activity
+##  on the machine, or other jobs in the system).
 
 #SUSPEND	= Scheduler =!= $(DedicatedScheduler) && ($(SUSPEND))
 #PREEMPT	= Scheduler =!= $(DedicatedScheduler) && ($(PREEMPT))
@@ -70,18 +98,6 @@ DedicatedScheduler = "DedicatedScheduler@full.host.name"
 ##  larger value than the maximum value your existing rank expression
 ##  could possibly evaluate to.  RANK is just a floating point value,
 ##  so there's no harm in having a value that's very large.
-
-##--------------------------------------------------------------------
-## Only run dedicated jobs here
-##--------------------------------------------------------------------
-#START		= Scheduler =?= $(DedicatedScheduler)
-#SUSPEND	= False
-#CONTINUE	= True
-#PREEMPT	= False
-#KILL		= False
-#WANT_SUSPEND	= False
-#WANT_VACATE	= False
-#RANK		= Scheduler =?= $(DedicatedScheduler)
 
 
 ######################################################################
@@ -97,6 +113,9 @@ MPI_CONDOR_RSH_PATH = $(SBIN)
 
 ##  Path to the condor_starter that handles MPI jobs.
 ALTERNATE_STARTER_2	= $(SBIN)/condor_starter.v63
+
+##  A flag needed to allow the MPI starter to work properly.
+STARTER_2_IS_DC	= TRUE
 
 ##  This setting puts the DedicatedScheduler attribute, defined above,
 ##  into your machine's classad.  This way, the dedicated scheduler

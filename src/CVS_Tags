@@ -9,6 +9,10 @@
 		Manager re-write, it's not clear when this will go to someone other
 		than INFN and Jim Basney.
  
+8/17/01 V6_3_0-merge-3
+	The state of the V6_3_0-branch before we merged it into 
+	the V6_3-branch.
+
 8/16/01 V6_3-post-merge-V6_3-syscall-hack-branch-merge-1
 		This is the state of the V6_3-branch after we merged the
 		V6_3-syscall-hack-branch tagged at V6_3-syscall-hack-branch-merge-1.
@@ -20,6 +24,13 @@
 8/10/01 V6_3-syscall-hack-branch-done
 		I finished the port a while ago, but here is a tag specifying the
 		set of files where I considered the port to be finished.
+
+7/29/01 V6_3_0-pre-merge-V6_2_1
+    The state of the V6_3_0-branch, before we merge the V6_2-branch (as tagged
+    at V6_2_1 back in.
+
+7/27/01 V6_2_1
+	The 6.2.1 release tags, which lives on the V6_2-branch. 
 
 6/4/01 V6_3-syscall-hack-branch-fixed_varargs
 		REMOTE_syscall() has been removed and honest to god

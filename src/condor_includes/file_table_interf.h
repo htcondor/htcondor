@@ -58,7 +58,7 @@ int _condor_get_unmapped_fd( int fd );
 int _condor_is_fd_local( int user_fd );
 
 /** Return true if this file should be accessed locally */
-int _condor_is_file_name_local( const char *name );
+int _condor_is_file_name_local( const char *name, char *local_name );
 
 /** Just before the program is about to exit, perform any necessary cleanup such as buffer flushing, data reporting, etc. */
 void _condor_file_table_cleanup();

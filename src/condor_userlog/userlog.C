@@ -195,6 +195,8 @@ statsort(const void *vi, const void *vj)
 void
 display_stats()
 {
+	int i;
+
 	// display HostStatistics
 	printf("%-15.15s %9.9s %9.9s %9.9s %9.9s %9.9s %7.7s %6.6s\n",
 		   "Host/Job", "Wall Time", "Good Time", "CPU Usage",
@@ -223,10 +225,10 @@ display_stats()
 	printf("\n");
 
 	// display JobStatistics
-	JobStatistics **statarray = new (JobStatistics *) [numJobStats];
+	JobStatistics **statarray = new JobStatistics* [numJobStats];
 	JobStatistics *js;
 	Stats.startIterations();
-	for (int i=0; Stats.iterate(js) == 1; i++) {
+	for (i=0; Stats.iterate(js) == 1; i++) {
 		statarray[i] = js;
 	}
 
@@ -235,7 +237,7 @@ display_stats()
 	int allocations=0, kills=0;
 	int wall_time=0, good_time=0, cpu_usage=0;
 	char job[40];
-	for (int i=0; i < numJobStats; i++) {
+	for (i=0; i < numJobStats; i++) {
 		js = statarray[i];
 		sprintf(job, "%d.%d", js->cluster, js->proc);
 		printf("%-15.15s ", job);

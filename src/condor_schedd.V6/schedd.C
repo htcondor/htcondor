@@ -1867,7 +1867,7 @@ Scheduler::negotiate(int, Stream* s)
 					if ( op == PERMISSION_AND_AD ) {
 						// get startd ad from negotiator as well
 						my_match_ad = new ClassAd();
-						if( !my_match_ad->get(*s) ) {
+						if( !my_match_ad->initFromStream(*s) ) {
 							dprintf( D_ALWAYS,
 								"Can't get my match ad from mgr\n" );
 							delete my_match_ad;
@@ -3592,9 +3592,6 @@ Scheduler::mark_cluster_rejected(int cluster)
 {
 	int		i;
 
-	if ( N_RejectedClusters + 1 == MAX_REJECTED_CLUSTERS ) {
-		EXCEPT("Reached MAX_REJECTED_CLUSTERS");
-	}
 	for( i=0; i<N_RejectedClusters; i++ ) {
 		if( RejectedClusters[i] == cluster ) {
 			return;

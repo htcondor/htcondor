@@ -336,8 +336,22 @@ all_pty_idle_time( time_t now )
 {
 	char	*f;
 	static Directory *dev = NULL;
+	static Directory *dev_pts = NULL;
 	time_t	idle_time;
 	time_t	answer = (time_t)INT_MAX;
+	static bool checked_dev_pts = false;
+	struct stat	statbuf;
+
+	if( ! checked_dev_pts ) {
+		if( stat("/dev/pts", &statbuf) >= 0 ) {
+				// "/dev/pts" exists, let's just make sure it's a
+				// directory and then we know we're in good shape.
+			if( S_ISDIR(statbuf.st_mode) ) {
+				dev_pts = new Directory( "/dev/pts" );
+			}
+		}
+		checked_dev_pts = true;
+	}
 
 	if( !dev ) {
 #if defined(Solaris)
@@ -360,6 +374,19 @@ all_pty_idle_time( time_t now )
 			}
 		}
 	}
+
+		// Now, if there's a /dev/pts, search all the devices in there.  
+	if( dev_pts ) {
+		char pathname[100];
+		for( dev_pts->Rewind();  (f = (char*)dev_pts->Next()); ) {
+			sprintf( pathname, "pts/%s", f );
+			idle_time = dev_idle_time( pathname, now );
+			if( idle_time < answer ) {
+				answer = idle_time;
+			}
+		}
+	}	
+
 	return answer;
 }
 
@@ -421,7 +448,11 @@ dev_idle_time( char *path, time_t now )
 	if( buf.st_atime > now ) {
 		answer = 0;
 	}
-        // dprintf( D_FULLDEBUG, "%s: %d secs\n", pathname, (int)answer );
+
+	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_IDLE) ) {
+        dprintf( D_FULLDEBUG, "%s: %d secs\n", pathname, (int)answer );
+	}
+
 	return answer;
 }
 

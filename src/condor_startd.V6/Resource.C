@@ -28,7 +28,7 @@ Resource::Resource( CpuAttributes* cap, int rid )
 {
 	char tmp[256];
 	char* tmpName;
-	int size = (int)ceil(60 / polling_interval);
+	int size = (int)ceil(60.0 / (double)polling_interval);
 	r_classad = NULL;
 	r_state = new ResState( this );
 	r_starter = new Starter( this );
@@ -1115,7 +1115,7 @@ Resource::compute_condor_load( void )
 void
 Resource::resize_load_queue( void )
 {
-	int size = (int)ceil(60 / polling_interval);
+	int size = (int)ceil(60.0 / (double)polling_interval);
 	dprintf( D_FULLDEBUG, "Resizing load queue.  Old: %d, New: %d\n",
 			 r_load_queue->size(), size );
 	float val = r_load_queue->avg();

@@ -353,7 +353,7 @@ fetchAds (ClassAdList &adList, const char *poolName)
 		}
 		if (more) {
 			ad = new ClassAd;
-			if (!ad->get (*sock)) {
+			if( !ad->initFromStream(*sock) ) {
 				sock->end_of_message();
 				delete ad;
 				return Q_COMMUNICATION_ERROR;

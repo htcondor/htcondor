@@ -66,7 +66,7 @@ require 5.002;
 ######################################################################
 
 # These are the modules you actually want to build.
-@modules = ( "condor", "smp_startd", "view_server", "ckpt_server", "pvm", "sdk","eventd", "mpi" );
+@modules = ( "condor", "smp_startd", "view_server", "ckpt_server", "pvm", "sdk","eventd", "dagman" );
 #@modules = ( "smp_startd", "view_server", "ckpt_server", "pvm", "sdk" );
 #@modules = ( "condor" );
 
@@ -129,7 +129,9 @@ $realskel="condor_release";
   "i386_linux2"   => "linux",
   "i386_linux22"  => "linux",
   "i386_linux3"   => "linux",
+  "i386_rh62"     => "linux",
   "alpha_linux3"  => "linux",
+  "alpha_linux22" => "linux",
   "alpha_dux40"   => "dux40",
   "alpha_dux40f"  => "dux40",
   "sgi_62"        => "irix6",
@@ -149,8 +151,10 @@ $realskel="condor_release";
   "sunx86_57"     => "x86",
   "i386_linux2"   => "x86",
   "i386_linux22"  => "x86",
+  "i386_rh62"     => "x86",
   "i386_linux3"   => "x86",
   "alpha_linux3"  => "Alpha",
+  "alpha_linux22"  => "Alpha",
   "alpha_dux40"   => "Alpha",
   "alpha_dux40f"  => "Alpha",
   "sgi_62"        => "SGI",
@@ -165,8 +169,10 @@ $realskel="condor_release";
   "i386_linux2"   => "libc5",
   "i386_linux22"  => "glibc21",
   "i386_linux3"   => "glibc20",
-  "i386_rh61  "   => "glibc21",
-  "alpha_linux3"  => "glibc20"
+  "i386_rh61"   => "glibc21",
+  "i386_rh62"   => "glibc21",
+  "alpha_linux3"  => "glibc20",
+  "alpha_linux22" => "glibc21"
 );
 
 
@@ -214,23 +220,9 @@ foreach $module ( @modules ) {
     `cp -r $realskel/LICENSE.TXT $skel/$release`;
 
     # Now, you always want a README, DOC, and INSTALL
-    if( $module =~ /condor/ ) {
 	foreach $file ( "README", "INSTALL", "DOC" ) {
 	    `cp -f $realskel/$file $skel/$release/`;
-	}
-    } else {
-	# If we're contrib, we need to do some special stuff.
-	# The README and DOC files really come from .contrib versions
-	# that are customized for a given contrib module.
-	foreach $file ( "README", "DOC" ) {
-	    customize( "$realskel/$file.contrib", 
-		      "$skel/$release/$file", 
-		      $module, $tarfile );
-	}
-	# The appropriate INSTALL file is stored in CVS by the module
-	# name. 
-	`cp -f $realskel/INSTALL.$module $skel/$release/INSTALL`;
-    }
+    } 
 
     # Now, handle any special case files for a given module
     foreach $file ( @{$skelfiles{$module}} ) {

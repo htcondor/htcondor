@@ -327,6 +327,52 @@ bool parse (char *filename, Dag *dag) {
 								  parent->GetJobName(), child->GetJobName() );
                 }
             }
+		}
+			
+		//
+		// Handle a Retry token
+		//
+		// Example Syntax is:  Retry JobName 3
+		//
+		else if( strcasecmp( token, "Retry" ) == 0 ) {
+			const char *example = "Retry JobName 3";
+
+			char *jobName = strtok( NULL, DELIMITERS );
+			if( jobName == NULL ) {
+                debug_printf( DEBUG_QUIET, "%s(%d): Missing job name\n",
+							  filename, lineNumber );
+                exampleSyntax( example );
+                fclose( fp );
+                return false;
+            }
+
+            Job *job = dag->GetJob( jobName );
+			if( job == NULL ) {
+				debug_printf( DEBUG_QUIET, "%s(%d): Unknown Job %s\n",
+							  filename, lineNumber, jobName );
+				fclose( fp );
+				return false;
+			}
+
+            char *s = strtok( NULL, DELIMITERS );
+            if( s == NULL ) {
+				debug_printf( DEBUG_QUIET, "%s(%d): Missing Retry value\n",
+                              filename, lineNumber );
+                exampleSyntax( example );
+                fclose( fp );
+                return false;
+			}
+
+			char *tmp;
+			job->retry_max = (int)strtol( s, &tmp, 10 );
+			if( tmp == s ) {
+				debug_printf( DEBUG_QUIET,
+							  "%s(%d): Invalid Retry value \"%s\"\n",
+							  filename, lineNumber, s );
+				exampleSyntax( example );
+				fclose(fp);
+				return false;
+			}
 
         } else {
             //

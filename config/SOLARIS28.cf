@@ -4,7 +4,7 @@
 
 #define NEEDS_64BIT_SYSCALLS    YES
 #define NEEDS_64BIT_STRUCTS YES
-#define HAS_PVM	NO
+#define HAS_PVM	YES
 
 
 #if IS_X86
@@ -12,7 +12,6 @@
 #define		GccArch			i386-pc-solaris2.8
 #define		Platform		INTEL-SOLARIS28
 #define IS_EGCS_BUILD	YES
-#define EgcsPath /usr/local/lib/gcc-lib/i386-pc-solaris2.8/2.95.2 
 #endif
 
 #if IS_SUN4X
@@ -20,7 +19,6 @@
 #define		Platform		SUN4X-SOLARIS28
 #define		GccArch			sparc-sun-solaris2.8
 #define IS_EGCS_BUILD	YES
-#define EgcsPath /s/gcc/lib/gcc-lib/sparc-sun-solaris2.8/2.95.3
 #define HAS_GLOBUS YES
 #endif
 

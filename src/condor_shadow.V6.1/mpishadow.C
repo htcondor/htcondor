@@ -180,7 +180,7 @@ MPIShadow::getResources( void )
         /* Now, do stuff for each proc: */
     for ( int i=0 ; i<numProcs ; i++ ) {
 		job_ad = new ClassAd();
-		if( !job_ad->get(*sock)  ) {
+		if( !job_ad->initFromStream(*sock)  ) {
             EXCEPT( "Failed to get job classad for proc %d", i );
 		}
         if( !sock->code( numInProc ) ) {
@@ -806,7 +806,7 @@ MPIShadow::updateFromStarter(int command, Stream *s)
 	
 	// get info from the starter encapsulated in a ClassAd
 	s->decode();
-	update_ad.get(*s);
+	update_ad.initFromStream(*s);
 	s->end_of_message();
 
 		// First, figure out what remote resource this info belongs
