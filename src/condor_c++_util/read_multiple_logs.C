@@ -149,7 +149,8 @@ ReadMultipleUserLogs::readEvent (ULogEvent * & event)
 			        // peter says always return an error immediately,
 			        // then go on our merry way trying again if they
 					// call us again.
-			        dprintf(D_ALWAYS, "read error on log %s\n",
+			        dprintf(D_ALWAYS, "ReadMultipleUserLogs: read error "
+								"on log %s\n",
 					    log.strFilename.Value());
 			        return eOutcome;
 		        }
@@ -207,9 +208,11 @@ ReadMultipleUserLogs::DeleteLogs(StringList &logFileNames)
 	char *filename;
 	while ( (filename = logFileNames.next()) ) {
         if ( access( filename, F_OK) == 0 ) {
-		    dprintf( D_ALWAYS, "Deleting older version of %s\n", filename);
+		    dprintf( D_ALWAYS, "ReadMultipleUserLogs: deleting older "
+						"version of %s\n", filename);
 		    if (remove (filename) == -1) {
-		        dprintf( D_ALWAYS, "Error: can't remove %s\n", filename );
+		        dprintf( D_ALWAYS, "ReadMultipleUserLogs error: can't "
+							"remove %s\n", filename );
 		    }
 		}
 	}
@@ -273,7 +276,8 @@ ReadMultipleUserLogs::LogGrew(LogFileEntry &log)
     struct stat buf;
     
     if( fstat( fd, &buf ) == -1 ) {
-		dprintf( D_FULLDEBUG, "ERROR: can't stat condor log (%s): %s\n",
+		dprintf( D_FULLDEBUG, "ReadMultipleUserLogs error: can't stat "
+					"condor log (%s): %s\n",
 					  log.strFilename.GetCStr(), strerror( errno ) );
 		return false;
 	}
@@ -282,8 +286,8 @@ ReadMultipleUserLogs::LogGrew(LogFileEntry &log)
     log.logSize = buf.st_size;
     
     bool grew = (buf.st_size > oldSize);
-    dprintf( D_FULLDEBUG, "%s\n",
-				  grew ? "Log GREW!" : "No log growth..." );
+    dprintf( D_FULLDEBUG, "ReadMultipleUserLogs: %s\n",
+				  grew ? "log GREW!" : "no log growth..." );
 
 	return grew;
 }
@@ -405,6 +409,18 @@ ReadMultipleUserLogs::loadLogFileNameFromSubFile(const MyString &strSubFilename)
 		}
 	}
 
+		//
+		// Check for macros in the log file name -- we currently don't
+		// handle those.
+		//
+	if ( logFileName != "" ) {
+		if ( strchr(logFileName.Value(), '$') ) {
+			dprintf(D_ALWAYS, "ReadMultipleUserLogs: macros not allowed "
+						"in log file name in DAG node submit files\n");
+			logFileName = "";
+		}
+	}
+
 	if ( logFileName != "" ) {
 			// Prepend initialdir to log file name if log file name is not
 			// an absolute path.
@@ -420,8 +436,8 @@ ReadMultipleUserLogs::loadLogFileNameFromSubFile(const MyString &strSubFilename)
 			if ( currentDir != "" ) {
 				logFileName = currentDir + "/" + logFileName;
 			} else {
-					// We should generate some kind of better error message
-					// here.
+				dprintf(D_ALWAYS, "ReadMultipleUserLogs: unable to get "
+							"current directory\n");
 				logFileName = "";
 			}
 		}
@@ -438,7 +454,9 @@ ReadMultipleUserLogs::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 {
 	MyString strDagFileContents = readFileToString(strDagFileName);
 	if (strDagFileContents == "") {
-		return "Unable to read DAG file";
+		MyString result = "Unable to read DAG file";
+		dprintf(D_ALWAYS, "ReadMultipleUserLogs: %s\n", result.Value());
+		return result;
 	}
 
 		// Split the DAG submit file string into lines.
@@ -470,16 +488,22 @@ ReadMultipleUserLogs::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 				tokens.next(); // Skip <name>
 				const char *submitFile = tokens.next();
 				if( !submitFile ) {
-			    	return "Improperly-formatted DAG file: submit file "
-							"missing from job line";
+					MyString result = "Improperly-formatted DAG file: "
+								"submit file missing from job line";
+					dprintf(D_ALWAYS, "ReadMultipleUserLogs: %s\n",
+								result.Value());
+			    	return result;
 				}
 				MyString strSubFile(submitFile);
 
 					// get the log = value from the sub file
 				MyString strLogFilename = loadLogFileNameFromSubFile(strSubFile);
 				if (strLogFilename == "") {
-					return "No 'log =' value found in submit file " +
-							strSubFile;
+					MyString result = "No 'log =' value found in submit file "
+								+ strSubFile;
+					dprintf(D_ALWAYS, "ReadMultipleUserLogs: %s\n",
+								result.Value());
+					return result;
 				}
 			
 					// Add the log file we just found to the log file list
@@ -558,8 +582,10 @@ ReadMultipleUserLogs::CombineLines(StringList &listIn, char continuation,
 			if ( physicalLine ) {
 				logicalLine += physicalLine;
 			} else {
-				return "Improper DAG file: continuation character "
-						"with no trailing line!";
+				MyString result = "Improper DAG file: continuation character "
+							"with no trailing line!";
+				dprintf(D_ALWAYS, "ReadMultipleUserLogs: %s\n", result.Value());
+				return result;
 			}
 		}
 
@@ -589,7 +615,7 @@ ReadMultipleUserLogs::DuplicateLogExists(ULogEvent *event, LogFileEntry *log)
 			result = false;
 		} else {
 			dprintf(D_FULLDEBUG,
-					"ReadMultipleUserLogs found duplicate log\n");
+					"ReadMultipleUserLogs: found duplicate log\n");
 			result = true;
 		}
 	} else {
@@ -597,7 +623,7 @@ ReadMultipleUserLogs::DuplicateLogExists(ULogEvent *event, LogFileEntry *log)
 			// the hash table.
 		if ( logHash.insert(id, log) != 0 ) {
 			dprintf(D_FULLDEBUG,
-					"Hash table insert error");
+					"ReadMultipleUserLogs: hash table insert error");
 		}
 		result = false;
 	}

@@ -155,7 +155,8 @@ instantiateEvent (ULogEventNumber event)
 	case ULOG_REMOTE_ERROR:
 		return new RemoteErrorEvent;
 
-	  default:
+	default:
+		dprintf( D_ALWAYS, "Invalid ULogEventNumber: %d\n", event );
         EXCEPT( "Invalid ULogEventNumber" );
 
 	}

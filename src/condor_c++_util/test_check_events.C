@@ -27,12 +27,31 @@
 #include "string_list.h"
 #include "check_events.h"
 
+static const char * VERSION = "0.9.1";
+
 MULTI_LOG_HASH_INSTANCE; // For the multi-log-file code...
 CHECK_EVENTS_HASH_INSTANCE; // For the event checking code...
 
+enum Status { STATUS_OK, STATUS_CANCEL, STATUS_ERROR };
+
+Status
+CheckArgs(int argc, char **argv);
+
 int main(int argc, char **argv)
 {
+		// Set up the dprintf stuff...
+	Termlog = true;
+	dprintf_config("test_check_events", 2);
+	DebugFlags = D_ALWAYS;
+
 	bool			result = true;
+
+	Status tmpStatus = CheckArgs(argc, argv);
+	if ( tmpStatus == STATUS_CANCEL ) {
+		return 0;
+	} else if ( tmpStatus == STATUS_ERROR ) {
+		return 1;
+	}
 
 	CheckEvents		ce1;
 	MyString		errorMsg;
@@ -224,4 +243,42 @@ int main(int argc, char **argv)
 		printf("\nTest failed\n");
 		return 1;
 	}
+}
+
+Status
+CheckArgs(int argc, char **argv)
+{
+	Status	status = STATUS_OK;
+
+	const char *	usage = "Usage: test_check_events [options]\n"
+			"  -debug <level>: debug level (e.g., D_FULLDEBUG)\n"
+			"  -usage: print this message and exit\n"
+			"  -version: print the version number and compile date\n";
+
+	for ( int index = 1; index < argc; ++index ) {
+		if ( !strcmp(argv[index], "-debug") ) {
+			if ( ++index >= argc ) {
+				fprintf(stderr, "Value needed for -debug argument\n");
+				printf("%s", usage);
+				status = STATUS_ERROR;
+			} else {
+				set_debug_flags( argv[index] );
+			}
+
+		} else if ( !strcmp(argv[index], "-usage") ) {
+			printf("%s", usage);
+			status = STATUS_CANCEL;
+
+		} else if ( !strcmp(argv[index], "-version") ) {
+			printf("test_check_events: %s, %s\n", VERSION, __DATE__);
+			status = STATUS_CANCEL;
+
+		} else {
+			fprintf(stderr, "Unrecognized argument: <%s>\n", argv[index]);
+			printf("%s", usage);
+			status = STATUS_ERROR;
+		}
+	}
+
+	return status;
 }
