@@ -691,6 +691,7 @@ kill_starter(pid, signo)
 #endif
 	if (signo != SIGSTOP && signo != SIGCONT)
 		ret = kill(pid, SIGCONT);
+	ret = kill(pid, signo);
 #ifdef NFSFIX
 	if (getuid() == 0)
 		set_condor_euid(__FILE__, __LINE__);
