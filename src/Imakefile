@@ -1,3 +1,5 @@
+#define AllFiles etc include lib bin sbin
+
 #define AdminTools sbin/condor_off sbin/condor_on sbin/condor_reconfig \
   sbin/condor_restart sbin/condor_master_off sbin/condor_preen
 
@@ -6,9 +8,9 @@
 #define SubmitSbinFiles sbin/condor_schedd sbin/condor_shadow \
   sbin/condor_checkpoint sbin/condor_vacate sbin/condor_reschedule
 
-#define SubmitOnlyFiles bin lib etc SubmitSbinFiles MasterFiles
+#define SubmitOnlyFiles bin lib include etc SubmitSbinFiles MasterFiles
 
-#define LinkOnlyFiles lib bin/condor_compile
+#define LinkOnlyFiles lib bin/condor_compile include
 
 #define PvmFiles sbin/condor_pvmd sbin/condor_pvmgs \
   sbin/condor_shadow.pvm sbin/condor_starter.pvm
@@ -59,10 +61,10 @@
 #if HAS_STATIC
 #define StaticDirectories \
 	static_dir static_dir/bin static_dir/sbin static_dir/lib \
-	static_dir/etc static_dir/etc/examples \
+	static_dir/etc static_dir/etc/examples static_dir/include \
 	static_contrib static_contrib/bin static_contrib/lib \
 	static_contrib/sbin static_contrib/etc \
-	static_contrib/etc/examples
+	static_contrib/etc/examples static_contrib/include
 #else
 #define StaticDirectories
 #endif
@@ -70,11 +72,12 @@
 #define Directories \
 	condor_shadow.V6.1 condor_starter.V6.1 html \
 	release_dir release_dir/bin release_dir/lib release_dir/sbin \
+	release_dir/include \
 	strip_dir strip_dir/bin strip_dir/sbin strip_dir/lib \
-	strip_dir/etc strip_dir/etc/examples \
+	strip_dir/etc strip_dir/etc/examples strip_dir/include \
 	strip_contrib strip_contrib/bin strip_contrib/lib \
 	strip_contrib/sbin strip_contrib/etc \
-	strip_contrib/etc/examples StaticDirectories
+	strip_contrib/etc/examples strip_contrib/include StaticDirectories
 
 all: h h_all condor_includes makefiles Directories Libraries \
 	Programs examples condor_release_all
@@ -86,7 +89,7 @@ libs:: h h_all condor_includes makefiles Directories Libraries
 public:: strip.tar 
 
 strip.tar: stripped
-	cd strip_dir; rm -f release.tar; tar -cvf release.tar etc bin lib sbin
+	cd strip_dir; rm -f release.tar; tar -cvf release.tar AllFiles
 
 afs_release.tar:: afs_strip.tar
 
@@ -99,7 +102,7 @@ public:: static.tar
 afs_release.tar:: afs_static.tar
 
 static.tar: static
-	cd static_dir; rm -f release.tar; tar -cvf release.tar etc bin lib sbin
+	cd static_dir; rm -f release.tar; tar -cvf release.tar AllFiles
 
 afs_static.tar: static.tar
 	cp static_dir/release.tar $(PUBLIC_S_TARGET)
@@ -147,6 +150,7 @@ simple_dir_target(release_dir)
 simple_dir_target(release_dir/bin)
 simple_dir_target(release_dir/lib)
 simple_dir_target(release_dir/sbin)
+simple_dir_target(release_dir/include)
 
 simple_dir_target(strip_dir)
 simple_dir_target(strip_dir/bin)
@@ -154,6 +158,7 @@ simple_dir_target(strip_dir/lib)
 simple_dir_target(strip_dir/sbin)
 simple_dir_target(strip_dir/etc)
 simple_dir_target(strip_dir/etc/examples)
+simple_dir_target(strip_dir/include)
 
 simple_dir_target(strip_contrib)
 simple_dir_target(strip_contrib/bin)
@@ -161,6 +166,7 @@ simple_dir_target(strip_contrib/lib)
 simple_dir_target(strip_contrib/sbin)
 simple_dir_target(strip_contrib/etc)
 simple_dir_target(strip_contrib/etc/examples)
+simple_dir_target(strip_contrib/include)
 
 #if HAS_STATIC
 simple_dir_target(static_dir)
@@ -169,6 +175,7 @@ simple_dir_target(static_dir/lib)
 simple_dir_target(static_dir/sbin)
 simple_dir_target(static_dir/etc)
 simple_dir_target(static_dir/etc/examples)
+simple_dir_target(static_dir/include)
 
 simple_dir_target(static_contrib)
 simple_dir_target(static_contrib/bin)
@@ -176,6 +183,7 @@ simple_dir_target(static_contrib/lib)
 simple_dir_target(static_contrib/sbin)
 simple_dir_target(static_contrib/etc)
 simple_dir_target(static_contrib/etc/examples)
+simple_dir_target(static_contrib/include)
 #endif /* HAS_STATIC */
 
 object_target(util_lib)
