@@ -26,10 +26,11 @@
 ** 
 */ 
 
-#if !defined(SUNOS41) && !defined(OSF1) && !defined(ULTRIX43)
+#if !defined(SUNOS41) && !defined(OSF1) && !defined(ULTRIX43) && !defined(Solaris)
 #define _POSIX_SOURCE
 #endif
 
+#include "condor_debug.h"		/* for EXCEPT */
 #include <signal.h>
 #include <sys/types.h>
 #include <stdio.h>
@@ -38,6 +39,7 @@
 #include "errno.h"
 #include "debug.h"
 
+static char *_FileName_ = __FILE__;
 extern	char	*strerror();
 
 #if defined(HPUX9)
@@ -58,8 +60,10 @@ extern void _sigreturn();
 
 void display_sigstate( int line, const char * file );
 
-#if defined(LINUX) || defined(Solaris)
+#if defined(LINUX)
 typedef int				SS_TYPE;
+#elif defined(Solaris)
+typedef struct sigaltstack SS_TYPE;
 #else
 typedef struct sigstack SS_TYPE;
 #endif
@@ -117,7 +121,9 @@ condor_save_sigstates()
 	}
 
 	/* Save pointer to signal stack (not POSIX, but widely supported) */	
-#if !defined(LINUX)
+#if defined(Solaris)
+	sigaltstack( (SS_TYPE *) 0, &(signal_states.sig_stack) ); 
+#elif !defined(LINUX)
 	sigstack( (struct sigstack *) 0, &(signal_states.sig_stack) ); 
 #endif
 
@@ -179,7 +185,9 @@ condor_restore_sigstates()
 	sigprocmask(SIG_SETMASK,&(signal_states.user_mask),NULL);
 
 	/* Restore signal stack pointer */
-#if !defined(LINUX)
+#if defined(Solaris)
+	sigaltstack( &(signal_states.sig_stack), (SS_TYPE *) 0 );  
+#elif !defined(LINUX)
 	sigstack( &(signal_states.sig_stack), (struct sigstack *) 0 );  
 #endif
 
@@ -390,15 +398,13 @@ sigaction( int sig, const struct sigaction *act, struct sigaction *oact )
 		}
 	}
 
-#if defined(OSF1) || defined(ULTRIX43)
+#if defined(OSF1) || defined(ULTRIX43) || defined(Solaris)
 	return SIGACTION( sig, my_act, oact);
 #else
 	return syscall(SYS_sigaction, sig, my_act, oact);
 #endif
 }
 #endif
-
-
 
 #if defined(SYS_sigprocmask)
 #if defined(LINUX)
