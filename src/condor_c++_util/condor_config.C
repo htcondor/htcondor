@@ -156,8 +156,7 @@ void
 real_config(ClassAd *classAd, char* host, int wantsQuiet)
 {
 	char		*config_file, *tmp;
-	int			scm, rval;
-	StringList	*local_files;
+	int			scm;
 
 	static int first_time = TRUE;
 	if( first_time ) {
@@ -742,7 +741,7 @@ int
 set_persistent_config(char *admin, char *config)
 {
 	char tmp_filename[_POSIX_PATH_MAX], filename[_POSIX_PATH_MAX];
-	int fd, i;
+	int fd;
 	char *tmp;
 
 	if (!admin || !admin[0]) {
