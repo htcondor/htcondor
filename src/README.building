@@ -13,11 +13,17 @@ system by some vendors is often not sufficient.  Condor's build environment
 makes heavy use of many of imake's features, and is only ensured to work with
 the imake distrbuted along with the X11 release sources (ftp://ftp.x.org).
 
-We build Condor using gcc and g++ on all of our Unix platforms.  We are
-currently using version 2.7.2 of these compilers, and cannot make any
+We build Condor using GNU gcc and g++ on all of our Unix platforms.  We are
+currently using version 2.95.2 of these compilers, and cannot make any
 claims about the ability to compile Condor with any other compilers or
-other versions of gcc.  Note: future versions of Condor for Unix will use
-EGCS.
+other versions of gcc.  Note: the only exception to this is Irix 6.2; for
+Irix 6.2 we build with GNU gcc/g++ v2.7.2 in order to support O32 MIPS ABI.
+Note: for compiling on Linux, we build all Linux version with gcc/g++ 2.95.2
+on a RedHat 6.0 machine.
+
+For building Condor on Windows NT, we use Microsoft Visual C++ v6.0 on a
+machine running Windows NT 4.0 SP4.  Note: the rest of this readme details
+the build process on Unix.
 
 Building Condor also uses the utilities awk, lex, and yacc, so they need to be
 available in order to perform a build.
