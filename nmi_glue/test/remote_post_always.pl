@@ -1,17 +1,13 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post_always.pl,v 1.1.2.7 2004-06-25 02:35:59 wright Exp $
+# $Id: remote_post_always.pl,v 1.1.2.8 2004-06-25 03:04:09 wright Exp $
 # post script for Condor testsuite that is run regardless of the
 # testsuite end status  
 ######################################################################
 
-######################################################################
-# set up path 
-######################################################################
-
 my $BaseDir = $ENV{BASE_DIR} || die "BASE_DIR not in environment!\n";
-print "PATH is $ENV{PATH}\n";
+
 
 ######################################################################
 # kill test suite personal condor daemons
