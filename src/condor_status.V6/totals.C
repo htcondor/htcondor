@@ -176,7 +176,7 @@ StartdServerTotal()
 	avail = 0;
 	memory = 0;
 	disk = 0;
-	mips = 0;
+	condor_mips = 0;
 	kflops = 0;
 }
 
@@ -203,7 +203,7 @@ update (ClassAd *ad)
 	machines++;
 	memory 	+= attrMem;
 	disk   	+= attrDisk;
-	mips	+= attrMips;
+	condor_mips	+= attrMips;
 	kflops	+= attrKflops;
 
 	return 1;
@@ -222,7 +222,7 @@ void StartdServerTotal::
 displayInfo (int)
 {
 	printf ("%9d %5d %7d %11d %11d %11d\n", machines, avail, memory,
-					disk, mips, kflops);
+					disk, condor_mips, kflops);
 }
 
 
@@ -230,7 +230,7 @@ StartdRunTotal::
 StartdRunTotal()
 {
 	machines = 0;
-	mips = 0;
+	condor_mips = 0;
 	kflops = 0;
 	loadavg = 0;
 }
@@ -247,7 +247,7 @@ update (ClassAd *ad)
 		!ad->LookupFloat  (ATTR_LOAD_AVG, attrLoadAvg))
 			return 0;
 
-	mips += attrMips;
+	condor_mips += attrMips;
 	kflops += kflops;
 	loadavg += attrLoadAvg;	
 	machines ++;
@@ -267,7 +267,7 @@ displayHeader()
 void StartdRunTotal::
 displayInfo (int)
 {
-	printf ("%9d  %11d  %11d   %-.3f\n", machines, mips, kflops, 
+	printf ("%9d  %11d  %11d   %-.3f\n", machines, condor_mips, kflops, 
 				(machines > 0) ? float(loadavg/machines) : 0);
 }
 
