@@ -3,6 +3,19 @@
 ************************************************************************/
 #include "Imakefile.common"
 
+/* 
+   If we're just doing "make all", the first thing we should do is
+   build all the various lists we need (dealing with test classes,
+   compiler subdirectories, etc), and do so in all the compiler  
+   subdirectories.  This way, we can catch errors right away, and we
+   get all that stuff out of the way early in the build.
+*/
+all_lists:: compiler_list
+	@for X in `cat compiler_list` ; do \
+	    make $$X/Makefile; \
+	    cd $$X; make all_lists; cd ..; \
+	done
+
 
 /************************************************************************
    Shared settings/rules used by all tests in the top-level directory,
