@@ -21,6 +21,10 @@ typedef unsigned int u_int;
 #include "_condor_fix_types.h"
 #endif 
 
+#if defined(IRIX62)
+typedef struct fd_set fd_set;
+#endif 
+
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>

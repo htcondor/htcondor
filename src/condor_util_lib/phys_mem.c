@@ -98,9 +98,17 @@ calc_phys_memory()
 #include <sys/file.h>
 
 struct nlist memnl[] = {
-	{ "physmem" },
-        { NULL }
+	{ "physmem",0,0 },
+    { NULL }
 };
+
+#if defined(IRIX62)
+struct nlist64 memnl64[] = {
+	{ "physmem",0,0 },
+    { NULL }
+};
+#endif  /* IRIX62 */
+
 calc_phys_memory()
 {
   int kmem;
@@ -114,7 +122,13 @@ calc_phys_memory()
   if ((nlist("/hp-ux",memnl) <0) || (memnl[0].n_type ==0)) return(-1); 
 #endif
 
-#if defined(IRIX53)
+/* for IRIX62, we assume that the kernel is a 32 or 64-bit ELF binary, and
+ * for IRIX53, we assume the kernel is a 32-bit COFF.  Todd 2/97 */
+#if defined(IRIX62)
+  if (_libelf_nlist("/unix",memnl) == -1)
+     if (_libelf_nlist64("/unix",memnl64) == -1)
+         return(-1);
+#elif defined(IRIX53)
   if ((nlist("/unix",memnl) <0) || (memnl[0].n_type ==0)) return(-1); 
 #endif
 
@@ -122,8 +136,17 @@ calc_phys_memory()
    *   Open kernel memory and read variables.
   */
   if ((kmem=open("/dev/kmem",0)) <0) return (-1);
-  
+
+#if defined(IRIX62)
+  /* if IRIX62, figure out if we grabbed a 32- or 64-bit address */
+  if ( memnl[0].n_type ) {
+  	if (-1==lseek(kmem,(long) memnl[0].n_value,0)) return (-1);
+  } else {
+  	if (-1==lseek(kmem,(long) memnl64[0].n_value,0)) return (-1);
+  }
+#else
   if (-1==lseek(kmem,(long) memnl[0].n_value,0)) return (-1);
+#endif
 
   if (read(kmem,(char *) &physmem, sizeof(int)) <0) return (-1);
   

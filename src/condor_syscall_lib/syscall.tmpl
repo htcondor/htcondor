@@ -558,7 +558,7 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 	int getdtablesize();
 
 	not_supported {
-#if defined(LINUX) || defined(OSF1)
+#if defined(LINUX) || defined(OSF1) || defined(IRIX62)
 		int select(int numfds, fd_set *readfds, fd_set *writefds,
 			fd_set *exceptfds, struct timeval *timeout);
 #else

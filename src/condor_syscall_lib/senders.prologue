@@ -6,6 +6,10 @@
 	typedef struct  _quad { int val[2]; } quad;
 #endif
 
+#if defined(IRIX62)
+#	include "condor_fdset.h"
+#endif
+
 #if defined(Solaris) || defined(IRIX53)
 #include "_condor_fix_types.h"
 #include <sys/statfs.h>

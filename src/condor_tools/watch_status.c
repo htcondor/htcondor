@@ -35,6 +35,13 @@
 
 #define _POSIX_SOURCE
 
+#if defined(IRIX62)
+/* the definition for time_t below is correct for 32-bit mode IRIX.
+ * what we really need is a runtime mechanism to determine between 32-bit mode 
+ * and 64-bit IRIX modes... Todd, 2/97 */
+typedef long time_t;
+#endif
+
 #include <stdio.h>
 #include "_condor_fix_types.h"
 #include "sched.h"

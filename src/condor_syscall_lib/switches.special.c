@@ -62,6 +62,10 @@ int _lxstat(int, const char *, struct stat *);
 #	endif
 #endif
 
+#if defined(IRIX62)
+#include "condor_fdset.h"
+#endif
+
 #include <unistd.h>
 
 #include "_condor_fix_types.h"
@@ -270,6 +274,9 @@ isatty( int filedes )
 #if defined(HPUX9) || defined(LINUX)
 ssize_t
 readv( int fd, const struct iovec *iov, size_t iovcnt )
+#elif defined(IRIX62)
+ssize_t
+readv( int fd, const struct iovec *iov, int iovcnt )
 #elif defined(OSF1)
 ssize_t
 readv( int fd, struct iovec *iov, int iovcnt )
@@ -355,7 +362,7 @@ linux_fake_readv( int fd, const struct iovec *iov, int iovcnt )
 #if defined(HPUX9) || defined(LINUX) 
 ssize_t
 writev( int fd, const struct iovec *iov, size_t iovcnt )
-#elif defined(Solaris)
+#elif defined(Solaris) || defined(IRIX62)
 ssize_t
 writev( int fd, const struct iovec *iov, int iovcnt )
 #elif defined(OSF1)
