@@ -156,6 +156,7 @@ void CondorFileTable::init()
 	buffer_size = 0;
 	buffer_block_size = 0;
 	info_count = 0;
+	aggravate_mode = 0;
 
 	int scm = SetSyscalls( SYS_UNMAPPED | SYS_LOCAL );
 	length = sysconf(_SC_OPEN_MAX);
