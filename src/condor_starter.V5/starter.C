@@ -42,11 +42,7 @@
 #include "condor_sys.h"
 #include "name_tab.h"
 
-#if defined(OSF1)
 #include "../condor_c++_util/state_machine_driver.h"
-#else
-#include "state_machine_driver.h"
-#endif
 
 #include "starter.h"
 #include "fileno.h"
@@ -54,11 +50,7 @@
 #include "user_proc.h"
 #include "alarm.h"
 
-#if defined(OSF1)
 #include "../condor_c++_util/list.h"
-#else
-#include "list.h"
-#endif
 
 #include <sys/stat.h>
 
@@ -542,11 +534,9 @@ handle_vacate_req()
 void
 req_vacate()
 {
-#if defined(OSF1)	/* Ckpt so fast here, we can do it */
+		// In V5 ckpt so fast, we can do it here
 	req_ckpt_exit_all();
-#else
-	req_exit_all();
-#endif
+
 	MyAlarm.set( VacateTimer );
 }
 
@@ -926,15 +916,7 @@ supervise_all()
 	}
 
 	if( periodic_checkpointing ) {
-#if defined(OSF1)
 		dprintf( D_FULLDEBUG, "Periodic checkpointing NOT implemented yet\n" );
-#else
-		if( MyTimer->is_active() ) {
-			MyTimer->resume();
-		} else {
-			MyTimer->start();
-		}
-#endif
 	}
 
 #if defined(LINK_PVM)

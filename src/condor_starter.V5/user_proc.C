@@ -88,7 +88,7 @@ extern "C" {
   With bytestream checkpointing, there is no updating of checkpoints - the
   user process does everything on its own.
 */
-#if defined(OSF1) && !defined(NO_CKPT)
+#if !defined(NO_CKPT)
 extern "C" {
 void
 _updateckpt( char *a, char *b, char *c )
@@ -433,13 +433,8 @@ UserProc::expand_exec_name( int &on_this_host )
 	char	*path_part;
 	char	*tmp;
 
-#if defined(OSF1)		// using bytestream checkpointing
 	if( strchr(a_out,':') ) {		// form is <hostname>:<path>
 		host_part = strtok( a_out, " \t:" );
-#else
-	if( strchr(orig_ckpt,':') ) {		// form is <hostname>:<path>
-		host_part = strtok( orig_ckpt, " \t:" );
-#endif
 		if( host_part == NULL ) {
 			EXCEPT( "Can't find host part" );
 		}
@@ -459,11 +454,7 @@ UserProc::expand_exec_name( int &on_this_host )
 		}
 	} else {	// form is <path>
 		on_this_host = FALSE;
-#if defined(OSF1)		// using bytestream checkpointing
 		path_part = a_out;
-#else
-		path_part = orig_ckpt;
-#endif
 	}
 
 		// expand macros in the pathname part
@@ -637,7 +628,6 @@ UserProc::execute()
 	char	a_out_name[ _POSIX_PATH_MAX ];
 	char	shortname[ _POSIX_PATH_MAX ];
 	int		user_syscall_fd;
-#if defined(OSF1)
 	const	int READ_END = 0;
 	const	int WRITE_END = 1;
 	const 	int USER_CMD_FD = 3;
@@ -649,7 +639,6 @@ UserProc::execute()
 
 	pipe_fds[0] = -1;
 	pipe_fds[1] = -1;
-#endif
 
 		// We will use mkargv() which modifies its arguments in place
 		// so we not use the original copy of the arguments
@@ -667,7 +656,6 @@ UserProc::execute()
 
 	  case STANDARD:
 	  case PIPE:
-#if defined(OSF1)
 		if( pipe(pipe_fds) < 0 ) {
 			EXCEPT( "pipe()" );
 			dprintf( D_ALWAYS, "Pipe built\n" );
@@ -688,13 +676,6 @@ UserProc::execute()
 		argv[1] = "-_condor_cmd_fd";
 		argv[2] = buf;
 		mkargv( &argc, &argv[3], tmp );
-#else
-		argv[0] = shortname;
-		argv[1] = in;
-		argv[2] = out;
-		argv[3] = err;
-		mkargv( &argc, &argv[4], tmp );
-#endif
 		break;
 
 	  case PVM:
@@ -817,7 +798,6 @@ UserProc::execute()
 
 		// The parent
 	dprintf( D_ALWAYS, "Started user job - PID = %d\n", pid );
-#if defined(OSF1)
 	if( job_class != VANILLA ) {
 			// Send the user process its startup environment conditions
 		close( pipe_fds[READ_END] );
@@ -845,7 +825,7 @@ UserProc::execute()
 		}
 		fclose( cmd_fp );
 	}
-#endif
+
 	delete [] tmp;
 	state = EXECUTING;
 }
@@ -909,24 +889,20 @@ UserProc::handle_termination( int exit_st )
 			"Process %d killed by signal %d\n", pid, WTERMSIG(exit_status)
 		);
 		switch( WTERMSIG(exit_status) ) {
-#if defined(OSF1)
 		  case SIGUSR2:			// synchronous ckpt exit - execute again
 			dprintf( D_ALWAYS, "Process eixted for checkpoint\n" );
 			state = CHECKPOINTING;
 			commit_cpu_time();
 			break;
-#endif
 		  case SIGQUIT:			// exited for a checkpoint
 			dprintf( D_ALWAYS, "Process eixted for checkpoint\n" );
 			state = CHECKPOINTING;
-#if defined(OSF1)
 			/*
 			  For bytestream checkpointing:  the only way the process exits
-			  with signal SIGQUIT is if haS transferred a checkpoint
+			  with signal SIGQUIT is if has transferred a checkpoint
 			  successfully.
 			*/
 			ckpt_transferred = TRUE;
-#endif
 			break;
 		  case SIGUSR1:
 		  case SIGKILL:				// exited by request - no ckpt
@@ -1255,7 +1231,6 @@ UserProc::kill_forcibly()
 	send_sig( SIGKILL );
 }
 
-#if defined(OSF1)
 void
 UserProc::make_runnable()
 {
@@ -1265,7 +1240,6 @@ UserProc::make_runnable()
 	state = RUNNABLE;
 	restart = TRUE;
 }
-#endif
 
 /*
   Create a new connection to the shadow using the existing remote

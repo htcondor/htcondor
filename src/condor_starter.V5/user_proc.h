@@ -121,9 +121,7 @@ public:
 	virtual void request_exit();
 	virtual void kill_forcibly();
 	virtual void handle_termination( int exit_stat );
-#if defined(OSF1)
 	void make_runnable();	// change from CHECKPOINTING to RUNNABLE
-#endif
 
 		// Access functions
 	PROC_STATE	get_state() { return state; }
