@@ -386,7 +386,7 @@ dev_idle_time( char *path, time_t now )
 	if( answer < 0 ) {
 		answer = 0;
 	}
-	dprintf( D_FULLDEBUG, "%s: %d secs\n", pathname, (int)answer );
+        // dprintf( D_FULLDEBUG, "%s: %d secs\n", pathname, (int)answer );
 	return answer;
 }
 
