@@ -227,7 +227,7 @@ IpVerify::Init()
 }
 
 int
-IpVerify::add_hash_entry(struct in_addr & sin_addr,int new_mask)
+IpVerify::add_hash_entry(const struct in_addr & sin_addr,int new_mask)
 {
 	int old_mask = 0;  // must init old_mask to zero!!!
 
@@ -298,10 +298,12 @@ IpVerify::fill_table(StringList *slist, int mask)
 int
 IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin )
 {
-	int mask, found_match, i;
+	int mask, found_match, i, temp_mask, j;
 	struct in_addr sin_addr;
+	char *thehost;
 	
 	memcpy(&sin_addr,&sin->sin_addr,sizeof(sin_addr));
+	mask = 0;	// must initialize to zero because we logical-or bits into this
 
 	switch ( perm ) {
 
@@ -320,34 +322,33 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin )
 			return TRUE;
 		}
 		
-		if ( PermHashTable->lookup(sin_addr,mask) == -1 ) {
-			// did not find an existing entry.  
+		PermHashTable->lookup(sin_addr,mask);
+
+		if ( ( (mask & allow_mask(perm)) == 0 ) && ( (mask & deny_mask(perm)) == 0 ) ) {
 			found_match = FALSE;
-			unsigned char *cur_byte = (unsigned char *) &sin_addr;
-			for (i=3; i>0; i--) {
-				cur_byte[i] = (unsigned char) 255;
-				if ( PermHashTable->lookup(sin_addr,mask) != -1 ) {
-					found_match = TRUE;
-					// We found a match due to a wildcard.  Insert a non-wild card
-					// entry into the hash table for this address so that next
-					// time we'll catch it with just one lookup.  We do not call
-					// add_hash_entry() method here because we already know it
-					// does not exist in the table, and therefore we do not
-					// need to check again for it like add_hash_entry() does.
-					// Use the original address (sin->sin_addr), not the one 
-					// we've munged up with wildcards (sin_addr).
-					PermHashTable->insert(sin->sin_addr,mask);
-					break;
-				}
-			}
 		} else {
 			found_match = TRUE;
 		}
 
-		// if we still have not found a match, try to match via hostname lists
 		if ( found_match == FALSE ) {
-			char *thehost;			
-			mask = 0;
+			// did not find an existing entry, so try subnets
+			unsigned char *cur_byte = (unsigned char *) &sin_addr;
+			for (i=3; i>0; i--) {
+				cur_byte[i] = (unsigned char) 255;
+				if ( PermHashTable->lookup(sin_addr,temp_mask) != -1 ) {
+					j = (temp_mask & ( allow_mask(perm) | deny_mask(perm) ));
+					if ( j != 0 ) {
+						// We found a subnet match.  Logical-or it into our mask.
+						// But only add in the bits that relate to this perm, else
+						// we may not check the hostname strings for a different
+						// perm.
+						mask |= j;
+						break;
+					}
+				}
+			}  // end of for
+
+			// now scan through hostname strings
 			if ( (thehost=sin_to_hostname(sin)) != NULL ) {
 				if ( PermTypeArray[perm]->allow_hosts &&
 					 PermTypeArray[perm]->allow_hosts->contains_withwildcard(thehost) == TRUE )
@@ -356,7 +357,7 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin )
 					 PermTypeArray[perm]->deny_hosts->contains_withwildcard(thehost) == TRUE )
 					mask |= deny_mask(perm);
 			}
-			// if we found something via our hostname mactching, we now have 
+			// if we found something via our hostname or subnet mactching, we now have 
 			// a mask, and we should add it into our table so we need not
 			// do a gethostbyaddr() next time.  if we still do not have a mask
 			// (perhaps because this host doesn't appear in any list), create one
@@ -367,12 +368,14 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin )
 				else 
 					mask |= deny_mask(perm);
 			}
-			if ( cache_DNS_results == TRUE )
-				PermHashTable->insert(sin->sin_addr,mask);			
-		}
 
-		// we now have a mask (either because we found a match or we 
-		// created a new mask).  decode the mask and return True or False to the user.
+			// finally, add the mask we computed into the table with this IP addr
+			if ( cache_DNS_results == TRUE ) {
+				add_hash_entry(sin->sin_addr,mask);			
+			}
+		}  // end of if find_match is FALSE
+
+		// decode the mask and return True or False to the user.
 		if ( mask & deny_mask(perm) )
 			return FALSE;
 		if ( mask & allow_mask(perm) )

@@ -76,7 +76,7 @@ private:
 	static const int perm_ints[];
 
 	int is_ipaddr(const char *, struct in_addr *);
-	int add_hash_entry(struct in_addr & sin_addr,int new_mask);
+	int add_hash_entry(const struct in_addr & sin_addr,int new_mask);
 	int fill_table(StringList *slist, int mask);
 	int cache_DNS_results;
 
