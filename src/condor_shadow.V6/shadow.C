@@ -81,9 +81,6 @@ extern "C" {
 	int close_kmem();
 	void NotifyUser( char *buf, PROC *proc, char *email_addr );
 	void MvTmpCkpt();
-	EXPR	*scan(), *create_expr();
-	ELEM	*create_elem();
-	CONTEXT	*create_context(), *build_job_context(PROC *);
 	FILE	*fdopen();
 	int		whoami();
 	void update_job_status( struct rusage *localp, struct rusage *remotep );
