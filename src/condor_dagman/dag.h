@@ -115,6 +115,12 @@ class Dag {
     */
     Job * GetJob (const CondorID condorID) const;
 
+    /** Ask whether a node name exists in the DAG
+        @param nodeName the name of the node in the DAG
+        @return true if the node exists, false otherwise
+    */
+    bool NodeExists( const char *nodeName ) const;
+
     /// Print the list of jobs to stdout (for debugging).
     void PrintJobList() const;
     void PrintJobList( Job::status_t status ) const;
