@@ -28,6 +28,7 @@
 #include "my_hostname.h"
 #include "condor_version.h"
 #include "limit.h"
+#include "condor_email.h"
 #include "sig_install.h"
 
 #include "condor_debug.h"
@@ -60,6 +61,8 @@ char*	addrFile = NULL;
 int line_where_service_stopped = 0;
 #endif
 bool	DynamicDirs = false;
+static StringList* SecureAttrList = NULL;
+static void init_secure_attr_list( void );
 
 #ifndef WIN32
 // This function polls our parent process; if it is gone, shutdown.
@@ -130,6 +133,7 @@ DC_Exit( int status )
 		// Finally, exit with the status we were given.
 	exit( status );
 }
+
 
 void
 drop_addr_file()
@@ -405,9 +409,6 @@ drop_core_in_log( void )
 }
 
 
-
-
-
 // See if we should set the limits on core files.  If the parameter is
 // defined, do what it says.  Otherwise, do nothing.
 // On NT, if CREATE_CORE_FILES is False, then we will use the
@@ -449,12 +450,14 @@ check_core_files()
 
 }
 
+
 int
 handle_off_fast( Service*, int, Stream* )
 {
 	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGQUIT );
 	return TRUE;
 }
+
 	
 int
 handle_off_graceful( Service*, int, Stream* )
@@ -462,6 +465,7 @@ handle_off_graceful( Service*, int, Stream* )
 	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGTERM );
 	return TRUE;
 }
+
 	
 int
 handle_reconfig( Service*, int, Stream* )
@@ -523,11 +527,161 @@ handle_config_val( Service*, int, Stream* stream )
 	return TRUE;
 }
 
+
+bool
+check_config_security( const char* config, Sock* sock )
+{
+	char *name, *tmp;
+	char buf[128];
+	char* ip_str;
+
+	if( ! (name = strdup(config)) ) {
+		EXCEPT( "Out of memory!" );
+	}
+	tmp = strchr( name, '=' );
+	if( ! tmp ) {
+		tmp = strchr( name, ':' );
+	}
+	if( ! tmp ) {
+		dprintf( D_ALWAYS, 
+				 "ERROR in handle_config(): can't parse config string \"%s\"\n", 
+				 config );
+		free( name );
+		return false;
+	}
+
+		// Trim off white space
+	*tmp = ' ';
+	while( isspace(*tmp) ) {
+		*tmp = '\0';
+		tmp--;
+	}
+
+		// Now, name should point to a NULL-terminated version of the
+		// attribute name we're trying to set.  This is what we must
+		// compare against the NETWORK_SECURE_ATTRIBUTES list.
+	if( ! SecureAttrList->contains_anycase(name) ) {
+			// Everything's cool.  Continue on.
+		free( name );
+		return true;
+	}
+
+		// If we're still here, someone is trying to set one of the
+		// special settings they shouldn't be.  Try to let as many
+		// people know as possible.  
+
+		// Grab a pointer to this string, since it's a little bit
+		// expensive to re-compute.
+	ip_str = sock->endpoint_ip_str();
+		// Upper-case-ify the string for everything we print out.
+	strupr(name);
+
+		// First, log it.
+	dprintf( D_ALWAYS,
+			 "WARNING: Someone at %s is trying to set \"%s\"\n",
+			 ip_str, name );
+	dprintf( D_ALWAYS, 
+			 "WARNING: Potential security problem, request refused\n" );
+	dprintf( D_ALWAYS, 
+			 "WARNING: Emailing the Condor Administrator\n" );
+
+		// Now, try to email the Condor Admins
+	sprintf( buf, "Potential security attack from %s", ip_str );
+	FILE* email = email_admin_open( buf );
+	if( ! email ) {
+		dprintf( D_ALWAYS, 
+				 "ERROR: Can't send email to the Condor Administrator\n" );
+		free( name );
+		return false;
+	}
+	fprintf( email, 
+			 "Someone at %s is attempting to modify the value of:\n", ip_str );
+	fprintf( email, "\"%s\" on %s (%s)\n\n", name, my_full_hostname(),
+			 inet_ntoa(*(my_sin_addr())) );
+	fprintf( email, 
+			 "This is a potential security attack.  You should probably add\n" );
+	fprintf( email, 
+			 "\"%s\" to your HOSTDENY_READ, HOSTDENY_WRITE, and\n",
+			 ip_str );
+	fprintf( email, "HOSTDENY_ADMINSITRATOR settings.  "
+			 "See the Condor Manual for\n" );
+	fprintf( email, "details on these config file entries.\n\n" );
+	fprintf( email, "If possible, try to further investigate this potential "
+			 "attack.\n" );
+	email_close( email );
+
+	free( name );
+	return false;
+}
+
+
+void
+init_secure_attr_list( void )
+{
+	char buf[64];
+	int i;
+	char* tmp;
+
+	if( SecureAttrList ) {
+		delete( SecureAttrList );
+	}
+	SecureAttrList = new StringList();
+
+	if( (tmp = param("NETWORK_SECURE_ATTRIBUTES")) ) {
+		SecureAttrList->initializeFromString( tmp );
+	} else {
+			// The defaults
+
+			// Paths
+		SecureAttrList->append( "RELEASE_DIR" );
+		SecureAttrList->append( "BIN" );
+		SecureAttrList->append( "SBIN" );
+		
+			// Daemons and programs spawned by Condor
+		SecureAttrList->append( "MASTER" );
+		SecureAttrList->append( "STARTD" );
+		SecureAttrList->append( "SCHEDD" );
+		SecureAttrList->append( "COLLECTOR" );
+		SecureAttrList->append( "NEGOTIATOR" );
+		SecureAttrList->append( "KBDD" );
+		SecureAttrList->append( "EVENTD" );
+		SecureAttrList->append( "CKPT_SERVER" );
+		SecureAttrList->append( "PREEN" );
+		SecureAttrList->append( "MAIL" );
+		SecureAttrList->append( "PVMD" );
+		SecureAttrList->append( "PVMGS" );
+		SecureAttrList->append( "SHADOW" );
+		SecureAttrList->append( "SHADOW_CARMI" );
+		SecureAttrList->append( "SHADOW_GLOBUS" );
+		SecureAttrList->append( "SHADOW_MPI" );
+		SecureAttrList->append( "SHADOW_NT" );
+		SecureAttrList->append( "SHADOWNT" );
+		SecureAttrList->append( "SHADOW_PVM" );
+		SecureAttrList->append( "STARTER" );
+		for( i=0; i<10; i++ ) {
+			sprintf( buf, "STARTER_%d", i );
+			SecureAttrList->append( buf );
+			sprintf( buf, "ALTERNATE_STARTER_%d", i );
+			SecureAttrList->append( buf );
+		}
+
+			// Other settings
+		SecureAttrList->append( "DAEMON_LIST" );
+		SecureAttrList->append( "LOCAL_ROOT_CONFIG_FILE" );
+		SecureAttrList->append( "PREEN_ARGS" );
+	}
+		// In either event, we don't want to let condor_config_val
+		// -set change NETWORK_SECURE_ATTRIBUTES itself!
+	SecureAttrList->append( "NETWORK_SECURE_ATTRIBUTES" );
+}
+
+
 int
 handle_config( Service *, int cmd, Stream *stream )
 {
 	char *admin = NULL, *config = NULL;
 	int rval = 0;
+	bool failed = false;
 
 	stream->decode();
 
@@ -544,20 +698,33 @@ handle_config( Service *, int cmd, Stream *stream )
 		return FALSE;
 	}
 
-	switch(cmd) {
-	case DC_CONFIG_PERSIST:
-		rval = set_persistent_config(admin, config);
-		// set_persistent_config will free admin and config when appropriate
-		break;
-	case DC_CONFIG_RUNTIME:
-		rval = set_runtime_config(admin, config);
-		// set_runtime_config will free admin and config when appropriate
-		break;
-	default:
-		dprintf( D_ALWAYS, "unknown DC_CONFIG command!\n" );
+	if( check_config_security(config, (Sock*)stream) ) {
+
+		switch(cmd) {
+		case DC_CONFIG_PERSIST:
+			rval = set_persistent_config(admin, config);
+				// set_persistent_config will free admin and config
+				// when appropriate  
+			break;
+		case DC_CONFIG_RUNTIME:
+			rval = set_runtime_config(admin, config);
+				// set_runtime_config will free admin and config when
+				// appropriate 
+			break;
+		default:
+			dprintf( D_ALWAYS, "unknown DC_CONFIG command!\n" );
+			free( admin );
+			free( config );
+			return FALSE;
+		}
+
+	} else {
+			// This config string is insecure, so don't try to do
+			// anything with it.
 		free( admin );
 		free( config );
-		return FALSE;
+		rval = -1;
+		failed = true;
 	}
 
 	stream->encode();
@@ -570,8 +737,9 @@ handle_config( Service *, int cmd, Stream *stream )
 		return FALSE;
 	}
 
-	return TRUE;
+	return (failed ? FALSE : TRUE);
 }
+
 
 #ifndef WIN32
 void
@@ -580,11 +748,13 @@ unix_sighup(int)
 	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGHUP );
 }
 
+
 void
 unix_sigterm(int)
 {
 	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGTERM );
 }
+
 
 void
 unix_sigquit(int)
@@ -592,11 +762,13 @@ unix_sigquit(int)
 	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGQUIT );
 }
 
+
 void
 unix_sigchld(int)
 {
 	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGCHLD );
 }
+
 
 void
 unix_sigusr1(int)
@@ -604,7 +776,8 @@ unix_sigusr1(int)
 	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGUSR1 );
 }
 
-#endif WIN32
+#endif /* ! WIN32 */
+
 
 int
 handle_dc_sighup( Service*, int )
@@ -646,6 +819,8 @@ handle_dc_sighup( Service*, int )
 		drop_pid_file();
 	}
 
+	init_secure_attr_list();
+
 		// If requested to do so in the config file, do a segv now.
 		// This is to test our handling/writing of a core file.
 	char* ptmp;
@@ -658,7 +833,7 @@ handle_dc_sighup( Service*, int )
 			// should never make it to here!
 			EXCEPT("FAILED TO DROP CORE");	
 	}
-		
+
 	// call this daemon's specific main_config()
 	main_config();
 
@@ -1279,6 +1454,10 @@ int main( int argc, char** argv )
 	// reconfig, we still wait 8 hours instead of just using a
 	// periodic timer.  -Derek Wright <wright@cs.wisc.edu> 1/28/99 
 	daemonCore->ReInit();
+
+		// Initialize the StringList that contains the attributes we
+		// don't want to allow anyone to set with condor_config_val. 
+	init_secure_attr_list();
 
 	// call the daemon's main_init()
 	main_init( argc, argv );
