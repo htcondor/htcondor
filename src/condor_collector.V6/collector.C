@@ -1,6 +1,6 @@
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "condor_parser.h"
+//#include "condor_parser.h"
 #include "sched.h"
 #include "condor_status.h"
 #include "condor_debug.h"
@@ -60,6 +60,8 @@ int CollectorDaemon::UpdateTimerId;
 
 ClassAd *CollectorDaemon::query_any_result;
 ClassAd CollectorDaemon::query_any_request;
+
+MatchClassAd CollectorDaemon::mad;
 
 //---------------------------------------------------------
 
@@ -155,7 +157,7 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 
 	// ClassAd evaluations use this function to resolve names
-	ClassAdLookupRegister( process_global_query, this );
+//	ClassAdLookupRegister( process_global_query, this );
 }
 
 int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
@@ -363,7 +365,13 @@ int CollectorDaemon::query_scanFunc (ClassAd *ad)
 
 	if (ad < CollectorEngine::THRESHOLD) return 1;
 
-    if ((*ad) >= (*__query__))
+	bool match;
+	mad.RemoveLeftAd( );
+	mad.RemoveRightAd( );
+	mad.ReplaceLeftAd( ad );
+	mad.ReplaceRightAd( __query__ );
+//    if ((*ad) >= (*__query__))
+	if( mad.EvaluateAttrBool( "leftMatchesRight", match ) && match )
     {
         if (!__sock__->code(more) || !ad->put(*__sock__))
         {
@@ -388,8 +396,14 @@ int CollectorDaemon::select_by_match( ClassAd *ad )
 	if(ad<CollectorEngine::THRESHOLD) {
 		return 1;
 	}
+	bool match;
 
-	if( query_any_request <= *ad ) {
+	mad.RemoveLeftAd( );
+	mad.RemoveRightAd( );
+	mad.ReplaceLeftAd( &query_any_request );
+	mad.ReplaceRightAd( ad );
+//	if( query_any_request <= *ad ) {
+	if( mad.EvaluateAttrBool( "rightMatchesLeft", match ) && match ) {
 		query_any_result = ad;
 		return 0;
 	}
@@ -461,7 +475,13 @@ int CollectorDaemon::invalidation_scanFunc (ClassAd *ad)
 
 	if (ad < CollectorEngine::THRESHOLD) return 1;
 
-    if ((*ad) >= (*__query__))
+	bool match;
+	mad.RemoveLeftAd( );
+	mad.RemoveRightAd( );
+	mad.ReplaceLeftAd( ad );
+	mad.ReplaceRightAd( __query__ );
+//    if ((*ad) >= (*__query__))
+	if( mad.EvaluateAttrBool( "leftMatchesRight", match ) && match )
     {
 		ad->Insert( buffer );			
         __numAds__++;

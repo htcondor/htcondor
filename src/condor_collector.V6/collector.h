@@ -71,6 +71,7 @@ protected:
 	static SafeSock updateSock;
 	static int UpdateTimerId;
 
+	static MatchClassAd mad;
 };
 
 #endif
