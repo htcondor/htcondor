@@ -2922,10 +2922,6 @@ int DaemonCore::HandleReq(int socki)
 
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: Success.\n");
 	} else {
-		// need to check our security policy to see if this is allowed.
-
-		dprintf (D_SECURITY, "DaemonCore received UNAUTHENTICATED command %i.\n", req);
-		dprintf (D_SECURITY, "\tNormally, this may not be allowed.  For now, it is.\n");
 
 		// get the handler function
 		
@@ -2948,6 +2944,48 @@ int DaemonCore::HandleReq(int socki)
 					index = j;
 					break;
 				}
+			}
+		}
+
+
+		if (reqFound) {
+			// need to check our security policy to see if this is allowed.
+
+			dprintf (D_SECURITY, "DaemonCore received UNAUTHENTICATED command %i.\n", req);
+
+			ClassAd our_policy;
+        	if( ! sec_man->FillInSecurityPolicyAd( PermString(comTable[index].perm), &our_policy) ) {
+				dprintf( D_ALWAYS, "DC_AUTHENTICATE: "
+						 "Our security policy is invalid!\n" );
+				result = FALSE;
+				goto finalize;
+			}
+
+			// well, they didn't authenticate, turn on encryption,
+			// or turn on integrity.  check to see if any of those
+			// were required.
+
+			if (  (sec_man->sec_lookup_req(our_policy, ATTR_SEC_NEGOTIATION)
+				   == SecMan::SEC_REQ_REQUIRED)
+			   || (sec_man->sec_lookup_req(our_policy, ATTR_SEC_AUTHENTICATION)
+				   == SecMan::SEC_REQ_REQUIRED)
+			   || (sec_man->sec_lookup_req(our_policy, ATTR_SEC_ENCRYPTION)
+				   == SecMan::SEC_REQ_REQUIRED)
+			   || (sec_man->sec_lookup_req(our_policy, ATTR_SEC_INTEGRITY)
+				   == SecMan::SEC_REQ_REQUIRED) ) {
+
+				// yep, they were.  deny.
+
+				dprintf(D_ALWAYS,
+					"DaemonCore: PERMISSION DENIED for %d via %s%s%s from host %s\n",
+					req,
+					(is_tcp) ? "TCP" : "UDP",
+					(user[0] != '\0') ? " from " : "",
+					(user[0] != '\0') ? user : "",
+					sin_to_string(((Sock*)stream)->endpoint()) );
+
+				result = FALSE;
+				goto finalize;
 			}
 		}
 	}
