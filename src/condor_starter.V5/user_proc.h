@@ -100,8 +100,8 @@ void *bsd_status( int, PROC_STATE, int, int );
 class UserProc {
 public:
 		// Constructors, etc.
-	UserProc( V2_PROC &, char *, char *, uid_t, uid_t, int );
-	UserProc( V3_PROC &, char *, char *, uid_t, uid_t, int, int );
+	UserProc( V2_PROC &, char *, char *, char *, uid_t, uid_t, int );
+	UserProc( V3_PROC &, char *, char *, char *, uid_t, uid_t, int, int );
 	virtual ~UserProc();
 	void display();
 
@@ -121,6 +121,9 @@ public:
 	virtual void request_exit();
 	virtual void kill_forcibly();
 	virtual void handle_termination( int exit_stat );
+#if defined(OSF1)
+	void make_runnable();	// change from CHECKPOINTING to RUNNABLE
+#endif
 
 		// Access functions
 	PROC_STATE	get_state() { return state; }
@@ -161,6 +164,7 @@ protected:
 	char	*env;
 	Environ	env_obj;
 
+	char	*a_out;			// on submitting machine
 	char	*orig_ckpt;		// on submitting machine
 	char	*target_ckpt;	// on submitting machine
 
@@ -185,7 +189,7 @@ protected:
 private:
 	virtual void send_sig( int );
 	int  estimate_image_size();
-	int  is_restart();
+	int  is_restart() { return restart; };
 	void accumulate_cpu_time();
 	void commit_cpu_time();
 	char *expand_exec_name( int &on_this_host );
@@ -197,6 +201,8 @@ private:
 
 	int		exit_status_valid;	// TRUE only if process has run and exited
 	int		exit_status;	// POSIX exit status
+
+	int		restart;		// true if we are restarting from a ckpt
 
 	int		ckpt_wanted;	// TRUE if user wants periodic checkpointing
 	int		coredump_limit_exists;
