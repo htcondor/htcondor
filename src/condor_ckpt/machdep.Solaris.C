@@ -162,6 +162,8 @@ find_map_for_addr(caddr_t addr)
   number includes the text segment, which should be ignored.  On error,
   returns -1.
 */
+extern "C"   int SYSCALL(int ...);
+
 int
 num_segments( )
 {

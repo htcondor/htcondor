@@ -61,7 +61,7 @@ extern "C" {
 	char *condor_malloc(size_t);
 	void condor_free(void *);
 	void *condor_morecore(int);
-	static struct z_stream *zstr = NULL;
+	static /*struct*/ z_stream *zstr = NULL;
 	unsigned char *zbuf = Z_NULL;
 	const int zbufsize = 64*1024;
 }
@@ -127,7 +127,7 @@ net_read(int fd, void *buf, int size)
 			return this_read;
 		}
 		bytes_read += this_read;
-		buf += this_read;
+		buf = (void *) ( (char *) buf + this_read );
 	} while (bytes_read < size);
 	return bytes_read;
 }
@@ -182,21 +182,22 @@ void *condor_morecore(int incr)
 			(((incr+malloc_static_data+
 			   (2*sizeof(void *)))/pagesize)+1)*pagesize;
 		begin = condor_map_seg(begin, segincr);
-		corestart = begin+(2*sizeof(void *))+malloc_static_data;
-		condor_malloc_init(begin+(2*sizeof(void *)));
+		corestart = (void *) (
+			(int)begin+(int)(2*sizeof(void *))+(int)malloc_static_data ); 
+		condor_malloc_init((void *)((int)begin+(int)(2*sizeof(void *))));
 		coreend = (void **)begin;
-		segend = (void **)(begin+sizeof(void *));
-		*segend = begin+segincr;
-		*coreend = corestart+incr;
+		segend = (void **)((int)begin+(int)sizeof(void *));
+		*segend = (void *)((int)begin+(int)segincr);
+		*coreend = (void *)((int)corestart+(int)incr);
 		return corestart;
 	} else if (incr == 0) {
 		return *coreend;
 	} else {
 		void *old_break = *coreend;
-		*coreend += incr;
+		*coreend = (void *)((int)*coreend + (int)incr);
 		if (*coreend > *segend) {
-			int segincr = (((*coreend-*segend)/pagesize)+1)*pagesize;
-			if (*coreend+segincr-begin > ALT_HEAP_SIZE) {
+			int segincr = (int)((((int)*coreend-(int)*segend)/(int)pagesize)+1)*(int)pagesize;
+			if ((int)*coreend+(int)segincr-(int)begin > ALT_HEAP_SIZE) {
 				dprintf(D_ALWAYS,
 						"fatal error: exceeded ALT_HEAP_SIZE of %d bytes!\n",
 						ALT_HEAP_SIZE);
@@ -207,7 +208,7 @@ void *condor_morecore(int incr)
 						"condor_morecore!\n");
 				Suicide();
 			}
-			*segend += segincr;
+			*segend = (void *)((int)*segend + (int)segincr);
 		}
 		return old_break;
 	}
@@ -346,7 +347,7 @@ Image::FindAltHeap()
 
 	for (int i=0; i < head.N_Segs(); i++) {
 		if (strcmp(map[i].GetName(), "DATA") == MATCH) {
-			void *ptr = (void *) map[i].GetLoc() + map[i].GetLen();
+			void *ptr = (void *)((int)map[i].GetLoc() + (int)map[i].GetLen());
 			if (ptr > datatop) {
 				datatop = ptr;
 			}
@@ -367,7 +368,7 @@ Image::FindAltHeap()
 	// be too big on 64 bit architectures, so we instead return
 	// datatop + RESERVED_HEAP - ALT_HEAP_SIZE
 	if (freetop == (void *)-1) {
-		freetop = datatop + RESERVED_HEAP;
+		freetop = (void *)((int)datatop + (int)RESERVED_HEAP);
 	}
 
 	// make sure that we begin on a page boundary
@@ -1316,7 +1317,7 @@ SegMap::Read( int fd, ssize_t pos )
 
 #if defined(COMPRESS_CKPT)
 	if (zstr) {
-		struct z_stream *saved_zstr = zstr;
+		/*struct*/ z_stream *saved_zstr = zstr;
 		unsigned char *saved_zbuf = zbuf;
 		saved_zstr->next_out = (unsigned char *)saved_core_loc;
 		saved_zstr->avail_out = saved_len;
