@@ -580,7 +580,7 @@ readEvent (FILE *file)
 	char buffer[128];
 	int  normalTerm;
 	int  gotCore;
-	int  retval, retval1, retval2;
+	int  retval1, retval2;
 
 	if ((retval1 = (fscanf (file, "Job terminated.") == EOF)) 	||
 		(retval2 = fscanf (file, "\n\t(%d) ", &normalTerm)) != 1)
@@ -589,7 +589,7 @@ readEvent (FILE *file)
 	if (normalTerm)
 	{
 		normal = true;
-		if (fscanf(file,"Normal termination (return value %d)",&retval)!=1)
+		if(fscanf(file,"Normal termination (return value %d)",&returnValue)!=1)
 			return 0;
 	}
 	else
