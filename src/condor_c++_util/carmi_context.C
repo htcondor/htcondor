@@ -165,13 +165,13 @@ CARMI_Context::next( char *&name, int &type)
 	name = rec.machine_context->data[last_scan]->data[0]->val.string_val;
 
 	if (!value(name, dummy_int)) {
-		type = INT;
+		type = CARMI_INT;
 	} else if (!value(name, dummy_str)) {
-		type = STRING;
+		type = CARMI_STRING;
 	} else if (!value(name, dummy_float)) {
-		type = FLOAT;
+		type = CARMI_FLOAT;
 	} else if (!bool_value(name, dummy_int)) {
-		type = BOOL;
+		type = CARMI_BOOL;
 	} else {
 		type = -1;
 	}

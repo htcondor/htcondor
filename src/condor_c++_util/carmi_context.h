@@ -11,10 +11,10 @@ enum {                  // how to get the information
 };
 
 enum {          // types of values stored in the context
-        INT,
-        FLOAT,
-        STRING,
-        BOOL
+        CARMI_INT,
+        CARMI_FLOAT,
+        CARMI_STRING,
+        CARMI_BOOL
 };
 
 class CARMI_Context {
