@@ -27,6 +27,9 @@
 ** 
 */ 
 
+#if defined(HPUX9)
+#include "fake_flock.h"
+#endif
 
 typedef struct {
 	int		p_disk_avail;
