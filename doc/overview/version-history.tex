@@ -22,6 +22,43 @@ being added, many bugs fixed, etc.
 
 \begin{itemize}
 
+\item \Condor{q} now displays job \emph{allocation time} by default, instead
+of displaying CPU time.  
+Job allocation time is the amount of wall-clock time the job has spent
+running.  
+Unlike CPU time information which is only updated when a job is
+checkpointed, the allocation time displayed by \Condor{q} is continuously
+updated, even for vanilla universe jobs.  
+By default, the allocation time displayed will be the total time across all
+runs of the job.  
+The new \Opt{-currentrun} option to \Condor{q} can be used to display the
+allocation time for solely the current run of the job.
+Additionally, the \Opt{-cputime} option can be used to view job CPU times as
+in earlier versions of Condor.
+
+\item The \condor{schedd} daemon has been updated to verify all queue access
+requests via Condor's IP/Host-Based Security mechanism (see
+section~\ref{sec:Host-Security}).
+
+\item Fixed a bug on platforms which require the \Condor{kbdd} (currently
+Digital Unix and IRIX).  
+This bug could have allowed Condor to start a job within the first five
+minutes after the Condor daemons had been started, even if there is a user
+typing on the keyboard.
+
+\item \Condor{release} now gives an error message if the user tries to
+release a job which either does not exist or is not in the hold state.
+
+\item Added a new config file parameter, \Macro{USER\_JOB\_WRAPPER}, which
+allows administrators to specify a file to act as a ``wrapper'' script
+around all jobs started by Condor. 
+See inside section~\ref{param:UserJobWrapper}, on 
+page~\pageref{sec:Starter-Config-File-Entries}, for more details.
+
+\item \Condor{dagman} now permits the backslash character (``\Bs'') to be used
+as a line-continuation character for DAG Input Files, just like the
+\condor{config} files.
+
 \item Changed the way that \Condor{master} spawns daemons and
 \Condor{preen} which allows you to specify command line arguments for
 any of them, though a \Macro{SUBSYS\_ARGS} setting.
@@ -31,7 +68,7 @@ problems, and only worked for \Condor{preen}.
 \Bold{Once you upgrade to version 6.1.6, if you continue to use your
 old \File{condor\_config} files, you must change the \Macro{PREEN}
 setting to remove any arguments you have defined and place those
-arguments into a seperate config setting, \Macro{PREEN\_ARGS}.}
+arguments into a separate config setting, \Macro{PREEN\_ARGS}.}
 See section~\ref{sec:Master-Config-File-Entries}, ``\condor{master}
 Config File Entries'', on
 page~\pageref{sec:Master-Config-File-Entries} for more details.
@@ -100,7 +137,7 @@ free disk and swap space on Digital Unix (Alpha) machines.
 their classads from the collector.
 So, when a daemon is shut down, or a machine is reconfigured to 
 advertise fewer virtual machines, those changes will be instantly
-visable with \Condor{status}, instead of having to wait 15 minutes for
+visible with \Condor{status}, instead of having to wait 15 minutes for
 the stale classads to time-out.
 
 \item The \Condor{schedd} no longer forks a child process (a ``schedd
@@ -134,7 +171,7 @@ used.  AFS support now works similar to NFS support, via the
 \Macro{FILESYSTEM\_DOMAIN} macro.
 
 \item Fixed a minor bug in the \File{Condor.pm} perl module that was
-causing it to be case-sensitve when parsing the Condor submit file.
+causing it to be case-sensitive when parsing the Condor submit file.
 Now, the perl module is properly case-insensitive, as indicated in the
 documentation.
 
@@ -751,7 +788,7 @@ This has all gone away in the current versions of Condor.
 \Condor{schedd} under rare conditions when a \Condor{shadow} exited.
 
 \item Fixed a bug that was preventing any core files that user jobs
-submitted to Condor might create from being transfered back to the
+submitted to Condor might create from being transferred back to the
 submit machine for inspection by the user who submitted them.
 
 \item Fixed a bug that would cause some Condor daemons to go into an
