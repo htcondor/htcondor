@@ -749,11 +749,11 @@ AFS''
   the same login name in the passwd file for a given UID, and the
   \Macro{UID\_DOMAIN} claimed by the submit machine is indeed found to
   be a subset of what an inverse lookup to a DNS (domain name server)
-  reports as the fully qualified domain name for the submit machine's
-  IP address (this security measure safeguards against the submit
-  machine from simply lying), \textbf{THEN} the job will run with the
-  same UID as the user who submitted the job.  Otherwise it will run
-  as user ``nobody''.
+  or NIS reports as the fully qualified domain name for the submit
+  machine's IP address (this security measure safeguards against the
+  submit machine from simply lying), \textbf{THEN} the job will run
+  with the same UID as the user who submitted the job.  Otherwise it
+  will run as user ``nobody''.
           
   Note: the \Macro{UID\_DOMAIN} parameter is also used when Condor
   sends email back to the user about a completed job; the address
@@ -761,6 +761,16 @@ AFS''
   is ``none'', in which case \texttt{Job-Owner@submit-machine} is
   used.
   
+\item[\Macro{SOFT\_UID\_DOMAIN}] \label{param:SoftUidDomain} This
+  setting is used in conjuction with the \Macro{UID\_DOMAIN} setting
+  described above.  If the \Macro{UID\_DOMAIN} settings match on both
+  the execute and submit machines, but the uid of the user who
+  submitted the job isn't in the passwd file (or password info if NIS
+  is being used) of the execute machine, the \Condor{starter} will
+  normally exit with an error.  If you set \Macro{SOFT\_UID\_DOMAIN}
+  to be ``True'', Condor will simply start the job with the specified
+  uid, even if it's not in the passwd file.
+
 \item[\Macro{FILESYSTEM\_DOMAIN}] \label{param:FilesystemDomain} This
   setting is similar in concept to \Macro{UID\_DOMAIN}, but here we
   need the Internet/DNS domain name where all the machines within that
@@ -1112,6 +1122,23 @@ The moral of the story is that this is some relatively complicated
 stuff.  The defaults we have work quite well, and you probably 
 won't want to change them for any reason.
 
+\begin{description}
+
+\item[\Macro{MASTER\_EXPRS}] \label{param:MasterExprs} This setting is
+  described above in section~\ref{param:SubsysExprs} as
+  \Macro{SUBSYS\_EXPRS}.
+
+\item[\Macro{MASTER\_DEBUG}] \label{param:MasterDebug} This setting
+  (and other settings related to debug logging in the master) is
+  described above in section~\ref{param:SubsysDebug} as
+  \Macro{SUBSYS\_DEBUG}.
+
+\item[\Macro{MASTER\_ADDRESS\_FILE}] \label{param:MasterAddressFile}
+  This setting is described above in
+  section~\ref{param:SubsysAddressFile} as
+  \Macro{SUBSYS\_ADDRESS\_FILE} 
+
+\end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\condor{startd} Config File Entries}
@@ -1199,6 +1226,20 @@ section`\ref{sec:Configuring-Policy}.
   Just list the attribute names you want advertised.  Note: since
   these are already ClassAd expressions, you don't have to do anything
   funny with strings, etc.
+
+\item[\Macro{STARTD\_EXPRS}] \label{param:StartdExprs} This setting is
+  described above in section~\ref{param:SubsysExprs} as
+  \Macro{SUBSYS\_EXPRS}.
+
+\item[\Macro{STARTD\_DEBUG}] \label{param:StartdDebug} This setting
+  (and other settings related to debug logging in the startd) is
+  described above in section~\ref{param:SubsysDebug} as
+  \Macro{SUBSYS\_DEBUG}.
+
+\item[\Macro{STARTD\_ADDRESS\_FILE}] \label{param:StartdAddressFile}
+  This setting is described above in
+  section~\ref{param:SubsysAddressFile} as
+  \Macro{SUBSYS\_ADDRESS\_FILE} 
 
 \end{description}
 
@@ -1318,6 +1359,20 @@ These settings control the \Condor{schedd}.
   setting, be sure to change the \Macro{VALID\_LOG\_FILES} entry that
   \Condor{preen} uses as well.
 
+\item[\Macro{SCHEDD\_EXPRS}] \label{param:ScheddExprs} This setting is
+  described above in section~\ref{param:SubsysExprs} as
+  \Macro{SUBSYS\_EXPRS}.
+
+\item[\Macro{SCHEDD\_DEBUG}] \label{param:ScheddDebug} This setting
+  (and other settings related to debug logging in the schedd) is
+  described above in section~\ref{param:SubsysDebug} as
+  \Macro{SUBSYS\_DEBUG}.
+
+\item[\Macro{SCHEDD\_ADDRESS\_FILE}] \label{param:ScheddAddressFile}
+  This setting is described above in
+  section~\ref{param:SubsysAddressFile} as
+  \Macro{SUBSYS\_ADDRESS\_FILE} 
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1347,6 +1402,11 @@ This setting effects the \Condor{shadow}
   setting, be sure to change the \Macro{VALID\_LOG\_FILES} entry that
   \Condor{preen} uses as well.
 
+\item[\Macro{SHADOW\_DEBUG}] \label{param:ShadowDebug} This setting
+  (and other settings related to debug logging in the shadow) is
+  described above in section~\ref{param:SubsysDebug} as
+  \Macro{SUBSYS\_DEBUG}.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1371,6 +1431,11 @@ Condor'' for details.
   Daemon, which is needed to support PVM groups.  This daemon is
   installed in the regular Condor release directory by default, so the
   macro is usually defined in terms of \MacroU{SBIN}.
+
+\item[\Macro{SHADOW\_DEBUG}] \label{param:ShadowDebug} This setting
+  (and other settings related to debug logging in the shadow) is
+  described above in section~\ref{param:SubsysDebug} as
+  \Macro{SUBSYS\_DEBUG}.
 
 \end{description}
 
@@ -1404,6 +1469,11 @@ This setting effects the \Condor{starter}.
   starter should do local logging to its own log file, or send debug
   information back to the \Condor{shadow} where it will end up in the
   ShadowLog.  It defaults to ``True''
+
+\item[\Macro{STARTER\_DEBUG}] \label{param:StarterDebug} This setting
+  (and other settings related to debug logging in the starter) is
+  described above in section~\ref{param:SubsysDebug} as
+  \Macro{SUBSYS\_DEBUG}.
 
 \end{description}
 
@@ -1545,6 +1615,23 @@ These settings control the \Condor{collector}.
   It should be about 20 characters long.  For example, the name of the
   UW-Madison Computer Science Condor Pool is ``UW-Madison CS''.  
 
+\item[\Macro{CONDOR\_DEVELOPERS\_COLLECTOR}]
+  \label{param:CondorDevelopersCollector} By default, every pool sends
+  periodic updates to a central \Condor{collector} at UW-Madison with
+  basic information about the status of your pool.  This includes only
+  the number of total machines, the number of jobs submitted, the
+  number of machines running jobs, the hostname of your central
+  manager, and the \Macro{COLLECTOR\_NAME} specified above.  These
+  updates help us see how Condor is being used around the world.  By
+  default, they will be sent to condor.cs.wisc.edu.  If you don't want
+  these updates to be sent from your pool, set this entry to
+  ``NONE''. 
+
+\item[\Macro{COLLECTOR\_DEBUG}] \label{param:CollectorDebug} This setting
+  (and other settings related to debug logging in the collector) is
+  described above in section~\ref{param:SubsysDebug} as
+  \Macro{SUBSYS\_DEBUG}.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1576,6 +1663,11 @@ These settings control the \Condor{negotiator}.
   even if a user with a higher priority has jobs they want to run.
   This helps prevents thrashing.  The default is to wait 2 hours
   before preempting any job.
+
+\item[\Macro{NEGOTIATOR\_DEBUG}] \label{param:NegotiatorDebug} This setting
+  (and other settings related to debug logging in the negotiator) is
+  described above in section~\ref{param:SubsysDebug} as
+  \Macro{SUBSYS\_DEBUG}.
 
 \end{description}
 
