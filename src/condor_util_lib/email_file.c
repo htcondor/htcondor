@@ -44,12 +44,8 @@ static long		delete_queue(TAIL_QUEUE* );
 static int		empty_queue(TAIL_QUEUE* );
 /*********************************************************/
 
-/* Externs to Globals */
-extern char* mySubSystem;	/* the subsys ID, such as SCHEDD, STARTD, etc. */
-
-
 void
-email_corefile_tail( FILE* output )
+email_corefile_tail( FILE* output, const char * subsystem_name )
 {
 #ifdef WIN32
 	char *ptmp;
@@ -61,7 +57,7 @@ email_corefile_tail( FILE* output )
 	if ( ptmp ) {
 		char file[MAX_PATH];
 		sprintf(file,"%s\\core.%s.WIN32",ptmp,
-			mySubSystem);
+			subsystem_name);
 		free(ptmp);
 		if( (input=fopen(file,"r")) == NULL ) {
 			dprintf( D_FULLDEBUG, 
