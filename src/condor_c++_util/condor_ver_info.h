@@ -42,7 +42,7 @@ public:
 		@param versionstring See condor_version.C for format.
 		@param subssytem One of SHADOW, STARTER, TOOL, SCHEDD, COLLECTOR, etc.
 	*/
-	CondorVersionInfo::CondorVersionInfo(char *versionstring = NULL, 
+	CondorVersionInfo::CondorVersionInfo(const char *versionstring = NULL, 
 		char *subsystem = NULL, char *platformstring = NULL);
 
 	/// Destructor.

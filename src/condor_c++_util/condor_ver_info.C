@@ -28,7 +28,8 @@ extern char *mySubSystem;
 extern "C" char *CondorVersion(void);
 extern "C" char *CondorPlatform(void);
 
-CondorVersionInfo::CondorVersionInfo(char *versionstring, char *subsystem, char *platformstring)
+CondorVersionInfo::CondorVersionInfo(const char *versionstring, 
+									 char *subsystem, char *platformstring)
 {
 	myversion.MajorVer = 0;
 	myversion.Arch = NULL;
