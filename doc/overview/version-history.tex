@@ -109,6 +109,15 @@ would perform a segmentation violation if you specified a \Opt{-pool}
 option and did not specify a hostname.
 This case now results in an error message, instead.
 
+\item Fixed a bug where resetting the time in a large negative direction
+caused the \Condor{negotiator} to have a floating point error on some
+platforms.
+
+\item Fixed \Condor{q}'s output so that certain arguments are not ignored.
+
+\item Fixed a bug in \Condor{q} where issuging a \Opt{-global} with a
+fairly restrictive \Opt{-constraint} argument would cause garbage to be
+printed to the terminal sometimes.
 \end{itemize}
 
 \noindent Known Bugs:
