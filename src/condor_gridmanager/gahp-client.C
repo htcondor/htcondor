@@ -87,6 +87,7 @@ GahpClient::~GahpClient()
 void
 GahpClient::write_line(const char *command)
 {
+dprintf(D_FULLDEBUG,"sending '%s'\n", command );
 	if ( !command || m_gahp_writefd == -1 ) {
 		return;
 	}
@@ -110,6 +111,8 @@ GahpClient::write_line(const char *command, int req, const char *args)
 	write(m_gahp_writefd,buf,strlen(buf));
 	if ( args ) {
 		write(m_gahp_writefd,args,strlen(args));
+dprintf(D_FULLDEBUG,"sending '%s%s%s'\n", command, buf, args );
+}else{dprintf(D_FULLDEBUG,"sending '%s%s'\n", command, buf );
 	}
 	write(m_gahp_writefd,"\r\n",2);
 
@@ -665,10 +668,13 @@ GahpClient::globus_gram_client_job_request(
 			strlen(callback_contact) + 150;
 	Gahp_Buf reqline(size);
 	char *buf = reqline.buffer;
-	int x = snprintf(buf,size,"%s %s 1 %s",
-					escape(resource_manager_contact),
-					escape(callback_contact),
-					escape(description));
+	char *esc1 = strdup( escape(resource_manager_contact) );
+	char *esc2 = strdup( escape(callback_contact) );
+	char *esc3 = strdup( escape(description) );
+	int x = snprintf(buf,size,"%s %s 1 %s", esc1, esc2, esc3 );
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
 	ASSERT( x > 0 && x < size );
 
 		// Check if this request is currently pending.  If not, make
@@ -869,8 +875,11 @@ GahpClient::globus_gram_client_job_signal(char * job_contact,
 	int size = strlen(job_contact) + strlen(signal_arg) + 150;
 	Gahp_Buf reqline(size);
 	char *buf = reqline.buffer;
-	int x = snprintf(buf,size,"%s %d %s",escape(job_contact),
-		signal,escape(signal_arg));
+	char *esc1 = strdup( escape(job_contact) );
+	char *esc2 = strdup( escape(signal_arg) );
+	int x = snprintf(buf,size,"%s %d %s",esc1,signal,esc2);
+	free( esc1 );
+	free( esc2 );
 	ASSERT( x > 0 && x < size );
 
 		// Check if this request is currently pending.  If not, make
@@ -943,8 +952,11 @@ GahpClient::globus_gram_client_job_callback_register(char * job_contact,
 	int size = strlen(job_contact) + strlen(callback_contact) + 150;
 	Gahp_Buf reqline(size);
 	char *buf = reqline.buffer;
-	int x = snprintf(buf,size,"%s %s",escape(job_contact),
-		escape(callback_contact));
+	char *esc1 = strdup( escape(job_contact) );
+	char *esc2 = strdup( escape(callback_contact) );
+	int x = snprintf(buf,size,"%s %s",esc1,esc2);
+	free( esc1 );
+	free( esc2 );
 	ASSERT( x > 0 && x < size );
 
 		// Check if this request is currently pending.  If not, make
