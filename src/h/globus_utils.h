@@ -246,6 +246,10 @@ const char* x509_error_string();
 
 int have_condor_g();
 
+void parse_resource_manager_string( const char *string, char **host,
+									char **port, char **service,
+									char **subject );
+
 #if 0
 int check_globus_rm_contacts( char* resource );
 #endif
