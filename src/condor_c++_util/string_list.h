@@ -33,8 +33,7 @@
 */
 class StringList {
 public:
-	StringList() {};
-	StringList(char *s) {initializeFromString(s);};
+	StringList(char *s = NULL, char *delim = "," ); 
 	~StringList();
 	void initializeFromString (char *);
 	BOOLEAN contains( const char * );
@@ -50,6 +49,9 @@ public:
 	bool isEmpty(void) { return strings.IsEmpty(); };
 private:
 	List<char> strings;
+	char *delimiters;
+
+	int isSeparator( char x );
 };
 
 #endif

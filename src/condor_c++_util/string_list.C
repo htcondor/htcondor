@@ -28,7 +28,32 @@
 
 // initialize the List<char> from the VALID_*_FILES variable in the
 // config file; the files are separated by commas
-#define isSeparator(x) (isspace(x) || x == ',')
+	//changed isSeparator to allow constructor to redefine
+//#define isSeparator(x) (isspace(x) || x == ',' )
+
+char *strnewp( const char * );
+
+int
+StringList::isSeparator( char x )
+{
+	if ( isspace( x ) ) {
+		return 1;
+	}
+	for ( char *sep = delimiters; *sep; sep++ ) {
+		if ( x == ( *sep ) ) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+StringList::StringList(char *s, char *delim ) 
+{
+	delimiters = strnewp( delim );
+	if ( s ) {
+		initializeFromString(s);
+	}
+}
 
 void
 StringList::initializeFromString (char *s)
@@ -71,6 +96,8 @@ StringList::~StringList ()
 	{
 		deleteCurrent();
 	}
+	if ( delimiters )
+		delete [] delimiters;
 }
 
 BOOLEAN
