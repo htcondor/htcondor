@@ -1,4 +1,7 @@
 Changes for version 0.9.6: 
+* Fixed a bug where the parser would choke on any input ending in a quotation
+  mark because the lexer wasn't consuming the entire string token.
+
 * Fixed a bug where the lexer would choke on any string ending in a backslash.
   Now it will only choke if the string ends in an odd number of backslashes. 
 
