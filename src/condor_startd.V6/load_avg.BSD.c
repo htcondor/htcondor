@@ -57,6 +57,13 @@ struct nlist nl[] = {
     { "" },
 };
 
+#if defined(IRIX62)
+struct nlist64  nl64[] = {
+	{ "avenrun",0,0 },
+	{ "" },
+};
+#endif /* IRIX62 */
+
 float
 calc_load_avg()
 {
@@ -80,10 +87,20 @@ get_k_vars()
 
 	/* Get the kernel's name list */
 
-
-#if defined(IRIX331) || defined(IRIX53)
+#if defined(IRIX62)
+	/* here we assume that all IRIX 6.x kernels are compiled as a ELF binary.  If the
+	 * kernel, i.e. /unix, is indeed a COFF binary, the below will fail with an exception.
+	 * first try a 32-bit ELF binary, then a 64-bit ELF, then fail.-Todd 2/97 */
+  if ( _libelf_nlist("/unix",nl) == -1 )
+	  if (_libelf_nlist64("/unix",nl64) == -1 ) {
+		  EXCEPT("cannot read /unix as an ELF binary");
+	  }
+  nl->n_value &= ~0x80000000;
+#elif defined(IRIX331) || defined(IRIX53)
 	(void)nlist( "/unix", nl );
 	nl->n_value &= ~0x80000000;
+#elif defined(HPUX10)
+	(void)nlist( "/stand/vmunix", nl );
 #elif defined(HPUX9)
 	(void)nlist( "/hp-ux", nl );
 #else 	/* everybody else */
@@ -116,7 +133,7 @@ get_k_vars()
 float
 lookup_load_avg()
 {
-    off_t addr = nl[0].n_value;
+    off_t addr;
 
 #if defined(HPPAR) && defined(HPUX9)			/* HP-UX */
     double  avenrun[3];
@@ -124,6 +141,16 @@ lookup_load_avg()
 	fix		avenrun[3];
 #elif defined(SUNOS41) || defined(IRIX331) || defined(IRIX53)
     long avenrun[3];
+#endif
+
+#if defined(IRIX62)
+	/* if IRIX62, figure out if we grabbed a 32- or 64-bit address */
+	if ( nl[0].n_type )
+		addr = nl[0].n_value;
+	else
+		addr = nl64[0].n_value;
+#else
+	addr = nl[0].n_value;
 #endif
 
 	avenrun[0] = 0;
