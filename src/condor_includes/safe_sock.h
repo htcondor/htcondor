@@ -141,7 +141,6 @@ protected:
 	} snd_msg;
 
 	safesock_state	_special_state;
-	struct sockaddr_in _who;	// endpoint of "connection"
 };
 
 

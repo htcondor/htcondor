@@ -103,7 +103,7 @@ protected:
 	**	Methods
 	*/
 
-	Sock() : Stream(),  _sock(INVALID_SOCKET), _state(sock_virgin), _timeout(0) {}
+	Sock();
 
 	int getportbyserv(char *);
 	int do_connect(char *, int);
@@ -124,6 +124,7 @@ protected:
 	SOCKET			_sock;
 	sock_state		_state;
 	int				_timeout;
+	struct sockaddr_in _who;	// endpoint of "connection"
 };
 
 

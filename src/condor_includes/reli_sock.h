@@ -136,7 +136,6 @@ protected:
 	} snd_msg;
 
 	relisock_state	_special_state;
-	struct sockaddr_in _who;  // updated when endpoint() called
 };
 
 
