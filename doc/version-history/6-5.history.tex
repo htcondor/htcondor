@@ -62,6 +62,11 @@ password file entry (e.g. with an overloaded NIS server) could
 result in the job running to completion and exiting the queue
 without updating the user log.
 
+\item Fixed a bug which prevented the user from specifying Hawkeye
+jobs with colons and / or spaces in the executable name.  The
+\MacroNI{HAWKEYE\_JOBS} macro now allows for the individual fields to be
+quoted, solving this problem.
+
 \end{itemize}
 
 \noindent Known Bugs:
