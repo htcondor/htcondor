@@ -652,6 +652,8 @@ short_header (void)
 	} else if ( globus ) {
 		printf( " %-7s %-14s %-7s %-8s %-18s  %-18s\n", 
 			"ID", "OWNER", "STATUS", "MANAGER", "HOST", "EXECUTABLE" );
+	} else if ( show_io ) {
+		io_header();
 	} else {
 		printf( " %-7s %-14s %11s %12s %-2s %-3s %-4s %-18s\n",
 			"ID",
