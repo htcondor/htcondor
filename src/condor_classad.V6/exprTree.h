@@ -85,6 +85,11 @@ class ExprTree
 		*/
 		void SetParentScope( ClassAd* p );
 
+		/** Gets the parent scope of the expression.
+		 	@return The parent scope of the expression.
+		*/
+		ClassAd *GetParentScope( ) const { return( parentScope ); }
+
 		/** Sends the expression object to a Sink.
 			@param s The Sink object.
 			@return false if the expression could not be successfully
