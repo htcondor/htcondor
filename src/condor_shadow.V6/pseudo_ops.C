@@ -79,6 +79,7 @@ void display_ip_addr( unsigned int addr );
 int has_ckpt_file();
 void update_job_status( struct rusage *localp, struct rusage *remotep );
 void update_job_rusage( struct rusage *localp, struct rusage *remotep );
+void RequestCkptBandwidth(unsigned int ip_addr);
 
 static char Executing_Filesystem_Domain[ MAX_STRING ];
 static char Executing_UID_Domain[ MAX_STRING ];
