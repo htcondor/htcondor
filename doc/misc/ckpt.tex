@@ -12,10 +12,11 @@ and after an interruption in service the program can continue from the
 most recent snapshot.
 
 Condor provides checkpointing services to single process jobs on a
-number of Unix platforms.  To enable checkpointing, the user must link
-the program with the Condor system call library
-(\File{condor\_syscall\_lib.a}), using the
-\Condor{compile} command.  This means that the
+number of Unix platforms.
+To enable checkpointing, the user must link the program with the
+Condor system call library (\File{libcondorsyscall.a}), using the
+\Condor{compile} command.
+This means that the
 user must have the object files or source code of the program to use
 Condor checkpointing.  However, the checkpointing services provided by
 Condor are strictly optional.  So, while there are some classes of
@@ -66,15 +67,17 @@ algorithm for writing checkpoints: a previous checkpoint is deleted
 only after a new complete checkpoint has been written successfully.
 
 The Condor distributions include a standalone checkpointing library,
-\File{libckpt.a}, which provides checkpointing for Unix processes
-without Condor's remote system call functionality.  Standalone
-checkpointing is described in section~\ref{sec:standalone-ckpt}.
+\File{libcondorckpt.a}, which provides checkpointing for Unix
+processes without Condor's remote system call functionality.
+Standalone checkpointing is described in
+section~\ref{sec:standalone-ckpt}.
 
 Condor can now read and write compressed checkpoints.  This new
-functionality is provided in the \File{condor\_syscall\_zlib.a} and
-\File{libzckpt.a} libraries.  If \File{/usr/lib/libz.a} exists on your
-workstation, \Condor{compile} will automatically link your job with
-the compression-enabled version of the checkpointing library.
+functionality is provided in the \File{libcondorzsyscall.a} and
+\File{libcondorzckpt.a} libraries.  
+If \File{/usr/lib/libz.a} exists on your workstation, \Condor{compile}
+will automatically link your job with the compression-enabled version
+of the checkpointing library.
 Currently, compression is used only for periodic checkpoints, while we
 experiment with this new functionality.
 
@@ -95,12 +98,12 @@ Using the Condor checkpoint library without the remote system call
 functionality and outside of the Condor system is known as standalone
 mode checkpointing.
 
-To link in standalone mode, use the \Condor{compile}
-utility with the ``-condor\_standalone'' option.  Once your program is
-re-linked with the Condor standalone checkpointing library
-\File{libckpt.a}, your program will require two new command line
-arguments: ``\_condor\_ckpt filename'' and ``\_condor\_restart
-filename''.
+To link in standalone mode, use the \Condor{compile} utility with the
+``-condor\_standalone'' option.
+Once your program is re-linked with the Condor standalone
+checkpointing library \File{libcondorckpt.a}, your program will
+require two new command line arguments: ``\_condor\_ckpt filename''
+and ``\_condor\_restart filename''.
 
 If the command line looks like:
 
