@@ -82,7 +82,8 @@ XferSummary::init()
 	char* tmp = param( "CONDOR_VIEW_HOST" );
 	if( tmp ) {
 		if( ! ViewCollector ) { 
-			ViewCollector = new DCCollector( tmp, COLLECTOR_PORT );
+			int condor_view_port = param_get_condor_view_port();
+			ViewCollector = new DCCollector( tmp, condor_view_port );
 		}
 		free( tmp );
 	}

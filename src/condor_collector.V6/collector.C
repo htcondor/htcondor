@@ -806,7 +806,8 @@ void CollectorDaemon::Config()
 			delete updateCollector;
 			updateCollector = NULL;
         }
-		updateCollector = new DCCollector( tmp, COLLECTOR_PORT, 
+		int collector_port = param_get_collector_port();
+		updateCollector = new DCCollector( tmp, collector_port, 
 										   DCCollector::UDP );
 		if( UpdateTimerId < 0 ) {
 			UpdateTimerId = daemonCore->

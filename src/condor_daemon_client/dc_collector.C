@@ -28,6 +28,7 @@
 #include "internet.h"
 #include "daemon.h"
 #include "dc_collector.h"
+#include "condor_parameters.h"
 
 
 DCCollector::DCCollector( const char* name, const char* pool, 
@@ -171,7 +172,7 @@ DCCollector::parseTCPInfo( void )
 		if( !(colon = strchr(host, ':')) ) {
 				// no colon, use the default port, and treat the given
 				// string as the address.
-			tcp_collector_port = COLLECTOR_PORT;
+			tcp_collector_port = param_get_collector_port();
 			tcp_collector_addr = strnewp( tcp_collector_host );
 		} else { 
 				// there's a colon, so grab what's after it for the

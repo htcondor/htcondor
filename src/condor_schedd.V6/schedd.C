@@ -450,6 +450,7 @@ Scheduler::count_jobs()
 	int		i, j;
 	int		prio_compar();
 	char	tmp[512];
+	int     collector_port;
 
 	ExtArray<OwnerData> SubmittingOwners;
 
@@ -466,6 +467,7 @@ Scheduler::count_jobs()
 	JobsRemoved = 0;
 	SchedUniverseJobsIdle = 0;
 	SchedUniverseJobsRunning = 0;
+	collector_port = param_get_collector_port();
 
 	// clear owner table contents
 	time_t current_time = time(0);
@@ -763,9 +765,10 @@ Scheduler::count_jobs()
 								  flock_collector,
 								  collector_port ); 
 				if (flock_view_server && flock_view_server[0] != '\0') {
+					int condor_view_port = param_get_condor_view_port();
 					updateCentralMgr( UPDATE_SUBMITTOR_AD, ad, 
 									  flock_view_server,
-									  view_port );
+									  condor_view_port );
 				}
 			}
 		}
@@ -5872,7 +5875,8 @@ Scheduler::Init()
 	}; 
 	tmp = param("CONDOR_VIEW_HOST");
 	if( tmp ) {
-		ViewCollector = new DCCollector( tmp, CONDOR_VIEW_PORT );
+		int condor_view_port = param_get_condor_view_port();
+		ViewCollector = new DCCollector( tmp, condor_view_port );
 	}
 	if( Collector ) {
 		delete( Collector );
@@ -6475,6 +6479,7 @@ Scheduler::invalidate_ads()
 			 Name );
     ad->InsertOrUpdate( line );
 	Collector->sendUpdate( INVALIDATE_SUBMITTOR_ADS, ad );
+	int collector_port = param_get_collector_port();
 	if( FlockCollectors && FlockLevel > 0 ) {
 		for( i=1, FlockCollectors->rewind();
 			 i <= FlockLevel && (host = FlockCollectors->next()); i++ ) {
