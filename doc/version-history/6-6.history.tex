@@ -23,6 +23,12 @@ The details of each version are described below.
 \item The time it takes \Condor{dagman} to submit jobs has been
       reduced slightly to improve up the startup time of large DAGs.
 
+\item In order to help reduce load on the \Condor{schedd} when
+      \Condor{dagman} is submitting jobs, there is a new config
+      variable, \Macro{DAGMAN\_SUBMIT\_DELAY}, to specify the number
+      of seconds \Condor{dagman} will sleep before submitting each
+      job.
+
 % commented out since i'm not sure we want to make a big deal of this
 % new config file knob. -derek 1/12/04
 % \item Added a new configuration macro
