@@ -276,6 +276,7 @@ NotifyUser( char *buf, PROC *proc )
 		job_report_display_calls( mailer );
 	}
 
+	email_custom_attributes( mailer, JobAd );
 	email_close(mailer);
 }
 
