@@ -18,7 +18,7 @@ PVM_LIBRARY = pvmd
 #endif
 
 
-#if IS_ALPHA_OSF1
+#if IS_V5
 #	define Programs \
 		scripts tools shadow.V5 starter.V5 startd \
 		schedd kbdd  negotiator collector globalq master prio q rm \
@@ -38,7 +38,7 @@ PVM_LIBRARY = pvmd
 all: makefiles Directories Libraries Programs
 release:: all
 
-#if IS_ALPHA_OSF1
+#if IS_V5
 distrib: release
 	cd ../doc; make distrib
 	cd condor_test_suite_C.V5; make distrib
@@ -60,7 +60,7 @@ object_target(xdr_lib)
 object_target(submit.v3)
 object_target(tools)
 
-#if IS_ALPHA_OSF1
+#if IS_V5
 	object_target(shadow.V5)
 	object_target(starter.V5)
 	object_target(test_suite_C.V5)

@@ -10,7 +10,7 @@ all_target($(TARGETS))
 depend_target($(SRC))
 tags: ALWAYS
 
-#if IS_ALPHA_OSF1
+#if IS_V5
 text_target(condor_config,lib,condor_config.generic)
 text_target(config_on,lib,config_on.generic)
 text_target(config_off,lib,config_off.generic)
