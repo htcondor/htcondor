@@ -434,11 +434,11 @@ SegMap::Contains( void *addr )
 }
 
 
+#define USER_DATA_SIZE 256
 #if defined(PVM_CHECKPOINTING)
 extern "C" user_restore_pre(char *, int);
 extern "C" user_restore_post(char *, int);
-
-int		global_user_data;
+char	global_user_data[USER_DATA_SIZE];
 #endif
 
 /*
@@ -449,7 +449,7 @@ void
 Image::Restore()
 {
 	int		save_fd = fd;
-	int		user_data;
+	char	user_data[USER_DATA_SIZE];
 
 #if defined(PVM_CHECKPOINTING)
 	user_restore_pre(user_data, sizeof(user_data));
@@ -574,13 +574,13 @@ RestoreStack()
 int
 Image::Write()
 {
-     dprintf( D_ALWAYS, "Image::Write(): fd %d file_name %s\n",
-	      fd, file_name?file_name:"(NULL)");
-     if (fd == -1) {
-	  return Write( file_name );
-     } else {
-	  return Write( fd );
-     }
+	dprintf( D_FULLDEBUG, "Image::Write(): fd %d file_name %s\n",
+			 fd, file_name?file_name:"(NULL)");
+	if (fd == -1) {
+		return Write( file_name );
+	} else {
+		return Write( fd );
+	}
 }
 
 
@@ -957,7 +957,8 @@ Checkpoint( int sig, int code, void *scp )
 
 	if( MyImage.GetMode() == REMOTE ) {
 		scm = SetSyscalls( SYS_REMOTE | SYS_UNMAPPED );
-		// if ( MyImage.GetFd() != -1 ) {
+#if !defined(PVM_CHECKPOINTING)
+		if ( MyImage.GetFd() != -1 ) {
 			// Here we make _certain_ that fd is -1.  on remote checkpoints,
 			// the fd is always new since we open a fresh TCP socket to the
 			// shadow.  I have detected some buggy behavior where the remote
@@ -966,10 +967,10 @@ Checkpoint( int sig, int code, void *scp )
 			// certain.  Hopefully the real bug will be found someday and
 			// this "patch" can go away...  -Todd 11/95
 			
-		//dprintf(D_ALWAYS,"WARNING: fd is %d for remote checkpoint, should be -1\n",MyImage.GetFd());
-		//MyImage.SetFd( -1 );
-		//}
-		// The above should be commented out for pvm standalone checkpointing -Bin
+		dprintf(D_ALWAYS,"WARNING: fd is %d for remote checkpoint, should be -1\n",MyImage.GetFd());
+		MyImage.SetFd( -1 );
+		}
+#endif
 
 	} else {
 		scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
