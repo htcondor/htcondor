@@ -51,7 +51,6 @@
 #define SUCCESS 1
 #define CANT_RUN 0
 
-static char *_FileName_ = __FILE__;	/* Used by EXCEPT (see except.h)	  */
 extern char *gen_ckpt_name();
 
 #include "condor_qmgr.h"
@@ -148,8 +147,8 @@ Scheduler::Scheduler()
 
 	LastTimeout = time(NULL);
 	CondorViewHost = NULL;
-	CollectorHost = NULL;
-	NegotiatorHost = NULL;
+	Collector = NULL;
+	Negotiator = NULL;
 	Shadow = NULL;
 	CondorAdministrator = NULL;
 	Mail = NULL;
@@ -186,12 +185,12 @@ Scheduler::~Scheduler()
 		daemonCore->Cancel_Socket(shadowCommandssock);
 		delete shadowCommandssock;
 	}
+	if (Collector)
+		delete(Collector);
+	if (Negotiator)
+		delete(Negotiator);
 	if (CondorViewHost)
 		free(CondorViewHost);
-	if (CollectorHost)
-		free(CollectorHost);
-	if (NegotiatorHost)
-		free(NegotiatorHost);
 	if (Shadow)
 		free(Shadow);
 	if (CondorAdministrator)
@@ -319,8 +318,8 @@ Scheduler::count_jobs()
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_RUNNING_JOBS, JobsRunning);
 	ad->Insert (tmp);
 
-	update_central_mgr(UPDATE_SCHEDD_AD, CollectorHost,
-						COLLECTOR_UDP_COMM_PORT); // always send
+		// Port doesn't matter, since we've got the sinful string. 
+	update_central_mgr( UPDATE_SCHEDD_AD, Collector->addr(), 0 );
 	dprintf( D_FULLDEBUG, 
 			 "Sent HEART BEAT ad to central mgr: Number of submittors=%d\n",
 			 N_Owners );
@@ -357,8 +356,8 @@ Scheduler::count_jobs()
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
-	  update_central_mgr(UPDATE_SUBMITTOR_AD, CollectorHost,
-						 COLLECTOR_UDP_COMM_PORT);
+		  // Port doesn't matter, since we've got the sinful string. 
+	  update_central_mgr( UPDATE_SUBMITTOR_AD, Collector->addr(), 0 );
 
 	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
 				Owners[i].Name, UidDomain );
@@ -382,8 +381,9 @@ Scheduler::count_jobs()
 		  int i;
 		  for (i=1, FlockHosts->rewind();
 				i <= FlockLevel && (host = FlockHosts->next()); i++) {
-			  update_central_mgr(UPDATE_SUBMITTOR_AD, host,
-								 COLLECTOR_UDP_COMM_PORT);
+				  // Port doesn't matter, since we've got the sinful string. 
+			  update_central_mgr( UPDATE_SUBMITTOR_AD, host, 
+								  COLLECTOR_UDP_COMM_PORT );
 		  }
 	  }
 
@@ -398,8 +398,8 @@ Scheduler::count_jobs()
 		  for (i=1, FlockHosts->rewind();
 				i <= OldFlockLevel && (host = FlockHosts->next()); i++) {
 			  if (i > FlockLevel) {
-				  update_central_mgr(UPDATE_SUBMITTOR_AD, host,
-									 COLLECTOR_UDP_COMM_PORT);
+				  update_central_mgr( UPDATE_SUBMITTOR_AD, host,
+									  COLLECTOR_UDP_COMM_PORT );
 			  }
 		  }
 	  }
@@ -439,8 +439,8 @@ Scheduler::count_jobs()
 	  ad->InsertOrUpdate(tmp);
 
 	  dprintf (D_ALWAYS, "Sent owner (0 jobs) ad to central manager\n");
-	  update_central_mgr(UPDATE_SUBMITTOR_AD, CollectorHost,
-						 COLLECTOR_UDP_COMM_PORT);
+		  // Port doesn't matter, since we've got the sinful string. 
+	  update_central_mgr( UPDATE_SUBMITTOR_AD, Collector->addr(), 0 );
 
 	  // also update all of the flock hosts
 	  char *host;
@@ -449,8 +449,8 @@ Scheduler::count_jobs()
 	  if (FlockHosts) {
 		 for (i=1, FlockHosts->rewind();
 			  i <= OldFlockLevel && (host = FlockHosts->next()); i++) {
-			 update_central_mgr(UPDATE_SUBMITTOR_AD, host,
-			  					COLLECTOR_UDP_COMM_PORT);
+			 update_central_mgr( UPDATE_SUBMITTOR_AD, host,
+								 COLLECTOR_UDP_COMM_PORT);
 		 }
 	  }
 	}
@@ -557,7 +557,7 @@ Scheduler::insert_owner(char* owner)
 }
 
 void
-Scheduler::update_central_mgr(int command, char *host, int port)
+Scheduler::update_central_mgr( int command, char *host, int port )
 {
 	// If the host we're given is NULL, just return, don't seg fault. 
 	if( !host ) {
@@ -806,7 +806,7 @@ Scheduler::doNegotiate (int i, Stream *s)
 		// different negotiator.  Stash this request to handle it later.
 		dprintf(D_FULLDEBUG,"Received Negotiate command while negotiating; stashing for later\n");
 		daemonCore->Register_Socket(s,"<Another-Negotiator-Socket>",
-			(SocketHandlercpp)delayedNegotiatorHandler,
+			(SocketHandlercpp)&delayedNegotiatorHandler,
 			"delayedNegotiatorHandler()", this, ALLOW);
 		return KEEP_STREAM;
 	}
@@ -818,7 +818,7 @@ Scheduler::doNegotiate (int i, Stream *s)
 				 "Stashing socket to negotiator for future reuse\n");
 		daemonCore->
 				Register_Socket(s, "<Negotiator Socket>", 
-								(SocketHandlercpp)negotiatorSocketHandler,
+								(SocketHandlercpp)&negotiatorSocketHandler,
 								"<Negotiator Command>",
 								this, ALLOW);
 	}
@@ -853,17 +853,18 @@ Scheduler::negotiate(int, Stream* s)
 	int		job_universe;
 	int		which_negotiator = 0; 		// >0 implies flocking
 	int		serviced_other_commands = 0;	
+	Sock*	sock = (Sock*)s;
 
 	dprintf( D_FULLDEBUG, "\n" );
 	dprintf( D_FULLDEBUG, "Entered negotiate\n" );
 
 	if (FlockHosts) {
 		// first, check if this is our local negotiator
-		struct in_addr endpoint_addr = (s->endpoint())->sin_addr;
+		struct in_addr endpoint_addr = (sock->endpoint())->sin_addr;
 		struct hostent *hent;
 		char *addr;
 		bool match = false;
-		hent = gethostbyname(NegotiatorHost);
+		hent = gethostbyname(Negotiator->fullHostname());
 		if (hent->h_addrtype == AF_INET) {
 			for (int a=0; !match && (addr = hent->h_addr_list[a]); a++) {
 				if (memcmp(addr, &endpoint_addr, sizeof(struct in_addr)) == 0){
@@ -894,14 +895,14 @@ Scheduler::negotiate(int, Stream* s)
 		}
 		if (!match) {
 			dprintf(D_ALWAYS, "Unknown negotiator (%s).  "
-					"Aborting negotiation.\n", sin_to_string(s->endpoint()));
+					"Aborting negotiation.\n", sin_to_string(sock->endpoint()));
 			return (!(KEEP_STREAM));
 		}
 	}
 
 	if (which_negotiator > FlockLevel) {
 		dprintf( D_ALWAYS, "Aborting connection with negotiator %s due to "
-				 "insufficient flock level.\n", sin_to_string(s->endpoint()));
+				 "insufficient flock level.\n", sin_to_string(sock->endpoint()));
 		return (!(KEEP_STREAM));
 	}
 
@@ -1273,7 +1274,7 @@ Scheduler::vacate_service(int, Stream *sock)
 	char	*capability = NULL;
 
 	dprintf( D_ALWAYS, "Got VACATE_SERVICE from %s\n", 
-			 sin_to_string(sock->endpoint()) );
+			 sin_to_string(((Sock*)sock)->endpoint()) );
 
 	if (!sock->code(capability)) {
 		dprintf (D_ALWAYS, "Failed to get capability\n");
@@ -2801,30 +2802,27 @@ Scheduler::Init()
 	if( CondorViewHost ) free( CondorViewHost );
 	CondorViewHost = param("CONDOR_VIEW_HOST");
 
-	if( CollectorHost ) free( CollectorHost );
-	if( ! (CollectorHost = param("COLLECTOR_HOST")) ) {
-		  EXCEPT( "No Collector host specified in config file" );
-	 }
+	if( Collector ) delete( Collector );
+	Collector = new Daemon( DT_COLLECTOR );
 
-	if( NegotiatorHost ) free( NegotiatorHost );
-	 if( ! (NegotiatorHost = param("NEGOTIATOR_HOST")) ) {
-		  EXCEPT( "No NegotiatorHost host specified in config file" );
-	 }
+	if( Negotiator ) delete( Negotiator );
+	Negotiator = new Daemon( DT_NEGOTIATOR );
+
 
 	if( Shadow ) free( Shadow );
-	 if( ! (Shadow = param("SHADOW")) ) {
-		  EXCEPT( "SHADOW not specified in config file\n" );
-	 }
+	if( ! (Shadow = param("SHADOW")) ) {
+		EXCEPT( "SHADOW not specified in config file\n" );
+	}
 
 	if( CondorAdministrator ) free( CondorAdministrator );
-	 if( ! (CondorAdministrator = param("CONDOR_ADMIN")) ) {
-		  EXCEPT( "CONDOR_ADMIN not specified in config file" );
-	 }
+	if( ! (CondorAdministrator = param("CONDOR_ADMIN")) ) {
+		EXCEPT( "CONDOR_ADMIN not specified in config file" );
+	}
 
 	if( Mail ) free( Mail );
-	 if( ! (Mail=param("MAIL")) ) {
-		  EXCEPT( "MAIL not specified in config file\n" );
-	 }
+	if( ! (Mail=param("MAIL")) ) {
+		EXCEPT( "MAIL not specified in config file\n" );
+	}	
 
 		// UidDomain will always be defined, since config() will put
 		// in my_full_hostname() if it's not defined in the file.
@@ -2836,19 +2834,19 @@ Scheduler::Init()
 		////////////////////////////////////////////////////////////////////
 
 	if( schedd_name_in_config ) {
-		free( Name );
 		tmp = param( "SCHEDD_NAME" );
-		Name = strdup( build_valid_daemon_name(tmp) );
+		delete [] Name;
+		Name = build_valid_daemon_name( tmp );
 		free( tmp );
 	} else {
 		if( ! Name ) {
 			tmp = param( "SCHEDD_NAME" );
 			if( tmp ) {
-				Name = strdup( build_valid_daemon_name(tmp) );
+				Name = build_valid_daemon_name( tmp );
 				schedd_name_in_config = 1;
 				free( tmp );
 			} else {
-				Name = strdup( my_full_hostname() );
+				Name = strnewp( my_full_hostname() );
 			}
 		}
 	}
@@ -2857,8 +2855,8 @@ Scheduler::Init()
 
 	if( AccountantName ) free( AccountantName );
 	if( ! (AccountantName = param("ACCOUNTANT_HOST")) ) {
-		  dprintf(D_FULLDEBUG, "No Accountant host specified in config file\n" );
-	 }
+		dprintf( D_FULLDEBUG, "No Accountant host specified in config file\n" );
+	}
 
 	if( JobHistoryFileName ) free( JobHistoryFileName );
 	if( ! (JobHistoryFileName = param("HISTORY")) ) {
@@ -3008,12 +3006,8 @@ Scheduler::Init()
 		daemonCore->Register_Command_Socket( (Stream*)shadowCommandssock );
 
 		char nameBuf[50];
-		struct in_addr addr;
-		if (get_inet_address(&addr) < 0) {
-			EXCEPT("get_inet_address failed");
-		}
-		sprintf(nameBuf,"<%s:%d>",inet_ntoa(addr),
-				shadowCommandrsock->get_port());
+		sprintf( nameBuf, "<%s:%d>", inet_ntoa(*(my_sin_addr())),
+				 shadowCommandrsock->get_port());
 		MyShadowSockName = strdup( nameBuf );
 	}
 
@@ -3024,21 +3018,21 @@ Scheduler::Register()
 {
 	 // message handlers for schedd commands
 	 daemonCore->Register_Command( NEGOTIATE, "NEGOTIATE", 
-			(CommandHandlercpp)doNegotiate, "negotiate", this, NEGOTIATOR );
+			(CommandHandlercpp)&doNegotiate, "negotiate", this, NEGOTIATOR );
 	 daemonCore->Register_Command( RESCHEDULE, "RESCHEDULE", 
-			(CommandHandlercpp)reschedule_negotiator, "reschedule_negotiator", 
+			(CommandHandlercpp)&reschedule_negotiator, "reschedule_negotiator", 
 										 this, WRITE);
 	 daemonCore->Register_Command( RECONFIG, "RECONFIG", 
-			(CommandHandler)dc_reconfig, "reconfig", 0, OWNER );
+			(CommandHandler)&dc_reconfig, "reconfig", 0, OWNER );
 	 daemonCore->Register_Command(VACATE_SERVICE, "VACATE_SERVICE", 
-			(CommandHandlercpp)vacate_service, "vacate_service", this, WRITE);
+			(CommandHandlercpp)&vacate_service, "vacate_service", this, WRITE);
 	 daemonCore->Register_Command(KILL_FRGN_JOB, "KILL_FRGN_JOB", 
-			(CommandHandlercpp)abort_job, "abort_job", this, WRITE);
+			(CommandHandlercpp)&abort_job, "abort_job", this, WRITE);
 
 	// Command handler for testing file access.  I set this as WRITE as we
 	// don't want people snooping the permissions on our machine.
 	daemonCore->Register_Command( ATTEMPT_ACCESS, "ATTEMPT_ACCESS", 
-								  (CommandHandler)attempt_access_handler, 
+								  (CommandHandler)&attempt_access_handler, 
 								  "attempt_access_handler", NULL, WRITE, 
 								  D_FULLDEBUG );
 
@@ -3046,7 +3040,7 @@ Scheduler::Register()
 	 // Note: This could either be a READ or a WRITE command.  Too bad we have 
 	// to lump both together here.
 	 daemonCore->Register_Command( QMGMT_CMD, "QMGMT_CMD",
-								  (CommandHandler)handle_q, 
+								  (CommandHandler)&handle_q, 
 								  "handle_q", NULL, READ, D_FULLDEBUG );
 
 	 // reaper
@@ -3081,17 +3075,17 @@ Scheduler::RegisterTimers()
 	}
 
 	 // timer handlers
-	 timeoutid = daemonCore->Register_Timer(10,(Eventcpp)timeout,
+	 timeoutid = daemonCore->Register_Timer(10,(Eventcpp)&timeout,
 											"timeout",this);
 	startjobsid = daemonCore->Register_Timer(10,
-											 (Eventcpp)StartJobs,"StartJobs",
+											 (Eventcpp)&StartJobs,"StartJobs",
 											 this);
 	 aliveid = daemonCore->Register_Timer(aliveInterval, aliveInterval,
-										 (Eventcpp)send_alive, 
+										 (Eventcpp)&send_alive, 
 										 "send_alive", this);
 	cleanid = daemonCore->Register_Timer(QueueCleanInterval,
 										 QueueCleanInterval,
-										 (Event)CleanJobQueue,
+										 (Event)&CleanJobQueue,
 										 "CleanJobQueue");
 }
 
@@ -3201,9 +3195,9 @@ Scheduler::reschedule_negotiator(int, Stream *)
 
 	ReliSock sock;
 
-	if (!sock.connect(NegotiatorHost, NEGOTIATOR_PORT)) {
-		dprintf( D_ALWAYS, "failed to connect to negotiator <%s:%d>\n",
-				 NegotiatorHost, NEGOTIATOR_PORT);
+	if (!sock.connect(Negotiator->addr(), 0)) {
+		dprintf( D_ALWAYS, "failed to connect to negotiator %s\n",
+				 Negotiator->addr() );
 		return;
 	}
 
