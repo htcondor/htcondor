@@ -1669,7 +1669,11 @@ check_open( char *name, int flags )
 	if (strcmp(name, NullFile) == MATCH) return;
 
 #if defined(WIN32)
-	strcpy(pathname, name);
+	if ( name[0] == '\\' || name[1] == ':' ) {
+		strcpy(pathname, name);
+	} else {
+		(void)sprintf( pathname, "%s\\%s", JobIwd, name );
+	}
 #else
 	if( name[0] == '/' ) {	/* absolute wrt whatever the root is */
 		(void)sprintf( pathname, "%s%s", JobRootdir, name );
