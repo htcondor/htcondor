@@ -187,6 +187,11 @@ ScheduledEvent::ActivateEvent()
 int ScheduledShutdownEvent::SlowStartInterval = -1;
 int ScheduledShutdownEvent::EventInterval = -1;
 
+static int CleanupShutdownModeConfig(const char startd_machine[],
+									 const char startd_addr[]);
+static int CleanupShutdownModeConfigs();
+static int CleanupTid = -1;
+
 static const char ShutdownConstraint[] =
 "(%s) && "
 "(((ImageSize > 0) && (State != \"Preempting\")) || " // need to be vacated
@@ -297,7 +302,29 @@ ScheduledShutdownEvent::ScheduledShutdownEvent(const char name[],
 			EventInterval = 900;
 		}
 	}
-	
+
+	// start a periodic cleanup timer if we haven't already
+	if (CleanupTid < 0) {
+		int CleanupInterval;
+		tmp = param("EVENTD_SHUTDOWN_CLEANUP_INTERVAL");
+		if (tmp) {
+			CleanupInterval = atoi(tmp);
+			free(tmp);
+			dprintf(D_FULLDEBUG, "Shutdown cleanup interval set to %d "
+					"seconds.\n", CleanupInterval);
+		} else {
+			CleanupInterval = 3600; // one hour
+		}
+		// do our first cleanup soon (in 10 minutes), because we may
+		// have been away for a while, but give a little time for the
+		// collector to get new ads
+		int firstCleanup = (CleanupInterval < 600) ? CleanupInterval : 600;
+		CleanupTid =
+			daemonCore->Register_Timer(firstCleanup, CleanupInterval,
+									   (Event)CleanupShutdownModeConfigs,
+									   "CleanupShutdownModeConfigs");
+	}
+
 	valid = true;
 }
 
@@ -321,6 +348,7 @@ ScheduledShutdownEvent::TimeNeeded()
 	time_t current_time = time(0);
 	double TotalRequiredCheckpoints = 0.0;
 	StartdList->Open();
+	StringList Machines;
 	while ((ad = StartdList->Next()) != NULL) {
 		int ImageSize = 0, JobUniverse = 1, etime = 0;
 		ad->LookupInteger(ATTR_JOB_UNIVERSE, JobUniverse);
@@ -331,15 +359,18 @@ ScheduledShutdownEvent::TimeNeeded()
 		if (ad->LookupInteger("EndDownTime", etime) == 1) {
 			if (etime < current_time) {
 				char startd_addr[ATTRLIST_MAX_EXPRESSION];
-				char startd_name[ATTRLIST_MAX_EXPRESSION];
+				char startd_machine[ATTRLIST_MAX_EXPRESSION];
 				if (ad->LookupString(ATTR_STARTD_IP_ADDR, startd_addr) != 1 ||
-					ad->LookupString(ATTR_NAME, startd_name) != 1) {
+					ad->LookupString(ATTR_MACHINE, startd_machine) != 1) {
 					dprintf(D_ALWAYS, "Malformed startd classad in "
 							"ScheduledShutdownEvent::TimeNeeded()\n");
 					continue;
 				}
-				CleanupShutdownModeConfig(startd_name, startd_addr);
-				did_cleanup = true;
+				if (!Machines.contains(startd_machine)) {
+					CleanupShutdownModeConfig(startd_machine, startd_addr);
+					Machines.append(startd_machine);
+					did_cleanup = true;
+				}
 			}
 		}
 	}
@@ -395,25 +426,25 @@ ScheduledShutdownEvent::ActivateEvent()
 	StartdList->Open();
 	StringList Machines;
 	while ((ad = StartdList->Next()) != NULL) {
-		char startd_addr[ATTRLIST_MAX_EXPRESSION];
-		char startd_name[ATTRLIST_MAX_EXPRESSION];
-		char startd_machine[ATTRLIST_MAX_EXPRESSION];
-		int etime;
-		if (ad->LookupString(ATTR_STARTD_IP_ADDR, startd_addr) != 1 ||
-			ad->LookupString(ATTR_NAME, startd_name) != 1 ||
-			ad->LookupString(ATTR_MACHINE, startd_machine) != 1) {
-			dprintf(D_ALWAYS, "Malformed startd classad in "
-					"ScheduledShutdownEvent::Timeout()\n");
-			continue;
-		}
 		// if machine is not in shutdown mode already *and* we didn't
 		// just put this machine into shutdown mode (i.e., an SMP
 		// startd will have multiple startd ClassAds), we put it in
 		// shutdown mode here
-		if ((ad->LookupInteger("EndDownTime", etime) != 1 ||
-			 etime < EndTime) && !Machines.contains(startd_machine)) {
-			EnterShutdownMode(startd_name, startd_addr);
-			Machines.append(startd_machine);
+		int etime;
+		if (ad->LookupInteger("EndDownTime", etime) != 1 ||
+			etime < EndTime) {
+			char startd_addr[ATTRLIST_MAX_EXPRESSION];
+			char startd_machine[ATTRLIST_MAX_EXPRESSION];
+			if (ad->LookupString(ATTR_STARTD_IP_ADDR, startd_addr) != 1 ||
+				ad->LookupString(ATTR_MACHINE, startd_machine) != 1) {
+				dprintf(D_ALWAYS, "Malformed startd classad in "
+						"ScheduledShutdownEvent::Timeout()\n");
+				continue;
+			}
+			if (!Machines.contains(startd_machine)) {
+				EnterShutdownMode(startd_machine, startd_addr);
+				Machines.append(startd_machine);
+			}
 		}
 	}
 
@@ -468,11 +499,14 @@ ScheduledShutdownEvent::Timeout()
 	bool did_shutdown = false;
 	ClassAd *ad;
 	StartdList->Open();
+	StringList Machines;
 	while ((ad = StartdList->Next()) != NULL) {
 		char startd_addr[ATTRLIST_MAX_EXPRESSION];
 		char startd_name[ATTRLIST_MAX_EXPRESSION];
 		char startd_state[ATTRLIST_MAX_EXPRESSION];
+		char startd_machine[ATTRLIST_MAX_EXPRESSION];
 		if (ad->LookupString(ATTR_STARTD_IP_ADDR, startd_addr) != 1 ||
+			ad->LookupString(ATTR_MACHINE, startd_machine) != 1 ||
 			ad->LookupString(ATTR_NAME, startd_name) != 1) {
 			dprintf(D_ALWAYS, "Malformed startd classad in "
 					"ScheduledShutdownEvent::Timeout()\n");
@@ -480,9 +514,10 @@ ScheduledShutdownEvent::Timeout()
 		}
 		// make sure all startds are in shutdown mode
 		int etime = 0;
-		if (ad->LookupInteger("EndDownTime", etime) != 1 ||
-			etime < EndTime) {
-			EnterShutdownMode(startd_name, startd_addr);
+		if ((ad->LookupInteger("EndDownTime", etime) != 1 ||
+			 etime < EndTime) && !Machines.contains(startd_machine)) {
+			EnterShutdownMode(startd_machine, startd_addr);
+			Machines.append(startd_machine);
 			did_shutdown = true;
 		}
 		// we keep looping to verify that all startds are in shutdown mode
@@ -618,14 +653,14 @@ ScheduledShutdownEvent::EnterShutdownMode(const char startd_name[],
 	return 0;
 }
 
-int
-ScheduledShutdownEvent::CleanupShutdownModeConfig(const char startd_name[],
-												  const char startd_addr[])
+static int
+CleanupShutdownModeConfig(const char startd_machine[],
+						  const char startd_addr[])
 {
 	ReliSock sock;
 	sock.timeout(10);
 	if (!sock.connect((char *)startd_addr, 0)) {
-		dprintf(D_ALWAYS, "Failed to connect to %s %s.\n", startd_name,
+		dprintf(D_ALWAYS, "Failed to connect to %s %s.\n", startd_machine,
 				startd_addr);
 		return -1;
 	}
@@ -634,12 +669,12 @@ ScheduledShutdownEvent::CleanupShutdownModeConfig(const char startd_name[],
 	if (!sock.code(cmd) || !sock.put((char *)ShutdownAdminId) ||
 		!sock.put("") || !sock.eom()) {
 		dprintf(D_ALWAYS, "Failed to send DC_CONFIG_PERSIST to "
-				"%s %s.\n", startd_name, startd_addr);
+				"%s %s.\n", startd_machine, startd_addr);
 		return -1;
 	}
 	sock.close();
 	if (!sock.connect((char *)startd_addr, 0)) {
-		dprintf(D_ALWAYS, "Failed to connect to %s %s.\n", startd_name,
+		dprintf(D_ALWAYS, "Failed to connect to %s %s.\n", startd_machine,
 				startd_addr);
 		return -1;
 	}
@@ -647,12 +682,49 @@ ScheduledShutdownEvent::CleanupShutdownModeConfig(const char startd_name[],
 	cmd = DC_RECONFIG;
 	if (!sock.code(cmd) || !sock.eom()) {
 		dprintf(D_ALWAYS, "Failed to send DC_RECONFIG to %s %s.\n",
-				startd_name, startd_addr);
+				startd_machine, startd_addr);
 		return -1;
 	}
 
 	dprintf(D_ALWAYS, "Cleaned up shutdown mode config on %s.\n",
-			startd_name);
+			startd_machine);
+
+	return 0;
+}
+
+static const char CleanupConstraint[] = "(CurrentTime > EndDownTime)";
+
+int
+CleanupShutdownModeConfigs()
+{
+	CondorQuery	StartdQuery(STARTD_AD);
+	ClassAd		*ad;
+
+	ClassAdList StartdList;
+
+	if (StartdQuery.addConstraint(CleanupConstraint) != Q_OK) {
+		return -1;
+	}
+	if (StartdQuery.fetchAds(StartdList) != Q_OK) {
+		return -1;
+	}
+
+	StartdList.Open();
+	StringList Machines;
+	while ((ad = StartdList.Next()) != NULL) {
+		char startd_addr[ATTRLIST_MAX_EXPRESSION];
+		char startd_machine[ATTRLIST_MAX_EXPRESSION];
+		if (ad->LookupString(ATTR_STARTD_IP_ADDR, startd_addr) != 1 ||
+			ad->LookupString(ATTR_MACHINE, startd_machine) != 1) {
+			dprintf(D_ALWAYS, "Malformed startd classad in "
+					"CleanupShutdownModeConfigs()\n");
+			continue;
+		}
+		if (!Machines.contains(startd_machine)) {
+			CleanupShutdownModeConfig(startd_machine, startd_addr);
+			Machines.append(startd_machine);
+		}
+	}
 
 	return 0;
 }
