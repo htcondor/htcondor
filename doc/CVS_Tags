@@ -7,9 +7,13 @@
 ** of that here.  (New tags should be added at the top of the file,
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
-1/22/04 V6_6-pre-merge-V6_6_0-doc-merge-1
+1/22/04 V6_6-pre-merge-V6_6_0-doc-merge-2
     The state of the doc directory in V6_6-branch before merging
     changes from the V6_6_0-branch as tagged V6_6_0-doc-merge-2.
+
+1/22/04  V6_6_0-doc-merge-2
+    The state of the doc directory in V6_6_0-branch before a hopefully,
+    last merge into the V6_6-branch.
 
 12/23/03 V6_6-full_redhat9_port-branch 
    A new branch off the end of the V6_6-branch for the redhat 9 full port.
@@ -38,10 +42,6 @@
     The state of the doc directory in V6_6_0-branch before merging
     into the V6_6-branch.  Also a tag to the re-re-release of the
     6.6.0 manual.
-
-1/22/04  V6_6_0-doc-merge-2
-    The state of the doc directory in V6_6_0-branch before a hopefully,
-    last merge into the V6_6-branch.
 
 12/17/03 V6_6_0-doc-merge-1
     The state of the doc directory in V6_6_0-branch before merging
