@@ -254,44 +254,44 @@ vacate_client(resource_id_t rid)
 		{
 			dprintf(D_ALWAYS, "Can't send capability\n");
 		}
+		else if(!sock->eom())
+		{
+			dprintf(D_ALWAYS, "Can't send EOM to schedd\n");
+		}
 		delete sock;
 	}
 
 	/* send VACATE_SERVICE and capability to accountant */
-	if (!AccountantHost)
+	if (AccountantHost)
 	{
-		free(rip->r_client);
-		rip->r_client = NULL;
-		free(rip->r_client);
-		rip->r_client = NULL;
-		free(rip->r_capab);
-		rip->r_capab = NULL;
-		rip->r_claimed = FALSE;
-		dprintf(D_FULLDEBUG, "Done vacate_client\n");
-		return;
-	}
-	if ((sd = do_connect(AccountantHost, "condor_accountant", ACCOUNTANT_PORT)) < 0)
-	{
-		dprintf(D_ALWAYS, "Couldn't connect to accountant\n");
-	}
-	else
-	{
-		sock = new ReliSock();
-		sock->attach_to_file_desc(sd);
-		if(!sock->put(VACATE_SERVICE))
+		if ((sd = do_connect(AccountantHost, "condor_accountant",
+							 ACCOUNTANT_PORT)) < 0)
 		{
-			dprintf(D_ALWAYS, "Can't send VACATE_SERVICE command\n");
+				dprintf(D_ALWAYS, "Couldn't connect to accountant\n");
 		}
-		else if(!sock->put(rip->r_capab))
+		else
 		{
-			dprintf(D_ALWAYS, "Can't send capability\n");
+			sock = new ReliSock();
+			sock->attach_to_file_desc(sd);
+			if(!sock->put(VACATE_SERVICE))
+			{
+				dprintf(D_ALWAYS, "Can't send VACATE_SERVICE command\n");
+			}
+			else if(!sock->put(rip->r_capab))
+			{
+				dprintf(D_ALWAYS, "Can't send capability\n");
+			}
+			else if(!sock->eom())
+			{
+				dprintf(D_ALWAYS, "Can't send EOM to schedd\n");
+			}
+			delete sock;
 		}
-		delete sock;
 	}
-	free(rip->r_capab);
-	rip->r_capab = NULL;
-	rip->r_claimed = FALSE;
 	dprintf(D_ALWAYS, "Done vacating client %s\n", rip->r_client);
 	free(rip->r_client);
 	rip->r_client = NULL;
+	free(rip->r_capab);
+	rip->r_capab = NULL;
+	rip->r_claimed = FALSE;
 }
