@@ -14,7 +14,6 @@
 
 
 #define QUERY_DELAY_SECS_DEFAULT 15 //can be overriden ClassAd
-char *chomp( char *buf );
 
 
 	//these are global so the sig handlers can use them.
@@ -174,17 +173,4 @@ main( int argc, char *argv[] ) {
 		}
 		sleep( delay );
 	}
-}
-
-//strip off newline if exists
-char *
-chomp( char *buffer ) {
-	int size;
-
-	if ( size = strlen( buffer ) ) {
-		if ( buffer[size-1] == '\n' ) {
-			buffer[size-1] = '\0';
-		}
-	}
-	return( buffer );
 }
