@@ -21,9 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
-
 #ifndef SOCK_H
 #define SOCK_H
 
@@ -32,10 +29,16 @@
 // retry failed connects for CONNECT_TIMEOUT seconds
 #define CONNECT_TIMEOUT 10
 
+const int _ENDPOINT_BUF_SIZE = 16;
+
 #if !defined(WIN32)
-typedef int SOCKET;
-#define INVALID_SOCKET -1
-#endif
+#  ifndef SOCKET
+#    define SOCKET int
+#  endif
+#  ifndef INVALID_SOCKET
+#    define INVALID_SOCKET -1
+#  endif
+#endif /* not WIN32 */
 
 /*
 **	B A S E    S O C K
@@ -105,7 +108,28 @@ public:
     */
 	int timeout(int sec);
 
-    ///
+    /// peer's port and IP address in a struct sockaddr_in.
+	struct sockaddr_in *endpoint();
+
+	/// peer's port number
+	int endpoint_port();
+
+	/// peer's IP address, string verison (e.g. "128.105.101.17")
+	char* endpoint_ip_str();
+
+	/// peer's IP address, integer version (e.g. 2154390801)
+	unsigned int endpoint_ip_int();
+
+	/// local port number
+	int get_port();
+
+	/// local ip address integer
+	unsigned int get_ip_int();
+
+	/// local file descriptor (fd) of this socket
+	int get_file_desc();
+
+    /// 
 	virtual ~Sock() {}
 
 
@@ -157,8 +181,10 @@ protected:
 	sock_state		_state;
 	int				_timeout;
 	struct sockaddr_in _who;	// endpoint of "connection"
+
+private:
+		// Buffer to hold the string version of our endpoint's IP address. 
+	char _endpoint_ip_buf[_ENDPOINT_BUF_SIZE];	
 };
 
-
-
-#endif
+#endif /* SOCK_H */
