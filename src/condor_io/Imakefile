@@ -4,8 +4,16 @@ CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I$(OpenSSLIncludePath) -DHEADER_DES_LOCL_H
 LIB = libcedar.a $(STD_LIBS)
 
+#if CONDOR_ENCRYPTION
+ENC_BASE_OBJ = condor_crypt.o
+#endif
+
 #if CONDOR_3DES_ENCRYPTION
 DES_ENC_OBJ = condor_crypt_3des.o
+#endif 
+
+#if CONDOR_BLOWFISH
+BLOWFISH_OBJ = condor_crypt_blowfish.o
 #endif 
 
 #if WANT_KERBEROS && HAS_KERBEROS
@@ -18,8 +26,8 @@ OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o sockCache.o \
 		condor_auth.o condor_auth_claim.o condor_auth_x509.o \
 		condor_auth_fs.o condor_auth_sspi.o \
 		authentication.o credential.o $(CONDOR_TYPE_OBJ) condor_rw.o \
-		SafeMsg.o condor_crypt.o CryptKey.o $(DES_ENC_OBJ) $(KERB_OBJ)
-#       condor_crypt_blowfish.o condor_crypt_3des.o 
+		SafeMsg.o $(ENC_BASE_OBJ) CryptKey.o $(DES_ENC_OBJ) $(KERB_OBJ) \
+		$(BLOWFISH_OBJ)
 #		autoTest.o manTest.o
 
 library_target(libcedar.a, $(OBJ))
