@@ -48,6 +48,7 @@ void dprintf_init ( int fd );
 void dprintf ( int flags, char *fmt, ... );
 int  dprintf_config (char *, int );
 void _EXCEPT_ ( char *fmt, ... );
+void Suicide();
 #else
 void config ();
 char * param ();
