@@ -391,6 +391,37 @@ GetAttributeString( int cluster_id, int proc_id, char *attr_name, char *value )
 
 
 int
+GetAttributeStringNew( int cluster_id, int proc_id, char *attr_name, char **val )
+{
+	int	rval;
+
+	CurrentSysCall = CONDOR_GetAttributeString;
+
+	qmgmt_sock->encode();
+	assert( qmgmt_sock->code(CurrentSysCall) );
+	assert( qmgmt_sock->code(cluster_id) );
+	assert( qmgmt_sock->code(proc_id) );
+	assert( qmgmt_sock->code(attr_name) );
+	assert( qmgmt_sock->end_of_message() );
+
+	qmgmt_sock->decode();
+	assert( qmgmt_sock->code(rval) );
+	if( rval < 0 ) {
+		*val = (char *) calloc(1, sizeof(char));
+		assert( qmgmt_sock->code(terrno) );
+		assert( qmgmt_sock->end_of_message() );
+		errno = terrno;
+		return rval;
+	}
+	*val = NULL;
+	assert( qmgmt_sock->code(*val) );
+	assert( qmgmt_sock->end_of_message() );
+
+	return rval;
+}
+
+
+int
 GetAttributeExpr( int cluster_id, int proc_id, char *attr_name, char *value )
 {
 	int	rval;
