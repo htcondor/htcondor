@@ -30,7 +30,6 @@
 #endif
 
 #include <sys/types.h>
-#define HAS_U_TYPES
 
 #include <unistd.h>
 /* These are all functions that unistd.h is supposed to prototype that
@@ -71,5 +70,15 @@ END_C_DECLS
 
 #include <sys/uio.h>
 #include <sys/socket.h>
+
+/****************************************
+** Condor-specific system definitions
+****************************************/
+#define HAS_U_TYPES				1
+
+#if defined( Solaris26) 
+#	define HAS_64BIT_STRUCTS	1
+#	define HAS_64BIT_SYSCALLS	1
+#endif
 
 #endif /* CONDOR_SYS_SOLARIS_H */
