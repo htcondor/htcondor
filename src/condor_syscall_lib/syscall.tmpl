@@ -97,6 +97,8 @@
 #if !defined(MODE_T)
 #	if defined(AIX32)
 #		define MODE_T ulong_t
+#	elif defined(Solaris)
+#		define MODE_T unsigned long
 #	else
 #		define MODE_T unsigned int
 #	endif
@@ -139,6 +141,10 @@
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
+#endif	/* not SWITCH and not CLIP */
+
+#if !defined(SWITCH)
+/* No switches for pseudo_syscalls */
 	int register_afs_cell( const char *cell ) : pseudo {
 		SEND_PATH( cell );
 		ALLOC_PATH( cell );
@@ -151,22 +157,7 @@
 		SEND_PATH( domain );
 		ALLOC_PATH( domain );
 	}
-#endif	/* not SWITCH and not CLIP */
-
-#if !(!defined (SWITCH) && !defined(CLIP)) && defined(Solaris)
-	int register_afs_cell( const char *cell ) : pseudo {
-        SEND_PATH( cell );
-        ALLOC_PATH( cell );
-    }
-    int register_fs_domain( const char *domain ) : pseudo {
-        SEND_PATH( domain );
-        ALLOC_PATH( domain );
-    }
-    int register_uid_domain( const char *domain ) : pseudo {
-        SEND_PATH( domain );
-        ALLOC_PATH( domain );
-    }
-
+#endif
 
 #if !defined( CLIP )
 	int link( const char *p1, const char *p2 ) {
@@ -419,17 +410,17 @@ int rename( const char *from, const char *to ) : pseudo {
 #if !defined( CLIP )
 
 #	if !defined(AIX32)
-		int fstat( map(int fd), struct stat *buf ) {
+	int fstat( map(int fd), struct stat *buf ) {
 			out xdr_stat( buf );
 			alloc( buf, STAT_SIZE );
 		}
-		int stat( const char *path, struct stat *buf ) {
+    int stat( const char *path, struct stat *buf ) {
 			SEND_PATH( path );
 			ALLOC_PATH( path );
 			out xdr_stat( buf );
 			alloc( buf, STAT_SIZE );
 		}
-		int lstat( const char *path, struct stat *buf ) {
+    int lstat( const char *path, struct stat *buf ) {
 			SEND_PATH( path );
 			ALLOC_PATH( path );
 			out xdr_stat( buf );
@@ -489,7 +480,7 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 		alloc( buf, buf_size );
 	}
 #else
-	int readlink( const char *path, char *buf, int buf_size ) {
+	int readlink( const char *path, void *buf, int buf_size ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 		out xdr_bytes( &buf, buf_size, buf_size );
@@ -609,7 +600,7 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 		alloc( times, TIMEVAL_ARRAY_SIZE );
 	}
 	int gethostid();
-#if defined(HPUX9) || defined(LINUX)
+#if defined(HPUX9) || defined(LINUX) || defined(Solaris)
 	int setrlimit( int resource, const  struct rlimit *rlp ) {
 #else
 	int setrlimit( int resource, /* const */ struct rlimit *rlp ) {
@@ -776,7 +767,11 @@ not_supported {
 	int setlogin( char *name );
 	int revoke( char *path );
 	int chroot( const char *path );
+#if defined(Solaris)
+	int setgroups( int gidsetsize, const gid_t grouplist[] );
+#else
 	int setgroups( int gidsetsize, gid_t grouplist[] );
+#endif
 	int plock( int op );
 	int adjtime( struct timeval *delta, struct timeval *old_delta );
 	int sethostid( int host_id );
@@ -795,8 +790,15 @@ not_supported {
 	int setdomainname( const char *name, size_t namelen );
 	int swapon( const char *path );
 #else
-	int mount( char *spec, char *dir, int mflag, int fstyp, char *pt, int len );
-	int acct( char *path );
+
+	#if defined(Solaris)
+		int mount( const char *spec, const char *dir, int mflag, int fstyp, char *pt, int len );
+		int acct( const char *path );
+	#else
+		int mount( char *spec, char *dir, int mflag, int fstyp, char *pt, int len );
+		int acct( char *path );
+	#endif
+
 	void reboot( int howto );
 	int sethostname( char *address, int address_len );
 	int settimeofday( struct timeval *tp, struct timezone *tzp );
@@ -820,8 +822,12 @@ not_supported {
 	int exec_with_loader( int flags, const char *loader, const char *file,
 					  char * const argv[], char * const envp[] );
 	pid_t wait4( pid_t pid, int *status, int options, struct rusage *ru );
+#if defined(Solaris)
+	int ptrace( int req, long process, int address, int data);
+#else
 	int ptrace( long req, long int process, unsigned long *address,
 						unsigned long data );
+#endif
 	int setpgid( pid_t process_id, pid_t gid );
 }
 
@@ -862,6 +868,8 @@ not_supported {
 #if defined(LINUX)
 	int profil( char *buf, int buf_size, int offset,
 				 int scale );
+#elif defined(Solaris)
+	void profil( short *buf, unsigned int buf_size, int offset, unsigned int scale);
 #else
 	void profil( short *buf, unsigned int buf_size, unsigned int offset,
 				 unsigned int scale );
@@ -1058,4 +1066,8 @@ not_supported {
 
 	}
 		
+#if defined(Solaris)
+#undef static
+#endif
+
 #endif /* not CLIP */
