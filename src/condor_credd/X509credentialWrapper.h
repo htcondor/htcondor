@@ -19,6 +19,7 @@ public:
 #define GET_DELEGATION_FD_NONE	(-1)
   int get_delegation_err_fd;
   char  * get_delegation_err_filename;
+  char  * get_delegation_err_buff;
   int get_delegation_password_pipe[2]; // to send pwd via stdin
   void get_delegation_reset(void);
 

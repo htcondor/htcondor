@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <unistd.h>
 
@@ -837,7 +838,7 @@ int MyProxyGetDelegationReaper(Service *, int exitPid, int exitStatus)
   } //elihw
 
 	if (matched_entry) {
-		if (exitStatus != 0) {
+		while (exitStatus != 0) {
 
 		int read_fd = matched_entry->get_delegation_err_fd;	// shorthand
 		off_t offset = lseek(read_fd, 0, SEEK_SET);	// rewind
@@ -849,11 +850,29 @@ int MyProxyGetDelegationReaper(Service *, int exitPid, int exitStatus)
 					matched_entry->get_delegation_err_filename,
 					strerror(errno)
 				);
+			break;
 		}
 
-		char buff[500];
-		memset(buff, 0, sizeof(buff) );
-		int bytes_read = read (read_fd, buff, sizeof(buff)-1 );
+		struct stat statbuf;
+		int status = fstat(read_fd, &statbuf);
+		if (status == -1) {
+			dprintf (D_ALWAYS, "myproxy-get-delegation for proxy (%s, %s), "
+					"stderr tmp file %s fstat() failed: %s\n", 
+					matched_entry->GetOwner(),
+					matched_entry->GetName(),
+					matched_entry->get_delegation_err_filename,
+					strerror(errno)
+				);
+			break;
+		}
+		matched_entry->get_delegation_err_buff =
+		(char *) calloc ( statbuf.st_size + 1, sizeof(char) );
+		int bytes_read =
+			read (
+					read_fd,
+					matched_entry->get_delegation_err_buff,
+					statbuf.st_size
+				);
 		if (bytes_read < 0 ) {
 			dprintf (D_ALWAYS, "myproxy-get-delegation for proxy (%s, %s), "
 					"stderr tmp file %s read() failed: %s\n", 
@@ -862,32 +881,36 @@ int MyProxyGetDelegationReaper(Service *, int exitPid, int exitStatus)
 					matched_entry->get_delegation_err_filename,
 					strerror(errno)
 				);
+			break;
 		}
 
 		if ( WIFEXITED(exitStatus) ) {
 			dprintf (D_ALWAYS, "myproxy-get-delegation for proxy (%s, %s),  "
-				"exited with status %d, output (top):\n%s\n\n",
+				"exited with status %d, output:\n%s\n\n",
 				matched_entry->GetOwner(),
 				matched_entry->GetName(),
 				WEXITSTATUS(exitStatus),
-				buff
+				matched_entry->get_delegation_err_buff
 			);
+			break;
 		} else if ( WIFSIGNALED(exitStatus) ) {
 			dprintf (D_ALWAYS, "myproxy-get-delegation for proxy (%s, %s),  "
-				"terminated by signal %d, output (top):\n%s\n\n",
+				"terminated by signal %d, output:\n%s\n\n",
 				matched_entry->GetOwner(),
 				matched_entry->GetName(),
 				WTERMSIG(exitStatus),
-				buff
+				matched_entry->get_delegation_err_buff
 			);
+			break;
 		} else {
 			dprintf (D_ALWAYS, "myproxy-get-delegation for proxy (%s, %s),  "
-				"unknown status %d, output (top):\n%s\n\n",
+				"unknown status %d, output:\n%s\n\n",
 				matched_entry->GetOwner(),
 				matched_entry->GetName(),
 				exitStatus,
-				buff
+				matched_entry->get_delegation_err_buff
 			);
+			break;
 		}
 
     } // if exitStatus != 0
