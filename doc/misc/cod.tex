@@ -152,7 +152,7 @@ To run an application under a COD resource, a user must define certain
 characteristics about the application.
 For example, they must specify what executable or script to use, what
 directory to run the application in, optionally define command-line
-arguments, files to use for standard input and output, etc.
+arguments, files to use for standard input and output, and so on.
 
 COD users must specify a ClassAd that describes these characteristics
 of their application.  
@@ -177,9 +177,9 @@ or some combination of both) the application's executable and input
 data must be pre-installed on the COD resource.
 This is a current limitation of Condor's support for COD that will
 eventually go away.
-For now, there is no mechanism to transfer files automatically for a
-COD application, and all I/O must be performed locally or onto a
-network filesystem that is accessible via a given COD resource.
+For now, there is no mechanism to transfer files for a COD
+application, and all I/O must be performed locally or onto a network
+filesystem that is accessible via a given COD resource.
 
 The following three sections describe this process in more detail.
 The first lists all the attributes that can be used to define a COD
@@ -436,8 +436,8 @@ they invoked \Condor{cod\_activate} (described below).
 \Note If a user is defining all attributes of their COD application in
 the Condor configuration files, and the \Condor{startd} on the COD
 resource they are using is running as root, the user must also define
-\Attr{Owner} to be the user that the COD application should run as (as
-described above).
+\Attr{Owner} to be the user that the COD application should run as
+(see section~\ref{sec:cod-application-attributes} above). 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -447,14 +447,35 @@ Defining Attributes with the \Condor{cod} Tool}
 tool}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\Todo
+COD users can define attributes dynamically at the time they spawn a
+given COD application.
+In this case, the ClassAd attributes are written into a file and the
+filename is passed to the \Condor{cod\_activate} tool using the
+\Opt{-jobad} command-line option.
+These attributes are read by the \Condor{cod} tool and passed through
+the system onto the Condor{starter} which spawns the COD application. 
+If the filename given is \File{-}, the \Condor{cod} tool will read
+from standard input (STDIN).
 
-\Note You should not define \Attr{Owner} in this case, since Condor
-will automatically insert the right value for you based on how you
-authenticate to the COD resource.  
-If you define something that does not match your authenticated
-identity, Condor will treat it as an error and fail to launch your
-application. 
+% TODO
+% For more information about using \Condor{cod\_activate}, see the
+% command reference on page~\pageref{man-condor-submit}
+
+Users should not add a keyword prefix (as described above in the
+section on using the configuration file) when defining attributes with
+the \Condor{cod\_activate} tool.
+The attribute names can be used in the file directly.
+
+\Warn The current syntax for this file is not the same as the syntax
+in the file used with \Condor{submit}.
+
+\Note Users should not define \Attr{Owner} in this case, since Condor
+will automatically insert the right value based on what user runs the
+\Condor{cod\_activate} command and how that user authenticates to the
+COD resource.
+If a user defines something that does not match their authenticated
+identity, Condor will treat it as an error and fail to launch the
+application.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
