@@ -63,6 +63,8 @@ get_full_hostname( const char* host, struct in_addr* sin_addrp )
 	}
 	if( sin_addrp ) {
 		*sin_addrp = *(struct in_addr*)(host_ptr->h_addr_list[0]);
+		dprintf( D_HOSTNAME, "Found IP addr in hostent: %s\n", 
+				 inet_ntoa(*sin_addrp) );
 	}
 
 		// now that we have a hostent, call our helper to find the
