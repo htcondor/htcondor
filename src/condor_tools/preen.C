@@ -677,7 +677,7 @@ State
 get_machine_state()
 {
 	char* addr = get_startd_addr(0);
-	char* state_str;
+	char* state_str = NULL;
 	State s;
 
 	if( !addr ) {
