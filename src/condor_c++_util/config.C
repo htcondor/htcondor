@@ -36,8 +36,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "expr.h"
-#include "debug.h"
-#include "except.h"
+#include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_classad.h"
 #include "condor_string.h"
