@@ -167,6 +167,21 @@ class String : public StringBase
 };
 
 
+class Time : public TimeBase
+{
+    public :
+
+  	Time(char* s) : TimeBase(s) {}
+	virtual int         CalcPrintToStr(void);
+    virtual void        PrintToStr(char*);
+	virtual ExprTree*     DeepCopy(void) const;
+
+	protected:
+
+  	virtual int         _EvalTree(AttrList*, EvalResult*);
+    virtual int         _EvalTree(AttrList*,AttrList*, EvalResult*);
+};
+
 class Boolean : public BooleanBase
 {
     public :

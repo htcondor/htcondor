@@ -253,6 +253,30 @@ class StringBase : public ExprTree
 		char*           value;
 };
 
+class TimeBase : public ExprTree
+{
+    public :
+
+	TimeBase(char*);
+	virtual ~TimeBase();
+
+	virtual int	    operator ==(ExprTree&);
+
+	virtual void	Display();
+	char*	const	Value();
+
+	friend	class	ExprTree;
+
+    protected :
+		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
+
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+        int                 stringSpaceIndex;
+#endif 
+		char                *time;
+};
+
 class BooleanBase : public ExprTree
 {
     public :
