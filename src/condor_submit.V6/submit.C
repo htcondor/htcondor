@@ -882,7 +882,6 @@ SetUniverse()
 	};
 
 
-
 	if( univ && stricmp(univ,"globus") == MATCH ) {
 		if ( have_condor_g() == 0 ) {
 			fprintf( stderr, "This version of Condor doesn't support Globus Universe jobs.\n" );
@@ -2368,17 +2367,31 @@ SetGlobusParams()
 	}
 
 	sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_RESOURCE, globushost );
-	InsertJobExpr (buffer, false );
+	InsertJobExpr (buffer);
+
+	if ( strstr(globushost,"$$") ) {
+		// We need to perform matchmaking on the job in order to find
+		// the GlobusScheduler.
+		sprintf(buffer,"%s = FALSE", ATTR_JOB_MATCHED);
+		InsertJobExpr (buffer);
+		sprintf(buffer,"%s = 0", ATTR_CURRENT_HOSTS);
+		InsertJobExpr (buffer);
+		sprintf(buffer,"%s = 1", ATTR_MAX_HOSTS);
+		InsertJobExpr (buffer);
+	}
 
 	free( globushost );
 
 	sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_CONTACT_STRING,
 			 NULL_JOB_CONTACT );
-	InsertJobExpr (buffer, false );
+	InsertJobExpr (buffer);
 
 	sprintf( buffer, "%s = %d", ATTR_GLOBUS_STATUS,
 			 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED );
-	InsertJobExpr (buffer, false );
+	InsertJobExpr (buffer);
+
+	sprintf( buffer, "%s = False", ATTR_WANT_CLAIMING );
+	InsertJobExpr(buffer);
 
 	sprintf( buffer, "%s = 0", ATTR_NUM_GLOBUS_SUBMITS );
 	InsertJobExpr (buffer, false );
@@ -2395,7 +2408,7 @@ SetGlobusParams()
 	if ( (tmp = condor_param(GlobusRSL)) ) {
 		sprintf( buff, "%s = \"%s\"", ATTR_GLOBUS_RSL, tmp );
 		free( tmp );
-		InsertJobExpr ( buff, false );
+		InsertJobExpr ( buff );
 	}
 }
 
@@ -2795,10 +2808,12 @@ queue(int num)
 
 			char *rm_contact = condor_param( GlobusScheduler );
 
+#ifndef WIN32
 			if ( check_x509_proxy(proxy_file) != 0 ) {
 				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
 				exit( 1 );
 			}
+#endif
 			
 /*
 			if ( rm_contact && (check_globus_rm_contacts(rm_contact) != 0) ) {
@@ -2997,6 +3012,14 @@ check_requirements( char *orig )
 		free( ptr );
 	}
 
+	if ( JobUniverse == CONDOR_UNIVERSE_GLOBUS ) {
+		// We don't want any defaults at all w/ Globus...
+		// If we don't have a req yet, set to TRUE
+		if ( answer[0] == '\0' ) {
+			sprintf(answer,"TRUE");
+		}
+		return answer;
+	}
 
 	checks_arch = findClause( answer, ATTR_ARCH );
 	checks_opsys = findClause( answer, ATTR_OPSYS );

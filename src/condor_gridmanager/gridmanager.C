@@ -827,6 +827,14 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 						  curr_job->procID.proc,
 						  ATTR_JOB_MANAGED,
 						  "FALSE" );
+			SetAttribute( curr_job->procID.cluster,
+						  curr_job->procID.proc,
+						  ATTR_JOB_MATCHED,
+						  "FALSE" );
+			SetAttributeInt( curr_job->procID.cluster,
+						  curr_job->procID.proc,
+						  ATTR_CURRENT_HOSTS,
+						  0 );
 		}
 
 		if ( curr_action->actions & UA_DELETE_FROM_SCHEDD ) {
@@ -859,26 +867,34 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 		// when we first start up in case we're recovering from a
 		// shutdown/meltdown.
 		// Otherwise, grab all jobs that are unheld and aren't marked as
-		// currently being managed.
+		// currently being managed and aren't marked as not matched.
 		// If JobManaged is undefined, equate it with false.
+		// If Matched is undefined, equate it with true.
 		if ( firstScheddContact ) {
 //			sprintf( expr_buf, "%s && %s == %d && !(%s == %d && %s =!= TRUE)",
-			sprintf( expr_buf, "%s && %s == %d && (%s == %d && %s =!= TRUE) == FALSE",
-					 owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
-					 ATTR_JOB_STATUS, HELD, ATTR_JOB_MANAGED );
+			sprintf( expr_buf, 
+				"%s && %s == %d && (%s =!= FALSE || %s =?= TRUE) && (%s == %d && %s =!= TRUE) == FALSE",
+					 owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS, 
+					 ATTR_JOB_MATCHED, ATTR_JOB_MANAGED, ATTR_JOB_STATUS, HELD,
+					 ATTR_JOB_MANAGED );
 		} else {
-			sprintf( expr_buf, "%s && %s == %d && %s != %d && %s =!= TRUE",
+			sprintf( expr_buf, 
+				"%s && %s == %d && %s =!= FALSE && %s != %d && %s =!= TRUE",
 					 owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
-					 ATTR_JOB_STATUS, HELD, ATTR_JOB_MANAGED );
+					 ATTR_JOB_MATCHED, ATTR_JOB_STATUS, HELD, ATTR_JOB_MANAGED );
 		}
 
 		next_ad = GetNextJobByConstraint( expr_buf, 1 );
 		while ( next_ad != NULL ) {
 			PROC_ID procID;
 			GlobusJob *old_job;
+			int job_is_managed = 0;		// default to false if not in ClassAd
+			int job_is_matched = 1;		// default to true if not in ClassAd
 
 			next_ad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
 			next_ad->LookupInteger( ATTR_PROC_ID, procID.proc );
+			next_ad->LookupBool(ATTR_JOB_MANAGED,job_is_managed);
+			next_ad->LookupBool(ATTR_JOB_MATCHED,job_is_matched);
 
 			if ( JobsByProcID.lookup( procID, old_job ) != 0 ) {
 
@@ -886,8 +902,31 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 				char resource_name[800];
 				GlobusResource *resource = NULL;
 
+				// job had better be either managed or matched! (or both)
+				ASSERT( job_is_managed || job_is_matched );
+
 				resource_name[0] = '\0';
-				next_ad->LookupString( ATTR_GLOBUS_RESOURCE, resource_name );
+				int must_expand = 0;
+
+					next_ad->LookupBool(ATTR_JOB_MUST_EXPAND, must_expand);
+					if ( !must_expand ) {
+						next_ad->LookupString(ATTR_GLOBUS_RESOURCE, resource_name);
+						if ( strstr(resource_name,"$$") ) {
+							must_expand = 1;
+						}
+					}
+
+					if (must_expand) {
+						// Get the expanded ClassAd from the schedd, which
+						// has the globus resource filled in with info from
+						// the matched ad.
+						delete next_ad;
+						next_ad = NULL;
+						next_ad = GetJobAd(procID.cluster,procID.proc);
+						ASSERT(next_ad);
+						resource_name[0] = '\0';
+						next_ad->LookupString(ATTR_GLOBUS_RESOURCE, resource_name);
+					}
 
 				if ( resource_name[0] == '\0' ) {
 
@@ -943,10 +982,12 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 					JobsByProcID.insert( new_job->procID, new_job );
 					num_ads++;
 
-					SetAttribute( new_job->procID.cluster,
+					if ( !job_is_managed ) {
+						SetAttribute( new_job->procID.cluster,
 								  new_job->procID.proc,
 								  ATTR_JOB_MANAGED,
 								  "TRUE" );
+					}
 
 				}
 
@@ -958,13 +999,14 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 			}
 
 			next_ad = GetNextJobByConstraint( expr_buf, 0 );
-		}
+		}	// end of while next_ad
 
 		dprintf(D_FULLDEBUG,"Fetched %d new job ads from schedd\n",num_ads);
 
 		firstScheddContact = false;
 		addJobsSignaled = false;
-	}
+	}	// end of handling add jobs
+
 	/////////////////////////////////////////////////////
 
 	// RemoveJobs

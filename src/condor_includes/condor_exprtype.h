@@ -80,6 +80,9 @@ typedef enum
 
   LX_TIME,
 
+  LX_FUNCTION,
+  LX_SEMICOLON,
+
   NOT_KEYWORD
 } LexemeType;
 

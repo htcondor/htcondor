@@ -33,6 +33,7 @@
 #include "condor_exprtype.h"
 #include "condor_ast.h"
 #include "condor_scanner.h"
+#include "condor_string.h"
 
 Token &nextToken()
 {
@@ -47,7 +48,7 @@ extern	void		Scanner(char*&, Token&);
 int ParseExpr(char*& s, ExprTree*&, int&);
 
 #ifndef USE_STRING_SPACE_IN_CLASSADS
-static	char*	StrCpy(char* str)
+static	char*	StrCpy(const char* str)
 {
 	char*	tmpStr = new char[strlen(str)+1];
 
@@ -113,6 +114,62 @@ Match(LexemeType t, char*& s, int& count)
 // intermediate parse functions.
 ///////////////////////////////////////////////////////////////////////////////
 
+#ifdef CLASSAD_FUNCTIONS
+int
+ParseFunction(char *functionName, char*& s, ExprTree*& newTree, int& count)
+{
+	int       parse_succeeded;
+	Token     *t;
+	Function  *function;
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+	newTree = new Function(functionName);
+#else
+	newTree = new Function(StrCpy(functionName));
+#endif
+
+	function = (Function *) newTree;
+
+	t = ReadToken(s); // That's the right paren
+	count += t->length;
+
+	parse_succeeded = FALSE;
+
+	t = LookToken(s);
+	if (t->type == LX_RPAREN) {
+		ReadToken(s);
+	} else {
+		while (1) {
+			ExprTree *argument;
+			if (ParseExpr(s, argument, count)) {
+				function->AppendArgument(argument);
+				
+				Token *next_token;
+				
+				next_token = LookToken(s);
+				if (next_token->type == LX_RPAREN) {
+					ReadToken(s);
+					count += next_token->length;
+					parse_succeeded = TRUE;
+					break;
+				} else if (next_token->type == LX_SEMICOLON) {
+					ReadToken(s);
+					count += next_token->length;
+					continue;
+				} else {
+					parse_succeeded = FALSE;
+					break;
+				}
+			} else {
+				parse_succeeded = FALSE;
+				break;
+			}
+		}
+	}
+
+	return parse_succeeded;
+}
+#endif
+
 int 
 ParseFactor(char*& s, ExprTree*& newTree, int& count)
 {
@@ -124,12 +181,31 @@ ParseFactor(char*& s, ExprTree*& newTree, int& count)
         case LX_VARIABLE :
 
             t = ReadToken(s);
+
 #ifdef USE_STRING_SPACE_IN_CLASSADS
 			newTree = new Variable(t->strVal);
 #else
             newTree = new Variable(StrCpy(t->strVal));
 #endif
     		count = count + t->length;
+
+#ifdef CLASSAD_FUNCTIONS
+			{
+				Token *next_token;
+
+				next_token = LookToken(s);
+				if (next_token->type == LX_LPAREN) {
+					// Oops, we didn't really want a variable
+					char *function_name;
+					function_name = strnewp(((Variable *)newTree)->Name());
+					delete newTree;
+					newTree = NULL;
+					ParseFunction(function_name, s, newTree, count);
+					delete [] function_name;
+					break;
+				}
+			}
+#endif
             break;
 
 		case LX_UNDEFINED:
@@ -654,7 +730,6 @@ Parse(const char* s, ExprTree*& tree)
 		delete tree;
 		tree = NULL;
 	}
-
 	nextToken().reset();
 	free(str);
     return count;

@@ -1272,53 +1272,75 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	char *capability;
 	SafeSock startdSock;
 	bool send_failed;
+	int want_claiming = -1;
+
+	strcpy(startdAddr, "<0.0.0.0:0>");
+	strcpy(startdName,"unknown");
+	offer->LookupString (ATTR_NAME, startdName);
 
 	// these will succeed
 	request.LookupInteger (ATTR_CLUSTER_ID, cluster);
 	request.LookupInteger (ATTR_PROC_ID, proc);
 
+	// see if offer supports claiming or not
+	offer->LookupBool(ATTR_WANT_CLAIMING,want_claiming);
+	// if offer says nothing, see if request says something
+	if ( want_claiming == -1 ) {
+		request.LookupBool(ATTR_WANT_CLAIMING,want_claiming);
+	}
+
 	// these should too, but may not
 	if (!offer->LookupString (ATTR_STARTD_IP_ADDR, startdAddr)		||
 		!offer->LookupString (ATTR_NAME, startdName))
 	{
-		dprintf (D_ALWAYS, "      Could not lookup %s and %s\n", 
+		// fatal error if we need claiming
+		if ( want_claiming ) {
+			dprintf (D_ALWAYS, "      Could not lookup %s and %s\n", 
 					ATTR_NAME, ATTR_STARTD_IP_ADDR);
-		return MM_BAD_MATCH;
+			return MM_BAD_MATCH;
+		}
 	}
 
 	// find the startd's capability from the private ad
-	if (!(capability = getCapability (startdName, startdAddr, startdPvtAds)))
-	{
-		dprintf(D_ALWAYS,"      %s has no capability\n", startdName);
-		return MM_BAD_MATCH;
+	if ( want_claiming ) {
+		if (!(capability = getCapability (startdName, startdAddr, startdPvtAds)))
+		{
+			dprintf(D_ALWAYS,"      %s has no capability\n", startdName);
+			return MM_BAD_MATCH;
+		}
+	} else {
+		// Claiming is *not* desired
+		capability = "null";
 	}
 	
 	// ---- real matchmaking protocol begins ----
 	// 1.  contact the startd 
-	dprintf (D_FULLDEBUG, "      Connecting to startd %s at %s\n", 
-				startdName, startdAddr); 
+	if ( want_claiming ) {
+		dprintf (D_FULLDEBUG, "      Connecting to startd %s at %s\n", 
+					startdName, startdAddr); 
 
-    startdSock.timeout (NegotiatorTimeout);
-	if (!startdSock.connect (startdAddr, 0))
-	{
-		dprintf(D_ALWAYS,"      Could not connect to %s\n", startdAddr);
-		return MM_BAD_MATCH;
-	}
+		startdSock.timeout (NegotiatorTimeout);
+		if (!startdSock.connect (startdAddr, 0))
+		{
+			dprintf(D_ALWAYS,"      Could not connect to %s\n", startdAddr);
+			return MM_BAD_MATCH;
+		}
 
-	Daemon startd (startdAddr, 0);
-	startd.startCommand (MATCH_INFO, &startdSock);
+		Daemon startd (startdAddr, 0);
+		startd.startCommand (MATCH_INFO, &startdSock);
 
-	// 2.  pass the startd MATCH_INFO and capability string
-	dprintf (D_FULLDEBUG, "      Sending MATCH_INFO/capability\n" );
-	dprintf (D_FULLDEBUG, "      (Capability is \"%s\" )\n", capability);
-	startdSock.encode();
-	if ( !startdSock.put (capability) || !startdSock.end_of_message())
-	{
-		dprintf (D_ALWAYS,"      Could not send MATCH_INFO/capability to %s\n",
-					startdName );
-		dprintf (D_FULLDEBUG, "      (Capability is \"%s\")\n", capability );
-		return MM_BAD_MATCH;
-	}
+		// 2.  pass the startd MATCH_INFO and capability string
+		dprintf (D_FULLDEBUG, "      Sending MATCH_INFO/capability\n" );
+		dprintf (D_FULLDEBUG, "      (Capability is \"%s\" )\n", capability);
+		startdSock.encode();
+		if ( !startdSock.put (capability) || !startdSock.end_of_message())
+		{
+			dprintf (D_ALWAYS,"      Could not send MATCH_INFO/capability to %s\n",
+						startdName );
+			dprintf (D_FULLDEBUG, "      (Capability is \"%s\")\n", capability );
+			return MM_BAD_MATCH;
+		}
+	}	// end of if want_claiming
 
 	// 3.  send the match and capability to the schedd
 	sock->encode();

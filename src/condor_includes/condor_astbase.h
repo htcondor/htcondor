@@ -453,4 +453,32 @@ class AssignOpBase : public BinaryOpBase
 									  StringList &external_references) const;
 };
 
+#ifdef CLASSAD_FUNCTIONS
+class FunctionBase : public ExprTree
+{
+    public :
+
+		FunctionBase(char *);
+		virtual         ~FunctionBase();
+		virtual int	    operator==(ExprTree&);
+		
+		virtual void    GetReferences(const AttrList *base_attrlist,
+									  StringList &internal_references,
+									  StringList &external_references) const;
+		friend  class   ExprTree;
+		friend	class	AttrList;
+
+		void AppendArgument(ExprTree *argument);
+
+    protected :
+
+		List<ExprTree>     arguments;
+
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+        int                 stringSpaceIndex;
+#endif 
+  		char*               name;
+};
+#endif /* CLASSAD_FUNCTIONS */
+
 #endif

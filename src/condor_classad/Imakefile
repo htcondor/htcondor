@@ -1,7 +1,7 @@
 all_target(libclassad.a)
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = -DCLASSAD_FUNCTIONS -Wall $(STD_C_PLUS_FLAGS)
+CFLAGS = -Wall $(STD_C_FLAGS)
 LIB = $(STD_LIBS)
 
 
@@ -16,8 +16,12 @@ library_target(libclassad.a,$(OBJ))
 
 c_plus_target(test, test.o, libclassad.a $(CUTIL_LIB))
 c_plus_target(test_classads, test_classads.o, $(LIB))
+c_plus_target(test_functions, test_functions.o, $(LIB))
 pure_c_plus_target(test_classads.pure, test_classads.o, $(LIB))
 pure_c_plus_target(test.pure, test.o, libclassad.a $(CUTIL_LIB))
+
+shared:
+	gcc -fPIC -shared -o libshared.so shared.C
 
 clean::
 	rm -f *.o libclassad.a

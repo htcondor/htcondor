@@ -152,6 +152,7 @@ ClassAdLog::TruncLog()
 	char	tmp_log_filename[_POSIX_PATH_MAX];
 	int new_log_fd;
 
+	dprintf(D_FULLDEBUG,"About to truncate log %s\n",log_filename);
 	sprintf(tmp_log_filename, "%s.tmp", log_filename);
 	new_log_fd = open(tmp_log_filename, O_RDWR | O_CREAT, 0600);
 	if (new_log_fd < 0) {
@@ -337,6 +338,7 @@ ClassAdLog::LogState(int fd)
 	char		key[_POSIX_PATH_MAX];
 	char		*attr_name = NULL;
 	char		*attr_val;
+	void*		chain;
 
 	table.startIterations();
 	while(table.iterate(ad) == 1) {
@@ -347,6 +349,9 @@ ClassAdLog::LogState(int fd)
 			EXCEPT("write to %s failed, errno = %d", log_filename, errno);
 		}
 		delete log;
+			// Unchain the ad -- we just want to write out this ads exprs,
+			// not all the exprs in the chained ad as well.
+		chain = ad->unchain();
 		ad->ResetName();
 		attr_name = ad->NextName();
 		while (attr_name) {
@@ -365,6 +370,8 @@ ClassAdLog::LogState(int fd)
 				attr_name = ad->NextName();
 			}
 		}
+			// ok, now that we're done writing out this ad, restore the chain
+		ad->RestoreChain(chain);
 	}
 	if (fsync(fd) < 0) {
 		EXCEPT("fsync of %s failed, errno = %d", log_filename, errno);

@@ -27,6 +27,9 @@
 #include "stringSpace.h"
 #include "condor_scanner.h" 
 #include "iso_dates.h"
+#ifdef CLASSAD_FUNCTIONS
+#include "condor_config.h"
+#endif
 
 /*----------------------------------------------------------
  *
@@ -43,7 +46,11 @@ extern StringSpace classad_string_space; // for debugging only!
 #define NUMBER_OF_CLASSAD_STRINGS (sizeof(classad_strings)/sizeof(char *))
 char *classad_strings[] = 
 {
+#ifdef CLASSAD_FUNCTIONS
+	"A = 1, B=2, C = 3, D='2001-04-05T12:14:15', E=script(\"testscript\";\"|/dev/zero\";3), G=GetTime(1), H=foo(1)",
+#else
 	"A = 1, B=2, C = 3, D='2001-04-05T12:14:15', E=TRUE",
+#endif
 	"A = 1, B=2, C = 3, D = \"alain\", MyType=\"foo\", TargetType=\"blah\"",
 
 	"Rank = (Memory >= 50)",
@@ -185,6 +192,10 @@ void test_not_in_references(char *name,	StringList &references,
     int line_number, TestResults *results);
 void test_dirty_attribute(
     TestResults *results);
+#ifdef CLASSAD_FUNCTIONS
+static void test_functions(
+	TestResults  *results);
+#endif
 void print_truncated_string(const char *s, int max_characters);
 static void make_big_string(int length, char **string,
     char **quoted_string);
@@ -243,6 +254,7 @@ main(
 			delete original;
 			classads[classad_index] = duplicate;
 		}
+
 		if (parameters.verbose) {
 			printf("ClassAd %d:\n", classad_index);
 			classads[classad_index]->fPrint(stdout);
@@ -288,7 +300,9 @@ main(
 	}
 
 	if (parameters.test_classads) {
+
 		printf("\nTesting ClassAds...\n");
+		
 		test_integer_value(classads[0], "A", 1, __LINE__, &test_results);
 		test_integer_value(classads[0], "B", 2, __LINE__, &test_results);
 		test_integer_value(classads[0], "C", 3, __LINE__, &test_results);
@@ -401,6 +415,11 @@ main(
 	if (parameters.test_dirty) {
 		test_dirty_attribute(&test_results);
 	}
+
+#ifdef CLASSAD_FUNCTIONS
+	test_functions(&test_results);
+#endif
+
 	//ClassAd *many_ads[LARGE_NUMBER_OF_CLASSADS];
 	/*
 	for (int i = 0; i < LARGE_NUMBER_OF_CLASSADS; i++) {
@@ -1357,6 +1376,108 @@ test_dirty_attribute(
 
 	return;
 }
+
+#ifdef CLASSAD_FUNCTIONS
+static void test_functions(
+	TestResults  *results)     // OUT: Modified to reflect result of test
+{
+	char   big_string[1024];
+	int    integer;
+    float  real;
+	char classad_string[] = "A=script(\"scriptfloat\"),"
+                            "B=script(\"scriptinteger\"),"
+	                        "C=script(\"scriptstring\"; \"|/dev/zero\"),"
+	                        "D=GetTime(),"
+		                    "E=sharedstring(),"
+                            "G=sharedinteger(2),"
+	                        "H=sharedfloat(3.14)";
+	ClassAd  *classad;
+
+	config(0);
+
+	classad = new ClassAd(classad_string, ',');
+	if (classad == NULL) {
+		printf("Can't parse ClassAd for testing functions in line %d\n", 
+			   __LINE__);
+		results->AddResult(false);
+	} else {
+		printf("Parsed ClassAd for testing functions in line %d\n", 
+			   __LINE__);
+		results->AddResult(true);
+
+		if (classad->EvalFloat("A", NULL, real)) {
+			printf("Passed: Evaluting scriptfloat gives: %f in line %d\n", 
+				   real, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed to evaluate scriptfloat in line %d\n",
+				   __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalInteger("B", NULL, integer)) {
+			printf("Passed: Evaluting scriptinteger gives: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating scriptinteger in line %d\n",
+				   __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalString("C", NULL, big_string)) {
+			printf("Passed: Evaluting scriptstring gives: '%s', in line %d\n", 
+				   big_string, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating scriptstring in line %d\n",
+				   __LINE__);
+			results->AddResult(false);
+		} 
+
+		if (classad->EvalInteger("D", NULL, integer)) {
+			printf("Passed: Evaluting gettime function gives: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating gettime function in line %d\n",
+				   __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalString("E", NULL, big_string)) {
+			printf("Passed: Evaluating sharedstring function gives: '%s' in line %d\n", 
+				   big_string, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating foo sharedstring in line %d\n",
+				   __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalInteger("G", NULL, integer)) {
+			printf("Passed: Evaluting sharedinteger gives: %d in line %d\n", 
+				   integer, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating sharedinteger in line %d\n",
+				   __LINE__);
+			results->AddResult(false);
+		}
+
+		if (classad->EvalFloat("H", NULL, real)) {
+			printf("Passed: Evaluting sharedfloat gives: %f in line %d\n", 
+				   real, __LINE__);
+			results->AddResult(true);
+		} else {
+			printf("Failed: Evaluating sharedfloat in line %d\n",
+				   __LINE__);
+			results->AddResult(false);
+		}
+	}
+	return;
+}
+#endif
 
 /***************************************************************
  *

@@ -112,7 +112,7 @@ void mark_job_running(PROC_ID*);
 int fixAttrUser( ClassAd *job );
 shadow_rec * find_shadow_rec(PROC_ID*);
 shadow_rec * add_shadow_rec(int, PROC_ID*, match_rec*, int);
-bool service_this_universe(int);
+bool service_this_universe(int, ClassAd*);
 
 int	WallClockCkptInterval = 0;
 static bool gridman_per_job = false;
@@ -270,6 +270,7 @@ Scheduler::Scheduler()
 	shadowsByPid = NULL;
 
 	shadowsByProcID = NULL;
+	resourcesByProcID = NULL;
 	numMatches = 0;
 	numShadows = 0;
 	IdleSchedUniverseJobIDs = NULL;
@@ -347,6 +348,14 @@ Scheduler::~Scheduler()
 	}
 	if (shadowsByProcID) {
 		delete shadowsByProcID;
+	}
+	if ( resourcesByProcID ) {
+		resourcesByProcID->startIterations();
+		ClassAd* ad;
+		while (resourcesByProcID->iterate(ad) == 1) {
+			if (ad) delete ad;
+		}
+		delete resourcesByProcID;
 	}
 	if (FlockCollectors) delete FlockCollectors;
 	if (FlockNegotiators) delete FlockNegotiators;
@@ -887,37 +896,16 @@ count( ClassAd *job )
 	// insert owner even if REMOVED or HELD for condor_q -{global|sub}
 	int OwnerNum = scheduler.insert_owner( owner, x509userproxy );
 
-	if ( !service_this_universe(universe)  ) 
+	if ( (universe != CONDOR_UNIVERSE_GLOBUS) &&	// handle Globus below...
+		 (!service_this_universe(universe,job))  ) 
 	{
+			// Deal with all the Universes which we do not service, expect
+			// for Globus, which we deal with below.
 		if ( universe == CONDOR_UNIVERSE_SCHEDULER ) {
 			// don't count REMOVED or HELD jobs
 			if (status == IDLE || status == UNEXPANDED || status == RUNNING) {
 				scheduler.SchedUniverseJobsRunning += cur_hosts;
 				scheduler.SchedUniverseJobsIdle += (max_hosts - cur_hosts);
-			}
-		}
-		if ( universe == CONDOR_UNIVERSE_GLOBUS ) {
-			// for Globus, count jobs in UNSUBMITTED state by owner.
-			// later we make certain there is a grid manager daemon
-			// per owner.
-			int needs_management = 0;
-			int job_managed = 0;
-			job->LookupBool(ATTR_JOB_MANAGED, job_managed);
-			// Don't count HELD jobs that have ATTR_JOB_MANAGED set to false.
-			if ( status != HELD || job_managed != 0 ) {
-				needs_management = 1;
-				scheduler.Owners[OwnerNum].GlobusJobs++;
-			}
-			if ( status != HELD && job_managed == 0 ) {
-				scheduler.Owners[OwnerNum].GlobusUnmanagedJobs++;
-			}
-			if ( gridman_per_job ) {
-				int cluster = 0;
-				int proc = 0;
-				job->LookupInteger(ATTR_CLUSTER_ID, cluster);
-				job->LookupInteger(ATTR_PROC_ID, proc);
-				GridUniverseLogic::JobCountUpdate(owner,x509userproxy,
-					cluster, proc, needs_management, job_managed ? 0 : 1);
 			}
 		}
 			// We want to record the cluster id of all idle MPI and parallel
@@ -933,6 +921,47 @@ count( ClassAd *job )
 		// which the schedd needs to service
 		return 0;
 	} 
+
+	if ( universe == CONDOR_UNIVERSE_GLOBUS ) {
+		// for Globus, count jobs in UNSUBMITTED state by owner.
+		// later we make certain there is a grid manager daemon
+		// per owner.
+		int needs_management = 0;
+		int job_managed = 0;
+		int real_status = status;
+		bool want_service = service_this_universe(universe,job);
+		job->LookupBool(ATTR_JOB_MANAGED, job_managed);
+		// if job is not already being managed : if we want matchmaking 
+		// for this job, but we have not found a 
+		// match yet, consider it "held" for purposes of the logic here.  we
+		// have no need to tell the gridmanager to deal with it until we've
+		// first found a match.
+		if ( (job_managed == 0) && (want_service && cur_hosts == 0) ) {
+			status = HELD;
+		}
+		// Don't count HELD jobs that have ATTR_JOB_MANAGED set to false.
+		if ( status != HELD || job_managed != 0 ) {
+			needs_management = 1;
+			scheduler.Owners[OwnerNum].GlobusJobs++;
+		}
+		if ( status != HELD && job_managed == 0 ) {
+			scheduler.Owners[OwnerNum].GlobusUnmanagedJobs++;
+		}
+		if ( gridman_per_job ) {
+			int cluster = 0;
+			int proc = 0;
+			job->LookupInteger(ATTR_CLUSTER_ID, cluster);
+			job->LookupInteger(ATTR_PROC_ID, proc);
+			GridUniverseLogic::JobCountUpdate(owner,x509userproxy,
+				cluster, proc, needs_management, job_managed ? 0 : 1);
+		}
+			// If we do not need to do matchmaking on this job (i.e.
+			// service this globus universe job), than we can bailout now.
+		if (!want_service) {
+			return 0;
+		}
+		status = real_status;	// set status back for below logic...
+	}
 
 	if (status == IDLE || status == UNEXPANDED || status == RUNNING) {
 		scheduler.JobsRunning += cur_hosts;
@@ -951,10 +980,31 @@ count( ClassAd *job )
 }
 
 bool
-service_this_universe(int universe)
+service_this_universe(int universe, ClassAd* job)
 {
 	switch (universe) {
 		case CONDOR_UNIVERSE_GLOBUS:
+			{
+				// If this Globus job is already being managed, then the schedd
+				// should leave it alone... the gridmanager is dealing with it.
+				int job_managed = 0;
+				job->LookupBool(ATTR_JOB_MANAGED, job_managed);
+				if ( job_managed ) {
+					return false;
+				}			
+				// Now if not managed, if the GlobusScheduler has a "$$", then 
+				// this job is at least _matchable_, so return true, else
+				// false.
+				char resource[500];
+				resource[0] = '\0';
+				job->LookupString(ATTR_GLOBUS_RESOURCE, resource);
+				if ( strstr(resource,"$$") ) {
+					return true;
+				} else {
+					return false;
+				}
+			}
+			break;
 		case CONDOR_UNIVERSE_MPI:
 		case CONDOR_UNIVERSE_PARALLEL:
 		case CONDOR_UNIVERSE_SCHEDULER:
@@ -2080,7 +2130,6 @@ Scheduler::negotiate(int, Stream* s)
 	char*	host = NULL;
 	char*	sinful = NULL;
 	char*	tmp;
-	char	temp[512];
 	int		jobs;						// # of jobs that CAN be negotiated
 	int		cur_cluster = -1;
 	int		cur_hosts;
@@ -2097,9 +2146,14 @@ Scheduler::negotiate(int, Stream* s)
 	Sock*	sock = (Sock*)s;
 	ContactStartdArgs * args;
 	ClassAd* my_match_ad;
+	ClassAd* ad;
+	char buffer[1024];
 
 	dprintf( D_FULLDEBUG, "\n" );
 	dprintf( D_FULLDEBUG, "Entered negotiate\n" );
+
+	// Set timeout on socket
+	s->timeout( param_integer("NEGOTIATOR_TIMEOUT",20) );
 
 	// BIOTECH
 	bool	biotech = false;
@@ -2312,15 +2366,20 @@ Scheduler::negotiate(int, Stream* s)
 			}
 		}
 
-		if (GetAttributeInt(PrioRec[i].id.cluster, PrioRec[i].id.proc,
-							ATTR_CURRENT_HOSTS, &cur_hosts) < 0) {
-			cur_hosts = 0;
-		}
 
-		if (GetAttributeInt(PrioRec[i].id.cluster, PrioRec[i].id.proc,
-							ATTR_MAX_HOSTS, &max_hosts) < 0) {
-			max_hosts = 1;
-		}
+		ad = GetJobAd( id.cluster, id.proc );
+		if (!ad) {
+			dprintf(D_ALWAYS,"Can't get job ad %d.%d\n",
+					id.cluster, id.proc );
+			continue;
+		}	
+
+		cur_hosts = 0;
+		ad->LookupInteger(ATTR_CURRENT_HOSTS,cur_hosts);
+		max_hosts = 1;
+		ad->LookupInteger(ATTR_MAX_HOSTS,max_hosts);
+		job_universe = 0;
+		ad->LookupInteger(ATTR_JOB_UNIVERSE,job_universe);
 
 		for (host_cnt = cur_hosts; host_cnt < max_hosts;) {
 
@@ -2356,44 +2415,45 @@ Scheduler::negotiate(int, Stream* s)
 					 }
 					 dprintf(D_FULLDEBUG, "Job %d.%d rejected: %s\n",
 							 id.cluster, id.proc, diagnostic_message);
-					 SetAttributeString(id.cluster, id.proc,
-										ATTR_LAST_REJ_MATCH_REASON,
-										diagnostic_message);
+					 sprintf(buffer,"%s = \"%s\"",
+						 ATTR_LAST_REJ_MATCH_REASON, diagnostic_message);
+					 ad->Insert(buffer);
 					 free(diagnostic_message);
 				 }
 					 // don't break: fall through to REJECTED case
 				 case REJECTED:
-					job_universe = 0;
-					GetAttributeInt(id.cluster, id.proc, ATTR_JOB_UNIVERSE,
-									&job_universe);
 						// Always negotiate for all PVM job classes! 
 					if ( job_universe != CONDOR_UNIVERSE_PVM && !NegotiateAllJobsInCluster ) {
 						mark_cluster_rejected( cur_cluster );
 					}
 					host_cnt = max_hosts + 1;
 					JobsRejected++;
-					SetAttributeInt(id.cluster, id.proc,
-									ATTR_LAST_REJ_MATCH_TIME, (int)time(0));
+					sprintf(buffer,"%s = %d",
+									ATTR_LAST_REJ_MATCH_TIME,(int)time(0));
+					ad->Insert(buffer);
 					break;
 				case SEND_JOB_INFO: {
 						// The Negotiator wants us to send it a job. 
 						// First, make sure we could start another
 						// shadow without violating some limit.
-					if( ! canSpawnShadow(JobsStarted, jobs) ) {
-							// We can't start another shadow.  Tell
-							// the negotiator we're done.
-						if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
-								// We failed to talk to the CM, so
-								// close the connection.
-							dprintf( D_ALWAYS, 
-									 "Can't send NO_MORE_JOBS to mgr\n" ); 
-							return( !(KEEP_STREAM) );
-						} else {
-								// Communication worked, keep the
-								// connection stashed for later.
-							return KEEP_STREAM;
+					if ( service_this_universe( job_universe,ad ) ) {
+						if( ! canSpawnShadow(JobsStarted, jobs) ) {
+								// We can't start another shadow.  Tell
+								// the negotiator we're done.
+							if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
+									// We failed to talk to the CM, so
+									// close the connection.
+								dprintf( D_ALWAYS, 
+										 "Can't send NO_MORE_JOBS to mgr\n" ); 
+								return( !(KEEP_STREAM) );
+							} else {
+									// Communication worked, keep the
+									// connection stashed for later.
+								return KEEP_STREAM;
+							}
 						}
-					}
+					}	// end of if service_this_universe()
+
 						// If we got this far, we can spawn another
 						// shadow, so keep going w/ our regular work. 
 
@@ -2403,20 +2463,15 @@ Scheduler::negotiate(int, Stream* s)
 						dprintf( D_ALWAYS, "Can't send JOB_INFO to mgr\n" );
 						return (!(KEEP_STREAM));
 					}
-					ClassAd *ad;
-					ad = GetJobAd( id.cluster, id.proc );
-					if (!ad) {
-						dprintf(D_ALWAYS,"Can't get job ad %d.%d\n",
-								id.cluster, id.proc );
-						return (!(KEEP_STREAM));
-					}	
 
 					// Figure out if this request would result in another 
 					// shadow process if matched.  If non-PVM, the answer
-					// is always yes.  If PVM, perhaps yes or no.
+					// is always yes.  If PVM, perhaps yes or no.  If
+					// Globus, then no.
 					shadow_num_increment = 1;
-					job_universe = 0;
-					ad->LookupInteger(ATTR_JOB_UNIVERSE, job_universe);
+					if(job_universe == CONDOR_UNIVERSE_GLOBUS) {
+						shadow_num_increment = 0;
+					}
 					if( job_universe == CONDOR_UNIVERSE_PVM ) {
 						PROC_ID temp_id;
 
@@ -2434,18 +2489,18 @@ Scheduler::negotiate(int, Stream* s)
 					}					
 
 					// request match diagnostics
-					sprintf (temp, "%s = True", ATTR_WANT_MATCH_DIAGNOSTICS);
-					ad->Insert (temp);
+					sprintf (buffer, "%s = True", ATTR_WANT_MATCH_DIAGNOSTICS);
+					ad->Insert (buffer);
 
 					// Send the ad to the negotiator
 					if( !ad->put(*s) ) {
 						dprintf( D_ALWAYS,
 								"Can't send job ad to mgr\n" );
-						FreeJobAd(ad);
+						// FreeJobAd(ad);
 						s->end_of_message();
 						return (!(KEEP_STREAM));
 					}
-					FreeJobAd(ad);
+					// FreeJobAd(ad);
 					if( !s->end_of_message() ) {
 						dprintf( D_ALWAYS,
 								"Can't send job eom to mgr\n" );
@@ -2461,11 +2516,14 @@ Scheduler::negotiate(int, Stream* s)
 				case PERMISSION_AND_AD:
 					/*
 					 * If things are cool, contact the startd.
+					 * But... of the capability is the string "null", that means
+					 * the resource does not support the claiming protocol.
 					 */
 					dprintf ( D_FULLDEBUG, "In case PERMISSION\n" );
 
-					SetAttributeInt(id.cluster, id.proc,
-									ATTR_LAST_MATCH_TIME, (int)time(0));
+					sprintf(buffer,"%s = %d",
+									ATTR_LAST_MATCH_TIME,(int)time(0));
+					ad->Insert(buffer);
 
 					if( !s->get(capability) ) {
 						dprintf( D_ALWAYS,
@@ -2504,7 +2562,43 @@ Scheduler::negotiate(int, Stream* s)
 						dprintf(D_PROTOCOL,"Received match ad\n");
 					}
 
-						// Pull out the sinful string.
+					if ( stricmp(capability,"null") == 0 ) {
+						// No capability given by the matchmaker.  This means
+						// the resource we were matched with does not support
+						// the claiming protocol.
+						//
+						// So, set the matched attribute in our classad to be true,
+						// and store the my_match_ad (if exists) in a hashtable.
+						if ( my_match_ad ) {
+							ClassAd *tmp_ad = NULL;
+							resourcesByProcID->lookup(id,tmp_ad);
+							if ( tmp_ad ) delete tmp_ad;
+							resourcesByProcID->insert(id,my_match_ad);
+								// set my_match_ad to NULL, since we stashed it
+								// in our hashtable -- i.e. dont deallocate!!
+							my_match_ad = NULL;	
+						} else {
+							EXCEPT("Negotiator messed up - gave null capability & no match ad");
+						}
+						// Update matched attribute in job ad
+						sprintf (buffer, "%s = True", ATTR_JOB_MATCHED);
+						ad->Insert (buffer);
+						sprintf (buffer, "%s = 1", ATTR_CURRENT_HOSTS);
+						ad->Insert(buffer);
+						// Break before we fall into the Claiming Logic section below...
+						FREE( capability );
+						capability = NULL;
+						JobsStarted += 1;
+						host_cnt++;
+						break;
+					}
+
+					/////////////////////////////////////////////
+					////// CLAIMING LOGIC  
+					/////////////////////////////////////////////
+
+						// First pull out the sinful string from capability,
+						// so we know whom to contact to claim.
 					sinful = strdup( capability );
 					tmp = strchr( sinful, '#');
 					if( tmp ) {
@@ -2518,13 +2612,12 @@ Scheduler::negotiate(int, Stream* s)
 						capability = NULL;
 						if( my_match_ad ) {
 							delete my_match_ad;
+							my_match_ad = NULL;
 						}
 						break;
 					}
 						// sinful should now point to the sinful string
 						// of the startd we were matched with.
-
-					// CLAIMING LOGIC
 
 					/* Here we don't want to call contactStartd directly
 					   because we do not want to block the negotiator for 
@@ -2562,6 +2655,10 @@ Scheduler::negotiate(int, Stream* s)
 					JobsStarted += perm_rval;
 					addActiveShadows( perm_rval * shadow_num_increment ); 
 					host_cnt++;
+
+					/////////////////////////////////////////////
+					////// END OF CLAIMING LOGIC  
+					/////////////////////////////////////////////
 
 					break;
 
@@ -5453,6 +5550,10 @@ Scheduler::Init()
 	shadowsByProcID =
 		new HashTable<PROC_ID, shadow_rec *>((int)(MaxJobsRunning*1.2),
 											 procIDHash);
+	resourcesByProcID = 
+		new HashTable<PROC_ID, ClassAd *>((int)(MaxJobsRunning*1.2),
+											 procIDHash,
+											 updateDuplicateKeys);
 	}
 
 	char *flock_collector_hosts, *flock_negotiator_hosts, *flock_view_servers;
@@ -6204,6 +6305,7 @@ Scheduler::AlreadyMatched(PROC_ID* id)
 
 	if ( (universe == CONDOR_UNIVERSE_PVM) ||
 		 (universe == CONDOR_UNIVERSE_MPI) ||
+		 (universe == CONDOR_UNIVERSE_GLOBUS) ||
 		 (universe == CONDOR_UNIVERSE_PARALLEL) )
 		return FALSE;
 

@@ -45,6 +45,7 @@ extern char *Spool;
 extern char *Name;
 extern char* JobHistoryFileName;
 extern Scheduler scheduler;
+extern bool	operator==( PROC_ID, PROC_ID );
 
 extern "C" {
 	int	prio_compar(prio_rec*, prio_rec*);
@@ -52,7 +53,7 @@ extern "C" {
 
 extern	int		Parse(const char*, ExprTree*&);
 extern  void    cleanup_ckpt_files(int, int, const char*);
-extern	bool	service_this_universe(int);
+extern	bool	service_this_universe(int, ClassAd *);
 static ReliSock *Q_SOCK = NULL;
 
 int		do_Q_request(ReliSock *);
@@ -152,6 +153,24 @@ ClusterCleanup(int cluster_id)
 	// blow away the initial checkpoint file from the spool dir
 	char *ckpt_file_name = gen_ckpt_name( Spool, cluster_id, ICKPT, 0 );
 	(void)unlink( ckpt_file_name );
+}
+
+static 
+void
+RemoveMatchedAd(int cluster_id, int proc_id)
+{
+	if ( scheduler.resourcesByProcID ) {
+		ClassAd *ad_to_remove = NULL;
+		PROC_ID job_id;
+		job_id.cluster = cluster_id;
+		job_id.proc = proc_id;
+		scheduler.resourcesByProcID->lookup(job_id,ad_to_remove);
+		if ( ad_to_remove ) {
+			delete ad_to_remove;
+			scheduler.resourcesByProcID->remove(job_id);
+		}
+	}
+	return;
 }
 
 // Read out any parameters from the config file that we need and
@@ -827,6 +846,9 @@ int DestroyProc(int cluster_id, int proc_id)
 		}
 	}
 
+		// remove any match (startd) ad stored w/ this job
+	RemoveMatchedAd(cluster_id,proc_id);
+
 	JobQueueDirty = true;
 
 	return 0;
@@ -861,7 +883,21 @@ int DestroyCluster(int cluster_id)
 
 //				log = new LogDestroyClassAd(key);
 //				JobQueue->AppendLog(log);
+
 				JobQueue->DestroyClassAd(key.value());
+					
+					// remove any match (startd) ad stored w/ this job
+				if ( scheduler.resourcesByProcID ) {
+					ClassAd *ad_to_remove = NULL;
+					PROC_ID job_id;
+					job_id.cluster = cluster_id;
+					job_id.proc = proc_id;
+					scheduler.resourcesByProcID->lookup(job_id,ad_to_remove);
+					if ( ad_to_remove ) {
+						delete ad_to_remove;
+						scheduler.resourcesByProcID->remove(job_id);
+					}
+				}
 		}
 
 	}
@@ -1411,9 +1447,8 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 		ClassAd *startd_ad;
 		ClassAd *expanded_ad;
 		int index;
-		const char *AttrsToExpand[] = { ATTR_JOB_CMD, ATTR_JOB_ARGUMENTS,
-			ATTR_JOB_ENVIRONMENT, NULL };	// ATTR_JOB_CMD must be first
 		char *left,*name,*right,*value,*tvalue;
+		bool value_came_from_jobad;
 
 		// we must make a deep copy of the job ad; we do not
 		// want to expand the ad we have in memory.
@@ -1422,33 +1457,83 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 		job_id.cluster = cluster_id;
 		job_id.proc = proc_id;
 
-		if ((srec = scheduler.FindSrecByProcID(job_id)) == NULL) {
-			// pretty weird... no shadow, nothing we can do
-			return expanded_ad;
+		// find the startd ad.  this is done differently if the job
+		// is a globus universe jobs or not.
+		int	job_universe;
+		ad->LookupInteger(ATTR_JOB_UNIVERSE,job_universe);
+		if ( job_universe == CONDOR_UNIVERSE_GLOBUS ) {
+			// Globus job... find "startd ad" via our simple
+			// hash table.
+			startd_ad = NULL;
+			scheduler.resourcesByProcID->lookup(job_id,startd_ad);
+		} else {
+			// Not a Globus job... find startd ad via the shadow rec
+			if ((srec = scheduler.FindSrecByProcID(job_id)) == NULL) {
+				// pretty weird... no shadow, nothing we can do
+				return expanded_ad;
+			}
+			if ( srec->match == NULL ) {
+				// pretty weird... no match rec, nothing we can do
+				// could be a PVM job?
+				return expanded_ad;
+			}
+			startd_ad = srec->match->my_match_ad;
 		}
 
-		if ( srec->match == NULL ) {
-			// pretty weird... no match rec, nothing we can do
-			// could be a PVM job?
-			return expanded_ad;
+			// Make a stringlist of all attribute names in job ad.
+			// Note: ATTR_JOB_CMD must be first in AttrsToExpand...
+		StringList AttrsToExpand;
+		const char * curr_attr_to_expand;
+		AttrsToExpand.append(ATTR_JOB_CMD);
+		ad->ResetName();
+		const char *attr_name = ad->NextNameOriginal();
+		while ( attr_name ) {
+			if ( stricmp(attr_name,ATTR_JOB_CMD) ) { 
+				AttrsToExpand.append(attr_name);
+			}
+			attr_name = ad->NextNameOriginal();
 		}
 
-		startd_ad = srec->match->my_match_ad;
-
-		index = 0;
+		index = -1;	
+		AttrsToExpand.rewind();
 		bool no_startd_ad = false;
 		bool attribute_not_found = false;
-		while ( AttrsToExpand[index] && !no_startd_ad &&
-				!attribute_not_found ) 
+		while ( !no_startd_ad && !attribute_not_found ) 
 		{
+			index++;
+			curr_attr_to_expand = AttrsToExpand.next();
+
+			if ( curr_attr_to_expand == NULL ) {
+				// all done; no more attributes to try and expand
+				break;
+			}
+
 			if (attribute_value != NULL) {
 				free(attribute_value);
 				attribute_value = NULL;
 			}
-			// Note that this version of LookupString will
-			// allocate a new buffer, and we have to free() it 
-			// later. (Not delete[] it, unfortunately.)
-			ad->LookupString(AttrsToExpand[index],&attribute_value);
+
+			// Get the current value of the attribute.  We want
+			// to use PrintToNewStr() here because we want to work
+			// with anything (strings, ints, etc) and because want
+			// strings unparsed (for instance, quotation marks should
+			// be escaped with backslashes) so that we can re-insert
+			// them later into the expanded ClassAd.
+			// Note: deallocate attribute_value with free(), despite
+			// the mis-leading name PrintTo**NEW**Str.  
+			ExprTree *tree = ad->Lookup(curr_attr_to_expand);
+			if ( tree ) {
+				ExprTree *rhs = tree->RArg();
+				if ( rhs ) {
+					rhs->PrintToNewStr( &attribute_value );
+				}
+			}
+
+			if ( attribute_value == NULL ) {
+					// Did not find the attribute to expand in the job ad.
+					// Just move on to the next attribute...
+				continue;
+			}
 
 				// Some backwards compatibility: if the
 				// user just has $$opsys.$$arch in the
@@ -1472,11 +1557,11 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 					tvalue = strstr(attribute_value,"$$");	
 					ASSERT(tvalue);
 					strcpy(tvalue,"$$(OPSYS).$$(ARCH)");
-					bigbuf2 = (char *) malloc(strlen(AttrsToExpand[index])
+					bigbuf2 = (char *) malloc(strlen(curr_attr_to_expand)
 											  + 3 // for the equal and the quotes
 											  + strlen(attribute_value)
 											  + 1); // for the null terminator.
-					sprintf(bigbuf2,"%s=\"%s\"",AttrsToExpand[index],
+					sprintf(bigbuf2,"%s=\"%s\"",curr_attr_to_expand,
 						attribute_value);
 					ad->Insert(bigbuf2);
 					free(bigbuf2);
@@ -1486,7 +1571,7 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 			while( !no_startd_ad && !attribute_not_found &&
 					get_var(attribute_value,&left,&name,&right,NULL,true) )
 			{
-				if (!startd_ad) {
+				if (!startd_ad && job_universe != CONDOR_UNIVERSE_GLOBUS) {
 					no_startd_ad = true;
 					break;
 				}
@@ -1508,7 +1593,20 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 				// If it is not there, use the fallback.
 				// If no fallback value, then fail.
 
-				value = startd_ad->sPrintExpr(NULL,0,name);
+				if ( startd_ad ) {
+						// We have a startd ad in memory, use it
+					value = startd_ad->sPrintExpr(NULL,0,name);
+					value_came_from_jobad = false;
+				} else {
+						// No startd ad -- use value from last match.
+						// Note: we will only do this for GLOBUS universe.
+					MyString expr;
+					expr = "MATCH_";
+					expr += name;
+					value = ad->sPrintExpr(NULL,0,expr.Value());
+					value_came_from_jobad = true;
+				}
+
 				if (!value) {
 					if(fallback) {
 						char *rebuild = (char *) malloc(  strlen(name) + 3 
@@ -1522,14 +1620,42 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 					}
 				}
 
+
 				// we just want the attribute value, so strip
 				// out the "attrname=" prefix and any quotation marks 
 				// around string value.
 				tvalue = strchr(value,'=');
 				ASSERT(tvalue);	// we better find the "=" sign !
-				tvalue++;	// skip past "=" sign
+				// now skip past the "=" sign
+				tvalue++;
 				while ( *tvalue && isspace(*tvalue) ) {
 					tvalue++;
+				}
+				// insert the expression into the original job ad
+				// before we mess with it any further.  however, no need to
+				// re-insert it if we got the value from the job ad
+				// in the first place.
+				if ( !value_came_from_jobad ) {
+					MyString expr;
+					expr = "MATCH_";
+					expr += name;
+						// If we are GLOBUS universe, we must
+						// store the values from the startd ad
+						// persistantly to disk right now.  
+						// If any other universe, just updating
+						// our RAM image is fine since we will get
+						// a new match every time.
+					if ( job_universe == CONDOR_UNIVERSE_GLOBUS ) {
+						if ( SetAttribute(cluster_id,proc_id,expr.Value(),tvalue) < 0 )
+						{
+							EXCEPT("Failed to store %s into job ad %d.%d",
+								expr.Value(),cluster_id,proc_id);
+						}
+					} else {
+						expr += "=";
+						expr += tvalue;
+						ad->Insert(expr.Value());
+					}
 				}
 				// skip any quotation marks around strings
 				if (*tvalue == '"') {
@@ -1546,11 +1672,11 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 									      + 1);
 				sprintf(bigbuf2,"%s%s%s",left,tvalue,right);
 				free(attribute_value);
-				attribute_value = (char *) malloc(  strlen(AttrsToExpand[index])
+				attribute_value = (char *) malloc(  strlen(curr_attr_to_expand)
 												  + 3 // = and quotes
 												  + strlen(bigbuf2)
 												  + 1);
-				sprintf(attribute_value,"%s=\"%s\"",AttrsToExpand[index],
+				sprintf(attribute_value,"%s=%s",curr_attr_to_expand,
 					bigbuf2);
 				expanded_ad->Insert(attribute_value);
 				dprintf(D_FULLDEBUG,"$$ substitution: %s\n",attribute_value);
@@ -1559,7 +1685,12 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 			    attribute_value = bigbuf2;
 				bigbuf2 = NULL;
 			}
-			index++;
+		}
+
+		if ( startd_ad && job_universe == CONDOR_UNIVERSE_GLOBUS ) {
+				// Can remove our matched ad since we stored all the
+				// values we need from it into the job ad.
+			RemoveMatchedAd(cluster_id,proc_id);
 		}
 
 
@@ -1586,7 +1717,7 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 				fprintf(email,"Condor failed to start your job %d.%d \n",
 					cluster_id,proc_id);
 				fprintf(email,"because job attribute %s contains $$(%s).\n",
-					AttrsToExpand[index-1],name);
+					curr_attr_to_expand,name);
 				fprintf(email,"\nAttribute $$(%s) cannot be expanded because",
 					name);
 				if ( attribute_not_found ) {
@@ -1783,7 +1914,7 @@ int get_job_prio(ClassAd *job)
     // No longer judge whether or not a job can run by looking at its status.
     // Rather look at if it has all the hosts that it wanted.
     if (cur_hosts>=max_hosts || job_status==HELD || 
-		   !service_this_universe(universe)) 
+		   !service_this_universe(universe,job)) 
 	{
         return cur_hosts;
 	}
@@ -2081,7 +2212,7 @@ int Runnable(ClassAd *job)
 				ATTR_JOB_UNIVERSE);
 		return FALSE;
 	}
-	if( !service_this_universe(universe) )
+	if( !service_this_universe(universe,job) )
 	{
 		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (Universe=%s)\n",
 			CondorUniverseName(universe) );

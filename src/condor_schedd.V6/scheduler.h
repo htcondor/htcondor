@@ -291,7 +291,11 @@ class Scheduler : public Service
 		// object to manage our various shadows and their ClassAds
 	ShadowMgr shadow_mgr;
 
-  private:
+		// hashtable used to hold matching ClassAds for Globus Universe
+		// jobs which desire matchmaking.
+	HashTable <PROC_ID, ClassAd *> *resourcesByProcID;
+  
+private:
 	
 	// information about this scheduler
 	ClassAd*		ad;

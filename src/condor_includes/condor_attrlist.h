@@ -116,7 +116,8 @@ class AttrList : public AttrListAbstract
 {
     public :
 	    void ChainToAd( AttrList * );
-		void unchain( void );
+		void* unchain( void );
+		void RestoreChain(void *);
 
 		// ctors/dtor
 		AttrList();							// No associated AttrList list
@@ -149,12 +150,12 @@ class AttrList : public AttrListAbstract
 #endif
 
 		// for iteration through expressions
-		void		ResetExpr() { this->ptrExpr = exprList; }
+		void		ResetExpr() { this->ptrExpr = exprList; this->ptrExprInChain = false; }
 		ExprTree*	NextExpr();					// next unvisited expression
 		ExprTree*   NextDirtyExpr();
 
 		// for iteration through names (i.e., lhs of the expressions)
-		void		ResetName() { this->ptrName = exprList; }
+		void		ResetName() { this->ptrName = exprList; this->ptrNameInChain = false; }
 		char*		NextName();					// next unvisited name
 		const char* NextNameOriginal();
 		char*       NextDirtyName();
@@ -224,7 +225,9 @@ class AttrList : public AttrListAbstract
 		AttrListList*	associatedList;	// the AttrList list I'm associated with
 		AttrListElem*	tail;			// used by Insert
 		AttrListElem*	ptrExpr;		// used by NextExpr and NextDirtyExpr
+		bool			ptrExprInChain;		// used by NextExpr and NextDirtyExpr
 		AttrListElem*	ptrName;		// used by NextName and NextDirtyName
+		bool			ptrNameInChain;		// used by NextName and NextDirtyName
 		int				seq;			// sequence number
 private:
 	bool inside_insert;

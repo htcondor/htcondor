@@ -380,6 +380,27 @@ class AssignOp: public AssignOpBase
 	friend		    class AttrList;
 };
 
+#ifdef CLASSAD_FUNCTIONS
+class Function: public FunctionBase
+{
+    public:
+	Function(char*name) : FunctionBase(name) {}
+	virtual int         CalcPrintToStr(void);
+    virtual void        PrintToStr(char*);
+	virtual ExprTree    *DeepCopy(void) const;
+
+  	virtual int     _EvalTree(AttrList*, EvalResult*);
+    virtual int     _EvalTree(AttrList*,AttrList*, EvalResult*);
+
+	int FunctionScript(int number_of_arguments, EvalResult *arguments, 
+					   EvalResult *result);
+	int FunctionSharedLibrary(int number_of_arguments, EvalResult *arguments, 
+					   EvalResult *result);
+	int FunctionGetTime(int number_of_arguments, EvalResult *arguments, 
+						EvalResult *result);
+};
+#endif
+
 extern	int		Parse(const char*, ExprTree*&);
 
 #endif

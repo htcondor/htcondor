@@ -33,6 +33,7 @@
 #include "condor_classad.h"
 #include "condor_buildtable.h"
 #include "condor_classad_lookup.h"
+#include "condor_string.h"
 
 extern void evalFromEnvironment (const char *, EvalResult *);
 static bool name_in_list(const char *name, StringList &references);
@@ -327,15 +328,17 @@ int Variable::_EvalTreeRecursive( char *name, AttrList* my_classad, AttrList* ta
 		} else {
 			ExprTree *expr;
 			char expr_string[ATTRLIST_MAX_EXPRESSION];
-			expr = target_classad->Lookup(prefix);
-			if(expr) {
-				expr_string[0] = 0;
-				expr->RArg()->PrintToStr(expr_string);
-				other_classad = ClassAdLookupGlobal(expr_string);
-				if(other_classad) {
-					result = _EvalTreeRecursive(rest,other_classad,other_classad,val);
-					delete other_classad;
-					return result;
+			if (target_classad) {
+				expr = target_classad->Lookup(prefix);
+				if(expr) {
+					expr_string[0] = 0;
+					expr->RArg()->PrintToStr(expr_string);
+					other_classad = ClassAdLookupGlobal(expr_string);
+					if(other_classad) {
+						result = _EvalTreeRecursive(rest,other_classad,other_classad,val);
+						delete other_classad;
+						return result;
+					}
 				}
 			}
 		}
@@ -1434,3 +1437,350 @@ AssignOp::DeepCopy(void) const
 	CopyBaseExprTree(copy);
 	return copy;
 }
+
+#ifdef CLASSAD_FUNCTIONS
+#include "dlfcn.h"
+#include "classad_shared.h"
+int Function::CalcPrintToStr(void)
+{
+	int      length;
+	int      i;
+	int      num_args;
+	ExprTree *arg;
+
+	length = 0;
+	length += strlen(name);
+	length += 1; // for left paren
+
+	arguments.Rewind();
+	i = 0;
+	num_args = arguments.Length();
+	while (arguments.Next(arg)) {
+		length += arg->CalcPrintToStr();
+		i++;
+		if (i < num_args) {
+			length += 2; // for "; "
+		}
+	}
+	length += 1; // for right paren
+	
+	return length;
+}
+
+void Function::PrintToStr(char *s)
+{
+	ExprTree *arg;
+	int i, num_args;
+
+	arguments.Rewind();
+	i = 0;
+	num_args = arguments.Length();
+	strcat(s, name);
+	strcat(s, "(");
+	while (arguments.Next(arg)) {
+		arg->PrintToStr(s);
+		i++;
+		if (i < num_args) {
+			strcat(s, "; ");
+		}
+	}
+	strcat(s, ")");
+
+	return;
+}
+
+ExprTree *Function::DeepCopy(void) const
+{
+	Function *copy;
+
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+	copy = new Function(name);
+#else
+	char     *name_copy;
+	name_copy = strnewp(name);
+#endif
+	CopyBaseExprTree(copy);
+
+	ListIterator< ExprTree > iter(arguments);
+	ExprTree *arg;
+
+	iter.ToBeforeFirst();
+	while (iter.Next(arg)) {
+		copy->AppendArgument(arg->DeepCopy());
+	}
+
+	return copy;
+}
+
+int Function::_EvalTree(AttrList *attrlist, EvalResult *result)
+{
+	_EvalTree(attrlist, NULL, result);
+	return 0;
+}
+
+int Function::_EvalTree(AttrList *attrlist1, AttrList *attrlist2, EvalResult *result)
+{
+	int        number_of_args, i;
+	int        successful_eval;
+	EvalResult *evaluated_args;
+
+	successful_eval = FALSE;
+	result->type = LX_UNDEFINED;
+
+	if (result != NULL) {
+		number_of_args = arguments.Length();
+		evaluated_args = new EvalResult[number_of_args];
+		
+		ListIterator<ExprTree> iter(arguments);
+		ExprTree *arg;
+
+		i = 0;
+		while (iter.Next(arg)) {
+			if (attrlist2 == NULL) {
+				// This will let us refer to attributes in a ClassAd, like "MY"
+				arg->EvalTree(attrlist1, &evaluated_args[i++]);
+			} else {
+				// This will let us refer to attributes in two ClassAds: like 
+				// "My" and "Target"
+				arg->EvalTree(attrlist1, attrlist2, &evaluated_args[i++]);
+			}
+		}
+		
+		if (!strcasecmp(name, "script")) {
+			successful_eval = FunctionScript(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "gettime")) {
+			successful_eval = FunctionGetTime(number_of_args, evaluated_args, result);
+		} else {
+			successful_eval = FunctionSharedLibrary(number_of_args, 
+													evaluated_args, result);
+		}
+		delete [] evaluated_args;
+	}
+
+	return successful_eval;
+}
+
+bool string_is_all_whitespace(char *s)
+{
+	bool is_all_whitespace = true;
+
+	while (*s != 0) {
+		if (!isspace(*s)) {
+			is_all_whitespace = false;
+			break;
+		} else {
+			s++;
+		}
+	}
+	return is_all_whitespace;
+}
+
+int Function::FunctionScript(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	int       eval_succeeded;
+	char      *script_directory;
+	MyString  command_line;
+
+	result->i = 0;
+	result->type = LX_ERROR;
+	eval_succeeded = TRUE;
+
+	if (   number_of_args >= 1 
+		&& evaluated_args[0].type == LX_STRING
+		&& (script_directory = param("CLASSAD_SCRIPT_DIRECTORY")) != NULL){
+		
+		command_line = script_directory;
+		command_line += '/';
+		command_line += evaluated_args[0].s;
+
+		struct stat stat_info;
+		if (stat(command_line.Value(), &stat_info)) {
+			eval_succeeded = FALSE;
+		} else {
+
+			command_line += ' ';
+
+			for (int i = 1; i < number_of_args; i++) {
+				char temp_string[128];
+				
+				switch (evaluated_args[i].type) {
+				case LX_INTEGER:
+					sprintf(temp_string, "%d", evaluated_args[i].i);
+					command_line += temp_string;
+					break;
+				case LX_FLOAT:
+					sprintf(temp_string, "%f", evaluated_args[i].f);
+					command_line += temp_string;
+					break;
+				case LX_STRING:
+					command_line += '\"';
+					command_line += evaluated_args[i].s;
+					command_line += '\"';
+					break;
+				default:
+					eval_succeeded = FALSE;
+					i = number_of_args; // force out of the loop
+					break;
+				}
+				command_line += ' ';
+			}
+
+			if (eval_succeeded) {
+				FILE *script_stream;
+				char script_character;
+				MyString script_output;
+
+				// Execute the script, using popen(). 
+				// This has security implications, I know. Given that this
+				// is prototype code, I checked if the executable exists, and
+				// I quote the string arguments, I'm not too worried about it,
+				// even though I probably should be.
+				script_stream = popen(command_line.Value(), "r");
+				if (script_stream == NULL) {
+					eval_succeeded = FALSE;
+				} else {
+					// Read the output from the script, up to, but not
+					// including the first newline. Everything after that
+					// newline is ignored.
+					while ((script_character = fgetc(script_stream)) != EOF) {
+						if (script_character == '\n') {
+							break;
+						} else {
+							script_output += script_character;
+						}
+					}
+					pclose(script_stream);
+
+					// We interpret the result by seeing if standard
+					// functions can interpret them. We check if it's an
+					// integer first: if there is a decimal it fails. (If we
+					// checked if it was a float first, it would succeed even 
+					// if it was a vanillia integer.) If both integer and 
+					// float fail, it's a string.
+					const char   *start;
+					char         *end;
+					start = script_output.Value();
+
+					long long_result = strtol(start, &end, 10);
+					if (start != end && string_is_all_whitespace(end)) {
+						result->i = long_result;
+						result->type = LX_INTEGER;
+					} else {
+						double real_result = strtod(start, &end);
+						if (start != end && string_is_all_whitespace(end)) {
+							result->f = real_result;
+							result->type = LX_FLOAT;
+						} else {
+							result->s = strnewp(script_output.Value());
+							result->type = LX_STRING;
+						}
+					}
+				}
+			} else {
+				eval_succeeded = FALSE;
+			}
+		}
+	}
+
+	return eval_succeeded;
+}
+
+int Function::FunctionSharedLibrary(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	char *shared_library_location;
+	int  eval_succeeded;
+
+	eval_succeeded = false;
+	if ((shared_library_location = param("CLASSAD_LIB_PATH")) != NULL){
+		void *dl_handle;
+		ClassAdSharedFunction function;
+		
+		dl_handle = dlopen(shared_library_location, RTLD_LAZY);
+		if (dl_handle) {
+			function = (ClassAdSharedFunction) dlsym(dl_handle, name);
+			if (function != NULL) {
+				ClassAdSharedValue  function_result;
+				ClassAdSharedValue  *function_args;
+
+				// Prepare the arguments for passing to the external library
+				// Note that we don't just use EvalResult, because we 
+				// want to give the DZero folks a header file that is completely
+				// independent of anything else in Condor.
+				if (number_of_args > 0) {
+					function_args = new ClassAdSharedValue[number_of_args];
+					for (int arg_index = 0; arg_index < number_of_args; arg_index++) {
+						switch (evaluated_args[arg_index].type) {
+						case LX_INTEGER:
+							function_args[arg_index].type = ClassAdSharedType_Integer;
+							function_args[arg_index].integer = evaluated_args[arg_index].i;
+							break;
+						case LX_FLOAT:
+							function_args[arg_index].type = ClassAdSharedType_Float;
+							function_args[arg_index].real = evaluated_args[arg_index].f;
+							break;
+						case LX_STRING:
+							function_args[arg_index].type = ClassAdSharedType_String;
+							function_args[arg_index].text = evaluated_args[arg_index].s;
+							break;
+						case LX_UNDEFINED:
+							function_args[arg_index].type = ClassAdSharedType_Undefined;
+							break;
+						default:
+							function_args[arg_index].type = ClassAdSharedType_Error;
+							break;
+						}
+					}
+				} else {
+					function_args = NULL;
+				}
+
+				function(number_of_args, function_args, &function_result);
+
+				switch (function_result.type) {
+				case ClassAdSharedType_Integer:
+					result->type = LX_INTEGER;
+					result->i = function_result.integer;
+					break;
+				case ClassAdSharedType_Float:
+					result->type = LX_FLOAT;
+					result->f = function_result.real;
+					break;
+				case ClassAdSharedType_String:
+					result->type = LX_STRING;
+					result->s = function_result.text;
+					break;
+				case ClassAdSharedType_Undefined:
+					result->type = LX_UNDEFINED;
+					break;
+				default: 
+					result->type = LX_ERROR;
+					break;
+				}
+				eval_succeeded = true;
+			}
+		}
+		free(shared_library_location);
+	}
+	return eval_succeeded;
+}
+
+
+int Function::FunctionGetTime(
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	time_t current_time = time(NULL);
+
+	result->i = (int) current_time;
+	result->type = LX_INTEGER;
+	return TRUE;
+}
+
+#endif

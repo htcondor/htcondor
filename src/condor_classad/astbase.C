@@ -1115,3 +1115,46 @@ int BooleanBase::Value()
 	return value;
 }
 
+#ifdef CLASSAD_FUNCTIONS
+FunctionBase::FunctionBase(char *name)
+{
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+	this->stringSpaceIndex = string_space->getCanonical(name, SS_DUP);
+	// I apologize for casting away the const-ness of the char * here
+	// I'm trying to make minimal changes in the code to add string space,
+	// and it is safe. 
+	this->name = (char *) (*string_space)[stringSpaceIndex];
+#else
+    this->name = name;
+#endif
+    this->type = LX_FUNCTION;
+	return;
+}
+
+FunctionBase::~FunctionBase()
+{
+	return;
+}
+
+int
+FunctionBase::operator==(ExprTree& tree)
+{
+	return 0;
+}
+
+void FunctionBase::GetReferences(const AttrList *base_attrlist,
+								 StringList &internal_references,
+								 StringList &external_references) const
+{
+	return;
+}
+
+void
+FunctionBase::AppendArgument(ExprTree *argument)
+{
+	arguments.Append(argument);
+	return;
+}
+
+#endif
+

@@ -829,6 +829,19 @@ masterCheck ()
 	FILE* 	 mailer = NULL;
 	int		 more;
 
+	char *tmp = param("COLLECTOR_PERFORM_MASTERCHECK");
+	bool do_check = true;	// default should be to do the check
+	if ( tmp ) {
+		if ( tmp[0] == 'F' || tmp[0] == 'f' ) {
+			do_check = false;
+		}
+		free(tmp);
+	}
+	if ( do_check == false ) {
+		// User explicitly asked for no checking... all done.
+		return TRUE;
+	}
+
 	dprintf (D_ALWAYS, "MasterCheck:  Checking for down masters ...\n");
 
 	MasterAds.startIterations ();

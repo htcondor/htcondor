@@ -40,6 +40,8 @@ template class HashTable<HashKey, match_rec *>;
 template class HashBucket<HashKey,match_rec *>;
 template class HashTable<PROC_ID, shadow_rec *>;
 template class HashBucket<PROC_ID,shadow_rec *>;
+template class HashTable<PROC_ID, ClassAd *>;
+template class HashBucket<PROC_ID, ClassAd *>;
 template class Queue<shadow_rec*>;
 template class Queue<ContactStartdArgs*>;
 template class List<shadow_rec*>;
