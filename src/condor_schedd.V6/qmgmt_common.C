@@ -20,13 +20,13 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-/* Copyright 1997, Condor Team */
 
 // This file contains routines in common to both the qmgmt client
 // and the qmgmt server (i.e. the schedd).
 
 #include "condor_common.h"
 #include "condor_qmgr.h"
+#include "MyString.h"
 
 int
 SetAttributeInt(int cl, int pr, const char *name, int val)
@@ -53,11 +53,13 @@ SetAttributeFloat(int cl, int pr, const char *name, float val)
 int
 SetAttributeString(int cl, int pr, const char *name, const char *val)
 {
-	char buf[1000];
+	MyString buf;
 	int rval;
 
-	sprintf(buf, "\"%s\"", val);
-	rval = SetAttribute(cl,pr,name,buf);
+	buf += '"';
+	buf +=  val;
+	buf += '"';
+	rval = SetAttribute(cl,pr,name,buf.Value());
 	return(rval);
 }
 
@@ -87,10 +89,12 @@ int
 SetAttributeStringByConstraint(const char *con, const char *name,
 							   const char *val)
 {
-	char buf[1000];
+	MyString buf;
 	int rval;
 
-	sprintf(buf, "\"%s\"", val);
-	rval = SetAttributeByConstraint(con,name,buf);
+	buf += '"';
+	buf +=  val;
+	buf += '"';
+	rval = SetAttributeByConstraint(con,name,buf.Value());
 	return(rval);
 }
