@@ -34,6 +34,7 @@
 #include "dc_startd.h"
 #include "daemon_types.h"
 #include "dc_collector.h"
+#include "condor_string.h"  // for strlwr() and friends
 
 // the comparison function must be declared before the declaration of the
 // matchmaker class in order to preserve its static-ness.  (otherwise, it
@@ -927,12 +928,6 @@ negotiateWithGroup ( ClassAdList& startdAds, ClassAdList& startdPvtAds,
 			 && (MaxscheddLimit > 0) && (startdAds.MyLength() > 0) );
 
 	return TRUE;
-}
-
-static int
-matchingAlgorithmComparisonFunction (AttrList *ad1, AttrList *ad2, void *m)
-{
-	Matchmaker *mm = (Matchmaker *) m;
 }
 
 static int
