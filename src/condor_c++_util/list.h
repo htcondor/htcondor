@@ -30,7 +30,7 @@
 	  Destruct		- delete the list, but not the objects contained in it
 	  Append		- append one element
 	  Display		- primitive display of contents of list - for debugging
-	  IsEmpty		- return TRUE if list is empty and FALSE otherwise
+	  IsEmpty		- return true if list is empty and false otherwise
 	  Number		- return the number of elements in the list
 	Scans
 	  Rewind		- set scan pointer before beginning first obj in list
@@ -110,10 +110,6 @@
 #define LIST_H
 #include <assert.h>
 
-// const int	TRUE = 1;
-// const int	FALSE = 0;
-
-
 template <class ObjType> class Item;
 
 template <class ObjType>
@@ -123,23 +119,25 @@ public:
 		// General
 	List();
 	~List();
-	void	Append( ObjType & obj );
-	void	Append( ObjType * obj );
-	void	Insert( ObjType & obj );    // insert an element before the current element
-	int		IsEmpty();
-	int		Number();
+	bool	Append( ObjType & obj );
+	bool	Append( ObjType * obj );
+
+    /// Insert an element before the current element
+	void	Insert( ObjType & obj );
+	bool	IsEmpty() const;
+	int		Number() const;
 
 		// Scans
 	void	Rewind();
-	int		Current( ObjType & obj );
-	int		Next( ObjType & obj );
-	ObjType *Current();
+	bool	Current( ObjType & obj ) const;
+	bool	Next( ObjType & obj );
+	ObjType *Current() const;
 	ObjType *Next();
-	int		AtEnd();
+	bool	AtEnd() const;
 	void	DeleteCurrent();
 
 		// Debugging
-	void	Display();
+	void	Display() const;
 private:
 	void	RemoveItem( Item<ObjType> * );
 	Item<ObjType>	*dummy;
@@ -167,18 +165,18 @@ public:
 	ListIterator( const List<ObjType>& );
 	~ListIterator( );
 
-	void initialize( const List<ObjType>& );
-	void toBeforeFirst( );
-	void toAfterLast( );
-	bool next( ObjType& );
-	ObjType* next( );
-	bool current( ObjType& );
-	ObjType* current( );
-	bool prev( ObjType& );
-	ObjType* prev( );
+	void Initialize( const List<ObjType>& );
+	void ToBeforeFirst( );
+	void ToAfterLast( );
+	bool Next( ObjType& );
+	ObjType* Next( );
+	bool Current( ObjType& ) const;
+	ObjType* Current( ) const;
+	bool Prev( ObjType& );
+	ObjType* Prev( );
 	
-	bool isBeforeFirst( );
-	bool isAfterLast( );
+	bool IsBeforeFirst( ) const;
+	bool IsAfterLast( ) const;
 
 private:
 	const List<ObjType>* list;
@@ -233,7 +231,7 @@ List<ObjType>::List()
 
 template <class ObjType>
 int
-List<ObjType>::Number()
+List<ObjType>::Number() const
 {
 	return num_elem;
 }
@@ -242,8 +240,8 @@ List<ObjType>::Number()
   The list is empty if the dummy is the only element.
 */
 template <class ObjType>
-int
-List<ObjType>::IsEmpty()
+bool
+List<ObjType>::IsEmpty() const
 {
 	return dummy->next == dummy;
 }
@@ -267,19 +265,21 @@ List<ObjType>::~List()
   object.  The scan pointer is left at the new item.
 */
 template <class ObjType>
-void
+bool
 List<ObjType>::Append( ObjType & obj )
 {
 	Item<ObjType>	*item;
 
 	// cout << "Entering Append (reference)" << endl;
 	item = new Item<ObjType>( &obj );
+    if (item == NULL) return false;
 	dummy->prev->next = item;
 	item->prev = dummy->prev;
 	dummy->prev = item;
 	item->next = dummy;
 	current = item;
 	num_elem++;
+    return true;
 }
 
 /*
@@ -287,19 +287,21 @@ List<ObjType>::Append( ObjType & obj )
   the new item.
 */
 template <class ObjType>
-void
+bool
 List<ObjType>::Append( ObjType * obj )
 {
 	Item<ObjType>	*item;
 
 	// cout << "Entering Append (pointer)" << endl;
 	item = new Item<ObjType>( obj );
+    if (item == NULL) return false;
 	dummy->prev->next = item;
 	item->prev = dummy->prev;
 	dummy->prev = item;
 	item->next = dummy;
 	current = item;
 	num_elem++;
+    return true;
 }
 
 /* Insert an element before the current element */
@@ -323,7 +325,7 @@ List<ObjType>::Insert( ObjType& obj )
 #if 0
 template <class ObjType>
 void
-List<ObjType>::Display()
+List<ObjType>::Display() const
 {
 	Item<ObjType>	*p = dummy->next;
 
@@ -356,43 +358,43 @@ List<ObjType>::Rewind()
 }
 
 /*
-  Generate a reference to the current object in the list.  Returns TRUE
-  if there is a current object, and FALSE if the list is empty or the
+  Generate a reference to the current object in the list.  Returns true
+  if there is a current object, and false if the list is empty or the
   scan pointer has been rewound.
 */
 template <class ObjType>
-int
-List<ObjType>::Current( ObjType & answer )
+bool
+List<ObjType>::Current( ObjType & answer ) const
 {
 	if( IsEmpty() ) {
-		return FALSE;
+		return false;
 	}
 
 		// scan pointer has been rewound
 	if( current == dummy ) {
-		return FALSE;
+		return false;
 	}
 
 	answer =  (*current->obj);
-	return TRUE;
+	return true;
 }
 
 /*
-  Generate a reference to the next object in the list.  Returns TRUE if
-  there is a next object, and FALSE if the list is empty or the scan pointer
+  Generate a reference to the next object in the list.  Returns true if
+  there is a next object, and false if the list is empty or the scan pointer
   is already at the end.
 */
 template <class ObjType>
-int
+bool
 List<ObjType>::Next( ObjType & answer )
 {
 	if( AtEnd() ) {
-		return FALSE;
+		return false;
 	}
 
 	current = current->next;
 	answer =  *current->obj;
-	return TRUE;
+	return true;
 }
 
 /*
@@ -401,7 +403,7 @@ List<ObjType>::Next( ObjType & answer )
 */
 template <class ObjType>
 ObjType *
-List<ObjType>::Current()
+List<ObjType>::Current() const
 {
 	if( IsEmpty() ) {
 		return 0;
@@ -427,12 +429,12 @@ List<ObjType>::Next()
 }
 
 /*
-  Return TRUE if the scan pointer is at the end of the list or the list
-  is empty, and FALSE otherwise.
+  Return true if the scan pointer is at the end of the list or the list
+  is empty, and false otherwise.
 */
 template <class ObjType>
-int
-List<ObjType>::AtEnd()
+bool
+List<ObjType>::AtEnd() const
 {
 	return current->next == dummy;
 }
@@ -488,7 +490,7 @@ ListIterator<ObjType>::~ListIterator( )
 
 template <class ObjType> 
 void
-ListIterator<ObjType>::initialize( const List<ObjType>& obj )
+ListIterator<ObjType>::Initialize( const List<ObjType>& obj )
 {
 	list = &obj;
 	cur = list->dummy;
@@ -496,21 +498,21 @@ ListIterator<ObjType>::initialize( const List<ObjType>& obj )
 
 template <class ObjType>
 void
-ListIterator<ObjType>::toBeforeFirst( )
+ListIterator<ObjType>::ToBeforeFirst( )
 {
 	if( list ) cur = list->dummy;
 }
 
 template <class ObjType>
 void
-ListIterator<ObjType>::toAfterLast( )
+ListIterator<ObjType>::ToAfterLast( )
 {
 	cur = NULL;
 }
 
 template <class ObjType>
 bool
-ListIterator<ObjType>::next( ObjType& obj)
+ListIterator<ObjType>::Next( ObjType& obj)
 {
 	if( cur ) {
 		if( ( cur = cur->next ) ) {
@@ -523,7 +525,7 @@ ListIterator<ObjType>::next( ObjType& obj)
 		
 template <class ObjType>
 ObjType*
-ListIterator<ObjType>::next( )
+ListIterator<ObjType>::Next( )
 {
 	if( cur ) {
 		if( ( cur = cur->next ) ) {
@@ -535,7 +537,7 @@ ListIterator<ObjType>::next( )
 
 template <class ObjType>
 bool
-ListIterator<ObjType>::current( ObjType& obj )
+ListIterator<ObjType>::Current( ObjType& obj ) const
 {
 	if( list && cur && cur != list->dummy ) {
 		obj = *(cur->obj);
@@ -546,7 +548,7 @@ ListIterator<ObjType>::current( ObjType& obj )
 
 template <class ObjType>
 ObjType*
-ListIterator<ObjType>::current( )
+ListIterator<ObjType>::Current( ) const
 {
 	if( list && cur && cur != list->dummy ) {
 		return( cur->obj );
@@ -557,7 +559,7 @@ ListIterator<ObjType>::current( )
 
 template <class ObjType>
 bool
-ListIterator<ObjType>::prev( ObjType& obj ) 
+ListIterator<ObjType>::Prev( ObjType& obj ) 
 {
 	if( cur && cur != list->dummy ) {
 		if( ( cur = cur->prev ) ) {
@@ -571,7 +573,7 @@ ListIterator<ObjType>::prev( ObjType& obj )
 
 template <class ObjType>
 ObjType*
-ListIterator<ObjType>::prev( )
+ListIterator<ObjType>::Prev( )
 {
 	if( cur && cur != list->dummy ) {
 		if( ( cur = cur->prev ) ) {
@@ -583,14 +585,14 @@ ListIterator<ObjType>::prev( )
 	
 template <class ObjType>
 bool
-ListIterator<ObjType>::isBeforeFirst( ) 
+ListIterator<ObjType>::IsBeforeFirst( ) const
 {
 	return( list && list->dummy == cur );
 }
 
 template <class ObjType>
 bool
-ListIterator<ObjType>::isAfterLast( ) 
+ListIterator<ObjType>::IsAfterLast( ) const
 {
 	return( list && cur == NULL );
 }

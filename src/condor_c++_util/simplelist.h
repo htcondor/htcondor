@@ -33,30 +33,33 @@
 
 #include <iostream.h>
 
+template <class ObjType> class SimpleListIterator;
+
 template <class ObjType>
 class SimpleList 
 {
+    friend class SimpleListIterator<ObjType>;
     public:
     // ctor, dtor
     SimpleList ();
-    ~SimpleList ();
+    inline ~SimpleList () { delete [] items; }
 
     // General
-    int Append (ObjType);
-    int IsEmpty();
+    bool Append (ObjType);
+    inline bool IsEmpty() const { return (size == 0); }
 
     // Scans
-    void    Rewind();
-    int     Current(ObjType &);
-    int     Next(ObjType &);
-    int     AtEnd();
+    inline void    Rewind() { current = -1; }
+    bool    Current(ObjType &) const;
+    bool    Next(ObjType &);
+    inline bool    AtEnd() const { return (current >= size-1); }
     void    DeleteCurrent();
 
     // Debugging
-    void    Display();
+    void Display (ostream & out) const;
 
     private:
-	int resize (int);
+	bool resize (int);
 	int maximum_size;
     ObjType *items;
     int size;
@@ -64,83 +67,51 @@ class SimpleList
 };
 
 template <class ObjType>
+ostream & operator << (ostream & out, const SimpleList<ObjType> & list) {
+  list.Display(out);
+  return out;
+}
+
+template <class ObjType>
 SimpleList<ObjType>::
-SimpleList ()
+SimpleList (): maximum_size(1), size(0)
 {
-	maximum_size = 1;
 	items = new ObjType[maximum_size];
-
-    size = 0;
-    current = 0;
+    Rewind();
 }
 
 template <class ObjType>
-SimpleList<ObjType>::
-~SimpleList()
-{
-	delete [] items;
-}
-
-template <class ObjType>
-int SimpleList<ObjType>::
+bool SimpleList<ObjType>::
 Append (ObjType item)
 {
     if (size >= maximum_size)
 	{
 		if (!resize (2*maximum_size))
-			return 0;
+			return false;
 	}
 
     items[size++] = item;
-    return 1;
+    return true;
 }
 
 template <class ObjType>
-int SimpleList<ObjType>::
-IsEmpty ()
+bool SimpleList<ObjType>::
+Current (ObjType &item) const
 {
-    return size == 0;
-}
-
-
-template <class ObjType>
-void SimpleList<ObjType>::
-Rewind ()
-{
-    current = -1;
-}
-
-
-template <class ObjType>
-int SimpleList<ObjType>::
-Current (ObjType &item)
-{
-    if (items && current < size && current >= 0)
-    {
+    if (items && current < size && current >= 0) {
 		item = items [current];
-		return 1;
+		return true;
     }
-
-    return 0;
+    return false;
 }
 
 template <class ObjType>
-int SimpleList<ObjType>::
+bool SimpleList<ObjType>::
 Next (ObjType &item)
 {
-    if (current >= size - 1)
-		return 0;
-
+    if (current >= size - 1) return false;
     item = items [++current];
-    return 1;
-}
-
-
-template <class ObjType>
-int SimpleList<ObjType>::
-AtEnd ()
-{
-    return current >= size - 1;
+    return true;
 }
 
 
@@ -160,19 +131,20 @@ DeleteCurrent ()
 
 template <class ObjType>
 void SimpleList<ObjType>::
-Display ()
+Display (ostream & out) const
 {
-	if (!items) return;
-
-    cout << "Display of list is: ";
-    for (int i = 0; i < size; i++)
-		cout << items[i] << '\t';
-
-    cout << endl;
+  out << '(';
+  if (items != NULL) {
+    for (int i = 0; i < size; i++) {
+      if (i > 0) cout << ',';
+      cout << items[i];
+    }
+  }
+  cout << ')';
 }
 
 template <class ObjType>
-int SimpleList<ObjType>::
+bool SimpleList<ObjType>::
 resize (int newsize)
 {
 	ObjType *buf;
@@ -180,7 +152,7 @@ resize (int newsize)
 	int     smaller;
 
 	buf = new ObjType [newsize];
-	if (!buf) return 0;
+	if (!buf) return false;
 
 	smaller = (newsize < size) ? newsize : size;
 	for (i = 0; i < smaller; i++)
@@ -198,8 +170,82 @@ resize (int newsize)
 	if (current > maximum_size - 1)
 		current = maximum_size;
 
-	return 1;
+	return true;
+}
+
+//--------------------------------------------------------------------------
+// SimpleListIterator Class Definition
+//--------------------------------------------------------------------------
+
+template <class ObjType>
+class SimpleListIterator {
+ public:
+  SimpleListIterator( ): _list(NULL), _cur(-1) {}
+  SimpleListIterator( const SimpleList<ObjType> & list ) { Initialize (list); }
+  ~SimpleListIterator( ) {}
+  
+  void Initialize( const SimpleList<ObjType> & );
+  inline void ToBeforeFirst () { _cur = -1; }
+  inline void ToAfterLast   () { _cur = -2; }
+  bool Next( ObjType& );
+  bool Current( ObjType& ) const;
+  bool Prev( ObjType& );
+  
+  inline bool IsBeforeFirst () const { return (_cur == -1); }
+  inline bool IsAfterLast   () const { return (_cur == -2); }
+  
+ private:
+  const SimpleList<ObjType>* _list;
+  int _cur;
+};
+
+//--------------------------------------------------------------------------
+// SimpleListIterator Class Implementation
+//--------------------------------------------------------------------------
+
+template <class ObjType> 
+void
+SimpleListIterator<ObjType>::Initialize( const SimpleList<ObjType> & list )
+{
+	_list = & list;
+	ToBeforeFirst();
+}
+
+template <class ObjType>
+bool
+SimpleListIterator<ObjType>::Next( ObjType& obj)
+{
+  if (_list == NULL || IsAfterLast()) return false;
+  if (_cur >= _list->size - 1) {
+    ToAfterLast();
+    return false;
+  }
+  obj = _list->items[++_cur];
+  return true;
 }
 		
-#endif // _SMPL_LIST_H_
+template <class ObjType>
+bool
+SimpleListIterator<ObjType>::Current( ObjType& obj ) const
+{
+  if (_list != NULL && _cur >= 0 && _cur < _list->size) {
+    obj = _list->items[_cur];
+    return true;
+  }
+  return false;
+}
 
+template <class ObjType>
+bool
+SimpleListIterator<ObjType>::Prev( ObjType& obj ) 
+{
+  if (_list == NULL || _cur == -1) return false;
+  if (_cur == -2) _cur = _list->size - 1;
+  else            _cur--;
+
+  if (_cur == -1) return false;
+  obj = _list->items[_cur];
+  return true;
+}
+
+#endif // _SMPL_LIST_H_
