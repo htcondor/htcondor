@@ -63,7 +63,7 @@ public:
   void BeginTransaction() { ClassAdLog::BeginTransaction(); }
   void AbortTransaction() { ClassAdLog::AbortTransaction(); }
   void CommitTransaction() { ClassAdLog::CommitTransaction(); }
-  int LookupInTransaction(const char *key, const char *name, char *&val) { return LookupInTransaction(key,name,val); }
+  int LookupInTransaction(const char *key, const char *name, char *&val) { return ClassAdLog::LookupInTransaction(key,name,val); }
   
   // Misc methods
 
