@@ -72,7 +72,7 @@ REMAP_TWO( lstat64, _lstat64, int, const char *, struct stat64 *)
 REMAP_TWO( stat64, _stat64, int, const char *, struct stat64 *)
 
 REMAP_FOUR( fstatfs, _fstatfs, int , int , struct statfs *, int , int )
-/*REMAP_THREE( fxstat, _fxstat, int , const int , int , struct stat *)*/
+REMAP_THREE( _fxstat, fxstat, int , const int , int , struct stat *)
 REMAP_THREE( getdents, _getdents, int, int, struct dirent *, unsigned int )
 REMAP_THREE( getdents64, _getdents64, int , int , struct dirent64 *, size_t )
 REMAP_TWO( getdomainname, _getdomainname, int , char *, int )
@@ -92,7 +92,7 @@ REMAP_TWO( kill, _kill, int, pid_t, int )
 REMAP_THREE( lchown, _lchown, int , const char *, uid_t , gid_t )
 REMAP_TWO( link, _link, int , const char *, const char *)
 REMAP_TWO( listen, _listen, int , int , int )
-/*REMAP_THREE( lxstat, _lxstat, int , const int , const char *, struct stat *)*/
+REMAP_THREE( _lxstat, lxstat, int , const int , const char *, struct stat *)
 REMAP_THREE( madvise, _madvise, int , void *, size_t , int )
 REMAP_TWO( mkdir, _mkdir, int , const char *, long unsigned int )
 REMAP_SIX( mmap, _mmap, void *, void *, size_t, int, int, int, off_t )
@@ -149,6 +149,6 @@ REMAP_ONE( unlink, _unlink, int , const char *)
 REMAP_TWO( utime, _utime, int , const char *, const struct utimbuf *)
 REMAP_THREE( writev, _writev, ssize_t, int, const struct iovec *, int )
 REMAP_FOUR( xmknod, _xmknod, int , const int , const char *, mode_t , dev_t )
-/*REMAP_THREE( xstat, _xstat, int , const int , const char *, struct stat *)*/
+REMAP_THREE( _xstat, xstat, int , const int , const char *, struct stat *)
 
 #endif /* REMOTE_SYSCALLS */ 
