@@ -1790,16 +1790,16 @@ terminate_with_sig( int sig )
 	// libc functions here, so we must use SYSCALL(SYS_something, ...).
 #if defined(SYS_sleep)
 	SYSCALL(SYS_sleep, 1);
-#elif defined(SYS_nanosleep)
-	struct timespec t;
-	t.tv_sec = 1;
-	t.tv_nsec = 0;
-	SYSCALL(SYS_nanosleep, &t, NULL);
 #elif defined(SYS_select)
 	struct timeval t;
 	t.tv_sec = 1;
 	t.tv_usec = 0;
 	SYSCALL(SYS_select, 0, NULL, NULL, NULL, &t);
+#elif defined(SYS_nanosleep)
+	struct timespec t;
+	t.tv_sec = 1;
+	t.tv_nsec = 0;
+	SYSCALL(SYS_nanosleep, &t, NULL);
 #else
 #error "Please port me!  I need a sleep system call."
 #endif
