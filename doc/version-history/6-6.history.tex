@@ -59,6 +59,11 @@ job log.  Addtionally, the schedd would exit with an error status.
       updated after some failures; instead, the node would be allowed
       to retry indefinitely if it kept failing.
 
+\item Fixed a recently-introduced bug where shutting down the
+      \Condor{schedd} caused \Condor{dagman} to remove all its jobs
+      from the queue and write a rescue file, rather than simply
+      exiting so that it could recover automatically upon restart.
+
 \end{itemize}
 
 \noindent Known Bugs:
