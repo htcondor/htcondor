@@ -131,7 +131,7 @@ exit 0;
 sub CopyAll( $$$ )
 {
     my ( $SrcDir, $DestDir, $FilePat ) = @_;
-    print "Copy '$FilePat' from '$SrcDir' to '$DestDir':\n";
+    print "Link '$FilePat' from '$SrcDir' to '$DestDir':\n";
     if ( ! -d $DestDir )
     {
 	die "Can't create $DestDir" if ( ! mkdir( "$DestDir", 0755 ) );
@@ -141,6 +141,8 @@ sub CopyAll( $$$ )
     {
 	next if ( ! -f "$SrcDir/$File" );
 	print "   $SrcDir/$File -> $DestDir\n";
-	system( "/bin/cp $SrcDir/$File $DestDir" );
+	#system( "/bin/cp $SrcDir/$File $DestDir" );
+	link "$SrcDir/$File", "$DestDir/$File" || die "link: $!";
     }
+    system "ls -li $DestDir";
 }
