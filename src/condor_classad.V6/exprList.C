@@ -145,7 +145,7 @@ bool ExprList::
 _Evaluate( EvalState &, Value &val, ExprTree *&sig )
 {
 	val.SetListValue( this );
-	return( !( sig = Copy( ) ) );
+	return( ( sig = Copy( ) ) );
 }
 
 bool ExprList::
