@@ -2290,6 +2290,7 @@ void Scheduler::StartJobHandler() {
 				"match for job %d.%d was deleted - not forking a shadow\n",
 				job_id->cluster,job_id->proc);
 			mark_job_stopped(job_id);
+			RemoveShadowRecFromMrec(srec);
 			delete srec;
 		}
 	}
@@ -2418,6 +2419,7 @@ void Scheduler::StartJobHandler() {
 			}
 #endif
 			mark_job_stopped(job_id);
+			RemoveShadowRecFromMrec(srec);
 			delete srec;
 			break;
 
