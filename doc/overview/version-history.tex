@@ -33,7 +33,7 @@ machines in your pool to the same version.
 
 \item Added full support for Linux 2.0.x and 2.2.x kernels using
 libc5, glibc20 and glibc21.
-This includes support for RedHat 6.0, Debian 2.1 and other popular
+This includes support for RedHat 6.x, Debian 2.x and other popular
 Linux distributions.
 Whereas the Linux machines had once been fragmented across libc5 and
 glibc, they have now been reunified.
@@ -91,6 +91,10 @@ page~\pageref{man:condor-config-val} for details on
 \item If the directory you specified for LOCK (which holds lock files
 used by Condor) doesn't exist, Condor will now try to create that
 directory for you instead of giving up right away.
+
+\item If you change the COLLECTOR_HOST setting and reconfig the
+\Condor{startd}, the startd will ``invalidate'' its ClassAds at the
+old collector before it starts reporting to the new one.
 
 \end{itemize}
 
@@ -168,7 +172,12 @@ available machines, or to begin a new PVM task.
 
 \begin{itemize}
 
-\item None.
+\item The \AdAttr{CondorLoadAvg} attribute in the \Condor{startd} has
+some problems in the way it is computed.
+The CondorLoadAvg is somewhat inaccurate for the first minute a job
+starts running, and for the first minute after it completes.
+Also, the computation of CondorLoadAvg is very wrong on NT.
+All of this will be fixed in version 6.1.10.
 
 \end{itemize}
 
