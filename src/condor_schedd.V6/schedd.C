@@ -192,11 +192,16 @@ Scheduler::~Scheduler()
     delete ad;
     if (MySockName)
         FREE(MySockName);
-    delete []CollectorHost;
-    delete []NegotiatorHost;
-    delete []Shadow;
-    delete []CondorAdministrator;
-    delete []Mail;
+	if (CollectorHost)
+		free(CollectorHost);
+	if (NegotiatorHost)
+		free(NegotiatorHost);
+	if (Shadow)
+		free(Shadow);
+	if (CondorAdministrator)
+		free(CondorAdministrator);
+	if (Mail)
+		free(Mail);
     delete []filename;
 	for(i = 0; i < nMrec; i++)
 	{
