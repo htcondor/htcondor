@@ -34,6 +34,8 @@
 *********************************************************************/
 
 
+#pragma implementation "list.h"
+
 #define _POSIX_SOURCE
 
 #if defined(Solaris)

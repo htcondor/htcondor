@@ -32,6 +32,8 @@
 ********************************************************************/
 
 
+#pragma implementation "list.h"
+
 #define _POSIX_SOURCE
 #if 0
 #include <stdio.h>
