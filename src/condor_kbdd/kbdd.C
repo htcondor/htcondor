@@ -78,12 +78,14 @@ main_shutdown_graceful()
 {
     delete xinter;
     DC_Exit(EXIT_SUCCESS);
+	return TRUE;
 }
 
 int 
 main_shutdown_fast()
 {
 	DC_Exit(EXIT_SUCCESS);
+	return TRUE;
 }
 
 int 
