@@ -321,14 +321,19 @@ main(int argc, char *argv[] )
 
 	ShadowBDate = LastRestartTime = time(0);
 
-	/* Start up with condor.condor privileges. */
-	set_condor_priv();
-
 	_EXCEPT_Cleanup = ExceptCleanup;
 
 	MyPid = getpid();
 	
 	config();
+
+	/* Start up with condor.condor privileges. */
+	/*
+	  we need to do this AFTER we call config() so that if CONDOR_IDS
+	  is being defined in the config file, we'll get the right value
+	*/ 
+	set_condor_priv();
+
 	dprintf_config( mySubSystem, SHADOW_LOG );
 	DebugId = whoami;
 

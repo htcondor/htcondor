@@ -111,6 +111,8 @@ void Server::Init()
 	config();
 	dprintf_config( mySubSystem, 2 );
 
+	set_condor_priv();
+
 		// We have to do this after we call config, not in the Server
 		// constructor, or we won't have NETWORK_INTERFACE yet.
 	server_addr.s_addr = htonl( my_ip_addr() );
@@ -2084,7 +2086,6 @@ void UnblockSignals()
 
 int main( int argc, char **argv )
 {
-	set_condor_priv();
 	myName = argv[0];
 	server.Init();
 	server.Execute();

@@ -98,11 +98,14 @@ initial_bookeeping( int argc, char *argv[] )
 		}
 	}
 
+		// we need to call this *before* we try to set_condor_priv(),
+		// so that if CONDOR_IDS is defined in the config file, we'll
+		// get the right value.
+	config();
+
 	set_condor_priv();
 
 	init_shadow_connections();
-
-	config();
 
 		// If we're told on the command-line to append something to
 		// the name of our log file (b/c of the SMP startd), we do
