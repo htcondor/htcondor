@@ -26,6 +26,11 @@
 #include "condor_classad.h"
 #endif
 
+/* get rid of the mapping of access to access_euid for the syscall library */
+#ifdef access
+#	undef access
+#endif
+
 static char *_FileName_ = __FILE__;
 
 int CurrentSysCall;

@@ -88,5 +88,10 @@ extern "C" {
 }
 #endif
 
+/* Get rid of the mapping from access to access_euid in the syscall library */
+#ifdef access
+#	undef access
+#endif
+
 extern "C" {
 

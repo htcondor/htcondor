@@ -34,6 +34,11 @@
 #endif
 #define assert(cond) CONDOR_ASSERT(cond)
 
+/* get rid of the access remap to access_euid for the syscall library */
+#ifdef access
+#	undef access
+#endif
+
 #if defined(Solaris)
 extern "C" {
 	int flock( int, int );
