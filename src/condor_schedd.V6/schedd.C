@@ -855,10 +855,15 @@ count( ClassAd *job )
 			// for Globus, count jobs in UNSUBMITTED state by owner.
 			// later we make certain there is a grid manager daemon
 			// per owner.
+			int needs_management = 0;
 			int job_managed = 0;
-			scheduler.Owners[OwnerNum].GlobusJobs++;
 			job->LookupBool(ATTR_JOB_MANAGED, job_managed);
-			if ( job_managed == 0 ) {
+			// Don't count HELD jobs that have ATTR_JOB_MANAGED set to false.
+			if ( status != HELD || job_managed != 0 ) {
+				needs_management = 1;
+				scheduler.Owners[OwnerNum].GlobusJobs++;
+			}
+			if ( status != HELD && job_managed == 0 ) {
 				scheduler.Owners[OwnerNum].GlobusUnmanagedJobs++;
 			}
 			if ( gridman_per_job ) {
@@ -867,7 +872,7 @@ count( ClassAd *job )
 				job->LookupInteger(ATTR_CLUSTER_ID, cluster);
 				job->LookupInteger(ATTR_PROC_ID, proc);
 				GridUniverseLogic::JobCountUpdate(owner,x509userproxy,
-					cluster, proc, 1, job_managed ? 0 : 1);
+					cluster, proc, needs_management, job_managed ? 0 : 1);
 			}
 		}
 			// We want to record the cluster id of all idle MPI jobs  
