@@ -236,7 +236,13 @@ bool _condorPacket::verifyMD()
         }
     }
     else {
-        verified_ = false;
+        dprintf(D_SECURITY, "Trying to verify MD but data has changed!\n");
+        if (md_ != NULL) {
+            verified_ = false;
+        }
+        else {
+            verified_ = true;
+        }
     }
     return verified_;
 }
@@ -348,6 +354,7 @@ int _condorPacket :: checkHeader(int & len, void *& dta)
 
     // Verify MD if necessary
     if (!verifyMD()) {
+        dprintf(D_SECURITY, "Incorrect Message Digest!\n");
         return -1;
     }
 
