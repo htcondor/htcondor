@@ -216,6 +216,7 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_SENDRECV_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_FLAGS_TYPE int
 	#define SOCKET_COUNT_TYPE int
+	#define SOCKET_LISTEN_CONST
 #elif defined(OSF1)
 	#define SOCKET_DATA_TYPE void*
 	#define SOCKET_LENGTH_TYPE int
@@ -229,7 +230,8 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_SENDRECV_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_FLAGS_TYPE int
 	#define SOCKET_COUNT_TYPE int
-#elif defined(HPUX)
+	#define SOCKET_LISTEN_CONST const
+#elif defined(HPUX10)
 	#define SOCKET_DATA_TYPE void*
 	#define SOCKET_LENGTH_TYPE size_t
 	#define SOCKET_DATA_CONST const
@@ -242,6 +244,7 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_SENDRECV_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_FLAGS_TYPE int
 	#define SOCKET_COUNT_TYPE int
+	#define SOCKET_LISTEN_CONST
 #elif defined(LINUX) && defined(GLIBC)
 	#define SOCKET_DATA_TYPE void*
 	#define SOCKET_LENGTH_TYPE socklen_t
@@ -255,6 +258,7 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_SENDRECV_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_FLAGS_TYPE int
 	#define SOCKET_COUNT_TYPE unsigned int
+	#define SOCKET_LISTEN_CONST
 #elif defined(LINUX) && !defined(GLIBC)
 	#define SOCKET_DATA_TYPE void*
 	#define SOCKET_LENGTH_TYPE int
@@ -281,6 +285,7 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_SENDRECV_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_FLAGS_TYPE int
 	#define SOCKET_COUNT_TYPE int
+	#define SOCKET_LISTEN_CONST
 #else
 	#define SOCKET_DATA_TYPE void*
 	#define SOCKET_LENGTH_TYPE int
@@ -294,6 +299,7 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_SENDRECV_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_FLAGS_TYPE unsigned int
 	#define SOCKET_COUNT_TYPE int
+	#define SOCKET_LISTEN_CONST
 #endif
 
 /*
@@ -396,7 +402,7 @@ All of these calls manipulate the open file table.
 	*/
 
 	#if defined(SWITCH)
-		#if defined(OSF1)
+		#if defined(OSF1) || defined(HPUX10)
 			int poll( struct pollfd *fds, nfds_t nfds, int timeout ) : file_table;
 			int select (int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) : file_table;
 		#else
@@ -654,7 +660,7 @@ version.
 		int option,
 		SOCKET_DATA_TYPE value,
 		SOCKET_LENGTH_TYPE * length) : INDIRECT;
-	int listen(
+	SOCKET_LISTEN_CONST int listen(
 		map(int fd),
 		SOCKET_COUNT_TYPE count) : INDIRECT;
 
@@ -787,7 +793,7 @@ do this.  This issue will eventually need to be addressed.
 		ALLOC_PATH( path2 );
 	}
 
-	#if defined(LINUX) || (defined(Solaris26) || defined(Solaris27)) || defined(OSF1) || defined(IRIX)
+	#if defined(LINUX) || (defined(Solaris26) || defined(Solaris27)) || defined(OSF1) || defined(IRIX) || defined(HPUX10)
 		int readlink( const char *path, char *buf, size_t buf_size ) {
 	#else
 		int readlink( const char *path, void *buf, int buf_size ) {
@@ -1299,11 +1305,23 @@ not_supported {
 		int adjtime( struct timeval *delta, struct timeval *old_delta );
 	#endif
 	int sethostid( int host_id );
-	int async_daemon();
-	#if !defined(IRIX)
+	#if defined(HPUX10)
+		void async_daemon();
+	#else
+		int async_daemon();
+	#endif
+
+	#if defined(IRIX)
+		/* nothing */
+	#elif defined(HPUX10)
+		int getfh( map(int fd), const fhandle_t *fhp );
+	#else
 		int getfh( map(int fd), fhandle_t *fhp, int exp_fd );
 	#endif
-	#if !defined(SUNOS41)
+
+	#if defined(HPUX10)
+		int exportfs( const char *name, const struct export *exp );
+	#else
 		int exportfs( int access, int *record, struct exportfsdata *exdata );
 	#endif
 
@@ -1332,6 +1350,9 @@ not_supported {
 		#elif defined(OSF1)
 			int mount( int type, char *mnt_path, int mnt_flag, char *data );
 			int acct( char *path );
+		#elif defined(HPUX10)
+			/* Need a better stub gen to trap mount */
+			int acct( char *path );
 		#else
 			int mount( char *spec, char *dir, int mflag, int fstyp, char *pt, int len );
 			int acct( char *path );
@@ -1339,10 +1360,18 @@ not_supported {
 
 		void reboot( int howto );
 		int sethostname( char *address, int address_len );
-		int settimeofday( struct timeval *tp, struct timezone *tzp );
-		int setdomainname( char *name, int namelen );
+		#if defined(HPUX10)
+			int settimeofday( const struct timeval *tp, const struct timezone *tzp );
+			int setdomainname( const char *name, int namelen );
+		#else
+			int settimeofday( struct timeval *tp, struct timezone *tzp );
+			int setdomainname( char *name, int namelen );
+		#endif
+
 		#if defined(OSF1) 
 			int swapon( const char *path, int flags );
+		#elif defined(HPUX10)
+			/* Need better stub gen to trap swapon */
 		#else
 			int swapon( char *path, int flags, int lo_water, int hi_water );
 		#endif
@@ -1361,7 +1390,14 @@ not_supported {
 	pid_t vfork();
 
 	int execve( const char *path, char * const argv[], char * const envp [] );
-	int execv( const char *path, char * const argv[] );
+
+	#if defined(HPUX)
+		/* Need better stub gen */
+	#else
+		int execv( const char *path, char * const argv[] );
+	#endif
+	
+
 	int exec_with_loader( int flags, const char *loader, const char *file,
 					  char * const argv[], char * const envp[] );
 	int execvp( const char *file, char *const argv[] );
@@ -1399,6 +1435,8 @@ not_supported {
 		int profil( char *buf, int buf_size, int offset, int scale );
 	#elif defined(Solaris)
 		void profil( unsigned short *buf, unsigned int buf_size, unsigned int offset, unsigned int scale );
+	#elif defined(HPUX10)
+		void profil( const void *buf, size_t size, size_t offset, int scale );
 	#else
 		void profil( short *buf, unsigned int buf_size, unsigned int offset, unsigned int scale );
 	#endif
