@@ -163,11 +163,15 @@ sub RunTest
 
     # if we want a checkpoint, register a function to force a vacate
     # and register a function to check to make sure it happens
-    if( $wants_checkpoint )
-    {
-	Condor::RegisterExecute( \&ForceVacate );
-	Condor::RegisterEvictedWithCheckpoint( sub { $checkpoints++ } );
-    }
+	if( $wants_checkpoint )
+	{
+		Condor::RegisterExecute( \&ForceVacate );
+		Condor::RegisterEvictedWithCheckpoint( sub { $checkpoints++ } );
+	} else {
+		if(defined $test{$handle}{"RegisterExecute"}) {
+			Condor::RegisterExecute($test{$handle}{"RegisterExecute"});
+		}
+	}
 
     # any handle-associated functions with the cluster
     # or else die with an unexpected event
