@@ -122,6 +122,9 @@ int  PeriodicSync;
 int  SlowCkptSpeed;
 char *CkptServerHost = NULL;
 char *LastCkptServer = NULL;
+int  LastRestartTime = -1;		// time_t when job last restarted from a ckpt
+								// or completed a periodic ckpt
+int  LastCkptTime = -1;			// time when job last completed a ckpt
 
 extern char *Executing_Arch, *Executing_OpSys;
 
@@ -261,6 +264,8 @@ main(int argc, char *argv[], char *envp[])
 			argc--;
 		}
 	}
+
+	LastRestartTime = time(0);
 
 	/* Start up with condor.condor privileges. */
 	set_condor_priv();
@@ -814,7 +819,10 @@ Wrapup( )
 		SetAttributeFloat( Proc->id.cluster, Proc->id.proc,
 						   ATTR_BYTES_RECVD, TotalBytesRecvd );
 	}
-
+	if( ExitReason == JOB_CKPTED || ExitReason == JOB_NOT_CKPTED ) {
+		SetAttributeInt( Proc->id.cluster, Proc->id.proc,
+						 ATTR_LAST_VACATE_TIME, time(0) );
+	}
     DisconnectQ (NULL);
 
 	/* fill in the Proc structure's exit_status with JobStatus, so that when
@@ -849,8 +857,6 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 	int		status = -1;
 	float utime = 0.0;
 	float stime = 0.0;
-	time_t	new_time;
-	float	accum_time=0.0;
 
 	//new syntax, can use filesystem to authenticate
 	ConnectQ(schedd);
@@ -923,6 +929,17 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 		if (LastCkptServer) {
 			SetAttributeString(Proc->id.cluster, Proc->id.proc,
 							   ATTR_LAST_CKPT_SERVER, LastCkptServer);
+			SetAttributeInt(Proc->id.cluster, Proc->id.proc,
+							ATTR_LAST_CKPT_TIME, LastCkptTime);
+			if (LastCkptTime > 0) {
+				int ckpt_time;
+				GetAttributeInt(Proc->id.cluster, Proc->id.proc,
+								ATTR_JOB_COMMITTED_TIME, &ckpt_time);
+				ckpt_time += LastCkptTime - LastRestartTime;
+				SetAttributeInt(Proc->id.cluster, Proc->id.proc,
+								ATTR_JOB_COMMITTED_TIME, ckpt_time);
+				LastRestartTime = LastCkptTime;
+			}
 			if (Executing_Arch) {
 				SetAttributeString(Proc->id.cluster, Proc->id.proc,
 								   ATTR_CKPT_ARCH, Executing_Arch);
@@ -1155,7 +1172,6 @@ DoCleanup()
 			SetAttributeFloat( Proc->id.cluster, Proc->id.proc,
 							   ATTR_BYTES_RECVD, TotalBytesRecvd );
 		}
-
 
 		DisconnectQ(0);
 	}
