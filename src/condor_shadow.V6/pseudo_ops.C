@@ -224,6 +224,7 @@ pseudo_free_fs_blocks( const char *path )
 int
 pseudo_image_size( int size )
 {
+	int new_size;
 	if (size > 0) {
 		int executable_size = 0;
 		dprintf( D_SYSCALLS,
@@ -231,7 +232,13 @@ pseudo_image_size( int size )
 		JobAd->LookupInteger(ATTR_EXECUTABLE_SIZE, executable_size);
 		dprintf( D_SYSCALLS, "\tAdding executable size of %d kilobytes\n",
 				 executable_size );
-		ImageSize = size + executable_size;
+		new_size = size + executable_size;
+		if( new_size == ImageSize ) {
+			dprintf( D_SYSCALLS, "Got Image Size report with same size "
+					 "(%d)\n", new_size );
+			return 0;
+		}
+		ImageSize = new_size;
 		dprintf( D_SYSCALLS, "Set Image Size to %d kilobytes\n", ImageSize );
 		
 		// log the event
