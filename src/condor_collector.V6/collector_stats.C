@@ -97,7 +97,7 @@ CollectorBaseStats::~CollectorBaseStats ( void )
 	// Free up the history buffer
 	if ( historyBuffer ) {
 		//dprintf( D_ALWAYS, "Freeing history buffer\n" );
-		delete( historyBuffer );
+		delete [] historyBuffer;
 		historyBuffer = NULL;
 	}
 }
@@ -131,7 +131,7 @@ CollectorBaseStats::setHistorySize ( int new_size )
 	} else if ( 0 == new_size ) {
 		dprintf( D_ALWAYS, "HistSize: -> 0\n" );
 		if ( historyBuffer) {
-			delete( historyBuffer );
+			delete[] historyBuffer;
 			historyBuffer = NULL;
 			historySize = historyWords = 0;
 			historyMaxbit = 0;
@@ -150,7 +150,7 @@ CollectorBaseStats::setHistorySize ( int new_size )
 		unsigned *newbuf = new unsigned[ required_words ];
 		if ( historyBuffer ) {
 			memcpy( newbuf, historyBuffer, historyWords );
-			delete( historyBuffer );
+			delete[] historyBuffer;
 		}
 		historyBuffer = newbuf;
 		historySize = new_size;
@@ -516,11 +516,11 @@ CollectorDaemonStatsList::updateStats( const char *class_name,
 	if ( tmp ) {
 		sprintf( line, "%s = \"0x%s\"", ATTR_UPDATESTATS_HISTORY, tmp );
 		ad->Insert(line);
-		delete tmp;
+		delete [] tmp;
 	}
 
 	// Free up the line buffer
-	delete line;
+	delete [] line;
 
 	return 0;
 }
