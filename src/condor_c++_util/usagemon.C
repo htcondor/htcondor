@@ -42,6 +42,11 @@ UsageMonitor::Request(double units)
 
 	time_t current_time = time(NULL);
 
+	// clean up any old records at the head of the history list
+	for (rec = first; rec && rec->timestamp < current_time - interval;
+		 first = rec->next, delete rec, rec = first);
+	if (first == NULL) last = NULL;
+
 	// special case: units > max_units -- reserve larger window of time
 	if (units > max_units) {
 		dprintf(D_FULLDEBUG, "usagemon: %.0f > %.0f (units > max_units) "
@@ -67,10 +72,6 @@ UsageMonitor::Request(double units)
 
 	// first, find usage in the past interval seconds
 	double usage_this_interval = 0.0;
-	// clean up any old records at the head of the history list
-	for (rec = first; rec && rec->timestamp < current_time - interval;
-		 first = rec->next, delete rec, rec = first);
-	if (first == NULL) last = NULL;
 	for (rec = first; rec; rec = rec->next) {
 		usage_this_interval += rec->units;
 	}
