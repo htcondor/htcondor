@@ -26,11 +26,75 @@
 #include "condor_config.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "dynuser.h"
-#include <windows.h>
 #include <lmaccess.h>
 #include <lmerr.h>
 #include <lmwksta.h>
 #include <lmapibuf.h>
+
+
+// language-independant way to get at the name of the Local System account
+// delete[] the result!
+//
+char* getSystemAccountName() {
+	return getWellKnownName(SECURITY_LOCAL_SYSTEM_RID);
+}
+
+// language-independant way to get at the BUILTIN\Users group name
+// delete[] the result!
+char* getUserGroupName() {
+	return getWellKnownName(SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_USERS);
+}
+
+// looks up well known SIDs and RIDs and returns the account name.
+// Seems like two sub-authorities should be enough for what we need.
+// delete[] the result!
+char* getWellKnownName( DWORD subAuth1, DWORD subAuth2 ) {
+	
+	PSID pSystemSID;
+	SID_IDENTIFIER_AUTHORITY auth = SECURITY_NT_AUTHORITY;
+	char* systemName;
+	char systemDomain[255];
+	DWORD name_size, domain_size;
+	SID_NAME_USE sidUse;
+	bool result;
+	
+	name_size = domain_size = 255;
+	
+	// Create a well-known SID for the Users Group.
+	
+	if(! AllocateAndInitializeSid( &auth, ((subAuth2) ? 2 : 1),
+		subAuth1,
+		subAuth2,
+		0,0, 0, 0, 0, 0,
+		&pSystemSID) ) {
+		printf( "AllocateAndInitializeSid Error %u\n", GetLastError() );
+		return NULL;
+	}
+	
+	
+	systemName = new char[name_size];
+	
+	// Now lookup whatever the account name is for this SID
+	
+	result = LookupAccountSid(
+		NULL,			// System name (or NULL for loca)
+		pSystemSID,		// ptr to SID to lookup
+		systemName,		// ptr to buffer that receives name
+		&name_size,			// size of buffer
+		systemDomain,	// ptr to domain buffer
+		&domain_size,			// size of domain buffer
+		&sidUse
+		);
+	FreeSid(pSystemSID);
+	
+	if ( ! result ) {
+		printf( "LookupAccountSid Error %u\n", GetLastError() );
+		delete[] systemName;
+		return NULL;
+	} else {
+		return systemName;
+	}
+}
 
 ////
 //
@@ -493,12 +557,19 @@ void dynuser::createaccount() {
 bool dynuser::add_users_group() {
 	// Add this user to group "users"
 	LOCALGROUP_MEMBERS_INFO_0 lmi;
+	wchar_t UserGroupName[255];
+	char* tmp;
+
+	tmp = getUserGroupName();
+	swprintf(UserGroupName, L"%S", tmp);
+	delete[] tmp;
+	tmp = NULL;
 
 	lmi.lgrmi0_sid = this->psid;
 
 	NET_API_STATUS nerr = NetLocalGroupAddMembers(
 	  NULL,				// LPWSTR servername,      
-	  L"Users",			// LPWSTR LocalGroupName,  
+	  UserGroupName,			// LPWSTR LocalGroupName,  
 	  0,				// DWORD level,            
 	  (LPBYTE) &lmi,	// LPBYTE buf,             
 	  1				// DWORD membercount       
@@ -527,12 +598,19 @@ bool dynuser::add_users_group() {
 bool dynuser::del_users_group() {
 	// Add this user to group "users"
 	LOCALGROUP_MEMBERS_INFO_0 lmi;
+	wchar_t UserGroupName[255];
+	char* tmp;
+
+	tmp = getUserGroupName();
+	swprintf(UserGroupName, L"%S", tmp);
+	delete[] tmp;
+	tmp = NULL;
 
 	lmi.lgrmi0_sid = this->psid;
 
 	NET_API_STATUS nerr = NetLocalGroupDelMembers(
 	  NULL,				// LPWSTR servername,      
-	  L"Users",			// LPWSTR LocalGroupName,  
+	  UserGroupName,	// LPWSTR LocalGroupName,  
 	  0,				// DWORD level,            
 	  (LPBYTE) &lmi,	// LPBYTE buf,             
 	  1				// DWORD membercount       

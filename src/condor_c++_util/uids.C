@@ -112,6 +112,8 @@ get_priv()
 #if defined(WIN32)
 
 #include "dynuser.h"
+#include "lsa_mgr.h"
+
 
 // Lots of functions just stubs on Win NT for now....
 void init_condor_ids() {}
@@ -126,10 +128,13 @@ uid_t getuid() { return get_my_uid(); }
 extern dynuser *myDynuser; 	// the "system wide" dynuser object
 
 static HANDLE CurrUserHandle = NULL;
-static char *NobodyLoginName = NULL;
+static char *UserLoginName = NULL; // either a "nobody" account or the submitting user
 
 void uninit_user_ids() 
 {
+	CloseHandle(CurrUserHandle);
+	free(UserLoginName);
+	UserLoginName = NULL;
 	CurrUserHandle = NULL;
 }
 
@@ -138,22 +143,15 @@ HANDLE priv_state_get_handle()
 	return CurrUserHandle;
 }
 
-#if 0
-void init_user_nobody_loginname()
-{
-	//DynUser.init_user();
-    NobodyLoginName = (char*) DynUser.get_accountname();
-}
-#endif
-
-const char *get_user_nobody_loginname()
-{
-    return NobodyLoginName;
+const char *get_user_loginname() {
+    return UserLoginName;
 }
 
 int
 init_user_ids(const char username[]) 
 {
+	int retval = 0;
+
 	dprintf(D_ALWAYS,
 		"entering init_user_ids()...watch out.\n");
 	
@@ -161,37 +159,93 @@ init_user_ids(const char username[])
 
 	
 	// see if we already have a user handle for the requested user.
-	// if so, just make it the CurrUserHandle and we're done.
-	const char *cur_acct = myDynuser->get_accountname();
-	if ( cur_acct && strcmp(cur_acct,username) == 0 ) {
-		CurrUserHandle = myDynuser->get_token();
+	// if so, just return 1. 
+	// TODO: cache multiple user handles to save time.
+	const char *cur_acct = get_user_loginname();
+	dprintf(D_FULLDEBUG, "init_user_ids: want user '%s', current is '%s'\n",
+		username, cur_acct);
+	
+	if ( CurrUserHandle && cur_acct && strcmp(cur_acct,username) == 0 ) {
+		dprintf(D_FULLDEBUG, "init_user_ids: Already have handle for %s,"
+			" so returning.\n", username);
 		return 1;
 	}
 
-	myDynuser->reset();
-
 	if ( strcmp(username,"nobody") != 0 ) {
-		// here we call routines to deal with password server
-		// or as Jeff says: "insert hand waving here"  :^)
-		return 0;
-	}
+		// here we call routines to deal with passwords. Hopefully we're
+		// running as LocalSystem here, otherwise we can't get at the 
+		// password stash.
+		lsa_mgr lsaMan;
+		char pw[255];
+		char user[255];
+		wchar_t w_username[255];
+		wchar_t *w_pw;
 
-	// at this point, we know we want a user nobody, so
-	// generate a dynamic user and stash the handle
-
-	// initialize NobodyLoginName unless it has been explicitly
-	// set already...
+		swprintf(w_username, L"%S", username);
+		sprintf(user, "%s", username);
 		
-	if ( !myDynuser->init_user() ) {
-		// Oh shit.  
-		EXCEPT("Failed to create a user nobody");
-	}
-	
-	NobodyLoginName = (char*) myDynuser->get_accountname();
+		w_pw = lsaMan.query(w_username);
 
-	// we created a new user, now just stash the token
-	CurrUserHandle = myDynuser->get_token();
-	return 1;
+		if ( ! w_pw ) {
+			dprintf(D_ALWAYS, "ERROR: Could not locate credential for user "
+				"'%s'\n", username);
+			return 0;
+		} else {
+			sprintf(pw, "%S", w_pw);
+
+			// we don't need the wide char pw anymore, so clean it up
+			ZeroMemory(w_pw, wcslen(w_pw)*sizeof(wchar_t));
+			delete[](w_pw);
+
+			dprintf(D_FULLDEBUG, "Found credential for user '%s'\n", username);
+			retval = LogonUser(
+				user,						// user name
+				".",						// domain or server - local for now
+				pw,							// password
+				LOGON32_LOGON_INTERACTIVE,	// type of logon operation. 
+											// LOGON_BATCH doesn't seem to work right here.
+				LOGON32_PROVIDER_DEFAULT,	// logon provider
+				&CurrUserHandle				// receive tokens handle
+			);
+
+			dprintf(D_FULLDEBUG, "LogonUser completed.\n");
+
+			UserLoginName = strdup(username);
+			// clear pw from memory
+			ZeroMemory(pw, 255);
+
+			if ( !retval ) {
+				dprintf(D_ALWAYS, "init_user_ids: LogonUser failed with NT Status %ld\n", 
+					GetLastError());
+				return 0;
+			} else {
+				return 1;
+			}
+		}
+		
+	} else {
+		///
+		// Here's where we use a nobody account
+		//
+		
+		dprintf(D_FULLDEBUG, "Using dynamic user account.\n");
+
+		myDynuser->reset();
+		// at this point, we know we want a user nobody, so
+		// generate a dynamic user and stash the handle
+
+				
+		if ( !myDynuser->init_user() ) {
+			// Oh shit.  
+			EXCEPT("Failed to create a user nobody");
+		}
+	
+		UserLoginName = strdup( myDynuser->get_accountname() );
+
+		// we created a new user, now just stash the token
+		CurrUserHandle = myDynuser->get_token();
+		return 1;
+	}
 }
 
 priv_state

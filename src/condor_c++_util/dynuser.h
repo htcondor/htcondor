@@ -19,6 +19,12 @@ const int max_domain_length = 100;
 #define ACCOUNT_PREFIX			"condor-run-"
 #define ACCOUNT_PREFIX_REUSE	"condor-reuse-"
 
+// get names of accounts and groups in a language-independent way
+char* getWellKnownName( DWORD subAuth1, DWORD subAuth2 = 0 );
+// these just call getWellKnownName()
+char* getSystemAccountName();
+char* getUserGroupName();
+
 class dynuser {
 public:
 	dynuser();
