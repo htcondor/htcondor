@@ -347,7 +347,7 @@ MAIN( int argc, char *argv[], char **envp )
 #if defined(HPUX9)
 	exit(_start( argc, argv, envp ));
 #else
-	main( argc, argv, envp );
+	exit( main( argc, argv, envp ));
 #endif
 }
 
