@@ -221,6 +221,7 @@ static void mainloop()
 		resmgr_setsocks(&readfds);
 		timer.tv_usec = 0;
 		timer.tv_sec = next_timeout - (int)time((time_t *)0);
+		if( timer.tv_sec < 0 ) timer.tv_sec = 0;
 
 #if defined(AIX31) || defined(AIX32)
 		errno = EINTR;
@@ -241,8 +242,8 @@ static void mainloop()
 			if( stashed_errno == EINTR ) {
 				continue;
 			} else {
-				EXCEPT( "select(FD_SETSIZE,0%o,0,0,%d sec)",
-						readfds, timer.tv_sec);
+				EXCEPT( "select(FD_SETSIZE,0%o,0,0,%d sec), errno: %d",
+						readfds, timer.tv_sec, errno);
 			}
 		}
 
