@@ -871,6 +871,9 @@ dc_config_auth()
 
 	if (get_my_uid()) {
 		if (pbuf) {
+			sprintf( buffer, "X509_RUN_AS_SERVER=1");
+			putenv (strdup(buffer));
+
 			sprintf( buffer, "X509_DIRECTORY=%s", pbuf);
 			putenv( strdup( buffer ) );
 
@@ -896,9 +899,6 @@ dc_config_auth()
 		}
 	}
     else { // running as root/condor, assuming host certificates
-		sprintf( buffer, "X509_RUN_AS_SERVER=1");
-		putenv (strdup(buffer));
-
 		if (pbuf) {
 			sprintf( buffer, "X509_DIRECTORY=%s", pbuf);
 			putenv( strdup( buffer ) );
