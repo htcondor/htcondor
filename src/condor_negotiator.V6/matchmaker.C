@@ -610,6 +610,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 
 	// done
 	dprintf (D_ALWAYS, "\t\t\tSuccessfully matched with %s\n", startdName);
+	return MM_GOOD_MATCH;
 }
 
 
