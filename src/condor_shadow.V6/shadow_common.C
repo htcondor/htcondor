@@ -901,7 +901,7 @@ MakeProc(ClassAd *ad, PROC *p)
 		buf[0] = '\0';
 			//e->PrintToStr(buf);
 		unp.Unparse( bufString, e );
-		strcpy( buf, bufString.c_str( ) );
+		sprintf( buf, "%s=%s", ATTR_REQUIREMENTS, bufString.c_str( );
 		bufString = "";
 		s = strchr(buf, '=');
 		if (s) {
