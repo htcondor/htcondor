@@ -437,9 +437,6 @@ sysapi_idle_time_raw(time_t *m_idle, time_t *m_console_idle)
 #ifndef WIN32
 	time_t m_i, m_c;
 
-	m_i = *m_idle;
-	m_c = *m_console_idle;
-
 	/* here calc_idle_time_cpp expects a reference, so let's give it one */
 	calc_idle_time_cpp(m_i, m_c);
 
