@@ -40,8 +40,9 @@
 #include "_condor_fix_nt.h"
 #include <stdlib.h>
 #include <stdio.h>
-#include <errno.h>
+#include <limits.h>
 #include <math.h>
+#include <errno.h>
 #include "condor_file_lock.h"
 
 /******************************
