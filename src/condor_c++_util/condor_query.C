@@ -13,6 +13,9 @@
 #include "condor_parser.h"
 #include "condor_adtypes.h"
 
+
+#define XDR_ASSERT(x) {if (!(x)) return Q_COMMUNICATION_ERROR;}
+
 char *new_strdup (const char *);
 
 // The order and number of the elements of the following arrays *are*
@@ -187,7 +190,8 @@ fetchAds (ClassAdList &adList, const char *poolName)
     ClassAd     queryAd, *ad;
 
 	// use current pool's collector if not specified
-	if (poolName[0] == '\0') {
+	if (poolName == NULL || poolName[0] == '\0')
+	{
 		if ((pool = param ("COLLECTOR_HOST")) == NULL)  {
 			return Q_NO_COLLECTOR_HOST;
 		}
