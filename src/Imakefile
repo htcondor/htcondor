@@ -1,8 +1,12 @@
 CFLAGS = $(STD_C_FLAGS)
 
 
-#if !HAS_FORTRAN
-#define test_suite_F
+#if HAS_FORTRAN
+#	if IS_V5
+TEST_SUITE_F = test_suite_F.V5
+#	else
+TEST_SUITE_F = test_suite_F
+#	endif
 #endif
 
 #if !HAS_X
@@ -22,14 +26,14 @@ PVM_LIBRARY = pvmd
 #	define Programs \
 		scripts tools shadow.V5 starter.V5 startd \
 		schedd kbdd  negotiator collector globalq master prio q rm \
-		submit.v3  on off test_suite_C.V5 test_suite_F.V5
+		submit.v3  on off test_suite_C.V5 $(TEST_SUITE_F)
 #		define Libraries	c++_util util_lib xdr_lib ckpt syscall_lib
 #else
 #	define Programs \
 		scripts standalone tools shadow starter startd \
 		schedd kbdd  negotiator collector globalq master prio q rm \
 		submit.v2 submit.v3  on off \
-		test_suite_C test_suite_F
+		test_suite_C $(TEST_SUITE_F)
 #		define Libraries	c++_util util_lib xdr_lib $(SYSCALL_LIB) $(PVM_LIBRARY)
 #endif
 
@@ -64,7 +68,9 @@ object_target(tools)
 	object_target(shadow.V5)
 	object_target(starter.V5)
 	object_target(test_suite_C.V5)
-	object_target(test_suite_F.V5)
+#	if HAS_FORTRAN
+		object_target($(TEST_SUITE_F))
+#	endif
 	object_target(ckpt)
 	object_target(syscall_lib)
 makefiles:: ../doc/Makefile
@@ -77,7 +83,7 @@ makefiles:: ../doc/Makefile
 	object_target($(SYSCALL_LIB))
 	object_target(test_suite_C)
 #	if HAS_FORTRAN
-		object_target(test_suite_F)
+		object_target($(TEST_SUITE_F))
 #	endif
 #	if DOES_CHECKPOINTING
 		object_target(standalone)
