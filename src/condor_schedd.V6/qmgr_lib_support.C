@@ -40,8 +40,8 @@ ConnectQ(char *qmgr_location)
 	connection->rendevous_file = 0;
 
 	/* No schedd identified --- use local schedd */
-	if (qmgr_location == 0) {
-		scheddAddr = get_schedd_addr( my_full_hostname() ); 
+	if( !qmgr_location || !*qmgr_location ) {
+		scheddAddr = get_schedd_addr( 0 ); 
 	}
 	/* schedd identified by Name, not <xxx.xxx.xxx.xxx:xxxx> */
 	else if(qmgr_location[0] != '<')
@@ -50,23 +50,23 @@ ConnectQ(char *qmgr_location)
 		scheddAddr = get_schedd_addr(qmgr_location);
 	}
 
-	if(scheddAddr)
-	{
+	if(scheddAddr) {
 		qmgmt_sock = new ReliSock(scheddAddr, QMGR_PORT);
 		free(scheddAddr);
-	}
-	else if(qmgr_location)
-	{
+	} else if(qmgr_location && (*qmgr_location == '<') ) {
 		qmgmt_sock = new ReliSock(qmgr_location, QMGR_PORT);
-	}
-	else
-	{
-		dprintf(D_ALWAYS, "Can't connect to qmgr\n");
+	} else {
+		if( qmgr_location ) {
+			dprintf( D_ALWAYS, "Can't find address of queue manager %s\n", 
+					 qmgr_location );
+		} else {
+			dprintf( D_ALWAYS, "Can't find address of local queue manager\n" );
+		}
 		free(connection);
 		return 0;
 	}
 	if (!qmgmt_sock->ok()) {
-		dprintf(D_ALWAYS, "Can't connect to qmgr\n");
+		dprintf(D_ALWAYS, "Can't connect to queue manager\n");
 		free(connection);
 		return 0;
 	}
