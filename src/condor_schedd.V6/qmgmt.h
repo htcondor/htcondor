@@ -48,8 +48,12 @@ void CommitTransaction();
 void AbortTransaction();
 void dirtyJobQueue( void );
 bool isQueueSuperUser( const char* user );
+
+int get_myproxy_password_handler(Service *, int, Stream *sock);
 #if defined(__cplusplus)
 }
 #endif
+
+
 
 #endif /* _QMGMT_H */
