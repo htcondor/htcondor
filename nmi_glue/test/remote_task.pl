@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.1.2.15 2005-02-17 19:56:40 bt Exp $
+# $Id: remote_task.pl,v 1.1.2.16 2005-03-04 19:11:29 wright Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -57,6 +57,8 @@ if( $compiler ) {
 
 chdir( "$targetdir" ) || c_die("Can't chdir($targetdir): $!\n");
 
+print "Attempting to build test in: $targetdir\n";
+print "Invoking \"make $testname\"\n";
 open( TESTBUILD, "make $testname 2>&1 |" ) || 
     c_die("Can't run make $testname\n");
 while( <TESTBUILD> ) {
