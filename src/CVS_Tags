@@ -1,3 +1,11 @@
+12/24/04 V6_6-merge-28
+   The state of the V6_6-branch for yet another merge into V6_7 (this
+   time into the V6_7_3-branch).  This includes the fixes for
+   COLLECTOR_ADDRESS_FILE and the "port 0" code to allow dynamic
+   collector (and negotiator) ports on 1-machine pools.  it also
+   includes the corresponding fix to the NWO test glue to take
+   advantage of this to avoid port conflicts in the test suite.
+
 12/21/04 V6_6-merge-27
    The state of the V6_6-branch for yet another merge into V6_7.  This
    just includes the condor-g fix from jamie, and some updates to the
