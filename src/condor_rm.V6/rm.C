@@ -334,7 +334,7 @@ void ProcArg(const char* arg)
 		c = strtol(arg, &tmp, 10);
 		if(c <= 0)
 		{
-			fprintf(stderr, "Invalid cluster # from %s\n", arg);
+			fprintf(stderr, "Invalid cluster # from %s.\n", arg);
 			return;
 		}
 		if(*tmp == '\0')
@@ -342,7 +342,9 @@ void ProcArg(const char* arg)
 		{
 			if(DestroyCluster(c) < 0)
 			{
-				fprintf(stderr, "Couldn't delete %s\n", arg);
+				fprintf(stderr, "Couldn't find/delete cluster %d.\n", c);
+			} else {
+			fprintf(stderr, "Cluster %d removed.\n", c);
 			}
 #ifdef 0
 			notify_schedd( c, -1 );
@@ -354,7 +356,7 @@ void ProcArg(const char* arg)
 			p = strtol(tmp + 1, &tmp, 10);
 			if(p < 0)
 			{
-				fprintf(stderr, "Invalid proc # from %s\n", arg);
+				fprintf(stderr, "Invalid proc # from %s.\n", arg);
 				return;
 			}
 			if(*tmp == '\0')
@@ -362,17 +364,19 @@ void ProcArg(const char* arg)
 			{
 				if(DestroyProc(c, p) < 0)
 				{
-					fprintf(stderr, "Couldn't delete %s\n", arg);
+					fprintf(stderr, "Couldn't find/delete job %d.%d.\n", c, p);
+				} else {
+					fprintf(stderr, "Job %d.%d removed.\n", c, p);
 				}
 #ifdef 0
 				notify_schedd( c, p );
 #endif
 				return;
 			}
-			fprintf(stderr, "Warning: unrecognized \"%s\" skipped\n", arg);
+			fprintf(stderr, "Warning: unrecognized \"%s\" skipped.\n", arg);
 			return;
 		}
-		fprintf(stderr, "Warning: unrecognized \"%s\" skipped\n", arg);
+		fprintf(stderr, "Warning: unrecognized \"%s\" skipped.\n", arg);
 	}
 	else if(isalpha(*arg))
 	// delete by user name
@@ -382,12 +386,14 @@ void ProcArg(const char* arg)
 		sprintf(constraint, "Owner == \"%s\"", arg);
 		if(DestroyClusterByConstraint(constraint) < 0)
 		{
-			fprintf(stderr, "Couldn't delete %s\n", arg);
+			fprintf(stderr, "Couldn't find/delete user %s's job(s).\n", arg);
+		} else {
+			fprintf(stderr, "User %s's job(s) removed.\n", arg);
 		}
 	}
 	else
 	{
-		fprintf(stderr, "Warning: unrecognized \"%s\" skipped\n", arg);
+		fprintf(stderr, "Warning: unrecognized \"%s\" skipped.\n", arg);
 	}
 }
 #endif
