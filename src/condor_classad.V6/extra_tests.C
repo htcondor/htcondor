@@ -145,9 +145,9 @@ static void read_from_string(ClassAd **classad_a, ClassAd **classad_b)
 	cout << "Reading from C++ string.\n";
 
 	offset = 0;
-	*classad_a = parser.ParseClassAd(parsing_text, &offset);
-	*classad_b = parser.ParseClassAd(parsing_text, &offset);
-	classad_c = parser.ParseClassAd(parsing_text, &offset);
+	*classad_a = parser.ParseClassAd(parsing_text, offset);
+	*classad_b = parser.ParseClassAd(parsing_text, offset);
+	classad_c = parser.ParseClassAd(parsing_text, offset);
 
 	check_parse(*classad_a, *classad_b, classad_c);
 
@@ -166,9 +166,9 @@ static void read_from_string_alt(ClassAd **classad_a, ClassAd **classad_b)
 	*classad_a = new ClassAd;
 	*classad_b = new ClassAd;
 	classad_c  = new ClassAd;
-	parser.ParseClassAd(parsing_text, **classad_a, &offset);
-	parser.ParseClassAd(parsing_text, **classad_b, &offset);
-	if (!parser.ParseClassAd(parsing_text, *classad_c, &offset)) {
+	parser.ParseClassAd(parsing_text, **classad_a, offset);
+	parser.ParseClassAd(parsing_text, **classad_b, offset);
+	if (!parser.ParseClassAd(parsing_text, *classad_c, offset)) {
 		delete classad_c;
 		classad_c = NULL;
 	}
@@ -187,9 +187,9 @@ static void read_from_char(ClassAd **classad_a, ClassAd **classad_b)
 	cout << "Reading from C string.\n";
 
 	offset = 0;
-	*classad_a = parser.ParseClassAd(text, &offset);
-	*classad_b = parser.ParseClassAd(text, &offset);
-	classad_c = parser.ParseClassAd(text, &offset);
+	*classad_a = parser.ParseClassAd(text, offset);
+	*classad_b = parser.ParseClassAd(text, offset);
+	classad_c = parser.ParseClassAd(text, offset);
 
 	check_parse(*classad_a, *classad_b, classad_c);
 	return;
@@ -208,9 +208,9 @@ static void read_from_char_alt(ClassAd **classad_a, ClassAd **classad_b)
 	*classad_a = new ClassAd;
 	*classad_b = new ClassAd;
 	classad_c  = new ClassAd;
-	parser.ParseClassAd(text, **classad_a, &offset);
-	parser.ParseClassAd(text, **classad_b, &offset);
-	if (!parser.ParseClassAd(text, *classad_c, &offset)) {
+	parser.ParseClassAd(text, **classad_a, offset);
+	parser.ParseClassAd(text, **classad_b, offset);
+	if (!parser.ParseClassAd(text, *classad_c, offset)) {
 		delete classad_c;
 		classad_c = NULL;
 	}
