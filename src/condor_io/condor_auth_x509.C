@@ -573,6 +573,7 @@ int Condor_Auth_X509::authenticate_client_gss()
         }
         if (status == 0) {
             dprintf(D_SECURITY, "Server is unable to authorize my user name. Check the GRIDMAP file on the server side.\n");
+            goto clear; 
         }
 
         char * server = get_server_info();
@@ -599,13 +600,8 @@ int Condor_Auth_X509::authenticate_client_gss()
         delete server;
         delete daemonNames;
     }
-
-    if (status == 1) {
-        return TRUE;
-    }
-    else {
-        return FALSE;
-    }
+ clear:
+    return (status == 0) ? FALSE : TRUE;
 }
 
 int Condor_Auth_X509::authenticate_server_gss()
@@ -654,15 +650,17 @@ int Condor_Auth_X509::authenticate_server_gss()
             status = 0;
         }
 
-        // Now, see if client likes me or not
-        mySock_->decode();
-        if (!mySock_->code(status) || !mySock_->end_of_message()) {
-            dprintf(D_SECURITY, "Unable to receive client confirmation.\n");
-            status = 0;
-        }
-        else {
-            if (status == 0) {
-                dprintf(D_SECURITY, "Client rejected my certificate. Please check the GSI_DAEMON_NAME parameter in Condor's config file.\n");
+        if (status != 0) {
+            // Now, see if client likes me or not
+            mySock_->decode();
+            if (!mySock_->code(status) || !mySock_->end_of_message()) {
+                dprintf(D_SECURITY, "Unable to receive client confirmation.\n");
+                status = 0;
+            }
+            else {
+                if (status == 0) {
+                    dprintf(D_SECURITY, "Client rejected my certificate. Please check the GSI_DAEMON_NAME parameter in Condor's config file.\n");
+                }
             }
         }
         
@@ -674,8 +672,3 @@ int Condor_Auth_X509::authenticate_server_gss()
 }
 
 #endif
-
-
-
-
-
