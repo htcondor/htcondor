@@ -38,9 +38,10 @@ static_link_target($(STATIC_DIR)/lib/ld,lib,real-ld)
 #endif /* IS_CLIPPED */
 
 
-#if IS_SGI_IRIX
+#if IS_IRIX
 release_link_target($(RELEASE_DIR)/lib/ld,lib,uld)
 release_link_target($(RELEASE_DIR)/lib/ld,lib,old_ld)
+release_link_target($(RELEASE_DIR)/lib/ld,lib,ld32)
 release_symlink_target(/usr/lib/c++/c++filt,lib,c++filt)
 release_symlink_target(/usr/lib/c++/c++patch,lib,c++patch)
 release_symlink_target(/usr/lib/c++/cfront,lib,cfront)
@@ -50,6 +51,7 @@ release_symlink_target(/usr/lib/c++/ptlink,lib,ptlink)
 
 strip_link_target($(STRIP_DIR)/lib/ld,lib,uld)
 strip_link_target($(STRIP_DIR)/lib/ld,lib,old_ld)
+strip_link_target($(STRIP_DIR)/lib/ld,lib,ld32)
 strip_symlink_target(/usr/lib/c++/c++filt,lib,c++filt)
 strip_symlink_target(/usr/lib/c++/c++patch,lib,c++patch)
 strip_symlink_target(/usr/lib/c++/cfront,lib,cfront)
@@ -59,6 +61,7 @@ strip_symlink_target(/usr/lib/c++/ptlink,lib,ptlink)
 
 static_link_target($(STATIC_DIR)/lib/ld,lib,uld)
 static_link_target($(STATIC_DIR)/lib/ld,lib,old_ld)
+static_link_target($(STATIC_DIR)/lib/ld,lib,ld32)
 static_symlink_target(/usr/lib/c++/c++filt,lib,c++filt)
 static_symlink_target(/usr/lib/c++/c++patch,lib,c++patch)
 static_symlink_target(/usr/lib/c++/cfront,lib,cfront)
