@@ -1196,7 +1196,7 @@ getrusage( int who, struct rusage *rusage )
 	        void *handle;
 		int (*fptr)(int,struct rusage *);
 
-		if ((handle = dlopen("/usr/lib/libc.so", RTLD_LAZY)) == NULL) {
+		if ((handle = dlopen("libc.so", RTLD_LAZY)) == NULL) {
 			rval = -1;
 		} else {
 			if ((fptr = (int (*)(int,struct rusage *))dlsym(handle, "getrusage")) == NULL) {
@@ -1357,7 +1357,7 @@ getlogin()
 		{
         void *handle;
         char * (*fptr)();
-        if ((handle = dlopen("/usr/lib/libc.so", RTLD_LAZY)) == NULL) {
+        if ((handle = dlopen("libc.so", RTLD_LAZY)) == NULL) {
             return NULL;
         }
 
