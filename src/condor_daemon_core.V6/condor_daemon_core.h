@@ -874,6 +874,9 @@ class DaemonCore : public Service
     unsigned int max_hang_time;
     int send_child_alive_timer;
 
+	// misc helper functions
+	void CheckPrivState( void );
+
     // these need to be in thread local storage someday
     void **curr_dataptr;
     void **curr_regdataptr;
