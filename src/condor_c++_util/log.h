@@ -17,7 +17,7 @@ class LogRecord {
 public:
 	
 	LogRecord();
-	~LogRecord();
+	virtual ~LogRecord();
 	LogRecord *get_next() { return next; }
 	int get_op_type() { return op_type; }
 
