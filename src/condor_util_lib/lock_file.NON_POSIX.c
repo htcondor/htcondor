@@ -49,54 +49,13 @@
 	locks agree on which kind of locks are being used.
 */
 
-#include <stdio.h>
-#include <errno.h>
-#include "file_lock.h"
+#include "condor_common.h"
 
-/* 
-   #include "fake_flock.h"  was here originally inserted by Dhaval; relocated
-   by Rajesh to remove redefinitions of LOCK_EX et al. and warnings caused due
-   to this  -- Rajesh 3/14
-*/
-
-
-#if defined( HPUX9 )
-#define USE_FLOCK 0
-#include "fake_flock.h" /* to get the definition of LOCK_UN */
-#endif
-
-#if defined( AIX32 )
-#define USE_FLOCK 0
-#endif
-
-#if defined( ULTRIX42 ) || defined(ULTRIX43)
-#define USE_FLOCK 1
-#endif
-
-#if defined( SUNOS41 )
-#define USE_FLOCK 1
-#endif
-
-#if defined( OSF1 )
-#define USE_FLOCK 1
-#endif
-
-#if defined( LINUX)
-#define USE_FLOCK 1
-#endif
-
-#if defined(Solaris) /* dhaval */
-#include "fake_flock.h"
-#define USE_FLOCK 0
-#endif
-
-#if defined( IRIX53)
-#define USE_FLOCK 0
-#endif
-
-#if !defined(USE_FLOCK)
-ERROR: DONT KNOW WHETHER TO USE FLOCK or FCNTL
-#endif
+/**********************************************************************
+** condor_common.h includes condor_file_lock.h, which defines
+** CONDOR_USE_FLOCK to be either 0 or 1 depending on whether we should
+** use the flock system call to implement file locking.
+**********************************************************************/
 
 /*
   This is the non POSIX conforming way of locking a file using the
@@ -104,17 +63,8 @@ ERROR: DONT KNOW WHETHER TO USE FLOCK or FCNTL
   becuase some NFS file systems don't fully support the POSIX fcntl()
   system call.
 */
-#if USE_FLOCK
 
-#include <sys/file.h>
-#if !defined(SUNOS41)	/* sunos41 has the definitions in sys/file.h --Weiru */
-#include "fake_flock.h" 
-#endif
-
-/* Solaris specific change because of the enclosure of this header in HPUX9 
-   definition but is used unconditionally in following code ..dhaval 6/24 */
-
-extern int errno;
+#if CONDOR_USE_FLOCK
 
 int
 lock_file( fd, type, do_block )
@@ -149,27 +99,14 @@ int do_block;
 	}
 	return 0;
 }
-#endif
 
-#if !USE_FLOCK
+#else /* (! CONDOR_USE_FLOCK) */
+
 /*
   This is the POSIX conforming way of locking a file using the
   fcntl() system call.  Note: even systems which fully support fcntl()
   for local fils these locks may not work across NFS files systems.
 */
-
-#ifndef F_RDLCK
-#include <fcntl.h>
-#endif
-
-#include "fake_flock.h"  /* For completeness' sake -- Rajesh */
-/* Solaris specific change because of the enclosure of this header in HPUX9 
-definition but is used unconditionally in following code ..dhaval 6/24 */
-
-
-#ifndef SEEK_SET
-#define SEEK_SET 0
-#endif
 
 int
 lock_file( int fd, LOCK_TYPE type, int do_block )
@@ -211,4 +148,5 @@ lock_file( int fd, LOCK_TYPE type, int do_block )
 	}
 	return 0;
 }
-#endif
+
+#endif CONDOR_USE_FLOCK

@@ -27,13 +27,10 @@
 ** 
 */ 
 
-#include <stdio.h>
-#include <fcntl.h>
-#include <sys/errno.h>
-#include "fake_flock.h"
+#include "condor_common.h"
+
 #include "except.h"
 #include "debug.h"
-
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
 extern int	errno;
