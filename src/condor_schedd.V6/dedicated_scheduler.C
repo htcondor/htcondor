@@ -1169,14 +1169,9 @@ DedicatedScheduler::deactivateClaim( match_rec* m_rec )
 	}
 	sock.close();
 	
-		// Now, just update the fields in our m_rec.
-	m_rec->cluster = -1;
-	m_rec->proc = -1;
-	m_rec->shadowRec = NULL;
-	m_rec->num_exceptions = 0;
-		// Status is no longer active, but we're still claimed
-	m_rec->status = M_CLAIMED;
-	m_rec->allocated = false;
+		// Clear out this match rec, since it's no longer allocated to
+		// a given MPI job.
+	deallocMatchRec( m_rec );
 
 	return true;
 }
@@ -1995,12 +1990,13 @@ DedicatedScheduler::removeAllocation( shadow_rec* srec )
 				srec->job_id.cluster ); 
 	}
 
-		// First, mark all match records as no longer allocated.
+		// First, mark all the match records as no longer allocated to
+		// our MPI job.
 	for( i=0; i<alloc->num_procs; i++ ) {
 		matches = (*alloc->matches)[i];
 		n = matches->getlast();
 		for( m=0 ; m <= n ; m++ ) {
-			(*matches)[m]->allocated = false;
+			deallocMatchRec( (*matches)[m] );
 		}
 	}
 
@@ -2531,3 +2527,15 @@ getCapability( ClassAd* resource )
 	return( strdup(cap_buf) );
 }
 
+
+void
+deallocMatchRec( match_rec* mrec )
+{
+	mrec->allocated = false;
+	mrec->cluster = -1;
+	mrec->proc = -1;
+	mrec->shadowRec = NULL;
+	mrec->num_exceptions = 0;
+		// Status is no longer active, but we're still claimed
+	mrec->status = M_CLAIMED;
+}

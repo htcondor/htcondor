@@ -279,3 +279,7 @@ void displayRequest( ClassAd* ad, char* str, int debug_level );
 char* makeCapability( ClassAd* ad, char* addr = NULL );
 
 char* getCapability( ClassAd* ad );
+
+// Clear out all the fields in the match record that have anything to
+// do with the mrec being allocated to a certain MPI job.
+void deallocMatchRec( match_rec* mrec );
