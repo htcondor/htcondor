@@ -20,6 +20,8 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+#include "condor_common.h"
 #include "startd.h"
 static char *_FileName_ = __FILE__;
 
@@ -33,6 +35,9 @@ ResMgr::ResMgr()
 
 	m_proc = new ProcAPI;
 	m_attr = new MachAttributes;
+
+	nresources = 0;
+	resources = NULL;
 }
 
 
@@ -45,10 +50,12 @@ ResMgr::~ResMgr()
 	if( view_sock ) {
 		delete view_sock;
 	}
-	for( i = 0; i < nresources; i++ ) {
-		delete resources[i];
+	if ( resources ) {
+		for( i = 0; i < nresources; i++ ) {
+			delete resources[i];
+		}
+		delete [] resources;
 	}
-	delete [] resources;
 }
 
 
@@ -154,7 +161,7 @@ ResMgr::sum( ResourceFloatMember memberfunc )
 
 
 Resource*
-ResMgr::max( ResourceMember memberfunc, int* val )
+ResMgr::res_max( ResourceMember memberfunc, int* val )
 {
 	Resource* rip = NULL;
 	int i, tmp, max = INT_MIN;
