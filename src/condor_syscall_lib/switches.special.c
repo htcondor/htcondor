@@ -79,6 +79,8 @@ extern unsigned int _condor_numrestarts;  /* in image.C */
 char	*getwd( char * );
 void    *malloc();     
 int	_condor_open( const char *path, int flags, va_list ap );
+sigset_t condor_block_signals();
+void condor_restore_sigmask(sigset_t);
 
 /*
   The process should exit making the status value available to its parent
@@ -103,6 +105,9 @@ chdir( const char *path )
 {
 	int rval, status;
 	char	tbuf[ _POSIX_PATH_MAX ];
+	sigset_t omask;
+
+	omask = condor_block_signals();
 
 		/* Try the system call */
 	if( LocalSysCalls() ) {
@@ -113,13 +118,15 @@ chdir( const char *path )
 
 		/* If it fails we can stop here */
 	if( rval < 0 ) {
+		condor_restore_sigmask(omask);
 		return rval;
 	}
 
-	if( MappingFileDescriptors ) {
+	if( MappingFileDescriptors() ) {
 		store_working_directory();
 	}
 
+	condor_restore_sigmask(omask);
 	return rval;
 }
 
@@ -128,12 +135,16 @@ int
 fchdir( int fd )
 {
 	int rval, real_fd;
+	sigset_t omask;
+
+	omask = condor_block_signals();
 
 	/* set this up in case we aren't mapping file descriptors. */
 	real_fd = fd;
 
 	if( MappingFileDescriptors() ) {
 		if( (real_fd = MapFd(fd)) < 0 ) {
+			condor_restore_sigmask(omask);
 			return -1;
 		}
 	}
@@ -147,13 +158,15 @@ fchdir( int fd )
 
 		/* If it fails we can stop here */
 	if( rval < 0 ) {
+		condor_restore_sigmask(omask);
 		return rval;
 	}
 
-	if( MappingFileDescriptors ) {
+	if( MappingFileDescriptors() ) {
 		store_working_directory();
 	}
 
+	condor_restore_sigmask(omask);
 	return rval;
 }
 #endif
@@ -215,6 +228,9 @@ getrusage( int who, struct rusage *rusage )
 	int scm;
 	static struct rusage accum_rusage;
 	static int num_restarts = 50;  /* must not initialize to 0 */
+	sigset_t omask;
+
+	omask = condor_block_signals();
 
 	/* Get current rusage for this process accumulated on this machine */
 
@@ -252,6 +268,7 @@ getrusage( int who, struct rusage *rusage )
 		/* Condor user processes don't have children - yet */
 		if( who != RUSAGE_SELF ) {
 			memset( (char *)rusage, '\0', sizeof(struct rusage) );
+			condor_restore_sigmask(omask);
 			return 0;
 		}
 
@@ -281,6 +298,7 @@ getrusage( int who, struct rusage *rusage )
 		}
 	}
 
+	condor_restore_sigmask(omask);
 	if ( rval == 0  && rval1 == 0 ) {
 		return 0;
 	} else {
@@ -480,6 +498,9 @@ ftruncate( int fd, off_t length )
 	int	rval;
 	int	user_fd;
 	int use_local_access = FALSE;
+	sigset_t omask;
+
+	omask = condor_block_signals();
 
 	/* The below length check is a hack to patch an f77 problem on
 	   OSF1.  - Jim B. */
@@ -488,6 +509,7 @@ ftruncate( int fd, off_t length )
 		return 0;
 
 	if( (user_fd=MapFd(fd)) < 0 ) {
+		condor_restore_sigmask(omask);
 		return (int)-1;
 	}
 	if( LocalAccess(fd) ) {
@@ -504,6 +526,7 @@ ftruncate( int fd, off_t length )
 		rval = REMOTE_syscall( CONDOR_ftruncate, user_fd, length );
 	}
 
+	condor_restore_sigmask(omask);
 	return rval;
 }
 
@@ -991,6 +1014,9 @@ int _condor_xstat(int version, const char *path, struct stat *buf)
     int rval;
 	struct kernel_stat kbuf;
 	struct stat sbuf;
+	sigset_t omask;
+
+	omask = condor_block_signals();
 
     if( LocalSysCalls() ) {
         rval = syscall( CONDOR_SYS_stat, path, &kbuf );
@@ -999,6 +1025,7 @@ int _condor_xstat(int version, const char *path, struct stat *buf)
         rval = REMOTE_syscall( CONDOR_stat, path, &sbuf );
 		_condor_s_stat_convert( version, &sbuf, buf );
     }
+	condor_restore_sigmask(omask);
     return rval;
 }
 
@@ -1008,6 +1035,9 @@ int _condor_xstat64(int version, const char *path, struct stat64 *buf)
     int rval;
 	struct kernel_stat kbuf;
 	struct stat sbuf;
+	sigset_t omask;
+
+	omask = condor_block_signals();
 
     if( LocalSysCalls() ) {
         rval = syscall( CONDOR_SYS_stat, path, &kbuf );
@@ -1016,6 +1046,7 @@ int _condor_xstat64(int version, const char *path, struct stat64 *buf)
         rval = REMOTE_syscall( CONDOR_stat, path, &sbuf );
 		_condor_s_stat_convert64( version, &sbuf, buf );
     }
+	condor_restore_sigmask(omask);
     return rval;
 }
 #endif
@@ -1028,6 +1059,9 @@ _condor_fxstat(int version, int fd, struct stat *buf)
     int use_local_access = FALSE;
 	struct kernel_stat kbuf;
 	struct stat sbuf;
+	sigset_t omask;
+
+	omask = condor_block_signals();
 
     if( (user_fd=MapFd(fd)) < 0 ) {
         return (int)-1;
@@ -1043,6 +1077,7 @@ _condor_fxstat(int version, int fd, struct stat *buf)
         rval = REMOTE_syscall( CONDOR_fstat, user_fd, &sbuf );
 		_condor_s_stat_convert( version, &sbuf, buf );
     }
+	condor_restore_sigmask(omask);
     return rval;
 }
 
@@ -1055,6 +1090,9 @@ _condor_fxstat64(int version, int fd, struct stat64 *buf)
     int use_local_access = FALSE;
 	struct kernel_stat kbuf;
 	struct stat sbuf;
+	sigset_t omask;
+
+	omask = condor_block_signals();
 
     if( (user_fd=MapFd(fd)) < 0 ) {
         return (int)-1;
@@ -1070,6 +1108,7 @@ _condor_fxstat64(int version, int fd, struct stat64 *buf)
         rval = REMOTE_syscall( CONDOR_fstat, user_fd, &sbuf );
 		_condor_s_stat_convert64( version, &sbuf, buf );
     }
+	condor_restore_sigmask(omask);
     return rval;
 }
 #endif
@@ -1079,6 +1118,9 @@ int _condor_lxstat(int version, const char *path, struct stat *buf)
     int rval;
 	struct kernel_stat kbuf;
 	struct stat sbuf;
+	sigset_t omask;
+
+	omask = condor_block_signals();
 
     if( LocalSysCalls() ) {
         rval = syscall( CONDOR_SYS_lstat, path, &kbuf );
@@ -1087,6 +1129,7 @@ int _condor_lxstat(int version, const char *path, struct stat *buf)
         rval = REMOTE_syscall( CONDOR_lstat, path, &sbuf );
 		_condor_s_stat_convert( version, &sbuf, buf );
     }
+	condor_restore_sigmask(omask);
     return rval;
 }
 
@@ -1096,6 +1139,9 @@ int _condor_lxstat64(int version, const char *path, struct stat64 *buf)
     int rval;
 	struct kernel_stat kbuf;
 	struct stat sbuf;
+	sigset_t omask;
+
+	omask = condor_block_signals();
 
     if( LocalSysCalls() ) {
         rval = syscall( CONDOR_SYS_lstat, path, &kbuf );
@@ -1104,6 +1150,7 @@ int _condor_lxstat64(int version, const char *path, struct stat64 *buf)
         rval = REMOTE_syscall( CONDOR_lstat, path, &sbuf );
 		_condor_s_stat_convert64( version, &sbuf, buf );
     }
+	condor_restore_sigmask(omask);
     return rval;
 }
 #endif
@@ -1155,6 +1202,9 @@ int _xstat(const int ver, const char *path, struct stat *buf)
 #endif
 {
 	int	rval;
+	sigset_t omask;
+
+	omask = condor_block_signals();
 
 	if( LocalSysCalls() ) {
 		rval = syscall( SYS_xstat, ver, path, buf );
@@ -1162,6 +1212,7 @@ int _xstat(const int ver, const char *path, struct stat *buf)
 		rval = REMOTE_syscall( CONDOR_stat, path, buf );
 	}
 
+	condor_restore_sigmask(omask);
 	return rval;
 }
 
@@ -1170,6 +1221,9 @@ int _lxstat(const int ver, const char *path, struct stat *buf)
 #endif
 {
 	int	rval;
+	sigset_t omask;
+
+	omask = condor_block_signals();
 
 	if( LocalSysCalls() ) {
 		rval = syscall( SYS_lxstat, ver, path, buf );
@@ -1177,6 +1231,7 @@ int _lxstat(const int ver, const char *path, struct stat *buf)
 		rval = REMOTE_syscall( CONDOR_lstat, path, buf );
 	}
 
+	condor_restore_sigmask(omask);
 	return rval;
 }
 
@@ -1187,8 +1242,12 @@ int _fxstat(const int ver, int fd, struct stat *buf)
 	int	rval;
 	int	user_fd;
 	int use_local_access = FALSE;
+	sigset_t omask;
+
+	omask = condor_block_signals();
 
 	if( (user_fd=MapFd(fd)) < 0 ) {
+		condor_restore_sigmask(omask);
 		return (int)-1;
 	}
 	if( LocalAccess(fd) ) {
@@ -1201,6 +1260,7 @@ int _fxstat(const int ver, int fd, struct stat *buf)
 		rval = REMOTE_syscall( CONDOR_fstat, user_fd, buf );
 	}
 
+	condor_restore_sigmask(omask);
 	return rval;
 }
 #endif /* IRIX || Solaris */
@@ -1277,7 +1337,9 @@ mmap( MMAP_T a, size_t l, int p, int f, int fd, off_t o )
 	MMAP_T	rval;
 	int		user_fd;
 	int		use_local_access = FALSE;
+	sigset_t omask;
 
+	omask = condor_block_signals();
 
 	if( f & MAP_ANONYMOUS ) {
 			/* If the MAP_ANONYMOUS flag is set, ignore the fd we were
@@ -1292,11 +1354,13 @@ mmap( MMAP_T a, size_t l, int p, int f, int fd, off_t o )
 		}
 	}
 	if( use_local_access || LocalSysCalls() ) {
+		condor_restore_sigmask(omask);
 		return MAP_FAILED;
 	} else {
 		rval = (MMAP_T)REMOTE_syscall( CONDOR_mmap, a, l, p, f, user_fd, o );
 	}
 	
+	condor_restore_sigmask(omask);
 	return rval;
 }
 #endif /* defined( LINUX ) */
@@ -1357,6 +1421,9 @@ kill( pid_t pid, int sig )
 {
 	int rval;
 	pid_t my_pid;	
+	sigset_t omask;
+
+	omask = condor_block_signals();
 
 	if( LocalSysCalls() ) {
 			/* We're in local mode, do exactly what we were told. */
@@ -1376,6 +1443,7 @@ kill( pid_t pid, int sig )
 			rval = -1;
 		}
 	}	
+	condor_restore_sigmask(omask);
 	return rval;
 }
 
@@ -1410,8 +1478,12 @@ int fdsync( int fd, int flags )
 	int	rval;
 	int	real_fd;
 	int use_local_access = FALSE;
+	sigset_t omask;
+
+	omask = condor_block_signals();
 
 	if( (real_fd=MapFd(fd)) < 0 ) {
+		condor_restore_sigmask(omask);
 		return (int)-1;
 	}
 	if( LocalAccess(fd) ) {
@@ -1424,6 +1496,7 @@ int fdsync( int fd, int flags )
 		rval = REMOTE_syscall( CONDOR_fsync, real_fd );
 	}
 
+	condor_restore_sigmask(omask);
 	return rval;
 }
 

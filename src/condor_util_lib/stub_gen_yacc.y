@@ -996,6 +996,8 @@ output_mapping( char *func_type_name, int is_ptr,  struct node *list )
 		printf( "\n" );
 	}
 
+	printf( "	omask = condor_block_signals();\n" );
+
 	for( n = list->next; n != list; n = n->next ) {
 		if( n->is_mapped ) {
 			printf( "	if( (user_%s=MapFd(%s)) < 0 ) {\n", n->id, n->id );
@@ -1384,6 +1386,7 @@ output_switch( struct node *n )
 	output_switch_decl( n->param_list );
 	printf( "{\n" );
 	printf( "	int	rval;\n" );
+	printf( "	sigset_t omask;\n\n" );
 
 	if (gen_local_calls ) {
 		output_mapping( n->type_name, n->is_ptr, n->param_list );
@@ -1403,6 +1406,8 @@ output_switch( struct node *n )
 	if (gen_local_calls) {
 		printf( "	}\n" );
 	}
+
+	printf( "	condor_restore_sigmask(omask);\n" );
 	if( strcmp(n->type_name,"void") != 0 ) {
 		printf( "\n" );
 		if( strcmp(n->type_name,"int") == 0 ) {
