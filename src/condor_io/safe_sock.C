@@ -64,6 +64,8 @@ void SafeSock::init()
 		_outMsgID.time = (unsigned long)time(NULL);
 		_outMsgID.msgNo = (unsigned long)get_random_int();
 	}
+
+    _authenticated = false;
 }
 
 
@@ -166,11 +168,13 @@ int SafeSock::end_of_message()
 				// message is not ready
 				ret_val = TRUE;
 			}
-                        resetCrypto();
+            resetCrypto();
+            _authenticated = false;
 			break;
 
 		default:
-                        resetCrypto();
+            resetCrypto();
+            _authenticated = false;
 			break;
 	}
 			
@@ -790,3 +794,12 @@ void SafeSock::setFullyQualifiedUser(char * u) {
 	}
 }
 
+int SafeSock :: isAuthenticated()
+{
+    return _authenticated;
+}
+
+void SafeSock :: setAuthenticated(bool authenticated)
+{
+    _authenticated = authenticated;
+}
