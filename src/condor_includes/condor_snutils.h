@@ -33,8 +33,14 @@
 BEGIN_C_DECLS
 
 #ifdef NEED_SNPRINTF
-int snprintf( char *str, size_t size, const  char  *format, ... );
+int snprintf(char *output, int buffer_size, const char *format, ...);
 #endif
+
+int condor_snprintf(char *output, int buffer_size, const char *format, ...);
+int condor_vsnprintf(char *output, int buffer_size, const char *format, 
+					 va_list args);
+int printf_length(const char *format, ...);
+int vprintf_length(const char *format, va_list args);
 
 END_C_DECLS
 
