@@ -1035,12 +1035,11 @@ Daemon::initHostname( void )
 		return false;
 	}
 
-		// TODO: we should really be checking for a full host
-		// here and looking at aliases, DEFAULT_DOMAIN_NAME, etc
-	dprintf( D_HOSTNAME, "Found host entry, using \"%s\" for "
-			 "full hostname\n", hostp->h_name );
-	New_full_hostname( strnewp(hostp->h_name) );
-
+		// This will print all the D_HOSTNAME messages we need, and it
+		// returns a newly allocated string, so we won't need to
+		// strnewp() it again
+	char* tmp = get_full_hostname_from_hostent( hostp, NULL );
+	New_full_hostname( tmp );
 	initHostnameFromFull();
 	return true;
 }
