@@ -222,15 +222,21 @@ Scheduler::count_jobs()
 	int		prio_compar();
 	char	tmp[512];
 
+    // copy owner data to old-owners table
+    OwnerData OldOwners[MAX_NUM_OWNERS];
+    int Old_N_Owners=N_Owners;
+	for ( i=0; i<N_Owners; i++) {
+		OldOwners[i].Name = Owners[i].Name;
+	}
+
 	N_Owners = 0;
 	JobsRunning = 0;
 	JobsIdle = 0;
 	SchedUniverseJobsIdle = 0;
 	SchedUniverseJobsRunning = 0;
 
-	// clear out the table ... (WHY? --RR)
+	// clear owner table contents
 	for ( i=0; i<MAX_NUM_OWNERS; i++) {
-		if (Owners[i].Name) FREE( Owners[i].Name );
 		Owners[i].Name = NULL;
 		Owners[i].JobsRunning = 0;
 		Owners[i].JobsIdle = 0;
@@ -283,6 +289,7 @@ Scheduler::count_jobs()
 	ad->Delete (ATTR_NUM_USERS);
 	ad->Delete (ATTR_TOTAL_RUNNING_JOBS);
 	ad->Delete (ATTR_TOTAL_IDLE_JOBS);
+
 	for ( i=0; i<N_Owners; i++) {
 
 	  sprintf(tmp, "%s = %d", ATTR_RUNNING_JOBS, Owners[i].JobsRunning);
@@ -304,6 +311,40 @@ Scheduler::count_jobs()
 	  dprintf (D_ALWAYS, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
+	  dprintf (D_ALWAYS, "Sent owner ad to central manager\n");
+	  update_central_mgr(UPDATE_SUBMITTOR_AD);
+	}
+
+    // send info about deleted owners
+    // put 0 for idle & running jobs
+
+	sprintf(tmp, "%s = 0", ATTR_RUNNING_JOBS);
+	ad->InsertOrUpdate(tmp);
+	sprintf(tmp, "%s = 0", ATTR_IDLE_JOBS);
+	ad->InsertOrUpdate(tmp);
+
+	for ( i=0; i<Old_N_Owners; i++) {
+
+	  // the nice-owner is not per uid domain, so don't decorate it with
+	  // the "@uidDomain"
+	  if( strcmp( OldOwners[i].Name, NiceUserName ) == 0 ) {
+		sprintf( tmp, "%s = \"%s\"", ATTR_NAME, NiceUserName );
+	  } else {
+	  	sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, OldOwners[i].Name, UidDomain);
+	  }
+      FREE( OldOwners[i].Name );
+
+      // check that the old name is not in the new list
+      int k;
+      for(k=0; k<N_Owners;k++) {
+        if (!strcmp(OldOwners[i].Name,Owners[k].Name)) break;
+      }
+      if (k<N_Owners) continue;
+
+	  dprintf (D_ALWAYS, "Changed attribute: %s\n", tmp);
+	  ad->InsertOrUpdate(tmp);
+
+	  dprintf (D_ALWAYS, "Sent owner (0 jobs) ad to central manager\n");
 	  update_central_mgr(UPDATE_SUBMITTOR_AD);
 	}
 
@@ -1846,6 +1887,7 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
     int     	status;
 	match_rec*		mrec;
 	shadow_rec*	srec;
+    int StartJobsFlag=TRUE;
 
     if( sig == 0 ) {
         dprintf( D_ALWAYS, "***********  Begin Extra Checking ********\n" );
@@ -1908,6 +1950,8 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 				switch( WEXITSTATUS(status) ) {
 				case JOB_NO_MEM:
 					swap_space_exhausted();
+                case JOB_EXEC_FAILED:
+                    StartJobsFlag=FALSE;
 					break;
 				case JOB_CKPTED:
 				case JOB_NOT_CKPTED:
@@ -1947,7 +1991,7 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 		// or a shadow (or both) have exited, we should try to
 		// activate all our claims and start jobs on them.
 	if( ! ExitWhenDone ) {
-		StartJobs();
+		if (StartJobsFlag) StartJobs();
 	}
 
 #endif /* !defined(WIN32) */
