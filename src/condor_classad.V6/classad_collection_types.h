@@ -257,7 +257,7 @@ public:
 	 	@param ID The ID of the next child collection
 	 	@return 0 if the iterator is invalid, or has gone past the last child 
 			collection, non-zero if the iterator was successfully moved.
-			Additionally, the return value is {\bf negative} if child 
+			Additionally, the return value is <b>negative</b> if child 
 			collections were added or removed to the parent collection since
 			the last iteration operation to this iterator.  This situation may
 			have already caused the iterator to move.
@@ -268,7 +268,7 @@ public:
 	 	(The previous state of the iterator will be cleared.)
 	 	@return 0 if the iterator is invalid, or has gone past the last child 
 			collection, non-zero if the iterator was successfully moved.
-			Additionally, the return value is {\bf negative} if child 
+			Additionally, the return value is <b>negative</b> if child 
 			collections were added or removed to the parent collection since
 			the last iteration operation to this iterator.  This situation may
 			have already caused the iterator to move.
@@ -396,7 +396,7 @@ public:
 			the next element, or undefined otherwise.
 		@return 0 if the iterator was invalid or could not be moved 
 			successfully, and non-zero otherwise.
-			Additionally, the return value is {\bf negative} if classads were 
+			Additionally, the return value is <b>negative</b> if classads were 
 			were added or removed to the collection being iterated over since
 			the last iteration operation to the iterator.  This situation may
 			have already caused the iterator to move.
@@ -407,7 +407,7 @@ public:
 	 	state of the iterator will be cleared.)
 		@return 0 if the iterator was invalid or could not be moved 
 			successfully, and non-zero otherwise.
-			Additionally, the return value is {\bf negative} if classads were 
+			Additionally, the return value is <b>negative</b> if classads were 
 			were added or removed to the collection being iterated over since
 			the last iteration operation to the iterator.  This situation may
 			have already caused the iterator to move.

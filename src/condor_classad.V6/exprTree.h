@@ -76,7 +76,7 @@ class ExprTree
 		/** Sets the lexical parent scope of the expression, which is used to 
 				determine the lexical scoping structure for resolving attribute
 				references. (However, the semantic parent may be different from 
-				the lexical parent if a {\tt super} attribute is specified.) 
+				the lexical parent if a <tt>super</tt> attribute is specified.) 
 				This method is automatically called when expressions are 
 				inserted into ClassAds, and should thus be called explicitly 
 				only when evaluating expressions which haven't been inserted 

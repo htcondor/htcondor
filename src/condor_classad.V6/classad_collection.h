@@ -169,7 +169,7 @@ public:
       Note that the class-ad returned cannot be modified directly.
       @param key The class-ad's key.
       @return a pointer to a class-ad which is the value of the
-        original ad {\em without} changes in the current transaction,
+        original ad <em>without</em> changes in the current transaction,
         or null if a class-ad with the specified key doesn't exist.
 		This classad should {\em not} be deleted by the user.
   */

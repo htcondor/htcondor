@@ -144,7 +144,7 @@ class Value
 			@return true iff the value is real.
 		*/
 		inline bool IsRealValue();
-		/** Checks if the value is a string.  The user should \emph{not}
+		/** Checks if the value is a string.  The user should <b>not</b>
 				deallocate the storage pointed to by str.
 			@param str A reference to a string which points to the character
 				string.

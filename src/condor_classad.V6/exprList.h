@@ -118,9 +118,9 @@ class ExprListIterator
     	void ToAfterLast( );
 
 		/** Positions the iterator at the n'th expression of the list (assuming 
-				0-based index.  {\em {\bf WARNING:}  Do not use this method to 
+				0-based index.  <em><b>WARNING:</b>  Do not use this method to 
 				``sequentially search'' the list, or your algorithm will be an
-				an n^2 search.  Use the next() and prev() methods instead.}
+				an n^2 search.  Use the next() and prev() methods instead.</em>
 			@param n The index of the expression to retrieve.
 			@return true if the iterator was successfully positioned at the
 				n'th element, and false otherwise.

@@ -1,17 +1,22 @@
 /**@name ClassAd Distribution Documentation
 The ClassAd Distribution consists of two components.
-\begin{description}
-	\item[The ClassAd Library.] The ClassAd Library defines objects and methods 
-		for creating classads, parsing and unparsing classad expressions and 
-		evaluating expressions.  The ClassAd Library is at a lower level of 
-		abstraction than the Collection Library, and may be used independently.
-	\item[The ClassAd Collection Library.] The ClassAd Collection Library 
-		defines objects and methods for managing collections of classads.  Most 
-		non-trivial application which use classads will find this library 
-		useful.
-\end{enumerate}
+<DL>
+  <DT><b>The ClassAd Library</b></DT>
+  <DD>The ClassAd Library defines objects and methods
+      for creating classads, parsing and unparsing classad expressions and
+      evaluating expressions.  The ClassAd Library is at a lower level of 
+      abstraction than the Collection Library, and may be used independently.
+  </DD>
 
-Please contact \URL[condor-admin]{mailto:condor-admin@cs.wisc.edu} for support.
+  <DT><b>The ClassAd Collection Library.</b></DT>
+  <DD>The ClassAd Collection Library defines objects and methods for managing
+      collections of classads.  Most non-trivial application which use
+      classads will find this library useful.
+  </DD>
+</DL>
+
+Please contact <A HREF="mailto:condor-admin@cs.wisc.edu">condor-admin</A>
+for support.
 */
 //@{
 	/**@name ClassAd Library Classes
@@ -77,31 +82,34 @@ Please contact \URL[condor-admin]{mailto:condor-admin@cs.wisc.edu} for support.
 		ClassAd collections provide a powerful method for managing large
 		numbers of classads.  The ClassAdCollection class may be thought of
 		as a persistent ``bag'' of classads under which various kinds of 
-		views (sub-collections) can be defined.
+		views (sub-collections) can be defined.<p>
 
 		Each ClassAdCollection object has a pre-defined collection with ID zero.
 		This collection with ID zero is called the ``root'' collection.  New
 		collections may be defined only as children of pre-existing collections.
 		Thus, the collections defined in a ClassAdCollection object form a tree,
-		and are directly or indirectly children of the root collection.  
+		and are directly or indirectly children of the root collection.<p>
 		
-		A child collection only defines a {\em view} over the parent collection,
+		A child collection only defines a <em>view</em> over the parent collection,
 		so the set of ads contained in a child collection is always a subset 
 		of the ads contained in the parent collection.  Each collection has an
 		associated rank expression (which is an expression from the classad
 		language).  The rank expression is used to order classads in the 
 		collection, so that iterating over the collection yeilds classads in
-		ascending rank order.
+		ascending rank order.<p>
 
 		Two kinds of child collections may be defined from a parent.
-		\begin{description}
-			\item[Constraint Collections] Constraint collections define a 
+		<DL>
+			<DT><b>Constraint Collections</b></DT>
+			<DD>Constraint collections define a 
 			view over the parent collection by means of a predicate:  if a
 			classad in the parent collection satisfies the predicate (i.e., the
 			predicate evaluates to true), the classad will appear in the child
 			collection.
+			</DD>
 
-			\item[Partition Collections] Partition collections are used to
+			<DT><b>Partition Collections</b></DT>
+			<DD>Partition collections are used to
 			separate classads from the parent collection into distinct child
 			collections.  Partitions are defined by specifying a vector of
 			attribute names so that classads which share the same attributes 
@@ -112,15 +120,16 @@ Please contact \URL[condor-admin]{mailto:condor-admin@cs.wisc.edu} for support.
 			child partitions will be created corresponding to the value 
 			vectors <1>, <2> and <"fuzz"> respectively.  Child partitions are 
 			dynamically created to accomodate new value vectors from new 
-			classads.
+			classads.<p>
 			
-			The partition ID of a particular child partition may be obtained by 
+			The partition ID of a particular child partition may be obtained by
 			calling the FindPartition method with the ID of the parent
 			collection, and passing in a classad that can be used as a
 			``representative'' of the child partition of interest.  I.e., the
 			child partition corresponding to the value vector of the 
 			representative classad is returned.
-		\end{description}
+			</DD>
+		</DL>
 
 		*/
 		//@{
@@ -129,21 +138,22 @@ Please contact \URL[condor-admin]{mailto:condor-admin@cs.wisc.edu} for support.
 
 		/**@name Iterator Classes 
 		There are two kinds of iterator objects:  
-		\begin{enumerate}
-			\item {\bf collection child iterators}, which iterate over the 
+		<OL>
+			<LI><b>collection child iterators</b>, which iterate over the 
 				child collections of a collection, and 
-			\item {\bf collection content iterators}, which iterate over the 
+			<LI><b>collection content iterators</b>, which iterate over the 
 				classads present in a collection.
-		\end{enumerate}
+		</OL>
+		<p>
 
 		ClassAd Collection iterators have a slightly complex iterator model
 		to accomodate the dynamic bahavior of collections.  For example, 
-		changing the attribute of a classad may cause the classad to reposition 
+		changing the attribute of a classad may cause the classad to reposition
 		itself in a collection (if the attribute is referred to in the Rank 
 		expression of the collection), or even leave its current collection 
 		altogether (if the attribute is being partitioned on).  It is very 
-		difficult to know if an attribute change will affect a classad {\em a 
-		priori}.
+		difficult to know if an attribute change will affect a classad <b>a
+		priori</b>.<p>
 		
 		The following iterator model has been developed so that iteration over 
 		a collection can continue correctly in most cases even if a collection 
@@ -151,16 +161,16 @@ Please contact \URL[condor-admin]{mailto:condor-admin@cs.wisc.edu} for support.
 		if there is a possibility that iteration cannot be correctly resumed, 
 		the iterator sets warning flags which can be used to infer the reason 
 		for the warning.  The iterator thus has a well-defined behavior in all 
-		situations.  
+		situations.<p>
 		
 		To allow successful iteration over such dynamic collections, each 
 		iterator has some state associated it.  The state describes if the 
-		iterator is OK (i.e., has been initialized and is currently pointing to 
+		iterator is OK (i.e., has been initialized and is currently pointing to
 		an item that can be accessed through the iterator) or if the iterator 
 		is invalid (i.e., not initialized, or if the list/set being iterated 
 		over was removed during iteration).  Additional flags associated with 
 		the state indicate if items were added or removed from the set/list 
-		being iterated over.  
+		being iterated over.<p>
 		
 		Changes to a collection with active iterators cause notifications to be
 		sent to the iterators, which set flags, change state or even move
@@ -171,14 +181,14 @@ Please contact \URL[condor-admin]{mailto:condor-admin@cs.wisc.edu} for support.
 		moved to the next item to maintain their validity, and an additional 
 		"iterator moved" flag will be set in each iterator.  The flags 
 		associated with an iterator are reset when an accessor method of the 
-		iterator is called.
+		iterator is called.<p>
 
 		Although this method seems clumsy and complex, it provides an
 		up-to-date view of the collection being iterated over, and does not
-		sacrifice simplicity for the common case.
+		sacrifice simplicity for the common case.<p>
 
 		For example, if the underlying collection does not change
-		\begin{verbatim}
+		<PRE>
 			ClassAdCollection 	coll;
 			CollContentIterator itor;
 			...
@@ -190,7 +200,7 @@ Please contact \URL[condor-admin]{mailto:condor-admin@cs.wisc.edu} for support.
 				...
 				itor.Next( );
 			}
-		\end{verbatim}
+		</PRE>
 
 		For a more involved example in which we check if the iterator has moved
 		due to the dynamic nature of the collection, check the htb.C program 

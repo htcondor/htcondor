@@ -360,7 +360,7 @@ class ClassAd : public ExprTree
 		ExprTree *Lookup( const char *attrName );
 
 		/** Finds the expression bound to an attribute name.  The lookup uses
-				the scoping structure (including {\tt super} attributes) to 
+				the scoping structure (including <tt>super</tt> attributes) to 
 				determine the expression bound to the given attribute name in
 				the closest enclosing scope.  The closest enclosing scope is
 				also returned.

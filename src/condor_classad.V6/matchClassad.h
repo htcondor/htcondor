@@ -30,7 +30,7 @@ BEGIN_NAMESPACE( classad )
 
 /** Special case of a ClassAd which sets up the scope names for bilateral 
   	matching.  The top-level scope is defined as follows:
-	\begin{verbatim}
+	<pre>
     [
        symmetricMatch   = leftMatchesRight && rightMatchesLeft;
        leftMatchesRight = adcr.ad.requirements;
@@ -60,7 +60,7 @@ BEGIN_NAMESPACE( classad )
                   ]
     	   ];
     ]
-	\end{verbatim}
+	</pre>
 */
 class MatchClassAd : public ClassAd
 {
@@ -115,13 +115,13 @@ class MatchClassAd : public ClassAd
 		*/
 		ClassAd *GetRightAd();
 
-		/** Gets the left context ad. ({\tt .adcl} in the above example)
+		/** Gets the left context ad. (<tt>.adcl</tt> in the above example)
 		 	@return The left context ad, or NULL if the MatchClassAd is not
 				valid
 		*/
 		ClassAd *GetLeftContext( );
 
-		/** Gets the right context ad. ({\tt .adcr} in the above example)
+		/** Gets the right context ad. (<tt>.adcr</tt> in the above example)
 		 	@return The left context ad, or NULL if the MatchClassAd is not
 				valid
 		*/
