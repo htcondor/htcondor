@@ -36,6 +36,8 @@ static const char* daemon_names[] = {
 	"dagman", 
 	"view_collector",
 	"cluster_server",
+	"shadow",
+	"starter",
 };
 
 extern "C" {
