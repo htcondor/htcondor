@@ -199,9 +199,8 @@ void CondorFileTable::dump()
 
 	for( int i=0; i<length; i++ ) {
 		if( pointers[i] ) {
-			dprintf(D_ALWAYS,"%d\t%s\t%s\tsize: %d offset: %d dups: %d ", i, pointers[i]->file->get_kind(), pointers[i]->file->get_name(), pointers[i]->file->get_size(), pointers[i]->offset, count_pointer_uses(pointers[i]));
+			dprintf(D_ALWAYS,"%d\t%s\t%s\tsize: %d offset: %d dups: %d\n", i, pointers[i]->file->get_kind(), pointers[i]->file->get_name(), pointers[i]->file->get_size(), pointers[i]->offset, count_pointer_uses(pointers[i]));
 		}
-		dprintf(D_ALWAYS,"\n");
 	}
 }
 
