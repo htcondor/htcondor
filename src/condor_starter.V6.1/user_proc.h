@@ -91,6 +91,11 @@ public:
 			@return true if job has been started, false if not. */
 	bool JobStarted() { return JobPid > 0; }
 
+		/** Was this job requested to exit by the starter, or did it 
+			exit on its own?
+		*/
+	bool RequestedExit( void ) { return requested_exit; };
+
 protected:
 	ClassAd *JobAd;
 	int JobPid;
