@@ -284,7 +284,7 @@ public class ChirpClient {
 			return code;
 		} else switch(code) {
 			case -1:
-				throw new IOException("couldn't authenticate");
+				throw new ChirpError("couldn't authenticate");
 			case -2:
 				throw new IOException("permission denied");
 			case -3:
@@ -294,7 +294,7 @@ public class ChirpClient {
 			case -5:
 				throw new IOException("argument too big");
 			case -6:
-				throw new IOException("out of space");
+				throw new ChirpError("out of space");
 			case -7:
 				throw new OutOfMemoryError();
 			case -8:
@@ -306,7 +306,7 @@ public class ChirpClient {
 			case -11:
 				throw new IOException("try again");
 			default:
-				throw new IOException("unknown error");
+				throw new ChirpError("unknown error");
 		}
 	}
 
