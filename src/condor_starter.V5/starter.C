@@ -1190,7 +1190,8 @@ get_job_info()
 	);
 
 #define NOBODY -2
-#if 1
+#define RUN_AS_NOBODY FALSE
+#if RUN_AS_NOBODY
 	uid = NOBODY;
 	gid = NOBODY;
 #else
