@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "user_log.c++.h"
+#include "format_time.h"
 #include "classad_hashtable.h"
 #include "internet.h"
 
@@ -62,24 +63,24 @@ void display_stats();
 struct JobStatistics {
 	JobStatistics(int Cluster, int Proc) :
 		cluster(Cluster), proc(Proc), allocations(0), kills(0), 
-		wall_time(0.0), good_time(0.0), cpu_usage(0.0) {}
+		wall_time(0), good_time(0), cpu_usage(0) {}
 	int cluster, proc;
 	int allocations, kills;
-	double wall_time;
-	double good_time;
-	double cpu_usage;
+	int wall_time;
+	int good_time;
+	int cpu_usage;
 };
 
 struct HostStatistics {
 	HostStatistics(const char executeHost[]) :
 		allocations(0), kills(0),
-		wall_time(0.0),	good_time(0.0), cpu_usage(0.0) 
+		wall_time(0),	good_time(0), cpu_usage(0) 
 		{ strcpy(host, executeHost); }
 	char host[128];
 	int allocations, kills;
-	double wall_time;
-	double good_time;
-	double cpu_usage;
+	int wall_time;
+	int good_time;
+	int cpu_usage;
 };
 
 // explicit template instantiation
@@ -194,24 +195,24 @@ statsort(const void *vi, const void *vj)
 void
 display_stats()
 {
-	const char TitleFormat[] =
-		"%-15.15s %9.9s %9.9s %9.9s %9.9s %9.9s %7.7s %6.6s\n";
-	const char RecordFormat[] =
-		"%-15.15s %9.0f %9.0f %9.0f %9.0f %9.0f %6.1f%% %5.1f%%\n";
-
 	// display HostStatistics
-	printf(TitleFormat, "", "Wall Time", "Good Time", "CPU Usage",
-		   "Avg Alloc", "Avg Lost", "", "");
-	printf(TitleFormat, "Host/Job", "(hours)", "(hours)", "(hours)",
-		   "(minutes)", "(minutes)", "Goodput", "Util.");
+	printf("%-15.15s %9.9s %9.9s %9.9s %9.9s %9.9s %7.7s %6.6s\n",
+		   "Host/Job", "Wall Time", "Good Time", "CPU Usage",
+		   "Avg Alloc", "Avg Lost", "Goodput", "Util.");
 	printf("\n");
 
 	HostStatistics *hs;
 	HStats.startIterations();
 	while (HStats.iterate(hs) == 1) {
-		printf(RecordFormat, hs->host, hs->wall_time/3600, hs->good_time/3600,
-			   hs->cpu_usage/3600, hs->wall_time/hs->allocations/60,
-			   hs->kills ? (hs->wall_time-hs->good_time)/hs->kills/60 : 0.0,
+		printf("%-15.15s ", hs->host);
+		printf("%9.9s ", format_time_nosecs(hs->wall_time));
+		printf("%9.9s ", format_time_nosecs(hs->good_time));
+		printf("%9.9s ", format_time_nosecs(hs->cpu_usage));
+		printf("%9.9s ", format_time_nosecs(hs->wall_time/hs->allocations/60));
+		printf("%9.9s ", hs->kills ?
+			   format_time_nosecs((hs->wall_time-hs->good_time)/hs->kills) :
+			   "0+00:00");
+		printf("%6.1f%% %5.1f%%\n",
 			   hs->wall_time ? hs->good_time/hs->wall_time*100 : 0.0,
 			   hs->good_time ? hs->cpu_usage/hs->good_time*100 : 0.0);
 		delete hs;
@@ -230,14 +231,20 @@ display_stats()
 	qsort(statarray, numJobStats, sizeof(JobStatistics *), statsort);
 
 	int allocations=0, kills=0;
-	double wall_time=0.0, good_time=0.0, cpu_usage=0.0;
+	int wall_time=0, good_time=0, cpu_usage=0;
 	char job[40];
 	for (int i=0; i < numJobStats; i++) {
 		js = statarray[i];
 		sprintf(job, "%d.%d", js->cluster, js->proc);
-		printf(RecordFormat, job, js->wall_time/3600, js->good_time/3600,
-			   js->cpu_usage/3600, js->wall_time/js->allocations/60,
-			   js->kills ? (js->wall_time-js->good_time)/js->kills/60 : 0.0,
+		printf("%-15.15s ", job);
+		printf("%9.9s ", format_time_nosecs(js->wall_time));
+		printf("%9.9s ", format_time_nosecs(js->good_time));
+		printf("%9.9s ", format_time_nosecs(js->cpu_usage));
+		printf("%9.9s ", format_time_nosecs(js->wall_time/js->allocations/60));
+		printf("%9.9s ", js->kills ?
+			   format_time_nosecs((js->wall_time-js->good_time)/js->kills) :
+			   "0+00:00");
+		printf("%6.1f%% %5.1f%%\n",
 			   js->wall_time ? js->good_time/js->wall_time*100 : 0.0,
 			   js->good_time ? js->cpu_usage/js->good_time*100 : 0.0);
 		allocations += js->allocations;
@@ -248,9 +255,15 @@ display_stats()
 		delete js;
 	}
 	printf("\n");
-	printf(RecordFormat, "Total", wall_time/3600, good_time/3600,
-		   cpu_usage/3600, wall_time/allocations/60,
-		   kills ? (wall_time-good_time)/kills/60 : 0.0,
+	printf("%-15.15s ", "Total");
+	printf("%9.9s ", format_time_nosecs(wall_time));
+	printf("%9.9s ", format_time_nosecs(good_time));
+	printf("%9.9s ", format_time_nosecs(cpu_usage));
+	printf("%9.9s ", format_time_nosecs(wall_time/allocations/60));
+	printf("%9.9s ", kills ?
+		   format_time_nosecs((wall_time-good_time)/kills) :
+		   "0+00:00");
+	printf("%6.1f%% %5.1f%%\n",
 		   wall_time ? good_time/wall_time*100 : 0.0,
 		   good_time ? cpu_usage/good_time*100 : 0.0);
 	Stats.clear();
@@ -258,12 +271,12 @@ display_stats()
 }
 
 void
-new_record(int cluster, int proc, int evict_time, int wall_time,
-		   int good_time, int cpu_usage, char host[], int start_hour,
-		   int end_hour, int day)
+new_record(int cluster, int proc, int start_time, int evict_time, 
+		   int good_time, int cpu_usage, char host[])
 {
 	static bool initialized = false;
 	char hash[40];
+	int wall_time = evict_time-start_time;
 
 	// We detect bad records here.  One cause of bad records is the
 	// fact that userlogs timestamps do not contain years, so we
@@ -302,9 +315,9 @@ new_record(int cluster, int proc, int evict_time, int wall_time,
 	}
 	js->allocations++;
 	js->kills += (wall_time != good_time);
-	js->wall_time += (double)wall_time;
-	js->good_time += (double)good_time;
-	js->cpu_usage += (double)cpu_usage;
+	js->wall_time += wall_time;
+	js->good_time += good_time;
+	js->cpu_usage += cpu_usage;
 
 	char ip_addr[128];
 	// only use the IP address in the key
@@ -333,27 +346,25 @@ new_record(int cluster, int proc, int evict_time, int wall_time,
 	}
 	hs->allocations++;
 	hs->kills += (wall_time != good_time);
-	hs->wall_time += (double)wall_time;
-	hs->good_time += (double)good_time;
-	hs->cpu_usage += (double)cpu_usage;
-
-	const char TitleFormat[] =
-		"%-8.8s %-14.15s %10s %9s %9s %9s %5s %3s %3s\n";
-	const char RecordFormat[] =
-		"%-8.8s %-15.15s %10d %9d %9d %9d %5d %3d %3d\n";
+	hs->wall_time += wall_time;
+	hs->good_time += good_time;
+	hs->cpu_usage += cpu_usage;
 
 	if (!totals_only) {
 		if (!raw_data && !initialized) {
 			printf("\n");
-			printf(TitleFormat, "", "", "Evict Time", "Wall Time", "Good Time",
-				   "CPU Usage", "Start", "End", "");
-			printf(TitleFormat, "Job", "Host", "(time_t)", "(seconds)",
-				   "(seconds)", "(seconds)", "(hr.)", "(h)", "Day");
+			printf("%-8.8s %-15.15s %-11.11s %-11.11s %9s %9s %9s\n",
+				   "Job", "Host", "Start Time", "Evict Time", "Wall Time",
+				   "Good Time", "CPU Usage");
 			initialized = true;
 		}
 
-		printf(RecordFormat, hash, hs->host, evict_time, wall_time,
-			   good_time, cpu_usage, start_hour, end_hour, day);
+		printf("%-8.8s %-15.15s ", hash, hs->host);
+		printf("%11s ", format_date(start_time));
+		printf("%11s ", format_date(evict_time));
+		printf("%9s ", format_time_nosecs(wall_time));
+		printf("%9s ", format_time_nosecs(good_time));
+		printf("%9s\n", format_time_nosecs(cpu_usage));
 	}
 }
 
@@ -444,13 +455,10 @@ read_log(const char *filename, int select_cluster, int select_proc)
 						cpu_usage = 0;
 					}
 				}
-				new_record(event->cluster, event->proc,
-						   (int)end_time, (int)end_time-start_time,
+				new_record(event->cluster, event->proc, (int)start_time,
+						   (int)end_time,
 						   (int)ckpt_time-start_time, cpu_usage,
-						   execEvent->executeHost,
-						   execEvent->eventTime.tm_hour,
-						   event->eventTime.tm_hour,
-						   event->eventTime.tm_wday);
+						   execEvent->executeHost);
 				delete execEvent;
 				delete event;
 				break;
@@ -483,17 +491,14 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				start_time = mktime(&execEvent->eventTime);
 				end_time = mktime(&event->eventTime);
 				if (!evict_only) {
-					new_record(event->cluster, event->proc, (int)end_time,
-							   (int)end_time-start_time,
+					new_record(event->cluster, event->proc, (int)start_time,
+							   (int)end_time,
 							   (int)end_time-start_time,
 							   terminateEvent->
 							   run_remote_rusage.ru_utime.tv_sec +
 							   terminateEvent->
 							   run_remote_rusage.ru_stime.tv_sec,
-							   execEvent->executeHost,
-							   execEvent->eventTime.tm_hour,
-							   event->eventTime.tm_hour,
-							   event->eventTime.tm_wday);
+							   execEvent->executeHost);
 				}
 				delete execEvent;
 				delete event;
@@ -540,13 +545,10 @@ read_log(const char *filename, int select_cluster, int select_proc)
 					cpu_usage = 0;
 				}
 				if (!evict_only) {
-					new_record(event->cluster, event->proc, (int)end_time,
-							   (int)end_time-start_time,
+					new_record(event->cluster, event->proc, (int)start_time,
+							   (int)end_time,
 							   (int)ckpt_time-start_time, cpu_usage,
-							   execEvent->executeHost,
-							   execEvent->eventTime.tm_hour,
-							   event->eventTime.tm_hour,
-							   event->eventTime.tm_wday);
+							   execEvent->executeHost);
 				}
 				delete execEvent;
 				delete event;
