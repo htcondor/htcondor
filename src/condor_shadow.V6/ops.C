@@ -37,7 +37,6 @@ extern int	LockFd;
 extern int	ImageSize;
 extern int	ClientUid;
 extern int	ClientGid;
-extern struct rusage AccumRusage;
 
 extern int UsePipes;
 
