@@ -6,10 +6,10 @@ FLG 	= -g -Wall -I$(INC_DIR)
 
 all: cxi 
 
-cxi: cxi.o
+cxi.o: cxi.C
 	$(GCC) $(FLG) -c cxi.C 
 	
-cxi.o: cxi.C
+cxi: cxi.o
 	$(GCC) $(FLG) -o cxi cxi.o $(LIB)
 
 clean:
