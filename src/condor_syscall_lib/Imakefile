@@ -46,6 +46,9 @@ EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 #	elif IS_HPPAR_HPUX9
 EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o  \
 		  MMAP.o PIPE.o GETWD.o GETLOGIN.o
+#	elif IS_GLIBC && IS_I386_LINUX
+EXTRACT = GETWD.o MMAP.o SYSCALL.o GETEUID.o GETEGID.o GETPPID.o \
+		FORK.o PIPE.o SIGACTION.o GETLOGIN.o
 #	elif IS_I386_LINUX
 EXTRACT = GETWD.o MMAP.o SYSCALL.o __GETEUID.o __GETEGID.o __GETPPID.o \
 		__FORK.o __PIPE.o __SIGACT.o ____SIG.o GETLOGIN.o \
@@ -214,23 +217,32 @@ uppercase_target($(SIMPLE_LIBC),__sigact.o,__SIGACT.o,__sigaction,__SIGACTION)
 uppercase_target($(SIMPLE_LIBC),__fork.o,__FORK.o,__fork,__FORK)
 uppercase_target($(SIMPLE_LIBC),__pipe.o,__PIPE.o,__pipe,__PIPE)
 
-#if (IS_I386_LINUX)
+
+#if (IS_I386_LINUX) 
 ____SIG.o : ToUpper $(SIMPLE_LIBC)
 	ar x $(SIMPLE_LIBC) ____sig.o
 	./ToUpper ____sig.o ____SIG_TMP.o ___sig_restore ___SIG_RESTORE
 	./ToUpper ____SIG_TMP.o ____SIG.o ___masksig_restore ___MASKSIG_RESTORE
 	rm -f ____sig.o ____SIG_TMP.o
-#endif
 
-#if (IS_I386_LINUX) || (IS_ALPHA_OSF1)
-uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL.o,syscall,SYSCALL)
-#endif
-
-#if (IS_I386_LINUX)
 uppercase_target($(SIMPLE_LIBC),__prev_stat.o,__PREV_STAT.o,stat,STAT)
 uppercase_target($(SIMPLE_LIBC),__prev_lstat.o,__PREV_LSTAT.o,lstat,LSTAT)
 uppercase_target($(SIMPLE_LIBC),__prev_fstat.o,__PREV_FSTAT.o,fstat,FSTAT)
 #endif
+
+
+#if (IS_GLIBC) && (IS_I386_LINUX)
+uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL_TMP.o,syscall,SYSCALL)
+
+SYSCALL.o: SYSCALL_TMP.o ToUpper
+	./ToUpper SYSCALL_TMP.o SYSCALL.o __SYSCALL_error __syscall_error
+
+clean::
+	rm -f SYSCALL_TMP.o
+#elif (IS_I386_LINUX) || (IS_ALPHA_OSF1)
+uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL.o,syscall,SYSCALL)
+#endif
+
 
 #if (IS_X86_SOLARIS25)
 i386_data.o : $(SIMPLE_LIBC)
@@ -240,8 +252,8 @@ i386_data.o : $(SIMPLE_LIBC)
 #if (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS251) || (IS_X86_SOLARIS25)
 SYSCONF.o :  $(SIMPLE_LIBC)  ToUpper
 	ar x    $(SIMPLE_LIBC)      sysconf.o 	  ; mv  sysconf.o  $(TMP_DIR)
-	ToUpper $(TMP_DIR)/sysconf.o   $(TMP_DIR)/SYSCONF.o   sysconf   SYSCONF
-	ToUpper $(TMP_DIR)/SYSCONF.o   SYSCONF.o SYSCONFig sysconfig
+	./ToUpper $(TMP_DIR)/sysconf.o   $(TMP_DIR)/SYSCONF.o   sysconf   SYSCONF
+	./ToUpper $(TMP_DIR)/SYSCONF.o   SYSCONF.o SYSCONFig sysconfig
 	rm -f $(TMP_DIR)/sysconf.o $(TMP_DIR)/SYSCONF.o
 #endif
 
@@ -255,7 +267,7 @@ static_copy_target( condor_rt0.o, $(STATIC_DIR)/lib, condor_rt0.o, OBJECT_MODE )
 	library_target(libtmp.a,$(LIB_OBJ))
 
 condor_syscall_lib.a: libtmp.a ToUpper
-	ToUpper libtmp.a condor_syscall_lib.a __cerror __CERROR
+	./ToUpper libtmp.a condor_syscall_lib.a __cerror __CERROR
 
 clean::
 	rm -f condor_syscall_lib.a
@@ -280,10 +292,9 @@ static:
 
 CPP = PreProcessCmd
 
-
 #if IS_I386_LINUX
-switches.c: syscall.tmpl switches.prologue stub_gen switches.linux.h switches.epilogue
-	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) syscall.tmpl | \
+switches.c: syscall.tmpl switches.prologue stub_gen switches.epilogue
+	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) GlibCFlag syscall.tmpl | \
 	./stub_gen -mode switches  -p switches.prologue -e switches.epilogue \
 	> switches.c
 #elif IS_SUN4M_SOLARIS251 || IS_X86_SOLARIS25
