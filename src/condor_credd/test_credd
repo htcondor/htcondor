@@ -1,0 +1,343 @@
+#!/bin/bash
+# CredD test harness.  Currently, this harness tests condor_credd,
+# condor_list_cred, condor_rm_cred, condor_store_cred.  Tests can optionally be
+# run from a memory debugger, such as valgrind.
+
+# Stork, CredD common test harness variables, functions.
+source test_harness_common.sh || exit 1
+
+# Configuration constants
+
+# Test enables
+CREDD_TESTS=			# determined at runtime
+CRED_CORE_TESTS=true
+MYPROXY_TESTS=false
+
+# Perl regex to find DAP id from stork_submit
+#PERL_DAP_ID_FIND='/^\s*Request assigned id:\s+(\d+)/ && print $1,"\n"'
+
+# list_cred invocation
+CRED_LIST=condor_list_cred
+CRED_LIST_OPTS="$CRED_LIST_OPTS -v"
+
+# rm_cred invocation
+CRED_RM=condor_rm_cred
+CRED_RM_OPTS="$CRED_RM_OPTS -v"
+
+# The following parameters for setting a brief proxy valid duration, and
+# reading a refreshed brief proxy, must be kept in agreement.
+BRIEF_PROXY_VALID="0:1"		# sent to my-proxy-init, hh:mm
+BRIEF_PROXY_REFRESHED=60	# seconds
+
+
+# Variables
+X509PASS_PHRASE=
+MYPROXY_PW="credd${RANDOM}${RANDOM}"
+
+# Functions
+
+usage() {
+cat <<EOF
+usage: $PROG [options]
+
+options:
+-debug			enable debugging output
+-x509proxy <file>	specifies nonstandard X509 proxy file location
+-passphrase <file>	file containing X509 proxy pass phrase
+
+-all			enable all tests below
+-[no]credd		enable credd tests [enabled]
+-[no]myproxy		enable myproxy tests [disabled]
+-[no]memory		enable memory tests [enabled]
+-[no]leak		enable memory leak tests, implies -memory [disabled]
+EOF
+#-gridftp	specify gridftpserver [localhost]
+}
+
+# parse command line
+parse_cmd() {
+	while [ -n "$1" ]; do
+		case $1 in 
+			-d|-debug|--debug)
+				set -x
+				local _DEBUG="D_FULLDEBUG D_SECURITY D_COMMAND D_IO"
+				export _CONDOR_CREDD_DEBUG=$_DEBUG
+				;;
+			-a|-all|--all) parse_cmd -credd -leak -myproxy ;;
+			-credd) CRED_CORE_TESTS=true ;;
+			-nocredd) CRED_CORE_TESTS=false ;;
+			-memory) MEMORY_TESTS=true ;;
+			-nomemory) MEMORY_TESTS=false ;;
+			-myproxy) MYPROXY_TESTS=true ;;
+			-nomyproxy) MYPROXY_TESTS=false ;;
+			-leak) LEAK_TESTS=true; MEMORY_TESTS=true ;;
+			-noleak) LEAK_TESTS=false ;;
+			-x|-x509|-x509proxy|-proxy)
+				shift;
+				X509PROXY=$1
+				if [ -z "$X509PROXY" ]; then
+					error -x509proxy file not specified
+					usage
+					exit 1
+				elif
+				[ ! -r $X509PROXY ]; then
+					error -x509proxy file $X509PROXY not readable
+					usage
+					exit 1
+				fi
+				;;
+			-pass|-passphrase)
+				shift;
+				X509PASS_PHRASE="$1"
+				if [ -z "$X509PASS_PHRASE" ]; then
+					error -passphrase file not specified
+					usage
+					exit 1
+				elif
+				[ ! -r $X509PASS_PHRASE ]; then
+					error -passphrase file $X509PASS_PHRASE not readable
+					usage
+					exit 1
+				fi
+				;;
+			*) usage; exit 1 ;;
+		esac
+		shift
+	done
+}
+
+# test setup
+setup() {
+	setup_common	# test harness common setup function
+
+
+	if $CRED_CORE_TESTS || false; then
+		CREDD_TESTS=true
+	else
+		CREDD_TESTS=false
+	fi
+	if $CRED_CORE_TESTS; then
+		echo Credd core tests are enabled
+	else
+		echo Credd core tests are disabled
+	fi
+	if $MYPROXY_TESTS; then
+		echo myproxy tests are enabled
+	else
+		echo myproxy tests are disabled
+	fi
+
+	X509PROXY_REQD=true
+	# Verify X509PROXY
+	$X509PROXY_REQD && x509proxy
+	if $MYPROXY_TESTS; then
+		if [ -z "$X509PASS_PHRASE" ]; then
+			error myproxy tests require -passphrase file option
+			usage
+			exit 1
+		fi
+		case "$X509PASS_PHRASE" in
+			/*)
+				# full path, do nothing
+				;;
+			*)
+				# local file, prepend directory
+				X509PASS_PHRASE="`pwd`/$X509PASS_PHRASE"
+				;;
+		esac
+		if ! chmod 0600 "$X509PASS_PHRASE" ; then
+			error unable to restrict permissions to X509 pass \
+				phrase file $X509PASS_PHRASE
+			exit 1
+		fi
+	fi
+
+	# Create a unique test subdirectory, from current directory. Change to new
+	# test subdirectory.
+	cd_test_dir
+	#Create credential subdirectory
+	cred_dir || exit 1
+}
+
+count_dir_credentials () {
+	disable_nullglob=false
+	if ! shopt -q nullglob; then
+		shopt -s nullglob
+		disable_nullglob=true
+	fi
+	credentials=`echo $CRED_STORE_DIR/cred[^-]*`
+	$disable_nullglob && shopt -u nullglob
+	if [ -z "$credentials" ]; then
+		echo 0
+	else
+		set $credentials
+		echo $#
+	fi
+	return 0
+}
+
+# list_cred should see no credentials
+list_cred_0creds() {
+	name="$1"; shift;
+	test_announce "$name"
+	CRED_LIST_OPTS="$CRED_LIST_OPTS -s $CREDD_HOST_PORT"
+	cmd="$CRED_LIST $CRED_LIST_OPTS"
+	run_fg $name $cmd
+	status=$?
+	if [ $status -ne 0 ];then
+		test_status $status
+		error $cmd failed
+		return $status
+	fi
+	ncredentials=`count_dir_credentials`
+	if [ $ncredentials -ne 0 ]; then
+		status=1
+		test_status $status
+		error $CRED_STORE_DIR credential count: $ncredentials, should be 0
+		return $status
+	fi
+	regex="No credentials currently stored on this server"
+	grep --silent "$regex" "$name.out"
+	status=$?
+	test_status $status
+	if [ $status -ne 0 ]; then
+		error $CRED_LIST output not empty
+		cat "$name.out" 1>&2
+	fi
+	return $status
+}
+
+# list_cred should see 1 credentials
+list_cred_1creds() {
+	name="$1"; shift;
+	test_announce "$name"
+	cmd="$CRED_LIST $CRED_LIST_OPTS"
+	run_fg $name $cmd
+	status=$?
+	if [ $status -ne 0 ];then
+		test_status $status
+		error $cmd failed
+		return $status
+	fi
+	ncredentials=`count_dir_credentials`
+	if [ $ncredentials -ne 1 ]; then
+		status=1
+		test_status $status
+		error $CRED_STORE_DIR credential count: $ncredentials, should be 1
+		return $status
+	fi
+	regex="No credentials currently stored on this server"
+	regex="^$CRED_NAME.*X509proxy"
+	grep --silent "$regex" "$name.out"
+	status=$?
+	test_status $status
+	if [ $status -ne 0 ]; then
+		error credential $CRED_NAME not found
+		cat "$name.out" 1>&2
+	fi
+	return $status
+}
+
+# Remove a credential
+rm_cred() {
+	name="$1"; shift;
+	test_announce "$name"
+	CRED_RM_OPTS="$CRED_RM_OPTS -s $CREDD_HOST_PORT"
+	cmd="$CRED_RM $CRED_RM_OPTS -n $CRED_NAME"
+	run_fg $name $cmd
+	status=$?
+	if [ $status -ne 0 ];then
+		test_status $status
+		error $cmd failed
+		return $status
+	fi
+	ncredentials=`count_dir_credentials`
+	if [ $ncredentials -ne 0 ]; then
+		status=1
+		test_status $status
+		error $CRED_STORE_DIR credential count: $ncredentials, should be 0
+		return $status
+	fi
+	test_status $status
+	return $status
+}
+
+# Create very short lived proxy, and verify it is refreshed by CredD
+refresh_proxy () {
+	name="$1"; shift;
+	local passphrase="$1"; shift
+	local myproxy_pw="$1"; shift
+	test_announce "$name"
+	brief_proxy=brief_proxy
+	cmd="$GRID_PROXY_INIT -pwstdin -valid $BRIEF_PROXY_VALID -out $brief_proxy"
+	out=$GRID_PROXY_INIT.out
+	$cmd <$passphrase >$out 2>&1
+	status=$?
+	if [ $status -ne 0 ]; then
+		error $cmd failed
+		cat $out
+		return $status
+	fi
+	echo $myproxy_pw | run_fg $name \
+	$CRED_STORE $CRED_STORE_OPTS -f $brief_proxy -n $CRED_NAME -S \
+	-m $USER@$MYPROXY_SERVER:$MYPROXY_SERVER_PORT -D "$MYPROXY_SERVER_DN"
+	status=$?
+	if [ $status -ne 0 ];then
+		test_status $status
+		error $CRED_STORE failed
+		return $status
+	fi
+	(( refresh_to = _CONDOR_CRED_CHECK_INTERVAL * 3 ))
+	#echo -n waiting $refresh_to for credd myproxy auto-refresh ...
+	sleep $refresh_to
+	local proxy=`echo $CRED_STORE_DIR/cred[^-]*`
+	local timeleft=`$GRID_PROXY_INFO -f $proxy -timeleft`
+	if (( $timeleft <= $BRIEF_PROXY_REFRESHED )); then
+		status=1
+		test_status $status
+		error stored proxy $proxy timeleft $timeleft sec: not refreshed
+		return $status
+	fi
+	status=0
+	test_status $status
+	return $status
+}
+
+# start main program ###########################################################
+
+parse_cmd "$@"
+setup
+
+# Start tests.
+FAIL_COUNT=0	# total count of test failures
+trap finish $SIGSPEC
+
+if $CREDD_TESTS; then
+	echo
+	echo running credd daemon startup tests ...
+	if credd "credd_daemon" && list_cred_0creds "list_cred_simple"; then
+		true
+	else
+		error disabling all tests that require credd
+		CRED_CORE_TESTS=false
+	fi
+fi
+
+if $CRED_CORE_TESTS; then
+	echo
+	echo running credential core tests ...
+	if store_cred "store_cred"; then
+		list_cred_1creds "list_cred_1creds"
+		rm_cred "rm_cred"
+		list_cred_0creds "list_cred_0creds_final"
+	fi
+fi
+
+if $MYPROXY_TESTS; then
+	echo
+	echo running myproxy tests ...
+	if	myproxy_server && store_myproxy "$X509PASS_PHRASE" "$MYPROXY_PW"; then
+		refresh_proxy "refresh_proxy" "$X509PASS_PHRASE" "$MYPROXY_PW"
+	fi
+fi
+

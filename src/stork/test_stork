@@ -1,0 +1,612 @@
+#!/bin/bash
+# Stork test harness.  Currently, this harness tests stork_server,
+# stork_submit, stork_rm, stork_q.  Tests can optionally be run from a memory
+# debugger, such as valgrind.
+
+# Stork, CredD common test harness variables, functions.
+source test_harness_common.sh
+
+# Configuration constants
+
+# Test enables
+STORKD_TESTS=			# determined at runtime
+STORK_CORE_TESTS=true	# run Stork tests
+GSI_TESTS=false			# run Stork GSI tests, without CredD
+CREDD_TESTS=false		# run CredD interface tests
+
+STORKD_HOST=`hostname`	# stork_server host
+STORKD_START_DELAY=4	# daemon startup/shutdown delay
+FILE_FILE_TO=10			# file->file xfer timeout
+GSI_TO=30				# GSI xfer timeout
+
+# Perl regex to find DAP id from stork_submit
+PERL_DAP_ID_FIND='/^\s*Request assigned id:\s+(\d+)/ && print $1,"\n"'
+
+# stork_server daemon invocation
+STORKD=stork_server
+STORKD_PORT=`next_port`
+STORKD_HOST_PORT="${STORKD_HOST}:${STORKD_PORT}"
+STORKD_OPTS="$STORKD_OPTS -p $STORKD_PORT"
+STORKD_OPTS="$STORKD_OPTS -f"
+DAP_XFER_FILE_FILE=DaP.transfer.file-file
+
+# stork_q invocation
+STORK_Q=stork_q
+STORK_Q_OPTS=$STORKD_HOST_PORT
+
+#stork_submit invocation
+STORK_SUBMIT=stork_submit
+STORK_SUBMIT_OPTS=$STORKD_HOST_PORT
+
+#stork_status invocation
+STORK_STATUS=stork_status
+STORK_STATUS_OPTS=$STORKD_HOST_PORT
+
+#stork_rm invocation
+STORK_RM=stork_rm
+STORK_RM_OPTS=$STORKD_HOST_PORT
+
+TERMCAP=/etc/termcap
+
+# Functions
+
+usage() {
+cat <<EOF
+usage: $PROG [options]
+
+options:
+-debug		enable debugging output
+-x509proxy file	specifies nonstandard X509 proxy file location
+
+-all		enable all tests below
+-[no]stork	enable stork tests [enabled]
+-[no]memory	enable memory tests [enabled]
+-[no]leak	enable memory leak tests, implies -memory [disabled]
+-[no]gsi	enable GSI auth tests without CredD [disabled]
+-[no]credd	enable GSI auth tests with CredD [disabled]
+EOF
+#-gridftp	specify gridftpserver [localhost]
+}
+
+# parse command line
+parse_cmd() {
+	while [ -n "$1" ]; do
+		case $1 in 
+			-d|-debug|--debug)
+				set -x
+				local _DEBUG="D_FULLDEBUG D_SECURITY D_COMMAND D_IO"
+				export _CONDOR_CREDD_DEBUG=$_DEBUG
+				export _STORK_DEBUG=$_DEBUG
+				;;
+			-a|-all|--all) parse_cmd -stork -gsi -leak -credd;;
+			-stork) STORK_CORE_TESTS=true ;;
+			-nostork) STORK_CORE_TESTS=false ;;
+			-memory) MEMORY_TESTS=true ;;
+			-nomemory) MEMORY_TESTS=false ;;
+			-leak) LEAK_TESTS=true; MEMORY_TESTS=true ;;
+			-noleak) LEAK_TESTS=false ;;
+			-gsi) GSI_TESTS=true ;;
+			-nogsi) GSI_TESTS=false ;;
+			-credd) CREDD_TESTS=true ;;
+			-nocredd) CREDD_TESTS=false ;;
+			-x|-x509|-x509proxy|-proxy)
+				shift;
+				X509PROXY=$1
+				if [ -z "$X509PROXY" ]; then
+					error -x509proxy file not specified
+					usage
+					exit 1
+				elif
+				[ ! -r $X509PROXY ]; then
+					error -x509proxy file $X509PROXY not readable
+					usage
+					exit 1
+				fi
+				;;
+			*) usage; exit 1 ;;
+		esac
+		shift
+	done
+}
+
+# test setup
+setup() {
+	setup_common	# test harness common setup function
+
+	if [ ! -r $TERMCAP ]; then
+		error file $TERMCAP not readable
+		exit 1
+	fi
+	if $STORK_CORE_TESTS || $GSI_TESTS; then
+		STORKD_TESTS=true
+	else
+		STORKD_TESTS=false
+	fi
+	if $STORK_CORE_TESTS; then
+		echo Stork core tests are enabled
+	else
+		echo Stork core tests are disabled
+	fi
+	if $GSI_TESTS; then
+		echo Stork non-CredD GSI tests are enabled
+		# FIXME: start local gsiftp server on unique port instead
+		echo using gridftpserver $GRIDFTPSERVER
+		$HOST_VERIFY $GRIDFTPSERVER >$DEVNULL || exit 1
+		netstat -tl |grep --silent gsiftp || \
+			fatal host $GRIDFTPSERVER not running gsiftp server
+	else
+		echo Stork non-CredD GSI tests are disabled
+	fi
+	if $CREDD_TESTS; then
+		echo Stork CredD GSI tests are enabled
+		echo using CredD server $CREDD_HOST
+	else
+		echo Stork CredD GSI tests are disabled
+	fi
+
+	if $GSI_TESTS || $CREDD_TESTS; then
+		X509PROXY_REQD=true
+	else
+		X509PROXY_REQD=false
+	fi
+	# Verify X509PROXY
+	$X509PROXY_REQD && x509proxy
+
+	# Parse Globus locations from etc/stork.config file.  This is a shakey
+	# method, but it's all we have, for now.
+	etc=`dirname $CONDOR_CONFIG`
+	STORK_CONFIG="$etc/stork.config"
+	echo parsing $STORK_CONFIG
+	[ -r $STORK_CONFIG ] || fatal $STORK_CONFIG file is not readable
+
+	if $GLOBUS_TESTS; then
+		GLOBUS_BIN=`$PERL -ne "$PERL_GLOBUS_BIN_FIND" $STORK_CONFIG`
+		if [ -d $GLOBUS_BIN ]; then
+			export PATH="$GLOBUS_BIN:$PATH"
+		else
+			fatal globus_bin_dir directory not found in $STORK_CONFIG
+		fi
+		GLOBUS_LIB=`$PERL -ne "$PERL_GLOBUS_LIB_FIND" $STORK_CONFIG`
+		if [ -d $GLOBUS_LIB ]; then
+			export LD_LIBRARY_PATH="$GLOBUS_LIB:$LD_LIBRARY_PATH"
+		else
+			fatal globus_bin_dir directory not found in $STORK_CONFIG
+		fi
+	fi
+
+	# Create a unique test subdirectory, from current directory. Change to new
+	# test subdirectory.
+	cd_test_dir
+	#Create credential subdirectory
+	cred_dir || exit 1
+}
+
+# start stork daemon
+storkd () {
+	name="$1"; shift;
+	STORKD_OPTS="$STORKD_OPTS -Serverlog $TESTDIR/Stork"
+	STORKD_OPTS="$STORKD_OPTS -Config $STORK_CONFIG"
+	cmd="$STORKD $STORKD_OPTS"
+	echo starting $cmd ...
+	test_announce "$name"
+	run_bg $name $cmd
+	STORKD_PID="$!"
+	register_memory_error_file "$name.pid*"
+	register_memory_leak_file "$name.pid*"
+	register_log_file "StorkLog"
+	sleep $STORKD_START_DELAY
+	ps >/dev/null $STORKD_PID
+	status=$?
+	test_status $status
+	if [ $status -ne 0 ];then
+		error $cmd failed
+	fi
+	return $status
+}
+
+# stork_q should see no dap jobs
+stork_q_0dap() {
+	name="$1"; shift;
+	test_announce "$name"
+	cmd="$STORK_Q $STORK_Q_OPTS"
+	run_fg $name $cmd
+	status=$?
+	if [ $status -ne 0 ];then
+		test_status $status
+		error $cmd failed
+		return $status
+	fi
+	regex="dap_id = *$DAP_ID;"
+	grep --silent "$regex" "$name.out"
+	status=$?
+	if (( $status==1 )); then
+		new_status=0
+	else
+		new_status=1
+	fi
+	test_status $new_status
+	if [ $new_status -ne 0 ]; then
+		error stork_q output not empty
+		cat "$name.out"
+	fi
+	return $new_status
+}
+
+# stork_q should see one dap job
+stork_q_1dap() {
+	name="$1"; shift;
+	test_announce "$name"
+	cmd="$STORK_Q $STORK_Q_OPTS"
+	run_fg $name $cmd
+	status=$?
+	if [ $status -ne 0 ];then
+		test_status $status
+		error $cmd failed
+		return $status
+	fi
+	regex="dap_id = *$DAP_ID;"
+	grep --silent "$regex" "$name.out"
+	status=$?
+	test_status $status
+	if [ $status -ne 0 ]; then
+		error dap_id $DAP_ID not found in $STORK_Q output "$name.out"
+	fi
+	return $status
+}
+
+# stork_status should see one dap job
+stork_1status() {
+	name="$1"; shift;
+	test_announce "$name"
+	cmd="$STORK_STATUS $STORK_STATUS_OPTS $DAP_ID"
+	run_fg $name $cmd
+	status=$?
+	if [ $status -ne 0 ];then
+		test_status $status
+		error $cmd failed
+		return $status
+	fi
+	regex="dap_id = *$DAP_ID;"
+	grep --silent "$regex" "$name.out"
+	status=$?
+	test_status $status
+	if [ $status -ne 0 ]; then
+		error dap_id $DAP_ID not found in $STORK_STATUS output "$name.out"
+	fi
+	return $status
+}
+
+stork_1rm() {
+	name="$1"; shift;
+	test_announce "$name"
+	cmd="$STORK_RM $STORK_RM_OPTS $DAP_ID"
+	run_fg $name $cmd
+	status=$?
+	if [ $status -ne 0 ];then
+		test_status $status
+		error $cmd failed
+		return $status
+	fi
+	regex="DaP job $DAP_ID is removed from queue."
+	grep --silent "$regex" "$name.out"
+	status=$?
+	test_status $status
+	if [ $status -ne 0 ]; then
+		error dap_id $DAP_ID not removed from queue
+	fi
+	return $status
+}
+
+# test file:// to file:// transfer and exit
+stork_submit_file_file() {
+	name="$1"; shift;
+	test_announce "$name"
+	DEST_FILE="$TESTDIR/condor_config-$name"
+	rm -f $DEST_FILE
+	SUBMIT_FILE="$name.dap"
+	COMPARE_FILE=$CONDOR_CONFIG
+	cat <<EOF >$SUBMIT_FILE
+	[
+		dap_type = transfer;
+		src_url = "file:$COMPARE_FILE";
+		dest_url = "file:$DEST_FILE";
+	]
+EOF
+	cmd="$STORK_SUBMIT $STORK_SUBMIT_OPTS $SUBMIT_FILE"
+	run_fg $name $cmd
+	status=$?
+	if [ $status -ne 0 ];then
+		test_status $status
+		error $cmd failed
+		return $status
+	fi
+	wait_file_cmp $DEST_FILE $COMPARE_FILE $FILE_FILE_TO
+	status=$?
+	if [ $status -ne 0 ];then
+		test_status $status
+		error cmp $DEST_FILE $COMPARE_FILE failed
+		return $status
+	fi
+	DAP_ID=`$PERL -ne "$PERL_DAP_ID_FIND" "$name.out"`
+	if [ -z "$DAP_ID" ]; then
+		status=1
+		test_status $status
+		error $STORK_SUBMIT dap_id not found in "$name.out"
+		return $status
+	fi
+	test_status $status
+	return $status
+}
+
+# test gsiftp:// to file:// transfer, with credential specified in submit file
+stork_submit_gsiftp_file () {
+	name="$1"; shift;
+	test_announce "$name"
+	DEST_FILE="$TESTDIR/condor_config-$name"
+	rm -f $DEST_FILE
+	SUBMIT_FILE="$name.dap"
+	COMPARE_FILE=$CONDOR_CONFIG
+	cat <<EOF >$SUBMIT_FILE
+	[
+		dap_type = transfer;
+		x509proxy = "$X509PROXY";
+		src_url = "gsiftp://${GRIDFTPSERVER}$COMPARE_FILE";
+		dest_url = "file:$DEST_FILE";
+	]
+EOF
+	cmd="$STORK_SUBMIT $STORK_SUBMIT_OPTS $SUBMIT_FILE"
+	run_fg $name $cmd
+	status=$?
+	if [ $status -ne 0 ];then
+		test_status $status
+		error $cmd failed
+		return $status
+	fi
+	wait_file_cmp $DEST_FILE $COMPARE_FILE $GSI_TO
+	status=$?
+	if [ $status -ne 0 ];then
+		test_status $status
+		error cmp $DEST_FILE $COMPARE_FILE failed
+		return $status
+	fi
+	DAP_ID=`$PERL -ne "$PERL_DAP_ID_FIND" "$name.out"`
+	if [ -z "$DAP_ID" ]; then
+		status=1
+		test_status $status
+		error $STORK_SUBMIT dap_id not found in "$name.out"
+		return $status
+	fi
+	test_status $status
+	return $status
+}
+
+# test gsiftp:// to file:// transfer, with credential from CredD
+stork_submit_credd_gsiftp_file () {
+	name="$1"; shift;
+	test_announce "$name"
+	DEST_FILE="$TESTDIR/termcap-$name"
+	rm -f $DEST_FILE
+	SUBMIT_FILE="$name.dap"
+	COMPARE_FILE=$TERMCAP
+	cat <<EOF >$SUBMIT_FILE
+	[
+		cred_name = "$CRED_NAME";
+		dap_type = transfer;
+		src_url = "gsiftp://${GRIDFTPSERVER}$COMPARE_FILE";
+		dest_url = "file:$DEST_FILE";
+	]
+EOF
+	cmd="$STORK_SUBMIT $STORK_SUBMIT_OPTS $SUBMIT_FILE"
+	run_fg $name $cmd
+	status=$?
+	if [ $status -ne 0 ];then
+		test_status $status
+		error $cmd failed
+		return $status
+	fi
+	wait_file_cmp $DEST_FILE $COMPARE_FILE $GSI_TO
+	status=$?
+	if [ $status -ne 0 ];then
+		test_status $status
+		error cmp $DEST_FILE $COMPARE_FILE failed
+		return $status
+	fi
+	DAP_ID=`$PERL -ne "$PERL_DAP_ID_FIND" "$name.out"`
+	if [ -z "$DAP_ID" ]; then
+		status=1
+		test_status $status
+		error $STORK_SUBMIT dap_id not found in "$name.out"
+		return $status
+	fi
+	test_status $status
+	return $status
+}
+
+# test file:// to gsiftp:// transfer, with credential specified in submit file
+stork_submit_file_gsiftp () {
+	name="$1"; shift;
+	test_announce "$name"
+	DEST_FILE="$TESTDIR/condor_config-$name"
+	rm -f $DEST_FILE
+	SUBMIT_FILE="$name.dap"
+	COMPARE_FILE=$CONDOR_CONFIG
+	cat <<EOF >$SUBMIT_FILE
+	[
+		dap_type = transfer;
+		x509proxy = "$X509PROXY";
+		src_url = "file:$COMPARE_FILE";
+		dest_url = "gsiftp://${GRIDFTPSERVER}$DEST_FILE";
+	]
+EOF
+	cmd="$STORK_SUBMIT $STORK_SUBMIT_OPTS $SUBMIT_FILE"
+	run_fg $name $cmd
+	status=$?
+	if [ $status -ne 0 ];then
+		test_status $status
+		error $cmd failed
+		return $status
+	fi
+	wait_file_cmp $DEST_FILE $COMPARE_FILE $GSI_TO
+	status=$?
+	if [ $status -ne 0 ];then
+		test_status $status
+		error cmp $DEST_FILE $COMPARE_FILE failed
+		return $status
+	fi
+	DAP_ID=`$PERL -ne "$PERL_DAP_ID_FIND" "$name.out"`
+	if [ -z "$DAP_ID" ]; then
+		status=1
+		test_status $status
+		error $STORK_SUBMIT dap_id not found in "$name.out"
+		return $status
+	fi
+	test_status $status
+	return $status
+}
+
+# test gsiftp:// to gsiftp:// transfer, with credential specified in submit file
+stork_submit_gsiftp_gsiftp () {
+	name="$1"; shift;
+	test_announce "$name"
+	DEST_FILE="$TESTDIR/condor_config-$name"
+	rm -f $DEST_FILE
+	SUBMIT_FILE="$name.dap"
+	COMPARE_FILE=$CONDOR_CONFIG
+	cat <<EOF >$SUBMIT_FILE
+	[
+		dap_type = transfer;
+		x509proxy = "$X509PROXY";
+		src_url = "gsiftp://${GRIDFTPSERVER}$COMPARE_FILE";
+		dest_url = "gsiftp://${GRIDFTPSERVER}$DEST_FILE";
+	]
+EOF
+	cmd="$STORK_SUBMIT $STORK_SUBMIT_OPTS $SUBMIT_FILE"
+	run_fg $name $cmd
+	status=$?
+	if [ $status -ne 0 ];then
+		test_status $status
+		error $cmd failed
+		return $status
+	fi
+	wait_file_cmp $DEST_FILE $COMPARE_FILE $GSI_TO
+	status=$?
+	if [ $status -ne 0 ];then
+		test_status $status
+		error cmp $DEST_FILE $COMPARE_FILE failed
+		return $status
+	fi
+	DAP_ID=`$PERL -ne "$PERL_DAP_ID_FIND" "$name.out"`
+	if [ -z "$DAP_ID" ]; then
+		status=1
+		test_status $status
+		error $STORK_SUBMIT dap_id not found in "$name.out"
+		return $status
+	fi
+	test_status $status
+	return $status
+}
+
+# test stork file submit, stork_q, stork_status, stork_rm, stork_q,
+# stork_status
+stork_submit_long_xfer() {
+	name="$1"; shift;
+	test_announce "$name"
+	SRC_FILE=$DEVZERO
+	DEST_FILE=$DEVNULL
+	SUBMIT_FILE="$name.dap"
+	cat <<EOF >$SUBMIT_FILE
+	[
+		dap_type = transfer;
+		src_url = "file:$SRC_FILE";
+		dest_url = "file:$DEST_FILE";
+	]
+EOF
+	cmd="$STORK_SUBMIT $STORK_SUBMIT_OPTS $SUBMIT_FILE"
+	run_fg $name $cmd
+	status=$?
+	if [ $status -ne 0 ];then
+		test_status $status
+		error $cmd failed
+		return $status
+	fi
+	wait_process_name $DAP_XFER_FILE_FILE 4
+	status=$?
+	if [ $status -ne 0 ];then
+		test_status $status
+		error process $DAP_XFER_FILE_FILE not spawned
+		return $status
+	fi
+	_dap_id=`$PERL -ne "$PERL_DAP_ID_FIND" "$name.out"`
+	if [ -z "$_dap_id" ]; then
+		error $STORK_SUBMIT previous dap_id not found
+		return $status
+	fi
+	if [ -z "$DAP_ID" ]; then
+		error $STORK_SUBMIT dap_id not found
+		status=1
+		return $status
+	fi
+	if (( $DAP_ID != $_dap_id - 1 )); then
+		error $STORK_SUBMIT dap_id $_dap_id unchanged from $DAP_ID
+		status=1
+		return $status
+	fi
+
+	DAP_ID=$_dap_id	# save newest dap_id
+	test_status $status
+	return $status
+}
+
+# start main program ###########################################################
+
+parse_cmd "$@"
+setup
+
+# Start tests.
+FAIL_COUNT=0	# total count of test failures
+trap finish $SIGSPEC
+
+if $STORKD_TESTS; then
+	echo
+	echo running stork daemon startup tests ...
+	if storkd "stork_daemon" && stork_q_0dap "stork_q_simple"; then
+		true
+	else
+		error disabling all tests that require stork server
+		STORK_CORE_TESTS=false
+		GSI_TESTS=false
+	fi
+fi
+
+if $STORK_CORE_TESTS; then
+	echo
+	echo running stork core tests ...
+	stork_submit_file_file "stork_submit_file_file"
+	if stork_submit_long_xfer "stork_submit_long_xfer"; then
+		stork_q_1dap "stork_q_1dap"
+		stork_1status "stork_1status"
+		if stork_1rm "stork_1rm"; then
+			stork_q_0dap "stork_q_0dap"
+		fi
+	fi
+fi
+
+if $GSI_TESTS; then
+	echo
+	echo running stork non-CredD GSI tests ...
+	stork_submit_gsiftp_file "stork_submit_gsiftp_file"
+	stork_submit_file_gsiftp "stork_submit_file_gsiftp"
+	stork_submit_gsiftp_gsiftp "stork_submit_gsiftp_gsiftp"
+fi
+
+if $CREDD_TESTS; then
+	echo
+	echo running stork CredD GSI tests ...
+	#echo running credd daemon startup tests ...
+	if credd "credd_daemon"; then
+		if store_cred "store_cred"; then
+			stork_submit_credd_gsiftp_file "stork_submit_credd_gsiftp_file"
+		fi
+	fi
+fi
+
