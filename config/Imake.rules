@@ -632,6 +632,19 @@ clean::						@@\
 XCOMM End translation of func(all_symlink_target)
 #endif /* all_symlink_target */
 
+
+#ifndef all_copy_target
+#define all_copy_target(src,dest)		@@\
+XCOMM Begin translation of func(all_copy_target) @@\
+all:: dest					@@\
+dest: src					@@\
+	/bin/rm -f dest				@@\
+	cp src dest				@@\
+clean::						@@\
+	/bin/rm -f dest			@@\
+XCOMM End translation of func(all_copy_target)
+#endif /* all_copy_target */
+
 /***********************************************************************
 ** tarball targets
 **
