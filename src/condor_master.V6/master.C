@@ -525,6 +525,12 @@ obituary( int pid, int status )
 		return;
 	}
 
+	// Just return if process exited with status 0.  If everthing's
+	// ok, why bother sending email?
+	if ( (WIFEXITED(status)) && (WEXITSTATUS(status) == 0 ) ) {
+		return;
+	}
+
     name = daemons.DaemonName( pid );
     log = daemons.DaemonLog( pid );
 
