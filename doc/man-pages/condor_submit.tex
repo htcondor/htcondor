@@ -343,6 +343,36 @@ of the process.  For jobs submitted to the Vanilla Universe, the default
 is \verb@SIGTERM@ which is the standard way to terminate a program in UNIX.  
 
 %%%%%%%%%%%%%%%%%%%
+%% compress_files
+%%%%%%%%%%%%%%%%%%%
+
+\item[compress\_files = file1, file2, ...]
+
+If your job attempts to access any of the files mentioned in this list,
+Condor will automatically compress them (if writing) or decompress them (if reading).
+The compress format is the same as used by GNU gzip.  The files given in this
+list must be complete pathnames, but may be abbreviated by using $*$ as a wildcard.
+
+Due to the nature of the compression format, compressed files must only
+be accessed sequentially.  Random access reading is allowed but is very slow,
+while random access writing is simply not possible.  This restriction may be
+avoided by using both compress\_files and fetch\_files at the same time.  When
+this is done, a file is kept in the decompressed state at the execution
+machine, but is compressed for transfer to its original location.
+
+%%%%%%%%%%%%%%%%%%%
+%% fetch_files
+%%%%%%%%%%%%%%%%%%%
+
+\item[fetch\_files = file1, file2, ...]
+
+If your job attempts to access a file mentioned in this list,
+Condor will automatically copy the whole file to the executing machine,
+where it can be accessed quickly.  When your job closes the file,
+it will be copied back to its original location.  The files given in this list must be
+complete pathnames, but may be abbreviated by using $*$ as a wildcard.
+
+%%%%%%%%%%%%%%%%%%%
 %% buffer_size
 %%%%%%%%%%%%%%%%%%%
 
