@@ -146,7 +146,6 @@ match_rec::match_rec(char* i, char* p, PROC_ID* id, ClassAd *match,
 	alive_countdown = 0;
 	num_exceptions = 0;
 	if( match ) {
-		match->dPrint(D_ALWAYS);
 		my_match_ad = new ClassAd( *match );
 	} else {
 		my_match_ad = NULL;
