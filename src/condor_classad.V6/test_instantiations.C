@@ -27,11 +27,17 @@
 
 using namespace std;
 
+#if (__GNUC__<3)
+#define CLASS
+#else
+#define CLASS class
+#endif
+
 BEGIN_NAMESPACE(classad)
 
-template map<string, Variable *>;
-template map<string, ClassAd *>;
-template map<string, ClassAdCollection *>;
+template CLASS map<string, Variable *>;
+template CLASS map<string, ClassAd *>;
+template CLASS map<string, ClassAdCollection *>;
 
 END_NAMESPACE
 
