@@ -208,6 +208,7 @@ class Lexer
 	private:
 			// grant access to FunctionCall --- for tokenize{Abs,Rel}Time fns
 		friend class FunctionCall;
+		friend class ClassAdXMLParser;
 
 		// internal state of lexical analyzer
 		TokenType	tokenType;             		// the integer id of the token
@@ -236,8 +237,8 @@ class Lexer
 		int			tokenizeTime( void );		// time (absolute and relative)
 		int 		tokenizePunctOperator(void);// punctuation and operators
 
-		static bool	tokenizeRelativeTime(const char*,time_t&);// relative time
-		static bool	tokenizeAbsoluteTime(const char*,time_t&);// absolute time
+		static bool tokenizeRelativeTime(const char*,time_t&);// relative time
+		static bool tokenizeAbsoluteTime(const char*,time_t&);// absolute time
 
 		void convert_escapes(std::string &text);
 };

@@ -26,6 +26,7 @@
 #include "lexerSource.h"
 #include "classad.h"
 #include "source.h"
+#include "lexer.h"
 
 using namespace std;
 
@@ -393,6 +394,7 @@ ParseUndefinedOrError(XMLLexer::TagID tag_id)
 ExprTree *ClassAdXMLParser::
 ParseTime(void)
 {
+	bool             have_token;
 	ExprTree         *tree;
 	XMLLexer::Token  token;
 
@@ -400,11 +402,50 @@ ParseTime(void)
 	lexer.ConsumeToken(&token);
 	assert(token.tag_id == XMLLexer::tagID_Time);
 
-	// We haven't yet finished this functionality.
-	assert(0); 
+	have_token = lexer.PeekToken(&token);
+	if (have_token && token.token_type == XMLLexer::tokenType_Text) {
+		lexer.ConsumeToken(&token);
 
+		struct 	tm timeValue;
+		time_t  asecs;
+		time_t	secs;
+		time_t	absTime=0;
+		char *tzStr, *tzOff=NULL;
+		char *time_rep = strdup(token.text.c_str());
+
+		// format of abstime:  `Wed Nov 11 13:11:47 1998 (CST) +6:00`
+		// get the position of the timezone string and timezone offSet
+		if(    ((tzStr = strchr(time_rep, '(' ) ) == NULL) 
+			|| ((tzOff = strchr(time_rep, ')' ) ) == NULL)){
+			tree = NULL;
+		} else {
+			// delimit ctime()-like segment, timezone string and timezone offSet
+			*(tzStr-1) = '\0';
+			*(tzOff+1) = '\0';
+			tzOff += 2;
+
+			// convert the ctime() like segment into a time_t
+			if((strptime(time_rep, "%a %b %d %H:%M:%S %Y", &timeValue) == 0) ||
+				(absTime = mktime(&timeValue)) == -1) {
+				tree = NULL;
+			} else {
+				// treat the timezone offSet as a relative time value
+				if(!Lexer::tokenizeRelativeTime(tzOff, secs)) {
+					tree = NULL;
+				} else {
+					//	wierd:  POSIX says that regions west of GMT have *positive*
+					//	offSets.  We have negative offSets to not confuse users.
+					secs = -secs;
+
+					// the actual is the abstime - foreign offSet - timezone (which got
+					// added in by mktime()
+					asecs = (int)absTime + secs - timezone;
+					tree = Literal::MakeAbsTime(asecs);
+				}
+			}
+		}
+	}
 	return tree;
-	
 }
 
 ExprTree *ClassAdXMLParser::

@@ -37,6 +37,7 @@ static void add_tag(
 	XMLLexer::TagType tag_type,
 	const char *attribute_name = NULL,
 	const char *attribute_value = NULL);
+static void UnparseRelativeTime(string &buffer, time_t rsecs);
 
 
 ClassAdXMLUnParser::
@@ -222,7 +223,7 @@ Unparse(
 
 				// get the timezone name
 			if( !strftime(timeZoneBuf, 31, "%Z", &tms)) {
-				buffer += "<error:strftime></time>";
+				buffer += "<error:strftime></t>";
 				return;
 			}
 			buffer += " (";
@@ -232,43 +233,15 @@ Unparse(
 			// output the offet (use the relative time format)
 			// wierd:  POSIX says regions west of GMT have positive
 			// offsets.We use negative offsets to not confuse users.
-			Value relTime;
-			string	relTimeBuf;
-			relTime.SetRelativeTimeValue(-timezone);
-			Unparse(relTimeBuf, relTime, indent);
-			buffer += relTimeBuf.substr(1,relTimeBuf.size()-2);
+			UnparseRelativeTime(buffer, -timezone);
 			add_tag(buffer, XMLLexer::tagID_Time, XMLLexer::tagType_End);
 			break;
 		}
 		case Value::RELATIVE_TIME_VALUE: {
 			time_t	rsecs;
-			int		days, hrs, mins, secs;
 			val.IsRelativeTimeValue( rsecs );
 			add_tag(buffer, XMLLexer::tagID_Time, XMLLexer::tagType_Start);
-			if( rsecs < 0 ) {
-				buffer += "-";
-				rsecs = -rsecs;
-			}
-			days = rsecs;
-			hrs  = days % 86400;
-			mins = hrs  % 3600;
-			secs = mins % 60;
-			days = days / 86400;
-			hrs  = hrs  / 3600;
-			mins = mins / 60;
-
-			if (days) {
-				sprintf( tempBuf, "%dd", days );
-				buffer += tempBuf;
-			}
-
-			sprintf(tempBuf, "%02d:%02d", hrs, mins);
-			buffer += tempBuf;
-			
-			if (secs) {
-				sprintf(tempBuf, ":%02d", secs);
-				buffer += tempBuf;
-			}
+			UnparseRelativeTime(buffer, rsecs);
 			add_tag(buffer, XMLLexer::tagID_Time, XMLLexer::tagType_End);
 			break;
 		}
@@ -364,5 +337,39 @@ static void add_tag(
 	}
 	buffer += '>';
 }
+
+static void 
+UnparseRelativeTime(string &buffer, time_t rsecs)
+{
+	int	  days, hrs, mins, secs;
+	char  tempBuf[512];
+
+	if( rsecs < 0 ) {
+		buffer += "-";
+		rsecs = -rsecs;
+	}
+	days = rsecs;
+	hrs  = days % 86400;
+	mins = hrs  % 3600;
+	secs = mins % 60;
+	days = days / 86400;
+	hrs  = hrs  / 3600;
+	mins = mins / 60;
+	
+	if (days) {
+		sprintf( tempBuf, "%dd", days );
+		buffer += tempBuf;
+	}
+	
+	sprintf(tempBuf, "%02d:%02d", hrs, mins);
+	buffer += tempBuf;
+	
+	if (secs) {
+		sprintf(tempBuf, ":%02d", secs);
+		buffer += tempBuf;
+	}
+	return;
+}
+
 
 END_NAMESPACE

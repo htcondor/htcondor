@@ -28,6 +28,8 @@ using namespace std;
 using namespace classad;
 #endif
 
+void test_old_time(void);
+
 int main(int argc, char **argv)
 {
 	ClassAdXMLParser  parser;
@@ -87,4 +89,49 @@ int main(int argc, char **argv)
 	cout << "Second ClassAd as parsed from XML:\n" 
 		 << printed_classad << endl;
 
+	FILE *temp_xml;
+	temp_xml = fopen("temp_xml", "w");
+	fprintf(temp_xml, "%s\n", xml.c_str());
+	fclose(temp_xml);
+
+	temp_xml = fopen("temp_xml", "r");
+	ClassAd *file_classad;
+	file_classad = parser.ParseClassAd(temp_xml);
+	fclose(temp_xml);
+	unlink("temp_xml");
+	
+	printed_classad = "";
+	printer.Unparse(printed_classad, file_classad);
+	cout << "File ClassAd:\n" 
+		 << printed_classad << endl;
+
+
+	test_old_time();
+
+	return 0;
+
+}
+
+void test_old_time(void)
+{
+	ClassAd *ad;
+	Literal  *time;
+
+	ad = new ClassAd();
+	time = Literal::MakeAbsTime();
+	ad->Insert("CurrentTime", time);
+
+	string       printed_classad;
+	ClassAdXMLUnParser  unparser;
+	unparser.SetCompactSpacing(false);
+	unparser.Unparse(printed_classad, ad);
+	cout << printed_classad << endl;
+
+	ClassAdXMLParser parser;
+	ClassAd *new_ad;
+	new_ad = parser.ParseClassAd(printed_classad);
+	printed_classad = "";
+	unparser.Unparse(printed_classad, new_ad);
+	cout << printed_classad << endl;
+	return;
 }
