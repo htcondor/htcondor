@@ -722,6 +722,12 @@ BUILD_FILES( name, ext )			@@\
 RLINK( cmplr, name##.remote, name##.o )		@@\
 VLINK( cmplr, name##.vanilla, name##.o )
 
+#define BUILD_EXTRA( cmplr, name, ext, obj)	@@\
+BUILD_FILES( name, ext )			@@\
+RLINK( cmplr, name##.remote, obj name##.o)	@@\
+VLINK( cmplr, name##.vanilla, obj name##.o)
+
+
 #define BUILD_SPECIFIC_VANILLA(compiler, progname, objfiles, cmdfile, runfile, ext) @@\
 BUILD_FILES_SPECIFIC(progname, cmdfile, runfile, ext) @@\
 VLINK(compiler, progname##.vanilla, objfiles)
