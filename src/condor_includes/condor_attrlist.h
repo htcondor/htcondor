@@ -105,7 +105,7 @@ class AttrList : public AttrListAbstract
 		int			InsertOrUpdate(char*);
 
 		// deletion of expressions	
-        int			Delete(char*);			// delete the expr with the name
+        int			Delete(const char*); 	// delete the expr with the name
 
 		// to update expression trees
 		void		ResetFlags();			// reset the all the dirty flags

@@ -29,11 +29,11 @@ int DestroyClusterByConstraint(const char*);
 int SetAttribute(int, int, char *, char *);
 int CloseConnection();
 
-int GetAttributeFloat(int, int, char *, float *);
-int GetAttributeInt(int, int, char *, int *);
-int GetAttributeString(int, int, char *, char *);
-int GetAttributeExpr(int, int, char *, char *);
-int DeleteAttribute(int, int, char *);
+int GetAttributeFloat(int, int, const char *, float *);
+int GetAttributeInt(int, int, const char *, int *);
+int GetAttributeString(int, int, const char *, char *);
+int GetAttributeExpr(int, int, const char *, char *);
+int DeleteAttribute(int, int, const char *);
 
 int GetNextJob(int, int, int *, int *);
 int FirstAttribute(int, int, char *);
