@@ -71,7 +71,7 @@
 #define StaticFlag /**/
 #define UnixName /unix          /* pathname of the system executable */
 #define syscall_lib syscall_lib_irix
-#define PsAllFlag -ef               /* "Ps" flag when you want everything */
+#define PsAllFlag /sbin/ps -ef               /* "Ps" flag when you want everything */
 #define PsAwkProg '{ print $2 }'    /* Pick out pid from "ps" output */
 #define CompatFlags -D_BSD_COMPAT
 
