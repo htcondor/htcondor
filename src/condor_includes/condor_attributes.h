@@ -167,5 +167,7 @@ const char ATTR_TRANSFER_KEY			 [] = "TransferKey";
 const char ATTR_TRANSFER_INPUT_FILES	 [] = "TransferInput";
 const char ATTR_TRANSFER_OUTPUT_FILES	 [] = "TransferOutput";
 const char ATTR_TRANSFER_SOCKET			 [] = "TransferSocket";
+const char ATTR_SERVER_TIME				 [] = "ServerTime";
+const char ATTR_SHADOW_BIRTHDATE		 [] = "ShadowBday";
 
 #endif
