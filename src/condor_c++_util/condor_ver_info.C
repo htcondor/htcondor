@@ -26,12 +26,18 @@
 
 extern char *mySubSystem;
 extern "C" char *CondorVersion(void);
+extern "C" char *CondorPlatform(void);
 
-CondorVersionInfo::CondorVersionInfo(char *versionstring, char *subsystem)
+CondorVersionInfo::CondorVersionInfo(char *versionstring, char *subsystem, char *platformstring)
 {
 	myversion.MajorVer = 0;
+	myversion.Arch = NULL;
+	myversion.OpSys = NULL;
+	myversion.Libc = NULL;
 	mysubsys = NULL;
 	string_to_VersionData(versionstring,myversion);
+	string_to_PlatformData(platformstring,myversion);
+
 	if ( subsystem ) {
 		mysubsys = strdup(subsystem);
 	} else {
@@ -42,6 +48,9 @@ CondorVersionInfo::CondorVersionInfo(char *versionstring, char *subsystem)
 CondorVersionInfo::~CondorVersionInfo()
 {
 	if (mysubsys) free(mysubsys);
+ 	if(myversion.Arch) free(myversion.Arch);
+ 	if(myversion.OpSys) free(myversion.OpSys);
+ 	if(myversion.Libc) free(myversion.Libc);
 }
 
 	
@@ -335,4 +344,57 @@ CondorVersionInfo::string_to_VersionData(const char *verstring,
 
 	return true;
 }
+
+							
+bool
+CondorVersionInfo::string_to_PlatformData(const char *platformstring, 
+									 VersionData_t & ver)
+{
+	// platformstring looks like "$CondorPlatform: INTEL-LINUX-GLIBC21 $"
+
+	if ( !platformstring ) {
+		// Use our own version number. 
+		platformstring = CondorPlatform();
+
+		// If we already computed myversion, we're done.
+		if ( myversion.Arch ) {
+			ver = myversion;
+			return true;
+		}
+	}
+
+	if ( strncmp(platformstring,"$CondorPlatform: ",17) != 0 ) {
+		return false;
+	}
+
+	char *ptr = strchr(platformstring,' ');
+	ptr++;		// skip space after the colon
+
+	char *tempStr = strdup(ptr);	
+	char *token; 
+        token = strtok(tempStr, "-");
+        if(token) ver.Arch = strdup(token);
+		
+        token = strtok(NULL, "-");
+        if(token) ver.OpSys = strdup(token);
+
+        token = strtok(NULL, "-");
+	if(token) ver.Libc = strdup(token);
+
+	if(ver.OpSys) {
+		token = strchr(ver.OpSys, '$');
+		if(token) *token = '\0';
+	}		
+
+	if(ver.Libc) {
+		token = strchr(ver.Libc, '$');
+		if(token) *token = '\0';
+	}		
+
+
+	free(tempStr);
+
+	return true;
+}
+
 
