@@ -140,6 +140,22 @@ SOURCE=..\src\condor_shadow.V6.1\shadow.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_shadow.V6.1\shadow_initializer.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_shadow.V6.1\shadow_initializer.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_shadow.V6.1\shadow_user_policy.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_shadow.V6.1\shadow_user_policy.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_shadow.V6.1\shadow_v61_main.C
 # End Source File
 # End Target

@@ -127,6 +127,14 @@ SOURCE=..\src\condor_includes\condor_auth_sspi.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_io\condor_crypt.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_includes\condor_crypt.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_includes\condor_io.h
 # End Source File
 # Begin Source File

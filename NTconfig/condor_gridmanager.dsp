@@ -1,24 +1,24 @@
-# Microsoft Developer Studio Project File - Name="condor_submit_dag" - Package Owner=<4>
+# Microsoft Developer Studio Project File - Name="condor_gridmanager" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
 # ** DO NOT EDIT **
 
 # TARGTYPE "Win32 (x86) Console Application" 0x0103
 
-CFG=condor_submit_dag - Win32 Release
+CFG=condor_gridmanager - Win32 Release
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
-!MESSAGE NMAKE /f "condor_submit_dag.mak".
+!MESSAGE NMAKE /f "condor_gridmanager.mak".
 !MESSAGE 
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "condor_submit_dag.mak" CFG="condor_submit_dag - Win32 Release"
+!MESSAGE NMAKE /f "condor_gridmanager.mak" CFG="condor_gridmanager - Win32 Release"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "condor_submit_dag - Win32 Debug" (based on "Win32 (x86) Console Application")
-!MESSAGE "condor_submit_dag - Win32 Release" (based on "Win32 (x86) Console Application")
+!MESSAGE "condor_gridmanager - Win32 Debug" (based on "Win32 (x86) Console Application")
+!MESSAGE "condor_gridmanager - Win32 Release" (based on "Win32 (x86) Console Application")
 !MESSAGE 
 
 # Begin Project
@@ -28,7 +28,7 @@ CFG=condor_submit_dag - Win32 Release
 CPP=cl.exe
 RSC=rc.exe
 
-!IF  "$(CFG)" == "condor_submit_dag - Win32 Debug"
+!IF  "$(CFG)" == "condor_gridmanager - Win32 Debug"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
@@ -51,19 +51,20 @@ BSC32=bscmake.exe
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
 # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib ../Debug/condor_common.obj ..\Debug\condor_common_c.obj /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
+# SUBTRACT LINK32 /map
 
-!ELSEIF  "$(CFG)" == "condor_submit_dag - Win32 Release"
+!ELSEIF  "$(CFG)" == "condor_gridmanager - Win32 Release"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
-# PROP BASE Output_Dir "condor_submit_dag___Win32_Release"
-# PROP BASE Intermediate_Dir "condor_submit_dag___Win32_Release"
+# PROP BASE Output_Dir "condor_gridmanager___Win32_Release"
+# PROP BASE Intermediate_Dir "condor_gridmanager___Win32_Release"
 # PROP BASE Ignore_Export_Lib 0
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 1
-# PROP Output_Dir "..\Release"
-# PROP Intermediate_Dir "..\Release"
+# PROP Output_Dir "../Release"
+# PROP Intermediate_Dir "../Release"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
@@ -76,17 +77,50 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib ../src/condor_c++_util/condor_common.obj ..\src\condor_util_lib/condor_common.obj /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
+# SUBTRACT BASE LINK32 /map
 # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib ../Release/condor_common.obj ../Release/condor_common_c.obj /nologo /subsystem:console /pdb:none /map /debug /machine:I386
 
 !ENDIF 
 
 # Begin Target
 
-# Name "condor_submit_dag - Win32 Debug"
-# Name "condor_submit_dag - Win32 Release"
+# Name "condor_gridmanager - Win32 Debug"
+# Name "condor_gridmanager - Win32 Release"
 # Begin Source File
 
-SOURCE=..\src\condor_tools\condor_submit_dag.C
+SOURCE="..\src\condor_gridmanager\gahp-client.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_gridmanager\gahp-client.h"
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\globusjob.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\globusjob.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\globusresource.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\globusresource.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\gridmanager.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\gridmanager.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\gridmanager_main.C
 # End Source File
 # End Target
 # End Project

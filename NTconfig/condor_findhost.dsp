@@ -1,24 +1,24 @@
-# Microsoft Developer Studio Project File - Name="condor_submit_dag" - Package Owner=<4>
+# Microsoft Developer Studio Project File - Name="condor_findhost" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
 # ** DO NOT EDIT **
 
 # TARGTYPE "Win32 (x86) Console Application" 0x0103
 
-CFG=condor_submit_dag - Win32 Release
+CFG=condor_findhost - Win32 Release
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
-!MESSAGE NMAKE /f "condor_submit_dag.mak".
+!MESSAGE NMAKE /f "condor_findhost.mak".
 !MESSAGE 
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "condor_submit_dag.mak" CFG="condor_submit_dag - Win32 Release"
+!MESSAGE NMAKE /f "condor_findhost.mak" CFG="condor_findhost - Win32 Release"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "condor_submit_dag - Win32 Debug" (based on "Win32 (x86) Console Application")
-!MESSAGE "condor_submit_dag - Win32 Release" (based on "Win32 (x86) Console Application")
+!MESSAGE "condor_findhost - Win32 Debug" (based on "Win32 (x86) Console Application")
+!MESSAGE "condor_findhost - Win32 Release" (based on "Win32 (x86) Console Application")
 !MESSAGE 
 
 # Begin Project
@@ -28,7 +28,7 @@ CFG=condor_submit_dag - Win32 Release
 CPP=cl.exe
 RSC=rc.exe
 
-!IF  "$(CFG)" == "condor_submit_dag - Win32 Debug"
+!IF  "$(CFG)" == "condor_findhost - Win32 Debug"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
@@ -52,12 +52,12 @@ LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
 # ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib ../Debug/condor_common.obj ..\Debug\condor_common_c.obj /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
 
-!ELSEIF  "$(CFG)" == "condor_submit_dag - Win32 Release"
+!ELSEIF  "$(CFG)" == "condor_findhost - Win32 Release"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
-# PROP BASE Output_Dir "condor_submit_dag___Win32_Release"
-# PROP BASE Intermediate_Dir "condor_submit_dag___Win32_Release"
+# PROP BASE Output_Dir "condor_findhost___Win32_Release"
+# PROP BASE Intermediate_Dir "condor_findhost___Win32_Release"
 # PROP BASE Ignore_Export_Lib 0
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
@@ -82,11 +82,11 @@ LINK32=link.exe
 
 # Begin Target
 
-# Name "condor_submit_dag - Win32 Debug"
-# Name "condor_submit_dag - Win32 Release"
+# Name "condor_findhost - Win32 Debug"
+# Name "condor_findhost - Win32 Release"
 # Begin Source File
 
-SOURCE=..\src\condor_tools\condor_submit_dag.C
+SOURCE=..\src\condor_tools\give_interactive.C
 # End Source File
 # End Target
 # End Project

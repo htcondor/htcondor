@@ -123,6 +123,14 @@ SOURCE="..\src\condor_c++_util\classad_log.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\classad_merge.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\classad_merge.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\condor_common.C"
 
 !IF  "$(CFG)" == "condor_cpp_util - Win32 Debug"
@@ -145,6 +153,18 @@ SOURCE="..\src\condor_c++_util\condor_config.C"
 # Begin Source File
 
 SOURCE=..\src\condor_includes\condor_config.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_includes\condor_cron.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_includes\condor_cronjob.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_includes\condor_cronmgr.h
 # End Source File
 # Begin Source File
 
@@ -201,6 +221,18 @@ SOURCE="..\src\condor_c++_util\config.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\cron.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\cronjob.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\cronmgr.C"
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_daemon_client\daemon.C
 # End Source File
 # Begin Source File
@@ -217,11 +249,27 @@ SOURCE=..\src\condor_daemon_client\daemon_types.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_daemon_client\dc_schedd.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_client\dc_schedd.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_daemon_client\dc_shadow.C
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\condor_daemon_client\dc_shadow.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_client\dc_startd.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_client\dc_startd.h
 # End Source File
 # Begin Source File
 
@@ -342,6 +390,14 @@ SOURCE="..\src\condor_c++_util\killfamily.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\killfamily.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\linebuffer.C"
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_includes\linebuffer.h
 # End Source File
 # Begin Source File
 
@@ -471,6 +527,14 @@ SOURCE="..\src\condor_c++_util\uids.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\usagemon.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\user_job_policy.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\user_job_policy.h"
 # End Source File
 # Begin Source File
 
