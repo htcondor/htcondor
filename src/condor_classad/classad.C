@@ -820,11 +820,29 @@ SortCompare(const void* v1, const void* v2)
 
 
 	// The user supplied SortSmallerThan() func returns a 1
-	// if a is smaller than b.  qsort() wants a -1 for smaller.
-	if ( SortSmallerThan(*a,*b,SortInfo) == 1 )
+	// if a is smaller than b, and that is _all_ we know about
+	// SortSmallerThan().  Some tools implement a SortSmallerThan()
+	// that returns a -1 on error, some just return a 0 on error,
+	// it is chaos.  Just chaos I tell you.  _SO_ we only check for
+	// a "1" if it is smaller than, and do not assume anything else.
+	// qsort() wants a -1 for smaller.
+	if ( SortSmallerThan(*a,*b,SortInfo) == 1 ) {
+			// here we know that a is less than b
 		return -1;
-	else 
-		return 1;
+	} else {
+			// So, now we know that a is not smaller than b, but
+			// we still need to figure out if a is equal to b or not.
+			// Do this by calling the user supplied compare function
+			// again and ask if b is smaller than a.
+		if ( SortSmallerThan(*b,*a,SortInfo) == 1 ) {
+				// now we know that a is greater than b
+			return 1;
+		} else {
+				// here we know a is not smaller than b, and b is not
+				// smaller than a.  so they must be equal.
+			return 0;
+		}
+	}
 }
 
 void ClassAdList::
