@@ -738,6 +738,7 @@ doContactSchedd()
 
 					GlobusJob *new_job = new GlobusJob( next_ad, resource );
 					ASSERT(new_job);
+					new_job->SetEvaluateState();
 					JobsByProcID.insert( new_job->procID, new_job );
 					num_ads++;
 
