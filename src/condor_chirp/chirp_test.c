@@ -9,6 +9,7 @@
 
 char buffer[BUFFER_SIZE];
 char buffer2[BUFFER_SIZE];
+#define TEST_WRITE_FILE "/tmp/chirp test.tmp"
 
 int main( int argc, char *argv[] )
 {
@@ -30,9 +31,9 @@ int main( int argc, char *argv[] )
 		return 1;
 	}
 
-	wfd = chirp_client_open(client,"/tmp/outfile","wtc",0777);
+	wfd = chirp_client_open(client,TEST_WRITE_FILE,"wtc",0777);
 	if(wfd<0) {
-		fprintf(stderr,"couldn't open /tmp/outfile: %s\n",strerror(errno));
+		fprintf(stderr,"couldn't open %s: %s\n",TEST_WRITE_FILE,strerror(errno));
 		return 1;
 	}
 
@@ -110,15 +111,15 @@ int main( int argc, char *argv[] )
 	chirp_client_close(client,rfd);
 	chirp_client_close(client,wfd);
 
-	result = chirp_client_rename(client,"/tmp/outfile","/tmp/outfile.renamed");
+	result = chirp_client_rename(client,TEST_WRITE_FILE,TEST_WRITE_FILE ".renamed");
 	if(result<0) {
-		fprintf(stderr,"couldn't rename /tmp/outfile: %s\n",strerror(errno));
+		fprintf(stderr,"couldn't rename %s: %s\n",TEST_WRITE_FILE,strerror(errno));
 		return 1;
 	}
 
-	result = chirp_client_unlink(client,"/tmp/outfile.renamed");
+	result = chirp_client_unlink(client,TEST_WRITE_FILE ".renamed");
 	if(result<0) {
-		fprintf(stderr,"couldn't rename /tmp/outfile: %s\n",strerror(errno));
+		fprintf(stderr,"couldn't rename %s: %s\n",TEST_WRITE_FILE,strerror(errno));
 		return 1;
 	}
 

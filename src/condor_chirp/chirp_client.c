@@ -27,7 +27,8 @@ struct chirp_client {
 	FILE *stream;
 };
 
-struct chirp_client * chirp_client_connect_default()
+struct chirp_client *
+chirp_client_connect_default()
 {
 	FILE *file;
 	int fields;
@@ -63,7 +64,8 @@ struct chirp_client * chirp_client_connect_default()
 	return client;
 }
 
-struct chirp_client * chirp_client_connect( const char *host, int port )
+struct chirp_client *
+chirp_client_connect( const char *host, int port )
 {
 	struct chirp_client *c;
 	int save_errno;
@@ -92,33 +94,39 @@ struct chirp_client * chirp_client_connect( const char *host, int port )
 	return c;
 }
 
-void chirp_client_disconnect( struct chirp_client *c )
+void
+chirp_client_disconnect( struct chirp_client *c )
 {
 	fclose(c->stream);
 	free(c);
 }
 
-int chirp_client_cookie( struct chirp_client *c, const char *cookie )
+int
+chirp_client_cookie( struct chirp_client *c, const char *cookie )
 {
 	return simple_command(c,"cookie %s\n",cookie);
 }
 
-int chirp_client_login( struct chirp_client *c, const char *name, const char *password )
+int
+chirp_client_login( struct chirp_client *c, const char *name, const char *password )
 {
 	return simple_command(c,"login %s %s\n",name,password);
 }
 
-int chirp_client_open( struct chirp_client *c, const char *path, const char *flags, int mode )
+int
+chirp_client_open( struct chirp_client *c, const char *path, const char *flags, int mode )
 {
 	return simple_command(c,"open %s %s %d\n",path,flags,mode);
 }
 
-int chirp_client_close( struct chirp_client *c, int fd )
+int
+chirp_client_close( struct chirp_client *c, int fd )
 {
 	return simple_command(c,"close %d\n",fd);
 }
 
-int chirp_client_read( struct chirp_client *c, int fd, char *buffer, int length )
+int
+chirp_client_read( struct chirp_client *c, int fd, char *buffer, int length )
 {
 	int result;
 	int actual;
@@ -133,7 +141,8 @@ int chirp_client_read( struct chirp_client *c, int fd, char *buffer, int length 
 	return result;
 }
 
-int chirp_client_write( struct chirp_client *c, int fd, const char *buffer, int length )
+int
+chirp_client_write( struct chirp_client *c, int fd, const char *buffer, int length )
 {
 	int actual;
 	int result;
@@ -150,37 +159,44 @@ int chirp_client_write( struct chirp_client *c, int fd, const char *buffer, int 
 	return convert_result(get_result(c->stream));
 }
 
-int chirp_client_unlink( struct chirp_client *c, const char *path )
+int
+chirp_client_unlink( struct chirp_client *c, const char *path )
 {
 	return simple_command(c,"unlink %s\n",path);
 }
 
-int chirp_client_rename( struct chirp_client *c, const char *oldpath, const char *newpath )
+int
+chirp_client_rename( struct chirp_client *c, const char *oldpath, const char *newpath )
 {
 	return simple_command(c,"rename %s %s\n",oldpath,newpath);
 }
-int chirp_client_fsync( struct chirp_client *c, int fd )
+int
+chirp_client_fsync( struct chirp_client *c, int fd )
 {
 	return simple_command(c,"fsync %d\n",fd);
 }
 
-int chirp_client_lseek( struct chirp_client *c, int fd, int offset, int whence )
+int
+chirp_client_lseek( struct chirp_client *c, int fd, int offset, int whence )
 {
 	return simple_command(c,"lseek %d %d %d\n",fd,offset,whence);
 }
 
-int chirp_client_mkdir( struct chirp_client *c, char const *name, int mode )
+int
+chirp_client_mkdir( struct chirp_client *c, char const *name, int mode )
 {
 	return simple_command(c,"mkdir %s %d\n",name,mode);
 }
 
-int chirp_client_rmdir( struct chirp_client *c, char const *name )
+int
+chirp_client_rmdir( struct chirp_client *c, char const *name )
 {
 	return simple_command(c,"rmdir %s\n",name);
 }
 
 
-static int convert_result( int result )
+static int
+convert_result( int result )
 {
 	if(result>=0) {
 		return result;
@@ -225,7 +241,8 @@ static int convert_result( int result )
 	}
 }
 
-static int get_result( FILE *s )
+static int
+get_result( FILE *s )
 {
 	char line[CHIRP_LINE_MAX];
 	char *c;
@@ -241,19 +258,22 @@ static int get_result( FILE *s )
 	return result;
 }
 
-static void chirp_fatal_request( const char *name )
+static void
+chirp_fatal_request( const char *name )
 {
 	fprintf(stderr,"chirp: couldn't %s: %s\n",name,strerror(errno));
 	abort();
 }
 
-static void chirp_fatal_response()
+static
+void chirp_fatal_response()
 {
 	fprintf(stderr,"chirp: couldn't get response from server: %s\n",strerror(errno));
 	abort();
 }
 
-static int tcp_connect( const char *host, int port )
+static int
+tcp_connect( const char *host, int port )
 {
 	struct hostent *h;
 	struct sockaddr_in address;
@@ -280,77 +300,82 @@ static int tcp_connect( const char *host, int port )
 }
 
 /*
- *vsprintf_command -- simple sprintf capabilities with character escaping
- *
- *The following format characters are interpreted:
- *
- *%d -- decimal
- *%s -- word (whitespace is escaped)
- */
+  vsprintf_chirp -- simple sprintf capabilities with character escaping
 
-void vsprintf_command(char *command,char const *fmt,va_list args)
+  The following format characters are interpreted:
+
+  %d -- decimal
+  %s -- word (whitespace is escaped)
+  %% -- output %
+*/
+
+void
+vsprintf_chirp(char *command,char const *fmt,va_list args)
 {
-  char *c;
-  char const *f;
+	char       *c;
+	char const *f;
 
-  c = command;
-  f = fmt;
-  while(*f) {
-	  if(*f == '%') {
-		  switch(*(++f)) {
-		  case 'd':
-			  f++;
-			  sprintf(c,"%d",va_arg(args,int));
-			  c += strlen(c);
-			  break;
-		  case 's': {
-			  char const *w = va_arg(args,char const *);
-			  f++;
-			  while(*w) {
-				  switch(*w) {
-				  case ' ':
-				  case '\t':
-				  case '\n':
-				  case '\r':
-				  case '\\':
-					  *(c++) = '\\';
-					  /*fall through*/
-				  default:
-					  *(c++) = *(w++);
-				  }
-			  }
-			  break;
-		  }
-		  default:
-			  chirp_fatal_request(f);
-		  }
-	  }
-	  else {
-		  *(c++) = *(f++);
-	  }
-  }
-  *(c++) = '\0';
+	c = command;
+	f = fmt;
+	while(*f) {
+		if(*f == '%') {
+			switch(*(++f)) {
+			case 'd':
+				f++;
+				sprintf(c,"%d",va_arg(args,int));
+				c += strlen(c);
+				break;
+			case 's': {
+				char const *w = va_arg(args,char const *);
+				f++;
+				while(*w) {
+					switch(*w) {
+					case ' ':
+					case '\t':
+					case '\n':
+					case '\r':
+					case '\\':
+						*(c++) = '\\';
+						/*fall through*/
+					default:
+						*(c++) = *(w++);
+					}
+				}
+				break;
+			}
+			case '%':
+				*(c++) = *(f++);
+				break;
+			default:
+				chirp_fatal_request(f);
+			}
+		} else {
+			*(c++) = *(f++);
+		}
+	}
+	*(c++) = '\0';
 }
 
-int simple_command(struct chirp_client *c,char const *fmt,...)
+int
+simple_command(struct chirp_client *c,char const *fmt,...)
 {
-  int result;
-  char command[CHIRP_LINE_MAX];
-  va_list args;
+	int     result;
+	char    command[CHIRP_LINE_MAX];
+	va_list args;
 
-  va_start(args,fmt);
-  vsprintf_command(command,fmt,args);
-  va_end(args);
+	va_start(args,fmt);
+	vsprintf_chirp(command,fmt,args);
+	va_end(args);
 
-  result = fputs(command,c->stream);
+	result = fputs(command,c->stream);
 
 
 
-  if(result < 0) chirp_fatal_request(fmt);
+	if(result < 0) chirp_fatal_request(fmt);
 
-  result = fflush(c->stream);
-  if(result < 0) chirp_fatal_request(fmt);
+	result = fflush(c->stream);
+	if(result < 0) chirp_fatal_request(fmt);
 
-  return convert_result(get_result(c->stream));
+	return convert_result(get_result(c->stream));
 }
 
