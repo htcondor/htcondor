@@ -34,7 +34,6 @@
 #include <paths.h>
 #include <utmp.h>
 #include <setjmp.h>
-static char *_FileName_ = __FILE__;
 
 extern int PollActivity();
 

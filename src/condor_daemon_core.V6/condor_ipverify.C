@@ -28,7 +28,6 @@
 
 // Externs to Globals
 extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc. 
-static	char*  	_FileName_ = __FILE__;	// used by EXCEPT
 
 // The "order" of entries in perm_names and perm_ints must match
 const char* IpVerify::perm_names[] = {"READ","WRITE","ADMINISTRATOR","OWNER","NEGOTIATOR",NULL};
