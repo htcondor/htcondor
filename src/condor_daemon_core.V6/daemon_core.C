@@ -2303,6 +2303,12 @@ int DaemonCore::HandleReq(int socki)
 						sess_id, return_address_ss);
 				}
 
+				if( return_address_ss ) {
+					free( return_address_ss );
+					return_address_ss = NULL;
+				}
+				free( sess_id );
+				sess_id = NULL;
 				result = FALSE;
 				goto finalize;
 			}
@@ -2310,12 +2316,24 @@ int DaemonCore::HandleReq(int socki)
 			if (!session->key()) {
 				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
 				// uhm, there should be a key here!
+				if( return_address_ss ) {
+					free( return_address_ss );
+					return_address_ss = NULL;
+				}
+				free( sess_id );
+				sess_id = NULL;
 				result = FALSE;
 				goto finalize;
 			}
 
 			if (!stream->set_MD_mode(MD_ALWAYS_ON, session->key())) {
 				dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on message authenticator, failing.\n");
+				if( return_address_ss ) {
+					free( return_address_ss );
+					return_address_ss = NULL;
+				}
+				free( sess_id );
+				sess_id = NULL;
 				result = FALSE;
 				goto finalize;
 			} else {
@@ -2658,6 +2676,8 @@ int DaemonCore::HandleReq(int socki)
 						memset (rbuf, 0, 24);
 						dprintf ( D_SECURITY, "DC_AUTHENTICATE: unable to generate key - no crypto available!\n");
 						result = FALSE;
+						free( crypto_method );
+						crypto_method = NULL;
 						goto finalize;
 					}
 
@@ -2675,6 +2695,9 @@ int DaemonCore::HandleReq(int socki)
 							dprintf ( D_SECURITY, "DC_AUTHENTICATE: this version doesn't support %s crypto.\n", crypto_method );
 							break;
 					}
+
+					free( crypto_method );
+					crypto_method = NULL;
 
 					if (!the_key) {
 						result = FALSE;
@@ -2862,6 +2885,8 @@ int DaemonCore::HandleReq(int socki)
 				KeyCacheEntry tmp_key(the_sid, sock->endpoint(), the_key, the_policy, expiration_time);
 				sec_man->session_cache->insert(tmp_key);
 				dprintf (D_SECURITY, "DC_AUTHENTICATE: added session id %s to cache for %s seconds!\n", the_sid, dur);
+				free( dur );
+				dur = NULL;
 			}
 		}
 
