@@ -273,6 +273,10 @@ main( int argc, char* argv[] )
 		}
 	}
 
+		// Put this before we fork so that if something goes wrong, we
+		// see it.
+	config_master(&ad);
+
 	if( !Foreground ) {
 		if( fork() ) {
 			exit( 0 );
@@ -290,8 +294,6 @@ main( int argc, char* argv[] )
 	install_sig_handler( SIGTERM, sigterm_handler );
 	install_sig_handler( SIGSEGV, (void(*)())siggeneric_handler );
 	install_sig_handler( SIGBUS, (void(*)())siggeneric_handler );
-
-	config_master(&ad);
 
 	init_params();
 
@@ -558,14 +560,16 @@ obituary( int pid, int status )
     if ( restart > 3 ) return;
 
     // always return for KBDD
-    if ( strcmp( daemons.SymbolicName(pid), "KBDD") == 0 )
+    if ( strcmp( daemons.SymbolicName(pid), "KBDD") == 0 ) {
         return;
+	}
 
-	// just return if process was killed with signal 9.  this
-	// means the admin did it, and thus no need to send email informing
-	// the admin about something they did...
-	if ( (WIFSIGNALED(status)) && ( (WTERMSIG(status)) == 9 ) )
+	// Just return if process was killed with SIGKILL.  This means the
+	// admin did it, and thus no need to send email informing the
+	// admin about something they did...
+	if ( (WIFSIGNALED(status)) && (WTERMSIG(status) == SIGKILL) ) {
 		return;
+	}
 
     name = daemons.DaemonName( pid );
     log = daemons.DaemonLog( pid );
@@ -579,7 +583,9 @@ obituary( int pid, int status )
 
     mail_prog = param("MAIL");
     if (mail_prog) {
-        (void)sprintf( cmd, "%s %s", mail_prog, CondorAdministrator );
+        (void)sprintf( cmd, "%s %s -s \"%s\"", mail_prog,
+					   CondorAdministrator, 
+					   "CONDOR Problem" );
     } else {
         EXCEPT("\"MAIL\" not specified in the config file! ");
     }
@@ -588,10 +594,7 @@ obituary( int pid, int status )
         EXCEPT( "popen(\"%s\",\"w\")", cmd );
     }
 
-//    fprintf( mailer, "To: %s\n", CondorAdministrator );
-    fprintf( mailer, "Subject: CONDOR Problem\n" );
     fprintf( mailer, "\n" );
-
 
     if( WIFSIGNALED(status) ) {
         fprintf( mailer, "\"%s\" on \"%s\" died due to signal %d\n",
