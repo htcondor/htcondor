@@ -201,7 +201,7 @@ SYSCALL_SUPPORT_OBJ=senders.o receivers.o syscall_mode.o syscall_connect.o remot
 UTIL_OBJ =  $(FLOCK_OBJ) dprintf_common.o except.o update_rusage.o \
 	internet.o $(PLATFORM_UTIL_OBJ) mkargv.o filename_tools.o
 
-CPP_UTIL_OBJ = condor_version.o 
+CPP_UTIL_OBJ = condor_version.o stat_wrapper.o
 
 CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o errno_num.o
 
