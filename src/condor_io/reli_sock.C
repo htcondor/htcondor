@@ -435,10 +435,10 @@ ReliSock::get_file(const char *destination, bool flush_buffers)
 
 #if defined(WIN32)
 	if ((fd = ::open(destination, O_WRONLY | O_CREAT | O_TRUNC | 
-		_O_BINARY | _O_SEQUENTIAL, 0644)) < 0)
+		_O_BINARY | _O_SEQUENTIAL, 0600)) < 0)
 #else /* Unix */
 	errno = 0;
-	if ((fd = ::open(destination, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
+	if ((fd = ::open(destination, O_WRONLY | O_CREAT | O_TRUNC, 0600)) < 0)
 #endif
 	{
 #ifndef WIN32 /* Unix */
@@ -559,28 +559,34 @@ ReliSock::put_file( int fd )
 	if ( filesize > 0 ) {
 
 #if defined(WIN32)
-	// First drain outgoing buffers
-	if ( !prepare_for_nobuffering(stream_encode) ) {
-		dprintf(D_ALWAYS,"ReliSock: put_file: failed to drain buffers!\n");
-		return -1;
-	}
+	// On Win32, if we don't need encryption, use the super-efficient Win32
+	// TransmitFile system call.
+	if ( !get_encryption() ) {
+		// First drain outgoing buffers
+		if ( !prepare_for_nobuffering(stream_encode) ) {
+			dprintf(D_ALWAYS,"ReliSock: put_file: failed to drain buffers!\n");
+			return -1;
+		}
 
-	// Now transmit file using special optimized Winsock call
-	// Only transfer if filesize > 0.
-	if ( (filesize > 0) && (TransmitFile(_sock,(HANDLE)_get_osfhandle(fd),
-			filesize,0,NULL,NULL,0) == FALSE) ) {
-		dprintf(D_ALWAYS,"ReliSock: put_file: TransmitFile() failed, errno=%d\n",
-			GetLastError() );
-		return -1;
-	} else {
-		total = filesize;
+		// Now transmit file using special optimized Winsock call
+		if ( TransmitFile(_sock,(HANDLE)_get_osfhandle(fd),
+				filesize,0,NULL,NULL,0) == FALSE ) {
+			dprintf(D_ALWAYS,"ReliSock: put_file: TransmitFile() failed, errno=%d\n",
+				GetLastError() );
+			return -1;
+		} else {
+			total = filesize;
+		}
 	}
-#else
+#endif
+
 	char buf[65536];
 	int nbytes, nrd;
 
-	// On Unix, send file using put_bytes_nobuffer()
-	while (total < filestat.st_size &&
+	// On Unix, always send the file using put_bytes_nobuffer().
+	// Note that on Win32, we use this method as well if encryption 
+	// is required.
+	while (total < filesize &&
 		(nrd = ::read(fd, buf, sizeof(buf))) > 0) {
 		if ((nbytes = put_bytes_nobuffer(buf, nrd, 0)) < nrd) {
 			dprintf(D_ALWAYS, "ReliSock: put_file: failed to put %d bytes "
@@ -590,7 +596,7 @@ ReliSock::put_file( int fd )
 		total += nbytes;
 	}
 	dprintf(D_FULLDEBUG, "ReliSock: put_file: done with transfer (errno = %d)\n", errno);
-#endif
+
 	
 	} // end of if filesize > 0
 
