@@ -43,9 +43,13 @@ c_plus_target(daemon.t, daemon.t.o, $(LIB))
 pure_c_plus_target(daemon.t.pure, daemon.t.o, $(LIB))
 purecov_c_plus_target(daemon.t.pc, daemon.t.o, $(LIB))
 
+c_plus_target(my_hostname.t, my_hostname.t.o, $(LIB))
+pure_c_plus_target(my_hostname.t.pure, my_hostname.t.o, $(LIB))
+purecov_c_plus_target(my_hostname.t.pc, my_hostname.t.o, $(LIB))
+
 html_target( documentation )
 
-all-tests: access.t killfamily.t daemon.t test_locks 
+all-tests: access.t killfamily.t daemon.t test_locks my_hostname.t
 
 test: test.o user_log.o
 	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o test test.o user_log.o $(LIB)
