@@ -147,7 +147,7 @@ int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
 	AdTypes whichAds;
 	ClassAd ad;
 
-	from = sock->endpoint();
+	from = ((Sock*)sock)->endpoint();
 
 	sock->decode();
 	sock->timeout(ClientTimeout);
@@ -221,7 +221,7 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 	AdTypes whichAds;
 	ClassAd ad;
 
-	from = sock->endpoint();
+	from = ((Sock*)sock)->endpoint();
 
 	sock->decode();
 	sock->timeout(ClientTimeout);
@@ -307,7 +307,7 @@ int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 	}
 
 	// get endpoint
-	from = sock->endpoint();
+	from = ((Sock*)sock)->endpoint();
 
     // process the given command
 	if (!(ad = collector.collect (command,(Sock*)sock,from,insert)))
@@ -464,22 +464,17 @@ int CollectorDaemon::reportMiniStartdScanFunc( ClassAd *ad )
 
 void CollectorDaemon::reportToDevelopers (void)
 {
-	char	whoami[128];
 	char	buffer[128];
 	FILE	*mailer;
 	TrackTotals	totals( PP_STARTD_NORMAL );
-
-	if (get_machine_name (whoami) == -1) {
-		dprintf (D_ALWAYS, "Unable to get_machine_name()\n");
-		return;
-	}
 
 	if( ( normalTotals = new TrackTotals( PP_STARTD_NORMAL ) ) == NULL ) {
 		dprintf( D_ALWAYS, "Didn't send monthly report (failed totals)\n" );
 		return;
 	}
 
-	sprintf (buffer, "Collector (%s):  Monthly report\n", whoami);
+	sprintf( buffer, "Collector (%s):  Monthly report\n", 
+			 my_full_hostname() );
 	if( ( mailer = email_developers_open(buffer) ) == NULL ) {
 		dprintf (D_ALWAYS, "Didn't send monthly report (couldn't open mailer)\n");		
 		return;
