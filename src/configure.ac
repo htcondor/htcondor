@@ -830,15 +830,22 @@ if test "$LEX" = "no" ; then
 fi
 
 
-# Previously, we didn't want the default AC_PROG_YACC, since it
-# selects "bison -y" if it can find it, and that didn't work for the
-# yacc input in the Condor build.  However, the Condor yacc input can
-# now handle bison just fine.
-AC_PROG_YACC
-if test "$YACC" = "no" ; then
-    AC_MSG_ERROR( [yacc is required] )
+# We don't want to do the default AC_PROG_YACC, since it selects
+# "bison -y" if it can find it, and that doesn't work for the yacc
+# input in the Condor build.  So, we just manually check for byacc as
+# our first choice, then regular old yacc...
+AC_CHECK_PROG(ac_byacc,byacc,byacc,no)
+if test $ac_byacc = "byacc"; then
+  YACC=$ac_byacc
+else
+  AC_CHECK_PROG(ac_yacc,yacc,yacc,no)
+  if test $ac_yacc = no; then
+    AC_MSG_ERROR( [byacc or yacc is required] )
+  else 
+    YACC=$ac_yacc
+  fi
 fi
-
+AC_SUBST([YACC],[$YACC])
 
 # ar is used for numerous libraries in Condor, and for extracting
 # objects from the system libc.a for the Condor syscall library.
