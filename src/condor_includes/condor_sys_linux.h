@@ -44,6 +44,7 @@
 
 #include <sys/types.h>
 
+
 #include "condor_fix_sys_stat.h"
 #include "condor_fix_unistd.h"
 
@@ -133,6 +134,9 @@ END_C_DECLS
 
 /* include stuff for malloc control */
 #include <malloc.h>
+
+/* to get the sysinfo() function call */
+#include <sys/sysinfo.h>
 
 /****************************************
 ** Condor-specific system definitions
