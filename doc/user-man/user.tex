@@ -290,10 +290,10 @@ The manual page for \Condor{compile} on page~\pageref{man-condor-compile} has de
 
 The vanilla universe provides a way to run jobs that cannot be
 relinked.
-It depends on a shared file system for access to input and output
-files,
-and there is no way to take a checkpoint or migrate a job executed
+There is no way to take a checkpoint or migrate a job executed
 under the vanilla universe.
+For access to input and output files, jobs must either use a shared
+file system, or use Condor's File Transfer mechanism.
 
 Choose a universe under which to run the Condor program,
 and re-link the program if necessary.
@@ -478,34 +478,27 @@ complete it at a later time,
 or it can give up and restart the job \emph{from the beginning} 
 on another machine in the pool.
 
-Under Unix, jobs submitted as vanilla universe jobs rely on an
-external mechanism for accessing data files,
-such as NFS or AFS.
-The job \emph{must} be able to access the data
-files from any machine on which it could potentially run.
-As an example,
-suppose a job is submitted from blackbird.cs.wisc.edu, and the job requires
-a particular data file called \File{/u/p/s/psilord/data.txt}.
-If the job were to run on cardinal.cs.wisc.edu, the file
-\File{/u/p/s/psilord/data.txt} must be available through either
-NFS or AFS for the job to run correctly.
+Since Condor's remote system call features cannot be used with the
+vanilla universe, access to the job's input and output files becomes a
+concern.
+One option is for Condor to rely on a shared file system, such as NFS
+or AFS. 
+Alternatively, Condor has a mechanism for transfering files on behalf
+of the user.
+In this case, Condor will transfer any files needed by a job to the
+execution site, run the job, and transfer the output back to the
+submitting machine.
 
-Condor deals with this restriction imposed by the vanilla universe by
-using
-the \AdAttr{FileSystemDomain} and \AdAttr{UidDomain} machine
-ClassAd attributes.
-These attributes reflect the reality of the pool's disk
-mounting structure.
-For a large pool spanning multiple
-\AdAttr{UidDomain} and/or \AdAttr{FileSystemDomain}s, the job
-must specify
-its \AdAttr{requirements} to use the correct \AdAttr{UidDomain} and/or
-\AdAttr{FileSystemDomain}s.
+Under Unix, the Condor presumes a shared file system for vanilla jobs. 
+However, if a shared file system is unavailable, a user can enable the
+Condor File Transfer mechanism.
+On Windows platforms, the default is to use the File Transfer
+mechanism.
+For details on running a job with a shared file system, see
+section~\ref{sec:shared-fs} on page~\pageref{sec:shared-fs}.
+For details on using the Condor File Transfer mechanism, see 
+section~\ref{sec:file-transfer} on page~\pageref{sec:file-transfer}.
 
-This mechanism is not required under Windows NT.
-The vanilla universe does \emph{not} require
-a shared file system due to the Condor File Transfer mechanism. Please see
-chapter~\ref{condor-nt} for more details about Condor NT.
 
 %%%%%%%%%%%%
 \subsubsection{PVM Universe}
@@ -921,6 +914,91 @@ machine \AdStr{friend3.cs.wisc.edu},
 and all three of these machines are ranked higher than others.
 
 %%%%%%%%%%%% 
+\subsection{\label{sec:shared-fs}
+Submitting Jobs Using a Shared File System} 
+%%%%%%%%%%%%
+\index{job!submission using a shared file system}
+\index{shared file system!submission of jobs}
+
+If vanilla, Java or MPI
+jobs are submitted without using the File Transfer mechanism, 
+Condor must use a shared file system to access input and output
+files. 
+In this case, the job \emph{must} be able to access the data files
+from any machine on which it could potentially run.
+
+As an example, suppose a job is submitted from blackbird.cs.wisc.edu,
+and the job requires a particular data file called
+\File{/u/p/s/psilord/data.txt}.  If the job were to run on
+cardinal.cs.wisc.edu, the file \File{/u/p/s/psilord/data.txt} must be
+available through either NFS or AFS for the job to run correctly.
+
+Condor allows users to ensure their jobs have access to the right
+shared files by using the \AdAttr{FileSystemDomain} and
+\AdAttr{UidDomain} machine ClassAd attributes.
+These attributes specify which machines have access to the same shared
+file systems.
+All machines that mount the same shared directories in the same
+locations are considered to belong to the same ``File System Domain''.
+Similarly, all machines that share the same user information (in
+particular, the same UID, which is important for file systems like
+NFS), are considered part of the same ``UID Domain''.
+
+However, the default configuration for Condor is that each machine is
+in its own UID and file system domain, using the full hostname of the
+machine as the name of the domains.
+So, if a pool \emph{does} have access to a shared file system, the
+pool administrator \emph{must} correctly configure Condor so that all
+the machines mounting the same files have the same
+\AdAttr{FileSystemDomain} setting.
+Similarly, all machines that share common user information must be
+configured to have the same \AdAttr{UidDomain}.
+
+If a job is going to rely on a shared file system, Condor uses the
+\AdAttr{requirements} expression to ensure it runs on a machine in the
+correct \AdAttr{UidDomain} and \AdAttr{FileSystemDomain}.
+In this case, the default \AdAttr{requirements} expression specifies
+that the job must run on a machine with the same \AdAttr{UidDomain}
+and \AdAttr{FileSystemDomain} as the submitting machine.
+This default is almost always correct.
+However, in a pool spanning multiple \AdAttr{UidDomain} and/or
+\AdAttr{FileSystemDomain}s, the user may have to specify a different
+\AdAttr{requirements} expression to have their job run on the right
+machines.
+
+For example, imagine a pool made up of both desktop workstations and a
+dedicated compute cluster.
+Most of the pool, including the compute cluster, has access to a
+shared file system, but some of the desktop machines do not.
+In this case, the administrators would probably define the
+\AdAttr{FileSystemDomain} to be ``cs.wisc.edu'' for all the machines
+that mounted the shared files, and to the full hostname for each
+machine that did not, for example, ``jimi.cs.wisc.edu''.
+
+A user wants to submit vanilla universe jobs from her own desktop
+machine (jimi.cs.wisc.edu) which does not mount the shared file system
+(and is therefore in its own file system domain, in its own world).
+But, she wants the jobs to be able to run on more than just her own
+machine (in particular, the compute cluster), so she puts the program
+and input files onto the shared file system.
+When she submits the jobs, she needs to tell Condor to send them to
+machines that have access to that shared data, so she specifies a
+different \AdAttr{requirements} expression than the default:
+\begin{verbatim}
+   Requirements = UidDomain == ``cs.wisc.edu && \
+                  FileSystemDomain == ``cs.wisc.edu''
+\end{verbatim}
+
+\Warn If there is \emph{no} shared file system, or the Condor pool
+administrator does not configure the \AdAttr{FileSystemDomain}
+settings correctly (the default is that each machine in a pool is in
+its own file system and UID domain), a user submits a job that cannot
+use remote system calls (for example, a vanilla universe job), and the
+user does not enable Condor's File Transfer mechanism, the job will
+\emph{only} run on the machine it was submitted from.
+
+
+%%%%%%%%%%%% 
 \subsection{Submitting Jobs Without a Shared File System} 
 %%%%%%%%%%%%
 \index{job!submission without a shared file system}
@@ -929,7 +1007,7 @@ and all three of these machines are ranked higher than others.
 A shared file system is presumed for submitting jobs to Condor
 under some circumstances.
 Condor works well without a shared file system,
-but the user must enable Condor's file transfering mechanism.
+but the user must enable the Condor File Transfer mechanism.
 In this case, Condor will transfer any files needed by your job into a
 temporary working directory on the remote machine, execute your job,
 and transfer back the output to your submitting machine.
@@ -940,15 +1018,18 @@ This specification is done within the submit description file for the
 job. 
 The default behavior regarding file transfers varies across the
 different Condor universes, and between UNIX and Windows machines.
+These defaults are described below.
 
 %%%%%%%%%%%% 
-\subsubsection{Default behavior across the Condor Universes}
+\subsubsection{Default behavior across Condor Universes and Platforms}
 %%%%%%%%%%%%
 
 For the standard universe, the existence of a shared file system
 is not relevant.
 Access to files (input and output) are handled through Condor's
 remote system call mechanism.
+The executable and checkpoint files are transfered automatically, if
+needed. 
 Therefore, the user does not need to change the submit description
 file if there is no shared file system.
 
@@ -956,11 +1037,11 @@ For the vanilla, Java, and MPI universes, access to files (including
 the executable) through a shared file system is presumed as a default
 on UNIX machines.
 If there is no shared file system, then Condor's file transfer
-mechanism must be explicitly enabled (see below).
+mechanism must be explicitly enabled (see above).
 On Windows machines, Condor presumes no access to a shared file
 system, enabling the file transfer mechanism by default.
-However, the user still might need to specify which files to
-transfer.  
+However, Windows users still might need to specify which files to
+transfer, and/or when to transfer the output files back.
 
 For the globus universe,
 jobs are to be executed on remote machines, so there would never
@@ -971,9 +1052,11 @@ For the PVM universe,
 file transfer other than the master's executable and files given in
 \verb@input@,
 \verb@output@, and
-\verb@error@ commands are not supported.
+\verb@error@ commands is not supported.
 This is not usually an impediment (shared file system or not), since
-PVM jobs are set up to have the master direct the workers.
+PVM jobs are set up to have the master direct the workers, and I/O
+from the workers is usually passed back to the master via PVM
+messages, not files.
 
 For the scheduler universe,
 Condor is only using the machine from where the job is submitted,
@@ -981,8 +1064,10 @@ therefore the existence of a shared file system is not relevant.
 
 
 %%%%%%%%%%%% 
-\subsubsection{Condor's File Transfer Mechanism}
+\subsubsection{\label{sec:file-transfer}
+Condor's File Transfer Mechanism}
 %%%%%%%%%%%%
+\index{File Transfer Mechanism}
 
 To enable the file transfer feature, you must specify
 \verb@transfer_files@ in the job's submit description file.
@@ -999,19 +1084,21 @@ It also enables transfering input files to your job (see below).
 There are three possible values for \verb@transfer_files@:
 
 \begin{enumerate}
+
 \item \verb@ONEXIT@: Condor transfers output files back to the submit
 machine only when the job exits on its own.
+
 \item \verb@ALWAYS@: Condor will always do the transfer, whether the
 job completes on its own, was preempted by another job, or killed.
-This is usually only useful if partial runs of your job are valuable
-for some reason (for example, if your application does its own
-checkpointing).
+This is only useful if partial runs of your job are valuable for some
+reason (for example, if your application does its own checkpointing).
+
 \item \verb@NEVER@: Condor's file transfer mechanism is disabled. 
 \end{enumerate}
 
 For vanilla, Java, and MPI universes, the defaults for
-\verb@transfer_files@ are \verb@NEVER@ for UNIX, and \verb@ONEXIT@
-for Windows.
+\verb@transfer_files@ are \verb@NEVER@ for UNIX, and \verb@ONEXIT@ for
+Windows.
 
 If file transfer is enabled, Condor will automatically transfer the
 executable, the file defined as the standard input (if specified with
@@ -1038,14 +1125,15 @@ To restrict the files that are transfered, specify
 the exact list with \verb@transfer_output_files@.
 If you define this list and any of the files do not exist when the
 job exits, Condor considers this an error, and re-runs the job.
-\Warn Do not specify \verb@transfer_output_files@ unless there is a
-really good reason -- it is best to let Condor figure things out by
-itself based upon what the job produces.
 For example:
 
 \begin{verbatim}
   transfer_output_files = final-results
 \end{verbatim}
+
+\Warn Do not specify \verb@transfer_output_files@ unless there is a
+really good reason -- it is best to let Condor figure things out by
+itself based upon what output the job produces.
 
 
 %%%%%%%%%%%% 
