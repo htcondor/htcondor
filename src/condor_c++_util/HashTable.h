@@ -24,7 +24,6 @@
 #define HASH_H
 
 #include "condor_common.h"
-#include <iostream.h>
 
 // a generic hash bucket class
 
@@ -524,5 +523,12 @@ void HashTable<Index,Value>::dump()
 
 /// basic hash function for an unpredictable integer key
 int hashFuncInt( const int& n, int numBuckets );
+
+/// basic hash function for an unpredictable unsigned integer key
+int hashFuncUInt( const unsigned int& n, int numBuckets );
+
+/// hash function for string versions of job id's ("cluster.proc")
+int hashFuncJobIdStr( const char* & key, int numBuckets );
+
 
 #endif // HASH_H
