@@ -182,7 +182,11 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 					   bool allow_dash, bool &used_starter_fd,
 					   const char* log_header, const char* phrase )
 {
-	int fd = -1;
+		// initialize this to -2 to mean "not specified".  if we have
+		// success, we'll have a valid fd (>=0).  if there's an error
+		// opening something, we'll return -1 which our callers
+		// consider a failed open().
+	int fd = -2;
 	const char* filename;
 	bool wants_stream = false;
 	const char* name;
