@@ -95,7 +95,9 @@ void giveStatus              (XDR *);
 bool sendTerminatingMachRec  (XDR *);
 void processXDR_TCP_Command  (void);
 void processXDR_UDP_Command  (void);
+#if 0
 void processXDR_query        (AdTypes, ClassAd &, XDR *);
+#endif
 int  xdr_send_classad_as_mach_rec (XDR *, ClassAd *);
 #endif
 void houseKeeper   		     (void);
@@ -280,7 +282,8 @@ processXDR_TCP_Command (void)
 	xdrs = xdr_Init (&ClientSocket, &xdr);
 
 	xdrs->x_op = XDR_DECODE;
-	if (!xdr_int (xdrs, &command) || (command != GIVE_STATUS && !ad.get(xdrs)))
+//	if (!xdr_int (xdrs, &command) || (command != GIVE_STATUS && !ad.get(xdrs)))
+	if (!xdr_int (xdrs, &command))
 	{
 		dprintf(D_ALWAYS,"Failed to receive command on XDR TCP: aborting\n");
 		xdr_destroy (xdrs);
@@ -331,8 +334,10 @@ processXDR_TCP_Command (void)
 			whichAds = (AdTypes) -1;	
         }
 		
-		if (whichAds != (AdTypes) -1)
+#if 0
+ 		if (whichAds != (AdTypes) -1)
         	processXDR_query (whichAds, ad, xdrs);
+#endif
 	}
 
 	// clean up connection
@@ -516,7 +521,7 @@ static Sock *__sock__;
 static int __numAds__;
 static int __failed__;
 
-#if defined(USE_XDR)
+#if defined(USE_XDR) && 0
 int
 XDR_query_scanFunc (ClassAd *ad)
 {
@@ -556,7 +561,7 @@ COMM_query_scanFunc (ClassAd *ad)
     return 1;
 }
 
-#if defined(USE_XDR)
+#if defined(USE_XDR) && 0
 void
 processXDR_query (AdTypes whichAds, ClassAd &query, XDR *xdrs)
 {
