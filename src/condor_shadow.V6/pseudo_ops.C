@@ -47,6 +47,7 @@
 extern "C" {
 	void log_checkpoint (struct rusage *, struct rusage *);
 	void log_image_size (int);
+	void log_execute (char *);
 	int access_via_afs (const char *);
 	int access_via_nfs (const char *);
 	int use_local_access (const char *);
