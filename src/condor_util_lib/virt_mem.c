@@ -198,25 +198,65 @@ calc_virt_memory()
 }
 #endif /* SunOS4.0 and SunOS4.1 code */
 
-#if defined(HPUX)
-/*
-** This is wrong!  This only gets the system defined limit on the data
-** segment size of an individual process.  It really has nothing to do
-** with available swap space.  -- mike
-*/
-#include <ulimit.h>
-#define DATA_SEG_ADDR 0x40000000
+#ifdef HPUX9
+/* The HPUX code here grabs the amount of free swap in Kbyes.
+ * I hope it is portable to all HPUX systems...  It grabs it
+ * from /dev/kmem, no messy/expensive pstat running -Todd Tannenbaum */
+#include <sys/file.h>
+
+struct nlist swapnl[] = {
+	{ "swapspc_cnt" },
+	{ NULL }
+};
+
 calc_virt_memory()
 {
-	long		lim;
+	static int kmem;
+	static char *addr;
+	static int initialized = 0;
+	int freeswap;
 
-	lim = ulimit( UL_GETMAXBRK );
+	/* Become root so we have no hassles reading /dev/kmem */
+	set_root_euid();
 
-	return (lim - DATA_SEG_ADDR) / 1024;
+	if( !initialized ) {
+
+		/*
+         * Look up addresses of variables.
+         */
+        if ((nlist("/hp-ux", swapnl) < 0) || (swapnl[0].n_type == 0)) {
+			set_condor_euid();
+			return(-1);
+        }
+		addr = (char *)swapnl[0].n_value;
+
+        /*
+         * Open kernel memory and read variables.
+         */
+        if( (kmem = open("/dev/kmem",O_RDONLY)) < 0 ) {
+			set_condor_euid();
+			return(-1);
+        }
+
+		initialized = 1;
+	}
+
+	if (-1==lseek(kmem, (long) swapnl[0].n_value, 0)){
+		set_condor_euid();
+		return(-1);
+	}
+	if (read(kmem, (char *) &freeswap, sizeof(int)) < 0){
+		set_condor_euid();
+		return(-1);
+	}
+
+	set_condor_euid();
+	return ( 4 * freeswap );
 }
-#endif
+#endif /* of the code for HPUX */
+
 	
-#if !defined(IRIX331) && !defined(AIX31) && !defined(AIX32) && !defined(SUNOS40) && !defined(SUNOS41) && !defined(CMOS) && !defined(HPUX) && !defined(OSF1)
+#if !defined(IRIX331) && !defined(AIX31) && !defined(AIX32) && !defined(SUNOS40) && !defined(SUNOS41) && !defined(CMOS) && !defined(HPUX9) && !defined(OSF1)
 /*
 ** Try to determine the swap space available on our own machine.  The answer
 ** is in kilobytes.
