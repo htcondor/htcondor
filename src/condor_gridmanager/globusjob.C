@@ -61,13 +61,35 @@
 #define GM_DELETE				17
 #define GM_CLEAR_REQUEST		18
 
+char *GMStateNames[] = {
+	"GM_INIT",
+	"GM_REGISTER",
+	"GM_STDIO_UPDATE",
+	"GM_UNSUBMITTED",
+	"GM_SUBMIT_SAVE",
+	"GM_SUBMIT_COMMIT",
+	"GM_SUBMITTED",
+	"GM_CHECK_OUTPUT",
+	"GM_DONE_SAVE",
+	"GM_DONE_COMMIT",
+	"GM_STOP_AND_RESTART",
+	"GM_RESTART",
+	"GM_RESTART_SAVE",
+	"GM_RESTART_COMMIT",
+	"GM_CANCEL",
+	"GM_CANCEL_WAIT",
+	"GM_FAILED",
+	"GM_DELETE",
+	"GM_CLEAR_REQUEST"
+};
+
 bool durocControlInited = false;
 globus_duroc_control_t durocControl;
 
 #define LOG_GLOBUS_ERROR(func,error) \
     dprintf(D_ALWAYS, \
-			"gmState %d, globusState %d: %s return Globus error %d\n", \
-            gmState,globusState,func,error)
+			"gmState %s, globusState %d: %s return Globus error %d\n", \
+            GMStateNames[gmState],globusState,func,error)
 
 GlobusJob::GlobusJob( GlobusJob& copy )
 {
