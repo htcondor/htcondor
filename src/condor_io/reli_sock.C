@@ -43,7 +43,6 @@
 void
 ReliSock::init()
 {
-	allow_empty_message_flag = FALSE;
 	ignore_next_encode_eom = FALSE;
 	ignore_next_decode_eom = FALSE;
 	_bytes_sent = 0.0;
@@ -239,18 +238,18 @@ ReliSock::put_bytes_nobuffer( char *buffer, int length, int send_size )
 {
 	int i, result, l_out;
 	int pagesize = 65536;  // Optimize large writes to be page sized.
-	char * cur;
-        char * buf = 0;
+	unsigned char * cur;
+    unsigned char * buf = NULL;
         
         // First, encrypt the data if necessary
         if (get_encryption()) {
-            if (!wrap((unsigned char *) buffer, length, (unsigned char *) buf , l_out)) { 
+            if (!wrap((unsigned char *) buffer, length,  buf , l_out)) { 
                 dprintf(D_SECURITY, "Encryption failed\n");
                 goto error;
             }
         }
         else {
-            buf = (char *) malloc(length);
+            buf = (unsigned char *) malloc(length);
             memcpy(buf, buffer, length);
         }
 
@@ -275,7 +274,7 @@ ReliSock::put_bytes_nobuffer( char *buffer, int length, int send_size )
 	{
 		// If there is less then a page left.
 		if( (length - i) < pagesize ) {
-			result = condor_write(_sock, cur, (length - i), _timeout);
+			result = condor_write(_sock, (char *)cur, (length - i), _timeout);
 			if( result < 0 ) {
                                 goto error;
 			}
@@ -283,7 +282,7 @@ ReliSock::put_bytes_nobuffer( char *buffer, int length, int send_size )
 			i += (length - i);
 		} else {  
 			// Send another page...
-			result = condor_write(_sock, cur, pagesize, _timeout);
+			result = condor_write(_sock, (char *)cur, pagesize, _timeout);
 			if( result < 0 ) {
                             goto error;
 			}
@@ -311,7 +310,7 @@ ReliSock::get_bytes_nobuffer(char *buffer, int max_length, int receive_size)
 {
 	int result;
 	int length;
-        char * buf = 0;
+    unsigned char * buf = NULL;
 
 	ASSERT(buffer != NULL);
 	ASSERT(max_length > 0);
@@ -350,7 +349,7 @@ ReliSock::get_bytes_nobuffer(char *buffer, int max_length, int receive_size)
         else {
             // See if it needs to be decrypted
             if (get_encryption()) {
-                unwrap((unsigned char *) buffer, result, (unsigned char *)buf, length);  // I am reusing length
+                unwrap((unsigned char *) buffer, result, buf, length);  // I am reusing length
                 memcpy(buffer, buf, result);
                 free(buf);
             }
@@ -609,17 +608,17 @@ ReliSock::put_bytes(const void *data, int sz)
 {
 	int		tw;
 	int		nw, l_out;
-        char * dta = 0;
+    unsigned char * dta = NULL;
 
         // Check to see if we need to encrypt
         if (get_encryption()) {
-            if (!wrap((unsigned char *)data, sz, (unsigned char *) dta , l_out)) { 
+            if (!wrap((unsigned char *)data, sz, dta , l_out)) { 
                 dprintf(D_SECURITY, "Encryption failed\n");
                 return -1;  // encryption failed!
             }
         }
         else {
-            dta = (char *) malloc(sz);
+            dta = (unsigned char *) malloc(sz);
             memcpy(dta, data, sz);
         }
 
@@ -660,7 +659,7 @@ int
 ReliSock::get_bytes(void *dta, int max_sz)
 {
 	int		bytes, length;
-        char * data = 0;
+    unsigned char * data = 0;
 
 	ignore_next_decode_eom = FALSE;
 
@@ -674,7 +673,7 @@ ReliSock::get_bytes(void *dta, int max_sz)
 
 	if (bytes > 0) {
             if (get_encryption()) {
-                unwrap((unsigned char *) dta, bytes, (unsigned char *)data, length);
+                unwrap((unsigned char *) dta, bytes, data, length);
                 memcpy(dta, data, bytes);
                 free(data);
             }
@@ -906,7 +905,7 @@ ReliSock::prepare_for_nobuffering(stream_coding direction)
 }
 
 int 
-ReliSock::authenticate(int clientFlags = 0 ) {
+ReliSock::authenticate(int clientFlags ) {
 	if ( !authob ) {
 		authob = new Authentication( this );
 	}
@@ -984,7 +983,3 @@ bool ReliSock :: is_encrypt()
 	return FALSE;
 }
 
-int ReliSock :: allow_one_empty_message()
-{
-	allow_empty_message_flag = TRUE;
-}
