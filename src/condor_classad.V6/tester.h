@@ -28,6 +28,10 @@
 #include "condor_classad.h"
 #endif
 
+#ifdef WANT_NAMESPACES
+using namespace classad;
+#endif
+
 class Variable
 {
 public:
