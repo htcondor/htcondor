@@ -28,6 +28,10 @@ The details of each version are described below.
       \Condor{rm}, could fail to remove all of its submitted jobs if
       any of their submit events had not yet appeared in the userlog.
 
+\item Fixed the bug whereby \Condor{preen} could potentially remove
+  files related to a valid Computing on Demand (COD) claim on an
+  otherwise idle machine.
+
 \end{itemize}
 
 \noindent Known Bugs:
