@@ -81,10 +81,14 @@ release-html:
 	mv -f /p/condor/public/html/manual/$(SUBDIR) /p/condor/public/html/manual/$(SUBDIR).old
 	mv -f /p/condor/public/html/manual/$(SUBDIR).new /p/condor/public/html/manual/$(SUBDIR)
 	/p/condor/public/cgi-bin/manual/$(SUBDIR)-links/human_header_links.pl
-	
+
 admin-man/startd-states.eps: admin-man/startd-states.fig
 	rm -f admin-man/startd-states.eps
 	fig2dev -L ps -m .6 admin-man/startd-states.fig > admin-man/startd-states.eps 
+
+user-man/dagman-diamond.eps: user-man/dagman-diamond.fig
+	rm -f $@
+	fig2dev -L ps -m .6 $< > $@
 
 admin-man/startd-activities.eps: admin-man/startd-activities.fig
 	rm -f admin-man/startd-activities.eps
@@ -94,7 +98,7 @@ admin-man/pool-arch.eps: admin-man/pool-arch.fig
 	rm -f admin-man/pool-arch.eps
 	fig2dev -L ps -m .4 admin-man/pool-arch.fig > admin-man/pool-arch.eps 
 
-figures: admin-man/startd-states.eps admin-man/startd-activities.eps admin-man/pool-arch.eps
+figures: admin-man/startd-states.eps admin-man/startd-activities.eps admin-man/pool-arch.eps user-man/dagman-diamond.eps
 
 clean:
 	rm -rf ref man user admin *.dvi *.ps *.html *.log *.aux *.toc *.pdf
