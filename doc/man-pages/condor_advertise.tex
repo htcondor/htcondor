@@ -1,0 +1,56 @@
+\begin{ManPage}{\label{man-condor-advertise}\Condor{advertise}}{1}
+{Send a classad to the collector daemon}
+\Synopsis \SynProg{\Condor{advertise}}
+\ToolArgsBase
+\oOptArg{-pool}{centralmanagerhostname}
+\oOpt{-debug}
+\Arg{update-command}
+\Arg{classad-filename}
+
+\index{Condor commands!condor\_advertise}
+\index{condor\_advertise command}
+
+\Description
+\Condor{advertise} sends a classad to the collector daemon on
+the central manager machine.
+The classad is contained in a file,
+which is specified by the second required argument.
+Which daemon's classad to update is specified by the first
+required argument.
+The \Arg{update-command} may be one of the following strings:
+\begin{description}
+\item[UPDATE\_STARTD\_AD]
+\item[UPDATE\_SCHEDD\_AD]
+\item[UPDATE\_MASTER\_AD]
+\item[UPDATE\_GATEWAY\_AD]
+\item[UPDATE\_CKPT\_SRVR\_AD]
+\item[UPDATE\_SUBMITTOR\_AD]
+\item[UPDATE\_COLLECTOR\_AD]
+\item[UPDATE\_LICENSE\_AD]
+\item[UPDATE\_STORAGE\_AD]
+\end{description}
+
+\begin{Options}
+    \ToolArgsBaseDesc
+    \OptItem{\OptArgnm{-pool}{centralmanagerhostname}}{Specify a pool by
+            giving the central manager's hostname.  The default is the
+	    \MacroNI{COLLECTOR\_HOST} specified in the configuration file.}
+    \OptItem{\Opt{-debug}}{Print debugging information as the command
+            executes.}
+\end{Options}
+
+\GenRem
+The job and machine classads are regularly updated.
+Therefore, the result of \Condor{advertise} is likely to be
+overwritten in a very short time.
+It is unlikely that either Condor users (those who submit jobs)
+or administrators will ever have a use for this command.
+If it is desired to update or set a classad attribute, the
+\Condor{config\_val} command is the proper command to use.
+
+\ExitStatus
+
+\Condor{advertise} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}
