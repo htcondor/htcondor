@@ -84,6 +84,7 @@ extern "C" {
 extern int ChildPid;
 extern int ExitReason;
 extern int JobExitStatus;
+extern char    ICkptName[];
 extern char    CkptName[];
 extern char    TmpCkptName[];
 extern int             MyPid;
@@ -457,6 +458,10 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 		dprintf(D_ALWAYS, "Shadow: Job was kicked off without a checkpoint\n" );
 		DoCleanup();
 		ExitReason = JOB_NOT_CKPTED;
+		if( proc->status==UNEXPANDED && !FileExists(ICkptName, Proc->owner) ) {
+			dprintf(D_ALWAYS,"No initial ckpt found\n");
+			ExitReason = JOB_KILLED;
+		}
 		break;
 
 	 case SIGQUIT:	/* Kicked off, but with a checkpoint */
