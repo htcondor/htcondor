@@ -11,7 +11,7 @@ SAVE_SIGSTATE = -DSAVE_SIGSTATE
 SAVE_SIGSTATE_OBJ = signals_support.o
 
 #if IS_DUX
-SIG_EXTRACT = SIGACTION.o SIGPROCMASK.o SIGSUSPEND.o SIGNAL.o
+SIG_EXTRACT = SIGACTION.o SIGPROCMASK.o SIGSUSPEND.o SIGNAL.o _SIGSUSPEND.o
 #elif IS_X86_SOLARIS
 SIG_EXTRACT = SIGACTION.o _SIGACTION.o i386_data.o
 #elif IS_SUN4X_SOLARIS
@@ -195,9 +195,14 @@ uppercase_target($(SIMPLE_LIBC),sigprocmask.o,SIGPROCMASK.o,sigprocmask,SIGPROCM
 SIGSUSPEND.o :  $(SIMPLE_LIBC)  ToUpper
 	ar x    $(SIMPLE_LIBC)      sigsuspend.o 	  ; mv  sigsuspend.o  $(TMP_DIR)
 	./ToUpper $(TMP_DIR)/sigsuspend.o   $(TMP_DIR)/SIGSUSPEND.o   sigsuspend   SIGSUSPEND
-	./ToUpper $(TMP_DIR)/SIGSUSPEND.o $(TMP_DIR)/SIGSUSPEND1.o _SIGSUSPEND _sigsuspend
-	./ToUpper $(TMP_DIR)/SIGSUSPEND1.o SIGSUSPEND.o __sigsuspend __SIGSUSPEND
-	rm -f $(TMP_DIR)/sigsuspend.o $(TMP_DIR)/SIGSUSPEND.o $(TMP_DIR)/SIGSUSPEND1.o
+	./ToUpper $(TMP_DIR)/SIGSUSPEND.o SIGSUSPEND.o __SIGSUSPEND_nc __sigsuspend_nc
+	rm -f $(TMP_DIR)/sigsuspend.o $(TMP_DIR)/SIGSUSPEND.o
+
+_SIGSUSPEND.o : $(SIMPLE_LIBC) ToUpper
+	ar x $(SIMPLE_LIBC) _sigsuspend.o ; mv _sigsuspend.o $(TMP_DIR)
+	./ToUpper $(TMP_DIR)/_sigsuspend.o _SIGSUSPEND.o sigsuspend SIGSUSPEND
+	rm -f $(TMP_DIR)/_sigsuspend.o
+
 SIGACTION.o : $(SIMPLE_LIBC) ToUpper
 	ar x $(SIMPLE_LIBC) sigaction.o; mv sigaction.o $(TMP_DIR)
 	./ToUpper $(TMP_DIR)/sigaction.o $(TMP_DIR)/SIGACTION.o sigaction SIGACTION
