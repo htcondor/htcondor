@@ -1,0 +1,175 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Configuring Condor for Multiple Platforms}
+\label{sec:Multiple-Platforms}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Beginning with Condor version 6.0.1, you can use a single, global
+config file for all platforms in your Condor pool, with only
+platform-specific settings placed in separate files.  This greatly
+simplifies administration of a heterogenous pool by allowing you to
+change platform-independent, global settings in one place, instead of
+separately for each platform.  This is made possible by the
+\Macro{LOCAL\_CONFIG\_FILE} parameter being treated by Condor as a
+list of files, instead of a single file.  Of course, this will only
+help you if you are using a shared filesystem for the machines in your
+pool, so that multiple machines can actually share a single set of
+configuration files.
+
+If you have multiple platforms, you should put all
+platform-independent settings (the vast majority) into your regular
+condor\_config file, which would be shared by all platforms.  This
+global file would be the one that is found with the
+\Env{CONDOR\_CONFIG} environment variable, user condor's home
+directory, or \File{/etc/condor/condor\_config}.
+
+You would then set the \Macro{LOCAL\_CONFIG\_FILE} parameter from that
+global config file to specify both a platform-specific config file and
+optionally, a local, machine-specific config file (this parameter is
+described in section~\ref{sec:Condor-wide-Config-File-Entries} on
+``Condor-wide Config File Entries'').
+
+The order in which you specify files in the
+\Macro{LOCAL\_CONFIG\_FILE} parameter is important, because settings
+in files at the beginning of the list are overridden if the same
+settings occur in files later in the list.  So, if you specify the
+platform-specific file and then the machine-specific file, settings in
+the machine-specific file would override those in the
+platform-specific file (which is probably what you want).  
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Specifying a Platform-Specific Config File}
+\label{sec:Specify-Platform-Files}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+To specify the platform-specific file, you could simply use the
+\Macro{ARCH} and \Macro{OPSYS} parameters which are defined
+automatically by Condor.  For example, if you had Intel Linux
+machines, Sparc Solaris 2.6 machines, and SGIs running IRIX 6.x, you
+might have files named:
+
+\begin{verbatim}
+        condor_config.INTEL.LINUX
+        condor_config.SUN4x.SOLARIS26
+        condor_config.SGI.IRIX6
+\end{verbatim}
+
+Then, assuming these three files were in the directory held in the
+\Macro{ETC} macro, and you were using machine-specific config files in
+the same directory, named by each machine's hostname, your
+\Macro{LOCAL\_CONFIG\_FILE} parameter would be set to:
+
+\begin{verbatim}
+  LOCAL_CONFIG_FILE = $(ETC)/condor_config.$(ARCH).$(OPSYS), \
+                      $(ETC)/$(HOSTNAME).local
+\end{verbatim}
+
+Alternatively, if you are using AFS, you can use an ``@sys link'' to
+specify the platform-specific config file and let AFS resolve this
+link differently on different systems.  For example, perhaps you have
+a soft linked named ``condor\_config.platform'' that points to
+``condor\_config.@sys''.  In this case, your files might be named:
+
+\begin{verbatim}
+        condor_config.i386_linux2
+        condor_config.sun4x_56
+        condor_config.sgi_64
+        condor_config.platform -> condor_config.@sys
+\end{verbatim}
+
+and your \Macro{LOCAL\_CONFIG\_FILE} parameter would be set to:
+
+\begin{verbatim}
+  LOCAL_CONFIG_FILE = $(ETC)/condor_config.platform, \
+                      $(ETC)/$(HOSTNAME).local
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Platform-Specific Config File Settings}
+\label{sec:Platform-Specific-Settings}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The only settings that are truly platform-specific are:
+
+\begin{description}
+
+\item[\Macro{RELEASE\_DIR}] Full path to where you have installed your
+  Condor binaries.  While the config files may be shared among
+  different platforms, the binaries certainly cannot.  Therefore, you
+  must still maintain separate release directories for each platform
+  in your pool.  See section~\ref{sec:Condor-wide-Config-File-Entries}
+  on ``Condor-wide Config File Entries'' for details.
+
+\item[\Macro{MAIL}] The full path to your mail program.  See
+  section~\ref{sec:Condor-wide-Config-File-Entries} on ``Condor-wide
+  Config File Entries'' for details.
+
+\item[\Macro{CONSOLE\_DEVICES}] Which devices in /dev should be
+  treated as ``console devices''.  See
+  section~\ref{sec:Startd-Config-File-Entries} on ``\condor{startd}
+  Config File Entries'' for details.
+
+\item[\Macro{DAEMON\_LIST}] Which daemons the \Condor{master} should
+  start up.  The only reason this setting is platform-specific is
+  because on Alphas running Digital Unix and SGIs running IRIX, you
+  must use the \Condor{kbdd}, which is not needed on other platforms.
+  See section~\ref{sec:Master-Config-File-Entries} on
+  ``\condor{master} Config File Entries'' for details.
+
+\end{description}
+
+Reasonable defaults for all of these settings will be found in the
+default config files inside a given platform's binary distribution
+(except the \Macro{RELEASE\_DIR}, since it is up to you where you want
+to install your Condor binaries and libraries).  If you have multiple
+platforms, simply take one of the condor\_config files you get from
+either running \Condor{install} or from the
+\Release{etc/examples/condor\_config.generic} file, take these settings
+out and save them into a platform-specific file, and install the
+resulting platform-independent file as your global config file.  Then,
+find the same settings from the config files for any other platforms
+you are setting up and put them in their own platform specific files.
+Finally, set your \Macro{LOCAL\_CONFIG\_FILE} parameter to point to
+the appropriate platform-specific file, as described above.
+
+Not even all of these settings are necessarily going to be different.
+For example, if you have installed a mail program that understands the
+``-s'' option in \File{/usr/local/bin/mail} on all your platforms, you
+could just set \Macro{MAIL} to that in your global file and not define
+it anywhere else.  If you've only got Digital Unix and IRIX machines,
+the \Macro{DAEMON\_LIST} will be the same for each, so there's no
+reason not to put that in the global config file (or, if you have no
+IRIX or Digital Unix machines, \Macro{DAEMON\_LIST} won't have to be
+platform-specific either).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Other Uses for Platform-Specific Config Files}
+\label{sec:Other-Uses-for-Platform-Files}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+It is certainly possible that you might want other settings to be
+platform-specific as well.  Perhaps you want a different startd policy
+for one of your platforms.  Maybe different people should get the
+email about problems with different platforms.  There's nothing
+hard-coded about any of this.  What you decide should be shared and
+what should not is entirely up to you and how you lay out your config
+files.
+
+Since the \Macro{LOCAL\_CONFIG\_FILE} parameter can be an arbitrary
+list of files, you can even break up your global, platform-independent
+settings into separate files.  In fact, your global config file might
+only contain a definition for \Macro{LOCAL\_CONFIG\_FILE}, and all
+other settings would be handled in separate files.  
+
+You might want to give different people permission to change different
+Condor settings.  For example, if you wanted some user to be able to
+change certain settings, but nothing else, you could specify those
+settings in a file which was early in the \Macro{LOCAL\_CONFIG\_FILE}
+list, give that user write permission on that file, then include all
+the other files after that one.  That way, if the user was trying to
+change settings she/he shouldn't, they would simply be overridden.  
+
+As you can see, this mechanism is quite flexible and powerful.  If you
+have very specific configuration needs, they can probably be met by
+using file permissions, the \Macro{LOCAL\_CONFIG\_FILE} setting, and
+your imagination.
+
