@@ -1,16 +1,478 @@
-#if IS_MIPS_ULTRIX43
-#define IMAKE_FLAGS	-I../../config -Dultrix43a -s Makefile
-#elif IS_SUN4M_SOLARIS251
+/*
+** Set up platform-dependent Imake flags
+*/
+#if IS_SUN4M_SOLARIS251
 #define IMAKE_FLAGS	-I../../config -DIS_SUN4M_SOLARIS251 -s Makefile
 PLATFORM_FLAG=-DIS_SUN4M_SOLARIS251
-#elif IS_SUN4M_SOLARIS
-#define IMAKE_FLAGS	-I../../config -DIS_SUN4M_SOLARIS -s Makefile
-PLATFORM_FLAG=-DIS_SUN4M_SOLARIS
 #elif IS_X86_SOLARIS25
 #define IMAKE_FLAGS 	-I../../config -DIS_X86_SOLARIS25 -s Makefile
 #else
 #define IMAKE_FLAGS	-I../../config -s Makefile
 #endif
+
+/*
+** Set up some shared, common rules and defininitions
+*/
+.SUFFIXES: .C
+
+.C.o:
+	$(CPlusPlus) $(C_PLUS_FLAGS) -c $<
+
+#define SET_GID_MODE		02775
+#define EXECUTABLE_MODE		0755
+#define OBJECT_MODE		0644
+
+#if defined(Demangler)
+DEMANGLE = 2>&1 | Demangler
+#endif
+
+
+/*
+** Set up to make all the objects in a particular directory.
+*/
+#ifndef object_target
+#define object_target(obj_name)				@@\
+obj_name: condor_##obj_name				@@\
+	cd condor_##obj_name; make $(SMP_FLAGS)		@@\
+release:: condor_##obj_name				@@\
+	cd condor_##obj_name; make release		@@\
+stripped:: condor_##obj_name				@@\
+	cd condor_##obj_name; make stripped		@@\
+static:: condor_##obj_name				@@\
+	cd condor_##obj_name; make static		@@\
+clean:: condor_##obj_name				@@\
+	cd condor_##obj_name; make clean		@@\
+tags:: condor_##obj_name				@@\
+	cd condor_##obj_name; make tags			@@\
+depend:: condor_##obj_name				@@\
+	cd condor_##obj_name; make depend		@@\
+makefiles:: condor_##obj_name##/Makefile		@@\
+condor_##obj_name##/Makefile:				@@\
+	cd condor_##obj_name ; imake IMAKE_FLAGS	@@\
+object_dir_target(condor_##obj_name)
+#endif /* object_target */
+
+/*
+** List everything which should be built in this object tree.
+*/
+#define all_target(targetlist)				@@\
+all: targetlist
+
+
+/***********************************************************************
+** building targets
+**
+** These rules are used for building various aspects of Condor.
+** Primarily, binaries and libraries.  Binaries be dymanically
+** linked, include debugging info, and not be stripped.
+***********************************************************************/
+
+/*
+** Build a library from .o files.
+*/
+#ifndef library_target
+#define library_target( libname, objlist )		@@\
+libname: objlist					@@\
+	rm -f libname					@@\
+	AR_REPLACE( libname, objlist )			@@\
+clean::							@@\
+	rm -f libname objlist
+#endif /* library_target */
+
+
+/*
+** Build a C program from .o files and libraries.
+*/
+#ifndef program_target
+#define	program_target( program, objlist, libs )		@@\
+program: objlist libs						@@\
+	$(CC) $(CFLAGS) -o program objlist libs $(LDFLAGS)	@@\
+clean::								@@\
+	rm -f program objlist
+#endif  program_target
+
+
+/*
+** Build a C++ program from .o files and libraries.
+*/
+#ifndef c_plus_target
+#define	c_plus_target( program, objlist, libs )		@@\
+program: objlist libs					@@\
+	$(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(LDFLAGS) $(DEMANGLE) @@\
+clean:: 						@@\
+	rm -f program objlist
+#endif  c_plus_target
+
+
+
+/***********************************************************************
+** release targets
+**
+** These rules are used for copying files that have already been built
+** into the release_dir, which is unstripped, for use at our pool.
+** All directories need to support a "release" rule.
+***********************************************************************/
+
+/*
+** Copy the given file to the specified directory, with the given mode.
+*/
+#ifndef release_target
+#define release_target( file, dir, mode )		@@\
+dir##/##file: file					@@\
+	/bin/rm -f dir##/##file				@@\
+	cp file dir					@@\
+	chmod mode dir##/##file				@@\
+release:: dir##/##file
+#endif  release_target
+
+
+/*
+** Copy the given library to the specified directory, and run ranlib.
+*/
+#ifndef release_library
+#define release_library( lib, dir ) 			@@\
+dir##/##lib: lib					@@\
+	COPY_LIBRARY( lib, dir##/##lib )		@@\
+	RANLIB_TOUCH( dir##/##lib )			@@\
+release:: dir##/##lib
+#endif  release_library
+
+
+/*
+** Target is released by creating a symbolic link to another.
+*/
+#ifndef symlink_torelease_target
+#define symlink_torelease_target( src, dir, dest )	@@\
+release:: $(RELEASE_DIR)/##dir##/##dest			@@\
+							@@\
+$(RELEASE_DIR)/##dir##/##dest##: src			@@\
+	/bin/rm -f $(RELEASE_DIR)/##dir##/##dest	@@\
+	ln -s src $(RELEASE_DIR)/##dir##/##dest			
+#endif /* symlink_torelease_target */
+
+
+/*
+** Target is released by creating a hard link to another.
+*/
+#ifndef link_torelease_target
+#define link_torelease_target( src, dir, dest )		@@\
+release:: $(RELEASE_DIR)/##dir##/##dest##		@@\
+							@@\
+$(RELEASE_DIR)/##dir##/##dest##: src			@@\
+	/bin/rm -f $(RELEASE_DIR)/##dir##/##dest	@@\
+	ln src $(RELEASE_DIR)/##dir##/##dest		
+#endif /* link_torelease_target */
+
+
+/*
+** Target is released by copying
+*/
+#ifndef copy_torelease_target
+#define copy_torelease_target( src, dir, dest, mode )	@@\
+release:: $(RELEASE_DIR)/##dir##/##dest##		@@\
+							@@\
+$(RELEASE_DIR)/##dir##/##dest##: src			@@\
+	/bin/rm -f $(RELEASE_DIR)/##dir##/##dest	@@\
+	cp src $(RELEASE_DIR)/##dir##/##dest		@@\
+	chmod mode $(RELEASE_DIR)/##dir##/##dest
+#endif /* copy_torelease_target */
+
+
+/***********************************************************************
+** strip targets
+**
+** These rules are used for copying files that have already been built
+** into the strip_dir, then stripping them if they're binaries, for
+** distribution to the world.  All directories need to support a
+** "stripped" rule. 
+***********************************************************************/
+
+/*
+** Copy a given file to the specified directory, with the given mode,
+** and strip the binary.
+*/
+#ifndef strip_target
+#define strip_target( file, dir, mode )			@@\
+##dir##/##file##: file					@@\
+	/bin/rm -f dir##/##file				@@\
+	cp file dir					@@\
+	strip dir##/##file				@@\
+	chmod mode dir##/##file				@@\
+stripped:: dir##/##file
+#endif  strip_target
+
+
+/*
+** Copy the given library to the specified directory, and run ranlib.
+*/
+#ifndef strip_library
+#define strip_library( lib, dir )			@@\
+dir##/##lib: lib					@@\
+	COPY_LIBRARY( lib, dir##/##lib )		@@\
+	RANLIB_TOUCH( dir##/##lib )			@@\
+stripped:: dir##/##lib
+#endif  strip_library
+
+
+/* 
+** Stripped target is released just by copying
+*/
+#ifndef strip_copy_target
+#define strip_copy_target( src, dir, file, mode )	@@\
+dir##/##file: src					@@\
+	/bin/rm -f dir##/##file				@@\
+	cp src dir##/##file				@@\
+	chmod mode dir##/##file				@@\
+stripped:: dir##/##file
+#endif strip_copy_target
+
+
+/*
+** Stripped target is released by creating a hard link to another. 
+*/
+#ifndef link_tostrip_target
+#define link_tostrip_target( src, dir, dest )		@@\
+stripped:: $(STRIP_DIR)/##dir##/##dest##		@@\
+							@@\
+$(STRIP_DIR)/##dir##/##dest##: src			@@\
+	/bin/rm -f $(STRIP_DIR)/##dir##/##dest		@@\
+	ln src $(STRIP_DIR)/##dir##/##dest		
+#endif /* link_tostrip_target */
+
+
+/*
+** Stripped target is released by creating a symbolic link to another.
+*/
+#ifndef symlink_tostrip_target
+#define symlink_tostrip_target( src, dir, dest )	@@\
+stripped:: $(STRIP_DIR)/##dir##/##dest##		@@\
+							@@\
+$(STRIP_DIR)/##dir##/##dest##: src			@@\
+	/bin/rm -f $(STRIP_DIR)/##dir##/##dest		@@\
+	ln -s src $(STRIP_DIR)/##dir##/##dest
+#endif /* symlink_tostrip_target */
+
+
+
+/***********************************************************************
+** static targets
+**
+** These rules are used for creating the statically linked, stripped
+** binary distribution for distribution to the world.  Any binary
+** will be statically linked, then stripped, then copied into the
+** given directory.  Other files should be put in the appropriate
+** places for a full binary distribution (e.g. scripts, example files,
+** libraries, etc).  All directories need to support a "static" rule. 
+***********************************************************************/
+
+/*
+** Target to build a statically linked, stripped binary, placed in the
+** specified directory.
+*/
+#ifndef	static_target
+#define	static_target( program, objlist, libs, dir )		@@\
+dir##/##program: objlist libs					@@\
+	$(CPlusPlus) $(STATIC) $(C_PLUS_FLAGS) -o program##.static objlist libs $(LDFLAGS) $(DEMANGLE) @@\
+	strip program##.static					@@\
+	/bin/rm -f dir##/##program				@@\
+	cp program##.static dir##/##program			@@\
+	chmod EXECUTABLE_MODE dir##/##program			@@\
+clean:: 							@@\
+	rm -f program##.static objlist				@@\
+static:: dir##/##program
+#endif  static_target
+
+
+/*
+** Copy the given library to the specified directory, and run ranlib.
+*/
+#ifndef static_library
+#define static_library( lib, dir )			@@\
+dir##/##lib: lib					@@\
+	COPY_LIBRARY( lib, dir##/##lib )		@@\
+	RANLIB_TOUCH( dir##/##lib )			@@\
+static:: dir##/##lib
+#endif  static_library
+
+
+/* 
+** Static target is released just by copying
+*/
+#ifndef static_copy_target
+#define static_copy_target( src, dir, file, mode )	@@\
+dir##/##file: src					@@\
+	/bin/rm -f dir##/##file				@@\
+	cp src dir##/##file				@@\
+	chmod mode dir##/##file				@@\
+static:: dir##/##file
+#endif static_copy_target
+
+
+/*
+** Static target is released by creating a hard link to another. 
+*/
+#ifndef link_tostatic_target
+#define link_tostatic_target( src, dir, dest )		@@\
+static:: $(STATIC_DIR)/##dir##/##dest##			@@\
+							@@\
+$(STATIC_DIR)/##dir##/##dest##: src			@@\
+	/bin/rm -f $(STATIC_DIR)/##dir##/##dest		@@\
+	ln src $(STATIC_DIR)/##dir##/##dest		
+#endif /* link_tostatic_target */
+
+
+/*
+** Static target is released by creating a symbolic link to another.
+*/
+#ifndef symlink_tostatic_target
+#define symlink_tostatic_target( src, dir, dest )	@@\
+static:: $(STATIC_DIR)/##dir##/##dest##			@@\
+							@@\
+$(STATIC_DIR)/##dir##/##dest##: src			@@\
+	/bin/rm -f $(STATIC_DIR)/##dir##/##dest		@@\
+	ln -s src $(STATIC_DIR)/##dir##/##dest
+#endif /* symlink_tostatic_target */
+
+
+/***********************************************************************
+** PureSoftware targets
+**
+** These rules are used for creating special debugging binaries built
+** for either purify, or purecoverage.
+***********************************************************************/
+
+#if IS_SUN4M_SOLARIS251
+
+#define PureCollector concat3(-collector=,CrtLibPath,/ld)
+
+#define	pure_c_plus_target( program, objlist, libs )	@@\
+##program: objlist libs					@@\
+	purify -g++=yes -collector=PureCollector $(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(LDFLAGS)	@@\
+clean::							@@\
+	rm -f program objlist
+
+#define	purecov_c_plus_target( program, objlist, libs )	@@\
+##program: objlist libs					@@\
+	purecov -g++=yes -collector=PureCollector $(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(LDFLAGS)						@@\
+clean:: 						@@\
+	rm -f program objlist
+
+#else 
+
+#define	pure_c_plus_target( program, objlist, libs )	/* NULL MACRO */
+#define	purecov_c_plus_target( program, objlist, libs )	/* NULL MACRO */
+
+#endif	/* IS_SUN4M_SOLARIS251 */
+
+
+/***********************************************************************
+** condor_compile rules
+**
+** Rules to link programs with the Condor libraries using
+** condor_compile.  These are used primarily in the test suites. 
+***********************************************************************/
+
+CONDOR_COMPILE = ../condor_scripts/condor_compile
+
+/*
+** Link all three types of binaries
+*/
+#define LINK( compiler, remotetarg, vanillatarg, standalonetarg, obj ) @@\
+all::						@@\
+	RLINK( compiler, remotetarg, obj );	@@\
+	VLINK( vanillatarg, obj );		@@\
+	SLINK( compiler, standalonetarg, obj );
+
+/*
+** Link a program for running remotely
+*/
+#define RLINK( compiler, remotetarg, obj )	@@\
+remotetarg: obj					@@\
+	condor_compile $(CONDOR_COMPILE_FLAGS) compiler -o remotetarg obj @@\
+clean::						@@\
+	rm -f remotetarg obj			@@\
+all:: remotetarg
+
+
+/*
+** Link a program standalone (runs outside condor, but will still checkpoint)
+*/
+#define SLINK( compiler, standalonetarg, obj )		@@\
+standalonetarg: obj					@@\
+	condor_compile $(CONDOR_COMPILE_FLAGS) $(STAND_ALONE_FLAG) compiler -o standalonetarg obj @@\
+							@@\
+clean::							@@\
+	rm -f standalonetarg obj			@@\
+all:: standalonetarg
+
+/*
+** Link a program to run normally (no condor at all)
+*/
+#define VLINK( vanillatarg, obj )				@@\
+vanillatarg: obj						@@\
+	program_target( vanillatarg, obj, fake_ckpt.o )		@@\
+								@@\
+clean::								@@\
+	rm -f vanillatarg obj					@@\
+all:: vanillatarg
+
+
+
+/***********************************************************************
+** misc rules
+**
+** Everything else.
+***********************************************************************/
+
+/*
+** These special object files are created by extracting a
+** standard routine from a system library and changing the
+** name by conversion to uppercase.
+*/
+#ifndef uppercase_target
+#define uppercase_target( libname, objname, newname, old_string, new_string )	@@\
+newname: libname ToUpper						@@\
+	AR_EXTRACT( libname, objname ); mv objname $(TMP_DIR)		@@\
+	./ToUpper $(TMP_DIR)/##objname newname old_string new_string 	@@\
+	rm -f $(TMP_DIR)/##objname
+#endif
+
+
+/*
+** Build a file using an awk program
+*/
+#ifndef awk_target
+#define awk_target( targ, input, prog )			@@\
+targ:	input prog					@@\
+	awk -f prog input > targ			@@\
+clean::							@@\
+	rm -f targ
+#endif
+
+
+/*
+** Import ".o" files from another directory as symbolic links.  Uses
+** Make macro "IMPORT_LINKS" which must be initialized to the
+** "import_links" shell script in this directory.
+*/
+#ifndef import
+#define import( dir, obj )			@@\
+obj:						@@\
+	$(IMPORT_LINKS) dir obj			@@\
+clean::						@@\
+	rm -f obj
+#endif /* import */
+
+
+/*
+** Just make a simple directory.
+*/
+#ifndef simple_dir_target
+#define simple_dir_target(dirname)			@@\
+##dirname##:						@@\
+	mkdir dirname
+#endif  simple_dir_target
+
 
 /*
 ** Build an object directory with symbolic links back into the
@@ -19,308 +481,50 @@ PLATFORM_FLAG=-DIS_SUN4M_SOLARIS
 ** will simplify the Makefiles.
 */
 #ifndef object_dir_target
-#define object_dir_target(dir_name)										@@\
-## dir_name##:															@@\
-	mkdir dir_name														@@\
-	cd dir_name##; for file in `ls $(SRC_TREE)/##dir_name##`;	\		@@\
-		do ln -s $(SRC_TREE)/##dir_name##/$$file .; done;				@@\
+#define object_dir_target(dir_name)					@@\
+## dir_name##:								@@\
+	mkdir dir_name							@@\
+	cd dir_name##; for file in `ls $(SRC_TREE)/##dir_name##`; \	@@\
+		do ln -s $(SRC_TREE)/##dir_name##/$$file .; done;	@@\
 	cd dir_name##; imake IMAKE_FLAGS
-#endif object_dir_target
+#endif  object_dir_target
 
-/*
-** Just make a simple directory.
-*/
-#ifndef simple_dir_target
-#define simple_dir_target(dirname)						@@\
-## dirname##:											@@\
-	mkdir dirname
-#endif simple_dir_target
-
-/*
-** Set up to make all the objects in a particular directory.
-*/
-#ifndef object_target
-#define object_target(obj_name)							@@\
-## obj_name##: condor_##obj_name						@@\
-	cd condor_##obj_name; make $(SMP_FLAGS)						@@\
-release:: condor_##obj_name								@@\
-	cd condor_##obj_name; make release					@@\
-stripped:: condor_##obj_name								@@\
-	cd condor_##obj_name; make stripped					@@\
-clean:: condor_##obj_name								@@\
-	cd condor_##obj_name; make clean					@@\
-tags:: condor_##obj_name								@@\
-	cd condor_##obj_name; make tags						@@\
-depend:: condor_##obj_name								@@\
-	cd condor_##obj_name; make depend					@@\
-makefiles:: condor_##obj_name##/Makefile				@@\
-condor_##obj_name##/Makefile:							@@\
-	cd condor_##obj_name ; imake IMAKE_FLAGS			@@\
-object_dir_target(condor_##obj_name)
-#endif
 
 /*
 ** Build a skeleton object tree for a particular platform.
 */
 #ifndef platform_target
-#define platform_target(platform)						@@\
-platform.init: platform ALWAYS							@@\
-	cp GENERIC/CheckPlatformType.c platform				@@\
-	cp Imakefile.platform_skel platform/Imakefile		@@\
-	cd platform ; imake IMAKE_FLAGS						@@\
-	cd platform ; make directories; make depend			@@\
-platform: 												@@\
+#define platform_target(platform)			@@\
+platform.init: platform ALWAYS				@@\
+	cp GENERIC/CheckPlatformType.c platform		@@\
+	cp Imakefile.platform_skel platform/Imakefile	@@\
+	cd platform ; imake IMAKE_FLAGS			@@\
+	cd platform ; make directories; make depend	@@\
+platform: 						@@\
 	mkdir platform
-#endif
+#endif  platform_target
 
 /*
 ** Check to make sure we are running on the correct kind of machine
 ** and operating system to make object files for this platform.
 */
 #ifndef check_platform_target
-#define check_platform_target											@@\
-CheckPlatformType:														@@\
-	rm -f CheckPlatformType												@@\
+#define check_platform_target				@@\
+CheckPlatformType:					@@\
+	rm -f CheckPlatformType				@@\
 	cc $(CFLAGS) -o CheckPlatformType ../GENERIC/CheckPlatformType.c	@@\
-	./CheckPlatformType													@@\
+	./CheckPlatformType				@@\
 	rm -f CheckPlatformType
-#endif
-
-/*
-** Build a library from .o files.
-*/
-#if IS_V5 || IS_V6
-#define library_target(libname, objlist)			@@\
-## libname ## :	objlist								@@\
-	rm -f libname									@@\
-	AR_REPLACE( libname, objlist )					@@\
-clean ## ::											@@\
-	rm -f libname objlist
-#else
-#define library_target(libname, objlist,rel)		@@\
-## libname ## :	objlist								@@\
-	rm -f libname									@@\
-	AR_REPLACE( libname, objlist )					@@\
-## rel ## :: libname								@@\
-	COPY_LIBRARY( libname, $(RELEASE_DIR)/lib )		@@\
-	RANLIB_TOUCH( $(RELEASE_DIR)/lib/libname )		@@\
-clean ## ::											@@\
-	rm -f libname objlist
-#endif
+#endif  check_platform_target
 
 
 /*
-** Build a program from .o files and libraries.
+** Build Makefile dependencies for an object tree.
 */
-#if IS_V5 || IS_V6
-#define	program_target(program, objlist, libs)			@@\
-##program: objlist libs									@@\
-	$(CC) $(CFLAGS) -o program objlist libs $(LDFLAGS)	@@\
-clean:: 												@@\
-	rm -f program objlist
-#else
-#define	program_target(program, objlist, libs, rel)		@@\
-##program: objlist libs									@@\
-	$(CC) $(CFLAGS) -o program objlist libs $(LDFLAGS)	@@\
-clean:: 												@@\
-	rm -f program objlist								@@\
-##rel::													@@\
-	/bin/rm -f $(RELEASE_DIR)/bin/##program				@@\
-	cp program $(RELEASE_DIR)/bin
-#endif
-
-
-/*
-** Build a C++ program from .o files and libraries.
-*/
-.SUFFIXES: .C
-
-.C.o:
-	$(CPlusPlus) $(C_PLUS_FLAGS) -c $<
-
-#if defined(Demangler)
-DEMANGLE = 2>&1 | Demangler
-#endif
-
-#if IS_V5 || IS_V6
-#define	c_plus_target(program, objlist, libs )						@@\
-##program: objlist libs												@@\
-	$(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(LDFLAGS) $(DEMANGLE) @@\
-clean:: 															@@\
-	rm -f program objlist
-#else
-#define	c_plus_target(program, objlist, libs, rel)					@@\
-##program: objlist libs												@@\
-	$(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(LDFLAGS) $(DEMANGLE) @@\
-clean:: 															@@\
-	rm -f program objlist											@@\
-##rel::	$(RELEASE_DIR)/bin/##program								@@\
-	/bin/rm -f $(RELEASE_DIR)/bin/##program							@@\
-	cp program $(RELEASE_DIR)/bin
-#endif
-
-#if IS_V5 || IS_V6
-#define SET_GID_MODE	02775
-#define EXECUTABLE_MODE	0755
-#define OBJECT_MODE		0644
-#define release_target(file, dir, mode )							@@\
-##dir##/##file##: file												@@\
-	/bin/rm -f dir##/##file											@@\
-	cp file dir														@@\
-	chmod mode dir##/##file											@@\
-##release##:: dir##/##file
-#endif
-
-#if IS_V5 || IS_V6
-#define release_library(lib, dir )									@@\
-##dir##/##lib##: lib												@@\
-	COPY_LIBRARY( lib, dir##/##lib )								@@\
-	RANLIB_TOUCH( dir##/##lib )										@@\
-##release##:: dir##/##lib
-#endif
-
-#if IS_V5 || IS_V6
-#define strip_target(file, dir, mode )								@@\
-##dir##/##file##: file												@@\
-	/bin/rm -f dir##/##file											@@\
-	cp file dir												@@\
-	strip dir##/##file											@@\
-	chmod mode dir##/##file											@@\
-##stripped##:: dir##/##file
-#endif
-
-#if IS_V5 || IS_V6
-#define strip_copy_target(src, dir, file, mode )						@@\
-##dir##/##file##: src												@@\
-	/bin/rm -f dir##/##file											@@\
-	cp src dir##/##file											@@\
-	chmod mode dir##/##file											@@\
-##stripped##:: dir##/##file
-#endif
-
-#if IS_V5 || IS_V6
-#define strip_library(lib, dir )									@@\
-##dir##/##lib##: lib												@@\
-	COPY_LIBRARY( lib, dir##/##lib )								@@\
-	RANLIB_TOUCH( dir##/##lib )										@@\
-##stripped##:: dir##/##lib
-#endif
-
-
-#if IS_SPARC_SUNOS41
-#define	pure_c_plus_target(program, objlist, libs)	@@\
-##program: objlist libs									@@\
-	purify -collector=$(TILDE)/bin/collect2 -linker=$(TILDE)/bin/ld $(CPlusPlus) -o program objlist libs $(LDFLAGS)						@@\
-clean:: 												@@\
-	rm -f program objlist								@@\
-##rel::													@@\
-	/bin/rm -f $(RELEASE_DIR)/bin/##program				@@\
-	cp program $(RELEASE_DIR)/bin
-#elif IS_HPPAR_HPUX9 || IS_SUN4M_SOLARIS251
-#define PureCollector concat3(-collector=,CrtLibPath,/ld)
-#define	pure_c_plus_target(program, objlist, libs)	@@\
-##program: objlist libs									@@\
-	purify -g++=yes -collector=PureCollector $(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(LDFLAGS)						@@\
-clean:: 												@@\
-	rm -f program objlist
-#else
-#define	pure_c_plus_target(program, objlist, libs)	/* NULL MACRO */
-#endif	/* pure_c_plus_target */
-
-
-#if IS_SUN4M_SOLARIS251
-#define PureCollector concat3(-collector=,CrtLibPath,/ld)
-#define	purecov_c_plus_target(program, objlist, libs)	@@\
-##program: objlist libs									@@\
-	purecov -g++=yes -collector=PureCollector $(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(LDFLAGS)						@@\
-clean:: 												@@\
-	rm -f program objlist
-#else
-#define	purecov_c_plus_target(program, objlist, libs)	/* NULL MACRO */
-#endif	/* purecov_c_plus_target */
-
-
-/*
-** Make sure setgid bit gets turned on after this program gets
-** copied into release directory.
-*/
-#ifndef setgid_target
-#define setgid_target(targ)								@@\
-##release:: $(RELEASE_DIR)/bin/##targ					@@\
-	chmod g+s $(RELEASE_DIR)/bin/##targ
-#endif
-
-/*
-** Target is made by simply copying a file from one directory to another.
-*/
-#ifndef copy_target
-#define copy_target(src,dst)						@@\
-dst:												@@\
-	cp src dst										@@\
-clean::												@@\
-	rm -f dst
-#endif
-
-/*
-** Target is released by creating a symbolic link to another.
-*/
-#ifndef symlink_torelease_target
-#define symlink_torelease_target(src,dir,dest)	@@\
-release:: $(RELEASE_DIR)/##dir##/##dest##			@@\
-													@@\
-$(RELEASE_DIR)/##dir##/##dest##: src				@@\
-	/bin/rm -f $(RELEASE_DIR)/##dir##/##dest		@@\
-	ln -s src $(RELEASE_DIR)/##dir##/##dest			
-#endif
-
-/*
-** Target is released by creating a hard link to another.
-*/
-#ifndef link_torelease_target
-#define link_torelease_target(src,dir,dest)	@@\
-release:: $(RELEASE_DIR)/##dir##/##dest##			@@\
-													@@\
-$(RELEASE_DIR)/##dir##/##dest##: src				@@\
-	/bin/rm -f $(RELEASE_DIR)/##dir##/##dest		@@\
-	ln src $(RELEASE_DIR)/##dir##/##dest		
-#endif
-
-/*
-** Target is released by copying
-*/
-#ifndef copy_torelease_target
-#define copy_torelease_target(src,dir,dest,mode)	@@\
-release:: $(RELEASE_DIR)/##dir##/##dest##			@@\
-													@@\
-$(RELEASE_DIR)/##dir##/##dest##: src				@@\
-	/bin/rm -f $(RELEASE_DIR)/##dir##/##dest		@@\
-	cp src $(RELEASE_DIR)/##dir##/##dest			@@\
-	chmod mode $(RELEASE_DIR)/##dir##/##dest
-#endif
-
-/*
-** Stripped target is released by creating a hard link to another. 
-*/
-#ifndef link_tostrip_target
-#define link_tostrip_target(src,dir,dest)	@@\
-stripped:: $(STRIP_DIR)/##dir##/##dest##			@@\
-													@@\
-$(STRIP_DIR)/##dir##/##dest##: src				@@\
-	/bin/rm -f $(STRIP_DIR)/##dir##/##dest		@@\
-	ln src $(STRIP_DIR)/##dir##/##dest		
-#endif
-
-
-/*
-** Stripped target is released by creating a symbolic link to another.
-*/
-#ifndef symlink_tostrip_target
-#define symlink_tostrip_target(src,dir,dest)	@@\
-stripped:: $(STRIP_DIR)/##dir##/##dest##			@@\
-													@@\
-$(STRIP_DIR)/##dir##/##dest##: src				@@\
-	/bin/rm -f $(STRIP_DIR)/##dir##/##dest		@@\
-	ln -s src $(STRIP_DIR)/##dir##/##dest			
+#ifndef depend_target
+#define depend_target( src_list )			@@\
+depend: ALWAYS						@@\
+	$(MKDEPEND) $(CFLAGS) src_list
 #endif
 
 
@@ -328,309 +532,13 @@ $(STRIP_DIR)/##dir##/##dest##: src				@@\
 ** Build a tags file for a source directory.
 */
 #ifndef tags_target
-#define tags_target(c_files, libdirs)				@@\
-tags: ALWAYS										@@\
-	condor_ctags c_files -l libdirs					@@\
-clean::												@@\
+#define tags_target( c_files, libdirs )			@@\
+tags: ALWAYS						@@\
+	condor_ctags c_files -l libdirs			@@\
+clean::							@@\
 	rm -f tags
-#endif
-
-/*
-** Build Makefile dependencies for an object tree.
-*/
-#ifndef depend_target
-#define depend_target(src_list)						@@\
-depend: ALWAYS										@@\
-	$(MKDEPEND) $(CFLAGS) src_list
-#endif
-
-/*
-** List everything which should be built in this object tree.
-*/
-#if IS_V5 || IS_V6
-#define all_target(targetlist)						@@\
-## all: targetlist
-#else
-#define all_target(targetlist)						@@\
-## all: targetlist									@@\
-release:: all
-#endif
-
-/*
-** Save changes via RCS.
-*/
-#ifndef	rcs_target
-#define rcs_target(sourcefile)						@@\
-sourcefile: RCS/sourcefile,v						@@\
-	co -r sourcefile
-#endif
-
-/*
-** These special object files are created by extracting a
-** standard routine from a system library and changing the
-** name by conversion to uppercase.
-*/
-#ifndef uppercase_target
-#define uppercase_target(libname,objname,newname,old_string,new_string)		@@\
-##newname: libname ToUpper													@@\
-	AR_EXTRACT( libname, objname	); mv objname $(TMP_DIR)				@@\
-	ToUpper $(TMP_DIR)/##objname newname old_string new_string				@@\
-	rm -f $(TMP_DIR)/##objname
-#endif
+#endif 
 
 
-/*
-** This target made in conjunction with building another library.  The
-** other library should have been made first.
-*/
-#ifndef prev_library_target
-#define prev_library_target(targ,prev_lib,this_lib)				@@\
-targ:															@@\
-	@echo prev_lib must be up to date before making this_lib	@@\
-	@echo MISSING targ											@@\
-	@false
-#endif
 
-/*
-** Make a .o file from a .c when the location of the .c is not obvious
-** and therefore is not handled by the default rules.
-*/
-#ifndef C_target
-#define C_target(src,obj)						@@\
-obj:											@@\
-	$(CC) -c $(CFLAGS) src
-#endif
 
-/*
-** Build a fortran program from .o files and libraries.
-*/
-#ifndef simple_target_F
-#define	simple_target_F(program,objlist,libs)			@@\
-BuildSimple_F(program,objlist,libs)						@@\
-clean:: 												@@\
-	rm -f program objlist
-#endif
-
-/*
-** Build a C program from .o files and libraries.
-*/
-#ifndef simple_target_C
-#define	simple_target_C(program,objlist,libs)			@@\
-BuildSimple_C(program,objlist,libs)						@@\
-clean:: 												@@\
-	rm -f program objlist
-#endif
-
-/*
-** Build a checkpointing, (but not remote system call), version of a
-** FORTRAN program from .o files and libraries.
-*/
-#ifndef ckpt_target_F
-#define	ckpt_target_F(program, objlist, libs)						@@\
-BuildCkpt_F(program,objlist,libs)									@@\
-clean:: 															@@\
-	rm -f program objlist
-#endif
-
-/*
-** Build a checkpointing, (but not remote system call), version of a
-** C program from .o files and libraries.
-*/
-#ifndef ckpt_target_C
-#define	ckpt_target_C(program, objlist, libs)						@@\
-BuildCkpt_C(program,objlist,libs)									@@\
-clean:: 															@@\
-	rm -f program objlist
-#endif
-
-/*
-** Build a checkpointing and remote system call version of a C
-** program from .o files and libraries.
-*/
-#ifndef remote_target_C
-#define remote_target_C(program,objlist,libs)						@@\
-BuildCondor_C(program,objlist,libs)									@@\
-clean::																@@\
-	rm -f program objlist
-#endif
-
-/*
-** Build a checkpointing and remote system call version of a FORTRAN
-** program from .o files and libraries.
-*/
-#ifndef remote_target_F
-#define remote_target_F(program,objlist,libs)						@@\
-BuildCondor_F(program,objlist,libs)									@@\
-clean::																@@\
-	rm -f program objlist
-#endif
-
-/*
-** Generate a platform specific version of a shell script file using imake.
-*/
-#if IS_V5 || IS_V6
-#define script_target(targ,dir,dest,mode)									@@\
-##targ: targ##.generic														@@\
-	imake -I../../config -T Scripts.template -s targ##.tmp -f targ##.generic@@\
-	awk -f awk.prog targ##.tmp > targ										@@\
-	rm -f targ##.tmp														@@\
-clean:: 																	@@\
-	rm -f targ 																@@\
-release:: $(RELEASE_DIR)/##dir##/##dest##									@@\
-																			@@\
-$(RELEASE_DIR)/##dir##/##dest##: targ										@@\
-	/bin/rm -f $(RELEASE_DIR)/##dir##/##targ								@@\
-	/bin/rm -f $(RELEASE_DIR)/##dir##/##dest								@@\
-	cp targ $(RELEASE_DIR)/##dir##/##dest									@@\
-	chmod mode $(RELEASE_DIR)/##dir##/##dest
-#else
-#define script_target(targ,dest)											@@\
-##targ: targ##.generic														@@\
-	imake -I../../config -T Scripts.template -s targ##.tmp -f targ##.generic@@\
-	awk -f awk.prog targ##.tmp > targ										@@\
-	rm -f targ##.tmp														@@\
-	chmod u+x targ															@@\
-clean:: 																	@@\
-	rm -f targ 																@@\
-release::																	@@\
-	/bin/rm -f $(RELEASE_DIR)/##dest##/##targ								@@\
-	cp targ $(RELEASE_DIR)/##dest##/##targ									@@\
-	chmod u+x $(RELEASE_DIR)/##dest##/##targ
-#endif
-
-/*
-** Generate a platform specific version of a text file file using imake.
-*/
-#if IS_V5 || IS_V6
-#define text_target(targ,dir,dest)											@@\
-##targ: targ##.generic														@@\
-	imake -I../../config -T Scripts.template $(PLATFORM_FLAG) -s targ##.tmp -f targ##.generic@@\
-	awk -f awk.prog targ##.tmp > targ										@@\
-	rm -f targ##.tmp														@@\
-clean:: 																	@@\
-	rm -f targ 																@@\
-release:: $(RELEASE_DIR)/##dir##/##dest										@@\
-																			@@\
-$(RELEASE_DIR)/##dir##/##dest##: targ										@@\
-	/bin/rm -f $(RELEASE_DIR)/##dir##/##targ								@@\
-	/bin/rm -f $(RELEASE_DIR)/##dir##/##dest								@@\
-	cp targ $(RELEASE_DIR)/##dir##/##dest
-#else
-#define text_target(targ,dest)												@@\
-##targ: targ##.generic														@@\
-	imake -I../../config -T Scripts.template -s targ##.tmp -f targ##.generic@@\
-	awk -f awk.prog targ##.tmp > targ										@@\
-	rm -f targ##.tmp														@@\
-clean:: 																	@@\
-	rm -f targ 																@@\
-release::																	@@\
-	/bin/rm -f $(RELEASE_DIR)/##dest##/##targ								@@\
-	cp targ $(RELEASE_DIR)/##dest##/##targ
-#endif
-
-/*
-** Build a file using an awk program
-*/
-#ifndef awk_target
-#define awk_target(targ,input,prog)			@@\
-##targ:	input prog							@@\
-	awk -f prog input > targ				@@\
-##clean::									@@\
-	rm -f targ
-#endif
-
-/*
-** Import ".o" files from another directory as symbolic links.  Uses
-** Make macro "IMPORT_LINKS" which must be initialized to the
-** "import_links" shell script in this directory.
-*/
-#define import(dir,obj)			@@\
-## obj ## :						@@\
-	$(IMPORT_LINKS) dir obj		@@\
-## clean::						@@\
-	rm -f obj
-
-#define canned_makefile(dir,pform)										@@\
-## dir ## /Makefile. ## pform ## :										@@\
-	cd dir; imake -I../../config -DIS_ ## pform -s Makefile. ## pform	@@\
-## canned_makefiles:: dir ## /Makefile. ## pform
-
-#define platform_canned_makefile(pform)				@@\
-canned_makefile(condor_ckpt,pform)					@@\
-canned_makefile(condor_c++_util,pform)				@@\
-canned_makefile(condor_collector,pform)				@@\
-canned_makefile(condor_globalq,pform)				@@\
-canned_makefile(condor_kbdd,pform)					@@\
-canned_makefile(condor_master,pform)				@@\
-canned_makefile(condor_negotiator,pform)			@@\
-canned_makefile(condor_off,pform)					@@\
-canned_makefile(condor_on,pform)					@@\
-canned_makefile(condor_prio,pform)					@@\
-canned_makefile(condor_q,pform)						@@\
-canned_makefile(condor_rm,pform)					@@\
-canned_makefile(condor_schedd,pform)				@@\
-canned_makefile(condor_scripts,pform)				@@\
-canned_makefile(condor_shadow.V5,pform)				@@\
-canned_makefile(condor_startd,pform)				@@\
-canned_makefile(h,pform)							@@\
-canned_makefile(condor_starter.V5,pform)			@@\
-canned_makefile(condor_submit.v3,pform)				@@\
-canned_makefile(condor_test_suite_C.V5,pform)		@@\
-canned_makefile(condor_tools,pform)					@@\
-canned_makefile(condor_util_lib,pform)				@@\
-canned_makefile(condor_xdr_lib,pform)
-
-CONDOR_COMPILE = ../condor_scripts/condor_compile
-
-#define RLINK(compiler, remotetarg, obj) @@\
-## remotetarg:  obj @@\
-	condor_compile $(CONDOR_COMPILE_FLAGS) compiler -o remotetarg obj @@\
-@@\
-## clean:: @@\
-	rm -f remotetarg obj @@\
-## all:: remotetarg @@\
-## release:: @@\
-## stripped:: 
-
-/*
-  Link all three types of binaries
-*/
-
-#define LINK(compiler, remotetarg, vanillatarg, standalonetarg, obj) @@\
-@@\
-## all:: @@\
-	RLINK(compiler, remotetarg, obj); @@\
-	VLINK(vanillatarg, obj); @@\
-	SLINK(compiler, standalonetarg, obj); @@\
-
-/*
-  Link a program for running remotely
-*/
-
-/*
-  Link a program standalone ( runs outside condor, but will still checkpoint )
-*/
-
-#define SLINK(compiler, standalonetarg, obj) @@\
-## standalonetarg: obj @@\
-	condor_compile $(CONDOR_COMPILE_FLAGS) $(STAND_ALONE_FLAG) compiler -o standalonetarg obj @@\
-@@\
-## clean:: @@\
-	rm -f standalonetarg obj @@\
-## all:: standalonetarg @@\
-## release:: @@\
-## stripped::
-
-/*
-  Link a program to run normally ( no condor at all )
-*/
-
-#define VLINK(vanillatarg, obj) @@\
-## vanillatarg: obj @@\
-	program_target(vanillatarg, obj, fake_ckpt.o) @@\
-@@\
-## clean::				@@\
-	rm -f vanillatarg obj			@@\
-## all:: vanillatarg @@\
-## release:: @@\
-## stripped::
