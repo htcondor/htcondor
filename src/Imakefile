@@ -173,6 +173,8 @@ object_dir_target(condor_includes)
 
 h_all: h/Makefile h/syscall_numbers.h h/syscall_numbers.o
 
+makefiles:: h/Makefile
+
 h/Makefile: h/Imakefile
 	cd h; imake IMAKE_FLAGS
 
