@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <fstream.h>
-#include <strings.h>
+#include <string.h>
 
 #include "debug.h"
 #include "condor_updown.h"
