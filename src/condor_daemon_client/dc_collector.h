@@ -95,8 +95,9 @@ private:
 
 	bool initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2 );
 
-	const char* tcp_update_destination;
-	const char* udp_update_destination;
+	char* tcp_update_destination;
+	char* udp_update_destination;
+
 
 	void displayResults( void );
 };
