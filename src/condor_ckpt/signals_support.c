@@ -26,7 +26,9 @@
 ** 
 */ 
 
+#if !defined(SUNOS41)
 #define _POSIX_SOURCE
+#endif
 
 #include <signal.h>
 #include <sys/types.h>
@@ -361,7 +363,11 @@ sigset_t *oset;
 
 int
 sigsuspend(set)
+#if defined(SUNOS41)
+sigset_t *set;
+#else
 const sigset_t *set;
+#endif
 {
 	if ( MappingFileDescriptors() ) {
 		sigdelset(set,SIGUSR1);
