@@ -263,8 +263,8 @@ senders.C: syscall.tmpl stub_gen senders.prologue senders.epilogue
 CMNT
 CMNT Bypass a bug in gcc.
 CMNT
-senders.o: senders.C
-	CC -I../h -I../condor_includes -I../condor_c++_util -DSGI -D$(OS) -DNFSFIX -DNDBM -D_BSD_COMPAT -g -DNEW_PROC -c senders.C
+CMNT senders.o: senders.C
+CMNT	CC -I../h -I../condor_includes -I../condor_c++_util -DSGI -D$(OS) -DNFSFIX -DNDBM -D_BSD_COMPAT -g -DNEW_PROC -c senders.C
 #endif
 
 receivers.C: syscall.tmpl stub_gen receivers.prologue receivers.epilogue
