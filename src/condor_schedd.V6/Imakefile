@@ -39,10 +39,12 @@ tags_target($(SRC),$(LIBDIRS))
 depend_target($(SRC))
 c_plus_target(condor_schedd,$(OBJ),$(LIB))
 pure_c_plus_target(condor_schedd.pure,$(OBJ),$(LIB))
+purecov_c_plus_target(condor_schedd.pc,$(OBJ),$(LIB))
 c_plus_target(qmgr,$(QMGR_OBJ), $(CLASS_AD_LIB) $(QMGR_LIB))
 library_target(libqmgmt.a,$(QMGMT_LIB_OBJ))
 release_target(condor_schedd,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 c_plus_target(qmgr_test, qmgr_test.o libqmgmt.a, $(LIB))
+
 CMNT c_plus_target(qmgr_rm, qmgr_rm.o libqmgmt.a, $(LIB))
 
 IMPORT_LINKS = ../../config/import_links

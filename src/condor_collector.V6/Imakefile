@@ -14,7 +14,10 @@ LIB = ../condor_daemon_core.V6/daemon_core.a collector_engine.a \
 
 all_target(collector_engine.a condor_collector)
 c_plus_target(condor_collector,$(OBJ),$(LIB))
+
 pure_c_plus_target(condor_collector.pure,$(OBJ),$(LIB))
+purecov_c_plus_target(condor_collector.pc,$(OBJ),$(LIB))
+
 tags_target($(SRC),$(LIBDIRS))
 depend_target($(SRC))
 library_target(collector_engine.a, $(ENGINE_OBJ))

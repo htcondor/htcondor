@@ -56,5 +56,7 @@ release_target(condor_startd,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
 pure_c_plus_target(condor_startd.pure, $(STARTD_OBJ), $(LIB) )
 
+purecov_c_plus_target(condor_startd.pc, $(STARTD_OBJ), $(LIB) )
+
 IMPORT_LINKS = ../../config/import_links
 import(../condor_util_lib, setsyscalls.o )
