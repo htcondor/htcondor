@@ -871,6 +871,13 @@ _condor_s_stat_convert64( int version, const struct stat *source,
    Finally, implement the _condor_[xlf]stat() functions which do all
    the work of checking if we want local or remote, and handle the
    different versions of the stat struct as appropriate.
+
+   Note: it is important that we only overwrite the buf the caller
+   passed in if the syscall succeeded.  For example, Fortran on Irix
+   6.5 doesn't check the return value of stat() calls, but instead
+   just checks to see if the stat structure has changed.  If we pass
+   back uninitialized garbage from our stack on failed calls, we're
+   going to confuse our caller.  -Jim B. (5/8/2000)
 */
 
 int _condor_xstat(int version, const char *path, struct stat *buf)
@@ -883,10 +890,14 @@ int _condor_xstat(int version, const char *path, struct stat *buf)
 
 	if( LocalSysCalls() ) {
 		rval = syscall( CONDOR_SYS_stat, OPT_STAT_VERSION path, &kbuf );
-		_condor_k_stat_convert( version, &kbuf, buf );
+		if (rval >= 0) {
+			_condor_k_stat_convert( version, &kbuf, buf );
+		}
 	} else {
 		rval = REMOTE_syscall( CONDOR_stat, path, &sbuf );
-		_condor_s_stat_convert( version, &sbuf, buf );
+		if (rval >= 0) {
+			_condor_s_stat_convert( version, &sbuf, buf );
+		}
 	}
 	_condor_signals_enable();
 	return rval;
@@ -903,10 +914,14 @@ int _condor_xstat64(int version, const char *path, struct stat64 *buf)
 
 	if( LocalSysCalls() ) {
 		rval = syscall( CONDOR_SYS_stat, path, &kbuf );
-		_condor_k_stat_convert64( version, &kbuf, buf );
+		if (rval >= 0) {
+			_condor_k_stat_convert64( version, &kbuf, buf );
+		}
 	} else {
 		rval = REMOTE_syscall( CONDOR_stat, path, &sbuf );
-		_condor_s_stat_convert64( version, &sbuf, buf );
+		if (rval >= 0) {
+			_condor_s_stat_convert64( version, &sbuf, buf );
+		}
 	}
 	_condor_signals_enable();
 	return rval;
@@ -928,10 +943,14 @@ _condor_fxstat(int version, int fd, struct stat *buf)
 	} else {
 		if( LocalSysCalls() || _condor_file_is_local(fd) ) {
 			rval = syscall( CONDOR_SYS_fstat, OPT_STAT_VERSION real_fd, &kbuf );
-			_condor_k_stat_convert( version, &kbuf, buf );
+			if (rval >= 0) {
+				_condor_k_stat_convert( version, &kbuf, buf );
+			}
 		} else {
 			rval = REMOTE_syscall( CONDOR_fstat, real_fd, &sbuf );
-			_condor_s_stat_convert( version, &sbuf, buf );
+			if (rval >= 0) {
+				_condor_s_stat_convert( version, &sbuf, buf );
+			}
 		}
 	}
 
@@ -956,10 +975,14 @@ _condor_fxstat64(int version, int fd, struct stat64 *buf)
 	} else {
 		if( LocalSysCalls() || _condor_file_is_local(fd) ) {
 			rval = syscall( CONDOR_SYS_fstat, real_fd, &kbuf );
-			_condor_k_stat_convert64( version, &kbuf, buf );
+			if (rval >= 0) {
+				_condor_k_stat_convert64( version, &kbuf, buf );
+			}
 		} else {
 			rval = REMOTE_syscall( CONDOR_fstat, real_fd, &sbuf );
-			_condor_s_stat_convert64( version, &sbuf, buf );
+			if (rval >= 0) {
+				_condor_s_stat_convert64( version, &sbuf, buf );
+			}
 		}
 	}
 
@@ -978,10 +1001,14 @@ int _condor_lxstat(int version, const char *path, struct stat *buf)
 
 	if( LocalSysCalls() ) {
 		rval = syscall( CONDOR_SYS_lstat, OPT_STAT_VERSION path, &kbuf );
-		_condor_k_stat_convert( version, &kbuf, buf );
+		if (rval >= 0) {
+			_condor_k_stat_convert( version, &kbuf, buf );
+		}
 	} else {
 		rval = REMOTE_syscall( CONDOR_lstat, path, &sbuf );
-		_condor_s_stat_convert( version, &sbuf, buf );
+		if (rval >= 0) {
+			_condor_s_stat_convert( version, &sbuf, buf );
+		}
 	}
 	_condor_signals_enable();
 	return rval;
@@ -998,10 +1025,14 @@ int _condor_lxstat64(int version, const char *path, struct stat64 *buf)
 
 	if( LocalSysCalls() ) {
 		rval = syscall( CONDOR_SYS_lstat, path, &kbuf );
-		_condor_k_stat_convert64( version, &kbuf, buf );
+		if (rval >= 0) {
+			_condor_k_stat_convert64( version, &kbuf, buf );
+		}
 	} else {
 		rval = REMOTE_syscall( CONDOR_lstat, path, &sbuf );
-		_condor_s_stat_convert64( version, &sbuf, buf );
+		if (rval >= 0) {
+			_condor_s_stat_convert64( version, &sbuf, buf );
+		}
 	}
 	_condor_signals_enable();
 	return rval;
