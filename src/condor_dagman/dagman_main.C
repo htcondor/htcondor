@@ -417,6 +417,26 @@ int main_init (int argc, char ** const argv) {
       
             // if there is an older version of the log files,
             // we need to delete these.
+
+			// pfc: why in the world would this be a necessary or good
+			// thing?  apparently b/c old submit events from a
+			// previous run of the same dag will contain the same dag
+			// node names as those from current run, which will
+			// completely f0rk the event-processing process (dagman
+			// will see the events from the first run and think they
+			// are from this one)...
+
+			// instead of deleting the old logs, which seems evil,
+			// maybe what we need is to add the submitting dagman
+			// daemon's job id in each of the submit events in
+			// addition to the dag node name we already write, so that
+			// we can differentiate between identically-named nodes
+			// from different dag instances.  (to take this to the
+			// extreme, we might also want a unique schedd id in there
+			// too...)
+
+			debug_printf( DEBUG_VERBOSE,
+						  "Deleting any older versions of log files...\n" );
       
             ReadMultipleUserLogs::DeleteLogs(G.condorLogFiles);
 
