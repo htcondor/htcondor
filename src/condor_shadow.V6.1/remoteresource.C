@@ -533,6 +533,7 @@ RemoteResource::setStartdInfo( const char *sinful,
 		*/
 	char *addr;
 	if( (addr = string_to_ipstr(sinful)) ) {
+		daemonCore->AddAllowHost( addr, WRITE );
 		daemonCore->AddAllowHost( addr, DAEMON );
 	} else {
 		dprintf( D_ALWAYS, "ERROR: Can't convert \"%s\" to an IP address!\n", 
