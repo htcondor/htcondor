@@ -1,0 +1,15 @@
+#!/bin/sh
+
+######################################################################
+# $Id: platform_post,v 1.1.4.1 2004-08-07 02:26:09 wright Exp $
+# post script to cleanup platform-specific files on the submit side
+######################################################################
+
+# we just want to chmod everything in the local directory (the
+# per-platform directory on the submit side, after everything was
+# transfered back) to be world-readable so that other folks can see
+# the results.  until Condor's file transfer mechanism preserves
+# permissions, we'll have to use this hack. :(
+
+chmod a+r *
+
