@@ -199,10 +199,10 @@ Authentication::authenticate( char *hostAddr, int clientFlags )
 
 
   if (hostAddr) {
-	dprintf ( D_ALWAYS, "ZKM: in authenticate( char *addr == '%s', int flags == %i)\n",
+	dprintf ( D_SECURITY, "AUTHENTICATE: in authenticate( char *addr == '%s', int flags == %i)\n",
 		  hostAddr, clientFlags);
   } else {
-	dprintf ( D_ALWAYS, "ZKM: in authenticate( char *addr == NULL, int flags == %i)\n",
+	dprintf ( D_SECURITY, "AUTHENTICATE: in authenticate( char *addr == NULL, int flags == %i)\n",
 		  clientFlags);
   }
 
@@ -223,7 +223,7 @@ Authentication::authenticate( char *hostAddr, int clientFlags )
       dprintf(D_ALWAYS, "authentication failed due to network errors\n");
       break;
     } else {
-      dprintf(D_ALWAYS, "Trying to use %d\n", firm);
+      dprintf(D_SECURITY, "Trying to use %d\n", firm);
     }
 
     switch ( firm ) {
@@ -1043,13 +1043,13 @@ Authentication::handshake(int clientFlags)
 	int clientCanUse = 0;
 	int canUse = (int) canUseFlags;
 
-	dprintf ( D_ALWAYS, "ZKM: in handshake(int flags == %i)\n", clientFlags);
+	dprintf ( D_SECURITY, "HANDSHAKE: in handshake(int flags == %i)\n", clientFlags);
 
 	if ( mySock->isClient() ) {
-	    dprintf (D_ALWAYS, "ZKM: handshake() - i am the client\n");
+	    dprintf (D_SECURITY, "HANDSHAKE: handshake() - i am the client\n");
 //            if (!clientFlags) {
 		mySock->encode();
-		dprintf ( D_ALWAYS, "ZKM: sending methods (canUse == %i) to server\n",
+		dprintf ( D_SECURITY, "HANDSHAKE: sending methods (canUse == %i) to server\n",
 				canUse);
 		if ( !mySock->code( canUse ) ||
                      !mySock->end_of_message() )
@@ -1063,12 +1063,12 @@ Authentication::handshake(int clientFlags)
                 {
                     return -1;
 		}
-	    dprintf ( D_ALWAYS, "ZKM: server replied (shouldUseMethod == %i)\n",
+	    dprintf ( D_SECURITY, "HANDSHAKE: server replied (shouldUseMethod == %i)\n",
 				shouldUseMethod);
 	    clientCanUse = canUse;
 	}
 	else { //server
-	    dprintf (D_ALWAYS, "ZKM: handshake() - i am the server\n");
+	    dprintf (D_SECURITY, "HANDSHAKE: handshake() - i am the server\n");
 //            if (!clientFlags) {
                 mySock->decode();
                 if ( !mySock->code( clientCanUse ) ||
@@ -1076,14 +1076,14 @@ Authentication::handshake(int clientFlags)
                     {
                         return -1;
                     }
-		dprintf ( D_ALWAYS, "ZKM: client sent methods (clientCanUse == %i)\n",
+		dprintf ( D_SECURITY, "HANDSHAKE: client sent methods (clientCanUse == %i)\n",
 				clientCanUse);
 //            } else {
 //                clientCanUse = clientFlags;
 //            }
 
             shouldUseMethod = selectAuthenticationType( clientCanUse );
-	    dprintf ( D_ALWAYS, "ZKM: i picked a method (shouldUseMethod == %i)\n",
+	    dprintf ( D_SECURITY, "HANDSHAKE: i picked a method (shouldUseMethod == %i)\n",
 				shouldUseMethod);
 
 
@@ -1094,12 +1094,12 @@ Authentication::handshake(int clientFlags)
                     return -1;
 		}
 
-	    dprintf ( D_ALWAYS, "ZKM: client received method (shouldUseMethod == %i)\n",
+	    dprintf ( D_SECURITY, "HANDSHAKE: client received method (shouldUseMethod == %i)\n",
 				shouldUseMethod);
 	}
 
-	dprintf(D_ALWAYS,
-		"ZKM: clientCanUse=%d,shouldUseMethod=%d\n",
+	dprintf(D_SECURITY,
+		"HANDSHAKE: clientCanUse=%d,shouldUseMethod=%d\n",
 		clientCanUse,shouldUseMethod);
 
 	return( shouldUseMethod );
@@ -1227,10 +1227,10 @@ Authentication::selectAuthenticationType( int clientCanUse )
 
 	server.rewind();
 	while ( tmp = server.next() ) {
-		dprintf ( D_ALWAYS, "ZKM: evaluating '%s'\n", tmp);
+		dprintf ( D_SECURITY, "SELECTAUTHENTICATIONTYPE: evaluating '%s'\n", tmp);
 #if defined(GSS_AUTHENTICATION)
 	  if ( ( clientCanUse & CAUTH_GSS )  && !stricmp( tmp, "GSS_AUTHENTICATION" ) ) {
-	    dprintf ( D_ALWAYS, "ZKM: picking '%s'\n", tmp);
+	    dprintf ( D_SECURITY, "SELECTAUTHENTICATIONTYPE: picking '%s'\n", tmp);
 	    retval = CAUTH_GSS;
 	    break;
 	  }
@@ -1238,26 +1238,26 @@ Authentication::selectAuthenticationType( int clientCanUse )
 
 #if defined(WIN32)
 	  if ( ( clientCanUse & CAUTH_NTSSPI ) && !stricmp( tmp, "NTSSPI" ) ) {
-	    dprintf ( D_ALWAYS, "ZKM: picking '%s'\n", tmp);
+	    dprintf ( D_SECURITY, "SELECTAUTHENTICATIONTYPE: picking '%s'\n", tmp);
 	    retval = CAUTH_NTSSPI;
 	    break;
 	  }
 #else
 	  if ( ( clientCanUse & CAUTH_FILESYSTEM ) && !stricmp( tmp, "FS" ) ) {
-	    dprintf ( D_ALWAYS, "ZKM: picking '%s'\n", tmp);
+	    dprintf ( D_SECURITY, "SELECTAUTHENTICATIONTYPE: picking '%s'\n", tmp);
 	    retval = CAUTH_FILESYSTEM;
 	    break;
 	  }
 	  if ( ( clientCanUse & CAUTH_FILESYSTEM_REMOTE ) 
 	       && !stricmp( tmp, "FS_REMOTE" ) ) {
-	    dprintf ( D_ALWAYS, "ZKM: picking '%s'\n", tmp);
+	    dprintf ( D_SECURITY, "SELECTAUTHENTICATIONTYPE: picking '%s'\n", tmp);
 	    retval = CAUTH_FILESYSTEM_REMOTE;
 	    break;
 	  }
 
 #if defined(KERBEROS_AUTHENTICATION)
 	  if ( ( clientCanUse & CAUTH_KERBEROS) && !stricmp( tmp, "KERBEROS")){
-	    dprintf ( D_ALWAYS, "ZKM: picking '%s'\n", tmp);
+	    dprintf ( D_SECURITY, "SELECTAUTHENTICATIONTYPE: picking '%s'\n", tmp);
 	    retval = CAUTH_KERBEROS;
 	    break;
 	  }
@@ -1266,7 +1266,7 @@ Authentication::selectAuthenticationType( int clientCanUse )
 #endif
 	  if ( ( clientCanUse & CAUTH_CLAIMTOBE ) && !stricmp( tmp, "CLAIMTOBE" ) )
 	    {
-	      dprintf ( D_ALWAYS, "ZKM: picking '%s'\n", tmp);
+	      dprintf ( D_SECURITY, "SELECTAUTHENTICATIONTYPE: picking '%s'\n", tmp);
 	      retval = CAUTH_CLAIMTOBE;
 	      break;
 	    }

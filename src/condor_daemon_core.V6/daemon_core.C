@@ -1633,11 +1633,11 @@ int DaemonCore::HandleReq(int socki)
 			ClassAd auth_response;
 			auth_response.Insert("AUTHENTICATE=\"YES\"");
 			sock->encode();
-			dprintf (D_SECURITY, "ZKM: sending following classad telling client to authenticate: \n");
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: sending following classad telling client to authenticate: \n");
 			auth_response.dPrint (D_SECURITY);
 			auth_response.code(*sock);
 			sock->end_of_message();
-			dprintf (D_ALWAYS, "ZKM: authenticating RIGHT NOW.\n");
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticating RIGHT NOW.\n");
 			sock->authenticate(getAuthBitmask(auth_types));
 		}
 
@@ -4778,9 +4778,9 @@ int
 DaemonCore::getAuthBitmask ( char * methods ) {
 
 	if (methods) {
-		dprintf ( D_ALWAYS, "ZKM: in getAuthBitmask('%s')\n", methods);
+		dprintf ( D_SECURITY, "GETAUTHBITMASK: in getAuthBitmask('%s')\n", methods);
 	} else {
-		dprintf ( D_ALWAYS, "ZKM: getAuthBitmask( NULL ) called!\n");
+		dprintf ( D_SECURITY, "GETAUTHBITMASK: getAuthBitmask( NULL ) called!\n");
 		return 0;
 	}
 
@@ -4791,22 +4791,22 @@ DaemonCore::getAuthBitmask ( char * methods ) {
 	server.rewind();
 	while ( tmp = server.next() ) {
 		if ( !stricmp( tmp, "GSS_AUTHENTICATION" ) ) {
-			dprintf ( D_ALWAYS, "ZKM: added CAUTH_GSS\n");
+			dprintf ( D_SECURITY, "GETAUTHBITMASK: added CAUTH_GSS\n");
 			retval |= Authentication::CAUTH_GSS;
 		} else if ( !stricmp( tmp, "NTSSPI" ) ) {
-			dprintf ( D_ALWAYS, "ZKM: added CAUTH_NTSSPI\n");
+			dprintf ( D_SECURITY, "GETAUTHBITMASK: added CAUTH_NTSSPI\n");
 			retval |= Authentication::CAUTH_NTSSPI;
 		} else if ( !stricmp( tmp, "FS" ) ) {
-			dprintf ( D_ALWAYS, "ZKM: added CAUTH_FILESYSTEM\n");
+			dprintf ( D_SECURITY, "GETAUTHBITMASK: added CAUTH_FILESYSTEM\n");
 			retval |= Authentication::CAUTH_FILESYSTEM;
 		} else if ( !stricmp( tmp, "FS_REMOTE" ) ) {
-			dprintf ( D_ALWAYS, "ZKM: added CAUTH_FILESYSTEM_REMOTE\n");
+			dprintf ( D_SECURITY, "GETAUTHBITMASK: added CAUTH_FILESYSTEM_REMOTE\n");
 			retval |= Authentication::CAUTH_FILESYSTEM_REMOTE;
 		} else if ( !stricmp( tmp, "KERBEROS" ) ) {
-			dprintf ( D_ALWAYS, "ZKM: added CAUTH_KERBEROS\n");
+			dprintf ( D_SECURITY, "GETAUTHBITMASK: added CAUTH_KERBEROS\n");
 			retval |= Authentication::CAUTH_KERBEROS;
 		} else if ( !stricmp( tmp, "CLAIMTOBE" ) ) {
-			dprintf ( D_ALWAYS, "ZKM: added CAUTH_CLAIMTOBE\n");
+			dprintf ( D_SECURITY, "GETAUTHBITMASK: added CAUTH_CLAIMTOBE\n");
 			retval |= Authentication::CAUTH_CLAIMTOBE;
 		}
 	}

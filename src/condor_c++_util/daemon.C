@@ -312,9 +312,9 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 
         paramer = param("SKIP_AUTHENTICATION");
 	if (paramer != NULL) {
-		dprintf ( D_SECURITY, "ZKM: param(SKIP_AUTHENTICATION) == %s\n", paramer);
+		dprintf ( D_SECURITY, "STARTCOMMAND: param(SKIP_AUTHENTICATION) == %s\n", paramer);
 		if (strcasecmp(paramer, "YES") == 0) {
-			dprintf ( D_SECURITY, "ZKM: skipping negotiationg for authentication.\n" );
+			dprintf ( D_SECURITY, "STARTCOMMAND: skipping negotiationg for authentication.\n" );
 
 			// just code the command and be done
 			sock->code(cmd);
@@ -327,7 +327,7 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 		free(paramer);
 
 	} else {
-		dprintf ( D_SECURITY, "ZKM: param(SKIP_AUTHENTICATION) failed!\n" );
+		dprintf ( D_SECURITY, "STARTCOMMAND: param(SKIP_AUTHENTICATION) failed!\n" );
 	}
 
 
@@ -338,14 +338,14 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 	// allow the config to force authentication
         paramer = param("ALWAYS_AUTHENTICATE");
 	if (paramer != NULL) {
-		dprintf ( D_SECURITY, "ZKM: param(ALWAYS_AUTHENTICATE) == %s\n", paramer);
+		dprintf ( D_SECURITY, "STARTCOMMAND: param(ALWAYS_AUTHENTICATE) == %s\n", paramer);
 		if (strcasecmp(paramer, "YES") == 0) {
-			dprintf ( D_SECURITY, "ZKM: forcing authentication.\n" );
+			dprintf ( D_SECURITY, "STARTCOMMAND: forcing authentication.\n" );
 			authenticating = AUTH_YES;
 		}
 		free(paramer);
 	} else {
-		dprintf ( D_SECURITY, "ZKM: param(ALWAYS_AUTHENTICATE) failed!\n" );
+		dprintf ( D_SECURITY, "STARTCOMMAND: param(ALWAYS_AUTHENTICATE) failed!\n" );
 	}
 
 
@@ -356,16 +356,16 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 
 	paramer = param("AUTHENTICATION_METHODS");
 	if (paramer != NULL) {
-		dprintf ( D_SECURITY, "ZKM: param(AUTHENTICATION_METHODS) == %s\n",
+		dprintf ( D_SECURITY, "STARTCOMMAND: param(AUTHENTICATION_METHODS) == %s\n",
 				paramer );
 		buflen += strlen(paramer);
 	} else {
-		dprintf ( D_SECURITY, "ZKM: param(AUTHENTICATION_METHODS) failed!\n" );
+		dprintf ( D_SECURITY, "STARTCOMMAND: param(AUTHENTICATION_METHODS) failed!\n" );
 	}
 
 	buf = new char[buflen];
 	if (buf == NULL) {
-		dprintf ( D_ALWAYS, "ZKM: new failed!\n" );
+		dprintf ( D_ALWAYS, "STARTCOMMAND: new failed!\n" );
 		delete sock;
 		return NULL;
 	}
@@ -379,46 +379,46 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 	}
 
 	auth_info.Insert(buf);
-	dprintf ( D_SECURITY, "ZKM: inserted '%s'\n", buf);
+	dprintf ( D_SECURITY, "STARTCOMMAND: inserted '%s'\n", buf);
 
 
 	// command
 	sprintf(buf, "%s=%i", ATTR_COMMAND, cmd);
 	auth_info.Insert(buf);
-	dprintf ( D_SECURITY, "ZKM: inserted '%s'\n", buf);
+	dprintf ( D_SECURITY, "STARTCOMMAND: inserted '%s'\n", buf);
 
 	// convert authenticate into a string
 	assert (authenticating >= 0 && authenticating <= 2);
 	char* tmpdesc[] = { "NO", "ASK", "YES" };
 	sprintf(buf, "%s=\"%s\"", ATTR_AUTHENTICATE, tmpdesc[authenticating]);
 	auth_info.Insert(buf);
-	dprintf ( D_SECURITY, "ZKM: inserted '%s'\n", buf);
+	dprintf ( D_SECURITY, "STARTCOMMAND: inserted '%s'\n", buf);
 
 	// free the buffer
 	delete [] buf;
 
 
-	dprintf ( D_SECURITY, "ZKM: sending DC_AUTHENTICATE command\n");
+	dprintf ( D_SECURITY, "STARTCOMMAND: sending DC_AUTHENTICATE command\n");
 	int authcmd = DC_AUTHENTICATE;
 	if (! sock->code(authcmd)) {
-		dprintf ( D_ALWAYS, "ZKM: failed to send DC_AUTHENTICATE\n");
+		dprintf ( D_ALWAYS, "STARTCOMMAND: failed to send DC_AUTHENTICATE\n");
 		delete sock;
 		return NULL;
 	}
 
 
 	// send the classad
-	dprintf ( D_SECURITY, "ZKM: sending following classad:\n");
+	dprintf ( D_SECURITY, "STARTCOMMAND: sending following classad:\n");
 	auth_info.dPrint ( D_SECURITY );
 
 	if (! auth_info.code(*sock)) {
-		dprintf ( D_ALWAYS, "ZKM: failed to send auth_info\n");
+		dprintf ( D_ALWAYS, "STARTCOMMAND: failed to send auth_info\n");
 		delete sock;
 		return NULL;
 	}
 
 	if (! sock->end_of_message()) {
-		dprintf ( D_ALWAYS, "ZKM: failed to end classad message\n");
+		dprintf ( D_ALWAYS, "STARTCOMMAND: failed to end classad message\n");
 		delete sock;
 		return NULL;
 	}
@@ -427,7 +427,7 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 
 	switch(authenticating) {
 		case AUTH_YES:
-			dprintf ( D_SECURITY, "ZKM: authenticate(0xFFFF) RIGHT NOW.\n");
+			dprintf ( D_SECURITY, "STARTCOMMAND: authenticate(0xFFFF) RIGHT NOW.\n");
 			retval = sock->authenticate(0xFFFF);
 			break;
 
@@ -438,12 +438,12 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 				auth_response.code(*sock);
 				sock->end_of_message();
 
-				dprintf ( D_SECURITY, "ZKM: server responded with:\n");
+				dprintf ( D_SECURITY, "STARTCOMMAND: server responded with:\n");
 				auth_response.dPrint( D_SECURITY );
 
 				buf = new char[128];
 				if (buf == NULL) {
-					dprintf ( D_ALWAYS, "ZKM: new failed!\n");
+					dprintf ( D_ALWAYS, "STARTCOMMAND: new failed!\n");
 					retval = false;
 					break;
 				}
@@ -452,13 +452,13 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 					EXCEPT( "AUTH: no AUTHENTICATE in response ClassAd" );
 				}
 				if(strcasecmp(buf, "YES") == 0) {
-					dprintf ( D_SECURITY, "ZKM: authenticate(0xFFFF) RIGHT NOW.\n");
+					dprintf ( D_SECURITY, "STARTCOMMAND: authenticate(0xFFFF) RIGHT NOW.\n");
 					retval = sock->authenticate(0xFFFF);
 				}
 				break;
 			}
 		case AUTH_NO:
-			dprintf ( D_SECURITY, "ZKM: not authenticating.\n");
+			dprintf ( D_SECURITY, "STARTCOMMAND: not authenticating.\n");
 			retval = true;
 			break;
 
@@ -466,14 +466,14 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 			EXCEPT( "AUTH: wierd value for authenticating" );
 	}
 
-	dprintf (D_SECURITY, "ZKM: retval is %i.\n", retval);
+	dprintf (D_SECURITY, "STARTCOMMAND: retval is %i.\n", retval);
 	if (retval) {
-		dprintf ( D_SECURITY, "ZKM: setting sock->encode()\n");
+		dprintf ( D_SECURITY, "STARTCOMMAND: setting sock->encode()\n");
 		sock->encode();
 
 		return sock;
 	} else {
-		dprintf (D_SECURITY, "ZKM: retval sucked.\n");
+		dprintf (D_SECURITY, "STARTCOMMAND: retval sucked.\n");
 		delete sock;
 		return NULL;
 	}

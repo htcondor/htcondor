@@ -150,9 +150,6 @@ int main (int argc, char **argv)
 	// load up configuration file
 	config();
 
-	// dprintf to console
-	Termlog = 1;
-	dprintf_config ("QUEUE", 2 );
 
 #if !defined(WIN32)
 	install_sig_handler(SIGPIPE, SIG_IGN );
@@ -506,6 +503,12 @@ processCommandLineArguments (int argc, char *argv[])
 		if( match_prefix( arg, "globus" ) ) {
 			Q.addAND( "GlobusStatus =!= UNDEFINED" );
 			globus = true;
+		}
+		else
+		if( match_prefix( arg, "debug" ) ) {
+			// dprintf to console
+			Termlog = 1;
+			dprintf_config ("QUEUE", 2 );
 		}
 		else
 		if (match_prefix(arg,"io")) {
@@ -1399,8 +1402,6 @@ fetchSubmittorPrios()
 		fprintf( stderr, "ZKM: startCommand failed.\n");
 		exit( 1 );
 	}
-
-	dprintf (D_ALWAYS, "ZKM: sock->is_encode == %i.\n", sock->is_encode());
 
 	if (!sock->end_of_message() ) {
 		fprintf( stderr, 

@@ -322,7 +322,7 @@ GET_PRIORITY_commandHandler (int, Stream *strm)
 	if (!strm->end_of_message())
 	{
 		dprintf (D_ALWAYS, "ZKM: strm->is_encode == %i.\n", strm->is_encode());
-		dprintf (D_ALWAYS, "Could not read eom\n");
+		dprintf (D_ALWAYS, "ZKM: Could not read eom\n");
 		return FALSE;
 	}
 
