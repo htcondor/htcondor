@@ -138,7 +138,6 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
       ustime = ( prs.pr_utime.tv_sec + ( prs.pr_utime.tv_nsec * 1.0e-9 ) ) +
                ( prs.pr_stime.tv_sec + ( prs.pr_stime.tv_nsec * 1.0e-9 ) );
 
-
       struct procHashNode * phn;
 
       if ( procHash->lookup( pid, phn ) == 0 ) {
@@ -156,11 +155,14 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
           pi->majfault = (long unsigned)((nowmajf - phn->oldmajf) / timediff);
         }
         delete phn;
-		procHash->remove(pid);
+	procHash->remove(pid);
       }
       else {
         // pid not in hash table; first time.  Use age of process as guide
-        pi->cpuusage = ( ustime / (double) pi->age ) * 100;
+        if ( pi->age == 0 )
+          pi->cpuusage = 0.0;
+        else
+          pi->cpuusage = ( ustime / (double) pi->age ) * 100;
         pi->minfault = (long unsigned int)(nowminf / (double) pi->age);
         pi->majfault = (long unsigned int)(nowmajf / (double) pi->age);
       }
@@ -226,7 +228,13 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
   pi->pid     = psinfo.pr_pid;
   pi->ppid    = psinfo.pr_ppid;
   pi->age     = secsSinceEpoch() - psinfo.pr_start.tv_sec;
-  pi->cpuusage= (float) psinfo.pr_pctcpu / (float) 256;
+
+  // I'm taking out this assignment here.  The reason is that I don't
+  // know exactly how this value is determined, and it is normalized
+  // across all the cpus.  To be on the conservative side, I'll use the
+  // sampling method used above (Solaris251, Irix, OSF/1) to get this
+  // value.  MEY 9-23-98
+  // pi->cpuusage= (float) psinfo.pr_pctcpu / (float) 256;
   
   // maj/min page fault info and user/sys time is found in 'usage':
   // I have never seen minor page faults return anything 
@@ -258,10 +266,12 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
      into page faults per second */
 
   struct timeval thistime;
-  double timediff, lasttime, now, junk;
+  double timediff, lasttime, oldustime, now, ustime, oldusage;
 
   gettimeofday ( &thistime, 0 );
   now = convertTimeval ( thistime );
+  ustime = ( prusage.pr_utime.tv_sec + (prusage.pr_utime.tv_nsec * 1.0e-9) ) +
+           ( prusage.pr_stime.tv_sec + (prusage.pr_stime.tv_nsec * 1.0e-9) );
 
   struct procHashNode * phn;
   
@@ -269,27 +279,33 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
     // success; pid in hash table
     timediff = now - phn->lasttime;
     if ( timediff < 1.0 ) {  // less than one second since last poll
+      pi->cpuusage = phn->oldusage;
       pi->minfault = phn->oldminf;
       pi->majfault = phn->oldmajf;
       now = phn->lasttime;
     }
     else {
+      pi->cpuusage = ( ( ustime - phn->oldtime ) / timediff ) * 100; 
       pi->minfault = (long unsigned int)((nowminf - phn->oldminf) / timediff);
       pi->majfault = (long unsigned int)((nowmajf - phn->oldmajf) / timediff);
     }
     delete phn;
-	procHash->remove(pid);
+    procHash->remove(pid);
   }
   else {
     // pid not in hash table; first time.  Use age of process as guide
+    if ( pi->age == 0 )
+      pi->cpuusage = 0.0;
+    else
+      pi->cpuusage = ( ustime / (double) pi->age ) * 100;
     pi->minfault = (long unsigned int)(nowminf / (double) pi->age);
     pi->majfault = (long unsigned int)(nowmajf / (double) pi->age);
   }
   // put new vals back into hashtable
   phn = new procHashNode;
   phn->lasttime = now;
-  phn->oldtime  = 0;
-  phn->oldusage = 0;
+  phn->oldtime  = ustime;
+  phn->oldusage = pi->cpuusage;
   phn->oldminf  = nowminf;
   phn->oldmajf  = nowmajf;
   procHash->insert( pid, phn );
@@ -408,7 +424,10 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
   }
   else {
     // pid not in hash table; first time.  Use age of process as guide
-    pi->cpuusage = ( ustime / (double) pi->age ) * 100;
+    if ( pi->age == 0 )
+      pi->cpuusage = 0.0;
+    else
+      pi->cpuusage = ( ustime / (double) pi->age ) * 100;
     pi->minfault = (unsigned long)(nowminf / (double) pi->age);
     pi->majfault = (unsigned long)(nowmajf / (double) pi->age);
   }
@@ -464,7 +483,13 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
   pi->user_time = buf.pst_utime;
   pi->sys_time  = buf.pst_stime;
   pi->age       = secsSinceEpoch() - buf.pst_start;
-  pi->cpuusage  = (float) buf.pst_pctcpu * 100;
+
+  // I'm taking out this assignment here.  The reason is that I don't
+  // know exactly how this value is determined, and it is normalized
+  // across all the cpus.  To be on the conservative side, I'll use the
+  // sampling method used above (Solaris251, Irix, OSF/1) to get this
+  // value.  MEY 9-23-98
+  // pi->cpuusage  = (float) buf.pst_pctcpu * 100;
 
   pi->pid       = buf.pst_pid;
   pi->ppid      = buf.pst_ppid;
@@ -473,10 +498,12 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
      page faults per second */
 
   struct timeval thistime;
-  double timediff, lasttime, now, junk;
+  double timediff, lasttime, oldustime, now, ustime, oldusage;
 
   gettimeofday ( &thistime, 0 );
   now = convertTimeval ( thistime );
+  ustime = buf.pst_utime + buf.pst_stime;  // is this inaccurate or what?!
+  // the above are in SECONDS.
 
   struct procHashNode * phn;  
   
@@ -484,27 +511,33 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
     // success; pid in hash table
     timediff = now - phn->lasttime;
     if ( timediff < 1.0 ) {  // less than one second since last poll
+      pi->cpuusage = phn->oldusage;
       pi->minfault = phn->oldminf;
       pi->majfault = phn->oldmajf;
       now = phn->lasttime;
     }
     else {
+      pi->cpuusage = ( ( ustime - phn->oldtime ) / timediff ) * 100;
       pi->minfault = (long unsigned int)((nowminf - phn->oldminf) / timediff);
       pi->majfault = (long unsigned int)((nowmajf - phn->oldmajf) / timediff);
     }
     delete phn;	
-	procHash->remove(pid);
+    procHash->remove(pid);
   }
   else {
     // pid not in hash table; first time.  Use age of process as guide
+    if ( pi->age == 0 )
+      pi->cpuusage = 0.0;
+    else
+      pi->cpuusage = ( ustime / (double) pi->age ) * 100;
     pi->minfault = (long unsigned int)(nowminf / (double) pi->age);
     pi->majfault = (long unsigned int)(nowmajf / (double) pi->age);
   }
   // put new vals back into hashtable
   phn = new procHashNode;
   phn->lasttime = now;
-  phn->oldtime  = 0;
-  phn->oldusage = 0;
+  phn->oldtime  = ustime;
+  phn->oldusage = pi->cpuusage;
   phn->oldminf  = nowminf;
   phn->oldmajf  = nowmajf;
   procHash->insert( pid, phn );

@@ -98,17 +98,23 @@ struct procInfo {
       a memory page from disk". */
   unsigned long majfault;
 
-  /** percent of recent cpu time used by this process.  For Solaris and Hpux, 
-      this is easily gotten.  I do not know exactly how Solaris and Hpux 
-      determine these values.  For Linux, Irix, OSF1 must be sampled over
-      time by hand.  Here's how it works:  If this is the first reference to
+  /** percent of recent cpu time used by this process.  To maintain consistency
+      between systems, this value must be sampled over time by hand.
+      Here's how it works:  If this is the first reference to
       a pid, that pid's %cpu usage until that time is returned.  If the pid
       has been looked at before, the %cpu since the last reference is returned.
       So, if you look at a process every 10 seconds, you get the %cpu for
-      those previous 10 seconds.
+      those previous 10 seconds.<p>
   
       Note that this number is a PERCENT, i.e. range of 100.0 - 0.0, on
-      a single processor machine. */
+      a single processor machine.<p>
+      
+      On multiple processor machines, it works the same way.  However, say 
+      you have a process with 2 threads.  If both of these threads are cpu 
+      bound (and they each get their own processor), then you'll have a 
+      usage of 200%.  For single threaded tasks, it's the same as above.
+
+  */
   double cpuusage;
 
   /// time (secs) in user mode
