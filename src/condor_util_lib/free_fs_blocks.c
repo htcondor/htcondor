@@ -265,7 +265,7 @@ const char *filename;
 #else
 	struct statfs statfsbuf;
 #endif
-	unsigned long free_kbytes;
+	double free_kbytes;
 	float kbytes_per_block;
 
 #if defined(IRIX331) || defined(IRIX53)
@@ -284,7 +284,7 @@ const char *filename;
 	}
 
 	/* Convert to kbyte blocks: available blks * blksize / 1k bytes. */
-	/* fix the overflow problem. weiru */
+	/* uses double now, shouldn't overflow */
 
 #if defined(Solaris)
 		/* On Solaris, we need to use f_frsize, the "fundamental
@@ -295,16 +295,16 @@ const char *filename;
 	kbytes_per_block = ( (unsigned long)statfsbuf.f_bsize / (float)1024 );
 #endif
 
-	free_kbytes = (unsigned long)statfsbuf.f_bavail * kbytes_per_block; 
-	if(free_kbytes > 0x7fffffff) {
+	free_kbytes = (double)statfsbuf.f_bavail * (double)kbytes_per_block; 
+	if(free_kbytes > INT_MAX) {
 		dprintf(D_ALWAYS, "Too much free disk space, return LOTS_OF_FREE\n");
 		return(LOTS_OF_FREE);
 	}
 
-	dprintf(D_FULLDEBUG, "number of kbytes available for (%s): %d\n", 
+	dprintf(D_FULLDEBUG, "number of kbytes available for (%s): %f\n", 
 			filename, free_kbytes);
 
-	return(free_kbytes);
+	return (int)free_kbytes;
 }
 #endif /* I386 && DYNIX */
 
