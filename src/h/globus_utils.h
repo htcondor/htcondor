@@ -43,6 +43,7 @@ int have_globus_support();
 
 int check_globus_rm_contacts( char* resource );
 
+char *rsl_stringify( char *string );
 
 END_C_DECLS
 

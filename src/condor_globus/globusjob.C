@@ -279,6 +279,7 @@ const char *GlobusJob::errorString()
 
 char *GlobusJob::buildRSL( ClassAd *classad )
 {
+	int transfer;
 	char rsl[15000];
 	char buff[11000];
 	char *iwd;
@@ -297,9 +298,12 @@ char *GlobusJob::buildRSL( ClassAd *classad )
 	//We're assuming all job clasads have a command attribute
 	classad->LookupString( ATTR_JOB_CMD, buff );
 	strcpy( rsl, "&(executable=" );
-	strcat( rsl, gassServerUrl );
-	if ( buff[0] != '/' )
-		strcat( rsl, iwd );
+	if ( !classad->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer ) || transfer ) {
+		strcat( rsl, gassServerUrl );
+		if ( buff[0] != '/' ) {
+			strcat( rsl, iwd );
+		}
+	}
 	strcat( rsl, buff );
 
 	buff[0] = '\0';
@@ -317,38 +321,49 @@ char *GlobusJob::buildRSL( ClassAd *classad )
 	buff[0] = '\0';
 	if ( classad->LookupString(ATTR_JOB_INPUT, buff) && *buff ) {
 		strcat( rsl, ")(stdin=" );
-		strcat( rsl, gassServerUrl );
-		if ( buff[0] != '/' )
-			strcat( rsl, iwd );
+		if ( !classad->LookupBool( ATTR_TRANSFER_INPUT, transfer ) || transfer ) {
+			strcat( rsl, gassServerUrl );
+			if ( buff[0] != '/' ) {
+				strcat( rsl, iwd );
+			}
+		}
 		strcat( rsl, buff );
 	}
 
 	buff[0] = '\0';
 	if ( classad->LookupString(ATTR_JOB_OUTPUT, buff) && *buff ) {
 		strcat( rsl, ")(stdout=" );
-		strcat( rsl, gassServerUrl );
-		if ( buff[0] != '/' )
-			strcat( rsl, iwd );
+		if ( !classad->LookupBool( ATTR_TRANSFER_OUTPUT, transfer ) || transfer ) {
+			strcat( rsl, gassServerUrl );
+			if ( buff[0] != '/' ) {
+				strcat( rsl, iwd );
+			}
+		}
 		strcat( rsl, buff );
 	}
 
 	buff[0] = '\0';
 	if ( classad->LookupString(ATTR_JOB_ERROR, buff) && *buff ) {
 		strcat( rsl, ")(stderr=" );
-		strcat( rsl, gassServerUrl );
-		if ( buff[0] != '/' )
-			strcat( rsl, iwd );
+		if ( !classad->LookupBool( ATTR_TRANSFER_ERROR, transfer ) || transfer ) {
+			strcat( rsl, gassServerUrl );
+			if ( buff[0] != '/' ) {
+				strcat( rsl, iwd );
+			}
+		}
 		strcat( rsl, buff );
 	}
 
 	buff[0] = '\0';
 	if ( classad->LookupString(ATTR_JOB_ENVIRONMENT, buff) && *buff ) {
-		bool print_header = true;
 		Environ env_obj;
 		env_obj.add_string(buff);
 		char **env_vec = env_obj.get_vector();
 		char var[5000];
 		int i = 0;
+		if ( env_vec[0] ) {
+			strcat( rsl, ")(environment=" );
+		}
 		while (env_vec[i]) {
 			char *equals = strchr(env_vec[i],'=');
 			if ( !equals ) {
@@ -356,11 +371,7 @@ char *GlobusJob::buildRSL( ClassAd *classad )
 				continue;
 			}
 			*equals = '\0';
-			if ( print_header ) {
-				strcat( rsl, ")(environment=" );
-				print_header = false;
-			}
-			sprintf(var,"(%s '%s')",env_vec[i],equals+1);
+			sprintf( var, "(%s %s)", env_vec[i], rsl_stringify(equals + 1) );
 			strcat(rsl,var);
 			i++;
 		}

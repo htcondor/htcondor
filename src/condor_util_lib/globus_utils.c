@@ -380,3 +380,27 @@ check_globus_rm_contacts(char* resource)
 
 } /* check_globus_rm_contact() */
 
+char *rsl_stringify( char *string )
+{
+	static char buffer[5000];
+
+	strcpy( buffer, "'" );
+	while ( strlen( string ) > 0 ) {
+		char *macro_start = strstr( string, "$(" );
+		char *macro_stop = macro_start == NULL ? NULL :
+			strstr( macro_start, ")" );
+		if ( macro_start && macro_stop ) {
+			strncat( buffer, string, macro_start - string );
+			strcat( buffer, "'#" );
+			strncat( buffer, macro_start, macro_stop - macro_start + 1 );
+			strcat( buffer, "#'" );
+			string = macro_stop + 1;
+		} else {
+			strcat( buffer, string );
+			string += strlen( string );
+		}
+	}
+	strcat( buffer, "'" );
+
+	return buffer;
+}

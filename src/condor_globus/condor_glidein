@@ -74,44 +74,43 @@ sub do_submit() {
 		$GLOBUSRSL .= "(count=$cpucount)(jobtype=single)";
 	}
 
-	$GLOBUSENV = "(environment=";
-	$GLOBUSENV .= "(CONDOR_CONFIG $basedir/$config)";
-	$GLOBUSENV .= "(_condor_CONDOR_HOST $CONDOR_HOST)";
+	$GLOBUSENV .= "CONDOR_CONFIG=$basedir/$config;";
+	$GLOBUSENV .= "_condor_CONDOR_HOST=$CONDOR_HOST;";
 
 	chomp( $my_hostname = `$G_HOSTNAME` );
-	$GLOBUSENV .= "(_condor_GLIDEIN_HOST $my_hostname)";
+	$GLOBUSENV .= "_condor_GLIDEIN_HOST=$my_hostname;";
 
-	$GLOBUSENV .= "(_condor_LOCAL_DIR $localdir)";
-	$GLOBUSENV .= "(_condor_SBIN $archdir)";
+	$GLOBUSENV .= "_condor_LOCAL_DIR=$localdir;";
+	$GLOBUSENV .= "_condor_SBIN=$archdir;";
 
 		##if submitting to Condor scheduler under Globus, don't want "queue <n>"
 		##starting <n> copies, EACH asking for <n> CPUs, that would give us
 		## <n>**2 CPUs....
 	if ( $CONTACT =~ /condor/ ) {
-		$GLOBUSENV .= "(_condor_NUM_CPUS 1)";
+		$GLOBUSENV .= "_condor_NUM_CPUS=1;";
 	}
 	else {
-		$GLOBUSENV .= "(_condor_NUM_CPUS $cpucount)";
+		$GLOBUSENV .= "_condor_NUM_CPUS=$cpucount;";
 	}
-	$GLOBUSENV .= "(_condor_UID_DOMAIN $UID_DOMAIN )";
-	$GLOBUSENV .= "(_condor_FILESYSTEM_DOMAIN $UID_DOMAIN )";
-	$GLOBUSENV .= "(_condor_MAIL $mail_arch )";
+	$GLOBUSENV .= "_condor_UID_DOMAIN=$UID_DOMAIN;";
+	$GLOBUSENV .= "_condor_FILESYSTEM_DOMAIN=$UID_DOMAIN;";
+	$GLOBUSENV .= "_condor_MAIL=$mail_arch;";
 	if ( $idle_time != 0 ) {
-		$GLOBUSENV .= "(_condor_STARTD_NOCLAIM_SHUTDOWN " . ($idle_time * 60) . ")";
+		$GLOBUSENV .= "_condor_STARTD_NOCLAIM_SHUTDOWN=" . ($idle_time * 60) . ";";
 	}
 	if ( $memory ) {
 		$kmem = $memory * 1024;
-		$GLOBUSENV .= "(_condor_MEMORY $kmem)";
+		$GLOBUSENV .= "_condor_MEMORY=$kmem;";
 	}
 	if ( $anybody ) {
-		$GLOBUSENV .= "(_condor_START  True)";
+		$GLOBUSENV .= "_condor_START=True;";
 	}
 	else {
-		$GLOBUSENV .= "(_condor_START_owner $ENV{'LOGNAME'})";
+		$GLOBUSENV .= "_condor_START_owner=$ENV{'LOGNAME'};";
 	}
 	if ( $vmcount != $cpucount ) {
-		$GLOBUSENV .= "(_condor_VIRTUAL_MACHINE_TYPE_1 1/$vmcount)";
-		$GLOBUSENV .= "(_condor_NUM_VIRTUAL_MACHINES_TYPE_1 $vmcount)";
+		$GLOBUSENV .= "_condor_VIRTUAL_MACHINE_TYPE_1=1/$vmcount;";
+		$GLOBUSENV .= "_condor_NUM_VIRTUAL_MACHINES_TYPE_1=$vmcount;";
 	}
 
 		##Condor has trouble determining ARCH on some
@@ -119,13 +118,13 @@ sub do_submit() {
 		##minimal OS install.  So, set the ARCH here if we
 		##know it.
 	if ( $arch =~ /hppa2/ ) {
-		$GLOBUSENV .= "(_condor_ARCH HPPA2 )";
+		$GLOBUSENV .= "_condor_ARCH=HPPA2;";
 	}
 	elsif ( $arch =~ /hppa1/ ) {
-		$GLOBUSENV .= "(_condor_ARCH HPPA1 )";
+		$GLOBUSENV .= "_condor_ARCH=HPPA1;";
 	}
 
-	$GLOBUSENV .= ")";
+	chop $GLOBUSENV;
 
 		##Escape '$' in submit file entries
 	$archdir =~ s/\$/\$(DOLLAR)/g;
@@ -136,7 +135,6 @@ sub do_submit() {
 #	open( SUBMIT, ">sub3" );
 	open( SUBMIT, "|$submit" );
 	print SUBMIT <<"EOF";
-Getenv = True
 Universe = Globus
 
 Executable = $archdir/condor_master
@@ -144,7 +142,11 @@ Executable = $archdir/condor_master
 #Arguments = -dyn -f -n $SUBDIR
 Arguments = -dyn -f 
 
-GlobusRSL = ${GLOBUSRSL}${GLOBUSENV}
+Environment = ${GLOBUSENV}
+
+Transfer_Executable = False
+
+GlobusRSL = ${GLOBUSRSL}
 
 GlobusScheduler = $CONTACT
 Queue
