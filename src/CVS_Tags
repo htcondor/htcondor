@@ -79,3 +79,9 @@
 5/27/94 DecAlpha_a2
 	Everything from "DecAlpha_a1", plus customization program for creating
 	site specific versions of "script files" from platform specific ones.
+6/7/94 DecAlpha_a3
+	Includes test programs for C, C++, and Fortran, plus a few minor bug
+	fixes which were necessary to get all the test programs running.
+6/9/94 DecAlpha_a4
+	Fixes memory leak in schedd and problem where condor_rm didn't kill
+	remotely running process.
