@@ -949,8 +949,15 @@ read_condor_file( FILE *fp )
 		/* if the user wanted to force the parameter into the classad, do it */
 		if (force == 1) {
 			char	buffer[2048];
-			sprintf (buffer, "%s = %s", name, value);
+			char 	*exValue = expand_macro (value, ProcVars, PROCVARSIZE);
+			if (exValue == NULL) {
+				fprintf (stderr, "Error in expanding %s when processing %s\n", 
+					value, name);
+				exit (1);
+			}
+			sprintf (buffer, "%s = %s", name, exValue);
 			ASSERT (job.InsertOrUpdate (buffer));
+			free (exValue);
 		} 
 
 		lower_case( name );
@@ -1349,7 +1356,7 @@ SaveClassAd (ClassAd &ad)
 }
 
 
-int 
+void 
 InsertJobExpr (char *expr)
 {
 	ExprTree *tree, *lhs, *rhs;
@@ -1370,15 +1377,8 @@ InsertJobExpr (char *expr)
 		EXCEPT ("Error in submit file");
 	}
 	
-	if (!job.Lookup (name)) 
-		job.InsertOrUpdate (expr);
-	else
-	{
-		if (rhs = tree->RArg()) 
-			job.UpdateExpr (name, tree);
-		else
-		{
-			EXCEPT ("Error in expression: %s\n", expr);
-		}
+	if (!job.InsertOrUpdate (expr))
+	{	
+		EXCEPT ("Unable to insert expression: %s\n", expr);
 	}
 }
