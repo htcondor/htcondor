@@ -21,6 +21,7 @@
 char *contactString = NULL;
 char *globusrun = NULL;
 
+extern "C" char * chomp(char*);
 
 /*
   Wait up for one of those nice debuggers which attaches to a running
