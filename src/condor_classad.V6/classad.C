@@ -127,7 +127,7 @@ MakeClassAd( vector< pair< string, ExprTree* > > &attrs )
 	};
 
 	for( itr = attrs.begin( ); itr != attrs.end( ); itr++ ) {
-		if( !Insert( itr->first, itr->second ) ) {
+		if( !newAd->Insert( itr->first, itr->second ) ) {
 			delete newAd;
 			return( NULL );
 		}
