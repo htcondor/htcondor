@@ -96,6 +96,10 @@ Authentication::authenticate( char *hostAddr )
 
 	while (auth_status == CAUTH_NONE ) {
 		int firm = handshake();
+		if ( firm < 0 ) {
+			dprintf(D_FULLDEBUG,"authentication failed due to network errors\n");
+			break;
+		}
 		switch ( firm ) {
 #if defined(GSS_AUTHENTICATION)
 		 case CAUTH_GSS:
@@ -706,20 +710,35 @@ Authentication::handshake()
 
 	if ( mySock->isClient() ) {
 		mySock->encode();
-		mySock->code( canUse );
-		mySock->end_of_message();
+		if ( !mySock->code( canUse ) ||
+			 !mySock->end_of_message() )
+		{
+			return -1;
+		}
 		mySock->decode();
-		mySock->code( shouldUseMethod );
-		mySock->end_of_message();
+		if ( !mySock->code( shouldUseMethod ) ||
+			 !mySock->end_of_message() )
+		{
+			return -1;
+		}
 	}
 	else { //server
 		mySock->decode();
-		mySock->code( clientCanUse );
-		mySock->end_of_message();
+		if ( !mySock->code( clientCanUse ) ||
+			 !mySock->end_of_message() )
+		{
+			return -1;
+		}
+
 		shouldUseMethod = selectAuthenticationType( clientCanUse );
+
+
 		mySock->encode();
-		mySock->code( shouldUseMethod );
-		mySock->end_of_message();
+		if ( !mySock->code( shouldUseMethod ) ||
+			 !mySock->end_of_message() )
+		{
+			return -1;
+		}
 	}
 
 	dprintf(D_FULLDEBUG,
