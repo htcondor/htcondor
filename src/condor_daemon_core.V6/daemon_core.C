@@ -880,6 +880,12 @@ DaemonCore::Cancel_And_Close_All_Sockets(void)
 			Stream* insock = (*sockTable)[0].iosock;
 			Cancel_Socket( insock );		
 			delete insock;
+			if( insock == (Stream*)dc_rsock ) {
+				dc_rsock = NULL;
+			}
+			if( insock == (Stream*)dc_ssock ) {
+				dc_ssock = NULL;
+			}
 			i++;
 		}
 	}
