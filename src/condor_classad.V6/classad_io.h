@@ -122,6 +122,11 @@ class ByteSink {
 		*/
 		bool PutBytes( const void* buf, int buflen );
 
+		/** Pushes the terminal character into the sink.
+		 	@return true if the operation succeeded, false otherwise
+		*/
+		bool Terminate( );
+
 		/** Performs the clean-up protocol for the sink
 		 	@return true if the operation succeeded, false otherwise
 		*/

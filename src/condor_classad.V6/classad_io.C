@@ -145,14 +145,23 @@ PutBytes( const void* buf, int buflen )
 	return( rval && buflen == num );
 }
 
+
+bool ByteSink::
+Terminate( )
+{
+	if( ( ( length > 0 && index < length-1 ) || ( length < 0 ) ) && 
+			_PutBytes( (void*)&terminal, 1 ) ) {
+		index++;
+		return( true );
+	}
+	return( false );
+}
+
+
 bool ByteSink::
 Flush( )
 {
-	if( _PutBytes( (void*)&terminal, 1 ) ) {
-		index++;
-		return( _Flush( ) );
-	}
-	return( false );
+	return( _Flush( ) );
 }
 
 
