@@ -1,20 +1,20 @@
-#include <stdio.h>
-#include <stdlib.h>
+#define _POSIX_SOURCE
+
+#include "condor_common.h"
 #include "condor_fix_string.h"
-#include <rpc/xdr.h>
-#include <unistd.h>
+#include "condor_xdr.h"
 #include "carmi_context.h"
 #include "util_lib_proto.h"
-#include "sched.h"		/* For COLLECTOR_PORT */
-#include "debug.h"
+#include "condor_network.h"		/* For COLLECTOR_PORT */
+#include "condor_debug.h"
+#include "sched.h"
 
+#undef ASSERT
 #define ASSERT(x) x
 
 extern "C" {
-	int xdr_int(XDR *, int *);
-	int xdrrec_endofrecord(XDR *, int);
 	int xdr_mach_rec(XDR *, MACH_REC *);
-	void my_xdr_destroy(XDR *);
+	int my_xdr_destroy(XDR *);
 }
 
 

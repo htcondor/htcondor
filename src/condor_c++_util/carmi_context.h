@@ -1,4 +1,5 @@
 #include <netinet/in.h>
+#include "condor_fix_timeval.h"
 #include "condor_types.h"
 #include "manager.h"
 
