@@ -35,6 +35,26 @@ machines in your pool to the same version.
 efficient.  This is much more obvous when getting the queue from
 \Condor{schedd}'s that have more than 1000 jobs.
 
+\item Added support for support for socket() and pipe() in standard
+jobs.  Both sockets and pipes are created on the executing machine.
+Checkpointing is deferred anytime a socket or pipe is open.
+
+\item Added limited support for select() and poll() in standard jobs.
+Both calls will work on files opened locally.
+
+\item Added limited support for fcntl() and ioctl() in standard jobs.
+Both calls will be performed remotely if the control-number is understood
+and the third argument is an integer.
+
+\item Replaced buffer implementation in standard jobs.
+The new buffer code reads and writes variable sized chunks.
+It will never issue a read to satisfy a write.  Buffering is enabled
+by default.
+
+\item Added extensive feedback on I/O performance in the user's email.
+
+\item Added -io option to \Condor{q} to show I/O statistics.
+
 \end{itemize}
 
 \noindent Bugs Fixed:

@@ -288,8 +288,9 @@ You may modify the order in which Condor will run your jobs with
 is checkpointed and/or migrated to a different machine. 
 
 \item[Job Completion.]When your program completes, Condor will tell you
-(by email, if preferred) the exit status of your program and how much
-CPU and wall clock time the program used. You can remove a job from the
+(by email, if preferred) the exit status of your program and various
+statistics about its performances, including time used and I/O performed.
+You can remove a job from the
 queue prematurely with \Condor{rm}. 
 \index{Condor commands!condor\_rm}
 
@@ -342,109 +343,83 @@ universes for user jobs:
 You state the universe to use for each job in a
 submit description file when the job is submitted. 
 
-The PVM universe is for
-programs that are parallel applications written for PVM.
+\index{universe!standard}
+The standard universe provides migration and reliability, but has some
+restrictions on the programs that can be run. 
+\index{universe!vanilla}
+The vanilla universe provides fewer services, but has very few
+restrictions.
 \index{universe!PVM}
-Section~\ref{sec:PVM} contains information on using Condor with PVM jobs.
-
-The MPI universe is for running jobs compiled with MPICH.  See
-Section~\ref{sec:MPI} for more information.
-
-The standard and vanilla universes provide support for all other jobs.
-In general, the standard universe provides more services than
-the vanilla universe. 
-The standard universe also imposes some restrictions on
-your job.
-The vanilla universe has very few restrictions, so
-it can be used when either the standard universe's additional services are not
-desired,  or when the job cannot abide by the restrictions
-of the standard universe.
-The Globus universe allows users to submit Globus jobs (see 
-\Url{http://www.globus.org}) through the Condor interface.
+The PVM universe is for programs written to the Parallel Virtual
+Machine interface.  See section~\ref{sec:PVM} for more about PVM and Condor.
+\index{universe!MPI}
+The MPI universe is for programs written to the MPICH interface.
+See section~\ref{sec:MPI} for more about MPI and Condor.
+\index{universe!Globus}
+The Globus universe allows users to submit Globus jobs through the
+Condor interface.  See \Url{http://www.globus.org} for more about Globus.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:standard-universe}Standard Universe}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{universe!standard}
-The standard universe is the default universe used for jobs.
-In the standard universe, Condor automatically checkpoints jobs.
-\index{checkpoint}
-A checkpoint is a snapshot of a job's current state.
-At those times when a Condor job must stop running,
-perhaps because the owner of the machine returned, Condor
-will checkpoint the job and then migrate it to another machine.
-The checkpoint allows Condor to continue the job
-\emph{from where it left off}. 
+In the standard universe, Condor provides \Term{checkpointing} and
+\Term{remote system calls}.  These features make a job more reliable
+and allow it uniform access to resources from anywhere in the pool.
+To prepare a program as a standard universe job, it must be re-linked
+with \Condor{compile}.  Most programs can be prepared as a standard
+universe job, but there are a few restrictions.
 
-Standard universe jobs use Condor's \Term{remote system call}
+\index{checkpoint}
+\index{checkpoint image}
+Condor checkpoints a job at regular intervals.
+A \Term{checkpoint image} is like a snapshot of the current
+state of a job.  If a job must be migrated from one machine to another,
+Condor makes a checkpoint image, copies the image to the new machine,
+and restarts the job \emph{right where it left off}.  If a machine should
+crash or fail while it is running a job, Condor can restart the job on
+a new machine from the most recent checkpoint image.  In this way, jobs
+can run for months or years even in the face of occasional computer failures.
+
 \index{remote system call}
-mechanism, which enables a program to access data files from
-any machine in the Condor pool.
-This is allowed regardless of whether that machine is
-sharing a file system via NFS (or AFS) or if the user has an account
-there. 
-Condor can access files from your local hard drive, or in /tmp. 
-When your Condor
-job is started on a remote machine in the Condor pool,
-a corresponding \Condor{shadow}
-process
+\index{shadow}
+Remote system calls make a job perceive that it is executing on its home
+machine, even though it may execute on many different machines over its
+lifetime.  When your job runs on a remote machine, a second process, called
+a \Condor{shadow} runs on the machine where you submitted the job.
 \index{condor\_shadow}
 \index{agents!condor\_shadow}
 \index{Condor daemon!condor\_shadow}
 \index{remote system call!condor\_shadow}
-is started up on the machine where you submitted the job.
-As your job runs on the remote machine,
-Condor traps operating system calls (such as calls to open, read, and
-write files). 
-Condor forwards the calls over the network to the machine where
-the job was submitted using the UNIX remote procedure call mechanism.
-The \Condor{shadow} on the machine where the job was
-submitted executes the system
-call and sends the result back to the remote machine over the network.
-In this way, the job appears to be
-running on the submit machine, despite actually
-running on various machines in the pool.
+Whenever your job attempts a system call, the \Condor{shadow} performs
+it instead and sends the results back.  So, if your job attempts to
+open a file that is stored only on the submitting machine,
+the \Condor{shadow} will find it and send the data to the machine where
+your job happens to be running.
 
-Transparent checkpoint and migration and remote system calls are highly
-desirable services. To use these services, standard universe jobs must be
-re-linked with the Condor libraries. This is a simple process,
-but results in
-a few restrictions on what the program can do:
-\begin{enumerate}
-	\item On some platforms, specifically HPUX and Digital Unix
-(OSF/1), shared libraries are not supported. On these
-platforms applications must be statically linked (Note: shared library
-checkpoint support is available on IRIX, Solaris, and LINUX). 
-	\item Only single process jobs are supported. The fork(2), exec(2),
-system(3) and similar calls are not implemented.
-	\item Interprocess communication may be done through
-sockets \index{UNIX!sockets} but not through pipes, \index{UNIX!pipes}
-semaphores,  \index{UNIX!semaphores} or shared memory
-\index{UNIX!shared memory}.
-	\item Signals and signal handlers are supported, but Condor reserves the 
-SIGUSR2 and SIGTSTP signals for its own use, and it does not permit their use by user code.
-	\item All file operations must be idempotent. Read-only and
-write-only file accesses work correctly, but programs which both
-read and write to the same file may not work correctly.
-	\item Each Condor job that has been checkpointed has an associated 
-\Term{checkpoint file} which is approximately the size of the virtual
-address space that the process uses.
-Disk space must be available to store the checkpoint file on the 
-machine where the job was submitted. 
-Alternatively, a Condor \Term{checkpoint server} can be set up to utilize
-a specific machine for checkpoint files.
-\end{enumerate}
+To convert your program into a standard universe job, you must use
+\Condor{compile} to re-link it with the Condor libraries.  Simply
+put \Condor{compile} in front of your usual link command.
+You do not need to modify the program's source code,
+but you do need access to its un-linked object files.  A commercial
+program that is packaged as a single executable file cannot be
+converted into a standard universe job.
 
-Although re-linking a program for use in Condor's standard universe is
-very easy to do and typically requires no changes to a program's
-source code, sometimes users do not have
-access to a program's source or object code.
-Without access to
-either the source or object code, re-linking for the standard universe is
-impossible. This situation typically occurs with commercial applications
-that only provide a binary executable, and only rarely provide
-source or object code.
+For example, if you normally link your job by executing:
+\begin{verbatim}
+% cc main.o tools.o -o program
+\end{verbatim}
+
+Then you can re-link your job for Condor with:
+\begin{verbatim}
+% condor_compile cc main.o tools.o -o program
+\end{verbatim}
+
+There are a few restrictions on standard universe jobs:
+
+\input{user-man/limitations.tex}
+
 
 %%%%%%%%%%%%
 \subsubsection{Vanilla Universe}
@@ -482,27 +457,6 @@ from Condor. Each job queued in the job submission file is translated
 into a Globus RSL string and used as the arguments to the \Prog{globusrun}
 program. The manual page for \Condor{submit} has detailed descriptions for
 the Globus-related attributes.
-
-%%%%%%%%%%%%%%
-\subsection{Relinking for the Standard Universe}
-%%%%%%%%%%%%%%
-
-\index{Condor!re-linking for}
-Re-linking a program with the Condor libraries (\File{condor\_rt0.o},
-\File{libcondorsyscall.a} and \File{libcondorc++support.a}) is a
-simple, one-step process with Condor \VersionNotice.
-To re-link a program, run \Condor{compile}. 
-See the command reference page for \Condor{compile} on
-page~\pageref{man-condor-compile} for details.
-
-Note that once your program is re-linked, you can still run your program
-outside of Condor. When running a program directly from the shell prompt
-the the following message is printed to remind you that this 
-binary is linked with the Condor libraries:
-\begin{verbatim}
-  WARNING: This binary has been linked for Condor.
-  WARNING: Setting up to run outside of Condor...
-\end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Submitting a Job to Condor}

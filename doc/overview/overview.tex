@@ -234,57 +234,8 @@ Condor's adaptation to nearly any desired policy.
 	\item[Limitations on Jobs which can Checkpointed] Although Condor can schedule and
 run any type of process, Condor does have some limitations on jobs that it can
 transparently checkpoint and migrate:
-\begin{enumerate}
-	\item On some platforms, specifically HPUX, LINUX, 
-\index{HPUX!limitations}
-and Digital Unix
-(OSF/1),
-\index{OSF/1!limitations}
-shared libraries are not supported; therefore on these
-platforms applications must be statically linked (Note: shared library
-checkpoint support is available on IRIX and Solaris). 
-	\item Only single process jobs are supported. The fork(2),
-\index{UNIX system call!fork(2)}
-exec(2),
-\index{UNIX system call!exec(2)}
-system(3)
-\index{UNIX system call!system(3)}
-and similar calls are not implemented.
-	\item Signals and signal handlers 
-\index{UNIX!signals}
-are supported, but Condor reserves the 
-SIGUSR2 and SIGTSTP signals and does not permit their use by user code.
-Timers (set with setitimer(2)
-\index{UNIX system call!setitimer(2)}
-and
-alarm(2))
-\index{UNIX system call!alarm(2)}
-will not be saved in the checkpoint.
-	\item Interprocess communication may be done through
-sockets \index{UNIX!sockets} but not through pipes, \index{UNIX!pipes}
-semaphores,  \index{UNIX!semaphores} or shared memory
-\index{UNIX!shared memory}.
-	\item Kernel-level threads are not supported.  However, user-level
-threads are supported.
-\index{UNIX!threads}
-	\item The mmap(2)
-\index{UNIX system call!mmap(2)}
-system call is not supported.
-	\item All file operations must be idempotent.
-Read-only and write-only file accesses work correctly,
-but programs which both read and write to the same file may not
-work correctly.
-	\item File locks
-\index{UNIX!file locks}
-are not saved in the checkpoint.  All locks
-are released when the process exits.
-	\item Each Condor job that has been checkpointed has an associated 
-checkpoint file.
-\index{file, size of}
-This file's size is approximately the amount of virtual memory used by the 
-process. Disk space must be available to store the checkpoint file on the 
-submitting machines (or on an optional checkpoint server).
-\end{enumerate}
+
+\input{user-man/limitations.tex}
 
 	Note: these limitations \emph{only} apply to jobs which Condor
 has been asked to transparently checkpoint.  If job checkpointing is not

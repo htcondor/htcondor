@@ -1,0 +1,67 @@
+
+\begin{enumerate}
+
+\index{UNIX!fork}
+\index{UNIX!exec}
+\index{UNIX!system}
+\item Multi-process jobs are not allowed.  This includes system calls such as
+\Syscall{fork}, \Syscall{exec}, and \Syscall{system}.
+
+\index{UNIX!pipe}
+\index{UNIX!semaphore}
+\index{UNIX!shared memory}
+\item Interprocess communication is not allowed.  This includes pipes, semaphores, and shared memory.
+
+\index{UNIX!socket}
+\index{network}
+\item Network communication must be brief.  A job \emph{may} make network
+connections using system calls such as \Syscall{socket}, but a network
+connection left open for long periods will delay checkpointing and migration.
+
+\index{signal}
+\index{signal!SIGUSR2}
+\index{signal!SIGTSTP}
+\item Sending or receiving the SIGUSR2 or SIGTSTP signals is not allowed.
+Condor reserves these signals for its own use.  Sending or receiving all
+other signals \emph{is} allowed.
+
+\index{UNIX!alarm}
+\index{UNIX!timer}
+\index{UNIX!sleep}
+\item Alarms, timers, and sleeping are not allowed.  This includes system
+calls such as \Syscall{alarm}, \Syscall{getitimer}, and \Syscall{sleep}.
+
+\index{thread!kernel-level}
+\index{thread!user-level}
+\item Multiple kernel-level threads are not allowed.  However,
+multiple user-level threads \emph{are} allowed.
+
+\index{file!memory-mapped}
+\index{UNIX!mmap}
+\item Memory mapped files are not allowed.  This includes system calls such
+as \Syscall{mmap} and \Syscall{munmap}.
+
+\index{file!locking}
+\index{UNIX!flock}
+\index{UNIX!lockf}
+\item File locks are allowed, but not retained between checkpoints.
+
+\index{file!read only}
+\index{file!write only}
+\item All files must be opened read-only or write-only.  A file opened
+for both reading and writing will cause trouble if a job must be rolled back
+to an old checkpoint image.  For compatibility reasons, a file opened
+for both reading and writing will result in a warning but not an error.
+
+\item A fair amount of disk space must be available on the submitting machine
+for storing a job's checkpoint images.  A checkpoint image is approximately
+equal to the virtual memory consumed by a job while it runs.  If disk space
+is short, a special \Term{checkpoint server} can be designated for storing
+all the checkpoint images for a pool.
+
+\index{linking!dynamic}
+\index{linking!static}
+\item On Digital Unix (OSF/1), HP-UX, and Linux, your job must be
+statically linked. Dynamic linking is allowed on all other platforms.
+
+\end{enumerate}
