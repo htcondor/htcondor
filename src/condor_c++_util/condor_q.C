@@ -4,6 +4,7 @@
 #include "condor_attributes.h"
 #include "condor_adtypes.h"
 #include "condor_qmgr.h"
+#include "format_time.h"
 
 // specify keyword lists; N.B.  The order should follow from the category
 // enumerations in the .h file
@@ -186,51 +187,6 @@ int JobSort(ClassAd *job1, ClassAd *job2, void *data)
 	else return 0;
 }
 
-/* queue printing routines moved here from proc_obj.C, which is being
-   taken out of cplus_lib.a.  -Jim B. */
-
-/*
-  Format a date expressed in "UNIX time" into "month/day hour:minute".
-*/
-static char *
-format_date( time_t date )
-{
-	static char	buf[ 12 ];
-	struct tm	*tm;
-
-	tm = localtime( &date );
-	sprintf( buf, "%2d/%-2d %02d:%02d",
-		(tm->tm_mon)+1, tm->tm_mday, tm->tm_hour, tm->tm_min
-	);
-	return buf;
-}
-
-/*
-  Format a time value which is encoded as seconds since the UNIX
-  "epoch".  We return a string in the format dd+hh:mm:ss, indicating
-  days, hours, minutes, and seconds.  The string is in static data
-  space, and will be overwritten by the next call to this function.
-*/
-static char	*
-format_time( int tot_secs )
-{
-	int		days;
-	int		hours;
-	int		min;
-	int		secs;
-	static char	answer[25];
-
-	days = tot_secs / DAY;
-	tot_secs %= DAY;
-	hours = tot_secs / HOUR;
-	tot_secs %= HOUR;
-	min = tot_secs / MINUTE;
-	secs = tot_secs % MINUTE;
-
-	(void)sprintf( answer, "%3d+%02d:%02d:%02d", days, hours, min, secs );
-	return answer;
-}
-
 /*
   Encode a status from a PROC structure as a single letter suited for
   printing.
@@ -249,6 +205,10 @@ encode_status( int status )
 		return 'C';
 	  case REMOVED:
 		return 'X';
+	  case HELD:
+		return 'H';
+	  case SUBMISSION_ERR:
+		return 'E';
 	  default:
 		return ' ';
 	}
