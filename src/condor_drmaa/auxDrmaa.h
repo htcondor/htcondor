@@ -41,10 +41,18 @@ BEGIN_C_DECLS
 #define SUCCESS 0
 #define FAILURE 1
 #define MIN_JOBID_LEN 10   
-#define DRMAA_DIR "drmaa/"
-#define SUBMIT_FILE_DIR "submitFiles/"
+
+#ifdef WIN32
+    #define DRMAA_DIR "drmaa\\"
+    #define SUBMIT_FILE_DIR "submitFiles\\"
+    #define LOG_FILE_DIR "logs\\"
+#else
+    #define DRMAA_DIR "drmaa/"
+    #define SUBMIT_FILE_DIR "submitFiles/"
+    #define LOG_FILE_DIR "logs/"
+#endif
+
 #define SUBMIT_FILE_EXTN ".sub"
-#define LOG_FILE_DIR "logs/"
 #define LOG_FILE_EXTN ".log"
 #define MAX_LOG_FILE_LINE_LEN 1000
 #define MAX_FILE_NAME_LEN 1024
@@ -381,7 +389,7 @@ int rel_locks(const int drmaa_err_code);
 
 /** Determines the library's base directory, allocates the required memory
     for buf, and copies the full path name there.  A successful result contains
-    a trailing slash.
+    a trailing forward slash or backslash, depanding upon the system.
     @return TRUE (on success) or FALSE otherwise
 */
 int get_base_dir(char** buf);

@@ -72,14 +72,14 @@ const char* SIGNAL_NAMES[] = {
 
 #ifdef WIN32
 static CRITICAL_SECTION is_init_lock;
-static is_init_lock_initialized = FALSE;
+static int is_init_lock_initialized = 0;
 #else
-#if HAS_PTHREADS
-static pthread_mutex_t is_init_lock = PTHREAD_MUTEX_INITIALIZER;
-// #else  // no lib init lock
+    #if HAS_PTHREADS
+        static pthread_mutex_t is_init_lock = PTHREAD_MUTEX_INITIALIZER;
+    // #else  // no lib init lock
+    #endif
 #endif
-#endif
-static int is_init = FALSE;
+static int is_init = 0;
 
 /* ------------------- private helper routines ------------------- */
 int is_lib_init();

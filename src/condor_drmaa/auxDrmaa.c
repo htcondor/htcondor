@@ -1067,21 +1067,37 @@ get_base_dir(char** buf)
     if (!dir)
 	dir = getenv("SPOOL");
     if (!dir){
+#ifdef WIN32
+	dir = strdup("c:\\Temp\\");
+#else
 	dir = strdup("/tmp/");
+#endif
 	if (stat(dir, &s) != 0 || !S_ISDIR(s.st_mode)){
 	    free(dir);
+#ifdef WIN32
+	    dir = strdup("c:\\");
+#else
 	    dir = strdup("/");
+#endif
 	}	    
     }
 
+#ifdef WIN32
+    if (dir[strlen(dir)-1) == '\\')
+#else
     if (dir[strlen(dir)-1] == '/'){
+#endif
 	*buf = (char*)malloc(strlen(dir) + strlen(DRMAA_DIR) + 1);
 	strcpy(*buf, dir);
     }
     else {
 	*buf = (char*)malloc(strlen(dir) + strlen(DRMAA_DIR) + 2);
 	strcpy(*buf, dir);
+#ifdef WIN32
+	strcat(*buf, "\\");
+#else
 	strcat(*buf, "/");
+#endif
     }
     strcat(*buf, DRMAA_DIR);    
     free(dir);

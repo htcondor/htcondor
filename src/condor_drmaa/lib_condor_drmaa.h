@@ -24,7 +24,9 @@
 #ifndef __DRMAA_H
 #define __DRMAA_H
 
-BEGIN_C_DECLS
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* ------------------- Constants ------------------- */
 /*
@@ -511,6 +513,8 @@ int drmaa_get_DRM_system(char *drm_system, size_t drm_system_len,
 int drmaa_get_DRMAA_implementation(char *impl, size_t impl_len,
 				   char *error_diagnosis, size_t error_diag_len);
 
-END_C_DECLS
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __DRMAA_H */
