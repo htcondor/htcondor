@@ -412,7 +412,7 @@ sub parse_command_line() {
 
 
 sub find_owner(;$) {
-    my $param = shift(@_);
+    my $owner = shift(@_);
 
     my $uid;
     my $uname;
@@ -421,15 +421,15 @@ sub find_owner(;$) {
 	# Non-root
 	$uid=$<;
     } 
-    elsif ($param) {
+    elsif ($owner) {
 	# We're root, see who should own the Condor files/directories
-	if ($param =~ m/^\d+$/) {
+	if ($owner =~ m/^\d+$/) {
 	    # owner as uid
 	    # fall through
-	    $uid=$param;
+	    $uid=$owner;
 	} else {
 	    #owner as uname
-	    $uname=$param;
+	    $uname=$owner;
 	}
     }
     else {
