@@ -30,7 +30,7 @@
 #	include "globus_common.h"
 #endif
 
-#if defined(GSS_AUTHENTICATION)
+#if defined(GSS_AUTHENTICATION) || defined(GLOBUS_SUPPORT)
 #   include "sslutils.h"
 #endif
 
@@ -63,7 +63,7 @@ x509_error_string()
 int
 x509_proxy_seconds_until_expire( char *proxy_file )
 {
-#if !defined(GSS_AUTHENTICATION)
+#if !defined(GSS_AUTHENTICATION) && !defined(GLOBUS_SUPPORT)
 	return -1;
 #else
 
@@ -135,7 +135,7 @@ x509_proxy_seconds_until_expire( char *proxy_file )
 int
 check_x509_proxy( char *proxy_file )
 {
-#if !defined(GSS_AUTHENTICATION)
+#if !defined(GSS_AUTHENTICATION) && !defined(GLOBUS_SUPPORT)
 
 	_globus_error_message = "This version of Condor doesn't support X509 authentication!" ;
 	return 1;
