@@ -419,7 +419,12 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 			//writes to it, so we are once again in danger of over-counting
 			//memory usage.  When in doubt, zero it out!
 
-			if (proc_flags & 64) { //PF_FORKNOEXEC
+			//One exception to this rule is made for processes inherited
+			//by init (ppid=1).  These are clearly not threads but are
+			//background processes (such as condor_master) that fork
+			//and exit from the parent branch.
+
+			if ((proc_flags & 64) && pi->ppid != 1) { //64 == PF_FORKNOEXEC
 				//zero out memory usage
 				vsize = 0;
 				rss = 0;
