@@ -1,3 +1,8 @@
+7/7/00 V6_1-NewAds-3-branch-merge-1
+	This is the NewAds-3-branch, at the time it was about to be
+	merged into the 6.5 trunk.  This should be the end of the road
+	for the NewAds branches, since now, the trunk will be NewAds. 
+
 7/6/00 V6_3-branch
 	The branch for all of Condor version 6.3.X (and, probably,
 	6.4.X).  Changes made on the V6_2-branch should always be
