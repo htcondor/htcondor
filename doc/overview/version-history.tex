@@ -31,6 +31,21 @@ machines in your pool to the same version.
 
 \begin{itemize}
 
+\item In the job submit description file passed to \Condor{submit}, 
+a new style of macro (with two dollar-signs) can reference attributes
+from the machine ClassAd.  This new style macro can be used in the
+job's \MacroNI{Executable}, \MacroNI{Arguments}, or \MacroNI{Environment}
+settings in the submit description file.  For example, if you have both
+Linux and Solaris machines in your pool, the following submit description
+file will run either foo.INTEL.LINUX or foo.SUN4u.SOLARIS27 as appropiate,
+and will pass in the amount of memory available on that machine on the
+command line:
+\begin{verbatim}
+	executable = foo.$$(Arch).$$(Opsys)
+	arguments = $$(Memory)
+	queue
+\end{verbatim}
+
 \item The \DCPerm{CONFIG} security access level now controls the
 modification of daemon configurations using \Condor{config\_val}.  For
 more information about security access levels, see
@@ -60,14 +75,52 @@ to flock to.
 Submitting users must trust a central manager they report to, so this
 doesn't impact security in any way.
 
+\item Some static limits relating to the number of jobs which can be 
+simultaneously started by the \Condor{schedd} has been removed.
+
+\item The default Condor config file(s) which are installed by
+the installation program have been re-organized for greater 
+clarity and simplicity.  
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
+\item In the STANDARD Universe, jobs submitted to Condor could segfault
+if they opened multiple files with the same name.  Usually this bug
+was exposed when users would submit jobs without specifying a file
+for either stdout or stderr; in this case, both would default to 
+\File{/dev/null}, and this could trigger the problem.
+
+\item The Linux 2.2.14 kernel, which is used by default with RedHat 6.2,
+has a serious bug can cause the machine to lock up when 
+the same socket is used for repeated connection attempts.   Thus, 
+previous versions of Condor could cause the 2.2.14 kernel to hang
+(lots of other applications could do this as well).  The Condor Team
+recommends that you upgrade your kernel to 2.2.16 or later.  However,
+in v6.1.15 of Condor, a patch was added to the Condor networking
+layer so that Condor would not trigger this Linux kernel bug.
+
+\item If no email address was specified when the job was submitted
+with \Condor{submit}, completion email was being sent to 
+user@submit-machine-hostname.  This is not the correct behavior.  Now 
+email goes by default to user@uid-domain, where uid-domain is
+defined by the \MacroNI{UID\_DOMAIN} setting in the config file.
+
 \item The \Condor{master} can now correctly shutdown and restart the
 \Condor{checkpoint\_server}.
+
+\item Email sent when a SCHEDULER Universe job compeltes now has the
+correct From: header.
+
+\item In the STANDARD universe, jobs which call sigsuspend() will 
+now receive the correct return value.
+
+\item Abnormal error conditions, such as the hard disk on the submit
+machine filling up, are much less likely to result in a job disappearing
+from the queue.
 
 \item The \Condor{checkpoint\_server} now correctly reconfigures when
 a \Condor{reconfig} command is received by the \Condor{master}.
@@ -121,7 +174,25 @@ not yet been synced to disk.
 
 \begin{itemize}
 
-\item None.
+\item On IRIX 6.2, C++ programs compiled with GNU C++ (g++) 2.7.2 and
+linked with the Condor libraries (using \Condor{compile}) will not
+execute the constructors for any global objects.
+There is a work-around for this bug, so if this is a problem for you,
+please send email to \Email{condor-admin@cs.wisc.edu}.
+
+\item In HP-UX 10.20, \Condor{compile} will not work correctly with HP's
+C++ compiler. 
+The jobs might link, but they will produce incorrect output, or die with
+a signal such as SIGSEGV during restart after a checkpoint/vacate cycle.
+However, the GNU C/C++ and the HP C compilers work just fine.
+
+\item The \Syscall{getrusage} call does not work always as expected in
+STANDARD Universe jobs.  
+If your program uses \Syscall{getrusage}, it 
+could decrease incorrectly by a second
+across a checkpoint and restart.  In addition, the time it takes
+Condor to restart from a checkpoint is included in the usage times
+reported by \Syscall{getrusage}, and it probably should not be.
 
 \end{itemize}
 
