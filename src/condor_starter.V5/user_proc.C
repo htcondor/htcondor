@@ -45,6 +45,10 @@
 #include "proto.h"
 #include "condor_sys.h"
 
+#if defined(AIX32)
+#	include <sys/id.h>
+#endif
+
 typedef unsigned short u_short;
 typedef unsigned char u_char;
 typedef unsigned long u_long;
@@ -83,6 +87,7 @@ extern "C" {
 	void _updateckpt( char *, char *, char * );
 	int free_fs_blocks(char *filename);
 }
+void open_std_file( const char *name, int mode, int needed_fd );
 
 /*
   With bytestream checkpointing, there is no updating of checkpoints - the
@@ -761,9 +766,20 @@ UserProc::execute()
 			// will change real, effective, and saved uid's.  Thus the
 			// child process will have only it's submitting uid, and cannot
 			// switch back to root or some other uid.
-		set_root_euid();
-		setgid( gid );
-		setuid( uid );
+		if( set_root_euid() < 0 ) {
+			EXCEPT( "set_root_euid()" );
+		}
+#if defined(AIX32)
+		if( setuidx( ID_LOGIN, uid ) < 0 ) {
+			EXCEPT( "setuidx(ID_LOGIN,%d)", uid );
+		}
+#endif
+		if( setgid( gid ) < 0 ) {
+			EXCEPT( "setgid(%d)", gid );
+		}
+		if( setuid( uid ) < 0 ) {
+			EXCEPT( "setuid(%d)", uid );
+		}
 
 		switch( job_class ) {
 		  
@@ -791,20 +807,11 @@ UserProc::execute()
 			(void)close( RSC_SOCK );
 			close_unused_file_descriptors();	// shouldn't need this
 
-			if( (fd = open(in,O_RDONLY)) < 0 ) {
-				EXCEPT( "open(%s)", in );
-			}
-			dup2( fd, 0 );
+			open_std_file( in, O_RDONLY, 0 );
+			open_std_file( out, O_WRONLY, 1 );
+			open_std_file( err, O_WRONLY, 2 );
 
-			if( (fd = open(out,O_WRONLY)) < 0 ) {
-				EXCEPT( "open(%s)", out );
-			}
-			dup2( fd, 1 );
-
-			if( (fd = open(err,O_WRONLY)) < 0 ) {
-				EXCEPT( "open(%s)", err );
-			}
-			dup2( fd, 2 );
+			(void)close( CLIENT_LOG );
 
 			break;
 		}
@@ -1365,4 +1372,18 @@ extern "C"
 {
 int
 pre_open( int, int, int ) { return 0; }
+}
+
+void
+open_std_file( const char *name, int mode, int needed_fd )
+{
+	int		fd;
+
+	if( (fd = open(name,mode)) < 0 ) {
+		EXCEPT( "open(%s)", name );
+	}
+	if( fd != needed_fd ) {
+		dup2( fd, needed_fd );
+		close( fd );
+	}
 }
