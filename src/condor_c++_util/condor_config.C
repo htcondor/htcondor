@@ -74,11 +74,8 @@ char* find_file();
 void init_tilde();
 void fill_attributes(ClassAd*);
 
-
 // External variables
-extern BUCKET	*ConfigTab[];
 extern int	ConfigLineNo;
-
 
 // Global variables
 BUCKET	*ConfigTab[TABLESIZE];
@@ -441,7 +438,7 @@ fill_attributes(ClassAd* classAd)
 void
 init_config()
 {
-	memset( (char *)ConfigTab, 0, sizeof(ConfigTab) ); 
+	memset( (char *)ConfigTab, 0, (TABLESIZE * sizeof(BUCKET*)) ); 
 }
 
 
