@@ -1,6 +1,6 @@
 all_target(cplus_lib.a liburl.a libcondorapi.a)
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) IsCondorG
 CFLAGS = $(STD_C_FLAGS)
 LIB = $(STD_LIBS)
 
