@@ -169,8 +169,6 @@ main( int argc, char *argv[] )
 	char	queue_name[_POSIX_PATH_MAX];
 	char	**ptr;
 	char	*cmd_file = NULL, *queue_file = NULL;
-	struct passwd	*pwd;
-	char*			config_location;
 	
 	setbuf( stdout, NULL );
 
@@ -193,30 +191,8 @@ main( int argc, char *argv[] )
 	MyName = argv[0];
 
 	/* Weiru */
-	if((pwd = getpwnam("condor")) == NULL)
-	{
-		EXCEPT( "condor not in passwd file" );
-	}
-	if(read_config(pwd->pw_dir, MASTER_CONFIG, NULL, ConfigTab, TABLESIZE,
-				   EXPAND_LAZY) < 0)
-	{
-		config(MyName, NULL);
-	}
-	else
-	{
-   		// Check to see if this is the configuration server host. If it is,
-   		// start configuration server immediately.
-   		config_location = param("CONFIG_FILE_LOCATION");
-   		if(!config_location)
-   		{
-   			config_location = pwd->pw_dir;
-   		}
-		if(config_from_server(config_location, MyName, NULL) < 0)
-	    {
-			config(MyName, NULL);
-		}
-	}
-
+	Config(MyName);
+	
 	init_params();
 
 	DebugFlags |= D_EXPR;
