@@ -90,6 +90,7 @@ V6_SRC		-a \
 			src/condor_master.V6 \
 			src/condor_negotiator.V6 \
 			src/condor_prio \
+			src/condor_procapi \
 			src/condor_q.V6 \
 			src/condor_release \
 			src/condor_rm.V6 \
