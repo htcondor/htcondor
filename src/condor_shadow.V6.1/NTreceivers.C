@@ -117,13 +117,15 @@ do_REMOTE_syscall()
 	{
 		int status=0;
 		int reason=0;
+		ClassAd ad;
 
 		assert( syscall_sock->code(status) );
 		assert( syscall_sock->code(reason) );
+		assert( ad.get(*syscall_sock) );
 		assert( syscall_sock->end_of_message() );
 
 		errno = 0;
-		rval = pseudo_job_exit(status, reason);
+		rval = pseudo_job_exit(status, reason, &ad);
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
