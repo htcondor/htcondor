@@ -34,7 +34,6 @@
 #include "match_prefix.h"
 #include "my_hostname.h"
 #include "get_daemon_addr.h"
-#include "get_full_hostname.h"
 #include "MyString.h"
 #include "extArray.h"
 #include "ad_printmask.h"

@@ -48,7 +48,6 @@
 #include "condor_string.h"
 #include "string_list.h"
 #include "condor_attributes.h"
-#include "get_full_hostname.h"
 #include "proc.h"
 #include "exit.h"
 #include "dc_startd.h"
