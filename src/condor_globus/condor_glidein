@@ -1,10 +1,11 @@
 #!/usr/bin/env perl
 
+use POSIX ":sys_wait_h";
+
 	##these are the files that need to be staged on the remote machine
 $config = "condor_config.glidein";
 @DAEMONS = ( "condor_master", "condor_startd", "condor_starter",
 			 "condor_starter.std", "condor_pvmd", "condor_starter.pvm" );
-
 
 if ( ( $error = parse_command_line() )
 		|| ( $error = gather_info() ) )
@@ -12,6 +13,18 @@ if ( ( $error = parse_command_line() )
 	print STDERR "$error\n";
 	exit( 1 );
 }
+
+if ( $gen_config ) {
+	my $glidein_condor_config = "glidein_condor_config$suffix";
+	gen_main_config($glidein_condor_config);
+	if ( ! -f $glidein_condor_config ) {
+	    print STDERR "Failed to create $glidein_condor_config.\n";
+	    exit( 1 );
+	}
+	print "Generated $glidein_condor_config\n";
+	exit( 0 );
+}
+
 
 foreach $CONTACT ( @CONTACTS ) {
 	if ( host_info() ) {
@@ -25,8 +38,8 @@ foreach $CONTACT ( @CONTACTS ) {
 		}
 	}
 	if ( !$setuponly ) {
-		if ( do_submit() ) {
-			print STDERR "Error: condor_submit failed.\n";
+		if ( $error = do_submit() ) {
+			print STDERR "Error: $error\n";
 			exit( 3 );
 		}
 	}
@@ -142,9 +155,17 @@ sub do_submit() {
 	$GLOBUSENV =~ s/\$/\$(DOLLAR)/g;
 
 		##generate condor_submit description file
+	my $glidein_run_submit = "glidein_run.submit$suffix";
 	if ( $gen_submit ) {
-		open( SUBMIT, ">submit.glidein" );
+		print "Saving glidein submit file: $glidein_run_submit\n";
+		open( SUBMIT, ">$glidein_run_submit" );
 	} else {
+		my $my_grid_proxy_err = check_grid_proxy();
+		if( $my_grid_proxy_err ) {
+			return $my_grid_proxy_err;
+		}
+
+		print "Submitting Glidein job...\n";
 		open( SUBMIT, "|$submit" );
 	}
 	print SUBMIT <<"EOF";
@@ -167,20 +188,36 @@ EOF
 	close( SUBMIT );
 	if ( $gen_submit ) {
 		return 0;
-	} else {
-		return ($?);
+	} elsif( $? ) {
+		return ("condor_submit failed.");
 	}
 }
 
+sub check_grid_proxy {
+    my $g_info;
+    chomp( $g_info = `which grid-proxy-info 2>/dev/null` );
+    if ( ! -x $g_info ) {
+	return( "cannot find grid-proxy-info" );
+    }
+    if ( silently( "$g_info -exists" ) ) {
+	return( "$NAME needs a valid grid proxy. (Re)run grid-proxy-init." );
+    }
+    if ( silently( "$g_info -exists -hours 4" ) ) {
+	return( "Your grid proxy expires in less than four hours.\n"
+		. "Rerun grid-proxy-init." );
+    }
+}
 
 sub gather_info() {
 		##ensure the needed condor programs are avail...
 	chomp( $submit = `which condor_submit` );
+	chomp( $condor_wait = `which condor_wait` );
 	chomp( $CONFIGVAL = `which condor_config_val` );
 	chomp( $STATUS = `which condor_status` );
-	if ( ! ( -x $CONFIGVAL && -x $STATUS && -x $submit ) ) {
+	if ( ! ( -x $CONFIGVAL && -x $STATUS && -x $submit && -x $condor_wait) ) {
 		return( "cannot find programs \"condor_config_val\" or "
-				. "\"condor_status\" or \"condor_submit\" needed for setup" );
+			. "\"condor_status\" or \"condor_submit\" or "
+			. "\"condor_wait\" needed for setup" );
 	}
 
 	if ( !defined( $condor_admin ) ) {
@@ -188,6 +225,8 @@ sub gather_info() {
 	}
 
 	chomp( $CONDOR_HOST = `$CONFIGVAL CONDOR_HOST` );
+	chomp( $NEGOTIATOR_HOST = `$CONFIGVAL NEGOTIATOR_HOST` );
+	chomp( $COLLECTOR_HOST = `$CONFIGVAL COLLECTOR_HOST` );
 
 	#set CONDOR_VERSION
 	$TMP = `$STATUS -master -format "%s" CondorVersion $CONDOR_HOST`;
@@ -206,14 +245,27 @@ sub gather_info() {
 	}
 
 	#Find out where the glidein tarball server is
-	chomp( $SERVER_NAME = `$CONFIGVAL GLIDEIN_SERVER_NAME` );
-	if ( $SERVER_NAME eq "" ) {
-	    return( "Error, GLIDEIN_SERVER_NAME needs to be defined in the Condor config file" );
+	chomp( $SERVER_URL = `$CONFIGVAL GLIDEIN_SERVER_URLS 2>/dev/null` );
+
+	if( $SERVER_URL eq "" ) {
+	    #Try reading the old deprecated config info
+	    chomp( $SERVER_NAME = `$CONFIGVAL GLIDEIN_SERVER_NAME 2>/dev/null` );
+	    chomp( $SERVER_DIR = `$CONFIGVAL GLIDEIN_SERVER_DIR 2>/dev/null` );
+	    if ( $SERVER_NAME eq "" && $SERVER_DIR eq "" ) {
+		#No info available, so tell them about the new way to config
+		return( "Error, GLIDEIN_SERVER_URLS must be defined in the condor_config config file" );
+	    }
+	    elsif ( $SERVER_NAME eq "" ) {
+		return( "Error, GLIDEIN_SERVER_NAME needs to be defined in the Condor config file" );
+	    }
+	    elsif ( $SERVER_DIR eq "" ) {
+		return( "Error, GLIDEIN_SERVER_DIR needs to be defined in the Condor config file" );
+	    }
+	    $SERVER_URL = "gsiftp://$SERVER_NAME$SERVER_DIR";
 	}
-	chomp( $SERVER_DIR = `$CONFIGVAL GLIDEIN_SERVER_DIR` );
-	if ( $SERVER_DIR eq "" ) {
-	    return( "Error, GLIDEIN_SERVER_DIR needs to be defined in the Condor config file" );
-	}
+
+	#Put into canonical comma separated form if there are multiple URLs.
+	$SERVER_URL = join(',',split(/[, ]+/,$SERVER_URL));
 
 		##if archdir was specified on command line
 	if ( defined( $ARCHDIR ) ) {
@@ -221,39 +273,17 @@ sub gather_info() {
 	}
 
 		## globus programs
-	chomp( $G_RUN = `which globusrun 2>/dev/null` );
-	if ( ! -x $G_RUN ) {
-	    return( "Error, cannot find globusrun" );
-	}
-	chomp( $G_INFO = `which grid-proxy-info 2>/dev/null` );
-	if ( ! -x $G_INFO ) {
-	    return( "Error, cannot find grid-proxy-info" );
-	}
-	chomp( $G_SEARCH = `which grid-info-search 2>/dev/null` );
-	if ( ! -x $G_SEARCH ) {
-	    return( "Error, cannot find grid-info-search" );
-	}
 	chomp( $G_HOSTNAME = `which globus-hostname 2>/dev/null` );
 	if ( ! -x $G_HOSTNAME ) {
-	    return( "Error, cannot find globus-hostname" );
-	}
-
-	if ( silently( "$G_INFO -exists" ) ) {
-		return( "$NAME needs a valid grid proxy. (Re)run grid-proxy-init." );
-	}
-	if ( silently( "$G_INFO -exists -hours 4" ) ) {
-		return( "Your grid proxy expires in less than four hours.\n"
-			. "Rerun grid-proxy-init." );
+	    chomp( $G_HOSTNAME = `which hostname 2>/dev/null` );
+	    if ( ! -x $G_HOSTNAME ) {
+		return( "Error, cannot find globus-hostname or hostname" );
+	    }
 	}
 
 		##also, ensure GLOBUS_LOCATION and HOME are set in ENV
 	if ( !defined( $ENV{'HOME'} ) ) {
 		return( "$NAME: $HOME not in your ENV" );
-	}
-	if ( !defined( $ENV{'GLOBUS_LOCATION'} ) )
-	{
-		return( "$NAME: GLOBUS_LOCATION "
-			. "must be defined in your ENV" );
 	}
 
 	return( 0 );
@@ -288,7 +318,8 @@ print STDERR "	Valid options:\n"
 . "   -admin <email address>  Who to email with problems [default=<you>]\n"
 . "   -genconfig              Generate condor_config.glidein\n"
 . "   -useconfig <file>       Use the specifed config file\n"
-. "   -gensubmit              Generate submit.glidein\n"
+. "   -gensubmit              Generate submit files; do not submit\n"
+. "   -suffix X               Suffix to append to submit file names.\n"
 . "   -edg                    Use EDG MDS schema to query GRIS\n"
 . "   -help                   Print this usage, see documentation for info\n";
 }
@@ -301,6 +332,7 @@ sub parse_command_line() {
 	$vmcount = 0;
 	$basedir = '$(HOME)/Condor_glidein';
 	##don't set default archdir because it is built below from pool version, arch
+	$suffix = ".$$";
 	$localdir = "";
 	$use_config = "";
 	chomp( $username = `whoami` );
@@ -327,12 +359,19 @@ sub parse_command_line() {
 		"useconfig=s" => \$use_config,
 		"gensubmit" => \$gen_submit,
 		"edg" => \$edg_mds_schema,
+		"setup_jobmanager=s" => \$setup_jobmanager,
+		"setup_queue=s" => \$setup_queue,
+		"arch=s" => \$setup_arch,
+		"suffix=s" => \$suffix,
 		"help" => \$help );
 	if ( !$RESULT ) {
 		usage();
 		exit( 1 );
 	}
 
+	if ( $suffix ne "" && !($suffix =~ /\..*/) ) {
+	    $suffix = "." . $suffix;
+	}
 	if ( $vmcount == 0 ) {
 		$vmcount = $cpucount;
 	} elsif ( $cpucount % $vmcount ) {
@@ -378,13 +417,8 @@ sub parse_command_line() {
 	chomp( @CONTACTS );
 
 	if ( $#ARGV == -1 ) {
-	    print "No resource specified\n";
+	    print "No target resource specified.  Use -help for usage information.\n";
 	    exit( -1 );
-	}
-
-	if ( $gen_config ) {
-		gen_main_config($config);
-		exit( 0 );
 	}
 
 	return( 0 );
@@ -411,7 +445,9 @@ sub silently {
 sub gen_main_config {
 	my $filename = shift(@_);
 	##generate the config files
-	open( CONDOR_CONFIG, ">$filename");
+	open( CONDOR_CONFIG, ">$filename")
+	    or die "Can't write to $filename: $!";
+
 	print CONDOR_CONFIG <<"EOF";
 
 	LOG = \$(LOCAL_DIR)/log
@@ -435,8 +471,8 @@ sub gen_main_config {
 
 	USE_NFS = False
 	USE_CKPT_SERVER = False
-	NEGOTIATOR_HOST	= \$(CONDOR_HOST)
-	COLLECTOR_HOST = \$(CONDOR_HOST)
+	NEGOTIATOR_HOST	= $NEGOTIATOR_HOST
+	COLLECTOR_HOST = $COLLECTOR_HOST
 
 	LOCK = \$(LOG)
 	STARTD_LOG = \$(LOG)/StartdLog
@@ -458,7 +494,180 @@ sub gen_main_config {
 
 	PREEN_INTERVAL = 0
 EOF
-	close CONDOR_CONFIG;
+	close CONDOR_CONFIG
+	    or die "Error writing to $filename: $!";
+}
+
+sub replace_jobmanager
+{
+    my $contact = shift();
+    my $jobmanager = shift();
+
+    if ( $jobmanager ne "" ) {
+	$jobmanager = "/" . $jobmanager
+    }
+
+    if ( grep( /jobmanager/, $contact ) ) {
+	$contact =~ s|/[^:]*|$jobmanager|;
+    } elsif ( grep( /:/, $contact ) < 2 ) {
+	$contact .= "$jobmanager";
+    } else {
+	$contact =~ s|(:[^:]*)|\1$jobmanager|;
+    }
+    return $contact;
+}
+
+sub grid_info_search {
+	my $host = shift();
+	my $port = shift();
+	my $query_string = shift();
+	my $grid_info_search;
+	chomp( $grid_info_search = `which grid-info-search 2>/dev/null` );
+	if ( ! -x $grid_info_search ) {
+	    print STDERR "Warning: cannot find grid-info-search\n";
+	    return;
+	}
+	open( QUERY, "$grid_info_search -x -h $host -p $port -b $query_string|");
+	my @result = <QUERY>;
+	if ( !close( QUERY ) ) {
+		print STDERR "Warning: failed to query GRIS on $host:$port\n";
+		return;
+	}
+	return @result;
+}
+
+sub query_edg_mds_schema()
+{
+    #The remote machine is an EDG Compute Element. Use the EDG MDS
+    #schema to query the GRIS server there. We're looking for the
+    #architecture of the Compute Element.
+    my @QUERY = grid_info_search($GLOBUSHOST,2135,"'mds-vo-name=local,o=grid' '(objectclass=MdsComputer)' Mds-Cpu-vendor Mds-Computer-platform Mds-Os-name Mds-Os-release" );
+    if ( !@QUERY ) {
+	return;
+    }
+
+    #Currently, the EDG MDS schema doesn't advertise anything that lets
+    #us find a jobmanager service & queue that'll run immediately for
+    #the setup phase, so we'll just try "jobmanager-fork".
+    if( $CONTACT_SETUP_QUEUE eq "" || $CONTACT_SETUP eq "") {
+	$CONTACT_SETUP_QUEUE = "unknown";
+	$CONTACT_SETUP = replace_jobmanager($CONTACT,"jobmanager-fork");
+    }
+
+    #Search the query results for the architecture of the resource the
+    #user wants to glidein to. In EDG land, there's only one
+    #architecture for a given Compute Element (a front-end machine
+    #running Globus and all it's associated back-end nodes).
+    @SEARCH1 = grep( /^Mds-Computer-platform:/, @QUERY );
+    @SEARCH2 = grep( /^Mds-Cpu-vendor:/, @QUERY );
+    @SEARCH3 = grep( /^Mds-Os-name:/, @QUERY );
+    @SEARCH4 = grep( /^Mds-Os-release:/, @QUERY );
+    my $cputype = "";
+    my $manufacturer = "";
+    my $osname = "";
+    my $osversion = "";
+    if ( $#SEARCH1 >= 0 ) {
+	chomp( $cputype = $SEARCH1[0] );
+	$cputype =~ s/Mds-Computer-platform: //;
+	chomp( $manufacturer = $SEARCH2[0] );
+	$manufacturer =~ s/Mds-Cpu-vendor: //;
+	chomp( $osname = $SEARCH3[0] );
+	$osname =~ s/Mds-Os-name: //;
+	chomp( $osversion = $SEARCH4[0] );
+	$osversion =~ s/Mds-Os-release: //;
+	if ( $osname =~ /[Ll]inux/ ) {
+	    $osversion =~ s/(\d+\.\d+)\..*/\1/;
+	}
+	if ( $manufacturer =~ /GenuineIntel/ ) {
+	    $manufacturer = "pc";
+	}
+	if ( $manufacturer =~ /AuthenticAMD/ ) {
+	    $manufacturer = "pc";
+	}
+    }
+
+    if($arch eq "") {
+	if ( $cputype ne "" && $manufacturer ne "" && $osname ne "" &&
+	 $osversion ne "" ) {
+	    $arch = "${CONDOR_VERSION}-${cputype}-${manufacturer}-${osname}-${osversion}";
+	}
+    }
+}
+
+sub query_globus_mds_schema()
+{
+
+    #Query the GRIS server on the globus machine using the Globus MDS
+    #schema. We're looking for two
+    #things: which jobmanager/queue will run jobs immediately (for
+    #setup), and the architecture of the jobmanager the user wants to
+    #run on (not necessarily the same as the machine we're talking to).
+    my @QUERY = grid_info_search($GLOBUSHOST,2135,"'mds-vo-name=local,o=grid' '(|(objectclass=MdsServiceGram)(objectclass=MdsGramJobQueue))' Mds-Software-deployment Mds-Gram-Job-Queue-dispatchtype Mds-Computer-isa Mds-Computer-manufacturer Mds-Os-name Mds-Os-release");
+    if ( !@QUERY ) {
+	return;
+    }
+
+    #Search the query results for an "Immediate" jobmanager/queue
+    @SEARCH1 = grep( /^dn: Mds-Job-Queue-name=/, @QUERY );
+    @SEARCH2 = grep( /^Mds-Gram-Job-Queue-dispatchtype:/, @QUERY );
+    my $queue = "";
+    my $service = "";
+    for ( $i = 0; $i <= $#SEARCH1; $i++ ) {
+	if ( grep( /Immediate/, $SEARCH2[$i] ) > 0 ) {
+	    chomp( $queue = $SEARCH1[$i] );
+	    $queue =~ s/^dn: Mds-Job-Queue-name=([^,]*),.*$/\1/;
+	    chomp( $service = $SEARCH1[$i] );
+	    $service =~ s/^.*Mds-Software-deployment=([^,]*),.*$/\1/;
+	    last;
+	}
+    }
+
+    if( $CONTACT_SETUP_QUEUE eq "" || $CONTACT_SETUP eq "") {
+	$CONTACT_SETUP_QUEUE = $queue;
+	$CONTACT_SETUP = replace_jobmanager($CONTACT,$CONTACT_SETUP);
+    }
+
+    #Search the query results for the architecture of the jobmanager
+    #the user wants to glidein to.
+    my $jobmanager;
+    if ( grep( /jobmanager/, $CONTACT ) ) {
+	$jobmanager = $CONTACT;
+	$jobmanager =~ s|^[^/]*/([^:]*).*|\1|;
+    } else {
+	$jobmanager = "jobmanager";
+    }
+    @SEARCH1 = grep( /^Mds-Software-deployment:/, @QUERY );
+    @SEARCH2 = grep( /^Mds-Computer-isa:/, @QUERY );
+    @SEARCH3 = grep( /^Mds-Computer-manufacturer:/, @QUERY );
+    @SEARCH4 = grep( /^Mds-Os-name:/, @QUERY );
+    @SEARCH5 = grep( /^Mds-Os-release:/, @QUERY );
+    my $cputype = "";
+    my $manufacturer = "";
+    my $osname = "";
+    my $osversion = "";
+    for ( $i = 0; $i <= $#SEARCH1; $i++ ) {
+	if ( grep( /$jobmanager/, $SEARCH1[$i] ) > 0 ) {
+	    chomp( $cputype = $SEARCH2[$i] );
+	    $cputype =~ s/Mds-Computer-isa: //;
+	    chomp( $manufacturer = $SEARCH3[$i] );
+	    $manufacturer =~ s/Mds-Computer-manufacturer: //;
+	    chomp( $osname = $SEARCH4[$i] );
+	    $osname =~ s/Mds-Os-name: //;
+	    chomp( $osversion = $SEARCH5[$i] );
+	    $osversion =~ s/Mds-Os-release: //;
+	    if ( $osname =~ /[Ll]inux/ ) {
+		$osversion =~ s/(\d+\.\d+)\..*/\1/;
+	    }
+	    last;
+	}
+    }
+
+    if($arch eq "") {
+	if ( $cputype ne "" && $manufacturer ne "" && $osname ne "" &&
+	       $osversion ne "" ) {
+	    $arch = "${CONDOR_VERSION}-${cputype}-${manufacturer}-${osname}-${osversion}";
+	}
+    }
 }
 
 sub host_info() 
@@ -476,163 +685,48 @@ sub host_info()
 	$UID_DOMAIN = $GLOBUSHOST;
 	$UID_DOMAIN =~ s/[^\.]*\.//;
 
-	if ( $edg_mds_schema ) {
+	$CONTACT_SETUP_QUEUE = "";
+	$CONTACT_SETUP = "";
+	$arch = "";
 
-		#The remote machine is an EDG Compute Element. Use the EDG MDS
-		#schema to query the GRIS server there. We're looking for the
-		#architecture of the Compute Element.
-		open( QUERY, "$G_SEARCH -x -h $GLOBUSHOST -p 2135 -b 'mds-vo-name=local,o=grid' '(objectclass=MdsComputer)' Mds-Cpu-vendor Mds-Computer-platform Mds-Os-name Mds-Os-release|" );
-		@QUERY = <QUERY>;
-		if ( !close( QUERY ) ) {
-			print STDERR "Error querying GRIS on $GLOBUSHOST\n";
-			return( 1 );
-		}
-
-		#Currently, the EDG MDS schema doesn't advertise anything that lets
-		#us find a jobmanager service & queue that'll run immediately for
-		#the setup phase, so we'll just try "jobmanager-fork".
+	#Explicit settings from command-line override GRIS.
+	if( $setup_queue ne "" ) {
+	    $CONTACT_SETUP_QUEUE = $setup_queue;
+	}
+	if( $setup_jobmanager ne "" ) {
+	    $CONTACT_SETUP = replace_jobmanager($CONTACT,$setup_jobmanager);
+	    if($CONTACT_SETUP_QUEUE eq "") {
 		$CONTACT_SETUP_QUEUE = "unknown";
-		$CONTACT_SETUP = $CONTACT;
-		if ( grep( /jobmanager/, $CONTACT_SETUP ) ) {
-			$CONTACT_SETUP =~ s|/[^:]*|/jobmanager-fork|;
-		} elsif ( grep( /:/, $CONTACT_SETUP ) < 2 ) {
-			$CONTACT_SETUP .= "/jobmanager-fork";
-		} else {
-			$CONTACT_SETUP =~ s|(:[^:]*)|\1/jobmanager-fork|;
-		}
-
-		#Search the query results for the architecture of the resource the
-		#user wants to glidein to. In EDG land, there's only one
-		#architecture for a given Compute Element (a front-end machine
-		#running Globus and all it's associated back-end nodes).
-		@SEARCH1 = grep( /^Mds-Computer-platform:/, @QUERY );
-		@SEARCH2 = grep( /^Mds-Cpu-vendor:/, @QUERY );
-		@SEARCH3 = grep( /^Mds-Os-name:/, @QUERY );
-		@SEARCH4 = grep( /^Mds-Os-release:/, @QUERY );
-		my $cputype = "";
-		my $manufacturer = "";
-		my $osname = "";
-		my $osversion = "";
-		if ( $#SEARCH1 >= 0 ) {
-			chomp( $cputype = $SEARCH1[0] );
-			$cputype =~ s/Mds-Computer-platform: //;
-			chomp( $manufacturer = $SEARCH2[0] );
-			$manufacturer =~ s/Mds-Cpu-vendor: //;
-			chomp( $osname = $SEARCH3[0] );
-			$osname =~ s/Mds-Os-name: //;
-			chomp( $osversion = $SEARCH4[0] );
-			$osversion =~ s/Mds-Os-release: //;
-			if ( $osname =~ /[Ll]inux/ ) {
-				$osversion =~ s/(\d+\.\d+)\..*/\1/;
-			}
-			if ( $manufacturer =~ /GenuineIntel/ ) {
-				$manufacturer = "pc";
-			}
-			if ( $manufacturer =~ /AuthenticAMD/ ) {
-				$manufacturer = "pc";
-			}
-		}
-
-		if ( $cputype eq "" || $manufacturer eq "" || $osname eq "" ||
-			 $osversion eq "" ) {
-			print STDERR "Can't find architecture info on $GLOBUSHOST\n";
-			return( 1 );
-		}
-
-		$arch = "${CONDOR_VERSION}-${cputype}-${manufacturer}-${osname}-${osversion}";
-
-	} else {
-
-		#Query the GRIS server on the globus machine using the Globus MDS
-		#schema. We're looking for two
-		#things: which jobmanager/queue will run jobs immediately (for
-		#setup), and the architecture of the jobmanager the user wants to
-		#run on (not necessarily the same as the machine we're talking to).
-		open( QUERY, "$G_SEARCH -x -h $GLOBUSHOST -p 2135 -b 'mds-vo-name=local,o=grid' '(|(objectclass=MdsServiceGram)(objectclass=MdsGramJobQueue))' Mds-Software-deployment Mds-Gram-Job-Queue-dispatchtype Mds-Computer-isa Mds-Computer-manufacturer Mds-Os-name Mds-Os-release|" );
-		@QUERY = <QUERY>;
-		if ( !close( QUERY ) ) {
-			print STDERR "Error querying GRIS on $GLOBUSHOST\n";
-			return( 1 );
-		}
-
-		#Search the query results for an "Immediate" jobmanager/queue
-		@SEARCH1 = grep( /^dn: Mds-Job-Queue-name=/, @QUERY );
-		@SEARCH2 = grep( /^Mds-Gram-Job-Queue-dispatchtype:/, @QUERY );
-		my $queue = "";
-		my $service = "";
-		for ( $i = 0; $i <= $#SEARCH1; $i++ ) {
-			if ( grep( /Immediate/, $SEARCH2[$i] ) > 0 ) {
-				chomp( $queue = $SEARCH1[$i] );
-				$queue =~ s/^dn: Mds-Job-Queue-name=([^,]*),.*$/\1/;
-				chomp( $service = $SEARCH1[$i] );
-				$service =~ s/^.*Mds-Software-deployment=([^,]*),.*$/\1/;
-				last;
-			}
-		}
-
-		if ( $queue eq "" || $service eq "" ) {
-			print STDERR "Can't find immediate jobmanager on $GLOBUSHOST\n";
-			return( 1 );
-		}
-
-		$CONTACT_SETUP_QUEUE = $queue;
-		$CONTACT_SETUP = $CONTACT;
-		if ( grep( /jobmanager/, $CONTACT_SETUP ) ) {
-			$CONTACT_SETUP =~ s|/[^:]*|/$service|;
-		} elsif ( grep( /:/, $CONTACT_SETUP ) < 2 ) {
-			$CONTACT_SETUP .= "/$service";
-		} else {
-			$CONTACT_SETUP =~ s|(:[^:]*)|\1/$service|;
-		}
-
-		#Search the query results for the architecture of the jobmanager
-		#the user wants to glidein to.
-		my $jobmanager;
-		if ( grep( /jobmanager/, $CONTACT ) ) {
-			$jobmanager = $CONTACT;
-			$jobmanager =~ s|^[^/]*/([^:]*).*|\1|;
-		} else {
-			$jobmanager = "jobmanager";
-		}
-		@SEARCH1 = grep( /^Mds-Software-deployment:/, @QUERY );
-		@SEARCH2 = grep( /^Mds-Computer-isa:/, @QUERY );
-		@SEARCH3 = grep( /^Mds-Computer-manufacturer:/, @QUERY );
-		@SEARCH4 = grep( /^Mds-Os-name:/, @QUERY );
-		@SEARCH5 = grep( /^Mds-Os-release:/, @QUERY );
-		my $cputype = "";
-		my $manufacturer = "";
-		my $osname = "";
-		my $osversion = "";
-		for ( $i = 0; $i <= $#SEARCH1; $i++ ) {
-			if ( grep( /$jobmanager/, $SEARCH1[$i] ) > 0 ) {
-				chomp( $cputype = $SEARCH2[$i] );
-				$cputype =~ s/Mds-Computer-isa: //;
-				chomp( $manufacturer = $SEARCH3[$i] );
-				$manufacturer =~ s/Mds-Computer-manufacturer: //;
-				chomp( $osname = $SEARCH4[$i] );
-				$osname =~ s/Mds-Os-name: //;
-				chomp( $osversion = $SEARCH5[$i] );
-				$osversion =~ s/Mds-Os-release: //;
-				if ( $osname =~ /[Ll]inux/ ) {
-					$osversion =~ s/(\d+\.\d+)\..*/\1/;
-				}
-				last;
-			}
-		}
-
-		if ( $cputype eq "" || $manufacturer eq "" || $osname eq "" ||
-			 $osversion eq "" ) {
-			print STDERR "Can't find jobmanager info on $GLOBUSHOST\n";
-			return( 1 );
-		}
-
-		$arch = "${CONDOR_VERSION}-${cputype}-${manufacturer}-${osname}-${osversion}";
-
+	    }
+	}
+	if( $setup_arch ne "" ) {
+	    $arch = $setup_arch;
 	}
 
-	if ( $? != 0 || $arch eq "" ) {
-		print STDERR "Error contacting resource $CONTACT_SETUP\n";
+	if( $arch eq "" || \
+	    $CONTACT_SETUP eq "" || \
+	    $CONTACT_SETUP_QUEUE eq "")
+	{
+	    if ( $edg_mds_schema ) {
+		query_edg_mds_schema();
+	    } else {
+		query_globus_mds_schema();
+	    }
+	}
+
+	if( !$runonly ) {
+	    if( $CONTACT_SETUP eq "" || $CONTACT_SETUP_QUEUE eq "" ) {
+		print STDERR "Cannot automatically determine immediate jobmanager for setup on\n$GLOBUSHOST.\n";
+		print STDERR "Try inserting something like -setup_jobmanager=jobmanager-fork\non your condor_glidein command-line.\n";
 		return( 1 );
+	    }
+	}
+
+	if( $arch eq "" ) {
+	    print STDERR "Can't determine architecture of $GLOBUSHOST\n";
+	    print STDERR "Try inserting something like -arch=${CONDOR_VERSION}-i686-pc-Linux-2.4\non your condor_glidein command-line.\n";
+	    print STDERR "For a full list of supported architectures, visit\nhttp://www.cs.wisc.edu/condor/glidein/binaries\n";
+	    return( 1 );
 	}
 
 	if ( !defined( $ARCHDIR ) || $ARCHDIR eq "" ) {
@@ -642,40 +736,77 @@ sub host_info()
 	return( 0 );
 }
 
+sub get_more_output {
+    my $filename = shift();
+    my $position = shift();
+    my $output = "";
+
+    if(!open( GET_MORE_OUTPUT_FD, "<", $filename )) {
+	return $output;
+    }
+    seek GET_MORE_OUTPUT_FD,${$position},0;
+    my $n = read(GET_MORE_OUTPUT_FD,$output,1000000);
+    ${$position} += $n;
+    close(GET_MORE_OUTPUT_FD);
+    return $output;
+}
+
+sub condor_submit {
+    my $submit_file = shift();
+    my $job_id;
+
+    $condor_submit_pid = open(CONDOR_SUBMIT_FH, "$submit $submit_file|");
+    while(($line = readline(CONDOR_SUBMIT_FH))) {
+	if($line =~ /.*submitted to cluster ([0-9]+).*/) {
+	    $line =~ s/.*submitted to cluster ([0-9]+).*/\1/;
+	    $job_id = $line;
+	}
+    }
+    close(CONDOR_SUBMIT_FH);
+    return $job_id;
+}
+
 sub do_remote_setup() {
 	my $DAEMONS = join( ' ', @DAEMONS );
-
-	my $remotedir = "/tmp";
-
-	# Why are we changing directories at all???
-	my $oldcwd = `pwd`;
-	chomp($oldcwd);
+	my $glidein_condor_config;
+	my $glidein_condor_config_is_temporary = 0;
 
 	if ( $use_config ne "" ) {
-		`cp $use_config $remotedir/$config`;
-		chdir $remotedir;
+		$glidein_condor_config = $use_config;
 	} else {
-		chdir $remotedir;
-		gen_main_config($config);
+		$glidein_condor_config = "glidein_condor_config$suffix";
+		$glidein_condor_config_is_temporary = 1;
+		gen_main_config($glidein_condor_config);
 	}
 
-	if ( ! -f $config ) {
-		return( "Couldn't create Condor config file" );
+	if ( ! -f $glidein_condor_config ) {
+		return( "accessing Condor config file: $glidein_condor_config" );
 	}
 
-	$REM_SETUP = "/tmp/remote_setup.glidein.$$";
-	open( REM_SETUP, ">$REM_SETUP" );
+	my $glidein_remote_setup = "glidein_remote_setup$suffix";
+	open( REM_SETUP, ">$glidein_remote_setup" );
 	print REM_SETUP<<"EOF";
 
 	BASEDIR=\$1
 	ARCHDIR=\$2
 	ARCH=\$3
 	LOCALDIR=\$4
-	GASS_SERVER=\$5
-	TARBALL_SERVER=\$6
-	FORCE=\$7
+	TARBALL_SERVERS=\$5
+	FORCE=\$6
 
 	CONFIG=\$BASEDIR/$config
+
+	if [ "$GLOBUS_SH_TAR" = "" ]; then
+		#We must not have gotten executed via globus-sh-exec.
+		#(In the old days, that is how this script worked.)
+		#Set up the utility variables that we need.
+		GLOBUS_SH_TAR=tar;
+		GLOBUS_SH_GZIP=gzip;
+		GLOBUS_SH_RM=rm;
+		GLOBUS_SH_GREP=grep;
+		GLOBUS_SH_SED=sed;
+		export LD_LIBRARY_PATH=\$GLOBUS_LOCATION/lib:\$LD_LIBRARY_PATH
+	fi
 
 	for newdir in \$BASEDIR \$ARCHDIR \$LOCALDIR; do
 		if [ ! -d \$newdir ];
@@ -687,9 +818,9 @@ sub do_remote_setup() {
 		fi
 	done
 
-	if [ \$FORCE -ne 0 -o ! -f \$CONFIG ];
-		then \$GLOBUS_LOCATION/bin/globus-url-copy \$GASS_SERVER/$config file:\$BASEDIR/$config 
-	fi
+	#Read condor_config from stdin
+	cat > \$CONFIG.\$\$;
+	mv -f \$CONFIG.\$\$ \$CONFIG;
 
 	cd \$ARCHDIR
 	GETFILES=0
@@ -699,33 +830,154 @@ sub do_remote_setup() {
 		fi
 	done
 	if [ \$FORCE -ne 0 -o \$GETFILES -ne 0 ]; then
-		\$GLOBUS_LOCATION/bin/globus-url-copy \$TARBALL_SERVER/\$ARCH.tar.gz file:\$ARCHDIR/\$ARCH.tar.gz;
-		if [ \$? != 0 -o ! -f \$ARCHDIR/\$ARCH.tar.gz ]; then
-			echo "Error: unable to retrieve \$TARBALL_SERVER/\$ARCH.tar.gz"
+		#Convert from comma separated URL list to space separated.
+		TARBALL_SERVER_LIST=`echo \$TARBALL_SERVERS | \$GLOBUS_SH_SED 's/,/ /g'`;
+		if [ "\$?" != "0" ]; then
+			echo "Error: failed to process GLIDEIN_SERVER_URLS information.";
 			exit 1;
 		fi
+		DOWNLOAD_SUCCESS=0
+		GLOBUS_URL_COPY=\$GLOBUS_LOCATION/bin/globus-url-copy
+		for TARBALL_SERVER in \$TARBALL_SERVER_LIST; do
+			TARBALL_URL=\$TARBALL_SERVER/\$ARCH.tar.gz
 
-		\$GLOBUS_SH_GZIP -d \$ARCH.tar.gz;
-		\$GLOBUS_SH_TAR xf \$ARCH.tar;
-		\$GLOBUS_SH_RM -f \$ARCH.tar;
+			\$GLOBUS_URL_COPY \$TARBALL_URL file:\$ARCHDIR/\$ARCH.tar.gz;
+			rc=\$?;
+			if [ \$rc != 0 -o ! -f \$ARCHDIR/\$ARCH.tar.gz ] &&
+			   echo \$TARBALL_URL | \$GLOBUS_SH_GREP -q -E '(^http)|(^ftp)'; then
+				echo "globus-url-copy failed; try wget"
+				wget -q -O \$ARCHDIR/\$ARCH.tar.gz \$TARBALL_URL
+				rc=\$?;
+			fi
+
+			if [ \$rc != 0 -o ! -f \$ARCHDIR/\$ARCH.tar.gz ]; then
+				echo "Failed to retrieve \$TARBALL_URL";
+			else
+				if ! \$GLOBUS_SH_GZIP -d \$ARCHDIR/\$ARCH.tar.gz; then
+					echo "Failed to gunzip glidein tarball."
+					exit 1;
+				elif ! \$GLOBUS_SH_TAR xf \$ARCHDIR/\$ARCH.tar; then
+					echo "Failed to untar glidein tarball."
+					exit 1;
+				fi
+				\$GLOBUS_SH_RM -f \$ARCHDIR/\$ARCH.tar;
+				DOWNLOAD_SUCCESS=1
+				echo
+				echo "Downloaded \$TARBALL_URL to \$ARCHDIR."
+				echo
+				break;
+			fi
+		done
+		if [ "\$DOWNLOAD_SUCCESS" != "1" ]; then
+			echo "Glidein tarball not successfully downloaded from \$TARBALL_SERVERS"
+			exit 1
+		fi
 	fi
-
+	#NOTE: the following text is expected to verify success.
+	echo "Installation successfully completed.";
 	exit 0;
 
 EOF
 	close( REM_SETUP );
-	$SYSTEM = "$G_RUN -s -r '$CONTACT_SETUP' '&(executable=\$(GLOBUS_LOCATION)/bin/globus-sh-exec)(arguments=\$(GLOBUSRUN_GASS_URL)$REM_SETUP $basedir $archdir $arch $localdir \$(GLOBUSRUN_GASS_URL)$remotedir gsiftp://$SERVER_NAME$SERVER_DIR $force_setup)(queue=$CONTACT_SETUP_QUEUE)'";
 
-	$err = system( $SYSTEM );
 
-	unlink( "$remotedir/$config" );
-	unlink( $REM_SETUP );
+		##Escape '$' in submit file entries
+	my $basedir_arg = $basedir;
+	my $archdir_arg = $archdir;
+	my $localdir_arg = $localdir;
+	$basedir_arg =~ s/\$/\$(DOLLAR)/g;
+	$archdir_arg =~ s/\$/\$(DOLLAR)/g;
+	$localdir_arg =~ s/\$/\$(DOLLAR)/g;
 
-	chdir $oldcwd;
+	$glidein_setup_submit = "glidein_setup.submit$suffix";
+	$glidein_setup_output = "glidein_setup.output$suffix";
+	$glidein_setup_error = "glidein_setup.error$suffix";
+	$glidein_setup_log = "glidein_setup.log$suffix";
+	open( SETUP_SUBMIT_FILE, ">$glidein_setup_submit" );
 
+	print SETUP_SUBMIT_FILE <<"EOF";
+	universe = Globus
+	GlobusScheduler = $CONTACT_SETUP
+	GlobusRSL = (queue=$CONTACT_SETUP_QUEUE)
+	executable = $glidein_remote_setup
+	arguments = $basedir_arg $archdir_arg $arch $localdir_arg $SERVER_URL $force_setup
+	#avoid trouble with scratch directory creation
+	remote_initialdir = /tmp
+	input = $glidein_condor_config
+	output = $glidein_setup_output
+	error = $glidein_setup_error
+	log = $glidein_setup_log
+	queue
+EOF
+	close( SETUP_SUBMIT_FILE );
+
+	if( $gen_submit ) {
+	    print "Saving glidein setup submit file: $glidein_setup_submit\n";
+	    return;
+	}
+
+	my $my_grid_proxy_err = check_grid_proxy();
+	if( $my_grid_proxy_err ) {
+		return $my_grid_proxy_err;
+	}
+
+	print "Submitting Glidein setup job...\n";
+	my $job_id = condor_submit($glidein_setup_submit);
+
+	if ( !$job_id ) {
+		return( "running setup script on remote machine" );
+	}
+
+	#Use condor_wait to check for completion of the setup job.
+	my $condor_wait_pid = open(CONDOR_WAIT_FH, "$condor_wait $glidein_setup_log|");
+
+	my $output_pos = 0;
+	my $error_pos = 0;
+	my $log_pos = 0;
+	while( 1 ) {
+	    #Keep re-opening the output files because the files get replaced.
+	    #Showing this output in realtime may help the user know if
+	    #something is going wrong.
+	    print get_more_output($glidein_setup_output,\$output_pos);
+	    print get_more_output($glidein_setup_error,\$error_pos);
+
+	    $child_exited = waitpid($condor_wait_pid,&WNOHANG);
+	    if($child_exited == $condor_wait_pid || $child_exited < 0) {
+		last;
+	    }
+
+	    #condor_wait does not pay attention to hold status,
+	    #so make sure job is not on hold or we'll wait forever.
+	    if(system("grep -q 'Job was held' $glidein_setup_log") == 0) {
+		print "Error: the setup job has been put on hold!  Reason given:\n";
+		system("condor_q -f '%s\\n' HoldReason $job_id\n");
+		system("condor_rm $job_id >& /dev/null\n");
+		return( "failed to run setup script on remote machine" );
+	    }
+
+	    sleep 1
+	}
+	close(CONDOR_WAIT_FH);
+
+	#Show any output not already displayed.
+	print get_more_output($glidein_setup_output,\$output_pos);
+	print get_more_output($glidein_setup_error,\$error_pos);
+
+	#Check for successful completion of the setup process.
+	$err = system("grep -q 'Installation successfully completed' $glidein_setup_output");
 	if ( $err ) {
 		return( "running setup script on remote machine" );
 	}
 
+	#Cleanup temporary files.
+	unlink( $glidein_setup_submit);
+	unlink( $glidein_setup_output);
+	unlink( $glidein_setup_error);
+	unlink( $glidein_setup_log);
+	unlink( $glidein_remote_setup );
+
+	if( $glidein_condor_config_is_temporary ) {
+		unlink( $glidein_condor_config );
+	}
 	return( 0 );
 }
