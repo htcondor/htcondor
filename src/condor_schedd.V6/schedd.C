@@ -78,7 +78,6 @@
 #endif
 
 #define DEFAULT_SHADOW_SIZE 125
-#define SHADOW_SIZE_INCR	75
 
 #define SUCCESS 1
 #define CANT_RUN 0
@@ -465,16 +464,14 @@ Scheduler::negotiate(ReliSock* s, struct sockaddr_in*)
 	N_RejectedClusters = 0;
 	SwapSpaceExhausted = FALSE;
 	JobsStarted = 0;
-	if( ShadowSizeEstimate == 0 ) {
-		ShadowSizeEstimate = DEFAULT_SHADOW_SIZE;
+	if( ShadowSizeEstimate ) {
+		start_limit_for_swap = (SwapSpace - ReservedSwap) / ShadowSizeEstimate;
+		dprintf( D_FULLDEBUG, "*** SwapSpace = %d\n", SwapSpace );
+		dprintf( D_FULLDEBUG, "*** ReservedSwap = %d\n", ReservedSwap );
+		dprintf( D_FULLDEBUG, "*** Shadow Size Estimate = %d\n",ShadowSizeEstimate);
+		dprintf( D_FULLDEBUG, "*** Start Limit For Swap = %d\n",
+				 									start_limit_for_swap);
 	}
-	start_limit_for_swap = (SwapSpace - ReservedSwap) / ShadowSizeEstimate;
-
-	dprintf( D_FULLDEBUG, "*** SwapSpace = %d\n", SwapSpace );
-	dprintf( D_FULLDEBUG, "*** ReservedSwap = %d\n", ReservedSwap );
-	dprintf( D_FULLDEBUG, "*** Shadow Size Estimate = %d\n",ShadowSizeEstimate);
-	dprintf( D_FULLDEBUG, "*** Start Limit For Swap = %d\n",
-													start_limit_for_swap);
 
 		/* Try jobs in priority order */
 	for( i=0; i < N_PrioRecs; i++ ) {
@@ -549,7 +546,7 @@ Scheduler::negotiate(ReliSock* s, struct sockaddr_in*)
 								JobsStarted, jobs - JobsStarted );
 						RETURN;
 					}
-					if( JobsStarted >= start_limit_for_swap ) {
+					if( ShadowSizeEstimate && JobsStarted >= start_limit_for_swap ) { 
 						if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
 							dprintf( D_ALWAYS, 
 									"Can't send NO_MORE_JOBS to mgr\n" );
@@ -733,21 +730,16 @@ Scheduler::permission(char* id, char* server, PROC_ID* jobId)
 	int			i;
 
 	mrec = AddMrec(id, server, jobId);
-	if(!mrec)
-	{
+	if(!mrec) {
 		return 0;
 	}
-	switch((pid = fork()))
-	{
-		case -1:	/* error */
+	switch((pid = fork())) 	{
+	    case -1:	/* error */
 
-            if(errno == ENOMEM)
-            {
+            if(errno == ENOMEM) {
                 dprintf(D_ALWAYS, "fork() failed, due to lack of swap space\n");
                 swap_space_exhausted();
-            }
-            else
-            {
+            } else {
                 dprintf(D_ALWAYS, "fork() failed, errno = %d\n", errno);
             }
 			DelMrec(mrec);
@@ -756,8 +748,7 @@ Scheduler::permission(char* id, char* server, PROC_ID* jobId)
         case 0:     /* the child */
 
             close(0);
-            for(i = 3; i < lim; i++)
-            {
+            for(i = 3; i < lim; i++) {
                 close(i);
             }
             Agent(server, id, MySockName, aliveFrequency);
@@ -1028,10 +1019,12 @@ Scheduler::start_std(Mrec* mrec , PROC_ID* job_id)
 #endif NFSFIX
 			Shadow = param("SHADOW");
 			(void)execve( Shadow, argv, environ );
+			dprintf( D_ALWAYS, "exec(%s) failed, errno = %d\n", Shadow, errno);
 			if (errno == ENOMEM) {
-				kill( parent_id, SIGUSR1 );
+				exit( JOB_NO_MEM );
+			} else {
+				exit( JOB_EXEC_FAILED );
 			}
-			exit( JOB_NO_MEM );
 			break;
 		default:	/* the parent */
 			dprintf( D_ALWAYS, "Running %d.%d on \"%s\", (shadow pid = %d)\n",
@@ -1126,14 +1119,14 @@ Scheduler::start_pvm(Mrec* mrec, PROC_ID *job_id)
 				for( i=3; i<lim; i++ ) {
 					(void)close( i );
 				}
-#if 0 /* def NFSFIX */
-				/* Must be condor to write to log files. */
-				set_root_euid(__FILE__,__LINE__);
-#endif
+
 				(void)execve( Shadow, argv, environ );
-				dprintf( D_ALWAYS, "exec failed\n");
-				kill( parent_id, SIGUSR1 );
-				exit( JOB_NO_MEM );
+				dprintf( D_ALWAYS, "exec(%s) failed, errno = %d\n", Shadow, errno);
+				if( errno == ENOMEM ) {
+					exit( JOB_NO_MEM );
+				} else {
+					exit ( JOB_EXEC_FAILED );
+				}
 				break;
 			default:	/* the parent */
 				dprintf( D_ALWAYS, "Forked shadow... (shadow pid = %d)\n",
@@ -1282,10 +1275,13 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 
 		errno = 0;
 		execve( a_out_name, argv, envp );
-		dprintf( D_ALWAYS, "exec(%s) failed - errno = %d\n", a_out_name,
+		dprintf( D_ALWAYS, "exec(%s) failed, errno = %d\n", a_out_name,
 				errno );
-		kill( parent_id, SIGUSR1 );
-		exit( JOB_NO_MEM );
+		if( errno == ENOMEM ) {
+			exit( JOB_NO_MEM );
+		} else {
+			exit( JOB_EXEC_FAILED );
+		}
 	}
 
 	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, RUNNING);
@@ -1549,21 +1545,7 @@ send_vacate(Mrec* match,int cmd)
 void
 Scheduler::swap_space_exhausted()
 {
-	int		old_estimate = ShadowSizeEstimate;
-
 	SwapSpaceExhausted = TRUE;
-
-	ShadowSizeEstimate = (SwapSpace - ReservedSwap) / JobsStarted;
-	if( ShadowSizeEstimate <= old_estimate ) {
-		ShadowSizeEstimate = old_estimate + SHADOW_SIZE_INCR;
-	}
-
-	dprintf( D_FULLDEBUG, "*** Revising Shadow Size Esitimate ***\n" );
-	dprintf( D_FULLDEBUG, "*** SwapSpace was %d, JobsStarted was %d\n",
-													SwapSpace, JobsStarted );
-	dprintf( D_FULLDEBUG, "*** New ShadowSizeEstimate: %dK\n",
-													ShadowSizeEstimate );
-
 }
 
 /*
