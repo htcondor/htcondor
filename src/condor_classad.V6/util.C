@@ -146,8 +146,6 @@ bool putOldClassAd ( Stream *sock, ClassAd& ad )
 	string			buf;
 	ExprTree		*expr;
 
-	unp.SetOldClassAd(true);  // NAC
-
 	int numExprs=0;
 	ClassAdIterator itor(ad);
 	while( !itor.IsAfterLast( ) ) {
