@@ -402,7 +402,7 @@ Claim::beginClaim( void )
 
 
 void
-Claim::beginActivation( ClassAd* request_ad, time_t now )
+Claim::beginActivation( time_t now )
 {
 		// Get a bunch of info out of the request ad that is now
 		// relevant, and store it in this Claim object
@@ -411,7 +411,7 @@ Claim::beginActivation( ClassAd* request_ad, time_t now )
 		// so we know who to charge for our services.  If not, we use
 		// the same user that claimed us.
 	char* remote_user = NULL;
-	if( ! request_ad->LookupString(ATTR_USER, &remote_user) ) {
+	if( ! c_ad->LookupString(ATTR_USER, &remote_user) ) {
 		if( ! c_is_cod ) { 
 			c_rip->dprintf( D_FULLDEBUG, "WARNING: %s not defined in "
 						  "request classad!  Using old value (%s)\n", 
@@ -424,7 +424,6 @@ Claim::beginActivation( ClassAd* request_ad, time_t now )
 		c_client->setuser( remote_user );
 	}
 
-	setad( request_ad );
 	c_job_start = (int)now;
 
 		// Everything else is only going to be valid if we're not a
@@ -435,7 +434,7 @@ Claim::beginActivation( ClassAd* request_ad, time_t now )
 	}
 
 	int universe;
-	if( request_ad->LookupInteger(ATTR_JOB_UNIVERSE, universe) == 0 ) {
+	if( c_ad->LookupInteger(ATTR_JOB_UNIVERSE, universe) == 0 ) {
 		if( c_is_cod ) {
 			universe = CONDOR_UNIVERSE_VANILLA;
 		} else {
@@ -458,10 +457,14 @@ Claim::beginActivation( ClassAd* request_ad, time_t now )
 
 
 void
-Claim::getJobId( ClassAd* request_ad )
+Claim::saveJobInfo( ClassAd* request_ad )
 {
-	request_ad->LookupInteger( ATTR_CLUSTER_ID, c_cluster );
-	request_ad->LookupInteger( ATTR_PROC_ID, c_proc );
+		// this does not make a copy, so we assume we have control
+		// over the ClassAd once this method has been called.
+	setad( request_ad );
+
+	c_ad->LookupInteger( ATTR_CLUSTER_ID, c_cluster );
+	c_ad->LookupInteger( ATTR_PROC_ID, c_proc );
 	if( c_cluster >= 0 ) { 
 			// if the cluster is set and the proc isn't, use 0.
 		if( c_proc < 0 ) { 

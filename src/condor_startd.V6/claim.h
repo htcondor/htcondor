@@ -126,16 +126,18 @@ public:
 	void beginClaim( void );	
 
 		/** We accepted a request to activate the claim and spawn a
-			starter.  pull all the information we need out of the
-			request and store it in this Claim object.
+			starter.  Pull all the information we need out of the
+			request and store it in this Claim object, along with any
+			attributes that care about the time the job was spawned. 
 		*/
-	void beginActivation( ClassAd* request_ad, time_t now ); 
+	void beginActivation( time_t now ); 
 
 		/** We're servicing a request to activate a claim and we want
-			to grab the attributes out the ClassAd that define the job
-			id and store them in this Claim object.
+			to save the request classad into our claim object for
+			future use.  This method also gets some info out of the
+			ClassAd we'll need to spawn the job, like the job ID.
 		*/
-	void getJobId( ClassAd* request_ad );
+	void saveJobInfo( ClassAd* request_ad );
 
 		// Timer functions
 	void start_match_timer();
@@ -252,7 +254,6 @@ private:
 			reset it by clearing out all the activation-specific data
 		*/
 	void resetClaim( void );
-
 };
 
 

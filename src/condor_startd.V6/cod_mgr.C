@@ -332,9 +332,16 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 	tmp_starter->setCODArgs( keyword );
 	free( keyword );
 
-		// Grab the job ID so we've got it, and can use it to spawn
-		// the starter with the right args if needed...
-	claim->getJobId( req );
+		// we need to make a copy of this, since the original is on
+		// the stack in command.C:command_classad_handler().
+		// otherwise, once the handler completes, we've got a dangling
+		// pointer, and if we try to access this variable, we'll crash 
+	ClassAd* new_req_ad = new ClassAd( *req );
+
+		// Save the request ClassAd, so we can use it to spawn the
+		// starter.  This also grab the job ID so we can use it to
+		// spawn the starter with the right args if needed...
+	claim->saveJobInfo( new_req_ad );
 
 		// now that we've gotten this far, we know we're going to
 		// start a starter.  so, we call the interactionLogic method
@@ -345,13 +352,7 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 	time_t now = time(NULL);
 	claim->setStarter( tmp_starter );	
 	claim->spawnStarter( now );
-
-		// we need to make a copy of this, since the original is on
-		// the stack in command.C:command_classad_handler().
-		// otherwise, once the handler completes, we've got a dangling
-		// pointer, and if we try to access this variable, we'll crash 
-	ClassAd* new_req_ad = new ClassAd( *req );
-	claim->beginActivation( new_req_ad, now );
+	claim->beginActivation( now );
 
 	ClassAd reply;
 

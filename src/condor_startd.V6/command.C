@@ -1014,7 +1014,7 @@ activate_claim( Resource* rip, Stream* stream )
 		// to spawn the starter.  set it in our Claim object. 
 	rip->r_cur->setStarter( tmp_starter );
 		// Grab the job ID, so we've got it...
-	rip->r_cur->getJobId( req_classad );
+	rip->r_cur->saveJobInfo( req_classad );
 
 		// Actually spawn the starter
 	if( ! rip->r_cur->spawnStarter(now, shadow_sock) ) {
@@ -1026,7 +1026,7 @@ activate_claim( Resource* rip, Stream* stream )
 
 		// Grab everything we need/want out of the request and store
 		// it in our current claim 
-	rip->r_cur->beginActivation( req_classad, now );
+	rip->r_cur->beginActivation( now );
 
 		// Finally, update all these things into the resource classad.
 	rip->r_cur->publish( rip->r_classad, A_PUBLIC );
