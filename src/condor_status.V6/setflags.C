@@ -96,6 +96,7 @@ getTypeStr ()
 		case CKPT_SRVR_AD:	return "CKPT_SRVR";
 		case GATEWAY_AD:	return "GATEWAYS";
 		case COLLECTOR_AD:	return "COLLECTOR";
+		case LICENSE_AD:	return "LICENSE";
 		default: 			return "<Unknown type!>";
 	}
 	// should never get here
@@ -123,6 +124,9 @@ setType (char *dtype, int i, char *argv)
     if (setArg == NULL) {
         if (matchPrefix (dtype, "STARTD")) {
             type = STARTD_AD;
+        } else
+        if (matchPrefix (dtype, "LICENSE")) {
+            type = LICENSE_AD;
         } else
         if (matchPrefix (dtype, "SCHEDD")) {
             type = SCHEDD_AD;
@@ -207,6 +211,11 @@ setMode (Mode mod, int i, char *argv)
 		  case MODE_SCHEDD_NORMAL:
             setType ("SCHEDD", i, argv);
             setPPstyle (PP_SCHEDD_NORMAL, i, argv);
+            break;
+
+		  case MODE_LICENSE_NORMAL:
+            setType ("LICENSE", i, argv);
+            setPPstyle (PP_VERBOSE, i, argv);
             break;
 
 		  case MODE_SCHEDD_SUBMITTORS:

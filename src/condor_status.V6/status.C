@@ -235,6 +235,7 @@ usage ()
 		"\t-pool <name>\t\tGet information from collector <name>\n"
 		"\t-run\t\t\tSame as -claimed [deprecated]\n"
 		"\t-schedd\t\t\tDisplay attributes of schedds\n"
+		"\t-license\t\t\tDisplay attributes of licenses\n"
 		"\t-server\t\t\tDisplay important attributes of resources\n"
 		"\t-startd\t\t\tDisplay resource attributes\n"
 		"\t-state\t\t\tDisplay state of resources\n"
@@ -310,6 +311,9 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix (argv[i], "-schedd")) {
 			setMode (MODE_SCHEDD_NORMAL, i, argv[i]);
+		} else
+		if (matchPrefix (argv[i], "-license")) {
+			setMode (MODE_LICENSE_NORMAL, i, argv[i]);
 		} else
 		if (matchPrefix (argv[i], "-sort")) {
 			char	exprString[1024];
