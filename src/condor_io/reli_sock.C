@@ -819,7 +819,6 @@ int
 ReliSock::handle_incoming_packet()
 {
     bool mngReady = false;
-    int result;
 
     /* if socket is listening, and packet is there, it is ready for accept */
     if (_state == sock_special && _special_state == relisock_listen) {
@@ -839,10 +838,12 @@ ReliSock::handle_incoming_packet()
 
     if(mngReady) {
         //cout << "handle_incoming_packet: mngSock(= " << _mngSock << ") is ready\n";
-        result = handleMngPacket();
+        if (!handleMngPacket()) {
+			return FALSE;
+		}
     }
 
-    return result;
+    return TRUE;
 }
 
 
@@ -886,6 +887,7 @@ ReliSock::end_of_message()
                     _mngSock = 0;
                     if(snd_msg.snd_packet(_sock, _mngSock, TRUE, _timeout, 0, congested, mngReady) < 0)
                         return FALSE;
+					ret_val = TRUE;
                 }
                 return ret_val;
             } // if buf is NOT empty
