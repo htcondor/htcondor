@@ -1183,6 +1183,10 @@ server, shadow, and starter, none of which use DaemonCore yet).
   machines can discriminate between other machines in a job's 
   \Opt{rank}
     and \Opt{requirements}.
+
+  These settings are synonyms; you can use them interchangably or use both.
+  For example, \MacroNI{STARTD\_ATTRS} and
+  \MacroNI{STARTD\_EXPRS} are interchangable.
   
   \Note The \Condor{negotiator} and \Condor{kbdd} do not send
   ClassAds now, so this entry does not affect them.  The
@@ -1190,16 +1194,8 @@ server, shadow, and starter, none of which use DaemonCore yet).
   \Condor{collector} do send ClassAds, so those would be valid
   subsystems to set this entry for.
   
-  Setting \MacroU{SUBMIT\_EXPRS} has the slightly
-  different effect of having the named expressions inserted into all
-  the job ClassAds that \Condor{submit} creates.  This is equivalent
-  to the ``+'' syntax in submit files.  See the
-  the \Condor{submit} manual page
-  on page~\pageref{sec:man-condor-submit} for details on using the ``+''
-  syntax to add attributes to the job ClassAd.
-  Attributes defined in the submit description file with ``+'' will
-  override attributes defined in the config file with
-  \MacroU{SUBMIT\_EXPRS}. 
+  \MacroNI{SUBMIT\_EXPRS} not part of the \MacroNI{SUBSYS\_EXPRS}, it is
+  documented in section~\ref{sec:Submit-Config-File-Entries}
 
   The \Condor{startd} \MacroU{STARTD\_ATTRS} defaults to
   ``JobUniverse''.
@@ -2858,6 +2854,18 @@ as:
   this step would hurt performance in such a way that it became
   an obstacle to scalability.
   The default value is True.
+
+\item[\Macro{SUBMIT\_EXPRS}] \label{param:SubmitExprs}
+  The given comma-seperated, named expressions are inserted into all 
+  the job ClassAds that \Condor{submit} creates.  This is equivalent
+  to the ``+'' syntax in submit files.  See the
+  the \Condor{submit} manual page
+  on page~\pageref{sec:man-condor-submit} for details on using the ``+''
+  syntax to add attributes to the job ClassAd.
+  Attributes defined in the submit description file with ``+'' will
+  override attributes defined in the config file with
+  \MacroNI{SUBMIT\_EXPRS}. 
+
 
 \end{description}
 
