@@ -2093,11 +2093,10 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 		dprintf ( D_ALWAYS, "In parent, shadow pid = %d\n", pid );
 
 		close(pipes[0]);
+		mark_job_running(job_id);
 		srp = add_shadow_rec( pid, job_id, mrec, pipes[1] );
 		shadow_fd = pipes[1];
-		dprintf( D_ALWAYS, "shadow_fd = %d\n", shadow_fd);
-		mark_job_running(job_id);
-
+		dprintf( D_ALWAYS, "shadow_fd = %d\n", shadow_fd);		
 	} else {
 		shadow_fd = srp->conn_fd;
 		dprintf( D_ALWAYS, "Existing shadow connected on fd %d\n", shadow_fd);
@@ -2277,8 +2276,8 @@ Scheduler::start_mpi(match_rec* matchRec, PROC_ID *job_id)
 		dprintf ( D_ALWAYS, "In Schedd, mpi shadow pid = %d\n", pid );        
             // The shadow rec always has a proc of 0 now...
         job_id->proc = 0;
-		srec = add_shadow_rec( pid, job_id, mrec, -1);
 		mark_job_running(job_id);
+		srec = add_shadow_rec( pid, job_id, mrec, -1);
 
 			// We must set all the match recs to point at this srec.
 		for ( i=0 ; i<=MpiMatches->getlast() ; i++ ) {
