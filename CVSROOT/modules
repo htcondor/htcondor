@@ -99,10 +99,16 @@ V6_3_SRC		-a \
 
 V6_5_SRC		-a \
 			V6_COMMON \
+			src/condor_chirp \
 			src/condor_classad.V6 \
 			src/condor_classad_analysis \
+			src/condor_daemon_client \
 			src/condor_data_manager \
+			src/condor_dcskel \
+			src/condor_gridmanager \
 			src/condor_nest \
+			src/condor_netman \
+			src/condor_test_suite_java \
 			src/mw
 
 CONDOR_VIEW_SRC	-a \
