@@ -27,14 +27,28 @@
 
 	Written on 10/9/97 by Derek Wright <wright@cs.wisc.edu>
 */
-#ifndef _RESMGR_H
-#define _RESMGR_H
+#ifndef _CONDOR_RESMGR_H
+#define _CONDOR_RESMGR_H
+
+#include "OrderedSet.h"
 
 typedef int (Resource::*ResourceMember)();
 typedef float (Resource::*ResourceFloatMember)();
 typedef void (Resource::*ResourceMaskMember)(amask_t);
 typedef void (Resource::*VoidResourceMember)();
 typedef int (*ComparisonFunc)(const void *, const void *);
+
+
+class IdDispenser
+{
+public:
+	IdDispenser( int seed );
+	int	next();
+	void insert( int id );
+private:
+	OrderedSet<int> set;
+};
+
 
 class ResMgr : public Service
 {
@@ -53,8 +67,9 @@ public:
 	void	assign_keyboard();
 
 	bool 	in_use();
-	bool	is_smp() { return( num_cpus() > 1 ); };
+	bool	is_smp() { return( num_vms() > 1 ); };
 	int		num_cpus() { return m_attr->num_cpus(); };
+	int		num_vms() { return nresources; };
 
 	int		send_update( ClassAd*, ClassAd* );
 	void	final_update();
@@ -114,7 +129,6 @@ public:
 	void report_updates();		// Log updates w/ dprintf()
 
 	MachAttributes*	m_attr;		// Machine-wide attribute object
-	AvailAttributes* m_avail;	// Available attributes object
 	
 	ProcAPI*		m_proc;		// Info from /proc about this machine 
 
@@ -122,14 +136,18 @@ public:
 	ClassAd*	config_classad;
 
 	void		init_config_classad();
+
 private:
-	Resource**	resources;		// Array of pointers to resource objects
+
+	Resource**	resources;		// Array of pointers to Resource objects
 	int			nresources;		// Size of the array
 	SafeSock*	coll_sock;
 	SafeSock*	view_sock;
 
-	int			currentVMType;		// Current virtual machine type
-		// we're parsing. 
+	IdDispenser* id_disp;
+
+		// Current virtual machine type we're parsing. 
+	int			currentVMType;		
 
 	int		num_updates;
 	int		up_tid;		// DaemonCore timer id for update timer
@@ -142,19 +160,58 @@ private:
 
 		// Builds a CpuAttributes object to represent the virtual
 		// machine described by the given machine type.
-	CpuAttributes*	build_vm( int );	
+	CpuAttributes*	build_vm( int type, bool except = false );	
+
 	    // Returns the percentage represented by the given fraction or
 		// percent string.
-	float		parse_value( const char* );
+	float		parse_value( const char*, bool except = false );
+
 		// All the logic of computing an integer number of cpus or
 		// physical memory out of a percentage share.   
 	int			compute_cpus( float share );
 	int			compute_phys_mem( float share );
+
+		/* 
+		  Return a pointer to a newly-allocated array of CpuAttributes
+		  objects of the number and types specified in the config
+		  file.  You actually pass in an int for the total number of
+		  CpuAttributes objects you expect to create and an array of
+		  ints that holds the types you care about (which should be
+		  created with countTypes()).  The array will be in
+		  type-order.  Returns NULL on error.  The last argument
+		  specifies if the function should EXCEPT() on error, or just
+		  dprintf() and return.
+		*/
+	CpuAttributes** buildCpuAttrs( int total, int* type_num_array, 
+								   bool except = false );
+
+		// Initialize our type_strings array (a ResMgr data member)
+		// for all VM types.   
+	void initTypes( bool except = false );
+
+		/*
+		  Count the number of each VM type specified in the config
+		  file.  If no type-specific entires are found, check for
+		  NUM_VIRTUAL_MACHINES, and return that for type 0.  If
+		  that's not defined, just use num_cpus() for type 0.  We
+		  return the total number of VMs to be used, and set the given
+		  array pointer to point to a newly allocated array of ints,
+		  indexed by type number.  
+		*/
+	int countTypes( int** array_ptr, bool except = false );
+
+ 		/* 
+		  Compare the two arrays of ints and see if they hold the
+		  same values.  Returns true if they're the same.
+		*/
+	bool typeNumCmp( int* a, int* b );
 };
+
 
 // Comparison functions for sorting resources:
 
 // Sort on State, with Owner state resources coming first, etc.
 int owner_state_cmp( const void*, const void* );
+int vm_type_cmp( const void*, const void* );
 
-#endif _RESMGR_H
+#endif /* _CONDOR_RESMGR_H */
