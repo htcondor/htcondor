@@ -79,6 +79,10 @@ main_init(int argc, char *argv[])
 		DC_Exit(1);
 	}
 	syscall_sock = (ReliSock *)socks[0];
+		/* Set a timeout on remote system calls.  This is needed in
+		   case the user job exits in the middle of a remote system
+		   call, leaving the shadow blocked.  -Jim B. */
+	syscall_sock->timeout(300);
 
 	if(!Starter->Init(argv[1])) {
 		dprintf(D_ALWAYS, "Unable to start job.\n");
