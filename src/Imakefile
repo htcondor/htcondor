@@ -72,7 +72,7 @@
 #define Directories \
 	condor_shadow.V6.1 condor_starter.V6.1 html \
 	release_dir release_dir/bin release_dir/lib release_dir/sbin \
-	release_dir/include \
+	release_dir/include pure_bin \
 	strip_dir strip_dir/bin strip_dir/sbin strip_dir/lib \
 	strip_dir/etc strip_dir/etc/examples strip_dir/include \
 	strip_contrib strip_contrib/bin strip_contrib/lib \
@@ -151,6 +151,8 @@ simple_dir_target(release_dir/bin)
 simple_dir_target(release_dir/lib)
 simple_dir_target(release_dir/sbin)
 simple_dir_target(release_dir/include)
+
+simple_dir_target(pure_bin)
 
 simple_dir_target(strip_dir)
 simple_dir_target(strip_dir/bin)
@@ -270,3 +272,14 @@ reallyclean: really-clean
 
 htmldocs: html docs
 	cd html; ./build_doc++_index
+
+pure_target( condor_startd.V6, condor_startd.pure );
+pure_target( condor_schedd.V6, condor_schedd.pure );
+pure_target( condor_master.V6, condor_master.pure );
+pure_target( condor_shadow.V6, condor_shadow.pure );
+pure_target( condor_starter.V5, condor_starter.pure );
+pure_target( condor_collector.V6, condor_collector.pure );
+pure_target( condor_negotiator.V6, condor_negotiator.pure );
+
+clean::
+	rm -rf $(PURE_DIR)
