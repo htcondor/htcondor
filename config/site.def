@@ -3,10 +3,10 @@
 #define HasGcc		YES
 #define HasGPlusPlus	YES
 
-#define CCompiler	/s/ogcc/bin/gcc 
-#define CPlusCompiler	/s/ogcc/bin/g++
+#define CCompiler	gcc 
+#define CPlusCompiler	g++
 #define PreProcessCmd	CCompiler -E -x c-header
-#define Demangler	/s/ogcc/bin/c++filt
+#define Demangler	c++filt
 
 #define X11LibPath /s/X11R6-2/lib
 #define X11Include /s/X11R6-2/include

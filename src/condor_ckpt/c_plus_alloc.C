@@ -37,7 +37,7 @@ void operator delete( void *to_free )
 }
 
 #if defined( __GNUC__ )
-#	if (__GNUG__== 2 && (__GNUC_MINOR__ == 6 || __GNUC_MINOR__ == 7))
+#	if (__GNUG__== 2 && (__GNUC_MINOR__ == 6 || __GNUC_MINOR__ == 7 || __GNUC_MINOR__ == 91))
 		extern "C" {
 			void *__builtin_new( size_t );
 			void __builtin_delete( void * );
