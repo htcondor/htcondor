@@ -6,7 +6,7 @@ This is the development release series of Condor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-7-5}Version 6.7.5}
+\subsection{\label{sec:New-6-7-5}Version 6.7.6}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
@@ -22,7 +22,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added a new \MacroNI{SCHED\_UNIV\_RENICE\_INCREMENT}
+configuration variable used by the \Condor{schedd} for scheduler
+universe jobs, analogous to the existing
+\MacroNI{JOB\_RENICE\_INCREMENT} variable used by the \Condor{startd}
+for other job universes.  The \MacroNI{SCHED\_UNIV\_RENICE\_INCREMENT}
+variable is undefined by default, and when undefined, defaults to 0
+internally.
 
 \end{itemize}
 
