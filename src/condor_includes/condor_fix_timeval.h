@@ -14,7 +14,9 @@
     	int tz_minuteswest; /* minutes west of Greenwich */
     	int tz_dsttime; /* type of dst correction */
 	};
-
+#elif defined(Solaris251)
+#define __EXTENSIONS__
+#	include <sys/time.h>
 #elif defined(Solaris)
 /* Solaris specific change ..dhaval 6/26 */
 #if defined(_POSIX_SOURCE)
