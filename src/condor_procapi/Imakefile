@@ -10,6 +10,8 @@ library_target(libprocapi.a,$(OBJ))
 
 c_plus_target(procapi.tester,procapi.t.o,$(LIB))
 pure_c_plus_target(procapi.tester.pure,procapi.t.o,$(LIB))
+c_plus_target(nt-testprocapi, testprocapi.o, $(LIB))
+pure_c_plus_target(nt-testprocapi.pure, testprocapi.o, $(LIB))
 
 html_target( procapi.h procinterface.h )
 
