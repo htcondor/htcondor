@@ -114,6 +114,7 @@
 #define RESET_ALL_USAGE		(SCHED_VERS+60)		// negotiator
 #define DAEMONS_OFF_FAST	(SCHED_VERS+61)
 #define MASTER_OFF_FAST		(SCHED_VERS+62)
+#define GET_RESLIST			(SCHED_VERS+63)		// negotiator
 
 
 /************
