@@ -25,6 +25,7 @@
 
 
 #define _XOPEN_SOURCE
+#define _BSD_COMPAT
 
 /* While we want _BSD_TYPES defined, we can't just define it ourself,
    since we include rpc/types.h later, and that defines _BSD_TYPES
@@ -84,10 +85,8 @@ int pclose(FILE *stream);
 
 #include <sys/select.h>
 
+/* Need these to get statfs and friends defined */
 #include <sys/stat.h>
 #include <sys/statfs.h>
-
-#include <sys/uio.h>
-#include <sys/socket.h>
 
 #endif /* CONDOR_SYS_IRIX_H */
