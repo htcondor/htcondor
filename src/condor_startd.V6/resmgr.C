@@ -104,7 +104,6 @@ resmgr_setsocks(fd_set* fds)
 int
 resmgr_call(fd_set* fds)
 {
-	dprintf(D_ALWAYS, "resmgr_call()\n");
 	cur_fds = *fds;
 	return resmgr_walk(resmgr_command);
 }
@@ -221,12 +220,10 @@ resmgr_addfd(resource_info_t* rip)
 static int
 resmgr_command(resource_info_t* rinfop)
 {
-	dprintf(D_ALWAYS, "resmgr_command(%x)\n", rinfop);
 	if (FD_ISSET(rinfop->r_sock, &cur_fds)) {
 		call_incoming(rinfop->r_sock, SOCK_STREAM, rinfop->r_rid);
 		FD_CLR(rinfop->r_sock , &cur_fds);
 	}
-	dprintf(D_ALWAYS, "resmgr_command(%x) exiting\n", rinfop);
 	return 0;
 }
 
