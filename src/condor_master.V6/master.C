@@ -93,9 +93,9 @@ long	delete_queue(QUEUE* );
 int		empty_queue(QUEUE* );
 void	get_lock(char * );
 time_t 	GetTimeStamp(char* file);
-int 	NewExecutable(char* file, time_t* tsp);
+int 	NewExecutable(char* file, time_t tsp);
 void	RestartMaster();
-int		daily_housekeeping(Service*);
+int		run_preen(Service*);
 void	update_collector();
 void	usage(const char* );
 int		main_shutdown_graceful();
@@ -116,7 +116,9 @@ char	*MailerPgm = NULL;
 int		MasterLockFD;
 int		update_interval;
 int		check_new_exec_interval;
-
+int		preen_interval;
+int		new_bin_delay;
+char	*MasterName = NULL;
 char	*CollectorHost = NULL;
 
 int		ceiling = 3600;
@@ -131,7 +133,6 @@ int		NT_ServiceFlag = FALSE;		// TRUE if running on NT as an NT Service
 int		shutdown_graceful_timeout;
 int		shutdown_fast_timeout;
 
-int		NotFlag = 0;
 int		PublishObituaries;
 int		Lines;
 int		AllowAdminCommands = FALSE;
@@ -167,7 +168,7 @@ master_exit(int retval)
 void
 usage( const char* name )
 {
-	dprintf( D_ALWAYS, "Usage: %s [-f] [-t] [-n]\n", name );
+	dprintf( D_ALWAYS, "Usage: %s [-f] [-t] [-n name]\n", name );
 	master_exit( 1 );
 }
 
@@ -202,7 +203,8 @@ int
 main_init( int argc, char* argv[] )
 {
 	char	**ptr;
-	int i;
+	char	*tmp;
+	int		size;
 
 #ifdef WIN32
 	// Daemon Core will call main_init with argc -1 if need to register
@@ -213,20 +215,34 @@ main_init( int argc, char* argv[] )
 	}
 #endif
 
-	if ( argc > 2 ) {
+	if ( argc > 3 ) {
 		usage( argv[0] );
 	}
 	
-	i = 0;
-	for( ptr=argv+1; *ptr && ( i < argc - 2 ); ptr++, i++ ) {
+	for( ptr=argv+1; *ptr; ptr++ ) {
 		if( ptr[0][0] != '-' ) {
 			usage( argv[0] );
 		}
 		switch( ptr[0][1] ) {
-		  case 'n':
-			NotFlag++;
+		case 'n':
+			ptr++;
+			if( ! *ptr ) {
+				EXCEPT( "-n requires another arugment" );
+			}
+			tmp = strchr( *ptr, '@' );
+			if( tmp ) {
+					// name we were passed has an '@', strip off the
+					// rest of it so we're sure we're getting our
+					// correct full hostname.
+				*tmp = '\0';
+			}
+				// Now, build up the master name
+			size = 2 + strlen( my_full_hostname() ) + strlen( *ptr );
+			MasterName = (char*)malloc( size );
+			sprintf( MasterName, "%s@%s", *ptr, my_full_hostname() );
+			dprintf( D_ALWAYS, "Using name: %s\n", MasterName );
 			break;
-		  default:
+		default:
 			usage( argv[0] );
 		}
 	}
@@ -277,12 +293,6 @@ main_init( int argc, char* argv[] )
 	if( StartDaemons ) {
 		daemons.StartAllDaemons();
 	}
-
-	// once a day  (starts up PREEN)
-	daemonCore->Register_Timer( 3600, 24 * 3600,
-								(TimerHandler)daily_housekeeping,
-								"daily_housekeeping()" );
-	
 	daemons.StartTimers();
 	return TRUE;
 }
@@ -304,6 +314,7 @@ admin_command_handler(Service *, int cmd, Stream *)
 		daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGHUP );
 		return TRUE;
 	case RESTART:
+		daemons.immediate_restart = TRUE;
 		daemons.RestartMaster();
 		return TRUE;
 	case DAEMONS_ON:
@@ -323,6 +334,14 @@ void
 init_params()
 {
 	char	*tmp;
+
+		// In general, for numeric values, we set our variable to 0,
+		// param for it, and if there's an entry, we call atoi() on
+		// the string to convert it to an int.  If the string doesn't
+		// contain a valid number, atoi() will return 0.  So, if our
+		// variable is still 0 after everything is done, either there
+		// was no entry, or the entry was an invalid number.  In both
+		// cases, we'll want to use our default.  -Derek
 
 	tmp = param( "START_MASTER" );
 	if( tmp ) {
@@ -440,6 +459,26 @@ init_params()
         check_new_exec_interval = 5 * MINUTE;
     }
 
+	new_bin_delay = 0;
+	tmp = param( "MASTER_NEW_BINARY_DELAY" );
+	if( tmp ) {
+		new_bin_delay = atoi( tmp );
+		free( tmp );
+	}
+	if( !new_bin_delay ) {
+		new_bin_delay = 2 * MINUTE;
+	}
+
+	preen_interval = 0;
+	tmp = param( "PREEN_INTERVAL" );
+	if( tmp ) {
+		preen_interval = atoi( tmp );
+		free( tmp );
+	} 
+	if( !preen_interval ) {
+		preen_interval = 24 * HOUR;
+	}
+
 	shutdown_fast_timeout = 0;
 	tmp = param( "SHUTDOWN_FAST_TIMEOUT" );
 	if( tmp ) {
@@ -508,7 +547,6 @@ check_daemon_list()
 	char	*daemon_name;
 	daemon	*new_daemon;
 	StringList daemon_names;
-	int num_daemons_in_list = 0;
 	char* daemon_list = param("DAEMON_LIST");
 	if( !daemon_list ) {
 			// Without a daemon list, there's no way it could be
@@ -520,7 +558,6 @@ check_daemon_list()
 
 	daemon_names.rewind();
 	while( (daemon_name = daemon_names.next()) ) {
-		num_daemons_in_list++;
 		if(daemons.GetIndex(daemon_name) < 0) {
 			new_daemon = new daemon(daemon_name);
 		}
@@ -541,7 +578,11 @@ init_classad()
 	sprintf(line, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() );
 	ad->Insert(line);
 
-	sprintf(line, "%s = \"%s\"", ATTR_NAME, my_full_hostname() );
+	if( MasterName ) {
+		sprintf(line, "%s = \"%s\"", ATTR_NAME, MasterName );
+	} else {
+		sprintf(line, "%s = \"%s\"", ATTR_NAME, my_full_hostname() );
+	}
 	ad->Insert(line);
 
 	sprintf(line, "%s = \"%s\"", ATTR_MASTER_IP_ADDR,
@@ -679,8 +720,10 @@ main_config()
 
 	if( StartDaemons ) {
 			// Restart any daemons who's executables are new or ones 
-			// that the path to the executable has changed.
+			// that the path to the executable has changed.  
+		daemons.immediate_restart = TRUE;
 		daemons.CheckForNewExecutable();
+		daemons.immediate_restart = FALSE;
 			// Tell all the daemons that are running to reconfig.
 		daemons.ReconfigAllDaemons();
 	} else {
@@ -689,6 +732,7 @@ main_config()
 		// Re-register our timers, since their intervals might have
 		// changed.
 	daemons.StartTimers();
+	update_collector();
 	return TRUE;
 }
 
@@ -773,11 +817,11 @@ GetTimeStamp(char* file)
 }
 
 int
-NewExecutable(char* file, time_t* tsp)
+NewExecutable(char* file, time_t tsp)
 {
 	time_t cts = GetTimeStamp(file);
 	dprintf(D_FULLDEBUG, "Time stamp of running %s is %d\n",
-			file, (int)*tsp);
+			file, (int)tsp);
 	dprintf(D_FULLDEBUG, "GetTime stamp returned %d\n",(int)cts);
 
 	if( cts == (time_t) -1 ) {
@@ -788,23 +832,18 @@ NewExecutable(char* file, time_t* tsp)
 		 */
 		return( FALSE );
 	}
-
-	if( cts != *tsp ) {
-		*tsp = cts;
-		return( TRUE );
-	}
-
-	return FALSE;
+	return( cts != tsp );
 }
 
 char	*Shell = "/bin/sh";
 
 int
-daily_housekeeping(Service*)
+run_preen(Service*)
 {
 	int		child_pid;
 
-	dprintf(D_FULLDEBUG, "enter daily_housekeeping\n");
+	dprintf(D_FULLDEBUG, "Entered run_preen.\n");
+
 	if( FS_Preen == NULL ) {
 		return 0;
 	}
@@ -838,7 +877,6 @@ daily_housekeeping(Service*)
 
 	   (void)system( FS_Preen );
 	   */
-	dprintf(D_FULLDEBUG, "exit daily_housekeeping\n");
 	return TRUE;
 }
 
