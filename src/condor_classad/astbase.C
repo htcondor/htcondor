@@ -34,6 +34,11 @@
 
 #define AdvancePtr(ptr)  while(*ptr != '\0') ptr++;
 
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+#include "stringSpace.h"
+
+StringSpace classad_string_space;
+#endif 
 
 ////////////////////////////////////////////////////////////////////////////////
 // Tree node constructors.                                                    //
@@ -41,7 +46,15 @@
 
 VariableBase::VariableBase(char* name)
 {
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+	this->stringSpaceIndex = classad_string_space.getCanonical(name, SS_DUP);
+	// I apologize for casting away the const-ness of the char * here
+	// I'm trying to make minimal changes in the code to add string space,
+	// and it is safe. 
+	this->name = (char *) classad_string_space[stringSpaceIndex];
+#else
     this->name = name;
+#endif
     this->ref = 0;
     this->type = LX_VARIABLE;
     this->cardinality = 0;
@@ -73,7 +86,15 @@ BooleanBase::BooleanBase(int v)
 
 StringBase::StringBase(char* str)
 {
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+	stringSpaceIndex = classad_string_space.getCanonical(str, SS_DUP);
+	// I apologize for casting away the const-ness of the char * here
+	// I'm trying to make minimal changes in the code to add string space,
+	// and it is safe. 
+	value = (char *) classad_string_space[stringSpaceIndex];
+#else
     value = str;
+#endif
     this->ref = 0;
     this->type  = LX_STRING;
     this->cardinality = 0;
@@ -265,11 +286,21 @@ void ExprTree::operator delete(void* exprTree)
         {
 	    	if(((ExprTree*)exprTree)->type == LX_VARIABLE)
 	    	{
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+				classad_string_space.disposeByIndex(
+				    ((VariableBase*)exprTree)->stringSpaceIndex);
+#else
 				delete []((VariableBase*)exprTree)->name;
+#endif
 	    	}
 	    	if(((ExprTree*)exprTree)->type == LX_STRING)
 	    	{
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+				classad_string_space.disposeByIndex(
+				    ((StringBase*)exprTree)->stringSpaceIndex);
+#else
 				delete []((StringBase*)exprTree)->value;
+#endif
 	    	}
 	    	delete (Dummy*)exprTree;
         }

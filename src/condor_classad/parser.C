@@ -117,7 +117,11 @@ ParseFactor(char*& s, ExprTree*& newTree, int& count)
         case LX_VARIABLE :
 
             t = ReadToken(s);
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+			newTree = new Variable(t->strVal);
+#else
             newTree = new Variable(StrCpy(t->strVal));
+#endif
     		count = count + t->length;
             break;
 
@@ -152,7 +156,11 @@ ParseFactor(char*& s, ExprTree*& newTree, int& count)
         case LX_STRING :
 
             t = ReadToken(s);
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+            newTree = new String(t->strVal);
+#else
             newTree = new String(StrCpy(t->strVal));
+#endif
     		count = count + t->length;
             break;
 

@@ -200,8 +200,12 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
         EXCEPT("Warning : you ran out of space -- quitting !");
     }
 
-    Parse("MyType", tree);                   // set myType field by evaluation
-    tree->EvalTree(this, val);               // over itself.
+	// Make a parse tree that contains the variable MyType
+    Parse("MyType", tree);
+	// Evaluate this variable within the classad, to see if it
+	// is defined.
+    tree->EvalTree(this, val);
+	// If it's not defined, we set the type to be blank
     if(!val || val->type!=LX_STRING)
     {
         myType = new AdType();               // undefined type.
@@ -210,6 +214,9 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
             EXCEPT("Warning : you ran out of space");
 		}
     }
+	// otherwise it was defined, so we'll set the type to be what the
+	// creator of the classad wants. Note that later on, we'll delete
+	// the type from the attribute list. ('Delete("MyType")')
     else
     {
 		myType = new AdType(val->s);
@@ -218,11 +225,13 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
 				EXCEPT("Warning : you ran out of space");
 		}
     }
-    delete tree;
 
-    Parse("TargetType", tree);               // set targetType field by
-                                             // evaluation over itself.
+	// Make a parse tree that contains the variable TargetType
+    Parse("TargetType", tree);
+	// Evaluate this variable within the classad, to see if it
+	// is defined.
     tree->EvalTree(this, val);
+	// If it's not defined, we set the type to be blank
     if(!val || val->type!=LX_STRING)
     {
         targetType = new AdType();           // undefined type.
@@ -231,6 +240,9 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
 			EXCEPT("Warning : you ran out of space");
 		}
     }
+	// otherwise it was defined, so we'll set the type to be what the
+	// creator of the classad wants. Note that later on, we'll delete
+	// the type from the attribute list. ('Delete("TargetType")')
     else
     {
 		targetType = new AdType(val->s);
@@ -245,7 +257,11 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
     {
         delete val;
     }
-    Delete("MyType");                        // eliminate redundant storage.
+
+	// These are the deletes referred to above. We delete theses
+	// from the attribute list because we keep them separately, 
+	// apparently because it's convenient that way. 
+    Delete("MyType");
     Delete("TargetType");
 }
 

@@ -42,7 +42,7 @@ extern char* mySubSystem;
 AttrListElem::AttrListElem(ExprTree* expr)
 {
     tree = expr;
-    dirty = FALSE;
+    // dirty = FALSE;
     name = ((Variable*)expr->LArg())->Name();
     next = NULL;
 }
@@ -54,7 +54,7 @@ AttrListElem::AttrListElem(AttrListElem& oldNode)
 {
     oldNode.tree->Copy();
     this->tree = oldNode.tree;
-    this->dirty = FALSE;
+    //this->dirty = FALSE;
     this->name = ((Variable*)tree->LArg())->Name();
     next = NULL;
 }
@@ -232,61 +232,61 @@ AttrList::AttrList(char *AttrList, char delimitor) : AttrListAbstract(ATTRLISTEN
     {                                        // to the end of the stirng to
         c = AttrList[i];                      // construct a AttrList object.
         if(c == delimitor || c == '\0')                 
-	{                                    // end of an expression.
-	    if(current)
-	    {                                // if expression not empty.
-	        buffer[current] = '\0';
-		if(!Parse(buffer, tree))
-		{
-		    if(tree->MyType() == LX_ERROR)
-		    {
-				EXCEPT("Warning : you ran out of memory");
-		    }
+		{                                    // end of an expression.
+			if(current)
+			{                                // if expression not empty.
+				buffer[current] = '\0';
+				if(!Parse(buffer, tree))
+				{
+					if(tree->MyType() == LX_ERROR)
+					{
+						EXCEPT("Warning : you ran out of memory");
+					}
+				}
+				else
+			   	{
+					EXCEPT("Parse error in the input string");
+				}
+				Insert(tree);
+			}
+			delete []buffer;
+			if(c == '\0')
+			{                                // end of input.
+				break;
+			}
+			i++;                             // look at the next character.
+			while(isspace(c = AttrList[i]))
+			{
+				i++;                         // skip white spaces.
+			}
+            if((c = AttrList[i]) == '\0')
+			{
+				break;                       // end of input.
+			}
+			i--;
+			buffer_size = 10;                // process next expression.
+			current = 0;                  
+			buffer = new char[buffer_size];
+			if(!buffer)
+			{
+				EXCEPT("Warning: you ran out of memory");
+			}	    
 		}
 		else
-		{
-			EXCEPT("Parse error in the input string");
+		{                                    // fill in the buffer.
+			if(current >= (buffer_size - 1))        
+			{
+				buffer_size *= 2;
+				buffer = (char *) realloc(buffer, buffer_size*sizeof(char));
+				if(!buffer)
+				{
+					EXCEPT("Warning: you ran out of memory");
+				}
+			}
+			buffer[current] = c;
+			current++;
 		}
-		Insert(tree);
-	    }
-	    delete []buffer;
-	    if(c == '\0')
-	    {                                // end of input.
-	        break;
-	    }
-	    i++;                             // look at the next character.
-	    while(isspace(c = AttrList[i]))
-	    {
-	        i++;                         // skip white spaces.
-	    }
-            if((c = AttrList[i]) == '\0')
-	    {
-	        break;                       // end of input.
-	    }
-	    i--;
-	    buffer_size = 10;                // process next expression.
-	    current = 0;                  
-	    buffer = new char[buffer_size];
-	    if(!buffer)
-	    {
-	        EXCEPT("Warning: you ran out of memory");
-	    }	    
-	}
-	else
-	{                                    // fill in the buffer.
-	    if(current >= (buffer_size - 1))        
-	    {
-	        buffer_size *= 2;
-		buffer = (char *) realloc(buffer, buffer_size*sizeof(char));
-		if(!buffer)
-		{
-	        EXCEPT("Warning: you ran out of memory");
-		}
-	    }
-	    buffer[current] = c;
-	    current++;
-	}
-	i++;
+		i++;
     }
 }
 
@@ -839,6 +839,9 @@ int AttrList::Delete(const char* name)
 ////////////////////////////////////////////////////////////////////////////////
 // Reset the dirty flags for each expression tree in the AttrList.
 ////////////////////////////////////////////////////////////////////////////////
+// This has been removed: it seems to be useless right now: the dirty flags are
+// set but never used. 
+#if 0 
 void AttrList::ResetFlags()
 {
     AttrListElem*	tmpElem;	// working variable
@@ -850,6 +853,7 @@ void AttrList::ResetFlags()
 	tmpElem = tmpElem->next;
     }
 }
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // Find an attibute and replace its value with a new value.
@@ -1925,7 +1929,6 @@ int AttrList::get(XDR *xdrs)
 	return (!errorFlag);
 }
 #endif
-
 
 void AttrList::ChainToAd(AttrList *ad)
 {
