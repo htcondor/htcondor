@@ -409,7 +409,7 @@ int __cdecl ExceptionHandler::_tprintf(const TCHAR * format, ...) {
 // Load IMAGEHLP.DLL and get the address of functions in it that we'll use 
 //=========================================================================
 BOOL ExceptionHandler::InitImagehlpFunctions( void ) {
-    HMODULE hModImagehlp = LoadLibrary( _T("condor_IMAGEHLP.DLL") );
+    HMODULE hModImagehlp = LoadLibrary( _T("IMAGEHLP.DLL") );
     if ( !hModImagehlp )        
 		return FALSE;
     _SymInitialize = (SYMINITIALIZEPROC)GetProcAddress( hModImagehlp,
