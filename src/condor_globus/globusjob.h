@@ -19,6 +19,7 @@ class GlobusJob
 
 	bool start();
 	bool commit();
+	bool stop_job_manager();
 	bool callback( int state = 0, int error = 0 );
 	bool cancel();
 	bool probe();
@@ -51,6 +52,7 @@ class GlobusJob
 
  protected:
 	bool callbackRegistered;
+	bool ignore_callbacks;
 	//Classad *ad;
 };
 

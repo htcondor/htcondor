@@ -29,11 +29,83 @@ usage( char *name )
 	DC_Exit( 1 );
 }
 
+bool
+main_activate_globus()
+{
+	int err;
+	static int first_time = true;
+
+	if(gridmanager.X509Proxy && first_time) {
+		// TODD DEBUG TEST test 
+		// NEXT LINE IS COMMENTED OUT - DO NOT CHECK THIS IN!!!
+		// setenv("X509_USER_PROXY", gridmanager.X509Proxy, 1);
+		first_time = false;
+	}		
+
+	err = globus_module_activate( GLOBUS_GRAM_CLIENT_MODULE );
+	if ( err != GLOBUS_SUCCESS ) {
+		dprintf( D_ALWAYS, "Error initializing GRAM, err=%d - %s\n", 
+			err, globus_gram_client_error_string(err) );
+		return false;
+	}
+
+	if ( gramCallbackContact ) {
+		globus_libc_free(gramCallbackContact);
+		gramCallbackContact = NULL;
+	}
+
+	err = globus_gram_client_callback_allow( GridManager::gramCallbackHandler,
+											 &gridmanager,
+											 &gramCallbackContact );
+	if ( err != GLOBUS_SUCCESS ) {
+		dprintf( D_ALWAYS, "Error enabling GRAM callback, err=%d - %s\n", 
+			err, globus_gram_client_error_string(err) );
+		globus_module_deactivate( GLOBUS_GRAM_CLIENT_MODULE );
+		return false;
+	}
+
+	err = globus_module_activate( GLOBUS_GASS_SERVER_EZ_MODULE );
+	if ( err != GLOBUS_SUCCESS ) {
+		dprintf( D_ALWAYS, "Error initializing GASS server, err=%d\n", err );
+		globus_gram_client_callback_disallow( gramCallbackContact );
+		globus_module_deactivate( GLOBUS_GRAM_CLIENT_MODULE );
+		return false;
+	}
+
+	err = globus_gass_server_ez_init( &gassServerListener, NULL, NULL, NULL,
+									  GLOBUS_GASS_SERVER_EZ_READ_ENABLE |
+									  GLOBUS_GASS_SERVER_EZ_LINE_BUFFER |
+									  GLOBUS_GASS_SERVER_EZ_WRITE_ENABLE,
+									  NULL );
+	if ( err != GLOBUS_SUCCESS ) {
+		dprintf( D_ALWAYS, "Error enabling GASS server, err=%d\n", err );
+		globus_gram_client_callback_disallow( gramCallbackContact );
+		globus_module_deactivate_all();
+		return false;
+	}
+
+	if ( gassServerUrl ) {
+		globus_libc_free(gassServerUrl);
+		gassServerUrl = NULL;
+	}
+	gassServerUrl = globus_gass_transfer_listener_get_base_url(gassServerListener);
+	return true;
+}
+
+
+bool
+main_deactivate_globus()
+{
+	globus_gram_client_callback_disallow( gramCallbackContact );
+	globus_gass_server_ez_shutdown( gassServerListener );
+	globus_module_deactivate_all();
+	return true;
+}
+
+
 int
 main_init( int argc, char **argv )
 {
-	int err;
-
 	// handle specific command line args
 	int i = 1;
 	while ( i < argc ) {
@@ -63,47 +135,11 @@ main_init( int argc, char **argv )
 		i++;
 	}
 
-	if(gridmanager.X509Proxy) {
-		setenv("X509_USER_PROXY", gridmanager.X509Proxy, 1);
-	}		
-	err = globus_module_activate( GLOBUS_GRAM_CLIENT_MODULE );
-	if ( err != GLOBUS_SUCCESS ) {
-		dprintf( D_ALWAYS, "Error initializing GRAM, err=%d - %s\n", 
-			err, globus_gram_client_error_string(err) );
-		DC_Exit( 1 );
+	// Activate Globus libraries
+	if ( main_activate_globus() == false ) {
+		dprintf(D_ALWAYS,"Failed to activate Globus Libraries\n");
+		DC_Exit(1);
 	}
-
-	err = globus_gram_client_callback_allow( GridManager::gramCallbackHandler,
-											 &gridmanager,
-											 &gramCallbackContact );
-	if ( err != GLOBUS_SUCCESS ) {
-		dprintf( D_ALWAYS, "Error enabling GRAM callback, err=%d - %s\n", 
-			err, globus_gram_client_error_string(err) );
-		globus_module_deactivate( GLOBUS_GRAM_CLIENT_MODULE );
-		DC_Exit( 1 );
-	}
-
-	err = globus_module_activate( GLOBUS_GASS_SERVER_EZ_MODULE );
-	if ( err != GLOBUS_SUCCESS ) {
-		dprintf( D_ALWAYS, "Error initializing GASS server, err=%d\n", err );
-		globus_gram_client_callback_disallow( gramCallbackContact );
-		globus_module_deactivate( GLOBUS_GRAM_CLIENT_MODULE );
-		DC_Exit( 1 );
-	}
-
-	err = globus_gass_server_ez_init( &gassServerListener, NULL, NULL, NULL,
-									  GLOBUS_GASS_SERVER_EZ_READ_ENABLE |
-									  GLOBUS_GASS_SERVER_EZ_LINE_BUFFER |
-									  GLOBUS_GASS_SERVER_EZ_WRITE_ENABLE,
-									  NULL );
-	if ( err != GLOBUS_SUCCESS ) {
-		dprintf( D_ALWAYS, "Error enabling GASS server, err=%d\n", err );
-		globus_gram_client_callback_disallow( gramCallbackContact );
-		globus_module_deactivate_all();
-		DC_Exit( 1 );
-	}
-
-	gassServerUrl = globus_gass_transfer_listener_get_base_url(gassServerListener);
 
 	gridmanager.Init();
 	gridmanager.Register();
@@ -125,9 +161,7 @@ main_config()
 int
 main_shutdown_fast()
 {
-	globus_gram_client_callback_disallow( gramCallbackContact );
-	globus_gass_server_ez_shutdown( gassServerListener );
-	globus_module_deactivate_all();
+	main_deactivate_globus();
 	DC_Exit(0);
 	return TRUE;	// to satisfy c++
 }
@@ -135,9 +169,7 @@ main_shutdown_fast()
 int
 main_shutdown_graceful()
 {
-	globus_gram_client_callback_disallow( gramCallbackContact );
-	globus_gass_server_ez_shutdown( gassServerListener );
-	globus_module_deactivate_all();
+	main_deactivate_globus();
 	DC_Exit(0);
 	return TRUE;	// to satify c++
 }

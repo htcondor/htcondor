@@ -46,6 +46,7 @@ GlobusJob::GlobusJob( GlobusJob& copy )
 
 	removedByUser = copy.removedByUser;
 	callbackRegistered = copy.callbackRegistered;
+	ignore_callbacks = copy.ignore_callbacks;
 	procID = copy.procID;
 	exitValue = copy.exitValue;
 	jobContact = (copy.jobContact == NULL) ? NULL : strdup( copy.jobContact );
@@ -78,6 +79,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 
 	removedByUser = false;
 	callbackRegistered = false;
+	ignore_callbacks = false;
 	classad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
 	classad->LookupInteger( ATTR_PROC_ID, procID.proc );
 	jobContact = NULL;
@@ -125,6 +127,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	classad->LookupInteger( ATTR_JOB_STATUS, job_status );
 	if ( job_status == REMOVED ) {
 		jobState = G_CANCELED;
+		removedByUser = true;
 	}
 
 	buf[0] = '\0';
@@ -277,6 +280,28 @@ bool GlobusJob::start()
 	}
 }
 
+bool GlobusJob::stop_job_manager()
+{
+	int rc;
+	int status;
+	int failure_code;
+
+	// Before sending the signal, set ignore_callbacks flag because
+	// callbacks could arrive before the send signal function returns.
+	ignore_callbacks = true;	
+
+	rc = globus_gram_client_job_signal( jobContact,
+								GLOBUS_GRAM_CLIENT_JOB_SIGNAL_STOP_MANAGER, NULL,
+								&status, &failure_code );
+	if ( rc == GLOBUS_SUCCESS ) {
+		return true;
+	} else {
+		errorCode = failure_code;
+		return false;
+	}
+}
+
+
 bool GlobusJob::commit()
 {
 	int rc;
@@ -400,6 +425,12 @@ bool GlobusJob::callback_register()
 
 bool GlobusJob::callback( int state = 0, int error = 0 )
 {
+	if (ignore_callbacks) {
+		dprintf( D_FULLDEBUG, "Ignoring callback - state %d for job %d.%d\n",
+				 state, procID.cluster, procID.proc );
+		return true;
+	}
+
 	if ( state == GLOBUS_GRAM_CLIENT_JOB_STATE_PENDING ) {
 		if ( jobState != G_PENDING ) {
 			jobState = G_PENDING;
@@ -416,30 +447,54 @@ bool GlobusJob::callback( int state = 0, int error = 0 )
 		}
 	} else if ( state == GLOBUS_GRAM_CLIENT_JOB_STATE_FAILED ) {
 		// Not sure what the right thing to do on a FAILED message from
-		// globus. For now, we treat it like a completed job.
+		// globus. For now, we usually treat it like a completed job.
 		// Note: we also get this message after the job was cancelled.
+		// Note: I think we also get this message if the JobManager's proxy
+		//       cert expires.  Check for this, and do not change the state.
+		//       instead, we'll deal with it next time we probe the job, at
+		//       which point we will notice the JM is gone and will restart
 
 		// JobsByContact with a state of FAILED shouldn't be in the hash table,
 		// but we'll check anyway.
 		if ( jobState != G_FAILED ) {
-			jobState = G_FAILED;
 
-			stateChanged = true;
 
-			//dprintf(D_ALWAYS,"TODD DEBUGCHECK %s:%d\n",__FILE__,__LINE__);
 			if ( removedByUser ) {
-			//dprintf(D_ALWAYS,"TODD DEBUGCHECK %s:%d\n",__FILE__,__LINE__);
+				// If the user removed the job anyhow, consider it cancelled.
 				jobState = G_CANCELED;
+				stateChanged = true;
 				addJobUpdateEvent( this, JOB_UE_CANCELED );
 			} else {
-				addJobUpdateEvent( this, JOB_UE_FAILED );
+				// If it failed because the proxy expired or because
+				// asked to shutdown, ignore the error if we can
+				// restart the job manager.... and we'll simply
+				// restart it next time we need it.
+				if ( (error == GLOBUS_GRAM_CLIENT_JOB_SIGNAL_STOP_MANAGER ||
+					  error == GLOBUS_GRAM_CLIENT_ERROR_TTL_EXPIRED ||
+					  error == GLOBUS_GRAM_CLIENT_ERROR_USER_PROXY_EXPIRED) &&
+					  newJM ) {
+
+						const char *err_str = 
+									globus_gram_client_error_string(error);
+						if ( !err_str ) {
+							err_str = "unknown";
+						}
+
+						dprintf(D_ALWAYS,"Job Manager %s failed because %s, "
+								"will restart it\n",jobContact,err_str);
+				} else {
+					// JM Failed with an error which cannot be handled
+					// by just restarting it, or we are talking to a job
+					// manager which cannot be restarted (old version).
+					jobState = G_FAILED;
+					stateChanged = true;
+					addJobUpdateEvent( this, JOB_UE_FAILED );
+					// TODO
+					// put on hold instead? restart? (for certain errors)
+					// userlog entry (what type of event is this?)
+				}
 			}
 
-			// TODO
-
-			// put on hold instead? (for certain errors)
-
-			// userlog entry (what type of event is this?)
 
 			if ( !newJM ) {
 				rehashJobContact( this, jobContact, NULL );
@@ -621,6 +676,11 @@ bool GlobusJob::restart()
 	char rsl[4096];
 	char buffer[1024];
 	struct stat file_status;
+
+	// If we killed the job manager ourselves, ignore_callbacks is set
+	// to True.  When we decide it is time to restart it, we must remember
+	// to put ignore_callbacks back to False.
+	ignore_callbacks = false;
 
 	if ( durocRequest ) {
 		dprintf( D_FULLDEBUG, "Attempted to restart a DUROC job (%d.%d)\n",

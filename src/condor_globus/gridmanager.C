@@ -28,12 +28,18 @@
 #include "my_username.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_attributes.h"
+#include "condor_config.h"
+#include "format_time.h"  // for format_time and friends
 
 #include "globus_gram_client.h"
+#include "globus_gss_assist.h"
 
 #include "gm_common.h"
 #include "gridmanager.h"
 
+#include "sslutils.h"	// for proxy_get_filenames
+
+extern gss_cred_id_t globus_i_gram_http_credential;
 
 #define QMGMT_TIMEOUT 5
 
@@ -158,6 +164,9 @@ GridManager::GridManager()
 	Owner = NULL;
 	ScheddAddr = NULL;
 	X509Proxy = NULL;
+	checkProxy_tid = -1;
+	Proxy_Expiration_Time = 0;
+	Initial_Proxy_Expiration_Time = 0;
 
 	JobsByContact = new HashTable <HashKey, GlobusJob *>( HASH_TABLE_SIZE,
 														  hashFunction );
@@ -227,6 +236,12 @@ GridManager::Init()
 	if ( Owner == NULL ) {
 		EXCEPT( "Can't determine username" );
 	}
+
+	// Find the location of our proxy file, if we don't already
+	// know (from the command line)
+	if (X509Proxy == NULL) {
+		proxy_get_filenames(1, NULL, NULL, &X509Proxy, NULL, NULL);
+	}
 }
 
 void
@@ -263,11 +278,191 @@ GridManager::Register()
 	daemonCore->Register_Timer( 10,
 		(TimerHandlercpp)&GridManager::jobProbe,
 		"jobProbe", (Service*)this );
+
+	reconfig();
 }
 
 void
 GridManager::reconfig()
 {
+	char *tmp = NULL;
+
+	// This method is called both at startup [from method Init()], and
+	// when we are asked to reconfig.
+
+	checkProxy_interval = -1;
+	tmp = param("GRIDMANAGER_CHECKPROXY_INTERVAL");
+	if ( tmp ) {
+		checkProxy_interval = atoi(tmp);
+		free(tmp);
+	} 
+	if ( checkProxy_interval < 0 ) {
+		checkProxy_interval = 10 * 60 ; // default interval = 10 minutes
+	}
+
+	minProxy_time = -1;
+	tmp = param("GRIDMANAGER_MINIMUM_PROXY_TIME");
+	if ( tmp ) {
+		minProxy_time = atoi(tmp);
+		free(tmp);
+	} 
+	if ( minProxy_time < 0 ) {
+		minProxy_time = 3 * 60 ; // default = 3 minutes
+	}
+
+	// Always check the proxy on a reconfig.
+	checkProxy();
+
+}
+
+int
+GridManager::checkProxy()
+{
+	time_t now = 	time(NULL);
+	ASSERT(X509Proxy);
+	int seconds_left = x509_proxy_seconds_until_expire(X509Proxy);
+	time_t current_expiration_time = now + seconds_left;
+
+	if ( seconds_left < 0 ) {
+		// Proxy file is gone.  Set things so the below logic
+		// will still do the right thing when our current proxy
+		// goes away, but will never try to refresh with the
+		// non-existant proxy.
+		seconds_left = 0;
+		current_expiration_time = now;
+	}
+
+	if ( Proxy_Expiration_Time == 0 ) {
+		// First time through....
+		Proxy_Expiration_Time = current_expiration_time;
+		Initial_Proxy_Expiration_Time = current_expiration_time;
+		dprintf(D_ALWAYS,
+			"Condor-G proxy cert valid for %s\n",format_time(seconds_left));
+	}
+
+	// If our proxy expired in the past, make it seem like it expired
+	// right now so we don't have to deal with time_t negative overflows
+	if ( now > Proxy_Expiration_Time ) {
+		Proxy_Expiration_Time = now;
+	}
+	if ( now > Initial_Proxy_Expiration_Time ) {
+		Initial_Proxy_Expiration_Time = now;
+	}
+
+	// Check if we have a refreshed proxy
+	if ( current_expiration_time > Proxy_Expiration_Time ) {
+		// We have a refreshed proxy!
+
+		/* Update our credential context for GRAM.  This will allow new
+		 * jobmanagers which we subsequently startup to have the refreshed
+		 * proxy.  Aren't we cool?  
+		 */
+    	OM_uint32	major_status;
+    	OM_uint32 	minor_status;
+		gss_cred_id_t old_gram_credential = globus_i_gram_http_credential;
+		static bool first_cred_refresh = true;
+		/* -- Now, acquire our new context.  We care about errors
+		 * here, but we have no good way of handling them.  Dooohh! */
+    	major_status = globus_gss_assist_acquire_cred(&minor_status,
+                        GSS_C_BOTH,
+                        &globus_i_gram_http_credential);
+    	if (major_status != GSS_S_COMPLETE)
+    	{
+			// If we failed, perhaps the proxy file was being changed
+			// right when we were reading it.  Bad luck!  So try
+			// to sleep for one second and try again.
+			sleep(1);
+    		major_status = globus_gss_assist_acquire_cred(&minor_status,
+                        GSS_C_BOTH,
+                        &globus_i_gram_http_credential);
+    		if (major_status != GSS_S_COMPLETE)
+			{
+				// We cannot read in the new proxy... revert to the old.
+				globus_i_gram_http_credential = old_gram_credential;
+			}
+		}
+
+		if ( major_status == GSS_S_COMPLETE ) {
+			// Success!  We have read in the new context.
+
+			/* -- First, release our old context.  Don't care about errors. 
+			 * Do not release the first time through, because the 
+			 * initial context is in use by all our listening sockets. */
+			if ((old_gram_credential != GSS_C_NO_CREDENTIAL) &&
+				(!first_cred_refresh))
+			{
+				OM_uint32 minor_status; 
+				gss_release_cred(&minor_status,&old_gram_credential); 
+				old_gram_credential = GSS_C_NO_CREDENTIAL;
+			}
+
+			// Print out a message
+			int time_left = Proxy_Expiration_Time - now;
+			if ( time_left < 0 ) {
+				time_left = 0;
+			}
+			char *oldtime = strdup(format_time(time_left));
+			char *newtime = strdup(format_time(seconds_left));
+			dprintf(D_ALWAYS,
+			   "Using refreshed cert - old valid for %s (%d), "
+			   "new valid for %s (%d)\n", 
+			   oldtime,time_left,newtime,seconds_left);
+			free(oldtime);
+			free(newtime);
+
+			// Update some variables
+			Proxy_Expiration_Time = current_expiration_time;
+			first_cred_refresh = false;
+		}
+	
+	}  // done handling a refreshed proxy
+
+	// Verify our Initial Proxy is longer than the minimum allowed
+	if ((Initial_Proxy_Expiration_Time - now) <= minProxy_time) 
+	{
+		// Initial Proxy is either already expired, or will expire in
+		// a very short period of time.
+		// Write something out to the log and send a signal to shutdown.
+		// The schedd will try to restart us every few minutes.
+		// TODO: should email the user somewhere around here....
+
+		char *formated_minproxy = strdup(format_time(minProxy_time));
+		dprintf(D_ALWAYS,
+			"ERROR: Condor-G proxy expiring; valid for %s - minimum allowed is %s\n",
+			X509Proxy, format_time( Initial_Proxy_Expiration_Time - now ), 
+			formated_minproxy);
+		free(formated_minproxy);
+
+			// Shutdown with haste!
+		daemonCore->Send_Signal(daemonCore->getpid(),DC_SIGQUIT);  
+		return FALSE;
+	}
+
+
+	// Setup timer to automatically check it next time.  We want the
+	// timer to go off either at the next user-specified interval,
+	// or right before our credentials expire, whichever is less.
+	int interval1 = MIN(checkProxy_interval, 
+						Proxy_Expiration_Time - now - minProxy_time);
+ 	int interval = MIN(interval1, 
+						Initial_Proxy_Expiration_Time - now - minProxy_time);	
+	if ( interval ) {
+		if ( checkProxy_tid != -1 ) {
+			daemonCore->Reset_Timer(checkProxy_tid,interval);
+		} else {
+			checkProxy_tid = daemonCore->Register_Timer( interval,
+				(TimerHandlercpp)&GridManager::checkProxy,
+				"checkProxy", (Service*)this );
+		}
+	} else {
+		// interval is 0, cancel any timer if we have one
+		if (checkProxy_tid != -1 ) {
+			daemonCore->Cancel_Timer(checkProxy_tid);
+			checkProxy_tid = -1;
+		}
+	}
+
+	return TRUE;
 }
 
 
@@ -396,7 +591,7 @@ GridManager::SUBMIT_JOB_signalHandler( int signal )
 					dprintf( D_ALWAYS,
 							 "Resource %s unreachable. Marking as dead\n",
 							 new_job->rmContact );
-					DeadMachines->insert( HashKey(new_job->rmContact), NULL );
+					DeadMachines->insert( HashKey(new_job->rmContact), (char*)NULL );
 					WaitingToSubmit.Append( new_job );
 
 				} else {
@@ -439,18 +634,19 @@ GridManager::SUBMIT_JOB_signalHandler( int signal )
 							// The machine is unreachable. Mark it dead and
 							// delay the cancel.
 							dprintf( D_ALWAYS,
-									 "Resource %s unreachable. Marking as dead\n",
+								 "Resource %s unreachable. Marking as dead\n",
 									 new_job->rmContact );
 							DeadMachines->insert( HashKey(new_job->rmContact),
-												  NULL );
+												  (char*)NULL );
 							WaitingToSubmit.Append( new_job );
 
 						} else {
 
 							// Try to restart the jobmanager
 							dprintf(D_FULLDEBUG,
-									"Can't contact jobmanager for job %d.%d. Will try to restart\n",
-									new_job->procID.cluster,new_job->procID.proc);
+								"Can't contact jobmanager for job %d.%d. "
+								"Will try to restart\n",
+								new_job->procID.cluster,new_job->procID.proc);
 							addRestartJM( new_job );
 
 						}
@@ -467,7 +663,8 @@ GridManager::SUBMIT_JOB_signalHandler( int signal )
 			}
 		} else {
 			// bad state
-			dprintf(D_ALWAYS,"ERROR: job %d.%d is in state %d but has no contact string\n",
+			dprintf(D_ALWAYS,
+				"ERROR: job %d.%d is in state %d but has no contact string\n",
 					new_job->procID.cluster, new_job->procID.proc,
 					new_job->jobState);
 		}
@@ -536,7 +733,9 @@ GridManager::REMOVE_JOBS_signalHandler( int signal )
 		} else {
 
 			// If we don't know about the job, remove it immediately
-			dprintf( D_ALWAYS, "Don't know about removed job %d.%d. Deleting it immediately\n", procID.cluster, procID.proc );
+			dprintf( D_ALWAYS, 
+				"Don't know about removed job %d.%d. "
+				"Deleting it immediately\n", procID.cluster, procID.proc );
 			DestroyProc( procID.cluster, procID.proc );
 
 		}
@@ -576,9 +775,8 @@ GridManager::CANCEL_JOB_signalHandler( int signal )
 	JobsToSubmit.Delete( curr_job );
 
 	if ( curr_job->jobContact != NULL ) {
-
 		char *tmp;
-		if ( DeadMachines->lookup( HashKey(curr_job->rmContact), tmp ) == 0 ) {
+		if ( DeadMachines->lookup(HashKey(curr_job->rmContact),tmp) == 0 ) {
 
 			dprintf(D_FULLDEBUG,
 					"Resource %s is dead, delaying cancel of job %d.%d\n",
@@ -611,15 +809,16 @@ GridManager::CANCEL_JOB_signalHandler( int signal )
 								 "Resource %s unreachable. Marking as dead\n",
 								 curr_job->rmContact );
 						DeadMachines->insert( HashKey(curr_job->rmContact),
-											  NULL );
+											  (char*)NULL );
 						WaitingToCancel.Append( curr_job );
 
 					} else {
 
 						// Try to restart the jobmanager
 						dprintf(D_FULLDEBUG,
-								"Can't contact jobmanager for job %d.%d. Will try to restart\n",
-								curr_job->procID.cluster,curr_job->procID.proc);
+							"Can't contact jobmanager for job %d.%d. "
+							"Will try to restart\n",
+							curr_job->procID.cluster,curr_job->procID.proc);
 						addRestartJM( curr_job );
 
 					}
@@ -735,14 +934,15 @@ GridManager::COMMIT_JOB_signalHandler( int signal )
 							 "Resource %s unreachable. Marking as dead\n",
 							 curr_job->rmContact );
 					DeadMachines->insert( HashKey(curr_job->rmContact),
-										  NULL );
+										  (char*)NULL );
 					WaitingToCommit.Append( curr_job );
 
 				} else {
 
 					// Try to restart the jobmanager
 					dprintf(D_FULLDEBUG,
-							"Can't contact jobmanager for job %d.%d. Will try to restart\n",
+							"Can't contact jobmanager for job %d.%d. "
+							"Will try to restart\n",
 							curr_job->procID.cluster,curr_job->procID.proc);
 					addRestartJM( curr_job );
 
@@ -789,6 +989,41 @@ GridManager::COMMIT_JOB_signalHandler( int signal )
 	}
 
 	return TRUE;
+}
+
+bool
+GridManager::stopJM(GlobusJob *job)
+{
+
+	// We are being asked to kill the JobManager associated
+	// with job (perhaps because its credential is going to expire).
+
+	// Handle this by first canceling all pending events on this
+	// job, so we don't do something silly like kill the JobManager
+	// and then have a pending event restart it.
+	cancelAllPendingEvents(job);
+
+	// Now kill the JM.  Once we do this, we will no longer listen
+	// to any updates from the JM, in case updates will trigger
+	// events which will restart it.
+	job->stop_job_manager();
+	
+
+}
+
+void
+GridManager::cancelAllPendingEvents(GlobusJob *curr_job)
+{
+	// Cancel any pending events on this job.
+	JobsToSubmit.Delete( curr_job );
+	JobsToCancel.Delete( curr_job );
+	JobsToCommit.Delete( curr_job );
+	JMsToRestart.Delete( curr_job );
+	JobsToProbe.Delete( curr_job );
+	WaitingToSubmit.Delete( curr_job );
+	WaitingToCancel.Delete( curr_job );
+	WaitingToCommit.Delete( curr_job );
+	WaitingToRestart.Delete( curr_job );
 }
 
 void
@@ -859,7 +1094,7 @@ GridManager::RESTART_JM_signalHandler( int signal = 0 )
 						 "Resource %s unreachable. Marking as dead\n",
 						 curr_job->rmContact );
 				DeadMachines->insert( HashKey(curr_job->rmContact),
-									  NULL );
+									  (char*)NULL );
 				WaitingToRestart.Append( curr_job );
 
 			} else {
@@ -1222,15 +1457,7 @@ dprintf(D_FULLDEBUG,"deleting job %d.%d (%x)\n",curr_job->procID.cluster,curr_jo
 			JobsByContact->remove( HashKey( curr_job->jobContact ) );
 		}
 		JobsByProcID->remove( curr_job->procID );
-		JobsToSubmit.Delete( curr_job );
-		JobsToCancel.Delete( curr_job );
-		JobsToCommit.Delete( curr_job );
-		JMsToRestart.Delete( curr_job );
-		JobsToProbe.Delete( curr_job );
-		WaitingToSubmit.Delete( curr_job );
-		WaitingToCancel.Delete( curr_job );
-		WaitingToCommit.Delete( curr_job );
-		WaitingToRestart.Delete( curr_job );
+		cancelAllPendingEvents( curr_job);
 		delete curr_job;
 
 	}
@@ -1295,7 +1522,8 @@ GridManager::jobProbe()
 
 	}
 
-	dprintf(D_FULLDEBUG,"machines to probe:%d jobs to probe:%d\n",MachinesToProbe.Number(),JobsToProbe.Number() );
+	dprintf(D_FULLDEBUG,"machines to probe:%d jobs to probe:%d\n",
+		MachinesToProbe.Number(),JobsToProbe.Number() );
 
 	// Ping all the unreachable machines to see if they're back
 	MachinesToProbe.Rewind();
@@ -1307,7 +1535,7 @@ GridManager::jobProbe()
 		if ( globus_gram_client_ping(next_contact) == GLOBUS_SUCCESS ) {
 
 			dprintf( D_ALWAYS,
-					 "Ping succeeded for resource %s. Removing from dead list\n",
+				"Ping succeeded for resource %s. Removing from dead list\n",
 					 next_contact );
 
 			DeadMachines->remove( HashKey(next_contact) );
@@ -1408,8 +1636,9 @@ GridManager::jobProbe()
 
 						// Try to restart the jobmanager
 						dprintf(D_FULLDEBUG,
-								"Can't contact jobmanager for job %d.%d. Will try to restart\n",
-								next_job->procID.cluster,next_job->procID.proc);
+							"Can't contact jobmanager for job %d.%d. "
+							"Will try to restart\n",
+							next_job->procID.cluster,next_job->procID.proc);
 
 						// Cancel any pending submit, cancel, or commit action.
 						// They will conflict with the restart.
@@ -1425,7 +1654,7 @@ GridManager::jobProbe()
 					dprintf( D_ALWAYS,
 							 "Resource %s unreachable. Marking as dead\n",
 							 next_job->rmContact );
-					DeadMachines->insert( HashKey(next_job->rmContact), NULL );
+					DeadMachines->insert( HashKey(next_job->rmContact), (char*)NULL );
 				}
 
 			}
@@ -1474,8 +1703,8 @@ GridManager::gramCallbackHandler( void *user_arg, char *job_contact,
 	rc = this_->JobsByContact->lookup( HashKey( job_contact ), this_job );
 	if ( rc != 0 || this_job == NULL ) {
 		dprintf( D_ALWAYS, 
-			"Can't find record for globus job with contact %s on globus event %d\n",
-				 job_contact, state );
+			"Can't find record for globus job with contact %s "
+			"on globus event %d\n", job_contact, state );
 		return;
 	}
 
@@ -1521,7 +1750,8 @@ GridManager::WriteExecuteToUserLog( GlobusJob *job )
 		return true;
 	}
 
-	dprintf( D_FULLDEBUG, "Writing execute record to user logfile=%s job=%d.%d owner=%s\n",
+	dprintf( D_FULLDEBUG, 
+		"Writing execute record to user logfile=%s job=%d.%d owner=%s\n",
 			 job->userLogFile, job->procID.cluster, job->procID.proc, Owner );
 
 	int hostname_len = strcspn( job->rmContact, ":/" );
@@ -1549,7 +1779,8 @@ GridManager::WriteAbortToUserLog( GlobusJob *job )
 		return true;
 	}
 
-	dprintf( D_FULLDEBUG, "Writing abort record to user logfile=%s job=%d.%d owner=%s\n",
+	dprintf( D_FULLDEBUG, 
+		"Writing abort record to user logfile=%s job=%d.%d owner=%s\n",
 			 job->userLogFile, job->procID.cluster, job->procID.proc, Owner );
 
 	JobAbortedEvent event;
@@ -1573,7 +1804,8 @@ GridManager::WriteTerminateToUserLog( GlobusJob *job )
 		return true;
 	}
 
-	dprintf( D_FULLDEBUG, "Writing terminate record to user logfile=%s job=%d.%d owner=%s\n",
+	dprintf( D_FULLDEBUG, 
+		"Writing terminate record to user logfile=%s job=%d.%d owner=%s\n",
 			 job->userLogFile, job->procID.cluster, job->procID.proc, Owner );
 
 	JobTerminatedEvent event;
@@ -1617,7 +1849,8 @@ GridManager::WriteEvictToUserLog( GlobusJob *job )
 		return true;
 	}
 
-	dprintf( D_FULLDEBUG, "Writing evict record to user logfile=%s job=%d.%d owner=%s\n",
+	dprintf( D_FULLDEBUG, 
+		"Writing evict record to user logfile=%s job=%d.%d owner=%s\n",
 			 job->userLogFile, job->procID.cluster, job->procID.proc, Owner );
 
 	JobEvictedEvent event;

@@ -39,6 +39,7 @@ class GridManager : public Service
 	int updateSchedd();
 	int globusPoll();
 	int jobProbe();
+	int checkProxy();
 
 	static void gramCallbackHandler( void *, char *, int, int );
 
@@ -76,6 +77,16 @@ class GridManager : public Service
 	bool grabAllJobs;
 
 	char *Owner;
+
+	int checkProxy_tid;
+	int checkProxy_interval;
+	int minProxy_time;
+
+	time_t Proxy_Expiration_Time;
+	time_t Initial_Proxy_Expiration_Time;
+
+	void cancelAllPendingEvents(GlobusJob *);
+	bool stopJM(GlobusJob *);
 
 };
 
