@@ -5,48 +5,22 @@ use strict;
 my $Hawkeye = "hawkeye_release";
 my $Release = "release_dir";
 my @BinDirs = ( "bin", "sbin" );
-my @KillList = (
-		"condor_checkpoint",
-		"condor_cod",
-		"condor_compile",
-		"condor_configure",
-		"condor_dagman",
-		"condor_findhost",
-		"condor_gridshell",
-		"condor_history",
-		"condor_hold",
-		"condor_init",
-		"condor_install",
-		"condor_prio",
-		"condor_release",
-		"condor_reschedule",
-		"condor_negotiator",
-		"condor_rm",
-		"condor_run",
-		"condor_submit_dag",
-		"condor_userlog",
-		"condor_vacate",
-		"condor_ckpt_server",
-		"condor_preen",
-		"condor_pvm.*",
-		"condor_reconfig_schedd",
-		"condor_reschedule",
-		"condor_shadow.*",
-		"condor_starter.*",
-		"condor_vacate",
-		"condor_userprio",
-		"condor_schedd",
-		"condor_stats",
-		"condor_submit",
-		"condor_wait",
-		"condor_q",
-		"condor_qedit",
-		"condor_glidein",
-		"condor_gridmanager",
-		"condor_eventd",
-		"gahp_server",
-		"grid_monitor",
-		"rsh",
+my @BinList = (
+		"condor",
+		"condor_config_val",
+		"condor_status",
+		"condor_version",
+		"condor_advertise",
+		"condor_collector",
+		"condor_fetchlog",
+		"condor_master",
+		"condor_master_off",
+		"condor_off",
+		"condor_on",
+		"condor_reconfig",
+		"condor_restart",
+		"condor_startd",
+		"condor_updates_stats",
 	       );
 
 # Are we in the right home?
@@ -82,10 +56,12 @@ foreach my $Bin ( @BinDirs )
   FILE:
     foreach my $File ( @Files )
     {
-	foreach my $Kill ( @KillList )
+	my $Want = 0;
+	foreach my $Bin ( @BinList )
 	{
-	    next FILE if ( $File =~ /$Kill/ );
+	    $Want++ if ( $File eq $Bin );
 	}
+	next FILE if ( ! $Want );
 
 	# Create the actual names
 	my $CondFile = "$RelBin/$File";
