@@ -1,36 +1,24 @@
-#define OperatingSystem Solaris
-#define Architecture X86
+/**************************************************************************
+** These are all the definitions that are shared between all versions of 
+** Solaris, including Sparc vs. X86, and 2.5.1 vs 2.6, etc.
+**
+** At the end of this file, we include the arch/version-specific
+** config files as needed.   
+**************************************************************************/
+
+/**************************************************************************
+** Shared Solaris Settings
+**************************************************************************/
+
+#define OperatingSystem		Solaris
+#define IS_SOLARIS		YES
 
 #define RpcLib /**/
 #define MldLib /**/
-#define KernLib /usr/lib/libelf.a /usr/lib/libkstat.a
-#define MallocLib /lib/libkvm.a
+#define KernLib -lkstat -lelf
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC  
-#define SocketLib /usr/lib/libsocket.so /usr/lib/libnsl.so
-
-#ifndef CrtLibPath
-#if HasGcc
-#define CrtLibPath /usr/local/gnu/lib/gcc-lib/i386-unknown-solaris2.5/2.7.2.1
-#else
-#ifndef SC_VERS
-#define SC_VERS 4.0
-#endif
-#define CrtLibPath concat(concat(/opt/SUNWspro/,SC_VERS),/lib)
-#endif
-#endif
-
-#ifndef Crt0
-#define Crt0 concat(CrtLibPath,/crt1.o)
-#endif
-
-#ifndef CrtAdd
-#if HasGcc
-#define CrtAdd concat(CrtlibPath,/crti.o) concat(CrtLibPath,/values-Xa.o) concat(CrtLibPath,/crtbegin.o)
-#else
-#define CrtAdd concat(CrtlibPath,/crti.o) concat(CrtLibPath,/values-xa.o)
-#endif
-#endif
+#define SocketLib -lnsl -lsocket 
 
 #define SyscallsExp /**/
 
@@ -50,20 +38,6 @@
 #define YpLib
 #endif
 
-#define DbmLibrary 
-
-#define HAS_NEW_FORTRAN		YES
-
-#if HAS_NEW_FORTRAN
-#define FortranLeft -dc -dp -e start -Bstatic -u _MAIN_ -X
-#define FortranMiddle /usr/lang/SC_VERS/cg87/_crt1.o -L/usr/lang/SC_VERS/cg87 -L/usr/lang/SC_VERS
-#define FortranRight -lF77 -lm
-#else
-#define FortranLeft -dc -dp -e start -Bstatic -u _MAIN_ -X
-#define FortranMiddle
-#define FortranRight -lF77 -lI77 -lU77 -lm
-#endif
-
 #ifndef CCompiler
 #if HasGcc
 #define CCompiler gcc
@@ -81,7 +55,7 @@
 #endif
 
 #ifndef Demangler
-#define Demangler /opt/SUNWspro/bin/c++filt  /* Ajitk */
+#define Demangler c++filt
 #endif
 
 #ifndef CFlags
@@ -92,6 +66,12 @@
 #define StaticFlag -static
 #endif
 
+/* 
+** Since we can't statically link on Solaris, don't try to build the 
+** static version when you "make public_all".  -Derek 6/25/98
+*/
+#define WantsStatic NO
+
 #ifndef PreProcessCmd
 #if HasGcc
 #define PreProcessCmd gcc -E -x c-header
@@ -100,13 +80,13 @@
 #endif
 #endif
 
-#define IS_X86_SOLARIS			YES  /* Dhaval defined it */
+#define IS_V5					YES
 
 #ifndef HAS_X
 #define HAS_X					NO
 #endif
 
-#ifndef HAS_X_EXTENSIONS
+#ifdef HAS_X_EXTENSIONS
 #define HAS_X_EXTENSIONS		NO
 #endif
 
@@ -114,12 +94,8 @@
 #define DO_BENCHMARKING			YES
 #endif
 
-#ifndef HAS_PVM
-#define HAS_PVM					NO
-#endif
-
 #define DOES_CHECKPOINTING      YES /* jbasney */
-#define DOES_REMOTE_SYSCALLS    YES /* was YES, but clipped condor */
+#define DOES_REMOTE_SYSCALLS    YES 
 #define DOES_SAVE_SIGSTATE		YES /* ask Jim */
 
 #define HAS_NDBM				YES
@@ -136,7 +112,7 @@
 #define HAS_FORTRAN				NO
 #define HAS_FLOCK				NO
 #define HAS_ADJTIME				YES
-#define HAS_GETDTABLESIZE		NO  /* solaris specific ..dhaval 6/28 */
+#define HAS_GETDTABLESIZE		NO
 #define HAS_GETHOSTNAME			YES
 #define HAS__UTSSYS				NO
 #define HAS_GETPAGESIZE			NO
@@ -144,8 +120,8 @@
 #define HAS_GETPGRP2			NO
 #define HAS_KILLPG				YES
 #define HAS_SETHOSTNAME			YES
-#define HAS_SETREGID			NO
-#define HAS_SETREUID			NO
+#define HAS_SETREGID			YES
+#define HAS_SETREUID			YES
 #define HAS_UTIMES				YES
 #define HAS_UTIME				NO
 #define HAS_VHANGUP				YES
@@ -153,12 +129,11 @@
 #define HAS_SETRESGID			NO
 #define HAS_SETEGID				YES
 #define HAS_SETEUID				YES
-#define HAS_GETWD				NO
+#define HAS_GETWD				YES
 #define HAS_INSQUE				YES
-#define PVM_ARCH			X86
 
+#define HAS_PVM					YES
 
-#define StaticFlag -static
 #define UnixName /vmunix			/* pathname of the system executable */
 #define syscall_lib syscall_lib_bsd /* ask Jim */
 #define PsAllFlag ps -ax				/* "Ps" flag when you want everything */
@@ -173,7 +148,29 @@
 #define MkDepend ../../GENERIC/mdepend.sh /* Ask Jim */
 #endif MkDepend
 
-#define TypicalMemory 12
-#define ShadowSizeEstimate 200
-#define KbdDeviceName		kbd
-#define MouseDeviceName		mouse
+
+/**************************************************************************
+** Include OS version and Arch-specific config files
+**************************************************************************/
+
+#ifdef ArchIncludeFile
+#include ArchIncludeFile
+#endif
+
+#ifdef OSVersionIncludeFile
+#include OSVersionIncludeFile
+#endif
+
+/**************************************************************************
+** Shared things we only can do after we get the version/arch specific 
+** settings defined. 
+**************************************************************************/
+
+#ifndef CrtLibPath
+#define CrtLibPath concat3(/opt/SUNWspro/,SC_VERS,/lib)
+#endif
+
+#ifndef Crt0
+#define Crt0 concat(CrtLibPath,/crt1.o)
+#endif
+
