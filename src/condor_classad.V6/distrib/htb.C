@@ -154,7 +154,7 @@ changeStates( ClassAd &rep, const char *newState, const char *timeStampAttr,
     
         // initialize an iterator over jobs in the partition
 
-    jobCollection->InitializeIterator( parID, itor );
+    jobCollection->InitializeIterator( parID, &itor );
     while( !itor.AtEnd( ) ) {
 
 		empty = false;
