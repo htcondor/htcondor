@@ -1,3 +1,7 @@
+10/10/01 V6_3_1-Condor-G
+	The V6_3-branch built with WANT_GLOBUS = YES, for a CondorG release. 
+	It's just slightly post V6_3_1, with just a few GridManager changes.
+
 10/09/01 V6_3-security-branch
 	 Branch for Zach's security-related changes.  Taken off the
 	 V6_3-branch right after the V6_3_1 release tag.
