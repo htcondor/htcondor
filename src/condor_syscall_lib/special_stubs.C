@@ -226,6 +226,7 @@ _condor_vfprintf_va( int fd, char* fmt, va_list args )
 		/* if it is a conversion character delimiter, then deal with it.
 			XXX skip all of the justifying and precision crap for now, if
 			we need it, we can add it later */
+
 		switch(*++i)
 		{
 			case 'c':
@@ -326,6 +327,16 @@ _condor_itoa(int quantity, char *out, int base)
 	int numchars;
 	char *p, *q;
 	int div, sum, mod, neg;
+	unsigned char basemap[16];
+
+	/* if it is zero, just fast quit */
+	if (quantity == 0)
+	{
+		out[0] = '0'; 
+		out[1] = 0;
+		numchars = 1;
+		return numchars;
+	}
 
 	/* We initialzie the basemap[] array in this fasion to avoid the GNU
 	 * compiler from generating a call to memcpy() behind the scenes.
@@ -348,6 +359,7 @@ _condor_itoa(int quantity, char *out, int base)
 	basemap[13] = 'd';
 	basemap[14] = 'e';
 	basemap[15] = 'f';
+
 	
 	switch(base)
 	{
@@ -384,6 +396,8 @@ _condor_itoa(int quantity, char *out, int base)
 				*q++ = *p++;
 			}
 			*q = 0;
+
+
 			return numchars;
 			break;
 
