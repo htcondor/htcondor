@@ -399,8 +399,11 @@ V6_7_6_EXT      -a V6_7_COMMON_EXT \
                    externals/bundles/gsoap/2.7 \
                    externals/bundles/srb/3.2.1
 
+# Externals needed for V6_7_7 (same as V6_7_6)
+V6_7_7_EXT	-a V6_7_6_EXT
+
 # Externals needed for the head of the V6_7-branch
-V6_7_EXT	-a V6_7_6_EXT
+V6_7_EXT	-a V6_7_7_EXT
 
 # Externals needed for the head of the V6_7-branch on Windows
 V6_7_NT_EXT -a EXT_COMMON \
@@ -474,6 +477,7 @@ V6_7_0_BUILD	-a V6_7_ALL V6_7_0_EXT
 V6_7_2_BUILD	-a V6_7_ALL V6_7_2_EXT
 V6_7_3_BUILD	-a V6_7_ALL V6_7_3_EXT
 V6_7_4_BUILD    -a V6_7_ALL V6_7_4_EXT
+V6_7_6_BUILD    -a V6_7_ALL V6_7_6_EXT
 
 # The V6_7-mirror-branch has condor_c-gahp, so we need to use
 # different modules for it
