@@ -76,10 +76,12 @@ extern "C" {
 	void reaper(int);
 	void handle_sigusr1(int);
 	void handle_sigquit(int);
+	void handle_sigterm(int);
 #else
 	void reaper();
 	void handle_sigusr1();
 	void handle_sigquit();
+	void handle_sigterm();
 #endif
 
 
@@ -90,6 +92,7 @@ extern "C" {
 	void HandleSyscalls();
 	void Wrapup();
 	void send_quit( char *host, char *capability );
+	void send_vacate( char *host, char *capability );
 	void handle_termination( PROC *proc, char *notification,
 				int *jobstatus, char *coredir );
 	void get_local_rusage( struct rusage *bsd_rusage );
@@ -289,17 +292,6 @@ main(int argc, char *argv[] )
 
 #if !defined(WIN32)
 	install_sig_handler(SIGPIPE, (SIG_HANDLER)SIG_IGN );
-	
-		/*
-		  We should always ignore SIGTERM.  If the machine is shutting
-		  down, the SIGTERM should be sent to the schedd, which in
-		  turn will gracefully shutdown the shadows in an orderly,
-		  throttled progression.  If the schedd isn't around to do
-		  that, we've got much bigger problems, and should be getting
-		  sent the SIGQUIT for a fast shutdown soon enough.  
-		  -Derek Wright <wright@cs.wisc.edu> 5/12/00
-		*/
-	install_sig_handler(SIGTERM, (SIG_HANDLER)SIG_IGN );
 #endif
 
 	if( argc > 1 ) {
@@ -556,6 +548,9 @@ main(int argc, char *argv[] )
 
 		// SIGQUIT is sent for a fast shutdow.
 	install_sig_handler_with_mask( SIGQUIT, &fullset, handle_sigquit );
+
+		// SIGTERM is sent for a graceful shutdow.
+	install_sig_handler_with_mask( SIGTERM, &fullset, handle_sigterm );
 
 
 	/* Here we block the async signals.  We do this mainly because on HPUX,
@@ -1339,6 +1334,24 @@ send_quit( char *host, char *capability )
 }
 
 
+/*
+  Connect to the startd on the remote host and gracefully vacate our
+  claim. 
+*/
+void
+send_vacate( char *host, char *capability )
+{
+	if( send_cmd_to_startd( host, capability, DEACTIVATE_CLAIM ) < 0 ) {
+		dprintf( D_ALWAYS, "Shadow: Can't connect to condor_startd on %s\n",
+				 host );
+		DoCleanup();
+		dprintf( D_ALWAYS, "********** Shadow Parent Exiting(%d) **********\n",
+				 JOB_NOT_STARTED );
+		exit( JOB_NOT_STARTED );
+	}
+}
+
+
 void
 regular_setup( char *host, char *cluster, char *proc, char *capability )
 {
@@ -1510,6 +1523,25 @@ handle_sigquit( void )
 	dprintf( D_ALWAYS, "Shadow recieved SIGQUIT (fast shutdown)\n" ); 
 	check_static_policy = 0;
 	send_quit( ExecutingHost, GlobalCap );
+}
+
+
+/*
+
+  If we get a SIGTERM (from the schedd, a shutdown, etc), we want to
+  try to do a graceful shutdown and allow our job to checkpoint. 
+*/
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11)
+void
+handle_sigterm( int unused )
+#else
+void
+handle_sigterm( void )
+#endif
+{
+	dprintf( D_ALWAYS, "Shadow recieved SIGTERM (graceful shutdown)\n" ); 
+	check_static_policy = 0;
+	send_vacate( ExecutingHost, GlobalCap );
 }
 
 
