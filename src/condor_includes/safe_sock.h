@@ -33,6 +33,7 @@
 #include <netinet/in.h>
 #include "buffers.h"
 #include "sock.h"
+#include "condor_constants.h"
 
 /*
 **	S A F E    S O C K
