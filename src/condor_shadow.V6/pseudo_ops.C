@@ -43,6 +43,7 @@
 #include "util_lib_proto.h"
 #include "condor_version.h"
 #include "condor_ver_info.h"
+#include "condor_socket_types.h"
 
 extern "C" {
 	void log_checkpoint (struct rusage *, struct rusage *);
@@ -1037,7 +1038,7 @@ int
 create_tcp_port( u_short *port, int *fd )
 {
 	struct sockaddr_in	sin;
-	int		addr_len = sizeof sin;
+	SOCKET_LENGTH_TYPE	addr_len = sizeof sin;
 
 		/* create a tcp socket */
 	if( (*fd=socket(AF_INET,SOCK_STREAM,0)) < 0 ) {
