@@ -8,6 +8,15 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+11/17/03 V6_6_0-branch
+    A release branch for the 6.6.0 manual.  Created from the
+    V6_6_0-root tag.  Any changes to the 6.6.0 manual should be done
+    here, and the V6_6-branch can be used for 6.6.1 and future work. 
+
+11/14/03 V6_6_0
+    The official 6.6.0 release tag.  This is the version of the manual
+    used to generate the man pages included in the 6.6.0 tarballs.
+
 10/23/03 V6_5_5-doc-post-merge-V6_6-branch-doc-merge-1
     The state of the doc directory in V6_6-branch after merging
     changes from the V6_5_5-branch as tagged V6_5_5-doc-merge-1.
