@@ -146,7 +146,7 @@ CondorVersionInfo::built_since_date(int month, int day, int year)
 	build_date.tm_isdst = 1;
 	build_date.tm_mday = day;
 	build_date.tm_min = 0;
-	build_date.tm_mon = month;
+	build_date.tm_mon = month - 1;
 	build_date.tm_sec = 0;
 	build_date.tm_year = year - 1900;
 
