@@ -20,6 +20,9 @@ The details of each version are described below.
   checkpointing and remote system calls) for Linux i386 RedHat 8.x
   (using gcc/g++ version 3.2.x and glibc version 2.2.93). 
 
+\item The time it takes \Condor{dagman} to submit jobs has been
+      reduced slightly to improve up the startup time of large DAGs.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -71,6 +74,14 @@ function to track mouse activity that does not have a tendancy to fail.
 \item Fixed a \Condor{negotiator} bug that could, in certain rare
       circumstances, cause a \Condor{schedd} to hang for five minutes
       while trying to communicate with it.
+
+\item Fixed a rare bug affecting \Condor{dagman} when job-throttling
+      was enabled: if \Condor{dagman} was removed from the queue
+      together with some of its own jobs (e.g., via \verb@condor_rm -a@,
+      it would quickly submit new jobs to replace them before
+      recognizing that it needs to exit.  It now shuts down
+      immediately without submitting and then removing these
+      unnecessary jobs.
 
 \end{itemize}
 
