@@ -1,12 +1,12 @@
 #!/usr/bin/perl
 
 ######################################################################
-# $Id: remote_declare.pl,v 1.1.2.7 2004-06-25 00:03:49 wright Exp $
+# $Id: remote_declare.pl,v 1.1.2.8 2004-06-25 01:38:10 wright Exp $
 # generate list of all tests to run
 ######################################################################
 
-my $BaseDir = $ENV{BASE_DIR};
-my $SrcDir = $ENV{SRC_DIR};
+my $BaseDir = $ENV{BASE_DIR} || die "BASE_DIR not in environment!\n";
+my $SrcDir = $ENV{SRC_DIR} || die "SRC_DIR not in environment!\n";
 
 my $decl_type;
 my $args = $ARGV[0];
@@ -29,6 +29,23 @@ if( $decl_type =~ /^quick$/ ||
 
 open( TASKLIST, ">$BaseDir/tasklist.nmi" ) || 
     die "Can't open $BaseDir/tasklist.nmi: $!\n"; 
+
+######################################################################
+# run configure on the source tree
+######################################################################
+
+chdir( $SrcDir ) || die "Can't chdir($SrcDir): $!\n";
+print "running CONFIGURE ...\n"; 
+open( TESTCONFIG, "./configure --without-externals 2>&1 |") ||
+    die "Can't open configure as a pipe: $!\n";
+while ( <TESTCONFIG> ) {
+  print $_;
+}
+close (TESTCONFIG);
+$configstat = $?;
+print "CONFIGURE returned a code of $configstat\n"; 
+($configstat == 0) || die "CONFIGURE failed, aborting testsuite run.\n";  
+
 
 ######################################################################
 # generate makefile, compiler_list and run_list for each test group 

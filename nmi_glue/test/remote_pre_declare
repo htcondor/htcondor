@@ -1,0 +1,31 @@
+#!/usr/bin/perl
+
+######################################################################
+# $Id $
+# script to set up for Condor testsuite run
+######################################################################
+
+use Cwd;
+
+######################################################################
+# set up environment and create env file for the rest of the scripts
+######################################################################
+
+my $BaseDir = getcwd();
+my $SrcDir = "$BaseDir/src";
+
+open(ENVSETUP, ">setup_test_env") || 
+    die "cannot open setup_test_env for writing\n";
+
+print ENVSETUP "BASE_DIR=$BaseDir\n";
+print ENVSETUP "export BASE_DIR\n";
+$ENV{"BASE_DIR"}="$BaseDir";
+print ENVSETUP "CONDOR_CONFIG=$BaseDir/condor/etc/condor_config\n";
+print ENVSETUP "export CONDOR_CONFIG\n";
+$ENV{"CONDOR_CONFIG"}="$BaseDir/condor/etc/condor_config";
+print ENVSETUP "PATH=$BaseDir/condor/bin:$BaseDir/condor/sbin:\$PATH\n";
+print ENVSETUP "export PATH\n";
+$ENV{"PATH"}="$BaseDir/condor/bin:$BaseDir/condor/sbin:$PATH";
+print ENVSETUP "SRC_DIR=$SrcDir\n";
+print ENVSETUP "export SRC_DIR\n";
+$ENV{"SRC_DIR"}="$SrcDir";
