@@ -18,7 +18,8 @@
 #define X11Include /s/X11R6-2/include
 #define MkDepend ../../GENERIC/mdepend.sh
 /* #define SC_VERS SC3.0.1  */
-#define IS_V6 NO
+#define IS_V6 YES
+#define USE_QMGMT YES
 #define HAS_NEW_FORTRAN         YES
 #endif
 
