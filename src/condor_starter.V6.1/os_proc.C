@@ -182,12 +182,25 @@ OsProc::StartJob()
 		// Environment 
 		// // // // // // 
 
-	char* env_str = NULL;
-	JobAd->LookupString( ATTR_JOB_ENVIRONMENT, &env_str );
-
 		// Now, instantiate an Env object so we can manipulate the
 		// environment as needed.
 	Env job_env;
+	char* env_str = NULL;
+
+	env_str = param( "STARTER_JOB_ENVIRONMENT" );
+	if(env_str) {
+		if( ! job_env.Merge(env_str) ) {
+			dprintf( D_ALWAYS, "Aborting OSProc::StartJob: "
+					           "Invalid value for STARTER_JOB_ENVIRONMENT: "
+				               "%s\n",env_str);
+			return 0;
+		}
+		free(env_str);
+		env_str = NULL;
+	}
+
+	JobAd->LookupString( ATTR_JOB_ENVIRONMENT, &env_str );
+
 	if( env_str ) { 
 		if( ! job_env.Merge(env_str) ) {
 			dprintf( D_ALWAYS, "Invalid %s found in JobAd.  "
