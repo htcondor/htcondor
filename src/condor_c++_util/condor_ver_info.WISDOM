@@ -66,3 +66,17 @@ condor_shadow.V6
    Compatibility: Fully backwards and forwards compatible
 
 
+---------------------------------------------------------------------------
+condor_c++_util/daemon.C
+---------------------------------------------------------------------------
+
+1) When negotiating authentication, we use the version object to find out
+   if the other side understands this negotiation.  Starting in 6.3.1, it
+   does.  If it doesn't (pre 6.3.1), we don't bother negotiating, since
+   failure is the only possible outcome.
+   
+   Uses is_compatible(): No, has the version it cares about hard coded
+   into the check.
+
+   Compatibility: Fully backwards and forwards compatible.
+

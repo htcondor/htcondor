@@ -339,18 +339,9 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 
 	// find out if client supports authentication negotiation
 
-
-
-	// look at the version if we haven't and it is available
-	if (!_auth_cap_known && _version) {
-		dprintf(D_SECURITY, "STARTCOMMAND: talking to a %s daemon.\n", _version);
-
-		CondorVersionInfo vi(_version);
-		int cmpres = vi.compare_versions("$CondorVersion: 6.3.0 Jul 17 2001 $");
-
-		_auth_cap_known = true;
-		_is_auth_cap = (cmpres <= 0);
-	}
+	// default is disabled.
+	// the config can override that to enabled
+	// the version can override that to disabled
 
 	bool disable_auth_negotiation = true;	// default
 	paramer = param("DISABLE_AUTH_NEGOTIATION");
@@ -365,9 +356,25 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 		free(paramer);
 	} 
 
+	// look at the version if we haven't and it is available
+	if (!_auth_cap_known && _version) {
+		dprintf(D_SECURITY, "STARTCOMMAND: talking to a %s daemon.\n", _version);
+
+		CondorVersionInfo vi(_version);
+		int cmpres = vi.compare_versions("$CondorVersion: 6.3.1 Jul 17 2001 $");
+
+		if (cmpres < 0) {
+			_auth_cap_known = true;
+			_is_auth_cap = false;
+			dprintf (D_SECURITY, "STARTCOMMAND: disabling auth "
+				"negotiation to talk to pre 6.3.1.\n");
+		}
+	}
+
+
 	if ( disable_auth_negotiation ) {
 			dprintf ( D_SECURITY, "STARTCOMMAND: "
-					      "disabling negotiationg for authentication.\n");
+				"disabling negotiation for authentication.\n");
 			_auth_cap_known = true;
 			_is_auth_cap = false;
 
@@ -530,9 +537,12 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 		}
 
 		if (auth_response.LookupString("CONDOR_VERSION", buf)) {
-			dprintf ( D_ALWAYS, "STARTCOMMAND: no CONDOR_VERSION "
-						"in response ClassAd" );
+			dprintf ( D_SECURITY, "STARTCOMMAND: CONDOR_VERSION "
+				"== %s in response ClassAd", buf);
 			New_version(buf);
+		} else {
+			dprintf ( D_SECURITY, "STARTCOMMAND: no CONDOR_VERSION "
+						"in response ClassAd" );
 		}
 
 
@@ -542,7 +552,8 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 			delete sock;
 			return NULL;
 		}
-		if(strcasecmp(buf, "YES") == 0) {
+		if( buf[0] == 'Y' || buf[0] == 'y' ||
+			buf[0] == 'T' || buf[0] == 't' ) {
 			authentication_action = AUTH_YES;
 		} else {
 			authentication_action = AUTH_NO;
