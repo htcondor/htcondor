@@ -27,6 +27,7 @@
 */ 
 
 #include "image.h"
+#include "condor_syscall_mode.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -43,15 +44,19 @@ void
 init_addr_tab()
 {
 	static BOOL initialized = FALSE;
+	int		scm;
 
 	if( initialized ) {
 		return;
 	}
 
+	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	if( getaddressconf(AddrTab,AddrTabSize) != AddrTabSize ) {
+		SetSyscalls( scm );
 		perror( "getaddressconf" );
 		exit( 1 );
 	}
+	SetSyscalls( scm );
 }
 
 /*
