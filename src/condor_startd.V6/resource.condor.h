@@ -1,6 +1,10 @@
 #ifndef _CONDOR_CONDOR_RESOURCE_H
 #define _CONDOR_CONDOR_RESOURCE_H
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 typedef char *resource_name_t;
 typedef char *resource_id_t;
 typedef char *job_id_t;
@@ -46,19 +50,23 @@ typedef struct jobstartinfo {
 	int ji_sock2;
 } start_info_t;
 
-int resource_init __P((void));
-int resource_names __P((resource_name_t **, int *));
-int resource_open __P((resource_name_t, resource_id_t *));
-int resource_params __P((resource_id_t, job_id_t, task_id_t, resource_param_t *, resource_param_t *));
-int resource_allocate __P((resource_id_t, int, int));
-int resource_activate __P((resource_id_t, int, job_id_t *, int, task_id_t *, start_info_t *));
-int resource_free __P((resource_id_t));
-int resource_event __P((resource_id_t, job_id_t, task_id_t, int));
-int resource_close __P((resource_id_t));
+int resource_init();
+int resource_names(resource_name_t **, int *);
+int resource_open(resource_name_t, resource_id_t *);
+int resource_params(resource_id_t, job_id_t, task_id_t, resource_param_t *, resource_param_t *);
+int resource_allocate(resource_id_t rid, int njobs, int ntasks);
+int resource_activate(resource_id_t, int, job_id_t *, int, task_id_t *, start_info_t *);
+int resource_free(resource_id_t);
+int resource_event(resource_id_t, job_id_t, task_id_t, int);
+int resource_close(resource_id_t);
 
 #define resource_isused(r)		((r).r_pid == NO_PID)
 #define resource_markunused(r)		((r).r_pid = NO_PID)
 #define resource_ridcmp(r1,r2)		strcmp((r1),(r2))
 #define resource_rnamecmp(r1,r2)	strcmp((r1),(r2))
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif /* _CONDOR_CONDOR_RESOURCE_H */
