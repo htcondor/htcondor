@@ -227,7 +227,7 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2 )
 	}
 
 	// Insert "my address"
-	char	*tmp = mySinfulAddr( );
+	char	*tmp = global_dc_sinful( );
 	if ( tmp ) {
 		sprintf( buf, "%s=\"%s\"", ATTR_MY_ADDRESS, tmp );
 		// No need to free tmp -- it's static

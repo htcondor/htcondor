@@ -39,9 +39,9 @@
 #include "../condor_daemon_core.V6/condor_ipverify.h"
 #include "condor_secman.h"
 #include "classad_merge.h"
+#include "daemon.h"
 
 extern char* mySubSystem;
-extern char* global_dc_sinful();
 extern bool global_dc_set_cookie(int len, unsigned char* data);
 
 #define SECURITY_HACK_ENABLE

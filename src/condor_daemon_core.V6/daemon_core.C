@@ -6712,8 +6712,3 @@ bool DaemonCore :: get_cookie( int &len, unsigned char* &data ) {
 
 	return true;
 }
-
-// Return the sinful string..
-char *mySinfulAddr( void ) {
-	return daemonCore->InfoCommandSinfulString( );
-}
