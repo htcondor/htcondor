@@ -12,6 +12,7 @@
 #define Crt0 /usr/lib/crt1.o
 #define CrtN /usr/lib/crtn.o
 #define SyscallsExp /**/
+#define SocketLib /**/
 
 #define XLibPath /usr/lib/libX11.a
 #define XExtLibPath /usr/lib/libXext.a
