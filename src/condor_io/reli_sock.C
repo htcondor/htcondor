@@ -93,10 +93,16 @@ ReliSock::listen()
 {
 	if (_state != sock_bound) return FALSE;
 
-	// many modern OS's now support a >5 backlog, so we ask for 200,
+	// many modern OS's now support a >5 backlog, so we ask for 500,
 	// but since we don't know how they behave when you ask for too
-	// many, if 200 doesn't work we try 5 before returning failure
-	if( ::listen( _sock, 200 ) < 0 ) {
+	// many, if 200 doesn't work we try progressively smaller numbers.
+	// you may ask, why not just use SOMAXCONN ?  unfortunately,
+	// it is not correct on several platforms such as Solaris, which
+	// accepts an unlimited number of socks but sets SOMAXCONN to 5.
+	if( ::listen( _sock, 500 ) < 0 ) {
+		if( ::listen( _sock, 300 ) < 0 ) 
+		if( ::listen( _sock, 200 ) < 0 ) 
+		if( ::listen( _sock, 100 ) < 0 ) 
 		if( ::listen( _sock, 5 ) < 0 ) {
 			return FALSE;
 		}
