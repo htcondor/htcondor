@@ -27,7 +27,6 @@ void secondPass (int, char *[]);
 void prettyPrint(ClassAdList &, TrackTotals *);
 int  matchPrefix(const char *, const char *);
 int  lessThanFunc(ClassAd*,ClassAd*,void*);
-char*compressBackSlashes(char*);
 
 extern "C" int SetSyscalls (int) {return 0;}
 extern	void setPPstyle (ppOption, int, char *);
@@ -88,6 +87,8 @@ main (int argc, char *argv[])
 	  case MODE_STARTD_NORMAL:
 	  case MODE_MASTER_NORMAL:
 	  case MODE_CKPT_SRVR_NORMAL:
+	  case MODE_SCHEDD_NORMAL: 
+	  case MODE_SCHEDD_SUBMITTORS:
 		break;
 
 
@@ -95,26 +96,6 @@ main (int argc, char *argv[])
     	sprintf (buffer, "(TARGET.%s == \"%s\") || (TARGET.%s == \"%s\")", 
                     ATTR_STATE, state_to_string(claimed_state), 
                     ATTR_STATE, state_to_string(unclaimed_state));
-		if (diagnose) {
-			printf ("Adding constraint [%s]\n", buffer);
-		}
-		query->addConstraint (buffer);
-		break;
-
-
-	  case MODE_SCHEDD_NORMAL: 
-		sprintf (buffer, "(TARGET.%s >= 0) || (TARGET.%s >= 0)",
-					ATTR_TOTAL_RUNNING_JOBS, ATTR_TOTAL_IDLE_JOBS);
-		if (diagnose) {
-			printf ("Adding constraint [%s]\n", buffer);
-		}
-		query->addConstraint (buffer);
-		break;
-
-
-	  case MODE_SCHEDD_SUBMITTORS:
-		sprintf (buffer, "(TARGET.%s >= 0) || (TARGET.%s >= 0)",
-					ATTR_RUNNING_JOBS, ATTR_IDLE_JOBS);
 		if (diagnose) {
 			printf ("Adding constraint [%s]\n", buffer);
 		}
@@ -192,19 +173,20 @@ usage ()
 	fprintf (stderr,"Usage: %s [options]\n"
 		"    where [options] are zero or more of\n"
 		"\t[-avail]\t\tPrint information about available resources\n"
+		"\t[-ckptsrvr]\t\tDisplay checkpoint server attributes\n"
 		"\t[-claimed]\t\tPrint information about claimed resources\n"
 		"\t[-constraint <const>]\tAdd constraint on classads\n"
 		"\t[-diagnose]\t\tPrint out query ad without performing query\n"
 		"\t[-format <fmt> <attr>]\tRegister display format and attribute\n"
 		"\t[-help]\t\t\tThis screen\n"
 		"\t[-long]\t\t\tDisplay entire classads\n"
+		"\t[-master]\t\tDisplay daemon master attributes\n"
 		"\t[-pool <name>]\t\tGet information from collector <name>\n"
 		"\t[-run]\t\t\tSame as -claimed [deprecated]\n"
+		"\t[-schedd]\t\tDisplay attributes of schedds\n"
 		"\t[-server]\t\tDisplay important attributes of resources\n"
 		"\t[-startd]\t\tDisplay resource attributes\n"
-		"\t[-schedd]\t\tDisplay submittor attributes\n"
-		"\t[-master]\t\tDisplay daemon master attributes\n"
-		"\t[-ckptsrvr]\t\tDisplay checkpoint server attributes\n"
+		"\t[-submittors]\tDisplay information about request submittors\n"
 		"\t[-total]\t\tDisplay totals only\n"
 		"\t[-verbose]\t\tSame as -long\n", 
 		myName);
@@ -295,7 +277,7 @@ secondPass (int argc, char *argv[])
 			pm.registerFormat (argv[i+1], argv[i+2]);
 			if (diagnose) {
 				printf ("Arg %d --- register format [%s] for [%s]\n", 
-						i, compressBackSlashes(argv[i+1]), argv[i+2]);
+						i, argv[i+1], argv[i+2]);
 			}
 			i += 2;
 			continue;
@@ -312,6 +294,7 @@ secondPass (int argc, char *argv[])
 			switch (mode) {
 			  case MODE_STARTD_NORMAL:
 			  case MODE_SCHEDD_NORMAL:
+			  case MODE_SCHEDD_SUBMITTORS:
 			  case MODE_MASTER_NORMAL:
 			  case MODE_CKPT_SRVR_NORMAL:
     		  case MODE_STARTD_AVAIL:
@@ -367,41 +350,4 @@ lessThanFunc(ClassAd *ad1, ClassAd *ad2, void *)
 			return 0;
 
 	return (strcmp (name1, name2) < 0);
-}
-
-
-char *
-compressBackSlashes (char *str)
-{
-	static char buf[512];
-	int	   i, j;
-	bool   bs;
-
-	bs = false;
-	i  = 0;
-	j  = 0;
-	while (str[j])
-	{
-		if (str[j] == '\\')
-		{
-			if (!bs) 
-			{
-				buf[i] = str[j];
-				i++;
-				bs = true;
-			}
-			else
-			{
-				bs = false;
-			}
-		}
-		else
-		{
-			buf[i] = str[j];
-			i++;
-		}
-		j++;
-	}
-
-	return buf;
 }

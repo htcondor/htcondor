@@ -17,6 +17,7 @@ getPPStyleStr ()
     	case PP_NOTSET:			return "<Not set>";
     	case PP_STARTD_NORMAL:	return "Normal (Startd)";
     	case PP_SCHEDD_NORMAL:	return "Normal (Schedd)";
+    	case PP_SCHEDD_SUBMITTORS:return "Normal (Schedd)";
     	case PP_MASTER_NORMAL:	return "Normal (Master)";
     	case PP_CKPT_SRVR_NORMAL:return"Normal (CkptSrvr)";
     	case PP_STARTD_SERVER:	return "Server";
@@ -66,6 +67,7 @@ getTypeStr ()
 	{
 		case STARTD_AD:		return "STARTD";
 		case SCHEDD_AD:		return "SCHEDD";
+		case SUBMITTOR_AD:	return "SUBMITTOR";
 		case MASTER_AD:		return "MASTER";
 		case CKPT_SRVR_AD:	return "CKPT_SRVR";
 		case GATEWAY_AD:	return "GATEWAYS";
@@ -100,6 +102,9 @@ setType (char *dtype, int i, char *argv)
         if (matchPrefix (dtype, "SCHEDD")) {
             type = SCHEDD_AD;
         } else
+		if (matchPrefix (dtype, "SUBMITTOR")) {
+			type = SUBMITTOR_AD;
+		} else
         if (matchPrefix (dtype, "MASTER")) {
             type = MASTER_AD;
         } else
@@ -131,6 +136,7 @@ getModeStr()
 		case MODE_STARTD_AVAIL:			return "Available (Startd)";
 		case MODE_STARTD_RUN:			return "Run (Startd)";
 		case MODE_SCHEDD_NORMAL:		return "Normal (Schedd)";
+		case MODE_SCHEDD_SUBMITTORS:	return "Submittors (Schedd)";
 		case MODE_MASTER_NORMAL:		return "Normal (Master)";
 		case MODE_CKPT_SRVR_NORMAL:		return "Normal (CkptSrvr)";
 		default:				return "<Unknown!>";
