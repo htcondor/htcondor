@@ -29,13 +29,15 @@
 */ 
 
 /* 
-  This file implements config(), function all daemons should call to
-  configure themselves.  It takes just one argument: a pointer to the
-  ClassAd to fill up with the expressions in the config_file.
-  config() simply calls real_config() with the right parameters for
-  the default behavior.  real_config() is also called by
-  config_master(), which is used to configure the condor_master
-  process with different file names.  
+
+  This file implements config(), the function all daemons call to
+  configure themselves.  It takes up to two arguments: a pointer to a
+  ClassAd to fill up with the expressions in the config_file, and a
+  pointer to a string containing the name of the daemon calling config
+  (mySubSystem).  config() simply calls real_config() with the right
+  parameters for the default behavior.  real_config() is also called
+  by config_master(), which is used to configure the condor_master
+  process with different file names.
 
   In general, the config functions check an environment variable to
   find the location of the global config files.  If that doesn't
@@ -66,7 +68,6 @@ char *get_op_sys();
 int SetSyscalls(int);
 void FillSubsysExprs( ClassAd*, char* );
 
-
 // External variables
 extern BUCKET	*ConfigTab[];
 extern int	ConfigLineNo;
@@ -74,7 +75,6 @@ extern int	ConfigLineNo;
 
 // Global variables
 BUCKET	*ConfigTab[TABLESIZE];
-
 
 // Function implementations
 void 
@@ -100,7 +100,6 @@ config_master(ClassAd *classAd)
 {
 	int rval = real_config("CONDOR_CONFIG_MASTER", "condor_config.master", 
 						   "condor_config.master.local", NULL);
-
 	if( rval ) {
 			// Trying to find things in with the .master names failed,
 			// try the regular config files.  
@@ -124,7 +123,6 @@ config_master(ClassAd *classAd)
 		}
 	}
 	FillSubsysExprs( classAd, "MASTER" );
-
 }
 
 
@@ -155,6 +153,7 @@ FillSubsysExprs(ClassAd* ad, char* mySubsys)
 	}
 }
 
+
 int
 real_config(const char *env_name, const char *file_name,
 			const char *local_name, ClassAd *classAd)
@@ -170,6 +169,16 @@ real_config(const char *env_name, const char *file_name,
 	char			*env, *config_file = NULL, *tilde = NULL;
 	char			line[256];
   
+	static int first_time = TRUE;
+	if( first_time ) {
+		first_time = FALSE;
+		init_config();
+	} else {
+			// Clear out everything in our config hash table so we can
+			// rebuild it from scratch.
+		clear_config();
+	}
+
 		/*
 		  N.B. if we are using the yellow pages, system calls which are
 		  not supported by either remote system calls or file descriptor
@@ -241,7 +250,6 @@ real_config(const char *env_name, const char *file_name,
 			// What about tilde if there's no ~condor? 
 	}
 	insert( "hostname", my_hostname(), ConfigTab, TABLESIZE );
-
 
 		// Actually read in the file
 
@@ -359,8 +367,30 @@ real_config(const char *env_name, const char *file_name,
 void
 init_config()
 {
-	 memset( (char *)ConfigTab, 0,sizeof(ConfigTab) ); 
+	memset( (char *)ConfigTab, 0, sizeof(ConfigTab) ); 
 }
+
+
+void
+clear_config()
+{
+	register 	int 	i;
+	register 	BUCKET	*ptr;	
+	register 	BUCKET	*tmp;	
+
+	for( i=0; i<TABLESIZE; i++ ) {
+		ptr = ConfigTab[i];
+		while( ptr ) {
+			tmp = ptr->next;
+			FREE( ptr->value );
+			FREE( ptr->name );
+			FREE( ptr );
+			ptr = tmp;
+		}
+		ConfigTab[i] = NULL;
+	}
+}
+
 
 /*
 ** Return the value associated with the named parameter.  Return NULL
@@ -501,6 +531,7 @@ get_op_sys()
 }
 
 #endif
+
 
 #if defined(__cplusplus)
 }
