@@ -1,0 +1,24 @@
+\begin{ManPage}{\Condor{reconfig}}{1}{Reconfigure condor daemons}
+\label{man-condor-reconfig}
+\Synopsis \SynProg{\Condor{reconfig}}
+\oOpt{-help}
+\oOpt{hostname ...}
+
+\Description 
+
+\Condor{reconfig} reconfigures all of the condor daemons in accordane with 
+the current
+status of the condor configuration file(s).  Once reconfiguration is complete,
+the daemons will behave according to the policies stated in the configuration
+file(s).  The only exception is with the DAEMON\_LIST variable, which will only be
+updated if the \Condor{restart} command is used.  In general,
+\Condor{reconfig} should be used when making changes to the configuration
+files, since it is faster and more effiecent then restarting the daemons.
+
+
+\begin{Options}
+	\OptItem{\Opt{-help}}{Display usage information}
+	\OptItem{\Opt{hostname ...}}{Reconfigure condor on this list of machines}
+\end{Options}
+
+\end{ManPage}

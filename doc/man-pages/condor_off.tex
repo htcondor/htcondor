@@ -1,0 +1,23 @@
+\begin{ManPage}{\Condor{off}}{1}{Shutdown condor daemons}
+\label{man-condor-off}
+\Synopsis \SynProg{\Condor{off}}
+\oOpt{-help}
+\oOpt{hostname ...}
+
+\Description 
+
+\Condor{off} shuts down all of the condor daemons running on a given
+machine.  It does this cleanly without a loss of work done by any jobs
+currently running on this machine, or jobs that are running on other machines
+that have been submitted from this machine.  The only daemon that remains
+running is the \Condor{master}, which can handle both local and remote
+requests to restart the other condor daeomns if need be.  To restart
+condor running on a machine, see the \Condor{on} command.
+
+
+\begin{Options}
+	\OptItem{\Opt{-help}}{Display usage information}
+	\OptItem{\Opt{hostname ...}}{Turn condor off on this list of machines}
+\end{Options}
+
+\end{ManPage}

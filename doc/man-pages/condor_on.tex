@@ -1,0 +1,21 @@
+\begin{ManPage}{\Condor{on}}{1}{Startup condor daemons}
+\label{man-condor-on}
+\Synopsis \SynProg{\Condor{on}}
+\oOpt{-help}
+\oOpt{hostname ...}
+
+\Description 
+
+\Condor{on} starts up all of the condor daemons running on a given
+machine.  This command assumes that the \Condor{master} is allready
+running on the machine.  If this is not the case, \Condor{on} will
+fail complaining that it can't find the address of the master.  \Condor{on}
+will tell the \Condor{master} to start up the condor daemons specified
+in the configuration variable DAEMON\_LIST.
+
+\begin{Options}
+	\OptItem{\Opt{-help}}{Display usage information}
+	\OptItem{\Opt{hostname ...}}{Turn condor on on this list of machines}
+\end{Options}
+
+\end{ManPage}
