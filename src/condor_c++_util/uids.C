@@ -52,6 +52,17 @@ static struct {
 } priv_history[HISTORY_LENGTH];
 static int ph_head=0, ph_count=0;
 
+
+const char*
+priv_to_string( priv_state p )
+{
+	if( p < _priv_state_threshold ) {
+		return priv_state_name[p];
+	}
+	return "PRIV_INVALID";
+}
+
+
 void
 log_priv(priv_state prev, priv_state new_priv, char file[], int line)
 {
