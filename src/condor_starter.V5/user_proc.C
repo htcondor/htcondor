@@ -761,16 +761,21 @@ UserProc::send_sig( int sig )
 		if( kill(pid,SIGCONT) < 0 ) {
 			set_priv(priv);
 			if( errno == ESRCH ) {	// User proc already exited
+				dprintf( D_ALWAYS, "Tried to send signal SIGCONT to user job "
+						 "%d, but that process doesn't exist.\n", pid);
 				return;
 			}
 			perror("kill");
 			EXCEPT( "kill(%d,SIGCONT)", pid  );
 		}
+		dprintf( D_ALWAYS, "Sent signal SIGCONT to user job %d\n", pid);
 	}
 
 	if( kill(pid,sig) < 0 ) {
 		set_priv(priv);
 		if( errno == ESRCH ) {	// User proc already exited
+			dprintf( D_ALWAYS, "Tried to send signal %d to user job "
+					 "%d, but that process doesn't exist.\n", sig, pid);
 			return;
 		}
 		perror("kill");
