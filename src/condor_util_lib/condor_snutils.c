@@ -33,7 +33,7 @@
 int 
 snprintf(
 	char       *output, 
-	int        buffer_size, 
+	size_t     buffer_size, 
 	const char *format, 
 	...)
 {
@@ -41,7 +41,7 @@ snprintf(
 	va_list  args;
 
 	va_start(args, format);
-	length = condor_vsnprintf(output, buffer_size, format, args);
+	length = condor_vsnprintf(output, (int)buffer_size, format, args);
 	va_end(args);
 
 	return length;

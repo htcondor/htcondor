@@ -30,7 +30,7 @@
 BEGIN_C_DECLS
 
 #ifdef NEED_SNPRINTF
-int snprintf(char *output, int buffer_size, const char *format, ...);
+int snprintf(char *output, size_t buffer_size, const char *format, ...);
 #endif
 
 int condor_snprintf(char *output, int buffer_size, const char *format, ...);
