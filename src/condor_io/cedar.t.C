@@ -19,6 +19,8 @@ int main(int argc, char **argv)
 	unsigned int u_integer;
 	long long_integer;
 	unsigned long u_long_integer;
+	long long long_long_integer;
+	unsigned long long u_long_long_integer;
 	short short_integer;
 	unsigned short u_short_integer;
 	float floating_pt;
@@ -109,6 +111,8 @@ int main(int argc, char **argv)
 		u_integer = 42;
 		long_integer = 42;
 		u_long_integer = 42;
+		long_long_integer = 42;
+		u_long_long_integer = 42;
 		short_integer = 42;
 		u_short_integer = 42; 
 		floating_pt = 42.0;
@@ -129,6 +133,8 @@ int main(int argc, char **argv)
 	assert(socket->code(u_integer) == TRUE);
 	assert(socket->code(long_integer) == TRUE);
 	assert(socket->code(u_long_integer) == TRUE);
+	assert(socket->code(long_long_integer) == TRUE);
+	assert(socket->code(u_long_long_integer) == TRUE);
 	assert(socket->code(short_integer) == TRUE);
 	assert(socket->code(u_short_integer) == TRUE);
 	assert(socket->code(floating_pt) == TRUE);
@@ -141,6 +147,8 @@ int main(int argc, char **argv)
 	assert(	u_integer == 42  );
 	assert(	long_integer == 42 );
 	assert(	u_long_integer == 42 );
+	assert(	long_long_integer == 42 );
+	assert(	u_long_long_integer == 42 );
 	assert(	short_integer == 42 );
 	assert(	u_short_integer == 42 ); 
 
