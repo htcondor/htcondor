@@ -330,7 +330,7 @@ StringList * getDaemonList(ReliSock * sock)
     char * entry       = NULL;
 
     StringList * original_names = new StringList(daemonNames, ",");
-    StringList * expanded_names = new StringList();
+    StringList * expanded_names = new StringList(NULL, ",");
 
     original_names->rewind();
     while ( (entry=original_names->next())) {
@@ -368,6 +368,47 @@ StringList * getDaemonList(ReliSock * sock)
     
     return expanded_names;
 }
+
+char * Condor_Auth_X509::get_server_info()
+{
+    OM_uint32	major_status = 0;
+    OM_uint32	minor_status = 0;            
+    OM_uint32   lifetime, flags;
+    gss_name_t  src = NULL, target = NULL;
+    gss_OID     mech, name_type;
+    gss_buffer_desc name_buf;
+    char *      server = NULL;
+    
+    // Now, we do some authorization work 
+    major_status = gss_inquire_context(&minor_status,
+                                       context_handle,
+                                       &src,    
+                                       &target,
+                                       &lifetime,
+                                       &mech, 
+                                       &flags, 
+                                       NULL,
+                                       NULL);
+    if (major_status != GSS_S_COMPLETE) {
+        dprintf(D_SECURITY, "Unable to obtain target principal name\n");
+        return NULL;
+    }
+    else {
+        if ((major_status = gss_display_name(&minor_status,
+                                             target,
+                                             &name_buf,
+                                             &name_type)) != GSS_S_COMPLETE) {
+            dprintf(D_SECURITY, "Unable to convert target principal name\n");
+            return NULL;
+        }
+        else {
+            server = new char[name_buf.length+1];
+            memset(server, 0, name_buf.length+1);
+            memcpy(server, name_buf.value, name_buf.length);
+        }
+    }
+    return server;
+}   
 
 int Condor_Auth_X509::authenticate_self_gss()
 {
@@ -425,87 +466,82 @@ int Condor_Auth_X509::authenticate_client_gss()
     OM_uint32	major_status = 0;
     OM_uint32	minor_status = 0;
     int         status = 0;
-    bool        done = false;
 
-    StringList * daemonNames = getDaemonList(mySock_);
+    priv_state priv;
+    
+    if (isDaemon()) {
+        priv = set_root_priv();
+    }
+    
+    major_status = globus_gss_assist_init_sec_context(&minor_status,
+                                                      credential_handle,
+                                                      &context_handle,
+                                                      "GSI-NO-TARGET",
+                                                      GSS_C_MUTUAL_FLAG,
+                                                      &ret_flags, 
+                                                      &token_status,
+                                                      authsock_get, 
+                                                      (void *) mySock_,
+                                                      authsock_put, 
+                                                      (void *) mySock_
+                                                      );
+    
+    if (isDaemon()) {
+        set_priv(priv);
+    }
 
-    daemonNames->rewind();
-    
-    char * daemon = daemonNames->next();
-    
-    do {
-        status = (daemon == NULL) ? 0 : 1;
+    if (major_status != GSS_S_COMPLETE)	{
+        print_log(major_status,minor_status,token_status,
+                  "Condor GSI authentication failure");
+        // Following four lines of code is added to temporarily
+        // resolve a bug (I belive so) in Globus's GSI code.
+        // basically, if client calls init_sec_context with
+        // mutual authentication and it returns with a mismatched
+        // target principal, init_sec_context will return without
+        // sending the server any token. The sever, therefore,
+        // hangs on waiting for the token (or until the timeout
+        // occurs). This code will force the server to break out
+        // the loop.
+        status = 0;
+        mySock_->encode();
+        mySock_->code(status);
+        mySock_->end_of_message();
+    }
+    else {
+        // Now, wait for final signal
+        mySock_->decode();
+        if (!mySock_->code(status) || !mySock_->end_of_message()) {
+            dprintf(D_SECURITY, "Unable to receive final confirmation for GSI Authentication!\n");
+        }
+        if (status == 0) {
+            dprintf(D_SECURITY, "Server is unable to authorize my user name. Check the GRIDMAP file on the server side.\n");
+        }
+
+        char * server = get_server_info();
+        StringList * daemonNames = getDaemonList(mySock_);
+
+        // Now, let's see if the name is in the list, I am not using
+        // anycase here, so if the host name and what we are looking for
+        // are in different cases, then we will run into problems.
+        status = daemonNames->contains_withwildcard(server) == TRUE? 1 : 0;
+
+        if (status) {
+            dprintf(D_SECURITY, "valid GSS connection established to %s\n", server);            
+        }
+        else {
+            dprintf(D_SECURITY, "The server %s is not specified in the GSI_DAEMON_NAME parameter\n", server);
+        }
 
         mySock_->encode();
         if (!mySock_->code(status) || !mySock_->end_of_message()) {
+            dprintf(D_SECURITY, "Unable to mutual authenticate with server!\n");
             status = 0;
-            dprintf(D_SECURITY, "Unable to send status code to server, bailing out\n");
-            break;      // We can't send message, fall out
-        }
-        status = 0;
-        dprintf(D_FULLDEBUG, "Trying to authenticate with server %s\n", daemon);
-
-        priv_state priv;
-    
-        if (isDaemon()) {
-            priv = set_root_priv();
-        }
-    
-        major_status = globus_gss_assist_init_sec_context(&minor_status,
-                                                          credential_handle,
-                                                          &context_handle,
-                                                          daemon,
-                                                          GSS_C_MUTUAL_FLAG,
-                                                          &ret_flags, 
-                                                          &token_status,
-                                                          authsock_get, 
-                                                          (void *) mySock_,
-                                                          authsock_put, 
-                                                          (void *) mySock_
-                                                          );
-    
-        if (isDaemon()) {
-            set_priv(priv);
         }
 
-        if (major_status != GSS_S_COMPLETE)	{
-            print_log(major_status,minor_status,token_status,
-                      "Condor GSI authentication failure");
-            done = ((daemon = daemonNames->next()) == NULL);
-            // Following four lines of code is added to temporarily
-            // resolve a bug (I belive so) in Globus's GSI code.
-            // basically, if client calls init_sec_context with
-            // mutual authentication and it returns with a mismatched
-            // target principal, init_sec_context will return without
-            // sending the server any token. The sever, therefore,
-            // hangs on waiting for the token (or until the timeout
-            // occurs). This code will force the server to break out
-            // the loop.
-            status = 0;
-            mySock_->encode();
-            mySock_->code(status);
-            mySock_->end_of_message();
+        delete server;
+        delete daemonNames;
+    }
 
-            status = done ? 0 : 1;
-            if (!mySock_->code(status) || !mySock_->end_of_message()) {
-                dprintf(D_SECURITY, "Unable to notify server of current status\n");
-                break;
-            }
-        }
-        else {
-            // Now, wait for final signal
-            mySock_->decode();
-            if (!mySock_->code(status) || !mySock_->end_of_message()) {
-                dprintf(D_SECURITY, "Unable to receive final confirmation for GSI Authentication!\n");
-            }
-            if (status == 0) {
-                dprintf(D_SECURITY, "Servier is unable to authorize my user name. Check the GRIDMAP file on the server side.\n");
-            }
-            break;
-        }
-    } while (!done);
-
-    delete daemonNames;
     if (status == 1) {
         return TRUE;
     }
@@ -521,71 +557,61 @@ int Condor_Auth_X509::authenticate_server_gss()
     OM_uint32 major_status = 0;
     OM_uint32 minor_status = 0;
 
-    do {
-        // See if client is all set to go
-        mySock_->decode();
+    priv_state priv;
+    
+    priv = set_root_priv();
+    
+    major_status = globus_gss_assist_accept_sec_context(&minor_status,
+                                                        &context_handle, 
+                                                        credential_handle,
+                                                        &GSSClientname,
+                                                        &ret_flags, NULL,
+                                                        /* don't need user_to_user */
+                                                        &token_status,
+                                                        NULL,     /* don't delegate credential */
+                                                        authsock_get, 
+                                                        (void *) mySock_,
+                                                        authsock_put, 
+                                                        (void *) mySock_
+                                                        );
+    
+    set_priv(priv);
+    
+    if ( (major_status != GSS_S_COMPLETE)) {
+        print_log(major_status,minor_status,token_status, 
+                  "Condor GSI authentication failure" );
+    }
+    else {
+        // Try to map DN to local name (in the format of name@domain)
+        if ( (status = nameGssToLocal(GSSClientname) ) == 0) {
+            dprintf(D_SECURITY, "Could not map user's DN to local name.\n");
+        }
+        else {
+            dprintf(D_SECURITY,"Valid GSI connection established to %s\n", 
+                    GSSClientname);
+        }
+        mySock_->encode();
         if (!mySock_->code(status) || !mySock_->end_of_message()) {
+            dprintf(D_SECURITY, "Unable to send final confirmation\n");
             status = 0;
         }
 
-        if (status == 0) {
-            break;
-        }
-
-        priv_state priv;
-    
-        priv = set_root_priv();
-    
-        major_status = globus_gss_assist_accept_sec_context(&minor_status,
-                                                            &context_handle, 
-                                                            credential_handle,
-                                                            &GSSClientname,
-                                                            &ret_flags, NULL,
-                                                            /* don't need user_to_user */
-                                                            &token_status,
-                                                            NULL,     /* don't delegate credential */
-                                                            authsock_get, 
-                                                            (void *) mySock_,
-                                                            authsock_put, 
-                                                            (void *) mySock_
-                                                            );
-    
-        set_priv(priv);
-    
-        if ( (major_status != GSS_S_COMPLETE)) {
-            print_log(major_status,minor_status,token_status, 
-                      "Condor GSI authentication failure" );
-
-            mySock_->decode();
-            // to see if user want to try again
-            if (!mySock_->code(status) || !mySock_->end_of_message()) {
-                dprintf(D_SECURITY, "Unable to receive client status.\n");
-                status = 0;
-                break;
-            }
+        // Now, see if client likes me or not
+        mySock_->decode();
+        if (!mySock_->code(status) || !mySock_->end_of_message()) {
+            dprintf(D_SECURITY, "Unable to receive client confirmation.\n");
+            status = 0;
         }
         else {
-            // Try to map DN to local name (in the format of name@domain)
-            if ( (status = nameGssToLocal(GSSClientname) ) == 0) {
-                dprintf(D_SECURITY, "Could not map user's DN to local name.\n");
+            if (status == 0) {
+                dprintf(D_SECURITY, "Client rejected my certificate. Please check the GSI_DAEMON_NAME parameter in Condor's config file.\n");
             }
-            else {
-                dprintf(D_SECURITY,"Valid GSI connection established to %s\n", 
-                        GSSClientname);
-            }
-            mySock_->encode();
-            if (!mySock_->code(status) || !mySock_->end_of_message()) {
-                dprintf(D_SECURITY, "Unable to send final confirmation\n");
-                status = 0;
-            }
-
-            if (GSSClientname) {
-                free(GSSClientname);
-            }
-            break;
         }
-    } while (status==1);
-    
+        
+        if (GSSClientname) {
+            free(GSSClientname);
+        }
+    }
     return (status == 0) ? FALSE : TRUE;
 }
 
