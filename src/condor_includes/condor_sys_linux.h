@@ -28,7 +28,9 @@
 #endif
 
 #if defined(GLIBC)
-#define _GNU_SOURCE
+# ifndef _GNU_SOURCE
+#  define _GNU_SOURCE
+# endif
 #endif
 
 #include <sys/types.h>
