@@ -1375,14 +1375,15 @@ splitTime(const char* name, const ArgumentList &argList, EvalState &state,
 	 	clock = asecs.secs;
 		getGMTime( &clock, &tms );
 
-        split->InsertAttr("seconds", tms.tm_sec);
-        split->InsertAttr("minutes", tms.tm_min);
-        split->InsertAttr("hours", tms.tm_hour);
-        split->InsertAttr("day", tms.tm_mday);
-        split->InsertAttr("month", tms.tm_mon + 1);
-        split->InsertAttr("year", tms.tm_year + 1900);
+        split->InsertAttr("Type", "AbsoluteTime");
+        split->InsertAttr("Year", tms.tm_year + 1900);
+        split->InsertAttr("Month", tms.tm_mon + 1);
+        split->InsertAttr("Day", tms.tm_mday);
+        split->InsertAttr("Hours", tms.tm_hour);
+        split->InsertAttr("Minutes", tms.tm_min);
+        split->InsertAttr("Seconds", tms.tm_sec);
         // Note that we convert the timezone from seconds to minutes.
-        split->InsertAttr("offset",(int) (asecs.offset / 60));
+        split->InsertAttr("Offset",(int) (asecs.offset / 60));
 
         val.SetClassAdValue(split);
 		return true;
@@ -1418,10 +1419,11 @@ splitTime(const char* name, const ArgumentList &argList, EvalState &state,
         }
         
         split = new ClassAd;
-        split->InsertAttr("days", days);
-        split->InsertAttr("hours", hrs);
-        split->InsertAttr("minutes", mins);
-        split->InsertAttr("seconds", secs);
+        split->InsertAttr("Type", "RelativeTime");
+        split->InsertAttr("Days", days);
+        split->InsertAttr("Hours", hrs);
+        split->InsertAttr("Minutes", mins);
+        split->InsertAttr("Seconds", secs);
         
         val.SetClassAdValue(split);
         return true; 
@@ -1701,14 +1703,6 @@ convInt( const char*, const ArgumentList &argList, EvalState &state,
 	Value &result )
 {
 	Value	arg;
-	string	buf;
-	char	*end;
-	int		ivalue;
-	time_t	rtvalue;
-	abstime_t atvalue;
-	bool	bvalue;
-	double	rvalue;
-	Value::NumberFactor nf = Value::NO_FACTOR;
 
 		// takes exactly one argument
 	if( argList.size() != 1 ) {
@@ -1720,68 +1714,8 @@ convInt( const char*, const ArgumentList &argList, EvalState &state,
 		return( false );
 	}
 
-	switch( arg.GetType( ) ) {
-		case Value::UNDEFINED_VALUE:
-			result.SetUndefinedValue( );
-			return( true );
-
-		case Value::ERROR_VALUE:
-		case Value::CLASSAD_VALUE:
-		case Value::LIST_VALUE:
-			result.SetErrorValue( );
-			return( true );
-
-		case Value::STRING_VALUE:
-			arg.IsStringValue( buf );
-			ivalue = (int)strtod( buf.c_str( ), (char**) &end);
-			if( end == buf && ivalue == 0 ) {
-				// strtol() returned an error
-				result.SetErrorValue( );
-				return( true );
-			}
-			switch( toupper( *end ) ) {
-				case 'B': nf = Value::B_FACTOR; break;
-				case 'K': nf = Value::K_FACTOR; break;
-				case 'M': nf = Value::M_FACTOR; break;
-				case 'G': nf = Value::G_FACTOR; break;
-				case 'T': nf = Value::T_FACTOR; break;
-			        case '\0': nf = Value::NO_FACTOR; break;
-				default:  
-					result.SetErrorValue( );
-					return( true );
-			}
-		
-			result.SetIntegerValue((int) (ivalue*Value::ScaleFactor[nf]));
-			return( true );
-
-		case Value::BOOLEAN_VALUE:
-			arg.IsBooleanValue( bvalue );
-			result.SetIntegerValue( bvalue ? 1 : 0 );
-			return( true );
-
-		case Value::INTEGER_VALUE:
-			result.CopyFrom( arg );
-			return( true );
-
-		case Value::REAL_VALUE:
-			arg.IsRealValue( rvalue );
-			result.SetIntegerValue( (int) rvalue );
-			return( true );
-
-		case Value::ABSOLUTE_TIME_VALUE:
-			arg.IsAbsoluteTimeValue(atvalue );
-			result.SetIntegerValue((int)atvalue.secs);
-			return( true );
-
-		case Value::RELATIVE_TIME_VALUE:
-			arg.IsRelativeTimeValue(rtvalue );
-			result.SetIntegerValue( (int)rtvalue );
-			return( true );
-
-		default:
-			EXCEPT( "Should not reach here" );
-	}
-	return( false );
+    convertValueToIntegerValue(arg, result);
+    return true;
 }
 
 
