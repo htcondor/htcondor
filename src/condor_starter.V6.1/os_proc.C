@@ -178,6 +178,28 @@ OsProc::StartJob()
 		// Now, add some env vars the user job might want to see:
 	job_env.Put( "CONDOR_SCRATCH_DIR", Starter->GetWorkingDir() );
 
+		// Deal with port regulation stuff
+	char* low = param( "LOWPORT" );
+	char* high = param( "HIGHPORT" );
+	if( low && high ) {
+		job_env.Put( "_condor_HIGHPORT", high );
+		job_env.Put( "_condor_LOWPORT", low );
+		free( high );
+		free( low );
+	} else if( low ) {
+		dprintf( D_ALWAYS, "LOWPORT is defined but HIGHPORT is not, "
+				 "ignoring LOWPORT\n" );
+		free( low );
+	} else if( high ) {
+		dprintf( D_ALWAYS, "HIGHPORT is defined but LOWPORT is not, "
+				 "ignoring HIGHPORT\n" );
+		free( high );
+    }
+
+		// // // // // // 
+		// Standard Files
+		// // // // // // 
+
 	char Cwd[_POSIX_PATH_MAX];
 	if (JobAd->LookupString(ATTR_JOB_IWD, Cwd) != 1) {
 		dprintf(D_ALWAYS, "%s not found in JobAd.  "
@@ -252,6 +274,10 @@ OsProc::StartJob()
 			dprintf ( D_ALWAYS, "Error file: %s\n", errfile );
 		}
 	}
+
+		// // // // // // 
+		// Misc + Exec
+		// // // // // // 
 
 	// handle JOB_RENICE_INCREMENT
 	char* ptmp = param( "JOB_RENICE_INCREMENT" );
