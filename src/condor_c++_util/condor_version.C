@@ -22,6 +22,16 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 /* Here is the version string - update before a public release */
+/* --- IMPORTANT!  THE FORMAT OF THE VERSION STRING IS VERY STRICT
+   BECAUSE IT IS PARSED AT RUNTIME.  DO NOT ALTER THE FORMAT OR ENTER
+   ANYTHING EXTRA BEFORE THE DATE.  IF YOU WISH TO ADD EXTRA INFORMATION,
+   DO SO _AFTER_ THE DATE AND BEFORE THE TRAILING '$' CHARACTER.
+   EXAMPLES:
+       $CondorVersion: 6.1.11 " __DATE__ " WinNTPreview $    [OK]
+	   $CondorVersion: 6.1.11 WinNTPreview " __DATE__ " $	 [WRONG!!!]
+   Any questions?  See Todd or Derek.  Note: if you mess it up, DaemonCore
+   will EXCEPT at startup time.  
+*/
 static char* CondorVersionString = "$CondorVersion: 6.1.11 " __DATE__ " $";
 
 /* 
