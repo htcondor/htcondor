@@ -255,6 +255,7 @@ NotifyUser( char *buf, PROC *proc, char *email_addr )
    both places. JCP
 */
 
+int
 unlink_local_or_ckpt_server( char *file )
 {
         int             rval;
@@ -297,6 +298,7 @@ rm()
 ** Print an identifier saying who we are.  This function gets handed to
 ** dprintf().
 */
+int
 whoami( FILE *fp )
 {
         if ((Proc) && (Proc->id.cluster || Proc->id.proc)) {
@@ -363,7 +365,7 @@ MvTmpCkpt()
         set_priv(priv);
 }
 
-extern "C" SetSyscalls(){}
+extern "C" int SetSyscalls(){}
 
 /*
 Convert a time value from the POSIX style "clock_t" to a BSD style

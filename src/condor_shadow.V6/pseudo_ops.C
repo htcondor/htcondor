@@ -40,6 +40,7 @@
 #include "job_report.h"
 #include "metric_units.h"
 #include "condor_file_info.h"
+#include "util_lib_proto.h"
 
 extern "C"  void log_checkpoint (struct rusage *, struct rusage *);
 extern "C"  void log_image_size (int);
@@ -125,6 +126,7 @@ pseudo_getppid()
 **	above, this CONDOR job may be started and checkpointed several times
 **	during its lifetime, we return the condor "process id".
 */
+int
 pseudo_getpid()
 {
 
@@ -1048,6 +1050,7 @@ file_size( int fd )
   0 if everything works OK, and -1 otherwise.  N.B. The port number is
   returned in host byte order.
 */
+int
 create_tcp_port( u_short *port, int *fd )
 {
 	struct sockaddr_in	sin;
@@ -1467,6 +1470,7 @@ pseudo_get_a_out_name( char *path )
   directory so we can build full pathname from relative pathnames
   were we need them.
 */
+int
 pseudo_chdir( const char *path )
 {
 	int		rval;
@@ -1495,6 +1499,7 @@ pseudo_chdir( const char *path )
 /*
   Take note of the executing machine's filesystem domain
 */
+int
 pseudo_register_fs_domain( const char *fs_domain )
 {
 	strcpy( Executing_Filesystem_Domain, fs_domain );
@@ -1504,6 +1509,7 @@ pseudo_register_fs_domain( const char *fs_domain )
 /*
   Take note of the executing machine's UID domain
 */
+int
 pseudo_register_uid_domain( const char *uid_domain )
 {
 	strcpy( Executing_UID_Domain, uid_domain );
@@ -1529,6 +1535,7 @@ use_special_access( const char *file )
 		!strcmp(file,"/dev/ip");	
 }
 
+int
 access_via_afs( const char *file )
 {
 	dprintf( D_SYSCALLS, "\tentering access_via_afs()\n" );
@@ -1561,6 +1568,7 @@ access_via_afs( const char *file )
 	return TRUE;
 }
 
+int
 access_via_nfs( const char *file )
 {
 	dprintf( D_SYSCALLS, "\tentering access_via_nfs()\n" );

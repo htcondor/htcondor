@@ -116,6 +116,7 @@ FILE	*log_fp;
   on the wire yet).   Author: Todd Tannenbaum.  Cleaned up on 12/22/97
   by Derek and Todd.
 */
+int
 HandleLog()
 {
 	int nli;			// New Line Index
@@ -235,6 +236,7 @@ int oldd, newd;
 **	treat it as though the parent process died and this process
 **	was inherited by init.
 */
+int
 condor_getppid()
 {
 	return( 1 );
@@ -245,6 +247,7 @@ condor_getppid()
 **	above, this CONDOR job may be started and checkpointed several times
 **	during its lifetime, we return the condor "process id".
 */
+int
 condor_getpid()
 {
 	extern V2_PROC *Proc;
@@ -257,6 +260,7 @@ condor_getpid()
 **	above, this CONDOR job may be started and checkpointed several times
 **	during its lifetime, we return the condor "cluster id".
 */
+int
 #if defined(AIX31) || defined(AIX32)
 condor_getpgrp()
 #else

@@ -104,6 +104,8 @@ extern int do_REMOTE_syscall3(int);
 extern int do_REMOTE_syscall4(int);
 extern int do_REMOTE_syscall5(int);
 
+extern void RequestRSCBandwidth();
+
 #if !defined(AIX31) && !defined(AIX32)
 char *strcpy();
 #endif
@@ -199,6 +201,7 @@ int HandleLog();
 
 int MainSymbolExists = 1;
 
+int
 usage()
 {
 	dprintf( D_ALWAYS, "Usage: shadow schedd_addr host capability cluster proc\n" );
@@ -826,6 +829,7 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 ** remote starter, and the scheduler will send back an aux port number to
 ** be used for out of band (error) traffic.
 */
+int
 #if defined(NEW_PROC)
 send_job( PROC *proc, char *host, char *cap)
 #else
@@ -867,6 +871,7 @@ extern char	*SigNames[];
 ** Opens job queue (Q), and reads in process structure (Proc) as side
 ** affects.
 */
+int
 start_job( char *cluster_id, char *proc_id )
 {
 	int		cluster_num;
