@@ -1,3 +1,9 @@
+04/29/04 V6_7-soap-2-branch
+   A new branch off of V6_7-branch created from the V6_7-soap-2-root
+   tag.  This is the 2nd generation of the V6_7-soap-branch.  The
+   V6_7-branch now has LoS support and a number of other improvements
+   since the V6_7-soap-root tag.
+
 04/28/04 V6_7_0
   The 6.7.0 release, which lives on the V6_7-branch
 
