@@ -159,39 +159,6 @@ int Authentication::authenticate( char *hostAddr, int clientFlags )
   dprintf(D_FULLDEBUG, "Authentication::authenticate %s\n", 
 	  retval == 1 ? "Success" : "FAILURE" );
 
-  //char * key = param("ENCRYPTION_KEY");
-  //if (key) {
-  //    KeyInfo k = KeyInfo((unsigned char *)key, strlen(key), CONDOR_3DES);
-  //    mySock->set_encryption_protocol(&k);
-  //    free(key);
-  //}
-
-  // Testing encryption
-  if (retval == 1){
-      char keyData[] = "This is my secret, please copy it!";
-      int length = strlen(keyData);
-      int l, outlen;
-      char * data = 0;
-      KeyInfo key = KeyInfo((unsigned char *)keyData, length, CONDOR_3DES);
-
-      if (mySock->isClient()) {
-          mySock->set_encryption_protocol(&key);
-          mySock->encode();
-          mySock->put(keyData);
-          mySock->end_of_message();
-          dprintf(D_ALWAYS, "Sent message %s\n", keyData);
-      }
-      else {
-          mySock->get_encryption_protocol(&key);
-          mySock->decode();
-          mySock->get(data);
-          mySock->end_of_message();
-          dprintf(D_ALWAYS, "Received message %s\n", data);
-          free(data);
-      }
-      mySock->set_encryption_off();
-  }
-
   mySock->allow_one_empty_message();
   return ( retval );
 #endif /* SKIP_AUTHENTICATION */
