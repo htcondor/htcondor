@@ -188,7 +188,7 @@ if( $job_log ) {
 } else {
 	# With the new multi-log-reader code, DAGMan doesn't do much with
 	# this anyhow, but it complains if nothing is specified.
-	$job_log = $debug_log;
+	$job_log = "$dagfile.dummy_log";
 }
 
 # Create the submit file used to submit DAGMan as a scheduler universe
