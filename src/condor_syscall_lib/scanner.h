@@ -6,6 +6,7 @@
 #define ACTION_PARAM	5
 #define NOSUPP_FUNC		6
 
+
 struct token {
 	int		tok_type;
 	char	*val;
@@ -24,6 +25,7 @@ struct node {
 	int		in_param;
 	int		out_param;
 	int		extract;
+	int		pseudo;
 	struct node	*next;
 	struct node *prev;
 	struct node *param_list;
