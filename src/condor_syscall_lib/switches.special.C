@@ -239,6 +239,164 @@ int __door_info( int fd, void *info )
 #endif
 
 /*
+getmsg and putmsg apply to SVR4 streams, which we really don't support
+due to the complexities of ioctl.  However, gethostbyname makes extensive
+use of streams on /dev/udp, which is forced to open locally.  So, we will
+allow getmsg and putmsg on locally opened files.  If a file is not locally
+opened, we will report that it is not a stream.
+*/
+
+#include <stropts.h>
+
+#if defined(SYS_getmsg)
+
+int getmsg( int fd, struct strbuf *cptr, struct strbuf *dptr, int *flags )
+{
+	int	rval;
+	int	real_fd;
+
+	_condor_signals_disable();
+
+	if( (real_fd=_condor_file_table_map(fd)) < 0 ) {
+		rval = -1;
+	} else {
+		if( LocalSysCalls() || _condor_file_is_local(fd) ) {
+			rval = syscall( SYS_getmsg, real_fd, cptr, dptr, flags );
+		} else {
+			errno = ENOSTR;
+			rval = -1;
+		}
+	}
+
+	_condor_signals_enable();
+	return rval;
+}
+
+int _getmsg( int fd, struct strbuf *cptr, struct strbuf *dptr, int *flags )
+{
+	return getmsg( fd, cptr, dptr, flags );
+}
+
+int __getmsg( int fd, struct strbuf *cptr, struct strbuf *dptr, int *flags )
+{
+	return getmsg( fd, cptr, dptr, flags );
+}
+
+
+#endif
+
+#if defined(SYS_getpmsg)
+
+int getpmsg( int fd, struct strbuf *cptr, struct strbuf *dptr, int *band, int *flags )
+{
+	int	rval;
+	int	real_fd;
+
+	_condor_signals_disable();
+
+	if( (real_fd=_condor_file_table_map(fd)) < 0 ) {
+		rval = -1;
+	} else {
+		if( LocalSysCalls() || _condor_file_is_local(fd) ) {
+			rval = syscall( SYS_getpmsg, real_fd, cptr, dptr, band, flags );
+		} else {
+			errno = ENOSTR;
+			rval = -1;
+		}
+	}
+
+	_condor_signals_enable();
+	return rval;
+}
+
+int _getpmsg( int fd, struct strbuf *cptr, struct strbuf *dptr, int *band, int *flags )
+{
+	return getpmsg( fd, cptr, dptr, band, flags );
+}
+
+int __getpmsg( int fd, struct strbuf *cptr, struct strbuf *dptr, int *band, int *flags )
+{
+	return getpmsg( fd, cptr, dptr, band, flags );
+}
+
+#endif
+
+#if defined(SYS_putmsg)
+
+int putmsg( int fd, const struct strbuf *cptr, const struct strbuf *dptr, int flags )
+{
+	int	rval;
+	int	real_fd;
+
+	_condor_signals_disable();
+
+	if( (real_fd=_condor_file_table_map(fd)) < 0 ) {
+		rval = -1;
+	} else {
+		if( LocalSysCalls() || _condor_file_is_local(fd) ) {
+			rval = syscall( SYS_putmsg, real_fd, cptr, dptr, flags );
+		} else {
+			errno = ENOSTR;
+			rval = -1;
+		}
+	}
+
+	_condor_signals_enable();
+	return rval;
+}
+
+int _putmsg( int fd, const struct strbuf *cptr, const struct strbuf *dptr, int flags )
+{
+	return putmsg( fd, cptr, dptr, flags );
+}
+
+int __putmsg( int fd, const struct strbuf *cptr, const struct strbuf *dptr, int flags )
+{
+	return putmsg( fd, cptr, dptr, flags );
+}
+
+
+#endif
+
+#if defined(SYS_putpmsg)
+
+int putpmsg( int fd, const struct strbuf *cptr, const struct strbuf *dptr, int band, int flags )
+{
+	int	rval;
+	int	real_fd;
+
+	_condor_signals_disable();
+
+	if( (real_fd=_condor_file_table_map(fd)) < 0 ) {
+		rval = -1;
+	} else {
+		if( LocalSysCalls() || _condor_file_is_local(fd) ) {
+			rval = syscall( SYS_putpmsg, real_fd, cptr, dptr, band, flags );
+		} else {
+			errno = ENOSTR;
+			rval = -1;
+		}
+	}
+
+	_condor_signals_enable();
+	return rval;
+}
+
+int _putpmsg( int fd, const struct strbuf *cptr, const struct strbuf *dptr, int band, int flags )
+{
+	return putpmsg( fd, cptr, dptr, band, flags );
+}
+
+int __putpmsg( int fd, const struct strbuf *cptr, const struct strbuf *dptr, int band, int flags )
+{
+	return putpmsg( fd, cptr, dptr, band, flags );
+}
+
+
+#endif
+
+
+/*
 The Linux C library uses mmap for several purposes.  The I/O
 system uses mmap() to get a nicely aligned buffer.  The memory
 system also uses mmap() for large allocation requests.  In general,
