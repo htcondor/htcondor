@@ -80,6 +80,18 @@ submitted as a non-Administrator user.
 \item Fixed a bug that was causing \Condor{startd} to fail to start up
 with the message, "caInsert: Can't insert CpuBusy into target classad."
 
+\item Fixed a long-standing bug in Condor regarding the configuration
+  settings \Macro{LOWPORT} and \Macro{HIGHPORT}.
+  When these were enabled (to restrict Condor's port usage to a
+  specified range), Condor would fail to set the
+  \texttt{SO\_KEEPALIVE} option on sockets it created.
+  This meant that in the case of a hard machine failure (such as a
+  sudden power outage, etc) on one machine, Condor daemons
+  communicating with that machine would never notice it had died.
+  Now, the \texttt{SO\_KEEPALIVE} option is properly set on all
+  sockets, even with \MacroNI{LOWPORT} and \MacroNI{HIGHPORT}
+  defined. 
+
 \end{itemize}
 
 \noindent Known Bugs:
