@@ -66,7 +66,7 @@ int ShadowInitializer::AcquireJobAdFromSchedd(void)
 		return TRUE;
 	}
 
-	dprintf(D_ALWAYS, "Getting JobAd from schedd manually.\n");
+	dprintf( D_FULLDEBUG, "Getting JobAd from schedd manually.\n" );
 
 	schedd_addr = strdup(m_argv[1]);
 	cluster = atoi(m_argv[4]);
@@ -85,7 +85,7 @@ int ShadowInitializer::AcquireJobAdFromSchedd(void)
 	}
 	free(schedd_addr);
 
-	dprintf(D_ALWAYS, "Success in retreving JobAd.\n");
+	dprintf( D_FULLDEBUG, "Success in retreving JobAd.\n" );
 	ShadowInitialize();
 
 	return TRUE;
