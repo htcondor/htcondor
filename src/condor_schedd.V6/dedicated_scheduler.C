@@ -1291,6 +1291,15 @@ DedicatedScheduler::reaper( int pid, int status )
 	} else if( WIFSIGNALED(status) ) {
 		dprintf( D_ALWAYS, "Shadow pid %d died with %s\n",
 				 pid, daemonCore->GetExceptionString(status) );
+
+		dprintf( D_ALWAYS, "Shadow exited prematurely, "
+				 "shutting down MPI computation\n" );
+
+			// If the shadow died with a signal, it's in bad shape,
+			// and probably didn't clean up anything.  So, try to
+			// shutdown the computation so we don't leave jobs lying
+			// around... 
+		shutdownMpiJob( srec );
 	}
 
 		// Regardless of what happened, we need to remove the
