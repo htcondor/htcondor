@@ -41,7 +41,7 @@ extern "C" void ckpt_and_exit();
 void ckpt_and_exit();
 #endif
 
-void abort();
+void abort_me(void);
 void check( int a, int b );
 
 void usage( char *my_name )
@@ -100,14 +100,14 @@ main( int argc, char **argv )
 	/* at this point a & c should dups, but not the same fd*/
 	if( a == c ) {
 		printf( "Error: a and c are the same: %d\n", a );
-		abort();
+		abort_me();
 		exit( 1 );
 	} 
 
 	/* d should be a dup with fd 15 */
 	if( d != 15 ) {
 		printf( "Error: d's not 15, it's %d\n", d );
-		abort();
+		abort_me();
 		exit( 1 );
 	} 
 
@@ -148,20 +148,20 @@ void check( int a, int b )
 	end = lseek( a, 0, 2 );
 	if( lseek(b,0,1) != end ) {
 		printf( "Error: file %d is not a dup of file %d\n", a, b );
-		abort();
+		abort_me();
 		exit( 1 );
 	}
 
 	result = lseek( b, 0, 0 );
 	if( lseek(a,0,1) != 0 ) {
 		printf( "Error: file %d is not a dup of file %d\n", a, b );
-		abort();
+		abort_me();
 		exit( 1 );
 	}
 	printf( "OK\n" );
 }
 
-void abort()
+void abort_me(void)
 {
 	int i;
 	int j;
