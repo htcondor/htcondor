@@ -580,7 +580,11 @@ activate_claim( Resource* rip, Stream* stream )
 	    ABORT;
 	}
 
-	RealStarter = AlternateStarter[starter];
+	if( starter ) {
+		RealStarter = AlternateStarter[starter];
+	} else {
+		RealStarter = PrimaryStarter;
+	}
 
 	/* We could have been asked to run an alternate version of the
 	 * starter which is not listed in our config file.  If so, Starter
@@ -603,6 +607,11 @@ activate_claim( Resource* rip, Stream* stream )
 	}
 
 	dprintf( D_FULLDEBUG, "Read request ad and starter from shadow.\n" );
+	if( starter ) {
+		dprintf( D_FULLDEBUG, "Using alternate starter #%d.\n", starter );
+	} else {
+		dprintf( D_FULLDEBUG, "Using default starter.\n" );
+	}
 
 		// This recomputes all attributes and fills in the machine classad 
 	rip->update_classad();
@@ -640,8 +649,6 @@ activate_claim( Resource* rip, Stream* stream )
 	    ABORT;
 	}
 
-	dprintf( D_FULLDEBUG, "About to reply ok to the shadow.\n" );
-
 		// If we're here, we've decided to activate the claim.  Tell
 		// the shadow we're ok.
 	stream->encode();
@@ -653,8 +660,6 @@ activate_claim( Resource* rip, Stream* stream )
 		dprintf( D_ALWAYS, "Can't send eom to shadow.\n" );
 		ABORT;
 	}
-
-	dprintf( D_FULLDEBUG, "Finished replying ok to the shadow.\n" );
 
 		// Set up the two starter ports and send them to the shadow
 	stRec.version_num = VERSION_FOR_FLOCK;
