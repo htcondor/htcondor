@@ -6,6 +6,7 @@
 #include "condor_xdr.h"
 #include "condor_constants.h"
 #include "condor_sys.h"
+#include "condor_jobqueue.h"
 #include "xdr_lib.h"
 
 #if defined(ULTRIX42) || defined(ULTRIX43) || defined(OSF1)
@@ -15,12 +16,20 @@
 #	include <sys/mount.h>
 #endif
 
+#if defined(OSF1)
+#include <sys/poll.h>
+#endif
+
+#include "syscall_param_sizes.h"
+
 static char *_FileName_ = __FILE__;
 
 
 int CurrentSysCall;
 
 extern XDR *xdr_syscall;
+
+
 
 int
 REMOTE_syscall( int syscall_num, ... )
