@@ -148,7 +148,6 @@ RESCHEDULE_commandHandler (int, Stream *)
 	ClassAdList startdAds;			// 1. get from collector
 	ClassAdList startdPvtAds;		// 2. get from collector
 	ClassAdList scheddAds;			// 3. get from collector
-	ClassAdList consumedStartds;	// 4. removed from (1) on match
 	ClassAd		*schedd;
 	char		scheddName[80];
 	char		scheddAddr[32];
@@ -213,7 +212,7 @@ RESCHEDULE_commandHandler (int, Stream *)
 		dprintf(D_ALWAYS,"\tSchedd %s's resource limit set at %d\n",
 				scheddName,scheddLimit);
 		result = negotiate( scheddName, scheddAddr, scheddPrio, scheddLimit, 
-						startdAds, startdPvtAds, consumedStartds);
+						startdAds, startdPvtAds);
 		switch (result)
 		{
 			case MM_DONE: // the schedd got all the resources it wanted
@@ -274,7 +273,7 @@ obtainAdsFromCollector (ClassAdList &startdAds,
 	// set the constraints on the various queries
 	// 1.  Fetch ads of startds that are CLAIMED or UNCLAIMED
 	dprintf (D_ALWAYS, "\tGetting startd ads ...\n");
-	sprintf (buffer, "(TARGET.%s == %s) || (TARGET.%s == %s)", 
+	sprintf (buffer, "(TARGET.%s == \"%s\") || (TARGET.%s == \"%s\")", 
 					ATTR_STATE, state_to_string(claimed_state), 
 					ATTR_STATE, state_to_string(unclaimed_state));
 	if (((result = startdQuery.addConstraint(buffer))	!= Q_OK) ||
@@ -317,8 +316,7 @@ obtainAdsFromCollector (ClassAdList &startdAds,
 
 int Matchmaker::
 negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
-			ClassAdList &startdAds, ClassAdList &startdPvtAds, 
-			ClassAdList &consumedStartds)
+			ClassAdList &startdAds, ClassAdList &startdPvtAds)
 {
 	ReliSock	sock;
 	int			i;
@@ -448,10 +446,8 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 			continue;
 		}
 
-		// 2g.  move the offer from the startdAds to the consumedStartds so
-		// 		that it will not be considered again in this negotiation cycle
-
-		// consumedStartds.Insert (offer);  --- ClassAd code doesn't work 
+		// 2g.  Delete ad from list so that it will not be considered again in 
+		//		this negotiation cycle
 		startdAds.Delete (offer);
 	}
 
