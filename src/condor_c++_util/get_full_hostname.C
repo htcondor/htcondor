@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "condor_debug.h"
 #include "condor_string.h"
 #include "condor_config.h"
 
@@ -39,11 +40,25 @@ get_full_hostname( const char* host, struct in_addr* sin_addrp )
 	struct hostent *host_ptr;
 	int h, i;
 
+	dprintf( D_HOSTNAME, "Trying to find full hostname %sfor \"%s\"\n", 
+			 sin_addrp ? "and IP addr " : "", host );
+	if( ! sin_addrp && (tmp = strchr(host, '.')) ) { 
+			// Caller doesn't want the IP addr, and the name already
+			// has a dot.  That's as good as we're going to do, so we
+			// should just exit w/o calling gethostbyname().
+		dprintf( D_HOSTNAME, "Given name is fully qualified, done\n" );
+		full_host = strnewp( host );
+		return full_host;
+	}
+
+	dprintf( D_HOSTNAME, "Calling gethostbyname(%s)\n", host );
 	if( (host_ptr = gethostbyname( host )) == NULL ) {
 			// If the resolver can't find it, just return NULL
 		if( sin_addrp ) {
 			memset( sin_addrp, 0, sizeof(struct in_addr) );
 		}
+		dprintf( D_HOSTNAME, "gethostbyname() failed: %s (errno: %d)\n", 
+				 strerror(errno), errno );
 		return NULL;
 	}
 	if( sin_addrp ) {
@@ -54,36 +69,53 @@ get_full_hostname( const char* host, struct in_addr* sin_addrp )
 	if( host_ptr->h_name && 
 		(tmp = strchr(host_ptr->h_name, '.')) ) { 
 			// There's a '.' in the "name", use that as full.
+		dprintf( D_HOSTNAME, "Main hostent \"%s\" is fully qualified\n", 
+				 host_ptr->h_name );
 		full_host = strnewp( host_ptr->h_name );
 		return full_host;
 	}
 
+	dprintf( D_HOSTNAME, "Main hostent \"%s\" contains no '.', checking "
+			 "aliases\n", host_ptr->h_name ? host_ptr->h_name : "(NULL)" );
+
 		// We still haven't found it yet, try all the aliases
 		// until we find one with a '.'
 	for( i=0; host_ptr->h_aliases[i]; i++ ) {
+		dprintf( D_HOSTNAME, "Checking alias \"%s\"\n",
+				 host_ptr->h_aliases[i] );
 		if( (tmp = strchr(host_ptr->h_aliases[i], '.')) ) { 
+			dprintf( D_HOSTNAME, "Alias \"%s\" is fully qualified\n" );
 			full_host = strnewp( host_ptr->h_aliases[i] );
 			return full_host;
 		}
 	}
 
+	dprintf( D_HOSTNAME, "No host alias is fully qualified, looking for "
+			 "DEFAULT_DOMAIN_NAME\n" );
+
 		// Still haven't found it, try to param for the domain.
 	if( (tmp = param("DEFAULT_DOMAIN_NAME")) ) {
+		dprintf( D_HOSTNAME, "DEFAULT_DOMAIN_NAME is defined: \"%s\"\n", tmp );
 		h = strlen( host );
 		i = strlen( tmp );
 		if( tmp[0] == '.' ) {
 			full_host = new char[h+i+1];
 			sprintf( full_host, "%s%s", host, tmp );
 		} else {
-				// There's no . at the front, so we have to add that.
 			full_host = new char[h+i+2];
 			sprintf( full_host, "%s.%s", host, tmp );
 		}
 		free( tmp );
+		dprintf( D_HOSTNAME, "Full hostname for \"%s\" is \"%s\"\n", host,
+				 full_host );
 		return full_host;
 	}
 
+	dprintf( D_HOSTNAME, "DEFAULT_DOMAIN_NAME not defined\n" );
+
 		// Still can't find it, just give up.
 	full_host = strnewp( host );
+	dprintf( D_HOSTNAME, "Failed to find full hostname for \"%s\", "
+			 "returning \"%s\"\n", host, full_host );
 	return full_host;
 }
