@@ -26,6 +26,8 @@
 #define FALSE (0)
 #endif
 
+extern char* param(char*);
+
 void StripPrefix(const char* pathname,
 				 char        filename[MAX_CONDOR_FILENAME_LENGTH])
 {
@@ -309,18 +311,22 @@ int
 get_ckpt_server_count()
 {
 	int		i;
-	char	ckpt_server_config[30];
+	char	ckpt_server_config[30], *tmp;
 
 	for (i = 0; ; i++) {
 		sprintf(ckpt_server_config, "CKPT_SERVER_HOST_%d", i);
-		if (param(ckpt_server_config) == 0) {
+		if( (tmp = param(ckpt_server_config)) == 0) {
 			break;
+		} else {
+			free( tmp );
 		}
 	}
 
 	if (i == 0) {
-		if (param("CKPT_SERVER_HOST") == 0) {
+		if( (tmp = param("CKPT_SERVER_HOST")) == 0) {
 			i = -1;
+		} else {
+			free( tmp );
 		}
 	}
 	return i;

@@ -136,7 +136,7 @@ int IMDS::RenameFile(struct in_addr machine_IP,
 		new_file_ptr->data.size = old_file_ptr->data.size;
 		new_file_ptr->data.state = old_file_ptr->data.state;
 		new_file_ptr->data.last_modified_time = time(NULL);
-		(void) FileStats.RemoveFileInfo(old_file_ptr);
+		(void) FileStats.RemoveFileInfo(NULL);
     }
 	(void) Index.DeleteFile(machine_IP, owner_name, file_name);
 /*	return RENAMED; */
@@ -155,7 +155,7 @@ u_short IMDS::RemoveFile(struct in_addr machine_IP,
 	file_ptr = Index.GetFileNode(machine_IP, owner_name, file_name);
 	if (file_ptr == NULL)
 		return DOES_NOT_EXIST;
-	d_ret_code = FileStats.RemoveFileInfo(file_ptr->file_data);
+	d_ret_code = FileStats.RemoveFileInfo(NULL);
 	if (d_ret_code != REMOVED_FILE)
 		return (u_short) d_ret_code;
 	i_ret_code = Index.DeleteFile(machine_IP, owner_name, file_name);

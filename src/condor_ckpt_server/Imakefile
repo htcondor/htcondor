@@ -21,6 +21,7 @@ SERVER_API_OBJ = network2.o server_interface.o
 all_target(condor_ckpt_server server_stat ckpt_server_api.a)
 
 c_plus_target(condor_ckpt_server,$(OBJ),$(LIB))
+pure_c_plus_target(condor_ckpt_server.pure,$(OBJ),$(LIB))
 
 c_plus_target(server_stat,$(SERVER_STAT_OBJ),$(LIB))
 

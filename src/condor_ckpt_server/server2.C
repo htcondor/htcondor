@@ -118,20 +118,23 @@ void Server::Init(int max_new_xfers,
 	dprintf_config( "CKPT_SERVER", 2 );
 
 	ckpt_server_dir = param( "CKPT_SERVER_DIR" );
-	if (ckpt_server_dir) {
+	if( ckpt_server_dir ) {
 		if (chdir(ckpt_server_dir) < 0) {
 			dprintf(D_ALWAYS, "Failed to chdir() to %s\n", ckpt_server_dir);
 			exit(1);
 		}
 		dprintf(D_ALWAYS, "CKPT_SERVER running in directory %s\n", 
 				ckpt_server_dir);
+		free( ckpt_server_dir );
 	}
 
 	level = param( "CKPT_SERVER_REPLICATION_LEVEL" );
-	if (level)
+	if( level ) {
 		replication_level = atoi(level);
-	else
+		free( level );
+	} else {
 		replication_level = 0;
+	}
 
 	store_req_sd = SetUpPort(CKPT_SVR_STORE_REQ_PORT);
 	restore_req_sd = SetUpPort(CKPT_SVR_RESTORE_REQ_PORT);
@@ -284,21 +287,27 @@ int Server::SetUpPort(u_short port)
 
 void Server::SetUpPeers()
 {
-	char *peers, *peer, peer_addr[256];
+	char *peers, *peer, peer_addr[256], *ckpt_host;
 	StringList peer_name_list;
 
 	if ((peers = param("CKPT_SERVER_HOSTS")) == NULL) {
 		return;
 	}
 
+	if( (ckpt_host = param("CKPT_SERVER_HOST")) == NULL ) {
+		return;
+	}
+
 	peer_name_list.initializeFromString(peers);
+	free( peers );
 	peer_name_list.rewind();
 	while ((peer = peer_name_list.next()) != NULL) {
-		if (strcmp(peer, param("CKPT_SERVER_HOST"))) {
+		if( strcmp(peer, ckpt_host) ) {
 			sprintf(peer_addr, "<%s:%d>", peer, CKPT_SVR_REPLICATE_REQ_PORT);
 			string_to_sin(peer_addr, peer_addr_list+(num_peers++));
 		}
 	}
+	free( ckpt_host );
 }
 
 void Server::Execute()
@@ -1841,7 +1850,7 @@ void Server::ChildComplete()
 void Server::NoMore()
 {
   more = 0;
-  Log(0, "SIGUSR2 trapped; shutting down checkpoint server");
+  Log(0, "SIGTERM trapped; shutting down checkpoint server");
 }
 
 
@@ -1923,13 +1932,13 @@ void InstallSigHandlers()
 		cerr << "ERROR:" << endl << endl;
 		exit(SIGNAL_HANDLER_ERROR);
     }
-	sig_info.sa_handler = (SIG_HANDLER) SigUser2Handler;
+	sig_info.sa_handler = (SIG_HANDLER) SigTermHandler;
 	sigemptyset(&sig_info.sa_mask);
 	sig_info.sa_flags = 0;
-	if (sigaction(SIGUSR2, &sig_info, NULL) < 0) {
+	if (sigaction(SIGTERM, &sig_info, NULL) < 0) {
 		cerr << endl << "ERROR:" << endl;
 		cerr << "ERROR:" << endl;
-		cerr << "ERROR: cannot install SIGUSR2 signal handler" << endl;
+		cerr << "ERROR: cannot install SIGTERM signal handler" << endl;
 		cerr << "ERROR:" << endl;
 		cerr << "ERROR:" << endl << endl;
 		exit(SIGNAL_HANDLER_ERROR);
@@ -1983,10 +1992,10 @@ void SigUser1Handler(int)
 }
 
 
-void SigUser2Handler(int)
+void SigTermHandler(int)
 {
   BlockSignals();
-  cout << "SIGUSR2 trapped; this handler is incomplete" << endl << endl;
+  cout << "SIGTERM trapped; Shutting down" << endl << endl;
   server.NoMore();
   UnblockSignals();
 }
@@ -2006,7 +2015,7 @@ void BlockSignals()
       exit(SIGNAL_MASK_ERROR);
     }
   if ((sigaddset(&mask, SIGCHLD) + sigaddset(&mask, SIGUSR1) +
-       sigaddset(&mask, SIGUSR2) + sigaddset(&mask, SIGPIPE)) != 0)
+       sigaddset(&mask, SIGTERM) + sigaddset(&mask, SIGPIPE)) != 0)
     {
       cerr << endl << "ERROR:" << endl;
       cerr << "ERROR:" << endl;
@@ -2041,7 +2050,7 @@ void UnblockSignals()
       exit(SIGNAL_MASK_ERROR);
     }
   if ((sigdelset(&mask, SIGCHLD) + sigdelset(&mask, SIGUSR1) +
-       sigdelset(&mask, SIGUSR2) + sigdelset(&mask, SIGPIPE)) != 0)
+       sigdelset(&mask, SIGTERM) + sigdelset(&mask, SIGPIPE)) != 0)
     {
       cerr << endl << "ERROR:" << endl;
       cerr << "ERROR:" << endl;

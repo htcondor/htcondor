@@ -1,13 +1,14 @@
 #if !defined(_XFER_SUMMARY_H)
 #define _XFER_SUMMARY_H
 
+#include "condor_io.h"
 #include "xferstat2.h"
 
-#include <stdio.h>
 
 class XferSummary {
 public:
-	XferSummary() { log_file = 0; }
+	XferSummary();
+	~XferSummary();
 	init();
 	Result(transferinfo *);
 	void time_out(time_t);
@@ -25,7 +26,9 @@ private:
 	unsigned int		time_recving;
 	FILE	*log_file;
 
-	char	machine[256], name[256], *subnet;
+	char	*subnet;
+	SafeSock *s;
+	char	pwd[_POSIX_PATH_MAX];
 
 	void log_transfer(time_t, transferinfo *);
 };

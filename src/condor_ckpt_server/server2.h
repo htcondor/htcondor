@@ -101,7 +101,7 @@ void SigChildHandler(int);
 void SigUser1Handler(int);
 
 
-void SigUser2Handler(int);
+void SigTermHandler(int);
 
 
 

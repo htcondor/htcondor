@@ -9,14 +9,53 @@
 #include "xfer_summary.h"
 #include "condor_network.h"
 #include "condor_collector.h"
+#include "condor_attributes.h"
+#include "my_hostname.h"
+
+static char *_FileName_ = __FILE__;
 
 extern "C" {
 	char *calc_subnet_name();
+	int	free_fs_blocks(char*);
+	char* getwd( char* );
+}
+
+
+
+XferSummary::XferSummary() 
+{
+	s = 0;
+	subnet = 0;
+	log_file = 0;
+}
+
+
+
+XferSummary::~XferSummary() 
+{
+	if( log_file ) { fclose(log_file); }
+	if( s ) { delete s; }
+	if( subnet ) { free(subnet); }
+
 }
 
 
 XferSummary::init()
 {
+	if( s ) { delete s; }
+	s = new SafeSock();
+	s->timeout(30);
+
+	char* tmp = param( "COLLECTOR_HOST" );
+	if( tmp ) {
+		if( ! s->connect(tmp, COLLECTOR_PORT) ) {
+			EXCEPT( "Can't connect to collector: %s", tmp );
+		}
+		free( tmp );
+	} else {
+		EXCEPT( "COLLECTOR_HOST not defined." );
+	}
+
 	start_time = time(0);
 
 	num_sends = 0;
@@ -29,10 +68,12 @@ XferSummary::init()
 	tot_recv_bandwidth = 0;
 	time_recving = 0;
 
-	gethostname(machine, 256);
-	struct hostent *hostptr = gethostbyname(machine);
-	sprintf(name, hostptr->h_name);
+	if( subnet ) { free( subnet ); }
 	subnet = (char *)calc_subnet_name(NULL);
+
+	if( ! getwd( pwd ) ) {
+		EXCEPT( "Can't get working directory." );
+	}
 }
 
 
@@ -82,18 +123,17 @@ extern "C" {
 void
 XferSummary::time_out(time_t now)
 {
-	SafeSock	s(param("COLLECTOR_HOST"), COLLECTOR_UDP_COMM_PORT);
 	ClassAd	   	info;
-	char		line[128];
+	char		line[128], *tmp;
 	int			command = UPDATE_CKPT_SRVR_AD;
 	struct in_addr addr;
 
 	info.SetMyTypeName("CkptServer");
 	info.SetTargetTypeName("CkptFile");
 
-	sprintf(line, "Name = \"%s\"", name);
+	sprintf(line, "%s = \"%s\"", ATTR_NAME, my_full_hostname() );
 	info.Insert(line);
-	sprintf(line, "Machine = \"%s\"", machine);
+	sprintf(line, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() );
 	info.Insert(line);
 	sprintf(line, "Subnet = \"%s\"", subnet);
 	info.Insert(line);
@@ -115,17 +155,21 @@ XferSummary::time_out(time_t now)
 	sprintf(line, "AvgReceiveBandwidth = %f", num_recvs ?
 			tot_recv_bandwidth / num_recvs : 0.0);
 	info.Insert(line);
-	sprintf(line, "CKPT_SERVER_INTERVAL_START = %s", ctime(&start_time));
+	sprintf(line, "CkptServerIntervalStart = \"%s\"", ctime(&start_time));
+	tmp = strchr( line, '\n' );
+	strcpy( tmp, "\"" );
 	info.Insert(line);
-	sprintf(line, "CKPT_SERVER_INTERVAL_END = %s", ctime(&now));
+	sprintf(line, "CkptServerIntervalEnd = \"%s\"", ctime(&now));
+	tmp = strchr( line, '\n' );
+	strcpy( tmp, "\"" );
 	info.Insert(line);
-	sprintf(line, "Disk = %d", free_fs_blocks(getwd(NULL)));
+	sprintf(line, "Disk = %d", free_fs_blocks(pwd) );
 	info.Insert(line);
 	
-	s.encode();
-	s.code(command);
-	info.put(s);
-	s.eom();
+	s->encode();
+	s->code(command);
+	info.put(*s);
+	s->eom();
 
 	if (now - start_time > XFER_SUMMARY_INTERVAL) {
 		init();

@@ -40,49 +40,31 @@ void FileInformation::DeleteFileInfo()
     }
   head = NULL;
   tail = NULL;
-  if (num_files != 0)
-    {
-      cerr << endl << "WARNING:" << endl;
-      cerr << "WARNING:" << endl;
-      cerr << "WARNING: upon deletion, incorrect number of files maintained"
-           << endl;
-      cerr << "WARNING:" << endl;
-      cerr << "WARNING:" << endl;
-    }
 }
 
 
 int FileInformation::RemoveFileInfo(file_info_node* d_ptr)
 {
-
-  if (d_ptr->lock != UNLOCKED)
-    return FILE_LOCKED;
-  if (d_ptr != NULL)
-    {
-      if ((head == d_ptr) && (tail == d_ptr))
-        {
-          head = NULL;
-          tail = NULL;
+	if (d_ptr) {
+		if (d_ptr->lock != UNLOCKED)
+			return FILE_LOCKED;
+		if ((head == d_ptr) && (tail == d_ptr)) {
+			head = NULL;
+			tail = NULL;
+        } else if (head == d_ptr) {
+			head = head->next;
+			head->prev = NULL;
+        } else if (tail == d_ptr) {
+			tail = tail->prev;
+			tail->next = NULL;
+        } else {
+			d_ptr->prev->next = d_ptr->next;
+			d_ptr->next->prev = d_ptr->prev;
         }
-      else if (head == d_ptr)
-        {
-          head = head->next;
-          head->prev = NULL;
-        }
-      else if (tail == d_ptr)
-        {
-          tail = tail->prev;
-          tail->next = NULL;
-        }
-      else
-        {
-          d_ptr->prev->next = d_ptr->next;
-          d_ptr->next->prev = d_ptr->prev;
-        }
-      delete d_ptr;
-      num_files--;
+		delete d_ptr;
     }
-  return (REMOVED_FILE);
+	num_files--;
+	return (REMOVED_FILE);
 }
 
 
