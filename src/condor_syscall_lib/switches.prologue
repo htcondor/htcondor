@@ -330,33 +330,32 @@ typedef int	bool_t;
 #	include <nfs/nfs.h>
 #endif
 
-#if	defined(HPUX9) || defined(IRIX53) || defined(Solaris)
 
 #include <sys/types.h>
 
-#define ZERO(old,new) \
-new( arg_1 ) \
+#define REMAP_ZERO(old,new,type_return) \
+type_return new() \
 { \
 return old(); \
 }
 
-#define ONE(old,new,type_1) \
-new( arg_1 ) \
+#define REMAP_ONE(old,new,type_return,type_1) \
+type_return new( arg_1 ) \
 type_1 arg_1; \
 { \
 return old( arg_1 ); \
 }
 
-#define TWO(old,new,type_1,type_2) \
-new( arg_1, arg_2, arg_3 ) \
+#define REMAP_TWO(old,new,type_return,type_1,type_2) \
+type_return new( arg_1, arg_2 ) \
 type_1 arg_1; \
 type_2 arg_2; \
 { \
 return old( arg_1, arg_2 ); \
 }
 
-#define THREE(old,new,type_1,type_2,type_3) \
-new( arg_1, arg_2, arg_3 ) \
+#define REMAP_THREE(old,new,type_return,type_1,type_2,type_3) \
+type_return new( arg_1, arg_2, arg_3 ) \
 type_1 arg_1; \
 type_2 arg_2; \
 type_3 arg_3; \
@@ -364,8 +363,18 @@ type_3 arg_3; \
 return old( arg_1, arg_2, arg_3 ); \
 }
 
-#define FIVE(old,new,type_1,type_2,type_3,type_4,type_5) \
-new( arg_1, arg_2, arg_3, arg_4, arg_5 ) \
+#define REMAP_FOUR(old,new,type_return,type_1,type_2,type_3,type_4) \
+type_return new( arg_1, arg_2, arg_3, arg_4 ) \
+type_1 arg_1; \
+type_2 arg_2; \
+type_3 arg_3; \
+type_4 arg_4; \
+{ \
+return old( arg_1, arg_2, arg_3, arg_4 ); \
+}
+
+#define REMAP_FIVE(old,new,type_return,type_1,type_2,type_3,type_4,type_5) \
+type_return new( arg_1, arg_2, arg_3, arg_4, arg_5 ) \
 type_1 arg_1; \
 type_2 arg_2; \
 type_3 arg_3; \
@@ -375,8 +384,8 @@ type_5 arg_5; \
 return old( arg_1, arg_2, arg_3, arg_4, arg_5 ); \
 }
 
-#define SIX(old,new,type_1,type_2,type_3,type_4,type_5,type_6) \
-new( arg_1, arg_2, arg_3, arg_4, arg_5, arg_6 ) \
+#define REMAP_SIX(old,new,type_return,type_1,type_2,type_3,type_4,type_5,type_6) \
+type_return new( arg_1, arg_2, arg_3, arg_4, arg_5, arg_6 ) \
 type_1 arg_1; \
 type_2 arg_2; \
 type_3 arg_3; \
@@ -387,66 +396,14 @@ type_6 arg_6; \
 return old( arg_1, arg_2, arg_3, arg_4, arg_5, arg_6 ); \
 }
 
-#endif
 
-#if	defined(HPUX9)
-
-TWO( access, _access, char *, int );
-ONE( unlink, _unlink, char * )
-ONE( close, _close, int )
-THREE( open, _open, char *, int, int )
-ZERO( getpid, _getpid )
-/* TWO( kill, _kill, int, int ) FIX */
-THREE( read, _read, int, char *, int )
-THREE( fcntl, _fcntl, int, int, int )
-THREE( lseek, _lseek, int, int, int )
-ONE( dup, _dup, int )
-TWO( ftruncate, _ftruncate, int, int )
-THREE( write, _write, int, char *, int )
-ONE( isatty, _isatty, int )
-TWO( fstat, _fstat, int, struct stat * )
-ZERO( geteuid, _geteuid )
-TWO( lstat, _lstat, char *, struct stat *)
-ONE( chdir, _chdir, char *)
-ZERO( getegid, _getegid)
-ONE( pipe, _pipe, int *)
-TWO( execv, _execv, char *, char **)
-THREE( bind, _bind, int, void *, int )
-THREE( connect, _connect, int, void *, int )
-THREE( setitimer, _setitimer, int, const struct itimerval *, struct itimerval *)
-/* ONE( sigpause, __sigpause, long ) FIX */
-TWO( stat, _stat, char *, struct stat * )
-/* ONE( sigsetmask, __sigsetmask, long ) FIX */
-/* ONE( sigblock, __sigblock, long ) FIX */
-SIX( recvfrom, _recvfrom, int, void *, int, int, void *, int * )
-TWO( dup2, _dup2, int, int )
-TWO( gettimeofday, _gettimeofday, struct timeval *, void* )
-SIX( sendto, _sendto, int, void *, int, int, void *, int )
-THREE( getsockname, _getsockname, int, void *, int * )
-THREE( ioctl, _ioctl, int, int, int )
-/* THREE( sigvector, __sigvector, int, struct sigvec *, struct sigvec * )  */
-TWO( getitimer, _getitimer, int, struct itimerval * )
-FIVE( setsockopt, _setsockopt, int, int, int, void *, int )
-/*THREE( setresuid, _setresuid, uid_t, uid_t, uid_t ) FIX */
-FIVE( select, _select, size_t, int *, int *, int *, struct timeval * )
-THREE( socket, _socket, int, int, int )
-/* THREE( wait3, _wait3, int *, int, int * ) FIX */
-#endif /* HPUX9 */
-
-#if defined(LINUX)
+#ifdef LINUX
 #include "switches.linux.h"
 #endif
 
-#if defined(IRIX53)
-ONE( getwd, _getwd, char * )
-SIX( mmap, _mmap, char *, size_t, int, int, int, off_t )
-#endif
-
-#if defined(Solaris)
-TWO( fstat, _fstat, int, struct stat * )
-TWO( stat, _stat, const char *, struct stat * )
-TWO( lstat, _lstat, const char *, struct stat * )
-SIX( mmap, _mmap, char *, size_t, int, int, int, off_t )
+#ifdef IRIX53
+REMAP_ONE( getwd, _getwd, char *, char * )
+REMAP_SIX( mmap, _mmap, char *, char *, size_t, int, int, int, off_t )
 #endif
 
 /* On HPUX10, libc fork.o and pipe.o have code entry points of
