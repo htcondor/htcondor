@@ -905,7 +905,7 @@ matchmakingAlgorithm(char *, ClassAd &request,ClassAdList &startdAds,
 	ClassAd 		*bestSoFar = NULL;	
 	double			bestRankValue = -(FLT_MAX);
 	double			bestPreemptRankValue = -(FLT_MAX);
-	PreemptState	bestPreemptState;
+	PreemptState	bestPreemptState = -1;
 	bool			newBestFound;
 		// to store results of evaluations
 	char			remoteUser[128];
