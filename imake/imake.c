@@ -142,7 +142,15 @@ in this Software without prior written authorization from The Open Group.
  */
 #include <stdio.h>
 #include <ctype.h>
+/* 
+   We don't want to include Xosdefs.h here, since we don't *really*
+   need it anywhere, and it's lame to make people install X11
+   development headers just to enable _POSIX_SOURCE for us.  I don't
+   think anyone's going to try to build Condor on a non-posix platform
+   anymore. 
+   - Derek Wright <wright@cs.wisc.edu>, 5/16/03
 #include "Xosdefs.h"
+*/
 #ifdef WIN32
 # include "Xw32defs.h"
 #endif
