@@ -383,6 +383,9 @@ int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 	sockaddr_in *from;
 	ClassAd *ad;
 
+	/* assume the ad is malformed... other functions set this value */
+	insert = -3;
+
   		// unless the collector has been configured to use a socket
   		// cache for TCP updates, refuse any update commands that come
   		// in via TCP... 
@@ -405,6 +408,17 @@ int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 			// commands with daemon core, but it cannot hurt to check...
 			dprintf (D_ALWAYS,"Got QUERY command (%d); not supported for UDP\n",
 						command);
+		}
+
+		if (insert == -3)
+		{
+			/* this happens when we get a classad for which a hash key could
+				not been made. This occurs when certain attributes are needed
+				for the particular catagory the ad is destined for, but they
+				are not present in the ad. */
+			dprintf (D_ALWAYS,
+				"Received malformed ad from command (%d). Ignoring.\n",
+				command);
 		}
 	}
 
