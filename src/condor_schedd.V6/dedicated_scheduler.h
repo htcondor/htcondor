@@ -174,6 +174,12 @@ class DedicatedScheduler : public Service {
 		// the given job ad.
 	bool setScheduler( ClassAd* job_ad );
 
+		/// Clear out our data structure of idle dedicated jobs. 
+	void clearDedicatedClusters( void );
+
+		/// Add the given cluster to our set of idle dedicated jobs.
+	void addDedicatedCluster( int cluster );
+
  private:
 
 	/** Used to handle the negotiation protocol for a given
@@ -198,12 +204,6 @@ class DedicatedScheduler : public Service {
 		// This one should be seperated out, and most easy to change.
 	bool computeSchedule( void );
 
-		// This scans the whole job queue, and makes a list of all
-		// Dedicated universe job ads, computes meta info (totals by
-		// user, etc).  This is called at the begining of each
-		// handleDeicatedJobs cycle.
-	bool getDedicatedJobs( void );
-
 		// This does the work of acting on a schedule, once that's
 		// been decided.  
 	bool spawnJobs( void );
@@ -216,6 +216,8 @@ class DedicatedScheduler : public Service {
 	void displayResourceRequests( void );
 
 	void sortResources( void );
+
+	bool sortJobs( void );
 
         // Used to give matches to the mpi shadow when it asks for
 		// them. 
@@ -240,8 +242,9 @@ class DedicatedScheduler : public Service {
 	int		scheduling_tid;				// DC timer id
 	int		rid;						// DC reaper id
 
-	ExtArray<ClassAd*>*	idle_jobs;		// Only dedicated jobs
-	ClassAdList*		resources;		// All dedicated resources
+	ExtArray<int>*		idle_clusters;	// Idle cluster ids
+
+	ClassAdList*		resources;		// All dedicated resources 
 
 		// All resources, sorted by the time they'll next be available 
 	AvailTimeList*			avail_time_list;	
@@ -285,6 +288,9 @@ time_t findAvailTime( match_rec* mrec );
 
 // Comparison function for sorting job ads by QDate
 int jobSortByDate( const void* ptr1, const void* ptr2 );
+
+// Comparison function for sorting job cluster ids by QDate
+int clusterSortByDate( const void* ptr1, const void* ptr2 );
 
 // Print out
 void displayResource( ClassAd* ad, char* str, int debug_level );
