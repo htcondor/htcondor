@@ -100,9 +100,12 @@ reinitialize ()
 	// get PreemptionHold expression
 	if (PreemptionHold) delete PreemptionHold;
 	PreemptionHold = NULL;
-	if (tmp && Parse(tmp, PreemptionHold))
-	{
-		EXCEPT ("Error parsing PREEMPTION_GUARD expression: %s", tmp);
+	tmp = param("PREEMPTION_HOLD");
+	if( tmp ) {
+		if( Parse(tmp, PreemptionHold) ) {
+			EXCEPT ("Error parsing PREEMPTION_HOLD expression: %s", tmp);
+		}
+		free( tmp );
 	}
 
 	dprintf (D_ALWAYS,"ACCOUNTANT_HOST     = %s\n", AccountantHost ? 
