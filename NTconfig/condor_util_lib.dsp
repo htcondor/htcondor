@@ -210,5 +210,25 @@ SOURCE=..\src\condor_util_lib\strcmp_until.c
 !ENDIF 
 
 # End Source File
+# Begin Source File
+
+SOURCE=..\src\h\syscall_numbers.tmpl
+
+!IF  "$(CFG)" == "condor_util_lib - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
+
+# PROP Ignore_Default_Tool 1
+# Begin Custom Build
+InputPath=..\src\h\syscall_numbers.tmpl
+
+"..\src\h\syscall_numbers.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	$(InputDir)\..\..\NTconfig\awk.exe -f $(InputDir)\awk_prog.include_file $(InputDir)\syscall_numbers.tmpl > ..\src\h\syscall_numbers.h
+
+# End Custom Build
+
+!ENDIF 
+
+# End Source File
 # End Target
 # End Project
