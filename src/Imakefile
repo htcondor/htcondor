@@ -18,6 +18,8 @@
 #define CkptServerFiles sbin/condor_ckpt_server sbin/condor_cleanckpts \
   etc/examples/condor_config.local.ckpt.server
 
+#define EventdFiles sbin/condor_eventd etc/examples/condor_config.local.eventd
+
 #define SMPFiles sbin/condor_startd sbin/condor_preen bin/condor_status
 
 #define SMPContribFiles etc/examples/condor_config.local.smp \
@@ -115,6 +117,7 @@ release_tarball( master.tar, MasterFiles )
 
 /* contrib_tarball( view_client.tar, ViewClientFiles ) */
 contrib_tarball( ckpt_server.tar, CkptServerFiles )
+contrib_tarball( eventd.tar, EventdFiles )
 
 both_tarball( smp_startd.tar, SMPFiles, SMPContribFiles )
 both_tarball( view_server.tar, ViewServerFiles, ViewServerContribFiles )
@@ -129,10 +132,10 @@ contrib_tarball( pvm.tar, PvmFiles )
 #define AfsPvmTar 
 #endif 
 
-all_tarballs: smp_startd.tar view_server.tar ckpt_server.tar PvmTar 
+all_tarballs: smp_startd.tar view_server.tar ckpt_server.tar eventd.tar PvmTar 
 
 afs_tarballs: afs_smp_startd.tar afs_view_server.tar afs_release.tar \
-	afs_ckpt_server.tar AfsPvmTar
+	afs_ckpt_server.tar afs_eventd.tar AfsPvmTar
 
 public:: all_tarballs
 
@@ -193,6 +196,7 @@ object_target(c++_util)
 object_target(procapi)
 object_target(tools)
 object_target(examples)
+object_target(eventd)
 object_target(accountant.V6)
 object_target(ckpt_server)
 object_target(shadow.V6)
