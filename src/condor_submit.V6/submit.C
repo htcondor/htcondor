@@ -818,6 +818,15 @@ SetUniverse()
 
 	univ = condor_param( Universe, ATTR_JOB_UNIVERSE );
 
+	if (!univ) {
+		// get a default universe from the config file
+		univ = param("DEFAULT_UNIVERSE");
+		if( !univ ) {
+			// if nothing else, it must be a standard universe
+			univ = strdup("standard");
+		}
+	}
+
 #if !defined(WIN32)
 	if( univ && stricmp(univ,"pvm") == MATCH ) 
 	{
@@ -891,9 +900,6 @@ SetUniverse()
 		return;
 	}
 
-	if (!univ) {
-		univ = strdup("standard");
-	}
 
 #if defined( CLIPPED )
 		// If we got this far, we must be a standard job.  Since we're
