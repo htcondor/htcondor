@@ -107,6 +107,7 @@ void store_cred_handler(void *, int i, Stream *s) {
 		HANDLE usrHnd;
 		bool retval;
 		char* dom;
+		DWORD LogonUserError;
 
 		dprintf( D_FULLDEBUG, "Adding %S to credential storage.\n", 
 			userbuf );
@@ -127,15 +128,18 @@ void store_cred_handler(void *, int i, Stream *s) {
 			LOGON32_PROVIDER_DEFAULT,	// logon provider
 			&usrHnd						// receive tokens handle
 		);
-		CloseHandle(usrHnd); // don't leak the handle
+		LogonUserError = GetLastError();
+
 		if (pw) {
 			swprintf(pwbuf, L"%S", pw); // make a wide-char copy first
 			ZeroMemory(pw, strlen(pw));
 		}
 		if ( ! retval ) {
-			dprintf(D_FULLDEBUG, "store_cred: Credential not valid\n");
+			dprintf(D_FULLDEBUG, "store_cred: Credential not valid (err=%d)\n", LogonUserError);
 			answer=FAILURE_BAD_PASSWORD; //fail
 			break;
+		} else {
+			CloseHandle(usrHnd); // don't leak the handle
 		}
 
 		// call lsa_mgr api
