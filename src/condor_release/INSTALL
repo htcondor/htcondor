@@ -3,26 +3,26 @@ INSTALL for Condor version 6.0				3/5/98
 This file contains the instructions for installing Condor at your
 site.  For a more complete guide to using, configuring and
 administering Condor, see the Condor Manual.  The manual can be found
-in the "doc" directory, or on the Condor home page:
-http://www.cs.wisc.edu/condor/manual/
+on the Condor home page: http://www.cs.wisc.edu/condor/manual/
 
-Please read the file DISCLAIMER before proceeding.  Installation and
+Please read the file LICENSE.TXT before proceeding.  Installation and
 use of Condor is acknowledgement that you have read and agree to the
-terms listed in the DISCLAIMER.
+terms listed in LICENSE.TXT.
 
 The Condor binary distribution is packaged in the following 5 files
 and 2 directories:
 
-DISCLAIMER	- by installing Condor, you agree to the contents of
-		  the DISCLAIMER file
-README		- general info
+DOC		- file containing directions for where to find the 
+		  Condor documentation
 INSTALL		- this file
-release.tar	- tar file of the "release directory", which contains
-		  the Condor binaries and libraries
-doc		- directory containing Condor documentation
+LICENSE.TXT	- by installing Condor, you agree to the contents of
+		  the LICENSE.TXT file
+README		- general info
+condor_install	- perl script to install and configure Condor
 examples	- directory containing C, Fortran and C++ example
 		  programs to run with Condor
-condor_install	- perl script to install and configure Condor
+release.tar	- tar file of the "release directory", which contains
+		  the Condor binaries and libraries
 
 
 Before you install, please consider joining the condor-world mailing
@@ -53,6 +53,8 @@ are:
 		System Binaries 
 		Lib Directory
 	Documentation
+7) Am I using AFS?
+8) Do I have enough disk space for Condor?
 
 If you feel you already know the answers to these questions, you can
 skip to the "Installation Procedure" section.  If you are unsure about
@@ -82,7 +84,7 @@ Otherwise, Condor can do very little to enforce security and policy
 decisions.  If you don't have root access and would like to install
 Condor, under most platforms you can run Condor under any user you'd
 like.  However, there are serious security consequences of this.
-Please read the Security Issues section for more details.
+Please read the section on "Running Condor as Non-Root" for details. 
 
 3) Who will be administering Condor on the machines in your pool?
 
@@ -176,7 +178,7 @@ NFS), these lock files should be placed on a local partition on each
 machine.  By default, they are just placed in the log directory.  If
 you place your log directory on a network filesystem partition, you
 should specify a local partition for the lock files with the "LOCK"
-parameter in the config file (such as /var/lock).
+parameter in the config file (such as /var/lock/condor).
 
 Generally speaking, we recommend that you do not put these directories
 (except lock) on the same partition as /var, since if the partition
@@ -296,13 +298,44 @@ html, postscript and TeX.  It can be locally installed wherever is
 customary at your site.  You can also find the Condor documentation on
 the web at: http://www.cs.wisc.edu/condor/manual
 
+7) Am I using AFS?
+
+If you are using AFS at your site, be sure to read the section on
+"Using Condor with AFS" at the end of this file.  Condor does not
+currently have a way to authenticate itself to AFS.  We're working on
+a solution, it's just not ready for version 6.0.  So, what this means
+is that you are probably not going to want to have the "LOCAL_DIR" for
+Condor on AFS.  However, you can (and probably should) have the Condor
+"RELEASE_DIR" on AFS, so that you can share one copy of those files
+and upgrade them in a centralized location.  You will also have to do
+something special if you submit jobs to Condor from a directory on
+AFS.  Again, just read the special section for all the gory details. 
+
+8) Do I have enough disk space for Condor?
+
+The Condor release directory takes up a fair amount of space.  This is
+another reason why it's a good idea to have it on a shared
+filesystem.  Here are the rough size requirements for the release
+directory on various platforms:
+
+	  Intel/Linux		11   megs (statically linked)
+	  Intel/Linux		 6.5 megs (dynamically linked)
+	  Intel/Solaris		 8   megs
+	  Sparc/Solaris		10   megs
+	  SGI/IRIX		17.5 megs
+	  Alpha/Digital Unix	15.5 megs
+
+In addition, you will need a lot of disk space in the local directory
+of any machines that are submitting jobs to Condor.  See question 5
+above for details on this.
+
 
 ***************************************************************************
 Installation Procedure:
 ***************************************************************************
 
-If you have decided to create a "condor" user and group, you should do
-that on all your machines before you do anything else.
+IF YOU HAVE DECIDED TO CREATE A "condor" USER AND GROUP, YOU SHOULD DO
+THAT ON ALL YOUR MACHINES BEFORE YOU DO ANYTHING ELSE.
 
 The easiest way to install Condor is to run the condor_install script.
 It will ask you some questions, and perform all the steps needed to
@@ -336,19 +369,27 @@ condor_install, step-by-step
 
 STEP 1: What type of Condor installation do you want?
 
-     The two main types of Condor installation you might choose are:
-     "submit-only" and "full-install".  A submit-only machine can
-     submit jobs to a Condor pool, but Condor jobs will not run on
-     it.  A full-install machine can both submit and run Condor jobs.
+     There are three types of Condor installation you might choose:
+     "submit-only", "full-install", and "central-manager".  A
+     submit-only machine can submit jobs to a Condor pool, but Condor
+     jobs will not run on it.  A full-install machine can both submit
+     and run Condor jobs.  
 
      If you are planning to run Condor jobs on your machines, you
      should either install and run Condor as root, or as user
      "condor".  
 
      If you are planning to setup a submit only machine, you can
-     either install Condor machine-wide as root or user condor, or,
+     either install Condor machine-wide as root or user "condor", or,
      you can install Condor as yourself into your home directory.
 
+     The other possible installation type is setting up a machine as a
+     central manager.  If you do a full-install and you say that you
+     want the local host to be your central manager, this step will be
+     done automatically.  You should only choose the central-manager
+     option at step 1 if you have already run condor_install on your
+     file server and you now want to run condor_install on a different
+     machine that will be your central manager.
 
 STEP 2: How many machines are you setting up this way?
 
@@ -365,7 +406,6 @@ STEP 2: How many machines are you setting up this way?
 
      If you are only installing Condor on 1 machine, you would just
      answer "no" to the first question, and move on.
-
 
 STEP 3: Install the Condor "release directory", which holds
 various binaries, libraries, scripts and files used by Condor.
@@ -393,6 +433,9 @@ various binaries, libraries, scripts and files used by Condor.
      for you by untarring the release.tar file from the binary
      distribution.  
 
+NOTE: If you are only setting up a central manager (you chose "central
+     manager" in step 1) step 3is the last question you will need to
+     answer.
 
 STEP 4: How and where should Condor send email if things go wrong?
 
@@ -414,20 +457,21 @@ STEP 4: How and where should Condor send email if things go wrong?
      You should verify that the program you end up using supports
      "-s".  The man page for that program will probably tell you.
 
-
 STEP 5: Where should public programs be installed?
 
      It is recommended that you install the user-level condor programs
      in the release directory, (where they go by default).  This way,
      when you want to install a new version of the Condor binaries,
      you can just replace your release directory and everything will
-     be updated at once.  So, you can have Condor users add
+     be updated at once.  So, one option is to have Condor users add
      <release_dir>/bin to their PATH, so that they can access the
      programs.  However, we recommend putting in soft links from some
      directory already in their PATH (such as /usr/local/bin) that
      point back to the Condor user programs.  condor_install will do
      this for you, all you have to do is tell it what directory to put
-     these links into.  
+     these links into.  This way, users don't have to change their
+     PATH to use Condor but you can still have the binaries installed
+     in their own location.
 
      If you are installing Condor as neither root nor condor, there is
      a perl script wrapper to all the Condor tools that is created
@@ -476,9 +520,16 @@ STEP 7: Where will the "local directory" go?
      permissions.  They should have the following permissions and
      ownerships:
 
-     drwxrwxrwt   2 condor   root         1024 Mar  6 01:30 execute/
+     drwxr-xr-x   2 condor   root         1024 Mar  6 01:30 execute/
      drwxr-xr-x   2 condor   root         1024 Mar  6 01:30 log/
      drwxr-xr-x   2 condor   root         1024 Mar  6 01:30 spool/
+
+     If your local directory is on a shared file system,
+     condor_install will prompt you for the location of your lock
+     files, as discussed in question #5 above.  In this case, when
+     condor_install is finished, you will have to run condor_init on
+     each machine in your pool to create the lock directory before you
+     can start up Condor.
 
 
 STEP 8: Where will the local (machine-specific) config files go?
@@ -498,6 +549,7 @@ STEP 8: Where will the local (machine-specific) config files go?
      recommend the first option, since it makes it easier to configure
      your pool from a centralized location.
 
+
 STEP 9: How do you want Condor to find its config file?
 
      Since there are a few known places Condor looks to find your
@@ -508,8 +560,9 @@ STEP 9: How do you want Condor to find its config file?
      config files.  Alternatively, you can set the CONDOR_CONFIG
      environment variable to contain <release_dir>/etc/condor_config.
 
-     condor_install will ask you if you want to create a soft links
+     condor_install will ask you if you want to create a soft link
      from either of the two fixed locations that Condor searches.
+
 
 Once you have completed STEP 9, you're done.  condor_install prints
 out a messages describing what to do next.  Please skip to the "Condor
@@ -534,26 +587,32 @@ things you should check before you start up Condor.
     a lot of possible settings and you should at least take a look at
     the first two main sections to make sure everything looks okay.
 
-2)  Condor can monitor the activity of your mouse and keyboard,
-    provided that you tell it where to look.  You do this with the
-    "KBD_DEVICE" and "MOUSE_DEVICE" entries in the condor_startd
-    section of the config file.  On most platforms, we provide
-    reasonable defaults.  For example, the default MOUSE_DEVICE on
-    Linux is "mouse", since most Linux installations have a soft link
-    from "/dev/mouse" that points to the right device (such as tty00
-    if you have a serial mouse, psaux if you have a PS/2 bus mouse,
-    etc).  If you don't have a /dev/mouse link, you should either
-    create one (you'll be glad you did), or change the MOUSE_DEVICE
-    entry in Condor's config file.  
+2)  In particular, you might want to setup host/ip based security for
+    Condor.  See the section on that in the Admin Manual for details. 
 
-3)  (Linux only) Condor needs to be able to find the "utmp" file.
+3)  Condor can monitor the activity of your mouse and keyboard,
+    provided that you tell it where to look.  You do this with the
+    "CONSOLE_DEVICES" entry in the condor_startd section of the config
+    file.  On most platforms, we provide reasonable defaults.  For
+    example, the default device for the mouse on Linux is "mouse",
+    since most Linux installations have a soft link from "/dev/mouse"
+    that points to the right device (such as tty00 if you have a
+    serial mouse, psaux if you have a PS/2 bus mouse, etc).  If you
+    don't have a /dev/mouse link, you should either create one (you'll
+    be glad you did), or change the CONSOLE_DEVICES entry in Condor's
+    config file.  This entry is just a comma seperated list, so you
+    can have any devices in /dev count as "console devices" and
+    activity will be reported in the condor_startd's classad as
+    ConsoleIdleTime.
+
+4)  (Linux only) Condor needs to be able to find the "utmp" file.
     According to the Linux File System Standard, this file should be
     /var/run/utmp.  If Condor can't find it there, it looks in
     /var/adm/utmp.  If it still can't find it, it gives up.  So, if
     your Linux distribution puts this file somewhere else, be sure to
     put a soft link from /var/run/utmp to point to the real location.
 
-4)  (HPUX 10 and Solaris machines only) Set the ARCH parameter in the
+5)  (HPUX 10 and Solaris machines only) Set the ARCH parameter in the
     condor_config file.  On HPUX 10 and Solaris machines, there are
     multiple CPU architectures that your machine could be using.  Our
     Condor programs are binary compatible across these platforms.
@@ -586,15 +645,15 @@ and periodically checks to see if you have installed new binaries (and
 if so, restarts the affected daemons).
 
 If you're setting up your own pool, you should start Condor on your
-central manager machine first.  If you have setup a submit-only
-machine, and adding machines to an existing pool, it doesn't matter
-what order to start them in.
+central manager machine first.  If you have done a submit-only
+installation and are adding machines to an existing pool, it doesn't
+matter what order to start them in.
 
 To ensure that Condor is running, you can run either:
 
-	ps -e | egrep condor_
+	ps -ef | egrep condor_
 or
-	ps ax | egrep condor_
+	ps -aux | egrep condor_
 
 depending on your flavor of Unix.  On your central manager machine you
 should have processes for:
@@ -668,7 +727,6 @@ can and should do:
     Operating System		  Location of ld (ld-path)
     Linux			  /usr/bin
     Solaris 2.X, HP-UX 10.x	  /usr/ccs/bin
-    HP-UX 9.x			  /bin
     OSF/1 (Digital Unix)	  /usr/lib/cmplrs/cc
 
     On these platforms, the full install simply involves (as root):
@@ -705,4 +763,213 @@ can and should do:
 
 2)  Try building and submitting some test jobs.  See examples/README
     for details.
+
+
+***************************************************************************
+Using Condor with AFS
+***************************************************************************
+
+Condor does not currently have a way to authenticate itself to AFS.
+This is true of the Condor daemons that would like to authenticate as
+AFS user Condor, and the condor_shadow, which would like to
+authenticate as the user who submitted the job it is serving.  Since
+neither of these things can happen yet, there are a number of special
+things people who use AFS with Condor must do.  Some of this must be
+done by the administrator(s) installing Condor.  Some of this must be
+done by Condor users who submit jobs.  
+
+Administrators:
+
+    The most important thing is that since the Condor daemons can't
+    authenticate to AFS, the "LOCAL_DIR" (and it's subdirectories like
+    "log" and "spool") for each machine must be either writeable to
+    unauthenticated users, or must not be on AFS.  The first option is
+    a _very_ bad security hole so you should NOT have your local
+    directory on AFS.  If you've got NFS installed as well and want to
+    have your LOCAL_DIR for each machine on a shared file system, use
+    NFS.  Otherwise, you should put the LOCAL_DIR on a local partition
+    on each machine in your pool.  This means that you should run
+    condor_install to install your release directory and configure
+    your pool, setting the LOCAL_DIR parameter to some local
+    partition.  When that's complete, log into each machine in your
+    pool and run condor_init to set up the local Condor directory.
+
+    The RELEASE_DIR, which holds all the Condor binaries, libraries
+    and scripts can and probably should be on AFS.  None of the Condor
+    daemons need to write to these files, they just need to read
+    them.  So, you just have to make your RELEASE_DIR world readable
+    and Condor will work just fine.  This makes it easier to upgrade
+    your binaries at a later date, means that your users can find the
+    Condor tools in a consistant location on all the machines in your
+    pool, and that you can have the Condor config files in a
+    centralized location.  This is what we do at UW-Madison's CS
+    department Condor pool and it works quite well.  
+
+    "What about the USE_AFS parameter?", you're probably wondering.
+    If this parameter is set, and a Condor job is executing on a
+    machine in the same AFS cell as the machine the jobs was submitted
+    from, Condor will try to open any files locally, instead of
+    sending the calls to open (and read, write, etc) back to the
+    condor_shadow on the submit-machine.  This way, you can use AFS to
+    access your files instead of the Remote System Call (RSC)
+    mechanism in Condor.  This has the advantage that it puts less
+    load on your Condor shadow.  It has the disadvantage that it
+    starts messing with the AFS cache on the remote execute machine.
+    It's unclear if there's a clear performance win either way, though
+    Generally speaking, since we try to minimize the impact of having
+    a Condor job run on a given machine, we don't recomend using this
+    setting.  However, things may be different at your site, which is
+    why the setting is there.  
+
+    Finally, you might want to setup some special AFS groups to help
+    your users deal with Condor and AFS better (you'll want to read
+    the section below anyway, since you're probably going to have to
+    explain this stuff to your users).  Basically, if you can, create
+    an AFS group that contains all unauthenticated users but that is
+    restricted to a given host or subnet.  You're supposed to be able
+    to make these host-based ACLs with AFS, but we've had some trouble
+    getting that working here at UW-Madison.  What we have instead is
+    a special group for all machines in our department.  So, the users
+    here just have to make their output directories on AFS writable to
+    any process running on any of our machines, instead of any process
+    on any machine with AFS on the Internet.
+
+Users:
+
+    The condor_shadow process runs on the machine where you submitted
+    your Condor jobs and performs all file system access for your
+    jobs.  Because this process isn't authenticated to AFS as the user
+    who submitted the job, it will not normally be able to write any
+    output.  So, when you submit jobs, any directories where your job
+    will be creating output files will need to be world writable (to
+    non-authenticated AFS users).  In addition, if your program writes
+    to stdout or stderr, or you're using a user log for your jobs,
+    those files will need to be in a directory that's world-writable.
+
+    Any input for your job, either the file you specify as input in
+    your submit file, or any files your program opens explictly, needs
+    to be world-readable.
+
+    Some sites may have special AFS groups set up that can make this
+    unauthenticated access to your files less scary.  For example,
+    there's supposed to be a way with AFS to grant access to any
+    unauthenticated process on a given host.  That way, you only have
+    to grant write access to unauthenticated processes on your submit
+    machine, instead of any unauthenticated process on the Internet.
+    Similarly, unauthenticated read access could be granted only to
+    processes running your submit machine.  Ask your AFS
+    administrators about the existance of such AFS groups and details
+    of how to use them.
+
+    The other solution to this problem is to just not use AFS at all.
+    If you have disk space on your submit machine in a partition that
+    is not on AFS, you can submit your jobs from there.  While the
+    condor_shadow is not authenticated to AFS, it does run with the
+    effective uid of the user who submitted the jobs.  So, on a local
+    (or NFS) file system, the condor_shadow will be able to access
+    your files normally, and you won't have to grant any special
+    permissions to anyone other than yourself.  If the Condor daemons
+    are not started as root however, the shadow will not be able to
+    run with your effective uid, and you'll have a similar problem as
+    you would with files on AFS.  See the section on "Running Condor
+    as Non-Root" for details.
+    
+
+***************************************************************************
+Running Condor as Non-Root
+***************************************************************************
+
+While we strongly recomend starting up the Condor daemons as root, we
+understand that that's not always possible.  The main problems this
+causes are if you've got one Condor installation shared by many users
+on a single machine, or if you're setting up your machines to execute
+Condor jobs.  If you're just setting up a submit-only installation for
+a single user, there's no need for (or bennefit from) running as
+root.  
+
+What follows are the details of what effect running without root
+access has on the various parts of Condor:
+
+condor_startd:
+
+    If you're setting up a machine to run Condor jobs and don't start
+    the condor_startd as root, you're basically relying on the
+    goodwill of your Condor users to agree to the policy you configure
+    the startd to enforce as far as starting, suspending, vacating and
+    killing Condor jobs under certain conditions.  If you run as root,
+    however, you can enforce these policies regardless of malicious
+    users.  By running as root, the Condor daemons run with a
+    different uid than the Condor job that gets started (since the
+    user's job is started as either the uid of the user who submitted
+    it, or as user "nobody", depending on the UID_DOMAIN settings).
+    Therefore, the Condor job cannot do anything to the Condor
+    daemons.  If you don't start the daemons as root, all processes
+    started by Condor, including the end user's job, run with the same
+    uid (since you can't switch uids unless you're root).  Therefore,
+    a user's job could just kill the condor_startd and starter as soon
+    as it starts up and by doing so, avoid getting suspended or
+    vacated when a user comes back to the machine.  This is nice for
+    the user, since they get unlimited access to the machine, but
+    awful for the machine owner or administrator.  If you trust the
+    users submitting jobs to Condor, this might not be a concern.
+    However, to ensure that the policy you choose is effectively
+    enforced by Condor, the startd should be started as root.
+
+    In addition, some system information cannot be obtained without
+    root access on some platforms (such as load average on IRIX).  As
+    a result, when we're running without root access, the startd has
+    to call other programs (for example, "uptime") to get this
+    information.  This is much less efficient than getting the
+    information directly from the kernel (which is what we do if we're
+    running as root).  On Linux and Solaris, we can get this
+    information directly without root access, so this is not a concern
+    on those platforms.  
+
+    If you can't have all of Condor running as root, at least consider
+    whether you can install the startd as setuid root.  That would
+    solve both of these problems.  If you can't do that, you could
+    also install it as a setgid sys or kmem program (depending on
+    whatever group has read access to /dev/kmem on your system) and
+    that would at least solve the system information problem.
+
+condor_schedd:
+
+    The biggest problem running the schedd without root access is that
+    the condor_shadows which it spawns are stuck with the same uid the
+    schedd has.  This means that users submitting their jobs have to
+    go out of their way to grant write access to user or group condor
+    (or whoever the schedd is running as) for any files or directories
+    their jobs write or create.  Similarly, read access must be
+    granted to their input files.  
+
+    You might consider installing condor_submit as a setgid condor
+    program so that at least the stdout, stderr and user log files get
+    created with the right permissions.  You'll want to make sure it's
+    umask is 002 as it runs so that it creates group-writable files.
+    This way, the simple case of a job that just writes to stdout and
+    stderr will work.  If users have programs that open their own
+    files, they'll have to know to set the right permissions on the
+    directories they submit from.  
+
+condor_master:
+
+    The master is what spawns the startd and schedd, so if want them
+    both running as root, you should have the master run as root.
+    This happens automatically if you start the master from your boot
+    scripts.
+
+condor_negotiator and condor_collector:
+
+    There is no need to have these daemons running as root.  
+
+condor_kbdd:
+
+    On platforms that need the condor_kbdd (Digital Unix and IRIX) the
+    condor_kbdd has to run as root.  If it is started as any other
+    user, it will not work.  You might consider installing this
+    program as a setuid root binary if you can't run the condor_master
+    as root.  Without the kbdd, the startd has no way to monitor mouse
+    activity at all, and the only keyboard activity it will notice is
+    activity on ttys (such as xterms, remote logins, etc).  
+
 
