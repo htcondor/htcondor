@@ -78,7 +78,7 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
 	if(scheddAddr) {
         Daemon d (scheddAddr);
         qmgmt_sock = (ReliSock*) d.startCommand (QMGMT_CMD, Stream::reli_sock, timeout);
-        ok = (int)qmgmt_sock;
+        ok = qmgmt_sock != NULL;
         if( !ok ) {
             dprintf(D_ALWAYS, "Can't connect to queue manager\n");
         }
