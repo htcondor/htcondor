@@ -16,7 +16,7 @@ SYSPARAM = sysparam_sun
 #if IS_SUN4M_SOLARIS || IS_SUN4M_SOLARIS251
 SYSPARAM = sysparam_solaris
 #endif
-#if IS_X86_SOLARIS
+#if IS_X86_SOLARIS || IS_X86_SOLARIS25
 SYSPARAM = sysparam_solaris
 #endif
 #if IS_ALPHA_OSF1
