@@ -236,7 +236,7 @@ ONE( unlink, _unlink, char * )
 ONE( close, _close, int )
 THREE( open, _open, char *, int, int )
 ZERO( getpid, _getpid )
-TWO( kill, _kill, int, int )
+/* TWO( kill, _kill, int, int ) FIX */
 THREE( read, _read, int, char *, int )
 THREE( fcntl, _fcntl, int, int, int )
 THREE( lseek, _lseek, int, int, int )
