@@ -274,6 +274,10 @@ real_config(ClassAd *classAd, char* host, int wantsQuiet)
 		init_full_hostname();
 	}
 
+		// Also, we should be safe to process the NETWORK_INTERFACE
+		// parameter at this point, if it's set.
+	init_ipaddr( TRUE );
+
 		// Re-insert the special macros.  We don't want the user to 
 		// override them, since it's not going to work.
 	reinsert_specials( host );
