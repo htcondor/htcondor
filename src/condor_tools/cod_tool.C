@@ -226,17 +226,28 @@ fillRequirements( ClassAd* req )
 
 	MyString require;
 	require = ATTR_REQUIREMENTS;
-	require += '=';
+	require += "=(";
+
+	int vm_id = 0;
+	if( name ) {
+		if( sscanf(name, "vm%d@", &vm_id) != 1 ) { 
+			vm_id = 0;
+		}
+	}
 
 	if( requirements ) {
-		require += '(';
 		require += requirements;
 		require += ")&&(";
-		require += jic_req;
-		require += ')';
-	} else {
-		require += jic_req;
 	}
+	if( vm_id > 0 ) {
+		require += ATTR_VIRTUAL_MACHINE_ID;
+		require += "==";
+		require += vm_id;
+		require += ")&&(";
+	}
+	require += jic_req;
+	require += ')';
+
 	if( ! req->Insert(require.Value()) ) {
 		fprintf( stderr, "ERROR: can't parse requirements '%s'\n",
 				 requirements );
