@@ -403,7 +403,7 @@ V6_7_6_EXT      -a V6_7_COMMON_EXT \
 V6_7_EXT	-a V6_7_6_EXT
 
 # Externals needed for the head of the V6_7-branch on Windows
-V6_7_NT_EXT -a V6_7_COMMON_EXT \
+V6_7_NT_EXT -a EXT_COMMON \
                    externals/bundles/gsoap/2.7
 
 # Externals needed for Stork trunk build
