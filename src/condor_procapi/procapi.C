@@ -71,10 +71,16 @@ ProcAPI::~ProcAPI() {
 #endif
 }    
 
+// getProcInfo is the heart of the procapi implementation.
+// Yes, it's an absolute mess of #ifdef's....
+
+int
+ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) 
+{
+
 // this version works for Solaris 2.5.1, IRIX, OSF/1 
 #if ( defined(Solaris251) || defined(IRIX62) || defined(OSF1) )
-int
-ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
+
 	char path[64];
 	struct prpsinfo pri;
 	struct prstatus prs;
@@ -102,6 +108,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
 			pi->pid     = pri.pr_pid;
 			pi->ppid    = pri.pr_ppid;
 			pi->age     = secsSinceEpoch() - pri.pr_start.tv_sec;
+			pi->creation_time = pri.pr_start.tv_sec;
 		} else {
 			dprintf( D_ALWAYS, 
 					 "ProcAPI: PIOCPSINFO Error occurred for pid %d\n",
@@ -157,59 +164,14 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
          the hashtable, put it there using (user+sys time) / age as %cpu.
          If it is there, use ((user+sys time) - old time) / timediff.
       */
+			
+			double ustime = ( prs.pr_utime.tv_sec + 
+							  ( prs.pr_utime.tv_nsec * 1.0e-9 ) ) +
+				            ( prs.pr_stime.tv_sec + 
+							  ( prs.pr_stime.tv_nsec * 1.0e-9 ) );
 
-			struct timeval thistime;
-			double timediff, lasttime, oldustime, now, ustime, oldusage;
-			long oldminf, oldmajf;
+			do_usage_sampling( pi, ustime, nowmajf, nowminf );
 
-			gettimeofday( &thistime, 0 );
-			now = convertTimeval( thistime );
-			ustime = ( prs.pr_utime.tv_sec + 
-					   ( prs.pr_utime.tv_nsec * 1.0e-9 ) ) +
-				( prs.pr_stime.tv_sec + ( prs.pr_stime.tv_nsec * 1.0e-9 ) );
-
-			struct procHashNode * phn;
-
-			if( procHash->lookup( pid, phn ) == 0 ) {
-					// success; pid in hash table
-				timediff = now - phn->lasttime;
-				if ( timediff < 1.0 ) {  // less than one second since last poll
-					pi->cpuusage = phn->oldusage;
-					pi->minfault = phn->oldminf;
-					pi->majfault = phn->oldmajf;
-					now = phn->lasttime;
-				} else {
-					pi->cpuusage = ( ( ustime - phn->oldtime ) / timediff ) * 100;
-					pi->minfault = (long unsigned)((nowminf - phn->oldminf) / timediff);
-					pi->majfault = (long unsigned)((nowmajf - phn->oldmajf) / timediff);
-				}
-				delete phn;
-				procHash->remove(pid);
-			} else {
-					// pid not in hash table; first time.  Use age of
-					// process as guide 
-				if( pi->age == 0 ) {
-					pi->cpuusage = 0.0;
-						// Should minfault and majfault be set to zero
-						// here, or now info? 
-						// pi->minfault = (long unsigned int)(nowminf);
-						// pi->majfault = (long unsigned int)(nowmajf);
-					pi->minfault = 0;
-					pi->majfault = 0;
-				} else {
-					pi->cpuusage = ( ustime / (double) pi->age ) * 100;
-					pi->minfault = (long unsigned int)(nowminf / (double) pi->age);
-					pi->majfault = (long unsigned int)(nowmajf / (double) pi->age);
-				}
-			}
-				// put new vals back into hashtable
-			phn = new procHashNode; 
-			phn->lasttime = now;
-			phn->oldtime  = ustime;
-			phn->oldusage = pi->cpuusage;
-			phn->oldminf  = nowminf;
-			phn->oldmajf  = nowmajf;
-			procHash->insert( pid, phn );
 		} else {
 			dprintf( D_ALWAYS, 
 					 "ProcAPI: PIOCSTATUS Error occurred for pid %d\n", 
@@ -235,13 +197,12 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
 	}
 	set_priv( priv );
 	return rval;
-}
+
 #endif /* defined(Solaris251) || defined(IRIX62) || defined(OSF1) */
 
 // This is the version of getProcInfo for Solaris 2.6 
 #ifdef Solaris26 
-int
-ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
+
 	char path[64];
 	int fd, rval = 0;
 	psinfo_t psinfo;
@@ -281,14 +242,8 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
 	pi->pid		= psinfo.pr_pid;
 	pi->ppid	= psinfo.pr_ppid;
 	pi->age		= secsSinceEpoch() - psinfo.pr_start.tv_sec;
+	pi->creation_time = psinfo.pr_start.tv_sec;
 
-  // I'm taking out this assignment here.  The reason is that I don't
-  // know exactly how this value is determined, and it is normalized
-  // across all the cpus.  To be on the conservative side, I'll use the
-  // sampling method used above (Solaris251, Irix, OSF/1) to get this
-  // value.  MEY 9-23-98
-  // pi->cpuusage= (float) psinfo.pr_pctcpu / (float) 256;
-  
   // maj/min page fault info and user/sys time is found in 'usage':
   // I have never seen minor page faults return anything 
   // other than '0' in 2.6.  I have seen a value returned for 
@@ -318,7 +273,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
 		return rval;
 	}
 
-	long nowminf, nowmajf, oldminf, oldmajf;
+	long nowminf, nowmajf;
 
 	nowminf = prusage.pr_minf;
 	nowmajf = prusage.pr_majf;
@@ -328,68 +283,28 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
   /* Now we do that sampling hashtable thing to convert page faults
      into page faults per second */
 
-	struct timeval thistime;
-	double timediff, lasttime, oldustime, now, ustime, oldusage;
+	double ustime = ( prusage.pr_utime.tv_sec + 
+					  (prusage.pr_utime.tv_nsec * 1.0e-9) ) +
+		            ( prusage.pr_stime.tv_sec + 
+					  (prusage.pr_stime.tv_nsec * 1.0e-9) ); 
 
-	gettimeofday( &thistime, 0 );
-	now = convertTimeval( thistime );
-	ustime = ( prusage.pr_utime.tv_sec + (prusage.pr_utime.tv_nsec * 1.0e-9) ) +
-		( prusage.pr_stime.tv_sec + (prusage.pr_stime.tv_nsec * 1.0e-9) );
+	do_usage_sampling( pi, ustime, nowmajf, nowminf );
 
-	struct procHashNode * phn;
-  
-	if( procHash->lookup(pid, phn) >= 0 ) {
-			// success; pid in hash table
-		timediff = now - phn->lasttime;
-		if( timediff < 1.0 ) {  // less than one second since last poll
-			pi->cpuusage = phn->oldusage;
-			pi->minfault = phn->oldminf;
-			pi->majfault = phn->oldmajf;
-			now = phn->lasttime;
-		} else {
-			pi->cpuusage = ( ( ustime - phn->oldtime ) / timediff ) * 100; 
-			pi->minfault = (long unsigned int)((nowminf - phn->oldminf) / timediff);
-			pi->majfault = (long unsigned int)((nowmajf - phn->oldmajf) / timediff);
-		}
-		delete phn;
-		procHash->remove(pid);
-	} else {
-			// pid not in hash table; first time.  Use age of process as guide 
-		if( pi->age == 0 ) {
-			pi->cpuusage = 0.0;
-			pi->minfault = 0;
-			pi->majfault = 0;
-		} else {
-			pi->cpuusage = ( ustime / (double) pi->age ) * 100;
-			pi->minfault = (long unsigned int)(nowminf / (double) pi->age);
-			pi->majfault = (long unsigned int)(nowmajf / (double) pi->age);
-		}
-	}
-		// put new vals back into hashtable
-	phn = new procHashNode;
-	phn->lasttime = now;
-	phn->oldtime  = ustime;
-	phn->oldusage = pi->cpuusage;
-	phn->oldminf  = nowminf;
-	phn->oldmajf  = nowmajf;
-	procHash->insert( pid, phn );
 	set_priv( priv );
 	return 0;
-}
+
 #endif /* Solaris26 */
 
 // This is the Linux version of getProcInfo.  Everything is easier and
 // actually seems to work in Linux...nice, but annoyingly different.
 #ifdef LINUX
-int
-ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
+
 	char path[64];
 	FILE *fp;
 
-	long usert, syst, start_time;
-
+	long usert, syst, jiffie_start_time, start_time, now;
 	unsigned long vsize, rss;
-	long nowminf, nowmajf, oldminf, oldmajf;
+	long nowminf, nowmajf;
 	
 	int i, rval = 0;
 	unsigned u;
@@ -413,8 +328,8 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
 				&i, &i, &i, &i, 
 				&u, &nowminf, &u, &nowmajf, &u, 
 				&usert, &syst, &i, &i, &i, &i, 
-				&u, &u, &start_time, &vsize, &rss, &u, &u, &u, &u, &u, &u, 
-				&i, &i, &i, &i, &u );
+				&u, &u, &jiffie_start_time, &vsize, &rss, &u, &u, &u, 
+				&u, &u, &u, &i, &i, &i, &i, &u );
 		fclose( fp );
 	} else {
 		if( errno == ENOENT ) {
@@ -444,7 +359,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
     
 		// we have start_time, which is the time after system boot
 		// that the process started...convert jiffies to seconds.
-	start_time = start_time / 100;
+	start_time = jiffie_start_time / 100;
   
 		// check to see if we've gotten the system boot time before,
 		// and if not, get it:
@@ -467,89 +382,35 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
 		// now we've got the boottime, the start time, and can get
 		// current time.  Throw 'em all together:  (yucky)
 
-	pi->age = (secsSinceEpoch() - boottime) - start_time;
+	now = secsSinceEpoch();
+	pi->age = (now - boottime) - start_time;
 
-  /* here we've got to do some sampling ourself to get the cpuusage.  
-     If the pid is not in the hashtable, put it there using 
-     (user+sys time) / age as %cpu.   If it is there, use 
-     ((user+sys time) - old time) / timediff.
-  */
-	struct timeval thistime;
-	double timediff, lasttime, oldustime, now, ustime, oldusage;
-  
-	gettimeofday( &thistime, 0 );
-	now = convertTimeval( thistime );
-	ustime = (usert + syst) / 100.0;
-
-	struct procHashNode * phn;
-  
-	if( procHash->lookup(pid, phn) == 0 ) {
-			// success; pid in hash table
-		timediff = now - phn->lasttime;
-		if( timediff < 1.0 ) {  // less than one second since last poll
-			pi->cpuusage = phn->oldusage;
-			pi->minfault = phn->oldminf;
-			pi->majfault = phn->oldmajf;
-			now = phn->lasttime;
-		} else {
-			pi->cpuusage = ((ustime - phn->oldtime) / timediff) * 100;
-			pi->minfault = (unsigned long)((nowminf - phn->oldminf) / timediff);
-			pi->majfault = (unsigned long)((nowmajf - phn->oldmajf) / timediff);
-		}
-		delete phn;		
-		procHash->remove(pid);
-	} else {
-			// pid not in hash table; first time.  Use age of process as guide 
-		if( pi->age == 0 ) {
-			pi->cpuusage = 0.0;
-			pi->minfault = 0;
-			pi->majfault = 0;
-		} else {
-			pi->cpuusage = ( ustime / (double) pi->age ) * 100;
-			pi->minfault = (unsigned long)(nowminf / (double) pi->age);
-			pi->majfault = (unsigned long)(nowmajf / (double) pi->age);
-		}
-	}
-		// put new vals back into hashtable
-	phn = new procHashNode;
-	phn->lasttime = now;
-	phn->oldtime  = ustime;
-	phn->oldusage = pi->cpuusage;
-	phn->oldminf  = nowminf;
-	phn->oldmajf  = nowmajf;
-	procHash->insert( pid, phn );
-	
-		// done with %cpu hacking
-
-		// Finally, do some sanity checking, due to bugs in the 2.0.X
-		// SMP Linux kernel.  
-	if( pi->cpuusage < 0 ) {
-		pi->cpuusage = 0;
-	}
-	if( pi->imgsize < 0 ) {
-		pi->imgsize = 0;
-	}
-	if( pi->rssize < 0 ) {
-		pi->rssize = 0;
-	}
-	if( pi->minfault < 0 ) {
-		pi->minfault = 0;
-	}
-	if( pi->majfault < 0 ) {
-		pi->majfault = 0;
-	}
-	if( pi->user_time < 0 ) {
-		pi->user_time = 0;
-	}
-	if( pi->sys_time < 0 ) {
-		pi->sys_time = 0;
-	}
+		// There seems to be something weird about jiffie_start_time
+		// in that it can grow faster than the process itself.  This
+		// can result in a negative age (on both SMP and non-SMP 2.0.X
+		// kernels, at least).  So, instead of allowing a negative
+		// age, which will lead to a negative cpu usage and
+		// CondorLoadAvg, we just set it to 0, since that's basically
+		// what's up.  -Derek Wright and Mike Yoder 3/24/99.
 	if( pi->age < 0 ) {
 		pi->age = 0;
 	}
+
+	pi->creation_time = now - age;
+
+  /* here we've got to do some sampling ourself to get the cpuusage
+	 and make the page faults a rate...
+  */
+
+	double ustime = (usert + syst) / 100.0;
+
+	do_usage_sampling ( pi, ustime, nowmajf, nowminf );
+
+		// Note: sanity checking done in above call.
+
 	set_priv( priv );
 	return 0;
-}
+
 #endif /* Linux */
 
 /* Here's getProcInfo for HPUX.  Calling this a /proc interface is a lie, 
@@ -560,8 +421,6 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
    you can get info on every process.
 */
 #ifdef HPUX
-int
-ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
 
 	struct pst_status buf;
 	int rval = 0;
@@ -600,76 +459,28 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
 	pi->user_time	= buf.pst_utime;
 	pi->sys_time	= buf.pst_stime;
 	pi->age			= secsSinceEpoch() - buf.pst_start;
+	pi->creation_time = buf.pst_start;
 
-		// I'm taking out this assignment here.  The reason is that I
-		// don't know exactly how this value is determined, and it is
-		// normalized across all the cpus.  To be on the conservative
-		// side, I'll use the sampling method used above (Solaris251,
-		// Irix, OSF/1) to get this value.  MEY 9-23-98
-		// pi->cpuusage  = (float) buf.pst_pctcpu * 100;
 	pi->pid		= buf.pst_pid;
 	pi->ppid	= buf.pst_ppid;
 
 		/* Now that darned sampling thing, so that page faults gets
 		   converted to page faults per second */
 
-	struct timeval thistime;
-	double timediff, lasttime, oldustime, now, ustime, oldusage;
+		// This is very inaccurrate: the below are in SECONDS!
+	double ustime = ((double) buf.pst_utime + buf.pst_stime );
 
-	gettimeofday ( &thistime, 0 );
-	now = convertTimeval ( thistime );
-	ustime = buf.pst_utime + buf.pst_stime;  // is this inaccurate or what?!
-		// the above are in SECONDS.
-
-	struct procHashNode * phn;  
-  
-	if( procHash->lookup(pid, phn) == 0 ) {
-			// success; pid in hash table
-		timediff = now - phn->lasttime;
-		if( timediff < 1.0 ) {  // less than one second since last poll
-			pi->cpuusage = phn->oldusage;
-			pi->minfault = phn->oldminf;
-			pi->majfault = phn->oldmajf;
-			now = phn->lasttime;
-		} else {
-			pi->cpuusage = ( ( ustime - phn->oldtime ) / timediff ) * 100;
-			pi->minfault = (long unsigned int)((nowminf - phn->oldminf) / timediff);
-			pi->majfault = (long unsigned int)((nowmajf - phn->oldmajf) / timediff);
-		}
-		delete phn;	
-		procHash->remove( pid );
-	} else {
-			// pid not in hash table; first time.  Use age of process as guide
-		if( pi->age == 0 ) {
-			pi->cpuusage = 0.0;
-			pi->minfault = 0;
-			pi->majfault = 0;
-		} else {
-			pi->cpuusage = ( ustime / (double) pi->age ) * 100;
-			pi->minfault = (long unsigned int)(nowminf / (double) pi->age);
-			pi->majfault = (long unsigned int)(nowmajf / (double) pi->age);
-		}
-	}
-		// put new vals back into hashtable
-	phn = new procHashNode;
-	phn->lasttime = now;
-	phn->oldtime  = ustime;
-	phn->oldusage = pi->cpuusage;
-	phn->oldminf  = nowminf;
-	phn->oldmajf  = nowmajf;
-	procHash->insert( pid, phn );
+	do_usage_sampling( pi, ustime, nowmajf, nowminf );
 
 	set_priv( priv );
 	return 0;
-}
+
 #endif /* HPUX */
 
 #ifdef WIN32
 /* Danger....WIN32 code follows....
    The getProcInfo call for WIN32 actually gets *all* the information
    on all the processes, but that's not preventable. */
-int
-ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
 
     DWORD dwStatus;  // return status of fn. calls
 
@@ -753,6 +564,8 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
     pi->sys_time  = (long) (LI_to_double( st ) / objectFrequency);
     pi->age       = (long) ((sampleObjectTime - LI_to_double ( elt )) 
                          / objectFrequency);
+	pi->creation_time = 0; // not supported at moment, bitch at Mike
+		// Yoder when it's really, truly needed.
 
     double nowcpu;
     long nowfault;
@@ -789,9 +602,134 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
 
 	set_priv( priv );
     return 0;
-}
+
 #endif  // WIN32 getProcInfo
-   
+
+} // 500+ lines later, the closing brace of getProcInfo! (Whew!)
+
+#ifndef WIN32
+// used in UNIX versions for sampling the cpu usage and page faults over time.
+void
+ProcAPI::do_usage_sampling( piPTR& pi, double ustime, long nowmajf, long nowminf ) {
+
+	struct timeval thistime;
+	double timediff, now;
+	long oldminf, oldmajf;
+	
+	gettimeofday( &thistime, 0 );
+	now = convertTimeval( thistime );
+	
+	struct procHashNode * phn = NULL;
+
+		/* The creation_time has been added because we could store the
+		   pid in the hashtable, the process would exit, we'd loop
+		   through the pid space & a new process would take that pid,
+		   and then we'd wind up using the old, dead pid's info as the
+		   last record of the new pid.  That is wrong.  So, we use
+		   each pid's creation time as a secondary identifier to make
+		   sure we've got the right one. Mike & Derek 3/24/99 */
+
+	if( (procHash->lookup( pi->pid, phn ) == 0 ) &&
+		(phn->creation_time == pi->creation_time) )  {
+			// success; pid in hash table
+		timediff = now - phn->lasttime;
+		if ( timediff < 1.0 ) {  // less than one second since last poll
+			pi->cpuusage = phn->oldusage;
+			pi->minfault = phn->oldminf;
+			pi->majfault = phn->oldmajf;
+			now     = phn->lasttime;  // we want old values preserved...
+			ustime  = phn->oldtime;
+			nowminf = phn->oldminf;
+			nowmajf = phn->oldmajf;
+		} else {
+			pi->cpuusage = ( ( ustime - phn->oldtime ) / timediff ) * 100;
+			pi->minfault = (long unsigned)((nowminf - phn->oldminf) / timediff);
+			pi->majfault = (long unsigned)((nowmajf - phn->oldmajf) / timediff);
+		}
+	} else {
+			// pid not in hash table; first time.  Use age of
+			// process as guide 
+		if( pi->age == 0 ) {
+			pi->cpuusage = 0.0;
+			pi->minfault = 0;
+			pi->majfault = 0;
+		} else {
+			pi->cpuusage = ( ustime / (double) pi->age ) * 100;
+			pi->minfault = (long unsigned)(nowminf / (double) pi->age);
+			pi->majfault = (long unsigned)(nowmajf / (double) pi->age);
+		}
+	}
+
+		// if we got that phn from the hashtable, remove it now.
+	if ( phn ) {
+		procHash->remove(pi->pid);
+	}
+
+		// put new vals back into hashtable
+	struct procHashNode * new_phn = new procHashNode;
+	new_phn->lasttime = now;
+	new_phn->oldtime  = ustime;
+	new_phn->oldusage = pi->cpuusage;
+	new_phn->oldminf  = nowminf;
+	new_phn->oldmajf  = nowmajf;
+	new_phn->creation_time = pi->creation_time;
+	procHash->insert( pi->pid, new_phn );
+
+		// due to some funky problems, do some sanity checking here for
+		// strange numbers:
+
+		// cpuusage is giving some strange numbers.  Some of this may be
+		// a bug in the Linux SMP kernel, or there may be a problem 
+		// in the above code.
+	if( pi->cpuusage < 0.0 ) {
+		if ( pi->cpuusage > -10.0 ) {
+				// let's call this a roundoff error and forget about it.
+			pi->cpuusage = 0.0;
+		}
+		else {
+				// damn, we've got a "rather negative" cpu usage number.
+				// Scream loudly!
+			dprintf ( D_ALWAYS, "AAAAG!  Large neg. number in cpuusage.\n");
+			dprintf ( D_ALWAYS, "Dumping everything I know:\n" );
+			dprintf ( D_ALWAYS, "pi->cpuusage       %f\n", pi->cpuusage );
+			dprintf ( D_ALWAYS, "ustime             %f\n", ustime );
+			dprintf ( D_ALWAYS, "now                %f\n", now );
+			dprintf ( D_ALWAYS, "timediff           %f\n", timediff );
+			dprintf ( D_ALWAYS, "pi->user_time      %ld\n", pi->user_time );
+			dprintf ( D_ALWAYS, "pi->sys_time       %ld\n", pi->sys_time );
+			dprintf ( D_ALWAYS, "pi->age            %ld\n", pi->age );
+			if ( phn ) {
+				dprintf ( D_ALWAYS, "old_phn->lasttime  %f\n", phn->lasttime );
+				dprintf ( D_ALWAYS, "old_phn->oldtime   %f\n", phn->oldtime );
+				dprintf ( D_ALWAYS, "old_phn->oldusage  %f\n", phn->oldusage );
+			}
+			assert(0);
+		}
+	}
+
+		// do some other checking...
+
+	if( pi->user_time < 0 ) {
+		dprintf ( D_ALWAYS, "ProcAPI sanity failure, user_time = %ld\n", 
+				  pi->user_time );
+		pi->user_time = 0;
+	}
+	if( pi->sys_time < 0 ) {
+		dprintf ( D_ALWAYS, "ProcAPI sanity failure, sys_time = %ld\n", 
+				  pi->sys_time );
+		pi->sys_time = 0;
+	}
+	if( pi->age < 0 ) {
+		dprintf ( D_ALWAYS, "ProcAPI sanity failure, age = %ld\n", 
+				  pi->age );
+		pi->age = 0;
+	}
+
+		// now we can delete this, we may have used it in checking...
+	if ( phn ) delete phn;
+	
+}
+#endif // ndef WIN32
 
 /* The next function, getMemInfo, is different for each *&^%$#@! OS.
    Each uses something quite different than other OS's use...

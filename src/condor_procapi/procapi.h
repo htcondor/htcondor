@@ -179,6 +179,9 @@ struct procInfo {
   /// parents pid.
   pid_t ppid;
 
+  /// The time of birth of this pid
+  long creation_time;
+
   /// pointer to next procInfo, if one exists.
   struct procInfo *next;
 };
@@ -217,6 +220,8 @@ struct procHashNode {
   long oldminf;
   /// the old value for major page faults.
   long oldmajf;
+  /// The "time of birth" of this process (in sec)
+  long creation_time;
 };
 
 
@@ -374,6 +379,8 @@ class ProcAPI {
   void initpi ( piPTR& );                  // initialization of pi.
   int isinfamily ( pid_t *, int, pid_t );  // used by buildFamily & NT equiv.
 #ifndef WIN32
+	  // works with the hashtable; finds cpuusage, maj/min page faults.
+  void do_usage_sampling( piPTR&, double, long, long);
   int buildPidList();                      // just what it says
   int buildProcInfoList();                 // ditto.
   int buildFamily( pid_t );                // builds + sums procInfo list
