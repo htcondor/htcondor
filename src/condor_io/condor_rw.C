@@ -144,8 +144,7 @@ int condor_write(SOCKET fd, char *buf, int sz, int timeout) {
 			if( start_time + timeout > cur_time ) {
 				timer.tv_sec = (start_time + timeout) - cur_time;
 			} else {
-				dprintf(D_ALWAYS, "Timed out writing buffer '%s'\n",
-						buf);
+				dprintf(D_ALWAYS, "Timed out writing buffer\n" );
 				return -1;
 			}
 			
@@ -162,8 +161,7 @@ int condor_write(SOCKET fd, char *buf, int sz, int timeout) {
 			
 			switch(nfound) {
 			  case 0:
-				dprintf( D_ALWAYS, "Timed out writing buffer '%s'\n",
-						buf);
+				dprintf( D_ALWAYS, "Timed out writing buffer\n" );
 				return -1;
 				
 			  case 1:
