@@ -213,6 +213,11 @@ struct sockaddr_in  *from;
 {
     struct hostent  *hp, *gethostbyaddr();
 
+	if( !from ) {
+		dprintf( D_ALWAYS, "from NULL source\n" );
+		return;
+	}
+
     if( (hp=gethostbyaddr((char *)&from->sin_addr,
                 sizeof(struct in_addr), from->sin_family)) == NULL ) {
         dprintf( D_ALWAYS, "from (%s), port %d\n",
