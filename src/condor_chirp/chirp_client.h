@@ -14,6 +14,10 @@ int chirp_client_read( struct chirp_client *c, int fd, char *buffer, int length 
 int chirp_client_write( struct chirp_client *c, int fd, const char *buffer, int length );
 int chirp_client_unlink( struct chirp_client *c, const char *path );
 int chirp_client_rename( struct chirp_client *c, const char *oldpath, const char *newpath );
+int chirp_client_fsync( struct chirp_client *c, int fd );
+int chirp_client_lseek( struct chirp_client *c, int fd, int offset, int whence );
+int chirp_client_mkdir( struct chirp_client *c, char const *name, int mode );
+int chirp_client_rmdir( struct chirp_client *c, char const *name );
 
 #endif
 

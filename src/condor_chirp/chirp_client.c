@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include <unistd.h>
 #include <sys/errno.h>
@@ -19,6 +20,8 @@ static void chirp_fatal_request( const char *name );
 static void chirp_fatal_response();
 static int get_result( FILE *s );
 static int convert_result( int response );
+static int simple_command(struct chirp_client *c,char const *fmt,...);
+static void vsprintf_command(char *command,char const *fmt,va_list args);
 
 struct chirp_client {
 	FILE *stream;
@@ -97,41 +100,22 @@ void chirp_client_disconnect( struct chirp_client *c )
 
 int chirp_client_cookie( struct chirp_client *c, const char *cookie )
 {
-	int result;
+	return simple_command(c,"cookie %s\n",cookie);
+}
 
-	result = fprintf(c->stream,"cookie %s\n",cookie);
-	if(result<0) chirp_fatal_request("cookie");
-
-	result = fflush(c->stream);
-	if(result<0) chirp_fatal_request("cookie");
-
-	return convert_result(get_result(c->stream));
+int chirp_client_login( struct chirp_client *c, const char *name, const char *password )
+{
+	return simple_command(c,"login %s %s\n",name,password);
 }
 
 int chirp_client_open( struct chirp_client *c, const char *path, const char *flags, int mode )
 {
-	int result;
-
-	result = fprintf(c->stream,"open %s %s %d\n",path,flags,mode);
-	if(result<0) chirp_fatal_request("open");
-
-	result = fflush(c->stream);
-	if(result<0) chirp_fatal_request("open");
-
-	return convert_result(get_result(c->stream));
+	return simple_command(c,"open %s %s %d\n",path,flags,mode);
 }
 
 int chirp_client_close( struct chirp_client *c, int fd )
 {
-	int result;
-
-	result = fprintf(c->stream,"close %d\n",fd);
-	if(result<0) chirp_fatal_request("close");
-
-	result = fflush(c->stream);
-	if(result<0) chirp_fatal_request("close");
-
-	return convert_result(get_result(c->stream));
+	return simple_command(c,"close %d\n",fd);
 }
 
 int chirp_client_read( struct chirp_client *c, int fd, char *buffer, int length )
@@ -139,13 +123,8 @@ int chirp_client_read( struct chirp_client *c, int fd, char *buffer, int length 
 	int result;
 	int actual;
 
-	result = fprintf(c->stream,"read %d %d\n",fd,length);
-	if(result<0) chirp_fatal_request("read");
+	result = simple_command(c,"read %d %d\n",fd,length);
 
-	result = fflush(c->stream);
-	if(result<0) chirp_fatal_request("read");
-
-	result = convert_result(get_result(c->stream));
 	if( result>0 ) {
 		actual = fread(buffer,1,result,c->stream);
 		if(actual!=result) chirp_fatal_response("read");
@@ -173,29 +152,33 @@ int chirp_client_write( struct chirp_client *c, int fd, const char *buffer, int 
 
 int chirp_client_unlink( struct chirp_client *c, const char *path )
 {
-	int result;
-
-	result = fprintf(c->stream,"unlink %s\n",path);
-	if(result<0) chirp_fatal_request("unlink");
-
-	result = fflush(c->stream);
-	if(result<0) chirp_fatal_request("unlink");
-
-	return convert_result(get_result(c->stream));
+	return simple_command(c,"unlink %s\n",path);
 }
 
 int chirp_client_rename( struct chirp_client *c, const char *oldpath, const char *newpath )
 {
-	int result;
-
-	result = fprintf(c->stream,"rename %s %s\n",oldpath,newpath);
-	if(result<0) chirp_fatal_request("rename");
-
-	result = fflush(c->stream);
-	if(result<0) chirp_fatal_request("rename");
-
-	return convert_result(get_result(c->stream));
+	return simple_command(c,"rename %s %s\n",oldpath,newpath);
 }
+int chirp_client_fsync( struct chirp_client *c, int fd )
+{
+	return simple_command(c,"fsync %d\n",fd);
+}
+
+int chirp_client_lseek( struct chirp_client *c, int fd, int offset, int whence )
+{
+	return simple_command(c,"lseek %d %d %d\n",fd,offset,whence);
+}
+
+int chirp_client_mkdir( struct chirp_client *c, char const *name, int mode )
+{
+	return simple_command(c,"mkdir %s %d\n",name,mode);
+}
+
+int chirp_client_rmdir( struct chirp_client *c, char const *name )
+{
+	return simple_command(c,"rmdir %s\n",name);
+}
+
 
 static int convert_result( int result )
 {
@@ -294,5 +277,80 @@ static int tcp_connect( const char *host, int port )
 	}
 
 	return fd;
+}
+
+/*
+ *vsprintf_command -- simple sprintf capabilities with character escaping
+ *
+ *The following format characters are interpreted:
+ *
+ *%d -- decimal
+ *%s -- word (whitespace is escaped)
+ */
+
+void vsprintf_command(char *command,char const *fmt,va_list args)
+{
+  char *c;
+  char const *f;
+
+  c = command;
+  f = fmt;
+  while(*f) {
+	  if(*f == '%') {
+		  switch(*(++f)) {
+		  case 'd':
+			  f++;
+			  sprintf(c,"%d",va_arg(args,int));
+			  c += strlen(c);
+			  break;
+		  case 's': {
+			  char const *w = va_arg(args,char const *);
+			  f++;
+			  while(*w) {
+				  switch(*w) {
+				  case ' ':
+				  case '\t':
+				  case '\n':
+				  case '\r':
+				  case '\\':
+					  *(c++) = '\\';
+					  /*fall through*/
+				  default:
+					  *(c++) = *(w++);
+				  }
+			  }
+			  break;
+		  }
+		  default:
+			  chirp_fatal_request(f);
+		  }
+	  }
+	  else {
+		  *(c++) = *(f++);
+	  }
+  }
+  *(c++) = '\0';
+}
+
+int simple_command(struct chirp_client *c,char const *fmt,...)
+{
+  int result;
+  char command[CHIRP_LINE_MAX];
+  va_list args;
+
+  va_start(args,fmt);
+  vsprintf_command(command,fmt,args);
+  va_end(args);
+
+  result = fputs(command,c->stream);
+
+
+
+  if(result < 0) chirp_fatal_request(fmt);
+
+  result = fflush(c->stream);
+  if(result < 0) chirp_fatal_request(fmt);
+
+  return convert_result(get_result(c->stream));
 }
 
