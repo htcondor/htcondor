@@ -103,13 +103,12 @@ bool	NewExecutable = false;
 bool	IsFirstExecutable;
 bool	UserLogSpecified = false;
 bool never_transfer = false;  // never transfer files or do transfer files
+
 // environment vars in the ClassAd attribute are seperated via
 // the env_delimiter character; currently a '|' on NT and ';' on Unix
-#ifdef WIN32
-	char env_delimiter[] = "|";
-#else
-	char env_delimiter[] = ";";
-#endif
+// env_delimiter is a static const chat defined in condor_constants.h.
+// Here we define a char* env_delimiter_string for use with strcat.
+static char env_delimiter_string[5];
 
 
 #define PROCVARSIZE	32
@@ -362,6 +361,10 @@ main( int argc, char *argv[] )
 	char	**ptr;
 	char	*cmd_file = NULL;
 	int dag_pause = 0;
+
+	// Initialize env_delimiter string... note that 
+	// const char env_delimiter is defined in condor_constants.h
+	sprintf(env_delimiter_string,"%c\0",env_delimiter);
 
 	setbuf( stdout, NULL );
 
@@ -1526,7 +1529,7 @@ SetEnvironment()
 
 	if (allowscripts && (*allowscripts=='T' || *allowscripts=='t') ) {
 		if ( !first ) {
-			strcat(newenv,env_delimiter);
+			strcat(newenv,env_delimiter_string);
 		}
 		strcat(newenv,"_CONDOR_NOCHECK=1");
 		first = false;
@@ -1545,7 +1548,7 @@ SetEnvironment()
 			// ignore env settings that contain env_delimiter to avoid 
 			// syntax problems
 
-			if (strchr(environ[i], env_delimiter[0]) == NULL) {
+			if (strchr(environ[i], env_delimiter) == NULL) {
 				envlen += strlen(environ[i]);
 				if (envlen < ATTRLIST_MAX_EXPRESSION) {
 
@@ -1561,7 +1564,7 @@ SetEnvironment()
 						if (first) {
 							first = false;
 						} else {
-							strcat(newenv, env_delimiter);
+							strcat(newenv, env_delimiter_string);
 						}
 						strcat(newenv, environ[i]);
 					}
@@ -2939,7 +2942,7 @@ setupAuthentication()
 		sprintf( buffer, "X509_USER_PROXY=%s", UserFile );
 		if ( JobUniverse == GLOBUS_UNIVERSE ) {
 			strcat( GlobusEnv, buffer );
-			strcat( GlobusEnv, env_delimiter );
+			strcat( GlobusEnv, env_delimiter_string );
 				//Put it in the ClassAd as well (per directive from 7th floor...)
 			sprintf( buffer, "X509_USER_PROXY = \"%s\"", UserFile );
 			InsertJobExpr( buffer );
@@ -2968,21 +2971,21 @@ setupAuthentication()
 
 			sprintf( buffer, "X09_CERT_DIR=%s/certdir", UserFile );
 			strcat( GlobusEnv, buffer );
-			strcat( GlobusEnv, env_delimiter );
+			strcat( GlobusEnv, env_delimiter_string );
 				//Put it in the ClassAd as well (per directive from 7th floor...)
 			sprintf( buffer, "X509_CERT_DIR = \"%s/certdir\"", UserFile );
 			InsertJobExpr( buffer );
 
 			sprintf( buffer, "X09_USER_CERT=%s/usercert.pem", UserFile );
 			strcat( GlobusEnv, buffer );
-			strcat( GlobusEnv, env_delimiter );
+			strcat( GlobusEnv, env_delimiter_string );
 				//Put it in the ClassAd as well (per directive from 7th floor...)
 			sprintf( buffer, "X509_USER_CERT = \"%s/usercert.pem\"", UserFile );
 			InsertJobExpr( buffer );
 
 			sprintf( buffer, "X09_USER_KEY=%s/userkey.pem", UserFile );
 			strcat( GlobusEnv, buffer );
-			strcat( GlobusEnv, env_delimiter );
+			strcat( GlobusEnv, env_delimiter_string );
 				//Put it in the ClassAd as well (per directive from 7th floor...)
 			sprintf( buffer, "X509_USER_KEY = \"%s/userkey.pem\"", UserFile );
 			InsertJobExpr( buffer );
@@ -2998,7 +3001,7 @@ setupAuthentication()
 			}
 			sprintf( buffer, "SSLEAY_CONF=%s", sslFile );
 			strcat( GlobusEnv, buffer );
-			strcat( GlobusEnv, env_delimiter );
+			strcat( GlobusEnv, env_delimiter_string );
 				//Put it in the ClassAd as well (per directive from 7th floor...)
 			sprintf( buffer, "SSLEAY_CONF = \"%s\"", sslFile );
 			InsertJobExpr( buffer );
@@ -3011,7 +3014,7 @@ setupAuthentication()
 		sprintf( buffer, "SSLEAY_CONF=%s", ssleay );
 		if ( JobUniverse == GLOBUS_UNIVERSE ) {
 			strcat( GlobusEnv, buffer );
-			strcat( GlobusEnv, env_delimiter );
+			strcat( GlobusEnv, env_delimiter_string );
 				//Put it in the ClassAd as well (per directive from 7th floor...)
 			sprintf( buffer, "SSLEAY_CONF = \"%s\"", ssleay );
 			InsertJobExpr( buffer );
