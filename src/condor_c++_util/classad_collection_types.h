@@ -98,21 +98,34 @@ public:
   
   virtual bool CheckClassAd(ClassAd* Ad) {
     ExprTree* tree;
-    EvalResult result;
+//    EvalResult result;
+	Value result;
+	ClassAdParser parser;
+	bool boolValue;
+	int intValue;
 
-    if (Parse(Constraint.Value(), tree) != 0) {
-        return false;
+//    if (Parse(Constraint.Value(), tree) != 0) {
+	if( !parser.ParseExpression( string( Constraint.Value( ) ), tree ) ) {
+		return false;
     }
 
-    if (!tree->EvalTree(NULL, Ad, &result)) {
+//    if (!tree->EvalTree(NULL, Ad, &result)) {
+	tree->SetParentScope( Ad );
+	if( !Ad->EvaluateExpr( tree, result ) ) {
         delete tree;
         return false;
     }
 
     delete tree;
-    if (result.type == LX_INTEGER) {
-        return (bool)result.i;
-    }
+//    if (result.type == LX_INTEGER) {
+//        return (bool)result.i;
+//   }
+	if( result.IsBooleanValue( boolValue ) ) {
+		return boolValue;
+	}
+	else if( result.IsIntegerValue( intValue ) ) {
+		return (bool)intValue;
+	}
 
     return false;
   }
