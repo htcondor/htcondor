@@ -698,6 +698,7 @@ void condor_event_timer () {
 void
 main_pre_dc_init( int argc, char* argv[] )
 {
+	DC_Skip_Auth_Init();
 }
 
 

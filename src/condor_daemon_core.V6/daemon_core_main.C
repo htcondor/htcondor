@@ -57,6 +57,7 @@ extern void main_pre_command_sock_init();
 // Internal protos
 void dc_reconfig( bool is_full );
 void dc_config_auth();       // Configuring GSI (and maybe other) authentication related stuff
+
 // Globals
 int		Foreground = 0;		// run in background by default
 static char*	myName;			// set to basename(argv[0])
@@ -71,6 +72,7 @@ static	char*	logAppend = NULL;
 int line_where_service_stopped = 0;
 #endif
 bool	DynamicDirs = false;
+
 // runfor is non-zero if the -r command-line option is specified. 
 // It is specified to tell a daemon to kill itself after runfor minutes.
 // Currently, it is only used for the master, and it is specified for 
@@ -84,6 +86,10 @@ bool	DynamicDirs = false;
 // time it has left before it exits. This can be used by a job's requirements
 // so that it can decide if it should run at a particular machine or not. 
 int runfor = 0; //allow cmd line option to exit after *runfor* minutes
+
+// This flag tells daemoncore whether to do the authorization initialization.
+// It can be set to false by calling the DC_Skip_Auth_Init() function.
+static bool doAuthInit = true;
 
 
 #ifndef WIN32
@@ -203,6 +209,13 @@ DC_Exit( int status )
 	
 		// Finally, exit with the status we were given.
 	exit( status );
+}
+
+
+void
+DC_Skip_Auth_Init()
+{
+	doAuthInit = false;
 }
 
 
@@ -1383,7 +1396,9 @@ int main( int argc, char** argv )
 
     // call dc_config_GSI to set GSI related parameters so that all
     // the daemons will know what to do.
-    dc_config_auth();
+	if ( doAuthInit ) {
+		dc_config_auth();
+	}
 
 		// See if we're supposed to be allowing core files or not
 	check_core_files();
