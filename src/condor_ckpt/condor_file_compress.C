@@ -411,6 +411,16 @@ int CondorFileCompress::ioctl( int cmd, int arg )
 
 int CondorFileCompress::ftruncate( size_t length )
 {
+	_condor_warning( "You can't ftruncate() a compressed file (%s).",
+					 get_url() ); 
+	errno = EINVAL;
+	return -1;
+}
+
+int CondorFileCompress::fstat( struct stat* buf )
+{
+	_condor_warning( "You can't fstat() a compressed file (%s).", 
+					 get_url() );
 	errno = EINVAL;
 	return -1;
 }
