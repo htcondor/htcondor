@@ -87,6 +87,8 @@ class Sink
 		*/
 		void SetSink( ByteSink *s );
 
+		ByteSink *GetSink( ) { return( sink ); }
+
 		/** Set the format options for the sink
 		 	@param fo Pointer to a FormatOptions object
 			@see FormatOptions
