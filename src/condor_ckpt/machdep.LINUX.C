@@ -98,7 +98,8 @@ void Proc::read_proc()
 	sprintf(fn ,"/proc/%d/stat", pid);
         proc=fopen(fn, "r");
 	if(!proc) {
-		printf("Can't open %s for reading\n", fn);
+		dprintf(D_ALWAYS, "Can't open %s for reading\n", fn);
+		Suicide();
 	}
 
 	fscanf(proc, "%d %s %c %d %d %d %d %d",
@@ -246,15 +247,15 @@ int find_map_for_addr(long addr)
 {
 	int		i;
 
-	fprintf(stderr, "Finding map for addr:0x%x (map_cnt=%d)\n", addr, map_count);
+	/*fprintf(stderr, "Finding map for addr:0x%x (map_cnt=%d)\n", addr, map_count);*/
 	for(i=0;i<map_count;i++) {
-		fprintf(stderr, "0x%x 0x%x\n", my_map[i].mem_start, my_map[i].mem_end);
+		/*fprintf(stderr, "0x%x 0x%x\n", my_map[i].mem_start, my_map[i].mem_end);*/
 		if(addr >= my_map[i].mem_start && addr <= my_map[i].mem_end) {
-			fprintf(stderr, "  Found:%d\n", i);
+			/*fprintf(stderr, "  Found:%d\n", i);*/
 			return i;
 		}
 	}
-	fprintf(stderr, "  NOT Found\n");
+	/*fprintf(stderr, "  NOT Found\n");*/
 	return -1;
 }
 
@@ -286,9 +287,9 @@ int num_segments()
 		fscanf(pfs, "%x-%x %c%c%c%c %x %d:%d %d\n",
 			&mem_start, &mem_end, &rperm, &wperm,
 			&xperm, &priv, &offset, &major, &minor, &inode);
-		fprintf(stderr, "0x%x 0x%x %c%c%c%c 0x%x %d:%d %d\n", 
+		/*fprintf(stderr, "0x%x 0x%x %c%c%c%c 0x%x %d:%d %d\n", 
 			mem_start, mem_end, rperm, wperm, xperm, priv,
-			offset, major, minor, inode);
+			offset, major, minor, inode);*/
 		my_map[num_seg].mem_start=mem_start;
 		my_map[num_seg].mem_end=mem_end-1;
 		/* FIXME - Greger */
@@ -316,7 +317,7 @@ int num_segments()
 		stack_loc=find_map_for_addr((long)stack_start_addr());
 	heap_loc=find_map_for_addr((long)data_start_addr());
 
-	fprintf(stderr, "%d segments\n", num_seg);
+	/*fprintf(stderr, "%d segments\n", num_seg);*/
 	SetSyscalls(scm);
 	return num_seg;
 }
