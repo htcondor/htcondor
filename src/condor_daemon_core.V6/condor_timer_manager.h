@@ -84,6 +84,7 @@ class TimerManager
 		int		NewTimer(Service* s, unsigned deltawhen, Eventcpp event, char *event_descrip,
 						 unsigned period = 0, int id = -1);
 		int	   	CancelTimer(int);
+		int		ResetTimer(int tid, unsigned when, unsigned period = 0);
 		void   	CancelAllTimers();
 		void   	DumpTimerList(int, char* = NULL );
 	  	int		Timeout(); 

@@ -136,6 +136,7 @@ class DaemonCore : public Service
 		int		Register_Timer(unsigned deltawhen, unsigned period, Eventcpp event, 
 					char *event_descrip, Service* s, int id = -1);
 		int		Cancel_Timer( int id );
+		int		Reset_Timer( int id, unsigned when, unsigned period = 0 );
 
 		void	Dump(int, char* = NULL );
 

@@ -190,6 +190,10 @@ int	DaemonCore::Cancel_Timer( int id ) {
 	return( t.CancelTimer(id) );
 }
 
+int	DaemonCore::Reset_Timer( int id, unsigned when, unsigned period ) {
+	return( t.ResetTimer(id,when,period) );
+}
+
 int DaemonCore::Register_Command(int command, char* command_descrip, CommandHandler handler, 
 					CommandHandlercpp handlercpp, char *handler_descrip, Service* s, 
 					DCpermission perm, int is_cpp)

@@ -166,6 +166,65 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 	return	new_timer->id;
 }
 
+int TimerManager::ResetTimer(int id, unsigned when, unsigned period)
+{
+	Timer*			timer_ptr;
+	Event			handler;
+	Eventcpp		handlercpp;
+	Service*		s; 
+	int				is_cpp;
+	char*			event_descrip;
+	void*			data_ptr;
+	int				reset_dataptr = FALSE;
+
+	dprintf( D_DAEMONCORE, "In reset_timer(), id=%d, time=%d, period=%d\n",id,when,period);
+	if (timer_list == NULL) {
+		dprintf( D_DAEMONCORE, "Reseting Timer from empty list!\n");
+		return -1;
+	}
+
+	// now find the correct timer entry and set timer_ptr to point to it
+	if (timer_list->id == id) {
+		// timer to remove is the first on the list
+		timer_ptr = timer_list;
+	} else {
+		// timer to remove is not first on the list, so find it
+		for (timer_ptr = timer_list; timer_ptr != NULL && timer_ptr->id != id; 
+			 timer_ptr = timer_ptr->next) ;
+
+		if ( timer_ptr == NULL ) {
+			dprintf( D_DAEMONCORE, "Timer %d not found\n",id );
+			return -1;
+		}
+	}
+
+	handler = timer_ptr->handler;
+	handlercpp = timer_ptr->handlercpp;
+	s = timer_ptr->service; 
+	is_cpp = timer_ptr->is_cpp;
+	event_descrip = timer_ptr->event_descrip;
+	data_ptr = timer_ptr->data_ptr;
+	if ( daemonCore->curr_dataptr == &(timer_ptr->data_ptr) )
+		reset_dataptr = TRUE;
+
+	// note that this call to NewTimer() will first call CancelTimer on the tid, 
+	// then create a new timer with the same tid.
+	NewTimer(s, when, handler, handlercpp, event_descrip, period, 
+			 id, is_cpp);
+	// and dont forget to renew the users data_ptr
+	daemonCore->Register_DataPtr(data_ptr);
+	// and if a handler was resetting _its own_ tid entry, reset curr_dataptr to new value
+	if ( reset_dataptr == TRUE )
+		daemonCore->curr_dataptr = daemonCore->curr_regdataptr;
+	// now clear curr_regdataptr; the above NewTimer should appear "transparent"
+	// as far as the user code/API is concerned
+	daemonCore->curr_regdataptr = NULL;
+	
+	// DumpTimerList(D_DAEMONCORE | D_FULLDEBUG);
+
+	return 0;
+}
+
 int TimerManager::CancelTimer(int id)
 {
 	Timer*			timer_ptr;
@@ -250,6 +309,7 @@ TimerManager::Timeout()
 	time_t			now;
 	int				is_cpp;
 	char*			event_descrip;
+	void*			data_ptr;
 
 	if ( in_timeout == TRUE ) {
 		dprintf(D_DAEMONCORE,"DaemonCore Timeout() called and in_timeout is TRUE\n");
@@ -285,6 +345,7 @@ TimerManager::Timeout()
 		s = timer_list->service; 
 		is_cpp = timer_list->is_cpp;
 		event_descrip = timer_list->event_descrip;
+		data_ptr = timer_list->data_ptr;
 
 		// Update curr_dataptr for GetDataPtr()
 		daemonCore->curr_dataptr = &(timer_list->data_ptr);
@@ -313,9 +374,11 @@ TimerManager::Timeout()
 				// will first call CancelTimer on the expired timer, then renew it.
 				NewTimer(s, period, handler, handlercpp, event_descrip, period, 
 						 current_id, is_cpp);
-				// Clear curr_dataptr; the above NewTimer should appear "transparent"
+				// and dont forget to renew the users data_ptr
+				daemonCore->Register_DataPtr(data_ptr);
+				// now clear curr_regdataptr; the above NewTimer should appear "transparent"
 				// as far as the user code/API is concerned
-				daemonCore->curr_dataptr = NULL;
+				daemonCore->curr_regdataptr = NULL;
 			} else {
 				// timer is not perodic; it is just a one-time event.  we just called
 				// the handler, so now remove the timer from out list.  
