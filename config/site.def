@@ -34,7 +34,7 @@
 /* Top should be the root of the source directory you want to use if
 you want our top-level Makefile to build the directory tree with all
 the soft links.  The links will point back to Top/src/... */
-#define Top		/p/condor/workspaces/wright/V6
+#define Top /p/condor/workspaces/shared.2/hbwang/V6_3/
 
 #define TmpDir		/tmp
 
@@ -68,4 +68,24 @@ the soft links.  The links will point back to Top/src/... */
 
 #define WANT_NETMAN	YES
 
+#define WANT_KERBEROS   NO
+
+/*------------------------------------------
+ * Condor Credential API related
+ *------------------------------------------*/
+
+KERBEROS_DIR =           /s/krb5
+KERBEROS_INCLUDE =       $(KERBEROS_DIR)/include
+KERBEROS_LIB =             \
+                         $(KERBEROS_DIR)/lib/libkrb5util.a    \
+                         $(KERBEROS_DIR)/lib/libkrb5.a        \
+                         $(KERBEROS_DIR)/lib/libcrypto.a      \
+                         $(KERBEROS_DIR)/lib/libcom_err.a
+
+CREDENTIAL_LIB = $(KERBEROS_LIB)
+
 #endif  /* AfterVendorCF */
+
+
+
+
