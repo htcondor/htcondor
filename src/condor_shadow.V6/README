@@ -1,10 +1,9 @@
 How to run condor_shadow:
 
 	condor_shadow is run by condor daemon schedd. Normally users do not need to
-	run it. It takes
+	run it.
 
 How to configure condor_shadow:
-
 
     condor_shadow is configured by adding variables in configuration file. Some
     configuration variables are required, other are not. Each configuration
