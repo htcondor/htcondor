@@ -121,36 +121,7 @@ Next(string &key)
 		return -1;
 	} 
 }
-/*
-string IndexFile::
-<<<<<<< indexfile.C
-GetClassadFromFile(string key, int offset){
-  if (filed!=0){
-    int curset;
-    curset=lseek(filed,offset,SEEK_SET);
-    char  k[1];
-    string m;
-    int l;
-    
-    while ((l=read(filed,k,1))>0){
-      string n(k,1);
-      if (n=="\n"){
-	break; 
-      }else{
-        m=m+n;
-      }           
-    }
 
-    if (m[0]!='*'){
-      return m;
-    }else{
-      return "";
-    }
-  }else{
-    return "";
-  }
-=======
-*/
 GetClassadFromFile(string key, int offset)
 {
 	if (filed != 0){
