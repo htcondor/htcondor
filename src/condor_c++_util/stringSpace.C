@@ -33,7 +33,7 @@ template class HashBucket<MyString,int>;
 
 // hash function for strings
 static int 
-hashFunction (MyString &str, int numBuckets)
+hashFunction (const MyString &str, int numBuckets)
 {
 	int i = str.Length() - 1, hashVal = 0;
 	while (i >= 0) 
