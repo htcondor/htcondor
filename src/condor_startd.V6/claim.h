@@ -177,6 +177,7 @@ public:
 	time_t      getJobTotalRunTime();
 	bool        mayUnretire()   {return c_may_unretire;}
 	bool        getRetirePeacefully() {return c_retire_peacefully;}
+	bool        preemptWasTrue() const {return c_preempt_was_true;}
 
 		// Functions that set the values of data
 	void setrank(float rank)	{c_rank=rank;};
@@ -186,6 +187,7 @@ public:
 	void setaliveint(int alive);
 	void disallowUnretire()     {c_may_unretire=false;}
 	void setRetirePeacefully(bool value) {c_retire_peacefully=value;}
+	void preemptIsTrue() {c_preempt_was_true=true;}
 
 		// starter-related functions
 	int	 spawnStarter( time_t, Stream* = NULL );
@@ -276,6 +278,7 @@ private:
 	bool		c_wants_remove;	// are we trying to remove this claim?
 	bool        c_may_unretire;
 	bool        c_retire_peacefully;
+	bool        c_preempt_was_true; //was PREEMPT ever true for this claim?
 
 
 		// Helper methods

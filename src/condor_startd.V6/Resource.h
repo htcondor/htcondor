@@ -161,6 +161,8 @@ public:
 	int		retirementExpired( void );
 	int		mayUnretire( void );
 	int		hasPreemptingClaim( void );
+	int     preemptWasTrue( void ) const; //PREEMPT was true in current claim
+	void    preemptIsTrue();              //records that PREEMPT was true
 
 		// Data members
 	ResState*		r_state;	// Startd state object, contains state and activity

@@ -127,6 +127,12 @@ ResState::change( State new_state, Activity new_act )
 		// We want to update the CM on every state or activity change
 	rip->update();   
 
+	if( r_act == retiring_act ) {
+		// When we enter retirement, check right away to see if we should
+		// be preempting instead.
+		this->eval();
+	}
+
 	return TRUE;
 }
 
@@ -144,7 +150,7 @@ ResState::change( State new_state )
 	if( new_state == preempting_state ) {
 			// wants_vacate dprintf's about what it decides and the
 			// implications on state changes...
-		if( rip->wants_vacate() ) {
+		if( !rip->preemptWasTrue() || rip->wants_vacate() ) {
 			return change( new_state, vacating_act );
 		} else {
 			return change( new_state, killing_act );
@@ -178,21 +184,22 @@ ResState::eval( void )
 			return 0;
 		}
 		want_suspend = rip->wants_suspend();
-		if( (r_act == busy_act && !want_suspend) ||
-			(r_act == retiring_act && rip->mayUnretire() && !want_suspend) ||
-			(r_act == suspended_act && rip->mayUnretire()) ) {
+		if( (r_act==busy_act && !want_suspend) ||
+			(r_act==retiring_act && !rip->preemptWasTrue() && !want_suspend) ||
+			(r_act==suspended_act && rip->preemptWasTrue()) ) {
 
 			//Explanation for the above conditions:
 			//The want_suspend check is there because behavior is
 			//potentially confusing without it.  Derek says:)
-			//The mayUnretire check is there to see if we are already
-			//in irreversible retirement, in which case, we don't need
+			//The preemptWasTrue check is there to see if we already
+			//had PREEMPT turn TRUE, in which case, we don't need
 			//to keep trying to retire over and over.
 
 			if( rip->eval_preempt() ) {
 				dprintf( D_ALWAYS, "State change: PREEMPT is TRUE\n" );
 				// irreversible retirement
 				// STATE TRANSITION #12 or #16
+				rip->preemptIsTrue();
 				return rip->retire_claim();
 			}
 		}
@@ -229,7 +236,7 @@ ResState::eval( void )
 				return change( busy_act );
 			}
 			if( rip->retirementExpired() ) {
-				dprintf( D_ALWAYS, "State change: retirement ended/expired; soft-killing next\n" );
+				dprintf( D_ALWAYS, "State change: retirement ended/expired\n" );
 				// STATE TRANSITION #18
 				return change( preempting_state );
 			}

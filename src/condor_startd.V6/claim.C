@@ -76,6 +76,7 @@ Claim::Claim( Resource* rip, bool is_cod )
 	c_claim_total_suspend_time = 0;
 	c_may_unretire = true;
 	c_retire_peacefully = false;
+	c_preempt_was_true = false;
 }
 
 
@@ -1299,6 +1300,7 @@ Claim::resetClaim( void )
 	c_job_total_run_time = 0;
 	c_job_total_suspend_time = 0;
 	c_may_unretire = true;
+	c_preempt_was_true = false;
 }
 
 

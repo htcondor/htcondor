@@ -122,7 +122,7 @@ Resource::retire_claim( void )
 	switch( state() ) {
 	case claimed_state:
 		// Do not allow backing out of retirement (e.g. if a
-		// preempting claim goes away) because this function called
+		// preempting claim goes away) because this function is called
 		// for irreversible events such as condor_vacate or PREEMPT.
 		if(r_cur) {
 			r_cur->disallowUnretire();
@@ -932,6 +932,19 @@ Resource::mayUnretire()
 		}
 	}
 	return 0;
+}
+
+int
+Resource::preemptWasTrue() const
+{
+	if(r_cur) return r_cur->preemptWasTrue();
+	return 0;
+}
+
+void
+Resource::preemptIsTrue()
+{
+	if(r_cur) r_cur->preemptIsTrue();
 }
 
 int
