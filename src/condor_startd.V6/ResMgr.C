@@ -27,23 +27,37 @@ static char *_FileName_ = __FILE__;
 ResMgr::ResMgr()
 {
 	int i;
+	coll_sock = NULL;
+	view_sock = NULL;
 
-	coll_sock = new SafeSock( collector_host, 
-							  COLLECTOR_UDP_COMM_PORT );
-
-	if( condor_view_host ) {
-		view_sock = new SafeSock( condor_view_host,
-								  CONDOR_VIEW_PORT ); 
-	} else {
-		view_sock = NULL;
-	}
+	this->init_socks();
 
 		// This should really handle multiple resources here.
 	nresources = 1;
 	resources = new Resource*[nresources];
 
 	for( i = 0; i < nresources; i++ ) {
-		resources[i] = new Resource( coll_sock, view_sock );
+		resources[i] = new Resource();
+	}
+}
+
+
+void
+ResMgr::init_socks()
+{
+
+	if( coll_sock ) {
+		delete coll_sock;
+	}
+	coll_sock = new SafeSock( collector_host, 
+							  COLLECTOR_UDP_COMM_PORT );
+
+	if( view_sock ) {
+		delete view_sock;
+	}
+	if( condor_view_host ) {
+		view_sock = new SafeSock( condor_view_host, 
+								  CONDOR_VIEW_PORT );
 	}
 }
 
@@ -149,4 +163,24 @@ ResMgr::final_update()
 {
 		// This needs serious help when we get to multiple resources
 	resources[0]->final_update();
+}
+
+
+
+void
+ResMgr::send_update( ClassAd* public_ad, ClassAd* private_ad )
+{
+	if( coll_sock ) {
+		send_classad_to_sock( coll_sock, public_ad, private_ad );
+		dprintf( D_FULLDEBUG, "Sent update to the collector (%s)\n", 
+				 collector_host );
+	}  
+
+		// If we have an alternate collector, send public CA there.
+	if( view_sock ) {
+		send_classad_to_sock( view_sock, public_ad, NULL );
+		dprintf( D_FULLDEBUG, 
+				 "Sent update to the condor_view host (%s)\n",
+				 condor_view_host );
+	}
 }

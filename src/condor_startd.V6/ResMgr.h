@@ -38,7 +38,9 @@ public:
 	ResMgr();
 	~ResMgr();
 
+	void	init_socks();
 	bool 	in_use();
+	void	send_update( ClassAd*, ClassAd* );
 	void	final_update();
 	
 	// These two functions walk through the array of rip pointers and
