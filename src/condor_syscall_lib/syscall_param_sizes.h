@@ -1,0 +1,18 @@
+#define STAT_SIZE sizeof(struct stat)
+#define STATFS_SIZE sizeof(struct statfs)
+#define GID_T_SIZE sizeof(gid_t)
+#define INT_SIZE sizeof(int)
+#define LONG_SIZE sizeof(long)
+#define FD_SET_SIZE sizeof(fd_set)
+#define TIMEVAL_SIZE sizeof(struct timeval)
+#define TIMEVAL_ARRAY_SIZE (sizeof(struct timeval) * 2)
+#define TIMEZONE_SIZE sizeof(struct timezone)
+#define FILEDES_SIZE sizeof(struct filedes)
+#define RLIMIT_SIZE sizeof(struct rlimit)
+#define UTSNAME_SIZE sizeof(struct utsname)
+#define POLLFD_SIZE sizeof(struct pollfd)
+#define RUSAGE_SIZE sizeof(struct rusage)
+#define MAX_STRING 1024
+#define EIGHT 8
+#define STATFS_ARRAY_SIZE (rval * sizeof(struct statfs))
+#define PROC_SIZE sizeof(PROC)
