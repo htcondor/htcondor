@@ -26,7 +26,7 @@
 #include "util.h"
 
 using namespace std;
-extern	time_t timezone;
+extern DLL_IMPORT_MAGIC time_t timezone;
 
 BEGIN_NAMESPACE( classad )
 
@@ -342,7 +342,7 @@ tokenizeNumber (void)
 		 * or a selection. This should really never happen, so we
 		 * bomb if it does. It should be reported as a bug.
 		 */
-		EXCEPT("Should not reach here");
+			EXCEPT("Should not reach here");
 	}
 
 	switch( toupper( ch ) ) {
