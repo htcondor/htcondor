@@ -1,8 +1,8 @@
 all_target(cplus_lib.a liburl.a libcondorapi.a)
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-CFLAGS = $(STD_C_FLAGS)
-LIB = $(STD_LIBS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(OPENSSL_FLAGS)
+CFLAGS = $(STD_C_FLAGS) $(OPENSSL_FLAGS)
+LIB = $(STD_LIBS) $(OPENSSL_LIB)
 
 #if !HAS_FLOCK
 FLOCK_OBJ = ../condor_util_lib/flock.o
@@ -31,7 +31,8 @@ CONLIBAPI_OBJ = $(API_OBJ) \
 	distribution.o \
 	my_distribution.o \
 	libcondorapi_stubs.o \
-	strnewp.o
+	strnewp.o \
+	condor_dh.o
 
 DAEMON_CLIENT_OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o \
 	dc_schedd.o
@@ -55,7 +56,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	condor_md.o condor_credential.o \
 	HashTable.o MyString.o \
 	KeyCache.o dc_stub.o which.o iso_dates.o java_config.o \
-	RegExer.o my_distribution.o
+	RegExer.o my_distribution.o condor_dh.o
 
 
 library_target( cplus_lib.a,$(OBJ))
