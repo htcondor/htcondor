@@ -19,7 +19,7 @@ crash whenever they ran in a pool with the \Macro{LOWPORT} and
 These settings restrict what ports Condor will use in your pool.
 To allow standard universe jobs to run in such a pool, you must relink
 your executable with \Condor{compile} after the 6.4.6 condor libraries
-are installed in your Condor \file{lib} directory.
+are installed in your Condor \File{lib} directory.
 
 \item When more than 512 distinct users submit to Condor or Condor-G,
 the \Condor{schedd} no longer crashes. 
@@ -28,6 +28,13 @@ the \Condor{schedd} no longer crashes.
 which contain two nodes with the same name; in the past DAGMan
 did not detect this, and would not exit even when the DAG was
 complete.
+
+\item The \Opt{-format} option to \Condor{q} and \Condor{status} can
+now be used to print out boolean expressions in ClassAds, not just
+strings, integers and floating point numbers.
+Any boolean expression will now be treated like a string, so be sure
+to use \verb@%s@ as the conversion character in the formatting string
+you pass to \Opt{-format}.
 
 \item If no \Attr{Rank} is specified in the job description file, or
 in the \Macro{DEFAULT\_RANK} config file variable, the default value
