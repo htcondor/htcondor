@@ -68,7 +68,7 @@ get_daemon_name( const char* name )
 	char *tmp, *fullname, *tmpname, *daemon_name = NULL;
 	int size;
 
-	dprintf( D_HOSTNAME, "Finding the proper daemon name for \"%s\"\n",
+	dprintf( D_HOSTNAME, "Finding proper daemon name for \"%s\"\n",
 			 name ); 
 
 		// First, check for a '@' in the name.
