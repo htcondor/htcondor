@@ -31,8 +31,8 @@ extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc.
 static	char*  	_FileName_ = __FILE__;	// used by EXCEPT
 
 // The "order" of entries in perm_names and perm_ints must match
-const char* IpVerify::perm_names[] = {"READ","WRITE","ADMINISTRATOR","OWNER",NULL};
-const int IpVerify::perm_ints[] = {READ,WRITE,ADMINISTRATOR,OWNER,-1};  // must end with -1
+const char* IpVerify::perm_names[] = {"READ","WRITE","ADMINISTRATOR","OWNER","NEGOTIATOR",NULL};
+const int IpVerify::perm_ints[] = {READ,WRITE,ADMINISTRATOR,OWNER,NEGOTIATOR,-1};  // must end with -1
 
 // Hash function for Permission hash table
 static int compute_perm_hash(const struct in_addr &in_addr, int numBuckets)
@@ -282,8 +282,10 @@ IpVerify::fill_table(StringList *slist, int mask)
 				// No wildcards; resolve the name
 				if ( (hostptr=gethostbyname(addr)) != NULL) {
 					if ( hostptr->h_addrtype == AF_INET ) {
-						if (add_hash_entry((*(struct in_addr *)(hostptr->h_addr_list[0])),mask) == FALSE) {
-							result = FALSE;
+						for (int i=0; hostptr->h_addr_list[i]; i++) {
+							if (add_hash_entry((*(struct in_addr *)(hostptr->h_addr_list[i])),mask) == FALSE) {
+								result = FALSE;
+							}
 						}
 					}
 				}
