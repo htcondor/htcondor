@@ -31,30 +31,136 @@
 #include "condor_query.h"
 #include "condor_attributes.h"
 #include "condor_collector.h"
+#include "condor_config.h"
+#include "condor_network.h"
+#include "condor_io.h"
+#include "condor_parser.h"
 #include "condor_adtypes.h"
 #include "condor_debug.h"
-#include "condor_config.h"
 
-CondorQuery::
-CondorQuery( )
+
+#define XDR_ASSERT(x) {if (!(x)) return Q_COMMUNICATION_ERROR;}
+
+char *new_strdup (const char *);
+
+// The order and number of the elements of the following arrays *are*
+// important.  (They follow the structure of the enumerations supplied
+// in the header file condor_query.h)
+const char *ScheddStringKeywords [] = 
 {
-	domain = (AdDomain)-1;
-	adType = (CondorAdType)NULL;
+	ATTR_NAME 
+};
+
+const char *ScheddIntegerKeywords [] = 
+{
+	ATTR_NUM_USERS,
+	ATTR_IDLE_JOBS,
+	ATTR_RUNNING_JOBS
+};
+
+const char *ScheddFloatKeywords [] = 
+{
+	""		// add null string to avoid compiler error
+};
+
+const char *StartdStringKeywords [] = 
+{
+	ATTR_NAME,
+	ATTR_MACHINE,
+	ATTR_ARCH,
+	ATTR_OPSYS
+};
+
+const char *StartdIntegerKeywords [] = 
+{
+	ATTR_MEMORY,
+	ATTR_DISK
+};
+
+const char *StartdFloatKeywords [] =
+{
+	""		// add null string to avoid compiler error
+};
+
+// normal ctor
+CondorQuery::
+CondorQuery (AdTypes qType)
+{
+	queryType = qType;
+	switch (qType)
+	{
+	  case STARTD_AD:
+		query.setNumStringCats (STARTD_STRING_THRESHOLD);
+		query.setNumIntegerCats(STARTD_INT_THRESHOLD);
+		query.setNumFloatCats  (STARTD_FLOAT_THRESHOLD);
+		query.setIntegerKwList ((char **)StartdIntegerKeywords);
+		query.setStringKwList  ((char **)StartdStringKeywords);
+		query.setFloatKwList   ((char **)StartdFloatKeywords);
+		command = QUERY_STARTD_ADS;
+		break;
+
+	  case STARTD_PVT_AD:
+		query.setNumStringCats (STARTD_STRING_THRESHOLD);
+		query.setNumIntegerCats(STARTD_INT_THRESHOLD);
+		query.setNumFloatCats  (STARTD_FLOAT_THRESHOLD);
+		query.setIntegerKwList ((char **)StartdIntegerKeywords);
+		query.setStringKwList  ((char **)StartdStringKeywords);
+		query.setFloatKwList   ((char **)StartdFloatKeywords);
+		command = QUERY_STARTD_PVT_ADS;
+		break;
+
+	  case SCHEDD_AD:
+		query.setNumStringCats (SCHEDD_STRING_THRESHOLD);
+		query.setNumIntegerCats(SCHEDD_INT_THRESHOLD);
+		query.setNumFloatCats  (SCHEDD_FLOAT_THRESHOLD);
+		query.setIntegerKwList ((char **)ScheddIntegerKeywords);
+		query.setStringKwList  ((char **)ScheddStringKeywords);
+		query.setFloatKwList   ((char **)ScheddFloatKeywords);
+		command = QUERY_SCHEDD_ADS;
+		break;
+
+	  case SUBMITTOR_AD:
+		query.setNumStringCats (SCHEDD_STRING_THRESHOLD);
+		query.setNumIntegerCats(SCHEDD_INT_THRESHOLD);
+		query.setNumFloatCats  (SCHEDD_FLOAT_THRESHOLD);
+		query.setIntegerKwList ((char **)ScheddIntegerKeywords);
+		query.setStringKwList  ((char **)ScheddStringKeywords);
+		query.setFloatKwList   ((char **)ScheddFloatKeywords);
+		command = QUERY_SUBMITTOR_ADS;
+		break;
+
+	  case MASTER_AD:
+		query.setNumStringCats (0);
+		query.setNumIntegerCats(0);
+		query.setNumFloatCats  (0);
+		command = QUERY_MASTER_ADS;
+		break;
+
+	  case CKPT_SRVR_AD:
+		query.setNumStringCats (0);
+		query.setNumIntegerCats(0);
+		query.setNumFloatCats  (0);
+		command = QUERY_CKPT_SRVR_ADS;
+		break;
+
+	  case COLLECTOR_AD:
+		query.setNumStringCats (0);
+		query.setNumIntegerCats(0);
+		query.setNumFloatCats  (0);
+		command = QUERY_COLLECTOR_ADS;
+		break;
+
+	  default:
+		command = -1;
+		queryType = (AdTypes) -1;
+	}
 }
 
 
+// copy ctor; makes deep copy
 CondorQuery::
-CondorQuery( CondorAdType adt, AdDomain add )
+CondorQuery (const CondorQuery &from)
 {
-	setQueryType( adt, add );
-}
-
-
-CondorQuery::
-CondorQuery( const CondorQuery &from ) : GenericQuery( from )
-{
-	domain = from.domain;
-	adType = from.adType;
 }
 
 
@@ -65,76 +171,160 @@ CondorQuery::
 }
 
 
+// clear particular string category
+QueryResult CondorQuery::
+clearStringConstraints (const int i)
+{
+	return (QueryResult) query.clearString (i);
+}
+
+
+// clear particular integer category
+QueryResult CondorQuery::
+clearIntegerConstraints (const int i)
+{
+	return (QueryResult) query.clearInteger (i);
+}
+
+// clear particular float category
+QueryResult CondorQuery::
+clearFloatConstraints (const int i)
+{
+	return (QueryResult) query.clearFloat (i);
+}
+
+
+void CondorQuery::
+clearCustomConstraints (void)
+{
+	query.clearCustom ();
+}
+
+
+// add a string constraint
+QueryResult CondorQuery::
+addConstraint (const int cat, const char *value)
+{
+	return (QueryResult) query.addString (cat, (char *) value);
+}
+
+
+// add an integer constraint
+QueryResult CondorQuery::
+addConstraint (const int cat, const int value)
+{
+	return (QueryResult) query.addInteger (cat, value);
+}
+
+
+// add a float constraint
+QueryResult CondorQuery::
+addConstraint (const int cat, const float value)
+{
+	return (QueryResult) query.addFloat (cat, value);
+}
+
+
+// add a custom constraint
+QueryResult CondorQuery::
+addConstraint (const char *value)
+{
+	return (QueryResult) query.addCustom ((char *) value);
+}
+
+
 // fetch all ads from the collector that satisfy the constraints
 QueryResult CondorQuery::
-fetchAds( ExprList  &adList, const char *poolName )
+fetchAds (ClassAdList &adList, const char *poolName)
 {
-    char  		*pool;
-	char		defaultPool[64];
+    char        *pool;
+	char		defaultPool[32];
     ReliSock    sock; 
+	int			more;
     QueryResult result;
-    ClassAd     queryAd;
-	int			command;
-	Source		source;
-	Sink		sink;
+    ClassAd     queryAd, *ad;
 
-		// ensure that we have enough state to make the query
-	if( domain == (AdDomain)-1 || adType == (CondorAdType)NULL ) {
-		return( Q_INVALID_QUERY );
-	}
-
-		// use current pool's collector if not specified
-	if( poolName == NULL || poolName[0] == '\0' ) {
-		if( ( pool = param("COLLECTOR_HOST") ) == NULL ) {
+	// use current pool's collector if not specified
+	if (poolName == NULL || poolName[0] == '\0')
+	{
+		if ((pool = param ("COLLECTOR_HOST")) == NULL)  {
 			return Q_NO_COLLECTOR_HOST;
 		}
-		strcpy( defaultPool, pool );
-		free( (void*)pool );
+		strcpy (defaultPool, pool);
+		free (pool);
 		pool = defaultPool;
-	} else {
-			// pool specified
+	}
+	else {
+		// pool specified
 		pool = (char *) poolName;
 	}
 
-		// make the query ad; add type information
-	if( !makeQueryAd( queryAd ) || !queryAd.insertAttr( ATTR_TYPE, adType ) ) {
-		return( Q_MEMORY_ERROR );
+	// make the query ad
+	result = (QueryResult) query.makeQuery (queryAd);
+	if (result != Q_OK) return result;
+
+	// fix types
+	queryAd.SetMyTypeName (QUERY_ADTYPE);
+	switch (queryType) {
+	  case STARTD_AD:
+	  case STARTD_PVT_AD:
+		queryAd.SetTargetTypeName (STARTD_ADTYPE);
+		break;
+
+	  case SCHEDD_AD:
+	  case SUBMITTOR_AD:
+		queryAd.SetTargetTypeName (SCHEDD_ADTYPE);
+		break;
+
+	  case MASTER_AD:
+		queryAd.SetTargetTypeName (MASTER_ADTYPE);
+		break;
+
+	  case CKPT_SRVR_AD:
+		queryAd.SetTargetTypeName (CKPT_SRVR_ADTYPE);
+		break;
+
+	  case COLLECTOR_AD:
+		queryAd.SetTargetTypeName (COLLECTOR_ADTYPE);
+		break;
+
+	  default:
+		return Q_INVALID_QUERY;
 	}
 
-		// the command that we have to send to the collector
-	switch( domain ) {
-		case PUBLIC_AD: 
-			command = QUERY_PUBLIC_ADS; 
-			break;
-		case PRIVATE_AD: 
-			command = QUERY_PRIVATE_ADS; 
-			break;
-		default: 
-			return( Q_INVALID_QUERY );
-	}
-
-		// contact collector
-	if( !sock.connect( pool, COLLECTOR_COMM_PORT ) ) {
+	// contact collector
+	if (!sock.connect(pool, COLLECTOR_COMM_PORT)) {
         return Q_COMMUNICATION_ERROR;
     }
 
-		// ship query
-	sink.setSink( sock );
-	sock.encode( );
-	if( !sock.code(command) || !queryAd.toSink(sink) || 
-		!sink.flushSink( )	|| !sock.end_of_message( ) ) {
-		return( Q_COMMUNICATION_ERROR );
+	// ship query
+	sock.encode();
+	if (!sock.code (command) || !queryAd.put (sock) || !sock.end_of_message()) {
+		return Q_COMMUNICATION_ERROR;
 	}
-
-		// get result
-	sock.decode( );
-	source.setSource( sock );
-	if( !source.parseExprList( &adList ) ) {
-		return( Q_COMMUNICATION_ERROR );
+	
+	// get result
+	sock.decode ();
+	more = 1;
+	while (more)
+	{
+		if (!sock.code (more)) {
+			sock.end_of_message();
+			return Q_COMMUNICATION_ERROR;
+		}
+		if (more) {
+			ad = new ClassAd;
+			if (!ad->get (sock)) {
+				sock.end_of_message();
+				delete ad;
+				return Q_COMMUNICATION_ERROR;
+			}
+			adList.Insert (ad);
+		}
 	}
-
-		// finalize
 	sock.end_of_message();
+
+	// finalize
 	sock.close ();
 	
 	return (Q_OK);
@@ -142,35 +332,63 @@ fetchAds( ExprList  &adList, const char *poolName )
 
 
 QueryResult CondorQuery::
-filterAds( ExprList &in, ExprList &out )
+getQueryAd (ClassAd &queryAd)
 {
-	ClassAd 		queryAd, *candidate;
-	QueryResult		result;
-	Value			val;
-	CondorClassAd	ad;
-	ExprTree		*tree;
-	bool			match;
+	QueryResult	result;
 
-		// make the query ad
-	if( !makeQueryAd( queryAd ) ) {
-		return( Q_MEMORY_ERROR );
+	result = (QueryResult) query.makeQuery (queryAd);
+	if (result != Q_OK) return result;
+
+	// fix types
+	queryAd.SetMyTypeName (QUERY_ADTYPE);
+	switch (queryType) {
+	  case STARTD_AD:
+	  case STARTD_PVT_AD:
+		queryAd.SetTargetTypeName (STARTD_ADTYPE);
+		break;
+
+	  case SCHEDD_AD:
+	  case SUBMITTOR_AD:
+		queryAd.SetTargetTypeName (SCHEDD_ADTYPE);
+		break;
+
+	  case MASTER_AD:
+		queryAd.SetTargetTypeName (MASTER_ADTYPE);
+		break;
+
+	  case CKPT_SRVR_AD:
+		queryAd.SetTargetTypeName (CKPT_SRVR_ADTYPE);
+		break;
+
+	  case COLLECTOR_AD:
+		queryAd.SetTargetTypeName (COLLECTOR_ADTYPE);
+		break;
+
+	  default:
+		return Q_INVALID_QUERY;
 	}
 
-		// plug in the query into the left context
-	ad.replaceLeftAd( &queryAd );
+	return Q_OK;
+}
 
-	in.rewind( );
-	while( ( tree = in.next( ) ) ) {
-			// 'tree' better be a classad
-		if( !tree->evaluate( val ) || !val.isClassAdValue( candidate ) ) {
-			return( Q_INVALID_QUERY_RESULT );
-		}
-			// plug in the candidate and test for a match
-		ad.replaceRightAd( candidate );
-		if( ad.evaluateAttrBool( "rightMatchesLeft", match ) && match ) {
-			out.appendExpression( candidate->copy( ) );
-		}
+	
+QueryResult CondorQuery::
+filterAds (ClassAdList &in, ClassAdList &out)
+{
+	ClassAd queryAd, *candidate;
+	QueryResult	result;
+
+	// make the query ad
+	result = (QueryResult) query.makeQuery (queryAd);
+	if (result != Q_OK) return result;
+
+	in.Open();
+	while (candidate = (ClassAd *) in.Next())
+    {
+        // if a match occurs
+		if ((*candidate) >= (queryAd)) out.Insert (candidate);
     }
+    in.Close ();
     
 	return Q_OK;
 }
@@ -187,7 +405,6 @@ char *getStrQueryResult(QueryResult q)
 	    case Q_COMMUNICATION_ERROR:	return "communication error";
 	    case Q_INVALID_QUERY:		return "invalid query";
 	    case Q_NO_COLLECTOR_HOST:	return "no COLLECTOR_HOST";
-		case Q_INVALID_QUERY_RESULT:return "invalid query result";
 		default:
 			return "unknown error";
 	}

@@ -85,40 +85,37 @@ extern char* mySubSystem;
 BUCKET	*ConfigTab[TABLESIZE];
 static char* tilde = NULL;
 
-static char* _FileName_ = __FILE__;
-
 // Function implementations
 
 void
 config_fill_ad( ClassAd* ad )
 {
-	char		buffer[512];
+	char 		buffer[1024];
 	char 		*tmp;
 	char		*expr;
 	StringList	reqdExprs;
-	Source		src;
-	ExprTree	*exprTree;
 	
 	if( !ad ) return;
+
 	sprintf (buffer, "%s_EXPRS", mySubSystem);
-	if( !( tmp = param (buffer) ) ) return;
+	tmp = param (buffer);
+	if( tmp ) {
+		reqdExprs.initializeFromString (tmp);	
+		free (tmp);
 
-	reqdExprs.initializeFromString (tmp);	
-	free (tmp);
-
-	reqdExprs.rewind();
-	while ((tmp = reqdExprs.next())) {
-		if( ( expr = param(tmp) ) == NULL ) continue;
-		src.SetSource( expr );
-		if( !src.ParseExpression( exprTree ) ) {
-			EXCEPT( "Error parsing: %s\n", expr );
-		}
-		ad->Insert( tmp, exprTree );
-		free (expr);
+		reqdExprs.rewind();
+		while ((tmp = reqdExprs.next())) {
+			expr = param(tmp);
+			if (expr == NULL) continue;
+			sprintf (buffer, "%s = %s", tmp, expr);
+			ad->Insert (buffer);
+			free (expr);
+		}	
 	}
 	
 	/* Insert the version into the ClassAd */
-	ad->InsertAttr( ATTR_VERSION, CondorVersion() );
+	sprintf(buffer,"%s=\"%s\"", ATTR_VERSION, CondorVersion() );
+	ad->Insert(buffer);
 }
 
 

@@ -122,21 +122,6 @@ Transaction::Commit(int fd, void *data_structure)
 	if (fd >= 0) fsync(fd);
 }
 
-void
-Transaction::Commit(FILE *fp, void *data_structure)
-{
-	LogRecord		*log;
-
-	for (log = op_log.FirstEntry(); log != 0; 
-		 log = op_log.NextEntry(log)) {
-		if (fp) log->Write(fp);
-		log->Play(data_structure);
-	}
-	if (fp) {
-		fflush( fp );
-		fsync(fileno(fp));
-	}
-}
 
 void
 Transaction::AppendLog(LogRecord *log)
