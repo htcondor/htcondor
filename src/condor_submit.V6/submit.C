@@ -175,6 +175,7 @@ char	*KillSig			= "kill_sig";
 void 	reschedule();
 void 	SetExecutable();
 void 	SetUniverse();
+void	SetMachineCount();
 void 	SetImageSize();
 int 	calc_image_size( char *name);
 int 	find_cmd( char *name );
@@ -768,15 +769,12 @@ void
 SetUniverse()
 {
 	char	*univ;
-	char	*mach_count;
-	char	*ptr;
 
 	univ = condor_param(Universe);
 
 #if !defined(WIN32)
 	if( univ && stricmp(univ,"pvm") == MATCH ) 
 	{
-		int tmp;
 		char *pvmd = param("PVMD");
 
 		if (!pvmd || access(pvmd, R_OK|X_OK) != 0) {
@@ -798,31 +796,6 @@ SetUniverse()
 		InsertJobExpr (buffer);
 		InsertJobExpr ("Checkpoint = 0");
 
-		mach_count = condor_param(MachineCount);
-
-		if (mach_count != NULL) {
-			for (ptr = mach_count; *ptr && *ptr != '.'; ptr++) ;
-			if (*ptr != '\0') {
-				*ptr = '\0';
-				ptr++;
-			}
-
-			tmp = atoi(mach_count);
-			(void) sprintf (buffer, "%s = %d", ATTR_MIN_HOSTS, tmp);
-			InsertJobExpr (buffer);
-			
-			for ( ; !isdigit(*ptr) && *ptr; ptr++) ;
-			if (*ptr != '\0') {
-				tmp = atoi(ptr);
-			}
-
-			(void) sprintf (buffer, "%s = %d", ATTR_MAX_HOSTS, tmp);
-			InsertJobExpr (buffer);
-			free(mach_count);
-		} else {
-			InsertJobExpr ("MinHosts = 1");
-			InsertJobExpr ("MaxHosts = 1");
-		}
 		free(univ);
 		return;
 	};
@@ -833,24 +806,6 @@ SetUniverse()
 		InsertJobExpr (buffer);
 		InsertJobExpr ("Checkpoint = 0");
 		
-		mach_count = condor_param( MachineCount );
-		
-		int tmp;
-		if ( mach_count != NULL ) {
-			tmp = atoi(mach_count);
-			free(mach_count);
-		}
-		else {
-			fprintf(stderr, "No machine_count specified!\n" );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
-
-		(void) sprintf (buffer, "%s = %d", ATTR_MIN_HOSTS, tmp);
-		InsertJobExpr (buffer);
-		(void) sprintf (buffer, "%s = %d", ATTR_MAX_HOSTS, tmp);
-		InsertJobExpr (buffer);
-
 		free(univ);
 		return;
 	}
@@ -914,6 +869,64 @@ SetUniverse()
 	}
 
 	return;
+}
+
+void
+SetMachineCount()
+{
+	char	*mach_count;
+	char	*ptr;
+
+	if (JobUniverse == PVM) {
+
+		mach_count = condor_param(MachineCount);
+
+		int tmp;
+		if (mach_count != NULL) {
+			for (ptr = mach_count; *ptr && *ptr != '.'; ptr++) ;
+			if (*ptr != '\0') {
+				*ptr = '\0';
+				ptr++;
+			}
+
+			tmp = atoi(mach_count);
+			(void) sprintf (buffer, "%s = %d", ATTR_MIN_HOSTS, tmp);
+			InsertJobExpr (buffer);
+			
+			for ( ; !isdigit(*ptr) && *ptr; ptr++) ;
+			if (*ptr != '\0') {
+				tmp = atoi(ptr);
+			}
+
+			(void) sprintf (buffer, "%s = %d", ATTR_MAX_HOSTS, tmp);
+			InsertJobExpr (buffer);
+			free(mach_count);
+		} else {
+			InsertJobExpr ("MinHosts = 1");
+			InsertJobExpr ("MaxHosts = 1");
+		}
+
+	} else if (JobUniverse == MPI) {
+
+		mach_count = condor_param( MachineCount );
+		
+		int tmp;
+		if ( mach_count != NULL ) {
+			tmp = atoi(mach_count);
+			free(mach_count);
+		}
+		else {
+			fprintf(stderr, "No machine_count specified!\n" );
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
+
+		(void) sprintf (buffer, "%s = %d", ATTR_MIN_HOSTS, tmp);
+		InsertJobExpr (buffer);
+		(void) sprintf (buffer, "%s = %d", ATTR_MAX_HOSTS, tmp);
+		InsertJobExpr (buffer);
+
+	}
 }
 
 // Note: you must call SetTransferFiles() *before* calling SetImageSize().
@@ -2173,6 +2186,7 @@ queue(int num)
 			SetUniverse();
 			SetExecutable();
 		}
+		SetMachineCount();
 		if ( JobUniverse == GLOBUS_UNIVERSE ) {
 			strcpy( GlobusArgs, GlobusExec );
 		}
