@@ -1,1 +1,3 @@
 HAS_STATIC=@_cv_has_static@
+
+GLOBUS_FLAVOR=@globus_flavor@
