@@ -279,7 +279,11 @@ new_record(int cluster, int proc, int evict_time, int wall_time,
 	if (HStats.lookup(hostkey, hs) < 0) {
 		struct sockaddr_in sin;
 		string_to_sin(host, &sin);
-		hs = new HostStatistics(sin_to_hostname(&sin, NULL));
+		char *hostname = sin_to_hostname(&sin, NULL);
+		if (hostname == NULL) {
+			hostname = "unknown";
+		}
+		hs = new HostStatistics(hostname);
 		HStats.insert(hostkey, hs);
 		numHostStats++;
 	}
