@@ -9,6 +9,23 @@ New releases of 6.2.0 should happen infrequently and will only include
 bug fixes and support for new platforms.
 New features will be added and tested in the 6.3 development series. 
 The details of each version are described below.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:New-6-2-1}Version 6.2.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\noindent New Features:
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\noindent Bugs Fixed:
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\noindent Known Bugs:
+\begin{itemize}
+\item None.
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:New-6-2-1}Version 6.2.1}
@@ -30,6 +47,12 @@ writing.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item When using heterogeneous specifications of an executable between
+NT and UNIX, Condor could get confused if the vanilla job had run on
+an NT machine, vacated without being completed, and then restarted as
+a standard universe job on UNIX. The job would be labeled as running in
+the queue, but not perform any work. This has been fixed.
 
 \item The entries in the \AdAttr{environment} 
 option in a submit file now correctly override the variables brought in
