@@ -51,7 +51,7 @@ Macro definitions are of the form:
         <macro_name> = <macro_definition>
 \end{verbatim}
 
-\textbf{NOTE:} You must have whitespace between the macro name, the
+\Note You must have whitespace between the macro name, the
 ``='' sign, and the macro definition.  Macro invocations are of the
 form: 
 
@@ -99,7 +99,7 @@ Expression definitions are of the form:
         <expression_name> : <expression>
 \end{verbatim}
 
-\textbf{NOTE:} You must have whitespace between the expression name,
+\Note You must have whitespace between the expression name,
 the ``:'' sign, and the expression definition.  Expressions may
 contain constants, operators, and other expressions.  Macros may also
 be used to aid in writing expressions.  Constants may be booleans,
@@ -579,7 +579,7 @@ server, shadow, and starter, none of which use DaemonCore yet).
   comma-separated list of entries from the config file you want in the
   given daemon's ClassAd.
   
-  \textbf{NOTE:} The \Condor{negotiator} and \Condor{kbdd} do not send
+  \Note The \Condor{negotiator} and \Condor{kbdd} do not send
   ClassAds now, so this entry does not effect them at all.  The
   \Condor{startd}, \Condor{schedd}, \Condor{master}, and
   \Condor{collector} do send ClassAds, so those would be valid
@@ -819,7 +819,7 @@ section~\ref{sec:Ckpt-Server} on ``Installing a Checkpoint Server''
 for details on installing and running a checkpoint server for your
 pool.
 
-\textbf{NOTE:} If you are setting up a machine to join to UW-Madison CS
+\Note If you are setting up a machine to join to UW-Madison CS
 Department Condor pool, you \textbf{should} configure the machine to
 use a checkpoint server, and use ``condor-ckpt.cs.wisc.edu'' as the
 checkpoint server host (see below).
@@ -862,11 +862,11 @@ These settings control the \Condor{master}.
         DAEMON_LIST = MASTER, STARTD, SCHEDD
 \end{verbatim}
 
-  \textbf{NOTE:} On your central manager, your \Macro{DAEMON\_LIST}
+  \Note On your central manager, your \Macro{DAEMON\_LIST}
   will be different from your regular pool, since it will include
   entries for the \Condor{collector} and \Condor{negotiator}.  
   
-  \textbf{NOTE:} On machines running Digital Unix or IRIX, your
+  \Note On machines running Digital Unix or IRIX, your
   \Macro{DAEMON\_LIST} will also include ``KBDD'', for the
   \Condor{kbdd}, which is a special daemon that runs to monitor
   keyboard and mouse activity on the console.  It is only with this
