@@ -23,10 +23,6 @@
 
  
 
-#if defined(AIX31) || defined(AIX32)
-#include "syscall.aix.h"
-#endif
-
 #if defined(IRIX)
 #	undef SYSVoffset
 #	undef __SYS_S__
@@ -39,7 +35,7 @@
 #include <sys/syscall.h>
 #endif
 
-#if !defined(AIX31) && !defined(AIX32)  && !defined(Solaris) && !defined(IRIX) && !defined(WIN32)
+#if defined(HPUX) || defined(LINUX) || defined(DUX)
 #include <syscall.h> 
 #endif
 
@@ -73,15 +69,6 @@
 #		define SYS_chown SYS_lchown
 #	endif
 #endif
-
-#if defined(AIX31) || defined(AIX32)
-extern int	CondorErrno;
-#define SET_ERRNO errno = CondorErrno
-#else
-#define SET_ERRNO
-#endif
-
-extern int	errno;
 
 /*
 **	System calls can be either:
