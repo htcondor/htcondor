@@ -19,9 +19,3 @@
 
 /* inet_ntoa is broken in GCC for -n32 and -64 ABIs */
 #define HAS_INET_NTOA NO
-
-/* For now, build a "clipped" version */
-#define IS_CLIPPED NO
-
-#undef HAS_KERBEROS
-#define HAS_KERBEROS NO
