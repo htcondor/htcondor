@@ -2,6 +2,7 @@
 #include "condor_debug.h"
 #include "condor_q.h"
 #include "condor_attributes.h"
+#include "condor_adtypes.h"
 #include "condor_qmgr.h"
 
 // specify keyword lists; N.B.  The order should follow from the category
@@ -26,7 +27,8 @@ static const char *fltKeywords[] =
 };
 
 // scan function to walk the job queue
-extern "C" getJobAd (int, int);
+extern "C" getJobAdAndInsert (int, int);
+int getJobAd(int cluster_id, int proc_id, ClassAd *new_ad);
 
 // need this global variable to hold information reqd by the scan function
 static ClassAdList *__list;
@@ -151,18 +153,38 @@ getAndFilterAds (ClassAd &ad, ClassAdList &list)
 	__list = &list;
 	__query = &ad;
 
-	WalkJobQueue (getJobAd);
+	WalkJobQueue (getJobAdAndInsert);
 
 	return Q_OK;
 }
 
 
-getJobAd(int cluster_id, int proc_id)
+getJobAdAndInsert(int cluster_id, int proc_id)
+{
+	int rval;
+    ClassAd *new_ad = new ClassAd;
+
+	rval = getJobAd(cluster_id, proc_id, new_ad);
+
+	if (rval != 0) {
+		delete new_ad;
+		return rval;
+	}
+
+	// iff the job ad matches the query, insert it into the list
+	if ((*new_ad) >= (*__query))
+		__list->Insert (new_ad);
+	else
+		delete new_ad;
+
+    return 0;
+}
+
+getJobAd(int cluster_id, int proc_id, ClassAd *new_ad)
 {
     char    buf[1000];
     char    buf2[1000];
     int     rval;
-    ClassAd *new_ad = new ClassAd;
 
 	// this code is largely Jim Pruyne's original qmgmt_test.c program  --RR
     rval = FirstAttribute(cluster_id, proc_id, buf);
@@ -172,7 +194,6 @@ getJobAd(int cluster_id, int proc_id)
 			if (!new_ad->Insert (buf2))
 			{
 				// failed to insert expr --- abort this ad
-				delete new_ad;
 				return 1;
 			}
             rval = NextAttribute(cluster_id, proc_id, buf);
@@ -180,16 +201,10 @@ getJobAd(int cluster_id, int proc_id)
     }
 
 	// insert types for the ad  ### Use from some canonical file?  --RR
-	new_ad->SetMyTypeName ("Job");
-	new_ad->SetTargetTypeName ("Machine");
+	new_ad->SetMyTypeName (JOB_ADTYPE);
+	new_ad->SetTargetTypeName (STARTD_ADTYPE);
 
-	// iff the job ad matches the query, insert it into the list
-	if ((*new_ad) >= (*__query))
-		__list->Insert (new_ad);
-	else
-		delete new_ad;
-
-    return 0;
+	return 0;
 }
 
 /* queue printing routines moved here from proc_obj.C, which is being
