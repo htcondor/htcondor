@@ -30,6 +30,7 @@ TESTCLASS_DECL(performance)
 TESTCLASS_DECL(condorc)
 TESTCLASS_DECL(core)
 TESTCLASS_DECL(lib)
+TESTCLASS_DECL(btdebug)
 
 
 /***************************************************
