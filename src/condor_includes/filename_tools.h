@@ -42,6 +42,8 @@ filename_url_parse().
 The filename argument may be up to _POSIX_PATH_MAX, and output must
 point to a buffer of _POSIX_PATH_MAX*3.
 <p>
+The delimiting characters = and ; may be escaped with a backslash.
+<p>
 Currently, this data is represented as a string attribute within
 a ClassAd.  A much better implementation would be to store it
 as a ClassAd within a ClassAd.  However, this will have to wait until
