@@ -8,13 +8,13 @@ CLASSAD_LIB = ../condor_classad/expr_lib.a
 
 SRC =  \
 	config_val.C preen.C reconfig_schedd.C reschedule.C  \
-	vacate.C custom.C custom_main.C checkpoint.C user_prio.C
+	vacate.C custom.C custom_main.C checkpoint.C user_prio.C history.C
 
 LIB= ../condor_c++_util/cplus_lib.a $(CLASSAD_LIB) ../condor_util_lib/util_lib.a RpcLib KernLib SocketLib
 LIBDIRS =../condor_util_lib ../condor_c++_util
 PROGRAMS =  \
 	config_val condor_preen condor_reconfig_schedd \
-	condor_reschedule condor_vacate \
+	condor_reschedule condor_vacate condor_history \
 	condor_customize condor_checkpoint condor_userprio
 
 all_target( $(PROGRAMS) )
@@ -44,3 +44,7 @@ release_target(condor_checkpoint,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
 c_plus_target(condor_userprio,user_prio.o,$(LIB))
 release_target(condor_userprio,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+
+c_plus_target(condor_history,history.o,$(LIB))
+release_target(condor_history,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+

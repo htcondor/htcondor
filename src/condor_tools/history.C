@@ -1,156 +1,208 @@
-/* 
-** Copyright 1993 by Miron Livny, and Mike Litzkow
-** 
-** Permission to use, copy, modify, and distribute this software and its
-** documentation for any purpose and without fee is hereby granted,
-** provided that the above copyright notice appear in all copies and that
-** both that copyright notice and this permission notice appear in
-** supporting documentation, and that the names of the University of
-** Wisconsin and the copyright holders not be used in advertising or
-** publicity pertaining to distribution of the software without specific,
-** written prior permission.  The University of Wisconsin and the 
-** copyright holders make no representations about the suitability of this
-** software for any purpose.  It is provided "as is" without express
-** or implied warranty.
-** 
-** THE UNIVERSITY OF WISCONSIN AND THE COPYRIGHT HOLDERS DISCLAIM ALL
-** WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
-** OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE UNIVERSITY OF
-** WISCONSIN OR THE COPYRIGHT HOLDERS BE LIABLE FOR ANY SPECIAL, INDIRECT
-** OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
-** OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
-** OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE
-** OR PERFORMANCE OF THIS SOFTWARE.
-** 
-** Author:  Mike Litzkow
-**
-*/ 
-
-/********************************************************************
-* Print a summary of each job that has been submitted to condor in the
-* history of this machine.
-********************************************************************/
-
-
-#pragma implementation "list.h"
-
 #include "condor_common.h"
-#include "condor_debug.h"
-#include "condor_constants.h"
+#include <iostream.h>
 #include "condor_config.h"
-#include "condor_jobqueue.h"
-#include "proc_obj.h"
-#include "alloc.h"
-#endif
+#include "condor_classad.h"
+#include "condor_debug.h"
+#include "condor_attributes.h"
 
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
+#include "MyString.h"
+#include "TimeClass.h"
 
-char		*MyName;	// Name by which this program was invoked
-char		*History;		// Name of history file
-BOOLEAN		Long;		// Whether or not to use long display format.
+//------------------------------------------------------------------------
 
-ProcFilter *PFilter = new ProcFilter();
-XDR		xdr, *H = &xdr;	// XDR stream connected to the history file
+static void displayJobShort(ClassAd *ad);
+static void short_header(void);
+static void short_print(int,int,const char*,int,int,int,int,int,const char *);
+static void short_header (void);
+static void displayJobShort (ClassAd *);
+static void shorten (char *, int);
+static char* format_date( time_t date );
+static char* format_time( int tot_secs );
+static char encode_status( int status );
 
-	// Prototypes of local interest
-void init_params();
-void usage();
+//------------------------------------------------------------------------
+
+main()
+{
+  config( 0 );
+  MyString LogFileName=param("SPOOL");
+  LogFileName+="/MatchStat.log";
+  FILE* LogFile=fopen(LogFileName,"r");
+  if (!LogFile) {
+    cerr << "ERROR - failed to open log file " << LogFileName.Value() << endl;
+    exit(1);
+  }
+  
+  int EndFlag=0;
+  while(!EndFlag) {
+    ClassAd* ad=new ClassAd(LogFile,"***",EndFlag);
+    displayJobShort(ad);
+  }
+ 
+  fclose(LogFile);
+  exit(0);
+}
+
+//------------------------------------------------------------------------
+
+static void
+displayJobShort (ClassAd *ad)
+{
+        int cluster, proc, date, status, prio, image_size;
+        float utime;
+        char owner[64], cmd[2048], args[2048];
+
+        if (!ad->EvalInteger (ATTR_CLUSTER_ID, NULL, cluster)           ||
+                !ad->EvalInteger (ATTR_PROC_ID, NULL, proc)                             ||
+                !ad->EvalInteger (ATTR_Q_DATE, NULL, date)                              ||
+                !ad->EvalFloat   (ATTR_JOB_REMOTE_USER_CPU, NULL, utime)||
+                !ad->EvalInteger (ATTR_JOB_STATUS, NULL, status)                ||
+                !ad->EvalInteger (ATTR_JOB_PRIO, NULL, prio)                    ||
+                !ad->EvalInteger (ATTR_IMAGE_SIZE, NULL, image_size)    ||
+                !ad->EvalString  (ATTR_OWNER, NULL, owner)                              ||
+                !ad->EvalString  (ATTR_JOB_CMD, NULL, cmd) )
+        {
+                printf (" --- ???? --- \n");
+                return;
+        }
+        
+        shorten (owner, 14);
+        if (ad->EvalString ("Args", NULL, args)) strcat (cmd, args);
+        shorten (cmd, 18);
+        //short_print (cluster, proc, owner, date, (int)utime, status, prio,
+        //                                image_size, cmd); 
+
+}
+
+//------------------------------------------------------------------------
+
+static void
+short_header (void)
+{
+    printf( " %-7s %-14s %11s %12s %-2s %-3s %-4s %-18s\n",
+        "ID",
+        "OWNER",
+        "SUBMITTED",
+        "CPU_USAGE",
+        "ST",
+        "PRI",
+        "SIZE",
+        "CMD"
+    );
+}
+
+//------------------------------------------------------------------------
+
+static void
+shorten (char *buff, int len)
+{
+    if ((unsigned int)strlen (buff) > (unsigned int)len) buff[len] = '\0';
+}
+
+//------------------------------------------------------------------------
 
 /*
-  Tell folks how to use this program.
+  Print a line of data for the "short" display of a PROC structure.  The
+  "short" display is the one used by "condor_q".  N.B. the columns used
+  by this routine must match those defined by the short_header routine
+  defined above.
 */
-void
-usage()
-{
-	fprintf( stderr,
-		"Usage: %s [-l] [-f file] [cluster | cluster.proc | user_name ] ...\n",
-		MyName
-	);
-	exit( 1 );
+
+static void
+short_print(
+        int cluster,
+        int proc,
+        const char *owner,
+        int date,
+        int time,
+        int status,
+        int prio,
+        int image_size,
+        const char *cmd
+        ) {
+        printf( "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %-18s\n",
+                cluster,
+                proc,
+                owner,
+                format_date(date),
+                format_time(time),
+                encode_status(status),
+                prio,
+                image_size/1024.0,
+                cmd
+        );
 }
 
-int
-main( int argc, char *argv[] )
-{
-	char	history_name[_POSIX_PATH_MAX];
-	char	*special_hist_file = NULL;
-	char	*arg;
-	List<ProcObj>	*proc_list;
-	ProcObj			*p;
-	int		dummy;
-
-	config( 0 );
-	init_params();
-
-	for( MyName = *argv++; arg = *argv; argv++ ) {
-		if( arg[0] == '-' && arg[1] == 'l' ) {
-			Long = TRUE;
-		} else if( arg[0] == '-' && arg[1] == 'f' ) {
-			special_hist_file = *(++argv);
-		} else if( arg[0] == '-' ) {
-			usage();
-		} else {
-			if( !PFilter->Append(arg) ) {
-				usage();
-			}
-		}
-	}
-
-		// Open history file
-	if( special_hist_file ) {
-		(void)strcpy( history_name, special_hist_file );
-	} else {
-		(void)strcpy( history_name, History );
-	}
-
-	H = OpenHistory( history_name, H, &dummy );
-	(void)LockHistory( H, READER );
-
-
-	if( !Long ) {
-		ProcObj::short_header();
-	}
-
-		// Create a list of all procs we're interested in
-	PFilter->Install();
-	proc_list = ProcObj::create_list( H, ProcFilter::Func );
-
-		// Display the list
-	proc_list->Rewind();
-	while( p = proc_list->Next() ) {
-		if( Long ) {
-			p->display();
-		} else {
-			p->display_short();
-		}
-	}
-
-		// Cleanup
-	(void)LockHistory( H, UNLOCK );
-	(void)CloseHistory( H );
-	ProcObj::delete_list( proc_list );
-	delete PFilter;
-
-#if defined(ALLOC_DEBUG)
-	print_alloc_stats();
-#endif
-
-	return 0;
-
-}
+//------------------------------------------------------------------------
 
 /*
-  Find out where the history file is stored on this machine by looking
-  into configuration files.
+  Format a date expressed in "UNIX time" into "month/day hour:minute".
 */
-void
-init_params()
+
+static char* format_date( time_t date )
 {
-	History = param("HISTORY");
-	if( History == NULL ) {
-		EXCEPT( "HISTORY not specified in config file\n" );
-	}
+        static char     buf[ 12 ];
+        struct tm       *tm;
+
+        tm = localtime( &date );
+        sprintf( buf, "%2d/%-2d %02d:%02d",
+                (tm->tm_mon)+1, tm->tm_mday, tm->tm_hour, tm->tm_min
+        );
+        return buf;
 }
 
-extern "C" int
-SetSyscalls( int foo ) { return foo; }
+//------------------------------------------------------------------------
+
+/*
+  Format a time value which is encoded as seconds since the UNIX
+  "epoch".  We return a string in the format dd+hh:mm:ss, indicating
+  days, hours, minutes, and seconds.  The string is in static data
+  space, and will be overwritten by the next call to this function.
+*/
+
+static char     *
+format_time( int tot_secs )
+{
+        int             days;
+        int             hours;
+        int             min;
+        int             secs;
+        static char     answer[25];
+
+        days = tot_secs / DAY;
+        tot_secs %= DAY;
+        hours = tot_secs / HOUR;
+        tot_secs %= HOUR;
+        min = tot_secs / MINUTE;
+        secs = tot_secs % MINUTE;
+
+        (void)sprintf( answer, "%3d+%02d:%02d:%02d", days, hours, min, secs );
+        return answer;
+}
+
+//------------------------------------------------------------------------
+
+/*
+  Encode a status from a PROC structure as a single letter suited for
+  printing.
+*/
+
+static char
+encode_status( int status )
+{
+        switch( status ) {
+          case UNEXPANDED:
+                return 'U';
+          case IDLE:
+                return 'I';
+          case RUNNING:
+                return 'R';
+          case COMPLETED:
+                return 'C';
+          case REMOVED:
+                return 'X';
+          default:
+                return ' ';
+        }
+}
+
