@@ -1032,6 +1032,9 @@ not_supported{
 	/*
 	Things having to do with memory mapped files - we may support these
 	one day soon.
+
+	Don't trap munmap(), we want that to always go locally. 
+	  -Derek Wright, 3/12/98 
 	*/
 not_supported {
 #	if defined(IRIX53) || defined(OSF1)
@@ -1042,19 +1045,28 @@ not_supported {
 	void * mmap( void * a, size_t l, int p, int f, map(int fd),
 														off_t o ) : extract;
 #	endif  /* of OSF1 */
-	int munmap( void * addr, size_t len );
 	int mprotect( ALPHA_CONST void * addr, size_t len, int prot );
 	int madvise( INV_SYSCALL_PTR * addr, size_t len, int behav );
 	int msync( void * addr, size_t len, int flags );
-#	else 
+#	elif defined(LINUX)
+	int mprotect( void * addr, size_t len, int prot );
+	int msync( void * addr, size_t len, int flags );
+#	else
 	char * mmap( char * a, size_t l, int p, int f, map(int fd),
 														off_t o ) : extract;
-	int munmap( char * addr, size_t len );
 	int mprotect( char * addr, size_t len, int prot );
 	int madvise( char * addr, size_t len, int behav );
 	int msync( char * addr, size_t len, int flags );
 #	endif
 }
+#if defined( LINUX ) && ! defined( SWITCH )
+	/* We need an mmap in switches.special.c to handle
+	   Linux-specific flags.  Derek Wright 3/12 */
+	not_supported {
+		void * mmap( void * a, size_t l, int p, int f, map(int fd),														             off_t o ) : extract;
+	}
+#endif
+
 
 #if !defined( CLIP )
 	/* Calls intended only for the super user or system managers */
