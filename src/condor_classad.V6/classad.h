@@ -46,6 +46,9 @@ BEGIN_NAMESPACE( classad )
 typedef classad_hash_map<std::string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr> AttrList;
 typedef std::set<std::string, CaseIgnLTStr> DirtyAttrList;
 
+void ClassAdLibraryVersion(int &major, int &minor, int &patch);
+void ClassAdLibraryVersion(std::string &version_string);
+
 /// An internal node of an expression which represents a ClassAd. 
 class ClassAd : public ExprTree
 {
