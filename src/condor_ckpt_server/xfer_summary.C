@@ -49,6 +49,7 @@ XferSummary::XferSummary()
 	s = 0;
 	subnet = 0;
 	log_file = 0;
+	CondorViewHost=NULL;
 }
 
 
@@ -77,6 +78,10 @@ XferSummary::init()
 	} else {
 		EXCEPT( "COLLECTOR_HOST not defined." );
 	}
+
+	// Get the condor view host name from the config file
+	if( CondorViewHost ) free( CondorViewHost );
+    CondorViewHost = param("CONDOR_VIEW_HOST");
 
 	start_time = time(0);
 
@@ -192,6 +197,17 @@ XferSummary::time_out(time_t now)
 	s->code(command);
 	info.put(*s);
 	s->eom();
+
+	// Send to condor view host
+	if (CondorViewHost) {
+        SafeSock sock(CondorViewHost, CONDOR_VIEW_PORT);
+        sock.encode();
+        if (!sock.put(command) ||
+            !info.put(sock) ||
+            !sock.end_of_message()) {
+            dprintf(D_ALWAYS, "failed to update condor view server!\n");
+		}
+	}
 
 	if (now - start_time > XFER_SUMMARY_INTERVAL) {
 		init();

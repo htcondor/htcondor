@@ -52,6 +52,8 @@ private:
 	SafeSock *s;
 	char	pwd[_POSIX_PATH_MAX];
 
+	char* CondorViewHost;
+
 	void log_transfer(time_t, transferinfo *);
 };
 
