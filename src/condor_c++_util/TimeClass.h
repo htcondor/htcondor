@@ -85,7 +85,7 @@ public:
   operator double() const { return Sec; }
 
   const char* Asc() const {
-#if defined(OSF1)
+#if defined(OSF1) || defined(HPUX10)
 	  int l=(int)Sec;
 #else
 	  long l=(long) Sec;
