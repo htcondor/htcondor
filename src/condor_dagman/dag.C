@@ -418,8 +418,9 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event,
 
 					if ( checkResult ) {
 						debug_printf( DEBUG_VERBOSE, "Continuing with DAG "
-									"because DAGMAN_ALLOW_EXTRA_RUNS is "
-									"set or the event is a spurious "
+									"because "
+									"DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION "
+									"is set or the event is a spurious "
 									"extra abort\n");
 					} else {
 						debug_printf( DEBUG_VERBOSE, "Aborting DAG because of "
