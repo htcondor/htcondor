@@ -1089,7 +1089,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		
 	// check for security violations.
 	// first, make certain ATTR_OWNER can only be set to who they really are.
-	if (strcmp(attr_name, ATTR_OWNER) == 0) 
+	if (stricmp(attr_name, ATTR_OWNER) == 0) 
 	{
 		if ( !Q_SOCK ) {
 			EXCEPT( "Trying to setAttribute( ATTR_OWNER ) and Q_SOCK is NULL" );
@@ -1132,7 +1132,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				 owner, scheduler.uidDomain() );  
 		SetAttribute( cluster_id, proc_id, ATTR_USER, user );
 	} 
-	else if (strcmp(attr_name, ATTR_CLUSTER_ID) == 0) {
+	else if (stricmp(attr_name, ATTR_CLUSTER_ID) == 0) {
 		if (atoi(attr_value) != cluster_id) {
 #if !defined(WIN32)
 			errno = EACCES;
@@ -1142,7 +1142,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			return -1;
 		}
 	} 
-	else if (strcmp(attr_name, ATTR_NICE_USER) == 0) {
+	else if (stricmp(attr_name, ATTR_NICE_USER) == 0) {
 			// Because we're setting a new value for nice user, we
 			// should create a new value for ATTR_USER while we're at
 			// it, since that might need to change now that
@@ -1169,7 +1169,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			SetAttribute( cluster_id, proc_id, ATTR_USER, user );
 		}
 	}
-	else if (strcmp(attr_name, ATTR_PROC_ID) == 0) {
+	else if (stricmp(attr_name, ATTR_PROC_ID) == 0) {
 		if (atoi(attr_value) != proc_id) {
 #if !defined(WIN32)
 			errno = EACCES;
