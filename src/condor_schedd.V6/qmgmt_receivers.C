@@ -35,12 +35,12 @@ do_Q_request(ReliSock *syscall_sock)
 	switch( request_num ) {
 	case CONDOR_InitializeConnection:
 	  {
-		char *owner;
-		char *tmp_file;
+		char *owner=NULL;
+		// XXX: shouldn't need a fixed size here -- at least keep
+		// it off the stack to avoid overflow attacks
+		char *tmp_file=(char *)malloc(_POSIX_PATH_MAX);
 		int terrno;
 
-		tmp_file = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
-		owner = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
 		assert( syscall_sock->code(owner) );
 		assert( syscall_sock->end_of_message() );;
 
@@ -157,10 +157,9 @@ do_Q_request(ReliSock *syscall_sock)
 
 	case CONDOR_DestroyClusterByConstraint:
 	  {
-		char *constraint;
+		char *constraint=NULL;
 		int terrno;
 
-		constraint = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
 		assert( syscall_sock->code(constraint) );
 		assert( syscall_sock->end_of_message() );;
 
@@ -183,16 +182,14 @@ do_Q_request(ReliSock *syscall_sock)
 	  {
 		int cluster_id;
 		int proc_id;
-		char *attr_name;
-		char *attr_value;
+		char *attr_name=NULL;
+		char *attr_value=NULL;
 		int terrno;
 
 		assert( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
 		assert( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
-		attr_value = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
-		attr_name = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
 		assert( syscall_sock->code(attr_value) );
 		assert( syscall_sock->code(attr_name) );
 		assert( syscall_sock->end_of_message() );;
@@ -237,21 +234,19 @@ do_Q_request(ReliSock *syscall_sock)
 	  {
 		int cluster_id;
 		int proc_id;
-		char *attr_name;
-		float *value;
+		char *attr_name=NULL;
+		float value;
 		int terrno;
 
 		assert( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
 		assert( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
-		value = (float *)malloc( (unsigned)FLOAT_SIZE );
-		attr_name = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
 		assert( syscall_sock->code(attr_name) );
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		rval = GetAttributeFloat( cluster_id, proc_id, attr_name, value );
+		rval = GetAttributeFloat( cluster_id, proc_id, attr_name, &value );
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
@@ -263,7 +258,6 @@ do_Q_request(ReliSock *syscall_sock)
 		if( rval >= 0 ) {
 			assert( syscall_sock->code(value) );
 		}
-		free( (char *)value );
 		free( (char *)attr_name );
 		assert( syscall_sock->end_of_message() );;
 		return 0;
@@ -273,21 +267,19 @@ do_Q_request(ReliSock *syscall_sock)
 	  {
 		int cluster_id;
 		int proc_id;
-		char *attr_name;
-		int *value;
+		char *attr_name=NULL;
+		int value;
 		int terrno;
 
 		assert( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
 		assert( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
-		value = (int *)malloc( (unsigned)INT_SIZE );
-		attr_name = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
 		assert( syscall_sock->code(attr_name) );
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		rval = GetAttributeInt( cluster_id, proc_id, attr_name, value );
+		rval = GetAttributeInt( cluster_id, proc_id, attr_name, &value );
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
@@ -299,7 +291,6 @@ do_Q_request(ReliSock *syscall_sock)
 		if( rval >= 0 ) {
 			assert( syscall_sock->code(value) );
 		}
-		free( (char *)value );
 		free( (char *)attr_name );
 		assert( syscall_sock->end_of_message() );;
 		return 0;
@@ -309,16 +300,16 @@ do_Q_request(ReliSock *syscall_sock)
 	  {
 		int cluster_id;
 		int proc_id;
-		char *attr_name;
-		char *value;
+		char *attr_name=NULL;
+		// XXX: shouldn't need a fixed size here -- at least keep
+		// it off the stack to avoid overflow attacks
+		char *value = (char *)malloc(ATTRLIST_MAX_EXPRESSION*sizeof(char));
 		int terrno;
 
 		assert( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
 		assert( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
-		value = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
-		attr_name = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
 		assert( syscall_sock->code(attr_name) );
 		assert( syscall_sock->end_of_message() );;
 
@@ -345,17 +336,16 @@ do_Q_request(ReliSock *syscall_sock)
 	  {
 		int cluster_id;
 		int proc_id;
-		char *attr_name;
-		char *value;
+		char *attr_name=NULL;
+		// XXX: shouldn't need a fixed size here -- at least keep
+		// it off the stack to avoid overflow attacks
+		char *value = (char *)malloc(ATTRLIST_MAX_EXPRESSION*sizeof(char));
 		int terrno;
 
 		assert( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
 		assert( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
-		value = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
-		value[0] = '\0';
-		attr_name = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
 		assert( syscall_sock->code(attr_name) );
 		assert( syscall_sock->end_of_message() );;
 
@@ -382,14 +372,13 @@ do_Q_request(ReliSock *syscall_sock)
 	  {
 		int cluster_id;
 		int proc_id;
-		char *attr_name;
+		char *attr_name=NULL;
 		int terrno;
 
 		assert( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
 		assert( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
-		attr_name = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
 		assert( syscall_sock->code(attr_name) );
 		assert( syscall_sock->end_of_message() );;
 
@@ -442,11 +431,10 @@ do_Q_request(ReliSock *syscall_sock)
 
 	case CONDOR_GetJobByConstraint:
 	  {
-		char *constraint;
+		char *constraint=NULL;
 		ClassAd *ad;
 		int terrno;
 
-		constraint = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
 		assert( syscall_sock->code(constraint) );
 		assert( syscall_sock->end_of_message() );;
 
@@ -501,14 +489,13 @@ do_Q_request(ReliSock *syscall_sock)
 
 	case CONDOR_GetNextJobByConstraint:
 	  {
-		char *constraint;
+		char *constraint=NULL;
 		ClassAd *ad;
 		int initScan;
 		int terrno;
 
 		assert( syscall_sock->code(initScan) );
 		dprintf( D_SYSCALLS, "	initScan = %d\n", initScan );
-		constraint = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
 		assert( syscall_sock->code(constraint) );
 		assert( syscall_sock->end_of_message() );;
 
@@ -534,10 +521,9 @@ do_Q_request(ReliSock *syscall_sock)
 
 	case CONDOR_SendSpoolFile:
 	  {
-		char *filename;
+		char *filename=NULL;
 		int terrno;
 
-		filename = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
 		assert( syscall_sock->code(filename) );
 		assert( syscall_sock->end_of_message() );;
 
