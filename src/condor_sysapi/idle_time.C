@@ -52,7 +52,15 @@ static time_t dev_idle_time( char *path, time_t now );
 static void calc_idle_time_cpp(time_t & m_idle, time_t & m_console_idle);
 #endif
 
+/* we must now use the kstat interface to get this information under later
+	releases of Solaris */
+#if defined(Solaris28) || defined(Solaris29)
+static time_t solaris_kbd_idle(void);
+static time_t solaris_mouse_idle(void);
 #endif
+
+#endif
+
 
 /* the local function that does the main work */
 
@@ -512,6 +520,40 @@ dev_idle_time( char *path, time_t now )
 		return now;
 	}
 
+	strcpy( &pathname[5], path );
+
+	/* under solaris, we'll catch when someone asks about a console or mouse
+		device, and specially figure them out since we cannot stat() them
+		anymore under solaris 8 update 6+ or solaris 9 */
+	#if defined(Solaris28) || defined(Solaris29)
+		/* check to see if it is the special devices I care about */
+		if (strstr(path, "kbd") != NULL)
+		{
+			answer = solaris_kbd_idle();
+			if (answer < 0)
+			{
+				answer = 0;
+			}
+			if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_IDLE) ) {
+        		dprintf( D_IDLE, "%s: %d secs\n", pathname, (int)answer );
+			}
+			return answer;
+		}
+
+		if (strstr(path, "mouse") != NULL || strstr(path, "consms") != NULL)
+		{
+			answer = solaris_mouse_idle();
+			if (answer < 0)
+			{
+				answer = 0;
+			}
+			if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_IDLE) ) {
+        		dprintf( D_IDLE, "%s: %d secs\n", pathname, (int)answer );
+			}
+			return answer;
+		}
+	#endif
+
 	if ( null_major_device == -1 ) {
 		// get the major device number of /dev/null so
 		// we can ignore any device that shares that
@@ -531,7 +573,7 @@ dev_idle_time( char *path, time_t now )
 		}
 	}
 	
-	strcpy( &pathname[5], path );
+	/* ok, just check the device idle time for normal devices using stat() */
 	if (stat(pathname,&buf) < 0) {
 		dprintf( D_FULLDEBUG, "Error on stat(%s,0x%x), errno = %d(%s)\n",
 				 pathname, &buf, errno, strerror(errno) );
@@ -657,6 +699,66 @@ extract_idle_time(
 }
 
 #endif  /* the end of the Mac OS X code, and the  */
+
+/* under solaris 8 with update 6 and later, and solaris 9, use the kstat 
+	interface to determine the console and mouse idle times. stat() on the
+	actual kbd or mouse device no longer returns(by design according to 
+	solaris) the access time. These are localized functions static to this
+	object file. */
+#if defined(Solaris28) || defined(Solaris29)
+static time_t solaris_kbd_idle(void)
+{
+	kstat_ctl_t     *kc;  /* libkstat cookie */ 
+	kstat_t         *kbd_ksp; 
+	void *p;
+
+	if ((kc = kstat_open()) == NULL) {
+		dprintf(D_ALWAYS, "solaris_kbd_idle(): Can't open /dev/kstat!\n");
+		return (time_t)-1;
+	}
+
+	kbd_ksp = kstat_lookup(kc, "conskbd", 0, "activity");
+	if (kbd_ksp == NULL) {
+		dprintf(D_ALWAYS, "solaris_kbd_idle(): Keyboard init failed!\n");
+		return (time_t)-1;
+	}
+
+	if (kstat_read(kc, kbd_ksp, NULL) == -1 ||
+		(p = kstat_data_lookup(kbd_ksp, "idle_sec")) == NULL)
+	{
+		return (time_t)-1;
+	}
+
+	return ((kstat_named_t *)p)->value.l;
+}
+
+static time_t solaris_mouse_idle(void)
+{
+	kstat_ctl_t     *kc;  /* libkstat cookie */ 
+	kstat_t         *ms_ksp; 
+	void *p;
+
+	if ((kc = kstat_open()) == NULL) {
+		dprintf(D_ALWAYS, "solaris_mouse_idle(): Can't open /dev/kstat!\n");
+		return (time_t)-1;
+	}
+
+	ms_ksp = kstat_lookup(kc, "consms", 0, "activity");
+	if (ms_ksp == NULL) {
+		dprintf(D_ALWAYS, "solaris_mouse_idle(): Mouse init failed!\n");
+		return (time_t)-1;
+	}
+
+	if (kstat_read(kc, ms_ksp, NULL) == -1 ||
+		(p = kstat_data_lookup(ms_ksp, "idle_sec")) == NULL)
+	{
+		return (time_t)-1;
+	}
+
+	return ((kstat_named_t *)p)->value.l;
+}
+
+#endif
 
 
 /* ok, the purpose of this code is to create an interface that is a C linkage
