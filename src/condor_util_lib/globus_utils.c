@@ -190,6 +190,8 @@ have_globus_support()
 }
 
 
+#if 0 /* We're not currently using these functions */
+
 /*
  * Function: simple_query_ldap()
  *
@@ -426,6 +428,8 @@ check_globus_rm_contacts(char* resource)
 #endif
 
 } /* check_globus_rm_contact() */
+
+#endif /* 0 */
 
 char *rsl_stringify( char *string )
 {

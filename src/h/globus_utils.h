@@ -49,7 +49,9 @@ const char* x509_error_string();
 
 int have_globus_support();
 
+#if 0
 int check_globus_rm_contacts( char* resource );
+#endif
 
 char *rsl_stringify( char *string );
 
