@@ -228,7 +228,6 @@ notify_schedd()
 		return;
 	}
 
-	fprintf( stdout, "Sent KILL_FRGN_JOB command to condor scheduler\n" );
 	delete sock;
 }
 
