@@ -67,6 +67,40 @@ This class does _not_:
 	     then perform the fd equivalent of that op.
 	     (i.e. fstat())  
 </dir>
+
+The file table has two sub-structures, File and FilePointer.
+<p>
+Each integer file descriptor (fd) indexes a file pointer (fp) in
+the open file table.  Each fp stores a current seek pointer
+and a pointer to the file object (fo) associated with that fd.
+<p>
+So, when a dup is performed, two fds will point to the same fp,
+which points to a single fo.  All operations on the same fd will
+manipulate the same seek pointer and the same file data.
+<pre>
+fd  fd
+|  /
+fp
+|
+fo
+</pre>
+<p>
+If, however, the same file is opened again, a new fd and new fp
+are allocated, but the same file object is shared with the previous
+fds.  This allows the separation of seek pointers, but operations on
+the third fd will still affect the data present in the first two.
+<pre>
+fd  fd  fd
+|  /    |
+fp      fp
+|      /
+|    /
+|  /
+fo
+</pre>
+<p>
+Various implementations of File can be found in file_types.[hC].
+
 */
 
 class OpenFileTable {
@@ -120,17 +154,21 @@ public:
 	int	ftruncate( int fd, size_t length );
 	int	fsync( int fd );
 
-	/* Flush buffers and save everything I know, as a precaution. */
+	/** Perform a periodic checkpoint. */
 	void	checkpoint();
 
-	/* Same as checkpoint, but close everything in preparation for exit */
+	/** Suspend everything I know in preparation for a vacate and exit. */
 	void	suspend();
 
-	/* A checkpoint has resumed, so open everything up again. */
+	/** A checkpoint has resumed, so open everything up again. */
 	void	resume();
 
-	/* Support the MapFd and LocalAccess interfaces for now */
+	/** XXX Hack: Return the real fd of this vfd. 
+	This interface will go away. */
 	int	map_fd_hack( int fd );
+
+	/** XXX Hack: Return 1 if this file is accessed locally.
+	This interface will go away. */
 	int	local_access_hack( int fd );
 
 private:
@@ -143,6 +181,7 @@ private:
 	BufferCache	*buffer;
 	char		working_dir[_POSIX_PATH_MAX];
 	int		prefetch_size;
+	int		resume_count;
 };
 
 /** This is a pointer to the single global instance of the file

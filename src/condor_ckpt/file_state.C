@@ -77,6 +77,7 @@ void OpenFileTable::init()
 {
 	buffer = 0;
 	prefetch_size = 0;
+	resume_count = 0;
 
 	int scm = SetSyscalls( SYS_UNMAPPED | SYS_LOCAL );
 	length = sysconf(_SC_OPEN_MAX);
@@ -91,7 +92,6 @@ void OpenFileTable::init()
 	pre_open( 0, 1, 0, 0 );
 	pre_open( 1, 0, 1, 0 );
 	pre_open( 2, 0, 1, 0 );
-
 }
 
 static void flush_and_disable_buffer()
@@ -210,14 +210,6 @@ int OpenFileTable::open( const char *path, int flags, int mode )
 	char	new_path[_POSIX_PATH_MAX];
 	File	*f;
 
-	// Opening files O_RDWR is not safe across checkpoints
-	// However, there is no problem as far as the rest of the
-	// file code is concerned.  We will catch it here,
-	// but the rest of the file table and buffer has no problem.
-
-	if( flags & O_RDWR )
-		file_warning("Opening file '%s' for read and write is not safe across all checkpoints!  You should use separate files for reading and writing.\n",path);
-
 	// Find an open slot in the table
 
 	fd = find_empty();
@@ -283,6 +275,14 @@ int OpenFileTable::open( const char *path, int flags, int mode )
 			}
 		}
 	}
+
+	// Opening files O_RDWR is not safe across checkpoints
+	// However, there is no problem as far as the rest of the
+	// file code is concerned.  We will catch it here,
+	// but the rest of the file table and buffer has no problem.
+
+	if( flags & O_RDWR )
+		file_warning("Opening file '%s' for read and write is not safe across all checkpoints!  You should use separate files for reading and writing.\n",path);
 
 	// Install a new fp and update the use counts 
 
@@ -681,6 +681,8 @@ int OpenFileTable::fsync( int fd )
 
 void OpenFileTable::checkpoint()
 {
+	dprintf(D_ALWAYS,"OpenFileTable::checkpoint\n");
+
 	dump();
 
 	if( MyImage.GetMode() == STANDALONE ) {
@@ -695,6 +697,8 @@ void OpenFileTable::checkpoint()
 
 void OpenFileTable::suspend()
 {
+	dprintf(D_ALWAYS,"OpenFileTable::suspend\n");
+
 	dump();
 
 	if( MyImage.GetMode() == STANDALONE ) {
@@ -711,6 +715,10 @@ void OpenFileTable::resume()
 {
 	int result;
 
+	resume_count++;
+
+	dprintf(D_ALWAYS,"OpenFileTable::resume %d\n",resume_count);
+
 	if( MyImage.GetMode() == STANDALONE ) {
 		result = syscall( SYS_chdir, working_dir );
 	} else {
@@ -722,7 +730,7 @@ void OpenFileTable::resume()
 	}
 
 	for( int i=0; i<length; i++ )
-	     if( pointers[i] ) pointers[i]->get_file()->resume();
+	     if( pointers[i] ) pointers[i]->get_file()->resume(resume_count);
 
 	dump();
 }
