@@ -448,7 +448,10 @@ GetProc(int cl, int pr, PROC *p)
 	float_to_rusage(utime, stime, &(p->local_usage));
 
 	p->remote_usage = (struct rusage *) malloc(p->n_cmds * 
-											   sizeof(struct rusage));
+		sizeof(struct rusage));
+
+	memset(p->remote_usage, 0, sizeof( struct rusage ));
+
 	GetAttributeFloat(cl, pr, ATTR_JOB_REMOTE_USER_CPU, &utime);
 	GetAttributeFloat(cl, pr, ATTR_JOB_REMOTE_SYS_CPU, &stime);
 	float_to_rusage(utime, stime, &(p->remote_usage[0]));
