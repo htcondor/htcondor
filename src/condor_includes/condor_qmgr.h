@@ -39,12 +39,7 @@ typedef int (*scan_func)(ClassAd *ad);
 extern "C" {
 #endif
 
-#if 0
-//commented out temporarily to get rest of trunk to compile
-//int InitializeConnection(char *, char *, int auth=0 );
-#else
-int InitializeConnection(char *, char * );
-#endif
+int InitializeConnection(char *, char *, int auth=0 );
 int NewCluster();
 int NewProc( int );
 int DestroyProc(int, int);
@@ -78,11 +73,7 @@ void FreeJobAd(ClassAd *&ad);
 int SendSpoolFile(char *filename);		/* prepare for file xfer */
 int SendSpoolFileBytes(char *filename); /* actually do file xfer */
 
-#if 0
 Qmgr_connection *ConnectQ(char *qmgr_location, int auth=0 );
-#else
-Qmgr_connection *ConnectQ(char *qmgr_location );
-#endif
 void DisconnectQ(Qmgr_connection *);
 void WalkJobQueue(scan_func);
 
