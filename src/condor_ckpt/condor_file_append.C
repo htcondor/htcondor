@@ -14,7 +14,7 @@ CondorFileAppend::~CondorFileAppend()
 	delete original;
 }
 
-int CondorFileAppend::cfile_open( const char *u, int flags, int mode )
+int CondorFileAppend::open( const char *u, int flags, int mode )
 {
 	char junk[_POSIX_PATH_MAX];
 	char sub_url[_POSIX_PATH_MAX];
@@ -29,52 +29,52 @@ int CondorFileAppend::cfile_open( const char *u, int flags, int mode )
 	sscanf(url,"%[^:]:%[\x1-\xFF]",junk,sub_url);
 	#endif
 
-	return original->cfile_open(sub_url,flags|O_APPEND,mode);
+	return original->open(sub_url,flags|O_APPEND,mode);
 }
 
-int CondorFileAppend::cfile_close()
+int CondorFileAppend::close()
 {
-	return original->cfile_close();
+	return original->close();
 }
 
-int CondorFileAppend::cfile_read( int offset, char *data, int length )
+int CondorFileAppend::read( int offset, char *data, int length )
 {
-	return original->cfile_read(offset,data,length);
+	return original->read(offset,data,length);
 }
 
-int CondorFileAppend::cfile_write( int offset, char *data, int length )
+int CondorFileAppend::write( int offset, char *data, int length )
 {
-	return original->cfile_write(offset,data,length);
+	return original->write(offset,data,length);
 }
 
-int CondorFileAppend::cfile_fcntl( int cmd, int arg )
+int CondorFileAppend::fcntl( int cmd, int arg )
 {
-	return original->cfile_fcntl(cmd,arg);
+	return original->fcntl(cmd,arg);
 }
 
-int CondorFileAppend::cfile_ioctl( int cmd, int arg )
+int CondorFileAppend::ioctl( int cmd, int arg )
 {
-	return original->cfile_ioctl(cmd,arg);
+	return original->ioctl(cmd,arg);
 }
 
-int CondorFileAppend::cfile_ftruncate( size_t length )
+int CondorFileAppend::ftruncate( size_t length )
 {
-	return original->cfile_ftruncate(length);
+	return original->ftruncate(length);
 }
 
-int CondorFileAppend::cfile_fsync()
+int CondorFileAppend::fsync()
 {
-	return original->cfile_fsync();
+	return original->fsync();
 }
 
-int CondorFileAppend::cfile_flush()
+int CondorFileAppend::flush()
 {
-	return original->cfile_flush();
+	return original->flush();
 }
 
-int CondorFileAppend::cfile_fstat( struct stat *buf )
+int CondorFileAppend::fstat( struct stat *buf )
 {
-	return original->cfile_fstat(buf);
+	return original->fstat(buf);
 }
 
 int CondorFileAppend::is_readable()

@@ -185,12 +185,12 @@ void CondorFileTable::init()
 	atexit( _condor_file_table_shutdown );
 }
 
-void CondorFileTable::cfile_flush()
+void CondorFileTable::flush()
 {
 	for( int i=0; i<length; i++ ) {
 		if( pointers[i] ) {
 			if( pointers[i]->file ) {
-				pointers[i]->file->cfile_flush();
+				pointers[i]->file->flush();
 			}
 		}
 	}
@@ -478,7 +478,7 @@ CondorFile * CondorFileTable::open_url( char *url, int flags, int mode )
 		errno = ENOENT;
 		return 0;
 	} else {
-		if( f->cfile_open(url,flags,mode)>=0 ) {
+		if( f->open(url,flags,mode)>=0 ) {
 			return f;
 		} else {
 			delete f;
@@ -574,13 +574,13 @@ CondorFile * CondorFileTable::open_file_unique( char *logical_name, int flags, i
 		flags &= ~(O_WRONLY);
 		flags |= O_RDWR;
 
-		p->file->cfile_flush();
+		p->file->flush();
 
 		CondorFile *f = open_url_retry( p->file->get_url(), flags, mode );
 		if(!f) return 0;
 
 		old_file = p->file;
-		if( old_file->cfile_close()!=0 ) return 0;
+		if( old_file->close()!=0 ) return 0;
 
 		replace_file( old_file, f );
 		delete old_file;
@@ -606,7 +606,7 @@ void CondorFileTable::complete_path( const char *short_path, char *full_path )
         }
 }
 
-int CondorFileTable::cfile_open( const char *logical_name, int flags, int mode )
+int CondorFileTable::open( const char *logical_name, int flags, int mode )
 {
 	char full_logical_name[_POSIX_PATH_MAX];
 
@@ -665,7 +665,7 @@ CondorFileSpecial on those two fds.  A CondorFileSpecial is just like
 a local file, but checkpointing is prohibited while it exists.
 */
 
-int CondorFileTable::cfile_pipe(int fds[])
+int CondorFileTable::pipe(int fds[])
 {
 	int real_fds[2];
 
@@ -689,7 +689,7 @@ install a CondorFileSpecial on that fd to access it locally and inhibit
 checkpointing in the meantime.
 */
 
-int CondorFileTable::cfile_socket( int domain, int type, int protocol )
+int CondorFileTable::socket( int domain, int type, int protocol )
 {
 	int scm = SetSyscalls( SYS_LOCAL|SYS_UNMAPPED ); 
 	int real_fd = ::socket(domain,type,protocol);
@@ -709,7 +709,7 @@ So, count all uses of the file.  If there is only one,
 close and delete.  Same goes for the file pointer.
 */
 
-int CondorFileTable::cfile_close( int fd )
+int CondorFileTable::close( int fd )
 {
 	if( (fd<0) || (fd>=length) || (pointers[fd]==0) ) {
 		errno = EBADF;
@@ -726,7 +726,7 @@ int CondorFileTable::cfile_close( int fd )
 
 	if(f && count_file_uses(f)==1) {
 		i->report();
-		int result = f->cfile_close();
+		int result = f->close();
 		if( result!=0 ) {
 			return result;
 		}
@@ -748,7 +748,7 @@ int CondorFileTable::cfile_close( int fd )
 	return 0;
 }
 
-ssize_t CondorFileTable::cfile_read( int fd, void *data, size_t nbyte )
+ssize_t CondorFileTable::read( int fd, void *data, size_t nbyte )
 {
 	if( resume(fd)<0 ) return -1;
 
@@ -768,7 +768,7 @@ ssize_t CondorFileTable::cfile_read( int fd, void *data, size_t nbyte )
 	if( nbyte==0 ) return 0;
 
 	// get the data from the object
-	int actual = f->cfile_read( fp->offset, (char*) data, nbyte );
+	int actual = f->read( fp->offset, (char*) data, nbyte );
 
 	// If there is an error, don't touch the offset.
 	if(actual<0) return -1;
@@ -787,7 +787,7 @@ ssize_t CondorFileTable::cfile_read( int fd, void *data, size_t nbyte )
 	return actual;
 }
 
-ssize_t CondorFileTable::cfile_write( int fd, const void *data, size_t nbyte )
+ssize_t CondorFileTable::write( int fd, const void *data, size_t nbyte )
 {
 	if( resume(fd)<0 ) return -1;
 
@@ -807,13 +807,13 @@ ssize_t CondorFileTable::cfile_write( int fd, const void *data, size_t nbyte )
 	CondorFile *f = fp->file;
 
 	// Write to the object at the current offset
-	int actual = f->cfile_write( fp->offset, (char *) data, nbyte );
+	int actual = f->write( fp->offset, (char *) data, nbyte );
 
 	// If there is an error, don't touch the offset.
 	if(actual<0) return -1;
 
 	// Special case: always flush data on stderr
-	if(fd==2) f->cfile_flush();
+	if(fd==2) f->flush();
 
 	// Update the offset by the amount written
 	fp->offset += actual;
@@ -837,7 +837,7 @@ void CondorFileTable::check_safety( CondorFilePointer *fp )
 	}
 }
 
-off_t CondorFileTable::cfile_lseek( int fd, off_t offset, int whence )
+off_t CondorFileTable::lseek( int fd, off_t offset, int whence )
 {
 	if( resume(fd)<0 ) return -1;
 
@@ -882,7 +882,7 @@ off_t CondorFileTable::cfile_lseek( int fd, off_t offset, int whence )
 	}
 }
 
-int CondorFileTable::cfile_dup( int fd )
+int CondorFileTable::dup( int fd )
 {
 	return search_dup2( fd, 0 );
 }
@@ -907,7 +907,7 @@ int CondorFileTable::search_dup2( int fd, int search )
 	}
 }
 
-int CondorFileTable::cfile_dup2( int fd, int nfd )
+int CondorFileTable::dup2( int fd, int nfd )
 {
 	int result;
 
@@ -966,7 +966,7 @@ to be careful never to do a getcwd(), because this is not
 safe on auto-mounted NFS systems.
 */
 
-int CondorFileTable::cfile_chdir( const char *path )
+int CondorFileTable::chdir( const char *path )
 {
 	int result;
 
@@ -994,13 +994,13 @@ along to the individual access method, which will decide
 if it can be supported.
 */
 
-int CondorFileTable::cfile_ioctl( int fd, int cmd, int arg )
+int CondorFileTable::ioctl( int fd, int cmd, int arg )
 {
 	if( resume(fd)<0 ) return -1;
-	return pointers[fd]->file->cfile_ioctl(cmd,arg);
+	return pointers[fd]->file->ioctl(cmd,arg);
 }
 
-int CondorFileTable::cfile_ftruncate( int fd, size_t size )
+int CondorFileTable::ftruncate( int fd, size_t size )
 {
 	if( resume(fd)<0 ) return -1;
 
@@ -1009,7 +1009,7 @@ int CondorFileTable::cfile_ftruncate( int fd, size_t size )
 
 	if( size<0 ) return 0;
 
-	return pointers[fd]->file->cfile_ftruncate(size);
+	return pointers[fd]->file->ftruncate(size);
 }
 
 /*
@@ -1021,7 +1021,7 @@ the access method, which may support the operation,
 or fail with its own error.
 */
 
-int CondorFileTable::cfile_fcntl( int fd, int cmd, int arg )
+int CondorFileTable::fcntl( int fd, int cmd, int arg )
 {
 
 	if( resume(fd)<0 ) return -1;
@@ -1055,9 +1055,9 @@ int CondorFileTable::cfile_fcntl( int fd, int cmd, int arg )
 				struct flock *f = (struct flock *)arg;
 
 				if( (f->l_whence==0) && (f->l_len==0) ) {
-					return FileTab->cfile_ftruncate(fd,f->l_start);
+					return FileTab->ftruncate(fd,f->l_start);
 				}
-				return pointers[fd]->file->cfile_fcntl(cmd,arg);
+				return pointers[fd]->file->fcntl(cmd,arg);
 			}
 			break;
 		#endif
@@ -1068,33 +1068,33 @@ int CondorFileTable::cfile_fcntl( int fd, int cmd, int arg )
 				struct flock64 *f64 = (struct flock64 *)arg;
 
 				if( (f64->l_whence==0) && (f64->l_len==0) ) {
-					return FileTab->cfile_ftruncate(fd,f64->l_start);
+					return FileTab->ftruncate(fd,f64->l_start);
 				}
 
-				return pointers[fd]->file->cfile_fcntl(cmd,arg);
+				return pointers[fd]->file->fcntl(cmd,arg);
 			}
 			break;
 		#endif
 
 		default:
-			return pointers[fd]->file->cfile_fcntl(cmd,arg);
+			return pointers[fd]->file->fcntl(cmd,arg);
 			break;
 	}
 }
 
-int CondorFileTable::cfile_fsync( int fd )
+int CondorFileTable::fsync( int fd )
 {
 	if( resume(fd)<0 ) return -1;
-	return pointers[fd]->file->cfile_fsync();
+	return pointers[fd]->file->fsync();
 }
 
-int CondorFileTable::cfile_fstat( int fd, struct stat *buf)
+int CondorFileTable::fstat( int fd, struct stat *buf)
 {
 	if( resume(fd)<0 ) return -1;
-	return pointers[fd]->file->cfile_fstat(buf);
+	return pointers[fd]->file->fstat(buf);
 }
 
-int CondorFileTable::cfile_stat( const char *name, struct stat *buf)
+int CondorFileTable::stat( const char *name, struct stat *buf)
 {
 	int fd;
 	int scm, oscm;
@@ -1135,7 +1135,7 @@ int CondorFileTable::cfile_stat( const char *name, struct stat *buf)
 	return fstat(fd, buf);
 }
 
-int CondorFileTable::cfile_lstat( const char *name, struct stat *buf)
+int CondorFileTable::lstat( const char *name, struct stat *buf)
 {
 	int fd;
 	int scm, oscm;
@@ -1179,7 +1179,7 @@ int CondorFileTable::cfile_lstat( const char *name, struct stat *buf)
 poll converts each fd into its mapped equivalent and then does a local poll.  A poll() on a non local file causes a warning and failure with EINVAL
 */
 
-int CondorFileTable::cfile_poll( struct pollfd *fds, int nfds, int timeout )
+int CondorFileTable::poll( struct pollfd *fds, int nfds, int timeout )
 {
 	struct pollfd *realfds;
 
@@ -1218,7 +1218,7 @@ int CondorFileTable::cfile_poll( struct pollfd *fds, int nfds, int timeout )
 select transforms its arguments into local fds and then does a local select.  A select on a non-local fd causes a return with EINVAL and a warning message.
 */
 
-int CondorFileTable::cfile_select( int n, fd_set *r, fd_set *w, fd_set *e, struct timeval *timeout )
+int CondorFileTable::select( int n, fd_set *r, fd_set *w, fd_set *e, struct timeval *timeout )
 {
 	fd_set	r_real, w_real, e_real;
 	int	n_real, fd, fd_real;
@@ -1304,7 +1304,7 @@ void CondorFileTable::checkpoint()
 		if( pointers[i] ) {
 			if( pointers[i]->file ) {
 				if( count_file_uses(pointers[i]->file)==1 ) {
-					temp = pointers[i]->file->cfile_close();
+					temp = pointers[i]->file->close();
 					if( temp==-1 ) {
 						_condor_error_retry("Unable to commit data to file %s!\n",pointers[i]->file->get_url());
 					}
