@@ -680,12 +680,10 @@ will override any setting for the noop exit signal.
 %% priority
 %%%%%%%%%%%%%%%%%%%
 
-\item[priority = $<$priority$>$] Condor job priorities range from -20 to
-\index{submit commands!priority}
-+20, with 0 being the default. Jobs with higher numerical priority will
+\item[priority = $<$priority$>$] A condor job priority \index{submit commands!priority} can be any integer, with 0 being the default. Jobs with higher numerical priority will
 run before jobs with lower numerical priority. Note that this priority
 is on a per user basis; setting the priority will determine the order in
-which your own jobs are executed, but will have no effect on whether or
+which the local \condor{schedd} will attempt to execute your own jobs, but will have no effect on whether or
 not your jobs will run ahead of another user's jobs. 
 
 %%%%%%%%%%%%%%%%%%%
