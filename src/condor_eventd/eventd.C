@@ -87,20 +87,21 @@ EventDaemon::Config()
 	if (tmp) {
 		EventInterval = atoi(tmp);
 		free(tmp);
+		dprintf(D_FULLDEBUG, "Event interval set to %d seconds.\n",
+				EventInterval);
 	} else {
-		EventInterval = 300;
+		EventInterval = 900;
 	}
-	dprintf(D_FULLDEBUG, "Event interval set to %d seconds.\n", EventInterval);
 
 	tmp = param("EVENTD_MAX_PREPARATION");
 	if (tmp) {
 		MaxEventPreparation = atoi(tmp);
 		free(tmp);
+		dprintf(D_FULLDEBUG, "Max event preparation set to %d seconds.\n",
+				MaxEventPreparation);
 	} else {
 		MaxEventPreparation = 0;
 	}
-	dprintf(D_FULLDEBUG, "Max event preparation set to %d seconds.\n",
-			MaxEventPreparation);
 
 	if (TimeoutTid >= 0) {
 		daemonCore->Cancel_Timer(TimeoutTid);
@@ -116,10 +117,14 @@ EventDaemon::Config()
 int
 EventDaemon::Timeout()
 {
+	int TimeToNearestEvent = INT_MAX;
 	for (int ev=0; ev < NumEvents; ev++) {
 		if (EventList[ev] &&
 			EventList[ev]->IsValid() && !EventList[ev]->IsActive()) {
 			int TimeToEvent = EventList[ev]->TimeToEvent();
+			if (TimeToNearestEvent > TimeToEvent) {
+				TimeToNearestEvent = TimeToEvent;
+			}
 			if (MaxEventPreparation == 0 ||
 				TimeToEvent <= MaxEventPreparation) {
 				int TimeNeeded = EventList[ev]->TimeNeeded();
@@ -135,6 +140,14 @@ EventDaemon::Timeout()
 						EventList[ev]->Name(), TimeToEvent);
 			}
 		}
+	}
+	if (TimeToNearestEvent > MaxEventPreparation) {
+		dprintf(D_FULLDEBUG, "All events are a long way off.\n");
+		dprintf(D_FULLDEBUG, "Next Timeout() will occur in %d seconds.\n",
+				TimeToNearestEvent-MaxEventPreparation);
+		daemonCore->Reset_Timer(TimeoutTid,
+								TimeToNearestEvent-MaxEventPreparation,
+								EventInterval);
 	}
 }
 
