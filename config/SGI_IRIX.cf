@@ -46,7 +46,7 @@
 #define Crt0 concat(BaseLibPath,/crt1.o)
 #define CrtN concat(BaseLibPath,/crtn.o)
 
-PLATFORM_LDFLAGS = MldLib RealMldLib 
+#define PlatformLdFlags MldLib RealMldLib 
 #define SyscallsExp /**/
 
 #define XLibPath -lX11
