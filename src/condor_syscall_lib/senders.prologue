@@ -2,10 +2,6 @@
 #	define _POSIX_SOURCE
 #endif
 
-#if defined(OSF1) && defined(__GNUC__)
-	typedef struct  _quad { int val[2]; } quad;
-#endif
-
 #if defined(IRIX62)
 #	include "condor_fdset.h"
 #endif
