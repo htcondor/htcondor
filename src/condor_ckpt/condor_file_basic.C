@@ -25,7 +25,7 @@ int CondorFileBasic::open(const char *url_in, int flags, int mode)
 	char path[_POSIX_PATH_MAX];
 
 	strcpy(url,url_in);
-	sscanf(url,"%[^:]:%s",junk,path);
+	sscanf(url,"%[^:]:%[\x1-\xFF]",junk,path);
 
 	switch( flags & O_ACCMODE ) {
 		case O_RDONLY:

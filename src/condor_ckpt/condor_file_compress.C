@@ -23,7 +23,7 @@ int CondorFileCompress::open( const char *url_in, int flags, int mode )
 	char sub_url[_POSIX_PATH_MAX];
 
 	strcpy(url,url_in);
-	sscanf( url, "%[^:]:%s", junk, sub_url );
+	sscanf( url, "%[^:]:%[\x1-\xFF]", junk, sub_url );
 	return original->open( sub_url, flags, mode );
 }
 

@@ -20,7 +20,7 @@ int CondorFileAppend::open( const char *u, int flags, int mode )
 	char sub_url[_POSIX_PATH_MAX];
 
 	strcpy(url,u);
-	sscanf(url,"%[^:]:%s",junk,sub_url);
+	sscanf(url,"%[^:]:%[\x1-\xFF]",junk,sub_url);
 	return original->open(sub_url,flags|O_APPEND,mode);
 }
 

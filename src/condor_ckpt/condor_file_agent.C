@@ -28,7 +28,7 @@ int CondorFileAgent::open( const char *url_in, int flags, int mode )
 	char sub_url[_POSIX_PATH_MAX];
 
 	strcpy( url, url_in );
-	sscanf( url, "%[^:]:%s",junk,sub_url );
+	sscanf( url, "%[^:]:%[\x1-\xFF]",junk,sub_url );
 
 	// First, fudge the flags.  Even if the file is opened
 	// write-only, we must open it read/write to get the 

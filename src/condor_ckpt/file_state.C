@@ -404,7 +404,7 @@ CondorFile * CondorFileTable::create_url_chain( char *url )
 	char *next;
 	CondorFile *f;
 
-	int fields = sscanf( url, "%[^:]:%s", method, rest );
+	int fields = sscanf( url, "%[^:]:%[\x1-\xFF]", method, rest );
 	if( fields!=2 ) return 0;
 
 	/* Options interpreted by each layer go in () following the : */
