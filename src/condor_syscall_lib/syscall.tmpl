@@ -1201,6 +1201,10 @@ they should be built in the special "clipped" version.
 		alloc( msg, MAX_STRING );
 	}
 
+	/* This was the old remote call for reporting file actions.
+	   int is not big enough to record moderate amounts of I/O,
+	   so this is deprecated in favor of report_file_info_new.
+	*/
 	int report_file_info(
 		char *kind, char *name,
 		int open_count, int read_count, int write_count,
@@ -1208,6 +1212,14 @@ they should be built in the special "clipped" version.
 
 		SEND_PATH(kind);
 		ALLOC_PATH(kind);
+		SEND_PATH(name);
+		ALLOC_PATH(name);
+	}
+	int report_file_info_new(
+		char *name,
+		long long open_count, long long read_count, long long write_count,
+		long long seek_count, long long read_bytes, long long write_bytes ) : pseudo {
+
 		SEND_PATH(name);
 		ALLOC_PATH(name);
 	}
