@@ -43,6 +43,7 @@
 #include "condor_ver_info.h"
 #include "../condor_sysapi/sysapi.h"
 #include "directory.h"
+#include "config_util.h"
 
 extern ReliSock *syscall_sock;
 
@@ -144,12 +145,12 @@ CStarter::Config()
 	}
 
 	if (UIDDomain) free(UIDDomain);
-	if ((UIDDomain = param("UID_DOMAIN")) == NULL) {
+	if ((UIDDomain = get_uid_domain()) == NULL) {
 		EXCEPT("UID_DOMAIN not specified in config file.");
 	}
 
 	if (FSDomain) free(FSDomain);
-	if ((FSDomain = param("FILESYSTEM_DOMAIN")) == NULL) {
+	if ((FSDomain = get_file_system_domain()) == NULL) {
 		EXCEPT("FILESYSTEM_DOMAIN not specified in config file.");
 	}
 }

@@ -21,9 +21,9 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#include "condor_common.h"
 #include "condor_auth.h"
 #include "condor_string.h"
+#include "config_util.h"
 
 static const char root[] = "root";
 
@@ -64,17 +64,12 @@ Condor_Auth_Base :: Condor_Auth_Base(ReliSock * sock, int mode)
 
     free(username);
   
-    char * tmp = param( "UID_DOMAIN" );
-    if (tmp) {
-        localDomain_ = strdup(tmp);
-    }
-    else {
+    if ((localDomain_ = get_uid_domain()) == NULL) {
         // This is not right!
         dprintf(D_SECURITY, "Unable to determine local UID domain!");
         localDomain_ = 0;
     }
 
-    free(tmp);
     setRemoteHost(inet_ntoa(mySock_->endpoint()->sin_addr));
     // This is done for protocols such as fs, anonymous. Kerberos should
     // override this with the ip address from Kerbeos

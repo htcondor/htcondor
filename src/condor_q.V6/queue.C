@@ -48,6 +48,7 @@
 #include "metric_units.h"
 #include "globus_utils.h"
 #include "print_wrapped_text.h"
+#include "config_util.h"
 
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
@@ -195,7 +196,7 @@ int main (int argc, char **argv)
 							   "condor_schedd process.",
 							   stderr);
 			if (!expert) {
-				char *log_directory;
+				char *log_directory = NULL;
 				log_directory = param("LOG");
 				fprintf(stderr, "\n");
 				print_wrapped_text("Extra Info: the condor_schedd is the local process "
@@ -214,6 +215,9 @@ int main (int argc, char **argv)
 						"section of the manual.", 
 						log_directory ? log_directory : "your Condor log directory");
 				print_wrapped_text(error_message, stderr);
+                if (log_directory) {
+                    free(log_directory);
+                }
 			}
 			exit( 1 );
 		}
@@ -456,7 +460,7 @@ processCommandLineArguments (int argc, char *argv[])
 				*at = '\0';
 			} else {
 				// no ... add UID_DOMAIN
-				char *uid_domain = param("UID_DOMAIN");
+				char *uid_domain = get_uid_domain();
 				if (uid_domain == NULL)
 				{
 					EXCEPT ("No 'UID_DOMAIN' found in config file");
@@ -1777,20 +1781,19 @@ static char*
 fixSubmittorName( char *name, int niceUser )
 {
 	static 	bool initialized = false;
-	static	char uid_domain[64];
+	static	char * uid_domain = 0;
 	static	char buffer[128];
 
 	if( !initialized ) {
-		char *tmp = param( "UID_DOMAIN" );
-		if( !tmp ) {
+		uid_domain = get_uid_domain();
+		if( !uid_domain ) {
 			fprintf( stderr, "Error:  UID_DOMAIN not found in config file\n" );
 			exit( 1 );
 		}
-		strncpy( uid_domain , tmp , 63);
-		free( tmp );
 		initialized = true;
 	}
 
+    // potential buffer overflow! Hao
 	if( strchr( name , '@' ) ) {
 		sprintf( buffer, "%s%s%s", 
 					niceUser ? NiceUserName : "",

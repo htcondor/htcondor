@@ -27,6 +27,7 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "condor_config.h"
+#include "config_util.h"
 #include "my_hostname.h"
 
 extern "C" {
@@ -94,15 +95,8 @@ email_user_open( ClassAd *jobAd, const char *subject )
 			// If that's not there, look for UID_DOMAIN in the config
 			// file
 		if( ! domain ) {
-			domain = param( "UID_DOMAIN" );
+			domain = get_uid_domain();
 		} 
-
-			// If we still don't know what to do, just use our own
-			// fully qualifed hostname.  We should never get this far,
-			// but we might as well be robust...
-		if( ! domain ) {
-			domain = strdup( my_full_hostname() );
-		}
 
 			// Now, we can append the domain to our address.
         strcat( email_addr, "@" );

@@ -33,6 +33,7 @@
 #include "condor_adtypes.h"
 #include "condor_attributes.h"
 #include "condor_config.h"
+#include "config_util.h"
 #include "my_hostname.h"
 #include "../condor_ckpt_server/server_interface.h"
 #include "sig_install.h"
@@ -125,9 +126,8 @@ char *strcpy();
 #include "user_log.c++.h"
 UserLog ULog;
 
-#define SMALL_STRING 128
-char My_Filesystem_Domain[ SMALL_STRING ];
-char My_UID_Domain[ SMALL_STRING ];
+char * My_Filesystem_Domain;
+char * My_UID_Domain;
 int  UseAFS;
 int  UseNFS;
 int  UseCkptServer;
@@ -257,7 +257,7 @@ main(int argc, char *argv[], char *envp[])
 	char	*tmp = NULL;
 	int		reserved_swap, free_swap;
 	char	*host = NULL, *cluster = NULL, *proc = NULL;
-	char	*my_fs_domain = NULL, *my_uid_domain = NULL, *use_afs = NULL, *use_nfs = NULL;
+	char	*use_afs = NULL, *use_nfs = NULL;
 	char	*use_ckpt_server = NULL;
 	char	*capability;
 	int		i;
@@ -386,22 +386,10 @@ main(int argc, char *argv[], char *envp[])
 	initializeUserLog();
 
 
-	my_fs_domain = param( "FILESYSTEM_DOMAIN" );
-	if( my_fs_domain ) {
-		strcpy( My_Filesystem_Domain, my_fs_domain );
-        free( my_fs_domain );
-	} else {
-		strcpy( My_Filesystem_Domain, my_full_hostname() );
-	}
+	My_Filesystem_Domain = get_file_system_domain();
 	dprintf( D_ALWAYS, "My_Filesystem_Domain = \"%s\"\n", My_Filesystem_Domain );
 
-	my_uid_domain = param( "UID_DOMAIN" );
-	if( (my_uid_domain) && (strcasecmp(my_uid_domain,"none") != 0) ) {
-		strcpy( My_UID_Domain, my_uid_domain );
-        free( my_uid_domain );
-	} else {
-		strcpy( My_UID_Domain, my_full_hostname() );
-	}
+	My_UID_Domain = get_uid_domain(); 
 	dprintf( D_ALWAYS, "My_UID_Domain = \"%s\"\n", My_UID_Domain );
 
 	use_afs = param( "USE_AFS" );
@@ -795,6 +783,9 @@ Wrapup( )
 	if( notification[0] ) {
 		NotifyUser( notification, Proc );
 	}
+    // Free up data
+    free(My_UID_Domain);
+    free(My_Filesystem_Domain);
 }
 
 /* evaluate various periodic checks during the running of the shadow and

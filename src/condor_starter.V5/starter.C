@@ -38,6 +38,7 @@
 #include "user_proc.h"
 #include "sig_install.h"
 #include "../condor_sysapi/sysapi.h"
+#include "config_util.h"
 
 #if !defined(X86)
 typedef List<UserProc> listuserproc; 
@@ -135,6 +136,7 @@ main( int argc, char *argv[] )
 	condor_starter_ptr = &(condor_starter);
 //	condor_starter.display();
 	condor_starter.execute();
+    free(UidDomain);
 	dprintf( D_ALWAYS, "********* STARTER terminating normally **********\n" );
 	return 0;
 }
@@ -337,7 +339,7 @@ init_params()
 	}
 
 		// find out domain of machines whose UIDs we honor
-	UidDomain = param( "UID_DOMAIN" );
+	UidDomain = get_uid_domain();
 
 		// if the domain is null, don't honor any UIDs
 	if( UidDomain == NULL || UidDomain[0] == '\0' ) {
@@ -1226,13 +1228,13 @@ init_environment_info()
 	char		*ckpt_server_host;
 	char		*arch, *opsys;
 
-	my_fs_domain = param( "FILESYSTEM_DOMAIN" );
+	my_fs_domain = get_file_system_domain();
 	if( my_fs_domain ) {
 		REMOTE_CONDOR_register_fs_domain( my_fs_domain );
 		free(my_fs_domain);
 	}
 
-	my_uid_domain = param( "UID_DOMAIN" );
+	my_uid_domain = get_uid_domain();
 	if( my_uid_domain ) {
 		REMOTE_CONDOR_register_uid_domain( my_uid_domain );
 		free(my_uid_domain);
