@@ -109,7 +109,7 @@ SRC =	ToUpper.c image.C machdep.$(OS).C file_state.C tmp_stack.C \
 OBJ =	image.o machdep.$(OS).o file_state.o tmp_stack.o syscall_mode.o \
 	local_startup.o fake_remote_syscall.o fake_hooks.o \
 	$(SAVE_SIGSTATE_OBJ) $(EXTRACT) \
-	$(ASSEMBLER_OBJ) $(UTIL_OBJ) $(URL_OBJ)
+	$(ASSEMBLER_OBJ) $(UTIL_OBJ)
 #else
 OBJ =	syscall_mode.o
 #endif
@@ -234,7 +234,6 @@ clean::
 
 IMPORT_LINKS = ../../config/import_links
 import(../condor_util_lib,$(UTIL_OBJ))
-import(../condor_c++_util,$(URL_OBJ))
 
 clean::
 	rm -f c_plus_alloc.o syscall_mode.o
