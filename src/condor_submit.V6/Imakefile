@@ -1,0 +1,33 @@
+SRC_DIR = $(SRC_TREE)/condor_submit.jim
+CFLAGS = $(STD_C_FLAGS) -DNEW_PROC -I../condor_c++_util
+
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -I../condor_c++_util -DALLOC_DEBUG
+
+LDFLAGS = $(LIBDBM)
+
+SRC = submit.C _mkckpt.c
+OBJ = submit.o _mkckpt.o
+LIB = ../condor_schedd/libqmgmt.a  ../condor_c++_util/cplus_lib.a \
+	 ../condor_xdr_lib/xdr_lib.a ../condor_util_lib/util_lib.a\
+	RpcLib KernLib SocketLib
+
+LIBDIRS = ../condor_util_lib ../condor_xdr_lib ../condor_c++_util
+
+/*
+  The standard submit on Alpha's is v3, with the v2 version available
+  only if you invoke it explicitly.  On all other machines, you get
+  v2, unless you explicitly ask for v3.
+*/
+#if IS_V5
+	all_target(condor_submit)
+	tags_target($(SRC),$(LIBDIRS))
+	depend_target($(SRC))
+	c_plus_target(condor_submit,$(OBJ),$(LIB))
+	release_target(condor_submit,$(RELEASE_DIR)/bin,SET_GID_MODE)
+#else
+	all_target(condor_submit.v3)
+	tags_target($(SRC),$(LIBDIRS))
+	depend_target($(SRC))
+	c_plus_target(condor_submit.v3,$(OBJ),$(LIB),release)
+	setgid_target(condor_submit.v3)
+#endif
