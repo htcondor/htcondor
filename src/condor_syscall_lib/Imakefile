@@ -72,11 +72,12 @@ EXTRACT = GETEUID.o GETEGID.o GETWD.o
 #if IS_HPPAR_HPUX9
 /* UTIL_EXTRACT = GETWD.o */
 HP_SPECIFIC_FILES = seteuid.o setegid.o
-HP_CKPT = get_reginfo.HPUX.o
 #endif
 
 #if IS_SGI_IRIX62
 DEP_OS = IRIX62
+#elif IS_HPPAR_HPUX10
+DEP_OS = HPUX10
 #else
 DEP_OS = OperatingSystem
 #endif
@@ -228,11 +229,21 @@ SYSCONF.o :  $(SIMPLE_LIBC)  ToUpper
 	rm -f $(TMP_DIR)/sysconf.o $(TMP_DIR)/SYSCONF.o
 #endif
 
+#if (DOES_CHECKPOINTING) || (DOES_REMOTE_SYSCALLS)
 release_target( condor_rt0.o, $(RELEASE_DIR)/lib, OBJECT_MODE )
-
+#endif
 
 library_target(condor_syscall_lib.a,$(LIB_OBJ))
+
+#if (DOES_CHECKPOINTING) || (DOES_REMOTE_SYSCALLS)
 release_library(condor_syscall_lib.a,$(RELEASE_DIR)/lib)
+#endif
+
+CMNT If no remote syscalls & no checkpointing support, then no need
+CMNT to release anything into RELEASEDIR/lib, since we only do VANILLA jobs
+#if (!DOES_CHECKPOINTING) && (!DOES_REMOTE_SYSCALLS)
+release:
+#endif
 
 CPP = PreProcessCmd
 
