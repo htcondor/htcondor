@@ -189,7 +189,8 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 	int fd = -2;
 	const char* filename;
 	bool wants_stream = false;
-	const char* name;
+	const char* name = NULL;
+	bool is_output = true;
 
 		///////////////////////////////////////////////////////
 		// Figure out what we're trying to open, if anything
@@ -198,21 +199,26 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 	if( attr ) {
 		filename = Starter->jic->getJobStdFile( attr );
 		wants_stream = Starter->jic->streamStdFile( attr );
+		name = attr;
+			// what can we do about is_output in this case?
 	} else {
 		switch( type ) {
 		case SFT_IN:
 			filename = Starter->jic->jobInputFilename();
 			wants_stream = Starter->jic->streamInput();
+			is_output = false;
 			name = "stdin";
 			break;
 		case SFT_OUT:
 			filename = Starter->jic->jobOutputFilename();
 			wants_stream = Starter->jic->streamOutput();
+			is_output = true;
 			name = "stdout";
 			break;
 		case SFT_ERR:
 			filename = Starter->jic->jobErrorFilename();
 			wants_stream = Starter->jic->streamError();
+			is_output = true;
 			name = "stderr";
 			break;
 		}
@@ -287,7 +293,7 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 		//////////////////////
 	if( wants_stream ) {
 		StreamHandler *handler = new StreamHandler;
-		if( !handler->Init(filename, name, false) ) {
+		if( !handler->Init(filename, name, is_output) ) {
 			MyString err_msg;
 			err_msg.sprintf( "unable to establish %s stream", phrase );
 			Starter->jic->notifyStarterError( err_msg.Value(), true );
