@@ -38,8 +38,6 @@ Condor_Auth_Base :: Condor_Auth_Base(ReliSock * sock, int mode)
       isDaemon_      ( false ),
       mySock_        ( sock  )
 {
-    char * username = my_username();
-    
     if (mySock_->isClient()) {
         
         //------------------------------------------
@@ -50,20 +48,21 @@ Condor_Auth_Base :: Condor_Auth_Base(ReliSock * sock, int mode)
         // So, we first find out whether this is a daemon or user
         //------------------------------------------
         
-        if ((strncmp(username,
-                     STR_DEFAULT_CONDOR_USER,
-                     strlen(STR_DEFAULT_CONDOR_USER)) == 0) ||
-            (strncmp(username, root, strlen(root)) == 0)) {
+        //if ((strncmp(username,
+        //            STR_DEFAULT_CONDOR_USER,
+        //             strlen(STR_DEFAULT_CONDOR_USER)) == 0) ||
+        //    (strncmp(username, root, strlen(root)) == 0)) {
             // I am a daemon! This is a daemon-daemon authentication
-            isDaemon_ = true;
+        //    isDaemon_ = true;
             
-            //fprintf(stderr,"This is a daemon with Condor uid:%d; uid:%d\n",
-            //      get_condor_uid(), get_my_uid());
+        //dprintf(D_ALWAYS,"This is a daemon with Condor uid:%d; my uid:%d, user uid :%d , 
+        // with username %s\n", get_condor_uid(), get_my_uid(), get_user_uid(), username);
+        //}
+        if (get_my_uid() == 0) {
+            isDaemon_ = true;
         }
     }
 
-    free(username);
-  
 		// this will *always* succeed
 	localDomain_ = param( "UID_DOMAIN" );
 
