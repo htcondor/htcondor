@@ -427,6 +427,8 @@ e		*/
 
 		void Modify( ClassAd& ad );
 
+		ClassAd &operator=(const ClassAd &rhs);
+
 		bool CopyFrom( const ClassAd &ad );
 
 		/** Flattens (a partial evaluation operation) the given expression in 
