@@ -202,6 +202,7 @@ main( int argc, char *argv[] )
 	char	*cmd_file = NULL;
 	int dag_pause = 0;
 	char	*scheddname;
+	char	*tmp_pointer;
 	
 	setbuf( stdout, NULL );
 
@@ -279,7 +280,7 @@ main( int argc, char *argv[] )
 		usage();
 	}
 
-	if( !(ScheddAddr = get_schedd_addr(ScheddName)) ) {
+	if( !(tmp_pointer = get_schedd_addr(ScheddName)) ) {
 		if( ScheddName ) {
 			fprintf( stderr, "Can't find address of schedd %s\n", ScheddName );
 		} else {
@@ -287,6 +288,9 @@ main( int argc, char *argv[] )
 		}
 		exit(1);
 	}
+
+	// get_schedd_addr uses a static buffer, so strdup into ScheddAddr
+	ScheddAddr = strdup(tmp_pointer);
 
 	// open submit file
 	if( (fp=fopen(cmd_file,"r")) == NULL ) {
@@ -388,6 +392,8 @@ main( int argc, char *argv[] )
 
 	if (dag_pause)
 		sleep(4);
+
+	free(ScheddAddr);
 
 	return 0;
 }
