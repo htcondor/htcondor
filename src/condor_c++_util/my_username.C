@@ -37,7 +37,7 @@ my_username( int uuid ) {
    struct passwd  *pwd;
 
 	int tryUid = uuid;
-	if ( !tryUid ) {
+	if ( tryUid < 0 ) {
 		tryUid = geteuid();
 	}
 
