@@ -113,6 +113,7 @@ int needed_fd( int fd );
 void determine_user_ids( uid_t &requested_uid, gid_t &requested_gid );
 int host_in_domain( const char *domain, const char *hostname );
 void init_environment_info();
+extern "C" int exception_cleanup();
 
 StateMachine	*condor_starter_ptr;
 
@@ -1215,6 +1216,7 @@ cleanup()
   but it has to get registered with the EXCEPT mechanism which is older
   and not typed correctly...
 */
+extern "C" {
 int
 exception_cleanup()
 {
@@ -1236,6 +1238,8 @@ exception_cleanup()
 	sleep( 10 );
 	return 0;
 }
+} /* extern "C" */
+
 
 /*
   Find out how many 1024 byte "blocks" are free in the current file system.
