@@ -35,8 +35,6 @@
 #include "daemon.h"
 #include "condor_distribution.h"
 
-Distribution *myDistro;
-
 //------------------------------------------------------------------------
 
 static int CalcTime(int,int,int);
@@ -100,7 +98,7 @@ main(int argc, char* argv[])
   MyString TimeFileName;
   char* pool = NULL;
 
-  myDistro = new Distribution( argc, argv );
+  myDistro->Init( argc, argv );
 
   for(int i=1; i<argc; i++) {
 

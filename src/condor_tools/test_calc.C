@@ -1,13 +1,9 @@
 #include "condor_common.h"
 #include "condor_config.h"
-#include "condor_distribution.h"
-
-Distribution *myDistro;
 
 int
 main(int argc, char* argv[]) 
 {
-	myDistro = new Distribution( argc, argv );
 	config();
 	if( argc > 1 ) {
 		printf( "Free space in %s: %d\n", argv[1], sysapi_disk_space(argv[1]) );

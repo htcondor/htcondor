@@ -50,8 +50,6 @@
 #include "print_wrapped_text.h"
 #include "condor_distribution.h"
 
-Distribution *myDistro;
-
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
 static  void processCommandLineArguments(int, char *[]);
@@ -154,7 +152,7 @@ int main (int argc, char **argv)
 	char		*tmp;
 
 	// load up configuration file
-	myDistro = new Distribution( argc, argv );
+	myDistro->Init( argc, argv );
 	config();
 
 

@@ -24,8 +24,6 @@
 #include "classad_collection.h"
 #include "condor_distribution.h"
 
-Distribution *myDistro;
-
 /*template class Set<RankedClassAd>;*/
 /*template class Set<int>;*/
 /*template class HashTable<int, BaseCollection *>;*/
@@ -36,7 +34,7 @@ Distribution *myDistro;
 int
 main(int argc, char *argv[])
 {
-	myDistro = new Distribution( argc, argv );
+	myDistro->Init( argc, argv );
 	if (argc != 2) {
 		fprintf(stderr, "usage: %s collection-file\n", argv[0]);
 	}

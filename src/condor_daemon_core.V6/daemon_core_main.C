@@ -59,7 +59,6 @@ void dc_reconfig( bool is_full );
 int		Foreground = 0;		// run in background by default
 char*	myName;				// set to argv[0]
 DaemonCore*	daemonCore;
-Distribution *myDistro;
 static int is_master = 0;
 char*	logDir = NULL;
 char*	pidFile = NULL;
@@ -957,7 +956,7 @@ int main( int argc, char** argv )
 
 	// set myName to be argv[0] with the path stripped off
 	myName = basename(argv[0]);
-	myDistro = new Distribution( argc, argv );
+	myDistro->Init( argc, argv );
 	if ( EnvInit() < 0 ) {
 		exit( 1 );
 	}

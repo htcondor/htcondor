@@ -109,7 +109,6 @@ bool	NewExecutable = false;
 bool	IsFirstExecutable;
 bool	UserLogSpecified = false;
 bool never_transfer = false;  // never transfer files or do transfer files
-Distribution *myDistro;
 
 // environment vars in the ClassAd attribute are seperated via
 // the env_delimiter character; currently a '|' on NT and ';' on Unix
@@ -437,7 +436,7 @@ main( int argc, char *argv[] )
 	}
 
 	MyName = basename(argv[0]);
-	myDistro = new Distribution( argc, argv );
+	myDistro->Init( argc, argv );
 	config();
 
 	init_params();

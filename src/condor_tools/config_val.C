@@ -51,7 +51,6 @@
 #include "internet.h"
 #include "condor_distribution.h"
 
-Distribution *myDistro;
 char	*MyName;
 char	*mySubSystem = NULL;
 StringList params;
@@ -134,7 +133,7 @@ main( int argc, char* argv[] )
 	ModeType mt = CONDOR_QUERY;
 
 	MyName = argv[0];
-	myDistro = new Distribution( argc, argv );
+	myDistro->Init( argc, argv );
 
 	for( i=1; i<argc; i++ ) {
 		if( match_prefix( argv[i], "-host" ) ) {

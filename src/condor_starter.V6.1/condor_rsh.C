@@ -45,8 +45,6 @@
 #include "condor_distribution.h"
 #include "condor_environ.h"
 
-Distribution *myDistro;
-
 // uncomment for poop to be left on hard drive.
 // #define MAKE_DROPPINGS
 
@@ -63,7 +61,7 @@ int main ( int argc, char *argv[] ) {
 
 	char *tmp;
     char *buf = new char[1024];
-	myDistro = new Distribution( argc, argv );
+	myDistro->Init( argc, argv );
     sprintf ( buf, "%s", argv[1] );
     for ( int i=2 ; i<argc ; i++ ) {
         strcat( buf, " " );

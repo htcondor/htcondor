@@ -50,7 +50,6 @@ double priority = 0.00001;
 const char *pool = NULL;
 struct 	PrioEntry { MyString name; float prio; };
 static  ExtArray<PrioEntry> prioTable;
-Distribution *myDistro;
 #ifndef WIN32
 template class ExtArray<PrioEntry>;
 #endif
@@ -448,7 +447,7 @@ main(int argc, char *argv[])
 
 	virtualMachineCounts = new HashTable <HashKey, int> (25, hashFunction); 
 	mySubSystem = "INTERACTIVE";
-	myDistro = new Distribution( argc, argv );
+	myDistro->Init( argc, argv );
 	config();
 
 	// parse command line args

@@ -70,7 +70,6 @@
 int	UsePipes;
 
 char* mySubSystem = "SHADOW";
-Distribution *myDistro;
 
 extern "C" {
 #if defined(LINUX) && defined(GLIBC22)
@@ -278,7 +277,7 @@ main(int argc, char *argv[] )
 	char	*capability;
 	int		i;
 
-	myDistro = new Distribution( argc, argv );
+	myDistro->Init( argc, argv );
 	if( argc == 2 && strincmp(argv[1], "-cl", 3) == MATCH ) {
 		printClassAd();
 		exit( 0 );

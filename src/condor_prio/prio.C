@@ -36,7 +36,6 @@
 
 char	*param();
 char	*MyName;
-Distribution *myDistro;
 
 
 int		PrioAdjustment;
@@ -77,7 +76,7 @@ main( int argc, char *argv[] )
 	Qmgr_connection	*q;
 
 	MyName = argv[0];
-	myDistro = new Distribution( argc, argv );
+	myDistro->Init( argc, argv );
 
 	config();
 

@@ -62,7 +62,6 @@ int all = 0;
 char* subsys = NULL;
 int takes_subsys = 0;
 int cmd_set = 0;
-Distribution *myDistro;
 
 
 // The pure-tools (PureCoverage, Purify, etc) spit out a bunch of
@@ -298,7 +297,7 @@ main( int argc, char *argv[] )
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
 
-	myDistro = new Distribution( argc, argv );
+	myDistro->Init( argc, argv );
 	config();
 
 	MyName = strrchr( argv[0], DIR_DELIM_CHAR );

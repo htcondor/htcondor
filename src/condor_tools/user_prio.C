@@ -69,7 +69,6 @@ int CompPrio(const void * a, const void * b);
 
 int DetailFlag=0;
 time_t MinLastUsageTime;
-Distribution *myDistro;
 
 
 int
@@ -84,7 +83,7 @@ main(int argc, char* argv[])
   int GetResList=0;
   char* pool = NULL;
 
-  myDistro = new Distribution( argc, argv );
+  myDistro->Init( argc, argv );
   MinLastUsageTime=time(0)-60*60*24;  // Default to show only users active in the last day
 
   for (int i=1; i<argc; i++) {

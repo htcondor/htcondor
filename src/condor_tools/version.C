@@ -29,8 +29,6 @@
 #include "condor_ver_info.h"
 #include "condor_distribution.h"
 
-Distribution *myDistro;
-
 void
 usage(char name[])
 {
@@ -42,7 +40,7 @@ int
 main(int argc, char *argv[])
 {
 
-	myDistro = new Distribution( argc, argv );
+	myDistro->Init( argc, argv );
 	CondorVersionInfo *version;
 	if (argc < 2) {
 		printf("%s\n%s\n", CondorVersion(), CondorPlatform());

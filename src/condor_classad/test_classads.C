@@ -27,14 +27,12 @@
 #include "stringSpace.h"
 #include "condor_scanner.h" 
 #include "iso_dates.h"
-#include "condor_distribution.h"
 
 /*----------------------------------------------------------
  *
  *                        Global Variables
  *
  *----------------------------------------------------------*/
-Distribution *myDistro;
 
 #define LARGE_NUMBER_OF_CLASSADS 10000
 
@@ -193,8 +191,6 @@ main(
 	ClassAd              **classads;
 	struct parameters    parameters;
 	TestResults          test_results;
-
-	myDistro = new Distribution(argc, argv);
 
 	parse_command_line(argc, argv, &parameters);
 

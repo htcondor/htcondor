@@ -106,7 +106,6 @@ void determine_user_ids( uid_t &requested_uid, gid_t &requested_gid );
 void init_environment_info();
 void determine_user_ids( uid_t &requested_uid, gid_t &requested_gid );
 StateMachine	*condor_starter_ptr;
-Distribution *myDistro;
 
 void
 printClassAd( void )
@@ -126,7 +125,7 @@ printClassAd( void )
 int
 main( int argc, char *argv[] )
 {
-	myDistro = new Distribution( argc, argv );
+	myDistro->New( argc, argv );
 	if( argc == 2 && strincmp(argv[1], "-cl", 3) == MATCH ) {
 		printClassAd();
 		exit( 0 );

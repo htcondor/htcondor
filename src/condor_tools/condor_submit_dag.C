@@ -54,14 +54,13 @@ struct SubmitDagOptions
 int printUsage(); // NOTE: printUsage calls exit(1), so it doesnt return
 void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[]);
 void submitDag(SubmitDagOptions &opts);
-Distribution *myDistro;
 
 int main(int argc, char *argv[])
 {
 	printf("\n");
 
 	SubmitDagOptions opts;
-	myDistro = new Distribution( argc, argv );
+	myDistro->Init( argc, argv );
 	parseCommandLine(opts, argc, argv);
 	
 	if (opts.strDagFile == "")

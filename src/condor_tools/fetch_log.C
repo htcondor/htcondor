@@ -31,8 +31,6 @@
 #include "command_strings.h"
 #include "condor_distribution.h"
 
-Distribution *myDistro;
-
 void
 usage( char *cmd )
 {
@@ -69,7 +67,7 @@ int main( int argc, char *argv[] )
 
 	daemon_t type = DT_MASTER;
 
-	myDistro = new Distribution( argc, argv );
+	myDistro->Init( argc, argv );
 	config();
 
 	for( i=1; i<argc; i++ ) {

@@ -38,9 +38,7 @@
 #include "condor_uid.h"
 #include "classad_collection.h"
 #include "daemon.h"
-#include "condor_distribution.h"
 
-Distribution *myDistro;
 XferSummary	xfer_summary;
 
 Server server;
@@ -2192,7 +2190,6 @@ void UnblockSignals()
 
 int main( int argc, char **argv )
 {
-	myDistro = new Distribution( argc, argv );
 	set_condor_priv();
 	server.Init();
 	server.Execute();
