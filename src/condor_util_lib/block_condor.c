@@ -68,9 +68,11 @@ static int	BlockFd = -1;
 #if defined( __STDC__ )
 char *param( const char *);
 static int init_block_file( int flags, int mode );
+char *strdup(char *);
 #else
 char *param();
 static int init_block_file();
+char *strdup();
 #endif
 
 /*
