@@ -61,19 +61,20 @@ ResumeDag() {
 }
 
 bool
-AddNode( const char *name, const char* cmd, const char *precmd,
-		 const char *postcmd, MyString &failReason )
+AddNode( Job::job_type_t type, const char *name, const char* cmd,
+		 const char *precmd, const char *postcmd, bool done,
+		 MyString &failReason )
 {
 	MyString why;
 	if( !IsValidNodeName( name, why ) ) {
-		failReason = "invalid node name: " + why;
+		failReason = why;
 		return false;
 	}
-	if( !cmd ) {
-		failReason = "missing cmd (NULL)";
+	if( !IsValidSubmitFileName( cmd, why ) ) {
+		failReason = why;
 		return false;
 	}
-	Job* node = new Job( name, cmd );
+	Job* node = new Job( type, name, cmd );
 	if( !node ) {
 		dprintf( D_ALWAYS, "ERROR: out of memory!\n" );
 			// we already know we're out of memory, so filling in
@@ -95,6 +96,15 @@ AddNode( const char *name, const char* cmd, const char *precmd,
 			return false;
 		}
 	}
+	if( done ) {
+		node->SetStatus( Job::STATUS_DONE );
+	}
+	ASSERT( G.dag != NULL );
+	if( !G.dag->Add( *node ) ) {
+		failReason = "unknown failure adding node to DAG";
+		delete node;
+		return false;
+	}
 	failReason = "n/a";
 	return true;
 }
@@ -103,20 +113,34 @@ bool
 IsValidNodeName( const char *name, MyString &whynot )
 {
 	if( name == NULL ) {
-		whynot = "name == NULL";
+		whynot = "missing node name";
 		return false;
 	}
-	if( strcmp( name, "" ) == 0 ) {
-		whynot = "name is empty";
+	if( strlen( name ) == 0 ) {
+		whynot = "empty node name (name == \"\")";
 		return false;
 	}
 	if( isKeyWord( name ) ) {
-		whynot.sprintf( "'%s' is a DAGMan keyword", name );
+		whynot.sprintf( "invalid node name: '%s' is a DAGMan keyword", name );
 		return false;
 	}
 	ASSERT( G.dag != NULL );
 	if( G.dag->NodeExists( name ) ) {
-		whynot.sprintf( "node '%s' already exists in DAG", name );
+		whynot.sprintf( "node name '%s' already exists in DAG", name );
+		return false;
+	}
+	return true;
+}
+
+bool
+IsValidSubmitFileName( const char *name, MyString &whynot )
+{
+	if( name == NULL ) {
+		whynot = "missing submit file name";
+		return false;
+	}
+	if( strlen( name ) == 0 ) {
+		whynot = "empty submit file name (name == \"\")";
 		return false;
 	}
 	return true;

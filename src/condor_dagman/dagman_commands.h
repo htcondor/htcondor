@@ -35,9 +35,12 @@ bool PauseDag();
 // resume DAGMan's normal event-processing
 bool ResumeDag();
 
-bool AddNode( const char *name, const char* cmd, const char *precmd,
-			  const char *postcmd );
+bool AddNode( Job::job_type_t type, const char *name, const char* cmd,
+			  const char *precmd, const char *postcmd, bool done,
+			  MyString &failReason );
+
 bool IsValidNodeName( const char *name, MyString &whynot );
+bool IsValidSubmitFileName( const char *name, MyString &whynot );
 
 /*
 bool RemoveNode( const char *name );
