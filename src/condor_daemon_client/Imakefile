@@ -15,6 +15,8 @@ c_plus_target(daemon.t,daemon.t.o libdaemonclient.a,$(LIB))
 pure_c_plus_target(daemon.t.pure,daemon.t.o libdaemonclient.a,$(LIB))
 purecov_c_plus_target(daemon.t.pc,daemon.t.o libdaemonclient.a,$(LIB))
 
+html_target( documentation )
+
 release:: all
 stripped:: all
 static:: all
