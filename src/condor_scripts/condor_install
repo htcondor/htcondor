@@ -425,7 +425,7 @@ sub customize_condor_script {
     }
 }
 
-sub fix_perl_path() {
+sub fix_perl_path {
     local( $file ) = @_;
     local( $tmp_name, $args );
     -f $file || die "Error: $file doesn't exist!\n";
