@@ -25,7 +25,6 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "condor_jobqueue.h"
 #include "condor_io.h"
 #include "condor_file_info.h"
 #include "condor_uid.h"
@@ -38,15 +37,6 @@
 #include "internet.h"
 #include "condor_config.h"
 #include "filename_tools.h"
-
-#ifdef CARMI_OPS
-#include <ProcList.h>
-
-extern HostLIST* HostList;
-extern char* ExecutingHost;
-#endif
-
-static char *_FileName_ = __FILE__;
 
 extern "C"  void log_checkpoint (struct rusage *, struct rusage *);
 extern "C"  void log_image_size (int);
@@ -1596,30 +1586,6 @@ pseudo_pvm_task_info(int pid, int task_tid)
 int
 pseudo_suspended(int suspended)
 {
-#ifdef CARMI_OPS
-	/************* MAKE CHANGES HERE **********/
-	/* Find HOST from HostList and change status of
-	   HOST->Status to  "Suspended" = 3 "Resume" = 2*/
- 	HostLIST *hlist = HostList;
-	int found = 0;
-
-	dprintf(D_ALWAYS, "Suspended = %d \n", suspended);
-
-	while(!found && (hlist))
-	{
-	   if (!strcmp(hlist->hostname, ExecutingHost))
-		found = 1;
-           else
-		hlist = hlist->next;
-	}
-
-	if (found)
-		hlist->status = (suspended ? 3 : 2);
-        else
-	   dprintf(D_ALWAYS, "Host not found in pseudo_suspended\n");
-        
-        
-#endif
 	return 0;
 }
 
