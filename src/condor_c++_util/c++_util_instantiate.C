@@ -34,6 +34,7 @@
 #include "condor_distribution.h"
 #include "file_transfer.h"
 #include "extra_param_info.h"
+#include "daemon.h"
 
 template class List<char>; 		template class Item<char>;
 template class List<int>; 		template class Item<int>;
@@ -60,3 +61,5 @@ template class Queue<char *>;
 template class HashTable<int, FileTransfer *>;
 template class HashTable<MyString, FileTransfer *>;
 template class HashTable<MyString, ExtraParamInfo *>;
+template class SimpleList<Daemon*>;
+
