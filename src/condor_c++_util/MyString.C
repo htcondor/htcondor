@@ -25,6 +25,7 @@
 #include "MyString.h"
 #include "condor_snutils.h"
 #include "condor_string.h"
+#include "strupr.h"
 
 /*--------------------------------------------------------------------
  *
@@ -511,6 +512,17 @@ lower_case(void)
 	::lower_case(Data);
 	return;
 }
+
+
+// TODO: This breaks libcondorapi!  we need to fix that before we
+// merge it back into a real version of Condor... 
+void
+MyString::upper_case(void)
+{
+	::strupr(Data);
+	return;
+}
+
 
 
 bool

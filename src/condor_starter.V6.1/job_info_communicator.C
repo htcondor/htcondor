@@ -28,6 +28,8 @@
 #include "starter.h"
 #include "condor_config.h"
 #include "domain_tools.h"
+#include "basename.h"
+
 
 extern CStarter *Starter;
 
@@ -46,6 +48,7 @@ JobInfoCommunicator::JobInfoCommunicator()
 	job_error_name = NULL;
 	job_iwd = NULL;
 	job_output_ad_file = NULL;
+	job_output_ad_is_stdout = false;
 	requested_exit = false;
 	change_iwd = false;
 	user_priv_is_initialized = false;
@@ -78,7 +81,6 @@ JobInfoCommunicator::~JobInfoCommunicator()
 	if( job_output_ad_file ) {
 		free( job_output_ad_file );
 	}
-
 }
 
 
@@ -171,55 +173,67 @@ JobInfoCommunicator::gotShutdownGraceful( void )
 void
 JobInfoCommunicator::setOutputAdFile( const char* path )
 {
-	bool is_stdout = false;
 	if( job_output_ad_file ) {
 		free( job_output_ad_file );
 	}
-
 	job_output_ad_file = strdup( path );
-
-	if( job_output_ad_file[0] == '-' && job_output_ad_file[1] == '\0' ) {
-		is_stdout = true;
-	}
-
-	dprintf( D_ALWAYS, "Will write job output ClassAd to \"%s\"\n", 
-			 is_stdout ? "STDOUT" : job_output_ad_file );
 }
 
 
-void
+bool
 JobInfoCommunicator::writeOutputAdFile( ClassAd* ad )
 {
 	if( ! job_output_ad_file ) {
-		return;
+		return false;
 	}
 
 	FILE* fp;
-	bool is_stdout = false;
-
-	if( job_output_ad_file[0] == '-' && job_output_ad_file[1] == '\0' ) {
+	if( job_output_ad_is_stdout ) {
+		dprintf( D_ALWAYS, "Will write job output ClassAd to STDOUT\n" );
 		fp = stdout;
-		is_stdout = true;
 	} else {
 		fp = fopen( job_output_ad_file, "a" );
 		if( ! fp ) {
-			dprintf( D_ALWAYS, "Failed to open output ClassAd file \"%\": "
-					 "%s (errno %d)\n", job_output_ad_file,
-					 strerror(errno), errno );
-			return;
+			dprintf( D_ALWAYS, "Failed to open job output ClassAd "
+					 "\"%s\": %s (errno %d)\n", job_output_ad_file, 
+					 strerror(errno), errno ); 
+			return false;
+		} else {
+			dprintf( D_ALWAYS, "Writing job output ClassAd to \"%s\"\n", 
+					 job_output_ad_file );
+
 		}
 	}
-
-	dprintf( D_ALWAYS, "Writing job output ClassAd to \"%s\"\n", 
-			 is_stdout ? "STDOUT" : job_output_ad_file );
-
 		// append a delimiter?
 	ad->fPrint( fp );
 
-	if( ! is_stdout ) {
+	if( job_output_ad_is_stdout ) {
+		fflush( fp );
+	} else {
 		fclose( fp );
 	}
+	return true;
 }
+
+
+// This has to be called after we know what the working directory is
+// going to be, so we can make sure this is a full path...
+void
+JobInfoCommunicator::initOutputAdFile( void )
+{
+	if( job_output_ad_file[0] == '-' && job_output_ad_file[1] == '\0' ) {
+		job_output_ad_is_stdout = true;
+	} else if( ! fullpath(job_output_ad_file) ) {
+		MyString path = Starter->GetWorkingDir();
+		path += DIR_DELIM_CHAR;
+		path += job_output_ad_file;
+		free( job_output_ad_file );
+		job_output_ad_file = strdup( path.GetCStr() );
+	}
+	dprintf( D_ALWAYS, "Will write job output ClassAd to \"%s\"\n",
+			 job_output_ad_is_stdout ? "STDOUT" : job_output_ad_file );
+}
+
 
 
 bool
@@ -294,7 +308,6 @@ JobInfoCommunicator::initUserPrivWindows( void )
 	user_priv_is_initialized = init_priv_succeeded;
 	return init_priv_succeeded;
 }
-
 
 
 void

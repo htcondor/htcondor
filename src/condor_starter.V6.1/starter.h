@@ -26,7 +26,6 @@
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "list.h"
-#include "os_proc.h"
 #include "user_proc.h"
 #include "job_info_communicator.h"
 
@@ -50,11 +49,14 @@ public:
 			reaper, makes the starter's working dir and moves there,
 			sets resource limits, then calls StartJob()
 		*/
-	virtual bool Init( JobInfoCommunicator* my_jic );
+	virtual bool Init( JobInfoCommunicator* my_jic, 
+					   const char* orig_cwd, bool is_gridshell );
 
 		/** Params for "EXECUTE" and other useful stuff 
 		 */
 	virtual void Config();
+
+	virtual int SpawnJob( void );
 
 		/** Walk through list of jobs, call ShutDownGraceful on each.
 			@return 1 if no jobs running, 0 otherwise 
@@ -65,11 +67,6 @@ public:
 			@return 1 if no jobs running, 0 otherwise 
 		*/
 	virtual int ShutdownFast(int);
-
-		/** For now, make a VanillaProc class instance and call
-			StartJob on it.  Append it to the JobList.
-		*/
-	virtual bool StartJob();
 
 		/** Create the execute/dir_<pid> directory and chdir() into
 			it.  This can only be called once user_priv is initialized
@@ -82,6 +79,12 @@ public:
 			the job.
 		*/
 	virtual int jobEnvironmentReady( void );
+
+		/** Does final cleanup once all the jobs (and post script, if
+			any) have completed.  This deals with everything on the
+			CleanedUpJobList, notifies the JIC, etc.
+		*/
+	virtual void allJobsDone( void );
 
 		/** Call Suspend() on all elements in JobList */
 	virtual int Suspend(int);
@@ -110,7 +113,17 @@ public:
 		*/
 	bool publishUpdateAd( ClassAd* ad );
 
+	bool publishPreScriptUpdateAd( ClassAd* ad );
+	bool publishPostScriptUpdateAd( ClassAd* ad );
 
+		/** Put all the environment variables we'd want a Proc to have
+			into the given Env object.  This will figure out what Proc
+			objects we've got and will call their respective
+			PublishToEnv() methods
+			@param proc_env The environment to publish to
+		*/
+	void PublishToEnv( Env* proc_env );
+	
 		/** Pointer to our JobInfoCommuniator object, which abstracts
 			away any details about our communications with whatever
 			entity is controlling our job.  This way, the starter can
@@ -124,6 +137,9 @@ public:
 		/** Returns the VM number we're running on
 		*/
 	int getMyVMNumber( void );
+
+	bool isGridshell( void ) {return is_gridshell;};
+	const char* origCwd( void ) {return (const char*) orig_cwd;};
 
 protected:
 	List<UserProc> JobList;
@@ -140,8 +156,12 @@ private:
 	char *Execute;
 	char WorkingDir[_POSIX_PATH_MAX]; // The iwd given to the job
 	char ExecuteDir[_POSIX_PATH_MAX]; // The scratch dir created for the job
+	char *orig_cwd;
+	bool is_gridshell;
 	int ShuttingDown;
 
+	UserProc* pre_script;
+	UserProc* post_script;
 };
 
 #endif

@@ -3,7 +3,7 @@
  *
  * See LICENSE.TXT for additional notices and disclaimers.
  *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
  * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
  * No use of the CONDOR Software Program Source Code is authorized 
  * without the express consent of the CONDOR Team.  For more information 
@@ -20,55 +20,50 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+#if !defined(_CONDOR_SCRIPT_PROC_H)
+#define _CONDOR_SCRIPT_PROC_H
 
-#if !defined(_CONDOR_OS_PROC_H)
-#define _CONDOR_OS_PROC_H
-
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "user_proc.h"
-#include "basename.h"
 
-/** This is a generic sort of "OS" process, the base for other types
-	of jobs.
+class ClassAd;
 
-*/
-class OsProc : public UserProc
+/** This class is for job wrapper scripts (pre/post) that the starter
+	might have to spawn.
+ */
+class ScriptProc : public UserProc
 {
 public:
 		/// Constructor
-	OsProc( ClassAd* jobAd );
+	ScriptProc( ClassAd* job_ad, const char* proc_name );
 
 		/// Destructor
-	virtual ~OsProc();
+	virtual ~ScriptProc();
 
-		/** Here we do things like set_user_ids(), get the executable, 
-			get the args, env, cwd from the classad, open the input,
-			output, error files for re-direction, and (finally) call
-			daemonCore->Create_Process().
-		 */
+		/** Start this script.  Starter should delete this object if 
+			StartJob returns 0.
+			@return 1 on success, 0 on failure.
+		*/
 	virtual int StartJob();
 
-		/** In this function, we determine if pid == our pid, and if so
-			do a CONDOR_job_exit remote syscall.  
-			@param pid The pid that exited.
-			@param status Its status
-		    @return 1 if our OsProc is no longer active, 0 if it is
+		/** A pid exited.  If this ScriptProc wants to do any cleanup
+			now that this pid has exited, it does so here.  If we
+			return 1, the starter will consider this ScriptProc done,
+			remove it from the active job list, and put it in a list
+			of jobs that are already cleaned up.
+		    @return 1 if our ScriptProc is no longer active, 0 if it is
 		*/
 	virtual int JobCleanup( int pid, int status );
 
-		/** In this function, we determine what protocol to use to
-			send the shadow a CONDOR_job_exit remote syscall, which
-			will cause the job to leave the queue and the shadow to
-			exit.  We can't send this until we're all done transfering
-			files and cleaning up everything. 
+		/** Job exits.  Starter has decided it's done with everything
+			it needs to do, and we can now notify the job's controller
+			we've exited so it can do whatever it wants to.
+		    @return true on success, false on failure
 		*/
 	virtual bool JobExit( void );
 
-		/** Publish all attributes we care about for updating the job
-			controller into the given ClassAd.  This function is just
-			virtual, not pure virtual, since OsProc and any derived
-			classes should implement a version of this that publishes
-			any info contained in each class, and each derived version
-			should also call it's parent's version, too.
+		/** Publish all attributes we care about for updating the
+			job controller into the given ClassAd.
 			@param ad pointer to the classad to publish into
 			@return true if success, false if failure
 		*/
@@ -86,19 +81,9 @@ public:
 		/// Send a SIGKILL
 	virtual bool ShutdownFast();
 
-		/// rename a core file created by this process
-	bool renameCoreFile( void );
-
 protected:
-
 	bool is_suspended;
-	
-		/// Number of pids under this OsProc
-	int num_pids;
-
-	bool dumped_core;
-	char* job_iwd;
 
 };
 
-#endif
+#endif /* _CONDOR_SCRIPT_PROC_H */

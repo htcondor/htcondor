@@ -91,6 +91,8 @@ JICLocal::init( void )
 		return false;
 	}
 
+	initOutputAdFile();
+
 		// Now that the user priv is setup and the temp execute dir
 		// exists, we can initialize the LocalUserLog.  if the job
 		// defines StarterUserLog, we'll write the events.  if not,
@@ -204,7 +206,12 @@ JICLocal::notifyJobExit( int exit_status, int reason, UserProc*
 						  user_proc )
 {
 	ClassAd ad;
+
+		// TODO: this is a hack.  we need a better way to get the
+		// pre/post info back to the right places...
+	Starter->publishPreScriptUpdateAd( &ad );
 	user_proc->PublishUpdateAd( &ad );
+	Starter->publishPostScriptUpdateAd( &ad );
 
 		// depending on the exit reason, we want a different event. 
 	u_log->logJobExit( &ad, reason );
@@ -313,6 +320,13 @@ JICLocal::initJobInfo( void )
 		return false;
 	}
 
+	if( Starter->isGridshell() ) { 
+		MyString iwd_str = ATTR_JOB_IWD;
+		iwd_str += "=\"";
+		iwd_str += Starter->origCwd();
+		iwd_str += '"';
+		job_ad->InsertOrUpdate( iwd_str.GetCStr() );
+	}
 	job_ad->LookupString( ATTR_JOB_IWD, &job_iwd );
 	if( ! job_iwd ) {
 		dprintf( D_ALWAYS, "Can't find job's IWD, aborting\n" );

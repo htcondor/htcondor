@@ -233,7 +233,7 @@ VanillaProc::Suspend()
 	}
 
 	// set our flag
-	job_suspended = TRUE;
+	is_suspended = true;
 }
 
 void
@@ -247,7 +247,7 @@ VanillaProc::Continue()
 	}
 
 	// set our flag
-	job_suspended = FALSE;
+	is_suspended = false;
 }
 
 bool

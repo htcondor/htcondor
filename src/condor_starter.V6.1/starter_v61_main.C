@@ -43,6 +43,9 @@ JobInfoCommunicator* parseArgs( int argc, char* argv [] );
 static CStarter StarterObj;
 CStarter *Starter = &StarterObj;
 
+extern int Foreground;	// from daemoncore
+static bool is_gridshell = false;
+
 // this appears at the bottom of this file:
 extern "C" int display_dprintf_header(FILE *fp);
 static char* dprintf_header = NULL;
@@ -114,17 +117,62 @@ printClassAd( void )
 	}
 }
 
+
+char *mySubSystem = NULL;
+static char* orig_cwd = NULL;
+
 void
 main_pre_dc_init( int argc, char* argv[] )
 {	
+		// figure out what mySubSystem should be based on argv[0], or
+		// if we see "-gridshell" anywhere on the command-line
+	char* base = basename(argv[0]);
+	char* tmp;
+	tmp = strrchr(base, '_' );
+	if( tmp && strincmp(tmp, "_gridshell", 10) == MATCH ) {
+		mySubSystem = "GRIDSHELL";
+		is_gridshell = true;
+	} else { 
+		int i, len;
+		for( i=1; i<argc; i++ ) {
+			len = strlen(argv[i]);
+			if( strincmp(argv[i], "-gridshell", len) == MATCH ) {
+				mySubSystem = "GRIDSHELL";
+				is_gridshell = true;
+				break;
+			}
+		}
+	}
+	if( ! is_gridshell ) {
+		mySubSystem = "STARTER";
+	}
+
+		// if we were passed "-classad", just print our classad and
+		// exit, without going back to daemoncore or anything.  we
+		// need to do this *after* we set mySubSystem, since this ends
+		// up calling functions that rely on it being defined...  
 	if( argc == 2 && strincmp(argv[1],"-cla",4) == MATCH ) {
 		printClassAd();
 		exit(0);
 	}
+
+		// if we're still here, stash the cwd for future reference
+	char cwd[_POSIX_PATH_MAX];
+	if( getcwd( cwd, _POSIX_PATH_MAX ) == NULL ) {
+		dprintf( D_ALWAYS, "ERROR calling getcwd(): %s (errno %d)\n", 
+				 strerror(errno), errno );
+	} else {
+		orig_cwd = strdup(cwd);
+	}
+
+		// if we're the gridshell, assume a "-f" option.  all that
+		// does in DaemonCore-land is set a global variable, so we'll
+		// just do that here, ourselves...
+	if( is_gridshell ) {
+		Foreground = 1;
+	}
 }
 
-
-char *mySubSystem = "STARTER";
 
 int
 main_init(int argc, char *argv[])
@@ -161,7 +209,7 @@ main_init(int argc, char *argv[])
 			// we couldn't figure out what to do...
 		usage();
 	}
-	if( !Starter->Init(jic) ) {
+	if( !Starter->Init(jic, orig_cwd, is_gridshell) ) {
 		dprintf(D_ALWAYS, "Unable to start job.\n");
 		DC_Exit(1);
 	}
@@ -225,6 +273,7 @@ parseArgs( int argc, char* argv [] )
 	char _jobproc[] = "-job-proc";
 	char _jobsubproc[] = "-job-subproc";
 	char _header[] = "-header";
+	char _gridshell[] = "-gridshell";
 	char* target = NULL;
 
 	ASSERT( argc >= 2 );
@@ -249,6 +298,13 @@ parseArgs( int argc, char* argv [] )
 			dprintf_header = strdup( arg );
 			DebugId = display_dprintf_header;
 			tmp++;	// consume the arg so we don't get confused 
+			continue;
+		}
+
+		if( ! strncmp(opt, _gridshell, opt_len) ) { 
+				// just skip this one, we already processed this in
+				// main_pre_dc_init()  
+			ASSERT( is_gridshell );
 			continue;
 		}
 
@@ -409,6 +465,11 @@ parseArgs( int argc, char* argv [] )
 		if( job_keyword ) {
 			dprintf( D_ALWAYS, "You cannot use '%s' and specify a "
 					 "shadow host\n", _jobkeyword );
+			usage();
+		}
+		if( job_input_ad ) {
+			dprintf( D_ALWAYS, "You cannot use '%s' and specify a "
+					 "shadow host\n", _jobinputad );
 			usage();
 		}
 		jic = new JICShadow( shadow_host );

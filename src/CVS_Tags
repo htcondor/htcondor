@@ -2,6 +2,17 @@
    The state of the V6_5-branch before merging in the
    V6_5-gridshell3-branch as tagged at gridshell-vdt_1_1_10
 
+8/12/03 gridshell-vdt_1_1_10
+    The state of the V6_5-gridshell3-branch that was used to build the
+    gridshell-related binarines (condor_gridmanager and
+    condor_gridshell) that were used in the VDT 1.1.10 release.
+    (note: the V6_5-gridshell3-branch only exists for src and config)
+
+7/29/03 V6_5-gridshell3-post-V6_5-gridshell2-merge-1
+    The state of the V6_5-gridshell3-branch after it had the changes
+    from V6_5-gridshell2-branch (as tagged at V6_5-gridshell2-merge-1)
+    merged in.
+
 7/29/03 V6_5-gridshell3-branch
    A new branch off of V6_5-branch for further GridShell work.
    Depending on the state of the CVS repository and our plans for the
@@ -12,6 +23,10 @@
    to the starter on V6_5-branch for COD that we want in the
    gridshell.  So, we made a new branch and will merge the changes
    from V6_5-gridshell2-branch into here..  
+
+7/29/03 V6_5-gridshell2-merge-1
+    The state of the V6_5-gridshell2-branch when it was merged into
+    V6_5-gridshell3-branch and then abandoned.
 
 7/28/03 V6_5_4
    The 6.5.4 release, which lives on the V6_5-branch. 

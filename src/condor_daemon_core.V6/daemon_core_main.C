@@ -426,7 +426,10 @@ drop_core_in_log( void )
 			EXCEPT("cannot chdir to dir <%s>",ptmp);
 		}
 	} else {
-		EXCEPT("No LOG directory specified in config file(s)");
+		dprintf( D_FULLDEBUG, 
+				 "No LOG directory specified in config file(s), "
+				 "not calling chdir()\n" );
+		return;
 	}
 #ifdef WIN32
 	{
@@ -1089,14 +1092,6 @@ int main( int argc, char** argv )
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif // of ifndef WIN32
 
-		// Figure out if we're the master or not.  The master is a
-		// special case daemon in many ways, so we want to just set a
-		// flag that we can check instead of doing this strcmp all the
-		// time.  -Derek Wright 1/13/98
-	if ( strcmp(mySubSystem,"MASTER") == 0 ) {
-		is_master = 1;
-	}
-
 	// set myName to be argv[0] with the path stripped off
 	myName = basename(argv[0]);
 	myDistro->Init( argc, argv );
@@ -1108,6 +1103,21 @@ int main( int argc, char** argv )
 		// stuff so that our client side can do stuff before we start
 		// messing with argv[]
 	main_pre_dc_init( argc, argv );
+
+		// Make sure this is set, since DaemonCore needs it for all
+		// sorts of things, and it's better to clearly EXCEPT here
+		// than to seg fault down the road...
+	if( ! mySubSystem ) {
+		EXCEPT( "Programmer error: mySubSystem is NULL!" );
+	}
+
+		// Figure out if we're the master or not.  The master is a
+		// special case daemon in many ways, so we want to just set a
+		// flag that we can check instead of doing this strcmp all the
+		// time.  -Derek Wright 1/13/98
+	if( strcmp(mySubSystem,"MASTER") == 0 ) {
+		is_master = 1;
+	}
 
 	// strip off any daemon-core specific command line arguments
 	// from the front of the command line.
@@ -1423,6 +1433,14 @@ int main( int argc, char** argv )
 	if (global_config_file != "") {
 		dprintf(D_ALWAYS, "Using config file: %s\n", 
 				global_config_file.GetCStr());
+	} else {
+		const char* env_name = EnvGetName( ENV_CONFIG );
+		char* env = getenv( env_name );
+		if( env ) {
+			dprintf(D_ALWAYS, 
+					"%s is set to '%s', not reading a config file\n",
+					env_name, env );
+		}
 	}
 	if (global_root_config_file != "") {
 		dprintf(D_ALWAYS, "Using root config file: %s\n", 

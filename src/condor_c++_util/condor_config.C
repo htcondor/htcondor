@@ -103,6 +103,7 @@ BUCKET	*ConfigTab[TABLESIZE];
 static ExtraParamTable *extra_info = NULL;
 static char* tilde = NULL;
 extern DLL_IMPORT_MAGIC char **environ;
+static bool have_config_file = true;
 
 MyString global_config_file;
 MyString global_root_config_file;
@@ -226,7 +227,14 @@ real_config(char* host, int wantsQuiet)
 	fill_attributes();
 
 		// Try to find the global config file
-	if( ! (config_file = find_global()) ) {
+
+	char* env = getenv( EnvGetName(ENV_CONFIG) );
+	if( env && stricmp(env, "ONLY_ENV") == MATCH ) {
+			// special case, no config file desired
+		have_config_file = false;
+	}
+
+	if( have_config_file && ! (config_file = find_global()) ) {
 		if( wantsQuiet ) {
 			fprintf( stderr, "%s error: can't find config file.\n",
 					 myDistro->GetCap() ); 
@@ -260,10 +268,11 @@ real_config(char* host, int wantsQuiet)
 	}
 
 		// Read in the global file
-	process_file( config_file, "global config file", NULL );
-	global_config_file = config_file;
-	
-	free( config_file );
+	if( have_config_file ) {
+		process_file( config_file, "global config file", NULL );
+		global_config_file = config_file;
+		free( config_file );
+	}
 
 		// Insert entries for "hostname" and "full_hostname".  We do
 		// this here b/c we need these macros defined so that we can
@@ -1036,9 +1045,12 @@ set_toplevel_runtime_config()
 			tmp = param("LOG");
 			if (!tmp) {
 				if ( strcmp(mySubSystem,"SUBMIT")==0 || 
-					 strcmp(mySubSystem,"TOOL")==0 )
+					 strcmp(mySubSystem,"TOOL")==0 ||
+					 ! have_config_file )
 				{
 						// we are just a tool, not a daemon.
+						// or, we were explicitly told we don't have
+						// the usual config files.
 						// thus it is not imperative that we find what we
 						// were looking for...
 					toplevel_runtime_config[0] = '\0';

@@ -220,6 +220,7 @@ class MyString
 	bool vsprintf_cat(const char *format, va_list args);
 
 	void lower_case(void);
+	void upper_case(void);
 
 	/** If the last character in the string is a newline, remove
 		it (by setting it to '\0' and decrementing Len).

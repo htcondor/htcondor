@@ -179,7 +179,9 @@ public:
 
 
 	void setOutputAdFile( const char* path );
-	void writeOutputAdFile( ClassAd* ad );
+	const char* getOutputAdFile( void ) { return job_output_ad_file; };
+	bool writeOutputAdFile( ClassAd* ad );
+	void initOutputAdFile( void );
 
 		// // // // // // // // // // // //
 		// Misc utilities
@@ -273,6 +275,7 @@ protected:
 	char* job_iwd;
 
 	char* job_output_ad_file;
+	bool job_output_ad_is_stdout;
 	
 		/// The ClassAd for our job.  We control the memory for this.
 	ClassAd* job_ad;

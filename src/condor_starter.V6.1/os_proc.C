@@ -37,7 +37,6 @@
 #include "sig_name.h"
 #include "exit.h"
 #include "condor_uid.h"
-#include "condor_distribution.h"
 #ifdef WIN32
 #include "perm.h"
 #endif
@@ -51,14 +50,13 @@ OsProc::OsProc( ClassAd* ad )
 {
     dprintf ( D_FULLDEBUG, "In OsProc::OsProc()\n" );
 	JobAd = ad;
-	JobPid = -1;
-	exit_status = -1;
-	requested_exit = false;
-	job_suspended = FALSE;
+	is_suspended = false;
 	num_pids = 0;
 	dumped_core = false;
 	job_iwd = NULL;
+	UserProc::initialize();
 }
+
 
 OsProc::~OsProc()
 {
@@ -89,8 +87,6 @@ OsProc::StartJob()
 		return 0;
 	}
 
-	initKillSigs();
-
 		// // // // // // 
 		// Arguments
 		// // // // // // 
@@ -112,6 +108,19 @@ OsProc::StartJob()
 			return 0;
 		}
 	}
+
+	if( Starter->isGridshell() ) {
+			// if we're a gridshell, just try to chmod our job, since
+			// globus probably transfered it for us and left it with
+			// bad permissions...
+		priv_state old_priv = set_user_priv();
+		int retval = chmod( JobName, S_IRWXU | S_IRWXO | S_IRWXG );
+		set_priv( old_priv );
+		if( retval < 0 ) {
+			dprintf ( D_ALWAYS, "Failed to chmod %s!\n", JobName );
+			return 0;
+		}
+	} 
 
 	char Args[_POSIX_ARG_MAX];
 	char tmp[_POSIX_ARG_MAX];
@@ -195,30 +204,10 @@ OsProc::StartJob()
 		free( env_str );
 	}
 
-	// Now, add some env vars the user job might want to see:
-	char	envName[256];
-	sprintf( envName, "%s_SCRATCH_DIR", myDistro->GetUc() );
-	job_env.Put( envName, Starter->GetWorkingDir() );
+		// Now, let the starter publish any env vars it wants to into
+		// the mainjob's env...
+	Starter->PublishToEnv( &job_env );
 
-		// Deal with port regulation stuff
-	char* low = param( "LOWPORT" );
-	char* high = param( "HIGHPORT" );
-	if( low && high ) {
-		sprintf( envName, "_%s_HIGHPORT", myDistro->Get() );
-		job_env.Put( envName, high );
-		sprintf( envName, "_%s_LOWPORT", myDistro->Get() );
-		job_env.Put( envName, low );
-		free( high );
-		free( low );
-	} else if( low ) {
-		dprintf( D_ALWAYS, "LOWPORT is defined but HIGHPORT is not, "
-				 "ignoring LOWPORT\n" );
-		free( low );
-	} else if( high ) {
-		dprintf( D_ALWAYS, "HIGHPORT is defined but LOWPORT is not, "
-				 "ignoring HIGHPORT\n" );
-		free( high );
-    }
 
 		// // // // // // 
 		// Standard Files
@@ -472,36 +461,9 @@ OsProc::StartJob()
 
 	dprintf(D_ALWAYS,"Create_Process succeeded, pid=%d\n",JobPid);
 
+	job_start_time.getTime();
+
 	return 1;
-}
-
-
-void
-OsProc::initKillSigs( void )
-{
-	int sig;
-
-	sig = findSoftKillSig( JobAd );
-	if( sig >= 0 ) {
-		soft_kill_sig = sig;
-	} else {
-		soft_kill_sig = SIGTERM;
-	}
-
-	sig = findRmKillSig( JobAd );
-	if( sig >= 0 ) {
-		rm_kill_sig = sig;
-	} else {
-		rm_kill_sig = SIGTERM;
-	}
-
-	const char* tmp = signalName( soft_kill_sig );
-	dprintf( D_FULLDEBUG, "KillSignal: %d (%s)\n", soft_kill_sig, 
-			 tmp ? tmp : "Unknown" );
-
-	tmp = signalName( rm_kill_sig );
-	dprintf( D_FULLDEBUG, "RmKillSignal: %d (%s)\n", rm_kill_sig, 
-			 tmp ? tmp : "Unknown" );
 }
 
 
@@ -513,6 +475,8 @@ OsProc::JobCleanup( int pid, int status )
 	if( JobPid != pid ) {		
 		return 0;
 	}
+
+	job_exit_time.getTime();
 
 		// save the exit status for future use.
 	exit_status = status;
@@ -603,22 +567,22 @@ void
 OsProc::Suspend()
 {
 	daemonCore->Send_Signal(JobPid, SIGSTOP);
-	job_suspended = TRUE;
+	is_suspended = true;
 }
 
 void
 OsProc::Continue()
 {
 	daemonCore->Send_Signal(JobPid, SIGCONT);
-	job_suspended = FALSE;
+	is_suspended = false;
 }
 
 bool
 OsProc::ShutdownGraceful()
 {
-	if ( job_suspended == TRUE )
+	if ( is_suspended ) {
 		Continue();
-
+	}
 	requested_exit = true;
 	daemonCore->Send_Signal(JobPid, soft_kill_sig);
 	return false;	// return false says shutdown is pending	
@@ -644,7 +608,7 @@ OsProc::PublishUpdateAd( ClassAd* ad )
 
 	if( exit_status >= 0 ) {
 		sprintf( buf, "%s=\"Exited\"", ATTR_JOB_STATE );
-	} else if( job_suspended ) {
+	} else if( is_suspended ) {
 		sprintf( buf, "%s=\"Suspended\"", ATTR_JOB_STATE );
 	} else {
 		sprintf( buf, "%s=\"Running\"", ATTR_JOB_STATE );
@@ -655,35 +619,11 @@ OsProc::PublishUpdateAd( ClassAd* ad )
 	ad->Insert( buf );
 
 	if( exit_status >= 0 ) {
-			/*
-			  If we have the exit status, we want to parse it and set
-			  some attributes which describe the status in a platform
-			  independent way.  This way, we're sure we're analyzing
-			  the status integer with the platform-specific macros
-			  where it came from, instead of assuming that WIFEXITED()
-			  and friends will work correctly on a status integer we
-			  got back from a different platform.
-			*/
-		if( WIFSIGNALED(exit_status) ) {
-			sprintf( buf, "%s = TRUE", ATTR_ON_EXIT_BY_SIGNAL );
-			ad->Insert( buf );
-			sprintf( buf, "%s = %d", ATTR_ON_EXIT_SIGNAL, 
-					 WTERMSIG(exit_status) );
-			ad->Insert( buf );
-			sprintf( buf, "%s = \"died on %s\"", ATTR_EXIT_REASON,
-					 daemonCore->GetExceptionString(WTERMSIG(exit_status)) );
-			ad->Insert( buf );
-		} else {
-			sprintf( buf, "%s = FALSE", ATTR_ON_EXIT_BY_SIGNAL );
-			ad->Insert( buf );
-			sprintf( buf, "%s = %d", ATTR_ON_EXIT_CODE, 
-					 WEXITSTATUS(exit_status) );
-			ad->Insert( buf );
-		}
 		if( dumped_core ) {
 			sprintf( buf, "%s = True", ATTR_JOB_CORE_DUMPED );
 			ad->Insert( buf );
 		} // should we put in ATTR_JOB_CORE_DUMPED = false if not?
 	}
-	return true;
+
+	return UserProc::PublishUpdateAd( ad );
 }

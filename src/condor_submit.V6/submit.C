@@ -167,6 +167,7 @@ char	*NiceUser		= "nice_user";
 
 char	*X509UserProxy	= "x509userproxy";
 char	*GlobusScheduler = "globusscheduler";
+char    *GridShell = "gridshell";
 char	*GlobusRSL = "globusrsl";
 char	*RendezvousDir	= "rendezvousdir";
 
@@ -2824,6 +2825,7 @@ SetGlobusParams()
 	char buff[2048];
 	char *globushost;
 	char *tmp;
+	char *use_gridshell;
 
 	if ( JobUniverse != CONDOR_UNIVERSE_GLOBUS )
 		return;
@@ -2850,6 +2852,15 @@ SetGlobusParams()
 	}
 
 	free( globushost );
+
+	if ( use_gridshell = condor_param( GridShell ) ) {
+		if( use_gridshell[0] == 't' || use_gridshell[0] == 'T' ) {
+			MyString tmp;
+			tmp.sprintf( "%s = TRUE", ATTR_USE_GRID_SHELL );
+			InsertJobExpr( tmp.GetCStr() );
+		}
+		free(use_gridshell);
+	}
 
 	sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_CONTACT_STRING,
 			 NULL_JOB_CONTACT );
