@@ -1,6 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Installation of Condor}
-\label{sec:install}
+\section{\label{sec:install}Installation of Condor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This section contains the instructions for installing Condor at your
@@ -39,7 +38,10 @@ to \Email{majordomo@cs.wisc.edu} with the body:
    subscribe condor-world 
 \end{verbatim}
 
-\subsection{Preparing to Install Condor}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Preparing-to-Install}Preparing to Install
+Condor} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Before you install Condor at your site, there are a few important
 decisions you must make about the basic layout of your pool.  These
@@ -72,7 +74,9 @@ If you feel you already know the answers to these questions, you can
 skip to the 'Installation Procedure' section below, section~\ref{install:procedure}.
 If you are unsure about any of them, read on.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{What machine will be the Central Manager?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 One machine in your pool must be the Central Manager.  You should
 setup and install Condor on this machine first.  This is the
@@ -89,7 +93,9 @@ default every 5 minutes) to this machine, it is advisable to consider
 network traffic and your network layout when choosing your central
 manager.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Will Condor run as root or not?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 We strongly recommend that you start up the Condor daemons as root.
 Otherwise, Condor can do very little to enforce security and policy
@@ -99,7 +105,9 @@ like.  However, there are serious security consequences of this.
 Please see section~\ref{sec:Non-Root} on page~\pageref{sec:Non-Root}
 in the manual for details on running Condor as non-root.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Who will be administering Condor on the machines in your pool?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Either root will be administering Condor directly, or someone else
 would be acting as the Condor administrator.  If root has delegated
@@ -114,8 +122,10 @@ condor\_config.root file while other settings that only control policy
 or condor-specific settings can still be controlled without root
 access.  
 
-\subsubsection{Will you have a 'condor' user and will it's home directory be
-   shared? }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Will you have a 'condor' user and will it's home
+directory be shared? }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 To simplify installation of Condor at your site, we recommend that you
 create a 'condor' user on all machines in your pool.  The condor
@@ -136,7 +146,10 @@ the ownership of various Condor files.  See section~\ref{sec:uids} on
 ``UIDs in Condor'' on page~\pageref{sec:uids} in the Administrator's
 Manual for details.
 
-\subsubsection{Where should the machine-specific directories for Condor go?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Where should the machine-specific directories for
+Condor go?} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Condor needs a few directories that are unique on every machine in
 your pool.  These are 'spool', 'log', and 'execute'.  Generally, all
@@ -211,7 +224,11 @@ problems for your machines.  Ideally, you'd have a separate partition
 for the Condor directories that the only consequence of filling up
 would be Condor's malfunction, not your whole machine.
 
-\subsubsection{Where should the parts of the Condor system be installed?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Where should the parts of the Condor system be
+installed?} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 	\begin{itemize}
 	\item Config Files
 	\item Release directory
@@ -339,7 +356,9 @@ documentation on the web at:
 
 \end{description}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Am I using AFS?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 If you are using AFS at your site, be sure to read the
 section~\ref{sec:Condor-AFS} on page~\pageref{sec:Condor-AFS} in the
@@ -353,7 +372,9 @@ centralized location.  You will also have to do something special if
 you submit jobs to Condor from a directory on AFS.  Again, read manual
 section~\ref{sec:Condor-AFS} for all the gory details.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Do I have enough disk space for Condor?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The Condor release directory takes up a fair amount of space.  This is
 another reason why it's a good idea to have it on a shared
@@ -379,9 +400,9 @@ In addition, you will need a lot of disk space in the local directory
 of any machines that are submitting jobs to Condor.  See question 5
 above for details on this.
 
-
-\subsection{Installation Procedure}
-\label{install:procedure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{install:procedure}Installation Procedure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 IF YOU HAVE DECIDED TO CREATE A 'condor' USER AND GROUP, YOU SHOULD DO
 THAT ON ALL YOUR MACHINES BEFORE YOU DO ANYTHING ELSE.
@@ -439,7 +460,9 @@ steps.  Each step is clearly numbered.  The following section explains
 what each step is for, and suggests how to answer the questions
 \Condor{install} will ask you for each one.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\Condor{install}, step-by-step}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{description}
 \item[STEP 1: What type of Condor installation do you want?]
@@ -563,7 +586,9 @@ At this point, the remaining steps are different depending on what
 kind of installation you are doing.  Skip to the appropriate section
 depending on what kind of installation you selected in STEP 1 above.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Full Install}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{description}
 
@@ -593,7 +618,6 @@ depending on what kind of installation you selected in STEP 1 above.
      creates all the needed subdirectories of each one with the proper
      permissions.  They should have the following permissions and
      ownerships:
-
 \begin{verbatim}
      drwxr-xr-x   2 condor   root         1024 Mar  6 01:30 execute/
      drwxr-xr-x   2 condor   root         1024 Mar  6 01:30 log/
@@ -645,11 +669,15 @@ Once you have completed STEP 9, you're done.  \Condor{install} prints
 out a messages describing what to do next.  Please skip to 
 section~\ref{installed-now-what}.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Submit Only}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \Todo
 
-\subsection{Condor is installed... now what?}
-\label{installed-now-what}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{installed-now-what}Condor is installed... now what?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Now that Condor has been installed on your machine(s), there are a few
 things you should check before you start up Condor.
@@ -688,7 +716,9 @@ things you should check before you start up Condor.
 
 \end{enumerate}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Starting up the Condor daemons}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 To start up the Condor daemons, all you need to do is execute
 \Release{sbin/condor\_master}.  This is the Condor master, whose
@@ -758,7 +788,10 @@ If your system uses BSD style boot scripts, you probably have an
 \Release{sbin/condor\_master} and you're done.
 
 
-\subsection{The Condor daemons are running... now what?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Running-Now-What}The Condor daemons are
+running... now what?} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Now that the Condor daemons are running, there are a few things you
 can and should do:

@@ -1,5 +1,7 @@
 SUBDIR = v6.1
 SUBVER = V6_1
+MANDIR = /p/condor/public/html/manual/$(SUBDIR)
+TARGETDIR = $(MANDIR).new
 all:  ref.dvi
 #all:  man.ps
 
@@ -24,9 +26,8 @@ ref.pdf:
 	rm -f ref.dvi
 	rm -f ref.ps
 
-release-pdf: ref.pdf
-	cp ref.pdf /p/condor/public/html/manual/$(SUBDIR).new/condor-$(SUBVER)-Manual.pdf
-
+release-pdf: ref.pdf $(TARGETDIR)
+	cp ref.pdf $(TARGETDIR)/condor-$(SUBVER)-Manual.pdf
 
 ref.dvi: 
 	rm -f timesfont.tex
@@ -46,15 +47,15 @@ ref.dvi:
 ref.ps: ref.dvi
 	dvips ref.dvi
 
-release-ps: ref.ps
-	cp ref.ps /p/condor/public/html/manual/$(SUBDIR).new/ref.ps
-	cp /p/condor/public/html/manual/$(SUBDIR).new/ref.ps /p/condor/public/html/manual/$(SUBDIR).new/condor-$(SUBVER)-Manual.ps
-	compress /p/condor/public/html/manual/$(SUBDIR).new/condor-$(SUBVER)-Manual.ps
-	cp /p/condor/public/html/manual/$(SUBDIR).new/ref.ps /p/condor/public/html/manual/$(SUBDIR).new/condor-$(SUBVER)-Manual.ps
-	gzip /p/condor/public/html/manual/$(SUBDIR).new/condor-$(SUBVER)-Manual.ps
-	mv /p/condor/public/html/manual/$(SUBDIR).new/ref.ps /p/condor/public/html/manual/$(SUBDIR).new/condor-$(SUBVER)-Manual.ps
+release-ps: ref.ps $(TARGETDIR)
+	cp ref.ps $(TARGETDIR)/ref.ps
+	cp $(TARGETDIR)/ref.ps $(TARGETDIR)/condor-$(SUBVER)-Manual.ps
+	compress $(TARGETDIR)/condor-$(SUBVER)-Manual.ps
+	cp $(TARGETDIR)/ref.ps $(TARGETDIR)/condor-$(SUBVER)-Manual.ps
+	gzip $(TARGETDIR)/condor-$(SUBVER)-Manual.ps
+	mv $(TARGETDIR)/ref.ps $(TARGETDIR)/condor-$(SUBVER)-Manual.ps
 
-ref.html:  
+ref.html: $(TARGETDIR)
 	rm -f timesfont.tex
 	echo "% do not want times" > timesfont.tex
 	rm -f fontsize.tex
@@ -71,16 +72,17 @@ ref.html:
 	latex2html -address condor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers ref.tex
 	rm -f ref.dvi
 	mv ref ref.new
-	mv -f ref.new/*  /p/condor/public/html/manual/$(SUBDIR).new
-	mv -f ref.new/.??*  /p/condor/public/html/manual/$(SUBDIR).new
+	mv -f ref.new/* $(TARGETDIR)
+	mv -f ref.new/.??* $(TARGETDIR)
 	rmdir ref.new
+	touch ref.html
 
-release-html: 
-	make ref.html
-	rm -rf /p/condor/public/html/manual/$(SUBDIR).old
-	mv -f /p/condor/public/html/manual/$(SUBDIR) /p/condor/public/html/manual/$(SUBDIR).old
-	mv -f /p/condor/public/html/manual/$(SUBDIR).new /p/condor/public/html/manual/$(SUBDIR)
+release-html: ref.html $(TARGETDIR)
+	rm -rf $(MANDIR).old
+	mv -f $(MANDIR) $(MANDIR).old
+	mv -f $(TARGETDIR) $(MANDIR)
 	/p/condor/public/cgi-bin/manual/$(SUBDIR)-links/human_header_links.pl
+	rm -f ref.html
 
 admin-man/machine-states.eps: admin-man/machine-states.fig
 	rm -f $@
@@ -100,14 +102,17 @@ user-man/dagman-diamond.eps: user-man/dagman-diamond.fig
 
 figures: admin-man/machine-states.eps admin-man/machine-activities.eps admin-man/pool-arch.eps user-man/dagman-diamond.eps
 
+$(TARGETDIR):
+	mkdir $(TARGETDIR)
+
 clean:
-	rm -rf ref man user admin *.dvi *.ps *.html *.log *.aux *.toc *.pdf
-	rm -rf */*.log
-#	rm -rf /p/condor/public/html/manual/$(SUBDIR).new
+	rm -rf ref man user admin *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log
+
+reallyclean: clean
+	rm -rf $(TARGETDIR)
 
 release:
-	make clean
-	mkdir /p/condor/public/html/manual/$(SUBDIR).new
+	make reallyclean
 	make release-ps
 	make release-pdf
 	make release-html

@@ -1,6 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Setting Up IP/Host-Based Security in Condor}
-\label{sec:Host-Security}
+\section{\label{sec:Host-Security}Setting Up IP/Host-Based Security in
+Condor} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This section describes the mechanisms for setting up Condor's
@@ -18,8 +18,7 @@ machines.  Finally, we provide some examples of how you might
 configure your pool.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{How does it work?}
-\label{sec:How-Host-Security-Works}
+\subsection{\label{sec:How-Host-Security-Works}How does it work?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Inside the Condor daemons or tools that use DaemonCore (see
@@ -45,8 +44,7 @@ administrator access on to machine ``bar'', you need to put ``foo'' in
 bar's config file access list, not the other way around.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Security Access Levels}
-\label{sec:Security-Access-Levels}
+\subsection{\label{sec:Security-Access-Levels}Security Access Levels} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The following are the various access levels that commands within
@@ -114,8 +112,7 @@ Condor can be registered with:
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Configuring your Pool}
-\label{sec:Config-DCPerms}
+\subsection{\label{sec:Config-DCPerms}Configuring your Pool}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \DCPerm{NEGOTIATOR} permission is handled automatically by Condor, and
@@ -185,14 +182,13 @@ section~\ref{sec:Condor-Subsystem-Names} on ``Subsystem Names''),
 which is one of: ``STARTD'', ``SCHEDD'', ``MASTER'', ``NEGOTIATOR'',
 or ``COLLECTOR''.  For example, if you wanted to grant different read
 access for the \Condor{schedd}:
-
 \begin{verbatim}
         HOSTALLOW_READ_SCHEDD = <machines>
 \end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Access Levels each Daemons Uses}
-\label{sec:DCPerm-per-Daemon}
+\subsection{\label{sec:DCPerm-per-Daemon}Access Levels each Daemons
+Uses} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Here are all the commands registered in Condor, what daemon registers
@@ -284,8 +280,7 @@ access:
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Access Level Examples}
-\label{sec:DCPerm-Examples}
+\subsection{\label{sec:DCPerm-Examples}Access Level Examples}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Notice in all these examples that \DCPerm{ADMINISTRATOR} access is
@@ -296,16 +291,13 @@ a small number of machines.  We recommend this.
 
 \item Let anyone join your pool.  Only your central manager has
 administrative access (this is the default that ships with Condor)
-
 \begin{verbatim}
 HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST)
 HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
 \end{verbatim}
 
-
 \item Only allow machines at NCSA to join or view the pool, Central
 Manager is the only machine with \DCPerm{ADMINISTRATOR} access.
-
 \begin{verbatim}
 HOSTALLOW_READ = *.ncsa.uiuc.edu
 HOSTALLOW_WRITE = *.ncsa.uiuc.edu
@@ -313,13 +305,11 @@ HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST)
 HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
 \end{verbatim}
 
-
 \item Only allow machines at NCSA and U of I Math department join the
 pool, EXCEPT do \textbf{not} allow lab machines to do so.  Also do not
 allow the 177.55 subnet (perhaps this is the dial-in subnet).  Allow
 anyone to view pool statistics.  Only let "bigcheese" administer the
 pool (not the central manager).
-
 \begin{verbatim}
 HOSTALLOW_WRITE = *.ncsa.uiuc.edu, *.math.uiuc.edu
 HOSTDENY_WRITE = lab-*.edu, *.lab.uiuc.edu, 177.55.*
@@ -336,7 +326,6 @@ onto multiple lines, making it more readable (this works for all
 config file entries, not just host access entries, see
 section~\ref{sec:Configuring-Condor} on ``Configuring Condor'' for
 details).
-
 \begin{verbatim}
 HOSTALLOW_READ = *.ncsa.uiuc.edu, *.cs.wisc.edu
 HOSTALLOW_WRITE = *.ncsa.uiuc.edu, raven.cs.wisc.edu
@@ -350,7 +339,6 @@ pool, but only let machines at NCSA view the job queues.  Only NCSA
 machines can join the pool. The central manager, bigcheese, and
 biggercheese can perform most administrative functions.  However, only
 ``biggercheese'' can update user priorities.
-
 \begin{verbatim}
 HOSTDENY_READ = *.mil
 HOSTALLOW_READ_SCHEDD = *.ncsa.uiuc.edu 

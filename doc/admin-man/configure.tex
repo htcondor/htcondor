@@ -1,6 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Configuring Condor}
-\label{sec:Configuring-Condor}
+\section{\label{sec:Configuring-Condor}
+Configuring Condor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This section describes how to configure all parts of the Condor
@@ -15,8 +15,8 @@ section~\ref{sec:Configuring-Policy} on ``Configuring Condor's Job
 Execution Policy''. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Introduction to Config Files}
-\label{sec:Intro-to-Config-Files}
+\subsection{\label{sec:Intro-to-Config-Files}
+Introduction to Config Files}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The Condor configuration files are used to customize how Condor
@@ -47,8 +47,8 @@ described in sections~\ref{sec:Condor-wide-Config-File-Entries}
 and~\ref{sec:Multiple-Platforms} below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Config File Macros}
-\label{sec:Config-File-Macros}
+\subsubsection{\label{sec:Config-File-Macros}
+Config File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Macro definitions are of the form:
@@ -86,8 +86,8 @@ is not legal, and will result in the Condor daemons and tools exiting
 when they try to parse their config files.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Config File Expressions}
-\label{sec:Config-File-Expressions}
+\subsubsection{\label{sec:Config-File-Expressions}
+Config File Expressions}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Expression definitions are of the form:
@@ -123,8 +123,8 @@ will result in ``Y'' being evaluated as ``yyy'' at run time, but
 will result in ``Y'' having a run time value of ``xxx''.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Other Syntax}
-\label{sec:Other-Syntax}
+\subsubsection{\label{sec:Other-Syntax}
+Other Syntax}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Other than macros and expressions, a Condor config file can contain
@@ -146,8 +146,8 @@ or,
 \end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Pre-Defined Macros and Expressions}
-\label{sec:Pre-Defined-Macros-and-Expressions}
+\subsubsection{\label{sec:Pre-Defined-Macros-and-Expressions}
+Pre-Defined Macros and Expressions}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Condor provides a number of pre-defined macros and expressions that
@@ -228,8 +228,8 @@ right things, we recomend that you do not override them yourself.
 Only do so if you know what you are doing.
   
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Condor Subsystem Names}
-\label{sec:Condor-Subsystem-Names}
+\subsubsection{\label{sec:Condor-Subsystem-Names}
+Condor Subsystem Names}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \textbf{IMPORTANT NOTE:} Many of the entries in the config file will
@@ -255,8 +255,8 @@ In the description of the actual config file entries, ``SUBSYS'' will
 stand for one of these possible subsystem names.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Condor-wide Config File Entries}
-\label{sec:Condor-wide-Config-File-Entries}
+\subsection{\label{sec:Condor-wide-Config-File-Entries}
+Condor-wide Config File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 This section describes settings which effect all parts of the Condor
 system. 
@@ -472,8 +472,8 @@ system.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Daemon Logging Config File Entries}
-\label{sec:Daemon-Logging-Config-File-Entries}
+\subsection{\label{sec:Daemon-Logging-Config-File-Entries}
+Daemon Logging Config File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 These entries control how and where the Condor daemons write their log
@@ -624,8 +624,8 @@ Log files may optionally be specified per debug level as follows:
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{DaemonCore Config File Entries}
-\label{sec:DaemonCore-Config-File-Entries}
+\subsection{\label{sec:DaemonCore-Config-File-Entries}
+DaemonCore Config File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Please read section~\ref{sec:DaemonCore} on ``DaemonCore'' for details
@@ -706,8 +706,8 @@ server, shadow, and starter, none of which use DaemonCore yet).
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Shared Filesystem Config File Entries}
-\label{sec:Shared-Filesystem-Config-File-Entries}
+\subsection{\label{sec:Shared-Filesystem-Config-File-Entries}
+Shared Filesystem Config File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 These entries control how Condor interacts with various shared and
@@ -918,8 +918,8 @@ AFS''
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Checkpoint Server Config File Entries}
-\label{sec:Checkpoint-Server-Config-File-Entries}
+\subsection{\label{sec:Checkpoint-Server-Config-File-Entries}
+Checkpoint Server Config File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 These entries control whether or not Condor user a checkpoint server.
@@ -973,8 +973,8 @@ checkpoint server host (see below).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\condor{master} Config File Entries}
-\label{sec:Master-Config-File-Entries}
+\subsection{\label{sec:Master-Config-File-Entries}
+\condor{master} Config File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 These settings control the \Condor{master}.
@@ -1171,8 +1171,8 @@ won't want to change them for any reason.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\condor{startd} Config File Entries}
-\label{sec:Startd-Config-File-Entries}
+\subsection{\label{sec:Startd-Config-File-Entries}
+\condor{startd} Config File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 These settings control general operation of the \Condor{startd}.
@@ -1281,8 +1281,8 @@ SMP Machines'' for more details.
 \input{admin-man/smp-params.tex}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\condor{schedd} Config File Entries}
-\label{sec:Schedd-Config-File-Entries}
+\subsection{\label{sec:Schedd-Config-File-Entries}
+\condor{schedd} Config File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 These settings control the \Condor{schedd}.
@@ -1426,8 +1426,8 @@ These settings control the \Condor{schedd}.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\condor{shadow} Config File Entries}
-\label{sec:Shadow-Config-File-Entries}
+\subsection{\label{sec:Shadow-Config-File-Entries}
+\condor{shadow} Config File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This setting effects the \Condor{shadow}
@@ -1452,8 +1452,8 @@ This setting effects the \Condor{shadow}
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\condor{shadow.pvm} Config File Entries}
-\label{sec:Shadow-PVM-Config-File-Entries}
+\subsection{\label{sec:Shadow-PVM-Config-File-Entries}
+\condor{shadow.pvm} Config File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 These settings control the \Condor{shadow.pvm}, the special shadow
@@ -1482,8 +1482,8 @@ Condor'' for details.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\condor{starter} Config File Entries}
-\label{sec:Starter-Config-File-Entries}
+\subsection{\label{sec:Starter-Config-File-Entries}
+\condor{starter} Config File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This setting effects the \Condor{starter}.
@@ -1520,8 +1520,8 @@ This setting effects the \Condor{starter}.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\condor{submit} Config File Entries}
-\label{sec:Submit-Config-File-Entries}
+\subsection{\label{sec:Submit-Config-File-Entries}
+\condor{submit} Config File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 If you want \Condor{submit} to automatically append an expression to
@@ -1571,8 +1571,8 @@ as:
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\condor{preen} Config File Entries}
-\label{sec:Preen-Config-File-Entries}
+\subsection{\label{sec:Preen-Config-File-Entries}
+\condor{preen} Config File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 These settings control \Condor{preen}.
@@ -1604,8 +1604,8 @@ These settings control \Condor{preen}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\condor{collector} Config File Entries}
-\label{sec:Collector-Config-File-Entries}
+\subsection{\label{sec:Collector-Config-File-Entries}
+\condor{collector} Config File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 These settings control the \Condor{collector}.
@@ -1701,8 +1701,8 @@ These settings control the \Condor{collector}.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\condor{negotiator} Config File Entries}
-\label{sec:Negotiator-Config-File-Entries}
+\subsection{\label{sec:Negotiator-Config-File-Entries}
+\condor{negotiator} Config File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 These settings control the \Condor{negotiator}.

@@ -1,4 +1,3 @@
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Welcome to Condor}  
 %
@@ -316,8 +315,9 @@ can be used when either the Standard Universe's additional services are not
 desired or when the job cannot abide by the Standard Universe's
 restrictions.
 
-\subsubsection{Standard Universe}
-\label{sec:standard-universe}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:standard-universe}Standard Universe}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 In the Standard Universe, which is the default, Condor will
 automatically make checkpoints (take a snapshot of its current state) of
@@ -637,8 +637,9 @@ set a job's priority to be, it will not alter your user priority in
 relation to other users.  Job priorities range from -20 to +20, with +20
 being the best and -20 the worst.  
 
-\subsection{User priority}
-\label{sec:user-priority-explained}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:user-priority-explained}User priority}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Machines are allocated to users based upon that user's priority. User
 priorities in Condor can be examined with the \Condor{userprio}
@@ -698,18 +699,18 @@ the Condor administrators could set the numerical priority of any
 individual Condor user, such as a guest account, so that these guest
 accounts would only use cycles not wanted by other users of the system.
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Parallel Applications in Condor: Condor-PVM}
-\label{sec:PVM}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{user-man/pvm.tex}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{user-man/dagman.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{More about how Condor vacates a job}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:Vacate-Explained}
+More about how Condor vacates a job}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 When Condor needs to vacate a job from a machine for whatever reason, it
 sends the job an asynchronous signal specified in the ``KillSig''

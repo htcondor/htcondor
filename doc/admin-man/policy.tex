@@ -1,6 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Configuring The Startd Policy}
-\label{sec:Configuring-Policy}
+\section{\label{sec:Configuring-Policy}
+Configuring The Startd Policy}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This section describes how to configure the \Condor{startd} to
@@ -54,8 +54,8 @@ you an idea of what is possible for your policy decisions.
 Finally, we offer two example policy settings.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Machine ClassAd Attributes}
-\label{sec:Machine-Attributes}
+\subsection{\label{sec:Startd-Attributes}
+Startd ClassAd Attributes}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The \Condor{startd} represents the machine on which it is running to
@@ -70,15 +70,15 @@ The attributes themselves and what they represent are described below:
 \input{user-man/machad.tex}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Job ClassAd Attributes}
-\label{sec:Job-Attributes}
+\subsection{\label{sec:Job-Attributes}
+Job ClassAd Attributes}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \Todo
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{The START expression}
-\label{sec:Start-Expr}
+\subsection{\label{sec:Start-Expr}
+The START expression}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The most important expression in the startd (and possibly in all of
@@ -99,10 +99,10 @@ matching with other jobs.  The startd just always defines the
 \Expr{Requirements} expression as the \Expr{START} expression.
 However, in situations where the machine wants to make itself
 unavailable for further matches, it sets its \Expr{Requirements}
-expression to False, not its \Expr{START} expression.  When the
-\Expr{START} expression \Term{locally evaluates} to true, the machine
-advertises the \Expr{Requirements} expression as ``True'' and doesn't
-even publish the \Expr{START} expression.
+expression to False, not its \Expr{START} expression.  
+When the \Expr{START} expression \Term{locally evaluates} to true, the
+machine advertises the \Expr{Requirements} expression as ``True'' and
+doesn't even publish the \Expr{START} expression.
 
 Normally, the expressions in the machine ClassAd are evaluated against
 certain request ClassAds in the \Condor{negotiator} to see if there is
@@ -128,16 +128,17 @@ how undefined terms are handled in ClassAd expression evaluation.
         PREEMPT : False
         KILL : False
 \end{verbatim}
-This way, Condor jobs would always run and would never be kicked off.
-However, because they would run with ``nice priority'', interactive
-response on your machines would not suffer.
-You probably wouldn't even notice Condor was running the jobs,
-assuming you had enough free memory for the Condor jobs so that you
-weren't swapping all the time.
+  This way, Condor jobs would always run and would never be kicked
+  off. 
+  However, because they would run with ``nice priority'', interactive 
+  response on your machines would not suffer.
+  You probably wouldn't even notice Condor was running the jobs, 
+  assuming you had enough free memory for the Condor jobs so that you 
+  weren't swapping all the time.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{The RANK expression}
-\label{sec:Rank-Expression}
+\subsection{\label{sec:Rank-Expression}
+The RANK expression}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 A machine can be configured to prefer running certain jobs over other
@@ -183,7 +184,6 @@ config file \File{bass.local}:
         RANK : Owner == "coltrane" + Owner == "tyner" \
                + (Owner == "garrison") * 10 + Owner == "jones"
 \end{verbatim}
-
 Notice, we're using ``+'' instead of ``\Bar\Bar'', since we want to be able
 to distinguish which terms matched and which ones didn't.  Now, if
 anyone who wasn't in the John Coltrane quartet was running a job on
@@ -218,7 +218,6 @@ jobs, you want to run them, regardless of everyone else's
 \begin{verbatim}
         RANK : (Owner == "coltrane" * 1000000000000) + Imagesize
 \end{verbatim}
-
 This scheme would break down if someone submitted a job with an image
 size of more 10\Circum12 kbytes.  However, if they did, this Rank expression
 preferring their job over yours wouldn't be the only problem Condor
@@ -226,8 +225,8 @@ had. :-)
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Machine States}
-\label{sec:States}
+\subsection{\label{sec:States}
+Machine States}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 A given machine could be in a number of different \Term{states},
@@ -271,8 +270,8 @@ for the various states and the possible transitions between them.
 \end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Machine Activities}
-\label{sec:Activities}
+\subsection{\label{sec:Activities}
+Machine Activities}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Within some of these states, there could be a number of different
@@ -380,8 +379,8 @@ matches a machine with a schedd).  The following section describes the
 conditions that lead to the various state and activity transitions.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{State and Activity Transitions}
-\label{sec:State-and-Activity-Transitions}
+\subsection{\label{sec:State-and-Activity-Transitions}
+State and Activity Transitions}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This section will trace through all possible state and activity
@@ -395,8 +394,8 @@ the Killing activity if you've been in the Vacating activity longer
 than a given amount of time). 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Owner State}
-\label{sec:Owner-State}
+\subsubsection{\label{sec:Owner-State}
+Owner State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 When the startd is first spawned, the machine it represents enters the
@@ -452,8 +451,7 @@ state on its way to the Owner state, if there's a job running that
 needs preempting.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Unclaimed State}
-\label{sec:Unclaimed-State}
+\subsubsection{\label{sec:Unclaimed-State}Unclaimed State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 While in the Unclaimed state, if the \Expr{START} expression locally
@@ -476,7 +474,6 @@ defined in terms of this attribute, for example:
         BenchmarkTimer = (CurrentTime - LastBenchmark)
         RunBenchmarks : $(BenchmarkTimer) >= (4 * $(HOUR))
 \end{verbatim}
-
 Here, a macro, \Macro{BenchmarkTimer} is defined to help write the
 expression.  The idea is that this macro holds the time since the last
 benchmark, so when this time exceeds 4 hours, we run the benchmarks
@@ -510,8 +507,7 @@ However, normally the machine will enter the Matched state (transition
 \Bold{6}), even if it's only for a brief period of time.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Matched State}
-\label{sec:Matched-State}
+\subsubsection{\label{sec:Matched-State}Matched State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The Matched state is not very interesting to Condor.  The only
@@ -698,8 +694,7 @@ Claimed state (all of which we've already discussed), or the
 Preempting state, which is described next.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Preempting State}
-\label{sec:Preempting-State}
+\subsubsection{\label{sec:Preempting-State}Preempting State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The Preempting state is much less complicated than the Claimed state.
@@ -752,8 +747,8 @@ state via transition \Bold{20} (if the job was preempted because a
 better match was found). 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{State/Activity Transition Expression Summary}
-\label{sec:State-Expression-Summary}
+\subsection{\label{sec:State-Expression-Summary}
+State/Activity Transition Expression Summary}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 The following section is meant to summarize the information from the
 previous sections to serve as a quick reference.  If anything is
@@ -817,8 +812,7 @@ unclear here, please refer to the previous sections for clarification.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Example Policy Settings}
-\label{sec:Example-Policy}
+\subsection{\label{sec:Example-Policy}Example Policy Settings}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The following section provides two examples of how you might configure
@@ -828,8 +822,7 @@ comments.  Finally the entire set of macros and expressions are listed
 in one block so you can see them in one place for easy reference.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Default Policy Settings}
-\label{sec:Default-Policy}
+\subsubsection{\label{sec:Default-Policy}Default Policy Settings}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 These settings are the default as shipped with Condor.  They have been
@@ -964,7 +957,6 @@ For larger jobs, we only checkpoint every 12 hours.
 PERIODIC_CHECKPOINT     : ( (ImageSize < 60000) && \
                             ($(LastCkpt) > (6 * $(HOUR))) ) || \ 
                           ( $(LastCkpt) > (12 * $(HOUR)) )
-
 \end{verbatim}
 
 For clarity and reference, the entire set policy settings are included
@@ -1009,8 +1001,8 @@ PERIODIC_CHECKPOINT     : ( (ImageSize < 60000) && \
 \end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{UW-Madison CS Condor Pool Policy Settings}
-\label{sec:UW-Policy}
+\subsubsection{\label{sec:UW-Policy}
+UW-Madison CS Condor Pool Policy Settings} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Due to a recent increase in the number of Condor users and the size of
@@ -1022,7 +1014,6 @@ Basically, whether or not we suspend or vacate jobs is now a function
 of the \Attr{Imagesize} of the job that's currently running (which is
 defined in terms of kilobytes).  We have divided the \Attr{Imagesize}
 into three possible categories, which we define with macros.
-
 \begin{verbatim}
 BigJob          = (ImageSize > (30 * 1024))
 MediumJob       = (ImageSize <= (30 * 1024) && ImageSize >= (10 * 1024))
@@ -1100,7 +1091,6 @@ frequently, we don't want to bog down our network or our checkpoint
 servers.
 So, we only periodic checkpoint small or medium jobs every 12 hours,
 since they get the privilege of checkpointing at eviction time.
-
 \begin{verbatim}
 PERIODIC_CHECKPOINT  : (($(LastCkpt) > (3 * $(HOUR))) \
       && $(BigJob)) || (($(LastCkpt) > (12 * $(HOUR))) && \
@@ -1177,4 +1167,3 @@ Notice that you don't have to do anything special with either the
 If Coltrane's jobs never suspend, they'll never even look at
 \Expr{CONTINE}.  
 Similarly, if they never preempt, they'll never look at \Expr{KILL}. 
-

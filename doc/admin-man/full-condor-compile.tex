@@ -1,6 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Full Installation of \condor{compile}}
-\label{sec:full-condor-compile}
+\subsection{\label{sec:full-condor-compile}Full Installation of
+\condor{compile}} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 In order to take advantage of two major Condor features: checkpointing
@@ -44,8 +44,6 @@ following steps need to be taken:
 
 The actual commands that you must execute depend upon the system that you
 are on.  The location of the system linker (\Prog{ld}), is as follows:
-
-
 \begin{verbatim}
 	Operating System              Location of ld (ld-path)
 	Linux                         /usr/bin
@@ -55,7 +53,6 @@ are on.  The location of the system linker (\Prog{ld}), is as follows:
 
 On these platforms, issue the following commands (as root), where
 \Prog{ld-path} is replaced by the path to your system's \Prog{ld}.
-
 \begin{verbatim}
         mv /[ld-path]/ld /[ld-path]/ld.real
         cp /usr/local/condor/lib/ld /[ld-path]/ld
@@ -67,7 +64,6 @@ On IRIX, things are more complicated in that there are multiple
 \Prog{ld} binaries that need to be moved, and symbolic links need to
 be made in order to convince the linker to work, since it looks at the
 name of it's own binary in order to figure out what to do.
-
 \begin{verbatim}
         mv /usr/lib/ld /usr/lib/ld.real
         mv /usr/lib/uld /usr/lib/uld.real

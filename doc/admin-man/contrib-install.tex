@@ -1,0 +1,26 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:Contrib-Install}Installing Contrib Modules}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This section describes how to install various \Term{contrib modules}
+in the Condor system.
+Some of these modules are separate, optional pieces, not included in
+the main distribution of Condor.
+For example, the checkpoint server, or DagMan.
+Others are integral parts of Condor taken from the development series
+that have certain features users might want to install.
+For example, the new SMP-aware \Condor{startd}, or the CondorView
+collector.  
+Both of these things come automatically with Condor version 6.1 and
+greater.
+However, if you don't want to switch over to using only the
+development binaries, you can install these seperate modules and
+maintain most of the stable release at your site.
+
+\input{admin-man/condor-view-install.tex}
+\input{admin-man/ckpt-server.tex}
+\input{admin-man/pvm-install.tex}
+
+
+
+

@@ -1,3 +1,6 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:PVM}Parallel Applications in Condor: Condor-PVM}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \newcommand{\func}[1]{\texttt{#1}}
 
@@ -19,7 +22,9 @@ file ``condor\_pvmd'' on your system, Condor-PVM is installed.  If not,
 ask your site administrator to download Condor-PVM from
 \Url{http://www.cs.wisc.edu/condor/condor-pvm} and install it.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{What does Condor-PVM do?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Condor-PVM provides a framework to run parallel applications written to
 PVM in Condor's opportunistic environment.  This means that you no
@@ -33,7 +38,9 @@ finds a machine in the Condor pool via the usual mechanisms, and adds it
 to the PVM virtual machine.  If a machine needs to leave the pool, your
 PVM program is notified of that as well via the normal PVM mechanisms.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{The Master-Worker Paradigm}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 There are several different parallel programming paradigms.  One of the
 more common is the \Term{master-worker} (or \Term{pool of tasks})
@@ -65,7 +72,9 @@ master-worker paradigm.  Condor runs the master application on the
 machine where the job was submitted and will not preempt it.  Workers
 are pulled in from the Condor pool as they become available.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Binary Compatibility}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Condor-PVM does not define a new API (application program interface);
 programs can simply use the existing resource management PVM calls such
@@ -83,7 +92,9 @@ This permits easy application development
 (develop your PVM application interactively with the regular PVM console, XPVM,
 etc) as well as binary sharing between Condor and some dedicated MPP systems.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Runtime differences between Condor-PVM and regular PVM}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This release of the Condor-PVM is based on PVM 3.3.11.  The vast majority of the PVM
 library functions under Condor maintain the same semantics as in
@@ -155,7 +166,9 @@ Condor environment in the following list:
 
 \end{itemize}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{A Sample PVM program for Condor-PVM}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Normal PVM applications assume dedicated machines.  However, when running a
 PVM application under Condor, since Condor's environment is an
@@ -622,15 +635,16 @@ main()
 There is also a larger and far more robust application available
 at \Url{http://www.cs.wisc.edu/condor/condor-pvm/}.
 
-\subsection{Sample PVM submit file}
-\label{submit}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:PVM-Submit}Sample PVM submit file}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Like submitting jobs in any other universe,
 to submit a PVM job, the user needs to specify the requirements and
-options in the submit-desciption file and run \Condor{submit}.  Figure~\ref{pvm_submit} on
-page~\pageref{pvm_submit} is an example of
-a submit-description file for a PVM job.  This job has a master PVM program called
-\func{master\_pvm}.
+options in the submit-desciption file and run \Condor{submit}.
+Figure~\ref{fig:pvm_submit} on page~\pageref{fig:pvm_submit} is an
+example of a submit-description file for a PVM job.  
+This job has a master PVM program called \func{master\_pvm}.
 
 \begin{figure}[hbt]
 \CondorSmall
@@ -675,7 +689,7 @@ queue
 \end{verbatim}
 \normalsize
 
-\label{pvm_submit}
+\label{fig:pvm_submit}
 \caption{A sample submit file for PVM jobs.}
 \end{figure}
 

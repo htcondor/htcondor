@@ -1,0 +1,218 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Contrib-CondorView-Install}
+Installing CondorView Contrib Modules}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+To install CondorView for your pool, you really need two things:
+\begin{enumerate}
+\item The CondorView server, which collects historical information.
+\item The CondorView client, a Java applett that views this data.
+\end{enumerate}
+
+Since these are totally seperate modules, they will each be handled in
+their own sections.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:CondorView-Server-Install}
+Installing the CondorView Server Module}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The CondorView server is just an enhanced version of the
+\Condor{collector} which can log information to disk, providing a 
+persistant, historical database of your pool state.
+This includes machine state, as well as the state of jobs submitted by
+users, and so on.
+This enhanced \Condor{collector} is simply the version 6.1 development
+series, but it can be installed in a 6.0 pool.
+The historical information logging can be turned on or off, so you can
+install the CondorView collector without using up disk space for
+historical information if you don't want it.
+
+To install the CondorView server, you must download the appropriate
+binary module for whatever platform you are going to run your
+CondorView server on.
+This does not have to be the same platform as your exisiting central
+manager (see below).
+Once you uncompress and untar the module, you will have a directory
+with a \File{view\_server.tar} file, a \File{README}, and so on.
+The \File{view\_server.tar} acts much like the \File{release.tar} file
+for a main release of Condor.
+It contains all the binaries and supporting files you would install in
+your release directory:
+\begin{verbatim}
+        sbin/condor_collector
+        etc/examples/condor_config.local.view_server
+\end{verbatim}
+
+You have two options to choose from when deciding how to install this
+enhanced \Condor{collector} in your pool:
+\begin{enumerate}
+\item Replace your exisiting \Condor{collector} and use the new
+version for both historical information and the regular role the 
+collector plays in your pool.
+\item Install the new \Condor{collector} and run it on a seperate host
+from your main \Condor{collector} and configure your machines to send
+updates to both collectors.
+\end{enumerate}
+
+If you replace your existing collector with the enhanced version,
+because it is development code, there might be a bug or problem that
+would cause problems for your pool.
+On the other hand, if you install the enhanced version on a seperate
+host, if there are problems, only CondorView will be affected, not
+your entire pool.
+However, installing the CondorView collector on a seperate host
+generates more network traffic (from all the duplicate updates that
+are sent from each machine in your pool to both collectors).
+In addition, the installation procedure to have both collectors
+running is a more complicated process.
+You will just have to decide for yourself which solution you feel more
+comfortable with.
+
+Before we discuss the details of one type of installation or the
+other, we explain the steps you must take in either case.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:CondorView-Server-Setup}
+Setting up the CondorView Server Module} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Before you install the CondorView collector (as described in the
+following sections), you have to add a few settings to the local
+config file of that machine to enable historical data collection.
+These settings are described in detail in the Condor Version 6.1
+Administrator's Manual, in the section ``\condor{collector} Config File
+Entries''.
+However, a short explaination of the ones you must customize is
+provided below. 
+These entries are also explained in the
+\File{etc/examples/condor\_config.local.view\_server} file, included
+in the contrib module.
+You should just insert that file into the local config file for your
+CondorView collector host and customize as appropriate at your site.  
+\begin{description}
+
+\item[\Macro{POOL\_HISTORY\_DIR}] This is the directory where
+historical data will be stored.
+There is a configurable limit to the maximum space required for all
+the files created by the CondorView server
+(\Macro{POOL\_HISTORY\_MAX\_STORAGE}). 
+This directory must be writable by whatever user the CondorView
+collector is running as (usually "condor").  
+
+\Note This should be a seperate directory, not the same as either the
+\File{Spool} or \File{Log} directories you have already setup for
+Condor. 
+There are a few problems putting these files into either of those
+directories.
+
+\item[\Macro{KEEP\_POOL\_HISTORY}] This is a boolean that determines
+if the CondorView collector should store the historical information.
+It is false by default, which is why you must specify it as true in
+your local config file.
+
+\end{description}
+
+Once these settings are in place in the local config file for your
+CondorView server host, you must to create the directory you specified
+in \Macro{POOL\_HISTORY\_DIR} and make it writable by whomever your
+CondorView collector is running as.
+This would be the same user that owns the \File{CollectorLog} file in
+your \File{Log} directory (usually, ``condor'').
+
+Once those steps are completed, you are ready to install the new
+binaries and you will begin collecting historical information.
+Then, you should install the CondorView client contrib module which
+contains the tools used to query and display this information.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:CondorView-Server-Only}
+CondorView Collector as Your Only Collector} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+To install the new CondorView collector as your main collector, you
+simply have to replace your existing binary with the new one, found in
+the \File{view\_server.tar} file.
+All you need to do is move your existing \File{\condor{collector}}
+binary out of the way with the ``mv'' command.
+For example:
+\begin{verbatim}
+        % cd /full/path/to/your/release/directory
+        % cd sbin
+        % mv condor_collector condor_collector.old
+\end{verbatim}
+Then, from that same directory, you just have to untar the
+\File{view\_server.tar} file, into your release directory, which will
+install a new \File{\condor{collector}} binary, and an example config
+file.
+Within 5 minutes, the \Condor{master} will notice the new timestamp on
+your \File{\condor{collector}} binary, shutdown your existing
+collector, and spawn the new version.
+You will see messages about this in the log file for your
+\Condor{master} (usually \File{MasterLog} in your \File{log}
+directory).
+Once the new collector is running, it is safe to remove your old
+binary, though you may want to keep it around in case you have
+problems with the new version and want to revert back.
+
+Once this is completed, you just have to add a few config file entries
+to the local config file on your central manager to enable historical
+data collection.
+These are described below in the ``Configuring the CondorView Server 
+Module'' section.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:CondorView-Server-Both}
+CondorView Collector in Addition to Your Main Collector} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+To install the CondorView collector in addition to your regular
+collector requires a little extra work.
+First, you should untar the \File{view\_server.tar} file into some
+temporary location (not your main release directory).
+Copy the \File{sbin/\condor{collector}} file out of there, and into
+your main release directory's sbin with a new name (such as
+\File{\condor{collector}.view\_server}).
+
+Next, you must configure whatever host is going to run your seperate
+CondorView server to spawn this new collector in addition to whatever
+other daemons it's running.
+You do this by adding ``COLLECTOR'' to the \Macro{DAEMON\_LIST} on
+this machine, and defining what ``COLLECTOR'' means.
+For example:
+\begin{verbatim}
+        DAEMON_LIST = MASTER, STARTD, SCHEDD, COLLECTOR
+        COLLECTOR = $(SBIN)/condor_collector.view_server
+\end{verbatim}
+For this change to take effect, you must actually re-start the
+\Condor{master} on this host (which you can do with the
+\Condor{restart} command, if you run that command from a machine with 
+``ADMINISTRATOR'' access to your pool.
+(See section~\ref{sec:Host-Security} on
+page~\pageref{sec:Host-Security} for full details of IP/host-based
+security in Condor).
+
+Finally, you must tell all the machines in your pool to start sending
+updates to both collectors.
+You do this by specifying the following setting in your global config
+file:
+\begin{verbatim}
+        CONDOR_VIEW_HOST = full.hostname
+\end{verbatim}
+where ``full.hostname'' is the full hostname of the machine where you
+are running your CondorView collector.
+
+Once this setting is in place, you must send a \Condor{reconfig} to
+your entire pool.  The easiest way to do this is:
+\begin{verbatim}
+        % condor_reconfig `condor_status -master`
+\end{verbatim}
+Again, this command must be run from a trusted ``administrator''
+machine for it to work.  
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:CondorView-Client-Install}
+Installing the CondorView Client Contrib Module} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\Todo
