@@ -68,23 +68,6 @@ extern "C" {
 }
 #endif
 
-#if defined(OSF1)
-	extern "C" unsigned int htonl( unsigned int );
-	extern "C" unsigned int ntohl( unsigned int );
-#elif defined(HPUX)
-#	include <netinet/in.h>
-#elif defined(Solaris) && defined(sun4m)
-	#define htonl(x)		(x)
-	#define ntohl(x)		(x)
-#elif defined(IRIX)
-	#include <sys/endian.h>
-#elif defined(LINUX)
-	#include <netinet/in.h>
-#else
-	extern "C" unsigned long htonl( unsigned long );
-	extern "C" unsigned long ntohl( unsigned long );
-#endif
-
 #if defined(HPUX10)
 extern "C" int _sigreturn();
 #endif
