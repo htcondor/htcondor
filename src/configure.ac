@@ -1279,6 +1279,12 @@ AC_MSG_RESULT([$_cv_ext_pvm_version])
 AC_SUBST(ext_pvm_version,$_cv_ext_pvm_version)
 
 
+AC_MSG_CHECKING([srb])
+_cv_ext_srb_version="srb-3.2.1"
+AC_MSG_RESULT([$_cv_ext_srb_version])
+AC_SUBST(ext_srb_version,$_cv_ext_srb_version)
+
+
 ############################################################
 # Configure-generated output
 ############################################################

@@ -444,7 +444,8 @@ manpages::
 #endif
 
 # Build stork release binaries.  This is primitive, but will suffice for now.
-stork: libs
+stork: externals libs
+	$(MAKE) -C condor_data_manager externals
 	$(MAKE) -C condor_data_manager all
 	$(MAKE) -C condor_credd.TEMPORARY all
 	$(MAKE) -C condor_master.V6 all
