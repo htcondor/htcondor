@@ -63,6 +63,12 @@ DEP_SYMLINK_EXT(job_ckpt_env_std,cmd)
 RUN(job_ckpt_env_std)
 TESTCLASS(job_ckpt_env_std,quick)
 
+DESC(job_ckpt_memory-file_std,"Does the memory_file class work across ckpts?")
+CBUILD($(CC),job_ckpt_memory-file_std,C)
+DEP_SYMLINK_EXT(job_ckpt_memory-file_std,cmd)
+RUN(job_ckpt_memory-file_std)
+TESTCLASS(job_ckpt_memory-file_std,quick)
+
 
 /***********************************************************************
   Finally, include all the tests that are common to both C and C++
