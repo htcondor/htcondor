@@ -4,11 +4,28 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -Wall IsCondorGRelease
 CFLAGS = $(STD_C_FLAGS) -Wall
 LIB = $(STD_LIBS)
 
+#if !HAS_FLOCK
+FLOCK_OBJ = ../condor_util_lib/flock.o
+#endif 
+
 URL_OBJ = url_condor.o cbstp_url.o file_url.o http_url.o filter_url.o \
 	mailto_url.o cfilter_url.o ftp_url.o include_urls.o mkargv.o
 
 API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
 			condor_event.o user_log.o strnewp.o
+
+CONLIBAPI_OBJ = $(API_OBJ) \
+	file_lock.o \
+	../condor_util_lib/dprintf_common.o \
+	../condor_util_lib/dprintf.o \
+	../condor_util_lib/mkargv.o \
+	../condor_util_lib/except.o \
+	../condor_util_lib/lock_file.NON_POSIX.o \
+	$(FLOCK_OBJ) \
+	../condor_util_lib/setsyscalls.o \
+	uids.o \
+	../condor_util_lib/chomp.o \
+	strnewp.o
 
 DAEMON_CLIENT_OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o \
 	dc_schedd.o
@@ -34,13 +51,10 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	KeyCache.o dc_stub.o which.o iso_dates.o java_config.o \
 	RegExer.o
 
-#if !HAS_FLOCK
-FLOCK_OBJ = ../condor_util_lib/flock.o
-#endif 
 
 library_target( cplus_lib.a,$(OBJ))
 library_target( liburl.a,$(URL_OBJ))
-library_target( libcondorapi.a,$(API_OBJ) file_lock.o ../condor_util_lib/dprintf_common.o ../condor_util_lib/dprintf.o ../condor_util_lib/mkargv.o ../condor_util_lib/except.o ../condor_util_lib/lock_file.NON_POSIX.o $(FLOCK_OBJ) ../condor_util_lib/setsyscalls.o uids.o strnewp.o)
+library_target( libcondorapi.a,$(CONLIBAPI_OBJ) )
 
 c_plus_target(test_locks,test_locks.o,$(LIB))
 c_plus_target(test_stringSpace, test_stringSpace.o,$(LIB))
