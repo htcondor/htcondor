@@ -41,6 +41,13 @@ usage()
 	exit( JOB_SHADOW_USAGE );
 }
 
+extern "C" {
+ExceptCleanup(int, int, char *buf)
+{
+  BaseShadow::log_except(buf);
+  return 0;
+}
+}
 
 /* DaemonCore interface implementation */
 
@@ -72,6 +79,11 @@ main_init(int argc, char *argv[])
 		EXCEPT("host not specified with sinful string.");
 	}
 
+		/* Start up with condor.condor privileges. */
+	set_condor_priv();
+
+	_EXCEPT_Cleanup = ExceptCleanup;
+
 		// Register a do-nothing reaper.  This is just because the
 		// file transfer object, which could be instantiated later,
 		// registers its own reaper and does an EXCEPT if it gets
@@ -93,7 +105,9 @@ main_init(int argc, char *argv[])
 	proc = atoi(argv[5]);
 
 		// talk to the schedd to get job ad & set remote host:
-	ConnectQ(schedd_addr);
+	if (!ConnectQ(schedd_addr, SHADOW_QMGMT_TIMEOUT, true)) {
+		EXCEPT("Failed to connect to schedd!");
+	}
 	jobAd = GetJobAd(cluster, proc);
 	DisconnectQ(NULL);
 	if (!jobAd) {
@@ -150,3 +164,5 @@ main_shutdown_graceful()
 	exit(0);	// temporary
 	return 0;
 }
+
+
