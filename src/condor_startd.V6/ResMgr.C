@@ -1490,7 +1490,7 @@ ResMgr::makeAdList( ClassAdList *list )
 		// QUERY_STARTD_ADS commannd, we need to do this ourselves or
 		// some timing stuff won't work. 
 	char buf[1024];
-	sprintf( buf, "%s = %d", ATTR_LAST_HEARD_FROM, cur_time );
+	sprintf( buf, "%s = %d", ATTR_LAST_HEARD_FROM, (int)cur_time );
 
 	for( i=0; i<nresources; i++ ) {
 		ad = new ClassAd;
