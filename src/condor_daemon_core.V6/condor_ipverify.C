@@ -301,6 +301,7 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin )
 	int mask, found_match, i, temp_mask, j;
 	struct in_addr sin_addr;
 	char *thehost;
+	char **aliases;
 	
 	memcpy(&sin_addr,&sin->sin_addr,sizeof(sin_addr));
 	mask = 0;	// must initialize to zero because we logical-or bits into this
@@ -349,13 +350,18 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin )
 			}  // end of for
 
 			// now scan through hostname strings
-			if ( (thehost=sin_to_hostname(sin)) != NULL ) {
+			thehost = sin_to_hostname(sin,&aliases);
+			i = 0;
+			while ( thehost ) {
 				if ( PermTypeArray[perm]->allow_hosts &&
 					 PermTypeArray[perm]->allow_hosts->contains_withwildcard(thehost) == TRUE )
 					mask |= allow_mask(perm);
 				if ( PermTypeArray[perm]->deny_hosts &&
 					 PermTypeArray[perm]->deny_hosts->contains_withwildcard(thehost) == TRUE )
 					mask |= deny_mask(perm);
+
+				// check all aliases for this IP as well
+				thehost = aliases[i++];
 			}
 			// if we found something via our hostname or subnet mactching, we now have 
 			// a mask, and we should add it into our table so we need not
