@@ -508,8 +508,8 @@ Image::Read()
 
 		// Make sure we have a valid file descriptor to read from
 	if( fd < 0 && file_name && file_name[0] ) {
-		if( (fd=open(file_name,O_RDONLY,0)) < 0 ) {
-			perror( "open" );
+		if( (fd=open_ckpt_file(file_name,O_RDONLY,0)) < 0 ) {
+			perror( "open_ckpt_file" );
 			exit( 1 );
 		}
 	}
@@ -669,7 +669,6 @@ init_image_with_file_descriptor( int fd )
 void
 restart( )
 {
-	// SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	MyImage.Read();
 	MyImage.Restore();
 }
