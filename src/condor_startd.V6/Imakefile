@@ -16,9 +16,9 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fno-implicit-templates
 #elif IS_SGI_IRIX62 || IS_SGI_IRIX53
 #       define LOAD_AVG_SRC load_avg.IRIX.c load_avg.uptime.c
 #       define LOAD_AVG_OBJ load_avg.IRIX.o load_avg.uptime.o
-#else
-#	define LOAD_AVG_SRC load_avg.BSD.c load_avg.uptime.c
-#	define LOAD_AVG_OBJ load_avg.BSD.o load_avg.uptime.o
+#elif IS_HPUX
+#	define LOAD_AVG_SRC load_avg.HPUX.c
+#	define LOAD_AVG_OBJ load_avg.HPUX.o
 #endif
 
 SRC = Match.C Reqexp.C ResAttributes.C ResMgr.C ResState.C Resource.C Starter.C calc.C command.C LOAD_AVG_SRC main.C util.C clinpack.c dhry21a.c dhry21b.c timers_b.c 
