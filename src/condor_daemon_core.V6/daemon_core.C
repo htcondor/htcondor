@@ -2686,10 +2686,21 @@ int DaemonCore::Create_Process(
 	struct stat stat_struct;
 	if( stat(name, &stat_struct) == -1 ) {
 		dprintf(D_ALWAYS, 
-				"Create_Process: Specified executable cannot be found.\n");	   
+				"Create_Process: Specified executable %s cannot be found.\n",
+				name);	   
 		return FALSE;
 	}
 	dprintf (D_DAEMONCORE, "%s has mode: 0%o\n", name, stat_struct.st_mode );
+
+	// Next, check to see that the cwd exists.
+	if( cwd && (cwd[0] != '\0') ) {
+		if( stat(cwd, &stat_struct) == -1 ) {
+			dprintf(D_ALWAYS, 
+				"Create_Process: Specified cwd %s cannot be found.\n",
+				cwd);	   
+			return FALSE;
+		}
+	}
 
 	newpid = fork();
 	if( newpid == 0 ) // Child Process
@@ -2757,13 +2768,6 @@ int DaemonCore::Create_Process(
 				dprintf ( D_DAEMONCORE, "Full path exec name: %s\n", name );
 			}
 			
-			dprintf ( D_DAEMONCORE, "Changing directory to %s\n", cwd );
-
-			if( chdir(cwd) == -1 ) {
-				dprintf(D_ALWAYS, "Create_Process: chdir(%s) failed: %s\n",
-						cwd, strerror(errno) );
-				exit(1); // Let's exit.
-			}
 		}
 
 		int openfds = getdtablesize();
@@ -2889,6 +2893,17 @@ int DaemonCore::Create_Process(
 			// now head into the proper priv state...
 		if ( priv != PRIV_UNKNOWN ) {
 			set_priv(priv);
+		}
+
+			// switch to the cwd now that we are in user priv state
+		if ( cwd && cwd[0] ) {
+			dprintf ( D_DAEMONCORE, "Changing directory to %s\n", cwd );
+
+			if( chdir(cwd) == -1 ) {
+				dprintf(D_ALWAYS, "Create_Process: chdir(%s) failed: %s\n",
+						cwd, strerror(errno) );
+				exit(1); // Let's exit.
+			}
 		}
 
 			// and ( finally ) exec:
