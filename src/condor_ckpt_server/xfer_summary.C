@@ -11,7 +11,11 @@
 
 extern "C" {
 	char *param();
+#if defined(LINUX)	
+	int gethostname(char *name, unsigned int namelen);
+#else
 	int gethostname(char *name, int namelen);
+#endif
 	char *calc_subnet_name();
 	char *getwd(char *path);
 }
