@@ -72,7 +72,7 @@ COMMON_CODE	-a src/Imakefile \
 			src/condor_xdr_lib \
 			src/h
 
-ALPHA_SRC	-a \
+V5_SRC		-a \
 			src/Imakefile \
 			src/CODING_GUIDELINES \
 			src/CVS_Tags \
@@ -103,8 +103,8 @@ ALPHA_SRC	-a \
 			src/condor_xdr_lib \
 			src/h
 
-ALPHA_CODE	-a TOOLS ALPHA_SRC
-ALPHA_ALL	-a DOC ALPHA_CODE
+V5_CODE		-a TOOLS V5_SRC
+V5_ALL		-a DOC V5_CODE
 AIX_CODE	-a TOOLS COMMON_CODE src/condor_syscall_lib_aix
 AIX_ALL		-a DOC TOOLS COMMON_CODE src/condor_syscall_lib_aix
 ULTRIX_CODE	-a TOOLS COMMON_CODE src/condor_syscall_lib_ultrix
