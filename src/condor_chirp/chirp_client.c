@@ -112,7 +112,7 @@ int chirp_client_open( struct chirp_client *c, const char *path, const char *fla
 {
 	int result;
 
-	result = fprintf(c->stream,"open %s %s %o\n",path,flags,mode);
+	result = fprintf(c->stream,"open %s %s %d\n",path,flags,mode);
 	if(result<0) chirp_fatal_request("open");
 
 	result = fflush(c->stream);
