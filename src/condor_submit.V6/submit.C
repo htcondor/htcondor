@@ -22,7 +22,6 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
  
 
-#include "daemon.h"
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
@@ -51,6 +50,7 @@
 #include "condor_qmgr.h"
 #include "sig_install.h"
 #include "access.h"
+#include "daemon.h"
 
 #include "extArray.h"
 #include "HashTable.h"
