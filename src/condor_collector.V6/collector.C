@@ -396,8 +396,6 @@ int CollectorDaemon::invalidation_scanFunc (ClassAd *ad)
 
 void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, Stream *sock)
 {
-	int		more;
-
 	// here we set up a network timeout of a longer duration
 	sock->timeout(QueryTimeout);
 
