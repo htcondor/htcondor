@@ -997,7 +997,7 @@ daemon::SetupHighAvailability( void )
 	MyString	name;
 
 	// Get the URL
-	name.sprintf("HA_%s_LOCK_URL" );
+	name.sprintf("HA_%s_LOCK_URL", name_in_config_file );
 	tmp = param( name.Value() );
 	if ( ! tmp ) {
 		tmp = param( "HA_LOCK_URL" );
@@ -1012,7 +1012,7 @@ daemon::SetupHighAvailability( void )
 
 	// Get the length of the lock
 	time_t		lock_hold_time = 60 * 60;	// One hour
-	name.sprintf( "HA_%s_LOCK_HOLD_TIME" );
+	name.sprintf( "HA_%s_LOCK_HOLD_TIME", name_in_config_file );
 	tmp = param( name.Value( ) );
 	if ( ! tmp ) {
 		tmp = param( "HA_LOCK_HOLD_TIME" );
@@ -1030,7 +1030,7 @@ daemon::SetupHighAvailability( void )
 
 	// Get the lock poll time
 	time_t		poll_period = 5 * 60;		// Five minutes
-	name.sprintf( "HA_%s_POLL_PERIOD" );
+	name.sprintf( "HA_%s_POLL_PERIOD", name_in_config_file );
 	tmp = param( name.Value() );
 	if ( ! tmp ) {
 		tmp = param( "HA_POLL_PERIOD" );
@@ -1047,20 +1047,35 @@ daemon::SetupHighAvailability( void )
 	}
 
 	// Now, create the lock object
-	ha_lock = new CondorLock( url,
-							  name_in_config_file,
-							  this,
-							  (LockEvent) &daemon::HaLockAcquired,
-							  (LockEvent) &daemon::HaLockLost,
-							  poll_period,
-							  lock_hold_time,
-							  true );
-
-	// Log the new lock creation (if successful)
 	if ( ha_lock ) {
-		dprintf( D_FULLDEBUG,
-				 "Created HA lock for %s; URL='%s' poll=%ds hold=%ds\n",
-				 name_in_config_file, url, poll_period, lock_hold_time );
+		int status = ha_lock->SetLockParams( url,
+											 name_in_config_file,
+											 poll_period,
+											 lock_hold_time,
+											 true );
+		if ( status ) {
+			dprintf( D_ALWAYS, "Failed to change HA lock parameters\n" );
+		} else {
+			dprintf( D_FULLDEBUG,
+					 "Set HA lock for %s; URL='%s' poll=%ds hold=%ds\n",
+					 name_in_config_file, url, poll_period, lock_hold_time );
+		}
+	} else {
+		ha_lock = new CondorLock( url,
+								  name_in_config_file,
+								  this,
+								  (LockEvent) &daemon::HaLockAcquired,
+								  (LockEvent) &daemon::HaLockLost,
+								  poll_period,
+								  lock_hold_time,
+								  true );
+
+			// Log the new lock creation (if successful)
+		if ( ha_lock ) {
+			dprintf( D_FULLDEBUG,
+					 "Created HA lock for %s; URL='%s' poll=%ds hold=%ds\n",
+					 name_in_config_file, url, poll_period, lock_hold_time );
+		}
 	}
 	free( url );
 
