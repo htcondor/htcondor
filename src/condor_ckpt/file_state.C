@@ -867,6 +867,26 @@ close( int fd )
 		}
 	}
 }
+
+/* these definitions of _close and __close match definitions of
+   _open and __open above */
+
+#if defined(OSF1) || defined(Solaris)
+int
+_close( int fd )
+{
+	return close( fd );
+}
+#endif
+
+#if defined(OSF1)
+int
+__close( int fd )
+{
+	return close( fd );
+}
+#endif
+
 #endif
 
 #if defined(SYS_dup)
