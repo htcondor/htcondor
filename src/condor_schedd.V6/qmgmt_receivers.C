@@ -287,8 +287,9 @@ do_Q_request(ReliSock *syscall_sock)
 			errno = 0;
 			dprintf( D_SYSCALLS, "Got MyProxyPassword, stashing...\n");
 			rval = SetMyProxyPassword (cluster_id, proc_id, attr_value);
-			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 			terrno = errno;
+			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+			
 		}
 		else {
 			errno = 0;
