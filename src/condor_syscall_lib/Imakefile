@@ -41,10 +41,10 @@ EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 #	elif IS_ALPHA_OSF1
 EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 		  MMAP.o PIPE.o
-#	elif (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS)
+#	elif (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS)
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
-		  MMAP.o PIPE.o
-# 	else
+		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o
+#	else
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 		  MMAP.o PIPE.o
 #	endif
@@ -55,7 +55,7 @@ EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 EXTRACT = GETEUID.o GETEGID.o
 #	elif IS_R6000_AIX32
 /* Don't extract anything */
-#	elif (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS)
+#     elif (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS)
 EXTRACT = GETEUID.o GETEGID.o
 #	else 
 EXTRACT = GETEUID.o GETEGID.o GETWD.o
@@ -127,8 +127,8 @@ URL_OBJ = url_condor.o include_urls.o cbstp_url.o file_url.o http_url.o \
 
 
 #if DOES_CHECKPOINTING
-CKPT_OBJ =	file_state.o image.o tmp_stack.o machdep.$(OS).o \
-			syscall_mode.o fake_hooks.o condor_rt0.o $(LONGJMP) $(HP_CKPT) \
+CKPT_OBJ =	flock.o file_state.o image.o tmp_stack.o machdep.$(OS).o \
+	syscall_mode.o fake_hooks.o condor_rt0.o $(LONGJMP) $(HP_CKPT) \
 	$(SIG_CKPT_OBJS) $(URL_OBJ)
 #else
 CKPT_OBJ = syscall_mode.o
@@ -167,6 +167,10 @@ uppercase_target($(SIMPLE_LIBC),fork.o,FORK.o,fork,FORK)
 uppercase_target($(SIMPLE_LIBC),kill.o,KILL.o,kill,KILL)
 #if !IS_ALPHA_OSF1
 uppercase_target($(SIMPLE_LIBC),sigaction.o,SIGACTION.o,sigaction,SIGACTION)
+#endif
+#if (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS)
+uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL.o,syscall,SYSCALL)
+uppercase_target($(SIMPLE_LIBC),_sigaction.o,_SIGACTION.o,sigaction,SIGACTION)
 #endif
 uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
 uppercase_target($(SIMPLE_LIBC),pipe.o,PIPE.o,pipe,PIPE)
