@@ -31,6 +31,7 @@
 // Get the ip address and port number of a schedd from the collector.
 ///////////////////////////////////////////////////////////////////////////////
 
+#include "condor_common.h"
 #include "condor_query.h"
 
 #if !defined(WANT_V6)
