@@ -189,6 +189,7 @@ class Scheduler : public Service
 	shadow_rec*     find_shadow_rec(PROC_ID*);
 	shadow_rec*     add_shadow_rec(int, PROC_ID*, match_rec*, int);
 	shadow_rec*		add_shadow_rec(shadow_rec*);
+	void			NotifyUser(shadow_rec*, char*, int, int);
 	
 #ifdef CARMI_OPS
 	shadow_rec*		find_shadow_by_cluster( PROC_ID * );
