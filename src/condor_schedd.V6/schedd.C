@@ -45,6 +45,7 @@
 #include "internet.h"
 #include "condor_ckpt_name.h"
 #include "../condor_ckpt_server/server_interface.h"
+#include "generic_query.h"
 
 #define DEFAULT_SHADOW_SIZE 125
 
@@ -2799,11 +2800,7 @@ Scheduler::child_exit(int pid, int status)
 		StartJobsFlag=FALSE;
 	 }  // big if..else if...
 	if( ExitWhenDone && numShadows == 0 ) {
-		// write a clean job queue on graceful shutdown so we can quickly
-		// recover on restart
-		CleanJobQueue();
-		dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
-		DC_Exit(0);
+		schedd_exit();
 	}
 		// If we're not trying to shutdown, now that either an agent
 		// or a shadow (or both) have exited, we should try to
@@ -3300,11 +3297,7 @@ void
 Scheduler::shutdown_graceful()
 {
 	if( numShadows == 0 ) {
-		// write a clean job queue on graceful shutdown so we can quickly
-		// recover on restart
-		CleanJobQueue();
-		dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
-		DC_Exit(0);
+		schedd_exit();
 	} else {
 			/* 
 				There are shadows running, so set a flag that tells the
@@ -3326,8 +3319,78 @@ Scheduler::shutdown_fast()
 	while (shadowsByPid->iterate(rec) == 1) {
 		daemonCore->Send_Signal( rec->pid, DC_SIGKILL );
 	}
+
+		// Since this is just sending a bunch of UDP updates, we can
+		// still invalidate our classads, even on a fast shutdown.
+	invalidate_ads();
+
 	dprintf( D_ALWAYS, "All shadows have been killed, exiting.\n" );
 	DC_Exit(0);
+}
+
+
+void
+Scheduler::schedd_exit()
+{
+		// write a clean job queue on graceful shutdown so we can
+		// quickly recover on restart
+	CleanJobQueue();
+
+		// Invalidate our classads at the collector, since we're now
+		// gone.  
+	invalidate_ads();
+
+	dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
+	DC_Exit(0);
+}
+
+
+void
+Scheduler::invalidate_ads()
+{
+	int i;
+	char *host;
+	char line[256];
+	GenericQuery query;
+
+		// The ClassAd we need to use is totally different from the
+		// regular one, so just delete it and start over again.
+	delete ad;
+	ad = new ClassAd;
+    ad->SetMyTypeName( QUERY_ADTYPE );
+    ad->SetTargetTypeName( SCHEDD_ADTYPE );
+
+        // Invalidate the schedd ad
+    sprintf( line, "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, 
+             Name );
+    ad->Insert( line );
+	update_central_mgr( INVALIDATE_SCHEDD_ADS, Collector->addr(), 0 );
+	if( FlockHosts && FlockLevel > 0 ) {
+		for( i=1, FlockHosts->rewind();
+			 i <= FlockLevel && (host = FlockHosts->next()); i++) {
+			update_central_mgr( INVALIDATE_SCHEDD_ADS, host, 
+								COLLECTOR_UDP_COMM_PORT );
+		}
+	}
+
+		// Now, we want to invalidate all the submittor ads.  So, go
+		// through each submittor and add their Name to a query.
+	for( i=0; i<N_Owners; i++ ) {
+		sprintf( line, "%s == \"%s@%s\"", ATTR_NAME, Owners[i].Name,
+				 UidDomain ); 
+		query.addCustom( line );
+	}
+		// This will overwrite the Requirements expression in ad.
+	query.makeQuery( *ad );
+
+	update_central_mgr( INVALIDATE_SUBMITTOR_ADS, Collector->addr(), 0 );
+	if( FlockHosts && FlockLevel > 0 ) {
+		for( i=1, FlockHosts->rewind();
+			 i <= FlockLevel && (host = FlockHosts->next()); i++ ) {
+			update_central_mgr( INVALIDATE_SUBMITTOR_ADS, host, 
+								COLLECTOR_UDP_COMM_PORT );
+		}
+	}
 }
 
 

@@ -114,6 +114,8 @@ class Scheduler : public Service
 	void			reconfig();
 	void			shutdown_fast();
 	void			shutdown_graceful();
+	void			schedd_exit();
+	void			invalidate_ads();
 	
 	// negotiation
 	int				doNegotiate(int, Stream *);
