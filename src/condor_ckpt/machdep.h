@@ -1,3 +1,6 @@
+#ifndef _MACHDEP_H
+#define _MACHDEP_H
+
 #if defined(ULTRIX42)
 
 	extern "C" int brk( void * );
@@ -69,5 +72,7 @@
 #else
 
 #	error UNKNOWN PLATFORM
+
+#endif
 
 #endif
