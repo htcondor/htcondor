@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 ######################################################################
-# $Id: remote_post_always.pl,v 1.1.2.5 2004-06-24 19:44:44 wright Exp $
+# $Id: remote_post_always.pl,v 1.1.2.6 2004-06-24 19:48:10 wright Exp $
 # post script for Condor testsuite that is run regardless of the
 # testsuite end status  
 ######################################################################
@@ -29,4 +29,5 @@ close PIDFILE;
 # probably try to stop more gracefully, then wait 30 seconds and kill
 # if necessary
 print "KILLING Personal Condor master daemon (pid: $master_pid)\n";
-kill 15, $master_pid;
+kill( 15, $master_pid ) || 
+    die "Can't kill condor_master (pid: $master_pid): $!\n";
