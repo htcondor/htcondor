@@ -39,6 +39,8 @@ int GetNextJob(int, int, int *, int *);
 int FirstAttribute(int, int, char *);
 int NextAttribute(int, int, char *);
 
+int SendSpoolFile(char *filename, char *address);
+
 Qmgr_connection *ConnectQ(char *qmgr_location);
 int DisconnectQ(Qmgr_connection *);
 int WalkJobQueue(scan_func);
