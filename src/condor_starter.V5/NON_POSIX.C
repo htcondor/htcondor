@@ -176,6 +176,8 @@ physical_file_size( char *name )
 
 
 #include <errno.h>
+#include "condor_constants.h"
+#include "startup.h"
 #include "user_proc.h"
 
 /*
