@@ -3698,6 +3698,9 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 	// and call HandleProcessExit to call a reaper.
 	pid_t pid;
 	int status;
+	WaitpidEntry wait_entry;
+	bool first_time = true;
+
 
 	assert( sig == DC_SIGCHLD );
 
@@ -3722,10 +3725,41 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 				dprintf( D_ALWAYS, "waitpid() returned %d, errno = %d\n",
 						 pid, errno );
 			}
-            break;
+            break; // out of the for loop and do not post DC_SERVICEWAITPIDS
         }
-		HandleProcessExit(pid, status);
+		// HandleProcessExit(pid, status);
+		wait_entry.child_pid = pid;
+		wait_entry.exit_status = status;
+		WaitpidQueue.enqueue(wait_entry);
+		if (first_time) {
+			Send_Signal( mypid, DC_SERVICEWAITPIDS );
+			first_time = false;
+		}
+
 	}
+	return TRUE;
+}
+
+int
+DaemonCore::HandleDC_SERVICEWAITPIDS(int sig)
+{
+	WaitpidEntry wait_entry;
+
+	if ( WaitpidQueue.dequeue(wait_entry) < 0 ) {
+		// queue is empty, just return
+		return TRUE;
+	}
+
+	// we pulled something off the queue, handle it
+	HandleProcessExit(wait_entry.child_pid, wait_entry.exit_status);
+
+	// now check if the queue still has more entries.  if so,
+	// repost the DC_SERVICEWAITPIDS signal so we'll eventually
+	// come back here and service the next entry.
+	if ( !WaitpidQueue.IsEmpty() ) {
+		Send_Signal( mypid, DC_SERVICEWAITPIDS );
+	}
+
 	return TRUE;
 }
 #endif // of ifndef WIN32

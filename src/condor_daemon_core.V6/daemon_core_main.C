@@ -1417,6 +1417,9 @@ int main( int argc, char** argv )
 								 (SignalHandler)handle_dc_sigterm,
 								 "handle_dc_sigterm()" );
 #ifndef WIN32
+	daemonCore->Register_Signal( DC_SERVICEWAITPIDS, "DC_SERVICEWAITPIDS",
+								(SignalHandlercpp)&DaemonCore::HandleDC_SERVICEWAITPIDS,
+								"HandleDC_SERVICEWAITPIDS()",daemonCore,IMMEDIATE_FAMILY);
 	daemonCore->Register_Signal( DC_SIGCHLD, "DC_SIGCHLD",
 								 (SignalHandlercpp)&DaemonCore::HandleDC_SIGCHLD,
 								 "HandleDC_SIGCHLD()",daemonCore,IMMEDIATE_FAMILY);

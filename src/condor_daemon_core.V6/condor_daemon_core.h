@@ -44,6 +44,7 @@
 #include "HashTable.h"
 #include "list.h"
 #include "extArray.h"
+#include "Queue.h"
 #ifdef WIN32
 #include "ntsysinfo.h"
 #endif
@@ -736,6 +737,7 @@ class DaemonCore : public Service
     int HandleProcessExitCommand(int command, Stream* stream);
     int HandleProcessExit(pid_t pid, int exit_status);
     int HandleDC_SIGCHLD(int sig);
+	int HandleDC_SERVICEWAITPIDS(int sig);
  
     int Register_Command(int command, char *com_descip,
                          CommandHandler handler, 
@@ -911,6 +913,16 @@ class DaemonCore : public Service
 #ifndef WIN32
     int async_pipe[2];  // 0 for reading, 1 for writing
     volatile int async_sigs_unblocked;
+
+	// Data memebers for queuing up waitpid() events
+	struct WaitpidEntry_s
+	{
+		pid_t child_pid;
+		int exit_status;
+	};
+	typedef struct WaitpidEntry_s WaitpidEntry;
+	Queue<WaitpidEntry> WaitpidQueue;
+
 #endif
 
     Stream *inheritedSocks[MAX_SOCKS_INHERITED+1];
