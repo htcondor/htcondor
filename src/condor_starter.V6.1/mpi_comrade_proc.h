@@ -46,6 +46,17 @@ class MPIComradeProc : public VanillaProc
 			work. */
     virtual int StartJob();
 
+		/** We don't need to do anything special, but because C++ is
+			lame, we need to define this.  MPIMasterProc wants to
+			implement its own version, and everyone just wants to call
+			up the class hierarchy.  However, there's no way in C++ to
+			say "climb up my class hierarchy and call this function
+			for the next class that implements it."  So, everyone
+			really has to define their own and explicitly call their
+			parent's, even if they have nothing special to add.
+		*/
+    virtual int JobCleanup( int pid, int status );
+
 		/** MPI tasks shouldn't be suspended.  So, if we get a
 			suspend, instead of sending the MPI task a SIGSTOP, we
 			tell it to shutdown, instead. */

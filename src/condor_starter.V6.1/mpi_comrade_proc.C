@@ -62,6 +62,13 @@ MPIComradeProc::StartJob()
 }
 
 
+int
+MPIComradeProc::JobCleanup( int pid, int status )
+{ 
+	return VanillaProc::JobCleanup( pid, status );
+}
+
+
 void 
 MPIComradeProc::Suspend() { 
         /* We Comrades don't ever want to be suspended.  We 
