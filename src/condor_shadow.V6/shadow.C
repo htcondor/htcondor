@@ -99,6 +99,7 @@ extern int do_REMOTE_syscall1(int);
 extern int do_REMOTE_syscall2(int);
 extern int do_REMOTE_syscall3(int);
 extern int do_REMOTE_syscall4(int);
+extern int do_REMOTE_syscall5(int);
 
 #if !defined(AIX31) && !defined(AIX32)
 char *strcpy();
