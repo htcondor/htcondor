@@ -61,6 +61,7 @@ int _WAITPID(...);
 int _libc_FORK(...);
 int SYSCONF(...);
 int SYSCALL(...);
+int _FORK_sys(...);
 void update_rusage( register struct rusage *ru1, register struct rusage *ru2 );
 
 #if defined(LINUX) || defined(IRIX)
@@ -1848,7 +1849,7 @@ static int remote_system_posix(const char *command, int len)
 static int local_system_posix(const char *command)
 {
 	pid_t pid;
-	int status;
+	int status = -1;
 	struct sigaction ignore, saveintr, savequit;
 	sigset_t chldmask, savemask;
 	char *argv[4];
@@ -1879,8 +1880,12 @@ static int local_system_posix(const char *command)
 
 #if defined(LINUX)
 	if ((pid = SYSCALL(SYS_fork)) < 0) {
-#else
+#elif defined(Solaris)
 	if ((pid = _libc_FORK()) < 0) {
+#elif defined(HPUX)
+	if ((pid = _FORK_sys()) < 0) {
+#else
+#error "Please port which 'fork' I need on this platform"
 #endif
 		status = -1;
 	} else if (pid == 0) { 
@@ -1902,12 +1907,13 @@ static int local_system_posix(const char *command)
 
 	} else {
 		/* parent */
-#if defined(LINUX)
+#if defined(LINUX) || defined(HPUX)
 		while(SYSCALL(SYS_waitpid, pid, &status, 0) < 0) {
 #elif defined(Solaris)
 		while(_WAITPID(pid, &status, 0) < 0) {
+#else
+#error "Please port which 'waitpid' I need on this platform"
 #endif
-
 			if (errno != EINTR) {
 				status = -1;
 				break;
