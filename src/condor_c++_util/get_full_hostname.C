@@ -40,15 +40,33 @@ get_full_hostname( const char* host, struct in_addr* sin_addrp )
 {
 	struct hostent *host_ptr;
 	char* tmp;
+	bool have_full = false;
 
-	dprintf( D_HOSTNAME, "Trying to find full hostname %sfor \"%s\"\n", 
-			 sin_addrp ? "and IP addr " : "", host );
-	if( ! sin_addrp && (tmp = strchr(host, '.')) ) { 
+	if( (tmp = strchr(host, '.')) ) {
+		have_full = true;
+	}
+
+
+	if( ! sin_addrp && have_full ) {
 			// Caller doesn't want the IP addr, and the name already
 			// has a dot.  That's as good as we're going to do, so we
 			// should just exit w/o calling gethostbyname().
 		dprintf( D_HOSTNAME, "Given name is fully qualified, done\n" );
 		return strnewp( host );
+	}
+
+	if( have_full ) {
+		ASSERT( sin_addrp );
+		dprintf( D_HOSTNAME, "Trying to find IP addr for \"%s\"\n",
+				 host );
+	} else {
+		if( sin_addrp ) {
+			dprintf( D_HOSTNAME, "Trying to find full hostname and "
+					 "IP addr for \"%s\"\n", host );
+		} else {
+			dprintf( D_HOSTNAME, "Trying to find full hostname for "
+					 "\"%s\"\n", host );
+		}
 	}
 
 	dprintf( D_HOSTNAME, "Calling gethostbyname(%s)\n", host );
@@ -65,6 +83,11 @@ get_full_hostname( const char* host, struct in_addr* sin_addrp )
 		*sin_addrp = *(struct in_addr*)(host_ptr->h_addr_list[0]);
 		dprintf( D_HOSTNAME, "Found IP addr in hostent: %s\n", 
 				 inet_ntoa(*sin_addrp) );
+	}
+
+	if( have_full ) {
+			// we're done.
+		return strnewp( host );
 	}
 
 		// now that we have a hostent, call our helper to find the
