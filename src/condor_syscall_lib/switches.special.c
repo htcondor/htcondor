@@ -166,11 +166,7 @@ store_working_directory()
 #endif
 
 		/* Get the information */
-#if defined(Solaris)
-	status = getcwd( tbuf, _POSIX_PATH_MAX);
-#else
 	status = getwd( tbuf );
-#endif
 
 		/* This routine returns 0 on error! */
 	if( !status ) {
@@ -507,7 +503,7 @@ ioctl( int fd, int request, caddr_t arg )
 }
 #endif
 
-#if defined(AIX32)
+#if defined(AIX32) || defined(Solaris)
 	char *
 	getwd( char *path )
 	{
@@ -517,6 +513,7 @@ ioctl( int fd, int request, caddr_t arg )
 			return (char *)REMOTE_syscall( CONDOR_getwd, path );
 		}
 	}
+
 #endif
 
 #if defined(AIX32)
