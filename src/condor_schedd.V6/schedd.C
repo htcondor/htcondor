@@ -358,6 +358,9 @@ Scheduler::~Scheduler()
 		if( Owners[i].Name ) { 
 			free( Owners[i].Name );
 		}
+		if( Owners[i].X509 ) { 
+			free( Owners[i].X509 );
+		}
 	}
 
 	if (_gridlogic)
@@ -447,7 +450,7 @@ Scheduler::count_jobs()
 	while(matches->iterate(rec) == 1) {
 		char *at_sign = strchr(rec->user, '@');
 		if (at_sign) *at_sign = '\0';
-		int OwnerNum = insert_owner( rec->user );
+		int OwnerNum = insert_owner( rec->user, NULL );
 		if (at_sign) *at_sign = '@';
 		if (rec->shadowRec && !rec->pool) {
 			Owners[OwnerNum].JobsRunning++;
@@ -640,7 +643,7 @@ Scheduler::count_jobs()
 			while(matches->iterate(rec) == 1) {
 				char *at_sign = strchr(rec->user, '@');
 				if (at_sign) *at_sign = '\0';
-				int OwnerNum = insert_owner( rec->user );
+				int OwnerNum = insert_owner( rec->user, NULL );
 				if (at_sign) *at_sign = '@';
 				if (rec->shadowRec && rec->pool &&
 					!strcmp(rec->pool, flock_negotiator)) {
@@ -699,7 +702,7 @@ Scheduler::count_jobs()
 	 // of Globus Jobs per owner.
 	for (i=0; i < N_Owners; i++) {
 		if ( Owners[i].GlobusJobs > 0 ) {
-			GridUniverseLogic::JobCountUpdate(Owners[i].Name,
+			GridUniverseLogic::JobCountUpdate(Owners[i].Name,Owners[i].X509,
 				Owners[i].GlobusJobs,Owners[i].GlobusUnsubmittedJobs);
 		}
 	}
@@ -787,6 +790,7 @@ count( ClassAd *job )
 	int		niceUser;
 	char 	buf[100];
 	char 	buf2[100];
+	char*	x509userproxy;
 	char*	owner;
 	int		cur_hosts;
 	int		max_hosts;
@@ -807,7 +811,15 @@ count( ClassAd *job )
 	if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) < 0) {
 		universe = STANDARD;
 	}
-	
+
+	if(job->LookupString(ATTR_X509_USER_PROXY, buf ) == 0) {
+		x509userproxy = NULL;
+	} else {
+		x509userproxy = strdup(buf);
+		dprintf(D_FULLDEBUG, "Job has a X509_proxy and it's %s\n",
+				 x509userproxy);	
+	}
+
 	// calculate owner for per submittor information.
 	if (job->LookupString(ATTR_OWNER, buf) < 0) {
 		dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n",
@@ -827,7 +839,7 @@ count( ClassAd *job )
 	}
 
 	// insert owner even if REMOVED or HELD for condor_q -{global|sub}
-	int OwnerNum = scheduler.insert_owner( owner );
+	int OwnerNum = scheduler.insert_owner( owner, x509userproxy );
 
 	if ( !service_this_universe(universe)  ) 
 	{
@@ -890,15 +902,24 @@ service_this_universe(int universe)
 }
 
 int
-Scheduler::insert_owner(char* owner)
+Scheduler::insert_owner(char* owner, char *x509proxy)
 {
 	int		i;
 	for ( i=0; i<N_Owners; i++ ) {
 		if( strcmp(Owners[i].Name,owner) == 0 ) {
-			return i;
+			if(x509proxy == NULL && Owners[i].X509 == NULL)
+				return i; //neither of us want an X509
+			if(x509proxy != NULL && Owners[i].X509 != NULL 
+				 && strcmp(Owners[i].X509,x509proxy) == 0)
+				return i; //We both have an X509
 		}
 	}
 	Owners[i].Name = strdup( owner );
+	if(x509proxy) 
+		Owners[i].X509 = strdup( x509proxy); 
+	else
+		Owners[i].X509 = NULL;
+
 	N_Owners +=1;
 	if ( N_Owners == MAX_NUM_OWNERS ) {
 		EXCEPT( "Reached MAX_NUM_OWNERS" );
@@ -967,9 +988,13 @@ abort_job_myself(PROC_ID job_id)
 	if (job_universe == GLOBUS_UNIVERSE) {
 		// tell grid manager about the jobs removal, then return.
 		char owner[_POSIX_PATH_MAX];
+		char proxy[_POSIX_PATH_MAX];
 		owner[0] = '\0';
+		proxy[0] = '\0';
 		GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
-		GridUniverseLogic::JobRemoved(owner);
+		GetAttributeString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY, 
+							proxy);
+		GridUniverseLogic::JobRemoved(owner,proxy);
 		return;
 	}
 

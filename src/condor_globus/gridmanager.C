@@ -154,6 +154,7 @@ GridManager::GridManager()
 	updateScheddTimerSet = false;
 	Owner = NULL;
 	ScheddAddr = NULL;
+	X509Proxy = NULL;
 
 	JobsByContact = new HashTable <HashKey, GlobusJob *>( HASH_TABLE_SIZE,
 														  hashFunction );
@@ -170,6 +171,10 @@ GridManager::~GridManager()
 	if ( ScheddAddr ) {
 		free( ScheddAddr );
 		ScheddAddr = NULL;
+	}
+	if ( X509Proxy ) {
+		free( X509Proxy );
+		X509Proxy = NULL;
 	}
 
 	if ( JobsByContact != NULL ) {
@@ -257,25 +262,32 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 {
 	ClassAd *next_ad;
 	char expr_buf[1024];
+	char owner_buf[512];
 	int num_ads = 0;
 
 	dprintf(D_FULLDEBUG,"in ADD_JOBS_signalHandler\n");
+	
+	if(X509Proxy)
+		sprintf(owner_buf, "%s == \"%s\" && %s == \"%s\" ", ATTR_OWNER, Owner,
+				ATTR_X509_USER_PROXY, X509Proxy);
+	else
+		sprintf(owner_buf, "%s == \"%s\" ", ATTR_OWNER, Owner);
 
 	// Make sure we grab all Globus Universe jobs when we first start up
 	// in case we're recovering from a shutdown/meltdown.
 	if ( grabAllJobs ) {
 		//Should be snprintf, but it's not on all platforms.
-		//snprintf( expr_buf, 1024, "%s == \"%s\" && %s == %d",
-		//		  ATTR_OWNER, Owner, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE );
-		sprintf( expr_buf, "%s == \"%s\" && %s == %d",
-				ATTR_OWNER, Owner, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE );
+		//snprintf( expr_buf, 1024, "%s && %s == %d",
+		//		  owner_buf, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE );
+		sprintf( expr_buf, "%s  && %s == %d",
+				owner_buf, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE );
 	} else {
 		//Should be snprintf, but it's not on all platforms.
-		//snprintf( expr_buf, 1024, "%s == \"%s\" && %s == %d && %s == %d",
-		//		  ATTR_OWNER, Owner, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE,
+		//snprintf( expr_buf, 1024, "%s  && %s == %d && %s == %d",
+		//		  owner_buf, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE,
 		//		  ATTR_GLOBUS_STATUS, G_UNSUBMITTED );
-		sprintf( expr_buf, "%s == \"%s\" && %s == %d && %s == %d",
-			ATTR_OWNER, Owner, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE,
+		sprintf( expr_buf, "%s  && %s == %d && %s == %d",
+			owner_buf, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE,
 			ATTR_GLOBUS_STATUS, G_UNSUBMITTED );
 	}
 
@@ -396,16 +408,23 @@ GridManager::REMOVE_JOBS_signalHandler( int signal )
 {
 	ClassAd *next_ad;
 	char expr_buf[1024];
+	char owner_buf[512];
 	int num_ads = 0;
 
 	dprintf(D_FULLDEBUG,"in REMOVE_JOBS_signalHandler\n");
+
+	if(X509Proxy)
+		sprintf(owner_buf, "%s == \"%s\" && %s == \"%s\" ", ATTR_OWNER, Owner,
+				ATTR_X509_USER_PROXY, X509Proxy);
+	else
+		sprintf(owner_buf, "%s == \"%s\" ", ATTR_OWNER, Owner);
 
 	//Should be snprintf, but it's not on all platforms.
 	//snprintf( expr_buf, 1024, "%s == \"%s\" && %s == %d && %s == %d",
 	//		  ATTR_OWNER, Owner, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE,
 	//		  ATTR_JOB_STATUS, REMOVED );
-	sprintf( expr_buf, "%s == \"%s\" && %s == %d && %s == %d",
-		ATTR_OWNER, Owner, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE,
+	sprintf( expr_buf, "%s && %s == %d && %s == %d",
+		owner_buf, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE,
 		ATTR_JOB_STATUS, REMOVED );
 
 	// Get all the new Grid job ads

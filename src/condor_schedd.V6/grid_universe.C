@@ -91,7 +91,7 @@ GridUniverseLogic::~GridUniverseLogic()
 
 
 void 
-GridUniverseLogic::JobCountUpdate(const char* owner, int num_globus_jobs,
+GridUniverseLogic::JobCountUpdate(const char* owner, const char* proxy, int num_globus_jobs,
 			int num_globus_unsubmitted_jobs)
 {
 	// Quick sanity checks - this should never be...
@@ -103,7 +103,7 @@ GridUniverseLogic::JobCountUpdate(const char* owner, int num_globus_jobs,
 	// does not know they are in the queue. so tell it some jobs
 	// were added.
 	if ( num_globus_unsubmitted_jobs > 0 ) {
-		JobAdded(owner);
+		JobAdded(owner, proxy);
 		return;
 	}
 
@@ -111,7 +111,7 @@ GridUniverseLogic::JobCountUpdate(const char* owner, int num_globus_jobs,
 	// are any globus jobs at all.  if there are, make certain that there
 	// is a grid manager watching over the jobs and start one if there isn't.
 	if ( num_globus_jobs > 0 ) {
-		StartOrFindGManager(owner);
+		StartOrFindGManager(owner, proxy);
 		return;
 	}
 
@@ -121,11 +121,11 @@ GridUniverseLogic::JobCountUpdate(const char* owner, int num_globus_jobs,
 
 
 void 
-GridUniverseLogic::JobAdded(const char* owner)
+GridUniverseLogic::JobAdded(const char* owner, const char* proxy)
 {
 	gman_node_t* node;
 
-	node = StartOrFindGManager(owner);
+	node = StartOrFindGManager(owner, proxy);
 
 	if (!node) {
 		// if we cannot find nor start a gridmanager, there's
@@ -146,11 +146,11 @@ GridUniverseLogic::JobAdded(const char* owner)
 }
 
 void 
-GridUniverseLogic::JobRemoved(const char* owner)
+GridUniverseLogic::JobRemoved(const char* owner, const char* proxy)
 {
 	gman_node_t* node;
 
-	node = StartOrFindGManager(owner);
+	node = StartOrFindGManager(owner, proxy);
 
 	if (!node) {
 		// if we cannot find nor start a gridmanager, there's
@@ -277,10 +277,14 @@ GridUniverseLogic::GManagerReaper(Service *,int pid, int exit_status)
 
 
 GridUniverseLogic::gman_node_t *
-GridUniverseLogic::lookupGmanByOwner(const char* owner)
+GridUniverseLogic::lookupGmanByOwner(const char* owner, const char* proxy)
 {
 	gman_node_t* result = NULL;
 	MyString owner_key(owner);
+	if(proxy){
+		MyString proxy_key(proxy);
+		owner_key += proxy_key; 
+	}
 
 	if (!gman_pid_table) {
 		// destructor has already been called; we are probably
@@ -294,12 +298,12 @@ GridUniverseLogic::lookupGmanByOwner(const char* owner)
 }
 
 GridUniverseLogic::gman_node_t *
-GridUniverseLogic::StartOrFindGManager(const char* owner)
+GridUniverseLogic::StartOrFindGManager(const char* owner, const char* proxy)
 {
 	gman_node_t* gman_node;
 	int pid;
 
-	if ( (gman_node=lookupGmanByOwner(owner)) ) {
+	if ( (gman_node=lookupGmanByOwner(owner, proxy)) ) {
 		// found it
 		return gman_node;
 	}
@@ -334,13 +338,19 @@ GridUniverseLogic::StartOrFindGManager(const char* owner)
 	char *gman_args;
 	gman_args = param("GRIDMANAGER_ARGS");
 	char gman_final_args[_POSIX_ARG_MAX];
+	char proxy_buf[_POSIX_ARG_MAX];
 	if (gman_args) {
 		sprintf(gman_final_args,"condor_gridmanager -f %s",gman_args);
 		free(gman_args);
 	} else {
 		sprintf(gman_final_args,"condor_gridmanager -f");
 	}
-	dprintf(D_FULLDEBUG,"Execing %s\n",gman_final_args);
+	if(proxy && proxy[0] != '\0') {
+		sprintf(proxy_buf, " -x %s", proxy);
+		// Really should be strncat...
+		strcat(gman_final_args, proxy_buf);
+	}
+	dprintf(D_FULLDEBUG,"Really Execing %s\n",gman_final_args);
 
 	init_user_ids(owner);
 
@@ -365,7 +375,13 @@ GridUniverseLogic::StartOrFindGManager(const char* owner)
 	gman_node = new gman_node_t;
 	gman_node->pid = pid;
 	MyString owner_key(owner);
-	ASSERT( gman_pid_table->insert(owner,gman_node) == 0 );
+	if(proxy){
+		MyString proxy_key(proxy);
+		owner_key += proxy_key;
+	}
+
+
+	ASSERT( gman_pid_table->insert(owner_key,gman_node) == 0 );
 
 	// All done
 	return gman_node;

@@ -31,12 +31,12 @@ class GridUniverseLogic : public Service
 		GridUniverseLogic();
 		~GridUniverseLogic();
 
-		static void JobCountUpdate(const char* owner, int num_globus_jobs,
-			int num_globus_unsubmitted_jobs);
+		static void JobCountUpdate(const char* owner, const char* proxy,
+				int num_globus_jobs, int num_globus_unsubmitted_jobs);
 
-		static void JobRemoved(const char* owner);
+		static void JobRemoved(const char* owner, const char* proxy);
 
-		static void JobAdded(const char* owner);
+		static void JobAdded(const char* owner, const char* proxy);
 
 		static void reconfig() { signal_all(DC_SIGHUP); }
 		static void shutdown_graceful() { signal_all(DC_SIGTERM); }
@@ -55,11 +55,13 @@ class GridUniverseLogic : public Service
 			gman_node_t() : pid(0),add_timer_id(-1),remove_timer_id(-1) {};
 		};
 
-		static gman_node_t* lookupGmanByOwner(const char* owner);
+		static gman_node_t* lookupGmanByOwner(const char* owner, 
+							const char* proxy);
 
 		static int GManagerReaper(Service *,int pid, int exit_status);
 
-		static gman_node_t* StartOrFindGManager(const char* owner);
+		static gman_node_t* StartOrFindGManager(const char* owner, const char*
+												proxy);
 
 		// SendAddSignal and SendRemoveSignal are DC Timer Event handlers
 		static int SendAddSignal(Service *);

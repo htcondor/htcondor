@@ -49,6 +49,7 @@ class GridManager : public Service
 	// This is public because it needs to be accessible from main_init()
 	char *gramCallbackContact;
 	char *ScheddAddr;
+	char *X509Proxy;
 
 	HashTable <HashKey, GlobusJob *> *JobsByContact;
 	HashTable <PROC_ID, GlobusJob *> *JobsByProcID;

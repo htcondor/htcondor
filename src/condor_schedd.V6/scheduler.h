@@ -67,6 +67,7 @@ struct shadow_rec
 
 struct OwnerData {
   char* Name;
+  char* X509;
   int JobsRunning;
   int JobsIdle;
   int JobsHeld;
@@ -349,7 +350,7 @@ class Scheduler : public Service
 	int				cluster_rejected(int);
 	void   			mark_cluster_rejected(int); 
 	int				count_jobs();
-	int				insert_owner(char*);
+	int				insert_owner(char*, char*);
 #ifndef WANT_DC_PM
 	void			reaper(int);
 #endif
