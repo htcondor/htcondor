@@ -408,6 +408,27 @@ Stream::code(StartdRec &rec)
 	return TRUE;
 }
 
+extern "C" int open_flags_encode( int flags );
+extern "C" int open_flags_decode( int flags );
+
+int 
+Stream::code(open_flags_t &flags)
+{
+	int real_flags, rval;
+
+	if (_coding == stream_encode) {
+		real_flags = open_flags_encode((int)flags);
+	}
+
+	rval = code(real_flags);
+
+	if (_coding == stream_decode) {
+		flags = (open_flags_t)open_flags_decode((int)real_flags);
+	}
+
+	return rval;
+}
+
 #if !defined(WIN32)
 
 /*
@@ -435,26 +456,6 @@ Stream::code(condor_signal_t &sig_num)
 	return rval;
 }
 
-extern "C" int open_flags_encode( int flags );
-extern "C" int open_flags_decode( int flags );
-
-int 
-Stream::code(open_flags_t &flags)
-{
-	int real_flags, rval;
-
-	if (_coding == stream_encode) {
-		real_flags = open_flags_encode((int)flags);
-	}
-
-	rval = code(real_flags);
-
-	if (_coding == stream_decode) {
-		flags = (open_flags_t)open_flags_decode((int)real_flags);
-	}
-
-	return rval;
-}
 
 extern "C" int fcntl_cmd_encode( int cmd );
 extern "C" int fcntl_cmd_decode( int cmd );
