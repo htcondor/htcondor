@@ -49,7 +49,8 @@ SRC = state_machine_driver.C event_handler.C name_tab.C NON_POSIX.select.C \
 	filter.C directory.C my_hostname.C file_lock.C disk.C up_down.C \
 	environ.C sysparam_main.C $(SYSPARAM).C afs.C subproc.C \
 	carmi_context.C instantiate.C condor_query.C string_list.C \
-	condor_event.C generic_query.C $(URL_SRC) get_schedd_addr.C
+	condor_event.C generic_query.C $(URL_SRC) get_schedd_addr.C \
+	user_log.C
 
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
@@ -57,7 +58,8 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	filter.o directory.o my_hostname.o file_lock.o disk.o up_down.o \
 	environ.o sysparam_main.o $(SYSPARAM).o afs.o subproc.o \
 	carmi_context.o instantiate.o condor_query.o string_list.o \
-	condor_event.o generic_query.o $(URL_OBJ) get_schedd_addr.o
+	condor_event.o generic_query.o $(URL_OBJ) get_schedd_addr.o \
+	user_log.o
 
 #if IS_R6000_AIX32
 TEST_LIBS = ../condor_util_lib/util_lib.a cplus_lib.a /usr/lib/libbsd.a

@@ -190,8 +190,8 @@ clean::
 #elif (IS_SUN4M_SOLARIS) || (IS_SUN4M_SOLARIS251)
 #undef sparc
 #undef sun
-condor_rt0.o: /s/gcc-2.6.3/sun4m_54/lib/gcc-lib/sparc-sun-solaris2.4/2.6.3/crt1.o ToUpper
-	ToUpper /s/gcc-2.6.3/sun4m_54/lib/gcc-lib/sparc-sun-solaris2.4/2.6.3/crt1.o condor_rt0.o main  MAIN
+condor_rt0.o: Crt0 ToUpper
+	ToUpper Crt0 condor_rt0.o main  MAIN
 clean::
 	rm -f condor_rt0.o
 #define sparc
@@ -199,8 +199,8 @@ clean::
 #elif  (IS_X86_SOLARIS)
 #undef i386
 #undef sun
-condor_rt0.o: /s/gcc-2.6.3/sunx86_54/lib/gcc-lib/i386-sun-solaris2.4/2.6.3/crt1.o ToUpper
-	ToUpper /s/gcc-2.6.3/sunx86_54/lib/gcc-lib/i386-sun-solaris2.4/2.6.3/crt1.o condor_rt0.o main  MAIN
+condor_rt0.o: Crt0 ToUpper
+	ToUpper Crt0 condor_rt0.o main  MAIN
 clean::
 	rm -f condor_rt0.o
 #define i386
