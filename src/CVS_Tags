@@ -1,7 +1,19 @@
-7/6/00 V6_2-branch
-	The branch for all of Condor version 6.2.X.  In addition, the
-	last few 6.1.X releases (hopefully, just 6.1.15), will live on
-	this branch.  config, src, doc, and NTconfig are all branched.
+7/6/00 V6_3-branch
+	The branch for all of Condor version 6.3.X (and, probably,
+	6.4.X).  Changes made on the V6_2-branch should always be
+	merged into this branch, not the trunk.  This branch should be
+	merged into the trunk periodically.  6.3.X should contain new
+	features, Globus universe stuff, Condor-G, Personal Condor
+	stuff, etc.  It should *NOT* contain new classads, new schedd,
+	etc, etc. 
+
+7/6/00 V6_2-branch The branch for all of Condor version 6.2.X.  In
+	addition, the last few 6.1.X releases (hopefully, just
+	6.1.15), will live on this branch.  config, src, doc, and
+	NTconfig are all branched.  Changes from this branch should
+	*NEVER* be merged directly into the trunk.  They *MUST* be
+	merged into the V6_3-branch, and then, those changes should be
+	merged from the V6_3-branch into the trunk.
 
 7/6/00 trunk-post-merge-V6_1_14
 	The state of the trunk aftering merging with V6_1_13-branch as 
