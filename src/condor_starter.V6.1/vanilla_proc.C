@@ -172,23 +172,25 @@ VanillaProc::StartJob()
 {
 	int ret_value;
 	char tmp[_POSIX_ARG_MAX];
+	int change_iwd = true;
 
 	dprintf(D_FULLDEBUG,"in VanillaProc::StartJob()\n");
 
-	// for now, stash the executable in jobtmp, and switch the ad to 
-	// say the executable is condor_exec
-	jobtmp[0] = '\0';
-	JobAd->LookupString(ATTR_JOB_CMD,jobtmp);
-	sprintf(tmp,"%s=\"%s\"",ATTR_JOB_CMD,CONDOR_EXEC);
-	JobAd->InsertOrUpdate(tmp);		
-
-	// setup value for TransferAtVacate
+		/* setup value for TransferAtVacate and also determine if
+		   we should change our working directory */
 	tmp[0] = '\0';
 	JobAd->LookupString(ATTR_TRANSFER_FILES,tmp);
 		// if set to "ALWAYS", then set TransferAtVacate to true
-	if ( tmp[0]=='a' || tmp[0]=='A' ) {
+	switch ( tmp[0] ) {
+	case 'a':
+	case 'A':
 		TransferAtVacate = true;
-	} 
+		break;
+	case 'n':  /* for "Never" */
+	case 'N':
+		change_iwd = false;  // It's true otherwise...
+		break;
+	}
 
 #ifdef WIN32
 	// taken from OsProc::StartJob for now, here we create the user and
@@ -211,22 +213,33 @@ VanillaProc::StartJob()
 	}
 #endif
 
-	// if requested in the jobad, transfer files over 
-	char TransSock[40];
-	if (JobAd->LookupString(ATTR_TRANSFER_SOCKET, TransSock) == 1) {
-		char buf[ATTRLIST_MAX_EXPRESSION];
+	// for now, stash the executable in jobtmp, and switch the ad to 
+	// say the executable is condor_exec
+	jobtmp[0] = '\0';
+	JobAd->LookupString(ATTR_JOB_CMD,jobtmp);
 
+		// if requested in the jobad, transfer files over.  
+	if ( change_iwd ) {
 		// reset iwd of job to the starter directory
-		sprintf(buf,"%s=\"%s\"",ATTR_JOB_IWD,Starter->GetWorkingDir());
-		JobAd->InsertOrUpdate(buf);		
+		sprintf(tmp,"%s=\"%s\"",ATTR_JOB_IWD,Starter->GetWorkingDir());
+		JobAd->InsertOrUpdate(tmp);		
+	
+			// rename executable to 'condor_exec'
+		sprintf(tmp,"%s=\"%s\"",ATTR_JOB_CMD,CONDOR_EXEC);
+		JobAd->InsertOrUpdate(tmp);		
 
 		filetrans = new FileTransfer();
 		ASSERT( filetrans->Init(JobAd) );
 		filetrans->RegisterCallback(
-			(FileTransferHandler)&VanillaProc::TransferCompleted,this);
+				  (FileTransferHandler)&VanillaProc::TransferCompleted,this);
 		ret_value = filetrans->DownloadFiles(false); // do not block
+
 	} else {
-		// no file transfer desired, thus the file transfer is "done"
+			/* no file transfer desired, thus the file transfer is "done".
+			   We assume that transfer_files == Never means that we want 
+			   to live in the submit directory, so we DON'T change the 
+			   ATTR_JOB_CMD or the ATTR_JOB_IWD.  This is important 
+			   to MPI!  -MEY 12-8-1999  */
 		ret_value = TransferCompleted(NULL);
 	}
 
