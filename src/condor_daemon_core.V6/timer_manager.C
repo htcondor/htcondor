@@ -355,7 +355,7 @@ TimerManager::Timeout()
 		handlercpp = timer_list->handlercpp;
 		s = timer_list->service; 
 		is_cpp = timer_list->is_cpp;
-		event_descrip = timer_list->event_descrip;
+		event_descrip = strdup(timer_list->event_descrip);
 		data_ptr = timer_list->data_ptr;
 
 		// Update curr_dataptr for GetDataPtr()
@@ -404,6 +404,7 @@ TimerManager::Timeout()
 				CancelTimer(current_id);
 			}
 		}
+		free( event_descrip );
 	}  // end of while loop
 
 
