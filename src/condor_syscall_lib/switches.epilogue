@@ -1,0 +1,8 @@
+
+#ifdef HPUX9
+#include "switches.remap-HPUX9.h"
+#endif 
+
+#ifdef SOLARIS251
+#include "switches.remap-SOLARIS251.h"
+#endif
