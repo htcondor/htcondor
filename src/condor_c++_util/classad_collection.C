@@ -77,7 +77,7 @@ bool ClassAdCollection::NewClassAd(const char* key, ClassAd* ad)
   ExprTree* L_expr;
   ExprTree* R_expr;
   char name[1000];
-  char value[10000];
+  char *value;
   ad->ResetExpr();
   while ((expr=ad->NextExpr())!=NULL) {
     strcpy(name,"");
@@ -85,8 +85,9 @@ bool ClassAdCollection::NewClassAd(const char* key, ClassAd* ad)
     L_expr=expr->LArg();
     L_expr->PrintToStr(name);
     R_expr=expr->RArg();
-    R_expr->PrintToStr(value);
+    R_expr->PrintToNewStr(&value);
     LogRecord* log=new LogSetAttribute(key,name,value);
+	free(value);
     ClassAdLog::AppendLog(log);
   }
   // return AddClassAd(0,key);
