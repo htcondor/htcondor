@@ -57,6 +57,8 @@
 
 #include "my_username.h"
 
+#include "globus_utils.h"
+
 static int hashFunction( const MyString&, int );
 HashTable<MyString,MyString> forcedAttributes( 64, hashFunction ); 
 HashTable<MyString,int> CheckFilesRead( 577, hashFunction ); 
@@ -504,7 +506,7 @@ main( int argc, char *argv[] )
 		exit( 1 );
 	}
 
-	if ( !DisconnectQ(0) ) {
+	if ( ActiveQueueConnection == TRUE && !DisconnectQ(0) ) {
 		fprintf(stderr, "\nERROR: Failed to commit job submission into the queue.\n");
 		exit(1);
 	}
@@ -653,46 +655,6 @@ SetExecutable()
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
-
-#if !defined(WIN32)
-	if ( JobUniverse == GLOBUS_UNIVERSE ) {
-			/* the end result of this section is:
-			 * place the "executable" value in submit file in arg list
-			 * find SHADOW_GLOBUS and use it for ename (executable in ClassAd)
-			 */
-		char *globusshadow;
-		struct stat statbuf;
-		char size[32];
-		if ( !(globusshadow = param( "SHADOW_GLOBUS" )) ) {
-			fprintf(stderr, "\"SHADOW_GLOBUS\" value not configured in your pool\n" );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
-			//check for existence & size of globusshadow pgm
-/*
-		if ( stat( globusshadow, &statbuf ) ) {
-			fprintf(stderr, "cannot get stat() on %s\n", globusshadow );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
-*/
-			//value in submit file is probably for globus job, not globusshadow pgm
-			//so just override it here
-		sprintf(size,"%d", ( statbuf.st_size / 1024 ) + 1 );
-		forcedAttributes.remove( MyString( "MemoryRequirements" ) );
-		forcedAttributes.insert( MyString( "MemoryRequirements" ), MyString( size ) );
-
-			//executable named in the submit file should be inserted in the
-			//arguments list to be passed to the globus shadow
-		sprintf( GlobusExec, "&(executable=%s)",ename );
-
-			//now, replace ename with globusshadow value from config file
-			//ename wasn't getting freed anywhere, free old value anyway
-		free( ename );
-			//we want (path to) globusshadow placed in the ad as the executable
-		ename = globusshadow;
-	}
-#endif !defined(WIN32)
 
 	check_path_length(full_path(ename,false), Executable);
 
@@ -867,14 +829,12 @@ SetUniverse()
 	};
 
 	if( univ && stricmp(univ,"globus") == MATCH ) {
-			//Globus universe jobs need to be transformed to be scheduler
-			//universe jobs, use JobUniverse as the signal for that, but the end 
-			//result should be a scheduler universe job with the globus shadow 
-			//program as the scheduler, and modified executable, arguments, 
-			//universe, in/out/err job attributes. 
-			//Also, find globusrun, and clear & set MemoryRequirements.
+		if ( have_globus_support() == 0 ) {
+			fprintf( stderr, "This version of Condor doesn't support Globus Universe jobs.\n" );
+			exit( 1 );
+		}
 		JobUniverse = GLOBUS_UNIVERSE;
-		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, SCHED_UNIVERSE);
+		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE);
 		InsertJobExpr (buffer);
 		free(univ);
 		return;
@@ -1233,37 +1193,6 @@ SetStdFile( int which_file )
 
 	check_path_length(macro_value, generic_name);
 
-#if !defined(WIN32)
-		//if GLOBUS universe, we don't want stdin/out/err in the ads, we
-		//want them to be passed on to globus to deal with them!
-	if ( JobUniverse == GLOBUS_UNIVERSE ) {
-		char tmpbuf[8192];
-		char *fileneeded;
-
-		switch( which_file ) {
-		case 0:
-			fileneeded = "stdin";
-			break;
-		case 1:
-			fileneeded = "stdout";
-			break;
-		case 2:
-			fileneeded = "stderr";
-			break;
-		}
-		strcpy( tmpbuf, GlobusArgs );
-			//if fileneeded not an absolute pathname, use "/./", Globus
-			//GASS notation for CWD
-		sprintf( GlobusArgs, "%s(%s=$(GLOBUSRUN_GASS_URL)%s%s)", tmpbuf, 
-				fileneeded, macro_value[0] == '/' ? "" : "./", macro_value );
-
-		if ( macro_value )
-			free(macro_value);
-
-		return;
-	}
-#endif
-
 	switch( which_file ) 
 	{
 	  case 0:
@@ -1433,70 +1362,9 @@ SetArguments()
 		exit( 1 );
 	}
 
-#if !defined(WIN32)
-	if ( JobUniverse == GLOBUS_UNIVERSE ) {
-		char *rsl;
-		if ( rsl = condor_param(GlobusRSL) ) {
-			strcat( GlobusArgs, rsl );
-			free( rsl );
-		}
-			//put specified args into RSL, then insert GlobusArgs into Ad
-		if ( strcmp( args, "" ) ) {
-				//handle args in either Condor format or Globus RSL format
-			StringList newargs( args, " ,\"" );
-			newargs.rewind();
-			strcat( GlobusArgs, "(arguments=" );
-			for ( char *nextarg = NULL; nextarg = newargs.next();  ) {
-				if ( strcmp( nextarg, "" ) ) {
-					strcat( GlobusArgs, nextarg );
-					strcat( GlobusArgs, " " );
-				}
-			}
-			strcat( GlobusArgs, ")" );
-		}
-         //if the universe is Globus, need to specify GlobusScheduler
-      char *globushost;
-      if ( !(globushost = condor_param( GlobusScheduler ) ) ) {
-         fprintf(stderr, "Globus universe jobs require a \"%s\" parameter\n",
-               GlobusScheduler );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-      }
-			//extract "GLOBUSRUN" value from config file
-		char *globusrun;
-		if ( !(globusrun = param( "GLOBUSRUN" )) ) {
-			fprintf(stderr, "\"GLOBUSRUN\" value not configured in your pool\n" );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
-		char *GlobusTmp = new char[_POSIX_ARG_MAX + 64];
-			//new arg list: cluster.proc globusrun flags rsl string
-		sprintf( GlobusTmp, "%d.%d %s %s", ClusterId, ProcId, ScheddAddr, 
-				globusrun );
-		sprintf( buffer, "%s = \"%s\"", ATTR_JOB_ARGUMENTS, GlobusTmp );
-		InsertJobExpr (buffer, false );
+	sprintf (buffer, "%s = \"%s\"", ATTR_JOB_ARGUMENTS, args);
+	InsertJobExpr (buffer);
 
-		sprintf( buffer, "%s = \"%s\"", "GlobusContactString", "X" );
-		InsertJobExpr (buffer, false );
-
-		sprintf( buffer, "%s = %d", "GlobusQueryDelay", 30 );
-		InsertJobExpr (buffer, false );
-
-		sprintf( buffer, "%s = \"%s\"", "GlobusStatus", "UNSUBMITTED" );
-		InsertJobExpr (buffer, false );
-
-			//this is the command line string to pass to globusrun itself
-		sprintf( buffer, "%s = \"-b -r '%s' '%s'\"", "GlobusArgs", globushost, 
-				GlobusArgs );
-		InsertJobExpr (buffer, false );
-		delete [] GlobusTmp;
-	}
-	else 
-#endif
-	{
-		sprintf (buffer, "%s = \"%s\"", ATTR_JOB_ARGUMENTS, args);
-		InsertJobExpr (buffer);
-	}
 	free(args);
 }
 
@@ -1882,6 +1750,75 @@ SetForcedAttributes()
 	}	
 }
 
+void
+SetGlobusParams()
+{
+	char rsl[8092];
+	char buff[2048];
+	char *globushost;
+	char *tmp;
+
+	if ( JobUniverse != GLOBUS_UNIVERSE )
+		return;
+
+	if ( !(globushost = condor_param( GlobusScheduler ) ) ) {
+		fprintf(stderr, "Globus universe jobs require a \"%s\" parameter\n",
+				GlobusScheduler );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	sprintf( buffer, "%s = \"%s\"", "GlobusResource", globushost );
+	InsertJobExpr (buffer, false );
+
+	free( globushost );
+
+	sprintf( buffer, "%s = \"%s\"", "GlobusContactString", "X" );
+	InsertJobExpr (buffer, false );
+
+	sprintf( buffer, "%s = %d", "GlobusQueryDelay", 30 );
+	InsertJobExpr (buffer, false );
+
+	sprintf( buffer, "%s = %d", "GlobusStatus", G_UNSUBMITTED );
+	InsertJobExpr (buffer, false );
+
+	strcpy( rsl, "GlobusRSL = \"" );
+
+	ASSERT( job->LookupString( ATTR_JOB_CMD, buff ) );
+	strcat( rsl, "&(executable=" );
+	strcat( rsl, buff );
+
+	if ( job->LookupString( ATTR_JOB_ARGUMENTS, buff ) && buff[0] != '\0' ) {
+		strcat( rsl, ")(arguments=" );
+		strcat( rsl, buff );
+	}
+
+	if ( job->LookupString( ATTR_JOB_INPUT, buff ) ) {
+		strcat( rsl, ")(stdin=" );
+		strcat( rsl, buff );
+	}
+
+	if ( job->LookupString( ATTR_JOB_OUTPUT, buff ) ) {
+		strcat( rsl, ")(stdout=" );
+		strcat( rsl, buff );
+	}
+
+	if ( job->LookupString( ATTR_JOB_ERROR, buff ) ) {
+		strcat( rsl, ")(stderr=" );
+		strcat( rsl, buff );
+	}
+
+	strcat( rsl, ")" );
+
+	if ( tmp = condor_param(GlobusRSL) ) {
+		strcat( rsl, tmp );
+		free( tmp );
+	}
+
+	strcat( rsl, "\"" );
+
+	InsertJobExpr ( rsl, false );
+}
 
 #if !defined(WIN32)
 struct SigTable { int v; char *n; };
@@ -2101,6 +2038,12 @@ condor_param( char *name )
 			fprintf(stderr, "\nERROR: Failed to expand macros in: %s\n", name);
 			exit(1);
 		}
+	} else {
+		// expand_macro() returns a newly-allocated string while
+		// lookup_macro() doesn't. So if we're skipping expand_macro(), we
+		// need to allocate a new copy of the string.
+		if ( pval != NULL )
+			pval = strdup( pval );
 	}
 
 	return( pval );
@@ -2207,7 +2150,21 @@ queue(int num)
 			SetExecutable();
 		}
 		if ( JobUniverse == GLOBUS_UNIVERSE ) {
-			strcpy( GlobusArgs, GlobusExec );
+			char *proxy_file = condor_param( X509UserProxy );
+			char *rm_contact = condor_param( GlobusScheduler );
+			if ( check_x509_proxy(proxy_file) != 0 ) {
+				exit( 1 );
+			}
+/*
+			if ( rm_contact && (check_globus_rm_contacts(rm_contact) != 0) ) {
+				fprintf( stderr, "ERROR: Can't find scheduler in MDS\n" );
+				exit( 1 );
+			}
+*/
+			if ( proxy_file )
+				free( proxy_file );
+			if ( rm_contact )
+				free( rm_contact );
 		}
 
 			/* For MPI only... we have to define $(NODE) to some string
@@ -2245,6 +2202,7 @@ queue(int num)
 		SetForcedAttributes();
 			//SetArguments needs to be last for Globus universe args
 		SetArguments(); 
+		SetGlobusParams();
 
 		rval = SaveClassAd();
 
@@ -2851,21 +2809,21 @@ setupAuthentication()
 		else {
 			//set all the X509_* stuff to default names under this directory
 
-			sprintf( buffer, "X09_CERT_DIR=%s/certdir", UserFile );
+			sprintf( buffer, "X509_CERT_DIR=%s/certdir", UserFile );
 			strcat( GlobusEnv, buffer );
 			strcat( GlobusEnv, env_delimiter );
 				//Put it in the ClassAd as well (per directive from 7th floor...)
 			sprintf( buffer, "X509_CERT_DIR = \"%s/certdir\"", UserFile );
 			InsertJobExpr( buffer );
 
-			sprintf( buffer, "X09_USER_CERT=%s/usercert.pem", UserFile );
+			sprintf( buffer, "X509_USER_CERT=%s/usercert.pem", UserFile );
 			strcat( GlobusEnv, buffer );
 			strcat( GlobusEnv, env_delimiter );
 				//Put it in the ClassAd as well (per directive from 7th floor...)
 			sprintf( buffer, "X509_USER_CERT = \"%s/usercert.pem\"", UserFile );
 			InsertJobExpr( buffer );
 
-			sprintf( buffer, "X09_USER_KEY=%s/userkey.pem", UserFile );
+			sprintf( buffer, "X509_USER_KEY=%s/userkey.pem", UserFile );
 			strcat( GlobusEnv, buffer );
 			strcat( GlobusEnv, env_delimiter );
 				//Put it in the ClassAd as well (per directive from 7th floor...)
