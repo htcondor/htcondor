@@ -122,6 +122,9 @@ sub RunIt()
     CheckAge( );
     CheckSize( );
 
+    # Add the cache directory...
+    $Hash->Add( "Directory", "s", $Directories{Base} );
+
     # Ok, summary is done...
     $Hash->Store( );
     $Hawkeye->Publish( );
@@ -265,7 +268,7 @@ sub CacheUsage( $$ )
     $Hash->Add( "GlobalDataBlocks", "n", $TotalBlocks );
 
     my $MeanBytes = 0;
-    $MeanBytes = ( $TotalBytes / $Count ) if ( $Count );
+    $MeanBytes = sprintf "%.1f", ( $TotalBytes / $Count ) if ( $Count );
     $Hash->Add( "GlobalDataBytesMean", "n", $MeanBytes );
     $Hash->Add( "GlobalDataBytesMax", "n", $MaxBytes );
 
@@ -315,12 +318,12 @@ sub CacheUsage( $$ )
 	{
 	    my ( $Dev, $Blocks, $Used, $Avail, $UsePct, $Mount ) = split;
 	    $UsePct =~ s/(\d+)\%/$1/;
-	    $Hash->Add( "Free_FileSystem", "s", $Dev );
-	    $Hash->Add( "Free_1k_Blocks", "n", $Blocks );
-	    $Hash->Add( "Free_Used", "n", $Used );
-	    $Hash->Add( "Free_Avail", "n", $Avail );
-	    $Hash->Add( "Free_UsePct", "n", $UsePct );
-	    $Hash->Add( "Free_MountPt", "s", $Mount );
+	    $Hash->Add( "Disk_FileSystem", "s", $Dev );
+	    $Hash->Add( "Disk_1k_Blocks", "n", $Blocks );
+	    $Hash->Add( "Disk_Used", "n", $Used );
+	    $Hash->Add( "Disk_Avail", "n", $Avail );
+	    $Hash->Add( "Disk_UsePct", "n", $UsePct );
+	    $Hash->Add( "Disk_MountPt", "s", $Mount );
 	}
     }
     close( DF ) or
@@ -375,17 +378,17 @@ sub CheckAge(  )
 
     # Store the results...
     $Hash->Add( "GlobalMeanAge", "n",
-		sprintf "%.1f", $TotalAge / $Count );
+		sprintf "%.1f", sprintf("%.1f", $TotalAge / $Count) );
     $Hash->Add( "OldMeanAge", "n",
-		sprintf "%.1f", $OldTotalAge / $OldCount );
+		sprintf "%.1f", sprintf("%1.f", $OldTotalAge / $OldCount) );
     $Hash->Add( "OldTotalBytes", "n", $OldTotalBytes );
     $Hash->Add( "OldMeanBytes", "n",
-		sprintf "%.1f", $OldTotalBytes / $OldCount );
+		sprintf "%.1f", sprintf("%1.f", $OldTotalBytes / $OldCount) );
     $Hash->Add( "OldTotalBlocks", "n", $OldTotalBlocks );
     $Hash->Add( "OldMeanBlocks", "n",
-		sprintf "%.1f", $OldTotalBlocks / $OldCount );
+		sprintf "%.1f", sprintf("%1.f", $OldTotalBlocks / $OldCount) );
     $Hash->Add( "OldPct", "n",
-		sprintf "%.1f", $OldPct );
+		sprintf( "%.1f", $OldPct) );
 
     # And, the old age threshold that we used...
     $Hash->Add( "OldThreshold", "n", $Config{MaxAge} );
@@ -426,11 +429,11 @@ sub CheckSize(  )
     $Hash->Add( "BigTotalBytes", "n",
 		$BigTotalBytes );
     $Hash->Add( "BigMeanBytes", "n",
-		sprintf "%.1f", $BigTotalBytes / $BigCount );
+		sprintf "%.1f", sprintf("%.1f", $BigTotalBytes / $BigCount) );
     $Hash->Add( "BigTotalBlocks", "n",
 		$BigTotalBlocks );
     $Hash->Add( "BigMeanBlocks", "n",
-		sprintf "%.1f", $BigTotalBlocks / $BigCount );
+		sprintf "%.1f", sprintf("%.1f", $BigTotalBlocks / $BigCount) );
     $Hash->Add( "BigPct", "n",
 		sprintf "%.1f", $BigPct );
 
