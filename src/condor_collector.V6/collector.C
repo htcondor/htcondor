@@ -16,7 +16,6 @@
 #include "condor_config.h"
 #include "condor_network.h"
 #include "condor_io.h"
-#include "proc_obj.h"
 
 #include "condor_daemon_core.h"
 #include "condor_timer_manager.h"

@@ -13,7 +13,6 @@
 #include "condor_config.h"
 #include "condor_network.h"
 #include "condor_io.h"
-#include "proc_obj.h"
 #include "condor_attributes.h"
 #include "collector_engine.h"
 
