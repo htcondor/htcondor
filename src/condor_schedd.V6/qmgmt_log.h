@@ -77,7 +77,7 @@ private:
 
 class LogSetAttribute : public LogRecord {
 public:
-	LogSetAttribute(int, int, char *, char *);
+	LogSetAttribute(int, int, const char *, char *);
 	~LogSetAttribute();
 	int Play();
 

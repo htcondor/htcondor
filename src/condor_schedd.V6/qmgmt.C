@@ -479,7 +479,7 @@ int DestroyClusterByConstraint(const char* constraint)
 
 
 int
-SetAttribute(int cluster_id, int proc_id, char *attr_name, char *attr_value)
+SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_value)
 {
 	Job	*job;
 	LogSetAttribute	*log;
@@ -871,7 +871,7 @@ Job::get_next()
 
 
 int
-Job::SetAttribute(char *name, char *value)
+Job::SetAttribute(const char *name, char *value)
 {
 	char *tmp_expr;
 	ExprTree *expr_tree;

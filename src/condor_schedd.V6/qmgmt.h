@@ -17,7 +17,7 @@ public:
 	~Job();
 	Job	*get_next();
 	int get_proc() { return proc; }
-	int	 SetAttribute(char *, char *);
+	int	 SetAttribute(const char *, char *);
 	int  DeleteAttribute(const char *);
 	int  GetAttribute(const char *, float *);
 	int  GetAttribute(const char *, int *);

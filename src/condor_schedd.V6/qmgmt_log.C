@@ -129,7 +129,7 @@ LogDestroyProc::Play()
 	return 0;
 }
 
-LogSetAttribute::LogSetAttribute(int cl, int p, char *n, char *val)
+LogSetAttribute::LogSetAttribute(int cl, int p, const char *n, char *val)
 {
 	op_type = CONDOR_SetAttribute;
 	body_size = sizeof(cluster) + sizeof(proc) + strlen(n) + 1 + 
