@@ -24,6 +24,9 @@ sub Submit
     
     open (SUBMIT, "$CONDOR_SUBMIT $cmd|") || die "Can't run $CONDOR_SUBMIT: $!\n";
     $line = <SUBMIT>; $line = <SUBMIT>; $line = <SUBMIT>;  # want 3rd line
+    
+    close(SUBMIT);
+
     @parts = split(' ', $line);
     $cluster = $parts[$#parts];
     $cluster =~ s/\.//g; # strip off period.
