@@ -316,16 +316,13 @@ Resource::leave_preempting_state()
 int
 Resource::init_classad()
 {
-	if( r_classad )	delete(r_classad);
-	r_classad 		= new ClassAd();
+	assert( resmgr->config_classad );
+	if( r_classad ) delete(r_classad);
+	r_classad = new ClassAd( *resmgr->config_classad );
 
 		// Publish everything we know about.
 	this->publish( r_classad, A_PUBLIC | A_ALL );
-
-		// Read in config files and fill up local ad with all
-		// expressions.
-	config( r_classad );
-
+	
 	return TRUE;
 }
 
@@ -652,9 +649,11 @@ Resource::publish( ClassAd* cap, amask_t mask )
 	if( IS_PUBLIC(mask) && IS_UPDATE(mask) ) {
 			// If we're claimed or preempting, handle anything listed 
 			// in STARTD_JOB_EXPRS.
+			// Our current match object might be gone though, so make
+			// sure we have the object before we try to use it.
 		s = this->state();
 		if( s == claimed_state || s == preempting_state ) {
-			if( startd_job_exprs ) {
+			if( startd_job_exprs && r_cur ) {
 				startd_job_exprs->rewind();
 				while( (ptr = startd_job_exprs->next()) ) {
 					caInsert( cap, r_cur->ad(), ptr );
@@ -670,10 +669,11 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			// should  get the capability from r_cur.
 		if( r_pre ) {
 			sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_pre->capab() );
-		} else {
+			cap->Insert( line );
+		} else if( r_cur ) {
 			sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_cur->capab() );
+			cap->Insert( line );
 		}		
-		cap->Insert( line );
 	}
 
 		// Put in cpu-specific attributes
@@ -688,8 +688,10 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		// Put in requirement expression info
 	r_reqexp->publish( cap, mask );
 
-		// Update info from the current Match object 
-	r_cur->publish( cap, mask );
+		// Update info from the current Match object, if it exists.
+	if( r_cur ) {
+		r_cur->publish( cap, mask );
+	}
 }
 
 
