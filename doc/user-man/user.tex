@@ -9,6 +9,7 @@
 % hastily written by a very tired Todd.... Good Luck.  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\label{sec:usermanual}
 \index{Condor!user manual|(}
 \index{user manual|(}
 Presenting Condor \VersionNotice! Condor is developed by
@@ -23,7 +24,7 @@ have a profound impact on its size, complexity, and scope. Over the
 years, the Condor Team has established collaborations with scientists
 from around the world and has provided them with access to surplus
 cycles (one of whom has consumed 100 CPU years!). Today, our
-department's pool consists of more than 700 desktop UNIX workstations.
+department's pool consists of more than 700 desktop Unix workstations.
 On a typical day, our pool delivers more than 500 CPU days to UW
 researchers. Additional Condor pools have been established over the
 years across our campus and the world. Groups of researchers, engineers,
@@ -181,10 +182,10 @@ in the pool.
 
 Refer to the \Condor{status} command 
 reference page located on page~\pageref{man-condor-status}
-for a complete description of \Condor{status} command.
+for a complete description of the \Condor{status} command.
 
-Figure~\ref{fig:CondorStatusL} shows the complete machine ad
-\index{ClassAd!example}
+Figure~\ref{fig:CondorStatusL} shows the complete machine ClassAd
+\index{ClassAd!machine example}
 \index{machine ClassAd}
 for a single workstation: alfred.cs.wisc.edu. Some of the listed
 attributes are used by
@@ -278,9 +279,9 @@ to take a checkpoint and migrate a partially completed job,
 should the machine on which the job is executing become
 unavailable.
 To use the standard universe, it is necessary to
-relinking the program with the Condor library using the
+relink the program with the Condor library using the
 \Condor{compile} command.
-The manual page on page~\pageref{man-condor-submit} has details.
+The manual page for \Condor{submit} on page~\pageref{man-condor-submit} has details.
 
 The vanilla universe provides a way to run jobs that cannot be
 relinked.
@@ -354,7 +355,7 @@ universes for user jobs:
 \end{itemize}
 
 The \AdAttr{Universe} attribute is specified in the submit description file.
-If the universe is not specified, then it will default to \Expr{standard}.
+If a universe is not specified, the default is \Expr{standard}.
 
 \index{universe!standard}
 The \Expr{standard} universe provides migration and reliability, but has some
@@ -380,51 +381,58 @@ Condor interface.  See \Url{http://www.globus.org} for more about Globus.
 In the standard universe, Condor provides \Term{checkpointing} and
 \Term{remote system calls}.  These features make a job more reliable
 and allow it uniform access to resources from anywhere in the pool.
-To prepare a program as a standard universe job, it must be re-linked
+To prepare a program as a standard universe job, it must be relinked
 with \Condor{compile}.  Most programs can be prepared as a standard
 universe job, but there are a few restrictions.
 
 \index{checkpoint}
 \index{checkpoint image}
 Condor checkpoints a job at regular intervals.
-A \Term{checkpoint image} is like a snapshot of the current
-state of a job.  If a job must be migrated from one machine to another,
+A \Term{checkpoint image} is essentially a snapshot of the current
+state of a job. 
+If a job must be migrated from one machine to another,
 Condor makes a checkpoint image, copies the image to the new machine,
-and restarts the job \emph{right where it left off}.  If a machine should
+and restarts the job continuing the job from where it left off.
+If a machine should
 crash or fail while it is running a job, Condor can restart the job on
-a new machine from the most recent checkpoint image.  In this way, jobs
+a new machine using the most recent checkpoint image.
+In this way, jobs
 can run for months or years even in the face of occasional computer failures.
 
 \index{remote system call}
 \index{shadow}
 Remote system calls make a job perceive that it is executing on its home
-machine, even though it may execute on many different machines over its
-lifetime.  When your job runs on a remote machine, a second process, called
-a \Condor{shadow} runs on the machine where you submitted the job.
+machine, even though the job may execute on many different machines over its
+lifetime.
+When a job runs on a remote machine, a second process, called
+a \Condor{shadow} runs on the machine where the job was submitted.
 \index{condor\_shadow}
 \index{agents!condor\_shadow}
 \index{Condor daemon!condor\_shadow}
 \index{remote system call!condor\_shadow}
-Whenever your job attempts a system call, the \Condor{shadow} performs
-it instead and sends the results back.  So, if your job attempts to
-open a file that is stored only on the submitting machine,
-the \Condor{shadow} will find it and send the data to the machine where
-your job happens to be running.
+When the job attempts a system call, the \Condor{shadow} performs
+the system call instead and sends the results to the remote
+machine.
+For example, if a job attempts to open a file that is
+stored on the submitting machine,
+the \Condor{shadow} will find the file,
+and send the data to the machine where
+the job is running.
 
 To convert your program into a standard universe job, you must use
-\Condor{compile} to re-link it with the Condor libraries.  Simply
-put \Condor{compile} in front of your usual link command.
+\Condor{compile} to relink it with the Condor libraries.
+Put \Condor{compile} in front of your usual link command.
 You do not need to modify the program's source code,
-but you do need access to its un-linked object files.  A commercial
-program that is packaged as a single executable file cannot be
+but you do need access to the unlinked object files.
+A commercial program that is packaged as a single executable file cannot be
 converted into a standard universe job.
 
-For example, if you normally link your job by executing:
+For example, if you would have linked the job by executing:
 \begin{verbatim}
 % cc main.o tools.o -o program
 \end{verbatim}
 
-Then you can re-link your job for Condor with:
+Then, relink the job for Condor with:
 \begin{verbatim}
 % condor_compile cc main.o tools.o -o program
 \end{verbatim}
@@ -456,27 +464,32 @@ or it can give up and restart the job \emph{from the beginning}
 on another machine in the pool.
 
 \Notice{
-In UNIX, jobs submitted as vanilla universe jobs can rely only on an
-external mechanism for accessing data files from different machines
-such as NFS or AFS. The job \emph{must} be able to access the data
-files on any machine on which it could potentially run. As an example,
-suppose your work machine is blackbird.cs.wisc.edu and your job requires
-a particular data file \File{/u/p/s/psilord/data.txt}. You wish to
-submit to Condor from this machine and the job can potentially run on
-cardinal.cs.wisc.edu. If the job runs on that machine, it must have
-\File{/u/p/s/psilord/data.txt} available through either NFS or AFS for
-your job to run correctly.
+Under Unix, jobs submitted as vanilla universe jobs rely on an
+external mechanism for accessing data files,
+such as NFS or AFS.
+The job \emph{must} be able to access the data
+files from any machine on which it could potentially run.
+As an example,
+suppose a job is submitted from blackbird.cs.wisc.edu, and the job requires
+a particular data file called \File{/u/p/s/psilord/data.txt}.
+If the job were to run on cardinal.cs.wisc.edu, the file
+\File{/u/p/s/psilord/data.txt} must be available through either
+NFS or AFS for the job to run correctly.
 
-Condor deals with this restriction of the vanilla universe by
+Condor deals with this restriction imposed by the vanilla universe by
+using
 the \AdAttr{FileSystemDomain} and \AdAttr{UidDomain} machine
-ClassAd attributes that reflect the reality of the pool's disk
-mounting structure. If you have a large pool spanning multiple
-\AdAttr{UidDomain} and/or \AdAttr{FileSystemDomain}s, then you must specify
-your \AdAttr{requirements} to use the correct \AdAttr{UidDomain} and/or
-\AdAttr{FileSystemDomain}s that your jobs need to access your data
-files.
+ClassAd attributes.
+These attributes reflect the reality of the pool's disk
+mounting structure.
+For a large pool spanning multiple
+\AdAttr{UidDomain} and/or \AdAttr{FileSystemDomain}s, the job
+must specify
+its \AdAttr{requirements} to use the correct \AdAttr{UidDomain} and/or
+\AdAttr{FileSystemDomain}s.
 
-However, under Windows NT, the vanilla universe \emph{does not} require
+This mechanism is not required under Windows NT.
+The vanilla universe does \emph{not} require
 a shared file system due to the Condor File Transfer mechanism. Please see
 chapter~\ref{condor-nt} for more details about Condor NT.
 }
@@ -486,10 +499,11 @@ chapter~\ref{condor-nt} for more details about Condor NT.
 %%%%%%%%%%%%
 
 \index{universe!PVM}
-The PVM universe allows programs written to the Parallel Virtual Machine
+The PVM universe allows programs written for the Parallel Virtual Machine
 interface to be used within the opportunistic Condor environment.
 Please see section~\ref{sec:PVM} for more details.
 
+% Commented out until implementation/documentation is complete:
 %%%%%%%%%%%%
 %\subsubsection{MPI}
 %%%%%%%%%%%%
@@ -507,7 +521,9 @@ The Globus universe in Condor is intended to provide the standard
 Condor interface to users who wish to start Globus system jobs
 from Condor. Each job queued in the job submission file is translated
 into a Globus RSL string and used as the arguments to the \Prog{globusrun}
-program. The manual page for \Condor{submit} has detailed descriptions for
+program. The manual page for \Condor{submit}
+on page~\pageref{man-condor-submit}
+has detailed descriptions of
 the Globus-related attributes.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1250,7 +1266,7 @@ HOSTALLOW\_READ configuration values.
 
 \subsection{Condor Daemons That Do Not Run as root}
 
-\index{UNIX daemon!running as root}
+\index{Unix daemon!running as root}
 \index{daemon!running as root}
 Condor is normally installed such that the Condor daemons have root
 permission.
@@ -1281,7 +1297,7 @@ running with root access.  If the
 \AdAttr{RealUid} attribute is not zero, then the Condor daemons do not have
 root access.
 
-\Note The UNIX program \Prog{ps}
+\Note The Unix program \Prog{ps}
 is \emph{not} an effective
 method of determining if Condor is running with root access.
 When using \Prog{ps},
@@ -1314,7 +1330,7 @@ on the directory where you submit your Condor job.
 When Condor starts up your job, it renames argv[0] (which usually
 contains the name of the program) to \condor{exec}.
 This is
-convenient when examining a machine's processes with the UNIX
+convenient when examining a machine's processes with the Unix
 command \Prog{ps}; the process
 is easily identified as a Condor job.  
 
