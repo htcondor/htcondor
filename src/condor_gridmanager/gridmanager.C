@@ -1682,6 +1682,7 @@ WriteTerminateEventToUserLog( GlobusJob *curr_job )
 	event.recvd_bytes = 0;
 	event.total_sent_bytes = 0;
 	event.total_recvd_bytes = 0;
+	event.normal = true;
 
 	// Globus doesn't tell us how the job exited, so we'll just assume it
 	// exited normally.
@@ -1693,26 +1694,30 @@ WriteTerminateEventToUserLog( GlobusJob *curr_job )
 			if( int_val ) {
 				if( job_ad->LookupInteger(ATTR_ON_EXIT_SIGNAL, int_val) ) {
 					event.signalNumber = int_val;
+					event.normal = false;
 				} else {
 					dprintf( D_ALWAYS, "(%d.%d) Job ad lacks %s.  "
 						 "Signal code unknown.\n", cluster, proc, 
 						 ATTR_ON_EXIT_SIGNAL);
+					event.normal = false;
 				}
 			} else {
 				if( job_ad->LookupInteger(ATTR_ON_EXIT_CODE, int_val) ) {
+					event.normal = true;
 					event.returnValue = int_val;
 				} else {
 					dprintf( D_ALWAYS, "(%d.%d) Job ad lacks %s.  "
 						 "Return code unknown.\n", cluster, proc, 
 						 ATTR_ON_EXIT_CODE);
+					event.normal = false;
 				}
 			}
 		} else {
 			dprintf( D_ALWAYS,
 				 "(%d.%d) Job ad lacks %s.  Final state unknown.\n",
 				 cluster, proc, ATTR_ON_EXIT_BY_SIGNAL);
+			event.normal = false;
 		}
-
 	}
 
 	int rc = ulog->writeEvent(&event);
