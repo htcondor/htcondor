@@ -932,14 +932,16 @@ usage( char *str )
 				 "host is used)\n" );
 	}
 
-	fprintf( stderr, "\nWhere [general-opts] can be zero or more of:\n" );
-	fprintf( stderr, "   -help\t\tGive this usage information\n" );
+	fprintf( stderr, "\nWhere [general-opts] can either be one of:\n" );
+	fprintf( stderr, "   -help\t\tPrint this usage information and exit\n" );
+	fprintf( stderr, "   -version\t\tPrint the version of this tool and "
+			 "exit\n" );
+	fprintf( stderr, " or it may be zero or more of:\n" );
 	fprintf( stderr, "   -debug\t\tPrint verbose debugging information\n" );
-	fprintf( stderr, "   -version\t\tPrint the version\n" );
-	fprintf( stderr, "   -timeout N\t\tTimeout all network "
-			 "operations after N seconds\n" );
 	fprintf( stderr, "   -classad file\tPrint the reply ClassAd to "
 			 "the given file\n" );
+	fprintf( stderr, "   -timeout N\t\tTimeout all network "
+			 "operations after N seconds\n" );
 
 	if( has_cmd_opt ) {
 		fprintf( stderr,
