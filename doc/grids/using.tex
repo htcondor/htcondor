@@ -19,6 +19,7 @@ These protocols allow Condor to utilize grid machines for
 the execution of jobs.
 \begin{description}
 \item[GSI]
+\index{GSI (Grid Security Infrastructure)}
 The Globus Toolkit's Grid Security Infrastructure (GSI) provides essential
 \index{Condor-G!GSI}
 building blocks for other Grid protocols and Condor-G.
@@ -32,6 +33,7 @@ apply at each site.
 \item[GRAM]
 The Grid Resource Allocation and Management (GRAM) protocol supports remote
 \index{Condor-G!GRAM}
+\index{GRAM (Grid Resource Allocation and Management)}
 submission of a computational request (for example, to run program P)
 to a remote computational resource,
 and it supports subsequent monitoring and control of the resulting
@@ -41,6 +43,7 @@ GRAM is the Globus protocol that Condor-G uses to talk to remote Globus
 \item[GASS]
 The Globus Toolkit's Global Access to Secondary Storage (GASS) service provides
 \index{Condor-G!GASS}
+\index{GASS (Global Access to Secondary Storage)}
 mechanisms for transferring data to and from a remote HTTP, FTP, or GASS server. 
 Condor-G uses GASS to transfer the executable, 
 \File{stdin}, 
@@ -231,6 +234,8 @@ gridmanager.
 %section.)
 
 Condor-G periodically checks for an updated proxy at
+\index{Condor-G!proxy}
+\index{proxy}
 an interval given by the configuration variable
 \AdAttr{GRIDMANAGER\_CHECKPROXY\_INTERVAL}.
 The value is defined in terms of seconds.
@@ -271,8 +276,11 @@ run and manage jobs under the globus universe.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Condor-G!job submission}
 
+\index{Condor-G!proxy}
+\index{proxy}
 Under Condor, successful job submission to the Globus universe requires
 credentials.
+\index{Condor-G!X.509 certificate}
 An X.509 certificate is used to create a proxy,
 and an account, authorization, or allocation to use a grid resource
 is required.

@@ -919,6 +919,7 @@ Kerberos authentication, or GSI authentication.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:GSI-Authentication}GSI Authentication}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{authentication!GSI}
 The Globus GSI (Grid Security Infrastructure) protocol provides
 an avenue for Condor to do
 PKI-based authentication using X.509 certificates.
@@ -927,11 +928,13 @@ Several steps are required to enable this authentication.
 \begin{description}
 \item[X.509 Certificates]
 
+\index{certificate}
 PKI-based authentication between Condor daemons
 requires
 a valid X.509 certificate from a trusted
 CA (Certification Authority).
 The certificate may be a single host certificate,
+\index{host certificate}
 and all Condor daemons on the same machine may share the same certificate.
 The directory where the certificate resides, along with
 other related files such as one containing the private key,
@@ -952,6 +955,7 @@ These users must also
 have valid X.509 certificates signed by a trusted CA.
 For use when submitting jobs,
 the certificate is used to generate a proxy:
+\index{proxy}
 a combination of certificate and password that is valid only
 for a specific (and usually short) time period.
 A proxy is used so that the user does  
@@ -1202,6 +1206,7 @@ for testing purposes only.
 \subsection{\label{sec:Security-Authorization} Authorization}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{security!authorization}
+\index{authorization!for security}
 
 Authorization protects resource usage by granting or denying
 access requests made to the resources.
