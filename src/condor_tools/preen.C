@@ -145,6 +145,7 @@ char *ValidLogFiles[] = {
 	"priorities.dir",
 	"machine_status",
 	"QueueLock",
+	"CondorViewLog",
 	"OldFiles",		// AFS backup directory
 	0
 };
