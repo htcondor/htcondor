@@ -354,14 +354,6 @@ MvTmpCkpt()
 
 extern "C" SetSyscalls(){}
 
-#include <sys/resource.h>
-#define _POSIX_SOURCE
-#       if defined(OSF1)
-#               include <time.h>                        /* need POSIX CLK_TCK */
-#       elif !defined(HPUX)
-#               define _SC_CLK_TCK      3               /* shouldn't do this */
-#       endif
-#undef _POSIX_SOURCE
 /*
 Convert a time value from the POSIX style "clock_t" to a BSD style
 "struct timeval".
@@ -385,9 +377,6 @@ clock_t_to_timeval( clock_t ticks, struct timeval *tv )
 }
 
 
-#define _POSIX_SOURCE
-#include <sys/times.h>          /* need POSIX struct tms */
-#undef _POSIX_SOURCE
 void
 get_local_rusage( struct rusage *bsd_rusage )
 {
@@ -513,7 +502,7 @@ part_send_job(
   StartdRec stRec;
   PORTS ports;
   
-#ifdef 0
+#if 0
   if (test_starter) {
     cmd = SCHED_VERS + ALT_STARTER_BASE + test_starter;
     dprintf( D_ALWAYS, "Requesting Test Starter %d\n", test_starter );
