@@ -27,10 +27,6 @@
 #include "exit.h"
 #include "debug.h"
 
-extern int	errno;
-extern int	sys_nerr;
-extern char	*sys_errlist[];
-
 void add_error_string( const char *str );
 char * strdup( const char *str );
 
