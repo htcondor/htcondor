@@ -128,7 +128,7 @@ insert(iterator it, ExprTree* t)
 }
 
 void ExprList::
-append(ExprTree* t)
+push_back(ExprTree* t)
 {
     exprList.push_back(t);
 	return;

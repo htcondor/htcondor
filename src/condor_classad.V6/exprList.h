@@ -68,7 +68,7 @@ class ExprList : public ExprTree
 		const_iterator end() const   { return exprList.end();   }
 
 		void insert(iterator it, ExprTree* t);
-		void append(ExprTree* t);
+		void push_back(ExprTree* t);
 		void erase(iterator it);
 		void erase(iterator f, iterator l);
 	
