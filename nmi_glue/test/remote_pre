@@ -1,38 +1,41 @@
 #!/usr/bin/perl
 
-####################################################################################################
-# app_pre.pl 
+######################################################################
+# test_pre.pl 
 # script to set up for Condor testsuite run
 # 06/21/04 Becky Gietzel 
-####################################################################################################
+######################################################################
 
 use Cwd;
 use Env; 
 
-#my $release_tarball = "condor-6.6.6-linux-Alpha-glibc22-dynamic.tar.gz";
-my $source_tarball= "condor-src.tar.gz";
 my $logsize = "50000000"; # size for logs of personal Condor
 
-####################################################################################################
+
+######################################################################
 # set up path and create path file for the rest of the scripts
-####################################################################################################
+######################################################################
 
 my $HomeDir = getcwd();
+my $SrcDir = "$HomeDir/src";
 
 open(ENVSETUP, ">setup_test_env") || die "cannot open setup_test_env for writing\n";
-print ENVSETUP "HOME=$HomeDir;\n";
-print ENVSETUP "CONDOR_CONFIG=$ENV{HOME}/condor/etc/condor_config\n";
-print ENVSETUP "PATH=$ENV{HOME}/condor/bin:$ENV{HOME}/condor/sbin:$PATH\n";
-print ENVSETUP "SRC_DIR=$ENV{HOME}/src\n";
 
-my $MakeDir = $ENV{SRC_DIR};
+print ENVSETUP "HOME=$HomeDir\n";
+$ENV{"HOME"}="$HomeDir";
+print ENVSETUP "CONDOR_CONFIG=$HomeDir/condor/etc/condor_config\n";
+$ENV{"CONDOR_CONFIG"}="$HomeDir/condor/etc/condor_config";
+print ENVSETUP "PATH=$HomeDir/condor/bin:$HomeDir/condor/sbin:\$PATH\n";
+$ENV{"PATH"}="$HomeDir/condor/bin:$HomeDir/condor/sbin:$PATH";
+print ENVSETUP "SRC_DIR=$SrcDir\n";
+$ENV{"SRC_DIR"}="$SrcDir";
 
 # for debugging
 print "PATH is $ENV{PATH}\n";
 
-####################################################################################################
+######################################################################
 # untar pre-built tarball
-####################################################################################################
+######################################################################
 
 chdir("$HomeDir");
 print "Untarring RELEASE tarball\n";
@@ -68,12 +71,10 @@ while( <UNTAR> ) {
 }
 close UNTAR;
 
-# can't use since macosx fails on this even though untar is successful  
-#( !($configure == "") && !($reltar == "") ) || die "cannot find files condor_configure $configure or reltar $reltar\n";
 
-####################################################################################################
+######################################################################
 # setup the personal condor
-####################################################################################################
+######################################################################
 
 # find the version - macosx doesn't work w/the "old" way  
 my $version = substr($release_tarball, 7, 5);
@@ -82,12 +83,13 @@ print "VERSION string is $version\n";
 my $configure = "$HomeDir/condor-$version/condor_configure";
 my $reltar = "$HomeDir/condor-$version/release.tar";
 
-print "Set up PERSONAL CONDOR\n";
+print "SETTING UP PERSONAL CONDOR\n";
 &verbose_system("mkdir -p $HomeDir/local");
 &verbose_system("mkdir -p $HomeDir/condor");
+print "RUNNING condor_configure\n";
 $conf = &verbose_system("$configure --make-personal-condor --local-dir=$HomeDir/local --install=$reltar --install-dir=$HomeDir/condor");
 
-($conf > 0) || die "Problem installing Personal Condor. Return val $conf\n";
+($conf == 0) || die "Problem installing Personal Condor. Return val $conf\n";
 
 # make sure ports for Personal Condor are valid  
 # high ports are a concern for irix, dux and aix. 
@@ -154,24 +156,13 @@ close FIX;
 
 print "PERSONAL CONDOR installed!\n";
 
-####################################################################################################
-# unpackage source
-####################################################################################################
 
-print "Untarring SOURCE tarball\n";
-open( UNTAR, "tar -zxvf $source_tarball |" ) ||
-  die "Can't untar $source_tarball: $!\n";
-print "Untarring $source_tarball ...\n";
-while( <UNTAR> ) {
-  print;
-}
-close UNTAR;
+######################################################################
+# setup the src tree so the test suite finds condor_compile and its
+# other dependencies.  
+######################################################################
 
-####################################################################################################
-#  setup the src tree so the test suite finds condor_compile and its other dependencies.
-####################################################################################################
-
-chdir("$MakeDir");
+chdir("$SrcDir");
 print "run CONFIGURE ...\n"; 
 open ( TESTCONFIG, "./configure --without-externals 2>&1 |");
 while ( <TESTCONFIG> ) {
@@ -182,7 +173,7 @@ $configstat = $?;
 print "CONFIGURE returned a code of $configstat\n"; 
 ($configstat == 0) || die "CONFIGURE failed, aborting testsuite run.\n";  
 
-chdir("$MakeDir");
+chdir("$SrcDir");
 &verbose_system("mkdir -p condor_syscall_lib");
 chdir( "condor_syscall_lib" );
 opendir(DIR, "$HomeDir/condor/lib") ||
@@ -210,9 +201,9 @@ symlink( "$HomeDir/condor/bin/condor_compile", "condor_compile" );
 chdir("$HomeDir/condor/bin");
 system("ls -al");
 
-####################################################################################################
+######################################################################
 # spawn the personal condor
-####################################################################################################
+######################################################################
 
 chdir($HomeDir);
 print "Starting condor master, about to FORK in $HomeDir\n";
