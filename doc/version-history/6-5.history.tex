@@ -59,6 +59,12 @@ Configuration files they are using, right after the startup banner.
       ``log'' statements, it now correctly recognizes lines with
       leading whitespace.
 
+\item The \Condor{master} used to always pass a \Opt{-f} on the
+  command line to all daemons defined in the \Macro{DAEMON\_LIST}
+  config file setting.
+  However, if you include entries which are not Condor daemons, the
+  \Condor{master} will no longer add a \Opt{-f}.
+
 \end{itemize}
 
 \noindent Known Bugs:
