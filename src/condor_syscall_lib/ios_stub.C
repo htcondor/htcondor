@@ -132,6 +132,9 @@ int ioserver_open(const char *path, int oflag, mode_t mode)
        }  
      SetSyscalls(scm); 
      
+		 /* bind to the right local interface */
+	 _condor_local_bind( sockfd );
+
      /* Connect to server */
      if (connect(sockfd, (struct sockaddr *)&srvr_IP, sizeof(srvr_IP)) < 0)
        {
@@ -360,6 +363,9 @@ int reopen(int filedes)
       SetSyscalls(scm); 
       
       dprintf(D_ALWAYS, "reopen .. socket successful \n");
+
+		 /* bind to the right local interface */
+	 _condor_local_bind( sockfd );
       
       /* Connect to server */
       if (connect(sockfd, (struct sockaddr *)&srvr_IP, sizeof(srvr_IP)) < 0)
