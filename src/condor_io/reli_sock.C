@@ -60,62 +60,6 @@ ReliSock::ReliSock()
 }
 
 
-/* listen on port	*/
-ReliSock::ReliSock( int port )
-	: Sock()
-{
-	init();
-	if (!listen(port)) {
-		dprintf(D_ALWAYS, "failed to listen on port %d!\n", port);
-	}
-}
-
-
-/* listen on serv		*/
-ReliSock::ReliSock( char *serv )
-	: Sock()
-{
-	init();
-	if (!listen(serv)) {
-		dprintf(D_ALWAYS, "failed to listen on serv %s!\n", serv);
-	}
-}
-
-
-ReliSock::ReliSock(
-	char	*host,
-	int		port,
-	int		timeout_val
-	)
-	: Sock()
-{
-	init();
-	timeout(timeout_val);
-	if (!connect(host, port)) {
-		dprintf(D_ALWAYS, "failed to connect to %s:%d!\n", host, port);
-	}
-	is_client = 1;
-	hostAddr = strdup( host );
-}
-
-
-ReliSock::ReliSock(
-	char	*host,
-	char	*serv,
-	int		timeout_val
-	)
-	: Sock()
-{
-	init();
-	timeout(timeout_val);
-	if (!Sock::connect(host, serv)) {
-		dprintf(D_ALWAYS, "failed to connect to %s:%s!\n", host, serv);
-	}
-	is_client = 1;
-	hostAddr = strdup( host );
-}
-
-
 ReliSock::~ReliSock()
 {
 	close();
@@ -133,8 +77,6 @@ ReliSock::~ReliSock()
 int 
 ReliSock::listen()
 {
-	if (!valid()) return FALSE;
-
 	if (_state != sock_bound) return FALSE;
 	if (::listen(_sock, 5) < 0) return FALSE;
 
@@ -154,7 +96,6 @@ ReliSock::accept( ReliSock	&c )
 	int			addr_sz;
 
 
-	if (!valid()) return FALSE;
 	if (_state != sock_special || _special_state != relisock_listen ||
 													c._state != sock_virgin)
 	{
@@ -549,8 +490,6 @@ ReliSock::put_bytes(const void *dta, int sz)
 	int		tw;
 	int		nw;
 
-	if (!valid()) return -1;
-
 	ignore_next_encode_eom = FALSE;
 
 	for(nw=0;;) {
@@ -586,10 +525,6 @@ ReliSock::get_bytes(void *dta, int max_sz)
 {
 	int		bytes;
 
-	if (!valid()) {
-		return -1;
-	}
-
 	ignore_next_decode_eom = FALSE;
 
 	while (!rcv_msg.ready) {
@@ -608,10 +543,6 @@ ReliSock::get_bytes(void *dta, int max_sz)
 
 int ReliSock::get_ptr( void *&ptr, char delim)
 {
-	if (!valid()) {
-		return -1;
-	}
-
 	while (!rcv_msg.ready){
 		if (!handle_incoming_packet()) {
 			return FALSE;
@@ -624,10 +555,6 @@ int ReliSock::get_ptr( void *&ptr, char delim)
 
 int ReliSock::peek( char &c)
 {
-	if (!valid()) {
-		return -1;
-	}
-
 	while (!rcv_msg.ready) {
 		if (!handle_incoming_packet()) {
 			return FALSE;

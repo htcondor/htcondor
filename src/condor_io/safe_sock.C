@@ -49,52 +49,6 @@ SafeSock::SafeSock() 				/* virgin safesock	*/
 }
 
 
-SafeSock::SafeSock(					/* bind on port		*/
-	int		port
-	)
-	: Sock()
-{
-	init();
-	bind(port);
-}
-
-
-SafeSock::SafeSock(					/* bind on serv		*/
-	char	*serv
-	)
-	: Sock()
-{
-	init();
-	bind(serv);
-}
-
-
-SafeSock::SafeSock(
-	char	*host,
-	int		port,
-	int		timeout_val
-	)
-	: Sock()
-{
-	init();
-	timeout(timeout_val);
-	connect(host, port);
-}
-
-
-SafeSock::SafeSock(
-	char	*host,
-	char	*serv,
-	int		timeout_val
-	)
-	: Sock()
-{
-	init();
-	timeout(timeout_val);
-	connect(host, serv);
-}
-
-
 SafeSock::~SafeSock()
 {
 	close();
@@ -149,7 +103,6 @@ int SafeSock::connect(
 	struct hostent	*hostp = NULL;
 	unsigned long	inaddr = 0;
 
-	if (!valid()) return FALSE;
 	if (!host || port < 0) return FALSE;
 
 		/* we bind here so that a sock may be	*/
@@ -192,8 +145,6 @@ int SafeSock::put_bytes(
 	int		tw;
 	int		nw;
 
-	if (!valid()) return -1;
-
 	for(nw=0;;){
 
 		if (snd_msg.buf.full()){
@@ -221,8 +172,6 @@ int SafeSock::get_bytes(
 	int			max_sz
 	)
 {
-	if (!valid()) return -1;
-
 	while (!rcv_msg.ready) {
 		if (!handle_incoming_packet()){
 			return FALSE;
@@ -240,8 +189,6 @@ int SafeSock::get_ptr(
 {
 	int nr;
 	int tr;
-
-	if (!valid()) return -1;
 
 	while (!rcv_msg.ready){
 		if (!handle_incoming_packet()) return FALSE;
@@ -261,8 +208,6 @@ int SafeSock::peek(
 	char		&c
 	)
 {
-	if (!valid()) return -1;
-
 	while (!rcv_msg.ready) {
 		if (!handle_incoming_packet()) return FALSE;
 	}
