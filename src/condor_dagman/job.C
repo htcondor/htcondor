@@ -85,7 +85,7 @@ void Job::Print (bool condorID) const {
 }
 
 //---------------------------------------------------------------------------
-void job_print (Job * job, bool condorID = false) {
+void job_print (Job * job, bool condorID) {
     if (job == NULL) printf ("(UNKNOWN)");
     else job->Print(condorID);
 }
