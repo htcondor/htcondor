@@ -237,11 +237,29 @@ The following list of attributes are optional:
 
 \begin{description}
 
- \item[\Attr{In}] (string, path to stdin)
-
- \item[\Attr{Out}] (string, path to stdout)
-
- \item[\Attr{Err}] (string, path to stderr)
+ \item[\Attr{In}] This string defines the path to the file on the
+   execution machine that should be used as standard input (STDIN) for 
+   the COD application.
+   This file (and all parent directories) must be readable by whatever
+   user the COD application will run as.
+   If this attribute is not specified, the default is to use
+   \File{/dev/null}.
+ 
+ \item[\Attr{Out}] This string defines the path to the file on the
+   execution machine that should be used as standard output (STDOUT)
+   for the COD application.
+   This file must be writable (and all parent directories readable) by
+   whatever user the COD application will run as.
+   If this attribute is not specified, the default is to use
+   \File{/dev/null}.
+ 
+ \item[\Attr{Err}] This string defines the path to the file on the
+   execution machine that should be used as standard error (STDERR)
+   for the COD application.
+   This file must be writable (and all parent directories readable) by
+   whatever user the COD application will run as.
+   If this attribute is not specified, the default is to use
+   \File{/dev/null}.
 
  \item[\Attr{Env}] (string, environment)
 
@@ -264,10 +282,20 @@ The following list of attributes are optional:
    section~\ref{sec:Choosing-Universe} on
    page~\pageref{sec:Choosing-Universe}. 
 
- \item[\Attr{JarFiles}] (string, JAR files for java universe)
+ \item[\Attr{JarFiles}] This string attribute is only used if
+   \Attr{JobUniverse} (described above) is set to \verb@10@ for the
+   Java universe.
+   If a given COD application is a Java program, you can specify what
+   JAR files that program requires with this attribute.
+   There is no default.
 
- \item[\Attr{KillSig}] (int, signal to send for graceful shutdown,
- SIGTERM by default)
+ \item[\Attr{KillSig}] This attribute specifies what signal should be
+   sent whenever the Condor system needs to gracefully shutdown the
+   COD application.
+   It can either be specified as a string containing the signal name
+   (for example \verb@KillSig = "SIGQUIT"@), or as an integer
+   (\verb@KillSig = 3@)
+   The default is to use SIGTERM.
 
  \item[\Attr{StarterUserLog}] (string, path to UserLog written by
  \Condor{starter}) 
@@ -283,8 +311,9 @@ The following list of attributes are optional:
 
 \end{description}
 
-\Note If any path attribute (Cmd, In, Out, Err, StarterUserLog) is not
-a full path name, Condor automatically prepends the value of Iwd.
+\Note If any path attribute (\Attr{Cmd}, \Attr{In},
+\Attr{Out},\Attr{Err}, \Attr{StarterUserLog}) is not a full path name,
+Condor automatically prepends the value of \Attr{IWD}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
