@@ -37,8 +37,8 @@
 #define _POSIX_SOURCE
 
 #include <time.h>
-#include <sys/stat.h>
 #include "condor_common.h"
+#include <sys/stat.h>
 #include "condor_debug.h"
 #include "condor_constants.h"
 #include "condor_config.h"
