@@ -43,7 +43,7 @@ extern "C" {
 #endif
 
 int
-InitializeConnection( char *owner )
+InitializeConnection( const char *owner )
 {
 	int	rval;
 

@@ -2719,7 +2719,7 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 }
 
 void
-cleanup_ckpt_files(int cluster, int proc, char *owner)
+cleanup_ckpt_files(int cluster, int proc, const char *owner)
 {
 	 char	 ckpt_name[MAXPATHLEN];
 	char	buf[_POSIX_PATH_MAX];
