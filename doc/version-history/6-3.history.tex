@@ -50,9 +50,15 @@ system.
 \item When you use \Condor{hold} and \Condor{release}, you now see an
 entry about the event in the UserLog file for the job.
 
-\item When you use \Condor{rm} to remove a Condor job, you now see a
-string saying the job was removed by \Condor{rm} in the UserLog file
-for the job, instead of just seeing ``Job was aborted by the user''.
+\item Whenever a job is removed, put on hold, or released (either by a
+Condor user or by the Condor system itself), there is a ``reason''
+attribute placed in the job ad and written to the UserLog file.  
+If a job is held, \Attr{HoldReason} will be set.
+If a job is released, \Attr{ReleaseReason} will be set.
+If a job is removed, \Attr{RemoveReason} will be set.
+In addition, whenever a job's status changes,
+\Attr{EnteredCurrentStatus} will contain the epoch time when the
+change took place.
 
 \item The error messages you get from \Condor{rm}, \Condor{hold} and
 \Condor{release} have all been updated to be more specific and
