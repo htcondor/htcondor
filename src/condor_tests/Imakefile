@@ -51,10 +51,12 @@ BUILD($(CC),x_trapsig,c)
 
 /* Chirp */
 
+/* turn off until building/linking in NWO and workspace resolved
 BUILD_DEP($(CC),lib_chirpio,c,../release_dir/lib/libchirp_client.a)
 DESC(lib_chirpio_van,"Exercise the chirp I/O library using the C client library")
 RUN(lib_chirpio_van)
 TESTCLASS(lib_chirpio_van,lib)
+*/
 
 /* User log and log reader used by dagman tests */
 
@@ -63,11 +65,13 @@ the BUILD_DEP_LIB() rule, which provides maximum flexibility.  but, in
 this case, we only need to specify libs, not dependent .o files, so we
 leave the 4th argument empty...
 */
+/* turn off until building/linking in NWO and workspace resolved
 BUILD_DEP_LIB($(CPlusPlus),x_read_joblog,C,,../release_dir/lib/libcondorapi.a -ldl)
 BUILD_DEP_LIB($(CPlusPlus),x_write_joblog,C,,../release_dir/lib/libcondorapi.a -ldl)
 DESC(lib_userlog,"Exercise the userlog interface write and read all events");
 RUN(lib_userlog)
 TESTCLASS(lib_userlog,lib)
+*/
 
 /* Condor-C Tests */
 /*
