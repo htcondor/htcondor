@@ -567,23 +567,9 @@ int ClassAd::get(Stream& s)
             return 0;
         }
         
-        if(!Parse(line, tree)) {
-            if(tree->MyType() == LX_ERROR) {
-                cerr << "Parse error in the incomming stream -- quitting !"
-					 << endl;
-                delete [] line;
-                exit(1);
-            }
-        }
-        else {
-            cerr << "Parse error in the incomming stream -- quitting !" << endl;
-			delete [] line;
-            exit(1);
-        }
-        
-        Insert(tree);
-        strcpy(line, "");
-        delete tree;
+		if (!Insert(line)) {
+			return 0;
+		}
     }
     delete [] line;
 
