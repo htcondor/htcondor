@@ -540,6 +540,7 @@ pure:: $(PURE_DIR)/##program
 ***********************************************************************/
 
 CONDOR_COMPILE = ../../condor_scripts/condor_compile
+CONDOR_ARCH_LINK = perl ../../condor_scripts/condor_arch_link
 
 /*
 ** Link all three types of binaries
@@ -554,6 +555,7 @@ VLINK( compiler, vanillatarg, obj );
 #define RLINK( compiler, remotetarg, obj )	@@\
 remotetarg: obj					@@\
 	$(CONDOR_COMPILE) $(CONDOR_COMPILE_FLAGS) compiler -o remotetarg obj $(ALL_LDFLAGS) @@\
+	$(CONDOR_ARCH_LINK) remotetarg		@@\
 clean::						@@\
 	rm -f remotetarg obj			@@\
 all:: remotetarg
