@@ -118,8 +118,10 @@ typedef DWORD pid_t;
 class DaemonCore : public Service
 {
 	friend class TimerManager;
-	friend DWORD pidWatcherThread(void*);	
 	friend main( int argc, char** argv );
+#ifdef WIN32
+	friend DWORD pidWatcherThread(void*);	
+#endif
 
 	public:
 		DaemonCore(int PidSize = 0, int ComSize = 0, int SigSize = 0, int SocSize = 0, int ReapSize = 0);

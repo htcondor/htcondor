@@ -467,7 +467,7 @@ int DaemonCore::Cancel_Signal( int sig )
 	// Clear entry
 	sigTable[found].num = 0;
 	sigTable[found].handler = NULL;
-	sigTable[found].handlercpp = NULL;
+	sigTable[found].handlercpp = (SignalHandlercpp)NULL;
 	free_descrip( sigTable[found].handler_descrip );
 
 	// Decrement the counter of total number of entries
