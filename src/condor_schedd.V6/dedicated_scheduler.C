@@ -367,7 +367,6 @@ DedicatedScheduler::DedicatedScheduler()
 
 	num_matches = 0;
 
-	ds_scheduler = NULL;
 	ds_owner = NULL;
 	ds_name = NULL;
 }
@@ -378,7 +377,6 @@ DedicatedScheduler::~DedicatedScheduler()
 	if(	idle_clusters ) { delete idle_clusters; }
 	if(	resources ) { delete resources; }
 	if(	avail_time_list ) { delete avail_time_list; }
-	if( ds_scheduler ) { delete [] ds_scheduler; }
 	if( ds_owner ) { delete [] ds_owner; }
 	if( ds_name ) { delete [] ds_name; }
 	if( unclaimed_resources ) { delete unclaimed_resources; }
@@ -427,27 +425,28 @@ DedicatedScheduler::initialize( void )
 	char *tmp, *tmpname;
 	
 
-		// First, figure out what ds_owner, ds_name, and ds_scheduler
-		// should be.  
+		// First, figure out what ds_owner and ds_name should be.
 	if( ! Name ) {
 		EXCEPT( "DedicatedScheduler::initialize(): Name is NULL" ); 
 	}
 	tmpname = strnewp( Name );
 	if( (tmp = strchr(tmpname, '@')) ) {
-			// There's an '@'
+			// There's an '@', so use everything in front of it to
+			// uniquely identify this dedicated scheduler on this
+			// host.  ATTR_OWNER is such a yucky attribute anyway, we
+			// care much more about ATTR_USER and ATTR_SCHEDULER. 
 		*tmp = '\0';
-		sprintf( buf, "DedicatedScheduler#%s", tmpname );
+		sprintf( buf, "DedicatedScheduler@%s", tmpname );
 	} else {
-			// No '@', that's what we'll use
+			// No '@'... we're alone on this host, and can just use a 
+			// simple string...
 		sprintf( buf, "DedicatedScheduler" );
 	}
 	delete [] tmpname;
 	ds_owner = strnewp( buf );
-	sprintf( buf, "%s@%s", ds_owner, my_full_hostname() );
-	ds_name = strnewp( buf );
-	sprintf( buf, "DedicatedScheduler!%s", Name );
-	ds_scheduler = strnewp( buf );
 
+	sprintf( buf, "DedicatedScheduler@%s", Name );
+	ds_name = strnewp( buf );
 
 		// Call our reconfig() method, since that will register 
 		// the DaemonCore timer for us, if we need it at all.
@@ -463,7 +462,7 @@ DedicatedScheduler::initialize( void )
 	dummy_job.Insert( buf );
 	sprintf( buf, "%s = \"%s\"", ATTR_USER, ds_name );
 	dummy_job.Insert( buf );
-	sprintf( buf, "%s = \"%s\"", ATTR_SCHEDULER, ds_scheduler );
+	sprintf( buf, "%s = \"%s\"", ATTR_SCHEDULER, ds_name );
 	dummy_job.Insert( buf );
 	sprintf( buf, "%s = %d", ATTR_JOB_UNIVERSE, MPI );
 	dummy_job.Insert( buf );
@@ -2908,7 +2907,7 @@ DedicatedScheduler::setScheduler( ClassAd* job_ad )
 		return false;
 	}
 	if( SetAttributeString(cluster, proc, ATTR_SCHEDULER,
-						   schedulerName()) < 0 ) {
+						   ds_name) < 0 ) {
 		return false;
 	}
 	return true;
