@@ -76,7 +76,6 @@ extern "C" {
 	void handle_termination( PROC *proc, char *notification,
 				int *jobstatus, char *coredir );
 	void get_local_rusage( struct rusage *bsd_rusage );
-	int calc_virt_memory();
 	void NotifyUser( char *buf, PROC *proc, char *email_addr );
 	void MvTmpCkpt();
 	FILE	*fdopen();
@@ -279,7 +278,7 @@ main(int argc, char *argv[], char *envp[])
 		free( tmp );
 	}
 
-	free_swap = calc_virt_memory();
+	free_swap = sysapi_swap_space();
 
 	dprintf( D_FULLDEBUG, "*** Reserved Swap = %d\n", reserved_swap );
 	dprintf( D_FULLDEBUG, "*** Free Swap = %d\n", free_swap );
