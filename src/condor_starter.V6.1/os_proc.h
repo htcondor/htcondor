@@ -50,9 +50,17 @@ public:
 			do a CONDOR_job_exit remote syscall.  
 			@param pid The pid that exited.
 			@param status Its status
-			@return 1 if pid matches, 0 otherwise
+		    @return 1 if our OsProc is no longer active, 0 if it is
 		*/
-	virtual int JobExit(int pid, int status);
+	virtual int JobCleanup( int pid, int status );
+
+		/** In this function, we determine what protocol to use to
+			send the shadow a CONDOR_job_exit remote syscall, which
+			will cause the job to leave the queue and the shadow to
+			exit.  We can't send this until we're all done transfering
+			files and cleaning up everything. 
+		*/
+	virtual bool JobExit( void );
 
 		/** Publish all attributes we care about for updating the
 			shadow into the given ClassAd.  This function is just
