@@ -139,6 +139,13 @@ const int UPDATE_COLLECTOR_AD	= 19;
 const int QUERY_COLLECTOR_ADS	= 20;
 const int INVALIDATE_COLLECTOR_ADS	= 21;
 
+const int QUERY_HIST_STARTD = 22;
+const int QUERY_HIST_STARTD_LIST = 23;
+const int QUERY_HIST_USER = 24;
+const int QUERY_HIST_USER_LIST = 25;
+const int QUERY_HIST_GROUPS = 26;
+const int QUERY_HIST_GROUPS_LIST = 27;
+
 /*
 *** Daemon Core Signals
 */
