@@ -542,9 +542,14 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 		} else {
 			rip->dprintf( D_FULLDEBUG, "Alive interval = %d\n", interval );
 		}
-			// Now, store them into r_cur
-		rip->r_cur->setaliveint( interval );
-		rip->r_cur->client()->setaddr( client_addr );
+			// Now, store them into r_cur or r_pre, as appropiate
+		if ( rip->state() == claimed_state ) {
+			rip->r_pre->setaliveint( interval );
+			rip->r_pre->client()->setaddr( client_addr );
+		} else {
+			rip->r_cur->setaliveint( interval );
+			rip->r_cur->client()->setaddr( client_addr );
+		}
 		free( client_addr );
 		client_addr = NULL;
 	} else {
@@ -708,7 +713,7 @@ accept_request_claim( Resource* rip )
 	}
 
 		// Grab the schedd addr and alive interval if the alive interval is still
-		// unitialized (-1) which means we are talking to an old (post v6.1.11) schedd.
+		// unitialized (-1) which means we are talking to an old (pre v6.1.11) schedd.
 		// Normally, we want to get this information from the schedd when the claim request
 		// first arrives.  This prevents a deadlock in the claiming protocol between the
 		// schedd and startd when the startd is running on an SMP.  -Todd 1/2000
