@@ -2883,56 +2883,55 @@ Scheduler::Agent(char* server, char* capability,
 	}	
 
 	if ( !sock.connect(server, 0) ) {
-		dprintf( D_ALWAYS, "Couldn't connect to startd.\n" );
+		// dprintf( D_ALWAYS, "Couldn't connect to startd.\n" );
 		exit(EXITSTATUS_NOTOK);
 	}
 
-	dprintf (D_PROTOCOL, "## 5. Requesting resource from %s ...\n", server);
+	// dprintf (D_PROTOCOL, "## 5. Requesting resource from %s ...\n", server);
 	sock.encode();
 
 	if( !sock.put( REQUEST_SERVICE ) ) {
-		dprintf( D_ALWAYS, "Couldn't send command to startd.\n" );	
+		// dprintf( D_ALWAYS, "Couldn't send command to startd.\n" );	
 		exit(EXITSTATUS_NOTOK);
 	}
 
 	if( !sock.code( capability ) ) {
-		dprintf( D_ALWAYS, "Couldn't send capability to startd.\n" );	
+		// dprintf( D_ALWAYS, "Couldn't send capability to startd.\n" );	
 		exit(EXITSTATUS_NOTOK);
 	}
 
 	if( !jobAd->put( sock ) ) {
-		dprintf( D_ALWAYS, "Couldn't send job classad to startd.\n" );	
+		// dprintf( D_ALWAYS, "Couldn't send job classad to startd.\n" );	
 		exit(EXITSTATUS_NOTOK);
 	}
 	delete jobAd;	// allocated by parent
 	
 	if( !sock.end_of_message() ) {
-		dprintf( D_ALWAYS, "Couldn't send eom to startd.\n" );	
+		// dprintf( D_ALWAYS, "Couldn't send eom to startd.\n" );	
 		exit(EXITSTATUS_NOTOK);
 	}
 
 	if( !sock.rcv_int(reply, TRUE) ) {
-		dprintf( D_ALWAYS, "Couldn't receive response from startd.\n" );	
+		// dprintf( D_ALWAYS, "Couldn't receive response from startd.\n" );	
 		exit(EXITSTATUS_NOTOK);
 	}
 
 	if( reply == OK ) {
-		dprintf (D_PROTOCOL, "(Request was accepted)\n");
+		// dprintf (D_PROTOCOL, "(Request was accepted)\n");
 		sock.encode();
 		if( !sock.code(name) ) {
-			dprintf( D_ALWAYS, "Couldn't send schedd string to startd.\n" );	
+			// dprintf( D_ALWAYS, "Couldn't send schedd string to startd.\n" );	
 			exit(EXITSTATUS_NOTOK);
 		}
 		if( !sock.snd_int(aliveInterval, TRUE) ) {
-			dprintf( D_ALWAYS, "Couldn't receive response from startd.\n" );	
+			// dprintf( D_ALWAYS, "Couldn't receive response from startd.\n" );	
 			exit(EXITSTATUS_NOTOK);
 		}
-		dprintf( D_FULLDEBUG, "alive interval %d secs\n", aliveInterval );
 	} else if( reply == NOT_OK ) {
-		dprintf( D_PROTOCOL, "(Request was NOT accepted)\n" );
+		// dprintf( D_PROTOCOL, "(Request was NOT accepted)\n" );
 		exit(EXITSTATUS_NOTOK);
 	} else {
-		dprintf( D_ALWAYS, "Unknown reply from startd, agent exiting.\n" ); 
+		// dprintf( D_ALWAYS, "Unknown reply from startd, agent exiting.\n" ); 
 		exit(EXITSTATUS_NOTOK);	
 	}
 	exit(EXITSTATUS_OK);
