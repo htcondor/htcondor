@@ -184,7 +184,7 @@ float	e_factor;								// exponential factor
 int		r_factor;								// recover factor
 int		Foreground;
 int		Termlog;
-char*  	config_option = NULL;					// whether use config server
+char*  	config_file = NULL;						// config file name from server
 char*	config_location;						// config file from server
 char	*CondorAdministrator;
 char	*FS_Preen;
@@ -327,8 +327,8 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 			else
 			{
 				config_from_server(config_location, MyName, NULL);
-				config_option = new char[MAXPATHLEN + 3];
-				sprintf(config_option, "-c %s/%s", config_location, SERVER_CONFIG);
+				config_file = new char[MAXPATHLEN];
+				sprintf(config_file, "%s/%s", config_location, SERVER_CONFIG);
 			}
 		}
 	}

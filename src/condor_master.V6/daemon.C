@@ -88,7 +88,7 @@ extern int 		RestartsPerHour;
 extern int 		MasterLockFD;
 extern char *		_FileName_ ;
 extern FileLock*	MasterLock;
-extern char*   	config_option;
+extern char*   	config_file;
  
 extern int     collector_runs_here();
 extern int     negotiator_runs_here();
@@ -430,9 +430,9 @@ int daemon::StartDaemon()
 		}
 		else
 		{
-			if(config_option)
+			if(config_file)
 			{
-				(void)execl( process_name, shortname, "-f", config_option, 0 );
+				(void)execl( process_name, shortname, "-f", "-c", config_file, 0 );
 			}
 			else
 			{
