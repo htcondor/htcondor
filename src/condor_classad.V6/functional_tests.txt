@@ -29,7 +29,7 @@ eval x = [
             b = 2.0;
             c = "alain";
             d = true;
-            atime = absTime("2004-01-01T");
+            atime = absTime("2004-01-01");
             rtime = relTime("2+25:14:16.123");
             l = {1, 1, 2, 3, 5};
             e = error;
@@ -39,7 +39,7 @@ same $x.a, 1
 same $x.b, 2.0
 same $x.c, "alain"
 same $x.d, true
-same $x.atime, absTime("2004-01-01T");
+same $x.atime, absTime("2004-01-01");
 same $x.rtime, relTime("2+25:14:16.123");
 same $x.l, {1, 1, 2, 3, 5}
 same $x.l[4], 5
