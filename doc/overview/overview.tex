@@ -254,14 +254,22 @@ and similar calls are not implemented.
 \index{UNIX!signals}
 are supported, but Condor reserves the 
 SIGUSR2 and SIGTSTP signals and does not permit their use by user code.
-	\item Many interprocess communication (IPC) calls are not supported,
-the socket(2),
-\index{UNIX system call!socket(2)}
-send(2),
-\index{UNIX system call!send(2)}
-recv(2),
-\index{UNIX system call!recv(2)}
-and similar calls are not implemented.
+	\item Interprocess communication (IPC) is not
+supported, including 
+sockets, 
+\index{UNIX!sockets}
+pipes,
+\index{UNIX!pipes}
+semaphores, 
+\index{UNIX!semaphores}
+and shared memory.
+\index{UNIX!shared memory}
+	\item Kernel-level threads are not supported.  However, user-level
+threads are supported.
+\index{UNIX!threads}
+	\item The mmap(2)
+\index{UNIX system call!mmap(2)}
+system call is not supported.
 	\item All file operations must be idempotent.
 Read-only and write-only file accesses work correctly,
 but programs which both read and write to the same file may not
