@@ -48,3 +48,14 @@ c_plus_target(qmgr_test, qmgr_test.o libqmgmt.a, $(LIB))
 CMNT c_plus_target(qmgr_rm, qmgr_rm.o libqmgmt.a, $(LIB))
 
 IMPORT_LINKS = ../../config/import_links
+
+#if IS_SGI_IRIX53 || IS_SGI_IRIX62
+CMNT On IRIX g++ external-templates option breaks things but we need
+CMNT it for instantiate.o and schedd.o 
+instantiate.o: instantiate.C
+	$(CPlusPlus) $(C_PLUS_FLAGS) -fexternal-templates -c instantiate.C
+
+schedd.o: schedd.C
+	$(CPlusPlus) $(C_PLUS_FLAGS) -fexternal-templates -c schedd.C
+#endif
+
