@@ -1,5 +1,8 @@
 HAS_STATIC=@_cv_has_static@
 
+EXT_ROOT=@ext_root@
+EXT_INSTALL=$EXT_ROOT/install
+
 WANT_EXT_GLIBC=@want_ext_glibc@
 EXT_GLIBC_VERSION=@ext_glibc_version@
 
