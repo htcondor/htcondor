@@ -63,6 +63,10 @@ int ConnectToServer(request_type type)
 	memset((char*) &server_sa, 0, (int) sizeof(server_sa));
 	server_sa.sin_family = AF_INET;
 	server_IP = getserveraddr();
+	if (server_IP == 0) {
+		close(conn_req_sd);
+		return -1;
+	}
 	memcpy((char*) &server_sa.sin_addr.s_addr, (char*) server_IP, 
 		   sizeof(struct in_addr));
 	switch (type) {
