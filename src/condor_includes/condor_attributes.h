@@ -83,6 +83,6 @@ const char ATTR_UID_DOMAIN               [] = "UidDomain";
 const char ATTR_UPDATE_PRIO              [] = "UpdatePrio";
 const char ATTR_VACATE                   [] = "Vacate";
 const char ATTR_VIRTUAL_MEMORY           [] = "VirtualMemory";
-const char ATTR_CONFIG_FILE_TIMESTAMP	 [] = "ConfigFileTimestamp";
+const char ATTR_LAST_UPDATE				 [] = "LastUpdate";
 
 #endif

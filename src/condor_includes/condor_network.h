@@ -10,6 +10,7 @@
 #define NEGOTIATOR_PORT		9614
 #define START_UDP_PORT		9615
 #define ACCOUNTANT_PORT		9616
+#define	CONFIG_SERVER_PORT	9600
 
 #if defined(__cplusplus)
 extern "C" {

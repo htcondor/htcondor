@@ -9,13 +9,18 @@ typedef struct bucket {
 	struct bucket	*next;
 } BUCKET;
 
+/*
+**  Types of macro expansion
+*/
+#define EXPAND_LAZY         1
+#define EXPAND_IMMEDIATE    2
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
 #if defined(__STDC__) || defined(__cplusplus)
-	void config ( char *a_out_name, CONTEXT *context );
+	void config ( char *a_out_name, CONTEXT *context, int = FALSE );
 	char * param ( char *name );
 	void insert ( char *name, char *value, BUCKET *table[], int table_size );
 	char * expand_macro ( char *value, BUCKET *table[], int table_size );

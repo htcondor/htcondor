@@ -54,7 +54,7 @@ typedef struct tagTimer {
     unsigned        	when;
 	unsigned			period;
     int     			id;
-    Event				handler;
+    void*				handler;
 	class Service*	   	service; 
     struct tagTimer*	next;
 	int					current;
@@ -67,7 +67,7 @@ class TimerManager
 		TimerManager();
 		~TimerManager();
 
-		int		NewTimer(Service*, unsigned, Event, unsigned = 0, int = -1);
+		int		NewTimer(Service*, unsigned, void*, unsigned = 0, int = -1);
 		int	   	CancelTimer(int);
 		void   	CancelAllTimers();
 		void   	DumpTimerList(int, char* = "");

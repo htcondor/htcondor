@@ -100,6 +100,7 @@ class AttrList : public AttrListAbstract
 		// insert expressions into the ad
         int        	Insert(char*);			// insert at the tail
         int        	Insert(ExprTree*);		// insert at the tail
+		int			InsertOrUpdate(char*);
 
 		// deletion of expressions	
         int			Delete(char*);			// delete the expr with the name
@@ -107,6 +108,7 @@ class AttrList : public AttrListAbstract
 		// to update expression trees
 		void		ResetFlags();			// reset the all the dirty flags
 		int			UpdateExpr(char*, ExprTree*);	// update an expression
+		int			UpdateExpr(ExprTree*);
 
 		// for iteration through expressions
 		void		ResetExpr() { this->ptrExpr = exprList; }
@@ -119,6 +121,7 @@ class AttrList : public AttrListAbstract
 		// lookup values in classads  (for simple assignments)
 		ExprTree*   Lookup(char *);  		// for convenience
         ExprTree*	Lookup(const char*);	// look up an expression
+		ExprTree*	Lookup(const ExprTree*);
 		int         LookupString(const char *, char *); 
         int         LookupInteger(const char *, int &);
         int         LookupFloat(const char *, float &);
