@@ -609,7 +609,7 @@ UserProc::execute()
 			exit( 4 );
 		}
 
-#if defined(LINUX)
+#if defined( LINUX ) && defined( I386 )
 		// alter the personality of this process to use i386 memory layout
 		// methods and no exec_shield(brk & stack segment randomization).
 		// We must use a syscall() here because the personality() call was
