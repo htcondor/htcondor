@@ -126,10 +126,7 @@ extern "C" {
 
 
 #include "condor_fix_setjmp.h"
-extern "C" {
-	int SETJMP( jmp_buf env );
-	void LONGJMP( jmp_buf env, int retval );
-}
+
 
 long data_start_addr();
 long data_end_addr();
