@@ -23,9 +23,6 @@
 
 #include "condor_common.h"
 
-#ifndef WIN32
-#include "types.h"
-#endif
 
 /*
   Format a date expressed in "UNIX time" into "month/day hour:minute".
