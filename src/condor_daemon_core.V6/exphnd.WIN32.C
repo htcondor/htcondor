@@ -42,6 +42,8 @@ ExceptionHandler::SYMGETMODULEBASEPROC
 						ExceptionHandler::_SymGetModuleBase = 0;
 ExceptionHandler::SYMGETSYMFROMADDRPROC
 						ExceptionHandler::_SymGetSymFromAddr = 0;
+ExceptionHandler::SYMGETLINEFROMADDRPROC
+						ExceptionHandler::_SymGetLineFromAddr = 0;
 ExceptionHandler g_ExceptionHandler;  // Declare global instance of class
 
 //============================== Class Methods =============================
@@ -312,9 +314,26 @@ void ExceptionHandler::ImagehlpStackWalk( PCONTEXT pContext ) {
 		pSymbol->Name[0] = '\0';
         DWORD symDisplacement = 0;  // Displacement of the input address,
                                     // relative to the start of the symbol
-        if ( _SymGetSymFromAddr(GetCurrentProcess(), sf.AddrPC.Offset,
-                                &symDisplacement, pSymbol) ) {
-            _tprintf( _T("%hs+%X\n"), pSymbol->Name, symDisplacement );
+		
+		int iLineNum = -1; // -1 will mean unknown.  
+		if (_SymGetLineFromAddr) // if this OS has the get linenum function
+		{
+			// call it
+			IMAGEHLP_LINE lineInfo;
+			if (_SymGetLineFromAddr(GetCurrentProcess(), sf.AddrPC.Offset,
+									&symDisplacement, &lineInfo))
+			{
+				iLineNum = lineInfo.LineNumber;
+			}
+		}
+
+		if ( _SymGetSymFromAddr(GetCurrentProcess(), sf.AddrPC.Offset,
+                                &symDisplacement, pSymbol) ) 
+		{
+			if (iLineNum != -1)
+				_tprintf( _T("%hs(%d)+%X\n"), pSymbol->Name, iLineNum, symDisplacement );
+			else
+				_tprintf( _T("%hs+%X\n"), pSymbol->Name, symDisplacement );
 		} else {
 			// No symbol found.  Print out the logical address instead.
 			//DWORD thelasterr = GetLastError();
@@ -374,9 +393,15 @@ BOOL ExceptionHandler::InitImagehlpFunctions( void ) {
     if ( !_SymGetModuleBase )
 		return FALSE;
     _SymGetSymFromAddr=(SYMGETSYMFROMADDRPROC)GetProcAddress( hModImagehlp,
-                                                              "SymGetSymFromAddr" );
+                                                            "SymGetSymFromAddr" );
     if ( !_SymGetSymFromAddr )     
 		return FALSE;
+
+	// Note: we are not checking if _SymGetLineFromAddr is NULL because we'll just 
+	// avoid calling it if it does not exist.  All the other fcns are required, 
+	// this one is optional.
+	_SymGetLineFromAddr= (SYMGETLINEFROMADDRPROC) GetProcAddress( hModImagehlp,
+														"SymGetSymFromAddr" );
 
     if ( !_SymInitialize( GetCurrentProcess(), NULL, TRUE ) )
 		return FALSE;

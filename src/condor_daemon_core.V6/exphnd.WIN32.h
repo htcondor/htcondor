@@ -63,12 +63,17 @@ class ExceptionHandler {
       typedef DWORD (__stdcall *SYMGETMODULEBASEPROC)( HANDLE, DWORD );
       typedef BOOL (__stdcall *SYMGETSYMFROMADDRPROC)
                                     ( HANDLE, DWORD, PDWORD, PIMAGEHLP_SYMBOL );
+	  typedef BOOL (__stdcall *SYMGETLINEFROMADDRPROC) 
+		  (HANDLE, DWORD, PDWORD, PIMAGEHLP_LINE);
+
+
       static SYMINITIALIZEPROC _SymInitialize;
       static SYMCLEANUPPROC _SymCleanup;     
 	  static STACKWALKPROC _StackWalk;
       static SYMFUNCTIONTABLEACCESSPROC _SymFunctionTableAccess;
       static SYMGETMODULEBASEPROC _SymGetModuleBase;
       static SYMGETSYMFROMADDRPROC _SymGetSymFromAddr;      
+	  static SYMGETLINEFROMADDRPROC _SymGetLineFromAddr;
 };
 
 extern ExceptionHandler g_ExceptionHandler;  // global instance of class
