@@ -26,6 +26,9 @@ extern "C" void report_image_size( int );
 #if defined(OSF1)
 extern "C" unsigned int htonl( unsigned int );
 extern "C" unsigned int ntohl( unsigned int );
+#else
+extern "C" unsigned long htonl( unsigned long );
+extern "C" unsigned long ntohl( unsigned long );
 #endif
 
 void terminate_with_sig( int sig );
@@ -641,7 +644,7 @@ terminate_with_sig( int sig )
 	SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 
 		// Make sure we have the default action in place for the sig
-	act.sa_handler = SIG_DFL;
+	act.sa_handler = (SIG_HANDLER)SIG_DFL;
 	sigemptyset( &act.sa_mask );
 	act.sa_flags = 0;
 	if( sigaction(sig,&act,0) < 0 ) {
