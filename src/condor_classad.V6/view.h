@@ -129,6 +129,28 @@ public:
 		// misc
 	bool Display( FILE * );
 
+	/** An iterator we can use on a View */
+	typedef ViewMembers::iterator iterator;
+
+	/** A constatnt iterator we can use on a View */
+	typedef ViewMembers::const_iterator const_iterator;
+
+	/** Returns an iterator pointing to the beginning of the
+		attribute/value pairs in the View */
+	iterator begin() { return viewMembers.begin(); }
+
+	/** Returns a constant iterator pointing to the beginning of the
+		attribute/value pairs in the View */
+	const_iterator begin() const { return viewMembers.begin(); }
+	
+	/** Returns aniterator pointing past the end of the
+		attribute/value pairs in the View */
+	iterator end() { return viewMembers.end(); }
+	
+	/** Returns a constant iterator pointing past the end of the
+		attribute/value pairs in the View */
+	const_iterator end() const { return viewMembers.end(); }
+
 private:
 	friend class ClassAdCollection;
 	friend class ClassAdCollectionServer;
