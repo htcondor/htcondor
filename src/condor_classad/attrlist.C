@@ -1004,6 +1004,20 @@ char* AttrList::NextName()
     }
 }
 
+const char* AttrList::NextNameOriginal()
+{
+	char *name;
+
+    if (!this->ptrName) {
+		name = NULL;
+    }
+    else {
+		name = ptrName->name;
+		ptrName = ptrName->next;
+    }
+	return name;
+}
+
 char *AttrList::NextDirtyName()
 {
 	char *name;
