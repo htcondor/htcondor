@@ -703,6 +703,28 @@ init_daemon_list()
 		daemon_names.initializeFromString(daemon_list);
 		free( daemon_list );
 
+			/*
+			  Make sure that if COLLECTOR is in the list, put it at
+			  the front...  unfortunately, our List template (what
+			  StringList is defined in terms of) is amazingly broken
+			  with regard to insert() and append().  :( insert()
+			  usually means: insert *before* the current position.
+			  however, if you're at the end, it inserts before the
+			  last valid entry, instead of working like append() as
+			  you'd expect.  OR, if you just called rewind() and
+			  insert() (to insert at the begining, right?) it works
+			  like append() and sticks it at the end!!  ARGH!!!  so,
+			  we've got to call next() after rewind() so we really
+			  insert it at the front of the list.  UGH!  EVIL!!!
+			  Derek Wright <wright@cs.wisc.edu> 2004-12-23
+			*/
+		if( daemon_names.contains("COLLECTOR") ) {
+			daemon_names.deleteCurrent();
+			daemon_names.rewind();
+			daemon_names.next();
+			daemon_names.insert( "COLLECTOR" );
+		}
+
 		daemon_names.rewind();
 		while( (daemon_name = daemon_names.next()) ) {
 			if(daemons.GetIndex(daemon_name) < 0) {
