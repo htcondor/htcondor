@@ -298,8 +298,14 @@ DaemonCore::~DaemonCore()
 	}
 
 	if (sec_man) {
-		sec_man->invalidateAllCache();
+		// the reference counting in sec_man is currently disabled,
+		// so we need to clean up after it quite explicitly.  ZKM.
+		KeyCache * tmp_kt = sec_man->session_cache;
+		HashTable<MyString,MyString>* tmp_cm = sec_man->command_map;
+
 		delete sec_man;
+		delete tmp_kt;
+		delete tmp_cm;
 	}
 
 		// Since we created these, we need to clean them up.
