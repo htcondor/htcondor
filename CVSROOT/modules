@@ -116,6 +116,7 @@ V6_7_MIRROR_SRC		-a V6_6_SRC \
 			src/condor_c-gahp
 
 V6_7_SRC		-a V6_6_SRC \
+			src/config.h.in \
 			src/condor_c-gahp \
 			src/condor_drmaa \
 			src/condor_credd \
