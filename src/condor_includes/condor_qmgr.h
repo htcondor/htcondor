@@ -143,8 +143,11 @@ int SetAttributeString(int cluster, int proc, const char *attr,
 */
 int SetMyProxyPassword (int cluster, int proc, const char * pwd);
 
+
 int CloseConnection();
 void BeginTransaction();
+
+void AbortTransaction();
 
 /** Get value of attr for job with specified cluster and proc.
 	@return -1 on failure; 0 on success
