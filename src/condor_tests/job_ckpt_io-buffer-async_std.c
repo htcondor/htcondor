@@ -37,7 +37,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "x_x_waste_second.h"
+#include "x_waste_second.h"
 
 
 int main( int argc, char *argv[] )
