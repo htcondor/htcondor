@@ -21,7 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#ifndef WIN32
 #ifndef PARALLELRESOURCE_H
 #define PARALLELRESOURCE_H
 
@@ -72,5 +71,4 @@ class ParallelResource : public RemoteResource {
 };
 
 
-#endif
 #endif

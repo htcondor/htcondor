@@ -21,7 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#ifndef WIN32
 #ifndef _CONDOR_PARALLEL_COMRADE_PROC_H
 #define _CONDOR_PARALLEL_COMRADE_PROC_H
 
@@ -75,5 +74,4 @@ class ParallelComradeProc : public VanillaProc
 
 };
 
-#endif
 #endif

@@ -30,10 +30,8 @@
 
 // for the MPIShadow, a list of remote resource classes....
 template class ExtArray<MpiResource *>;
-#ifndef WIN32
 // for the ParallelShadow, a list of remote resource classes....
 template class ExtArray<ParallelResource *>;
-#endif
 
 // for the file transfer object.
 template class HashTable<MyString, FileTransfer *>;

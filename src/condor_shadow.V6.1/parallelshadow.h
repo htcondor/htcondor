@@ -21,7 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#ifndef WIN32
 #ifndef PARALLELSHADOW_H
 #define PARALLELSHADOW_H
 
@@ -137,6 +136,13 @@ class ParallelShadow : public BaseShadow
 			through last ads in the file. */
 	int runParallelStartupScript( char* rshargs );
 
+		/** This is registered as the reaper for the script. It just continues
+			the process from after the script onwards.
+			@param pid the pid that died
+			@param exit_status the exit status of the dead pid
+		*/
+	int postScript(int pid, int exit_status);
+
         /** After the schedd claims a resource, it puts it in a queue
             and then sends us a RESOURCE_AVAILABLE signal.  Upon
             receipt of that signal (it's registered in init()), we
@@ -163,6 +169,9 @@ class ParallelShadow : public BaseShadow
 			2) return TRUE if every resource is dead. 
 		    @param exitReason The job exit reason. */
 	int shutDownLogic( int& exitReason );
+	
+		/** The reaper id of postScript */
+	int postScript_rid;
 
         /** The name of the job ad file we give to the user supplied script */
     char jobadfile[_POSIX_PATH_MAX];
@@ -201,4 +210,3 @@ class ParallelShadow : public BaseShadow
 
 
 #endif /* PARALLELSHADOW_H */
-#endif

@@ -21,7 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#ifndef WIN32
 #include "condor_common.h"
 #include "parallelshadow.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
@@ -123,6 +122,10 @@ ParallelShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 	if( info_tid < 0 ) {
 		EXCEPT("Can't register DC timer!");
 	}
+
+	postScript_rid = daemonCore->Register_Reaper("postScript",
+								(ReaperHandlercpp)&ParallelShadow::postScript,
+								"postScript", this);
 }
 
 
@@ -313,30 +316,12 @@ ParallelShadow::startMaster()
 	if( parallelscriptshadow ) {
 		    // run shadow side script
 		runParallelStartupScript(NULL);
-		    // read the jobads back in
-		readJobAdFile(0);
 	} else {
-		dprintf(D_ALWAYS, "Warning: job submitted as %s universe but without "
+		dprintf(D_ALWAYS, "Error, job submitted as %s universe but without "
 				"a %s.\n", CondorUniverseName(CONDOR_UNIVERSE_PARALLEL),
 				ATTR_PARALLEL_SCRIPT_SHADOW);
+		shutDown(JOB_NOT_STARTED);
 	}
-
-        // back to master resource:
-    rr = ResourceList[0];
-
-		// now, we want to re-initialize the shadow_user_policy object
-		// with the ClassAd for our master node, since the one sitting
-		// in the Shadow object itself will never get updated with
-		// exit status, info about the run, etc, etc.
-	shadow_user_policy.init(rr->getJobAd(), this);
-
-
-        // Once we actually spawn the job (below), the sneaky rsh
-		// intercepts the master's call to rsh, and sends stuff to
-		// startComrade()... 
-	spawnNode(rr);
-
-    dprintf(D_PROTOCOL, "#3 - Just requested Master resource.\n");
 }
 
 int
@@ -374,133 +359,113 @@ ParallelShadow::readJobAdFile( int node )
 int
 ParallelShadow::runParallelStartupScript( char* rshargs )
 {
-		// prepare args for shadow side script
+	char*  binary;
+	char*  scriptargs;			// will be the final argument list
+	int    argcharcount = 0;	// size of scriptargs
 
-	char** scriptargs;			// will be the array of arguments
-	char*  stepper;				// tmporary for filling in scriptargs
-	char*  newpar;				// tmporary for filling in scriptargs
-	int    argn;				// index of next argument to go in scriptargs
-	int    argcount = 1;		// number of arguments (1 because of jobadfile)
-	char   nodenum[10];			// will only be used if rshargs
-
-	    // count the args in parallelscriptshadow (including actual binary)
-	stepper = parallelscriptshadow;
-	if( *stepper != ' ' ) argcount++;
-	while( *stepper ) {
-		if( *stepper == ' ' ) {
-			while( *stepper == ' ' ) stepper++;
-			if( *stepper ) argcount++;
-		} else stepper++;
+	if( !parallelscriptshadow ) {
+		dprintf(D_ALWAYS, "Error, parallelscriptshadow is null\n");
+		shutDown(JOB_NOT_STARTED);
+	}
+	if( !jobadfile ) {
+		dprintf(D_ALWAYS, "Error, jobadfile is null\n");
+		shutDown(JOB_NOT_STARTED);
 	}
 
+		// determine necessary memory
+	argcharcount += strlen(parallelscriptshadow);
+	argcharcount += 1; // for space
+	argcharcount += strlen(jobadfile);
 	if( rshargs ) {
-		argcount++; // for the node number
-
-		    // now count the args in rshargs
-		stepper = rshargs;
-		if( *stepper != ' ' ) argcount++;
-		while( *stepper ) {
-			if( *stepper == ' ' ) {
-				while( *stepper == ' ' ) stepper++;
-				if( *stepper ) argcount++;
-			} else stepper++;
-		}
+		argcharcount += 15; // for the node number
+		argcharcount += strlen(rshargs);
 	}
 
-	scriptargs = (char**) calloc(argcount + 1, sizeof(char*)); // + 1 for null
+	scriptargs = (char*) calloc(argcharcount + 1, sizeof(char));// +1 for null
 
-	    // now put the args in the array
-	argn = 0;
-	newpar = strdup(parallelscriptshadow);
-	stepper = newpar;
-
-	if( *stepper != ' ' ) scriptargs[argn++] = stepper;
-	while( *stepper ) {
-		if( *stepper == ' ' ) {
-			*stepper = 0;
-			stepper++;
-			while( *stepper == ' ' ) stepper++;
-			if( *stepper ) scriptargs[argn++] = stepper;
-		} else stepper++;
-	}
-	scriptargs[argn++] = jobadfile;
-
+		// fill in
+	strcat(scriptargs, parallelscriptshadow);
+	strcat(scriptargs, " ");
+	strcat(scriptargs, jobadfile);
 	if( rshargs ) {
-		scriptargs[argn++] = nodenum;
-		snprintf(scriptargs[3], 9, "%d", nextResourceToStart);
-		    // add in the rshargs
-		stepper = rshargs;
-		if( *stepper != ' ' ) scriptargs[argn++] = stepper;
-		while( *stepper ) {
-			if( *stepper == ' ' ) {
-				*stepper = 0;
-				stepper++;
-				while( *stepper == ' ' ) stepper++;
-				if( *stepper ) scriptargs[argn++] = stepper;
-			} else stepper++;
-		}
+		char tmp[15];
+		snprintf(tmp, 15, " %d ", nextResourceToStart);
+		strcat(scriptargs, tmp);
+		strcat(scriptargs, rshargs);
 	}
 
-	ASSERT(argn == argcount);
-	scriptargs[argcount] = 0; // null terminate the array
+		// clip off the extra stuff in `binary'
+	binary = strdup(parallelscriptshadow);
+	char* stepper = binary;
+	if( isspace(*stepper) ) while( isspace(*stepper) ) stepper++;
+	while( !isspace(*stepper) && *stepper ) stepper++;
+	*stepper = 0;
 
 		// run shadow side script
-	int scriptpid;
-	if( (scriptpid = fork()) ) {
-		if( scriptpid < 0 ) {
-			dprintf(D_ALWAYS, "Error, shadow could not fork to start up the "
-					"shadow side parallel start up script\n");
-			shutDown(JOB_NOT_STARTED);
-		} else {
-			int exitstatus;
-			waitpid(scriptpid, &exitstatus, 0);
-			if( WIFEXITED(exitstatus) ) {
-				if( WEXITSTATUS(exitstatus) ) {
-					dprintf(D_ALWAYS, "Error, shadow side parallel start up "
-							"script exited with status %d\n",
-							WEXITSTATUS(exitstatus));
-					
-					FILE* scriptobit;
-					char obitfile[_POSIX_PATH_MAX];
-					snprintf(obitfile, _POSIX_PATH_MAX, "%s/scriptobit.%d",
-							 getIwd(), scriptpid);
-					if( !(scriptobit = fopen(obitfile, "r")) ) {
-						dprintf(D_ALWAYS, "Script did not leave obituary\n");
-					} else {
-						char scripterr[128];
-						fgets(scripterr, 128, scriptobit);
-						fclose(scriptobit);
-						unlink(obitfile);
-						dprintf(D_ALWAYS, "Script exited with this error "
-								"message:\n%s", scripterr);
-					}
+	int scriptpid = daemonCore->Create_Process(binary, scriptargs,
+											   PRIV_UNKNOWN, postScript_rid);
 
-					shutDown(JOB_NOT_STARTED);
-				}
-			} else {
-				dprintf(D_ALWAYS, "Error, shadow side parallel start up "
-						"script did not exit normally\n");
-				shutDown(JOB_NOT_STARTED);
-			}
-		}
-		free(newpar);
-		free(scriptargs);
-	} else {
-		dprintf(D_FULLDEBUG, "About to execv(%s\n", scriptargs[0]);
-		for( int i = 1; i < argcount; i++ )
-			dprintf(D_FULLDEBUG, "%s\n", scriptargs[i]);
-		dprintf(D_FULLDEBUG, ")\n");
+	free(binary);
+	free(scriptargs);
 
-		execv(scriptargs[0], scriptargs);
-		dprintf(D_ALWAYS, "Error, could not execv the parallel script!\n");
-		exit(1);
+	if( !scriptpid ) {
+		dprintf(D_ALWAYS, "Error, could not execute the script (%s)\n",
+				scriptargs);
+		shutDown(JOB_NOT_STARTED);
 	}
-
-	//TODO - some better error handling code is needed in this procedure
 
 	return 1;
 }
 
+int
+ParallelShadow::postScript(int pid, int exit_status)
+{
+	FILE* scriptobit;
+	char obitfile[_POSIX_PATH_MAX];
+	snprintf(obitfile, _POSIX_PATH_MAX, "%s/scriptobit.%d",
+			 getIwd(), pid);
+	if( scriptobit = fopen(obitfile, "r") ) {
+		char scripterr[256];
+		fgets(scripterr, 256, scriptobit);
+		fclose(scriptobit);
+		unlink(obitfile);
+		dprintf(D_ALWAYS, "Script exited with this error "
+				"message:\n%s", scripterr);
+		shutDown(JOB_NOT_STARTED);
+	}
+
+	if( nextResourceToStart ) {
+			// read in the potentially modified ads
+		readJobAdFile(nextResourceToStart);
+
+		ParallelResource* rr = ResourceList[nextResourceToStart];
+		dprintf(D_PROTOCOL, "#9 - Added args to jobAd, now requesting:\n");
+
+			// Now, call the shared method to really spawn this node
+		spawnNode(rr);
+	} else {
+		    // read the jobads back in
+		readJobAdFile(0);
+
+			// back to master resource:
+		ParallelResource* rr = ResourceList[0];
+
+			// now, we want to re-initialize the shadow_user_policy object
+		    // with the ClassAd for our master node, since the one sitting
+		    // in the Shadow object itself will never get updated with
+		    // exit status, info about the run, etc, etc.
+		shadow_user_policy.init(rr->getJobAd(), this);
+
+            // Once we actually spawn the job (below), the sneaky rsh
+		    // intercepts the master's call to rsh, and sends stuff to
+		    // startComrade()... 
+		spawnNode(rr);
+
+		dprintf(D_PROTOCOL, "#3 - Just requested Master resource.\n");
+	}
+
+	return TRUE;
+}
 
 int
 ParallelShadow::startComrade( int cmd, Stream* s )
@@ -522,16 +487,6 @@ ParallelShadow::startComrade( int cmd, Stream* s )
 
 		// run the parallel startup script again
 	runParallelStartupScript(comradeArgs);
-
-		// read in the potentially modified ads
-	readJobAdFile(nextResourceToStart);
-
-    ParallelResource* rr = ResourceList[nextResourceToStart];
-
-    dprintf ( D_PROTOCOL, "#9 - Added args to jobAd, now requesting:\n" );
-
-		// Now, call the shared method to really spawn this node
-	spawnNode( rr );
 
     return TRUE;
 }
@@ -985,5 +940,3 @@ ParallelShadow::resourceBeganExecution( RemoteResource* rr )
 		shadow_user_policy.startTimer();
 	}
 }
-
-#endif
