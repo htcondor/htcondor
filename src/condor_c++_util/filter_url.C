@@ -34,7 +34,27 @@
 #define READ_END 0
 #define WRITE_END 1
 
-extern "C" int mkargv(int *, char **, char *);
+static int
+makeargv( int *argc, char *argv[], char *line )
+{
+	int		count, instring;
+	char	*ptr;
+
+	count = 0;
+	instring = 0;
+	for( ptr=line; *ptr; ptr++ ) {
+		if( isspace(*ptr) ) {
+			instring = 0;
+			*ptr = '\0';
+		}
+		else if( !instring ) {
+			argv[count++] = ptr;
+			instring = 1;
+		}
+	}
+	argv[count] = 0;
+	*argc = count;
+}
 
 /* A filer url is of the form "filter:program {|URL}" */
 
@@ -109,7 +129,7 @@ int condor_open_filter( const char *name, int flags, size_t n_bytes )
 				}
 			}
 
-			mkargv(&argc, argv, name);
+			makeargv(&argc, argv, name);
 			execv(argv[0], argv);
 			fprintf(stderr, "execv(%s) failed!!!!\n", argv[0]);
 			exit(-1);
