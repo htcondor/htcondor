@@ -254,17 +254,19 @@ SCHEDD:
   The commands that a startd sends to the schedd when it must vacate
   its jobs and release the schedd's claim.
 
+  The commands which write information into the job queue (such as
+  \Condor{submit}, \Condor{hold}, etc).  
+  Note that for most commands which try to write to the job queue, Condor
+  will perform an additional user-level authentication step.  
+  This additional user-level authentication prevents, for example, an
+  ordinary user from removing a different user's jobs.
+
 \item[\DCPerm{OWNER}] : The command that \Condor{reconfig\_schedd}
   sends to get the schedd to re-read it's config files.
 
-\item[\DCPerm{READ}] : The ``queue management'' command, which all
+\item[\DCPerm{READ}] : The command which all
   tools which view the status of the job queue send (such as
-  \Condor{q}, \Condor{submit}, etc).  Queue commands that want to
-  write information to the job queue (such as \Condor{submit} or
-  \Condor{rm}) do their own user-level authentication, so you can't
-  update anything in a given ClassAd without being the owner of that
-  ClassAd.  Therefore, this command only requires \DCPerm{READ}
-  access, since any writes are authenticated separately.
+  \Condor{q}).  
 \end{description}
 
 MASTER:  All commands are registered with \DCPerm{ADMINISTRATOR}
