@@ -942,48 +942,6 @@ AFS''
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:IO-Buffering-Config-File-Entries}
-I/O Buffering Config File Entries}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-These entries manage a buffer which may be enabled in 
-Standard Universe Condor jobs.  If your application performs many
-I/O operations, it may benefit from a buffer of file data which is kept
-with the application as it migrates from machine to machine.
-For many applications, buffering can greatly reduce the number of 
-remote system calls performed by a job.
-
-By default, buffering is turned off.  Buffering may be enabled by
-defining {\bf both } \Macro{BUFFER\_BLOCK\_COUNT} and
-\Macro{BUFFER\_BLOCK\_SIZE}.
-
-The total size of the buffer is given by \Macro{BUFFER\_BLOCK\_SIZE}
-multiplied by \Macro{BUFFER\_BLOCK\_COUNT}.  In general, the larger the
-buffer, the better I/O performance will be, but the larger the application
-image becomes.  A very large application image takes a long time to
-checkpoint and restore.
-
-When buffering is enabled, prefetching may also be performed.
-When prefetching is enabled, the first few bytes of a file are fetched
-from storage when a file is opened, but before any read has taken place.
-
-\begin{description}
-
-\item[\Macro{BUFFER\_BLOCK\_SIZE}] The block size, in bytes,
-to use in buffer operations.  The buffer will attempt to combine read
-and write operations into packets of this size.
-This number should be a multiple
-of your disk block size, which is typically 4096 bytes.  Default is zero.
-
-\item[\Macro{BUFFER\_BLOCK\_COUNT}] The number of blocks to be kept
-in every job's buffer.  Default is zero.
-
-\item[\Macro{BUFFER\_PREFETCH\_BYTES}] When buffering is enabled, the
-number of bytes to prefetch from every opened file.  Default is zero.
-
-\end{description}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Checkpoint-Server-Config-File-Entries}
 Checkpoint Server Config File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
