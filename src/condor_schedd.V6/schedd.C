@@ -1644,6 +1644,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		ATTR_TRANSFER_INPUT_FILES,
 		ATTR_TRANSFER_OUTPUT_FILES,
 		ATTR_ULOG_FILE,
+		ATTR_X509_USER_PROXY,
 		NULL };		// list must end with a NULL
 
 
