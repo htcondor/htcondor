@@ -420,9 +420,11 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 #define ABORT 						\
 if( client_addr )					\
     free( client_addr );			\
+stream->encode();					\
+stream->end_of_message();			\
+rip->r_cur->setagentstream( NULL );	\
 rip->change_state( owner_state );	\
-return FALSE
-
+return KEEP_STREAM
 
 int
 accept_request_claim( Resource* rip )
