@@ -691,6 +691,15 @@ int GlobusJob::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
+				if ( GetCallbacks() ) {
+					if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED &&
+						 globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_COMMIT_TIMED_OUT ) {
+dprintf(D_FULLDEBUG,"(%d.%d) jobmanager timed out on commit, clearing request\n",procID.cluster, procID.proc);
+						doResubmit = 1;
+						gmState = GM_CLEAR_REQUEST;
+						break;
+					}
+				}
 				rc = gahp.globus_gram_client_job_signal( jobContact,
 								GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_REQUEST,
 								NULL, &status, &error );
