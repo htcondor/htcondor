@@ -164,6 +164,7 @@ void uninit_user_ids()
 	UserLoginName = NULL;
 	UserDomainName= NULL;
 	CurrUserHandle = NULL;
+	UserIdsInited = false;
 }
 
 HANDLE priv_state_get_handle()
@@ -190,6 +191,9 @@ init_user_ids(const char username[], const char domain[])
 	   	return 0;
    	}
 
+		// we default to true, and only set this to false in the few
+		// cases where this method would return failure.
+	UserIdsInited = true;
 	
 	// see if we already have a user handle for the requested user.
 	// if so, just return 1. 
@@ -262,6 +266,7 @@ init_user_ids(const char username[], const char domain[])
 		if ( ! w_pw ) {
 			dprintf(D_ALWAYS, "ERROR: Could not locate credential for user "
 				"'%s@%s'\n", username, domain);
+			UserIdsInited = false;
 			return 0;
 		} else {
 			sprintf(pw, "%S", w_pw);
@@ -300,6 +305,7 @@ init_user_ids(const char username[], const char domain[])
 			if ( !retval ) {
 				dprintf(D_ALWAYS, "init_user_ids: LogonUser failed with NT Status %ld\n", 
 					GetLastError());
+				UserIdsInited = false;
 				return 0;
 			} else {
 				// stash the new token in our cache
