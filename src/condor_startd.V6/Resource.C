@@ -36,11 +36,12 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	r_reqexp = new Reqexp( this );
 	r_load_queue = new LoadQueue( size );
 
+	r_id = rid;
 	sprintf( tmp, "vm%d", rid );
-	r_id = strdup( tmp );
+	r_id_str = strdup( tmp );
 	
 	if( resmgr->is_smp() ) {
-		sprintf( tmp, "%s@%s", r_id, my_full_hostname() );
+		sprintf( tmp, "%s@%s", r_id_str, my_full_hostname() );
 		r_name = strdup( tmp );
 	} else {
 		r_name = strdup( my_full_hostname() );
@@ -68,7 +69,7 @@ Resource::~Resource()
 	delete r_attr;		
 	delete r_load_queue;
 	free( r_name );
-	free( r_id );
+	free( r_id_str );
 }
 
 
@@ -644,6 +645,12 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 			// Include everything from STARTD_EXPRS.
 		config_fill_ad( cap );
+
+			// Also, include a VM ID attribute, since it's handy for
+			// defining expressions, and other things.
+		
+		sprintf( line, "%s = %d", ATTR_VIRTUAL_MACHINE_ID, r_id );
+		cap->Insert( line );
 	}		
 
 	if( IS_PUBLIC(mask) && IS_UPDATE(mask) ) {
@@ -713,7 +720,7 @@ void
 Resource::dprintf_va( int flags, char* fmt, va_list args )
 {
 	if( resmgr->is_smp() ) {
-		::dprintf( flags, "%s: ", r_id );
+		::dprintf( flags, "%s: ", r_id_str );
 		::_condor_dprintf_va( flags | D_NOHEADER, fmt, args );
 	} else {
 		::_condor_dprintf_va( flags, fmt, args );
