@@ -50,7 +50,7 @@ int		Kmem;
 
 struct nlist nl[] = {
 #if defined(IRIX331) || defined(HPUX9) || defined(IRIX53)
-    { "avenrun" },
+    { "avenrun",0,0 },
 #else
     { "_avenrun" },
 #endif
@@ -59,15 +59,23 @@ struct nlist nl[] = {
 
 #if defined(IRIX62)
 struct nlist64  nl64[] = {
-	{ "avenrun",0,0 },
-	{ "" },
+    { "avenrun",0,0 },
+    { "" },
 };
 #endif /* IRIX62 */
 
 float
 calc_load_avg()
 {
+	static int got_k_vars = 0;
 	float lookup_load_avg();
+
+	/* if we have big-cheese access, open up /dev/kmem fist time thru.. */
+	if ( !got_k_vars && (getuid() == 0) ) {
+		got_k_vars = 1;
+		get_k_vars();
+	}
+		
 	return lookup_load_avg();
 }
 
@@ -76,8 +84,7 @@ calc_load_avg()
 */
 get_k_vars()
 {
-	if (getuid() == 0)
-		set_root_euid();
+	set_root_euid();
 
         /* Open kmem for reading */
     if( (Kmem=open("/dev/kmem",O_RDONLY,0)) < 0 ) {
@@ -90,12 +97,12 @@ get_k_vars()
 #if defined(IRIX62)
 	/* here we assume that all IRIX 6.x kernels are compiled as a ELF binary.  If the
 	 * kernel, i.e. /unix, is indeed a COFF binary, the below will fail with an exception.
-	 * first try a 32-bit ELF binary, then a 64-bit ELF, then fail.-Todd 2/97 */
-  if ( _libelf_nlist("/unix",nl) == -1 )
-	  if (_libelf_nlist64("/unix",nl64) == -1 ) {
-		  EXCEPT("cannot read /unix as an ELF binary");
-	  }
-  nl->n_value &= ~0x80000000;
+	 * first try a 32-bit ELF binary, then a 64-bit ELF, then fail. -Todd 2/97 */
+    if ( _libelf_nlist("/unix",nl) == -1 )
+		if (_libelf_nlist64("/unix",nl64) == -1 ) {
+			EXCEPT("cannot read /unix as an ELF binary");
+		}
+	nl->n_value &= ~0x80000000;
 #elif defined(IRIX331) || defined(IRIX53)
 	(void)nlist( "/unix", nl );
 	nl->n_value &= ~0x80000000;
@@ -107,8 +114,7 @@ get_k_vars()
 	(void)nlist( "/vmunix", nl );
 #endif
 
-	if (getuid() == 0)
-		set_condor_euid();
+	set_condor_euid();
 
 }
 
@@ -134,6 +140,7 @@ float
 lookup_load_avg()
 {
     off_t addr;
+	size_t result;
 
 #if defined(HPPAR) && defined(HPUX9)			/* HP-UX */
     double  avenrun[3];
@@ -145,7 +152,7 @@ lookup_load_avg()
 
 #if defined(IRIX62)
 	/* if IRIX62, figure out if we grabbed a 32- or 64-bit address */
-	if ( nl[0].n_type )
+	if ( nl[0].n_type ) 
 		addr = nl[0].n_value;
 	else
 		addr = nl64[0].n_value;
@@ -162,7 +169,7 @@ lookup_load_avg()
         EXCEPT( "lseek" );
     }
 
-    if( read(Kmem,(char *)avenrun,sizeof avenrun) != sizeof avenrun ) {
+    if( (result=read(Kmem,(char *)avenrun,sizeof avenrun)) != sizeof avenrun ) {
         EXCEPT( "read" );
     }
 
