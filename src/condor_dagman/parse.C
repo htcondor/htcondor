@@ -75,7 +75,7 @@ isDelimiter( char c ) {
 bool parse (char *filename, Dag *dag) {
 
     ASSERT( dag != NULL );
-  
+
     FILE *fp = fopen(filename, "r");
     if (fp == NULL) {
         if (DEBUG_LEVEL(DEBUG_QUIET)) {
@@ -113,8 +113,8 @@ bool parse (char *filename, Dag *dag) {
         // Example Syntax is:  JOB j1 j1.condor [DONE]
         //
         if (strcasecmp(token, "JOB") == 0) {
-			parsed_line_successfully = parse_job(dag, filename, lineNumber);
-		}
+	  parsed_line_successfully = parse_job(dag, filename, lineNumber);
+	}
 
 	// Handle a DaP spec
         // Example Syntax is:  DAP j1 j1.dapsubmit [DONE]
@@ -162,6 +162,9 @@ bool parse (char *filename, Dag *dag) {
 			return false;
 		}
     }
+
+    debug_printf( DEBUG_QUIET, "Parse completed successfully\n");
+
     return true;
 }
 
@@ -227,7 +230,7 @@ parse_job(
 	//
 	char *done = strtok(0, DELIMITERS);
 	if (done != NULL && strcasecmp(done, "DONE") == 0) {
-		job->_Status = Job::STATUS_DONE;
+	  job->_Status = Job::STATUS_DONE;
 	}
 	
 	if (!dag->Add (*job)) {
@@ -304,9 +307,9 @@ parse_dap(
 	//
 	char *done = strtok(0, DELIMITERS);
 	if (done != NULL && strcasecmp(done, "DONE") == 0) {
-		job->_Status = Job::STATUS_DONE;
+	  job->_Status = Job::STATUS_DONE;
 	}
-	
+
 	if (!dag->Add (*job)) {
 		debug_printf( DEBUG_QUIET, "ERROR adding Job %s to DAG\n",
 					  job->GetJobName() );
