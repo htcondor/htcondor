@@ -105,7 +105,7 @@ Condor_Auth_Base * auth = NULL;
 	MyString methods_to_try = auth_methods;
 
 	auth_status = CAUTH_NONE;
-	method_used == NULL;
+	method_used = NULL;
  
 	while (auth_status == CAUTH_NONE ) {
 		if (DebugFlags & D_FULLDEBUG) {
