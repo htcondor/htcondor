@@ -53,13 +53,20 @@ int command_match_info( Service*, int, Stream* );
    These commands all act startd-wide, and therefore, should be handled
    seperately. 
 */
-int command_vacate( Service*, int, Stream* );
 int command_vacate_all( Service*, int, Stream* );
 int command_pckpt_all( Service*, int, Stream* );
 int command_x_event( Service*, int, Stream* );
 int	command_give_state( Service*, int, Stream* );
 int	command_give_classad( Service*, int, Stream* );
 int command_give_request_ad( Service*, int, Stream* );
+
+/*
+   This command handler deals with commands that send a name as part
+   of the protocol to specify which resource they should effect,
+   instead of a capability.
+*/
+int command_name_handler( Service*, int, Stream* );
+
 
 /*
   Since the protocol is complex and what we have to do so

@@ -133,45 +133,6 @@ command_vacate_all( Service*, int, Stream* )
 
 
 int
-command_vacate( Service*, int cmd, Stream* stream ) 
-{
-	dprintf( D_ALWAYS, "command_vacate() called.\n" );
-	char* name = NULL;
-	Resource* rip;
-
-	if( ! stream->code(name) ) {
-		dprintf( D_ALWAYS, "Can't read name\n" );
-		free( name );
-		return FALSE;
-	}
-	if( ! stream->end_of_message() ) {
-		dprintf( D_ALWAYS, "Can't read end_of_message\n" );
-		free( name );
-		return FALSE;
-	}
-	rip = resmgr->get_by_name( name );
-	if( !rip ) {
-		dprintf( D_ALWAYS, 
-				 "Error: can't find resource with name (%s)\n",
-				 name );
-		free( name );
-		return FALSE;
-	}
-	free( name );
-
-	State s = rip->state();
-
-		// VACATE_CLAIM only makes sense in two states
-	if( (s == claimed_state) || (s == matched_state) ) {
-		return rip->release_claim();
-	} else {
-		rip->log_ignore( cmd, s );
-		return FALSE;
-	}
-}
-
-
-int
 command_pckpt_all( Service*, int, Stream* ) 
 {
 	dprintf( D_ALWAYS, "command_pckpt_all() called.\n" );
@@ -254,6 +215,57 @@ command_request_claim( Service*, int, Stream* stream )
 	}
 	free( cap );
 	return rval;
+}
+
+
+int
+command_name_handler( Service*, int cmd, Stream* stream ) 
+{
+	char* name = NULL;
+	Resource* rip;
+
+	if( ! stream->code(name) ) {
+		dprintf( D_ALWAYS, "Can't read name\n" );
+		free( name );
+		return FALSE;
+	}
+	if( ! stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "Can't read end_of_message\n" );
+		free( name );
+		return FALSE;
+	}
+	rip = resmgr->get_by_name( name );
+	if( !rip ) {
+		dprintf( D_ALWAYS, 
+				 "Error: can't find resource with name (%s)\n",
+				 name );
+		free( name );
+		return FALSE;
+	}
+	free( name );
+
+	State s = rip->state();
+	switch( cmd ) {
+	case VACATE_CLAIM:
+		if( (s == claimed_state) || (s == matched_state) ) {
+			return rip->release_claim();
+		} else {
+			rip->log_ignore( cmd, s );
+			return FALSE;
+		}
+		break;
+	case PCKPT_JOB:
+		if( s == claimed_state ) {
+			return rip->periodic_checkpoint();
+		} else {
+			rip->log_ignore( cmd, s );
+			return FALSE;
+		}
+		break;
+	default:
+		EXCEPT( "Unknown command (%d) in command_name_handler", cmd );
+	}
+	return FALSE;
 }
 
 
