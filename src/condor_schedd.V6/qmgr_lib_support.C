@@ -45,7 +45,7 @@ AuthSock *qmgmt_sock;
 static Qmgr_connection *connection = 0;
 
 Qmgr_connection *
-ConnectQ(char *qmgr_location, int auth=0 )
+ConnectQ(char *qmgr_location, int auth )
 {
 	int		rval;
 	char	tmp_file[255];
