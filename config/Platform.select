@@ -16,6 +16,11 @@
 #       endif
 #endif
 
+#if defined( IS_BSD )
+#       define PlatformIncludeFile <BSD.cf>
+#       undef IS_BSD
+#endif
+
 #if defined( IS_SOLARIS251 ) || defined( IS_SOLARIS26 ) || defined( IS_SOLARIS27 ) || defined (IS_SOLARIS28 ) || defined( IS_SOLARIS29 )
 #	define PlatformIncludeFile <SOLARIS.cf>
 #	if defined( IS_SUN4X ) 
