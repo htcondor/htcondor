@@ -59,6 +59,8 @@ void set_condor_euid(){}
 #define D_FULLDEBUG stdout
 #endif /* TESTING */
 
+close_kmem(){}
+
 /*
 ** Try to determine the swap space available on our own machine.  The answer
 ** is in kilobytes.
