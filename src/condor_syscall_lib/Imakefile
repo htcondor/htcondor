@@ -10,7 +10,11 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 		  MMAP.o PIPE.o
 #else
+#if IS_HPPAR_HPUX9
+EXTRACT = GETEUID.o GETEGID.o
+#else
 EXTRACT = GETEUID.o GETEGID.o GETWD.o
+#endif
 #endif
 
 STUBS = switches.o switches.special.o
@@ -82,10 +86,20 @@ CMNT Create a replacement for crt0.o to be linked with condor programs.
 CMNT N.B. This is done differently than other objects in that we start out
 CMNT with a copy of crt0.o, and change the name of "main" to "MAIN".
 CMNT
+#if IS_HPPAR_HPUX9
 condor_rt0.o: Crt0 ToUpper
-	ToUpper Crt0 condor_rt0.o main MAIN
+	ToUpper Crt0 tmp1 _start  _START
+	ToUpper tmp1 tmp2 __text_START __text_start 
+	ToUpper tmp2 condor_rt0.o __data_START __data_start
+	rm -f tmp1 tmp2
 clean::
 	rm -f condor_rt0.o
+#else
+condor_rt0.o: Crt0 ToUpper
+	ToUpper Crt0 condor_rt0.o main  MAIN
+clean::
+	rm -f condor_rt0.o
+#endif
 
 release_target( condor_rt0.o, $(RELEASE_DIR)/lib, OBJECT_MODE )
 
