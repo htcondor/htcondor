@@ -14,7 +14,7 @@ LDFLAGS = $(LIBDBM)
 RC_SRC = \
 	../condor_syscall_lib/extern_path.c \
 	FAKE_GETMNT_SRC 
-SRC =	$(RC_SRC) ops.C pseudo_ops.C perm_err.c shadow.C ulog.c \
+SRC =	$(RC_SRC) ops.C pseudo_ops.C perm_err.c shadow.C log_events.C \
 		../condor_syscall_lib/receivers.C
 
 RC_OBJ = extern_path.o FAKE_GETMNT_OBJ
@@ -24,8 +24,8 @@ QMGMT_LIB = ../condor_schedd.V6/libqmgmt.a
 CLASSAD_LIB = ../condor_classad/expr_lib.a
 UTIL_LIB = ../condor_util_lib/util_lib.a
 
-OBJ = $(RC_OBJ) ops.o pseudo_ops.o perm_err.o shadow.o receivers.o ulog.o \
-	$(CKPT_SERV_OBJ)
+OBJ = $(RC_OBJ) ops.o pseudo_ops.o perm_err.o shadow.o receivers.o \
+	log_events.o $(CKPT_SERV_OBJ)
 
 LIB =   $(CKPT_SERV_LIB) \
 		$(QMGMT_LIB) \
