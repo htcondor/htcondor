@@ -921,7 +921,13 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 	while( (name = name_list->next()) ) {
 		ads.Rewind();
 		while( !d && (ad = ads.Next()) ) {
-			if( real_dt == DT_STARTD ) {
+				// we only want to use the special ATTR_MACHINE hack
+				// to locate a startd if the query string we were
+				// given (which we're holding in the variable "name")
+				// does NOT contain an '@' character... if it does, it
+				// means the end user is trying to find a specific
+				// startd (e.g. glide-in, a certain VM, etc).
+			if( real_dt == DT_STARTD && ! strchr(name, '@') ) {
 				host = get_host_part( name );
 				ad->LookupString( ATTR_MACHINE, &tmp );
 				if( ! tmp ) {
@@ -961,7 +967,7 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 				free( tmp );
 				tmp = NULL;
 
-			} else {  // daemon type != DT_STARTD
+			} else {  // daemon type != DT_STARTD or there's an '@'
 					// everything else always uses ATTR_NAME
 				ad->LookupString( ATTR_NAME, &tmp );
 				if( ! tmp ) {
