@@ -35,7 +35,9 @@ values as POSIX requires.
 thain Thu Jan 28 14:19:48 CST 1999
 */
 
+#ifndef _POSIX_SOURCE
 #define _POSIX_SOURCE
+#endif
 
 #include <iostream.h>
 #include <unistd.h>
