@@ -321,11 +321,13 @@ do_Q_request(ReliSock *syscall_sock)
 		assert( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
 		assert( syscall_sock->code(attr_name) );
+		dprintf( D_SYSCALLS, "  attr_name = %s\n", attr_name );
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
 		rval = GetAttributeInt( cluster_id, proc_id, attr_name, &value );
 		terrno = errno;
+		dprintf( D_SYSCALLS, "  value: %d\n", value );
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
 		syscall_sock->encode();
