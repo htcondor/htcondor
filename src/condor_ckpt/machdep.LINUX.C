@@ -121,7 +121,7 @@ stack_start_addr()
 long
 stack_end_addr()
 {
-	return (((long)environ)&PAGE_MASK) + PAGE_SIZE - 1;
+	return (((long)*environ)&PAGE_MASK) + PAGE_SIZE - 1;
 }
 
 /*

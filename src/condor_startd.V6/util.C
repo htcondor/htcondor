@@ -226,7 +226,20 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose )
 bool
 configInsert( ClassAd* ad, const char* attr, bool is_fatal )
 {
-	char* val = param( attr );
+	return configInsert( ad, attr, attr, is_fatal );
+}
+
+
+/*
+  This version just allows for the name of the thing you're looking
+  for in the config file to be different than the classad attribute
+  name you want to insert it as.
+*/
+bool
+configInsert( ClassAd* ad, const char* param_name, 
+			  const char* attr, bool is_fatal ) 
+{
+	char* val = param( param_name );
 	char* tmp;
 	if( ! val ) {
 		if( is_fatal ) {

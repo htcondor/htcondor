@@ -41,6 +41,7 @@ Starter::Starter( Resource* rip )
 	s_family_size = 0;
 	s_type = -1;
 	s_is_dc = 0;
+	s_birthdate = 0;
 }
 
 
@@ -391,7 +392,7 @@ Starter::reallykill( int signo, int type )
 
 
 int 
-Starter::spawn( start_info_t* info )
+Starter::spawn( start_info_t* info, time_t now )
 {
 
 	if( is_dc() ) {
@@ -408,6 +409,7 @@ Starter::spawn( start_info_t* info )
 	if( s_pid == 0 ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter returned %d\n", s_pid );
 	} else {
+		s_birthdate = now;
 		s_procfam = new ProcFamily( s_pid, PRIV_ROOT );
 #if WIN32
 		// we only support running jobs as user nobody for the first pass
@@ -418,7 +420,7 @@ Starter::spawn( start_info_t* info )
 #endif
 		dprintf( D_PROCFAMILY, 
 				 "Created new ProcFamily w/ pid %d as the parent.\n", s_pid );
-		recompute_pidfamily();
+		recompute_pidfamily( now );
 	}
 	return s_pid;
 }
@@ -632,13 +634,14 @@ Starter::dprintf( int flags, char* fmt, ... )
 
 
 void
-Starter::recompute_pidfamily() 
+Starter::recompute_pidfamily( time_t now = 0 ) 
 {
 	if( !s_procfam ) {
 		dprintf( D_PROCFAMILY, 
 				 "Starter::recompute_pidfamily: ERROR: No ProcFamily object.\n" );
 		return;
 	}
+	dprintf( D_PROCFAMILY, "Recomputing pid family\n" );
 	s_procfam->takesnapshot();
 	if( s_pidfamily ) {
 		delete [] s_pidfamily;
@@ -647,5 +650,10 @@ Starter::recompute_pidfamily()
 	s_family_size = s_procfam->currentfamily( s_pidfamily );
 	if( ! s_family_size ) {
 		dprintf( D_ALWAYS, "WARNING: No processes found in starter's family\n" );
+	}
+	if( now ) {
+		s_last_snapshot = now;
+	} else {
+		s_last_snapshot = time( NULL );
 	}
 }

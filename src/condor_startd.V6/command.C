@@ -707,8 +707,8 @@ accept_request_claim( Resource* rip )
 {
 	int interval;
 	char *client_addr = NULL, *client_host, *full_client_host, *tmp;
-	char RemoteUser[512];
-	RemoteUser[0] = '\0';
+	char RemoteOwner[512];
+	RemoteOwner[0] = '\0';
 
 		// There should not be a pre match object now.
 	assert( rip->r_pre == NULL );
@@ -776,18 +776,22 @@ accept_request_claim( Resource* rip )
 
 		// Get the owner of this claim out of the request classad.
 	if( (rip->r_cur->ad())->
-		EvalString( ATTR_USER, rip->r_cur->ad(), RemoteUser ) == 0 ) { 
+		EvalString( ATTR_USER, rip->r_cur->ad(), RemoteOwner ) == 0 ) { 
 		rip->dprintf( D_ALWAYS, 
 				 "Can't evaluate attribute %s in request ad.\n", 
 				 ATTR_USER );
-		RemoteUser[0] = '\0';
+		RemoteOwner[0] = '\0';
 	}
-	if( RemoteUser ) {
-		rip->r_cur->client()->setname( RemoteUser );
-		rip->dprintf( D_ALWAYS, "Remote user is %s\n", RemoteUser );
+	if( RemoteOwner ) {
+		rip->r_cur->client()->setowner( RemoteOwner );
+			// For now, we say the remote user is the same as the
+			// remote owner.  In the future, we might decide to leave
+			// RemoteUser undefined until the resource is busy...
+		rip->r_cur->client()->setuser( RemoteOwner );
+		rip->dprintf( D_ALWAYS, "Remote owner is %s\n", RemoteOwner );
 	} else {
-		rip->dprintf( D_ALWAYS, "Remote user is NULL\n" );
-			// What else should we do here???
+		rip->dprintf( D_ALWAYS, "Remote owner is NULL\n" );
+			// TODO: What else should we do here???
 	}		
 		// Since we're done talking to this schedd agent, delete the stream.
 	rip->r_cur->setagentstream( NULL );
@@ -874,9 +878,12 @@ activate_claim( Resource* rip, Stream* stream )
 
 	rip->dprintf( D_FULLDEBUG, "Read request ad and starter from shadow.\n" );
 
-		// This recomputes all attributes and fills in the machine classad 
-	rip->update_classad();
-	
+		// Now, ask the ResMgr to recompute so we have totally
+		// up-to-date values for everything in our classad.
+		// Unfortunately, this happens to all the resources in an SMP
+		// at once, but that's the only way to compute anything... 
+	resmgr->compute( A_TIMEOUT | A_UPDATE );
+
 		// Possibly print out the ads we just got to the logs.
 	rip->dprintf( D_JOB, "REQ_CLASSAD:\n" );
 	if( DebugFlags & D_JOB ) {
@@ -901,10 +908,28 @@ activate_claim( Resource* rip, Stream* stream )
 		req_requirements = 0;
 	}
 	if( !mach_requirements || !req_requirements ) {
-	    rip->dprintf( D_ALWAYS,"mach_requirements = %d, request_requirements = %d\n",
-				 mach_requirements, req_requirements );
+	    rip->dprintf( D_ALWAYS, "Requirements check failed! "
+					  "resource = %d, request = %d\n",
+					  mach_requirements, req_requirements );
 		REFUSE;
 	    ABORT;
+	}
+
+		// Make sure the classad we got includes an ATTR_USER field,
+		// so we know who to charge for our services.  If it's not
+		// there, refuse to run the job.
+	char remote_user[256];
+	remote_user[0] = '\0';
+	if( req_classad->EvalString(ATTR_USER, rip->r_classad, 
+								remote_user) == 0 ) {
+		rip->dprintf( D_ALWAYS, "ERROR: %s not defined in request "
+					  "classad!  Refusing job\n", ATTR_USER );
+		REFUSE;
+		ABORT;
+	} else {
+		rip->dprintf( D_FULLDEBUG, 
+					  "Got RemoteUser (%s) from request classad\n",	
+					  remote_user );
 	}
 
 		// If we're here, we've decided to activate the claim.  Tell
@@ -990,46 +1015,55 @@ activate_claim( Resource* rip, Stream* stream )
 
 	ji.ji_hname = rip->r_cur->client()->host();
 
+	int now = (int)time( NULL );
+
+		// Actually spawn the starter
+	if( ! rip->spawn_starter(&ji, now) ) {
+			// Error spawning starter!
+		ABORT;
+	}
+
 		// Get a bunch of info out of the request ad that is now
 		// relevant, and store it in the machine ad and cur Match object
 
 	req_classad->EvalInteger( ATTR_CLUSTER_ID, req_classad, job_cluster );
 	req_classad->EvalInteger( ATTR_PROC_ID, req_classad, job_proc );
-	rip->r_cur->setproc( job_proc );
-	rip->r_cur->setcluster( job_cluster );
-	rip->dprintf( D_ALWAYS, "Remote job ID is %d.%d\n", job_cluster, job_proc );
 
-	rip->r_cur->setad( req_classad );
+	rip->dprintf( D_ALWAYS, "Remote job ID is %d.%d\n", job_cluster,
+				  job_proc );
 
-	if( !rip->r_cur->ad() ||
-		((rip->r_cur->ad())->EvalInteger( ATTR_JOB_UNIVERSE,
-										  rip->r_classad,universe)==0) ) {
+	if( req_classad->EvalInteger(ATTR_JOB_UNIVERSE,
+								 rip->r_classad, universe) == 0 ) {
 		universe = STANDARD;
 		rip->dprintf( D_ALWAYS,
-				 "Default universe (%d) since not in classad \n", 
-				 universe );
+					  "Default universe (%d) since not in classad \n", 
+					  universe );
 	} else {
 		rip->dprintf( D_ALWAYS, "Got universe (%d) from request classad\n",
-				 universe );
+					  universe );
 	}
 	if( universe == VANILLA ) {
-		rip->dprintf( D_ALWAYS, "Startd using *_VANILLA control expressions.\n" );
+		rip->dprintf( D_ALWAYS, 
+					  "Startd using *_VANILLA control expressions.\n" );
 	} else {
-		rip->dprintf( D_ALWAYS, "Startd using standard control expressions.\n" );
+		rip->dprintf( D_ALWAYS, 
+					  "Startd using standard control expressions.\n" );
 	}
+
+	rip->r_cur->client()->setuser( remote_user );
+	rip->r_cur->setproc( job_proc );
+	rip->r_cur->setcluster( job_cluster );
+	rip->r_cur->setad( req_classad );
 	rip->r_cur->setuniverse(universe);
 
-		// Actually spawn the starter
-	rip->r_starter->spawn( &ji );
-
-	int now = (int)time( NULL );
 	rip->r_cur->setjobstart(now);	
 	rip->r_cur->setlastpckpt(now);	
 
 		// Finally, update all these things into the resource classad.
 	rip->r_cur->publish( rip->r_classad, A_PUBLIC );
 
-	rip->dprintf( D_ALWAYS, "State change: claim-activation protocol successful\n" );
+	rip->dprintf( D_ALWAYS, 
+				  "State change: claim-activation protocol successful\n" );
 	rip->change_state( busy_act );
 
 	free( shadow_addr );

@@ -263,7 +263,9 @@ display_stats()
 	printf("%9.9s ", format_time_nosecs(wall_time));
 	printf("%9.9s ", format_time_nosecs(good_time));
 	printf("%9.9s ", format_time_nosecs(cpu_usage));
-	printf("%9.9s ", format_time_nosecs(wall_time/allocations));
+	printf("%9.9s ", allocations ?
+		   format_time_nosecs(wall_time/allocations) :
+		   "0+00:00");
 	printf("%9.9s ", kills ?
 		   format_time_nosecs((wall_time-good_time)/kills) :
 		   "0+00:00");

@@ -119,9 +119,14 @@ Match::publish( ClassAd* ad, amask_t how_much )
 	ad->Insert( line );
 
 	if( m_client ) {
-		tmp = m_client->name();
+		tmp = m_client->user();
 		if( tmp ) {
 			sprintf( line, "%s=\"%s\"", ATTR_REMOTE_USER, tmp );
+			ad->Insert( line );
+		}
+		tmp = m_client->owner();
+		if( tmp ) {
+			sprintf( line, "%s=\"%s\"", ATTR_REMOTE_OWNER, tmp );
 			ad->Insert( line );
 		}
 		tmp = m_client->host();
@@ -361,7 +366,8 @@ Match::capab( void )
 
 Client::Client()
 {
-	c_name = NULL;
+	c_user = NULL;
+	c_owner = NULL;
 	c_addr = NULL;
 	c_host = NULL;
 }
@@ -369,22 +375,37 @@ Client::Client()
 
 Client::~Client() 
 {
-	free( c_name );
-	free( c_addr );
-	free( c_host );
+	if( c_user) free( c_user );
+	if( c_owner) free( c_owner );
+	if( c_addr) free( c_addr );
+	if( c_host) free( c_host );
 }
 
 
 void
-Client::setname(char* name)
+Client::setuser( char* user )
 {
-	if( c_name ) {
-		free( c_name);
+	if( c_user ) {
+		free( c_user);
 	}
-	if( name ) {
-		c_name = strdup( name );
+	if( user ) {
+		c_user = strdup( user );
 	} else {
-		c_name = NULL;
+		c_user = NULL;
+	}
+}
+
+
+void
+Client::setowner( char* owner )
+{
+	if( c_owner ) {
+		free( c_owner);
+	}
+	if( owner ) {
+		c_owner = strdup( owner );
+	} else {
+		c_owner = NULL;
 	}
 }
 
@@ -423,7 +444,7 @@ Client::vacate(char* cap)
 	ReliSock sock;
 	sock.timeout( 20 );
 
-	if( ! (c_addr || c_host || c_name ) ) {
+	if( ! (c_addr || c_host || c_owner ) ) {
 			// Client not really set, nothing to do.
 		return;
 	}

@@ -127,6 +127,9 @@ extern	bool	compute_avail_stats;
 	// should the startd compute vm availability statistics; currently 
 	// false by default
 
+extern	int		pid_snapshot_interval;	
+    // How often do we take snapshots of the pid families? 
+
 #endif /* _STARTD_NO_DECLARE_GLOBALS */
 
 #endif /* _CONDOR_STARTD_H */

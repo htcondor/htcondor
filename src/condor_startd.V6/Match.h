@@ -70,12 +70,14 @@ public:
 	Client();
 	~Client();
 
-	char*	name()	{return c_name;};
-	char*	user()	{return c_name;};	// For compatibility only
+	char*	name()	{return c_user;};	// For compatibility only
+	char*	user()	{return c_user;};
+	char*	owner()	{return c_owner;};
 	char*	host()	{return c_host;};
 	char*	addr() 	{return c_addr;};
 
-	void	setname(char* name);
+	void	setuser(char* user);
+	void	setowner(char* owner);
 	void	setaddr(char* addr);
 	void	sethost(char* host);
 
@@ -83,7 +85,8 @@ public:
 		// is a being vacated
 	void	vacate(char* cap);
 private:
-	char	*c_name;	// name of the client, a.k.a. "user"
+	char	*c_owner;	// name of the owner
+	char	*c_user;	// name of the user
 	char	*c_host;	// hostname of the clientmachine
 	char	*c_addr;	// <ip:port> of the client
 };
