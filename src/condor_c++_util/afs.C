@@ -153,7 +153,7 @@ AFS_Info::which_cell( const char *path )
 	// directory on AFS
 	if (answer == NULL) {
 		int i;
-		for (i = strlen(args); i >= 0 && args[i] != '/'; i--);
+		for (i = strlen(args); i >= 0 && args[i] != '/' && args[i] != '\\'; i--);
 		if (i >= 0) {
 			args[i] = '\0';
 			fs = new SubProc( fs_pathname, args, "r" );
@@ -190,7 +190,7 @@ AFS_Info::which_vol( const char *path )
 	// directory on AFS
 	if (answer == NULL) {
 		int i;
-		for (i = strlen(args); i >= 0 && args[i] != '/'; i--);
+		for (i = strlen(args); i >= 0 && args[i] != '/' && args[i] != '\\'; i--);
 		if (i >= 0) {
 			args[i] = '\0';
 			fs = new SubProc( fs_pathname, args, "r" );
