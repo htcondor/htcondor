@@ -330,6 +330,9 @@ Reconfig()
 	GlobusJob::setGahpCallTimeout( tmp_int );
 	GlobusResource::setGahpCallTimeout( tmp_int );
 
+	tmp_int = param_integer("GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT",3);
+	GlobusJob::setConnectFailureRetry( tmp_int );
+
 	checkProxy_interval = -1;
 	tmp = param("GRIDMANAGER_CHECKPROXY_INTERVAL");
 	if ( tmp ) {
@@ -813,8 +816,8 @@ doContactSchedd()
 			if ( JobsByProcID.lookup( procID, old_job ) != 0 ) {
 
 				int rc;
-				char resource_name[200];
-				GlobusResource *resource;
+				char resource_name[800];
+				GlobusResource *resource = NULL;
 
 				resource_name[0] = '\0';
 				next_ad->LookupString( ATTR_GLOBUS_RESOURCE, resource_name );

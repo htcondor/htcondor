@@ -37,6 +37,7 @@ class GlobusJob : public Service
 	static int submitInterval;
 	static int restartInterval;
 	static int gahpCallTimeout;
+	static int maxConnectFailures;
 
 	static void setProbeInterval( int new_interval )
 		{ probeInterval = new_interval; }
@@ -46,6 +47,8 @@ class GlobusJob : public Service
 		{ restartInterval = new_interval; }
 	static void setGahpCallTimeout( int new_timeout )
 		{ gahpCallTimeout = new_timeout; }
+	static void setConnectFailureRetry( int count )
+		{ maxConnectFailures = count; }
 
 	// New variables
 	bool resourceDown;
@@ -108,6 +111,7 @@ class GlobusJob : public Service
 
  protected:
 	bool callbackRegistered;
+	int connect_failure_counter;
 	//Classad *ad;
 };
 

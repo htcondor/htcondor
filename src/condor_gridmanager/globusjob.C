@@ -30,6 +30,7 @@
 
 #include "gridmanager.h"
 #include "globusjob.h"
+#include "condor_config.h"
 
 
 // GridManager job states
@@ -102,6 +103,7 @@ int GlobusJob::probeInterval = 300;		// default value
 int GlobusJob::submitInterval = 300;	// default value
 int GlobusJob::restartInterval = 60;	// default value
 int GlobusJob::gahpCallTimeout = 300;	// default value
+int GlobusJob::maxConnectFailures = 3;	// default value
 
 GlobusJob::GlobusJob( GlobusJob& copy )
 {
@@ -157,6 +159,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	lastRestartAttempt = 0;
 	numRestartAttempts = 0;
 	numRestartAttemptsThisSubmit = 0;
+	connect_failure_counter = 0;
 
 	evaluateStateTid = daemonCore->Register_Timer( TIMER_NEVER,
 								(TimerHandlercpp)&GlobusJob::doEvaluateState,
@@ -1216,16 +1219,30 @@ int GlobusJob::doEvaluateState()
 					GMStateNames[gmState]);
 			enteredCurrentGmState = time(NULL);
 			gahp.purgePendingRequests();
+			connect_failure_counter = 0;
 		}
 
 	} while ( reevaluate_state );
 
 	if ( connect_failure && !jmUnreachable && !resourceDown ) {
-		dprintf(D_FULLDEBUG,
-			"(%d.%d) Connection failure, requesting a ping of the resource\n",
-			procID.cluster,procID.proc);
-		jmUnreachable = true;
-		myResource->RequestPing( this );
+		if ( connect_failure_counter < maxConnectFailures ) {
+				// We are seeing a lot of failures to connect
+				// with Globus 2.2 libraries, often due to GSI not able 
+				// to authenticate.
+			connect_failure_counter++;
+			int retry_secs = param_integer(
+				"GRIDMANAGER_CONNECT_FAILURE_RETRY_INTERVAL",5);
+			dprintf(D_FULLDEBUG,
+				"(%d.%d) Connection failure (try #%d), retrying in %d secs\n",
+				procID.cluster,procID.proc,connect_failure_counter,retry_secs);
+			daemonCore->Reset_Timer( evaluateStateTid, retry_secs );
+		} else {
+			dprintf(D_FULLDEBUG,
+				"(%d.%d) Connection failure, requesting a ping of the resource\n",
+				procID.cluster,procID.proc);
+			jmUnreachable = true;
+			myResource->RequestPing( this );
+		}
 	}
 
 	return TRUE;
