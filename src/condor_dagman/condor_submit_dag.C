@@ -377,32 +377,26 @@ void getJobLogFilenameFromSubmitFiles(SubmitDagOptions &opts)
 				strLine += psLine;
 		}
 
-		if (strLine.Length() <= 3)
-			continue;
+        strLine.Tokenize();
+        const char *token;
+        token = strLine.GetNextToken("\t ", true);
+        if (token != NULL && strcasecmp(token, "job") == 0) {
+            const char *jobname;
+            const char *submit_filename;
 
-		MyString strFirstThree = strLine.Substr(0, 2);
-		if (!stricmp(strFirstThree.Value(), "job"))
-		{
-			int iLastWhitespace = strLine.Length();
-			int iPos;
-			for (iPos = strLine.Length()-1; iPos >= 0; iPos--)
-			{
-				if (strLine[iPos] == '\t' || strLine[iPos] == ' ')
-				{	
-					iLastWhitespace = iPos;
-					break;
-				}
-			}
+            jobname = strLine.GetNextToken("\t ", true);
+            if (jobname != NULL) {
+                submit_filename = strLine.GetNextToken("\t ", true);
 
-			MyString strSubFile = strLine.Substr(iLastWhitespace+1, strLine.Length()-1);
+                MyString strSubFile = submit_filename;
 
-			// get the log= value from the sub file
+                // get the log= value from the sub file
+                MyString strLogFilename = loadLogFileNameFromSubFile(strSubFile, opts);
 
-			MyString strLogFilename = loadLogFileNameFromSubFile(strSubFile, opts);
-
-			if (opts.strJobLog == "") {
-				opts.strJobLog = strLogFilename;
-			}
+                if (opts.strJobLog == "") {
+                    opts.strJobLog = strLogFilename;
+                }
+            }
 		}
 	}	
 
