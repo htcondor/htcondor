@@ -27,17 +27,18 @@
 
 enum AdTypes
 {
-    STARTD_AD,
-    SCHEDD_AD,
-    MASTER_AD,
-    GATEWAY_AD,
-    CKPT_SRVR_AD,
+	STARTD_AD,
+	SCHEDD_AD,
+	MASTER_AD,
+	GATEWAY_AD,
+	CKPT_SRVR_AD,
 	STARTD_PVT_AD,
 	SUBMITTOR_AD,
 	COLLECTOR_AD,
 	LICENSE_AD,
-
-    NUM_AD_TYPES
+	NEST_AD,
+	ANY_AD,
+	NUM_AD_TYPES
 };
 
 #include "condor_commands.h"   // collector commands
