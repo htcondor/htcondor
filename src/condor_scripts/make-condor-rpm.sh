@@ -42,12 +42,14 @@ then
 fi
 
 
-pushd /tmp/make-condor-rpm
+pushd /tmp/make-condor-rpm >> /dev/null
 
 # Untar condor distribution
-tar xzvf condor.tar.gz || exit 4
+tar xzf condor.tar.gz || exit 4
 
 cd condor-${condor_version}
+
+file_list=`tar xvf release.tar`
 
 # Create RPM build directory
 mkdir -p rpmbuild/BUILD
@@ -55,7 +57,7 @@ mkdir -p rpmbuild/SOURCES
 mkdir -p rpmbuild/RPMS
 
 ln -s `pwd` /opt/condor-${condor_version} 
-if [ $? != 0 ]
+if [ $? -ne 0 ]
 then
     echo "Unable to create /opt/condor-${condor_version}"
     exit 5
@@ -84,7 +86,14 @@ Prefix: /opt/%{name}-%{version}
 
 %post
 cd \${RPM_INSTALL_PREFIX}
-./condor_configure --install
+
+# This is a hack so that condor_configure works
+touch ./ignore.me
+tar cf ./release.tar ignore.me
+rm ./ignore.me
+./condor_configure --install --owner=condor
+rm ./ignore.me
+rm ./release.tar
 
 %postun
 rm -rf \${RPM_INSTALL_PREFIX}
@@ -96,10 +105,14 @@ rm -rf \${RPM_INSTALL_PREFIX}
 /opt/%{name}-%{version}/INSTALL
 /opt/%{name}-%{version}/LICENSE.TXT
 /opt/%{name}-%{version}/README
-/opt/%{name}-%{version}/release.tar
-
-%changelog
 EOF
+
+# Now print the filelist too
+for f in $file_list
+do
+  echo '/opt/%{name}-%{version}/'$f >> ./condor.spec
+done
+echo '%changelog' >> ./condor.spec
 
 # Build RPM
 rpmbuild --define "_topdir rpmbuild" -bb condor.spec && yes_rpm='y'
