@@ -437,8 +437,10 @@ character are ignored by the submit-description file parser.
     \OptItem{\OptArg{-n}{schedd\_name}}{Submit to the specified schedd. This option is used when there is more than one schedd running on the submitting machine}
 
 	\OptItem{\OptArg{-r}{schedd\_name}}{Submit to a remote schedd. The jobs
-	will be submitted to the schedd on the specified remote host, and their
-	owner will be set to ``nobody".}
+	will be submitted to the schedd on the specified remote host. On Unix
+	systems, the Condor administrator for you site must override the default 
+	AUTHENTICATION_METHODS configuration setting to enable remote filesystem 
+	(FS_REMOTE) authentication.}
 
 \end{Options}
 
