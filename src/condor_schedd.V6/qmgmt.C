@@ -1261,7 +1261,6 @@ void mark_jobs_idle()
  */
 void FindRunnableJob(int c, int& rp)
 {
-	int					p;
 	char				constraint[_POSIX_PATH_MAX];
 	ClassAdList			joblist;
 	ClassAd				*ad;
@@ -1275,10 +1274,8 @@ void FindRunnableJob(int c, int& rp)
 
 	N_PrioRecs = 0;
 	rp = -1;
-	p = -1;
 	joblist.Open();	// start at beginning of list
 	while ((ad = joblist.Next()) != NULL) {
-		ad->LookupInteger(ATTR_PROC_ID, p);
 		get_job_prio(ad);
 	}
 	if(N_PrioRecs == 0)

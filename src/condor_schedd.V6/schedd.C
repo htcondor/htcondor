@@ -2461,17 +2461,6 @@ extern "C" {
 int
 prio_compar(prio_rec* a, prio_rec* b)
 {
-    /* compare up down priorities */
-    /* lower values mean more priority */
-#if 0
-    if( a->prio > b->prio ) {
-        return 1;
-    }
-    if( a->prio < b->prio ) {
-        return -1;
-    }
-#endif
-    /* here updown priorities are equal */
     /* compare job priorities: higher values have more priority */
     if( a->job_prio < b->job_prio ) {
         return 1;
