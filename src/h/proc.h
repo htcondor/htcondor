@@ -100,7 +100,7 @@ typedef struct {
 	char			*requirements;		/* job requirements */
 	char			*preferences;		/* job preferences */
 	struct rusage	local_usage;		/* accumulated usage by shadows */
-	char			pad[50];			/* make at least as big as V2 proc */
+	char			pad[66];			/* make at least as big as V2 proc */
 #if defined(NEW_PROC)
 } PROC;
 #else
