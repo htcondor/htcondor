@@ -116,17 +116,6 @@
   should generate code.
 */
 
-	/* Use 32 bits for file mode (mode_t) everywhere - hope nobody wants more */
-#if !defined(MODE_T)
-#	if defined(AIX32)
-#		define MODE_T ulong_t
-#	elif defined(Solaris)
-#		define MODE_T unsigned long
-#	else
-#		define MODE_T unsigned int
-#	endif
-#endif
-
 /*	OSF/1 has some what different prototypes for many system calls.
 	These try to set things up so we don't have to have so many
 	if defined()'s below.  I'm afraid other new platforms may require
@@ -135,36 +124,37 @@
 
 
 #if defined(LINUX)
-#       if defined(GLIBC) 
-#               define MMAP_T char*
-#		define GLIBC_CONST 
-#       else
-#               define MMAP_T void*
-#		define GLIBC_CONST const
-#       endif
+#   if defined(GLIBC) 
+#	define MMAP_T char*
+#	define GLIBC_CONST 
+#   else
+#	define MMAP_T void*
+#	define GLIBC_CONST const
+#   endif
 #endif
+
 #if defined(OSF1)
-#define SYSCALL_PTR	void
-#define INV_SYSCALL_PTR	char
-#define NEED_CONST	const
+#   define SYSCALL_PTR	void
+#   define INV_SYSCALL_PTR	char
+#   define NEED_CONST	const
 #else
-#define SYSCALL_PTR	char
-#define INV_SYSCALL_PTR	void
-#if defined(Solaris26)
-#define NEED_CONST	const
-#else
-#define NEED_CONST
-#endif
+#   define SYSCALL_PTR	char
+#   define INV_SYSCALL_PTR	void
+#   if defined(Solaris26)
+#	define NEED_CONST	const
+#   else
+#	define NEED_CONST
+#   endif
 #endif
 
 #define SEND_PATH(name) in code(name)
 #define GET_PATH(name) out code(name)
 
-/* on IRIX, we always want to dl_extract */
-#if defined(IRIX53)
-#define EXTRACT dl_extract
+/* Decide if we want to use dlopen for extracting or not. */
+#if defined( DL_EXTRACT )
+#   define EXTRACT dl_extract
 #else
-#define EXTRACT extract
+#   define EXTRACT extract
 #endif
 
 #define ALLOC_PATH(name) alloc(name,_POSIX_PATH_MAX)
@@ -218,7 +208,7 @@
 		in code_bytes_bool( &buf, &len, len );
 		alloc( buf, len );
         }
-#endif
+#endif /* BufferCondorIO */
 
 #ifdef CARMI_OPS
 
@@ -342,7 +332,7 @@
 		SEND_PATH( domain );
 		ALLOC_PATH( domain );
 	}
-#endif
+#endif /* !defined(SWITCH) */
 
 #if !defined( CLIP )
 	int link( const char *p1, const char *p2 ) {
@@ -361,7 +351,7 @@
 			build senders and recievers for everybody, and switches for
 			everybody but AIX
 		*/
-#if !defined( BufferCondorIO )
+#	    if !defined( BufferCondorIO )
 		ssize_t write( map(int fd), const void *buf, size_t len ) {
 			in code_bytes_bool( buf, len );
 			alloc( buf, len );
@@ -371,19 +361,19 @@
 			out code_bytes_bool( buf, rval );
 			alloc( buf, len );
 		} 
-#endif
-#	endif
+#	    endif /* BufferCondorIO */
+#	endif /* AIX32 */
 
 #if !defined( BufferCondorIO )
 	off_t lseek( map(int fd), off_t offset, int whence );
-
+#endif
 
 #ifdef Solaris26 
 	offset_t llseek( map(int fd), offset_t offset, int whence );
 	off64_t	lseek64( map(int fd), off64_t offset, int whence ) : extract, no_sys_chk;
 #endif 
 
-#endif 
+
 	int access( const char *path, int access_mode ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
@@ -393,17 +383,9 @@
 		These get special treatment by the shadow, but should work normally
 		in local mode.
 		*/
-#	if defined(AIX32)
-		pid_t getppid() : pseudo;
-#	else
-#	if defined(IRIX53)
-		pid_t getppid() : dl_extract, pseudo;
-#	else
-		pid_t getppid() : extract, pseudo;
-#	endif
-		uid_t getuid()  : pseudo;
-		gid_t getgid()  : pseudo;
-#	endif
+	pid_t getppid() : EXTRACT, pseudo;
+	uid_t getuid()  : pseudo;
+	gid_t getgid()  : pseudo;
 	pid_t getpid()  : pseudo;
 	
 	/*
@@ -428,25 +410,16 @@
 	  the "clipped" version.
 	*/
 
-#if !defined(AIX32)
-#	if defined(IRIX53)
-	uid_t geteuid() : dl_extract, pseudo;
-	gid_t getegid() : dl_extract, pseudo;
-	char * getwd( char *path_name ) : pseudo, dl_extract {
-		GET_PATH( path_name );
-		ALLOC_PATH( path_name );
-	}
-#	else
-	uid_t geteuid() : extract, pseudo;
-	gid_t getegid() : extract, pseudo;
-#if !defined(Solaris) || !defined(SWITCH)
-	char * getwd( char *path_name ) : pseudo, extract {
+	uid_t geteuid() : EXTRACT, pseudo;
+	gid_t getegid() : EXTRACT, pseudo;
+
+#if !defined(SWITCH)
+	char * getwd( char *path_name ) : pseudo {
 		GET_PATH( path_name );
 		ALLOC_PATH( path_name );
 	}
 #endif
-#	endif
-#endif
+
 int unlink( const char *path ) {
 	SEND_PATH( path );
 	ALLOC_PATH( path );
@@ -536,7 +509,7 @@ int rename( const char *from, const char *to ) : pseudo {
 		out signal( kill_sig );
 		alloc( kill_sig, INT_SIZE );
 	}
-#endif
+#endif /* 0 */
 	int startup_info_request( STARTUP_INFO *s ): pseudo {
 		out code( s );
 		alloc( s, STARTUP_INFO_SIZE );
@@ -635,7 +608,7 @@ int rename( const char *from, const char *to ) : pseudo {
 		involved, it's easier to just code the senders by hand.
 		They are implemented in "senders.epilogue".
 		*/
-	int send_file( const char *name, MODE_T mode ) : pseudo {
+	int send_file( const char *name, mode_t mode ) : pseudo {
 		SEND_PATH( name );
 		ALLOC_PATH( name );
 	}
@@ -648,8 +621,6 @@ int rename( const char *from, const char *to ) : pseudo {
 
 
 #if !defined( CLIP )
-
-#	if !defined(AIX32)
 
 #if defined(LINUX) && !defined(GLIBC)
 	int fstat( map(int fd), struct stat *buf ) : extract, no_sys_chk {
@@ -706,12 +677,12 @@ int rename( const char *from, const char *to ) : pseudo {
 			alloc( buf, STAT64_SIZE );
 	}
 
+	int getdents64( map(int fd), char *buf, int nbytes ) {
+			out code_bytes_bool( buf, nbytes );
+			alloc( buf, nbytes );
+	}
+
 #endif /* Solaris26 */
-
-
-
-#endif  /* !defined(AIX32) */
-
 
 #if defined(LINUX)
 	int mknod( const char *path, mode_t mode, dev_t device ) {
@@ -721,16 +692,16 @@ int rename( const char *from, const char *to ) : pseudo {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
-	int chmod( const char *path, MODE_T mode ) {
+	int chmod( const char *path, mode_t mode ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
-#	if !defined(SUNOS41) && !defined(ULTRIX43) && !defined(Solaris) && !defined(LINUX) && !defined(IRIX62) 
+#if !defined(Solaris) && !defined(LINUX) && !defined(IRIX62) 
 		int getfsstat( struct statfs buf[], long bufsize, int flags ) {
 			out code_bytes_bool( buf, STATFS_ARRAY_SIZE );
 			alloc( buf, bufsize );
 		}
-#	endif
+#endif
 #if defined(Solaris)
 	not_supported {
 		int flock( map(int fd), int op );
@@ -754,7 +725,7 @@ not_supported{
 	out code( buf );
 	alloc( buf, STATFS_SIZE );
 	}
-#endif
+#endif /* defined(Solaris) */
 
 	int fsync( map(int fd) );
 
@@ -767,26 +738,26 @@ not_supported{
 
 #if defined(LINUX) || defined(Solaris26)
 	int readlink( const char *path, char *buf, size_t buf_size ) {
-#elif defined(AIX32) || defined(IRIX62) || defined(OSF1)
+#elif defined(IRIX62) || defined(OSF1)
 	int readlink( const char *path, char *buf, int buf_size ) {
 #else
 	int readlink( const char *path, void *buf, int buf_size ) {
 #endif
-	SEND_PATH( path );
-    ALLOC_PATH( path );
-    out code_bytes_bool( buf, buf_size );
-    alloc( buf, buf_size );
-    }
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+		out code_bytes_bool( buf, buf_size );
+		alloc( buf, buf_size );
+	}
 
 	pid_t getpgrp();
-	MODE_T umask( MODE_T cmask );
+	mode_t umask( mode_t cmask );
 	int getpagesize();
 
 	int getgroups( int gidsetsize, gid_t grouplist[] ) {
 		out code_bytes_bool( grouplist, gidsetsize * GID_T_SIZE );
 		alloc( grouplist, gidsetsize * GID_T_SIZE );
 	}
-#	if defined(SUNOS41) || defined(Solaris) || defined(IRIX62)
+#	if defined(Solaris) || defined(IRIX62)
 		int getdents( map(int fd), char *buf, int nbytes ) {
 			out code_bytes_bool( buf, nbytes );
 			alloc( buf, nbytes );
@@ -831,7 +802,7 @@ not_supported{
 	int setpriority( int which, int who, int priority );
 #endif
 	int getpriority( int which, int who );
-#if defined(OSF1) || (defined(HPUX9) && !defined(HPUX10)) || defined(LINUX)
+#if defined(OSF1) || defined(LINUX)
 	int gettimeofday( struct timeval *tp, struct timezone *tzp ) {
 		out code( tp );
 #else
@@ -843,7 +814,7 @@ not_supported{
 		alloc( tzp, TIMEZONE_SIZE );
 	}
 	int fchown( map(int fd), uid_t owner, gid_t group );
-#	if !defined(AIX32) && !defined(LINUX)
+#	if !defined(LINUX)
 		int lchown( const char *path, uid_t owner, gid_t group ) {
 			SEND_PATH( path );
 			ALLOC_PATH( path );
@@ -854,52 +825,31 @@ not_supported{
 		ALLOC_PATH( path );
 	}
 
-#if defined(LINUX)
 	int fchmod( map(int fd), mode_t mode );
-	not_supported int setreuid( uid_t ruid, uid_t euid );
-	not_supported int setregid( uid_t rgid, uid_t egid );
+
+#if defined(LINUX)
 	int truncate( const char *path, size_t length ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
-	int ftruncate( map(int fd), size_t length );
-#elif defined(OSF1)
-	int fchmod( map(int fd), MODE_T mode );
-	not_supported int setreuid( uid_t ruid, uid_t euid );
-	not_supported int setregid( gid_t rgid, gid_t egid );
+#else
 	int truncate( const char *path, off_t length ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
-#if (!defined (SWITCH) && !defined(CLIP))
-	int ftruncate( map(int fd), off_t length );
-#endif
-#elif defined(Solaris26)
-	int fchmod( map(int fd), mode_t mode );
-	not_supported int setreuid( uid_t ruid, uid_t euid );
-	not_supported int setregid( gid_t rgid, gid_t egid );
-	int truncate( const char *path, off_t length) {
-		SEND_PATH( path );
-		ALLOC_PATH( path );
-	}
-#else
-	int fchmod( map(int fd), MODE_T mode );
-	not_supported int setreuid( int ruid, int euid );
-	not_supported int setregid( int rgid, int egid );
-	int truncate( const char *path, off_t length ) {
-		SEND_PATH( path );
-		ALLOC_PATH( path );
-	}
-#if defined(Solaris)
-	#if (!defined (SWITCH) && !defined(CLIP))
-		int ftruncate( map(int fd), off_t length ) : extract, no_sys_chk ;
-	#endif
-#else
-	int ftruncate( map(int fd), off_t length );
-#endif
-#endif
-	not_supported int setgid( gid_t gid );
-	int mkdir( const char *path, MODE_T mode ) {
+#endif /* ! LINUX */
+
+#if !defined(SWITCH)
+	/* Not a switch, b/c it's in switches.special.c b/c Jim fixed
+	   a fortran problem there. -Derek and Jim 7/6/98 */
+#	if defined( LINUX )
+		int ftruncate( map(int fd), size_t length );
+#	else 
+		int ftruncate( map(int fd), off_t length );
+#	endif
+#endif /* ! SWITCH */
+
+	int mkdir( const char *path, mode_t mode ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
@@ -942,7 +892,6 @@ not_supported{
 	}
 #endif
 
-	pid_t setsid();
 #if defined(HPUX9)
 	int statfs( char *path, struct statfs *buf ) {
 		SEND_PATH( path );
@@ -958,8 +907,8 @@ not_supported{
 		alloc( buf, STATFS_SIZE );
 	}
 #elif defined(Solaris)
-	not_supported
-{	int statfs( char *path, struct statfs *buf, int len );
+	not_supported {
+		int statfs( char *path, struct statfs *buf, int len );
 	}
 #elif defined(IRIX53)
 	int statfs( const char *path, struct statfs *buf, int len, int fstyp ) {
@@ -996,7 +945,6 @@ not_supported{
 	}
 
 
-#	if !defined(AIX32)
 #if !defined(Solaris) && !defined(LINUX) && !defined(IRIX62)
 		int getaddressconf( struct addressconf *buf, size_t length ) {
 			out code_bytes_bool( buf, length );
@@ -1020,10 +968,7 @@ not_supported{
 		}
 
 		int uswitch( int cmd, int value );
-#endif
-#	endif
-
-
+#endif /* Solaris || Linux || IRIX62 */
 
 		/*
 		Things having to do with signals - we may support these
@@ -1031,38 +976,23 @@ not_supported{
 		*/
 	not_supported {
 
-#if 	!defined(SAVE_SIGSTATE)
+#if !defined(SAVE_SIGSTATE)
 
-
-#if 	defined(LINUX)
-		int sigprocmask( int how, sigset_t *set, sigset_t *o_set );
-#else
-		int sigprocmask( int how, const sigset_t *set, sigset_t *o_set );
+#if defined(LINUX)
+#define SIG_CONST
+#else 
+#define SIG_CONST const
 #endif
 
-		int sigpending( sigset_t *set );
+	int sigprocmask( int how, SIG_CONST sigset_t *set, sigset_t *o_set );
+	int sigsuspend( SIG_CONST sigset_t *mask );
+	int sigpending( sigset_t *set );
+	int sigstack( struct sigstack *instack, struct sigstack *outstack );
 
-#if		!defined(LINUX)
+#	if !defined(LINUX)
 		int sigreturn( struct sigcontext *scp );
-#endif
-
-#if		defined(LINUX)
-		int sigsuspend( sigset_t *set );
-#else
-		int sigsuspend( const sigset_t *mask );
-#endif
-
-
-		int sigstack( struct sigstack *instack, struct sigstack *outstack );
-#	if defined( AIX32)
-		int kill( pid_t pid, int sig );
-#	else
-#	if defined(IRIX53)
-        int kill( pid_t pid, int sig ) : dl_extract;
-#	else
-        int kill( pid_t pid, int sig ) : extract;
 #	endif
-#	endif
+
 #endif  /* of !defined(SAVE_SIGSTATE) */
 
 
@@ -1075,29 +1005,27 @@ not_supported{
 	int getitimer( int which, struct itimerval *value );
 	}
 
-		/*
-		We don't support these everywhere, but we ignore attempts to do them remotely
-		for the benefit of Fortran compilers...
-		*/
+	/*
+	We don't support these everywhere, but we ignore attempts to do them remotely
+	for the benefit of Fortran compilers...
+	*/
 	ignored {
 #	if defined( AIX32) && !defined(SAVE_SIGSTATE)
 		int sigaction( int sig, const struct sigaction *act,
 						struct sigaction *o_act );
 #	elif !defined (SAVE_SIGSTATE)
-#if		defined(LINUX)
+#	    if defined(LINUX)
 		int sigaction( int sig, struct sigaction *act,
 				struct sigaction *o_act ) : extract;
-#elif		defined(IRIX53)
+#	    else
 		int sigaction( int sig, const struct sigaction *act,
-						struct sigaction *o_act ) : dl_extract;
-#else
-		int sigaction( int sig, const struct sigaction *act,
-						struct sigaction *o_act ) : extract;
-#endif
+						struct sigaction *o_act ) : EXTRACT;
+#	    endif
 #	endif
 		int setsysinfo( unsigned long op, char *buffer, unsigned long nbytes,
 						char * arg, unsigned long flag );
 	}
+
 #endif /* not CLIP */
 
 	/*
@@ -1109,13 +1037,7 @@ not_supported{
 	*/
 not_supported {
 #	if defined(IRIX53) || defined(OSF1)
-#	if defined(IRIX53)
-	void * mmap( void * a, size_t l, int p, int f, map(int fd),
-														off_t o ) : dl_extract;
-#	elif defined(OSF1)
-	void * mmap( void * a, size_t l, int p, int f, map(int fd),
-														off_t o ) : extract;
-#	endif  /* of OSF1 */
+	void * mmap( void * a, size_t l, int p, int f, map(int fd), off_t o ) : EXTRACT;
 	int mprotect( NEED_CONST void * addr, size_t len, int prot );
 	int madvise( INV_SYSCALL_PTR * addr, size_t len, int behav );
 	int msync( void * addr, size_t len, int flags );
@@ -1124,7 +1046,7 @@ not_supported {
 	int msync( MMAP_T addr, size_t len, int flags );
 #	else
 	char * mmap( char * a, size_t l, int p, int f, map(int fd),
-														off_t o ) : extract;
+														off_t o ) : EXTRACT;
 	int mprotect( char * addr, size_t len, int prot );
 	int madvise( char * addr, size_t len, int behav );
 	int msync( char * addr, size_t len, int flags );
@@ -1140,9 +1062,17 @@ not_supported {
 #if defined( LINUX ) && ! defined( SWITCH )
 	/* We need an mmap in switches.special.c to handle
 	   Linux-specific flags.  Derek Wright 3/12 */
-	not_supported {
-		void * mmap( void * a, size_t l, int p, int f, map(int fd),														             off_t o ) : extract;
-	}
+    not_supported {
+	void* mmap( void* a, size_t l, int p, int f, map(int fd), off_t o );
+    }
+#endif
+
+
+/* We want stubs for kill(), we just don't want a switch, since we
+   define our own switch for it in switches.special.c. 
+   -Derek Wright 7/8/98 */
+#if ! defined( SWITCH )
+	int kill( pid_t pid, int sig );
 #endif
 
 
@@ -1150,6 +1080,9 @@ not_supported {
 	/* Calls intended only for the super user or system managers */
 not_supported {
 	int setuid( uid_t uid );
+	int setgid( gid_t gid );
+	int setreuid( uid_t ruid, uid_t euid );
+	int setregid( uid_t rgid, uid_t egid );
 	int setlogin( char *name );
 	int revoke( char *path );
 	int chroot( const char *path );
@@ -1217,12 +1150,9 @@ not_supported {
 #if defined(AIX32)
 	pid_t fork();
 	int pipe( int fd[] );
-#elif defined(IRIX53)
-	pid_t fork() : dl_extract;
-	int pipe( int fd[] ) : dl_extract;
 #else
-	pid_t fork() : extract;
-	int pipe( int fd[] ) : extract;
+	pid_t fork() : EXTRACT;
+	int pipe( int fd[] ) : EXTRACT;
 #endif
 	/* Other fork()-like calls */
 #if defined(LINUX)
@@ -1251,6 +1181,7 @@ not_supported {
 						unsigned long data );
 #endif
 	int setpgid( pid_t process_id, pid_t gid );
+	pid_t setsid();
 #if defined(OSF1)
 	int setpgrp( pid_t process_id , pid_t process_group_id );
 #else 
@@ -1355,12 +1286,6 @@ not_supported {
 #if defined(AIX32)
 	uid_t getuidx( int which );
 	gid_t getgidx( int which );
-#	if !defined(SWITCH)
-		char * getwd( char *path_name ) : pseudo {
-			GET_PATH( path_name );
-			ALLOC_PATH( path_name );
-		}
-#	endif
 #endif
 
 
@@ -1498,8 +1423,10 @@ not_supported {
 
 	}
 		
+#endif /* AIX and not CLIP */
+
 #if defined(Solaris)
 #undef static
 #endif
 
-#endif /* not CLIP */
+
