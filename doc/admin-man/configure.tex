@@ -1841,6 +1841,25 @@ as:
   which is needed for submitting to the GLOBUS universe.
 \end{description}
 
+\begin{description}
+\item[\Macro{DEFAULT\_IO\_BUFFER\_SIZE}] \label{param:DefaultBufferSize}
+  Condor keeps a buffer of recently-used data for each file an
+  application opens.  This macro specifies the default maximum number
+  of bytes to be buffered for each open file at the executing machine.
+  The \Condor{status} \Macro{buffer\_size} command will override this
+  default.  If this macro is undefined, a default size of 512 KB will
+  be used.
+
+\item[\Macro{DEFAULT\_IO\_BUFFER\_BLOCK\_SIZE}] 
+  \label{param:DefaultBufferBlockSize} When buffering is enabled,
+  Condor will attempt to consolidate small read and write operations
+  into large blocks.  This macro specifies the default block size
+  Condor will use.  The \Condor{status} \Macro{buffer\_block\_size}
+  command will override this default.  If this macro is undefined, a
+  default size of 32 KB will be used.
+
+\end{description}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Preen-Config-File-Entries}
 \condor{preen} Configutation File Entries}

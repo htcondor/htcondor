@@ -345,7 +345,10 @@ number of bytes to be buffered for each open file at the executing machine.
 
 The buffer size and its effect on throughput may be viewed with
 the \verb@-io@ option to \Condor{status}. 
-In this version of Condor, the default buffer size is 512 KB.
+In this version of Condor, the default buffer size is 512 KB, unless
+the configuration file macro \Macro{DEFAULT\_IO\_BUFFER\_SIZE} has
+been set to a different default by your administrator on your
+submission machine.
 
 %%%%%%%%%%%%%%%%%%%
 %% buffer_block_size
@@ -360,7 +363,10 @@ your program performs.
 
 The buffer block size and its effect on throughput may be viewed with
 the \verb@-io@ option to \Condor{status}. 
-In this version of Condor, the default buffer block size is 32 KB.
+In this version of Condor, the default buffer block size is 32 KB,
+unless the configuration file \Macro{DEFAULT\_IO\_BUFFER\_BLOCK\_SIZE}
+has been set to a different default by your administrator on your
+submission machine.
 
 %%%%%%%%%%%%%%%%%%%
 %% file_remaps
