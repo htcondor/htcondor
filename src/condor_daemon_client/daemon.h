@@ -315,10 +315,13 @@ protected:
 	char* _pool;
 	char* _error;
 	char* _id_str;
+	char* _subsys;
 	int _port;
 	daemon_t _type;
 	bool _is_local;
 	bool _tried_locate;
+	bool _tried_init_hostname;
+	bool _tried_init_version;
 	bool _is_configured; 
 	SecMan _sec_man;
 
@@ -355,6 +358,31 @@ protected:
 		  @return Whether or not we found the info we want
 		  */
 	bool getCmInfo( const char* subsys );
+
+		/** Helper to initialize the hostname if we don't have it
+			already, but we do have an IP address.  Usually, when we
+			locate(), we can get all the hostname info for free, but
+			if we're instantiated just with a sinful string, we don't
+			bother looking that IP up in the appropriate hostinfo
+			database unless we need it.
+		*/
+	bool initHostname( void );
+
+		/** Helper to initialize the hostname once we have the full
+			hostname.  This is shared in a few places, so it now lives
+			in a seperate method.
+		*/
+	bool initHostnameFromFull( void );
+
+		/** Helper to initialize the version and platform string if we
+			don't have it already.  Usually, when we locate(), we can
+			get all this info for free, either from the local address
+			file or the ClassAd we got back from querying a collector.
+			However, if we don't have it, we don't go out of our way
+			to find it (like calling ident on the binary) unless we
+			need it.
+		*/
+	bool initVersion( void );
 
 		/** Get the default port based on what type of Daemon we are */
 	int getDefaultPort( void );

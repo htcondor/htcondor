@@ -45,6 +45,8 @@ void Daemon::common_init() {
 	_port = -1;
 	_is_local = false;
 	_tried_locate = false;
+	_tried_init_hostname = false;
+	_tried_init_version = false;
 	_is_configured = true;
 	_addr = NULL;
 	_name = NULL;
@@ -53,6 +55,7 @@ void Daemon::common_init() {
 	_platform = NULL;
 	_error = NULL;
 	_id_str = NULL;
+	_subsys = NULL;
 	_hostname = NULL;
 	_full_hostname = NULL;
 	_cmd_str = NULL;
@@ -78,18 +81,25 @@ Daemon::Daemon( daemon_t type, const char* name, const char* pool )
 		}
 	} 
 	dprintf( D_HOSTNAME, "New Daemon obj (%s) name: \"%s\", pool: "
-			 "\"%s\"\n", daemonString(_type), name ? name : "NULL",
-			 pool ? pool : "NULL" );
+			 "\"%s\", addr: \"%s\"\n", daemonString(_type), 
+			 _name ? _name : "NULL", _pool ? _pool : "NULL",
+			 _addr ? _addr : "NULL" );
 }
 
 
 Daemon::~Daemon() 
 {
+	if( DebugFlags & D_HOSTNAME ) {
+		dprintf( D_HOSTNAME, "Destroying Daemon object:\n" );
+		display( D_HOSTNAME );
+		dprintf( D_HOSTNAME, " --- End of Daemon object info ---\n" );
+	}
 	if( _name ) delete [] _name;
 	if( _pool ) delete [] _pool;
 	if( _addr ) delete [] _addr;
 	if( _error ) delete [] _error;
 	if( _id_str ) delete [] _id_str;
+	if( _subsys ) delete [] _subsys;
 	if( _hostname ) delete [] _hostname;
 	if( _full_hostname ) delete [] _full_hostname;
 	if( _version ) delete [] _version;
@@ -115,8 +125,8 @@ Daemon::name( void )
 char*
 Daemon::hostname( void )
 {
-	if( ! _hostname ) {
-		locate();
+	if( ! _hostname && ! _tried_init_hostname ) {
+		initHostname();
 	}
 	return _hostname;
 }
@@ -125,8 +135,8 @@ Daemon::hostname( void )
 char*
 Daemon::version( void )
 {
-	if( ! _version ) {
-		locate();
+	if( ! _version && ! _tried_init_version ) {
+		initVersion();
 	}
 	return _version;
 }
@@ -135,8 +145,8 @@ Daemon::version( void )
 char*
 Daemon::platform( void )
 {
-	if( ! _platform ) {
-		locate();
+	if( ! _platform && ! _tried_init_version ) {
+		initVersion();
 	}
 	return _platform;
 }
@@ -145,8 +155,8 @@ Daemon::platform( void )
 char*
 Daemon::fullHostname( void )
 {
-	if( ! _full_hostname ) {
-		locate();
+	if( ! _full_hostname && ! _tried_init_hostname ) {
+		initHostname();
 	}
 	return _full_hostname;
 }
@@ -527,7 +537,6 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, bool force_auth,
 bool
 Daemon::locate( void )
 {
-	char buf[256], *tmp;
 	bool rval;
 
 		// Make sure we only call locate() once.
@@ -590,16 +599,16 @@ Daemon::locate( void )
 
 		// Now, deal with everything that's common between both.
 
-		// get*Info() will usually fill in _full_hostname, but not
-		// _hostname.  In all cases, if we have _full_hostname we just
-		// want to trim off the domain the same way for _hostname. 
-	if( _full_hostname ) {
-		strcpy( buf, _full_hostname );
-		tmp = strchr( buf, '.' );
-		if( tmp ) {
-			*tmp = '\0';
-		}
-		New_hostname( strnewp(buf) );
+		// The helpers all try to set _full_hostname, but not
+		// _hostname.  If we've got the full host, we always want to
+		// trim off the domain for _hostname.
+	initHostnameFromFull();
+
+	if( _port < 0 && _addr ) {
+			// If we have the sinful string and no port, fill it in
+		_port = string_to_port( _addr );
+		dprintf( D_HOSTNAME, "Using port %d based on address \"%s\"\n",
+				 _port, _addr );
 	}
 
 		// Now that we're done with the get*Info() code, if we're a
@@ -618,12 +627,21 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 	char				buf[512], tmpname[512];
 	char				*addr_file, *tmp, *my_name;
 	FILE				*addr_fp;
-	struct				sockaddr_in sockaddr;
-	struct				hostent* hostp;
+
+	if( _subsys ) {
+		delete [] _subsys;
+	}
+	_subsys = strnewp( subsys );
+
+	if( _addr && is_valid_sinful(_addr) ) {
+		dprintf( D_HOSTNAME, "Already have address, no info to locate\n" );
+		_is_local = false;
+		return true;
+	}
 
 		// If we were not passed a name or an addr, check the
 		// config file for a subsystem_HOST, e.g. SCHEDD_HOST=XXXX
-	if (!_name && !_addr ) {
+	if( ! _name ) {
 		sprintf(buf,"%s_HOST",subsys);
 		char *specified_host = param(buf);
 		if ( specified_host ) {
@@ -635,6 +653,7 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 			free(specified_host);
 		}
 	}
+
 
 		// Figure out if we want to find a local daemon or not, and
 		// fill in the various hostname fields.
@@ -668,36 +687,20 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 			// if that matches the name for the local daemon.  
 			// If we were given a pool, never assume we're local --
 			// always try to query that pool...
-		my_name = localName();
-		dprintf( D_HOSTNAME, "Local daemon name would be \"%s\"\n", 
-				 my_name );
-		if( !_pool && !strcmp(_name, my_name) ) {
-		dprintf( D_HOSTNAME, "Name \"%s\" matches local name and "
-				 "no pool given, treating as a local daemon\n", _name );
-			_is_local = true;
-		}
-		delete [] my_name;
-	} else if( _addr ) {
-			// We got no name, but we have an address.  Try to
-			// do an inverse lookup and fill in some hostname info
-			// from the IP address we already have.
-		dprintf( D_HOSTNAME, "Address \"%s\" specified, but no name, "
-				 "looking up host info\n", _addr );
-		string_to_sin( _addr, &sockaddr );
-		hostp = gethostbyaddr( (char*)&sockaddr.sin_addr, 
-							   sizeof(struct in_addr), AF_INET ); 
-		if( ! hostp ) {
-			New_full_hostname( NULL );
-			dprintf( D_HOSTNAME, "gethostbyaddr() failed: %s (errno: %d)\n",
-					 strerror(errno), errno );
-			sprintf( buf, "can't find host info for %s", _addr );
-			newError( buf );
+		if( _pool ) {
+			dprintf( D_HOSTNAME, "Pool was specified, "
+					 "forcing collector query\n" );
 		} else {
-				// TODO: we should really be checking for a full host
-				// here and looking at aliases, DEFAULT_DOMAIN_NAME,
-			dprintf( D_HOSTNAME, "Found host entry, using \"%s\" for "
-					 "full hostname\n", hostp->h_name );
-			New_full_hostname( strnewp(hostp->h_name) );
+			my_name = localName();
+			dprintf( D_HOSTNAME, "Local daemon name would be \"%s\"\n", 
+					 my_name );
+			if( !strcmp(_name, my_name) ) {
+				dprintf( D_HOSTNAME, "Name \"%s\" matches local name and "
+						 "no pool given, treating as a local daemon\n",
+						 _name );
+				_is_local = true;
+			}
+			delete [] my_name;
 		}
 	} else {
 			// We were passed neither a name nor an address, so use
@@ -749,30 +752,7 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 			}
 			free( addr_file );
 		} 
-
-		if( ! _version ) { 
-				// If we didn't find the version string in the address
-				// file, try to ident the daemon's binary directly.
-			sprintf( buf, "%s", subsys );
-			dprintf( D_HOSTNAME, "No version string in local address file, "
-					 "trying to find it in the daemon's binary\n" );
-			char* exe_file = param( buf );
-			if( exe_file ) {
-				char ver[128];
-				CondorVersionInfo vi;
-				vi.get_version_from_file(exe_file, ver, 128);
-				New_version( strnewp(ver) );
-				dprintf( D_HOSTNAME, "Found version string \"%s\" "
-						 "in local binary (%s)\n", ver, exe_file );
-				free( exe_file );
-			} else {
-				dprintf( D_HOSTNAME, "%s not defined in config file, "
-						 "can't locate daemon binary for version info\n", 
-						 buf );
-			}
-		}
 	}
-
 
 	if( ! _addr ) {
 			// If we still don't have it (or it wasn't local), query
@@ -863,15 +843,19 @@ Daemon::getCmInfo( const char* subsys )
 {
 	char buf[128];
 	char* host = NULL;
-	char* local_host = NULL;
-	char* remote_host = NULL;
 	char* tmp;
 	struct in_addr sin_addr;
-	struct hostent* hostp;
 
-	dprintf( D_HOSTNAME, "Entering getCmInfo() name: \"%s\", "
-			 "pool: \"%s\", addr: \"%s\"\n", _name ? _name : "NULL", 
-			 _pool ? _pool : "NULL", _addr ? _addr : "NULL" );
+	if( _subsys ) {
+		delete [] _subsys;
+	}
+	_subsys = strnewp( subsys );
+
+	if( _addr && is_valid_sinful(_addr) ) {
+		dprintf( D_HOSTNAME, "Already have address, no info to locate\n" );
+		_is_local = false;
+		return true;
+	}
 
 		// For CM daemons, normally, we're going to be local (we're
 		// just not sure which config parameter is going to find it
@@ -897,53 +881,37 @@ Daemon::getCmInfo( const char* subsys )
 		// Figure out what name we're really going to use.
 	if( _name && *_name ) {
 			// If we were given a name, use that.
-		remote_host = strdup( _name );
-		host = remote_host;
+		host = strdup( _name );
 		_is_local = false;
 	}
 
-	dprintf( D_HOSTNAME,
-			 "Finding info on local central manager to compare\n" );
-
-		// Try the config file for a subsys-specific IP addr 
-	sprintf( buf, "%s_IP_ADDR", subsys );
-	local_host = param( buf );
-	if( local_host ) {
-		dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf, local_host );
+	if( ! host ) {
+			// Try the config file for a subsys-specific IP addr 
+		sprintf( buf, "%s_IP_ADDR", subsys );
+		host = param( buf );
+		if( host ) {
+			dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf, host );
+		}
 	}
 
-	if( ! local_host ) {
+	if( ! host ) {
 			// Try the config file for a subsys-specific hostname 
 		sprintf( buf, "%s_HOST", subsys );
-		local_host = param( buf );
-		if( local_host ) {
+		host = param( buf );
+		if( host ) {
 			dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf, 
-					 local_host ); 
+					 host ); 
 		}
 	}
 
-	if( ! local_host ) {
+	if( ! host ) {
 			// Try the generic CM_IP_ADDR setting (subsys-specific
 			// settings should take precedence over this). 
-		local_host = param( "CM_IP_ADDR" );
-		if( local_host ) {
+		host = param( "CM_IP_ADDR" );
+		if( host ) {
 			dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf, 
-					 local_host ); 
+					 host ); 
 		}
-	}
-
-	if( local_host && ! host ) {
-		host = local_host;
-	}
-	if( local_host && remote_host && !strcmp(local_host, remote_host) ) { 
-			// We've got the same thing, we're really local, even
-			// though we were given a "remote" host.
-		dprintf( D_HOSTNAME, "Pool specified (%s) matches local pool "
-				 "(%s)\n", remote_host, local_host );
-		_is_local = true;
-		host = local_host;
-	} else {
-		dprintf( D_HOSTNAME, "Remote pool specified (%s)\n", host );
 	}
 
 	if( ! host ) {
@@ -951,16 +919,16 @@ Daemon::getCmInfo( const char* subsys )
 				 subsys ); 
 		newError( buf );
 		_is_configured = false;
-		if( local_host ) free( local_host );
-		if( remote_host ) free( remote_host );
+		if( host ) free( host );
 		return false;
 	} 
-
 
 		// Now that we finally know what we're going to use, we should
 		// store that (as is) in _name, so that we can get to it later
 		// if we need it.
-	New_name( strnewp(host) );
+	if( ! _name ) {
+		New_name( strnewp(host) );
+	}
 	dprintf( D_HOSTNAME, "Using name \"%s\" to find daemon\n", host ); 
 
 		// See if it's already got a port specified in it, or if we
@@ -974,45 +942,25 @@ Daemon::getCmInfo( const char* subsys )
 		dprintf( D_HOSTNAME, "Port %d specified in name\n", _port );
 	}
 
-		// Now that we've got the port, just grab the hostname part of
-		// it for the rest of the logic.  We can deallocate the other
-		// strings we used for this so that we don't have to worry
-		// about leaking memory if we return...
+		// Now that we've got the port, grab the hostname for the rest
+		// of the logic.  first, stash the copy of the hostname with
+		// our handy helper method, then free() the full version
+		// (which we've already got stashed in _name if we need it),
+		// and finally reset host to point to the host for the rest of
+		// this function.
 	tmp = getHostFromAddr( host );
-	if( local_host ) {
-		free( local_host );
-		local_host = NULL;
-	}
-	if( remote_host ) {
-		free( remote_host );
-		remote_host = NULL;
-	}
+	free( host );
 	host = tmp;
+	tmp = NULL;
 
 	if( is_ipaddr(host, &sin_addr) ) {
 		sprintf( buf, "<%s:%d>", host, _port );
 		New_addr( strnewp(buf) );
-		dprintf( D_HOSTNAME, "Host info \"%s\" is an IP address, finding "
-				 "hostname with gethostbyaddr()\n", host );
-
-			// See if we can get the canonical name
-		hostp = gethostbyaddr( (char*)&sin_addr, 
-							   sizeof(struct in_addr), AF_INET ); 
-		if( ! hostp ) {
-			dprintf( D_HOSTNAME, "gethostbyaddr() failed: %s (errno: %d)\n",
-					 strerror(errno), errno );
-			New_full_hostname( NULL );
-			sprintf( buf, "can't find host info for %s", _addr );
-			newError( buf );
-		} else {
-				// TODO: we should really be checking for a full host
-				// here and looking at aliases, DEFAULT_DOMAIN_NAME,
-			dprintf( D_HOSTNAME, "Found host entry, using \"%s\" for "
-					 "full hostname\n", hostp->h_name );
-			New_full_hostname( strnewp(hostp->h_name) );
-		}
+		dprintf( D_HOSTNAME, "Host info \"%s\" is an IP address\n", host );
 	} else {
 			// We were given a hostname, not an address.
+		dprintf( D_HOSTNAME, "Host info \"%s\" is a hostname, "
+				 "finding IP address\n", host );
 		tmp = get_full_hostname( host, &sin_addr );
 		if( ! tmp ) {
 				// With a hostname, this is a fatal Daemon error.
@@ -1034,6 +982,145 @@ Daemon::getCmInfo( const char* subsys )
 
 	free( host );
 	return true;
+}
+
+
+
+bool
+Daemon::initHostname( void )
+{
+		// make sure we only try this once
+	if( _tried_init_hostname ) {
+		return true;
+	}
+	_tried_init_hostname = true;
+
+		// if we already have the info, we're done
+	if( _hostname && _full_hostname ) {
+		return true;
+	}
+
+		// if we haven't tried to locate yet, we should do that now,
+		// since that's usually the best way to get the hostnames, and
+		// we get everything else we need, while we're at it...
+	if( ! _tried_locate ) {
+		locate();
+	}
+
+	if( ! _addr ) {
+			// this is bad...
+		return false;
+	}
+
+			// We have no name, but we have an address.  Try to do an
+			// inverse lookup and fill in the hostname info from the
+			// IP address we already have.
+
+	dprintf( D_HOSTNAME, "Address \"%s\" specified but no name, "
+			 "looking up host info\n", _addr );
+
+	struct sockaddr_in sockaddr;
+	struct hostent* hostp;
+	string_to_sin( _addr, &sockaddr );
+	hostp = gethostbyaddr( (char*)&sockaddr.sin_addr, 
+						   sizeof(struct in_addr), AF_INET ); 
+	if( ! hostp ) {
+		New_hostname( NULL );
+		New_full_hostname( NULL );
+		dprintf( D_HOSTNAME, "gethostbyaddr() failed: %s (errno: %d)\n",
+				 strerror(errno), errno );
+		MyString err_msg = "can't find host info for ";
+		err_msg += _addr;
+		newError( err_msg.Value() );
+		return false;
+	}
+
+		// TODO: we should really be checking for a full host
+		// here and looking at aliases, DEFAULT_DOMAIN_NAME, etc
+	dprintf( D_HOSTNAME, "Found host entry, using \"%s\" for "
+			 "full hostname\n", hostp->h_name );
+	New_full_hostname( strnewp(hostp->h_name) );
+
+	initHostnameFromFull();
+	return true;
+}
+
+
+bool
+Daemon::initHostnameFromFull( void )
+{
+	char* copy;
+	char* tmp;
+
+		// many of the code paths that find the hostname info just
+		// fill in _full_hostname, but not _hostname.  In all cases,
+		// if we have _full_hostname we just want to trim off the
+		// domain the same way for _hostname.
+	if( _full_hostname ) {
+		copy = strnewp( _full_hostname );
+		tmp = strchr( copy, '.' );
+		if( tmp ) {
+			*tmp = '\0';
+		}
+		New_hostname( strnewp(copy) );
+		delete [] copy;
+		return true; 
+	}
+	return false;
+}
+
+
+bool
+Daemon::initVersion( void )
+{
+		// make sure we only try this once
+	if( _tried_init_version ) {
+		return true;
+	}
+	_tried_init_version = true;
+
+		// if we already have the info, we're done
+	if( _version && _platform ) {
+		return true;
+	}
+
+		// if we haven't done the full locate, we should do that now,
+		// since that's the most likely way to find the version and
+		// platform strings, and we get lots of other good info while
+		// we're at it...
+	if( ! _tried_locate ) {
+		locate();
+	}
+
+		// If we didn't find the version string via locate(), and
+		// we're a local daemon, try to ident the daemon's binary
+		// directly. 
+	if( ! _version && _is_local ) {
+		dprintf( D_HOSTNAME, "No version string in local address file, "
+				 "trying to find it in the daemon's binary\n" );
+		char* exe_file = param( _subsys );
+		if( exe_file ) {
+			char ver[128];
+			CondorVersionInfo vi;
+			vi.get_version_from_file(exe_file, ver, 128);
+			New_version( strnewp(ver) );
+			dprintf( D_HOSTNAME, "Found version string \"%s\" "
+					 "in local binary (%s)\n", ver, exe_file );
+			free( exe_file );
+			return true;
+		} else {
+			dprintf( D_HOSTNAME, "%s not defined in config file, "
+					 "can't locate daemon binary for version info\n", 
+					 _subsys );
+			return false;
+		}
+	}
+
+		// if we're not local, and locate() didn't find the version
+		// string, we're screwed.
+	dprintf( D_HOSTNAME, "Daemon isn't local and couldn't find "
+			 "version string with locate(), giving up\n" );
+	return false;
 }
 
 
