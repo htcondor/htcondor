@@ -89,7 +89,6 @@ int update_rusage ( register struct rusage *ru1, register struct rusage *ru2 );
 int sysapi_swap_space ( void );
 int sysapi_disk_space(const char *filename);
 int calc_disk_needed( PROC * proc );
-char *GetEnvParam( char * param, char * env_string );
 PROC *ConstructProc( int, PROC *);
 
 #else /* HAS_PROTO */
@@ -142,7 +141,6 @@ int update_rusage ();
 int sysapi_swap_space ();
 int sysapi_disk_space();
 int calc_disk_needed();
-char *GetEnvParam();
 PROC *ConstructProc();
 
 #endif /* HAS_PROTO */
