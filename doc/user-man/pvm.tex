@@ -191,6 +191,7 @@ Condor environment:
   to the function \func{pvm\_notify()}.
   They are \func{PvmHostSuspend} and
   \func{PvmHostResume}.
+\index{PVM!PvmHostSuspend and PvmHostResume notifications}
   The program calls \func{pvm\_notify()}
   with a host tid and \func{PvmHostSuspend} (or \func{PvmHostResume})
   as arguments, and the program will receive
@@ -208,6 +209,35 @@ Condor environment:
   its tid.  When that node gets suspended, set up a \func{PvmHostResume}
   notification.  When it resumes, set up a \func{PvmHostSuspend}
   notification.
+
+  If your application uses the \func{PvmHostSuspend} and
+  \func{PvmHostResume} notification types, you will need to modify
+  your PVM distribution to support them as follows.  First, go to your
+  \$(PVM\_ROOT). In \File{include/pvm3.h}, add
+\begin{verbatim}
+#define PvmHostSuspend  6   /* condor suspension */
+#define PvmHostResume   7   /* condor resumption */
+\end{verbatim}
+
+  to the list of "pvm\_notify kinds".
+  In \File{src/lpvmgen.c}, in \func{pvm\_notify()}, change 
+
+\begin{verbatim}
+} else {
+        switch (what) {
+        case PvmHostDelete:
+        ....
+\end{verbatim}
+to 
+\begin{verbatim}
+} else {
+        switch (what) {
+        case PvmHostSuspend:  /* for condor */
+        case PvmHostResume:   /* for condor */
+        case PvmHostDelete:
+        ....
+\end{verbatim}
+And that's it. Re-compile, and you're done. 
 
 
 \item \func{pvm\_spawn()}.  If the flag in \func{pvm\_spawn()} is 
