@@ -42,3 +42,4 @@
 #define JOB_NOT_STARTED	8	/* Can't connect to startd or request refused	 */
 #define JOB_BAD_STATUS	9	/* Job status != RUNNING on startup				 */
 #define JOB_EXEC_FAILED 10  /* Exec failed for some reason other than ENOMEM */
+#define JOB_NO_CKPT_FILE 11 /* There is no checkpoint file (lost)            */
