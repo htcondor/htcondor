@@ -2,7 +2,7 @@
 
 use CondorTest;
 
-$cmd = 'job_rsc_exception_std.cmd';
+$cmd = 'job_core-cpp_exception_std.cmd';
 $testname = 'C++ Exception Test';
 
 $OutputTest = sub

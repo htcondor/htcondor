@@ -20,13 +20,19 @@ C_PLUS_FLAGS = $(CFLAGS)
 
 
 /****************************
+ * Core C++ Functionality 
+ ***************************/
+
+DESC(job_core-cpp_exception_std,"C++ exception handling")
+CBUILD($(CC),job_core-cpp_exception_std,C)
+RUN(job_core-cpp_exception_std)
+TESTCLASS(job_core-cpp_exception_std,quick)
+
+
+/****************************
  * Remote System Calls
  ***************************/
 
-DESC(job_rsc_exception_std,"C++ exception handling when linked for RSC")
-CBUILD($(CC),job_rsc_exception_std,C)
-RUN(job_rsc_exception_std)
-TESTCLASS(job_rsc_exception_std,quick)
 
 
 /****************************
