@@ -1066,9 +1066,10 @@ Defaults to \Expr{False}.
 
 \item[match\_list\_length = $<$integer value$>$] 
 \index{submit commands!match\_list\_length}
+Defaults to the value zero (0).
 When \Opt{match\_list\_length} is defined with an integer value
 greater than zero (0),
-attributes are placed in the job ClassAd.
+attributes are inserted into the job ClassAd.
 The maximum number of attributes defined is given by the integer
 value.
 The job ClassAds introduced are given as
@@ -1086,6 +1087,11 @@ with \verb@LastMatchName1@ becoming \verb@LastMatchName2@,
 \verb@LastMatchName0@ becoming \verb@LastMatchName1@,
 and \verb@LastMatchName0@ being set by the most recent
 value of the \Attr{Name} attribute.
+
+An intended use of 
+these job attributes is in the requirements expression.
+The requirements can allow a job to prefer a match with either the same
+or a different resource than a previous match.
 
 %%%%%%%%%%%%%%%%%%%
 %% transfer_output
