@@ -1,7 +1,9 @@
 #ifndef FIX_SOCKET_H
 #define FIX_SOCKET_H
 
+#if !defined(WIN32)
 #include <sys/socket.h>
+#endif
 
 
 /*
