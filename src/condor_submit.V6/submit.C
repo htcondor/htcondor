@@ -65,6 +65,7 @@
 #include "my_username.h"
 #include "globus_utils.h"
 #include "enum_utils.h"
+#include "setenv.h"
 
 #include "list.h"
 
@@ -4841,9 +4842,8 @@ setupAuthentication()
 	}
 	if( Rendezvous ) {
 		dprintf( D_FULLDEBUG,"setting RENDEZVOUS_DIRECTORY=%s\n", Rendezvous );
-		sprintf( buffer, "RENDEZVOUS_DIRECTORY=%s", Rendezvous );
-			//putenv because Authentication::authenticate() expects them there.
-		putenv( strdup( buffer ) );
+			//SetEnv because Authentication::authenticate() expects them there.
+		SetEnv( "RENDEZVOUS_DIRECTORY", Rendezvous );
 		free( Rendezvous );
 	}
 }
