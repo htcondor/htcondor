@@ -145,6 +145,7 @@ daemon::daemon(char *name)
 	stop_tid = -1;
 	stop_fast_tid = -1;
  	hard_kill_tid = -1;
+	procfam_tid = -1;
 	stop_state = NONE;
 	needs_update = FALSE;
 	procfam = NULL;
