@@ -11,6 +11,7 @@
 #define O_CREAT _O_CREAT
 #define O_APPEND _O_APPEND
 #include <sys/stat.h>
+typedef unsigned short mode_t;
 #define stat _stat
 #define fstat _fstat
 #define MAXPATHLEN 1024
