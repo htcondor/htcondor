@@ -137,6 +137,15 @@ main_init( int, char* argv[] )
 		// Resource's LoadQueue object.
 	init_params(1);		// The 1 indicates that this is the first time
 
+#if defined( OSF1 ) || defined (IRIX62) || defined(WIN32)
+		// Pretend we just got an X event so we think our console idle
+		// is something, even if we haven't heard from the kbdd yet.
+		// We do this on Win32 as well, since Win32 uses last_x_event
+		// variable in a similar fasion to the X11 condor_kbdd, and
+		// thus it must be initialized.
+	command_x_event( 0, 0, 0 );
+#endif
+
 		// Instantiate Resource objects in the ResMgr
 	resmgr->init_resources();
 
@@ -261,15 +270,6 @@ main_init( int, char* argv[] )
 	rval = daemonCore->Register_Reaper( "reaper_starters", 
 		(ReaperHandler)reaper, "reaper" );
 	assert(rval == 1);	// we assume reaper id 1 for now
-
-#if defined( OSF1 ) || defined (IRIX62) || defined(WIN32)
-		// Pretend we just got an X event so we think our console idle
-		// is something, even if we haven't heard from the kbdd yet.
-		// We do this on Win32 as well, since Win32 uses last_x_event
-		// variable in a similar fasion to the X11 condor_kbdd, and
-		// thus it must be initialized.
-	command_x_event( 0, 0, 0 );
-#endif
 
 	resmgr->start_update_timer();
 
@@ -525,8 +525,8 @@ reaper(Service *, int pid, int status)
 	Resource* rip;
 
 	if( WIFSIGNALED(status) ) {
-		dprintf(D_ALWAYS, "pid %d died on signal %d\n",
-				pid, WTERMSIG(status));
+		dprintf(D_ALWAYS, "pid %d died on %s\n",
+				pid, daemonCore->GetExceptionString(status));
 	} else {
 		dprintf(D_ALWAYS, "pid %d exited with status %d\n",
 				pid, WEXITSTATUS(status));
