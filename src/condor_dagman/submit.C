@@ -83,8 +83,8 @@ bool submit_submit (const char * cmdFile, CondorID & condorID) {
 			  __FILE__, __LINE__ );
 	  return false;
   }
-  sprintf( command, "%s %s%s", exe, cmdFile,
-		   DEBUG_LEVEL( DEBUG_VERBOSE ) ? "" : "2>&1" );
+  // we use 2>&1 to make sure we get both stdout and stderr from command
+  sprintf( command, "%s %s 2>&1", exe, cmdFile );
   
   bool success = false;
   const int tries = 6;
