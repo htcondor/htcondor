@@ -42,6 +42,10 @@ class SimpleList
     public:
     // ctor, dtor
     SimpleList ();
+
+    /// Copy Constructor
+    SimpleList (const SimpleList<ObjType> & list);
+
     inline ~SimpleList () { delete [] items; }
 
     // General
@@ -78,6 +82,15 @@ SimpleList (): maximum_size(1), size(0)
 {
 	items = new ObjType[maximum_size];
     Rewind();
+}
+
+template <class ObjType>
+SimpleList<ObjType>::
+SimpleList (const SimpleList<ObjType> & list):
+    maximum_size(list.maximum_size), size(list.size), current(list.current)
+{
+	items = new ObjType[maximum_size];
+    memcpy (items, list.items, sizeof (ObjType *) * maximum_size);
 }
 
 template <class ObjType>
