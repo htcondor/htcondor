@@ -19,6 +19,7 @@ int grab(int type);
 void display_token( int type );
 void reset_yyline();
 
+
 %}
 
 %START C_Comment
@@ -144,6 +145,7 @@ rdiscard			return grab( RDISCARD );
 "..."					return grab( ELLIPSIS );
 .					return grab( UNKNOWN );
 %%
+int
 yywrap()
 {
 	return feof(stdin);
