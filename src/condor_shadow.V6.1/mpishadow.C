@@ -252,7 +252,7 @@ MPIShadow::startMaster() {
 
         // first we open up the procgroup file (in working dir of job)
     char pgfilename[128];
-    sprintf ( pgfilename, "%s/procgroup", getIwd() );
+    sprintf ( pgfilename, "%s/procgroup.%d.%d", getIwd(), getCluster(), getProc() );
     if ( (pg=fopen( pgfilename, "w" )) == NULL ) {
         dprintf (D_ALWAYS, "Failure to open %s for writing, errno %d\n", 
                  pgfilename, errno );
@@ -378,8 +378,8 @@ MPIShadow::hackMasterArgs( ClassAd *ad ) {
 	}
     
     char tmp[_POSIX_ARG_MAX];
-    sprintf ( tmp, "%s = \"%s%s-p4pg %s/procgroup\"", 
-              ATTR_JOB_ARGUMENTS, args, args[0]?" ":"", getIwd() );
+    sprintf ( tmp, "%s = \"%s%s-p4pg %s/procgroup.%d.%d\"", 
+              ATTR_JOB_ARGUMENTS, args, args[0]?" ":"", getIwd(), getCluster(), getProc() );
 
     ad->Delete( ATTR_JOB_ARGUMENTS );
 
@@ -445,7 +445,7 @@ MPIShadow::shutDown( int exitReason, int exitStatus ) {
 
         // unlink the procgroup file:
     char pgfilename[128];
-    sprintf( pgfilename, "%s/procgroup", getIwd() );
+    sprintf( pgfilename, "%s/procgroup.%d.%d", getIwd(), getCluster(), getProc() );
     if ( unlink( pgfilename ) == -1 ) {
         if ( errno != ENOENT ) {
             dprintf ( D_ALWAYS, "Problem removing %s: errno %d.\n", 
