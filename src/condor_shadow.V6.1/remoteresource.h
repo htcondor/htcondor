@@ -207,6 +207,11 @@ class RemoteResource : public Service {
 		*/
 	void setStarterOpsys( const char *opsys );
 	
+		/** Set the Starter's version string
+			@param version The starter's version string
+		*/
+	void setStarterVersion( const char *version );
+	
 		/** Set the reason this host exited.  
 			@param reason Why did it exit?  Film at 11.
 		*/
@@ -303,6 +308,7 @@ class RemoteResource : public Service {
 	char *starterAddress;
 	char *starterArch;
 	char *starterOpsys;
+	char *starter_version;
 	char *fs_domain;
 	char *uid_domain;
 	ReliSock *claim_sock;

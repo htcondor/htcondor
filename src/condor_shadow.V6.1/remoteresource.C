@@ -60,6 +60,7 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	starterAddress = NULL;
 	starterArch = NULL;
 	starterOpsys = NULL;
+	starter_version = NULL;
 	jobAd = NULL;
 	fs_domain = NULL;
 	uid_domain = NULL;
@@ -80,6 +81,7 @@ RemoteResource::~RemoteResource()
 	if ( starterAddress) delete [] starterAddress;
 	if ( starterArch   ) delete [] starterArch;
 	if ( starterOpsys  ) delete [] starterOpsys;
+	if ( starter_version ) delete [] starter_version;
 	if ( uid_domain	   ) delete [] uid_domain;
 	if ( fs_domain     ) delete [] fs_domain;
 	if ( claim_sock    ) delete claim_sock;
@@ -589,6 +591,16 @@ RemoteResource::setStarterOpsys( const char * opsys )
 		delete [] starterOpsys;
 	}	
 	starterOpsys = strnewp( opsys );
+}
+
+
+void
+RemoteResource::setStarterVersion( const char * version )
+{
+	if( starter_version ) {
+		delete [] starter_version;
+	}	
+	starter_version = strnewp( version );
 }
 
 
