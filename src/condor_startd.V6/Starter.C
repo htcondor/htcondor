@@ -50,7 +50,7 @@ Starter::Starter()
 Starter::Starter( const Starter& s )
 {
 	if( s.s_claim || s.s_pid || s.s_procfam || s.s_family_size
-		|| s.s_pidfamily || s.s_birthdate || s.s_cod_keyword 
+		|| s.s_pidfamily || s.s_birthdate 
 		|| s.s_port1 >= 0 || s.s_port2 >= 0 ) {
 		EXCEPT( "Trying to copy a Starter object that's already running!" );
 	}
@@ -84,7 +84,6 @@ Starter::initRunData( void )
 	s_birthdate = 0;
 	s_last_snapshot = 0;
 	s_kill_tid = -1;
-	s_cod_keyword = NULL;
 	s_port1 = -1;
 	s_port2 = -1;
 		// Initialize our procInfo structure so we don't use any
@@ -109,9 +108,6 @@ Starter::~Starter()
 	}
 	if( s_ad ) {
 		delete( s_ad );
-	}
-	if( s_cod_keyword ) {
-		delete [] s_cod_keyword;
 	}
 }
 
@@ -181,16 +177,6 @@ Starter::setPorts( int port1, int port2 )
 {
 	s_port1 = port1;
 	s_port2 = port2;
-}
-
-
-void
-Starter::setCODArgs( const char* keyword )
-{
-	if( s_cod_keyword ) {
-		delete [] s_cod_keyword;
-	}
-	s_cod_keyword = strnewp( keyword );
 }
 
 
@@ -551,28 +537,10 @@ Starter::exited()
 int
 Starter::execCODStarter( void )
 {
-	MyString args;
+	int rval;
 	MyString env;
+	char* args = NULL;
 	char* tmp;
-	int cluster = s_claim->cluster();
-	int proc = s_claim->proc();
-	args = "condor_starter -f -append cod ";
-	args += "-header (";
-	if( resmgr->is_smp() ) {
-		args += s_claim->rip()->r_id_str;
-		args += ':';
-	}
-	args += s_claim->codId();
-	args += ") -job_keyword ";
-	args += s_cod_keyword;
-	if( cluster >= 0 ) {
-		args += " -job_cluster ";
-		args += cluster;
-	} 
-	if( proc >= 0 ) {
-		args += " -job_proc ";
-		args += proc;
-	} 
 
 	tmp = param( "LOCK" );
 	if( ! tmp ) { 
@@ -586,7 +554,53 @@ Starter::execCODStarter( void )
 	free( tmp );
 	env += DIR_DELIM_CHAR;
 	env += "StarterLock.cod";
-	return execDCStarter( args.Value(), env.Value(), NULL );
+
+	args = s_claim->makeCODStarterArgs();
+
+	int* std_fds_p = NULL;
+	int std_fds[3];
+	int pipe_fds[2];
+	if( s_claim->hasJobAd() ) {
+		if( ! daemonCore->Create_Pipe(pipe_fds) ) {
+			dprintf( D_ALWAYS, "ERROR: Can't create pipe to pass job ClassAd "
+					 "to starter, aborting\n" );
+			return 0;
+		}
+			// pipe_fds[0] is the read-end of the pipe.  we want that
+			// setup as STDIN for the starter.  we'll hold onto the
+			// write end of it so 
+		std_fds[0] = pipe_fds[0];
+		std_fds[1] = -1;
+		std_fds[2] = -1;
+		std_fds_p = std_fds;
+	}
+
+	rval = execDCStarter( args, env.Value(), std_fds_p, NULL );
+
+	if( s_claim->hasJobAd() ) {
+			// now that the starter has been spawned, we need to do
+			// some things with the pipe:
+
+			// 1) close our copy of the read end of the pipe, so we
+			// don't leak it.  we have to use DC::Close_Pipe() for
+			// this, not just close(), so things work on windoze.
+		daemonCore->Close_Pipe( pipe_fds[0] );
+
+			// 2) dump out the job ad to the write end, since the
+			// starter is now alive and can read from the pipe.
+
+		s_claim->writeJobAd( pipe_fds[1] );
+
+			// Now that all the data is written to the pipe, we can
+			// safely close the other end, too.  
+		daemonCore->Close_Pipe( pipe_fds[1] );
+	}
+
+	if( args ) {
+		free( args );
+		args = NULL;
+	}
+	return rval;
 }
 
 
@@ -604,14 +618,15 @@ Starter::execDCStarter( Stream* s )
 	} else {
 		sprintf(args, "condor_starter -f %s", hostname );
 	}
-	execDCStarter( args, NULL, s );
+	execDCStarter( args, NULL, NULL, s );
 
 	return s_pid;
 }
 
 
 int
-Starter::execDCStarter( const char* args, const char* env, Stream* s )
+Starter::execDCStarter( const char* args, const char* env, 
+						int* std_fds, Stream* s )
 {
 	Stream *sock_inherit_list[] = { s, 0 };
 	Stream** inherit_list = NULL;
@@ -619,11 +634,11 @@ Starter::execDCStarter( const char* args, const char* env, Stream* s )
 		inherit_list = sock_inherit_list;
 	}
 
-	dprintf ( D_FULLDEBUG, "About to Create_Process \"%s\".\n", args );
+	dprintf( D_FULLDEBUG, "About to Create_Process \"%s\"\n", args );
 
 	s_pid = daemonCore->
 		Create_Process( s_path, (char*)args, PRIV_ROOT, main_reaper,
-						TRUE, env, NULL, TRUE, inherit_list );
+						TRUE, env, NULL, TRUE, inherit_list, std_fds );
 	if( s_pid == FALSE ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");
 		s_pid = 0;

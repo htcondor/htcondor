@@ -81,8 +81,6 @@ public:
 
 	void	setClaim( Claim* c );
 	void	setPorts( int, int );
-	void	setCODArgs( const char* keyword );
-	char*	getCODKeyword( void ) { return s_cod_keyword; };
 
 	void	printInfo( int debug_level );
 
@@ -93,7 +91,8 @@ private:
 	int		execOldStarter( void );
 	int		execCODStarter( void );
 	int		execDCStarter( Stream* s );
-	int		execDCStarter( const char* args, const char* env, Stream* s );
+	int		execDCStarter( const char* args, const char* env, 
+						   int std_fds[], Stream* s );
 	void	initRunData( void );
 
 	int		startKillTimer( void );	    // Timer for how long we're willing 
@@ -122,7 +121,6 @@ private:
 	procInfo	s_pinfo;	// aggregate ProcAPI info for starter & job
 	int		s_port1;
 	int		s_port2;
-	char*	s_cod_keyword;
 };
 
 #endif /* _CONDOR_STARTD_STARTER_H */
