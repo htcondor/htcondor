@@ -85,6 +85,7 @@
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 extern char *gen_ckpt_name();
 extern void	Init();
+extern int getJobAd(int cluster_id, int proc_id, ClassAd *new_ad);
 
 #include "condor_qmgr.h"
 
@@ -559,26 +560,22 @@ Scheduler::negotiate(ReliSock* s, struct sockaddr_in*)
 					}
 					
 					/* Send a job description */
-					context = build_context( &id);
 					if( !s->snd_int(JOB_INFO,FALSE) ) {
 						dprintf( D_ALWAYS, "Can't send JOB_INFO to mgr\n" );
 						RETURN;
 					}
-					ClassAd ad(context);
-					ad.SetMyTypeName (JOB_ADTYPE);
-					ad.SetTargetTypeName (STARTD_ADTYPE);
+					ClassAd ad;
+					getJobAd( id.cluster, id.proc, &ad );
 					if( !ad.put(*s) ) {
 						dprintf( D_ALWAYS,
-								"Can't send job_context to mgr\n" );
+								"Can't send job ad to mgr\n" );
 						RETURN;
 					}
 					if( !s->end_of_message() ) {
 						dprintf( D_ALWAYS,
-								"Can't send job_context to mgr\n" );
+								"Can't send job ad to mgr\n" );
 						RETURN;
 					}
-					free_context( context );
-					context = NULL;
 					dprintf( D_FULLDEBUG,
 							"Sent job %d.%d\n", id.cluster, id.proc );
 					cur_cluster = id.cluster;
@@ -667,52 +664,6 @@ Scheduler::vacate_service(ReliSock *sock, struct sockaddr_in*)
 	return;
 }
 
-
-CONTEXT* 
-Scheduler::build_context(PROC_ID* id)
-{
-	char			req_buf[1000], *requirements;
-	char			pref_buf[1000], *preferences;
-	char			own_buf[1000], *owner;
-	CONTEXT*		job_context;
-	char			line[1024];
-	int				image_size;
-	int				disk;
-
-	GetAttributeExpr(id->cluster, id->proc, ATTR_REQUIREMENTS, req_buf);
-	requirements = strchr(req_buf, '=');
-	requirements++;
-	GetAttributeExpr(id->cluster, id->proc, ATTR_PREFERENCES, pref_buf);
-	preferences = strchr(pref_buf, '=');
-	preferences++;
-	GetAttributeString(id->cluster, id->proc, ATTR_OWNER, own_buf);
-	owner = own_buf;
-	GetAttributeInt(id->cluster, id->proc, ATTR_IMAGE_SIZE, &image_size);
-
-#if 0
-	/* Very bad hack! */
-	disk = 10000;
-#endif
-
-	job_context = create_context();
-
-	(void)sprintf( line,
-		"JOB_REQUIREMENTS = (%s) && (Disk >= %d) && (VirtualMemory >= %d)",
-		requirements, disk, image_size  );
-	store_stmt( scan(line), job_context );
-
-	if( preferences && preferences[0] ) {
-		(void)sprintf( line, "JOB_PREFERENCES = %s", preferences );
-	} else {
-		(void)sprintf( line, "JOB_PREFERENCES = T" );
-	}
-	store_stmt( scan(line), job_context );
-
-	(void)sprintf( line, "Owner = \"%s\"", owner );
-	store_stmt( scan(line), job_context );
-
-	return job_context;
-}
 
 /*
  * Weiru

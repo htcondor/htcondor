@@ -160,7 +160,6 @@ class Scheduler : public Service
 	void			mail_problem_message();
 	int				cluster_rejected(int);
 	void   			mark_cluster_rejected(int); 
-	CONTEXT*		build_context(PROC_ID*);
 	int				count_jobs();
 	void			update_central_mgr();
 	void			insert_owner(char*);
