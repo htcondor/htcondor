@@ -33,7 +33,7 @@
 #include "debug.h"
 
 static bool
-submit_try( const char *exe, const char *command, CondorID &condorID )
+submit_try( const char *command, CondorID &condorID )
 {
   MyString  command_output("");
 
@@ -142,31 +142,28 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	const int tries = dm.max_submit_attempts;
 	int wait = 1;
 
-	success = submit_try( exe, command.Value(), condorID );
+	success = submit_try( command.Value(), condorID );
 	for (int i = 1 ; i < tries && !success ; i++) {
 		debug_printf( DEBUG_NORMAL, "condor_submit try %d/%d failed, "
 			"will try again in %d second%s\n", i, tries, wait,
 			wait == 1 ? "" : "s" );
 		sleep( wait );
-		success = submit_try( exe, command.Value(), condorID );
+		success = submit_try( command.Value(), condorID );
 		wait = wait * 2;
 	}
-	if (!success && DEBUG_LEVEL(DEBUG_QUIET)) {
-		dprintf( D_ALWAYS, "condor_submit failed after %d tr%s.\n", tries,
-			tries == 1 ? "y" : "ies" );
-		dprintf( D_ALWAYS, "submit command was: %s\n", command.Value() );
+	if( !success ) {
+	        debug_printf( DEBUG_QUIET, "%s failed after %d tr%s.\n", exe,
+			      tries, tries == 1 ? "y" : "ies" );
+		debug_printf( DEBUG_QUIET, "submit command was: %s\n",
+			      command.Value() );
 		return false;
 	}
 	return success;
 }
 
-//-------------------------------------------------------------------------
-//-------------------------------------------------------------------------
-//-------------------------------------------------------------------------
 
-//--> DAP
 static bool
-dap_try( const char *exe, const char *command, CondorID &condorID )
+dap_try( const char *command, CondorID &condorID )
 {
   MyString  command_output("");
 
@@ -254,13 +251,13 @@ dap_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
   const int tries = dm.max_submit_attempts;
   int wait = 1;
   
-  success = dap_try( exe, command.Value(), condorID );
+  success = dap_try( command.Value(), condorID );
   for (int i = 1 ; i < tries && !success ; i++) {
       debug_printf( DEBUG_NORMAL, "stork_submit try %d/%d failed, "
                      "will try again in %d second%s\n", i, tries, wait,
 					 wait == 1 ? "" : "s" );
       sleep( wait );
-	  success = dap_try( exe, command.Value(), condorID );
+	  success = dap_try( command.Value(), condorID );
 	  wait = wait * 2;
   }
   if (!success && DEBUG_LEVEL(DEBUG_QUIET)) {
@@ -271,9 +268,6 @@ dap_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
   }
   return success;
 }
-//<-- DAP
-
-
 
 
 
