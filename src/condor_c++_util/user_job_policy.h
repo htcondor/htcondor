@@ -5,45 +5,40 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 
-/* This code figures out what to do with a job given the user policy
-denotated in the submit description file(and therefore in the job
-ad). Here are the steps necessary to use this code:
+/*
+This is a plain english description of the technical details of the use
+of the user_job_policy() function.
 
-1. If you are doing periodic calls to this function, then just check the
-result classad and see what you need to do with the job. This is done like 
-this:
-	a) check to see if there is an error condition, then
-	b) check if there needs to be an action taken.
+SYNOPSIS:
 
-2. If you are checking the job ad after the job has exited, then make sure you
-	fix up the job ad with the exit/signal code BEFORE you call the user policy
-	function.
+user_job_policy() takes a job classad and then determines if the
+user specified policy in the job ad causes some sort of action to be
+taken. This action could be to hold the job, to remove the job, or if
+the job exited, ignore that fact and keep the job in the queue. This
+action(and its properties) are represented as a classad pointer returned
+from the function that you are responsible for freeing.
 
-3. If the job has exited for real, but the user_policy code(for whatever
-reason) says it shouldn't leave the queue, then make sure you UNDEFINE
-ATTR_ON_EXIT_CODE, ATTR_ON_EXIT_SIGNAL, and set ATTR_EXIT_BY_SIGNAL
-to FALSE. This undoes the exiting of the job with repect to the
-classad. Also, you have to set ATTR_COMPLETION_DATE back to zero.
+RETURN VALUE:
 
-Now, what do you do with the result classad?
+The resultant classad will always ATTR_USER_POLICY_ERROR defined as a
+boolean. If ATTR_USER_POLICY_ERROR is true, then there was a problem
+with the classad and ATTR_USER_ERROR_REASON will hold the reason.
 
-A. check to see if ATTR_USER_POLICY_ERROR is true, if so, then the
-attribute ATTR_USER_ERROR_REASON will contain a reason for the error.
+If there wasn't an error with the classad, then inspect ATTR_TAKE_ACTION
+and see if it is true or false. If false, then the job is supposed to
+be left in the queue and you must reset the classad to this effect(if
+the job had exited, there might be exit codes and what not in the
+classad you need to set back into the undefined state).  If true,
+then ATTR_USER_POLICY_ACTION explains what you should DO with the job,
+either removing it or holding it. If you want to know why the action
+happened, then you can inspect ATTR_USER_POLICY_FIRING_EXPR and this
+will hold the offending attribute name of the expression that fired in
+the user policy.  This last attribute allows for better output to the
+user log about why something happened. Is the job going to be removed
+intentionally by condor?  or did it just finish normally? Those are the
+kinds of questions you could resolve when the user policy is invoked.
 
-B. check to see ATTR_TAKE_ACTION is true, if so, then
-ATTR_USER_POLICY_FIRING_EXPR will contain the offending expression or the
-text in "old_style_exit" that explains which expression caused the action.
-The attribute ATTR_USER_POLICY_ACTION dictates what you should DO with
-the job, either put it on hold or remove it from the queue.
-
-C. If ATTR_USER_POLICY_FIRING_EXPR is ATTR_PERIODIC_REMOVE_CHECK then
-"condor" removed the job and it should be treated differently than if
-the job exited legitimately. For example, a different email to the user
-explaining the job was forcibly removed because the periodic remove check
-became true, not because the job exited legitimately.
-
-D. The general case of no action specified means the job stays in the queue.
-
+-psilord 10/18/2001
 */
 
 /* determine what to do with this job. */
