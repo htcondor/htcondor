@@ -323,6 +323,14 @@ main( int argc, char *argv[] )
 		}
 		delete( result_ad );
 	}
+
+		// If releasing jobs, and no errors happened, do a 
+		// reschedule command now.
+	if ( mode == IDLE && had_error == false ) {
+		Daemon  my_schedd(DT_SCHEDD, NULL, NULL);
+		my_schedd.sendCommand(RESCHEDULE, Stream::safe_sock, 0);
+	}
+
 	return had_error;
 }
 
