@@ -75,7 +75,7 @@ public:
 		@param port The port to connect to.  If host is in the form <IP:PORT>,
 		then the port parameter is ignored.
 	*/
-	virtual int connect(char *host, int port) { assert(0); return 0; }
+	virtual int connect(char *, int) { assert(0); return 0; }
 
 	/** Connect the socket to a remote peer.
 		@param host Hostname of the peer, either a DNS name or IP address.
