@@ -14,6 +14,7 @@ FunctionCall () : arguments( 4 )
 {
 	nodeKind = FN_CALL_NODE;
 	functionName = NULL;
+	function = NULL;
 	numArgs = 0;
 
 	if( !initialized ) {
@@ -106,6 +107,8 @@ Copy( )
 
 	if (!newTree) return NULL;
 	if (functionName) newTree->functionName = strnewp( functionName );
+	newTree->parentScope = parentScope;
+	newTree->function    = function;
 
 	for( int i = 0 ; i < numArgs ; i++ ) {
 		newArg = arguments[i]->Copy( );
