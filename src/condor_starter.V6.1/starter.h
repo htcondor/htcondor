@@ -199,8 +199,6 @@ private:
 	char *Execute;
 	char *UIDDomain;
 	char *FSDomain;
-	char *Arch;
-	char *Opsys;
 	char WorkingDir[_POSIX_PATH_MAX]; // The iwd given to the job
 	char ExecuteDir[_POSIX_PATH_MAX]; // The scratch dir created for the job
 	int ShuttingDown;
