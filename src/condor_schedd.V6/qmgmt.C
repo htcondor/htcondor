@@ -897,6 +897,26 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_valu
 }
 
 
+void
+BeginTransaction()
+{
+	JobQueue->BeginTransaction();
+}
+
+
+void
+CommitTransaction()
+{
+	JobQueue->CommitTransaction();
+}
+
+
+void
+AbortTransaction()
+{
+	JobQueue->AbortTransaction();
+}
+
 int
 CloseConnection()
 {
@@ -1317,6 +1337,21 @@ int mark_idle(ClassAd *job)
 		mark_job_stopped(&job_id);
 	}
 		
+	int wall_clock_ckpt = 0;
+	GetAttributeInt(cluster,proc,ATTR_JOB_WALL_CLOCK_CKPT, &wall_clock_ckpt);
+	if (wall_clock_ckpt) {
+			// Schedd must have died before committing this job's wall
+			// clock time.  So, commit the wall clock saved in the
+			// wall clock checkpoint.
+		float wall_clock = 0.0;
+		GetAttributeFloat(cluster,proc,ATTR_JOB_REMOTE_WALL_CLOCK,&wall_clock);
+		wall_clock += wall_clock_ckpt;
+		JobQueue->BeginTransaction();
+		SetAttributeFloat(cluster,proc,ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock);
+		DeleteAttribute(cluster,proc,ATTR_JOB_WALL_CLOCK_CKPT);
+		JobQueue->CommitTransaction();
+	}
+
 	return 1;
 }
 
