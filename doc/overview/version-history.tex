@@ -157,6 +157,12 @@ checking the timestamps on a daemon.
 \item Fixed a minor bug in the \Opt{-owner} option to
 \Condor{config\_val} that was causing \Condor{init} not to work.
 
+\item Fixed a bug where the \Condor{startd}, while it was already
+shutting down, was allowing certain actions to succeed that should
+have failed.
+For example, it allowed itself to be matched with a user looking for
+available machines, or to begin a new PVM task.
+
 \end{itemize}
 
 \noindent Known Bugs:
