@@ -653,12 +653,15 @@ version.
 			alloc( buf, nbytes );
 		}
 
+#	endif
+
+#if defined(Solaris) || defined(IRIX) || defined(LINUX)
 		int getdents64( map(int fd), struct dirent64 *buf, size_t nbytes )
 		{
 			out code_bytes_bool( buf, nbytes );
 			alloc( buf, nbytes );
 		}
-#	endif
+#endif
 
 	/*
 	These calls do not need switches because they are pseudo calls,
