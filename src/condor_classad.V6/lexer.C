@@ -428,16 +428,23 @@ int Lexer::
 tokenizeString(char delim)
 {
 	bool stringComplete = false;
-	
+
 	// need to mark() after the quote
 	inString = true;
 	wind ();
 	mark ();
 	
 	while (!stringComplete) {
+		bool oddBackWhacks = false;
 		int oldCh = 0;
 		// consume the string literal; read upto " ignoring \"
-		while( ( ch > 0 ) && ( ch != delim || ( ch == delim && oldCh == '\\' ) ) ) {
+		while( ( ch > 0 ) && ( ch != delim || ( ch == delim && oldCh == '\\' && oddBackWhacks ) ) ) {
+			if( !oddBackWhacks && ch == '\\' ) {
+				oddBackWhacks = true;
+			}
+			else {
+				oddBackWhacks = false;
+			}
 			oldCh = ch;
 			wind( );
 		}
