@@ -5,9 +5,9 @@ ref.pdf:
 	rm -f timesfont.tex
 	echo "\usepackage{times}" > timesfont.tex
 	rm -f fontsize.tex
-	rm -f bar.tex
+	rm -f symbol.tex
 	ln -s regularfont.tex fontsize.tex
-	ln -s bar-html.tex bar.tex
+	ln -s symbol-postscript.tex symbol.tex
 	rm -rf *.dvi *.ps *.log *.aux *.toc
 	make figures
 	latex ref.tex
@@ -30,9 +30,9 @@ ref.dvi:
 	rm -f timesfont.tex
 	echo "% do not want times" > timesfont.tex
 	rm -f fontsize.tex
-	rm -f bar.tex
+	rm -f symbol.tex
 	ln -s smallfont.tex fontsize.tex
-	ln -s bar-postscript.tex bar.tex
+	ln -s symbol-postscript.tex symbol.tex
 	rm -rf *.dvi *.ps *.log *.aux *.toc
 	make figures
 	latex ref.tex
@@ -56,9 +56,9 @@ ref.html:
 	rm -f timesfont.tex
 	echo "% do not want times" > timesfont.tex
 	rm -f fontsize.tex
-	rm -f bar.tex
+	rm -f symbol.tex
 	ln -s regularfont.tex fontsize.tex
-	ln -s bar-html.tex bar.tex
+	ln -s symbol-html.tex symbol.tex
 	rm -rf *.dvi *.ps *.log *.aux *.toc
 	make figures
 	latex ref.tex
