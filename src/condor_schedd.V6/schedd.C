@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "sched.h"
+#include "dedicated_scheduler.h"
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "proc.h"
@@ -55,8 +56,6 @@
 
 #define SUCCESS 1
 #define CANT_RUN 0
-
-const int Scheduler::MPIShadowSockTimeout = 60;
 
 extern char *gen_ckpt_name();
 
@@ -92,6 +91,7 @@ extern char *DebugFile;
 extern char *DebugLock;
 
 extern Scheduler scheduler;
+extern DedicatedScheduler dedicated_scheduler;
 
 // priority records
 extern prio_rec *PrioRec;
@@ -135,18 +135,15 @@ match_rec::match_rec(char* i, char* p, PROC_ID* id, ClassAd *match,
 	strcpy(peer, p);
 	origcluster = cluster = id->cluster;
 	proc = id->proc;
-	status = M_INACTIVE;
+	status = M_UNCLAIMED;
 	shadowRec = NULL;
 	alive_countdown = 0;
 	num_exceptions = 0;
 	my_match_ad = match;
 	user = the_user;
-        // this is a HACK.  True if it's MPI and matched, but can be true
-        // before the Mpi shadow starts.  Used so that we don't try to 
-        // start the mpi shadow every time through StartJob()...
-    isMatchedMPI = FALSE;
 	pool = my_pool;
 	sent_alive_interval = false;
+	allocated = false;
 }
 
 match_rec::~match_rec()
@@ -190,7 +187,7 @@ Scheduler::Scheduler()
 	CondorAdministrator = NULL;
 	Mail = NULL;
 	filename = NULL;
-	aliveInterval = 0;
+	alive_interval = 0;
 	ExitWhenDone = FALSE;
 	matches = NULL;
 	shadowsByPid = NULL;
@@ -207,7 +204,7 @@ Scheduler::Scheduler()
 	startjobsid = -1;
 
 	startJobsDelayBit = FALSE;
-	numRegContacts = 0;
+	num_reg_contacts = 0;
 #ifndef WIN32
 	MAX_STARTD_CONTACTS = getdtablesize() - 20;  // save 20 fds...
 #else
@@ -215,8 +212,6 @@ Scheduler::Scheduler()
 	MAX_STARTD_CONTACTS = 2000;
 #endif
 	checkContactQueue_tid = -1;
-    storedMatches = new HashTable < int, ExtArray<match_rec*> *> 
-                                                  ( 5, mpiHashFunc );
 	sent_shadow_failure_email = FALSE;
 	ManageBandwidth = false;
 	RejectedClusters.setFiller(0);
@@ -283,13 +278,6 @@ Scheduler::~Scheduler()
 		daemonCore->Cancel_Timer(checkContactQueue_tid);
 	}
 
-        // for the stored mpi matches
-    ExtArray<match_rec*> *foo;
-    storedMatches->startIterations();
-    while( storedMatches->iterate( foo ) )
-        delete foo;
-
-    delete storedMatches;
 }
 
 void
@@ -303,11 +291,12 @@ Scheduler::timeout()
 	 * call preempt() here if we are shutting down.  When shutting down, we have
 	 * a timer which is progressively preempting just one job at a time.
 	 */
-	if( ((numShadows-SchedUniverseJobsRunning) > MaxJobsRunning) && 
-					(!ExitWhenDone) ) {
-		dprintf(D_ALWAYS,"Preempting %d jobs due to MAX_JOBS_RUNNING change\n",
-			numShadows-SchedUniverseJobsRunning);
-		preempt( numShadows - MaxJobsRunning );
+	int real_jobs = numShadows-SchedUniverseJobsRunning;
+	if( (real_jobs > MaxJobsRunning) && (!ExitWhenDone) ) {
+		dprintf( D_ALWAYS, 
+				 "Preempting %d jobs due to MAX_JOBS_RUNNING change\n",
+				 (real_jobs - MaxJobsRunning) );
+		preempt( real_jobs - MaxJobsRunning );
 	}
 
 	/* Reset our timer */
@@ -1879,21 +1868,16 @@ Scheduler::vacate_service(int, Stream *sock)
 		dprintf (D_ALWAYS, "Failed to get capability\n");
 		return;
 	}
-	DelMrec (capability);
+	if( DelMrec(capability) < 0 ) {
+			// We couldn't find this match in our table, perhaps it's
+			// from a dedicated resource.
+		dedicated_scheduler.DelMrec( capability );
+	}
 	FREE (capability);
 	dprintf (D_PROTOCOL, "## 7(*)  Completed vacate_service\n");
 	return;
 }
 
-#ifdef BAILOUT   /* this is kinda hack-like, but we need to do it a LOT. */
-#undef BAILOUT
-#endif
-#define BAILOUT              \
-		DelMrec( mrec );     \
-        free( capability );  \
-        free( server );      \
-        delete sock;         \
-        return 0;
 
 int
 Scheduler::contactStartd( char* capability, char *user, 
@@ -1901,7 +1885,6 @@ Scheduler::contactStartd( char* capability, char *user,
 						  char* pool=NULL)
 {
 	match_rec* mrec;   // match record pointer
-	ReliSock *sock = new ReliSock();
 
 	dprintf ( D_FULLDEBUG, "In Scheduler::contactStartd.\n" );
 
@@ -1912,64 +1895,94 @@ Scheduler::contactStartd( char* capability, char *user,
 		// match record destructor.  Thus we should only free them
 		// in the function _if_ AddMrec fails.
 	mrec = AddMrec(capability, server, jobId, my_match_ad, user, pool);
+	free( capability );
+	free( server );
 	if(!mrec) {
-        free( capability );
         free( user );
-        free( server );
 		if (pool) free( pool );
 		if (my_match_ad) delete my_match_ad;
-        delete sock;
         return 0;
 	}
 	ClassAd *jobAd = GetJobAd(jobId->cluster, jobId->proc);
 	if (!jobAd) {
 		dprintf(D_ALWAYS, "failed to find job %d.%d\n", 
 				jobId->cluster, jobId->proc);
-		BAILOUT;
+		DelMrec( mrec );
+		return 0;
 	}
+
+	// add User = "owner@uiddomain" to ad
+    char temp[512];
+    sprintf (temp, "%s = \"%s\"", ATTR_USER, user);
+    jobAd->Insert (temp);
+
+	if( claimStartd(mrec, jobAd, false) ) {
+		return 1;
+	} else {
+		DelMrec( mrec );
+		return 0;
+	}
+}
+
+
+#ifdef BAILOUT   /* this is kinda hack-like, but we need to do it a LOT. */
+#undef BAILOUT
+#endif
+#define BAILOUT       \
+        delete sock;  \
+        return false;
+
+bool
+claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated )
+{
+
+	ReliSock *sock = new ReliSock();
 
 	sock->timeout( STARTD_CONTACT_TIMEOUT );
 
-	if ( !sock->connect(server, 0) ) {
-		dprintf( D_ALWAYS, "Couldn't connect to startd.\n" );
+	if ( !sock->connect(mrec->peer, 0) ) {
+		dprintf( D_ALWAYS, "Couldn't connect to startd at %s\n",
+				 mrec->peer );
 		BAILOUT;
 	}
 
-	dprintf (D_PROTOCOL, "Requesting resource from %s ...\n", server);
+	dprintf( D_PROTOCOL, "Requesting resource from %s ...\n",
+			 mrec->peer ); 
+
 	sock->encode();
 
-	if( !sock->put( REQUEST_SERVICE ) ) {
+	if( !sock->put( REQUEST_CLAIM ) ) {
 		dprintf( D_ALWAYS, "Couldn't send command to startd.\n" );	
 		BAILOUT;
 	}
 
-	if( !sock->code( capability ) ) {
+	if( !sock->put( mrec->id ) ) {
 		dprintf( D_ALWAYS, "Couldn't send capability to startd.\n" );	
 		BAILOUT;
 	}
 
-	if( !jobAd->put( *sock ) ) {
+	if( !job_ad->put( *sock ) ) {
 		dprintf( D_ALWAYS, "Couldn't send job classad to startd.\n" );	
 		BAILOUT;
 	}	
 
 	char startd_version[150];
 	startd_version[0] = '\0';
-	if ( my_match_ad  &&
-		 my_match_ad->LookupString(ATTR_VERSION,startd_version) ) 
+	if ( mrec->my_match_ad  &&
+		 mrec->my_match_ad->LookupString(ATTR_VERSION,startd_version) ) 
 	{	
 		CondorVersionInfo ver(startd_version,"STARTD");
 
-		if (ver.built_since_version(6,1,11) && ver.built_since_date(1,28,2000))
-		{
+		if( ver.built_since_version(6,1,11) &&
+			ver.built_since_date(1,28,2000) ) {
 				// We are talking to a startd which understands sending the
 				// post 6.1.11 change to the claim protocol.
-			if( !sock->code(MySockName) ) {
-				dprintf(D_ALWAYS, "Couldn't send schedd string to startd.\n");
+			if( !sock->put( scheduler.dcSockSinful() ) ) {
+				dprintf( D_ALWAYS, "Couldn't send schedd string to startd.\n" ); 
 				BAILOUT;
 			}
-			if( !sock->snd_int(aliveInterval, FALSE) ) {
-				dprintf(D_ALWAYS, "Couldn't send aliveInterval to startd.\n");
+			if( !sock->snd_int(scheduler.aliveInterval(), FALSE) ) {
+				dprintf(D_ALWAYS, "Couldn't send alive_interval to startd.\n");
 				BAILOUT;
 			}
 			mrec->sent_alive_interval = true;
@@ -1977,10 +1990,9 @@ Scheduler::contactStartd( char* capability, char *user,
 	}
 
 	if ( !mrec->sent_alive_interval ) {
-		dprintf(D_FULLDEBUG,"Startd expects pre-v6.1.11 claim protocol\n");
+		dprintf( D_FULLDEBUG, "Startd expects pre-v6.1.11 claim protocol\n" );
 	}
 
-		
 	if( !sock->end_of_message() ) {
 		dprintf( D_ALWAYS, "Couldn't send eom to startd.\n" );	
 		BAILOUT;
@@ -1989,24 +2001,29 @@ Scheduler::contactStartd( char* capability, char *user,
 	mrec->status = M_STARTD_CONTACT_LIMBO;
 
 	char to_startd[256];
-	sprintf ( to_startd, "to startd %s", server );
-	daemonCore->Register_Socket( sock, "<Startd Contact Socket>",
-								 (SocketHandlercpp)&Scheduler::startdContactSockHandler,
-								 to_startd, this, ALLOW );
+	sprintf ( to_startd, "to startd %s", mrec->peer );
 
-	daemonCore->Register_DataPtr( strdup(capability) );
+	if( is_dedicated ) {
+		daemonCore->
+			Register_Socket( sock, "<Startd Contact Socket>",
+			  (SocketHandlercpp)&DedicatedScheduler::startdContactSockHandler,
+			  to_startd, &dedicated_scheduler, ALLOW );
+	} else {
+		daemonCore->
+			Register_Socket( sock, "<Startd Contact Socket>",
+			  (SocketHandlercpp)&Scheduler::startdContactSockHandler,
+			  to_startd, &scheduler, ALLOW );
+	}
+	daemonCore->Register_DataPtr( strdup(mrec->id) );
+
+	scheduler.addRegContact();
 
 	dprintf ( D_FULLDEBUG, "Registered startd contact socket.\n" );
-	dprintf ( D_FULLDEBUG, "Set data pointer to %x\n", mrec );
 
-	free( capability );
-	free( server );
-
-	numRegContacts++;
-
-	return 1;
+	return true;
 }
 #undef BAILOUT
+
 
 /* note new BAILOUT def:
    before each bad return we check to see if there's a pending call
@@ -2016,7 +2033,8 @@ Scheduler::contactStartd( char* capability, char *user,
 		checkContactQueue();  \
 		return FALSE;
 
-int Scheduler::startdContactSockHandler( Stream *sock )
+int
+Scheduler::startdContactSockHandler( Stream *sock )
 {
 		// all return values are non - KEEP_STREAM.  
 		// Therefore, DaemonCore will cancel this socket at the
@@ -2028,7 +2046,7 @@ int Scheduler::startdContactSockHandler( Stream *sock )
 
 		// since all possible returns from here result in the socket being
 		// cancelled, we begin by decrementing the # of contacts.
-	numRegContacts--;
+	delRegContact();
 
 		// fetch the match record.  the daemon core DataPtr specifies the
 		// id of the match (which is really the startd capability).  use
@@ -2051,7 +2069,7 @@ int Scheduler::startdContactSockHandler( Stream *sock )
 	
 	dprintf ( D_FULLDEBUG, "Got mrec data pointer %x\n", mrec );
 
-	mrec->status = M_ACTIVE; // we assume things will work out.
+	mrec->status = M_CLAIMED; // we assume things will work out.
 
 	// Now, we set the timeout on the socket to 1 second.  Since we 
 	// were called by as a Register_Socket callback, this should not 
@@ -2073,7 +2091,7 @@ int Scheduler::startdContactSockHandler( Stream *sock )
 				dprintf( D_ALWAYS, "Couldn't send schedd string to startd.\n");
 				BAILOUT;
 			}
-			if( !sock->snd_int(aliveInterval, TRUE) ) {
+			if( !sock->snd_int(alive_interval, TRUE) ) {
 				dprintf( D_ALWAYS, "Couldn't send aliveInterval to startd.\n");
 				BAILOUT;
 			}
@@ -2114,7 +2132,7 @@ Scheduler::checkContactQueue()
 		// Contact startds as long as (a) there are still entries in our
 		// queue, and (b) we have not exceeded MAX_STARTD_CONTACTS, which
 		// ensures we do not run ourselves out of socket descriptors.
-	while ( (numRegContacts < MAX_STARTD_CONTACTS) &&
+	while ( (num_reg_contacts < MAX_STARTD_CONTACTS) &&
 			(!startdContactQueue.IsEmpty()) ) {
 			// there's a pending registration in the queue:
 
@@ -2200,8 +2218,8 @@ Scheduler::StartJobs()
 	startJobsDelayBit = FALSE;
 	matches->startIterations();
 	while(matches->iterate(rec) == 1) {
-		if( rec->status == M_INACTIVE ) {
-			dprintf(D_FULLDEBUG, "match (%s) inactive\n", rec->id);
+		if( rec->status == M_UNCLAIMED ) {
+			dprintf(D_FULLDEBUG, "match (%s) unclaimed\n", rec->id);
 			continue;
 		}
 		if ( rec->status == M_STARTD_CONTACT_LIMBO ) {
@@ -2241,56 +2259,44 @@ Scheduler::StartJobs()
 		}
 #endif
 
-		if(!(rec->shadowRec = StartJob(rec, &id)))
-                /* We check the universe of the job.  If it's MPI, 
-                   it's ok to return null - we just haven't started
-                   the shadow yet! */
-        {
-            int universe;
-            if ( GetAttributeInt ( id.cluster, id.proc, ATTR_JOB_UNIVERSE, 
-                                   &universe ) < 0 ) {
-                universe = STANDARD;
-            }
-            if ( universe != MPI ) {
+		if(!(rec->shadowRec = StartJob(rec, &id))) {
                 
 		// Start job failed. Throw away the match. The reason being that we
 		// don't want to keep a match around and pay for it if it's not
 		// functioning and we don't know why. We might as well get another
 		// match.
-                dprintf(D_ALWAYS,"Failed to start job %s; relinquishing\n",
-						rec->id);
-                Relinquish(rec);
-                DelMrec(rec);
-				mark_job_stopped( &id );
+
+			dprintf(D_ALWAYS,"Failed to start job %s; relinquishing\n",
+					rec->id);
+			Relinquish(rec);
+			DelMrec(rec);
+			mark_job_stopped( &id );
 
 					/* We want to send some email to the administrator
 					   about this.  We only want to do it once, though. */
-				if ( !sent_shadow_failure_email ) {
-					sent_shadow_failure_email = TRUE;
-					FILE *email = email_admin_open("Failed to start shadow.");
-					if( email ) {
-						fprintf(email,"Condor failed to start the " );
-						fprintf(email,"condor_shadow.\n\nThis may be a ");
-						fprintf(email,"configuration problem or a problem with\n");
-						fprintf(email,"permissions on the condor_shadow ");
-						fprintf(email,"binary.\n");
-						char *schedlog = param ( "SCHEDD_LOG" );
-						if ( schedlog ) {
-							email_asciifile_tail( email, schedlog, 50 );
-							free ( schedlog );
-						}
-						email_close ( email );
-					} else {
-							// Error sending the message
-						dprintf( D_ALWAYS, 
-								 "ERROR: Can't send email to the Condor "
-								 "Administrator\n" );
+			if ( !sent_shadow_failure_email ) {
+				sent_shadow_failure_email = TRUE;
+				FILE *email = email_admin_open("Failed to start shadow.");
+				if( email ) {
+					fprintf( email,
+							 "Condor failed to start the condor_shadow.\n\n"
+							 "This may be a configuration problem or a "
+							 "problem with\n"
+							 "permissions on the condor_shadow binary.\n" );
+					char *schedlog = param ( "SCHEDD_LOG" );
+					if ( schedlog ) {
+						email_asciifile_tail( email, schedlog, 50 );
+						free ( schedlog );
 					}
+					email_close ( email );
+				} else {
+						// Error sending the message
+					dprintf( D_ALWAYS, 
+							 "ERROR: Can't send email to the Condor "
+							 "Administrator\n" );
 				}
-                continue;
-            } else {
-                dprintf ( D_FULLDEBUG, "Match stored for mpi use\n" );
-            }
+			}
+			continue;
 		}
 		dprintf(D_FULLDEBUG, "Match (%s) - running %d.%d\n",rec->id,id.cluster,
 				id.proc);
@@ -2299,6 +2305,8 @@ Scheduler::StartJobs()
 			// This is important for Scheduler::AlreadyMatched().
 		rec->cluster = id.cluster;
 		rec->proc = id.proc;
+			// Now that the shadow has spawned, consider this match "ACTIVE"
+		rec->status = M_ACTIVE;
 	}
 	if (SchedUniverseJobsIdle > 0) {
 		StartSchedUniverseJobs();
@@ -2407,18 +2415,7 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 							&universe);
 	if (universe == PVM) {
 		return start_pvm(mrec, job_id);
-	}
-    else if ( universe == MPI ) {
-        shadow_rec *mpireturn = NULL;
-            // if we haven't tried to start this match before...
-        if ( !mrec->isMatchedMPI ) {
-            mpireturn = start_mpi( mrec, job_id );
-        } else {
-            mpireturn = NULL;
-        }
-        return mpireturn;
-	}
-	else {
+	} else {
 		if (rval < 0) {
 			dprintf(D_ALWAYS, "Couldn't find %s Attribute for job "
 					"(%d.%d) assuming standard.\n",	ATTR_JOB_UNIVERSE,
@@ -2801,283 +2798,6 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 }
 
 
-shadow_rec*
-Scheduler::start_mpi(match_rec* matchRec, PROC_ID *job_id)
-{
-	char args[128];
-	int	 pid;
-	struct shadow_rec *srec;
-    struct match_rec  *mrec;
-	int	currHosts=0;    // current hosts
-    int maxHosts=0;     // max hosts needed for a proc.
-        // a pointer to our stored matches for this cluster.
-    ExtArray<match_rec*> *MpiMatches;
-	int i;
-
-	dprintf( D_FULLDEBUG, "Got permission to run job %d.%d on %s...\n",
-			job_id->cluster, job_id->proc, matchRec->peer);
-	
-        /* We adhere to the "one mpi job per cluster number" religion.
-           We now have the not-fun task of seeing if we *need* 
-           the match given to us, incrementing the ATTR_CURRENT_HOSTS 
-           for the proper proc if it is, then determining if 
-           all the procs are in a ready to start state. */
-
-        /* The first thing we do is find our stored match list: */
-    if ( storedMatches->lookup( job_id->cluster, MpiMatches ) == -1 ) {
-        dprintf ( D_FULLDEBUG, "No stored matches; assuming new...\n" );
-        MpiMatches = new ExtArray<match_rec*>;
-        MpiMatches->fill(NULL);
-        MpiMatches->truncate(-1);
-        storedMatches->insert( job_id->cluster, MpiMatches );
-    } else {
-        dprintf ( D_FULLDEBUG, "Found stored extarray of matches...\n" );
-    }
-
-        // now we get the max and current hosts of this proc to see
-        // if we actually need this host. 
-    if ( GetAttributeInt( job_id->cluster, job_id->proc, 
-                          ATTR_MAX_HOSTS, &maxHosts ) < 0 ) {
-        maxHosts = 0;
-    }
-
-    if ( GetAttributeInt( job_id->cluster, job_id->proc, 
-                          ATTR_CURRENT_HOSTS, &currHosts ) < 0 ) {
-        currHosts = 0;
-    }
-
-    if ( currHosts < maxHosts ) {
-            // we need it; add on to the stored matches:
-        dprintf ( D_FULLDEBUG, "curr < max  (%d < %d)\n", 
-                  currHosts, maxHosts );
-            // update ad:
-        SetAttributeInt(job_id->cluster, job_id->proc, 
-                        ATTR_CURRENT_HOSTS, ++currHosts );
-        matchRec->isMatchedMPI = TRUE;
-        dprintf ( D_FULLDEBUG, "MpiMatches->getlast() = %d\n", 
-                  MpiMatches->getlast() );
-        (*MpiMatches)[MpiMatches->getlast()+1] = matchRec;
-        dprintf ( D_FULLDEBUG, "Just appended %s %s %d.%d\n", matchRec->peer, 
-                  matchRec->id, job_id->cluster, job_id->proc );
-        dprintf ( D_FULLDEBUG, "MpiMatches->getlast() = %d\n", 
-                  MpiMatches->getlast() );
-
-            // paranoia check:
-        if ( currHosts != MpiMatches->getlast()+1 ) {
-            dprintf (D_ALWAYS, "%s not == to #elem in MpiMatches! (%d!=%d)\n", 
-                     ATTR_CURRENT_HOSTS, currHosts, MpiMatches->getlast()+1 );
-        }
-    }
-    else {
-            // we don't need this match.
-        dprintf ( D_FULLDEBUG, "Don't need match!\n" );
-        Relinquish( matchRec );
-        DelMrec( matchRec );
-        return NULL;
-    }
-
-        /* Now we walk through all the procs to see if all of them
-           are ready to go.  */
-    bool startShadow = true;
-    int proc = 0;
-    maxHosts = currHosts = 0;
-    
-    while ( startShadow ) {
-        if ( GetAttributeInt( job_id->cluster, proc,
-                              ATTR_MAX_HOSTS, &maxHosts ) < 0 ) {
-            dprintf ( D_FULLDEBUG, "a\n" );
-            break;  // hit last proc
-        }
-        
-        if ( GetAttributeInt( job_id->cluster, proc, 
-                              ATTR_CURRENT_HOSTS, &currHosts ) < 0 ) {
-            dprintf ( D_FULLDEBUG, "b\n" );
-            break;  // hit last proc
-        }
-        
-        if ( maxHosts == 0 ) {
-            dprintf ( D_FULLDEBUG, "c\n" );
-            break;  // hit last proc
-        }
-        
-        if ( maxHosts == currHosts ) {
-                // cool, move to next
-            dprintf ( D_FULLDEBUG, "cool: (m==c==%d) p=%d\n", maxHosts, proc );
-            proc++;
-            maxHosts = currHosts = 0;
-        }
-        else {
-                // not cool, don't start.
-            dprintf ( D_FULLDEBUG, "no start: m:%d c:%d p:%d\n", 
-                      maxHosts, currHosts, proc );
-            startShadow = false;
-        }
-    }
-
-    // proc is now the # of procs going.
-
-    dprintf ( D_FULLDEBUG, "startShadow: %s.  # procs: %d\n", 
-              startShadow ? "TRUE":"FALSE", proc );
-
-    if ( startShadow ) {
-        
-        dprintf ( D_ALWAYS, "Starting MPI shadow, cluster #%d\n", 
-                  job_id->cluster );
-
-            // XXX todo: add rec to slowstart Q
-
-        if (Shadow) free(Shadow);
-        Shadow = param("SHADOW_MPI");
-
-        for ( i=0 ; i<=MpiMatches->getlast() ; i++ ) {
-            dprintf ( D_FULLDEBUG, "peer: %s\n", (*MpiMatches)[i]->peer );
-        }
-        
-            // give shadow the very first match from the list:
-        mrec = (*MpiMatches)[0];
-
-		sprintf(args, "condor_shadow -f %s %s %s %d %d", MyShadowSockName, 
-				mrec->peer, mrec->id, job_id->cluster, 0 );
-
-        dprintf ( D_FULLDEBUG, "args: \"%s\"\n", args );
-
-        pid = daemonCore->Create_Process(Shadow, args);
-
-        free(Shadow);
-        Shadow = NULL;
-
-        if (pid == FALSE) {
-            dprintf( D_ALWAYS, "CreateProcess() failed!\n" );
-            for ( i=0 ; i<=MpiMatches->getlast() ; i++ ) {
-                DelMrec( (*MpiMatches)[i] );
-            }
-            return NULL;
-        } 
-    
-		dprintf ( D_ALWAYS, "In Schedd, mpi shadow pid = %d\n", pid );        
-            // The shadow rec always has a proc of 0 now...
-        job_id->proc = 0;
-		mark_job_running(job_id);
-		srec = add_shadow_rec( pid, job_id, mrec, -1);
-
-			// We must set all the match recs to point at this srec.
-		for ( i=0 ; i<=MpiMatches->getlast() ; i++ ) {
-			(*MpiMatches)[i]->shadowRec = srec;
-		}
-
-            // now we have to contact the Shadow and push the other 
-            // matches at it.
-        if ( !pushMPIMatches( srec->sinfulString, MpiMatches, proc ) ) {
-            dprintf( D_ALWAYS, "pushMpiMatches() failed!\n" );
-            for ( i=0 ; i<=MpiMatches->getlast() ; i++ ) {
-                DelMrec( (*MpiMatches)[i] );
-            }
-            return NULL;
-        }
-
-        return srec;
-    }
-    
-        // this is a *good* case of NULL
-	return NULL;
-}
-
-int
-Scheduler::pushMPIMatches( char *shadow, 
-                           ExtArray<match_rec*> *MpiMatches, 
-                           int procs ) {
-/* shadow is in sinful string format */
-
-/* We're going to push the information on all the matches.  The shadow
-   actually *knows* the information for the first match from the argv, 
-   so it can ignore the first one.  The format we're sending is:
-
-   #procs (p)
-   for each proc: {
-      proc num
-      number in this proc (n)
-      for each n: {
-         host
-         cap
-      }
-   }
-*/
-
-    dprintf ( D_FULLDEBUG, "In pushMPIMatches %s, %d\n", shadow, procs );
-
-    match_rec *mrec;
-    ReliSock s;
-    s.timeout( MPIShadowSockTimeout );
-    
-    if ( !s.connect( shadow ) ) {
-        dprintf ( D_ALWAYS, "Failed to contact mpi shadow.\n" );
-        return 0;
-    }
-    
-    int cmd = TAKE_MATCH;
-    s.encode();
-    if ( !s.code( cmd ) ||
-         !s.code( procs ) ) {
-        dprintf ( D_ALWAYS, "Failed to push cmd or procs\n" );
-        return 0;
-    }
-    
-    dprintf ( D_PROTOCOL, "Pushed TAKE_MATCH, %d to Mpi Shadow\n", procs);
-
-    char *p = new char[64];
-    char *c = new char[64];
-    for ( int i=0, matchNum=0 ; i<procs ; i++ ) {
-        int inproc = countOfProc( *MpiMatches, i );
-        if ( !s.code( i ) ||
-             !s.code( inproc ) ) {
-            dprintf ( D_ALWAYS, "Failed to push proc num, inproc.\n" );
-            return 0;
-        }
-        dprintf ( D_FULLDEBUG, "Pushed proc %d, num %d.\n", i, inproc );
-
-        for ( int j=0 ; j<inproc ; j++ ) {
-            mrec = (*MpiMatches)[matchNum++];
-            strncpy( p, mrec->peer, 63 );
-            strncpy( c, mrec->id, 63 );
-            if ( !s.code( p ) ||
-                 !s.code( c ) ) {
-                dprintf ( D_ALWAYS, "Failed to send host, cap to shadow\n" );
-                delete [] p;
-                delete [] c;
-                return 0;
-            }
-            dprintf ( D_PROTOCOL, "Pushed %s %s to mpi shadow\n", p, c );
-        }
-    }
-    delete [] p;
-    delete [] c;
-    
-    if ( !s.end_of_message() ) {
-        dprintf ( D_ALWAYS, "Failure in sending eom to mpi shadow.\n" );
-        return 0;
-    }
-    
-    if( !s.close() ) {
-        dprintf ( D_ALWAYS, "Failure to close mpi shadow sock.\n" );
-        return 0;
-    }
-    
-    return 1;
-}
-
-int
-Scheduler::countOfProc( ExtArray<match_rec*> matches, int proc ) {
-        /* Job: count the number of matches which have proc 'proc' */
-    int last = matches.getlast();
-    int num = 0;
-    for ( int i=0 ; i<=last ; i++ ) {
-        if ( matches[i]->proc == proc ) {
-            num++;
-        }
-    }
-    dprintf ( D_FULLDEBUG, "%d elements in proc %d\n", num, proc );
-    return num;
-}
 
 shadow_rec*
 Scheduler::start_sched_universe_job(PROC_ID* job_id)
@@ -3378,7 +3098,7 @@ CkptWallClock()
 	int first_time = 1;
 	int current_time = (int)time(0); // bad cast, but ClassAds only know ints
 	ClassAd *ad;
-	while (ad = GetNextJob(first_time)) {
+	while( (ad = GetNextJob(first_time)) ) {
 		first_time = 0;
 		int status = IDLE;
 		ad->LookupInteger(ATTR_JOB_STATUS, status);
@@ -3477,6 +3197,13 @@ Scheduler::delete_shadow_rec(int pid)
 			}
 		}
 		check_zombie( pid, &(rec->job_id) );
+			// If the shadow went away, this match is no longer
+			// "ACTIVE", it's just "CLAIMED"
+		if( rec->match ) {
+				// Be careful, since there might not be a match record
+				// for this shadow record anymore... 
+			rec->match->status = M_CLAIMED;
+		}
 		RemoveShadowRecFromMrec(rec);
 		shadowsByPid->remove(pid);
 		shadowsByProcID->remove(rec->job_id);
@@ -3485,17 +3212,11 @@ Scheduler::delete_shadow_rec(int pid)
         if ( rec->sinfulString ) 
             delete [] rec->sinfulString;
 
-            // mpi stored match stuff:
-        ExtArray<match_rec*> *foo;
-        if( storedMatches->lookup( rec->job_id.cluster, foo ) == 0 ) {
-            dprintf (D_FULLDEBUG, "Deleting stored extarray for cluster %d\n", 
-                     rec->job_id.cluster );
-            storedMatches->remove( rec->job_id.cluster );
-            delete foo;
-        }
-
 		delete rec;
 		numShadows -= 1;
+		if( ExitWhenDone && numShadows == 0 ) {
+			schedd_exit();
+		}
 		display_shadow_recs();
 		return;
 	}
@@ -3734,17 +3455,6 @@ Scheduler::preempt(int n)
 				rec->preempted = TRUE;
 				n--;
             }
-			else if ( universe == MPI ) {
-                if ( !rec->preempted ) {
-                    daemonCore->Send_Signal( rec->pid, DC_SIGQUIT );
-				} else {
-					if ( ExitWhenDone ) {
-						n++;
-					}
-                }
-                rec->preempted = TRUE;
-                n--;
-			}
 			else if (rec->match) {
 				if( !rec->preempted ) {
 					send_vacate( rec->match, CKPT_FRGN_JOB );
@@ -4171,14 +3881,8 @@ Scheduler::child_exit(int pid, int status)
 			case JOB_NOT_CKPTED:
 			case JOB_NOT_STARTED:
 				if (!srec->removed) {
-						/* See if it's an mpi job here... */
-					if ( (srec->match) && (srec->match->isMatchedMPI) ) {
-						nuke_mpi ( srec );
-					} else {
-							/* Otherwise it's a normal job... */
-						Relinquish(srec->match);
-						DelMrec(srec->match);
-					}
+					Relinquish(srec->match);
+					DelMrec(srec->match);
 				}
 				break;
 			case JOB_SHADOW_USAGE:
@@ -4195,12 +3899,8 @@ Scheduler::child_exit(int pid, int status)
 				break;
 			case JOB_EXITED:
 				dprintf(D_FULLDEBUG, "Reaper: JOB_EXITED\n");
-
 				set_job_status( srec->job_id.cluster, srec->job_id.proc,
 								COMPLETED );
-				if ( (srec->match) && (srec->match->isMatchedMPI) ) {
-					nuke_mpi ( srec );
-				}
 				break;
 			case JOB_SHOULD_HOLD:
 				dprintf( D_ALWAYS, "Putting job %d.%d on hold\n",
@@ -4233,13 +3933,6 @@ Scheduler::child_exit(int pid, int status)
 				// relinquish the match if we get too many
 				// exceptions 
 				if( !srec->removed ) {
-						/* See if it's an mpi job here... */
-					if ( (srec->match) && (srec->match->isMatchedMPI) ) {
-							/* I'm doing this so we don't leave Claimed/Idle
-							   nodes lying around all the time.  There 
-							   may be a better way to do this... */
-						nuke_mpi( srec );
-					}
 					HadException(srec->match);
 				}
 				break;
@@ -4253,43 +3946,12 @@ Scheduler::child_exit(int pid, int status)
 		// mrec and srec are NULL - agent dies after deleting match
 		StartJobsFlag=FALSE;
 	 }  // big if..else if...
-	if( ExitWhenDone && numShadows == 0 ) {
-		schedd_exit();
-	}
+
 		// If we're not trying to shutdown, now that either an agent
 		// or a shadow (or both) have exited, we should try to
 		// activate all our claims and start jobs on them.
 	if( ! ExitWhenDone ) {
 		if (StartJobsFlag) StartJobs();
-	}
-}
-
-void
-Scheduler::nuke_mpi ( shadow_rec *srec ) {
-		/* remove all in cluster */
-	ExtArray<match_rec*> *matches;
-	if ( storedMatches->lookup( srec->match->cluster, 
-								matches ) != -1 ) {
-		int n = matches->getlast();
-		for ( int m=0 ; m <= n ; m++ ) {
-			Relinquish( (*matches)[m] );
-			DelMrec( (*matches)[m] );
-		}
-		matches->fill( NULL );
-		matches->truncate(-1);
-	}
-		/* it may be that the mpi shadow crashed and left around a 
-		   file named 'procgroup' in the IWD of the job.  We should 
-		   check and delete it here. */
-	char pg_file[256];
-	GetAttributeString(srec->job_id.cluster, srec->job_id.proc, 
-					   ATTR_JOB_IWD, pg_file );
-	strcat ( pg_file, "/procgroup" );
-	if ( unlink ( pg_file ) == -1 ) {
-		if ( errno != ENOENT ) {
-			dprintf ( D_FULLDEBUG, "Couldn't remove %s. errno %d.\n", 
-					  pg_file, errno );
-		}
 	}
 }
 
@@ -4622,29 +4284,29 @@ Scheduler::Init()
 	}
 
 	tmp = param( "JOB_START_DELAY" );
-	 if( ! tmp ) {
-		  JobStartDelay = 2;
-	 } else {
-		  JobStartDelay = atoi( tmp );
-		  free( tmp );
-	 }
-
+	if( ! tmp ) {
+		JobStartDelay = 2;
+	} else {
+		JobStartDelay = atoi( tmp );
+		free( tmp );
+	}
+	
 	tmp = param( "MAX_JOBS_RUNNING" );
-	 if( ! tmp ) {
-		  MaxJobsRunning = 200;
-	 } else {
-		  MaxJobsRunning = atoi( tmp );
-		  free( tmp );
-	 }
-
-	 tmp = param( "NEGOTIATE_ALL_JOBS_IN_CLUSTER" );
-	 if( !tmp || tmp[0] == 'f' || tmp[0] == 'F' ) {
-		 NegotiateAllJobsInCluster = false;
-	 } else {
-		 NegotiateAllJobsInCluster = true;
-	 }
+	if( ! tmp ) {
+		MaxJobsRunning = 200;
+	} else {
+		MaxJobsRunning = atoi( tmp );
+		free( tmp );
+	}
+	
+	tmp = param( "NEGOTIATE_ALL_JOBS_IN_CLUSTER" );
+	if( !tmp || tmp[0] == 'f' || tmp[0] == 'F' ) {
+		NegotiateAllJobsInCluster = false;
+	} else {
+		NegotiateAllJobsInCluster = true;
+	}
 	if( tmp ) free( tmp );
-
+	
 	/* Initialize the hash tables to size MaxJobsRunning * 1.2 */
 		// Someday, we might want to actually resize these hashtables
 		// on reconfig if MaxJobsRunning changes size, but we don't
@@ -4717,9 +4379,9 @@ Scheduler::Init()
 
 	tmp = param("ALIVE_INTERVAL");
 	 if(!tmp) {
-		aliveInterval = 300;
+		alive_interval = 300;
 	 } else {
-		  aliveInterval = atoi(tmp);
+		  alive_interval = atoi(tmp);
 		  free(tmp);
 	}
 
@@ -4882,8 +4544,8 @@ Scheduler::RegisterTimers()
 		(Eventcpp)&Scheduler::timeout,"timeout",this);
 	startjobsid = daemonCore->Register_Timer(10,
 		(Eventcpp)&Scheduler::StartJobs,"StartJobs",this);
-	 aliveid = daemonCore->Register_Timer(aliveInterval, aliveInterval,
-		(Eventcpp)&Scheduler::send_alive,"send_alive", this);
+	aliveid = daemonCore->Register_Timer(alive_interval, alive_interval,
+		(Eventcpp)&Scheduler::sendAlives,"sendAlives", this);
 	cleanid = daemonCore->Register_Timer(QueueCleanInterval,
 										 QueueCleanInterval,
 										 (Event)&CleanJobQueue,
@@ -5162,22 +4824,26 @@ Scheduler::DelMrec(char* id)
 		dprintf(D_ALWAYS, "Null parameter --- match not deleted\n");
 		return -1;
 	}
-	if (matches->lookup(key, rec) == 0) {
 
-		dprintf( D_ALWAYS, "Match record (%s, %d, %d) deleted\n",
-				 rec->peer, rec->cluster, rec->proc ); 
-		dprintf( D_FULLDEBUG, "Capability of deleted match: %s\n", rec->id );
-
-		matches->remove(key);
-		// Remove this match from the associated shadowRec.
-		if (rec->shadowRec)
-			rec->shadowRec->match = NULL;
-		delete rec;
-
-		numMatches--; 
+	if( matches->lookup(key, rec) != 0 ) {
+			// Couldn't find it, return failure
+		return -1;
 	}
+
+	dprintf( D_ALWAYS, "Match record (%s, %d, %d) deleted\n",
+			 rec->peer, rec->cluster, rec->proc ); 
+	dprintf( D_FULLDEBUG, "Capability of deleted match: %s\n", rec->id );
+	
+	matches->remove(key);
+		// Remove this match from the associated shadowRec.
+	if (rec->shadowRec)
+		rec->shadowRec->match = NULL;
+	delete rec;
+	
+	numMatches--; 
 	return 0;
 }
+
 
 int
 Scheduler::DelMrec(match_rec* match)
@@ -5361,50 +5027,62 @@ Scheduler::AlreadyMatched(PROC_ID* id)
 /*
  * go through match reords and send alive messages to all the startds.
  */
-void
-Scheduler::send_alive()
+
+bool
+sendAlive( match_rec* mrec )
 {
-	SafeSock	*sock;
-	 int	  	numsent=0;
+	SafeSock	sock;
 	int			alive = ALIVE;
 	char		*id = NULL;
-	match_rec	*rec;
+	
+	dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n",mrec->peer);
+	id = mrec->id;
+	sock.timeout(STARTD_CONTACT_TIMEOUT);
+	sock.encode();
+	id = mrec->id;
+	if( !sock.connect(mrec->peer) ||
+		!sock.put(alive) || 
+		!sock.code(id) || 
+		!sock.end_of_message() ) {
+			// UDP transport out of buffer space!
+		dprintf(D_ALWAYS, "\t(Can't send alive message to %s)\n",
+				mrec->peer);
+		return false;
+	}
+		/* TODO: Someday, espcially once the accountant is done, 
+		   the startd should send a keepalive ACK back to the schedd.  
+		   If there is no shadow to this machine, and we have not 
+		   had a startd keepalive ACK in X amount of time, then we 
+		   should relinquish the match.  Since the accountant is 
+		   not done and we are in fire mode, leave this 
+		   for V6.1.  :^) -Todd 9/97
+		*/
+	return true;
+}
+
+void
+Scheduler::sendAlives()
+{
+	match_rec	*mrec;
+	int		  	numsent=0;
 
 	matches->startIterations();
-	while (matches->iterate(rec) == 1) {
-		if(rec->status != M_ACTIVE)	{
-			continue;
+	while (matches->iterate(mrec) == 1) {
+		if( mrec->status == M_ACTIVE || mrec->status == M_CLAIMED ) {
+			if( sendAlive( mrec ) ) {
+				numsent++;
+			}
 		}
-		dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n",rec->peer);
-		numsent++;
-		id = rec->id;
-		sock = new SafeSock;
-		sock->timeout(STARTD_CONTACT_TIMEOUT);
-		sock->encode();
-		id = rec->id;
-		if( !sock->connect(rec->peer) ||
-			!sock->put(alive) || 
-			!sock->code(id) || 
-			!sock->end_of_message() ) {
-				// UDP transport out of buffer space!
-			dprintf(D_ALWAYS, "\t(Can't send alive message to %s)\n",
-					rec->peer);
-			delete sock;
-			continue;
-		}
-			/* TODO: Someday, espcially once the accountant is done, 
-               the startd should send a keepalive ACK back to the schedd.  
-               If there is no shadow to this machine, and we have not 
-               had a startd keepalive ACK in X amount of time, then we 
-               should relinquish the match.  Since the accountant is 
-               not done and we are in fire mode, leave this 
-               for V6.1.  :^) -Todd 9/97
-            */
-		delete sock;
-	 }
-	 dprintf(D_PROTOCOL,"## 6. (Done sending alive messages to %d startds)\n",
-			numsent);
+	}
+	dprintf( D_PROTOCOL, "## 6. (Done sending alive messages to "
+			 "%d startds)\n", numsent );
+
+		// Just so we don't have to deal with a seperate DC timer for
+		// this, just call the dedicated_scheduler's version of the
+		// same thing so we keep all of those claims alive, too.
+	dedicated_scheduler.sendAlives();
 }
+
 
 void
 job_prio(ClassAd *ad)
@@ -5430,10 +5108,6 @@ Scheduler::HadException( match_rec* mrec )
 	}
 }
 
-int
-mpiHashFunc( const int& cluster, int numbuckets ) {
-    return cluster % numbuckets;
-}
 
 int
 Scheduler::dumpState(int, Stream* s) {
@@ -5465,7 +5139,7 @@ Scheduler::dumpState(int, Stream* s) {
 	intoAd ( ad, "timeoutid", timeoutid );
 	intoAd ( ad, "startjobsid", startjobsid );
 	intoAd ( ad, "startJobsDelayBit", startJobsDelayBit );
-	intoAd ( ad, "numRegContacts", numRegContacts );
+	intoAd ( ad, "num_reg_contacts", num_reg_contacts );
 	intoAd ( ad, "MAX_STARTD_CONTACTS", MAX_STARTD_CONTACTS );
 	intoAd ( ad, "CondorViewHost", CondorViewHost );
 	intoAd ( ad, "Shadow", Shadow );
@@ -5476,7 +5150,7 @@ Scheduler::dumpState(int, Stream* s) {
 	intoAd ( ad, "UidDomain", UidDomain );
 	intoAd ( ad, "MaxFlockLevel", MaxFlockLevel );
 	intoAd ( ad, "FlockLevel", FlockLevel );
-	intoAd ( ad, "aliveInterval", aliveInterval );
+	intoAd ( ad, "alive_interval", alive_interval );
 	intoAd ( ad, "MaxExceptions", MaxExceptions );
 	
 	int cmd;
