@@ -281,7 +281,6 @@ while(  ! $Exit )
     if ( $Exe ne "" )
     {
 	my $Cwd = GetParam( "Cwd" );
-	Log( "CWD = '$Cwd'\n" );
 	if ( $Cwd ne "" )
 	{
 	    if ( ! chdir( $Cwd ) )
