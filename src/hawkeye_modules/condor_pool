@@ -550,6 +550,7 @@ sub RunJobHistory(  )
 	  NumRestarts => "n",
 	  JobStatus => "n",
 	  Owner => "s",
+	  JobUniverse => "",
 	  ClusterId => "",
 	  ProcId => "",
 	);
@@ -565,6 +566,19 @@ sub RunJobHistory(  )
 			{ Count => 0, String => "Held", },
 			{ Count => 0, String => "SubmissionError", },
 		       );
+    my @JobUniverseMap = (
+			  { Count => 0, String => "Standard", },
+			  { Count => 0, String => "Pipe", },
+			  { Count => 0, String => "Linda", },
+			  { Count => 0, String => "PVM", },
+			  { Count => 0, String => "Vanilla", },
+			  { Count => 0, String => "PVMD", },
+			  { Count => 0, String => "Scheduler", },
+			  { Count => 0, String => "MPI", },
+			  { Count => 0, String => "Globus", },
+			  { Count => 0, String => "Java", },
+			  { Count => 0, String => "Parallel", },
+			 );
 
     # Parse the output...
     my $CurJob;
@@ -582,7 +596,14 @@ sub RunJobHistory(  )
 		if ( exists $CurJob->{JobStatus} )
 		{
 		    my $JobStatus = $CurJob->{JobStatus};
-		    $JobStatusMap[$JobStatus]{Count}++;
+		    $JobStatusMap[$JobStatus]{Count}++
+			if ( $JobStatus <= $#JobStatusMap );
+		}
+		if ( exists $CurJob->{JobUniverse} )
+		{
+		    my $Universe = $CurJob->{JobUniverse};
+		    $JobUniverseMap[$Universe]{Count}++
+			if ( $Universe <= $#JobUniverseMap );
 		}
 	    }
 	    $CurJob = {};
@@ -609,6 +630,14 @@ sub RunJobHistory(  )
 	$Hash->Add( "JobStatus_" . $JobStatusMap[$Status]{String},
 		    "n",
 		    $JobStatusMap[$Status]{Count} );
+    }
+
+    # Publish the Universe summary info
+    foreach my $Universe ( 0 .. $#JobUniverseMap )
+    {
+	$Hash->Add( "JobUniverse_" . $JobUniverseMap[$Universe]{String},
+		    "n",
+		    $JobUniverseMap[$Universe]{Count} );
     }
 
     # Publish it all...
