@@ -154,14 +154,8 @@ html_target( documentation )
 
 all-tests: access.t killfamily.t test_locks my_hostname.t
 
-test: test.o user_log.o
-	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o test test.o user_log.o $(LIB)
-
 tester: tester.o $(LIB)
 	$(CC) $(CFLAGS) -Wl,-u._fpdata_size -o tester tester.o $(LIB)
-
-foo: foo.o user_log.o
-	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o foo foo.o user_log.o $(LIB)
 
 IMPORT_LINKS = ../../config/import_links
 import(../condor_util_lib,mkargv.o)
