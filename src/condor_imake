@@ -1,5 +1,11 @@
 #!/bin/sh
 
+if [ -d CVS ]; then
+	echo "You probably don't want to do this in your source repository."
+	echo "Try doing it in a build directory instead."
+	exit 1
+fi
+
 gss="no"
 if [ "$1" = "-DGSS_AUTHENTICATION" ]; then
 	gss="Y"
