@@ -78,6 +78,13 @@ int string_to_sin(char *addr, struct sockaddr_in *sin);
 
 char *sin_to_string(struct sockaddr_in *sin);
 
+/* Extract the port from a string of the form "<xx.xx.xx.xx:pppp>" */
+int string_to_port( const char* addr );
+
+/* Extract the ip_addr from a string of the form "<xx.xx.xx.xx:pppp>"
+   and convert it to the unsigned int version from the ASCII version */
+unsigned int string_to_ip( const char* addr );
+
 char *sock_to_string(SOCKET sockd);
 
 /* Return the real hostname of a machine given a sin; return NULL if it cannot
@@ -91,8 +98,10 @@ display_from( struct sockaddr_in *from );
    host, 0 if they don't, and -1 on error. */
 int same_host(const char *h1, const char *h2);
 
-
 char* calc_subnet_name( char* host );
+
+int is_ipaddr(const char *inbuf, struct in_addr *sin_addr);
+
 
 
 #if defined(__cplusplus)
