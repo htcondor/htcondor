@@ -943,7 +943,7 @@ rc=0;
 					gmState = GM_CANCEL;
 					break;
 				}
-				UpdateGlobusState( status, error );
+				UpdateGlobusState( status, 0 );
 				ClearCallbacks();
 				lastProbeTime = now;
 				gmState = GM_SUBMITTED;
