@@ -19,7 +19,7 @@ static char *_FileName_ = __FILE__;
 #endif
 
 extern int errno;
-extern int _Ckpt_Via_TCP_Stream;
+int _Ckpt_Via_TCP_Stream;
 
 const int KILO = 1024;
 
