@@ -132,3 +132,7 @@
 	Released in department on Sun and Alpha.  Known bugs
 		1. Vanilla jobs run by users other than "condor" crash
 		2. Jobs which execute non-supported syscalls remain in queue forever
+
+9/7/94 V5_a3
+	Runs on SunOs, AIX, and OSF1.  Released in dept on "steves" and
+	"huey", "louie", and "frigg".  Given to DoIt this date.
