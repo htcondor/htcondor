@@ -88,10 +88,6 @@
 #include "clib.h"
 #include "shadow.h"
 
-#if defined(LINUX) || defined(Solaris)
-#define MAX(a,b)	((a)<(b)?(b):(a))
-#endif
-
 FILE	*fdopen();
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
