@@ -21,9 +21,42 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-int hashFuncInt( const int& n, int numBuckets ) {
+#include "condor_common.h"
+
+int
+hashFuncInt( const int& n, int numBuckets )
+{
 	if( n < 0 ) {
 		return (0 - n) % numBuckets;
 	}
 	return n % numBuckets;
+}
+
+
+int
+hashFuncUInt( const unsigned int& n, int numBuckets )
+{
+	return n % numBuckets;
+}
+
+
+int
+hashFuncJobIdStr( const char* & key, int numBuckets )
+{
+    unsigned int bkt = 0;
+	int i,j,size;
+    unsigned int multiplier = 1;
+
+    if (key) {
+        size = strlen(key);
+        for (i=0; i < size; i++) {
+            j = size - 1 - i;
+            if (key[j] == '.' ) continue;
+            bkt += (key[j] - '0') * multiplier;
+            multiplier *= 10;
+        }
+    }
+
+    bkt %= numBuckets;
+    return bkt;
 }
