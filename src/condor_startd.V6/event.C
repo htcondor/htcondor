@@ -152,8 +152,10 @@ static int eval_state(resource_info_t* rip)
     }
     if (tmp) 
     {
-      if (rip->r_claimed)
-	vacate_client(rip->r_rid);
+#if 0
+      if (rip->r_claimed)		/* Why call vacate_client here? */
+		  vacate_client(rip->r_rid);
+#endif
       event_suspend(rip->r_rid, NO_JID, NO_TID);
       return 0;
     }
@@ -201,6 +203,7 @@ check_claims(resource_info_t* rip)
 		if (time(NULL) - rip->r_captime > capab_timeout) {
 			dprintf(D_ALWAYS, "Capability (%s) timed out\n",
 				rip->r_capab);
+			rip->r_claimed = FALSE;
 			free(rip->r_capab);
 			free(rip->r_client);
 			rip->r_capab = NULL;
