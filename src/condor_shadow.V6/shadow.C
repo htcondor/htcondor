@@ -974,13 +974,17 @@ start_job( char *cluster_id, char *proc_id )
 #endif
 	ImageSize = Proc->image_size;
 
-	tmp = gen_ckpt_name( Spool, Proc->id.cluster, Proc->id.proc, 0 );
-	strcpy( CkptName, tmp );
+	if (Proc->universe != STANDARD) {
+		strcpy( CkptName, "" );
+		strcpy( TmpCkptName, "" );
+	} else {
+		tmp = gen_ckpt_name( Spool, Proc->id.cluster, Proc->id.proc, 0 );
+		strcpy( CkptName, tmp );
+		sprintf( TmpCkptName, "%s.tmp", CkptName );
+	}
 
 	tmp = gen_ckpt_name( Spool, Proc->id.cluster, ICKPT, 0 );
 	strcpy( ICkptName, tmp );
-
-	sprintf( TmpCkptName, "%s.tmp", CkptName );
 
 	strcpy( RCkptName, CkptName );
 #endif
@@ -1022,7 +1026,8 @@ DoCleanup()
 			return 0;
 		}
 			
-		if( ! FileExists(CkptName, Proc->owner) ) {
+		if( Proc->universe != STANDARD ||
+			!FileExists(CkptName, Proc->owner) ) {
 			status = UNEXPANDED;
 			dprintf(D_ALWAYS,
 					"Shadow: no ckpt %s found, resetting to UNEXPANDED\n",
