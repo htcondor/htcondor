@@ -127,7 +127,7 @@
 #define PVM_ARCH			X86SOL2
 
 
-#define Demangler /opt/SUNWspro/bin/c++filt
+#define Demangler c++filt
 #define StaticFlag -static
 #define UnixName /vmunix			/* pathname of the system executable */
 #define syscall_lib syscall_lib_bsd /* ask Jim */
