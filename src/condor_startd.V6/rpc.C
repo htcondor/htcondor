@@ -223,6 +223,9 @@ reply(Sock *sock, int answer)
 	return TRUE;
 }
 
+ 
+// This function simply sends the VACATE_SERVICE command to the schedd
+// and accountant (if it exists).
 void
 vacate_client(resource_id_t rid)
 {
@@ -231,6 +234,7 @@ vacate_client(resource_id_t rid)
 	resource_info_t *rip;
 
 	if( !(rip = resmgr_getbyrid(rid)) ) {
+		dprintf( D_ALWAYS, "vacate:client: Can't find resource.\n" );
 		return;
 	}
 
@@ -270,7 +274,4 @@ vacate_client(resource_id_t rid)
 	}
 
 	dprintf(D_ALWAYS, "Done vacating client %s\n", rip->r_client);
-		// resource_free deletes a whole bunch of stuff, including
-		// r_client, so print out the message before we call it. 
-	resource_free( rid );
 }
