@@ -87,7 +87,8 @@ int main( int argc, char *argv[] )
 			version();
 			exit(0);
 		} else if(!strcmp(argv[i],"-debug")) {
-			set_debug_flags("D_FULLDEBUG");
+            Termlog = 1;
+            dprintf_config ("TOOL", 2);
 		} else if(argv[i][0]=='-') {
 			type = stringToDaemonType(&argv[i][1]);
 			if(type==DT_NONE) {
@@ -134,15 +135,13 @@ int main( int argc, char *argv[] )
 
 	dprintf(D_FULLDEBUG,"Daemon %s is %s\n",daemon->hostname(),daemon->addr());
 	
-	sock = daemon->reliSock();
+	sock = (ReliSock*)daemon->startCommand( DC_FETCH_LOG, Sock::reli_sock);
 
 	if(!sock) {
 		fprintf(stderr,"couldn't connect to daemon %s at %s\n",daemon->hostname(),daemon->addr());
 		return 1;
 	}
 
-	sock->encode();
-	sock->put( DC_FETCH_LOG );
 	sock->put( DC_FETCH_LOG_TYPE_PLAIN );
 	sock->put( log_name );
 	sock->end_of_message();
