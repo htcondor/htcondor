@@ -706,7 +706,8 @@ AttrList::~AttrList()
 ////////////////////////////////////////////////////////////////////////////////
 // Insert an expression tree into a AttrList. If the expression is not an
 // assignment expression, FALSE is returned. Otherwise, it is inserted at the
-// end of the expression list.
+// end of the expression list. It is not checked if the attribute already
+// exists in the list!
 ////////////////////////////////////////////////////////////////////////////////
 int AttrList::Insert(char* str)
 {
@@ -723,18 +724,22 @@ int AttrList::Insert(ExprTree* expr)
 {
     if(expr->MyType() != LX_ASSIGN)
     {
-	return FALSE;
+		return FALSE;
     }
 
     AttrListElem* newNode = new AttrListElem(expr);
 
+	if(Lookup(expr->LArg()))
+	{
+		return FALSE;
+	}
     if(!tail)
     {
-	exprList = newNode;
+		exprList = newNode;
     }
     else
     {
-	tail->next = newNode;
+		tail->next = newNode;
     }
     tail = newNode;
 
@@ -752,6 +757,29 @@ int AttrList::Insert(ExprTree* expr)
 	}
     }
     return TRUE;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// If the attribute is already in the list, replace it with the new one.
+// Otherwise just insert it.
+////////////////////////////////////////////////////////////////////////////////
+int AttrList::InsertOrUpdate(char* attr)
+{
+	ExprTree*	tree;
+
+	if(Parse(attr, tree) != 0)
+	{
+		return FALSE;
+	}
+	if(tree->MyType() != LX_ASSIGN)
+	{
+		return FALSE;
+	}
+	if((Insert(tree) == FALSE) && (UpdateExpr(tree) == FALSE))
+	{
+		return FALSE;
+	}
+	return TRUE;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -840,8 +868,7 @@ void AttrList::ResetFlags()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Update an expression tree. Find the tree according to its name, then change
-// the right hand side to a new tree. Set the dirty flag for that tree to TRUE.
+// Find an attibute and replace its value with a new value.
 ////////////////////////////////////////////////////////////////////////////////
 int AttrList::UpdateExpr(char* name, ExprTree* tree)
 {
@@ -849,47 +876,40 @@ int AttrList::UpdateExpr(char* name, ExprTree* tree)
 
     if(tree->MyType() == LX_ASSIGN)
     {
-	return FALSE;
+		return FALSE;
     }
 
     if(!(tmpTree = Lookup(name)))
     {
-	return FALSE;
+		return FALSE;
     }
 
-    delete tmpTree;
     tree->Copy();
-    tmpTree = new AssignOp(new Variable(name), tree);
-    Insert(tmpTree);
-    delete tmpTree;
-
-    // update associated aggregate expressions
-    if(inList)		// this AttrList is in only one AttrList list
-    {
-	inList->UpdateAgg(tmpTree, AGG_INSERT);
-    }
-    else if(next)	// this AttrList is in more than one AttrList lists
-    {
-	AttrListRep* rep = (AttrListRep*)next;
-	while(rep)
-	{
-	    rep->attrList->inList->UpdateAgg(tmpTree, AGG_INSERT);
-	}
-    }
+	delete tmpTree->RArg();
+	((BinaryOp*)tmpTree)->rArg = tree;
     return TRUE;
+}
+
+int AttrList::UpdateExpr(ExprTree* attr)
+{
+	if(attr->MyType() != LX_ASSIGN)
+	{
+		return FALSE;
+	}
+	return UpdateExpr(((Variable*)attr->LArg())->Name(), attr->RArg());
 }
 
 ExprTree* AttrList::NextExpr()
 {
     if(!this->ptrExpr)
     {
-	return NULL;
+		return NULL;
     }
     else
     {
-	ExprTree* tmp = ptrExpr->tree;
-	ptrExpr = ptrExpr->next;
-	return tmp;
+		ExprTree* tmp = ptrExpr->tree;
+		ptrExpr = ptrExpr->next;
+		return tmp;
     }
 }
 
@@ -931,6 +951,11 @@ ExprTree* AttrList::Lookup(const char* name)
         }
     }
     return NULL;
+}
+
+ExprTree* AttrList::Lookup(const ExprTree* attr)
+{
+	return Lookup (((Variable*)attr)->Name());
 }
 
 int AttrList::LookupString (const char *name, char *value)
