@@ -612,12 +612,8 @@ MPIShadow::modifyNodeAd( ClassAd* ad )
 	if( ad->LookupString(ATTR_JOB_ENVIRONMENT, &env_str) ) {
 		if( env_str && env_str[0] ) {
 				// There's something there!
-			dprintf( D_FULLDEBUG, "env_str: %s\n", env_str );
 			had_env = true;
 			env += env_str;
-		} else {
-				// No existing environment
-			dprintf( D_FULLDEBUG, "empty environment\n" );
 		}
 		free( env_str );
 	}
@@ -903,7 +899,7 @@ MPIShadow::shutDownLogic( int& exitReason ) {
 
 	if ( alldone ) {
 			// everyone has reported in their exit status...
-		dprintf ( D_FULLDEBUG, "We're really ready to exit!\n" );
+		dprintf( D_FULLDEBUG, "All nodes have finished, ready to exit\n" );
 		return TRUE;
 	}
 
