@@ -25,6 +25,14 @@
 #	define SETJMP _setjmp
 #	define LONGJMP _longjmp
 
+#elif defined(SOLARIS2)
+
+	extern "C" int brk( void * );
+	extern "C" void *sbrk( int );
+	typedef void (*SIG_HANDLER)();
+#	define SETJMP setjmp
+#	define LONGJMP longjmp
+
 #elif defined(OSF1)
 
 	extern "C" int brk( void * );
