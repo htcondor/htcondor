@@ -25,7 +25,7 @@
 
 
 
-#define DEBUG
+#define DEBUG 0
 
 
 XferSummary	xfer_summary;
@@ -99,7 +99,7 @@ void Server::Init(int max_new_xfers,
 	max_restore_xfers = max_new_restore_xfers;
 	num_store_xfers = 0;
 	num_restore_xfers = 0;
-#if 0
+#if DEBUG
 	sprintf(log_filename, "%s%s", LOCAL_DRIVE_PREFIX, LOG_FILE);
 	if (stat(log_filename, &log_stat) == 0) {
 		sprintf(old_log_filename, "%s%s", LOCAL_DRIVE_PREFIX, OLD_LOG_FILE);
@@ -205,9 +205,9 @@ void Server::Init(int max_new_xfers,
 			max_restore_xfers);
 	Log(log_msg);
 	log_file << endl << endl << endl;
-#endif
 	log_file << "   Local Time    Request ID   Event" << endl;
 	log_file << "   ----------    ----------   -----" << endl;
+#endif
 }
 
 
@@ -337,7 +337,9 @@ void Server::Execute()
 	close(service_req_sd);
 	close(store_req_sd);
 	close(restore_req_sd);
+#if DEBUG
 	log_file.close();
+#endif
 }
 
 
@@ -783,7 +785,9 @@ void Server::ProcessServiceReq(int             req_id,
 					Log(req_id, "Request for server status GRANTED");
 				} else {
 					// Child process
+#if DEBUG
 					log_file.close();
+#endif
 					close(store_req_sd);
 					close(restore_req_sd);
 					close(service_req_sd);
@@ -1006,7 +1010,9 @@ void Server::ProcessStoreReq(int            req_id,
 				Log(req_id, "Request to store checkpoint file GRANTED");
 			} else {
 				// Child process
+#if DEBUG
 				log_file.close();
+#endif
 				close(store_req_sd);
 				close(restore_req_sd);
 				close(service_req_sd);
@@ -1273,7 +1279,9 @@ void Server::ProcessRestoreReq(int             req_id,
 			  Log(req_id, "Request to restore checkpoint file GRANTED");
 		  } else {
 			  // Child process
+#if DEBUG
 			  log_file.close();
+#endif
 			  close(store_req_sd);
 			  close(restore_req_sd);
 			  close(service_req_sd);
