@@ -69,7 +69,10 @@ static const int ERR_CLIENT_NOT_CONNECTED	= 288;
 static const int ERR_COMMUNICATION_ERROR	= 289;
 static const int ERR_BAD_CONNECTION_TYPE	= 290;
 static const int ERR_BAD_SERVER_ACK			= 291;
+static const int ERR_CANNOT_REPLACE             =292;
 
+static const int ERR_CACHE_SWITCH_ERROR         =293;
+static const int ERR_CACHE_FILE_ERROR           =294;
 END_NAMESPACE //classad
 
 #endif
