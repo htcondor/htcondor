@@ -310,7 +310,7 @@ V6_6_8_EXT	-a -a V6_6_COMMON_EXT \
 		   externals/bundles/glibc/2.3.2.27.9.7 \
 		   externals/bundles/globus/2.2.4 \
 		   externals/bundles/globus/2.4.3.vdt.1.1.14 \
-		   externals/bundles/gahp/1.0.12
+		   externals/bundles/gahp/1.0.13
 
 # Externals needed for the head of the V6_6-branch
 V6_6_EXT	-a V6_6_8_EXT
