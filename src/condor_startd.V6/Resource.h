@@ -35,6 +35,14 @@ public:
 		// Called from the reaper to handle things for this rip
 	void	starter_exited();	
 
+		// Since the preempting state is so weird, and when we want to
+		// leave it, we need to decide where we want to go, and we
+		// have to do lots of funky twiddling with our match objects,
+		// we put all the actions and logic in one place that gets
+		// called whenever we're finally ready to leave the preempting
+		// state. 
+	void	leave_preempting_state();
+
 		// Methods to initialize and refresh the resource classads.
 	int		init_classad();		
 	void	update_classad();	
