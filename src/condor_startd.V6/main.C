@@ -161,6 +161,7 @@ int main(int argc, char** argv)
 
 	// CHANGE -> N Anand
 	template_ClassAd->Insert(def_owner);
+	template_ClassAd->SetRequirements("Requirements = START");
 
 	dprintf_config("STARTD", 2);
 
