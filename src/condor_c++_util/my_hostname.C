@@ -34,33 +34,44 @@
 
 
 // Return our hostname in a static data buffer.
+// If we've already looked up the hostname, just return the answer.
 char *
 my_hostname()
 {
-	static char hostname[1024];
+	static char hostname[1024] = "\0";
+	if( hostname[0] ) {
+		return hostname;
+	}
 	if( gethostname(hostname, sizeof(hostname)) == 0 ) {
 		return hostname;
 	} else {
+		hostname[0] = '\0';
 		return NULL;
 	}
 }
 
 
 // Return our full hostname (with domain) in a static data buffer.
+// If we've already looked up the hostname, just return the answer.
 char*
 my_full_hostname()
 {
-	static char hostname[1024];
+	static char hostname[1024] = "\0";
 	char this_host[1024];
 	struct hostent *host_ptr;
 
+	if( hostname[0] ) {
+		return hostname;
+	}
 		// determine our own host name 
 	if( gethostname(this_host, sizeof(this_host)) < 0 ) {
+		hostname[0] = '\0';
 		return NULL;
 	}
 
 	/* Look up out official host information */
 	if( (host_ptr = gethostbyname(this_host)) == NULL ) {
+		hostname[0] = '\0';
 		return NULL;
 	}
 
