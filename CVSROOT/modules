@@ -86,7 +86,8 @@ V6_SRC			-a \
 V6_5_SRC		-a \
 			V6_COMMON \
 			src/condor_classad.V6 \
-			src/condor_data_manager
+			src/condor_data_manager \
+			src/condor_nest
 
 CONDOR_VIEW_SRC	-a \
 			src/condor_view_client \
