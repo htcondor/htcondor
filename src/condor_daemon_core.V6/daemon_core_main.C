@@ -1258,11 +1258,11 @@ int main( int argc, char** argv )
 
 	daemonCore->Register_Command( DC_CONFIG_PERSIST, "DC_CONFIG_PERSIST",
 								  (CommandHandler)handle_config,
-								  "handle_config()", 0, ADMINISTRATOR );
+								  "handle_config()", 0, CONFIG );
 
 	daemonCore->Register_Command( DC_CONFIG_RUNTIME, "DC_CONFIG_RUNTIME",
 								  (CommandHandler)handle_config,
-								  "handle_config()", 0, ADMINISTRATOR );
+								  "handle_config()", 0, CONFIG );
 
 	daemonCore->Register_Command( DC_OFF_FAST, "DC_OFF_FAST",
 								  (CommandHandler)handle_off_fast,

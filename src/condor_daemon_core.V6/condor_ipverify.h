@@ -45,7 +45,8 @@ enum DCpermission {
 	/** Not_Yet_Ducumented */ NEGOTIATOR,
 	/** Not_Yet_Ducumented */ IMMEDIATE_FAMILY,
 	/** Not_Yet_Ducumented */ ADMINISTRATOR,
-	/** Not_Yet_Ducumented */ OWNER
+	/** Not_Yet_Ducumented */ OWNER,
+	/** Not_Yet_Ducumented */ CONFIG_PERM
 };
 
 
@@ -55,6 +56,8 @@ static const int IPVERIFY_ALLOW = 0;
 static const int IPVERIFY_USE_TABLE = 1;
 /// Not_Yet_Ducumented
 static const int IPVERIFY_ONLY_DENIES = 2;
+/// Not_Yet_Ducumented
+static const int IPVERIFY_DENY = 3;
 ///	Not_Yet_Ducumented.  15 is max for 32-bit mask
 static const int IPVERIFY_MAX_PERM_TYPES = 15;
 		

@@ -30,8 +30,8 @@
 extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc. 
 
 // The "order" of entries in perm_names and perm_ints must match
-const char* IpVerify::perm_names[] = {"READ","WRITE","ADMINISTRATOR","OWNER","NEGOTIATOR",NULL};
-const int IpVerify::perm_ints[] = {READ,WRITE,ADMINISTRATOR,OWNER,NEGOTIATOR,-1};  // must end with -1
+const char* IpVerify::perm_names[] = {"READ","WRITE","ADMINISTRATOR","OWNER","NEGOTIATOR","CONFIG",NULL};
+const int IpVerify::perm_ints[] = {READ,WRITE,ADMINISTRATOR,OWNER,NEGOTIATOR,CONFIG_PERM,-1};  // must end with -1
 
 // Hash function for Permission hash table
 static int compute_perm_hash(const struct in_addr &in_addr, int numBuckets)
@@ -126,7 +126,11 @@ IpVerify::Init()
 		}
 	
 		if ( !pAllow && !pDeny ) {
-			pentry->behavior = IPVERIFY_ALLOW;
+			if (perm_ints[i] == CONFIG_PERM) { 	  // deny all CONFIG requests 
+				pentry->behavior = IPVERIFY_DENY; // by default
+			} else {
+				pentry->behavior = IPVERIFY_ALLOW;
+			}
 		} else {
 			if ( pDeny && !pAllow ) {
 				pentry->behavior = IPVERIFY_ONLY_DENIES;
@@ -249,6 +253,12 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin )
 			// allow if no HOSTALLOW_* or HOSTDENY_* restrictions 
 			// specified.
 			return TRUE;
+		}
+		
+		if ( PermTypeArray[perm]->behavior == IPVERIFY_DENY ) {
+			// allow if no HOSTALLOW_* or HOSTDENY_* restrictions 
+			// specified.
+			return FALSE;
 		}
 		
 		PermHashTable->lookup(sin_addr,mask);
