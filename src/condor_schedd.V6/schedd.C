@@ -81,6 +81,7 @@ extern bool	operator==( PROC_ID, PROC_ID );
 
 extern char* Spool;
 extern char * Name;
+static char * NameInEnv = NULL;
 extern char * JobHistoryFileName;
 extern char * mySubSystem;
 
@@ -1288,14 +1289,19 @@ Scheduler::negotiate(int, Stream* s)
 		// first, check if this is our local negotiator
 		struct in_addr endpoint_addr = (sock->endpoint())->sin_addr;
 		struct hostent *hent;
-		char *addr;
 		bool match = false;
-		hent = gethostbyname(Negotiator->fullHostname());
-		if (!hent) {
-			dprintf(D_ALWAYS, "gethostbyname for local negotiator (%s) failed!"
-					"  Aborting negotiation.\n", Negotiator->fullHostname());
+		char *negotiator_hostname = Negotiator->fullHostname();
+		if (!negotiator_hostname) {
+			dprintf(D_ALWAYS, "Negotiator hostname lookup failed!");
 			return (!(KEEP_STREAM));
 		}
+		hent = gethostbyname(negotiator_hostname);
+		if (!hent) {
+			dprintf(D_ALWAYS, "gethostbyname for local negotiator (%s) failed!"
+					"  Aborting negotiation.\n", negotiator_hostname);
+			return (!(KEEP_STREAM));
+		}
+		char *addr;
 		if (hent->h_addrtype == AF_INET) {
 			for (int a=0; !match && (addr = hent->h_addr_list[a]); a++) {
 				if (memcmp(addr, &endpoint_addr, sizeof(struct in_addr)) == 0){
@@ -4329,6 +4335,27 @@ SetCkptServerHost(const char *)
 }
 #endif // of ifdef WIN32
 
+/*
+**  Starting with version 6.2.0, we store checkpoints on the checkpoint
+**  server using "owner@scheddName" instead of just "owner".  If the job
+**  was submitted before this change, we need to check to see if its
+**  checkpoint was stored using the old naming scheme.
+*/
+bool
+JobPreCkptServerScheddNameChange(int cluster, int proc)
+{
+	char job_version[150];
+	job_version[0] = '\0';
+	if (GetAttributeString(cluster, proc, ATTR_VERSION, job_version) == 0) {
+		CondorVersionInfo ver(job_version, "JOB");
+		if (ver.built_since_version(6,2,0) &&
+			ver.built_since_date(11,16,2000)) {
+			return false;
+		}
+	}
+	return true;				// default to version compat. mode
+}
+
 void
 cleanup_ckpt_files(int cluster, int proc, const char *owner)
 {
@@ -4377,7 +4404,10 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 			rmdir(ckpt_name);
 		} else {
 			if (universe == STANDARD) {
-				RemoveLocalOrRemoteFile(owner,ckpt_name);
+				RemoveLocalOrRemoteFile(owner,Name,ckpt_name);
+				if (JobPreCkptServerScheddNameChange(cluster, proc)) {
+					RemoveLocalOrRemoteFile(owner,NULL,ckpt_name);
+				}
 			} else {
 				unlink(ckpt_name);
 			}
@@ -4400,7 +4430,10 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 			rmdir(ckpt_name);
 		} else {
 			if (universe == STANDARD) {
-				RemoveLocalOrRemoteFile(owner,ckpt_name);
+				RemoveLocalOrRemoteFile(owner,Name,ckpt_name);
+				if (JobPreCkptServerScheddNameChange(cluster, proc)) {
+					RemoveLocalOrRemoteFile(owner,NULL,ckpt_name);
+				}
 			} else {
 				unlink(ckpt_name);
 			}
@@ -4493,6 +4526,20 @@ Scheduler::Init()
 	}
 
 	dprintf( D_FULLDEBUG, "Using name: %s\n", Name );
+
+		// Put SCHEDD_NAME in the environment, so the shadow can use
+		// it.  (Since the schedd's name may have been set on the
+		// command line, the shadow can't compute the schedd's name on
+		// its own.)  Note that the string we pass to putenv() may
+		// become part of the environment, so we can't free it until we
+		// replace it with a new value.
+	char *OldNameInEnv = NameInEnv;
+	NameInEnv = (char *)malloc(strlen("SCHEDD_NAME=")+strlen(Name)+1);
+	sprintf(NameInEnv, "SCHEDD_NAME=%s", Name);
+	if (putenv(NameInEnv) < 0) {
+		dprintf(D_ALWAYS, "putenv(\"%s\") failed!\n", NameInEnv);
+	}
+	if (OldNameInEnv) free(OldNameInEnv);
 
 	if( AccountantName ) free( AccountantName );
 	if( ! (AccountantName = param("ACCOUNTANT_HOST")) ) {

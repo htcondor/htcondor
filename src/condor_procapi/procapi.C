@@ -34,6 +34,7 @@ pidlistPTR ProcAPI::pidList	= NULL;
 int ProcAPI::pagesize		= 0;
 #ifdef LINUX
 long unsigned ProcAPI::boottime	= 0;
+long unsigned ProcAPI::boottime_expiration = 0;
 #endif // LINUX
 #else // WIN32
 #include "ntsysinfo.h"
@@ -431,9 +432,11 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 		// that the process started...convert jiffies to seconds.
 	start_time = jiffie_start_time / 100;
   
-		// check to see if we've gotten the system boot time before,
-		// and if not, get it:
-	if( boottime == 0 ) {
+	now = secsSinceEpoch();
+
+		// get the system boot time periodically, since it may change
+		// if the time on the machine is adjusted
+	if( boottime_expiration <= now ) {
 		if( (fp = fopen("/proc/stat", "r")) > 0 ) {
 			fgets( s, 256, fp );
 			while( strstr(s, "btime") == NULL ) {
@@ -441,7 +444,10 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 			}
 			sscanf( s, "%s %lu", junk, &boottime );
 			fclose( fp );
-		} else {
+			boottime_expiration = now+60; // update once every minute
+		} else if (boottime == 0) {
+				// we failed to get the boottime, so we must abort
+				// unless we have an old boottime value to fall back on
 			dprintf( D_ALWAYS, "ProcAPI: Problem opening /proc/stat "
 					 "for btime.\n" );
 			delete pi; 
@@ -453,7 +459,6 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 		// now we've got the boottime, the start time, and can get
 		// current time.  Throw 'em all together:  (yucky)
 
-	now = secsSinceEpoch();
 	pi->age = (now - boottime) - start_time;
 
 		// There seems to be something weird about jiffie_start_time
@@ -746,9 +751,17 @@ ProcAPI::do_usage_sampling( piPTR& pi,
 		   last record of the new pid.  That is wrong.  So, we use
 		   each pid's creation time as a secondary identifier to make
 		   sure we've got the right one. Mike & Derek 3/24/99 */
+		/* Allow 2 seconds "slack" on creation time, like we do in
+		   ProcFamily, since (at least on Linux) the value can
+		   oscillate. Jim B. 11/29/00 */
 	phn = NULL;	// clear to NULL before attempting the lookup
-	if( (procHash->lookup( pi->pid, phn ) == 0 ) &&
-		(phn->creation_time == pi->creation_time) )  {
+	if (procHash->lookup( pi->pid, phn ) == 0) {
+		long birth = phn->creation_time - pi->creation_time;
+		if (-2 > birth || birth > 2) {
+			phn = NULL;
+		}
+	}
+	if( phn ) {
 			// success; pid in hash table
 
 			/*	clear the garbage flag.  we need to do this whenever
@@ -984,7 +997,16 @@ ProcAPI::getProcSetInfo( pid_t *pids, int numpids, piPTR& pi ) {
 	initpi ( pi );
 	piPTR temp = NULL;
 	int rval = 0, val = 0;
-	priv_state priv = set_root_priv();
+	priv_state priv;
+
+	if( numpids <= 0 || pids == NULL ) {
+			// We were passed nothing, so there's no work to do and we
+			// should return immediately before we dereference
+			// something we shouldn't be touching.
+		return 0;
+	}
+
+	priv = set_root_priv();
 
 	for( int i=0; i<numpids; i++ ) {
 		val = getProcInfo( pids[i], temp );
@@ -1017,7 +1039,10 @@ ProcAPI::getProcSetInfo( pid_t *pids, int numpids, piPTR& pi ) {
 			break;
 		}
 	}
-	delete temp;
+
+	if( temp ) { 
+		delete temp;
+	}
 	set_priv( priv );
 	return rval;
 }
@@ -1028,6 +1053,15 @@ ProcAPI::getProcSetInfo( pid_t *pids, int numpids, piPTR& pi ) {
 // of all processes at once anyway...
 int
 ProcAPI::getProcSetInfo( pid_t *pids, int numpids, piPTR& pi ) {
+
+    initpi( pi );
+
+	if( numpids <= 0 || pids == NULL ) {
+			// We were passed nothing, so there's no work to do and we
+			// should return immediately before we dereference
+			// something we shouldn't be touching.
+		return 0;
+	}
 
 	DWORD dwStatus;  // return status of fn. calls
 
@@ -1053,7 +1087,6 @@ ProcAPI::getProcSetInfo( pid_t *pids, int numpids, piPTR& pi ) {
     if( !offsets ) {	// If we haven't yet gotten the offsets, grab 'em.
         grabOffsets( pThisObject );
     }
-    initpi( pi );
 
         // create local copy of pids.
 	pid_t *localpids = (pid_t*) malloc ( sizeof (pid_t) * numpids );

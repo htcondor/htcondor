@@ -49,6 +49,7 @@
 extern "C" {
 	void log_checkpoint (struct rusage *, struct rusage *);
 	void log_image_size (int);
+	void log_execute (char *);
 	int access_via_afs (const char *);
 	int access_via_nfs (const char *);
 	int use_local_access (const char *);
@@ -75,6 +76,7 @@ extern int  NumCkpts;
 extern int  NumRestarts;
 extern int MaxDiscardedRunTime;
 extern char *ExecutingHost;
+extern char *scheddName;
 
 int		LastCkptSig = 0;
 
@@ -93,6 +95,7 @@ int has_ckpt_file();
 void update_job_status( struct rusage *localp, struct rusage *remotep );
 void update_job_rusage( struct rusage *localp, struct rusage *remotep );
 void RequestCkptBandwidth(unsigned int ip_addr);
+bool JobPreCkptServerScheddNameChange();
 
 static char Executing_Filesystem_Domain[ MAX_STRING ];
 static char Executing_UID_Domain[ MAX_STRING ];
@@ -116,6 +119,8 @@ extern float BytesSent, BytesRecvd;
 
 const int MaxRetryWait = 3600;
 static bool CkptWanted = true;	// WantCheckpoint from Job ClassAd
+static bool RestoreCkptWithNoScheddName = false; // compat with old naming
+static Daemon Negotiator(DT_NEGOTIATOR);
 
 bool ManageBandwidth = false;   // notify negotiator about network usage?
 
@@ -540,7 +545,10 @@ pseudo_rename(char *from, char *to)
 					// a checkpoint server, if any.
 				if (LastCkptServer) {
 					SetCkptServerHost(LastCkptServer);
-					RemoveRemoteFile(p->owner, to);
+					RemoveRemoteFile(p->owner, scheddName, to);
+					if (JobPreCkptServerScheddNameChange()) {
+						RemoveRemoteFile(p->owner, NULL, to);
+					}
 					free(LastCkptServer);
 					LastCkptServer = NULL; // stored ckpt file on local disk
 				}
@@ -551,7 +559,7 @@ pseudo_rename(char *from, char *to)
 
 	} else {
 
-		if (RenameRemoteFile(p->owner, from, to) < 0)
+		if (RenameRemoteFile(p->owner, scheddName, from, to) < 0)
 			return -1;
 			// if we just wrote a checkpoint to a new checkpoint server,
 			// we should remove any previous checkpoints we left around.
@@ -567,7 +575,10 @@ pseudo_rename(char *from, char *to)
 				   same_host(LastCkptServer, CkptServerHost) == FALSE) {
 				// previous checkpoint is on a different ckpt server
 			SetCkptServerHost(LastCkptServer);
-			RemoveRemoteFile(p->owner, to);
+			RemoveRemoteFile(p->owner, scheddName, to);
+			if (JobPreCkptServerScheddNameChange()) {
+				RemoveRemoteFile(p->owner, NULL, to);
+			}
 			SetCkptServerHost(CkptServerHost);
 		}
 		if (LastCkptServer) free(LastCkptServer);
@@ -614,7 +625,10 @@ pseudo_get_file_stream(
 		SetCkptServerHost(LastCkptServer);
 		retry_wait = 5;
 		do {
-			rval = RequestRestore(p->owner,file,len,
+			rval = RequestRestore(p->owner,
+								  (RestoreCkptWithNoScheddName) ? NULL :
+								  								  scheddName,
+								  file,len,
 								  (struct in_addr*)ip_addr,port);
 			if (rval) { // network error, try again
 				dprintf(D_ALWAYS, "ckpt server restore failed, trying again"
@@ -727,7 +741,7 @@ pseudo_put_file_stream(
 	if (CkptFile && UseCkptServer) {
 		SetCkptServerHost(CkptServerHost);
 		do {
-			rval = RequestStore(p->owner, file, len,
+			rval = RequestStore(p->owner, scheddName, file, len,
 								(struct in_addr*)ip_addr, port);
 			if (rval) {	/* request denied or network error, try again */
 				dprintf(D_ALWAYS, "store request to ckpt server failed, "
@@ -858,7 +872,6 @@ RequestCkptBandwidth(unsigned int ip_addr)
 	sprintf(buf, "%s = %f", ATTR_REQUESTED_CAPACITY,
 			(float)(ImageSize-executable_size)*1024.0);
 	request.Insert(buf);
-	Daemon Negotiator(DT_NEGOTIATOR);
 	SafeSock sock;
 	sock.timeout(10);
 	if (!sock.connect(Negotiator.addr())) {
@@ -905,7 +918,6 @@ RequestRSCBandwidth()
 	// don't bother allocating anything under 1KB
 	if (send_estimate < 1024.0 && recv_estimate < 1024.0) return;
 
-	Daemon Negotiator(DT_NEGOTIATOR);
 	SafeSock sock;
 	sock.timeout(10);
 	if (!sock.connect(Negotiator.addr())) {
@@ -1137,13 +1149,13 @@ pseudo_startup_info_request( STARTUP_INFO *s )
 	s->env = Strdup( p->env );
 	s->iwd = Strdup( p->iwd );
 
-	s->is_restart = has_ckpt_file();
-
 	if (JobAd->LookupBool(ATTR_WANT_CHECKPOINT, s->ckpt_wanted) == 0) {
 		s->ckpt_wanted = TRUE;
 	}
 
 	CkptWanted = s->ckpt_wanted;
+
+	s->is_restart = has_ckpt_file();
 
 	if (JobAd->LookupInteger(ATTR_CORE_SIZE, s->coredump_limit) == 1) {
 		s->coredump_limit_exists = TRUE;
@@ -1260,13 +1272,13 @@ do_get_file_info( char *logical_name, char *actual_url, int allow_complex )
 	/* The incoming logical name might be a simple, relative, or complete path */
 	/* We need to examine both the full path and the simple name. */
 
-	filename_split( logical_name, split_dir, split_file );
+	filename_split( (char*) logical_name, split_dir, split_file );
 	complete_path( logical_name, full_path );
 
 	/* Any name comparisons must check the logical name, the simple name, and the full path */
 
 	if(JobAd->LookupString(ATTR_FILE_REMAPS,remap_list) &&
-	  (filename_remap_find( remap_list, logical_name, remap ) ||
+	  (filename_remap_find( remap_list, (char*) logical_name, remap ) ||
 	   filename_remap_find( remap_list, split_file, remap ) ||
 	   filename_remap_find( remap_list, full_path, remap ))) {
 
@@ -1469,18 +1481,32 @@ int pseudo_get_buffer_info( int *bytes_out, int *block_size_out, int *prefetch_b
 	return 0;
 }
 
+
 /*
   Return process's initial working directory
 */
 int
 pseudo_get_iwd( char *path )
 {
+		/*
+		  Try to log an execute event.  We had made logging the
+		  execute event it's own pseudo syscall, but that broke
+		  compatibility with older versions of Condor.  So, even
+		  though this is still kind of hacky, it should be right,
+		  since all vanilla jobs call this, and all standard jobs call
+		  pseudo_chdir(), before they start executing.  log_execute()
+		  keeps track of itself and makes sure it only really logs the
+		  event once in the lifetime of a shadow.
+		*/
+	log_execute( ExecutingHost );
+
 	PROC	*p = (PROC *)Proc;
 
 	strcpy( path, p->iwd );
 	dprintf( D_SYSCALLS, "\tanswer = \"%s\"\n", p->iwd );
 	return 0;
 }
+
 
 /*
   Return name of checkpoint file for this process
@@ -1542,7 +1568,7 @@ pseudo_get_a_out_name( char *path )
 	// Switch to Condor uid first, since ickpt files are 
 	// stored in the SPOOL directory as user Condor.
 	priv_state old_priv = set_condor_priv();
-	result = access(ICkptName,F_OK | X_OK);
+	result = access(ICkptName,R_OK);
 	set_priv(old_priv);
 
 	if ( result >= 0 ) {
@@ -1569,6 +1595,18 @@ int
 pseudo_chdir( const char *path )
 {
 	int		rval;
+	
+		/*
+		  Try to log an execute event.  We had made logging the
+		  execute event it's own pseudo syscall, but that broke
+		  compatibility with older versions of Condor.  So, even
+		  though this is still kind of hacky, it should be right,
+		  since all standard jobs call this, and all vanilla jobs call
+		  pseudo_get_iwd(), before they start executing.
+		  log_execute() keeps track of itself and makes sure it only
+		  really logs the event once in the lifetime of a shadow.
+		*/
+	log_execute( ExecutingHost );
 
 	dprintf( D_SYSCALLS, "\tpath = \"%s\"\n", path );
 	dprintf( D_SYSCALLS, "\tOrig CurrentWorkingDir = \"%s\"\n", CurrentWorkingDir );
@@ -1592,8 +1630,7 @@ pseudo_chdir( const char *path )
 }
 
 /*
-  Take note of the executing machine's filesystem domain
-*/
+  Take note of the executing machine's filesystem domain */
 int
 pseudo_register_fs_domain( const char *fs_domain )
 {
@@ -1610,6 +1647,17 @@ pseudo_register_uid_domain( const char *uid_domain )
 {
 	strcpy( Executing_UID_Domain, uid_domain );
 	dprintf( D_SYSCALLS, "\tUID_Domain = \"%s\"\n", uid_domain );
+	return 0;
+}
+
+/*
+  Take note that the job is about to start executing and log that to
+  the userlog
+*/
+int
+pseudo_register_begin_execution( void )
+{
+	log_execute( ExecutingHost );
 	return 0;
 }
 
@@ -1716,6 +1764,27 @@ access_via_nfs( const char *file )
 	return TRUE;
 }
 
+/*
+**  Starting with version 6.2.0, we store checkpoints on the checkpoint
+**  server using "owner@scheddName" instead of just "owner".  If the job
+**  was submitted before this change, we need to check to see if its
+**  checkpoint was stored using the old naming scheme.
+*/
+bool
+JobPreCkptServerScheddNameChange()
+{
+	char job_version[150];
+	job_version[0] = '\0';
+	if (JobAd && JobAd->LookupString(ATTR_VERSION, job_version)) {
+		CondorVersionInfo ver(job_version, "JOB");
+		if (ver.built_since_version(6,2,0) &&
+			ver.built_since_date(11,16,2000)) {
+			return false;
+		}
+	}
+	return true;				// default to version compat. mode
+}
+
 int
 has_ckpt_file()
 {
@@ -1725,12 +1794,19 @@ has_ckpt_file()
 	long	accum_usage;
 
 	if (p->universe != STANDARD) return 0;
+	if (!CkptWanted) return 0;
 	accum_usage = p->remote_usage[0].ru_utime.tv_sec +
 		p->remote_usage[0].ru_stime.tv_sec;
 	priv = set_condor_priv();
 	do {
 		SetCkptServerHost(LastCkptServer);
-		rval = FileExists(RCkptName, p->owner);
+		rval = FileExists(RCkptName, p->owner, scheddName);
+		if (rval == 0 && JobPreCkptServerScheddNameChange()) {
+			rval = FileExists(RCkptName, p->owner, NULL);
+			if (rval == 1) {
+				RestoreCkptWithNoScheddName = true;
+			}
+		}
 		if(rval == -1 && LastCkptServer && accum_usage > MaxDiscardedRunTime) {
 			dprintf(D_ALWAYS, "failed to contact ckpt server, trying again"
 					" in %d seconds\n", retry_wait);

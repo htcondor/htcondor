@@ -62,6 +62,9 @@ float	BytesSent = 0.0, BytesRecvd = 0.0;
 extern "C" void
 log_execute (char *host)
 {
+	if( WroteExecuteEvent ) {
+		return;
+	}
 	// log execute event
 	ExecuteEvent event;
 	strcpy (event.executeHost, host);

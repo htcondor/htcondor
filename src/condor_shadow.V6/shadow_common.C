@@ -82,6 +82,7 @@ extern char    TmpCkptName[];
 extern int             MyPid;
 extern char    *Spool;
 extern char    RCkptName[];
+extern int ShadowBDate;
 extern int LastRestartTime;
 extern int CommittedTime;
 extern int NumCkpts;
@@ -102,7 +103,8 @@ extern char    *MailerPgm;
 extern char My_UID_Domain[];
 
 ClassAd *JobAd = NULL;			// ClassAd which describes this job
-extern char *schedd;
+extern char *schedd, *scheddName;
+extern "C" bool JobPreCkptServerScheddNameChange();
 
 void
 NotifyUser( char *buf, PROC *proc )
@@ -199,7 +201,7 @@ NotifyUser( char *buf, PROC *proc )
 				if (JobAd) {
 					JobAd->LookupFloat(ATTR_JOB_REMOTE_WALL_CLOCK, run_time);
 				}
-				run_time += proc->completion_date - LastRestartTime;
+				run_time += proc->completion_date - ShadowBDate;
 				
 				fprintf(mailer, "\tRun Time:            %s\n",
 						d_format_time(run_time));
@@ -339,9 +341,14 @@ unlink_local_or_ckpt_server( char *file )
                    should do that anyway??? */
 				/* We only need to check the server for standard universe 
 				   jobs. -Jim B. */
-                dprintf( D_FULLDEBUG, "Remove from ckpt server returns %d\n",
-                                RemoveRemoteFile(Proc->owner, file));
+			rval = RemoveRemoteFile(Proc->owner, scheddName, file);
+			if (JobPreCkptServerScheddNameChange()) {
+				rval = RemoveRemoteFile(Proc->owner, NULL, file);
+			}
+			dprintf( D_FULLDEBUG, "Remove from ckpt server returns %d\n",
+					 rval );
         }
+		return rval;
 }
 
 

@@ -105,35 +105,6 @@ Match::vacate()
 }
 
 
-int
-Match::send_accountant( int cmd )
-{
-	if( !accountant_host ) {
-		return FALSE;
-	}
-	ReliSock sock;
-	sock.timeout( 30 );
-	if( ! sock.connect( accountant_host, ACCOUNTANT_PORT ) ) {
-		dprintf(D_ALWAYS, "Couldn't connect to accountant\n");
-		return FALSE;
-	}
-	if( !sock.put( cmd ) ) {
-		dprintf(D_ALWAYS, "Can't send command (%d) to accountant\n", cmd ); 
-		return FALSE;
-	}
-	if( !sock.put( m_cap->capab() ) ) {
-		dprintf(D_ALWAYS, "Can't send capability to accountant\n");
-		return FALSE;
-	}
-	if( !sock.eom() ) {
-		dprintf(D_ALWAYS, "Can't send EOM to accountant\n");
-		return FALSE;
-	}
-	sock.close();
-	return TRUE;
-}
-
-
 void
 Match::publish( ClassAd* ad, amask_t how_much )
 {
@@ -245,10 +216,27 @@ Match::match_timed_out()
 
 	if( rip->r_cur->cap()->matches( capab() ) ) {
 		if( rip->state() != matched_state ) {
-			EXCEPT( "Current match timed out but not in matched state." );
+				/* 
+				   This used to be an EXCEPT(), since it really
+				   shouldn't ever happen.  However, it kept happening,
+				   and we couldn't figure out why.  For now, just log
+				   it and silently ignore it, since there's no real
+				   harm done, anyway.  We use D_FULLDEBUG, since we
+				   don't want people to worry about it if they see it
+				   in D_ALWAYS in the 6.2.X stable series.  However,
+				   in the 6.3 series, we should probably try to figure 
+				   out what's going on with this, for example, by
+				   sending email at this point with the last 300 lines
+				   of the log file or something.  -Derek 10/9/00
+				*/
+			dprintf( D_FULLDEBUG, 
+					 "WARNING: Current match timed out but in %s state.",
+					 state_to_string(rip->state()) );
+			return FALSE;
 		}
 		delete rip->r_cur;
 		rip->r_cur = new Match( rip );
+		dprintf( D_ALWAYS, "State change: match timed out\n" );
 		rip->change_state( owner_state );
 	} else {
 			// The match that timed out was the preempting match.
@@ -308,6 +296,9 @@ Match::claim_timed_out()
 		delete m_client;
 		m_client = NULL;
 	}
+
+	dprintf( D_ALWAYS, "State change: claim timed out (condor_schedd gone?)\n" );
+
 		// Kill the claim.
 	rip->kill_claim();
 	return TRUE;

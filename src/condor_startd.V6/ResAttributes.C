@@ -281,6 +281,8 @@ MachAttributes::benchmark( Resource* rip, int force )
 			return;
 		}
 			// Enter benchmarking activity
+		dprintf( D_ALWAYS, "State change: %s is TRUE\n", 
+				 ATTR_RUN_BENCHMARKS );
 		rip->change_state( benchmarking_act );
 	}
 
@@ -313,6 +315,7 @@ MachAttributes::benchmark( Resource* rip, int force )
 	m_last_benchmark = (int)time(NULL);
 
 	if( ! force ) {
+		dprintf( D_ALWAYS, "State change: benchmarks completed\n" );
 		rip->change_state( idle_act );
 	}
 }

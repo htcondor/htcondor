@@ -125,6 +125,7 @@ int  PeriodicSync;
 int  SlowCkptSpeed;
 char *CkptServerHost = NULL;
 char *LastCkptServer = NULL;
+int  ShadowBDate = -1;
 int  LastRestartTime = -1;		// time_t when job last restarted from a ckpt
 								// or completed a periodic ckpt
 int  LastCkptTime = -1;			// time when job last completed a ckpt
@@ -151,15 +152,11 @@ GENERIC_PROC GenProc;
 
 extern "C"  void initializeUserLog();
 extern "C"  void log_termination(struct rusage *, struct rusage *);
-extern "C"  void log_execute(char *);
 extern "C"  void log_except(char *);
-
-int		TryLogExecute = 0;
 
 char	*Spool = NULL;
 char	*ExecutingHost = NULL;
 char	*GlobalCap = NULL;
-char	*MailerPgm = NULL;
 
 // count of total network bytes previously send and received for this
 // job from previous runs (i.e., includes ckpt transfers)
@@ -234,7 +231,7 @@ usage()
 
 extern ClassAd *JobAd;
 
-char*		schedd = NULL;
+char		*schedd = NULL, *scheddName = NULL;
 
 /*ARGSUSED*/
 main(int argc, char *argv[], char *envp[])
@@ -284,7 +281,7 @@ main(int argc, char *argv[], char *envp[])
 		}
 	}
 
-	LastRestartTime = time(0);
+	ShadowBDate = LastRestartTime = time(0);
 
 	/* Start up with condor.condor privileges. */
 	set_condor_priv();
@@ -353,6 +350,7 @@ main(int argc, char *argv[], char *envp[])
 		}
 		regular_setup( host, cluster, proc, capability );
 	}
+	scheddName = getenv("SCHEDD_NAME");
 
 	GlobalCap = strdup(capability);
 
@@ -500,11 +498,6 @@ main(int argc, char *argv[], char *envp[])
 		}
 	}
 
-	MailerPgm = param( "MAIL" );
-	if( MailerPgm == NULL ) {
-		MailerPgm = "/bin/mail";
-	}
-
 	// Install signal handlers such that all signals are blocked when inside
 	// the handler.
 	sigset_t fullset;
@@ -590,11 +583,6 @@ HandleSyscalls()
 
 		if( cnt < 0 && errno == EINTR ) {
 			continue;
-		}
-
-		if( TryLogExecute ) {
-			log_execute( ExecutingHost );
-			TryLogExecute = 0;
 		}
 
 		if( FD_ISSET(CLIENT_LOG, &readfds) ) {
@@ -1176,24 +1164,6 @@ reaper()
 			);
 		}
 	}
-		
-		/* 
-
-		   Set a flag so we try to log a ULOG_EXECUTE event the next
-		   time we return from select().  We do this here because the
-		   only children the shadow has are from the old file transfer
-		   protocol, and the first time one of those children exits is
-		   when the initial checkpoint has been completely transfered
-		   to the remote machine.  Doing it this way, instead ofas
-		   soon as the shadow spawns, gives much more accurate timing
-		   in the UserLog.  The execute event will only happen once,
-		   b/c log_execute() is only called in the parent shadow
-		   process, and it has its own flag to ensure it only logs
-		   once.
-		   Derek Wright <wright@cs.wisc.edu>
-		*/
-	TryLogExecute = 1;
-
 
 #ifdef HPUX
 #define _BSD

@@ -31,6 +31,7 @@ int pseudo_register_arch( const char *arch );
 int pseudo_register_opsys( const char *opsys );
 int pseudo_register_ckpt_server( const char *host );
 int pseudo_register_syscall_version( const char *version );
+int pseudo_register_begin_execution( void );
 int pseudo_get_ckpt_mode( int sig );
 int pseudo_getppid();
 int pseudo_getpid();

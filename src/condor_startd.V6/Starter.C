@@ -46,12 +46,15 @@ Starter::Starter( Resource* rip )
 
 Starter::~Starter()
 {
-	free( s_name );
+	if (s_name) {
+		free( s_name );
+	}
 	if( s_procfam ) {
 		delete s_procfam;
 	}
 	if( s_pidfamily ) {
 		delete [] s_pidfamily;
+		s_pidfamily = NULL;
 	}
 }
 
@@ -433,7 +436,10 @@ Starter::exited()
 
 		// Finally, we can free up our memory and data structures.
 	s_pid = 0;
-	free( s_name );
+	if ( s_name ) {
+		free( s_name );
+		s_name = NULL;
+	}
 	s_name = NULL;
 
 	if( s_procfam ) {
@@ -636,6 +642,10 @@ Starter::recompute_pidfamily()
 	s_procfam->takesnapshot();
 	if( s_pidfamily ) {
 		delete [] s_pidfamily;
+		s_pidfamily = NULL;
 	}
 	s_family_size = s_procfam->currentfamily( s_pidfamily );
+	if( ! s_family_size ) {
+		dprintf( D_ALWAYS, "WARNING: No processes found in starter's family\n" );
+	}
 }

@@ -155,8 +155,6 @@ char	*NiceUser		= "nice_user";
 char	*X509UserProxy	= "x509userproxy";
 char	*X509Directory	= "x509directory";
 char	*GlobusScheduler = "globusscheduler";
-char	*GlobusArguments = "globusarguments";
-char	*GlobusExecutable = "globusexecutable";
 char	*GlobusRSL = "globusrsl";
 char	*RendezvousDir	= "rendezvousdir";
 char	*SsleayConf	= "ssleayconf";
@@ -183,6 +181,7 @@ char	*KillSig			= "kill_sig";
 void 	reschedule();
 void 	SetExecutable();
 void 	SetUniverse();
+void	SetMachineCount();
 void 	SetImageSize();
 int 	calc_image_size( char *name);
 int 	find_cmd( char *name );
@@ -509,7 +508,7 @@ main( int argc, char *argv[] )
 		exit( 1 );
 	}
 
-	if ( ActiveQueueConnection == TRUE && !DisconnectQ(0) ) {
+	if ( !DisconnectQ(0) ) {
 		fprintf(stderr, "\nERROR: Failed to commit job submission into the queue.\n");
 		exit(1);
 	}
@@ -641,16 +640,7 @@ SetExecutable()
 	char	*ename = NULL;
 	char	*copySpool = NULL;
 
-#if !defined(WIN32)
-		//Allow GlobusExecutable to override executable
-	if ( JobUniverse == GLOBUS_UNIVERSE ) {
-		ename = condor_param( GlobusExecutable );
-	}
-#endif
-
-	if ( ename == NULL ) {
-		ename = condor_param(Executable);
-	}
+	ename = condor_param(Executable);
 
 
 	if( ename == NULL ) {
@@ -736,15 +726,12 @@ void
 SetUniverse()
 {
 	char	*univ;
-	char	*mach_count;
-	char	*ptr;
 
 	univ = condor_param(Universe);
 
 #if !defined(WIN32)
 	if( univ && stricmp(univ,"pvm") == MATCH ) 
 	{
-		int tmp;
 		char *pvmd = param("PVMD");
 
 		if (!pvmd || access(pvmd, R_OK|X_OK) != 0) {
@@ -766,31 +753,6 @@ SetUniverse()
 		InsertJobExpr (buffer);
 		InsertJobExpr ("Checkpoint = 0");
 
-		mach_count = condor_param(MachineCount);
-
-		if (mach_count != NULL) {
-			for (ptr = mach_count; *ptr && *ptr != '.'; ptr++) ;
-			if (*ptr != '\0') {
-				*ptr = '\0';
-				ptr++;
-			}
-
-			tmp = atoi(mach_count);
-			(void) sprintf (buffer, "%s = %d", ATTR_MIN_HOSTS, tmp);
-			InsertJobExpr (buffer);
-			
-			for ( ; !isdigit(*ptr) && *ptr; ptr++) ;
-			if (*ptr != '\0') {
-				tmp = atoi(ptr);
-			}
-
-			(void) sprintf (buffer, "%s = %d", ATTR_MAX_HOSTS, tmp);
-			InsertJobExpr (buffer);
-			free(mach_count);
-		} else {
-			InsertJobExpr ("MinHosts = 1");
-			InsertJobExpr ("MaxHosts = 1");
-		}
 		free(univ);
 		return;
 	};
@@ -801,24 +763,6 @@ SetUniverse()
 		InsertJobExpr (buffer);
 		InsertJobExpr ("Checkpoint = 0");
 		
-		mach_count = condor_param( MachineCount );
-		
-		int tmp;
-		if ( mach_count != NULL ) {
-			tmp = atoi(mach_count);
-			free(mach_count);
-		}
-		else {
-			fprintf(stderr, "No machine_count specified!\n" );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
-
-		(void) sprintf (buffer, "%s = %d", ATTR_MIN_HOSTS, tmp);
-		InsertJobExpr (buffer);
-		(void) sprintf (buffer, "%s = %d", ATTR_MAX_HOSTS, tmp);
-		InsertJobExpr (buffer);
-
 		free(univ);
 		return;
 	}
@@ -880,6 +824,64 @@ SetUniverse()
 	}
 
 	return;
+}
+
+void
+SetMachineCount()
+{
+	char	*mach_count;
+	char	*ptr;
+
+	if (JobUniverse == PVM) {
+
+		mach_count = condor_param(MachineCount);
+
+		int tmp;
+		if (mach_count != NULL) {
+			for (ptr = mach_count; *ptr && *ptr != '.'; ptr++) ;
+			if (*ptr != '\0') {
+				*ptr = '\0';
+				ptr++;
+			}
+
+			tmp = atoi(mach_count);
+			(void) sprintf (buffer, "%s = %d", ATTR_MIN_HOSTS, tmp);
+			InsertJobExpr (buffer);
+			
+			for ( ; !isdigit(*ptr) && *ptr; ptr++) ;
+			if (*ptr != '\0') {
+				tmp = atoi(ptr);
+			}
+
+			(void) sprintf (buffer, "%s = %d", ATTR_MAX_HOSTS, tmp);
+			InsertJobExpr (buffer);
+			free(mach_count);
+		} else {
+			InsertJobExpr ("MinHosts = 1");
+			InsertJobExpr ("MaxHosts = 1");
+		}
+
+	} else if (JobUniverse == MPI) {
+
+		mach_count = condor_param( MachineCount );
+		
+		int tmp;
+		if ( mach_count != NULL ) {
+			tmp = atoi(mach_count);
+			free(mach_count);
+		}
+		else {
+			fprintf(stderr, "No machine_count specified!\n" );
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
+
+		(void) sprintf (buffer, "%s = %d", ATTR_MIN_HOSTS, tmp);
+		InsertJobExpr (buffer);
+		(void) sprintf (buffer, "%s = %d", ATTR_MAX_HOSTS, tmp);
+		InsertJobExpr (buffer);
+
+	}
 }
 
 // Note: you must call SetTransferFiles() *before* calling SetImageSize().
@@ -1363,16 +1365,7 @@ SetArguments()
 {
 	char	*args = NULL;
 
-#if !defined(WIN32)
-	//allow GlobusArguments to override arguments
-	if ( JobUniverse == GLOBUS_UNIVERSE ) {
-		args = condor_param(GlobusArguments);
-	}
-#endif
-
-	if ( args == NULL ) {
-		args = condor_param(Arguments);
-	}
+	args = condor_param(Arguments);
 
 	if( args == NULL ) {
 		args = strdup("");
@@ -2026,8 +2019,7 @@ read_condor_file( FILE *fp )
 
 		lower_case( name );
 
-		if ( (strcmp(name, Executable) == 0)
-			|| ( strcmp(name, GlobusExecutable) == 0) )
+		if ( strcmp(name, Executable) == 0 )
 		{
 			NewExecutable = true;
 		}
@@ -2047,26 +2039,15 @@ condor_param( char *name )
 {
 	char *pval = lookup_macro(name, ProcVars, PROCVARSIZE);
 
-
 	if( pval == NULL ) {
 		return( NULL );
 	}
 
-	//DON'T expand values that start with "globus", they need to
-	//be passed unexpanded to globusrun
-	if ( strncasecmp( name, "GLOBUS", strlen( "GLOBUS" ) ) ) {
-		pval = expand_macro(pval, ProcVars, PROCVARSIZE);
+	pval = expand_macro(pval, ProcVars, PROCVARSIZE);
 
-		if (pval == NULL) {
-			fprintf(stderr, "\nERROR: Failed to expand macros in: %s\n", name);
-			exit(1);
-		}
-	} else {
-		// expand_macro() returns a newly-allocated string while
-		// lookup_macro() doesn't. So if we're skipping expand_macro(), we
-		// need to allocate a new copy of the string.
-		if ( pval != NULL )
-			pval = strdup( pval );
+	if (pval == NULL) {
+		fprintf(stderr, "\nERROR: Failed to expand macros in: %s\n", name);
+		exit(1);
 	}
 
 	return( pval );
@@ -2172,6 +2153,7 @@ queue(int num)
 			SetUniverse();
 			SetExecutable();
 		}
+		SetMachineCount();
 		if ( JobUniverse == GLOBUS_UNIVERSE ) {
 			char *proxy_file = condor_param( X509UserProxy );
 			char *rm_contact = condor_param( GlobusScheduler );

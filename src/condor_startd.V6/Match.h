@@ -98,9 +98,6 @@ public:
 		// Operations you can perform on a Match
 	void vacate();	// Send a vacate command to the client of this match
 	void alive();	// Process a keep alive for this match
-		// Send the given cmd to the accountant, followed by the
-		// capability of this match. 
-	int	send_accountant( int );	
 
 	void publish( ClassAd*, amask_t );
 

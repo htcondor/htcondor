@@ -98,7 +98,6 @@ getReliSock (Sock *&sock, char *addr, int timeOut)
 
 	if (!(rSock = new ReliSock))
 	{
-		delete rSock;
 		return false;
 	}
 

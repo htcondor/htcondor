@@ -295,6 +295,13 @@ Resource::starter_exited( void )
 		// would send it SIGKILL.
 	cancel_kill_timer();
 
+		// All of the potential paths from here result in a state
+		// change, and all of them are triggered by the starter
+		// exiting, so let folks know that happened.  The logic in
+		// leave_preempting_state() is more complicated, and we'll
+		// describe why we make the change we do in there.
+	dprintf( D_ALWAYS, "State change: starter exited\n" );
+
 	State s = state();
 	switch( s ) {
 	case claimed_state:
@@ -372,8 +379,17 @@ Resource::leave_preempting_state( void )
 				// Only if it's defined and false do we consider the
 				// machine busy.  We have a job ad, so local
 				// evaluation gotchas don't apply here.
+			dprintf( D_ALWAYS, 
+					 "State change: preempting match refused - START is false\n" );
 			allow_it = false;
+		} else {
+			dprintf( D_ALWAYS, 
+					 "State change: preempting match exists - "
+					 "START is true or undefined\n" );
 		}
+	} else {
+		dprintf( D_ALWAYS, 
+				 "State change: No preempting match, returning to owner\n" );
 	}
 
 	if( allow_it ) {
@@ -563,6 +579,7 @@ Resource::wants_vacate( void )
 			// Derek Wright <wright@cs.wisc.edu>, 6/21/00
 		dprintf( D_FULLDEBUG,
 				 "In Resource::wants_vacate() w/o a job, returning TRUE\n" );
+		dprintf( D_ALWAYS, "State change: no job, WANT_VACATE considered TRUE\n" );
 		return 1;
 	}
 
@@ -570,6 +587,8 @@ Resource::wants_vacate( void )
 		if( r_classad->EvalBool("WANT_VACATE_VANILLA",
 								r_cur->ad(),
 								want_vacate ) ) { 
+			dprintf( D_ALWAYS, "State change: WANT_VACATE_VANILLA is %s\n",
+					 want_vacate ? "TRUE" : "FALSE" );
 			unknown = false;
 		}
 	} 
@@ -594,6 +613,8 @@ Resource::wants_vacate( void )
 				// if we've got this defined. -Derek Wright 4/12/00
 			EXCEPT( "WANT_VACATE undefined in internal ClassAd" );
 		}
+		dprintf( D_ALWAYS, "State change: WANT_VACATE is %s\n",
+				 want_vacate ? "TRUE" : "FALSE" );
 	}
 	return want_vacate;
 }

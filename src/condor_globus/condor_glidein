@@ -3,8 +3,7 @@
 
 	##these are the files that need to be staged on the remote machine
 $config = "condor_config.glidein";
-@DAEMONS = ( "condor_master", "condor_startd", "condor_starter",
-		"condor_starter.pvm", "condor_pvmd" );
+@DAEMONS = ( "condor_master", "condor_startd", "condor_starter" );
 
 	##contact string for globus gass server...Change 'do_remote_setup()' if
 	##you change the method of file staging (e.g. gass to gsiftp)
@@ -57,23 +56,29 @@ sub do_submit() {
 	if ( $queue ) {
 		$GLOBUSRSL .= "(queue=$queue)";
 	}
+	if ( $project ) {
+		$GLOBUSRSL .= "(project=$project)";
+	}
+	if ( $run_time ) {
+		$GLOBUSRSL .= "(maxTime=$run_time)";
+	}
+	if ( $memory ) {
+		$GLOBUSRSL .= "(maxMemory=$memory)";
+	}
 	if ( $cpucount > 1 ) {
 			##claim N cpus, but only run one copy of the program
 		$GLOBUSRSL .= "(count=$cpucount)(jobtype=single)";
 	}
-	$GLOBUSRSL .= "(rsl_substitution=(BASEDIR $basedir)(ARCHDIR $archdir))";
 
 	$GLOBUSENV = "(environment=";
-	$GLOBUSENV .= "(CONDOR_CONFIG \$(BASEDIR)/$config)";
+	$GLOBUSENV .= "(CONDOR_CONFIG $basedir/$config)";
 	$GLOBUSENV .= "(_condor_CONDOR_HOST $CONDOR_HOST)";
 
 	chomp( $my_hostname = `$G_HOSTNAME` );
 	$GLOBUSENV .= "(_condor_GLIDEIN_HOST $my_hostname)";
 
-		##need to specify basedir because globusrun doesn't expand $(HOME)
-		##in the env list, only in args and exec lines!!!!!
 	$GLOBUSENV .= "(_condor_LOCAL_DIR $localdir)";
-	$GLOBUSENV .= "(_condor_SBIN \$(ARCHDIR))";
+	$GLOBUSENV .= "(_condor_SBIN $archdir)";
 
 		##if submitting to Condor scheduler under Globus, don't want "queue <n>"
 		##starting <n> copies, EACH asking for <n> CPUs, that would give us
@@ -87,8 +92,12 @@ sub do_submit() {
 	$GLOBUSENV .= "(_condor_UID_DOMAIN $UID_DOMAIN )";
 	$GLOBUSENV .= "(_condor_FILESYSTEM_DOMAIN $UID_DOMAIN )";
 	$GLOBUSENV .= "(_condor_MAIL $mail_arch )";
-	if ( $run_for != 0 ) {
-		$GLOBUSENV .= "(_condor_STARTD_NOCLAIM_SHUTDOWN " . ($run_for * 60) . ")";
+	if ( $idle_time != 0 ) {
+		$GLOBUSENV .= "(_condor_STARTD_NOCLAIM_SHUTDOWN " . ($idle_time * 60) . ")";
+	}
+	if ( $memory ) {
+		$kmem = $memory * 1024;
+		$GLOBUSENV .= "(_condor_MEMORY $kmem)";
 	}
 	if ( $anybody ) {
 		$GLOBUSENV .= "(_condor_START  True)";
@@ -98,6 +107,11 @@ sub do_submit() {
 	}
 	$GLOBUSENV .= ")";
 
+		##Escape '$' in submit file entries
+	$archdir =~ s/\$/\$(DOLLAR)/g;
+	$GLOBUSRSL =~ s/\$/\$(DOLLAR)/g;
+	$GLOBUSENV =~ s/\$/\$(DOLLAR)/g;
+
 		##generate condor_submit description file
 #	open( SUBMIT, ">sub3" );
 	open( SUBMIT, "|$submit" );
@@ -105,14 +119,12 @@ sub do_submit() {
 Getenv = True
 Universe = Globus
 
-#replace executable with GlobusExecutable for non-expansion of Globus macros
-GlobusExecutable = $archdir/condor_master
+Executable = $archdir/condor_master
 
-#replace arguments with GlobusArguments for non-expansion of Globus macros
-#GlobusArguments = -dyn -f -n $SUBDIR
-GlobusArguments = -dyn -f 
+#Arguments = -dyn -f -n $SUBDIR
+Arguments = -dyn -f 
 
-GlobusRSL = $GLOBUSRSL $GLOBUSENV
+GlobusRSL = ${GLOBUSRSL}${GLOBUSENV}
 
 GlobusScheduler = $CONTACT
 Queue
@@ -219,8 +231,11 @@ print STDERR "	Valid options:\n"
 . "   --setuponly|--runonly	Setup and exit  |  No setup, just run\n"
 . "   --scheduler <scheduler> Globus scheduler  [default=fork]\n"
 . "   --queue <queue>         Queue to use on Globus scheduler\n"
+. "   --project <project>     Project to use on Globus resource\n"
+. "   --memory <Mbytes>       Amount of memory to request\n"
 . "   --count <CPU count>     Number of CPUs to request [default=1]\n"
-. "   --runfor <mins>         Remote daemons exit gracefully after <mins>\n"
+. "   --runtime <mins>        Maximum run time on Globus resource\n"
+. "   --idletime <mins>       Remote daemons exit gracefully after <mins>\n"
 . "                            without running a Condor job [default=20]\n"
 . "   --anybody               Allow any user to run jobs on your glideins\n"
 . "   --admin <email address> Who to email with problems [default=<you>]\n"
@@ -233,7 +248,7 @@ sub parse_command_line() {
 		#parse command line options
 	($NAME = $0) =~ s/.*\///; ## strip off directory path...
 	$scheduler = "fork";
-	$run_for = 20;
+	$idle_time = 20;
 	$cpucount = 1;
 	$basedir = '$(HOME)/Condor_glidein';
 	##don't set default archdir because it is built below from pool version, arch
@@ -251,8 +266,11 @@ sub parse_command_line() {
 		"runonly" => \$runonly,
 		"scheduler=s" => \$scheduler,
 		"queue=s" => \$queue,
+		"project=s" => \$project,
+		"memory=i" => \$memory,
 		"count=i" => \$cpucount,
-		"runfor=i" => \$run_for,
+		"runtime=i" => \$run_time,
+		"idletime=i" => \$idle_time,
 		"anybody" => \$anybody,
 		"admin=s" => \$CONDOR_ADMIN,
 		"genconfig" => \$gen_config,
@@ -378,7 +396,7 @@ sub host_info()
 	##Search MDS only if we don't have a full contact string
 	if ( $CONTACT !~ /.+:\d+\/.+:.+/ ) {
 
-		open( SEARCH, "$G_SEARCH -h $GLOBUSHOST -p 2135 -R '(hn=$GLOBUSHOST)'|" );
+		open( SEARCH, "$G_SEARCH -h $GLOBUSHOST -p 2135 -b 'o=Grid' -R '(hn=$GLOBUSHOST)'|" );
 		@SEARCH = <SEARCH>;
 		close( SEARCH );
 

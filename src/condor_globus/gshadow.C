@@ -206,9 +206,20 @@ main( int argc, char *argv[] ) {
 		}
 		chomp( status );
 
-		//I might have to close stderr at this point, a bug in globus reports
-		//Error to stderr, but nothing to stdout. 
-		//I am currently using a modified Globusrun until they fix the bug.
+		rc = pclose( statusfp );
+//globusrun returns 79 when the jobmanager can't be contacted
+//   (i.e. when a job has exitted)
+/*
+		if ( rc ) {
+			fprintf( stderr, "globusrun exited with status %d on job status check\n", rc );
+			exit( 10 );
+		}
+*/
+		//In Globus 1.1.1 and earlier, on certain errors, globusrun will
+		//exit with a false status of 0 (success). In these cases, nothing
+		//is printed to stdout. To work with these versions of Globus, we
+		//should treat empty stdout as an error (otherwise, we may end up
+		//with an infinite loop..
 
 		if ( !strncasecmp( status, "ERROR", 5 ) ) {
 			strcpy( status, "DONE" ); 

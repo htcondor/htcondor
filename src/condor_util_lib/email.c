@@ -260,7 +260,6 @@ email_open_implementation(char *Mailer, char *final_command)
 		const char *condor_name;
 		uid_t condor_uid;
 		gid_t condor_gid;
-		char **envp = NULL;
 
 		/* XXX This must be the FIRST thing in this block of code. For some
 			reason, at least on IRIX65, this forked process
@@ -280,13 +279,6 @@ email_open_implementation(char *Mailer, char *final_command)
 			user dir somewhere and not readable by the Condor Account. */
 		chdir("/");
 		umask(0);
-
-		/* Need to do some OS hackery */
-		#if defined(IRIX)
-			envp = _environ;
-		#else
-			envp = environ;
-		#endif
 
 		/* Change my userid permanently to "condor" */
 		/* WARNING  This code must happen before the close/dup operation. */
@@ -308,17 +300,29 @@ email_open_implementation(char *Mailer, char *final_command)
 		/* prop up the environment with goodies to get the Mailer to do the
 			right thing */
 		condor_name = get_condor_username();
+
+		/* Should be snprintf() but we don't have it for all platforms */
 		sprintf(pe_logname,"LOGNAME=%s", condor_name);
-		putenv(pe_logname);
+		if (putenv(pe_logname) != 0)
+		{
+			EXCEPT("EMAIL PROCESS: Unable to insert LOGNAME=%s into "
+				" environment correctly: %s\n", pe_logname, strerror(errno));
+		}
+
+		/* Should be snprintf() but we don't have it for all platforms */
 		sprintf(pe_user,"USER=%s", condor_name);
-		putenv(pe_user);
+		if( putenv(pe_user) != 0)
+		{
+			EXCEPT("EMAIL PROCESS: Unable to insert USER=%s into "
+				" environment correctly: %s\n", pe_user, strerror(errno));
+		}
 
 		/* invoke the mailer */
-		execle("/bin/sh", "sh", "-c", final_command, NULL, envp);
+		execl("/bin/sh", "sh", "-c", final_command, NULL);
 
 		/* I hope this EXCEPT gets recorded somewhere */
-		EXCEPT("EMAIL PROCESS: Could not exec mailer with %s because: %s", 
-			"/bin/sh", strerror(errno));
+		EXCEPT("EMAIL PROCESS: Could not exec mailer with %s with command %s because: %s.", 
+			"/bin/sh", final_command, strerror(errno));
 	}
 
 	/* for completeness */
@@ -397,18 +401,14 @@ email_close(FILE *mailer)
 	*/
 	prev_umask = umask(022);
 	/* 
-	** On many Unix platforms, we cannot use
-	** 'pclose()' here: it does its own wait, and messes
-    ** with our handling of SIGCHLD! So do fclose() instead.
-	** Except on HPUX & Win32, pclose() is both safe and required.
+	** we fclose() on UNIX, pclose on win32 
 	*/
-#if defined(HPUX) 
-	pclose( mailer );
-#elif defined(WIN32)
+#if defined(WIN32)
 	if (EMAIL_FINAL_COMMAND == NULL) {
 		pclose( mailer );
 	} else {
 		char *email_filename = NULL;
+		/* Should this be a pclose??? -Erik 9/21/00 */ 
 		fclose( mailer );
 		dprintf(D_FULLDEBUG,"Sending email via system(%s)\n",
 			EMAIL_FINAL_COMMAND);

@@ -836,6 +836,8 @@ Daemons::InitParams()
 				// The path to this daemon has changed in the config
 				// file, we will need to start the new version.
 			daemon_ptr[i]->newExec = TRUE;
+		}
+		if (tmp) {
 			free( tmp );
 			tmp = NULL;
 		}

@@ -42,6 +42,8 @@ command_handler( Service*, int cmd, Stream* stream )
 		// RELEASE_CLAIM only makes sense in two states
 	if( cmd == RELEASE_CLAIM ) {
 		if( (s == claimed_state) || (s == matched_state) ) {
+			rip->dprintf( D_ALWAYS, 
+						  "State change: received RELEASE_CLAIM command\n" );
 			return rip->release_claim();
 		} else {
 			rip->log_ignore( cmd, s );
@@ -158,9 +160,11 @@ command_vacate_all( Service*, int cmd, Stream* )
 	dprintf( D_ALWAYS, "command_vacate_all() called.\n" );
 	switch( cmd ) {
 	case VACATE_ALL_CLAIMS:
+		dprintf( D_ALWAYS, "State change: received VACATE_ALL_CLAIMS command\n" );
 		resmgr->walk( &Resource::release_claim );
 		break;
 	case VACATE_ALL_FAST:
+		dprintf( D_ALWAYS, "State change: received VACATE_ALL_FAST command\n" );
 		resmgr->walk( &Resource::kill_claim );
 		break;
 	default:
@@ -292,6 +296,8 @@ command_name_handler( Service*, int cmd, Stream* stream )
 	switch( cmd ) {
 	case VACATE_CLAIM:
 		if( (s == claimed_state) || (s == matched_state) ) {
+			rip->dprintf( D_ALWAYS, 
+						  "State change: received VACATE_CLAIM command\n" );
 			return rip->release_claim();
 		} else {
 			rip->log_ignore( cmd, s );
@@ -303,6 +309,8 @@ command_name_handler( Service*, int cmd, Stream* stream )
 		case claimed_state:
 		case matched_state:
 		case preempting_state:
+			rip->dprintf( D_ALWAYS, 
+						  "State change: received VACATE_CLAIM_FAST command\n" );
 			return rip->kill_claim();
 			break;
 		default:
@@ -481,6 +489,9 @@ if( s == claimed_state ) {				\
 	delete rip->r_pre;					\
 	rip->r_pre = new Match( rip );		\
 } else {								\
+    if( s != owner_state ) {			\
+        rip->dprintf( D_ALWAYS, "State change: claiming protocol failed\n" ); \
+    }									\
 	rip->change_state( owner_state );	\
 }										\
 return FALSE
@@ -628,6 +639,14 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 				rip->r_pre->setoldrank( rip->r_cur->rank() );
 
 					// Get rid of the current claim.
+				if( rank > rip->r_cur->rank() ) {
+					rip->dprintf( D_ALWAYS, 
+					 "State change: preempting claim based on machine rank\n" );
+				} else {
+					ASSERT( rank == rip->r_cur->rank() );
+					rip->dprintf( D_ALWAYS, 
+					 "State change: preempting claim based on user priority\n" );
+				}
 				rip->release_claim();
 
 					// Tell daemon core not to do anything to the stream.
@@ -679,6 +698,7 @@ if( client_addr )					\
 stream->encode();					\
 stream->end_of_message();			\
 rip->r_cur->setagentstream( NULL );	\
+rip->dprintf( D_ALWAYS, "State change: claiming protocol failed\n" ); \
 rip->change_state( owner_state );	\
 return KEEP_STREAM
 
@@ -772,6 +792,7 @@ accept_request_claim( Resource* rip )
 		// Since we're done talking to this schedd agent, delete the stream.
 	rip->r_cur->setagentstream( NULL );
 
+	rip->dprintf( D_ALWAYS, "State change: claiming protocol successful\n" );
 	rip->change_state( claimed_state );
 
 		// Want to return KEEP_STREAM so that daemon core doesn't try
@@ -1008,6 +1029,7 @@ activate_claim( Resource* rip, Stream* stream )
 		// Finally, update all these things into the resource classad.
 	rip->r_cur->publish( rip->r_classad, A_PUBLIC );
 
+	rip->dprintf( D_ALWAYS, "State change: claim-activation protocol successful\n" );
 	rip->change_state( busy_act );
 
 	free( shadow_addr );
@@ -1056,6 +1078,8 @@ match_info( Resource* rip, char* cap )
 
 				// Entering matched state sets our reqexp to unavail
 				// and updates CM.
+			rip->dprintf( D_ALWAYS, 
+						  "State change: match notification protocol successful\n" );
 			rip->change_state( matched_state );
 			rval = TRUE;
 		} else {

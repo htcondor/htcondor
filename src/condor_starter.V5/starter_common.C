@@ -37,6 +37,7 @@ extern int		EventSigs[];
 extern char*	InitiatingHost;
 extern char*	mySubSystem;
 extern ReliSock	*SyscallStream;	// stream to shadow for remote system calls
+extern char*	UidDomain;				// Machines we share UID space with
 
 char VirtualMachineName[25];
 
@@ -99,7 +100,7 @@ initial_bookeeping( int argc, char *argv[] )
 
 	init_shadow_connections();
 
-	read_config_files();
+	config();
 
 		// If we're told on the command-line to append something to
 		// the name of our log file (b/c of the SMP startd), we do
@@ -130,7 +131,12 @@ initial_bookeeping( int argc, char *argv[] )
 	}
 
 	init_logging();
+	dprintf( D_ALWAYS, "********** STARTER starting up ***********\n" );
 
+	InitiatingHost = submitHost;
+	dprintf( D_ALWAYS, "Submitting machine is \"%s\"\n", InitiatingHost );
+
+	init_params();
 
 		/* Now if we have an error, we can print a message */
 	if( usageError ) {
@@ -138,11 +144,6 @@ initial_bookeeping( int argc, char *argv[] )
 	}
 
 	init_sig_mask();
-
-	InitiatingHost = submitHost;
-
-	dprintf( D_ALWAYS, "********** STARTER starting up ***********\n" );
-	dprintf( D_ALWAYS, "Submitting machine is \"%s\"\n", InitiatingHost );
 
 	_EXCEPT_Cleanup = exception_cleanup;
 }
@@ -296,3 +297,95 @@ support_job_wrapper(char *a_out_name, int *argc, char *argv[])
 	return;
 }
 
+/*
+  Return true if the given domain contains the given hostname.  For
+  example the domain "cs.wisc.edu" constain the host "padauk.cs.wisc.edu".
+*/
+int
+host_in_domain( const char *domain, const char *hostname )
+{
+	const char	*ptr;
+
+	for( ptr=hostname; *ptr; ptr++ ) {
+		if( strcmp(ptr,domain) == MATCH ) {
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
+/*
+  We've been requested to start the user job with the given UID, but
+  we apply our own rules to determine whether we'll honor that request.
+*/
+void
+determine_user_ids( uid_t &requested_uid, gid_t &requested_gid )
+{
+
+	struct passwd	*pwd_entry;
+
+		// don't allow any root processes
+	if( requested_uid == 0 || requested_gid == 0 ) {
+		EXCEPT( "Attempt to start user process with root privileges" );
+	}
+		
+		// if the submitting machine is in our shared UID domain, honor
+		// the request
+	if( host_in_domain(UidDomain,InitiatingHost) ) {
+
+		/* check to see if there is an entry in the passwd file for this uid */
+		if( (pwd_entry=getpwuid(requested_uid)) == NULL ) {
+			char *want_soft = NULL;
+	
+			if ( (want_soft=param("SOFT_UID_DOMAIN")) == NULL || 
+				 (*want_soft != 'T' && *want_soft != 't') ) {
+			  EXCEPT("Uid not found in passwd file & SOFT_UID_DOMAIN is False");
+			}
+			if ( want_soft ) {
+				free(want_soft);
+			}
+		}
+		(void)endpwent();
+
+		return;
+	}
+
+		// otherwise, we run the process an "nobody"
+	if( (pwd_entry = getpwnam("nobody")) == NULL ) {
+#ifdef HPUX
+		// the HPUX9 release does not have a default entry for nobody,
+		// so we'll help condor admins out a bit here...
+		requested_uid = 59999;
+		requested_gid = 59999;
+		return;
+#else
+		EXCEPT( "Can't find UID for \"nobody\" in passwd file" );
+#endif
+	}
+
+	requested_uid = pwd_entry->pw_uid;
+	requested_gid = pwd_entry->pw_gid;
+
+#ifdef HPUX
+	// HPUX9 has a bug in that getpwnam("nobody") always returns
+	// a gid of 60001, no matter what the group file (or NIS) says!
+	// on top of that, legal UID/GIDs must be -1<x<60000, so unless we
+	// patch here, we will generate an EXCEPT later when we try a
+	// setgid().  -Todd Tannenbaum, 3/95
+	if ( (requested_uid > 59999) || (requested_uid < 0) )
+		requested_uid = 59999;
+	if ( (requested_gid > 59999) || (requested_gid < 0) )
+		requested_gid = 59999;
+#endif
+
+#ifdef IRIX
+		// Same weirdness on IRIX.  60001 is the default uid for
+		// nobody, lets hope that works.
+	if ( (requested_uid >= UID_MAX ) || (requested_uid < 0) )
+		requested_uid = 60001;
+	if ( (requested_gid >= UID_MAX) || (requested_gid < 0) )
+		requested_gid = 60001;
+#endif
+
+}
