@@ -3737,7 +3737,6 @@ full_path(const char *name, bool use_iwd)
 	pathname[0] = '\0';
 	char *p_iwd;
 	char realcwd[_POSIX_PATH_MAX];
-	int root_len, iwd_len, name_len, real_len;
 
 	if ( use_iwd ) {
 		ASSERT(JobIwd[0]);
@@ -3754,6 +3753,8 @@ full_path(const char *name, bool use_iwd)
 		(void)sprintf( pathname, "%s\\%s", p_iwd, name );
 	}
 #else
+	int root_len, iwd_len, name_len, real_len;
+
 	root_len = strlen(JobRootdir);
 	iwd_len = strlen(p_iwd);
 	name_len = strlen(name);
