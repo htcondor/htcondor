@@ -1,4 +1,5 @@
 all:  ref.ps admin.ps user.ps man.ps admin.html user.html man.html
+#all:  man.ps
 
 ref.ps: admin.tex user.tex man.tex condor-macros.tex
 	latex ref.tex
@@ -15,7 +16,18 @@ user.ps: user.tex condor-macros.tex
 	latex user.tex
 	dvips user.dvi
 
-man.ps: man.tex condor-macros.tex
+MAN_PAGES = man-pages/man.tex \
+            man-pages/condor_q.tex \
+            man-pages/condor_history.tex \
+            man-pages/condor_rm.tex \
+            man-pages/condor_prio.tex \
+            man-pages/condor_userprio.tex \
+            man-pages/condor_compile.tex \
+            man-pages/condor_checkpoint.tex \
+            man-pages/condor_submit.tex \
+            man-pages/condor_status.tex
+
+man.ps: man.tex condor-macros.tex $(MAN_PAGES)
 	latex man.tex
 	latex man.tex
 	dvips man.dvi
