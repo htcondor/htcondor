@@ -22,9 +22,10 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
  
-
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "get_full_hostname.h"
+
 static char *_FileName_ = __FILE__;
 
 static struct hostent *host_ptr = NULL;
@@ -70,16 +71,13 @@ my_ip_addr()
 
 } /* extern "C" */
 
-#if !defined(WIN32) && !defined(Solaris)
-#include <arpa/nameser.h>
-#include <resolv.h>
-#endif
 
 void
 init_hostnames()
 {
 	char *tmp, hostbuf[MAXHOSTNAMELEN];
 	int i;
+	hostbuf[0]='\0';
 
 	if( hostname ) {
 		free( hostname );
@@ -92,14 +90,18 @@ init_hostnames()
 		// Get our local hostname, and strip off the domain if
 		// gethostname returns it.
 	if( gethostname(hostbuf, sizeof(hostbuf)) == 0 ) {
-		if( (tmp = strchr(hostbuf, '.')) ) {
-				// There's a '.' in the hostname, assume we've got the
-				// full hostname here, save it, and trim the domain
-				// off and save that as the hostname.
-			full_hostname = strdup( hostbuf );
-			*tmp = '\0';
+		if( hostbuf[0] ) {
+			if( (tmp = strchr(hostbuf, '.')) ) {
+					// There's a '.' in the hostname, assume we've got
+					// the full hostname here, save it, and trim the
+					// domain off and save that as the hostname.
+				full_hostname = strdup( hostbuf );
+				*tmp = '\0';
+			} 
+			hostname = strdup( hostbuf );
+		} else {
+			EXCEPT( "gethostname succeeded, but hostbuf is empty" );
 		}
-		hostname = strdup( hostbuf );
 	} else {
 		EXCEPT( "gethostname failed, errno = %d", 
 #ifndef WIN32
@@ -120,47 +122,15 @@ init_hostnames()
 
 	    // If we don't have our full_hostname yet, try to find it. 
 	if( ! full_hostname ) {
-			// See if it's correct in the hostent we've got.
-		if( (tmp = strchr(host_ptr->h_name, '.')) ) {
-				// There's a '.' in the "name", use that as full.
-			full_hostname = strdup( host_ptr->h_name );
-		}
-	}
-
-	if( ! full_hostname ) {
-			// We still haven't found it yet, try all the aliases
-			// until we find one with a '.'
-		for( i=0; host_ptr->h_aliases[i], !full_hostname; i++ ) {
-			if( (tmp = strchr(host_ptr->h_aliases[i], '.')) ) { 
-				full_hostname = strdup( host_ptr->h_aliases[i] );
-			}
-		}
-	}
-
-
-/* On Solaris, the resolver lib is so heavily patched that folks
- * cannot deal with the below code.  And we cannot link in the resolver
- * statically on Solaris, cuz stupid Sun only releases the resolver
- * as a dynamic library.  So we skip the below on Solaris -Todd 5/98
- */
-#if !defined( WIN32 ) && !defined(Solaris) 
-	if( ! full_hostname ) {
-			// We still haven't found it yet, try to use the
-			// resolver.  *sigh*
-		res_init();
-		if( _res.defdname ) {
-				// We know our default domain name, append that.
-			strcat( hostbuf, "." );
-			strcat( hostbuf, _res.defdname );
+		tmp = get_full_hostname( hostbuf );
+		if( tmp ) {
+				// Found it, use it.
+			full_hostname = strdup( tmp );
+		} else {
+				// Couldn't find it, just use what we've got in hostbuf. 
 			full_hostname = strdup( hostbuf );
 		}
 	}
-#endif /* not WIN32 and not Solaris */
-	if( ! full_hostname ) {
-			// Still can't find it, just give up.
-		full_hostname = strdup( hostname );
-	}
-
 	hostnames_initialized = TRUE;
 }
 
