@@ -26,27 +26,14 @@
 **
 */ 
 
-#if defined(Solaris)
-#include "condor_fix_timeval.h"
-#if !defined(Solaris251)
-#include </usr/ucbinclude/sys/rusage.h>
-#endif
-#endif
-
-#if defined(IRIX53)
-#include "condor_fix_unistd.h"
-#endif
-
-#define _POSIX_SOURCE
-
 #include "condor_common.h"
-#include "condor_constants.h"
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_network.h"
 #include "condor_io.h"
 #include "sched.h"
 #include "alloc.h"
+#include "my_hostname.h"
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
@@ -128,10 +115,8 @@ main( int argc, char *argv[] )
 	if (hostname[0] == '\0')
 	{
 		// hostname was not set at command line; obtain from system
-		if(gethostname(hostname, 200) < 0)
-		{
-			EXCEPT("gethostname failed, errno = %d", errno);
-		}
+		strcpy( hostname, my_hostname() );
+
 	}
 	if((q = ConnectQ(hostname)) == 0)
 	{
@@ -168,9 +153,7 @@ notify_schedd( int cluster, int proc )
 	if (hostname[0] == '\0')
 	{
 		// if the hostname was not set at command line, obtain from system
-		if( gethostname(hostname,sizeof(hostname)) < 0 ) {
-			EXCEPT( "gethostname failed" );
-		}
+		strcpy( hostname, my_hostname() );
 	}
 
 	if ((scheddAddr = get_schedd_addr(hostname)) == NULL)
