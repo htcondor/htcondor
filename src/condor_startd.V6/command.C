@@ -63,16 +63,11 @@ command_main(Sock *sock, struct sockaddr_in* from, resource_id_t rid)
 {
 	int cmd;
 
-	dprintf(D_ALWAYS, "command_main(%x, %x, %x)\n", 
-			sock, from, rid);
-	
 	sock->decode();
 	if (!sock->code(cmd)) {
 		dprintf(D_ALWAYS, "Can't read command\n");
 		return -1;
 	}
-
-	dprintf(D_ALWAYS, "Got command %d.\n", cmd);
 
 	/* XXX how to get resource */
 
@@ -117,7 +112,7 @@ command_main(Sock *sock, struct sockaddr_in* from, resource_id_t rid)
 		return command_alive(sock, from, rid);
 	case REQ_NEW_PROC:
 	default:
-		dprintf(D_ALWAYS, "Can't handle this.\n");
+		dprintf(D_ALWAYS, "Can't handle command %d.\n", cmd);
 	}
 }
 
