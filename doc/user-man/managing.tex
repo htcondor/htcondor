@@ -304,10 +304,12 @@ contact your system administrator.
 \subsection{\label{sec:job-completion}Job Completion}
 \index{job!completion}
 
-When your Condor job completes, Condor will remove it from the job
-queue (i.e., it will no longer appear in the output of \Condor{q}) and
-insert it into the job history file.  You can examine the job history
-file with the \Condor{history} command.
+When your Condor job completes(either through normal means or abnormal
+termination by signal), Condor will remove it from the job queue (i.e.,
+it will no longer appear in the output of \Condor{q}) and insert it into
+the job history file.  You can examine the job history file with the
+\Condor{history} command. If you specified a log file in your submit
+description file, then the job exit status will be recorded there as well.
 
 By default, Condor will send you an email message
 when your job completes.  You can modify this behavior with the
