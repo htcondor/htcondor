@@ -9,6 +9,44 @@ in the 6.6 series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:New-6-6-9}Version 6.6.9}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% \noindent Release Notes:
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a memory management bug introduced in version 6.6.8 that could result
+in deallocated memory being referenced after a child process forked from a
+Condor daemon exits.
+
+\item Fixed a security bug in the \Condor{schedd} that could enable a
+maliciously modified \Condor{submit} tool to overwrite files in the Condor
+\Macro{SPOOL} subdirectory, including the job queue.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:New-6-6-8}Version 6.6.8}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -107,7 +145,7 @@ several weeks without being rebooted.
 
 \item Starting with RedHat 9, newer versions of Linux began to produce
   core files named \File{core.<pid>}.
-  This broke functionality in Condor that managed and transfered back
+  This broke functionality in Condor that managed and transferred back
   any core file created by the job, since the \Condor{starter} was
   unable to locate the proper file.
   Now, Condor will correctly transfer back core files, even if they
@@ -120,7 +158,7 @@ several weeks without being rebooted.
 amounts of memory over long periods of time.
 
 \item Fixed a bug that was causing \Condor{startd} to fail to start up
-with the message, "caInsert: Can't insert CpuBusy into target classad."
+with the message, "caInsert: Can't insert CpuBusy into target ClassAd."
 
 \item Fixed a long-standing bug in Condor regarding the configuration
   settings \Macro{LOWPORT} and \Macro{HIGHPORT}.
@@ -165,9 +203,9 @@ with the message, "caInsert: Can't insert CpuBusy into target classad."
   \Condor{schedd} making this mistake, rendering this error
   impossible.
 
-\item Fixed a bug that occured when submitted Condor-G jobs while
+\item Fixed a bug that occurred when submitted Condor-G jobs while
   using the grid monitor. If the grid job monitor returned a FAILED
-  status for a job while the jobmanager is asleep, the gridmanager
+  status for a job while the jobmanager is asleep, the \Condor{gridmanager}
   could sometimes end up in a loop, continuously restarting the remote
   Globus jobmanager then putting it back to sleep.
 
@@ -239,14 +277,14 @@ applies to machines running Windows XP SP2.
 
 \begin{itemize}
 
-\item Fixed a bug specific to Windows that could cause, in rare occurances
+\item Fixed a bug specific to Windows that could cause, in rare occurrences
 due to a race condition, Condor to fail to properly signal the job to
 suspend, continue, or preempt.
 
 \item When Condor transfers the job executable using the file transfer
-  mechanism, it used to leave the binary sitting as a world-writeable
+  mechanism, it used to leave the binary sitting as a world-writable
   file inside the execute directory on UNIX.
-  Now, executable files transfered by Condor have the proper
+  Now, executable files transferred by Condor have the proper
   permissions (mode 0755).
 
 \item Fixed an important bug in the low-level code that Condor uses to
@@ -275,7 +313,7 @@ suspend, continue, or preempt.
   value.
   For example, if a user tries to print out a boolean attribute with
   \verb@condor_status -format "%d\n" HasFileTransfer@, the
-  \Condor{status} tool will evalute \Attr{HasFiletransfer} and print
+  \Condor{status} tool will evaluate \Attr{HasFiletransfer} and print
   either a 0 or a 1 (FALSE or TRUE).
   If, on the other hand, a user tries to print out a boolean attribute
   with \verb@condor_status -format "%s\n" HasFileTransfer@, the
@@ -327,7 +365,7 @@ been fixed.
 
 \begin{itemize}
 
-\item A \Condor{dagman} job will fail and report a cycle in the Dag
+\item A \Condor{dagman} job will fail and report a cycle in the DAG
 when XML logs are used in a single or multiple log format. The Post
 Script  completion event does not get converted to XML and Dagman
 never sees them complete or fail because of the format of the event.
@@ -469,7 +507,7 @@ never sees them complete or fail because of the format of the event.
 \item Fixed a signal handling bug in the checkpoint server which could
   cause the daemon to hang sometimes.
 
-\item The kerberos map file now tolerates spaces on either side of the
+\item The Kerberos map file now tolerates spaces on either side of the
 	equals sign instead of generating a parse error.
 
 \item The \Opt{-analyze} option to \Condor{q} is only meaningful for certain
@@ -477,7 +515,7 @@ never sees them complete or fail because of the format of the event.
 
 \item Java universe: when jar files are transferred to the execute
   machine (with \Expr{should\_transfer\_files} or
-  \Expr{tranfer\_input\_files}) the \Condor{starter} will use the
+  \Expr{transfer\_input\_files}) the \Condor{starter} will use the
   local path (in the execute directory) for the jarfiles, instead of
   the original path specified in the submit file.
 
@@ -492,7 +530,7 @@ never sees them complete or fail because of the format of the event.
   TRUE, the job might have been successfully removed but the
   \Attr{RemoveReason} attribute could have been lost.
   Now, both actions are taken together atomically.
-  If a job is succesfully removed, it will always have a
+  If a job is successfully removed, it will always have a
   \Attr{RemoveReason} attribute.
 
 \item Fixed a memory leak in the \Condor{collector}.
@@ -569,7 +607,7 @@ and \Condor{startd}. These leaks particularly affected Windows systems.
 with UNC paths (with appropriate permissions set). This has been fixed.
 
 \item On Windows, \Condor{store\_cred} would fail if the account did not
-have \verb@Log on Locally@ priviledges, even if the account was allowed
+have \verb@Log on Locally@ privileges, even if the account was allowed
 to log in interactively. This has been fixed.
 
 \item Fixed a bug on Windows that would cause the \Condor{schedd} to
@@ -656,7 +694,7 @@ could not be expanded.
 \item On Windows, the system-wide TEMP variable is included in the
 execute environment if it is not specified in the submit file.
 
-\item Fixed a rarely-occuring bug when  the child process forked by the schedd gets stuck in an infinite loop when the user does ``condor\_submit -s''. This should also fix problems when the child process forked by the collector would sometimes get stuck in an infinite loop when \Expr{ COLLECTOR\_QUERY\_WORKERS > 0 } in the config file.
+\item Fixed a rarely-occurring bug when  the child process forked by the schedd gets stuck in an infinite loop when the user does ``condor\_submit -s''. This should also fix problems when the child process forked by the collector would sometimes get stuck in an infinite loop when \Expr{ COLLECTOR\_QUERY\_WORKERS > 0 } in the config file.
 
 \end{itemize}
 
@@ -716,7 +754,7 @@ execute environment if it is not specified in the submit file.
 statistics information from ClassAds in a human readable format.
 Condor 6.6.1, by default, publishes ``update statistics'' into the
 ClassAds as published by the \Condor{collector}.  This program parses
-this ouput and displays it to the user in a readable format.
+this output and displays it to the user in a readable format.
 
 \item Changed the default \Condor{dagman} behavior so that it doesn't
       check for cycles at startup, only at runtime, since the former
@@ -760,11 +798,11 @@ flocking to machines that did not happen to be in the
 \item The grid monitor now attempts to restart transfers in the event of
     globus-url-copy hanging.
 
-\item Removed some settings from the default configuation files
+\item Removed some settings from the default configuration files
   shipped with Condor that are no longer used in the code.
 
 \item Fixed bugs in \Condor{dagman} parsing of submit files (to determine
-  node log files).  Previously, a submit file line begining with
+  node log files).  Previously, a submit file line beginning with
   "log" (e.g., "LogLock = True") would be interpreted as a log file
   line.  Also, if "log" was defined twice in the submit file,
   \Condor{dagman} would incorrectly use the first definition, rather than
@@ -778,7 +816,7 @@ the userlog for the same job; this can happen due to a bug in the
 \Condor{schedd}, which is not yet fixed.
 
 \item \Condor{dagman} now works right with nodes that have an initialdir
-  specified in the node submit file.  (Previously, specifiying
+  specified in the node submit file.  (Previously, specifying
   an initialdir only worked if the log file path was absolute.)
 
 \item \Condor{dagman} now responds more quickly to a request to be
@@ -882,7 +920,7 @@ accepting new transfer requests, producing a variety of errors.
   the new jobs.
   However, for submit machines that are managing a huge number of jobs
   (thousands or tens of thousands), this step would hurt performance
-  in such a way that it became an obsticle to scalability.
+  in such a way that it became an obstacle to scalability.
   In this case, an administrator can set
   \MacroNI{SUBMIT\_SEND\_RESCHEDULE} to \verb@FALSE@, this extra
   step is not performed, and the \Condor{schedd} will try to find
@@ -926,7 +964,7 @@ accepting new transfer requests, producing a variety of errors.
   for this many seconds.  Defaults to 900 (15 minutes).  If we
   can't successfully get it going again the grid monitor will be
   disabled for that site until 60 minutes have passed.  Prior to
-  this change the condor\_gridmanger wait 60 minutes after any
+  this change the condor\_gridmanager wait 60 minutes after any
   failure.
 
 \end{itemize}
@@ -1183,8 +1221,8 @@ the continued lines.  This has been corrected.
 
 \item Fixed a bug which was causing problems when a periodic\_remove
 expression for a scheduler universe job evaluates to true.  Under
-these conditions, the schedd did not log the job terminiation to the
-job log.  Addtionally, the schedd would exit with an error status.
+these conditions, the schedd did not log the job termination to the
+job log.  Additionally, the schedd would exit with an error status.
 
 \item Fixed a recently-introduced \Condor{dagman} bug where the number
       of node retries (specified with the RETRY keyword) wasn't being
@@ -1261,7 +1299,7 @@ page~\pageref{param:PasswdCacheRefresh} for more details.
   listening on the standard port or not. 
 
   \begin{itemize}
-    \item \verb@condor_config_val -negotitator@ queries the
+    \item \verb@condor_config_val -negotiator@ queries the
           \Condor{collector}, instead of querying the
           \Condor{negotiator} like it should.  
 
@@ -1278,7 +1316,7 @@ page~\pageref{param:PasswdCacheRefresh} for more details.
           The tools print a somewhat confusing message in this case.
 
     \item Most Condor tools that support \verb@-pool hostname@ will
-          also recogize \verb@-pool hostname:port@ if the remote
+          also recognize \verb@-pool hostname:port@ if the remote
           \Condor{collector} is listening on a non-standard port.
           However, the \Condor{findhost} tool does not work if given a
           \Opt{-pool} option that includes a port.
