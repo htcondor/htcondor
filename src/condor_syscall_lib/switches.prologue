@@ -65,8 +65,11 @@
 	void profil( short *buf, unsigned int size, unsigned int ,unsigned int  );
 #endif
 
-#if defined(IRIX53)
+#if defined(DL_EXTRACT)
 #	include <dlfcn.h>	/* for dlopen and dlsym */
+#endif
+
+#if defined(IRIX)
 struct statfs;
 struct exportfsdata;
 #endif
@@ -95,7 +98,7 @@ struct stat;
 #undef _PROTOTYPES
 #endif
 
-#if defined(IRIX53)
+#if defined(IRIX)
 #	define sendmsg __hide_sendmsg
 #	define recvfrom __hide_recvfrom
 #	define accept __hide_accept
@@ -111,7 +114,7 @@ struct stat;
 
 #include <sys/socket.h>
 
-#if defined(IRIX53)
+#if defined(IRIX)
 #	undef sendmsg
 #	undef recvfrom
 #	undef accept
@@ -142,7 +145,7 @@ struct stat;
 
 #include <sys/utsname.h>
 
-#if defined(SUNOS41) || defined(IRIX53) || defined(Solaris) || defined(OSF1)
+#if defined(IRIX) || defined(Solaris) || defined(OSF1)
 #	include <signal.h>
 #endif
 
@@ -178,12 +181,10 @@ struct stat;
 #if !defined(GLIBC)
 #	include <linux/ipc.h>
 #endif /* GLIBC */
-#	define	TRUE 1
-#	define	FALSE 0
 struct module;
 #endif
 
-#if defined(OSF1) || defined(AIX32)
+#if defined(OSF1)
 #	define semctl __hide_semctl
 #	define semop __hide_semop
 #	include <sys/sem.h>
@@ -193,18 +194,17 @@ struct module;
 	int semctl(int , int , int , void *);
 #endif
 
-#if defined(IRIX53)
+#if defined(IRIX)
 #	define mount __hide_mount
 #endif
 
-#if defined(ULTRIX42) || defined(ULTRIX43) || defined(OSF1)
+#if defined(OSF1)
 #	include <sys/param.h>
-#	include <sys/mount.h>
-#elif !defined(AIX32)
-#	include <sys/mount.h>
 #endif
+#include <sys/mount.h>
 
-#if defined(IRIX53)
+
+#if defined(IRIX)
 #	undef mount
 	int mount( char *spec, char *dir, int mflag, int fstyp, char *pt, int len );
 #endif
@@ -213,10 +213,7 @@ struct module;
 #   define mknod  	__hide_mknod
 #	define readlink	__hide_readlink
 #	define setpgrp  __hide_setpgrp
-#elif defined(ULTRIX43)
-#	define write	__hide_write
-#	define read		__hide_read
-#elif defined(IRIX53)
+#elif defined(IRIX)
 #	define select	__hide_select
 #	define readlink __hide_readlink
 #	define gethostid __hide_gethostid
@@ -242,12 +239,7 @@ struct module;
 	int mknod( const char *path, int mode, dev_t device );
 	int readlink( const char *path, void *buf, int buf_size );
 	int setpgrp(  );
-#elif defined(ULTRIX43)
-#	undef write
-#	undef read
-	ssize_t write( int fd, const void *buf, size_t len );
-	ssize_t read( int fd, void *buf, size_t len );
-#elif defined(IRIX53)
+#elif defined(IRIX)
 #	undef select
 #	undef readlink
 #	undef gethostid
@@ -277,29 +269,12 @@ struct module;
 #	include <sys/vfs.h>		 /* for struct statfs */
 #endif
 
-#if defined(AIX32)
-#	include <sys/statfs.h>		 /* for struct statfs */
-#	include <sys/msg.h>		 	/* for struct msqid_ds */
-#endif
-
-#if defined(AIX32)
-#	define shmget __hide_shmget
-#	include <sys/shm.h>		 	/* for struct shmid_ds */
-#	undef shmget
-	int shmget( key_t key, unsigned int size, unsigned int flags );
-#endif
-
-#if defined(SUNOS41) || defined(HPUX9) || defined(ULTRIX43) || defined(Solaris) || defined(IRIX53)
+#if !defined(TRUE)
 #	define TRUE 1
+#endif
+#if !defined(FALSE)
 #	define FALSE 0
 #endif
-
-#if	defined(ULTRIX43)
-typedef int	bool_t;
-#	include <errno.h>
-#	include <nfs/nfs.h>
-#endif
-
 
 #include <sys/types.h>
 
