@@ -33,7 +33,7 @@
 //---------------------------------------------------------------------------
 char* mySubSystem = "DAGMAN";         // used by Daemon Core
 
-bool run_post_on_failure;	// for DAGMAN_RUN_POST_ON_FAILURE config setting
+bool run_post_on_failure = TRUE;
 
 char* DAGManJobId;
 
@@ -69,6 +69,7 @@ static void Usage() {
             "\t\t-Rescue <Rescue.dag>\n"
             "\t\t[-MaxJobs] <int N>\n\n"
             "\t\t[-MaxScripts] <int N>\n\n"
+            "\t\t[-NoPostFail]\n\n"
             "\twhere NAME is the name of your DAG.\n"
             "\twhere N is Maximum # of Jobs to run at once "
             "(0 means unlimited)\n"
@@ -87,18 +88,10 @@ void touch (const char * filename) {
 
 //---------------------------------------------------------------------------
 
-int main_config() { 
-	char* s = param( "DAGMAN_RUN_POST_ON_FAILURE" );
-	if( s != NULL && !strcasecmp( s, "TRUE" ) ) {
-		run_post_on_failure = TRUE;
-	}	
-	else {
-		run_post_on_failure = FALSE;
-	}
-	if( s != NULL ) {
-		free( s );
-	}
-    return TRUE;
+int
+main_config()
+{
+	return 0;
 }
 
 int
@@ -212,6 +205,8 @@ int main_init (int argc, char **argv) {
                 Usage();
             }
             G.maxScripts = atoi( argv[i] );
+        } else if( !strcmp( "-NoPostFail", argv[i] ) ) {
+			run_post_on_failure = FALSE;
         } else Usage();
     }
   
