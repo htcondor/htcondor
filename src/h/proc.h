@@ -199,7 +199,8 @@ typedef struct {
 #define RUNNING		2
 #define REMOVED		3
 #define COMPLETED	4
-#define SUBMISSION_ERR	5
+#define	HELD		5
+#define SUBMISSION_ERR	6
 
 #ifdef INCLUDE_STATUS_NAME_ARRAY
 char    *JobStatusNames[] = {
@@ -208,6 +209,7 @@ char    *JobStatusNames[] = {
     "RUNNING",
     "REMOVED",
     "COMPLETED",
+	"HELD",
     "SUBMISSION_ERR",
 };
 #else
