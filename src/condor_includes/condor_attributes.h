@@ -83,6 +83,7 @@ const char ATTR_EXCEPTION_HIERARCHY      [] = "ExceptionHierarchy";
 const char ATTR_EXCEPTION_NAME           [] = "ExceptionName";
 const char ATTR_EXCEPTION_TYPE           [] = "ExceptionType";
 const char ATTR_EXECUTABLE_SIZE			 [] = "ExecutableSize";
+const char ATTR_EXIT_REASON              [] = "ExitReason";
 const char ATTR_FETCH_FILES			 [] = "FetchFiles";
 const char ATTR_FILE_NAME				 [] = "FileName";
 const char ATTR_FILE_SIZE				 [] = "FileSize";
