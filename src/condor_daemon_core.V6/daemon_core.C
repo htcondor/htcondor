@@ -1719,7 +1719,7 @@ int DaemonCore::HandleReq(int socki)
 		}
 
 		if (always_authenticate) {
-			dprintf (D_SECURITY, "DaemonCore received UNAUTHENTICATED command %i.\n");
+			dprintf (D_SECURITY, "DaemonCore received UNAUTHENTICATED command %i.\n", req);
 			dprintf (D_SECURITY, "\tNormally, this would not be allowed.  For now, it is.\n");
 			// ZKM
 			// return error.
