@@ -665,9 +665,48 @@ susp_ckpt_timer()
 int
 susp_all()
 {
+	char *susp_msg = "TISABH Starter: Suspended user job: ";
+	char *unsusp_msg = "TISABH Starter: Unsuspended user job.";
+	char msg[4096];
+	UserProc	*proc;
+	int sum;
+
 	stop_all();
 
+	/* determine how many pids the starter suspended */
+	sum = 0;
+	UProcList.Rewind();
+	while( proc = UProcList.Next() ) {
+		if( proc->is_suspended() ) {
+			sum += proc->get_num_pids_suspended();
+		}
+	}
+
+	/* Now that we've suspended the jobs, write to our client log
+		fd some information about what we did so the shadow
+		can figure out we suspended the job. TISABH stands for
+		"This Is Such A Bad Hack".  Note: The starter isn't
+		supposed to be messing with this fd like this, but
+		the high poobah wanted this feature hacked into
+		the old starter/shadow combination. So here it
+		is. Sorry. If you change this string, please go to
+		ops.C in the shadow.V6 directory and change the function
+		log_old_starter_shadow_suspend_event_hack() to reflect
+		the new choice.  -psilord 2/1/2001 */
+
+	sprintf(msg, "%s%d\n", susp_msg, sum);
+	/* Hmm... maybe I should write a loop that checks to see if this is ok */
+	write(CLIENT_LOG, msg, strlen(msg));
+
 	susp_self();
+
+	/* Before we unsuspend the jobs, write to the client log that we are
+		about to so the shadow knows. Make sure to do this BEFORE we unsuspend
+		the jobs.
+		-psilord 2/1/2001 */
+	sprintf(msg, "%s\n", unsusp_msg);
+	/* Hmm... maybe I should write a loop that checks to see if this is ok */
+	write(CLIENT_LOG, msg, strlen(msg));
 
 	resume_all();
 
