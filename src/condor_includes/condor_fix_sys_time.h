@@ -28,7 +28,9 @@
    to take ints (according to the man page, POSIX, whatever) that
    really take enums.  -Derek Wright 4/17/98 */
 #define getitimer __hide_getitimer
+#define __getitimer __hide__getitimer
 #define setitimer __hide_setitimer
+#define __setitimer __hide__setitimer
 #endif /* LINUX && GLIBC */
 
 #if !defined(WIN32)
@@ -41,9 +43,15 @@ extern "C" {
 
 #if defined(LINUX) && defined(GLIBC)
 #undef getitimer
+#undef __getitimer
 #undef setitimer
+#undef __setitimer
+
 int getitimer(int, struct itimerval *);
+int __getitimer(int, struct itimerval *);
 int setitimer(int, const struct itimerval *,  struct itimerval *);
+int __setitimer(int, const struct itimerval *,  struct itimerval *);
+
 #endif /* LINUX && GLIBC */
 
 #if defined(__cplusplus)
