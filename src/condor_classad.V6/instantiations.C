@@ -46,6 +46,8 @@ template map<string, string>::iterator;
 template hash_map<string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr>;
 template hash_map<string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr>::iterator;
 template hash_map<string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr>::const_iterator;
+template set<string, CaseIgnLTStr>;
+template set<string, CaseIgnLTStr>::iterator;
 
 // expr evaluation cache
 template hash_map<const ExprTree*, Value, ExprHash >;
