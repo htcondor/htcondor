@@ -445,8 +445,8 @@ class DedicatedScheduler : public Service {
 // Find when a given resource will next be available
 time_t findAvailTime( match_rec* mrec );
 
-// Comparison function for sorting job cluster ids by QDate
-int clusterSortByDate( const void* ptr1, const void* ptr2 );
+// Comparison function for sorting job cluster ids by JOB_PRIO and QDate
+int clusterSortByPrioAndDate( const void* ptr1, const void* ptr2 );
 
 // Comparison function for sorting machines by rank, cluster_id
 int
