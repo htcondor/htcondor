@@ -43,7 +43,7 @@ char	*MyName;
 
 usage()
 {
-	fprintf( stderr, "Usage: %s [-master] variable ...\n", MyName );
+	fprintf( stderr, "Usage: %s variable ...\n", MyName );
 	exit( 1 );
 }
 
@@ -58,14 +58,9 @@ main( int argc, char* argv[] )
 		usage();
 	}
 
-	if( strcmp(*++argv,"-master") == 0 ) {
-		config_master( 0 );
-		argv++;
-	} else {
-		config( 0 );
-	}
+	config( 0 );
 		
-	while( *argv ) {
+	while( *++argv ) {
 		tmp = strdup( *argv );
 		value = param( tmp );
 		free( tmp );
@@ -76,7 +71,6 @@ main( int argc, char* argv[] )
 			printf("%s\n", value);
 			free( value );
 		}
-		argv++;
 	}
 	exit( 0 );
 }
