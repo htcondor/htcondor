@@ -81,12 +81,10 @@ FunctionCall( )
 		*/
 
 			// time management
-		functionTable["currenttime"	] =	(void*)currentTime;
+	      	functionTable["currenttime"	] =	(void*)currentTime;
 		functionTable["timezoneoffset"] =(void*)timeZoneOffset;
 		functionTable["daytime"		] =	(void*)dayTime;
 		functionTable["makedate"	] =	(void*)makeDate;
-		functionTable["makeabstime"	] =	(void*)makeTime;
-		functionTable["makereltime"	] =	(void*)makeTime;
 		functionTable["getyear"		] =	(void*)getField;
 		functionTable["getmonth"	] =	(void*)getField;
 		functionTable["getdayofyear"] =	(void*)getField;
@@ -96,11 +94,11 @@ FunctionCall( )
 		functionTable["gethours"	] =	(void*)getField;
 		functionTable["getminutes"	] =	(void*)getField;
 		functionTable["getseconds"	] =	(void*)getField;
-		functionTable["indays"		] =	(void*)inTimeUnits;
+	      	functionTable["indays"		] =	(void*)inTimeUnits;
 		functionTable["inhours"		] =	(void*)inTimeUnits;
 		functionTable["inminutes"	] =	(void*)inTimeUnits;
 		functionTable["inseconds"	] =	(void*)inTimeUnits;
-
+		
 			// string manipulation
 		functionTable["strcat"		] =	(void*)strCat;
 		functionTable["toupper"		] =	(void*)changeCase;
@@ -115,13 +113,15 @@ FunctionCall( )
 		functionTable["real"		] =	(void*)convReal;
 		functionTable["string"		] =	(void*)convString;
 		functionTable["bool"		] =	(void*)convBool;
-		functionTable["abstime"		] =	(void*)convTime;
-		functionTable["reltime"		] = (void*)convTime;
+		functionTable["absTime"		] =	(void*)convTime;
+		functionTable["relTime"		] = (void*)convTime;
 
 			// mathematical functions
 		functionTable["floor"		] =	(void*)doMath;
 		functionTable["ceil"		] =	(void*)doMath;
 		functionTable["round"		] =	(void*)doMath;
+
+		functionTable["ieee754"] = (void *)doIEEE754;
 
 		initialized = true;
 	}
@@ -1005,7 +1005,6 @@ listCompare(
 bool FunctionCall::
 currentTime (const char *, const ArgumentList &argList, EvalState &, Value &val)
 {
-	time_t clock;
 
 		// no arguments
 	if( argList.size( ) > 0 ) {
@@ -1013,12 +1012,9 @@ currentTime (const char *, const ArgumentList &argList, EvalState &, Value &val)
 		return( true );
 	}
 
-	if( time( &clock ) < 0 ) {
-		val.SetErrorValue( );
-		return( false );
-	}
-
-	val.SetAbsoluteTimeValue( (int) clock );
+	Literal *lit;
+	lit = lit->MakeAbsTime(NULL);
+	lit->GetValue(val);
 	return( true );
 }
 
@@ -1032,10 +1028,19 @@ timeZoneOffset (const char *, const ArgumentList &argList, EvalState &,
 		val.SetErrorValue( );
 		return( true );
 	}
-
+	
+	struct tm *tms;
+	time_t clock;
+	time(&clock);
+	tms  = localtime( &clock);
 		// POSIX says that timezone is positive west of GMT;  we reverse it
 		// here to make it more intuitive
-	val.SetRelativeTimeValue( (int) -timezone );
+	if(tms->tm_isdst > 0) { //check for daylight saving
+	  val.SetRelativeTimeValue( (int) (-timezone+3600) );
+	}
+	else {
+	  val.SetRelativeTimeValue( (int) (-timezone));
+	}
 	return( true );
 }
 
@@ -1065,9 +1070,10 @@ makeDate( const char*, const ArgumentList &argList, EvalState &state,
 	Value 	arg0, arg1, arg2;
 	int		dd, mm, yy;
 	time_t	clock;
-	struct	tm	tms;
+	struct	tm	*tms;
 	char	buffer[64];
 	string	month;
+	abstime_t abst;
 
 		// two or three arguments
 	if( argList.size( ) < 2 || argList.size( ) > 3 ) {
@@ -1087,8 +1093,8 @@ makeDate( const char*, const ArgumentList &argList, EvalState &state,
 		val.SetErrorValue( );
 		return( false );
 	}
-	gmtime_r( &clock, &tms );
-	
+	tms  = localtime( &clock);
+
 		// evaluate optional third argument
 	if( argList.size( ) == 3 ) {
 		if( !argList[2]->Evaluate( state, arg2 ) ) {
@@ -1097,7 +1103,7 @@ makeDate( const char*, const ArgumentList &argList, EvalState &state,
 		}
 	} else {
 			// use the current year (tm_year is years since 1900)
-		arg2.SetIntegerValue( tms.tm_year + 1900 );
+		arg2.SetIntegerValue( tms->tm_year + 1900 );
 	}
 		
 		// check if any of the arguments are undefined
@@ -1116,13 +1122,13 @@ makeDate( const char*, const ArgumentList &argList, EvalState &state,
 		// the second argument must be integer or string
 	if( arg1.IsIntegerValue( mm ) ) {
 		if( sprintf( buffer, "%d %d %d", dd, mm, yy ) > 63 ||
-			strptime( buffer, "%d %m %Y", &tms ) == NULL ) {
+			strptime( buffer, "%d %m %Y", tms ) == NULL ) {
 			val.SetErrorValue( );
 			return( true );
 		}
 	} else if( arg1.IsStringValue( month ) ) {
 		if( sprintf( buffer, "%d %s %d", dd, month.c_str( ), yy ) > 63 ||
-				strptime( buffer, "%d %b %Y", &tms ) == NULL ) {
+				strptime( buffer, "%d %b %Y", tms ) == NULL ) {
 			val.SetErrorValue( );
 			return( true );
 		}
@@ -1131,54 +1137,34 @@ makeDate( const char*, const ArgumentList &argList, EvalState &state,
 		return( true );
 	}
 
-		// convert the struct tm->time_t->absolute time
-	clock = mktime( &tms );
-	val.SetAbsoluteTimeValue( (int) clock );
+		// convert the struct tm -> time_t -> absolute time
+	clock = mktime( tms );
+	if(clock == -1) {
+		val.SetErrorValue( );
+		return( true );
+	}
+	abst.secs = clock;	
+	abst.offset = -timezone;
+	// alter absolute time parameters based on current day-light saving status
+	if(tms->tm_isdst > 0) { 
+		abst.offset += 3600;
+		abst.secs -= 3600;
+	}
+	else {
+		abst.secs += 3600;
+	}
+	val.SetAbsoluteTimeValue( abst );
 	return( true );
 }
 
-
-bool FunctionCall::
-makeTime( const char*name, const ArgumentList &argList, EvalState &state, 
-	Value &val )
-{
-	Value 	arg;
-	int		i;
-
-	if( argList.size( ) != 1 ) {
-		val.SetErrorValue( );
-		return( true );
-	}
-
-	if( !argList[0]->Evaluate( state, arg ) ) {
-		val.SetErrorValue( );
-		return false;	
-	}
-
-	if( arg.IsUndefinedValue( ) ) {
-		val.SetUndefinedValue( );
-		return( true );
-	}
-
-	if( !arg.IsNumber( i ) ) {
-		val.SetErrorValue( );
-		return( true );
-	}
-
-	if( strcasecmp( name, "makeabstime" ) == 0 ) {
-		val.SetAbsoluteTimeValue( i );
-	} else {
-		val.SetRelativeTimeValue( i );
-	}
-	return( true );
-}
 
 bool FunctionCall::
 getField(const char* name, const ArgumentList &argList, EvalState &state, 
 	Value &val )
 {
 	Value 	arg;
-	time_t 	secs;
+	abstime_t asecs;
+	time_t rsecs;
 	time_t	clock;
 	struct  tm tms;
 
@@ -1192,14 +1178,14 @@ getField(const char* name, const ArgumentList &argList, EvalState &state,
 		return false;	
 	}
 
-	if( arg.IsAbsoluteTimeValue( secs ) ) {
-		clock = secs;
-		gmtime_r( &clock, &tms );
+	if( arg.IsAbsoluteTimeValue( asecs ) ) {
+	 	clock = asecs.secs + asecs.offset + timezone;
+		localtime_r( &clock, &tms );
 		if( strcasecmp( name, "getyear" ) == 0 ) {
-				// tm_year is years since 1900 --- make it y2k compliant :-)
+			 // tm_year is years since 1900 --- make it y2k compliant :-)
 			val.SetIntegerValue( tms.tm_year + 1900 );
 		} else if( strcasecmp( name, "getmonth" ) == 0 ) {
-			val.SetIntegerValue( tms.tm_mon );
+			val.SetIntegerValue( tms.tm_mon + 1 );
 		} else if( strcasecmp( name, "getdayofyear" ) == 0 ) {
 			val.SetIntegerValue( tms.tm_yday );
 		} else if( strcasecmp( name, "getdayofmonth" ) == 0 ) {
@@ -1223,7 +1209,7 @@ getField(const char* name, const ArgumentList &argList, EvalState &state,
 			return( false );
 		}
 		return( true );
-	} else if( arg.IsRelativeTimeValue( secs ) ) {
+	} else if( arg.IsRelativeTimeValue( rsecs ) ) {
 		if( strcasecmp( name, "getyear" ) == 0  	||
 			strcasecmp( name, "getmonth" ) == 0  	||
 			strcasecmp( name, "getdayofmonth" )== 0 ||
@@ -1233,13 +1219,13 @@ getField(const char* name, const ArgumentList &argList, EvalState &state,
 			val.SetErrorValue( );
 			return( true );
 		} else if( strcasecmp( name, "getdays" ) == 0 ) {
-			val.SetIntegerValue( secs / 86400 );
+			val.SetIntegerValue( rsecs / 86400 );
 		} else if( strcasecmp( name, "gethours" ) == 0 ) {
-			val.SetIntegerValue( ( secs % 86400 ) / 3600 );
+			val.SetIntegerValue( (rsecs % 86400 ) / 3600 );
 		} else if( strcasecmp( name, "getminutes" ) == 0 ) {
-			val.SetIntegerValue( ( secs % 3600 ) / 60 );
+			val.SetIntegerValue( ( rsecs % 3600 ) / 60 );
 		} else if( strcasecmp( name, "getseconds" ) == 0 ) {
-			val.SetIntegerValue( secs % 60 );
+			val.SetIntegerValue( rsecs % 60 );
 		} else {
 			EXCEPT( "Should not reach here" );
 			val.SetErrorValue( );
@@ -1252,12 +1238,16 @@ getField(const char* name, const ArgumentList &argList, EvalState &state,
 	return( true );
 }
 
+
 bool FunctionCall::
 inTimeUnits(const char*name,const ArgumentList &argList,EvalState &state, 
 	Value &val )
 {
 	Value 	arg;
-	time_t	asecs=0, rsecs=0;
+	abstime_t	asecs;
+	asecs.secs = 0;
+	asecs.offset = 0;
+	time_t rsecs=0;
 	double	secs=0.0;
 
     if( argList.size( ) != 1 ) {
@@ -1278,7 +1268,7 @@ inTimeUnits(const char*name,const ArgumentList &argList,EvalState &state,
 	}
 
 	if( arg.IsAbsoluteTimeValue( ) ) {
-		secs = asecs;
+		secs = asecs.secs;
 	} else if( arg.IsRelativeTimeValue( ) ) {	
 		secs = rsecs;
 	}
@@ -1445,6 +1435,15 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 		len = alen - offset;
 	}
 
+	// to make sure that if length is specified as 0 explicitly
+	// then, len is set to 0
+	if(argList.size( ) == 3) {
+	  int templen;
+	  arg2.IsIntegerValue( templen );
+	  if(templen == 0)
+	    len = 0;
+	}
+
 		// allocate storage for the string
 	string str;
 
@@ -1461,13 +1460,14 @@ convInt( const char*, const ArgumentList &argList, EvalState &state,
 	string	buf;
 	char	*end;
 	int		ivalue;
-	time_t	tvalue;
+	time_t	rtvalue;
+	abstime_t atvalue;
 	bool	bvalue;
 	double	rvalue;
 	Value::NumberFactor nf = Value::NO_FACTOR;
 
 		// takes exactly one argument
-	if( argList.size() > 1 ) {
+	if( argList.size() != 1 ) {
 		result.SetErrorValue( );
 		return( true );
 	}
@@ -1489,7 +1489,7 @@ convInt( const char*, const ArgumentList &argList, EvalState &state,
 
 		case Value::STRING_VALUE:
 			arg.IsStringValue( buf );
-			ivalue = strtol( buf.c_str( ), (char**) &end, 0 );
+			ivalue = (int)strtod( buf.c_str( ), (char**) &end);
 			if( end == buf && ivalue == 0 ) {
 				// strtol() returned an error
 				result.SetErrorValue( );
@@ -1501,14 +1501,13 @@ convInt( const char*, const ArgumentList &argList, EvalState &state,
 				case 'M': nf = Value::M_FACTOR; break;
 				case 'G': nf = Value::G_FACTOR; break;
 				case 'T': nf = Value::T_FACTOR; break;
-				case '\0': nf = Value::NO_FACTOR; break;
+			        case '\0': nf = Value::NO_FACTOR; break;
 				default:  
 					result.SetErrorValue( );
 					return( true );
 			}
-			if( nf != Value::NO_FACTOR ) {
-				result.SetIntegerValue((int) (ivalue*Value::ScaleFactor[nf]));
-			}
+		
+			result.SetIntegerValue((int) (ivalue*Value::ScaleFactor[nf]));
 			return( true );
 
 		case Value::BOOLEAN_VALUE:
@@ -1526,13 +1525,13 @@ convInt( const char*, const ArgumentList &argList, EvalState &state,
 			return( true );
 
 		case Value::ABSOLUTE_TIME_VALUE:
-			arg.IsAbsoluteTimeValue( tvalue );
-			result.SetIntegerValue( (int)tvalue );
+			arg.IsAbsoluteTimeValue(atvalue );
+			result.SetIntegerValue( (int)atvalue.secs );
 			return( true );
 
 		case Value::RELATIVE_TIME_VALUE:
-			arg.IsRelativeTimeValue( tvalue );
-			result.SetIntegerValue( (int)tvalue );
+			arg.IsRelativeTimeValue(rtvalue );
+			result.SetIntegerValue( (int)rtvalue );
 			return( true );
 
 		default:
@@ -1550,13 +1549,14 @@ convReal( const char*, const ArgumentList &argList, EvalState &state,
 	string	buf;
 	char	*end;
 	int		ivalue;
-	time_t	tvalue;
+	time_t	rtvalue;
+	abstime_t atvalue;
 	bool	bvalue;
 	double	rvalue;
 	Value::NumberFactor nf;
 
 		// takes exactly one argument
-	if( argList.size() > 1 ) {
+	if( argList.size() != 1 ) {
 		result.SetErrorValue( );
 		return( true );
 	}
@@ -1595,9 +1595,7 @@ convReal( const char*, const ArgumentList &argList, EvalState &state,
 					result.SetErrorValue( );
 					return( true );
 			}
-			if( nf != Value::NO_FACTOR ) {
-				result.SetRealValue(rvalue*Value::ScaleFactor[nf] );
-			}
+			result.SetRealValue(rvalue*Value::ScaleFactor[nf] );
 			return( true );
 
 		case Value::BOOLEAN_VALUE:
@@ -1615,13 +1613,13 @@ convReal( const char*, const ArgumentList &argList, EvalState &state,
 			return( true );
 
 		case Value::ABSOLUTE_TIME_VALUE:
-			arg.IsAbsoluteTimeValue( tvalue );
-			result.SetRealValue( tvalue );
+			arg.IsAbsoluteTimeValue( atvalue );
+			result.SetRealValue( atvalue.secs );
 			return( true );
 
 		case Value::RELATIVE_TIME_VALUE:
-			arg.IsRelativeTimeValue( tvalue );
-			result.SetRealValue( tvalue );
+			arg.IsRelativeTimeValue( rtvalue );
+			result.SetRealValue( rtvalue );
 			return( true );
 
 		default:
@@ -1637,7 +1635,7 @@ convString(const char*, const ArgumentList &argList, EvalState &state,
 	Value	arg;
 
 		// takes exactly one argument
-	if( argList.size() > 1 ) {
+	if( argList.size() != 1 ) {
 		result.SetErrorValue( );
 		return( true );
 	}
@@ -1652,15 +1650,15 @@ convString(const char*, const ArgumentList &argList, EvalState &state,
 			return( true );
 
 		case Value::ERROR_VALUE:
-		case Value::CLASSAD_VALUE:
-		case Value::LIST_VALUE:
-			result.SetErrorValue( );
+		  	result.SetErrorValue( );
 			return( true );
 
-		case Value::STRING_VALUE:
+	        case Value::STRING_VALUE:
 			result.CopyFrom( arg );
 			return( true );
 
+		case Value::CLASSAD_VALUE:
+		case Value::LIST_VALUE:		  
 		case Value::INTEGER_VALUE:
 		case Value::REAL_VALUE:
 		case Value::BOOLEAN_VALUE:
@@ -1763,21 +1761,54 @@ convBool( const char*, const ArgumentList &argList, EvalState &state,
 }
 
 
+
+
 bool FunctionCall::
 convTime(const char* name,const ArgumentList &argList,EvalState &state,
 	Value &result)
 {
-	Value	arg;
-	bool	relative = ( strcasecmp( "reltime", name ) == 0 );
 
-		// takes exactly one argument
-	if( argList.size() > 1 ) {
+	Value	arg, arg2;
+	bool	relative = ( strcasecmp( "reltime", name ) == 0 );
+	bool secondarg = false; // says whether a 2nd argument exists
+	int arg2num; 
+
+		// takes one or two argument
+	if(( argList.size() < 1 )  || (argList.size() > 2)) {
 		result.SetErrorValue( );
 		return( true );
 	}
 	if( !argList[0]->Evaluate( state, arg ) ) {
 		result.SetErrorValue( );
 		return( false );
+	}
+	if(argList.size() == 2) { // we have a 2nd argument
+		secondarg = true;
+		if( !argList[1]->Evaluate( state, arg2 ) ) {
+			result.SetErrorValue( );
+			return( false );
+		}
+		int ivalue2 = 0;
+		double rvalue2 = 0;
+		time_t rsecs = 0;
+		if(relative) {// 2nd argument is N/A for reltime
+			result.SetErrorValue( );
+			return( false );
+		}
+		// 2nd arg should be integer, real or reltime
+		else if (arg2.IsIntegerValue(ivalue2)) {
+			arg2num = ivalue2;
+		}
+		else if (arg2.IsRealValue(rvalue2)) {
+			arg2num = (int)rvalue2;
+		}
+		else if(arg2.IsRelativeTimeValue(rsecs)) {
+			arg2num = rsecs;
+		}
+		else {
+			result.SetErrorValue( );
+			return( false );
+		}
 	}
 
 	switch( arg.GetType( ) ) {
@@ -1799,7 +1830,19 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 				if( relative ) {
 					result.SetRelativeTimeValue( ivalue );
 				} else {
-					result.SetAbsoluteTimeValue( ivalue );
+				  abstime_t atvalue;
+				  atvalue.secs = ivalue;
+				  if(secondarg)   //2nd arg is the offset in secs
+				    atvalue.offset = arg2num;
+				  else   // the default offset is the current timezone
+				    atvalue.offset = Literal::findOffset(atvalue.secs);
+				  
+				  if(atvalue.offset == -1) {
+				    result.SetErrorValue( );
+				    return( false );
+				  }
+				  else
+				    result.SetAbsoluteTimeValue( atvalue );
 				}
 				return( true );
 			}
@@ -1812,40 +1855,36 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 				if( relative ) {
 					result.SetRelativeTimeValue( (int)rvalue );
 				} else {
-					result.SetAbsoluteTimeValue( (int)rvalue );
+				  	  abstime_t atvalue;
+					  atvalue.secs = (int)rvalue;
+					  if(secondarg)         //2nd arg is the offset in secs
+					    atvalue.offset = arg2num;
+					  else    // the default offset is the current timezone
+					    atvalue.offset = Literal::findOffset(atvalue.secs);
+					  if(atvalue.offset == -1) {
+					    result.SetErrorValue( );
+					    return( false );
+					  }
+					  else	
+					    result.SetAbsoluteTimeValue( atvalue );
 				}
 				return( true );
 			}
 
 		case Value::STRING_VALUE:
 			{
-				string 	buf;
-				time_t 	secs;
-				arg.IsStringValue( buf );
-				if( relative ) {
-					if( !Lexer::tokenizeRelativeTime((char*)buf.c_str(),secs)) {
-						result.SetErrorValue( );
-						return( true );
-					}
-					result.SetRelativeTimeValue( secs );
-				} else {
-					if( !Lexer::tokenizeAbsoluteTime((char*)buf.c_str(),secs)) {
-						result.SetErrorValue( );
-						return( true );
-					}
-					result.SetAbsoluteTimeValue( secs );
-				}
-				return( true );
+			  //should'nt come here
+			  // a string argument to this function is transformed to a literal directly
 			}
 
 		case Value::ABSOLUTE_TIME_VALUE:
 			{
-				time_t secs;
+				abstime_t secs;
 				arg.IsAbsoluteTimeValue( secs );
 				if( relative ) {
-					result.SetRelativeTimeValue( secs );
+					result.SetRelativeTimeValue( secs.secs );
 				} else {
-					result.SetAbsoluteTimeValue( secs );
+					result.CopyFrom( arg );
 				}
 				return( true );
 			}
@@ -1857,7 +1896,18 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 				} else {
 					time_t secs;
 					arg.IsRelativeTimeValue( secs );
-					result.SetAbsoluteTimeValue( secs );
+					abstime_t atvalue;
+					atvalue.secs = secs;
+					if(secondarg)    //2nd arg is the offset in secs
+						atvalue.offset = arg2num;
+					else      // the default offset is the current timezone
+						atvalue.offset = Literal::findOffset(atvalue.secs);	
+					if(atvalue.offset == -1) {
+						result.SetErrorValue( );
+						return( false );
+					}
+					else
+					  result.SetAbsoluteTimeValue( atvalue );
 				}
 				return( true );
 			}
@@ -1868,6 +1918,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 	}
 }
 
+
 bool FunctionCall::
 doMath( const char* name,const ArgumentList &argList,EvalState &state,
 	Value &result )
@@ -1875,7 +1926,7 @@ doMath( const char* name,const ArgumentList &argList,EvalState &state,
 	Value	arg;
 
 		// takes exactly one argument
-	if( argList.size() > 1 ) {
+	if( argList.size() != 1 ) {
 		result.SetErrorValue( );
 		return( true );
 	}
@@ -1909,11 +1960,11 @@ doMath( const char* name,const ArgumentList &argList,EvalState &state,
 				double rvalue;
 				arg.IsRealValue( rvalue );
 				if( strcasecmp( "floor", name ) == 0 ) {
-					result.SetRealValue( floor( rvalue ) );
+					result.SetIntegerValue( (int)floor( rvalue ) );
 				} else if( strcasecmp( "ceil", name ) == 0 ) {
-					result.SetRealValue( ceil( rvalue ) );
+					result.SetIntegerValue( (int)ceil( rvalue ) );
 				} else if( strcasecmp( "round", name ) == 0 ) {
-					result.SetRealValue( rint( rvalue ) );
+					result.SetIntegerValue( (int)rint( rvalue ) );
 				} else {
 					result.SetErrorValue( );
 					return( true );
@@ -1993,6 +2044,41 @@ matchPattern( const char*,const ArgumentList &argList,EvalState &state,
 		result.SetErrorValue( );
 		return( true );
 	}
+}
+
+
+// function call which takes a string(hexadecimal number) & converts it to the 
+// corresponding 64-bit real number according to the ieee754 norms 
+bool FunctionCall::
+doIEEE754( const char*,const ArgumentList &argList,EvalState &state,
+	Value &result )
+{
+  	Value	arg;
+
+	// takes exactly one argument
+	if( argList.size() != 1 ) {
+		result.SetErrorValue( );
+		return( true );
+	}
+	if( !argList[0]->Evaluate( state, arg ) ) {
+		result.SetErrorValue( );
+		return( false );
+	}
+	
+	string ieeestr;
+	// has to be a string argument
+	if(!arg.IsStringValue(ieeestr)) {
+		result.SetErrorValue( );
+		return( false );
+	} 
+	
+	union { double d; long long l; } u;
+	if (sscanf(ieeestr.c_str(), "%llx", &u.l) != 1) { // the hex string should correspond to a valid real no.
+		result.SetErrorValue( );
+		return( false );
+	}
+	result.SetRealValue(u.d);
+	return(true);	
 }
 
 END_NAMESPACE // classad
