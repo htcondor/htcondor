@@ -3562,6 +3562,15 @@ The location of a file visible to both server and client in
 Remote File System authentication.
 The default when not defined is the directory 
 \File{/shared/scratch/tmp}.
+
+\item[\Macro{ENCRYPT\_EXECUTE\_DIRECTORY}]
+\label{param:EncryptExecuteDirectory}
+The execute directory for jobs on Windows platforms may be
+encrypted by setting this configuration variable to \Expr{True}.
+Defaults to \Expr{False}.
+The method of encryption uses the EFS (Encrypted File System)
+feature of Windows NTFS v5.
+
 \end{description}
 
 
