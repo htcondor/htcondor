@@ -1378,3 +1378,18 @@ void AssignOpBase::Display()
 	rArg->Display();
     }
 }
+
+int IntegerBase::Value()
+{
+	return value;
+}
+
+float FloatBase::Value()
+{
+	return value;
+}
+
+char * const StringBase::Value()
+{
+	return value;
+}
