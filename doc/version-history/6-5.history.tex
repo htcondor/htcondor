@@ -12,15 +12,6 @@ The details of each version are described below.
 \noindent New Features:
 \begin{itemize}
 
-\item All daemons now publish ``sequence number'' and ``start time''
-information in their ClassAds.
-
-\item The Collector now maintains and publishes update statistics
-using the above ClassAd ``sequence number'' and ``start time''
-information.  History information is stored for the past
-COLLECTOR\_CLASS\_HISTORY\_SIZE updates and is also published in the
-Collector's ClassAd as a hex string.
-
 \item The collector and negotiator can now run on configurable
 ports, instead of relying on hard-coded values.
 To use this feature, many places in Condor where you could previously
@@ -54,23 +45,50 @@ Configuration files they are using, right after the startup banner.
   which will tell you in which configuration file and line number a
   condor configuration parameter is defined.
 
-\item The value of the \Macro{JOB\_RENICE\_INCREMENT} configuration
-      parameter can now be an arbitrary ClassAd expression rather than
-      just a static integer.  The expression will be evaluated by the
-      \Condor{starter} for each job just before it runs, and can refer
-      to any attribute in the job ClassAd.
-
-\item You no longer need to define \Macro{FLOCK\_VIEW\_SERVERS} in
-  your config file if you have configured a \Condor{schedd} to flock
-  to other pools.
-  This is now handled automatically, so you only have to define
-  \Macro{FLOCK\_TO}.
+\item There are new attributes to control Condor's file transfer
+  mechanism.
+  Not only will they hopefully be more clear and easy to use than the
+  old ones, they also provide new functionality.
+  There is now an option to only transfer files ``IF\_NEEDED''.
+  In this case, if the job is matched with a machine in the same
+  \Attr{FileSystemDomain}, the files are not transfered, but if the
+  job runs at a machine in a different \Attr{FileSystemDomain}, the
+  files are transfered automatically.
+  For more information on using the Condor File Transfer mechanism,
+  see section~\ref{sec:file-transfer} on
+  page~\pageref{sec:file-transfer}, or the \Condor{submit} man
+  page on page~\pageref{man-condor-submit}.
 
 \item On all Unix platforms, the \Condor{master} no longer spawns the
   \Condor{collector} and \Condor{negotiator} with root privileges,
   since they were not used by those daemons.
   This is a security enhancement, since it is better for daemons not
   to have root powers unless they really need them.
+
+\item The value of the \Macro{JOB\_RENICE\_INCREMENT} configuration
+      parameter can now be an arbitrary ClassAd expression rather than
+      just a static integer.  The expression will be evaluated by the
+      \Condor{starter} for each job just before it runs, and can refer
+      to any attribute in the job ClassAd.
+
+\item The \Condor{collector} now publishes statistics about the running
+  jobs.  In particular, it now publishes the number of jobs running in
+  each Universe, both as a snapshot, and the maximum of the snapshots
+  for each month.
+
+\item The UNIX \Condor{collector} has the ability to fork off child
+  processes to handle queries.  The \Macro{COLLECTOR\_QUERY\_WORKERS}
+  parameter is used to specify the maximum number of these worker
+  processes and defaults to zero.
+
+\item All daemons now publish ``sequence number'' and ``start time''
+information in their ClassAds.
+
+\item The Collector now maintains and publishes update statistics
+using the above ClassAd ``sequence number'' and ``start time''
+information.  History information is stored for the past
+COLLECTOR\_CLASS\_HISTORY\_SIZE updates and is also published in the
+Collector's ClassAd as a hex string.
 
 \item The \Condor{schedd} can now use TCP connections to send updates
   to pools that it is configured to flock to.
@@ -85,18 +103,14 @@ Configuration files they are using, right after the startup banner.
   section~\ref{sec:tcp-collector-update} on ``Using TCP to Send 
   Collector Updates'' on page~\pageref{sec:tcp-collector-update}.
 
-\item The \Condor{collector} now publishes statistics about the running
-  jobs.  In particular, it now publishes the number of jobs running in
-  each Universe, both as a snapshot, and the maximum of the snapshots
-  for each month.
+\item You no longer need to define \Macro{FLOCK\_VIEW\_SERVERS} in
+  your config file if you have configured a \Condor{schedd} to flock
+  to other pools.
+  This is now handled automatically, so you only have to define
+  \Macro{FLOCK\_TO}.
 
 \item If no \Macro{STARTD\_EXPRS} is specified, the \Condor{startd}
   now defaults to ``JobUniverse''.
-
-\item The UNIX \Condor{collector} has the ability to fork off child
-  processes to handle queries.  The \Macro{COLLECTOR\_QUERY\_WORKERS}
-  parameter is used to specify the maximum number of these worker
-  processes and defaults to zero.
 
 \end{itemize}
 
