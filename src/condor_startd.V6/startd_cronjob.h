@@ -29,14 +29,17 @@
 class StartdCronJob : public CondorCronJob
 {
   public:
-	StartdCronJob( const char *name );
+	StartdCronJob( const char *mgrName, const char *jobName );
 	virtual ~StartdCronJob( );
+	int Initialize( void );
 
   private:
 	virtual int ProcessOutput( const char *line );
-	ClassAd	*OutputAd;
-	int		OutputAdCount;
 
+	ClassAd		*OutputAd;
+	int			OutputAdCount;
+
+	MyString	EnvStr;			// My environment string
 };
 
 #endif /* _STARTD_CRONJOB_H */

@@ -25,15 +25,31 @@
 #include "startd_cronjob.h"
 #include "startd.h"
 
+// Interface version number
+#define	INTERFACE_VERSION	"1"
+
 // CronJob constructor
 StartdCronJob::
-StartdCronJob( const char *jobName ) :
-		CondorCronJob( jobName )
+StartdCronJob( const char *mgrName, const char *jobName ) :
+		CondorCronJob( mgrName, jobName )
 {
 	// Register it with the Resource Manager
 	resmgr->adlist_register( jobName );
 	OutputAd = NULL;
 	OutputAdCount = 0;
+
+	// Build my interface version environment (but, I need a 'name' to do it)
+	if ( mgrName && (*mgrName) ) {
+		char	*nameUc = strdup( mgrName );
+		char	*namePtr;
+		for( namePtr = nameUc; *namePtr; namePtr++ ) {
+			if ( islower ( *namePtr ) ) {
+				*namePtr = toupper( *namePtr );
+			}
+		}
+		EnvStr = nameUc;
+		EnvStr += "_INTERFACE_VERSION=" INTERFACE_VERSION;
+	}
 }
 
 // StartdCronJob destructor
@@ -45,6 +61,16 @@ StartdCronJob::
 	if ( NULL != OutputAd ) {
 		delete( OutputAd );
 	}
+}
+
+// StartdCronJob initializer
+int
+StartdCronJob::Initialize( )
+{
+	AddEnv( EnvStr.GetCStr() );
+
+	// And, run the "main" Initialize function
+	CondorCronJob::Initialize( );
 }
 
 // Process a line of input

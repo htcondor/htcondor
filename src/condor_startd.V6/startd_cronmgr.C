@@ -36,8 +36,9 @@ StartdCronMgr::StartdCronMgr( void ) :
 		SetName( NewName, NewName );
 		free( NewName );
 	}
-	ShuttingDown = false;
 
+	// Set my initial "shutdown" state
+	ShuttingDown = false;
 }
 
 // Basic destructor
@@ -67,16 +68,14 @@ StartdCronMgr::ShutdownOk( void )
 
 // Create a new job
 CondorCronJob *
-StartdCronMgr::NewJob( const char *name )
+StartdCronMgr::NewJob( const char *jobname )
 {
-	dprintf( D_FULLDEBUG, "*** Creating a Startd job '%s'***\n", name );
-	StartdCronJob *job = new StartdCronJob( name );
+	dprintf( D_FULLDEBUG, "*** Creating a Startd job '%s'***\n", jobname );
+	StartdCronJob *job = new StartdCronJob( GetName(), jobname );
 
 	// Register our death handler...
 	CronEventHandler e;
 	e = (CronEventHandler) &StartdCronMgr::JobEvent;
-	//NewJob->SetEventHandler( (CronEventHandler) &StartdCronMgr::JobEvent,
-	//						 this );
 	job->SetEventHandler( e, this );
 
 	return (CondorCronJob *) job;
