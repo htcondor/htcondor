@@ -83,6 +83,8 @@ private:
 	int		needs_update;
 	StopStateT stop_state;
 
+	int		was_not_responding;
+
 };
 
 
