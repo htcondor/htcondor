@@ -38,7 +38,7 @@ int		egid;
 int temp_gid=getgid();
 int temp_egid=getegid();
 
-#if defined(Solaris) /* ..dhaval 9/11/95 to avoid inclusion of libucb.a */
+if (getuid()!=0){ 
         if(setgid(rgid)==-1){ return -1;}
 	else {if (setegid(egid)==-1){
 		setgid(temp_gid);
@@ -47,8 +47,7 @@ int temp_egid=getegid();
 		} else { return 0;} 
 
 } 
-#else
-	return setresgid( rgid, egid, egid );
-#endif
+} else {
+	return setresgid( rgid, egid, egid ); 
+	}
 }
-
