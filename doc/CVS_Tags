@@ -8,10 +8,51 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+5/20/04 V6_7-pre-merge-V6_7_0-doc-merge-1
+    The state of the doc directory in V6_7-branch before merging
+    changes from the V6_7_0-branch as tagged V6_7_0-doc-merge-1.
+
+5/20/04 V6_7_0-doc-merge-1
+    The state of the doc directory in V6_7_0-branch before a 
+    first-ever merge into the V6_7-branch.  This merge will
+    bring changes made in the V6_6_5-branch, merged into the
+    V6_6-branch, and again merged into the V6_7_0-branch
+    into the V6_7-branch.
+
+5/20/04 V6_7_0-post-merge-V6_6-doc-merge-5
+    The state of the doc directory in V6_7_0-branch after merging
+    changes from the V6_6-branch as tagged V6_6-doc-merge-5.
+
+5/20/04 V6_7_0-pre-merge-V6_6-doc-merge-5
+    The state of the doc directory in V6_7_0-branch before merging
+    changes from the V6_6-branch as tagged V6_6-doc-merge-5.
+
+5/20/04 V6_6-doc-merge-5
+    The state of the doc directory in V6_6-branch before a 
+    merge into the V6_7-branch.  This merge goes into the
+    V6_7_0-branch.
+
+5/19/04 V6_6-post-merge-V6_6_5-doc-merge-1
+    The state of the doc directory in V6_6-branch after merging
+    changes from the V6_6_5-branch as tagged V6_6_5-doc-merge-1.
+
+5/19/04 V6_6-pre-merge-V6_6_5-doc-merge-1
+    The state of the doc directory in V6_6-branch before merging
+    changes from the V6_6_5-branch as tagged V6_6_5-doc-merge-1.
+
+5/19/04 V6_6_5-doc-merge-1
+    The state of the doc directory in V6_6_5-branch before a 
+    first-time merge into the V6_6-branch. 
+
 5/6/04 V6_7_0-branch
     A release branch for the 6.7.0 manual.  Created from the
     V6_7_0-root tag.  Any changes to the 6.7.0 manual should be done
     here, and the V6_7-branch can be used for 6.7.1 and future work. 
+
+5/04/04 V6_6_5-branch
+    A release branch for the 6.6.5 manual.  Created from the
+    V6_6_5-root tag.  Any changes to the 6.6.5 manual should be done
+    here, and the V6_6-branch can be used for 6.6.6 and future work. 
 
 4/29/04 V6_7-post-merge-V6_6-doc-merge-4
     The state of the doc directory in V6_7-branch after merging
