@@ -812,10 +812,17 @@ CStarter::InitUserPriv( void )
 	// taken origionally from OsProc::StartJob.  Here we create the
 	// user and initialize user_priv.
 	// we only support running jobs as user nobody for the first pass
+#if 0 
+
+	// this code is handled by dynuser now. It is not needed.
+	// -stolley 7/02
 	char nobody_login[60];
 	// sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
 	sprintf(nobody_login,"condor-run-%d",daemonCore->getpid());
 	init_user_nobody_loginname(nobody_login);
+#endif
+	
+	// just init a new nobody user; dynuser handles the rest.
 	init_user_ids("nobody");
 #endif
 

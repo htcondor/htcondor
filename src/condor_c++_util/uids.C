@@ -150,13 +150,13 @@ const char *get_user_nobody_loginname()
     return NobodyLoginName;
 }
 
-void
+int
 init_user_ids(const char username[]) 
 {
 	dprintf(D_ALWAYS,
 		"entering init_user_ids()...watch out.\n");
 	
-	if (!username) { return; }
+	if (!username) { return 0; }
 
 	
 	// see if we already have a user handle for the requested user.
@@ -164,7 +164,7 @@ init_user_ids(const char username[])
 	const char *cur_acct = DynUser.get_accountname();
 	if ( cur_acct && strcmp(cur_acct,username) == 0 ) {
 		CurrUserHandle = DynUser.get_token();
-		return;
+		return 1;
 	}
 
 	DynUser.reset();
@@ -172,7 +172,7 @@ init_user_ids(const char username[])
 	if ( strcmp(username,"nobody") != 0 ) {
 		// here we call routines to deal with password server
 		// or as Jeff says: "insert hand waving here"  :^)
-		return;
+		return 0;
 	}
 
 	// at this point, we know we want a user nobody, so
@@ -190,6 +190,7 @@ init_user_ids(const char username[])
 
 	// we created a new user, now just stash the token
 	CurrUserHandle = DynUser.get_token();
+	return 1;
 }
 
 priv_state
