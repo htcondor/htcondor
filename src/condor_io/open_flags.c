@@ -50,7 +50,9 @@ static struct {
 	{O_APPEND, CONDOR_O_APPEND}
 };
 
+#ifdef WIN32
 extern "C" {
+#endif
 
 int open_flags_encode(int old_flags)
 {
@@ -81,4 +83,7 @@ int open_flags_decode(int old_flags)
 	return new_flags;
 }
 
+#ifdef WIN32
 }  /* end of extern "C" */
+#endif
+
