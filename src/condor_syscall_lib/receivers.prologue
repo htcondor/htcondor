@@ -30,10 +30,15 @@
 #	include "condor_fdset.h"
 #endif
 
-#if defined(ULTRIX42) || defined(ULTRIX43) || defined(OSF1)
+#if defined(ULTRIX42) || defined(OSF1)
 #	include <sys/param.h>
 #	include <sys/mount.h>
-#else
+#elif defined(ULTRIX43)
+#   include <errno.h>
+#	include <sys/param.h>
+#	include "condor_fix_timeval.h"
+#   include <nfs/nfs.h>
+#else 
 #	include <sys/mount.h>
 #endif
 

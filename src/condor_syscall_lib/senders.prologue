@@ -28,9 +28,11 @@
 #	include "condor_fdset.h"
 #endif
 
-#if defined(ULTRIX43) || defined(OSF1)
+#if defined(OSF1)
 #	include <sys/param.h>
 #	include <sys/mount.h>
+#elif defined(ULTRIX43)
+#	include <sys/param.h>
 #else
 #	include <sys/mount.h>
 #endif
@@ -51,6 +53,12 @@
 
 #if defined(SUNOS41)
 #	include <sys/poll.h>
+#endif
+
+#if	defined(ULTRIX43)
+#   include <errno.h>
+#   include <nfs/nfs.h>
+#	include "_condor_fix_types.h"
 #endif
 
 #if defined(AIX32)

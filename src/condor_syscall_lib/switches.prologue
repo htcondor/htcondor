@@ -53,7 +53,15 @@
 #undef _PROTOTYPES
 #endif
 #include <sys/socket.h>
+
+#if defined(ULTRIX43)
+#	define uname	__hide_uname
+#endif
 #include <sys/utsname.h>
+#if	defined(ULTRIX43)
+#	undef uname
+	int uname( struct utsname *name );
+#endif
 
 #if defined(SUNOS41) 
 #	include <signal.h>
@@ -102,6 +110,9 @@
 #   define mknod  	__hide_mknod
 #	define readlink	__hide_readlink
 #	define setpgrp  __hide_setpgrp
+#elif defined(ULTRIX43)
+#	define write	__hide_write
+#	define read		__hide_read
 #endif
 #include "condor_fix_unistd.h"
 #if defined(HPUX9)
@@ -111,6 +122,11 @@
 	int mknod( const char *path, int mode, dev_t device );
 	int readlink( const char *path, char *buf, int buf_size );
 	int setpgrp(  );
+#elif defined(ULTRIX43)
+#	undef write
+#	undef read
+	ssize_t write( int fd, const void *buf, size_t len );
+	ssize_t read( int fd, void *buf, size_t len );
 #endif
 
 #if defined(HPUX9)
@@ -132,7 +148,7 @@
 	int shmget( key_t key, unsigned int size, unsigned int flags );
 #endif
 
-#if defined(SUNOS41) || defined(HPUX9)
+#if defined(SUNOS41) || defined(HPUX9) || defined(ULTRIX43)
 #	define TRUE 1
 #	define FALSE 0
 #endif
@@ -151,6 +167,12 @@
 MODE_T	umask( MODE_T mask );
 int mkdir( const char *path, MODE_T mode );
 int chmod( const char *path, MODE_T mode);
+
+#if	defined(ULTRIX43)
+typedef int	bool_t;
+#	include <errno.h>
+#	include <nfs/nfs.h>
+#endif
 
 #if	defined(HPUX9)
 

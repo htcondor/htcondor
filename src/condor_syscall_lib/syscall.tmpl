@@ -371,7 +371,7 @@ int rename( const char *from, const char *to ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
-#	if !defined(SUNOS41)
+#	if !defined(SUNOS41) && !defined(ULTRIX43)
 		int getfsstat( struct statfs buf[], long bufsize, int flags ) {
 			out xdr_opaque( buf, STATFS_ARRAY_SIZE );
 			alloc( buf, bufsize );

@@ -48,7 +48,7 @@
 #endif
 #include <unistd.h>
 #include "_condor_fix_types.h"
-#include <sys/time.h>
+#include "condor_fix_timeval.h"
 #include <sys/resource.h>
 #include <sys/uio.h>
 #include <errno.h>
