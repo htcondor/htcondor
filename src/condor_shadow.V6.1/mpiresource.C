@@ -31,26 +31,30 @@ MpiResource::MpiResource( BaseShadow *shadow ) :
 	node_num = -1;
 }
 
-MpiResource::MpiResource( BaseShadow *shadow, 
-						  const char *executingHost, 
-						  const char *capability ) :
-	RemoteResource( shadow, executingHost, capability ) 
-{
-	node_num = -1;
-}
-
 
 bool
 MpiResource::requestIt( int starterVersion )  {
 
 	char buf[256];
+	char* startd_addr;
 	sprintf( buf, "MpiResource::requestIt(), node: %d", node_num );
 	dumpClassad( buf, jobAd, D_JOB );
 	bool rval;
 
+	if( ! dc_startd ) {
+		dprintf( D_ALWAYS, 
+				 "requestIt() called with no DCStartd object!\n" );
+		return false;
+	}
+	if( ! (startd_addr = dc_startd->addr()) ) {
+		dprintf( D_ALWAYS, 
+				 "requestIt() called with no startd contact info!\n" );
+		return false;
+	}
+
 	if( (rval=RemoteResource::requestIt(starterVersion)) ) {
 		NodeExecuteEvent event;
-        strcpy( event.executeHost, executingHost );
+        strcpy( event.executeHost, startd_addr );
 		event.node = node_num;
         if( writeULogEvent(&event) ) {
             dprintf ( D_ALWAYS, "Unable to log NODE_EXECUTE event." );
