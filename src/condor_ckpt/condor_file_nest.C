@@ -29,10 +29,12 @@ CondorFileNest::CondorFileNest()
 	url[0] = 0;
 	server[0] = 0;
 	path[0] = 0;
+	_condor_ckpt_disable();
 }
 
 CondorFileNest::~CondorFileNest()
 {
+	_condor_ckpt_enable();
 }
 
 int CondorFileNest::open( const char *u, int flags, int mode )
