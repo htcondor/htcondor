@@ -754,13 +754,16 @@ printComparisonOpToStr (char *str, ExprTree *lArg, ExprTree *rArg, char *op)
 ExprTree*  
 Variable::DeepCopy(void) const
 {
-	char     *name_copy;
 	Variable *copy;
 
-	/* This needs to be updated after the merge into 6.3 */
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+	copy = new Variable(name);
+#else
+	char     *name_copy;
 	name_copy = new char[strlen(name)+1];
 	strcpy(name_copy, name);
 	copy = new Variable(name_copy);
+#endif
 	CopyBaseExprTree(copy);
 	
 	return copy;
@@ -802,13 +805,16 @@ Boolean::DeepCopy(void) const
 ExprTree*  
 String::DeepCopy(void) const
 {
-	char   *value_copy;
 	String *copy;
 
-	/* This needs to be updated after the merge into 6.3 */
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+	copy = new String(value);
+#else
+	char   *value_copy;
 	value_copy = new char[strlen(value)+1];
 	strcpy(value_copy, value);
 	copy = new String(value_copy);
+#endif
 	CopyBaseExprTree(copy);
 	
 	return copy;
