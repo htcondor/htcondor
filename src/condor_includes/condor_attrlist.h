@@ -151,6 +151,7 @@ class AttrList : public AttrListAbstract
 		// for iteration through names (i.e., lhs of the expressions)
 		void		ResetName() { this->ptrName = exprList; }
 		char*		NextName();					// next unvisited name
+		const char* NextNameOriginal();
 		char*       NextDirtyName();
 
 		// lookup values in classads  (for simple assignments)
