@@ -46,11 +46,10 @@ class EvalState {
 		void SetRootScope( );
 		void SetScopes( const ClassAd* );
 
-		EvalCache		cache;
-		const ClassAd	*rootAd;
-		const ClassAd 	*curAd;
+		EvalCache	cache;
+		ClassAd		*rootAd;
+		ClassAd 	*curAd;
 };
-
 
 /** A node of the expression tree, which may be a literal, attribute reference,
 	function call, classad, expression list, or an operator applied to other
@@ -96,7 +95,7 @@ class ExprTree
 			@param v The value of the expression.
 			@return true if the operation succeeded, and false otherwise.
 		*/
-		bool Evaluate( Value& v ) const ;
+		bool Evaluate( Value& v ) const;
 
 		/** Evaluates the expression and identifies significant sub-expressions
 				that determined the value of the expression.
@@ -118,8 +117,9 @@ class ExprTree
 				could not be fully flattened to a value, and NULL otherwise.
 			@return true if the flattening was successful, and false otherwise.
 		*/
-		bool Flatten( Value& val, ExprTree*& tree);
+		bool Flatten( Value& val, ExprTree*& tree) const;
 
+		void Puke( ) const;
 		
   	protected:
 		ExprTree ();
