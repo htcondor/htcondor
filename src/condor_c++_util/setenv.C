@@ -42,9 +42,9 @@ extern DLL_IMPORT_MAGIC char **environ;
 template class HashTable<HashKey, char *>;
 template class HashBucket<HashKey, char *>;
 
-#endif
-
 HashTable <HashKey, char *> EnvVars( HASH_TABLE_SIZE, hashFunction );
+
+#endif
 
 int SetEnv( const char *key, const char *value)
 {
@@ -138,10 +138,8 @@ int UnsetEnv( const char *env_var )
 				GetLastError());
 		return FALSE;
 	}
-#endif
+#else
 
-		// XXX Again, this is a memory-leaking quick hack. If we tracked
-		// variables we previously inserted, we could free them here.
 	for ( int i = 0 ; environ[i] != NULL; i++ ) {
 		if ( strncmp( environ[i], env_var, strlen(env_var) ) == 0 ) {
             for ( ; environ[i] != NULL; i++ ) {
@@ -159,6 +157,7 @@ int UnsetEnv( const char *env_var )
 			// delete it
 		delete [] hashed_var;
 	}
+#endif
 
 	return TRUE;
 }
