@@ -176,6 +176,7 @@ if (getuid()==0)
 
 #ifdef NFSFIX
 	/* X11R4 has new security features.  Need to be root here. */
+if (getuid() == 0)
 	set_root_euid(__FILE__,__LINE__);
 #endif NFSFIX
 
