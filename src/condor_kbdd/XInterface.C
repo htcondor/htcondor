@@ -22,7 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #define _POSIX_SOURCE
 
-
+#include "condor_common.h"
 #include <stdio.h>
 #include <paths.h>
 #include <string.h>
