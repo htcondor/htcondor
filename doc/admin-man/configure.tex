@@ -3548,6 +3548,12 @@ between a client and daemon, and is protected by a shared secret key.
 The session expires to reduce the window of opportunity where
 the key may be compromised by attack.
 
+\item[\Macro{FS\_REMOTE\_DIR}]
+\label{param:FSRemoteDir}
+The location of a file visible to both server and client in
+Remote File System authentication.
+The default when not defined is the directory 
+\File{/shared/scratch/tmp}.
 \end{description}
 
 

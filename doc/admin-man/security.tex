@@ -1359,13 +1359,15 @@ In this way, the file system becomes the trusted authority.
 \subsubsection{\label{sec:FSR-Authentication}File System Remote Authentication}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{authentication!using a remote file system}
-Like file system authentication, this
-form of authentication utilizes the ownership of a file
+Like file system authentication,
+this form of authentication utilizes the ownership of a file
 in the identity verification of a client.
 In this case,
 a daemon authenticating a client requires the client to write
 a file in a specific location,
 but the location is not restricted to \File{/tmp}.
+The location of the file is specified by the configuration
+variable \Macro{FS\_REMOTE\_DIR}.
 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % \index{authentication!using a remote file system}
