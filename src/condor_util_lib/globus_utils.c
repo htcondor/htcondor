@@ -31,6 +31,7 @@
 #     include "globus_gsi_credential.h"
 #     include "globus_gsi_system_config.h"
 #     include "globus_gsi_system_config_constants.h"
+#     include "gssapi.h"
 #endif
 
 #define DEFAULT_MIN_TIME_LEFT 8*60*60;
@@ -101,6 +102,11 @@ activate_globus_gsi()
 
 	if ( globus_module_activate(GLOBUS_GSI_CREDENTIAL_MODULE) ) {
 		_globus_error_message = "couldn't activate globus gsi credential module";
+		return -1;
+	}
+
+	if ( globus_module_activate(GLOBUS_GSI_GSSAPI_MODULE) ) {
+		_globus_error_message = "couldn't activate globus gsi gssapi module";
 		return -1;
 	}
 
@@ -306,24 +312,96 @@ x509_proxy_seconds_until_expire( const char *proxy_file )
 #endif /* !defined(GSS_AUTHENTICATION) */
 }
 
+/* Attempt a gss_import_cred() to catch some certificate problems. This
+ * won't catch all problems (it doesn't verify the entire certificate
+ * chain), but it's a start. Returns 0 on success, and -1 on any errors.
+ */
+int
+x509_proxy_try_import( const char *proxy_file )
+{
+#if !defined(CONDOR_GSI)
+
+	_globus_error_message = "This version of Condor doesn't support X509 credentials!";
+	return -1;
+
+#else
+	int rc;
+	int min_stat;
+	gss_buffer_desc import_buf;
+	gss_cred_id_t cred_handle;
+	static char buf_value[4096];
+	int must_free_proxy_file = FALSE;
+
+	if ( activate_globus_gsi() != 0 ) {
+		return -1;
+	}
+
+	/* Check for proxy file */
+	if (proxy_file == NULL) {
+		proxy_file = get_x509_proxy_filename();
+		if (proxy_file == NULL) {
+			goto cleanup;
+		}
+		must_free_proxy_file = TRUE;
+	}
+
+	snprintf( buf_value, sizeof(buf_value), "X509_USER_PROXY=%s", proxy_file);
+	import_buf.value = buf_value;
+	import_buf.length = strlen(buf_value) + 1;
+
+	rc = gss_import_cred( &min_stat, &cred_handle, GSS_C_NO_OID, 1,
+						  &import_buf, 0, NULL );
+
+	if ( rc != GSS_S_COMPLETE ) {
+		char *message;
+        globus_gss_assist_display_status_str(&message,
+											 "",
+											 rc,
+											 min_stat,
+											 0);
+		snprintf( buf_value, sizeof(buf_value), "%s", message );
+		free(message);
+//		snprintf( buf_value, sizeof(buf_value),
+//				  "Failed to import credential maj=%d min=%d", rc,
+//				  min_stat );
+		_globus_error_message = buf_value;
+		return -1;
+	}
+
+	gss_release_cred( &min_stat, &cred_handle );
+
+ cleanup:
+    if (must_free_proxy_file) {
+        free(proxy_file);
+    }
+
+	return 0;
+#endif /* !defined(CONDOR_GSI) */
+}
+
 int
 check_x509_proxy( const char *proxy_file )
 {
 #if !defined(CONDOR_GSI)
 
 	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
-	return 1;
+	return -1;
 
 #else
 	char *min_time_left_param = NULL;
 	int min_time_left;
 	int time_diff;
 
+	if ( x509_proxy_try_import( proxy_file ) != 0 ) {
+		/* Error! Don't set error message, it is already set */
+		return -1;
+	}
+
 	time_diff = x509_proxy_seconds_until_expire( proxy_file );
 
 	if ( time_diff < 0 ) {
 		/* Error! Don't set error message, it is already set */
-		return 1;
+		return -1;
 	}
 
 	/* check validity */
@@ -338,12 +416,12 @@ check_x509_proxy( const char *proxy_file )
 
 	if ( time_diff == 0 ) {
 		_globus_error_message =	"proxy has expired";
-		return 1;
+		return -1;
 	}
 
 	if ( time_diff < min_time_left ) {
 		_globus_error_message =	"proxy lifetime too short";
-		return 1;
+		return -1;
 	}
 
 	return 0;
