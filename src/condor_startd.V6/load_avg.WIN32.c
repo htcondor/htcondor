@@ -25,7 +25,8 @@
 
 /* 
 ** Load average on WIN32 is calculated by sampling the System
-** Processor Queue Length.  The first time it is called, calc_load_avg(),
+** Processor Queue Length and the % Processor Time of each processor
+** in the system.  The first time it is called, calc_load_avg(),
 ** starts a thread which samples the counter periodically.  The sample
 ** interval is set by constants below.
 */
@@ -41,28 +42,31 @@
 #define NUM_SAMPLES 60000/SAMPLE_INTERVAL	/* num samples per 1 minute */
 
 #undef TESTING
-#if defined(TESTING)
-int SetSyscalls(int x) { return x; }	/* dummy stub */
-#endif
+
+int calc_ncpus();
 
 static CRITICAL_SECTION cs;		/* protects samples array */
 static struct {
-	long queuelen;
+	double load;
 	time_t sampletime;
 } samples[NUM_SAMPLES];
+static int ncpus;
 
 static int WINAPI
 sample_load(void *thr_data)
 {
 	HQUERY hQuery = NULL;
-	HCOUNTER hCounter;
+	HCOUNTER hCounterQueueLength, *hCounterCpuLoad;
 	int nextsample = 0, i;
 	PDH_STATUS pdhStatus;
-	PDH_FMT_COUNTERVALUE loadavg;
+	PDH_FMT_COUNTERVALUE counterval;
+	long queuelen;
+	double cpuload;
+	char counterpath[35];
 
 	EnterCriticalSection(&cs);
 	for (i=0; i < NUM_SAMPLES; i++) {
-		samples[i].queuelen = 0;
+		samples[i].load = 0;
 		samples[i].sampletime = (time_t)0;
 	}
 	LeaveCriticalSection(&cs);
@@ -75,11 +79,22 @@ sample_load(void *thr_data)
 	}
 	pdhStatus = PdhAddCounter(hQuery, 
 							  "\\System\\Processor Queue Length", 
-							  0, &hCounter);
+							  0, &hCounterQueueLength);
 	if (pdhStatus != ERROR_SUCCESS) {
 		/* dprintf(D_ALWAYS, "PdhAddCounter returns 0x%x\n", 
 						   (int)pdhStatus); */
 		return 2;
+	}
+	hCounterCpuLoad = malloc(sizeof(HCOUNTER)*ncpus);
+	for (i=0; i < ncpus; i++) {
+		sprintf(counterpath, "\\Processor(%d)\\%% Processor Time", i);
+		pdhStatus = PdhAddCounter(hQuery, counterpath, 0, 
+								  hCounterCpuLoad+i);
+		if (pdhStatus != ERROR_SUCCESS) {
+			/* dprintf(D_ALWAYS, "PdhAddCounter returns 0x%x\n", 
+							   (int)pdhStatus); */
+			return 3;
+		}
 	}
 
 	while (1) {
@@ -88,19 +103,46 @@ sample_load(void *thr_data)
 		if (pdhStatus != ERROR_SUCCESS) {
 			/* dprintf(D_ALWAYS, "PdhCollectQueryData returns 0x%x\n", 
 							   (int)pdhStatus); */
-			return 3;
-		}
-
-		pdhStatus = PdhGetFormattedCounterValue(hCounter, PDH_FMT_LONG,
-												NULL, &loadavg);
-		if (pdhStatus != ERROR_SUCCESS) {
-			/* dprintf(D_ALWAYS, "PdhGetFormattedCounterValue returns 0x%x\n",
-							   (int)pdhStatus); */
 			return 4;
 		}
 
+		pdhStatus = PdhGetFormattedCounterValue(hCounterQueueLength, 
+												PDH_FMT_LONG,
+												NULL, &counterval);
+		if (pdhStatus != ERROR_SUCCESS) {
+			/* dprintf(D_ALWAYS, "PdhGetFormattedCounterValue returns 0x%x\n",
+							   (int)pdhStatus); */
+			return 5;
+		}
+		queuelen = counterval.longValue;
+		cpuload = 0.0;
+		for (i=0; i < ncpus; i++) {
+			pdhStatus = PdhGetFormattedCounterValue(hCounterCpuLoad[i], 
+													PDH_FMT_DOUBLE,
+													NULL, &counterval);
+			if (pdhStatus != ERROR_SUCCESS) {
+				/* dprintf(D_ALWAYS, "PdhGetFormattedCounterValue returns 0x%x\n",
+								   (int)pdhStatus); */
+				return 6;
+			}
+			cpuload += counterval.doubleValue/100.0;
+		}
+
 		EnterCriticalSection(&cs);
-		samples[nextsample].queuelen = loadavg.longValue;
+		/* 
+		** Here is the code to simulate Unix style load average on Win32.
+		** If the system is not fully utilized, the length of the processor
+		** queue should be near 0.  When the system is fully utilized,
+		** we must discount two items on the processor queue: the system
+		** thread and the thread which we displaced to take our measurement.
+		** If there are more than 2 items on the queue, we want to add this
+		** to our load average to show the additional load on the system.
+		*/
+		if (queuelen > 2) {
+			samples[nextsample].load = cpuload + queuelen - 2;
+		} else {
+			samples[nextsample].load = cpuload;
+		}
 		samples[nextsample].sampletime = time(NULL);
 		LeaveCriticalSection(&cs);
 		nextsample++;
@@ -119,16 +161,19 @@ calc_load_avg()
 	static HANDLE threadHandle = NULL;
 	static int threadID = -1;
 	time_t currentTime;
-	long totalQueueLen=0;
+	double totalLoad=0.0;
 	int numSamples=0, i;
 
 	if (threadHandle == NULL) {
+		ncpus = calc_ncpus();
 		InitializeCriticalSection(&cs);
 		threadHandle = CreateThread(NULL, 0, sample_load, 
 									NULL, 0, &threadID);
 		if (threadHandle == NULL) {
+#ifndef TESTING
 			dprintf(D_ALWAYS, "failed to create loadavg thread, errno = %d\n",
 					GetLastError());
+#endif
 			return 0.0;
 		}
 		Sleep(SAMPLE_INTERVAL*5);	/* wait for ~5 samples */
@@ -140,24 +185,36 @@ calc_load_avg()
 	for (i=0; i < NUM_SAMPLES; i++) {
 		/* if this sample occurred within the minute, then add to total */
 		if ((currentTime-60) <= samples[i].sampletime) {
-			totalQueueLen += samples[i].queuelen;
+			totalLoad += samples[i].load;
 			numSamples++;
 		}
 	}
 	LeaveCriticalSection(&cs);
 
 	if (numSamples == 0) {
+#ifndef TESTING
 		dprintf(D_ALWAYS, "no loadavg samples this minute, maybe thread died???\n");
+#endif
 		return 0.0;
 	}
 
+#ifndef TESTING
 	dprintf(D_LOAD, "loadavg=%f with %d samples\n",
-			((float)totalQueueLen)/((float)numSamples), numSamples);
+			((float)totalLoad)/((float)numSamples), numSamples);
+#endif
 
-	return ((float)totalQueueLen)/((float)numSamples);
+	return ((float)totalLoad)/((float)numSamples);
 }
 
 #if defined(TESTING)
+int
+calc_ncpus()
+{
+	SYSTEM_INFO info;
+	GetSystemInfo(&info);
+	return info.dwNumberOfProcessors;
+}
+
 int main()
 {
 	while (1) {
