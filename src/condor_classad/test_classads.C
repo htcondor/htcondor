@@ -51,7 +51,7 @@ char *classad_strings[] =
 #else
 	"A = 1, B=2, C = 3, D='2001-04-05T12:14:15', E=TRUE",
 #endif
-	"A = 1, B=2, C = 3, D = \"alain\", MyType=\"foo\", TargetType=\"blah\"",
+	"A = 0.7, B=2, C = 3, D = \"alain\", MyType=\"foo\", TargetType=\"blah\"",
 
 	"Rank = (Memory >= 50)",
 
