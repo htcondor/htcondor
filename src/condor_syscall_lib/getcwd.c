@@ -91,7 +91,7 @@ GETCWD( char* path, size_t size )
 {
 	void *handle;
 	char * (*fptr)(char *, size_t);
-	if ((handle = dlopen("/usr/lib/libc.so", RTLD_LAZY)) == NULL) {
+	if ((handle = dlopen("libc.so", RTLD_LAZY)) == NULL) {
 		return (char *)-1;
 	}
 	
@@ -107,7 +107,7 @@ _GETCWD( char* path, size_t size )
 {
 	void *handle;
 	char * (*fptr)(char *, size_t);
-	if ((handle = dlopen("/usr/lib/libc.so", RTLD_LAZY)) == NULL) {
+	if ((handle = dlopen("libc.so", RTLD_LAZY)) == NULL) {
 		return (char *)-1;
 	}
 	
