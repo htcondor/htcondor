@@ -123,6 +123,34 @@ release_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
 strip_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
 static_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
 
+#if IS_C_COMP_KIND_GCC && IS_C_COMP_MAJOR_GCC_3 && !IS_CLIPPED
+/* Starting with gcc3, we are going to ship three internal libraries that come
+	with the compiler that we are going to use to replace what 
+	libcondorc++support.a used to do. This is because C++ support for gcc has
+	gone through a serious upgrade, and these three libraries and the functions
+	we need in them to support the syscall libraries are now basically
+	inseperable from each other. No more can we make our simple 
+	libcondorc++support.a do what it did before. Now we just must include
+	everything. :( */
+
+all_symlink_target($(LIB_STDCPP),libcompiler_libstdc++.a)
+all_symlink_target($(GCC_LIBC),libcompiler_libgcc.a)
+all_symlink_target($(LIB_GCC_EH),libcompiler_libgcc_eh.a)
+
+release_copy_target(libcompiler_libstdc++.a,lib,libcompiler_libstdc++.a,OBJECT_MODE)
+static_copy_target(libcompiler_libstdc++.a,lib,libcompiler_libstdc++.a,OBJECT_MODE)
+strip_copy_target(libcompiler_libstdc++.a,lib,libcompiler_libstdc++.a,OBJECT_MODE)
+
+release_copy_target(libcompiler_libgcc.a,lib,libcompiler_libgcc.a,OBJECT_MODE)
+static_copy_target(libcompiler_libgcc.a,lib,libcompiler_libgcc.a,OBJECT_MODE)
+strip_copy_target(libcompiler_libgcc.a,lib,libcompiler_libgcc.a,OBJECT_MODE)
+
+release_copy_target(libcompiler_libgcc_eh.a,lib,libcompiler_libgcc_eh.a,OBJECT_MODE)
+static_copy_target(libcompiler_libgcc_eh.a,lib,libcompiler_libgcc_eh.a,OBJECT_MODE)
+strip_copy_target(libcompiler_libgcc_eh.a,lib,libcompiler_libgcc_eh.a,OBJECT_MODE)
+
+#endif
+
 
 #if WANT_MAN_PAGES
 man_target(condor_advertise.1)
