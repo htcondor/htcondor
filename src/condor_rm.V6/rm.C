@@ -336,7 +336,9 @@ void ProcArg(const char* arg)
 			{
 				fprintf(stderr, "Couldn't delete %s\n", arg);
 			}
+#ifdef 0
 			notify_schedd( c, -1 );
+#endif
 			return;
 		}
 		if(*tmp == '.')
@@ -354,7 +356,9 @@ void ProcArg(const char* arg)
 				{
 					fprintf(stderr, "Couldn't delete %s\n", arg);
 				}
+#ifdef 0
 				notify_schedd( c, p );
+#endif
 				return;
 			}
 			fprintf(stderr, "Warning: unrecognized \"%s\" skipped\n", arg);
