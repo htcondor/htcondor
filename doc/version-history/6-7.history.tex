@@ -103,6 +103,20 @@ be sent a SIGHUP when the \Condor{startd} is reconfigured.
 \item A lot of the items logged by the \Condor{startd} ``cron'' logic,
 changed to D\_FULLDEBUG (from D\_ALWAYS), etc.
 
+\item Added \Macro{NEGOTIATOR\_PRE\_JOB\_RANK} and
+\Macro{NEGOTIATOR\_POST\_JOB\_RANK}.  These expressions are applied
+respectively before and after the user-supplied job rank when deciding
+which of the possible matches to choose.  (The existing expression
+\Macro{PREEMPTION\_RANK} is applied after
+\Macro{NEGOTIATOR\_POST\_JOB\_RANK}.)  The pool administrator may use
+these expressions to steer jobs in ways that improve the overall
+performance of the pool.  For example, using the pre job rank,
+preemption may be avoided as long as there are idle machines, even
+when the user-supplied rank expression prefers a machine that happens
+to be busy.  Using the post job rank, one could steer jobs towards
+machines that are known to be dedicated to batch jobs, or one could
+enforce breadth-first instead of depth-first filling of a cluster of
+multi-processor machines.
 
 \end{itemize}
 

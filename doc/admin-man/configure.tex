@@ -3203,6 +3203,27 @@ These macros affect the \Condor{negotiator}.
   value greater than the number of schedds submitting jobs to the
   negotiator at any time.
 
+\item[\Macro{NEGOTIATOR\_PRE\_JOB\_RANK}]
+  \label{param:NegotiatorPreJobRank} Resources that match a request
+  are first sorted by this expression, then by the user-supplied rank
+  in the job ClassAd, then by \Macro{NEGOTIATOR\_POST\_JOB\_RANK}, then by
+  \Macro{PREEMPTION\_RANK} (if the match would cause preemption).  The purpose
+  of the pre job rank is to allow the pool administrator to override any
+  other rankings, in order to optimize overall throughput.  For example,
+  it is generally used to prevent preemption when possible, even if the job
+  rank prefers a machine that is busy.
+
+\item[\Macro{NEGOTIATOR\_POST\_JOB\_RANK}]
+  \label{param:NegotiatorPostJobRank} Resources that match a request
+  are first sorted by the \Macro{NEGOTIATOR\_POST\_JOB\_RANK}
+  expression, then by the user-supplied rank in the job ClassAd, then
+  by \Macro{NEGOTIATOR\_POST\_JOB\_RANK}, then by
+  \Macro{PREEMPTION\_RANK} (if the match would cause preemption).  The
+  purpose of the post job rank is to allow the pool administrator to
+  choose between machines that the job ranks equally.  For example,
+  you might want breadth-first instead of depth-first filling of a
+  cluster of multi-processor machines.
+
 \item[\Macro{PREEMPTION\_REQUIREMENTS}]
   \label{param:PreemptionRequirements} The negotiator will not preempt
   a job running on a given machine unless the
@@ -3213,14 +3234,20 @@ These macros affect the \Condor{negotiator}.
   priority of the competing user is 20\% higher, in order to prevent
   ``churning'' of jobs in the pool.
 
-\item[\Macro{PREEMPTION\_RANK}] \label{param:PreemptionRank} This
-  expression is used to rank machines that the job ranks the same.
-  For example, if the job has no preference, it is usually preferable
-  to preempt a job with a small \AdAttr{ImageSize} instead of a job with a
-  large \AdAttr{ImageSize}.  The default is to rank all preemptable matches the
-  same.  However, the negotiator will always prefer to match the job
-  with an idle machine over a preemptable machine, if the job has no
-  preference between them.
+\item[\Macro{PREEMPTION\_RANK}] \label{param:PreemptionRank}
+  Resources that match a request are first sorted by the
+  \Macro{NEGOTIATOR\_POST\_JOB\_RANK} expression, then by the
+  user-supplied rank in the job ClassAd, then by
+  \Macro{NEGOTIATOR\_POST\_JOB\_RANK}, then by
+  \Macro{PREEMPTION\_RANK} (if the match would cause preemption).
+  This expression is used to rank machines that the job and the other
+  negotiation expressions rank the same.  For example, if the job has
+  no preference, it is usually preferable to preempt a job with a
+  small \AdAttr{ImageSize} instead of a job with a large
+  \AdAttr{ImageSize}.  The default is to rank all preemptable matches
+  the same.  However, the negotiator will always prefer to match the
+  job with an idle machine over a preemptable machine, if none of the
+  other ranks express a preference between them.
 
 \item[\Macro{NEGOTIATOR\_DEBUG}] \label{param:NegotiatorDebug} This macro
   (and other settings related to debug logging in the negotiator) is
