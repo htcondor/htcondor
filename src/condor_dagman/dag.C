@@ -668,7 +668,7 @@ Dag::NodeExists( const char* nodeName ) const
   ListIterator<Job> nodeList( _jobs );
   Job *node;
   while( (node = nodeList.Next()) ) {
-    if( strcmp( node->GetJobName(), nodeName ) == 0 ) {
+    if( strcasecmp( node->GetJobName(), nodeName ) == 0 ) {
       return true;
     }
   }
