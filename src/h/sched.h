@@ -27,6 +27,9 @@
 ** 
 */ 
 
+#ifndef _SCHED_H_
+#define _SCHED_H_
+
 #if defined(HPUX9)
 #include "fake_flock.h"
 #endif
@@ -230,3 +233,5 @@ typedef struct {        /* record sent by startd to shadow */
 
 #define	MATCH_ACTIVE		1					/* match record status */
 #define	NOTMATCHED			0
+
+#endif
