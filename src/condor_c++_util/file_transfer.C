@@ -880,6 +880,8 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 			} else {
 				// schedd sending to condor_transfer_data
 				FilesToSend = OutputFiles;
+				EncryptFiles = EncryptOutputFiles;
+				DontEncryptFiles = DontEncryptOutputFiles;
 			}
 		} else {
 			// starter sending back to the shadow
