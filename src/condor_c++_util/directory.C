@@ -400,11 +400,18 @@ Directory::do_remove( const char* path, bool is_curr )
 
 			set_priv(priv);
 		}
+		else {
+			// Let the second attempt have the same error code as the
+			// first attempt, since we require _both_ to fail in order
+			// to detect a failure.
+			try_2_rc = try_1_rc;
+		}
 		if(try_1_rc && try_2_rc && ::IsDirectory(path)) {
 			// Both attempts to remove the directory failed,
 			// and the directory does in fact exist.
 			ret_val = false;
-			errno = 0; //do not know precise errno
+			errno = 0; //do not know precise errno, so clear it to prevent
+			           //final code below from doing the wrong thing.
 		}
 	} else {
 		// the current file is not a directory, just a file	
