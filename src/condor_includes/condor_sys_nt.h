@@ -23,7 +23,7 @@
 #ifndef CONDOR_SYS_NT_H
 #define CONDOR_SYS_NT_H
 
-#define NOGDI
+// #define NOGDI
 #define NOSOUND
 #include <winsock2.h>
 #include <windows.h>
@@ -31,6 +31,8 @@
 #include <io.h>
 #include <fcntl.h>
 #include <direct.h>		// for _chdir , etc
+#include <sys/utime.h>	// for struct _utimbuf & friends
+#include <string.h>
 #define lseek _lseek
 #define O_RDONLY _O_RDONLY
 #define O_WRONLY _O_WRONLY
@@ -59,6 +61,7 @@ typedef DWORD pid_t;
 #define execl _execl  
 #define execv _execv
 #define putenv _putenv
+#define itoa _itoa
 #define R_OK 4
 #define W_OK 2
 #define X_OK 4
