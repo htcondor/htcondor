@@ -1,3 +1,17 @@
+11/8/01 V6_3-bandwidth-merge-1
+	The end of the old bandwidth branch at the point where we
+	merged it into V6_3-bandwidth-2-branch.  Hopefully, we'll
+	never need this tag, but if we end up having to do more
+	development on the old bandwidth branch and re-merge, this is
+	the "last-merged-at" tag we'll need to use.
+
+11/8/01 V6_3-bandwidth-2-branch
+	A new bandwidth branch for Sonny's bandwidth and private
+	network changes.  This was created off the end of the
+	V6_3-branch so that all the RedHat 7.1 porting can be used for
+	Sonny's work.  The old V6_3-bandwidth-branch will be merged
+	directly into this new branch and then abandoned.
+
 10/10/01 V6_3_1-Condor-G
 	The V6_3-branch built with WANT_GLOBUS = YES, for a CondorG release. 
 	It's just slightly post V6_3_1, with just a few GridManager changes.
