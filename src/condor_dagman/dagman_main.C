@@ -50,7 +50,7 @@ Global G;
 //---------------------------------------------------------------------------
 static void Usage() {
     debug_printf( DEBUG_SILENT, "\nUsage: condor_dagman -f -t -l .\n"
-		  "\t\t[-Debug <level>]\n"
+            "\t\t[-Debug <level>]\n"
             "\t\t-Condorlog <NAME.dag.condor.log>\n"
 	    "\t\t-Daplog <dap_userlog>\n"                       //-->DAP
 	    "\t\t-Dapserver <dap server name>\n"                //-->DAP
@@ -300,26 +300,26 @@ int main_init (int argc, char ** const argv) {
     debug_printf( DEBUG_VERBOSE, "DAG Input file is %s\n", G.datafile);
 
     if (G.rescue_file != NULL) {
-      debug_printf( DEBUG_VERBOSE, "Rescue DAG will be written to %s\n",
-		      G.rescue_file);
+        debug_printf( DEBUG_VERBOSE, "Rescue DAG will be written to %s\n",
+                       G.rescue_file);
     }
-    
-    // if requested, wait for someone to attach with a debugger...
-    while( wait_for_debug );
+
+		// if requested, wait for someone to attach with a debugger...
+	while( wait_for_debug );
 
     {
-      char *temp;
-      debug_printf( DEBUG_DEBUG_1, "Current path is %s\n",
-		    (temp=getcwd(NULL, _POSIX_PATH_MAX)) ? temp : "<null>");
-      if( temp ) {
-	free( temp );
-      }
-      temp = my_username();
-      debug_printf( DEBUG_DEBUG_1, "Current user is %s\n",
-		    temp ? temp : "<null>" );
-      if( temp ) {
-	free( temp );
-      }
+        char *temp;
+        debug_printf( DEBUG_DEBUG_1, "Current path is %s\n",
+                       (temp=getcwd(NULL, _POSIX_PATH_MAX)) ? temp : "<null>");
+		if( temp ) {
+			free( temp );
+		}
+		temp = my_username();
+		debug_printf( DEBUG_DEBUG_1, "Current user is %s\n",
+					   temp ? temp : "<null>" );
+		if( temp ) {
+			free( temp );
+		}
     }
   
     //
@@ -338,22 +338,22 @@ int main_init (int argc, char ** const argv) {
     // Parse the input file.  The parse() routine
     // takes care of adding jobs and dependencies to the DagMan
     //
-    debug_printf( DEBUG_VERBOSE, "* Parsing %s ...\n", G.datafile);
+    debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n", G.datafile);
     if (!parse (G.datafile, G.dag)) {
-      debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n", G.datafile);
+        debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n", G.datafile);
     }
-    
+
 #ifndef NOT_DETECT_CYCLE
-    if (G.dag->isCycle())
-      {
-	debug_error (1, DEBUG_QUIET, "ERROR: a cycle exists in the dag, plese check input\n");
-      }
+	if (G.dag->isCycle())
+	{
+		debug_error (1, DEBUG_QUIET, "ERROR: a cycle exists in the dag, plese check input\n");
+	}
 #endif
     debug_printf( DEBUG_VERBOSE, "Dag contains %d total jobs\n",
-		  G.dag->NumJobs());
-    
-    G.dag->DumpDotFile();
-    
+                   G.dag->NumJobs());
+
+	G.dag->DumpDotFile();
+
     //------------------------------------------------------------------------
     // Bootstrap and Recovery
     //
@@ -365,7 +365,6 @@ int main_init (int argc, char ** const argv) {
     // mode
   
     {
-
       bool recovery = ( (access(lockFileName,  F_OK) == 0 &&
 			 access(condorLogName, F_OK) == 0) 
 			
@@ -376,10 +375,6 @@ int main_init (int argc, char ** const argv) {
             debug_printf( DEBUG_VERBOSE, "Lock file %s detected, \n",
                            lockFileName);
         } else {
-
-	  debug_printf( DEBUG_QUIET, "* No lock file\n");
-	  
-
       
             // if there is an older version of the log files,
             // we need to delete these.

@@ -217,17 +217,18 @@ Job::AddParent( Job* parent )
 {
 	ASSERT( parent != NULL );
 
-	// child that has already been started (unless the parent is
-	// already marked STATUS_DONE, e.g., when rebuilding from a
-	// rescue DAG) -- but this restriction might be lifted in the
-	// future once we figure out the right way for the DAG to
-	// respond...
+		// we don't currently allow a new parent to be added to a
+		// child that has already been started (unless the parent is
+		// already marked STATUS_DONE, e.g., when rebuilding from a
+		// rescue DAG) -- but this restriction might be lifted in the
+		// future once we figure out the right way for the DAG to
+		// respond...
 	if( _Status != STATUS_READY && parent->GetStatus() != STATUS_DONE ) {
-	  debug_printf( DEBUG_QUIET, "ERROR: Job::AddParent(): can't add a new "
-			"%s parent node (%s) to a %s child (%s)!\n",
-			parent->GetStatusName(), parent->GetJobName(),
-			this->GetStatusName(), this->GetJobName() );
-	  return false;
+		debug_printf( DEBUG_QUIET, "ERROR: Job::AddParent(): can't add a new "
+					  "%s parent node (%s) to a %s child (%s)!\n",
+					  parent->GetStatusName(), parent->GetJobName(),
+					  this->GetStatusName(), this->GetJobName() );
+		return false;
 	}
 
 	if( !Add( Q_PARENTS, parent->GetJobID() ) ) {

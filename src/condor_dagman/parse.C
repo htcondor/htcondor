@@ -52,7 +52,8 @@ bool
 isKeyWord( const char *token )
 {
     static const char * keywords[] = {
-        "JOB", "DAP", "PARENT", "CHILD", "PRE", "POST", "DONE", "Retry", "SCRIPT", "DOT"
+        "JOB", "PARENT", "CHILD", "PRE", "POST", "DONE", "Retry", "SCRIPT",
+		"DOT", "DAP"
     };
     static const unsigned int numKeyWords = sizeof(keywords) / 
 		                                    sizeof(const char *);
@@ -75,7 +76,7 @@ isDelimiter( char c ) {
 bool parse (char *filename, Dag *dag) {
 
     ASSERT( dag != NULL );
-
+  
     FILE *fp = fopen(filename, "r");
     if (fp == NULL) {
         if (DEBUG_LEVEL(DEBUG_QUIET)) {
@@ -113,8 +114,8 @@ bool parse (char *filename, Dag *dag) {
         // Example Syntax is:  JOB j1 j1.condor [DONE]
         //
         if (strcasecmp(token, "JOB") == 0) {
-	  parsed_line_successfully = parse_job(dag, filename, lineNumber);
-	}
+			parsed_line_successfully = parse_job(dag, filename, lineNumber);
+		}
 
 	// Handle a DaP spec
         // Example Syntax is:  DAP j1 j1.dapsubmit [DONE]
@@ -153,7 +154,7 @@ bool parse (char *filename, Dag *dag) {
 		// None of the above means that there was bad input.
 		else {
             debug_printf( DEBUG_QUIET, "%s (line %d): "
-						  "Expected JOB, DAP, SCRIPT, or PARENT token\n",
+						  "Expected JOB, SCRIPT, or PARENT token\n",
 						  filename, lineNumber );
             parsed_line_successfully = false;
         }
@@ -162,9 +163,6 @@ bool parse (char *filename, Dag *dag) {
 			return false;
 		}
     }
-
-    debug_printf( DEBUG_QUIET, "Parse completed successfully\n");
-
     return true;
 }
 
@@ -230,7 +228,7 @@ parse_job(
 	//
 	char *done = strtok(0, DELIMITERS);
 	if (done != NULL && strcasecmp(done, "DONE") == 0) {
-	  job->_Status = Job::STATUS_DONE;
+		job->_Status = Job::STATUS_DONE;
 	}
 	
 	if (!dag->Add (*job)) {
@@ -238,9 +236,7 @@ parse_job(
 					  job->GetJobName() );
 		return false;
 	} else {
-	  //		debug_printf( DEBUG_DEBUG_3, "Added Job %s\n",
-	  //			  job->GetJobName() );
-		debug_printf( DEBUG_QUIET, "Added Job %s\n",
+		debug_printf( DEBUG_DEBUG_3, "Added Job %s\n",
 					  job->GetJobName() );
 	}
 	return true;
@@ -309,9 +305,9 @@ parse_dap(
 	//
 	char *done = strtok(0, DELIMITERS);
 	if (done != NULL && strcasecmp(done, "DONE") == 0) {
-	  job->_Status = Job::STATUS_DONE;
+		job->_Status = Job::STATUS_DONE;
 	}
-
+	
 	if (!dag->Add (*job)) {
 		debug_printf( DEBUG_QUIET, "ERROR adding Job %s to DAG\n",
 					  job->GetJobName() );
