@@ -86,6 +86,8 @@ do_REMOTE_syscall()
 		assert( syscall_sock->end_of_message() );
 		free(uiddomain);
 		free(fsdomain);
+		free(address);
+		free(fullHostname);
 		return 0;
 	}
 
@@ -111,6 +113,7 @@ do_REMOTE_syscall()
 		return 0;
 	}
 
+#if 0	// no longer needed; executable should go via FileTransfer object
 	case CONDOR_get_executable:
 	{
 		char source[_POSIX_PATH_MAX];
@@ -127,11 +130,12 @@ do_REMOTE_syscall()
 		if( rval < 0 ) {
 			assert( syscall_sock->code(terrno) );
 		} else {
-			assert( syscall_sock->put_file(source) );
+			assert( syscall_sock->put_file(source) > -1 );
 		}
 		assert( syscall_sock->end_of_message() );
 		return 0;
 	}
+#endif
 
 	case CONDOR_job_exit:
 	{
