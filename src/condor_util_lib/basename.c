@@ -35,6 +35,11 @@ char *
 basename(const char *path)
 {
 	char *s, *name;
+
+    /* We need to initialize to make sure we return something real
+	   even if the path we're passed in has no directory delimiters. */
+	name = (char*)path;	
+
 	for (s = (char*)path; s && *s != '\0'; s++) {
 		if (*s == '\\' || *s == '/') {
 			name = s+1;
