@@ -484,7 +484,9 @@ void (*func)(int);
 		}
 	}
 
-#if defined(VOID_SIGNAL_RETURN)
+#if defined(OSF1)
+	SIGNAL(sig, func);
+#elif defined(VOID_SIGNAL_RETURN)
 	return ( (void (*) (int)) syscall(SYS_signal,sig,func) );
 #else
 	return ( (int (*) (int)) syscall(SYS_signal,sig,func) );
