@@ -297,6 +297,14 @@ SOURCE="..\src\condor_c++_util\HashTable.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\iso_dates.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\iso_dates.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\killfamily.C"
 # End Source File
 # Begin Source File
