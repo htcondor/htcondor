@@ -63,7 +63,7 @@ ssize_t BufferGlueRead( File *f, char *data, size_t nbytes )
 
 	// Check seek pointer boundaries
 
-	if( (offset>size) || (nbytes==0) ) return 0;
+	if( (offset>=size) || (nbytes==0) ) return 0;
 
 	// The buffer doesn't know about file sizes, so cut off
 	// extra long reads here
