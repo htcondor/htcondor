@@ -360,6 +360,7 @@ universes for user jobs:
 	\item Globus or Grid
 	\item Java
 	\item Scheduler
+	\item Local
 \end{itemize}
 
 The \AdAttr{Universe} attribute is specified in the submit description file.
@@ -392,6 +393,8 @@ The Java universe allows users to run jobs written for the
 Java Virtual Machine (JVM).
 %\index{universe!Scheduler}
 %The scheduler universe . . .
+%\index{universe!Local}
+%The local universe . . .
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:standard-universe}Standard Universe}
@@ -570,6 +573,22 @@ jobs.
 
 This universe choice is appropriate (and used) for DAGMan,
 which is itself a scheduler universe job.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:local-universe}Local Universe}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{universe!local}
+The local universe allows a Condor job to be submitted and
+executed with different assumptions for the execution conditions
+of the job.
+The job does not wait to be matched with a machine.
+It instead executes right away, on the machine where the job
+is submitted.
+The job will never be preempted.
+The machine requirements are not considered for local universe
+jobs.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Submitting a Job}

@@ -2773,6 +2773,10 @@ These macros control the \Condor{schedd}.
   section~\ref{param:SubsysAddressFile} as
   \MacroNI{SUBSYS\_ADDRESS\_FILE}. 
 
+\item[\Macro{SCHEDD\_EXECUTE}] \label{param:ScheddExecute}
+  A directory to use as a temporary sandbox for local universe jobs.
+  Defaults to \File{\MacroUNI{SPOOL}/execute}.
+
 \item[\Macro{FLOCK\_NEGOTIATOR\_HOSTS}] \label{param:FlockNegotiatorHosts} 
   This macro defines a list of negotiator host names (not including the
   local \MacroUNI{NEGOTIATOR\_HOST} machine) for pools in which the
