@@ -219,6 +219,8 @@ bool Condor_Credential_M :: add_user_cred(Credential_t type)
   credMap_->remove(type);
   // Add the new one
   credMap_->add(create_new_cred(type));
+
+  return TRUE;
 }
 
 bool Condor_Credential_M :: add_service_cred(Credential_t type)
