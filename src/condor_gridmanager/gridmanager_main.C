@@ -12,13 +12,16 @@
 
 char *mySubSystem = "GRIDMANAGER";	// used by Daemon Core
 
+char *myUserName = NULL;
+
 // this appears at the bottom of this file
 extern "C" int display_dprintf_header(FILE *fp);
 
 void
 usage( char *name )
 {
-	dprintf( D_ALWAYS, "Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>] -x <x509_user_proxy>]\n",
+	dprintf( D_ALWAYS, 
+		"Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>] [-o <owern@uid-domain>] -x <x509_user_proxy>]\n",
 		basename( name ) );
 	DC_Exit( 1 );
 }
@@ -127,6 +130,15 @@ main_init( int argc, char **argv )
 				usage( argv[0] );
 			X509Proxy = strdup( argv[i + 1] );
 			useDefaultProxy = false;
+			i++;
+			break;
+		case 'o':
+			// use a different owner name; this is useful if
+			// Condor-G is running as non-root, and yet
+			// different users are allowed to submit to the schedd.
+			if ( argc <= i + 1 )
+				usage( argv[0] );
+			myUserName = strdup( argv[i + 1] );
 			i++;
 			break;
 		default:
