@@ -48,8 +48,10 @@ various bug fixes and improvements.
 
 \noindent Known Bugs:
 \begin{itemize}
-\item 
 
-\item 
+\item DAGMan doesn't detect when users mistakenly specify two
+DAG nodes with the same node name; instead it waits for the
+same node to complete twice, which never happens, and so DAGMan
+goes off into never-never land.
 
 \end{itemize}
