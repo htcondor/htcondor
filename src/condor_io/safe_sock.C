@@ -31,6 +31,7 @@
 #include "condor_debug.h"
 #include "internet.h"
 #include "condor_socket_types.h"
+#include "condor_string.h"
 
 _condorMsgID SafeSock::_outMsgID = {0, 0, 0, 0};
 unsigned long SafeSock::_noMsgs = 0;
@@ -46,6 +47,9 @@ unsigned long SafeSock::_avgSdeleted = 0;
 void SafeSock::init()
 {
 	_special_state = safesock_none;
+
+	// initialize username
+	_fqu = NULL;
 
 	for(int i=0; i<SAFE_SOCK_HASH_BUCKET_SIZE; i++)
 		_inMsgs[i] = NULL;
@@ -95,6 +99,9 @@ SafeSock::~SafeSock()
 		_inMsgs[i] = NULL;
 	}
 	close();
+	if (_fqu) {
+		delete _fqu;
+	}
 }
 
 
@@ -601,7 +608,7 @@ char * SafeSock::serialize() const
 	char * parent_state = Sock::serialize();
 	// now concatenate our state
 	char * outbuf = new char[50];
-	sprintf(outbuf,"*%d*%s",_special_state,sin_to_string(&_who));
+	sprintf(outbuf,"*%d*%s*%s",_special_state,sin_to_string(&_who),(_fqu ? _fqu : ""));
 	strcat(parent_state,outbuf);
 	delete []outbuf;
 	return( parent_state );
@@ -610,6 +617,7 @@ char * SafeSock::serialize() const
 char * SafeSock::serialize(char *buf)
 {
 	char sinful_string[28];
+	char usernamebuf[128];
 	char *ptmp;
 
 	assert(buf);
@@ -619,8 +627,13 @@ char * SafeSock::serialize(char *buf)
 	// first, let our parent class restore its state
 	ptmp = Sock::serialize(buf);
 	assert( ptmp );
-	sscanf(ptmp,"%d*%s",&_special_state,sinful_string);
+	sscanf(ptmp,"%d*%s*%s",&_special_state,sinful_string,usernamebuf);
 	string_to_sin(sinful_string, &_who);
+
+	if (_fqu) {
+		delete _fqu;
+	}
+	_fqu = strdup(usernamebuf);
 
 	return NULL;
 }
@@ -762,3 +775,18 @@ void SafeSock::dumpSock()
 	_outMsg.dumpMsg(_outMsgID);
 }
 #endif
+
+const char* SafeSock::getFullyQualifiedUser() {
+	return _fqu;
+}
+
+void SafeSock::setFullyQualifiedUser(char * u) {
+	if (_fqu) {
+		delete _fqu;
+		_fqu = NULL;
+	}
+	if (u) {
+		_fqu = strnewp(u);
+	}
+}
+

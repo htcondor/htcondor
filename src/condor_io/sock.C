@@ -1141,6 +1141,16 @@ int Sock::set_async_handler( CedarHandler *handler )
 #endif  /* of ifndef WIN32 for the async support */
 
 
+void Sock :: setFullyQualifiedUser(char *)
+{
+	return;
+}
+
+const char * Sock :: getFullyQualifiedUser()
+{
+	return NULL;
+}
+
 int Sock :: encrypt(bool)
 {
 	return -1;
