@@ -1,7 +1,7 @@
 #ifndef _TYPES_H_
 #define _TYPES_H_
 
-#include <stdio.h>
+#include "condor_common.h"    /* for <stdio.h> */
 
 //---------------------------------------------------------------------------
 #ifndef __cplusplus

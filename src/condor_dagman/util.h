@@ -1,7 +1,7 @@
 #ifndef _UTIL_H_
 #define _UTIL_H_
 
-#include <stdio.h>
+#include "condor_system.h"   /* for <stdio.h> */
 
 #if 0   /* These function are never used! */
 int StringHash(char *str, int numBuckets);

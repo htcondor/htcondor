@@ -8,19 +8,6 @@
 #include "condor_constants.h"      /* from condor_includes/ directory */
 #include "list.h"
 
-// #include <limits.h>
-// #include <string.h>
-// #include <ctype.h>
-// #include <fcntl.h>
-// #include <errno.h>
-// #include <signal.h>
-
-// #include <unistd.h>
-// #include <sys/types.h>
-
-// #include <stdio.h>
-// #include <stdlib.h>
-
 /** Termination Queue Item (TQI).  EXPLANATION NEEDED HERE!
  */
 class TQI {

@@ -2,9 +2,10 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-// Declare DC_Exit so we don't have to include
-// "../condor_daemon_core.V6/condor_daemon_core.h"
-// and open a huge can of C++ worms.
+/* Declare DC_Exit so we don't have to include
+   "../condor_daemon_core.V6/condor_daemon_core.h"
+   and open a huge can of C++ worms.
+*/
 extern void DC_Exit( int status );	
 
 debug_level_t debug_level    = DEBUG_NORMAL;

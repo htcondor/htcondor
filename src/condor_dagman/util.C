@@ -1,6 +1,5 @@
+#include "condor_common.h"   /* for <ctype.h>, <assert.h> */
 #include "util.h"
-#include <ctype.h>    /* for isspace() */
-#include <assert.h>
 
 //------------------------------------------------------------------------
 int util_getline(FILE *fp, char *line, int max) {

@@ -1,10 +1,11 @@
+#include "condor_common.h" /* for <stdio.h>,<stdlib.h>,<string.h>,<unistd.h> */
+
+//
+// Local DAGMan includes
+//
 #include "submit.h"
 #include "util.h"
 #include "debug.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>  /*   for sleep()  */
 
 static bool submit_try (const char *exe,
                         const char * command,

@@ -1,10 +1,14 @@
 #ifndef JOB_H
 #define JOB_H
 
-#include <stdio.h>
+#include "condor_common.h"      /* for <stdio.h> */
 
+//
+// Local DAGMan includes
+//
 #include "types.h"
 #include "debug.h"
+
 #include "condor_constants.h"   /* from condor_includes/ directory */
 #include "simplelist.h"         /* from condor_c++_util/ directory */
 
