@@ -26,7 +26,10 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 
+
+
 // a generic hash bucket class
+
 
 template <class Index, class Value>
 class HashBucket {
@@ -174,11 +177,11 @@ HashTable<Index,Value>::HashTable( int tableSz,
   }
 
   if (!(ht = new HashBucket<Index, Value>* [tableSize])) {
-    cerr << "Insufficient memory for hash table" << endl;
+	  cerr << "Insufficient memory for hash table" << std::endl;
     exit(1);
   }
   if (!(chainsUsed = new int[tableSize])) {
-    cerr << "Insufficient memory for hash table (chainsUsed array)" << endl;
+	  cerr << "Insufficient memory for hash table (chainsUsed array)" << endl;
     exit(1);
   }
   for(i = 0; i < tableSize; i++) {
