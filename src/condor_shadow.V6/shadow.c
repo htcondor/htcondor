@@ -226,7 +226,7 @@ usage()
 
 #if defined(__STDC__)
 	void regular_setup( char *host, char *cluster, char *proc, char* );
-	void pipe_setup( char *cluster, char *proc );
+	void pipe_setup( char *cluster, char *proc, char* capability );
 	void open_named_pipe( const char *name, int mode, int target_fd );
 #else
 	void regular_setup();
