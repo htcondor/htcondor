@@ -60,9 +60,10 @@ Match::~Match()
 	if( m_client ) {
 		delete( m_client );
 	}
-		// We don't want to delete m_agentstream, since DaemonCore
-		// will delete it for us.  
-//	delete( m_agentstream );
+	if( m_agentstream ) {
+		delete( m_agentstream );
+	}
+
 }	
 	
 
@@ -129,6 +130,17 @@ Match::update( ClassAd* ad )
 		}
 	}
 }	
+
+
+void
+Match::refuse_agent()
+{
+	if( !m_agentstream ) return;
+	dprintf( D_ALWAYS, "Refusing request from schedd agent.\n" );
+	m_agentstream->encode();
+	m_agentstream->put(NOT_OK);
+	m_agentstream->end_of_message();
+}
 
 
 void
