@@ -567,6 +567,7 @@ part_send_job(
   StartdRec stRec;
   PORTS ports;
   
+#ifdef 0
   if (test_starter) {
     cmd = SCHED_VERS + ALT_STARTER_BASE + test_starter;
     dprintf( D_ALWAYS, "Requesting Test Starter %d\n", test_starter );
@@ -574,6 +575,9 @@ part_send_job(
     cmd = START_FRGN_JOB;
     dprintf( D_ALWAYS, "Requesting Standard Starter\n" );
   }
+#else
+  cmd = ACTIVATE_CLAIM;
+#endif 
 
   /* Connect to the startd */
   sd = do_connect_with_timeout(host, "condor_startd", START_PORT, 90);
@@ -598,6 +602,12 @@ part_send_job(
   }
   free(capability);
                
+  /* send the starter number */
+  dprintf( D_ALWAYS, "Requesting Test Starter %d\n", test_starter );
+  if( !sock->code(test_starter) ) {
+    EXCEPT( "sock->code(%d)", test_starter );
+  }
+
   /* Send the job info */
   ClassAd ad;
   ConnectQ(schedd);
