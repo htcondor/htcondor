@@ -123,14 +123,14 @@ STD_C_PLUS_FLAGS = \
 	CFlags -I/usr/include -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX DbmFlag SigFlag CompatFlags -g
 STD_C_FLAGS = $(STD_C_PLUS_FLAGS)
 STATIC = -static
-#elif (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS)
-STD_C_PLUS_FLAGS =  \
-	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) -I$(X11_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX DbmFlag SigFlag CompatFlags -g -gstabs
-STD_C_FLAGS =  $(STD_C_PLUS_FLAGS)
-STATIC = StaticFlag
 #elif (IS_SUN4M_SOLARIS251)
 STD_C_PLUS_FLAGS =  \
 	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) -I$(X11_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DSolaris251 -DNFSFIX DbmFlag SigFlag CompatFlags -g -gstabs
+STD_C_FLAGS =  $(STD_C_PLUS_FLAGS)
+STATIC = StaticFlag
+#elif (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS)
+STD_C_PLUS_FLAGS =  \
+	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) -I$(X11_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX DbmFlag SigFlag CompatFlags -g -gstabs
 STD_C_FLAGS =  $(STD_C_PLUS_FLAGS)
 STATIC = StaticFlag
 #else
