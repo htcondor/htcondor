@@ -45,14 +45,14 @@ const char * ULogEventNumberNames[] = {
 	"ULOG_JOB_TERMINATED",			// Job terminated
 	"ULOG_IMAGE_SIZE",				// Image size of job updated
 	"ULOG_SHADOW_EXCEPTION",		// Shadow threw an exception
-	"ULOG_JOB_SUSPENDED",			// Job was suspended
-	"ULOG_JOB_UNSUSPENDED",			// Job was unsuspended
-	"ULOG_JOB_HELD",  				// Job was held
-	"ULOG_JOB_RELEASED",  			// Job was released
 #if defined(GENERIC_EVENT)
 	"ULOG_GENERIC",
 #endif	    
 	"ULOG_JOB_ABORTED",  			// Job aborted
+	"ULOG_JOB_SUSPENDED",			// Job was suspended
+	"ULOG_JOB_UNSUSPENDED",			// Job was unsuspended
+	"ULOG_JOB_HELD",  				// Job was held
+	"ULOG_JOB_RELEASED",  			// Job was released
 	"ULOG_NODE_EXECUTE",  			// MPI Node executing
 	"ULOG_NODE_TERMINATED",  		// MPI Node terminated
 	"ULOG_POST_SCRIPT_TERMINATED",	// POST script terminated
