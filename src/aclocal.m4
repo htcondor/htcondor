@@ -252,3 +252,62 @@ AC_DEFUN([CONDOR_TRY_CP_RECURSIVE_SYMLINK_FLAG],
 ])
 
 
+#######################################################################
+# CONDOR_TEST_STRIP by Derek Wright <wright@cs.wisc.edu> 
+# We need to use strip for packaging Condor.  Usually, we prefer GNU
+# strip but sometimes we need to use the vendor strip.  So, this macro
+# is used for testing a given version of strip to see if it produces
+# an output program that still works, and if so, how big the resulting
+# output program is in bytes.  We use this macro on both GNU and
+# vendor strip (if we find them), and if both versions work, we use
+# the size to determine which version to use.
+# 
+# Unfortunately, this test has to be fairly unorthodox, since it
+# doesn't neatly fall into the standard way of testing things.  First
+# of all, we can't use autoconf's compiler or link tests, since we
+# need to run strip against the output, and all of autoconf's pre-made
+# tests clean up after themselves.  Also, we can't really use the
+# cache for this, since we want to check 2 values, and we can't do
+# that without breaking some cache rules (like no side effects in your
+# cache check).  Also, we assume "g++" is in the PATH and works (we
+# want to make a c++ test program, since that's what we're going to be
+# stripping, anyway).  Therefore, this macro should be called *AFTER*
+# we test for g++ 
+#
+# Arguments
+#  $1 identifying message to print 
+#  $2 variable name of the strip to test.  not only is this used to
+#     invoke strip, it's also used for naming a few other variables
+# Side Effects:
+#  Sets a few variables with the result of the test:
+#    "<variable_name>_works"=(yes|no)  
+#    "<variable_name>_outsize"=(size in bytes of the stripped program)
+#######################################################################
+AC_DEFUN([CONDOR_TEST_STRIP],
+[AC_MSG_CHECKING([if $1 works])
+ [$2]_works="no"
+ [$2]_outsize=""
+ cat > conftest.c << _TESTEOF
+#include <stdio.h>
+int main () {
+  printf( "hello world\n" );
+  return 0;
+}
+_TESTEOF
+ g++ -g -o conftest1 conftest.c > /dev/null 2>&1
+ if test $? -ne 0 ; then
+   AC_MSG_RESULT([no])
+   AC_MSG_ERROR([failed to build simple gcc test program])
+ fi
+ $[$2] conftest1 > /dev/null 2>&1
+ if test $? -eq 0 &&
+      (sh -c ./conftest1 2>/dev/null |grep "hello world" 2>&1 >/dev/null) ;
+ then
+   [$2]_works="yes"
+   [$2]_outsize="`/bin/ls -nl conftest1 2> /dev/null | awk '{print [$]5}'`"
+   AC_MSG_RESULT([yes])
+ else
+   AC_MSG_RESULT([no])
+ fi
+ rm -f conftest.c conftest1
+])
