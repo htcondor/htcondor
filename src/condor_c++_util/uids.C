@@ -470,6 +470,13 @@ clear_passwd_cache() {
 	// no-op on Windows
 }
 
+void
+_condor_disable_uid_switching()
+{
+	SwitchIds = FALSE;
+}
+
+
 #else  // end of ifdef WIN32, now below starts Unix-specific code
 
 #include <grp.h>
