@@ -120,3 +120,7 @@
 	latest code on the Alpha_Alpha branch.  It is intended for any
 	minor fixes which may be needed for that distribution, not
 	general development.
+
+7/3/94 V5_Alpha_Sparc_1
+	V5 code which compiles and works on both Dec Alpha and Sparc Sunos
+	platforms - clipped wing version only.  Tested very little.
