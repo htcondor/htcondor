@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/vmparam.h>
+#include "condor_debug.h"
 
 extern "C" {
 #include <sys/addrconf.h>
