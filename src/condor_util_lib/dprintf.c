@@ -41,7 +41,7 @@
 
 #include "condor_common.h"
 #include "condor_sys.h"
-#include "debug.h"
+#include "condor_debug.h"
 #include "clib.h"
 #include "except.h"
 #include "condor_uid.h"
@@ -77,7 +77,7 @@ char *DebugFlagNames[] = {
 	"D_ALWAYS", "D_SYSCALLS", "D_CKPT", "D_XDR", "D_MALLOC", "D_LOAD",
 	"D_EXPR", "D_PROC", "D_JOB", "D_MACHINE", "D_FULLDEBUG", "D_NFS",
 	"D_UPDOWN", "D_AFS", "D_PREEMPT", "D_PROTOCOL",	"D_PRIV",
-	"D_TAPENET", "D_DAEMONCORE", "D_COMMAND", "D_UNDEF20", "D_UNDEF21",
+	"D_TAPENET", "D_DAEMONCORE", "D_COMMAND", "D_BANDWIDTH", "D_UNDEF21",
 	"D_UNDEF22", "D_UNDEF23", "D_UNDEF24", "D_UNDEF25", "D_UNDEF26",
 	"D_UNDEF27", "D_UNDEF28", "D_UNDEF29", "D_UNDEF30", "D_UNDEF31",
 };
@@ -119,11 +119,10 @@ int InDBX = 0;
 ** current debugging flags.
 */
 /* VARARGS1 */
+
 void
-dprintf(int flags, ...)
+_condor_dprintf_va( int flags, char* fmt, va_list args )
 {
-	va_list pvar;
-	char *fmt;
 	struct tm *tm, *localtime();
 	long *clock;
 	int scm;
@@ -142,11 +141,9 @@ dprintf(int flags, ...)
 		   trys to dprintf, we just return to avoid infinite loops. */
 	if( DprintfBroken ) return;
 
-	va_start(pvar, flags);
-
 		/* See if this is one of the messages we are logging */
 	if( !(flags&DebugFlags) ) {
-		goto VA_END;
+		return;
 	}
 
 	saved_errno = errno;
@@ -177,11 +174,14 @@ dprintf(int flags, ...)
 
 #endif
 
-	fmt = va_arg(pvar, char *);
-
 	/* log files owned by condor system acct */
 		/* avoid priv macros so we can bypass priv logging */
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
+
+		/* Grab the time info only once, instead of inside the for
+		   loop.  -Derek 9/14 */
+	(void)time(  (time_t *)&clock );
+	tm = localtime( (time_t *)&clock );
 
 		/* print debug message to catch-all debug file plus files */
 		/* registered for other debug levels */
@@ -194,8 +194,6 @@ dprintf(int flags, ...)
 
 			/* Print the message with the time and a nice identifier */
 			if( ((saved_flags|flags) & D_NOHEADER) == 0 ) {
-				(void)time(  (time_t *)&clock );
-				tm = localtime( (time_t *)&clock );
 				fprintf( DebugFP, "%d/%d %02d:%02d ", tm->tm_mon + 1,
 						 tm->tm_mday, tm->tm_hour, tm->tm_min );
 
@@ -204,7 +202,7 @@ dprintf(int flags, ...)
 				}
 			}
 
-			vfprintf( DebugFP, fmt, pvar );
+			vfprintf( DebugFP, fmt, args );
 
 			/* Close and unlock the log file */
 			debug_unlock(debug_level);
@@ -229,11 +227,18 @@ dprintf(int flags, ...)
 
 	errno = saved_errno;
 	DebugFlags = saved_flags;
-
-
-VA_END:
-	va_end(pvar);
 }
+
+
+void
+dprintf(int flags, char* fmt, ...)
+{
+    va_list args;
+    va_start( args, fmt );
+    _condor_dprintf_va( flags, fmt, args );
+    va_end( args );
+}
+
 
 FILE *
 debug_lock(int debug_level)
