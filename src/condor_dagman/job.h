@@ -99,7 +99,9 @@ class Job {
     ///
     ~Job();
   
-    /** */ inline char *  GetJobName () const { return _jobName; }
+    // returns copy of _jobName (or job ID if _jobName is undefined)
+	char* GetJobName();
+
     /** */ inline char *  GetCmdFile () const { return _cmdFile; }
     /** */ inline JobID_t GetJobID   () const { return _jobID;   }
 
@@ -156,8 +158,6 @@ class Job {
   
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
-
-    /** */ int _scriptPid;
 
 	// the return code of the job
 	int retval;

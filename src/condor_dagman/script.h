@@ -17,20 +17,19 @@ class Script {
     // Has this script been logged?
     bool   _logged;
 
-    /*  Runs the script and sets _retValScript.
-        @return returns _retValScript
-    */
-    int Run ();
+	// pid of running script, or 0 if not currently running
+	int _pid;
 
-	int Script::BackgroundRun( int reaper_id );
+	int BackgroundRun( int reaperId );
 
     inline char * GetCmd () const { return _cmd; }
-    Script (bool post, char *cmd, Job * job);
+    Script( bool post, char* cmd, Job* job );
     ~Script();
 
-  protected:
-    Job  * _job;
     char * _cmd;
+    Job  * _job;
+
+  protected:
 };
 
 #endif

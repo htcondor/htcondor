@@ -204,8 +204,14 @@ bool parse (char *filename, Dag *dag) {
             while (*rest != '\0') rest++;
             if (rest < endline)   rest++;
 
-            if (post) job->_scriptPost = new Script (post, rest, job);
-            else      job->_scriptPre  = new Script (post, rest, job);
+            if( post ) {
+				job->_scriptPost =
+					new Script( post, rest, job );
+			}
+            else {
+				job->_scriptPre =
+					new Script( post, rest, job );
+			}
         }
 
         //

@@ -32,8 +32,7 @@ Job::~Job() {
 Job::Job (const char *jobName, const char *cmdFile):
     _scriptPre  (NULL),
     _scriptPost (NULL),
-    _Status     (STATUS_READY),
-	_scriptPid	(0)
+    _Status     (STATUS_READY)
 {
 
     _jobName = strnewp (jobName);
@@ -44,6 +43,17 @@ Job::Job (const char *jobName, const char *cmdFile):
 
     // jobID is a primary key (a database term).  All should be unique
     _jobID = _jobID_counter++;
+}
+
+char*
+Job::GetJobName()
+{
+	if( !_jobName ) {
+		char *s = new char[32];
+		sprintf( s, "#%d (unnamed)", _jobID );
+		return s;
+	}
+	return strnewp( _jobName );
 }
 
 //---------------------------------------------------------------------------

@@ -21,31 +21,21 @@ void TQI::Print () const {
 
 //---------------------------------------------------------------------------
 Dag::Dag(const char *condorLogName, const char *lockFileName,
-         const int numJobsRunningMax) :
+         const int maxJobsSubmitted, const int maxScriptsRunning ) :
+	_maxScriptsRunning    (maxScriptsRunning),
     _condorLogInitialized (false),
     _condorLogSize        (0),
     _lockFileName         (NULL),
     _termQLock            (false),
     _numJobsDone          (0),
     _numJobsFailed        (0),
-    _numJobsRunning       (0),
-    _numJobsRunningMax    (numJobsRunningMax)
+    _numJobsSubmitted     (0),
+    _maxJobsSubmitted     (maxJobsSubmitted)
 {
     _condorLogName = strnewp (condorLogName);
     _lockFileName  = strnewp (lockFileName);
 
-	// register reaper functions for PRE & POST script completion
-	preScriptReaperId =
-		daemonCore->Register_Reaper( "PRE Script Reaper",
-									 (ReaperHandlercpp)&Dag::PreScriptReaper,
-									 "Dag::PreScriptReaper", this );
-	postScriptReaperId =
-		daemonCore->Register_Reaper( "POST Script Reaper",
-									 (ReaperHandlercpp)&Dag::PostScriptReaper,
-									 "Dag::PostScriptReaper", this );
-
-	// initialize hash table for mapping PRE/POST script pids to Job*
-	jobScriptPidTable = new HashTable<int,Job*>( 499, &hashFuncInt );
+	_scriptQ = new ScriptQ( this );
 }
 
 //-------------------------------------------------------------------------
@@ -53,8 +43,7 @@ Dag::~Dag() {
     unlink(_lockFileName);  // remove the file being used as semaphore
     delete [] _condorLogName;
     delete [] _lockFileName;
-	delete jobScriptPidTable;
-	// should we un-register reapers here?
+	delete _scriptQ;
 }
 
 //-------------------------------------------------------------------------
@@ -179,8 +168,8 @@ bool Dag::ProcessLogEvents (bool recovery) {
         if (outcome != ULOG_UNK_ERROR) log_unk_count = 0;
 
 		debug_printf (DEBUG_VERBOSE,
-					  "\t_numJobsRunning = %d, _numJobsFailed = %d\n",
-					  _numJobsRunning, _numJobsFailed );
+					  "\t_numJobsSubmitted = %d, _numJobsFailed = %d\n",
+					  _numJobsSubmitted, _numJobsFailed );
 
         switch (outcome) {
             
@@ -263,7 +252,6 @@ bool Dag::ProcessLogEvents (bool recovery) {
                 //--------------------------------------------------
               case ULOG_JOB_TERMINATED:
               {
-				  int pid;
                   Job * job = GetJob (condorID);
                   
                   if (DEBUG_LEVEL(DEBUG_VERBOSE)) {
@@ -279,11 +267,17 @@ bool Dag::ProcessLogEvents (bool recovery) {
                       break;
                   }
 
+				  if( !recovery ) {
+					  _numJobsSubmitted--;
+					  assert( _numJobsSubmitted >= 0 );
+				  }
+
                   JobTerminatedEvent * termEvent = (JobTerminatedEvent*) e;
 
                   if (! (termEvent->normal &&
                                 termEvent->returnValue == 0)) {
                       job->_Status = Job::STATUS_ERROR;
+					  _numJobsFailed++;
                       if (DEBUG_LEVEL(DEBUG_QUIET)) {
                           printf ("Job ");
                           job_print(job,true);
@@ -297,10 +291,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
                           }
                           putchar ('\n');
                       }
-					  _numJobsFailed++;
 					  if( run_post_on_failure == FALSE ) {
-						  _numJobsRunning--;
-						  assert( _numJobsRunning >= 0 );
 						  break;
 					  }
                   }
@@ -311,18 +302,15 @@ bool Dag::ProcessLogEvents (bool recovery) {
                   // if a POST script is specified for the job, run it
                   if (job->_scriptPost != NULL) {
 					  if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
-						  printf( "Running POST Script of Job " );
-						  job->Print();
-						  printf( "\n" );
+						  printf( "Running POST script of Job %s ...\n",
+								  job->GetJobName() );
 					  }
+					  // let the script know the job's exit status
                       job->_scriptPost->_retValJob = termEvent->normal
                           ? termEvent->returnValue : -1;
+
 					  job->_Status = Job::STATUS_POSTRUN;
-					  pid =
-						  job->_scriptPost->BackgroundRun(postScriptReaperId);
-					  assert( pid > 0 );
-					  job->_scriptPid = pid;
-					  jobScriptPidTable->insert( pid, job );
+					  _scriptQ->Run( job->_scriptPost );
 					  break;
 				  }
 
@@ -330,8 +318,6 @@ bool Dag::ProcessLogEvents (bool recovery) {
 				  // dependencies given our successful completion
 
 				  job->_Status = Job::STATUS_DONE;
-				  _numJobsRunning--;
-				  assert( _numJobsRunning >= 0 );
 				  TerminateJob( job );
 
 				  if( !recovery ) {
@@ -422,11 +408,10 @@ Job * Dag::GetJob (const CondorID condorID) const {
 bool Dag::Submit (Job * job) {
     assert (job != NULL);
 
-	_numJobsRunning++;
-	assert( _numJobsRunning >= 0 );
+	// if a PRE script exists, run that first -- the PRE script's
+	// reaper function will submit the actual job to Condor if/when
+	// the script exits successfully
 
-	// if a PRE script exists, spawn it, and set up a reaper to submit
-	// the job to Condor if/when the PRE script exits successfully
     if (job->_scriptPre != NULL) {
 		if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
 			printf( "Running PRE Script of Job " );
@@ -434,10 +419,7 @@ bool Dag::Submit (Job * job) {
 			printf( "\n" );
 		}
 		job->_Status = Job::STATUS_PRERUN;
-		int pid = job->_scriptPre->BackgroundRun( preScriptReaperId );
-		assert( pid > 0 );
-		job->_scriptPid = pid;
-		jobScriptPidTable->insert( pid, job );
+		_scriptQ->Run( job->_scriptPre );
 		return true;
     }
 	// no PRE script exists, so submit the job to condor right away
@@ -474,6 +456,7 @@ Dag::SubmitCondor( Job* job )
     }
 
     job->_Status = Job::STATUS_SUBMITTED;
+	_numJobsSubmitted++;
 
     if (DEBUG_LEVEL(DEBUG_VERBOSE)) {
         printf (", ");
@@ -486,116 +469,85 @@ Dag::SubmitCondor( Job* job )
 
 //---------------------------------------------------------------------------
 int
-Dag::PreScriptReaper( int pid, int status )
+Dag::PreScriptReaper( Job* job, int status )
 {
-	Job* job;
-
-	// get the Job* that corresponds to this pid
-	jobScriptPidTable->lookup( pid, job );
-	jobScriptPidTable->remove( pid );
-
 	assert( job != NULL );
 	assert( job->_Status == Job::STATUS_PRERUN );
 
-	job->_scriptPid = 0;	// reset
-
 	if( WIFSIGNALED( status ) ) {
 		if( DEBUG_LEVEL(DEBUG_QUIET) ) {
-			printf( "PRE Script of Job " );
-			job->Print();
-			printf( " died on %s\n", daemonCore->GetExceptionString(status) );
+			printf( "PRE Script of Job %s died on %s\n", job->GetJobName(),
+					daemonCore->GetExceptionString(status) );
 		}
 		job->_Status = Job::STATUS_ERROR;
-		_numJobsRunning--;
 		_numJobsFailed++;
-		return true;
 	}
 	else if ( WEXITSTATUS( status ) != 0 ) {
 		if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
-			printf( "PRE Script of Job " );
-			job->Print();
-			printf( " failed with status %d\n", WEXITSTATUS(status) );
+			printf( "PRE Script of Job %s failed with status %d\n",
+					job->GetJobName(), WEXITSTATUS(status) );
 		}
 		job->_Status = Job::STATUS_ERROR;
-		_numJobsRunning--;
 		_numJobsFailed++;
-		return true;
 	}
-
-	if( DEBUG_LEVEL(DEBUG_QUIET) ) {
-		printf( "PRE Script of Job " );
-		job->Print();
-		printf( " completed successfully\n" );
+	else {
+		if( DEBUG_LEVEL(DEBUG_QUIET) ) {
+			printf( "PRE Script of Job %s completed successfully\n",
+					job->GetJobName() );
+		}
+		job->_Status = Job::STATUS_READY;
+		SubmitCondor( job );
 	}
-	job->_Status = Job::STATUS_READY;
-	SubmitCondor( job );
 	return true;
 }
 
 //---------------------------------------------------------------------------
 int
-Dag::PostScriptReaper( int pid, int status )
+Dag::PostScriptReaper( Job* job, int status )
 {
-	Job* job;
-
-	// get the Job* that corresponds to this pid
-	jobScriptPidTable->lookup( pid, job );
-	jobScriptPidTable->remove( pid );
-
 	assert( job != NULL );
 	assert( job->_Status == Job::STATUS_POSTRUN );
 
-	job->_scriptPid = 0;	// reset
-
 	if( WIFSIGNALED( status ) ) {
 		if( DEBUG_LEVEL(DEBUG_QUIET) ) {
-			printf( "POST Script of Job " );
-			job->Print();
-			printf( " died on %s\n", daemonCore->GetExceptionString(status) );
+			printf( "POST Script of Job %s died on %s\n", job->GetJobName(),
+					daemonCore->GetExceptionString(status) );
 		}
 		job->_Status = Job::STATUS_ERROR;
-		_numJobsRunning--;
 		_numJobsFailed++;
-		return true;
 	}
 	else if ( WEXITSTATUS( status ) != 0 ) {
 		if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
-			printf( "POST Script of Job " );
-			job->Print();
-			printf( " failed with status %d\n", WEXITSTATUS(status) );
+			printf( "POST Script of Job %s failed with status %d\n",
+					job->GetJobName(), WEXITSTATUS(status) );
 		}
 		job->_Status = Job::STATUS_ERROR;
-		_numJobsRunning--;
 		_numJobsFailed++;
-		return true;
-	}
-
-	if( DEBUG_LEVEL(DEBUG_QUIET) ) {
-		printf( "POST Script of Job " );
-		job->Print();
-		printf( " completed successfully\n" );
-	}
-
-	if( job->retval == 0 ) {
-		// update DAG dependencies given our successful completion
-		job->_Status = Job::STATUS_DONE;
-		_numJobsRunning--;
-		assert( _numJobsRunning >= 0 );
-		TerminateJob( job );
-		
-		// submit any waiting child jobs
-		if( SubmitReadyJobs() == false ) {
-			// if submit fails for any reason, abort
-			// TODO: abort the DAG somehow
-		}
 	}
 	else {
-		job->_Status = Job::STATUS_ERROR;
+		if( DEBUG_LEVEL(DEBUG_QUIET) ) {
+			printf( "POST Script of Job %s completed successfully\n",
+					job->GetJobName() );
+		}
+
+		if( job->retval == 0 ) {
+			// update DAG dependencies given our successful completion
+			job->_Status = Job::STATUS_DONE;
+			TerminateJob( job );
+			
+			// submit any waiting child jobs
+			if( SubmitReadyJobs() == false ) {
+				// if submit fails for any reason, abort
+				// TODO: abort the DAG somehow
+			}
+		}
+		else {
+			job->_Status = Job::STATUS_ERROR;
+		}
+
+		if( DEBUG_LEVEL( DEBUG_DEBUG_1 ) )
+			Print_TermQ();
 	}
-
-	if( DEBUG_LEVEL( DEBUG_DEBUG_1 ) )
-		Print_TermQ();
-
 	return true;
 }
 
@@ -682,9 +634,21 @@ void Dag::RemoveRunningJobs () const {
         }
 		// if job has its PRE script running, hard kill it
         else if( job->_Status == Job::STATUS_PRERUN ) {
-			assert( job->_scriptPid != 0 );
+			assert( job->_scriptPre->_pid != 0 );
             killCmdLen += sprintf( &killCmd[killCmdLen], " %d",
-								   job->_scriptPid );
+								   job->_scriptPre->_pid );
+            killNum++;
+
+			if( killCmdLen >= (ARG_MAX - 20) ) {
+				util_popen( killCmd );
+				killNum = 0;
+			}
+        }
+		// if job has its POST script running, hard kill it
+        else if( job->_Status == Job::STATUS_POSTRUN ) {
+			assert( job->_scriptPost->_pid != 0 );
+            killCmdLen += sprintf( &killCmd[killCmdLen], " %d",
+								   job->_scriptPost->_pid );
             killNum++;
 
 			if( killCmdLen >= (ARG_MAX - 20) ) {
@@ -901,7 +865,8 @@ bool Dag::SubmitReadyJobs () {
     tqi->children.Rewind();
     JobID_t jobID;
     while (tqi->children.Next(jobID) &&
-           (_numJobsRunningMax == 0 || _numJobsRunning < _numJobsRunningMax)) {
+           ( _maxJobsSubmitted == 0 ||
+			 _numJobsSubmitted < _maxJobsSubmitted ) ) {
         Job * job = GetJob(jobID);
         assert (job != NULL);
         if (job->CanSubmit()) {

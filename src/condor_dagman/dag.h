@@ -4,6 +4,7 @@
 #include "condor_common.h"
 #include "list.h"
 #include "job.h"
+#include "scriptQ.h"
 #include "user_log.c++.h"          /* from condor_c++_util/ directory */
 #include "condor_constants.h"      /* from condor_includes/ directory */
 #include "HashTable.h"
@@ -36,21 +37,20 @@ class TQI {
     dependencies, submit jobs, control the locations of log files,
     query the state of a job, and process any new events that have
     appeared in the condor log file.
-
-	The Dag class must be derived from Service so that we can register
-	one of its methods as a reaper function for Create_Process()
 */
-class Dag : public Service {
+class Dag {
   public:
   
     /** Create a DAG
         @param condorLog the condor log where job events are being written to
         @param lockFileName the name of the lock file
-        @param numJobsRunningMax the maximum number of jobs to submit to Condor
+        @param maxJobsSubmitted the maximum number of jobs to submit to Condor
                at one time
+        @param maxScriptsRunning the maximum number of scripts to spawn at one
+               time
     */
     Dag (const char *condorLog, const char *lockFileName,
-         const int  numJobsRunningMax);
+         const int maxJobsSubmitted, const int maxScriptsRunning );
 
     ///
     ~Dag();
@@ -125,7 +125,12 @@ class Dag : public Service {
 
     /** @return the number of jobs currently submitted to Condor
      */
-    inline int NumJobsRunning() const { return _numJobsRunning; }
+    inline int NumJobsSubmitted() const { return _numJobsSubmitted; }
+
+    /** @return the number of PRE/POST scripts currently running
+     */
+    inline int NumScriptsRunning() const
+		{ return _scriptQ->NumScriptsRunning(); }
 
     /** Remove all jobs (using condor_rm) that are currently running.
         All jobs currently marked Job::STATUS_SUBMITTED will be fed
@@ -142,6 +147,12 @@ class Dag : public Service {
         @param datafile The original DAG config file to read from
     */
     void Rescue (const char * rescue_file, const char * datafile) const;
+
+	int PreScriptReaper( Job* job, int status );
+	int PostScriptReaper( Job* job, int status );
+
+	// max number of PRE & POST scripts to run at once (0 means no limit)
+    int _maxScriptsRunning;
 
   protected:
 
@@ -214,21 +225,14 @@ class Dag : public Service {
     int _numJobsFailed;
 
     // Number of Jobs currently running (submitted to Condor)
-    int _numJobsRunning;
+    int _numJobsSubmitted;
 
-    /*  Maximum number of jobs to run at once.  Non-negative.  Zero means
+    /*  Maximum number of jobs to submit at once.  Non-negative.  Zero means
         unlimited
     */
-    int _numJobsRunningMax;
+    int _maxJobsSubmitted;
 
-	int PreScriptReaper( int pid, int status );
-	int PostScriptReaper( int pid, int status );
-
-	int preScriptReaperId;
-	int postScriptReaperId;
-
-	// hash table to map PRE/POST script pids to their Job*
-	HashTable<int, Job*> *jobScriptPidTable;
+	ScriptQ* _scriptQ;
 };
 
 #endif /* #ifndef DAG_H */

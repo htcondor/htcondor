@@ -19,11 +19,13 @@ class Global {
     inline Global ():
         dag          (NULL),
         maxJobs      (0),
+        maxScripts   (0),
         rescue_file  (NULL),
         datafile     (NULL) {}
     inline void CleanUp () { delete dag; }
     Dag * dag;
     int maxJobs;  // Maximum number of Jobs to run at once
+    int maxScripts;  // max. number of PRE/POST scripts to run at once
     char *rescue_file;
     char *datafile;
 };
@@ -40,6 +42,7 @@ static void Usage() {
             "\t\t-Dag <NAME.dag>\n"
             "\t\t-Rescue <Rescue.dag>\n"
             "\t\t[-MaxJobs] <int N>\n\n"
+            "\t\t[-MaxScripts] <int N>\n\n"
             "\twhere NAME is the name of your DAG.\n"
             "\twhere N is Maximum # of Jobs to run at once "
             "(0 means unlimited)\n"
@@ -168,6 +171,14 @@ int main_init (int argc, char **argv) {
                 Usage();
             }
             G.maxJobs = atoi (argv[i]);
+        } else if( !strcmp( "-MaxScripts", argv[i] ) ) {
+            i++;
+            if( argc <= i ) {
+                debug_println( DEBUG_SILENT,
+							   "Integer missing after -MaxScripts" );
+                Usage();
+            }
+            G.maxScripts = atoi( argv[i] );
         } else Usage();
     }
   
@@ -189,6 +200,10 @@ int main_init (int argc, char **argv) {
     }
     if (G.maxJobs < 0) {
         debug_println (DEBUG_SILENT, "-MaxJobs must be non-negative");
+        Usage();
+    }
+    if( G.maxScripts < 0 ) {
+        debug_println( DEBUG_SILENT, "-MaxScripts must be non-negative" );
         Usage();
     }
  
@@ -216,7 +231,7 @@ int main_init (int argc, char **argv) {
     // Create the DAG
     //
   
-    G.dag = new Dag (condorLogName, lockFileName, G.maxJobs);
+    G.dag = new Dag( condorLogName, lockFileName, G.maxJobs, G.maxScripts );
   
     //
     // Parse the input file.  The parse() routine
@@ -293,9 +308,10 @@ void main_timer () {
                    G.dag->NumJobsDone(), G.dag->NumJobs());
 
 	if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
-		printf( "Jobs Total / Running / Failed / Done = %d / %d / %d / %d\n",
-				G.dag->NumJobs(), G.dag->NumJobsRunning(),
-				G.dag->NumJobsFailed(), G.dag->NumJobsDone() );
+		printf( "%d Jobs Total / %d Submitted / %d Failed / %d Done "
+				"(%d Scripts Running)\n", G.dag->NumJobs(),
+				G.dag->NumJobsSubmitted(), G.dag->NumJobsFailed(),
+				G.dag->NumJobsDone(), G.dag->NumScriptsRunning() );
 	}
     
     // If the log has grown
@@ -318,7 +334,7 @@ void main_timer () {
     // If DAG is complete, hurray, and exit.
     //
     if (G.dag->NumJobsDone() >= G.dag->NumJobs()) {
-        assert (G.dag->NumJobsRunning() == 0);
+        assert (G.dag->NumJobsSubmitted() == 0);
         debug_println (DEBUG_NORMAL, "All jobs Completed!");
         G.CleanUp();
         DC_Exit(0);
@@ -328,7 +344,8 @@ void main_timer () {
     // If no jobs are running, but the dag is not complete,
     // then at least one job failed, or a cycle exists.
     // 
-    if( G.dag->NumJobsRunning() == 0 ) {
+    if( G.dag->NumJobsSubmitted() == 0 &&
+		G.dag->NumScriptsRunning() == 0 ) {
 		if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
 			printf( "ERROR: some jobs failed\n" );
 			G.dag->PrintJobList( Job::STATUS_ERROR );
