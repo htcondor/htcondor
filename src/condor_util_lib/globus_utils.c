@@ -40,11 +40,13 @@
 
 char *GlobusJobStatusNames[] = {
 	"UNSUBMITTED",
+	"SUBMITTED",
 	"PENDING",
 	"ACTIVE",
 	"FAILED",
 	"DONE",
-	"SUSPENDED"
+	"SUSPENDED",
+	"CANCELED"
 };
 
 int
