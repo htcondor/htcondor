@@ -82,7 +82,7 @@ StringList::print (void)
 {
 	char *x;
 	strings.Rewind ();
-	while (x = strings.Next ())
+	while ((x = strings.Next ()))
 		printf ("[%s]\n", x);
 }
 
@@ -90,7 +90,7 @@ StringList::~StringList ()
 {
 	char *x;
 	strings.Rewind ();
-	while (x = strings.Next ())
+	while ((x = strings.Next ()))
 	{
 		deleteCurrent();
 	}
@@ -104,7 +104,7 @@ StringList::contains( const char *st )
 	char	*x;
 
 	strings.Rewind ();
-	while (x = strings.Next ()) {
+	while ((x = strings.Next ())) {
 		if( strcmp(st, x) == MATCH ) {
 			return TRUE;
 		}
@@ -119,7 +119,7 @@ StringList::contains_anycase( const char *st )
 	char	*x;
 
 	strings.Rewind ();
-	while (x = strings.Next ()) {
+	while ((x = strings.Next ())) {
 		if( stricmp(st, x) == MATCH ) {
 			return TRUE;
 		}
@@ -134,7 +134,7 @@ StringList::remove(const char *str)
 	char *x;
 
 	strings.Rewind();
-	while (x = strings.Next()) {
+	while ((x = strings.Next())) {
 		if (strcmp(str, x) == MATCH) {
 			deleteCurrent();
 		}
@@ -147,7 +147,7 @@ StringList::remove_anycase(const char *str)
 	char *x;
 
 	strings.Rewind();
-	while (x = strings.Next()) {
+	while ((x = strings.Next())) {
 		if (stricmp(str, x) == MATCH) {
 			deleteCurrent();
 		}
@@ -161,7 +161,7 @@ StringList::substring( const char *st )
 	int len;
 	
 	strings.Rewind ();
-	while( x = strings.Next() ) {
+	while( (x = strings.Next()) ) {
 		len = strlen(x);
 		if( strncmp(st, x, len) == MATCH ) {
 			return TRUE;
@@ -202,7 +202,7 @@ StringList::contains_withwildcard(const char *string, bool anycase)
 
 	strings.Rewind();
 
-	while ( x=strings.Next() ) {
+	while ( (x=strings.Next()) ) {
 
 		if ( (asterisk = strchr(x,'*')) == NULL ) {
 			// There is no wildcard in this entry; just compare
