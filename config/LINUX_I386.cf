@@ -1,0 +1,16 @@
+/* Things specific to I386_LINUX machines (all versions) */
+
+#define Architecture		I386
+#define IS_I386			YES
+#define IS_I386_LINUX		YES
+#define ImakeArchFlag		-DIS_I386
+
+#define	ArchOptimizeFlag	-m486
+
+#if defined( IS_GLIBC )
+#   define Platform		I386_LINUX-G
+#   define PublicTargetName	i386_linux2-glibc
+#else
+#   define Platform		I386_LINUX
+#endif
+
