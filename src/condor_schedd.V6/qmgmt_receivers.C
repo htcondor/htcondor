@@ -377,8 +377,13 @@ do_Q_request(ReliSock *syscall_sock)
 		errno = 0;
 		rval = GetAttributeInt( cluster_id, proc_id, attr_name, &value );
 		terrno = errno;
-		dprintf( D_SYSCALLS, "  value: %d\n", value );
-		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+		if (rval < 0) {
+			dprintf( D_SYSCALLS, "GetAttributeInt(%d, %d, %s) not found.\n",
+					cluster_id, proc_id, attr_name);
+		} else {
+			dprintf( D_SYSCALLS, "  value: %d\n", value );
+			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+		}
 
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
