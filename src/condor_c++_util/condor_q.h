@@ -25,6 +25,9 @@
 
 #include "generic_query.h"
 
+// This is for the getFilterAndProcess function
+typedef bool    (*process_function)(ClassAd *);
+
 enum
 {
 	Q_NO_SCHEDD_IP_ADDR = 20,
@@ -74,12 +77,14 @@ class CondorQ
 	// from the local schedd
 	int fetchQueue (ClassAdList &, ClassAd * = 0);
 	int fetchQueueFromHost (ClassAdList &, char * = 0);
+	int fetchQueueFromHostAndProcess ( char *, process_function process_func);
 
   private:
 	GenericQuery query;
 	
 	// helper functions
-	int getAndFilterAds (ClassAd &, ClassAdList &);
+	int getAndFilterAds( ClassAd &, ClassAdList & );
+	int getFilterAndProcessAds( ClassAd &, process_function );
 };
 
 int JobSort(ClassAd *job1, ClassAd *job2, void *data);

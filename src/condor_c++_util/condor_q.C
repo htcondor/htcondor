@@ -179,6 +179,78 @@ fetchQueueFromHost (ClassAdList &list, char *host)
 }
 
 int CondorQ::
+fetchQueueFromHostAndProcess ( char *host, process_function process_func )
+{
+	Qmgr_connection *qmgr;
+	ClassAd 		filterAd;
+	int     		result;
+
+	// make the query ad
+	if ((result = query.makeQuery (filterAd)) != Q_OK)
+		return result;
+
+	// insert types into the query ad   ###
+	filterAd.SetMyTypeName ("Query");
+	filterAd.SetTargetTypeName ("Job");
+
+	/*
+	 connect to the Q manager.
+	 use a timeout of 20 seconds, and a read-only connection.
+	 why 20 seconds?  because careful research by Derek has shown
+	 that whenever one needs a periodic time value, 20 is always
+	 optimal.  :^).
+	*/
+	if (!(qmgr = ConnectQ (host,20,true)))
+		return Q_SCHEDD_COMMUNICATION_ERROR;
+
+	// get the ads and filter them
+	result = getFilterAndProcessAds (filterAd, process_func);
+
+	DisconnectQ (qmgr);
+	return result;
+}
+
+int CondorQ::
+getFilterAndProcessAds( ClassAd &queryad, process_function process_func )
+{
+	char		constraint[ATTRLIST_MAX_EXPRESSION]; /* yuk! */ 
+	ExprTree	*tree;
+	ClassAd		*ad;
+
+	constraint[0] = '\0';
+	tree = queryad.Lookup(ATTR_REQUIREMENTS);
+	if (!tree) {
+		return Q_INVALID_QUERY;
+	}
+
+	tree->RArg()->PrintToStr(constraint);
+
+	if ((ad = GetNextJobByConstraint(constraint, 1)) != NULL) {
+		// Process the data and insert it into the list
+		if ( ( *process_func )( ad ) ) {
+			delete(ad);
+		}
+
+		while((ad = GetNextJobByConstraint(constraint, 0)) != NULL) {
+			// Process the data and insert it into the list
+			if ( ( *process_func )( ad ) ) {
+				delete(ad);
+			}
+		}
+	}
+
+	// here GetNextJobByConstraint returned NULL.  check if it was
+	// because of the network or not.  if qmgmt had a problem with
+	// the net, then errno is set to ETIMEDOUT, and we should fail.
+	if ( errno == ETIMEDOUT ) {
+		return Q_SCHEDD_COMMUNICATION_ERROR;
+	}
+
+	return Q_OK;
+}
+
+
+int CondorQ::
 getAndFilterAds (ClassAd &queryad, ClassAdList &list)
 {
 	char		constraint[ATTRLIST_MAX_EXPRESSION]; /* yuk! */
@@ -193,18 +265,8 @@ getAndFilterAds (ClassAd &queryad, ClassAdList &list)
 	tree->RArg()->PrintToStr(constraint);
 
 	if ((ad = GetNextJobByConstraint(constraint, 1)) != NULL) {
-#if 0
-		ClassAd *adCopy = new ClassAd(*ad);
-		list.Insert(adCopy);	// insert copy so list can't destroy original
-		FreeJobAd(ad);
-#endif
 		list.Insert(ad);
 		while((ad = GetNextJobByConstraint(constraint, 0)) != NULL) {
-#if 0
-			adCopy = new ClassAd(*ad);
-			list.Insert(adCopy);	// insert copy
-			FreeJobAd(ad);
-#endif
 			list.Insert(ad);
 		}
 	}
@@ -292,3 +354,29 @@ short_print(
 	);
 }
 
+void
+short_print_to_buffer(
+	char *buffer,
+	int cluster,
+	int proc,
+	const char *owner,
+	int date,
+	int time,
+	int status,
+	int prio,
+	int image_size,
+	const char *cmd
+	) {
+	sprintf( buffer, "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %-18.18s\n",
+		cluster,
+		proc,
+		owner,
+		format_date((time_t)date),
+		format_time(time),
+		encode_status(status),
+		prio,
+		image_size/1024.0,
+		cmd
+	);
+}
+	
