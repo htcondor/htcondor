@@ -33,13 +33,10 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "condor_config.h"
-
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT */
-
-#if !defined(WIN32)
-#include "condor_fdset.h"
-#endif
+#include "condor_config.h"
+#include "condor_attributes.h"
+#include "my_hostname.h"
 
 #include "sched.h"
 #include "clib.h"
@@ -69,8 +66,7 @@ char*		mySubSystem = "SCHEDD";
 
 // global objects
 Scheduler	scheduler;
-char		Name[MAXHOSTNAMELEN];
-int			ScheddName = 0;
+char*		Name = NULL;
 
 void Init();
 
@@ -85,6 +81,7 @@ main_init(int argc, char* argv[])
 {
 	char**		ptr; 
 	char		job_queue_name[_POSIX_PATH_MAX];
+	char	expr[200];
  
 	for(ptr = argv + 1; *ptr; ptr++)
 	{
@@ -95,8 +92,7 @@ main_init(int argc, char* argv[])
 		switch(ptr[0][1])
 		{
 		  case 'n':
-			strcpy(Name, *(++ptr)); 
-			ScheddName++;
+			Name = strdup(*(++ptr)); 
 			break;
 		  default:
 			usage(argv[0]);
@@ -108,33 +104,27 @@ main_init(int argc, char* argv[])
 
 	Init();
 	
-	// if a name if not specified, assume the name of the machine
-	if(!ScheddName)
-	{
-		gethostname(Name, MAXHOSTNAMELEN);
+	// if a name if not specified, use the full hostname of the machine
+	if(!Name) {
+		Name = strdup( my_full_hostname() );
 	}
 
 	ScheddClassad->SetMyTypeName(SCHEDD_ADTYPE);
 	ScheddClassad->SetTargetTypeName("");
 
-	// throw the name into the machine ad
-	{
-		char	expr[200];
-
-		sprintf(expr, "Name = \"%s\"", Name);
-		ScheddClassad->Insert(expr);
-	}
-
+		// Throw name into the classad.
+	sprintf( expr, "%s = \"%s\"", ATTR_NAME, Name );
+	ScheddClassad->Insert(expr);
+	
+		// Initialize the job queue
 	sprintf(job_queue_name, "%s/job_queue.log", Spool);
 	InitJobQueue(job_queue_name);
 	mark_jobs_idle();
 
-	// initialize all the modules
+		// Initialize all the modules
 	scheduler.SetClassAd(ScheddClassad);
 	scheduler.Init();
 	scheduler.Register();
-	scheduler.SetCommandPort(daemonCore->InfoCommandPort());
-	
 	scheduler.timeout();
 
 	return 0;
