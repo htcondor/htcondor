@@ -1,0 +1,12 @@
+config_val
+condor_history
+condor_preen
+condor_reconfig_schedd
+condor_reschedule
+condor_status
+condor_summary
+condor_vacate
+watch_status
+block_jobs
+condor_customize
+
