@@ -35,10 +35,10 @@ $success = sub
 		print "ARG -$item-\n";
 	}
 
-	Condor::ParseMachineAds( $lines[2] );
-	%ads = Condor::FetchMachineAds();
-	my $machinemem = Condor::FetchMachineAdValue("memory");
-	my $wontbethere = Condor::FetchMachineAdValue("wontbethere");
+	CondorTest::ParseMachineAds( $lines[2] );
+	%ads = CondorTest::FetchMachineAds();
+	my $machinemem = CondorTest::FetchMachineAdValue("memory");
+	my $wontbethere = CondorTest::FetchMachineAdValue("wontbethere");
 
 	print "Alternate value is ---$wontbethere---\n";
 	if( $machinemem ne undef)
