@@ -4,12 +4,18 @@ SRC_DIR = $(SRC_TREE)/condor_c++_util
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fexternal-templates -DNEW_PROC
 TEMPLATE_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC
 #else
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fexternal-templates -DNEW_PROC
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fexternal-templates -DNEW_PROC -static
 #endif
 CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
 
 #if IS_SPARC_SUNOS41
 SYSPARAM = sysparam_sun
+#endif
+#if IS_SUN4M_SOLARIS
+SYSPARAM = sysparam_solaris
+#endif
+#if IS_X86_SOLARIS
+SYSPARAM = sysparam_solaris
 #endif
 #if IS_ALPHA_OSF1
 SYSPARAM = sysparam_osf1
@@ -47,7 +53,7 @@ TEST_LIBS = ../condor_util_lib/util_lib.a cplus_lib.a /usr/lib/libbsd.a
 TEST_LIBS = cplus_lib.a ../condor_util_lib/util_lib.a
 #endif
 
-all_target( cplus_lib.a )
+all_target(cplus_lib.a)
 
 library_target( cplus_lib.a,$(OBJ))
 
@@ -55,6 +61,9 @@ c_plus_target(test_locks,test_locks.o,$(TEST_LIBS))
 
 test: test.o user_log.o
 	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o test test.o user_log.o $(TEST_LIBS)
+
+tester: tester.o $(TEST_LIBS)
+	$(CC) $(CFLAGS) -Wl,-u._fpdata_size -o tester tester.o $(TEST_LIBS)
 
 test_afs: test_afs.o afs.o $(TEST_LIBS)
 	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o test_afs test_afs.o afs.o $(TEST_LIBS)

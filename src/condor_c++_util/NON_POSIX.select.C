@@ -28,6 +28,8 @@
 
 #define _POSIX_SOURCE
 
+#include "_condor_fix_types.h"
+
 #include "condor_common.h"
 #include "condor_constants.h"
 #include "condor_debug.h"

@@ -1,5 +1,10 @@
 #define _POSIX_SOURCE
 
+/* Solaris specific change ..dhaval 6/27 */
+#if defined(Solaris)
+#include "_condor_fix_types.h"
+#endif
+
 #include "condor_common.h"
 #include "condor_fix_string.h"
 #include "condor_xdr.h"

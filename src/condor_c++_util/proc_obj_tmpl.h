@@ -1,3 +1,5 @@
+/*#ifndef _PROC_OBJ_TMPL_H
+#define _PROC_OBJ_TMPL_H */
 #pragma interface
 
 /*
@@ -61,3 +63,5 @@ display_common_elements( Type *p )
 	d_string( "preferences", p->preferences );
 	d_rusage( "local_usage", p->local_usage );
 }
+template static void display_common_elements(V2_PROC *);
+/*#endif */

@@ -189,6 +189,11 @@ Osf1::disSysParam(const SysParamName sys, const char* buffer,
 
 
 // dummy stubs
+/* Solaris specific change ..dhaval 6/27 */
+solaris:: solaris() {}
+int  solaris::readSysParam(const SysParamName, char*& buffer, int& size, SysType& type){}
+void solaris::disSysParam(const SysParamName sys, const char* buffer, const int size, const SysType type){}
+
 SunOs:: SunOs() {}
 int  SunOs::readSysParam(const SysParamName, char*& buffer, int& size, SysType& type){}
 void SunOs::disSysParam(const SysParamName sys, const char* buffer, const int size, const SysType type){}

@@ -34,6 +34,7 @@
 
 #define _POSIX_SOURCE
 
+#include "_condor_fix_types.h"
 #include "condor_common.h"
 #include "condor_constants.h"
 #include "condor_debug.h"
@@ -43,6 +44,12 @@
 #include <pwd.h>
 #include "proc_obj.h"
 #include "proc_obj_tmpl.h"
+/*Solaris specific change ..dhaval 6/27 */
+#if defined(Solaris)
+#include</usr/ucbinclude/sys/rusage.h>
+#endif
+
+/* include "proc_obj_tmpl.h" seems redundant ..dhaval 6/26 */ 
 
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
