@@ -729,7 +729,7 @@ owner (the owner is still using the machine after a specific period of
 time), the startd moves on to vacating the job.
 Vacating a standard universe job
 involves performing a checkpoint so that the work already completed
-is not lost.  Vanilla jobs are sent a \Term{softkill signal} so that they
+is not lost.  Vanilla jobs are sent a \Term{soft kill signal} so that they
 can gracefully shutdown if necessary; the default is \verb@SIGTERM@.
 If vacating does not satisfy the machine owner (usually because it is
 taking too long and the owner wants their machine back \emph{now}),
@@ -1324,14 +1324,14 @@ WANT_VACATE  = ( $(ActivationTimer) > 10 * $(MINUTE) \
                  || $(IsPVM) || $(IsVanilla) )
 
 # Suspend jobs if:
-# 1) The cpu has been busy for more than 1 minute, AND
+# 1) The CPU has been busy for more than 1 minute, AND
 # 2) the job has been running for more than 90 seconds
 # 3) OR suspend if this is a desktop and the user is active
 SUSPEND = ( ((CpuBusyTime > 2 * $(MINUTE)) && ($(ActivationTimer) > 90)) \
             || ( IsDesktop =?= True && $(KeyboardBusy) ) )
 
 # Continue jobs if:
-# 1) the cpu is idle, AND 
+# 1) the CPU is idle, AND 
 # 2) we've been suspended more than 5 minutes AND
 # 3) the keyboard has been idle for long enough (if this is a desktop)
 CONTINUE = ( $(CPUIdle) && ($(ActivityTimer) > 300) \
@@ -1385,20 +1385,95 @@ achieved with the following policy:
 
 \begin{verbatim}
 PREEMPT = False
-START = $(START) && (State == "Unclaimed")
+PREEMPTION_REQUIREMENTS = False
+RANK = 0
 \end{verbatim}
 
-Setting \Macro{PREEMPT} to be false disables preemption by the machine
-owner.  Making the \Macro{START} expression require the machine to be
-in an unclaimed state prevents higher priority users from preempting
-lower priority users who already have a claim to the machine.
+Setting \Macro{PREEMPT} to False disables preemption from activity
+on the machine, for example because of console activity from
+the machine owner.
+\Macro{PREEMPTION\_REQUIREMENTS} is set to False to disable preemption
+by users with better priority in the pool. 
+Technically, that is part
+of the \Condor{negotiator} policy, not the \Condor{startd} daemon policy.
+Setting the
+\Condor{startd}'s \Macro{RANK} expression to 0 removes the possibility of
+\Condor{startd} preemption,
+which is when the \Condor{negotiator} finds a job that the
+\Condor{startd} likes better than the current job it is running.
+For this purpose,
+setting the rank to any constant or to nothing at all would
+work just as well.
 
-You should be aware of one disadvantage of this policy: A low priority
+You should be aware of one disadvantage of this policy:
+a low priority
 user can get a claim to a machine and then hold on to it indefinitely,
 by running a very long job or by keeping the machine busy with a
-continuous stream of short jobs.  The negotiator will not be able to
+continuous stream of short jobs.  The \Condor{negotiator} will not
+be able to
 reallocate the resource to a higher priority user until the machine
 returns to an unclaimed state.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Job-Suspension}Job Suspension}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{policy!suspending jobs instead of evicting them}
+As new jobs are submitted that receive a higher priority than
+currently executing jobs,
+the executing jobs may be preempted.
+These jobs lose whatever forward progress they have made,
+and are sent back to the job queue to await starting over again as
+another machine becomes available.
+
+Condor may be configured with a policy that allows these potentially
+evicted jobs to be suspended instead.
+The configuration introduces the notion of a virtual machine,
+even in the case of a single, physical CPU.
+The policy utilizes two virtual machines,
+one (called VM1 in the example) that runs jobs following
+the normal policy implemented for all machines in the pool.
+The second virtual machine (called VM2 in the example) is 
+set to run jobs whenever it can, and suspend these jobs
+when VM1 is utilized.
+
+Section~\ref{sec:Startd-Config-File-Entries} contains details of
+the \Macro{STARTD\_VM\_EXPRS} configuration macro,
+utilized in this policy example.
+The configuration, with comments to illustrate the intended policy
+will appear much like this example.
+
+\footnotesize
+\begin{verbatim}
+# Lie to Condor, to achieve 2 virtual machines with only a single CPU
+NUM_CPUS = 2
+
+# VM1 is the high-prio VM, while VM2 is the background VM...
+START = (VirtualMachineID == 1) && $(VM1_START) || \
+        (VirtualMachineID == 2) && $(VM2_START)
+
+# Only start jobs on VM1 if the job is marked as a high-priority job 
+VM1_START = (TARGET.IsHighPrioJob =?= TRUE)
+
+# Only start jobs on VM2 if there is no job on VM1, and if the machine is
+# otherwise idle...  NOTE: the "Busy" activity is only in the Claimed
+# state, and only when there is an active job, so that is good enough
+# for our needs...
+VM2_START = ( (vm1_Activity != "Busy") && \ 
+              (KeyboardIdle > $(StartIdleTime)) && \
+	      ($(CPUIdle) || (State != "Unclaimed" && State != "Owner")) )
+
+# Only suspend jobs on VM2.  Suspend if there is keyboard activity or
+# if a job starts on VM1...
+SUSPEND = (VirtualMachineID == 2) && \
+          ( (vm1_Activity == "Busy") || ($(KeyboardBusy)) )
+
+# Since SUSPEND can only be TRUE on VM2, we can write the
+# CONTINUE expression specifically for VM2:
+CONTINUE = (KeyboardIdle > $(ContinueIdleTime)) && \
+           (vm1_Activity != "Busy")
+
+\end{verbatim}
+\normalsize
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:V60-Policy-diffs}Differences from the 

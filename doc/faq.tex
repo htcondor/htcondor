@@ -477,6 +477,7 @@ page~\pageref{sec:Policy-Examples}.
 \subsection*{How do I configure Condor such that all machines do not produce checkpoints at the same time?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \label{sec:randomchoiceusage}
+\index{checkpoint!periodic}
 \index{\$RANDOM\_CHOICE()}
 \index{RANDOM\_CHOICE() macro!use in configuration}
 If machines are configured to produce checkpoints at fixed intervals,
@@ -488,7 +489,7 @@ It is likely to cause rather poor performance during this burst of
 writing.
 
 The \MacroU{RANDOM\_CHOICE()} macro can help in this instance.
-Instead of defining \MacroNI{PERIODIC\_CHECKPOINT} to be a fixed
+Instead of defining \Macro{PERIODIC\_CHECKPOINT} to be a fixed
 interval, each machine is configured to randomly choose 
 one of a set of intervals.
 For example, to set a machine's interval for producing checkpoints
@@ -771,6 +772,27 @@ Here is a list:
 \end{itemize}
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{When I use \Condor{compile} to produce a job, I get an error that says, "Internal ld was not invoked!". What does this mean?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{condor\_compile}
+
+\Condor{compile} enforces certain behavior in the compilers/linkers that
+it supports(gcc, g77, cc, CC, ld, etc.) where a special linker script
+provided by Condor must be invoked during the final linking stages of
+the supplied compiler/linker.
+
+In some rare cases, as in gcc compiled simultaneously with
+\Opt{--without-gnu-ld} and and \Opt{--with-ld}, the enforcement mechanism
+we rely upon to have gcc choose our supplied linker script is ignored.
+
+When this happens, an executable is produced, but it is bereft of the
+Condor libraries which both identify it as a Condor executable linked
+for the Standard Universe and implement the feature sets of remote I/O
+and transparent process checkpointing and migration.
+
+This specific case can be fixed by recompiling gcc so that those to flags
+are not used in conjunction.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Can I submit my standard universe SPARC Solaris 2.6 jobs and have them run on a SPARC Solaris 2.7 machine?}

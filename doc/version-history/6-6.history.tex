@@ -43,11 +43,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed an error in the \Condor{dagman} submit file parsing code:
-  if one job referred to a log file with a relative path, and another
-  job referred to the same log file with an absolute path, the log file
-  reading failed.  Note: things can still get goofed up by symbolic
-  links or paths with ".." in them.
+\item Fixed an error in \Condor{dagman}: if submit files for individual
+  nodes referred to the same log file with different paths, \Condor{dagman}
+  would read log events incorrectly and the DAG would fail.  \Condor{dagman}
+  is now able to recognize that the different paths actually refer to
+  the same log file.
+
+\item Fixed a bug where the environment of jobs in any universe could be
+	corrupted.
 
 \item The kerberos map file now tolerates spaces on either side of the equals sign instead of generating a parse error.
 
@@ -59,6 +62,11 @@ The details of each version are described below.
   \Expr{tranfer\_input\_files}) the \Condor{starter} will use the
   local path (in the execute directory) for the jarfiles, instead of
   the original path specified in the submit file.
+
+\item Previously, if a scheduler universe job died with a signal, the
+  \Condor{schedd} would write multiple (conflicting) events into the
+  UserLog file: a terminate event and an abort event.
+  Now, only the terminate event is written, not the abort event.
 
 \item Fixed a minor bug where if the \Condor{schedd} crashed or was
   killed at just the wrong moment while a job was being removed
@@ -72,6 +80,9 @@ The details of each version are described below.
 \item The default setting for \Macro{POOL\_HISTORY\_DIR} is no
   longer \Macro{SPOOL}.  Using the spool directory would result
   in history files being obliterated by \Condor{preen}.
+
+\item The \Condor{startd} now properly cleans up execute directories on
+  root-squashed NFS mounts.
 
 \end{itemize}
 

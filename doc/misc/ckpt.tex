@@ -2,6 +2,7 @@
 \section{\label{ckpt-reference}
 Condor's Checkpoint Mechanism}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{checkpoint}
 
 Checkpointing is taking a snapshot of the current state of a program
 in such a way that the program can be restarted from that state at a
@@ -33,6 +34,7 @@ page~\pageref{sec:standard-universe} for a description of the
 classes of jobs for which Condor does not provide checkpointing
 services.)
 
+\index{checkpoint!implementation}
 Process checkpointing is implemented in the Condor system call library
 as a signal handler.  When Condor sends a checkpoint signal to a
 process linked with this library, the provided signal handler writes
@@ -54,8 +56,9 @@ checkpoint, and computation is resumed from where it left off.  Jobs
 that can not be checkpointed are preempted and restarted from the
 beginning.
 
+\index{checkpoint!periodic}
 Condor's periodic checkpointing provides fault tolerance.  Condor
-pools are each configured with the \Expr{PERIODIC\_CHECKPOINT}
+pools are each configured with the \Macro{PERIODIC\_CHECKPOINT}
 expression which controls when and how often jobs which can be
 checkpointed do periodic checkpoints (examples: never, every three
 hours, etc.).  When the time for a periodic checkpoint occurs, the job
@@ -80,6 +83,7 @@ The Condor checkpointing facility can also be used for any Unix process
 outside of the Condor batch environment. Standalone checkpointing
 is described in section~\ref{sec:standalone-ckpt}.
 
+\index{checkpoint!compression}
 Condor can produce and use compressed checkpoints.
 Configuration variables (detailed in 
 section~\ref{sec:Shadow-Config-File-Entries}
@@ -98,8 +102,11 @@ burden of storing checkpoint files off of the submitting machines and
 placing it instead on server machines (with disk space dedicated to
 the purpose of storing checkpoints).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:standalone-ckpt}Standalone Checkpointing}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{checkpoint!stand alone}
 Using the Condor checkpoint library without the remote system call
 functionality and outside of the Condor system is known as standalone
 mode checkpointing.
@@ -133,7 +140,9 @@ the checkpoint is called \File{P1.ckpt}, use
 P1 -_condor_restart P1.ckpt
 \end{verbatim}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:ckpt-safety}Checkpoint Safety}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Some programs have fundamental limitations that make them
 unsafe for checkpointing.  For example, a program that both reads
@@ -156,9 +165,11 @@ if a file is used for both reading and writing.  You can ignore or disable
 these warnings if you choose (see section \ref{sec:ckpt-warnings},) but
 please understand that your program may compute incorrect results.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:ckpt-warnings}Checkpoint Warnings}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Condor has a number of messages that warn you of unexpected
+Condor has warning messages in the case unexpected
 behaviors in your program.  For example, if file \File{x}
 is opened for reading
 and writing, you will see:
@@ -195,8 +206,11 @@ To turn all ordinary notices off:
 The same effect can be accomplished within a program by using the function
 \verb$_condor_warning_config$, described in section \ref{sec:ckpt-api}.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:ckpt-api}Checkpoint Library Interface}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{checkpoint!library interface}
 A program need not be rewritten to take advantage of checkpointing.
 However, the checkpointing library provides several C entry points
 that allow for a program to control its own checkpointing behavior

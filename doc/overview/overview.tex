@@ -263,16 +263,21 @@ transparently checkpoint and migrate:
 has been asked to transparently checkpoint.  If job checkpointing is not
 desired, the limitations above do not apply.
 
-	\item[Security Implications.] Condor does a significant amount of work to prevent 
-security hazards, but loopholes are known to exist.  Condor can be instructed 
-to run user programs only as the UNIX user nobody, a user login which traditionally has very 
-restricted access.  But even with access solely as user nobody, a sufficiently 
-malicious individual could do such things as fill up /tmp (which is world writable) and/or gain 
-read access to world readable files.
-Furthermore, where the security of machines in the pool is a high concern, 
-only machines where the UNIX user root on that machine can be trusted should be admitted
-into the pool. Condor provides the administrator with IP-based security mechanisms 
-to enforce this.
+	\item[Security Implications.] Condor does a significant amount of
+	work to prevent security hazards, but loopholes are known to exist.
+	Condor can be instructed to run user programs only as the UNIX
+	user nobody, a user login which traditionally has very 
+	restricted access.
+	But even with access solely as user nobody,
+	a sufficiently malicious individual could do such things as fill up
+	\File{/tmp} (which is world writable) and/or gain read access to
+	world readable files.
+	Furthermore, where the security of machines in the pool is a
+	high concern, 
+	only machines where the UNIX user root on that machine can be
+	trusted should be admitted into the pool.
+	Condor provides the administrator with extensive security mechanisms 
+	to enforce desired policies.
 
 	\item[Jobs Need to be Re-linked to get Checkpointing and Remote System Calls] Although 
 typically no source code changes are required,
@@ -323,15 +328,15 @@ Sun SPARC Sun4m,Sun4c, Sun UltraSPARC & Solaris 2.6, 2.7, 8, 9 \\ \hline
 Silicon Graphics MIPS (R5000, R8000, R10000) & IRIX 6.5 (clipped) \\ \hline
 Intel x86 & Red Hat Linux 7.1, 7.2, 7.3, 8.0 \\
  & Red Hat Linux 9 \\
- & Windows NT 4.0 Workstation and Server (clipped) \\
- & Windows 2000 Professional and Server, 2003 Server (clipped) \\ 
- & Windows XP Professional (clipped) \\ \hline
+ & Windows 2000 Professional and Server, 2003 Server (Win NT 5.0) (clipped) \\ 
+ & Windows XP Professional (Win NT 5.1) (clipped) \\ \hline
 ALPHA & Digital Unix 4.0 \\
  & Red Hat Linux 7.1, 7.2, 7.3 (clipped) \\
  & Tru64 5.1 (clipped) \\ \hline
 PowerPC & Macintosh OS X (clipped) \\
  & AIX 5.2L (clipped) \\ \hline
-Itanium & Red Hat Linux 7.1, 7.2, 7.3 (clipped) \\ \hline
+Itanium & Red Hat Linux 7.1, 7.2, 7.3 (clipped) \\
+ & SuSE Linux Enterprise 8.1 (clipped) \\ \hline
 \end{tabular}
 \caption{\label{supported-platforms}Condor \VersionNotice\ supported platforms}
 \end{table}
@@ -400,6 +405,37 @@ Digitial Unix 4.0 on ALPHA \\
 \end{table}
 \end{center}
 
+\index{file transfer!large files (>2Gb)}
+\index{large file transfer support}
+The following table, 
+Table~\ref{large-file-support},
+identifies which platforms support
+the transfer of large files (greater than 2 Gbyte in length).
+For those platforms where large file transfer is
+supported, the support is automatic.
+
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|lc|} \hline
+\emph{Platform} & \emph{Large File Transfer Supported?} \\ \hline \hline
+Hewlett Packard PA-RISC with HPUX 10.20 & Yes \\ \hline
+Sun SPARC Sun4m,Sun4c, Sun UltraSPARC with Solaris 2.6, 2.7, 8, 9 & Yes \\ \hline
+Silicon Graphics MIPS (R5000, R8000, R10000) with IRIX 6.5 &  Yes \\ \hline
+Intel x86 with Red Hat Linux 7.1, 7.2, 7,3, 8.0, 9 & Yes \\ \hline
+Intel x86 with Windows 2000 Professional and Server, 2003 Server (Win NT 5.0) & Yes \\ \hline 
+Intel x86 with Windows XP Professional (Win NT 5.1) & Yes \\ \hline
+ALPHA with Digital Unix 4.0 & No \\ \hline
+ALPHA with Red Hat Linux 7.1, 7.2, 7.3 & Yes \\ \hline
+ALPHA with  Tru64 5.1  & No \\ \hline
+PowerPC with Macintosh OS X  & No \\ \hline
+PowerPC with AIX 5.2L  & Yes \\ \hline
+Itanium with Red Hat Linux 7.1, 7.2, 7.3 & Yes \\ \hline
+Itanium with SuSE Linux Enterprise 8.1 & Yes \\ \hline
+\end{tabular}
+\caption{\label{large-file-support}Supported platforms for large file transfer}
+\end{table}
+\end{center}
+
 
 \section{\label{contact-info}Contact Information}
 
@@ -409,21 +445,29 @@ High-Throughput Computing
 research can be found at the official web site for Condor at  
 \URL{http://www.cs.wisc.edu/condor}.
 
-In addition, there is an e-mail list at condor-world@cs.wisc.edu.  The Condor Team 
-uses this e-mail list to announce new releases of Condor and other major Condor-related 
-news items.  Membership into condor-world is automated by MajorDomo software.  To 
-subscribe or unsubscribe from the the list, follow the instructions at  
-\URL{http://www.cs.wisc.edu/condor/condor-world/condor-world.html}.  Because many of us receive 
-too much e-mail as it is, you'll be happy to know that the condor-world e-mail listgroup is 
-moderated and only major announcements of wide interest are distributed.
+In addition, there is an e-mail list at condor-world@cs.wisc.edu.
+The Condor Team uses this e-mail list to announce new releases of
+Condor and other major Condor-related news items.
+Membership into condor-world is automated by MajorDomo software.
+To subscribe or unsubscribe from the the list, follow the instructions at  
+\URL{http://www.cs.wisc.edu/condor/mail-lists/}.
+Because many of us receive 
+too much e-mail as it is, you will be happy to know that the
+condor-world e-mail listgroup is 
+moderated, and only major announcements of wide interest are distributed.
 
-Finally, you can reach the Condor Team directly.  The Condor Team is comprised of the 
-developers and administrators of Condor at the University of Wisconsin-Madison. Condor 
-questions, comments, pleas for help, and requests for commercial contract consultation or support 
-are all welcome; just send Internet e-mail to \URL{mailto:condor-admin@cs.wisc.edu}.  Please include your 
-name, organization, and telephone number in your message.  If you are having trouble with 
-Condor, please help us troubleshoot by including as much pertinent information as you can, 
-including snippets of Condor log files. 
+Finally, you can reach the Condor Team directly.
+The Condor Team is comprised of the 
+developers and administrators of Condor at the University of Wisconsin-Madison.
+Condor questions, comments, pleas for help,
+and requests for commercial contract consultation or support 
+are all welcome;
+send Internet e-mail to
+\URL{mailto:condor-admin@cs.wisc.edu}.
+Please include your name, organization, and telephone number in your message.
+If you are having trouble with Condor,
+please help us troubleshoot by including as much pertinent information
+as you can, including snippets of Condor log files. 
 
 \section{\label{privacy}Privacy Notice}
 
