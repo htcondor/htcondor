@@ -3335,7 +3335,8 @@ SetGlobusParams()
 
 	if ( stricmp (JobGridType, "globus") == MATCH ||
 		 stricmp (JobGridType, "gt2") == MATCH ||
-		 stricmp (JobGridType, "gt3") == MATCH ) {
+		 stricmp (JobGridType, "gt3") == MATCH ||
+		 stricmp (JobGridType, "gt4") == MATCH ) {
 
 		sprintf( buffer, "%s = %d", ATTR_GLOBUS_STATUS,
 				 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED );
