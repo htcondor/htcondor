@@ -1,3 +1,9 @@
+05/25/04 V6_7-gcb-branch
+   A new branch off V6_7 for adding support for GCB (Generic
+   Connection Broker) which will enable Condor to play nicely with
+   firewalls, private nets, etc.  Created from V6_7-gcb-root.  Does
+   *not* include doc.
+
 05/18/04 V6_7-post_merge-V6_6-merge-13
    The state of the V6_7-branch after merging in the V6_6-branch as
    tagged at V6_6-merge-13.
