@@ -146,7 +146,8 @@ void convert_escapes(string &text, bool &validStr)
 }
 
 void 
-getLocalTime(time_t *now, struct tm *localtm) {
+getLocalTime(time_t *now, struct tm *localtm) 
+{
 
 #ifndef WIN32
 	localtime_r( now, localtm );
@@ -171,7 +172,37 @@ getLocalTime(time_t *now, struct tm *localtm) {
 	localtm->tm_isdst = lt_ptr->tm_isdst;  /* daylight saving time */
 	
 #endif
+	return;
+}
+
+void 
+getGMTime(time_t *now, struct tm *gtm) 
+{
+
+#ifndef WIN32
+	gmtime_r( now, gtm );
+#else
+	// there is no localtime_r() on Windows, so for now
+	// we just call localtime() and deep copy the result.
+
+	struct tm *gt_ptr; 
+
+	gt_ptr = gmtime(now);
+
+	if (gtm == NULL) { return; } 
+
+	gtm->tm_sec   = gt_ptr->tm_sec;    /* seconds */
+	gtm->tm_min   = gt_ptr->tm_min;    /* minutes */
+	gtm->tm_hour  = gt_ptr->tm_hour;   /* hours */
+	gtm->tm_mday  = gt_ptr->tm_mday;   /* day of the month */
+	gtm->tm_mon   = gt_ptr->tm_mon;    /* month */
+	gtm->tm_year  = gt_ptr->tm_year;   /* year */
+	gtm->tm_wday  = gt_ptr->tm_wday;   /* day of the week */
+	gtm->tm_yday  = gt_ptr->tm_yday;   /* day in the year */
+	gtm->tm_isdst = gt_ptr->tm_isdst;  /* daylight saving time */
 	
+#endif
+	return;
 }
 
 #ifdef WIN32

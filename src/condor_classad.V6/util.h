@@ -47,6 +47,7 @@ long timezone_offset(void);
 void convert_escapes(std::string &text, bool &validStr); 
 
 void getLocalTime(time_t *now, struct tm *localtm);
+void getGMTime(time_t *now, struct tm *localtm);
 
 int classad_isinf(double x);
 int classad_isnan(double x);
