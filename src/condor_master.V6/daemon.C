@@ -324,7 +324,6 @@ daemon::Start()
 	char	*shortname, *tmp;
 	char	buf[512];
 	int 	command_port = TRUE;
-	int		size;
 
 	if( start_tid != -1 ) {
 		daemonCore->Cancel_Timer( start_tid );
@@ -1175,7 +1174,7 @@ Daemons::SetAllReaper()
 		return;
 	}
 	daemonCore->Reset_Reaper( 1, "All Daemon Reaper",
-							  (ReaperHandlercpp)Daemons::AllReaper,
+							  (ReaperHandlercpp)&Daemons::AllReaper,
 							  "Daemons::AllReaper()",this);
 	reaper = ALL_R;
 }
