@@ -32,8 +32,7 @@ char *collapse_escapes( char *str )
 	int	 length = strlen( str );
 	int  count;
 
-	while( *cp )
-	{
+	while( *cp ) {
 		// skip over non escape characters
 		while( *cp && *cp != '\\' ) cp++;
 
@@ -42,8 +41,7 @@ char *collapse_escapes( char *str )
 
 		// ASSERT: *cp == '\\'
 		np = cp + 1;
-		switch( *np )
-		{
+		switch( *np ) {
 			case 'a':	value = '\a'; np++; break;
 			case 'b':	value = '\b'; np++; break;
 			case 'f':	value = '\f'; np++; break;
@@ -58,30 +56,22 @@ char *collapse_escapes( char *str )
 
 			default:
 				// octal sequence
-				if( isdigit( *np ) )
-				{
+				if( isdigit( *np ) ) {
 					value = 0;
-					while( *np && isdigit( *np ) ) 
-					{
+					while( *np && isdigit( *np ) ) {
 						value += value*8 + ((*np) - '0');
 						np++;
 					}
-				}
-				else
-				// hexadecimal sequence
-				if ( *np == 'x' )
-				{
+				} else if ( *np == 'x' ) {
+					// hexadecimal sequence
 					value = 0;
 					np++;
-					while( *np && isxdigit( *np ) )
-					{
+					while( *np && isxdigit( *np ) ) {
 						value += value*16 + getHexDigitValue(*np);
 						np++;
 					}
-				}
-				else
-				// just copy the character over
-				{
+				} else {
+ 					// just copy the character over
 					value = *np;
 					np++;
 				}
@@ -96,7 +86,7 @@ char *collapse_escapes( char *str )
 		memmove( cp+1, np, count );
 
 		// next character to process
-		cp = np;
+		cp++;
 	}
 	
 	return str;
