@@ -266,19 +266,31 @@ int SubmitEvent::
 readEvent (FILE *file)
 {
 	char s[8192];
+	s[0] = '\0';
 	if( submitEventLogNotes ) {
 		delete[] submitEventLogNotes;
 	}
-	int retval = fscanf( file, "Job submitted from host: %s\n", submitHost );
-    if (retval != 1)
-    {
-	return 0;
-    }
-	if( ! fscanf( file, "    %8191[^\n]\n", s ) ) {
+	if( fscanf( file, "Job submitted from host: %s\n", submitHost ) != 1 ) {
 		return 0;
-    }
+	}
+
+	// see if the next line contains an optional event notes string,
+	// and, if not, rewind, because that means we slurped in the next
+	// event delimiter looking for it...
+ 
+	fpos_t filep;
+	fgetpos( file, &filep );
+     
+	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
+		fsetpos( file, &filep );
+		return 1;
+	}
+ 
+	// remove trailing newline
+	s[ strlen( s ) - 1 ] = '\0';
+
 	submitEventLogNotes = strnewp( s );
-    return 1;
+	return 1;
 }
 
 // ----- the GlobusSubmitEvent class
