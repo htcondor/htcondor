@@ -34,6 +34,7 @@
 #include "dc_schedd.h"
 #include "condor_xml_classads.h"
 #include "condor_new_classads.h"
+#include "setenv.h"
 #include "FdBuffer.h"
 #include "io_loop.h"
 
@@ -1056,6 +1057,18 @@ handle_gahp_command(char ** argv, int argc) {
 				cluster_id,
 				proc_id,
 				argv[4]));
+		return TRUE;
+	} else if (strcasecmp (argv[0], GAHP_COMMAND_INITIALIZE_FROM_FILE)==0) {
+		static bool init_done = false;
+
+		if ( init_done == false ) {
+			SetEnv( "X509_USER_PROXY", argv[1] );
+			UnsetEnv( "X509_USER_CERT" );
+			UnsetEnv( "X509_USER_KEY" );
+			// TODO set any config values needed
+			// TODO trigger a reconfig
+			init_done = true;
+		}
 		return TRUE;
 	}
 

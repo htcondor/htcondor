@@ -27,6 +27,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "schedd_client.h"
 #include "FdBuffer.h"
+#include "globus_utils.h"
 
 
 // Queue for pending commands to schedd
@@ -158,6 +159,12 @@ io_loop(void * arg, Stream * sock) {
 							GAHP_COMMAND_VERSION,
 							GAHP_COMMAND_COMMANDS};
 						gahp_output_return (commands, 15);
+					} else if (strcasecmp (argv[0], GAHP_COMMAND_REFRESH_PROXY_FROM_FILE) == 0) {
+						// For now, just return success. This will work if
+						// the file is the same as that given to
+						// INITIALIZE_FROM_FILE (since our worker reads from
+						// the file on every use.
+						gahp_output_return_success();
 					} else {
 						// Pass it on to the worker thread
 						// Actually buffer it, until the worker says it's ready
@@ -283,6 +290,15 @@ verify_gahp_command(char ** argv, int argc) {
 				verify_request_id (argv[1]) &&
 				verify_schedd_name (argv[2]) &&
 				verify_job_id (argv[3]);
+
+	} else if (strcasecmp (argv[0], GAHP_COMMAND_INITIALIZE_FROM_FILE) == 0) {
+		// Expecting:GAHP_COMMAND_INITIALIZE_FROM_FILE <proxy file>
+		return verify_number_args (argc, 2) &&
+			 x509_proxy_expiration_time (argv[1]) > 0;
+
+	} else if (strcasecmp (argv[0], GAHP_COMMAND_REFRESH_PROXY_FROM_FILE) == 0) {
+		// Expecting:GAHP_COMMAND_REFRESH_PROXY_FROM_FILE <proxy file>
+		return verify_number_args (argc, 2);
 
 	} else if (strcasecmp (argv[0], GAHP_COMMAND_RESULTS) == 0 ||
 				strcasecmp (argv[0], GAHP_COMMAND_VERSION) == 0 ||
