@@ -354,6 +354,15 @@ init_job_ad()
 	(void) sprintf (buffer, "%s = 0", ATTR_JOB_COMMITTED_TIME);
 	InsertJobExpr (buffer);
 
+	(void) sprintf (buffer, "%s = 0", ATTR_TOTAL_SUSPENSIONS);
+	InsertJobExpr (buffer);
+
+	(void) sprintf (buffer, "%s = 0", ATTR_LAST_SUSPENSION_TIME);
+	InsertJobExpr (buffer);
+
+	(void) sprintf (buffer, "%s = 0", ATTR_CUMULATIVE_SUSPENSION_TIME);
+	InsertJobExpr (buffer);
+
 	config_fill_ad( job );
 }
 
