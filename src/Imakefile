@@ -22,6 +22,8 @@
 
 #define EventdFiles sbin/condor_eventd etc/examples/condor_config.local.eventd
 
+#define SDKFiles src include lib/libcondorsdk.a
+
 #define SMPFiles sbin/condor_startd sbin/condor_preen bin/condor_status \
   sbin/condor_vacate sbin/condor_checkpoint
 
@@ -123,6 +125,7 @@ release_tarball( master.tar, MasterFiles )
 /* contrib_tarball( view_client.tar, ViewClientFiles ) */
 contrib_tarball( ckpt_server.tar, CkptServerFiles )
 contrib_tarball( eventd.tar, EventdFiles )
+contrib_tarball( sdk.tar, SDKFiles )
 
 both_tarball( smp_startd.tar, SMPFiles, SMPContribFiles )
 both_tarball( view_server.tar, ViewServerFiles, ViewServerContribFiles )
@@ -139,7 +142,7 @@ contrib_tarball( pvm.tar, PvmFiles )
 
 contrib_tarball( mpi.tar, MpiFiles )
 
-all_tarballs: smp_startd.tar view_server.tar ckpt_server.tar eventd.tar PvmTar mpi.tar
+all_tarballs: smp_startd.tar view_server.tar ckpt_server.tar eventd.tar PvmTar mpi.tar sdk.tar
 
 afs_tarballs: afs_smp_startd.tar afs_view_server.tar afs_release.tar \
 	afs_ckpt_server.tar afs_eventd.tar AfsPvmTar afs_mpi.tar
@@ -196,6 +199,7 @@ simple_dir_target(static_contrib/sbin)
 simple_dir_target(static_contrib/etc)
 simple_dir_target(static_contrib/etc/examples)
 simple_dir_target(static_contrib/include)
+simple_dir_target(static_contrib/src)
 #endif /* HAS_STATIC */
 
 object_target(util_lib)
@@ -237,6 +241,7 @@ object_target(scripts)
 object_target(globus)
 object_target(starter.V6.1)
 object_target(shadow.V6.1)
+object_target(sdk)
 
 object_dir_target(h)
 object_dir_target(condor_includes)
