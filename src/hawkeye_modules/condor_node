@@ -255,6 +255,7 @@ sub RunIt {
 	    {
 		my @CoreFiles = grep( /^core/, readdir( LOG ) );
 		$CondorInfo{CoreFilesNum} = $#CoreFiles + 1;
+		my $TotalSize = 0;
 		my $CoreNum = 0;
 		my $Now = time( );
 		foreach my $Core ( @CoreFiles )
@@ -265,11 +266,13 @@ sub RunIt {
 			my $Name = "CoreFiles_$CoreNum";
 			$CondorInfo{$Name."_Name"} = $Core;
 			$CondorInfo{$Name."_Size"} = $Stat[7];
+			$TotalSize += ( $Stat[11] * $Stat[12] );
 			$CondorInfo{$Name."_Age"} = $Now - $Stat[9];
 			$CondorInfo{$Name."_TimeStamp"} = $Stat[9];
 		    }
 		    $CoreNum++;
 		}
+		$CondorInfo{CoreFilesDisk} = $TotalSize;
 	    }
 	    closedir( LOG );
 	}
