@@ -98,7 +98,13 @@ V6_3_SRC		-a \
 			src/condor_gridmanager \
 			src/hawkeye_modules
 
+V6_4_SRC		-a \
+			V6_3_SRC
+
 V6_5_SRC		-a \
+			V6_4_SRC
+
+V_TRUNK_SRC		-a \
 			V6_COMMON \
 			src/condor_chirp \
 			src/condor_classad.V6 \
@@ -211,22 +217,19 @@ V6_2_ALL	-a DOC TOOLS NT_TOOLS V6_2_SRC
 V6_3_CODE	-a TOOLS V6_3_SRC
 V6_3_NT_CODE	-a NT_TOOLS V6_3_SRC
 V6_3_ALL	-a DOC TOOLS NT_TOOLS V6_3_SRC 
+V6_4_CODE	-a TOOLS V6_4_SRC
+V6_4_NT_CODE	-a NT_TOOLS V6_4_SRC
+V6_4_ALL	-a DOC TOOLS NT_TOOLS V6_4_SRC 
 V6_5_CODE	-a TOOLS V6_5_SRC
 V6_5_NT_CODE	-a NT_TOOLS V6_5_SRC
 V6_5_ALL	-a DOC TOOLS NT_TOOLS V6_5_SRC 
+V6_7_CODE	-a TOOLS V_TRUNK_SRC
+V6_7_NT_CODE	-a NT_TOOLS V_TRUNK_SRC
+V6_7_ALL	-a DOC TOOLS NT_TOOLS V_TRUNK_SRC
 
-# Set these to point to whatever "default" version V6 should be.  In
-# general, using these isn't a good idea, since they're more
-# error-prone.  However, this is what people are used to, so we'll
-# leave them in for compatibility's sake.
-
-V6_SRC		-a V6_2_SRC
-V6_CODE		-a V6_2_CODE
-V6_NT_CODE	-a V6_2_NT_CODE
-V6_ALL		-a V6_2_ALL
 
 # Point these to whatever version is living on the trunk.
-TRUNK_SRC	-a V6_5_SRC
-TRUNK_CODE	-a V6_5_CODE
-TRUNK_NT_CODE	-a V6_5_NT_CODE
-TRUNK_ALL	-a V6_5_ALL
+TRUNK_SRC	-a V6_7_SRC
+TRUNK_CODE	-a V6_7_CODE
+TRUNK_NT_CODE	-a V6_7_NT_CODE
+TRUNK_ALL	-a V6_7_ALL
