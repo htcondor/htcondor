@@ -104,7 +104,7 @@ void UniShadow::shutDown( int reason, int exitStatus ) {
 				 "%d (0x%X).\n", getCluster(), getProc(), remRes->getExitStatus(),
 				 remRes->getExitStatus() );
 				 
-		fprintf( mailer, "Have a nice day.\n" );
+		fprintf( mailer, "\nHave a nice day.\n" );
 		email_close(mailer);
 	}
 	

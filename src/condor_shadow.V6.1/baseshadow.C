@@ -153,7 +153,10 @@ void BaseShadow::config()
 
 int BaseShadow::cdToIwd() {
 	if (chdir(iwd) < 0) {
-		dprintf(D_ALWAYS, "Can't chdir to %s\n", iwd);
+		dprintf(D_ALWAYS, "\n\nPath does not exist.\n"
+				"He who travels without bounds\n"
+				"Can't locate data.\n\n" );
+		dprintf( D_ALWAYS, "(Can't chdir to %s)\n", iwd);
 		char *buf = new char [strlen(iwd)+20];
 		sprintf(buf, "Can't access \"%s\".", iwd);
 		// TODO: need to have some handler to email the user here

@@ -65,6 +65,7 @@ do_REMOTE_syscall()
 		dprintf( D_SYSCALLS, "  fsdomain = %s\n", fsdomain);
 		assert( syscall_sock->code(address) );
 		dprintf( D_SYSCALLS, "  address = %s\n", address);
+			// Problem: nothing is done with address here: mem. leak!
 		assert( syscall_sock->code(key) );
 		dprintf( D_SYSCALLS, "  key = %d\n", key);
 		assert( syscall_sock->end_of_message() );

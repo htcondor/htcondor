@@ -78,7 +78,7 @@ main_init(int argc, char *argv[])
 		// That's why so much processing goes on here....
 
 		// Get the jobAd from the schedd:
-	ClassAd *jobAd;
+	ClassAd *jobAd = NULL;
 	char schedd_addr[128];
 	int cluster, proc;
 	strncpy ( schedd_addr, argv[1], 128 );
@@ -87,11 +87,12 @@ main_init(int argc, char *argv[])
 
 		// talk to the schedd to get job ad & set remote host:
 	ConnectQ(schedd_addr);
-	jobAd = ::GetJobAd(cluster, proc);
+	jobAd = GetJobAd(cluster, proc);
 		// Move the following somewhere else for MPI/PVM?
 	SetAttributeString(cluster,proc,ATTR_REMOTE_HOST,argv[2]);
 	DisconnectQ(NULL);
 	if (!jobAd) {
+		dprintf( D_ALWAYS, "errno: %d\n", errno );
 		EXCEPT("Failed to get job ad from schedd.");
 	}
 
@@ -115,6 +116,7 @@ main_init(int argc, char *argv[])
 //		Shadow = new PVMShadow();
 		break;
 	default:
+		dprintf ( D_ALWAYS, "Unknown universe: %d.\n", universe );
 		EXCEPT( "Universe not supported" );
 	}
 
