@@ -7,23 +7,23 @@
 
 \SynProg{\Condor{config\_val}}
 \oArg{options}
-\OptArg{-set}{variable value}
-\oOpt{variable value \Dots}
+\OptArg{-set}{string}
+\oOpt{string \Dots}
 
 \SynProg{\Condor{config\_val}}
 \oArg{options}
-\OptArg{-rset}{variable value}
-\oOpt{variable value \Dots}
+\OptArg{-rset}{string}
+\oOpt{string \Dots}
 
 \SynProg{\Condor{config\_val}}
 \oArg{options}
-\OptArg{-unset}{variable value}
-\oOpt{variable value \Dots}
+\OptArg{-unset}{variable}
+\oOpt{variable \Dots}
 
 \SynProg{\Condor{config\_val}}
 \oArg{options}
-\OptArg{-runset}{variable value}
-\oOpt{variable value \Dots}
+\OptArg{-runset}{variable}
+\oOpt{variable \Dots}
 
 \SynProg{\Condor{config\_val}}
 \oArg{options}
@@ -51,33 +51,52 @@ variables for a specific daemon on a given machine.  Each daemon
 remembers settings made by \Condor{config\_val}.  The configuration
 file is not modified by this command.  Persistent settings remain when
 the daemon is restarted.  Runtime settings are lost when the daemon is
-restarted.  \Note The changes will not take effect until you perform a
+restarted.  
+
+\Note The changes will not take effect until you perform a
 \Condor{reconfig}.
+
+\Note It is generally wise to test a new configuration on a single
+machine to ensure you have no syntax or other errors in the
+configuration before you reconfigure many machines.  
+Having bad syntax or invalid configuration settings is a fatal error
+for Condor daemons, and they will exit.
+Far better to discover such a problem on a single machine than to
+cause all the Condor daemons in your pool to exit.
 
 \begin{Options}
 	\OptItem{\OptArg{-name}{daemon\_name}}{ Query the specified
-	daemon for its configuration}
+	daemon for its configuration. }
 	\OptItem{\OptArg{-pool}{hostname}}{ Use the given central
-	manager to find daemons}
+	manager to find daemons. }
 	\OptItem{\OptArg{-address}{\Sinful{ip:port}}}{ Connect to the
-	given ip/port}
+	given ip/port. }
 	\OptItem{\OptArg{-host}{hostname}}{ Connect to the given hostname}
 	\OptItem{\Opt{-master \Bar -schedd \Bar -startd \Bar
 	-collector \Bar -negotiator}}{The daemon to query (if not
-	specified, master is default)}
-	\OptItem{\OptArg{-set}{variable value}} { Set a persistent
-	config file expression}
-	\OptItem{\OptArg{-rset}{variable value}} { Set a runtime
-	config file expression}
-	\OptItem{\OptArg{-unset}{variable value}} { Unset a persistent
-	config file expression}
-	\OptItem{\OptArg{-runset}{variable value}} { Unset a runtime
-	config file expression}
+	specified, master is default). }
+	\OptItem{\OptArg{-set}{string}} { Set a persistent
+	config file entry.
+	The string must be a single argument, so you should enclose it
+	in double quotes.
+	The string must be of the form ``variable = value'' for a
+	macro, or ``variable : value'' for an expression.
+	See section~\ref{sec:Intro-to-Config-Files} on
+	page~\pageref{sec:Intro-to-Config-Files} for details on macros
+	vs. expressions. }
+	\OptItem{\OptArg{-rset}{string}} { Set a runtime
+	config file entry.
+	See the description for \Opt{-set} for details about the
+	string to use. } 
+	\OptItem{\OptArg{-unset}{variable}} { Unset a persistent
+	config file variable. }
+	\OptItem{\OptArg{-runset}{variable}} { Unset a runtime
+	config file variable. }
 	\OptItem{\Opt{-tilde}}{ Return the path to the Condor home
-	directory}
+	directory. }
 	\OptItem{\Opt{-owner}}{ Return the owner of the
-	\Condor{config\_val} process}
-	\OptItem{\Opt{variable \Dots}}{The variables to query}
+	\Condor{config\_val} process. }
+	\OptItem{\Opt{variable \Dots}}{The variables to query. }
 \end{Options}
 
 \Examples
@@ -85,8 +104,8 @@ restarted.  \Note The changes will not take effect until you perform a
 \begin{verbatim}
 % condor_config_val -name perdita -schedd MAX_JOBS_RUNNING
 500
-% condor_config_val -name perdita -schedd -set MAX_JOBS_RUNNING 10
-Successfully set configuration "MAX_JOBS_RUNNING : 10" on 
+% condor_config_val -name perdita -schedd -set ``MAX_JOBS_RUNNING = 10''
+Successfully set configuration "MAX_JOBS_RUNNING = 10" on 
 schedd perdita.cs.wisc.edu <128.105.73.32:52067>.
 % condor_reconfig -schedd perdita
 Sent "Reconfig" command to schedd perdita.cs.wisc.edu
@@ -100,6 +119,5 @@ Sent "Reconfig" command to schedd perdita.cs.wisc.edu
 % condor_config_val -name perdita -schedd MAX_JOBS_RUNNING
 500
 \end{verbatim}
-
 
 \end{ManPage}
