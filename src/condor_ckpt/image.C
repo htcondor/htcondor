@@ -57,6 +57,7 @@ extern "C" {
 #include <sys/mman.h>		// for mmap()
 #include <sys/syscall.h>        // for syscall()
 #include <sys/time.h>
+#include <values.h>
 #endif
 #include <sys/stat.h>
 #include <sys/times.h>
@@ -322,7 +323,7 @@ Image::Save()
 
 	numsegs = num_segments();
 
-#if !defined(IRIX53)
+#if !defined(IRIX53) && !defined(Solaris)
 
 	// data segment is saved and restored as before, using sbrk()
 	data_start = data_start_addr();
@@ -333,7 +334,8 @@ Image::Save()
 
 #else
 
-	// sbrk() doesn't give reliable values on IRIX53 - use ioctl info
+	// sbrk() doesn't give reliable values on IRIX53 and Solaris
+	// use ioctl info instead
 	data_start=MAXLONG;
 	data_end=0;
 	for( i=0; i<numsegs; i++ ) {
@@ -843,8 +845,9 @@ SegMap::Read( int fd, ssize_t pos )
 	else if ( mystrcmp(name,"SHARED LIB") == 0) {
 		int zfd, segSize = len;
 		if ((zfd = SYSCALL(SYS_open, "/dev/zero", O_RDWR)) == -1) {
+			fprintf( stderr, "Unable to open /dev/zero in read/write mode.\n");
 			perror("open");
-			exit(2);
+			exit( 1 );
 		}
 
 	  /* Some notes about mmap:
@@ -886,7 +889,7 @@ SegMap::Read( int fd, ssize_t pos )
 				segSize);
 			fprintf(stderr, "Current segmap dump follows\n");
 			display_prmap();
-			exit(3);
+			exit(1);
 		}
 
 		/* WARNING: We have potentially just overwritten libc.so.  Do
@@ -895,8 +898,9 @@ SegMap::Read( int fd, ssize_t pos )
 		   the checkpoint (i.e., use mystrcmp and SYSCALL).  -Jim B. */
 
 		if (SYSCALL(SYS_close, zfd) < 0) {
+			fprintf( stderr, "Unable to close /dev/zero file descriptor.\n" );
 			perror("close");
-			exit(4);
+			exit(1);
 		}
 	}		
 #endif		
