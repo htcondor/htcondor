@@ -105,6 +105,10 @@ sub do_submit() {
 	else {
 		$GLOBUSENV .= "(_condor_START_owner $ENV{'LOGNAME'})";
 	}
+	if ( $vmcount != $cpucount ) {
+		$GLOBUSENV .= "(_condor_VIRTUAL_MACHINE_TYPE_1 1/$vmcount)";
+		$GLOBUSENV .= "(_condor_NUM_VIRTUAL_MACHINES_TYPE_1 $vmcount)";
+	}
 	$GLOBUSENV .= ")";
 
 		##Escape '$' in submit file entries
@@ -234,6 +238,8 @@ print STDERR "	Valid options:\n"
 . "   --project <project>     Project to use on Globus resource\n"
 . "   --memory <Mbytes>       Amount of memory to request\n"
 . "   --count <CPU count>     Number of CPUs to request [default=1]\n"
+. "   --vms <VM count>        Number of virtual machines to split up\n"
+. "                            allocated resources into [default=<CPU count>]\n"
 . "   --runtime <mins>        Maximum run time on Globus resource\n"
 . "   --idletime <mins>       Remote daemons exit gracefully after <mins>\n"
 . "                            without running a Condor job [default=20]\n"
@@ -250,6 +256,7 @@ sub parse_command_line() {
 	$scheduler = "fork";
 	$idle_time = 20;
 	$cpucount = 1;
+	$vmcount = 0;
 	$basedir = '$(HOME)/Condor_glidein';
 	##don't set default archdir because it is built below from pool version, arch
 	$localdir = "";
@@ -269,6 +276,7 @@ sub parse_command_line() {
 		"project=s" => \$project,
 		"memory=i" => \$memory,
 		"count=i" => \$cpucount,
+		"vms=i" => \$vmcount,
 		"runtime=i" => \$run_time,
 		"idletime=i" => \$idle_time,
 		"anybody" => \$anybody,
@@ -279,6 +287,12 @@ sub parse_command_line() {
 	if ( !$RESULT ) {
 		usage();
 		exit( 1 );
+	}
+
+	if ( $vmcount == 0 ) {
+	    $vmcount = $cpucount;
+	} elsif ( $cpucount % $vmcount ) {
+	    return( "ERROR: $NAME --vms must be a factor of --count");
 	}
 
 	if ( $localdir eq "" ) {
