@@ -302,7 +302,7 @@ int perm::userInGlobalGroup( const char *account, const char *domain, const char
 		);
 	
 	if (status == NERR_DCNotFound ) {
-		dprintf(D_ALWAYS, "perm::NetGetDCName() failed: DCNotFound (domain looked up: %s)", group_domain);
+		dprintf(D_ALWAYS, "perm::NetGetDCName() failed: DCNotFound (domain looked up: %s)\n", group_domain);
 		NetApiBufferFree( BufPtr );
 		return -1;
 	} else if ( status == ERROR_INVALID_NAME ) {
