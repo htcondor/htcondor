@@ -1742,30 +1742,3 @@ SecMan :: invalidateExpiredCache()
 
 			goto choose_action;
 */
-
-
-/*
-	// reconcile the session expiration.  it is the SHORTEST of
-	// a) client's value
-	// b) server's value (for this authorization level)
-	// c) kerb ticket lifetime
-
-	int cli_duration = 0;
-	int srv_duration = 0;
-	int krb_duration = 0;
-
-	char *dur = NULL;
-	cli_ad->LookupString(ATTR_SEC_SESSION_DURATION, &dur);
-	if (dur) {
-		cli_duration = atoi(dur);
-		delete dur;
-	}
-
-	dur = NULL;
-	srv_ad->LookupString(ATTR_SEC_SESSION_DURATION, &dur);
-	if (dur) {
-		srv_duration = atoi(dur);
-		delete dur;
-	}
-
-*/
