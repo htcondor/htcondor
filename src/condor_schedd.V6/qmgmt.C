@@ -41,6 +41,7 @@
 #endif
 
 #include "condor_debug.h"
+#include "condor_config.h"
 
 static char *_FileName_ = __FILE__;	 /* Used by EXCEPT (see condor_debug.h) */
 
@@ -55,6 +56,8 @@ static char *_FileName_ = __FILE__;	 /* Used by EXCEPT (see condor_debug.h) */
 #include "condor_attributes.h"
 #include "condor_uid.h"
 #include "condor_adtypes.h"
+
+#include "MyString.h"
 
 extern char *Spool;
 
@@ -103,6 +106,8 @@ int			N_PrioRecs = 0;
 static int 	MAX_PRIO_REC=INITIAL_MAX_PRIO_REC ;	// INITIAL_MAX_* in prio_rec.h
 
 const char HeaderKey[] = "0.0";
+
+static void AppendHistory(ClassAd*);
 
 void
 InitJobQueue(const char *job_queue_name)
@@ -465,6 +470,9 @@ int DestroyProc(int cluster_id, int proc_id)
 		return -1;
 	}
 
+    // Append to history file
+    AppendHistory(ad);
+
 	log = new LogDestroyClassAd(key);
 	JobQueue->AppendLog(log);
 
@@ -531,6 +539,10 @@ int DestroyCluster(int cluster_id)
 				if (!OwnerCheck(ad, active_owner)) {
 					return -1;
 				}
+
+				// Apend to history file
+                AppendHistory(ad);
+
 				sprintf(key, "%d.%d", cluster_id, proc_id);
 				log = new LogDestroyClassAd(key);
 				JobQueue->AppendLog(log);
@@ -601,6 +613,9 @@ int DestroyClusterByConstraint(const char* constraint)
 			if (OwnerCheck(ad, active_owner)) {
 				if (EvalBool(ad, constraint)) {
 					ad->LookupInteger(ATTR_PROC_ID, job_id.proc);
+
+					// Apend to history file
+    	            AppendHistory(ad);
 
 					sprintf(key, "%d.%d", job_id.cluster, job_id.proc);
 					log = new LogDestroyClassAd(key);
@@ -1322,4 +1337,36 @@ void FindPrioJob(int& p)
 		}
 	}
 	p = PrioRec[0].id.proc;
+}
+
+// --------------------------------------------------------------------------
+// Write job ads to history file when they're destroyed
+// --------------------------------------------------------------------------
+
+static void AppendHistory(ClassAd* ad)
+{
+  static MyString LogFileName="";
+  if (LogFileName=="") {
+    LogFileName=param("SPOOL");
+    LogFileName+="/job_history.log";
+  }
+
+  dprintf(D_FULLDEBUG, "Saving classad to history file\n");
+
+  MyString AccMode="a";
+  struct stat buf;
+  if (stat(LogFileName, &buf)==0) {
+    if (buf.st_size>64000) AccMode="w";
+  }
+
+  // save job ad to the log
+  FILE* LogFile=fopen(LogFileName,AccMode);
+  if (!ad->fPrint(LogFile)) {
+    dprintf(D_ALWAYS, "ERROR in Scheduler::LogMatchEnd - failed to write clas ad to log file %s\n",LogFileName.Value());
+    return;
+  }
+  
+  fprintf(LogFile,"***");   // separator
+  fclose(LogFile);
+  return;
 }
