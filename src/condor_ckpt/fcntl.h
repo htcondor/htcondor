@@ -1,7 +1,9 @@
 #if defined(__cplusplus) && !defined(OSF1)	/* GNU G++ */
 #	include "fix_gnu_fcntl.h"
 #elif defined(AIX32)						/* AIX bsdcc */
-	typedef unsigned short ushort;
+#	if !defined(_ALL_SOURCE)
+		typedef ushort_t    ushort;
+#	endif
 #	include <fcntl.h>
 #elif defined(HPUX9)						/* HPUX 9 */
 #	define fcntl __condor_hide_fcntl
