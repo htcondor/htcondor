@@ -105,7 +105,7 @@ const char* CondorError::get_full_text() {
 		errbuf += '\n';
 		walk = walk->_next;
 	}
-	return errbuf.GetCStr();
+	return errbuf.Value();
 }
 
 char* CondorError::subsys(int level) {
