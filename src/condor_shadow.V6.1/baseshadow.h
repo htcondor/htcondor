@@ -161,7 +161,7 @@ class BaseShadow : public Service
 			This uses the virtual cleanUp() method to take care of any
 			universe-specific code before we exit.
 		*/
-	void terminateJob( void );
+	void terminateJob( int exit_reason = -1 );
 
 		/** We want to abort the job (due to condor_rm or
 			condor_hold).  This doesn't send email or write userlog

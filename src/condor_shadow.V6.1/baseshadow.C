@@ -284,7 +284,7 @@ BaseShadow::shutDown( int reason )
 
 		// if we aren't trying to evaluate the user's policy, we just
 		// want to terminate this job.
-	terminateJob();
+	terminateJob( reason );
 }
 
 
@@ -364,7 +364,7 @@ BaseShadow::removeJob( const char* reason )
 
 
 void
-BaseShadow::terminateJob( void )
+BaseShadow::terminateJob( int exit_reason )
 {
 	if( ! jobAd ) {
 		dprintf( D_ALWAYS, "In terminateJob() w/ NULL JobAd!" );
@@ -373,7 +373,12 @@ BaseShadow::terminateJob( void )
 		// cleanup this shadow (kill starters, etc)
 	cleanUp();
 
-	int reason = getExitReason();
+	int reason;
+	if( exit_reason < 0 ) {
+		reason = getExitReason();
+	} else {
+		reason = exit_reason;
+	}
 
 		// email the user
 	emailTerminateEvent( reason );
