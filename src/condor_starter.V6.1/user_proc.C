@@ -180,7 +180,7 @@ UserProc::PublishToEnv( Env* proc_env )
 int
 UserProc::openStdFile( std_file_type type, const char* attr, 
 					   bool allow_dash, bool &used_starter_fd,
-					   const char* log_header, const char* phrase )
+					   const char* log_header )
 {
 		// initialize this to -2 to mean "not specified".  if we have
 		// success, we'll have a valid fd (>=0).  if there's an error
@@ -190,8 +190,32 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 	const char* filename;
 	bool wants_stream = false;
 	const char* name = NULL;
+	const char* phrase = NULL;
 	bool is_output = true;
 	bool is_null_file = false;
+
+
+		///////////////////////////////////////////////////////
+		// Initialize some settings depending on the type
+		///////////////////////////////////////////////////////
+
+	switch( type ) {
+	case SFT_IN:
+		is_output = false;
+		phrase = "standard input";
+		name = "stdin";
+		break;
+	case SFT_OUT:
+		is_output = true;
+		phrase = "standard output";
+		name = "stdout";
+		break;
+	case SFT_ERR:
+		is_output = true;
+		phrase = "standard error";
+		name = "stderr";
+		break;
+	}
 
 
 		///////////////////////////////////////////////////////
@@ -201,31 +225,19 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 	if( attr ) {
 		filename = Starter->jic->getJobStdFile( attr );
 		wants_stream = Starter->jic->streamStdFile( attr );
-		name = attr;
-		if( type == SFT_IN ) {
-			is_output = false;
-		} else {
-			is_output = true;
-		}
 	} else {
 		switch( type ) {
 		case SFT_IN:
 			filename = Starter->jic->jobInputFilename();
 			wants_stream = Starter->jic->streamInput();
-			is_output = false;
-			name = "stdin";
 			break;
 		case SFT_OUT:
 			filename = Starter->jic->jobOutputFilename();
 			wants_stream = Starter->jic->streamOutput();
-			is_output = true;
-			name = "stdout";
 			break;
 		case SFT_ERR:
 			filename = Starter->jic->jobErrorFilename();
 			wants_stream = Starter->jic->streamError();
-			is_output = true;
-			name = "stderr";
 			break;
 		}
 	}

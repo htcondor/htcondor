@@ -144,7 +144,7 @@ protected:
 
 	int openStdFile( std_file_type type, const char* attr, 
 					 bool allow_dash, bool &used_starter_fd,
-					 const char* log_header, const char* phrase );
+					 const char* log_header );
 
 private:
 
