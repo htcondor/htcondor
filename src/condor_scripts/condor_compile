@@ -226,7 +226,8 @@ if [ $# = 0 ]; then
 		exit 1
 	fi
 	echo "  where <command> is one of the following:"
-	echo "  gcc, g++, g77, cc, acc, c89, CC, f77, fort77, ld "
+	echo "  gcc, g++, g77, cc, acc, c89, CC, f77, fort77, ld, "
+	echo "  pgcc, pgf77, pgf90, or pghpf."
 	echo "  (on some platforms, f90 is also allowed)"
 	exit 1
 fi
@@ -264,6 +265,7 @@ done
 myname=`echo $NAME | sed "s/.*\///"`
 
 # Handle GNU compilers
+
 if [ $myname = "gcc" ]; then
 	exec $ARGS -B$CONDOR_LD_DIR/
 fi 
@@ -274,6 +276,26 @@ fi
 
 if [ $myname = "g77" ]; then
 	exec $ARGS -B$CONDOR_LD_DIR/
+fi 
+
+# Handle Portland compilers.
+# Notice that we explicitly do _not_ support Portland C++.
+# Their run-time support libraries conflict with libcondorc++support.a
+
+if [ $myname = "pgcc" ]; then
+	exec $ARGS -Yl,$CONDOR_LD_DIR/
+fi 
+
+if [ $myname = "pgf77" ]; then
+	exec $ARGS -Yl,$CONDOR_LD_DIR/
+fi 
+
+if [ $myname = "pgf90" ]; then
+	exec $ARGS -Yl,$CONDOR_LD_DIR/
+fi 
+
+if [ $myname = "pghpf" ]; then
+	exec $ARGS -Yl,$CONDOR_LD_DIR/
 fi 
 
 # Handle ld (linker).  Since the user might have specified a full path
@@ -452,6 +474,7 @@ esac
 		exit 1
 	fi
 	echo "  where <command> is one of the following:"
-	echo "  gcc, g++, g77, cc, acc, c89, CC, f77, fort77, ld "
+	echo "  gcc, g++, g77, cc, acc, c89, CC, f77, fort77, ld, "
+	echo "  pgcc, pgf77, pgf90, or pghpf."
 	echo "  (on some platforms, f90 is also allowed)"
 	exit 1
