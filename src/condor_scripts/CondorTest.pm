@@ -1,6 +1,7 @@
 package CondorTest;
 
 $MAX_CHECKPOINTS = 2;
+$MAX_VACATES = 5;
 
 #------------------------------------------------------------------------------
 # No user servicable parts below this line
@@ -107,7 +108,7 @@ $execute = sub
 {
     ($cluster, $proc, $ip, $port) = @_;
     local($output, $junk, $name);
-    if($checkpoints > $MAX_CHECKPOINTS)
+    if( $checkpoints > $MAX_CHECKPOINTS || $vacates > $MAX_VACATES )
     {
 	return;
     }
@@ -116,6 +117,7 @@ $execute = sub
 	sleep 5;
 	&Condor::debug("Sending vacate to <$ip:$port>\n");
 	&Condor::Vacate("\"<$ip:$port>\"");
+	$vacates++;
     }
 };
 
