@@ -55,7 +55,7 @@ class AttrListElem
         ~AttrListElem() { delete tree; }	// destructor
 
         friend class AttrList;
-        //friend class ClassAd;
+        friend class ClassAd;
         friend class AttrListList;
   
     private :
@@ -74,7 +74,7 @@ class AttrListAbstract
 
 		friend	class		AttrList;
 		friend	class		AttrListList;
-		//friend	class		ClassAd;
+		friend	class		ClassAd;
 		friend	class		ClassAdList;
 
     protected :
@@ -177,7 +177,7 @@ class AttrList : public AttrListAbstract
 
 		friend	class	AttrListRep;			// access "next" 
 		friend	class	AttrListList;			// access "UpdateAgg()"
-		//friend	class	ClassAd;
+		friend	class	ClassAd;
 
     protected :
 	    AttrListElem**	chainedAttrs;
@@ -220,7 +220,7 @@ class AttrListList
       	ExprTree* 	BuildAgg(char*, LexemeType);	// build aggregate expr
 
       	friend	  	class		AttrList;
-      	//friend	  	class		ClassAd;
+      	friend	  	class		ClassAd;
   
     protected:
 
