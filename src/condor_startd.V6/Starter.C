@@ -443,10 +443,12 @@ Starter::exec_starter( char* starter, char* hostname,
 	if ( resmgr->is_smp() ) {
 		// Note: the "-a" option is a daemon core option, so it
 		// must come first on the command line.
-		sprintf(args, "condor_starter -a %s %s", rip->r_id, hostname);
+		sprintf(args, "condor_starter -f -a %s %s", rip->r_id, hostname);
 	} else {
-		sprintf(args, "condor_starter %s", hostname);
+		sprintf(args, "condor_starter -f %s", hostname);
 	}
+
+	dprintf ( D_FULLDEBUG, "About to Create_Process \"%s\".\n", args );
 
 	s_pid = daemonCore->Create_Process( s_name, args, PRIV_ROOT, 1, TRUE, 
 										NULL, NULL, TRUE, sock_inherit_list );
