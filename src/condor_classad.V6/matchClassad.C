@@ -49,23 +49,35 @@ InitMatchClassAd( ClassAd *adl, ClassAd *adr )
 	Insert( "rightRankValue", "adcr.ad.rank" );
 
 		// the left context
-	src.SetSource( "[other=.adcr.ad;my=ad;target=other;super=other]" );
+	src.SetSource( "[other=.adcr.ad;my=ad;target=other;super=other;ad=[]]" );
 	if( !src.ParseClassAd( lCtx ) ) {
 		Clear( );
 		lCtx = NULL;
 		rCtx = NULL;
 		return( false );
 	}
-	lCtx->Insert( "ad", adl );
+	if( adl ) {
+		lCtx->Insert( "ad", adl );
+	} else {
+		Value val;
+		lCtx->EvaluateAttr( "ad", val );
+		val.IsClassAdValue( adl );
+	}
 
 		// the right context
-	src.SetSource( "[other=.adcl.ad;my=ad;target=other;super=other]" );
+	src.SetSource( "[other=.adcl.ad;my=ad;target=other;super=other;ad=[]]" );
 	if( !src.ParseClassAd( rCtx ) ) {
 		delete lCtx;
 		lCtx = rCtx = NULL;
 		return( false );
 	}
-	rCtx->Insert( "ad", adr );
+	if( adr ) {
+		rCtx->Insert( "ad", adr );
+	} else {
+		Value val;
+		rCtx->EvaluateAttr( "ad", val );
+		val.IsClassAdValue( adr );
+	}
 
 		// insert the left and right contexts
 	Insert( "adcl", lCtx );
