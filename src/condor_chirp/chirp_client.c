@@ -232,7 +232,6 @@ chirp_client_lookup( struct chirp_client *c, const char *logical_name, char **ur
 	int actual;
 
 	result = simple_command(c,"lookup %s\n",logical_name);
-
 	if(result>0) {
 		*url = malloc(result);
 		if(*url) {
@@ -244,6 +243,37 @@ chirp_client_lookup( struct chirp_client *c, const char *logical_name, char **ur
 	}
 
 	return result;
+}
+
+chirp_client_constrain( struct chirp_client *c, const char *expr):
+{
+	return simple_command(c,"constrain %s\n",expr);
+}
+
+int
+chirp_client_get_job_attr( struct chirp_client *c, const char *name, char **expr )
+{
+	int result;
+	int actual;
+
+	result = simple_command(c,"get_job_attr %s\n",name);
+	if(result>0) {
+		*expr = malloc(result);
+		if(*expr) {
+			actual = fread(*expr,1,result,c->stream);
+			if(actual!=result) chirp_fatal_request("get_job_attr");
+		} else {
+			chirp_fatal_request("get_job_attr");
+		}
+	}
+
+	return result;
+}
+
+int
+chirp_client_set_job_attr( struct chirp_client *c, const char *name, const char *expr )
+{
+	return simple_command(c,"set_job_attr %s %s\n",name,expr);
 }
 
 int

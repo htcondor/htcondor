@@ -272,6 +272,9 @@ class BaseShadow : public Service
 		*/
 	bool updateJobInQueue( update_t type );
 
+		/** Connect to the job queue and update one attribute */
+	bool updateJobAttr( const char *name, const char *expr );
+
 		/** Timer handler which just calls updateJobInQueue with the
 			right arguments so we do a periodic update.
 		*/

@@ -1207,6 +1207,29 @@ they should be built in the special "clipped" version.
 		out code( prefetch_size );
 		alloc( prefetch_size, INT_SIZE );
 	}
+
+	int get_job_attr( const char *attrname, char *expr ) : pseudo
+	{
+		in code(attrname);
+		alloc(attrname,ATTRLIST_MAX_EXPRESSION);
+		out code(expr);
+		alloc(expr,ATTRLIST_MAX_EXPRESSION);
+	}
+
+	int set_job_attr( const char *attrname, const char *expr ) : pseudo
+	{
+		in code(attrname);
+		alloc(attrname,ATTRLIST_MAX_EXPRESSION);
+		in code(expr);
+		alloc(expr,ATTRLIST_MAX_EXPRESSION);
+	}
+
+	int constrain( const char *expr ) : pseudo
+	{
+		in code(expr);
+		alloc(expr,ATTRLIST_MAX_EXPRESSION);
+	}
+
 	int get_iwd( char *path ) : pseudo {
 		GET_PATH( path );
 		ALLOC_PATH( path );

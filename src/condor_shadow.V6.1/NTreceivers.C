@@ -776,6 +776,93 @@ do_REMOTE_syscall()
 		return 0;
 	}
 
+	case CONDOR_get_job_attr:
+	  {
+		char *  attrname;
+		char *  expr;
+		condor_errno_t terrno;
+
+		expr = (char *)malloc( (unsigned)ATTRLIST_MAX_EXPRESSION );
+		memset( expr, 0, (unsigned)ATTRLIST_MAX_EXPRESSION );
+		attrname = (char *)malloc( (unsigned)ATTRLIST_MAX_EXPRESSION );
+		memset( attrname, 0, (unsigned)ATTRLIST_MAX_EXPRESSION );
+		assert( syscall_sock->code(attrname) );
+		assert( syscall_sock->end_of_message() );;
+
+		errno = (condor_errno_t)0;
+		rval = pseudo_get_job_attr( attrname , expr);
+		terrno = (condor_errno_t)errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, (int)terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		if( rval >= 0 ) {
+			assert( syscall_sock->code(expr) );
+		}
+		free( (char *)expr );
+		free( (char *)attrname );
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+	}
+
+	case CONDOR_set_job_attr:
+	  {
+		char *  attrname;
+		char *  expr;
+		condor_errno_t terrno;
+
+		expr = (char *)malloc( (unsigned)ATTRLIST_MAX_EXPRESSION );
+		memset( expr, 0, (unsigned)ATTRLIST_MAX_EXPRESSION );
+		attrname = (char *)malloc( (unsigned)ATTRLIST_MAX_EXPRESSION );
+		memset( attrname, 0, (unsigned)ATTRLIST_MAX_EXPRESSION );
+		assert( syscall_sock->code(expr) );
+		assert( syscall_sock->code(attrname) );
+		assert( syscall_sock->end_of_message() );;
+
+		errno = (condor_errno_t)0;
+		rval = pseudo_set_job_attr( attrname , expr);
+		terrno = (condor_errno_t)errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, (int)terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		free( (char *)expr );
+		free( (char *)attrname );
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+	}
+
+	case CONDOR_constrain:
+	  {
+		char *  expr;
+		condor_errno_t terrno;
+
+		expr = (char *)malloc( (unsigned)ATTRLIST_MAX_EXPRESSION );
+		memset( expr, 0, (unsigned)ATTRLIST_MAX_EXPRESSION );
+		assert( syscall_sock->code(expr) );
+		assert( syscall_sock->end_of_message() );;
+
+		errno = (condor_errno_t)0;
+		rval = pseudo_constrain( expr);
+		terrno = (condor_errno_t)errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, (int)terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		free( (char *)expr );
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+	}
+
 	default:
 	{
 		EXCEPT( "unknown syscall %d received\n", condor_sysnum );

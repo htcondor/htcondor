@@ -182,6 +182,8 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 	char path[CHIRP_LINE_MAX];
 	char newpath[CHIRP_LINE_MAX];
 	char flags_string[CHIRP_LINE_MAX];
+	char name[CHIRP_LINE_MAX];
+	char expr[CHIRP_LINE_MAX];
 	int result, offset, whence, length, flags, mode, fd;
 
 	dprintf(D_SYSCALLS,"IOProxyHandler: request: %s\n",line);
@@ -312,6 +314,30 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 			sprintf(line,"%d",convert(result,errno));
 			r->put_line_raw(line);
 		}
+
+	} else if(sscanf_chirp(line,"set_job_attr %s %s",name,expr)==2) {
+
+		result = REMOTE_CONDOR_set_job_attr(name,expr);
+		sprintf(line,"%d",convert(result,errno));
+		r->put_line_raw(line);
+
+	} else if(sscanf_chirp(line,"get_job_attr %s",name)==1) {
+
+		result = REMOTE_CONDOR_get_job_attr(name,expr);
+		if(result==0) {
+			sprintf(line,"%d",strlen(expr));
+			r->put_line_raw(line);
+			r->put_bytes_raw(expr,strlen(expr));
+		} else {
+			sprintf(line,"%d",convert(result,errno));
+			r->put_line_raw(line);
+		}	
+
+	} else if(sscanf_chirp(line,"constrain %s",expr)==1) {
+
+		result = REMOTE_CONDOR_constrain(expr);
+		sprintf(line,"%d",convert(result,errno));
+		r->put_line_raw(line);
 
 	} else if(sscanf_chirp(line,"read %d %d",&fd,&length)==2) {
 

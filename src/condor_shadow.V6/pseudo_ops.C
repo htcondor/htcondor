@@ -2497,6 +2497,28 @@ pseudo_statfs( const char *path, struct statfs *buf )
 #endif
 }
 
+/*
+These three calls are used in the new starter/shadow
+by Chirp.  They certainly could be implemented in the old
+shadow, but we have no need for them just yet.
+*/
 
+int pseudo_get_job_attr( const char *name, char *expr )
+{
+	errno = ENOSYS;
+	return -1;
+}
+
+int pseudo_set_job_attr( const char *name, const char *expr )
+{
+	errno = ENOSYS;
+	return -1;
+}
+
+int pseudo_constrain( const char *expr )
+{
+	errno = ENOSYS;
+	return -1;
+}
 
 } /* extern "C" */

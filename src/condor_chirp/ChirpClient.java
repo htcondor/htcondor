@@ -289,6 +289,27 @@ public class ChirpClient {
 		return url;
 	}
 
+	public void constrain( String expr ) throws IOException {
+		simple_command("constrain "+" "+ChirpWord(expr)+"\n");
+	}
+
+	public String get_job_attr( String name ) throws IOException {
+		String value = null;
+		int response = simple_command("get_job_attr "+ChirpWord(name)+"\n");
+		if(response>0) {
+			byte [] buffer = new byte[response];
+			int actual = fullRead(buffer,0,response);
+			if(actual!=response) throw new ChirpError("server disconnected");
+			value = new String(buffer,0,response,encoding);
+		}
+		returnOrThrow(response);
+		return value;
+	}
+
+	public void set_job_attr( String name, String expr ) throws IOException {
+		simple_command("set_job_attr "+ChirpWord(name)+" "+ChirpWord(expr)+"\n");	
+	}
+
 	private int simple_command( String cmd ) throws IOException {
 		int response;
 		try {

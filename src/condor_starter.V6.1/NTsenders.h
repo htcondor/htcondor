@@ -29,6 +29,9 @@ extern "C" {
 	int REMOTE_CONDOR_ulog_printf( char const *str, ... );
 	int REMOTE_CONDOR_ulog_error( char const *str );
 	int REMOTE_CONDOR_ulog( ClassAd *ad );
+	int REMOTE_CONDOR_get_job_attr( const char *name, char *expr );
+	int REMOTE_CONDOR_set_job_attr( const char *name, const char *expr );
+	int REMOTE_CONDOR_constrain( const char *expr );
 }
 
 #endif

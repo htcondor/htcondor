@@ -1050,6 +1050,29 @@ BaseShadow::log_except(char *msg)
 	}
 }
 
+bool
+BaseShadow::updateJobAttr( const char *name, const char *expr )
+{
+	bool result;
+
+	dprintf(D_FULLDEBUG,"updateJobAttr: %s = %s\n",name,expr);
+
+	if(ConnectQ(scheddAddr,SHADOW_QMGMT_TIMEOUT)) {
+		if(SetAttribute(cluster,proc,name,expr)<0) {
+			result = FALSE;
+		} else {
+			result = TRUE;
+		}
+		DisconnectQ(NULL);
+	} else {
+		result = FALSE;
+	}
+
+	if(result==FALSE) {
+		dprintf(D_ALWAYS,"updateJobAttr: couldn't update attribute\n");
+	}
+	return result;
+}
 
 bool
 BaseShadow::updateJobInQueue( update_t type )
@@ -1296,6 +1319,4 @@ display_dprintf_header(FILE *fp)
 
 	return TRUE;
 }
-
-
 

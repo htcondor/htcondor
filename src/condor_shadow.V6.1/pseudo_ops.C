@@ -682,3 +682,59 @@ pseudo_ulog( ClassAd *ad )
 	return result;
 }
 
+int
+pseudo_get_job_attr( const char *name, char *expr )
+{
+	ClassAd *ad = thisRemoteResource->getJobAd();
+	ExprTree *e = ad->Lookup(name);
+	if(e) {
+		expr[0] = 0;
+		e->RArg()->PrintToStr(expr);
+		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) = %s\n",name,expr);
+		return 0;
+	} else {
+		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) failed\n",name);
+		errno = ENOENT;
+		return -1;
+	}
+}
+
+int
+pseudo_set_job_attr( const char *name, const char *expr )
+{
+	if(Shadow->updateJobAttr(name,expr)) {
+		dprintf(D_SYSCALLS,"pseudo_set_job_attr(%s,%s) succeeded\n",name,expr);
+		char str[ATTRLIST_MAX_EXPRESSION];
+		sprintf(str,"%s = %s",name,expr);
+		ClassAd *ad = thisRemoteResource->getJobAd();
+		ad->Insert(str);
+		return 0;
+	} else {
+		dprintf(D_SYSCALLS,"pseudo_set_job_attr(%s,%s) failed\n",name,expr);
+		errno = ENOENT;
+		return -1;
+	}
+}
+
+int
+pseudo_constrain( const char *expr )
+{
+	char reqs[ATTRLIST_MAX_EXPRESSION];
+	char newreqs[ATTRLIST_MAX_EXPRESSION];
+
+	dprintf(D_SYSCALLS,"pseudo_constrain(%s)\n",expr);
+	dprintf(D_SYSCALLS,"\tchanging AgentRequirements to %s\n",expr);
+	
+	if(pseudo_set_job_attr("AgentRequirements",expr)!=0) return -1;
+	if(pseudo_get_job_attr("Requirements",reqs)!=0) return -1;
+
+	if(strstr(reqs,"AgentRequirements")) {
+		dprintf(D_SYSCALLS,"\tRequirements already refers to AgentRequirements\n");
+		return 0;
+	} else {
+		sprintf(newreqs,"(%s) && AgentRequirements",reqs);
+		dprintf(D_SYSCALLS,"\tchanging Requirements to %s\n",newreqs);
+		return pseudo_set_job_attr("Requirements",newreqs);
+	}
+}
+
