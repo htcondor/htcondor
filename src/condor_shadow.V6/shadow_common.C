@@ -597,9 +597,10 @@ part_send_job(
 
   /* send the capability */
   dprintf(D_FULLDEBUG, "send capability %s\n", capability);
-  if(!sock->put(capability, SIZE_OF_CAPABILITY_STRING)){
+  if(!sock->code(capability)) {
     EXCEPT( "sock->put()" );
   }
+	  // Do we really want to free this here?
   free(capability);
                
   /* send the starter number */
@@ -622,7 +623,7 @@ part_send_job(
 
   sock->decode();
   ASSERT( sock->code(reply) );
-  ASSERT( sock->eom() );
+  ASSERT( sock->end_of_message() );
 
   if( reply != OK ) {
     dprintf( D_ALWAYS, "Shadow: Request to run a job was REFUSED\n");
@@ -639,7 +640,9 @@ part_send_job(
   ports = stRec.ports;
   if( stRec.ip_addr ) {
     host = stRec.server_name;
-    *name = strdup(stRec.server_name);
+	if(name) {
+		*name = strdup(stRec.server_name);
+	}
     dprintf(D_FULLDEBUG,
 	    "host = %s inet_addr = 0x%x port1 = %d port2 = %d\n",
 	    host, stRec.ip_addr,ports.port1, ports.port2
