@@ -15,12 +15,12 @@
 #define _POSIX_SOURCE
 
 #include <stdio.h>
-#include <fcntl.h>
+#include "condor_fix_fcntl.h"
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <syscall.h>
+#include "condor_syscalls.h"
 #include <stdarg.h>
 #include <sys/types.h>
 #include "file_state.h"
