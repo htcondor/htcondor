@@ -41,22 +41,21 @@ update_startd()
 {
     static int cmd_num = X_EVENT_NOTIFICATION;
     static char *my_addr = get_startd_addr(NULL);
-    static SafeSock ssock(my_addr, 0, 0);
-
-    if(ssock.ok()) 
-    {
+    static SafeSock ssock;
+	static bool first_time = true;
+	if( first_time ) {
+		if( !(ssock.connect(my_addr)) ) {
+			dprintf( D_ALWAYS, "Can't connect to startd, aborting.\n" );
+			return -1;
+		}
+		first_time = false;
+	}
 	ssock.encode();
 	ssock.timeout(3);
-	if( !ssock.code(cmd_num) || !ssock.end_of_message() ) 
-	{
-	    dprintf( D_ALWAYS, "Can't send command to startd\n" );
+	if( !ssock.code(cmd_num) || !ssock.end_of_message() ) {
+		dprintf( D_ALWAYS, "Can't send command to startd\n" );
 	    return -1;
-	}
-    } 
-    else 
-    {
-	return -1;
-    }
+	} 
     dprintf( D_FULLDEBUG, "Sent update to startd at: %s.\n", my_addr);
     return 0;		
 }
