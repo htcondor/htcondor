@@ -21,7 +21,7 @@ LIB= $(DAEMONCORE_LIB) $(STD_LIBS)
 
 OBJ = LoadQueue.o Match.o Reqexp.o ResAttributes.o ResMgr.o ResState.o \
 	Resource.o Starter.o command.o startd_main.o util.o \
-	startd_cronmgr.o startd_cronjob.o starter_mgr.o \
+	startd_cronmgr.o startd_cronjob.o starter_mgr.o mds.o \
 	setsyscalls.o startd_instantiate.o AvailStats.o
 
 template_inst( startd_instantiate.C, startd_instantiate.o )

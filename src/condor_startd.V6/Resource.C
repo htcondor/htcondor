@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "startd.h"
+#include "mds.h"
 
 Resource::Resource( CpuAttributes* cap, int rid )
 {
@@ -1014,6 +1015,27 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 	// Publish the supplemental Class Ads
 	resmgr->adlist_publish( cap, mask );
+
+	// Build the MDS/LDIF file
+	char	*tmp;
+	if ( ( tmp = param( "STARTD_MDS_OUTPUT" ) ) != NULL ) {
+		if (  ( mask & ( A_PUBLIC | A_UPDATE ) ) == 
+			  ( A_PUBLIC | A_UPDATE )  ) {
+
+			int		mlen = 20 + strlen( tmp );
+			char	*fname = (char *) malloc( mlen );
+			if ( NULL == fname ) {
+				dprintf( D_ALWAYS, "Failed to malloc MDS fname (%d bytes)\n",
+						 mlen );
+			} else {
+				sprintf( fname, "%s-%s.ldif", tmp, r_id_str );
+				if (  ( MdsGenerate( cap, fname ) ) < 0 ) {
+					dprintf( D_ALWAYS, "Failed to generate MDS file '%s'\n",
+							 fname );
+				}
+			}
+		}
+	}
 
 }
 
