@@ -1349,6 +1349,7 @@ Scheduler::start_std(match_rec* mrec , PROC_ID* job_id)
 shadow_rec*
 Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 {
+
 #if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 	char			*argv[8];
 	char			cluster[10], proc_str[10];
@@ -1359,7 +1360,7 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 	char			**ptr;
 	struct shadow_rec *srp;
 	int				c;							// current hosts
-
+	int    old_proc;  // the class in the cluster.  needed by the multi_shadow -Bin
 
 	dprintf( D_FULLDEBUG, "Got permission to run job %d.%d on %s...\n",
 			job_id->cluster, job_id->proc, mrec->peer);
@@ -1374,6 +1375,10 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 	}
 	SetAttributeInt(job_id->cluster, job_id->proc, "CurrentHosts", c);
 
+	dprintf(D_ALWAYS, "old_proc = %d\n", old_proc);
+	// need to pass to the multi-shadow later. -Bin
+	old_proc = job_id->proc;  
+	
 	/* For PVM/CARMI, all procs in a cluster are considered part of the same
 	   job, so just clear out the proc number */
 	job_id->proc = 0;
@@ -1450,11 +1455,13 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 	
     dprintf( D_ALWAYS, "Sending job %d.%d to shadow pid %d\n", 
 			job_id->cluster, job_id->proc, srp->pid);
+
     sprintf(out_buf, "%d %d %d\n", job_id->cluster, job_id->proc, 1);
 	
 	dprintf( D_ALWAYS, "First Line: %s", out_buf );
 	write(shadow_fd, out_buf, strlen(out_buf));
-	sprintf(out_buf, "%s %s %d\n", mrec->peer, mrec->id, job_id->proc);
+
+	sprintf(out_buf, "%s %s %d\n", mrec->peer, mrec->id, old_proc);
 	dprintf( D_ALWAYS, "sending %s", out_buf);
 	write(shadow_fd, out_buf, strlen(out_buf));
 	return srp;
