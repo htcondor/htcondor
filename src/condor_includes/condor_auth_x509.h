@@ -105,12 +105,6 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
 
     int nameGssToLocal( char * GssClient );
 
-    int get_user_GSIname(char*,char*);
-    
-    //bool verifyServerName();
-    // This method verifies the connected server's name using the list of 
-    // GSI names specified by the GSI_DAEMON_NAME configuration parameters
-
     /** Check whether the security context of the scoket is valid or not 
 	@return TRUE if valid FALSE if not */
     bool gss_is_valid();
