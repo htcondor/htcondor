@@ -6,17 +6,17 @@ terms listed in the LICENSE.TXT.
 
 This directory contains the following files:
 
-LICENSE.TXT	- by installing Condor, you agree to the contents of
-                  the LICENSE.TXT file
+DOC		- file containing directions for where to find the 
+		  Condor documentation
 INSTALL		- instructions on how to install Condor on your machines
+LICENSE.TXT	- by installing Condor, you agree to the contents of
+		  the LICENSE.TXT file
 README		- this file
-release.tar	- tar file of the release directory, which contains
-		  the Condor binaries and libraries -- please see
-		  INSTALL for details on using this file
-condor_install	- perl script that helps you install Condor
-doc		- directory containing Condor documentation
+condor_install	- perl script to install and configure Condor
 examples	- directory containing C, Fortran and C++ example
 		  programs to run with Condor
+release.tar	- tar file of the "release directory", which contains
+		  the Condor binaries and libraries
 
 
 A complete manual for Condor is available on the World Wide Web at
