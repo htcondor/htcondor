@@ -240,7 +240,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
               case ULOG_EXECUTABLE_ERROR:
               case ULOG_JOB_ABORTED:
 
-				  PrintEvent( DEBUG_VERBOSE, eventName, job );
+				  PrintEvent( DEBUG_VERBOSE, eventName, job, condorID );
 				  if( !job ) {
 					  break;
 				  }
@@ -302,7 +302,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
               
               case ULOG_JOB_TERMINATED:
 			  {	
-				  PrintEvent( DEBUG_VERBOSE, eventName, job );
+				  PrintEvent( DEBUG_VERBOSE, eventName, job, condorID );
                   if( !job ) {
                       break;
                   }
@@ -398,7 +398,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
 
 			case ULOG_POST_SCRIPT_TERMINATED:
 			{
-				PrintEvent( DEBUG_VERBOSE, eventName, job );
+				PrintEvent( DEBUG_VERBOSE, eventName, job, condorID );
 				if( !job ) {
 					break;
 				}
@@ -540,7 +540,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
 				if( job ) {
 					job->_CondorID = condorID;
 				}
-				PrintEvent( DEBUG_VERBOSE, eventName, job );
+				PrintEvent( DEBUG_VERBOSE, eventName, job, condorID );
 				if( !job ) {
 					break;
 				}
@@ -592,7 +592,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
 			case ULOG_EXECUTE:
 			default:
 
-                PrintEvent( DEBUG_VERBOSE, eventName, job );
+                PrintEvent( DEBUG_VERBOSE, eventName, job, condorID );
                 break;
 			}
         }
@@ -977,15 +977,16 @@ Dag::TerminateJob( Job* job, bool bootstrap )
 }
 
 void Dag::
-PrintEvent( debug_level_t level, const char* eventName, Job* job )
+PrintEvent( debug_level_t level, const char* eventName, Job* job,
+			CondorID condorID )
 {
 	if( job ) {
 		debug_printf( level, "Event: %s for Job %s (%d.%d.%d)\n", eventName,
 					  job->GetJobName(), job->_CondorID._cluster,
 					  job->_CondorID._proc, job->_CondorID._subproc );
 	} else {
-		debug_printf( level, "Event: %s for Unknown Job (%d.%d.%d)\n",
-					  eventName, job->_CondorID._cluster, job->_CondorID._proc,
-					  job->_CondorID._subproc );
+		debug_printf( level, "Event: %s for Unknown Job (%d.%d.%d) -- "
+					  "ignoring...\n", eventName, condorID._cluster,
+					  condorID._proc, condorID._subproc );
 	}
 }
