@@ -50,6 +50,10 @@ typedef struct bucket {
 	bool param_boolean( const char *name, const bool default_value );
 	bool param_get_location(const char *parameter, MyString &filename,
 							int &line_number);
+
+/* here we provide C linkage to C++ defined functions. This seems a bit
+	odd since if a .c file includes this, these prototypes technically don't
+	exist.... */
 extern "C" {
 	void config( int wantsQuiet=0 );
 	void config_host( char* host=NULL );
@@ -64,9 +68,11 @@ extern "C" {
 	int get_env( register char *value, register char **leftp,
 				 register char **namep, register char **rightp);
 	void lower_case( char *str );
+}
 #endif
 
-#if defined(__STDC__) || defined(__cplusplus)
+BEGIN_C_DECLS
+
 	char * get_tilde();
 	char * param ( const char *name );
 	int param_integer( const char *name, int default_value );
@@ -78,27 +84,9 @@ extern "C" {
 	void clear_config ( void );
 	void set_debug_flags( char * );
 	void config_insert( const char*, const char* );
-#else
-	void config();
-	void config_host();
-	char * get_tilde();
-	char * param ();
-	insert();
-	char * expand_macro();
-	char * lookup_macro();
-	char * macro_expand();
-	int param_integer();
-	int param_in_pattern ();
-	void init_config ();
-	void clear_config ();
-	void config_fill_ad ();
-	void set_debug_flags ();
-	void config_insert ();
-#endif
 
-#if defined(__cplusplus)
-}
-#endif
+END_C_DECLS
+
 
 #endif /* CONFIG_H */
 
