@@ -2531,6 +2531,10 @@ getCapability( ClassAd* resource )
 void
 deallocMatchRec( match_rec* mrec )
 {
+		// We might call this with a NULL mrec, so don't seg fault.
+	if( ! mrec ) {
+		return;
+	}
 	mrec->allocated = false;
 	mrec->cluster = -1;
 	mrec->proc = -1;
