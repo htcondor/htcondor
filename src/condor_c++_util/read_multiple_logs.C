@@ -77,6 +77,7 @@ ReadMultipleUserLogs::initialize(StringList &listLogFileNames)
 		char *psFilename = listLogFileNames.next();
 		pLogFileEntries[i].isInitialized = FALSE;
 		pLogFileEntries[i].isValid = FALSE;
+		pLogFileEntries[i].haveReadEvent = FALSE;
 		pLogFileEntries[i].pLastLogEvent = NULL;
 		pLogFileEntries[i].strFilename = psFilename;
 		pLogFileEntries[i].logSize = 0;
@@ -142,7 +143,7 @@ ReadMultipleUserLogs::readEvent (ULogEvent * & event)
 		if ( log.isInitialized && log.isValid ) {
 		    ULogEventOutcome eOutcome = ULOG_OK;
 		    if ( !log.pLastLogEvent ) {
-			    eOutcome = log.readUserLog.readEvent(log.pLastLogEvent);
+				eOutcome = readEventFromLog(log);
 
 		        if ( eOutcome == ULOG_RD_ERROR || eOutcome == ULOG_UNK_ERROR ) {
 			        // peter says always return an error immediately,
@@ -152,14 +153,6 @@ ReadMultipleUserLogs::readEvent (ULogEvent * & event)
 					    log.strFilename.Value());
 			        return eOutcome;
 		        }
-
-		    	if ( eOutcome == ULOG_OK ) {
-					// Check for duplicate logs.
-					if ( DuplicateLogExists(log.pLastLogEvent, &log) ) {
-						eOutcome = ULOG_NO_EVENT;
-						log.isValid = FALSE;
-					}
-				}
 		    }
 
 		    if ( eOutcome != ULOG_NO_EVENT ) {
@@ -293,6 +286,33 @@ ReadMultipleUserLogs::LogGrew(LogFileEntry &log)
 				  grew ? "Log GREW!" : "No log growth..." );
 
 	return grew;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ULogEventOutcome
+ReadMultipleUserLogs::readEventFromLog(LogFileEntry &log)
+{
+
+	ULogEventOutcome	result;
+
+	result = log.readUserLog.readEvent(log.pLastLogEvent);
+
+   	if ( result == ULOG_OK ) {
+			// Check for duplicate logs.  We only need to do that the
+			// first time we've successfully read an event from this
+			// log.
+		if ( !log.haveReadEvent ) {
+			log.haveReadEvent = true;
+
+			if ( DuplicateLogExists(log.pLastLogEvent, &log) ) {
+				result = ULOG_NO_EVENT;
+				log.isValid = FALSE;
+			}
+		}
+	}
+
+	return result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -562,7 +582,7 @@ ReadMultipleUserLogs::DuplicateLogExists(ULogEvent *event, LogFileEntry *log)
 	int printRes = snprintf(jobId, MAX_LEN, "%d.%d", event->cluster,
 			event->proc);
 	if ( printRes >= MAX_LEN || printRes < 0 ) {
-		fprintf(stderr, "Buffer too short at %s: %d\n", __FILE__, __LINE__);
+		dprintf(D_ALWAYS, "Buffer too short at %s: %d\n", __FILE__, __LINE__);
 		result = false;
 	} else {
 
@@ -573,7 +593,8 @@ ReadMultipleUserLogs::DuplicateLogExists(ULogEvent *event, LogFileEntry *log)
 			if ( log == oldLog ) {
 				result = false;
 			} else {
-				// printf("ReadMultipleUserLogs found duplicate log\n");
+				dprintf(D_FULLDEBUG,
+						"ReadMultipleUserLogs found duplicate log\n");
 				result = true;
 			}
 		} else {

@@ -86,6 +86,7 @@ private:
 	{
 		bool		isInitialized;
 		bool		isValid;
+		bool		haveReadEvent;
 		MyString	strFilename;
 		ReadUserLog	readUserLog;
 		ULogEvent *	pLastLogEvent;
@@ -107,6 +108,16 @@ private:
 		    we called this method on it.
 		 */
 	static bool LogGrew(LogFileEntry &log);
+
+		/**
+		 * Read an event from a log, including checking whether this log
+		 * is actually a duplicate of another log.  Note that if this *is*
+		 * a duplicate log, the method will return ULOG_NO_EVENT, even
+		 * though an event was read.
+		 * @param The log to read from.
+		 * @return The outcome of trying to read an event.
+		 */
+	ULogEventOutcome readEventFromLog(LogFileEntry &log);
 
 	    /** Read the entire contents of the given file into a MyString.
 		 * @param The name of the file.
