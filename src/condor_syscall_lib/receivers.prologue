@@ -112,8 +112,6 @@ extern ReliSock *syscall_sock;
 	extern char *SyscallLabel;
 #endif
 
-typedef int open_flags_t;
-
 int CONDOR_NotSupported( int num, ... );
 int CONDOR_Ignored( int num, ... );
 
