@@ -440,7 +440,7 @@ Authentication::authenticate_filesystem()
 				//need to lookup username from file and do setOwner()
 				char *tmpOwner = my_username( stat_buf.st_uid );
 				setOwner( tmpOwner );
-				delete [] tmpOwner;
+				free( tmpOwner );
 			}
 		}
 		unlink( new_file );
