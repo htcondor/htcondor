@@ -114,10 +114,6 @@ or when UNC paths were used.
   when jobs had large environments, it would fail. This has been
   corrected.
 
-\item The error message in the SchedLog that indicates that swap space
-  has been depleted has been rephrased so it appears to be
-  significant. 
-
 \item Fixed a \Condor{negotiator} bug that could, in certain rare
       circumstances, cause a \Condor{schedd} to hang for five minutes
       while trying to communicate with it.
@@ -149,9 +145,11 @@ be cleaned up. This bug first appeared in 6.5.0.
 Windows (such as when \verb@condor_vacate@  is called) to fail to
 complete.
 
-\item The gahp\_server helper program, which provides Globus services to
-Condor-G, was always dynamically linked, even in statically-linked releases. 
-The statically linked distributions of Condor now include a static gahp\_server.
+\item The gahp\_server helper program, which provides Globus services
+to Condor-G, was always dynamically linked, even in statically-linked
+releases.
+The statically linked distributions of Condor now include a static
+gahp\_server.
 
 \item Fixed minor bug in parsing XML user log files that contain empty
   strings. 
@@ -159,6 +157,9 @@ The statically linked distributions of Condor now include a static gahp\_server.
 \item Fixed the messages written to the Condor daemon log files in
   various error conditions to be more informative and clear.
   \begin{itemize}
+  \item The error message in the SchedLog that indicates that swap
+    space has been depleted has been rephrased so it appears to be
+    significant.
   \item Certain serious error messages are now being written to the 
     \Dflag{ALWAYS} debug level that used to only appear if other debug
     levels were enabled.
