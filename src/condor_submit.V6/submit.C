@@ -60,6 +60,8 @@
 
 #include "globus_utils.h"
 
+#include "list.h"
+
 static int hashFunction( const MyString&, int );
 HashTable<MyString,MyString> forcedAttributes( 64, hashFunction ); 
 HashTable<MyString,int> CheckFilesRead( 577, hashFunction ); 
@@ -85,6 +87,7 @@ char    JobRootdir[_POSIX_PATH_MAX];
 char    JobIwd[_POSIX_PATH_MAX];
 
 int		LineNo;
+int		ExtraLineNo;
 int		GotQueueCommand;
 
 char	IckptName[_POSIX_PATH_MAX];	/* Pathname of spooled initial ckpt file */
@@ -111,6 +114,9 @@ bool never_transfer = false;  // never transfer files or do transfer files
 	char env_delimiter[] = ";";
 #endif
 
+char* LogNotesVal = NULL;
+
+List<char> extraLines;  // lines passed in via -a argument
 
 #define PROCVARSIZE	32
 BUCKET *ProcVars[ PROCVARSIZE ];
@@ -169,6 +175,11 @@ char	*TransferFiles = "transfer_files";
 
 char	*CopyToSpool = "copy_to_spool";
 
+char	*DAGNodeName = "dag_node_name";
+char	*DAGManJobId = "dagman_job_id";
+
+char	*LogNotes = "submit_event_notes";
+
 #if !defined(WIN32)
 char	*KillSig			= "kill_sig";
 #endif
@@ -224,6 +235,10 @@ void	InsertJobExpr (char *expr, bool clustercheck = true);
 void	check_umask();
 void setupAuthentication();
 
+void SetDAGNodeName();
+void SetDAGManJobId();
+void SetLogNotes();
+
 char *owner = NULL;
 
 extern DLL_IMPORT_MAGIC char **environ;
@@ -239,6 +254,7 @@ struct SubmitRec {
 	int firstjob;
 	int lastjob;
 	char *logfile;
+	char *lognotes;
 };
 
 ExtArray <SubmitRec> SubmitInfo(10);
@@ -372,8 +388,7 @@ main( int argc, char *argv[] )
 	FILE	*fp;
 	char	**ptr;
 	char	*cmd_file = NULL;
-	int dag_pause = 0;
-
+	
 	setbuf( stdout, NULL );
 
 #if !defined(WIN32)	
@@ -416,13 +431,6 @@ main( int argc, char *argv[] )
 			case 'd':
 				DisableFileChecks = 1;
 				break;
-			case 'p':
-					// the -p option will cause condor_submit to pause for about
-					// 4 seconds upon completion.  this prevents 'Broken Pipe'
-					// messages when condor_submit is called from DagMan on
-					// platforms with crappy popen(), like IRIX - Todd T, 2/97
-					dag_pause = 1;
-				break;
 			case 'r':
 				Remote++;
 				if( !(--argc) || !(*(++ptr)) ) {
@@ -453,6 +461,14 @@ main( int argc, char *argv[] )
 							 MyName, get_host_part(*ptr) );
 					exit(1);
 				}
+				break;
+			case 'a':
+				if( !(--argc) || !(*(++ptr)) ) {
+					fprintf( stderr, "%s: -a requires another argument\n",
+							 MyName );
+					exit( 1 );
+				}
+				extraLines.Append( *ptr );
 				break;
 			default:
 				usage();
@@ -500,8 +516,16 @@ main( int argc, char *argv[] )
 
 	//  Parse the file and queue the jobs 
 	if( read_condor_file(fp) < 0 ) {
-		fprintf(stderr, "\nERROR: Failed to parse command file (line %d).\n",
-				LineNo);
+		if( ExtraLineNo == 0 ) {
+			fprintf( stderr,
+					 "\nERROR: Failed to parse command file (line %d).\n",
+					 LineNo);
+		}
+		else {
+			fprintf( stderr,
+					 "\nERROR: Failed to parse -a argument line (#%d).\n",
+					 ExtraLineNo );
+		}
 		exit(1);
 	}
 
@@ -554,9 +578,6 @@ main( int argc, char *argv[] )
 	if ( !DisableFileChecks ) {
 		TestFilePermissions( ScheddAddr );
 	}
-
-	if (dag_pause)
-		sleep(4);
 
 	return 0;
 }
@@ -1347,6 +1368,43 @@ SetNotifyUser()
 }
 
 void
+SetDAGNodeName()
+{
+	char* name = condor_param( DAGNodeName );
+	if( !name ) {
+		name = condor_param( "DAGNodeName" );
+	}
+	if( name ) {
+		(void) sprintf( buffer, "%s = \"%s\"", ATTR_DAG_NODE_NAME, name );
+		InsertJobExpr( buffer );
+		free( name );
+	}
+}
+
+void
+SetDAGManJobId()
+{
+	char* id = condor_param( DAGManJobId );
+	if( !id ) {
+		id = condor_param( "DAGManJobId" );
+	}
+	if( id ) {
+		(void) sprintf( buffer, "%s = \"%s\"", ATTR_DAGMAN_JOB_ID, id );
+		InsertJobExpr( buffer );
+		free( id );
+	}
+}
+
+void
+SetLogNotes()
+{
+	LogNotesVal = condor_param( LogNotes );
+	if( !LogNotesVal ) {
+		LogNotesVal = condor_param( "SubmitEventNotes" );
+	}
+}
+
+void
 SetExitRequirements()
 {
 	char *who = condor_param(ExitRequirements);
@@ -1873,16 +1931,39 @@ read_condor_file( FILE *fp )
 	char	*ptr;
 	int		force = 0, queue_modifier;
 
+	char* justSeenQueue = NULL;
+
 	JobIwd[0] = '\0';
 
 	LineNo = 0;
-	
+	ExtraLineNo = 0;
+
+	extraLines.Rewind();
 
 	for(;;) {
 		force = 0;
 
-		name = getline(fp);
-		LineNo++;
+		// check if we've just seen a "queue" command and need to
+		// parse any extra lines passed in via -a first
+		if( justSeenQueue ) {
+			if( extraLines.Next( name ) ) {
+				name = strdup( name );
+				ExtraLineNo++;
+			}
+			else {
+				// there are no more -a lines to parse, so rewind
+				// extraLines in case we encounter another queue
+				// command later, and restore the "queue" line itself
+				// (stashed in justSeenQueue) so we can now parse it
+				extraLines.Rewind();
+				ExtraLineNo = 0;
+				name = justSeenQueue;
+			}
+		}
+		else {
+			name = getline( fp );
+			LineNo++;
+		}
 		if( name == NULL ) {
 			break;
 		}
@@ -1904,6 +1985,23 @@ read_condor_file( FILE *fp )
 		}
 
 		if( strincmp(name, "queue", strlen("queue")) == 0 ) {
+			// if this is the first time we've seen this "queue"
+			// command, then set justSeenQueue to TRUE and go back to
+			// the top of the loop to process extraLines before
+			// proceeding; if justSeenQueue is already TRUE, however,
+			// then we've just finished processing extraLines, and
+			// we're ready to go ahead parsing the "queue" command
+			// itself
+			if( !justSeenQueue ) {
+				justSeenQueue = name;
+				continue;
+			}
+			else {
+				justSeenQueue = NULL;
+				// we don't have to worry about freeing justSeenQueue
+				// since the string is still pointed to by name and
+				// will be freed below like any other line...
+			}
 			name = expand_macro( name, ProcVars, PROCVARSIZE );
 			if( name == NULL ) {
 				(void)fclose( fp );
@@ -2174,8 +2272,12 @@ queue(int num)
 			//SetArguments needs to be last for Globus universe args
 		SetArguments(); 
 		SetGlobusParams();
+		SetDAGNodeName();
+		SetDAGManJobId();
 
 		rval = SaveClassAd();
+
+		SetLogNotes();
 
 		switch( rval ) {
 		case 0:			/* Success */
@@ -2202,7 +2304,10 @@ queue(int num)
 
 		if (CurrentSubmitInfo == -1 ||
 			SubmitInfo[CurrentSubmitInfo].cluster != ClusterId ||
-			strcmpnull(SubmitInfo[CurrentSubmitInfo].logfile, logfile) != 0) {
+			strcmpnull( SubmitInfo[CurrentSubmitInfo].logfile,
+						logfile ) != 0 ||
+			strcmpnull( SubmitInfo[CurrentSubmitInfo].lognotes,
+						LogNotesVal ) != 0 ) {
 			CurrentSubmitInfo++;
 			SubmitInfo[CurrentSubmitInfo].cluster = ClusterId;
 			SubmitInfo[CurrentSubmitInfo].firstjob = ProcId;
@@ -2211,6 +2316,12 @@ queue(int num)
 				SubmitInfo[CurrentSubmitInfo].logfile = strdup(logfile);
 			} else {
 				SubmitInfo[CurrentSubmitInfo].logfile = NULL;
+			}
+			if( LogNotesVal ) {
+				SubmitInfo[CurrentSubmitInfo].lognotes = strdup( LogNotesVal );
+			}
+			else {
+				SubmitInfo[CurrentSubmitInfo].lognotes = NULL;
 			}
 		}
 		SubmitInfo[CurrentSubmitInfo].lastjob = ProcId;
@@ -2453,6 +2564,10 @@ usage()
 	fprintf( stderr, "	-n schedd_name\tsubmit to the specified schedd\n" );
 	fprintf( stderr, 
 			 "	-r schedd_name\tsubmit to the specified remote schedd\n" );
+	fprintf( stderr,
+			 "	-a line\tadd line to submit file before processing\n"
+			 "         \t(overrides lines in the submit file;"
+			 "         \t multiple -a arguments are supported)" );
 	fprintf( stderr, "	-d\t\tdisable file permission checks\n\n" );
 	fprintf( stderr, "	If [cmdfile] is omitted, input is read from stdin\n" );
 	exit( 1 );
@@ -2589,9 +2704,18 @@ log_submit()
 
 	strcpy (jobSubmit.submitHost, ScheddAddr);
 
+	if( LogNotesVal ) {
+		jobSubmit.submitEventLogNotes = strnewp( LogNotesVal );
+		free( LogNotesVal );
+	}
+
 	for (int i=0; i <= CurrentSubmitInfo; i++) {
 
 		if ((simple_name = SubmitInfo[i].logfile) != NULL) {
+			if( jobSubmit.submitEventLogNotes ) {
+				delete[] jobSubmit.submitEventLogNotes;
+			}
+			jobSubmit.submitEventLogNotes = strnewp( SubmitInfo[i].lognotes );
 
 			usr_log.initialize(owner, simple_name, 0, 0, 0);
 
