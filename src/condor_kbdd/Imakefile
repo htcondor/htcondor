@@ -9,7 +9,11 @@ SRC = kbdd.c
 OBJ = kbdd.o
 STD_LIB = ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a 
 X_LIB = XExtLibPath XLibPath
+#if (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS)
+LIB = $(STD_LIB) $(X_LIB) RpcLib SocketLib 
+#else
 LIB = $(STD_LIB) $(X_LIB) RpcLib
+#endif
 LIBDIRS = ../condor_util_lib ../condor_xdr_lib
 
 all_target(condor_kbdd)
