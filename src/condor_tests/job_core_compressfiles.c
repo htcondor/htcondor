@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <fcntl.h>
 
+int read();
+int write();
+int exit();
+
 int main(int argc, char* argv[])
 {
 	int rfd;
