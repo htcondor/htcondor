@@ -106,7 +106,7 @@ sub generate_cmdfile() {
     print CMDFILE "remote_task = nmi_glue/build/remote_task\n";
     print CMDFILE "remote_post = nmi_glue/build/remote_post\n";
     print CMDFILE "post_all = nmi_glue/build/post_all\n";
-    print CMDFILE "platforms = x86_rh_9, sun4u_sol_5.9\n";
+    print CMDFILE "platforms = x86_rh_9, x86_rh_8.0, x86_rh_7.2, sun4u_sol_5.9\n";
     print CMDFILE "prereqs = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, binutils-2.15, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, gcc-2.95.3, coreutils-5.2.1\n";
     print CMDFILE "notify = $notify\n";
     print CMDFILE "priority = 1\n";
