@@ -30,7 +30,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "eventd.h"
 
-const char *mySubSystem = "EVENTD";
+char *mySubSystem = "EVENTD";
 
 int
 main_init(int argc, char *argv[])
