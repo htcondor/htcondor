@@ -3214,7 +3214,7 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 			// and our child is not a daemon-core process, then just send
 			// the signal as usual via kill()
 			if ( target_has_dcpm == FALSE ) {
-				const char* tmp = sigNameLookup(sig);
+				const char* tmp = signalName(sig);
 				dprintf( D_DAEMONCORE,
 						 "Send_Signal(): Doing kill(%d,%d) [%s]\n",
 						 pid, sig, tmp ? tmp : "Unknown" );
