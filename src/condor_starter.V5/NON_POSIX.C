@@ -44,9 +44,6 @@ typedef char *  caddr_t;
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#if 0
-#include "proto.h"
-#endif
 #include "condor_jobqueue.h"
 #include "condor_sys.h"
 #include <signal.h>
@@ -140,7 +137,7 @@ physical_file_size( char *name )
 	/*  On this systems struct stat member st_blocks is
 	   defined, and appears to be in 1024 byte blocks. */
 
-#if defined(HPUX8)
+#if defined(HPUX9)
 	return buf.st_blocks;
 #endif
 
@@ -157,22 +154,26 @@ physical_file_size( char *name )
 }
 
 #if defined(AIX32)
-#undef _POSIX_SOURCE
-#define _BSD
-#include <sys/m_wait.h>
+#	undef _POSIX_SOURCE
+#	define _BSD
+#	include <sys/m_wait.h>
+#elif defined(OSF1)
+#	undef _POSIX_SOURCE
+#	define _BSD
+#	define _OSF_SOURCE
+#	include <sys/wait.h>
+#elif defined(SUNOS41)
+#	undef _POSIX_SOURCE
+#	include <sys/wait.h>
+#elif defined(ULTRIX43)
+#	undef _POSIX_SOURCE
+#	include <sys/wait.h>
+#elif defined(HPUX9)
+#	undef _POSIX_SOURCE
+#	define _BSD
+#	include <sys/wait.h>
 #endif
 
-#if defined(OSF1)
-#undef _POSIX_SOURCE
-#define _BSD
-#define _OSF_SOURCE
-#include <sys/wait.h>
-#endif
-
-#if defined(ULTRIX42) || defined(ULTRIX43) || defined(SUNOS41)
-#undef _POSIX_SOURCE
-#include <sys/wait.h>
-#endif
 
 #include <errno.h>
 #include "user_proc.h"
