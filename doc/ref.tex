@@ -3,6 +3,7 @@
 %
 %  For use with latex2html
 %
+% \usepackage{times}
 \usepackage{html}
 \usepackage{graphics}
 
@@ -12,7 +13,7 @@
 \setlength{\evensidemargin}{0.5in}
 \setlength{\oddsidemargin}{0.5in}
 \setlength{\textwidth}{5.5in}
-\setlength{\topmargin}{0.8in}
+\setlength{\topmargin}{0.2in}
 \setlength{\headsep}{0.5in}
 \setlength{\topskip}{0in}
 \setlength{\marginparwidth}{1in}
@@ -28,6 +29,10 @@
 \input{man-macros.tex}
 
 %
+% hyphenation of our terms
+\hyphenation{Class-Ads Class-Ad}
+
+%
 %  Fix the headers and footers
 %
 \latex{
@@ -38,7 +43,7 @@
 	\fancyhead[LE,RO]{\thepage}
 	\fancyhead[RE]{\leftmark}
 	\fancyhead[LO]{\rightmark}
-	\fancyfoot[C]{Condor \VersionNotice\ Reference Manual}
+	\fancyfoot[C]{Condor \VersionNotice\ Manual}
 	\renewcommand{\headrulewidth}{0.4pt}
 	\renewcommand{\footrulewidth}{0.4pt}
 	\addtolength{\headwidth}{\oddsidemargin}
@@ -51,7 +56,7 @@
 
 \begin{document}
 
-\title{Condor \VersionNotice\ User and Administrator Manual}
+\title{Condor \VersionNotice\ Manual}
 \author{\AuthorNotice}
 \maketitle
 
@@ -61,6 +66,7 @@
 
 \begin{small}
 \subsubsection{Copyright and Disclaimer}
+\label{sec:copyright-and-disclaimer}
 \input{copyright.tex}
 \end{small}
 
@@ -79,21 +85,21 @@
 \label{admin-manual}
 \input{admin-man/admin.tex}
 
-\chapter{Command Reference Manual}
-\label{command-reference}
-\input{man-pages/man.tex}
-
 %
 %  The fancy header package gets confused after the man pages, so reset
 %  the header and footer style
 %
-\fancyhead[LE,RO]{\thepage}
-\fancyhead[RE]{\leftmark}
-\fancyhead[LO]{\rightmark}
-\fancyfoot[C]{Condor \VersionNotice\ Reference Manual}
-\chapter{Miscellaneous}
+% \fancyhead[LE,RO]{\thepage}
+% \fancyhead[RE]{\leftmark}
+% \fancyhead[LO]{\rightmark}
+% \fancyfoot[C]{Condor \VersionNotice\ Reference Manual}
+\chapter{Miscellaneous Concepts}
 \section{An Introduction to Condor's ClassAd Mechanism}
 \label{classad-reference}
 \input{misc/classad.tex}
+
+\chapter{Command Reference Manual (man pages)}
+\label{command-reference}
+\input{man-pages/man.tex}
 
 \end{document}
