@@ -224,7 +224,8 @@ OsProc::StartJob()
 	// handle stdin, stdout, and stderr redirection
 	int fds[3];
 	fds[0] = -1; fds[1] = -1; fds[2] = -1;
-	char filename[_POSIX_PATH_MAX];
+	char filename1[_POSIX_PATH_MAX];
+	char *filename;
 	char infile[_POSIX_PATH_MAX];
 	char outfile[_POSIX_PATH_MAX];
 	char errfile[_POSIX_PATH_MAX];
@@ -233,8 +234,13 @@ OsProc::StartJob()
 	priv_state priv;
 	priv = set_user_priv();
 
-	if (JobAd->LookupString(ATTR_JOB_INPUT, filename) == 1) {
-		if ( strcmp(filename,"NUL") != 0 ) {
+	if (JobAd->LookupString(ATTR_JOB_INPUT, filename1) == 1) {
+		if ( strcmp(filename1,"NUL") != 0 ) {
+			if( Starter->wantsFileTransfer() ) {
+				filename = basename( filename1 );
+			} else {
+				filename = filename1;
+			}
             if ( filename[0] != '/' ) {  // prepend full path
                 sprintf( infile, "%s%c", job_iwd, DIR_DELIM_CHAR );
             } else {
@@ -249,8 +255,13 @@ OsProc::StartJob()
 		}
 	}
 
-	if (JobAd->LookupString(ATTR_JOB_OUTPUT, filename) == 1) {
-		if ( strcmp(filename,"NUL") != 0 ) {
+	if (JobAd->LookupString(ATTR_JOB_OUTPUT, filename1) == 1) {
+		if ( strcmp(filename1,"NUL") != 0 ) {
+			if( Starter->wantsFileTransfer() ) {
+				filename = basename( filename1 );
+			} else {
+				filename = filename1;
+			}
             if ( filename[0] != '/' ) {  // prepend full path
                 sprintf( outfile, "%s%c", job_iwd, DIR_DELIM_CHAR );
             } else {
@@ -269,8 +280,13 @@ OsProc::StartJob()
 		}
 	}
 
-	if (JobAd->LookupString(ATTR_JOB_ERROR, filename) == 1) {
-		if ( strcmp(filename,"NUL") != 0 ) {
+	if (JobAd->LookupString(ATTR_JOB_ERROR, filename1) == 1) {
+		if ( strcmp(filename1,"NUL") != 0 ) {
+			if( Starter->wantsFileTransfer() ) {
+				filename = basename( filename1 );
+			} else {
+				filename = filename1;
+			}
             if ( filename[0] != '/' ) {  // prepend full path
                 sprintf( errfile, "%s%c", job_iwd, DIR_DELIM_CHAR );
             } else {
