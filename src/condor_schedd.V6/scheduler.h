@@ -32,6 +32,7 @@
 #ifndef _CONDOR_SCHED_H_
 #define _CONDOR_SCHED_H_
 
+#include "daemon.h"
 #include "condor_classad.h"
 #include "condor_io.h"
 #include "proc.h"
@@ -180,14 +181,16 @@ class Scheduler : public Service
 	
 	// useful names
 	char*			CondorViewHost;
-	char*			CollectorHost;
-	char*			NegotiatorHost;
 	char*			Shadow;
 	char*			CondorAdministrator;
 	char*			Mail;
 	char*			filename;					// save UpDown object
 	char*			AccountantName;
-    char*                   UidDomain;
+    char*			UidDomain;
+
+	// info about our central manager
+	Daemon*			Collector;
+	Daemon*			Negotiator;
 
 	// connection variables
 	struct sockaddr_in	From;
