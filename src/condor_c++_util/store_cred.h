@@ -30,8 +30,8 @@
 
 
 // store cred return codes
-const int SUCCESS = 0; 				// it worked!
-const int FAILURE = 1;				// communication error
+const int SUCCESS = 1; 				// it worked!
+const int FAILURE = 0;				// communication error
 const int FAILURE_BAD_PASSWORD = 2; // bad (wrong) password
 
 // store cred modes
