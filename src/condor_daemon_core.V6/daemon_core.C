@@ -3793,29 +3793,28 @@ int DaemonCore::Was_Not_Responding(pid_t pid)
 
 int DaemonCore::SendAliveToParent()
 {
-	SafeSock *sock;
+	SafeSock sock;
 	char *parent_sinfull_string;
 	int alive_command = DC_CHILDALIVE;
 
-	dprintf(D_FULLDEBUG,"in SendAliveToParent\n");
+	dprintf(D_FULLDEBUG,"DaemonCore: in SendAliveToParent()\n");
 	parent_sinfull_string = InfoCommandSinfulString(ppid);	
 	if (!parent_sinfull_string ) {
 		return FALSE;
 	}
 	
-	sock = new SafeSock();
-	if (!sock->connect(parent_sinfull_string)) {
+	if (!sock.connect(parent_sinfull_string)) {
 		return FALSE;
 	}
 	
-	dprintf(D_DAEMONCORE,"sending alive to %s\n",parent_sinfull_string);
-	sock->encode();
-	sock->code(alive_command);
-	sock->code(mypid);
-	sock->code(max_hang_time);
-	sock->end_of_message();
+	dprintf( D_DAEMONCORE, "DaemonCore: Sending alive to %s\n",
+			 parent_sinfull_string );
 
-	delete sock;	
+	sock.encode();
+	sock.code(alive_command);
+	sock.code(mypid);
+	sock.code(max_hang_time);
+	sock.end_of_message();
 
 	return TRUE;
 }
