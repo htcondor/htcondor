@@ -81,11 +81,28 @@ open_file_stream( const char *file, int flags, size_t *len )
 
 		/* Try to access it using local system calls */
 	if( mode == IS_NFS || mode == IS_AFS ) {
+
+/* This is to make PVM work because this file gets linked in with the Condor
+	support daemons for the starter/shadow in addition to the user job
+	and AIX doesn't have a syscall() */
+#if defined(AIX)
+		fd = open(local_path, flags, 0644);
+#else
 		fd = syscall( SYS_open, local_path, flags, 0664 );
+#endif
+
 		if( fd >= 0 ) {
 			if( !(flags & O_WRONLY) ) {
+/* This is to make PVM work because this file gets linked in with the Condor
+	support daemons for the starter/shadow in addition to the user job
+	and AIX doesn't have a syscall() */
+#if defined(AIX)
+				*len = lseek(fd, 0, 2);
+				lseek(fd, 0, 0);
+#else
 				*len = syscall( SYS_lseek, fd, 0, 2 );
 				syscall( SYS_lseek, fd, 0, 0 );
+#endif
 			}
 			dprintf( D_ALWAYS, "Opened \"%s\" via local syscalls\n",local_path);
 		}
