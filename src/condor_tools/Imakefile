@@ -22,30 +22,38 @@ LIB= ../condor_c++_util/cplus_lib.a ../condor_c++_util/libapi.a $(CLASSAD_LIB) .
 
 LIBDIRS =../condor_util_lib ../condor_xdr_lib ../condor_c++_util
 
+#if IS_V6
+PROGRAMS =  \
+	config_val condor_preen condor_reconfig_schedd \
+	condor_reschedule condor_status condor_vacate watch_status \
+	block_jobs condor_customize condor_checkpoint
+#else
 PROGRAMS =  \
 	config_val condor_history condor_preen condor_reconfig_schedd \
 	condor_reschedule condor_status condor_summary condor_vacate watch_status \
 	block_jobs condor_customize condor_jobqueue condor_schedd_info condor_checkpoint
+#endif
 
 all_target( $(PROGRAMS) )
 tags_target($(SRC),$(LIBDIRS))
 depend_target($(SRC))
 
 c_plus_target(condor_summary,summary.o,$(LIB))
-release_target(condor_summary,$(RELEASE_DIR)/bin,SET_GID_MODE)
 
 c_plus_target(condor_history,history.o,$(LIB))
-release_target(condor_history,$(RELEASE_DIR)/bin,SET_GID_MODE)
 
 #if IS_V6
 c_plus_target(condor_preen,$(PREEN_OBJ),../condor_schedd.V6/libqmgmt.a ../condor_classad/expr_lib.a $(LIB))
 #else
 c_plus_target(condor_preen,$(PREEN_OBJ),$(LIB))
+release_target(condor_summary,$(RELEASE_DIR)/bin,SET_GID_MODE)
+release_target(condor_history,$(RELEASE_DIR)/bin,SET_GID_MODE)
+release_target(condor_jobqueue,$(RELEASE_DIR)/bin,SET_GID_MODE)
+release_target(condor_schedd_info,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 #endif
 release_target(condor_preen,$(RELEASE_DIR)/bin,SET_GID_MODE)
 
 c_plus_target(condor_jobqueue,jobQueueCheck.o,$(LIB))
-release_target(condor_jobqueue,$(RELEASE_DIR)/bin,SET_GID_MODE)
 
 c_plus_target(condor_customize,custom.o custom_main.o,$(LIB))
 release_target(condor_customize,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
@@ -74,4 +82,3 @@ release_target(watch_status,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 program_target(block_jobs,block_jobs.o,$(LIB))
 
 program_target(condor_schedd_info,info.o,$(LIB))
-release_target(condor_schedd_info,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
