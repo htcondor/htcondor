@@ -190,31 +190,36 @@ HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST)
 HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
 
 ##  Read access.  Machines listed as allow (and/or not listed as deny)
-##  can view the status of your pool, etc.  
-##  NOTE: By default, without either of these entries specified, you
+##  can view the status of your pool, but cannot join your pool 
+##  or run jobs.
+##  NOTE: By default, without these entries customized, you
 ##  are granting read access to the whole world.  You may want to
 ##  restrict that to hosts in your domain.  If possible, please also
 ##  grant read access to "*.cs.wisc.edu", so the Condor developers
 ##  will be able to view the status of your pool and more easily help
 ##  you install, configure or debug your Condor installation.
 ##  It is important to have this defined.
-HOSTALLOW_READ =
+HOSTALLOW_READ = * 
 #HOSTALLOW_READ = *.your.domain, *.cs.wisc.edu
 #HOSTDENY_READ = *.bad.subnet, bad-machine.your.domain, 144.77.88.*
 
 ##  Write access.  Machines listed here can join your pool, submit
-##  jobs, etc.
+##  jobs, etc.  Note: Any machine which has WRITE access must
+##  also be granted READ access.  Granting WRITE access below does
+##  not also automatically grant READ access; you must change
+##  HOSTALLOW_READ above as well.
 ##  If you leave it as it is, it will be unspecified, and effectively
 ##  it will be allowing anyone to write to your pool.
-HOSTALLOW_WRITE =
+HOSTALLOW_WRITE = *
 #HOSTALLOW_WRITE = *.your.domain, your-friend's-machine.other.domain
 #HOSTDENY_WRITE = bad-machine.your.domain
 
 ##  Negotiator access.  Machines listed here are trusted central
-##  managers.
-#HOSTALLOW_NEGOTIATOR = $(NEGOTIATOR_HOST)
+##  managers.  You should normally not have to change this.
+HOSTALLOW_NEGOTIATOR = $(NEGOTIATOR_HOST)
 ##  Now, with flocking we need to let the SCHEDD trust the other 
-##  negotiators.
+##  negotiators we are flocking with as well.  You should normally 
+##  not have to change this either.
 HOSTALLOW_NEGOTIATOR_SCHEDD = $(NEGOTIATOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
 
 ##  Config access.  Machines listed here can use the condor_config_val
