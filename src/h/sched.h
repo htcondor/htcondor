@@ -92,6 +92,11 @@ typedef struct {
 } COMPLETED_JOB_INFO;
 
 typedef struct {
+	char*       capability;
+	char*       server;
+} FIN_MATCHES;
+
+typedef struct {
 	int		clusterID;
 	int		procID;
 	time_t	startTime;
@@ -164,7 +169,8 @@ typedef struct {        /* record sent by startd to shadow */
 #define	MATCH_INFO			(SCHED_VERS+40)
 #define	ALIVE				(SCHED_VERS+41)
 #define	REQUEST_SERVICE		(SCHED_VERS+42)
-#define	VACATE_SERVICE		(SCHED_VERS+43)
+#define	RELINQUISH_SERVICE	(SCHED_VERS+43)
+#define	VACATE_SERVICE		(SCHED_VERS+44)
 
 #define SCHED_PORT		9605
 #define START_PORT		9611
@@ -220,6 +226,7 @@ typedef struct {        /* record sent by startd to shadow */
 
 #define	EXITSTATUS_OK		0					/* exit status of the agent */
 #define EXITSTATUS_NOTOK	1
+#define EXITSTATUS_FAIL		2
 
-#define	MATCHED				1					/* match record status */
+#define	MATCH_ACTIVE		1					/* match record status */
 #define	NOTMATCHED			0
