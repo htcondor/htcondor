@@ -243,7 +243,7 @@ SIMPLE_OBJ = condor_rt0.o extern_path.o xfer_file.o libcondorc++support.a
 SYSCALL_LIB = libcondorsyscall.a
 
 #if DOES_REMOTE_SYSCALLS
-all_target($(SYSCALL_LIB) $(COMPRESS_LIB) receivers.o $(SIMPLE_OBJ) syscall-list libz.a)
+all_target($(SYSCALL_LIB) $(COMPRESS_LIB) receivers.o $(SIMPLE_OBJ) syscall-list)
 #else 
 all_target($(SYSCALL_SUPPORT_OBJ) extern_path.o file_stream.o)
 #endif
@@ -440,9 +440,9 @@ static_library(libcondorsyscall.a,lib)
 #endif
 
 #if DOES_CHECKPOINTING || DOES_REMOTE_SYSCALLS
-release_library(libz.a,lib)
-strip_library(libz.a,lib)
-static_library(libz.a,lib)
+release_library(libcondor_z.a,lib)
+strip_library(libcondor_z.a,lib)
+static_library(libcondor_z.a,lib)
 #endif
 
 #if DOES_COMPRESS_CKPT
@@ -523,7 +523,7 @@ import(../h,syscall_numbers.c)
 import(../condor_util_lib,stub_gen)
 import(../condor_shadow.V6,pseudo_ops.h)
 import(../condor_ckpt,libcondorc++support.a)
-import($(ZLIB_LIB),libz.a)
+all_symlink_target($(ZLIB_LIB)/libz.a,libcondor_z.a)
 
 authentication.o: ../condor_io/authentication.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
@@ -593,25 +593,25 @@ obj_extract($(OPENSSL_MD_LIB),$(OPENSSL_OBJ))
    don't want to have to do any copying or packaging step like "make
    release" or "make public" before we can build the test suite.
 */
-all_symlink_target($(GLIBC_DIR)/libc.a,libc.a)
-all_symlink_target($(GLIBC_DIR)/libnss_files.a,libnss_files.a)
-all_symlink_target($(GLIBC_DIR)/libnss_dns.a,libnss_dns.a)
-all_symlink_target($(GLIBC_DIR)/libresolv.a,libresolv.a)
+all_symlink_target($(GLIBC_DIR)/libc.a,libcondor_c.a)
+all_symlink_target($(GLIBC_DIR)/libnss_files.a,libcondor_nss_files.a)
+all_symlink_target($(GLIBC_DIR)/libnss_dns.a,libcondor_nss_dns.a)
+all_symlink_target($(GLIBC_DIR)/libresolv.a,libcondor_resolv.a)
 
-release_copy_target($(GLIBC_DIR)/libc.a,lib,libc.a,OBJECT_MODE)
-release_copy_target($(GLIBC_DIR)/libnss_files.a,lib,libnss_files.a,OBJECT_MODE)
-release_copy_target($(GLIBC_DIR)/libnss_dns.a,lib,libnss_dns.a,OBJECT_MODE)
-release_copy_target($(GLIBC_DIR)/libresolv.a,lib,libresolv.a,OBJECT_MODE)
+release_copy_target($(GLIBC_DIR)/libc.a,lib,libcondor_c.a,OBJECT_MODE)
+release_copy_target($(GLIBC_DIR)/libnss_files.a,lib,libcondor_nss_files.a,OBJECT_MODE)
+release_copy_target($(GLIBC_DIR)/libnss_dns.a,lib,libcondor_nss_dns.a,OBJECT_MODE)
+release_copy_target($(GLIBC_DIR)/libresolv.a,lib,libcondor_resolv.a,OBJECT_MODE)
 
-static_copy_target($(GLIBC_DIR)/libc.a,lib,libc.a,OBJECT_MODE)
-static_copy_target($(GLIBC_DIR)/libnss_files.a,lib,libnss_files.a,OBJECT_MODE)
-static_copy_target($(GLIBC_DIR)/libnss_dns.a,lib,libnss_dns.a,OBJECT_MODE)
-static_copy_target($(GLIBC_DIR)/libresolv.a,lib,libresolv.a,OBJECT_MODE)
+static_copy_target($(GLIBC_DIR)/libc.a,lib,libcondor_c.a,OBJECT_MODE)
+static_copy_target($(GLIBC_DIR)/libnss_files.a,lib,libcondor_nss_files.a,OBJECT_MODE)
+static_copy_target($(GLIBC_DIR)/libnss_dns.a,lib,libcondor_nss_dns.a,OBJECT_MODE)
+static_copy_target($(GLIBC_DIR)/libresolv.a,lib,libcondor_resolv.a,OBJECT_MODE)
 
-strip_copy_target($(GLIBC_DIR)/libc.a,lib,libc.a,OBJECT_MODE)
-strip_copy_target($(GLIBC_DIR)/libnss_files.a,lib,libnss_files.a,OBJECT_MODE)
-strip_copy_target($(GLIBC_DIR)/libnss_dns.a,lib,libnss_dns.a,OBJECT_MODE)
-strip_copy_target($(GLIBC_DIR)/libresolv.a,lib,libresolv.a,OBJECT_MODE)
+strip_copy_target($(GLIBC_DIR)/libc.a,lib,libcondor_c.a,OBJECT_MODE)
+strip_copy_target($(GLIBC_DIR)/libnss_files.a,lib,libcondor_nss_files.a,OBJECT_MODE)
+strip_copy_target($(GLIBC_DIR)/libnss_dns.a,lib,libcondor_nss_dns.a,OBJECT_MODE)
+strip_copy_target($(GLIBC_DIR)/libresolv.a,lib,libcondor_resolv.a,OBJECT_MODE)
 
 #endif /* ! IS_CLIPPED && IS_GLIBC */
 
