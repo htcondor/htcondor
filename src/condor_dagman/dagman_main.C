@@ -128,7 +128,7 @@ void print_status();
 
 
 //---------------------------------------------------------------------------
-int main_init (int argc, char **argv) {
+int main_init (int argc, char ** const argv) {
 
     // The DCpermission (last parm) should probably be PARENT, if it existed
     daemonCore->Register_Signal (DC_SIGUSR1, "DC_SIGUSR1",
@@ -141,7 +141,8 @@ int main_init (int argc, char **argv) {
 
     char *condorLogName  = NULL;
 
-    for (int i = 0 ; i < argc ; i++) {
+	int i;
+    for (i = 0 ; i < argc ; i++) {
         debug_printf( DEBUG_NORMAL, "argv[%d] == \"%s\"\n", i, argv[i] );
     }
   
@@ -156,7 +157,7 @@ int main_init (int argc, char **argv) {
     //
     // Process command-line arguments
     //
-    for (int i = 1; i < argc; i++) {
+    for (i = 1; i < argc; i++) {
         if (!strcmp("-Debug", argv[i])) {
             i++;
             if (argc <= i) {
@@ -290,8 +291,7 @@ int main_init (int argc, char **argv) {
 					 G.maxPostScripts );
 
     if( G.dag == NULL ) {
-        EXCEPT( "ERROR: out of memory (%s() in %s:%d)!\n",
-                __FUNCTION__, __FILE__, __LINE__ );
+        EXCEPT( "ERROR: out of memory!\n");
     }
   
     //
