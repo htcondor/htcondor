@@ -1445,7 +1445,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 				// have to. 
 			KeyCacheEntry tmp_key( sid, sock->endpoint(), ki,
 								   &auth_info, expiration_time ); 
-			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %i seconds.\n", sid, dur);
+			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %s seconds.\n", sid, dur);
 
             if (dur) {
                 free(dur);
