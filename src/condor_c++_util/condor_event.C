@@ -353,7 +353,7 @@ readEvent (FILE *file)
 	char buffer [128];
 
 	// get the error number
-	retval = fscanf (file, "(%d)", &errType);
+	retval = fscanf (file, "(%d)", &(int)errType);
 	if (retval != 1) 
 	{ 
 		return 0;
