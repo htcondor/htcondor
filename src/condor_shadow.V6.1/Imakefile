@@ -1,4 +1,4 @@
-NAME = condor_shadow.v63
+NAME = condor_shadow
 all_target($(NAME))
 
 CFLAGS = $(STD_C_FLAGS) -Wall
