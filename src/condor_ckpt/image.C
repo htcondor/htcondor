@@ -74,12 +74,12 @@ extern "C" {
 #elif defined(HPUX)
 #	include <netinet/in.h>
 #elif defined(Solaris) && defined(sun4m)
-    #define htonl(x)        (x)
-    #define ntohl(x)        (x)
+	#define htonl(x)		(x)
+	#define ntohl(x)		(x)
 #elif defined(IRIX)
-    #include <sys/endian.h>
+	#include <sys/endian.h>
 #elif defined(LINUX)
-    #include <netinet/in.h>
+	#include <netinet/in.h>
 #else
 	extern "C" unsigned long htonl( unsigned long );
 	extern "C" unsigned long ntohl( unsigned long );
@@ -269,7 +269,7 @@ SegMap::MSync()
 	   This reduces the number of dirty pages that need to be swapped out
 	   if we are suspended, reducing the cost of a suspend operation.
 	   We would like to use MS_ASYNC, like this:
-	     if (msync((char *)core_loc, len, MS_ASYNC) < 0) {
+		 if (msync((char *)core_loc, len, MS_ASYNC) < 0) {
 		   dprintf( D_ALWAYS, "msync(%x, %d) failed with errno = %d\n",
 		   core_loc, len, errno );
 		 }
@@ -486,7 +486,7 @@ Image::Save()
 	RAW_ADDR	stack_start, stack_end;
 #else
 	RAW_ADDR	addr_start, addr_end;
-	int             numsegs, prot, rtn, stackseg=-1;
+	int			 numsegs, prot, rtn, stackseg=-1;
 #endif
 	RAW_ADDR	data_start, data_end;
 	ssize_t		pos;
@@ -535,8 +535,8 @@ Image::Save()
 	// data segment is saved and restored as before, using sbrk()
 	data_start = data_start_addr();
 	data_end = data_end_addr();
-	printf( "Data start = 0x%lx, data end = 0x%lx\n",
-			data_start, data_end );
+/*	printf( "Data start = 0x%lx, data end = 0x%lx\n",*/
+/*			data_start, data_end );*/
 	AddSegment( "DATA", data_start, data_end, 0 );
 
 #else
@@ -583,7 +583,7 @@ Image::Save()
 			Suicide();
 		}
 	}	
-       
+	   
 	if(stackseg==-1) {
 		dprintf(D_ALWAYS,"Image::Save: Never found stackseg!\n");
 		Suicide();
@@ -1265,17 +1265,17 @@ SegMap::Read( int fd, ssize_t pos )
 		}
 
 	  /* Some notes about mmap:
-	     - The MAP_FIXED flag will ensure that the memory allocated is
-	       exactly what was requested.
-	     - Both the addr and off parameters must be aligned and sized
-	       according to the value returned by getpagesize() when MAP_FIXED
-	       is used.  If the len parameter is not a multiple of the page
-	       size for the machine, then the system will automatically round
-	       up. 
-	     - Protections must allow writing, so that the dll data can be
-	       copied into memory. 
-	     - Memory should be private, so we don't mess with any other
-	       processes that might be accessing the same library. */
+		 - The MAP_FIXED flag will ensure that the memory allocated is
+		   exactly what was requested.
+		 - Both the addr and off parameters must be aligned and sized
+		   according to the value returned by getpagesize() when MAP_FIXED
+		   is used.  If the len parameter is not a multiple of the page
+		   size for the machine, then the system will automatically round
+		   up. 
+		 - Protections must allow writing, so that the dll data can be
+		   copied into memory. 
+		 - Memory should be private, so we don't mess with any other
+		   processes that might be accessing the same library. */
 
 #if defined(Solaris) || defined(LINUX)
 		if ((MMAP((MMAP_T)core_loc, (size_t)segSize,
@@ -1478,8 +1478,8 @@ Checkpoint( int sig, int code, void *scp )
 
 		// No sense trying to do a checkpoint in the middle of a
 		// restart, just quit leaving the current ckpt entact.
-	    // WARNING: This test should be done before any other code in
-	    // the signal handler.
+		// WARNING: This test should be done before any other code in
+		// the signal handler.
 	if( InRestart ) {
 		if ( sig == SIGTSTP )
 			Suicide();		// if we're supposed to vacate, kill ourselves
@@ -1625,18 +1625,18 @@ Checkpoint( int sig, int code, void *scp )
 		}
 
 #ifdef HPUX10
-    /* TODD'S SCARY FIX TO THE HPUX10.X FORTRAN PROBLEM ------
-     * reset the return-pointer in the current stack frame
-     * to _sigreturn, as it sometimes is a screwed-up address during
-     * a restart with HPUX10 Fortran. weird trampoline code in HPUX f77?
+	/* TODD'S SCARY FIX TO THE HPUX10.X FORTRAN PROBLEM ------
+	 * reset the return-pointer in the current stack frame
+	 * to _sigreturn, as it sometimes is a screwed-up address during
+	 * a restart with HPUX10 Fortran. weird trampoline code in HPUX f77?
 	 * We find the return-pointer in the stack frame by adding an offset (16)
 	 * from the address of the 1st parameter on the frame. (in this case, &sig)
-     * WARNING: we are only dealing here with 32-bit RP addresses!  We
-     * may need to make this patch more intelligent someday.
-     * WANRING: do not move this code to a different procedure/func,
-     * we need to twiddle _this_ stack frame and &sig is only in scope
-     * here in Checkpoint().  -Todd, 4/97 */
-	    *((unsigned int *)( ((unsigned int) &sig)+16 )) = (unsigned int) _sigreturn;
+	 * WARNING: we are only dealing here with 32-bit RP addresses!  We
+	 * may need to make this patch more intelligent someday.
+	 * WANRING: do not move this code to a different procedure/func,
+	 * we need to twiddle _this_ stack frame and &sig is only in scope
+	 * here in Checkpoint().  -Todd, 4/97 */
+		*((unsigned int *)( ((unsigned int) &sig)+16 )) = (unsigned int) _sigreturn;
 #endif
 
 #ifdef SAVE_SIGSTATE
@@ -1716,11 +1716,11 @@ ckpt_and_exit()
 */
 void
 ckpt_() {
-    ckpt();
+	ckpt();
 }
 void
 ckpt_and_exit_() {
-    ckpt_and_exit();
+	ckpt_and_exit();
 }
 
 /*
@@ -1894,15 +1894,14 @@ __CERROR64()
 
 void mydprintf(int foo, const char *fmt, ...)
 {
-        va_list args;
+		va_list args;
 
-        va_start(args, fmt);
-        vfprintf(stdout, fmt, args);
-        va_end(args);
+		va_start(args, fmt);
+		vfprintf(stdout, fmt, args);
+		va_end(args);
 		fflush(0);
 
 		foo = foo;
 }
 
 } /* extern "C" */
-
