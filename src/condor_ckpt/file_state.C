@@ -74,7 +74,7 @@ int IOServerAccess( int user_fd );
 }
 
 
-OpenFileTable	*FileTab;
+OpenFileTable	*FileTab = NULL;
 static char				Condor_CWD[ _POSIX_PATH_MAX ];
 static int				MaxOpenFiles;
 static int				Condor_isremote;
@@ -1787,6 +1787,9 @@ lseek( int user_fd, off_t offset, int whence )
         int real_fd;
 	off_t temp;
 
+	if ( FileTab == NULL )
+		InitFileState();
+
 	errno = 0;
 
         if( ( real_fd=MapFd( user_fd ) ) < 0 ) {
@@ -1835,6 +1838,9 @@ read( int user_fd, void *buf, size_t nbyte )
         int real_fd;
 	off_t tempPos, tempSize;
 	int use_local_access = FALSE;
+
+	if ( FileTab == NULL )
+		InitFileState();
 
 	errno = 0;
 
@@ -1944,6 +1950,9 @@ write( int user_fd, const void *buf, size_t len )
 	off_t tempPos, tempSize;
 	int use_local_access = FALSE;
 
+	if ( FileTab == NULL )
+		InitFileState();
+
 	errno = 0;
         
 	if( !FileTab->IsWriteable( user_fd ) ) {
@@ -2036,6 +2045,9 @@ open( const char *path, int flags, ... )
 	int		status;
 	int		is_remote = FALSE;
 	sigset_t omask;
+
+	if ( FileTab == NULL )
+		InitFileState();
 
 	if( flags & O_CREAT ) {
 		va_start( ap, flags );
@@ -2158,6 +2170,9 @@ int
 openx( const char *path, int flags, mode_t creat_mode, int ext )
 {
 
+	if ( FileTab == NULL )
+		InitFileState();
+
 	if( ext != 0 ) {
 		errno = ENOSYS;
 		return -1;
@@ -2179,6 +2194,9 @@ openx( const char *path, int flags, mode_t creat_mode, int ext )
 int
 close( int fd )
 {
+	if ( FileTab == NULL )
+		InitFileState();
+
   if ( !LocalSysCalls() && MappingFileDescriptors() && IOServerAccess(fd)) 
     {
       int scm = SetSyscalls(SYS_LOCAL | SYS_MAPPED);
@@ -2222,6 +2240,9 @@ dup( int old )
 	sigset_t omask;
 	int rval;
 
+	if ( FileTab == NULL )
+		InitFileState();
+
 	/* we don't want to be interrupted by a checkpoint between when
 	   modify our local file table and actually make the change */
 	omask = block_condor_signals();
@@ -2248,6 +2269,9 @@ int
 dup2( int old, int new_fd )
 {
 	int		rval;
+
+	if ( FileTab == NULL )
+		InitFileState();
 
 	if( MappingFileDescriptors() ) {
 		rval =  FileTab->DoDup2( old, new_fd );
@@ -2279,6 +2303,9 @@ socket( int addr_family, int type, int protocol )
 		(unsigned long)protocol
 	};
 #endif
+
+	if ( FileTab == NULL )
+		InitFileState();
 
 	if( MappingFileDescriptors() ) {
 		rval =  FileTab->DoSocket( addr_family, type, protocol );
@@ -2387,6 +2414,9 @@ fcntl(int fd, int cmd, ...)
         int user_fd;
         int use_local_access = FALSE;
 		int rval;
+
+	if ( FileTab == NULL )
+		InitFileState();
 
         if ((user_fd = MapFd(fd)) < 0) {
                 return -1;
