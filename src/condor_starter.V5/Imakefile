@@ -70,14 +70,12 @@ REMOTE_SYSCALL_LIB = ../condor_$(SYSCALL_LIB)/libremote.a $(UTIL_LIB) $(IO_LIB)
 #endif
 #endif
 
-#if IS_MIPS_ULTRIX42
-LIB = $(REMOTE_SYSCALL_LIB) /usr/lib/libcP.a
-#elif (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS25) || (IS_SUN4M_SOLARIS251)
-LIB = $(REMOTE_SYSCALL_LIB) KernLib SocketLib RpcLib MldLib 
-#elif (IS_I386_LINUX)
-LIB = $(REMOTE_SYSCALL_LIB) KernLib  RpcLib MldLib /usr/lib/libbfd.a /usr/lib/libiberty.a
+LIB = $(REMOTE_SYSCALL_LIB) 
+
+#if (IS_I386_LINUX)
+LDFLAGS = KernLib RpcLib MldLib -lbfd -liberty
 #else
-LIB = $(REMOTE_SYSCALL_LIB) KernLib  RpcLib MldLib 
+LDFLAGS = KernLib SocketLib RpcLib MldLib 
 #endif
 
 LIBDIRS = ../condor_util_lib ../condor_io
