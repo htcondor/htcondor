@@ -714,7 +714,7 @@ int Stream::put(
 
 		case external:
 			if ((sizeof(int) == sizeof(long)) || (sizeof(long) > INT_SIZE)) {
-				return put((int)l);
+				return put((unsigned int)l);
 			} else {
 				if (!hton_is_noop()) { // need to convert to network order
 					l = htonL(l);
@@ -775,7 +775,7 @@ int Stream::put(
 			break;
 
 		case external:
-			return put((int)s);
+			return put((unsigned int)s);
 
 		case ascii:
 			return FALSE;
@@ -1093,7 +1093,7 @@ int Stream::get(
 		case external:
 			if ((sizeof(int) == sizeof(long)) || (sizeof(long) > INT_SIZE)) {
 				if (!get(i)) return FALSE;
-				l = (long) i;
+				l = (unsigned long) i;
 			} else {
 				if (sizeof(long) < INT_SIZE) {
 					if (get_bytes(pad, INT_SIZE-sizeof(long))
