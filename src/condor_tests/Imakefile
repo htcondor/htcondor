@@ -223,17 +223,6 @@ TESTCLASS(lib_userlog,lib)
 **RUN(job_core_matchlist_van)
 **TESTCLASS(job_core_matchlist_van,core)
 **
-**DESC(job_core_priority_van,"Vanilla: Verify respect for job priority")
-**RUN(job_core_priority_van)
-**TESTCLASS(job_core_priority_van,core)
-**
-**DESC(job_core_leaveinqueue_van,"Vanilla: verify true and false classads do leave_in_queue right")
-**RUN(job_core_leaveinqueue_van)
-**TESTCLASS(job_core_leaveinqueue_van,core)
-**
-**DESC(job_core_niceuser_van,"Vanilla: Ensure non nice_user job completes before nice_user job") 
-**RUN(job_core_niceuser_van)
-**TESTCLASS(job_core_niceuser_van,core)
 **
 */
 
@@ -248,12 +237,9 @@ RUN(job_core_compressfiles_std)
 TESTCLASS(job_core_compressfiles_std,core)
 #endif /* ! IS_CLIPPED */
 
-/* Test needs work as there seems to be a timing influence
-** and first size of streaming file is not smaller as it should be
 DESC(job_core_streamerr_van,"Vanilla: test for streaming of error when both stream_error is true and false")
 RUN(job_core_streamerr_van)
 TESTCLASS(job_core_streamerr_van,core)
-*/
 
 DESC(job_core_copytospool_van,"Vanilla: test that spooled executable is same via md5 checksum of both files")
 RUN(job_core_copytospool_van)
@@ -319,9 +305,17 @@ DESC(job_core_leaveinqueue_sched,"Scheduler: verify true and false classads do l
 RUN(job_core_leaveinqueue_sched)
 TESTCLASS(job_core_leaveinqueue_sched,core)
 
+DESC(job_core_leaveinqueue_van,"Vanilla: verify true and false classads do leave_in_queue right")
+RUN(job_core_leaveinqueue_van)
+TESTCLASS(job_core_leaveinqueue_van,core)
+
 DESC(job_core_macros_sched,"Scheduler: a number of macros get passed in as args") 
 RUN(job_core_macros_sched)
 TESTCLASS(job_core_macros_sched,core)
+
+DESC(job_core_niceuser_van,"Vanilla: Ensure non nice_user job completes before nice_user job") 
+RUN(job_core_niceuser_van)
+TESTCLASS(job_core_niceuser_van,core)
 
 DESC(job_core_onexitrem_van,"Vanilla: Verify true and false triggers of on_exit_remove")
 RUN(job_core_onexitrem_van)
@@ -361,6 +355,10 @@ TESTCLASS(job_core_plus_van,core)
 DESC(job_core_priority_sched,"Scheduler: Verify respect for job priority")
 RUN(job_core_priority_sched)
 TESTCLASS(job_core_priority_sched,core)
+
+DESC(job_core_priority_van,"Vanilla: Verify respect for job priority")
+RUN(job_core_priority_van)
+TESTCLASS(job_core_priority_van,core)
 
 DESC(job_core_queue_sched,"Scheduler: Verify the  queue command")
 RUN(job_core_queue_sched)
