@@ -363,6 +363,7 @@ class Scheduler : public Service
 	void			preempt(int);
 	void			preempt_one_job();
 	void			refuse( Stream* s );
+	void			tryNextShadow( void );
 
 		/** We add a match record (AddMrec), then open a ReliSock to the
 			startd.  We push the capability and the jobAd, then register
