@@ -58,8 +58,13 @@ TESTCLASS(lib_chirpio_van,lib)
 
 /* User log and log reader used by dagman tests */
 
-BUILD_DEP($(CPlusPlus),x_read_joblog,C,../release_dir/lib/libcondorapi.a -ldl)
-BUILD_DEP($(CPlusPlus),x_write_joblog,C,../release_dir/lib/libcondorapi.a -ldl)
+/* NOTE: since we're linking these with external libraries, we need
+the BUILD_DEP_LIB() rule, which provides maximum flexibility.  but, in
+this case, we only need to specify libs, not dependent .o files, so we
+leave the 4th argument empty...
+*/
+BUILD_DEP_LIB($(CPlusPlus),x_read_joblog,C,,../release_dir/lib/libcondorapi.a -ldl)
+BUILD_DEP_LIB($(CPlusPlus),x_write_joblog,C,,../release_dir/lib/libcondorapi.a -ldl)
 DESC(lib_userlog,"Exercise the userlog interface write and read all events");
 RUN(lib_userlog)
 TESTCLASS(lib_userlog,lib)
