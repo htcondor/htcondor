@@ -32,6 +32,13 @@ job in a cluster than for Condor to start a new cluster.  This can make
 a big difference when submitting lots of short jobs.
 \end{itemize}
 
+Note that submission of jobs from a Windows machine requires
+a stashed password to allow Condor to impersonate the user submitting
+the job.
+To stash a password, use the \Condor{store\_cred} command.
+See the manual page at
+page~\pageref{man-condor-store-cred} for details.
+
 \emph{SUBMIT DESCRIPTION FILE COMMANDS}
 
 Each submit description file describes one cluster of jobs to be
