@@ -10,7 +10,7 @@
 static char text[BUFFER_SIZE];
 static int warning_mode=1;
 
-void _condor_warning_mode_set( int onoff )
+extern "C" void _condor_warning_mode_set( int onoff )
 {
 	warning_mode = onoff;
 }

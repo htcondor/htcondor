@@ -130,6 +130,7 @@
 #include "condor_syscall_mode.h"
 #include "syscall_numbers.h"
 #include "condor_debug.h"
+#include "condor_error.h"
 
 enum result { NOT_OK = 0, OK = 1, END };
 
