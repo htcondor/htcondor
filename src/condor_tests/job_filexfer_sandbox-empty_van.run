@@ -1,0 +1,55 @@
+#!/usr/bin/env perl
+
+use CondorTest;
+use File::Path;
+
+$cmd = 'job_filexfer_sandbox-empty_van.cmd';
+$testname = 'file transfer sandbox empty (vanilla) test';
+
+# How many seconds after the job terminates are we willing to wait to
+# see if the directory is removed before we give up and consider it a
+# failure? 
+$dir_timeout = 20;
+
+umask 0;
+
+$OutputTest = sub
+{
+    my %info = @_;
+    my $sandbox_dir;
+
+    -z $info{"error"} ||
+    die "$testname: FAILURE (STDERR contains data)\n";
+
+    $output = $info{"output"};
+    open( OUTPUT, "<$output" ) || die "Can't open $output: $!\n";
+    while( <OUTPUT> ) {
+        if( /sandbox: (.+)/ ) {
+            $sandbox_dir = $1;
+        } else {
+            die "$testname: FAILURE (bad output to STDOUT)\n";
+        }
+    }
+    $sandbox_dir || die "$testname: FAILURE (no sandbox dir in STDOUT)\n";
+
+    for( $i=0; $i < $dir_timeout; $i++ ) {
+	if( -d $sandbox_dir ) {
+	    sleep( 1 );
+	} else {
+	    return;
+	}
+    }
+    die "$testname: FAILURE: $sandbox_dir still exists after " . $i . 
+	" seconds\n";
+};
+
+
+CondorTest::RegisterExitedSuccess( $testname, $OutputTest);
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+    print "$testname: SUCCESS\n";
+    exit(0);
+} else {
+    die "$testname: CondorTest::RunTest() failed\n";
+}
+
