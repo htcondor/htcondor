@@ -99,4 +99,5 @@ CCOMPILER_ID = $(C_COMP_KIND) $(C_COMP_MAJOR) $(C_COMP_MINOR) $(C_COMP_PATCH)
 LIB_STDCPP = @lib_std_cpp@
 GCC_LIBC = @gcc_libc@
 CRT_BEGIN = @crt_begin@
-
+GCC_STATIC_LD_FLAG = @gcc_static_ld_flag@
+GCC_STATIC_LIBS = $(GCC_STATIC_LD_FLAG) -lstdc++ -lgcc
