@@ -1,0 +1,4 @@
+executable = cpusoak.exe
+universe = vanilla
+log = soak.log
+queue

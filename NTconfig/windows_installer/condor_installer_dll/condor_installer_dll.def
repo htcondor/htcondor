@@ -1,0 +1,11 @@
+; MyCustomAction.def
+;
+; defines the exported functions which will be available to the MSI engine
+;
+LIBRARY    "condor_installer_dll"
+DESCRIPTION    'Custom actions for installing condor'
+EXPORTS
+    chomp_backslash
+	get_domain
+	get_full_hostname
+	set_daemon_list
