@@ -1591,7 +1591,7 @@ read( int user_fd, void *buf, size_t nbyte )
 	return rval;
 }
 
-#endif
+#endif // #if defined( SYS_read )
 
 
 #if defined( SYS_write )
@@ -1667,9 +1667,11 @@ write( int user_fd, const void *buf, size_t len )
 	return rval;
 }
 
-#endif
+#endif // #if defined( SYS_write )
 
-#endif
+#endif // #if defined( SYS_lseek )
+
+#endif // #if defined( BufferCondorIO )
 
 #if defined( SYS_open )
 
@@ -2086,7 +2088,5 @@ fcntl(int fd, int cmd, ...)
 	}
 }
 #endif
-
-#endif // #if defined( BufferCondorIO )
 
 } // end of extern "C"
