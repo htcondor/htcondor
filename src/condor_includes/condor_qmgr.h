@@ -40,6 +40,7 @@ extern "C" {
 #endif
 
 int InitializeConnection(const char * );
+int InitializeReadOnlyConnection(const char * );
 int NewCluster();
 int NewProc( int );
 int DestroyProc(int, int);
@@ -73,7 +74,8 @@ void FreeJobAd(ClassAd *&ad);
 int SendSpoolFile(char *filename);		/* prepare for file xfer */
 int SendSpoolFileBytes(char *filename); /* actually do file xfer */
 
-Qmgr_connection *ConnectQ(char *qmgr_location );
+Qmgr_connection *ConnectQ(char *qmgr_location, int timeout=0, 
+				bool read_only=FALSE );
 bool DisconnectQ(Qmgr_connection *);
 void WalkJobQueue(scan_func);
 
