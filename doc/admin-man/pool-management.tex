@@ -66,10 +66,9 @@ in your pool.
 You can do this with one command, so long as you run it from a blessed
 administrator machine:
 \begin{verbatim}
-        % condor_off `cat addresses`
+        % condor_off -all
 \end{verbatim}
-where \File{addresses} is the file where you saved your master
-addresses. 
+
 \Condor{off} will shutdown all the daemons, but leave the
 \Condor{master} running, so that you can send a \Condor{on} in the
 future.  
@@ -165,7 +164,7 @@ machines start to use the new setting, you must send a
 You can do this with one command, so long as you run it from a blessed
 administrator machine:
 \begin{verbatim}
-        % condor_reconfig `condor_status -master`
+        % condor_reconfig -all
 \end{verbatim}
 
 \Note If your global config file is not shared among all your machines
