@@ -1,7 +1,0 @@
-There are 6 args to process
-foobar
-0
-1568
-/p/condor/workspaces/build/bin:/s/std/bin:/scratch/local/sbin:/scratch/local/bin:/usr/bin:/u/b/t/bt/bin:/s/std/bin:/usr/afsws/bin:/opt/SUNWspro/bin:/usr/ccs/bin:/usr/ucb:/bin:/usr/bin:/usr/stat/bin:/usr/X11R6/bin:.:/unsup/condor/bin:/p/condor/home/rust/bin/@sys:/p/condor/home/bin:/usr/X11R6/bin:/unsup/kde-3.0/bin:/scratch/local/bin:/scratch/local/sbin
-4
-$
