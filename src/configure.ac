@@ -548,6 +548,10 @@ AC_SUBST(CompilerPatch,$CompilerPatch)
 # Find libgcc.a (needed for all platforms)
 GET_GCC_VALUE([libgcc.a],[-print-libgcc-file-name],[gcc_libc])
 GET_GCC_VALUE([libstdc++.a],[--print-file-name=libstdc++.a],[lib_std_cpp])
+# this gcc3+ specific library is used for standard universe linking
+if test "X$CompilerKind" = "XGCC" && test "X$CompilerMajor" = "X3" ; then
+	GET_GCC_VALUE([libgcc_eh.a],[--print-file-name=libgcc_eh.a],[lib_gcc_eh])
+fi
 
 # Find/define crt[01].o for each architecture we support
 AC_MSG_CHECKING([for crt0.o])
