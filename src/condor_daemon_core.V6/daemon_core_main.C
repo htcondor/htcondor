@@ -575,6 +575,7 @@ int main( int argc, char** argv )
 	SafeSock* ssock = NULL;	// udp command socket
 	int		wantsKill = FALSE, wantsQuiet = FALSE;
 	char	*logAppend = NULL;
+	int runfor = 0; //allow cmd line option to exit after *runfor* minutes
 
 
 #ifndef WIN32
@@ -738,6 +739,24 @@ int main( int argc, char** argv )
 				exit( 1 );
 			}
 			break;
+		case 'r':   //run for <arg> minutes then gracefully exit
+		{
+			ptr++;
+			if( ptr && *ptr ) {
+				runfor = atoi( *ptr );
+				dcargs += 2;
+			}
+			else {
+				fprintf( stderr, 
+						 "DaemonCore: ERROR: -runfor needs another argument.\n" );
+				fprintf( stderr, 
+				   "   Please specify the number of minutes to run for.\n" );
+
+				exit( 1 );
+			}
+			//call Register_Timer below after intialized...
+		}
+			break;
 		default:
 			done = TRUE;
 			break;	
@@ -876,6 +895,14 @@ int main( int argc, char** argv )
 		daemonCore = new DaemonCore(500);
 	} else {
 		daemonCore = new DaemonCore();
+	}
+
+		//if specified on command line, set timer to gracefully exit
+	if ( runfor ) {
+		daemonCore->Register_Timer( runfor * 60, 0, 
+				(TimerHandler)main_shutdown_graceful, "main_shutdown_graceful" );
+		dprintf(D_ALWAYS,"Registered Timer for graceful shutdown in %d minutes\n",
+				runfor );
 	}
 
 		// Now that we have the daemonCore object, we can finally
