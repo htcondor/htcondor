@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_pre,v 1.1.4.4 2004-09-16 18:08:08 wright Exp $
+# $Id: platform_pre,v 1.1.4.5 2004-09-30 23:12:25 wright Exp $
 # Submit-side NMI build system infrastructure to setup platform
 # specific input for test jobs.  All we have to do is trim down the
 # architecture-dependent results.tar.gz file to remove all the
@@ -47,7 +47,7 @@ while( <LTAR> ) {
     if( $test_type eq "dynamic" ) {
 	# in this case, we want to ignore RPMs, and only grab the
 	# dynamically-linked version of the tarballs
-	if( /.*$test_type.*\.tar\.gz$/ ) {
+	if( /.*$test_type.*\.tar\.(gz|Z)$/ ) {
 	    $saved_tarball = $_;
 	    print "Found tarball that matches '$test_type'!\n";
 	    last;
