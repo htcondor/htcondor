@@ -1,8 +1,6 @@
 #if !defined(_QMGMT_H)
 #define _QMGMT_H
 
-#include "condor_xdr.h"
-
 #include "condor_classad.h"
 #include "condor_io.h"
 
@@ -16,8 +14,8 @@ class Job
 public:
 	Job(Cluster *, int);
 	~Job();
-	Job	*get_next();
-	int get_proc() { return proc; }
+	Job *get_next();
+	int  get_proc() { return proc; }
 	int	 SetAttribute(const char *, char *);
 	int  DeleteAttribute(const char *);
 	int  GetAttribute(const char *, float *);
@@ -44,7 +42,6 @@ private:
 	int		proc;
 	int 	state;
 };
-
 
 class Cluster
 {
@@ -93,5 +90,4 @@ int handle_q(ReliSock *, struct sockaddr_in*);
 }
 #endif
 
-
-#endif
+#endif /* _QMGMT_H */
