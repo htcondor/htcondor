@@ -9,8 +9,7 @@
 /*
   Return starting address of the data segment
 */
-extern int __data_start;
-int
+long
 data_start_addr()
 {
 	return USRDATA;
@@ -19,19 +18,19 @@ data_start_addr()
 /*
   Return ending address of the data segment
 */
-int
+long
 data_end_addr()
 {
-	return (int)sbrk(0);
+	return (long)sbrk(0);
 }
 
 /*
   Return TRUE if the stack grows toward lower addresses, and FALSE
   otherwise.
 */
-int StackGrowsDown()
+BOOL StackGrowsDown()
 {
-	return 1;
+	return TRUE;
 }
 
 /*
@@ -47,7 +46,7 @@ int JmpBufSP_Index()
 /*
   Return starting address of stack segment.
 */
-int
+long
 stack_start_addr()
 {
 	jmp_buf env;
@@ -58,7 +57,7 @@ stack_start_addr()
 /*
   Return ending address of stack segment.
 */
-int
+long
 stack_end_addr()
 {
 	return USRSTACK;
