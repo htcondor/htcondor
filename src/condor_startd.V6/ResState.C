@@ -359,13 +359,15 @@ ResState::leave_action( State s, Activity a,
 	switch( s ) {
 
 	case preempting_state:
-		cp = rip->r_classad;
-		cp->Delete( ATTR_CLIENT_MACHINE );
-		cp->Delete( ATTR_REMOTE_USER );
-		cp->Delete( ATTR_JOB_START );
-		cp->Delete( ATTR_JOB_ID );
-		cp->Delete( ATTR_JOB_UNIVERSE );
-		cp->Delete( ATTR_LAST_PERIODIC_CHECKPOINT );
+		if( statechange ) {
+			cp = rip->r_classad;
+			cp->Delete( ATTR_CLIENT_MACHINE );
+			cp->Delete( ATTR_REMOTE_USER );
+			cp->Delete( ATTR_JOB_START );
+			cp->Delete( ATTR_JOB_ID );
+			cp->Delete( ATTR_JOB_UNIVERSE );
+			cp->Delete( ATTR_LAST_PERIODIC_CHECKPOINT );
+		}
 		break;
 	case matched_state:
 	case owner_state:
