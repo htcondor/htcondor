@@ -1,3 +1,9 @@
+4/19/01  V6_3-pre-kerberos
+    A tag VALID ONLY ON SRC that represents the 6_3-branch right before
+    Hao checked in his Kerberos stuff. Some files in config/ were checked
+    in before this tag was added. (site.def - 1.21.8.5 and Project.tmpl 
+    1.68.4.11) 
+
 4/18/01 V6_3_0-branch
 	A branch off of V6_3 for the 6.3.0 release of Condor.  This is
 	to insulate the 6.3.0 release from other changes to the
