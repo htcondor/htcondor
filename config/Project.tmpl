@@ -186,7 +186,7 @@ AUTH_FLAGS = GssAuthentication
 #define IMAKE_FLAGS ImakeFlags -I../../config -s Makefile
 
 STD_C_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
-  -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) \
+  -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG)=$(ARCH_FLAG) -D$(OS_FLAG)=$(OS_FLAG) \
   $(DEBUG_FLAG) PlatformFlags $(SITE_C_FLAGS) $(AUTH_FLAGS)
 
 STD_C_PLUS_FLAGS = $(STD_C_FLAGS) -fno-implicit-templates
