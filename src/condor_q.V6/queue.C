@@ -62,7 +62,6 @@ static 	void io_display (ClassAd *);
 static 	char * buffer_io_display (ClassAd *);
 static 	void displayJobShort (ClassAd *);
 static 	char * bufferJobShort (ClassAd *);
-static 	void shorten (char *, int);
 static	bool show_queue (char* scheddAddr, char* scheddName, char* scheddMachine);
 static	bool show_queue_buffered (char* scheddAddr, char* scheddName,
 								  char* scheddMachine);
@@ -745,16 +744,6 @@ bufferJobShort( ClassAd *ad ) {
 		return( return_buff );
 	}
 	
-	int niceUser;
-    if( ad->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
-        char tmp[100];
-        strncpy(tmp,NiceUserName,99);
-        strcat(tmp,".");
-        strcat(tmp,owner);
-        strncpy(owner,tmp, 63);
-    }
-
-	shorten (owner, 14);
 	if (ad->EvalString ("Args", NULL, args)) {
 		sprintf( buffer, "%s %s", basename(cmd), args );
 	} else {
@@ -1014,11 +1003,6 @@ format_q_date (int d, AttrList *)
 	return format_date(d);
 }
 
-static void
-shorten (char *buff, int len)
-{
-	if ((unsigned int)strlen (buff) > (unsigned int)len) buff[len] = '\0';
-}
 		
 static void
 usage (char *myName)
