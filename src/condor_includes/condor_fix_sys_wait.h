@@ -22,9 +22,9 @@
 
 #include <sys/wait.h>
 
-#if defined(OSF1) && !defined(_XOPEN_SOURCE)
-#	define CONDOR_XOPEN_DEFINED
-#	define _XOPEN_SOURCE
+#if defined(OSF1) && defined(CONDOR_XOPEN_DEFINED)
+#	undef CONDOR_XOPEN_DEFINED
+#	undef _XOPEN_SOURCE
 #endif
 
 #if defined(IRIX53)
