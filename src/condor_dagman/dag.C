@@ -1169,15 +1169,9 @@ PrintEvent( debug_level_t level, const char* eventName, Job* job,
 	  
 	  
 	} else {
-	  if (job->job_type == Job::CONDOR_JOB){
-	    debug_printf( level, "Event: %s for Unknown Condor Job (%d.%d.%d): "
-			  "ignoring...\n", eventName, condorID._cluster,
-			  condorID._proc, condorID._subproc );
-	  }
-	  else if (job->job_type == Job::DAP_JOB){
-	    debug_printf( level, "Event: %s for Unknown DaP Job (%d): "
-			  "ignoring...\n", eventName, condorID._cluster);
-	  }
+        debug_printf( level, "Event: %s for Unknown Job (%d.%d.%d): "
+					  "ignoring...\n", eventName, condorID._cluster,
+					  condorID._proc, condorID._subproc );
 	}
 	//<-- DAP
 }
