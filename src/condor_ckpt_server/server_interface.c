@@ -87,6 +87,20 @@ int IsLocal(const char* path)
 }
 
 
+int FileExists(const char *filename, const char *owner)
+{
+	if (IsLocal(filename) == LOCAL) {
+		return TRUE;
+	}
+	
+	if (FileOnServer(owner, filename)) {
+		return TRUE;
+	} else {
+		return FALSE;
+	}
+}
+
+
 int RequestStore(const char*     owner,
 				 const char*     filename,
 				 u_lint          len,

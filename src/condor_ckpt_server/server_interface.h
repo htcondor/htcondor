@@ -1,11 +1,6 @@
 #include <sys/types.h>
-#if 0
-#include "../server2/typedefs2.h"
-#include "../server2/network2.h"
-#else
 #include "typedefs2.h"
 #include "network2.h"
-#endif
 
 
 void StripPrefix(const char* pathname,
@@ -17,6 +12,7 @@ int ConnectToServer(request_type type);
 
 int IsLocal(const char* path);
 
+int FileExists(const char *path, const char *filename);
 
 int RequestStore(const char*     owner,
 				 const char*     filename,
