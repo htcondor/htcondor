@@ -1,0 +1,23 @@
+
+NAME=Chirp.jar
+SOURCES=ChirpClient.java ChirpConfig.java ChirpInputStream.java ChirpOutputStream.java
+
+#if WANT_JAVA
+
+all_target( $(NAME) )
+jar_target( $(NAME), $(SOURCES), edu )
+release_copy_target($(NAME),$(RELEASE_DIR)/lib,$(NAME),EXECUTABLE_MODE);
+strip_copy_target($(NAME),$(RELEASE_DIR)/lib,$(NAME),EXECUTABLE_MODE);
+static_copy_target($(NAME),$(RELEASE_DIR)/lib,$(NAME),EXECUTABLE_MODE);
+
+#else
+
+all::
+release::
+stripped::
+static::
+clean::
+
+#endif /* WANT_JAVA */
+
+html_target( ChirpClient.java ChirpInputStream.java ChirpOutputStream.java )

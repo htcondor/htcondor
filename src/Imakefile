@@ -81,7 +81,7 @@
 		daemon_core.V6 \
 		condor_ckpt_server/ckpt_server_api.a \
 		condor_schedd.V6/libqmgmt.a condor_accountant.V6/libacct.a \
-		ckpt syscall_lib NetmanLibs
+		ckpt syscall_lib NetmanLibs chirp
 
 #if HAS_STATIC
 #define StaticDirectories \
@@ -104,12 +104,12 @@
 	strip_contrib/sbin strip_contrib/etc \
 	strip_contrib/etc/examples strip_contrib/include StaticDirectories
 
-all: h h_all condor_includes condor_chirp makefiles Directories Libraries \
+all: h h_all condor_includes makefiles Directories Libraries \
 	Programs examples 
 release:: all
 stripped:: all
 static:: all
-libs:: h h_all condor_includes condor_chirp makefiles Directories Libraries
+libs:: h h_all condor_includes makefiles Directories Libraries
 
 public:: strip.tar 
 
@@ -258,6 +258,7 @@ object_target(scripts)
 object_target(starter.V6.1)
 object_target(shadow.V6.1)
 object_target(dcskel)
+object_target(chirp)
 
 object_dir_target(h)
 object_dir_target(condor_includes)
@@ -265,7 +266,6 @@ object_dir_target(condor_release)
 object_dir_target(html)
 object_dir_target(condor_bypass)
 object_dir_target(condor_sdk)
-object_dir_target(condor_chirp)
 
 single_target(condor_procapi,libprocapi.a)
 single_target(condor_sysapi,libsysapi.a)
