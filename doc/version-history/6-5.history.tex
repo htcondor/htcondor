@@ -59,12 +59,6 @@ Configuration files they are using, right after the startup banner.
   page~\pageref{sec:file-transfer}, or the \Condor{submit} man
   page on page~\pageref{man-condor-submit}.
 
-\item On all Unix platforms, the \Condor{master} no longer spawns the
-  \Condor{collector} and \Condor{negotiator} with root privileges,
-  since they were not used by those daemons.
-  This is a security enhancement, since it is better for daemons not
-  to have root powers unless they really need them.
-
 \item Added support for Condor's new ``Computing on Demand''
   functionality.
   Documentation is not yet available, but will be coming soon.
