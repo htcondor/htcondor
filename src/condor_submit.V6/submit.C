@@ -30,21 +30,12 @@
 **
 */ 
 
-#define _POSIX_SOURCE
-#if defined(Solaris)
-#include "_condor_fix_types.h"
-#include <sys/fcntl.h>
-#endif
-
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
-#include "condor_constants.h"
-#include "condor_expressions.h"
 #include "condor_network.h"
 #include "condor_string.h"
 #include "condor_ckpt_name.h"
-#include <time.h>
 #include "user_log.c++.h"
 #include "url_condor.h"
 #include "sched.h"
@@ -53,12 +44,8 @@
 #include "condor_adtypes.h"
 #include "condor_io.h"
 #include "condor_parser.h"
-#include "files.h"
+#include "my_hostname.h"
 // #include "util_lib_proto.h"
-#if !defined(WIN32)
-#include <pwd.h>
-#include <sys/stat.h>
-#endif
 
 #include "condor_qmgr.h"
 
@@ -160,7 +147,6 @@ void 	compress( char *str );
 void 	magic_check();
 void 	log_submit();
 void 	get_time_conv( int &hours, int &minutes );
-char *	my_hostname();
 int     SaveClassAd (ClassAd &);
 void	InsertJobExpr (char *expr);
 
