@@ -1,3 +1,10 @@
+10/22/02 V6_5-cod-branch
+	A new branch off of V6_5 for "cod", a.k.a. "computing on
+	demand".  This will mostly involve changes to the startd to
+	support multiple claims per resource, "checkpointing to swap",
+	and other features.  There might be other changes to other
+	parts of Condor to take advantage of it, too.
+
 10/17/02 V6_5-post-merge-V6_4_3
 	The V6_5 branch, after we merged in the V6_4-branch as tagged
 	at V6_4_3. 
