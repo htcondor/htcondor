@@ -116,9 +116,10 @@ if (constraint) puts(constraint);
   // if (constraint) printf("constraint=%s\n",constraint);
 
   ClassAdParser parser;	// NAC
-  if( constraint && parser.ParseExpression( constraint, constraintExpr )){//NAC
+  if( constraint && !parser.ParseExpression( constraint, 
+											 constraintExpr ) ) {	//NAC
 	  fprintf( stderr, "Error:  could not parse constraint %s\n", constraint );
-     exit( 1 );
+	  exit( 1 );
   }
 
   int EndFlag=0;
