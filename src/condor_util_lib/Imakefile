@@ -60,24 +60,18 @@ INET_NTOA_OBJ = inet_ntoa.o
 	setsyscalls.o match_prefix.o sleep.o basename.o strcmp_until.o\
 	filename_tools.o d_format_time.o chomp.o strupr.o globus_utils.o \
 	condor_universe.o condor_perms.o proc_id.o access_euid.o \
-	condor_snutils.o nullfile.o copy_file.o
-
-test.o: test.c
-	$(CC) $(CFLAGS) -c test.c
+	condor_snutils.o nullfile.o copy_file.o get_exec_path.o
 
 test: test.o util_lib.a
 	$(CC) $(CFLAGS) -o test test.o util_lib.a
 
-test_snprintf.o: test_snprintf.c
-	$(CC) $(CFLAGS) -c test_snprintf.c
-
 test_snprintf: test_snprintf.o util_lib.a
 	$(CC) $(CFLAGS) -o test_snprintf test_snprintf.o util_lib.a
 
-library_target(util_lib.a,ObjectFiles)
+test_get_exec_path: test_get_exec_path.o util_lib.a
+	$(CC) $(CFLAGS) -o test_get_exec_path test_get_exec_path.o util_lib.a
 
-lex.yy.o: lex.yy.c
-	$(CC) $(CFLAGS) -c lex.yy.c
+library_target(util_lib.a,ObjectFiles)
 
 stub_gen: y.tab.o lex.yy.o
 	$(CC) $(CFLAGS) -o stub_gen y.tab.o lex.yy.o $(LEXLIB) $(ALL_LDFLAGS)
