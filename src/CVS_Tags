@@ -1,8 +1,17 @@
+10/22/03 V6_6-post_merge_V6_6-externals-merge-1
+   The state of the V6_6-branch after merging the
+   V6_6-externals-branch as tagged at V6_6-externals-merge-1.
+   The V6_6-externals-branch is now abandonded.
+
 10/22/03 V6_6-externals-merge-1
    The state of the V6_6-externals-branch when it was merged back into
    V6_6-branch.  We'll abandon the V6_6-externals-branch after this
    merge, and move all development on the new system onto the
    V6_6-branch for the 6.6.x stable series.
+
+10/22/03 V6_6-pre_merge_V6_6-externals-merge-1
+   The state of the V6_6-branch before merging the
+   V6_6-externals-branch as tagged at V6_6-externals-merge-1.
 
 9/25/03 V6_6-externals-branch
    A new branch off the V6_6-branch for checking in the solution to
