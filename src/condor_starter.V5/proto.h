@@ -43,7 +43,6 @@ void GenerateEarlyAbort( int event );
 void set_posix_environment();
 void delay( int );
 
-int NewConnection( int );
 int Start_Synch();
 int GetJob_Synch();
 int GetJob_Asynch();
