@@ -30,43 +30,50 @@ public:
 	~Resource();
 
 		// Public methods that can be called from command handlers
-	int		release_claim();	// Gracefully kill starter and release claim
-	int		kill_claim();		// Quickly kill starter and release claim
-	int		got_alive();			// You got a keep alive command
-	int 	periodic_checkpoint();	// Do a periodic checkpoint
+	int		release_claim( void );	// Gracefully kill starter and release claim
+	int		kill_claim( void );		// Quickly kill starter and release claim
+	int		got_alive( void );		// You got a keep alive command
+	int 	periodic_checkpoint( void );	// Do a periodic checkpoint
+
 		// Multi-shadow wants to run more processes.  Send a SIGHUP to
 		// the starter
-	int		request_new_proc();
+	int		request_new_proc( void );
+
 		// Gracefully kill starter but keep claim	
-	int		deactivate_claim();	
+	int		deactivate_claim( void );	
+
 		// Quickly kill starter but keep claim
-	int		deactivate_claim_forcibly();
- 
-	int		hardkill_starter();	// Send DC_SIGHARDKILL to the starter
-								// and start a timer to send SIGKILL
-								// to the starter if it's not gone in
-								// killing_timeout seconds.
-	int		sigkill_starter();  // Send SIGKILL to starter + process group 
+	int		deactivate_claim_forcibly( void );
+
+ 		// Send DC_SIGHARDKILL to the starter and start a timer to
+		// send SIGKILL to the starter if it's not gone in
+		// killing_timeout seconds.  
+	int		hardkill_starter( void );
+
+		// Send SIGKILL to starter + process group 
+	int		sigkill_starter( void );
 	
 		// Resource state methods
-	int		change_state( State );
-	int		change_state( Activity );
-	int		change_state( State, Activity );
-	State		state()		{return r_state->state();};
-	Activity	activity()	{return r_state->activity();};
-	int		eval_state()	{return r_state->eval();};
-	bool	in_use();
+	void	set_destination_state( State s ) { r_state->set_destination(s);};
+	State	destination_state( void ) {return r_state->destination();};
+	int		change_state( State s ) {return r_state->change(s);};
+	int		change_state( Activity a) {return r_state->change(a);};
+	int		change_state( State s , Activity a ) {return r_state->change(s, a);};
+	State		state( void )		{return r_state->state();};
+	Activity	activity( void )	{return r_state->activity();};
+	int		eval_state( void )		{return r_state->eval();};
+	bool	in_use( void );
 
 		// Methods for computing and publishing resource attributes 
 	void	compute( amask_t mask);
 	void	publish( ClassAd*, amask_t );
 
 		// Load Average related methods
-	float	condor_load() {return r_attr->condor_load();};
-	float	compute_condor_load();
-	void	resize_load_queue(); 
-	float	owner_load() {return r_attr->owner_load();};
-	void	set_owner_load( float val) {r_attr->set_owner_load(val);};
+	float	condor_load( void ) {return r_attr->condor_load();};
+	float	compute_condor_load( void );
+	void	resize_load_queue( void ); 
+	float	owner_load( void ) {return r_attr->owner_load();};
+	void	set_owner_load( float val ) {r_attr->set_owner_load(val);};
 
 	void	display( amask_t m ) {r_attr->display(m);}
 
@@ -81,7 +88,7 @@ public:
 	void	log_ignore( int cmd, State s );
 
 		// Called from the reaper to handle things for this rip
-	void	starter_exited();	
+	void	starter_exited( void );	
 
 		// Since the preempting state is so weird, and when we want to
 		// leave it, we need to decide where we want to go, and we
@@ -89,34 +96,34 @@ public:
 		// we put all the actions and logic in one place that gets
 		// called whenever we're finally ready to leave the preempting
 		// state. 
-	void	leave_preempting_state();
+	void	leave_preempting_state( void );
 
 		// Methods to initialize and refresh the resource classads.
-	int		init_classad();		
-	void	update_classad();	
-	void	timeout_classad();	
-	int		force_benchmark();
+	int		init_classad( void );		
+	void	update_classad( void );	
+	void	timeout_classad( void );	
+	int		force_benchmark( void );
 
 	int		give_classad( Stream* stream );	// Send this VM's classad
 											// to the given Stream
 
-	int		update();				// Update the central manager.
-	int		eval_and_update();		// Evaluate state and update CM. 
-	void	final_update();			// Send a final update to the CM
-									// with Requirements = False.
+	int		update( void );				// Update the central manager.
+	int		eval_and_update( void );	// Evaluate state and update CM. 
+	void	final_update( void );		// Send a final update to the CM
+									    // with Requirements = False.
 
 		// Methods to control various timers 
-	int		start_kill_timer();		// Timer for how long we're willing to 
-	void	cancel_kill_timer();	//    be in preempting/killing state. 
+	int		start_kill_timer( void );	// Timer for how long we're willing to 
+	void	cancel_kill_timer( void );	// be in preempting/killing state. 
 
  		// Helper functions to evaluate resource expressions
-	int		wants_vacate();
-	int		wants_suspend();
-	int		wants_pckpt();
-	int		eval_kill();
-	int		eval_preempt();
-	int		eval_suspend();
-	int		eval_continue();
+	int		wants_vacate( void );
+	int		wants_suspend( void );
+	int		wants_pckpt( void );
+	int		eval_kill( void );
+	int		eval_preempt( void );
+	int		eval_suspend( void );
+	int		eval_continue( void );
 
 		// Data members
 	ResState*		r_state;	// Startd state object, contains state and activity
@@ -131,14 +138,15 @@ public:
 	int				r_id;		// CPU id of this resource (int form)
 	char*			r_id_str;	// CPU id of this resource (string form)
 
-	int				type() { return r_attr->type(); };
+	int				type( void ) { return r_attr->type(); };
 
 private:
 	int		kill_tid;	// DaemonCore timer id for kiling timer.
 
 	int		did_update;		// Flag set when we do an update.
 	int		fast_shutdown;	// Flag set if we're in fast shutdown mode.
-	int		r_load_num_called;		// Counter used for CondorLoadAvg
+	int		r_load_num_called;	// Counter used for CondorLoadAvg
+	void	remove_pre( void );	// If r_pre is set, refuse and delete it.
 };
 
 #endif _STARTD_RESOURCE_H
