@@ -210,6 +210,7 @@ main_config()
 	resmgr->walk( Resource::init_classad );  
 		// Re-read config file for startd-wide stuff.
 	init_params(0);
+	resmgr->init_socks();
 		// Re-evaluate and update the CM for each resource.
 	resmgr->walk( Resource::eval_and_update );
 	return TRUE;
