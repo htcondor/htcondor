@@ -629,6 +629,7 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 #endif
 			break;
 
+		case PRIV_USER:
 		case PRIV_ROOT:
 		case PRIV_CONDOR:
 			saved_priv = set_priv( priv );
