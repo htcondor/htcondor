@@ -24,7 +24,7 @@
 // File: Helper.cpp
 // Author: Francesco Giacomini, INFN <Francesco.Giacomini@cnaf.infn.it>
 
-// $Id: helper.C,v 1.1.4.4 2003-01-18 19:30:56 epaulson Exp $
+// $Id: helper.C,v 1.1.4.5 2003-03-26 20:18:49 psilord Exp $
 
 #include "condor_common.h"
 #include "helper.h"
@@ -88,7 +88,10 @@ Helper::HelperImpl::resolve(std::string const& input_file)
   for (int i = 1; output_file.empty(); ++i) {
     std::ostringstream s;
     s << i;
-    std::string tmp = input_file + '-' + s.str() + ".help";
+    std::string tmp = input_file;
+	tmp.append("-");
+	tmp.append(s.str());
+	tmp.append(".help");
     std::ifstream is(tmp.c_str());
     if (! is) {			// file does not exist: good!
       output_file = tmp;
@@ -100,7 +103,10 @@ Helper::HelperImpl::resolve(std::string const& input_file)
   if (p && strlen(p) != 0) {
     helper_command = p;
   }
-  helper_command += " " + input_file + " " + output_file;
+  helper_command.append(" ");
+  helper_command.append(input_file);
+  helper_command.append(" ");
+  helper_command.append(output_file);
 
   std::cout << helper_command << '\n';
 
