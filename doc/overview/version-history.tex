@@ -37,7 +37,7 @@ released binaries for.
 \begin{itemize}
 
 \item Added ``clipped'' support for Alpha Linux machines running the
-2.0.X kernel and glibc 2.0.X.
+2.0.X kernel and glibc 2.0.X (such as RedHat 5.X).
 We do not yet support checkpointing and remote system calls on this
 platform, but we can start ``vanilla'' jobs.
 See section~\ref{sec:Choosing-Universe} on
@@ -48,8 +48,8 @@ vs. standard jobs.
 Linux kernel, glibc 2.0.X, using the GNU C compiler (gcc/g++ 2.7.X) or
 the EGCS compilers (versions 1.0.X, 1.1.1 and 1.1.2).
 This includes RedHat 5.X, and Debian 2.0.
-RedHat 6.0 and Debian 2.1 are not yet supported, since they use glibc
-2.1.X and the 2.2.X Linux kernel.
+\Bold{RedHat 6.0 and Debian 2.1 are not yet supported, since they use
+glibc 2.1.X and the 2.2.X Linux kernel.}
 Future versions of Condor will support all combinations of kernels,
 compilers and versions of libc.
 
