@@ -145,9 +145,17 @@ int AutoCluster::getAutoClusterid( ClassAd *job )
 	char buf[ATTRLIST_MAX_EXPRESSION];
 	significant_attrs->rewind();
 	const char* next_attr = NULL;
+	ExprTree *tree = NULL;
+	string bufS;
+	ClassAdUnParser unp;
 	while ( (next_attr=significant_attrs->next()) != NULL ) {
 		buf[0] = '\0';
-		job->sPrintExpr(buf,sizeof(buf),next_attr);
+//		job->sPrintExpr(buf,sizeof(buf),next_attr);
+		tree = job->Lookup( next_attr );
+		if( tree ) {
+			unp.Unparse( bufS, tree );
+			strcpy( buf, bufS.c_str( ) );
+		}			
 		signature += buf;
 	}
 
