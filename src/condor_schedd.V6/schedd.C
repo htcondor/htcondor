@@ -2498,12 +2498,12 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		dprintf ( D_ALWAYS, "Open of %s failed, errno %d\n", input, errno );
 		cannot_open_files = true;
 	}
-	if ((inouterr[1] = open(input, O_WRONLY, 0)) < 0) {
-		dprintf ( D_ALWAYS, "Open of %s failed, errno %d\n", input, errno );
+	if ((inouterr[1] = open(output, O_WRONLY, 0)) < 0) {
+		dprintf ( D_ALWAYS, "Open of %s failed, errno %d\n", output, errno );
 		cannot_open_files = true;
 	}
-	if ((inouterr[2] = open(input, O_WRONLY, 0)) < 0) {
-		dprintf ( D_ALWAYS, "Open of %s failed, errno %d\n", input, errno );
+	if ((inouterr[2] = open(error, O_WRONLY, 0)) < 0) {
+		dprintf ( D_ALWAYS, "Open of %s failed, errno %d\n", error, errno );
 		cannot_open_files = true;
 	}
 
