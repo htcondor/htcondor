@@ -1656,20 +1656,44 @@ These macros control the \Condor{schedd}.
   section~\ref{param:SubsysAddressFile} as
   \MacroNI{SUBSYS\_ADDRESS\_FILE}. 
 
-\item[\Macro{FLOCK\_HOSTS}] \label{param:FlockHosts} This macro
-  defines a list of central manager hostnames (not including the local
-  \MacroU{CONDOR\_HOST} machine) for pools in which the schedd should
-  attempt to run jobs.  Hosts in the list should be in order of
-  preference.  The schedd will only send a request to a central
-  manager in the list if the local pool and pools earlier in the list
-  are not satisfying all the job requests.
+\item[\Macro{FLOCK\_NEGOTIATOR\_HOSTS}] \label{param:FlockNegotiatorHosts} 
+  This macro defines a list of negotiator hostnames (not including the
+  local \MacroU{NEGOTIATOR\_HOST} machine) for pools in which the
+  schedd should attempt to run jobs.  Hosts in the list should be in
+  order of preference.  The schedd will only send a request to a
+  central manager in the list if the local pool and pools earlier in
+  the list are not satisfying all the job requests.
   \MacroUNI{HOSTALLOW\_NEGOTIATOR\_SCHEDD} (see
   section~\ref{param:HostAllow}) must also be configured to allow
-  negotiators from all of the \MacroU{FLOCK\_HOSTS} to contact the schedd.
-  Please make sure the \MacroUNI{CONDOR\_HOST} is first in the 
-  \MacroUNI{HOSTALLOW\_NEGOTIATOR\_SCHEDD} list.
-  Similarly, the central managers of the remote pools must be configured
-  to listen to requests from this schedd.
+  negotiators from all of the \MacroU{FLOCK\_NEGOTIATOR\_HOSTS} to
+  contact the schedd.  Please make sure the
+  \MacroUNI{NEGOTIATOR\_HOST} is first in the
+  \MacroUNI{HOSTALLOW\_NEGOTIATOR\_SCHEDD} list.  Similarly, the
+  central managers of the remote pools must be configured to listen to
+  requests from this schedd.
+
+\item[\Macro{FLOCK\_COLLECTOR\_HOSTS}] \label{param:FLockCollectorHosts}
+  This macro defines a list of collector hostnames for pools in which
+  the schedd should attempt to run jobs.  The
+  collectors must be specified in order, corresponding to the
+  \MacroU{FLOCK\_NEGOTIATOR\_HOSTS} list.  In the typical case, where each pool
+  has the collector and negotiator running on the same machine,
+  \MacroU{FLOCK\_COLLECTOR\_HOSTS} should have the same definition as
+  \MacroU{FLOCK\_NEGOTIATOR\_HOSTS}.
+
+\item[\Macro{FLOCK\_VIEW\_SERVERS}] \label{param:FlockViewServers}
+  This macro defines a list of hostnames where the condor-view server
+  is running in the pools to which you want your jobs to flock.  The
+  order of this list must correspond to the order of the
+  \MacroU{FLOCK\_COLLECTOR\_HOSTS} and
+  \MacroU{FLOCK\_NEGOTIATOR\_HOSTS} lists.  List items may be empty
+  for pools which don't use a separate condor-view server.
+  \MacroU{FLOCK\_VIEW\_SERVER} may be left undefined if no remote
+  pools use separate condor-view servers.  Note: It is required that
+  the same hostname does not appear twice in the
+  \MacroU{FLOCK\_VIEW\_SERVERS} list and that the
+  \MacroU{CONDOR\_VIEW\_HOST} does not appear in the
+  \MacroU{FLOCK\_VIEW\_SERVERS} list.
 
 \end{description}
 
