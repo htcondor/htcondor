@@ -45,6 +45,7 @@ private:
 	int             r_console_idle;
 	int				r_mips;
 	int				r_kflops;
+	int				r_last_benchmark;   // Last time we computed benchmarks
 #if !defined(WIN32)
 	AFS_Info*		r_afs_info;
 #endif

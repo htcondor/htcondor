@@ -8,6 +8,7 @@ ResAttributes::ResAttributes( Resource* rip )
 #endif
 	r_mips = -1;
 	r_kflops = -1;
+	r_last_benchmark = 0;
 	this->rip = rip;
 	update( rip->r_classad );
 	timeout( rip->r_classad );
@@ -47,6 +48,8 @@ ResAttributes::update( ClassAd* cp)
 		sprintf( line, "%s=%d", ATTR_MIPS, r_mips );
 		cp->Insert( line );
 	}
+	sprintf( line, "%s=%d", ATTR_LAST_BENCHMARK, r_last_benchmark );
+	cp->Insert( line );
 }
 
 
@@ -89,11 +92,10 @@ ResAttributes::timeout( ClassAd* cp )
 void
 ResAttributes::benchmark(void)
 {
-	ClassAd* cp = rip->r_classad;	
-
-	if( rip->state() != unclaimed_state ) {
+	if( rip->state() != unclaimed_state &&
+		rip->activity() != idle_act ) {
 		dprintf( D_ALWAYS, 
-				 "Tried to run benchmarks when not unclaimed, aborting.\n" );
+				 "Tried to run benchmarks when not idle, aborting.\n" );
 		return;
 	}
 
@@ -115,7 +117,7 @@ ResAttributes::benchmark(void)
 	dprintf( D_FULLDEBUG, "About to compute kflops\n" );
 	int new_kflops_calc = calc_kflops();
 	dprintf( D_FULLDEBUG, "Computed kflops: %d\n", new_kflops_calc );
-	if ( r_kflops == 0 ) {
+	if ( r_kflops == -1 ) {
 			// first time we've done benchmarks
 		r_kflops = new_kflops_calc;
 	} else {
@@ -126,9 +128,7 @@ ResAttributes::benchmark(void)
 	dprintf( D_FULLDEBUG, "recalc:DHRY_MIPS=%d, CLINPACK KFLOPS=%d\n",
 			 r_mips, r_kflops);
 
-	char tmp[100];
-	sprintf( tmp, "%s=%d", ATTR_LAST_BENCHMARK, (int)time(NULL) );
-	cp->InsertOrUpdate( tmp );
+	r_last_benchmark = (int)time(NULL);
 
 	rip->change_state( idle_act );
 }
