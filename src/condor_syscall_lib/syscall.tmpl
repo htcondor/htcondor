@@ -348,7 +348,7 @@
 #if HAS_64BIT_SYSCALLS
 #if defined(Solaris26)
 	offset_t llseek( map(int fd), offset_t offset, int whence );
-	off64_t	lseek64( map(int fd), off64_t offset, int whence ) : extract, no_sys_chk;
+	off64_t	lseek64( map(int fd), off64_t offset, int whence ) : extract;
 #else
 	off64_t	lseek64( map(int fd), off64_t offset, int whence );
 #endif /* Solaris 2.6 */
@@ -609,7 +609,7 @@ int rename( const char *from, const char *to ) : pseudo {
 #if !defined( CLIP )
 
 #if defined(LINUX) && !defined(GLIBC)
-	int fstat( map(int fd), struct stat *buf ) : extract, no_sys_chk {
+	int fstat( map(int fd), struct stat *buf ) : extract {
 #else
 	int fstat( map(int fd), struct stat *buf ) {
 #endif
@@ -619,7 +619,7 @@ int rename( const char *from, const char *to ) : pseudo {
 
 
 #if defined(LINUX) && !defined(GLIBC)
-    int stat( const char *path, struct stat *buf ) : extract, no_sys_chk {
+    int stat( const char *path, struct stat *buf ) : extract {
 #else
     int stat( const char *path, struct stat *buf ) {
 #endif
@@ -630,7 +630,7 @@ int rename( const char *from, const char *to ) : pseudo {
 		}
 
 #if defined(LINUX) && !defined(GLIBC)
-    int lstat( const char *path, struct stat *buf ) : extract, no_sys_chk {
+    int lstat( const char *path, struct stat *buf ) : extract {
 #else
     int lstat( const char *path, struct stat *buf ) {
 #endif
@@ -834,6 +834,11 @@ not_supported{
 
 #if defined(LINUX)
 	int truncate( const char *path, size_t length ) {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+	}
+#elif defined(Solaris) 
+	int truncate( const char *path, off_t length ) : extract {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
