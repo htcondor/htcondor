@@ -254,11 +254,11 @@ char		*schedd = NULL, *scheddName = NULL;
 /*ARGSUSED*/
 main(int argc, char *argv[], char *envp[])
 {
-	char	*tmp;
+	char	*tmp = NULL;
 	int		reserved_swap, free_swap;
-	char	*host, *cluster, *proc;
-	char	*my_fs_domain, *my_uid_domain, *use_afs, *use_nfs;
-	char	*use_ckpt_server;
+	char	*host = NULL, *cluster = NULL, *proc = NULL;
+	char	*my_fs_domain = NULL, *my_uid_domain = NULL, *use_afs = NULL, *use_nfs = NULL;
+	char	*use_ckpt_server = NULL;
 	char	*capability;
 	int		i;
 
@@ -389,6 +389,7 @@ main(int argc, char *argv[], char *envp[])
 	my_fs_domain = param( "FILESYSTEM_DOMAIN" );
 	if( my_fs_domain ) {
 		strcpy( My_Filesystem_Domain, my_fs_domain );
+        free( my_fs_domain );
 	} else {
 		strcpy( My_Filesystem_Domain, my_full_hostname() );
 	}
@@ -397,6 +398,7 @@ main(int argc, char *argv[], char *envp[])
 	my_uid_domain = param( "UID_DOMAIN" );
 	if( (my_uid_domain) && (strcasecmp(my_uid_domain,"none") != 0) ) {
 		strcpy( My_UID_Domain, my_uid_domain );
+        free( my_uid_domain );
 	} else {
 		strcpy( My_UID_Domain, my_full_hostname() );
 	}
@@ -405,6 +407,7 @@ main(int argc, char *argv[], char *envp[])
 	use_afs = param( "USE_AFS" );
 	if( use_afs && (use_afs[0] == 'T' || use_afs[0] == 't') ) {
 		UseAFS = TRUE;
+        free( use_afs );
 	} else {
 		UseAFS = FALSE;
 	}
@@ -412,6 +415,7 @@ main(int argc, char *argv[], char *envp[])
 	use_nfs = param( "USE_NFS" );
 	if( use_nfs && (use_nfs[0] == 'T' || use_nfs[0] == 't') ) {
 		UseNFS = TRUE;
+        free( use_nfs );
 	} else {
 		UseNFS = FALSE;
 	}
@@ -428,7 +432,9 @@ main(int argc, char *argv[], char *envp[])
 	} else {
 		free(tmp);
 		use_ckpt_server = param( "USE_CKPT_SERVER" );
-		if (CkptServerHost) free(CkptServerHost);
+		if (CkptServerHost) {
+            free(CkptServerHost);
+        }
 		CkptServerHost = param( "CKPT_SERVER_HOST" );
 		if( !CkptServerHost ||
 			(use_ckpt_server && (use_ckpt_server[0] == 'F' ||
@@ -440,7 +446,9 @@ main(int argc, char *argv[], char *envp[])
 				// We've got a checkpoint server, so let's use it.
 			UseCkptServer = TRUE;
 		}
-		if (use_ckpt_server) free(use_ckpt_server);
+		if (use_ckpt_server) {
+            free(use_ckpt_server);
+        }
 
 		StarterChoosesCkptServer = TRUE; // True by default
 		if( (tmp = param("STARTER_CHOOSES_CKPT_SERVER")) ) {
@@ -476,23 +484,31 @@ main(int argc, char *argv[], char *envp[])
 	} else {
 		CompressPeriodicCkpt = FALSE;
 	}
-	if (tmp) free(tmp);
+	if (tmp) {
+        free(tmp);
+    }
 
 	tmp = param( "PERIODIC_MEMORY_SYNC" );
 	if (tmp && (tmp[0] == 'T' || tmp[0] == 't')) {
 		PeriodicSync = TRUE;
+        free(tmp);
 	} else {
 		PeriodicSync = FALSE;
 	}
-	if (tmp) free(tmp);
+	if (tmp) {
+        free(tmp);
+    }
 
 	tmp = param( "COMPRESS_VACATE_CKPT" );
 	if (tmp && (tmp[0] == 'T' || tmp[0] == 't')) {
 		CompressVacateCkpt = TRUE;
+        free(tmp);
 	} else {
 		CompressVacateCkpt = FALSE;
 	}
-	if (tmp) free(tmp);
+	if (tmp) {
+        free(tmp);
+    }
 
 	tmp = param( "SLOW_CKPT_SPEED" );
 	if (tmp) {
@@ -1347,6 +1363,7 @@ regular_setup( char *host, char *cluster, char *proc, char *capability )
 	ExecutingHost = host;
 	start_job( cluster, proc );
 	send_job( Proc, host, capability );
+    free( Spool );
 }
 
 void
@@ -1376,6 +1393,8 @@ pipe_setup( char *cluster, char *proc, char *capability )
 
 	sock_RSC1 = RSC_ShadowInit( RSC_SOCK, CLIENT_LOG );
 	start_job( cluster, proc );
+
+    free( Spool );
 }
 
 /*
