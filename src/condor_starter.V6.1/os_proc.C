@@ -358,9 +358,8 @@ OsProc::JobCleanup( int pid, int status )
 		// check to see if the job dropped a core file.  if so, we
 		// want to rename that file so that it won't clobber other
 		// core files back at the submit site.  
-	if( WCOREDUMP(status) ) {
+	if( renameCoreFile() ) {
 		dumped_core = true;
-		renameCoreFile();
 	}
 
 	return 1;
@@ -431,9 +430,7 @@ OsProc::JobExit( void )
 bool
 OsProc::renameCoreFile( void )
 {
-	bool rval = true;
-
-#if ! defined( WIN32 )
+	bool rval = false;
 
 	priv_state old_priv;
 	char buf[64];
@@ -453,23 +450,21 @@ OsProc::renameCoreFile( void )
 	sprintf( new_name, "%s%c%s", job_iwd, DIR_DELIM_CHAR, buf );
 
 		// we need to do this rename as the user...
+	errno = 0;
 	old_priv = set_user_priv();
-	if( rename(old_name, new_name) < 0 ) {
-		rval = false;
+	if( rename(old_name, new_name) >= 0 ) {
+		rval = true;
 	}
 	set_priv( old_priv );
-
-	if( rval ) {
-		dprintf( D_FULLDEBUG, "Renamed core file to %s\n", buf );
-	} else {
-		dprintf( D_FULLDEBUG, "Failed to rename core file: "
-				 "errno %d (%s)\n", errno, strerror(errno) );
-	}
-
 	free( old_name );
 	free( new_name );
 
-#endif /* ! WIN32 */
+	if( rval ) {
+		dprintf( D_FULLDEBUG, "Found core file, renamed to %s\n", buf );
+	} else if( errno != ENOENT ) {
+		dprintf( D_ALWAYS, "Failed to rename core file: "
+				 "errno %d (%s)\n", errno, strerror(errno) );
+	}
 
 	return rval;
 }
@@ -556,10 +551,10 @@ OsProc::PublishUpdateAd( ClassAd* ad )
 					 WEXITSTATUS(exit_status) );
 			ad->Insert( buf );
 		}
-		if( WCOREDUMP(exit_status) ) {
+		if( dumped_core ) {
 			sprintf( buf, "%s = True", ATTR_JOB_CORE_DUMPED );
 			ad->Insert( buf );
-		} 
+		} // should we put in ATTR_JOB_CORE_DUMPED = false if not?
 	}
 	return true;
 }
