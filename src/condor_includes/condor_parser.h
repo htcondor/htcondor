@@ -13,5 +13,6 @@
 #include "condor_ast.h"
 
 int Parse(const char*, ExprTree*&);
+int Parse(char *, ExprTree *&);
 
 #endif
