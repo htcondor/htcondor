@@ -23,6 +23,14 @@ The details of each version are described below.
 \item The time it takes \Condor{dagman} to submit jobs has been
       reduced slightly to improve up the startup time of large DAGs.
 
+% commented out since i'm not sure we want to make a big deal of this
+% new config file knob. -derek 1/12/04
+% \item Added a new configuration macro
+%     \Macro{MAX\_CLAIM\_ALIVES\_MISSED}, described on
+%     page~\pageref{param:MaxClaimAlivesMissed}.
+%     This setting controls how many keep alive messages a startd is
+%     willing to miss before it releases the claim from a given schedd.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
