@@ -71,16 +71,17 @@ The execution step starts the Condor daemons running through
 the resource's Globus interface.
 
 By default, all files placed on the remote machine are placed in
-\File{\MacroUNI{HOME}/Condor\_glidein}.  It is assumed that this
-directory is shared by all of the machines that will be running
-the glidein Condor daemons.  By default, the daemon log files will also
-be written into this area, but you are encouraged
-to change this (e.g. with \Opt{-localdir}) to make them write to local
-scratch space on the execution machine.  However, for debugging
-initial problems, it may be convenient to have the log files
-in a more accessible place.
-Each instance of \Condor{glidein} will generate spool and log
-files.  These files should be occasionally removed.
+\File{\MacroUNI{HOME}/Condor\_glidein} (or whatever \Opt{-basedir} is
+defined to be).  It is assumed that this directory is shared by all of
+the machines that will be running the glidein Condor daemons.  By
+default, the daemon log files will also be written into this area, but
+you are encouraged to change this (e.g. with \Opt{-localdir}) to make
+them write to local scratch space on the execution machine.  However,
+for debugging initial problems, it may be convenient to have the log
+files in a more accessible place.  If you do leave the default
+setting alone, you should at least occasionally clean up old
+log and execute directories left behind by glideins or you may eventually
+run out of space.
 
 \Examples
 
@@ -95,7 +96,11 @@ automatically determine everything it needs to know about the remote site,
 it will ask you to provide more information.  A typical result of this
 process is something like the following command:
 \begin{verbatim}
-% condor_glidein -count 10 -arch 6.6.7-i686-pc-Linux-2.4 -setup_jobmanager jobmanager-fork  gatekeeper.site.edu/jobmanager-pbs
+% condor_glidein \
+    -count 10 \
+    -arch 6.6.7-i686-pc-Linux-2.4 \
+    -setup_jobmanager jobmanager-fork \
+    gatekeeper.site.edu/jobmanager-pbs
 \end{verbatim}
 
 You may use \Condor{q} to see the glidein jobs that have been
@@ -147,6 +152,12 @@ if you have trouble getting the system to work.
 	resource.
         If any of the files are missing, exits with an error code.
         This option cannot be run simultaneously with \Opt{-setuponly} }
+    \OptItem{\Opt{-run\_here}}{
+        Runs \Condor{master} directly rather than submitting it to
+        Condor-G for remote execution.  To instead generate a script that
+        does this, use \Opt{-run\_here} in combination with
+        \Opt{-gensubmit}.  This may be useful for running Glidein on
+        resources that are not directly accessible to Condor-G.}
     \OptItem{\Opt{-setuponly}}{
         Performs only the placement of files on the Globus resource.
         This option cannot be run simultaneously with \Opt{-runonly} }
@@ -259,6 +270,33 @@ if you have trouble getting the system to work.
         }
     \OptItem{\Opt{-suffix}{X}}{
         Suffix to use when generating files.  Default is process id. }
+    \OptItem{\OptArg{-gsi\_daemon\_name}{cert\_name}}{
+        Using this option turns on GSI authentication in the glidein
+        configuration.  The argument to this option is the GSI
+        certificate name that the glidein daemons will use to authenticate
+        themselves.  It should be set to whatever certificate name
+        you will use to execute the glideins.}
+    \OptItem{\OptArg{-install\_gsi\_trusted\_ca\_dir}{path}}{
+        Using this option turns on GSI authentication in the glidein
+        configuration.  The argument to this option is the path
+        to the trusted CA certificates that you wish the glidein
+        daemons to use (e.g. /etc/grid-security/certificates).  The
+        contents of this directory will be installed at the remote
+        site in \Opt{-basedir}/grid-security. }
+    \OptItem{\OptArg{-install\_gsi\_gridmap}{file}}{
+        Using this option turns on GSI authentication in the glidein
+        configuration.  The argument to this option is the filename
+        of the grid-mapfile that you wish the glidein daemons to
+        use.  The file will be installed at the remote site
+        in \Opt{-basedir}/grid-security.  The file should contain
+        entries mapping grid-certificates to user names.  At the
+        very least, it must contain an entry for the certificate
+        \OptArg{-gsi\_daemon\_name}.  If your other Condor
+        daemons use different certificates, then this file should
+        also mention any certificates that the glidein daemons
+        will encounter (schedd, collector, and negotiator).  See
+        section~\ref{sec:GSI-Authentication} for more information. }
+
 
 \end{Options}
 

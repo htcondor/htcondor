@@ -42,6 +42,13 @@ but can be any integer value.
 \item Added the \Condor{dagman} arguments {-noeventchecks} and
 {-allowlogerror} to \Condor{submit\_dag}.
 
+\item Added \Condor{glidein} options for setting up GSI authentication.
+
+\item Added \Condor{glidein} option {-run\_here} for direct execution
+of Glidein, instead of submitting it for remote execution.  You may also save
+a script for doing this and then run the script through whatever mechanism
+you want (like some batch system interface not supported by Condor-G).
+
 \end{itemize}
 
 \noindent Bugs Fixed:
