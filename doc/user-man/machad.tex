@@ -150,6 +150,14 @@ always want to be matched with jobs, and vice-versa.
 administrator which describes a cluster of machines which all have 
 the same \File{passwd} file entries, and therefore all have the same logins.
 %
+\item[\AdAttr{VirtualMachineID}] : For SMP machines, the integer
+that identifies the VM.
+The value will be \verb@X@ for the VM with 
+\begin{verbatim}
+name="vmX@full.hostname"
+\end{verbatim}
+For non-SMP machines with one virtual machine, the value will be 1.
+%
 \item[\AdAttr{VirtualMemory}] : The amount of currently available virtual memory 
 (swap space) expressed in kbytes.
 

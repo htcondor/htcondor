@@ -9,6 +9,7 @@ questions about Condor.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Obtaining \& Installing Condor}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{description}
 \item[Where can I download Condor?]
@@ -314,6 +315,11 @@ Condor will automatically recognize a SMP machine and advertise each
 CPU of the machine separately.
 For more details, see section~\ref{sec:Configuring-SMP} on
 page~\pageref{sec:Configuring-SMP}.
+
+\item[How do I configure a separate policy for the CPUs of an SMP machine?]
+Please see section~\ref{sec:Configuring-SMP} on
+page~\pageref{sec:Configuring-SMP} for a lengthy discussion on
+this topic.
 
 \item[How do I set up my machines so that only certain users's jobs will run on them?]
 \index{running a job!on only certain machines}
@@ -1120,6 +1126,67 @@ to restart the Condor daemons and effect the change.
 %Restart Condor after making this change.
 \end{description}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Grid Computing}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{description}
+
+\item[Do I need to have a Condor pool installed to use Condor-G?]
+No, you do not.
+Condor-G is only the job management part of Condor.
+It makes perfect sense to install Condor-G on just one machine
+within an organization.
+Note that access to remote resources using a Globus interface
+will be done through that one machine using Condor-G.
+
+\item[I want to install Globus on my Condor pool, and have external users
+submit jobs into the pool. Do I need to install Condor-G?]
+
+No, you do not need to install Condor-G.
+You need to install Globus,
+to get the "Condor jobmanager setup package."
+See the Condor-G
+homepage at \URL{http://www.cs.wisc.edu/condor/condorg/}
+for a link to Globus.
+
+\item[I am the administrator at Physics, and I have a 64-node cluster
+running Condor.
+The administrator at Chemistry is also running Condor on her 64-node cluster.
+We would like to be able to share resources.
+Do I need to install Globus and Condor-G?]
+
+You may, but you do not have a need to.
+Condor has a feature called flocking,
+which lets multiple Condor pools share resources.
+By setting configuration variables, jobs may be executed on
+either cluster.
+Flocking is good (better than Condor-G) because
+all the Condor features continue to work.
+Examples of features are
+checkpointing remote system calls.
+Unfortunately, flocking only works between Condor pools.
+So, access to a resource managed by PBS, for example,
+will still require Globus and Condor-G to submit jobs into the PBS queue.
+
+\item[What is glidein?]
+
+Glidein provides a way to temporarily add a Globus resource
+to a local Condor pool.
+Condor-G is not required to use glidein.
+Glidein uses Globus resource-management software to run jobs.
+It works by executing the portions of Condor
+software on the Globus resource.
+Then, Condor may execute the user's jobs.
+There are several benefits to working in this way.
+Checkpoints can be made of the jobs running on the Globus resource,
+and remote system calls can be supported.
+Condor can also dynamically schedule jobs across the Grid.
+
+See section~\ref{sec:Glidein} of the manual
+for further information.
+
+\end{description}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Troubleshooting}
 

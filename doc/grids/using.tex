@@ -1,11 +1,48 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Using-Condor-G}Using the Globus Universe}
+\subsection{\label{sec:Globus-intro}Working with Globus}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{universe!Globus}
-This section contains what users need to know to install Condor-G,
-run, and manage jobs under
-the globus universe.
+The Globus software provides a well-defined set of protocols
+that allow authentication, data transfer, and remote job submission.
+
+Authentication is a mechanism by which an identity is verified.
+Given proper authentication, authorization to use a resource
+is required.
+Authorization is a policy that determines who is allowed to do what. 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Globus-Protocols}Globus Protocols}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Condor uses the following Globus protocols.
+These protocols allow Condor to utilize grid machines for
+the execution of jobs.
+\begin{description}
+\item[GSI]
+The Globus Toolkit's Grid Security Infrastructure (GSI) provides essential
+\index{Condor-G!GSI}
+building blocks for other Grid protocols and Condor-G.
+This authentication and authorization system
+makes it possible to authenticate a user just once,
+using public key infrastructure (PKI) mechanisms to verify
+a user-supplied grid credential.
+GSI then handles the mapping of the grid credential to the
+diverse local credentials and authentication/authorization mechanisms that
+apply at each site. 
+\item[GRAM]
+The Grid Resource Allocation and Management (GRAM) protocol supports remote
+\index{Condor-G!GRAM}
+submission of a computational request (for example, to run program P)
+to a remote computational resource,
+and it supports subsequent monitoring and control of the resulting
+computation. 
+\item[GASS]
+The Globus Toolkit's Global Access to Secondary Storage (GASS) service provides
+\index{Condor-G!GASS}
+mechanisms for transferring data between a remote HTTP, FTP, or GASS server. 
+Condor-G uses GASS to transfer the executable, stdin, stdout, and stderr
+between the submission local and the remote resource.
+\end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Grid-Access}Accessing the Grid with Condor-G}
@@ -44,6 +81,10 @@ and request that a new job manager be started.
 GRAM is also used to monitor the job's progress.
 Condor-G detects and intelligently handles cases
 such as if the remote Globus resource crashes.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Condor-G-Setup}Set Up of Condor-G}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Condor-G-Install}Condor-G Installation}
@@ -144,6 +185,97 @@ See section~\ref{sec:Run-Condor} on page~\pageref{sec:Run-Condor}
 for details.
 \end{enumerate}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Condor-G-Credentials}Configuration and Credential Management}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The following are required configuration file entries that
+relate to submission of globus universe jobs.
+Condor-G fails if any of these entries are missing.
+These entries are provided in the file
+\File{etc/examples/condor\_config.local.condor-g}
+that is used during the installation of the Condor-G contrib module.
+
+\footnotesize
+\begin{verbatim}
+GRIDMANAGER             = $(SBIN)/condor_gridmanager
+GRIDMANAGER_LOG         = $(LOG)/GridmanagerLog
+MAX_GRIDMANAGER_LOG     = 64000
+GRIDMANAGER_DEBUG       = D_FULLDEBUG
+GAHP                    = $(SBIN)/gahp_server
+\end{verbatim} 
+\normalsize
+
+\AdAttr{GRIDMANAGER}
+gives the path to the gridmanager daemon.
+The 
+\AdAttr{GRIDMANAGER\_LOG}
+and
+\AdAttr{MAX\_GRIDMANAGER\_LOG}
+entries give the location of and how long
+the log files may be.
+\AdAttr{GRIDMANAGER\_DEBUG}
+sets a debugging level for the gridmanager daemon.
+The
+\AdAttr{GAHP} entry specifies the location of the required
+GAHP (Globus ASCII Helper Protocol) server.
+Details of the protocol may be found at
+\URL{http://www.cs.wisc.edu/condor/gahp/}.
+
+Further configuration file entries are for the gridmanager daemon,
+and they are relevant to
+the newest job managers from the Globus 2.0 version of software.
+\begin{verbatim}
+GRIDMANAGER_CHECKPROXY_INTERVAL = 600
+GRIDMANAGER_MINIMUM_PROXY_TIME = 180
+\end{verbatim} 
+
+Condor-G periodically checks for an updated proxy at
+an interval given by the configuration variable
+\AdAttr{GRIDMANAGER\_CHECKPROXY\_INTERVAL}.
+The value is defined in terms of seconds.
+For example, if you create a 12-hour proxy, and then
+6 hours later re-run \Prog{grid-proxy-init},
+Condor-G will check the proxy within
+this time interval, and use the new proxy it finds there.
+The default interval is 10 minutes.
+
+Condor-G also knows when the proxy of each job will expire,
+and if the proxy is not refreshed before
+\AdAttr{GRIDMANAGER\_MINIMUM\_PROXY\_TIME}
+seconds before the proxy expires,
+the Condor-G grid manager daemon exits.
+Since the grid manager daemon keeps track of all jobs
+associated with a proxy, its tasks
+(such as authentication, file transfer, job log maintainance)
+will not occur.
+So, if
+\AdAttr{GRIDMANAGER\_MINIMUM\_PROXY\_TIME}
+is 180, and the proxy is 3 minutes away from
+expiring, Condor-G will attempt to safely shut down,
+instead of simply losing
+contact with the remote job because Condor-G is unable to
+authenticate the remote job.
+The default setting is 3 minutes (180 seconds).
+
+% other variables that should probably get documented
+%GRIDMANAGER_CONTACT_SCHEDD_DELAY
+%GRIDMANAGER_JOB_PROBE_DELAY
+%GRIDMANAGER_RESOURCE_PRODBE_DELAY
+%GRIDMANAGER_MAX_PENDING_SUBMITS
+%GRIDMANAGER_GAHP_CALL_TIMEOUT
+%GRIDMANAGER_SYNC_JOB_IO_INTERVAL
+%GRIDMANAGER_MAX_PENDING_REQUESTS
+%GAHP_ARGS
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Using-Condor-G}Using the Globus Universe}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{universe!Globus}
+This section contains what users need to know to 
+run and manage jobs under the globus universe.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Running-CondorG-Job}Running a Globus Universe Job}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -218,6 +350,7 @@ where \File{test.submit} is the name of the submit description file.
 
 Example output from 
 \Condor{q} for this submission looks like:
+\footnotesize
 \begin{verbatim}
 % condor_q
 
@@ -229,10 +362,12 @@ Example output from
 
 1 jobs; 1 idle, 0 running, 0 held
 \end{verbatim}
+\normalsize
 
 After a short time, Globus accepts the job.
 Again running \Condor{q} will now result in
 
+\footnotesize
 \begin{verbatim}
 % condor_q
 
@@ -244,10 +379,12 @@ Again running \Condor{q} will now result in
 
 1 jobs; 0 idle, 1 running, 0 held
 \end{verbatim}
+\normalsize
 
 Then, very shortly after that, the queue will be empty again,
 because the job has finished:
 
+\footnotesize
 \begin{verbatim}
 % condor_q
 
@@ -258,11 +395,13 @@ because the job has finished:
 
 0 jobs; 0 idle, 0 running, 0 held
 \end{verbatim}
+\normalsize
 
 
 A second example of a submit description file runs the Unix \Prog{ls}
 program on a different Globus resource.
 
+\footnotesize
 \begin{verbatim}
 executable = /bin/ls
 Transfer_Executable = false
@@ -272,6 +411,7 @@ output = ls-test.out
 log = ls-test.log
 queue
 \end{verbatim} 
+\normalsize
 
 In this example, the executable (the binary) is pre-staged.
 The executable is on the remote machine, and it is not to
@@ -317,6 +457,7 @@ Now create the following submit description file
 (Replace \File{biron.cs.wisc.edu/jobmanager} with a resource
 you are authorized to use.):
 
+\footnotesize
 \begin{verbatim}
 executable = env-test.pl
 globusscheduler = biron.cs.wisc.edu/jobmanager
@@ -326,10 +467,12 @@ output = env-test.out
 log = env-test.log
 queue
 \end{verbatim}
+\normalsize
 
 When the job has completed, the output file \File{env-test.out}
 should contain something like this:
 
+\footnotesize
 \begin{verbatim}
 GLOBUS_GRAM_JOB_CONTACT = https://biron.cs.wisc.edu:36213/30905/1020633947/
 GLOBUS_GRAM_MYJOB_CONTACT = URLx-nexus://biron.cs.wisc.edu:36214
@@ -342,6 +485,7 @@ X509_USER_PROXY = /home/epaulson/.globus/.gass_cache/globus_gass_cache_102063395
 foo = bar
 zot = qux
 \end{verbatim}
+\normalsize
 
 
 Of particular interest is the GLOBUS\_REMOTE\_IO\_URL environment variable.
@@ -366,6 +510,7 @@ to copy input files to the execute machine.
 is just going to count the number of lines in a file.
 Hopefully, your job will be a bit more productive.)
 
+\footnotesize
 \begin{verbatim}
 #!/usr/bin/env perl
 use FileHandle;
@@ -390,9 +535,11 @@ print $_;
 
 exit 0;
 \end{verbatim}
+\normalsize
 
 Our submit file looks like this:
 
+\footnotesize
 \begin{verbatim}
 executable = gass-example.pl
 globusscheduler = biron.cs.wisc.edu/jobmanager
@@ -401,6 +548,7 @@ output = gass.out
 log = gass.log
 queue
 \end{verbatim}
+\normalsize
 
 There are two optional submit description file commands
 of note:
@@ -434,83 +582,3 @@ globusrsl = (project=Test_Project)
 This example's attribute name for the additional RSL is
 \verb@project@, and the value assigned is \verb@Test_Project@.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Condor-G-Credentials}Configuration and Credential Management}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-The following are required configuration file entries that
-relate to submission of globus universe jobs.
-Condor-G fails if any of these entries are missing.
-These entries are provided in the file
-\File{etc/examples/condor\_config.local.condor-g}
-that is used during the installation of the Condor-G contrib module.
-
-\begin{verbatim}
-GRIDMANAGER             = $(SBIN)/condor_gridmanager
-GRIDMANAGER_LOG         = $(LOG)/GridmanagerLog
-MAX_GRIDMANAGER_LOG     = 64000
-GRIDMANAGER_DEBUG       = D_FULLDEBUG
-GAHP                    = $(SBIN)/gahp_server
-\end{verbatim} 
-
-\AdAttr{GRIDMANAGER}
-gives the path to the gridmanager daemon.
-The 
-\AdAttr{GRIDMANAGER\_LOG}
-and
-\AdAttr{MAX\_GRIDMANAGER\_LOG}
-entries give the location of and how long
-the log files may be.
-\AdAttr{GRIDMANAGER\_DEBUG}
-sets a debugging level for the gridmanager daemon.
-The
-\AdAttr{GAHP} entry specifies the location of the required
-GAHP (Globus ASCII Helper Protocol) server.
-Details of the protocol may be found at
-\URL{http://www.cs.wisc.edu/condor/gahp/}.
-
-Further configuration file entries are for the gridmanager daemon,
-and they are relevant to
-the newest job managers from the Globus 2.0 version of software.
-\begin{verbatim}
-GRIDMANAGER_CHECKPROXY_INTERVAL = 600
-GRIDMANAGER_MINIMUM_PROXY_TIME = 180
-\end{verbatim} 
-
-Condor-G periodically checks for an updated proxy at
-an interval given by the configuration variable
-\AdAttr{GRIDMANAGER\_CHECKPROXY\_INTERVAL}.
-The value is defined in terms of seconds.
-For example, if you create a 12-hour proxy, and then
-6 hours later re-run \Prog{grid-proxy-init},
-Condor-G will check the proxy within
-this time interval, and use the new proxy it finds there.
-The default interval is 10 minutes.
-
-Condor-G also knows when the proxy of each job will expire,
-and if the proxy is not refreshed before
-\AdAttr{GRIDMANAGER\_MINIMUM\_PROXY\_TIME}
-seconds before the proxy expires,
-the Condor-G grid manager daemon exits.
-Since the grid manager daemon keeps track of all jobs
-associated with a proxy, its tasks
-(such as authentication, file transfer, job log maintainance)
-will not occur.
-So, if
-\AdAttr{GRIDMANAGER\_MINIMUM\_PROXY\_TIME}
-is 180, and the proxy is 3 minutes away from
-expiring, Condor-G will attempt to safely shut down,
-instead of simply losing
-contact with the remote job because Condor-G is unable to
-authenticate the remote job.
-The default setting is 3 minutes (180 seconds).
-
-% other variables that should probably get documented
-%GRIDMANAGER_CONTACT_SCHEDD_DELAY
-%GRIDMANAGER_JOB_PROBE_DELAY
-%GRIDMANAGER_RESOURCE_PRODBE_DELAY
-%GRIDMANAGER_MAX_PENDING_SUBMITS
-%GRIDMANAGER_GAHP_CALL_TIMEOUT
-%GRIDMANAGER_SYNC_JOB_IO_INTERVAL
-%GRIDMANAGER_MAX_PENDING_REQUESTS
-%GAHP_ARGS
