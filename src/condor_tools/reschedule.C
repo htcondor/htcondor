@@ -64,6 +64,10 @@ main( int argc, char *argv[] )
 
 	config( 0 ); 
 
+#if !defined(WIN32)
+	install_sig_handler(SIGPIPE, SIG_IGN );
+#endif
+
 	for (i = 1; i < argc; i++) {
 
 		if ((scheddAddr = get_schedd_addr(argv[1])) == NULL)
