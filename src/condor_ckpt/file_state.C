@@ -68,6 +68,7 @@ static char *_FileName_ = __FILE__;
 OpenFileTable	*FileTab;
 static char				Condor_CWD[ _POSIX_PATH_MAX ];
 static int				MaxOpenFiles;
+static int				Condor_isremote;
 
 
 
@@ -494,14 +495,19 @@ OpenFileTable::Restore()
 			} else {
 				mode = (mode_t)0;
 			}
-				// This is not quite right yet - we need to learn whether
-				// the file is opened locally or remotely this time around,
-				// and set f->remote_access accordingly.
+
 			f->real_fd = open( f->pathname, mode );
 			if( f->real_fd < 0 ) {
 				perror( "open" );
 				abort();
 			}
+			
+				// the open above saved in a global variable whether or not
+				// the file is remote (i.e. accessable only via shadow) or not.
+				// we must now save this into the file state table immediately,
+				// because we assume it is correct in what follows...
+				// Todd Tannenbaum, 3/14/95
+			f->remote_access = Condor_isremote;
 
 				// No need to seek if offset is 0, but more importantly, this
 				// fd could be a tty if offset is 0.
@@ -632,6 +638,8 @@ open( const char *path, int flags, ... )
 			break;
 		}
 	}
+
+	Condor_isremote = is_remote;
 
 	if( fd < 0 ) {
 		return -1;
