@@ -7,11 +7,33 @@
 #undef _POSIX_C_SOURCE
 #endif
 
+#if defined(IRIX53)
+#define _save_ansimode _NO_ANSIMODE
+#undef _NO_ANSIMODE
+#define _NO_ANSIMODE 0
+#define _save_xopen _XOPEN4UX
+#undef _XOPEN4UX
+#define _XOPEN4UX 1
+#endif
+
 #include <sys/wait.h>
+
+#if defined(IRIX53)
+#undef _NO_ANSIMODE
+#define _NO_ANSIMODE _save_ansimode
+#undef _save_ansimode
+#undef _XOPEN4UX
+#define _XOPEN4UX _save_xopen
+#undef _save_xopen
+#endif
 
 #if defined(LINUX) && !defined( WCOREFLG )
 #define WCOREFLG 0200
 #endif 
+
+#if defined(IRIX53)
+#define WCOREFLG WCOREFLAG
+#endif
 
 #if defined(HOLD_POSIX_C_SOURCE)
 #define _POSIX_C_SOURCE HOLD_POSIX_C_SOURCE 

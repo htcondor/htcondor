@@ -41,6 +41,7 @@
 
 #if defined(IRIX53)
 #define CONDOR_USE_FLOCK 0
+#include <sys/file.h>
 #endif
 
 #if defined(WIN32)

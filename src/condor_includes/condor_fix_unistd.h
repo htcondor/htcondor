@@ -23,6 +23,16 @@ struct timeval;
 #if !defined(_SYS_SELECT_H)
 typedef struct fd_set fd_set;
 #endif
+#define _save_SGIAPI _SGIAPI
+#undef _SGIAPI
+#define _SGIAPI 1
+#define _save_XOPEN4UX _XOPEN4UX
+#undef _XOPEN4UX
+#define _XOPEN4UX 1
+#define _save_XOPEN4 _XOPEN4
+#undef _XOPEN4
+#define _XOPEN4 1
+#define __vfork fork
 #endif /* IRIX62 */
 
 #if defined(LINUX)
@@ -38,6 +48,19 @@ typedef struct fd_set fd_set;
 /**********************************************************************
 ** Clean-up
 **********************************************************************/
+#if defined(IRIX62)
+#	undef _SGIAPI
+#	define _SGIAPI _save_SGIAPI
+#	undef _save_SGIAPI
+#	undef _XOPEN4UX
+#	define _XOPEN4UX _save_XOPEN4UX
+#	undef _save_XOPEN4UX
+#	undef _XOPEN4
+#	define _XOPEN4 _save_XOPEN4
+#	undef _save_XOPEN4
+#	undef __vfork
+#endif
+
 #if defined(SUNOS41)
 #	undef read
 #	undef write

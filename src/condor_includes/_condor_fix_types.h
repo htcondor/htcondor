@@ -88,6 +88,13 @@ typedef unsigned long rlim_t;
 typedef long rlim_t;
 #endif
 
+/* On IRIX, we need to compile senders.c with the stupid native CC compiler
+ * because gcc/g++ is rather broken on this platform.  BUT, CC does not have
+ * bool defined, so do it here. */
+#if !defined(__GNUC__) && defined(IRIX53)
+enum bool {false, true};
+#endif
+
 #endif
 
 

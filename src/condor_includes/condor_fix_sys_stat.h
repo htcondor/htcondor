@@ -1,7 +1,21 @@
 #ifndef CONDOR_SYS_STAT_H
 #define CONDOR_SYS_STAT_H
 
+#ifdef IRIX53
+#define _save_XOPEN4UX _XOPEN4UX
+#undef _XOPEN4UX
+#define _XOPEN4UX 1
+#endif
+
+
 #include <sys/stat.h>
+
+
+#ifdef IRIX53
+#undef _XOPEN4UX
+#define _XOPEN4UX _save_XOPEN4UX
+#undef _save_XOPEN4UX
+#endif
 
 /**********************************************************************
 **  Include whatever we need to get statfs and friends.
