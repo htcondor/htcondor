@@ -3,6 +3,8 @@ SRC_DIR = $(SRC_TREE)/condor_c++_util
 #if IS_I386_LINUX
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fexternal-templates -DNEW_PROC
 TEMPLATE_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC
+#elif IS_SGI_IRIX53
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC
 #else
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fexternal-templates -DNEW_PROC
 #endif
