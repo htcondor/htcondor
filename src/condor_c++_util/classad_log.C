@@ -271,6 +271,7 @@ ClassAdLog::LogState(int fd)
 				log = new LogSetAttribute(key, attr_name, attr_val);
 				log->Write(fd);
 				delete log;
+				delete [] attr_name;
 				attr_name = ad->NextName();
 			}
 		}
