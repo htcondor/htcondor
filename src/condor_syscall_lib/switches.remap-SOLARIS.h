@@ -97,25 +97,12 @@ REMAP_THREE( mprotect, _mprotect, int , char *, size_t , int )
 REMAP_ONE( pipe, _pipe, int , int *)
 REMAP_ONE( plock, _plock, int , int )
 REMAP_FOUR_VOID( profil, _profil, void , unsigned short *, unsigned int , unsigned int , unsigned int )
-REMAP_FOUR( ptrace, _ptrace, int , int , long , int , int )
-#if defined(Solaris251)
-	REMAP_THREE( readlink, _readlink, int , const char *, void *, int )
-#else
-	REMAP_THREE( readlink, _readlink, int , const char *, char *, size_t )
-#endif
-
 REMAP_THREE( readv, _readv, ssize_t, int, const struct iovec *, int )
 REMAP_TWO( rename, _rename, int, const char *, const char * )
 REMAP_ONE( rmdir, _rmdir, int , const char *)
 REMAP_ONE( setgid, _setgid, int , gid_t )
 /* REMAP_TWO( setgroups, _setgroups, int , int , const gid_t []) */
 REMAP_TWO( setgroups, _setgroups, int , int , const gid_t *)
-#if defined(Solaris251)
-	REMAP_THREE( setitimer, _setitimer, int , int , const struct itimerval *, struct itimerval *)
-#else
-	REMAP_THREE( setitimer, _setitimer, int , int , struct itimerval *, struct itimerval *)
-#endif
-
 REMAP_TWO( setregid, _setregid, int , long , long )
 REMAP_TWO( setreuid, _setreuid, int , long , long )
 REMAP_TWO( setrlimit, _setrlimit, int , int , const struct rlimit *)
@@ -133,3 +120,4 @@ REMAP_ONE( wait, _wait, pid_t , int *)
 REMAP_THREE( writev, _writev, int, int, const struct iovec *, int )
 
 #endif /* REMOTE_SYSCALLS */
+
