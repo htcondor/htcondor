@@ -36,7 +36,11 @@ installed!
 
 #endif /* LINUX */
 
+#ifndef WIN32	/* on Win32, we do EXCEPT instead of assert */
 #include <assert.h>
+#else
+#include "condor_debug.h"
+#endif	// of else ifndef WIN32
 
 #if defined(CONDOR_HAD_GNUC)
 #	define __GNUC__ CONDOR_HAD_GNUC
