@@ -314,7 +314,7 @@ char* getserveraddr()
 		/* do not use ckpt server */
 		return NULL;
 	} else {
-		if ( *server != 'T' || *server != 't' ) {
+		if ( *server != 'T' && *server != 't' ) {
 			free(server);
 			return NULL;
 		}
