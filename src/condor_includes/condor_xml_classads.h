@@ -93,16 +93,6 @@ class ClassAdXMLUnparser
     /** Destructor.  */
 	~ClassAdXMLUnparser();
 
-	/** Query to find if the XML uses compact names. Compact names are like
-	 * <a>, while non-compact names are like <attribute>
-	 * @return true if using compact names. */
-	bool GetUseCompactNames(void);
-
-	/** Set compact names. Compact names are like
-	 * <a>, while non-compact names are like <attribute>
-	 * @param use_compact_names A boolean indicating if compact names are desired. */
-	void SetUseCompactNames(bool use_compact_names);
-
 	/** Query to find if the XML uses compact spacing. Compact spacing 
 	 * places an entire ClassAd on one line, while non-compact places
 	 * each attribute on a separate line. 
@@ -142,7 +132,6 @@ class ClassAdXMLUnparser
 	void fix_characters(char *source, MyString &dest);
 
  private:
-	bool _use_compact_names;
 	bool _use_compact_spacing;
 };
 
