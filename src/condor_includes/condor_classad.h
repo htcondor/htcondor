@@ -44,19 +44,33 @@ class ClassAd : public AttrList
 		ClassAd(const ClassAd&);				// copy constructor
         virtual ~ClassAd();						// destructor
 
-        virtual int	fPrint(FILE*);				// print the AttrList to a file
+		// Type operations
         void		SetMyTypeName(char *);		// my type name set.
         char*		GetMyTypeName();			// my type name returned.
         void 		SetTargetTypeName(char *);	// target type name set.
         char*		GetTargetTypeName();		// target type name returned.
         int			GetMyTypeNumber();			// my type number returned.
         int			GetTargetTypeNumber();		// target type number returned.
-        int			IsAMatch(ClassAd*);			// tests symmetric match
+
+		// Requirement operations
+		int			SetRequirement(char *);
+		void        SetRequirement(ExprTree *);
+		ExprTree	*GetRequirement(void);
+
+		// Ranking operations
+		int 		SetRankExpr(char *);
+		void		SetRankExpr(ExprTree *);
+		ExprTree	*GetRankExpr(void);
+
+		// Sequence numbers
+		void		SetSequenceNumber(int);
+		int			GetSequenceNumber(void);
+
+		// Matching operations
+        int			IsAMatch(ClassAd*);			  // tests symmetric match
 		friend bool operator==(ClassAd&,ClassAd&);// same as symmetric match
 		friend bool operator>=(ClassAd&,ClassAd&);// lhs satisfies rhs
 		friend bool operator<=(ClassAd&,ClassAd&);// rhs satisifes lhs
-
-		ClassAd*	FindNext();
 
         // shipping functions -- added by Lei Cao
         int put(Stream& s);
@@ -67,6 +81,10 @@ class ClassAd : public AttrList
 		int put (XDR *);
 		int get (XDR *);
 
+		// misc
+		ClassAd*	FindNext();
+        virtual int	fPrint(FILE*);				// print the AttrList to a file
+
 		// poor man's update function until ClassAd Update Protocol  --RR
 		 void ExchangeExpressions (ClassAd *);
 
@@ -74,6 +92,9 @@ class ClassAd : public AttrList
 
 		AdType*		myType;						// my type field.
         AdType*		targetType;					// target type field.
+		ExprTree*	requirementExpr;			// the requirement
+		ExprTree*	rankExpr;					// the rank
+		// (sequence number is stored in attrlist)
 };
 
 class ClassAdList : public AttrListList
