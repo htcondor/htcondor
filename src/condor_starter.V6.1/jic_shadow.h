@@ -228,14 +228,89 @@ private:
 			@return true on success, false on failure */
 	bool initJobInfo( void );
 
+		/** Initialize the file-transfer-related properties of this
+			job from the ClassAd.  This procedure is somewhat
+			complicated, and involves some backwards compatibility
+			cruft, too.  All of the code paths share some common code,
+			too.  So, everything is split up into a few helper
+			functions to maximize clarity, keep the length of
+			individual functions reasonable, and to avoid code
+			duplication.  
+
+			initFileTransfer() is responsible for looking up
+			ATTR_SHOULD_TRANSFER_FILES, the better way to specify the
+			file transfer behavior.  If that's there, it decide what
+			to do based on what it says, and call the appropriate
+			helper method, either initNoFileTransfer() or
+			initWithFileTransfer().  If it's defined to "IF_NEEDED",
+			we compare the FileSystemDomain of the job with our local
+			value, using the sameFSDomain() helper, and if there's a
+			match, we don't setup file transfer.  If the new attribute
+			isn't defined, we call the initWithFileTransfer() helper,
+			since that knows what to do with the old
+			ATTR_TRANSFER_FILES attribute.
+
+			@return true on success, false if there are fatal errors
+		*/
+	bool initFileTransfer( void );
+
+		/** If we know for sure we do NOT want file transfer, we call
+			this method.  It sets the appropriate flags to turn off
+			file transfer code in the starter, and uses the original
+			value of ATTR_JOB_IWD to initialize the job's IWD and the
+			standard files (STDIN, STDOUT, and STDERR), using the
+			initStdFiles() method.
+			@return true on success, false if there are fatal errors
+		*/
+	bool initNoFileTransfer( void );
+
+		/** If we think we want file transfer, we call this method.
+			It tries to find the new ATTR_WHEN_TO_TRANSFER_OUTPUT
+			attribute and uses that to figure out if we should send
+			back output files when we're evicted, or only if the job
+			exits on its own.  If that attribute is not defined, we
+			search for the deprecated ATTR_TRANSFER_FILES attribute
+			and use that to figure out the same thing (or, if
+			TransferFiles is set to "NEVER", we just call
+			initNoFileTransfer(), instead).  Once we know that we're
+			doing a file transfer, we initialize the job's IWD to the
+			starter's temporary execute directory, and can then call
+			the initStdFiles() method to initalize STDIN, STDOUT, and
+			STDERR.
+			@return true on success, false if there are fatal errors
+		*/			
+	bool initWithFileTransfer( void );
+
+		/** This method is used whether or not we're doing a file
+			transfer to initialize the valid full paths to use for
+			STDIN, STDOUT, and STDERR.  The "job_iwd" data member of
+			this object must be filled in before this can be called.  
+			For the output files, if they contain full pathnames,
+			condor_submit now stores the original values in alternate
+			attribute names and puts a temporary value in the real
+			attributes so that things work for file transfer.
+			However, if we're not transfering files, we need to now
+			use these alternate names, since that's where the user
+			really wants the output, and we want to access them
+			directly.  So, for STDOUT, and STDERR, we also pass in the
+			alternate attribute names to the underlying helper method,
+			getJobStdFile(). 
+			@return at this time, this method always returns true
+		*/
+	bool initStdFiles( void );
+
 		/** Since the logic for getting the std filenames out of the
 			job ad and munging them are identical for all 3, just use
-			a helper to avoid duplicating code...
+			a helper to avoid duplicating code.  If we're not
+			transfering files, we may need to use an alternate
+			attribute (see comment above for initStdFiles() for more
+			details). 
 			@param attr_name The ClassAd attribute name to lookup
+			@param alt_name The alternate attribute name we might need
 			@return a strdup() allocated string for the filename we 
 			        care about, or NULL if it's not in the job ad.
 		*/
-	char* getJobStdFile( const char* attr_name );
+	char* getJobStdFile( const char* attr_name, const char* alt_name );
 
 		/// If the job ad says so, initialize our IO proxy
 	bool initIOProxy( void );
@@ -247,6 +322,14 @@ private:
 			@return true if they match, false if not
 		*/
 	bool sameUidDomain( void );
+
+		/** Compare our own FileSystemDomain vs. where the job came from.
+			We check in the job ClassAd for ATTR_FILESYSTEM_DOMAIN, and
+			compare that to our locally defined value.  This is used
+			to help figure out if we should do file-transfer or not.
+			@return true if they match, false if not
+		*/
+	bool sameFSDomain( void );
 
 		// // // // // // // //
 		// Private Data Members

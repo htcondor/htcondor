@@ -121,16 +121,9 @@ JICShadow::init( void )
 		// debugger.
 	checkForStarterDebugging();
 
-		// Grab all the interesting stuff out of the ClassAd we need
-		// to know about the job itself, like are we doing file
-		// transfer, what should the std files be called, etc.
-	if( ! initJobInfo() ) { 
-		dprintf( D_ALWAYS|D_FAILURE,
-				 "Failed to initialize job info from ClassAd!\n" );
-		return false;
-	}
-
-		// Next, instantiate our DCShadow object
+		// Next, instantiate our DCShadow object.  We want to do this
+		// right away, since the rest of this stuff might depend on
+		// what shadow version we're talking to...
 	if( shadow ) {
 		delete shadow;
 	}
@@ -148,6 +141,15 @@ JICShadow::init( void )
 		// to, we can register information about ourselves with the
 		// shadow in a method that it understands.
 	registerStarterInfo();
+
+		// Grab all the interesting stuff out of the ClassAd we need
+		// to know about the job itself, like are we doing file
+		// transfer, what should the std files be called, etc.
+	if( ! initJobInfo() ) { 
+		dprintf( D_ALWAYS|D_FAILURE,
+				 "Failed to initialize job info from ClassAd!\n" );
+		return false;
+	}
 	
 		// Now that we have the job ad, figure out what the owner
 		// should be and initialize our priv_state code:
@@ -722,68 +724,188 @@ JICShadow::initJobInfo( void )
 		return false;
 	}
 
-		// figure out if we're going to be using file transfer, and
-		// therefore, if we're going to want to change the job's iwd
-		// and so we know what filenames to use for stdin, stdout,
-		// etc. 
-	char tmp[_POSIX_ARG_MAX];
+		// everything else is related to if we're transfering files or
+		// not. that can get a little complicated, so it all lives in
+		// its own set of functions.
+	return initFileTransfer();
+}
 
-	change_iwd = true;
-	wants_file_transfer = true;
 
-		/* setup value for transfer_at_vacate and also determine if 
-		   we should change our working directory */
-	tmp[0] = '\0';
-	job_ad->LookupString( ATTR_TRANSFER_FILES, tmp );
-		// if set to "ALWAYS", then set transfer_at_vacate to true
-	switch ( tmp[0] ) {
-	case 'a':
-	case 'A':
-		transfer_at_vacate = true;
+bool
+JICShadow::initFileTransfer( void )
+{
+	bool rval;
+
+		// first, figure out if the job supports the new file transfer
+		// attributes.  if so, we can see if it wants optional file
+		// transfer, and if we need to use it or not...
+
+	ShouldTransferFiles_t should_transfer;
+	char* should_transfer_str = NULL;
+
+	job_ad->LookupString( ATTR_SHOULD_TRANSFER_FILES, &should_transfer_str );
+	if( should_transfer_str ) {
+		should_transfer = getShouldTransferFilesNum( should_transfer_str );
+		if( should_transfer < 0 ) {
+			dprintf( D_ALWAYS, "ERROR: Invalid %s (%s) in job ad, "
+					 "aborting\n", ATTR_SHOULD_TRANSFER_FILES, 
+					 should_transfer_str );
+			free( should_transfer_str );
+			return false;
+		}
+	} else { 
+			// new attribute is not defined, use the old method.  we
+			// just want to call the initWithFileTransfer() method,
+			// since it will check the ATTR_TRANSFER_FILES if it can't
+			// find ATTR_WHEN_TO_TRANSFER_OUTPUT...
+		dprintf( D_FULLDEBUG, "No %s specified, looking for deprecated %s "
+				 "attribute\n", ATTR_SHOULD_TRANSFER_FILES, 
+				 ATTR_TRANSFER_FILES );
+		return initWithFileTransfer();
+	}
+
+	switch( should_transfer ) {
+	case STF_IF_NEEDED:
+		if( sameFSDomain() ) {
+			dprintf( D_FULLDEBUG, "%s is \"%s\" and job's FileSystemDomain "
+					 "matches local value, NOT transfering files\n",
+					 ATTR_SHOULD_TRANSFER_FILES, should_transfer_str );
+			rval = initNoFileTransfer();
+		} else {
+			dprintf( D_FULLDEBUG, "%s is \"%s\" but job's FileSystemDomain "
+					 "does NOT match local value, transfering files\n",
+					 ATTR_SHOULD_TRANSFER_FILES, should_transfer_str );
+			rval = initWithFileTransfer();
+		}
 		break;
-	case 'n':  /* for "Never" */
-	case 'N':
-		change_iwd = false;  // It's true otherwise...
-		wants_file_transfer = false;
+	case STF_YES:
+		dprintf( D_FULLDEBUG, "%s is \"%s\", transfering files\n", 
+				 ATTR_SHOULD_TRANSFER_FILES, should_transfer_str );
+		rval = initWithFileTransfer();
+		break;
+	case STF_NO:
+		dprintf( D_FULLDEBUG, "%s is \"%s\", NOT transfering files\n", 
+				 ATTR_SHOULD_TRANSFER_FILES, should_transfer_str );
+		rval = initNoFileTransfer();
 		break;
 	}
+	free( should_transfer_str );
+	return rval;
+}
+
+
+bool
+JICShadow::initNoFileTransfer( void )
+{
+	wants_file_transfer = false;
+	change_iwd = false;
 
 		/* We assume that transfer_files == Never means that we want
 		   to live in the submit directory, so we DON'T change the
 		   ATTR_JOB_CMD or the ATTR_JOB_IWD.  This is important to
 		   MPI!  -MEY 12-8-1999 */
-	if( change_iwd ) {
-			// reset iwd of job to the starter directory
-		sprintf( tmp, "%s=\"%s\"", ATTR_JOB_IWD, Starter->GetWorkingDir() );
-		job_ad->InsertOrUpdate( tmp );		
-		job_iwd = strdup( Starter->GetWorkingDir() );
-	} else {
-		job_ad->LookupString( ATTR_JOB_IWD, &job_iwd );
-	}
+	job_ad->LookupString( ATTR_JOB_IWD, &job_iwd );
 	if( ! job_iwd ) {
 		dprintf( D_ALWAYS, "Can't find job's IWD, aborting\n" );
 		return false;
 	}
 
+		// now that we've got the iwd we're using and all our
+		// transfer-related flags set, we can finally initialize the
+		// job's standard files.  this is shared code if we're
+		// transfering or not, so it's in its own function.
+	return initStdFiles();
+}
+
+
+bool
+JICShadow::initWithFileTransfer()
+{
+		// First, see if the new attribute to decide when to transfer
+		// the output back is defined, and if so, use it. 
+	char* when_str = NULL;
+	FileTransferOutput_t when;
+	job_ad->LookupString( ATTR_WHEN_TO_TRANSFER_OUTPUT, &when_str );
+	if( when_str ) {
+		when = getFileTransferOutputNum( when_str );
+		if( when < 0 ) {
+			dprintf( D_ALWAYS, "ERROR: Invalid %s (%s) in job ad, "
+					 "aborting\n", ATTR_WHEN_TO_TRANSFER_OUTPUT, when_str );
+			free( when_str );
+			return false;
+		}
+		free( when_str );
+		if( when == FTO_ON_EXIT_OR_EVICT ) {
+			transfer_at_vacate = true;
+		}
+	} else { 
+			// no new attribute, try the old...
+		char* tmp = NULL;
+		job_ad->LookupString( ATTR_TRANSFER_FILES, &tmp );
+			// if set to "ALWAYS", then set transfer_at_vacate to true
+		switch ( tmp[0] ) {
+		case 'a':
+		case 'A':
+			transfer_at_vacate = true;
+			break;
+		case 'n':  /* for "Never" */
+		case 'N':
+			return initNoFileTransfer();
+			break;
+		}
+	}
+
+		// if we're here, it means we're transfering files, so we need
+		// to reset the job's iwd to the starter directory
+
+	wants_file_transfer = true;
+	change_iwd = true;
+	job_iwd = strdup( Starter->GetWorkingDir() );
+	MyString line = ATTR_JOB_IWD;
+	line += " = \"";
+	line += job_iwd;
+	line+= '"';
+	job_ad->InsertOrUpdate( line.Value() );
+
+		// now that we've got the iwd we're using and all our
+		// transfer-related flags set, we can finally initialize the
+		// job's standard files.  this is shared code if we're
+		// transfering or not, so it's in its own function.
+	return initStdFiles();
+}
+
+
+bool
+JICShadow::initStdFiles( void )
+{
 		// now that we know about file transfer and the real iwd we'll
 		// be using, we can initialize the std files... 
-	job_input_name = getJobStdFile( ATTR_JOB_INPUT );
-	job_output_name = getJobStdFile( ATTR_JOB_OUTPUT );
-	job_error_name = getJobStdFile( ATTR_JOB_ERROR );
+	job_input_name = getJobStdFile( ATTR_JOB_INPUT, NULL );
+	job_output_name = getJobStdFile( ATTR_JOB_OUTPUT, ATTR_JOB_OUTPUT_ORIG );
+	job_error_name = getJobStdFile( ATTR_JOB_ERROR, ATTR_JOB_ERROR_ORIG );
 
+		// so long as all of the above are initialized, we were
+		// successful, regardless of if any of them are NULL...
 	return true;
 }
 
 
 char* 
-JICShadow::getJobStdFile( const char* attr_name )
+JICShadow::getJobStdFile( const char* attr_name, const char* alt_name )
 {
 	char* tmp = NULL;
 	char* filename1 = NULL;
 	char filename[_POSIX_PATH_MAX];
 	filename[0] = '\0';
 
-	if( job_ad->LookupString(attr_name, &tmp) ) {
+	if( ! wants_file_transfer && alt_name ) {
+		job_ad->LookupString( alt_name, &tmp );
+	}
+
+	if( !tmp ) {
+		job_ad->LookupString( attr_name, &tmp );
+	}
+	if( tmp ) {
 		if ( !nullFile(tmp) ) {
 			if( wants_file_transfer ) {
 				filename1 = basename( tmp );
@@ -852,6 +974,40 @@ JICShadow::sameUidDomain( void )
 	return false;
 }
 
+
+bool
+JICShadow::sameFSDomain( void ) 
+{
+	char* job_fs_domain = NULL;
+	bool same_domain = false;
+
+	ASSERT( fs_domain );
+
+	if( ! job_ad->LookupString(ATTR_FILE_SYSTEM_DOMAIN, &job_fs_domain) ) {
+			// No FileSystemDoamin in the job ad, what should we do?
+			// For now, we'll just have to assume that we're not in
+			// the same FSDomain...
+		dprintf( D_FULLDEBUG, "SameFSDomain(): Job ClassAd does not "
+				 "contain %s, returning false\n", ATTR_FILE_SYSTEM_DOMAIN );
+		return false;
+	}
+
+	dprintf( D_FULLDEBUG, "Submit FsDomain: \"%s\"\n",
+			 job_fs_domain );
+	dprintf( D_FULLDEBUG, " Local FsDomain: \"%s\"\n",
+			 fs_domain );
+
+	if( stricmp(job_fs_domain, fs_domain) == MATCH ) {
+		same_domain = true;
+	}
+
+		// do we want to do any "security" checking on the FS domain
+		// here?  i don't think so...  it should just be an arbitrary
+		// string, not necessarily a domain name or substring.
+
+	free( job_fs_domain );
+	return same_domain;
+}
 
 
 bool
