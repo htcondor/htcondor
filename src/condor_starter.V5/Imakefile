@@ -14,9 +14,7 @@ CKPT_FLAG = -DNO_CKPT
 
 CFLAGS = $(STD_C_FLAGS) $(CKPT_FLAG) -DNEW_PROC
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CKPT_FLAG) -DNEW_PROC $(PVM_INCLUDE)\
-	$(PVM_FLAG) -fexternal-templatesi
-
-/* #	$(PVM_FLAG) $(STATIC) */
+	$(PVM_FLAG) -fexternal-templates
 
 #if IS_ALPHA_OSF1
 LDFLAGS = -lmld
@@ -45,9 +43,9 @@ CLASS_LIB_OBJ = alarm.o state_machine_driver.o name_tab.o
 #endif
 
 PORTABLE_SRC = $(CLASS_LIB_SRC) signals.C starter.C \
-	user_proc.C starter.toy.C tables.C $(PVM_SRC) killkids.c instantiate.C
+	user_proc.C starter.toy.C tables.C $(PVM_SRC) killkids.c
 PORTABLE_OBJ = $(CLASS_LIB_OBJ) signals.o starter.o \
-	user_proc.o tables.o $(PVM_OBJ) ../condor_syscall_lib/file_stream.o killkids.o instantiate.o
+	user_proc.o tables.o $(PVM_OBJ) ../condor_syscall_lib/file_stream.o killkids.o 
 
 NON_PORTABLE_SRC = NON_POSIX.C resource_limits.$(OS).C analyze_exec.$(OS).C \
 	analyze_core.$(OS).C
@@ -98,8 +96,8 @@ TOY_OBJ = state_machine_driver.o signals.o name_tab.o starter.toy.o \
 	alarm.o
 TOY_LIB =  $(UTIL_LIB) $(XDR_LIB)
 
-/* all_target(condor_starter.V5.mike test_it hound) ---we no longer need test_it & hound */
-all_target(condor_starter.V5.mike)
+/* all_target(condor_starter.V5 test_it hound) ---we no longer need test_it & hound */
+all_target(condor_starter.V5)
 tags_target($(SRC),$(LIBDIRS))
 depend_target($(SRC))
 
@@ -110,12 +108,12 @@ c_plus_target(hound,hound.o,$(NULL))
 
 #if IS_R6000_AIX31 || IS_R6000_AIX32 
 G++_DIR = /usr/gnu/lib/gcc-lib/rs6000-ibm-aix/2.5.0
-condor_starter.V5.mike: $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) $(LIB)
+condor_starter.V5: $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) $(LIB)
 	$(G++_DIR)/ld \
 	-T512 -H512 -btextro -bhalt:4 -bnodelcsect \
 	-L/usr/gnu/lib \
 	-L$(INSTALL_DIR)/lib \
-	-o condor_starter.V5.mike \
+	-o condor_starter.V5 \
 	/lib/crt0.o \
 	$(PORTABLE_OBJ) \
 	$(NON_PORTABLE_OBJ) \
@@ -124,10 +122,17 @@ condor_starter.V5.mike: $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) $(LIB)
 	$(REMOTE_SYSCALL_LIB) \
 	-lg++ $(G++_DIR)/libgcc.a -lc
 clean::
-	rm -f condor_starter.V5.mike $(OBJ)
+	rm -f condor_starter.V5 $(OBJ)
 #else
-c_plus_target(condor_starter.V5.mike,$(OBJ),$(LIB))
+c_plus_target(condor_starter.V5,$(OBJ),$(LIB))
 #endif
-release_target(condor_starter.V5.mike,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+release_target(condor_starter.V5,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
 c_plus_target(toy,$(TOY_OBJ),$(TOY_LIB))
+
+starter_state_diagram.dot: condor_starter.V5
+	condor_starter.V5 -dot > starter_state_diagram.dot
+
+starter_state_diagram.ps: starter_state_diagram.dot
+	dot -Tps -Gsize="10,9" -Gratio=.75 -Gorientation=landscape \
+	starter_state_diagram.dot > starter_state_diagram.ps
