@@ -1,3 +1,7 @@
+5/22/01 V6_3-pre-authentication
+	The V6_3-branch before zach's authentication stuff, which
+	affects pretty much all of condor's ReliSocks.
+
 5/16/01 V6_3-post-merge-V6_3_0-merge-2
        The state of the V6_3-branch after merging in the
        V6_3_0-branch as tagged at V6_3_0-merge-2.
