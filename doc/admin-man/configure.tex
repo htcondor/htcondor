@@ -571,8 +571,6 @@ system.
   If no value for \Macro{LOCK} is provided, the value of \Macro{LOG}
   is used.
 
-% Default value check end here: NRL 11 Dec 2003
-
 
 \item[\Macro{HISTORY}] \label{param:History} Defines the
   location of the Condor history file, which stores information about
@@ -580,6 +578,11 @@ system.
   is used by both the \Condor{schedd} which appends the information
   and \Condor{history}, the user-level program used to view
   the history file.
+% PKK
+% Described in default config file: YES
+% Defined in the default config file: YES 
+% Default definition in config file: $(SPOOL)/history
+% Result if not defined or RHS is empty: no history file is kept.
 
 \item[\Macro{DEFAULT\_DOMAIN\_NAME}] \label{param:DefaultDomainName}
   If you do not use a fully qualified name in file \File{/etc/hosts}
@@ -598,12 +601,22 @@ system.
   reading the global configuration file, Condor figures out the right values
   for \MacroUNI{HOSTNAME} and \MacroUNI{FULL\_HOSTNAME} and inserts them
   into its configuration table.
+% PKK
+% Described in default config file: YES
+% Defined in the default config file: NO
+% Default definition in config file: bogus value
+% Result if not defined or RHS is empty: autodiscovered domain, if any, is used.
 
 \item[\Macro{NETWORK\_INTERFACE}] \label{param:NetworkInterface}
   For systems with multiple network interfaces, Condor chooses the
   first one defined.  To choose a network interface other than the
   first one, this macro is defined by giving the IP address
   to use.
+% PKK
+% Described in default config file: NO
+% Defined in the default config file: NO
+% Default definition in config file: N/A
+% Result if not defined or RHS is empty: Condor binds to first interface found
 
 \item[\Macro{CM\_IP\_ADDR}] \label{param:CMIPAddr}
   If neither \MacroNI{COLLECTOR\_HOST} nor 
@@ -611,6 +624,11 @@ system.
   macro will be used to determine the IP address of the central
   manager (collector daemon).
   This macro is defined by an IP address.
+% PKK
+% Described in default config file: NO
+% Defined in the default config file: NO
+% Default definition in config file: N/A
+% Result if not defined or RHS is empty: Condor performs above algorithm
 
 \item[\Macro{HIGHPORT}] \label{param:HighPort}
   Specifies an upper limit of given port numbers for Condor to use,
@@ -620,6 +638,12 @@ system.
   system-assigned port numbers.
   For this macro to work, both \MacroNI{HIGHPORT} and
   \MacroNI{LOWPORT} (given below) must be defined.
+% PKK
+% Described in default config file: YES
+% Defined in the default config file: NO
+% Default definition in config file: bogus
+% Result if not defined or RHS is empty: Condor uses any ports available,
+% regardless of the LOWPORT setting
 
 \item[\Macro{LOWPORT}] \label{param:LowPort}
   Specifies a lower limit of given port numbers for Condor to use,
@@ -629,6 +653,12 @@ system.
   system-assigned port numbers.
   For this macro to work, both \MacroNI{HIGHPORT} (given above) and
   \MacroNI{LOWPORT} must be defined.
+% PKK
+% Described in default config file: YES
+% Defined in the default config file: NO
+% Default definition in config file: bogus
+% Result if not defined or RHS is empty: Condor uses any ports available,
+% regardless of the HIGHPORT setting
 
 \item[\Macro{EMAIL\_DOMAIN}] \label{param:EmailDomain}
   By default, if a user does not specify \AdAttr{notify\_user} in the
@@ -649,7 +679,19 @@ system.
   things are true: 1) \MacroNI{UID\_DOMAIN} is set to your domain, not
   \MacroUNI{FULL\_HOSTNAME}, and 2) email to user@UID\_DOMAIN will not 
   work. 
-
+% PKK
+% Described in default config file: YES
+% Defined in the default config file: NO
+% Default definition in config file: bogus
+% Result if not defined or RHS is empty: 
+%	Condor will try to use the notify_user attribute email in the job ad.
+%	If that is not present, then it will use the UID_DOMAIN embedded in
+%	the job ad.
+%	If that is not present, then it will use the UID_DOMAIN found in the
+%	config file.
+%	If that is not present, then I suspect there is a bug and the code will
+%	segfault!!! (This needs fixing...)
+ 
 \item[\Macro{CREATE\_CORE\_FILES}] \label{param:CreateCoreFiles}
   Defines whether or not Condor daemons are to
   create a core file if something really bad happens.  It is
@@ -666,10 +708,20 @@ system.
   limit before starting Condor. You set the parameter
   to whatever behavior you want Condor to enforce.  This parameter has
   no default value, and is commented out in the default configuration file. 
+% PKK
+% Described in default config file: YES
+% Defined in the default config file: NO
+% Default definition in config file: bogus
+% Result if not defined or RHS is empty: shell's default corelimit size applies
 
 \item[\Macro{Q\_QUERY\_TIMEOUT}] \label{param:QQueryTimeout}
   Defines the timeout (in seconds) that \Condor{q} uses when trying to
   connect to the \Condor{schedd}.  Defaults to 20.
+% PKK
+% Described in default config file: NO
+% Defined in the default config file: NO
+% Default definition in config file: N/A
+% Result if not defined or RHS is empty: defaults to 20 seconds.
 
 \item[\Macro{UPDATE\_COLLECTOR\_WITH\_TCP}]
   \label{param:UpdateCollectorWithTcp}
@@ -687,6 +739,29 @@ system.
   that the collector will accept TCP connections for updates, and will
   keep them open for reuse.
   Defaults to FALSE.
+% PKK
+% Described in default config file: YES
+% Defined in the default config file: NO
+% Default definition in config file: bogus
+% Result if not defined or RHS is empty: disable the feature of TCP updates to
+% collectors
+% WARNING: The code also looks for UPDATE_COLLECTORS_WITH_TCP, which
+% means the SAME THING as UPDATE_COLLECTOR_WITH_TCP
+
+\item[\Macro{TCP\_UPDATE\_COLLECTORS}]
+  \label{param:TcpUpdateCollectors}
+  The list of collectors which will be updated with TCP instead of UDP.
+  Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
+  Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
+  for more details and a discussion of when you would need this
+  functionality. 
+% PKK
+% Described in default config file: NO
+% Defined in the default config file: NO
+% Default definition in config file: N/A
+% Result if not defined or RHS is empty: no collectors are updated with TCP
+% WARNING: Look in Version 6.5.2 version history for more information about
+% this particular entry.
 
 \item[\Macro{TRUST\_UID\_DOMAIN}]
   \label{param:TrustUidDomain}
@@ -706,6 +781,11 @@ system.
   to spawn a job, instead of making sure the submit machine's hostname
   matches the \MacroNI{UID\_DOMAIN}.
   The default is FALSE, since it is more secure to perform this test. 
+% PKK
+% Described in default config file: YES
+% Defined in the default config file: NO
+% Default definition in config file: bogus
+% Result if not defined or RHS is empty: this entry is considered False
 
 \item[\Macro{PASSWD\_CACHE\_REFRESH}]
   \label{param:PasswdCacheRefresh}
@@ -721,9 +801,15 @@ system.
   0. In addition, the cache can also be flushed explicitly by running
   the ``\condor{reconfig} -full'' command. This setting has no effect
   on Windows.
+% PKK
+% Described in default config file: NO
+% Defined in the default config file: NO
+% Default definition in config file: N/A
+% Result if not defined or RHS is empty: 300 seconds
 
 \end{description}
 
+% Default value check end here: PKK 8 Jan 2004
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Daemon-Logging-Config-File-Entries}
