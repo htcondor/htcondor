@@ -97,12 +97,14 @@ int		table_size;
 	register BUCKET	*ptr;
 	int		loc;
 	BUCKET	*bucket;
+	char	tmp_name[ 1024 ];
 
 		/* Make sure not already in hash table */
-	lower_case( name );
-	loc = hash( name, table_size );
+	strcpy( tmp_name, name );
+	lower_case( tmp_name );
+	loc = hash( tmp_name, table_size );
 	for( ptr=table[loc]; ptr; ptr=ptr->next ) {
-		if( strcmp(name,ptr->name) == 0 ) {
+		if( strcmp(tmp_name,ptr->name) == 0 ) {
 			FREE( ptr->value );
 			ptr->value = strdup( value );
 			return;
@@ -111,7 +113,7 @@ int		table_size;
 
 		/* Insert it */
 	bucket = (BUCKET *)MALLOC( sizeof(BUCKET) );
-	bucket->name = strdup( name );
+	bucket->name = strdup( tmp_name );
 	bucket->value = strdup( value );
 	bucket->next = table[ loc ];
 	table[loc] = bucket;
