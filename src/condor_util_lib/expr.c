@@ -1620,3 +1620,82 @@ CONTEXT	*context;
 	(void)fclose( fp );
 }
 #endif notdef
+
+/*
+* these are added for condor flocking : dhruba 
+*/
+append_stmt(expr, context)
+EXPR    *expr;
+CONTEXT *context;
+{
+    int     i;
+    char    *name;
+
+    if( expr->data[0]->type != NAME ) {
+        dprintf( D_ALWAYS, "First element in statement not a NAME" );
+        return FALSE;
+    }
+    name = expr->data[0]->s_val;
+
+    for( i=0; i<context->len; i++ ) 
+	{
+        if( context->data[i]->data[0]->type != NAME ) 
+		{
+            dprintf( D_ALWAYS,
+                "Bad machine context, first elem in expr [%d] is type %d",
+                i, context->data[i]->data[0]->type );
+            return FALSE;
+        }
+		if( strcmp(name,context->data[i]->data[0]->s_val) == MATCH )
+		{
+			/* found where to append */
+			concatenate_expr(context->data[i], expr,AND);
+			return  TRUE;
+		}
+	}
+	return FALSE;
+}
+
+concatenate_expr(exp1, exp2,operator)
+EXPR	*exp1, *exp2;
+int     operator;
+{
+	int 	i;
+	ELEM	*elem;
+	if ( ( elem = (ELEM*) malloc(sizeof(ELEM))) == NULL )
+	{
+		EXCEPT(" Error in malloc in util lib\n");
+	}
+	elem->type = operator;
+
+	dprintf(D_ALWAYS," Displaying expr before :");
+	display_expr(exp1);
+	display_expr(exp2);
+
+	for ( i=1; i < exp2->len-2; i++)
+		add_elem_before_last( exp2->data[i], exp1);
+	add_elem_before_last( elem, exp1);
+}
+		
+/*
+* adds the element in the last-but-one slot of the data array 
+*/
+add_elem_before_last( elem, expr )
+ELEM	*elem;
+EXPR	*expr;
+{
+	if( expr->len == expr->max_len ) {
+		expr->max_len += EXPR_INCR;
+		expr->data =
+			(ELEM **)REALLOC( (char *)expr->data,
+			(unsigned)(expr->max_len * sizeof(ELEM *)) );
+	}
+	expr->data[expr->len]   = expr->data[expr->len-1];
+	expr->data[expr->len-1] = expr->data[expr->len-2];
+	expr->data[expr->len-2] = elem;
+	expr->len++;
+}
+		
+
+	    
+
