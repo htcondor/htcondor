@@ -279,7 +279,7 @@ private:
     char * _cmdFile;
   
     // name given to the job by the user
-    char * _jobName;
+    const char* _jobName;
   
     /*  Job queue's
       
