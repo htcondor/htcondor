@@ -45,12 +45,14 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 extern "C" char *get_schedd_addr(const char *);
 
+void
 usage( char *str )
 {
 	fprintf( stderr, "Usage: %s hostname-list\n", str );
 	exit( 1 );
 }
 
+int
 main( int argc, char *argv[] )
 {
 	int			cmd;
@@ -91,7 +93,5 @@ main( int argc, char *argv[] )
 
 	}
 
-	exit( 0 );
+	return 0;
 }
-
-extern "C" SetSyscalls(){}
