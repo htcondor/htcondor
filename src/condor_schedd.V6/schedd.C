@@ -1508,7 +1508,17 @@ Scheduler::actOnJobs(int, Stream* s)
 	rsock->timeout( 10 );  
 	rsock->decode();
 	if( ! rsock->isAuthenticated() ) {
-		rsock->authenticate();
+		if( ! rsock->authenticate() ) {
+				// we failed to authenticate, we should bail out now
+				// since we don't know what user is trying to perform
+				// this action.
+				// TODO: it'd be nice to print out what failed, but we
+				// need better error propagation for that...
+			dprintf( D_ALWAYS, "actOnJobs(): "
+					 "failed to authenticate, aborting\n" );
+			refuse( s );
+			return FALSE;
+		}
 	}
 
 		// read the command ClassAd + EOM
