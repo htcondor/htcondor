@@ -76,6 +76,11 @@ object_target(tools)
 makefiles:: ../doc/Makefile
 ../doc/Makefile:
 	cd ../doc; imake -I../config -DTilde=/usr/home/condor -s Makefile
+makefiles:: h/Makefile
+h/Makefile:
+	cd h; imake IMAKE_FLAGS
+h: h/Makefile
+	cd h; make
 #else
 	object_target(shadow)
 	object_target(starter)
@@ -114,6 +119,3 @@ check_platform_target
 clean::
 	cd h; make clean
 	rm -rf Makefile */Makefile release_dir
-
-h: ALWAYS
-	cd h; imake IMAKE_FLAGS; make all
