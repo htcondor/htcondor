@@ -22,18 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
  
-
-#include <stdio.h>
-#include <sys/file.h>
-#include <sys/ioctl.h>
-
-/* Solaris specific change ..dhaval 6/24 */
-#if defined(Solaris)
-#include <sys/fcntl.h>
-#include <unistd.h>
-#include <termios.h>
-#endif
-
+#include "condor_common.h"
 #include "debug.h"
 #include "except.h"
 
