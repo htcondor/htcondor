@@ -377,7 +377,18 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 		  But, we can't do that. :( So, instead, we call getOwner()
 		  and compare that to whatever ATTR_OWNER is in our job ad
 		  (the original ad, not whatever they're requesting now).
+
+		  WORSE YET, even if it did work, there's no user credential
+		  management when you use strong authentication, so this
+		  socket would be authenticated with the shadow's system
+		  credentials, not the user.  So, *NONE* of this will work,
+		  anyway.  
+
+		  We could try to introduce some kind of real shared
+		  secret/capability to make this more secure, but that's going
+		  to have to wait for time to make some bigger changes.
 		*/
+#if 0
 	const char* new_owner = s->getOwner();
 	char* my_owner = NULL; 
 	if( ! job_ad->LookupString(ATTR_OWNER, &my_owner) ) {
@@ -394,6 +405,7 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 				 getCommandString(CA_RECONNECT_JOB), new_owner );
 		return FALSE;
 	}
+#endif
 
 	ClassAd reply;
 	publishStarterInfo( &reply );
@@ -416,8 +428,9 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 
 		// Destroy our old DCShadow object and make a new one with the
 		// current info.
-	dprintf( D_ALWAYS, "Accepted request to reconnect by user '%s'\n",
-			 new_owner );
+	dprintf( D_ALWAYS, "Accepted request to reconnect from <%s:%d>\n",
+			 syscall_sock->endpoint_ip_str(), 
+			 syscall_sock->endpoint_port() );
 	dprintf( D_ALWAYS, "Ignoring old shadow %s\n", shadow->addr() );
 	delete shadow;
 	shadow = new DCShadow;
@@ -455,7 +468,6 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 	delete syscall_sock;
 	syscall_sock = s;
 	syscall_sock->timeout(300);
-
 	dprintf( D_FULLDEBUG, "Using new syscall sock <%s:%d>\n",
 			 syscall_sock->endpoint_ip_str(), 
 			 syscall_sock->endpoint_port() );
