@@ -109,7 +109,7 @@ sub generate_cmdfile() {
     my $srcsfile = "condor_srcsfile-$tag";
 
     # Generate the source code file
-    CondorGlue::makeFetchFile( $srcsfile, $tag, $module );
+    CondorGlue::makeFetchFile( $srcsfile, $module, $tag );
 
     # Generate the cmdfile
     open(CMDFILE, ">$cmdfile") || die "Can't open $cmdfile for writing.";

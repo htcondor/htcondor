@@ -125,7 +125,7 @@ sub generate_cmdfile() {
     my $runidfile = "input_build_runid.src";
 
     # generate the test glue file - may be symlinked eventually
-    CondorGlue::makeFetchFile( $gluefile, $tag, "nmi_glue/test" );
+    CondorGlue::makeFetchFile( $gluefile, "nmi_glue/test", $tag );
 
     # generate the runid input file
     open(RUNIDFILE, ">$runidfile") || 
