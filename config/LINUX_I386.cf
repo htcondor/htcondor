@@ -32,4 +32,4 @@
 #endif
 
 /*#define IS_CLIPPED YES*/
-/*#define HAS_GLOBUS	NO*/
+#define HAS_GLOBUS	YES
