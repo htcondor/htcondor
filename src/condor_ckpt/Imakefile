@@ -28,7 +28,7 @@ PLATFORM_EXTRACT = MMAP.o SYSCALL.o SYSDEP.o
 #elif IS_LINUX || IS_SOLARIS
 PLATFORM_EXTRACT = MMAP.o SYSCALL.o 
 #elif IS_ALPHA_OSF1
-PLATFORM_EXTRACT = SYSCALL.o
+PLATFORM_EXTRACT = MMAP.o SYSCALL.o
 #elif IS_HPUX
 PLATFORM_EXTRACT = SYSCALL.o __SYSCALL.o
 #else
@@ -37,7 +37,19 @@ PLATFORM_EXTRACT =
 
 EXTRACT = $(SIG_EXTRACT) $(PLATFORM_EXTRACT)
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(SAVE_SIGSTATE) $(STATIC) $(PVM_CHECKPOINT)
+#if DOES_COMPRESS_CKPT
+#if IS_SUN4X_SOLARIS
+COMPRESS_OBJ = malloc.o zimage.o _rem.o
+#else
+COMPRESS_OBJ = malloc.o zimage.o
+#endif
+COMPRESS_SRC = malloc.c image.C
+COMPRESS_FLAGS = -DCOMPRESS_CKPT -I/s/zlib/include
+COMPRESS_LIB = libzckpt.a
+#endif
+
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(SAVE_SIGSTATE) $(STATIC) \
+	$(PVM_CHECKPOINT)
 
 #if IS_HPUX10
 CFLAGS = $(STD_C_FLAGS) $(STATIC)
@@ -64,7 +76,7 @@ ASSEMBLER_OBJ = SYSCALL.MIPS.IRIX62.o MMAP.MIPS.IRIX62.o
 
 SRC =	ToUpper.c image.C machdep.$(OS).C file_state.C tmp_stack.C \
 	syscall_mode.c local_startup.c fake_remote_syscall.c fake_hooks.c \
-	$(SAVE_SIGSTATE_SRC) fake_util_lib.c eprintf.c
+	$(SAVE_SIGSTATE_SRC) fake_util_lib.c eprintf.c $(COMPRESS_SRC)
 
 #if DOES_CHECKPOINTING
 OBJ =	image.o machdep.$(OS).o file_state.o tmp_stack.o syscall_mode.o \
@@ -77,7 +89,7 @@ OBJ =	syscall_mode.o
 
 #if DOES_CHECKPOINTING
 
-	all_target(ToUpper libckpt.a c_plus_alloc.o condor_rt0.o $(RELEASE_OBJ) )
+	all_target(ToUpper libckpt.a c_plus_alloc.o condor_rt0.o $(COMPRESS_LIB) $(RELEASE_OBJ) )
 
 #if IS_X86_SOLARIS || IS_GLIBC_LINUX
 	library_target(libtmp.a,$(OBJ))
@@ -138,7 +150,9 @@ SIGACTION.o : ToUpper $(SIMPLE_LIBC)
 	./ToUpper sigaction.o sigaction.tmp.o sigaction SIGACTION
 	./ToUpper sigaction.tmp.o SIGACTION.o _siguhandler _SIGUHANDLER
 	rm -f sigaction.tmp.o sigaction.o
-#elif !IS_ALPHA_OSF1
+#elif IS_ALPHA_OSF1
+uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
+#else
 uppercase_target($(SIMPLE_LIBC),sigaction.o,SIGACTION.o,sigaction,SIGACTION)
 #endif
 
@@ -194,6 +208,23 @@ program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBL
 #endif
 
 program_target(ToUpper,ToUpper.o,$(NULL))
+
+#if DOES_COMPRESS_CKPT
+malloc.o : malloc.c
+	CCompiler -O2 -g -DMORECORE=condor_morecore -DHAVE_MMAP=0 -c malloc.c
+zimage.o : image.C
+	CPlusCompiler $(C_PLUS_FLAGS) $(COMPRESS_FLAGS) -o zimage.o -c image.C
+#if IS_SUN4X_SOLARIS
+_rem.o : $(SIMPLE_LIBC)
+	ar x $(SIMPLE_LIBC) _rem.o
+#endif
+$(COMPRESS_LIB): libckpt.a $(COMPRESS_OBJ)
+	cp libckpt.a $(COMPRESS_LIB)
+	ar -d $(COMPRESS_LIB) image.o
+	ar -r $(COMPRESS_LIB) $(COMPRESS_OBJ)
+clean::
+	rm -f $(COMPRESS_LIB) $(COMPRESS_OBJ)
+#endif
 
 CMNT
 CMNT Create a replacement for crt0.o to be linked with condor programs.
