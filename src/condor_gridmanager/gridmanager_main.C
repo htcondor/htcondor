@@ -35,7 +35,9 @@ main_activate_globus()
 	}
 
 	if(first_time) {
-		setenv("X509_USER_PROXY", X509Proxy, 1);
+		char buf[1024];
+		snprintf(buf,1024,"X509_USER_PROXY=%s",X509Proxy);
+		putenv(buf);
 		first_time = false;
 	}		
 
