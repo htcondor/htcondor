@@ -114,6 +114,13 @@ ResMgr::init_resources()
 		// First, see how many VMs of each type are specified.
 	nresources = countTypes( &type_nums, true );
 
+	if( ! nresources ) {
+			// We're not configured to advertise any nodes.
+		resources = NULL;
+		id_disp = new IdDispenser( num_cpus(), 1 );
+		return;
+	}
+
 		// See if the config file allows for a valid set of
 		// CpuAttributes objects.  Since this is the startup-code
 		// we'll let it EXCEPT() if there is an error.
@@ -130,7 +137,7 @@ ResMgr::init_resources()
 	}
 
 		// We can now seed our IdDispenser with the right VM id. 
-	id_disp = new IdDispenser( num_cpus() + 1, i+1 );
+	id_disp = new IdDispenser( num_cpus(), i+1 );
 
 		// Finally, we can free up the space of the new_cpu_attrs
 		// array itself, now that all the objects it was holding that
@@ -145,16 +152,11 @@ bool
 ResMgr::reconfig_resources()
 {
 	int t, i, cur, num;
-	int cur_type_index[max_types];
 	CpuAttributes** new_cpu_attrs;
 	int max_num = num_cpus();
-	Resource* sorted_resources[max_types][max_num];
+	int* cur_type_index;
+	Resource*** sorted_resources;	// Array of arrays of pointers.
 	Resource* rip;
-
-		// Initialize
-	memset( cur_type_index, 0, (max_types*sizeof(int)) );
-	memset( sorted_resources[0], 0, 
-			(max_num*max_types*sizeof(Resource*)) );
 
 		// See if any new types were defined.  Don't except if there's
 		// any errors, just dprintf().
@@ -177,6 +179,7 @@ ResMgr::reconfig_resources()
 	if( ! new_cpu_attrs ) {
 			// There was an error, abort.  We still return true to
 			// indicate that we're done doing our thing...
+		dprintf( D_ALWAYS, "Aborting virtual machine type reconfig.\n" );
 		delete [] new_type_nums;
 		new_type_nums = NULL;
 		return true;
@@ -186,17 +189,27 @@ ResMgr::reconfig_resources()
 		// Sort all our resources by type and state.
 		////////////////////////////////////////////////////
 
+		// Allocate and initialize our arrays.
+	sorted_resources = new Resource** [max_types];
+	for( i=0; i<max_types; i++ ) {
+		sorted_resources[i] = new Resource* [max_num];
+		memset( sorted_resources[i], 0, (max_num*sizeof(Resource*)) ); 
+	}
+
+	cur_type_index = new int [max_types];
+	memset( cur_type_index, 0, (max_types*sizeof(int)) );
+
 		// Populate our sorted_resources array by type.
 	for( i=0; i<nresources; i++ ) {
 		t = resources[i]->type();
-		sorted_resources[t][cur_type_index[t]] = resources[i];
+		(sorted_resources[t])[cur_type_index[t]] = resources[i];
 		cur_type_index[t]++;
 	}
 	
 		// Now, for each type, sort our resources by state.
 	for( t=0; t<max_types; t++ ) {
 		assert( cur_type_index[t] == type_nums[t] );
-		qsort( &sorted_resources[t], type_nums[t], 
+		qsort( sorted_resources[t], type_nums[t], 
 			   sizeof(Resource*), &claimedRankCmp );
 	}
 
@@ -207,13 +220,13 @@ ResMgr::reconfig_resources()
 	for( t=0; t<max_types; t++ ) {
 		for( i=0; i<new_type_nums[t]; i++ ) {
 			cur++;
-			if( ! sorted_resources[t][i] ) {
+			if( ! (sorted_resources[t])[i] ) {
 					// If there are no more existing resources of this
 					// type, we'll need to allocate one.
 				alloc_list.Append( new_cpu_attrs[cur] );
 				continue;
 			}
-			if( sorted_resources[t][i]->type() ==
+			if( (sorted_resources[t])[i]->type() ==
 				new_cpu_attrs[cur]->type() ) {
 					// We've already got a Resource for this VM, so we
 					// can delete it.
@@ -224,8 +237,8 @@ ResMgr::reconfig_resources()
 			// We're done with the new VMs of this type.  See if there
 			// are any Resources left over that need to be destroyed.
 		for( ; i<max_num; i++ ) {
-			if( sorted_resources[t][i] ) {
-				destroy_list.Append( sorted_resources[t][i] );
+			if( (sorted_resources[t])[i] ) {
+				destroy_list.Append( (sorted_resources[t])[i] );
 			} else {
 				break;
 			}
@@ -240,6 +253,13 @@ ResMgr::reconfig_resources()
 		// elsewhere, and the rest has already been deleted, so we
 		// should now delete the array itself. 
 	delete [] new_cpu_attrs;
+
+		// Cleanup our memory.
+	for( i=0; i<max_types; i++ ) {	
+		delete [] sorted_resources[i];
+	}
+	delete [] sorted_resources;
+	delete [] cur_type_index;
 
 		// See if there's anything to destroy, and if so, do it. 
 	destroy_list.Rewind();
@@ -1346,7 +1366,7 @@ claimedRankCmp( const void* a, const void* b )
 
 
 IdDispenser::IdDispenser( int size, int seed ) :
-	free_ids(size)
+	free_ids(size+2)
 {
 	int i;
 	free_ids.setFiller(true);
