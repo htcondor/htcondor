@@ -100,7 +100,7 @@ initial_bookeeping( int argc, char *argv[] )
 
 	init_shadow_connections();
 
-	read_config_files();
+	config();
 
 		// If we're told on the command-line to append something to
 		// the name of our log file (b/c of the SMP startd), we do
@@ -131,7 +131,12 @@ initial_bookeeping( int argc, char *argv[] )
 	}
 
 	init_logging();
+	dprintf( D_ALWAYS, "********** STARTER starting up ***********\n" );
 
+	InitiatingHost = submitHost;
+	dprintf( D_ALWAYS, "Submitting machine is \"%s\"\n", InitiatingHost );
+
+	init_params();
 
 		/* Now if we have an error, we can print a message */
 	if( usageError ) {
@@ -139,11 +144,6 @@ initial_bookeeping( int argc, char *argv[] )
 	}
 
 	init_sig_mask();
-
-	InitiatingHost = submitHost;
-
-	dprintf( D_ALWAYS, "********** STARTER starting up ***********\n" );
-	dprintf( D_ALWAYS, "Submitting machine is \"%s\"\n", InitiatingHost );
 
 	_EXCEPT_Cleanup = exception_cleanup;
 }
