@@ -330,12 +330,13 @@ A \Term{universe} in Condor
 \index{universe}
 \index{Condor!universe}
 defines an execution environment. 
-Condor \VersionNotice\ supports three different
+Condor \VersionNotice\ supports five different
 universes for user jobs:
 \begin{itemize}
 	\item Standard
 	\item Vanilla
 	\item PVM
+	\item MPI
 	\item Globus
 \end{itemize}
 You state the universe to use for each job in a
@@ -345,6 +346,9 @@ The PVM universe is for
 programs that are parallel applications written for PVM.
 \index{universe!PVM}
 Section~\ref{sec:PVM} contains information on using Condor with PVM jobs.
+
+The MPI universe is for running jobs compiled with MPICH.  See
+Section~\ref{sec:MPI} for more information.
 
 The standard and vanilla universes provide support for all other jobs.
 In general, the standard universe provides more services than
@@ -909,6 +913,10 @@ accounts would only use cycles not wanted by other users of the system.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{user-man/pvm.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{user-man/mpi.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
