@@ -605,7 +605,7 @@ char * SafeSock::serialize() const
 	// first, get the state from our parent class
 	char * parent_state = Sock::serialize();
 	// now concatenate our state
-	char * outbuf = new char[50];
+	char outbuf[50];
     int len = 0;
 
     if (_fqu) {
@@ -620,7 +620,6 @@ char * SafeSock::serialize() const
         strcat(parent_state, _fqu);
     }
 
-	delete []outbuf;
 	return( parent_state );
 }
 
@@ -637,13 +636,14 @@ char * SafeSock::serialize(char *buf)
     }   
 	ASSERT(buf);
 
+	usernamebuf[0] = '\0';
+
 	// here we want to restore our state from the incoming buffer
 
 	// first, let our parent class restore its state
 	ptmp = Sock::serialize(buf);
 	ASSERT( ptmp );
 	sscanf(ptmp,"%d*%s",&_special_state,sinful_string);
-	sscanf(ptmp,"%d*%s*%s",&_special_state,sinful_string,usernamebuf);
 	string_to_sin(sinful_string, &_who);
 
     // For backward compatibility reasons
@@ -658,7 +658,11 @@ char * SafeSock::serialize(char *buf)
         }
     }
 
-	_fqu = strnewp(usernamebuf);
+	if( usernamebuf[0] ) {
+		_fqu = strnewp(usernamebuf);
+	} else {
+		_fqu = NULL;
+	}
 
 	return NULL;
 }
