@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: platform_post,v 1.1.2.3 2005-02-11 13:42:38 parag Exp $
+# $Id: platform_post,v 1.1.2.4 2005-02-24 05:25:11 parag Exp $
 # post script to cleanup platform-specific files on the submit side
 ######################################################################
 
@@ -13,11 +13,16 @@
 
 system("chmod a+r *");
 
-print "Submitting test job for platform $ENV{NMI_PLATFORM} ...\n";
-system( "nmi_glue/test_submit/condor_test_submit.pl ".
-        "--nightly --platform=$ENV{NMI_PLATFORM}" );
-my $status = $?;
-if( $status ) {
-    die "condor_test_submit.pl failed with status $status\n";
+if ( -f "test_ids" ) {
+    print "Submitting test job for platform $ENV{NMI_PLATFORM} ...\n";
+    system( "nmi_glue/test_submit/condor_test_submit.pl ".
+            "--nightly --platform=$ENV{NMI_PLATFORM}" );
+    my $status = $?;
+    if( $status ) {
+        die "condor_test_submit.pl failed with status $status\n";
+    }
+}
+else {
+    print "It seems no test_ids file was created. Not submitting a test run\n";
 }
 
