@@ -1,4 +1,4 @@
-#!/bin/csh
+#!/bin/csh -f
 
 # Usage: import_links directory obj_file...
 #
