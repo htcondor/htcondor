@@ -55,6 +55,8 @@ typedef struct fd_set fd_set;
 #undef _XOPEN4
 #define _XOPEN4 1
 #define __vfork fork
+#define _save_BSD_COMPAT _BSD_COMPAT
+#undef _BSD_COMPAT
 #endif /* IRIX62 */
 
 #if defined(LINUX)
@@ -85,6 +87,9 @@ typedef struct fd_set fd_set;
 #	define _XOPEN4 _save_XOPEN4
 #	undef _save_XOPEN4
 #	undef __vfork
+#	undef _BSD_COMPAT
+#	define _BSD_COMPAT _save_BSD_COMPAT
+#	undef _save_BSD_COMPAT
 #endif
 
 #if defined(SUNOS41)
