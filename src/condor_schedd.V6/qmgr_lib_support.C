@@ -135,6 +135,7 @@ ConnectQ(char *qmgr_location )
 	qmgmt_sock->code(cmd);
 	
 	rval = InitializeConnection( username );
+	free( username );
 
 	if (rval < 0) {
 		free(connection);
