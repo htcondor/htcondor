@@ -745,7 +745,7 @@ AttrList& AttrList::operator=(const AttrList& other)
 // end of the expression list. It is not checked if the attribute already
 // exists in the list!
 ////////////////////////////////////////////////////////////////////////////////
-int AttrList::Insert(char* str)
+int AttrList::Insert(const char* str)
 {
 	ExprTree*	tree;
 
@@ -1375,7 +1375,7 @@ AttrList::sPrintExpr(char *buffer, unsigned int buffersize, const char* name)
 int AttrList::fPrint(FILE* f)
 {
     AttrListElem*	tmpElem;
-    char			tmpLine[10000] = "";
+    char			*tmpLine;
 
     if(!f)
     {
@@ -1388,17 +1388,23 @@ int AttrList::fPrint(FILE* f)
 	if ( chainedAttrs ) {
 		for(tmpElem = *chainedAttrs; tmpElem; tmpElem = tmpElem->next)
 		{
-			tmpElem->tree->PrintToStr(tmpLine);
-			fprintf(f, "%s\n", tmpLine);
-			strcpy(tmpLine, "");
+			tmpLine = NULL;
+			tmpElem->tree->PrintToNewStr(&tmpLine);
+			if (tmpLine != NULL) {
+				fprintf(f, "%s\n", tmpLine);
+				free(tmpLine);
+			}
 		}
 	}
 
     for(tmpElem = exprList; tmpElem; tmpElem = tmpElem->next)
     {
-        tmpElem->tree->PrintToStr(tmpLine);
-        fprintf(f, "%s\n", tmpLine);
-        strcpy(tmpLine, "");
+		tmpLine = NULL;
+        tmpElem->tree->PrintToNewStr(&tmpLine);
+		if (tmpLine != NULL) {
+			fprintf(f, "%s\n", tmpLine);
+			free(tmpLine);
+		}
     }
     return TRUE;
 }
@@ -1412,7 +1418,7 @@ void
 AttrList::dPrint( int level )
 {
     AttrListElem*	tmpElem;
-    char			tmpLine[10000] = "";
+    char			*tmpLine;
 	int				flag = D_NOHEADER | level;
 
 	// if this is a chained ad, print out chained attrs first. this is so
@@ -1421,17 +1427,23 @@ AttrList::dPrint( int level )
 	if ( chainedAttrs ) {
 		for(tmpElem = *chainedAttrs; tmpElem; tmpElem = tmpElem->next)
 		{
-			tmpElem->tree->PrintToStr(tmpLine);
-			dprintf( flag, "%s\n", tmpLine);
-			strcpy(tmpLine, "");
+			tmpLine = NULL;
+			tmpElem->tree->PrintToNewStr(&tmpLine);
+			if (tmpLine != NULL) {
+				dprintf( flag, "%s\n", tmpLine);
+				free(tmpLine);
+			}
 		}
 	}
 
     for(tmpElem = exprList; tmpElem; tmpElem = tmpElem->next)
     {
-        tmpElem->tree->PrintToStr(tmpLine);
-		dprintf( flag, "%s\n", tmpLine);
-        strcpy(tmpLine, "");
+		tmpLine = NULL;
+        tmpElem->tree->PrintToNewStr(&tmpLine);
+		if (tmpLine != NULL) {
+			dprintf( flag, "%s\n", tmpLine);
+			free(tmpLine);
+		}
     }
 }
 
@@ -1853,26 +1865,29 @@ int AttrList::put(Stream& s)
     if(!s.code(numExprs))
         return 0;
 
-    char linebuf[ATTRLIST_MAX_EXPRESSION];
-	char *line = linebuf;
+	char *line;
 	// copy chained attrs first, so if there are duplicates, the get()
 	// method will overide the attrs from the chained ad with attrs
 	// from this ad.
 	if ( chainedAttrs ) {
 		for(elem = *chainedAttrs; elem; elem = elem->next) {
-			line[0] = '\0';
-			elem->tree->PrintToStr(line);
+			line = NULL;
+			elem->tree->PrintToNewStr(&line);
 			if(!s.code(line)) {
+				free(line);
 				return 0;
 			}
+			free(line);
 		}
 	}
     for(elem = exprList; elem; elem = elem->next) {
-        line[0] = '\0';
-        elem->tree->PrintToStr(line);
+        line = NULL;
+        elem->tree->PrintToNewStr(&line);
         if(!s.code(line)) {
+			free(line);
             return 0;
         }
+		free(line);
     }
 	if ( send_server_time ) {
 		// insert in the current time from the server's (schedd)
@@ -1880,10 +1895,16 @@ int AttrList::put(Stream& s)
 		// time values based upon other attribute values without 
 		// worrying about the clocks being different on the condor_schedd
 		// machine -vs- the condor_q machine.
+		line = (char *) malloc(strlen(ATTR_SERVER_TIME)
+							   + 3   // for " = "
+							   + 12  // for integer
+							   + 1); // for null termination
 		sprintf(line,"%s = %ld",ATTR_SERVER_TIME,time(NULL));
 		if(!s.code(line)) {
+			free(line);
 			return 0;
 		}
+		free(line);
 	}
 
     return 1;
@@ -1988,30 +2009,44 @@ bool AttrList::IsExternalReference(const char *name, char **simplified_name) con
 int
 AttrList::initFromStream(Stream& s)
 {
-    char linebuf[ATTRLIST_MAX_EXPRESSION];
-	char *line = linebuf;
+	char *line;
     int numExprs;
+	int succeeded;
+	
+	succeeded = 1;
 
-		// First, clear our ad so we start with a fresh ClassAd
+	// First, clear our ad so we start with a fresh ClassAd
 	clear();
 
-		// Now, read our new set of attributes off the given stream 
+	// Now, read our new set of attributes off the given stream 
     s.decode();
 
     if(!s.code(numExprs)) 
         return 0;
     
     for(int i = 0; i < numExprs; i++) {
+
+		// This code used to read into a static buffer. 
+		// Happily, cedar will allocate a buffer for us instead. 
+		// That is much better, paticularly when people send around 
+		// large attributes (like the environment) which are bigger
+		// than the static buffer was.--Alain, 1-Nov-2001
+		line = NULL;
         if(!s.code(line)) {
-            return 0;
+            succeeded = 0;
+			break;
         }
         
 		if (!Insert(line)) {
-			return 0;
+			succeeded = 0;
+			break;
+		}
+		if (line != NULL) {
+			free(line);
 		}
     }
 
-    return 1;
+    return succeeded;
 }
 
 
