@@ -22,11 +22,11 @@ man.ps: man.tex condor-macros.tex
 
 ref.html: ref.ps
 	latex2html -split 4 -link 2 ref.tex
-	mv -f ref ~/public/html
+	mv -f ref ${HOME}/public/html
 
 admin.html: admin.tex condor-macros.tex admin.ps
 	latex2html -split 4 -link 2 admin.tex
-	mv -f admin ~/public/html
+	mv -f admin ${HOME}/public/html
 
 user.html: user.tex condor-macros.tex user.ps
 	latex2html -split 4 -link 1 user.tex
