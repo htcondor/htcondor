@@ -163,7 +163,19 @@ elif test $os = "Linux" ; then
   fi
 
   # next, figure out what linux distribution this is
-  if test -f "/etc/redhat-release" ; then 
+  if test -f "/etc/tao-release" ; then 
+    _tao_vers=`cat /etc/tao-release|perl -ne '/.* (.*) \(.*\)/;print $1;'`
+    case "$_tao_vers" in
+     "1" )
+       _cv_linux_distro="TAO1"
+       ;;
+     * )
+       AC_MSG_WARN([Condor is not yet ported to Tao version $_tao_vers])
+       AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
+       _cv_linux_distro="TAO_UNKNOWN"
+       ;;
+    esac
+  elif test -f "/etc/redhat-release" ; then 
     _rh_vers=`cat /etc/redhat-release|perl -ne '/.* (.*) \(.*\)/;print $1;'`
     case "$_rh_vers" in
      "7.2" )
