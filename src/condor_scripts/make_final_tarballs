@@ -85,11 +85,16 @@ require 5.002;
 ######################################################################
 
 # These are the modules you actually want to build.
-@modules = ( "condor", "ckpt_server", "pvm", "sdk","eventd", "dagman" );
+#@modules = ( "condor", "ckpt_server", "pvm", "sdk","eventd", "dagman" );
 #@modules = ( "smp_startd", "ckpt_server", "pvm", "sdk" );
 #@modules = ( "condor", "ckpt_server", "pvm", "mpi" );
 #@modules = ( "ckpt_server", "pvm" );
-#@modules = ( "condor" );
+
+# in fact, we're through making all these nasty version-specific
+# contrib modules.  all of this stuff is part of the main release now.
+# so, this script can focus on packaging up the main release tarballs. 
+@modules = ( "condor" );
+
 
 # List any special files, other than README, DOC, INSTALL, and
 # LICENSE.TXT (which are included in all releases) that you want in
