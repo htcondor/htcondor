@@ -278,7 +278,8 @@ V6_6_EXT	-a V6_6_COMMON_EXT \
 		   externals/bundles/glibc/2.3.2.27.9.7
 
 # For now, V6_7-branch uses all the same externals as the V6_6-branch
-V6_7_EXT	-a V6_6_EXT
+V6_7_EXT	-a V6_6_EXT \
+		externals/bundles/gt3gahp/1.0
 
 # Windows-only programs. dagedit will be added here too.
 NT_PROGRAMS -a src/condor_birdwatcher 
