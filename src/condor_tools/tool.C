@@ -35,7 +35,9 @@
 #include "get_daemon_addr.h"
 #include "daemon_types.h"
 
+#ifndef WIN32
 extern "C" int strincmp( char*, char*, int );
+#endif
 
 void do_command( char *name );
 void version();
@@ -160,7 +162,11 @@ cmd_to_str( int c )
 	case MASTER_OFF_FAST:
 		return "MASTER_OFF_FAST";
 	}
-	return "UNKNOWN";
+
+	fprintf(stderr,"Unknown Command (%d) in cmd_to_str()",c);
+	exit(1);
+
+	return "UNKNOWN";	// to make C++ happy
 }
 	
 int
@@ -169,6 +175,12 @@ main( int argc, char *argv[] )
 	char *daemonname, *MyName = argv[0];
 	char *cmd_str, **tmp, *foo;
 	int size, did_one = FALSE;
+
+#ifndef WIN32
+	// Ignore SIGPIPE so if we cannot connect to a daemon we do not
+	// blowup with a sig 13.
+	install_sig_handler(SIGPIPE, SIG_IGN );
+#endif
 
 	config( 0 );
 
@@ -311,7 +323,8 @@ main( int argc, char *argv[] )
 	if( ! did_one ) {
 		do_command( NULL );
 	}
-	exit( 0 );
+
+	return 0;
 }
 
 
