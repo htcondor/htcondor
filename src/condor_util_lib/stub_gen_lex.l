@@ -54,6 +54,7 @@ ssize_t				return grab( TYPE_NAME );
 off_t				return grab( TYPE_NAME );
 offset_t			return grab( TYPE_NAME );
 off64_t				return grab( TYPE_NAME );
+dirent64_t			return grab( TYPE_NAME );
 pid_t				return grab( TYPE_NAME );
 mode_t				return grab( TYPE_NAME );
 uid_t				return grab( TYPE_NAME );
