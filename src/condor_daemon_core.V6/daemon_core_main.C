@@ -492,29 +492,30 @@ drop_core_in_log( void )
 }
 
 
-// See if we should set the limits on core files.
-// On Windows, if CREATE_CORE_FILES is False, then we will use the
+// See if we should set the limits on core files.  If the parameter is
+// defined, do what it says.  Otherwise, do nothing.
+// On NT, if CREATE_CORE_FILES is False, then we will use the
 // default NT exception handler which brings up the "Abort or Debug"
 // dialog box, etc.  Otherwise, we will just write out a core file
 // "summary" in the log directory and not display the dialog.
 void
 check_core_files()
 {
+	char* tmp;
 	int want_set_error_mode = TRUE;
 
-	if(	param_boolean(
-				"CREATE_CORE_FILES",	// parameter name
-				"True"					// default value
-		)
-	) {
+	if( (tmp = param("CREATE_CORE_FILES")) ) {
 #ifndef WIN32	
+		if( *tmp == 't' || *tmp == 'T' ) {
 			limit( RLIMIT_CORE, RLIM_INFINITY );
-#endif
-	} else {
-#ifndef WIN32	
+		} else {
 			limit( RLIMIT_CORE, 0 );
+		}
 #endif
+		if( *tmp == 'f' || *tmp == 'F' ) {
 			want_set_error_mode = FALSE;
+		}
+		free( tmp );
 	}
 
 #ifdef WIN32
