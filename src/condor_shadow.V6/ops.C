@@ -209,6 +209,7 @@ HandleLog()
 			return -1; 		// anything other than EINTR or EAGAIN is error
 		}
 		if ( len == 0 ) {
+			// some platforms return 0 instead of -1/EAGAIN like POSIX says...
 			return 0;
 		}
 
