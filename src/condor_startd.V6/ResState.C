@@ -60,19 +60,19 @@ ResState::change( State new_state, Activity new_act )
 	}
 
 	if( statechange && !actchange ) {
-		dprintf( D_FULLDEBUG, "Changing state: %s->%s\n",
+		dprintf( D_FULLDEBUG, "Changing state: %s -> %s\n",
 				 state_to_string(r_state), 
 				 state_to_string(new_state) );
 	} else if (actchange && !statechange ) {
-		dprintf( D_FULLDEBUG, "Changing activity: %s->%s\n",
+		dprintf( D_FULLDEBUG, "Changing activity: %s -> %s\n",
 				 activity_to_string(r_act), 
 				 activity_to_string(new_act) );
 	} else {
 		dprintf( D_FULLDEBUG, 
-				 "Changing state and activity: %s->%s; %s->%s\n", 
+				 "Changing state and activity: %s/%s -> %s/%s\n", 
 				 state_to_string(r_state), 
-				 state_to_string(new_state),
 				 activity_to_string(r_act), 
+				 state_to_string(new_state),
 				 activity_to_string(new_act) );
 	}
 
@@ -96,18 +96,6 @@ ResState::change( State new_state, Activity new_act )
 
 	if( statechange ) {
 		rip->update();   // We want to update the CM on every state change
-	}
-
-		// If Condor is using this resource, i.e. claimed, matched or
-		// preempting states, we want to poll the resource and
-		// evaluate it's state frequently (POLLING_INTERVAL from the
-		// config file, defaults to 5 seconds).  Otherwise, we only
-		// need to evaluate the state when we're going to do an
-		// update.   -- should this be in enter/leave_action ?
-	if( rip->in_use() ) {
-		rip->start_poll_timer();
-	} else {
-		rip->cancel_poll_timer();
 	}
 	return TRUE;
 }
@@ -172,6 +160,9 @@ ResState::eval()
 		if( (r_act == idle_act) && (rip->r_reqexp->eval() == 0) ) {
 				// STATE TRANSITION #14
 			return change( preempting_state ); 
+		}
+		if( (r_act == busy_act) && (rip->wants_pckpt()) ) {
+			rip->periodic_checkpoint();
 		}
 		break;   // case claimed_state:
 
@@ -406,6 +397,7 @@ ResState::enter_action( State s, Activity a,
 {
 	switch( s ) {
 	case owner_state:
+		rip->cancel_poll_timer();
 			// Always want to create new match objects
 		if( rip->r_cur ) {
 			delete( rip->r_cur );
@@ -426,18 +418,19 @@ ResState::enter_action( State s, Activity a,
 	case claimed_state:
 		rip->r_reqexp->pub();			
 		if( statechange ) {
+			rip->start_poll_timer();
 			rip->r_cur->start_claim_timer();	
 		}
-		break;
-
-	case unclaimed_state:
-		rip->r_reqexp->pub();
 		if( a == suspended_act ) {
 			if( rip->r_starter->kill( DC_SIGSUSPEND ) < 0 ) {
 					// Error.  We already have an error message.
 					// Should we do anything else?
 			}
 		}
+		break;
+
+	case unclaimed_state:
+		rip->r_reqexp->pub();
 		break;
 
 	case matched_state:
@@ -473,9 +466,13 @@ ResState::enter_action( State s, Activity a,
 				return TRUE;
 			} 
 			break;  // idle_act
+
 		case killing_act:
 			if( rip->r_starter->active() ) {
-				rip->r_starter->kill( DC_SIGHARDKILL );
+				if( rip->r_starter->kill( DC_SIGHARDKILL ) < 0 ) {
+						// Error.  We already have an error message.
+						// Should we do anything else?
+				}
 			} else {
 				return change( idle_act );
 			}
@@ -483,7 +480,10 @@ ResState::enter_action( State s, Activity a,
 
 		case vacating_act:
 			if( rip->r_starter->active() ) {
-				rip->r_starter->kill( DC_SIGSOFTKILL );
+				if( rip->r_starter->kill( DC_SIGSOFTKILL ) < 0 ) {
+						// Error.  We already have an error message.
+						// Should we do anything else?
+				}
 			} else {
 				return change( idle_act );
 			}
@@ -497,7 +497,6 @@ ResState::enter_action( State s, Activity a,
 	default: 
 		EXCEPT("Unknown state in ResState::enter_action");
 	}
-
 	return FALSE;
 }
 
