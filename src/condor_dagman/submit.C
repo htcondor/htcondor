@@ -21,7 +21,7 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#include "condor_common.h" /* for <stdio.h>,<stdlib.h>,<string.h>,<unistd.h> */
+#include "condor_common.h"
 
 //
 // Local DAGMan includes
@@ -30,12 +30,6 @@
 #include "submit.h"
 #include "util.h"
 #include "debug.h"
-
-#ifdef WIN32
-	char cCommandLineQuoteChar = '\"';
-#else
-	char cCommandLineQuoteChar = '\'';
-#endif
 
 static bool submit_try (const char *exe,
                         const char * command,
@@ -107,19 +101,13 @@ submit_submit( const char* cmdFile, CondorID& condorID,
   // DAG and the DAGMan's job id, and to print the former in the
   // submit log
 
-#ifdef WIN32
   sprintf( prependLines, 
-		   "-a \"dag_node_name = %s\" "
-		   "-a \"dagman_job_id = %s\" "
-		   "-a \"submit_event_notes = DAG Node: $(dag_node_name)\"",
-		   DAGNodeName, DAGManJobId );
-#else
-  sprintf( prependLines, 
-		   "-a 'dag_node_name = %s' "
-		   "-a 'dagman_job_id = %s' "
-		   "-a 'submit_event_notes = DAG Node: $(dag_node_name)'",
-		   DAGNodeName, DAGManJobId );
-#endif
+	   "-a %cdag_node_name = %s%c "
+	   "-a %cdagman_job_id = %s%c "
+	   "-a %csubmit_event_notes = DAG Node: $(dag_node_name)%c",
+	   commandLineQuoteChar, DAGNodeName, commandLineQuoteChar,
+	   commandLineQuoteChar, DAGManJobId, commandLineQuoteChar,
+	   commandLineQuoteChar, commandLineQuoteChar );
 
   cmdLen = strlen( exe ) + strlen( prependLines ) + strlen( cmdFile ) + 16;
   command = new char[cmdLen];
@@ -128,11 +116,11 @@ submit_submit( const char* cmdFile, CondorID& condorID,
 				   __FILE__, __LINE__ );
   }
 
-  // we use 2>&1 to make sure we get both stdout and stderr from command
-#ifndef WIN32
-  sprintf( command, "%s %s %s 2>&1", exe, prependLines, cmdFile );
-#else
+#ifdef WIN32
   sprintf( command, "%s %s %s", exe, prependLines, cmdFile );
+#else
+  // we use 2>&1 to make sure we get both stdout and stderr from command
+  sprintf( command, "%s %s %s 2>&1", exe, prependLines, cmdFile );
 #endif
   
   bool success = false;

@@ -30,7 +30,7 @@
 #include "submit.h"
 #include "util.h"
 
-#include "simplelist.h"     /* should be replaced by STL library */
+#include "simplelist.h"
 #include "condor_string.h"  /* for strnewp() */
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
