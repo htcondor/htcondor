@@ -554,10 +554,11 @@ DCCollectorAdSeqMan::~DCCollectorAdSeqMan( void )
 unsigned
 DCCollectorAdSeqMan::GetSequence( ClassAd *ad )
 {
-	int		adNum;
-	char		*name = NULL;
-	char		*myType = NULL;
-	char		*machine = NULL;
+	int				adNum;
+	char				*name = NULL;
+	char				*myType = NULL;
+	char				*machine = NULL;
+	DCCollectorAdSeq	*adSeq = NULL;
 
 	// Extract the 'key' attributes of the ClassAd
 	ad->LookupString( ATTR_NAME, &name );
@@ -567,13 +568,31 @@ DCCollectorAdSeqMan::GetSequence( ClassAd *ad )
 	// Walk through the ads that we know of, find a match...
 	for ( adNum = 0;  adNum < numAds;  adNum++ ) {
 		if ( adSeqInfo[adNum]->Match( name, myType, machine ) ) {
-			unsigned seq = adSeqInfo[adNum]->GetSequence( );
-			return seq;
+			adSeq = adSeqInfo[adNum];
+			break;
 		}
 	}
 
 	// No matches; create a new one, add to the list
-	DCCollectorAdSeq	*newAdSeq = new DCCollectorAdSeq ( name, myType, machine );
-	adSeqInfo[numAds++] = newAdSeq;
-	return newAdSeq->GetSequence( );
+	if ( ! adSeq ) {
+		adSeq = new DCCollectorAdSeq ( name, myType, machine );
+		adSeqInfo[numAds++] = adSeq;
+	}
+
+	// Free up memory...
+	if ( name ) {
+		free( name );
+		name = NULL;
+	}
+	if ( myType ) {
+		free( myType );
+		myType = NULL;
+	}
+	if ( machine ) {
+		free( machine );
+		machine = NULL;
+	}
+
+	// Finally, return the sequence
+	return adSeq->GetSequence( );
 }
