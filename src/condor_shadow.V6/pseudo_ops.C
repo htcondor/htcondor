@@ -39,7 +39,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
-
+#include "condor_constants.h"
 #include "../condor_syscall_lib/syscall_param_sizes.h"
 
 #ifdef CARMI_OPS
@@ -51,8 +51,11 @@ extern char* ExecutingHost;
 
 static char *_FileName_ = __FILE__;
 
-#include "user_log.h"
-extern USER_LOG	*ULog;
+extern "C"  void log_checkpoint (struct rusage *, struct rusage *);
+extern "C"  void log_image_size (int);
+
+extern "C" int access_via_afs (const char *);
+extern "C" int access_via_nfs (const char *);
 
 extern int ClientUid;
 extern int ClientGid;
@@ -119,17 +122,17 @@ pseudo_getpid()
 int
 pseudo_getlogin(char *loginbuf)
 {
-        int             rval;
-        char *temp;
+	int		rval;
+	char *temp;
 
-        temp = ((PROC *)Proc)->owner; 
+	temp = ((PROC *)Proc)->owner; 
 
-        if ( (temp != NULL) && (strlen(temp) < 30) ) {
-                strcpy(loginbuf,temp);
-                return 0;
-        } else {
-                return -1;
-        }
+	if ( (temp != NULL) && (strlen(temp) < 30) ) {
+		strcpy(loginbuf,temp);
+		return 0;
+	} else {
+		return -1;
+	}
 }
 
 int
@@ -185,7 +188,9 @@ pseudo_image_size( int size )
 	if( size > ImageSize ) {
 		ImageSize = size;
 		dprintf( D_SYSCALLS, "Set Image Size to %d kilobytes\n", size );
-		PutUserLog( ULog, IMAGE_SIZE, size );
+
+		// log the event
+		log_image_size (size);
 	}
 	return 0;
 }
@@ -204,8 +209,9 @@ pseudo_send_rusage( struct rusage *use_p )
 
 	get_local_rusage( &local_rusage );
 	update_job_status( &local_rusage, use_p );
-	PutUserLog(ULog, CHECKPOINTED);		/* let the user know it happened */
 
+	// log the event
+	log_checkpoint (&local_rusage, use_p);
 	
 	return 0;
 }
@@ -915,6 +921,9 @@ pseudo_file_info( const char *name, int *pipe_fd, char *extern_path )
 	dprintf( D_SYSCALLS, "\textern_path = \"%s\"\n", extern_path );
 	dprintf( D_SYSCALLS, "\tSpool = \"%s\"\n", Spool );
 
+	// this first one is a special case: if the full_path looks like
+	// it is in our Spool directory, we are likely transferring a
+	// checkpoint, so ALWAYS transfer via a Remote System call.
 	if(strlen(Spool) < strlen(full_path) &&
 	   strncmp(Spool, full_path, strlen(Spool)) == MATCH) {
 		answer = IS_RSC;
@@ -1310,11 +1319,41 @@ pseudo_subproc_status(int subproc, union wait *statp, struct rusage *rusagep)
 	get_local_rusage( &local_rusage );
 	memcpy( &JobRusage, rusagep, sizeof(struct rusage) );
 	update_job_status( &local_rusage, &JobRusage );
-	LogRusage( ULog,  THIS_RUN, &local_rusage, &JobRusage );
+
+	// Rusages are logged when a job is evicted, or if it terminates
+    // I'm not sure if this logging step is required.  Skip for now.
+    // Of course, need to convert to condor_event  --RR
+    // LogRusage( ULog,  THIS_RUN, &local_rusage, &JobRusage );
 
 	return 0;
 }
 
 #endif /* PVM_RECEIVE */
+
+int
+pseudo_lseekread(int fd, off_t offset, int whence, void *buf, size_t len)
+{
+        int rval;
+
+        if ( lseek( fd, offset, whence ) < 0 ) {
+                return (off_t) -1;
+        }
+
+        rval = read( fd, buf, len );
+        return rval;    
+}
+
+int
+pseudo_lseekwrite(int fd, off_t offset, int whence, const void *buf, size_t len)
+{
+	int rval;
+
+	if ( lseek( fd, offset, whence ) < 0 ) {
+		return (off_t) -1;
+	}
+
+	rval = write( fd, buf, len );
+	return rval;
+}
 
 } /* extern "C" */
