@@ -36,7 +36,6 @@
 #include "condor_debug.h"
 #include "condor_ckpt_mode.h"
 #include "signals_control.h"
-#include "condor_environ.h"
 
 static char *_FileName_ = __FILE__;
 
