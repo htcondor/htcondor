@@ -648,7 +648,7 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
                         }
                     }
                 } else {
-					dprintf( D_SECURITY, "ZKM: hoststring: %s\n", hoststring);
+					dprintf( D_SECURITY, "IPVERIFY: hoststring: %s\n", hoststring);
 				}
                 
                 if ( PermTypeArray[perm]->deny_hosts &&

@@ -316,8 +316,7 @@ GET_PRIORITY_commandHandler (int, Stream *strm)
 	// read the required data off the wire
 	if (!strm->end_of_message())
 	{
-		dprintf (D_ALWAYS, "ZKM: strm->is_encode == %i.\n", strm->is_encode());
-		dprintf (D_ALWAYS, "ZKM: Could not read eom\n");
+		dprintf (D_ALWAYS, "GET_PRIORITY: Could not read eom\n");
 		return FALSE;
 	}
 

@@ -40,7 +40,7 @@
 #include "condor_secman.h"
 
 extern char* mySubSystem;
-extern char* ZZZ_dc_sinful();
+extern char* global_dc_sinful();
 
 #define SECURITY_HACK_ENABLE
 void zz1printf(KeyInfo *k) {
@@ -879,7 +879,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 	}
 
 	
-	dprintf (D_ALWAYS, "ZKM: Security Policy:\n");
+	dprintf (D_SECURITY, "SECMAN: Security Policy:\n");
 	auth_info->dPrint( D_SECURITY );
 
 
@@ -1111,7 +1111,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 			sprintf(buf, "%s", enc_key->id());
 
 			// stick our command socket sinful string in there
-			char* dcss = ZZZ_dc_sinful();
+			char* dcss = global_dc_sinful();
 			if (dcss) {
 				strcat (buf, ",");
 				strcat (buf, dcss);
@@ -1140,7 +1140,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 			sprintf(buf, "%s", enc_key->id());
 
 			// stick our command socket sinful string in there
-			char* dcss = ZZZ_dc_sinful();
+			char* dcss = global_dc_sinful();
 			if (dcss) {
 				strcat (buf, ",");
 				strcat (buf, dcss);
@@ -1361,14 +1361,15 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 			char *sid = NULL;
 			auth_info->LookupString(ATTR_SEC_SID, &sid);
 			if (sid == NULL) {
-				// ZKM: memory leak, will fix tonight
+				delete auth_info;
 				return FALSE;
 			}
 
 			char *cmd_list = NULL;
 			auth_info->LookupString(ATTR_SEC_VALID_COMMANDS, &cmd_list);
 			if (cmd_list == NULL) {
-				// ZKM: memory leak, will fix tonight
+				delete sid;
+				delete auth_info;
 				return FALSE;
 			}
 

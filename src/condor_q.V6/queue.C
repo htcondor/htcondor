@@ -1501,7 +1501,8 @@ fetchSubmittorPrios()
 	Sock* sock;
 
 	if (!(sock = negotiator.startCommand( GET_PRIORITY, Stream::reli_sock, 0))) {
-		fprintf( stderr, "ZKM: startCommand failed.\n");
+		fprintf( stderr, "Error: Could not connect to negotiator (%s)\n",
+				 negotiator.fullHostname() );
 		exit( 1 );
 	}
 

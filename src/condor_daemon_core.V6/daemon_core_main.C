@@ -81,7 +81,7 @@ check_parent()
 }
 #endif
 
-char* ZZZ_dc_sinful() {
+char* global_dc_sinful() {
 	if (daemonCore) {
 		return daemonCore->InfoCommandSinfulString();
 	} else {
