@@ -66,9 +66,11 @@ class CheckEvents {
 		int		errorCount;
 		int		abortCount;
 		int		termCount;
+		int		postScriptCount;
 
 		JobInfo() {
-			submitCount = errorCount = abortCount = termCount = 0;
+			submitCount = errorCount = abortCount = termCount =
+					postScriptCount = 0;
 		}
 
 		int TotalEndCount() const { return errorCount + abortCount +

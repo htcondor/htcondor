@@ -197,6 +197,16 @@ int main(int argc, char **argv)
 	printf("Testing executable error... ");
 	CheckThisEvent(ce2, &ee2, true,true, result);
 
+	PostScriptTerminatedEvent pe1;
+		// Note that ID doesn't match anything else -- this simulates
+		// running a post script where node submit failed.
+	pe1.cluster = 998866;
+	pe1.proc = 0;
+	pe1.subproc = 0;
+
+	printf("Testing post script terminated...");
+	CheckThisEvent(ce2, &pe1, true, true, result);
+
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce2.CheckAllJobs(errorMsg) ) {
 		printf("...succeeded\n");
@@ -330,6 +340,9 @@ int main(int argc, char **argv)
 
 	printf("Testing terminate... ");
 	CheckThisEvent(ce6, &te3, false, false, result);
+
+	printf("Testing post script terminated...");
+	CheckThisEvent(ce6, &pe1, true, true, result);
 
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce6.CheckAllJobs(errorMsg) ) {

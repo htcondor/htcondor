@@ -131,6 +131,11 @@ CheckEvents::CheckAnEvent(const ULogEvent *event, MyString &errorMsg,
 			result = CheckJobEnd(idStr, info, errorMsg, eventIsGood);
 			break;
 
+		case ULOG_POST_SCRIPT_TERMINATED:
+			info->postScriptCount++;
+			result = CheckJobEnd(idStr, info, errorMsg, eventIsGood);
+			break;
+
 		default:
 			break;
 		}
@@ -145,6 +150,12 @@ CheckEvents::CheckJobEnd(const MyString &idStr, const JobInfo *info,
 		MyString &errorMsg, bool &eventIsGood)
 {
 	bool		result = true;
+
+		// Allow for the case where we ran a post script after all submit attempts
+		// fail.
+	if ( info->submitCount == 0 && info->termCount == 0 && info->postScriptCount == 1 ) {
+		return result;
+	}
 
 	if ( info->submitCount != 1 ) {
 		errorMsg = idStr + " ended; submit count != 1 (" +
