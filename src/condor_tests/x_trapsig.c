@@ -22,8 +22,8 @@ struct sigaction new =
 {
 	&catchsig,
 	0,
-	SA_NOMASK,
-	SA_NOMASK,
+	SA_NODEFER,
+	SA_NODEFER,
 };
 
 struct sigaction old;
