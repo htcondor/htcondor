@@ -48,7 +48,7 @@ extern "C" {
 #define fcntl_h 1
 
 int       fcntl(int, int, ...);
-int	  creat (const char*, unsigned short int);
+int	  creat (const char*, mode_t);
 
 int       open (const char*, int, ...);
 
