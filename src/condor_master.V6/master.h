@@ -79,12 +79,6 @@ public:
 };
 
 
-#if 0
-#define BADSIG          ((void (*)(int))(-1))
-#define SIG_IGN         ((void (*)(int))( 1))
-#define SIG_DFL         ((void (*)(int))( 0))
-#endif
-
 #define MAXIMUM(a,b) ((a)>(b)?(a):(b))
 
 #endif /* __CONDOR_MASTER */
