@@ -38,7 +38,7 @@ editinfo		-i mkmodules CVSROOT editinfo
 validate_user	-i co validate_user
 
 # Add other modules here...
-TOOLS	-a Distfile GENERIC Imakefile config
+TOOLS	-a GENERIC config
 DOC		-a TOOLS doc
 COMMON_CODE	-a src/Imakefile \
 			src/condor_c++_util \
