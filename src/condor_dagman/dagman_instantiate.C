@@ -26,6 +26,7 @@
 #include "job.h"
 #include "script.h"
 #include "MyString.h"
+#include "read_multiple_logs.h"
 
 template class List<Job>;
 template class List<MyString>;
@@ -38,3 +39,4 @@ template class HashTable<int, Script*>;
 template class Queue<Script*>;
 template class Queue<Job*>;
 template class SimpleList<Job*>;
+MULTI_LOG_HASH_INSTANCE;
