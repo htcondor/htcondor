@@ -2088,10 +2088,20 @@ Scheduler::sigterm_handler()
 {
 	block_signal(SIGCHLD);
     dprintf( D_ALWAYS, "Performing graceful shut down.\n" );
-	MaxJobsRunning = 0;
-	ExitWhenDone = 1;
-	preempt( NShadowRecs );
-	unblock_signal(SIGCHLD);
+	if( NShadowRecs == 0 ) {
+		dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
+		exit(0);
+	} else {
+			/* 
+			   There are shadows running, so set a flag that tells the
+			   reaper to exit when all the shadows are gone, and start
+			   shutting down shadows.
+ 		    */
+		MaxJobsRunning = 0;
+		ExitWhenDone = 1;
+		preempt( NShadowRecs );
+		unblock_signal(SIGCHLD);
+	}
 }
 
 // Perform fast shutdown.
