@@ -47,17 +47,18 @@ CondorCronMgr::CondorCronMgr( const char *name )
 // Basic destructor
 CondorCronMgr::~CondorCronMgr( )
 {
-	// Reconfigure all running jobs
-	Cron.KillAll( );
+	// Kill all running jobs
+	Cron.DeleteAll( );
 
 	// Log our death
 	dprintf( D_FULLDEBUG, "CronMgr: bye\n" );
 }
 
 // Set new name..
-int CondorCronMgr::SetName( const char *newName, 
-							const char *newParamBase,
-							const char *newParamExt )
+int
+CondorCronMgr::SetName( const char *newName, 
+						const char *newParamBase,
+						const char *newParamExt )
 {
 	int		retval = 0;
 
@@ -119,13 +120,13 @@ int CondorCronMgr::SetParamBase( const char *newParamBase,
 
 // Kill all running jobs
 int
-CondorCronMgr::KillAll( )
+CondorCronMgr::KillAll( bool force)
 {
 	// Log our death
 	dprintf( D_FULLDEBUG, "CronMgr: Killing all jobs\n" );
 
 	// Reconfigure all running jobs
-	return Cron.KillAll( );
+	return Cron.KillAll( force );
 }
 
 // Handle Reconfig

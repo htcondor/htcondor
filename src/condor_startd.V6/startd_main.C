@@ -122,6 +122,9 @@ main_init( int, char* argv[] )
 	char*	tmp = NULL;
 	char**	ptr; 
 
+	// Reset the cron manager to a known state
+	Cronmgr = NULL;
+
 		// Process command line args.
 	for(ptr = argv + 1; *ptr; ptr++) {
 		if(ptr[0][0] != '-') {
@@ -571,6 +574,14 @@ init_params( int first_time)
 void
 startd_exit() 
 {
+	// Shut down the cron logic
+	if( Cronmgr ) {
+		dprintf( D_ALWAYS, "Deleting Cronmgr\n" );
+		Cronmgr->Shutdown( true );
+		delete Cronmgr;
+	}
+
+	// Cleanup the resource manager
 	if ( resmgr ) {
 		dprintf( D_FULLDEBUG, "About to send final update to the central manager\n" );	
 		resmgr->final_update();
@@ -591,6 +602,13 @@ startd_exit()
 int
 main_shutdown_fast()
 {
+	dprintf( D_ALWAYS, "shutdown fast\n" );
+
+	// Shut down the cron logic
+	if( Cronmgr ) {
+		Cronmgr->Shutdown( true );
+	}
+
 		// If the machine is free, we can just exit right away.
 	check_free();
 
@@ -615,6 +633,13 @@ main_shutdown_fast()
 int
 main_shutdown_graceful()
 {
+	dprintf( D_ALWAYS, "shutdown graceful\n" );
+
+	// Shut down the cron logic
+	if( Cronmgr ) {
+		Cronmgr->Shutdown( false );
+	}
+
 		// If the machine is free, we can just exit right away.
 	check_free();
 

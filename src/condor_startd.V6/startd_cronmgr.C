@@ -43,6 +43,13 @@ StartdCronMgr::~StartdCronMgr( )
 	dprintf( D_FULLDEBUG, "StartdCronMgr: Bye\n" );
 }
 
+// Perform shutdown
+int StartdCronMgr::Shutdown( bool force )
+{
+	dprintf( D_FULLDEBUG, "StartdCronMgr: Shutting down\n" );
+	return KillAll( force );
+}
+
 // Create a new job
 CondorCronJob *
 StartdCronMgr::NewJob( const char *name )

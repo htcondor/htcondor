@@ -34,7 +34,7 @@ class CondorCronMgr
 	CondorCronMgr( const char *name );
 	virtual ~CondorCronMgr( );
 	int Reconfig( void );
-	int KillAll( void );
+	int KillAll( bool force );
 
   protected:
 	virtual CondorCronJob *NewJob( const char *name );

@@ -37,7 +37,8 @@ class CondorCron
 
 	// Methods to manipulate the job list
 	int Reconfig( void );
-	int KillAll( void );
+	int DeleteAll( void );
+	int KillAll( bool force );
 	int AddJob( 
 		const char *	jobName,
 		CondorCronJob	*job

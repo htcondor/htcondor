@@ -31,6 +31,7 @@ class StartdCronMgr : public CondorCronMgr
   public:
 	StartdCronMgr( void );
 	virtual ~StartdCronMgr( void );
+	int Shutdown( bool force );
 
   protected:
 	virtual CondorCronJob *NewJob( const char *name );

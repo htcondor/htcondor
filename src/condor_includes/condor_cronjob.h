@@ -58,7 +58,8 @@ typedef enum {
 	CRON_IDLE, 
 	CRON_RUNNING,
 	CRON_TERMSENT,
-	CRON_KILLSENT
+	CRON_KILLSENT,
+	CRON_DEAD
 } CronJobState;
 
 // Job's "run" mode
@@ -66,6 +67,7 @@ typedef enum
 { 
 	CRON_CONTINUOUS,		// Keep it running forever (possible delay)
 	CRON_PERIODIC, 			// Run it periodically
+	CRON_KILL,				// Job has been killed
 	CRON_ILLEGAL
 } CronJobMode;
 
@@ -94,6 +96,8 @@ class CondorCronJob : public Service
 	int SetCwd( const char *cwd );
 	int SetPeriod( CronJobMode mode, unsigned period );
 	int SetKill( bool );
+
+	virtual int KillJob( bool );
 
 	void Mark( void ) { marked = true; };
 	void ClearMark( void ) { marked = false; };
@@ -132,7 +136,6 @@ class CondorCronJob : public Service
 	virtual int KillHandler( void );
 	virtual int StdoutHandler( int pipe );
 	virtual int StderrHandler( int pipe );
-	virtual int KillJob( bool );
 	virtual int Reaper( int exitPid, int exitStatus );
 	virtual int RunProcess( void );
 

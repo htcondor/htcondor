@@ -41,20 +41,40 @@ CondorCron::CondorCron( )
 CondorCron::~CondorCron( )
 {
 	// Walk through the list
-	KillAll( );
+	DeleteAll( );
+}
+
+// Kill & delete all running jobs
+int
+CondorCron::DeleteAll( )
+{
+	CondorCronJob	*curJob;
+
+	// Kill 'em all
+	KillAll( true );
+
+	// Walk through the list
+	dprintf( D_JOB, "Cron: Deleting all jobs\n" );
+	JobList.Rewind( );
+	while ( JobList.Next( curJob ) ) {
+		dprintf( D_JOB, "Cron: Deleting job '%s'\n", curJob->GetName() );
+		JobList.DeleteCurrent( );
+		delete curJob;
+	}
+	return 0;
 }
 
 // Kill all running jobs
 int
-CondorCron::KillAll( )
+CondorCron::KillAll( bool force )
 {
 	CondorCronJob	*curJob;
 
 	// Walk through the list
+	dprintf( D_JOB, "Cron: Killing all jobs\n" );
 	JobList.Rewind( );
 	while ( JobList.Next( curJob ) ) {
-		JobList.DeleteCurrent( );
-		delete curJob;
+		curJob->KillJob( force );
 	}
 	return 0;
 }
@@ -116,6 +136,7 @@ CondorCron::AddJob( const char *name, CondorCronJob *newJob )
 	}
 
 	// It doesn't exit; put it on the list
+	dprintf( D_JOB, "Cron: Adding job '%s'\n", name );
 	JobList.Append( newJob );
 
 	// Done
@@ -135,6 +156,7 @@ CondorCron::DeleteJob( const char *jobName )
 	}
 
 	// Remove it from the list
+	dprintf( D_JOB, "Cron: Deleting job '%s'\n", jobName );
 	JobList.DeleteCurrent( );
 
 	// After that, free up it's resources..

@@ -114,21 +114,6 @@ CronJobErr::Output( const char *buf, int len )
 	return 0;
 }
 
-// Output function
-#if 0
-MyString *
-CronJobOut::GetString( void )
-{
-	MyString	*retString = new MyString( stringBuf );
-
-	// Zero out the old string
-	stringBuf = "";
-
-	// Return the copy
-	return retString;
-}
-#endif
-
 // CronJob constructor
 CondorCronJob::CondorCronJob( const char *jobName )
 {
@@ -387,7 +372,7 @@ int
 CondorCronJob::StartJob( void )
 {
 	if ( CRON_IDLE != state ) {
-		dprintf( D_ALWAYS, "Cron: Job '%s' already running!\n", name );
+		dprintf( D_ALWAYS, "Cron: Job '%s' not idle!\n", name );
 		return 0;
 	}
 	dprintf( D_JOB, "Cron: Starting job '%s', path '%s'\n", name, path );
@@ -449,6 +434,11 @@ CondorCronJob::Reaper( int exitPid, int exitStatus )
 		}
 		break;
 
+	}
+
+	// Note that we're dead
+	if ( CRON_KILL == mode ) {
+		state = CRON_DEAD;
 	}
 
 	// Process the output
@@ -739,6 +729,9 @@ CondorCronJob::CleanFd ( int *fd )
 int
 CondorCronJob::KillJob( bool force )
 {
+	// Change our mode
+	mode = CRON_KILL;
+
 	// Idle?
 	if ( CRON_IDLE == state ) {
 		return 0;
@@ -870,6 +863,8 @@ CondorCronJob::StateString( CronJobState state )
 		return "TermSent";
 	case CRON_KILLSENT:
 		return "KillSent";
+	case CRON_DEAD:
+		return "Dead";
 	default:
 		return "Unknown";
 	}
