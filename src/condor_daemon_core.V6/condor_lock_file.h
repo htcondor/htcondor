@@ -63,7 +63,7 @@ class CondorLockFile : public CondorLockImpl
   private:
 	MyString		lock_url;
 	MyString		lock_name;
-	MyString		file_path;
+	MyString		lock_file;
 	MyString		temp_file;
 
 	// Private member functions
