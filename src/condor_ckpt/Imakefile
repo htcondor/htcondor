@@ -83,14 +83,13 @@ ASSEMBLER_OBJ = SYSCALL.MIPS.IRIX53.o MMAP.MIPS.IRIX53.o
 
 SRC =	ToUpper.c image.C machdep.$(OS).C file_state.C tmp_stack.C \
 	syscall_mode.c local_startup.c fake_remote_syscall.c fake_hooks.c \
-	$(SAVE_SIGSTATE_SRC) fake_util_lib.c eprintf.c user_restore.c \
-	pvm_before_after_ckpt.c
+	$(SAVE_SIGSTATE_SRC) fake_util_lib.c eprintf.c
 
 #if DOES_CHECKPOINTING
 OBJ =	image.o machdep.$(OS).o file_state.o tmp_stack.o syscall_mode.o \
 	local_startup.o fake_remote_syscall.o fake_hooks.o \
 	$(SAVE_SIGSTATE_OBJ) fake_util_lib.o eprintf.o $(EXTRACT) \
-	$(ASSEMBLER_OBJ) user_restore.o pvm_before_after_ckpt.o
+	$(ASSEMBLER_OBJ)
 #else
 OBJ =	syscall_mode.o
 #endif

@@ -214,7 +214,6 @@ _condor_prestart( int syscall_mode )
 #if defined(Solaris)
 	setnetconfig();
 #if defined(sun4m)
-
 	float x=23, y=14, z=256;
 	if ((x+y)>z) {
 		dprintf(D_ALWAYS,
@@ -447,16 +446,13 @@ SegMap::Contains( void *addr )
 	return ((RAW_ADDR)addr >= core_loc) && ((RAW_ADDR)addr < core_loc + len);
 }
 
-/* I have put stub functions for non-pvm checkpointing,
- * so only one library needs to be compiled.  -Bin */
-/* #if defined(PVM_CHECKPOINTING) */
+
+#if defined(PVM_CHECKPOINTING)
 extern "C" user_restore_pre(char *, int);
 extern "C" user_restore_post(char *, int);
 
-/* We need this global memeory space to store for PVMSOCK and PVMEPID 
- * during restore.  -Bin */
-char		global_user_data[256];   
-/* #endif */
+int		global_user_data;
+#endif
 
 /*
   Given an "image" object containing checkpoint information which we have
@@ -466,22 +462,11 @@ void
 Image::Restore()
 {
 	int		save_fd = fd;
+	int		user_data;
 
-	/* We need this space to save PVMSOCK and PVMEPID on the stack
-	 * during image restore.  */
-	char		user_data[256];
-
-	// #if defined(PVM_CHECKPOINTING) 
-	/* In PVM, we want to maintain two environment variables PVMSOCK and 
-	 * PVMEPID the save before and after restore.  So, we save them on 
-	 * the stack when restoring non-segments, and then we 
-	 * put them back into memory when restoring the stack.  After the 
-	 * stack is resored, we put them back into the environment. 
-	 * (I do not see why we need to put them into global_user_data
-	 * instead of just put them back into environment directly after
-	 * restoring the non-stack segments.)  -Bin*/
+#if defined(PVM_CHECKPOINTING)
 	user_restore_pre(user_data, sizeof(user_data));
-	// #endif 
+#endif
 
 		// Overwrite our data segment with the one saved at checkpoint
 		// time *and* restore any saved shared libraries.
@@ -492,9 +477,9 @@ Image::Restore()
 		// the only thing that has changed is the file descriptor.
 	fd = save_fd;
 
-	// #if defined(PVM_CHECKPOINTING) 
+#if defined(PVM_CHECKPOINTING)
 	memcpy(global_user_data, user_data, sizeof(user_data));
-	// #endif
+#endif
 
 		// Now we're going to restore the stack, so we move our execution
 		// stack to a temporary area (in the data segment), then call
@@ -525,7 +510,6 @@ Image::RestoreSeg( const char *seg_name )
 		if( mystrcmp(seg_name,map[i].GetName()) == 0 ) {
 			if( (pos = map[i].Read(fd,pos)) < 0 ) {
 				dprintf(D_ALWAYS, "SegMap::Read() failed!\n");
-				
 				Suicide();
 			} else {
 				return;
@@ -559,8 +543,6 @@ void Image::RestoreAllSegsExceptStack()
 					"last segment in ckpt file.\n");
 			fprintf( stderr, "CONDOR ERROR: STACK is not the last segment "
 					 " in ckpt file.\n" );
-
-
 			exit( 1 );
 		}
 		fd = save_fd;
@@ -595,9 +577,9 @@ RestoreStack()
 		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 	}
 
-	// #if defined(PVM_CHECKPOINTING)
+#if defined(PVM_CHECKPOINTING)
 	user_restore_post(global_user_data, sizeof(global_user_data));
-	// #endif
+#endif
 
 	LONGJMP( Env, 1 );
 }
@@ -605,10 +587,7 @@ RestoreStack()
 int
 Image::Write()
 {
-     if (fd < 0)
-	  return Write( file_name );
-     else 
-	  return Write( fd );
+	return Write( file_name );
 }
 
 
@@ -653,7 +632,6 @@ Image::Write( const char *ckpt_file )
 	// if( (fd=open_url(ckpt_file,O_WRONLY|O_TRUNC|O_CREAT,len)) < 0 ) {
 		sprintf( tmp_name, "%s.tmp", ckpt_file );
 		dprintf( D_ALWAYS, "Tmp name is \"%s\"\n", tmp_name );
-
 		if ((fd = open_ckpt_file(tmp_name, O_WRONLY|O_TRUNC|O_CREAT,
 								len)) < 0)  {
 				dprintf( D_ALWAYS, "ERROR:open_ckpt_file failed, aborting ckpt\n");
@@ -668,13 +646,12 @@ Image::Write( const char *ckpt_file )
 
 		// Have to check close() in AFS
 	dprintf( D_ALWAYS, "About to close ckpt fd (%d)\n", fd );
-
 	if( close(fd) < 0 ) {
 		dprintf( D_ALWAYS, "Close failed!\n" );
 		return -1;
 	}
 	dprintf( D_ALWAYS, "Closed OK\n" );
-	
+
 	SetSyscalls( scm );
 
 		// We now know it's complete, so move it to the real ckpt file name
@@ -726,7 +703,6 @@ Image::Write( int fd )
 			return -1;
 		}
 		pos += nbytes;
-
 		dprintf( D_ALWAYS, "Wrote SegMap[%d] OK\n", i );
 	}
 	dprintf( D_ALWAYS, "Wrote all SegMaps OK\n" );
@@ -782,7 +758,6 @@ Image::Read()
 			if( (fd=open_ckpt_file(file_name,O_RDONLY,0)) < 0 ) {
 				dprintf( D_ALWAYS, "open_ckpt_file failed: %s",
 						 strerror(errno));
-
 				return -1;
 			}
 //		}		// don't use URL library -- Jim B.
@@ -794,7 +769,7 @@ Image::Read()
 	}
 	pos += nbytes;
 	dprintf( D_ALWAYS, "Read headers OK\n" );
-	
+
 		// Read in the segment maps
 	for( i=0; i<head.N_Segs(); i++ ) {
 		if( (nbytes=net_read(fd,&map[i],sizeof(SegMap))) < 0 ) {
@@ -802,7 +777,6 @@ Image::Read()
 		}
 		pos += nbytes;
 		dprintf( D_ALWAYS, "Read SegMap[%d] OK\n", i );
-
 	}
 	dprintf( D_ALWAYS, "Read all SegMaps OK\n" );
 
@@ -955,8 +929,6 @@ SegMap::Write( int fd, ssize_t pos )
 }
 
 extern "C" {
-extern void	pvm_before_ckpt(void);
-extern void     pvm_after_ckpt(void);
 
 /*
   This is the signal handler which actually effects a checkpoint.  This
@@ -995,11 +967,9 @@ Checkpoint( int sig, int code, void *scp )
 
 	dprintf( D_ALWAYS, "Entering Checkpoint()\n" );
 
-	pvm_before_ckpt();
-
 	if( MyImage.GetMode() == REMOTE ) {
 		scm = SetSyscalls( SYS_REMOTE | SYS_UNMAPPED );
-		/* if ( MyImage.GetFd() != -1 ) {
+		if ( MyImage.GetFd() != -1 ) {
 			// Here we make _certain_ that fd is -1.  on remote checkpoints,
 			// the fd is always new since we open a fresh TCP socket to the
 			// shadow.  I have detected some buggy behavior where the remote
@@ -1009,10 +979,9 @@ Checkpoint( int sig, int code, void *scp )
 			// this "patch" can go away...  -Todd 11/95
 			dprintf(D_ALWAYS,"WARNING: fd is %d for remote checkpoint, should be -1\n",MyImage.GetFd());
 			MyImage.SetFd( -1 );
-			} */  // when we want the checkpoint file be written into a file
-		// descriptor directly, fd may be set at this point. -Bin 3/98
+		}
 	} else {
-	     scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+		scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	}
 
 
@@ -1029,24 +998,17 @@ Checkpoint( int sig, int code, void *scp )
 		;
 #endif
 	if( SETJMP(Env) == 0 ) {	// Checkpoint
-
-	     dprintf( D_ALWAYS, "About to save MyImage\n" );
+		dprintf( D_ALWAYS, "About to save MyImage\n" );
 #ifdef SAVE_SIGSTATE
-
-	     dprintf( D_ALWAYS, "About to save signal state\n" );
-	     condor_save_sigstates();
-	     dprintf( D_ALWAYS, "Done saving signal state\n" );
-
+		dprintf( D_ALWAYS, "About to save signal state\n" );
+		condor_save_sigstates();
+		dprintf( D_ALWAYS, "Done saving signal state\n" );
 #endif
-		     
 		SaveFileState();
 		MyImage.Save();
-
 		write_result = MyImage.Write();
-
 		if ( sig == SIGTSTP ) {
 			/* we have just checkpointed; now time to vacate */
-
 			dprintf( D_ALWAYS,  "Ckpt exit\n" );
 			SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 			if ( write_result == 0 ) {
@@ -1117,9 +1079,7 @@ Checkpoint( int sig, int code, void *scp )
 			} else {
 				SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 			}
-			
 			RestoreFileState();
-			
 			dprintf( D_ALWAYS, "Done restoring files state\n" );
 		} else {
 			patch_registers( scp );
@@ -1144,14 +1104,10 @@ Checkpoint( int sig, int code, void *scp )
 		dprintf( D_ALWAYS, "About to restore signal state\n" );
 		condor_restore_sigstates();
 		dprintf( D_ALWAYS, "Done restoring signal state\n" );
-
 #endif
-		
+
 		SetSyscalls( scm );
-		pvm_after_ckpt();
-
 		dprintf( D_ALWAYS, "About to return to user code\n" );
-
 		InRestart = FALSE;
 		return;
 	}
@@ -1178,8 +1134,6 @@ void
 restart( )
 {
 	InRestart = TRUE;
-
-
 
 	if (MyImage.Read() < 0) Suicide();
 	MyImage.Restore();
@@ -1275,7 +1229,6 @@ terminate_with_sig( int sig )
 		dprintf( D_ALWAYS, "About to send signal %d to process %d\n",
 				sig, my_pid );
 	}
-
 	if( SYSCALL(SYS_kill, my_pid, sig) < 0 ) {
 		EXCEPT( "kill" );
 	}
