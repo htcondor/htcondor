@@ -21,22 +21,52 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
 #include "condor_common.h"
+#include "condor_config.h"
 
 // Returns the full hostname of the given host in a static buffer.
 char*
 get_full_hostname( const char* host ) 
 {
 	static char full_host[MAXHOSTNAMELEN];
-	struct hostent *hostent_ptr;
+	char* tmp;
+	struct hostent *host_ptr;
+	int i;
 
-	if( (hostent_ptr = gethostbyname( host )) == NULL ) {
+	if( (host_ptr = gethostbyname( host )) == NULL ) {
 			// If the resolver can't find it, just return NULL
 		return NULL;
 	}
 
-	strcpy( full_host, hostent_ptr->h_name );
+		// See if it's correct in the hostent we've got.
+	if( host_ptr->h_name && 
+		(tmp = strchr(host_ptr->h_name, '.')) ) { 
+			// There's a '.' in the "name", use that as full.
+		strcpy( full_host, host_ptr->h_name );
+		return full_host;
+	}
+
+		// We still haven't found it yet, try all the aliases
+		// until we find one with a '.'
+	for( i=0; host_ptr->h_aliases[i]; i++ ) {
+		if( (tmp = strchr(host_ptr->h_aliases[i], '.')) ) { 
+			strcpy( full_host, host_ptr->h_aliases[i] );
+			return full_host;
+		}
+	}
+
+		// Still haven't found it, try to param for the domain.
+	if( (tmp = param("DEFAULT_DOMAIN_NAME")) ) {
+		if( tmp[0] == '.' ) {
+			sprintf( full_host, "%s%s", host, tmp );
+		} else {
+			sprintf( full_host, "%s.%s", host, tmp );
+		}
+		free( tmp );
+		return full_host;
+	}
+
+		// Still can't find it, just give up.
+	strcpy( full_host, host );
 	return full_host;
 }
