@@ -8,6 +8,44 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+6/8/04  V6_7-pre-merge-V6_7_0-doc-merge-2
+    The state of the doc directory in V6_7-branch before merging
+    changes from the V6_7_0-branch as tagged V6_7_0-doc-merge-2.
+
+6/8/04 V6_7_0-doc-merge-2
+    The state of the doc directory in V6_7_0-branch before a 
+    merge into the V6_7-branch.  This merge will
+    bring changes made in the V6_6_5-branch (from tag V6_6_5-doc-merge-1
+    to V6_6_5-doc-merge-2) into the V6_6-branch, and again merged
+    from V6_6-branch (from tag  V6_6-doc-merge-5 to V6_6-doc-merge-6)
+    into the V6_7_0-branch;  this tag made for a merge into the V6_7-branch.
+
+6/8/04 V6_7_0-post-merge-V6_6-doc-merge-6
+    The state of the doc directory in V6_7_0-branch after merging
+    changes from the V6_6-branch as tagged V6_6-doc-merge-6.
+
+6/8/04 V6_7_0-pre-merge-V6_6-doc-merge-6
+    The state of the doc directory in V6_7_0-branch before merging
+    changes from the V6_6-branch as tagged V6_6-doc-merge-6.
+
+6/8/04 V6_6-doc-merge-6
+    The state of the doc directory in V6_6-branch before a 
+    merge into the V6_7-branch.  This merge goes into the
+    V6_7_0-branch.
+
+6/7/04 V6_6-post-merge-V6_6_5-doc-merge-2
+    The state of the doc directory in V6_6-branch after merging
+    changes from the V6_6_5-branch as tagged V6_6_5-doc-merge-2.
+
+6/7/04 V6_6-pre-merge-V6_6_5-doc-merge-2
+    The state of the doc directory in V6_6-branch before merging
+    changes from the V6_6_5-branch as tagged V6_6_5-doc-merge-2.
+
+6/7/04 V6_6_5-doc-merge-2
+    The state of the doc directory in V6_6_5-branch before a 
+    merge into the V6_6-branch. 
+
+
 5/20/04 V6_7-post-merge-V6_7_0-doc-merge-1
     The state of the doc directory in V6_7-branch after merging
     changes from the V6_7_0-branch as tagged V6_7_0-doc-merge-1.
