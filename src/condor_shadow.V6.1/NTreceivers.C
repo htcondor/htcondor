@@ -41,7 +41,10 @@ do_REMOTE_syscall()
 
 	syscall_sock->decode();
 
-	ASSERT( syscall_sock->code(condor_sysnum) );
+	rval = syscall_sock->code(condor_sysnum);
+	if (!rval) {
+	 EXCEPT("Can no longer communicate with condor_starter on execute machine");
+	}
 
 	dprintf(D_SYSCALLS,
 		"Got request for syscall %d\n",
