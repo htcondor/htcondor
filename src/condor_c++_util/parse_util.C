@@ -1,7 +1,9 @@
 #include "condor_common.h"
-#include "parseUtil.h"
+#include "parse_util.h"
 
-void breakStringByDelimiter(StringList &toAppendTo, const MyString &strToBreak, char cDelimiter)
+void
+breakStringByDelimiter( StringList &toAppendTo, const MyString &strToBreak,
+						char cDelimiter )
 {
 	int iStartPos = 0;
 	int iDelimPos;

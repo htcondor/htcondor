@@ -2,7 +2,7 @@
 #include "string_list.h"
 #include "which.h"
 #include "directory.h"
-#include "parseUtil.h"
+#include "parse_util.h"
 
 #ifdef WIN32
 #include <direct.h>
