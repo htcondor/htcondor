@@ -54,6 +54,10 @@ this ouput and displays it to the user in a readable format.
       many individual jobs \Condor{dagman} will submit in a row before
       servicing other requests (such as a \Condor{rm}).
 
+\item The grid\_monitor now automatically detects jobmanager scripts on the
+      remote gatekeeper.  Previously it was limited to supporting the condor,
+	  fork, lsf, pbs, and remote jobmanager scripts.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
