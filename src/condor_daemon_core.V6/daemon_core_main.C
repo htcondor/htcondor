@@ -1412,6 +1412,18 @@ int main( int argc, char** argv )
 
 	dprintf(D_ALWAYS,"******************************************************\n");
 
+	if (global_config_file != "") {
+		dprintf(D_ALWAYS, "Using config file: %s\n", 
+				global_config_file.GetCStr());
+	}
+	if (global_root_config_file != "") {
+		dprintf(D_ALWAYS, "Using root config file: %s\n", 
+				global_root_config_file.GetCStr());
+	}
+	if (local_config_files != "") {
+		dprintf(D_ALWAYS, "Using local config files: %s\n", 
+				local_config_files.GetCStr());
+	}
 		// chdir() into our log directory so if we drop core, that's
 		// where it goes.  We also do some NT-specific stuff in here.
 	drop_core_in_log();
