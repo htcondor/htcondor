@@ -61,18 +61,12 @@ case $os in
 				osld="/usr/lib/ld.real"
 			fi
 		else
-			if [ $brokenbase = "old_ld" ]; then
+			if [ $brokenbase = "old_ld" -o $brokenbase = "uld" ]; then
 				osld="/usr/lib/old_ld"
-			elif [ $brokenbase = "real-ld" ]; then
-				osld="/usr/lib/old_ld"
+				abi="-o32"
 			else
-				osld="/bin/$brokenbase"
+				osld="/usr/lib/ld"
 			fi
-		fi
-		#6/3/99 mikeu: force o32 ABI if using old_ld/uld
-		finalbase=`basename $osld`
-		if [ $finalbase = old_ld -o $finalbase = uld ]; then
-			abi="-o32"
 		fi
 		;;
 	HP-UX )
@@ -187,7 +181,7 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 		if [ X$abi = X-o32 ]; then
 			ldargs="-mips2 $abi" 
 		else
-			ldargs="$abi"
+			ldargs="$abi -woff 85"
 		fi
 
 	#6/3/99 mikeu: the rest of this is redoing the work done in prev case stmt

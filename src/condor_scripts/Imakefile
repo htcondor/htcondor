@@ -23,6 +23,8 @@ static_link_target($(STATIC_DIR)/lib/ld,lib,real-ld)
 static_copy_target(condor_cleanckpts,$(STATIC_CONTRIB)/sbin,condor_cleanckpts,EXECUTABLE_MODE)
 
 #if IS_SGI_IRIX
+release_link_target($(RELEASE_DIR)/lib/ld,lib,uld)
+release_link_target($(RELEASE_DIR)/lib/ld,lib,old_ld)
 release_symlink_target(/usr/lib/c++/c++filt,lib,c++filt)
 release_symlink_target(/usr/lib/c++/c++patch,lib,c++patch)
 release_symlink_target(/usr/lib/c++/cfront,lib,cfront)
@@ -30,6 +32,8 @@ release_symlink_target(/usr/lib/c++/markc++,lib,markc++)
 release_symlink_target(/usr/lib/c++/ptcomp,lib,ptcomp)
 release_symlink_target(/usr/lib/c++/ptlink,lib,ptlink)
 
+strip_link_target($(STRIP_DIR)/lib/ld,lib,uld)
+strip_link_target($(STRIP_DIR)/lib/ld,lib,old_ld)
 strip_symlink_target(/usr/lib/c++/c++filt,lib,c++filt)
 strip_symlink_target(/usr/lib/c++/c++patch,lib,c++patch)
 strip_symlink_target(/usr/lib/c++/cfront,lib,cfront)
@@ -37,16 +41,14 @@ strip_symlink_target(/usr/lib/c++/markc++,lib,markc++)
 strip_symlink_target(/usr/lib/c++/ptcomp,lib,ptcomp)
 strip_symlink_target(/usr/lib/c++/ptlink,lib,ptlink)
 
+static_link_target($(STATIC_DIR)/lib/ld,lib,uld)
+static_link_target($(STATIC_DIR)/lib/ld,lib,old_ld)
 static_symlink_target(/usr/lib/c++/c++filt,lib,c++filt)
 static_symlink_target(/usr/lib/c++/c++patch,lib,c++patch)
 static_symlink_target(/usr/lib/c++/cfront,lib,cfront)
 static_symlink_target(/usr/lib/c++/markc++,lib,markc++)
 static_symlink_target(/usr/lib/c++/ptcomp,lib,ptcomp)
 static_symlink_target(/usr/lib/c++/ptlink,lib,ptlink)
-
-release_link_target($(RELEASE_DIR)/lib/ld,lib,old_ld)
-strip_link_target($(STRIP_DIR)/lib/ld,lib,old_ld)
-static_link_target($(STATIC_DIR)/lib/ld,lib,old_ld)
 #endif
 
 release_copy_target(Condor.pm,$(RELEASE_DIR)/lib,Condor.pm,OBJECT_MODE)

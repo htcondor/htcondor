@@ -115,11 +115,11 @@ else
 fi
 
 osfull="$os$osmajver"
+abi=""
 
 # Determine if the system ld has been replaced with our ld script
 # or not.
 CONDOR_FULLINSTALL=false
-abi=""
 
 case $os in
 	IRIX )
