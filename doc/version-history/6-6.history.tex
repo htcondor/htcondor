@@ -44,6 +44,11 @@ the continued lines.  This has been corrected.
       \Condor{submit}, and would instead report the job as
       successfully submitted with job id 0.0.
 
+\item Fixed a bug which was causing problems when a periodic\_remove
+expression for a scheduler universe job evaluates to true.  Under
+these conditions, the schedd did not log the job terminiation to the
+job log.  Addtionally, the schedd would exit with an error status.
+
 \end{itemize}
 
 \noindent Known Bugs:
