@@ -35,13 +35,23 @@ Accountant::Accountant(int MaxCustomers, int MaxResources)
 void
 Accountant::Initialize() 
 {
-  char* tmp=param("PRIORITY_HALFLIFE");
-  if (tmp) HalfLifePeriod=atoi(tmp);
+  char* tmp;
+  tmp = param("PRIORITY_HALFLIFE");
+  if(tmp) {
+	  HalfLifePeriod=atoi(tmp);
+	  free(tmp);
+  }
   dprintf(D_FULLDEBUG,"Accountant::Initialize - HalfLifePeriod=%f\n",HalfLifePeriod);
 
-  LogFileName=param("SPOOL");
-  // LogFileName+="/p/condor/workspaces/adiel/local/spool";
-  LogFileName+="/Accountant.log";
+  tmp = param("SPOOL");
+  if(tmp) {
+	  LogFileName=tmp;
+		  // LogFileName+="/p/condor/workspaces/adiel/local/spool";
+	  LogFileName+="/Accountant.log";
+	  free(tmp);
+  } else {
+	  EXCEPT( "SPOOL not defined!" );
+  }
   LoadState();
   LogEnabled=1;
   UpdatePriorities();
