@@ -3934,6 +3934,7 @@ Scheduler::child_exit(int pid, int status)
 {
 	shadow_rec*		srec;
 	int				StartJobsFlag=TRUE;
+	int				q_status;  // status of this job in the queue 
 
 	srec = FindSrecByPid(pid);
 
@@ -3996,6 +3997,11 @@ Scheduler::child_exit(int pid, int status)
 				,pid);
 			status = JOB_EXCEPTION;
 		}
+		if( GetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
+							ATTR_JOB_STATUS, &q_status) < 0 ) {
+			EXCEPT( "ERROR no job status for %d.%d in child_exit()!",
+					srec->job_id.cluster, srec->job_id.proc );
+		}
 		if( WIFEXITED(status) ) {			
             dprintf( D_FULLDEBUG, "Shadow pid %d exited with status %d\n",
 					 pid, WEXITSTATUS(status) );
@@ -4029,14 +4035,18 @@ Scheduler::child_exit(int pid, int status)
 			case JOB_NO_CKPT_FILE:
 			case JOB_KILLED:
 			case JOB_COREDUMPED:
-				set_job_status( srec->job_id.cluster, srec->job_id.proc, 
-								REMOVED );
+				if( q_status != HELD ) {
+					set_job_status( srec->job_id.cluster,
+									srec->job_id.proc, REMOVED ); 
+				}
 				break;
 			case JOB_EXITED:
 				dprintf(D_FULLDEBUG, "Reaper: JOB_EXITED\n");
 
-				set_job_status( srec->job_id.cluster, srec->job_id.proc,
-								COMPLETED );
+				if( q_status != HELD ) {
+					set_job_status( srec->job_id.cluster,
+									srec->job_id.proc, COMPLETED ); 
+				}
 				if ( (srec->match) && (srec->match->isMatchedMPI) ) {
 					nuke_mpi ( srec );
 				}
