@@ -130,12 +130,18 @@ class MPIShadow : public BaseShadow
 		*/
 	virtual void emailTerminateEvent( int exitReason );
 
-
 		/** Do all work to cleanup before this shadow can exit.  To
 			cleanup an MPI job, we've got to kill all our starters,
 			and remove the procgroup file, if we're using one.
 		*/
 	virtual void cleanUp( void );
+
+		/** Do a graceful shutdown of this computation.
+			Unfortunately, there's no such thing as a graceful
+			shutdown of an MPI job, so we're just going to have to
+			call cleanUp() in the MPI case. 
+		*/
+	virtual void gracefulShutDown( void );
 
  private:
 

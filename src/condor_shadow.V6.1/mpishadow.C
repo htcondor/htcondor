@@ -742,6 +742,13 @@ MPIShadow::cleanUp( void )
 }
 
 
+void 
+MPIShadow::gracefulShutDown( void )
+{
+	cleanUp();
+}
+
+
 void
 MPIShadow::emailTerminateEvent( int exitReason )
 {
