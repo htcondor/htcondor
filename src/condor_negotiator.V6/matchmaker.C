@@ -190,7 +190,10 @@ RESCHEDULE_commandHandler (int, Stream *)
 	double		normalFactor;
 	double		scheddPrio;
 	int			scheddLimit;
-
+	int			scheddUsage;
+	int			can_run_niceuser;
+	int			scheddsRemaining; 
+	int			hit_schedd_prio_limit;
 
 	dprintf( D_ALWAYS, "---------- Started Negotiation Cycle ----------\n" );
 
@@ -210,59 +213,100 @@ RESCHEDULE_commandHandler (int, Stream *)
 
 	// ----- Sort the schedd list in decreasing priority order
 	dprintf( D_ALWAYS, "Phase 3:  Sorting schedd ads by priority ...\n" );
-	calculateNormalizationFactor( scheddAds, maxPrioValue, normalFactor );
 	scheddAds.Sort( (lessThanFunc)comparisonFunction, this );
 
-	// ----- Negotiate with the schedds in the sorted list
-	dprintf( D_ALWAYS, "Phase 4:  Negotiating with schedds ...\n" );
-	scheddAds.Open();
-	while( (schedd = scheddAds.Next()) )
-	{
-		// get the name and address of the schedd
-		if( !schedd->LookupString( ATTR_NAME, scheddName ) ||
-			!schedd->LookupString( ATTR_SCHEDD_IP_ADDR, scheddAddr ) )
+	int spin_pie=0;
+	do {
+		spin_pie++;
+		hit_schedd_prio_limit = FALSE;
+		can_run_niceuser = TRUE;
+		calculateNormalizationFactor( scheddAds, maxPrioValue, normalFactor );
+		scheddsRemaining = scheddAds.MyLength();
+		// ----- Negotiate with the schedds in the sorted list
+		dprintf( D_ALWAYS, "Phase 4.%d:  Negotiating with schedds ...\n",spin_pie );
+		scheddAds.Open();
+		while( (schedd = scheddAds.Next()) )
 		{
-			dprintf (D_ALWAYS, "\tError!  Could not get %s and %s from ad\n",
-						ATTR_NAME, ATTR_SCHEDD_IP_ADDR);
-			return FALSE;
-		}	
-		dprintf(D_ALWAYS,"\tNegotiating with %s at %s\n",scheddName,scheddAddr);
+			// decrement our count of schedds remaining
+			scheddsRemaining--;
+	
+			// get the name and address of the schedd
+			if( !schedd->LookupString( ATTR_NAME, scheddName ) ||
+				!schedd->LookupString( ATTR_SCHEDD_IP_ADDR, scheddAddr ) )
+			{
+				dprintf (D_ALWAYS, "\tError!  Could not get %s and %s from ad\n",
+							ATTR_NAME, ATTR_SCHEDD_IP_ADDR);
+				return FALSE;
+			}	
+			dprintf(D_ALWAYS,"\tNegotiating with %s at %s\n",scheddName,scheddAddr);
+	
+			// calculate the percentage of machines that this schedd can use
+			scheddPrio = accountant.GetPriority ( scheddName );
+			if (scheddPrio==HUGE_VAL) {
+				scheddUsage = 0;
+			}
+			else { 
+				scheddUsage = accountant.GetResourcesUsed ( scheddName );
+			}
+			numStartdAds = startdAds.MyLength();
+			dprintf (D_FULLDEBUG, "\tCalculating schedd limit with the following "
+						"parameters\n");
+			dprintf (D_FULLDEBUG, "\t\tMaxPrioValue = %f\n", maxPrioValue);
+			dprintf (D_FULLDEBUG, "\t\tScheddPrio   = %f\n", scheddPrio);
+			dprintf (D_FULLDEBUG, "\t\tScheddUsage  = %d\n", scheddUsage);
+			dprintf (D_FULLDEBUG, "\t\tNormalFactor = %f\n", normalFactor);
+			dprintf (D_FULLDEBUG, "\t\tNumStartdAds = %d\n", numStartdAds);
+	
+			if ( scheddPrio != HUGE_VAL ) {
+				// a normal user, i.e. not the "nice-user"
+				scheddLimit  = (int) ceil (maxPrioValue/(scheddPrio*normalFactor) *
+										numStartdAds) - scheddUsage;
+			} else {
+				// handle the "nice-user" 
+				// if any other schedd before us did not get all the 
+				// resources they wanted, bail out now.
+				if ( !can_run_niceuser ) {
+					dprintf(D_ALWAYS,"\tNice-User skipped; other schedds want more\n");
+					continue;    // dont waste the time calling negotiate
+				}
+				// Ok, if we made it here we can run nice-user jobs.
+				// Run nice-user jobs round-robin amongst the schedds; since
+				// the schedds are sorted by priority we know that all the
+				// remaining schedds are also nice-user; so we can get
+				// round-robin by setting the limit to the number of
+				// machines divided by the number of nice-user schedds left.
+				scheddLimit = (int) ceil (numStartdAds/(scheddsRemaining + 1));
+			}
 
-		// calculate the percentage of machines that this schedd can use
-		scheddPrio   = accountant.GetPriority ( scheddName );
-		numStartdAds = startdAds.MyLength();
-
-		dprintf (D_FULLDEBUG, "\tCalculating schedd limit with the following "
-					"parameters\n");
-		dprintf (D_FULLDEBUG, "\t\tMaxPrioValue = %f\n", maxPrioValue);
-		dprintf (D_FULLDEBUG, "\t\tScheddPrio   = %f\n", scheddPrio);
-		dprintf (D_FULLDEBUG, "\t\tNormalFactor = %f\n", normalFactor);
-		dprintf (D_FULLDEBUG, "\t\tNumStartdAds = %d\n", numStartdAds);
-
-		scheddLimit  = (int) ceil (maxPrioValue/(scheddPrio*normalFactor) *
-									numStartdAds);
-
-		dprintf(D_ALWAYS,"\tSchedd %s's resource limit set at %d\n",
-				scheddName,scheddLimit);
-		result = negotiate( scheddName, scheddAddr, scheddPrio, scheddLimit, 
-						startdAds, startdPvtAds);
-		switch (result)
-		{
-			case MM_DONE: // the schedd got all the resources it wanted
-			case MM_RESUME:
-				// the schedd hit its resource limit.  must resume negotiations
-				// at a later negotiation cycle; in either case adjust 
-				// normalization factor
-				normalFactor = normalFactor - (maxPrioValue / scheddPrio);
-				break;
-
-			case MM_ERROR:
-			default:
-				dprintf( D_ALWAYS,"\tError: Ignoring schedd for this cycle\n" );
-				// scheddAds.Delete( schedd );
+			dprintf(D_ALWAYS,"\tSchedd %s's resource limit set at %d\n",
+					scheddName,scheddLimit);
+			result = negotiate( scheddName, scheddAddr, scheddPrio, scheddLimit, 
+							startdAds, startdPvtAds);
+			switch (result)
+			{
+				case MM_RESUME:
+					// the schedd hit its resource limit.  must resume negotiations
+					// at a later negotiation cycle.
+					// do not allow nice_user jobs to run, since this schedd
+					// still wants more resources.
+					dprintf(D_FULLDEBUG,"\tThis schedd hit its scheddlimit.\n");
+					can_run_niceuser = FALSE;
+					hit_schedd_prio_limit = TRUE;
+					break;
+				case MM_DONE: 
+					// the schedd got all the resources it wanted. delete this schedd
+					// ad.
+					dprintf(D_FULLDEBUG,"\tThis schedd got all it wants; removing it.\n");
+					scheddAds.Delete( schedd);
+					break;
+				case MM_ERROR:
+				default:
+					dprintf( D_ALWAYS,"\tError: Ignoring schedd for this cycle\n" );
+					scheddAds.Delete( schedd );
+			}
 		}
-	}
-	scheddAds.Close();
+		scheddAds.Close();
+	} while ( hit_schedd_prio_limit == TRUE );
 
 	// ----- Done with the negotiation cycle
 	dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
@@ -687,6 +731,7 @@ calculateNormalizationFactor (ClassAdList &scheddAds, double &max,
 	double	prio;
 
 	// find the maximum of the priority values (i.e., lowest priority)
+	// note: ignore the "nice user" priority (HUGE_VAL)
 	max = DBL_MIN;
 	scheddAds.Open();
 	while ((ad = scheddAds.Next()))
@@ -694,18 +739,20 @@ calculateNormalizationFactor (ClassAdList &scheddAds, double &max,
 		// this will succeed (comes from collector)
 		ad->LookupString (ATTR_NAME, scheddName);
 		prio = accountant.GetPriority (scheddName);
-		if (prio > max) max = prio;
+		if (prio > max && prio != HUGE_VAL) max = prio;
 	}
 	scheddAds.Close();
 
 	// calculate the normalization factor, i.e., sum of the (max/scheddprio)
+	// again, do not enter the "nice user" into the calculation
 	normalFactor = 0.0;
 	scheddAds.Open();
 	while ((ad = scheddAds.Next()))
 	{
 		ad->LookupString (ATTR_NAME, scheddName);
 		prio = accountant.GetPriority (scheddName);
-		normalFactor = normalFactor + max/prio;
+		if ( prio != HUGE_VAL )
+			normalFactor = normalFactor + max/prio;
 	}
 	scheddAds.Close();
 
