@@ -3,7 +3,7 @@
 
 #define RpcLib /**/
 #define MldLib /**/
-#define KernLib /usr/lib/libkstat.so /usr/lib/libelf.so
+#define KernLib -lkstat -lelf
 #define MallocLib /**/
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC  
