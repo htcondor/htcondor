@@ -17,6 +17,7 @@ CONDOR_ZCLIB=$CONDOR_LIBDIR/libcondorzsyscall.a
 CONDOR_RT0=$CONDOR_LIBDIR/condor_rt0.o
 CONDOR_CPLUS=$CONDOR_LIBDIR/libcondorc++support.a
 CONDOR_LD_DIR=$CONDOR_LIBDIR
+CONDOR_SPECIAL_CLIB=/not-there-bull
 
 # --------------------------------------------------
 
@@ -34,7 +35,7 @@ do
 
 	if [ $1 = "-condor_syscall_lib" ]; then
 		shift
-		CONDOR_CLIB=$1
+		CONDOR_SPECIAL_CLIB=$1
 		shift
 		continue
 	fi
@@ -86,6 +87,10 @@ done
 
 if [ -r $STATIC_ZLIB -a -r $CONDOR_ZCLIB ]; then
 	CONDOR_CLIB="$CONDOR_ZCLIB $STATIC_ZLIB"
+fi
+
+if [ -r $CONDOR_SPECIAL_CLIB ]; then
+	CONDOR_CLIB="$CONDOR_SPECIAL_CLIB"
 fi
 
 # Export these so our special "ld" script can find them
