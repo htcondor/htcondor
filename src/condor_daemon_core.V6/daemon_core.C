@@ -3151,6 +3151,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 			ASSERT(pidentry);
 			pidentry->parent_is_local = TRUE;
 			pidentry->reaper_id = 1;
+			pidentry->hung_tid = -1;
 		} else {
 			dprintf(D_DAEMONCORE,"Unknown process exited (popen?) - pid=%d\n",pid);
 			return FALSE;
