@@ -32,6 +32,11 @@ EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 #	elif IS_HPPAR_HPUX9
 EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o  \
 		  MMAP.o PIPE.o
+#	elif IS_I386_LINUX
+EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
+		MMAP.o PIPE.o \
+		__GETEUID.o __GETEGID.o __GETPPID.o __KILL.o \
+		__FORK.o __PIPE.o __SIGACT.o ____SIG.o ____SIG2.o
 #	else
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 		  MMAP.o PIPE.o
@@ -143,6 +148,17 @@ uppercase_target($(SIMPLE_LIBC),sigaction.o,SIGACTION.o,sigaction,SIGACTION)
 uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
 uppercase_target($(SIMPLE_LIBC),pipe.o,PIPE.o,pipe,PIPE)
 
+uppercase_target($(SIMPLE_LIBC),__geteuid.o,__GETEUID.o,__geteuid,__GETEUID)
+uppercase_target($(SIMPLE_LIBC),__getegid.o,__GETEGID.o,__getegid,__GETEGID)
+uppercase_target($(SIMPLE_LIBC),__getppid.o,__GETPPID.o,__getppid,__GETPPID)
+uppercase_target($(SIMPLE_LIBC),__kill.o,__KILL.o,__kill,__KILL)
+uppercase_target($(SIMPLE_LIBC),__sigact.o,__SIGACT.o,__sigaction,__SIGACTION)
+uppercase_target($(SIMPLE_LIBC),__fork.o,__FORK.o,__fork,__FORK)
+uppercase_target($(SIMPLE_LIBC),__pipe.o,__PIPE.o,__pipe,__PIPE)
+uppercase_target($(SIMPLE_LIBC),____sig.o,____SIG.o,___sig_restore,___SIG_RESTORE)
+uppercase_target($(SIMPLE_LIBC),____sig.o,____SIG2.o,___masksig_restore,___MASKSIG_RESTORE)
+
+
 CMNT
 CMNT Create a replacement for crt0.o to be linked with condor programs.
 CMNT N.B. This is done differently than other objects in that we start out
@@ -171,11 +187,18 @@ release_library(condor_syscall_lib.a,$(RELEASE_DIR)/lib)
 
 #if IS_ALPHA_OSF1
 CPP = /usr/ucb/cpp
+#elif IS_I386-LINUX
+CPP = /lib/cpp
 #else
 CPP = ansi_cpp
 #endif
 
+
+#if IS_I386_LINUX
+switches.c: syscall.tmpl switches.prologue stub_gen switches.linux.h
+#else
 switches.c: syscall.tmpl switches.prologue stub_gen
+#endif
 	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) < syscall.tmpl | \
 	stub_gen -mode switches  -p switches.prologue \
 	> switches.c
