@@ -49,12 +49,19 @@ D. The general case of no action specified means the job stays in the queue.
 /* determine what to do with this job. */
 ClassAd* user_job_policy(ClassAd *jad);
 
+/* determine what kind of classad it is with respect to the user_policy */
+int JadKind(ClassAd *suspect);
+
 /* print out this expression nicely */
 void EmitExpression(unsigned int mode, const char *attr, ExprTree* attr_expr);
 
 /* Errors that can happen when determining the user_policy */
 #define USER_ERROR_NOT_JOB_AD 0
 #define USER_ERROR_INCONSISTANT 1
+
+/* the "kind" that a job ad candidate can be */
+#define KIND_OLDSTYLE 2
+#define KIND_NEWSTYLE 3 /* new style is with the new user policy stuff */
 
 /* If a job ad was pre user policy and it was determined to have exited. */
 extern const char *old_style_exit;

@@ -29,8 +29,6 @@ const char ATTR_USER_POLICY_ERROR [] = "UserPolicyError";
 /* an "errno" of sorts as to why the error happened. */
 const char ATTR_USER_ERROR_REASON [] = "ErrorReason";
 
-
-
 /* This function determines what should be done with a job given the user
 	policy specifed in the job ad. If no policy is specified, then a classad
 	is returned detailing that nothing should be done because there wasn't
@@ -45,6 +43,7 @@ ClassAd* user_job_policy(ClassAd *jad)
 	int periodic_hold = 0, periodic_remove = 0;
 	int on_exit_hold = 0, on_exit_remove = 0;
 	int cdate = 0;
+	int adkind;
 	
 	if (jad == NULL)
 	{
@@ -65,33 +64,15 @@ ClassAd* user_job_policy(ClassAd *jad)
 	sprintf(buf, "%s = FALSE", ATTR_USER_POLICY_ERROR);
 	result->Insert(buf);
 
-	/* in the versions of Condor that allow user defined policies to exist
-		condor_submit inserts ATTR_PERIODIC_HOLD_CHECK, 
-		ATTR_PERIODIC_REMOVE_CHECK, ATTR_ON_EXIT_HOLD_CHECK, and 
-		ATTR_ON_EXIT_REMOVE_CHECK as default values. If these do not 
-		exist, then I cannot check any periodic expressions, and must use
-		a different scheme to figure out if the job exited. */
+	/* figure out the ad kind and then do something with it */
 
-	ExprTree *ph_expr = jad->Lookup(ATTR_PERIODIC_HOLD_CHECK);
-	ExprTree *pr_expr = jad->Lookup(ATTR_PERIODIC_REMOVE_CHECK);
-	ExprTree *oeh_expr = jad->Lookup(ATTR_ON_EXIT_HOLD_CHECK);
-	ExprTree *oer_expr = jad->Lookup(ATTR_ON_EXIT_REMOVE_CHECK);
+	adkind = JadKind(jad);
 
-	/* This determines if the user_policy expression definition appears in
-		this classad. If not, then do old-style policy where I only check to
-		see if the job exited correctly. */
-		
-	if (ph_expr == NULL && pr_expr == NULL && oeh_expr == NULL && 
-		oer_expr == NULL)
+	switch(adkind)
 	{
-		/* do old style policy checking, only determine if job has exited. */
-
-		if (jad->LookupInteger(ATTR_COMPLETION_DATE, cdate) == 0)
-		{
-			/* What? No Completion date and no user policy? I must not have
-				a job ad or something like that. */
+		case USER_ERROR_NOT_JOB_AD:
 			dprintf(D_ALWAYS, "user_job_policy(): I have something that "
-					"doesn't appear to be a job ad! Ingoring.\n");
+					"doesn't appear to be a job ad! Ignoring.\n");
 
 			sprintf(buf, "%s = TRUE", ATTR_USER_POLICY_ERROR);
 			result->Insert(buf);
@@ -100,137 +81,155 @@ ClassAd* user_job_policy(ClassAd *jad)
 			result->Insert(buf);
 
 			return result;
-		}
+			break;
 
-		if (cdate > 0)
-		{
-			/* oldstyle job ad said this job is finished */
+		case USER_ERROR_INCONSISTANT:
+			dprintf(D_ALWAYS, "user_job_policy(): Inconsistant jobad state "
+								"with respect to user_policy. Detail "
+								"follows:\n");
+			{
+				ExprTree *ph_expr = jad->Lookup(ATTR_PERIODIC_HOLD_CHECK);
+				ExprTree *pr_expr = jad->Lookup(ATTR_PERIODIC_REMOVE_CHECK);
+				ExprTree *oeh_expr = jad->Lookup(ATTR_ON_EXIT_HOLD_CHECK);
+				ExprTree *oer_expr = jad->Lookup(ATTR_ON_EXIT_REMOVE_CHECK);
 
-			sprintf(buf, "%s = TRUE", ATTR_TAKE_ACTION);
+				EmitExpression(D_ALWAYS, ATTR_PERIODIC_HOLD_CHECK, ph_expr);
+				EmitExpression(D_ALWAYS, ATTR_PERIODIC_REMOVE_CHECK, pr_expr);
+				EmitExpression(D_ALWAYS, ATTR_ON_EXIT_HOLD_CHECK, oeh_expr);
+				EmitExpression(D_ALWAYS, ATTR_ON_EXIT_REMOVE_CHECK, oer_expr);
+			}
+
+			sprintf(buf, "%s = TRUE", ATTR_USER_POLICY_ERROR);
 			result->Insert(buf);
-			sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, REMOVE_JOB);
+			sprintf(buf, "%s = %u", ATTR_USER_ERROR_REASON, 
+				USER_ERROR_INCONSISTANT);
 			result->Insert(buf);
-			sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
-				old_style_exit);
-			result->Insert(buf);
-		}
 
-		return result;
+			return result;
+			break;
+
+		case KIND_OLDSTYLE:
+			jad->LookupInteger(ATTR_COMPLETION_DATE, cdate);
+			if (cdate > 0)
+			{
+				sprintf(buf, "%s = TRUE", ATTR_TAKE_ACTION);
+				result->Insert(buf);
+				sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, REMOVE_JOB);
+				result->Insert(buf);
+				sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
+					old_style_exit);
+				result->Insert(buf);
+			}
+			return result;
+			break;
+
+		case KIND_NEWSTYLE:
+			/*	The user_policy is checked in this
+				order. The first one to succeed is the winner:
+		
+				periodic_hold
+				periodic_exit
+				on_exit_hold
+				on_exit_remove
+			*/
+
+			/* should I perform a periodic hold? */
+			jad->EvalBool(ATTR_PERIODIC_HOLD_CHECK, jad, periodic_hold);
+			if (periodic_hold == 1)
+			{
+				/* make a result classad explaining this and return it */
+
+				sprintf(buf, "%s = TRUE", ATTR_TAKE_ACTION);
+				result->Insert(buf);
+				sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, HOLD_JOB);
+				result->Insert(buf);
+				sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
+					ATTR_PERIODIC_HOLD_CHECK);
+				result->Insert(buf);
+
+				return result;
+			}
+
+			/* Should I perform a periodic remove? */
+			jad->EvalBool(ATTR_PERIODIC_REMOVE_CHECK, jad, periodic_remove);
+			if (periodic_remove == 1)
+			{
+				/* make a result classad explaining this and return it */
+
+				sprintf(buf, "%s = TRUE", ATTR_TAKE_ACTION);
+				result->Insert(buf);
+				sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, REMOVE_JOB);
+				result->Insert(buf);
+				sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
+					ATTR_PERIODIC_REMOVE_CHECK);
+				result->Insert(buf);
+
+				return result;
+			}
+
+			/* Check to see if ExitSignal or ExitCode 
+				are defined, if not, then assume the
+				job hadn't exited and don't check the
+				policy. This could hide a mistake of
+				the caller to insert those attributes
+				correctly but allows checking of the
+				job ad in a periodic context. */
+			if (jad->Lookup(ATTR_ON_EXIT_CODE) == 0 && 
+				jad->Lookup(ATTR_ON_EXIT_SIGNAL) == 0)
+			{
+				return result;
+			}
+
+			/* Should I hold on exit? */
+			jad->EvalBool(ATTR_ON_EXIT_HOLD_CHECK, jad, on_exit_hold);
+			if (on_exit_hold == 1)
+			{
+				/* make a result classad explaining this and return it */
+
+				sprintf(buf, "%s = TRUE", ATTR_TAKE_ACTION);
+				result->Insert(buf);
+				sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, HOLD_JOB);
+				result->Insert(buf);
+				sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
+					ATTR_ON_EXIT_HOLD_CHECK);
+				result->Insert(buf);
+
+				return result;
+			}
+
+			/* Should I remove on exit? */
+			jad->EvalBool(ATTR_ON_EXIT_REMOVE_CHECK, jad, on_exit_remove);
+			if (on_exit_remove == 1)
+			{
+				/* make a result classad explaining this and return it */
+
+				sprintf(buf, "%s = TRUE", ATTR_TAKE_ACTION);
+				result->Insert(buf);
+				sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, REMOVE_JOB);
+				result->Insert(buf);
+				sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
+					ATTR_ON_EXIT_REMOVE_CHECK);
+				result->Insert(buf);
+
+				return result;
+			}
+
+			/* just return the default of leaving the job in idle state */
+			return result;
+
+			break;
+
+		default:
+			dprintf(D_ALWAYS, "JadKind() returned unknown ad kind\n");
+
+			/* just return the default of leaving the job in idle state. This
+				is safest. */
+			return result;
+
+			break;
 	}
 
-	/* I've determined that user_policy expressions in the job ad exist, so
-		now see if they exist in a consistant way. */
-
-	if (ph_expr == NULL || pr_expr == NULL || oeh_expr == NULL || 
-		oer_expr == NULL)
-	{
-		dprintf(D_ALWAYS, "user_job_policy(): Inconsistant jobad state with "
-							"respect to user_policy. Detail follows:\n");
-
-		EmitExpression(D_ALWAYS, ATTR_PERIODIC_HOLD_CHECK, ph_expr);
-		EmitExpression(D_ALWAYS, ATTR_PERIODIC_REMOVE_CHECK, pr_expr);
-		EmitExpression(D_ALWAYS, ATTR_ON_EXIT_HOLD_CHECK, oeh_expr);
-		EmitExpression(D_ALWAYS, ATTR_ON_EXIT_REMOVE_CHECK, oer_expr);
-
-		sprintf(buf, "%s = TRUE", ATTR_USER_POLICY_ERROR);
-		result->Insert(buf);
-		sprintf(buf, "%s = %u", ATTR_USER_ERROR_REASON, 
-			USER_ERROR_INCONSISTANT);
-		result->Insert(buf);
-
-		return result;
-	}
-
-	/* ok, now that I know the job ad is consistant, I can do
-		the actual policy. The user_policy is checked in this
-		order. The first one to succeed is the winner:
-
-		periodic_hold
-		periodic_exit
-		on_exit_hold
-		on_exit_remove
-	*/
-
-
-	/* should I perform a periodic hold? */
-	jad->EvalBool(ATTR_PERIODIC_HOLD_CHECK, jad, periodic_hold);
-	if (periodic_hold == 1)
-	{
-		/* make a result classad explaining this and return it */
-
-		sprintf(buf, "%s = TRUE", ATTR_TAKE_ACTION);
-		result->Insert(buf);
-		sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, HOLD_JOB);
-		result->Insert(buf);
-		sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
-			ATTR_PERIODIC_HOLD_CHECK);
-		result->Insert(buf);
-
-		return result;
-	}
-
-	/* Should I perform a periodic remove? */
-	jad->EvalBool(ATTR_PERIODIC_REMOVE_CHECK, jad, periodic_remove);
-	if (periodic_remove == 1)
-	{
-		/* make a result classad explaining this and return it */
-
-		sprintf(buf, "%s = TRUE", ATTR_TAKE_ACTION);
-		result->Insert(buf);
-		sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, REMOVE_JOB);
-		result->Insert(buf);
-		sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
-			ATTR_PERIODIC_REMOVE_CHECK);
-		result->Insert(buf);
-
-		return result;
-	}
-
-	/* Check to see if ExitSignal or ExitCode are defined, if not, then
-		assume the job hadn't exited and don't check the policy. This could
-		hide a mistake of the caller to insert those attributes correctly
-		but allows checking of the job ad in a periodic context. */
-	if (jad->Lookup(ATTR_ON_EXIT_CODE) == 0 && 
-		jad->Lookup(ATTR_ON_EXIT_SIGNAL) == 0)
-	{
-		return result;
-	}
-
-	/* Should I hold on exit? */
-	jad->EvalBool(ATTR_ON_EXIT_HOLD_CHECK, jad, on_exit_hold);
-	if (on_exit_hold == 1)
-	{
-		/* make a result classad explaining this and return it */
-
-		sprintf(buf, "%s = TRUE", ATTR_TAKE_ACTION);
-		result->Insert(buf);
-		sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, HOLD_JOB);
-		result->Insert(buf);
-		sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
-			ATTR_ON_EXIT_HOLD_CHECK);
-		result->Insert(buf);
-
-		return result;
-	}
-
-	/* Should I remove on exit? */
-	jad->EvalBool(ATTR_ON_EXIT_REMOVE_CHECK, jad, on_exit_remove);
-	if (on_exit_remove == 1)
-	{
-		/* make a result classad explaining this and return it */
-
-		sprintf(buf, "%s = TRUE", ATTR_TAKE_ACTION);
-		result->Insert(buf);
-		sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, REMOVE_JOB);
-		result->Insert(buf);
-		sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
-			ATTR_ON_EXIT_REMOVE_CHECK);
-		result->Insert(buf);
-
-		return result;
-	}
-
-	/* just return the default of do nothing */
+	/* just return the default of leaving the job in idle state */
 	return result;
 }
 
@@ -247,6 +246,55 @@ void EmitExpression(unsigned int mode, const char *attr, ExprTree* attr_expr)
 		attr_expr->PrintToStr(buf);
 		dprintf(mode, "%s = %s\n", attr, buf);
 	}
+}
+
+/* This function takes a classad and forces it to return to the idle state.
+	It does this by undefining or resetting certain attributes in the job
+	ad to a pre-exited state. It returns a stringlist containing the attributes
+	that had been modified in the job ad so you can SetAttribute later
+	with the modified attributes. */
+
+/*StringList* force_job_ad_to_idle(ClassAd *jad)*/
+/*{*/
+	
+/*}*/
+
+
+/* is this classad oldstyle, newstyle, or even a job ad? */
+int JadKind(ClassAd *suspect)
+{
+	int cdate;
+
+	/* determine if I have a user job ad with the new user policy expressions
+		enabled. */
+	ExprTree *ph_expr = suspect->Lookup(ATTR_PERIODIC_HOLD_CHECK);
+	ExprTree *pr_expr = suspect->Lookup(ATTR_PERIODIC_REMOVE_CHECK);
+	ExprTree *oeh_expr = suspect->Lookup(ATTR_ON_EXIT_HOLD_CHECK);
+	ExprTree *oer_expr = suspect->Lookup(ATTR_ON_EXIT_REMOVE_CHECK);
+
+	/* check to see if it is oldstyle */
+	if (ph_expr == NULL && pr_expr == NULL && oeh_expr == NULL && 
+		oer_expr == NULL)
+	{
+		/* check to see if it has ATTR_COMPLETION_DATE, if so then it is
+			an oldstyle jobad. If not, it isn't a job ad at all. */
+
+		if (suspect->LookupInteger(ATTR_COMPLETION_DATE, cdate) == 0)
+		{
+			return KIND_OLDSTYLE;
+		}
+
+		return USER_ERROR_NOT_JOB_AD;
+	}
+
+	/* check to see if it is a consistant user policy job ad. */
+	if (ph_expr == NULL || pr_expr == NULL || oeh_expr == NULL || 
+		oer_expr == NULL)
+	{
+		return USER_ERROR_INCONSISTANT;
+	}
+	
+	return KIND_NEWSTYLE;
 }
 
 
