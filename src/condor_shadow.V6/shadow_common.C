@@ -518,73 +518,92 @@ part_send_job(
   ReliSock *sock;
   StartdRec stRec;
   PORTS ports;
-  
-#if 0
-  if (test_starter) {
-    cmd = SCHED_VERS + ALT_STARTER_BASE + test_starter;
-    dprintf( D_ALWAYS, "Requesting Test Starter %d\n", test_starter );
-  } else {
-    cmd = START_FRGN_JOB;
-    dprintf( D_ALWAYS, "Requesting Standard Starter\n" );
-  }
-#else
+  bool done = false;
+
   cmd = ACTIVATE_CLAIM; // new protocol in V6 startd
-#endif 
-
-  /* Connect to the startd */
-  sock = new ReliSock();
-  sock->timeout(90);
-  if ( sock->connect(host,START_PORT) == FALSE ) {
-	reason = JOB_NOT_STARTED;
-	return -1;
-  }
-  sock->encode();
-
-  /* Send the command */
-  if( !sock->code(cmd) ) {
-    EXCEPT( "sock->code(%d)", cmd );
-  }
-
-  /* send the capability */
-  dprintf(D_FULLDEBUG, "send capability %s\n", capability);
-  if(!sock->code(capability)) {
-    EXCEPT( "sock->put()" );
-  }
-	  // Do we really want to free this here?
-  free(capability);
-               
-  /* send the starter number */
-  if( test_starter ) {
-	  dprintf( D_ALWAYS, "Requesting Alternate Starter %d\n", test_starter );
-  } else {
-	  dprintf( D_ALWAYS, "Requesting Primary Starter\n" );
-  }
-  if( !sock->code(test_starter) ) {
-    EXCEPT( "sock->code(%d)", test_starter );
-  }
 
   // make sure we have the job classad
   InitJobAd(proc->id.cluster, proc->id.proc);
 
-  /* Send the job info */
-  if( !JobAd->put(*sock) ) {
-    EXCEPT( "failed to send job ad" );
-  }
-  if( !sock->end_of_message() ) {
-    EXCEPT( "end_of_message failed" );
+  while( !done ) {
+
+		  // Connect to the startd
+	  sock = new ReliSock();
+	  sock->timeout(90);
+	  if ( sock->connect(host,START_PORT) == FALSE ) {
+		  reason = JOB_NOT_STARTED;
+		  return -1;
+	  }
+
+	  sock->encode();
+
+		  // Send the command
+	  if( !sock->code(cmd) ) {
+		  EXCEPT( "sock->code(%d)", cmd );
+	  }
+
+		  // Send the capability
+	  dprintf(D_FULLDEBUG, "send capability %s\n", capability);
+	  if( !sock->code(capability) ) {
+		  EXCEPT( "sock->put()" );
+	  }
+
+	  // Send the starter number
+	  if( test_starter ) {
+		  dprintf( D_ALWAYS, "Requesting Alternate Starter %d\n", test_starter );
+	  } else {
+		  dprintf( D_ALWAYS, "Requesting Primary Starter\n" );
+	  }
+	  if( !sock->code(test_starter) ) {
+		  EXCEPT( "sock->code(%d)", test_starter );
+	  }
+
+		  // Send the job info 
+	  if( !JobAd->put(*sock) ) {
+		  EXCEPT( "failed to send job ad" );
+	  }	
+
+	  if( !sock->end_of_message() ) {
+		  EXCEPT( "end_of_message failed" );
+	  }
+
+		  // We're done sending.  Now, get the reply.
+	  sock->decode();
+	  ASSERT( sock->code(reply) );
+	  ASSERT( sock->end_of_message() );
+	  
+	  switch( reply ) {
+	  case OK:
+		  dprintf( D_ALWAYS, "Shadow: Request to run a job was ACCEPTED\n" );
+		  done = true;
+		  break;
+
+	  case NOT_OK:
+		  dprintf( D_ALWAYS, "Shadow: Request to run a job was REFUSED\n");
+		  reason = JOB_NOT_STARTED;
+		  delete sock;
+		  return -1;
+		  break;
+
+	  case TRY_AGAIN:
+		  dprintf(D_ALWAYS,"Shadow: Request to run a job was TEMPORARILY REFUSED\n");
+		  dprintf(D_ALWAYS,"Shadow: will try again in 10 seconds\n");
+		  delete sock;
+		  sleep( 3 );
+		  break;
+
+	  default:
+		  dprintf(D_ALWAYS,"Unknown reply from startd for command ACTIVATE_CLAIM\n");
+		  dprintf(D_ALWAYS,"Shadow: Request to run a job was REFUSED\n");
+		  reason = JOB_NOT_STARTED;
+		  delete sock;
+		  return -1;
+		  break;
+	  }
   }
 
-  sock->decode();
-  ASSERT( sock->code(reply) );
-  ASSERT( sock->end_of_message() );
-
-  if( reply != OK ) {
-    dprintf( D_ALWAYS, "Shadow: Request to run a job was REFUSED\n");
-    reason = JOB_NOT_STARTED;
-    return -1;
-  }
-  dprintf( D_ALWAYS, "Shadow: Request to run a job was ACCEPTED\n" );
-
+  free(capability);
+               
   /* start flock : dhruba */
   sock->decode();
   memset( &stRec, '\0', sizeof(stRec) );
