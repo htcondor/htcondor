@@ -519,9 +519,10 @@ int daemon::RealStart( )
 		if (command_port == -1) {
 				// strange....
 			command_port = COLLECTOR_PORT;
+			dprintf (D_ALWAYS, "Collector port not defined, will use default: %d\n", COLLECTOR_PORT);
 		}
 
-		dprintf (D_FULLDEBUG, "Staring Collector on port %d\n", command_port);
+		dprintf (D_FULLDEBUG, "Starting Collector on port %d\n", command_port);
 
 
 			// We can't do this b/c of needing to read host certs as root 
