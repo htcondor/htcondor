@@ -1,6 +1,7 @@
 %p 10000
 %n 1000
 %a 4000
+%e 2500
 %{
 #include <stdlib.h>
 #include <ctype.h>
