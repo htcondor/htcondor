@@ -55,6 +55,13 @@ lock_file(int fd, LOCK_TYPE type, int do_block)
 
 	result = _locking(fd, mode, 4L);
 
+#if 0  // leave this out because lock_file called from dprintf,
+	   // so we cannot dprintf or EXCEPT in lock_file !
+	if ( result < 0 && ( errno != EACCES && errno != EDEADLOCK ) ) {
+		EXCEPT("Programmer error in lock_file()");
+	}
+#endif
+
 	lseek(fd, SEEK_SET, original_pos);
 
 	return result;
