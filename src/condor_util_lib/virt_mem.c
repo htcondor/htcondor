@@ -54,6 +54,7 @@ static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 ** Don't know how to do this one.  We just return the soft limit on data
 ** space for any children of the calling process.
 */
+close_kmem() {}
 calc_virt_memory()
 {
 	struct rlimit	lim;
@@ -71,6 +72,7 @@ calc_virt_memory()
 ** Try to determine the swap space available on our own machine.  The answer
 ** is in kilobytes.
 */
+close_kmem() {}
 calc_virt_memory()
 {
 	return free_fs_blocks( "/debug" );
@@ -82,6 +84,14 @@ calc_virt_memory()
 ** Try to determine the swap space available on our own machine.  The answer
 ** is in kilobytes.
 */
+
+static int memfd;
+
+close_kmem()
+{
+	close( memfd );
+}
+
 calc_virt_memory()
 {
 /*
@@ -100,7 +110,6 @@ calc_virt_memory()
 	} vmker;
 	struct nlist knames[1] = {"vmker", 0, 0, 0, 0, 0 };
 	static int initialized = 0;
-	static int memfd;
 
 	/* get address of vmker structure */
 	if (knlist(knames, 1, sizeof(struct nlist)) == -1) {
@@ -133,6 +142,13 @@ calc_virt_memory()
 #if defined(SUNOS40) || defined(SUNOS41) || defined(CMOS)
 #include <kvm.h>
 #include <vm/anon.h>
+static kvm_t *kd = (kvm_t *)NULL;
+
+close_kmem()
+{
+	kvm_close( kd );
+}
+
 calc_virt_memory()
 {
         static int initialized = 0;
@@ -143,8 +159,9 @@ calc_virt_memory()
         static char errstr [] = "virt_mem.c";
         struct nlist nl[2];
         struct anoninfo a_info;
-        static kvm_t *kd = (kvm_t *)NULL;
         int result, vm_free;
+
+
 
 			/* Operate as root to read /dev/kmem */
 		set_root_euid();
@@ -208,10 +225,15 @@ struct nlist swapnl[] = {
 	{ "swapspc_cnt" },
 	{ NULL }
 };
+static int kmem;
+
+close_kmem()
+{
+	close( kmem );
+}
 
 calc_virt_memory()
 {
-	static int kmem;
 	static char *addr;
 	static int initialized = 0;
 	int freeswap;
@@ -261,6 +283,7 @@ calc_virt_memory()
 ** Try to determine the swap space available on our own machine.  The answer
 ** is in kilobytes.
 */
+close_kmem() {}
 calc_virt_memory()
 {
 	FILE	*fp, *popen();
@@ -271,7 +294,6 @@ calc_virt_memory()
 	struct	rlimit lim;
 	int		read_error = 0;
 	int		configured, reserved;
-
 
 /*
 ** Have to be root to run pstat on some systems...
