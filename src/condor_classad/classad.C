@@ -97,8 +97,8 @@ ClassAd::ClassAd() : AttrList()
 {
 	myType = NULL;
 	targetType = NULL;
-	SetRankExpr ("Rank = 0");
-	SetRequirements ("Requirements = TRUE");
+	// SetRankExpr ("Rank = 0");
+	// SetRequirements ("Requirements = TRUE");
 }
 
 #if 0 /* don't want to link with ProcObj class; we shouldn't need this */
@@ -106,8 +106,8 @@ ClassAd::ClassAd(class ProcObj* procObj) : AttrList(procObj)
 {
 	myType = NULL;
 	targetType = NULL;
-    SetRankExpr ("Rank = 0");
-	SetRequirements ("Requirements = TRUE");
+	// SetRankExpr ("Rank = 0");
+	// SetRequirements ("Requirements = TRUE");
 }
 #endif
 
@@ -135,8 +135,8 @@ ClassAd(FILE* f, char* d, int& i, int &err, int &empty)
     ExprTree *tree;
     EvalResult *val;
 
-    SetRankExpr ("Rank = 0");
-	SetRequirements ("Requirements = TRUE");
+	// SetRankExpr ("Rank = 0");
+	// SetRequirements ("Requirements = TRUE");
 
 	val = new EvalResult;
     tree = Lookup("MyType");
@@ -191,8 +191,8 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
 
 	myType = NULL;
 	targetType = NULL;
-    SetRankExpr ("Rank = 0");
-	SetRequirements ("Requirements = TRUE");
+    // SetRankExpr ("Rank = 0");
+	// SetRequirements ("Requirements = TRUE");
     val = new EvalResult;
     if(val == NULL)
     {
@@ -273,14 +273,6 @@ ClassAd::ClassAd(const ClassAd& old) : AttrList((AttrList&) old)
 
 ClassAd::~ClassAd()
 {
-    AttrListElem* tmp;
-
-    for(tmp = exprList; tmp; tmp = exprList)
-    {
-        exprList = exprList->next;
-        delete tmp;
-    }
-
     if(associatedList)
     {
 		associatedList->associatedAttrLists->Delete(this);
@@ -409,6 +401,7 @@ int ClassAd::GetTargetTypeNumber()
 
 
 // Requirement expression management functions
+#if 0
 int ClassAd::
 SetRequirements (char *expr)
 {
@@ -432,7 +425,7 @@ SetRequirements (ExprTree *tree)
 		delete tree;
 	}
 }
-
+#endif
 
 ExprTree *ClassAd::
 GetRequirements (void)
@@ -443,6 +436,7 @@ GetRequirements (void)
 //
 // Implementation of rank expressions is same as the requirement --RR
 //
+#if 0
 int ClassAd::
 SetRankExpr (char *expr)
 {
@@ -466,7 +460,7 @@ SetRankExpr (ExprTree *tree)
 		delete tree;
 	}
 }
-
+#endif
 
 ExprTree *ClassAd::
 GetRankExpr (void)
@@ -637,30 +631,11 @@ int ClassAd::fPrint(FILE* f)
 
 int ClassAd::put(Stream& s)
 {
-    AttrListElem*   elem;
-    char*           line;
-    int             numExprs = 0;
 
-    //get the number of expressions
-    for(elem = exprList; elem; elem = elem->next)
-        numExprs++;
-
-    s.encode();
-
-    if(!s.code(numExprs))
-        return 0;
-
-    line = new char[ATTRLIST_MAX_EXPRESSION];
-    for(elem = exprList; elem; elem = elem->next) {
-        strcpy(line, "");
-        elem->tree->PrintToStr(line);
-        if(!s.code(line)) {
-            delete [] line;
-            return 0;
-        }
-    }
-    delete [] line;
-
+	// first send over all the attributes
+	if ( !AttrList::put(s) ) {
+		return 0;
+	}
 
 	// send the types; if a type does not exist, send "(unknown type)" instead
 	{
@@ -690,43 +665,23 @@ int ClassAd::put(Stream& s)
 
 int ClassAd::get(Stream& s)
 {
-    char*           name;
-    char*           line;
-    int             numExprs;
+    char           namebuf[CLASSAD_MAX_ADTYPE];
+	char *name = namebuf;
 
-    s.decode();
+	// first get all the attributes
+	if ( !AttrList::get(s) ) {
+		return 0;
+	}
 
-    if(!s.code(numExprs)) 
-        return 0;
-    
-    line = new char[ATTRLIST_MAX_EXPRESSION];
-    for(int i = 0; i < numExprs; i++) {
-        if(!s.code(line)) {
-            delete [] line;
-            return 0;
-        }
-        
-		if (!Insert(line)) {
-			return 0;
-		}
-    }
-    delete [] line;
-
-    name = new char[CLASSAD_MAX_ADTYPE];
     if(!s.code(name)) {
-        delete [] name;
         return 0;
     }
     SetMyTypeName(name);
-    delete [] name;
 
-    name = new char[CLASSAD_MAX_ADTYPE];
     if(!s.code(name)) {
-        delete [] name;
         return 0;
     }
     SetTargetTypeName(name);
-    delete [] name;
 
     return 1; 
 }
