@@ -287,7 +287,11 @@ rm()
                                         Proc->rootdir, Proc->id.cluster, Proc->id.proc );
         }
 
-        (void) unlink_local_or_ckpt_server( TmpCkptName );
+		if( TmpCkptName[0] != '\0' ) {
+			dprintf(D_ALWAYS, "Shadow: DoCleanup: unlinking TmpCkpt '%s'\n",
+					TmpCkptName);
+			(void) unlink_local_or_ckpt_server( TmpCkptName );
+		}
 
         exit( JOB_KILLED );
 }
@@ -422,6 +426,7 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 			char *coredir )
 {
 	int status = *jobstatus;
+	struct stat st_buf;
 	char my_coredir[4096];
 	dprintf(D_FULLDEBUG, "handle_termination() called.\n");
 
@@ -454,7 +459,7 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 		dprintf(D_ALWAYS, "Shadow: Job was kicked off without a checkpoint\n" );
 		DoCleanup();
 		ExitReason = JOB_NOT_CKPTED;
-		if( proc->status==UNEXPANDED && !FileExists(ICkptName, Proc->owner) ) {
+		if( stat(ICkptName,&st_buf) < 0) {
 			dprintf(D_ALWAYS,"No initial ckpt found\n");
 			ExitReason = JOB_NO_CKPT_FILE;
 		}
