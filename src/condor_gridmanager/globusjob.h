@@ -40,6 +40,8 @@ class GlobusJob : public Service
 	time_t enteredCurrentGlobusState;
 	int numSubmitAttempts;
 
+	GahpClient gahp;
+
 	const char *errorString();
 
 	char *buildRSL( ClassAd *classad );
@@ -69,3 +71,4 @@ class GlobusJob : public Service
 };
 
 #endif
+

@@ -29,6 +29,8 @@ class GlobusResource : public Service
 	int pingTimerId;
 	List<GlobusJob> registeredJobs;
 	List<GlobusJob> pingRequesters;
+
+	GahpClient gahp;
 };
 
 #endif

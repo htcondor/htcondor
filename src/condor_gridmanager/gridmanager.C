@@ -89,6 +89,8 @@ int minProxy_time;
 time_t Proxy_Expiration_Time = 0;
 time_t Initial_Proxy_Expiration_Time = 0;
 
+GahpClient GahpMain;
+
 int RequestContactSchedd();
 int doContactSchedd();
 
@@ -126,18 +128,22 @@ template class List<Service *>;
 template class Item<Service *>;
 
 
-int 
+// return value of true means requested update has been committed to schedd.
+// return value of false means requested update has been queued, but has not
+//   been committed to the schedd yet
+bool
 addScheddUpdateAction( GlobusJob *job, int actions, int request_id )
 {
 	ScheddUpdateAction *curr_action;
 
-	if ( completedScheddUpdates.lookup( job->procID, curr_action ) == 0 ) {
+	if ( request_id != 0 &&
+		 completedScheddUpdates.lookup( job->procID, curr_action ) == 0 ) {
 		ASSERT( curr_action->job == job );
 
 		if ( request_id == curr_action->request_id && request_id != 0 ) {
 			completedScheddUpdates.remove( job->procID );
 			delete curr_action;
-			// return done;
+			return true;
 		} else {
 			completedScheddUpdates.remove( job->procID );
 			delete curr_action;
@@ -158,7 +164,7 @@ addScheddUpdateAction( GlobusJob *job, int actions, int request_id )
 		RequestContactSchedd();
 	}
 
-	// return pending;
+	return false;
 
 }
 
@@ -575,11 +581,22 @@ doContactSchedd()
 							 curr_job->procID.proc,
 							 ATTR_JOB_STATUS, &curr_status );
 
-			if ( curr_status != REMOVED ) {
-				// TODO: What about HELD jobs?
-				SetAttributeInt( curr_job->procID.cluster,
-								 curr_job->procID.proc,
-								 ATTR_JOB_STATUS, curr_job->condorState );
+			// If the job is marked as REMOVED or HELD on the schedd, don't
+			// change it. Instead, modify our state to match it.
+			if ( curr_status != REMOVED && curr_status != HELD ) {
+				// Right now, if we have a job marked as HELD, it's because
+				// the schedd told us it was. In this case, we don't want
+				// to undo a subsequent unhold done on the schedd. Instead,
+				// we keep our HELD state, kill the job, forget about it,
+				// then relearn about it later (this makes it easier to
+				// ensure that we pick up changed job attributes).
+				// Eventually, we'll be able to initiate holds. In that
+				// situation, we'll want to update the schedd state.
+				if ( curr_job->condorState != HELD ) {
+					SetAttributeInt( curr_job->procID.cluster,
+									 curr_job->procID.proc,
+									 ATTR_JOB_STATUS, curr_job->condorState );
+				}
 			} else {
 				curr_job->UpdateCondorState( curr_status );
 			}

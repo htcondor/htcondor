@@ -38,6 +38,7 @@
 
 // timer id values that indicates the timer is not registered
 #define TIMER_UNSET		-1
+#define TIME_NEVER		10000000
 
 // GridManager job states
 #define GM_INIT					0
@@ -91,34 +92,6 @@ GlobusJob::GlobusJob( GlobusJob& copy )
 {
 	dprintf(D_ALWAYS, "GlobusJob copy constructor called. This is a No-No!\n");
 	ASSERT( 0 );
-/*
-	removedByUser = copy.removedByUser;
-	callbackRegistered = copy.callbackRegistered;
-	ignore_callbacks = copy.ignore_callbacks;
-	procID = copy.procID;
-	exitValue = copy.exitValue;
-	jobContact = (copy.jobContact == NULL) ? NULL : strdup( copy.jobContact );
-	RSL = (copy.RSL == NULL) ? NULL : strdup( copy.RSL );
-	localOutput = (copy.localOutput == NULL) ? NULL : strdup( copy.localOutput );
-	localError = (copy.localError == NULL) ? NULL : strdup( copy.localError );
-	globusError = copy.globusError;
-	jmFailureCode = copy.jmFailureCode;
-	userLogFile = (copy.userLogFile == NULL) ? NULL : strdup( copy.userLogFile );
-	executeLogged = copy.executeLogged;
-	stateChanged = copy.stateChanged;
-	newJM = copy.newJM;
-	restartingJM = copy.restartingJM;
-	restartWhen = copy.restartWhen;
-	resourceDown = copy.resourceDown;
-	condorState = copy.condorState;
-	gmState = copy.gmState;
-	globusState = copy.globusState;
-	jmUnreachable = false;
-	evaluateStateTid = TIMER_UNSET;
-
-	myResource = copy.myResource;
-	myResource->RegisterJob( this );
-*/
 }
 
 GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
@@ -148,12 +121,17 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	gmState = GM_INIT;
 	globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
 	jmUnreachable = false;
-	evaluateStateTid = TIMER_UNSET;
 	lastProbeTime = 0;
 	enteredCurrentGmState = time(NULL);
 	enteredCurrentGlobusState = time(NULL);
 	numSubmitAttempts = 0;
 	// ad = NULL;
+
+	evaluateStateTid = daemonCore->Register_Timer( TIME_NEVER,
+								(TimerHandlercpp)&GlobusJob::doEvaluateState,
+								"doEvaluateState", (Service*) this );;
+	gahp.resetTimerOnResults( evaluateStateTid );
+	gahp.setMode( normal );
 
 	myResource = resource;
 	myResource->RegisterJob( this );
@@ -221,13 +199,7 @@ GlobusJob::~GlobusJob()
 
 void GlobusJob::SetEvaluateState()
 {
-	if ( evaluateStateTid == TIMER_UNSET ) {
-		evaluateStateTid = daemonCore->Register_Timer( 0,
-					(TimerHandlercpp)&GlobusJob::doEvaluateState,
-					"doEvaluateState", (Service*) this );
-	} else {
-		daemonCore->Reset_Timer( evaluateStateTid, 0 );
-	}
+	daemonCore->Reset_Timer( evaluateStateTid, 0 );
 }
 
 int GlobusJob::doEvaluateState()
@@ -237,16 +209,17 @@ int GlobusJob::doEvaluateState()
 	int old_globus_state;
 	bool reevaluate_state = true;
 
+	bool done;
 	int rc;
 	int status;
 	int error;
 
-	evaluateStateTid = TIMER_UNSET;
+	daemonCore->Reset_Timer( evaluateStateTid, TIME_NEVER );
 
 	if ( jmUnreachable || resourceDown ) {
-		globus_gahp_set_new_call( false );
+		gahp.setMode( results_only );
 	} else {
-		globus_gahp_set_new_call( true );
+		gahp.setMode( normal );
 	}
 
 	do {
@@ -274,7 +247,8 @@ int GlobusJob::doEvaluateState()
 				rc = globus_gram_client_job_signal( jobContact,
 										(globus_gram_client_job_signal_t)0,
 										NULL, &status, &error );
-				if ( rc == WOULD_CALL || rc == PENDING ) {
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_UNKNOWN_SIGNAL_TYPE ) {
@@ -302,7 +276,8 @@ int GlobusJob::doEvaluateState()
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
 										gramCallbackContact, &status,
 										&error );
-			if ( rc == WOULD_CALL || rc == PENDING ) {
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
@@ -350,7 +325,8 @@ int GlobusJob::doEvaluateState()
 			rc = globus_gram_client_job_signal( jobContact,
 								GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_STDIO_UPDATE,
 								rsl, &status, &error, new_cal );
-			if ( rc == WOULD_CALL || rc == PENDING ) {
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
@@ -379,7 +355,8 @@ int GlobusJob::doEvaluateState()
 				rc = globus_gram_client_job_request( rmContact, rsl,
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
 										gramCallbackContact, &job_contact );
-				if ( rc == WOULD_CALL || rc == PENDING ) {
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ) {
@@ -413,9 +390,9 @@ int GlobusJob::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-				rc = addScheddUpdateAction( this, UA_UPDATE_CONTACT_STRING,
+				done = addScheddUpdateAction( this, UA_UPDATE_CONTACT_STRING,
 											GM_SUBMIT_SAVE );
-				if ( rc == PENDING ) {
+				if ( !done ) {
 					break;
 				}
 				if ( newJM ) {
@@ -432,7 +409,8 @@ int GlobusJob::doEvaluateState()
 				rc = globus_gram_client_job_signal( jobContact,
 								GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_REQUEST,
 								NULL, &status, &error );
-				if ( rc == WOULD_CALL || rc == PENDING ) {
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
@@ -469,7 +447,8 @@ int GlobusJob::doEvaluateState()
 					if ( now >= lastProbeTime + JOB_PROBE_INTERVAL ) {
 						rc = globus_gram_client_job_status( jobContact,
 															&status, &error );
-						if ( rc == WOULD_CALL || rc == PENDING ) {
+						if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+							 rc == GAHPCLIENT_COMMAND_PENDING ) {
 							break;
 						}
 						if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
@@ -485,10 +464,8 @@ int GlobusJob::doEvaluateState()
 						UpdateGlobusState( state, error );
 						lastProbeTime = now;
 					}
-					evaluateStateTid = daemonCore->Register_Timer(
-								(lastProbeTime + JOB_PROBE_INTERVAL) - now,
-								(TimerHandlercpp)&GlobusJob::doEvaluateState,
-								"doEvaluateState", (Service*) this );
+					daemonCore->Reset_Timer( evaluateStateTid,
+								(lastProbeTime + JOB_PROBE_INTERVAL) - now );
 				}
 			}
 			break;
@@ -524,7 +501,8 @@ int GlobusJob::doEvaluateState()
 				rc = globus_gram_client_job_signal( jobContact,
 									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_STDIO_SIZE,
 									size_str, &status, &error );
-				if ( rc == WOULD_CALL || rc == PENDING ) {
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
@@ -545,9 +523,9 @@ int GlobusJob::doEvaluateState()
 		case GM_DONE_SAVE:
 			if ( condorState != HELD && condorState != REMOVED ) {
 				condorState = COMPLETED;
-				rc = addScheddUpdateAction( this, UA_UPDATE_CONDOR_STATE,
+				done = addScheddUpdateAction( this, UA_UPDATE_CONDOR_STATE,
 											GM_DONE_SAVE );
-				if ( rc == PENDING ) {
+				if ( !done ) {
 					break;
 				}
 			}
@@ -558,7 +536,8 @@ int GlobusJob::doEvaluateState()
 				rc = globus_gram_client_job_signal( jobContact,
 									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_END,
 									NULL, &status, &error );
-				if ( rc == WOULD_CALL || rc == PENDING ) {
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
@@ -582,7 +561,8 @@ int GlobusJob::doEvaluateState()
 			rc = globus_gram_client_job_signal( jobContact,
 								GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_STOP_MANAGER,
 								NULL, &status, &error );
-			if ( rc == WOULD_CALL || rc == PENDING ) {
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
@@ -629,7 +609,8 @@ int GlobusJob::doEvaluateState()
 				rc = globus_gram_client_job_request( rmContact, rsl,
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
 										gramCallbackContact, &job_contact );
-				if ( rc == WOULD_CALL || rc == PENDING ) {
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ) {
@@ -652,9 +633,9 @@ int GlobusJob::doEvaluateState()
 			}
 			break;
 		case GM_RESTART_SAVE:
-			rc = addScheddUpdateAction( this, UA_UPDATE_CONTACT_STRING,
+			done = addScheddUpdateAction( this, UA_UPDATE_CONTACT_STRING,
 										GM_RESTART_SAVE );
-			if ( rc == PENDING ) {
+			if ( !done ) {
 				break;
 			}
 			gmState = GM_RESTART_COMMIT;
@@ -663,7 +644,8 @@ int GlobusJob::doEvaluateState()
 			rc = globus_gram_client_job_signal( jobContact,
 								GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_REQUEST,
 								NULL, &status, &error );
-			if ( rc == WOULD_CALL || rc == PENDING ) {
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
@@ -681,7 +663,8 @@ int GlobusJob::doEvaluateState()
 			if ( globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE &&
 				 globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 				rc = globus_gram_client_job_cancel( jobContact );
-				if ( rc == WOULD_CALL || rc == PENDING ) {
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
@@ -720,7 +703,8 @@ int GlobusJob::doEvaluateState()
 				if ( now >= lastProbeTime + JOB_PROBE_INTERVAL ) {
 					rc = globus_gram_client_job_status( jobContact, &status,
 														&error );
-					if ( rc == WOULD_CALL || rc == PENDING ) {
+					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+						 rc == GAHPCLIENT_COMMAND_PENDING ) {
 						break;
 					}
 					if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
@@ -735,10 +719,8 @@ int GlobusJob::doEvaluateState()
 					UpdateGlobusState( state, error );
 					lastProbeTime = now;
 				}
-				evaluateStateTid = daemonCore->Register_Timer(
-								(lastProbeTime + JOB_PROBE_INTERVAL) - now,
-								(TimerHandlercpp)&GlobusJob::doEvaluateState,
-								"doEvaluateState", (Service*) this );
+				daemonCore->Reset_Timer( evaluateStateTid,
+								(lastProbeTime + JOB_PROBE_INTERVAL) - now );
 			}
 			break;
 		case GM_FAILED:
@@ -752,7 +734,8 @@ int GlobusJob::doEvaluateState()
 					rc = globus_gram_client_job_signal( jobContact,
 									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_END,
 									NULL, &status, &error );
-					if ( rc == WOULD_CALL || rc == PENDING ) {
+					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+						 rc == GAHPCLIENT_COMMAND_PENDING ) {
 						break;
 					}
 					if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
@@ -786,26 +769,27 @@ int GlobusJob::doEvaluateState()
 			} else if ( condorState == COMPLETED ) {
 				schedd_actions |= UA_LOG_TERMINATE_EVENT;
 			}
-			rc = addScheddUpdateAction( this, update_actions,
-										GM_DELETE );
-			if ( rc == PENDING ) {
+			done = addScheddUpdateAction( this, update_actions,
+										  GM_DELETE );
+			if ( !done ) {
 				break;
 			}
 			DeleteJob( this );
 			break;
 		case GM_CLEAR_REQUEST:
 			globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
+			globusStateErrorCode = 0;
 			free( jobContact );
 			jobContact = NULL;
-			rc = addScheddUpdateAction( this, UA_UPDATE_CONTACT_STRING,
-										GM_CLEAR_REQUEST );
-			if ( rc == PENDING ) {
+			done = addScheddUpdateAction( this, UA_UPDATE_CONTACT_STRING,
+										  GM_CLEAR_REQUEST );
+			if ( !done ) {
 				break;
 			}
 			gmState = GM_UNSUBMITTED;
 			break;
 		default:
-			// Complain loudly!!
+			EXCEPT( "Unknown gmState %d!", gmState );
 		}
 
 		if ( gmState != old_gm_state || globusState != old_globus_state ) {
@@ -816,6 +800,7 @@ int GlobusJob::doEvaluateState()
 		}
 		if ( gmState != old_gm_state ) {
 			enteredCurrentGmState = time(NULL);
+			gahp.PurgePendingRequests();
 		}
 
 	} while ( reevaluate_state );
@@ -860,7 +845,21 @@ void GlobusJob::UpdateCondorState( int new_state )
 
 void GlobusJob::UpdateGlobusState( int new_state, new_error_code )
 {
-	if ( globusState != new_state ) {
+	bool allow_transition = true;
+
+	// Prevent non-transitions or transitions that go backwards in time.
+	// The jobmanager shouldn't do this, but notification of events may
+	// get re-ordered (callback and probe results arrive backwards).
+    if ( new_state == globusState ||
+		 new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ||
+		 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ||
+		 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ||
+		 ( new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING &&
+		   globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) ) {
+		allow_transition = false;
+	}
+
+	if ( allow_transition ) {
 		// where to put logging of events: here or in EvaluateState?
 		int update_actions = UA_UPDATE_GLOBUS_STATE;
 

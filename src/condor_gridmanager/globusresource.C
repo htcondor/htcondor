@@ -7,6 +7,7 @@
 
 // timer id values that indicates the timer is not registered
 #define TIMER_UNSET		-1
+#define TIME_NEVER		10000000
 
 template class List<GlobusJob>;
 template class Item<GlobusJob>;
@@ -15,15 +16,17 @@ template class Item<GlobusJob>;
 GlobusResource::GlobusResource( char *resource_name )
 {
 	resourceDown = false;
-	pingTimerId = TIMER_UNSET;
+	pingTimerId = daemonCore->Register_Timer( TIME_NEVER,
+								(TimerHandlercpp)&GlobusResouce::DoPing,
+								"GlobusResource::DoPing", (Service*)this );
+	gahp.resetTimerOnResults( pingTimerId );
+	gahp.setMode( normal );
 	resourceName = strdup( resource_name );
 }
 
 GlobusResource::~GlobusResource()
 {
-	if ( pingTimerId != TIMER_UNSET ) {
-		daemonCore->Cancel_Timer( pingTimerId );
-	}
+	daemonCore->Cancel_Timer( pingTimerId );
 	if ( resourceName != NULL ) {
 		free( resourceName );
 	}
@@ -47,13 +50,7 @@ void GlobusResource::UnregisterJob( GlobusJob *job )
 void GlobusResource::RequestPing( GlobusJob *job )
 {
 	pingRequesters.Append( job );
-	if ( pingTimerId != TIMER_UNSET ) {
-		daemonCore->Cancel_Timer( pingTimerId );
-	}
-	pingTimerId = daemonCore->Register_Timer( 0,
-								(TimerHandlercpp)&GlobusResouce::DoPing,
-								"GlobusResource::DoPing", (Service*)this );
-
+	daemonCore->Reset_Timer( pingTimerId, 0 );
 }
 
 bool GlobusResource::IsEmpty()
@@ -77,11 +74,11 @@ int GlobusResource::DoPing()
 	bool ping_failed = false;
 	GlobusJob *job;
 
-	pingTimerId = TIMER_UNSET;
+	daemonCore->Reset_Timer( pingTimerId, TIME_NEVER );
 
-	rc = globus_gram_client_ping( resourceName )
+	rc = gahp.globus_gram_client_ping( resourceName );
 
-	if ( rc == GLOBUS_CALL_PENDING ) {
+	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 		return 0;
 	}
 
@@ -121,9 +118,7 @@ int GlobusResource::DoPing()
 
 	if ( resourceDown ) {
 		// TODO: We should param for the ping interval
-		pingTimerId = daemonCode->Register_Timer( 300,
-								(TimerHandlercpp)&GlobusResouce::DoPing,
-								"GlobusResource::DoPing", (Service*)this );
+		daemonCore->Reset_Timer( pingTimerId, 300 );
 	}
 
 	return 0;

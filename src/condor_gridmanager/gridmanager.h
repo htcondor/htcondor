@@ -28,6 +28,8 @@ extern char *ScheddAddr;
 extern char *X509Proxy;
 extern bool useDefaultProxy;
 
+extern GahpClient GahpMain;
+
 // initialization
 void Init();
 void Register();
@@ -35,7 +37,7 @@ void Register();
 // maintainence
 void Reconfig();
 	
-int addScheddUpdateAction( GlobusJob *job, int actions, int request_id = 0 );
+bool addScheddUpdateAction( GlobusJob *job, int actions, int request_id = 0 );
 void removeScheddUpdateAction( GlobusJob *job );
 void rehashJobContact( GlobusJob *job, const char *old_contact,
 					   const char *new_contact );
