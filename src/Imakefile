@@ -443,3 +443,11 @@ manpages::
 	@exit 1
 #endif
 
+# Build stork release binaries.  This is primitive, but will suffice for now.
+stork: libs
+	$(MAKE) -C condor_data_manager all
+	$(MAKE) -C condor_credd.TEMPORARY all
+	$(MAKE) -C condor_master.V6 all
+	$(MAKE) -C condor_tools all
+	@echo make stork complete
+
