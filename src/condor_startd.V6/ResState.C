@@ -7,8 +7,7 @@ ResState::ResState( Resource* rip )
 	r_load_q = new LoadQueue(60);
 	r_state = owner_state;
 	r_act = idle_act;
-	r_load_avg = 0;
-	last_compute = (int)time(NULL);
+	act_time = (int)time(NULL);
 	this->rip = rip;
 }
 
@@ -20,10 +19,9 @@ ResState::~ResState()
 
 
 void
-ResState::init_classad() 
+ResState::init_classad( ClassAd* cp ) 
 {
 	char tmp[80];
-	ClassAd* cp = rip->r_classad;
 	int now = (int)time(NULL);
 
 	sprintf( tmp, "%s=\"%s\"", ATTR_STATE, state_to_string(r_state) );
@@ -43,7 +41,6 @@ ResState::init_classad()
 int
 ResState::change( State new_state )
 {
-	Activity new_act;
 	time_t now;
 	char tmp[100];
 	char* name;
@@ -63,8 +60,6 @@ ResState::change( State new_state )
 	dprintf( D_FULLDEBUG, "Changing state: %s -> %s\n",
 			 state_to_string(r_state), 
 			 state_to_string(new_state) );
-
-	compute_load();
 
 	r_state = new_state;
 
@@ -168,7 +163,7 @@ ResState::change( Activity new_act )
 			 activity_to_string(r_act), 
 			 activity_to_string(new_act) );
 	
-	compute_load();
+	load_activity_change();
 
 	r_act = new_act;
 
@@ -183,160 +178,9 @@ ResState::change( Activity new_act )
 }
 
 
-void
-ResState::print_error( State new_state )
-{
-	dprintf( D_ALWAYS, "Illegal state/activity change.\n" );
-	dprintf( D_ALWAYS, "current state/activity: %s / %s.\n",
-			 state_to_string(r_state),
-			 activity_to_string(r_act) );
-	dprintf( D_ALWAYS, "requested state: %s.\n", 
-			 state_to_string(new_state) );
-}
-
-
-void
-ResState::print_error( Activity new_act )
-{
-	dprintf( D_ALWAYS, "Illegal state/activity change.\n" );
-	dprintf( D_ALWAYS, "current state/activity: %s / %s.\n",
-			 state_to_string(r_state),
-			 activity_to_string(r_act) );
-	dprintf( D_ALWAYS, "requested activity: %s.\n", 
-			 activity_to_string(new_act) );
-}
-
-
-bool
-ResState::is_valid( State new_state )
-{
-	if( r_state == new_state ) {
-		return true;
-	}
-
-	switch( r_state ) {
-	case owner_state:
-		assert( r_act == idle_act );
-		if( new_state == unclaimed_state ) {
-			return true;
-		} else {
-			return false;
-		}
-	case unclaimed_state:
-		if( r_act != idle_act ) {
-			return false;
-		}
-		switch( new_state ) {
-		case matched_state:
-		case claimed_state:
-			return true;
-		default:
-			return false;
-		}
-	case matched_state:
-		assert( r_act == idle_act );
-		switch( new_state ) {
-		case owner_state:
-		case claimed_state:
-			return true;
-		default:
-			return false;
-		}
-	case claimed_state:
-		if( new_state == preempting_state ) {
-			return true;
-		} else {
-			return false;
-		}
-	case preempting_state:
-		if(	r_act != idle_act ) {
-			return false;
-		}
-		switch( new_state ) {
-		case claimed_state:
-		case owner_state:
-			return true;
-		default:
-			return false;
-		}
-	}			
-}
-
-#if 0
-bool
-ResState::is_valid( Activity new_act )
-{
-	if( r_act == new_act ) {
-		return true;
-	}
-
-	switch( r_state ) {
-	case owner_state:
-		if( new_act == idle_act) {
-			return true;
-		} else {
-			return false;
-		}
-	case unclaimed_state:
-		if( (r_act == idle_act && new_act == benchmarking_act) ||
-			(r_act == benchmarking_act && new_act == idle_act) ) {
-			return true;
-		} else {
-			return false;
-		}
-	case matched_state:
-		if( new_act == idle_act) {
-			return true;
-		} else {
-			return false;
-		}
-	case claimed_state:
-		switch( r_act ) {
-		case idle_act:
-		case suspended_act:
-			if( new_act == busy_act ) {
-				return true;
-			} else {
-				return false;
-			}
-		case busy_act:
-			if( new_act == idle_act || new_act == suspended_act ) {
-				return true;
-			} else {
-				EXCEPT( "unknown activity in claimed state" );
-			}
-		default: 
-			EXCEPT( "unknown activity in claimed state" );
-		}
-	case preempting_state:
-		switch( r_act ) {
-		case killing_act:
-			if( new_act == idle_act ) {
-				return true;
-			} else {
-				return false;
-			}
-		case vacating_act:
-			if( new_act == idle_act || new_act == killing_act ) {
-				return true;
-			} else {
-				EXCEPT( "unknown activity in preempting state" );
-			}
-		case idle_act:
-			return false;
-		default: 
-			EXCEPT( "unknown activity in preempting state" );
-		}
-	}
-}
-#endif
-
-
 int
 ResState::eval()
 {
-	int tmp;
-
 		// Recompute attributes needed at every timeout and refresh classad 
 	rip->timeout_classad();
 
@@ -463,51 +307,67 @@ act_to_load( Activity act )
 	default:
 		EXCEPT( "Unknown activity in act_to_load" );
 	}
+	return -1;
 }
 
 
+// This function is called on every activity change.  It's purpose is
+// to keep the load_q array up to date by pushing a 0 or 1 onto the
+// queue for every second we've been in the previous activity.  
 void
-ResState::compute_load()
+ResState::load_activity_change() 
 {
 	int now		=	(int) time(NULL);
-	int delta	= 	now - last_compute;
+	int delta	= 	now - act_time;
 	int load	=	act_to_load( r_act );
 
-	if( delta >= 60 ) {
-			// Easy: Condor load is just 1 or 0 depending on previous
-			// activity.
-		r_load_q->push( 60, (char)load );
-		r_load_avg = (float)load;
-	} else {
-		if( delta < 1 ) {
-			delta = 1;
-		}
-			// Hard: Need to use the load queue to determine average
-			// over last minute.
-		r_load_q->push( delta, (char)load );
-		r_load_avg = r_load_q->avg();
+	if( delta < 1 ) {
+		delta = 1;
 	}
-	last_compute = now;
+	if( delta >= 60 ) {
+		r_load_q->setval( (char)load );
+		dprintf( D_FULLDEBUG, "Reset load queue to %d\n", load );
+	} else {
+		r_load_q->push( delta, (char)load );
+		dprintf( D_FULLDEBUG, 
+				 "Added %d seconds worth of %d to load queue\n", 
+				 delta, load );
+	}
+	act_time = now;
 }
 
 
 float
 ResState::condor_load()
 {
-	this->compute_load();
-	return r_load_avg;
+	int now		=	(int) time(NULL);
+	int delta	= 	now - act_time;
+	int load	=	act_to_load( r_act );
+	int val;
+
+	if( delta >= 60 ) {
+			// Easy: Condor load is just 1 or 0 depending on previous
+			// activity.
+		return (float)load;
+	} 
+
+	if( delta < 1 ) {
+		delta = 1;
+	}
+		// Hard: Need to use the load queue to determine average
+		// over last minute.
+	val = r_load_q->val( 60 - delta );
+	val += ( load * delta );
+	return ( (float)val / 60 );
 }
 
 
 LoadQueue::LoadQueue( int q_size )
 {
-	int i;
 	size = q_size;
 	head = 0;
 	buf = new char[size];
-	for( i=0; i<size; i++ ) {
-		buf[i] = (char)0;
-	}
+	this->setval( (char)0 );
 }
 
 
@@ -517,36 +377,41 @@ LoadQueue::~LoadQueue()
 }
 
 
+// Return the average value of the queue
 float
 LoadQueue::avg()
 {
 	int i, val = 0;
 	for( i=0; i<size; i++ ) {
-		if( buf[i] ) {
-			val++;
-		}
+		val += buf[i];
 	}
 	return( (float)val/size );
 }
 
 
-float
-LoadQueue::avg(int num)
+// Return the sum of the values of the first num elements.
+int
+LoadQueue::val( int num )
 {
-	int i, j, val = 0;
-	if( num > size ) {
-		num = size;
+	int i, j, val = 0, delta = size - num, foo;
+		// delta is how many elements we need to skip over to get to
+		// the values we care about.  If we were asked for more
+		// elements than the size of our array, we need to return the
+		// sum of all values, i.e., don't skip anything.
+	if( delta < 0 ) {
+		delta = 0;
+		num = size;	
 	}
+	foo = head + delta;
 	for( i=0; i<num; i++ ) {
-		j = (head + i) % size;
-		if( buf[j] ) {
-			val++;
-		}
+		j = (foo + i) % size;
+		val += buf[j];
 	}
-	return( (float)val/num );
+	return val;
 }
 
 
+// Push num elements onto the array with the given value.
 void
 LoadQueue::push( int num, char val ) 
 {
@@ -560,4 +425,167 @@ LoadQueue::push( int num, char val )
 	}
 	head = (head + num) % size;
 }
+
+
+// Set all elements of the array to have the given value.
+void
+LoadQueue::setval( char val ) 
+{
+	memset( (void*)buf, (int)val, (size*sizeof(char)) );
+		// Reset the head, too.
+	head = 0;
+}
+
+//////////////////////////////////////////////////////////////////////
+//  DEAD CODE
+//////////////////////////////////////////////////////////////////////
+#if 0
+bool
+ResState::is_valid( State new_state )
+{
+	if( r_state == new_state ) {
+		return true;
+	}
+
+	switch( r_state ) {
+	case owner_state:
+		assert( r_act == idle_act );
+		if( new_state == unclaimed_state ) {
+			return true;
+		} else {
+			return false;
+		}
+	case unclaimed_state:
+		if( r_act != idle_act ) {
+			return false;
+		}
+		switch( new_state ) {
+		case matched_state:
+		case claimed_state:
+			return true;
+		default:
+			return false;
+		}
+	case matched_state:
+		assert( r_act == idle_act );
+		switch( new_state ) {
+		case owner_state:
+		case claimed_state:
+			return true;
+		default:
+			return false;
+		}
+	case claimed_state:
+		if( new_state == preempting_state ) {
+			return true;
+		} else {
+			return false;
+		}
+	case preempting_state:
+		if(	r_act != idle_act ) {
+			return false;
+		}
+		switch( new_state ) {
+		case claimed_state:
+		case owner_state:
+			return true;
+		default:
+			return false;
+		}
+	}			
+}
+
+
+bool
+ResState::is_valid( Activity new_act )
+{
+	if( r_act == new_act ) {
+		return true;
+	}
+
+	switch( r_state ) {
+	case owner_state:
+		if( new_act == idle_act) {
+			return true;
+		} else {
+			return false;
+		}
+	case unclaimed_state:
+		if( (r_act == idle_act && new_act == benchmarking_act) ||
+			(r_act == benchmarking_act && new_act == idle_act) ) {
+			return true;
+		} else {
+			return false;
+		}
+	case matched_state:
+		if( new_act == idle_act) {
+			return true;
+		} else {
+			return false;
+		}
+	case claimed_state:
+		switch( r_act ) {
+		case idle_act:
+		case suspended_act:
+			if( new_act == busy_act ) {
+				return true;
+			} else {
+				return false;
+			}
+		case busy_act:
+			if( new_act == idle_act || new_act == suspended_act ) {
+				return true;
+			} else {
+				EXCEPT( "unknown activity in claimed state" );
+			}
+		default: 
+			EXCEPT( "unknown activity in claimed state" );
+		}
+	case preempting_state:
+		switch( r_act ) {
+		case killing_act:
+			if( new_act == idle_act ) {
+				return true;
+			} else {
+				return false;
+			}
+		case vacating_act:
+			if( new_act == idle_act || new_act == killing_act ) {
+				return true;
+			} else {
+				EXCEPT( "unknown activity in preempting state" );
+			}
+		case idle_act:
+			return false;
+		default: 
+			EXCEPT( "unknown activity in preempting state" );
+		}
+	}
+}
+
+
+void
+ResState::print_error( State new_state )
+{
+	dprintf( D_ALWAYS, "Illegal state/activity change.\n" );
+	dprintf( D_ALWAYS, "current state/activity: %s / %s.\n",
+			 state_to_string(r_state),
+			 activity_to_string(r_act) );
+	dprintf( D_ALWAYS, "requested state: %s.\n", 
+			 state_to_string(new_state) );
+}
+
+
+void
+ResState::print_error( Activity new_act )
+{
+	dprintf( D_ALWAYS, "Illegal state/activity change.\n" );
+	dprintf( D_ALWAYS, "current state/activity: %s / %s.\n",
+			 state_to_string(r_state),
+			 activity_to_string(r_act) );
+	dprintf( D_ALWAYS, "requested activity: %s.\n", 
+			 activity_to_string(new_act) );
+}
+
+#endif
 
