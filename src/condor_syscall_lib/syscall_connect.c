@@ -5,7 +5,7 @@
 #include "condor_debug.h"
 #include "condor_constants.h"
 #include "condor_jobqueue.h"
-#include <assert.h>
+#include "condor_fix_assert.h"
 
 void open_named_pipe( const char *name, int access_mode, int target_fd );
 XDR *RSC_Init( int, int );
@@ -66,6 +66,7 @@ init_syscall_connection( int want_debug_mode )
 
 	return answer;
 }
+
 
 /*
   Open the named pipe in the given mode, and get the file descriptor to
