@@ -18,7 +18,7 @@ public:
   // User Functions
   //--------------------------------------------------------
 
-  Initialize();  // Initialize some parameters
+  void Initialize();  // Initialize some parameters
 
   double GetPriority(const MyString& CustomerName); // get priority for a customer
   void SetPriority(const MyString& CustomerName, double Priority); // set priority for a customer

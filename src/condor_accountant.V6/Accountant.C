@@ -32,6 +32,7 @@ Accountant::Accountant(int MaxCustomers, int MaxResources)
 // Initialize log file
 //------------------------------------------------------------------
 
+void
 Accountant::Initialize() 
 {
   LogFileName=param("SPOOL");
