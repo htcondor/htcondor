@@ -342,8 +342,10 @@ IsStringValue( const char *&s ) const
 	// (Example: the strcat classad function)
 	if (valueType == STRING_VALUE) {
 		s = strValue.c_str( );
+		return true;
+	} else {
+		return false;
 	}
-    return( valueType == STRING_VALUE );
 }
 
 inline bool Value::
@@ -359,15 +361,23 @@ IsStringValue( char *s, int len ) const
 inline bool Value::
 IsStringValue( string &s ) const
 {
-	s = strValue;
-    return( valueType == STRING_VALUE );
+	if ( valueType == STRING_VALUE ) {
+		s = strValue;
+		return true;
+	} else {
+		return false;
+	}
 }
 
 inline bool Value::
 IsClassAdValue(ClassAd *&ad) const
 {
-	ad = classadValue;
-	return( valueType == CLASSAD_VALUE );	
+	if ( valueType == CLASSAD_VALUE ) {
+		ad = classadValue;
+		return true;
+	} else {
+		return false;
+	}
 }
 
 inline bool Value:: 
