@@ -762,7 +762,7 @@ Dag::SubmitReadyJobs()
 
 		// sleep for a specified time before submitting
 	if( G.submit_delay ) {
-		debug_printf( DEBUG_VERBOSE, "Sleeping for %d seconds "
+		debug_printf( DEBUG_VERBOSE, "Sleeping for %d s "
 					  "(DAGMAN_SUBMIT_DELAY) to throttle submissions...\n",
 					  G.submit_delay );
 		sleep( G.submit_delay );
