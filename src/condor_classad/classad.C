@@ -847,6 +847,7 @@ Sort( int(*SmallerThan)(AttrListAbstract*,AttrListAbstract*,void*),
 	// place the smallest at the head of the list
 	if (smallestPrev != NULL)
 	{
+		if (smallest==tail) tail=smallestPrev;
 		smallestPrev->next = smallest->next;
 		smallest->next = head;
 		head = smallest;
