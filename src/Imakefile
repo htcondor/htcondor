@@ -14,6 +14,9 @@ CFLAGS = $(STD_C_FLAGS)
 
 #if WANT_PVM && HAS_PVM
    PVM_LIBRARY = pvmd
+   #define PvmProgs starter.jim shadow.jim 
+#else
+   #define PvmProgs
 #endif
 
 #if USE_CONFIG_SERVER
@@ -21,10 +24,10 @@ CFLAGS = $(STD_C_FLAGS)
 #endif
 
 #define Programs \
-		accountant.V6 ckpt_server collector.V6 $(CONFIG_SERVER) \
+		accountant.V6 ckpt_server $(CONFIG_SERVER) \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts shadow.V6 startd.V6 starter.V5 submit.V6 status.V6 \
-		shadow.jim starter.jim tools kbdd
+		tools kbdd PvmProgs collector.V6
 
 #define Libraries \
 		util_lib c++_util ckpt io classad daemon_core.V6 \
@@ -37,13 +40,11 @@ all: h makefiles Directories Libraries Programs examples
 release:: all
 
 #define Tools condor_checkpoint condor_off condor_on condor_reconfig \
-	condor_reconfig_schedd condor_reschedule condor_restart condor_vacate
+	condor_reconfig_schedd condor_reschedule condor_restart \
+	condor_vacate condor_master_off
 
 #define SubmitSbinFiles sbin/condor_master sbin/condor_schedd \
-	sbin/condor_shadow sbin/condor_preen sbin/condor_vacate \
-	sbin/condor_checkpoint sbin/condor_off sbin/condor_on \
-	sbin/condor_reconfig sbin/condor_reconfig_schedd \
-	sbin/condor_reschedule sbin/condor_restart
+	sbin/condor_shadow sbin/condor_preen Tools
 
 release.tar: stripped
 	cd release_dir; rm -f release.tar; tar -cvf release.tar etc bin lib sbin
@@ -99,8 +100,10 @@ object_target(syscall_lib)
 object_target(io)
 object_target(classad)
 object_target(daemon_core.V6)
-object_target(starter.jim)
-object_target(shadow.jim)
+#if WANT_PVM && HAS_PVM
+   object_target(starter.jim)
+   object_target(shadow.jim)
+#endif
 
 makefiles:: h/Makefile
 h/Makefile:
