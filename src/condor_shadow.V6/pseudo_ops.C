@@ -107,8 +107,8 @@ static char Executing_Filesystem_Domain[ MAX_STRING ];
 static char Executing_UID_Domain[ MAX_STRING ];
 char *Executing_Arch=NULL, *Executing_OpSys=NULL;
 
-extern char My_Filesystem_Domain[];
-extern char My_UID_Domain[];
+extern char* My_Filesystem_Domain;
+extern char* My_UID_Domain;
 extern int	UseAFS;
 extern int  UseNFS;
 extern int  UseCkptServer;
