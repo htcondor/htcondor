@@ -5071,7 +5071,7 @@ int DaemonCore::Create_Process(
             nice( nice_inc );
         }
 
-#if defined( Solaris ) && defined( sun4m )
+#if defined( HAS_PURIFY )
 			/* The following will allow purify to pop up windows 
 			   for all daemons created with Create_Process().  The
 			   -program-name is so purify can find the executable.

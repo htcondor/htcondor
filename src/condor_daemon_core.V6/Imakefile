@@ -12,8 +12,14 @@ FIX_BROKEN_GCC =
 #endif
 #endif
 
+#if HAS_PURIFY
+PURIFY_FLAG = -DHAS_PURIFY
+#else
+PURIFY_FLAG =
+#endif
+
 CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(FIX_BROKEN_GCC)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(FIX_BROKEN_GCC) $(PURIFY_FLAG)
 LIB = $(STD_LIBS)
 
 OBJ = timer_manager.o daemon_core.o daemon_core_main.o \
