@@ -72,6 +72,8 @@ class ResTimeNode {
 	bool satisfyJob( ClassAd* jobAd, int max_hosts,
 					 CAList* candidates );
 
+	void display( int level );
+
 	time_t time;
 	CAList* res_list;
 	int num_matches;
