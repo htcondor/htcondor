@@ -141,8 +141,18 @@ ReliSock::accept( ReliSock	&c )
 	}
 
 	addr_sz = sizeof(c._who);
-	if ((c_sock = ::accept(_sock, (sockaddr *)&c._who, &addr_sz)) < 0)
+#ifndef WIN32 /* Unix */
+	errno = 0;
+#endif
+	if ((c_sock = ::accept(_sock, (sockaddr *)&c._who, &addr_sz)) < 0) {
+#ifndef WIN32 /* Unix */
+		if ( errno == EMFILE ) {
+			fd_panic ( __LINE__, __FILE__ ); /* This calls dprintf_exit! */
+		}
+#endif
 		return FALSE;
+
+	}
 
 	c._sock = c_sock;
 	c._state = sock_connect;
@@ -313,12 +323,18 @@ ReliSock::get_file(const char *destination)
 
 #if defined(WIN32)
 	if ((fd = ::open(destination, O_WRONLY | O_CREAT | O_TRUNC | _O_BINARY, 0644)) < 0)
-#else
+#else /* Unix */
+	errno = 0;
 	if ((fd = ::open(destination, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
 #endif
 	{
-		dprintf(D_ALWAYS, 
-			"get_file(): Failed to open file %s, errno = %d.\n", destination, errno);
+#ifndef WIN32 /* Unix */
+		if ( errno == EMFILE ) {
+			fd_panic( __LINE__, __FILE__ ); /* This calls dprintf_exit! */
+		}
+#endif
+		dprintf(D_ALWAYS, "get_file(): Failed to open file %s, errno = %d.\n",
+				destination, errno);
 		return -1;
 	}
 

@@ -255,8 +255,17 @@ int Sock::assign(
 			assert(0);
 	}
 
-	if ((_sock = socket(AF_INET, my_type, 0)) < 0) return FALSE;
-
+#ifndef WIN32 /* Unix */
+	errno = 0;
+#endif
+	if ((_sock = socket(AF_INET, my_type, 0)) < 0) {
+#ifndef WIN32 /* Unix... */
+		if ( errno == EMFILE ) {
+			fd_panic( __LINE__, __FILE__ ); /* Calls dprintf_exit! */
+		}
+#endif
+		return FALSE;
+	}
 	// on WinNT, sockets are created as inheritable by default.  we
 	// want to create the socket as non-inheritable by default.  so 
 	// we duplicate the socket as non-inheritable and then close
