@@ -105,6 +105,13 @@ const int QUERY_STARTD_PVT_ADS	= 10;
 const int UPDATE_SUBMITTOR_AD	= 11;
 const int QUERY_SUBMITTOR_ADS	= 12;
 
+const int INVALIDATE_STARTD_ADS	= 13;
+const int INVALIDATE_SCHEDD_ADS	= 14;
+const int INVALIDATE_MASTER_ADS	= 15;
+const int INVALIDATE_GATEWAY_ADS	= 16;
+const int INVALIDATE_CKPT_SRVR_ADS	= 17;
+const int INVALIDATE_SUBMITTOR_ADS	= 18;
+
 /*
 *** Daemon Core Signals
 */
