@@ -1,10 +1,9 @@
 NAME = condor_ckpt_server
 all_target($(NAME) ckpt_server_api.a)
 
-CFLAGS = $(STD_C_FLAGS) -DDEBUG
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DDEBUG
+CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LIB = $(STD_LIBS) 
-LDFLAGS = -lm SocketLib
 
 OBJ = network2.o gen_lib.o fileinfo2.o fileindex2.o imds2.o xferstat2.o \
 	signal2.o alarm2.o server2.o xfer_summary.o replication.o
