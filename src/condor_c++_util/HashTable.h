@@ -88,6 +88,14 @@ HashTable<Index,Value>::HashTable(int tableSz,
 {
   int i,j,k;
 
+  // Do not allow tableSize=0 since that is likely to
+  // result in a divide by zero in many hash functions.
+  // If the user specifies an illegal table size, use
+  // a default value of 5.
+  if ( tableSize < 1 ) {
+	  tableSize = 5;
+  }
+
   // If tableSize is anything but tiny, round it up to
   // the next prime number if a prime can be found within
   // 35 of the specified size.  Using a prime for tableSize
