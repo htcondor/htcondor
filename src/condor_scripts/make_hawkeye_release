@@ -6,7 +6,7 @@ my $HawkeyeVersion = "";
 my $HawkeyeCpu = "";
 my $HawkeyeOs = "";
 my $HawkeyeLib = "";
-my $Temp = "../tmp-$$";
+my $TempNum = $$;
 my $HawkeyeRelease = "hawkeye_release";
 my @BinDirs = ( "bin", "sbin" );
 my $Modules = "hawkeye_modules";
@@ -43,6 +43,7 @@ foreach my $Arg ( @ARGV )
 	{
 	    $Arg =~ /^-t$/ && do { $TestMode = 1; last SWITCH; };
 	    $Arg =~ /^-T$/ && do { $TestMode = 2; last SWITCH; };
+	    $Arg =~ /^-n=(\d+)$/ && do { $TempNum = $1; last SWITCH; };
 	    print STDERR "$Usage\n"; exit 1;
 	}
     }
@@ -51,6 +52,9 @@ foreach my $Arg ( @ARGV )
 	push @RelOpts, $Arg;
     }
 }
+
+# Temp directory to use
+my $Temp = "../tmp-$TempNum";
 
 # Pull the info from the commandline
  if ( $#RelOpts != 3 )
@@ -119,13 +123,13 @@ do { print "\n-- TestMode -> $Temp; done --\n"; exit; } if ( $TestMode == 1 );
 # Create the release directory
 mkdir( $ReleaseDir, 0755 ) if ( ! -d $ReleaseDir );
 
+# Directory to create the final tarball in...
+my $AssembleDir = $Temp . "/" . "hawkeye-" . $HawkeyeVersion;
+
 # Finally, make the damn tarball
-my $BinTarBall;
+my $BinTarBall = "release.tar";
 {
-    my $TarBall = sprintf( "Hawkeye-%s-%s-%s-%s.tar",
-			   $HawkeyeVersion, $HawkeyeOs,
-			   $HawkeyeCpu, $HawkeyeLib );
-    my $TarBallPath = "$ReleaseDir/$TarBall";
+    my $TarBallPath = "$ReleaseDir/$BinTarBall";
     print "\nCreating tarball '$TarBallPath'...  ";
     system( "tar -C $Temp -cf $TarBallPath ." );
     print "Done\n";
@@ -133,21 +137,23 @@ my $BinTarBall;
 
     # Blow away tmp, and move the newly created tarball there
     system( "rm -r $Temp" );
-    die "Can't create $Temp" if ( ! mkdir( "$Temp", 0755 ) );
-    system( "mv $TarBallPath $Temp" );
-    $BinTarBall = $TarBall;
+    mkdir( "$Temp", 0755 ) || die "Can't create $Temp";
+    mkdir( "$AssembleDir", 0755 ) || die "Can't create $AssembleDir";
+    system( "mv $TarBallPath $AssembleDir" );
 }
 
+# Assemble the final tarball pieces
+
 # Copy in the last minute pieces..
-CopyAll( $CondorRel, $Temp, "*hawkeye*", undef );
-CopyAll( $ClassAdViewer, $Temp, "h*tgz*", undef );
+CopyAll( $CondorRel, $AssembleDir, "*hawkeye*", undef );
+CopyAll( $ClassAdViewer, $AssembleDir, "h*tgz*", undef );
 
 # Create the install script
 {
 
     # Copy the installation script
-    system( "cp $Scripts/hawkeye_install $Temp/hawkeye_install.pl" );
-    my $Install = "$Temp/hawkeye_install";
+    system( "cp $Scripts/hawkeye_install $AssembleDir/hawkeye_install.pl" );
+    my $Install = "$AssembleDir/hawkeye_install";
     open( OUT, ">$Install" ) || die "Can't write to '$Install'\n";
     print OUT "#! /bin/sh\n";
     print OUT "\$0.pl \"$BinTarBall\" \$*\n";
