@@ -109,3 +109,5 @@ int get_ckpt_server_count() { return 0; }
 
 
 int set_ckpt_server_number(int i) {}
+
+int SetCkptServerHost(const char *host) {}
