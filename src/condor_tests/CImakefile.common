@@ -154,6 +154,13 @@ DEPS(job_ckpt_dup_std,x_data.in)
 DEP_SYMLINK_EXT(job_ckpt_dup_std,cmd)
 RUN(job_ckpt_dup_std)
 
+#if ! IS_DARWIN
+DESC(job_ckpt_longjmp_std,"Can we ckpt while longjmp()'ing around?")
+CBUILD_DEP($(CC),job_ckpt_longjmp_std,c,x_waste_second.o)
+DEP_SYMLINK_EXT(job_ckpt_longjmp_std,cmd)
+RUN(job_ckpt_longjmp_std)
+#endif
+
 DESC(job_ckpt_gettimeofday_std,"ckpt/restore current time-of-day")
 CBUILD_DEP($(CC),job_ckpt_gettimeofday_std,c,x_waste_second.o)
 DEP_SYMLINK_EXT(job_ckpt_gettimeofday_std,cmd)
