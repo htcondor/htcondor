@@ -65,26 +65,30 @@ int resmgr_init()
 		dprintf(D_ALWAYS, "resource %d has id '%s'\n", index,
 			resources[index].r_rid);
 		resources[index].r_state = NO_JOB;
-		if (resource_params(rid, NO_JID, NO_TID,
+		if (resource_timeout_params(rid, NO_JID, NO_TID,
+		    &resources[index].r_param, NULL) < 0)
+			continue;
+		if (resource_update_params(rid, NO_JID, NO_TID,
 		    &resources[index].r_param, NULL) < 0)
 			continue;
 		resources[index].r_name = rnames[i];
 		resources[index].r_pid = NO_PID;
 		resources[index].r_claimed = FALSE;
 		// C H A N G E -> N Anand
-		resources[index].r_context = new ClassAd(*template_ClassAd);
-		resources[index].r_jobcontext = NULL;
+		resources[index].r_classad = new ClassAd(*template_ClassAd);
+		resources[index].r_jobclassad = NULL;
 		resources[index].r_capab = NULL;
 		resources[index].r_interval = 0;
 		resources[index].r_receivetime = 0;
 		resources[index].r_universe = STANDARD;
-		dprintf(D_FULLDEBUG, "create_context returned %x\n",
-			resources[index].r_context);
+		dprintf(D_FULLDEBUG, "create_classad returned %x\n",
+			resources[index].r_classad);
 		resources[index].r_port = create_port(&resources[index].r_sock);
 		// CHANGE -> N Anand
 		resource_initAd(&resources[index]);
 		/* XXX following must be last in this initialization */
-		resource_context(&resources[index]);
+		resource_timeout_classad(&resources[index]);
+		resource_update_classad(&resources[index]);
 		index++;
 	}
 	nresources = index;
@@ -228,14 +232,14 @@ resmgr_command(resource_info_t* rinfop)
 }
 
 ClassAd*
-resmgr_context(resource_id_t rid)
+resmgr_classad(resource_id_t rid)
 {
 	resource_info_t *rip;
 
 	if (!(rip = resmgr_getbyrid(rid)))
 		return NULL;
 
-	return rip->r_context;
+	return rip->r_classad;
 }
 
 char *
@@ -272,7 +276,7 @@ void resmgr_changestate(resource_id_t rid, int new_state)
   if (!(rip = resmgr_getbyrid(rid)))
     return;
   
-  cp = rip->r_context;
+  cp = rip->r_classad;
   claimed = rip->r_claimed;
   
   switch (new_state) 
