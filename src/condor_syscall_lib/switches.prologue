@@ -76,6 +76,8 @@
 #if defined(IRIX53)
 #	include <dlfcn.h>	/* for dlopen and dlsym */
 #	include <sys/mman.h>	/* for mmap */
+struct statfs;
+struct exportfsdata;
 #endif
 
 #if defined(Solaris)
