@@ -88,7 +88,7 @@ BUCKET	*ConfigTab[TABLESIZE];
 
 // Function implementations
 void 
-config(ClassAd *classAd=NULL, char *mySubsystem=NULL)
+config(ClassAd *classAd, char *mySubsystem)
 {
 	char 		buffer[1024];
 	char 		*tmp;
