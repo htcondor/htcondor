@@ -114,12 +114,11 @@ void ShadowInitializer::ShadowInitialize(void)
 		universe = CONDOR_UNIVERSE_VANILLA;
 	}
 
-	dprintf(D_ALWAYS, "Initializing a %s shadow.\n", 
-		CondorUniverseName(universe));
+	dprintf( D_ALWAYS, "Initializing a %s shadow\n", 
+			 CondorUniverseName(universe) );
 
 	switch ( universe ) {
 	case CONDOR_UNIVERSE_VANILLA:
-	case CONDOR_UNIVERSE_STANDARD:
 	case CONDOR_UNIVERSE_JAVA:
 		Shadow = new UniShadow();
 		break;
@@ -127,15 +126,20 @@ void ShadowInitializer::ShadowInitialize(void)
 		Shadow = new MPIShadow();
 		break;
 	case CONDOR_UNIVERSE_PVM:
-		EXCEPT( "PVM...hopefully one day..." );
+			// some day we'll support this.  for now, fall through and
+			// print out an error message that might mean something to
+			// our user, not "PVM...hopefully one day..."
 //		Shadow = new PVMShadow();
-		break;
+//		break;
 	default:
-		dprintf ( D_ALWAYS, "I don't support universe %d (%s)\n", universe, CondorUniverseName(universe) );
+		dprintf( D_ALWAYS, "This version of the shadow cannot support "
+				 "universe %d (%s)\n", universe,
+				 CondorUniverseName(universe) );
 		EXCEPT( "Universe not supported" );
 	}
 	
-	Shadow->init(m_jobAd, m_argv[1], m_argv[2], m_argv[3], m_argv[4],m_argv[5]);
+	Shadow->init( m_jobAd, m_argv[1], m_argv[2], m_argv[3], m_argv[4], 
+				  m_argv[5] ); 
 }
 
 
