@@ -1317,12 +1317,13 @@ extern void mark_job_stopped(PROC_ID* job_id);
 
 int mark_idle(ClassAd *job)
 {
-    int     status, cluster, proc;
+    int     status, cluster, proc, hosts;
 	PROC_ID	job_id;
 
 	job->LookupInteger(ATTR_CLUSTER_ID, cluster);
 	job->LookupInteger(ATTR_PROC_ID, proc);
     job->LookupInteger(ATTR_JOB_STATUS, status);
+	job->LookupInteger(ATTR_CURRENT_HOSTS, hosts);
 
 	job_id.cluster = cluster;
 	job_id.proc = proc;
@@ -1333,7 +1334,7 @@ int mark_idle(ClassAd *job)
 	else if ( status == UNEXPANDED ) {
 		SetAttributeInt(cluster,proc,ATTR_JOB_STATUS,IDLE);
 	}
-	else if ( status == RUNNING ) {
+	else if ( status == RUNNING || hosts > 0 ) {
 		mark_job_stopped(&job_id);
 	}
 		
