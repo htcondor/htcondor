@@ -1,8 +1,5 @@
 EXT_ROOT = @ext_root@
-EXT_INSTALL = $(EXT_ROOT)/install
-EXT_BUNDLE = $(EXT_ROOT)/bundles
-EXT_BUILD = $(EXT_ROOT)/build
-EXT_TRIGGER = $(EXT_ROOT)/triggers
+EXT_CONFIG_SH = @_cv_ext_config_sh@
 
 
 EXT_KERBEROS_VERSION = krb5-1.2.5
