@@ -1251,15 +1251,18 @@ and transferred back when the job completes.
 This command is ignored if the job ClassAd attribute
 \Attr{TransferErr} is
 \Expr{False}.
-The default value is \Expr{True} in the Globus
+The default value is \Expr{True} in the globus
 universe and \Expr{False} otherwise.
 
 %%%%%%%%%%%%%%%%%%%
 %% job_lease_duration
 %%%%%%%%%%%%%%%%%%%
-\item[job\_lease\_duration = $<$number-of-seconds$>$] 
+\item[job\_lease\_duration = $<$number-of-seconds$>$] For vanilla
 \index{submit commands!job\_lease\_duration}
-\Todo
+and java universe jobs only, the duration (in seconds) of a
+job lease.  The default value is undefined.
+See section~\ref{sec:Job-Lease} for details of job leases.
+
 %%%%%%%%%%%%%%%%%%%
 % +
 %%%%%%%%%%%%%%%%%%%

@@ -1934,6 +1934,68 @@ mean using the Unix command \verb@chmod 777@
 on the directory where you submit your Condor job.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Job-Lease}
+Job Leases}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{job!lease}
+
+A job lease specifies how long a given job will attempt to run
+on a remote resource,
+even if that resource loses contact with the submitting machine.
+Similarly, it is the length of time the submitting machine will
+spend trying to reconnect to the (now disconnected) execution host,
+before the submitting machine gives up and tries to claim
+another resource to run the job.
+The goal aims at run only once semantics,
+so that the \Condor{schedd} daemon does not allow the same job
+to run on multiple sites simultaneously.
+
+If the submitting machine is alive,
+it periodically renews the job lease,
+and all is well.
+If the submitting machine is dead,
+or the network goes down, the job lease will no longer be renewed.
+Eventually the lease expires.
+While the lease has not expired,
+the execute host continues to try to run the job,
+in the hope that the submit machine will come back to life
+and reconnect.
+If the job completes, the lease has not expired,yet the 
+submitting machine is still dead,
+the \Condor{starter} daemon will wait for a
+\Condor{shadow} daemon to reconnect, 
+before sending final information on the job,
+and its output files.
+Should the lease expire, the \Condor{startd} daemon
+kills off the \Condor{starter} daemon and user job.
+
+The user must set a value for \Attr{job\_lease\_duration}
+to keep a job running in the case that the submit side no longer
+renews the lease.
+There is a tradeoff in setting the value of \Attr{job\_lease\_duration}. 
+Too small a value,
+and the job might get killed before the submitting machine has a
+chance to recover.
+Forward progress on the job will be lost.
+Too large a value,
+and execute resource will be tied up waiting for the job lease to expire.
+The value 
+should be choosen based on how long is the user willing to tie up
+the execute machines, how quickly submit machines come  back up,
+and how much work would be lost if the lease expires,
+the job is killed, and the job must start over from its beginning.
+
+\Attr{job\_lease\_duration}
+is only valid for vanilla and java universe jobs.
+Chirp I/O and streaming I/O (which uses Chirp I/O) may not
+be used in conjunction with a defined \Attr{job\_lease\_duration}.
+
+A current limitation
+is that jobs with a defined \Attr{job\_lease\_duration} will not
+reconnect if the jobs flock to a remote pool.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Potential Problems}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
