@@ -1036,7 +1036,7 @@ static bool EvalBool(ClassAd *ad, const char *constraint)
 			delete tree;
 			tree = NULL;
 		}
-		if( !parser.ParseExpression( string( constraint ), tree ) ) {
+		if( !parser.ParseExpression( std::string( constraint ), tree ) ) {
 			dprintf(D_ALWAYS, 
 				"can't parse constraint: %s\n", constraint);
 			return false;
@@ -1638,7 +1638,7 @@ GetAttributeExpr(int cluster_id, int proc_id, const char *attr_name, char *val)
 	char		key[_POSIX_PATH_MAX];
 	ExprTree	*tree;
 	char		*attr_val;
-	string 		valString;
+	std::string	valString;
 	ClassAdUnParser unp;
 
 	strcpy(key, IdToStr(cluster_id,proc_id) );
@@ -1730,7 +1730,7 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 		int index;
 		char *left,*name,*right,*value,*tvalue;
 //		ExprTree *tree = NULL;
-		string valueString;
+		std::string valueString;
 		ClassAdUnParser unp;
 		bool value_came_from_jobad;
 
@@ -1773,7 +1773,7 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 //		const char *attr_name = ad->NextNameOriginal();
 //		while ( attr_name ) {
 		ClassAd::iterator a;
-		string attr_nameS;
+		std::string attr_nameS;
 		for( a = ad->begin( ); a != ad->end( ); a++ ) {
 			unp.Unparse( attr_nameS, a->second );
 			if ( stricmp(attr_nameS.c_str( ),ATTR_JOB_CMD) ) { 
@@ -2092,7 +2092,7 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 				else {
 					dprintf(D_FULLDEBUG,
 					  "Environment for target OpSys (%s): %s\n",opsys,new_env);
-					expanded_ad->Assign( ATTR_JOB_ENVIRONMENT, new_env );
+                    expanded_ad->InsertAttr( ATTR_JOB_ENVIRONMENT, new_env );
 				}
 				if(new_env) {
 					delete[] new_env;

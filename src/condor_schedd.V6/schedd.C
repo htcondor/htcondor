@@ -1614,24 +1614,21 @@ PeriodicExprEval( ClassAd *jobad )
 	MyString reason;
 	const char *firing_expr = policy.FiringExpression();
 	if(firing_expr) {
-		ExprTree *tree, *rhs = NULL;
+		ExprTree *tree;
+
 		tree = jobad->Lookup( firing_expr );
 
 		// Get a formatted expression string
-		char* exprString = NULL;
-		if( tree && (rhs=tree->RArg()) ) {
-			rhs->PrintToNewStr( &exprString );
+		std::string exprString;
+		if( tree ) {
+            ClassAdUnParser unparser;
+            unparser.Unparse(exprString, tree);
 		}
 
 		// Format up the log entry
 		reason.sprintf( "The %s expression '%s' evaluated to ",
 						firing_expr,
-						exprString ? exprString : "" );
-
-		// Free up the buffer from PrintToNewStr()
-		if ( exprString ) {
-			free( exprString );
-		}
+						tree ? exprString.c_str() : "" );
 
 		// Get a string for it's value
 		int firing_value = policy.FiringExpressionValue();
@@ -2336,7 +2333,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	bool needs_transaction = true;
 	action_result_type_t result_type = AR_TOTALS;
 	ClassAdUnParser unp;
-	string bufString;
+	std::string bufString;
 	
 		// Setup array to hold ids of the jobs we're acting on.
 	ExtArray<PROC_ID> jobs;

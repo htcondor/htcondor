@@ -146,7 +146,7 @@ int AutoCluster::getAutoClusterid( ClassAd *job )
 	significant_attrs->rewind();
 	const char* next_attr = NULL;
 	ExprTree *tree = NULL;
-	string bufS;
+	std::string bufS;
 	ClassAdUnParser unp;
 	while ( (next_attr=significant_attrs->next()) != NULL ) {
 		buf[0] = '\0';

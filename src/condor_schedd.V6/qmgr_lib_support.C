@@ -39,19 +39,6 @@ extern "C" int		strcmp_until(const char *, const char *, const char);
 ReliSock *qmgmt_sock = NULL;
 static Qmgr_connection connection;
 
-int
-strcmp_until( const char *s1, const char *s2, const char until ) {
-   while ( ( *s1 || *s2 ) && *s1 != until && *s2 != until ) {
-
-      if ( *s1 != *s2 ) {
-         return( *s2 - *s1 );
-      }
-      s1++;
-      s2++;
-   }
-   return( 0 );
-}
-
 Qmgr_connection *
 ConnectQ(char *qmgr_location, int timeout, bool read_only, CondorError* errstack )
 {

@@ -2624,7 +2624,7 @@ DedicatedScheduler::generateRequest( ClassAd* job )
 	char tmp[8192];
 	char buf[8192];
 	ClassAdUnParser unp;
-	string bufString;
+	std::string bufString;
 
 		// First, make a job of the job ad, as is, and use that as the
 		// basis for our resource request.
@@ -3150,7 +3150,7 @@ displayRequest( ClassAd* ad, char* str, int debug_level )
 	req[0] = '\0';
 //	expr->PrintToStr( req );
 	ClassAdUnParser unp;
-	string bufString;
+	std::string bufString;
 	unp.Unparse( bufString, expr );
 	sprintf( req, "%s=%s", ATTR_REQUIREMENTS, bufString.c_str( ) );
 	dprintf( debug_level, "%s%s\n", str, req );
