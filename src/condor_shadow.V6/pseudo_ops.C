@@ -1426,29 +1426,25 @@ pseudo_get_ckpt_speed()
 int
 pseudo_get_a_out_name( char *path )
 {
-	PROC	*p = (PROC *)Proc;
-	char exec_buf[_POSIX_PATH_MAX], *exec_name=exec_buf;
-	char final_buf[_POSIX_PATH_MAX], *final=final_buf;
-	char *tptr;
-
-	exec_buf[0] = '\0';
-	final_buf[0] = '\0';
 	path[0] = '\0';
+	int result;
 
-	if ( JobAd ) {
-			JobAd->LookupString(ATTR_JOB_CMD,exec_name);
-			if ( (tptr=substr(exec_name,"$$")) ) {
-				JobAd->LookupString(ATTR_JOB_CMDEXT,final);
-				if ( final[0] ) {
-					strcpy(tptr,final);
-					strcpy(path,exec_name);
-				}
-			}
-	}
+	// See if we can find an executable in the spool dir.
+	// Switch to Condor uid first, since ickpt files are 
+	// stored in the SPOOL directory as user Condor.
+	int old_priv = set_condor_priv();
+	result = access(ICkptName,F_OK | X_OK);
+	set_priv(old_priv);
 
-
-	if ( path[0] == '\0' ) {
+	if ( result >= 0 ) {
+			// we can access an executable in the spool dir
 		strcpy( path, ICkptName );
+	} else {
+			// nothing in the spool dir; the executable 
+			// probably has $$(opsys) in it... so use what
+			// the jobad tells us.
+		ASSERT(JobAd);
+		JobAd->LookupString(ATTR_JOB_CMD,path);
 	}
 
 	dprintf( D_SYSCALLS, "\tanswer = \"%s\"\n", path );
