@@ -158,8 +158,11 @@ bogomips        : 299.01
 	}
 	fclose( proc );
 	return num_cpus;
+#elif defined(AIX)
+	sysapi_internal_reconfig();
+	return sysconf(_SC_NPROCESSORS_ONLN);
 #else
-#error DO NOT KNOW HOW ON THIS PLATFORM
+#error DO NOT KNOW HOW TO COMPUTE NUMBER OF CPUS ON THIS PLATFORM!
 #endif
 }
 
