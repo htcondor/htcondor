@@ -593,15 +593,9 @@ updateClassAd (CollectorHashTable &hashTable,
 			   int  &insert)
 {
 	ClassAd  *old_ad, *new_ad;
-	ExprTree *tree;
 	char     buf [40];
 	time_t   now;
 
-	// timestamp the ad
-	if (tree = ad->Lookup (ATTR_LAST_HEARD_FROM))
-	{
-		delete tree;
-	}	
 	(void) time (&now);
 	if (now == (time_t) -1)
 	{
