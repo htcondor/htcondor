@@ -85,7 +85,7 @@ sysapi_ncpus_raw(void)
 	FILE        *proc;
 	char 		buf[256];
 	char		*tmp;
-#if defined(I386) || defined(IA64)
+#if defined(I386) || defined(IA64) || defined(X86_64)
 	int             siblings = 0;
 #endif
 	int 		num_cpus = 0;
@@ -139,7 +139,7 @@ bogomips        : 299.01
 
 	// Count how many lines begin with the string "processor".
 	while( fgets( buf, 256, proc) ) {
-#if defined(I386) || defined(IA64)
+#if defined(I386) || defined(IA64) || defined(X86_64)
 	    // For hyperthreads we assume processor will appear before 
 	    // sibling.  If that fails we're screwed.
 	    if( !strincmp(buf, "processor", 9) ) {

@@ -56,6 +56,8 @@
 #    define ArchIncludeFile <LINUX_IA64.cf>
 #  elif defined( IS_CONDOR_PPC )
 #    define ArchIncludeFile <LINUX_PPC.cf>
+#  elif defined( IS_X86_64 )
+#    define ArchIncludeFile <LINUX_X86_64.cf>
 #  else
 #    error CONDOR DOES NOT YET SUPPORT THIS LINUX PLATFORM 
 #  endif

@@ -213,6 +213,9 @@ sysapi_translate_arch( char *machine, char *sysname )
 	else if( !strcmp(machine, "ia64") ) {
 		sprintf( tmp, "IA64" );
 	}
+	else if( !strcmp(machine, "x86_64") ) {
+		sprintf( tmp, "X86_64" );
+	}
 	else if( !strncmp( sysname, "IRIX", 4 ) ) {
 		sprintf( tmp, "SGI" );
 	} 

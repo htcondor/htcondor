@@ -171,6 +171,8 @@ elif test $os = "Linux" ; then
     _cv_arch="IA64"
   elif test $arch = "ppc" ; then
     _cv_arch="CONDOR_PPC"
+  elif test $arch = "x86_64" ; then
+    _cv_arch="X86_64"
   fi
 
   # next, figure out what linux distribution this is
@@ -200,6 +202,9 @@ elif test $os = "Linux" ; then
        ;;
      "9" )
        _cv_linux_distro="RH9"
+       ;;
+	 "3" )
+       _cv_linux_distro="RHEL3"
        ;;
      * )
        AC_MSG_WARN([Condor is not yet ported to redhat version $_rh_vers])
@@ -1285,7 +1290,7 @@ else
 fi
 AC_MSG_CHECKING([globus flavor])
 _cv_globus_flavor=gcc32dbg
-if test "$_cv_arch" = "ALPHA" -o "$_cv_arch" = "IA64" ; then
+if test "$_cv_arch" = "ALPHA" -o "$_cv_arch" = "IA64" -o "$_cv_arch" = "X86_64"; then
   _cv_globus_flavor=gcc64dbg
 elif test "$_cv_arch" = "SGI" -o "$_cv_opsys" = "AIX" ; then
   _cv_globus_flavor=vendorcc32dbg
