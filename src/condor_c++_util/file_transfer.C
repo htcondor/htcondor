@@ -867,7 +867,7 @@ FileTransfer::HandleCommands(Service *, int command, Stream *s)
 			transobject->CommitFiles();
 			Directory spool_space( transobject->SpoolSpace,
 								   PRIV_CONDOR );
-			while ( currFile=spool_space.Next() ) {
+			while ( (currFile=spool_space.Next()) ) {
 				if (transobject->UserLogFile && 
 						!file_strcmp(transobject->UserLogFile,currFile)) 
 				{
