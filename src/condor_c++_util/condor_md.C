@@ -37,7 +37,7 @@ public:
 
 Condor_MD_MAC::Condor_MD_MAC()
     : isMAC_   (false),
-      context_ (0),
+      context_ (new MD_Context()),
       key_     (0)
 {
     init();
@@ -45,7 +45,7 @@ Condor_MD_MAC::Condor_MD_MAC()
     
 Condor_MD_MAC::Condor_MD_MAC(KeyInfo * key)
     : isMAC_   (true),
-      context_ (0),
+      context_ (new MD_Context()),
       key_     (0)
 {
     key_ = new KeyInfo(*key);
@@ -61,7 +61,6 @@ Condor_MD_MAC :: ~Condor_MD_MAC()
 void Condor_MD_MAC :: init()
 {
 #if defined(CONDOR_MD)
-    context_ = new MD_Context();
     MD5_Init(&(context_->md5_));
     
     if (key_) {
