@@ -116,8 +116,26 @@ private:
 		// Private Methods
 		// // // // // // // 
 
-		/** Send an update ClassAd to the shadow */
-	int UpdateShadow( void );
+		/** Send an update ClassAd to the shadow.  The "insure_update"
+			just means do we make sure the update gets there.  It has
+			nothing to do with the "insure" memory analysis tool.
+			@param insure_update Should we insure the update gets there?
+			@return true if success, false if failure
+		*/
+	bool UpdateShadow( bool insure_update = false );
+
+		/** Function to be called periodically to update the shadow.
+			We can't just register a timer to call UpdateShadow()
+			directly, since DaemonCore isn't passing any args to timer
+			handlers, and therefore, it doesn't know it's supposed to
+			honor the default argument we specified above.  So, we use
+			this seperate function to register for the periodic
+			updates, and this ensures that we use the UDP version of
+			UpdateShadow().  This returns an int just to keep
+			DaemonCore happy about the types.
+			@return TRUE on success, FALSE on failure
+		*/
+	int PeriodicShadowUpdate( void );
 
 		/** Publish all attributes we care about for updating the
 			shadow into the given ClassAd. 
