@@ -38,7 +38,7 @@ PVM_LIBRARY = pvmd
 
 #define Directories release_dir release_dir/bin release_dir/lib
 all: makefiles Directories Libraries Programs
-release:: makefiles Directories
+release:: all
 
 simple_dir_target(release_dir)
 simple_dir_target(release_dir/bin)
