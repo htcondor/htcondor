@@ -1,0 +1,300 @@
+/* 
+** Copyright 1994 by Miron Livny, and Mike Litzkow
+** 
+** Permission to use, copy, modify, and distribute this software and its
+** documentation for any purpose and without fee is hereby granted,
+** provided that the above copyright notice appear in all copies and that
+** both that copyright notice and this permission notice appear in
+** supporting documentation, and that the names of the University of
+** Wisconsin and the copyright holders not be used in advertising or
+** publicity pertaining to distribution of the software without specific,
+** written prior permission.  The University of Wisconsin and the 
+** copyright holders make no representations about the suitability of this
+** software for any purpose.  It is provided "as is" without express
+** or implied warranty.
+** 
+** THE UNIVERSITY OF WISCONSIN AND THE COPYRIGHT HOLDERS DISCLAIM ALL
+** WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
+** OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE UNIVERSITY OF
+** WISCONSIN OR THE COPYRIGHT HOLDERS BE LIABLE FOR ANY SPECIAL, INDIRECT
+** OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+** OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+** OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE
+** OR PERFORMANCE OF THIS SOFTWARE.
+** 
+** Author:  Mike Litzkow
+**
+*/ 
+
+#include "condor_common.h"
+#include "condor_debug.h"
+#include <pwd.h>
+#include <stdarg.h>
+#include "user_log.h"
+#include <time.h>
+
+static char *_FileName_ = __FILE__;
+
+extern "C" {
+	int seteuid( uid_t );
+	int setegid( gid_t );
+}
+
+
+static void switch_ids( uid_t new_euid, gid_t new_egid );
+static void display_ids();
+
+UserLog::UserLog( const char *owner, const char *file, int c, int p, int s )
+{
+	struct passwd	*pwd;
+
+		// Save parameter info
+	path = new char[ strlen(file) + 1 ];
+	strcpy( path, file );
+	cluster = c;
+	proc = p;
+	subproc = s;
+	in_block = FALSE;
+
+		// Look up process owner's UID and GID
+	if( (pwd = getpwnam(owner)) == NULL ) {
+		EXCEPT( "Can't find \"%s\" in passwd file", owner );
+	}
+	user_uid = pwd->pw_uid;
+	user_gid = pwd->pw_gid;
+
+		// create the file
+	set_user_id();
+	if( (fd = open( path, O_CREAT | O_WRONLY, 0644 )) < 0 ) {
+		EXCEPT( "path" );
+	}
+
+		// attach it to stdio stream
+	if( (fp = fdopen(fd,"w")) == NULL ) {
+		EXCEPT( "fdopen(%d)", fd );
+	}
+
+		// set the stdio stream for line buffering
+	if( setvbuf(fp,NULL,_IOLBF,BUFSIZ) < 0 ) {
+		EXCEPT( "setvbuf" );
+	}
+
+		// prepare to lock the file
+	lock = new FileLock( fd );
+
+		// get back to whatever UID and GID we started with
+	restore_id();
+}
+
+UserLog::UserLog( )
+{
+	path = 0;
+	cluster = -1;
+	proc = -1;
+	subproc = -1;
+	in_block = FALSE;
+	user_uid = 999;
+	user_gid = 999;
+	fp = 0;
+	lock = 0;
+}
+
+UserLog::~UserLog()
+{
+	delete [] path;
+	delete lock;
+	fclose( fp );
+}
+
+void
+UserLog::display()
+{
+	dprintf( D_ALWAYS, "Path = \"%s\"\n", path );
+	dprintf( D_ALWAYS, "user_uid = %d, saved_uid = %d\n", user_uid, saved_uid );
+	dprintf( D_ALWAYS, "user_gid = %d, saved_gid = %d\n", user_gid, saved_gid );
+	dprintf( D_ALWAYS, "Job = %d.%d.%d\n", proc, cluster, subproc );
+	dprintf( D_ALWAYS, "fp = 0x%x\n", fp );
+	dprintf( D_ALWAYS, "fd = %d\n", fd );
+	lock->display();
+	dprintf( D_ALWAYS, "in_block = %s\n", in_block ? "TRUE" : "FALSE" );
+}
+
+void
+UserLog::put( const char *fmt, ... )
+{
+	va_list		ap;
+	va_start( ap, fmt );
+
+	if( !fp ) {
+		return;
+	}
+
+	if( !in_block ) {
+		lock->obtain( WRITE_LOCK );
+		fseek( fp, 0, SEEK_END );
+	}
+
+	output_header();
+	vfprintf( fp, fmt, ap );
+
+	if( !in_block ) {
+		lock->release();
+	}
+}
+
+void
+UserLog::begin_block()
+{
+	struct tm	*tm;
+	time_t		clock;
+
+	if( !fp ) {
+		return;
+	}
+
+	lock->obtain( WRITE_LOCK );
+	fseek( fp, 0, SEEK_END );
+
+	(void)time(  (time_t *)&clock );
+	tm = localtime( (time_t *)&clock );
+	fprintf( fp, "(%d.%d.%d) %d/%d %02d:%02d:%02d\n",
+		cluster, proc, subproc,
+		tm->tm_mon + 1, tm->tm_mday,
+		tm->tm_hour, tm->tm_min, tm->tm_sec
+	);
+	in_block = TRUE;
+}
+
+void
+UserLog::end_block()
+{
+	if( !fp ) {
+		return;
+	}
+
+	in_block = FALSE;
+	lock->release();
+}
+
+void
+UserLog::output_header()
+{
+	struct tm	*tm;
+	time_t		clock;
+
+	if( !fp ) {
+		return;
+	}
+
+	if( in_block ) {
+		fprintf( fp, "(%d.%d.%d) ", cluster, proc, subproc );
+	} else {
+		(void)time(  (time_t *)&clock );
+		tm = localtime( (time_t *)&clock );
+		fprintf( fp, "(%d.%d.%d) %d/%d %02d:%02d:%02d ",
+			cluster, proc, subproc,
+			tm->tm_mon + 1, tm->tm_mday,
+			tm->tm_hour, tm->tm_min, tm->tm_sec
+		);
+	}
+}
+
+void
+UserLog::set_user_id()
+{
+	saved_uid = geteuid();
+	saved_gid = getegid();
+
+	if( saved_uid != user_uid || saved_gid != user_gid ) {
+		switch_ids( user_uid, user_gid );
+	}
+}
+
+void
+UserLog::restore_id()
+{
+	if( saved_uid != user_uid || saved_gid != saved_gid ) {
+		switch_ids( saved_uid, saved_gid );
+	}
+}
+
+/*
+  Switch process's effective user and group ids as desired.
+*/
+static void
+switch_ids( uid_t new_euid, gid_t new_egid )
+{
+		/* First set euid to root so we have privilege to do this */
+	if( seteuid(0) < 0 ) {
+		fprintf( stderr, "Can't set euid to root\n" );
+		exit( errno );
+	}
+
+		/* Now set the egid as desired */
+	if( setegid(new_egid) < 0 ) {
+		fprintf( stderr, "Can't set egid to %d\n", new_egid );
+		exit( errno );
+	}
+
+		/* Now set the euid as desired */
+	if( seteuid(new_euid) < 0 ) {
+		fprintf( stderr, "Can't set euid to %d\n", new_euid );
+		exit( errno );
+	}
+}
+
+static void
+display_ids()
+{
+	fprintf( stderr, "ruid = %d, euid = %d\n", getuid(), geteuid() );
+	fprintf( stderr, "rgid = %d, egid = %d\n", getgid(), getegid() );
+}
+
+extern "C" LP *
+InitUserLog( const char *own, const char *file, int c, int p, int s )
+{
+	UserLog	*answer;
+
+	answer = new UserLog( own, file, c, p, s );
+	return (LP *)answer;
+}
+
+extern "C" void
+CloseUserLog( LP *lp )
+{
+	delete lp;
+}
+
+extern "C" void
+PutUserLog( LP *lp, const char *fmt, ... )
+{
+	va_list		ap;
+	FILE	*fp;
+	char	buf[1024];
+
+	if( !lp ) {
+		return;
+	}
+	va_start( ap, fmt );
+	vsprintf( buf, fmt, ap );
+
+	((UserLog *)lp) -> put( buf );
+}
+
+extern "C" void
+BeginUserLogBlock( LP *lp )
+{
+	if( !lp ) {
+		return;
+	}
+	((UserLog *)lp) -> begin_block();
+}
+
+extern "C" void
+EndUserLogBlock( LP *lp )
+{
+	if( !lp ) {
+		return;
+	}
+	((UserLog *)lp) -> end_block();
+}
