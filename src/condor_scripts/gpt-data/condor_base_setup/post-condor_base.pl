@@ -45,21 +45,19 @@ $condor_uid = &find_owner();
 
 `mkdir -p $gpath/var/condor`;
 `chown $condor_uid $gpath/var/condor`; 
-`chmod o+x $gpath/var/condor`;
-`chmod g+x $gpath/var/condor`;
+`chmod 0777 $gpath/var/condor`;
 
 `mkdir -p $gpath/var/condor/log`;
 `chown $condor_uid $gpath/var/condor/log`;
-`chmod o+x $gpath/var/condor/log`;
-`chmod g+x $gpath/var/condor/log`;
+`chmod 0777 $gpath/var/condor/log`;
 
 `mkdir -p $gpath/var/condor/log/GridLogs`;
 `chown $condor_uid $gpath/var/condor/log/GridLogs/`;
 `chmod 1777 $gpath/var/condor/log/GridLogs/`;
 
 `mkdir -p $gpath/var/condor/spool`;
-`chown $condor_id $gpath/var/condor/spool`;
-`chmod 0755 $gpath/var/condor/spool`;
+`chown $condor_uid $gpath/var/condor/spool`;
+`chmod 0777 $gpath/var/condor/spool`;
 
 my $globusdir = $ENV{GLOBUS_LOCATION};
 
