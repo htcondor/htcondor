@@ -2,7 +2,7 @@ all_target(libprocapi.a condor_procapi)
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 CFLAGS = $(STD_C_FLAGS)
-LIB = libprocapi.a ../condor_c++_util/libcondorapi.a
+LIB = $(STD_LIBS)
 
 OBJ = procapi.o procinterface.o procapi_instantiate.o
 
