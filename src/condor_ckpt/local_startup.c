@@ -63,6 +63,7 @@ static char *_FileName_ = __FILE__;
 int main( int argc, char *argv[], char **envp );
 
 extern int DebugFlags;
+int _condor_in_file_stream;
 
 int
 #if defined(HPUX9)
