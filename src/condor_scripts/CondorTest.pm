@@ -1,189 +1,271 @@
+# CondorTest.pm - a Perl module for automated testing of Condor
+#
+# 19??-???-?? originally written by Tom Stanis (?)
+# 2000-Jun-02 Total overhaul by pfc@cs.wisc.edu and wright@cs.wisc.edu
+
+
 package CondorTest;
 
-$MAX_CHECKPOINTS = 2;
-$MAX_VACATES = 5;
-
-#------------------------------------------------------------------------------
-# No user servicable parts below this line
-#------------------------------------------------------------------------------
+require 5.0;
+use Carp;
 use Condor;
 
+BEGIN
+{
+    $MAX_CHECKPOINTS = 2;
+    $MAX_VACATES = 3;
 
-
-BEGIN {
+    @skipped_output_lines = ( );
+    @expected_output = ( );
     $checkpoints = 0;
-    $require_checkpoint = 0;
-    $ignored = 0;
-    $usetestcallback = 0;
-    foreach $arg (@ARGV)
-    {
-	if( $arg eq "-a" )
-	{
-	    $analyze_only = 1;
-	}
-	else
-	{
-	    $analyze_only = 0;
-	}
-    }
+    $vacates = 0;
+    %test;
 }
 
-$normal = sub
+sub ResetTest
 {
-    ($cluster, $proc, $return_val, @output, @error) = @_;
-    local($args, $locals);
-    if($return_val == 0)
-    {
-	$num_expect = $#expected_out + $#IGNORE + 2;
-	$num_actual = $#output + 1;
-	if($num_actual != $num_expect)
-	{
-	    print "$testname: FAILURE (output differs from expected by num lines)\n";
-	    print "expected: $num_expect.  actual: $num_actual.\n";
-	    exit(1);
-	}
+    $handle = shift || croak "missing handle argument";
+    $test{$handle} = undef;
+    $checkpoints = 0;
+    $vacates = 0;
+}
 
-      OUTPUT: for ($i = 0; $i <= $#output; ++$i)
-	{
-	    $linenum = $i + 1;
-	    foreach $line (@IGNORE)
-	    {
-		
-		if($linenum == $line)
-		{
-		    ++$ignored;
-		    print "Ignoring line $linenum.\n";
-		    next OUTPUT;
-		}
-	    }
-    
-	    $expected_index = $i - $ignored;
-	    chomp $output[$i]; chomp $expected_out[$expected_index];
-	    
-	    if( $output[$i] ne $expected_out[$expected_index] )
-	    {
-		print "actual: $output[$i]\n";
-		print "expect: $expected_out[$expected_index]\n";
-		print "$testname: FAILURE (output differs at line $linenum.)\n";
-		exit(4);
-	    }
-	}
-	if($require_checkpoint == 1 && $checkpoints == 0)
-	{
-	    print "$testname: FAILURE (did not checkpoint)\n";
-	    exit(5);
-	}
-	if( $usetestcallback == 1  )
-	{
-	    &Condor::debug("Calling special test handler.\n");
-	    $result = &$testcallback(@output, @error);
-	    if($result != 0)
-	    {
-		print "$testname: FAILURE ( special conditions not met ).\n";
-		exit(6);
-	    }
-	}
-	print "$testname: SUCCESS ( $checkpoints checkpoints ).\n";
-	exit(0);
-    }
-    else
-    {
-	print "$testname: FAILURE (return val of " . $return_val . ")\n";
-	exit(3);
-    }
-};
-
-$abnormal = sub
+sub ForceVacate
 {
-    ($cluster, $proc, $signal, $core, @output, @error);
-    print "$testname: FAILURE (abnormal term (signal $signal)):\n";
-    if($core ne "")
-    {
-	print "Core file is: $core.\n";
-    }
-    exit(2);
-};
+    my %info = @_;
 
-$execute = sub
-{
-    ($cluster, $proc, $ip, $port) = @_;
-    local($output, $junk, $name);
-    if( $checkpoints > $MAX_CHECKPOINTS || $vacates > $MAX_VACATES )
-    {
-	return;
-    }
-    else
-    {
-	sleep 5;
-	&Condor::debug("Sending vacate to <$ip:$port>\n");
-	&Condor::Vacate("\"<$ip:$port>\"");
-	$vacates++;
-    }
-};
+    return 0 if ( $checkpoints >= $MAX_CHECKPOINTS ||
+		  $vacates >= $MAX_VACATES );
 
-$evicted = sub
+    # let the job run for a few seconds and then send vacate signal
+    sleep 10;
+    Condor::Vacate( "\"$info{'sinful'}\"" );
+    $vacates++;
+    return 1;
+}
+
+sub RegisterSubmit
 {
-    ($cluster, $proc, $ckpt) = @_;
-    $checkpoints += $ckpt;
-    &Condor::debug("Job evicted. (checkpointed = $ckpt)\n");
-    &Condor::Reschedule();
-};
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "submit: missing function reference argument";
+
+    $test{$handle}{"RegisterSubmit"} = $function_ref;
+}
+sub RegisterExecute
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "execute: missing function reference argument";
+
+    $test{$handle}{"RegisterExecute"} = $function_ref;
+}
+sub RegisterEvicted
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "evict: missing function reference argument";
+
+    $test{$handle}{"RegisterEvicted"} = $function_ref;
+}
+sub RegisterEvictedWithCheckpoint
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterEvictedWithCheckpoint"} = $function_ref;
+}
+sub RegisterEvictedWithoutCheckpoint
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterEvictedWithoutCheckpoint"} = $function_ref;
+}
+sub RegisterExited
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterExited"} = $function_ref;
+}
+sub RegisterExitedSuccess
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "exit success: missing function reference argument";
+
+    $test{$handle}{"RegisterExitedSuccess"} = $function_ref;
+}
+sub RegisterExitedFailure
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterExitedFailure"} = $function_ref;
+}
+sub RegisterExitedAbnormal
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterExitedAbnormal"} = $function_ref;
+}
+
+sub DefaultOutputTest
+{
+    my %info = @_;
+
+    croak "default_output_test called but no \@expected_output defined"
+	unless defined @expected_output;
+
+    Condor::debug( "\$info{'output'} = $info{'output'}\n" );
+
+    CompareText( $info{'output'}, \@expected_output, @skipped_output_lines )
+	|| die "$handle: FAILURE (STDOUT doesn't match expected output)\n";
+
+    IsFileEmpty( $info{'error'} ) || 
+	die "$handle: FAILURE (STDERR contains data)\n";
+}
 
 sub RunTest
 {
-    ($cmd, $testname, @expected_out) = @_;
+    $handle              = shift || croak "missing handle argument";
+    my $submit_file      = shift || croak "missing submit file argument";
+    my $wants_checkpoint = shift;
 
-    if($analyze_only == 0)
+    my $status           = -1;
+
+    croak "too many arguments" if shift;
+
+    # submit the job and get the cluster id
+    $cluster = Condor::Submit( $submit_file );
+    
+    # if condor_submit failed for some reason return an error
+    return -1 if $cluster == 0;
+
+    # this is kludgey
+    $Condor::submit_info{'handle'} = $handle;
+
+    # if we want a checkpoint, register a function to force a vacate
+    # and register a function to check to make sure it happens
+    if( $wants_checkpoint )
     {
-	$cluster = Condor::Submit($cmd);
-	&Condor::RegisterNormalTerm($cluster, $normal);
-	&Condor::RegisterAbnormalTerm($cluster, $abnormal);
-	&Condor::RegisterExecute($cluster, $execute);
-	&Condor::RegisterEvicted($cluster, $evicted);
+	Condor::RegisterExecute( \&ForceVacate );
+	Condor::RegisterEvictedWithCheckpoint( sub { $checkpoints++ } );
+    }
 
-	&Condor::Monitor($cluster);
-	
-	&Condor::Wait();
+    # any handle-associated functions with the cluster
+    # or else die with an unexpected event
+    if( defined $test{$handle}{"RegisterExitedSuccess"} )
+    {
+        Condor::RegisterExitSuccess( $test{$handle}{"RegisterExitedSuccess"} );
     }
     else
     {
-      ($log, $out, $err, $in) = Condor::ReadCmdFile($cmd);
-      open(OUT, $out) || die "Can't open $out: $!.\n";
-      @output = <OUT>; # Slurp
-      close(OUT);
-      
-      open(ERR, $err) || die "Can't open $err: $!.\n";
-      @error = <ERR>;
-      close(ERR);
-
-      &$normal(0, 0, 0, @output, @error);
+	Condor::RegisterExitSuccess( sub {
+	    die "$handle: FAILURE (got unexpected successful termination)\n";
+	} );
     }
-}
 
-sub IgnoreLine
-{
-    my($line) = @_;
-    push(@IGNORE, $line);
-}
-
-sub IgnoreLines
-{
-    my($line);
-    foreach $line (@_)
+    if( defined $test{$handle}{"RegisterExitedFailure"} )
     {
-	push(@IGNORE, $line);
+	Condor::RegisterExitFailure( $test{$handle}{"RegisterExitedFailure"} );
     }
+    else
+    {
+	Condor::RegisterExitFailure( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (returned %info{'retval'})\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterExitedAbnormal"} )
+    {
+	Condor::RegisterExitAbnormal( $test{$handle}{"RegisterExitedAbnormal"} );
+    }
+    else
+    {
+	Condor::RegisterExitAbnormal( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (got signal $info{'signal'})\n";
+	} );
+    }
+
+    # if evicted, call condor_resched so job runs again quickly
+    # (we're passing a sub to call it instead of registering it
+    # directly so it doesn't get passed the %info hash)
+    Condor::RegisterEvicted( sub { Condor::Reschedule } );
+    
+    # monitor the cluster and return its exit status
+    $retval = Condor::Monitor();
+    # $retval = Condor::Wait();
+
+    die "$handle: FAILURE (job never checkpointed)\n"
+	if $wants_checkpoint && $checkpoints < 1;
+
+    return $retval;
 }
 
-sub AddTestCallback
+sub CompareText
 {
-    &Condor::debug("Enabling special test callback.\n");
-    ($sub) = @_;
-    $usetestcallback = 1;
-    $testcallback = $sub;
+    my $file = shift || croak "missing file argument";
+    my $aref = shift || croak "missing array reference argument";
+    my @skiplines = @_;
+    my $linenum = 0;
+
+    open( FILE, "<$file" ) || die "error opening $file: $!\n";
+    
+    while( <FILE> )
+    {
+	$line = $_;
+	chomp $line;
+	$linenum++;
+
+#	print "DEBUG: linenum $linenum\n";
+#	print "DEBUG: \$line: $line\n";
+#	print "DEBUG: \$\$aref[0] = $$aref[0]\n";
+
+#	print "DEBUG: skiplines = \"@skiplines\"\n";
+#	print "DEBUG: grep returns ", grep( /^$linenum$/, @skiplines ), "\n";
+
+	next if grep /^$linenum$/, @skiplines;
+
+	$expectline = shift @$aref;
+	if( ! defined $expectline )
+	{
+	    die "FAILURE: $file contains more text than expected\n";
+	}
+	chomp $expectline;
+
+#	print "DEBUG: \$expectline: $expectline\n";
+
+	# if they match, go on
+	next if $expectline eq $line;
+
+	# otherwise barf
+	warn "FAILURE: $file line $linenum doesn't match expected output:\n" .
+	    "actual: $line\nexpect: $expectline\n";
+	return 0;
+    }
+
+    # barf if we're still expecting text but the file has ended
+    ($expectline = shift @$aref ) && 
+        die "FAILURE: $file incomplete, expecting:\n$expectline\n";
+
+    # barf if there are skiplines we haven't hit yet
+    foreach $num ( @skiplines )
+    {
+	if( $num > $linenum )
+	{
+	    warn "FAILURE: skipline $num > # of lines in $file ($linenum)\n";
+	    return 0;
+	}
+	croak "invalid skipline argument ($num)" if $num < 1;
+    }
+    
+#    print "DEBUG: CompareText successful\n";
+    return 1;
 }
 
-sub RequireCheckpoint
+sub IsFileEmpty
 {
-    $require_checkpoint = 1;
+    my $file = shift || croak "missing file argument";
+    return -z $file;
 }
