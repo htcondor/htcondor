@@ -4,6 +4,7 @@ CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LIB = libcedar.a $(STD_LIBS)
 
+
 CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o
 
 OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o sockCache.o \
