@@ -311,8 +311,13 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose )
   there, if it should be a fatal error or not.  If the attribute is
   defined, we insert "attribute = value" into the given classad and
   return true.  If the attribute wasn't defined, we return false, and
-  if the is_fatal flag is set, we EXCEPT
+  if the is_fatal flag is set, we EXCEPT().  If we found the attribute
+  but failed to insert it into the ClassAd, there's a syntax error and
+  we should EXCEPT(), even if is_fatal is false.  If it's it's in the
+  config file, the admin is trying to use it, so if there's a syntax
+  error, we should let them know right away. 
   -Derek Wright <wright@cs.wisc.edu> 4/12/00
+  -Syntax error checking by Derek on 6/25/03
 */
 bool
 configInsert( ClassAd* ad, const char* attr, bool is_fatal )
@@ -350,7 +355,9 @@ configInsert( ClassAd* ad, const char* param_name,
 	}
 	sprintf( tmp, "%s = %s", attr, val );
 
-	ad->Insert( tmp );
+	if( ! ad->Insert(tmp) ) {
+		EXCEPT( "Syntax error in %s expression: '%s'", attr, val );
+	}
 
 	free( tmp );
 	free( val );
