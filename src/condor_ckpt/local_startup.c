@@ -75,7 +75,21 @@ MAIN( int argc, char *argv[], char **envp )
 	char	buf[_POSIX_PATH_MAX];
 	static char	init_working_dir[_POSIX_PATH_MAX];
 	static char	init_working_dir2[_POSIX_PATH_MAX]; /* Greger */
-	int		i;
+	int		i, should_restart = FALSE;
+	char*	ckpt_file = NULL;
+	char*	arg;
+	
+
+		/*
+		  These will hold the argc and argv we actually give to the
+		  user's code, with any Condor-specific flags stripped out. 
+		*/
+	int		user_argc;
+	char*	user_argv[_POSIX_ARG_MAX];
+
+		/* The first arg will always be the same */
+	user_argv[0] = argv[0];
+	user_argc = 1;
 
 	_condor_prestart( SYS_LOCAL );
 
@@ -92,51 +106,111 @@ MAIN( int argc, char *argv[], char **envp )
 		executable_name = init_working_dir;
 	}
 
-		/*
-		If the command line looks like 
-			exec_name -_condor_ckpt <ckpt_file> ...
-		then we set up to checkpoint to the given file name
-		*/
-	if( argc >= 3 && strcmp("-_condor_ckpt",argv[1]) == MATCH ) {
-		init_image_with_file_name( argv[2] );
-		fprintf(stderr, "Checkpointing to file %s\n", argv[2]);
-		fflush(stderr);
-#if 0
-		if (access( argv[2], R_OK ) == 0) {
-			restart();
+		 /*
+		   Now, process our command-line args to see if there are
+		   any ones that begin with "-_condor" and deal with them. 
+		 */
+	for( i=1; (i<argc && argv[i]); i++ ) {
+		if( (strncmp(argv[i], "-_condor_", 9) != MATCH ) ) {
+				/* Non-Condor arg so save it. */
+			user_argv[user_argc] = argv[i];
+			user_argc++;
+			continue;
 		}
-#endif
-		Set_CWD( init_working_dir2 );
-		argc -= 2;
-		argv += 2;
-		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
-		InRestart = FALSE;
-#if defined(HPUX)
-		return(_start( argc, argv, envp ));
-#else
-		return main( argc, argv, envp );
-#endif
+		
+			/* 
+			   This must be a Condor arg.  Let's just deal with the 
+			   part of it that'll be unique...
+			*/
+		arg = argv[i]+9;
+		
+			/* 
+			   '-_condor_ckpt <ckpt_filename>' is used to specify the 
+			   file we want to checkpoint to.
+			*/
+		if( (strcmp(arg, "ckpt") == MATCH) ) {
+			if( ! argv[i+1] ) {
+				fprintf( stderr, 
+						 "ERROR: -_condor_ckpt requires another argument\n" );
+				exit( 1 );
+			} else {
+				i++;
+				ckpt_file = argv[i];
+				fprintf( stderr, "Checkpointing to file %s\n", ckpt_file );
+				fflush( stderr );
+			 }	
+			continue;
+		}
+		
+			/*
+			  '-_condor_restart <ckpt_file>' is used to specify that
+			  we should restart from the given checkpoint file.
+			*/
+		if( (strcmp(arg, "restart") == MATCH) ) {
+			if( ! argv[i+1] ) {
+				fprintf( stderr, 
+						 "ERROR: -_condor_restart requires another argument\n" );
+				exit( 1 );
+			} else {
+				i++;
+				ckpt_file = argv[i];
+				should_restart = TRUE;
+			}
+			continue;
+		}
+		
+			 /*
+			   '-_condor_D_XXX' can be set to add the D_XXX
+			   (e.g. D_ALWAYS) debug level for this job's output.
+			   This is for debug messages inside our checkpointing and
+			   remote syscalls code.  If a user sets a given level,
+			   messages from that level go to stderr.  
+			   -Derek Wright 9/30/99
+			 */
+		if( (strncmp(arg, "D_", 2) == MATCH) ) {
+			_condor_set_debug_flags( arg );
+			continue;
+		}
 	}
 
 		/*
-		If the command line looks like 
-			exec_name -_condor_restart <ckpt_file> ...
-		then we effect a restart from the given file name
+		  We're done processing all the args, so copy the 
+		  user_arg* stuff back into the real argv and argc. 
+		  First, we must terminate the final element.
 		*/
-	if( argc >= 3 && strcmp("-_condor_restart",argv[1]) == MATCH ) {
-		init_image_with_file_name( argv[2] );
-		restart();
+	user_argv[user_argc] = NULL;
+	argc = user_argc;
+	for( i=0; i<=argc; i++ ) {
+		argv[i] = user_argv[i];
 	}
 
-		/*
-		If we aren't given instructions on the command line, assume
-		we are an original invocation, and that we should write any
-		checkpoints to the name by which we were invoked with a
-		".ckpt" extension.
+		/* 
+		   Now, if the user wants it, dprintf() is configured.  So,
+		   we're safe to dprintf() our version string.  This serves
+		   many purposes: 1) it means anything linked with any Condor
+		   library, standalone or regular, will reference the
+		   CondorVersion() symbol, so our magic-ident string will
+		   always be included by the linker, 2) In standalone jobs,
+		   the user only gets the clutter if they want it.
+		   -Derek Wright 5/26/99
 		*/
-	if( argc < 3 || 1) {
+	dprintf( D_ALWAYS | D_NOHEADER , "User Job - %s\n", CondorVersion() );
+
+	if( ! ckpt_file ) {
+			/*
+			  If we aren't given instructions on the command line,
+			  assume we are an original invocation, and that we
+			  should write any checkpoints to the name by which we
+			  were invoked with a ".ckpt" extension.  */
 		sprintf( buf, "%s.ckpt", argv[0] );
-		init_image_with_file_name( buf );
+		ckpt_file = buf;
+	}
+	init_image_with_file_name( ckpt_file );
+	 
+	if( should_restart ) {
+		restart();
+	} else {
+		Set_CWD( init_working_dir2 );
 		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 		InRestart = FALSE;
 #if defined(HPUX)
@@ -145,7 +219,6 @@ MAIN( int argc, char *argv[], char **envp )
 		return main( argc, argv, envp );
 #endif
 	}
-
 }
 
 /*
@@ -184,6 +257,7 @@ get_ckpt_speed()
 	return 0;
 }
 
+
 /* if you modify this, then make sure to do the same changes in senders.prologue */
 sigset_t
 block_condor_signals()
@@ -220,12 +294,12 @@ void restore_condor_sigmask(sigset_t omask)
 }
 
 
-
 char	*
 condor_get_executable_name()
 {
 	return executable_name;
 }
+
 
 int
 ioserver_open(const char *path, int oflag, mode_t mode)
