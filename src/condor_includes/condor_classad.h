@@ -92,8 +92,6 @@ class ClassAd : public AttrList
 
 		AdType*		myType;						// my type field.
         AdType*		targetType;					// target type field.
-		ExprTree*	requirementExpr;			// the requirement
-		ExprTree*	rankExpr;					// the rank
 		// (sequence number is stored in attrlist)
 };
 
