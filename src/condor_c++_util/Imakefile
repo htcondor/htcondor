@@ -7,31 +7,15 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fno-implicit-templates -DNEW_PROC
 #endif
 CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
 
-#if IS_SPARC_SUNOS41
-SYSPARAM = sysparam_sun
-#endif
-#if IS_SUN4M_SOLARIS || IS_SUN4M_SOLARIS251
+#if IS_SOLARIS
 SYSPARAM = sysparam_solaris
-#endif
-#if IS_X86_SOLARIS || IS_X86_SOLARIS25
-SYSPARAM = sysparam_solaris
-#endif
-#if IS_ALPHA_OSF1
+#elif IS_ALPHA_OSF1
 SYSPARAM = sysparam_osf1
-#endif
-#if IS_MIPS_ULTRIX42 || IS_MIPS_ULTRIX43
-SYSPARAM = sysparam_ultrix
-#endif
-#if IS_R6000_AIX32
-SYSPARAM=sysparam_aix
-#endif
-#if IS_HPPAR_HPUX9
+#elif IS_HPPAR_HPUX
 SYSPARAM = sysparam_hpux
-#endif
-#if IS_I386_LINUX
+#elif IS_LINUX
 SYSPARAM = sysparam_linux
-#endif
-#if IS_SGI_IRIX53
+#elif IS_SGI_IRIX53
 SYSPARAM = sysparam_irix
 #endif
 
@@ -68,11 +52,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
 	limit.o my_arch.o my_subsystem.o
 
-#if IS_R6000_AIX32
-TEST_LIBS = ../condor_util_lib/util_lib.a cplus_lib.a /usr/lib/libbsd.a
-#else
 TEST_LIBS = cplus_lib.a ../condor_util_lib/util_lib.a
-#endif
 
 #if !HAS_FLOCK
 FLOCK_OBJ = ../condor_util_lib/flock.o
