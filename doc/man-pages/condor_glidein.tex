@@ -11,8 +11,8 @@
 \oOptArg{-\hspace{.25 mm}-queue}{name}
 \oOptArg{-\hspace{.25 mm}-project}{name}
 \oOptArg{-\hspace{.25 mm}-memory}{MBytes}
-\oOptArg{-\hspace{.25 mm}-count}{CPU count}
-\oOptArg{-\hspace{.25 mm}-vms}{VM count}
+\oOptArg{-\hspace{.25 mm}-count}{CPUcount}
+\oOptArg{-\hspace{.25 mm}-vms}{VMcount}
 \oOptArg{-\hspace{.25 mm}-idletime}{minutes}
 \oOptArg{-\hspace{.25 mm}-runtime}{minutes}
 \oOpt{-\hspace{.25 mm}-anybody}
@@ -137,13 +137,14 @@ These files should be occasionally removed.
 	The maximum memory size to request from the Globus resource
 	(in megabytes).
 	}
-    \OptItem{\OptArg{-\hspace{.25 mm}-count}{CPU count}}{
+    \OptItem{\OptArg{-\hspace{.25 mm}-count}{CPUcount}}{
 	Number of CPUs to request, default is 1. }
-    \OptItem{\OptArg{-\hspace{.25 mm}-vms}{VM count}}{
-	Number of virtual machines to split up allocated resources
-	into.
-	By default, Condor divides multiple-CPU resources into one
-	virtual machine for each CPU, with an equal share of RAM,
+    \OptItem{\OptArg{-\hspace{.25 mm}-vms}{VMcount}}{
+        For machines with multiple CPUs, the CPUs maybe divided
+	up into virtual machines. \Arg{VMcount} is the number
+	of virtual machines that results.
+	By default, Condor divides multiple-CPU resources such that
+	each CPU is a virtual machine, each with an equal share of RAM,
 	disk, and swap space.
 	This option configures the number of virtual machines, so that
 	multi-threaded jobs can run in a virtual machine with multiple
