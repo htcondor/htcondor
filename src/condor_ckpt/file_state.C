@@ -484,6 +484,8 @@ CondorFile * CondorFileTable::open_file_unique( char *logical_name, int flags, i
 		flags &= ~(O_WRONLY);
 		flags |= O_RDWR;
 
+		p->file->fsync();
+
 		CondorFile *f = open_url_retry( p->file->get_url(), flags, mode, allow_buffer );
 		if(!f) return 0;
 
@@ -555,8 +557,9 @@ int CondorFileTable::install_special( int real_fd, char *kind )
 	int fd = find_empty();
 	if(fd<0) return -1;
 
-	CondorFileInfo *i= new CondorFileInfo(kind);
+	CondorFileInfo *i= make_info(kind);
 	i->already_warned = 1;
+	i->open_count++;
 
 	CondorFileSpecial *s = new CondorFileSpecial();
 	s->attach( real_fd );
