@@ -26,6 +26,8 @@
 
 using namespace std;
 
+extern DLL_IMPORT_MAGIC long timezone;
+
 BEGIN_NAMESPACE( classad )
 
 #ifdef WIN32
@@ -81,9 +83,6 @@ long timezone_offset(void)
     }
     return tz_offset;
 #else
-
-    extern DLL_IMPORT_MAGIC long timezone;
-
     return ::timezone;
 #endif
 }
