@@ -41,7 +41,6 @@ calc_virt_memory()
 
 #else
 
-#include <nlist.h>
 #include "debug.h"
 #include "except.h"
 #include "condor_uid.h"
@@ -137,6 +136,7 @@ calc_virt_memory()
 /* The HPUX code here grabs the amount of free swap in Kbyes.
  * I hope it is portable to all HPUX systems...  It grabs it
  * from /dev/kmem, no messy/expensive pstat running -Todd Tannenbaum */
+#include <nlist.h>
 #include <sys/file.h>
 
 struct nlist swapnl[] = {
