@@ -7,7 +7,6 @@
 #include <string.h>
 #include "condor_exprtype.h"
 #include "condor_ast.h"
-#include "condor_parser.h"
 #include "condor_buildtable.h"
 
 #define NextSpace(str) while(*str != ' ') str++;

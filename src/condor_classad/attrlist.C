@@ -15,10 +15,9 @@
 
 # include "except.h"
 # include "debug.h"
-# include "condor_astbase.h"
+# include "condor_ast.h"
 # include "condor_expressions.h"
 # include "condor_attrlist.h"
-# include "condor_parser.h"
 
 static 	char *_FileName_ = __FILE__;         // Used by EXCEPT (see except.h)
 extern 	"C" int _EXCEPT_(char*, ...);

@@ -16,7 +16,6 @@
 # include "condor_expressions.h"
 # include "condor_attrlist.h"
 # include "condor_classad.h"
-# include "condor_parser.h"
 
 static Registration regi;                   // this is the registration for 
                                             // the AttrList type names. It 

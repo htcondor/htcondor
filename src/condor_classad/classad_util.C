@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <iostream.h>
 #include "condor_ast.h"
-#include "condor_parser.h"
 #include "condor_classad_util.h" 
 #include "_condor_fix_resource.h"
 
