@@ -595,7 +595,7 @@ init_classad()
 	ad->Insert(line);
 
 #if !defined(WIN32)
-	sprintf(line, "%s = %d", ATTR_REAL_UID, getuid() );
+	sprintf(line, "%s = %d", ATTR_REAL_UID, (int)getuid() );
 	ad->Insert(line);
 #endif
 
