@@ -20,13 +20,14 @@
 #   define IS_GLIBC_LINUX	YES
 #   define GlibCFlag		-DGLIBC
 #   define ImakeOtherFlag	-DIS_GLIBC
+#   define IS_EGCS_BUILD	YES
 #else
 #   define GlibCFlag
 #endif
 
 #define PlatformFlags		ArchOptimizeFlag GlibCFlag
 
-PLATFORM_LDFLAGS = -lbfd -liberty
+#define PlatformLdFlags		-lbfd -liberty
 
 #define SimpleLibC /usr/lib/libc.a
 #define LibC SimpleLibC

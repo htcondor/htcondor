@@ -12,7 +12,7 @@
 #define IS_DUX		YES
 #define IS_DUX4		YES
 
-PLATFORM_LDFLAGS = -lmld
+#define PlatformLdFlags -lmld
 
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC

@@ -49,9 +49,15 @@ SafeSock::SafeSock() 				/* virgin safesock	*/
 }
 
 SafeSock::SafeSock(const SafeSock & orig) 
+	: Sock(orig)
 {
 	init();
-	Sock::Sock((const Sock&)orig);
+	// now copy all cedar state info via the serialize() method
+	char *buf = NULL;
+	buf = orig.serialize();	// get state from orig sock
+	assert(buf);
+	serialize(buf);			// put the state into the new sock
+	delete [] buf;
 }
 
 SafeSock::~SafeSock()

@@ -35,7 +35,7 @@ if( $versarg ) {
     # directly on the condor_master binary.
     $_=`ident strip_dir/sbin/condor_master`;
 }
-/(\$Version: )?(\d*)\.(\d*)\.(\d*).*/;
+/(\$CondorVersion: )?(\d*)\.(\d*)\.(\d*).*/;
 $majorv = $2;
 $minorv = $3;
 $releasev = $4;
@@ -110,6 +110,7 @@ $target="/p/condor/public/binaries";
   "i386_linux2"   => "linux",
   "i386_linux22"   => "linux",
   "i386_linux3"   => "linux",
+  "alpha_linux3"   => "linux",
   "alpha_dux40"   => "dux40",
   "sgi_62"        => "irix6",
   "sgi_63"        => "irix6",
@@ -126,6 +127,7 @@ $target="/p/condor/public/binaries";
   "i386_linux2"   => "x86",
   "i386_linux22"   => "x86",
   "i386_linux3"   => "x86",
+  "alpha_linux3"   => "Alpha",
   "alpha_dux40"   => "Alpha",
   "sgi_62"        => "SGI",
   "sgi_63"        => "SGI",
@@ -150,7 +152,7 @@ $arch = $archname{$sys};
 $opsys = $opsysname{$sys};
 if( ! $glibc ) {
     $glibc = "";
-    if( $opsys =~ /linux/i && -f "/lib/libc.so.6" ) {
+    if( $sys =~ /.*linux22.*/ || $sys =~ /.*linux3.*/ ) {
 	$glibc = "glibc";
     } 
 }

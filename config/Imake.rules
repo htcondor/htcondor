@@ -572,6 +572,15 @@ newname: libname ToUpper						@@\
 #endif
 
 
+#ifndef obj_extract
+#define obj_extract( libname, objname )			@@\
+objname: libname					@@\
+	AR_EXTRACT( libname, objname );			@@\
+clean:: 						@@\
+	rm -f objname
+#endif
+
+
 /*
 ** Build a file using an awk program
 */

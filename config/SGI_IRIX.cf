@@ -37,15 +37,15 @@
 #define RpcLib RpcSvc RpcSun 
 #define MallocLib	concat(BaseLibPath,/libmalloc.so)
 #define KernLib /**/
+#define SyscallsExp /**/
+#define SocketLib /**/
 #define SimpleLibC concat(BaseLibPath,/libc.so)
 #define LibC RpcLib SimpleLibC
 #define Crt0 concat(BaseLibPath,/crt1.o)
 #define CrtN concat(BaseLibPath,/crtn.o)
 #define RealMldLib concat(BaseLibPath,/libmld.a)
 
-PLATFORM_LDFLAGS = MldLib RealMldLib RpcLib
-#define SyscallsExp /**/
-#define SocketLib /**/
+#define PlatformLdFlags /usr/lib/libelf.a /usr/lib/libmld.a RpcLib
 
 #define XLibPath -lX11
 #define XExtLibPath concat(BaseLibPath,/libXext.a)

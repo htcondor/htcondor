@@ -159,8 +159,8 @@ COMPRESS_OBJ = malloc.o zimage.o _rem.o _div.o umultiply.o
 #else
 COMPRESS_OBJ = malloc.o zimage.o
 #endif
-STANDALONE_COMPRESS_LIB = libzckpt.a
-COMPRESS_LIB = condor_syscall_zlib.a
+STANDALONE_COMPRESS_LIB = libcondorzckpt.a
+COMPRESS_LIB = libcondorzsyscall.a
 #endif
 
 SYSCALL_SUPPORT_OBJ=senders.o receivers.o syscall_mode.o syscall_connect.o remote_syscall.o syscall_numbers.o xfer_file.o
@@ -183,14 +183,14 @@ LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL) $(NAME_TAB) $(XDR_OBJ) $(UTIL_OBJ) \
 	$(CKPT_OBJ) $(UTIL_EXTRACT) $(IOS_STUBS) $(IO_OBJ) $(SPECIAL_IO_OBJ) \
 	$(SPECIAL_OBJ) $(CPP_UTIL_OBJ)
 
-SIMPLE_OBJ = condor_rt0.o extern_path.o xfer_file.o c_plus_alloc.o \
-	libckpt.a $(STANDALONE_COMPRESS_LIB)
-SYSCALL_LIB = condor_syscall_lib.a
+SIMPLE_OBJ = condor_rt0.o extern_path.o xfer_file.o libcondorc++support.a \
+	libcondorckpt.a $(STANDALONE_COMPRESS_LIB) 
+SYSCALL_LIB = libcondorsyscall.a
 
 #if DOES_REMOTE_SYSCALLS
 all_target($(SYSCALL_LIB) $(COMPRESS_LIB) receivers.o $(SIMPLE_OBJ) $(AIX_OBJ) syscall-list)
 #else 
-all_target($(SYSCALL_SUPPORT_OBJ))
+all_target($(SYSCALL_SUPPORT_OBJ) extern_path.o)
 #endif
 
 stubs: switches.c senders.C receivers.C
@@ -303,22 +303,22 @@ static_copy_target( condor_rt0.o, $(STATIC_DIR)/lib, condor_rt0.o, OBJECT_MODE )
 	library_target(libtmp.a,$(LIB_OBJ))
 
 clean::
-	rm -f condor_syscall_lib.a
+	rm -f libcondorsyscall.a
 
-condor_syscall_lib.a: libtmp.a ToUpper
+libcondorsyscall.a: libtmp.a ToUpper
 #   if (IS_X86_SOLARIS)
-	./ToUpper libtmp.a condor_syscall_lib.a __cerror __CERROR
+	./ToUpper libtmp.a libcondorsyscall.a __cerror __CERROR
 #   else /* GLIBC Linux */
-	./ToUpper libtmp.a condor_syscall_lib.a __syscall_error __SYSCALL_ERROR
+	./ToUpper libtmp.a libcondorsyscall.a __syscall_error __SYSCALL_ERROR
 #   endif /* Solaris */
 #else /* Not GLIBC Linux or Intel Solaris */
-	library_target(condor_syscall_lib.a,$(LIB_OBJ))
+	library_target(libcondorsyscall.a,$(LIB_OBJ))
 #endif
 
 #if DOES_CHECKPOINTING || DOES_REMOTE_SYSCALLS
-release_library(condor_syscall_lib.a,$(RELEASE_DIR)/lib)
-strip_library(condor_syscall_lib.a,$(STRIP_DIR)/lib)
-static_library(condor_syscall_lib.a,$(STATIC_DIR)/lib)
+release_library(libcondorsyscall.a,$(RELEASE_DIR)/lib)
+strip_library(libcondorsyscall.a,$(STRIP_DIR)/lib)
+static_library(libcondorsyscall.a,$(STATIC_DIR)/lib)
 #endif
 
 #if DOES_COMPRESS_CKPT
@@ -392,8 +392,8 @@ import(../condor_ckpt,$(COMPRESS_OBJ))
 import(../h,syscall_numbers.c)
 import(../condor_util_lib, stub_gen)
 import(../condor_shadow.V6, pseudo_ops.h)
-import(../condor_ckpt,libckpt.a)
-import(../condor_ckpt,c_plus_alloc.o)
+import(../condor_ckpt,libcondorckpt.a)
+import(../condor_ckpt,libcondorc++support.a)
 
 authentication.o: authentication.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
