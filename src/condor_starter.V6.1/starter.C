@@ -35,7 +35,7 @@
 #include "condor_string.h"  // for strnewp
 #include "condor_random_num.h"
 
-static char *_FileName_ = __FILE__; /* Used by EXCEPT (see except.h)    */
+extern "C" int get_random_int();
 
 /* CStarter class implementation */
 
@@ -95,12 +95,11 @@ CStarter::Init(char peer[])
 
 	// init environment info
 	char *mfhn = strnewp ( my_full_hostname() );
-	dprintf ( D_FULLDEBUG, "asdf\n" );
 	REMOTE_syscall(CONDOR_register_machine_info, UIDDomain, FSDomain,
 				   daemonCore->InfoCommandSinfulString(), 
 				   mfhn, Key);
 	delete [] mfhn;
-	dprintf ( D_FULLDEBUG, "ffdsa\n" );
+
 
 	set_resource_limits();
 
@@ -176,6 +175,12 @@ CStarter::StartJob()
 		JobList.Append(job);		
 	} else {
 		delete job;
+
+		// DREADFUL HACK:  for now, if we fail to start the job,
+		// do an EXCEPT.  Of course this is wrong for a multi-starter,
+		// this is just a quick hack to get the first pass at WinNT
+		// Condor out the door.
+		EXCEPT("Failed to start job");
 	}
 }
 
@@ -218,7 +223,8 @@ CStarter::Reaper(int pid, int exit_status)
 	UserProc *job;
 
 		/* This shifts exit_status back to where it should be (MEY) */
-	exit_status = exit_status >> 8;
+		/* Huh? This looks very wrong.  I am commenting it out. -Todd */
+	//  exit_status = exit_status >> 8;
 
 	dprintf(D_ALWAYS,"Job exited, pid=%d, status=%d\n",pid,exit_status);
 	JobList.Rewind();
