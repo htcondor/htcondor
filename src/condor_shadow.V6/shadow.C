@@ -157,7 +157,6 @@ int		TryLogExecute = 0;
 char	*Spool = NULL;
 char	*ExecutingHost = NULL;
 char	*GlobalCap = NULL;
-char	*MailerPgm = NULL;
 
 // count of total network bytes previously send and received for this
 // job from previous runs (i.e., includes ckpt transfers)
@@ -490,11 +489,6 @@ main(int argc, char *argv[], char *envp[])
 			BWInterval = atoi(tmp);
 			free(tmp);
 		}
-	}
-
-	MailerPgm = param( "MAIL" );
-	if( MailerPgm == NULL ) {
-		MailerPgm = "/bin/mail";
 	}
 
 	// Install signal handlers such that all signals are blocked when inside
