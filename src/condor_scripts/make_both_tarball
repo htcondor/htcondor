@@ -1,4 +1,4 @@
-#!/s/std/bin/perl
+#!/usr/bin/env perl
 
 # This perl script is used by our build environment to build
 # "both_tarballs", which are tarballs that use files from both the

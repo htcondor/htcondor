@@ -1,4 +1,4 @@
-#!/s/std/bin/perl
+#!/usr/bin/env perl
 
 # Perl script to print out the synopsis from the man page for a given
 # system call.  If the man page source just says to look at a
