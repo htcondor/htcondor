@@ -45,6 +45,8 @@ The details of each version are described below.
 \item The -analyze option to \Condor{q} is only meaningful for certain
   universes.  \Condor{q} now warns if the output might not be meaningful. 
 
+\item Java universe: when jar files are transferred to the execute machine (with \Expr{should\_transfer\_files} or \Expr{tranfer\_input\_files}) the Starter will use the local path (in the execute directory) for the jarfiles, instead of the original path specified in the submit file.
+
 \end{itemize}
 
 \noindent Known Bugs:
