@@ -34,7 +34,6 @@
 #include "master.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include <math.h>
-#include "max_fd.h"
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
@@ -376,7 +375,7 @@ int daemon::StartDaemon()
 {
 	char	*shortname;
 	int command_port = TRUE;
-	int i, max_fds = max_fd();
+	int i, max_fds = getdtablesize();
 	char argbuf[150];
 
 	if( (shortname = strrchr(process_name,'/')) ) {
@@ -505,7 +504,7 @@ void Daemons::Restart(int pid)
 void Daemons::RestartMaster()
 {
 	int			index = GetIndex("MASTER");
-	int 		i, max_fds = max_fd();
+	int 		i, max_fds = getdtablesize();
 
 	if ( index == -1 ) {
 		dprintf(D_ALWAYS, "Restart Master:MASTER not specified\n");
