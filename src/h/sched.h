@@ -204,16 +204,7 @@ typedef struct {        /* record sent by startd to shadow */
 #define OK		TRUE
 #define NOT_OK	FALSE
 
-#define	NO_JOB			0
-#define	JOB_RUNNING		1
-#define	KILLED			2
-#define	CHECKPOINTING	3
-#define SUSPENDED		4
-#define USER_BUSY		5
-#define M_IDLE			6
-#define BLOCKED			7
-#define SYSTEM			8
-#define CONDOR_DOWN		-1
+#include "condor_mach_status.h"
 
 #define LOCK_JOB_QUEUE(q,m) GuardQueue(q,m,__FILE__,__LINE__)
 #define CLOSE_JOB_QUEUE(q) GuardQueue(q,LOCK_UN,__FILE__,__LINE__)
