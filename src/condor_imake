@@ -114,7 +114,10 @@ EgcsLib="-DLIB_GCC=$LIBGCC"
 if [ $os = "HP-UX" -a $osrelease = "B.10.20" ] ; then
 	Opsys="-DIS_HPUX10"
 
-elif [ $os = "OSF1" -a $osrelease = "V4.0" ] ; then
+elif [ $os = "HP-UX" -a $osversion = "B.11.00" ] ; then
+	Opsys="-DIS_HPUX11"
+
+elif [ $os = "OSF1" -a $osversion = "V4.0" ] ; then
 	Opsys="-DIS_DUX4"
 
 elif [ $os = "Linux" ]; then
