@@ -36,7 +36,6 @@
 #include "condor_string.h"
 #include "condor_email.h"
 #include "environ.h"
-#include "condor_updown.h"
 #include "condor_uid.h"
 #include "my_hostname.h"
 #include "get_daemon_addr.h"

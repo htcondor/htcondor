@@ -33,7 +33,6 @@
 #include "log_transaction.h"
 #include "log.h"
 #include "classad_collection.h"
-#include "condor_updown.h"
 #include "prio_rec.h"
 #include "condor_attributes.h"
 #include "condor_uid.h"
