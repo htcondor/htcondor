@@ -151,12 +151,14 @@ BOOL StackGrowsDown();
 int JmpBufSP_Index();
 void ExecuteOnTmpStk( void (*func)() );
 void patch_registers( void  *);
-#if defined(Solaris)
+#if defined(Solaris) || defined(IRIX53)
      int find_map_for_addr(caddr_t addr);
      int num_segments( );
      int segment_bounds( int seg_num, RAW_ADDR &start, RAW_ADDR &end,
 	int &prot );
      void display_prmap();
+	 extern "C" int open_ckpt_file( const char *name,
+								   int flags, size_t n_bytes );
 #endif
 
 #	define JMP_BUF_SP(env) (((long *)(env))[JmpBufSP_Index()])
