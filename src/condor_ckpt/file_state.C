@@ -462,6 +462,22 @@ static int needs_reopen( int old_flags, int new_flags )
 }
 
 /*
+Find any pointers to one file and replace it with another.
+*/
+
+void CondorFileTable::replace_file( CondorFile *old_file, CondorFile *new_file )
+{
+	int i;
+
+	for( i=0;i<length; i++ ) {
+		if(pointers[i] && pointers[i]->file==old_file) {
+			pointers[i]->file=new_file;
+		}
+	}
+}
+
+
+/*
 Create and open a file object from a logical name.  If either the logical
 name or url are already in the file table AND the file was previously
 opened with compatible flags, then share the object.  If not, elevate
@@ -483,6 +499,7 @@ CondorFile * CondorFileTable::open_file_unique( char *logical_name, int flags, i
 	}
 
 	CondorFilePointer *p = pointers[match];
+	CondorFile *old_file;
 
 	if( needs_reopen( p->flags, flags ) ) {
 		flags &= ~(O_RDONLY);
@@ -494,10 +511,11 @@ CondorFile * CondorFileTable::open_file_unique( char *logical_name, int flags, i
 		CondorFile *f = open_url_retry( p->file->get_url(), flags, mode, allow_buffer );
 		if(!f) return 0;
 
-		if( p->file->close()!=0 ) return 0;
-		delete p->file;
+		old_file = p->file;
+		if( old_file->close()!=0 ) return 0;
 
-		p->file = f;
+		replace_file( old_file, f );
+		delete old_file;
 	}
 
 	return p->file;

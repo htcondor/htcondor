@@ -253,6 +253,7 @@ private:
 	int	find_logical_name( char *logical_name );
 	void	complete_path( const char *short_path, char *long_path );
 	void	lookup_url( char *logical_name, char *url );
+	void	replace_file( CondorFile *o, CondorFile *n );
 
 	CondorFile * open_url( char *url, int flags, int mode, int allow_buffer );
 	CondorFile * open_url_retry( char *url, int flags, int mode, int allow_buffer );
