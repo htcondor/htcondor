@@ -73,14 +73,16 @@ sub Dump( $ )
     print scalar( keys %{$self->{Macros}} ) . " macros defined:\n";
     foreach my $Var ( sort keys %{$self->{Macros}} )
     {
-	print "\t$Var = '$self->{Macros}{$Var}'\n";
+	my $Macro = $self->{Macros}{$Var};
+	my $File = $Macro->{File} ? $Macro->{File} : "<NONE>";
+	print "\t$File:$Macro->{Line}:$Var = '$Macro->{Value}'\n";
     }
 
 } # Dump()
 # ******************************************************
 
 # ******************************************************
-# Process a line from a config file
+# Set a macro's value
 # ******************************************************
 sub Set( $$$ )
 {
@@ -94,20 +96,66 @@ sub Set( $$$ )
     # Expand self references
     if ( exists $self->{Macros}{$Macro} )
     {
-	my $CurValue = $self->{Macros}{$Macro};
+	my $CurValue = $self->{Macros}{$Macro}{Value};
 	$Value =~ s/\$\($Macro\)/$CurValue/g;
     }
 
     # And, set it
-    $self->{Macros}{$Macro} = $Value;
+    $self->{Macros}{$Macro}{Value} = $Value;
+    $self->{Macros}{$Macro}{File} = undef;
+    $self->{Macros}{$Macro}{Line} = -1;
 
 } # Set()
 # ******************************************************
+
+# ******************************************************
+# Set a macro's value
+# ******************************************************
+sub SetWithFile( $$$$$ )
+{
+    my $self = shift;
+    my $File = shift;
+    my $Line = shift;
+    my $Var = shift;
+    my $Value = shift;
+
+    # Get the macro name
+    my $Macro = uc( $Var );
+
+    # Expand self references
+    if ( exists $self->{Macros}{$Macro} )
+    {
+	my $CurValue = $self->{Macros}{$Macro}{Value};
+	$Value =~ s/\$\($Macro\)/$CurValue/g;
+    }
+
+    # And, set it
+    $self->{Macros}{$Macro}{Value} = $Value;
+    $self->{Macros}{$Macro}{File} = $File;
+    $self->{Macros}{$Macro}{Line} = $Line;
+
+} # SetWithFile()
+# ******************************************************
 
 # ******************************************************
-# Expand a macro from the config file
+# Get a macro without expanding it
 # ******************************************************
 sub Get( $ )
+{
+    my $self = shift;
+    my $Var = uc( shift );
+
+    # One more check
+    return undef if ( ! exists ( $self->{Macros}{$Var} ) );
+    return $self->{Macros}{$Var}{Value};
+
+} # Get()
+# ******************************************************
+
+# ******************************************************
+# Get info on a macro
+# ******************************************************
+sub GetInfo( $$ )
 {
     my $self = shift;
     my $Var = uc( shift );
@@ -131,7 +179,7 @@ sub Expand( $ )
     return undef if ( ! exists ( $self->{Macros}{$Var} ) );
 
     # Now, expand it out...
-    my $Value = $self->{Macros}{$Var};
+    my $Value = $self->{Macros}{$Var}{Value};
     while( $Value =~ /(.*)\$\((\w+)\)(.*)/ )
     {
 	if ( $2 eq $Var )
@@ -140,7 +188,7 @@ sub Expand( $ )
 	}
 	elsif ( exists ( $self->{Macros}{$2} ) )
 	{
-	    $Value = $1 . $self->{Macros}{$2} . $3;
+	    $Value = $1 . $self->{Macros}{$2}{Value} . $3;
 	    last if ( $2 eq $Var );
 	}
 	elsif ( exists ( $ENV{$2} ) )
@@ -172,7 +220,7 @@ sub ExpandString( $ )
     {
 	if ( exists ( $self->{Macros}{$2} ) )
 	{
-	    $Value = $1 . $self->{Macros}{$2} . $3;
+	    $Value = $1 . $self->{Macros}{$2}{Value} . $3;
 	}
 	elsif ( exists ( $ENV{$2} ) )
 	{
@@ -218,7 +266,7 @@ sub new( $$ )
 # ******************************************************
 # Find the 'base' config file to use
 # ******************************************************
-sub FindConfig( $$$ )
+sub FindConfig( $$$$ )
 {
     my $self = shift;
     my $ConfigEnvVar = shift;
@@ -466,7 +514,7 @@ sub ReadFile( $$ )
 	# Comment? ( /\#/ )
 	if ( /\#/ )
 	{
-	    $self->ProcessConfigLine( $Line ) if ( $Line ne "" );
+	    $self->ProcessConfigLine( $File, $., $Line ) if ( $Line ne "" );
 	    $Line = "";
 	}
 
@@ -480,7 +528,7 @@ sub ReadFile( $$ )
 	else
 	{
 	    $Line = ( $Line eq "" ) ? $_ : $Line . " " . $_;
-	    $self->ProcessConfigLine( $Line ) if ( $Line ne "" );
+	    $self->ProcessConfigLine( $File, $., $Line ) if ( $Line ne "" );
 	    $Line = "";
 	}
     }
@@ -495,9 +543,11 @@ sub ReadFile( $$ )
 # ******************************************************
 # Process a line from a config file
 # ******************************************************
-sub ProcessConfigLine( $$ )
+sub ProcessConfigLine( $$$$ )
 {
     my $self = shift;
+    my $File = shift;
+    my $Num = shift;
     my $Line = shift;
 
     # Some cleanup..
@@ -508,11 +558,11 @@ sub ProcessConfigLine( $$ )
     # MACRO = value
     if ( $Line =~ /^(\S+)\s*=\s*(.+)/ )
     {
-	$self->{Macros}->Set( $1, $2 );
+	$self->{Macros}->SetWithFile( $File, $Num, $1, $2 );
     }
     elsif ( $Line =~ /^(\S+)\s*=$/ )
     {
-	$self->{Macros}->Set( $1, "" );
+	$self->{Macros}->SetWithFile( $File, $Num, $1, "" );
     }
 
 } # ProcessConfigLine()
