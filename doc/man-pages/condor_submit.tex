@@ -1,254 +1,465 @@
-\begin{ManPage}{\Condor{submit}}{1}{queue jobs for execution on remote machines}
+\begin{ManPage}{\Condor{submit}}{1}{Queue jobs for execution on remote machines}
 \label{man-condor-submit}
 \Synopsis \SynProg{\Condor{submit}}
 \oOpt{-v}
 \oOptArg{-n}{schedd\_name}
 \oOptArg{-r}{schedd\_name}
-\Arg{cmdfile}
+\Arg{submit-description file}
 
 \Description
-\Condor{submit} is the program for submitting jobs to Condor. \Condor{submit} reads a submit-description file which contains
-commands that direct the queuing of jobs. A description file may contain specifications for the queuing of many condor jobs.
-All jobs queued by a single invocation of \Condor{submit} must share the same executable, and are referred to as a "job
-cluster". It is advantageous to submit multiple jobs as a single cluster because only one copy of the checkpoint file is
-needed to represent all jobs in a cluster until they begin execution. Detailed instructions for creating description files follows
-below after a brief introduction to Condor Universes. 
-
-SUBMIT DESCRIPTION FILE 
-
-Each condor job description file describes one cluster of jobs to be placed in the condor execution pool. All jobs in a cluster
-must share the same executable, but they may have different input and output files, and different program arguments. The
-submit-description file is then used as the only command-line argument to \Condor{submit}. The submit-description file must
-contain one or more of the following commands: 
-
-executable= <name> 
-
-The name of the executable file for this job cluster. Only one executable command may be present in a description file. If
-submitting into the Standard Universe, then the named executable must have been relinked with the Condor libraries (such
-as via the \Condor{compile} command). If submitting into the Vanilla Universe, then the named executable need not be
-relinked and can be any process which can run in the background (shell scripts work fine as well). 
-
-requirements = <boolean\_expression> 
-
-This is a list of requirements which a remote machine must meet to execute any jobs in the job cluster. The requirements
-command is a boolean expression using C like operators. In order for your job to run on a given machine, this requirements
-expression must evaluate to true on the given machine. , e.g. to require that whatever machine executes your program has
-a least 64 megs of RAM and has a MIPS performance rating greater than 45, use: 
-
-requirements = Memory >= 64 \&\& MIPS > 45. 
-
-Only one requirements command may be present in a description file. Unless otherwise specified, \Condor{submit} by default
-appends to the requirements expression a clause that states Arch and OpSys should equal the Arch and OpSys values of
-the machine where the job was submitted. Furthermore, if Universe is set to Vanilla, then by default a clause that
-FilesystemDomain equals the submit machine's FilsystemDomain is also appended. You can view the requirements of a job
-which has already been submitted (along with everything else about the job) with the command "condor\_q -l"; see the
-command reference page for \Condor{q} and \Condor{globalq}. 
-
-The following system-macros may be used in the requirements boolean expression (note that the keywords in this list are
-case sensitive!): 
-
-     Arch - the architecture of the machine. See "Defined Arch/OpSys Values" section below for default Arch value
-     definitions. 
-     Clock\_Day - the day of the week, where 0 = Sunday, 1 = Monday, ..., 6 = Saturday. 
-     Clock\_Min - the number of minutes passed since midnight. 
-     ConsoleIdle - the number of seconds since a user has pressed a key or moved the mouse on the physical console
-     of the machine (keypress activity on terminals, telnet/rlogin sessions are not considered for ConsoleIdle). Not
-     available on all platforms. 
-     Disk - the amount of free disk space in 1k blocks (i.e. 6000 = 6megabytes ) on the machine's root partition. 
-     FilesystemDomain - a domain name configured by the Condor administrator which describes a cluster of machines
-     which all access the same networked filesystems (usually via NFS, AFS, or DFS). 
-     Flavor - the result of running the command "uname -m"; typically the model number/type of the machine 
-     KFLOPS - the result of a linpack benchmark that rates the machine's floating-point performance speed in KFLOPS (
-     a KFLOP = one thousand FLOPS ). 
-     Machine - the unqualified name of the machine 
-     Memory - the amount of RAM memory in megabytes 
-     MIPS - the result of a dhrystone benchmark that rates the machine's integer computation performance speed in
-     MIPS. 
-     Nest - a string specified and defined by the Condor administrator, typically used to define the machine's physical
-     location (such as "Rm1340-Engineering"). 
-     OpSys - the operating system of the machine. See "Defined Arch/OpSys Values" section below for default OpSys
-     value definitions. 
-     Subnet - the IP subnet address of the machine 
-     UidDomain - a domain name configured by the Condor administrator which describes a cluster of machines which
-     all have the same "passwd" file entries, and therefore all have the same logins. 
-     VirtualMemory - the amount of virtual memory (RAM + swap space) available on the machine 
-
-preferences = <boolean expression> 
-
-This is a list of characteristics which would be preferable in a remote machine executing jobs in this cluster. The condor
-software will attempt to supply remote machines which meet the preferences, but if no such machines are available it will
-then supply machines which meet only the requirements. Only one preferences command may be present in a description
-file. The format for the boolean expression and the macros permissable in the expression are identical to the "requirements"
-statement detailed above. 
 
-image\_size = <size> 
+\Condor{submit} is the program for submitting jobs to Condor.
+\Condor{submit} requires a submit-description file which contains commands
+to direct the queuing of jobs. One description file may contain
+specifications for the queuing of many condor jobs at once. All jobs queued by a
+single invocation of \Condor{submit} must share the same executable, and
+are referred to as a ``job cluster''. It is advantageous to submit
+multiple jobs as a single cluster because:
+\begin{itemize}
+\item Only one copy of the checkpoint file is needed to 
+represent all jobs in a cluster until they begin execution.
+\item There is much less overhead involved for Condor to start the next
+job in a cluster than for Condor to start a new cluster.  This can make
+a big difference if you are submitting lots of short running jobs.
+\end{itemize}
+
+\emph{SUBMIT DESCRIPTION FILE COMMANDS}
+
+Each condor job description file describes one cluster of jobs to be
+placed in the condor execution pool. All jobs in a cluster must share
+the same executable, but they may have different input and output files,
+and different program arguments, etc. The submit-description file is then
+used as the only command-line argument to \Condor{submit}. 
+
+The submit-description file must contain one \Arg{executable} command and at least one
+\Arg{queue} command.  All of the other commands have default actions.
+
+The commands which can appear in the submit-description file are:
+
+\begin{description} 
+
+%%%%%%%%%%%%%%%%%%%
+%% executable
+%%%%%%%%%%%%%%%%%%%
+
+\item[executable = $<$name$>$]The name of the executable file for this
+job cluster. Only one executable command may be present in a description
+file. If submitting into the Standard Universe, which is the default,
+then the named executable must have been relinked with the Condor
+libraries (such as via the \Condor{compile} command). If submitting into
+the Vanilla Universe, then the named executable need not be relinked and
+can be any process which can run in the background (shell scripts work
+fine as well). 
+
+%%%%%%%%%%%%%%%%%%%
+%% input
+%%%%%%%%%%%%%%%%%%%
+
+\item[input = $<$pathname$>$] Condor assumes that its jobs are
+long-running, and that the user will not wait at the terminal for their
+completion. Because of this, the standard files which normally access
+the terminal, (stdin, stdout, and stderr), must refer to files. Thus,
+the filename specified with \Opt{input} should contain any keyboard
+input the program requires (i.e. this file becomes stdin). If not
+specified, the default value of /dev/null is used. 
+
+%%%%%%%%%%%%%%%%%%%
+%% output
+%%%%%%%%%%%%%%%%%%%
+
+\item[output = $<$pathname$>$] The \Opt{output} filename will capture
+any information the program would normally write to the screen (i.e.
+this file becomes stdout). If not specified, the default value of
+/dev/null is used. 
+
+%%%%%%%%%%%%%%%%%%%
+%% error
+%%%%%%%%%%%%%%%%%%%
+
+\item[error = $<$pathname$>$] The \Opt{error} filename will capture any
+error messages the program would normally write to the screen (i.e. this
+file becomes stderr). If not specified, the default value of /dev/null
+is used. 
+
+%%%%%%%%%%%%%%%%%%%
+%% arguments
+%%%%%%%%%%%%%%%%%%%
+
+\item[arguments = $<$argument\_list$>$] List of arguments to be supplied
+to the program on the command line. 
+
+
+%%%%%%%%%%%%%%%%%%%
+%% initialdir
+%%%%%%%%%%%%%%%%%%%
+
+\item[initaldir = $<$directory-path$>$] Used to specify the current
+working directory for the Condor job. Should be a path to a prexisting
+directory. If not specified, \Condor{submit} will automatically insert
+the user's current working directory at the time \Condor{submit} was run
+as the value for \Opt{initialdir}. 
+
+%%%%%%%%%%%%%%%%%%%
+%% requirements
+%%%%%%%%%%%%%%%%%%%
+
+\item[requirements = $<$ClassAd Boolean Expression$>$] The requirements
+command is a boolean ClassAd expression which uses C\-like operators. In
+order for any job in this cluster to run on a given machine, this
+requirements expression must evaluate to true on the given machine. For
+example, to require that whatever machine executes your program has a
+least 64 megs of RAM and has a MIPS performance rating greater than 45,
+use: 
+\begin{verbatim}
+        requirements = Memory >= 64 && Mips > 45
+\end{verbatim}
+Only one requirements command may be present in a
+description file. By default, \Condor{submit} 
+appends the following clauses to the requirements expression:
+\begin{enumerate}
+	\item Arch and OpSys are set equal to the Arch and OpSys of the
+submit machine.  In other words: unless you request otherwise, Condor will give your
+job machines with the same architecture and operating system version as
+the machine running \Condor{submit}.
+	\item Disk $>$ ExecutableSize.  To ensure there is enough disk space on the 
+target machine for Condor to copy over your executable.
+	\item VirtualMemory $>=$ ImageSize.  To ensure the target machine
+has enough virtual memory to run your job.
+	\item If Universe is set to Vanilla, FileSystemDomain is set equal to
+the submit machine's FileSystemDomain.
+\end{enumerate}
+You can view the requirements of a job
+which has already been submitted (along with everything else about the
+job ClassAd) with the command \Condor{q -l}; see the command reference for
+\Condor{q} on page~\pageref{man-condor-q}.  Also, see the Condor Users
+Manual for complete information on the syntax and available attributes
+that can be used in the ClassAd expression.
+
+%%%%%%%%%%%%%%%%%%%
+%% rank
+%%%%%%%%%%%%%%%%%%%
+
+\item[rank = $<$ClassAd Float Expression$>$] A ClassAd Floating-Point 
+expression that states how to rank machines which have already met the requirements
+expression. Essentially, rank expresses preference.  A higher numeric value 
+equals better rank. Condor will give the job the machine with the 
+highest rank.  For example,
+\begin{verbatim}
+        requirements = Memory > 60
+        rank = Memory
+\end{verbatim}
+asks Condor to find all available machines with more than 60 megabytes of memory
+and give the job the one with the most amount of memory.  See the Condor Users
+Manual for complete information on the syntax and available attributes
+that can be used in the ClassAd expression.
+
+%%%%%%%%%%%%%%%%%%%
+%% priority
+%%%%%%%%%%%%%%%%%%%
+
+\item[priority = $<$priority$>$] Condor job priorities range from -20 to
++20, with 0 being the default. Jobs with higher numerical priority will
+run before jobs with lower numerical priority. Note that this priority
+is on a per user basis; setting the priority will determine the order in
+which your own jobs are executed, but will have no effect on whether or
+not your jobs will run ahead of another user's jobs. 
+
+%%%%%%%%%%%%%%%%%%%
+%% notification
+%%%%%%%%%%%%%%%%%%%
+
+\item[notification = $<$when$>$] Owners of condor jobs are notified by
+email when certain events occur. If \Arg{when} is set to
+\mbox{``ALWAYS''}, the owner will be notified whenever the job is
+checkpointed, and when it completes. If \Arg{when} is set to
+\mbox{``COMPLETE''} (the default), the owner will be notified when the
+job terminates. If \Arg{when} is set to \mbox{``ERROR''}, the owner will
+only be notified if the job terminates abnormally. Finally, if
+\Arg{when} is set to \mbox{``NEVER''}, the owner will not be mailed,
+regardless what happens to the job. 
+
+%%%%%%%%%%%%%%%%%%%
+%% notify_user
+%%%%%%%%%%%%%%%%%%%
+
+\item[notify\_user = $<$email-address$>$] Used to specify the email
+address to use when Condor sends email about a job.  If not specified,
+Condor will default to using :
+\begin{verbatim}
+        job-owner@UID_DOMAIN
+\end{verbatim}
+where \Macro{UID\_DOMAIN} is specified by the Condor site administrator.  If 
+\Macro{UID\_DOMAIN} has not been specified, Condor will send the email
+to :
+\begin{verbatim}
+        job-owner@submit-machine-name
+\end{verbatim}
+
+
+%%%%%%%%%%%%%%%%%%%
+%% getenv
+%%%%%%%%%%%%%%%%%%%
+
+\item[getenv = $<$True \Bar\ False$>$] If \Opt{getenv} is set to
+\Arg{True}, then \Condor{submit} will copy all of the user's current
+shell environment variables at the time of job submission into the job
+ClassAd. The job will therefore execute with the same set of environment
+variables that the user had at submit time. Defaults to \Arg{False}.
+
+%%%%%%%%%%%%%%%%%%%
+%% environment
+%%%%%%%%%%%%%%%%%%%
+
+\item[environment = $<$parameter\_list$>$] List of environment variables
+of the form :
+\begin{verbatim}
+        <parameter> = <value>
+\end{verbatim}
+Multiple environment variables can be specified by seperating them with a
+semicolon (`` ; ''). These environment variables will be placed into the
+job's environment before execution. The length of all characters
+specified in the environment is currently limited to 4096 characters. 
+
+%%%%%%%%%%%%%%%%%%%
+%% log
+%%%%%%%%%%%%%%%%%%%
+
+\item[log = $<$pathname$>$] Use \Opt{log} to specify a filename where
+Condor will write a log file of what is happening with this job cluster.
+For example, Condor will log into this file when and where the job
+begins running, when the job is checkpointed and/or migrated, when the
+job completes, etc. Most users find specifying a LOG file to be very
+handy; its use is recommended. 
+
+%%%%%%%%%%%%%%%%%%%
+%% universe
+%%%%%%%%%%%%%%%%%%%
+
+\item[universe = $<$vanilla \Bar\ standard \Bar\ pvm \Bar\ scheduler$>$] Specifies 
+which Condor Universe to use when running this job.  The Condor Universe
+specifies a Condor execution environment.  The \Arg{standard} Universe
+is the default, and tells Condor that this job has been relinked via
+\Condor{compile} with the Condor libraries and therefore supports
+checkpointing and remote system calls.  The \Arg{vanilla} Universe is an
+execution environment for jobs which have not been linked with the
+Condor libraries.  \textit{Note:} use the \Arg{vanilla} Universe to
+submit shell scripts to Condor.  The \Arg{pvm} Universe is for a
+parallel job written with PVM 3.3, and \Arg{scheduler} is for a job that
+should act as a metascheduler.  See the Condor User's Manual for more
+information about using Universe.
+
+%%%%%%%%%%%%%%%%%%%
+%% image_size
+%%%%%%%%%%%%%%%%%%%
+
+\item[image\_size = $<$size$>$] This command tells Condor the maximum
+virtual image size to which you believe your program will grow during
+its execution. Condor will then execute your job only on machines which
+have enough resources, (such as virtual memory), to support executing
+your job. If you do not specify the image size of your job in the
+description file, Condor will automatically make a (reasonably accurate)
+estimate about its size and adjust this estimate as your program runs.
+If the image size of your job is underestimated, it may crash due to
+inability to acquire more address space, e.g. malloc() fails. If the image
+size is overestimated, Condor may have difficulty finding machines which
+have the required resources. 
+
+%%%%%%%%%%%%%%%%%%%
+%% machine_count
+%%%%%%%%%%%%%%%%%%%
+
+\item[machine\_count = $<$min..max$>$] If \Opt{machine\_count} is
+specified, Condor will not start the job until it can simultaneously
+supply the job with \Arg{min} machines.  Condor will try to provide up
+to \Arg{max} machines, but will not delay starting of the job to do so.
+\textbf{Important:} only use \Opt{machine\_count} if an only if
+submitting into the PVM Universe.  At this time, \Opt{machine\_count}
+must be used with a parallel PVM application.
+
+%%%%%%%%%%%%%%%%%%%
+%% coresize
+%%%%%%%%%%%%%%%%%%%
+
+\item[coresize = $<$size$>$] Should the user's program abort and produce
+a core file, \Opt{coresize} specifies the maximum size in bytes of the
+core file which the user wishes to keep. If \Opt{coresize} is not
+specified in the command file, the system's user resource limit
+\mbox{``coredumpsize''} is used (except on HP-UX). 
+
+%%%%%%%%%%%%%%%%%%%
+%% nice_user
+%%%%%%%%%%%%%%%%%%%
+
+\item[nice\_user = $<$True \Bar\ False$>$] Normally, when a machine
+becomes available to Condor, Condor decides which job to run based upon
+user and job priorities. Setting \Opt{nice\_user} equal to \Arg{True}
+tells Condor not to use your regular user priority, but that this job
+should have last priority amongst all users and all jobs. So jobs
+submitted in this fasion run only on machines which no other
+non-nice\_user job wants --- a true ``bottom-feeder'' job! This is very
+handy if a user has some jobs they wish to run, but do not wish to use
+resources they could instead be used to run other people's Condor jobs. Jobs
+submitted in this fasion have ``nice-user.'' pre-appended in front of
+the owner name when viewed from \Condor{q} or \Condor{userprio}.  The
+default value if \Arg{False}.
+
+%%%%%%%%%%%%%%%%%%%
+%% kill_sig
+%%%%%%%%%%%%%%%%%%%
+
+\item[kill\_sig = $<$signal-number$>$] When Condor needs to kick a job
+off of a machine, it will send the job the signal specified by
+\Arg{signal-number}.  \Arg{signal-number} needs to be an integer which
+represents a valid signal on the execution machine.  For jobs submitted
+to the Standard Universe, the default value is the number for
+\verb@SIGTSTP@ which tells the Condor libraries to initiate a checkpoint
+of the process.  For jobs submitted to the Vanilla Universe, the default 
+is \verb@SIGTERM@ which is the standard way to terminate a program in UNIX.  
+
+%%%%%%%%%%%%%%%%%%%
+%% queue
+%%%%%%%%%%%%%%%%%%%
+
+\item[queue [number-of-procs]] Places one or more copies of the job into
+the Condor queue. If desired, new \Opt{input}, \Opt{output},
+\Opt{error}, \Opt{initialdir}, \Opt{arguments}, \Opt{nice\_user},
+\Opt{priority}, \Opt{kill\_sig}, \Opt{coresize}, or \Opt{image\_size}
+commands may be issued between \Opt{queue} commands. This is very handy
+when submitting multiple runs into one cluster with one submit file; for
+example, by issuing an \Opt{initialdir} between each \Opt{queue}
+command, each run can work in its own subdirectory. The optional
+argument \Arg{number-of-procs} specifies how many times to submit the
+job to the queue, and defaults to 1.
+
+\end{description}
+
+In addition to commands, the submit-description file can contain macros
+and comments:
+
+\begin{description}
+
+\item[Macros] Parameterless macros in the form of \MacroU{macro\_name}
+may be inserted anywhere in condor description files. Macros can be
+defined by lines in the form of 
+\begin{verbatim} 
+        <macro_name> = <string> 
+\end{verbatim} 
+Two pre-defined macros are supplied by the description file parser. The
+\MacroU{Cluster} macro supplies the number of the job cluster, and the
+\MacroU{Process} macro supplies the number of the job. These macros are
+intended to aid in the specification of input/output files, arguments,
+etc., for clusters with lots of jobs, and/or could be used to supply a
+Condor process with its own cluster and process numbers on the command
+line. 
+
+\item[Comments] Blank lines and lines beginning with a '\#' (pound-sign)
+chracater are ignored by the submit-description file parser. 
+
+\end{description}
 
-This command tells Condor the maximum virtual image size to which you believe your program will grow during its execution.
-Condor will then execute your job only on machines which have enough resources, (such as virtual memory), to support
-executing your job. If you do not specify the image size of your job in the description file, Condor will automatically make a
-(reasonably accurate) estimate about its size and adjust this estimate as your program runs. If the image size of your job is
-underestimated, it may crash due to inability to acquire more address space, e.g. malloc(). If the image size is
-overestimated, Condor may have difficulty finding machines which have the required resources. 
-
-input = <pathname> 
-
-output = <pathname> 
-
-error = <pathname> 
-
-Condor assumes that its jobs are long-running, and that the user will not wait at the terminal for their completion. Because
-of this, the standard files which normally access the terminal, (stdin, stdout, and stderr), must refer to files. Thus, the filename
-specified with "input" should contain any keyboard input the program requires (i.e. stdin). The "output" filename will capture
-any information the program would normally write to the screen (i.e. stdout). The "error" filename will capture any error
-messages the program would normally write to the screen (i.e. stderr). If any of these commands are not specified, the
-default value of /dev/null is used. 
-
-arguments = <argument\_list> 
-
-List of arguments to be supplied to the program on the command line. 
-
-environment = <parameter\_list> 
-
-List of environment variables of the form "<parameter> = <value>". Multiple environment variables can be specified by
-seperating them with a semicolon (" ; "). These environment variables will be placed into the job's environment before
-execution. The length of all characters specified in the environment is currently limited to 255 characters. See sample
-submit files below. 
-
-Furthermore, there are two Condor-specific parameters supported: LOG and CONDOR\_CORESIZE. 
-
-Use LOG to specify a filename where Condor will write a log file of what is happening with this job cluster. For example,
-Condor will log into this file when and where the job begins running, when the job is checkpointed and/or migrated, when the
-job completes, etc. Most users find specifying a LOG file to be very handy; its use is recommended. 
-
-Should the user's program abort and product a core file, CONDOR\_CORESIZE specifies the maximum size of the core file
-which the user wishes to keep. If CONDOR\_CORESIZE is not specified in the command file, the user's shell environment is
-checked to see if the variable is set. If CONDOR\_CORESIZE is not set by either the command file or a shell environment
-variable, the user's resource limit "coredumpsize" is used (except on HP-UX). 
-
-priority = <prio> 
-
-Condor job priorities range from -20 to +20, with 0 being the default. Jobs with higher numerical priority will run before jobs
-with lower numerical priority. Note that this priority is on a per user basis; setting the priority will determine the order in which
-your own jobs are executed, but will have no effect on whether or not your jobs will run ahead of another user's jobs. 
-
-notification = <when> 
-
-Owners of condor jobs are notified by mail when certain events occur. If <when> is set to "ALWAYS", the owner will be
-notified whenever the job is checkpointed, and when it completes. If <when> is set to "COMPLETE" (the default), the owner
-will be notified when the job terminates. If <when> is set to "ERROR", the owner will only be notified if the job terminates
-abnormally. Finally, if <when> is set to "NEVER", the owner will not be mailed, regardless what happens to the job. 
-
-initialdir = <directory-path> 
-
-Initialdir should specify a path to a directory. This path will be prepended to all relative file pathnames. In other words,
-initialdir specifies the current-working directory for the Condor job. If not specified, \Condor{submit} will automatically insert
-the user's current-working directory at the time \Condor{submit} was run as the value for initialdir. 
-
-universe = < standard | vanilla > 
-
-Specify which Condor Universe to use when running this job, either "standard" or "vanilla". There can only be one Universe
-statement per submit-description file. Any job specified to run in the "standard" universe must be relinked with the Condor
-libraries; see above for a description of Standard Universe -vs- Vanilla Universe. If the Universe is not specified, the
-default is "standard". [ Note: shell scripts should be submitted as Vanilla ]. 
-
-queue 
-
-Place one copy of the job in the condor queue. If desired, new input, output, error, initialdir, and arguments commands may
-be issued between queue commands. 
-
-[ Macros ] 
-
-Parameterless macros in the form of \$(macro\_name) may be inserted anywhere in condor description files. Macros can be
-defined by lines in the form of <macro\_name> = <string>. Two pre-defined macros are supplied by the description file
-parser. The \$(Cluster) macro supplies the number of the job cluster, and the \$(Process) macro supplies the number of the
-job. These macros are intended to aid in the specification of input and output files for clusters with lots of jobs, and may be
-used to supply a condor process with its own cluster and process numbers on the command line. 
-
-[ Comments ] 
-
-Blank lines and lines beginning with a '\#' are ignored by the submit-description file parser. 
-
-Arch/OpSys DEFINED DEFAULT VALUES 
-
-Below are default Arch and OpSys values that could be specified in the Requirements command [ note that these are just
-default values; the Condor administrator could have customized these ]. These Arch/OpSys combinations define a unique
-platform described by the "Description" column. Note that a Condor Standard Universe job cannot checkpoint and then
-subsequently restart on a different platform. 
-
-
-Arch     OpSys        Description                                      
-
-ALPHA    OSF1 (same   Digital ALPHA based workstation running OSF1     
-         as Digital   (Digital Unix) version 3.2 or above              
-         Unix)                                                         
-
-HPPA1    HPUX9        Hewlett Packard PA-RISC 1.x CPU (i.e. PA-RISC    
-                      7000 series CPU) based-workstation running HPUX  
-                      9.x                                              
-
-HPPA1    HPUX10       Hewlett Packard PA-RISC 1.x CPU (i.e. PA-RISC    
-                      7000 series CPU) based-workstation running HPUX  
-                      10.20 or above.                                  
-
-HPPA2    HPUX10       Hewlett Packard PA-RISC 2.x CPU (i.e. PA-RISC    
-                      8000 series CPU) based-workstation running HPUX  
-                      10.20 or above.                                  
-
-INTEL    SOLARIS251   Intel x86 running Solaris 2.5.1 (SunOS 5.5.1)    
-                      or above                                         
-
-INTEL    LINUX        Intel x86 running Linux 2 (Kernel 2.0.x,         
-                      libc.so.5.3.12 or libc.so.5.4.7 or               
-                      libc.so.5.4.20 or newer, and an ELF capable      
-                      system).  See URL                                
-                      http://www.cs.wisc.edu/condor/linux for          
-                      up-to-the minute Linux notes.                    
-
-SGI      IRIX53       Silicon Graphics workstation running IRIX 5.3.   
-
-SGI      IRIX62       Silicon Graphics workstation running IRIX 6.2    
-                      or above.                                        
-
-SUN4c    SUNOS4       Sun SPARC sun4c (i.e. a Sparc 1, Sparc 2, IPC,   
-                      IPX, etc) based workstation running SunOS 4.1.x  
-
-SUN4m    SUNOS4       Sun SPARC sun4m (i.e. a Sparc 10, Sparc 20,      
-                      etc) based workstations running SunOS 4.1.x      
-
-SUN4u    SOLARIS251   Sun ULTRASPARC based workstation running         
-                      Solaris 2.5.1 (SunOS 5.5.1) or above             
-
-SUN4x    SOLARIS251   Sun SPARC sun4c -or- sun4m based workstation     
-                      running Solaris 2.5.1 (SunOS 5.5.1) or above     
-
-SUN4x    SOLARIS24    Sun SPARC sun4c -or- sun4m based workstation     
-                      running Solaris 2.4 (SunOS 5.4).
-
-
-
-
-
-BUGS 
-
-For security reasons, Condor will refuse to run any jobs submitted by user root (UID = 0)or by a user whose default group is
-group wheel (GID = 0). Jobs submitted by user root or a user with a default group of wheel will appear to sit forever in the
-queue in an unexpanded state. 
-
-All pathnames and argument lists specified in the submit-description file must be less than 256 characters in length;
-otherwise, \Condor{submit} gives a warning message but the jobs will not execute properly. 
-
-On some platforms, some FORTRAN jobs may produce a few error messages into stderr at startup time, but should then run
-normally if there are no errors. If errors occur, and the program is compiled to produce core dumps, the core will be returned
-to the initiating machine. 
-
-Somewhat understandably, behavior gets bizzare if the user makes the silly mistake of requesting multiple Condor jobs to
-write to the same file, and/or if the user alters any files that need to be accessed by a Condor job which is still in the queue
-(i.e. compressing of data or output files before a Condor job has compelted is a common mistake). 
 
 \begin{Options}
+
     \OptItem{\Opt{-v}}{Verbose output - display the created job class-ad}
+
     \OptItem{\OptArg{-n}{schedd\_name}}{Submit to the specified schedd. This option is used when there is more than one schedd running on the submitting machine}
-    \OptItem{\OptArg{-r}{schedd\_name}}{Submit to a remote schedd. The jobs will be submitted to the schedd on the specified remote host, and their owner will be set to "nobody".}
+
+	\OptItem{\OptArg{-r}{schedd\_name}}{Submit to a remote schedd. The jobs
+	will be submitted to the schedd on the specified remote host, and their
+	owner will be set to ``nobody".}
+
 \end{Options}
 
+\Examples
+
+\underline{Example 1}: The below example queues three jobs for
+execution by Condor. The first will be given command line arguments of
+'15' and '2000', and will write its standard output to 'foo.out1'. The
+second will be given command line arguments of '30' and '2000', and will
+write its standard output to 'foo.out2'. Similarly the third will have
+arguments of '45' and '6000', and will use 'foo.out3' for its standard
+output. Standard error output, (if any), from all three programs will
+appear in 'foo.error'.
+
+\begin{verbatim}
+      ####################                                                   
+      #                                                                      
+      # Example 1: queueing multiple jobs with differing                       
+      # command line arguments and stdout files.                             
+      #                                                                      
+      ####################                                                   
+                                                                         
+      Executable     = foo                                                   
+      Error   = foo.error                                                    
+                                                                         
+      Arguments      = 15 2000                                               
+      Output  = foo.out1                                                     
+      Queue                                                                  
+                                                                         
+      Arguments      = 30 2000                                               
+      Output  = foo.out2                                                     
+      Queue                                                                  
+                                                                         
+      Arguments      = 45 6000                                               
+      Output  = foo.out3                                                     
+      Queue                   
+\end{verbatim}
+
+\underline{Example 2}: This submit-description file example queues 150
+runs of program "foo" which must have been compiled and linked for
+Silicon Graphics workstations running IRIX 6.x. Condor will not attempt
+to run the processes on machines which have less than 32 megabytes of
+physical memory, and will run them on machines which have at least 64
+megabytes if such machines are available. Stdin, stdout, and stderr will
+refer to "in.0", "out.0", and "err.0" for the first run of this program
+(process 0). Stdin, stdout, and stderr will refer to "in.1", "out.1",
+and "err.1" for process 1, and so forth. A log file containing entries
+about where/when Condor runs, checkpoints, and migrates processes in this
+cluster will be written into file "foo.log".
+
+\begin{verbatim}
+      ####################                                                    
+      #                                                                       
+      # Example 2: Show off some fancy features including                            
+      # use of pre-defined macros and logging.                                
+      #                                                                       
+      ####################                                                    
+                                                                          
+      Executable     = foo                                                    
+      Requirements   = Memory >= 32 && OpSys == "IRIX6" && Arch =="SGI"     
+      Preferences    = Memory >= 64
+      Image_Size     = 28 Meg                                                 
+                                                                          
+      Error   = err.$(Process)                                                
+      Input   = in.$(Process)                                                 
+      Output  = out.$(Process)                                                
+      Log = foo.log                                                                       
+                                                                          
+      Queue 150
+\end{verbatim}
+
+\GenRem
+\begin{itemize}
+
+\item For security reasons, Condor will refuse to run any jobs submitted
+by user root (UID = 0) or by a user whose default group is group wheel
+(GID = 0). Jobs submitted by user root or a user with a default group of
+wheel will appear to sit forever in the queue in an unexpanded state. 
+
+\item All pathnames specified in the submit-description file must be
+less than 256 characters in length, and command line arguments must be
+less than 4096 characters in length; otherwise, \Condor{submit} gives a
+warning message but the jobs will not execute properly. 
+
+\item Somewhat understandably, behavior gets bizzare if the user makes
+the silly mistake of requesting multiple Condor jobs to write to the
+same file, and/or if the user alters any files that need to be accessed
+by a Condor job which is still in the queue (i.e. compressing of data or
+output files before a Condor job has completed is a common mistake).
+\end{itemize}
+
+\SeeAlso
+Condor User Manual
+
 \end{ManPage}
+
