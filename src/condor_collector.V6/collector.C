@@ -107,7 +107,7 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_query,"receive_query",NULL,READ);
 	daemonCore->Register_Command(QUERY_COLLECTOR_ADS,"QUERY_COLLECTOR_ADS",
 		(CommandHandler)receive_query,"receive_query",NULL,ADMINISTRATOR);
-	daemonCore->Register_Command(QUERY_NEST_ADS,"QUERY_NEST_ADS",
+	daemonCore->Register_Command(QUERY_STORAGE_ADS,"QUERY_STORAGE_ADS",
 		(CommandHandler)receive_query,"receive_query",NULL,READ);
 	daemonCore->Register_Command(QUERY_ANY_ADS,"QUERY_ANY_ADS",
 		(CommandHandler)receive_query,"receive_query",NULL,READ);
@@ -131,8 +131,8 @@ void CollectorDaemon::Init()
 	daemonCore->Register_Command(INVALIDATE_COLLECTOR_ADS,
 		"INVALIDATE_COLLECTOR_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,ALLOW);
-	daemonCore->Register_Command(INVALIDATE_NEST_ADS,
-		"INVALIDATE_NEST_ADS", (CommandHandler)receive_invalidation,
+	daemonCore->Register_Command(INVALIDATE_STORAGE_ADS,
+		"INVALIDATE_STORAGE_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,WRITE);
 
 	// install command handlers for updates
@@ -150,7 +150,7 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
 	daemonCore->Register_Command(UPDATE_COLLECTOR_AD,"UPDATE_COLLECTOR_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,ALLOW);
-	daemonCore->Register_Command(UPDATE_NEST_AD,"UPDATE_NEST_AD",
+	daemonCore->Register_Command(UPDATE_STORAGE_AD,"UPDATE_STORAGE_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
 
 	// ClassAd evaluations use this function to resolve names
@@ -219,9 +219,9 @@ int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
 		whichAds = COLLECTOR_AD;
 		break;
 
-	  case QUERY_NEST_ADS:
-		dprintf (D_FULLDEBUG,"Got QUERY_NEST_ADS\n");
-		whichAds = NEST_AD;
+	  case QUERY_STORAGE_ADS:
+		dprintf (D_FULLDEBUG,"Got QUERY_STORAGE_ADS\n");
+		whichAds = STORAGE_AD;
 		break;
 
 	  case QUERY_ANY_ADS:
@@ -298,9 +298,9 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 		whichAds = COLLECTOR_AD;
 		break;
 
-	  case INVALIDATE_NEST_ADS:
-		dprintf (D_ALWAYS, "Got INVALIDATE_NEST_ADS\n");
-		whichAds = NEST_AD;
+	  case INVALIDATE_STORAGE_ADS:
+		dprintf (D_ALWAYS, "Got INVALIDATE_STORAGE_ADS\n");
+		whichAds = STORAGE_AD;
 		break;
 
 	  default:

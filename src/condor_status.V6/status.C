@@ -122,8 +122,8 @@ main (int argc, char *argv[])
 		setPPstyle(PP_COLLECTOR_NORMAL, 0, DEFAULT);
 		break;
 
-	  case NEST_AD:
-		setPPstyle(PP_NEST_NORMAL, 0, DEFAULT);
+	  case STORAGE_AD:
+		setPPstyle(PP_STORAGE_NORMAL, 0, DEFAULT);
 		break;
 
 	  case ANY_AD:
@@ -142,7 +142,7 @@ main (int argc, char *argv[])
 	  case MODE_SCHEDD_NORMAL: 
 	  case MODE_SCHEDD_SUBMITTORS:
 	  case MODE_COLLECTOR_NORMAL:
-	  case MODE_NEST_NORMAL:
+	  case MODE_STORAGE_NORMAL:
 	  case MODE_ANY_NORMAL:
 		break;
 
@@ -222,7 +222,7 @@ main (int argc, char *argv[])
 		case MODE_CKPT_SRVR_NORMAL:
 		case MODE_COLLECTOR_NORMAL:
 		case MODE_LICENSE_NORMAL:
-		case MODE_NEST_NORMAL:
+		case MODE_STORAGE_NORMAL:
 		case MODE_ANY_NORMAL:
 				// These have to go to the collector, anyway.
 			break;
@@ -292,7 +292,7 @@ usage ()
 		"\t-schedd\t\t\tDisplay attributes of schedds\n"
 		"\t-server\t\t\tDisplay important attributes of resources\n"
 		"\t-startd\t\t\tDisplay resource attributes\n"
-		"\t-nest\t\t\tDisplay network storage resources\n"
+		"\t-storage\t\t\tDisplay network storage resources\n"
 		"\t-any\t\t\tDisplay any resources\n"
 		"\t-state\t\t\tDisplay state of resources\n"
 		"\t-submitters\t\tDisplay information about request submitters\n"
@@ -403,8 +403,8 @@ firstPass (int argc, char *argv[])
 		if (matchPrefix (argv[i], "-license")) {
 			setMode (MODE_LICENSE_NORMAL, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-nest")) {
-			setMode (MODE_NEST_NORMAL, i, argv[i]);
+		if (matchPrefix (argv[i], "-storage")) {
+			setMode (MODE_STORAGE_NORMAL, i, argv[i]);
 		} else
 		if (matchPrefix (argv[i], "-any")) {
 			setMode (MODE_ANY_NORMAL, i, argv[i]);
@@ -520,7 +520,7 @@ secondPass (int argc, char *argv[])
 			  case MODE_MASTER_NORMAL:
 			  case MODE_COLLECTOR_NORMAL:
 			  case MODE_CKPT_SRVR_NORMAL:
-			  case MODE_NEST_NORMAL:
+			  case MODE_STORAGE_NORMAL:
 			  case MODE_ANY_NORMAL:
     		  case MODE_STARTD_AVAIL:
 				sprintf(buffer,"(TARGET.%s==\"%s\") || (TARGET.%s==\"%s\")", 

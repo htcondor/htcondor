@@ -36,7 +36,7 @@
 #define CKPT_FILE_ADTYPE	"CkptFile"
 #define USERAUTH_ADTYPE		"Authentication"
 #define LICENSE_ADTYPE		"License"
-#define NEST_ADTYPE		"Nest"
+#define STORAGE_ADTYPE		"Storage"
 #define ANY_ADTYPE		"Any"
 
 #endif

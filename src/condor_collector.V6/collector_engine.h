@@ -72,7 +72,7 @@ class CollectorEngine : public Service
 	CollectorHashTable SubmittorAds;
 	CollectorHashTable LicenseAds;
 	CollectorHashTable MasterAds;
-	CollectorHashTable NestAds;
+	CollectorHashTable StorageAds;
 
 	// the lesser tables
 	enum {LESSER_TABLE_SIZE = 32};

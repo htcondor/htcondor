@@ -39,7 +39,7 @@ usage( char *cmd )
 	fprintf(stderr,"    -version          Display Condor version\n");
 	fprintf(stderr,"    -pool <hostname>  Use this central manager\n");
 	fprintf(stderr,"    -debug            Show extra debugging info\n");
-	fprintf(stderr,"\nExample: %s -debug UPDATE_NEST_AD adfile\n\n",cmd);
+	fprintf(stderr,"\nExample: %s -debug UPDATE_STORAGE_AD adfile\n\n",cmd);
 }
 
 void

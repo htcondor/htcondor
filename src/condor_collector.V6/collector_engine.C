@@ -64,7 +64,7 @@ CollectorEngine () :
 	SubmittorAds  (GREATER_TABLE_SIZE, &hashFunction),
 	LicenseAds    (GREATER_TABLE_SIZE, &hashFunction),
 	MasterAds     (GREATER_TABLE_SIZE, &hashFunction),
-	NestAds       (GREATER_TABLE_SIZE, &hashFunction),
+	StorageAds       (GREATER_TABLE_SIZE, &hashFunction),
 	CkptServerAds (LESSER_TABLE_SIZE , &hashFunction),
 	GatewayAds    (LESSER_TABLE_SIZE , &hashFunction),
 	CollectorAds  (LESSER_TABLE_SIZE , &hashFunction)
@@ -86,7 +86,7 @@ CollectorEngine::
 	killHashTable (SubmittorAds);
 	killHashTable (LicenseAds);
 	killHashTable (MasterAds);
-	killHashTable (NestAds);
+	killHashTable (StorageAds);
 	killHashTable (CkptServerAds);
 	killHashTable (GatewayAds);
 }
@@ -172,8 +172,8 @@ invokeHousekeeper (AdTypes adtype)
 			cleanHashTable (LicenseAds, now, makeLicenseAdHashKey);
 			break;
 
-		case NEST_AD:
-			cleanHashTable (NestAds, now, makeNestAdHashKey);
+		case STORAGE_AD:
+			cleanHashTable (StorageAds, now, makeStorageAdHashKey);
 			break;
 
 		default:
@@ -262,13 +262,13 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 		table = &CollectorAds;
 		break;
 
-	  case NEST_AD:
-		table = &NestAds;
+	  case STORAGE_AD:
+		table = &StorageAds;
 		break;
 
 	  case ANY_AD:
 		return
-			NestAds.walk(scanFunction) &&
+			StorageAds.walk(scanFunction) &&
 			CkptServerAds.walk(scanFunction) &&
 			LicenseAds.walk(scanFunction) &&
 			StartdAds.walk(scanFunction) &&
@@ -480,15 +480,15 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 							  hashString, insert);
 		break;
 
-	  case UPDATE_NEST_AD:
-		if (!makeNestAdHashKey (hk, clientAd, from))
+	  case UPDATE_STORAGE_AD:
+		if (!makeStorageAdHashKey (hk, clientAd, from))
 		{
 			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
 			retVal = 0;
 			break;
 		}
 		sprintf (hashString, "< %s >", hk.name);
-		retVal=updateClassAd (NestAds, "NestAd  ", clientAd, hk, 
+		retVal=updateClassAd (StorageAds, "StorageAd  ", clientAd, hk, 
 							  hashString, insert);
 		break;
 
@@ -570,8 +570,8 @@ lookup (AdTypes adType, HashKey &hk)
 				return 0;
 			break;
 
-		case NEST_AD:
-			if (NestAds.lookup (hk, val) == -1)
+		case STORAGE_AD:
+			if (StorageAds.lookup (hk, val) == -1)
 				return 0;
 			break;
 
@@ -612,8 +612,8 @@ remove (AdTypes adType, HashKey &hk)
 		case COLLECTOR_AD:
 			return !CollectorAds.remove (hk);
 
-		case NEST_AD:
-			return !NestAds.remove (hk);
+		case STORAGE_AD:
+			return !StorageAds.remove (hk);
 
 		default:
 			return 0;
@@ -762,8 +762,8 @@ housekeeper()
 	dprintf (D_ALWAYS, "\tCleaning CollectorAds ...\n");
 	cleanHashTable (CollectorAds, now, makeCollectorAdHashKey);
 
-	dprintf (D_ALWAYS, "\tCleaning NestAds ...\n");
-	cleanHashTable (NestAds, now, makeNestAdHashKey);
+	dprintf (D_ALWAYS, "\tCleaning StorageAds ...\n");
+	cleanHashTable (StorageAds, now, makeStorageAdHashKey);
 
 	// add other ad types here ...
 

@@ -38,7 +38,7 @@ void printScheddSubmittors(ClassAd *);
 void printMasterNormal 	(ClassAd *);
 void printCollectorNormal (ClassAd *);
 void printCkptSrvrNormal(ClassAd *);
-void printNestNormal(ClassAd *);
+void printStorageNormal(ClassAd *);
 void printAnyNormal(ClassAd *);
 void printServer 		(ClassAd *);
 void printRun    		(ClassAd *);
@@ -98,8 +98,8 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 				printCkptSrvrNormal(ad);
 				break;
 
-			  case PP_NEST_NORMAL:
-				printNestNormal(ad);
+			  case PP_STORAGE_NORMAL:
+				printStorageNormal(ad);
 				break;
 
 			  case PP_ANY_NORMAL:
@@ -419,7 +419,7 @@ printCkptSrvrNormal(ClassAd *ad)
 
 
 void
-printNestNormal(ClassAd *ad)
+printStorageNormal(ClassAd *ad)
 {
 	static bool first = true;
 	static AttrListPrintMask pm;

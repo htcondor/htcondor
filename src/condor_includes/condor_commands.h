@@ -175,9 +175,9 @@ const int UPDATE_LICENSE_AD			= 42;
 const int QUERY_LICENSE_ADS			= 43;
 const int INVALIDATE_LICENSE_ADS	= 44;
 
-const int UPDATE_NEST_AD = 45;
-const int QUERY_NEST_ADS = 46;
-const int INVALIDATE_NEST_ADS = 47;
+const int UPDATE_STORAGE_AD = 45;
+const int QUERY_STORAGE_ADS = 46;
+const int INVALIDATE_STORAGE_ADS = 47;
 
 const int QUERY_ANY_ADS = 48;
 

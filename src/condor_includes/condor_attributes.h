@@ -162,7 +162,6 @@ const char ATTR_MPI_IS_MASTER            [] = "MPIIsMaster";
 const char ATTR_MY_TYPE					 [] = "MyType";
 const char ATTR_NAME                     [] = "Name";
 const char ATTR_NICE_USER			 	 [] = "NiceUser";
-const char ATTR_NEST                     [] = "Nest";
 const char ATTR_NEXT_CLUSTER_NUM		 [] = "NextClusterNum";
 const char ATTR_NODE					 [] = "Node";
 const char ATTR_NOTIFY_USER				 [] = "NotifyUser";

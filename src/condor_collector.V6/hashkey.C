@@ -305,7 +305,7 @@ makeCollectorAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 }
 
 bool
-makeNestAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
+makeStorageAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
 	if (!ad->LookupString ("Name", hk.name))
 	{

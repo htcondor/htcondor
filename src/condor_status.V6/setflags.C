@@ -46,7 +46,7 @@ getPPStyleStr ()
     	case PP_STARTD_SERVER:	return "Server";
     	case PP_STARTD_RUN:		return "Run";
 		case PP_STARTD_STATE:	return "State";
-		case PP_NEST_NORMAL:	return "Nest";
+		case PP_STORAGE_NORMAL:	return "Storage";
 		case PP_ANY_NORMAL:	return "Any";
     	case PP_VERBOSE:		return "Verbose";
     	case PP_CUSTOM:			return "Custom";
@@ -99,7 +99,7 @@ getTypeStr ()
 		case GATEWAY_AD:	return "GATEWAYS";
 		case COLLECTOR_AD:	return "COLLECTOR";
 		case LICENSE_AD:	return "LICENSE";
-		case NEST_AD:		return "NEST";
+		case STORAGE_AD:		return "STORAGE";
 		case ANY_AD:		return "ANY";
 		default: 			return "<Unknown type!>";
 	}
@@ -150,8 +150,8 @@ setType (char *dtype, int i, char *argv)
         if (matchPrefix (dtype, "GATEWAYS")) {
             type = GATEWAY_AD;
         } else
-        if (matchPrefix (dtype, "NEST")) {
-            type = NEST_AD;
+        if (matchPrefix (dtype, "STORAGE")) {
+            type = STORAGE_AD;
         } else
         if (matchPrefix (dtype, "ANY")) {
             type = ANY_AD;
@@ -182,7 +182,7 @@ getModeStr()
 		case MODE_MASTER_NORMAL:		return "Normal (Master)";
 		case MODE_CKPT_SRVR_NORMAL:		return "Normal (CkptSrvr)";
 		case MODE_COLLECTOR_NORMAL:		return "Normal (Collector)";
-		case MODE_NEST_NORMAL:			return "Normal (Nest)";
+		case MODE_STORAGE_NORMAL:			return "Normal (Storage)";
 		case MODE_ANY_NORMAL:			return "Normal (Any)";
 		default:				return "<Unknown!>";
 	}
@@ -250,9 +250,9 @@ setMode (Mode mod, int i, char *argv)
 			setPPstyle (PP_CKPT_SRVR_NORMAL, i, argv);
 			break;
 
-		  case MODE_NEST_NORMAL:
-			setType ("NEST", i, argv);
-			setPPstyle (PP_NEST_NORMAL, i, argv);
+		  case MODE_STORAGE_NORMAL:
+			setType ("STORAGE", i, argv);
+			setPPstyle (PP_STORAGE_NORMAL, i, argv);
 			break;
 
 		  case MODE_ANY_NORMAL:
