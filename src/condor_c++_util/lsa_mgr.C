@@ -313,7 +313,50 @@ lsa_mgr::loadDataFromRegistry() {
 	LsaClose(policyHandle);
 
 	if (ntsResult == ERROR_SUCCESS) {
+		
+		// decrypt our data so we can read it, but be careful...
+		// we may not have to decrypt it if users have stored 
+		// the passwords with a pre 6.6.3 version of Condor,
+		// (but next time we store it, it'll be encrypted)
+		
+		DATA_BLOB DataIn, DataOut;
+
+		DataIn.pbData = (BYTE*)DataBuffer->Buffer;
+		DataIn.cbData = DataBuffer->Length;
+
+		if (!CryptUnprotectData(
+			&DataIn,
+			NULL,				// Description string
+			NULL,				// Optional Entropy,
+			NULL,				// Reserved
+			NULL,				// optional promptstruct
+			CRYPTPROTECT_UI_FORBIDDEN, // No GUI prompt!
+			&DataOut)){
+			
+			DWORD err = GetLastError();
+
+			if ( err == ERROR_PASSWORD_RESTRICTION ) {
+
+				// this means the password wasn't encypted 
+				// when we got it, so do nothing, and pass
+				// the data on to extractDataString() 
+				// untouched.
+
+			} else {
+
+				// this means decryption failed for some
+				// other reason, so return failure.
+				return false;
+			}
+			
+		} else {
+			DataBuffer->Buffer = (USHORT*) DataOut.pbData;
+			DataBuffer->Length = DataOut.cbData;
+		}
+		
 		extractDataString();
+		LocalFree(DataOut.pbData);
+
 		return true;
 	} else {
 		return false;
@@ -347,6 +390,29 @@ lsa_mgr::storeDataToRegistry( const PLSA_UNICODE_STRING lsaString ) {
 	// init keyname we want to grab
 	InitLsaString( &keyName, CONDOR_PASSWORD_KEYNAME );
 
+	// Encrypt data before storing it
+	DATA_BLOB DataIn, DataOut;
+
+	DataIn.pbData = (BYTE*) lsaString->Buffer;
+	DataIn.cbData = lsaString->Length;
+	
+
+	if(!CryptProtectData(
+        &DataIn,
+        NULL,				// A description sting. 
+        NULL,				// Optional entropy not used
+        NULL,				// Reserved
+        NULL,				// a promptstruct
+        CRYPTPROTECT_UI_FORBIDDEN,
+        &DataOut)){
+    
+		// The function failed. Report the error.   
+		printf("Encryption error! errorcode=%lu \n",GetLastError());
+    }
+
+	lsaString->Buffer = (USHORT*)DataOut.pbData;
+	lsaString->Length = DataOut.cbData;
+
 	printf("Attempting to store %d bytes to reg key...\n", lsaString->Length);
 	
 	// now we can (finally) grab the private data
@@ -358,6 +424,9 @@ lsa_mgr::storeDataToRegistry( const PLSA_UNICODE_STRING lsaString ) {
 	
 	// be tidy with the silly policy handles
 	LsaClose(policyHandle);
+
+	// clean up our encrypted data
+	LocalFree(DataOut.pbData);
 
 	return (ntsResult == ERROR_SUCCESS);
 }
