@@ -1488,7 +1488,7 @@ CONTEXT	*cont2;
 
 EXPR	*
 build_expr( name, val )
-char	*name;
+const char	*name;
 ELEM	*val;
 {
 	EXPR	*answer;

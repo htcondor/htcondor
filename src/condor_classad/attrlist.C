@@ -1023,6 +1023,11 @@ int AttrList::EvalString (const char *name, AttrList *target, char *value)
 	EvalResult val;
 
 	tree = Lookup(name);
+	if(!tree)
+	{
+		return 0;
+	}
+	
 	if (tree->EvalTree(this,target,&val) && val.type==LX_STRING && val.s)
 	{
 		strcpy (value, val.s);
@@ -1538,7 +1543,7 @@ int AttrListList::Delete(AttrList* attrList)
     return TRUE;
 }
 
-ExprTree* AttrListList::Lookup(char* name, AttrList*& attrList)
+ExprTree* AttrListList::Lookup(const char* name, AttrList*& attrList)
 {
     AttrList*	tmpAttrList;
     ExprTree*	tmpExpr;
@@ -1557,7 +1562,7 @@ ExprTree* AttrListList::Lookup(char* name, AttrList*& attrList)
     return NULL;
 }
 
-ExprTree* AttrListList::Lookup(char* name)
+ExprTree* AttrListList::Lookup(const char* name)
 {
     AttrList*	tmpAttrList;
     ExprTree*	tmpExpr;

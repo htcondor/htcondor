@@ -81,7 +81,7 @@ char *param();
 
 
 do_connect( host, service, port )
-char 	*host, *service;
+const char 	*host, *service;
 u_short	port;
 {
 	return do_connect_with_timeout(host, service, port, 0);

@@ -19,7 +19,7 @@ extern "C" {
 #endif
 
 #if defined( __STDC__) || defined(__cplusplus)
-int do_connect ( char *host, char *service, unsigned int port );
+int do_connect ( const char *host, const char *service, unsigned int port );
 #else
 int do_connect ();
 #endif

@@ -54,6 +54,8 @@ class ClassAd : public AttrList
 		friend bool operator>=(ClassAd&,ClassAd&);// lhs satisfies rhs
 		friend bool operator<=(ClassAd&,ClassAd&);// rhs satisifes lhs
 
+		ClassAd*	FindNext();
+
         // shipping functions -- added by Lei Cao
         int put(Stream& s);
         int get(Stream& s);
@@ -80,6 +82,14 @@ class ClassAdList : public AttrListList
 	ClassAd*	Next() { return (ClassAd*)AttrListList::Next(); }
 	void	Insert(ClassAd* ca) { AttrListList::Insert((AttrList*)ca); }
 	int		Delete(ClassAd* ca) { return AttrListList::Delete((AttrList*)ca); }
+	ClassAd*	Lookup(const char* name);
+
+	// User supplied function should define the "<" relation and the list
+	// is sorted in ascending order
+	void        Sort(int(*)(ClassAd*, ClassAd*));
+
+  private:
+	void		Sort(int(*)(ClassAd*, ClassAd*), AttrListAbstract*&);
 };
 
 #endif

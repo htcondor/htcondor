@@ -684,3 +684,46 @@ ExchangeExpressions (ClassAd *ad)
     return;
 }
 
+ClassAd* ClassAdList::Lookup(const char* name)
+{
+	AttrList*	list;
+
+	((AttrListList*)this)->Lookup(name, list);
+	return (ClassAd*)list;
+}
+
+void ClassAdList::Sort(int(*SmallerThan)(ClassAd*, ClassAd*))
+{
+	Sort(SmallerThan, head);
+}
+
+void ClassAdList::Sort(int(*SmallerThan)(ClassAd*, ClassAd*), AttrListAbstract*& list)
+{
+	ClassAd*	first;
+	ClassAd*	prev;
+	ClassAd*	ad;
+
+	if(list == NULL || list->next == NULL)
+	{
+		return;
+	}
+	
+	first = (ClassAd*)list;
+	prev = first;
+	ad = (ClassAd*)list->next;
+	for(; ad; prev = ad, ad = (ClassAd*)ad->next)
+	{
+		if(SmallerThan(ad, first))
+		{
+			prev->next = ad->next;
+			ad->next = first;
+			list = (AttrListAbstract*)ad;
+		}
+	}
+	Sort(SmallerThan, list->next);
+}
+
+ClassAd* ClassAd::FindNext()
+{
+	return (ClassAd*)next;
+}

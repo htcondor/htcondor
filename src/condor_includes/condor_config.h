@@ -22,7 +22,7 @@ extern "C" {
 
 #if defined(__STDC__) || defined(__cplusplus)
 	void config ( char *a_out_name, CONTEXT *context );
-	void config_from_server(char*, char*, CONTEXT*);
+	int	 config_from_server(char*, char*, CONTEXT*);
 	char * param ( char *name );
 	void insert ( char *name, char *value, BUCKET *table[], int table_size );
 	char * expand_macro ( char *value, BUCKET *table[], int table_size );
@@ -30,7 +30,7 @@ extern "C" {
 	char * macro_expand ( char *name );
 #else
 	void config ();
-	void config_from_server();
+	int	 config_from_server();
 	char * param ();
 	insert();
 	char * expand_macro();

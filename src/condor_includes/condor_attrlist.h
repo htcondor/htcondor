@@ -56,6 +56,8 @@ class AttrListAbstract
 
 		friend	class		AttrList;
 		friend	class		AttrListList;
+		friend	class		ClassAd;
+		friend	class		ClassAdList;
 
     protected :
 
@@ -180,8 +182,8 @@ class AttrListList
         void 	  	Open();				// set pointer to the head of the queue
         void 	  	Close();			// set pointer to NULL
         AttrList* 	Next();				// return AttrList pointed to by "ptr"
-        ExprTree* 	Lookup(char*, AttrList*&);	// look up an expression
-      	ExprTree* 	Lookup(char*);
+        ExprTree* 	Lookup(const char*, AttrList*&);	// look up an expression
+      	ExprTree* 	Lookup(const char*);
 
       	void 	  	Insert(AttrList*);	// insert at the tail of the list
       	int			Delete(AttrList*); 	// delete a AttrList
@@ -193,7 +195,7 @@ class AttrListList
       	friend	  	class		AttrList;
       	friend	  	class		ClassAd;
   
-    private:
+    protected:
 
         // update aggregate expressions in associated AttrLists
 		void				UpdateAgg(ExprTree*, int);

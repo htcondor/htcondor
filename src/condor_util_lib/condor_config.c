@@ -171,7 +171,7 @@ void config( char* a_out_name, CONTEXT* context )
 	}
 }
 
-void config_from_server( dir, a_out_name, context )
+int config_from_server( dir, a_out_name, context )
 char*	dir; 
 char    *a_out_name;
 CONTEXT *context;
@@ -216,13 +216,10 @@ CONTEXT *context;
 					   EXPAND_LAZY);
 	if(rval < 0)
 	{
-		fprintf(stderr, "Configuration Error Line %d while processing config
-file %s/%s ", ConfigLineNo, pw->pw_dir, config_file);
-		perror("");
-		exit(1);
+		return -1;
 	}
 
-        /* Try to get a runtime value for our machine architecture,
+	/* try to get a runtime value for our machine architecture,
            if we can't figure it out we default to value from config file */
     if( (arch = get_arch()) != NULL ) {
         insert( "ARCH", arch, ConfigTab, TABLESIZE );
@@ -239,6 +236,7 @@ file %s/%s ", ConfigLineNo, pw->pw_dir, config_file);
             insert_context( "OpSys", op_sys, context );
         }
     }
+	return 0; 
 }
 
 /*
