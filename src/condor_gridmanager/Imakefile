@@ -23,6 +23,10 @@ release_copy_target(grid_monitor.sh,sbin,grid_monitor.sh,EXECUTABLE_MODE)
 static_copy_target(grid_monitor.sh,sbin,grid_monitor.sh,EXECUTABLE_MODE)
 strip_copy_target(grid_monitor.sh,sbin,grid_monitor.sh,EXECUTABLE_MODE)
 
+grid_monitor.sh: grid_monitor_wrapper grid_manager_monitor_agent
+	cat grid_monitor_wrapper grid_manager_monitor_agent > grid_monitor.sh
+	chmod 755 grid_monitor.sh
+
 $(GAHP_DIR)/gahp_server:
 	/bin/true
 
