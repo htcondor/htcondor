@@ -1,3 +1,8 @@
+3/6/01  V6_3-galileo-1
+	This is a tag of the V6_3 branch for the purposes of giving
+	a company called Galileo some experimental/new features 
+	concerning job suspension and control from the shadow side.
+
 2/28/01 V6_3-condor-g-branch
 	A branch for Condor-G development in anticipation of a release
 	in the near future.  Branched from the end of the V6_3-branch
