@@ -230,21 +230,18 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 			event.signalNumber = WTERMSIG(JobStatus);
 			if (WCOREDUMP(JobStatus))
 			{
+				char coreFile[_POSIX_PATH_MAX];
 				if (strcmp (Proc->rootdir, "/") == 0)
 				{
-					sprintf (event.coreFile, "%s/core.%d.%d", coredir, 
-							 Proc->id.cluster, Proc->id.proc);
+					sprintf( coreFile, "%s/core.%d.%d", coredir, 
+							 Proc->id.cluster, Proc->id.proc );
 				}
 				else
 				{
-					sprintf (event.coreFile, "%s%s/core.%d.%d", Proc->rootdir,
-							 coredir, Proc->id.cluster, Proc->id.proc);
+					sprintf( coreFile, "%s%s/core.%d.%d", Proc->rootdir,
+							 coredir, Proc->id.cluster, Proc->id.proc );
 				}
-			}
-			else
-			{
-				// no core file
-				event.coreFile[0] = '\0';
+				event.setCoreFile( coreFile );
 			}
 			event.run_local_rusage = *localr;
 			event.run_remote_rusage = *remoter;

@@ -653,7 +653,7 @@ BaseShadow::logTerminateEvent( int exitReason )
 	event.total_sent_bytes = bytesReceived();
 	
 	if( exitReason == JOB_COREDUMPED ) {
-		strcpy( event.coreFile, core_file_name );
+		event.setCoreFile( core_file_name );
 	}
 	
 	if (!uLog.writeEvent (&event)) {
