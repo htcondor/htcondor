@@ -201,7 +201,7 @@ KILL_VANILLA		: $(ActivityTimer) > $(MaxVacateTime)
 
 ##
 ##  Periodic Checkpointing
-LastCkpt	= (CurrentTime - LastPeriodicCkpt)
+LastCkpt	= (CurrentTime - LastPeriodicCheckpoint)
 PERIODIC_CHECKPOINT	: ( (image_size < 60000) && ( $(LastCkpt) > (6 * $(HOUR)) ) ) || ( $(LastCkpt) > (12 * $(HOUR)) )
 
 
@@ -458,6 +458,11 @@ PVM_POLLING_FREQ	= 0
 #APPEND_RANK_STANDARD	= (expression to append to vanilla job rank)
 #APPEND_RANK_VANILLA	= (expression to append to standard job rank)
 
+##  These are default values for the rank expression that are used if
+##  none are specified in the submit file.
+DEFAULT_RANK_VANILLA	= ((Memory*1024) > Imagesize)
+DEFAULT_RANK_STANDARD	= ((Memory*1024) > Imagesize)
+
 
 ##--------------------------------------------------------------------
 ##  condor_preen 
@@ -466,7 +471,7 @@ PVM_POLLING_FREQ	= 0
 PREEN_ADMIN		= $(CONDOR_ADMIN)
 
 ##  What files should condor_preen leave in the spool directory?
-VALID_SPOOL_FILES	= job_queue.log, history, Accountant.log
+VALID_SPOOL_FILES	= job_queue.log, job_queue.log.tmp, history, Accountant.log
 
 ##  What files should condor_preen leave in the log directory?
 VALID_LOG_FILES		= MasterLog, MasterLog.old, NegotiatorLog, NegotiatorLog.old, CollectorLog, CollectorLog.old, SchedLog, SchedLog.old, ShadowLog, ShadowLog.old, StartLog, StartLog.old, StarterLog, StarterLog.old, KbdLog, KbdLog.old, ShadowLock, ULogLock, SchedLock, CkptServerLog, CkptServerLog.old
