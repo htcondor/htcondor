@@ -668,17 +668,9 @@ Image::Write( const char *ckpt_file )
 		dprintf( D_ALWAYS, "Tmp name is \"%s\"\n", tmp_name );
 		if ((fd = open_ckpt_file(tmp_name, O_WRONLY|O_TRUNC|O_CREAT,
 								len)) < 0)  {
-			if (check_sig == SIGUSR2) { // periodic checkpoint
-				dprintf( D_ALWAYS,
-						"open_ckpt_file failed, aborting periodic ckpt\n" );
+				dprintf( D_ALWAYS, "ERROR:open_ckpt_file failed, aborting ckpt\n");
 				return -1;
-			}
-			else {
-				dprintf( D_ALWAYS, "open_ckpt_file failed: %s",
-						 strerror(errno));
-				Suicide();
-			}
-		}	
+		}
 	// }  // this is the matching brace to the open_url; see comment above
 
 		// Write out the checkpoint
@@ -701,15 +693,8 @@ Image::Write( const char *ckpt_file )
 		dprintf(D_ALWAYS, "About to rename \"%s\" to \"%s\"\n",
 				tmp_name, ckpt_file);
 		if( rename(tmp_name,ckpt_file) < 0 ) {
-			if (check_sig == SIGUSR2) { // periodic checkpoint
-				dprintf( D_ALWAYS,
-						"rename failed, aborting periodic ckpt\n" );
-				return -1;
-			}
-			else {
-				dprintf( D_ALWAYS, "ckpt rename failed: %s", strerror(errno) );
-				Suicide();
-			}
+			dprintf( D_ALWAYS, "rename failed, aborting ckpt\n" );
+			return -1;
 		}
 		dprintf( D_ALWAYS, "Renamed OK\n" );
 	}
@@ -773,14 +758,14 @@ Image::Write( int fd )
 	if( _condor_in_file_stream ) {
 		status = net_read( fd, &ack, sizeof(ack) );
 		if( status < 0 ) {
-			dprintf( D_ALWAYS, "Can't read final ack from the shadow" );
-			Suicide();
+			dprintf( D_ALWAYS, "Can't read final ack from the shadow\n" );
+			return -1;
 		}
 
 		ack = ntohl( ack );		// Ack is in network byte order, fix here
 		if( ack != len ) {
 			dprintf( D_ALWAYS, "Ack - expected %d, but got %d\n", len, ack );
-			Suicide();
+			return -1;
 		}
 	}
 
@@ -999,6 +984,7 @@ Checkpoint( int sig, int code, void *scp )
 {
 	int		scm, p_scm;
 	int		do_full_restart = 1; // set to 0 for periodic checkpoint
+	int		write_result;
 
 		// No sense trying to do a checkpoint in the middle of a
 		// restart, just quit leaving the current ckpt entact.
@@ -1006,14 +992,14 @@ Checkpoint( int sig, int code, void *scp )
 	    // the signal handler.
 	if( InRestart ) {
 		if ( sig == SIGTSTP )
-			Suicide();
+			Suicide();		// if we're supposed to vacate, kill ourselves
 		else
-			return;
+			return;			// if periodic ckpt or we're currently ckpting
 	}
+	InRestart = TRUE;	// not strictly true, but needed in our saved data
+	check_sig = sig;
 
 	dprintf( D_ALWAYS, "Entering Checkpoint()\n" );
-
-	check_sig = sig;
 
 	if( MyImage.GetMode() == REMOTE ) {
 		scm = SetSyscalls( SYS_REMOTE | SYS_UNMAPPED );
@@ -1047,7 +1033,6 @@ Checkpoint( int sig, int code, void *scp )
 #endif
 	if( SETJMP(Env) == 0 ) {	// Checkpoint
 		dprintf( D_ALWAYS, "About to save MyImage\n" );
-		InRestart = TRUE;	// not strictly true, but needed in our saved data
 #ifdef SAVE_SIGSTATE
 		dprintf( D_ALWAYS, "About to save signal state\n" );
 		condor_save_sigstates();
@@ -1055,12 +1040,16 @@ Checkpoint( int sig, int code, void *scp )
 #endif
 		SaveFileState();
 		MyImage.Save();
-		MyImage.Write();
+		write_result = MyImage.Write();
 		if ( sig == SIGTSTP ) {
 			/* we have just checkpointed; now time to vacate */
 			dprintf( D_ALWAYS,  "Ckpt exit\n" );
 			SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-			terminate_with_sig( SIGUSR2 );
+			if ( write_result == 0 ) {
+				terminate_with_sig( SIGUSR2 );
+			} else {
+				Suicide();
+			}
 			/* should never get here */
 		} else {
 			/* we have just checkpointed, but this is a periodic checkpoint.
@@ -1074,6 +1063,7 @@ Checkpoint( int sig, int code, void *scp )
 				// it here.
 				MyImage.SetFd( -1 );
 
+				if ( write_result == 0 ) {  /* only update if write was happy */
 				/* now update shadow with CPU time info.  unfortunately, we need
 				 * to convert to struct rusage here in the user code, because
 				 * clock_tick is platform dependent and we don't want CPU times
@@ -1099,6 +1089,7 @@ Checkpoint( int sig, int code, void *scp )
 				SetSyscalls( SYS_REMOTE | SYS_UNMAPPED );
 				(void)REMOTE_syscall( CONDOR_send_rusage, (void *) &bsd_usage );
 				SetSyscalls( p_scm );
+				}  /* end of if write_result == 0 */
 				
 			}
 			do_full_restart = 0;
@@ -1150,8 +1141,8 @@ Checkpoint( int sig, int code, void *scp )
 #endif
 
 		SetSyscalls( scm );
-		InRestart = FALSE;
 		dprintf( D_ALWAYS, "About to return to user code\n" );
+		InRestart = FALSE;
 		return;
 	}
 }
@@ -1197,7 +1188,7 @@ ckpt()
 
 	dprintf( D_ALWAYS, "About to send CHECKPOINT signal to SELF\n" );
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-	kill( getpid(), SIGTSTP );
+	kill( getpid(), SIGUSR2 );
 	SetSyscalls( scm );
 }
 
