@@ -83,13 +83,13 @@ chdir($workspace) || die "Can't chdir($workspace): $!\n";
 
 if (defined $opt_buildid) {
     if (not defined($opt_tag) ) {
-        print "ERROR: You need to specify --tag while using --runid\n";
+        print "ERROR: You need to specify --tag while using --buildid\n";
         print_usage();
         exit 1;
     }
     $ids{$opt_buildid} = $opt_tag;
     if (not defined $opt_module) {
-        print "ERROR: You need to specify --module while using --runid\n";
+        print "ERROR: You need to specify --module while using --buildid\n";
         print_usage();
         exit 1;
     }
