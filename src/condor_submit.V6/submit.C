@@ -1649,7 +1649,7 @@ log_submit()
 	if (Quiet) fprintf(stdout, "Logging submit event(s)");
 
 	job.LookupString (ATTR_OWNER, owner);
-	strcpy (jobSubmit.submitHost, ScheddName);
+	strcpy (jobSubmit.submitHost, ScheddAddr);
 
 	for (int i=0; i <= CurrentSubmitInfo; i++) {
 
