@@ -278,11 +278,12 @@ CStarter::StartJob()
 	char io_proxy_config_file[_POSIX_PATH_MAX];
 
 	if( jobAd->LookupBool( ATTR_WANT_IO_PROXY, want_io_proxy ) < 1 ) {
-		dprintf(D_ALWAYS,"StartJob: Job does not define %s\n",ATTR_WANT_IO_PROXY);
+		dprintf( D_FULLDEBUG, "StartJob: Job does not define %s\n", 
+				 ATTR_WANT_IO_PROXY );
 		want_io_proxy = 0;
 	} else {
-		dprintf(D_ALWAYS,"StartJob: Job has %s=%s\n",ATTR_WANT_IO_PROXY,
-			want_io_proxy?"true":"false");
+		dprintf( D_ALWAYS, "StartJob: Job has %s=%s\n", ATTR_WANT_IO_PROXY, 
+				 want_io_proxy ? "true" : "false" );
 	}
 
 	if( want_io_proxy || universe==CONDOR_UNIVERSE_JAVA ) {
