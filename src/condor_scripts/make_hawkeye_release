@@ -95,7 +95,7 @@ CopyAll( $ClassAdViewer, $Temp, "h*tgz*" );
     print "Creating release tarball '$TarBall'...  ";
     system( "gtar --gzip -C $Temp -cf $TarBall ." );
     system( "ls -l $TarBall" );
-    system( "tar tvfz $TarBall" );
+    system( "tar --gzip -tvf $TarBall" );
     print "Done\n";
 }
 
