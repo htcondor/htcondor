@@ -85,13 +85,17 @@ ASSEMBLER_OBJ = SYSCALL.MIPS.IRIX53.o MMAP.MIPS.IRIX53.o
 	gas -o $*.o $*.s
 #endif
 
+#if !HAS_GETWD
+GETWD_OBJ = getwd.o
+#endif
+
 #if IS_R6000_AIX32
-UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o $(FLOCK_OBJ)
+UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o $(FLOCK_OBJ) $(GETWD_OBJ)
 #elif IS_HPPAR_HPUX9
 UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o $(FLOCK_OBJ) \
-		   seteuid.o setegid.o getwd.o
+		   seteuid.o setegid.o $(GETWD_OBJ)
 #else
-UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o $(FLOCK_OBJ)
+UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o $(FLOCK_OBJ) $(GETWD_OBJ)
 #endif
 
 URL_OBJ = url_condor.o include_urls.o cbstp_url.o file_url.o http_url.o \
