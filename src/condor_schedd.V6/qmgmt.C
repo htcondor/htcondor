@@ -62,6 +62,7 @@ extern "C" {
 extern	int		Parse(const char*, ExprTree*&);
 extern  void    cleanup_ckpt_files(int, int, char*);
 static AuthSock *Q_SOCK;
+int GSSAuthenticated = 0; //DO NOT make this static!
 
 int		do_Q_request(AuthSock *);
 void	FindRunnableJob(int, int&);
@@ -347,7 +348,7 @@ ValidateRendevous()
 		return 0;
 	}
 
-	if (rendevous_file == 0) {
+	if (rendevous_file == 0 && !GSSAuthenticated) {
 		UnauthenticatedConnection();
 		return 0;
 	}
@@ -355,23 +356,31 @@ ValidateRendevous()
 #if !defined(WIN32)
 	// note we do an lstat() instead of a stat() so we do _not_ follow
 	// a symbolic link.  this prevents a security attack via sym links.
-	if (lstat(rendevous_file, &stat_buf) < 0) {
-		UnauthenticatedConnection();
-		return 0;
+	if ( !GSSAuthenticated ) {
+		if (lstat(rendevous_file, &stat_buf) < 0) {
+			UnauthenticatedConnection();
+			return 0;
+		}
 	}
+	
 #endif
 
-	unlink(rendevous_file);
+	if ( !GSSAuthenticated ) {
+		unlink(rendevous_file);
+	}
+
 
 #if !defined(WIN32)
-	// Authentication should fail if a) owner match fails, or b) the
-	// file is either a hard or soft link (no links allowed because they
-	// could spoof the owner match).  -Todd 3/98
-	if ( (stat_buf.st_uid != active_owner_uid) ||
-		(stat_buf.st_nlink > 1) ||		// check for hard link
-		(S_ISLNK(stat_buf.st_mode)) ) {
-		UnauthenticatedConnection();
-		return 0;
+	if ( !GSSAuthenticated ) {
+		// Authentication should fail if a) owner match fails, or b) the
+		// file is either a hard or soft link (no links allowed because they
+		// could spoof the owner match).  -Todd 3/98
+		if ( (stat_buf.st_uid != active_owner_uid) ||
+			(stat_buf.st_nlink > 1) ||		// check for hard link
+			(S_ISLNK(stat_buf.st_mode)) ) {
+			UnauthenticatedConnection();
+			return 0;
+		}
 	}
 #endif
 
@@ -457,6 +466,9 @@ CheckConnection()
 	if (connection_state == CONNECTION_CLOSED && rendevous_file != 0) {
 		return ValidateRendevous();
 	}
+	if ( GSSAuthenticated ) {
+		return 0;
+	}
 	return -1;
 }
 
@@ -501,10 +513,16 @@ InitializeConnection( char *owner, char *tmp_file, int auth=0 )
 {
 	char	*new_file;
 
-	new_file = tempnam("/tmp", "qmgr_");
-	strcpy(tmp_file, new_file);
-	// man page says string returned by tempnam has been malloc()'d
-	free(new_file);
+	if ( !auth ) {
+		new_file = tempnam("/tmp", "qmgr_");
+		strcpy(tmp_file, new_file);
+		// man page says string returned by tempnam has been malloc()'d
+		free(new_file);
+	}
+	else {
+		GSSAuthenticated = 1;
+	}
+
 	init_user_ids( owner );
 #if !defined(WIN32)
 	active_owner_uid = get_user_uid();
@@ -514,9 +532,15 @@ InitializeConnection( char *owner, char *tmp_file, int auth=0 )
 	}
 #endif
 	active_owner = strdup( owner );
-	rendevous_file = strdup( tmp_file );
-	dprintf(D_FULLDEBUG, "QMGR InitializeConnection returning 0 (%s)\n",
+	if ( !auth ) {
+		rendevous_file = strdup( tmp_file );
+		dprintf(D_FULLDEBUG, "QMGR InitializeConnection returning 0 (%s)\n",
 			tmp_file);
+	}
+	else {
+		dprintf(D_FULLDEBUG, "QMGR InitializeConnection returning 0 (%s)\n",
+			"NO temp file, GSS authenticated" );
+	}
 	return 0;
 }
 
