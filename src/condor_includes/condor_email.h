@@ -38,6 +38,8 @@ void email_close(FILE *mailer);
 
 void email_asciifile_tail( FILE* mailer, char* filename, int lines );
 
+void email_corefile_tail( FILE* mailer );
+
 #if defined(__cplusplus)
 }
 #endif
