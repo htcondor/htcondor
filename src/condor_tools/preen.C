@@ -36,14 +36,10 @@
 #pragma implementation "list.h" 
 #endif
 
-#define _POSIX_SOURCE
-
 #include "condor_common.h"
-#include <time.h>
-#include <sys/stat.h>
 #include "condor_debug.h"
 #include "condor_constants.h"
-#include "condor_mach_status.h"
+#include "condor_io.h"
 #include "condor_config.h"
 #include "condor_uid.h"
 #include "string_list.h"
@@ -52,13 +48,17 @@
 #include "condor_qmgr.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
+#include "my_hostname.h"
+#include "condor_state.h"
+
+extern "C" char *get_startd_addr(const char *);
+State get_machine_state();
 
 #if defined(OSF1)
 #pragma define_template List<char>
 #pragma define_template Item<char>
 #endif
 
-char *my_hostname();
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
@@ -422,23 +422,21 @@ check_execute_dir()
 			// if we know the state of the machine, we can use a simple
 			// algorithm.  If we are hosting a job - anything goes, otherwise
 			// the execute directory should be empty.
-		switch( get_machine_status() ) {
-			case NO_JOB:	// shouldn't get this, but means no job on board
-			case M_IDLE:	// could accept condor job, but doesn't have one now
-			case USER_BUSY:	// in use by owner - no condor job on board
-				bad_file( Execute, f );		// directory should be empty
-				continue;
-			case JOB_RUNNING:		// has condor job
-			case SUSPENDED:			// has job, but temporarily suspended
-			case CHECKPOINTING:		// has job, in process of leaving
-			case KILLED:			// has job, being forced off
-				good_file( Execute, f );	// let anything go here
-				continue;
-			default:
-				break; // not sure of the state, have to make some guesses...
+		switch( get_machine_state() ) {
+		case owner_state:	
+		case unclaimed_state:
+		case matched_state:	
+			bad_file( Execute, f );		// directory should be empty
+			continue;
+		case claimed_state:			// has condor job
+		case preempting_state:		// has condor job
+			good_file( Execute, f );	// let anything go here
+			continue;
+		default:
+			break; // not sure of the state, have to make some guesses...
 		}
 
-		// If we get here, get_machine_status didn't return something
+		// If we get here, get_machine_state didn't return something
 		// we exepected.  We can't make any assumptions about the
 		// state of the machine, so we fall back on some messier
 		// heruistics.
@@ -680,4 +678,42 @@ bad_file( char *dir, char *name )
 		sprintf( buf, "\"%s\" - Not Removed", pathname );
 	}
 	BadFiles->Append( strdup(buf) );
+}
+
+
+// Returns the state of the local startd
+State
+get_machine_state()
+{
+	char* addr = get_startd_addr( my_hostname() );
+	char* state_str;
+	State s;
+
+	if( !addr ) {
+		dprintf( D_ALWAYS, 
+				 "Can't find startd address for %s\n", my_hostname() );
+		return _error_state_;
+	}
+
+	ReliSock sock;
+	if( ! sock.connect( addr, 5 ) ) {
+		dprintf( D_ALWAYS, "Can't connect to startd at %s\n", addr );
+		free(addr);
+		return _error_state_;
+	}
+	free(addr);
+
+	sock.encode();
+	sock.put( GIVE_STATE );
+	sock.end_of_message();
+	sock.decode();
+	if( !sock.code( state_str ) || !sock.end_of_message() ) {
+		dprintf( D_ALWAYS, "Can't read state/eom from startd.\n" );
+		free(state_str);
+		return _error_state_;
+	}
+
+	s = string_to_state( state_str );
+	free(state_str);
+	return s;
 }
