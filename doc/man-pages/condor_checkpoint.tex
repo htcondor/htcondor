@@ -1,30 +1,45 @@
 \begin{ManPage}{\label{man-condor-checkpoint}\Condor{checkpoint}}{1}
-{checkpoint jobs running on the specified hosts}
+{send a checkpoint command to jobs running on specified hosts}
 \Synopsis \SynProg{\Condor{checkpoint}}
-\ToolArgs
+\ToolArgsBase \ToolArgsLocate
 
 \index{Condor commands!condor\_checkpoint}
 \index{condor\_checkpoint command}
 
 \Description
-\Condor{checkpoint} causes the startd's on the specified hosts to perform a 
-checkpoint on any running jobs. The jobs continue to run once
-they are done checkpointing. If no host is specified, only the current host is sent
-the checkpoint command.
+\Condor{checkpoint} sends a checkpoint command to a specified
+machine or set of machines within a single pool.
+This causes the startd daemon on each of the specified hosts to take a 
+checkpoint of any running jobs. The job is temporarily
+stopped, a checkpoint is taken, and then the job continues.
+If no host is specified, then the checkpoint command
+is sent to the host that issued the
+\Condor{checkpoint} command.
 
-A periodic checkpoint means that the job will checkpoint itself, but then it will immediately continue running
-after the checkpoint has completed. \Condor{vacate}, on the other hand, will result in the job exiting (vacating) after it
-checkpoints. 
+The command sent is a
+periodic checkpoint.
+The job will take a checkpoint, but then the job will immediately
+continue running
+after the checkpoint is completed.
+\Condor{vacate}, on the other hand, will result in the job exiting
+(vacating) after it produces a checkpoint. 
 
-If the job being checkpointed is running in the Standard Universe, the job is checkpointed and then just continues running
-on the same machine. If the job is running in the Vanilla Universe, or there is currently no Condor job
+If the job being checkpointed is running under the standard universe,
+the job produces a checkpoint and then continues running
+on the same machine.
+If the job is running under another universe,
+or if there is currently no Condor job
 running on that host, then \Condor{checkpoint} has no effect. 
 
-Normally there is no need for the user or administrator to explicitly run \Condor{checkpoint}. Checkpointing a running condor
-job is normally handled automatically by Condor by following the policies stated in Condor's configuration files. 
+There is no need for the user or administrator to explicitly
+run \Condor{checkpoint} under normal circumstances.
+Taking checkpoints of running Condor jobs is
+handled automatically by Condor by following the policies
+stated in Condor's configuration files. 
 
 \begin{Options}
-	\ToolArgsDesc
+	\ToolArgsBaseDesc
+	\ToolArgsLocateDesc
 \end{Options}
 
 \ExitStatus
