@@ -138,6 +138,23 @@ that are only found in a request ad, such as \Attr{Owner} or
 See section~\ref{classad-reference} for specifics on
 how undefined terms are handled in ClassAd expression evaluation. 
 
+A note of caution is in order when modifying the \Expr{START} to
+reference job ClassAd attributes.  The default \Expr{IsOwner}
+expression is a function of the \Expr{START} expression
+\begin{verbatim}
+START =?= FALSE
+\end{verbatim}
+See a detailed discussion of the \Expr{IsOwner} expression in
+section~\ref{sec:Owner-State}.  However, the machine locally
+evaluates the \Expr{IsOwner} expression to determine if it is
+capable of running jobs for Condor.  Any job ClassAd attributes
+appearing in the \Expr{START} expression, and hence in the
+\Expr{IsOwner} expression are undefined in this context, and may
+lead to unexpected behavior.  Whenever the \Expr{START} expression
+is modified to reference job ClassAd attributes, the
+\Expr{IsOwner} expression should also be modified to reference
+only machine ClassAd attributes.
+
 \Note If you have machines with lots of real memory and swap space such
 that the only scarce resource is CPU time, consider using
 defining \Macro{JOB\_RENICE\_INCREMENT} 
@@ -451,6 +468,9 @@ the Vacating activity longer than a specified amount of time.
 Owner State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{expression!\Expr{IsOwner}}
+\index{IsOwner@\Expr{IsOwner} expression}
+\index{configuration!IsOwner@\Expr{IsOwner} expression}
 When the startd is first spawned, the machine it represents enters the
 Owner state. 
 The machine remains in the Owner state while the
@@ -458,16 +478,24 @@ expression \Expr{IsOwner} is TRUE.
 If the \Expr{IsOwner} expression is FALSE,
 then the machine transitions to the Unclaimed state.
 The default value for the 
-\Expr{IsOwner} expression is 
+\Expr{IsOwner} expression is optimized for a shared resource
 \begin{verbatim}
 START =?= FALSE
 \end{verbatim}
 So,
 the machine will remain in the Owner state as long as the \Expr{START}
 expression locally evaluates to FALSE.
+Section~\ref{sec:Start-Expr} provides more detail on the
+\Expr{START} expression.
 If the \Expr{START} locally evaluates to TRUE or cannot be locally
 evaluated (it evaluates to UNDEFINED), transition \Bold{1}
 occurs and the machine enters the Unclaimed state.
+The \Expr{IsOwner} expression is locally evaluated by the machine,
+and should not reference job ClassAd attributes, which would be
+UNDEFINED.
+
+For dedicated resources, the recommended value for the \Expr{IsOwner}
+expression is FALSE.
 
 The Owner state represents a resource that is in use by its
 interactive owner (for example, if the keyboard is being used).
