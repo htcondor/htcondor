@@ -434,12 +434,12 @@ fPrint( FILE *file )
 	unp.SetOldClassAd( true );
 	string buffer;
 
-	if( !f ) {
+	if( !file ) {
 		return FALSE;
 	}
 
 	unp.Unparse( buffer, this );
-	fprintf( f, "%s", buffer.c_str( ) );
+	fprintf( file, "%s", buffer.c_str( ) );
 
 	return TRUE;
 }
