@@ -457,7 +457,7 @@ command_query_ads( Service*, int, Stream* stream)
 		// Now, find the ClassAds that match.
 	stream->encode();
 	ads.Open();
-	while( ad = ads.Next() ) {
+	while( (ad = ads.Next()) ) {
 		if( (*ad) >= queryAd ) {
 			if( !stream->code(more) || !ad->put(*stream) ) {
 				dprintf (D_ALWAYS, 
