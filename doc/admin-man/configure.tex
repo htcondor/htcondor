@@ -1488,20 +1488,20 @@ These macros control the \Condor{master}.
   well.  For example:
 \begin{verbatim}
         MASTER_HA_LIST = SCHEDD
-	SPOOL = /share/spool
-	HA_LOCK_URL = file:/share/spool
+        SPOOL = /share/spool
+        HA_LOCK_URL = file:/share/spool
 \end{verbatim}
 
   A separate lock is created for each ``High Availability'' daemon.
 
   There is no default value for \Macro{HA\_LOCK\_URL}.
 
-\item[\Macro{HA\_name\_LOCK\_URL}]
-  \label{param:HAnameLockURL} This macro controls the ``High
-  Availability'' lock URL for a specific daemon ``name'' and
+\item[\Macro{HA\_daemon\_LOCK\_URL}]
+  \label{param:HAdaemonLockURL} This macro controls the ``High
+  Availability'' lock URL for a specific daemon ``daemon'' and
   overrides the system wide lock URL specified by
   \Macro{HA\_LOCK\_URL}.  If not defined for each daemon,
-  \Macro{HA\_name\_LOCK\_URL} is ignored, and the value of
+  \Macro{HA\_daemon\_LOCK\_URL} is ignored, and the value of
   \Macro{HA\_LOCK\_URL} is used.
 
 \item[\Macro{HA\_LOCK\_HOLD\_TIME}] \label{param:HALockHoldTime} This macro
@@ -1515,28 +1515,30 @@ These macros control the \Condor{master}.
 
   \Macro{HA\_LOCK\_HOLD\_TIME} defaults to 3600 seconds (one hour).
 
-\item[\Macro{HA\_name\_LOCK\_HOLD\_TIME}]
-  \label{param:HAnameLockHoldTime} This macro controls the ``High
-  Availability'' lock hold time for a specific daemon ``name'' and
+\item[\Macro{HA\_daemon\_LOCK\_HOLD\_TIME}]
+  \label{param:HAdaemonLockHoldTime} This macro controls the ``High
+  Availability'' lock hold time for a specific daemon ``daemon'' and
   overrides the system wide poll period specified by
   \Macro{HA\_LOCK\_HOLD\_TIME}.  If not defined for each daemon,
-  \Macro{HA\_name\_LOCK\_HOLD\_TIME} is ignored, and the value of
+  \Macro{HA\_daemon\_LOCK\_HOLD\_TIME} is ignored, and the value of
   \Macro{HA\_LOCK\_HOLD\_TIME} is used.
 
 \item[\Macro{HA\_POLL\_PERIOD}] \label{param:HALockPollPeriod} This
   macro specifies how often the \Condor{master} will poll the ``High
   Availability'' locks to see if any locks are either stale (not
   updated for \Macro{HA\_LOCK\_HOLD\_TIME} seconds), or have been
-  released by the owning \Condor{master}.  If the \Condor{master} owns
-  any locks, it will renew the lock during these polls, as well.
+  released by the owning \Condor{master}.  Addionally, the
+  \Condor{master} will renew any locks that it ``owns'' during these
+  polls.
+
   \Macro{HA\_POLL\_PERIOD} defaults to 300 seconds (five minutes).
 
-\item[\Macro{HA\_name\_POLL\_PERIOD}]
-  \label{param:HALockPollNamePeriod} This macro controls the ``High
-  Availability'' pool period for a specific daemon ``name'' and
+\item[\Macro{HA\_daemon\_POLL\_PERIOD}]
+  \label{param:HALockPolldaemonPeriod} This macro controls the ``High
+  Availability'' pool period for a specific daemon ``daemon'' and
   overrides the system wide poll period specified by
   \Macro{HA\_POLL\_PERIOD}.  If not defined for each daemon,
-  \Macro{HA\_name\_POLL\_PERIOD} is ignored, and the value of
+  \Macro{HA\_daemon\_POLL\_PERIOD} is ignored, and the value of
   \Macro{HA\_POLL\_PERIOD} is used.
 
 \item[\Macro{SUBSYS}] \label{param:SUBSYS} Once you have defined which
@@ -2456,6 +2458,15 @@ These macros control the \Condor{schedd}.
   given by the user in a Condor submit file. By default, this value is
   300 seconds (5 minutes).  A value of 0 prevents the schedd from
   performing the periodic evaluations.
+
+\item[\Macro{SCHEDD\_BACKUP\_SPOOL}]
+  \label{param:ScheddBackupSpool} This macro is used to enable the
+  \Condor{schedd} to make a backup of the job queue as it starts.  If
+  set to ``True'', the \Condor{schedd} will create host specific a
+  backup of the current spool file to the spool directory.  This
+  backup file will be overwritten each time the \Condor{schedd}
+  starts.  \Macro{SCHEDD\_BACKUP\_SPOOL} defaults to ``False''.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
