@@ -27,12 +27,12 @@
 int 
 is_number(const char* str)
 {
-    int result = TRUE;
+    int result = 1;
     int i;
 
     for (i=0; i < strlen(str); i++){
 	if (!isdigit((int)str[i])){
-	    result = FALSE;
+	    result = 0;
 	    break;
 	}
     }
@@ -109,7 +109,7 @@ int
 is_valid_attr_name(const char* name, char* error_diagnosis, 
 		   size_t error_diag_len)
 {
-    int result = FALSE;
+    int result = 0;
 
     if (name == NULL)
 	strncpy(error_diagnosis, "Attribute name is empty", error_diag_len);
@@ -139,7 +139,7 @@ is_valid_attr_name(const char* name, char* error_diagnosis,
 	     strcmp(name, DRMAA_V_EMAIL) != 0)
 	strncpy(error_diagnosis, "Unrecognized attribute name", error_diag_len);
     else
-	result = TRUE;
+	result = 1;
 
     return result;
 }
@@ -149,7 +149,7 @@ int
 is_valid_attr_value(int* err_cd, const char* name, const char* value, 
 		    char* error_diagnosis, size_t error_diag_len)
 {
-    int result = FALSE;
+    int result = 0;
     int i_value;
 
     if (value == NULL){
@@ -175,12 +175,12 @@ is_valid_attr_value(int* err_cd, const char* name, const char* value,
 		    *err_cd = DRMAA_ERRNO_INVALID_ATTRIBUTE_VALUE;
 		}
 		else		
-		    result = TRUE;
+		    result = 1;
 	    }
 	} 
 	else {
 	    // TODO: add validation for all other supported attributes
-	    result = TRUE;  
+	    result = 1;  
 	}
     }
 
@@ -190,7 +190,7 @@ is_valid_attr_value(int* err_cd, const char* name, const char* value,
 int 
 is_scalar_attr(const char* name, char* error_diagnosis, size_t error_diag_len)
 {
-    int result = FALSE;
+    int result = 0;
 
     if (name == NULL)
 	strncpy(error_diagnosis, "Attribute name is empty", error_diag_len);
@@ -212,7 +212,7 @@ is_scalar_attr(const char* name, char* error_diagnosis, size_t error_diag_len)
 	     strcmp(name, DRMAA_WCT_SLIMIT) == 0 || 
 	     strcmp(name, DRMAA_DURATION_HLIMIT) == 0 || 
 	     strcmp(name, DRMAA_DURATION_SLIMIT) == 0)
-	result = TRUE;
+	result = 1;
     else
 	strncpy(error_diagnosis,
 		"Attribute name does not specify a scalar value", 
@@ -224,14 +224,14 @@ is_scalar_attr(const char* name, char* error_diagnosis, size_t error_diag_len)
 int 
 is_vector_attr(const char* name, char* error_diagnosis, size_t error_diag_len)
 {
-    int result = FALSE;
+    int result = 0;
 
     if (name == NULL)
 	strncpy(error_diagnosis, "Attribute name is empty", error_diag_len);
     else if (strcmp(name, DRMAA_V_ARGV) == 0 ||
 	     strcmp(name, DRMAA_V_ENV) == 0 || 
 	     strcmp(name, DRMAA_V_EMAIL) == 0)
-	result = TRUE;
+	result = 1;
     else
 	strncpy(error_diagnosis, 
 		"Attribute name does not specify a vector value",
@@ -243,7 +243,7 @@ is_vector_attr(const char* name, char* error_diagnosis, size_t error_diag_len)
 int 
 is_supported_attr(const char* name, char* error_diagnosis, size_t error_diag_len)
 {
-    int result = FALSE;
+    int result = 0;
 
     if (name == NULL)
 	strncpy(error_diagnosis, "Attribute name is empty", error_diag_len);
@@ -268,7 +268,7 @@ is_supported_attr(const char* name, char* error_diagnosis, size_t error_diag_len
 	     strcmp(name, DRMAA_V_ARGV) == 0 ||  
 	     strcmp(name, DRMAA_V_ENV) == 0 || 
 	     strcmp(name, DRMAA_V_EMAIL) == 0)
-	result = TRUE;
+	result = 1;
     else
 	strncpy(error_diagnosis, "Attribute is not currently supported",
 		error_diag_len);
@@ -308,12 +308,12 @@ int
 is_valid_job_template(const drmaa_job_template_t* jt, char* error_diagnosis,
 	  size_t error_diag_len)
 {
-    int result = FALSE;
+    int result = 0;
 
     if (jt == NULL)
 	strncpy(error_diagnosis, "Job template is null", error_diag_len);
     else {
-	result = TRUE;  
+	result = 1;  
 	/*  // TODO
         cur = jt;
 	while (cur != NULL){
@@ -334,11 +334,11 @@ find_attr(const drmaa_job_template_t* jt, const char* name,
 	  char* error_diagnosis, size_t error_diag_len)
 {
     job_attr_t* result = jt->head;
-    int found_attr = FALSE;
+    int found_attr = 0;
 
     while (!found_attr && result != NULL){
 	if (strcmp(result->name, name) == 0)
-	    found_attr = TRUE;
+	    found_attr = 1;
 	else 
 	    result = result->next;
     }
@@ -356,12 +356,12 @@ int
 contains_attr(const drmaa_job_template_t* jt, const char* name, 
 	      char* error_diagnosis, size_t error_diag_len)
 {
-    int result = FALSE;
+    int result = 0;
     job_attr_t* cur = jt->head;
 
     while (!result && cur != NULL){
 	if (strcmp(cur->name, name) == 0){
-	    result = TRUE;
+	    result = 1;
 	    strncpy(error_diagnosis, "Attribute already set in job template",
 		    error_diag_len);
 	}
@@ -724,7 +724,7 @@ rm_log_file(const char* job_id)
     char log_file_nm[2000];
     sprintf(log_file_nm, "%s%s%s%s", file_dir, LOG_FILE_DIR, job_id, 
 	    LOG_FILE_EXTN);
-    return remove(log_file_nm)? FALSE : TRUE;
+    return remove(log_file_nm)? 0 : 1;
 }
 
 int 
@@ -734,7 +734,7 @@ wait_job(const char* job_id, const int dispose, const int get_stat_rusage,
 	 size_t error_diag_len)
 {
     int result = DRMAA_ERRNO_INVALID_JOB;
-    int time_up = FALSE, found_job_term = FALSE, job_exit_val;
+    int time_up = 0, found_job_term = 0, job_exit_val;
     double sleep_len;
     FILE* logFS;
     char line[MAX_LOG_FILE_LINE_LEN], r_val[MAX_LOG_FILE_LINE_LEN];
@@ -754,7 +754,7 @@ wait_job(const char* job_id, const int dispose, const int get_stat_rusage,
 	
 	while (!found_job_term && fgets(line, sizeof(line), logFS) != NULL){
 	    if (strstr(line, "Job terminated") != NULL){
-		found_job_term = TRUE;
+		found_job_term = 1;
 		
 		if (get_stat_rusage){
 		    // scan further for status info
@@ -795,7 +795,7 @@ wait_job(const char* job_id, const int dispose, const int get_stat_rusage,
 	    else if ((strstr(line, "Job not properly linked for Condor") 
 		      != NULL)
 		     || (strstr(line, "aborted") != NULL)){
-		found_job_term = TRUE;
+		found_job_term = 1;
 		if (get_stat_rusage)
 		    *stat = STAT_ABORTED;		
 	    }
@@ -804,9 +804,9 @@ wait_job(const char* job_id, const int dispose, const int get_stat_rusage,
 	// check if time is up
 	if (timeout != DRMAA_TIMEOUT_WAIT_FOREVER){
 	    if (timeout == DRMAA_TIMEOUT_NO_WAIT)
-		time_up = TRUE;
+		time_up = 1;
 	    else if (difftime(time(NULL), start) >= (double)timeout)
-		time_up = TRUE;
+		time_up = 1;
 	}
 
 
@@ -894,13 +894,13 @@ mv_jobs_res_to_info(const drmaa_job_ids_t* jobids)
 	i++;
     }
     
-    return TRUE;
+    return 1;
 }
 
 int 
 mv_job_res_to_info(const char* jobid)
 {
-    int result = FALSE;
+    int result = 0;
     condor_drmaa_job_info_t* cur_res, *last;    
 
 #ifdef WIN32
@@ -926,7 +926,7 @@ mv_job_res_to_info(const char* jobid)
 		    cur_res->state = SUBMITTED;
 		num_reserved_jobs--;
 		num_info_jobs++;
-		result = TRUE;
+		result = 1;
 	    }
 	    else {
 		last = cur_res;
@@ -944,7 +944,7 @@ mv_job_res_to_info(const char* jobid)
 int
 rm_infolist(const char* job_id)
 {
-    int result = FALSE;
+    int result = 0;
     condor_drmaa_job_info_t* cur, *last;
 
 #ifdef WIN32
@@ -964,7 +964,7 @@ rm_infolist(const char* job_id)
 		    last->next = cur->next;
 		destroy_job_info(cur);
 		num_info_jobs--;
-		result = TRUE;
+		result = 1;
 		cur = NULL;  // break;
 	    }
 	    else {
@@ -982,7 +982,7 @@ rm_infolist(const char* job_id)
 int
 rm_reslist(const char* job_id)
 {
-    int result = FALSE;
+    int result = 0;
     condor_drmaa_job_info_t* cur, *last;
 
 #ifdef WIN32
@@ -1002,7 +1002,7 @@ rm_reslist(const char* job_id)
 		    last->next = cur->next;
 		destroy_job_info(cur);
 		num_reserved_jobs--;
-		result = TRUE;
+		result = 1;
 		cur = NULL;  // break
 	    }
 	    else {
@@ -1020,7 +1020,7 @@ rm_reslist(const char* job_id)
 int 
 mark_res_job_finished(const char* job_id)
 {
-    int result = FALSE;
+    int result = 0;
     condor_drmaa_job_info_t* cur;
 #ifdef WIN32
     EnterCriticalSection(&reserved_list_lock);
@@ -1033,7 +1033,7 @@ mark_res_job_finished(const char* job_id)
 	while (cur != NULL){
 	    if (strcmp(cur->id, job_id) == 0){
 		cur->state = FINISHED;
-		result = TRUE;
+		result = 1;
 		break;
 	    }
 	    else
@@ -1102,7 +1102,7 @@ get_base_dir(char** buf)
     strcat(*buf, DRMAA_DIR);    
     free(dir);
 
-    return TRUE;
+    return 1;
 }
 
 int 
@@ -1358,14 +1358,14 @@ unlock_job_info(condor_drmaa_job_info_t* job_info)
 int 
 get_schedd_name(char *error_diagnosis, size_t error_diag_len)
 {
-    int result = FALSE;
+    int result = 0;
 #ifdef WIN32
     char tmp[1000];
     DWORD bufsize;
 
     if (GetComputerNameEx(ComputerNameDnsFullyQualified, tmp, 
 			  &bufsize)){
-	result = TRUE;
+	result = 1;
 	schedd_name = strdup(tmp);	
     }
 #else
@@ -1375,7 +1375,7 @@ get_schedd_name(char *error_diagnosis, size_t error_diag_len)
 	strncpy(error_diagnosis, "Failed to obtain name of local schedd",
 		error_diag_len);		
     else {
-	result = TRUE;
+	result = 1;
 	schedd_name = strdup(host_info.nodename);
     }
 #endif

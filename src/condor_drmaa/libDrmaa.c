@@ -79,7 +79,7 @@ static int is_init_lock_initialized = 0;
     // #else  // no lib init lock
     #endif
 #endif
-static int is_init = FALSE;
+static int is_init = 0;
 
 /* ------------------- private helper routines ------------------- */
 int is_lib_init();
@@ -176,7 +176,7 @@ drmaa_init(const char *contact, char *error_diagnosis, size_t error_diag_len)
 #ifdef WIN32
     if (!is_init_lock_initialized) {
 	InitializeCriticalSection(&is_init_lock);
-	is_init_lock_initialized = TRUE;
+	is_init_lock_initialized = 1;
     }
     EnterCriticalSection(&is_init_lock);
 #else
@@ -241,7 +241,7 @@ drmaa_init(const char *contact, char *error_diagnosis, size_t error_diag_len)
 	}	
 
 	// Initialize other local data structures
-	is_init = TRUE;
+	is_init = 1;
 #ifdef WIN32
 	InitializeCriticalSection(&info_list_lock);
 #else
@@ -287,7 +287,7 @@ drmaa_exit(char *error_diagnosis, size_t error_diag_len)
     if (pthread_mutex_lock(&is_init_lock) == 0){
 #endif
 #endif
-        is_init = FALSE;
+        is_init = 0;
 	clean_submit_file_dir();  
 	free_job_info_list();
 	free_reserved_job_list();
@@ -743,7 +743,7 @@ drmaa_control(const char *jobid, int action, char *error_diagnosis,
 	      size_t error_diag_len)
 {
     int result = DRMAA_ERRNO_INVALID_JOB;
-    int proceed = FALSE;
+    int proceed = 0;
     condor_drmaa_job_info_t* cur_res, *cur_info, *last;   
 
     // 1. Argument validation and library state check
@@ -819,7 +819,7 @@ drmaa_control(const char *jobid, int action, char *error_diagnosis,
 			    return
 				rel_locks(DRMAA_ERRNO_HOLD_INCONSISTENT_STATE);
 			else {
-			    proceed = TRUE;
+			    proceed = 1;
 			    break;
 			}
 		    }
@@ -838,7 +838,7 @@ drmaa_control(const char *jobid, int action, char *error_diagnosis,
 			if (action == DRMAA_CONTROL_RELEASE)
 			    return rel_locks(DRMAA_ERRNO_RELEASE_INCONSISTENT_STATE);			
 			else {			
-			    proceed = TRUE;
+			    proceed = 1;
 			    break;
 			}
 		    }
@@ -949,7 +949,7 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
 {
     int result;
     int i, proceed;
-    int sync_all_jobs = FALSE;
+    int sync_all_jobs = 0;
     time_t start;
     condor_drmaa_job_info_t* cur_info, *cur_res, *last;
 
@@ -968,7 +968,7 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
     }   
     for (i = 0; i < jobids->size; i++){
 	if (strcmp(jobids->values[i], DRMAA_JOB_IDS_SESSION_ANY) == 0){
-	    sync_all_jobs = TRUE;
+	    sync_all_jobs = 1;
 	    break;
 	}
 	else if (!is_valid_job_id(jobids->values[i])){
@@ -1051,12 +1051,12 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
 
 	    // B. Verify all synch-desired jobids are on job_info list
 	    i = 0;
-	    proceed = FALSE;
+	    proceed = 0;
 	    while (i < jobids->size){
 		cur_info = job_info_list;
 		while (cur_info != NULL){
 		    if (strcmp(jobids->values[i], cur_info->id) == 0){
-			proceed = TRUE;
+			proceed = 1;
 			break;
 		    }
 		    else 
@@ -1136,7 +1136,7 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
 	i = 0;
 	start = time(NULL);
 	while (i < jobids->size){
-	    result = wait_job(jobids->values[i], dispose, FALSE, NULL, timeout,
+	    result = wait_job(jobids->values[i], dispose, 0, NULL, timeout,
 			      start, NULL, error_diagnosis, error_diag_len);
 
 	    if (result != DRMAA_ERRNO_SUCCESS) {		
@@ -1221,7 +1221,7 @@ drmaa_wait(const char *job_id, char *job_id_out, size_t job_id_out_len,
     else 
 	strncpy(term_job_id, job_id, sizeof(term_job_id)-1);
     
-    result = wait_job(job_id, TRUE, TRUE, stat, timeout, time(NULL), rusage, 
+    result = wait_job(job_id, 1, 1, stat, timeout, time(NULL), rusage, 
 		      error_diagnosis, error_diag_len);
     
     // remove job info from job_info list
@@ -1247,9 +1247,9 @@ drmaa_wifexited(int *exited, int stat, char *error_diagnosis,
 
     // Did process terminate? 
     if (stat != STAT_UNKNOWN)
-	*exited = TRUE;
+	*exited = 1;
     else
-	*exited = FALSE;
+	*exited = 0;
 
     return DRMAA_ERRNO_SUCCESS;
 }
@@ -1291,7 +1291,7 @@ drmaa_wifsignaled(int *signaled, int stat, char *error_diagnosis,
 	return DRMAA_ERRNO_INVALID_ARGUMENT;
     }
 
-    *signaled = TRUE;
+    *signaled = 1;
     return DRMAA_ERRNO_SUCCESS;
 }
 
@@ -1336,7 +1336,7 @@ drmaa_wcoredump(int *core_dumped, int stat, char *error_diagnosis,
     }
     
     // TODO: Must be linked to the term via signal
-    *core_dumped = FALSE;
+    *core_dumped = 0;
 
     return DRMAA_ERRNO_SUCCESS;
 }
@@ -1356,9 +1356,9 @@ drmaa_wifaborted(int *aborted, int stat, char *error_diagnosis,
     }
 
     if (stat == STAT_ABORTED)
-	*aborted = TRUE;
+	*aborted = 1;
     else
-	*aborted = FALSE;
+	*aborted = 0;
 
     return DRMAA_ERRNO_SUCCESS;
 }
@@ -1477,19 +1477,19 @@ drmaa_get_DRMAA_implementation(char *impl, size_t impl_len,
 int
 is_lib_init()
 {
-    int result = FALSE;
+    int result = 0;
 #ifdef WIN32
     if (is_init_lock_initailized){
 	EnterCriticalSection(&is_init_lock);
 	if (is_init)
-	    result = TRUE;
+	    result = 1;
 	LeaveCriticalSection(&is_init_lock);
     }
 #else
     #if HAS_PTHREADS
         if (pthread_mutex_lock(&is_init_lock) == 0){
             if (is_init)
-	      result = TRUE;
+	      result = 1;
 	    pthread_mutex_unlock(&is_init_lock);
         }
     #endif

@@ -136,7 +136,7 @@ struct drmaa_job_template_s {
 
 /** Determines if a given string is a number.
     @param str the string to test
-    @return TRUE (upon success) or FALSE
+    @return true (upon success) or false
 */
 int is_number(const char* str);
 
@@ -162,7 +162,7 @@ void destroy_job_info(condor_drmaa_job_info_t* job_info);
     @param name attribute name
     @param drmaa_context_error_buf contains a context sensitive error upon
            fail returned
-    @return TRUE (upon success) or FALSE
+    @return true (upon success) or false
 */
 int is_valid_attr_name(const char* name, char* error_diagnosis, 
 		       size_t error_diag_len);
@@ -176,7 +176,7 @@ int is_valid_attr_name(const char* name, char* error_diagnosis,
     @param value attribute value
     @param drmaa_context_error_buf contains a context sensitive error upon
            fail returned
-    @return TRUE (upon success) or FALSE
+    @return true (upon success) or false
 */
 int is_valid_attr_value(int* err_cd, const char* name, const char* value, 
 			char* error_diagnosis, size_t error_diag_len);
@@ -186,7 +186,7 @@ int is_valid_attr_value(int* err_cd, const char* name, const char* value,
     @param name name of attribute
     @param error_diagnosis contains a context sensitive error upon failure
     @param error_diag_len length of error_diagnosis buffer
-    @return TRUE (upon succcess) or FALSE
+    @return true (upon succcess) or false
 */
 int is_scalar_attr(const char* name, char* error_diagnosis, 
 		   size_t error_diag_len);
@@ -196,7 +196,7 @@ int is_scalar_attr(const char* name, char* error_diagnosis,
     @param name name of attribute
     @param error_diagnosis contains a context sensitive error upon failure
     @param error_diag_len length of error_diagnosis buffer
-    @return TRUE or FALSE
+    @return true or false
 */
 int is_vector_attr(const char* name, char* error_diagnosis, 
 		   size_t error_diag_len);
@@ -206,7 +206,7 @@ int is_vector_attr(const char* name, char* error_diagnosis,
     @param name name of attribute
     @param error_diagnosis contains a context sensitive error upon failure
     @param error_diag_len length of error_diagnosis buffer
-    @return TRUE (upon success) or FALSE
+    @return true (upon success) or false
 */
 int is_supported_attr(const char* name, char* error_diagnosis, 
 		      size_t error_diag_len);
@@ -225,7 +225,7 @@ drmaa_job_template_t* create_job_template();
     @param jt job template
     @param drmaa_context_error_buf contains a context sensitive error upon
            fail returned
-    @return TRUE (upon success) or FALSE
+    @return true (upon success) or false
 */
 int is_valid_job_template(const drmaa_job_template_t* jt, char* error_diagnosis,
 	      size_t error_diag_len);
@@ -250,7 +250,7 @@ job_attr_t* find_attr(const drmaa_job_template_t* jt, const char* name,
     @param name attribute name
     @param error_diagnosis contains a context sensitive error upon failure
     @param error_diag_len length of error buffer
-    @return TRUE (upon success) or FALSE
+    @return true (upon success) or false
 */
 int contains_attr(const drmaa_job_template_t* jt, const char* name, 
 		  char* error_diagnosis, size_t error_diag_len);
@@ -313,12 +313,12 @@ int submit_job(char* job_id, size_t job_id_len, const char* submit_file_name,
 		char* error_diagnosis, size_t error_diag_len);
 
 /** Determines if stat represents a valid stat code
-    @return TRUE or FALSE
+    @return true or false
 */
 int is_valid_stat(const int stat);
 
 /** Determines if a given job id is valid
-    @return TRUE or FALSE
+    @return true or false
 */
 int is_valid_job_id(const char* job_id);
 
@@ -328,12 +328,12 @@ int is_valid_job_id(const char* job_id);
 FILE* open_log_file(const char* job_id); 
 
 /** Removes the log file of the given job id
-    @return TRUE upon success, FALSE on failure
+    @return true upon success, false on failure
 */
 int rm_log_file(const char* job_id);
 
 /** Waits for a given job_id to complete by monitoring the log file
-    @param dispose If TRUE, deletes log file
+    @param dispose If true, deletes log file
     @return DRMAA_ERRNO_s very similar to drmaa_wait()
  */
 int wait_job(const char* job_id, const int dispose, const int get_stat_rusage, 
@@ -350,33 +350,33 @@ drmaa_attr_values_t* create_dav(int size);
     job_info_list.  Caller must have locks to both lists before calling.
     If a given item in jobids is not found in the reserved_jobs_list, it
     is ignored and the function continues.
-    @return TRUE or FALSE (upon success or failure, respectively)
+    @return true or false (upon success or failure, respectively)
 */
 int mv_jobs_res_to_info(const drmaa_job_ids_t* jobids);    
 
 /** Moves the given valid jobid from the job_reserved list to the job_info
     list.  This method acquires and releases locks to both lists appropriately.
-    Returns FALSE if jobid not found on job_reserved_list.
-    @return TRUE (on success) or FALSE
+    Returns false if jobid not found on job_reserved_list.
+    @return true (on success) or false
 */
 int mv_job_res_to_info(const char* jobid);
 
 /** Removes a given job id from the job_info_list.  Method acquires
     and releases job_info_list_lock.
-    @return TRUE (upon success) or FALSE 
+    @return true (upon success) or false 
 */
 int rm_infolist(const char* job_id);
 
 /** Removes a given job id from the reserved_job_list.  This method acquires and 
     releases reserved_job_list lock itself.
-    @return TRUE (upon success) or FALSE 
+    @return true (upon success) or false 
 */
 int rm_reslist(const char* job_id);
 
 /** Change the status of a given job on the reserved list to FINISHED.  This
     method acquires and releases the reserved_job_list lock itself.  If the 
-    jobid is not found in the reserved_jobs_list, the function returns FALSE.
-    @return TRUE (upon success) or FALSE
+    jobid is not found in the reserved_jobs_list, the function returns false.
+    @return true (upon success) or false
 */
 int mark_res_job_finished(const char* job_id);
 
@@ -390,7 +390,7 @@ int rel_locks(const int drmaa_err_code);
 /** Determines the library's base directory, allocates the required memory
     for buf, and copies the full path name there.  A successful result contains
     a trailing forward slash or backslash, depanding upon the system.
-    @return TRUE (on success) or FALSE otherwise
+    @return true (on success) or false otherwise
 */
 int get_base_dir(char** buf);
 
@@ -431,7 +431,7 @@ void unlock_job_info(condor_drmaa_job_info_t* job_info);
 
 /** Obtains the name of the local schedd.  Sets the "schedd_name" global
     variable upon success.  
-    @return TRUE (upon success) or FALSE
+    @return true (upon success) or false
 */
 int get_schedd_name(char *error_diagnosis, size_t error_diag_len);
 
