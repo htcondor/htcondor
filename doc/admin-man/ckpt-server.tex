@@ -257,7 +257,7 @@ following configuration changes are required to make them active.
 First, \Macro{USE\_CKPT\_SERVER} should be set to TRUE on all
 submitting machines where Condor jobs should use a checkpoint server.
 Additionally, \Macro{STARTER\_CHOOSES\_CKPT\_SERVER} should be set to
-TRUE on these submitting machines.
+TRUE (the default) on these submitting machines.
 When TRUE, this parameter specifies that the checkpoint server
 specified by the machine running the job should be used instead of the
 checkpoint server specified by the submitting machine.

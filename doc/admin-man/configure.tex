@@ -1034,10 +1034,11 @@ checkpoint server host (see below).
   hostname of a checkpoint server.
 
 \item[\Macro{STARTER\_CHOOSES\_CKPT\_SERVER}]
-  \label{param:StarterChoosesCkptServer} If this parameter is TRUE on
+  \label{param:StarterChoosesCkptServer} If this parameter is TRUE 
+  or undefined on
   the submit machine, the checkpoint server specified by
   \MacroU{CKPT\_SERVER\_HOST} on the execute machine is used.  If it is
-  FALSE or undefined on the submit machine, the checkpoint server
+  FALSE on the submit machine, the checkpoint server
   specified by \MacroU{CKPT\_SERVER\_HOST} on the submit machine is
   used.
   
