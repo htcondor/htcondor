@@ -11,32 +11,23 @@
 #include "image.h"
 #include "file_table_interf.h"
 
+#include "condor_debug.h"
+static char *_FileName_ = __FILE__;
+
 #ifndef SIG_DFL
 #include <signal.h>
 #endif
 
 
-static Image MyImage;
+Image MyImage;
 static jmp_buf Env;
+
+static int CkptMode;
 
 Header::Header()
 {
-	Init( -1, -1, "" );
-}
-
-Header::Header( int c, int p, const char *o )
-{
-	Init( c, p, o );
-}
-
-void
-Header::Init( int c, int p, const char *o )
-{
 	magic = MAGIC;
 	n_segs = 0;
-	cluster = c;
-	proc = p;
-	strcpy( owner, o );
 }
 
 void
@@ -44,14 +35,11 @@ Header::Display()
 {
 	DUMP( " ", magic, 0x%X );
 	DUMP( " ", n_segs, %d );
-	DUMP( " ", cluster, %d );
-	DUMP( " ", proc, %d );
-	DUMP( " ", owner, "%s" );
 }
 
 SegMap::SegMap()
 {
-	Init( "", 0, 0L );
+	Init( "XXXXXXXXXXXXX", -1, -1 );
 }
 
 SegMap::SegMap( const char *n, RAW_ADDR c, long l )
@@ -79,10 +67,43 @@ SegMap::Display()
 
 Image::Image()
 {
+	Init( "", -1 );
+}
+
+Image::Image( int fd )
+{
+	Init( "", fd );
+}
+
+Image::Image( char *ckpt_name )
+{
+	Init( ckpt_name, -1 );
+}
+
+void
+Image::SetFd( int f )
+{
+	fd = f;
+}
+
+void
+Image::SetFileName( char *ckpt_name )
+{
+		// Save the checkpoint file name
+	file_name = new char [ strlen(ckpt_name) + 1 ];
+	strcpy( file_name, ckpt_name );
+}
+
+void
+Image::Init( char *ckpt_name, int ckpt_fd )
+{
 	struct sigaction action;
 
+		// Save the checkpoint file name
+	file_name = new char [ strlen(ckpt_name) + 1 ];
+	strcpy( file_name, ckpt_name );
+
 		// Initialize saved image data structures
-	head.Init( -1, -1, "" );
 	max_segs = SEG_INCR;
 	map = new SegMap[max_segs];
 	valid = FALSE;
@@ -98,32 +119,21 @@ Image::Image()
 		exit( 1 );
 	}
 
-	fd = -1;
+	fd = ckpt_fd;
 	pos = 0;
 }
 
-int Cluster = 13;
-int Proc = 13;
-char Owner[] = "mike";
 
-void
-Image::Save()
-{
-	Save( Cluster, Proc, Owner );
-}
 
 extern char *etext;
 extern char *edata;
 void
-Image::Save( int c, int p, const char *o )
+Image::Save()
 {
 	RAW_ADDR	data_start, data_end;
 	RAW_ADDR	stack_start, stack_end;
 	ssize_t		pos;
 	int			i;
-
-		// Set up header
-	head.Init( c, p, o );
 
 		// Set up data segment
 	data_start = data_start_addr();
@@ -255,12 +265,22 @@ RestoreStack()
 }
 
 int
-Image::Write( const char *file_name )
+Image::Write()
+{
+	return Write( file_name );
+}
+
+int
+Image::Write( const char *ckpt_file )
 {
 	int	fd;
 	int	status;
 
-	if( (fd=open(file_name,O_CREAT|O_TRUNC|O_WRONLY,0664)) < 0 ) {
+	if( ckpt_file == 0 ) {
+		ckpt_file == file_name;
+	}
+
+	if( (fd=open(ckpt_file,O_CREAT|O_TRUNC|O_WRONLY,0664)) < 0 ) {
 		perror( "open" );
 		exit( 1 );
 	}
@@ -301,25 +321,20 @@ Image::Write( int fd )
 	return 0;
 }
 
-int
-Image::Read( const char *file_name )
-{
-	int	status;
-
-	if( (fd=open(file_name,O_RDONLY,0)) < 0 ) {
-		perror( "open" );
-		exit( 1 );
-	}
-	status = Read( fd );
-
-	return status;
-}
 
 int
-Image::Read( int fd )
+Image::Read()
 {
 	int		i;
 	ssize_t	nbytes;
+
+		// Make sure we have a valid file descriptor to read from
+	if( fd < 0 && file_name && file_name[0] ) {
+		if( (fd=open(file_name,O_RDONLY,0)) < 0 ) {
+			perror( "open" );
+			exit( 1 );
+		}
+	}
 
 		// Read in the header
 	if( (nbytes=read(fd,&head,sizeof(head))) < 0 ) {
@@ -352,19 +367,44 @@ ssize_t
 SegMap::Read( int fd, ssize_t pos )
 {
 	ssize_t nbytes;
+	char *orig_brk;
+	char *cur_brk;
+	char	*ptr;
+	size_t	bytes_to_go;
+	size_t	read_size;
+
 
 	if( pos != file_loc ) {
 		fprintf( stderr, "Checkpoint sequence error\n" );
 		exit( 1 );
 	}
 	if( strcmp(name,"DATA") == 0 ) {
-		brk( (char *)(core_loc + len) );
+		orig_brk = (char *)sbrk(0);
+		if( orig_brk < (char *)(core_loc + len) ) {
+			brk( (char *)(core_loc + len) );
+		}
+		cur_brk = (char *)sbrk(0);
 	}
-	nbytes =  read(fd,(void *)core_loc,(size_t)len);
-	if( nbytes < 0 ) {
-		return -1;
+
+		// This overwrites an entire segment of our address space
+		// (data or stack).  Assume we have been handed an fd which
+		// can be read by purely local syscalls, and we don't need
+		// to need to mess with the system call mode, fd mapping tables,
+		// etc. as none of that would work considering we are overwriting
+		// them.
+	bytes_to_go = len;
+	ptr = (char *)core_loc;
+	while( bytes_to_go ) {
+		read_size = bytes_to_go > 4096 ? 4096 : bytes_to_go;
+		nbytes =  syscall( SYS_read, fd, (void *)ptr, read_size );
+		if( nbytes < 0 ) {
+			return -1;
+		}
+		bytes_to_go -= nbytes;
+		ptr += nbytes;
 	}
-	return pos + nbytes;
+
+	return pos + len;
 }
 
 ssize_t
@@ -382,37 +422,57 @@ void
 Checkpoint( int sig, int code, void *scp )
 {
 
-	printf( "Got SIGTSTP\n" );
+	SetSyscalls( CkptMode );
+	dprintf( D_ALWAYS, "Got SIGTSTP\n" );
 	if( SETJMP(Env) == 0 ) {
-		printf( "About to save MyImage\n" );
-		SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+		dprintf( D_ALWAYS, "About to save MyImage\n" );
 		SaveFileState();
 		MyImage.Save();
-		MyImage.Write( "Ckpt.13.13" );
-		printf( "Ckpt exit\n" );
+		MyImage.Write();
+		dprintf( D_ALWAYS,  "Ckpt exit\n" );
+		SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 		exit( 0 );
 	} else {
 		patch_registers( scp );
+		SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 		MyImage.Close();
+		SetSyscalls( CkptMode );
 		RestoreFileState();
-		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
+		// SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 		syscall( SYS_write, 1, "About to return to user code\n", 29 );
 		return;
 	}
 }
 
-}	// end of extern "C"
+void
+init_image_with_file_name( char *ckpt_name )
+{
+	MyImage.SetFileName( ckpt_name );
+}
 
 void
-restart()
+init_image_with_file_descriptor( int fd )
 {
-	SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-	MyImage.Read( "Ckpt.13.13" );
+	MyImage.SetFd( fd );
+}
+
+void
+restart( )
+{
+	// SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+	MyImage.Read();
 	MyImage.Restore();
 }
+
+}	// end of extern "C"
+
+
 
 void
 ckpt()
 {
+	int		scm;
+
+	CkptMode = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	kill( getpid(), SIGTSTP );
 }
