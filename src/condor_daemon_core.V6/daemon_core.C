@@ -2740,11 +2740,12 @@ int DaemonCore::HandleReq(int socki)
 					dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticating RIGHT NOW.\n");
 				}
 				if (!sock->authenticate(the_key, sec_man->getAuthBitmask(auth_method))) {
-					dprintf (D_ALWAYS, "DC_AUTHENTICATE: authenticate failed\n");
+					free( auth_method );
+					dprintf( D_ALWAYS, 
+							 "DC_AUTHENTICATE: authenticate failed\n" );
 					result = FALSE;
 					goto finalize;
 				}
-
 				free( auth_method );
 
 
