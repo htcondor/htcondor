@@ -36,6 +36,9 @@
 #define _save_XOPEN4UX _XOPEN4UX
 #undef _XOPEN4UX
 #define _XOPEN4UX 1
+#define _save_SGIAPI _SGIAPI
+#undef _SGIAPI
+#define _SGIAPI 1
 #endif
 
 #include <signal.h>
@@ -49,8 +52,15 @@
 #define _NO_ANSIMODE _save_NO_ANSIMODE
 #undef _XOPEN4UX
 #define _XOPEN4UX _save_XOPEN4UX
+#undef _SGIAPI
+#define _SGIAPI _save_SGIAPI
 #undef _save_NO_ANSIMODE
 #undef _save_XOPEN4UX
+#undef _save_SGIAPI
+#endif
+
+#if defined(OSF1) && !defined(NSIG) && defined(SIGMAX)
+#define NSIG (SIGMAX+1)
 #endif
 
 #endif CONDOR_FIX_SIGNAL_H
