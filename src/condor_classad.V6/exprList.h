@@ -71,6 +71,7 @@ class ExprList : public ExprTree
 	    typedef std::vector<ExprTree*>::iterator       iterator;
     	typedef std::vector<ExprTree*>::const_iterator const_iterator;
 
+        int size()                   { return exprList.size();  }
         iterator begin()             { return exprList.begin(); }
 		iterator end()               { return exprList.end();   }
 		const_iterator begin() const { return exprList.begin(); }
