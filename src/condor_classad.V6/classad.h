@@ -28,21 +28,16 @@
 #include <vector>
 #include "exprTree.h"
 
-#ifdef __cplusplus
-#include <string>
-using namespace std;
-#endif
-
 BEGIN_NAMESPACE( classad );
 
 #if defined( EXPERIMENTAL )
-	typedef set<string, CaseIgnLTStr> References;
-	typedef map<const ClassAd*, References> PortReferences;
+	typedef std::set<std::string, CaseIgnLTStr> References;
+	typedef std::map<const ClassAd*, References> PortReferences;
 #include "rectangle.h"
 #endif
 
 
-typedef hash_map<string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr> AttrList;
+typedef std::hash_map<std::string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr> AttrList;
 
 /// An internal node of an expression which represents a ClassAd. 
 class ClassAd : public ExprTree
@@ -73,13 +68,13 @@ class ClassAd : public ExprTree
 		 * 	@param vec A vector of (name,expression) pairs to make a classad
 		 * 	@return The constructed classad
 		 */
-		ClassAd *MakeClassAd( vector< pair< string, ExprTree* > > &vec );
+		ClassAd *MakeClassAd( std::vector< std::pair< std::string, ExprTree* > > &vec );
 
 		/** Deconstructor to get the components of a classad
 		 * 	@param vec A vector of (name,expression) pairs which are the
 		 * 		attributes of the classad
 		 */
-		void GetComponents( vector< pair< string, ExprTree *> > &vec ) const;
+		void GetComponents( std::vector< std::pair< std::string, ExprTree *> > &vec ) const;
 
 		/**@name Insertion Methods */
 		//@{	
@@ -90,7 +85,7 @@ class ClassAd : public ExprTree
 			@return true if the operation succeeded, false otherwise.
 			@see ExprTree::setParentScope
 		*/
-		bool Insert( const string &attrName, ExprTree *expr );
+		bool Insert( const std::string &attrName, ExprTree *expr );
 
 		/** Inserts an attribute into a nested classAd.  The scope expression is
 		 		evaluated to obtain a nested classad, and the attribute is 
@@ -102,7 +97,7 @@ class ClassAd : public ExprTree
 			@return true if the operation succeeded, false otherwise.
 			@see ExprTree::setParentScope
 		*/
-		bool DeepInsert( ExprTree *scopeExpr, const string &attrName, 
+		bool DeepInsert( ExprTree *scopeExpr, const std::string &attrName, 
 				ExprTree *expr );
 
 		/** Inserts an attribute into the ClassAd.  The integer value is
@@ -113,7 +108,7 @@ class ClassAd : public ExprTree
 			@param f The multiplicative factor to be attached to value.
 			@see Value::NumberFactor
 		*/
-		bool InsertAttr( const string &attrName,int value, 
+		bool InsertAttr( const std::string &attrName,int value, 
 				Value::NumberFactor f=Value::NO_FACTOR );
 
 		/** Inserts an attribute into a nested classad.  The scope expression 
@@ -127,7 +122,7 @@ class ClassAd : public ExprTree
 			@param f The multiplicative factor to be attached to value.
 			@see Value::NumberFactor
 		*/
-		bool DeepInsertAttr( ExprTree *scopeExpr, const string &attrName,
+		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName,
 				int value, Value::NumberFactor f=Value::NO_FACTOR );
 
 		/** Inserts an attribute into the ClassAd.  The real value is
@@ -138,7 +133,7 @@ class ClassAd : public ExprTree
 			@param f The multiplicative factor to be attached to value.
 			@see Value::NumberFactor
 		*/
-		bool InsertAttr( const string &attrName,double value, 
+		bool InsertAttr( const std::string &attrName,double value, 
 				Value::NumberFactor f=Value::NO_FACTOR);
 
 		/** Inserts an attribute into a nested classad.  The scope expression
@@ -153,7 +148,7 @@ class ClassAd : public ExprTree
 				Otherwise, the string is assumed to have been created with new[]
 				and the classad assumes responsibility for freeing the storage.
 		*/
-		bool DeepInsertAttr( ExprTree *scopeExpr, const string &attrName,
+		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName,
 				double value, Value::NumberFactor f=Value::NO_FACTOR);
 
 		/** Inserts an attribute into the ClassAd.  The boolean value is
@@ -162,7 +157,7 @@ class ClassAd : public ExprTree
 			@param attrName The name of the attribute. 
 			@param value The boolean value of the attribute.
 		*/
-		bool InsertAttr( const string &attrName, bool value );
+		bool InsertAttr( const std::string &attrName, bool value );
 
 		/** Inserts an attribute into a nested classad.  The scope expression
 		 		is evaluated to obtain a nested classad, and the insertion is
@@ -177,7 +172,7 @@ class ClassAd : public ExprTree
 				Otherwise, the string is assumed to have been created with new[]
 				and the classad assumes responsibility for freeing the storage.
 		*/
-		bool DeepInsertAttr( ExprTree *scopeExpr, const string &attrName, 
+		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName, 
 				bool value );
 
 		/** Inserts an attribute into the ClassAd.  The string value is
@@ -186,7 +181,7 @@ class ClassAd : public ExprTree
 			@param attrName The name of the attribute.
 			@param value The string attribute
 		*/
-		bool InsertAttr( const string &attrName, const string &value );
+		bool InsertAttr( const std::string &attrName, const std::string &value );
 
 		/** Inserts an attribute into a nested classad.  The scope expression
 		 		is evaluated to obtain a nested classad, and the insertion is
@@ -200,8 +195,8 @@ class ClassAd : public ExprTree
 				Otherwise, the string is assumed to have been created with new[]
 				and the classad assumes responsibility for freeing the storage.
 		*/
-		bool DeepInsertAttr( ExprTree *scopeExpr, const string &attrName, 
-				const string &value );
+		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName, 
+				const std::string &value );
 		//@}
 
 		/**@name Lookup Methods */
@@ -212,7 +207,7 @@ class ClassAd : public ExprTree
 			@return The expression bound to the name in the ClassAd, or NULL
 				otherwise.
 		*/
-		ExprTree *Lookup( const string &attrName ) const;
+		ExprTree *Lookup( const std::string &attrName ) const;
 
 		/** Finds the expression bound to an attribute name.  The lookup uses
 				the scoping structure (including <tt>super</tt> attributes) to 
@@ -225,7 +220,7 @@ class ClassAd : public ExprTree
 			@return The expression bound to the name in the ClassAd, or NULL
 				otherwise.
 		*/
-		ExprTree *LookupInScope(const string &attrName,const ClassAd *&ad)const;
+		ExprTree *LookupInScope(const std::string &attrName,const ClassAd *&ad)const;
 		//@}
 
 		/**@name Attribute Deletion Methods */
@@ -240,7 +235,7 @@ class ClassAd : public ExprTree
 			@return true if the attribute previously existed and was 
 				successfully removed, false otherwise.
 		*/
-		bool Delete( const string &attrName );
+		bool Delete( const std::string &attrName );
 
 		/** Deletes the named attribute from a nested classAd.  The scope
 		 		expression is evaluated to obtain a nested classad, and the
@@ -252,7 +247,7 @@ class ClassAd : public ExprTree
 			@return true if the attribute previously existed and was 
 				successfully removed, false otherwise.
 		*/
-		bool DeepDelete( const string &scopeExpr, const string &attrName );
+		bool DeepDelete( const std::string &scopeExpr, const std::string &attrName );
 
 		/** Deletes the named attribute from a nested classAd.  The scope
 		 		expression is evaluated to obtain a nested classad, and the
@@ -264,7 +259,7 @@ class ClassAd : public ExprTree
 			@return true if the attribute previously existed and was 
 				successfully removed, false otherwise.
 		*/
-		bool DeepDelete( ExprTree *scopeExpr, const string &attrName );
+		bool DeepDelete( ExprTree *scopeExpr, const std::string &attrName );
 	
 		/** Similar to Delete, but the expression is returned rather than 
 		  		deleted from the classad.
@@ -273,7 +268,7 @@ class ClassAd : public ExprTree
 				the attribute could not be found.
 			@see Delete
 		*/
-		ExprTree *Remove( const string &attrName );
+		ExprTree *Remove( const std::string &attrName );
 
 		/** Similar to DeepDelete, but the expression is returned rather than 
 		  		deleted from the classad.
@@ -283,7 +278,7 @@ class ClassAd : public ExprTree
 				the attribute could not be found.
 			@see Delete
 		*/
-		ExprTree *DeepRemove( const string &scopeExpr, const string &attrName );
+		ExprTree *DeepRemove( const std::string &scopeExpr, const std::string &attrName );
 
 		/** Similar to DeepDelete, but the expression is returned rather than 
 		  		deleted from the classad.
@@ -293,7 +288,7 @@ class ClassAd : public ExprTree
 				the attribute could not be found.
 			@see Delete
 		*/
-		ExprTree *DeepRemove( ExprTree *scopeExpr, const string &attrName );
+		ExprTree *DeepRemove( ExprTree *scopeExpr, const std::string &attrName );
 		//@}
 
 		/**@name Evaluation Methods */
@@ -302,7 +297,7 @@ class ClassAd : public ExprTree
 			@param attrName The name of the attribute in the ClassAd.
 			@param result The result of the evaluation.
 		*/
-		bool EvaluateAttr( const string& attrName, Value &result ) const;
+		bool EvaluateAttr( const std::string& attrName, Value &result ) const;
 
 		/** Evaluates an expression.
 			@param buf Buffer containing the external representation of the
@@ -311,7 +306,7 @@ class ClassAd : public ExprTree
 			@param result The result of the evaluation.
 			@return true if the operation succeeded, false otherwise.
 		*/
-		bool EvaluateExpr( const string& buf, Value &result ) const;
+		bool EvaluateExpr( const std::string& buf, Value &result ) const;
 
 		/** Evaluates an expression.  If the expression doesn't already live in
 				this ClassAd, the setParentScope() method must be called
@@ -336,14 +331,14 @@ class ClassAd : public ExprTree
 			@param intValue The value of the attribute.
 			@return true if attrName evaluated to an integer, false otherwise.
 		*/
-		bool EvaluateAttrInt( const string &attrName, int& intValue ) const;
+		bool EvaluateAttrInt( const std::string &attrName, int& intValue ) const;
 
 		/** Evaluates an attribute to a real.
 			@param attrName The name of the attribute.
 			@param realValue The value of the attribute.
 			@return true if attrName evaluated to a real, false otherwise.
 		*/
-		bool EvaluateAttrReal( const string &attrName, double& realValue )const;
+		bool EvaluateAttrReal( const std::string &attrName, double& realValue )const;
 
 		/** Evaluates an attribute to an integer. If the attribute evaluated to 
 				a real, it is truncated to an integer.
@@ -351,7 +346,7 @@ class ClassAd : public ExprTree
 			@param intValue The value of the attribute.
 			@return true if attrName evaluated to an number, false otherwise.
 		*/
-		bool EvaluateAttrNumber( const string &attrName, int& intValue ) const;
+		bool EvaluateAttrNumber( const std::string &attrName, int& intValue ) const;
 
 		/** Evaluates an attribute to a real.  If the attribute evaluated to an 
 				integer, it is promoted to a real.
@@ -359,7 +354,7 @@ class ClassAd : public ExprTree
 			@param realValue The value of the attribute.
 			@return true if attrName evaluated to a number, false otherwise.
 		*/
-		bool EvaluateAttrNumber(const string &attrName,double& realValue) const;
+		bool EvaluateAttrNumber(const std::string &attrName,double& realValue) const;
 
 		/** Evaluates an attribute to a string.  If the string value does not 
 				fit into the buffer, only the portion that does fit is copied 
@@ -369,7 +364,7 @@ class ClassAd : public ExprTree
 			@param len Size of buffer
 			@return true iff attrName evaluated to a string
 		*/
-		bool EvaluateAttrString( const string &attrName, char *buf, int len) 
+		bool EvaluateAttrString( const std::string &attrName, char *buf, int len) 
 				const;
 
 		/** Evaluates an attribute to a string.  If the string value does not 
@@ -379,7 +374,7 @@ class ClassAd : public ExprTree
 			@param buf The buffer for the string value.
 			@return true iff attrName evaluated to a string
 		*/
-		bool EvaluateAttrString( const string &attrName, string &buf ) const;
+		bool EvaluateAttrString( const std::string &attrName, std::string &buf ) const;
 
 		/** Evaluates an attribute to a boolean.  A pointer to the string is 
 				returned.
@@ -388,7 +383,33 @@ class ClassAd : public ExprTree
 			@return true if attrName evaluated to a boolean value, false 
 				otherwise.
 		*/
-		bool EvaluateAttrBool( const string &attrName, bool& boolValue ) const;
+		bool EvaluateAttrBool( const std::string &attrName, bool& boolValue ) const;
+		//@}
+
+		/**@name Iterators */
+		//@{
+
+		/** Define an iterator we can use on a ClassAd */
+		typedef AttrList::iterator iterator;
+
+		/** Define a constatnt iterator we can use on a ClassAd */
+		typedef AttrList::const_iterator const_iterator;
+
+		/** Returns an iterator pointing to the beginning of the
+			attribute/value pairs in the ClassAd */
+		iterator begin() { return attrList.begin(); }
+
+		/** Returns a constant iterator pointing to the beginning of the
+			attribute/value pairs in the ClassAd */
+		const_iterator begin() const { return attrList.begin(); }
+
+		/** Returns aniterator pointing past the end of the
+			attribute/value pairs in the ClassAd */
+		iterator end() { return attrList.end(); }
+
+		/** Returns a constant iterator pointing past the end of the
+			attribute/value pairs in the ClassAd */
+		const_iterator end() const { return attrList.end(); }
 		//@}
 
 		/**@name Miscellaneous */
@@ -418,7 +439,7 @@ class ClassAd : public ExprTree
 		bool GetExternalReferences( const ExprTree *tree, References &refs );
 		bool GetExternalReferences(const ExprTree *tree, PortReferences &refs);
 		bool AddRectangle( const ExprTree *tree, Rectangles &r, 
-					const string &allowed, const References &imported );
+					const std::string &allowed, const References &imported );
 #endif
 		//@}
 
@@ -434,10 +455,10 @@ class ClassAd : public ExprTree
 		bool _GetExternalReferences( const ExprTree *, ClassAd *, 
 					EvalState &, PortReferences& );
 		bool _MakeRectangles(const ExprTree*,const string&,Rectangles&, bool);
-		bool _CheckRef( ExprTree *, const string & );
+		bool _CheckRef( ExprTree *, const std::string & );
 #endif
 
-		ClassAd *_GetDeepScope( const string& ) const;
+		ClassAd *_GetDeepScope( const std::string& ) const;
 		ClassAd *_GetDeepScope( ExprTree * ) const;
 
 		virtual void _SetParentScope( const ClassAd* p );
@@ -445,7 +466,7 @@ class ClassAd : public ExprTree
 		virtual bool _Evaluate( EvalState&, Value&, ExprTree*& ) const;
 		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;
 	
-		int LookupInScope( const string&, ExprTree*&, EvalState& ) const;
+		int LookupInScope( const std::string&, ExprTree*&, EvalState& ) const;
 		AttrList	attrList;
 };
 	
