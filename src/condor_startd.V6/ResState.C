@@ -186,7 +186,7 @@ ResState::eval( void )
 		want_suspend = rip->wants_suspend();
 		if( (r_act==busy_act && !want_suspend) ||
 			(r_act==retiring_act && !rip->preemptWasTrue() && !want_suspend) ||
-			(r_act==suspended_act && rip->preemptWasTrue()) ) {
+			(r_act==suspended_act && !rip->preemptWasTrue()) ) {
 
 			//Explanation for the above conditions:
 			//The want_suspend check is there because behavior is
@@ -201,6 +201,18 @@ ResState::eval( void )
 				// STATE TRANSITION #12 or #16
 				rip->preemptIsTrue();
 				return rip->retire_claim();
+			}
+		}
+		if( r_act == retiring_act ) {
+			if( rip->mayUnretire() ) {
+				dprintf( D_ALWAYS, "State change: unretiring because no preempting claim exists\n" );
+				// STATE TRANSITION #13
+				return change( busy_act );
+			}
+			if( rip->retirementExpired() ) {
+				dprintf( D_ALWAYS, "State change: retirement ended/expired\n" );
+				// STATE TRANSITION #18
+				return change( preempting_state );
 			}
 		}
 		if( (r_act == busy_act || r_act == retiring_act) && want_suspend ) {
@@ -222,24 +234,23 @@ ResState::eval( void )
 					return change( retiring_act );
 				}
 			}
+			else if( !rip->mayUnretire() ) {
+				// We are in suspended retirement.  It is possible
+				// for the retirement time to expire in this case,
+				// but only if MaxJobRetirementTime decreases
+				// for some reason.
+				if( rip->retirementExpired() ) {
+					dprintf( D_ALWAYS, "State change: retirement ended/expired during suspension\n" );
+					// STATE TRANSITION #18b
+					return change( preempting_state );
+				}
+			}
 		}
 		if( (r_act == busy_act) && rip->hasPreemptingClaim() ) {
 			dprintf( D_ALWAYS, "State change: retiring due to preempting claim\n" );
 			// reversible retirement (e.g. if preempting claim goes away)
 			// STATE TRANSITION #12
 			return change( retiring_act );
-		}
-		if( r_act == retiring_act ) {
-			if( rip->mayUnretire() ) {
-				dprintf( D_ALWAYS, "State change: unretiring because no preempting claim exists\n" );
-				// STATE TRANSITION #13
-				return change( busy_act );
-			}
-			if( rip->retirementExpired() ) {
-				dprintf( D_ALWAYS, "State change: retirement ended/expired\n" );
-				// STATE TRANSITION #18
-				return change( preempting_state );
-			}
 		}
 		if( (r_act == idle_act) && (rip->eval_start() == 0) ) {
 				// START evaluates to False, so return to the owner
