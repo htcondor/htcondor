@@ -48,7 +48,6 @@ OsProc::OsProc()
 	JobAd = NULL;
 	JobPid = Cluster = Proc = -1;
 	job_suspended = FALSE;
-	ShadowAddr[0] = '\0';
 }
 
 OsProc::~OsProc()
@@ -86,17 +85,6 @@ OsProc::StartJob()
 		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting StartJob.\n", 
 				 ATTR_JOB_CMD );
 		return 0;
-	}
-
-	// get sinfullstring of our shadow, if shadow told us
-	JobAd->LookupString(ATTR_MY_ADDRESS, ShadowAddr);
-
-	if( ShadowAddr[0] ) {
-		dprintf( D_FULLDEBUG, "In job ad: %s = %s\n",
-				 ATTR_MY_ADDRESS, ShadowAddr );
-	} else {
-		dprintf( D_FULLDEBUG, "Can't find %s in job ad!\n",
-				 ATTR_MY_ADDRESS );
 	}
 
 	// if name is condor_exec, we transferred it, so make certain

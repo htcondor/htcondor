@@ -244,6 +244,7 @@ VanillaProc::UpdateShadow()
 
 	dprintf( D_FULLDEBUG, "Entering VanillaProc::UpdateShadow()\n" );
 
+	char* ShadowAddr = Starter->GetShadowAddr();
 	if ( ShadowAddr[0] == '\0' ) {
 		// we do not have an address for the shadow
 		dprintf( D_FULLDEBUG, "Leaving VanillaProc::UpdateShadow(): "
