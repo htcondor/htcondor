@@ -534,6 +534,29 @@ char *
 			return (char *)REMOTE_syscall( CONDOR_getwd, path );
 		}
 	}
+
+	int
+	ftruncate( int fd, off_t length )
+	{
+		int	rval;
+		int	user_fd;
+		int use_local_access = FALSE;
+	
+		if( (user_fd=MapFd(fd)) < 0 ) {
+			return (int)-1;
+		}
+		if( LocalAccess(fd) ) {
+			use_local_access = TRUE;
+		}
+	
+		if( LocalSysCalls() || use_local_access ) {
+			rval = FTRUNCATE( user_fd, length );
+		} else {
+			rval = REMOTE_syscall( CONDOR_ftruncate, user_fd, length );
+		}
+	
+		return rval;
+	}
 #endif
 
 #if defined(AIX32)
