@@ -42,7 +42,6 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
-/* #include "condor_jobqueue.h" */
 #include "condor_constants.h"
 #include "condor_expressions.h"
 #include "condor_network.h"
@@ -51,6 +50,8 @@
 #include "url_condor.h"
 #include "proc_obj.h"
 #include "sched.h"
+#include "condor_classad.h"
+#include "condor_parser.h"
 #include "files.h"
 #include <pwd.h>
 #include <sys/stat.h>
@@ -60,25 +61,29 @@
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
+ClassAd job;
+char    buffer[_POSIX_PATH_MAX + 64];
+
 char	*OperatingSystem;
 char	*Architecture;
 char	*Spool;
 char	*Flavor;
 char	*ThisHost;
 char	*My_fs_domain;
-char    WhomToNotify [256];
+char    JobRequirements[2048];
+char    JobRootdir[_POSIX_PATH_MAX];
+char    JobIwd[_POSIX_PATH_MAX];
 
 int		LineNo;
 int		GotQueueCommand;
 
-DBM		*Q, *OpenJobQueue();
-PROC	Proc;
-
 char	IckptName[_POSIX_PATH_MAX];	/* Pathname of spooled initial ckpt file */
 
-
 char	*MyName;
-int		Quiet=0;
+int		Quiet;
+int     ClusterId;
+int     ProcId;
+int     JobUniverse;
 int		Remote=0;
 int		ClusterCreated = FALSE;
 
@@ -108,57 +113,56 @@ char	*ImageSize		= "image_size";
 char	*Universe		= "universe";
 char	*MachineCount	= "machine_count";
 char    *NotifyUser     = "notify_user";
+char    *UserLog        = "user_log";
 
 extern int	Terse;
 extern int	DontDisplayTime;
 extern BUCKET	*ConfigTab[];
 
-void reschedule();
-void SetExecutable();
-void SetUniverse();
-void SetImageSize();
-int calc_image_size( char *name );
-void SetPipes();
-void check_pipe_name( char *name );
-BOOLEAN topology_check( P_DESC pipe_array[], int n_pipes );
-int find_cmd( char *name );
-char * get_tok();
-void SetStdFile( int which_file );
-void SetPriority();
-void SetNotification();
-void SetNotifyUser ();
-void SetArguments();
-void SetEnvironment();
-void SetRootDir();
-void SetRequirements();
-void SetPreferences();
-void SetIWD();
-void check_iwd( char *iwd );
-int read_condor_file( FILE *fp );
-char * condor_param( char *name );
-void set_condor_param( char *name, char *value );
-void queue();
-char * check_requirements( char *orig );
-void check_open( char *name, int flags );
-void usage();
-int DoCleanup();
-char * get_owner();
-char * get_owner();
-void init_params();
-int whitespace( char *str);
-void check_expr_syntax( char *expr );
-CONTEXT	* fake_machine_context();
-void delete_commas( char *ptr );
-void compress( char *str );
-void magic_check();
-void log_submit();
-void get_time_conv( int &hours, int &minutes );
-char *my_hostname();
+void 	reschedule();
+void 	SetExecutable();
+void 	SetUniverse();
+void 	SetImageSize();
+int 	calc_image_size( char *name );
+int 	find_cmd( char *name );
+char *	get_tok();
+void 	SetStdFile( int which_file );
+void 	SetPriority();
+void 	SetNotification();
+void 	SetNotifyUser ();
+void 	SetArguments();
+void 	SetEnvironment();
+void 	SetRootDir();
+void 	SetRequirements();
+void 	SetPreferences();
+void 	SetIWD();
+void 	check_iwd( char *iwd );
+int 	read_condor_file( FILE *fp );
+char * 	condor_param( char *name );
+void 	set_condor_param( char *name, char *value );
+void 	queue();
+char * 	check_requirements( char *orig );
+void 	check_open( char *name, int flags );
+void 	usage();
+int 	DoCleanup();
+char * 	get_owner();
+char * 	get_owner();
+void 	init_params();
+int 	whitespace( char *str);
+void 	delete_commas( char *ptr );
+void 	compress( char *str );
+void 	magic_check();
+void 	log_submit();
+void 	get_time_conv( int &hours, int &minutes );
+char *	my_hostname();
+int     SaveClassAd (ClassAd &);
 
 extern "C" {
+
 void _mkckpt( char *, char * );
 int SetSyscalls( int foo );
 int	get_machine_name(char*);
+int gethostname();
 int read_config(char*, char*, CONTEXT*, BUCKET**, int, int);
 char *get_schedd_addr(char *);
 }
@@ -172,6 +176,14 @@ main( int argc, char *argv[] )
 	char	*cmd_file = NULL, *queue_file = NULL;
 	
 	setbuf( stdout, NULL );
+
+	MyName = argv[0];
+	config( MyName, (CONTEXT *)0 );
+	init_params();
+
+	DebugFlags |= D_EXPR;
+	Terse = 1;
+	DontDisplayTime = TRUE;
 
 	for( ptr=argv+1; *ptr; ptr++ ) {
 		if( ptr[0][0] == '-' ) {
@@ -210,35 +222,48 @@ main( int argc, char *argv[] )
 		ThisHost = my_hostname();
 	}
 
+	// open submit file
 	if( (fp=fopen(cmd_file,"r")) == NULL ) {
 		fprintf( stderr, "Failed to open command file\n");
 		exit(1);
 	}
 
+	// connect to the schedd
 	if (ConnectQ(queue_file) == 0) {
 		fprintf(stderr, "Failed to connect to qmgr\n");
 		exit(1);
 	}
-	Proc.q_date = (int)time( (time_t *)0 );
-	Proc.completion_date = 0;
-	Proc.version_num = PROC_VERSION;
-	if (Remote) {
-		Proc.owner = string_copy("nobody");	// unauthenticated!
-	} else {
-		Proc.owner = get_owner();
-	}
-	Proc.id.cluster = NewCluster();
-	if (Proc.id.cluster == -1) {
+
+	// in case things go awry ...
+	_EXCEPT_Cleanup = DoCleanup;
+
+	// begin to initialize the job ad
+	if ((ClusterId = NewCluster()) == -1)
+	{
 		fprintf(stderr, "Failed to create cluster\n");
 		exit(1);
 	}
-	Proc.id.proc = 0;
+	ProcId = -1;
 
-	dprintf( D_FULLDEBUG, "Proc.version_num = %d\n", Proc.version_num );
+	(void) sprintf (buffer, "Q_Date = %d", (int)time ((time_t *) 0));
+	ASSERT (job.InsertOrUpdate (buffer));
 
-	_EXCEPT_Cleanup = DoCleanup;
+	(void) sprintf (buffer, "Completion_date = 0");
+	ASSERT (job.InsertOrUpdate (buffer));
 
-		/* Parse the file and queue the jobs */
+	(void) sprintf (buffer, "Owner = \"%s\"", get_owner());
+	ASSERT (job.InsertOrUpdate (buffer));
+
+	(void) sprintf (buffer, "Local_CPU = 0.0");
+	ASSERT (job.InsertOrUpdate (buffer));
+
+	(void) sprintf (buffer, "Remote_CPU = 0.0");
+	ASSERT (job.InsertOrUpdate (buffer));
+
+	(void) sprintf (buffer, "Exit_status = 0");
+	ASSERT (job.InsertOrUpdate (buffer));
+
+	//  Parse the file and queue the jobs 
 	if( read_condor_file(fp) < 0 ) {
 		fprintf(stderr, "Failed to parse command file.\n");
 		exit(1);
@@ -246,7 +271,8 @@ main( int argc, char *argv[] )
 
 	DisconnectQ(0);
 
-	if( Proc.id.proc == 0 ) {
+	if(ProcId == 0 ) 
+	{
 		reschedule();
 	}
 
@@ -255,6 +281,7 @@ main( int argc, char *argv[] )
 		fprintf( stderr, " commands -- no jobs queued\n" );
 		exit( 1 );
 	}
+
 	return 0;
 }
 
@@ -294,8 +321,8 @@ void
 check_path_length(char *path, char *lhs)
 {
 	if (strlen(path) > _POSIX_PATH_MAX) {
-		fprintf(stderr,
-"ERROR: Value for \"%s\" is too long:\n\tPosix limits path names to %d bytes\n",
+		fprintf(stderr, "ERROR: Value for \"%s\" is too long:\n"
+				"\tPosix limits path names to %d bytes\n",
 				lhs, _POSIX_PATH_MAX);
 		DoCleanup();
 		exit( 1 );
@@ -324,55 +351,43 @@ SetExecutable()
 
 	check_path_length(ename, Executable);
 
-	ename = string_copy( ename );
+	(void) sprintf (buffer, "Cmd = \"%s\"", ename);
+	ASSERT (job.InsertOrUpdate (buffer));
 
+	ASSERT (job.InsertOrUpdate ("MinHosts = 1"));
+	ASSERT (job.InsertOrUpdate ("MaxHosts = 1"));
 
-	delete_commas( ename );
-	mkargv( &argc, argv, ename );
-
-	Proc.n_cmds = argc;
-	Proc.cmd = (char **)malloc( Proc.n_cmds * sizeof(char *) );
-	Proc.args = (char **)malloc( Proc.n_cmds * sizeof(char *) );
-	Proc.in = (char **)malloc( Proc.n_cmds * sizeof(char *) );
-	Proc.out = (char **)malloc( Proc.n_cmds * sizeof(char *) );
-	Proc.err = (char **)malloc( Proc.n_cmds * sizeof(char *) );
-	Proc.remote_usage = (struct rusage *)
-						calloc( Proc.n_cmds, sizeof(struct rusage) );
-	Proc.exit_status = (int *) calloc( Proc.n_cmds, sizeof(int) );
-	Proc.min_needed = Proc.max_needed = 1;
-	Proc.status = UNEXPANDED;
+	(void) sprintf (buffer, "Status = %d", UNEXPANDED);
+	ASSERT (job.InsertOrUpdate (buffer));
 
 	SetUniverse();
-/*	fprintf( stderr, "Universe = %d\n", Proc.universe ); */
-
-	switch( Proc.universe ) {
-		case STANDARD:
-			Proc.remote_syscalls = TRUE;
-			Proc.checkpoint = TRUE;
-			break;
-		case PVM:
-			Proc.remote_syscalls = TRUE;
-			Proc.checkpoint = FALSE;
-			break;
-		case PIPE:
-			Proc.remote_syscalls = TRUE;
-			Proc.checkpoint = FALSE;
-			break;
-		case VANILLA:
-			Proc.remote_syscalls = FALSE;
-			Proc.checkpoint = FALSE;
-			break;
-		default:
-			EXCEPT( "Unknown Proc.universe (%d)", Proc.universe );
+	
+	switch(JobUniverse) 
+	{
+	  case STANDARD:
+		ASSERT (job.InsertOrUpdate ("Remote_syscalls = 1"));
+		ASSERT (job.InsertOrUpdate ("Checkpoint = 1"));
+		break;
+	  case PVM:
+		ASSERT (job.InsertOrUpdate ("Remote_syscalls = 1"));
+		ASSERT (job.InsertOrUpdate ("Checkpoint = 0"));
+		break;
+	  case PIPE:
+		ASSERT (job.InsertOrUpdate ("Remote_syscalls = 1"));
+		ASSERT (job.InsertOrUpdate ("Checkpoint = 0"));
+		break;
+	  case VANILLA:
+		ASSERT (job.InsertOrUpdate ("Remote_syscalls = 0"));
+		ASSERT (job.InsertOrUpdate ("Checkpoint = 0"));
+		break;
+	  default:
+		EXCEPT( "Unknown universe (%d)", JobUniverse );
 	}
 
-	for( i=0; i<argc; i++ ) {
-		strcpy( IckptName, gen_ckpt_name(0,Proc.id.cluster,ICKPT,i) );
-		_mkckpt(IckptName,argv[i]);
-		Proc.cmd[i] = string_copy( argv[i] );
-	}
-
-
+	// generate initial checkpoint file
+	strcpy( IckptName, gen_ckpt_name(0,ClusterId,ICKPT,i) );
+	_mkckpt(IckptName, ename);
+		
 	exec_set = 1;
 }
 
@@ -382,53 +397,65 @@ SetUniverse()
 	char	*univ;
 	char	*mach_count;
 	int		i;
+	int     ckpt;
 	P_DESC	dummy;
 	char	*ptr;
 
 	univ = condor_param(Universe);
 
-	if( univ && stricmp(univ,"pvm") == MATCH ) {
-		Proc.universe = PVM;
-		Proc.checkpoint = FALSE;
+	if( univ && stricmp(univ,"pvm") == MATCH ) 
+	{
+		int tmp;
+
+		JobUniverse = PVM;
+		(void) sprintf (buffer, "Universe = %d", PVM);
+		ASSERT (job.InsertOrUpdate (buffer));
+		ASSERT (job.InsertOrUpdate ("Checkpoint = 0"));
+
 		mach_count = condor_param(MachineCount);
+
 		if (mach_count != NULL) {
 			for (ptr = mach_count; *ptr && *ptr != '.'; ptr++) ;
 			if (*ptr != '\0') {
 				*ptr = '\0';
 				ptr++;
 			}
-			Proc.min_needed = atoi(mach_count);
-			Proc.max_needed = Proc.min_needed;
+
+			tmp = atoi(mach_count);
+			(void) sprintf (buffer, "MinHosts = %d", tmp);
+			ASSERT (job.InsertOrUpdate (buffer));
+			
 			for ( ; !isdigit(*ptr) && *ptr; ptr++) ;
 			if (*ptr != '\0') {
-				Proc.max_needed = atoi(ptr);
+				tmp = atoi(ptr);
 			}
+
+			(void) sprintf (buffer, "MaxHosts = %d", tmp);
+			ASSERT (job.InsertOrUpdate (buffer));
 		}
 		return;
 	};
 
 	if( univ && stricmp(univ,"pipe") == MATCH ) {
-		Proc.universe = PIPE;
-		Proc.checkpoint = FALSE;
+		JobUniverse = PIPE;
+		(void) sprintf (buffer, "Universe = %d", PIPE);
+		ASSERT (job.InsertOrUpdate (buffer));
+		ASSERT (job.InsertOrUpdate ("Checkpoint = 0"));
 		return;
 	};
 
 	if( univ && stricmp(univ,"vanilla") == MATCH ) {
-		Proc.universe = VANILLA;
+		JobUniverse = VANILLA;
+		(void) sprintf (buffer, "Universe = %d", VANILLA);
+		ASSERT (job.InsertOrUpdate (buffer));
 		return;
 	};
 
-	if( Proc.n_cmds == 1 ) {
-#if defined(ALL_VANILLA)
-		Proc.universe = VANILLA;
-#else
-		Proc.universe = STANDARD;
-		Proc.checkpoint = TRUE;
-#endif
-		Proc.n_pipes = 0;
-	} else {
-		Proc.universe = PIPE;
-	}
+	JobUniverse = STANDARD;
+	(void) sprintf (buffer, "Universe = %d", STANDARD);
+	ASSERT (job.InsertOrUpdate (buffer));
+
+	return;
 }
 
 void
@@ -437,6 +464,7 @@ SetImageSize()
 	int		size;
 	char	*tmp;
 	char	*p;
+	char    buff[2048];
 	int		mem_req = 0;
 	int		i;
 
@@ -457,15 +485,16 @@ SetImageSize()
 			EXCEPT( "Image Size must be positive" );
 		}
 	} else {
-		size = 0;
-		for( i=0; i<Proc.n_cmds; i++ ) {
-			size += calc_image_size( Proc.cmd[i] );
-		}
+		ASSERT (job.LookupString ("Cmd", buff));
+		size = calc_image_size( buff );
 	}
 
-		/* It's reasonable to expect the image size will be at least the
-		   physical memory requirement, so make sure it is. */
-	for( p=Proc.requirements; *p; p++ ) {
+
+	/* It's reasonable to expect the image size will be at least the
+	   physical memory requirement, so make sure it is. */
+	  
+	strcpy (buff, JobRequirements);	
+	for( p=buff; *p; p++ ) {
 		if( strincmp("Memory",p,6) == 0 ) {
 			while( *p && !isdigit(*p) ) {
 				p++;
@@ -476,11 +505,9 @@ SetImageSize()
 			break;
 		}
 	}
-	if( mem_req > size ) {
-		Proc.image_size = mem_req;
-	} else {
-		Proc.image_size = size;
-	}
+
+	(void)sprintf (buffer, "Image_size = %d", mem_req > size ? mem_req : size);
+	ASSERT (job.InsertOrUpdate (buffer));
 }
 
 /*
@@ -500,177 +527,6 @@ calc_image_size( char *name )
 	return (buf.st_size + 1023) / 1024;
 }
 
-/*
-** The "pipe" command is a list of pipe specifications.  The list
-** may be separated by commas.  Each specification looks like
-**
-** 	writer_name < opt_pipe_name > reader_name
-**
-** writer_name and reader_name must be names of commands listed in
-** the "executable" command.  opt_pipe_name is either the name
-** associated with a named pipe, or may be null.  In that case
-** the pipe will be buile from fd 0 of the writer to fd 1
-** of the reader.
-*/
-char	*TokStream;
-void
-SetPipes()
-{
-	char	*str;
-	char	*token;
-	int		i;
-	P_DESC	pipe_array[256];
-
-	if( (str = condor_param("pipe")) == NULL ) {
-/*		Proc.n_pipes = 0; */
-		return;
-	}
-		
-	printf( "Pipe macro = \"%s\"\n", str );
-
-	TokStream = str;
-
-	for( i=0; ; i++ ) {
-		
-			/* name of writer */
-		token = get_tok();
-		if( token == NULL )
-			break;
-
-		pipe_array[i].writer = find_cmd( token );
-
-			/* Should be '<' */
-		token = get_tok();	/* < */
-		if( token[0] != '<' ) {
-			EXCEPT( "Syntax error on \"pipe\" command" );
-		}
-
-			/* May be name of pipe, or '>' */
-		token = get_tok();	
-		if( token[0] == '>' ) {
-			pipe_array[i].name = NULL;
-		} else {
-			pipe_array[i].name = token;
-			check_pipe_name( token );
-			token = get_tok();
-			if( token[0] != '>' ) {
-				EXCEPT( "Syntax error on \"pipe\" command" );
-			}
-		}
-
-		token = get_tok();
-		pipe_array[i].reader = find_cmd( token );
-	}
-
-	if( !topology_check(pipe_array,i) ) {
-		EXCEPT( "Only simple left to right pipelines are allowed" );
-	}
-
-	Proc.n_pipes = i;
-	Proc.pipe = (P_DESC *)malloc( Proc.n_pipes * sizeof(P_DESC) );
-	memcpy( Proc.pipe, pipe_array, Proc.n_pipes * sizeof(P_DESC) );
-
-
-}
-
-/*
-** Check the name for a named pipe.  For now this must be a
-** simple file name not containing any path, either relative
-** or absolute.
-*/
-void
-check_pipe_name( char *name )
-{
-	while( *name ) {
-		if( *name == '/' ) {
-			EXCEPT( "Named pipes must be simple file name, no paths" );
-		}
-		name += 1;
-	}
-}
-
-/*
-** Check the topology of a set of pipes between processes.  For now
-** the pipes must be a single line left to right with "left to right"
-** being defined by the order in which the processes were named in
-** the "executable" line.
-*/
-BOOLEAN
-topology_check( P_DESC pipe_array[], int n_pipes )
-{
-	int		i;
-
-	for( i=0; i<n_pipes; i++ ) {
-		if( pipe_array[i].reader < pipe_array[i].writer ) {
-			return FALSE;
-		}
-	}
-	return TRUE;
-}
-
-/*
-** Given the name of an executable which is already stored in the
-** Proc structure, return it's index in the "cmd" array.  Return
-** -1 if it is not found.
-*/
-int
-find_cmd( char *name )
-{
-	int		i;
-
-	for( i=0; i<Proc.n_cmds; i++ ) {
-		if( strcmp(name,Proc.cmd[i]) == MATCH ) {
-			return i;
-		}
-	}
-	EXCEPT( "Can't build pipe for \"%s\" - not in your \"executable\" command");
-
-		// Can never get here.
-	return -1;
-}
-
-/*
-** Trivial lexical analyzer for statements describing pipes.  The
-** tokens are character strings, '<', and '>'.  Commas and
-** white space are ignored.  NULL is returned both at end of
-** input and in case of errors.
-*/
-char *
-get_tok()
-{
-	char	buf[256], *dst = buf;
-	char	*p = TokStream;
-
-	while( *p && isspace(*p) ) {
-		p++;
-	}
-
-	if( isalpha(*p) ) {
-		while( *p && *p != '<' && *p != '>' && *p != ','
-												&& !isspace(*p) ) {
-			*dst++ = *p++;
-		}
-		*dst = '\0';
-		TokStream = p;
-		return string_copy( buf );
-	}
-
-	if( *p == '<' || * p == '>' ) {
-		*dst++ = *p++;
-		*dst = '\0';
-		TokStream = p;
-		return string_copy( buf );
-	}
-
-	if( *p == ',' ) {
-		TokStream++;
-		return get_tok();
-	}
-
-	return NULL;
-}
-
-
 void
 SetStdFile( int which_file )
 {
@@ -678,63 +534,56 @@ SetStdFile( int which_file )
 	char	macro_name[128];
 	char	*macro_value;
 	char	*generic_name;
+	char    buffer[_POSIX_PATH_MAX + 32];
 
-	switch( which_file ) {
-		case 0:
-			generic_name = Input;
-			break;
-		case 1:
-			generic_name = Output;
-			break;
-		case 2:
-			generic_name = Error;
-			break;
-		default:
-			EXCEPT( "Unknown standard file descriptor (%d)\n", which_file );
+	switch( which_file ) 
+	{
+	  case 0:
+		generic_name = Input;
+		break;
+	  case 1:
+		generic_name = Output;
+		break;
+	  case 2:
+		generic_name = Error;
+		break;
+	  default:
+		EXCEPT( "Unknown standard file descriptor (%d)\n", which_file );
 	}
 
 
-	for( i=0; i<Proc.n_cmds; i++ ) {
+	macro_value = condor_param( generic_name );
+	
+	if( !macro_value || *macro_value == '\0') 
+	{
+		macro_value = "/dev/null";
+	}
+	
+	if( whitespace(macro_value) ) 
+	{
+		EXCEPT("The '%s' takes exactly one argument (%s)", generic_name, 
+			   macro_value);
+	}	
 
-			/* Name of file should be stored under macro
-			<cmd_name>.<generic_name> where <generic_name> is
-			one of "input", "output", "error" - try to find
-			it that way. */
-		sprintf( macro_name, "%s.%s", Proc.cmd[i], generic_name );
-		macro_value = condor_param(macro_name);
+	check_path_length(macro_value, generic_name);
 
-			/* If we didn't find it, and there is only one
-			   executable, this could be an old job description
-			   file - try macro name <generic_name>. */
-		if( !macro_value && Proc.n_cmds == 1 ) {
-			macro_value = condor_param( generic_name );
-		}
-
-		if( !macro_value || macro_value[0] == '\0') {
-			macro_value = "/dev/null";
-		}
-
-		if( whitespace(macro_value) ) {
-			EXCEPT("The '%s' takes exactly one argument (%s)",
-					generic_name, macro_value);
-		}
-
-		check_path_length(macro_value, generic_name);
-
-		switch( which_file ) {
-			case 0:
-				Proc.in[i] = macro_value;
-				check_open( macro_value, O_RDONLY );
-				break;
-			case 1:
-				Proc.out[i] = macro_value;
-				check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
-				break;
-			case 2:
-				Proc.err[i] = macro_value;
-				check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
-				break;
-		}
+	switch( which_file ) 
+	{
+	  case 0:
+		(void) sprintf (buffer, "In = \"%s\"", macro_value);
+		ASSERT (job.InsertOrUpdate (buffer));
+		check_open( macro_value, O_RDONLY );
+		break;
+	  case 1:
+		(void) sprintf (buffer, "Out = \"%s\"", macro_value);
+		ASSERT (job.InsertOrUpdate (buffer));
+		check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
+		break;
+	  case 2:
+		(void) sprintf (buffer, "Err = \"%s\"", macro_value);
+		ASSERT (job.InsertOrUpdate (buffer));
+		check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
+		break;
 	}
 }
 
@@ -742,15 +591,21 @@ void
 SetPriority()
 {
 	char *prio = condor_param(Priority);
+	int  prioval = 0;
 
-	if( prio == NULL ) {
-		Proc.prio = 0;
-	} else {
-		Proc.prio = atoi( prio );
-		if( Proc.prio < -20 || Proc.prio > 20 ) {
-			EXCEPT("Priority must be in the range -20 thru 20 (%d)",
-					Proc.prio );
+	if( prio == NULL ) 
+	{
+		ASSERT (job.InsertOrUpdate ("Prio = 0"));
+	} 
+	else 
+	{
+		prioval = atoi (prio);
+		if( prioval < -20 || prioval > 20 ) 
+		{
+			EXCEPT("Priority must be in the range -20 thru 20 (%d)", prioval );
 		}
+		(void) sprintf (buffer, "Prio = %d", prioval);
+		ASSERT (job.InsertOrUpdate (buffer));
 	}
 }
 
@@ -758,18 +613,23 @@ void
 SetNotification()
 {
 	char *how = condor_param(Notification);
+	int notification;
 
 	if( (how == NULL) || (stricmp(how, "COMPLETE") == 0) ) {
-		Proc.notification = NOTIFY_COMPLETE;
+		notification = NOTIFY_COMPLETE;
 	} else if( stricmp(how, "NEVER") == 0 ) {
-		Proc.notification = NOTIFY_NEVER;
+		notification = NOTIFY_NEVER;
 	} else if( stricmp(how, "ALWAYS") == 0 ) {
-		Proc.notification = NOTIFY_ALWAYS;
+		notification = NOTIFY_ALWAYS;
 	} else if( stricmp(how, "ERROR") == 0 ) {
-		Proc.notification = NOTIFY_ERROR;
-	} else {
-		EXCEPT("Notification must be 'Never', 'Always', 'Complete', or 'Error'");
+		notification = NOTIFY_ERROR;
+	} else 
+	{
+	EXCEPT("Notification must be 'Never', 'Always', 'Complete', or 'Error'");
 	}
+
+	(void) sprintf (buffer, "Notification = %d", notification);
+	ASSERT (job.InsertOrUpdate (buffer));
 }
 
 void
@@ -777,52 +637,24 @@ SetNotifyUser()
 {
 	char *who = condor_param(NotifyUser);
 
-	if (who == NULL)
-		strcpy (WhomToNotify, "");
-	else
-		strcpy (WhomToNotify, who);
+	if (who)
+	{
+		(void) sprintf (buffer, "NotifyUser = \"%s\"", who);
+		ASSERT (job.InsertOrUpdate (buffer));
+	}
 }
 	
 void
 SetArguments()
 {
 	char	*args = condor_param(Arguments);
-	char	*macro_value;
-	char	macro_name[ 128 ];
-	int		i;
 
 	if( args == NULL ) {
 		args = "";
 	}
 
-	for( i=0; i<Proc.n_cmds; i++ ) {
-
-			/* Command line arguments should be stored under macro
-			<cmd_name>.arguments - try to find it that way. */
-		sprintf( macro_name, "%s.arguments", Proc.cmd[i] );
-		macro_value = condor_param(macro_name);
-		if( !macro_value ) {
-			sprintf( macro_name, "%s.args", Proc.cmd[i] );
-			macro_value = condor_param(macro_name);
-		}
-
-			/* If we didn't find it, and there is only one
-			   executable, this could be an old job description
-			   file - try macro name <generic_name>. OR, it's PVM
-			   and only one executable is allowed, but n_cmds has
-			   machine count */
-		if( !macro_value && (Proc.n_cmds == 1 || Proc.universe == PVM)) {
-			macro_value = args;
-		}
-
-		if( !macro_value ) {
-			macro_value = "";
-		}
-
-		check_path_length(macro_value, Arguments);
-
-		Proc.args[i] = macro_value;
-	}
+	sprintf (buffer, "Args = \"%s\"", args);
+	ASSERT (job.InsertOrUpdate (buffer));
 }
 
 #if defined(ALPHA)
@@ -837,24 +669,29 @@ SetEnvironment()
 {
 	char *env = condor_param(Environment);
 	char *shell_env;
+	char *envvalue;
 	struct rlimit rl;
 	char tmp[BUFSIZ];
 
-	Proc.env = "";
+	envvalue = "";
 	/* Defined in command file */
-	if( env != NULL ) {
-		Proc.env = env;
+	if( env != NULL ) 
+	{
+		envvalue = env;
 	}
 	/* Defined in shell environment variable */
-	else if( shell_env = getenv("CONDOR_CORESIZE") ) {
-		sprintf( tmp, "CONDOR_CORESIZE=%s", shell_env );
+	else 
+	if( shell_env = getenv("CONDOR_CORESIZE") ) 
+	{
+		(void) sprintf( tmp, "CONDOR_CORESIZE=%s", shell_env );
 		env = string_copy( tmp );
-		Proc.env = env;
+		envvalue = env;
 	} 
 	/* Defined by shell variable */
-	else {
+	else 
+	{
 #if defined(HPUX9) 		/* hp-ux doesn't support RLIMIT_CORE */
-		Proc.env = "";
+		envvalue = "";
 #else
 		if ( getrlimit( RLIMIT_CORE, &rl ) == -1) {
 			EXCEPT("getrlimit failed");
@@ -862,17 +699,20 @@ SetEnvironment()
 
 		/* RLIM_INFINITY is a magic cookie, don't try converting to kbytes */
 		if( rl.rlim_cur == RLIM_INFINITY) {
-			sprintf( tmp, CoreSizeFmt, rl.rlim_cur );
+			(void) sprintf( tmp, CoreSizeFmt, rl.rlim_cur );
 		} else {
-			sprintf( tmp, CoreSizeFmt, rl.rlim_cur/1024 );
+			(void) sprintf( tmp, CoreSizeFmt, rl.rlim_cur/1024 );
 		}
 		env = string_copy( tmp );
 
 		check_path_length(env, Environment);
 
-		Proc.env = env;
+		envvalue = env;
 #endif
 	}
+
+	(void) sprintf (buffer, "Env = \"%s\"", envvalue);
+	ASSERT (job.InsertOrUpdate (buffer));
 }
 
 void
@@ -880,16 +720,22 @@ SetRootDir()
 {
 	char *rootdir = condor_param(RootDir);
 
-	if( rootdir == NULL ) {
-		Proc.rootdir = "/";
-	} else {
+	if( rootdir == NULL ) 
+	{
+		ASSERT (job.InsertOrUpdate ("Rootdir = \"/\""));
+		(void) strcpy (JobRootdir, "/");
+	} 
+	else 
+	{
 		if( access(rootdir, F_OK|X_OK) < 0 ) {
 			EXCEPT("No such directory: %s", rootdir);
 		}
 
 		check_path_length(rootdir, RootDir);
 
-		Proc.rootdir = rootdir;
+		(void) sprintf (buffer, "Rootdir = \"%s\"", rootdir);
+		ASSERT (job.InsertOrUpdate (buffer));
+		(void) strcpy (JobRootdir, rootdir);
 	}
 }
 
@@ -897,14 +743,21 @@ void
 SetRequirements()
 {
 	char *requirements = condor_param(Requirements);
-	if( requirements == NULL ) {
-		Proc.requirements = "";
-	} else {
-		Proc.requirements = requirements;
+	char *tmp;
+	if( requirements == NULL ) 
+	{
+		(void) strcpy (JobRequirements, "");
+	} 
+	else 
+	{
+		(void) strcpy (JobRequirements, requirements);
 	}
 
-	Proc.requirements = check_requirements( Proc.requirements );
+	tmp = check_requirements( JobRequirements );
+	(void) sprintf (buffer, "Requirements = %s", tmp);
+	strcpy (JobRequirements, tmp);
 
+	ASSERT (job.InsertOrUpdate (buffer));
 }
 
 void
@@ -920,10 +773,12 @@ SetPreferences()
 		(void)strcpy( preferences, orig_pref );
 	}
 
-	if ( Proc.universe == STANDARD ) {
+	if ( JobUniverse == STANDARD ) 
+	{
 		ptr = param("APPEND_PREF_STANDARD");
 	} 
-	if ( Proc.universe == VANILLA ) {
+	if ( JobUniverse == VANILLA ) 
+	{
 		ptr = param("APPEND_PREF_VANILLA");
 	} 
 
@@ -937,11 +792,14 @@ SetPreferences()
 		(void) strcat( preferences,")" );
 	}
 				
-	if( preferences[0] == '\0' ) {
-		Proc.preferences = "TRUE";
-	} else {
-		check_expr_syntax(  preferences );
-		Proc.preferences = preferences;
+	if( preferences[0] == '\0' ) 
+	{
+		ASSERT (job.InsertOrUpdate ("Preferences = TRUE"));
+	} 
+	else 
+	{
+		(void) sprintf (buffer, "Preferences = %s", preferences);
+		ASSERT (job.InsertOrUpdate (buffer));
 	}
 }
 
@@ -954,7 +812,7 @@ SetIWD()
 
 	shortname = condor_param( InitialDir );
 
-	if( strcmp(Proc.rootdir,"/") != MATCH )	{	/* Rootdir specified */
+	if( strcmp(JobRootdir,"/") != MATCH )	{	/* Rootdir specified */
 		if( shortname ) {
 			(void)strcpy( iwd, shortname );
 		} else {
@@ -974,12 +832,12 @@ SetIWD()
 	}
 
 	compress( iwd );
-		
 	check_path_length(iwd, InitialDir);
-
 	check_iwd( iwd );
 
-	Proc.iwd = string_copy( iwd );
+	(void) sprintf (buffer, "Iwd = \"%s\"", iwd);
+	ASSERT (job.InsertOrUpdate (buffer));
+	strcpy (JobIwd, iwd);
 }
 
 void
@@ -987,7 +845,7 @@ check_iwd( char *iwd )
 {
 	char	pathname[ _POSIX_PATH_MAX ];
 
-	(void)sprintf( pathname, "%s/%s", Proc.rootdir, iwd );
+	(void)sprintf( pathname, "%s/%s", JobRootdir, iwd );
 	compress( pathname );
 
 	if( access(pathname, F_OK|X_OK) < 0 ) {
@@ -1016,12 +874,12 @@ read_condor_file( FILE *fp )
 		if( stricmp(name, "queue") == 0 ) {
 			queue();
 			continue;
-		}
-
+		}	
+		
 #define isop(c)		((c) == '=')
-
-			/* Separate out the parameter name */
-/*
+		
+		/* Separate out the parameter name */
+/*		
 		for( ptr=name ; *ptr && !isspace(*ptr) && !isop(*ptr); ptr++ );
 */
 
@@ -1111,58 +969,36 @@ queue()
 	char tmp[ BUFSIZ ];
 	static int i = 0;
 	int		rval;
-	char  *blah;
-	ProcObj	*proc_obj;
 
 	/*
 	**	Insert the current idea of the cluster and
 	**	process number into the hash table.
 	*/
 	GotQueueCommand = 1;
-	(void)sprintf(tmp, "%d", Proc.id.cluster);
+	(void)sprintf(tmp, "%d", ClusterId);
 	set_condor_param(Cluster, tmp);
-	(void)sprintf(tmp, "%d", Proc.id.proc);
+	(void)sprintf(tmp, "%d", ProcId);
 	set_condor_param(Process, tmp);
 
-
 	SetExecutable();
-	blah = string_copy(Proc.cmd[0]);
 	SetRootDir();
 	SetIWD();
 	SetPriority();
 	SetArguments();
 	SetEnvironment();
 	SetNotification();
-	SetNotifyUser();         /* Set NotifyUser parameter  --RR */
+	SetNotifyUser();
 	SetRequirements();
 	SetPreferences();
-	SetPipes();
 	SetStdFile( 0 );
 	SetStdFile( 1 );
 	SetStdFile( 2 );
-	Proc.cmd[0] = blah;
 	SetImageSize();
 
 
-#if 0
-	if (Proc.id.cluster == -1) {
-		Proc.id.cluster = NewCluster();
-		if (Proc.id.cluster == -1) {
-			EXCEPT("NewCluster");
-		}
-	}
-#endif
+	ProcId = NewProc (ClusterId);
 
-	Proc.id.proc = NewProc( Proc.id.cluster );
-#if 0
-	rval = StoreProc( Q, &Proc );
-#else
-	rval = SaveProc( &Proc );
-	/* Set NotifyUser parameter in Job ad   --RR */
-	if (strcmp (WhomToNotify, "") != 0)
-		SetAttributeString (Proc.id.cluster, Proc.id.proc, "NotifyUser", 
-											WhomToNotify);	
-#endif
+	rval = SaveClassAd( job );
 
 	switch( rval ) {
 		case 0:			/* Success */
@@ -1172,19 +1008,18 @@ queue()
 			DoCleanup();
 			exit( 1 );
 		default:		/* Failed for some other reason... */
-			EXCEPT( "SaveProc failed" );
+			EXCEPT( "Failed to queue" );
 	}
 
 	ClusterCreated = TRUE;
 	
-	if( !Quiet ) {
-		// proc_obj = ProcObj::create( (GENERIC_PROC *)&Proc );
-		proc_obj = ProcObj::create( (GENERIC_PROC *) &Proc );
-		proc_obj->display();
-		// display_proc_long( &Proc );
+	if( !Quiet ) 
+	{
+		fprintf(stdout, "Proc %d.%d:\n", ClusterId, ProcId);
+		job.fPrint (stdout);
 	}
 
-	log_submit();
+	// log_submit();
 }
 
 char *
@@ -1233,15 +1068,15 @@ check_requirements( char *orig )
 		magic_check();
 	}
 
-/*	if (Proc.universe == PVM) {
+	if (JobUniverse == PVM) {
 		char	localhost[80];
 		gethostname(localhost);
 		(void)strcat( answer, " && (Machine != \"" );
 		(void)strcat( answer, localhost );
 		(void)strcat( answer, "\")" );
-	} */
+	} 
 
-	if ( Proc.universe == VANILLA ) {
+	if ( JobUniverse == VANILLA ) {
 		ptr = param("APPEND_REQ_VANILLA");
 		if ( ptr != NULL ) {
 			(void) strcat( answer," && (" );
@@ -1263,7 +1098,7 @@ check_requirements( char *orig )
 */
 	}
 
-	if ( Proc.universe == STANDARD ) {
+	if ( JobUniverse == STANDARD ) {
 		ptr = param("APPEND_REQ_STANDARD");
 		if ( ptr != NULL ) {
 			(void) strcat( answer," && (" );
@@ -1272,7 +1107,6 @@ check_requirements( char *orig )
 		}
 	}
 				
-	check_expr_syntax(  answer );
 	return answer;
 }
 
@@ -1283,21 +1117,10 @@ check_open( char *name, int flags )
 	char	pathname[_POSIX_PATH_MAX];
 	int		i;
 
-		/* See is the file refers to a named pipe.  In that
-		** case we'll build it at run time.
-		*/
-	if (Proc.universe == PIPE) {
-		for( i=0; i<Proc.n_pipes; i++ ) {
-			if( strcmp(name,Proc.pipe[i].name) == MATCH ) {
-				return;
-			}
-		}
-	}
-			
 	if( name[0] == '/' ) {	/* absolute wrt whatever the root is */
-		(void)sprintf( pathname, "%s%s", Proc.rootdir, name );
+		(void)sprintf( pathname, "%s%s", JobRootdir, name );
 	} else {	/* relative to iwd which is relative to the root */
-		(void)sprintf( pathname, "%s/%s/%s", Proc.rootdir, Proc.iwd, name );
+		(void)sprintf( pathname, "%s/%s/%s", JobRootdir, JobIwd, name );
 	}
 	compress( pathname );
 
@@ -1307,8 +1130,6 @@ check_open( char *name, int flags )
 	(void)close( fd );
 }
 
-		
-
 
 void
 usage()
@@ -1317,28 +1138,22 @@ usage()
 	exit( 1 );
 }
 
+
 int
 DoCleanup()
 {
-	if( ClusterCreated ) {
+	if( ClusterCreated ) 
+	{
 		// TerminateCluster() may call EXCEPT() which in turn calls 
 		// DoCleanup().  This lead to infinite recursion which is bad.
 		ClusterCreated = 0;
-#if 0
-		TerminateCluster( Q, Proc.id.cluster, SUBMISSION_ERR );
-#endif
-		DestroyCluster( Proc.id.cluster );
+		DestroyCluster( ClusterId );
 	}
-	if( IckptName[0] ) {
+	if( IckptName[0] ) 
+	{
 		(void)unlink( IckptName );
 	}
 
-#if 0
-	if( Q ) {
-		CloseJobQueue( Q );
-		Q = 0;
-	}
-#endif
 	return 0;		// For historical reasons...
 }
 
@@ -1415,92 +1230,6 @@ compress( char *str )
 	}
 }
 
-CONTEXT	*MachineContext;
-
-void
-check_expr_syntax( char *expr )
-{
-		CONTEXT	*context;
-	char	line[1024];
-	ELEM	*dummy;
-
-	if( MachineContext == NULL ) {
-		MachineContext = fake_machine_context();
-	}
-
-	(void)sprintf( line, "DUMMY = %s && (Disk >= 0)", expr );
-	context = create_context();
-	store_stmt( scan(line), context );
-
-	dummy = eval( "DUMMY", context, MachineContext );
-	if( !dummy || dummy->type != BOOL ) {
-		fprintf( stderr, "Syntax error: \"%s\"\n", expr );
-		DoCleanup();
-		exit( 1 );
-	}
-	free_elem( dummy );
-	free_context( context );
-}
-
-CONTEXT	*
-fake_machine_context()
-{
-	CONTEXT	*answer;
-	char	line[1024];
-
-	answer = create_context();
-
-	(void)sprintf( line, "Arch = \"fake\"" );
-	store_stmt( scan(line), answer );
-
-	(void)sprintf( line, "OpSys = \"fake\"" );
-	store_stmt( scan(line), answer );
-
-	(void)sprintf( line, "Disk = 0" );
-	store_stmt( scan(line), answer );
-
-	(void)sprintf( line, "Memory = 0" );
-	store_stmt( scan(line), answer );
-
-	(void)sprintf( line, "Machine = \"nobody\"" );
-	store_stmt( scan(line), answer );
-
-	(void)sprintf( line, "Subnet = \"128.105.255\"" );
-	store_stmt( scan(line), answer );
-
-	(void)sprintf( line, "Flavor = \"none\"" );
-	store_stmt( scan(line), answer );
-
-	(void)sprintf( line, "Nest = \"none\"" );
-	store_stmt( scan(line), answer );
-
-	(void)sprintf( line, "FilesystemDomain = \"somewhere.xxx\"" );
-	store_stmt( scan(line), answer );
-
-	(void)sprintf( line, "UidDomain = \"somewhere.xxx\"" );
-	store_stmt( scan(line), answer );
-
-	(void)sprintf( line, "VirtualMemory = 0" );
-	store_stmt( scan(line), answer );
-
-	(void)sprintf( line, "ConsoleIdle = 0" );
-	store_stmt( scan(line), answer );
-
-	(void)sprintf( line, "Clock_Min = 0" );
-	store_stmt( scan(line), answer );
-
-	(void)sprintf( line, "Clock_Day = 0" );
-	store_stmt( scan(line), answer );
-
-	(void)sprintf( line, "MIPS = 0" );
-	store_stmt( scan(line), answer );
-
-	(void)sprintf( line, "KFLOPS = 0" );
-	store_stmt( scan(line), answer );
-
-	return answer;
-}
-
 void
 magic_check()
 {
@@ -1523,92 +1252,103 @@ int SetSyscalls( int foo ) { return foo; }
 }
 
 #include "environ.h"
-extern "C" {
-#include "user_log.h"
-USER_LOG *InitUserLog(const char *own, const char *file, int c, int p, int s 
-);
-}
+#include "user_log.c++.h"
 
+#if 0
 void
 log_submit()
 {
-	Environ env;
-	char	*simple_name;
-	char	*path;
-	char	tmp[ _POSIX_PATH_MAX ];
-	USER_LOG	*usr_log;		/* XXX */
-	int		hours, minutes;
+    Environ env;
+    char    *simple_name;
+    char    *path;
+    char    tmp[ _POSIX_PATH_MAX ];
+    UserLog usr_log;
+    SubmitEvent jobSubmit;
 
-		// Get name of user log file (if any)
-	env.add_string( Proc.env );
-	if( (simple_name=env.getenv("LOG")) == NULL ) {
-		return;
-	}
+        // Get name of user log file (if any)
+    env.add_string( Proc.env );
+    if( (simple_name=env.getenv("LOG")) == NULL ) {
+        return;
+    }
 
-		// Convert to a pathname using IWD if needed
-	if( simple_name[0] == '/' ) {
-		path = simple_name;
-	} else {
-		sprintf( tmp, "%s/%s", Proc.iwd, simple_name );
-		path = tmp;
-	}
+        // Convert to a pathname using IWD if needed
+    if( simple_name[0] == '/' ) {
+        path = simple_name;
+    } else {
+        sprintf( tmp, "%s/%s", Proc.iwd, simple_name );
+        path = tmp;
+    }
 
-		// Figure out conversion from GMT to local time
-	get_time_conv( hours, minutes );
-
-		// Output the information
-	usr_log = InitUserLog( Proc.owner, path, Proc.id.cluster, Proc.id.proc, 0 );
-	PutUserLog( usr_log, SUBMIT, ThisHost, hours, minutes );
-	CloseUserLog( usr_log );
+        // Output the information
+    strcpy (jobSubmit.submitHost, ThisHost);
+    usr_log.initialize ( Proc.owner, path, Proc.id.cluster, Proc.id.proc, 0 );
+    if (!usr_log.writeEvent (&jobSubmit))
+        dprintf (D_ALWAYS, "Error logging submit event.\n");
 }
+#endif
 
 #define SECOND 1
 #define MINUTE (SECOND * 60)
 #define HOUR (MINUTE * 60)
 
-void
-get_time_conv( int &hours, int &minutes )
+
+int
+SaveClassAd (ClassAd &ad)
 {
-	time_t	gmt_now;
-	time_t	local_now;
-	time_t	diff;
-	int		is_dst;
-	struct tm	*tm;
-	static int	init_done;
-	static int	save_hours;
-	static int	save_minutes;
+	ExprTree *tree, *lhs, *rhs;
+	char lhstr[128], rhstr[2048];
+	char buffer[4096];
+	int  retval;
 
-	if( init_done ) {
-		hours = save_hours;
-		minutes = save_minutes;
-		return;
-	}
-		
-		/* Get the current calendar time */
-	time( &local_now );
+	SetAttributeInt (ClusterId, ProcId, "ClusterId", ClusterId);
+	SetAttributeInt (ClusterId, ProcId, "ProcId", ProcId);
 
-		/* Find out if local time is affected by Daylight Savings Time */
-	tm = localtime( &local_now );
-	is_dst = tm->tm_isdst;
-
-		/* Convert calendar time to struct tm in GMT */
-	tm = gmtime( &local_now );
-
-		/* Convert struct tm back to a calendar time */
-	tm->tm_isdst = is_dst;
-	gmt_now = mktime( tm );
-
-		/* Get difference in seconds between GMT and Local */
-	diff = (local_now - gmt_now);
-
-		/* Convert to hours and minutes */
-	hours = diff / HOUR;
-	minutes = diff % HOUR;
-	if( minutes < 0 ) {
-		minutes = -minutes;
+	job.ResetExpr();
+	while (tree = job.NextExpr())
+	{
+		lhstr[0] = '\0';
+		rhstr[0] = '\0';
+		if (lhs = tree->LArg()) lhs->PrintToStr (lhstr);
+		if (rhs = tree->RArg()) rhs->PrintToStr (rhstr);
+		if (!lhs || !rhs) retval = -1;
+		if (SetAttribute (ClusterId, ProcId, lhstr, rhstr) == -1)
+			retval = -1;
 	}
 
-	save_hours = hours;
-	save_minutes = minutes;
-	init_done = TRUE;
+	return retval;
+}
+
+
+int 
+InsertJobExpr (char *expr)
+{
+	ExprTree *tree, *lhs, *rhs;
+	char      name[128];
+	int retval = Parse (expr, tree);
+
+	if (retval)
+	{
+		fprintf (stderr, "Parse error in expression: %s\n", expr);
+		EXCEPT ("Error in submit file");
+	}
+
+	if (lhs = tree->LArg()) 
+		lhs->PrintToStr (name);
+	else
+	{
+		fprintf (stderr, "Expression not assignment: %s\n", expr);
+		EXCEPT ("Error in submit file");
+	}
+	
+	if (!job.Lookup (name)) 
+		job.InsertOrUpdate (expr);
+	else
+	{
+		if (rhs = tree->RArg()) 
+			job.UpdateExpr (name, tree);
+		else
+		{
+			EXCEPT ("Error in expression: %s\n", expr);
+		}
+	}
 }
