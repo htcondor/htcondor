@@ -2,7 +2,7 @@
 use strict;
 
 # Things we know about
-my $Hawkeye = "hawkeye_dir";
+my $Hawkeye = "hawkeye_release";
 my $Release = "release_dir";
 my @BinDirs = ( "bin", "sbin" );
 my @KillList = (

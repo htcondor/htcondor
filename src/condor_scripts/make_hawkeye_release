@@ -4,7 +4,7 @@ use strict;
 # Version info, dirs, etc
 my $HawkeyeVersion = "";
 my $Temp = "../tmp";
-my $HawkeyeDir = "hawkeye_dir";
+my $HawkeyeRelease = "hawkeye_release";
 my @BinDirs = ( "bin", "sbin" );
 my $Modules = "hawkeye_modules";
 my $ModulesTarget = "modules";
@@ -59,7 +59,7 @@ print "\n == Filling temp release directory ==\n\n";
 # Start populating it..
 foreach my $Bin ( @BinDirs )
 {
-    CopyAll( "$HawkeyeDir/$Bin", "$Temp/$Bin", "*" );
+    CopyAll( "$HawkeyeRelease/$Bin", "$Temp/$Bin", "*" );
 }
 
 # Copy the modules
