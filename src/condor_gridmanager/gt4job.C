@@ -1085,6 +1085,8 @@ gmState=GM_SUBMIT;
 					jobContact = NULL;
 					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
 									   NULL_JOB_CONTACT );
+					globusState = GT4_JOB_STATE_UNSUBMITTED;
+					UpdateJobAdInt( ATTR_GLOBUS_STATUS, globusState );
 					requestScheddUpdate( this );
 					jmDown = false;
 				}
@@ -1144,6 +1146,8 @@ gmState=GM_SUBMIT;
 			jmDown = false;
 			UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
 							   NULL_JOB_CONTACT );
+			globusState = GT4_JOB_STATE_UNSUBMITTED;
+			UpdateJobAdInt( ATTR_GLOBUS_STATUS, globusState );
 			requestScheddUpdate( this );
 
 			if ( condorState == REMOVED ) {
@@ -1275,6 +1279,10 @@ gmState=GM_SUBMIT;
 				globusState = GT4_JOB_STATE_UNKNOWN;
 				UpdateJobAdInt( ATTR_GLOBUS_STATUS, globusState );
 				//UpdateGlobusState( GT4_JOB_STATE_UNKNOWN, NULL );
+			} else if ( !jobContact &&
+						globusState != GT4_JOB_STATE_UNSUBMITTED ) {
+				globusState = GT4_JOB_STATE_UNSUBMITTED;
+				UpdateJobAdInt( ATTR_GLOBUS_STATUS, globusState );
 			}
 			// If the condor state is already HELD, then someone already
 			// HELD it, so don't update anything else.
