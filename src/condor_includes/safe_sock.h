@@ -59,18 +59,15 @@ public:
 	//
 	virtual int handle_incoming_packet();
 	virtual int end_of_message();
-	virtual int connect(char *, int);
+		/* s can be a hostname or sinful string */
+	virtual int connect(char *s, int port=0);
 	inline int connect(char *h, char *s) { return connect(h,getportbyserv(s));}
 
 
 	// Safe socket services
 	//
 
-	SafeSock();					/* virgin safe_sock		*/
-	SafeSock(int);				/* bind on port			*/
-	SafeSock(char *);			/* bind on serv 		*/
-	SafeSock(char *, int, int timeout_val=0);		/* connect to host/port	*/
-	SafeSock(char *, char *, int timeout_val=0);	/* connect to host/serv	*/
+	SafeSock();
 	~SafeSock();
 	void init();				/* shared initialization method */
 

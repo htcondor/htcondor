@@ -56,17 +56,14 @@ public:
 	//
 	virtual int handle_incoming_packet();
 	virtual int end_of_message();
-	virtual int connect(char *, int);
+		/* s can be a hostname or sinful string */
+	virtual int connect(char *s, int port=0);
 
 
 	// Reliable socket services
 	//
 
-	ReliSock();					/* virgin ReliSock		*/
-	ReliSock(int);				/* listen on port		*/
-	ReliSock(char *);			/* listen on serv 		*/
-	ReliSock(char *, int, int timeout_val=0);		/* connect to host/port	*/
-	ReliSock(char *, char *, int timeout_val=0);	/* connect to host/serv	*/
+	ReliSock();
 	~ReliSock();
 	void init();				/* shared initialization method */
 
