@@ -70,13 +70,15 @@ u_short	htons();
 u_short	ntohs();
 #endif ntohs
 
-#ifndef htonl
-u_long	htonl();
-#endif htonl
+#if !defined(OSF1)
+#	ifndef htonl
+		u_long	htonl();
+#	endif htonl
 
-#ifndef ntohl
-u_long	ntohl();
-#endif ntohl
+#	ifndef ntohl
+		u_long	ntohl();
+#	endif ntohl
+#endif
 
 #ifndef time
 time_t	time();
