@@ -221,11 +221,6 @@ RESCHEDULE_commandHandler (int, Stream *)
 	// ----- Sort the schedd list in decreasing priority order
 	dprintf( D_ALWAYS, "Phase 3:  Sorting schedd ads by priority ...\n" );
 	scheddAds.Sort( (lessThanFunc)comparisonFunction, this );
-	// TODO: the scheddAds should be secondarily sorted based on ATTR_NAME
-	//       because we assume in the code that follows that ads with the
-	//		 same ATTR_NAME are adjacent in the scheddAds list.  this is
-	// 		 usually the case because 95% of the time each user in the
-	// 		 system has a different priority.
 
 	int spin_pie=0;
 	do {
@@ -363,6 +358,13 @@ comparisonFunction (ClassAd *ad1, ClassAd *ad2, void *m)
 	prio1 = mm->accountant.GetPriority(scheddName1);
 	prio2 = mm->accountant.GetPriority(scheddName2);
 	
+	// the scheddAds should be secondarily sorted based on ATTR_NAME
+	// because we assume in the code that follows that ads with the
+	// same ATTR_NAME are adjacent in the scheddAds list.  this is
+	// usually the case because 95% of the time each user in the
+	// system has a different priority.
+
+	if (prio1==prio2) return (strcmp(scheddName1,scheddName2) < 0);
 	return (prio1 < prio2);
 }
 
