@@ -91,6 +91,7 @@ extern char	*Execute;			// Name of directory where user procs execute
 extern "C" {
 	void _updateckpt( char *, char *, char * );
 	int free_fs_blocks(char *filename);
+	void killkids(pid_t, int);
 }
 void open_std_file( int which );
 void set_iwd();
@@ -741,6 +742,9 @@ UserProc::send_sig( int sig )
 	}
 
 	set_root_euid();
+
+	if ( job_class == VANILLA )
+		killkids(pid,sig);
 
 	if( sig != SIGCONT ) {
 		if( kill(pid,SIGCONT) < 0 ) {
