@@ -50,6 +50,11 @@ BaseShadow::BaseShadow() {
 	scheddAddr = NULL;
 	ASSERT( !myshadow_ptr );	// make cetain we're only instantiated once
 	myshadow_ptr = this;
+	common_job_queue_attrs = NULL;
+	hold_job_queue_attrs = NULL;
+	remove_job_queue_attrs = NULL;
+	requeue_job_queue_attrs = NULL;
+	terminate_job_queue_attrs = NULL;
 }
 
 BaseShadow::~BaseShadow() {
@@ -57,6 +62,11 @@ BaseShadow::~BaseShadow() {
 	if (fsDomain) free(fsDomain);
 	if (ckptServerHost) free(ckptServerHost);
 	if (jobAd) FreeJobAd(jobAd);
+	if( common_job_queue_attrs ) { delete common_job_queue_attrs; }
+	if( hold_job_queue_attrs ) { delete hold_job_queue_attrs; }
+	if( remove_job_queue_attrs ) { delete remove_job_queue_attrs; }
+	if( requeue_job_queue_attrs ) { delete requeue_job_queue_attrs; }
+	if( terminate_job_queue_attrs ) { delete terminate_job_queue_attrs; }
 }
 
 void BaseShadow::baseInit( ClassAd *jobAd, char schedd_addr[], 
@@ -91,6 +101,8 @@ void BaseShadow::baseInit( ClassAd *jobAd, char schedd_addr[],
 	
 	config();
 
+	initJobQueueAttrLists();
+
 	initUserLog();
 
 		// Make sure we've got enough swap space to run
@@ -113,6 +125,11 @@ void BaseShadow::baseInit( ClassAd *jobAd, char schedd_addr[],
 	}
 
 	dumpClassad( "BaseShadow::baseInit()", this->jobAd, D_JOB );
+
+		// finally, clear all the dirty bits on this jobAd, so we only
+		// update the queue with things that have changed after this
+		// point. 
+	jobAd->ClearAllDirtyFlags();
 }
 
 void BaseShadow::config()
@@ -163,6 +180,45 @@ void BaseShadow::config()
 	}
 	if (tmp) free(tmp);
 }
+
+
+void
+BaseShadow::initJobQueueAttrLists( void )
+{
+	if( hold_job_queue_attrs ) { delete hold_job_queue_attrs; }
+	if( requeue_job_queue_attrs ) { delete requeue_job_queue_attrs; }
+	if( remove_job_queue_attrs ) { delete remove_job_queue_attrs; }
+	if( terminate_job_queue_attrs ) { delete terminate_job_queue_attrs; }
+	if( common_job_queue_attrs ) { delete common_job_queue_attrs; }
+
+	common_job_queue_attrs = new StringList();
+	common_job_queue_attrs->insert( ATTR_IMAGE_SIZE );
+	common_job_queue_attrs->insert( ATTR_DISK_USAGE );
+	common_job_queue_attrs->insert( ATTR_JOB_REMOTE_SYS_CPU );
+	common_job_queue_attrs->insert( ATTR_JOB_REMOTE_USER_CPU );
+	common_job_queue_attrs->insert( ATTR_TOTAL_SUSPENSIONS );
+	common_job_queue_attrs->insert( ATTR_CUMULATIVE_SUSPENSION_TIME );
+	common_job_queue_attrs->insert( ATTR_LAST_SUSPENSION_TIME );
+
+	hold_job_queue_attrs = new StringList();
+	hold_job_queue_attrs->insert( ATTR_HOLD_REASON );
+
+	remove_job_queue_attrs = new StringList();
+	remove_job_queue_attrs->insert( ATTR_REMOVE_REASON );
+
+	requeue_job_queue_attrs = NULL;
+
+	terminate_job_queue_attrs = new StringList();
+	terminate_job_queue_attrs->insert( ATTR_EXIT_REASON );
+	terminate_job_queue_attrs->insert( ATTR_JOB_EXIT_STATUS );
+	terminate_job_queue_attrs->insert( ATTR_ON_EXIT_BY_SIGNAL );
+	terminate_job_queue_attrs->insert( ATTR_ON_EXIT_SIGNAL );
+	terminate_job_queue_attrs->insert( ATTR_ON_EXIT_CODE );
+	terminate_job_queue_attrs->insert( ATTR_EXCEPTION_HIERARCHY );
+	terminate_job_queue_attrs->insert( ATTR_EXCEPTION_TYPE );
+	terminate_job_queue_attrs->insert( ATTR_EXCEPTION_NAME );
+}
+
 
 int BaseShadow::cdToIwd() {
 	if (chdir(iwd) < 0) {
@@ -440,6 +496,143 @@ BaseShadow::log_except(char *msg)
 		::dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event\n");
 	}
 }
+
+
+bool
+BaseShadow::updateJobInQueue( update_t type )
+{
+	ExprTree* tree = NULL;
+	bool is_connected = false;
+	bool had_error = false;
+	char* name;
+	
+	StringList* job_queue_attrs = NULL;
+	switch( type ) {
+	case U_HOLD:
+		job_queue_attrs = hold_job_queue_attrs;
+		break;
+	case U_REMOVE:
+		job_queue_attrs = remove_job_queue_attrs;
+		break;
+	case U_REQUEUE:
+		job_queue_attrs = requeue_job_queue_attrs;
+		break;
+	case U_TERMINATE:
+		job_queue_attrs = terminate_job_queue_attrs;
+		break;
+	case U_PERIODIC:
+			// No special attributes needed...
+		break;
+	default:
+		EXCEPT( "BaseShadow::updateJobInQueue: Unknown update type (%d)!" );
+	}
+
+	jobAd->ResetExpr();
+	while( (tree = jobAd->NextDirtyExpr()) ) {
+		name = ((Variable*)tree->LArg())->Name();
+
+			// If we have the lists of attributes we care about and
+			// this attribute is in one of the lists, actually do the
+			// update into the job queue...  If either of these lists
+			// aren't defined, we're careful here to not dereference a
+			// NULL pointer...
+		if( (common_job_queue_attrs &&
+			 common_job_queue_attrs->contains_anycase(name)) || 
+			(job_queue_attrs &&
+			 job_queue_attrs->contains_anycase(name)) ) {
+
+			if( ! is_connected ) {
+				if( ! ConnectQ(scheddAddr, SHADOW_QMGMT_TIMEOUT) ) {
+					return false;
+				}
+				is_connected = true;
+			}
+			if( ! updateExprTree(tree) ) {
+				had_error = true;
+			}
+		}
+	}
+	if( is_connected ) {
+		DisconnectQ(NULL);
+	} 
+	if( had_error ) {
+		return false;
+	}
+	jobAd->ClearAllDirtyFlags();
+	return true;
+}
+
+
+bool
+BaseShadow::updateExprTree( ExprTree* tree )
+{
+	if( ! tree ) {
+		return false;
+	}
+	ExprTree *rhs = tree->RArg(), *lhs = tree->LArg();
+	if( ! rhs || ! lhs ) {
+		return false;
+	}
+	char* name = ((Variable*)lhs)->Name();
+
+	switch( rhs->MyType() ) {
+	case LX_FLOAT:
+		if( SetAttributeFloat(cluster, proc, name,
+							  (float)((Float*)rhs)->Value()) < 0 ) {
+			dprintf( D_ALWAYS, 
+					 "updateExprTree: Failed SetAttributeFloat(%s, %f)\n",
+					 name, (float)((Float*)rhs)->Value() );
+			return false;
+		}
+		dprintf( D_FULLDEBUG, 
+				 "updateExprTree: SetAttributeFloat(%s, %f)\n",
+				 name, (float)((Float*)rhs)->Value() );
+		break;
+	case LX_INTEGER:
+		if( SetAttributeInt(cluster, proc, name,
+							  (int)((Integer*)rhs)->Value()) < 0 ) {
+			dprintf( D_ALWAYS, 
+					 "updateExprTree: Failed SetAttributeInt(%s, %d)\n",
+					 name, (int)((Integer*)rhs)->Value() );
+			return false;
+		}
+		dprintf( D_FULLDEBUG, 
+				 "updateExprTree: SetAttributeInt(%s, %d)\n",
+				 name, (int)((Integer*)rhs)->Value() );
+		break;
+	case LX_STRING:
+		if( SetAttributeString(cluster, proc, name,
+							   (char*)((String*)rhs)->Value()) < 0 ) {
+			dprintf( D_ALWAYS, 
+					 "updateExprTree: Failed SetAttributeString(%s, %s)\n",
+					 name, (char*)((String*)rhs)->Value() );
+			return false;
+		}
+		dprintf( D_FULLDEBUG, 
+				 "updateExprTree: SetAttributeString(%s, \"%s\")\n",
+				 name, (char*)((String*)rhs)->Value() );
+		break;
+	default:
+		{
+			char* tmp = NULL;
+			rhs->PrintToNewStr( &tmp );
+			if( SetAttribute(cluster, proc, name, tmp) < 0 ) {
+				dprintf( D_ALWAYS, 
+						 "updateExprTree: Failed SetAttribute(%s, %s)\n",
+						 name, tmp );
+				free( tmp );
+				return false;
+			}
+			dprintf( D_FULLDEBUG, 
+					 "updateExprTree: SetAttribute(%s, %s)\n",
+					 name, tmp );
+			free( tmp );
+			break;
+		}
+	}
+	return true;
+}
+
 
 void BaseShadow::dprintf_va( int flags, char* fmt, va_list args )
 {

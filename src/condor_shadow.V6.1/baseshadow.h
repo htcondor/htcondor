@@ -34,6 +34,9 @@
 /* Forward declaration to prevent loops... */
 class RemoteResource;
 
+/// What kind of update to the job queue are we performing?
+enum update_t { U_PERIODIC, U_TERMINATE, U_HOLD, U_REMOVE, U_REQUEUE };
+
 /** This is the base class for the various incarnations of the Shadow.<p>
 
 	If you want to change something related to the shadow, 
@@ -217,6 +220,15 @@ class BaseShadow : public Service
 
 	virtual bool setMpiMasterInfo( char* str ) = 0;
 
+		/** Connect to the job queue and update all relevent
+			attributes of the job class ad.  This checks our job
+			classad to find any dirty attributes, and compares them
+			against the lists of attribute names we care about.  
+			@param type What kind of update we want to do
+			@return true on success, false on failure
+		*/
+	bool updateJobInQueue( update_t type );
+
 		/** Did this shadow's job exit by a signal or not?  This is
 			virtual since each kind of shadow will need to implement a
 			different method to decide this. */
@@ -245,6 +257,11 @@ class BaseShadow : public Service
 			something like $(NODE) into each remoteresource. */
 	ClassAd *jobAd;
 
+		/** Initialize our StringLists for attributes we want to keep
+			updated in the job queue itself
+		*/ 
+	void initJobQueueAttrLists( void );
+
  private:
 
 	// private methods
@@ -253,6 +270,16 @@ class BaseShadow : public Service
 			not, exit with JOB_NO_MEM.
 		*/
 	void checkSwap( void );
+
+		/** Update a specific attribute from our job ad into the
+			queue.  This checks the type of the given ExprTree and
+			calls the appropriate SetAttribute* function to do the
+			work.  This function assumes you're in the middle of a
+			qmgmt operation, i.e., that you've called ConnectQ().
+			@param The ExprTree you want to update in the job queue 
+			@return success or failure to set the attribute
+		 */
+	bool updateExprTree( ExprTree* tree );
 
 	// config file parameters
 	char *spool;
@@ -270,6 +297,18 @@ class BaseShadow : public Service
 	char iwd[_POSIX_PATH_MAX];
 	char *scheddAddr;
 	bool jobExitedGracefully;
+
+		/// Pointers to lists of attribute names we care about
+
+		/** Attributes that should go in the job queue regardless of
+			what action we're taking with this job. */
+	StringList* common_job_queue_attrs;
+
+		/// Attributes specific to certain kinds of updates
+	StringList* hold_job_queue_attrs;
+	StringList* remove_job_queue_attrs;
+	StringList* requeue_job_queue_attrs;
+	StringList* terminate_job_queue_attrs;
 
 		// This makes this class un-copy-able:
 	BaseShadow( const BaseShadow& );
