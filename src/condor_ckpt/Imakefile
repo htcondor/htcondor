@@ -4,7 +4,11 @@ CC = gcc
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(STATIC)
 
+#if IS_R6000_AIX32
+CFLAGS = $(STD_C_FLAGS) -qsrcmsg
+#else
 CFLAGS = $(STD_C_FLAGS)
+#endif
 
 SRC_DIR = $(SRC_TREE)/condor_ckpt
 
