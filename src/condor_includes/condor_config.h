@@ -47,6 +47,7 @@ extern "C" {
 	void config( ClassAd* classAd=NULL, char *mySubsystem=NULL );
 	void config_host( ClassAd* classAd=NULL, char *mySubsystem=NULL, char* host=NULL );
 	int	 config_from_server(char*, char*, CONTEXT*);
+	char * get_tilde();
 	char * param ( char *name );
 	void insert ( char *name, char *value, BUCKET *table[], int table_size );
 	char * expand_macro ( char *value, BUCKET *table[], int table_size );
@@ -61,6 +62,7 @@ extern "C" {
 	void config();
 	void config_host();
 	int	 config_from_server();
+	char * get_tilde();
 	char * param ();
 	insert();
 	char * expand_macro();
