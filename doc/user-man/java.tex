@@ -103,6 +103,16 @@ version 3.2:
 requirements = (JavaVersion=="3.2")
 \end{verbatim}
 
+Each JVM in a Condor pool is benchmarked at startup using the SciMark2
+(\Url{http://math.nist.gov/scimark2}) benchmark.  This is reported in
+every machine ClassAd as \AdAttr{JavaMFlops}.  Just like other Condor jobs,
+you may prefer or require faster machines by setting \AdAttr{rank} or
+\AdAttr{Requirements}.  For example, to only use machines of a certain speed:
+
+\begin{verbatim}
+requirements = (JavaMFlops>4.5)
+\end{verbatim}
+
 By default, Condor will move all of your input files
 to each execution site before your job runs, and will move
 all of your output files back when your program completes.
@@ -230,6 +240,3 @@ arguments = TestChirp
 jar_files = Chirp.jar
 queue
 \end{verbatim}
-
-
-
