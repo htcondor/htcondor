@@ -89,6 +89,20 @@ StringBase::StringBase(char* str)
     this->type  = LX_STRING;
 }
 
+TimeBase::TimeBase(char* str)
+{
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+	stringSpaceIndex = string_space->getCanonical(str, SS_DUP);
+	// I apologize for casting away the const-ness of the char * here
+	// I'm trying to make minimal changes in the code to add string space,
+	// and it is safe. 
+	time = (char *) (*string_space)[stringSpaceIndex];
+#else
+    time = str;
+#endif
+    this->type  = LX_TIME;
+}
+
 UndefinedBase::UndefinedBase()
 {
     this->type  = LX_UNDEFINED;
@@ -225,6 +239,15 @@ StringBase::~StringBase()
 #endif
 }
 
+TimeBase::~TimeBase()
+{
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+	string_space->disposeByIndex(stringSpaceIndex);
+#else
+	delete [] time;
+#endif
+}
+
 BinaryOpBase::~BinaryOpBase()
 {
 	if (lArg != NULL) {
@@ -282,6 +305,15 @@ int StringBase::operator ==(ExprTree& tree)
     if(tree.MyType() == LX_STRING)
     {
         return !strcmp(this->value, ((StringBase&)tree).value);
+    }
+    return FALSE;
+}
+
+int TimeBase::operator ==(ExprTree& tree)
+{
+    if(tree.MyType() == LX_TIME)
+    {
+        return !strcmp(this->time, ((TimeBase&)tree).time);
     }
     return FALSE;
 }
@@ -517,6 +549,11 @@ void FloatBase::Display()
 void StringBase::Display()
 {
     dprintf (D_NOHEADER | D_ALWAYS, "\"%s\"", value);
+}
+
+void TimeBase::Display()
+{
+    dprintf (D_NOHEADER | D_ALWAYS, "\"%s\"", time);
 }
 
 void BooleanBase::Display()
@@ -1066,6 +1103,11 @@ float FloatBase::Value()
 char * const StringBase::Value()
 {
 	return value;
+}
+
+char * const TimeBase::Value()
+{
+	return time;
 }
 
 int BooleanBase::Value()
