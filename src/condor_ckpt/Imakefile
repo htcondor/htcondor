@@ -35,6 +35,9 @@ SRC_DIR = $(SRC_TREE)/condor_ckpt
 
 OS = OperatingSystem
 
+#if !HAS_FLOCK
+FLOCK_OBJ = flock.o
+#endif
 
 #if IS_HPPAR_HPUX9
 ASSEMBLER_SRC = get_reginfo.HPUX.s
@@ -51,12 +54,12 @@ ASSEMBLER_OBJ = _longjmp.AIX32.o
 #endif
 
 #if IS_R6000_AIX32
-UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o flock.o
+UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o $(FLOCK_OBJ)
 #elif IS_HPPAR_HPUX9
-UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o flock.o \
+UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o $(FLOCK_OBJ) \
 		   seteuid.o setegid.o getwd.o
 #else
-UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o flock.o
+UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o $(FLOCK_OBJ)
 #endif
 
 URL_OBJ = url_condor.o include_urls.o cbstp_url.o file_url.o http_url.o \
