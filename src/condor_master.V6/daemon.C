@@ -100,7 +100,6 @@ extern "C"
 #elif !defined(WIN32)
 	extern	int		gethostname(char*, int);
 #endif
-	void	set_machine_status(int); 
 }
 
 // to add a new process as a condor daemon, just add one line in 
