@@ -71,19 +71,6 @@ LIB = $(LIB_BASE) $(IO_LIB) $(SECURITY_LIB) $(CUTIL_LIB)
 LIB = $(LIB_BASE)
 #endif
 
-/* The S_* files are for standalone classads */
-S_OBJ = $(S_UTL_OBJ) $(S_LCL_OBJ)
-#if !HAS_FLOCK
-S_UTL_OBJ = ../condor_util_lib/except.o ../condor_util_lib/dprintf.o \
-			../condor_c++_util/uids.o ../condor_util_lib/escapes.o \
-			../condor_util_lib/flock.o
-#else
-S_UTL_OBJ = ../condor_util_lib/except.o ../condor_util_lib/dprintf.o \
-			../condor_c++_util/uids.o ../condor_util_lib/escapes.o 
-#endif
-S_LCL_OBJ = ./stand_alone.o
-
-
 /* the main condor library target */
 all_target(libclassad.a test_classads test_xml extra_tests)
 library_target(libclassad.a,$(OBJ))
