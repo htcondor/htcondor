@@ -1,4 +1,4 @@
-Changes for version 0.9.4: (not yet released)
+Changes for version 0.9.4: (release 21-Nov-2002)
 * Added user-defined functions
 
 * New parsing functions to allow input from different input types: C
