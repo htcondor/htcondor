@@ -30,12 +30,11 @@
 #ifndef _ATTRLIST_H
 #define _ATTRLIST_H
 
-#include <stdio.h>
-
 #include "condor_exprtype.h"
 #include "condor_astbase.h"
 
 #include "stream.h"
+#include "list.h"
 
 #define		ATTRLIST_MAX_EXPRESSION		10240
 
@@ -54,8 +53,6 @@ class AttrListElem
         AttrListElem(AttrListElem&);		// copy constructor
         ~AttrListElem() 
 			{
-				// Notice that this calls our ExprTree::operator delete()
-				// in astbase.C
 				delete tree; 
 			}
 
@@ -128,6 +125,8 @@ class AttrList : public AttrListAbstract
         AttrList(AttrList&);				// copy constructor
         virtual ~AttrList();				// destructor
 
+		AttrList& operator=(const AttrList& other);
+
 		// insert expressions into the ad
         int        	Insert(char*);			// insert at the tail
         int        	Insert(ExprTree*);		// insert at the tail
@@ -152,11 +151,12 @@ class AttrList : public AttrListAbstract
 		char*		NextName();					// next unvisited name
 
 		// lookup values in classads  (for simple assignments)
-		ExprTree*   Lookup(char *);  		// for convenience
-        ExprTree*	Lookup(const char*);	// look up an expression
-		ExprTree*	Lookup(const ExprTree*);
+		ExprTree*   Lookup(char *) const;  		// for convenience
+        ExprTree*	Lookup(const char*) const;	// look up an expression
+		ExprTree*	Lookup(const ExprTree*) const;
 		int         LookupString(const char *, char *); 
-		int         LookupString(const char *, char *, int); //use strncpy
+		int         LookupString(const char *, char *, int); //uses strncpy
+		int         LookupString (const char *name, char **value);
         int         LookupInteger(const char *, int &);
         int         LookupFloat(const char *, float &);
         int         LookupBool(const char *, int &);
@@ -183,6 +183,11 @@ class AttrList : public AttrListAbstract
 		int initFromStream(Stream& s);
 
 		void clear( void );
+
+		void GetReferences(const char *attribute, 
+						   StringList &internal_references, 
+						   StringList &external_references) const;
+		bool IsExternalReference(const char *name, char **simplified_name) const;
 
 #if defined(USE_XDR)
 		int put (XDR *);

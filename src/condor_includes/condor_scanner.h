@@ -31,15 +31,16 @@
 
 #define MAXVARNAME 256
 
-#include "condor_attrlist.h"
+#define USE_NEW_SCANNER
 
-// Lexeme abstract dataype:
+#include "condor_attrlist.h"
 
 class Token
 {
 	public:
 
 		Token();
+		~Token();
 		void		reset();
 		union
 		{
@@ -48,9 +49,13 @@ class Token
 		};
 		LexemeType	type; 
 		int			length;	// error position in the string for the parser
+#ifdef USE_NEW_SCANNER
+		char        *strVal;
+		int         strValLength;
+#else
 		char		strVal[ATTRLIST_MAX_EXPRESSION];
-
-		friend	void	Scanner(char*&, Token&);
+#endif
+		friend	void	Scanner(char *&input, Token &token);
 
 	private:
 

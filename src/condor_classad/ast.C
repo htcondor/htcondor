@@ -35,8 +35,9 @@
 #include "condor_classad_lookup.h"
 
 extern void evalFromEnvironment (const char *, EvalResult *);
+static bool name_in_list(const char *name, StringList &references);
 static void printComparisonOpToStr (char *, ExprTree *, ExprTree *, char *);
-
+static int calculate_math_op_length(ExprTree *lArg, ExprTree *rArg, int op_length);
 
 #define EatSpace(ptr)  while(*ptr != '\0') ptr++;
 
@@ -553,6 +554,271 @@ int Error::_EvalTree(AttrList*, AttrList*,  EvalResult* val)
 }
 //--------------------------------
 
+void ExprTree::GetReferences(const AttrList *base_attlrist,
+							 StringList &internal_references,
+							 StringList &external_references) const
+{
+	return;
+}
+
+void BinaryOpBase::GetReferences(const AttrList *base_attrlist,
+								 StringList &internal_references,
+								 StringList &external_references) const 
+{
+	if (lArg != NULL) {
+		lArg->GetReferences(base_attrlist, internal_references, external_references);
+	}
+	if (rArg != NULL) {
+		rArg->GetReferences(base_attrlist, internal_references, external_references);
+	}
+	return;
+}
+
+void AssignOpBase::GetReferences(const AttrList *base_attrlist,
+								 StringList &internal_references,
+								 StringList &external_references) const
+{
+	// We don't look at the left argument, because we know that
+	// we won't want to add it to the internal or external references.
+	if (rArg != NULL) {
+		rArg->GetReferences(base_attrlist, internal_references, external_references);
+	}
+	return;
+}
+
+void VariableBase::GetReferences(const AttrList *base_attrlist,
+								 StringList &internal_references,
+								 StringList &external_references) const
+{
+	bool is_external_reference; // otherwise, internal
+	char *simplified_name;
+
+	is_external_reference = base_attrlist->IsExternalReference(name, 
+													  &simplified_name);
+	if (is_external_reference) {
+		if (!name_in_list(simplified_name, external_references)) {
+			external_references.append(simplified_name);
+		}
+	}
+	else {
+		if (!name_in_list(simplified_name, internal_references)) {
+			internal_references.append(simplified_name);
+		}
+	}
+	// We added simplified_name to the list, but it was copied
+	// when we did the append, so we need to free it now. 
+	free(simplified_name);
+
+	return;
+}
+
+static bool name_in_list(const char *name, StringList &references)
+{
+	bool is_in_list;
+	const char *reference;
+
+	is_in_list = false;
+	references.rewind(); 
+	while ((reference = references.next()) != NULL) {
+		if (!strcmp(name, reference)) {
+			is_in_list = true;
+			break;
+		}
+	}
+
+	return is_in_list;
+}
+
+// Calculate how many bytes an expression will print to
+int Variable::CalcPrintToStr(void)
+{
+	return strlen(name);
+}
+
+int Integer::CalcPrintToStr(void)
+{
+	int  length;
+	char printed_representation[256];
+	printed_representation[0] = 0;
+	PrintToStr(printed_representation);
+	length = strlen(printed_representation);
+	return length;
+}
+
+int Float::CalcPrintToStr(void)
+{
+	int  length;
+	char printed_representation[256];
+	printed_representation[0] = 0;
+	PrintToStr(printed_representation);
+	length = strlen(printed_representation);
+	return length;
+}
+
+int String::CalcPrintToStr(void)
+{
+	return strlen(value) + 2; // the +2 is for the quote marks around the string
+}
+
+int Boolean::CalcPrintToStr(void)
+{
+	int  length;
+	char printed_representation[256];
+	printed_representation[0] = 0;
+	PrintToStr(printed_representation);
+	length = strlen(printed_representation);
+	return length;
+}
+
+int Error::CalcPrintToStr(void)
+{
+	int  length;
+	char printed_representation[256];
+	printed_representation[0] = 0;
+	PrintToStr(printed_representation);
+	length = strlen(printed_representation);
+	return length;
+}
+
+int Undefined::CalcPrintToStr(void)
+{
+	int  length;
+	char printed_representation[256];
+	printed_representation[0] = 0;
+	PrintToStr(printed_representation);
+	length = strlen(printed_representation);
+	return length;
+}
+
+int AddOp::CalcPrintToStr(void)
+{
+	int  length;
+
+	if (lArg == NULL) {
+		length = 1                   // Left parenthesis
+			+ rArg->CalcPrintToStr() // Parenthesized expressions
+			+ 1;                     // Right parenthesis
+	}
+	else {
+		length = lArg->CalcPrintToStr() // Left subexpression
+			+ 3                         // for " + "
+			+ rArg->CalcPrintToStr();   // Right subexpression
+		if (unit == 'k') {
+			length += 2; // for " k"
+		}
+	}
+
+	return length;
+}
+
+int SubOp::CalcPrintToStr(void)
+{
+	int length;
+
+	length = calculate_math_op_length(lArg, rArg, 3);
+
+	if (unit == 'k') {
+		length += 2; // for " k"
+	}
+
+	return length;
+}
+
+int MultOp::CalcPrintToStr(void)
+{
+	int length;
+
+	length = calculate_math_op_length(lArg, rArg, 3);
+
+	if (unit == 'k') {
+		length += 2; // for " k"
+	}
+
+	return length;
+}
+
+
+int DivOp::CalcPrintToStr(void)
+{
+	int length;
+
+	length = calculate_math_op_length(lArg, rArg, 3);
+
+	if (unit == 'k') {
+		length += 2; // for " k"
+	}
+
+	return length;
+}
+
+/// ----------------
+int MetaEqOp::CalcPrintToStr(void)
+{
+	// 5 for " =?= "
+	return calculate_math_op_length(lArg, rArg, 5);
+}
+
+int MetaNeqOp::CalcPrintToStr(void)
+{
+	// 5 for " =!= "
+	return calculate_math_op_length(lArg, rArg, 5);
+}
+
+int EqOp::CalcPrintToStr(void)
+{
+	// 4 for " == "
+	return calculate_math_op_length(lArg, rArg, 4);
+}
+
+int NeqOp::CalcPrintToStr(void)
+{
+	// 4 for " != "
+	return calculate_math_op_length(lArg, rArg, 4);
+}
+
+int GtOp::CalcPrintToStr(void)
+{
+	// 3 for " > "
+	return calculate_math_op_length(lArg, rArg, 3);	
+}
+
+int GeOp::CalcPrintToStr(void)
+{
+	// 4 for " >= "
+	return calculate_math_op_length(lArg, rArg, 4);	
+}
+
+int LtOp::CalcPrintToStr(void)
+{
+	// 3 for " < "
+	return calculate_math_op_length(lArg, rArg, 3);	
+}
+
+int LeOp::CalcPrintToStr(void)
+{
+	// 4 for " <= "
+	return calculate_math_op_length(lArg, rArg, 4);	
+}
+
+int AndOp::CalcPrintToStr(void)
+{
+	// 4 for " && "
+	return calculate_math_op_length(lArg, rArg, 4);
+}
+
+int OrOp::CalcPrintToStr(void)
+{
+	// 4 for " || "
+	return calculate_math_op_length(lArg, rArg, 4);
+}
+
+int AssignOp::CalcPrintToStr(void)
+{
+	// 3 for " = "
+	return calculate_math_op_length(lArg, rArg, 3);
+}
+
+/// -----------------
 
 ////////////////////////////////////////////////////////////////////////////////
 // Print an Expression to a string.                                           //
@@ -749,6 +1015,22 @@ printComparisonOpToStr (char *str, ExprTree *lArg, ExprTree *rArg, char *op)
     if(rArg) {
 		((ExprTree*)rArg)->PrintToStr(str);
     }
+}
+
+static int
+calculate_math_op_length(ExprTree *lArg, ExprTree *rArg, int op_length)
+{
+	int length;
+
+	length = 0;
+	if (lArg) {
+		length += lArg->CalcPrintToStr();
+	}
+	length += op_length; // Like " - "
+	if (rArg) {
+		length += rArg->CalcPrintToStr();
+	}
+	return length;
 }
 
 ExprTree*  

@@ -696,6 +696,49 @@ AttrList::~AttrList()
     }
 }
 
+AttrList& AttrList::operator=(const AttrList& other)
+{
+	if (this != &other) {
+		// First delete our old stuff.
+		clear();
+
+		if(associatedList) {
+			associatedList->associatedAttrLists->Delete(this);
+		}
+
+		// Then copy over the new stuff 
+		AttrListElem* tmpOther;	// working variable
+		AttrListElem* tmpThis;	// working variable
+		
+		if(other.exprList) {
+			this->exprList = new AttrListElem(*other.exprList);
+			tmpThis = this->exprList;
+			for(tmpOther = other.exprList->next; tmpOther; tmpOther = tmpOther->next) {
+				tmpThis->next = new AttrListElem(*tmpOther);
+				tmpThis = tmpThis->next;
+			}
+			tmpThis->next = NULL;
+			this->tail = tmpThis;
+		}
+		else {
+			this->exprList = NULL;
+			this->tail = NULL;
+		}
+		this->chainedAttrs = other.chainedAttrs;
+		this->inside_insert = false;
+		this->ptrExpr = NULL;
+		this->ptrName = NULL;
+		this->associatedList = other.associatedList;
+		this->seq = other.seq;
+		if (this->associatedList) {
+			this->associatedList->associatedAttrLists->Insert(this);
+		}
+		
+	}
+	return *this;
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // Insert an expression tree into a AttrList. If the expression is not an
 // assignment expression, FALSE is returned. Otherwise, it is inserted at the
@@ -939,12 +982,12 @@ char* AttrList::NextName()
 // Return the named expression without copying it. Return NULL if the named
 // expression is not found.
 ////////////////////////////////////////////////////////////////////////////////
-ExprTree* AttrList::Lookup(char* name)
+ExprTree* AttrList::Lookup(char* name) const
 {
 	return Lookup ((const char *) name);
 }
 
-ExprTree* AttrList::Lookup(const char* name)
+ExprTree* AttrList::Lookup(const char* name) const
 {
     AttrListElem*	tmpNode;
     char*	 		tmpChar;	// variable name
@@ -973,7 +1016,7 @@ ExprTree* AttrList::Lookup(const char* name)
     return NULL;
 }
 
-ExprTree* AttrList::Lookup(const ExprTree* attr)
+ExprTree* AttrList::Lookup(const ExprTree* attr) const
 {
 	return Lookup (((Variable*)attr)->Name());
 }
@@ -1005,6 +1048,32 @@ int AttrList::LookupString (const char *name, char *value, int max_len)
 	{
 		strncpy (value, strVal, max_len);
 		return 1;
+	}
+
+	return 0;
+}
+
+int AttrList::LookupString (const char *name, char **value)
+{
+	ExprTree *tree, *rhs;
+	char     *strVal;
+
+	tree = Lookup (name);
+	if (tree && (rhs=tree->RArg()) && (rhs->MyType() == LX_STRING) &&
+		(strVal = ((String *) rhs)->Value()) && strVal)
+	{
+		// Unlike the other lame version of this function call, we
+		// ensure that we have sufficient space to actually do this. 
+		*value = (char *) malloc(strlen(strVal) + 1);
+		if (*value != NULL) {
+			strcpy(*value, strVal);
+			return 1;
+		}
+		else {
+			// We shouldn't ever fail, but what if something gets corrupted
+			// and we try to allocate 3billion bytes of storage?
+			return 0;
+		}
 	}
 
 	return 0;
@@ -1837,6 +1906,84 @@ AttrList::clear( void )
 	tail = NULL;
 }
 
+
+void AttrList::GetReferences(const char *attribute, 
+							 StringList &internal_references, 
+							 StringList &external_references) const
+{
+	ExprTree  *tree;
+
+	tree = Lookup(attribute);
+	if (tree != NULL) {
+		tree->GetReferences(this, internal_references, external_references);
+	}
+
+	return;
+}
+
+bool AttrList::IsExternalReference(const char *name, char **simplified_name) const
+{
+	// There are two ways to know if this is an internal or external
+	// reference.  
+	// 1. If it is prefixed with MY or has no prefix but refers to an 
+	//    internal variable definition, it's internal. 
+	// 2. If it is prefixed with TARGET or another non-MY prefix, or if
+	//    it has no prefix, but there is no other variable it could refer to.
+	char  *prefix;
+	char  *rest;
+	int   number_of_fields;
+	int   name_length;
+	bool  is_external;
+
+	if (name == NULL) {
+		is_external = false;
+	}
+
+	name_length = strlen(name);
+	prefix      = (char *) malloc(name_length + 1);
+	rest        = (char *) malloc(name_length + 1);
+
+	// There are two ways that prefixes could be listed: with . or
+	// with __. We'll check both. 
+	number_of_fields = sscanf(name, "%[^.].%s", prefix, rest);
+	if (number_of_fields != 2) {
+		number_of_fields = sscanf(name, "%[^_]__%s", prefix, rest);
+	}
+
+	// We have a prefix, so we examine it. 
+	if (number_of_fields == 2) {
+		if (!strcmp(prefix, "MY")) {
+			is_external = FALSE;
+		}
+		else {
+			is_external = TRUE;
+		}
+	} else {
+		// No prefix means that we have to see if the name occurs within
+		// the attrlist or not. We lookup not only the name, but 
+		if (Lookup(name)) {
+			is_external = FALSE;
+		}
+		else {
+			is_external = TRUE;
+		}
+	}
+
+	if (simplified_name != NULL) {
+		if (number_of_fields == 1) {
+			*simplified_name = prefix;
+			free(rest);
+		} else {
+			*simplified_name = rest;
+			free(prefix);
+		}
+	} else {
+		free(prefix);
+		free(rest);
+	}
+
+	return is_external;
+}
 
 int
 AttrList::initFromStream(Stream& s)

@@ -32,13 +32,54 @@
 #include "condor_exprtype.h"
 #include "condor_scanner.h" 
 
+#ifdef USE_NEW_SCANNER
+struct keywords
+{
+	char        *keyword;       // the text of the keyword we'll be matching against
+	int         keyword_length; // the strlen of keyword
+	LexemeType  type;           // the token type we should produce when scanning the keyword
+	int         int_value;      // what we should use as the integer value.
+};
+
+#define NUMBER_OF_KEYWORDS (sizeof(keywords) / sizeof(struct keywords))
+const struct keywords keywords[] = 
+{
+	{"ERROR",     5, LX_ERROR,     0},
+	{"UNDEFINED", 9, LX_UNDEFINED, 0},
+	{"TRUE",      4, LX_BOOL,      1},
+	{"T",         1, LX_BOOL,      1},
+	{"FALSE",     5, LX_BOOL,      0},
+	{"F",         1, LX_BOOL,      0}
+};
+
+static bool scan_keyword(char *&input, Token &token);
+static void scan_variable(char *&input, Token &token);
+static void scan_number(char *&input, Token &token);
+static void scan_string(char *&input, Token &token);
+static void scan_operator(char *&input, Token &token);
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 // Implementation of class Token
 ////////////////////////////////////////////////////////////////////////////////
 
 Token::Token()
 {
+#ifdef USE_NEW_SCANNER
+	strVal = (char *) malloc(1025);
+	strValLength = 1024;
+#endif
 	reset();
+}
+
+Token::~Token()
+{
+#ifdef USE_NEW_SCANNER
+	if (strVal != NULL) {
+		free(strVal);
+	}
+	strValLength = 0;
+#endif
 }
 
 void
@@ -48,6 +89,7 @@ Token::reset()
 	type = NOT_KEYWORD;
 	floatVal = 0.0;
 	intVal = 0;
+
 	strVal[0] = '\0';
 	isString = FALSE;
 }
@@ -55,6 +97,345 @@ Token::reset()
 ////////////////////////////////////////////////////////////////////////////////
 // This function reads input from a string, returns a token;
 ////////////////////////////////////////////////////////////////////////////////
+
+#ifdef USE_NEW_SCANNER 
+
+void Scanner(char*& input, Token& token)
+{ 
+    // skip white space
+    token.length = 0;
+    while (isspace(*input)) {
+        input++;
+		token.length++;
+    }
+
+    if (isalpha(*input) || *input == '_' || *input == '.' ) {
+		if (!scan_keyword(input, token)) {
+			scan_variable(input, token);
+			token.isString = TRUE; // scan_variable is not a friend, can't set this
+		}
+	}
+	else if (isdigit(*input)) {
+		scan_number(input, token);
+	}
+	else if (*input == '"') {
+		scan_string(input, token);
+		token.isString = TRUE; // scan_string is not a friend, can't set this
+	}
+	else {
+		scan_operator(input, token);
+	}
+	return;
+}
+
+static bool scan_keyword(
+    char   *&input,
+	Token  &token)
+{
+	int  keyword_index;
+	bool is_keyword;
+
+	is_keyword = false;
+	
+	for(keyword_index = 0; keyword_index < (int) NUMBER_OF_KEYWORDS; keyword_index++) {
+		const struct keywords *keyword;
+		
+		keyword = &(keywords[keyword_index]);
+		if (!strncasecmp(input, keyword->keyword, keyword->keyword_length)
+			&& !isalpha(*(input + keyword->keyword_length))
+			&& *(input + keyword->keyword_length) != '_') {
+
+			input        += keyword->keyword_length;
+			token.length += keyword->keyword_length;
+			token.type    = keyword->type;
+			token.intVal  = keyword->int_value;
+			
+			is_keyword = true;
+			break;
+		}
+	}
+	return is_keyword;
+}
+
+static void scan_variable(
+    char   *&input,
+    Token  &token)
+{
+	int  variable_length;
+	char *s;
+
+	variable_length = 0;
+	s = input;
+	
+	// First, we count how many characters the variable is. 
+	while (isalnum(*s) || *s == '_' || *s == '.') {
+		variable_length++;
+		s++;
+	}
+
+	// Then we make sure we have space to store it.
+	if (variable_length > token.strValLength) {
+		free(token.strVal);
+		token.strVal = (char *) malloc(variable_length + 1);
+		token.strValLength = variable_length;
+	}
+
+	// Finally, we copy the variable. 
+	strncpy(token.strVal, input, variable_length);
+	token.strVal[variable_length] = 0;
+
+	input          += variable_length;
+	token.length   += variable_length;
+	token.type      = LX_VARIABLE;
+
+	//token.isString  = TRUE;
+	return;
+}
+
+static void scan_number(
+    char   *&input,
+	Token  &token)
+{
+	char *digit_text;
+
+	digit_text = input;
+
+	// Count how long the number is
+	while(isdigit(*digit_text)) {
+		digit_text++;
+		token.length++;
+	}
+
+	// Check if it's a floating point value
+	if(*digit_text == '.') {
+		token.length++;
+		
+		// It is a float, so count the fractional digits as well.
+		for(digit_text++; isdigit(*digit_text); digit_text++) {
+			token.length++;
+		}
+
+		// Convert the float
+		token.floatVal = (float) strtod(input, &input);
+		token.type = LX_FLOAT; 
+	}
+	else {
+		// It's just a plain integer
+		token.intVal = strtol(input, &input, 10);
+		token.type = LX_INTEGER; 
+	}
+	return;
+}
+
+static void scan_string(
+    char   *&input,
+	Token  &token)
+{
+
+	int   string_length;
+	char *s;
+
+	// skip the initial quote mark 
+	input++;
+	token.length++;
+
+	s = input;
+	string_length = 0;
+
+	// First count the length of the string. 
+	while (*s != '"' && *s != '\0') {
+		// An escaped quote is only one character. When we have an
+		// escaped quote, make certain s+2 != \0 so that on NT we can
+		// have strings that are pathnames that end with a '\'. (Note
+		// that short-circuiting makes this check perfectly safe.)
+		if(*s == '\\' && *(s+1) == '"' && *(s+2) != '\0') {
+			s++;
+		}
+		s++;
+		string_length++;
+	}
+
+	// Check if the string is not properly terminated with a quote mark. 
+	if (*s == '\0') {
+		token.type = LX_ERROR;
+		token.length = 0;			 
+	}
+	else {
+		// Make sure we have space to store the string.
+		if (string_length > token.strValLength) {
+			free(token.strVal);
+			token.strVal = (char *) malloc(string_length + 1);
+			token.strValLength = string_length;
+		}
+
+		// Copy the string. Because of escaped quotes, we have to 
+		// copy the string without the benefit of strncpy
+		char *dest;
+		dest = token.strVal;
+        while(*input != '"' && *input != '\0')
+		{
+			// skip the backslash for the escaped quote
+			if(*input == '\\' && *(input + 1) == '"' && *(input + 2) != '\0')
+			{
+				input++;
+				token.length++; 
+			} 
+			*dest = *input;
+			input++;
+            dest++;
+			token.length++;
+        }
+
+		token.strVal[string_length] = 0;
+
+		// Update our tracking.
+		input++;        // for the final quote
+		token.length++; // for the final quote
+		token.type = LX_STRING;
+		//token.isString = TRUE;
+	}
+	return;
+}
+
+static void scan_operator(
+    char   *&input,
+    Token  &token)
+{
+	switch(*input) {
+	case '(': 
+		token.type = LX_LPAREN;
+		input = input + 1;
+		token.length++;
+		break; 
+		
+	case ')': 
+		token.type = LX_RPAREN;
+		input = input + 1;
+		token.length++;
+		break; 
+
+	case '+': 
+		token.type = LX_ADD;
+		input = input + 1;
+		token.length++;
+		break;
+
+	case '-': 
+		token.type = LX_SUB;
+		input = input + 1;
+		token.length++;
+		break;
+
+	case '*': 
+		token.type = LX_MULT;
+		input = input + 1;
+		token.length++;
+		break;
+		
+	case '/': 
+		token.type = LX_DIV;
+		input = input + 1;
+		token.length++;
+		break;
+		
+	case '<': 
+		input = input + 1;
+		token.length++;
+		if(*input == '=') {
+			input = input + 1;
+			token.length++;
+			token.type = LX_LE;
+		} else {
+			token.type = LX_LT; 
+		}
+		break; 
+		
+	case '>': 
+		input = input + 1;
+		token.length++;
+		if(*input == '=') {
+			input = input + 1;
+			token.length++;
+			token.type = LX_GE; 
+		} else {
+			token.type = LX_GT; 
+		}
+		break; 
+		
+	case '&': 
+		input = input + 1;
+		token.length++;
+		if(*input == '&') {
+			token.type = LX_AND;
+			input = input + 1;
+			token.length++;
+		} else {
+			token.type = LX_ERROR;
+		}
+		break;
+
+	case '|': 
+		input = input + 1;
+		token.length++;
+		if(*input == '|') {
+			token.type = LX_OR;
+			input = input + 1;
+		} else {
+			token.type = LX_ERROR;
+		}
+		break;
+
+	case '\0':
+	case '\n': 
+		token.type = LX_EOF;
+		break;
+
+	case '!': 
+		input = input + 1;
+		token.length++;
+		if(*input == '=') {
+			token.type = LX_NEQ;
+			input = input + 1;
+			token.length++;
+		} else {
+			token.type = LX_ERROR;
+		}
+		break;
+		
+	case '=': 
+		input = input + 1;
+		token.length++;
+		if(*input == '=') {
+			token.type = LX_EQ;
+			input = input + 1;
+			token.length++;
+		} else if (*input == '?' && *(input+1) == '=') {
+			token.type = LX_META_EQ;
+			input = input + 2;
+			token.length += 2;
+		} else if (*input == '!' && *(input+1) == '=') {
+			token.type = LX_META_NEQ;
+			input = input + 2;
+			token.length += 2;
+		} else {
+			token.type = LX_ASSIGN;
+		}
+		break;
+
+	case '$': 
+		token.type = LX_MACRO;
+		input = input + 1;
+		token.length++;
+		break;
+			
+	default:
+		token.type = LX_ERROR;
+		break;
+	}
+	return;
+}
+
+#else /* USE_EXTENSIBLE_ARRAY is not defined */
 void Scanner(char*& s, Token& t)
 { 
     char	str[MAXVARNAME];
@@ -366,3 +747,4 @@ void Scanner(char*& s, Token& t)
 					break;
 	} 
 }
+#endif /* USE_EXTENSIBLE_ARRAY is not defined */

@@ -54,33 +54,25 @@ VariableBase::VariableBase(char* name)
 #else
     this->name = name;
 #endif
-    this->ref = 0;
     this->type = LX_VARIABLE;
-    this->cardinality = 0;
 }
 
 IntegerBase::IntegerBase(int v)
 {
     this->value = v;
-    this->ref   = 0;
     this->type  = LX_INTEGER;
-    this->cardinality = 0;
 }
 
 FloatBase::FloatBase(float v)
 {
     this->value = v;
-    this->ref   = 0;
     this->type  = LX_FLOAT;
-    this->cardinality = 0;
 }
 
 BooleanBase::BooleanBase(int v)
 {
     this->value = v;
-    this->ref   = 0;
     this->type  = LX_BOOL;
-    this->cardinality = 0;
 }
 
 StringBase::StringBase(char* str)
@@ -94,158 +86,122 @@ StringBase::StringBase(char* str)
 #else
     value = str;
 #endif
-    this->ref = 0;
     this->type  = LX_STRING;
-    this->cardinality = 0;
 }
 
 UndefinedBase::UndefinedBase()
 {
-    this->ref = 0;
     this->type  = LX_UNDEFINED;
-    this->cardinality = 0;
 }
 
 ErrorBase::ErrorBase()
 {
-    this->ref = 0;
     this->type  = LX_ERROR;
-    this->cardinality = 0;
 }
 
 AddOpBase::AddOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_ADD;
-    this->cardinality = 2;
 }
 
 SubOpBase::SubOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_SUB;
-    this->cardinality = 2;
 }
 
 MultOpBase::MultOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_MULT;
-    this->cardinality = 2;
 }
 
 DivOpBase::DivOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_DIV;
-    this->cardinality = 2;
 }
 
 MetaEqOpBase::MetaEqOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_META_EQ;
-    this->cardinality = 2;
 }
 
 MetaNeqOpBase::MetaNeqOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_META_NEQ;
-    this->cardinality = 2;
 }
 
 EqOpBase::EqOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_EQ;
-    this->cardinality = 2;
 }
 
 NeqOpBase::NeqOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_NEQ;
-    this->cardinality = 2;
 }
 
 GtOpBase::GtOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_GT;
-    this->cardinality = 2;
 }
 
 GeOpBase::GeOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_GE;
-    this->cardinality = 2;
 }
 
 LtOpBase::LtOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_LT;
-    this->cardinality = 2;
 }
 
 LeOpBase::LeOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_LE;
-    this->cardinality = 2;
 }
 
 AndOpBase::AndOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_AND;
-    this->cardinality = 2;
 }
 
 OrOpBase::OrOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_OR;
-    this->cardinality = 2;
 }
 
 AssignOpBase::AssignOpBase(ExprTree* l, ExprTree* r)
 {
     this->lArg = l;
     this->rArg = r;
-    this->ref  = 0;
     this->type  = LX_ASSIGN;
-    this->cardinality = 2;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -489,56 +445,41 @@ int FloatBase::operator <=(ExprTree& tree)
     return FALSE;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Increment the reference counter of the whole tree                          //
-////////////////////////////////////////////////////////////////////////////////
-ExprTree* ExprTree::Copy()
-{
-    if(this->cardinality > 0)
-    // binary operator, copy children first
-    {
-		if(((BinaryOpBase*)this)->lArg)
-		{
-			((BinaryOpBase*)this)->lArg->Copy();
-		}
-		if(((BinaryOpBase*)this)->rArg)
-		{
-			((BinaryOpBase*)this)->rArg->Copy();
-		}
-    }
-    this->ref++;
-	return this;
-}
-
 // This is used by the various CopyDeep()s to get the variables from the base
 // ExprTree class.
 void ExprTree::CopyBaseExprTree(ExprTree * const recipient) const
 {
 	recipient->unit         = unit;
-	recipient->ref          = ref;
 	recipient->type         = type;
-	recipient->cardinality  = cardinality;
-	recipient->sumFlag      = sumFlag;
 	recipient->evalFlag     = evalFlag;
 	return;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Increment reference counter                                                //
-////////////////////////////////////////////////////////////////////////////////
-
-ExprTree* BinaryOpBase::Copy()
+void ExprTree::PrintToNewStr(char **str)
 {
-    this->ref++;
-    if(this->lArg)
-    {
-		this->lArg->Copy();
-    }
-    if(this->rArg)
-    {
-		this->rArg->Copy();
-    }
-	return this;
+	int   length;
+	char  *new_str;
+
+	// Before we allocate new space for this string, we determine how
+	// much space is needed.
+	length = CalcPrintToStr();
+	new_str = (char *) malloc(length + 1); // +1 for termination
+	*new_str = 0; // necessary, because PrintToStr begins at end of string
+
+	// Now that we have a correctly sized string, fill it up.
+	PrintToStr(new_str);
+
+	// Sanity check--I've tested this quite thoroughly, so it shouldn't
+	// except. It's a good idea to run test_classads though, should you 
+	// ever change the code. Catch errors before shipping. 
+	if (strlen(new_str) != (size_t) length) {
+		EXCEPT("Bad length calculation in class ads. Expected %d, "
+			   "got %d (\"%s\"",
+			   length, strlen(new_str), new_str);
+	}
+	*str = new_str;
+
+	return;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

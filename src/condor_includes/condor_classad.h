@@ -62,6 +62,8 @@ class ClassAd : public AttrList
 		ClassAd(const ClassAd&);				// copy constructor
         virtual ~ClassAd();						// destructor
 
+		ClassAd& operator=(const ClassAd& other);
+
 		// Type operations
         void		SetMyTypeName(char *);		// my type name set.
         const char*		GetMyTypeName();			// my type name returned.

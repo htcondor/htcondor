@@ -41,6 +41,7 @@ extern	void		Scanner(char*&, Token&);
 
 int ParseExpr(char*& s, ExprTree*&, int&);
 
+#ifndef USE_STRING_SPACE_IN_CLASSADS
 static	char*	StrCpy(char* str)
 {
 	char*	tmpStr = new char[strlen(str)+1];
@@ -48,6 +49,7 @@ static	char*	StrCpy(char* str)
 	strcpy(tmpStr, str);
 	return tmpStr;
 }
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // ReadToken() reads in a token to the global variable for parse_... functions
@@ -612,6 +614,36 @@ ParseAssignExpr(char*& s, ExprTree*& newTree, int& count)
 int 
 Parse(const char* s, ExprTree*& tree)
 {
+	char   *str;
+	char   *tmp;
+	int    count;
+
+	// Make a copy of the string we're parsing.  Unlike the old
+	// version (see below) we don't bite the dust when the string is
+	// really long. But I'm unsure why the original author of this
+	// code chose to copy the string at all. Is it really necessary? I
+	// suspect not, but I don't want to risk breaking all of Condor by
+	// changing it.--Alain 10-Sep-2001
+	str = (char *) malloc(strlen(s) + 1);
+	tmp = str;
+	strcpy(str, s);
+
+	count = 0;
+    alreadyRead = TRUE;
+    if(ParseAssignExpr(tmp, tree, count))
+    {
+		count = 0;
+    }
+	nextToken.reset();
+	free(str);
+    return count;
+}
+
+// Old version of Parse()
+#if 0
+int 
+Parse(const char* s, ExprTree*& tree)
+{
 	char		str[ATTRLIST_MAX_EXPRESSION];
     char*		tmp = str;	// parsing indicator
     int			count = 0;	// count characters which has been read
@@ -626,6 +658,7 @@ Parse(const char* s, ExprTree*& tree)
 	nextToken.reset();
     return count;
 }
+#endif
 
 int 
 Parse(char* s, ExprTree*& tree)

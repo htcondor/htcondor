@@ -311,6 +311,38 @@ ClassAd::~ClassAd()
     }
 }
 
+ClassAd& ClassAd::operator=(const ClassAd& other)
+{
+	if (this != &other) {
+		// First, let the base class do its magic.
+		AttrList::operator=(other);
+
+		// Clean up memory that we're going to be copying over.
+		if (myType != NULL) {
+			delete myType;
+			myType = NULL;
+		}
+		if (targetType != NULL) {
+			delete targetType;
+			targetType = NULL;
+		}
+
+		if (other.myType) {
+			myType = new AdType(other.myType->name);
+			if (myType == NULL) {
+				EXCEPT("Warning : you ran out of meomory");
+			}
+		}
+		if(other.targetType) {
+			targetType = new AdType(other.targetType->name);
+			if (targetType == NULL) {
+				EXCEPT("Warning : you ran out of meomory");
+			}
+		}
+	}
+	return *this;
+}
+
 //
 // This member function of class AttrList sets myType name.
 //

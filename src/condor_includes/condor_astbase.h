@@ -55,15 +55,8 @@
 //     ExprTree* RArg()
 //         Return the right argument or NULL.
 //
-//     void Copy()
-//         Increment the reference count of this node and all its children.
-//
 //     void Display()
 //         Display the expression on stdout.
-//
-//     operator delete(void* tree) 
-//         If the reference count of "tree" is greater than 0, then it is
-//         decremented; otherwise, memory of "tree" is freed.
 //
 //     operator ==(ExprTree& tree)
 //     operator >(ExprTree& tree)
@@ -78,6 +71,7 @@
 #define _ASTBASE_H_
 
 #include "condor_exprtype.h"
+#include "string_list.h"
 
 #define USE_STRING_SPACE_IN_CLASSADS
 
@@ -99,16 +93,19 @@ class ExprTree
 		virtual int	    	operator <=(ExprTree&);
 
         LexemeType			MyType() { return type; }
-		int					MyRef()	 { return ref; }
 		virtual ExprTree*   LArg()   { return NULL; }
 		virtual ExprTree*   RArg()   { return NULL; }
-        virtual ExprTree*   Copy();       // increment the ref counter
 		virtual ExprTree*   DeepCopy(void) const = 0;
         virtual void        Display();    // display the expression
+		virtual int         CalcPrintToStr(void) {return 0;}
+		virtual void        PrintToNewStr(char **str);
 		virtual void        PrintToStr(char*) {} // print the expr to a string
 
 		int         		EvalTree(AttrList*, EvalResult*);
 		int         		EvalTree(AttrList*, AttrList*, EvalResult*);
+		virtual void        GetReferences(const AttrList *base_attrlist,
+										  StringList &internal_references,
+										  StringList &external_references) const;
 
 		char                unit;         // unit of the expression
 
@@ -121,7 +118,10 @@ class ExprTree
 		// and now init sumFlag as well... not sure if it should be
 		// FALSE or TRUE! but it needs to be initialized -Todd, 9/10
 		// and now init evalFlag as well (to detect circular eval'n) -Rajesh
-		ExprTree::ExprTree():unit('\0'), sumFlag(FALSE), evalFlag(FALSE)
+		// We no longer initialze sumFlag, because it has been removed. 
+		// It's not used, that's why you couldn't figure out how to initialize
+		// it, Todd.-Alain 26-Sep-2001
+		ExprTree::ExprTree():unit('\0'), evalFlag(FALSE)
 		{
 #ifdef USE_STRING_SPACE_IN_CLASSADS
 			if (string_space_references == 0) {
@@ -148,10 +148,7 @@ class ExprTree
 		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
 		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
 
-		int                 ref;          // number of ptrs to this expr
 		LexemeType	    	type;         // lexeme type of the node
-		int                 cardinality;  // number of children
-		int		    		sumFlag;      // used by the SumTree functions
 		bool				evalFlag;	  // to check for circular evaluation
 
 #ifdef USE_STRING_SPACE_IN_CLASSADS
@@ -172,6 +169,9 @@ class VariableBase : public ExprTree
 
 		virtual void	Display();
 		char*	const	Name() { return name; }
+		virtual void    GetReferences(const AttrList *base_attrlist,
+									  StringList &internal_references,
+									  StringList &external_references) const;
 
 		friend	class	ExprTree;
 
@@ -306,8 +306,9 @@ class BinaryOpBase : public ExprTree
 		virtual ExprTree*     LArg()   { return lArg; }
 		virtual ExprTree*     RArg()   { return rArg; }
 
-		virtual ExprTree*	  Copy();
-
+		virtual void            GetReferences(const AttrList *base_attrlist,
+											  StringList &internal_references,
+											  StringList &external_references) const;
 		friend  class         ExprTree;
 		friend	class	      AttrList;
 		friend	class	      AggOp;
@@ -423,6 +424,9 @@ class AssignOpBase : public BinaryOpBase
     public :
   	AssignOpBase(ExprTree*, ExprTree*);
   	virtual void        Display();
+	virtual void        GetReferences(const AttrList *base_attlrlist,
+									  StringList &internal_references,
+									  StringList &external_references) const;
 };
 
 #endif
