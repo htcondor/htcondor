@@ -442,7 +442,7 @@ int		port;
 	}
 
 	get_inet_address( &(sin.sin_addr) );
-	MySockName1 = sin_to_string( &sin ); /* dhaval */
+	MySockName1 = strdup( sin_to_string( &sin ) ); /* dhaval */
 	dprintf(D_ALWAYS, "Listening at address %s\n", MySockName1);
 
 	if( listen(sock,5) < 0 ) {
