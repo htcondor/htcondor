@@ -54,7 +54,8 @@
 OpenSSLPath = /usr/uwglobus
 GlobusPath  = /usr/uwglobus
 #GAHP_DIR    = /p/condor/workspaces/epaulson/gahp/bin
-GAHP_DIR    = /home/psilord/v64/v64-dirty/src/gahp
+#GAHP_DIR    = /home/psilord/v64/v64-dirty/src/gahp
+GAHP_DIR    = /usr/local/condor-support/
 
 
 
