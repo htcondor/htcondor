@@ -279,7 +279,9 @@ Scheduler::Scheduler()
 	numMatches = 0;
 	numShadows = 0;
 	IdleSchedUniverseJobIDs = NULL;
-	FlockCollectors = FlockNegotiators = FlockViewServers = NULL;
+	FlockCollectors = NULL;
+	FlockNegotiators = NULL;
+	FlockViewServers = NULL;
 	MaxFlockLevel = 0;
 	FlockLevel = 0;
 	StartJobTimer=-1;
@@ -374,6 +376,9 @@ Scheduler::~Scheduler()
 	if (FlockCollectors) delete FlockCollectors;
 	if (FlockNegotiators) delete FlockNegotiators;
 	if (FlockViewServers) delete FlockViewServers;
+	FlockCollectors = NULL;
+	FlockNegotiators = NULL;
+	FlockViewServers = NULL;
 	if ( checkContactQueue_tid != -1 && daemonCore ) {
 		daemonCore->Cancel_Timer(checkContactQueue_tid);
 	}
@@ -441,6 +446,8 @@ Scheduler::count_jobs()
 	int		i, j;
 	int		prio_compar();
 	char	tmp[512];
+
+	ExtArray<OwnerData> SubmittingOwners;
 
 	 // copy owner data to old-owners table
 	ExtArray<OwnerData> OldOwners(Owners);
@@ -624,24 +631,50 @@ Scheduler::count_jobs()
 	sprintf(tmp, "%s = \"%s\"", ATTR_SCHEDD_NAME, Name);
 	ad->InsertOrUpdate(tmp);
 
-	for ( i=0; i<N_Owners; i++) {
-	  sprintf(tmp, "%s = %d", ATTR_RUNNING_JOBS, Owners[i].JobsRunning);
+
+		// Make another owners array that is independent of X509 proxy crap.
+	int numSubmittingOwners = 0;
+	for (i=0;i<N_Owners;i++) {
+		bool already_done = false;
+		int j;
+		for (j=0;j<numSubmittingOwners;j++) {
+			if (strcmp(SubmittingOwners[j].Name,Owners[i].Name)==0) {
+				already_done = true;
+				SubmittingOwners[j].JobsRunning += Owners[i].JobsRunning;
+				SubmittingOwners[j].JobsIdle += Owners[i].JobsIdle;
+				SubmittingOwners[j].JobsHeld += Owners[i].JobsHeld;
+				SubmittingOwners[j].JobsFlocked += Owners[i].JobsFlocked;
+				break;
+			}
+		}
+		if ( already_done ) continue;
+		j = numSubmittingOwners;
+		SubmittingOwners[j].JobsRunning = Owners[i].JobsRunning;
+		SubmittingOwners[j].JobsIdle = Owners[i].JobsIdle;
+		SubmittingOwners[j].JobsHeld = Owners[i].JobsHeld;
+		SubmittingOwners[j].JobsFlocked = Owners[i].JobsFlocked;
+		SubmittingOwners[j].Name = Owners[i].Name;
+		numSubmittingOwners++;
+	}
+
+	for ( i=0; i<numSubmittingOwners; i++) {
+	  sprintf(tmp, "%s = %d", ATTR_RUNNING_JOBS, SubmittingOwners[i].JobsRunning);
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
-	  sprintf(tmp, "%s = %d", ATTR_IDLE_JOBS, Owners[i].JobsIdle);
+	  sprintf(tmp, "%s = %d", ATTR_IDLE_JOBS, SubmittingOwners[i].JobsIdle);
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
-	  sprintf(tmp, "%s = %d", ATTR_HELD_JOBS, Owners[i].JobsHeld);
+	  sprintf(tmp, "%s = %d", ATTR_HELD_JOBS, SubmittingOwners[i].JobsHeld);
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
-	  sprintf(tmp, "%s = %d", ATTR_FLOCKED_JOBS, Owners[i].JobsFlocked);
+	  sprintf(tmp, "%s = %d", ATTR_FLOCKED_JOBS, SubmittingOwners[i].JobsFlocked);
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
-	  sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, Owners[i].Name, UidDomain);
+	  sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, SubmittingOwners[i].Name, UidDomain);
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
@@ -649,7 +682,7 @@ Scheduler::count_jobs()
 	  updateCentralMgr( UPDATE_SUBMITTOR_AD, ad, Collector->addr(), 0 ); 
 
 	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
-				Owners[i].Name, UidDomain );
+				SubmittingOwners[i].Name, UidDomain );
 
 	  // condor view uses the acct port - because the accountant today is not
 	  // an independant daemon. In the future condor view will be the
@@ -891,8 +924,6 @@ count( ClassAd *job )
 		x509userproxy = NULL;
 	} else {
 		x509userproxy = strdup(buf);
-		dprintf(D_FULLDEBUG, "Job has a X509_proxy and it's %s\n",
-				 x509userproxy);	
 	}
 
 	// calculate owner for per submittor information.
