@@ -45,21 +45,22 @@ update_startd()
     static char *my_addr = get_startd_addr(NULL);
     static SafeSock ssock(my_addr, 0, 0);
 
-    dprintf( D_FULLDEBUG, "X_EVENT_NOTIFICATION is: %d.\n",
-			 X_EVENT_NOTIFICATION);
-
-    if(ssock.ok()) {
-		ssock.encode();
-		ssock.timeout(3);
-		if( !ssock.code(cmd_num) || !ssock.end_of_message() ) {
-			dprintf( D_ALWAYS, "Can't send command to startd\n" );
-			return -1;
-		}
-    } else {
+    if(ssock.ok()) 
+    {
+	ssock.encode();
+	ssock.timeout(3);
+	if( !ssock.code(cmd_num) || !ssock.end_of_message() ) 
+	{
+	    dprintf( D_ALWAYS, "Can't send command to startd\n" );
+	    return -1;
+	}
+    } 
+    else 
+    {
 		return -1;
     }
-	dprintf( D_FULLDEBUG, "Sent update to startd at: %s.\n", my_addr);
-	return 0;		
+    dprintf( D_FULLDEBUG, "Sent update to startd at: %s.\n", my_addr);
+    return 0;		
 }
 
 int 

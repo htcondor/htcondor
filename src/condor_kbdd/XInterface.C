@@ -22,7 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #define _POSIX_SOURCE
 
-#include "condor_common.h"
+#include "XInterface.h"
 #include <stdio.h>
 #include <paths.h>
 #include <string.h>
@@ -30,8 +30,8 @@
 #include <sys/types.h>
 #include <utmp.h>
 #include <setjmp.h>
-#include "XInterface.h"
 #include <stdlib.h>
+
 const char * PASSWD_FILE = "/etc/passwd";
 
 bool        g_connected;
@@ -55,7 +55,7 @@ CatchFalseAlarm(Display *display, XErrorEvent *err)
 {
     char msg[80];
     XGetErrorText(display, err->error_code, msg, 80);
-    dprintf(D_ALWAYS, "Caught Error code(%d): %s\n", err->error_code, msg);
+    dprintf(D_FULLDEBUG, "Caught Error code(%d): %s\n", err->error_code, msg);
     return 0;
 }
 
@@ -66,7 +66,7 @@ CatchIOFalseAlarm(Display *display, XErrorEvent *err)
     g_connected = false;
         
     XGetErrorText(display, err->error_code, msg, 80);
-    dprintf(D_ALWAYS, "Caught Error code(%d): %s\n", err->error_code, msg);
+    dprintf(D_FULLDEBUG, "Caught Error code(%d): %s\n", err->error_code, msg);
 
     longjmp(jmp, 0);
     return 0;
@@ -134,12 +134,13 @@ XInterface::NextEntry()
 	    size = pwsize;
 	}
     }
-    while(strncmp(utmp_entry->ut_user, passwd_entry->pw_name, size));
+    while( strncmp(utmp_entry->ut_user, passwd_entry->pw_name, size) );
     fclose(etc_passwd);
     
     if(end == true)
     {
-	dprintf(D_ALWAYS, "UTMP is not in sync with passwd file\n");
+	// We couldn't find the current user in the passwd file?
+	
 	return -1;
     }
     else
@@ -161,24 +162,53 @@ XInterface::NextEntry()
 
 XInterface::XInterface()
 {
-    int s;
-    Window root;
+
+
     
     // We may need access to other user's home directories, so we must run
     // as root.
-    if(setuid(0) == -1)
+    set_root_priv();
+    
+    if(geteuid() != 0)
     {
-	dprintf(D_ALWAYS, "We must run as root.\n");
+	dprintf(D_ALWAYS, "We should run as root.\n");
     }
+
     _tried_root = false;
     g_connected = false;
     
     while(!Connect())
     {
-	sleep(1);
+	return;
     }
-    
+}
+
+XInterface::~XInterface()
+{
+}
+
+bool
+XInterface::Connect()
+{
+    int err;
+    Window root;
+    int s;
+
+    setutent(); // Reset utmp file to beginning.
+
+    _tried_root = false;
+    while(!(_display = XOpenDisplay("localhost:0.0") ))
+    {
+	err = NextEntry();
+	if(err == -1)
+	{
+	    dprintf(D_FULLDEBUG, "Exausted all possible attempts to "
+		    "connect to X server.\n");
+	    return false;
+	}
+    }
     dprintf(D_ALWAYS, "Connected to X server: localhost:0.0\n");
+    g_connected = true;
 
     // See note above the function to see why we need to do this.
     XSetErrorHandler((XErrorHandler) CatchFalseAlarm);
@@ -197,35 +227,7 @@ XInterface::XInterface()
     _pointer_prev_x = -1;
     _pointer_prev_y = -1;
     _pointer_prev_mask = 0;
-}
 
-XInterface::~XInterface()
-{
-}
-
-bool
-XInterface::Connect()
-{
-    int err;
-    
-    setutent(); // Reset utmp file to beginning.
-
-    dprintf(D_FULLDEBUG, "XDisplayName(NULL) returns: %s.\n", 
-	    XDisplayName(NULL));
-    _tried_root = false;
-    while(!(_display = XOpenDisplay("localhost:0.0") ))
-    {
-	
-	fflush(stderr);
-	err = NextEntry();
-	if(err == -1)
-	{
-	    dprintf(D_ALWAYS, "Exausted all possible attempts to "
-		    "connect to X server.\n");
-	    return false;
-	}
-    }
-    g_connected = true;
     return true;
 }
 
@@ -235,15 +237,18 @@ XInterface::CheckActivity()
     setjmp(jmp);
     while(!g_connected)
     {
-	Connect();
+	// If we can't connect, we don't know anything....
+	if( Connect() == -1 )
+	{
+	    return false;
+	}
     }
     
     if(ProcessEvents())
     {
 	return true;
     }
-    dprintf(D_FULLDEBUG, "Attempting to Query pointer...\n");
-    if(QueryPointer())
+    else if(QueryPointer())
     {
 	return true;
     }
@@ -306,7 +311,7 @@ XInterface::SelectEvents(Window win)
     }
     else if(XGetWindowAttributes(_display, win, &attribs) == 0)
     {
-	dprintf(D_FULLDEBUG, "XGetWindowAttributes() failed.\n");
+	dprintf(D_ALWAYS, "XGetWindowAttributes() failed.\n");
 	return;
     }
     else
@@ -355,13 +360,11 @@ XInterface::QueryPointer()
 	}
 	if(!found)
 	{
-	    dprintf(D_FULLDEBUG, "Lost connection to X server.\n");
+	    dprintf(D_ALWAYS, "Lost connection to X server.\n");
 	    g_connected = false;
 	}
     }
 
-    dprintf(D_FULLDEBUG, "pointer at (%d, %d) mask: %ud.\n", root_x, root_y,
-	    mask);
     if(root_x == _pointer_prev_x && root_y == _pointer_prev_y && 
        mask == _pointer_prev_mask)
     {

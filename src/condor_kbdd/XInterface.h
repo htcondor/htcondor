@@ -27,6 +27,7 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "condor_uid.h"
 #include <ctype.h>
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
