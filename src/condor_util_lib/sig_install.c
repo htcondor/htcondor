@@ -48,3 +48,16 @@ install_sig_handler( int sig, SIG_HANDLER handler )
 		EXCEPT( "sigaction" );
 	}
 }
+
+void
+unblock_signal( int sig)
+{
+    sigset_t    set;
+    if ( sigprocmask(SIG_SETMASK,0,&set)  == -1 ) {
+        EXCEPT("Error in reading procmask, errno = %d\n", errno);
+    }
+    sigdelset(&set, sig);
+    if ( sigprocmask(SIG_SETMASK,&set, 0)  == -1 ) {
+        EXCEPT("Error in setting procmask, errno = %d\n", errno);
+    }
+}	
