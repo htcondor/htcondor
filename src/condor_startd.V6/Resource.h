@@ -75,6 +75,8 @@ public:
 	void	resize_load_queue( void ); 
 	float	owner_load( void ) {return r_attr->owner_load();};
 	void	set_owner_load( float val ) {r_attr->set_owner_load(val);};
+	void	compute_cpu_busy( void );
+	time_t	cpu_busy_time( void );
 
 	void	display( amask_t m ) {r_attr->display(m);}
 
@@ -104,11 +106,10 @@ public:
 
 		// Methods to initialize and refresh the resource classads.
 	int		init_classad( void );		
-	void	update_classad( void );	
-	void	timeout_classad( void );	
+	void	refresh_classad( amask_t mask );	
 	int		force_benchmark( void );
 
-	int		update( void );				// Schedule to update the central manager.
+	int		update( void );		// Schedule to update the central manager.
 	int		do_update( void );			// Actually update the CM
 	int		eval_and_update( void );	// Evaluate state and update CM. 
 	void	final_update( void );		// Send a final update to the CM
@@ -128,6 +129,7 @@ public:
 	int		eval_continue( void );		// EXCEPT's on undefined
 	int		eval_is_owner( void );		// EXCEPT's on undefined
 	int		eval_start( void );			// returns -1 on undefined
+	int		eval_cpu_busy( void );		// returns FALSE on undefined
 
 		// Data members
 	ResState*		r_state;	// Startd state object, contains state and activity
@@ -152,6 +154,8 @@ private:
 	int		r_load_num_called;	// Counter used for CondorLoadAvg
 	void	remove_pre( void );	// If r_pre is set, refuse and delete it.
 	bool	r_is_deactivating;	// Are we in the middle of deactivating a claim?
+	int		r_cpu_busy;
+	time_t	r_cpu_busy_start_time;
 };
 
 #endif _STARTD_RESOURCE_H
