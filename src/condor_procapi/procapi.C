@@ -402,7 +402,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
 
 	sprintf( path, "/proc/%d/stat", pid );
 
-	if( (fp = fopen(path, "r")) >= 0 ) {
+	if( (fp = fopen(path, "r")) > 0 ) {
 		fscanf( fp, "%d %s %c %d "
 				"%d %d %d %d "
 				"%u %u %u %u %u "
@@ -520,7 +520,33 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) {
 	procHash->insert( pid, phn );
 	
 		// done with %cpu hacking
- 
+
+		// Finally, do some sanity checking, due to bugs in the 2.0.X
+		// SMP Linux kernel.  
+	if( pi->cpuusage < 0 ) {
+		pi->cpuusage = 0;
+	}
+	if( pi->imgsize < 0 ) {
+		pi->imgsize = 0;
+	}
+	if( pi->rssize < 0 ) {
+		pi->rssize = 0;
+	}
+	if( pi->minfault < 0 ) {
+		pi->minfault = 0;
+	}
+	if( pi->majfault < 0 ) {
+		pi->majfault = 0;
+	}
+	if( pi->user_time < 0 ) {
+		pi->user_time = 0;
+	}
+	if( pi->sys_time < 0 ) {
+		pi->sys_time = 0;
+	}
+	if( pi->age < 0 ) {
+		pi->age = 0;
+	}
 	set_priv( priv );
 	return 0;
 }
