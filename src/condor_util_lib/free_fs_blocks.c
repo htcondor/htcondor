@@ -245,11 +245,14 @@ char *filename;
 }
 #endif /* VAX && ULTRIX */
 
-#if (defined(I386) && defined(DYNIX)) || (defined(VAX) && defined(BSD43)) || (defined(MC68020) && defined(SUNOS41)) || (defined(IBM032) && defined(BSD43)) || (defined(MC68020) && defined(BSD43)) || (defined(SPARC) && defined(SUNOS41)) || (defined(R6000) && defined(AIX31)) || defined(AIX32) || defined(IRIX331) || (defined(SPARC) && defined(CMOS)) || defined(HPUX8)
+#if (defined(I386) && defined(DYNIX)) || (defined(VAX) && defined(BSD43)) || (defined(MC68020) && defined(SUNOS41)) || (defined(IBM032) && defined(BSD43)) || (defined(MC68020) && defined(BSD43)) || (defined(SPARC) && defined(SUNOS41)) || (defined(R6000) && defined(AIX31)) || defined(AIX32) || defined(IRIX331) || (defined(SPARC) && defined(CMOS)) || defined(HPUX8) || defined(OSF1)
 
 #if defined(AIX31) || defined(AIX32)
 #include <sys/statfs.h>
+#elif defined(OSF1)
+#include <sys/mount.h>
 #endif
+
 
 #ifdef IRIX331
 #define f_bavail f_bfree
@@ -262,8 +265,10 @@ char *filename;
 	struct statfs statfsbuf;
 	int free_kbytes;
 
-#ifdef IRIX331
+#if defined(IRIX331)
 	if(statfs(filename, &statfsbuf, sizeof statfsbuf, 0) < 0) {
+#elif defined(OSF1)
+	if(statfs(filename, &statfsbuf, sizeof statfsbuf) < 0) {
 #else
 	if(statfs(filename, &statfsbuf) < 0) {
 #endif
