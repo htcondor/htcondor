@@ -132,7 +132,7 @@ submit_submit( const char* cmdFile, CondorID& condorID,
 	command = MyString(exe) + " " + prependLines + " " + cmdFile;
 #else
 	// we use 2>&1 to make sure we get both stdout and stderr from command
-	command = MyString(exe) + " " + prependLines + " " + cmdFile + ">&1";;
+	command = MyString(exe) + " " + prependLines + " " + cmdFile + " 2>&1";;
 #endif
 	
 	debug_printf(DEBUG_VERBOSE, "submitting: %s\n", command.Value());
