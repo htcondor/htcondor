@@ -1,33 +1,42 @@
-/* scanner.h
-   Interface definition for the scanner module of condor submit.
-*/
-#ifndef _SCANNER_H
-#define _SCANNER_H
+//******************************************************************************
+//
+// scanner.h
+//
+//******************************************************************************
+
+#ifndef _SCANNER_H_
+#define _SCANNER_H_
 
 #define MAX_VAR_NAME 100
 
-/* Lexeme abstract dataype: */
+// Lexeme abstract dataype:
 
-class token
+class Token
 {
- public:
-  token() { str_val = NULL; le_type = NOT_KEYWORD; }
-  ~token() { if(le_type == LX_STRING) delete str_val; }
-  friend void scanner (char **, class token *);
-  lexeme_type token_type ();
-  int token_int ();
-  char *token_str ();
-  float token_float();
+    public:
 
-  union {
-   int int_val;
-   char *str_val;
-   float float_val;
-  };
+        Token() { strVal = NULL; type = NOT_KEYWORD; }
+        ~Token() { if(type == LX_STRING) delete strVal; }
 
- private: 
-  lexeme_type le_type; 
+        LexemeType	Type () { return type; }
+        int		Int ()  { return intVal; }
+        char*		Str () { return strVal; }
+        float		Float() { return floatVal; }
+	int		Length() { return length; }
+
+        friend void Scanner (char*&, class Token&);
+
+        union {
+            int		intVal;
+            char*	strVal;
+            float	floatVal;
+        };
+
+    private: 
+
+        LexemeType	type; 
+	int		length;
 };
 
 
-#endif /* _SCANNER_H */
+#endif
