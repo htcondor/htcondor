@@ -79,6 +79,8 @@ END_C_DECLS
 #if defined( Solaris26) 
 #	define HAS_64BIT_STRUCTS	1
 #	define HAS_64BIT_SYSCALLS	1
+#	define HAS_F_DUP2FD			1
 #endif
+
 
 #endif /* CONDOR_SYS_SOLARIS_H */

@@ -81,6 +81,10 @@
 #	define SIGISMEMBER_IS_BROKEN 0
 #endif
 
+#if !defined(HAS_F_DUP2FD)
+#	define HAS_F_DUP2FD 0
+#endif
+
 #if !defined(NBBY)
 #	define NBBY 8
 #endif
