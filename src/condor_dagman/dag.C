@@ -245,9 +245,8 @@ bool Dag::ProcessLogEvents (bool recovery) {
 					  break;
 				  }
 
-				  if( job->retries < job->retry_max ) {
+				  if( job->retries++ < job->retry_max ) {
 					  // retry job
-					  job->retries++;
 					  job->_Status = Job::STATUS_READY;
 					  if( job->_scriptPre ) {
 						  // undo PRE script completion
@@ -261,39 +260,30 @@ bool Dag::ProcessLogEvents (bool recovery) {
 					  }
 					  break;
 				  }
-				  else {
-					  // no more retries -- job failed
-					  job->_Status = Job::STATUS_ERROR;
-					  _numJobsFailed++;
-					  if( job->retry_max > 0 ) {
-						  // add # of retries to error_text
-						  char *tmp = strnewp( job->error_text );
-						  sprintf( job->error_text, 
-								   "%s (after %d node retries)", tmp,
-								   job->retries );
-						  delete tmp;
-					  }
-					  if( job->_scriptPost == NULL ||
-						  run_post_on_failure == FALSE ) {
-						  break;
-					  }
-				  }
-
 
 				  job->_Status = Job::STATUS_ERROR;
+                  _numJobsSubmitted--;
+                  assert( _numJobsSubmitted >= 0 );
 				  _numJobsFailed++;
+
 				  sprintf( job->error_text, "Condor reported %s event",
 						   ULogEventNumberNames[e->eventNumber] );
-
- 				  if( job->_scriptPost == NULL ||
+				  if( job->retry_max > 0 ) {
+					  // add # of retries to error_text
+					  char *tmp = strnewp( job->error_text );
+					  sprintf( job->error_text, "%s (after %d node retries)",
+							   tmp, job->retries );
+					  delete tmp;
+				  }
+ 				  if( job->_scriptPost == NULL || 
 					  run_post_on_failure == FALSE ) {
 					  break;
 				  }
 				  // if a POST script is specified for the job, run it
 				  job->_Status = Job::STATUS_POSTRUN;
 				  // there's no easy way to represent these errors as
-				  // return values or signals, so just say SIGKILL
-				  job->_scriptPost->_retValJob = -9;
+				  // return values or signals, so just say SIGABRT
+				  job->_scriptPost->_retValJob = -6;
 				  if( !recovery ) {
 					  _postScriptQ->Run( job->_scriptPost );
 				  }
