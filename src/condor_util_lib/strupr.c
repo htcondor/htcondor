@@ -21,7 +21,7 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#include <string.h>
+#include "condor_common.h"
 
 /*
 ** Convert a string, in place, to the uppercase version of it. 
