@@ -205,8 +205,10 @@ VanillaProc::StartJob()
 
 		// Only rename the executable if it is transferred.
 		int xferExec;
-		if(!JobAd->LookupBool(ATTR_TRANSFER_EXECUTABLE,xferExec)) {
+		if(JobAd->LookupBool(ATTR_TRANSFER_EXECUTABLE,xferExec)!=1) {
 			xferExec = 1;
+		} else {
+			xferExec = 0;
 		}
 
 		if(xferExec) {
