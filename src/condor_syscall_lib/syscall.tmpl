@@ -1281,6 +1281,10 @@ not_supported {
 	Stuff having to do with semaphores.  Probably won't support
 	these unless they become a standard across all the platforms.
 	*/
+	/*
+	IRIX note: semctl doesn't work in current version of gcc irix N32 ABI
+	mikeu - 6/15/99
+	*/
 not_supported {
 	int semctl( int semid, int semnum, int cmd, void *arg );
 	int semget( key_t key, int nsems, int semflag );
