@@ -47,9 +47,9 @@ when aborting a DAG.
   the STDOUT or STDERR file from the execution host, even though these
   files didn't exist and all the data was already streamed back to the
   submit host.
-  Now, if either \Attr{stream_output} or \Attr{stream_error} are set
-  to true, Condor will transfer any other output but will not attempt
-  to transfer back STDOUT or STDERR.
+  Now, if either \Attr{stream\_output} or \Attr{stream\_error} are set
+  to true in the job submit description file, Condor will transfer any
+  other output but will not attempt to transfer back STDOUT or STDERR.
 
 \end{itemize}
 
