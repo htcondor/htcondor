@@ -24,8 +24,11 @@ then
     exit 1
 fi
 
+base_name=`echo $1 | sed -e 's/.tar.gz//'`
+
 # Figure out version from file name condor-<ver>-....tar.gz
 condor_version=`perl -e '@v=split(/-/, $ARGV[0]); print $v[1];' $1`;
+echo "Condor Version: $condor_version"
 
 rm -rf /tmp/make-condor-rpm && mkdir /tmp/make-condor-rpm
 if [ $? != 0 ]
@@ -44,13 +47,16 @@ fi
 
 pushd /tmp/make-condor-rpm >> /dev/null
 
+echo "*** Untarring distribution"
 # Untar condor distribution
 tar xzf condor.tar.gz || exit 4
 
 cd condor-${condor_version}
 
+echo "*** Untarring release.tar"
 file_list=`tar xvf release.tar`
 
+echo "*** Creating RPM build directories"
 # Create RPM build directory
 mkdir -p rpmbuild/BUILD
 mkdir -p rpmbuild/SOURCES
@@ -63,6 +69,7 @@ then
     exit 5
 fi
 
+echo "*** Creating RPM spec file"
 # Create RPM spec file
 cat > ./condor.spec <<EOF
 Summary: Condor
@@ -87,11 +94,15 @@ Prefix: /opt/%{name}-%{version}
 %post
 cd \${RPM_INSTALL_PREFIX}
 
+# Figure out the user
+owner="condor"
+grep condor: /etc/passwd || owner="daemon"
+
 # This is a hack so that condor_configure works
 touch ./ignore.me
 tar cf ./release.tar ignore.me
 rm ./ignore.me
-./condor_configure --install --owner=condor
+./condor_configure --install --owner=\${owner}
 rm ./ignore.me
 rm ./release.tar
 
@@ -114,14 +125,20 @@ do
 done
 echo '%changelog' >> ./condor.spec
 
+
 # Build RPM
+echo "*** Building RPM"
 rpmbuild --define "_topdir rpmbuild" -bb condor.spec && yes_rpm='y'
 
 # Place RPM in the resulting directory
 popd >> /dev/null
-cp /tmp/make-condor-rpm/condor-${condor_version}/rpmbuild/RPMS/i386/*.rpm .
+rpm_name="condor-$condor_version-1.i386.rpm"
+cp /tmp/make-condor-rpm/condor-${condor_version}/rpmbuild/RPMS/i386/${rpm_name} \
+   ./${base_name}-1.i386.rpm
+
 
 # Cleanup
+echo "*** Cleaning up"
 rm /opt/condor-${condor_version}
 rm -rf /tmp/make-condor-rpm    
 
@@ -129,3 +146,8 @@ if [ "$yes_rpm" != 'y' ]
 then
     exit 7
 fi
+
+echo
+echo "Output: "`pwd`/${base_name}-1.i386.rpm
+echo
+
