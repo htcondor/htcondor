@@ -777,7 +777,7 @@ bool periodic_policy(void)
 	if (phc == 1)
 	{
 		dprintf(D_ALWAYS, "Periodic policy: holding job.\n");
-		sprintf(buf, "Your job has been held because %s has become true\n"
+		sprintf(buf, "Your job has been held because %s has become true\n",
 			ATTR_PERIODIC_HOLD_CHECK);
 
 		/* This exits */
