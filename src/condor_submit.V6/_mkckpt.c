@@ -25,6 +25,8 @@
 ** Authors:  Allan Bricker and Michael J. Litzkow,
 ** 	         University of Wisconsin, Computer Sciences Dept.
 ** 
+** Modified by Jim Basney to use qmgmt services to transfer initial
+**   checkpoint file via Shadow.  11/5/96
 */ 
 
 #if defined(Solaris)
@@ -36,7 +38,12 @@
 #include "except.h"
 
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <netinet/in.h>
+
+#include "condor_qmgr.h"
+#include "_condor_fix_types.h"
+#include "condor_fix_socket.h"
 
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
@@ -46,8 +53,11 @@ char *ckptfile, *objfile;
 	register int objfd, ckptfd;
 	register int len = 0, cc;
 	register int i;
-	int ssize;
+	int ssize, ack;
 	char buf[ 4 * 1024 ];
+	char address[256];
+	struct sockaddr_in sin;
+	struct stat filesize;
 
 	/*
 	**	Make sure to do local calls...
@@ -59,9 +69,32 @@ char *ckptfile, *objfile;
 		EXCEPT("open %s", objfile);
 	}
 
-	ckptfd = open( ckptfile, O_CREAT|O_TRUNC|O_WRONLY, 0777);
-	if( ckptfd < 0 ) {
-		EXCEPT("open %s", ckptfile);
+	if (SendSpoolFile(ckptfile, address) < 0) {
+		EXCEPT("unable to transfer checkpoint file %s", ckptfile);
+	}
+
+	ckptfd = socket( AF_INET, SOCK_STREAM, 0 );
+	if (ckptfd < 0 ) {
+		EXCEPT("socket call failed");
+	}
+	
+	memset( &sin, '\0', sizeof sin );
+	sin.sin_family = AF_INET;
+	if (string_to_sin(address, &sin) < 0) {
+		EXCEPT("unable to decode address %s", address);
+	}
+
+	if (connect(ckptfd, (struct sockaddr *)&sin, sizeof(sin)) < 0) {
+		EXCEPT("failed to connect to qmgmr to transfer checkpoint file");
+	}
+
+	if (fstat(objfd, &filesize) < 0) {
+		EXCEPT("fstat of executable %s failed", objfile);
+	}
+
+	filesize.st_size = htonl(filesize.st_size);
+	if ( write(ckptfd, &filesize.st_size, sizeof(int)) < 0 ) {
+		EXCEPT("filesize write failed");
 	}
 
 	for(;;) {
@@ -81,8 +114,14 @@ char *ckptfile, *objfile;
 		}
 	}
 
-	if( fsync(ckptfd) < 0 ) {
-		EXCEPT( "Write of \"%s\"", ckptfile );
+	if ( read(ckptfd, &ack, sizeof(ack)) < 0) {
+		EXCEPT("Failed to read ack from qmgmr!  Checkpoint store failed!");
+	}
+
+	ack = ntohl(ack);
+	if (ack != len) {
+		EXCEPT("Failed to transfer %d bytes of checkpoint file (only %d)",
+			   len, ack);
 	}
 
 	(void)close( objfd );

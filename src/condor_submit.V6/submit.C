@@ -40,6 +40,7 @@
 #include "condor_network.h"
 #include "condor_string.h"
 #include "condor_ckpt_name.h"
+#include "url_condor.h"
 #include "proc_obj.h"
 #include "sched.h"
 #include <pwd.h>
@@ -68,7 +69,8 @@ char	IckptName[_POSIX_PATH_MAX];	/* Pathname of spooled initial ckpt file */
 
 
 char	*MyName;
-int		Quiet;
+int		Quiet=0;
+int		Remote=0;
 int		ClusterCreated = FALSE;
 
 #define PROCVARSIZE	32
@@ -155,7 +157,7 @@ main( int argc, char *argv[] )
 	FILE	*fp;
 	char	queue_name[_POSIX_PATH_MAX];
 	char	**ptr;
-	char	*cmd_file = NULL;
+	char	*cmd_file = NULL, *queue_file = NULL;
 
 	setbuf( stdout, NULL );
 
@@ -163,11 +165,6 @@ main( int argc, char *argv[] )
 
 	config( MyName, (CONTEXT *)0 );
 	init_params();
-
-
-	if( argc < 2 || argc > 3 ) {
-		usage();
-	}
 
 	DebugFlags |= D_EXPR;
 	Terse = 1;
@@ -177,6 +174,10 @@ main( int argc, char *argv[] )
 		if( ptr[0][0] == '-' ) {
 			if( ptr[0][1] == 'q' ) {
 				Quiet++;
+			} else if ( ptr[0][1] == 'r' ) {
+				Remote++;
+				ptr++;
+				queue_file = *ptr;
 			} else {
 				usage();
 			}
@@ -189,21 +190,29 @@ main( int argc, char *argv[] )
 		usage();
 	}
 
-	ThisHost = my_hostname();
+	if (Remote) {
+		ThisHost = queue_file;
+	} else {
+		ThisHost = my_hostname();
+	}
 
 	if( (fp=fopen(cmd_file,"r")) == NULL ) {
 		fprintf( stderr, "Failed to open command file\n");
 		exit(1);
 	}
 
-	if (ConnectQ(NULL) == 0) {
+	if (ConnectQ(queue_file) == 0) {
 		fprintf(stderr, "Failed to connect to qmgr\n");
 		exit(1);
 	}
 	Proc.q_date = (int)time( (time_t *)0 );
 	Proc.completion_date = 0;
 	Proc.version_num = PROC_VERSION;
-	Proc.owner = get_owner();
+	if (Remote) {
+		Proc.owner = string_copy("nobody");	// unauthenticated!
+	} else {
+		Proc.owner = get_owner();
+	}
 	Proc.id.cluster = NewCluster();
 	if (Proc.id.cluster == -1) {
 		fprintf(stderr, "Failed to create cluster\n");
@@ -246,8 +255,6 @@ reschedule()
 	int			sock = -1;
 	int			cmd;
 	XDR			xdr, *xdrs = NULL;
-
-
 
 		/* Connect to the schedd */
 	if( (sock = do_connect(ThisHost, "condor_schedd", SCHED_PORT)) < 0 ) {
@@ -340,7 +347,7 @@ SetExecutable()
 	}
 
 	for( i=0; i<argc; i++ ) {
-		strcpy( IckptName, gen_ckpt_name(Spool,Proc.id.cluster,ICKPT,i) );
+		strcpy( IckptName, gen_ckpt_name(0,Proc.id.cluster,ICKPT,i) );
 		_mkckpt(IckptName,argv[i]);
 		Proc.cmd[i] = string_copy( argv[i] );
 	}
@@ -1286,7 +1293,7 @@ check_open( char *name, int flags )
 void
 usage()
 {
-	fprintf( stderr, "Usage: %s [-q] cmdfile\n", MyName );
+	fprintf( stderr, "Usage: %s [-q] [-r \"hostname\"] cmdfile\n", MyName );
 	exit( 1 );
 }
 
