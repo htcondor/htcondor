@@ -38,6 +38,14 @@
 #include "condor_debug.h"
 #include <stdio.h>
 
+Sock::Sock() : Stream() {
+	_sock = INVALID_SOCKET;
+	_state = sock_virgin;
+	_timeout = 0;
+	memset(&_who, 0, sizeof( struct sockaddr_in ) );
+}
+
+
 #if defined(WIN32)
 class SockInitializer
 {
