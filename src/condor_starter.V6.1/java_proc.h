@@ -25,6 +25,7 @@
 #define _CONDOR_JAVA_PROC_H
 
 #include "vanilla_proc.h"
+#include "condor_classad.h"
 
 typedef enum {
 	JAVA_EXIT_NORMAL,
@@ -44,12 +45,15 @@ public:
 
 private:
 	int ParseExceptionLine( const char *line, char *name, char *type );
-	int ParseExceptionFile( FILE *file, char *name, char *type );
+	int ParseExceptionFile( FILE *file );
 	java_exit_mode_t ClassifyExit( int status );
 
 	char *execute_dir;
 	char startfile[_POSIX_PATH_MAX];
 	char endfile[_POSIX_PATH_MAX];
+	char ex_name[ATTRLIST_MAX_EXPRESSION];
+	char ex_type[ATTRLIST_MAX_EXPRESSION];
+	char ex_hier[ATTRLIST_MAX_EXPRESSION];
 };
 
 #endif

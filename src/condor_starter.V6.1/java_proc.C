@@ -11,6 +11,9 @@ JavaProc::JavaProc( ClassAd * jobAd, const char *xdir ) : VanillaProc(jobAd)
 	execute_dir = strdup(xdir);
 	startfile[0] = 0;
 	endfile[0] = 0;
+	ex_hier[0] = 0;
+	ex_name[0] = 0;
+	ex_type[0] = 0;
 }
 
 JavaProc::~JavaProc()
@@ -110,30 +113,14 @@ int JavaProc::ParseExceptionLine( const char *line, char *name, char *type )
 
 /*
 Read the exception line from the status file,
-and place the necessary info in the JobAd.
+and stash the necessary info in this object.
 */
 
-int JavaProc::ParseExceptionFile( FILE *file, char *ex_name, char *ex_type )
+int JavaProc::ParseExceptionFile( FILE *file )
 {
-	char tmp[ATTRLIST_MAX_EXPRESSION];
-	char ex_line[ATTRLIST_MAX_EXPRESSION];
-
-	if(!fgets(ex_line,sizeof(ex_line),file)) return 0;
-	if(!fgets(ex_line,sizeof(ex_line),file)) return 0;
-	if(!ParseExceptionLine(ex_line,ex_name,ex_type)) return 0;
-
-	sprintf(tmp,"%s=\"%s\"",ATTR_EXCEPTION_HIERARCHY,ex_line);
-	JobAd->InsertOrUpdate(tmp);
-	dprintf(D_ALWAYS,"JavaProc: %s\n",tmp);
-
-	sprintf(tmp,"%s=\"%s\"",ATTR_EXCEPTION_NAME,ex_name);
-	JobAd->InsertOrUpdate(tmp);
-	dprintf(D_ALWAYS,"JavaProc: %s\n",tmp);
-
-	sprintf(tmp,"%s=\"%s\"",ATTR_EXCEPTION_TYPE,ex_type);
-	JobAd->InsertOrUpdate(tmp);
-	dprintf(D_ALWAYS,"JavaProc: %s\n",tmp);
-
+	if(!fgets(ex_hier,sizeof(ex_hier),file)) return 0;
+	if(!fgets(ex_hier,sizeof(ex_hier),file)) return 0;
+	if(!ParseExceptionLine(ex_hier,ex_name,ex_type)) return 0;
 	return 1;
 }
 
@@ -149,8 +136,6 @@ java_exit_mode_t JavaProc::ClassifyExit( int status )
 	int fields;
 
 	char tmp[ATTRLIST_MAX_EXPRESSION];
-	char ex_name[ATTRLIST_MAX_EXPRESSION];
-	char ex_type[ATTRLIST_MAX_EXPRESSION];
 
 	int normal_exit = WIFEXITED(status);
 	int exit_code = WEXITSTATUS(status);
@@ -175,7 +160,7 @@ java_exit_mode_t JavaProc::ClassifyExit( int status )
 					dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Job returned from main()\n");
 					exit_mode = JAVA_EXIT_NORMAL;
 				} else if(!strcmp(tmp,"abnormal")) {	
-					ParseExceptionFile(file,ex_name,ex_type);
+					ParseExceptionFile(file);
 					if(!strcmp(ex_type,"java.lang.Error")) {
 						dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Job threw a %s (%s), will retry it later.\n",ex_name,ex_type);
 						exit_mode = JAVA_EXIT_SYSTEM_ERROR;
@@ -184,6 +169,7 @@ java_exit_mode_t JavaProc::ClassifyExit( int status )
 						exit_mode = JAVA_EXIT_EXCEPTION;
 					}
 				} else if(!strcmp(tmp,"noexec")) {
+					ParseExceptionFile(file);
 					dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Job could not be executed\n");
 					exit_mode = JAVA_EXIT_EXCEPTION;
 				} else {
@@ -240,6 +226,7 @@ int JavaProc::JobCleanup(int pid, int status)
 {
 	if(pid==JobPid) {
 		dprintf(D_ALWAYS,"JavaProc: JVM pid %d has finished\n",pid);
+		dprintf( D_FULLDEBUG, "pid=%d, JobPid=%d\n",pid,JobPid );
 
 		switch( ClassifyExit(status) ) {
 			case JAVA_EXIT_NORMAL:
@@ -263,13 +250,32 @@ int JavaProc::JobCleanup(int pid, int status)
 }
 
 /*
-We don't have anything to put in the ad ad this point,
-but if ParseExceptionFile has been run, it throws the
-exception types into the ad.
+If any exception information has been filled in,
+then throw it into the update ad.
 */
 
 bool JavaProc::PublishUpdateAd( ClassAd* ad )
 {
+	char tmp[ATTRLIST_MAX_EXPRESSION];
+
+	if(ex_hier[0]) {
+		sprintf(tmp,"%s=\"%s\"",ATTR_EXCEPTION_HIERARCHY,ex_hier);
+		ad->InsertOrUpdate(tmp);
+		dprintf(D_ALWAYS,"JavaProc: %s\n",tmp);
+	}
+
+	if(ex_name[0]) {
+		sprintf(tmp,"%s=\"%s\"",ATTR_EXCEPTION_NAME,ex_name);
+		ad->InsertOrUpdate(tmp);
+		dprintf(D_ALWAYS,"JavaProc: %s\n",tmp);
+	}
+
+	if(ex_type[0]) {
+		sprintf(tmp,"%s=\"%s\"",ATTR_EXCEPTION_TYPE,ex_type);
+		ad->InsertOrUpdate(tmp);
+		dprintf(D_ALWAYS,"JavaProc: %s\n",tmp);
+	}
+
 	return VanillaProc::PublishUpdateAd(ad);
 }
 
