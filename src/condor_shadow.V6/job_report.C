@@ -40,6 +40,7 @@ void job_report_display_calls( FILE *f )
 
 struct error_node {
 	char *text;
+	int count;
 	struct error_node *next;
 };
 
@@ -50,22 +51,34 @@ static struct error_node *error_head=0;
 int job_report_store_error( char *format, ... )
 {
 	struct error_node *e;
+	char *text;
 
 	va_list args;
 	va_start( args, format );
 
-	/* Create a node containing the text */
+	/* Create a string according to the text */
+
+	text = (char*)malloc(JOB_REPORT_RECORD_MAX);
+	if(!text) return 0;
+	vsprintf( text, format, args );
+
+	/* Are there any duplicates? */
+
+	for( e=error_head; e; e=e->next ) {
+		if(!strcmp(e->text,text)) {
+			e->count++;
+			free(text);
+			return 1;
+		}
+	}
+
+	/* Otherwise, add it to the list */
 	
 	e = (struct error_node *) malloc(sizeof(struct error_node));
 	if(!e) return 0;
 
-	e->text = (char *) malloc(JOB_REPORT_RECORD_MAX);
-	if(!e->text) {
-		free(e);
-		return 0;
-	}
-	vsprintf( e->text, format, args );
-
+	e->text = text;
+	e->count = 1;
 	e->next = error_head;
 	error_head = e;
 
@@ -83,7 +96,12 @@ void job_report_display_errors( FILE *f )
 	if( error_head ) {
 		fprintf( f,"***\n");
 		for( i=error_head; i; i=i->next ) {
-			fprintf(f,"\t* %s\n",i->text);
+			fprintf(f,"\t* %s",i->text);
+			if(i->count>1) {
+				fprintf(f," (%d times)\n",i->count);
+			} else {
+				fprintf(f,"\n");
+			}
 		}
 		fprintf( f,"***\n");
 	}
