@@ -187,7 +187,6 @@ const char ATTR_TRANSFER_SOCKET			 [] = "TransferSocket";
 const char ATTR_SERVER_TIME				 [] = "ServerTime";
 const char ATTR_SHADOW_BIRTHDATE		 [] = "ShadowBday";
 const char ATTR_HOLD_REASON				 [] = "HoldReason";
-const char ATTR_JOB_START_DATE			 [] = "JobStartDate";
 const char ATTR_WANT_RESOURCE_AD		 [] = "WantResAd";
 
 #endif
