@@ -8,6 +8,22 @@ STUBS = switches.o switches.special.o
 UTIL =	remote_syscall.o syscall_connect.o senders.o remote_startup.o
 NAME_TAB = ../h/syscall_numbers.o
 
+SRC = \
+	ToUpper.c \
+	extern_path.c \
+	receivers.epilogue \
+	receivers.prologue \
+	remote_startup.c \
+	remote_syscall.c \
+	senders.epilogue \
+	senders.prologue \
+	stub_gen_lex.l \
+	stub_gen_yacc.y \
+	switches.prologue \
+	switches.special.c \
+	syscall.tmpl \
+	syscall_connect.c
+
 XDR_OBJ = \
  	xdr_rusage.o \
  	xdr_proc.o \
@@ -78,6 +94,7 @@ y.tab.c: stub_gen_yacc.y scanner.h
 clean::
 	rm -f lex.yy.c y.tab.c y.tab.h switches.c senders.c receivers.c *.o
 
+depend_target($(SRC))
 program_target(stub_gen,y.tab.o lex.yy.o,$(NULL),no_realeas)
 
 
