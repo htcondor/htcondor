@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "common.h"
 #include "exprTree.h"
 
 BEGIN_NAMESPACE( classad )
@@ -126,7 +127,7 @@ _Evaluate( EvalState &, Value &val, ExprTree *&sig ) const
 }
 
 bool ExprList::
-_Flatten( EvalState &state, Value &, ExprTree *&tree, OpKind* ) const
+_Flatten( EvalState &state, Value &, ExprTree *&tree, int* ) const
 {
 	vector<ExprTree*>::const_iterator	itr;
 	ExprTree	*expr, *nexpr;

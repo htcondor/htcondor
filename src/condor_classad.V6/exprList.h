@@ -26,7 +26,7 @@
 
 #include <vector>
 
-BEGIN_NAMESPACE( classad )
+BEGIN_NAMESPACE( classad );
 
 class ExprListIterator;
 
@@ -36,16 +36,27 @@ class ExprListIterator;
 class ExprList : public ExprTree
 {
 	public:
-		/// Constructor
-		ExprList();
-
 		/// Destructor
 		~ExprList();
 
-		static ExprList *MakeExprList( const vector< ExprTree* > & );
-		void GetComponents( vector<ExprTree*>& ) const;
+		/** Factory to make an expression list expression
+		 * 	@param	list A vector of the expressions to be contained in the
+		 * 		list
+		 * 	@return The constructed expression list
+		 */
+		static ExprList *MakeExprList( const vector< ExprTree* > &list );
 
+		/** Deconstructor to obtain the components of an expression list
+		 * 	@param list The list of expressions
+		 */
+		void GetComponents( vector<ExprTree*>& list) const;
+
+		/// Make a deep copy of the expression
 		virtual ExprList* Copy( ) const;
+
+	protected:
+		/// Constructor
+		ExprList();
 
 	private:
 		friend class ExprListIterator;
@@ -56,7 +67,7 @@ class ExprList : public ExprTree
 		virtual void _SetParentScope( const ClassAd* p );
 		virtual bool _Evaluate (EvalState &, Value &) const;
 		virtual bool _Evaluate (EvalState &, Value &, ExprTree *&) const;
-		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* ) const;
+		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;
 };
 
 
