@@ -147,7 +147,7 @@ extern "C" {
 #endif
 }
 
-extern int getJobAd(int cluster_id, int proc_id, ClassAd *new_ad);
+extern "C" int getJobAd(int cluster_id, int proc_id, ClassAd *new_ad);
 extern int part_send_job( int test_starter, char *host, int &reason,
 			  char *capability, char *schedd, PROC *proc, int &sd1,
 	      		  int &sd2, char **name);

@@ -122,7 +122,7 @@ extern "C" {
 				union wait *jobstatus, char *coredir );
 }
 
-extern int getJobAd(int cluster_id, int proc_id, ClassAd *new_ad);
+extern "C" int getJobAd(int cluster_id, int proc_id, ClassAd *new_ad);
 
 
 #if defined(NEW_PROC)
