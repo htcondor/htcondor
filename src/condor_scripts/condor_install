@@ -808,6 +808,7 @@ sub get_default_mail_path {
     local( $mail_path );
     chop($_ = `uname`);
   SWITCH: {
+      if(/^AIX/) { $mail_path="/usr/bin/mail";   last SWITCH; }
       if(/^Linux/) { $mail_path="/usr/bin/mail";   last SWITCH; }
       if(/^SunOS/) { $mail_path="/usr/ucb/mail";   last SWITCH; }
       if(/^HP-UX/) { $mail_path="/bin/mailx";      last SWITCH; }

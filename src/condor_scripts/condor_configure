@@ -619,6 +619,7 @@ sub set_mail_settings {
       if(/^HP-UX/) { $mail_path="/bin/mailx";      last SWITCH; }
       if(/^IRIX.*/) { $mail_path="/usr/sbin/mailx";  last SWITCH; }
       if(/^OSF1/)  { $mail_path="/usr/ucb/mailx";  last SWITCH; }
+      if(/^AIX/)  { $mail_path="/usr/bin/mail";  last SWITCH; }
       if(/^Darwin/) { $mail_path="/usr/bin/mail";  last SWITCH; }
       $mail_path="/bin/mail";
   }   
