@@ -546,7 +546,7 @@ all:: vanillatarg
 #define html_target( files )					@@\
 html: files							@@\
 	/bin/rm -rf html					@@\
-	/unsup/doc++/bin/doc++ -H -d html -u -g -l -j \		@@\
+	/unsup/doc++/bin/doc++ -H -d html -u -g -l -j -p \	@@\
 		-m -f -B ../html/condor_banner.html \		@@\
 		files
 #endif /* html_target */
