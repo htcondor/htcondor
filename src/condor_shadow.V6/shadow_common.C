@@ -538,14 +538,12 @@ part_send_job(
 #endif 
 
   /* Connect to the startd */
-  sd = do_connect_with_timeout(host, "condor_startd", START_PORT, 90);
-  if( sd < 0 ) {
-    reason = JOB_NOT_STARTED;
-    return -1;
-  }
-  
   sock = new ReliSock();
-  sock->attach_to_file_desc(sd);
+  sock->timeout(90);
+  if ( sock->connect(host,START_PORT) == FALSE ) {
+	reason = JOB_NOT_STARTED;
+	return -1;
+  }
   sock->encode();
 
   /* Send the command */
