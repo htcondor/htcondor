@@ -27,30 +27,11 @@
 int
 command_handler( Service*, int cmd, Stream* stream )
 {
-	char* cap = NULL;
-	Resource* rip;
 	int rval = FALSE;
-
-	if( ! stream->code(cap) ) {
-		dprintf( D_ALWAYS, "Can't read capability\n" );
-		free( cap );
+	Resource* rip;
+	if( ! (rip = stream_to_rip(stream)) ) {
 		return FALSE;
 	}
-	if( ! stream->end_of_message() ) {
-		dprintf( D_ALWAYS, "Can't read end_of_message\n" );
-		free( cap );
-		return FALSE;
-	}
-	rip = resmgr->get_by_cur_cap( cap );
-	if( !rip ) {
-		dprintf( D_ALWAYS, 
-				 "Error: can't find resource with capability (%s)\n",
-				 cap );
-		free( cap );
-		return FALSE;
-	}
-	free( cap );
-
 	State s = rip->state();
 
 		// RELEASE_CLAIM only makes sense in two states
@@ -171,12 +152,27 @@ command_give_state( Service*, int, Stream* stream )
 int
 command_give_classad( Service*, int, Stream* stream ) 
 {
-	ClassAd* cp = resmgr->rip()->r_classad;
+	Resource* rip;
 	dprintf( D_FULLDEBUG, "command_give_classad() called.\n" );
+	if( (rip = stream_to_rip(stream)) ) {
+		return rip->give_classad( stream );
+	}
+	return FALSE;
+}
+
+
+int
+command_give_totals_classad( Service*, int, Stream* stream ) 
+{
+	int rval = FALSE;
+	dprintf( D_FULLDEBUG, "command_give_totals_classad() called.\n" );
 	stream->encode();
-	cp->put( *stream );
+	if( resmgr->totals_classad ) {
+		resmgr->totals_classad->put( *stream );
+		rval = TRUE;
+	}
 	stream->end_of_message();
-	return TRUE;
+	return rval;
 }
 
 
