@@ -37,11 +37,11 @@ class ClassAdXMLParser
 		ClassAd *ParseClassAd(const std::string &buffer);
 		ClassAd *ParseClassAd(const std::string &buffer, int &offset);
 		ClassAd *ParseClassAd(FILE *file);
-		ClassAd *ParseClassAd(istream& stream);
+		ClassAd *ParseClassAd(std::istream& stream);
 		bool ParseClassAd(const std::string &buffer, ClassAd &ad, int &offset);
 		bool ParseClassAd(const std::string &buffer, ClassAd &ad);
 		bool ParseClassAd(FILE *file, ClassAd &ad);
-		bool ParseClassAd(istream& stream, ClassAd &ad);
+		bool ParseClassAd(std::istream& stream, ClassAd &ad);
 	private:
 
 		ClassAd *ClassAdXMLParser::ParseClassAd(void);
