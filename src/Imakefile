@@ -34,7 +34,7 @@ TEST_SUITE_BASE = test_suite_base
 #define StdUnvLibs ckpt syscall_lib
 
 #if WANT_CONDOR_G && HAS_GLOBUS
-#define GlobusProgs gridmanager globus
+#define GlobusProgs gridmanager globus credd
 #else
 #define GlobusProgs
 #endif
@@ -60,7 +60,7 @@ TEST_SUITE_BASE = test_suite_base
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts startd.V6 StdUnvProgs submit.V6 status.V6 \
 		tools kbdd collector.V6 PvmProgs dagman userlog Eventd \
-		GlobusProgs starter.V6.1 shadow.V6.1 dcskel c-gahp credd
+		GlobusProgs starter.V6.1 shadow.V6.1 dcskel c-gahp
 
 #define Libraries \
 		util_lib daemon_client classad c++_util condor_procapi/libprocapi.a \
@@ -210,11 +210,11 @@ object_target(scripts)
 #if WANT_CONDOR_G && HAS_GLOBUS
     object_target(gridmanager)
 	object_target(globus)
+	object_target(credd)
 #endif
 object_target(starter.V6.1)
 object_target(shadow.V6.1)
 object_target(c-gahp)
-object_target(credd)
 object_target(dcskel)
 #if WANT_DRMAA
 object_target(drmaa)
