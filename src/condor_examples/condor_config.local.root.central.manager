@@ -22,8 +22,3 @@
 ##  (to allow Condor jobs to execute) on your central manager.
 DAEMON_LIST	= MASTER, COLLECTOR, NEGOTIATOR, STARTD, SCHEDD
 
-##  Where are the binaries for these daemons?  (Note: MASTER, SCHEDD,
-##  and STARTD are already defined in the global config file).
-COLLECTOR	= $(SBIN)/condor_collector
-NEGOTIATOR	= $(SBIN)/condor_negotiator
-
