@@ -21,46 +21,13 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
-
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <sys/ioctl.h>
-#include <errno.h>
+#include "condor_common.h"
 #include "except.h"
 #include "debug.h"
 #include "clib.h"
-#include <string.h>
 #include "dgram_io_handle.h"
-#if defined(Solaris) /* Solaris specific change ..Dhaval 6/23 */
-#include <sys/filio.h> /* This contains the
-definition of FIONBIO in Solaris */
-#endif 
 
-#if defined(AIX32)
-#include <sys/select.h>
-#endif
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
-
-/*
-   The HPUX version of select takes (int *) params, unlike SunOS, Solaris
-   which take (fd_set *).  Define an intermediate type for this.  -- Rajesh
-   But HPUX 10 takes fd_set * like all the rest.... -Todd
-*/
-
-#if defined(HPUX9) && !defined(HPUX10)
-typedef int *SELECT_FDSET_PTR;
-#else
-typedef fd_set *SELECT_FDSET_PTR;
-#endif
-
-
-extern int	errno;
 
 #if defined(__STDC__)
 unsigned short find_port_num( char *service_name, unsigned short dflt_port );
@@ -330,11 +297,7 @@ int tcp_connect_timeout( int sockfd, struct sockaddr *sin, int len,
            For some reason on AIX if you set this here, the connect()
            fails.  In that case errno doesn't get set either... */
 #if !defined(AIX31) && !defined(AIX32)
-#if defined(Solaris)
-	if( ioctl(sockfd,(int *)FIONBIO,(char *)&on) < 0 ) /* int casting to make it Solaris compatible */{
-#else
 	if( ioctl(sockfd,FIONBIO,(char *)&on) < 0 ) {
-#endif
 		EXCEPT( "ioctl" );
 	}
 #endif
