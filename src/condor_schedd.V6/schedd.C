@@ -62,6 +62,7 @@
 #include "file_transfer.h"
 #include "basename.h"
 #include "nullfile.h"
+#include "user_job_policy.h"
 
 #define DEFAULT_SHADOW_SIZE 125
 
@@ -878,25 +879,6 @@ count( ClassAd *job )
 		return 0;
 	}
 
-		// If job is HELD, evaluate PeriodicRelease and release if TRUE
-	if ( status == HELD ) {
-		int release_it = 0;
-		job->EvalBool(ATTR_PERIODIC_RELEASE_CHECK,NULL,release_it);
-		if ( release_it ) {
-			char buf[200];
-			sprintf(buf,"job %s attribute evaluated to TRUE",
-				ATTR_PERIODIC_RELEASE_CHECK);
-			int cluster = -5;
-			int proc = -5;
-			job->LookupInteger(ATTR_CLUSTER_ID, cluster);
-			job->LookupInteger(ATTR_PROC_ID, proc);
-			if (releaseJob(cluster,proc,buf,true)) {
-				// job released, so reset status
-				status = IDLE;
-			}
-		}
-	}
-			
 	if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) < 0) {
 		cur_hosts = ((status == RUNNING) ? 1 : 0);
 	}
@@ -1305,6 +1287,100 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
 
 } /* End of extern "C" */
 
+/*
+For a given job, determine if the schedd is the responsible
+party for evaluating the job's periodic expressions.
+The schedd is responsible if the job is scheduler
+universe, globus universe with managed==false, or
+any other universe when the job is idle or held.
+*/
+
+static int
+ResponsibleForPeriodicExprs( ClassAd *jobad )
+{
+	int status=-1, univ=-1;
+	bool managed=false;
+
+	jobad->LookupInteger(ATTR_JOB_STATUS,status);
+	jobad->LookupInteger(ATTR_JOB_UNIVERSE,univ);
+	jobad->LookupBool(ATTR_JOB_MANAGED,managed);
+
+	if(univ==CONDOR_UNIVERSE_SCHEDULER) {
+		return 1;
+	} else if(univ==CONDOR_UNIVERSE_GLOBUS) {
+		if(managed) {
+			return 0;
+		} else {
+			return 1;
+		}
+	} else {
+		switch(status) {
+			case UNEXPANDED:
+			case HELD:
+			case IDLE:
+				return 1;
+			default:
+				return 0;
+		}
+	}
+}
+
+/*
+For a given job, evaluate any periodic expressions
+and abort, hold, or release the job as necessary.
+*/
+
+static int
+PeriodicExprEval( ClassAd *jobad )
+{
+	int cluster=-1, proc=-1, status=-1, action=-1;
+	char reason[1024];
+	const char *firing_expr;
+
+	if(!ResponsibleForPeriodicExprs(jobad)) return 1;
+
+	jobad->LookupInteger(ATTR_CLUSTER_ID,cluster);
+	jobad->LookupInteger(ATTR_PROC_ID,proc);
+	jobad->LookupInteger(ATTR_JOB_STATUS,status);
+
+	if(cluster<0 || proc<0 || status<0) return 1;
+
+	PROC_ID job_id;
+	job_id.cluster = cluster;
+	job_id.proc = proc;
+
+	UserPolicy policy;
+	policy.Init(jobad);
+
+	action = policy.AnalyzePolicy(PERIODIC_ONLY);
+	firing_expr = policy.FiringExpression();
+	if(firing_expr) sprintf(reason,"%s is true",firing_expr);
+
+	switch(action) {
+		case REMOVE_FROM_QUEUE:
+			if(status!=REMOVED) abortJob(cluster,proc,reason,true);
+			break;
+		case HOLD_IN_QUEUE:
+			if(status!=HELD) holdJob(cluster,proc,reason,true,false,false,false,false);
+			break;
+		case RELEASE_FROM_HOLD:
+			if(status==HELD) releaseJob(cluster,proc,reason,true);
+			break;
+	}
+
+	return 1;
+}
+
+/*
+For all of the jobs in the queue, evaluate the 
+periodic user policy expressions.
+*/
+
+void
+Scheduler::PeriodicExprHandler( void )
+{
+	WalkJobQueue(PeriodicExprEval);
+}
 
 // Initialize a UserLog object for a given job and return a pointer to
 // the UserLog object created.  This object can then be used to write
@@ -4030,7 +4106,6 @@ Scheduler::StartJobHandler()
 	tryNextJob();
 }
 
-
 void
 Scheduler::tryNextJob( void )
 {
@@ -6072,6 +6147,12 @@ Scheduler::Init()
 		 free(tmp);
 	 }
 
+	tmp = param("PERIODIC_EXPR_INTERVAL");
+	if(!tmp) {
+		PeriodicExprInterval = 60;
+	} else {
+		PeriodicExprInterval = atoi(tmp);
+	}
 
 	if ( first_time_in_init ) {	  // cannot be changed on the fly
 		tmp = param( "GRIDMANAGER_PER_JOB" );
@@ -6216,7 +6297,7 @@ Scheduler::Register()
 void
 Scheduler::RegisterTimers()
 {
-	static int aliveid = -1, cleanid = -1, wallclocktid = -1;
+	static int aliveid = -1, cleanid = -1, wallclocktid = -1, periodicid=-1;
 
 	// clear previous timers
 	if (timeoutid >= 0) {
@@ -6231,6 +6312,9 @@ Scheduler::RegisterTimers()
 	if (cleanid >= 0) {
 		daemonCore->Cancel_Timer(cleanid);
 	}
+	if (periodicid>=0) {
+		daemonCore->Cancel_Timer(periodicid);
+	}
 
 	 // timer handlers
 	 timeoutid = daemonCore->Register_Timer(10,
@@ -6240,14 +6324,21 @@ Scheduler::RegisterTimers()
 	aliveid = daemonCore->Register_Timer(alive_interval, alive_interval,
 		(Eventcpp)&Scheduler::sendAlives,"sendAlives", this);
 	cleanid = daemonCore->Register_Timer(QueueCleanInterval,
-										 QueueCleanInterval,
-										 (Event)&CleanJobQueue,
-										 "CleanJobQueue");
+		(Event)&CleanJobQueue,"CleanJobQueue");
 	if (WallClockCkptInterval) {
 		wallclocktid = daemonCore->Register_Timer(WallClockCkptInterval,
 												  WallClockCkptInterval,
 												  (Event)&CkptWallClock,
 												  "CkptWallClock");
+	} else {
+		wallclocktid = -1;
+	}
+
+	if (PeriodicExprInterval>0) {
+		periodicid = daemonCore->Register_Timer(PeriodicExprInterval,PeriodicExprInterval,
+			(Eventcpp)&Scheduler::PeriodicExprHandler,"PeriodicExpr",this);
+	} else {
+		periodicid = -1;
 	}
 }
 
@@ -7014,11 +7105,75 @@ moveStrAttr( PROC_ID job_id, const char* old_attr, const char* new_attr,
 	return true;
 }
 
+/*
+Abort a job by shutting down the shadow, changing the job state,
+writing to the user log, and updating the job queue.
+Does not start or end a transaction.
+*/
 
+static bool
+abortJobRaw( int cluster, int proc, const char *reason )
+{
+	PROC_ID job_id;
+	job_id.cluster = cluster;
+	job_id.proc = proc;
+
+	abort_job_myself( job_id, true, true );
+
+	if(!scheduler.WriteAbortToUserLog(job_id)) {
+		dprintf(D_ALWAYS,"Couldn't write abort event to log for job %d.%d\n",cluster,proc);
+		return false;
+	}
+
+	if( SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, REMOVED) < 0 ) {
+		dprintf(D_ALWAYS,"Couldn't change state of job %d.%d\n",cluster,proc);
+		return false;
+	}
+
+	DestroyProc(cluster,proc);
+
+	dprintf(D_ALWAYS,"Job %d.%d aborted: %s\n",cluster,proc,reason);
+
+	return true;
+}
+
+/*
+Abort a job by shutting down the shadow, changing the job state,
+writing to the user log, and updating the job queue.
+Performs a complete transaction if desired.
+*/
 
 bool
-holdJob( int cluster, int proc, const char* reason,
-		 bool use_transaction, bool notify_shadow, bool email_user,
+abortJob( int cluster, int proc, const char *reason, bool use_transaction )
+{
+	bool result;
+
+	if( use_transaction ) {
+		BeginTransaction();
+	}
+
+	result = abortJobRaw(cluster,proc,reason);
+
+	if(use_transaction) {
+		if(result) {
+			CommitTransaction();
+		} else {
+			AbortTransaction();
+		}
+	}
+
+	return result;
+}
+
+/*
+Hold a job by stopping the shadow, changing the job state,
+writing to the user log, and updating the job queue.
+Does not start or end a transaction.
+*/
+
+static bool
+holdJobRaw( int cluster, int proc, const char* reason,
+		 bool notify_shadow, bool email_user,
 		 bool email_admin, bool system_hold )
 {
 	int status;
@@ -7026,10 +7181,6 @@ holdJob( int cluster, int proc, const char* reason,
 	tmp_id.cluster = cluster;
 	tmp_id.proc = proc;
 	int system_holds = 0;
-
-	if( use_transaction ) {
-		 BeginTransaction();
-	}
 
 	if( GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &status) < 0 ) {   
 		dprintf( D_ALWAYS, "Job %d.%d has no %s attribute.  Can't hold\n",
@@ -7080,10 +7231,6 @@ holdJob( int cluster, int proc, const char* reason,
 	if ( system_hold ) {
 		system_holds++;
 		SetAttributeInt(cluster, proc, ATTR_NUM_SYSTEM_HOLDS, system_holds);
-	}
-
-	if( use_transaction ) {
-		 CommitTransaction();
 	}
 
 	dprintf( D_ALWAYS, "Job %d.%d put on hold: %s\n", cluster, proc,
@@ -7139,10 +7286,45 @@ holdJob( int cluster, int proc, const char* reason,
 	return true;
 }
 
+/*
+Hold a job by shutting down the shadow, changing the job state,
+writing to the user log, and updating the job queue.
+Performs a complete transaction if desired.
+*/
 
 bool
-releaseJob( int cluster, int proc, const char* reason,
-		 bool use_transaction, bool email_user,
+holdJob( int cluster, int proc, const char* reason,
+		 bool use_transaction, bool notify_shadow, bool email_user,
+		 bool email_admin, bool system_hold )
+{
+	bool result;
+
+	if(use_transaction) {
+		BeginTransaction();
+	}
+
+	result = holdJobRaw(cluster,proc,reason,notify_shadow,email_user,email_admin,system_hold);
+
+	if(use_transaction) {
+		if(result) {
+			CommitTransaction();
+		} else {
+			AbortTransaction();
+		}
+	}
+
+	return result;
+}
+
+/*
+Release a job by changing the job state,
+writing to the user log, and updating the job queue.
+Does not start or end a transaction.
+*/
+
+static bool
+releaseJobRaw( int cluster, int proc, const char* reason,
+		 bool email_user,
 		 bool email_admin, bool write_to_user_log )
 {
 	int status;
@@ -7150,9 +7332,6 @@ releaseJob( int cluster, int proc, const char* reason,
 	tmp_id.cluster = cluster;
 	tmp_id.proc = proc;
 
-	if( use_transaction ) {
-		 BeginTransaction();
-	}
 
 	if( GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &status) < 0 ) {   
 		dprintf( D_ALWAYS, "Job %d.%d has no %s attribute.  Can't release\n",
@@ -7192,10 +7371,6 @@ releaseJob( int cluster, int proc, const char* reason,
 						(int)time(0)) < 0 ) {
 		dprintf( D_ALWAYS, "WARNING: Failed to set %s for job %d.%d\n",
 				 ATTR_ENTERED_CURRENT_STATUS, cluster, proc );
-	}
-
-	if( use_transaction ) {
-		 CommitTransaction();
 	}
 
 	if ( write_to_user_log ) {
@@ -7249,5 +7424,35 @@ releaseJob( int cluster, int proc, const char* reason,
 		}			
 	}
 	return true;
+}
+
+/*
+Release a job by changing the job state,
+writing to the user log, and updating the job queue.
+Performs a complete transaction if desired.
+*/
+
+bool
+releaseJob( int cluster, int proc, const char* reason,
+		 bool use_transaction, bool email_user,
+		 bool email_admin, bool write_to_user_log )
+{
+	bool result;
+
+	if(use_transaction) {
+		BeginTransaction();
+	}
+
+	result = releaseJobRaw(cluster,proc,reason,email_user,email_admin,write_to_user_log);
+
+	if(use_transaction) {
+		if(result) {
+			CommitTransaction();
+		} else {
+			AbortTransaction();
+		}
+	}
+
+	return result;
 }
 
