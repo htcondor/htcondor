@@ -1201,6 +1201,9 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 
 	env = new char [ strlen(s.env) + 1 ];
 	strcpy( env, s.env );
+#if 1
+	env_obj.add_string( env );  // set up environment as an object
+#endif
 
 		// Generate a directory where process can run and do its checkpointing
 	sprintf( buf, "dir_%d", proc_index++ );
