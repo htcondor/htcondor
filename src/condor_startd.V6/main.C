@@ -93,7 +93,9 @@ main_init( int, char* [] )
 	init_params(1);		// The 1 indicates that this is the first time
 
 	resmgr = new ResMgr;
+	dprintf( D_ALWAYS, "About to run initial benchmarks.\n" );
 	resmgr->walk( Resource::force_benchmark );
+	dprintf( D_ALWAYS, "Completed initial benchmarks.\n" );
 	resmgr->walk( Resource::init_classad );
 
 		// Do a little sanity checking and cleanup
