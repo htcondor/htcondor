@@ -187,6 +187,7 @@ char	*name;
 
 char *
 macro_expand( str )
+char *str;
 {
 	return( expand_macro(str, ConfigTab, TABLESIZE) );
 }
