@@ -44,6 +44,7 @@
 #include "get_daemon_addr.h"
 #include "condor_state.h"
 #include "sig_install.h"
+#include "condor_email.h"
 State get_machine_state();
 
 
@@ -167,20 +168,17 @@ produce_output()
 	char	*str;
 	FILE	*mailer;
 	char	cmd[ 1024 ];
-
-	sprintf( cmd, "%s %s", MailPrg, PreenAdmin );
+	char	*subject = "Junk Condor Files";
 
 	if( MailFlag ) {
-		if( (mailer=popen(cmd,"w")) == NULL ) {
-			EXCEPT( "Can't do popen(%s,\"w\")", cmd );
+		if( (mailer=email_open(PreenAdmin, subject)) == NULL ) {
+			EXCEPT( "Can't do email_open(\"%s\", \"%s\")\n",PreenAdmin,subject);
 		}
 	} else {
 		mailer = stdout;
 	}
 
 	if( MailFlag ) {
-		fprintf( mailer, "To: %s\n", PreenAdmin );
-		fprintf( mailer, "Subject: Junk Condor Files\n" );
 		fprintf( mailer, "\n" );
 		fprintf( mailer,
 			"These files should be removed from <%s>:\n\n", my_hostname()
@@ -192,7 +190,7 @@ produce_output()
 	}
 
 	if( MailFlag ) {
-		pclose( mailer );
+		email_close( mailer );
 	}
 
 }
