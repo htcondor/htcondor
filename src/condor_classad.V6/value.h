@@ -196,6 +196,11 @@ class Value
 			@return true iff the value is a string.
 		*/
 		bool IsStringValue( char *str, int len ) const; 	
+		/** Returns length of the string instead of the string
+            @param size This is filled in with the size of the string
+			@return true iff the value is string.
+		*/
+        inline bool IsStringValue( int &size ) const;
 		/** Checks if the value is a string.
 			@return true iff the value is string.
 		*/
@@ -423,6 +428,18 @@ IsStringValue( std::string &s ) const
 	} else {
 		return false;
 	}
+}
+
+inline bool Value::
+IsStringValue( int &size ) const
+{
+    if (valueType == STRING_VALUE) {
+        size = strValue.size();
+        return true;
+    } else {
+        size = -1;
+        return false;
+    }
 }
 
 inline bool Value::
