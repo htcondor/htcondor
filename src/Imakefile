@@ -23,12 +23,6 @@
 
 #define EventdFiles sbin/condor_eventd etc/examples/condor_config.local.eventd
 
-#define SMPFiles sbin/condor_startd sbin/condor_preen bin/condor_status \
-  sbin/condor_vacate sbin/condor_checkpoint
-
-#define SMPContribFiles etc/examples/condor_config.local.smp \
-  sbin/condor_starter
-
 #define ViewServerFiles sbin/condor_collector sbin/condor_stats
 
 #define ViewServerContribFiles etc/examples/condor_config.local.view_server
@@ -125,7 +119,6 @@ release_tarball( master.tar, MasterFiles )
 contrib_tarball( ckpt_server.tar, CkptServerFiles )
 contrib_tarball( eventd.tar, EventdFiles )
 
-both_tarball( smp_startd.tar, SMPFiles, SMPContribFiles )
 both_tarball( view_server.tar, ViewServerFiles, ViewServerContribFiles )
 
 
@@ -140,9 +133,9 @@ contrib_tarball( pvm.tar, PvmFiles )
 
 contrib_tarball( mpi.tar, MpiFiles )
 
-all_tarballs: smp_startd.tar view_server.tar ckpt_server.tar eventd.tar PvmTar mpi.tar
+all_tarballs: view_server.tar ckpt_server.tar eventd.tar PvmTar mpi.tar
 
-afs_tarballs: afs_smp_startd.tar afs_view_server.tar afs_release.tar \
+afs_tarballs: afs_view_server.tar afs_release.tar \
 	afs_ckpt_server.tar afs_eventd.tar AfsPvmTar afs_mpi.tar
 
 public:: all_tarballs
