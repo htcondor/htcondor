@@ -33,7 +33,8 @@ int main_init(int argc, char* argv[])
   }
 
   Accountant accountant;
-  
+  accountant.Initialize();
+ 
   ClassAd* AccountantClassAd=new ClassAd();
   // config(AccountantClassAd);
 

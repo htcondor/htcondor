@@ -18,13 +18,22 @@
 // Constructor - One time initialization
 //------------------------------------------------------------------
 
-Accountant::Accountant(int MaxCustomers, int MaxResources) 
+Accountant::Accountant(int MaxCustomers, int MaxResources)
   : Customers(MaxCustomers, HashFunc), Resources(MaxResources, HashFunc)
 {
   HalfLifePeriod=1.5;
-  LastUpdateTime=Time::Now();
   MinPriority=0.5;
   Epsilon=0.001;
+  LastUpdateTime=Time::Now();
+  LogEnabled=0;
+}
+
+//------------------------------------------------------------------
+// Initialize log file
+//------------------------------------------------------------------
+
+Accountant::Initialize() 
+{
   LogFileName=param("SPOOL");
   // LogFileName+="/p/condor/workspaces/adiel/local/spool";
   LogFileName+="/Accountant.log";
@@ -215,6 +224,8 @@ void Accountant::AppendLogEntry(const MyString& Action, const MyString& Customer
 
 void Accountant::SaveState()
 {
+  if (!LogEnabled) return;
+
   dprintf(D_FULLDEBUG,"Saving State\n");
   MyString CustomerName, ResourceName;
 
