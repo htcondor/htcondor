@@ -39,6 +39,10 @@ need these extra definitions...
 #	define HAS_U_TYPES
 #endif
 
+#if defined(LINUX)
+#	define HAS_U_TYPES
+#endif
+
 #if !defined(HAS_U_TYPES)
 	typedef unsigned int u_int;
 	typedef unsigned char   u_char;
