@@ -17,9 +17,9 @@ X_LIB = -lX11 -lXext
 #else
 X_LIB = XExtLibPath XLibPath
 #endif
-LIB = $(STD_LIB) SocketLib
+LIB = $(STD_LIB) 
 LIBDIRS = ../condor_util_lib ../condor_io
-LDFLAGS = $(X_LIB)
+LDFLAGS = $(X_LIB) SocketLib
 
 all_target(condor_kbdd)
 tags_target($(SRC),$(LIBDIRS))
