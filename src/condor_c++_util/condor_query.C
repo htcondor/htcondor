@@ -198,6 +198,7 @@ QueryResult CondorQuery::
 fetchAds (ClassAdList &adList, const char *poolName)
 {
     char        *pool;
+	char		defaultPool[32];
     ReliSock    sock; 
 	int			more;
     QueryResult result;
@@ -209,6 +210,9 @@ fetchAds (ClassAdList &adList, const char *poolName)
 		if ((pool = param ("COLLECTOR_HOST")) == NULL)  {
 			return Q_NO_COLLECTOR_HOST;
 		}
+		strcpy (defaultPool, pool);
+		free (pool);
+		pool = defaultPool;
 	}
 	else {
 		// pool specified

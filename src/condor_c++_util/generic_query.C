@@ -31,6 +31,11 @@ GenericQuery::
 ~GenericQuery ()
 {
 	clearQueryObject ();
+	
+	// release memory
+	delete stringConstraints;
+	delete floatConstraints;
+	delete integerConstraints;
 }
 
 
