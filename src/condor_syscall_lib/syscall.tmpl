@@ -1248,22 +1248,29 @@ not_supported {
 		void * mmap( void * a, size_t l, int p, int f, map(int fd), off_t o ) : EXTRACT;
 		int mprotect( const void * addr, size_t len, int prot );
 		int madvise( void * addr, size_t len, int behav );
-		int msync( void * addr, size_t len, int flags );
 	#elif defined(LINUX)
 		#if !defined(SWITCH)
 			void * mmap( void * a, size_t l, int p, int f, map(int fd), off_t o );
 		#endif
 		int mprotect( MMAP_T addr, size_t len, int prot );
-		int msync( MMAP_T addr, size_t len, int flags );
 	#else
 		char * mmap( char * a, size_t l, int p, int f, map(int fd), off_t o ) : EXTRACT;
 		int mprotect( char * addr, size_t len, int prot );
 		int madvise( char * addr, size_t len, int behav );
-		int msync( char * addr, size_t len, int flags );
 	#endif
 
 	#if HAS_64BIT_SYSCALLS
 		caddr_t mmap64( caddr_t addr, size_t len, int prot, int flags, map(int fd), off64_t off);
+	#endif
+}
+
+ignored {
+	#if defined(IRIX) || defined(OSF1) || defined(HPUX)
+		int msync( void * addr, size_t len, int flags );
+	#elif defined(LINUX)
+		int msync( MMAP_T addr, size_t len, int flags );
+	#else
+		int msync( char * addr, size_t len, int flags );
 	#endif
 }
 
@@ -1413,7 +1420,7 @@ not_supported {
 	#endif
 
 	#if defined(Solaris27)
-	        long ptrace( int req, long process, long address, long data);
+		long ptrace( int req, long process, long address, long data);
 	#elif defined(Solaris)
 		int ptrace( int req, long process, int address, int data);
 	#elif defined (IRIX)
