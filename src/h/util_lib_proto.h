@@ -80,14 +80,6 @@ int getdtablesize ( void );
 char * getwd ( char *path );
 #endif
 
-#if defined(LINUX)
-void insque ( struct qelem *elem, struct qelem *pred );
-void remque ( struct qelem *elem );
-#else
-int insque ( struct qelem *elem, struct qelem *pred );
-int remque ( struct qelem *elem );
-#endif
-
 char * ltrunc ( register char *str );
 int set_machine_status ( int status );
 int get_machine_status ( void );
