@@ -103,7 +103,11 @@ Macro vos_path(
 Macro mailer_path(
 	"MAIL",
 	"Pathname of program to send mail",
+#if defined(SUNOS41)
+	"/usr/ucb/mail"
+#else
 	"/bin/mail"
+#endif
 );
 Macro uid_domain(
 	"UID_DOMAIN",
