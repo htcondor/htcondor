@@ -1,45 +1,47 @@
 \begin{ManPage}{\label{man-condor-submit}\Condor{submit}}{1}
-{Queue jobs for execution on remote machines}
+{Queue jobs for execution under Condor}
 \Synopsis \SynProg{\Condor{submit}}
 \oOpt{--}
 \oOpt{-v}
 \oOptArg{-n}{schedd\_name}
 \oOptArg{-r}{schedd\_name}
 \oOpt{-d}
-\Arg{submit-description file}
+\oArg{submit description file}
 
 \index{Condor commands!condor\_submit}
 \index{condor\_submit command}
 
 \Description
 
-\Condor{submit} is the program for submitting jobs to Condor.
-\Condor{submit} requires a submit-description file which contains commands
-to direct the queuing of jobs. One description file may contain
-specifications for the queuing of many condor jobs at once. All jobs queued by a
+\Condor{submit} is the program for submitting jobs for execution
+under Condor.
+\Condor{submit} requires a submit description file which contains commands
+to direct the queuing of jobs. One submit description file may contain
+specifications for the queuing of many Condor jobs at once.
+All jobs queued by a
 single invocation of \Condor{submit} must share the same executable, and
-are referred to as a ``job cluster''. It is advantageous to submit
+are referred to as a job cluster. It is advantageous to submit
 multiple jobs as a single cluster because:
 \begin{itemize}
 \item Only one copy of the checkpoint file is needed to 
 represent all jobs in a cluster until they begin execution.
 \item There is much less overhead involved for Condor to start the next
 job in a cluster than for Condor to start a new cluster.  This can make
-a big difference if you are submitting lots of short running jobs.
+a big difference when submitting lots of short jobs.
 \end{itemize}
 
 \emph{SUBMIT DESCRIPTION FILE COMMANDS}
 
-Each condor job description file describes one cluster of jobs to be
-placed in the condor execution pool. All jobs in a cluster must share
+Each submit description file describes one cluster of jobs to be
+placed in the Condor execution pool. All jobs in a cluster must share
 the same executable, but they may have different input and output files,
-and different program arguments, etc. The submit-description file is then
-used as the only command-line argument to \Condor{submit}. 
+and different program arguments. The submit description file is
+the only command-line argument to \Condor{submit}. 
 
-The submit-description file must contain one \Arg{executable} command and at least one
+The submit description file must contain one \Arg{executable} command and at least one
 \Arg{queue} command.  All of the other commands have default actions.
 
-The commands which can appear in the submit-description file are:
+The commands which can appear in the submit description file are:
 
 \begin{description} 
 
@@ -53,8 +55,7 @@ file. If submitting into the Standard Universe, which is the default,
 then the named executable must have been re-linked with the Condor
 libraries (such as via the \Condor{compile} command). If submitting into
 the Vanilla Universe, then the named executable need not be re-linked and
-can be any process which can run in the background (shell scripts work
-fine as well). 
+can be any process which can run in the background (such as shell scripts).
 
 %%%%%%%%%%%%%%%%%%%
 %% input
@@ -177,7 +178,7 @@ not your jobs will run ahead of another user's jobs.
 %% notification
 %%%%%%%%%%%%%%%%%%%
 
-\item[notification = $<$when$>$]\label{man-condor-submit-notification} Owners of condor jobs are notified by
+\item[notification = $<$when$>$]\label{man-condor-submit-notification} Owners of Condor jobs are notified by
 email when certain events occur.
 If \Arg{when} is set to \mbox{Always}, the owner will be notified
 whenever the job is checkpointed, and when it completes.
@@ -248,12 +249,18 @@ the hold state will not run until released by \Condor{release}.
 \item[environment = $<$parameter\_list$>$] List of environment variables
 of the form :
 \begin{verbatim}
-        <parameter> = <value>
+        <parameter>=<value>
 \end{verbatim}
 Multiple environment variables can be specified by separating them with a
-semicolon (`` ; ''). These environment variables will be placed into the
+semicolon (`` ; '') when submitting from a Unix platform.
+Multiple environment variables can be specified by separating them with a
+vertical bar (`` | '') when submitting from an NT platform.
+These environment variables will be placed (as given) into the
 job's environment before execution. The length of all characters
 specified in the environment is currently limited to 10240 characters.  
+Note that spaces are accepted, but rarely desired,
+characters within parameter names and values.
+Place spaces within the parameter list only if required.
 
 %%%%%%%%%%%%%%%%%%%
 %% log
@@ -513,7 +520,7 @@ following \Arg{attribute} into the job ClasssAd with the given
 %% queue
 %%%%%%%%%%%%%%%%%%%
 
-\item[queue [number-of-procs] ] Places one or more copies of the job into
+\item[queue \Lbr number-of-procs \Rbr] Places one or more copies of the job into
 the Condor queue. If desired, new \Opt{input}, \Opt{output},
 \Opt{error}, \Opt{initialdir}, \Opt{arguments}, \Opt{nice\_user},
 \Opt{priority}, \Opt{kill\_sig}, \Opt{coresize}, or \Opt{image\_size}
@@ -524,20 +531,26 @@ command, each run can work in its own subdirectory. The optional
 argument \Arg{number-of-procs} specifies how many times to submit the
 job to the queue, and defaults to 1.
 
+%%%%%%%%%%%%%%%%%%%
+%% allow_startup_script
+%%%%%%%%%%%%%%%%%%%
+%\item[allow\_startup\_script ]
+
 \end{description}
 
-In addition to commands, the submit-description file can contain macros
+In addition to commands, the submit description file can contain macros
 and comments:
 
 \begin{description}
 
 \item[Macros] Parameterless macros in the form of \MacroU{macro\_name}
-may be inserted anywhere in condor description files. Macros can be
+may be inserted anywhere in Condor submit description files. Macros can be
 defined by lines in the form of 
 \begin{verbatim} 
         <macro_name> = <string> 
 \end{verbatim} 
-Two pre-defined macros are supplied by the description file parser. The
+Two pre-defined macros are supplied by the submit description file parser.
+The
 \MacroU{Cluster} macro supplies the number of the job cluster, and the
 \MacroU{Process} macro supplies the number of the job. These macros are
 intended to aid in the specification of input/output files, arguments,
@@ -545,21 +558,22 @@ etc., for clusters with lots of jobs, and/or could be used to supply a
 Condor process with its own cluster and process numbers on the command
 line.  The \MacroU{Process} macro should not be used for PVM jobs.
 
-If you happen to want a ``\$'' as a literal character, then you must use
+If the dollar sign (``\$'') is desired as a literal character,
+then use
 \begin{verbatim}
 $(DOLLAR)
 \end{verbatim}
 
 In addition to the normal macro, there is also a special kind of macro
-called a ``\emph{Substitution Macro}'' that allows you to substitue
-expressions defined on the resource machine itself(gotten after a match
+called a ``substitution macro'' that allows you to substitute
+expressions defined on the resource machine itself (gotten after a match
 to the machine has been performed) into specific expressions in your
 submit description file. The special substitution macro is of the form:
 \begin{verbatim} 
 $$(attribute)
 \end{verbatim}
 
-The substitution macro can only be used in three expressions in the
+The substitution macro may only be used in three expressions in the
 submit description file: \Macro{executable}, \Macro{environment}, and
 \Macro{arguments}. The most common use of this macro is for heterogeneous
 submission of an executable:
@@ -568,29 +582,35 @@ executable = povray.$$(opsys).$$(arch)
 \end{verbatim}
 The \AdAttr{opsys} and \AdAttr{arch} attributes will be substituted at
 match time for any given resource. This will allow Condor to automatically
-choose the right executable for the right machine.
+choose the correct executable for the matched machine.
 
 
-\item[Comments] Blank lines and lines beginning with a '\#' (pound-sign)
-character are ignored by the submit-description file parser. 
+\item[Comments] Blank lines and lines beginning with a 
+pound sign
+('\#')
+character are ignored by the submit description file parser. 
 
 \end{description}
 
 
 \begin{Options}
 
-	\OptItem{\Opt{--}}{Accept the command file from stdin.}
-    \OptItem{\Opt{-v}}{Verbose output - display the created job class-ad}
+\OptItem{\Opt{--}}{Accept the command file from stdin.}
+\OptItem{\Opt{-v}}{Verbose output - display the created job class-ad}
 
-    \OptItem{\OptArg{-n}{schedd\_name}}{Submit to the specified schedd. This option is used when there is more than one schedd running on the submitting machine}
+\OptItem{\OptArg{-n}{schedd\_name}}{Submit to the specified schedd. This option is used when there is more than one schedd running on the submitting machine}
 
-	\OptItem{\OptArg{-r}{schedd\_name}}{Submit to a remote schedd. The jobs
-	will be submitted to the schedd on the specified remote host. On Unix
-	systems, the Condor administrator for you site must override the default 
-	AUTHENTICATION\_METHODS configuration setting to enable remote filesystem 
-	(FS\_REMOTE) authentication.}
+\OptItem{\OptArg{-r}{schedd\_name}}{Submit to a remote schedd. The jobs
+will be submitted to the schedd on the specified remote host. On Unix
+systems, the Condor administrator for you site must override the default 
+AUTHENTICATION\_METHODS configuration setting to enable remote file system 
+(FS\_REMOTE) authentication.}
 
-	\OptItem{\Opt{-d}}{Disable file permission checks.}
+\OptItem{\Opt{-d}}{Disable file permission checks.}
+
+\OptItem{submit description file}{The pathname to the submit description
+file. If this optional argument is missing, then the commands are
+taken from standard input.}
 
 \end{Options}
 
@@ -603,16 +623,21 @@ non-zero value upon failure.
 
 \underline{Example 1}: The below example queues three jobs for
 execution by Condor. The first will be given command line arguments of
-'15' and '2000', and will write its standard output to 'foo.out1'. The
-second will be given command line arguments of '30' and '2000', and will
-write its standard output to 'foo.out2'. Similarly the third will have
-arguments of '45' and '6000', and will use 'foo.out3' for its standard
-output. Standard error output, (if any), from all three programs will
-appear in 'foo.error'.
+\Arg{15} and \Arg{2000}, and it will write its standard output
+to \File{foo.out1}.
+The second will be given command line arguments of 
+\Arg{30} and \Arg{2000}, and it will
+write its standard output to \File{foo.out2}.
+Similarly the third will have
+arguments of 
+\Arg{45} and \Arg{6000}, and it will use \File{foo.out3} for its standard
+output. Standard error output (if any) from all three programs will
+appear in \File{foo.error}.
 
 \begin{verbatim}
       ####################
       #
+      # submit description file
       # Example 1: queueing multiple jobs with differing
       # command line arguments and output files.
       #                                                                      
@@ -636,22 +661,26 @@ appear in 'foo.error'.
       Queue                   
 \end{verbatim}
 
-\underline{Example 2}: This submit-description file example queues 150
-runs of program 'foo' which must have been compiled and linked for
-Silicon Graphics workstations running IRIX 6.x. Condor will not attempt
-to run the processes on machines which have less than 32 megabytes of
-physical memory, and will run them on machines which have at least 64
-megabytes if such machines are available. Stdin, stdout, and stderr will
-refer to ``in.0'', ``out.0'', and ``err.0'' for the first run of this program
-(process 0). Stdin, stdout, and stderr will refer to ``in.1'', ``out.1'',
-and ``err.1'' for process 1, and so forth. A log file containing entries
-about where/when Condor runs, checkpoints, and migrates processes in this
-cluster will be written into file ``foo.log''.
+\underline{Example 2}: This submit description file example queues 150
+runs of program \Prog{foo} which must have been compiled and linked for
+Silicon Graphics workstations running IRIX 6.x.
+Condor will not attempt
+to run the processes on machines which have less than 32 Megabytes of
+physical memory, and it will run them on machines which have at least 64
+Megabytes, if such machines are available.
+Stdin, stdout, and stderr will
+refer to \File{in.0}, \File{out.0}, and \File{err.0} for the first run
+of this program (process 0).
+Stdin, stdout, and stderr will refer to
+\File{in.1}, \File{out.1}, and \File{err.1} for process 1, and so forth.
+A log file containing entries
+about where and when Condor runs, takes checkpoints, and migrates processes
+in this cluster will be written into file \File{foo.log}.
 
 \begin{verbatim}
       ####################                                                    
       #                                                                       
-      # Example 2: Show off some fancy features including                            
+      # Example 2: Show off some fancy features including
       # use of pre-defined macros and logging.                                
       #                                                                       
       ####################                                                    
@@ -677,7 +706,7 @@ by user root (UID = 0) or by a user whose default group is group wheel
 (GID = 0). Jobs submitted by user root or a user with a default group of
 wheel will appear to sit forever in the queue in an idle state. 
 
-\item All pathnames specified in the submit-description file must be
+\item All pathnames specified in the submit description file must be
 less than 256 characters in length, and command line arguments must be
 less than 4096 characters in length; otherwise, \Condor{submit} gives a
 warning message but the jobs will not execute properly. 
@@ -685,15 +714,16 @@ warning message but the jobs will not execute properly.
 \item Somewhat understandably, behavior gets bizzare if the user makes
 the mistake of requesting multiple Condor jobs to write to the
 same file, and/or if the user alters any files that need to be accessed
-by a Condor job which is still in the queue (i.e. compressing of data or
-output files before a Condor job has completed is a common mistake).
+by a Condor job which is still in the queue.
+For example, the compressing of data or
+output files before a Condor job has completed is a common mistake.
 
 \item To disable checkpointing for Standard Universe jobs, include the
 line:
 \begin{verbatim}
       +WantCheckpoint = False
 \end{verbatim}
-in the submit-description file before the queue command(s).
+in the submit description file before the queue command(s).
 \end{itemize}
 
 \SeeAlso
