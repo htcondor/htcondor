@@ -1965,7 +1965,7 @@ SetGlobusParams()
 		exit( 1 );
 	}
 
-	sprintf( buffer, "%s = \"%s\"", "GlobusResource", globushost );
+	sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_RESOURCE, globushost );
 	InsertJobExpr (buffer, false );
 
 	free( globushost );
