@@ -403,6 +403,9 @@ access specifier, \verb@local:@ or \verb@remote:@.  If left unspecified,
 the default access specifier is \verb@remote:@.  Multiple remaps can be 
 specified by separating each with a semicolon.
 
+If you wish to remap file names that contain equals signs or semicolons,
+these special chracaters may be escaped with a backslash.
+
 \begin{description}
 \item[Example One:]
 Suppose that your job reads a file named \verb@dataset.1@.  To instruct Condor
