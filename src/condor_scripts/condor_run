@@ -140,6 +140,9 @@ while (!$done) {
 	} elsif (/termination \(signal (\d+)\)/) {
 	    print STDERR "Condor job killed by signal ", $1 , ".\n";
 	    $done = 1;
+        } elsif ( /^013/ && /Job was aborted by the user/ ) {
+	    print STDERR "DAGMan was aborted by the user";
+	    $done = 1;
 	}
     }
     close(LOG) || &abort("Failed to close Condor log file.\n");
