@@ -192,13 +192,7 @@ int		asynch_wait();
 int		supervise_all();
 int		proc_exit();
 int		send_core();
-int		update_all();
-int		update_one();
-int		send_ckpt_all();
 int		dispose_all();
-#if defined(LINK_PVM)
-int		read_pvm_msg();
-#endif
 
 /*
   Name table for state action routines.  This allows the finite state
@@ -215,9 +209,6 @@ NAME_VALUE	StateFuncArray[] = {
 	{ (unsigned long)supervise_all,	"supervise_all()"	},
 	{ (unsigned long)proc_exit,		"proc_exit()"		},
 	{ (unsigned long)send_core,		"send_core()"		},
-	{ (unsigned long)update_all,	"update_all()"		},
-	{ (unsigned long)update_one,	"update_one()"		},
-	{ (unsigned long)send_ckpt_all,	"send_ckpt_all()"	},
 	{ (unsigned long)dispose_all,	"dispose_all()"		},
 #if defined(LINK_PVM)
     { (unsigned long)read_pvm_msg,	"read_pvm_msg()"	},
@@ -248,7 +239,6 @@ int reaper();				// Gather status of exited child process
 int set_quit();			// Set quit flag, will exit after updating ckpts
 int susp_self();			// Suspend ourself, wait for CONTINUE
 int cleanup();				// Forcibly kill procs and delete their files
-int unset_xfer();			// Don't transfer checkpoints
 int dispose_one();			// Send final status to shadow and delete process
 int update_cpu();			// Send updated CPU usage info to shadow
 #if defined(LINK_PVM)
@@ -276,7 +266,6 @@ NAME_VALUE	TransFuncArray[] = {
 	{ (unsigned long)set_quit,			"set_quit"			},
 	{ (unsigned long)susp_self,			"susp_self"			},
 	{ (unsigned long)cleanup,				"cleanup"			},
-	{ (unsigned long)unset_xfer,			"unset_xfer"		},
 	{ (unsigned long)dispose_one,			"dispose_one"		},
 	{ (unsigned long)update_cpu,			"update_cpu"		},
 #if defined(LINK_PVM)
@@ -323,13 +312,10 @@ State	StateTab[] = {
 	{ GET_EXEC,			EmptySet,		get_exec		},
 	{ TERMINATE,		EmptySet,		terminate_all	},
 	{ SUPERVISE,		EmptySet,		supervise_all	},
-	{ UPDATE_ALL,		EmptySet,		update_all		},
 	{ PROC_EXIT,		EmptySet,		proc_exit		},
 	{ SEND_CORE,		EmptySet,		send_core		},
 	{ UPDATE_WAIT,		EmptySet,		asynch_wait		},
 	{ TERMINATE_WAIT,	EmptySet,		asynch_wait		},
-	{ SEND_CKPT_ALL,	EmptySet,		send_ckpt_all	},
-	{ UPDATE_ONE,		EmptySet,		update_one		},
 	{ SEND_STATUS_ALL,	EmptySet,		dispose_all		},
 #if defined(LINK_PVM)
     { READ_PVM_MSG,		EmptySet,		read_pvm_msg	},
@@ -373,7 +359,7 @@ Transition TransTab[] = {
 #endif
 
 { TERMINATE_WAIT,	SUSPEND,			0,				susp_self			},
-{ TERMINATE_WAIT,	DIE,				0,				unset_xfer			},
+{ TERMINATE_WAIT,	DIE,				0,				req_die				},
 { TERMINATE_WAIT,	ALARM,				END,			cleanup				},
 { TERMINATE_WAIT,	CHILD_EXIT,			TERMINATE,		reaper				},
 
