@@ -27,6 +27,11 @@ sub DoConfig( )
 	{
 	    $HardConfigs{$1} = $2;
 	}
+	# Special case; just an no "name" (i.e. "--df=/home,/scratch" )
+	elsif ( $Arg =~ /^--($ModuleName)=(.*)/ )
+	{
+	    $HardConfigs{$1} = $2;
+	}
 	# Don't queury the config from the startd _at all_
 	elsif ( $Arg =~ /^--noconfig/ )
 	{
