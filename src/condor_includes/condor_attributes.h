@@ -394,6 +394,7 @@ const char ATTR_SEC_REMOTE_VERSION       [] = "RemoteVersion";
 const char ATTR_SEC_SERVER_ENDPOINT      [] = "ServerEndpoint";
 const char ATTR_SEC_SERVER_COMMAND_SOCK  [] = "ServerCommandSock";
 const char ATTR_SEC_SERVER_PID           [] = "ServerPid";
+const char ATTR_SEC_PARENT_UNIQUE_ID     [] = "ParentUniqueID";
 const char ATTR_SEC_PACKET_COUNT         [] = "PacketCount";
 const char ATTR_SEC_NEGOTIATION          [] = "OutgoingNegotiation";
 const char ATTR_SEC_VALID_COMMANDS       [] = "ValidCommands";
