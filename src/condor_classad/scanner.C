@@ -69,6 +69,15 @@ void Scanner(char*& s, Token& t)
         t.type = LX_BOOL;
 		return;
     }
+	if(!strncasecmp(s, "T", 1) && !isalpha(*(s+1)) && *(s+1) != '_')
+	// also TRUE
+	{
+		s = s + 1;
+		t.length = t.length + 1;
+		t.intVal = 1;
+		t.type = LX_BOOL;
+		return;
+	}
     if(!strncasecmp(s, "FALSE", 5) && !isalpha(*(s+5)) && *(s+5) != '_')
     // FALSE
     {
@@ -78,6 +87,15 @@ void Scanner(char*& s, Token& t)
         t.type = LX_BOOL;
 		return;
     }
+	if(!strncasecmp(s, "F", 1) && !isalpha(*(s+1)) && *(s+1) != '_')
+	// also FALSE
+	{
+		s = s + 1;
+		t.length = t.length + 1;
+		t.intVal = 0;
+		t.type = LX_BOOL;
+		return;
+	}
     if(isalpha(*s) || *s == '_')
     // token is a variable
     {
