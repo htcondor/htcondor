@@ -10,10 +10,6 @@
 const int MAX_HASH_SIZE = 100;
 
 
-extern "C" int mkdir();
-extern "C" int rmdir();
-
-
 typedef struct file_node
 {
   char            file_name[MAX_CONDOR_FILENAME_LENGTH];
