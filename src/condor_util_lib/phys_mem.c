@@ -138,6 +138,27 @@ calc_phys_memory()
   return(physmem);
 }
 
+#elif defined(Solaris)
+
+/*
+ * This works for Solaris >= 2.3
+ */
+#include <unistd.h>
+ 
+int
+calc_phys_memory()
+{
+	long pages, pagesz;
+
+	pages = sysconf(_SC_PHYS_PAGES);
+	pagesz = sysconf(_SC_PAGESIZE);
+
+	if (pages == -1 || pagesz == -1)
+		return -1;
+ 
+        return (int)((pages * pagesz) / 1048576);
+}
+
 #else	/* Don't know how to do this on other than SunOS and HPUX yet */
 int
 calc_phys_memory()
