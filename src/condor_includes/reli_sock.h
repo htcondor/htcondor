@@ -71,6 +71,12 @@ public:
 	int accept(ReliSock &);
 	int accept(ReliSock *);
 
+	// Send & Recv Files: Takes buffer pointers and lengths as arguments, 
+	// sends the data in a bulk optimized method. Returns -1 on failure,
+	// or the number of bytes read or written on success. 
+	int RecvFile(char *buffer, int max_length);
+	int SendFile(char *file, int length);
+
 	int get_port();
 	struct sockaddr_in *endpoint();
 
