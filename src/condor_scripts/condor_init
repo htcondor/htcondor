@@ -1,0 +1,94 @@
+#!/bin/sh
+
+#
+#  This is the condor_init script.  It creates all the necessary
+#  files and directories on a host to run Condor.  
+# 
+
+HOSTNAME=`hostname`
+CONFIG_VAL="condor_config_val -h $HOSTNAME"
+
+CONDOR_LOCALDIR=`$CONFIG_VAL LOCAL_DIR 2> /dev/null`
+CONDOR_LOG=`$CONFIG_VAL LOG 2> /dev/null`
+CONDOR_SPOOL=`$CONFIG_VAL SPOOL 2> /dev/null`
+CONDOR_EXECUTE=`$CONFIG_VAL EXECUTE 2> /dev/null`
+CONDOR_LOCALCFG=`$CONFIG_VAL LOCAL_CONFIG_FILE 2> /dev/null`
+
+if [ -n "$CONDOR_LOCALDIR" ]; then
+	if [ ! -d $CONDOR_LOCALDIR ]; then
+		echo "Creating $CONDOR_LOCALDIR"
+		mkdir $CONDOR_LOCALDIR
+		chmod 755 $CONDOR_LOCALDIR
+	fi
+else
+	echo "LOCAL_DIR is not defined, will not create"
+fi
+
+if [ -n "$CONDOR_LOG" ]; then
+	if [ ! -d $CONDOR_LOG ]; then
+		echo "Creating $CONDOR_LOG"
+		mkdir $CONDOR_LOG
+		chmod 755 $CONDOR_LOG
+	else
+		echo "$CONDOR_LOG already exists."
+	fi
+else
+	echo "LOG is not defined here, fix this and try again."
+	exit 1
+fi
+
+if [ -n "$CONDOR_SPOOL" ]; then
+
+	CONDOR_SPOOL_PARENT=`echo $CONDOR_SPOOL | sed "s/\/[a-zA-Z]*$//g"`
+
+	if [ ! -d $CONDOR_SPOOL_PARENT ]; then
+		echo "Creating $CONDOR_SPOOL_PARENT"
+		mkdir $CONDOR_SPOOL_PARENT
+		chmod 755 $CONDOR_SPOOL_PARENT
+	fi
+
+	if [ ! -d $CONDOR_SPOOL ]; then
+		echo "Creating $CONDOR_SPOOL"
+		mkdir $CONDOR_SPOOL
+		chmod 700 $CONDOR_SPOOL
+	else
+		echo "$CONDOR_SPOOL already exists."
+	fi
+else
+	echo "SPOOL is not defined, will not create."
+fi
+
+if [ -n "$CONDOR_EXECUTE" ]; then
+
+	CONDOR_EXECUTE_PARENT=`echo $CONDOR_EXECUTE | sed "s/\/[a-zA-Z]*$//g"`
+
+	if [ ! -d $CONDOR_EXECUTE_PARENT ]; then
+		echo "Creating $CONDOR_EXECUTE_PARENT"
+		mkdir $CONDOR_EXECUTE_PARENT
+		chmod 755 $CONDOR_EXECUTE_PARENT
+	fi
+
+	if [ ! -d $CONDOR_EXECUTE ]; then
+		echo "Creating $CONDOR_EXECUTE"
+		mkdir $CONDOR_EXECUTE
+		chmod 1777 $CONDOR_EXECUTE
+	else
+		echo "$CONDOR_EXECUTE already exists."
+	fi
+else
+	echo "EXECUTE is not defined, will not create."
+fi
+
+if [ -n "$CONDOR_LOCALCFG" ]; then
+	if [ ! -f $CONDOR_LOCALCFG ]; then
+		echo "Creating $CONDOR_LOCALCFG"
+		touch $CONDOR_LOCALCFG 
+		chmod 644 $CONDOR_LOCALCFG
+	else 
+		echo "$CONDOR_LOCALCFG already exists."
+	fi
+else
+	echo "LOCAL_CONFIG_FILE is not defined, will not create."
+fi
+
+echo "Condor has been initialized, but not started."
