@@ -467,6 +467,9 @@ int daemon::StartDaemon()
 		// In version 6 daemons are not started as root but as Condor
 		/* Daemons need to be started as root. */
 		if(getuid()==0) {
+#ifndef USE_ROOT_RUID
+			set_condor_ruid();
+#endif
 			set_condor_euid();
 		}
 

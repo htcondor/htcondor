@@ -105,7 +105,7 @@ extern "C"
 	int		sigpause(int mask);
 	int 	gethostname(char* name, int len);
 #if !defined(Solaris251)
-	int		vfork();
+	pid_t		vfork();
 #endif
 #elif defined(IRIX53)
 	int	vfork();
@@ -247,12 +247,19 @@ main( int argc, char* argv[] )
 	
 	MyName = argv[0];
 
+#ifdef UW_LOCAL_HACK
+/*
+ * If you want to use the kbdd, then link it with the right -L _and_ -R
+ * flags under Solaris, so that this isn't needed. - Frank
+ * [ gcc -o condor_kbdd <objfiles> -L<xpath> -R<xpath> ...]
+ */
 #if defined(X86) && defined(Solaris)
 	/* Set the environment for the X11 dynamic library for condor_kbdd */
 	putenv("LD_LIBRARY_PATH=/s/X11R6-2/sunx86_54/lib");
 #else if defined(sun4m) && defined(Solaris)
 	/* Set the environment for the X11 dynamic library for condor_kbdd */
 	putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
+#endif
 #endif
 
 	/* Run as group condor so we can access log files even if they
@@ -270,6 +277,7 @@ main( int argc, char* argv[] )
 	 ** even if he has group write permission.  We need to be Condor
 	 ** most of the time.
 	 */
+	setuid(0);	// If started up by setuid program, only euid is 0.
 	set_condor_euid();
 
 	for( ptr=argv+1; *ptr; ptr++ ) {
