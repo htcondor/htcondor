@@ -15,6 +15,7 @@ public:
   // User Functions
 
   void SetAccountant(char* sin); // set accountant remote/local mode
+  void Reset();                  // Flush all tables
 
   double GetPriority(const MyString& CustomerName); // get priority for a customer
   void SetPriority(const MyString& CustomerName, double Priority); // set priority for a customer
@@ -24,6 +25,9 @@ public:
 
   void CheckMatches(ClassAdList& ResourceList);  // Remove matches that are not claimed
   void UpdatePriorities(); // update all the priorities
+
+  void LoadPriorities(); // Save to file
+  void SavePriorities(); // Read from file
 
   //----------------------------------------------------------------------
 
@@ -37,9 +41,6 @@ public:
   Accountant(int MaxCustomers=1024, int MaxResources=1024);
                                                 
 private:
-
-  // int LoadPriorities(); // Save to file
-  // int SavePriorities(); // Read from file
 
   //---------------------------------------------
   // Data structures & members
@@ -73,6 +74,7 @@ private:
   double Epsilon;
   double HalfLifePeriod; // The time in sec in which the priority is halved by aging
   Time LastUpdateTime;
+  MyString PriorityFile; // Name of priority file
 
   //--------------------------------------------------------
   // Misc functions
