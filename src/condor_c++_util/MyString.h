@@ -94,6 +94,7 @@ public:
   MyString& operator=(const MyString& S) {
     if (Data) delete[] Data;
     Data=NULL;
+    Len=0;
     if (S.Data) {
       Len=S.Len;
       Data=new char[Len+1];
