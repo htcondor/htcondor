@@ -1311,9 +1311,3 @@ GRIDMANAGER_LOG = /tmp/GridmanagerLog.$(USERNAME)
 #
 CRED_MIN_TIME_LEFT		= 120 
 
-##--------------------------------------------------------------------
-##  condor_glidein settings. 
-##--------------------------------------------------------------------
-
-GLIDEIN_SERVER_NAME = gridftp.cs.wisc.edu
-GLIDEIN_SERVER_DIR = /p/condor/public/binaries/glidein
