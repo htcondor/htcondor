@@ -149,7 +149,7 @@ SYSCALL_SUPPORT_OBJ=senders.o receivers.C syscall_mode.o syscall_connect.o remot
 UTIL_OBJ =  $(FLOCK_OBJ) dprintf.o dprintf_config.o except.o update_rusage.o \
 	condor_errlst.o internet.o $(HP_SPECIFIC_FILES) uids.o
 
-CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o
+CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o
 
 IO_OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o $(CONDOR_TYPE_OBJ)
 
@@ -257,7 +257,7 @@ switches.c: syscall.tmpl switches.prologue stub_gen switches.epilogue
 senders.C: syscall.tmpl stub_gen senders.prologue senders.epilogue
 	$(CPP) -DSENDER $(CLIP) $(SAVE_SIGSTATE) -D$(OS) syscall.tmpl | \
 	./stub_gen -mode senders -p senders.prologue -e senders.epilogue \
-	> senders.C
+	-n syscheck > senders.C
 
 #if IS_SGI_IRIX53 
 CMNT
@@ -269,7 +269,8 @@ CMNT	CC -I../h -I../condor_includes -I../condor_c++_util -DSGI -D$(OS) -DNFSFIX 
 
 receivers.C: syscall.tmpl stub_gen receivers.prologue receivers.epilogue
 	$(CPP) -DRECEIVER $(CLIP) $(SAVE_SIGSTATE) -D$(OS) syscall.tmpl | \
-	./stub_gen -mode receivers -p receivers.prologue -e receivers.epilogue \
+	./stub_gen -mode receivers -p receivers.prologue \
+	-e receivers.epilogue -n syscheck \
 	> receivers.C
 
 syscall-list: syscall.tmpl stub_gen 
