@@ -269,7 +269,8 @@
 #	undef sethostname
 #	undef setdomainname
 #	undef ptrace
-	int readlink( const char *path, void *buf, int buf_size );
+	/* leave readlink() out, at least on IRIX62; not sure about IRIX53 */
+	/* int readlink( const char *path, void *buf, int buf_size ); */
 	int select();
 	int setreuid( int ruid, int euid );
 	int setregid( int rgid, int egid );
