@@ -149,10 +149,10 @@ int Condor_Auth_X509 :: authenticate(const char * remoteHost)
     return( status );
 }
 
-int Condor_Auth_X509 :: wrap(const char* data_in, 
-                             int         length_in, 
-                             char*&      data_out, 
-                             int&        length_out)
+int Condor_Auth_X509 :: wrap(char*  data_in, 
+                             int    length_in, 
+                             char*& data_out, 
+                             int&   length_out)
 {
     OM_uint32 major_status;
     OM_uint32 minor_status;
@@ -182,10 +182,10 @@ int Condor_Auth_X509 :: wrap(const char* data_in,
     return major_status;
 }
     
-int Condor_Auth_X509 :: unwrap(const char*  data_in, 
-                               int          length_in, 
-                               char*&       data_out, 
-                               int&         length_out)
+int Condor_Auth_X509 :: unwrap(char*  data_in, 
+                               int    length_in, 
+                               char*& data_out, 
+                               int&   length_out)
 {
     OM_uint32 major_status;
     OM_uint32 minor_status;
