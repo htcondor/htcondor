@@ -36,31 +36,37 @@
 
 /*
 **	Definitions for flags to pass to dprintf
+**  Note: this is a little confusing, since the flags specify both
+**  debug levels and dprintf options (i.e., D_NOHEADER).  The debug
+**  level flags use the lower order bits while the option flag(s)
+**  use the higher order bit(s).  Note that D_MAXFLAGS is 32 so we
+**  can store the debug level as a integer bitmask.
 */
-static const int D_ALWAYS		= (1<<0);
-static const int D_TERMLOG		= (1<<1);
-static const int D_SYSCALLS		= (1<<2);
-static const int D_CKPT			= (1<<3);
-static const int D_XDR			= (1<<4);
-static const int D_MALLOC		= (1<<5);
-static const int D_NOHEADER		= (1<<6);
-static const int D_LOAD			= (1<<7);
-static const int D_EXPR			= (1<<8);
-static const int D_PROC			= (1<<9);
-static const int D_JOB			= (1<<10);
-static const int D_MACHINE		= (1<<11);
-static const int D_FULLDEBUG	= (1<<12);
-static const int D_NFS			= (1<<13);
-static const int D_UPDOWN       = (1<<14);
-static const int D_AFS          = (1<<15);
-static const int D_PREEMPT		= (1<<16);
-static const int D_PROTOCOL		= (1<<17);
-static const int D_PRIV			= (1<<18);
-static const int D_TAPENET		= (1<<19);
-static const int D_DAEMONCORE	= (1<<20);
-static const int D_COMMAND		= (1<<21);
-static const int D_MAXFLAGS		= 32;
-static const int D_ALL			= (~(1<<5));
+#define D_NUMLEVELS		21
+#define D_MAXFLAGS 		32
+#define D_ALWAYS 		(1<<0)
+#define D_SYSCALLS		(1<<1)
+#define D_CKPT			(1<<2)
+#define D_XDR			(1<<3)
+#define D_MALLOC		(1<<4)
+#define D_LOAD			(1<<5)
+#define D_EXPR			(1<<6)
+#define D_PROC			(1<<7)
+#define D_JOB			(1<<8)
+#define D_MACHINE		(1<<9)
+#define D_FULLDEBUG	 	(1<<10)
+#define D_NFS			(1<<11)
+#define D_UPDOWN        (1<<12)
+#define D_AFS           (1<<13)
+#define D_PREEMPT		(1<<14)
+#define D_PROTOCOL		(1<<15)
+#define D_PRIV			(1<<16)
+#define D_TAPENET		(1<<17)
+#define D_DAEMONCORE	(1<<18)
+#define D_COMMAND		(1<<19)
+#define D_BANDWIDTH		{1<<20)
+#define D_NOHEADER		(1<<(D_MAXFLAGS-1))
+#define D_ALL			(~(0))
 
 #if defined(__cplusplus)
 extern "C" {
@@ -68,11 +74,12 @@ extern "C" {
 
 extern int DebugFlags;	/* Bits to look for in dprintf */
 extern int Termlog;		/* Are we logging to a terminal? */
+extern int (*DebugId)();		/* set header message */
 
 #if defined(__STDC__) || defined(__cplusplus)
 void dprintf_init ( int fd );
-void dprintf ( int flags, char *fmt, ... );
-int  dprintf_config (char *, int );
+void dprintf ( int flags, ... );
+void dprintf_config (char *, int );
 void _EXCEPT_ ( char *fmt, ... );
 void Suicide();
 #else
