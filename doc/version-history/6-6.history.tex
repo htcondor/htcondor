@@ -32,13 +32,14 @@ The details of each version are described below.
   files related to a valid Computing on Demand (COD) claim on an
   otherwise idle machine.
 
-\item Fixed the faulty argument parsing in condor_rm, condor_release,
-  and condor_hold. Before you could accidentally type ``condor_rm
-  -analyze'', and it would remove all of your jobs. Now it gives an
-  error.
+\item Fixed the faulty argument parsing in \Condor{rm},
+  \Condor{release}, and \Condor{hold}.
+  Before you could accidentally type \verb@condor_rm -analyze@, and it
+  would remove all of your jobs.
+  Now it gives an error.
 
 \item One Windows, when you type a command like
-  ``condor_reconfig.exe'' instead of ``condor_reconfig'', you no
+  \verb@condor_reconfig.exe@ instead of \verb@condor_reconfig@, you no
   longer get an error.
 
 \end{itemize}
