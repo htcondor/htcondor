@@ -460,7 +460,7 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 		ExitReason = JOB_NOT_CKPTED;
 		if( proc->status==UNEXPANDED && !FileExists(ICkptName, Proc->owner) ) {
 			dprintf(D_ALWAYS,"No initial ckpt found\n");
-			ExitReason = JOB_KILLED;
+			ExitReason = JOB_NO_CKPT_FILE;
 		}
 		break;
 
