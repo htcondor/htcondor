@@ -129,6 +129,7 @@ BEGIN_C_DECLS
 int async_daemon(void);
 int nfssvc(int,int,int);
 int swapon(const char *,int);
+int initgroups(const char *, gid_t);	/* DEC screwed up the signature on this one */
 END_C_DECLS
 
 /****************************************
