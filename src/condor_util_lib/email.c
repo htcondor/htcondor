@@ -26,6 +26,7 @@
 #include "debug.h"
 #include "condor_uid.h"
 #include "condor_email.h"
+#include "my_hostname.h"
 
 #define EMAIL_SUBJECT_PROLOG "[Condor] "
 
@@ -161,6 +162,10 @@ email_open( const char *email_addr, const char *subject )
 	/* free up everything we strdup-ed and param-ed, and return result */
 	free(Mailer);
 	free(FinalAddr);
+	if ( mailerstream ) {
+		fprintf(mailerstream,"This is an automated email from the Condor system\n"
+			"on machine \"%s\".  Do not reply.\n\n",my_full_hostname());
+	}
 	return mailerstream;
 }
 
@@ -213,7 +218,14 @@ email_close(FILE *mailer)
 	}
 
 	/* Put a signature on the bottom of the email */
-	/* if ( (temp = param("CONDOR_ADMIN")) == NULL ) { */
+	if ( (temp = param("CONDOR_ADMIN")) != NULL ) { 
+		fprintf(mailer,"\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n");
+		fprintf(mailer,"Questions about this message or Condor in general?\n");
+		fprintf(mailer,"Email address of the local Condor administrator: %s\n",
+			temp);
+		fprintf(mailer,"The Official Condor Homepage is http://www.cs.wisc.edu/condor\n");
+		free(temp);
+	}
 	
 	/* 
 	** On many Unix platforms, we cannot use
