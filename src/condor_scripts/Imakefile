@@ -7,6 +7,8 @@ CFLAGS = $(STD_C_FLAGS)
 GLIBC_DIR = /p/condor/workspaces/glibc/glibc-install/lib
 #elif IS_GLIBC22
 GLIBC_DIR = /p/condor/workspaces/glibc/glibc-install/lib-glibc2.2.2/lib
+#elif IS_GLIBC23
+GLIBC_DIR = /p/condor/workspaces/glibc/glibc-install/lib-glibc2.3.2/lib
 #endif
 
 MANDIR = /p/condor/workspaces/man/v6.4
@@ -55,7 +57,7 @@ all_symlink_target(ld,real-ld)
 	automatically get used before the real libc courtesy of -L on
 	the link line). This will be the case until we hit a set of
 	header files that can't be used with glibc 2.1.1. */
-#if IS_GLIBC21 || IS_GLIBC22
+#if IS_GLIBC21 || IS_GLIBC22 || IS_GLIBC23
 #if ! IS_CLIPPED
 release_copy_target($(GLIBC_DIR)/libc.a,$(RELEASE_DIR)/lib,libc.a,OBJECT_MODE)
 static_copy_target($(GLIBC_DIR)/libc.a,$(STATIC_DIR)/lib,libc.a,OBJECT_MODE)
