@@ -35,6 +35,8 @@ extern "C" int REMOTE_CONDOR_register_machine_info(char *uiddomain,
 	char *fsdomain, char *address, char *fullHostname, int key);
 extern "C" int REMOTE_CONDOR_get_job_info(ClassAd *ad);
 extern "C" int REMOTE_CONDOR_job_exit(int status, int reason, ClassAd *ad);
+extern "C" int REMOTE_CONDOR_register_mpi_master_info(char *str);
+
 
 /* thse are the remote system calls that the starter uses */
 
