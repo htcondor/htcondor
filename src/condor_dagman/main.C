@@ -1,28 +1,47 @@
-#include "DagMan.h"
+#include "condor_common.h"
+#include "dag.h"
 #include "log.h"
+#include "debug.h"
+#include "parse.h"
 
-#include <pwd.h>
+#if 0  /* sig_install.h is broken, so I will defined my own installer */
+#include "sig_install.h"
+#else
+//typedef void (*SIG_HANDLER)(int);
+//void install_sig_handler (int sig, SIG_HANDLER handler);
+#endif
+
 #include <unistd.h>
-#include <iostream.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-char *DAG_LOG = "dagman.log";
-char *CONDOR_LOG = "condor.log";
-char *DAGMAN_LOCKFILE = ".dagmanLock";
-int   DEFAULT_SLEEP = 10;
+// Required for linking with condor libs
+extern "C" int SetSyscalls() { return 0; }
 
-int DagLog_fd;
-
-DagMan *dagman;
-
+//---------------------------------------------------------------------------
 static void Usage() {
-  fprintf(stderr, "Usage: condor_dagman [-condorlog file] [-daglog file] "
-          "[-lockfile file] <input filename>\n");
+  debug_printf (DEBUG_SILENT, "Usage: condor_dagman [-debug <level>] "
+                "[-condorlog <file>] \n\t\t"
+                "[-lockfile <file>] <file.dag>\n");
   exit(1);
 }
 
+//---------------------------------------------------------------------------
 int main(int argc, char **argv) {
+
+  debug_progname = argv[0];
+  debug_level = DEBUG_NORMAL;  // Default debug level is normal output
+
+#if !defined(WIN32)
+  // the following is used to avoid 'broken pipe' messages
+  install_sig_handler (SIGPIPE, SIG_IGN);
+#endif
+  
+  char *condorLogName = "condor.log";
+  char *lockFileName = ".dagmanLock";
+  
   // DagMan recovery occurs if the file pointed to by 
-  // DAGMAN_LOCKFILE exists. This file is deleted on normal 
+  // lockFileName exists. This file is deleted on normal 
   // completion of condor_dagman
 
   // DAG_LOG is used for DagMan to maintain the order of events 
@@ -31,10 +50,7 @@ int main(int argc, char **argv) {
 
   char *datafile = NULL;
   
-  int parseStatus;
-  int nJobsSubmitted;
-
-  dagman = new DagMan();
+  Dag * dag = new Dag();
   
   if (argc < 2) Usage();  //  Make sure an input file was specified
   
@@ -42,27 +58,27 @@ int main(int argc, char **argv) {
   // Process command-line arguments
   //
   for (int i = 1; i < argc; i++) {
-	if (!strcmp("-condorlog", argv[i])) {
+    if (!strcmp("-debug", argv[i])) {
       i++;
       if (argc <= i) {
-        printf("No condor log specified\n");
-		Usage();
+        debug_println (DEBUG_SILENT, "No debug level specified");
+        Usage();
       }
-      CONDOR_LOG = argv[i];
-    } else if (!strcmp("-daglog", argv[i])) {
+      debug_level = (debug_level_t) atoi (argv[i]);
+	} else if (!strcmp("-condorlog", argv[i])) {
       i++;
       if (argc <= i) {
-		printf("No DagMan logfile name specified\n");
+        debug_println (DEBUG_SILENT, "No condor log specified");
 		Usage();
       }
-      DAG_LOG = argv[i];
+      condorLogName = argv[i];
     } else if (!strcmp("-lockfile", argv[i])) {
       i++;
       if (argc <= i) {
-		printf("No DagMan lockfile specified\n");
+		debug_println (DEBUG_SILENT, "No DagMan lockfile specified");
 		Usage();
       }
-      DAGMAN_LOCKFILE = argv[i];
+      lockFileName = argv[i];
     } else if (!strcmp("-help", argv[i])) {
       Usage();
     } else if (i == (argc - 1)) {
@@ -71,196 +87,102 @@ int main(int argc, char **argv) {
   }
   
   if (datafile == NULL) {
-    printf("No input file was specified\n");
+    debug_println (DEBUG_SILENT, "No input file was specified");
     Usage();
   }
  
-
-#ifdef VERBOSE
-  fprintf(stderr, "Dagman log will be written to %s\n", 
-          DAG_LOG);
-  fprintf(stderr, "Condor log will be written to %s\n", 
-          CONDOR_LOG);
-  fprintf(stderr, "Dagman Lockfile will be written to %s\n", 
-          DAGMAN_LOCKFILE);
-  fprintf(stderr, "Input file is %s\n",
-          datafile);
-#endif
+  debug_println (DEBUG_VERBOSE,"Condor log will be written to %s", condorLogName);
+  debug_println (DEBUG_VERBOSE,"Dagman Lockfile will be written to %s",
+                 lockFileName);
+  debug_println (DEBUG_VERBOSE,"Input file is %s", datafile);
   
   //
   // Initialize the DagMan object
   //
-  struct passwd *p;
-  p = getpwuid(getuid());
-  if (p == NULL) {
-    fprintf(stderr, "Error looking up username\n");
-    return (1);
+  
+  if (dag->Init(condorLogName, lockFileName) != OK) {
+    debug_error (1, DEBUG_QUIET, "ERROR in DagMan initialization!");
   }
   
-  int status = dagman->Init(CONDOR_LOG, 
-                        DAG_LOG,
-                        DAGMAN_LOCKFILE,
-                        p->pw_name);
-#ifdef DEBUG
-  fprintf(stderr, "finished dagman->Init");
-#endif
-
-  if (status != OK) {
-    fprintf(stderr, "ERROR in DagMan initialization: ");
-    fprintf(stderr, "\n");
-    return (1);
-  }
-
   //
-  // Open the input file, then parse it. The Parse() routine
+  // Parse the input file.  The parse() routine
   // takes care of adding jobs and dependencies to the DagMan
   //
-  FILE *fp = fopen(datafile, "r");
-  if (fp == NULL) {
-    fprintf(stderr, "Could not open file %s for input\n", datafile);
-    return (1);
+  debug_println (DEBUG_VERBOSE, "Parsing %s ...", datafile);
+  if (!parse (datafile, dag)) {
+    debug_error (1, DEBUG_QUIET, "Failed to parse %s", datafile);
   }
 
-  parseStatus = Parse(fp, dagman);
+  debug_println (DEBUG_VERBOSE, "Dag contains %d total jobs",
+                 dag->NumJobs());
 
-  if (parseStatus != 0) {
-    printf("Error Parsing\n");
-    return (1);
-  } 
-
-#ifdef DEBUG
-  printf("After Parsing ...\n");
-  dagman->PrintNodeList();
-#endif
-
-#ifdef VERBOSE
-  fprintf(stderr, "Starting DagMan ... \n");
-#endif
-
+  if (DEBUG_LEVEL(DEBUG_DEBUG_3)) dag->PrintJobList();
+  
   // check if any jobs have been pre-defined as being done
   // if so, report this to the other nodes
+  dag->TerminateFinishedJobs();
 
-#ifdef DEBUG
-  cout << "# of Jobs" << dagman->NumJobs() << endl;
-  cout << "# of Jobs completed" << dagman->NumJobsCompleted() << endl;
-#endif
-
-  dagman->CheckForFinishedJobs();
-
+  debug_println (DEBUG_VERBOSE, "Number of Pre-completed Jobs: %d",
+                 dag->NumJobsDone());
+    
+  debug_println (DEBUG_NORMAL, "Starting DagMan ...");
+  
   // If the Lockfile exists, this indicates a premature termination
   // of a previous run of Dagman. If condor log is also present,
   // we run in recovery mode
-
+  
   // If the Daglog is not present, then we do not run in recovery
   // mode
+  
+  if (access(lockFileName,  F_OK) == 0 &&
+      access(condorLogName, F_OK) == 0) {
 
-  if ( (access(DAGMAN_LOCKFILE, F_OK) == 0) &&
-       (access(CONDOR_LOG,      F_OK) == 0) &&
-       (access(DAG_LOG,         F_OK) == 0) ) {     // RECOVERY MODE
+    debug_println (DEBUG_VERBOSE, "Lock file %s detected, "
+                   "running in RECOVER mode", lockFileName);
+    dag->Recover();
 
-    DagLog_fd = open(DAG_LOG, O_RDWR, 0600);
-    dagman->Recover_DagMan();
-  } else {                                          // NORMAL MODE
-
+  } else {                                      // NORMAL MODE
+    
     // if there is an older version of the log files,
     // we need to delete these.
     
-    if ( access( CONDOR_LOG, F_OK) == 0 ) {
-#ifdef DEBUG
-	  fprintf(stderr, "Deleting an older version of %s\n", CONDOR_LOG); 
-#endif
-
-	  FILE *fp;
-	  char *DeleteCommand;
-	  DeleteCommand = new char[strlen(CONDOR_LOG) + 10];
-
-	  sprintf(DeleteCommand, "rm %s", CONDOR_LOG);
-	  
-	  fp = popen(DeleteCommand, "r");
-	  if (fp == NULL) {
-        fprintf(stderr, "popen in main() failed\n");
-        return (1);
-      }
-	  
-	  pclose(fp);
-	}
-    
-    if ( access( DAG_LOG, F_OK) == 0 ) {
-#ifdef DEBUG
-	  fprintf(stderr, "Deleting an older version of %s\n", DAG_LOG); 
-#endif
-      
-	  FILE *fp;
-	  char *DeleteCommand;
-	  DeleteCommand = new char[strlen(DAG_LOG) + 10];
-      
-	  sprintf(DeleteCommand, "rm %s", DAG_LOG);
-	  
-	  fp = popen(DeleteCommand, "r");
-	  if (fp == NULL) {
-        fprintf(stderr, "popen in main() failed\n");
-        return (1);
-      }
-	  
-	  pclose(fp);
-	}
-    
-    DagLog_fd = open(DAG_LOG, O_RDWR | O_CREAT, 0600);
-    open(DAGMAN_LOCKFILE, O_RDWR | O_CREAT, 0600);
+    if ( access( condorLogName, F_OK) == 0 ) {
+      debug_println (DEBUG_VERBOSE, "Deleting older version of %s",
+                     condorLogName);
+      if (remove (condorLogName) == -1)
+        debug_perror (1, DEBUG_QUIET, condorLogName);
+    }
+    open(lockFileName, O_RDWR | O_CREAT, 0600);
   }
 
-#ifdef DEBUG
-  cout << "# of Jobs " << dagman->NumJobs() << endl;
-  cout << "# of Jobs completed " << dagman->NumJobsCompleted() << endl;
-#endif
+  while (dag->NumJobsDone() < dag->NumJobs()) {
 
-  while (dagman->NumJobsCompleted() < dagman->NumJobs()) {
+    debug_println (DEBUG_DEBUG_2, "%s: Jobs Done: %d/%d", __FUNCTION__,
+                   dag->NumJobsDone(), dag->NumJobs());
 
-    status = dagman->RunReadyJobs(nJobsSubmitted);
+    if (DEBUG_LEVEL(DEBUG_DEBUG_3)) dag->PrintJobList();
 
-    if (status != OK) {
-	  fprintf(stderr, "ERROR submitting ready jobs: ");
-	  fprintf(stderr, "\n");
-	  return (1);
-	}
-      
+    int ran = dag->SubmitReadyJobs();
+    debug_println (DEBUG_DEBUG_2, "%s: Jobs Submitted: %d",
+                   __FUNCTION__, ran);
+    
     //
     // Wait for new events to be written into the condor log
     //
     
     // need to put a check here for the case
-    // where the condor log doesnt exist (i.e., no jobs submitted)
+    // where the condor log doesn't exist (i.e., no jobs submitted)
     
-    bool ready;
-    do {
-      // fprintf (stderr, "dagman->DetectLogGrowth(): "); fflush(stderr);
-      ready = dagman->DetectLogGrowth();
-
-      // fprintf (stderr, "dagman->WaitForLogEvents(): "); fflush(stderr);
-      // ready = dagman->WaitForLogEvents();
-
-      // fprintf (stderr, "%s\n", ready ? "true" : "false"); fflush(stderr);
-    } while (!ready);
-
-    fprintf (stderr, "dagman->ProcessLogEvents()\n"); fflush(stderr);
-    status = dagman->ProcessLogEvents();
-    if (status != OK) {
-	  fprintf(stderr, "ERROR processing condor log.\n");
-	  return (1);
+    while (!dag->DetectLogGrowth());
+    
+    if (dag->ProcessLogEvents() != OK) {
+      debug_error (1, DEBUG_QUIET, "ERROR processing condor log!");
 	}
-      
+
     // Nothing to do if all jobs have finished
-    //
-    // (This is not needed, look at the while loop condition above!)
-    // if (dagman->NumJobsCompleted() == dagman->NumJobs()) break;
-
   }
-
-#ifdef DEBUG  
-  fprintf(stderr, "No more jobs to run\n"); 
-#endif
-  delete dagman;
-  close(DagLog_fd);  
-
+  
+  debug_println (DEBUG_NORMAL, "All jobs Completed!");
+  delete dag;
   return (0);
 }
