@@ -1,6 +1,5 @@
-
 \section{Introduction to Condor NT Preview}
-
+\index{Windows NT!introduction|(}
 Welcome to Condor for Windows NT!  
 We view Windows NT as a strategic platform for Condor, and therefore we are
 doing a full-blown ``deep port'' to Windows NT.
@@ -30,9 +29,11 @@ After reading these chapters, then review the information in this chapter
 for important information and differences when using and administrating
 Condor on Windows NT.  For information on installing Condor NT, see
 section~\ref{sec:NT-Install}.
+\index{Windows NT!introduction|)}
 
 
 \section{Release Notes for Condor NT Preview 6.1.8}
+\index{Windows NT!release notes|(}
 
 Released mid-October 1999, this is the first public release of Condor NT.
 
@@ -194,7 +195,7 @@ out again as input files when the job restarts.
 
 It is \Bold{highly recommended} that you specify a \Opt{Requirements}
 expression in your submit-description file that checks the size of the
-\AdAttr{Disk} attribute when using File Transfer!!!  Doing so can ensure
+\AdAttr{Disk} attribute when using File Transfer!  Doing so can ensure
 that Condor picks a machine with enough local disk space for your job.
 Here is a sample submit-description file:
 
@@ -403,7 +404,7 @@ to remove or edit their own jobs)
 \Warn Do not remove ``SYSTEM'' from \MacroNI{QUEUE\_SUPER\_USERS}, or
 Condor itself will not be able to access the job queue when needed.  If the
 LocalSystem account on your machine is compromised, you have all sorts of
-problems!!!
+problems!
 
 To protect the actual job queue files themselves, the Condor NT installation
 program will automatically set permissions on the entire Condor release
@@ -475,3 +476,4 @@ happened.  This information can be used by the Condor developers to fix the
 problem.
 
 \end{itemize}
+\index{Windows NT!release notes|)}

@@ -110,7 +110,7 @@ of free space.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:nt-install-procedure}
-Installation Procedure using the included Setpup Program}
+Installation Procedure using the included Setup Program}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % condor MUST be run as local system
@@ -391,10 +391,10 @@ are available.
 
 \index{Windows NT!manual install|(}
 If you are to install Condor on many different machines, you may wish
-to use some other mechanism to install Condor NT rather than running
-the Setup program descibed aboute.
+to use some other mechanism to install Condor NT on additional machines
+rather than running the Setup program described above on each machine.
 
-\Warn This is for advanced users only!  All others should use the Setup program described about.
+\Warn This is for advanced users only!  All others should use the Setup program described above. 
 
 Here is a brief overview of how to install Condor NT manually without using the provided GUI-based setup program:
 
@@ -405,7 +405,7 @@ Type is Automatic.  The service should log on as System Account, but
 \Bold{do not enable} "Allow Service to Interact with Desktop".  The
 program that is run is \Condor{master.exe}.
 
-For your convience, we have included a file called \File{install.exe} in 
+For your convenience, we have included a file called \File{install.exe} in 
 the bin directory that will install a service.  It is typically called in the
 following way:
 \begin{verbatim}
@@ -419,7 +419,7 @@ remove Condor
 \end{verbatim}
 
 \item [The Registry]
-Condor NT uses a few registry entries in its operation.  The key that Codnor
+Condor NT uses a few registry entries in its operation.  The key that Condor
 uses is HKEY\_LOCAL\_MACHINE/Software/Condor.  The values that Condor puts
 in this registry key serve two purposes.
 \begin{enumerate}
@@ -439,9 +439,9 @@ so that they can be used for the next one.
 
 \item [The Filesystem]
 The files that are needed for Condor to operate are identical to the Unix
-version of Condor, execept that executable files end in \File{.exe}.  For
+version of Condor, except that executable files end in \File{.exe}.  For
 example the on Unix one of the files is \File{condor\_master} and on Condor
-NT the coresponding file is \File{condor\_master.exe}.
+NT the corresponding file is \File{condor\_master.exe}.
 
 These files currently must reside on the local disk for a variety of reasons.
 Advanced Windows NT users might be able to put the files on remote resources.
@@ -506,6 +506,6 @@ Condor is running... now what?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Once Condor services are running, try building
-and submitting some test jobs.  See the \File{README} file in the
+and submitting some test jobs.  See the \File{README.TXT} file in the
 examples directory
 for details.
