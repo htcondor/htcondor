@@ -1,3 +1,7 @@
+6/10/99 cae-special-603-branch
+	Some bugs fixes related to fortran.
+	Compiled only for sparc solaris 551 and given to them in binary form.
+
 6/7/99 V6_1-pre-merge-V6_1-Irix65-1-branch-merge-1
 	Tag of Trunk before merging Irix branch back in
 
