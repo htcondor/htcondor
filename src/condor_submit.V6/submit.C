@@ -1241,7 +1241,12 @@ SetTransferFiles()
 		free(macro_value);		// condor_param() calls malloc; free it!
 	} else {
 		// User did not explicitly specify TransferFiles; choose a default
+#ifdef WIN32
 		sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_FILES,"ONEXIT");
+#else
+		sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_FILES,"NEVER");
+		never_transfer = true;
+#endif
 	}
 
 	// Insert what we want for ATTR_TRANSFER_FILES
