@@ -1,3 +1,4 @@
+#include "condor_common.h"
 #include "HashTable.h"
 #include "extArray.h"
 #include "list.h"

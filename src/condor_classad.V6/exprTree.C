@@ -1,3 +1,4 @@
+#include "condor_common.h"
 #include "stringSpace.h"
 #include "exprTree.h"
 

@@ -1,3 +1,4 @@
+#include "condor_common.h"
 #include "exprTree.h"
 
 ExprList::

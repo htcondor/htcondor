@@ -1,3 +1,4 @@
+#include "condor_common.h"
 #include "source.h"
 #include "classad.h"
 #include "lexer.h"
