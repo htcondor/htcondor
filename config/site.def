@@ -76,8 +76,7 @@ the soft links.  The links will point back to Top/src/... */
 
 #define WANT_PVM	YES
 
-#define WANT_CONDOR_G	NO
-#define CONDOR_G_RELEASE NO
+#define WANT_CONDOR_G	YES
 
 #define WANT_NETMAN	YES
 

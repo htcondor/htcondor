@@ -204,12 +204,6 @@ DEBUG_FLAG = DebugFlag
 #define VendorFTestFlags
 #endif
 
-#if CONDOR_G_RELEASE
-  #define IsCondorGRelease -DCONDOR_G_RELEASE
-#else
-  #define IsCondorGRelease
-#endif
-
 #if WANT_CONDOR_G && HAS_GLOBUS
 
   #define NEEDS_GSI YES
