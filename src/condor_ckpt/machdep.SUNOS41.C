@@ -84,10 +84,33 @@ stack_start_addr()
   Return ending address of stack segment.
 */
 #include <sys/vmparam.h>
+#include <sys/utsname.h>
+#include "condor_syscall_mode.h"
 long
 stack_end_addr()
 {
-	return USRSTACK;
+    struct utsname buf;
+	int		status;
+	int		scm;
+
+    /*
+      We do this becuase on some gcc installations, the sun4m
+      include file gets used on sun4c machines, and the value
+      given for USRSTACK is wrong.
+    */
+
+	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+    status = uname( &buf );		// do on the executing machine - not remotely
+	SetSyscalls( scm );
+
+    if( status < 0 ) {
+        return USRSTACK;  // hope it's a sun4m...
+    }
+    if( strcmp(buf.machine,"sun4c") == 0 ) {
+        return 0xf8000000;
+    }
+
+    return USRSTACK;
 }
 
 /*
