@@ -213,7 +213,7 @@ template class HashTable<MyString, MyString>;
 template class HashBucket<MyString,MyString>;
 template class ExtArray<SubmitRec>;
 
-void TestFilePermissions()
+void TestFilePermissions( char *scheddAddr = NULL )
 {
 #ifdef WIN32
 	// TODO: need to port to Win32
@@ -227,7 +227,7 @@ void TestFilePermissions()
 
 	for(i = 0; i < NumCheckFilesRead; ++i)
 	{
-		result = attempt_access(CheckFilesRead[i], ACCESS_READ, uid, gid);
+		result = attempt_access(CheckFilesRead[i], ACCESS_READ, uid, gid, scheddAddr);
 		if( result == FALSE ) {
 			fprintf(stderr, "\nWARNING: File %s is not readable by condor.\n", 
 					CheckFilesRead[i]);
@@ -237,7 +237,7 @@ void TestFilePermissions()
 
 	for(i = 0; i < NumCheckFilesWrite; ++i)
 	{
-		result = attempt_access(CheckFilesWrite[i], ACCESS_WRITE, uid, gid);
+		result = attempt_access(CheckFilesWrite[i], ACCESS_WRITE, uid, gid, scheddAddr );
 		if( result == FALSE ) {
 			fprintf(stderr, "\nWARNING: File %s is not writeable by condor.\n", 
 					CheckFilesWrite[i]);
@@ -399,6 +399,7 @@ main( int argc, char *argv[] )
 	_EXCEPT_Cleanup = DoCleanup;
 
 	(void) sprintf (buffer, "%s = %d", ATTR_Q_DATE, (int)time ((time_t *) 0));
+	dprintf(D_FULLDEBUG,"about to InsertJobExpr with \"%s\"\n", buffer);
 	InsertJobExpr (buffer);
 
 	(void) sprintf (buffer, "%s = 0", ATTR_COMPLETION_DATE);
@@ -481,12 +482,12 @@ main( int argc, char *argv[] )
 	}
 
 	if( !GotQueueCommand ) {
-		fprintf( stderr, "ERROR: \"%s\" doesn't contain any \"queue\"", cmd_file );
+		fprintf(stderr, "ERROR: \"%s\" doesn't contain any \"queue\"", cmd_file );
 		fprintf( stderr, " commands -- no jobs queued\n" );
 		exit( 1 );
 	}
 
-	TestFilePermissions();
+	TestFilePermissions( ScheddAddr );
 
 	if (dag_pause)
 		sleep(4);
@@ -1510,7 +1511,7 @@ queue(int num)
 		if (NewExecutable) {
 			NewExecutable = false;
  			if ((ClusterId = NewCluster()) == -1) {
-				fprintf(stderr, "\nERROR: Failed to create cluster\n");
+				fprintf(stderr, "\nERROR: Failed to create cluster, errno: %d\n",errno);
 				exit(1);
 			}
 			ProcId = -1;
