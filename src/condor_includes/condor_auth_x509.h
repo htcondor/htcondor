@@ -37,14 +37,6 @@ const char STR_GSI_USER_KEY[]         = "X509_USER_KEY";
 const char STR_SSLEAY_CONF[]          = "SSLEAY_CONF";
 const char STR_GSI_MAPFILE[]          = "GRIDMAP";
 
-class GSSComms {
-public:
-   ReliSock *sock;
-   void *buffer;
-   int size;
-};
-
-
 class Condor_Auth_X509 : public Condor_Auth_Base {
  public:
     Condor_Auth_X509(ReliSock * sock);
@@ -102,6 +94,8 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
     int authenticate_client_gss();
 
     int authenticate_server_gss();
+
+    char * get_server_info();
 
     int nameGssToLocal( char * GssClient );
 
