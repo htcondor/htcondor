@@ -866,9 +866,6 @@ dc_config_auth()
     char buffer[1024];
     memset(buffer, 0, 1024);
     
-	sprintf( buffer, "X509_RUN_AS_SERVER=1");
-	putenv (strdup(buffer));
-
     // buffer overflow problem. Hao 
     pbuf = param( STR_GSI_DAEMON_DIRECTORY );
 
@@ -899,7 +896,10 @@ dc_config_auth()
 		}
 	}
     else { // running as root/condor, assuming host certificates
-        if (pbuf) {
+		sprintf( buffer, "X509_RUN_AS_SERVER=1");
+		putenv (strdup(buffer));
+
+		if (pbuf) {
 			sprintf( buffer, "X509_DIRECTORY=%s", pbuf);
 			putenv( strdup( buffer ) );
 
