@@ -18,6 +18,7 @@
 #   undef IS_GLIBC
 #   define IS_GLIBC		YES
 #   define IS_GLIBC_LINUX	YES
+#   define IS_EGCS_BUILD	YES
 
 /* Yes, we actually need to know the difference between glibc 2.0 and 2.1 */
 #if defined( IS_GLIBC20 )
@@ -32,8 +33,7 @@
 #   define ImakeOtherFlag	-DIS_GLIBC -DIS_GLIBC21
 #endif
 
-#   define IS_EGCS_BUILD	YES
-#else
+#else /* Non IS_GLIBC */
 #   define GlibCFlag
 #endif
 
