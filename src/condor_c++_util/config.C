@@ -105,8 +105,17 @@ int Read_config( char* config_file, BUCKET** table,
 		}
 
 		if( !*ptr ) {
-			(void)fclose( conf_fp );
-			return( -1 );
+				// Here we have determined this line has no operator
+			if ( name && name[0] && name[0] == '[' ) {
+				// Treat a line w/o an operator that begins w/ a square bracket
+				// as a comment so a config file can look like
+				// a Win32 .ini file for MS Installer purposes.		
+				continue;
+			} else {
+				// No operator and no square bracket... bail.
+				(void)fclose( conf_fp );
+				return( -1 );
+			}
 		}
 
 		if( ISOP(*ptr) ) {
@@ -135,6 +144,7 @@ int Read_config( char* config_file, BUCKET** table,
 
 		rhs = ptr;
 		// rhs is now 'SunOS' in the above eg
+
 		
 		/* Expand references to other parameters */
 		name = expand_macro( name, table, table_size );
