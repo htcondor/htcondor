@@ -299,7 +299,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 
 			int stream = 1;
 			ad->LookupBool( ATTR_STREAM_OUTPUT, stream );
-			streamOutput = stream != 0;
+			streamOutput = (stream != 0);
 			stageOutput = !streamOutput;
 		}
 	}
@@ -318,7 +318,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 
 			int stream = 1;
 			ad->LookupBool( ATTR_STREAM_ERROR, stream );
-			streamError = stream != 0;
+			streamError = (stream != 0);
 			stageError = !streamError;
 		}
 	}
@@ -856,7 +856,8 @@ dprintf(D_FULLDEBUG,"(%d.%d) jobmanager timed out on commit, clearing request\n"
 				gmState = GM_DONE_COMMIT;
 			} else {
 				char size_str[128];
-				if ( streamOutput == false && streamError == false ) {
+				if ( streamOutput == false && streamError == false &&
+					 stageOutput == false && stageError == false ) {
 					gmState = GM_DONE_SAVE;
 					break;
 				}
@@ -2139,7 +2140,7 @@ bool GlobusJob::GetOutputSize( int& output_size, int& error_size )
 	struct stat file_status;
 	bool retval = true;
 
-	if ( streamOutput ) {
+	if ( streamOutput || stageOutput ) {
 		rc = stat( localOutput, &file_status );
 		if ( rc < 0 ) {
 			dprintf( D_ALWAYS,
@@ -2152,7 +2153,7 @@ bool GlobusJob::GetOutputSize( int& output_size, int& error_size )
 		}
 	}
 
-	if ( streamError ) {
+	if ( streamError || stageError ) {
 		rc = stat( localError, &file_status );
 		if ( rc < 0 ) {
 			dprintf( D_ALWAYS,
@@ -2172,7 +2173,7 @@ void GlobusJob::DeleteOutput()
 {
 	int rc;
 
-	if ( streamOutput ) {
+	if ( streamOutput || stageOutput ) {
 		rc = unlink( localOutput );
 		if ( rc < 0 ) {
 			dprintf( D_ALWAYS, "(%d.%d) Failed to unlink %s\n",
@@ -2187,7 +2188,7 @@ void GlobusJob::DeleteOutput()
 		}
 	}
 
-	if ( streamError ) {
+	if ( streamError || stageOutput ) {
 		rc = unlink( localError );
 		if ( rc < 0 ) {
 			dprintf( D_ALWAYS, "(%d.%d) Failed to unlink %s\n",
