@@ -7,6 +7,9 @@ We recommend that you go to the above URL and download the Condor
 Manual.  However, the installation instructions for the MPI contrib
 module are reproduced below in ASCII.
 
+Note that the MPI contrib module will only work with condor versions
+6.1.11 and higher.  It will not work with the 6.0 release.
+
      _________________________________________________________________
 
 Installing the MPI Contrib Module
