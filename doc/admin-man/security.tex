@@ -1113,7 +1113,7 @@ GSI_DAEMON_TRUSTED_CA_DIR = $(GSI_DAEMON_DIR)/certificates
 \normalsize
 Note that no proxy is assumed in this case.
 \item
-If the \Macro{GSI\_DAEMON\_DIRECTORY} is not defined, 
+If the \MacroNI{GSI\_DAEMON\_DIRECTORY} is not defined, 
 or when defined,
 the location may be overridden with specific configuration
 variables that specify the complete path and filename of 
@@ -2233,7 +2233,7 @@ attribute that matched ``MAX\_*\_LOG'' (for example,
 access. 
 
 \item \begin{verbatim}STARTD_SETTABLE_ATTRS_OWNER = HasDataSet\end{verbatim}
-Allows any request to modify the \Macro{HasDataSet} 
+Allows any request to modify the \MacroNI{HasDataSet} 
 attribute that came from a host with \DCPerm{OWNER} access.
 By default, \DCPerm{OWNER} covers any request originating from the
 local host, plus any machines listed in the \DCPerm{ADMINISTRATOR}
@@ -2241,9 +2241,9 @@ level.
 Therefore, any Condor job would qualify for OWNER access to the
 machine where it is running. 
 So, this setting would allow any process running on a given host,
-including a Condor job, to modify the \Macro{HasDataSet} variable for
+including a Condor job, to modify the \MacroNI{HasDataSet} variable for
 that host. 
-\Macro{HasDataSet} is not used by Condor, it is an invented attribute
+\MacroNI{HasDataSet} is not used by Condor, it is an invented attribute
 included in the \Macro{STARTD\_ATTRS} setting in order for this
 example to make sense.
 

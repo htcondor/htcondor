@@ -118,7 +118,7 @@ These arguments and what they do are described below:
   into the machine, instead of running as root.  Regular users would
   not normally have permission to write files into Condor's log
   directory.  Using this option, they can override the value of
-  \Macro{LOG} and have the \Condor{kbdd} write its log file into a
+  \MacroNI{LOG} and have the \Condor{kbdd} write its log file into a
   directory that the user has permission to write to.
 
 \item[-a string] Append a period (``.'') concatenated with \Opt{string}
@@ -132,7 +132,7 @@ These arguments and what they do are described below:
   the output of the Unix \Prog{ps} command.
 
   Since daemons run with their current working directory set to the
-  value of \Macro{LOG}, if a full path (one that begins with a ``/''),
+  value of \MacroNI{LOG}, if a full path (one that begins with a ``/''),
   the file will be placed in the \MacroNI{LOG} directory.  If you leave
   the \Opt{filename} in the \MacroNI{LOG} directory, add this
   \Opt{filename} to the \Macro{VALID\_LOG\_FILES} configuration variable,

@@ -4,11 +4,13 @@
 \ToolArgsBase
 
 \SynProg{\Condor{rm}}
+\ToolDebugOption
 \ToolLocate
 \ToolJobs
 $|$ \OptArg{-constraint}{expression} \Dots
 
 \SynProg{\Condor{rm}}
+\ToolDebugOption
 \ToolLocate
 \ToolAll
 
@@ -29,6 +31,7 @@ For any given job, only the owner of the job or one of the queue super users
 \begin{Options}
 	\ToolArgsBaseDesc
 	\ToolLocateDesc
+        \ToolDebugDesc
 	\OptItem{\Arg{cluster}}{Remove all jobs in the specified cluster}
 	\OptItem{\Arg{cluster.process}}{Remove the specific job in the cluster}
 	\OptItem{\Arg{user}}{Remove jobs belonging to specified user}

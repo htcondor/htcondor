@@ -4,11 +4,13 @@
 \ToolArgsBase 
 
 \SynProg{\Condor{release}}
+\ToolDebugOption
 \ToolLocate
 \ToolJobs
 $|$ \OptArg{-constraint}{expression} \Dots
 
 \SynProg{\Condor{release}}
+\ToolDebugOption
 \ToolLocate
 \ToolAll
 
@@ -30,6 +32,7 @@ For any given job, only the owner of the job or one of the queue super users
 \begin{Options}
 	\ToolArgsBaseDesc
 	\ToolLocateDesc
+	\ToolDebugDesc
 	\OptItem{\Arg{cluster}}{Release all jobs in the specified cluster}
 	\OptItem{\Arg{cluster.process}}{Release the specific job in the cluster}
 	\OptItem{\Arg{user}}{Release jobs belonging to specified user}

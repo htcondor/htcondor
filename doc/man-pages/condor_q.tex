@@ -2,6 +2,7 @@
 {Display information about jobs in queue}
 \Synopsis \SynProg{\Condor{q}}
 \oOpt{-help} 
+\ToolDebugOption
 \oOpt{-global} 
 \oOptArg{-submitter}{submitter}
 \oOptArg{-name}{name} 
@@ -192,6 +193,7 @@ per machine basis.
 \begin{Options}
     \OptItem{\Opt{-help}}{Get a brief description of the supported options}
     \OptItem{\Opt{-global}}{Get queues of all the submitters in the system}
+    \ToolDebugDesc
 	\OptItem{\OptArg{-submitter}{submitter}}{List jobs of specific submitter 
 		from all the queues in the pool}
 	\OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
