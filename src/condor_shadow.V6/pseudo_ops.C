@@ -1713,7 +1713,7 @@ void append_buffer_info( char *url, char *method, char *path )
 
 /* Return true if this JobAd attribute contains this path */
 
-static int attr_list_has_file( const char *attr, char *path )
+static int attr_list_has_file( const char *attr, const char *path )
 {
 	char dir[_POSIX_PATH_MAX];
 	char file[_POSIX_PATH_MAX];
@@ -1998,8 +1998,10 @@ pseudo_register_begin_execution( void )
 int
 use_local_access( const char *file )
 {
-	return ((strcmp(file, "/dev/null") == MATCH) ||
-			(strcmp(file, "/dev/zero") == MATCH));
+	return
+		!strcmp(file,"/dev/null") ||
+		!strcmp(file,"/dev/zero") ||
+		attr_list_has_file( ATTR_LOCAL_FILES, file );
 }
 
 /* "special" access means open the file locally, and also protect it by preventing checkpointing while it is open.   This needs to be applied to sockets (not trapped here) and special files that take the place of sockets. */
