@@ -97,7 +97,7 @@ template_inst( coll-client-inst.C,coll-client-inst.o) 	/* collection client*/
 template_inst( exp-inst.C, exp-inst.o )					/* experimental */
 
 /* Standalone distribution of classads/collections */
-DISTRIBUTION_DIR = classads_0.9.3
+DISTRIBUTION_DIR = classads_0.9.4-beta
 
 DIST_FILES = attrrefs.C attrrefs.h classad.C classad.h collection.C		\
 collection.h collectionBase.C collectionBase.h common.h classadErrno.h	\
@@ -105,11 +105,11 @@ classadItor.h debug.C debug.h exprList.C exprList.h exprTree.C			\
 exprTree.h extra_tests.C fnCall.C fnCall.h indexfile.h indexfile.C		\
 instantiations.C lexer.C lexer.h lexerSource.C lexerSource.h			\
 literals.C literals.h matchClassad.C matchClassad.h operators.C			\
-operators.h query.C query.h sample.C sink.C sink.h source.C source.h	\
-test_classads.C test_xml.C tests.txt transaction.C transaction.h		\
-value.C value.h view.C view.h xmlLexer.C xmlLexer.h xmlSink.h			\
-xmlSink.C xmlSource.h xmlSource.C classad_distribution.h cclassad.C		\
-cclassad.h LICENSE README CHANGELOG configure
+operators.h query.C query.h sample.C shared.C sink.C sink.h source.C	\
+source.h test_classads.C test_xml.C tests.txt transaction.C				\
+transaction.h value.C value.h view.C view.h xmlLexer.C xmlLexer.h		\
+xmlSink.h xmlSink.C xmlSource.h xmlSource.C classad_distribution.h		\
+cclassad.C cclassad.h LICENSE README CHANGELOG configure
 
 dist: $(DIST_FILES)
 	rm -rf $(DISTRIBUTION_DIR) *.gz
@@ -122,6 +122,10 @@ dist: $(DIST_FILES)
 /* Rule to make documentation */
 doc: html
 
+#ifdef ENABLE_SHARED_LIBRARY_FUNCTIONS
+shared:
+	g++ -fPIC -shared -o libshared.so shared.C
+#endif
 
 /* Also depends on several header files, but I am ignoring that for now */
 html_target( documentation )
@@ -130,9 +134,14 @@ clean::
 	rm -f -r *.o *.gz html
 
 /* The Classad eXpression Interpreter */
+#ifdef ENABLE_SHARED_LIBRARY_FUNCTIONS
+LDFLAGS =  -Xlinker --export-dynamic -ldl
+#endif
+
 c_plus_target (cxi, cxi.o, $(LIB))
 c_plus_target (test_classads, test_classads.o, $(LIB))
 c_plus_target (test_xml, test_xml.o, $(LIB))
 c_plus_target (extra_tests, extra_tests.o, $(LIB))
 c_plus_target (man_cache_test, man_cache_test.o, $(LIB))
 pure_c_plus_target (test_classads.pure, test_classads.o, $(LIB))
+
