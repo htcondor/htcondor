@@ -175,7 +175,7 @@ public:
   */
   int CreateConstraintCollection(int ParentCoID, const MyString& Rank, const MyString& Constraint);
 
-  // int CreatePartition(int ParentCoID, const MyString& Rank, char** AttrList);
+  int CreatePartition(int ParentCoID, const MyString& Rank, StringSet& AttrList);
 
   /** Deletes a collection and all of its descendants from the collection tree.
       @param CoID The ID of the collection to be deleted.
@@ -287,10 +287,7 @@ private:
   bool RemoveClassAd(int CoID, const MyString& OID);
 
   ///
-  bool ChangeClassAd(int CoID, const MyString& OID);
-
-  ///
-  bool ChangeClassAd(int CoID, const MyString& OID, ClassAd* ad);
+  bool ChangeClassAd(const MyString& OID);
 
   ///
   bool RemoveCollection(int CoID, BaseCollection* Coll);
@@ -300,6 +297,9 @@ private:
 
   ///
   static float GetClassAdRank(ClassAd* Ad, const MyString& RankExpr);
+
+  ///
+  bool CheckClassAd(BaseCollection* Coll, const MyString& OID, ClassAd* Ad);
 
 };
 

@@ -18,8 +18,12 @@ public:
   RankedClassAd(const MyString& oid, float rank) { OID=oid; Rank=rank; }
   MyString OID;
   float Rank;
-  friend int operator==(const RankedClassAd& RankedAd1, const RankedClassAd& RankedAd2) {
-    return (RankedAd1.OID==RankedAd2.OID);
+  friend bool operator==(const RankedClassAd& RankedAd1, const RankedClassAd& RankedAd2) {
+    return ((RankedAd1.OID==RankedAd2.OID) ? true : false);
+  }
+
+  friend bool operator!=(const RankedClassAd& RankedAd1, const RankedClassAd& RankedAd2) {
+    return ((RankedAd1.OID==RankedAd2.OID) ? false : true);
   }
 
 };
@@ -40,8 +44,7 @@ class BaseCollection {
 
 public:
 
-  BaseCollection(int parentCoID, const MyString& rank) {
-    ParentCoID=parentCoID;
+  BaseCollection(const MyString& rank) {
     Rank=rank;
   }
 
@@ -51,15 +54,10 @@ public:
 
   MyString GetRank() { return Rank; }
   
-  int GetParentCoID() { return ParentCoID; }
-
   IntegerSet Children;
   RankedAdSet Members;
 
-protected:
-
   MyString Rank;
-  int ParentCoID;
 
 };
 
@@ -69,8 +67,8 @@ class ExplicitCollection : public BaseCollection {
 
 public:
 
-  ExplicitCollection(int parentCoID, const MyString& rank, bool fullFlag) 
-  : BaseCollection(parentCoID,rank) {
+  ExplicitCollection(const MyString& rank, bool fullFlag) 
+  : BaseCollection(rank) {
     FullFlag=fullFlag;
   }
 
@@ -79,8 +77,6 @@ public:
   }
 
   virtual int Type() { return ExplicitCollection_e; }
-
-protected:
 
   bool FullFlag;
 
@@ -92,8 +88,8 @@ class ConstraintCollection : public BaseCollection {
 
 public:
 
-  ConstraintCollection(int parentCoID, const MyString& rank, const MyString& constraint)
-  : BaseCollection(parentCoID,rank) {
+  ConstraintCollection(const MyString& rank, const MyString& constraint)
+  : BaseCollection(rank) {
     Constraint=constraint;
   }
   
@@ -120,8 +116,6 @@ public:
 
   virtual int Type() { return ConstraintCollection_e; }
 
-protected:
-
   MyString Constraint;
 
 };
@@ -132,18 +126,16 @@ class PartitionParent : public BaseCollection {
 
 public:
 
-  PartitionParent(int parentCoID, const MyString& rank, char** attributes)
-  : BaseCollection(parentCoID,rank) {
-    for (;*attributes;attributes++) Attributes.Add(*attributes);
+  PartitionParent(const MyString& rank, StringSet& attributes)
+  : BaseCollection(rank) {
+    Attributes=attributes;
   }
 
   virtual bool CheckClassAd(ClassAd* Ad) {
-    return true;
+    return false;
   }
 
   virtual int Type() { return PartitionParent_e; }
-
-protected:
 
   StringSet Attributes;
 
@@ -155,9 +147,9 @@ class PartitionChild : public BaseCollection {
 
 public:
 
-  PartitionChild(int parentCoID, const MyString& rank, char** values)
-  : BaseCollection(parentCoID,rank) {
-    for (;*values;values++) Values.Add(*values);
+  PartitionChild(const MyString& rank, StringSet& values)
+  : BaseCollection(rank) {
+    Values=values;
   }
 
   virtual bool CheckClassAd(ClassAd* Ad) {
@@ -165,8 +157,6 @@ public:
   }
 
   virtual int Type() { return PartitionChild_e; }
-
-private:
 
   StringSet Values;
 

@@ -14,7 +14,7 @@ ClassAdCollection::ClassAdCollection(const char* filename)
   : Collections(97, HashFunc), ClassAdLog(filename)
 {
   LastCoID=0;
-  Collections.insert(LastCoID,new ExplicitCollection(-1,"",true));
+  Collections.insert(LastCoID,new ExplicitCollection("",true));
 
   HashKey HK;
   char key[_POSIX_PATH_MAX];
@@ -34,7 +34,7 @@ ClassAdCollection::ClassAdCollection()
   : Collections(97, HashFunc), ClassAdLog()
 {
   LastCoID=0;
-  Collections.insert(LastCoID,new ExplicitCollection(-1,"",true));
+  Collections.insert(LastCoID,new ExplicitCollection("",true));
 }
 
 //----------------------------------------------------------------------------------
@@ -120,7 +120,7 @@ bool ClassAdCollection::SetAttribute(const char *key, const char *name, const ch
 {
   LogRecord* log=new LogSetAttribute(key,name,value);
   ClassAdLog::AppendLog(log);
-  return ChangeClassAd(0,key);
+  return ChangeClassAd(key);
 }
 
 //----------------------------------------------------------------------------------
@@ -136,7 +136,7 @@ bool ClassAdCollection::DeleteAttribute(const char *key, const char *name)
 {
   LogRecord* log=new LogDeleteAttribute(key,name);
   ClassAdLog::AppendLog(log);
-  return ChangeClassAd(0,key);
+  return ChangeClassAd(key);
 }
 
 //----------------------------------------------------------------------------------
@@ -158,7 +158,7 @@ int ClassAdCollection::CreateExplicitCollection(int ParentCoID, const MyString& 
   if (Collections.lookup(ParentCoID,Parent)==-1) return -1;
 
   // Initialize and insert to collection table
-  ExplicitCollection* Coll=new ExplicitCollection(ParentCoID,Rank,FullFlag);
+  ExplicitCollection* Coll=new ExplicitCollection(Rank,FullFlag);
   int CoID=LastCoID+1;
   if (Collections.insert(CoID,Coll)==-1) return -1;
   LastCoID=CoID;
@@ -192,7 +192,32 @@ int ClassAdCollection::CreateConstraintCollection(int ParentCoID, const MyString
   if (Collections.lookup(ParentCoID,Parent)==-1) return -1;
 
   // Initialize and insert to collection table
-  ConstraintCollection* Coll=new ConstraintCollection(ParentCoID,Rank,Constraint);
+  ConstraintCollection* Coll=new ConstraintCollection(Rank,Constraint);
+  int CoID=LastCoID+1;
+  if (Collections.insert(CoID,Coll)==-1) return -1;
+  LastCoID=CoID;
+
+  // Add to parent's children
+  Parent->Children.Add(CoID);
+
+  // Add Parents members to new collection
+  RankedClassAd RankedAd;
+  Parent->Members.StartIterations();
+  while(Parent->Members.Iterate(RankedAd)) AddClassAd(CoID,RankedAd.OID);
+
+  return LastCoID;
+}
+
+//----------------------------------------------------------------------------------
+
+int ClassAdCollection::CreatePartition(int ParentCoID, const MyString& Rank, StringSet& AttrList)
+{
+  // Lookup the parent
+  BaseCollection* Parent;
+  if (Collections.lookup(ParentCoID,Parent)==-1) return -1;
+
+  // Initialize and insert to collection table
+  PartitionParent* Coll=new PartitionParent(Rank,AttrList);
   int CoID=LastCoID+1;
   if (Collections.insert(CoID,Coll)==-1) return -1;
   LastCoID=CoID;
@@ -244,7 +269,7 @@ bool ClassAdCollection::AddClassAd(int CoID, const MyString& OID, ClassAd* Ad)
   if (Collections.lookup(CoID,Coll)==-1) return false;
 
   // Check if ad matches the collection
-  if (!Coll->CheckClassAd(Ad)) return false;
+  if (!CheckClassAd(Coll,OID,Ad)) return false;
 
   // Create the Ranked Ad
   RankedClassAd RankedAd(OID,GetClassAdRank(Ad,Coll->GetRank()));
@@ -273,6 +298,60 @@ bool ClassAdCollection::AddClassAd(int CoID, const MyString& OID, ClassAd* Ad)
 }
 
 //----------------------------------------------------------------------------------
+
+bool ClassAdCollection::CheckClassAd(BaseCollection* Coll,const MyString& OID, ClassAd* Ad) 
+{
+  if (Coll->Type()==PartitionParent_e) {
+    PartitionParent* ParentColl=(PartitionParent*) Coll;
+    StringSet Values;
+    MyString AttrName;
+    MyString AttrValue;
+    char tmp[1000];
+    ParentColl->Attributes.StartIterations();
+printf("Checking OID %s\n",OID.Value());
+    while (ParentColl->Attributes.Iterate(AttrName)) {
+      *tmp='\0';
+      ExprTree* expr=Ad->Lookup(AttrName.Value());
+      if (expr) {
+        expr=expr->RArg();
+        expr->PrintToStr(tmp);
+      }
+      AttrValue=tmp;
+      Values.Add(AttrValue);
+    }
+Values.StartIterations(); while (Values.Iterate(AttrValue)) { printf("Val: AttrValue=%s\n",AttrValue.Value()); }
+    int CoID;
+    PartitionChild* ChildColl=NULL;
+    ParentColl->Children.StartIterations();
+    while (ParentColl->Children.Iterate(CoID)) {
+      if (Collections.lookup(CoID,Coll)==-1) continue;
+      ChildColl=(PartitionChild*) Coll;
+ChildColl->Values.StartIterations(); while (ChildColl->Values.Iterate(AttrValue)) { printf("ChildVal: AttrValue=%s\n",AttrValue.Value()); }
+      if (ChildColl->Values==Values) break;
+      ChildColl=NULL;
+    }
+
+    if (ChildColl==NULL) {
+      // Create a new child collection
+      ChildColl=new PartitionChild(ParentColl->Rank,Values);
+      CoID=LastCoID+1;
+      if (Collections.insert(CoID,ChildColl)==-1) return false;
+      LastCoID=CoID;
+
+      // Add to parent's children
+      ParentColl->Children.Add(CoID);
+   }
+ 
+   // Add to child
+   AddClassAd(CoID,OID,Ad);
+   return false;
+  }
+  else {
+    return Coll->CheckClassAd(Ad);
+  }
+}
+
+//----------------------------------------------------------------------------------
 /// Remove Class Ad from a collection (private method)
 //----------------------------------------------------------------------------------
 
@@ -283,7 +362,7 @@ bool ClassAdCollection::RemoveClassAd(int CoID, const MyString& OID)
   if (Collections.lookup(CoID,Coll)==-1) return false;
 
   // Check if ad is in the collection and remove it
-  if (!Coll->Members.Exist(RankedClassAd(OID))) return false;
+  if (!Coll->Members.Exist(RankedClassAd(OID)) && Coll->Type()!=PartitionParent_e) return false;
   Coll->Members.Remove(RankedClassAd(OID));
     
   // remove from children
@@ -299,61 +378,10 @@ bool ClassAdCollection::RemoveClassAd(int CoID, const MyString& OID)
 /// Change a class-ad (private method)
 //----------------------------------------------------------------------------------
 
-bool ClassAdCollection::ChangeClassAd(int CoID, const MyString& OID)
+bool ClassAdCollection::ChangeClassAd(const MyString& OID)
 {
-  // Get the ad
-  ClassAd* Ad;
-  if (table.lookup(HashKey(OID.Value()),Ad)==-1) return false;
-
-  return ChangeClassAd(CoID,OID,Ad);
-}
-
-//----------------------------------------------------------------------------------
-/// Change a class-ad (private method)
-//----------------------------------------------------------------------------------
-
-bool ClassAdCollection::ChangeClassAd(int CoID, const MyString& OID, ClassAd* Ad)
-{
-  // Get collection pointer
-  BaseCollection* Coll;
-  if (Collections.lookup(CoID,Coll)==-1) return false;
-
-  // Check that it exists in the parent
-  if (CoID!=0) {
-    BaseCollection* Parent;
-    if (Collections.lookup(Coll->GetParentCoID(),Parent)==-1) return false;
-    if (!Parent->Members.Exist(RankedClassAd(OID))) return false;
-  }
-  
-  // it it didn't exist before just add it (and check that it belongs)
-  RankedClassAd RankedAd(OID);
-  if (!Coll->Members.Exist(RankedAd)) return AddClassAd(CoID,OID,Ad);
-
-  // if it doesn't belong anymore, remove it
-  if (!Coll->CheckClassAd(Ad)) return RemoveClassAd(CoID,OID);
-
-  // re-insert the ad in a new position
-  Coll->Members.Remove(RankedAd);
-  RankedAd.Rank=GetClassAdRank(Ad,Coll->GetRank());
-  RankedClassAd CurrRankedAd;
-  bool Inserted=false;
-  Coll->Members.StartIterations();
-  while (Coll->Members.Iterate(CurrRankedAd)) {
-    if (RankedAd.Rank<=CurrRankedAd.Rank) {
-      Coll->Members.Insert(RankedAd);
-      Inserted=true;
-      break;
-    }
-  }
-  if (!Inserted) Coll->Members.Insert(RankedAd);
-    
-  // Do recursive calls on children
-  int ChildCoID;
-  BaseCollection* ChildColl;
-  Coll->Children.StartIterations();
-  while (Coll->Children.Iterate(ChildCoID)) ChangeClassAd(ChildCoID,OID,Ad);
-
-  return true;  // Ad remains in the collection (no change)
+  RemoveClassAd(0,OID);
+  return AddClassAd(0,OID);
 }
 
 //----------------------------------------------------------------------------------
