@@ -142,6 +142,7 @@ sub generate_cmdfile() {
 
     # Generate the cmdfile
     open(CMDFILE, ">$cmdfile") || die "Can't open $cmdfile for writing: $!\n";
+    print CMDFILE "run_type = test\n";
     
     CondorGlue::printIdentifiers( *CMDFILE, $tag );
 
