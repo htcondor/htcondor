@@ -136,11 +136,6 @@ char	*BufferBlockSize = "buffer_block_size";
 #if !defined(WIN32)
 char	*KillSig			= "kill_sig";
 #endif
-#if defined(WIN32)
-char	*NullFile		= "NUL";
-#else
-char	*NullFile		= "/dev/null";
-#endif
 
 void 	reschedule();
 void 	SetExecutable();
@@ -174,11 +169,11 @@ char * 	condor_param( char *name );
 void 	set_condor_param( char *name, char *value );
 void 	queue(int num);
 char * 	check_requirements( char *orig );
-void 	check_open( char *name, int flags );
+void 	check_open( const char *name, int flags );
 void 	usage();
 char * 	get_owner();
 void 	init_params();
-int 	whitespace( char *str);
+int 	whitespace( const char *str);
 void 	delete_commas( char *ptr );
 void 	compress( char *str );
 void 	magic_check();
@@ -526,7 +521,7 @@ reschedule()
 
 
 void
-check_path_length(char *path, char *lhs)
+check_path_length(const char *path, char *lhs)
 {
 	if (strlen(path) > _POSIX_PATH_MAX) {
 		fprintf(stderr, "\nERROR: Value for \"%s\" is too long:\n"
@@ -786,7 +781,7 @@ calc_image_size( char *name )
 void
 SetStdFile( int which_file )
 {
-	char	*macro_value;
+	const char	*macro_value;
 	char	*generic_name;
 	char	 buffer[_POSIX_PATH_MAX + 32];
 
@@ -810,7 +805,7 @@ SetStdFile( int which_file )
 	
 	if( !macro_value || *macro_value == '\0') 
 	{
-		macro_value = NullFile;
+		macro_value = NULL_FILE;
 	}
 	
 	if( whitespace(macro_value) ) 
@@ -938,6 +933,16 @@ SetEnvironment()
 	int envlen;
 	bool first = true;
 
+	// environment vars in the ClassAd attribute are seperated via
+	// the env_delimiter character; currently a '|' on NT and ';' on Unix
+	char env_delimiter[2];
+#ifdef WIN32
+	env_delimiter[0] = '|';
+#else
+	env_delimiter[0] = ';';
+#endif
+	env_delimiter[1] = '\0';
+
 	sprintf(newenv, "%s = \"", ATTR_JOB_ENVIRONMENT);
 
 
@@ -954,9 +959,10 @@ SetEnvironment()
 
 		for (int i=0; environ[i] && envlen < ATTRLIST_MAX_EXPRESSION; i++) {
 
-			// ignore env settings that contain ';' to avoid syntax problems
+			// ignore env settings that contain env_delimiter to avoid 
+			// syntax problems
 
-			if (strchr(environ[i], ';') == NULL) {
+			if (strchr(environ[i], env_delimiter[0]) == NULL) {
 				envlen += strlen(environ[i]);
 				if (envlen < ATTRLIST_MAX_EXPRESSION) {
 
@@ -972,7 +978,7 @@ SetEnvironment()
 						if (first) {
 							first = false;
 						} else {
-							strcat(newenv, ";");
+							strcat(newenv, env_delimiter);
 						}
 						strcat(newenv, environ[i]);
 					}
@@ -1696,14 +1702,14 @@ check_requirements( char *orig )
 }
 
 void
-check_open( char *name, int flags )
+check_open( const char *name, int flags )
 {
 	int		fd;
 	char	pathname[_POSIX_PATH_MAX];
 	pathname[0] = '\0';
 
 	/* No need to check for existence of the Null file. */
-	if (strcmp(name, NullFile) == MATCH) return;
+	if (strcmp(name, NULL_FILE) == MATCH) return;
 
 #if defined(WIN32)
 	if ( name[0] == '\\' || name[1] == ':' ) {
@@ -1830,7 +1836,7 @@ init_params()
 }
 
 int
-whitespace( char *str)
+whitespace( const char *str)
 {
 	while( *str ) {
 		if( isspace(*str++) ) {
