@@ -464,6 +464,7 @@ int DaemonCore::Cancel_Signal( int sig )
 	sigTable[found].handler = NULL;
 	sigTable[found].handlercpp = (SignalHandlercpp)NULL;
 	free_descrip( sigTable[found].handler_descrip );
+	sigTable[found].handler_descrip = NULL;
 
 	// Decrement the counter of total number of entries
 	nSig--;
@@ -477,6 +478,8 @@ int DaemonCore::Cancel_Signal( int sig )
 	// Log a message and conditionally dump what our table now looks like
 	dprintf(D_DAEMONCORE,"Cancel_Signal: cancelled signal %d <%s>\n",sig,sigTable[found].sig_descrip);
 	free_descrip( sigTable[found].sig_descrip );
+	sigTable[found].sig_descrip = NULL;
+
 	DumpSigTable(D_FULLDEBUG | D_DAEMONCORE);
 
 	return TRUE;
