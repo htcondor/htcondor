@@ -14,10 +14,14 @@
 #ifndef BOOLEAN_TYPE_DEFINED
 typedef int BOOLEAN;
 #endif
-#ifndef TRUE
+
+#if defined(TRUE)
+#	undef TRUE
+#	undef FALSE
+#endif
+
 static const int	TRUE = 1;
 static const int	FALSE = 0;
-#endif
 
 /*
 	Useful constants for turning seconds into larger units of time.  Since
