@@ -27,6 +27,7 @@
 
        $RELEASE_DIR = "/unsup/condor";
           $NUMNODES = 64;   # (note: we assume $NUMNODES <=99 in a few places)
+         $STARTNODE = 2;
          $CONDOR_CM = "condor.cs.wisc.edu";
 $CLUSTER_CONSTRAINT = "-const 'IsComputeCluster == True'";
 
@@ -62,7 +63,7 @@ if( $cmd eq "on" ) {
     stop_condor( @args );
 } elsif( $cmd =~ /^ch/ ) {
     if( $#args < 0 ) {
-	foreach $n (1 .. 9) {
+	foreach $n ($STARTNODE .. 9) {
 	    push @args, "c0$n";
 	}
 	foreach $n (10 .. $NUMNODES) {
@@ -101,6 +102,15 @@ sub usage {
 sub start_condor {
     my @hosts = @_;
     foreach $host ( @hosts ) {
+	# if the user just specifies a number, prepend the "cXX" node name
+	if( $host =~ /^\d+$/ ) {
+	    if( $host < 10 ) {
+		$host = "c0$host";
+	    }
+	    else {
+		$host = "c$host";
+	    }
+	}
 	system( "$CONDOR_ON $host" );
     }
 }
@@ -142,7 +152,7 @@ sub find_avail {
     parse_cluster_status();
 
     $found = 0;
-    for( $i = 1; $i <= $NUMNODES; $i++ ) {
+    for( $i = $STARTNODE; $i <= $NUMNODES; $i++ ) {
 	if( $i < 10 ) {
 	    $host = "c0$i";
 	} else {
