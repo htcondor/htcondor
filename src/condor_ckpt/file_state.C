@@ -853,7 +853,7 @@ int CondorFileTable::select( int n, fd_set *r, fd_set *w, fd_set *e, struct time
 	/* Do a local select */
 
 	scm = SetSyscalls( SYS_LOCAL|SYS_UNMAPPED );
-	result = select( n_real, &r_real, &w_real, &e_real, timeout );
+	result = ::select( n_real, &r_real, &w_real, &e_real, timeout );
 	SetSyscalls(scm);
 
 	if( r ) FD_ZERO( r );
