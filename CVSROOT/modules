@@ -69,6 +69,7 @@ V6_SRC		-a \
 			src/condor_imake \
 			src/CODING_GUIDELINES \
 			src/CVS_Tags \
+			src/README.building \
 			src/condor_accountant.V6 \
 			src/condor_c++_util \
 			src/condor_ckpt \
