@@ -19,22 +19,22 @@ this:
 	fix up the job ad with the exit/signal code BEFORE you call the user policy
 	function.
 
-3. If the job has exited for real, but the user_policy code says it shouldn't
-leave the queue, then make sure you UNDEFINE ATTR_ON_EXIT_CODE, 
-ATTR_ON_EXIT_SIGNAL, and set ATTR_EXIT_BY_SIGNAL to FALSE. This undoes the
-exiting of the job with repect to the classad. Also, you have to set
-ATTR_COMPLETION_DATE back to zero.
+3. If the job has exited for real, but the user_policy code(for whatever
+reason) says it shouldn't leave the queue, then make sure you UNDEFINE
+ATTR_ON_EXIT_CODE, ATTR_ON_EXIT_SIGNAL, and set ATTR_EXIT_BY_SIGNAL
+to FALSE. This undoes the exiting of the job with repect to the
+classad. Also, you have to set ATTR_COMPLETION_DATE back to zero.
 
 Now, what do you do with the result classad?
 
 A. check to see if ATTR_USER_POLICY_ERROR is true, if so, then the
 attribute ATTR_USER_ERROR_REASON will contain a reason for the error.
 
-B. check to see ATTR_TAKE_ACTION is true, if so, then 
-ATTR_USER_POLICY_FIRING_EXPR will contain the offending expression or
-the text in "old_style_exit" that explains which expression caused the action.
-The attribute ATTR_USER_POLICY_ACTION dictates what you should DO with the
-job, either put it on hold or remove it from the queue.
+B. check to see ATTR_TAKE_ACTION is true, if so, then
+ATTR_USER_POLICY_FIRING_EXPR will contain the offending expression or the
+text in "old_style_exit" that explains which expression caused the action.
+The attribute ATTR_USER_POLICY_ACTION dictates what you should DO with
+the job, either put it on hold or remove it from the queue.
 
 C. If ATTR_USER_POLICY_FIRING_EXPR is ATTR_PERIODIC_REMOVE_CHECK then
 "condor" removed the job and it should be treated differently than if
