@@ -93,13 +93,33 @@ cleanup_execute_dir(int pid)
 
 #else
 	if( pid ) {
-		sprintf( buf, "/bin/rm -rf %.256s/dir_%d",
-				exec_path, pid );
+		sprintf( buf, "%.256s/dir_%d", exec_path, pid );
 	} else {
-		sprintf( buf, "/bin/rm -rf %.256s/condor_exec* %.256s/dir_*",
-				 exec_path, exec_path );
+		sprintf( buf, "%.256s", exec_path );
 	}
-	system( buf );
+	Directory dir( buf );
+	priv_state old_priv = set_root_priv();
+	if( ! dir.Remove_Entire_Directory() ) {
+		dprintf( D_ALWAYS, "Error deleting contents of \"%s\"\n", 
+				 buf );
+		set_priv( old_priv );
+		return;
+	}
+	if( pid ) {
+			// If we've got a pid, we want to remove the dir_XXX
+			// directory itself, which Remove_Entire_Directory() won't
+			// do for us.
+		if( rmdir(buf) < 0 ) {
+			dprintf( D_ALWAYS, "Warning, unlink(%s) failed, errno: %d\n", 
+					 buf, errno );
+		} else {
+			dprintf( D_FULLDEBUG, "Removed \"%s\" and all its contents\n", 
+					 buf );
+		}
+	} else {
+		dprintf( D_FULLDEBUG, "Removed all contents of \"%s\"\n", buf );
+	}
+	set_priv( old_priv );
 #endif
 }
 
