@@ -410,7 +410,8 @@ calc_ncpus()
 	}
 
 /*
-/proc/meminfo looks something like this:
+/proc/cpuinfo looks something like this on an I386 machine...:
+The alpha linux port does not use "processor", so we use bogomips instead.
 (For 1 cpu machines, there's only 1 entry).
 
 processor       : 0
@@ -445,7 +446,7 @@ bogomips        : 299.01
 */
 	// Count how many lines begin with the string "processor".
 	while( fgets( buf, 256, proc) ) {
-		if( !strncmp( buf, "processor", 9 ) ) {
+		if( !strincmp( buf, "bogomips", 8 ) ) {
 			num_cpus++;
 		}
 	}
