@@ -182,17 +182,22 @@ x509_proxy_expiration_time( const char *proxy_file )
     globus_gsi_cred_handle_t         handle       = NULL;
     globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
 	time_t expiration_time = -1;
+	int deactivate_globus = FALSE;
 	int must_free_proxy_file = FALSE;
 
-    globus_module_activate(GLOBUS_GSI_CREDENTIAL_MODULE);
+	if (globus_module_activate(GLOBUS_GSI_CREDENTIAL_MODULE)) {
+        _globus_error_message = "problem during internal initializationAA";
+        goto cleanup;
+	}
+	deactivate_globus = TRUE;
 
-    if (!globus_gsi_cred_handle_attrs_init(&handle_attrs)) {
-        _globus_error_message = "problem during internal initialization";
+    if (globus_gsi_cred_handle_attrs_init(&handle_attrs)) {
+        _globus_error_message = "problem during internal initializationA";
         goto cleanup;
     }
 
-    if (!globus_gsi_cred_handle_init(&handle, handle_attrs)) {
-        _globus_error_message = "problem during internal initialization";
+    if (globus_gsi_cred_handle_init(&handle, handle_attrs)) {
+        _globus_error_message = "problem during internal initializationB";
         goto cleanup;
     }
 
@@ -206,12 +211,12 @@ x509_proxy_expiration_time( const char *proxy_file )
     }
 
     // We should have a proxy file, now, try to read it
-    if (!globus_gsi_cred_read_proxy(handle, proxy_file)) {
+    if (globus_gsi_cred_read_proxy(handle, proxy_file)) {
        _globus_error_message = "unable to read proxy file";
        goto cleanup;
     }
 
-	if (!globus_gsi_cred_get_goodtill(handle, &expiration_time)) {
+	if (globus_gsi_cred_get_goodtill(handle, &expiration_time)) {
 		_globus_error_message = "unable to extract expiration time";
         goto cleanup;
     }
@@ -229,7 +234,9 @@ x509_proxy_expiration_time( const char *proxy_file )
         globus_gsi_cred_handle_destroy(handle);
     }
 
-    globus_module_deactivate(GLOBUS_GSI_CREDENTIAL_MODULE);
+	if (deactivate_globus) {
+		globus_module_deactivate(GLOBUS_GSI_CREDENTIAL_MODULE);
+	}
 
 	return expiration_time;
 
