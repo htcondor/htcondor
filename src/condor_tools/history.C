@@ -33,6 +33,7 @@
 
 
 #define _POSIX_SOURCE
+#if 0
 #include <stdio.h>
 #include <unistd.h>
 #include <ctype.h>
@@ -42,6 +43,15 @@
 #include "proc_obj.h"
 #include "filter.h"
 #include "alloc.h"
+#else
+#include "condor_common.h"
+#include "condor_debug.h"
+#include "condor_constants.h"
+#include "condor_config.h"
+#include "condor_jobqueue.h"
+#include "proc_obj.h"
+#include "alloc.h"
+#endif
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 

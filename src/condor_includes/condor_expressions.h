@@ -61,14 +61,14 @@ EXPR * scan ( const char *line );
 CONTEXT * create_context ( void );
 int store_stmt ( EXPR *expr, CONTEXT *context );
 void free_elem ( ELEM *elem );
-free_context ( CONTEXT *context );
+void free_context ( CONTEXT *context );
 ELEM * eval ( char *name, CONTEXT *cont1, CONTEXT *cont2 );
 #else
 EXPR * scan();
 CONTEXT * create_context();
 int store_stmt();
 void free_elem();
-free_context();
+void free_context();
 ELEM * eval();
 #endif
 
