@@ -7,11 +7,15 @@ The \Condor{schedd} may be configured to submit jobs to more than one
 pool.
 In the default configuration, the \Condor{schedd} contacts the
 Central Manager specified by the \Macro{CONDOR\_HOST} macro (described
-in section~\ref{param:CondorHost}) to locate execute machines
+in section~\ref{sec:Condor-wide-Config-File-Entries} on
+page~\pageref{sec:Condor-wide-Config-File-Entries})
+to locate execute machines
 available to run jobs in its queue.
 However, the
 \Macro{FLOCK\_HOSTS} macro (described in
-section~\ref{param:FlockHosts}) may be used to specify additional
+section~\ref{sec:Schedd-Config-File-Entries} on
+page~\pageref{sec:Schedd-Config-File-Entries}) may 
+be used to specify additional 
 Central Managers for the \Condor{schedd} to contact.
 When the local
 pool does not satisfy all job requests, the \Condor{schedd} will try
