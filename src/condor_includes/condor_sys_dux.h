@@ -100,5 +100,6 @@ END_C_DECLS
    header files have done. -Derek Wright 10/30/98 */
 #include <string.h>
 #undef basename
+#undef dirname
 
 #endif /* CONDOR_SYS_DUX_H */
