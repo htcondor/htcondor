@@ -22,10 +22,9 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "startup.h"
+#include "condor_header_features.h"
  
-#if defined( __cplusplus )
-extern "C" { 
-#endif
+BEGIN_C_DECLS
 
 int pseudo_getppid();
 int pseudo_getpid();
@@ -89,7 +88,8 @@ void get_local_rusage( struct rusage *bsd_rusage );
 int tcp_accept_timeout( int, struct sockaddr*, int*, int );
 void display_startup_info( const STARTUP_INFO *, int );
 
-#if defined( __cplusplus )
-} /* extern "C" */
-#endif
+int pseudo_getrusage(int who, struct rusage *use_p );
+int pseudo_sync();
+
+END_C_DECLS
 
