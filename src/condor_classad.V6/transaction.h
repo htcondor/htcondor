@@ -27,6 +27,7 @@
 #include <hash_map>
 #include <list>
 #include <string>
+#include "sink.h"
 #include "view.h"
 
 BEGIN_NAMESPACE( classad )
@@ -63,7 +64,7 @@ public:
 	void ClearRecords( );
 	void AppendRecord( int, const string &, ClassAd * );
 	bool Commit( );
-	bool Log( FILE *fp, ClassAdUnParser &unp );
+	bool Log( FILE *fp, ClassAdUnParser *unp );
 	ClassAd *ExtractErrorCause( );
 
 	enum { ABSENT, ACTIVE, COMMITTED };
@@ -94,9 +95,9 @@ public:
 	inline void SetXactionState( char s ) { state = s; }
 	inline char GetXactionState( ) const { return( state ); }
 
-	bool LogCommit( FILE *, ClassAdUnParser &unp );
-	bool LogAckCommit( FILE *, ClassAdUnParser &unp );
-	bool LogAbort( FILE *, ClassAdUnParser &unp );
+	bool LogCommit( FILE *, ClassAdUnParser *unp );
+	bool LogAckCommit( FILE *, ClassAdUnParser *unp );
+	bool LogAbort( FILE *, ClassAdUnParser *unp );
 
 	enum { ACTIVE, PENDING };
 

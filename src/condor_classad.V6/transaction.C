@@ -168,7 +168,7 @@ Commit( )
 
 
 bool ServerTransaction::
-Log( FILE *fp, ClassAdUnParser &unp )
+Log( FILE *fp, ClassAdUnParser *unp )
 {
     ClassAd 			rec;
 	CollectionOpList::iterator	itr;
@@ -184,7 +184,7 @@ Log( FILE *fp, ClassAdUnParser &unp )
 		CondorErrMsg += "; FATAL ERROR: failed to log transaction";
         return( false );
     }
-	unp.Unparse( buf, &rec );
+	unp->Unparse( buf, &rec );
 	if( fprintf( fp, "%s\n", buf.c_str( ) ) < 0 ) {
 		sprintf( tmp, "%d", errno );
 		CondorErrno = ERR_FILE_WRITE_FAILED;
@@ -196,7 +196,7 @@ Log( FILE *fp, ClassAdUnParser &unp )
         // log all the operations in the transaction
     for( itr = opList.begin( ); itr != opList.end( ); itr++ ) {
 		buf = "";
-		unp.Unparse( buf, itr->rec );
+		unp->Unparse( buf, itr->rec );
 		if( fprintf( fp, "%s\n", buf.c_str( ) ) < 0 ) {
 			sprintf( tmp, "%d", errno );
 			CondorErrno = ERR_FILE_WRITE_FAILED;
@@ -211,7 +211,7 @@ Log( FILE *fp, ClassAdUnParser &unp )
 		CondorErrMsg += "; FATAL ERROR: failed to log transaction";
         return( false );
     }
-	unp.Unparse( buf, &rec );
+	unp->Unparse( buf, &rec );
 	if( fprintf( fp, "%s\n", buf.c_str( ) ) < 0 ) {
 		sprintf( tmp, "%d", errno );
 		CondorErrno = ERR_FILE_WRITE_FAILED;
@@ -251,7 +251,7 @@ ClientTransaction::
 
 
 bool ClientTransaction::
-LogCommit( FILE *fp, ClassAdUnParser &unp )
+LogCommit( FILE *fp, ClassAdUnParser *unp )
 {
 	ClassAd	rec;
 	string	buf;
@@ -263,7 +263,7 @@ LogCommit( FILE *fp, ClassAdUnParser &unp )
 		CondorErrMsg += "FATAL ERROR: failed to log transaction";
 		return( false );
 	}
-	unp.Unparse( buf, &rec );
+	unp->Unparse( buf, &rec );
 	if( fprintf( fp, "%s\n", buf.c_str( ) ) < 0 ) {
 		CondorErrno = ERR_FILE_WRITE_FAILED;
 		CondorErrMsg = "FATAL ERROR: failed fprintf()";
@@ -275,7 +275,7 @@ LogCommit( FILE *fp, ClassAdUnParser &unp )
 
 
 bool ClientTransaction::
-LogAckCommit( FILE *fp, ClassAdUnParser &unp )
+LogAckCommit( FILE *fp, ClassAdUnParser *unp )
 {
 	if( state != PENDING ) {
 		CondorErrno = ERR_BAD_TRANSACTION_STATE;
@@ -291,7 +291,7 @@ LogAckCommit( FILE *fp, ClassAdUnParser &unp )
 		CondorErrMsg += "FATAL ERROR: failed to log transaction";
 		return( false );
 	}
-	unp.Unparse( buf, &rec );
+	unp->Unparse( buf, &rec );
 	if( fprintf( fp, "%s\n", buf.c_str( ) ) < 0 ) {
 		CondorErrno = ERR_FILE_WRITE_FAILED;
 		CondorErrMsg = "FATAL ERROR: failed fprintf()";
@@ -303,7 +303,7 @@ LogAckCommit( FILE *fp, ClassAdUnParser &unp )
 
 
 bool ClientTransaction::
-LogAbort( FILE *fp, ClassAdUnParser &unp )
+LogAbort( FILE *fp, ClassAdUnParser *unp )
 {
 	if( state != PENDING ) {
 		CondorErrno = ERR_BAD_TRANSACTION_STATE;
@@ -319,7 +319,7 @@ LogAbort( FILE *fp, ClassAdUnParser &unp )
 		CondorErrMsg += "FATAL ERROR: failed to log transaction";
 		return( false );
 	}
-	unp.Unparse( buf, &rec );
+	unp->Unparse( buf, &rec );
 	if( fprintf( fp, "%s\n", buf.c_str( ) ) < 0 ) {
 		CondorErrno = ERR_FILE_WRITE_FAILED;
 		CondorErrMsg = "FATAL ERROR: failed fprintf()";
