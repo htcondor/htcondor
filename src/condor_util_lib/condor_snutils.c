@@ -108,6 +108,7 @@ condor_vsnprintf(
 			}
 			full_output[termination_point] = 0;
 			strcpy(output, full_output);
+			free(full_output);
 		}
 	}
 	return actual_length;
