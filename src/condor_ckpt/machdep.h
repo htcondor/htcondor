@@ -57,7 +57,7 @@
 
 	extern "C" int brk( void * );
 	extern "C" void *sbrk( int );
-	typedef void (*SIG_HANDLER)();
+	typedef void (*SIG_HANDLER)( ... );
 #	define SETJMP setjmp
 #	define LONGJMP longjmp
 
