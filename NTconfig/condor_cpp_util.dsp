@@ -154,6 +154,10 @@ SOURCE="..\src\condor_c++_util\file_lock.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\format_time.C"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\generic_query.C"
 # End Source File
 # Begin Source File
@@ -163,6 +167,14 @@ SOURCE="..\src\condor_c++_util\generic_query.h"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\get_daemon_addr.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\get_daemon_addr.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\get_full_hostname.C"
 # End Source File
 # Begin Source File
 
@@ -195,6 +207,10 @@ SOURCE=..\src\h\proc.h
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\query_result_type.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\Queue.h"
 # End Source File
 # Begin Source File
 
