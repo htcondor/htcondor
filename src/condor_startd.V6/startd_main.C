@@ -642,10 +642,10 @@ reaper(Service *, int pid, int status)
 	Resource* rip;
 
 	if( WIFSIGNALED(status) ) {
-		dprintf(D_FAILURE|D_ALWAYS, "starter pid %d died on signal %d (%s)\n",
+		dprintf(D_FAILURE|D_ALWAYS, "Starter pid %d died on signal %d (%s)\n",
 				pid, WTERMSIG(status), daemonCore->GetExceptionString(status));
 	} else {
-		dprintf(D_FAILURE|D_ALWAYS, "starter pid %d exited with status %d\n",
+		dprintf(D_FAILURE|D_ALWAYS, "Starter pid %d exited with status %d\n",
 				pid, WEXITSTATUS(status));
 	}
 	rip = resmgr->get_by_pid(pid);
