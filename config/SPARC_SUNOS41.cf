@@ -1,7 +1,6 @@
 #define OperatingSystem SUNOS41
 #define Architecture SPARC
 
-#define Tilde /u/special/condor
 #define RpcLib /**/
 #define MldLib /**/
 #define KernLib /lib/libkvm.a
@@ -30,8 +29,14 @@
 
 
 #define IS_SPARC_SUNOS41		YES
+#define IS_V5					YES
+
 #define HAS_X					NO
 #define HAS_X_EXTENSIONS		NO
+
+#define DOES_CHECKPOINTING      NO
+#define DOES_REMOTE_SYSCALLS    NO
+
 #define HAS_NDBM				YES
 #define HAS_FSTATFS				YES
 #define NEEDS_XDR_FLOAT			NO
@@ -45,7 +50,6 @@
 #define NEEDS_SPECIAL_SETJMP	NO
 #define HAS_FORTRAN				NO
 #define HAS_FLOCK				YES
-#define DOES_CHECKPOINTING		YES
 #define HAS_ADJTIME				YES
 #define HAS_GETDTABLESIZE		YES
 #define HAS_GETHOSTNAME			YES
@@ -69,7 +73,7 @@
 #define HAS_PVM					NO
 
 
-#define CCompiler cc
+#define CCompiler gcc
 #define CPlusCompiler g++
 #define StaticFlag -static
 #define UnixName /vmunix			/* pathname of the system executable */
