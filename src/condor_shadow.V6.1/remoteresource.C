@@ -533,8 +533,7 @@ RemoteResource::setExitReason( int reason )
 	// and the syscall sock goes away.
 
 	shadow->dprintf( D_FULLDEBUG, "setting exit reason on %s to %d\n", 
-					 machineName ? machineName : dc_startd->addr(),
-					 reason ); 
+					 machineName ? machineName : "???", reason ); 
 
 	if( exitReason != JOB_KILLED ) {
 		exitReason = reason;
