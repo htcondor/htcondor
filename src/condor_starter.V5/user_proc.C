@@ -26,55 +26,24 @@
 **
 */ 
 
-#define _POSIX_SOURCE
-
-#if defined(Solaris) && !defined(Solaris251)
-#include "_condor_fix_types.h"
-#include </usr/ucbinclude/sys/rusage.h>
-#endif
-
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "debug.h"
-#include "condor_constants.h"
 #include "condor_string.h"
 #include "condor_config.h"
 #include "condor_jobqueue.h"
 #include "condor_uid.h"
 #include "condor_file_info.h"
-#include <signal.h>
-#include <sys/wait.h>
-#include <sys/file.h>
-#include <sys/stat.h>
-#include <sys/times.h>
 #include "name_tab.h"
 #include "proto.h"
 #include "condor_sys.h"
 #include "condor_io.h"
 #include "startup.h"
-#if defined(LINUX)
-#include <unistd.h>
-#endif
+#include "fileno.h"
+#include "condor_rsc.h"
 
 #if defined(AIX32)
 #	include <sys/id.h>
 #endif
-
-typedef unsigned short u_short;
-typedef unsigned char u_char;
-typedef unsigned long u_long;
-#include "condor_fix_socket.h"
-
-extern "C" {
-#include <netinet/in.h>
-
-#if defined(IRIX53)
-int symlink(const char *name1, const char *name2);
-#endif
-
-}
-#include "fileno.h"
-#include "condor_rsc.h"
 
 const mode_t REGULAR_FILE_MODE =
 	S_IRUSR | S_IWUSR |					// rw- for user
@@ -1127,6 +1096,7 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 {
 	char	buf[ _POSIX_PATH_MAX ];
 	char	*value;
+	mode_t 	omask;
 
 	cmd = new char [ strlen(s.cmd) + 1 ];
 	strcpy( cmd, s.cmd );
@@ -1141,12 +1111,14 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 
 
 		// Generate a directory where process can run and do its checkpointing
+	omask = umask(0);
 	sprintf( buf, "dir_%d", proc_index++ );
 	local_dir = new char [ strlen(buf) + 1 ];
 	strcpy( local_dir, buf );
 	if( mkdir(local_dir,LOCAL_DIR_MODE) < 0 ) {
 		EXCEPT( "mkdir(%s,0%o)", local_dir, LOCAL_DIR_MODE );
 	}
+	(void)umask(omask);
 
 	sprintf( buf, "%s/condor_exec.%d.%d", local_dir, cluster, proc );
 	cur_ckpt = new char [ strlen(buf) + 1 ];
