@@ -189,6 +189,8 @@ check_claims(resource_info_t* rip)
 {
 	if (rip->r_claimed == TRUE) {
 		if ((time(NULL) - rip->r_receivetime) > 2 * rip->r_interval) {
+			dprintf(D_ALWAYS, "Capability (%s) timed out\n",
+				rip->r_capab);
 			rip->r_claimed = FALSE;
 			free(rip->r_capab);
 			free(rip->r_client);
