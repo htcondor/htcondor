@@ -5633,7 +5633,7 @@ DaemonCore::Inherit( void )
 		char	tmp[50];
 		strcpy( tmp, envName );
 		strcat( tmp, "=" );
-		putenv( tmp );
+		SetEnv( tmp );
 	} else {
 		dprintf ( D_DAEMONCORE, "%s: is NULL\n", envName );
 	}		
