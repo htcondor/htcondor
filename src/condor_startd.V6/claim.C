@@ -372,8 +372,11 @@ Claim::match_timed_out()
 			return FALSE;
 		}
 		delete rip->r_cur;
+			// once we've done this delete, the this pointer is now in
+			// a weird, invalid state.  don't rely on using any member
+			// functions or data until we return.
 		rip->r_cur = new Claim( rip );
-		dprintf( D_FAILURE|D_ALWAYS, "State change: match timed out\n" );
+		rip->dprintf( D_FAILURE|D_ALWAYS, "State change: match timed out\n" );
 		rip->change_state( owner_state );
 	} else {
 			// The match that timed out was the preempting claim.
