@@ -856,9 +856,11 @@ dc_reconfig( bool is_full )
 	drop_core_in_log();
 
 	// If we're doing a full reconfig, call ReInit to clear out the
-	// DNS info we have cashed for the IP verify code
+	// DNS info we have cashed for the IP verify code. Also clear out
+	// the passwd cache.
 	if( is_full ) {
 		daemonCore->ReInit();
+		clear_passwd_cache();
 	}
 
 	// Re-drop the address file, if it's defined, just to be safe.
