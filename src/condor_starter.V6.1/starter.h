@@ -100,10 +100,12 @@ public:
 		/** Return the version string of the Shadow */
 	const char *GetShadowVersion() const { return ShadowVersion; }
 
-		/** Compare our own UIDDomain vs. the submitting host.
+		/** Compare our own UIDDomain vs. the submitting host.  We
+			check in the given job ClassAd for ATTR_UID_DOMAIN.
+			@param jobAd ClassAd of the job we're trying to run
 			@return true if they match, false if not
 		*/
-	bool SameUidDomain( void );
+	bool SameUidDomain( ClassAd* jobAd );
 
 		/** Initialize the priv_state code with the appropriate user
 			for this job.  This function deals with all the logic for
