@@ -42,12 +42,26 @@ PVM_LIBRARY = pvmd
 all: h makefiles Directories Libraries Programs
 release:: all
 
+
 #if IS_V5
-distrib: release
-	cd ../doc; make distrib
-	cd condor_test_suite_C.V5; make distrib
-	cd condor_test_suite_F.V5; make distrib
+
+#if IS_ALPHA_OSF1
+BINARY = ../ALPHA_OSF1_BIN.tar
+#elif IS_SPARC_SUNOS41
+BINARY = ../SPARC_SUNOS41_BIN.tar
+#elif IS_R6000_AIX32
+BINARY = ../R6000_AIX32_BIN.tar
 #endif
+
+obj_distrib: release
+	cd ../doc; make obj_distrib
+	cd condor_test_suite_C.V5; make obj_distrib
+#if HAS_FORTRAN
+	cd condor_test_suite_F.V5; make obj_distrib
+#endif
+	cd release_dir; tar cvf $(BINARY) .
+
+#endif	/* IS_V5 */
 
 simple_dir_target(release_dir)
 simple_dir_target(release_dir/bin)
@@ -118,4 +132,8 @@ check_platform_target
 
 clean::
 	cd h; make clean
-	rm -rf Makefile */Makefile release_dir
+	rm -rf Makefile */Makefile */Makefile.*  release_dir
+
+platform_canned_makefile(R6000_AIX32)
+platform_canned_makefile(ALPHA_OSF1)
+platform_canned_makefile(SPARC_SUNOS41)
