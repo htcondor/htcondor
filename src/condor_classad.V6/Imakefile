@@ -1,6 +1,6 @@
 SRC_DIR = $(SRC_TREE)/condor_classad.V6
 
-C_PLUS_FLAGS = -Wall -I./ $(STD_C_PLUS_FLAGS) -fno-implicit-templates
+C_PLUS_FLAGS=-Wall -I./ $(STD_C_PLUS_FLAGS) -fno-implicit-templates -DIN_CONDOR
 CFLAGS = -Wall $(STD_C_FLAGS)
 
 SRC = lexer.C source.C operators.C attrrefs.C fnCall.C literals.C exprTree.C \
@@ -36,12 +36,6 @@ S_LCL_OBJ = stand_alone.o
 /* the main condor library target */
 all_target(libclassad.a)
 library_target(libclassad.a,$(OBJ))
-
-
-/* Defining IN_CONDOR activates the 'param' feature in cxi */
-#define IN_CONDOR
-c_plus_target (cxi, cxi.o, $(LIB))
-pure_c_plus_target(cxi.pure, cxi.o, $(LIB))
 
 
 /* Standalone classad library (single .a); still need all condor's headers */
@@ -82,6 +76,10 @@ html: documentation
 
 clean::
 	rm -f -r *.o *.gz html
+
+
+c_plus_target (cxi, cxi.o, $(LIB))
+pure_c_plus_target(cxi.pure, cxi.o, $(LIB))
 
 
 IMPORT_LINKS = ../../config/import_links
