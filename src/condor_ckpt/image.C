@@ -522,7 +522,7 @@ Image::Save()
 	dprintf(D_CKPT, "I should have %d segments...\n", numsegs);
 /*	display_prmap();*/
 
-#if !defined(IRIX) && !defined(Solaris)
+#if !defined(Solaris)
 
 	// data segment is saved and restored as before, using sbrk()
 	data_start = data_start_addr();
@@ -533,7 +533,7 @@ Image::Save()
 
 #else
 
-	// sbrk() doesn't give reliable values on IRIX and Solaris
+	// sbrk() doesn't give reliable values on Solaris
 	// use ioctl info instead
 	data_start=MAXLONG;
 	data_end=0;
@@ -792,6 +792,16 @@ static int mystrcmp(const char *str1, const char *str2)
 	}
 	return (int) *str1 - *str2;
 }
+
+#if defined(HAS_DYNAMIC_USER_JOBS)
+extern "C"  int GETPAGESIZE(void);
+#if defined(SYS_getpagesize)
+static int GETPAGESIZE(void)
+{
+	return SYSCALL(SYS_getpagesize);
+}
+#endif
+#endif
 
 void
 Image::RestoreSeg( const char *seg_name )
@@ -1267,6 +1277,7 @@ SegMap::Read( int fd, ssize_t pos )
 #if defined(HAS_DYNAMIC_USER_JOBS)
 	else if ( mystrcmp(name,"SHARED LIB") == 0) {
 		int zfd, segSize = len;
+		char *segLoc = (char *)core_loc;
 		if ((zfd = SYSCALL(SYS_open, "/dev/zero", O_RDWR)) == -1) {
 			dprintf( D_ALWAYS,
 					 "Unable to open /dev/zero in read/write mode.\n");
@@ -1287,29 +1298,58 @@ SegMap::Read( int fd, ssize_t pos )
 		 - Memory should be private, so we don't mess with any other
 		   processes that might be accessing the same library. */
 
-#if defined(Solaris) || defined(LINUX)
-		if ((MMAP((MMAP_T)core_loc, (size_t)segSize,
-				  prot|PROT_WRITE,
-				  MAP_PRIVATE|MAP_FIXED, zfd,
-				  (off_t)0)) == MAP_FAILED) {
-#elif defined(IRIX)
-			// Irix 6.5 dumps some garbage in the protection bits that
-			// makes the mmap fail.  So, we need to clean out the garbage.
-		saved_prot &= (PROT_READ | PROT_WRITE | PROT_EXEC);
-		if (MMAP((caddr_t)saved_core_loc, (size_t)segSize,
-				 (saved_prot|PROT_WRITE)&(~MA_SHARED),
-				 MAP_PRIVATE|MAP_FIXED, zfd,
-				 (off_t)0) == MAP_FAILED) {
-#endif
-
-			dprintf(D_ALWAYS, "mmap: %s", strerror(errno));
-			dprintf(D_ALWAYS, "Attempted to mmap /dev/zero at "
-				"address 0x%x, size 0x%x\n", saved_core_loc,
-				segSize);
-			dprintf(D_ALWAYS, "Current segmap dump follows\n");
-			display_prmap();
-			Suicide();
+		int page_mask = GETPAGESIZE()-1;
+		int align_offset = (long)segLoc & page_mask;
+		if (align_offset) {
+				// Our addr parameter (segLoc) is not aligned.  We
+				// must have migrated to a machine with a smaller
+				// pagesize than the machine where we checkpointed.
+			dprintf(D_ALWAYS, "Unaligned ckpt segment at 0x%x!  "
+					"Performing alignment...\n", segLoc);
+			segSize += align_offset;
+			segLoc -= align_offset;
+				// But we can't just blindly align the address,
+				// because we don't want to mmap() over previously
+				// restored segments.  We also can't make any
+				// assumption about the segments being ordered by
+				// address in our checkpoint.  So, we take a look at
+				// the first and last page using mprotect.  If we can
+				// set the permissions on the pages, then they're
+				// already mapped in and we shouldn't remap over them.
+				// It's not a big deal that we're setting all
+				// permissions on these pages because we basically do
+				// that anyway in the restart process, since we need
+				// the pages to be writeable to restore from
+				// checkpoint.
+			if (SYSCALL(SYS_mprotect, segLoc, GETPAGESIZE(),
+						PROT_READ|PROT_WRITE|PROT_EXEC) == 0) {
+				dprintf(D_ALWAYS, "First page already mapped.\n");
+				segLoc += GETPAGESIZE();
+				segSize -= GETPAGESIZE();
+			}
+			char *lastPage = segLoc + ((segSize-1) & ~(page_mask));
+			if (segSize > 0 &&
+				SYSCALL(SYS_mprotect, lastPage, GETPAGESIZE(),
+						PROT_READ|PROT_WRITE|PROT_EXEC) == 0) {
+				dprintf(D_ALWAYS, "Last page already mapped.\n");
+				segSize -= GETPAGESIZE();
+			}
 		}
+
+		if (segSize > 0) {		// our pages may already be mapped in
+			if ((MMAP((MMAP_T)segLoc, (size_t)segSize,
+					  prot|PROT_WRITE,
+					  MAP_PRIVATE|MAP_FIXED, zfd,
+					  (off_t)0)) == MAP_FAILED) {
+				dprintf(D_ALWAYS, "mmap: %s", strerror(errno));
+				dprintf(D_ALWAYS, "Attempted to mmap /dev/zero at "
+						"address 0x%x, size 0x%x\n", segLoc,
+						segSize);
+				dprintf(D_ALWAYS, "Current segmap dump follows\n");
+				display_prmap();
+				Suicide();
+			}
+		} // if (segSize > 0)
 
 		/* WARNING: We have potentially just overwritten libc.so.  Do
 		   not make calls that are defined in this (or any other)
@@ -1493,14 +1533,8 @@ Checkpoint( int sig, int code, void *scp )
 	int		do_full_restart = 1; // set to 0 for periodic checkpoint
 	int		write_result;
 
-	/*
-		WARNING: Do not put any code here.  This check prevents a race condition.
-		The Checkpoint signal could arrive before we block the signal, thus
-		causing a checkpoint within a checkpoint.  We _could_ prevent this race
-		condition by using sigaction to automatically set the signal mask, but
-		then the user's mask would not be available to be saved by
-		_condor_save_sigstate.
-	*/
+		// First thing, make sure we don't do recursive checkpointing.
+	_condor_ckpt_disable();
 
 	if( InRestart ) {
 		if ( sig == SIGTSTP )
@@ -1511,13 +1545,6 @@ Checkpoint( int sig, int code, void *scp )
 	} else {
 		InRestart = TRUE;
 	}
-
-	/*
-		WARNING: Do not put any code here either.  _condor_save_sigstate() will
-		save the user's signal mask, block all signals, and then save all the
-		other associated signal state.  This must be the first action in
-		Checkpoint after the race condition check above.
-	*/
 
 	_condor_save_sigstates();
 	dprintf( D_ALWAYS, "Saved signal state.\n");
@@ -1706,6 +1733,9 @@ Checkpoint( int sig, int code, void *scp )
 
 		dprintf( D_ALWAYS, "About to restore signal state\n" );
 		_condor_restore_sigstates();
+
+			// match _condor_ckpt_disable() call at start of function
+		_condor_ckpt_enable();
 
 		dprintf( D_ALWAYS, "About to return to user code\n" );
 		InRestart = FALSE;
