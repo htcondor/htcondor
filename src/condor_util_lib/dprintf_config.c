@@ -39,13 +39,14 @@
 int		Termlog;
 
 extern int		DebugFlags;
-extern FILE		*DebugFP;
+extern FILE		*_condor_DebugFP;
 extern int		MaxLog[D_NUMLEVELS+1];
 extern char		*DebugFile[D_NUMLEVELS+1];
 extern char		*DebugLock;
-extern char		*DebugFlagNames[];
+extern char		*_condor_DebugFlagNames[];
 
-void set_debug_flags( char *strflags );
+extern void		_condor_set_debug_flags( char *strflags );
+
 FILE *open_debug_file( int debug_level, char flags[] );
 
 void
@@ -73,7 +74,7 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 	(void)sprintf(pname, "%s_DEBUG", subsys);
 	pval = param(pname);
 	if( pval ) {
-		set_debug_flags( pval );
+		_condor_set_debug_flags( pval );
 		free( pval );
 	}
 
@@ -95,7 +96,7 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 				(void)sprintf(pname, "%s_LOG", subsys);
 			} else {
 				(void)sprintf(pname, "%s_%s_LOG", subsys,
-							  DebugFlagNames[debug_level-1]+2);
+							  _condor_DebugFlagNames[debug_level-1]+2);
 			}
 			if( DebugFile[debug_level] ) {
 				free( DebugFile[debug_level] );
@@ -110,7 +111,7 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 					(void)sprintf(pname, "TRUNC_%s_LOG_ON_OPEN", subsys);
 				} else {
 					(void)sprintf(pname, "TRUNC_%s_%s_LOG_ON_OPEN", subsys,
-								  DebugFlagNames[debug_level-1]+2);
+								  _condor_DebugFlagNames[debug_level-1]+2);
 				}
 				pval = param(pname);
 				if( pval ) {
@@ -120,24 +121,24 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 					free(pval);
 				}
 				if( first_time && want_truncate ) {
-					DebugFP = open_debug_file(debug_level, "w");
+					_condor_DebugFP = open_debug_file(debug_level, "w");
 				} else {
-					DebugFP = open_debug_file(debug_level, "a");
+					_condor_DebugFP = open_debug_file(debug_level, "a");
 				}
 
-				if( DebugFP == NULL && debug_level == 0 ) {
+				if( _condor_DebugFP == NULL && debug_level == 0 ) {
 					EXCEPT("Cannot open log file '%s'",
 						   DebugFile[debug_level]);
 				}
 
-				if (DebugFP) (void)fclose( DebugFP );
-				DebugFP = (FILE *)0;
+				if (_condor_DebugFP) (void)fclose( _condor_DebugFP );
+				_condor_DebugFP = (FILE *)0;
 
 				if (debug_level == 0) {
 					(void)sprintf(pname, "MAX_%s_LOG", subsys);
 				} else {
 					(void)sprintf(pname, "MAX_%s_%s_LOG", subsys,
-								  DebugFlagNames[debug_level-1]+2);
+								  _condor_DebugFlagNames[debug_level-1]+2);
 				}
 				pval = param(pname);
 				if( pval != NULL ) {
@@ -169,39 +170,3 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 	first_time = 0;
 }
 
-void
-set_debug_flags( char *strflags )
-{
-	char tmp[ BUFSIZ ];
-	char *argv[ BUFSIZ ], *flag;
-	int argc, notflag, bit, i;
-
-	(void)strncpy(tmp, strflags, sizeof(tmp));
-	mkargv(&argc, argv, tmp);
-
-	while( --argc >= 0 ) {
-		flag = argv[argc];
-		if( *flag == '-' ) {
-			flag += 1;
-			notflag = 1;
-		} else {
-			notflag = 0;
-		}
-
-		bit = 0;
-		if( stricmp(flag, "D_ALL") == 0 ) {
-			bit = D_ALL;
-		} else for( i = 0; i < D_MAXFLAGS; i++ ) {
-			if( stricmp(flag, DebugFlagNames[i]) == 0 ) {
-				bit = (1 << i);
-				break;
-			}
-		}
-
-		if( notflag ) {
-			DebugFlags &= ~bit;
-		} else {
-			DebugFlags |= bit;
-		}
-	}
-}
