@@ -440,7 +440,7 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 				(void)sprintf(notification,
 "was killed because it was not properly linked for execution \nwith Version 6 Condor.\n" );
 				MainSymbolExists = FALSE;
-				ExitReason = JOB_EXCEPTION;
+				ExitReason = JOB_KILLED;
 		} else {
 			(void)sprintf(notification, "exited with status %d.",
 					WEXITSTATUS(status) );
