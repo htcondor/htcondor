@@ -40,7 +40,13 @@ HP_CKPT = get_reginfo.HPUX.o
 #endif
 
 STUBS = switches.o switches.special.o
-UTIL =	remote_syscall.o syscall_connect.o senders.o remote_startup.o  
+UTIL = \
+	remote_syscall.o \
+	syscall_connect.o \
+	senders.o \
+	remote_startup.o \
+	file_stream.o
+
 NAME_TAB = syscall_numbers.o
 
 SRC = \
@@ -59,7 +65,8 @@ SRC = \
 	syscall.tmpl \
 	syscall_connect.c \
 	syscall_numbers.c \
-	xfer_file.c 
+	xfer_file.c \
+	file_stream.c
 
 #if IS_ALPHA_OSF1
 XDR_STATFS_OBJ = xdr_statfs.OSF1.o
@@ -74,7 +81,8 @@ XDR_OBJ = \
  	$(XDR_STATFS_OBJ) \
  	xdr_timeval.o \
  	xdr_timezone.o \
- 	xdr_rlimit.o
+ 	xdr_rlimit.o \
+	xdr_startup_info.o
 
 #if 0
  	xdr_utsname.o
@@ -102,7 +110,7 @@ UTIL_OBJ =  dprintf.o dprintf_config.o except.o update_rusage.o \
 LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL) $(NAME_TAB) $(XDR_OBJ) $(UTIL_OBJ) \
 		$(CKPT_OBJ) $(UTIL_EXTRACT) $(HP_UTIL)
 
-SIMPLE_OBJ = $(LIB_DIR)/condor_rt0.o extern_path.o xfer_file.o
+SIMPLE_OBJ = $(LIB_DIR)/condor_rt0.o extern_path.o xfer_file.o 
 SYSCALL_LIB = $(LIB_DIR)/condor_syscall_lib.a
 
 all_target($(SYSCALL_LIB) receivers.c $(SIMPLE_OBJ) $(AIX_OBJ))
