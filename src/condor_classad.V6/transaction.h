@@ -109,4 +109,4 @@ private:
 
 END_NAMESPACE
 
-#endif XACTION_H
+#endif /* __XACTION_H__ */
