@@ -50,6 +50,7 @@ void MPIShadow::shutDown( int reason, int exitStatus ) {
 
 int MPIShadow::handleJobRemoval( int sig ) {
 
+	return 0;
 }
 
 
