@@ -127,7 +127,7 @@ main_shutdown_fast()
 			"Failed to fast shutdown shadow because it is of unknown type.\n");
 		return 0;
 	}
-	Shadow->shutDown(JOB_NOT_CKPTED, 0);
+	Shadow->shutDown( JOB_NOT_CKPTED );
 	return 0;
 }
 
