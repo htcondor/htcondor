@@ -166,6 +166,8 @@ class ExprTree
 		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* )const=0;
 };
 
+std::ostream& operator<<(std::ostream &os, const ExprTree &expr);
+
 END_NAMESPACE // classad
 
 #include "literals.h"

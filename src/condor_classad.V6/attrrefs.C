@@ -235,6 +235,8 @@ _Flatten( EvalState &state, Value &val, ExprTree*&ntree, int*) const
 	Value		cv;
 	EvalCache::iterator	itr;
 
+	ntree = NULL; // Just to be safe...  wenger 2003-12-11.
+
 		// find the expression and the evalstate
 	curAd = state.curAd;
 	switch( FindExpr( state, tree, dummy, false ) ) {
@@ -271,6 +273,10 @@ _Flatten( EvalState &state, Value &val, ExprTree*&ntree, int*) const
 						CondorErrMsg = "";
 						return( false );
 					}
+				} else {
+						// Fixes the bug I (wenger) ran into with Flatten()
+						// returning an expression with a bad pointer.
+					ntree = NULL;
 				}
 				state.curAd = curAd;
 				return true;

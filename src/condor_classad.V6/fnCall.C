@@ -345,6 +345,8 @@ _Flatten( EvalState &state, Value &value, ExprTree*&tree, int* ) const
 	Value		argValue;
 	bool		fold = true;
 
+	tree = NULL; // Just to be safe...  wenger 2003-12-11.
+
 	// if the function cannot be resolved, the value is "error"
 	if( !function ) {
 		value.SetErrorValue();

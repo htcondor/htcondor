@@ -441,6 +441,8 @@ _Flatten( EvalState &state, Value &val, ExprTree *&tree, int *opPtr ) const
 	ExprTree	*fChild1=NULL, *fChild2=NULL;
 	Value		val1, val2, val3;
 	OpKind		newOp = operation, op = operation;
+
+	tree = NULL; // Just to be safe...  wenger 2003-12-11.
 	
 	// if op is binary, but not associative or commutative, disallow splitting 
 	if( ( op >= __COMPARISON_START__ && op <= __COMPARISON_END__ ) ||

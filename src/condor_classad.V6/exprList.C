@@ -176,6 +176,8 @@ _Flatten( EvalState &state, Value &, ExprTree *&tree, int* ) const
 	Value		tempVal;
 	ExprList	*newList;
 
+	tree = NULL; // Just to be safe...  wenger 2003-12-11.
+
 	if( ( newList = new ExprList( ) ) == NULL ) return false;
 
 	for( itr = exprList.begin( ); itr != exprList.end( ); itr++ ) {

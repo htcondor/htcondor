@@ -346,6 +346,9 @@ Unparse( string &buffer, const ExprTree *tree )
 		}
 
 		default:
+				// I really wonder whether we should except here, but I
+				// don't want to do that without further consultation.
+				// wenger 2003-12-11.
 			buffer = "";
 			CondorErrno = ERR_BAD_EXPRESSION;
 			CondorErrMsg = "unknown expression type";

@@ -179,4 +179,15 @@ SetRootScope( )
 	rootAd = prevScope;
 }
 
+ostream& operator<<(ostream &stream, const ExprTree &expr)
+{
+	PrettyPrint unparser;
+	string      string_representation;
+
+	unparser.Unparse(string_representation, &expr);
+	stream << string_representation;
+	
+	return stream;
+}
+
 END_NAMESPACE // classad

@@ -665,6 +665,8 @@ _Flatten( EvalState& state, Value&, ExprTree*& tree, int* ) const
 	ClassAd		*oldAd;
 	AttrList::const_iterator	itr;
 
+	tree = NULL; // Just to be safe...  wenger 2003-12-11.
+
 	oldAd = state.curAd;
 	state.curAd = (ClassAd*)this;
 
@@ -1425,18 +1427,6 @@ bool ClassAd::IsAttributeDirty(const string &name)
 		is_dirty = false;
 	}
 	return is_dirty;
-}
-
-
-ostream& operator<<(ostream &stream, const ClassAd &ad)
-{
-	PrettyPrint unparser;
-	string      string_representation;
-
-	unparser.Unparse(string_representation, &ad);
-	stream << string_representation;
-	
-	return stream;
 }
 
 END_NAMESPACE // classad
