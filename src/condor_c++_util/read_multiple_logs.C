@@ -324,6 +324,11 @@ ReadMultipleUserLogs::loadLogFileNameFromSubFile(const MyString &strSubFilename)
 		MyString strLine = psLine;
 		if (!stricmp(strLine.Substr(0, 2).Value(), "log")) {
 			int iEqPos = strLine.FindChar('=',0);
+				// There is a bug here!  if there is another submit
+				// file command that begins with the string "log"
+				// (e.g., "LogOnlyBlah = True"), then it will
+				// mistakenly be interpreted as the userlog filename!
+				// --pfc
 			if (iEqPos == -1) {
 				return "";
 			}
@@ -339,6 +344,10 @@ ReadMultipleUserLogs::loadLogFileNameFromSubFile(const MyString &strSubFilename)
 			}
 
 			MyString strToReturn = strLine.Substr(iEqPos, strLine.Length());
+
+				// There may be another bug here... what if "log" is
+				// redefined later in the submit file?  The first,
+				// obsolete value will be returned!  --pfc
 
 			return strToReturn;
 		}
