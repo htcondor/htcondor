@@ -444,8 +444,20 @@ job_time(float cpu_time,ClassAd *ad)
 		return -1;
 	}
 
+	/* Compute total wall time as follows:  previous_runs is not the 
+	 * number of seconds accumulated on earlier runs.  cur_time is the
+	 * time from the point of view of the schedd, and shadow_bday is the
+	 * epoch time from the schedd's view when the shadow was started for
+	 * this job.  So, we figure out the time accumulated on this run by
+	 * computing the time elapsed between cur_time & shadow_bday.  
+	 * NOTE: shadow_bday is set to zero when the job is RUNNING but the
+	 * shadow has not yet started due to JOB_START_DELAY parameter.  And
+	 * shadow_bday is undefined (stale value) if the job status is not
+	 * RUNNING.  So we only compute the time on this run if shadow_bday
+	 * is not zero and the job status is RUNNING.  -Todd <tannenba@cs.wisc.edu>
+	 */
 	float total_wall_time = previous_runs + 
-		(cur_time - shadow_bday)*(job_status == RUNNING);
+		(cur_time - shadow_bday)*(job_status == RUNNING && shadow_bday);
 
 	return total_wall_time;
 }
@@ -562,7 +574,7 @@ format_goodput (float wall_clock, AttrList *ad)
 	ad->LookupInteger( ATTR_LAST_CKPT_TIME, last_ckpt );
 	ad->LookupInteger( ATTR_JOB_STATUS, job_status );
 	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock );
-	if (job_status == RUNNING && last_ckpt > shadow_bday) {
+	if (job_status == RUNNING && shadow_bday && last_ckpt > shadow_bday) {
 		wall_clock += last_ckpt - shadow_bday;
 	}
 	float goodput = (wall_clock > 0.0) ? ckpt_time/wall_clock*100.0 : 0.0;
