@@ -332,6 +332,7 @@ const char ATTR_PERIODIC_RELEASE_CHECK	 [] = "PeriodicRelease";
 const char ATTR_PERIODIC_REMOVE_CHECK	 [] = "PeriodicRemove";
 const char ATTR_GLOBUS_RESUBMIT_CHECK	 [] = "GlobusResubmit";
 
+const char ATTR_SEC_AUTHENTICATION_METHODS_LIST[] = "AuthMethodsList";
 const char ATTR_SEC_AUTHENTICATION_METHODS[] = "AuthMethods";
 const char ATTR_SEC_CRYPTO_METHODS       [] = "CryptoMethods";
 const char ATTR_SEC_AUTHENTICATION       [] = "Authentication";
