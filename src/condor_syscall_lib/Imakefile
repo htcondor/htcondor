@@ -202,7 +202,7 @@ URL_OBJ = url_condor.o include_urls.o cbstp_url.o file_url.o http_url.o \
 
 #if DOES_CHECKPOINTING
 CKPT_OBJ = $(FILE_TABLE_OBJ)\
-	image.o tmp_stack.o machdep.$(DEP_OS).o \
+	image.o tmp_stack.o machdep.$(DEP_OS).o malloc-user.o \
 	syscall_mode.o fake_hooks.o $(LONGJMP) $(HP_CKPT) \
 	$(SGI_CKPT) $(SIG_CKPT_OBJS) eprintf.o shared_utils.o condor_error.o
 #else
@@ -211,9 +211,9 @@ CKPT_OBJ = $(FILE_TABLE_OBJ) syscall_mode.o eprintf.o shared_utils.o condor_erro
 
 #if DOES_COMPRESS_CKPT
 #if IS_SUN4X_SOLARIS
-COMPRESS_OBJ = malloc.o zimage.o _rem.o _div.o umultiply.o
+COMPRESS_OBJ = malloc-condor.o zimage.o _rem.o _div.o umultiply.o
 #else
-COMPRESS_OBJ = malloc.o zimage.o
+COMPRESS_OBJ = malloc-condor.o zimage.o
 #endif
 COMPRESS_LIB = libcondorzsyscall.a
 #endif
