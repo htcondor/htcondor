@@ -640,9 +640,12 @@ Stream::code(struct utsname &n)
 	
 	#if defined(LINUX)
 		n.domainname[0] = 0;
-	#elif defined(IRIX)
+	#elif defined(IRIX) && !defined(_ABIAPI)
 		n.m_type[0] = 0;
 		n.base_rel[0] = 0;
+	#elif defined(IRIX) && defined(_ABIAPI)
+		n.__m_type[0] = 0;
+		n.__base_rel[0] = 0;
 	#elif defined(HPUX)
 		n.__idnumber[0] = 0;
 	#endif
