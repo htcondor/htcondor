@@ -1,4 +1,4 @@
-NAME = condor_starter
+NAME = condor_starter.std
 all_target($(NAME))
 
 #if !DOES_CHECKPOINTING
