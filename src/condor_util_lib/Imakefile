@@ -130,7 +130,7 @@ clean::
 	rm -f lex.yy.c
 
 y.tab.c: stub_gen_yacc.y scanner.h
-	yacc -d stub_gen_yacc.y
+	YACC -d stub_gen_yacc.y
 clean::
 	rm -f y.tab.c y.tab.h
 
