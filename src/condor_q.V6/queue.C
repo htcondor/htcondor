@@ -412,6 +412,15 @@ displayJobShort (ClassAd *ad)
 		return;
 	}
 	
+	int niceUser;
+    if( ad->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
+        char tmp[100];
+        strcpy(tmp,NiceUserName);
+        strcat(tmp,".");
+        strcat(tmp,owner);
+        strcpy(owner,tmp);
+    }
+
 	shorten (owner, 14);
 	if (ad->EvalString ("Args", NULL, args)) {
 		strcat(cmd, " ");
