@@ -45,7 +45,7 @@ Also, you might want to read the platform-specific information in
 Chapter~\ref{platforms} on page~\pageref{platforms}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{What versions of RedHat Linux does Condor supprt?}
+\subsection*{What versions of Red Hat Linux does Condor support?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 See Section~\ref{sec:platform-linux} on
@@ -622,7 +622,7 @@ information.
 Check the following:
 \begin {enumerate}
 
-\item{Did you submit the job from a local filesystem that other
+\item{Did you submit the job from a local file system that other
 computers can't access?}
 
 See Section~\ref{sec:Shared-Filesystem-Config-File-Entries}, on
@@ -942,7 +942,7 @@ SUSPEND = (CpuBusyTime > 3 * $(MINUTE)) && ((CurrentTime - JobStart) > 90)
 \end{verbatim}
 \normalsize
 
-The above policy says to only suspend the job if the cpu has been busy
+The above policy says to only suspend the job if the CPU has been busy
 with non-Condor load at least three minutes and it has been at least 90
 seconds since the start of the job.
 
@@ -1373,7 +1373,7 @@ in Explorer, choose Quickview, and look under ``Import List''.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Why does the startd crash on CondorNT with the error\\
+\subsection*{Why does the startd crash on Condor NT with the error\\
 "caInsert: Can't insert CpuBusy into target classad."?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{decimal point!problems with}
@@ -1578,7 +1578,7 @@ EVERYONE  to synchronize on it.
 
 [ Technical note: Crun adds "C:\WINNT\SYSTEM32\CMD.EXE /C" to the start of 
 the command line. This is because the process is created with the network 
-context of the caller i.e. LOCALSYSTEM. Prepending cmd.exe gets round any 
+context of the caller i.e. LOCALSYSTEM. Pre-pending cmd.exe gets round any 
 unexpected "Access Denied" errors. ]
 
 If Crun gets a WM_CLOSE (CTRL_CLOSE_EVENT) while the job is running it 
@@ -2012,18 +2012,21 @@ Use the solutions given above.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Is there a Condor mailing-list?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Condor!mailing-list}
+\index{Condor!mailing lists}
+\index{mailing lists}
 \index{Condor!new versions, notification of}
+\index{Condor!contact information}
 
-Yes.
-We run an extremely low traffic mailing list solely to announce new
+Yes. There are two useful mailing lists.
+First, we run an extremely low traffic mailing list solely to announce new
 versions of Condor.
-To subscribe, e-mail \Email{majordomo@cs.wisc.edu} with a message body
-of:
-
-\begin{verbatim}
-subscribe condor-world
-\end{verbatim}
+Follow the instructions for Condor World at
+\URL{http://www.cs.wisc.edu/condor/mail-lists/}.
+Second, our users can be extremely knowledgeable,
+and they help each other solve problems
+using the Condor Users mailing list.
+Again, follow the instructions for Condor Users at
+\URL{http://www.cs.wisc.edu/condor/mail-lists/}.
 
 
 
@@ -2033,6 +2036,10 @@ subscribe condor-world
 
 If you have any questions that are not listed in this FAQ, try looking
 through the rest of the manual.
+Try joining the Condor Users mailing list, where our users
+support each other in finding answers to problems.
+Follow the instructions at
+\URL{http://www.cs.wisc.edu/condor/mail-lists/}.
 If you still can't find an answer, feel free to contact us at
 \Email{condor-admin@cs.wisc.edu}.
 
