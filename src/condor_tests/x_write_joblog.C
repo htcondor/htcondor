@@ -1,0 +1,325 @@
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <sys/socket.h>
+#include "user_log.c++.h"
+#include <sys/types.h>
+
+struct hostent *NameEnt;
+/*
+**#define NUL       "\0";
+*/
+
+UserLog log("owner","local.log", 0, 0, 0, (bool)0);
+
+int writeSubmitEvent();
+int writeRemoteErrorEvent();
+int writeExecuteEvent();
+int writeExecutableErrorEvent();
+int writeCheckpointedEvent();
+int writeJobAbortedEvent();
+int writeJobEvictedEvent();
+int writeJobTerminatedEvent();
+int writeNodeTerminatedEvent();
+int writePostScriptTerminatedEvent();
+int writeGlobusSubmitEvent();
+int writeGlobusSubmitFailedEvent();
+int writeGlobusResourceUpEvent();
+int writeGlobusResourceDownEvent();
+int writeJobImageSizeEvent(); 
+int writeShadowExceptionEvent(); 
+int writeJobSuspendedEvent(); 
+int writeJobUnsuspendedEvent(); 
+int writeJobHeldEvent(); 
+int writeJobReleasedEvent(); 
+int writeNodeExecuteEvent(); 
+
+main(int argc, char **argv)
+{
+	writeSubmitEvent();
+	writeRemoteErrorEvent();
+	writeExecuteEvent();
+	writeExecutableErrorEvent();
+	writeCheckpointedEvent();
+	writeJobAbortedEvent();
+	writeJobEvictedEvent();
+	writeJobTerminatedEvent();
+	writeNodeTerminatedEvent();
+	writePostScriptTerminatedEvent();
+	writeGlobusSubmitEvent();
+	writeGlobusSubmitFailedEvent();
+	writeGlobusResourceUpEvent();
+	writeGlobusResourceDownEvent();
+	writeJobImageSizeEvent(); 
+	writeShadowExceptionEvent(); 
+	writeJobSuspendedEvent(); 
+	writeJobUnsuspendedEvent(); 
+	writeJobHeldEvent(); 
+	writeJobReleasedEvent(); 
+	writeNodeExecuteEvent(); 
+}
+
+int writeSubmitEvent()
+{
+	SubmitEvent submit;
+	strcpy(submit.submitHost, "<128.105.165.12:32779>");
+	submit.submitEventLogNotes = strdup("DAGMan info");
+	submit.submitEventUserNotes = strdup("User info");
+	if ( !log.writeEvent(&submit) ) {
+		printf("Complain about bad submit write\n");
+		exit(1);
+	}
+}
+
+int writeExecuteEvent()
+{
+	ExecuteEvent execute;
+	strcpy(execute.executeHost, "<128.105.165.12:32779>");
+	if ( !log.writeEvent(&execute) ) {
+		printf("Complain about bad execute write\n");
+		exit(1);
+	}
+}
+
+int writeExecutableErrorEvent()
+{
+	ExecutableErrorEvent executeerror;
+	executeerror.errType = CONDOR_EVENT_BAD_LINK;
+	if ( !log.writeEvent(&executeerror) ) {
+		printf("Complain about bad executeerror write\n");
+		exit(1);
+	}
+}
+
+int writeCheckpointedEvent()
+{
+	CheckpointedEvent checkpoint;
+	if ( !log.writeEvent(&checkpoint) ) {
+		printf("Complain about bad checkpoint write\n");
+		exit(1);
+	}
+}
+
+int writeRemoteErrorEvent()
+{
+	RemoteErrorEvent remoteerror;
+	remoteerror.setExecuteHost("<128.105.165.12:32779>");
+	remoteerror.setDaemonName("<write job log test>");
+	remoteerror.setErrorText("this is the write test error string");
+	remoteerror.setCriticalError(TRUE);
+	if ( !log.writeEvent(&remoteerror) ) {
+	        printf("Complain about bad remoteerror write\n");
+			exit(1);
+	}
+}
+
+int writeJobAbortedEvent()
+{
+	JobAbortedEvent jobabort;
+	jobabort.setReason("cause I said so!");
+	if ( !log.writeEvent(&jobabort) ) {
+	        printf("Complain about bad jobabort write\n");
+			exit(1);
+	}
+}
+
+int writeJobEvictedEvent()
+{
+	JobEvictedEvent jobevicted;
+	jobevicted.setReason("It misbehaved!");
+	jobevicted.setCoreFile("corefile");
+	if ( !log.writeEvent(&jobevicted) ) {
+	        printf("Complain about bad jobevicted write\n");
+			exit(1);
+	}
+}
+
+int writeJobTerminatedEvent()
+{
+	struct rusage ru;
+
+	JobTerminatedEvent jobterminated;
+	jobterminated.normal = false;
+	jobterminated.signalNumber = 9;
+	jobterminated.returnValue = 4;
+	jobterminated.run_remote_rusage = ru;
+	jobterminated.total_remote_rusage = ru;
+	jobterminated.recvd_bytes = 200000;
+	jobterminated.sent_bytes = 400000;
+	jobterminated.total_recvd_bytes = 800000;
+	jobterminated.total_sent_bytes = 900000;
+	jobterminated.setCoreFile( "badfilecore" );
+	if ( !log.writeEvent(&jobterminated) ) {
+	        printf("Complain about bad jobterminated write\n");
+			exit(1);
+	}
+}
+
+int writeNodeTerminatedEvent()
+{
+	struct rusage ru;
+
+	NodeTerminatedEvent nodeterminated;
+	nodeterminated.node = 44;
+	nodeterminated.normal = false;
+	nodeterminated.signalNumber = 9;
+	nodeterminated.returnValue = 4;
+	nodeterminated.run_remote_rusage = ru;
+	nodeterminated.total_remote_rusage = ru;
+	nodeterminated.recvd_bytes = 200000;
+	nodeterminated.sent_bytes = 400000;
+	nodeterminated.total_recvd_bytes = 800000;
+	nodeterminated.total_sent_bytes = 900000;
+	nodeterminated.setCoreFile( "badfilecore" );
+	if ( !log.writeEvent(&nodeterminated) ) {
+	        printf("Complain about bad nodeterminated write\n");
+			exit(1);
+	}
+}
+
+int writePostScriptTerminatedEvent()
+{
+	struct rusage ru;
+
+	PostScriptTerminatedEvent postscriptterminated;
+	postscriptterminated.normal = false;
+	postscriptterminated.signalNumber = 9;
+	postscriptterminated.returnValue = 4;
+	if ( !log.writeEvent(&postscriptterminated) ) {
+	        printf("Complain about bad postscriptterminated write\n");
+			exit(1);
+	}
+}
+
+int writeGlobusSubmitEvent()
+{
+	struct rusage ru;
+
+	GlobusSubmitEvent globussubmitevent;
+	globussubmitevent.rmContact = strdup("ResourceManager");;
+	globussubmitevent.jmContact = strdup("JobManager");;
+	globussubmitevent.restartableJM = true;
+	if ( !log.writeEvent(&globussubmitevent) ) {
+	        printf("Complain about bad globussubmitevent write\n");
+			exit(1);
+	}
+}
+
+int writeGlobusSubmitFailedEvent()
+{
+	struct rusage ru;
+
+	GlobusSubmitFailedEvent globussubmitfailedevent;
+	globussubmitfailedevent.reason = strdup("Cause it could");;
+	if ( !log.writeEvent(&globussubmitfailedevent) ) {
+	        printf("Complain about bad globussubmitfailedevent write\n");
+			exit(1);
+	}
+}
+
+int writeGlobusResourceUpEvent()
+{
+	struct rusage ru;
+
+	GlobusResourceUpEvent globusresourceupevent;
+	globusresourceupevent.rmContact = strdup("ResourceUp");;
+	if ( !log.writeEvent(&globusresourceupevent) ) {
+	        printf("Complain about bad globusresourceupevent write\n");
+			exit(1);
+	}
+}
+
+int writeGlobusResourceDownEvent()
+{
+	struct rusage ru;
+
+	GlobusResourceDownEvent globusresourcedownevent;
+	globusresourcedownevent.rmContact = strdup("ResourceDown");;
+	if ( !log.writeEvent(&globusresourcedownevent) ) {
+	        printf("Complain about bad globusresourcedownevent write\n");
+			exit(1);
+	}
+}
+
+int writeJobImageSizeEvent()
+{
+	JobImageSizeEvent jobimagesizeevent;
+	jobimagesizeevent.size = 128;
+	if ( !log.writeEvent(&jobimagesizeevent) ) {
+		printf("Complain about bad jobimagesizeevent write\n");
+		exit(1);
+	}
+}
+
+
+int writeShadowExceptionEvent() 
+{
+	ShadowExceptionEvent shadowexceptionevent;
+	shadowexceptionevent.sent_bytes = 4096;
+	shadowexceptionevent.recvd_bytes = 4096;
+	shadowexceptionevent.message[0] = '\0';
+	strncat(shadowexceptionevent.message,"shadow message", 15);
+	if ( !log.writeEvent(&shadowexceptionevent) ) {
+		printf("Complain about bad shadowexceptionevent write\n");
+		exit(1);
+	}
+}
+
+
+int writeJobSuspendedEvent()
+{
+	JobSuspendedEvent jobsuspendevent;
+	jobsuspendevent.num_pids = 99;
+	if ( !log.writeEvent(&jobsuspendevent) ) {
+		printf("Complain about bad jobsuspendevent write\n");
+		exit(1);
+	}
+}
+
+int writeJobUnsuspendedEvent()
+{
+	JobUnsuspendedEvent jobunsuspendevent;
+	//jobunsuspendevent.num_pids = 99;
+	if ( !log.writeEvent(&jobunsuspendevent) ) {
+		printf("Complain about bad jobunsuspendevent write\n");
+		exit(1);
+	}
+}
+
+int writeJobHeldEvent() 
+{
+	JobHeldEvent jobheldevent;
+	jobheldevent.setReason("CauseWeCan");
+	jobheldevent.setReasonCode(404);
+	jobheldevent.setReasonSubCode(0xff);
+	if ( !log.writeEvent(&jobheldevent) ) {
+		printf("Complain about bad jobheldevent write\n");
+		exit(1);
+	}
+}
+
+int writeJobReleasedEvent() 
+{
+	JobReleasedEvent jobreleasedevent;
+	jobreleasedevent.setReason("MessinWithYou");
+	if ( !log.writeEvent(&jobreleasedevent) ) {
+		printf("Complain about bad jobreleasedevent write\n");
+		exit(1);
+	}
+}
+
+int writeNodeExecuteEvent()
+{
+	NodeExecuteEvent nodeexecuteevent;
+	nodeexecuteevent.node = 49;
+	nodeexecuteevent.executeHost[0] = '\0';
+	strcat(nodeexecuteevent.executeHost,"<128.105.165.12:32779>");
+	if ( !log.writeEvent(&nodeexecuteevent) ) {
+		printf("Complain about bad nodeexecuteevent write\n");
+		exit(1);
+	}
+}

@@ -1,0 +1,96 @@
+#! /usr/bin/env perl
+use CondorTest;
+use Cwd;
+use Sys::Hostname;
+
+$cmd = 'job_core_queue_sched.cmd';
+$testname = 'condor_submit queue - scheduler U';
+$queuelog = "submit_queue_scheduler_log.log";
+my $queuelength = 40;
+my $submitcount = 0;
+my $donecount = 0;
+
+open(QUEUECMD,"<$cmd") || die "Can't open cmd file $!\n";
+open(NEWCMD,">$cmd.new") || die "Can not open new command file: $!\n";
+while(<QUEUECMD>)
+{
+	chomp;
+	$line = $_;
+	if( $line =~ /^\s*queue\s*.*$/ )
+	{
+		print NEWCMD "queue $queuelength\n";
+	}
+	else
+	{
+		print NEWCMD "$line\n";
+	}
+}
+close(QUEUECMD);
+close(NEWCMD);
+
+system("mv $cmd.new $cmd");
+
+$ExitSuccessBase = sub {
+	my %info = @_;
+
+};
+
+my @lines;
+
+
+$success = sub
+{
+    my %args = @_;
+	my $cluster = $args{"cluster"};
+	$donecount += 1;
+	if( $donecount == $submitcount )
+	{
+		# kill server
+		system("x_general_client.pl /tmp/queuetest quit");
+		# test for correct number of hellos from jobs in jog
+		open(FLOW,"./x_readqueuelog.pl $flowlog HELLO $queuelength | ") || die "Can not open flowlog: $!\n";
+		while(<FLOW>)
+		{
+			my $ret;
+			chomp;
+			$ret = $_;
+			print "$ret\n";
+			if( $ret ne "0" )
+			{
+				die "failed to run exact number of pre/post scripts\n";
+			}
+		}
+	}
+};
+
+$submit = sub
+{
+    my %args = @_;
+	my $cluster = $args{"cluster"};
+	$submitcount += 1;
+};
+
+# can not do this because we stick here as long as server runs
+#system("x_general_server.pl $queuelog");
+system("rm -f $queuelog");
+defined(my $pid = fork) or die "Cannot fork: $!";
+unless ($pid)
+{
+	#child runs and ceases to exist
+	exec "./x_general_server.pl /tmp/queuetest $queuelog";
+	die "can not exec dumpcore!\n";
+}
+#main process continues here
+sleep 2;
+
+CondorTest::RegisterExitedSuccess( $testname, $success );
+CondorTest::RegisterSubmit( $testname, $submit );
+
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

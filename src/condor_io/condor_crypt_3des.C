@@ -25,7 +25,6 @@
 #include "condor_crypt_3des.h"
 #include "condor_debug.h"
 
-
 Condor_Crypt_3des :: Condor_Crypt_3des(const KeyInfo& key)
 #if !defined(SKIP_AUTHENTICATION)
     : Condor_Crypt_Base(CONDOR_3DES, key)
@@ -34,7 +33,7 @@ Condor_Crypt_3des :: Condor_Crypt_3des(const KeyInfo& key)
     const unsigned char * keyData = k.getKeyData();
 
     ASSERT(k.getKeyLength() >= 24);
-    
+
     des_set_key((des_cblock *)  keyData    , keySchedule1_);
     des_set_key((des_cblock *) (keyData+8) , keySchedule2_);
     des_set_key((des_cblock *) (keyData+16), keySchedule3_);

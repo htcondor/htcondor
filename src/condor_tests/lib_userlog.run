@@ -1,0 +1,54 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd = 'lib_userlog.cmd';
+$testname = 'Test user log - write all events and expect to read the same';
+
+
+@CondorTest::expected_output =
+(
+'Job Submited.........',
+'Job Remote Error.........',
+'Job Executed.........',
+'Job Execution Error.........',
+'Job Checkpointed.........',
+'Job ABORTED by user.........',
+'Job Evicted.........',
+'Job Terminated.........',
+'Node Terminated .........',
+'Post Script Terminated.........',
+'Job Globus Submit.........',
+'Job Globus Submit Failed.........',
+'Globus Resource Up.........',
+'Globus Resource Down.........',
+'Job Image Size Changed.........',
+'Job Shadow Exception.........',
+'Job Suspended.........',
+'Job Unsuspended.........',
+'Job Held.........',
+'Job Released.........',
+'Job Node Execute.........',
+'DONE',
+);
+
+system("rm -f local.log");
+my $stats = system("x_write_joblog.exe");
+if($stats != 0)
+{
+	die "Write Log... failed.....\n";
+}
+
+$ExitSuccess = sub {
+};
+
+
+CondorTest::RegisterExitedSuccess( $testname, \&CondorTest::DefaultOutputTest );
+#CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

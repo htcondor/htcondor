@@ -1,0 +1,36 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd = 'job_core_signal-suicide_van.cmd';
+$testname = 'Does condor record signal-death properly? - vanilla U';
+
+$died = sub {
+	my %info = @_;
+	my $expectedsig = $info{"job"}+1;
+	my $gotsig      = $info{"signal"};
+	if($expectedsig != $gotsig) {
+		die "Expecting program to have died by sig $expected but it was $gotsig.\n";
+	} else {
+		print "Good, signal $gotsig came through fine.\n";
+	}
+};
+
+$success = sub {
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	my $job     = $info{"job"};
+	die "None of the suiciders should have succeeded! $cluster.$job did.\n";
+};
+
+
+CondorTest::RegisterExitedAbnormal( $testname, $died );
+CondorTest::RegisterExitedSuccess( $testname, $success );
+CondorTest::RegisterAbort( $testname, sub{} ); # ignore aborts
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

@@ -1,0 +1,35 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+my $stats = 0;
+
+$cmd = 'job_filexfer_md5-remote_van.cmd';
+$testname = 'Do file transfers with md5 - vanilla U';
+
+$success = sub {
+	print "Transfer job worked..... need to chack data file.\n";
+	$stats = CondorTest::verbose_system("job_filexfer_md5-testdata.pl -m=200");
+	if($stats != 0)
+	{
+		die "Test of MD5 data failed\n";
+	}
+};
+
+if( ! -e "data")
+{
+	print "Making data file\n";
+	$stats = CondorTest::verbose_system("job_filexfer_md5-createdata.pl -m=200");
+}
+else
+{
+	print "Data file already exists....skipping generation\n";
+}
+
+CondorTest::RegisterExitedSuccess($testname, $success);
+if(CondorTest::RunTest($testname, $cmd, 0)) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

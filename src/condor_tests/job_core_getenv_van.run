@@ -1,0 +1,34 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd = 'job_core_getenv_van.cmd';
+$testname = 'Environment is preserved - vanilla U';
+
+
+$ExitSuccess = sub {
+	my %info = @_;
+};
+
+
+# before the test let's throw some weird crap into the environment
+
+CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+
+#empty local environment and add only a few things that way......
+my $path = $ENV{"PATH"};
+
+$condor_config = $ENV{CONDOR_CONFIG};
+%ENV = ();
+$ENV{CONDOR_CONFIG} = $condor_config;
+$ENV{PATH} = $path;
+$ENV{UNIVERSE} = "vanilla";
+
+print "join(` `,keys %ENV)";
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

@@ -174,7 +174,9 @@ bool _condorPacket::init_MD(const char * keyId)
 /* Demarshall - Get the values of the header:
  * Set the values of data structure to the values of header field
  * of received packet and initialize other values
- *	@param: last - is this the last packet of a message
+ *	@param:
+ *        msgsize - size of the UDP msg
+ *        last - is this the last packet of a message
  *        seq - sequence number of the packet
  *        len - length of the packet
  *        mID - message id
@@ -182,7 +184,8 @@ bool _condorPacket::init_MD(const char * keyId)
  *	@return: true, if this packet is the whole message
  *         false, otherwise
  */
-int _condorPacket::getHeader(bool &last,
+int _condorPacket::getHeader(int msgsize,
+                             bool &last,
                              int &seq,
                              int &len,
                              _condorMsgID &mID,
@@ -190,7 +193,6 @@ int _condorPacket::getHeader(bool &last,
 {
     uint16_t stemp;
     uint32_t ltemp;
-    short flags = 0;
 	
     if (md_) {
         free(md_);
@@ -227,6 +229,8 @@ int _condorPacket::getHeader(bool &last,
 	mID.msgNo = ntohs(stemp);
 
     dta = data = &dataGram[25];
+    dprintf(D_NETWORK, "Fragmentation Header: last=%d,seq=%d,len=%d,data=[25]\n",
+           last, seq, len); 
 
     checkHeader(len, dta);    
 
@@ -253,6 +257,9 @@ void _condorPacket :: checkHeader(int & len, void *& dta)
         data += 2;
 
         length -= 10;
+        dprintf(D_NETWORK,
+                "Sec Hdr: tag(4), flags(2), mdKeyIdLen(2), encKeyIdLen(2), mdKey(%d), MAC(16), encKey(%d)\n",
+                mdKeyIdLen, encKeyIdLen);
 
         if ((flags & MD_IS_ON) && (mdKeyIdLen > 0)) {
             // Scan for the key
@@ -340,8 +347,10 @@ bool _condorPacket::verifyMD(Condor_MD_MAC * mdChecker)
  */
 int _condorPacket::getn(char* dta, const int size)
 {
-	if(!dta || curIndex + size > length)
+	if(!dta || curIndex + size > length) {
+        dprintf(D_NETWORK, "dta is NULL or more data than queued is requested\n");
 		return -1;
+    }
 	memcpy(dta, &data[curIndex], size);
 	curIndex += size;
 	return size;
@@ -575,7 +584,7 @@ void _condorPacket::dumpPacket()
 	void* dta;
 
 	// if single packet message--backward compatible message
-	if(getHeader(last, seq, len, mID, dta)) {
+	if(getHeader(6000, last, seq, len, mID, dta)) {
 		dprintf(D_NETWORK, "(short) ");
 		for(int i=0; i<length; i++) {
 			if(i < 200)
@@ -684,6 +693,7 @@ int _condorOutMsg::sendMsg(const int sock,
 	int seqNo = 0, msgLen = 0, sent;
 	int total = 0;
     unsigned char * md = mac;
+    //char str[10000];
 
 	if(headPacket->empty()) // empty message
 		return 0;
@@ -693,18 +703,24 @@ int _condorOutMsg::sendMsg(const int sock,
 		headPacket = headPacket->next;
 		tempPkt->makeHeader(false, seqNo++, msgID, md);
 		msgLen    += tempPkt->length;
+
 		sent = sendto(sock, tempPkt->dataGram,
 		              tempPkt->length + SAFE_MSG_HEADER_SIZE,
                       0, who, sizeof(struct sockaddr));
-		if( D_FULLDEBUG & DebugFlags )
-			dprintf(D_NETWORK, "SafeMsg: Packet[%d] sent\n", sent);
 		if(sent != tempPkt->length + SAFE_MSG_HEADER_SIZE) {
 			dprintf(D_NETWORK, "sendMsg:sendto failed - errno: %d\n", errno);
 			headPacket = tempPkt;
 			clearMsg();
 			return -1;
 		}
-		dprintf( D_NETWORK, "SEND %s ", sock_to_string(sock) );
+        //int i;
+        //str[0] = 0;
+        //for (i=0; i<tempPkt->length + SAFE_MSG_HEADER_SIZE; i++) {
+        //    sprintf(&str[strlen(str)], "%02x,", tempPkt->dataGram[i]);
+        //}
+        //dprintf(D_NETWORK, "--->packet [%d bytes]: %s\n", sent, str);
+
+		dprintf( D_NETWORK, "SEND [%d] %s ", sent, sock_to_string(sock) );
 		dprintf( D_NETWORK|D_NOHEADER, "%s\n",
 				 sin_to_string((sockaddr_in *)who) );
 		total += sent;
@@ -718,8 +734,6 @@ int _condorOutMsg::sendMsg(const int sock,
         lastPacket->makeHeader(true, 0, msgID, md);
 		sent = sendto(sock, lastPacket->data, lastPacket->length,
 		              0, who, sizeof(struct sockaddr));
-		if( D_FULLDEBUG & DebugFlags )
-			dprintf(D_NETWORK, "SafeMsg: Packet[%d] sent\n", sent);
 		if(sent != lastPacket->length) {
 			dprintf( D_NETWORK, 
 				 "SafeMsg: sending small msg failed. errno: %d\n",
@@ -727,7 +741,12 @@ int _condorOutMsg::sendMsg(const int sock,
 			headPacket->reset();
 			return -1;
 		}
-		dprintf( D_NETWORK, "SEND %s ", sock_to_string(sock) );
+        //str[0] = 0;
+        //for (i=0; i<lastPacket->length + SAFE_MSG_HEADER_SIZE; i++) {
+        //    sprintf(&str[strlen(str)], "%02x,", lastPacket->dataGram[i]);
+        //}
+        //dprintf(D_NETWORK, "--->packet [%d bytes]: %s\n", sent, str);
+		dprintf( D_NETWORK, "SEND [%d] %s ", sent, sock_to_string(sock) );
 		dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string((sockaddr_in *)who) );
 		total = sent;
     }
@@ -737,15 +756,17 @@ int _condorOutMsg::sendMsg(const int sock,
         sent = sendto(sock, lastPacket->dataGram,
                       lastPacket->length + SAFE_MSG_HEADER_SIZE,
                       0, who, sizeof(struct sockaddr));
-        if( D_FULLDEBUG & DebugFlags ) {
-            dprintf(D_NETWORK, "SafeMsg: Packet[%d] sent\n", sent);
-        }
         if(sent != lastPacket->length + SAFE_MSG_HEADER_SIZE) {
             dprintf( D_NETWORK, "SafeMsg: sending last packet failed. errno: %d\n", errno );
             headPacket->reset();
             return -1;
         }
-        dprintf( D_NETWORK, "SEND %s ", sock_to_string(sock) );
+        //str[0] = 0;
+        //for (i=0; i<lastPacket->length + SAFE_MSG_HEADER_SIZE; i++) {
+        //    sprintf(&str[strlen(str)], "%02x,", lastPacket->dataGram[i]);
+        //}
+        //dprintf(D_NETWORK, "--->packet [%d bytes]: %s\n", sent, str);
+        dprintf( D_NETWORK, "SEND [%d] %s ", sent, sock_to_string(sock) );
         dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string((sockaddr_in *)who) );
         total += sent;
     }
@@ -902,31 +923,8 @@ _condorInMsg::_condorInMsg(const _condorMsgID mID,// the id of this message
 	prevMsg = prev;
 	nextMsg = NULL;
 
-    if(md) {
-        md_ = (unsigned char *) malloc(MAC_SIZE);
-        memcpy(md_, md, MAC_SIZE);
-        verified_ = false;
-    }
-    else {
-        md_ = 0;
-        verified_ = true;
-    } 
-
-    if (MD5Keyid) {
-        incomingMD5KeyId_ = strdup(MD5Keyid);
-    }
-    else {
-        incomingMD5KeyId_ = 0;
-    }
-
-    if (EncKeyId) {
-        incomingEncKeyId_ = strdup(EncKeyId);
-    }
-    else {
-        incomingEncKeyId_ = 0;
-    }
+    set_sec(MD5Keyid, md, EncKeyId);
 }
-
 
 _condorInMsg::~_condorInMsg() {
 
@@ -962,6 +960,7 @@ bool _condorInMsg::addPacket(const bool last,
 
 	// check if the message is already ready
 	if(lastNo != 0 && lastNo+1 == received) {
+        dprintf(D_NETWORK, "Duplicated packet. The msg fully defragmented.\n");
 		return false;
 	}
 	// find the correct dir entry
@@ -999,6 +998,7 @@ bool _condorInMsg::addPacket(const bool last,
 			curDir = headDir;
 			curPacket = 0;
 			curData = 0;
+            dprintf(D_NETWORK, "long msg ready: %d bytes\n", msgLen);
 			return true;
 		} else {
 			lastTime = time(NULL);
@@ -1067,8 +1067,10 @@ int _condorInMsg::getn(char* dta, const int size)
 	int len, total = 0;
 	_condorDirPage* tempDir;
 
-	if(!dta || passed + size > msgLen)
+	if(!dta || passed + size > msgLen) {
+        dprintf(D_NETWORK, "dta is NULL or more data than queued is requested\n");
 		return -1;
+    }
 
 	while(total != size) {
 		len = size - total;
@@ -1100,10 +1102,10 @@ int _condorInMsg::getn(char* dta, const int size)
 	} // of while(total..)
 
 	passed += total;
-	if( D_FULLDEBUG & DebugFlags )
-		dprintf(D_NETWORK,
-		        "%d bytes read & %d bytes passed\n",
-			  total, passed);
+    if( D_FULLDEBUG & DebugFlags ) {
+        dprintf(D_NETWORK, "%d bytes read from UDP[size=%d, passed=%d]\n",
+                total, msgLen, passed);
+    }
 	return total;
 }
 
@@ -1182,6 +1184,36 @@ bool _condorInMsg::consumed()
 	return(msgLen != 0 && msgLen == passed);
 }
 
+void
+_condorInMsg::set_sec(const char * MD5Keyid,  // MD5 key id
+                const unsigned char * md,  // MD5 key id
+                const char * EncKeyId)
+{
+    if(md) {
+        md_ = (unsigned char *) malloc(MAC_SIZE);
+        memcpy(md_, md, MAC_SIZE);
+        verified_ = false;
+    }
+    else {
+        md_ = 0;
+        verified_ = true;
+    }
+
+    if (MD5Keyid) {
+        incomingMD5KeyId_ = strdup(MD5Keyid);
+    }
+    else {
+        incomingMD5KeyId_ = 0;
+    }
+
+    if (EncKeyId) {
+        incomingEncKeyId_ = strdup(EncKeyId);
+    }
+    else {
+        incomingEncKeyId_ = 0;
+    }
+}
+
 const char * _condorInMsg :: isDataMD5ed()
 {
     return incomingMD5KeyId_;
@@ -1208,19 +1240,22 @@ void _condorInMsg :: resetMD()
     }
 }
 
-#ifdef DEBUG
 void _condorInMsg::dumpMsg()
 {
+    char str[10000];
+    struct in_addr in;
+
+    in.s_addr = msgID.ip_addr;
+    sprintf(str, "ID: %s, %d, %lu, %d\n",
+            inet_ntoa(in), msgID.pid, msgID.time, msgID.msgNo);
+    sprintf(&str[strlen(str)], "len:%lu, lastNo:%d, rcved:%d, lastTime:%lu\n",
+            msgLen, lastNo, received, lastTime);
+    dprintf(D_NETWORK, "========================\n%s\n===================\n", str);
+
+    /*
 	_condorDirPage *tempDir;
 	int i, j, total = 0;
 
-	dprintf(D_NETWORK, "\t=======< ");
-	dprintf(D_NETWORK, "Msg[%d, %d, %d, %d]",
-	        msgID.ip_addr, msgID.pid, msgID.time, msgID.msgNo);
-	dprintf(D_NETWORK, " >=======\n");
-	dprintf(D_NETWORK,
-	        "\tmsgLen: %d\tlastNo: %d\treceived: %d\tlastTime: %d\n",
-	        msgLen, lastNo, received, lastTime);
 	dprintf(D_NETWORK,
 	        "\theadDir: %d\tcurDir: %d\tcurPkt: %d\tcurData: %d\n",
 	        headDir, curDir, curPacket, curData);
@@ -1247,5 +1282,5 @@ void _condorInMsg::dumpMsg()
 	dprintf(D_NETWORK,
 	        "\t----------------------- has %d bytes\
 		     ------------------------------\n", total);;
+    */
 }
-#endif

@@ -544,21 +544,25 @@ negotiationTime ()
 	ClassAdList scheddAds;
 	ClassAdList allAds;
 
-	// Check if we just finished a cycle less than 20 seconds ago.
-	// If we did, reset our timer so at least 20 seconds will elapse
-	// between cycles.  We do this to help ensure all the startds have
-	// had time to update the collector after the last negotiation cycle
-	// (otherwise, we might match the same resource twice).  Note: we must
-	// do this check _before_ we reset GotRescheduledCmd to false to prevent
-	// postponing a new cycle indefinitely.
+	/**
+		Check if we just finished a cycle less than NEGOTIATOR_CYCLE_DELAY 
+		seconds ago.  If we did, reset our timer so at least 
+		NEGOTIATOR_CYCLE_DELAY seconds will elapse between cycles.  We do 
+		this to help ensure all the startds have had time to update the 
+		collector after the last negotiation cycle (otherwise, we might match
+		the same resource twice).  Note: we must do this check _before_ we 
+		reset GotRescheduledCmd to false to prevent postponing a new 
+		cycle indefinitely.
+	**/
 	unsigned int elapsed = time(NULL) - completedLastCycleTime;
-	if ( elapsed < 20 ) {
+	int cycle_delay = param_integer("NEGOTIATOR_CYCLE_DELAY",20,0);
+	if ( elapsed < cycle_delay ) {
 		daemonCore->Reset_Timer(negotiation_timerID,
-							20 - elapsed,
+							cycle_delay - elapsed,
 							NegotiatorInterval);
 		dprintf(D_FULLDEBUG,
 			"New cycle requested but just finished one -- delaying %u secs\n",
-			20 - elapsed);
+			cycle_delay - elapsed);
 		return FALSE;
 	}
 

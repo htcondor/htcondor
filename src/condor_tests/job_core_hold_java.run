@@ -1,0 +1,74 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd = 'job_core_hold_java.cmd';
+$testname = 'Condor allows submit with hold - java U';
+
+my $killedchosen = 0;
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+$abnormal = sub {
+	my %info = @_;
+
+	die "Want to see $killsig in this file $outfile\n";
+};
+
+$aborted = sub {
+	my %info = @_;
+	my $done;
+	print "Abort event expected as we clear job\n";
+};
+
+$held = sub {
+	my %info = @_;
+	my $done;
+	print "Held event expected\n";
+	my $cluster = $info{"cluster"};
+	die "We don't hit Hold state for job started in hold!\n";
+};
+
+$executed = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	die "We should never hit execute state but go to hold state\n";
+	sleep 5;
+};
+
+$submitted = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	print "submitted: We should never hit execute state but go to hold state\n";
+	print "It better be on hold...";
+	if(`condor_q $cluster -format %d JobStatus` != HELD) 
+	{
+		die "Cluster $cluster failed to go on hold\n";
+	} 
+	else 
+	{
+		print "good\n";
+		system("condor_rm $cluster");
+	}
+	sleep 5;
+};
+
+CondorTest::RegisterExecute($testname, $executed);
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterSubmit( $testname, $submitted );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

@@ -88,6 +88,10 @@ class _condorInMsg
 		// get the current data without incrementing the 'current position'
 		int peek(char &c);
 
+        void set_sec(const char * MD5Keyid,  // MD5 key id
+                const unsigned char * md,  // MD5 key id
+                const char * EncKeyId);
+
         const char * isDataMD5ed();
         const char * isDataEncrypted();
 
@@ -95,9 +99,7 @@ class _condorInMsg
         void resetMD();
 
 		bool consumed();
-#ifdef DEBUG
 		void dumpMsg();
-#endif
 
 	// next line should be uncommented after testing
 	private:
@@ -144,11 +146,12 @@ class _condorPacket
 
 		// get the contents of header
                 // returns 1 if is short message; 0 if not; -1 if checksum failed
-		int getHeader(bool &last,
-				   int &seq,
-		   		   int &len,
-				   _condorMsgID &mID,
-				   void *&dta);
+		int getHeader(int msgsize,
+                bool &last,
+				int &seq,
+		   		int &len,
+				_condorMsgID &mID,
+				void *&dta);
 
         int headerLen();
         // Get the part of the header that is also check summed

@@ -1,0 +1,15 @@
+condor = install
+startjobs = 100
+incrementjobs = 100
+maxjobs = 500
+duration = 20
+
+universe = scheduler
+type = loading
+
+condorconfig = condor_config
+condorlocal = condor_config.local
+condortemplate = x_condor_config_template
+vms	= 10
+encryption = 3DES,BLOWFISH
+#authentication = GSI

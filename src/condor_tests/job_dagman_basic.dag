@@ -1,0 +1,3 @@
+Job     NODERET         job_dagman_basic-node.cmd
+Script PRE NODERET     ./x_dagman_premonitor.pl 
+Script POST NODERET     ./job_dagman_monitor.pl $RETURN
