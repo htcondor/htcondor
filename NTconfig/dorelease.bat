@@ -29,7 +29,7 @@ cd ..\src
 for /R %%f in (*.wsdl) do copy %%f %1\lib\webservice
 popd
 echo Stripping out debug symbols from files...
-pushd %1
+pushd %1\bin
 for %%f in (*.exe) do rebase -b 0x400000 -x . -a %%f
 for %%f in (master startd schedd collector negotiator shadow starter eventd) do move condor_%%f.dbg condor_%%f.save
 del *.dbg 
