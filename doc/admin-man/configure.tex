@@ -1757,6 +1757,13 @@ the defaults work quite well, and you probably
 will not want to change them for any reason.
 \begin{description}
 
+\item[\Macro{MASTER\_NAME}] \label{param:MasterName}
+  A unique name given for a \Condor{master} daemon on a machine.
+  Defaults to username@hostname, where the username is the user name
+  under which the \Condor{master} daemon is executed.
+  If the \Condor{master} daemon is running as root, then
+  \MacroNI{MASTER\_NAME} is the host name.
+
 \item[\Macro{MASTER\_ATTRS}] \label{param:MasterExprs} This macro is
   described in section~\ref{param:SubsysExprs} as
   \MacroNI{SUBSYS\_ATTRS}.
@@ -2486,6 +2493,15 @@ These macros control the \Condor{schedd}.
   If you decide to change this setting (not recommended),
   be sure to change the \MacroUNI{VALID\_LOG\_FILES} entry that
   \Condor{preen} uses as well.
+
+\item[\Macro{SCHEDD\_NAME}] \label{param:ScheddName}
+  A unique name given for a \Condor{schedd} daemon on a machine.
+  Defaults to username@hostname, where the username is the user name
+  under which the \Condor{schedd} daemon is executed.
+  If the \Condor{schedd} daemon is running as root, then
+  \MacroNI{SCHEDD\_NAME} is the host name.
+  This configuration macro is used to identify \Condor{schedd}
+  ClassAds.
 
 \item[\Macro{SCHEDD\_ATTRS}] \label{param:ScheddAttrs} This macro is
   correctly used as \MacroNI{SUBMIT\_EXPRS}, as described in

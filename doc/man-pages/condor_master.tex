@@ -22,11 +22,12 @@ daemons remotely.  The \Condor{master} will run on every machine in
 your Condor pool, regardless of what functions each machine are
 performing.
 
-See section~\ref{sec:Condor-Daemons} in the Administrator's Manual
-for more information
+Section~\ref{sec:Condor-Daemons} in the Administrator's Manual
+has more information
 about the \Condor{master} and other Condor daemons.
-Command line arguments for a \Condor{master} daemon are included
-in that section.
+See Section~\ref{sec:DaemonCore-Arguments}
+for documentation on
+command line arguments for \Condor{master}.
 
 The \Macro{DAEMON\_LIST} configuration macro is used by the
 \Condor{master} to provide a per-machine list of daemons that
@@ -37,5 +38,13 @@ the \Condor{master} daemon will spawn them automatically
 appending a \Arg{-f} argument.
 For those listed in \MacroNI{DAEMON\_LIST}, but not in \MacroNI{DC\_DAEMON\_LIST},
 there will be no \Arg{-f} argument.
+
+\begin{Options}
+    \OptItem{\OptArgnm{-n}{name}}
+            {Provides an alternate name for the \Condor{master}
+            to override that given by the \Macro{MASTER\_NAME}
+	    configuration variable.
+            }
+\end{Options}
 
 \end{ManPage}

@@ -1,4 +1,4 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \section{\label{sec:DaemonCore}DaemonCore}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -58,13 +58,13 @@ is serving, while fast shutdown results in a hard kill of every shadow
 with no chance of checkpointing.  
 
 For all daemons, ``reconfigure'' just means that the daemon re-reads
-its config file(s) and any settings that have changed take effect.
+its configuration file(s) and any settings that have changed take effect.
 For example, changing the level of debugging output, the value of
 timers that determine how often daemons perform certain actions, the
 paths to the binaries you want the \Condor{master} to spawn, etc.
 See section~\ref{sec:Configuring-Condor} on
 page~\pageref{sec:Configuring-Condor}, ``Configuring Condor'' for full
-details on what settings are in the config files and what they do.
+details on what settings are in the configuration files and what they do.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DaemonCore-Arguments}DaemonCore and
@@ -75,44 +75,45 @@ Command-line Arguments}
 \index{Condor daemon!command line arguments}
 The other visible feature that DaemonCore provides to administrators
 is a common set of command-line arguments that all daemons understand.
-The arguments and what they do are described below:
+These arguments and what they do are described below:
 
 \begin{description}
 
 \item[-b] Causes the daemon to start up in the background.  When a
-  DaemonCore process starts up with this option, disassociates itself
-  from the terminal and forks itself so that it runs in the
-  background.  This is the default behavior for Condor daemons, and
-  what you get if you specify no options at all.
+  DaemonCore process starts up with this option, it disassociates itself
+  from the terminal and forks itself, so that it runs in the
+  background.  This is the default behavior for Condor daemons.
 
 \item[-f] Causes the daemon to start up in the foreground.  Instead of
-  forking, the daemon just runs in the foreground.  
+  forking, the daemon runs in the foreground.  
 
-  \Note when the \Condor{master} starts up daemons, it does
-  so with the -f option since it has already forked a process for the
-  new daemon.  That is why you will see -f in the argument list of all
-  Condor daemons that the master spawns.
+  \Note When the \Condor{master} starts up daemons, it does
+  so with the \Opt{-f} option, as it has already forked a process for the
+  new daemon.  There will be a \Opt{-f} in the argument list for all
+  Condor daemons that the \Condor{master} spawns.
 
-\item[-c filename] Causes the daemon to use the specified filename
-  (you must use a full path) as its global config file.  This
-  overrides the \Env{CONDOR\_CONFIG} environment variable, and the
-  regular locations that Condor checks for its config file: the condor
-  user's home directory and \File{/etc/condor/\condor{config}}.  
+\item[-c filename] Causes the daemon to use the specified \Opt{filename}
+  (use a full path name) as its global configuration file.  This
+  overrides the \Env{CONDOR\_CONFIG} environment variable and the
+  regular locations that Condor checks for its configuration file: the 
+  user condor's
+  home directory and file \File{/etc/condor/condor\_config}.  
 
-\item[-p port] Causes the daemon to bind to the specified port for its
-  \Term{command socket}.  The master uses this option to make sure the
-  \Condor{collector} and \Condor{negotiator} start up on the
-  well-known ports that the rest of Condor depends on them using.
+\item[-p port] Causes the daemon to bind to the specified port as its
+  command socket.  The \Condor{master} daemon
+  uses this option to ensure that the
+  \Condor{collector} and \Condor{negotiator} start up using
+  well-known ports that the rest of Condor depends upon them using.
 
 \item[-t] Causes the daemon to print out its error message to
   \File{stderr} instead of its specified log file.  This option forces
-  the -f option described above.
+  the \Opt{-f} option.
 
 \item[-v] Causes the daemon to print out version information and
   exit.
 
 \item[-l directory] Overrides the value of \Macro{LOG} as specified in
-  your config files.  Primarily, this option would be used with the
+  the configuration files.  Primarily, this option is used with the
   \Condor{kbdd} when it needs to run as the individual user logged
   into the machine, instead of running as root.  Regular users would
   not normally have permission to write files into Condor's log
@@ -120,31 +121,33 @@ The arguments and what they do are described below:
   \Macro{LOG} and have the \Condor{kbdd} write its log file into a
   directory that the user has permission to write to.
 
-\item[-a string] Whatever string you specify is automatically
-  appended (with a ``.'') to the filename of the log for this daemon,
-  as specified in your config file.
+\item[-a string] Append a period (``.'') concatenated with \Opt{string}
+  to the file name of the log for this daemon,
+  as specified in the configuration file.
 
-\item[-pidfile filename] Causes the daemon to write out its PID, or
-  process id number, to the specified file.  This file can be used to
-  help shutdown the daemon without searching through the output of the
-  ``ps'' command.
+\item[-pidfile filename] Causes the daemon to write out its PID
+  (process id number) to the specified \Opt{filename}.
+  This file can be used to
+  help shutdown the daemon without first searching through 
+  the output of the Unix \Prog{ps} command.
 
   Since daemons run with their current working directory set to the
-  value of \Macro{LOG}, if you don't specify a full path (with a ``/''
-  to begin), the file will be left in the log directory.  If you leave
-  your pidfile in your log directory, you will want to add whatever
-  filename you use to the \Macro{VALID\_LOG\_FILES} parameter,
+  value of \Macro{LOG}, if a full path (one that begins with a ``/''),
+  the file will be placed in the \MacroNI{LOG} directory.  If you leave
+  the \Opt{filename} in the \MacroNI{LOG} directory, add this
+  \Opt{filename} to the \Macro{VALID\_LOG\_FILES} configuration variable,
   described in section~\ref{param:ValidLogFiles} on
   page~\pageref{param:ValidLogFiles}, so that \Condor{preen} does not
   remove it.
 
-\item[-k filename] Causes the daemon to read out a pid from the
-  specified filename and send a SIGTERM to that process.  The daemon
-  that you start up with ``-k'' will wait until the daemon it is
-  trying to kill has exited.  
+\item[-k filename] For non-Windows operating systems,
+  causes the daemon to read out a PID from the
+  specified \Opt{filename}, and send a SIGTERM to that process.
+  The daemon started with this optional argument waits until the
+  daemon it is attempting to kill has exited.  
 
 \item[-r minutes] Causes the daemon to set a timer, upon expiration
-  of which, sends itself a SIGTERM for graceful shutdown.
+  of which, it sends itself a SIGTERM for graceful shutdown.
 
 \item[-q] Quiet output; write less verbose error
  messages to \File{stderr} when something goes wrong,
@@ -165,7 +168,7 @@ The arguments and what they do are described below:
  \Condor{shadow} daemons it spawns will use the dynamic
  directories (named with the \Condor{schedd} daemon's PID).
 
- Note that by using a dynamically created spool directory
+ Note that by using a dynamically-created spool directory
  named by the IP address and PID,
  upon restarting daemons,
  jobs submitted to the original \Condor{schedd} daemon
