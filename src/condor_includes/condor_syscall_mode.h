@@ -23,7 +23,7 @@
 #ifndef _CONDOR_SYSCALLS_H
 #define _CONDOR_SYSCALLS_H
 
-#if defined( AIX32)
+#if defined( AIX )
 #	include "syscall.aix.h"
 #elif defined(Solaris)
 #	include <sys/syscall.h>
