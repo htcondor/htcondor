@@ -619,11 +619,14 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 				} else if ( rc ==  GLOBUS_GRAM_PROTOCOL_ERROR_STDIO_SIZE ) {
 					globusError = rc;
 					gmState = GM_STOP_AND_RESTART;
+					dprintf( D_FULLDEBUG, "Requesting jobmanager restart because of GLOBUS_GRAM_PROTOCOL_ERROR_STDIO_SIZE\n" );
+					dprintf( D_FULLDEBUG, "output_size = %d, error_size = %d\n", output_size, error_size );
 				} else {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(STDIO_SIZE)", rc );
 					globusError = rc;
 					gmState = GM_STOP_AND_RESTART;
+					dprintf( D_FULLDEBUG, "Requesting jobmanager restart because of unknown error\n" );
 				}
 			}
 			break;
