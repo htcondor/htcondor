@@ -783,8 +783,8 @@ FileLock *MasterLock;
 void
 lock_or_except( const char* file_name )
 {
-	if( (MasterLockFD=open(file_name,O_WRONLY|O_CREAT|O_APPEND,S_IRUSR|S_IWUSR)) < 0 ) {
-		EXCEPT( "can't open(%s,O_WRONLY|O_CREAT|O_APPEND,S_IRUSR|S_IWUSR) - errno %i", file_name, errno );
+	if( (MasterLockFD=open(file_name,O_WRONLY|O_CREAT|O_APPEND, S_IREAD|S_IWRITE)) < 0 ) {
+		EXCEPT( "can't open(%s,O_WRONLY|O_CREAT|O_APPEND,S_IREAD|S_IWRITE) - errno %i", file_name, errno );
 	}
 
 	// This must be a global so that it doesn't go out of scope
