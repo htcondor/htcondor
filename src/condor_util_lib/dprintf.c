@@ -91,7 +91,7 @@ char *DebugFlagNames[] = {
 	"D_ALWAYS", "D_TERMLOG", "D_SYSCALLS", "D_CKPT", "D_XDR", "D_MALLOC", 
 	"D_NOHEADER", "D_LOAD", "D_EXPR", "D_PROC", "D_JOB", "D_MACHINE",
 	"D_FULLDEBUG", "D_NFS", "D_UPDOWN", "D_AFS", "D_PREEMPT",
-	"D_PROTOCOL", "D_UNDEF18", "D_UNDEF19", "D_UNDEF20", "D_UNDEF21",
+	"D_PROTOCOL", "D_PRIV", "D_UNDEF19", "D_UNDEF20", "D_UNDEF21",
 	"D_UNDEF22", "D_UNDEF23", "D_UNDEF24", "D_UNDEF25", "D_UNDEF26",
 	"D_UNDEF27", "D_UNDEF28", "D_UNDEF29", "D_UNDEF30", "D_UNDEF31",
 };
@@ -174,7 +174,9 @@ va_dcl
 	sigdelset( &mask, SIGTRAP );
 	sigprocmask( SIG_BLOCK, &mask, &omask );
 
-	priv = set_condor_priv();	/* log files owned by condor system acct */
+		/* log files owned by condor system acct */
+		/* avoid priv macros so we can bypass priv logging */
+	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
 		/* Open and lock the log file */
 	(void)debug_lock();
@@ -205,7 +207,8 @@ va_dcl
 		/* Close and unlock the log file */
 	debug_unlock();
 
-	set_priv(priv);				/* restore privileges */
+		/* restore privileges */
+	_set_priv(priv, __FILE__, __LINE__, 0);
 
 		/* Let them signal handlers go!! */
 	(void) sigprocmask( SIG_SETMASK, &omask, 0 );
@@ -227,7 +230,7 @@ debug_lock()
 	int			oumask;
 	priv_state	priv;
 
-	priv = set_condor_priv();
+	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
 		/* Acquire the lock */
 	if( DebugLock ) {
@@ -276,7 +279,7 @@ debug_lock()
 		}
 	}
 
-	set_priv(priv);
+	_set_priv(priv, __FILE__, __LINE__, 0);
 
 	return DebugFP;
 }
@@ -285,7 +288,7 @@ debug_unlock()
 {
 	priv_state priv;
 
-	priv = set_condor_priv();
+	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
 	(void)fflush( DebugFP );
 
@@ -303,7 +306,7 @@ debug_unlock()
 		DebugFP = NULL;
 	}
 
-	set_priv(priv);
+	_set_priv(priv, __FILE__, __LINE__, 0);
 }
 
 
@@ -316,7 +319,7 @@ preserve_log_file()
 	int			fd;
 	priv_state	priv;
 
-	priv = set_condor_priv();
+	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
 	(void)sprintf( old, "%s.old", DebugFile );
 	fprintf( DebugFP, "Saving log file to \"%s\"\n", old );
@@ -368,7 +371,7 @@ preserve_log_file()
 #endif
 	fprintf (DebugFP, "Now in new log file %s\n", DebugFile);
 
-	set_priv(priv);
+	_set_priv(priv, __FILE__, __LINE__, 0);
 }
 
 /*
@@ -381,7 +384,7 @@ char	*file;
 {
 	priv_state	priv;
 
-	priv = set_condor_priv();
+	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
 	(void)close( 0 );
 	if( DebugFile ) {
@@ -440,7 +443,7 @@ open_debug_file(int flags)
 	int			oumask;
 	priv_state	priv;
 
-	priv = set_condor_priv();
+	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
 	/* The log file MUST be group writeable */
 	oumask = umask( 0 );
@@ -460,7 +463,7 @@ open_debug_file(int flags)
 	}
 	(void) umask( oumask );
 
-	set_priv(priv);
+	_set_priv(priv, __FILE__, __LINE__, 0);
 
 	return fd;
 }
