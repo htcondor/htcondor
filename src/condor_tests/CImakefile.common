@@ -50,6 +50,12 @@ CBUILD($(CC),job_rsc_getdirentries_std,c)
 RUN(job_rsc_getdirentries_std)
 #endif /* HAS_GETDIRENTRIES */
 
+DESC(job_rsc_fread_std,"Does fread() work remotely?")
+CBUILD($(CC),job_rsc_fread_std,c)
+DEPS(job_rsc_fread_std,x_data.in)
+RUN(job_rsc_fread_std)
+TESTCLASS(job_rsc_fread_std,quick)
+
 
 /****************************
  * Checkpointing
