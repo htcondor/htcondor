@@ -2,6 +2,7 @@ Hawkeye v0.1 Release Notes
 
 1. Hawkeye Installation instructions
 
+1.1 By Hand
 Enclosed in this tarball there is a Hawkeye tarball.  To install
 this, you can create a 'hawkeye' user, or run as a normal user.
 Do the following:
@@ -21,6 +22,17 @@ In this directory, you'll find the following created:
  etc
  modules
  hawkeye_config
+
+1.2 Using hawkeye_install
+Run the ./hawkeye_install perl script.  You can specify the target
+directory on the command line; if not, it will prompt you for the
+directory.
+
+hawkeye_install will ask you questions as to which Hawkeye modules to
+configure, and will generate a hawkeye_config file that matches your
+answers.  You should verify that the generated hawkeye_config matches
+your requirements.
+
 
 2. Hawkeye Configuration
 
