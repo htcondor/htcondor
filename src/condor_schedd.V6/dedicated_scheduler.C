@@ -2621,6 +2621,8 @@ DedicatedScheduler::generateRequest( ClassAd* job )
 {
 	char tmp[8192];
 	char buf[8192];
+	ClassAdUnParser unp;
+	string bufString;
 
 		// First, make a job of the job ad, as is, and use that as the
 		// basis for our resource request.
@@ -2647,12 +2649,14 @@ DedicatedScheduler::generateRequest( ClassAd* job )
 		// ATTR_REQUIREMENTS better be there, better be an assignment,
 		// and better have a right argument! 
 	ASSERT( expr );
-	ASSERT( expr->MyType() == LX_ASSIGN );
-	ASSERT( expr->RArg() );
+//	ASSERT( expr->MyType() == LX_ASSIGN );
+//	ASSERT( expr->RArg() );
 
 		// We just want the right side of the assignment, which is
 		// just the value (without the "Requirements = " part)
-	expr->RArg()->PrintToStr( buf );
+//	expr->RArg()->PrintToStr( buf );
+	unp.Unparse( bufString, expr );
+	strcpy( buf, bufString.c_str( ) );
 
 		// Construct the new requirements expression by adding a
 		// clause that says we need to run on a machine that's going
@@ -3142,7 +3146,11 @@ displayRequest( ClassAd* ad, char* str, int debug_level )
 	expr = ad->Lookup( ATTR_REQUIREMENTS );
 	char req[1024];
 	req[0] = '\0';
-	expr->PrintToStr( req );
+//	expr->PrintToStr( req );
+	ClassAdUnParser unp;
+	string bufString;
+	unp.Unparse( bufString, expr );
+	sprintf( req, "%s=%s", ATTR_REQUIREMENTS, bufString.c_str( ) );
 	dprintf( debug_level, "%s%s\n", str, req );
 }
 
