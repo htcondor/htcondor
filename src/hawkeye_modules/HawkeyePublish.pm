@@ -62,7 +62,7 @@ sub StoreValue {
     $self->StoreIndex( $Var ) if ( $self->{AutoIndex} );
 
     # Auto; let's guess
-    if ( $Type == $self->TypeAuto )
+    if ( $Type == HawkeyePublish::TypeAuto )
     {
 	if ( ( $Value =~ /^\d+$/ ) || ( $Value =~ /^\d*\.\d+$/ ) )
 	{
