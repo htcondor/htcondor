@@ -17,9 +17,13 @@ extern "C" {
 #if defined(__STDC__) || defined(__cplusplus)
 	FILE *popen( char *, char * );
 	int  pclose( FILE *__stream );
+	extern void     setbuffer(FILE*, char*, int);
+	extern void     setlinebuf(FILE*);
 #else
 	FILE *popen();
 	int  pclose();
+	extern void     setbuffer();
+	extern void     setlinebuf();
 #endif
 #endif	/* OSF1 */
 
