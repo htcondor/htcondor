@@ -250,11 +250,11 @@ sub usage() {
 
 print STDERR "	Valid options:\n"
 . "   -basedir <name>         Use <name> as remote base directory\n"
-. "                            [default: $(HOME)/Condor_glidein]\n"
+. "                            [default: \$(HOME)/Condor_glidein]\n"
 . "   -archdir <name>         Specify remote dir for daemon executables\n"
 . "                            [default is built from system config info]\n"
 . "   -localdir <name>        Use <name> as remote base for log/execute dirs\n"
-. "                            [default on remote host: $(BASEDIR)/local]\n"
+. "                            [default on remote host: <basedir>/local]\n"
 . "   -contactfile <file>     Specify file from which to read Globus contacts\n"
 . "   -setuponly|-runonly     Setup and exit  |  No setup, just run\n"
 . "   -queue <queue>          Queue to use on Globus scheduler\n"
