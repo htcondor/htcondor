@@ -1,3 +1,10 @@
+12/23/99 V6_1_11-pre1
+	A pre-release of Version 6.1.11.  This state of the trunk was
+	released in two ways: 1) A negotitator for IRIX 6.2 was given
+	to CORE in response to [condor-support #237] and this is what
+	the "6.1.10" glidein tarballs released on 12/23/99 were built
+	with. 
+
 11/24/99 V6_1_10
 	The 6.1.10 release tag, which lives on the trunk.
 	 
