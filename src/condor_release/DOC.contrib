@@ -1,0 +1,10 @@
+The documentation for Condor can be found on the World Wide Web at:
+
+http://www.cs.wisc.edu/condor/manual
+
+At that web site, you will find both an on-line version of manual and
+directions for downloading your own copy in a variety of formats. 
+
+For "contrib" modules, such as the SMP-startd, DagMan, PVM support,
+etc, be sure to look at the Condor Version 6.1 manual, not the 6.0
+manual.  
