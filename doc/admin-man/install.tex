@@ -367,6 +367,13 @@ error message and exit:
    \item \File{\Tilde condor/condor\_config}
 \end{enumerate}
 
+If you specify a file in the \Env{CONDOR\_CONFIG} environment variable
+and there's a problem reading that file, Condor will print an error
+message and exit right away, instead of continuing to search the other
+options.
+However, if no \Env{CONDOR\_CONFIG} environment variable is set,
+Condor will search through the other options.
+
 Next, Condor tries to load the local configuration file(s).
 The only way to specify the local configuration file(s) is in the global configuration
 file, with the \Macro{LOCAL\_CONFIG\_FILE} macro.  If that macro is not
