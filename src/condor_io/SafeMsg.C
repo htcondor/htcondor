@@ -320,7 +320,7 @@ int _condorOutMsg::putn(const char *dta, const int size) {
 		len = lastPacket->putMax(&dta[total], size - total);
 		total += len;
 	}
-	dprintf(D_ALWAYS, "%d bytes added to OutMsg\n", total);
+	dprintf(D_NETWORK, "%d bytes added to OutMsg\n", total);
 	return total;
 }
 
@@ -348,7 +348,7 @@ int _condorOutMsg::sendMsg(const int sock,
 		sent = sendto(sock, tempPkt->dataGram,
 		              tempPkt->length + _condorPacket::HEADER_SIZE,
 				  0, who, sizeof(struct sockaddr));
-		printf("Packet[%d] sent\n", sent);
+		//printf("Packet[%d] sent\n", sent);
 		dprintf(D_NETWORK, "Packet[%d] sent\n", sent);
 		if(sent != tempPkt->length + _condorPacket::HEADER_SIZE) {
 			dprintf(D_NETWORK, "sendMsg:sendto failed.
@@ -366,7 +366,7 @@ int _condorOutMsg::sendMsg(const int sock,
 		msgLen = lastPacket->length;
 		sent = sendto(sock, lastPacket->data, lastPacket->length,
 		              0, who, sizeof(struct sockaddr));
-		printf("Packet[%d] sent\n", sent);
+		//printf("Packet[%d] sent\n", sent);
 		dprintf(D_NETWORK, "Packet[%d] sent\n", sent);
 		if(sent != lastPacket->length) {
 			dprintf(D_NETWORK, "sendMsg:sending small msg failed. errno: %d\n", errno);
@@ -380,7 +380,7 @@ int _condorOutMsg::sendMsg(const int sock,
 		sent = sendto(sock, lastPacket->dataGram,
 		              lastPacket->length + _condorPacket::HEADER_SIZE,
 		              0, who, sizeof(struct sockaddr));
-		printf("Packet[%d] sent\n", sent);
+		//printf("Packet[%d] sent\n", sent);
 		dprintf(D_NETWORK, "Packet[%d] sent\n", sent);
 		if(sent != lastPacket->length + _condorPacket::HEADER_SIZE) {
 			dprintf(D_NETWORK, "sendMsg:sending last packet failed. errno: %d\n", errno);
@@ -511,6 +511,7 @@ _condorInMsg::_condorInMsg(const _condorMsgID mID,// the id of this message
 	headDir = curDir = new _condorDirPage(NULL, 0);
 	if(!curDir) {
 		dprintf(D_ALWAYS, "::InMsg, new DirPage failed. out of mem\n");
+		//Danger Alert! Do we _really_ want to exit here?
 		exit(-1);
 	}
 	destDirNo = seq / _condorDirPage::NO_OF_DIR_ENTRY;
@@ -518,6 +519,7 @@ _condorInMsg::_condorInMsg(const _condorMsgID mID,// the id of this message
 		curDir->nextDir = new _condorDirPage(curDir, curDir->dirNo + 1);
 		if(!curDir->nextDir) {
 			dprintf(D_ALWAYS, "::InMsg, new DirPage failed. out of mem\n");
+			//Danger Alert! Do we _really_ want to exit here?
 			exit(-1);
 		}
 		curDir = curDir->nextDir;
@@ -529,6 +531,7 @@ _condorInMsg::_condorInMsg(const _condorMsgID mID,// the id of this message
 	curDir->dEntry[index].dGram = (char *)malloc(len);
 	if(!curDir->dEntry[index].dGram) {
 		dprintf(D_ALWAYS, "::InMsg, new char[%d] failed. out of mem\n", len);
+		//Again, exiting may not be the right move.
 		exit(-1);
 	}
 	memcpy(curDir->dEntry[index].dGram, data, len);

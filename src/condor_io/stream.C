@@ -723,7 +723,7 @@ Stream::put( int		i)
   getcount =0;
   putcount +=4;
   NETWORK_TRACE("put int " << i << " c(" << putcount << ") ");
-  dprintf(D_ALWAYS, "put(int) required\n");
+  //dprintf(D_ALWAYS, "put(int) required\n");
 
 	switch(_code){
 		case internal:

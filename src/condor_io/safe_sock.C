@@ -208,7 +208,7 @@ int SafeSock::put_bytes(const void *dta, int sz)
 {
 	int bytesPut;
 
-	dprintf(D_ALWAYS, "put_bytes(%d bytes) requested\n", sz);
+	//dprintf(D_ALWAYS, "put_bytes(%d bytes) requested\n", sz);
 	bytesPut = _outMsg.putn((char *)dta, sz);
 	return bytesPut;
 }
