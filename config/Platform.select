@@ -5,9 +5,15 @@
 **
 **********/
 
-#if defined( IS_DUX4 )
+#if defined( IS_DUX4 ) || defined( IS_DUX5 )
 #	define PlatformIncludeFile <ALPHA_OSF1.cf>
-#	undef IS_DUX4
+#       if defined( IS_DUX4 )
+#               define OSVersionIncludeFile <ALPHA_OSF1_V4.cf>
+#               undef IS_DUX4
+#       elif defined( IS_DUX5 )
+#               define OSVersionIncludeFile <ALPHA_OSF1_V5.cf>
+#               undef IS_DUX5
+#       endif
 #endif
 
 #if defined( IS_SOLARIS251 ) || defined( IS_SOLARIS26 ) || defined( IS_SOLARIS27 ) || defined (IS_SOLARIS28 ) || defined( IS_SOLARIS29 )
