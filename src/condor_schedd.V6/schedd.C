@@ -86,7 +86,7 @@
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 extern char *gen_ckpt_name();
 extern void	Init();
-extern "C" int getJobAd(int cluster_id, int proc_id, ClassAd *new_ad);
+extern "C" int getJobAd(int cluster_id, int proc_id, ClassAd *&new_ad);
 
 #include "condor_qmgr.h"
 
@@ -612,9 +612,9 @@ Scheduler::negotiate(int, Stream* s)
 						dprintf( D_ALWAYS, "Can't send JOB_INFO to mgr\n" );
 						return;
 					}
-					ClassAd ad;
-					getJobAd( id.cluster, id.proc, &ad );
-					if( !ad.put(*s) ) {
+					ClassAd *ad = NULL;
+					getJobAd( id.cluster, id.proc, ad );
+					if( !ad->put(*s) ) {
 						dprintf( D_ALWAYS,
 								"Can't send job ad to mgr\n" );
 						return;
@@ -2050,7 +2050,7 @@ Scheduler::Register(DaemonCore* core)
 
 #if !defined(WIN32) /* not sure what the WIN32 equivalents of these will be yet */
         // signal handlers
-        core->Register_Signal( DC_SIGCHLD, "SIGCHLD", (SignalHandler)reaper, "reaper" );
+        core->Register_Signal( DC_SIGCHLD, "SIGCHLD", (SignalHandlercpp)reaper, "reaper", this );
 #endif
 
 }
@@ -2286,14 +2286,14 @@ Scheduler::Agent(char* server, char* capability,
 {
     int     	reply;                              /* reply from the startd */
 
-	ClassAd jobAd;
-	getJobAd( jobId->cluster, jobId->proc, &jobAd );
+	ClassAd *jobAd = NULL;
+	getJobAd( jobId->cluster, jobId->proc, jobAd );
 
 	// add User = "owner@uiddomain" to ad
 	{
 		char temp[512];
 		sprintf (temp, "%s = \"%s\"", ATTR_USER, user);
-		jobAd.Insert (temp);
+		jobAd->Insert (temp);
 	}	
 
 	ReliSock sock(server, 0);
@@ -2311,7 +2311,7 @@ Scheduler::Agent(char* server, char* capability,
 		exit(EXITSTATUS_NOTOK);
 	}
 
-	if( !jobAd.put( sock ) ) {
+	if( !jobAd->put( sock ) ) {
 		dprintf( D_ALWAYS, "Couldn't send job classad to startd.\n" );	
 		exit(EXITSTATUS_NOTOK);
 	}
