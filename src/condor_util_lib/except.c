@@ -24,7 +24,7 @@
 #include "condor_common.h"
 #include "condor_sys.h"
 #include "exit.h"
-#include "debug.h"
+#include "condor_debug.h"
 
 #ifdef LINT
 /* VARARGS */
@@ -41,7 +41,6 @@ int		_EXCEPT_Errno;
 char	*_EXCEPT_File;
 int		(*_EXCEPT_Cleanup)();
 int		SetSyscalls(int);
-void	dprintf ( int flags, ... );
 
 void
 _EXCEPT_(char *fmt, ...)
