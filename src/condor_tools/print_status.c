@@ -51,6 +51,8 @@ typedef struct {
 	int		idle;
 	int    bench_mips;       
 	int    kflops;    
+	int    tot_jobs;  /* jobs submitted */
+	int    run;  /* jobs exported */
 } SERVER_REC;
 
 SERVER_REC	Servers[1024];
@@ -66,6 +68,7 @@ typedef struct {
 	float	swap;
 	char	*arch;
 	char	*op_sys;
+	char    *state;
 } SUBMITTOR_REC;
 
 SUBMITTOR_REC	Submittors[1024];
@@ -158,6 +161,12 @@ MACH_REC	*mach;
 		rec->op_sys = "(?)";
 	}
 
+	if( evaluate_string("State",&rec->state,context,NIL ) < 0 ) {
+		rec->state = "?";
+	} else {
+		rec->state = shorten(rec->state);
+	}
+
 	inc_submit_sum( rec );
 
 }
@@ -170,9 +179,10 @@ MACH_REC	*mach;
 	char	*ptr;
 	char	*format_seconds();
 	CONTEXT	*context;
-	int		swap;
-	int		disk;
-	
+	int	swap;
+	int	disk;
+	int     idle_jobs;
+
 	if( Now - mach->time_stamp > MachineUpdateInterval ) {
 		return;
 	}
@@ -193,6 +203,17 @@ MACH_REC	*mach;
 		*ptr = '\0';
 	}
 	rec->name = mach->name;
+
+
+	if( evaluate_int("Running",&rec->run,context,NIL ) < 0 ) {
+		rec->run = 0;
+	}
+
+	if( evaluate_int("Idle",&idle_jobs,context,NIL ) < 0 ) {
+		idle_jobs = 0;
+	}
+
+	rec->tot_jobs = rec->run + idle_jobs;
 
 	if( evaluate_int("VirtualMemory",&swap,context,NIL ) < 0 ) {
 		rec->swap = -1.0;
@@ -335,7 +356,8 @@ FILE		*fp;
 		fprintf( fp, "%-6.1f ", rec->disk );
 	}
 
-	fprintf( fp, "%-6s ", rec->state );
+	if(!AvailOnly)
+	  fprintf( fp, "%-6s ", rec->state );
 
 	if( rec->load_avg < 0.0 ) {
 		fprintf( fp, "%-6s", "?" );
@@ -359,7 +381,7 @@ FILE		*fp;
 	  if( rec->kflops <= 0 ) {
 	       fprintf( fp, "%-5s ", "?" );
 	  } else {
-	       fprintf( fp, "%-6d ", rec->kflops );
+	       fprintf( fp, "%-6.2f ", (float)rec->kflops/1000 );
 	  }
 	}
 
@@ -395,12 +417,13 @@ FILE	*fp;
 	   fprintf( fp, "%-4s ", "Avail" );
 	fprintf( fp, "%-6s", "Swap" );
 	fprintf( fp, "%-6s ", "Disk" );
-	fprintf( fp, "%-6s ", "State" );
+	if(!AvailOnly)
+	  fprintf( fp, "%-6s ", "State" );
 	fprintf( fp, "%-6s ", "LdAvg" );
 	fprintf( fp, "%8s ", "Idle" );
 	if(AvailOnly) {
 	  fprintf( fp, "%6s ", "MIPS" );
-	  fprintf( fp, "%6s ", "KFLOPS" );
+	  fprintf( fp, "%6s ", "MFLOPS" );
 	  fprintf( fp, "%-7s ", "Arch" );
 	}
 	else
@@ -464,6 +487,11 @@ typedef struct {
 	int		condor;
 	int		user;
 	int		down;
+	int    run;
+	int    tot_jobs;
+	int    sub_machs;   /* machines with a job queue */
+	int    bench_mips;
+	int    kflops;
 } SERV_SUMMARY;
 
 SERV_SUMMARY	*ServSum[50];
@@ -479,6 +507,23 @@ SERVER_REC	*rec;
 
 	s->machines += 1;
 	ServTot.machines += 1;
+
+	s->run += rec->run;
+	ServTot.run += rec->run;
+
+	s->bench_mips += rec->bench_mips;
+	ServTot.bench_mips += rec->bench_mips;
+
+	s->kflops += rec->kflops;
+	ServTot.kflops += rec->kflops;
+
+	s->tot_jobs += rec->tot_jobs;
+	ServTot.tot_jobs+= rec->tot_jobs;
+	
+	if(rec->tot_jobs > 0) {
+	  s->sub_machs++;
+	  ServTot.sub_machs++;
+	}
 
 	if( rec->idle ) {
 		s->avail += 1;
@@ -518,10 +563,39 @@ display_serv_summaries()
 {
 	int		i;
 
+	printTimeAndColl();
+
+	if(AvailOnly)
+	     printf("------------------------------------------------\n");
+	else
+	  printf("-------------------------------------------------------------------------\n");
+
+	if(AvailOnly) {
+	        printf("ARCH/OS           machines  avail Mflops  mips  |\n");
+	        printf("------------------------------------------------|\n");
+	} else {
+	        printf("ARCH/OS           machines | avail   user  condor | Machs/jobs exporting |\n");
+	        printf("-------------------------------------------------------------------------|\n");
+	}
+
 	for( i=0; i<N_ServSum; i++ ) {
 		display_serv_sum( ServSum[i] );
 	}
+
+
+	if(AvailOnly) {
+	        printf("------------------------------------------------|\n");
+	} else {
+	        printf("-------------------------------------------------------------------------|\n");
+	}
+
 	display_serv_sum( &ServTot );
+
+	if(AvailOnly)
+	     printf("------------------------------------------------\n");
+	else
+	  printf("-------------------------------------------------------------------------\n");
+
 }
 
 display_serv_sum( s )
@@ -532,15 +606,15 @@ SERV_SUMMARY		*s;
 	if( s->arch ) {
 		(void)sprintf( tmp, "%s/%s", s->arch, s->op_sys );
 	} else {
-		tmp[0] = '\0';
+		strcpy(tmp, "Total");
 	}
 
 	if( AvailOnly ) {
-		printf( "%-20s %3d machines %3d avail\n",
-						tmp, s->machines, s->avail );
+		printf( "%-20s %3d   %3d   %6.2f  %5d  |\n",
+			tmp, s->machines, s->avail, (float)s->kflops/1000,s->bench_mips );
 	} else {
-		printf( "%-20s %3d machines %3d user %3d condor %3d avail\n",
-						tmp, s->machines, s->user, s->condor, s->avail );
+		printf( "%-20s %3d   | %3d    %3d     %3d   | %3d /%3d     %3d     |\n",
+		  	  tmp, s->machines, s->avail, s->user, s->condor, s->sub_machs, s->tot_jobs, s->run );
 	}
 }
 
@@ -570,6 +644,7 @@ SUBMITTOR_REC	*rec;
 	s->run += rec->run;
 	SubmitTot.jobs += rec->tot;
 	SubmitTot.run += rec->run;
+	
 }
 
 SUBMIT_SUMMARY *
@@ -597,11 +672,18 @@ char	*op_sys;
 display_submit_summaries()
 {
 	int		i;
+	
+	printTimeAndColl();
 
+	printf("------------------------------------------\n");
+	printf("ARCH/OS           machines  jobs  running |\n");
+	printf("------------------------------------------|\n");
 	for( i=0; i<N_SubmitSum; i++ ) {
 		display_submit_sum( SubmitSum[i] );
 	}
+	printf("------------------------------------------|\n");
 	display_submit_sum( &SubmitTot );
+	printf("------------------------------------------\n");
 }
 
 display_submit_sum( s )
@@ -612,9 +694,9 @@ SUBMIT_SUMMARY		*s;
 	if( s->arch ) {
 		(void)sprintf( tmp, "%s/%s", s->arch, s->op_sys );
 	} else {
-		tmp[0] = '\0';
+		strcpy(tmp, "Total");
 	}
 
-	printf( "%-20s %3d machines %3d jobs %3d running\n",
-						tmp, s->machines, s->jobs, s->run );
+	printf( "%-20s %3d    %3d   %3d     |\n",
+		   tmp, s->machines, s->jobs, s->run );
 }
