@@ -259,7 +259,12 @@ Scheduler::timeout()
 
 	clean_shadow_recs();	
 
-	if( (numShadows-SchedUniverseJobsRunning) > MaxJobsRunning ) {
+	/* Call preempt() if we are running more than max jobs; however, do not
+	 * call preempt() here if we are shutting down.  When shutting down, we have
+	 * a timer which is progressively preempting just one job at a time.
+	 */
+	if( ((numShadows-SchedUniverseJobsRunning) > MaxJobsRunning) && 
+					(!ExitWhenDone) ) {
 		dprintf(D_ALWAYS,"Preempting %d jobs due to MAX_JOBS_RUNNING change\n",
 			numShadows-SchedUniverseJobsRunning);
 		preempt( numShadows - MaxJobsRunning );
@@ -642,35 +647,37 @@ abort_job_myself(PROC_ID job_id)
             
                 /* if there is a match printout the info */
 			if (srec->match) {
-				dprintf( D_ALWAYS,
+				dprintf( D_FULLDEBUG,
                          "Found shadow record for job %d.%d, host = %s\n",
                          job_id.cluster, job_id.proc, srec->match->peer);
 			} else {
-				dprintf( D_ALWAYS, "This job does not have a match -- "
+				dprintf( D_FULLDEBUG, "This job does not have a match -- "
 						 "It may be a PVM job.\n");
-                dprintf(D_ALWAYS, "Found shadow record for job %d.%d\n",
+                dprintf(D_FULLDEBUG, "Found shadow record for job %d.%d\n",
                         job_id.cluster, job_id.proc);
             }
         
             if ( daemonCore->Send_Signal( srec->pid, DC_SIGUSR1 ) == FALSE )
                 dprintf(D_ALWAYS,
-                        "Error in sending SIGUSR1 to %d errno = %d\n",
+                        "Error in sending SIGUSR1 to pid %d errno = %d\n",
                         srec->pid, errno);
             
             else 
-                dprintf(D_ALWAYS, "Sent SIGUSR1 to Shadow Pid %d\n",
+                dprintf(D_FULLDEBUG, "Sent SIGUSR1 to Shadow Pid %d\n",
                         srec->pid);
             
         } else {  // Scheduler universe job
             
-            dprintf( D_ALWAYS,
+            dprintf( D_FULLDEBUG,
                      "Found record for scheduler universe job %d.%d\n",
                      job_id.cluster, job_id.proc);
             
 			char owner[_POSIX_PATH_MAX];
 			owner[0] = '\0';
 			GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
-			dprintf(D_FULLDEBUG,"Sending SIGUSR1 to scheduler universe job pid=%d owner=%s\n",srec->pid,owner);
+			dprintf(D_FULLDEBUG,
+				"Sending SIGUSR1 to scheduler universe job"
+				" pid=%d owner=%s\n",srec->pid,owner);
 			init_user_ids(owner);
 			priv_state priv = set_user_priv();
 			daemonCore->Send_Signal( srec->pid, DC_SIGUSR1 );
@@ -1624,6 +1631,11 @@ Scheduler::StartJobs()
     
         /* Todd also added this; watch for conflict! */
     startJobsDelayBit = FALSE;
+
+		/* If we are trying to exit, don't start any new jobs! */
+	if ( ExitWhenDone ) {
+		return;
+	}
 
 	dprintf(D_FULLDEBUG, "-------- Begin starting jobs --------\n");
 	startJobsDelayBit = FALSE;
@@ -2745,6 +2757,14 @@ Scheduler::preempt(int n)
 		preempt_all = false;
 	}
 	shadowsByPid->startIterations();
+
+	/* Now we loop until we are out of shadows or until we've preempted
+	 * `n' shadows.  Note that the behavior of this loop is slightly 
+	 * different if ExitWhenDone is True.  If ExitWhenDone is True, we
+	 * will always preempt `n' new shadows, used for a progressive shutdown.  If
+	 * ExitWhenDone is False, we will preempt n minus the number of shadows we
+	 * have previously told to preempt but are still waiting for them to exit.
+	 */
 	while (shadowsByPid->iterate(rec) == 1 && n > 0) {
 		if( is_alive(rec) ) {
 			int universe;
@@ -2753,6 +2773,10 @@ Scheduler::preempt(int n)
 			if (universe == PVM) {
 				if ( !rec->preempted ) {
 					daemonCore->Send_Signal( rec->pid, DC_SIGTERM );
+				} else {
+					if ( ExitWhenDone ) {
+						n++;
+					}
 				}
 				rec->preempted = TRUE;
 				n--;
@@ -2760,6 +2784,10 @@ Scheduler::preempt(int n)
 			else if ( universe == MPI ) {
                 if ( !rec->preempted ) {
                     daemonCore->Send_Signal( rec->pid, DC_SIGQUIT );
+				} else {
+					if ( ExitWhenDone ) {
+						n++;
+					}
                 }
                 rec->preempted = TRUE;
                 n--;
@@ -2767,13 +2795,21 @@ Scheduler::preempt(int n)
 			else if (rec->match) {	/* scheduler universe job check (?) */
 				if( !rec->preempted ) {
 					send_vacate( rec->match, CKPT_FRGN_JOB );
+				} else {
+					if ( ExitWhenDone ) {
+						n++;
+					}
 				}
 				rec->preempted = TRUE;
 				n--;
-			} else if (preempt_all) {
+			} 
+			else if (preempt_all) {
 				if ( !rec->preempted ) {
 					daemonCore->Send_Signal( rec->pid, DC_SIGTERM );
-					rec->preempted = TRUE;
+				} else {
+					if ( ExitWhenDone ) {
+						n++;
+					}
 				}
 				rec->preempted = TRUE;
 				n--;
@@ -3576,9 +3612,10 @@ Scheduler::Register()
 								  "attempt_access_handler", NULL, WRITE, 
 								  D_FULLDEBUG );
 
-	 // handler for queue management commands
-	 // Note: This could either be a READ or a WRITE command.  Too bad we have 
-	// to lump both together here.
+	// handler for queue management commands
+	// Note: We make QMGMT_CMD a READ command.  The command handler
+	// itself calls daemonCore->Verify() to check for WRITE access if
+	// someone tries to modify the queue.
 	daemonCore->Register_Command( QMGMT_CMD, "QMGMT_CMD",
 								  (CommandHandler)&handle_q, 
 								  "handle_q", NULL, READ, D_FULLDEBUG );
@@ -3687,6 +3724,12 @@ Scheduler::reconfig()
 	 timeout();
 }
 
+// This function is called by a timer when we are shutting down
+void
+Scheduler::preempt_one_job()
+{
+	preempt(1);
+}
 
 // Perform graceful shutdown.
 void
@@ -3694,16 +3737,24 @@ Scheduler::shutdown_graceful()
 {
 	if( numShadows == 0 ) {
 		schedd_exit();
-	} else {
-			/* 
-				There are shadows running, so set a flag that tells the
-				reaper to exit when all the shadows are gone, and start
-				shutting down shadows.
- 			 */
-		MaxJobsRunning = 0;
-		ExitWhenDone = TRUE;
-		preempt( numShadows );
 	}
+
+	if ( ExitWhenDone ) {
+		// we already are attempting to gracefully shutdown
+		return;
+	}
+
+	/* 
+ 		There are shadows running, so set a flag that tells the
+		reaper to exit when all the shadows are gone, and start
+		shutting down shadows.  Set a Timer to shutdown a shadow
+		every JobStartDelay seconds.
+ 	 */
+	MaxJobsRunning = 0;
+	ExitWhenDone = TRUE;
+	daemonCore->Register_Timer(0,JobStartDelay,
+					(TimerHandlercpp)&Scheduler::preempt_one_job,
+					"preempt_one_job()", this );
 }
 
 // Perform fast shutdown.
@@ -3795,6 +3846,11 @@ Scheduler::reschedule_negotiator(int, Stream *)
 {
 	int	  	cmd = RESCHEDULE;
 
+
+		// don't bother the negotiator if we are shutting down
+	if ( ExitWhenDone ) {
+		return;
+	}
 
 	timeout();							// update the central manager now
 
