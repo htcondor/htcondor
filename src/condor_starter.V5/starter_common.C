@@ -76,7 +76,7 @@ initial_bookeeping( int argc, char *argv[] )
 		}
 		if(ptr[0][0] == '-') {
 			switch( ptr[0][1] ) {
-			case 'l':
+			case 'a':
 				ptr++;
 				if( ptr && *ptr ) {
 					logAppend = *ptr;
