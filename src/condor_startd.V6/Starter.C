@@ -35,9 +35,6 @@ Starter::setname( char* name )
 int
 Starter::kill( int signo )
 {
-	dprintf( D_FULLDEBUG, "In Starter::kill() with pid %d, signo %d\n", 
-			 s_pid, signo);
-
 	return this->reallykill( signo, 0 );
 }
 
@@ -45,8 +42,6 @@ Starter::kill( int signo )
 int
 Starter::killpg( int signo )
 {
-	dprintf( D_FULLDEBUG, "In Starter::killpg() with pid %d, signo %d\n", 
-			 s_pid, signo);
 	return this->reallykill( signo, 1 );
 }
 
@@ -55,14 +50,47 @@ int
 Starter::reallykill( int signo, int pg )
 {
 	struct stat st;
-	int 		ret = 0;
+	int 		ret = 0, sig = 0;
 	priv_state	priv;
+	char	signame[1024];
+	signame[0]='\0';
 
 	if ( s_pid <= 0 ) {
 		dprintf( D_ALWAYS, "Invalid pid (%d) in Starter::kill(), returning.\n",  
 				 s_pid );
 		return -1;
 	}
+
+#if !defined(WIN32)
+	switch( signo ) {
+	case DC_SIGSUSPEND:
+		sig = SIGUSR1;
+		sprintf( signame, "SIGSUSPEND" );
+		break;
+	case DC_SIGHARDKILL:
+		sig = SIGINT;
+		sprintf( signame, "SIGHARDKILL" );
+		break;
+	case DC_SIGSOFTKILL:
+		sig = SIGTSTP;
+		sprintf( signame, "SIGSOFTKILL" );
+		break;
+	case DC_SIGPCKPT:
+		sig = SIGUSR2;
+		sprintf( signame, "SIGPCKPT" );
+		break;
+	case DC_SIGCONTINUE:
+		sig = SIGCONT;
+		sprintf( signame, "SIGCONTINUE" );
+		break;
+	case DC_SIGHUP:
+		sig = SIGHUP;
+		sprintf( signame, "SIGHUP" );
+		break;
+	default:
+		EXCEPT( "Unknown signal (%d) in Starter::kill", signo );
+	}
+#endif
 
 	for (errno = 0; (ret = stat(s_name, &st)) < 0; errno = 0) {
 #if !defined(WIN32)
@@ -73,10 +101,20 @@ Starter::reallykill( int signo, int pg )
 				signo, s_name, errno);
 	}
 
+	if( pg ) {
+		dprintf( D_FULLDEBUG, 
+				 "In Starter::killpg() with pid %d, sig %d (%s)\n", 
+				 s_pid, signo, signame );
+	} else {
+		dprintf( D_FULLDEBUG, 
+				 "In Starter::kill() with pid %d, sig %d (%s)\n", 
+				 s_pid, signo, signame );
+	}
+
 	priv = set_root_priv();
 
 #if !defined(WIN32) /* NEED TO PORT TO WIN32 */
-	if (signo != SIGSTOP && signo != SIGCONT) {
+	if (sig != SIGSTOP && sig != SIGCONT) {
 		if( pg ) {
 			ret = ::kill( -(s_pid), SIGCONT );
 		} else {
@@ -84,9 +122,9 @@ Starter::reallykill( int signo, int pg )
 		}
 	}
 	if( pg ) {
-		ret = ::kill( -(s_pid), signo );
+		ret = ::kill( -(s_pid), sig );
 	} else {
-		ret = ::kill( (s_pid), signo );
+		ret = ::kill( (s_pid), sig );
 	}
 #endif
 
@@ -219,8 +257,10 @@ exec_starter(char* starter, char* hostname, int main_sock, int err_sock)
 		 * uid and gid.
 		 */
 		set_root_priv();
-		(void)execl(starter, "condor_starter", hostname, 0);
-		EXCEPT( "execl(%s, condor_starter, %s, 0)", starter, hostname );
+		(void)execl(starter, "condor_starter", hostname, 
+					daemonCore->InfoCommandSinfulString(), 0);
+		EXCEPT( "execl(%s, condor_starter, %s, %s, 0)", starter, 
+				daemonCore->InfoCommandSinfulString(), hostname );
 	}
 	return pid;
 #endif // !defined(WIN32)
