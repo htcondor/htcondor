@@ -1883,6 +1883,8 @@ pseudo_register_syscall_version( const char *version )
 	char buf[4096];
 	char line[256];
 
+	buf[0] = '\0';
+	line[0] = '\0';
 	strcat( buf, "Since the time that you ran condor_compile to link your job with\n" );
 	strcat( buf, "the Condor libraries, your local Condor administrator has\n" );
 	strcat( buf, "installed a different version of the condor_shadow program.\n" );
