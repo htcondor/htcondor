@@ -221,6 +221,7 @@ const char ATTR_TRANSFER_TYPE			 [] = "TransferType";
 const char ATTR_TRANSFER_FILES			 [] = "TransferFiles";
 const char ATTR_TRANSFER_KEY			 [] = "TransferKey";
 const char ATTR_TRANSFER_INPUT_FILES	 [] = "TransferInput";
+const char ATTR_TRANSFER_INTERMEDIATE_FILES [] = "TransferIntermediate";
 const char ATTR_TRANSFER_OUTPUT_FILES	 [] = "TransferOutput";
 const char ATTR_TRANSFER_SOCKET			 [] = "TransferSocket";
 const char ATTR_SERVER_TIME				 [] = "ServerTime";
