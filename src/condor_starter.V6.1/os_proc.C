@@ -25,6 +25,7 @@
 #include "condor_classad.h"
 #include "condor_config.h"
 #include "condor_debug.h"
+#include "env.h"
 #include "user_proc.h"
 #include "os_proc.h"
 #include "starter.h"
@@ -90,6 +91,10 @@ OsProc::StartJob()
 		return 0;
 	}
 
+		// // // // // // 
+		// Arguments
+		// // // // // // 
+
 	// if name is condor_exec, we transferred it, so make certain
 	// it is executable.
 	if ( strcmp(CONDOR_EXEC,JobName) == 0 ) {
@@ -113,7 +118,7 @@ OsProc::StartJob()
 
 	if (JobAd->LookupString(ATTR_JOB_ARGUMENTS, tmp) != 1) {
 		dprintf(D_ALWAYS, "%s not found in JobAd.  "
-				"Aborting DC_StartCondorJob.\n", ATTR_JOB_ARGUMENTS);
+				"Aborting OsProc::StartJob.\n", ATTR_JOB_ARGUMENTS);
 		return 0;
 	}
 
@@ -148,12 +153,30 @@ OsProc::StartJob()
 	strcat( Args, " " );
 	strcat( Args, tmp );
 
-	char Env[ATTRLIST_MAX_EXPRESSION];
-	if (JobAd->LookupString(ATTR_JOB_ENVIRONMENT, Env) != 1) {
-		dprintf(D_ALWAYS, "%s not found in JobAd.  "
-				"Aborting DC_StartCondorJob.\n", ATTR_JOB_ENVIRONMENT);
+		// // // // // // 
+		// Environment 
+		// // // // // // 
+
+	char* env_str = NULL;
+	if( JobAd->LookupString(ATTR_JOB_ENVIRONMENT, &env_str) != 1 ) {
+		dprintf( D_ALWAYS, "%s not found in JobAd.  "
+				 "Aborting OsProc::StartJob.\n", ATTR_JOB_ENVIRONMENT );  
 		return 0;
 	}
+		// Now, instantiate an Env object so we can manipulate the
+		// environment as needed.
+	Env job_env;
+	if( ! job_env.Merge(env_str) ) {
+		dprintf( D_ALWAYS, "Invalid %s found in JobAd.  "
+				 "Aborting OsProc::StartJob.\n", ATTR_JOB_ENVIRONMENT );  
+		return 0;
+	}
+		// Next, we can free the string we got back from
+		// LookupString() so we don't leak any memory.
+	free( env_str );
+
+		// Now, add some env vars the user job might want to see:
+	job_env.Put( "CONDOR_SCRATCH_DIR", Starter->GetWorkingDir() );
 
 	char Cwd[_POSIX_PATH_MAX];
 	if (JobAd->LookupString(ATTR_JOB_IWD, Cwd) != 1) {
@@ -252,10 +275,13 @@ OsProc::StartJob()
 				 &(Args[skip]) );
 	}
 
+		// Grap the full environment back out of the Env object 
+	env_str = job_env.getDelimitedString();
+
 	set_priv ( priv );
 
 	JobPid = daemonCore->Create_Process(JobName, Args, PRIV_USER_FINAL, 1,
-				   FALSE, Env, Cwd, TRUE, NULL, fds, nice_inc );
+				   FALSE, env_str, Cwd, TRUE, NULL, fds, nice_inc );
 
 	// now close the descriptors in fds array.  our child has inherited
 	// them already, so we should close them so we do not leak descriptors.
@@ -264,6 +290,9 @@ OsProc::StartJob()
 			close(fds[i]);
 		}
 	}
+
+		// Free up memory we allocated so we don't leak.
+	delete [] env_str;
 
 	if ( JobPid == FALSE ) {
 		JobPid = -1;
