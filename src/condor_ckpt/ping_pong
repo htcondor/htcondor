@@ -1,0 +1,20 @@
+#! /bin/csh
+
+set echo
+set verbose
+
+if( $#argv != 2 ) then
+	echo Usage: ping_pong prog_name host_name
+	exit 1 
+endif
+
+set cmd_name = $argv[1]
+set host_name = $argv[2]
+
+echo cmd_name = $cmd_name
+echo host_name = $host_name
+
+rcp $cmd_name ${host_name}:
+rsh $host_name $cmd_name
+rcp ${host_name}:Ckpt.13.13 .
+$cmd_name __restart__
