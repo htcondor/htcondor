@@ -31,7 +31,6 @@
 #include "get_daemon_addr.h"
 
 #include "sched.h"
-#include "clib.h"
 #include "exit.h"
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"

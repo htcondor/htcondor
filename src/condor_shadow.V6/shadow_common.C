@@ -38,7 +38,6 @@
 #include "fileno.h"
 #include "files.h"
 #include "exit.h"
-#include "clib.h"
 #include "shadow.h"
 
 #if !defined( WCOREDUMP )

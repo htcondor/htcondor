@@ -22,11 +22,9 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-#include "condor_sys.h"
 #include "condor_debug.h"
 #include "fileno.h"
 #include "condor_io.h"
-#include "clib.h"
 #include "shadow.h"
 
 FILE	*fdopen();

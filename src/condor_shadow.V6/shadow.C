@@ -54,7 +54,6 @@
 #	include "condor_fdset.h"
 #endif
 
-#include "clib.h"
 #include "shadow.h"
 
 #if !defined( WCOREDUMP )

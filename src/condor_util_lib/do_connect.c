@@ -25,7 +25,6 @@
 #include "internet.h"
 #include "except.h"
 #include "debug.h"
-#include "clib.h"
 #include "dgram_io_handle.h"
 
 

@@ -229,7 +229,6 @@ char* get_condor_username()
 #endif
 
 #include "debug.h"
-#include "condor_sys.h"
 
 
 #ifndef FALSE

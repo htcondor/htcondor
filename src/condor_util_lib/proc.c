@@ -40,7 +40,6 @@
 #include <time.h>
 #endif
 
-#include "clib.h"
 
 int		DontDisplayTime;
 

@@ -29,10 +29,8 @@
 ************************************************************************/
 
 #include "condor_common.h"
-#include "condor_sys.h"
 #include "debug.h"
 #include "except.h"
-#include "clib.h"
 #include "condor_string.h"
 
 
