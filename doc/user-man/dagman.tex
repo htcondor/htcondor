@@ -259,7 +259,7 @@ The fourth type of item in the DAG input file provides a
 way (optional) to retry failed nodes.
 The syntax for retry is
 
-\Arg{RETRY} \Arg{JobName} \Arg{NumberOfRetries} \oArg{UNLESS-EXIT <value>}
+\Arg{RETRY} \Arg{JobName} \Arg{NumberOfRetries} \oArg{UNLESS-EXIT \textless{value}\textgreater}
 
 where the \Arg{JobName} is the same as the name given in
 a Job Entry line, and \Arg{NumberOfRetries} is an integer,
@@ -285,6 +285,8 @@ the PRE script.
 Failure of the node is then determined by the return value of
 the program, the existence and return value of a POST script.
 
+\index{DAGMan!VARS}
+\index{VARS}
 The fifth type of item in the DAG input file provides a
 method of defining a macro to be placed into the submit description
 file.
@@ -294,20 +296,10 @@ following format.
 \Arg{VARS} \Arg{JobName} \Arg{macroname="string"\Dots}
 
 The definition of the macro is available to use within the
-submit description file, as the submission for the node's
-executable is of the form
-\begin{verbatim}
-condor_submit SubmitDescriptionFileName -a "+macroname=\"string\""
-\end{verbatim}
-Job submission with the "+" attribute not only adds the attribute
-to the ClassAd of the job,
-but also allows dereferencing of the attribute through the macro
-usage in the submit description file.
-% the string must be enclosed in double quotes. To add a double quote inside
-% the string, you can escape it with \. To add the '\' itself, you can use \\.
-
-There may be more than one macro defined for each \Arg{JobName}.
-The space character delimits the list of macros.
+submit description file.  The \verb@macroname@ can be variable
+length and consist of alphanumerics (e.g. a..Z and 0..9) and
+underscores.  The space character delimits the list of macros when
+there is more than one macro defined for each \Arg{JobName}.
 
 Correct syntax requires that the \verb@string@ must be
 enclosed in double quotes.
