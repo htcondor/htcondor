@@ -66,7 +66,7 @@ writeEvent method.
 The UserLog and ReadUserLog classes are defined in user_log.c++.h.
 ULogEventNumber, ULogEventOutcome, ULogEvent, and the event subclasses
 are defined in condor_event.h.  You need to include user_log.c++.h in
-any code which uses the user log API and link with libapi.a.
+any code which uses the user log API and link with libcondorapi.a.
 
 Also, please #include <sys/time.h> before bringing in the user log API
 header file. This brings in definitions needed by the user log header file.
