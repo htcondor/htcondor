@@ -1,6 +1,6 @@
+#include "condor_common.h"
 #include <math.h>
 #include <float.h>
-#include "condor_common.h"
 #include "condor_state.h"
 #include "condor_debug.h"
 #include "condor_config.h"
