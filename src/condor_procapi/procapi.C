@@ -2258,7 +2258,7 @@ DWORD ProcAPI::GetSystemPerfData ( LPTSTR pValue )
 #endif // WIN32
 
 int
-ProcAPI::getPidFamilyByLogin(const char *searchLogin, pid_t *pidFamily)
+ProcAPI::getPidFamilyByLogin( const char *searchLogin, pid_t *pidFamily )
 {
 #ifndef WIN32
 
@@ -2274,8 +2274,17 @@ ProcAPI::getPidFamilyByLogin(const char *searchLogin, pid_t *pidFamily)
 	piPTR cur = allProcInfos;
 	int fam_index = 0;
 
+#ifndef HPUX        // everyone except HPUX needs a pidlist built.
+	buildPidList();
+#endif
+
+	buildProcInfoList();  // HPUX has its own version of this, too.
+
 	while ( cur != NULL ) {
 		if ( cur->owner == searchUid ) {
+			dprintf(D_PROCFAMILY,
+				  "ProcAPI: found pid %d owned by %s (uid=%d)\n",
+				  cur->pid, searchLogin, searchUid);
 			pidFamily[fam_index] = cur->pid;
 			fam_index++;
 		}
