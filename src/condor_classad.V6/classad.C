@@ -124,6 +124,24 @@ InsertAttr( const char* name, int value, NumberFactor f )
 
 
 bool ClassAd::
+DeepInsertAttr( const char *scopeExpr, const char* name, int value, 
+	NumberFactor f )
+{
+	ClassAd *ad = _GetDeepScope( scopeExpr );
+	return( ad != NULL && ad->InsertAttr( name, value, f ) );
+}
+
+
+bool ClassAd::
+DeepInsertAttr( ExprTree *scopeExpr, const char* name, int value, 
+	NumberFactor f )
+{
+	ClassAd *ad = _GetDeepScope( scopeExpr );
+	return( ad != NULL && ad->InsertAttr( name, value, f ) );
+}
+
+
+bool ClassAd::
 InsertAttr( const char* name, double value, NumberFactor f )
 {
 	Literal *lit = new Literal( );
@@ -137,6 +155,24 @@ InsertAttr( const char* name, double value, NumberFactor f )
 	
 
 bool ClassAd::
+DeepInsertAttr( const char *scopeExpr, const char* name, double value, 
+	NumberFactor f )
+{
+	ClassAd *ad = _GetDeepScope( scopeExpr );
+	return( ad != NULL && ad->InsertAttr( name, value, f ) );
+}
+
+
+bool ClassAd::
+DeepInsertAttr( ExprTree *scopeExpr, const char* name, double value, 
+	NumberFactor f )
+{
+	ClassAd *ad = _GetDeepScope( scopeExpr );
+	return( ad != NULL && ad->InsertAttr( name, value, f ) );
+}
+
+
+bool ClassAd::
 InsertAttr( const char *name, bool value )
 {
 	Literal *lit = new Literal( );
@@ -146,6 +182,22 @@ InsertAttr( const char *name, bool value )
 		return false;
 	}
 	return true;
+}
+
+
+bool ClassAd::
+DeepInsertAttr( const char *scopeExpr, const char *name, bool value )
+{
+	ClassAd *ad = _GetDeepScope( scopeExpr );
+	return( ad != NULL && ad->InsertAttr( name, value ) );
+}
+
+
+bool ClassAd::
+DeepInsertAttr( ExprTree *scopeExpr, const char *name, bool value )
+{
+	ClassAd *ad = _GetDeepScope( scopeExpr );
+	return( ad != NULL && ad->InsertAttr( name, value ) );
 }
 
 
@@ -162,8 +214,27 @@ InsertAttr( const char *name, const char *value, bool dup )
 	return true;
 }
 
+
 bool ClassAd::
-Insert (const char *name, ExprTree *tree)
+DeepInsertAttr( const char *scopeExpr, const char *name, const char *value, 
+	bool dup )
+{
+	ClassAd *ad = _GetDeepScope( scopeExpr );
+	return( ad != NULL && ad->InsertAttr( name, value, dup ) );
+}
+
+
+bool ClassAd::
+DeepInsertAttr( ExprTree *scopeExpr, const char *name, const char *value, 
+	bool dup )
+{
+	ClassAd *ad = _GetDeepScope( scopeExpr );
+	return( ad != NULL && ad->InsertAttr( name, value, dup ) );
+}
+
+
+bool ClassAd::
+Insert( const char *name, ExprTree *tree )
 {
 	int			index;
 	char		*attr = NULL;
@@ -218,6 +289,22 @@ Insert (const char *name, ExprTree *tree)
 
 
 bool ClassAd::
+DeepInsert( const char *scopeExpr, const char *name, ExprTree *tree )
+{
+	ClassAd *ad = _GetDeepScope( scopeExpr );
+	return( ad != NULL && ad->Insert( name, tree ) );
+}
+
+
+bool ClassAd::
+DeepInsert( ExprTree *scopeExpr, const char *name, ExprTree *tree )
+{
+	ClassAd *ad = _GetDeepScope( scopeExpr );
+	return( ad != NULL && ad->Insert( name, tree ) );
+}
+
+
+bool ClassAd::
 Insert( const char *name, const char *expr, int len )
 {
 	static Source	src;
@@ -228,10 +315,26 @@ Insert( const char *name, const char *expr, int len )
 }
 
 
-ExprTree *ClassAd::
-Lookup (const char *name)
+bool ClassAd::
+DeepInsert( const char *scopeExpr, const char *name, const char *expr, int len )
 {
-	int			index;
+	ClassAd *ad = _GetDeepScope( scopeExpr );
+	return( ad != NULL && ad->Insert( name, expr, len ) );
+}
+
+
+bool ClassAd::
+DeepInsert( ExprTree *scopeExpr, const char *name, const char *expr, int len )
+{
+	ClassAd *ad = _GetDeepScope( scopeExpr );
+	return( ad != NULL && ad->Insert( name, expr, len ) );
+}
+
+
+ExprTree *ClassAd::
+Lookup( const char *name )
+{
+	int	index;
 
 	// sanity check
 	if (!name) return NULL;
@@ -347,7 +450,7 @@ LookupInScope( const char* name, ExprTree*& expr, EvalState &state )
 
 
 bool ClassAd::
-Delete (const char *name)
+Delete( const char *name )
 {
     int         index;
 
@@ -389,8 +492,24 @@ Delete (const char *name)
 }
 
 
+bool ClassAd::
+DeepDelete( const char *scopeExpr, const char *name )
+{
+	ClassAd *ad = _GetDeepScope( scopeExpr );
+	return( ad != NULL && ad->Delete( name ) );
+}
+
+
+bool ClassAd::
+DeepDelete( ExprTree *scopeExpr, const char *name )
+{
+	ClassAd *ad = _GetDeepScope( scopeExpr );
+	return( ad != NULL && ad->Delete( name ) );
+}
+
+
 ExprTree *ClassAd::
-Remove (const char *name)
+Remove( const char *name )
 {
     int         index;
 
@@ -427,6 +546,23 @@ Remove (const char *name)
 
 	return NULL;
 }
+
+
+ExprTree *ClassAd::
+DeepRemove( const char *scopeExpr, const char *name )
+{
+	ClassAd *ad = _GetDeepScope( scopeExpr );
+	return( ad ? ad->Remove( name ) : NULL );
+}
+
+
+ExprTree *ClassAd::
+DeepRemove( ExprTree *scopeExpr, const char *name )
+{
+	ClassAd *ad = _GetDeepScope( scopeExpr );
+	return( ad ? ad->Remove( name ) : NULL );
+}
+
 
 void ClassAd::
 _SetParentScope( ClassAd* )
@@ -505,7 +641,7 @@ ToSink( Sink &s )
 
 
 void ClassAd::
-Update( ClassAd& ad )
+Update( const ClassAd& ad )
 {
 	const char *attrName;
 
@@ -521,6 +657,84 @@ Update( ClassAd& ad )
 			Insert(attrName,ad.attrList[index].expression->Copy());
 		}
 	}
+}
+
+
+bool ClassAd::
+Modify( ClassAd& mod )
+{
+	ClassAd		*ctx;
+	ExprTree	*expr;
+	Value		val;
+
+		// Step 0:  Determine Context
+	if( ( expr = mod.Lookup( ATTR_CONTEXT ) ) != NULL ) {
+		if( ( ctx = _GetDeepScope( expr ) ) == NULL ) {
+			return( false );
+		}
+	} else {
+		ctx = this;
+	}
+
+		// Step 1:  Process Replace attribute
+	if( ( expr = mod.Lookup( ATTR_REPLACE ) ) != NULL ) {
+		ClassAd	*ad;
+		if( !expr->Evaluate( val ) || !val.IsClassAdValue( ad ) ) {
+			return( false );
+		}
+		ctx->Clear( );
+		ctx->Update( *ad );
+		return( true );
+	}
+
+		// Step 2:  Process Updates attribute
+	if( ( expr = mod.Lookup( ATTR_UPDATES ) ) != NULL ) {
+		ClassAd *ad;
+		if( !expr->Evaluate( val ) || !val.IsClassAdValue( ad ) ) {
+			return( false );
+		}
+		ctx->Update( *ad );
+	}
+
+		// Step 3:  Process Deletes attribute
+	if( ( expr = mod.Lookup( ATTR_DELETES ) ) != NULL ) {
+		ExprList 			*list;
+		ExprListIterator	itor;
+		char				*attrName;
+
+		if( !expr->Evaluate( val ) || !val.IsListValue( list ) ) {
+			return( false );
+		}
+		itor.Initialize( list );
+		while( ( expr = itor.NextExpr( ) ) ) {
+			if( !expr->Evaluate( val ) || !val.IsStringValue( attrName ) ) {
+				return( false );
+			}
+			ctx->Delete( attrName );
+		}
+	}
+
+		// Step 4:  Process DeepModifications attribute
+	if( ( expr = mod.Lookup( ATTR_DEEP_MODS ) ) != NULL ) {
+		ExprList			*list;
+		ExprListIterator	itor;
+		ClassAd				*ad;
+
+		if( !expr->Evaluate( val ) || !val.IsListValue( list ) ) {
+			return( false );
+		}
+		itor.Initialize( list );
+		while( ( expr = itor.NextExpr( ) ) ) {
+			if( !expr->Evaluate( val ) 		|| 
+				!val.IsClassAdValue( ad ) 	|| 
+				!Modify( *ad ) ) {
+				return( false );
+			}
+		}
+	}
+
+
+	return( true );
 }
 
 
@@ -645,10 +859,34 @@ FromSource (Source &s)
 	return ad;
 }
 
+
 ClassAd *ClassAd::
-AugmentFromSource (Source &s, ClassAd &ad)
+_GetDeepScope( const char *scopeExpr )
 {
-    return( s.ParseClassAd(ad) ? &ad : 0 );
+	Source 		src;
+	ExprTree 	*tree;
+
+	if( !scopeExpr ) return( NULL );
+	src.SetSource( scopeExpr );
+	if( !src.ParseExpression( tree ) || !tree ) {
+		return( NULL );
+	}
+	return( _GetDeepScope( tree ) );
+}
+
+
+ClassAd *ClassAd::
+_GetDeepScope( ExprTree *tree )
+{
+	ClassAd	*scope;
+	Value	val;
+
+	if( !tree ) return( NULL );
+	tree->SetParentScope( this );
+	if( !tree->Evaluate( val ) || !val.IsClassAdValue( scope ) ) {
+		return( NULL );
+	}
+	return( scope );
 }
 
 

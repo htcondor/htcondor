@@ -75,7 +75,8 @@ class ClassAd : public ExprTree
 			@param ad the class-ad that represents the update.
 			@return false if the ClassAd could not be successfully updated.
 		*/
-		void Update( ClassAd& ad );	
+		void Update( const ClassAd& ad );	
+		bool Modify( ClassAd& ad );
 
 		// Accessors/modifiers
 		/** Clears the ClassAd of all attributes.
@@ -91,6 +92,10 @@ class ClassAd : public ExprTree
 			@see ExprTree::setParentScope
 		*/
 		bool Insert( const char *attrName, ExprTree *expr );
+		bool DeepInsert( const char *scopeExpr, const char *attrName, 
+				ExprTree *expr );
+		bool DeepInsert( ExprTree *scopeExpr, const char *attrName, 
+				ExprTree *expr );
 
 		/** Inserts an attribute into the ClassAd.  The contents of the buffer 
 				is parsed into an expression and then inserted into the 
@@ -106,6 +111,10 @@ class ClassAd : public ExprTree
 			@see ExprTree::setParentScope
 		*/
 		bool Insert( const char *attrName, const char *buf, int len=-1 );
+		bool DeepInsert( const char *scopeExpr, const char *attrName, 
+				const char *buf, int len=-1 );
+		bool DeepInsert( ExprTree *scopeExpr, const char *attrName, 
+				const char *buf, int len=-1 );
 
 		/** Inserts an attribute into the ClassAd.  The integer value is
 				converted into a Literal expression, and then inserted into
@@ -117,7 +126,11 @@ class ClassAd : public ExprTree
 			@see NumberFactor
 		*/
 		bool InsertAttr( const char *attrName,int value, 
-			NumberFactor f=NO_FACTOR );
+				NumberFactor f=NO_FACTOR );
+		bool DeepInsertAttr( const char *scopeExpr, const char *attrName,
+				int value, NumberFactor f=NO_FACTOR );
+		bool DeepInsertAttr( ExprTree *scopeExpr, const char *attrName,
+				int value, NumberFactor f=NO_FACTOR );
 
 		/** Inserts an attribute into the ClassAd.  The real value is
 				converted into a Literal expression, and then inserted into
@@ -129,7 +142,11 @@ class ClassAd : public ExprTree
 			@see NumberFactor
 		*/
 		bool InsertAttr( const char *attrName,double value, 
-			NumberFactor f=NO_FACTOR);
+				NumberFactor f=NO_FACTOR);
+		bool DeepInsertAttr( const char *scopeExpr, const char *attrName,
+				double value, NumberFactor f=NO_FACTOR);
+		bool DeepInsertAttr( ExprTree *scopeExpr, const char *attrName,
+				double value, NumberFactor f=NO_FACTOR);
 
 		/** Inserts an attribute into the ClassAd.  The boolean value is
 				converted into a Literal expression, and then inserted into
@@ -139,6 +156,10 @@ class ClassAd : public ExprTree
 			@param value The boolean value of the attribute.
 		*/
 		bool InsertAttr( const char *attrName, bool value );
+		bool DeepInsertAttr( const char *scopeExpr, const char *attrName, 
+				bool value );
+		bool DeepInsertAttr( ExprTree *scopeExpr, const char *attrName, 
+				bool value );
 
 		/** Inserts an attribute into the ClassAd.  The string value is
 				converted into a Literal expression, and then inserted into
@@ -152,6 +173,10 @@ class ClassAd : public ExprTree
 		*/
 		bool InsertAttr( const char *attrName, const char *value, 
 				bool dup=true );
+		bool DeepInsertAttr( const char *scopeExpr, const char *attrName, 
+				const char *value, bool dup=true );
+		bool DeepInsertAttr( ExprTree *scopeExpr, const char *attrName, 
+				const char *value, bool dup=true );
 
 		/** Finds the expression bound to an attribute name.  The lookup only
 				involves this ClassAd; scoping information is ignored.
@@ -182,6 +207,8 @@ class ClassAd : public ExprTree
 				successfully removed, false otherwise.
 		*/
 		bool Delete( const char *attrName );
+		bool DeepDelete( const char *scopeExpr, const char *attrName );
+		bool DeepDelete( ExprTree *scopeExpr, const char *attrName );
 	
 		/** Similar to Delete, but the expression is returned rather than 
 		  		deleted from the classad.
@@ -190,6 +217,8 @@ class ClassAd : public ExprTree
 				the attribute could not be found.
 		*/
 		ExprTree *Remove( const char* attrName );
+		ExprTree *DeepRemove( const char *scopeExpr, const char* attrName );
+		ExprTree *DeepRemove( ExprTree *scopeExpr, const char* attrName );
 
 		// evaluation methods
 		/** Evaluates expression bound to an attribute.
@@ -325,6 +354,9 @@ class ClassAd : public ExprTree
 		friend 	class ExprTree;
 		friend 	class EvalState;
 		friend 	class ClassAdIterator;
+
+		ClassAd *_GetDeepScope( const char* );
+		ClassAd *_GetDeepScope( ExprTree * );
 
 		virtual void _SetParentScope( ClassAd* p );
 		virtual bool _Evaluate( EvalState& , Value& );
