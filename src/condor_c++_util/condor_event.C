@@ -359,22 +359,25 @@ readEvent (FILE *file)
 
 	if ( rmContact ) {
 		delete [] rmContact;
+		rmContact = NULL;
 	} 
 	if ( jmContact ) {
 		delete [] jmContact;
+		jmContact = NULL;
 	}
 	int retval = fscanf (file, "Job submitted to Globus\n");
     if (retval != 0)
     {
 		return 0;
     }
-	retval = fscanf( file, "    RM-Contact: %.8191s\n", s );
+	s[0] = '\0';
+	retval = fscanf( file, "    RM-Contact: %8191s\n", s );
 	if ( retval != 1 )
 	{
 		return 0;
 	}
 	rmContact = strnewp(s);
-	retval = fscanf( file, "    JM-Contact: %.8191s\n", s );
+	retval = fscanf( file, "    JM-Contact: %8191s\n", s );
 	if ( retval != 1 )
 	{
 		return 0;
