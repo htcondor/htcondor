@@ -82,4 +82,11 @@ instead.
 
 \Note f90 (FORTRAN 90) is only supported on Solaris and Digital Unix. 
 
+\ExitStatus
+
+\Condor{compile} is a script that executes specified compilers and/or linkers.
+If an error is encountered before calling these other programs,
+\Condor{compile} will exit with a status value of 1 (one).
+Otherwise, the exit status will be that given by the executed program.
+
 \end{ManPage}

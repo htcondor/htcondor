@@ -10,6 +10,40 @@ bug fixes and support for new platforms.
 New features will be added and tested in the 6.3 development series. 
 The details of each version are described below.
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:New-6-2-1}Version 6.2.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\noindent New Features:
+\begin{itemize}
+
+\item Condor administrators can now specify
+\MacroNI{CONDOR\_SUPPORT\_EMAIL} in their config file.
+This address is included at the bottom of all email Condor sends out.
+Previously, the \MacroNI{CONDOR\_ADMIN} setting was used for this, but
+at many sites, the address where the Condor daemons should send email
+about administrative problems is not the same address that users
+should use for technical support.
+If your site has different addresses for these two things, you can now
+specify them properly.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+\begin{itemize}
+\item The \MacroNI{FILESYSTEM\_DOMAIN} and \MacroNI{UID\_DOMAIN} settings were
+not being automatically appened to the requriements of a Vanilla-universe job,
+possibly causing it to run on machines where it will not sucessfully run. This
+has been fixed.
+\item The getdirentries call was not being trapped, causing a few applications
+to fail running inside of Condor.
+\end{itemize}
+
+\noindent Known Bugs:
+\begin{itemize}
+\item None.
+\end{itemize}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:New-6-2-1}Version 6.2.1}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -30,6 +64,12 @@ writing.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item When using heterogeneous specifications of an executable between
+NT and UNIX, Condor could get confused if the vanilla job had run on
+an NT machine, vacated without being completed, and then restarted as
+a standard universe job on UNIX. The job would be labeled as running in
+the queue, but not perform any work. This has been fixed.
 
 \item The entries in the \AdAttr{environment} 
 option in a submit file now correctly override the variables brought in

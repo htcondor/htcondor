@@ -410,6 +410,15 @@ system.
   of that daemon's log file and a brief message that describes what
   signal or exit status that daemon exited with.
   
+\item[\Macro{CONDOR\_SUPPORT\_EMAIL}] \label{param:CondorSupportEmail}
+  The email address to be included at the bottom of all email Condor
+  sends out under the label ``Email address of the local Condor
+  administrator:''.  
+  This is the address where Condor users at your site should send
+  their questions about Condor and get technical support.
+  If this setting is not defined, Condor will use the address
+  specified in \Macro{CONDOR\_ADMIN} (described above).
+
 \item[\Macro{MAIL}] \label{param:Mail} The full path to a mail
   sending program that uses \Opt{-s} to
   specify a subject for the message.  On all platforms,

@@ -127,4 +127,11 @@ script or explicitly call perl from the command line:
 $ perl [path-to-condor]/bin/condor_run "shell-cmd"
 \end{verbatim}
 
+\ExitStatus
+
+\Condor{run} exits with a status value of 0 (zero) upon complete success.
+The exit status of \Condor{run} will be non-zero upon failure.
+The exit status in the case of a single error due to a system call
+will be the error number (\Code{errno}) of the failed call.
+
 \end{ManPage}
