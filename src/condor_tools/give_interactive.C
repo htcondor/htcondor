@@ -537,7 +537,7 @@ main(int argc, char *argv[])
 		if (!offer) {
 			fprintf(stderr,
 				"\nERROR: %d machines not available\n",NumMachinesWanted);
-			exit(1);
+			exit(i+1);
 		}
 
 		// If we want the entire machine, and not just a VM...
