@@ -120,6 +120,7 @@ extern NameTable SigNames;
 extern char *ThisHost;
 extern char *InitiatingHost;
 extern XDR	*SyscallStream;			// XDR stream to shadow for remote system calls
+extern int EventSigs[];
 int UserProc::proc_index = 1;
 
 #ifndef MATCH
@@ -680,13 +681,13 @@ UserProc::handle_termination( int exit_st )
 			"Process %d killed by signal %d\n", pid, WTERMSIG(exit_status)
 		);
 		switch( WTERMSIG(exit_status) ) {
-		  case SIGUSR2:			// synchronous ckpt exit - execute again
-			dprintf( D_ALWAYS, "Process eixted for checkpoint\n" );
+		  case SIGUSR2:			// ckpt and vacate exit 
+			dprintf( D_ALWAYS, "Process exited for checkpoint\n" );
 			state = CHECKPOINTING;
 			commit_cpu_time();
 			break;
 		  case SIGQUIT:			// exited for a checkpoint
-			dprintf( D_ALWAYS, "Process eixted for checkpoint\n" );
+			dprintf( D_ALWAYS, "Process exited for checkpoint\n" );
 			state = CHECKPOINTING;
 			/*
 			  For bytestream checkpointing:  the only way the process exits
@@ -697,13 +698,13 @@ UserProc::handle_termination( int exit_st )
 			break;
 		  case SIGUSR1:
 		  case SIGKILL:				// exited by request - no ckpt
-			dprintf( D_ALWAYS, "Process eixted by request\n" );
+			dprintf( D_ALWAYS, "Process exited by request\n" );
 			state = NON_RUNNABLE;
 			break;
 		  default:					// exited abnormally due to signal
-			dprintf( D_ALWAYS, "Process eixted abnormally\n" );
+			dprintf( D_ALWAYS, "Process exited abnormally\n" );
 			state = ABNORMAL_EXIT;
-			commit_cpu_time();
+			commit_cpu_time();		// should this be here on ABNORMAL_EXIT ???? -Todd
 		}
 			
 	}
@@ -742,6 +743,9 @@ UserProc::handle_termination( int exit_st )
 void
 UserProc::send_sig( int sig )
 {
+    sigset_t    sigmask, oldmask;
+    int         i;
+ 
 	if( !pid ) {
 		dprintf( D_FULLDEBUG,
 		"UserProc::send_signal() called, but user job pid NULL\n" );
@@ -752,8 +756,20 @@ UserProc::send_sig( int sig )
  	set_root_euid(); 
 #endif
 
-	if ( job_class == VANILLA )
+	if ( job_class == VANILLA ) {
+		// Here we call killkids() to forward the signal to all of our
+		// decendents, since a VANILLA job in condor can fork.  But first,
+		// we block all of our async events, since killkids is relatively
+		// slow, does popen and runs /bin/ps, etc.  Thus it is not re-enterant.
+		// -Todd Tannenbaum, 5/9/95
+    	// sigemptyset( &sigmask );
+    	// for( i=0; EventSigs[i]; i++ ) {
+       // 		sigaddset( &sigmask, EventSigs[i] );
+    	// }
+    	// (void)sigprocmask( SIG_SETMASK, &sigmask, &oldmask );
 		killkids(pid,sig);
+    	// (void)sigprocmask( SIG_SETMASK, &oldmask, 0 );
+	}
 
 	if( sig != SIGCONT ) {
 		if( kill(pid,SIGCONT) < 0 ) {
@@ -1032,6 +1048,12 @@ void
 UserProc::request_ckpt()
 {
 	send_sig( SIGTSTP );
+}
+
+void
+UserProc::request_periodic_ckpt()
+{
+	send_sig( SIGUSR2 );
 }
 
 void

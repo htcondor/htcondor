@@ -119,7 +119,7 @@ typedef enum event_type {
 	ALARM = SIGALRM,			/* request user job to ckpt */
 	DIE = SIGINT,				/* terminate user job, don't return ckpt */
 	CHILD_EXIT = SIGCHLD,		/* user process terminated */
-	CKPT_and_VACATE = SIGUSR2,	/* create new ckpt, then return it */
+	PERIODIC_CKPT = SIGUSR2,	/* checkpoint user process, but continue running */
 	CKPT_EXIT,					/* user process exited for checkpoint */
 	SUCCESS,					/* generic successful result */
 	FAILURE,					/* generic failure result */
@@ -153,7 +153,7 @@ static NAME_VALUE	EventNameArray[] = {
 	{ ALARM,			"ALARM"				},
 	{ DIE,				"DIE"				},
 	{ CHILD_EXIT,		"CHILD_EXIT"		},
-	{ CKPT_and_VACATE,	"CKPT_and_VACATE"	},
+	{ PERIODIC_CKPT,	"PERIODIC_CKPT"		},
 	{ CKPT_EXIT,		"CKPT_EXIT"			},
 	{ SUCCESS,			"SUCCESS"			},
 	{ FAILURE,			"FAILURE"			},
@@ -235,24 +235,26 @@ NameTable StateFuncNames( StateFuncArray );
   defined below up to date!
 */
 
-void susp_all();			// Suspend self and user processes
-void req_die();				// Request all procs to exit - don't transfer ckpts
-void req_vacate();			// Request all procs to exit - do transfer ckpts
-void spawn_all();			// Spawn all user processes
-void stop_all();			// Stop all user processes
-void handle_vacate_req();	// Deal with Ckpt_and_Vacate in Supervise state
-void susp_ckpt_timer();		// Suspend ckpt timer, but save remaining time
-void reaper();				// Gather status of exited child process
-void set_quit();			// Set quit flag, will exit after updating ckpts
-void susp_self();			// Suspend ourself, wait for CONTINUE
-void cleanup();				// Forcibly kill procs and delete their files
-void unset_xfer();			// Don't transfer checkpoints
-void dispose_one();			// Send final status to shadow and delete process
-void update_cpu();			// Send updated CPU usage info to shadow
+int susp_all();			// Suspend self and user processes
+int periodic_ckpt_all();	// Send a periodic checkpoint request to user prcoesses
+int test_connection();		// Test our connection back to a shadow
+int req_die();				// Request all procs to exit - don't transfer ckpts
+int req_vacate();			// Request all procs to exit - do transfer ckpts
+int spawn_all();			// Spawn all user processes
+int stop_all();			// Stop all user processes
+int handle_vacate_req();	// Deal with Ckpt_and_Vacate in Supervise state
+int susp_ckpt_timer();		// Suspend ckpt timer, but save remaining time
+int reaper();				// Gather status of exited child process
+int set_quit();			// Set quit flag, will exit after updating ckpts
+int susp_self();			// Suspend ourself, wait for CONTINUE
+int cleanup();				// Forcibly kill procs and delete their files
+int unset_xfer();			// Don't transfer checkpoints
+int dispose_one();			// Send final status to shadow and delete process
+int update_cpu();			// Send updated CPU usage info to shadow
 #if defined(LINK_PVM)
-void pvm_reaper();			// Reap via PVM message
+int pvm_reaper();			// Reap via PVM message
 #endif
-void make_runnable();		// Make ckpt'ed process runnable again
+int make_runnable();		// Make ckpt'ed process runnable again
 
 /*
   Name table for transition routines.  This allows the finite state
@@ -262,6 +264,8 @@ void make_runnable();		// Make ckpt'ed process runnable again
 #if defined(INSERT_TABLES)
 NAME_VALUE	TransFuncArray[] = {
 	{ (unsigned long)susp_all,			"susp_all"			},
+	{ (unsigned long)periodic_ckpt_all,			"periodic_ckpt_all"			},
+	{ (unsigned long)test_connection,			"test_connection"			},
 	{ (unsigned long)req_die,				"req_die"			},
 	{ (unsigned long)req_vacate,			"req_vacate"		},
 	{ (unsigned long)spawn_all,			"spawn_all"			},
@@ -297,7 +301,7 @@ int	EventSigs[] = {
 	ALARM,
 	DIE,
 	CHILD_EXIT,
-	CKPT_and_VACATE,
+	PERIODIC_CKPT,
 	GET_NEW_PROC,
 	0
 };
@@ -359,7 +363,6 @@ Transition TransTab[] = {
 { GET_EXEC,			VACATE,				TERMINATE,		req_vacate			},
 { GET_EXEC,			FAILURE,			SUPERVISE,		dispose_one			},
 { GET_EXEC,			SUCCESS,			SUPERVISE,		spawn_all			},
-{ GET_EXEC,			CKPT_and_VACATE,	TERMINATE,		req_vacate			},
 
 { TERMINATE,		DO_WAIT,			TERMINATE_WAIT,	0					},
 #if 0
@@ -374,17 +377,18 @@ Transition TransTab[] = {
 { TERMINATE_WAIT,	ALARM,				END,			cleanup				},
 { TERMINATE_WAIT,	CHILD_EXIT,			TERMINATE,		reaper				},
 
+#if defined(NO_CKPT)
+{ SUPERVISE,		VACATE,				TERMINATE,		req_die				},
+#else
 { SUPERVISE,		VACATE,				TERMINATE,		req_vacate			},
+#endif
 { SUPERVISE,		DIE,				TERMINATE,		req_die				},
 { SUPERVISE,		CHILD_EXIT,			PROC_EXIT,		reaper				},
 { SUPERVISE,		GET_NEW_PROC,		GET_PROC,		susp_ckpt_timer		},
 { SUPERVISE,		SUSPEND,			0,				susp_all			},
+{ SUPERVISE,		PERIODIC_CKPT,		0,				periodic_ckpt_all	},
+{ SUPERVISE,		ALARM,				0,				test_connection	},
 
-#if defined(NO_CKPT)
-	{ SUPERVISE,		CKPT_and_VACATE,	TERMINATE,		req_die			},
-#else
-	{ SUPERVISE,		CKPT_and_VACATE,	TERMINATE,		req_vacate		},
-#endif
 
 #if defined(LINK_PVM)
 	{ SUPERVISE,		PVM_MSG,			READ_PVM_MSG,	0				},
@@ -408,14 +412,18 @@ Transition TransTab[] = {
 { UPDATE_ALL,		DO_WAIT,			UPDATE_WAIT,	0					},
 
 { UPDATE_WAIT,		CHILD_EXIT,			UPDATE_ONE,		reaper				},
+#ifdef 0
 { UPDATE_WAIT,		CKPT_and_VACATE,	0,				set_quit			},
+#endif
 { UPDATE_WAIT,		SUSPEND,			0,				susp_self			},
 { UPDATE_WAIT,		VACATE,				TERMINATE,		req_vacate			},
 { UPDATE_WAIT,		DIE,				TERMINATE,		req_die				},
 
 { UPDATE_ONE,		EXITED,				UPDATE_ALL,		dispose_one			},
 { UPDATE_ONE,		FAILURE,			SEND_CKPT_ALL,	0					},
+#ifdef 0
 { UPDATE_ONE,		CKPT_and_VACATE,	0,				set_quit			},
+#endif
 { UPDATE_ONE,		SUSPEND,			0,				susp_self			},
 { UPDATE_ONE,		VACATE,				TERMINATE,		req_vacate			},
 { UPDATE_ONE,		DIE,				TERMINATE,		req_die				},

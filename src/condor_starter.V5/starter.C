@@ -302,12 +302,13 @@ init()
 /*
   Suspend ourself and wait for a SIGCONT signal.
 */
-void
+int
 susp_self()
 {
 	dprintf( D_ALWAYS, "Suspending self\n" );
 	kill( getpid(), SIGSTOP );
 	dprintf( D_ALWAYS, "Resuming self\n" );
+	return(0);
 }
 
 /*
@@ -560,7 +561,7 @@ get_exec()
   We've been asked to vacate the machine, but we're allowed to checkpoint
   any running jobs or complete any checkpoints we have in progress first.
 */
-void
+int
 handle_vacate_req()
 {
 	// dprintf( D_ALWAYS, "Entering function handle_vacate_req()\n" );
@@ -568,6 +569,7 @@ handle_vacate_req()
 	MyTimer->clear();		// clear ckpt timer
 	stop_all();				// stop any running user procs
 	QuitNow = TRUE;			// set flag so other routines know we have to leave
+	return(0);
 }
 
 
@@ -576,13 +578,18 @@ handle_vacate_req()
   update any more checkpoint files.  We may however transfer any
   existing checkpoint files back to the submitting machine.
 */
-void
+int
 req_vacate()
 {
+
+	MyAlarm.cancel();	// Cancel supervise test_connection() alarm
+
 		// In V5 ckpt so fast, we can do it here
 	req_ckpt_exit_all();
 
 	MyAlarm.set( CkptLimit );
+
+	return(0);
 }
 
 /*
@@ -590,12 +597,15 @@ req_vacate()
   update any more checkpoint files.  Also, we may not transfer any
   existing checkpoint files back to the submitting machine.
 */
-void
+int
 req_die()
 {
+	MyAlarm.cancel();	// Cancel supervise test_connection() alarm
 	req_exit_all();
 	MyAlarm.set( VacateLimit );
 	XferCkpts = FALSE;
+
+	return(0);
 }
 
 
@@ -777,22 +787,31 @@ send_final_status( UserProc *proc )
   Wait for some user process to exit, and update it's object in the
   list with the exit status information.
 */
-void
+int
 reaper()
 {
 	int			st;
 	pid_t		pid;
 	UserProc	*proc;
+	int continue_fsa = -2;
 
-		// Wait for a child process to exit
-	while( (pid=waitpid(ANY_PID,&st,0)) == -1 && errno == EINTR )
-		;
+	MyAlarm.cancel();	// Cancel supervise test_connection() alarm
 
-		// Should never happen...
+	for (;;) {
+
+	pid = waitpid(ANY_PID,&st,WNOHANG);
+
 	if( pid == -1 ) {
-		EXCEPT( "wait()" );
+		if ( errno == EINTR ) {
+			continue;
+		} else {
+			break;
+		}
 	}
 
+	if( pid == 0 ) {
+		break;
+	}
 	
 		// Find the corresponding UserProc object
 	dprintf( D_FULLDEBUG,
@@ -806,44 +825,46 @@ reaper()
 		}
 	}
 
-		// If we didn't find the process's object, bail out now
-	if( proc == NULL ) {
-		EXCEPT(
-			"wait() returned pid %d, but no such process marked as EXECUTING",
-			pid
-		);
+		// If we found the process's object, update it now
+	if( proc != NULL ) {
+		dprintf( D_FULLDEBUG, "Found object for process %d\n", pid );	
+		continue_fsa = 0;
+		proc->handle_termination( st );
 	}
 
-		// Ok, update the object
-	dprintf( D_FULLDEBUG, "Found object for process %d\n", pid );
-	proc->handle_termination( st );
+	}	/* end of infinite for loop */
+
+	return(continue_fsa);
 }
 
 
 /*
   Temporarily suspend the timer which controls periodic checkpointing.
 */
-void
+int
 susp_ckpt_timer()
 {
+	MyAlarm.cancel();	// Cancel supervise test_connection() alarm
 	MyTimer->suspend();
+	return(0);
 }
 
 /*
   Set a global flags which says we may not transfer any checkpoints back
   to the initiating machine.
 */
-void
+int
 unset_xfer()
 {
 	// dprintf( D_ALWAYS, "Setting XferCkpts to FALSE\n" );
 	XferCkpts = FALSE;
+	return(0);
 }
 
 /*
   Suspend all user processes and ourself - wait for a SIGCONT.
 */
-void
+int
 susp_all()
 {
 	MyTimer->suspend();
@@ -853,24 +874,27 @@ susp_all()
 
 	resume_all();
 	MyTimer->resume();
+
+	return(0);
 }
 
 /*
   Set a global flag which says we must leave after completing and
   transferring the current batch of checkpoints.
 */
-void
+int
 set_quit()
 {
 	// dprintf( D_ALWAYS, "Entering function set_quit()\n" );
 
 	QuitNow = TRUE;
+	return(0);
 }
 
 /*
   Suspend every user process.
 */
-void
+int
 stop_all()
 {
 	UserProc	*proc;
@@ -892,6 +916,7 @@ stop_all()
 			dprintf( D_ALWAYS, "\tRequested user job to suspend\n" );
 		}
 	}
+	return(0);
 }
 
 /*
@@ -922,9 +947,27 @@ resume_all()
 }
 
 /*
+  Request all standard jobs perform a periodic checkpoint 
+*/
+int
+periodic_ckpt_all()
+{
+	UserProc	*proc;
+
+	UProcList.Rewind();
+	while( proc = UProcList.Next() ) {
+		if( proc->ckpt_enabled() && proc->get_class() != PVMD ) {
+			proc->request_periodic_ckpt();
+			dprintf( D_ALWAYS, "\tRequested user job to do a periodic checkpoint\n" );
+		}
+	}
+	return(0);
+}
+
+/*
   Start up every runnable user process which isn't already running.
 */
-void
+int
 spawn_all()
 {
 	UserProc	*proc;
@@ -943,7 +986,27 @@ spawn_all()
 			proc->resume();
 		}
 	}
+	return(0);
 }
+
+/*
+  Test our connection back to the shadow.  If we cannot communicate with the
+  shadow for whatever reason, close up shop.  We perform this test by simply sending
+  a "null" message to the shadow's log socket (which the shadow will discard), i.e.
+  the equivelent of a shadow "ping"
+*/
+int
+test_connection()
+{
+	if ( write(CLIENT_LOG,"\0\n",2) == -1 ) {
+		EXCEPT("Lost our connection to a shadow!");
+		// of course, the irony is that this message won't make it 
+		// unless we are doing local logging....!
+	}
+		
+	return 0;
+}
+	
 
 /*
   Start up the periodic checkpoint timer, then wait for some asynchronous
@@ -970,9 +1033,6 @@ supervise_all()
 			break;
 		}
 	}
-	if( periodic_checkpointing ) {
-		dprintf( D_FULLDEBUG, "Periodic checkpointing NOT implemented yet\n" );
-	}
 
 #if defined(LINK_PVM)
 	if( Running_PVMD ) {
@@ -990,6 +1050,10 @@ supervise_all()
 #endif
 
 	for(;;) {
+		// Set an ALARM so we regularly test_connection every 5 minutes
+		MyAlarm.set(300);
+
+		// Wait for an async event
 		pause();
 	}
 
@@ -1033,7 +1097,7 @@ proc_exit()
 /*
   Dispose of one user process from our list.
 */
-void
+int
 dispose_one()
 {
 	UserProc	*proc;
@@ -1047,12 +1111,13 @@ dispose_one()
 		// Delete proc from our list
 	proc->delete_files();
 	UProcList.DeleteCurrent();
+	return(0);
 }
 
 /*
   Dispose of one user process from our list.
 */
-void
+int
 make_runnable()
 {
 	UserProc	*proc;
@@ -1064,6 +1129,7 @@ make_runnable()
 	proc->make_runnable();
 	proc->execute();
 
+	return(0);
 }
 
 /*
@@ -1173,20 +1239,26 @@ update_one()
 
 /*
   User process has just been checkpointed.  Update the shadow with its
-  accumulated CPU usage so that it the user process calls getrusage(),
+  accumulated CPU usage so that if the user process calls getrusage(),
   then usage from previous checkpointed runs will be included.
 */
-void
+int
 update_cpu()
 {
 	UserProc	*proc;
 	void		*rusage;
 
+/* looks to me like this is not getting called anymore, and CONDOR_send_rusage
+   is now used by the new condor 5.6 periodic checkpointing mechanism */
+#ifdef 0
+ 
 		// Grab a pointer to proc which just exited
 	proc = UProcList.Current();
 
 	rusage = proc->accumulated_rusage();
 	(void)REMOTE_syscall( CONDOR_send_rusage, rusage );
+#endif
+	return(0);
 }
 
 
@@ -1262,7 +1334,7 @@ get_job_info()
   RPC stream to the shadow in an inconsitent state and we could hang
   if we tried using that.
 */
-void
+int
 cleanup()
 {
 	UserProc	*proc;
@@ -1283,6 +1355,7 @@ cleanup()
 			UProcList.DeleteCurrent();
 		}
 	}
+	return(0);
 }
 
 /*

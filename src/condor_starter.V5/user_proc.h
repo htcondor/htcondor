@@ -117,6 +117,7 @@ public:
 	virtual void suspend();
 	virtual void resume();
 	virtual void request_ckpt();
+	virtual void request_periodic_ckpt();
 	virtual void request_exit();
 	virtual void kill_forcibly();
 	virtual void handle_termination( int exit_stat );

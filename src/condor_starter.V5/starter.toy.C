@@ -113,16 +113,18 @@ kill_all()
 	dprintf( D_ALWAYS, "Entering function kill_all()\n" );
 }
 
-void
+int
 set_quit()
 {
 	dprintf( D_ALWAYS, "Entering function set_quit()\n" );
+	return(0);
 }
 
-void
+int
 stop_all()
 {
 	dprintf( D_ALWAYS, "Entering function stop_all()\n" );
+	return(0);
 }
 
 void
@@ -149,10 +151,11 @@ reap_update()
 	dprintf( D_ALWAYS, "Entering function reap_update()\n" );
 }
 
-void
+int
 unset_xfer()
 {
 	dprintf( D_ALWAYS, "Entering function unset_xfer()\n" );
+	return(0);
 }
 
 void
@@ -161,10 +164,11 @@ incr_new_procs()
 	dprintf( D_ALWAYS, "Entering function incr_new_procs()\n" );
 }
 
-void
+int
 handle_vacate_req()
 {
 	dprintf( D_ALWAYS, "Entering function handle_vacate_req()\n" );
+	return(0);
 }
 
 void
@@ -173,18 +177,20 @@ handle_sync_ckpt()
 	dprintf( D_ALWAYS, "Entering function handle_sync_ckpt()\n" );
 }
 
-void
+int
 spawn_all()
 {
 	dprintf( D_ALWAYS, "Entering function spawn_all()\n" );
+	return(0);
 }
 
-void
+int
 susp_self()
 {
 	dprintf( D_ALWAYS, "Suspending self\n" );
 	kill( getpid(), SIGSTOP );
 	dprintf( D_ALWAYS, "Resuming self\n" );
+	return(0);
 }
 
 int
@@ -230,7 +236,7 @@ update_ckpt()
 	return SUCCESS;
 }
 
-void
+int
 susp_all()
 {
 	dprintf( D_ALWAYS, "Entering function susp_user_proc()\n" );
@@ -242,6 +248,7 @@ susp_all()
 
 	MyTimer->resume();
 	dprintf( D_ALWAYS, "\tRequested user job to restart\n" );
+	return(0);
 }
 
 void
