@@ -50,6 +50,7 @@ BOOLEAN	TroubleReported;
 BOOLEAN All = FALSE;
 int nToProcess = 0;
 int mode;
+int error_occurred = 0;
 List<PROC_ID> ToProcess;
 Daemon* schedd = NULL;
 
@@ -288,7 +289,7 @@ main( int argc, char *argv[] )
 	print_alloc_stats();
 #endif
 
-	return 0;
+	return error_occurred;
 }
 
 
@@ -308,6 +309,7 @@ notify_schedd()
 		if( !TroubleReported ) {
 			fprintf( stderr, "%s: can't connect to %s\n", MyName, 
 					 schedd->idStr() );
+			error_occurred = 1;
 			TroubleReported = 1;
 		}
 		return;
@@ -335,6 +337,7 @@ notify_schedd()
 		if( !sock.code(*job_id) ) {
 			fprintf( stderr,
 				"Error: can't send a proc_id to condor scheduler\n" );
+			error_occurred = 1;
 			return;
 		}
 	}
@@ -360,6 +363,7 @@ void ProcArg(const char* arg)
 		if(c <= 0)
 		{
 			fprintf(stderr, "Invalid cluster # from %s.\n", arg);
+			error_occurred = 1;
 			return;
 		}
 		if(*tmp == '\0')
@@ -378,6 +382,7 @@ void ProcArg(const char* arg)
 			{
 				fprintf( stderr, "Couldn't find/%s all jobs in cluster %d.\n",
 					 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release", c);
+				error_occurred = 1;
 			} else {
 				fprintf(stderr, "Cluster %d %s.\n", c,
 					(mode==REMOVED)?"has been marked for removal":
@@ -392,6 +397,7 @@ void ProcArg(const char* arg)
 			if(p < 0)
 			{
 				fprintf( stderr, "Invalid proc # from %s.\n", arg);
+				error_occurred = 1;
 				return;
 			}
 			if(*tmp == '\0')
@@ -402,11 +408,13 @@ void ProcArg(const char* arg)
 					if( GetAttributeInt(c,p,ATTR_JOB_STATUS,&status) < 0 ) {
 						fprintf(stderr,"Couldn't access job queue for %d.%d\n", 
 							c, p );
+						error_occurred = 1;
 						return;
 					}
 					if( status != HELD ) {
 						fprintf(stderr,"Job %d.%d not held to be released\n",
 							c, p);
+						error_occurred = 1;
 						return;
 					}
 				}
@@ -416,6 +424,7 @@ void ProcArg(const char* arg)
 					fprintf( stderr, "Couldn't find/%s job %d.%d.\n",
 					 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release", 
 					 c, p);
+					error_occurred = 1;
 				} else {
 					fprintf(stdout, "Job %d.%d %s.\n", c, p,
 						(mode==REMOVED)?"has been marked for removal":
@@ -450,6 +459,7 @@ void ProcArg(const char* arg)
 		{
 			fprintf( stderr, "Couldn't find/%s all of user %s's job(s).\n",
 				 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release",arg );
+			error_occurred = 1;
 		} else {
 			fprintf(stdout, "User %s's job(s) %s.\n", arg,
 				(mode==REMOVED)?"have been marked for removal":
@@ -476,6 +486,7 @@ handle_constraint( const char *constraint )
 		fprintf( stderr, "Couldn't find/%s all jobs matching constraint %s\n",
 				 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release",
 				 constraint);
+		error_occurred = 1;
 	} else {
 		fprintf( stdout, "Jobs matching constraint %s %s.\n", constraint,
 				(mode==REMOVED)?"have been marked for removal":
@@ -503,6 +514,7 @@ handle_all()
 		fprintf( stdout, "Could not %s all jobs.\n",
 				 (mode==REMOVED)?"remove":
 				 (mode==HELD)?"hold":"release" );
+		error_occurred = 1;
 	} else {
 		fprintf( stdout, "All jobs %s.\n",
 				 (mode==REMOVED)?"marked for removal":
