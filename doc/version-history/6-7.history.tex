@@ -41,17 +41,30 @@ comma-delimited string.
 
 \begin{itemize}
 
-\item Starting in version 6.7.1, \Condor{off}, \Condor{restart}, and
-  \Condor{vacate} stopped handling the \Opt{-pool} command-line option
+% Karen's rewrite of Derek's prose
+\item Condor versions 6.7.1 through 6.7.4 exhibit a bug in
+  which the commands \Condor{off}, \Condor{restart}, and
+  \Condor{vacate} did not handle the \Opt{-pool} command-line option
   correctly.
-  Normally, these tools will query the \Condor{collector} of the pool
-  specified with the \Opt{-pool} argument to locate the other daemons
-  listed on the command-line.
-  Due to a bug, these tools would not only query the central manager
-  of the remote pool, they would also send their command to the
-  central manager machine.
-  This bug has now been fixed, and these tools will no longer send
-  their commands to the machine specified with \Opt{-pool}.
+  The bug caused these commands to correctly query the central manager
+  of the remote pool,
+  and to incorrectly send the command to the central manager machine.
+  This bug has now been fixed, and these tools no longer send
+  the command to the central manager machine.
+
+
+% Derek's prose
+%\item Starting in version 6.7.1, \Condor{off}, \Condor{restart}, and
+%  \Condor{vacate} stopped handling the \Opt{-pool} command-line option
+%  correctly.
+%  Normally, these tools will query the \Condor{collector} of the pool
+%  specified with the \Opt{-pool} argument to locate the other daemons
+%  listed on the command-line.
+%  Due to a bug, these tools would not only query the central manager
+%  of the remote pool, they would also send their command to the
+%  central manager machine.
+%  This bug has now been fixed, and these tools will no longer send
+%  their commands to the machine specified with \Opt{-pool}.
 
 \end{itemize}
 
