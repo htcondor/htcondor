@@ -220,7 +220,7 @@ foreach $module ( @modules ) {
     mkdir( "$skel/$release", 0777 );
 
     # You always want the same version of LICENSE.TXT in everything. 
-    `cp -r $realskel/LICENSE.TXT $skel/$release`;
+    `cp -f $realskel/LICENSE.TXT $skel/$release`;
 
     # Now, you always want a README, DOC, and INSTALL
 	foreach $file ( "README", "INSTALL", "DOC" ) {
@@ -229,17 +229,21 @@ foreach $module ( @modules ) {
 
     # Now, handle any special case files for a given module
     foreach $file ( @{$skelfiles{$module}} ) {
-	if( $filesource{$file} ) {
-	    $src = $filesource{$file};
-	} else {
-	    $src = "$realskel/$file";
-	}
-	if( $filedest{$file} ) {
-	    $dest = $filedest{$file};
-	} else {
-	    $dest = $file;
-	}
-	`cp -r $src $skel/$release/$dest`;
+		if( $filesource{$file} ) {
+	   	 $src = $filesource{$file};
+		} else {
+	   	 $src = "$realskel/$file";
+		}
+		if( $filedest{$file} ) {
+	   	 $dest = $filedest{$file};
+		} else {
+	   	 $dest = $file;
+		}
+		if( $opsys =~ /.*linux.*/ ) {
+			`cp -rL $src $skel/$release/$dest`;
+		} else {
+			`cp -r $src $skel/$release/$dest`;
+		}	
     }
     `rm -rf $skel/$release/CVS`;
     `rm -rf $skel/$release/*/CVS`;
