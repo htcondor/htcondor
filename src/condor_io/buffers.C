@@ -58,7 +58,9 @@ Buf::Buf(
 
 Buf::~Buf()
 {
-	if (_dta) delete [] _dta;
+	if (_dta) {
+        delete [] _dta;
+    }
 	num_deleted++;
 }
 
@@ -74,7 +76,9 @@ int Buf::write(
 	int nwo;
 	unsigned int start_time, curr_time;
 
-	if (sz < 0 || sz > num_untouched()) sz = num_untouched();
+	if (sz < 0 || sz > num_untouched()) {
+        sz = num_untouched();
+    }
 
     nw = condor_write(sockd, &_dta[num_touched()], sz , timeout);
 	if (nw < 0){
