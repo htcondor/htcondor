@@ -25,6 +25,7 @@
 #include "condor_distribution.h"
 #define _CONDOR_ENVIRON_MAIN
 #include "condor_environ.h"
+#include "condor_debug.h"
 
 // Initialize our logic
 int
