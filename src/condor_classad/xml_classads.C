@@ -342,8 +342,10 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 		//   * Attributes not in a ClassAd
 		//   * Attribute values not in an attribute
 		if (!in_classad && tag_name != tag_ClassAd) {
+			delete token;
 			continue;
 		} else if (tag_name > tag_Attribute && !in_attribute) {
+			delete token;
 			continue;
 		}
 
@@ -401,6 +403,7 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 		default:
 			break;
 		}
+		delete token;
 	}
 
 	return classad;
@@ -554,6 +557,7 @@ ClassAdXMLUnparser::Unparse(ClassAd *classad, MyString &buffer)
 		type_expr_string += '\"';
 		Parse(type_expr_string.Value(), type_expr);
 		Unparse(type_expr, buffer);
+		delete type_expr;
 	}
     mytarget = classad->GetTargetTypeName();
 	if (*mytype != 0) {
@@ -564,6 +568,7 @@ ClassAdXMLUnparser::Unparse(ClassAd *classad, MyString &buffer)
 		target_expr_string += '\"';
 		Parse(target_expr_string.Value(), target_expr);
 		Unparse(target_expr, buffer);
+		delete target_expr;
 	}
 
 	// Then loop through all the other expressions in the ClassAd
