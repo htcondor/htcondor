@@ -197,7 +197,7 @@ sub check_auth()
     $db_auth_hosts = `$DBCHECK`;
 	#print "$DBCHECK\n";
     $cc_auth_hosts = `$CCCHECK`;
-    unless( ($cc_auth_hosts =~ /$hostname/ )||(db_auth_hosts =~ /$hostname/)) {
+    unless( ($cc_auth_hosts =~ /$hostname/ )||($db_auth_hosts =~ /$hostname/)) {
 	print "Error: current host ($hostname) is not authorized ";
 	print "to manage nodes\n\n";
 	print "Please use one of the following authorized hosts for "; 
@@ -276,7 +276,7 @@ sub start_condor
 	    }
 	}
 	print LOG timestamp() . " $user    (returned $host)\n";
-	print timestamp() . " $user    (returned $host)\n";
+	#print timestamp() . " $user    (returned $host)\n";
 	system( "$CONDOR_ON $host" );
 	system( "$CONFIG_ON -name $host > /dev/null" );
 	system( "$CONDOR_RECONFIG $host > /dev/null" );
