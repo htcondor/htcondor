@@ -444,7 +444,6 @@ CollectorDaemonStatsList::CollectorDaemonStatsList( bool enable,
 	enabled = enable;
 	historySize = history_size;
 	if ( enabled ) {
-		dprintf( D_ALWAYS, "Creating stats hash table\n" );
 		hashTable = new StatsHashTable( STATS_TABLE_SIZE, &hashFunction );
 	} else {
 		hashTable = NULL;
@@ -455,7 +454,6 @@ CollectorDaemonStatsList::CollectorDaemonStatsList( bool enable,
 CollectorDaemonStatsList::~CollectorDaemonStatsList( void )
 {
 	if ( hashTable ) {
-		dprintf( D_ALWAYS, "Destroying stats hash table\n" );
 		delete hashTable;
 		hashTable = NULL;
 	}
