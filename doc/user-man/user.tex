@@ -327,7 +327,7 @@ every time your job is checkpointed and/or migrated to a different machine.
 When your program completes, Condor will tell you
 (by e-mail, if preferred) the exit status of your program and various
 statistics about its performances, including time used and I/O performed.
-If you are using a logfile for the job(which is recommended) the exit
+If you are using a log file for the job(which is recommended) the exit
 status will be recorded in the log file.
 You can remove a job from the
 queue prematurely with \Condor{rm}. 
@@ -750,118 +750,108 @@ to your site's installation and policies.
 
 
 %%%%%%%%%%%% 
-\subsection{Heterogeneous Submit: Submitting to a Different Architecture} 
+\subsection{Heterogeneous Submit: Execution on Differing Architectures} 
 %%%%%%%%%%%%
 
 \index{job!heterogeneous submit}
 \index{running a job!on a different architecture}
 \index{heterogeneous pool!submitting a job to}
-\subsubsection{Cross Submitting}
-There are times when you would like to submit jobs across machine
-architectures. For instance, you have an Intel machine running
-LINUX. This is the machine where you do all your
-work and where all your files are stored. But, perhaps the majority of
-machines in your pool are Sun SPARC machines running Solaris. You
-want to submit jobs directly from your LINUX box that run on the
-SPARC machines.
+If executables are available for the different platforms of machines
+in the Condor pool,
+Condor can be allowed the choice of a larger number of machines
+when allocating a machine for a job.
+Modifications to the submit description file allow this choice
+of platforms.
 
-This is easily accomplished.  You will need to create your
-executable for the same type of machine where your job will run.
-Condor does not convert machine instructions from one architecture
-to another. 
-Given the correct executable, use the
-\AdAttr{requirements} command in
-the submit description file to
-specify the target architecture.
-Without this, \Condor{submit}
-\index{Condor commands!condor\_submit}
-will use its default architecture, 
-the type of machine you are submitting from.
-An example of the \AdAttr{requirements} command is
+A simplified example is a cross submission.
+An executable is available for one platform, but
+the submission is done from a different platform.
+Given the correct executable, the \AdAttr{requirements} command in
+the submit description file specifies the target architecture.
+For example, an executable compiled for a Sun 4, submitted
+from an Intel architecture running Linux would add the 
+\AdAttr{requirement}
 \begin{verbatim}
   requirements = Arch == "SUN4x" && OpSys == "SOLARIS251"
 \end{verbatim}
+Without this \AdAttr{requirement}, \Condor{submit}
+will assume that the program is to be executed on
+a machine with the same platform as the machine where the job
+is submitted.
 
-You may do this for \Expr{standard} and \Expr{vanilla} universes, just
-make sure you have the correct executable for the target architecture.
-To see the architecture and operating systems of the machines
-in your pool,
-run \Condor{status}.
+Cross submission works for both
+\Expr{standard} and \Expr{vanilla} universes.
+The burden is on the user to both obtain and specify
+the correct executable for the target architecture.
+To list the architecture and operating systems of the machines
+in a pool, run \Condor{status}.
 
-\subsubsection{True Heterogenous Submitting}
+%%%%%%%%%%%% 
+\subsection{Vanilla Universe Example for Execution on Differing Architectures} 
+%%%%%%%%%%%%
 
-Now suppose you wish to submit either a \Expr{standard} or a
-\Expr{vanilla} job to \emph{many} different architectures to gain full
+A more complex example of a heterogeneous submission
+occurs when a job may be executed on
+many different architectures to gain full
 use of a diverse architecture and operating system pool.
-As in the above example, you are going to need to create or have available
-executables that can work on each on the architectures in which you are
-interested. Once this is done, you can write your requirements using
-a special ``MachineAd Substitution Macro'' that will allow Condor to
-automatically choose the correct executable for the machine where the
-job was matched.  
+If the executables are available for the different architectures,
+then a modification to the submit description file
+will allow Condor to choose an executable after an
+available machine is chosen.
 
-\Note This special macro has a certain form and some
-restrictions in its use.
-
-The form of the macro that would appear in the submit description file is:
+A special-purpose MachineAd substitution macro can be used in
+the \AdAttr{executable}, \AdAttr{environment},  and \AdAttr{arguments}
+attributes in the submit description file.
+The macro has the form
 \begin{verbatim}
   $$(MachineAdAttribute)
 \end{verbatim}
+Note that this macro is ignored in all other submit description attributes.
+The \$\$() informs Condor to substitute the requested 
+\AdAttr{MachineAdAttribute} 
+from the machine where the job will be executed.
 
-The restriction is that this special macro form may \emph{only} be used in
-the \AdAttr{executable}. \AdAttr{environment}.  and \AdAttr{arguments}
-attributes in the submit description file. Please be aware that this special
-substitution macro is ignored in all other submit description attributes.
+An example of the heterogeneous job submission
+has executables available for three platforms:
+LINUX Intel, Solaris26 Intel, and Irix 6.5 SGI machines.
+This example uses \Prog{povray}
+to render images using a popular free rendering engine.
 
-The \$\$() informs Condor to select the requested 
-\AdAttr{MachineAdAttribute} from the machine on which the job had been 
-selected to run and substitute it into the submit description attribute.
-
-\Note The substitution will only occur \emph{after} a machine
-has been selected on which the job may execute. This has implications when
-using this special macro in your submit description file, e.g.,
-\AdAttr{executable} attribute.
-
-\Bold{Example 1}
-
-This is an example where you want to use a lot of different types of
-machine to render some images using a popular free rendering engine
-called \Prog{povray} within the standard universe. 
-
-The first thing you must do is create a set of executables that you wish to 
-submit into your pool. Let's say your pool contains LINUX Intel,
-Solaris26 Intel, and Irix 6.5 SGI machines. Once you've compiled
-\Prog{povray}(linking with \Condor{compile}) on these machines you must 
-place them all into the same
-initial working directory so that they may be found by Condor. 
-It is required that you name them by attributes that can be found in the
-machine ClassAd; conveniently, we will choose \AdAttr{Arch} and \AdAttr{OpSys}.
-
-The named executables:
+The substitution macro chooses a specific executable after
+a platform for running the job is chosen.
+These executables must therefore be named based on the
+machine attributes that describe a platform.
+The executables named
 \begin{verbatim}
   povray.LINUX.INTEL
   povray.SOLARIS26.INTEL
   povray.IRIX65.SGI
 \end{verbatim}
+will work correctly for the macro
+\begin{verbatim}
+  povray.$$(OpSys).$$(Arch)
+\end{verbatim}
 
-Once this is done, you now have to worry about what kind of machines with
-which you want your job to match. Your \AdAttr{requirements} expression
-will let Condor know which machines should attempt to run your job.
+The executables or links to executables with this name
+are placed into the initial working directory so that they may be
+found by Condor. 
+A submit description file that queues three jobs for this example:
 
 \begin{verbatim}
   ####################
   #
-  # Example of true heterogeneous submission
+  # Example of heterogeneous submission
   #
   ####################
 
+  universe     = vanilla
   Executable   = povray.$$(OpSys).$$(Arch)
   Log          = povray.log
   Output       = povray.out.$(Process)
   Error        = povray.err.$(Process)
 
-  Requirements = (Arch == "INTEL" && OpSys == "LINUX") ||
-                 (Arch == "INTEL" && OpSys =="SOLARIS26") ||
+  Requirements = (Arch == "INTEL" && OpSys == "LINUX") || \
+                 (Arch == "INTEL" && OpSys =="SOLARIS26") || \
                  (Arch == "SGI" && OpSys == "IRIX65")
 
   Arguments    = +W1024 +H768 +Iimage1.pov
@@ -874,84 +864,98 @@ will let Condor know which machines should attempt to run your job.
   Queue 
 \end{verbatim}
 
-Suppose Condor matches your job with an \Bold{IRIX65 SGI} machine.
-The resource asks the submitting machine for the executable that it
-wishes to run, specifically the \Condor{shadow} that has been spawned
-for this job.  The shadow process determines if the substitution macro
-was used in either the \AdAttr{executable}, \AdAttr{environment}, or the
-\AdAttr{arguments} attribute and if so, substitutes the corresponding
-resource attributes into those specific job attributes and evaluates them.
+These jobs are submitted to the vanilla universe
+to assure that once a job is started on a specific platform,
+it will finish running on that platform.
+Switching platforms in the middle of job execution cannot
+work correctly.
 
-When the shadow discovers that the \AdAttr{Executable} attribute really
-resolves to \Prog{povray.IRIX65.SGI}, it chooses that executable and
-sends it to the resource to be executed correctly.
+There are two common errors made with the substitution macro.
+The first is the use of a non-existent \AdAttr{MachineAdAttribute}.
+If the specified \AdAttr{MachineAdAttribute} does not
+exist in the machine's ClassAd, then Condor will place
+the job in the machine state of hold until the problem is resolved.
 
-%%%%%%%%%%%% 
-\subsubsection{Common Errors with the Special Substitution Macro}
-%%%%%%%%%%%% 
-\index{running a job!on multiple architectures}
-\index{running a job!on multiple operating systems}
-\index{heterogeneous pool!submitting a job to}
-\begin{description}
-	\item[Use of a non-existent \AdAttr{MachineAdAttribute}.]
-		If the specified \AdAttr{MachineAdAttribute} does not
-		exist in the machine's ClassAd, then Condor will place
-		your job on hold until the problem is resolved.
-
-	\item[Not handling all combinations of \AdAttr{MachineAdAttribute}.]
-		An example of this error would be, using the
-		povray example, if you kept the submit description file
-		the same, but removed one of the executables.  In this
-		case, Condor will report back to you that one of its
-		executables are missing when it happens to match your
-		job against a resource that requires the removed binary.
-\end{description}
-
+The second common error occurs due to an incomplete job set up.
+For example, the submit description file given above specifies
+three available executables.
+If one is missing, Condor report back that an
+executable is missing when it happens to match the
+job with a resource that requires the missing binary.
 
 %%%%%%%%%%%% 
-\subsubsection{Submitting a Job to Run on Binary Compatible Operating Systems}
+\subsection{Standard Universe Example for Execution on Differing Architectures} 
 %%%%%%%%%%%%
 
-\index{running a job!on multiple architectures}
-\index{running a job!on multiple operating systems}
-\index{heterogeneous pool!submitting a job to}
+Jobs submitted to the standard universe may produce checkpoints.
+A checkpoint can then be used to start up and continue execution
+of a partially completed job.
+For a partially completed job, the checkpoint and the job are specific
+to a platform.
+If migrated to a different machine, correct execution requires that
+the platform must remain the same.
 
-Some binary executable jobs are able to run on multiple architectures
-or operating systems that are For example, a SPARC binary may be able
-to run on either ``SUN4x'' or ``SUN4u'' machines.
+A more complex \AdAttr{requirements} expression tells Condor
+to migrate a partially
+completed job to another machine with the same platform.
 
-You can use the 
-\AdAttr{requirements} command in
-the submit description file to
-specify the target architectures and operating systems.
-For example, if your executable can run on any SPARC Solaris machine, you can
-specify
 \begin{verbatim}
-  requirements = (Arch == "SUN4x" || Arch == "SUN4u") && \
-                 (OpSys == "SOLARIS251" || OpSys == "SOLARIS26")
-\end{verbatim}
-
-Note that Condor checkpoints can not be transferred across
-architectures.  Once a job has checkpointed, it must run only on
-machines of the exact same architecture and operating system.  This
-can be enforced with a more complex \AdAttr{requirements} expression.  For
-example, if your job will run on any SPARC Solaris machine, you can
-specify
-\begin{verbatim}
-  +CkptRequirements = ((CkptArch == Arch) || (CkptArch =?= UNDEFINED)) && \
+  CkptRequirements = ((CkptArch == Arch) || (CkptArch =?= UNDEFINED)) && \
                       ((CkptOpSys == OpSys) || (CkptOpSys =?= UNDEFINED))
-  Requirements = (OpSys == "SOLARIS251" || OpSys == "SOLARIS26") && \
-                 (Arch == "SUN4x" || Arch == "SUN4u") && CkptRequirements
+  Requirements = ( (Arch == "INTEL" && OpSys == "LINUX") || \
+                 (Arch == "INTEL" && OpSys =="SOLARIS26") || \
+                 (Arch == "SGI" && OpSys == "IRIX65") ) && $(CkptRequirements)
 \end{verbatim}
-The \AdAttr{Requirements} expression in this example includes a
-reference to a \AdAttr{CkptRequirements} expression.  The \AdAttr{CkptRequirements}
-expression ensures that the job will run on a machine only if the job
-has not yet checkpointed (i.e., \AdAttr{CkptArch} and \AdAttr{CkptOpSys} are both
-UNDEFINED) or the machine has \AdAttr{Arch} and \AdAttr{OpSys} attributes which match
-the job's \AdAttr{CkptArch} and \AdAttr{CkptOpSys} values.
-This example uses the ``+'' syntax to add expressions to the Job
-ClassAd.  See the \Condor{submit} manual page on
-page~\pageref{man-condor-submit} for details.
+
+The \AdAttr{Requirements} expression in the example uses a macro
+to add an additional expression, called \AdAttr{CkptRequirements}.
+The \AdAttr{CkptRequirements} expression guarantees correct operation
+in the two possible cases for a job.
+In the first case, the job has not produced a checkpoint.
+The ClassAd attributes \Attr{CkptArch} and \Attr{CkptOpSys}
+will be undefined, and therefore the meta operator (\verb@=?=@)
+evaluates to true.
+In the second case, the job has produced a checkpoint.
+The Machine ClassAd is restricted to require further execution
+only on a machine of the same platform.
+The attributes \Attr{CkptArch} and \Attr{CkptOpSys}
+will be defined, ensuring that the platform chosen for further
+execution will be the same as the one used just before the
+checkpoint.
+
+Note that this restriction of platforms also applies to platforms where
+the executables are binary compatible.
+
+The complete submit description file for this example:
+
+\begin{verbatim}
+  ####################
+  #
+  # Example of heterogeneous submission
+  #
+  ####################
+
+  universe     = standard
+  Executable   = povray.$$(OpSys).$$(Arch)
+  Log          = povray.log
+  Output       = povray.out.$(Process)
+  Error        = povray.err.$(Process)
+
+  CkptRequirements = ((CkptArch == Arch) || (CkptArch =?= UNDEFINED)) && \
+                      ((CkptOpSys == OpSys) || (CkptOpSys =?= UNDEFINED))
+  Requirements = ( (Arch == "INTEL" && OpSys == "LINUX") || \
+                 (Arch == "INTEL" && OpSys =="SOLARIS26") || \
+                 (Arch == "SGI" && OpSys == "IRIX65") ) && $(CkptRequirements)
+
+  Arguments    = +W1024 +H768 +Iimage1.pov
+  Queue 
+
+  Arguments    = +W1024 +H768 +Iimage2.pov
+  Queue 
+
+  Arguments    = +W1024 +H768 +Iimage3.pov
+  Queue 
+\end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Managing a Condor Job}
