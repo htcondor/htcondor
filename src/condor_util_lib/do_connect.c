@@ -265,7 +265,7 @@ mk_config_name( const char *service_name )
 	char	*ptr;
 
 		/* Copy part after the '_' to our answer */
-	ptr = strchr( service_name, '_' );
+	ptr = (char *)strchr((const char *) service_name, '_' );
 	if( ptr == NULL ) {
 		return NULL;
 	}
