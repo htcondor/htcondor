@@ -30,7 +30,8 @@
 #ifndef _CONDOR_RESMGR_H
 #define _CONDOR_RESMGR_H
 
-#include "OrderedSet.h"
+#include "simplelist.h"
+#include "extArray.h"
 
 typedef int (Resource::*ResourceMember)();
 typedef float (Resource::*ResourceFloatMember)();
@@ -42,11 +43,11 @@ typedef int (*ComparisonFunc)(const void *, const void *);
 class IdDispenser
 {
 public:
-	IdDispenser( int seed );
+	IdDispenser( int size, int seed );
 	int	next();
 	void insert( int id );
 private:
-	OrderedSet<int> set;
+	ExtArray<bool> free_ids;
 };
 
 
@@ -58,7 +59,7 @@ public:
 
 	void	init_socks();
 	void	init_resources();
-	void	reconfig_resources();
+	bool	reconfig_resources();
 
 	void	compute( amask_t );
 	void	publish( ClassAd*, amask_t );
@@ -67,7 +68,7 @@ public:
 	void	assign_keyboard();
 
 	bool 	in_use();
-	bool	is_smp() { return( num_vms() > 1 ); };
+	bool	is_smp() { return( num_cpus() > 1 ); };
 	int		num_cpus() { return m_attr->num_cpus(); };
 	int		num_vms() { return nresources; };
 
@@ -137,6 +138,8 @@ public:
 
 	void		init_config_classad();
 
+	void		deleteResource( Resource* );
+
 private:
 
 	Resource**	resources;		// Array of pointers to Resource objects
@@ -156,7 +159,12 @@ private:
 	StringList**	type_strings;	// Array of StringLists that
 		// define the resource types specified in the config file.  
 	int*		type_nums;		// Number of each type.
+	int*		new_type_nums;	// New numbers of each type.
 	int			max_types;		// Maximum # of types.
+
+		// Data members we need to handle dynamic reconfig:
+	SimpleList<CpuAttributes*>		alloc_list;		
+	SimpleList<Resource*>			destroy_list;
 
 		// Builds a CpuAttributes object to represent the virtual
 		// machine described by the given machine type.
@@ -205,13 +213,22 @@ private:
 		  same values.  Returns true if they're the same.
 		*/
 	bool typeNumCmp( int* a, int* b );
+
+		/* 
+		  See if the destroy_list is empty.  If so, allocate whatever
+		  we need to allocate.
+		*/
+	bool processAllocList( void );
 };
 
 
-// Comparison functions for sorting resources:
+// Comparison function for sorting resources:
 
 // Sort on State, with Owner state resources coming first, etc.
-int owner_state_cmp( const void*, const void* );
-int vm_type_cmp( const void*, const void* );
+int ownerStateCmp( const void*, const void* );
+
+// Sort on State, with Claimed state resources coming first.  Break
+// ties with the value of the Rank expression for Claimed resources.
+int claimedRankCmp( const void*, const void* );
 
 #endif /* _CONDOR_RESMGR_H */
