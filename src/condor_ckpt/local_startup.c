@@ -46,7 +46,11 @@
 
 
 #define _POSIX_SOURCE
-#define __STDC__
+
+#if defined(OSF1)
+#	define __STDC__
+#endif
+
 #include "condor_common.h"
 #include "condor_constants.h"
 #include "condor_syscall_mode.h"
@@ -70,9 +74,11 @@ MAIN( int argc, char *argv[], char **envp )
 	_condor_prestart( SYS_LOCAL );
 
 
-		// If the command line looks like 
-		//		exec_name -_condor_ckpt <ckpt_file> ...
-		// then we set up to checkpoint to the given file name
+		/*
+		If the command line looks like 
+			exec_name -_condor_ckpt <ckpt_file> ...
+		then we set up to checkpoint to the given file name
+		*/
 	if( argc >= 3 && strcmp("-_condor_ckpt",argv[1]) == MATCH ) {
 		init_image_with_file_name( argv[2] );
 #if 0
@@ -86,18 +92,22 @@ MAIN( int argc, char *argv[], char **envp )
 		return main( argc, argv, envp );
 	}
 
-		// If the command line looks like 
-		//		exec_name -_condor_restart <ckpt_file> ...
-		// then we effect a restart from the given file name
+		/*
+		If the command line looks like 
+			exec_name -_condor_restart <ckpt_file> ...
+		then we effect a restart from the given file name
+		*/
 	if( argc >= 3 && strcmp("-_condor_restart",argv[1]) == MATCH ) {
 		init_image_with_file_name( argv[2] );
 		restart();
 	}
 
-		// If we aren't given instructions on the command line, assume
-		// we are an original invocation, and that we should write any
-		// checkpoints to the name by which we were invoked with a
-		// ".ckpt" extension.
+		/*
+		If we aren't given instructions on the command line, assume
+		we are an original invocation, and that we should write any
+		checkpoints to the name by which we were invoked with a
+		".ckpt" extension.
+		*/
 	if( argc < 3 ) {
 		sprintf( buf, "%s.ckpt", argv[0] );
 		init_image_with_file_name( buf );
