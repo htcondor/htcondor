@@ -685,7 +685,7 @@ int String::CalcPrintToStr(void)
 	
 	// Unfortunately, we have to walk the string to find the length.
 	// This is because it contain quote marks
-	for (p = value; *p != 0; p++) {
+	for (p = value; p && *p != 0; p++) {
 		if (*p == '"') {
 			length += 2;
 		} else {
@@ -893,7 +893,7 @@ void String::PrintToStr(char* str)
   while(*ptr2 != '\0') ptr2++;
   *ptr2 = '"';
   ptr2++;
-  while(*ptr1 != '\0')
+  while( ptr1 && *ptr1 != '\0')
   {
 	if(*ptr1 == '"')
 	{
