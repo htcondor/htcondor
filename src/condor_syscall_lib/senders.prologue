@@ -1,101 +1,18 @@
-#if !defined(OSF1) || defined(__GNUC__)
-#	define _POSIX_SOURCE
-#endif
-
-#if defined(IRIX62)
-#	include "condor_fdset.h"
-#endif
-
-#if defined(Solaris) || defined(IRIX53)
-#include "_condor_fix_types.h"
-#include <sys/statfs.h>
-#if !defined(IRIX53)
-#include <nfs/nfs.h>
-#endif
+#if defined(Solaris)
+#include <nfs/nfs.h>		/* for fhandle_t.  Include before
+			condor_common to avoid duplicate definitions of MIN */ 
 #endif
 
 #include "condor_common.h"
 #define MODE_T unsigned int	/* use 32 bits on all platforms */
 
+#include "condor_nfs.h"
+
 #include "condor_debug.h"
-#include <stdarg.h>
-#include <signal.h>
-#include "condor_fix_assert.h"
 #include "condor_syscall_mode.h"
 #include "condor_io.h"
-#include "condor_constants.h"
 #include "condor_sys.h"
-#include "condor_jobqueue.h"
 #include "startup.h"
-#if defined(OSF1) && defined(__GNUC__)
-#	include "condor_fdset.h"
-#endif
-
-#if defined(SUNOS41)
-#	include "condor_fdset.h"
-#endif
-
-#if defined(OSF1)
-#	include "_condor_fix_types.h"
-#	include <sys/param.h>
-#	include <sys/mount.h>
-#elif defined(ULTRIX43)
-#	include <sys/param.h>
-#else
-#	include <sys/mount.h>
-#endif
-
-#if defined(HPUX9)
-#	include <time.h>
-#	include <rpc/rpc.h>
-#	include <errno.h>
-#	include <nfs/export.h>
-#	include <nfs/nfs.h> /* for definition of fhandle_t */
-#   include <sys/vfs.h>      /* for struct statfs */
-#endif
-
-#if defined(LINUX)
-#	include <sys/vfs.h>
-#       include <linux/nfs.h>
-#	include <linux/ipc.h>
-        typedef struct fhandle fhandle_t;
-#endif
-
-#if defined(OSF1)
-#	define _AES_SOURCE
-#	include <sys/poll.h>
-#endif
-
-#if defined(SUNOS41)
-#	include <sys/poll.h>
-#endif
-
-#if	defined(ULTRIX43)
-#   include <errno.h>
-#   include <nfs/nfs.h>
-#	include "_condor_fix_types.h"
-#endif
-
-#if defined(AIX32)
-	struct fsid {
-		long    val[2];
-	};
-	typedef struct fsid fsid_t;
-#	include <sys/statfs.h>		 /* for struct statfs */
-#endif
-
-#if defined(IRIX53)
-#	include <sys/statfs.h>
-#endif
-
-#if defined(AIX32)
-#	define FHSIZE      32
-	struct fhandle {
-		char x[FHSIZE];
-	};
-	typedef struct fhandle fhandle_t;
-#endif
-
 #include "syscall_param_sizes.h"
 
 #ifdef LINK_PVM
@@ -104,7 +21,6 @@
 #endif
 
 static char *_FileName_ = __FILE__;
-
 
 int CurrentSysCall;
 
