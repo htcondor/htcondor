@@ -185,6 +185,13 @@ extern "C" int __getdents( int fd, struct dirent *dirp, size_t count ) {
 	return getdents(fd,dirp,count);
 }
 
+/* XXX Implement a getdents64() entrance call! I think we are getting away
+	with it for now because it seems that no application ever calls 
+	getdirentries64() (which is what getdent64() will end up calling on
+	linux). The libc header files for this function are very screwy and
+	the dirent64 structure is oddly defined. So for now, leave it out
+	until I have more time to add it. */
+
 #endif /* LINUX */
 
 #undef ngetdents
