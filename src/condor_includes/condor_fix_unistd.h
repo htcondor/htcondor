@@ -61,17 +61,29 @@ typedef struct fd_set fd_set;
 
 #if defined(LINUX)
 #	define idle _hide_idle
-#	define __USE_BSD
+#	if ! defined(_BSD_SOURCE)
+#		define _BSD_SOURCE
+#		define CONDOR_BSD_SOURCE
+#	endif
 #endif
 
-#if defined(OSF1)
+/* Even though we normally have _XOPEN_SOURCE_EXTENDED defined on
+   dux4.0 by condor_common.h, this file is also included in a few
+   places (most notably, switches.c) without condor_common.h.  So, we
+   want to define it here if it hasn't been set already, since we
+   really need it for unistd.h in switches.c to get the right
+   prototypes.  -Derek 3/27/98 */
+#if defined(OSF1) && ! defined( _XOPEN_SOURCE_EXTENDED )
+#	define CONDOR_XOPEN_SOURCE_EXTENDED
 #	define _XOPEN_SOURCE_EXTENDED
 #endif
+
 
 /**********************************************************************
 ** Actually include the file
 **********************************************************************/
 #include <unistd.h>
+
 
 /**********************************************************************
 ** Clean-up
@@ -104,10 +116,10 @@ typedef struct fd_set fd_set;
 
 #if defined(LINUX)
 #   undef idle
-#endif
-
-#if defined(OSF1)
-#	undef _XOPEN_SOURCE_EXTENDED
+#	if defined( CONDOR_BSD_SOURCE ) 
+#		undef CONDOR_BSD_SOURCE
+#		undef _BSD_SOURCE
+#	endif
 #endif
 
 /**********************************************************************
@@ -134,6 +146,11 @@ extern "C" {
 	int gethostname( char *, int );
 #endif
 
+/* Only if we set it ourself in this file to we want to undef here */
+#if defined(OSF1) && defined( CONDOR_XOPEN_SOURCE_EXTENDED )
+#	undef CONDOR_XOPEN_SOURCE_EXTENDED
+#	undef _XOPEN_SOURCE_EXTENDED
+#endif
 
 #if defined(__cplusplus)
 }
