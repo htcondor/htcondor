@@ -29,6 +29,7 @@
 #include "alloc.h"
 #include "my_hostname.h"
 #include "get_daemon_addr.h"
+#include "sig_install.h"
 
 #include "condor_qmgr.h"
 
