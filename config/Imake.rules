@@ -535,11 +535,10 @@ CONDOR_COMPILE = ../../condor_scripts/condor_compile
 /*
 ** Link all three types of binaries
 */
-#define LINK( compiler, remotetarg, vanillatarg, standalonetarg, obj ) @@\
+#define LINK( compiler, remotetarg, vanillatarg, obj ) @@\
 all::						@@\
 	RLINK( compiler, remotetarg, obj );	@@\
-	VLINK( compiler, vanillatarg, obj );		@@\
-	SLINK( compiler, standalonetarg, obj );
+	VLINK( compiler, vanillatarg, obj );
 
 /*
 ** Link a program for running remotely
@@ -551,17 +550,6 @@ clean::						@@\
 	rm -f remotetarg obj			@@\
 all:: remotetarg
 
-
-/*
-** Link a program standalone (runs outside condor, but will still checkpoint)
-*/
-#define SLINK( compiler, standalonetarg, obj )		@@\
-standalonetarg: obj					@@\
-	$(CONDOR_COMPILE) $(CONDOR_COMPILE_FLAGS) $(STAND_ALONE_FLAG) compiler -o standalonetarg obj @@\
-							@@\
-clean::							@@\
-	rm -f standalonetarg obj			@@\
-all:: standalonetarg
 
 /*
 ** Link a program to run normally (no condor at all)
