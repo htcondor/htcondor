@@ -1,3 +1,9 @@
+10/22/04 V6_6-merge-23
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  This includes all of the new condor_tests directory
+   and imake changes, along with some other minor fixes and
+   enhancements from V6_6_7 and some stuff that'll be in V6_6_8.
+
 10/11/04 V6_6_7
    The official 6.6.7 release tag (at long last!).  this lives on
    V6_6_ALL and V6_6_7_EXT 
