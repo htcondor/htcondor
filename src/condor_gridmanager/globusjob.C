@@ -260,14 +260,6 @@ int GlobusJob::doEvaluateState()
 
 		switch ( gmState ) {
 		case GM_INIT:
-			if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD ) {
-				// A globusState of HELD means UNSUBMITTED with a
-				// condorState of HELD, used to mean that the gridmanager
-				// has finished handling it. Since we're handling it again
-				// (probably because it got released), translate it back.
-				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
-				addScheddUpdateAction( this, UA_UPDATE_GLOBUS_STATE, 0 );
-			}
 			if ( resourceStateKnown == false ) {
 				break;
 			}
@@ -395,19 +387,9 @@ int GlobusJob::doEvaluateState()
 			if ( condorState == REMOVED ) {
 				gmState = GM_DELETE;
 			} else if ( condorState == HELD ) {
-				// Before forgetting about this held job, we need to make
-				// sure the globusState is HELD.
-				schedd_actions = 0;
-				if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
-					globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD;
-					schedd_actions = UA_UPDATE_GLOBUS_STATE;
-				}
-				done = addScheddUpdateAction( this, schedd_actions,
-											  GM_UNSUBMITTED );
-				if ( !done ) {
-					break;
-				}
-				DeleteJob( this );
+				addScheddUpdateAction( this, UA_FORGET_JOB, GM_UNSUBMITTED );
+				// This object will be deleted when the update occurs
+				break;
 			} else {
 				gmState = GM_SUBMIT;
 			}
@@ -889,18 +871,14 @@ int GlobusJob::doEvaluateState()
 			}
 			break;
 		case GM_DELETE:
-			schedd_actions = UA_DELETE_FROM_SCHEDD;
+			schedd_actions = UA_DELETE_FROM_SCHEDD | UA_FORGET_JOB;
 			if ( condorState == REMOVED ) {
 				schedd_actions |= UA_LOG_ABORT_EVENT;
 			} else if ( condorState == COMPLETED ) {
 				schedd_actions |= UA_LOG_TERMINATE_EVENT;
 			}
-			done = addScheddUpdateAction( this, schedd_actions,
-										  GM_DELETE );
-			if ( !done ) {
-				break;
-			}
-			DeleteJob( this );
+			addScheddUpdateAction( this, schedd_actions, GM_DELETE );
+			// This object will be deleted when the update occurs
 			break;
 		case GM_CLEAR_REQUEST:
 			// For now, put problem jobs on hold instead of
@@ -913,13 +891,7 @@ int GlobusJob::doEvaluateState()
 			}
 			schedd_actions = 0;
 			if ( globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
-				// If the job has been held, we need to set the globusState
-				// to HELD instead of UNSUBMITTED.
-				if ( condorState == HELD ) {
-					globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD;
-				} else {
-					globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
-				}
+				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
 				schedd_actions |= UA_UPDATE_GLOBUS_STATE;
 			}
 			globusStateErrorCode = 0;
@@ -980,15 +952,12 @@ int GlobusJob::doEvaluateState()
 		case GM_HOLD:
 			// TODO: what happens if we learn here that the job is removed?
 			condorState = HELD;
+			schedd_actions = UA_HOLD_JOB | UA_FORGET_JOB;
 			if ( jobContact &&
 				 globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN ) {
 				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN;
-				addScheddUpdateAction( this, UA_UPDATE_GLOBUS_STATE, 0 );
+				schedd_actions |= UA_UPDATE_GLOBUS_STATE;
 				//UpdateGlobusState( GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN, 0 );
-			} else if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
-				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD;
-				addScheddUpdateAction( this, UA_UPDATE_GLOBUS_STATE, 0 );
-				//UpdateGlobusState( GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD, 0 );
 			}
 			// Set the hold reason as best we can
 			// TODO: set the hold reason in a more robust way.
@@ -1008,33 +977,23 @@ int GlobusJob::doEvaluateState()
 			if ( holdReason == NULL ) {
 				holdReason = strdup( "Unspecified gridmanager error" );
 			}
-			done = addScheddUpdateAction( this, UA_HOLD_JOB, GM_HOLD );
-			if ( !done ) {
-				break;
-			}
-			DeleteJob( this );
+			addScheddUpdateAction( this, schedd_actions, GM_HOLD );
+			// This object will be deleted when the update occurs
 			break;
 		case GM_PROXY_EXPIRED:
 			now = time(NULL);
 			if ( condorState == HELD ) {
-				// Before forgetting about this held job, we need to make
-				// sure the globusState is either HELD or UNKNOWN.
-				schedd_actions = 0;
-				if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
-					globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD;
-					schedd_actions = UA_UPDATE_GLOBUS_STATE;
-				}
-				if ( globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD &&
+				// Should we be setting the GlobusStatus to UNKNOWN here?
+				schedd_actions = UA_FORGET_JOB;
+				if ( globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED &&
 					 globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN ) {
 					globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN;
-					schedd_actions = UA_UPDATE_GLOBUS_STATE;
+					schedd_actions |= UA_UPDATE_GLOBUS_STATE;
 				}
-				done = addScheddUpdateAction( this, schedd_actions,
-											  GM_UNSUBMITTED );
-				if ( !done ) {
-					break;
-				}
-				DeleteJob( this );
+				addScheddUpdateAction( this, schedd_actions,
+									   GM_PROXY_EXPIRED );
+				// This object will be deleted when the update occurs
+				break;
 			} else if ( Proxy_Expiration_Time > JM_MIN_PROXY_TIME + now ) {
 				if ( jobContact ) {
 					gmState = GM_RESTART;

@@ -48,10 +48,6 @@ void GlobusResource::UnregisterJob( GlobusJob *job )
 {
 	registeredJobs.Delete( job );
 	pingRequesters.Delete( job );
-
-	if ( registeredJobs.IsEmpty() ) {
-		DeleteResource( this );
-	}
 }
 
 void GlobusResource::RequestPing( GlobusJob *job )

@@ -26,6 +26,7 @@
 #define UA_UPDATE_STDOUT_SIZE		0x0400
 #define UA_UPDATE_STDERR_SIZE		0x0800
 #define UA_HOLD_JOB					0x1000
+#define UA_FORGET_JOB				0x2000
 
 extern char *gramCallbackContact;
 extern char *ScheddAddr;
@@ -49,8 +50,6 @@ bool addScheddUpdateAction( GlobusJob *job, int actions, int request_id = 0 );
 void removeScheddUpdateAction( GlobusJob *job );
 void rehashJobContact( GlobusJob *job, const char *old_contact,
 					   const char *new_contact );
-void DeleteJob( GlobusJob *job );
-void DeleteResource( GlobusResource *resource );
 
 void gramCallbackHandler( void *user_arg, char *job_contact, int state,
 						  int errorcode );

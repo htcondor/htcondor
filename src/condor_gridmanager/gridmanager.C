@@ -221,56 +221,6 @@ rehashJobContact( GlobusJob *job, const char *old_contact,
 }
 
 void
-DeleteJob( GlobusJob *job ) {
-	removeScheddUpdateAction( job );
-	if ( job->jobContact != NULL ) {
-		JobsByContact.remove( HashKey( job->jobContact ) );
-	}
-	JobsByProcID.remove( job->procID );
-
-	ObjectDeleteList.Delete( (Service *)job );
-	ObjectDeleteList.Append( (Service *)job );
-	daemonCore->Send_Signal( daemonCore->getpid(), GRIDMAN_DELETE_OBJS );
-}
-
-void
-DeleteResource( GlobusResource *resource ) {
-	ASSERT( resource->IsEmpty() );
-	
-	ResourcesByName.remove( HashKey( resource->ResourceName() ) );
-
-	ObjectDeleteList.Delete( (Service *)resource );
-	ObjectDeleteList.Append( (Service *)resource );
-	daemonCore->Send_Signal( daemonCore->getpid(), GRIDMAN_DELETE_OBJS );
-}
-
-int
-DELETE_OBJS_signalHandler( Service *srvc, int signal )
-{
-	Service *curr_obj;
-
-	ObjectDeleteList.Rewind();
-
-	while ( ObjectDeleteList.Next( curr_obj ) ) {
-		// The deletion of an object may involve the appending of other
-		// objects to ObjectDeleteList. Therefore, we remove the current
-		// object before the delete and rewind the list after (because the
-		// Append() function modifies the cuurent position in the list).
-		ObjectDeleteList.DeleteCurrent();
-		delete curr_obj;
-		ObjectDeleteList.Rewind();
-	}
-
-	if ( JobsByProcID.getNumElements() == 0 ) {
-		dprintf( D_ALWAYS, "No jobs left, shutting down\n" );
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
-	}
-
-	return TRUE;
-}
-
-
-void
 Init()
 {
 	int rc;
@@ -307,10 +257,6 @@ Register()
 	daemonCore->Register_Signal( GRIDMAN_REMOVE_JOBS, "RemoveJobs",
 								 (SignalHandler)&REMOVE_JOBS_signalHandler,
 								 "REMOVE_JOBS_signalHandler", NULL, WRITE );
-
-	daemonCore->Register_Signal( GRIDMAN_DELETE_OBJS, "DeleteObjs",
-								 (SignalHandler)&DELETE_OBJS_signalHandler,
-								 "DELETE_OBJS_signalHandler" );
 
 	Reconfig();
 }
@@ -731,6 +677,13 @@ doContactSchedd()
 							 curr_job->syncedErrorSize );
 		}
 
+		if ( curr_action->actions & UA_FORGET_JOB ) {
+			SetAttribute( curr_job->procID.cluster,
+						  curr_job->procID.proc,
+						  ATTR_JOB_MANAGED,
+						  "FALSE" );
+		}
+
 		if ( curr_action->actions & UA_DELETE_FROM_SCHEDD ) {
 			CloseConnection();
 			BeginTransaction();
@@ -761,23 +714,18 @@ doContactSchedd()
 		// that we previously indicated we were done with)
 		// when we first start up in case we're recovering from a
 		// shutdown/meltdown.
-		// Otherwise, grab all jobs that are unheld and unsubmitted or
-		// have been recently unheld (globus status UNKNOWN or HELD).
+		// Otherwise, grab all jobs that are unheld and aren't marked as
+		// currently being managed.
+		// If JobManaged is undefined, equate it with false.
 		if ( grabAllJobs ) {
-//			sprintf( expr_buf, "%s  && %s == %d && !(%s == %d && (%s == %d || %s == %d))",
-			sprintf( expr_buf, "%s  && %s == %d && (%s != %d || (%s != %d && %s != %d))",
+//			sprintf( expr_buf, "%s && %s == %d && !(%s == %d && %s =!= TRUE)",
+			sprintf( expr_buf, "%s && %s == %d && (%s == %d && %s =!= TRUE) == FALSE",
 					 owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
-					 ATTR_JOB_STATUS, HELD, ATTR_GLOBUS_STATUS,
-					 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN,
-					 ATTR_GLOBUS_STATUS, GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD);
+					 ATTR_JOB_STATUS, HELD, ATTR_JOB_MANAGED );
 		} else {
-			sprintf( expr_buf, "%s  && %s == %d && %s != %d && (%s == %d || %s == %d || %s == %d)",
+			sprintf( expr_buf, "%s && %s == %d && %s != %d && %s =!= TRUE",
 					 owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
-					 ATTR_JOB_STATUS, HELD, ATTR_GLOBUS_STATUS,
-					 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED,
-					 ATTR_GLOBUS_STATUS,
-					 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN,
-					 ATTR_GLOBUS_STATUS, GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD);
+					 ATTR_JOB_STATUS, HELD, ATTR_JOB_MANAGED );
 		}
 
 		next_ad = GetNextJobByConstraint( expr_buf, 1 );
@@ -824,6 +772,11 @@ doContactSchedd()
 					JobsByProcID.insert( new_job->procID, new_job );
 					num_ads++;
 
+					SetAttribute( new_job->procID.cluster,
+								  new_job->procID.proc,
+								  ATTR_JOB_MANAGED,
+								  "TRUE" );
+
 				}
 
 			}
@@ -848,13 +801,12 @@ doContactSchedd()
 		dprintf( D_FULLDEBUG, "querying for removed/held jobs\n" );
 
 		// Grab jobs marked as REMOVED or marked as HELD that we haven't
-		// previously indicated that we're done with (by setting globus
-		// status to UNKNOWN or HELD.
-		sprintf( expr_buf, "%s && %s == %d && (%s == %d || (%s == %d && %s != %d && %s != %d))",
+		// previously indicated that we're done with (by setting JobManaged
+		// to FALSE. If JobManaged is undefined, equate it with false.
+		sprintf( expr_buf, "%s && %s == %d && (%s == %d || (%s == %d && %s =?= TRUE))",
 				 owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
 				 ATTR_JOB_STATUS, REMOVED, ATTR_JOB_STATUS, HELD,
-				 ATTR_GLOBUS_STATUS, GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN,
-				 ATTR_GLOBUS_STATUS, GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD );
+				 ATTR_JOB_MANAGED );
 
 		next_ad = GetNextJobByConstraint( expr_buf, 1 );
 		while ( next_ad != NULL ) {
@@ -888,25 +840,9 @@ doContactSchedd()
 
 			} else {
 
-				// This can happen if someone submits a job and holds
-				// it immediately. Need to change GlobusStatus to HELD if
-				// it's UNSUBMITTED and UNKNOWN otherwise.
-				int globus_status;
-
 				dprintf( D_ALWAYS, "Don't know about held job %d.%d. "
-						 "Setting GlobusStatus and ignoring it\n",
+						 "Ignoring it\n",
 						 procID.cluster, procID.proc );
-
-				next_ad->LookupInteger( ATTR_GLOBUS_STATUS, globus_status );
-				if ( globus_status == GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
-					SetAttributeInt( procID.cluster, procID.proc,
-									 ATTR_GLOBUS_STATUS,
-									 GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD );
-				} else if ( globus_status != GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD ) {
-					SetAttributeInt( procID.cluster, procID.proc,
-									 ATTR_GLOBUS_STATUS,
-									 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN );
-				}
 
 			}
 
@@ -922,14 +858,29 @@ doContactSchedd()
 
 	DisconnectQ( schedd );
 
-	// Wake up jobs that had schedd updates pending
+	// Wake up jobs that had schedd updates pending and delete job
+	// objects that wanted to be deleted
 	pendingScheddUpdates.startIterations();
 
 	while ( pendingScheddUpdates.iterate( curr_action ) != 0 ) {
 
 		curr_job = curr_action->job;
 
-		if ( curr_action->request_id != 0 ) {
+		if ( curr_action->actions & UA_FORGET_JOB ) {
+			if ( curr_job->jobContact != NULL ) {
+				JobsByContact.remove( HashKey( curr_job->jobContact ) );
+			}
+			JobsByProcID.remove( curr_job->procID );
+			GlobusResource *resource = curr_job->GetResource();
+			delete curr_job;
+
+			if ( resource->IsEmpty() ) {
+				ResourcesByName.remove( HashKey( resource->ResourceName() ) );
+				delete resource;
+			}
+
+			delete curr_action;
+		} else if ( curr_action->request_id != 0 ) {
 			completedScheddUpdates.insert( curr_job->procID, curr_action );
 			curr_job->SetEvaluateState();
 		} else {
@@ -940,9 +891,7 @@ doContactSchedd()
 
 	pendingScheddUpdates.clear();
 
-	// Need to check here in case we found no jobs to manage on startup.
-	// Of course, the schedd shouldn't have started us up in this case,
-	// but it may be acting brain-dead.
+	// Check if we have any jobs left to manage. If not, exit.
 	if ( JobsByProcID.getNumElements() == 0 ) {
 		dprintf( D_ALWAYS, "No jobs left, shutting down\n" );
 		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );

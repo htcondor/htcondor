@@ -283,7 +283,6 @@ const int QUERY_ANY_ADS = 48;
 *** Commands used by the gridmanager daemon
 */
 #define DCGRIDMANAGER_BASE 73000
-#define GRIDMAN_DELETE_OBJS (DCGRIDMANAGER_BASE+0)
 #define GRIDMAN_REMOVE_JOBS SIGUSR1
 #define GRIDMAN_ADD_JOBS SIGUSR2
 

@@ -183,10 +183,9 @@ typedef enum
     GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED = 16,
     GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED = 32,
     GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL = 0xFFFFF,
-	// These last two states aren't real GRAM job states. They're used
-	// by the schedd and gridmanager to help deal with held Globus jobs.
-	GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN = 0,
-	GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD = 0x100000
+	// This last state isn't a real GRAM job state. It's used
+	// by the gridmanager when a job's state is unknown
+	GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN = 0
 } globus_gram_protocol_job_state_t;
 typedef enum
 {

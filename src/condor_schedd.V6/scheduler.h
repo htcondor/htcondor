@@ -77,10 +77,10 @@ struct OwnerData {
   int FlockLevel;
   int OldFlockLevel;
   int GlobusJobs;
-  int GlobusUnsubmittedJobs;
+  int GlobusUnmanagedJobs;
   time_t NegotiationTimestamp;
   OwnerData() { Name=NULL;
-  JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=GlobusJobs=GlobusUnsubmittedJobs=0; }
+  JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=GlobusJobs=GlobusUnmanagedJobs=0; }
 };
 
 class match_rec

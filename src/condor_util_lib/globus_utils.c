@@ -54,8 +54,6 @@ char *GlobusJobStatusName( int status )
 		return "UNSUBMITTED";
 	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN:
 		return "UNKNOWN";
-	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD:
-		return "HELD";
 	default:
 		return "??????";
 	}

@@ -148,6 +148,7 @@ const char ATTR_JOB_REMOTE_IWD			 [] = "RemoteIwd";
 const char ATTR_JOB_LOCAL_CPU			 [] = "LocalCpu";
 const char ATTR_JOB_LOCAL_SYS_CPU		 [] = "LocalSysCpu";
 const char ATTR_JOB_LOCAL_USER_CPU		 [] = "LocalUserCpu";
+const char ATTR_JOB_MANAGED				 [] = "Managed";
 const char ATTR_JOB_NOTIFICATION		 [] = "JobNotification";
 const char ATTR_JOB_OUTPUT				 [] = "Out";
 const char ATTR_JOB_OUTPUT_SIZE			 [] = "OutSize";

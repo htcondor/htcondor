@@ -426,7 +426,7 @@ Scheduler::count_jobs()
 		Owners[i].FlockLevel = 0;
 		Owners[i].OldFlockLevel = 0;
 		Owners[i].GlobusJobs = 0;
-		Owners[i].GlobusUnsubmittedJobs = 0;
+		Owners[i].GlobusUnmanagedJobs = 0;
 		Owners[i].NegotiationTimestamp = current_time;
 	}
 
@@ -704,7 +704,7 @@ Scheduler::count_jobs()
 		for (i=0; i < N_Owners; i++) {
 			if ( Owners[i].GlobusJobs > 0 ) {
 				GridUniverseLogic::JobCountUpdate(Owners[i].Name,Owners[i].X509,
-					0, 0, Owners[i].GlobusJobs,Owners[i].GlobusUnsubmittedJobs);
+					0, 0, Owners[i].GlobusJobs,Owners[i].GlobusUnmanagedJobs);
 			}
 		}
 	}
@@ -797,7 +797,6 @@ count( ClassAd *job )
 	int		cur_hosts;
 	int		max_hosts;
 	int		universe;
-	int		globus_status;
 
 	if (job->LookupInteger(ATTR_JOB_STATUS, status) < 0) {
 		dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n",
@@ -856,13 +855,11 @@ count( ClassAd *job )
 			// for Globus, count jobs in UNSUBMITTED state by owner.
 			// later we make certain there is a grid manager daemon
 			// per owner.
-			int thisJobGlobusUnsubmitted = 0;
+			int job_managed = 0;
 			scheduler.Owners[OwnerNum].GlobusJobs++;
-			globus_status = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
-			job->LookupInteger(ATTR_GLOBUS_STATUS, globus_status);
-			if ( globus_status == GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
-				scheduler.Owners[OwnerNum].GlobusUnsubmittedJobs++;
-				thisJobGlobusUnsubmitted = 1;
+			job->LookupBool(ATTR_JOB_MANAGED, job_managed);
+			if ( job_managed == 0 ) {
+				scheduler.Owners[OwnerNum].GlobusUnmanagedJobs++;
 			}
 			if ( gridman_per_job ) {
 				int cluster = 0;
@@ -870,7 +867,7 @@ count( ClassAd *job )
 				job->LookupInteger(ATTR_CLUSTER_ID, cluster);
 				job->LookupInteger(ATTR_PROC_ID, proc);
 				GridUniverseLogic::JobCountUpdate(owner,x509userproxy,
-					cluster, proc, 1, thisJobGlobusUnsubmitted);
+					cluster, proc, 1, job_managed ? 0 : 1);
 			}
 		}
 			// We want to record the cluster id of all idle MPI jobs  
