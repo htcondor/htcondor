@@ -97,6 +97,7 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 	new_timer->service = s; 
 	new_timer->is_cpp = is_cpp;
 	new_timer->when = deltawhen + time(NULL);
+	new_timer->data_ptr = NULL;
 	if ( event_descrip ) 
 		new_timer->event_descrip = strdup(event_descrip);
 	else
