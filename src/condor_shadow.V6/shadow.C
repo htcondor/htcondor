@@ -396,9 +396,9 @@ main(int argc, char *argv[], char *envp[])
 
 	/* Set CurrentHosts to 0 before we call Wrapup(), since Wrapup will
 	   delete the job from the queue if it just finished. */
-	ConnectQ(schedd);
-	SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_CURRENT_HOSTS, 0);
-	DisconnectQ(NULL);
+	// ConnectQ(schedd);
+	// SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_CURRENT_HOSTS, 0);
+	// DisconnectQ(NULL);
 
 	Wrapup();
 
@@ -801,6 +801,7 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 						ImageSize);
 		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS, 
 						Proc->status);
+		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_CURRENT_HOSTS, 0);
 
 		rusage_to_float( Proc->local_usage, &utime, &stime );
 		SetAttributeFloat(Proc->id.cluster, Proc->id.proc, ATTR_JOB_LOCAL_USER_CPU, 
