@@ -23,24 +23,18 @@
 
  
 
-/* The macro definition and file was added for debugging purposes */
 
-# include <iostream.h>
-# include <fstream.h>
+#include "condor_common.h"
+#include "condor_constants.h"
+#include "condor_io.h"
+#include "condor_debug.h"
+
+/* The macro definition and file was added for debugging purposes */
 
 int putcount =0;
 int getcount = 0;
 
 static int shipcount =0;
-#if 0
-#ifdef CLIENT
-ofstream nwdump("CLIENTDUMP",ios::out);
-#endif
-
-#ifndef CLIENT
-ofstream nwdump("SERVERDUMP",ios::out);
-#endif
-#endif
 
 #if 0
 #define NETWORK_TRACE(s) { shipcount++; nwdump << s << "|"; \
@@ -48,17 +42,9 @@ ofstream nwdump("SERVERDUMP",ios::out);
 #endif
 #define NETWORK_TRACE(s) { }
 
-#define _POSIX_SOURCE
-
-#include "condor_common.h"
-#include "condor_constants.h"
-#include "condor_io.h"
-#include "condor_debug.h"
 
 #include <math.h>
 #include <string.h>
-
-
 
 #define FRAC_CONST		2147483647
 #define BIN_NULL_CHAR	"\255"
@@ -135,7 +121,6 @@ int Stream::code(
 }
 
 
-
 int Stream::code(
 	long	&l
 	)
@@ -149,7 +134,6 @@ int Stream::code(
 
 	return FALSE;	/* will never get here	*/
 }
-
 
 
 int Stream::code(
@@ -166,6 +150,35 @@ int Stream::code(
 	return FALSE;	/* will never get here	*/
 }
 
+
+int Stream::code(
+	long long	&l
+	)
+{
+	switch(_coding){
+		case stream_encode:
+			return put(l);
+		case stream_decode:
+			return get(l);
+	}
+
+	return FALSE;	/* will never get here	*/
+}
+
+
+int Stream::code(
+	unsigned long long	&l
+	)
+{
+	switch(_coding){
+		case stream_encode:
+			return put(l);
+		case stream_decode:
+			return get(l);
+	}
+
+	return FALSE;	/* will never get here	*/
+}
 
 
 int Stream::code(
@@ -651,7 +664,7 @@ static bool hton_is_noop()
 	return (bool) (1 == htons(1));
 }
 
-// no hton function is provided for ints > 4 bytes...
+// no hton function is provided for ints > 4 bytes by any OS.
 static unsigned long htonL(unsigned long hostint)
 {
 	unsigned long netint;
@@ -664,7 +677,7 @@ static unsigned long htonL(unsigned long hostint)
 	return netint;
 }
 
-// no ntoh function is provided for ints > 4 bytes...
+// no ntoh function is provided for ints > 4 bytes by any OS.
 static unsigned long ntohL(unsigned long netint)
 {
 	unsigned long hostint;
@@ -672,6 +685,32 @@ static unsigned long ntohL(unsigned long netint)
 	char *netp = (char *)&netint;
 
 	for (unsigned int i=0, j=sizeof(long)-1; i < sizeof(long); i++, j--) {
+		hostp[i] = netp[j];
+	}
+	return hostint;
+}
+
+// no hton function is provided for ints > 4 bytes by any OS.
+static unsigned long long htonLL(unsigned long long hostint)
+{
+	unsigned long long netint;
+	char *hostp = (char *)&hostint;
+	char *netp = (char *)&netint;
+
+	for (unsigned int i=0, j=sizeof(long long)-1; i < sizeof(long long); i++, j--) {
+		netp[i] = hostp[j];
+	}
+	return netint;
+}
+
+// no ntoh function is provided for ints > 4 bytes by any OS.
+static unsigned long long ntohLL(unsigned long long netint)
+{
+	unsigned long long hostint;
+	char *hostp = (char *)&hostint;
+	char *netp = (char *)&netint;
+
+	for (unsigned int i=0, j=sizeof(long long)-1; i < sizeof(long long); i++, j--) {
 		hostp[i] = netp[j];
 	}
 	return hostint;
@@ -743,6 +782,82 @@ int Stream::put(
 					}
 				}
 				if (put_bytes(&l, sizeof(long)) != sizeof(long)) return FALSE;
+			}
+			break;
+
+		case ascii:
+			return FALSE;
+	}
+
+	return TRUE;
+}
+
+int Stream::put(
+	long long	l
+	)
+{
+	char	pad;
+  NETWORK_TRACE("put long long" << l);
+	if (!valid()) return FALSE;
+
+	switch(_code){
+		case internal:
+			if (put_bytes(&l, sizeof(long long)) != sizeof(long long)) return FALSE;
+			break;
+
+		case external:
+			if ((sizeof(int) == sizeof(long long)) || (sizeof(long long) > INT_SIZE)) {
+				return put((long)l);
+			} else {
+				if (!hton_is_noop()) { // need to convert to network order
+					l = htonLL(l);
+				}
+				if (sizeof(long long) < INT_SIZE) {
+					pad = (l >= 0) ? 0 : 0xff; // sign extend value
+					for (int s=0; s < INT_SIZE-sizeof(long long); s++) {
+						if (put_bytes(&pad, 1) != 1) return FALSE;
+					}
+				}
+				if (put_bytes(&l, sizeof(long long)) != sizeof(long long)) return FALSE;
+			}
+			break;
+
+		case ascii:
+			return FALSE;
+	}
+
+	return TRUE;
+}
+
+
+
+int Stream::put(
+	long long unsigned	l
+	)
+{
+	char	pad;
+  NETWORK_TRACE("put long long" << l);
+	if (!valid()) return FALSE;
+
+	switch(_code){
+		case internal:
+			if (put_bytes(&l, sizeof(long long)) != sizeof(long long)) return FALSE;
+			break;
+
+		case external:
+			if ((sizeof(int) == sizeof(long long)) || (sizeof(long long) > INT_SIZE)) {
+				return put((unsigned long)l);
+			} else {
+				if (!hton_is_noop()) { // need to convert to network order
+					l = htonLL(l);
+				}
+				if (sizeof(long long) < INT_SIZE) {
+					pad = 0;
+					for (int s=0; s < INT_SIZE-sizeof(long long); s++) {
+						if (put_bytes(&pad, 1) != 1) return FALSE;
+					}
+				}
+				if (put_bytes(&l, sizeof(long long)) != sizeof(long long)) return FALSE;
 			}
 			break;
 
@@ -1134,6 +1249,97 @@ int Stream::get(
 			return FALSE;
 	}
     NETWORK_TRACE("get long " << l);
+	return TRUE;
+}
+
+int Stream::get(
+	long long	&l
+	)
+{
+	int		i;
+	char	pad[INT_SIZE-sizeof(long long)], sign;
+
+	if (!valid()) return FALSE;
+
+	switch(_code){
+		case internal:
+			if (get_bytes(&l, sizeof(long long)) != sizeof(long long)) return FALSE;
+			break;
+
+		case external:
+			if ((sizeof(int) == sizeof(long long)) || (sizeof(long long) > INT_SIZE)) {
+				if (!get(i)) return FALSE;
+				l = (long) i;
+			} else {
+				if (sizeof(long long) < INT_SIZE) {
+					if (get_bytes(pad, INT_SIZE-sizeof(long long))
+						!= INT_SIZE-sizeof(long long)) {
+						return FALSE;
+					}
+				}
+				if (get_bytes(&l, sizeof(long long)) != sizeof(long long)) return FALSE;
+				if (!hton_is_noop()) { // need to convert to host order
+					l = ntohL(l);
+				}
+				sign = (l >= 0) ? 0 : 0xff;
+				for (int s=0; s < INT_SIZE-sizeof(long long); s++) { // overflow?
+					if (pad[s] != sign) {
+						return FALSE; // overflow
+					}
+				}
+			}
+			break;
+
+		case ascii:
+			return FALSE;
+	}
+    NETWORK_TRACE("get long long " << l);
+	return TRUE;
+}
+
+
+
+int Stream::get(
+	unsigned long long	&l
+	)
+{
+	unsigned int		i;
+	char	pad[INT_SIZE-sizeof(long long)];
+
+	if (!valid()) return FALSE;
+
+	switch(_code){
+		case internal:
+			if (get_bytes(&l, sizeof(long long)) != sizeof(long long)) return FALSE;
+			break;
+
+		case external:
+			if ((sizeof(int) == sizeof(long long)) || (sizeof(long long) > INT_SIZE)) {
+				if (!get(i)) return FALSE;
+				l = (unsigned long long) i;
+			} else {
+				if (sizeof(long long) < INT_SIZE) {
+					if (get_bytes(pad, INT_SIZE-sizeof(long long))
+						!= INT_SIZE-sizeof(long long)) {
+						return FALSE;
+					}
+				}
+				if (get_bytes(&l, sizeof(long long)) != sizeof(long long)) return FALSE;
+				if (!hton_is_noop()) { // need to convert to host order
+					l = ntohL(l);
+				}
+				for (int s=0; s < INT_SIZE-sizeof(long long); s++) { // overflow?
+					if (pad[s] != 0) {
+						return FALSE; // overflow
+					}
+				}
+			}
+			break;
+
+		case ascii:
+			return FALSE;
+	}
+    NETWORK_TRACE("get long long " << l);
 	return TRUE;
 }
 
