@@ -57,7 +57,7 @@
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts shadow.V6 startd.V6 starter.V5 submit.V6 status.V6 \
 		tools kbdd collector.V6 PvmProgs dagman userlog eventd \
-		globus starter.V6.1 shadow.V6.1
+		globus starter.V6.1 shadow.V6.1 data_manager
 
 #define Libraries \
 		util_lib c++_util procapi sysapi io classad.V6 daemon_core.V6 \
@@ -212,6 +212,7 @@ object_target(startd.V6)
 object_target(schedd.V6)
 object_target(status.V6)
 object_target(dagman)
+object_target(data_manager)
 object_target(userlog)
 #if NEEDS_KBDD
    object_target(kbdd)
