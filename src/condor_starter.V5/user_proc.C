@@ -538,18 +538,18 @@ UserProc::execute()
 			// will change real, effective, and saved uid's.  Thus the
 			// child process will have only it's submitting uid, and cannot
 			// switch back to root or some other uid.
-#if !defined(Solaris)
-		if( set_root_euid() < 0 ) {
-			EXCEPT( "set_root_euid()" );
-		} 
-		dprintf(D_FULLDEBUG,"Setting ruid and guid\n");
-		if( setgid( gid ) < 0 ) {
-			EXCEPT( "setgid(%d)", gid );
-		} 
-		if( setuid( uid ) < 0 ) {
-			EXCEPT( "setuid(%d)", uid );
-		} 
-#endif
+		if (getuid() == 0) {
+			if( set_root_euid() < 0 ) {
+				EXCEPT( "set_root_euid()" );
+			} 
+			dprintf(D_FULLDEBUG,"Setting ruid and guid\n");
+			if( setgid( gid ) < 0 ) {
+				EXCEPT( "setgid(%d)", gid );
+			} 
+			if( setuid( uid ) < 0 ) {
+				EXCEPT( "setuid(%d)", uid );
+			} 
+		}
 
 		switch( job_class ) {
 		  
@@ -756,9 +756,9 @@ UserProc::send_sig( int sig )
 		return;
 	}
 
-#if !defined(Solaris)
- 	set_root_euid(); 
-#endif
+	if (getuid() == 0) {
+		set_root_euid(); 
+	}
 
 	if ( job_class == VANILLA ) {
 		// Here we call killkids() to forward the signal to all of our
@@ -781,6 +781,7 @@ UserProc::send_sig( int sig )
 				return;
 			}
 			set_condor_euid();
+			perror("kill");
 			EXCEPT( "kill(%d,SIGCONT)", pid  );
 		}
 	}
@@ -790,6 +791,7 @@ UserProc::send_sig( int sig )
 			return;
 		}
 		set_condor_euid();
+		perror("kill");
 		EXCEPT( "kill(%d,%d)", pid, sig );
 	}
 
@@ -1199,7 +1201,7 @@ open_std_file( int which )
 		}
 	}
 	if( answer < 0 ) {
-		sprintf( buf, "Can't open \"%s\"", name );
+		sprintf( buf, "Can't open \"%s\" - %s", name, strerror(errno) );
 		REMOTE_syscall(CONDOR_perm_error, buf );
 		exit( 4 );
 	} else {
