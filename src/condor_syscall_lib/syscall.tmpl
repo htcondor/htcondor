@@ -216,7 +216,7 @@
 	  the "clipped" version.
 	*/
 
-#if !defined(AIX32)
+#if !defined(AIX32) && !defined(Solaris)
 	uid_t geteuid() : extract, pseudo;
 	gid_t getegid() : extract, pseudo;
 	char * getwd( char *path_name ) : pseudo, extract {
@@ -923,7 +923,8 @@ not_supported {
 #endif /* not CLIP */
 
 	/* System calls unique to AIX - needed even in CLIPPED version */ 
-#if defined(AIX32)
+	/* Also needed by Solaris - Jim B. */
+#if defined(AIX32) || defined(Solaris)
 	uid_t getuidx( int which );
 	gid_t getgidx( int which );
 #	if !defined(SWITCH)
