@@ -275,7 +275,8 @@ void writeSubmitFile(const MyString &strDagmanPath, const SubmitDagOptions &opts
     }
 
     fprintf(pSubFile, "arguments\t= %s\n", strArgs.Value());
-    fprintf(pSubFile, "environment\t= _CONDOR_DAGMAN_LOG=%s;_CONDOR_MAX_DAGMAN_LOG=0\n", opts.strDebugLog.Value());
+    fprintf(pSubFile, "environment\t= _CONDOR_DAGMAN_LOG=%s"
+		"%c_CONDOR_MAX_DAGMAN_LOG=0\n", opts.strDebugLog.Value(), env_delimiter);
     if(opts.strNotification != "") 
 	{	
 		fprintf(pSubFile, "notification\t= %s\n", opts.strNotification.Value());
