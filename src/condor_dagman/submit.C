@@ -81,25 +81,29 @@ bool submit_submit (const char * cmdFile, CondorID & condorID) {
   if (command == NULL) {
     debug_error (1, DEBUG_QUIET, "%s %s: Out of memory", exe, cmdFile);
   }
-  sprintf(command, "%s %s 2>&1", exe, cmdFile);
+  sprintf( command, "%s %s%s", exe, cmdFile,
+		   DEBUG_LEVEL( DEBUG_VERBOSE ) ? "" : "2>&1" );
   
   bool success = false;
   const int tries = 6;
+  int wait = 1;
   
-  for (int i = 1 ; i <= tries && !success ; i++) {
-    success = submit_try (exe, command, condorID);
-    if (!success) {
-      const int wait = 10;
-      debug_println (DEBUG_NORMAL, "condor_submit try %d/%d failed, "
-                     "will try again in %d seconds", i, tries, wait);
-      sleep(wait);
-    }
+  success = submit_try( exe, command, condorID );
+  for (int i = 1 ; i < tries && !success ; i++) {
+      debug_println( DEBUG_NORMAL, "condor_submit try %d/%d failed, "
+                     "will try again in %d second%s", i, tries, wait,
+					 wait == 1 ? "" : "s" );
+      sleep( wait );
+	  success = submit_try( exe, command, condorID );
+	  wait = wait * 2;
   }
   if (!success && DEBUG_LEVEL(DEBUG_QUIET)) {
-    printf ("condor_submit failed after %d tries.\n", tries);
-    printf ("Submit command was: %s\n", command);
+    printf( "condor_submit failed after %d tr%s.\n", tries,
+			tries == 1 ? "y" : "ies" );
+    printf("submit command was: %s\n", command );
+	delete[] command;
+	return false;
   }
   delete [] command;
   return success;
 }
-
