@@ -1098,7 +1098,7 @@ void DaemonCore::Driver()
 #ifndef WIN32
 		// Drain our async_pipe; we must do this before we unblock unix signals...
 		// Just keep reading while something is there.  async_pipe is set to 
-		// non-blocking more via fcntl, so the read below will not block.
+		// non-blocking mode via fcntl, so the read below will not block.
 		while( read(async_pipe[0],asyncpipe_buf,8) > 0 );
 #endif
 
