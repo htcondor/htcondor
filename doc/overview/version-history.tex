@@ -57,7 +57,7 @@ universe job.
 list of ports that now support remote system calls and checkpointing.
 
 \item Any mail being sent from Condor now shows up as having been sent from
-the Condor Account, instead of root or Super User.
+the designated Condor Account, instead of root or ``Super User''.
 
 \item The \Condor{submit} ``hold'' command may be used to submit jobs
 to the queue in the hold state.  Held jobs will not run until released
@@ -85,6 +85,11 @@ hostnames or addresses, the new flags are not required.
 \item Added \Opt{-pool} and \Opt{-addr} options to \Condor{rm},
 \Condor{hold} and \Condor{release}.
 
+\item Clarified our Linux platform support.  We now officially
+support the RedHat 5.2 and 6.x distributions, and although other Linux
+distributions (especially those with similar libc versions) may work,
+they are not tested or supported.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -110,17 +115,17 @@ programs to sometimes fail.
 
 \item Fixed a number of problems with the statistics reported in the
 job completion email and by \Condor{q} \Opt{-goodput}, including the
-number of checkpoints and total network usage.  Correct values will be
-computed for all new jobs after upgrading.
+number of checkpoints and total network usage.  Correct values will
+now be computed for all new jobs.
 
 \item Changes in \Macro{USE\_CKPT\_SERVER} and
 \Macro{CKPT\_SERVER\_HOST} no longer cause problems for jobs in the
 queue which have already checkpointed.
 
 \item Many of the Condor administration tools had a bug where they
-would perform a segmentation violation if you specified a \Opt{-pool} 
+would suffer a segmentation violation if you specified a \Opt{-pool} 
 option and did not specify a hostname.
-This case now results in an error message, instead.
+This case now results in an error message instead.
 
 \item Fixed a bug where the \Condor{schedd} could die with a
 segmentation violation if there was an error mapping an IP address
