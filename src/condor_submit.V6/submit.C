@@ -56,7 +56,7 @@ char	*Spool;
 char	*Flavor;
 char	*ThisHost;
 char	*My_fs_domain;
-
+char    WhomToNotify [256];
 
 int		LineNo;
 int		GotQueueCommand;
@@ -96,6 +96,7 @@ char	*Preferences	= "preferences";
 char	*ImageSize		= "image_size";
 char	*Universe		= "universe";
 char	*MachineCount	= "machine_count";
+char    *NotifyUser     = "notify_user";
 
 extern int	Terse;
 extern int	DontDisplayTime;
@@ -113,6 +114,7 @@ char * get_tok();
 void SetStdFile( int which_file );
 void SetPriority();
 void SetNotification();
+void SetNotifyUser ();
 void SetArguments();
 void SetEnvironment();
 void SetRootDir();
@@ -202,7 +204,7 @@ main( int argc, char *argv[] )
 	LockJobQueue( Q, WRITER );
 
 #else
-	if (ConnectQ() == 0) {
+	if (ConnectQ(NULL) == 0) {
 		fprintf(stderr, "Failed to connect to qmgr\n");
 		exit(1);
 	}
@@ -756,6 +758,17 @@ SetNotification()
 }
 
 void
+SetNotifyUser()
+{
+	char *who = condor_param(NotifyUser);
+
+	if (who == NULL)
+		strcpy (WhomToNotify, "");
+	else
+		strcpy (WhomToNotify, who);
+}
+	
+void
 SetArguments()
 {
 	char	*args = condor_param(Arguments);
@@ -1105,6 +1118,7 @@ queue()
 	SetArguments();
 	SetEnvironment();
 	SetNotification();
+	SetNotifyUser();         /* Set NotifyUser parameter  --RR */
 	SetRequirements();
 	SetPreferences();
 	SetPipes();
@@ -1129,6 +1143,10 @@ queue()
 	rval = StoreProc( Q, &Proc );
 #else
 	rval = SaveProc( &Proc );
+	/* Set NotifyUser parameter in Job ad   --RR */
+	if (strcmp (WhomToNotify, "") != 0)
+		SetAttributeString (Proc.id.cluster, Proc.id.proc, "NotifyUser", 
+											WhomToNotify);	
 #endif
 
 	switch( rval ) {
@@ -1221,11 +1239,13 @@ check_requirements( char *orig )
 				break;
 			}
 		}
+/*
 		if ( !has_fsdomain ) {
 			(void)strcat( answer, " && (FilesystemDomain == \"" );
 			(void)strcat( answer, My_fs_domain );
 			(void)strcat( answer, "\")" );
 		} 
+*/
 	}
 
 	if ( Proc.universe == STANDARD ) {
