@@ -26,6 +26,7 @@
 #include "condor_debug.h"
 #include "directory.h"
 #include "condor_string.h"
+#include "status_string.h"
 #include "condor_config.h"
 
 // Set DEBUG_DIRECTORY_CLASS to 1 to not actually remove
@@ -424,11 +425,24 @@ Directory::do_remove( const char* path, bool is_curr, dir_rempriv_t rem_priv )
 		try_1_rc = my_spawnl( "/bin/rm", "/bin/rm", "-rf", path, NULL );
 #endif
 
+		if( try_1_rc != 0 ) { 
+			MyString errmsg;
+			if( try_1_rc < 0 ) {
+				errmsg = "my_spawnl returned -1";
+			} else {
+				errmsg = "/bin/rm ";
+				statusString( try_1_rc, errmsg );
+			}
+			dprintf( D_FULLDEBUG, "Removing %s as %s failed: %s -- "
+					 "trying again as file owner\n", path, 
+					 priv_to_string(get_priv()), errmsg.Value() );
+		}
+					 
 			// for good measure, repeat the above operation a second
-			// time // as the owner of the entry.  We do this because
-			// if we // currently have root priv, and we are accessing
-			// files across // NFS, we will get re-mapped to user
-			// "nobody" by any NFS // daemon worth its salt.
+			// time as the owner of the entry.  We do this because if
+			// we currently have root priv, and we are accessing files
+			// across NFS, we will get re-mapped to user "nobody" by
+			// any NFS daemon worth its salt.
 #ifndef WIN32
 		if ( ( want_priv_change ) && ( rem_priv == DIR_REMPRIV_OWNER ) ) {
 
@@ -454,7 +468,8 @@ Directory::do_remove( const char* path, bool is_curr, dir_rempriv_t rem_priv )
 			}
 
 				// Log what we're about to do
-			dprintf( D_FULLDEBUG, "Removing %s as with ids to %d.%d\n",
+			dprintf( D_FULLDEBUG, 
+					 "Attempting to remove %s as file owner (%d.%d)\n",
 					 full, uid, gid );
 
 				// Become the user who owns the directory
@@ -473,6 +488,20 @@ Directory::do_remove( const char* path, bool is_curr, dir_rempriv_t rem_priv )
 
 				// When all of that is done, switch back to our normal user
 			set_priv(priv);
+
+			if( try_2_rc != 0 ) { 
+				MyString errmsg;
+				if( try_2_rc < 0 ) {
+					errmsg = "my_spawnl returned -1";
+				} else {
+					errmsg = "/bin/rm ";
+					statusString( try_2_rc, errmsg );
+				}
+				dprintf( D_ALWAYS,
+						 "Removing %s as file owner (%d.%d) failed: %s\n",
+						 path, (int)uid, (int)gid, errmsg.Value() );
+			}
+
 		}
 
 		else
@@ -498,8 +527,24 @@ Directory::do_remove( const char* path, bool is_curr, dir_rempriv_t rem_priv )
 #else
 			try_2_rc = my_spawnl( "/bin/rm", "/bin/rm", "-rf", path, NULL );
 #endif
+
 			set_priv(priv);
+
+			if( try_2_rc != 0 ) { 
+				MyString errmsg;
+				if( try_2_rc < 0 ) {
+					errmsg = "my_spawnl returned -1";
+				} else {
+					errmsg = "/bin/rm ";
+					statusString( try_2_rc, errmsg );
+				}
+				dprintf( D_FULLDEBUG, 
+						 "Removing %s as PRIV_CONDOR failed: %s\n",
+						 path, errmsg.Value() );
+			}
+
 		}
+
 
 	} else {
 		// the current file is not a directory, just a file	
