@@ -787,7 +787,7 @@ open_stream( const char *local_path, int flags, int *_FileStreamLen )
 	EXCEPT( "Should never get here" );
 }
 
-#if defined(OSF1)
+#if defined(OSF1) || defined(Solaris)
 	int
 	_open( const char *path, int flags, ... )
 	{
@@ -803,7 +803,9 @@ open_stream( const char *local_path, int flags, int *_FileStreamLen )
 		}
 
 	}
+#endif
 
+#if defined(OSF1)
 	__open( const char *path, int flags, ... )
 	{
 		va_list ap;
