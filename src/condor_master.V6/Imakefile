@@ -1,10 +1,14 @@
+#if IS_HPPAR_HPUX9
+BSD_LIB = /usr/lib/libBSD.a
+#endif
+
 SRC_DIR = $(SRC_TREE)/condor_master
 #if defined(USE_CONFIG_SERVER)
 CFLAGS = $(STD_C_FLAGS) -DUSE_CONFIG_SERVER
-C_PLUS_FLAGS =  $(STD_C_PLUS_FLAGS) -DNEW_PROC -DUSE_CONFIG_SERVER 
+C_PLUS_FLAGS =  $(STD_C_PLUS_FLAGS) -DUSE_CONFIG_SERVER 
 #else
 CFLAGS = $(STD_C_FLAGS) 
-C_PLUS_FLAGS =  $(STD_C_PLUS_FLAGS) -DNEW_PROC -Wall
+C_PLUS_FLAGS =  $(STD_C_PLUS_FLAGS) -Wall
 #endif
 
 SRC = master.C daemon.C
@@ -17,12 +21,10 @@ CLASSAD_LIB = ../condor_classad/expr_lib.a
 CCTP_LIB = ../condor_config_server/cctp_lib.a
 #endif
 
-#if IS_HPPAR_HPUX9
-BSD_LIB = /usr/lib/libBSD.a
-#endif
-
-LIB = $(DAEMON_CORE_LIB) $(CCTP_LIB) $(CLASSAD_LIB) $(UTIL_LIB) $(CLASS_LIB) $(UTIL_LIB) $(BSD_LIB) SocketLib KernLib
+LIB = $(DAEMON_CORE_LIB) $(CCTP_LIB) $(CLASSAD_LIB) $(UTIL_LIB) $(CLASS_LIB) $(UTIL_LIB)
 LIBDIRS = ../condor_util_lib ../condor_c++_util
+
+LDFLAGS = SocketLib KernLib
 
 all_target(condor_master)
 tags_target($(SRC),$(LIBDIRS))
