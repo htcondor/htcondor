@@ -59,9 +59,9 @@
 #define HAS_PVM					NO
 
 
-#define CCompiler gcc
+#define CCompiler /usr/psup/gcc-2.6.0/bin/gcc
 #define StaticFlag -static
-#define CPlusCompiler g++
+#define CPlusCompiler /usr/psup/gcc-2.6.0/bin/g++
 #define UnixName /vmunix			/* pathname of the system executable */
 #define syscall_lib syscall_lib_ultrix
 #define PsAllFlag -ax				/* "Ps" flag when you want everything */
