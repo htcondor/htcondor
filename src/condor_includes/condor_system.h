@@ -57,7 +57,11 @@
 #	include "condor_sys_solaris.h"
 #elif defined(OSF1)
 #	include "condor_sys_dux.h"
+#else
+#   error "Don't know what Unix this is!"
 #endif
+
+#define UNIX
 
 /**********************************************************************
 ** Files that need to be fixed on all (or nearly all) platforms 
