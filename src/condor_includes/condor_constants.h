@@ -11,8 +11,13 @@
 	it is conditional.
 */
 #ifndef BOOLEAN_TYPE_DEFINED
+#if defined(WIN32)
+typedef unsigned char BOOLEAN;
+typedef unsigned char BOOL_T;
+#else
 typedef int BOOLEAN;
 typedef int BOOL_T;
+#endif
 #define BOOLAN_TYPE_DEFINED
 #endif
 
