@@ -91,7 +91,12 @@ void restart();
 const int MAGIC = 0xfeafea;
 const int SEG_INCR = 25;
 
+#if defined(AIX32)
+#include "setjmp.AIX32.h"
+#else
 #include <setjmp.h>
+#endif
+
 #define SETJMP _setjmp
 #define LONGJMP _longjmp
 extern "C" {
