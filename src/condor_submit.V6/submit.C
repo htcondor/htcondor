@@ -22,6 +22,14 @@
 ** OR PERFORMANCE OF THIS SOFTWARE.
 ** 
 ** Author:  Mike Litzkow
+** Modified by: Cai, Weiru
+**
+** 		The configuration is rather complicated now that we have config_server.
+**		We will first try to find a condor_config.master in condor directory.
+**		If failed, configure as usual. Otherwise, read condor_config.master
+**		and look for CONDOR_CONFIG_LOCATION to find out where the master placed
+**		the configuration file. If CONDOR_CONFIG_LOCATION is not configured,
+**		look in the default directory for the location of the config file.
 **
 */ 
 
@@ -43,6 +51,7 @@
 #include "url_condor.h"
 #include "proc_obj.h"
 #include "sched.h"
+#include "files.h"
 #include <pwd.h>
 #include <sys/stat.h>
 #include <time.h>
@@ -102,6 +111,7 @@ char    *NotifyUser     = "notify_user";
 
 extern int	Terse;
 extern int	DontDisplayTime;
+extern BUCKET	*ConfigTab[];
 
 void reschedule();
 void SetExecutable();
@@ -149,6 +159,7 @@ extern "C" {
 void _mkckpt( char *, char * );
 int SetSyscalls( int foo );
 int	get_machine_name(char*);
+int read_config(char*, char*, CONTEXT*, BUCKET**, int, int);
 }
 
 int
@@ -158,17 +169,10 @@ main( int argc, char *argv[] )
 	char	queue_name[_POSIX_PATH_MAX];
 	char	**ptr;
 	char	*cmd_file = NULL, *queue_file = NULL;
-
+	struct passwd	*pwd;
+	char*			config_location;
+	
 	setbuf( stdout, NULL );
-
-	MyName = argv[0];
-
-	config( MyName, (CONTEXT *)0 );
-	init_params();
-
-	DebugFlags |= D_EXPR;
-	Terse = 1;
-	DontDisplayTime = TRUE;
 
 	for( ptr=argv+1; *ptr; ptr++ ) {
 		if( ptr[0][0] == '-' ) {
@@ -185,6 +189,39 @@ main( int argc, char *argv[] )
 			cmd_file = *ptr;
 		}
 	}
+	
+	MyName = argv[0];
+
+	/* Weiru */
+	if((pwd = getpwnam("condor")) == NULL)
+	{
+		EXCEPT( "condor not in passwd file" );
+	}
+	if(read_config(pwd->pw_dir, MASTER_CONFIG, NULL, ConfigTab, TABLESIZE,
+				   EXPAND_LAZY) < 0)
+	{
+		config(MyName, NULL);
+	}
+	else
+	{
+   		// Check to see if this is the configuration server host. If it is,
+   		// start configuration server immediately.
+   		config_location = param("CONFIG_FILE_LOCATION");
+   		if(!config_location)
+   		{
+   			config_location = pwd->pw_dir;
+   		}
+		if(config_from_server(config_location, MyName, NULL) < 0)
+	    {
+			config(MyName, NULL);
+		}
+	}
+
+	init_params();
+
+	DebugFlags |= D_EXPR;
+	Terse = 1;
+	DontDisplayTime = TRUE;
 
 	if( cmd_file == NULL ) {
 		usage();
