@@ -1,3 +1,10 @@
+Changes for version 0.9.6: 
+
+* Fixed bug that sometimes caused Flatten() to return an expression
+  with a bad pointer.
+
+* operator<<() now takes any ExprTree instead of just a ClassAd.
+
 Changes for version 0.9.5: 
 * Fixed a bug in printing parenthesized expressions with minimal
   parentheses. (It used to print garbage in some cases.)
