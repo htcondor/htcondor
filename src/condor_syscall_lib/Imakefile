@@ -224,7 +224,7 @@ switches.c: syscall.tmpl switches.prologue stub_gen switches.linux.h
 	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) < syscall.tmpl | \
 	stub_gen -mode switches  -p switches.prologue \
 	> switches.c
-#elif IS_SUN4M_SOLARIS251
+#elif IS_SUN4M_SOLARIS251 || IS_X86_SOLARIS25
 switches.c: syscall.tmpl switches.prologue stub_gen
 	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) -DSolaris251 < \
 	syscall.tmpl | stub_gen -mode switches  -p switches.prologue \
