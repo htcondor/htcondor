@@ -737,6 +737,7 @@ terminate_with_sig( int sig )
 {
 	sigset_t	mask;
 	pid_t		my_pid;
+	struct sigaction act;
 
 		// Make sure all system calls handled "straight through"
 	SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
