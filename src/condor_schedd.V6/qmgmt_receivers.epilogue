@@ -1,4 +1,0 @@
-	} /* End of switch */
-
-	return -1;
-} /* End of function */
