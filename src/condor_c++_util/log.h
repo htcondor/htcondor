@@ -13,7 +13,7 @@ class LogRecord {
 public:
 	
 	LogRecord();
-	~LogRecord();
+	virtual ~LogRecord();
 	LogRecord *get_next() { return next; }
 	int get_op_type() { return op_type; }
 
@@ -27,14 +27,14 @@ public:
 	int ReadHeader(int fd);
 	int ReadHeader(XDR *);
 	int ReadHeader(FILE *fp);
-	virtual int ReadBody(int fd) {}
+	virtual int ReadBody(int fd) {return 0;}
 	virtual int ReadBody(XDR *xdrs) { return WriteBody(xdrs); }
-	virtual int ReadBody(FILE *fp) {}
+	virtual int ReadBody(FILE *fp) {return 0;}
 	int ReadTail(int fd);
 	int ReadTail(XDR *);
 	int ReadTail(FILE *fp);
 
-	virtual int Play() {}
+	virtual int Play() {return 0;}
 
 protected:
 	int readstring(int, char *&);
@@ -43,17 +43,17 @@ protected:
 	int body_size;
 
 private:
-	WriteHeader(int fd);
-	virtual WriteBody(int fd) {}
-	WriteTail(int fd);
+	int WriteHeader(int fd);
+	virtual int WriteBody(int fd) {return 0;}
+	int WriteTail(int fd);
 
-	WriteHeader(XDR *);
-	virtual WriteBody(XDR *) {}
-	WriteTail(XDR *);
+	int WriteHeader(XDR *);
+	virtual int WriteBody(XDR *) {return 0;}
+	int WriteTail(XDR *);
 
-	WriteHeader(FILE *fp);
-	virtual WriteBody(FILE *) {}
-	WriteTail(FILE *fp);
+	int WriteHeader(FILE *fp);
+	virtual int WriteBody(FILE *) {return 0;}
+	int WriteTail(FILE *fp);
 
 	LogRecord *next;
 	LogRecord *prev;
