@@ -2080,19 +2080,20 @@ These macros control the \Condor{schedd}.
   \MacroUNI{FLOCK\_COLLECTOR\_HOSTS} should have the same definition as
   \MacroUNI{FLOCK\_NEGOTIATOR\_HOSTS}.
 
-\item[\Macro{FLOCK\_VIEW\_SERVERS}] \label{param:FlockViewServers}
-  This macro defines a list of hostnames where the condor-view server
-  is running in the pools to which you want your jobs to flock.  The
-  order of this list must correspond to the order of the
-  \MacroUNI{FLOCK\_COLLECTOR\_HOSTS} and
-  \MacroUNI{FLOCK\_NEGOTIATOR\_HOSTS} lists.  List items may be empty
-  for pools which don't use a separate condor-view server.
-  \MacroUNI{FLOCK\_VIEW\_SERVER} may be left undefined if no remote
-  pools use separate condor-view servers.  Note: It is required that
-  the same hostname does not appear twice in the
-  \MacroUNI{FLOCK\_VIEW\_SERVERS} list and that the
-  \MacroUNI{CONDOR\_VIEW\_HOST} does not appear in the
-  \MacroUNI{FLOCK\_VIEW\_SERVERS} list.
+% No longer needed as of 6.5.2.  Now done automatically.
+%\item[\Macro{FLOCK\_VIEW\_SERVERS}] \label{param:FlockViewServers}
+% This macro defines a list of hostnames where the condor-view server
+% is running in the pools to which you want your jobs to flock.  The
+% order of this list must correspond to the order of the
+% \MacroUNI{FLOCK\_COLLECTOR\_HOSTS} and
+% \MacroUNI{FLOCK\_NEGOTIATOR\_HOSTS} lists.  List items may be empty
+% for pools which don't use a separate condor-view server.
+% \MacroUNI{FLOCK\_VIEW\_SERVER} may be left undefined if no remote
+% pools use separate condor-view servers.  Note: It is required that
+% the same hostname does not appear twice in the
+% \MacroUNI{FLOCK\_VIEW\_SERVERS} list and that the
+% \MacroUNI{CONDOR\_VIEW\_HOST} does not appear in the
+% \MacroUNI{FLOCK\_VIEW\_SERVERS} list.
 
 \item[\Macro{NEGOTIATE\_ALL\_JOBS\_IN\_CLUSTER}]
   \label{param:NegotiateAllJobsInCluster}
