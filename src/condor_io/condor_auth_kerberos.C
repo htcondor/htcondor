@@ -44,7 +44,6 @@ const char STR_CONDOR_CACHE_PREFIX[]    = "krb_condor_";
 #define KERBEROS_MUTUAL  3
 #define KERBEROS_PROCEED 4
 
-template class HashTable<MyString, MyString>;
 HashTable<MyString, MyString> * Condor_Auth_Kerberos::RealmMap = 0;
 //----------------------------------------------------------------------
 // Kerberos Implementation
