@@ -102,6 +102,7 @@ my @EmptyDirs;
 my %DataInodes;
 my %TagInodes;
 my %UrlInodes;
+my %AllInodes;
 
 # Do the real work here...
 sub RunIt()
@@ -133,7 +134,7 @@ sub RunIt()
 # Scan for data files, collect info on 'em
 sub ScanFiles( )
 {
-    my $Cmd = "find . -type f -printf '%h %f %i %n %s %b %A@ %C@ %T@\\n' ";
+    my $Cmd = "find . -printf '%h %f %i %n %s %b %A@ %C@ %T@\\n' ";
     if ( ! open( FIND, "$Cmd|" ) )
     {
 	print STDERR "Can't run '$Cmd'\n";
@@ -142,7 +143,8 @@ sub ScanFiles( )
     while( <FIND> )
     {
 	my @Results = split;
-
+	
+	# Split it all up into fields...
 	my %File;
 	$File{Directory} = shift @Results;
 	$File{Name} = shift @Results;
@@ -153,6 +155,30 @@ sub ScanFiles( )
 	$File{Access} = shift @Results;
 	$File{Change} = shift @Results;
 	$File{Modify} = shift @Results;
+
+	# Add it into the "all count" hash
+	if ( ! exists $AllInodes{$File{Inode}} )
+	{
+	    $AllInodes{$File{Inode}} = 1;
+	}
+	else
+	{
+	    $AllInodes{$File{Inode}} = 0;
+	}
+	my $FullFile = $File{Directory} . "/" . $File{Name};
+
+	# Skip over directories...
+	if ( -d $FullFile )
+	{
+	    next if ( $File{Directory} eq "." );
+	    if ( opendir( DIR, $FullFile)  )
+	    {
+		 my $n = grep( ! /(^\.$)|(^\.\.$)/, readdir( DIR ) );
+		 push( @EmptyDirs, $FullFile) if ( 0 == $n );
+		closedir( DIR );
+	    }
+	    next;
+	}
 
 	# What type of file is it (based on it's name)
 	$File{IsGlobal} = $File{Directory} =~ /global/;
@@ -198,24 +224,6 @@ sub ScanFiles( )
 	warn $! ? "Error closing $Cmd pipe: $!" : "Exit status $? from $Cmd";
 }
 
-# Scan for empty directories
-sub ScanDirs( )
-{
-    my $Cmd = "find local global -type d -empty -print\n' ";
-    if ( ! open( FIND, "$Cmd|" ) )
-    {
-	print STDERR "Can't run '$Cmd'\n";
-	exit 1;
-    }
-    while( <FIND> )
-    {
-	chomp;
-	push @EmptyDirs, $_;
-    }
-    close( FIND ) or
-	warn $! ? "Error closing $Cmd pipe: $!" : "Exit status $? from $Cmd";
-}
-
 # Find orphaned files here...
 sub CheckOrphans()
 {
@@ -242,7 +250,7 @@ sub CheckOrphans()
 
 
 # Total cache usage stats..
-sub CacheUsage( $$ )
+sub CacheUsage( )
 {
     # Total data file usage..
 
@@ -262,10 +270,16 @@ sub CacheUsage( $$ )
 	}
     }
 
+    # Count the total inodes & empty dirs
+    my $TotalInodes = scalar keys %AllInodes;
+    my $EmptyDirs = scalar @EmptyDirs;
+
     # Report it all..
     $Hash->Add( "GlobalDataCount", "n", $Count );
     $Hash->Add( "GlobalDataBytes", "n", $TotalBytes );
     $Hash->Add( "GlobalDataBlocks", "n", $TotalBlocks );
+    $Hash->Add( "TotalInodes", "n", $TotalInodes );
+    $Hash->Add( "EmptyDirs", "n", $EmptyDirs );
 
     my $MeanBytes = 0;
     $MeanBytes = sprintf "%.1f", ( $TotalBytes / $Count ) if ( $Count );
