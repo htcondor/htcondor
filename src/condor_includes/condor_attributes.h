@@ -107,6 +107,7 @@ const char ATTR_PRIO                     [] = "Prio";
 const char ATTR_PROC_ID                  [] = "ProcId";
 const char ATTR_Q_DATE                   [] = "QDate";
 const char ATTR_RANK					 [] = "Rank";
+const char ATTR_REAL_UID				 [] = "RealUid";
 const char ATTR_REMOTE_USER              [] = "RemoteUser";
 const char ATTR_REMOTE_USER_PRIO         [] = "RemoteUserPrio";
 const char ATTR_REQUIREMENTS             [] = "Requirements";
