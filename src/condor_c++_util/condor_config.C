@@ -691,8 +691,8 @@ param_in_pattern( char *parameter, char *pattern )
 void
 reinsert_specials( char* host )
 {
-	static int reinsert_pid = 0;
-	static int reinsert_ppid = 0;
+	static unsigned int reinsert_pid = 0;
+	static unsigned int reinsert_ppid = 0;
 	char buf[40];
 
 	if( tilde ) {
@@ -723,7 +723,8 @@ reinsert_specials( char* host )
 		reinsert_pid = getpid();
 #endif
 	}
-	insert( "pid", itoa(reinsert_pid,buf,10), ConfigTab, TABLESIZE );
+	sprintf(buf,"%u",reinsert_pid);
+	insert( "pid", buf, ConfigTab, TABLESIZE );
 	if ( !reinsert_ppid ) {
 #ifdef WIN32
 		CSysinfo system_hackery;
@@ -732,7 +733,8 @@ reinsert_specials( char* host )
 		reinsert_ppid = getppid();
 #endif
 	}
-	insert( "ppid", itoa(reinsert_ppid,buf,10), ConfigTab, TABLESIZE );
+	sprintf(buf,"%u",reinsert_ppid);
+	insert( "ppid", buf, ConfigTab, TABLESIZE );
 }
 
 
