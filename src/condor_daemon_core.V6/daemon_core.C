@@ -1274,16 +1274,16 @@ int DaemonCore::HandleReq(int socki)
 	// the stream.  On tcp, we just delete it since the stream is the one we got
 	// from accept and our listen socket is still out there.  on udp, however, we
 	// cannot just delete it or we will not be "listening" anymore, so we just do
-	// an eom to flush buffers, etc.
+	// an eom flush all buffers, etc.
 	// HACK: keep all UDP sockets as well for now.  
 	if ( result != KEEP_STREAM ) {
-		stream->encode();	// we wanna "flush" below in the encode direction only
+		stream->encode();	// we wanna "flush" below in the encode direction 
 		if ( is_tcp ) {
 			stream->end_of_message();  // make certain data flushed to the wire
 			if ( insock != stream )	   // delete the stream only if we did an accept; if we
 				delete stream;		   //     did not do an accept, Driver() will delete the stream.
-		} else {
-			stream->end_of_message();
+		} else {			
+			stream->end_of_message(); 			
 			result = KEEP_STREAM;	// HACK: keep all UDP sockets for now.  The only ones
 									// in Condor so far are Initial command socks, so keep it.
 		}
@@ -1652,15 +1652,17 @@ int DaemonCore::Create_Process(
 	si.cb = sizeof(si);
 	
 
-	// should be DETACHED_PROCESS
+	// should be DETACHED_PROCESS (for debug, can use CREATE_NEW_CONSOLE)
 	if ( new_process_group == TRUE )
-		new_process_group = CREATE_NEW_PROCESS_GROUP | CREATE_NEW_CONSOLE;
+		new_process_group = CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS;
 	else
-		new_process_group = CREATE_NEW_CONSOLE;
+		new_process_group =  DETACHED_PROCESS;
 
 
-	if ( !::CreateProcess(name,args,NULL,NULL,TRUE,new_process_group,env,cwd,&si,&piProcess) ) {
-		dprintf(D_ALWAYS,"Create_Process: CreateProcess failed, errno=%d\n",GetLastError());
+	if ( !::CreateProcess(name,args,NULL,NULL,TRUE,new_process_group,
+			env,cwd,&si,&piProcess) ) {
+		dprintf(D_ALWAYS,
+			"Create_Process: CreateProcess failed, errno=%d\n",GetLastError());
 		return FALSE;
 	}
 
@@ -1692,7 +1694,8 @@ int DaemonCore::Create_Process(
 	pidtmp->hThread = piProcess.hThread;
 #endif 
 	assert( pidTable->insert(newpid,pidtmp) == 0 );
-	dprintf(D_DAEMONCORE,"Child Process: pid %lu at %s\n",newpid,pidtmp->sinful_string);
+	dprintf(D_DAEMONCORE,
+		"Child Process: pid %lu at %s\n",newpid,pidtmp->sinful_string);
 #ifdef WIN32
 	WatchPid(pidtmp);
 #endif
@@ -1884,6 +1887,10 @@ pidWatcherThread( void* arg )
 				last_pidentry_exited = result;
 			}
 		}
+	} else {
+		// no pid exited, we were signaled because our pidentries array was modified.
+		// we must clear last_pidentry_exited.
+		last_pidentry_exited = MAXIMUM_WAIT_OBJECTS + 5;
 	}
 
 	}	// end of infinite for loop
@@ -1958,6 +1965,7 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 int DaemonCore::HandleProcessExitCommand(int command, Stream* stream)
 {
 	unsigned int pid;
+	int result = TRUE;
 
 	assert( command == DC_PROCESSEXIT );
 
@@ -1965,6 +1973,13 @@ int DaemonCore::HandleProcessExitCommand(int command, Stream* stream)
 
 	// read the pid from the socket
 	if (!stream->code(pid))
+		result = FALSE;
+
+	// do the eom
+	if ( !stream->end_of_message() )
+		result = FALSE;
+
+	if ( result == FALSE )
 		return FALSE;
 
 	// and call HandleSig to raise the signal
