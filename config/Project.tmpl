@@ -303,3 +303,9 @@ name: obj lib startup libc									@@\
 #ifndef TypicalMemory
 #define TypicalMemory 12
 #endif
+
+#if IS_I386_LINUX
+#define YACC byacc
+#else
+#define YACC yacc
+#endif
