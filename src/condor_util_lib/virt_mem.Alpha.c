@@ -94,12 +94,26 @@ calc_virt_memory()
 
 	set_condor_euid();
 
+    /*
+	   If a SIGCHLD is delivered when trying to parse swapon output,
+       parsing fails, and results in daemons getting totally confused
+       and dying.  So we block SIGCHLD while we parse.  --RR
+    */
+
+#if defined (OSF1)
+    if (HasSigchldHandler) block_signal (SIGCHLD);
+#endif
+
 	buf[0] = '\0';
 	while( fgets(buf,sizeof(buf),fp) ) {
 		if( (size = parse_swapon_line(buf)) > 0 ) {
 			break;
 		}
 	}
+
+#if defined (OSF1)
+    if (HasSigchldHandler) unblock_signal (SIGCHLD);
+#endif
 
 	/*
 	 * Some programs which call this routine will have their own handler
