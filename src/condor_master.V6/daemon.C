@@ -449,11 +449,9 @@ int daemon::StartDaemon()
 		// Weiru
 		// In version 6 daemons are not started as root but as Condor
 		/* Daemons need to be started as root. */
-		// 	if(getuid()==0) {
-		// 			set_root_euid();
-		// 		}
 		if(getuid()==0) {
 			set_condor_euid();
+			set_condor_ruid(); 
 		}
 
 		pid = getpid();
