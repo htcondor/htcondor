@@ -96,7 +96,7 @@ int   ngetdents ( int fd, struct dirent *buf, size_t nbytes, int *eof )
 	int rval,do_local=0;
 	errno = 0;
 
-	_condor_signals_disable();
+	sigset_t omask = _condor_signals_disable();
 
 	if( MappingFileDescriptors() ) {
 		do_local = _condor_is_fd_local( fd );
@@ -109,7 +109,7 @@ int   ngetdents ( int fd, struct dirent *buf, size_t nbytes, int *eof )
 			rval = REMOTE_syscall( CONDOR_getdents, fd , buf , nbytes );
 		}
 
-	_condor_signals_enable();
+	_condor_signals_enable(omask);
 
 	if ( rval == 0 ) {
 		*eof = 1;
@@ -133,7 +133,7 @@ int   ngetdents64 ( int fd, struct dirent64 *buf, size_t nbytes, int *eof )
 	int rval,do_local=0;
 	errno = 0;
 
-	_condor_signals_disable();
+	sigset_t omask = _condor_signals_disable();
 
 	if( MappingFileDescriptors() ) {
 		do_local = _condor_is_fd_local( fd );
@@ -146,7 +146,7 @@ int   ngetdents64 ( int fd, struct dirent64 *buf, size_t nbytes, int *eof )
 			rval = REMOTE_syscall( CONDOR_getdents64, fd , buf , nbytes );
 		}
 
-	_condor_signals_enable();
+	_condor_signals_enable(omask);
 
 	if ( rval == 0 ) {
 		*eof = 1;
@@ -250,7 +250,7 @@ int so_socket( int a, int b, int c, int d, int e )
 	int result;
 	sigset_t sigs;
 
-	_condor_signals_disable();
+	sigset_t omask = _condor_signals_disable();
 
 	if(MappingFileDescriptors()) {
 		_condor_file_table_init();
@@ -263,7 +263,7 @@ int so_socket( int a, int b, int c, int d, int e )
 		}
 	}
 
-	_condor_signals_enable();
+	_condor_signals_enable(omask);
 
 	return result;
 }
@@ -329,7 +329,7 @@ int getmsg( int fd, struct strbuf *cptr, struct strbuf *dptr, int *flags )
 	int	rval;
 	int	real_fd;
 
-	_condor_signals_disable();
+	sigset_t omask = _condor_signals_disable();
 
 	if( (real_fd=_condor_get_unmapped_fd(fd)) < 0 ) {
 		rval = -1;
@@ -342,7 +342,7 @@ int getmsg( int fd, struct strbuf *cptr, struct strbuf *dptr, int *flags )
 		}
 	}
 
-	_condor_signals_enable();
+	_condor_signals_enable(omask);
 	return rval;
 }
 
@@ -366,7 +366,7 @@ int getpmsg( int fd, struct strbuf *cptr, struct strbuf *dptr, int *band, int *f
 	int	rval;
 	int	real_fd;
 
-	_condor_signals_disable();
+	sigset_t omask = _condor_signals_disable();
 
 	if( (real_fd=_condor_get_unmapped_fd(fd)) < 0 ) {
 		rval = -1;
@@ -379,7 +379,7 @@ int getpmsg( int fd, struct strbuf *cptr, struct strbuf *dptr, int *band, int *f
 		}
 	}
 
-	_condor_signals_enable();
+	_condor_signals_enable(omask);
 	return rval;
 }
 
@@ -409,7 +409,7 @@ int putmsg( int fd, STREAM_CONST struct strbuf *cptr,
 	int	rval;
 	int	real_fd;
 
-	_condor_signals_disable();
+	sigset_t omask = _condor_signals_disable();
 
 	if( (real_fd=_condor_get_unmapped_fd(fd)) < 0 ) {
 		rval = -1;
@@ -422,7 +422,7 @@ int putmsg( int fd, STREAM_CONST struct strbuf *cptr,
 		}
 	}
 
-	_condor_signals_enable();
+	_condor_signals_enable(omask);
 	return rval;
 }
 
@@ -449,7 +449,7 @@ int putpmsg( int fd, STREAM_CONST struct strbuf *cptr,
 	int	rval;
 	int	real_fd;
 
-	_condor_signals_disable();
+	sigset_t omask = _condor_signals_disable();
 
 	if( (real_fd=_condor_get_unmapped_fd(fd)) < 0 ) {
 		rval = -1;
@@ -462,7 +462,7 @@ int putpmsg( int fd, STREAM_CONST struct strbuf *cptr,
 		}
 	}
 
-	_condor_signals_enable();
+	_condor_signals_enable(omask);
 	return rval;
 }
 
@@ -994,7 +994,7 @@ int _condor_xstat(int version, const char *path, struct stat *buf)
 	struct stat sbuf;
 	int do_local = 0;
 
-	_condor_signals_disable();
+	sigset_t omask = _condor_signals_disable();
 
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
@@ -1015,7 +1015,7 @@ int _condor_xstat(int version, const char *path, struct stat *buf)
 			}
 		}
 	}
-	_condor_signals_enable();
+	_condor_signals_enable(omask);
 	return rval;
 }
 
@@ -1027,7 +1027,7 @@ int _condor_xstat64(int version, const char *path, struct stat64 *buf)
 	struct stat sbuf;
 	int do_local = 0;
 
-	_condor_signals_disable();
+	sigset_t omask = _condor_signals_disable();
 
 	do_local = _condor_is_file_name_local( path );
 
@@ -1050,7 +1050,7 @@ int _condor_xstat64(int version, const char *path, struct stat64 *buf)
 			}
 		}
 	}
-	_condor_signals_enable();
+	_condor_signals_enable(omask);
 	return rval;
 }
 #endif
@@ -1062,7 +1062,7 @@ _condor_fxstat(int version, int fd, struct stat *buf)
 	struct kernel_stat kbuf;
 	struct stat sbuf;
 
-	_condor_signals_disable();
+	sigset_t omask = _condor_signals_disable();
 
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
@@ -1084,7 +1084,7 @@ _condor_fxstat(int version, int fd, struct stat *buf)
 		}
 	}
 
-	_condor_signals_enable();
+	_condor_signals_enable(omask);
 	return rval;
 }
 
@@ -1097,7 +1097,7 @@ _condor_fxstat64(int version, int fd, struct stat64 *buf)
 	struct kernel_stat kbuf;
 	struct stat sbuf;
 
-	_condor_signals_disable();
+	sigset_t omask = _condor_signals_disable();
 
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
@@ -1119,7 +1119,7 @@ _condor_fxstat64(int version, int fd, struct stat64 *buf)
 		}
 	}
 
-	_condor_signals_enable();
+	_condor_signals_enable(omask);
 	return rval;
 }
 #endif
@@ -1131,7 +1131,7 @@ int _condor_lxstat(int version, const char *path, struct stat *buf)
 	struct stat sbuf;
 	int do_local = 0;
 
-	_condor_signals_disable();
+	sigset_t omask = _condor_signals_disable();
 
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
@@ -1152,7 +1152,7 @@ int _condor_lxstat(int version, const char *path, struct stat *buf)
 			}
 		}
 	}
-	_condor_signals_enable();
+	_condor_signals_enable(omask);
 	return rval;
 }
 
@@ -1164,7 +1164,7 @@ int _condor_lxstat64(int version, const char *path, struct stat64 *buf)
 	struct stat sbuf;
 	int do_local = 0;
 
-	_condor_signals_disable();
+	sigset_t omask = _condor_signals_disable();
 
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
@@ -1186,7 +1186,7 @@ int _condor_lxstat64(int version, const char *path, struct stat64 *buf)
 		}
 	}
 
-	_condor_signals_enable();
+	_condor_signals_enable(omask);
 	return rval;
 }
 #endif
@@ -1211,7 +1211,7 @@ int _xstat(const int ver, const char *path, struct stat *buf)
 	int	rval;
 	int	do_local = 0;
 
-	_condor_signals_disable();
+	sigset_t omask = _condor_signals_disable();
 
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
@@ -1224,7 +1224,7 @@ int _xstat(const int ver, const char *path, struct stat *buf)
 		}
 	}
 
-	_condor_signals_enable();
+	_condor_signals_enable(omask);
 	return rval;
 }
 
@@ -1235,7 +1235,7 @@ int _lxstat(const int ver, const char *path, struct stat *buf)
 	int	rval;
 	int	do_local=0;
 
-	_condor_signals_disable();
+	sigset_t omask = _condor_signals_disable();
 
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
@@ -1248,7 +1248,7 @@ int _lxstat(const int ver, const char *path, struct stat *buf)
 		}
 	}
 
-	_condor_signals_enable();
+	_condor_signals_enable(omask);
 	return rval;
 }
 
@@ -1259,7 +1259,7 @@ int _fxstat(const int ver, int fd, struct stat *buf)
 	int	rval;
 	int use_local_access = FALSE;
 
-	_condor_signals_disable();
+	sigset_t omask = _condor_signals_disable();
 
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
@@ -1272,7 +1272,7 @@ int _fxstat(const int ver, int fd, struct stat *buf)
 		}
 	}
 
-	_condor_signals_enable();
+	_condor_signals_enable(omask);
 	return rval;
 }
 #endif /* Solaris */
@@ -1417,9 +1417,8 @@ getrusage( int who, struct rusage *rusage )
 	int scm;
 	static struct rusage accum_rusage;
 	static int num_restarts = 50;  /* must not initialize to 0 */
-	sigset_t omask;
 
-	_condor_signals_disable();
+	sigset_t omask = _condor_signals_disable();
 
 	/* Get current rusage for this process accumulated on this machine */
 
@@ -1458,7 +1457,7 @@ getrusage( int who, struct rusage *rusage )
 		/* Condor user processes don't have children - yet */
 		if( who != RUSAGE_SELF ) {
 			memset( (char *)rusage, '\0', sizeof(struct rusage) );
-			_condor_signals_enable();
+			_condor_signals_enable(omask);
 			return 0;
 		}
 
@@ -1488,7 +1487,7 @@ getrusage( int who, struct rusage *rusage )
 		}
 	}
 
-	_condor_signals_enable();
+	_condor_signals_enable(omask);
 	if ( rval == 0  && rval1 == 0 ) {
 		return 0;
 	} else {
