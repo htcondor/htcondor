@@ -1102,7 +1102,7 @@ Daemons::FinalRestartMaster()
 		// an exec, so we disappear), thus we must blank out the 
 		// CONDOR_INHERIT env variable.
 	char	tmps[256];
-	sprintf( tmps, "%=", EnvGetName( ENV_INHERIT ) );
+	sprintf( tmps, "%s=", EnvGetName( ENV_INHERIT ) );
 	putenv( tmps );
 
 		// Make sure the exec() of the master works.  If it fails,
