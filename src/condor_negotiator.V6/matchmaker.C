@@ -406,6 +406,7 @@ negotiationTime ()
 	int			hit_network_prio_limit;
 	int 		send_ad_to_schedd;	
 	static time_t completedLastCycleTime = 0;
+	bool ignore_schedd_limit;
 
 	// Check if we just finished a cycle less than 20 seconds ago.
 	// If we did, reset our timer so at least 20 seconds will elapse
@@ -526,15 +527,24 @@ negotiationTime ()
 			dprintf (D_FULLDEBUG, "    scheddLimit      = %d\n", scheddLimit);
 			dprintf (D_FULLDEBUG, "    MaxscheddLimit   = %d\n",
 					 MaxscheddLimit);
-		
-			if ( scheddLimit < 1 ) {
-				// Optimization: If limit is 0, don't waste time with negotiate
+
+				// Optimization: If limit is 0, don't waste time with negotiate.
+				// However, on the first spin of the pie (spin_pie==1), we must
+				// still negotiate because on the first spin we tell the negotiate
+				// function to ignore the scheddLimit w/ respect to jobs which
+				// are strictly preferred by resource offers (via startd rank).
+			if ( scheddLimit < 1 && spin_pie > 1 ) {
 				result = MM_RESUME;
 			} else {
+				if ( spin_pie == 1 ) {
+					ignore_schedd_limit = true;
+				} else {
+					ignore_schedd_limit = false;
+				}
 				result=negotiate( scheddName,scheddAddr,scheddPrio,
 								  scheddAbsShare, scheddLimit,
 								  startdAds, startdPvtAds, 
-								  send_ad_to_schedd);
+								  send_ad_to_schedd,ignore_schedd_limit);
 			}
 
 			switch (result)
@@ -699,10 +709,10 @@ obtainAdsFromCollector (ClassAdList &startdAds,
 
 
 int Matchmaker::
-negotiate (char *scheddName, char *scheddAddr, double priority, double share,
+negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 		   int scheddLimit,
 		   ClassAdList &startdAds, ClassAdList &startdPvtAds, 
-		   int send_ad_to_schedd)
+		   int send_ad_to_schedd, bool ignore_schedd_limit)
 {
 	ReliSock	*sock;
 	int			i;
@@ -711,6 +721,7 @@ negotiate (char *scheddName, char *scheddAddr, double priority, double share,
 	int			result;
 	ClassAd		request;
 	ClassAd		*offer;
+	bool		only_consider_startd_rank;
 	char		prioExpr[128], remoteUser[128];
 
 	// 0.  connect to the schedd --- ask the cache for a connection
@@ -733,7 +744,8 @@ negotiate (char *scheddName, char *scheddAddr, double priority, double share,
 	(void) sprintf( prioExpr , "%s = %f" , ATTR_SUBMITTOR_PRIO , priority );
 
 	// 2.  negotiation loop with schedd
-	for (i = 0; i < scheddLimit;  i++)
+	// for (i = 0; i < scheddLimit;  i++)
+	for (i=0;true;i++)
 	{
 		// Service any interactive commands on our command socket.
 		// This keeps condor_userprio hanging to a minimum when
@@ -742,6 +754,23 @@ negotiate (char *scheddName, char *scheddAddr, double priority, double share,
 		// any reschedule requests queued up on our command socket, so
 		// we do not negotiate over & over unnecesarily.
 		daemonCore->ServiceCommandSocket();
+
+		// Handle the case if we are over the scheddLimit
+		if ( i >= scheddLimit ) {
+			if ( ignore_schedd_limit ) {
+				only_consider_startd_rank = true;
+				dprintf (D_ALWAYS, 	
+					"    Over schedd resource limit (%d) ... "
+					    "only consider startd ranks\n", scheddLimit);
+			} else {
+				dprintf (D_ALWAYS, 	
+				"    Reached schedd resource limit: %d ... stopping\n", i);
+				break;	// get out of the infinite for loop & stop negotiating
+			}
+		} else {
+			only_consider_startd_rank = false;
+		}
+
 
 		// 2a.  ask for job information
 		dprintf (D_FULLDEBUG, "    Sending SEND_JOB_INFO/eom\n");
@@ -769,7 +798,16 @@ negotiate (char *scheddName, char *scheddAddr, double priority, double share,
 		{
 			dprintf (D_ALWAYS, "    Got NO_MORE_JOBS;  done negotiating\n");
 			sock->end_of_message ();
-			return MM_DONE;
+				// If we have negotiated above our scheddLimit, we have only
+				// considered matching if the offer strictly prefers the request.
+				// So in this case, return MM_RESUME since there still may be 
+				// jobs which the schedd wants scheduled but have not been considered
+				// as candidates for no preemption or user priority preemption.
+			if ( i >= scheddLimit ) {
+				return MM_RESUME;
+			} else {
+				return MM_DONE;
+			}
 		}
 		else
 		if (reply != JOB_INFO)
@@ -812,7 +850,7 @@ negotiate (char *scheddName, char *scheddAddr, double priority, double share,
 			// 2e(i).  find a compatible offer
 			if (!(offer=matchmakingAlgorithm(scheddName, scheddAddr, request,
 											 startdAds, priority,
-											 share)))
+											 share, only_consider_startd_rank)))
 			{
 				int want_match_diagnostics = 0;
 				request.LookupBool (ATTR_WANT_MATCH_DIAGNOSTICS,
@@ -906,12 +944,6 @@ negotiate (char *scheddName, char *scheddAddr, double priority, double share,
 		startdAds.Delete (offer);
 	}
 
-	// 3.  check if we hit our resource limit
-	if (i == scheddLimit)
-	{
-		dprintf (D_ALWAYS, 	
-				"    Reached schedd resource limit: %d ... stopping\n", i);
-	}
 
 	// break off negotiations
 	sock->encode();
@@ -931,7 +963,8 @@ enum PreemptState {PRIO_PREEMPTION,RANK_PREEMPTION,NO_PREEMPTION};
 ClassAd *Matchmaker::
 matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 					 ClassAdList &startdAds,
-					 double preemptPrio, double share)
+					 double preemptPrio, double share,
+					 bool only_for_startdrank)
 {
 		// to store values pertaining to a particular candidate offer
 	ClassAd 		*candidate;
@@ -1016,8 +1049,30 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 		}
 
 		candidatePreemptState = NO_PREEMPTION;
+
+		// if only_for_startdrank flag is true, check if the offer strictly
+		// prefers this request _irregardless_ of whether or not there is a 
+		// remote user present on the resource or not.  If the offer does 
+		// not prefer it, just continue with the next offer ad....  we can
+		// skip all the below logic about preempt for user-priority, etc.
+		if ( only_for_startdrank ) {
+			if( rankCondStd->EvalTree(candidate, &request, &result) && 
+					result.type == LX_INTEGER && result.i == TRUE ) {
+					// offer strictly prefers this request to the one
+					// currently being serviced
+				candidatePreemptState = RANK_PREEMPTION;
+			} else {
+					// offer does not strictly prefer this request.
+					// try the next offer since only_for_statdrank flag is set
+				continue;
+			}
+		}
+
 		// if there is a remote user, consider preemption ....
-		if (candidate->LookupString (ATTR_REMOTE_USER, remoteUser) ) {
+		// Note: we skip this if only_for_startdrank is true since we already
+		//       tested above for the only condition we care about.
+		if ( (candidate->LookupString (ATTR_REMOTE_USER, remoteUser)) &&
+			 (!only_for_startdrank) ) {
 			if( rankCondStd->EvalTree(candidate, &request, &result) && 
 					result.type == LX_INTEGER && result.i == TRUE ) {
 					// offer strictly prefers this request to the one

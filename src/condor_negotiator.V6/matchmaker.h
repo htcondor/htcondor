@@ -62,9 +62,9 @@ class Matchmaker : public Service
 		// auxillary functions
 		bool obtainAdsFromCollector (ClassAdList&, ClassAdList&, ClassAdList&, ClassAdList&);	
 		int  negotiate(char *, char *, double, double, int,
-			ClassAdList &, ClassAdList &, int );
+			ClassAdList &, ClassAdList &, int, bool );
 		ClassAd *matchmakingAlgorithm(char*,char*,ClassAd&,ClassAdList&,
-									  double=-1.0, double=1.0);
+									  double=-1.0, double=1.0, bool=false);
 		int matchmakingProtocol(ClassAd &request, ClassAd *offer, 
 						ClassAdList &startdPvtAds, Sock *sock,
 						char* scheddName, char* scheddAddr,
