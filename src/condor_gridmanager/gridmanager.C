@@ -637,7 +637,8 @@ doContactSchedd()
 								 curr_job->procID.proc,
 								 ATTR_JOB_STATUS, curr_job->condorState );
 				if ( curr_status != curr_job->condorState ) {
-					SetAttributeInt( job_id->cluster, job_id->proc,
+					SetAttributeInt( curr_job->procID.cluster, 
+									 curr_job->procID.proc,
 						ATTR_ENTERED_CURRENT_STATUS, (int)time(0) );
 				}
 				SetAttributeString( curr_job->procID.cluster,
@@ -656,7 +657,8 @@ doContactSchedd()
 									 curr_job->procID.proc,
 									 ATTR_JOB_STATUS, curr_job->condorState );
 					if ( curr_status != curr_job->condorState ) {
-						SetAttributeInt( job_id->cluster, job_id->proc,
+						SetAttributeInt( curr_job->procID.cluster,
+										 curr_job->procID.proc, 
 							ATTR_ENTERED_CURRENT_STATUS, (int)time(0) );
 					}
 				}
