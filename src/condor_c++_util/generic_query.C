@@ -150,11 +150,20 @@ addString (const int cat, char *value)
 }
 
 int GenericQuery::
-addCustom (char *value)
+addCustomOR (char *value)
 {
     char *x = new_strdup (value);
 	if (!x) return Q_MEMORY_ERROR;
-	customConstraints.Append (x);
+	customORConstraints.Append (x);
+	return Q_OK;
+}
+
+int GenericQuery::
+addCustomAND (char *value)
+{
+    char *x = new_strdup (value);
+	if (!x) return Q_MEMORY_ERROR;
+	customANDConstraints.Append (x);
 	return Q_OK;
 }
 
@@ -197,9 +206,16 @@ clearFloat (const int cat)
 }
 
 int GenericQuery::
-clearCustom ()
+clearCustomOR ()
 {
-	clearStringCategory (customConstraints);
+	clearStringCategory (customORConstraints);
+	return Q_OK;
+}
+
+int GenericQuery::
+clearCustomAND ()
+{
+	clearStringCategory (customANDConstraints);
 	return Q_OK;
 }
 
@@ -304,13 +320,29 @@ makeQuery (ClassAd &ad)
 		}
 	}
 
-	// add custom constraints
-	customConstraints.Rewind ();
-	if (!customConstraints.AtEnd ())
+	// add custom AND constraints
+	customANDConstraints.Rewind ();
+	if (!customANDConstraints.AtEnd ())
 	{
 		bool firstTime = true;
 		strcat (req, firstCategory ? "(" : " && (");
-		while (item = customConstraints.Next ())
+		while (item = customANDConstraints.Next ())
+		{
+			sprintf (buf, "%s(%s)", firstTime ? " " : " && ", item);
+			strcat (req, buf);
+			firstTime = false;
+			firstCategory = false;
+		}
+		strcat (req, " )");
+	}
+
+	// add custom OR constraints
+	customORConstraints.Rewind ();
+	if (!customORConstraints.AtEnd ())
+	{
+		bool firstTime = true;
+		strcat (req, firstCategory ? "(" : " && (");
+		while (item = customORConstraints.Next ())
 		{
 			sprintf (buf, "%s(%s)", firstTime ? " " : " || ", item);
 			strcat (req, buf);
@@ -345,7 +377,8 @@ clearQueryObject (void)
 	for (i = 0; i < floatThreshold; i++)
 		clearFloatCategory (floatConstraints[i]);
 
-	clearStringCategory (customConstraints);
+	clearStringCategory (customANDConstraints);
+	clearStringCategory (customORConstraints);
 }
 
 void GenericQuery::
@@ -396,7 +429,8 @@ copyQueryObject (GenericQuery &from)
 		copyIntegerCategory (integerConstraints[i],from.integerConstraints[i]);
 
 	// copy custom constraints
-	copyStringCategory (customConstraints, from.customConstraints);
+	copyStringCategory (customANDConstraints, from.customANDConstraints);
+	copyStringCategory (customORConstraints, from.customORConstraints);
 
 	// copy misc fields
 	stringThreshold = from.stringThreshold;
@@ -443,10 +477,7 @@ copyFloatCategory (SimpleList<float> &to, SimpleList<float> &from)
 static char *new_strdup (const char *str)
 {
     char *x = new char [strlen (str) + 1];
-    if (!x)
-    {
-		return 0;
-    }
+    if (!x) return 0;
     strcpy (x, str);
     return x;
 }

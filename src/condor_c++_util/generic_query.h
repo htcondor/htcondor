@@ -45,13 +45,15 @@ class GenericQuery
 	int addInteger (const int, int);
 	int addString (const int, char *);
 	int addFloat (const int, float);
-	int addCustom (char *);
+	int addCustomOR (char *);
+	int addCustomAND( char * );
 
 	// clear constraints
 	int clearInteger (const int);
 	int clearString (const int);
 	int clearFloat (const int);
-	int clearCustom (void);
+	int clearCustomOR (void);
+	int clearCustomAND(void);
 
 	// set keyword lists
 	void setIntegerKwList (char **);
@@ -80,7 +82,8 @@ class GenericQuery
 	SimpleList<int>   *integerConstraints;
 	SimpleList<float> *floatConstraints;
 	List<char> 		  *stringConstraints;
-	List<char> 		  customConstraints;
+	List<char> 		  customORConstraints;
+	List<char> 		  customANDConstraints;
 
 	// helper functions
 	void clearQueryObject     (void);
