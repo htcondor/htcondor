@@ -659,7 +659,7 @@ CondorCronJob::OpenFds ( void )
 	}
 	stdErr = tmpfds[0];
 	childFds[2] = tmpfds[1];
-	daemonCore->Register_Pipe( stdOut,
+	daemonCore->Register_Pipe( stdErr,
 							   "Standard Error",
 							   (PipeHandlercpp) & CondorCronJob::StderrHandler,
 							   "Standard Error Handler",
