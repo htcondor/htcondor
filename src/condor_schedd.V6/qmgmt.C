@@ -1210,10 +1210,13 @@ int get_job_prio(ClassAd *job)
     PROC_ID id;
     int     q_date;
     char    buf[100];
-	char	owner[100]="";
+	char	owner[100];
     int     cur_hosts;
     int     max_hosts;
 	int 	niceUser;
+
+	buf[0] = '\0';
+	owner[0] = '\0';
 
     job->LookupInteger(ATTR_JOB_STATUS, job_status);
     job->LookupInteger(ATTR_JOB_PRIO, job_prio);
