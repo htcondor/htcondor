@@ -227,6 +227,7 @@ union wait JobStatus;
 struct rusage JobRusage;
 struct rusage AccumRusage;
 int ChildPid;
+int ExitReason = JOB_EXITED;		/* Schedd counts on knowing exit reason */
 
 int DoCleanup();
 
@@ -245,7 +246,7 @@ usage()
 	dprintf( D_ALWAYS, "Usage: shadow schedd_addr host capability cluster proc\n" );
 	dprintf( D_ALWAYS, "or\n" );
 	dprintf( D_ALWAYS, "Usage: shadow -pipe cluster proc\n" );
-	exit( 1 );
+	exit( JOB_SHADOW_USAGE );
 }
 
 #if defined(__STDC__)
@@ -478,7 +479,7 @@ main(int argc, char *argv[], char *envp[])
 #endif
 
 	dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
-	exit( 0 );
+	exit( ExitReason );
 }
 
 void
@@ -834,7 +835,7 @@ handle_termination( char *notification )
 #ifdef USERLOG_WORKS
 			PutUserLog( ULog, NOT_EXECUTABLE );
 #endif
-
+			ExitReason = JOB_EXCEPTION;
 		} else if( JobStatus.w_coredump && JobStatus.w_retcode == 0 ) {
 				(void)sprintf(notification,
 "was killed because it was not properly linked for execution \nwith Version 5 Condor.\n" );
@@ -842,6 +843,7 @@ handle_termination( char *notification )
 				PutUserLog( ULog, BAD_LINK );
 #endif
 				MainSymbolExists = FALSE;
+				ExitReason = JOB_EXCEPTION;
 		} else {
 			(void)sprintf(notification, "exited with status %d.",
 					JobStatus.w_retcode );
@@ -850,6 +852,7 @@ handle_termination( char *notification )
 #ifdef USERLOG_WORKS
 			PutUserLog( ULog, NORMAL_EXIT, JobStatus.w_retcode );
 #endif
+			ExitReason = JOB_EXITED;
 		}
 
 		Proc->status = COMPLETED;
@@ -861,6 +864,7 @@ handle_termination( char *notification )
 		PutUserLog(ULog, NOT_CHECKPOINTED );
 #endif
 		DoCleanup();
+		ExitReason = JOB_NOT_CKPTED;
 		break;
 	 case SIGQUIT:	/* Kicked off, but with a checkpoint */
 		dprintf(D_ALWAYS, "Shadow: Job was checkpointed\n" );
@@ -871,6 +875,7 @@ handle_termination( char *notification )
 			MvTmpCkpt();
 		}
 		Proc->status = IDLE;
+		ExitReason = JOB_CKPTED;
 		break;
 	 default:	/* Job exited abnormally */
 #if defined(Solaris)
@@ -902,12 +907,14 @@ handle_termination( char *notification )
 				   );
 #endif
 			}
+			ExitReason = JOB_COREDUMPED;
 		} else {
 			(void)sprintf(notification,
 				"was killed by signal %d.", JobStatus.w_termsig);
 #ifdef USERLOG_WORKS
 			PutUserLog( ULog, ABNORMAL_EXIT, JobStatus.w_termsig );
 #endif
+			ExitReason = JOB_KILLED;
 		}
 		dprintf(D_ALWAYS, "Shadow: %s\n", notification);
 
@@ -1265,7 +1272,7 @@ send_job( V2_PROC *proc, char *host, char *cap)
 						host);
 		DoCleanup();
 		dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
-		exit( 0 );
+		exit( JOB_NOT_STARTED );
 	}
 
 	sock = new ReliSock();
@@ -1307,7 +1314,7 @@ send_job( V2_PROC *proc, char *host, char *cap)
 		dprintf( D_ALWAYS, "Shadow: Request to run a job was REFUSED\n" );
 		DoCleanup();
 		dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
-		exit( 0 );
+		exit( JOB_NOT_STARTED );
 	}
 	dprintf( D_ALWAYS, "Shadow: Request to run a job was ACCEPTED\n" );
 
@@ -1334,7 +1341,7 @@ send_job( V2_PROC *proc, char *host, char *cap)
         dprintf( D_ALWAYS, "Shadow: Request to run a job on %s was REFUSED\n",
 host );
         dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
-        exit( 0 );
+        exit( JOB_NOT_STARTED );
     }
     /* end  flock ; dhruba */
 
@@ -1488,7 +1495,7 @@ rm()
 	(void) unlink_local_or_ckpt_server( TmpCkptName );
 	(void) unlink_local_or_ckpt_server( CkptName );
 
-	exit( 1 );
+	exit( JOB_KILLED );
 }
 
 
@@ -1556,7 +1563,7 @@ start_job( char *cluster_id, char *proc_id )
 		dprintf( D_ALWAYS, "Shadow: Asked to run proc %d.%d, but status = %d\n",
 							Proc->id.cluster, Proc->id.proc, Proc->status );
 		dprintf(D_ALWAYS, "********** Shadow Exiting **********\n" );
-		exit( 0 );	/* don't cleanup here */
+		exit( JOB_BAD_STATUS );	/* don't cleanup here */
 	}
 #endif
 
@@ -1826,7 +1833,7 @@ send_quit( char *host )
 						host);
 		DoCleanup();
 		dprintf( D_ALWAYS, "********** Shadow Parent Exiting **********\n" );
-		exit( 0 );
+		exit( JOB_NOT_STARTED );
 	}
 }
 
