@@ -465,7 +465,7 @@ int String::_EvalTree(AttrList*, EvalResult* val)
     return TRUE;
 }
 
-int Time::_EvalTree(AttrList*, EvalResult* val)
+int ISOTime::_EvalTree(AttrList*, EvalResult* val)
 {
     if(!val) 
     {
@@ -491,7 +491,7 @@ int String::_EvalTree(AttrList*, AttrList*, EvalResult* val)
     return TRUE;
 }
 
-int Time::_EvalTree(AttrList*, AttrList*, EvalResult* val)
+int ISOTime::_EvalTree(AttrList*, AttrList*, EvalResult* val)
 {
     if(!val) 
     {
@@ -696,7 +696,7 @@ int String::CalcPrintToStr(void)
 	return length + 2;
 }
 
-int Time::CalcPrintToStr(void)
+int ISOTime::CalcPrintToStr(void)
 {
 	// Add 2, for the opening and closing quote (') marks.
 	return strlen(time) + 2;
@@ -908,7 +908,7 @@ void String::PrintToStr(char* str)
   *(ptr2 + 1) = '\0';
 }
 
-void Time::PrintToStr(char* str)
+void ISOTime::PrintToStr(char* str)
 {
   char*		ptr1 = time;
   char*		ptr2 = str;
@@ -1163,17 +1163,17 @@ String::DeepCopy(void) const
 }
 
 ExprTree*  
-Time::DeepCopy(void) const
+ISOTime::DeepCopy(void) const
 {
-	Time *copy;
+	ISOTime *copy;
 
 #ifdef USE_STRING_SPACE_IN_CLASSADS
-	copy = new Time(time);
+	copy = new ISOTime(time);
 #else
 	char   *time_copy;
 	time_copy = new char[strlen(time)+1];
 	strcpy(time_copy, time);
-	copy = new Time(time_copy);
+	copy = new ISOTime(time_copy);
 #endif
 	CopyBaseExprTree(copy);
 	

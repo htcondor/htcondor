@@ -89,7 +89,7 @@ StringBase::StringBase(char* str)
     this->type  = LX_STRING;
 }
 
-TimeBase::TimeBase(char* str)
+ISOTimeBase::ISOTimeBase(char* str)
 {
 #ifdef USE_STRING_SPACE_IN_CLASSADS
 	stringSpaceIndex = string_space->getCanonical(str, SS_DUP);
@@ -239,7 +239,7 @@ StringBase::~StringBase()
 #endif
 }
 
-TimeBase::~TimeBase()
+ISOTimeBase::~ISOTimeBase()
 {
 #ifdef USE_STRING_SPACE_IN_CLASSADS
 	string_space->disposeByIndex(stringSpaceIndex);
@@ -309,11 +309,11 @@ int StringBase::operator ==(ExprTree& tree)
     return FALSE;
 }
 
-int TimeBase::operator ==(ExprTree& tree)
+int ISOTimeBase::operator ==(ExprTree& tree)
 {
     if(tree.MyType() == LX_TIME)
     {
-        return !strcmp(this->time, ((TimeBase&)tree).time);
+        return !strcmp(this->time, ((ISOTimeBase&)tree).time);
     }
     return FALSE;
 }
@@ -551,7 +551,7 @@ void StringBase::Display()
     dprintf (D_NOHEADER | D_ALWAYS, "\"%s\"", value);
 }
 
-void TimeBase::Display()
+void ISOTimeBase::Display()
 {
     dprintf (D_NOHEADER | D_ALWAYS, "\"%s\"", time);
 }
@@ -1105,7 +1105,7 @@ char * const StringBase::Value()
 	return value;
 }
 
-char * const TimeBase::Value()
+char * const ISOTimeBase::Value()
 {
 	return time;
 }
