@@ -66,7 +66,8 @@ struct Translation ShouldTransferFilesTranslation[] = {
 
 
 struct Translation FileTransferOutputTranslation[] = {
-	{ "ALWAYS", FTO_ALWAYS },
+	{ "ON_EXIT_OR_EVICT", FTO_ON_EXIT_OR_EVICT },
+	{ "ALWAYS", FTO_ON_EXIT_OR_EVICT },
 	{ "ON_EXIT", FTO_ON_EXIT },
 	{ "ONEXIT", FTO_ON_EXIT },
 	{ "NULL", 0 }
