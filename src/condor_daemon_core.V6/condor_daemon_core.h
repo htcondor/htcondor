@@ -73,48 +73,6 @@ typedef DWORD pid_t;
 #define WANT_DC_PM
 #endif
 
-// defines for signals; compatibility with traditional UNIX values maintained where possible.
-#define	DC_SIGHUP	1	/* hangup */
-#define	DC_SIGINT	2	/* interrupt (rubout) */
-#define	DC_SIGQUIT	3	/* quit (ASCII FS) */
-#define	DC_SIGILL	4	/* illegal instruction (not reset when caught) */
-#define	DC_SIGTRAP	5	/* trace trap (not reset when caught) */
-#define	DC_SIGIOT	6	/* IOT instruction */
-#define	DC_SIGABRT 6	/* used by abort, replace DC_SIGIOT in the future */
-#define	DC_SIGEMT	7	/* EMT instruction */
-#define	DC_SIGFPE	8	/* floating point exception */
-#define	DC_SIGKILL	9	/* kill (cannot be caught or ignored) */
-#define	DC_SIGBUS	10	/* bus error */
-#define	DC_SIGSEGV	11	/* segmentation violation */
-#define	DC_SIGSYS	12	/* bad argument to system call */
-#define	DC_SIGPIPE	13	/* write on a pipe with no one to read it */
-#define	DC_SIGALRM	14	/* alarm clock */
-#define	DC_SIGTERM	15	/* software termination signal from kill */
-#define	DC_SIGUSR1	16	/* user defined signal 1 */
-#define	DC_SIGUSR2	17	/* user defined signal 2 */
-#define	DC_SIGCLD	18	/* child status change */
-#define	DC_SIGCHLD	18	/* child status change alias (POSIX) */
-#define	DC_SIGPWR	19	/* power-fail restart */
-#define	DC_SIGWINCH 20	/* window size change */
-#define	DC_SIGURG	21	/* urgent socket condition */
-#define	DC_SIGPOLL 22	/* pollable event occured */
-#define	DC_SIGIO	DC_SIGPOLL	/* socket I/O possible (DC_SIGPOLL alias) */
-#define	DC_SIGSTOP 23	/* stop (cannot be caught or ignored) */
-#define	DC_SIGTSTP 24	/* user stop requested from tty */
-#define	DC_SIGCONT 25	/* stopped process has been continued */
-#define	DC_SIGTTIN 26	/* background tty read attempted */
-#define	DC_SIGTTOU 27	/* background tty write attempted */
-#define	DC_SIGVTALRM 28	/* virtual timer expired */
-#define	DC_SIGPROF 29	/* profiling timer expired */
-#define	DC_SIGXCPU 30	/* exceeded cpu limit */
-#define	DC_SIGXFSZ 31	/* exceeded file size limit */
-#define	DC_SIGWAITING 32	/* process's lwps are blocked */
-#define	DC_SIGLWP	33	/* special signal used by thread library */
-#define	DC_SIGFREEZE 34	/* special signal used by CPR */
-#define	DC_SIGTHAW 35	/* special signal used by CPR */
-#define	DC_SIGCANCEL 36	/* thread cancellation signal used by libthread */
-
-
 class DaemonCore : public Service
 {
 	friend class TimerManager;
