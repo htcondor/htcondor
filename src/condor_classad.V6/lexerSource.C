@@ -22,6 +22,7 @@
 
 #include "common.h"
 #include "lexerSource.h"
+using namespace std;
 
 /*--------------------------------------------------------------------
  *
@@ -64,7 +65,8 @@ FileLexerSource::ReadCharacter(void)
 void 
 FileLexerSource::UnreadCharacter(void)
 {
-	fseek(_file, -1, SEEK_CUR);
+	//fseek(_file, -1, SEEK_CUR);
+	ungetc(_previous_character, _file);
 	return;
 }
 
@@ -101,8 +103,6 @@ InputStreamLexerSource::~InputStreamLexerSource()
 void InputStreamLexerSource::SetNewSource(istream &stream)
 {
 	_stream = &stream;
-	_last_character = -1;
-	_unread_character = -1;
 	return;
 }
 
@@ -112,17 +112,13 @@ InputStreamLexerSource::ReadCharacter(void)
 	char real_character;
 	int  character;
 
-	if (_unread_character != -1) {
-		character = _unread_character;
-		_unread_character = -1;
-	} else if (_stream != NULL && !_stream->eof()) {
+	if (_stream != NULL && !_stream->eof()) {
 		_stream->get(real_character);
 		character = real_character;
-		_last_character = character;
 	} else {
 		character = -1;
 	}
- 	_previous_character = character;
+   _previous_character = character;
 	return character;
 }
 
@@ -131,7 +127,7 @@ InputStreamLexerSource::UnreadCharacter(void)
 {
 	//doesn't work on cin
 	//_stream->seekg(-1, ios::cur);
-	_unread_character = _last_character;
+	_stream->putback(_previous_character);
 	return;
 }
 
