@@ -26,6 +26,11 @@
 #ifndef _MyString_H_
 #define _MyString_H_
 
+// a warning to anyone changing this code: as currently implemented,
+// an "empty" MyString can have two different possible internal
+// representations depending on its history.  Sometimes Data == NULL,
+// sometimes Data[0] == '\0'.  So don't assume one or the other...
+
 class MyString {
   
 public:
@@ -50,16 +55,12 @@ public:
     Data=NULL;
     Len=0;
 	capacity = 0; 
-    if (!S) return;
-    Len=strlen(S);	
-    if (Len==0) return;
-    Data=new char[Len+1];
-    capacity = Len;
-    strcpy(Data,S);
+    *this=S;
   };
 
   MyString(const MyString& S) {
     Data=NULL;
+	Len = 0;
 	capacity = 0;
     *this=S;
   }
@@ -109,7 +110,7 @@ public:
 	  if( Data ) Data[0] = '\0';
       Len = 0;
       return *this;
-    } else if( Data && S.Len < capacity ) {
+    } else if( Data && S.Len <= capacity ) {
       strcpy( Data, S.Data );
       Len = S.Len;
       return *this;
@@ -123,6 +124,27 @@ public:
       strcpy(Data,S.Data);
 	  capacity = Len;
     }
+    return *this;
+  }
+
+  MyString& operator=( const char *s ) {
+	if( !s || *s == '\0' ) {
+		if( Data ) {
+			Data[0] = '\0';
+			Len = 0;
+		}
+		return *this;
+	}
+	int s_len = strlen( s );
+    if( s_len > capacity ) {
+		if( Data ) {
+			delete[] Data;
+		}
+		capacity = s_len;
+		Data = new char[capacity+1];
+	}
+	strcpy( Data, s );
+	Len = s_len;
     return *this;
   }
 
@@ -159,18 +181,31 @@ public:
     if( S.Len + Len > capacity ) {
        reserve( Len + S.Len );
     }
-    strncat( Data, S.Data, capacity-Len );
+    strcat( Data, S.Value() );
 	Len += S.Len;
     return *this;
   }
 
   MyString& operator+=(const char *s) {
-    int s_len = strlen(s);
+    if( !s || *s == '\0' ) {
+		return *this;
+	}
+    int s_len = strlen( s );
     if( s_len + Len > capacity ) {
        reserve( Len + s_len );
     }
     strcat( Data, s );
 	Len += s_len;
+    return *this;
+  }
+
+  MyString& operator+=( const char c ) {
+    if( Len + 1 > capacity ) {
+       reserve( Len + 1 );
+    }
+	Data[Len] = c;
+	Data[Len+1] = '\0';
+	Len++;
     return *this;
   }
 
