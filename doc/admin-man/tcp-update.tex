@@ -1,0 +1,83 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:tcp-collector-update}
+Using TCP to Send Updates to the \Condor{collector}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{TCP}
+\index{TCP!sending updates}
+\index{UDP}
+\index{UDP!lost datagrams}
+\index{condor\_collector}
+
+TCP sockets are reliable, connection-based sockets that guarantee
+the delivery of any data sent.
+However, TCP sockets are fairly expensive to establish, and there is more
+network overhead involved in sending and receiving messages.
+
+UDP sockets are datagrams, and are not reliable.
+There is very little overhead in establishing or using a UDP socket,
+but there is also no guarantee that the data will be delivered.
+All previous Condor versions used UDP sockets to send updates to
+the \Condor{collector}, and this did not cause problems.
+
+Beginning with version 6.5.0, Condor can be configured to use TCP
+sockets to send updates to the \Condor{collector} instead of
+UDP datagrams.
+It is \emph{not} intended for most sites.
+This feature is targeted at sites where UDP updates are
+lost because of the underlying network.
+Most Condor administrators that believe this is a good idea for
+their site are wrong.
+Do not enable this feature just because it sounds like a good idea.
+The only cases where an administrator would want this feature are if
+the ClassAd updates are consistently not getting to the
+\Condor{collector}.
+An example where this may happen is if the pool is comprised of
+machines across a wide area network (WAN) where UDP packets are
+frequently dropped.
+
+Configuration variables are set to enable the use of TCP sockets.
+There are two variables that an
+administrator must define to enable this feature:
+
+\begin{itemize}
+
+\item[\Macro{UPDATE\_COLLECTOR\_WITH\_TCP}]
+  When set to TRUE, the Condor daemons to use TCP to
+  update the \Condor{collector}, instead of the default UDP.
+  Defaults to FALSE.
+
+\item[\Macro{COLLECTOR\_SOCKET\_CACHE\_SIZE}] 
+  Specifies the number of TCP sockets cached at the \Condor{collector}.
+  The default value for this setting is 0, with no cache enabled.
+
+\end{itemize}
+
+The use of a cache allows Condor to leave established TCP sockets open,
+facilitating much better performance.
+Subsequent updates can reuse an already open socket.
+The work to establish a TCP connection may be lengthy,
+including authentication and setting up encryption.
+Therefore, Condor requires that
+a socket cache be defined if TCP updates are to be used.
+TCP updates will be refused by the \Condor{collector} daemon
+if a cache is not enabled.
+
+Each Condor daemon will have 1 socket open to the \Condor{collector}.
+So, in a pool with N machines, each of them running a \Condor{master},
+\Condor{schedd}, and \Condor{startd}, the \Condor{collector} would
+need a socket cache that has at least 3*N entries.
+Machines running Personal Condor in the pool need
+an additional two entries (for the \Condor{master} and
+\Condor{schedd}) for each Personal Condor installation.
+
+Every cache entry utilizes a file descriptor within the
+\Condor{collector} daemon.
+Therefore, be careful not to define a cache that
+is larger than the number of file descriptors the underlying operating
+system allocates for a single process.
+
+\Note At this time, \MacroNI{UPDATE\_COLLECTOR\_WITH\_TCP}, only
+affects the main \Condor{collector} for the site, not any sites that
+a \Condor{schedd} might flock to.
+

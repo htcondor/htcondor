@@ -289,7 +289,7 @@ system.
   and \Condor{negotiator} would run on the same machine.  If for some
   reason they were not run on the same machine,
   \MacroU{CONDOR\_HOST} would not be needed.  Some
-  of the host-based security macros use \MacroU{CONDOR\_HOST} by
+  of the host-based security macros use \MacroUNI{CONDOR\_HOST} by
   default.  See section~\ref{sec:Host-Security}, Setting up
   IP/host-based security in Condor for details.
   
@@ -329,13 +329,13 @@ system.
 \item[\Macro{LOCAL\_DIR}] \label{param:LocalDir} The location of the
   local Condor directory on each machine in your pool.  One common
   option is to use the condor user's home directory which may be
-  specified with \MacroU{TILDE}.  For example:
+  specified with \MacroUNI{TILDE}.  For example:
 \begin{verbatim}
         LOCAL_DIR = $(tilde)
 \end{verbatim}
   
   On machines with a shared file system, where either the
-  \MacroU{TILDE} directory or another directory you want to use is
+  \MacroUNI{TILDE} directory or another directory you want to use is
   shared among all machines in your pool, you might use the
   \MacroUNI{HOSTNAME} macro and have a directory with many
   subdirectories, one for each machine in your pool, each named by
@@ -351,7 +351,7 @@ system.
 \item[\Macro{LOG}] \label{param:Log} Used to specify the
   directory where each Condor daemon writes its log files.  The names
   of the log files themselves are defined with other macros, which use
-  the \MacroU{LOG} macro by default.  The log directory also acts as
+  the \MacroUNI{LOG} macro by default.  The log directory also acts as
   the current working directory of the Condor daemons as the run, so
   if one of them should produce a core file for any reason, it would
   be placed
@@ -425,7 +425,7 @@ system.
   This is the address where Condor users at your site should send
   their questions about Condor and get technical support.
   If this setting is not defined, Condor will use the address
-  specified in \Macro{CONDOR\_ADMIN} (described above).
+  specified in \MacroNI{CONDOR\_ADMIN} (described above).
 
 \item[\Macro{MAIL}] \label{param:Mail} The full path to a mail
   sending program that uses \Opt{-s} to
@@ -446,7 +446,7 @@ system.
   a given partition on your machine, it will always subtract this
   amount.  An example is the \Condor{startd}, which
   advertises the amount of
-  free space in the \MacroU{EXECUTE} directory.
+  free space in the \MacroUNI{EXECUTE} directory.
   
 \item[\Macro{LOCK}] \label{param:Lock} Condor needs to create
   lock files to synchronize access to various log files.  Because of
@@ -480,14 +480,14 @@ system.
   domain to be appended to your hostname, if changing your host
   information is not a good option.  This macro must be set in the
   global configuration file (not the \MacroUNI{LOCAL\_CONFIG\_FILE}.
-  The reason for this is that the special \MacroU{FULL\_HOSTNAME}
+  The reason for this is that the special \MacroUNI{FULL\_HOSTNAME}
   macro is used by the configuration file code in Condor needs
   to know the full hostname.  So, for \MacroUNI{DEFAULT\_DOMAIN\_NAME} to
   take effect, Condor must already have read in its value.  However,
-  Condor must set the \MacroU{FULL\_HOSTNAME} special macro since you
+  Condor must set the \MacroUNI{FULL\_HOSTNAME} special macro since you
   might use that to define where your local configuration file is.  After
   reading the global configuration file, Condor figures out the right values
-  for \MacroU{HOSTNAME} and \MacroU{FULL\_HOSTNAME} and inserts them
+  for \MacroUNI{HOSTNAME} and \MacroUNI{FULL\_HOSTNAME} and inserts them
   into its configuration table.
 
 \item[\Macro{NETWORK\_INTERFACE}] \label{param:NetworkInterface}
@@ -526,19 +526,19 @@ system.
   submit description file, any email Condor sends about that job will
   go to "username@UID\_DOMAIN".
   If your machines all share a common UID domain (so that you would
-  set \Macro{UID\_DOMAIN} to be the same across all machines in your
+  set \MacroNI{UID\_DOMAIN} to be the same across all machines in your
   pool), but email to user@UID\_DOMAIN is not the right place for
   Condor to send email for your site, you can define the default
   domain to use for email.
-  A common example would be to set \Macro{EMAIL\_DOMAIN} to the fully
+  A common example would be to set \MacroNI{EMAIL\_DOMAIN} to the fully
   qualified hostname of each machine in your pool, so users submitting
   jobs from a specific machine would get email sent to
   user@machine.your.domain, instead of user@your.domain.  
-  You would do this by setting \Macro{EMAIL\_DOMAIN} to
-  \MacroU{FULL\_HOSTNAME}. 
+  You would do this by setting \MacroNI{EMAIL\_DOMAIN} to
+  \MacroUNI{FULL\_HOSTNAME}. 
   In general, you should leave this setting commented out unless two
-  things are true: 1) \Macro{UID\_DOMAIN} is set to your domain, not
-  \MacroU{FULL\_HOSTNAME}, and 2) email to user@UID\_DOMAIN will not 
+  things are true: 1) \MacroNI{UID\_DOMAIN} is set to your domain, not
+  \MacroUNI{FULL\_HOSTNAME}, and 2) email to user@UID\_DOMAIN will not 
   work. 
 
 \item[\Macro{CREATE\_CORE\_FILES}] \label{param:CreateCoreFiles}
@@ -562,6 +562,23 @@ system.
   Defines the timeout (in seconds) that \Condor{q} uses when trying to
   connect to the \Condor{schedd}.  Defaults to 20.
 
+\item[\Macro{UPDATE\_COLLECTOR\_WITH\_TCP}]
+  \label{param:UpdateCollectorWithTcp}
+  If your site needs to use TCP connections to send ClassAd updates to
+  your collector (which it almost certainly does NOT), you can enable
+  this feature by setting this to TRUE.
+  Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
+  Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
+  for more details and a discussion of when you would need this
+  functionality. 
+  At this time, this setting only effects the main \Condor{collector}
+  for your site, not any sites that a \Condor{schedd} might flock to. 
+  If you enable this feature, you must also define
+  \Macro{COLLECTOR\_SOCKET\_CACHE\_SIZE}] at your central manager, so
+  that the collector will accept TCP connections for updates, and will
+  keep them open for reuse.
+  Defaults to FALSE.
+
 \end{description}
 
 
@@ -581,14 +598,14 @@ of the subsystem corresponding to the daemon.
  
 \item[\Macro{SUBSYS\_LOG}] \label{param:SubsysLog} The name of
   the log file for a given subsystem.  For example,
-  \MacroU{STARTD\_LOG} gives the location of the log file for
+  \MacroUNI{STARTD\_LOG} gives the location of the log file for
   \Condor{startd}.
 
   The actual names of the files
-  are also used in the \MacroU{VALID\_LOG\_FILES} entry used by
+  are also used in the \MacroUNI{VALID\_LOG\_FILES} entry used by
   \Condor{preen}.  A change to one of the
   file names with this setting requires a change to the
-  \MacroU{VALID\_LOG\_FILES} entry as well, or \Condor{preen} will
+  \MacroUNI{VALID\_LOG\_FILES} entry as well, or \Condor{preen} will
   delete your newly named log files.
 
 \item[\Macro{MAX\_SUBSYS\_LOG}] \label{param:MaxSubsysLog} Controls
@@ -611,14 +628,14 @@ of the subsystem corresponding to the daemon.
 \item[\Macro{SUBSYS\_LOCK}] \label{param:SubsysLock} This macro
   specifies the lock file used to synchronize append operations to the
   log file for this subsystem.  It must be a separate file from the
-  \MacroU{SUBSYS\_LOG} file, since the \MacroU{SUBSYS\_LOG} file may be
+  \MacroUNI{SUBSYS\_LOG} file, since the \MacroUNI{SUBSYS\_LOG} file may be
   rotated and you want to be able to synchronize access across log
   file rotations.  A lock file is only required for log files which
   are accessed by more than one process.  Currently, this includes
-  only the \Macro{SHADOW} subsystem.  This macro is defined relative
-  to the \MacroU{LOCK} macro.  If, for some strange
+  only the \MacroNI{SHADOW} subsystem.  This macro is defined relative
+  to the \MacroUNI{LOCK} macro.  If, for some strange
   reason, you decide to change this setting, be sure to change the
-  \MacroU{VALID\_LOG\_FILES} entry that \Condor{preen} uses as well.
+  \MacroUNI{VALID\_LOG\_FILES} entry that \Condor{preen} uses as well.
 
 \item[\Macro{SUBSYS\_DEBUG}] \label{param:SubsysDebug} All of the
   Condor daemons can produce different levels of output depending on
@@ -709,7 +726,7 @@ The \Condor{startd} keeps track
   performing. If any are failing, the reason for the
   failure is given.  The \Condor{schedd} also uses this flag for the server
   portion of the queue management code.  With \Dflag{SYSCALLS}
-  defined in \Macro{SCHEDD\_DEBUG} there will be verbose logging of all
+  defined in \MacroNI{SCHEDD\_DEBUG} there will be verbose logging of all
   queue management operations the \Condor{schedd} performs.  
 
 \item[\Dflag{MATCH}] \label{dflag:match}
@@ -727,7 +744,7 @@ The \Condor{startd} keeps track
 \end{description}
 
 \item[\Macro{ALL\_DEBUG}] \label{param:AllDebug} To make all subsystems
-  share a debug flag, simply set the parameter \Macro{ALL\_DEBUG}
+  share a debug flag, simply set the parameter \MacroNI{ALL\_DEBUG}
   instead of changing all of the individual parameters.  For example,
   to turn on network debugging in all subsystems, set
   \verb$ALL_DEBUG = D_NETWORK$.
@@ -796,7 +813,7 @@ server, shadow, and starter, none of which use DaemonCore yet).
   the identity of the user.  For instance, when a job is submitted with
   \Condor{submit}, Condor needs to authenticate the user so that the job
   goes into the queue and runs with the proper credentials.  The
-  \Macro{AUTHENTICATION\_METHODS} parameter is a list of
+  \MacroNI{AUTHENTICATION\_METHODS} parameter is a list of
   permitted authentication methods.  The list is ordered by
   preference.  The actual authentication method used is the first method
   in this list that both the server and client are able to perform.
@@ -896,40 +913,40 @@ AFS.
 \begin{description}
 
 \item[\Macro{UID\_DOMAIN}] \label{param:UidDomain}
-The \Macro{UID\_DOMAIN} macro
+The \MacroNI{UID\_DOMAIN} macro
 is used to decide under which user to run your jobs.
-If the \MacroU{UID\_DOMAIN}
+If the \MacroUNI{UID\_DOMAIN}
 on the submitting machine is different than
-the \MacroU{UID\_DOMAIN}
+the \MacroUNI{UID\_DOMAIN}
 on the machine that runs your job, then Condor will run
 the job as the user called ``nobody''.
 For example, if the submit machine has
-the \MacroU{UID\_DOMAIN}
+the \MacroUNI{UID\_DOMAIN}
 ``flippy.cs.wisc.edu'' and the machine where the job will execute
-has the \MacroU{UID\_DOMAIN}
+has the \MacroUNI{UID\_DOMAIN}
 ``cs.wisc.edu'', the job will run as user nobody, because
-the two \MacroU{UID\_DOMAIN}s are not the same.
-If the \MacroU{UID\_DOMAIN}
+the two \MacroUNI{UID\_DOMAIN}s are not the same.
+If the \MacroUNI{UID\_DOMAIN}
 is the same on both the submit and execute machines,
 then Condor will run the job as the user that submitted the job.
 
 A further check attempts to assure that the submitting
-machine can not lie about its \MacroU{UID\_DOMAIN}.
+machine can not lie about its \MacroUNI{UID\_DOMAIN}.
 Condor compares the 
-submit machine's claimed \MacroU{UID\_DOMAIN}
+submit machine's claimed \MacroUNI{UID\_DOMAIN}
 to its fully qualified name.
 If the two do not end the same, then the submit machine
-is presumed to be lying about its \MacroU{UID\_DOMAIN}.
+is presumed to be lying about its \MacroUNI{UID\_DOMAIN}.
 In this case, Condor will run the job as user nobody.
 For example, a job submission to the Condor pool at the UW Madison
-from ``flippy.example.com'', claiming a \MacroU{UID\_DOMAIN}
+from ``flippy.example.com'', claiming a \MacroUNI{UID\_DOMAIN}
 of ``cs.wisc.edu'',
 will run the job as the user nobody.
 
 Because of this verification, you need to set your
-\MacroU{UID\_DOMAIN}
+\MacroUNI{UID\_DOMAIN}
 to a real domain name. At the Computer Sciences department
-at the UW Madison, we set the \MacroU{UID\_DOMAIN}
+at the UW Madison, we set the \MacroUNI{UID\_DOMAIN}
 to be ``cs.wisc.edu'' to
 indicate that whenever someone submits from a department machine, we
 will run the job as the user who submits it.
@@ -958,7 +975,7 @@ them.
 When Condor sends e-mail about a job, Condor sends the e-mail to
 %% This is the wrong LaTeX  macro to use, but we don't have a correct one.
 \File{user@UID\_DOMAIN}.
-If \MacroU{UID\_DOMAIN}
+If \MacroUNI{UID\_DOMAIN}
 is set to ``none'' or it is undefined, 
 the e-mail is
 sent to \File{user@submitmachinename}.
@@ -977,7 +994,7 @@ this attribute to True.
 
 
 \item[\Macro{FILESYSTEM\_DOMAIN}] \label{param:FilesystemDomain}
-The \Macro{FILESYSTEM\_DOMAIN}
+The \MacroNI{FILESYSTEM\_DOMAIN}
 macro is an arbitrary string that is used to decide if
 two machines (a submitting machine and an execute machine) share a
 file system.
@@ -988,7 +1005,7 @@ Vanilla Unix jobs currently require a shared file system in order to
 share any data files or see the output of the program.
 Condor decides if there is a shared filesystem by comparing the values
 of 
-\MacroU{FILESYSTEM\_DOMAIN}
+\MacroUNI{FILESYSTEM\_DOMAIN}
 of both the submitting and execute machines.
 If the values are the same,
 Condor assume there is a shared file system.
@@ -1008,11 +1025,11 @@ how to run jobs only on machines that have
 certain software installations.
 
 Note that if you do not set 
-\MacroU{FILESYSTEM\_DOMAIN}, Condor will
+\MacroUNI{FILESYSTEM\_DOMAIN}, Condor will
 automatically set the macro's value to be the fully qualified hostname
 of the local machine.
 Since each machine will have a different
-\MacroU{FILESYSTEM\_DOMAIN},
+\MacroUNI{FILESYSTEM\_DOMAIN},
 they will not be considered to have shared file systems.
 
   
@@ -1043,7 +1060,7 @@ they will not be considered to have shared file systems.
   read/write files without redirecting I/O back to the submitting
   machine if both the submitting machine and the machine running the job
   are both accessing the same NFS servers (\emph{if} they are both in the
-  same \MacroU{FILESYSTEM\_DOMAIN} and in the same \MacroU{UID\_DOMAIN},
+  same \MacroUNI{FILESYSTEM\_DOMAIN} and in the same \MacroUNI{UID\_DOMAIN},
   as described above).  The result is I/O performed by Condor standard
   universe jobs is only sent over the network once.  
   While sending all file operations over the network twice might sound
@@ -1052,7 +1069,7 @@ they will not be considered to have shared file systems.
   scheme offers very little real performance gain.  There are also
   some (fairly rare) situations where this scheme can break down.
   
-  Setting \MacroU{USE\_NFS} to FALSE is always safe.  It may result
+  Setting \MacroUNI{USE\_NFS} to FALSE is always safe.  It may result
   in slightly more network traffic, but Condor jobs are most often heavy
   on CPU and light on I/O.  It also ensures that a remote
   standard universe Condor job will always use Condor's remote system
@@ -1061,9 +1078,9 @@ they will not be considered to have shared file systems.
   the job.
   
   Some gritty details for folks who want to know: If the you set
-  \MacroU{USE\_NFS} to TRUE, and the \MacroU{FILESYSTEM\_DOMAIN} of
+  \MacroUNI{USE\_NFS} to TRUE, and the \MacroUNI{FILESYSTEM\_DOMAIN} of
   both the submitting machine and the remote machine about to execute
-  the job match, and the \MacroU{FILESYSTEM\_DOMAIN} claimed by the
+  the job match, and the \MacroUNI{FILESYSTEM\_DOMAIN} claimed by the
   submit machine is indeed found to be a subset of what an inverse
   lookup to a DNS (domain name server) reports as the fully qualified
   domain name for the submit machine's IP address (this security
@@ -1074,10 +1091,10 @@ they will not be considered to have shared file systems.
   submitting machine using Condor's remote system call mechanism.
   \Note When submitting a vanilla job, \Condor{submit} will, by default,
   append requirements to the Job ClassAd that specify the machine to run
-  the job must be in the same \MacroU{FILESYSTEM\_DOMAIN} and the same
-  \MacroU{UID\_DOMAIN}.
+  the job must be in the same \MacroUNI{FILESYSTEM\_DOMAIN} and the same
+  \MacroUNI{UID\_DOMAIN}.
 
-\item[\Macro{IGNORE\_NSF\_LOCK\_ERRORS}] \label{param:IgnoreNFSLockErrors}
+\item[\Macro{IGNORE\_NFS\_LOCK\_ERRORS}] \label{param:IgnoreNFSLockErrors}
   When set to TRUE, all errors related to file locking errors from
   NFS are ignored.
   Defaults to FALSE, not ignoring errors.
@@ -1088,11 +1105,11 @@ they will not be considered to have shared file systems.
   standard universe jobs to send I/O requests to the submit machine,
   or if it should use local file access on the execute machine (which
   will then use AFS to get to the submitter's files).  Read the
-  setting above on \MacroU{USE\_NFS} for a discussion of why you might
+  setting above on \MacroUNI{USE\_NFS} for a discussion of why you might
   want to use AFS access instead of remote system calls.
   
-  One important difference between \MacroU{USE\_NFS} and
-  \MacroU{USE\_AFS} is the AFS cache.  With \MacroU{USE\_AFS} set to
+  One important difference between \MacroUNI{USE\_NFS} and
+  \MacroUNI{USE\_AFS} is the AFS cache.  With \MacroUNI{USE\_AFS} set to
   TRUE, the remote Condor job executing on some machine will start
   modifying the AFS cache, possibly evicting the machine owner's
   files from the cache to make room for its own.  Generally speaking,
@@ -1105,7 +1122,7 @@ they will not be considered to have shared file systems.
   scheme offers very little real performance gain.  There are also
   some (fairly rare) situations where this scheme can break down.
   
-  Setting \MacroU{USE\_AFS} to FALSE is always safe.  It may result
+  Setting \MacroUNI{USE\_AFS} to FALSE is always safe.  It may result
   in slightly more network traffic, but Condor jobs are usually heavy
   on CPU and light on I/O.  FALSE ensures that a remote
   standard universe Condor job will always see the exact same
@@ -1148,9 +1165,9 @@ checkpoint server host (see below).
   \label{param:StarterChoosesCkptServer} If this parameter is TRUE 
   or undefined on
   the submit machine, the checkpoint server specified by
-  \MacroU{CKPT\_SERVER\_HOST} on the execute machine is used.  If it is
+  \MacroUNI{CKPT\_SERVER\_HOST} on the execute machine is used.  If it is
   FALSE on the submit machine, the checkpoint server
-  specified by \MacroU{CKPT\_SERVER\_HOST} on the submit machine is
+  specified by \MacroUNI{CKPT\_SERVER\_HOST} on the submit machine is
   used.
   
 \item[\Macro{CKPT\_SERVER\_DIR}] \label{param:CkptServerDir} The
@@ -1163,8 +1180,8 @@ checkpoint server host (see below).
 \item[\Macro{USE\_CKPT\_SERVER}] \label{param:UseCkptServer} A boolean
   which determines if you want a given submit machine to use a
   checkpoint server if one is available.  If a
-  checkpoint server isn't available or \Macro{USE\_CKPT\_SERVER} is set to
-  False, checkpoints will be written to the local \MacroU{SPOOL} directory on
+  checkpoint server isn't available or \MacroNI{USE\_CKPT\_SERVER} is set to
+  False, checkpoints will be written to the local \MacroUNI{SPOOL} directory on
   the submission machine.
 
 \item[\Macro{MAX\_DISCARDED\_RUN\_TIME}]
@@ -1172,7 +1189,7 @@ checkpoint server host (see below).
   checkpoint file from the checkpoint server, it keeps trying only if
   the job has accumulated more than this many seconds of CPU usage.
   Otherwise, the job is started from scratch.  Defaults to 3600 (1
-  hour). This setting is only used if \MacroU{USE\_CKPT\_SERVER} is
+  hour). This setting is only used if \MacroUNI{USE\_CKPT\_SERVER} is
   TRUE.
 
 \end{description}
@@ -1195,19 +1212,19 @@ These macros control the \Condor{master}.
         DAEMON_LIST = MASTER, STARTD, SCHEDD
 \end{verbatim}
 
-  \Note On your central manager, your \MacroU{DAEMON\_LIST}
+  \Note On your central manager, your \MacroUNI{DAEMON\_LIST}
   will be different from your regular pool, since it will include
   entries for the \Condor{collector} and \Condor{negotiator}.  
   
   \Note On machines running Digital Unix or IRIX, your
-  \MacroU{DAEMON\_LIST} will also include KBDD, for the
+  \MacroUNI{DAEMON\_LIST} will also include KBDD, for the
   \Condor{kbdd}, which is a special daemon that runs to monitor
   keyboard and mouse activity on the console.  It is only with this
   special daemon that we can acquire this information on those
   platforms. 
 
 \item[\Macro{DC\_DAEMON\_LIST}] \label{param:DCDaemonList} This macro
-  lists the daemons in \Macro{DAEMON\_LIST} which use the Condor
+  lists the daemons in \MacroNI{DAEMON\_LIST} which use the Condor
   DaemonCore library.  The \Condor{master} must differentiate between
   daemons that use DaemonCore and those that don't so it uses the
   appropriate inter-process communication mechanisms.  This list
@@ -1222,13 +1239,13 @@ These macros control the \Condor{master}.
         STARTD          = $(SBIN)/condor_startd
         SCHEDD          = $(SBIN)/condor_schedd
 \end{verbatim}
-  These are most often defined relative to the \MacroU{SBIN} macro.
+  These are most often defined relative to the \MacroUNI{SBIN} macro.
 
 \item[\Macro{DAEMONNAME\_ENVIRONMENT}] \label{param:DaemonNameEnvironment}
-  For each subsystem defined in \Macro{DAEMON\_LIST}, you may specify
+  For each subsystem defined in \MacroNI{DAEMON\_LIST}, you may specify
   changes to the environment that daemon is started with by setting
-  \Macro{DAEMONNAME\_ENVIRONMENT}, where \MacroNI{DAEMONNAME} is the name of
-  a daemon listed in \Macro{DAEMON\_LIST}. It should be set to a semicolon
+  \MacroNI{DAEMONNAME\_ENVIRONMENT}, where \MacroNI{DAEMONNAME} is the name of
+  a daemon listed in \MacroNI{DAEMON\_LIST}. It should be set to a semicolon
   delimited list of name=value pairs. For example, if you wish to redefine the
   \Env{TMP} and \Env{CONDOR\_CONFIG} environment variables seen by the
   \Condor{schedd}, you could place the following in the config file:
@@ -1246,11 +1263,11 @@ These macros control the \Condor{master}.
   Set the arguments for a specific daemon with this macro,
   and the macro will affect only that daemon. Define
   one of these for each daemon the \Condor{master} is controlling.
-  For example, set \MacroU{STARTD\_ARGS} to specify any extra
+  For example, set \MacroUNI{STARTD\_ARGS} to specify any extra
   command line arguments to the \Condor{startd}.
 
 \item[\Macro{PREEN}] \label{param:Preen} In addition to the daemons
-  defined in \MacroU{DAEMON\_LIST}, the \Condor{master} also starts up
+  defined in \MacroUNI{DAEMON\_LIST}, the \Condor{master} also starts up
   a special process, \Condor{preen} to clean out junk files that have
   been left laying around by Condor.  This macro determines where the
   \Condor{master} finds the \Condor{preen} binary.
@@ -1259,7 +1276,7 @@ These macros control the \Condor{master}.
 \item[\Macro{PREEN\_ARGS}] \label{param:PreenArgs}
   Controls how \Condor{preen} behaves by allowing the specification
   of command-line arguments.
-  This macro works as \MacroU{SUBSYS\_ARGS} does.
+  This macro works as \MacroUNI{SUBSYS\_ARGS} does.
   The difference is that you must specify this macro for
   \Condor{preen} if you want it to do anything.
   \Condor{preen} takes action only
@@ -1274,7 +1291,7 @@ These macros control the \Condor{master}.
 
 \item[\Macro{PUBLISH\_OBITUARIES}] \label{param:PublishObituaries}
   When a daemon crashes, the \Condor{master} can send e-mail to the
-  address specified by \MacroU{CONDOR\_ADMIN} with an obituary letting
+  address specified by \MacroUNI{CONDOR\_ADMIN} with an obituary letting
   the administrator know that the daemon died, the cause of
   death (which signal or exit status it exited with), and
   (optionally) the last few entries from that daemon's log file.  If
@@ -1294,9 +1311,9 @@ These macros control the \Condor{master}.
   not a global configuration file.
 
 \item[\Macro{START\_DAEMONS}] \label{param:StartDaemons} This macro
-  is similar to the \MacroU{START\_MASTER} macro described above.
+  is similar to the \MacroUNI{START\_MASTER} macro described above.
   However, the \Condor{master} does not exit; it does not start any
-  of the daemons listed in the \MacroU{DAEMON\_LIST}.
+  of the daemons listed in the \MacroUNI{DAEMON\_LIST}.
   The daemons may be started at a later time with a \Condor{on}
   command.
 
@@ -1340,7 +1357,7 @@ These macros control the \Condor{master}.
 \item[\Macro{MASTER\_BACKOFF\_CEILING}]
   \label{param:MasterBackoffCeiling} This entry determines the maximum
   amount of time you want the master to wait between attempts to start
-  a given daemon.  (With 2.0 as the \MacroU{MASTER\_BACKOFF\_FACTOR},
+  a given daemon.  (With 2.0 as the \MacroUNI{MASTER\_BACKOFF\_FACTOR},
   1 hour is obtained in 12 restarts).  It is defined in terms of
   seconds and defaults to 3600 (1 hour).
 
@@ -1363,7 +1380,7 @@ When a daemon crashes, it is restarted in 10 seconds.  If it keeps
 crashing, a longer amount of time is waited before restarting.
 The length of time is based on how
 many times it has been restarted.  
-Take the \MacroU{MASTER\_BACKOFF\_FACTOR} (defaults to 2) to 
+Take the \MacroUNI{MASTER\_BACKOFF\_FACTOR} (defaults to 2) to 
 the power the number of times the daemon has restarted, and add 9.
 An example:
 \begin{verbatim}
@@ -1381,7 +1398,7 @@ After the 13th crash, it would be:
         13th crash:  restarts == 12, so, 9 + 2^12 = 9 + 4096 = 4105 seconds
 \end{verbatim}
 
-This is bigger than the \MacroU{MASTER\_BACKOFF\_CEILING}, which
+This is bigger than the \MacroUNI{MASTER\_BACKOFF\_CEILING}, which
 defaults to 3600, so the daemon would really be restarted after only
 3600 seconds, not 4105.
 The \Condor{master} tries again every hour (since the numbers would
@@ -1391,7 +1408,7 @@ This might happen if, for example, an administrator reinstalled
 an accidentally deleted binary after receiving e-mail about
 the daemon crashing.
 If it stayed alive for
-\MacroU{MASTER\_RECOVER\_FACTOR} seconds (defaults to 5 minutes),
+\MacroUNI{MASTER\_RECOVER\_FACTOR} seconds (defaults to 5 minutes),
 the count of how many restarts this daemon has performed is reset to
 10 seconds.
 
@@ -1402,11 +1419,11 @@ will not want to change them for any reason.
 
 \item[\Macro{MASTER\_EXPRS}] \label{param:MasterExprs} This macro is
   described in section~\ref{param:SubsysExprs} as
-  \Macro{SUBSYS\_EXPRS}.
+  \MacroNI{SUBSYS\_EXPRS}.
 
 \item[\Macro{MASTER\_DEBUG}] \label{param:MasterDebug} This macro
   is described in section~\ref{param:SubsysDebug} as
-  \Macro{SUBSYS\_DEBUG}.
+  \MacroNI{SUBSYS\_DEBUG}.
 
 \item[\Macro{MASTER\_ADDRESS\_FILE}] \label{param:MasterAddressFile}
   This macro is described in
@@ -1468,12 +1485,12 @@ control state or activity transitions within the
 \item[\Macro{STARTER}] \label{param:Starter}  This macro holds the
   full path to the \Condor{starter} binary that the startd should 
   spawn.
-  It is normally defined relative to \MacroU{SBIN}.
+  It is normally defined relative to \MacroUNI{SBIN}.
   
 \item[\Macro{ALTERNATE\_STARTER\_1}] \label{param:AlternateStarter1}
   This macro holds the full path to the \Condor{starter.pvm}
   binary that the startd spawns to service PVM jobs.  It is normally
-  defined relative to \MacroU{SBIN}, since by default,
+  defined relative to \MacroUNI{SBIN}, since by default,
   \Condor{starter.pvm} is installed in the regular Condor release
   directory. 
   
@@ -1578,21 +1595,21 @@ control state or activity transitions within the
 
   \Note If you use this setting on a given machine, you should
   probably advertise that fact in the machine's ClassAd by using the
-  \Macro{STARTD\_EXPRS} setting (described above).
+  \MacroNI{STARTD\_EXPRS} setting (described above).
   This way, jobs submitted in your pool could specify that they did or
   did not want to be matched with machines that were only really
   offering ``fractional CPUs''.
 
 \item[\Macro{MEMORY}] \label{param:Memory}
   Normally, Condor will automatically detect the amount of physical
-  memory available on your machine.  Define \Macro{MEMORY} to tell
+  memory available on your machine.  Define \MacroNI{MEMORY} to tell
   Condor how much physical memory (in MB) your machine has, overriding
   the value Condor computes automatically.
 
 \item[\Macro{RESERVED\_MEMORY}] \label{param:ReservedMemory}
   How much memory would you like reserved from Condor?  By default,
   Condor considers all the physical memory of your machine as
-  available to be used by Condor jobs.  If \Macro{RESERVED\_MEMORY} is
+  available to be used by Condor jobs.  If \MacroNI{RESERVED\_MEMORY} is
   defined, Condor subtracts it from the amount of memory it advertises
   as available.
 
@@ -1681,7 +1698,7 @@ change to take effect (for example, using ``\condor{restart}
   what part of each shared system resource (like RAM, swap space, etc)
   this kind of virtual machine gets.
   N can be any integer from 1 to the value of
-  \MacroU{MAX\_VIRTUAL\_MACHINE\_TYPES}, such as
+  \MacroUNI{MAX\_VIRTUAL\_MACHINE\_TYPES}, such as
   \MacroNI{VIRTUAL\_MACHINE\_TYPE\_1}. 
   The format of this entry can be somewhat complex, so please refer to
   section~\ref{sec:SMP-Divide} on page~\pageref{sec:SMP-Divide} for
@@ -1887,18 +1904,18 @@ These macros control the \Condor{schedd}.
 
 \item[\Macro{SHADOW}] \label{param:Shadow} This macro determines the
   full path of the \Condor{shadow} binary that the \Condor{schedd}
-  spawns.  It is normally defined in terms of \MacroU{SBIN}. 
+  spawns.  It is normally defined in terms of \MacroUNI{SBIN}. 
   
 \item[\Macro{SHADOW\_PVM}] \label{param:ShadowPvm} This macro
   determines the full path of the special \Condor{shadow.pvm} binary
   used for supporting PVM jobs that the \Condor{schedd} spawns.  It is
-  normally defined in terms of \MacroU{SBIN}.
+  normally defined in terms of \MacroUNI{SBIN}.
 
 \item[\Macro{MAX\_JOBS\_RUNNING}] \label{param:MaxJobsRunning} This
   macro controls the maximum number of \Condor{shadow} processes
   a given \Condor{schedd} is allowed to spawn.  The actual
   number of \Condor{shadow}s may be less if you have reached
-  your \MacroU{RESERVED\_SWAP} limit.
+  your \MacroUNI{RESERVED\_SWAP} limit.
 
 \item[\Macro{MAX\_SHADOW\_EXCEPTIONS}]
   \label{param:MaxShadowExceptions} This macro controls the maximum
@@ -2012,9 +2029,9 @@ These macros control the \Condor{schedd}.
   \File{SchedLog}, since the \File{SchedLog} may be rotated and
   synchronization across log file rotations
   is desired.
-  This macro is defined relative to the \MacroU{LOCK} macro.
+  This macro is defined relative to the \MacroUNI{LOCK} macro.
   If you decide to change this setting (not recommended),
-  be sure to change the \MacroU{VALID\_LOG\_FILES} entry that
+  be sure to change the \MacroUNI{VALID\_LOG\_FILES} entry that
   \Condor{preen} uses as well.
 
 \item[\Macro{SCHEDD\_EXPRS}] \label{param:ScheddExprs} This macro is
@@ -2033,14 +2050,14 @@ These macros control the \Condor{schedd}.
 
 \item[\Macro{FLOCK\_NEGOTIATOR\_HOSTS}] \label{param:FlockNegotiatorHosts} 
   This macro defines a list of negotiator hostnames (not including the
-  local \MacroU{NEGOTIATOR\_HOST} machine) for pools in which the
+  local \MacroUNI{NEGOTIATOR\_HOST} machine) for pools in which the
   schedd should attempt to run jobs.  Hosts in the list should be in
   order of preference.  The schedd will only send a request to a
   central manager in the list if the local pool and pools earlier in
   the list are not satisfying all the job requests.
   \MacroUNI{HOSTALLOW\_NEGOTIATOR\_SCHEDD} (see
   section~\ref{param:HostAllow}) must also be configured to allow
-  negotiators from all of the \MacroU{FLOCK\_NEGOTIATOR\_HOSTS} to
+  negotiators from all of the \MacroUNI{FLOCK\_NEGOTIATOR\_HOSTS} to
   contact the schedd.  Please make sure the
   \MacroUNI{NEGOTIATOR\_HOST} is first in the
   \MacroUNI{HOSTALLOW\_NEGOTIATOR\_SCHEDD} list.  Similarly, the
@@ -2051,24 +2068,24 @@ These macros control the \Condor{schedd}.
   This macro defines a list of collector hostnames for pools in which
   the schedd should attempt to run jobs.  The
   collectors must be specified in order, corresponding to the
-  \MacroU{FLOCK\_NEGOTIATOR\_HOSTS} list.  In the typical case, where each pool
+  \MacroUNI{FLOCK\_NEGOTIATOR\_HOSTS} list.  In the typical case, where each pool
   has the collector and negotiator running on the same machine,
-  \MacroU{FLOCK\_COLLECTOR\_HOSTS} should have the same definition as
-  \MacroU{FLOCK\_NEGOTIATOR\_HOSTS}.
+  \MacroUNI{FLOCK\_COLLECTOR\_HOSTS} should have the same definition as
+  \MacroUNI{FLOCK\_NEGOTIATOR\_HOSTS}.
 
 \item[\Macro{FLOCK\_VIEW\_SERVERS}] \label{param:FlockViewServers}
   This macro defines a list of hostnames where the condor-view server
   is running in the pools to which you want your jobs to flock.  The
   order of this list must correspond to the order of the
-  \MacroU{FLOCK\_COLLECTOR\_HOSTS} and
-  \MacroU{FLOCK\_NEGOTIATOR\_HOSTS} lists.  List items may be empty
+  \MacroUNI{FLOCK\_COLLECTOR\_HOSTS} and
+  \MacroUNI{FLOCK\_NEGOTIATOR\_HOSTS} lists.  List items may be empty
   for pools which don't use a separate condor-view server.
-  \MacroU{FLOCK\_VIEW\_SERVER} may be left undefined if no remote
+  \MacroUNI{FLOCK\_VIEW\_SERVER} may be left undefined if no remote
   pools use separate condor-view servers.  Note: It is required that
   the same hostname does not appear twice in the
-  \MacroU{FLOCK\_VIEW\_SERVERS} list and that the
-  \MacroU{CONDOR\_VIEW\_HOST} does not appear in the
-  \MacroU{FLOCK\_VIEW\_SERVERS} list.
+  \MacroUNI{FLOCK\_VIEW\_SERVERS} list and that the
+  \MacroUNI{CONDOR\_VIEW\_HOST} does not appear in the
+  \MacroUNI{FLOCK\_VIEW\_SERVERS} list.
 
 \item[\Macro{NEGOTIATE\_ALL\_JOBS\_IN\_CLUSTER}]
   \label{param:NegotiateAllJobsInCluster}
@@ -2102,15 +2119,15 @@ These settings affect the \Condor{shadow}.
   \File{ShadowLog} file.  It must be a separate file from the
   \File{ShadowLog}, since the \File{ShadowLog} may be rotated 
   and you want to synchronize access across log file rotations.
-  This macro is defined relative to the \MacroU{LOCK} macro.
+  This macro is defined relative to the \MacroUNI{LOCK} macro.
   If you decide to change this setting (not recommended),
-  be sure to change the \MacroU{VALID\_LOG\_FILES} entry that
+  be sure to change the \MacroUNI{VALID\_LOG\_FILES} entry that
   \Condor{preen} uses as well.
 
 \item[\Macro{SHADOW\_DEBUG}] \label{param:ShadowDebug} This macro
   (and other settings related to debug logging in the shadow) is
   described in section~\ref{param:SubsysDebug} as
-  \Macro{SUBSYS\_DEBUG}.
+  \MacroNI{SUBSYS\_DEBUG}.
 
 \item[\Macro{COMPRESS\_PERIODIC\_CKPT}]
   \label{param:CompressPeriodicCkpt} This boolean macro specifies
@@ -2153,13 +2170,13 @@ special shadow.  See section~\ref{sec:Shadow-Config-File-Entries}.
 \item[\Macro{PVMD}] \label{param:PvmD}  This macro holds the full path
   to the special \Condor{pvmd}, the Condor PVM daemon.  This daemon is
   installed in the regular Condor release directory by default, so the
-  macro is usually defined in terms of \MacroU{SBIN}.
+  macro is usually defined in terms of \MacroUNI{SBIN}.
   
 \item[\Macro{PVMGS}] \label{param:PvmGS} This macro holds the full
   path to the special \Condor{pvmgs}, the Condor PVM Group Server
   daemon, which is needed to support PVM groups.  This daemon is
   installed in the regular Condor release directory by default, so the
-  macro is usually defined in terms of \MacroU{SBIN}.
+  macro is usually defined in terms of \MacroUNI{SBIN}.
 
 \end{description}
 
@@ -2260,9 +2277,13 @@ jobs at your site use the following macros:
 
 \item[\Macro{APPEND\_REQUREMENTS}] \label{param:AppendReq}
   Expression to be appended to any type of universe jobs. 
-  However, if \Macro{APPEND\_REQ\_VANILLA} or \Macro{APPEND\_REQ\_STANDARD}
-  is defined, then ignore the \Macro{APPEND\_REQUREMENTS} for those
+  However, if \MacroNI{APPEND\_REQ\_VANILLA} or \MacroNI{APPEND\_REQ\_STANDARD}
+  is defined, then ignore the \MacroNI{APPEND\_REQUREMENTS} for those
   universes.
+
+\item[\Macro{APPEND\_RANK}] \label{param:AppendRank}
+  Expression to be appended to job rank.  \MacroNI{APPEND\_RANK\_STANDARD} or
+    \MacroNI{APPEND\_RANK\_VANILLA} will override this setting if defined.
 
 \item[\Macro{APPEND\_RANK\_STANDARD}] \label{param:AppendRankStandard}
   Expression to be appended to standard job rank.
@@ -2315,7 +2336,7 @@ as:
   Condor keeps a buffer of recently-used data for each file an
   application opens.  This macro specifies the default maximum number
   of bytes to be buffered for each open file at the executing machine.
-  The \Condor{status} \Macro{buffer\_size} command will override this
+  The \Condor{status} \MacroNI{buffer\_size} command will override this
   default.  If this macro is undefined, a default size of 512 KB will
   be used.
 
@@ -2323,7 +2344,7 @@ as:
   \label{param:DefaultBufferBlockSize} When buffering is enabled,
   Condor will attempt to consolidate small read and write operations
   into large blocks.  This macro specifies the default block size
-  Condor will use.  The \Condor{status} \Macro{buffer\_block\_size}
+  Condor will use.  The \Condor{status} \MacroNI{buffer\_block\_size}
   command will override this default.  If this macro is undefined, a
   default size of 32 KB will be used.
 
@@ -2349,18 +2370,18 @@ These macros affect \Condor{preen}.
 \item[\Macro{PREEN\_ADMIN}] \label{param:PreenAdmin}  This macro
   sets the e-mail address where \Condor{preen} will send e-mail (if
   it is configured to send email at all... see the entry for
-  \Macro{PREEN}).  Defaults to \MacroU{CONDOR\_ADMIN}.
+  \MacroNI{PREEN}).  Defaults to \MacroUNI{CONDOR\_ADMIN}.
 
 \item[\Macro{VALID\_SPOOL\_FILES}] \label{param:ValidSpoolFiles}  This
   macro contains a (comma or space separated) list of files that
-  \Condor{preen} considers valid files to find in the \MacroU{SPOOL}
+  \Condor{preen} considers valid files to find in the \MacroUNI{SPOOL}
   directory.  Defaults to all the files that are valid.  A change
-  to the \MacroU{HISTORY} macro requires a change to this
+  to the \MacroUNI{HISTORY} macro requires a change to this
   macro as well.
   
 \item[\Macro{VALID\_LOG\_FILES}] \label{param:ValidLogFiles} This
   macro contains a (comma or space separated) list of files that
-  \Condor{preen} considers valid files to find in the \MacroU{LOG}
+  \Condor{preen} considers valid files to find in the \MacroUNI{LOG}
   directory.  Defaults to all the files that are valid.  A change
   to the names of any of the log files above requires a change to this
   macro as well.  In addition, the defaults for the
@@ -2384,7 +2405,7 @@ These macros affect the \Condor{collector}.
   the collector might also have an attribute that says how long the
   lifetime should be for that specific ad.  If that attribute is
   present, the collector will either use it or the
-  \MacroU{CLASSAD\_LIFETIME}, whichever is greater.  The macro is
+  \MacroUNI{CLASSAD\_LIFETIME}, whichever is greater.  The macro is
   defined in terms of seconds, and defaults to 900 (15 minutes).
   
 \item[\Macro{MASTER\_CHECK\_INTERVAL}]
@@ -2429,7 +2450,7 @@ These macros affect the \Condor{collector}.
   basic information about the status of your pool.  This includes only
   the number of total machines, the number of jobs submitted, the
   number of machines running jobs, the hostname of your central
-  manager, and the \MacroU{COLLECTOR\_NAME} specified above.  These
+  manager, and the \MacroUNI{COLLECTOR\_NAME} specified above.  These
   updates help the Condor Team see how Condor is being used around the world.
   By default, they will be sent to condor.cs.wisc.edu.  If you don't want
   these updates to be sent from your pool, set this macro to
@@ -2443,6 +2464,20 @@ These macros affect the \Condor{collector}.
   have stale information about the pool due to dropping update packets.  If
   your pool is small or your central manager has very little RAM, considering
   setting this parameter to a lower value (perhaps 256000 or 128000).
+
+\item[\Macro{COLLECTOR\_SOCKET\_CACHE\_SIZE}] 
+  \label{param:CollectorSocketCacheSize} 
+  If your site wants to use TCP connections to send ClassAd updates to
+  the collector, you must use this setting to enable a cache of TCP
+  sockets (in addition to enabling
+  \Macro{UPDATE\_COLLECTOR\_WITH\_TCP}). 
+  Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
+  Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
+  for more details and a discussion of when you would need this
+  functionality. 
+  If you do not enable a socket cache, TCP updates will be refused by
+  the collector.
+  The default value for this setting is 0, with no cache enabled.   
 
 \item[\Macro{KEEP\_POOL\_HISTORY}] \label{param:KeepPoolHistory}
   This boolean macro is used to decide if the collector will write
@@ -2480,7 +2515,7 @@ These macros affect the \Condor{collector}.
 \item[\Macro{COLLECTOR\_DEBUG}] \label{param:CollectorDebug} This
   macro (and other macros related to debug logging in the
   collector) is described in section~\ref{param:SubsysDebug} as
-  \Macro{SUBSYS\_DEBUG}.
+  \MacroNI{SUBSYS\_DEBUG}.
 
 \end{description}
 
@@ -2552,7 +2587,7 @@ These macros affect the \Condor{negotiator}.
 \item[\Macro{PREEMPTION\_REQUIREMENTS}]
   \label{param:PreemptionRequirements} The negotiator will not preempt
   a job running on a given machine unless the
-  \Macro{PREEMPTION\_REQUIREMENTS} expression evaluates to TRUE and the
+  \MacroNI{PREEMPTION\_REQUIREMENTS} expression evaluates to TRUE and the
   owner of the idle job has a better priority than the owner of the
   running job.  By default, this expression allows jobs to be
   preempted only after they have run for one hour, and only if the
@@ -2570,7 +2605,7 @@ These macros affect the \Condor{negotiator}.
 
 \item[\Macro{NEGOTIATOR\_DEBUG}] \label{param:NegotiatorDebug} This macro
   (and other settings related to debug logging in the negotiator) is
-  described in section~\ref{param:SubsysDebug} as \Macro{SUBSYS\_DEBUG}.
+  described in section~\ref{param:SubsysDebug} as \MacroNI{SUBSYS\_DEBUG}.
 
 \end{description}
 
@@ -2592,16 +2627,16 @@ which define events to be managed by the event daemon.
 
 \item[\Macro{EVENTD\_CAPACITY\_INFO}] \label{param:EventdCapInfo}
 Configures the bandwidth limits used when scheduling job checkpoint
-transfers before \Macro{SHUTDOWN} events.
-The \Macro{EVENTD\_CAPACITY\_INFO} file has the same
-format as the \Macro{NETWORK\_CAPACITY\_INFO} file, described in
+transfers before \MacroNI{SHUTDOWN} events.
+The \MacroNI{EVENTD\_CAPACITY\_INFO} file has the same
+format as the \MacroNI{NETWORK\_CAPACITY\_INFO} file, described in
 section~\ref{sec:Bandwidth-Alloc-Capinfo}.
 
 \item[\Macro{EVENTD\_ROUTING\_INFO}] \label{param:EventdRouteInfo}
 Configures the network routing information used when scheduling job
-checkpoint transfers before \Macro{SHUTDOWN} events.
-The \Macro{EVENTD\_ROUTING\_INFO} file has the same
-format as the \Macro{NETWORK\_ROUTING\_INFO} file, described in
+checkpoint transfers before \MacroNI{SHUTDOWN} events.
+The \MacroNI{EVENTD\_ROUTING\_INFO} file has the same
+format as the \MacroNI{NETWORK\_ROUTING\_INFO} file, described in
 section~\ref{sec:Bandwidth-Alloc-Routes}.
 
 \item[\Macro{EVENTD\_INTERVAL}] \label{param:EventdInterval} The number

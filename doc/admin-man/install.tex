@@ -218,13 +218,13 @@ the local directory (specified by the \Macro{LOCAL\_DIR} macro
 in the configuration file).
 
 If you have a Unix user named condor with a local home directory on each
-machine, the \Macro{LOCAL\_DIR} could just be user condor's home
-directory (\Macro{LOCAL\_DIR} = \MacroU{TILDE} in the 
+machine, the \MacroNI{LOCAL\_DIR} could just be user condor's home
+directory (\MacroNI{LOCAL\_DIR} = \MacroUNI{TILDE} in the 
 configuration file).
 If this user's home directory is shared among all machines in your
 pool, you would want to create a directory for each host (named by
-host name) for the local directory (for example, \Macro{LOCAL\_DIR} =
-\MacroU{TILDE}/hosts/\MacroU{HOSTNAME}).  If you do not
+host name) for the local directory (for example, \MacroNI{LOCAL\_DIR} =
+\MacroUNI{TILDE}/hosts/\MacroUNI{HOSTNAME}).  If you do not
 have a condor account on your machines, you can put these directories
 wherever you'd like.  However, where to place them will require some
 thought, as each one has its own resource needs:
@@ -471,7 +471,7 @@ A solution is not ready for
 This implies that you are probably not going to want
 to have the \Macro{LOCAL\_DIR} for Condor on AFS.
 However, you can
-(and probably should) have the Condor \Macro{RELEASE\_DIR} on AFS, so
+(and probably should) have the Condor \MacroNI{RELEASE\_DIR} on AFS, so
 that you can share one copy of those files and upgrade them in a
 centralized location.  You will also have to do something special if
 you submit jobs to Condor from a directory on AFS.  Again, read manual
@@ -542,7 +542,7 @@ and directories you need, you will still need to use \Condor{init} to
 create the \Macro{LOCK} directory on the local disk of each machine.
 If you have a shared release directory, but the \Macro{LOCAL\_DIR} is
 local on each machine, \Condor{init} will create all the directories
-and files needed in \Macro{LOCAL\_DIR}.  In addition, \Condor{init}
+and files needed in \MacroNI{LOCAL\_DIR}.  In addition, \Condor{init}
 will create any soft links on each machine that are needed so that
 Condor can find its global configuration file.
 
@@ -700,19 +700,19 @@ what each step is for, and suggests how to answer the questions
      \condor{install} will configure your \Macro{FILESYSTEM\_DOMAIN} 
      setting to be set to the domain name of the machine running
      \condor{install}.
-     If not, \Macro{FILESYSTEM\_DOMAIN} will be set to
-     \MacroU{FULL\_HOSTNAME}, indicating that each machine is in its
+     If not, \MacroNI{FILESYSTEM\_DOMAIN} will be set to
+     \MacroUNI{FULL\_HOSTNAME}, indicating that each machine is in its
      own domain.
 
      For the UID domain, Condor needs to know if all users across all
      the machines in your pool have a unique UID.  
      If so, \Macro{UID\_DOMAIN} will be set to the domain name of the
      machine running \condor{install}. 
-     If not, \Macro{UID\_DOMAIN} will be set to
-     \MacroU{FULL\_HOSTNAME}, indicating that each machine is in its 
+     If not, \MacroNI{UID\_DOMAIN} will be set to
+     \MacroUNI{FULL\_HOSTNAME}, indicating that each machine is in its 
      own domain.
 
-     If you have a common \Macro{UID\_DOMAIN}, \condor{install} will
+     If you have a common \MacroNI{UID\_DOMAIN}, \condor{install} will
      ask if you have a \Term{soft UID domain}, meaning that although
      you have unique UIDs, not every machine in your pool has all the
      users in their individual password files.  Please see the
@@ -786,7 +786,7 @@ Skip to the appropriate section below, based on the kind of installation.
      of guesses) type in what you want.  Since this directory needs to
      be unique, it is common to use the host name of each machine in
      its name.  When typing in your own path, you can use
-     '\MacroU{HOSTNAME}' which \Condor{install}
+     '\MacroUNI{HOSTNAME}' which \Condor{install}
      (and the Condor configuration files)
      will expand to the host name of the machine you are currently on.
      \Condor{install} will try to create the corresponding directories
@@ -826,7 +826,7 @@ Skip to the appropriate section below, based on the kind of installation.
 
      The two main options are to have a single directory that holds
      all the local configuration files, each one 
-     named \File{\MacroU{HOSTNAME}.local},
+     named \File{\MacroUNI{HOSTNAME}.local},
      or to have the local configuration files go into the individual local
      directories for each machine.  Given a shared file system, we
      recommend the first option, since it makes it easier to configure
@@ -913,7 +913,7 @@ things you should check before you start up Condor.
     \File{tty00} if you have a serial mouse, \File{psaux} if you have
     a PS/2 bus mouse, etc).  If you do not have a \File{/dev/mouse}
     link, you should either create one (you will be glad you did), or
-    change the \Macro{CONSOLE\_DEVICES} entry in Condor's
+    change the \MacroNI{CONSOLE\_DEVICES} entry in Condor's
     configuration file.
     This entry is a comma separated list, so you can have any
     devices in \File{/dev} count as 'console devices' and activity

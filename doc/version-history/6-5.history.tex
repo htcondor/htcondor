@@ -11,7 +11,6 @@ The details of each version are described below.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent New Features:
-
 \begin{itemize}
 
 \item DAGMan now supports both Condor computational jobs and Stork data
@@ -21,30 +20,39 @@ for more info on Stork.)
 \item Starter exceptions, such as failure to open standard input, are
 now recorded in the user log.
 
+\item Added new \Arg{-forcex} argument to \Condor{rm} to force the
+immediate local removal of (typically Globus universe) jobs in the 'X'
+state, regardless of their remote state.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
-
 \begin{itemize}
-
-\item A DAGMan bug introduced in Condor 6.5.0 has been fixed, where
-DAGMan could crash (with a failed assertion) when recovering from a
-rescue DAG.
 
 \item When transfer_files is being used, the path to the stdout/stderr
 files was not being respected.  After hese files have been transferred,
 they are now copied to the location specified in the submit file.
 
+\item A DAGMan bug introduced in Condor 6.5.0 has been fixed, where
+DAGMan could crash (with a failed assertion) when recovering from a
+rescue DAG.
+
+\item Fixed a bug in the example condor\_config.generic and
+hawkeye\_config files, where COLLECTOR\_HOST was being included in the
+default STARTD\_EXPRS in non-string form, resulting in an invalid value
+for that attribute in machine classads.
+
 \end{itemize}
 
 \noindent Known Bugs:
-
 \begin{itemize}
 
-\item None.
+\item DAGMan doesn't detect when users mistakenly specify two
+DAG nodes with the same node name; instead it waits for the
+same node to complete twice, which never happens, and so DAGMan
+goes off into never-never land.
 
 \end{itemize}
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:New-6-5-0}Version 6.5.0}
@@ -88,6 +96,13 @@ various bug fixes and improvements.
 defines the timeout that \Condor{q} uses when communicating with the
 \Condor{schedd}.
 
+\item Added the ability to use TCP to send ClassAd updates to the
+Condor{collector}, though the feature is disabled by default.
+Read section~\ref{sec:tcp-collector-update} on ``Using TCP to Send
+Collector Updates'' on page~\pageref{sec:tcp-collector-update} for
+more details and a discussion of when a site would need to enable this 
+functionality.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -103,6 +118,15 @@ file.
 Improved the error messages generated when there are problems
 initializing the user log to include string descriptions of the
 errors, not just the error number (errno).
+
+\item The default value in the config files for \Macro{LOCK} is now
+defined in terms of \Macro{LOG}, instead of using \Macro{LOCAL\_DIR}
+and appending ``log''.
+This is a very minor correction, but in the rare cases where the log
+directory is being redefined for some reason, we usually want that to
+apply to the lock files, as well.
+Of course, if the log directory is on NFS, \Macro{LOCK} should still
+be customized to point to a directoy on a local file system.
 
 \end{itemize}
 

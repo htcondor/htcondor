@@ -537,8 +537,8 @@ This option is
 most useful combined with the \Opt{UPDATE} option to
 visualize the history of the DAG after it has finished executing. 
 
-\item \OptArg{INCLUDE}{include-file-name} Includes the contents
-of a file \File{include-file-name} in the file produced by the
+\item \OptArg{INCLUDE}{path-to-filename} Includes the contents
+of a file given by \File{path-to-filename} in the file produced by the
 \Opt{DOT} command.
 The include file contents are always placed after the line of
 the form
@@ -550,4 +550,6 @@ progresses.
 
 \end{itemize}
 
+If conflicting parameters are used in a DOT command, the last one
+listed is used.
 \index{DAGMan|)}

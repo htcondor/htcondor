@@ -22,23 +22,23 @@ done by Condor users who submit jobs.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The most important thing is that since the Condor daemons can't
-authenticate to AFS, the \Macro{LOCAL\_DIR} (and it's subdirectories
+authenticate to AFS, the \MacroNI{LOCAL\_DIR} (and it's subdirectories
 like ``log'' and ``spool'') for each machine must be either writable
 to unauthenticated users, or must not be on AFS.  The first option is
 a \textbf{VERY} bad security hole so you should \textbf{NOT} have your
 local directory on AFS.  If you've got NFS installed as well and want
-to have your \Macro{LOCAL\_DIR} for each machine on a shared file
-system, use NFS.  Otherwise, you should put the \Macro{LOCAL\_DIR} on
+to have your \MacroNI{LOCAL\_DIR} for each machine on a shared file
+system, use NFS.  Otherwise, you should put the \MacroNI{LOCAL\_DIR} on
 a local partition on each machine in your pool.  This means that you
 should run \Condor{install} to install your release directory and
-configure your pool, setting the \Macro{LOCAL\_DIR} parameter to some
+configure your pool, setting the \MacroNI{LOCAL\_DIR} parameter to some
 local partition.  When that's complete, log into each machine in your
 pool and run \Condor{init} to set up the local Condor directory.
 
-The \Macro{RELEASE\_DIR}, which holds all the Condor binaries,
+The \MacroNI{RELEASE\_DIR}, which holds all the Condor binaries,
 libraries and scripts can and probably should be on AFS.  None of the
 Condor daemons need to write to these files, they just need to read
-them.  So, you just have to make your \Macro{RELEASE\_DIR} world
+them.  So, you just have to make your \MacroNI{RELEASE\_DIR} world
 readable and Condor will work just fine.  This makes it easier to
 upgrade your binaries at a later date, which means that your users can find
 the Condor tools in a consistent location on all the machines in your

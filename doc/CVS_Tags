@@ -1,0 +1,76 @@
+**********************************************************************
+** This file is for describing the CVS tags we use for the Condor
+** manual.  The *only* tags that should go in here are ones we do on
+** the doc directory.  So, any tags related to merging doc from one
+** branch to another should be listed here.  Also, anytime we make a
+** new branch that includes the doc directory, we should make a note
+** of that here.  (New tags should be added at the top of the file,
+** just after this header).  Thanks!  Derek Wright, 3/17/03
+**********************************************************************
+04/07/03 V6_5-doc-pre-merge-V6_5_0-doc-merge-1
+	The state of the doc directory in V6_5-branch just before merging
+	from V6_5_0-branch as tagged at V6_5_0-doc-merge-1.
+
+04/07/03 V6_5-doc-post-merge-V6_5_0-doc-merge-1
+	The state of the doc directory in V6_5-branch just before merging
+	from V6_5_0-branch as tagged at V6_5_0-doc-merge-1.
+
+04/07/03 V6_5_0-doc-merge-1
+	The state of the doc directory in V6_5_0-branch before merging it
+	into the V6_5-branch.  This is the second merge of doc from the
+	V6_5_0-branch to the V6_5-branch.  The first one was done as
+	tagged at V6_5_0-merge-1, before we started merging the doc
+	separately.
+
+03/19/03 V6_5_0-doc-post-merge-V6_4-doc-merge-1
+    The state of the doc directory of the V6_5_0-branch after the
+    merge of V6_4-branch as tagged V6_4-doc-merge-1
+
+03/19/03 V6_5_0-doc-pre-merge-V6_4-doc-merge-1
+    The state of the doc directory of the V6_5_0-branch before the
+    merge of V6_4-branch as tagged V6_4-doc-merge-1
+
+03/18/03 V6_4-doc-merge-1
+    the state of the V6_4-branch before merging into V6_5_0-branch
+    (again).  This is first time we're doing this for the docs
+    separately.  The previous merge that did both source and
+    docs was the V6_4-merge-7.
+    
+
+03/07/03 V6_4-merge-7
+    the state of the V6_4-branch before merging into V6_5_0-branch
+    (again).  this includes a few minor but important bug fixes that
+    have gone into V6_4-branch that need to be present before we ship
+    6.5.0.  [NOTE: this was the last time doc was merged from
+    V6_4-branch to V6_5_0-branch with the rest of the source.  So, the
+    next time we merge doc from V6_4-branch to V6_5_0-branch,
+    "V6_4-merge-7" would be the "last-merged-from" tag, in the
+    HOWTO-merge instructions.]
+
+02/07/03 V6_5_0-merge-1
+    The state of the V6_5_0-branch before merging back into
+    V6_5-branch. It has a few bug fixes, and some changes from V6_4 on
+    it.  This is the first time V6_5_0 has ever been merged into V6_5.
+    [NOTE: this was the last time doc was merged from V6_5_0-branch to
+    the V6_5-branch with the rest of the source.    So, the
+    next time we merge doc from V6_5_0-branch -> V6_5-branch,
+    "V6_5_0-merge-1" would be the "last-merged-from" tag, in the
+    HOWTO-merge instructions.]
+
+02/04/03 V6_5_0-branch
+    A stable branch for the V6.5.0 release. It's off the V6_5-branch.
+
+07/19/02 V6_5-branch
+    The V6_5 development series branch.  For important,
+    low-hanging new features.  We should try to keep this branch
+    so it's always ready to be released within a week, if needed.
+    This development series should only last for a month of
+    development, and then be hardened for another stable release.
+    as soon as the trunk (new classads) porting is done in the
+    most basic level, and daemons with new classads can run jobs
+    and pass the test suite, we will freeze development in 6_5,
+    have a few people work to make it stable, and finally move all
+    development into new classads.  yee haw!
+
+07/19/02 V6_4-branch
+    The V6_4 *stable* series branch.  ONLY BUG FIXES to 6.4.1! 

@@ -2,14 +2,21 @@
 \section{\label{sec:grids-intro}An Introduction}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Todd's introduction to grid computing.
-This introduction contains 
-\begin{enumerate}
-\item A high-level description of grids.
-\item How Condor helps with grid-computing.
-\item Flocking intro.
-\item Condor-G intro.
-\end{enumerate}
+Grids refer to computing resources all over the world. 
+Condor's purpose of providing computing cycles extends naturally
+to grids.
 
-When the user is done reading this section, he/she will know
-what further info or sections should be further read.
+An easy extension allows Condor jobs submitted within one pool
+of machines to execute on another (separate) Condor pool.
+Condor calls this flocking.
+If a machine within the pool where a job is submitted is not
+available to run the job,
+the job makes its way to another pool.
+This is enabled by configuration of the pools.
+
+Some of Condor's grid computing features utilize Globus software
+(\URL{http://www.globus.org/}).
+Globus provides infrastructure for authentication, authorization,
+and remote job submission (including data transfer) on Grid resources.
+Condor-G provides all of Condor's job submission features,
+but for these far-removed resources.
