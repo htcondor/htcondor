@@ -42,6 +42,14 @@ RemoteResource *thisRemoteResource;
 // 90 seconds to wait for a socket timeout:
 const int RemoteResource::SHADOW_SOCK_TIMEOUT = 90;
 
+static char *Resource_State_String [] = {
+	"PRE", 
+	"EXECUTING", 
+	"PENDING_DEATH", 
+	"FINISHED",
+	"SUSPENDED",
+};
+
 RemoteResource::RemoteResource( BaseShadow *shad ) 
 {
 	executingHost = NULL;
@@ -77,6 +85,7 @@ RemoteResource::init( BaseShadow *shad )
 	memset( &remote_rusage, 0, sizeof(struct rusage) );
 	disk_usage = 0;
 	image_size = 0;
+	state = RR_PRE;
 }
 
 RemoteResource::~RemoteResource()
@@ -94,7 +103,7 @@ RemoteResource::~RemoteResource()
 }
 
 
-int
+bool
 RemoteResource::requestIt( int starterVersion )
 {
 /* starterVersion is a default to 2. */
@@ -105,12 +114,12 @@ RemoteResource::requestIt( int starterVersion )
 		shadow->dprintf ( D_ALWAYS, "executingHost or capability not defined"
 				  "in requestIt.\n" );
 		setExitReason(JOB_SHADOW_USAGE);  // no better exit reason available
-		return -1;
+		return false;
 	}
 
 	if ( !jobAd ) {
 		shadow->dprintf( D_ALWAYS, "JobAd not defined in RemoteResource\n" );
-		return -1;
+		return false;
 	}
 
 	claimSock->close();	// make sure ClaimSock is a virgin socket
@@ -119,7 +128,7 @@ RemoteResource::requestIt( int starterVersion )
 		shadow->dprintf(D_ALWAYS, "failed to connect to execute host %s\n", 
 				executingHost);
 		setExitReason(JOB_NOT_STARTED);
-		return -1;
+		return false;
 	}
 
 	claimSock->encode();
@@ -132,7 +141,7 @@ RemoteResource::requestIt( int starterVersion )
 		shadow->dprintf(D_ALWAYS, "failed to send ACTIVATE_CLAIM "
                         "request to %s\n", executingHost);
 		setExitReason(JOB_NOT_STARTED);
-		return -1;
+		return false;
 	}
 
 	claimSock->decode();
@@ -140,23 +149,24 @@ RemoteResource::requestIt( int starterVersion )
 		shadow->dprintf(D_ALWAYS, "failed to receive ACTIVATE_CLAIM "
                         "reply from %s\n", executingHost);
 		setExitReason(JOB_NOT_STARTED);
-		return -1;
+		return false;
 	}
 
 	if (reply != OK) {
 		shadow->dprintf(D_ALWAYS, "Request to run on %s was REFUSED.\n",
 				executingHost);
 		setExitReason(JOB_NOT_STARTED);
-		return -1;
+		return false;
 	}
 
-	shadow->dprintf(D_ALWAYS, "Request to run on %s was ACCEPTED.\n",
-                    executingHost);
-	return 0;
+	shadow->dprintf( D_ALWAYS, "Request to run on %s was ACCEPTED.\n",
+					 executingHost );
+	setResourceState( RR_EXECUTING );
+	return true;
 }
 
 
-int
+bool
 RemoteResource::killStarter()
 {
 
@@ -165,7 +175,7 @@ RemoteResource::killStarter()
 	if ( !executingHost ) {
 		shadow->dprintf ( D_ALWAYS, "In killStarter, "
                           "executingHost not defined.\n");
-		return -1;
+		return false;
 	}
 
 	shadow->dprintf( D_ALWAYS, "Removing machine \"%s\".\n", 
@@ -175,7 +185,7 @@ RemoteResource::killStarter()
 	if (!sock.connect(executingHost, 0)) {
 		shadow->dprintf(D_ALWAYS, "failed to connect to executing host %s\n",
 				executingHost );
-		return -1;
+		return false;
 	}
 
 	sock.encode();
@@ -185,10 +195,13 @@ RemoteResource::killStarter()
 	{
 		shadow->dprintf(D_ALWAYS, "failed to send KILL_FRGN_JOB "
                         "to startd %s\n", executingHost );
-		return -1;
+		return false;
 	}
 
-	return 0;
+	if( state != RR_FINISHED ) {
+		setResourceState( RR_PENDING_DEATH );
+	}
+	return true;
 }
 
 
@@ -572,8 +585,8 @@ RemoteResource::setExitStatus( int status )
 {
 	shadow->dprintf ( D_FULLDEBUG, "setting exit status on %s to %d\n", 
 					  machineName ? machineName : "???", status );
-
 	exitStatus = status;
+	setResourceState( RR_FINISHED );
 }
 
 
@@ -647,6 +660,159 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		disk_usage = int_value;
 	}
 
+	char* job_state = NULL;
+	ResourceState new_state = state;
+	update_ad->LookupString( ATTR_JOB_STATE, &job_state );
+	if( job_state ) { 
+			// The starter told us the job state, see what it is and
+			// if we need to log anything to the UserLog
+		if( stricmp(job_state, "Suspended") == MATCH ) {
+			new_state = RR_SUSPENDED;
+		} else if ( stricmp(job_state, "Running") == MATCH ) {
+			new_state = RR_EXECUTING;
+		} else { 
+				// For our purposes in here, we don't care about any
+				// other possible states at the moment.  If the job
+				// has state "Exited", we'll see all that in a second,
+				// and we don't want to log any events here. 
+		}
+		if( new_state != state ) {
+				// State change!  Let's log the appropriate event to
+				// the UserLog and keep track of suspend/resume
+				// statistics.
+			switch( new_state ) {
+			case RR_SUSPENDED:
+				recordSuspendEvent( update_ad );
+				break;
+			case RR_EXECUTING:
+				recordResumeEvent( update_ad );
+				break;
+			default:
+				EXCEPT( "Trying to log state change for invalid state %s",
+						rrStateToString(new_state) );
+			}
+				// record the new state
+			setResourceState( new_state );
+		}
+		free( job_state );
+	}
+}
+
+
+bool
+RemoteResource::recordSuspendEvent( ClassAd* update_ad )
+{
+	bool rval = true;
+		// First, grab the number of pids that were suspended out of
+		// the update ad.
+	int num_pids;
+	if( ! update_ad->LookupInteger(ATTR_NUM_PIDS, num_pids) ) {
+		dprintf( D_FULLDEBUG, "update ad from starter does not define %s\n",
+				 ATTR_NUM_PIDS );  
+		num_pids = 0;
+	}
+	
+		// Now, we can log this event to the UserLog
+	JobSuspendedEvent event;
+	event.num_pids = num_pids;
+	if( !writeULogEvent(&event) ) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_SUSPENDED event\n" );
+		rval = false;
+	}
+
+		// Finally, we need to update some attributes in our in-memory
+		// copy of the job ClassAd
+	int now = (int)time(NULL);
+	int total_suspensions = 0;
+	char tmp[256];
+
+	jobAd->LookupInteger( ATTR_TOTAL_SUSPENSIONS, total_suspensions );
+	total_suspensions++;
+	sprintf( tmp, "%s = %d", ATTR_TOTAL_SUSPENSIONS, total_suspensions );
+	jobAd->Insert( tmp );
+
+	sprintf( tmp, "%s = %d", ATTR_LAST_SUSPENSION_TIME, now );
+	jobAd->Insert( tmp );
+
+		// Log stuff so we can check our sanity
+	printSuspendStats( D_FULLDEBUG );
+
+	return rval;
+}
+
+
+bool
+RemoteResource::recordResumeEvent( ClassAd* update_ad )
+{
+	bool rval = true;
+
+		// First, log this to the UserLog
+	JobUnsuspendedEvent event;
+	if( !writeULogEvent(&event) ) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_UNSUSPENDED event\n" );
+		rval = false;
+	}
+
+		// Now, update our in-memory copy of the job ClassAd
+	int now = (int)time(NULL);
+	int cumulative_suspension_time = 0;
+	int last_suspension_time = 0;
+	char tmp[256];
+
+		// add in the time I spent suspended to a running total
+	jobAd->LookupInteger( ATTR_CUMULATIVE_SUSPENSION_TIME,
+						  cumulative_suspension_time );
+	jobAd->LookupInteger( ATTR_LAST_SUSPENSION_TIME,
+						  last_suspension_time );
+	cumulative_suspension_time += now - last_suspension_time;
+
+	sprintf( tmp, "%s = %d", ATTR_CUMULATIVE_SUSPENSION_TIME,
+			 cumulative_suspension_time );
+	jobAd->Insert( tmp );
+
+		// set the current suspension time to zero, meaning not suspended
+	sprintf(tmp, "%s = 0", ATTR_LAST_SUSPENSION_TIME );
+	jobAd->Insert( tmp );
+
+		// Log stuff so we can check our sanity
+	printSuspendStats( D_FULLDEBUG );
+
+	return rval;
+}
+
+
+bool
+RemoteResource::writeULogEvent( ULogEvent* event )
+{
+	if( !shadow->uLog.writeEvent(event) ) {
+		return false;
+	}
+	return true;
+}
+
+
+void
+RemoteResource::printSuspendStats( int debug_level )
+{
+	int total_suspensions = 0;
+	int last_suspension_time = 0;
+	int cumulative_suspension_time = 0;
+
+	dprintf( debug_level, "Statistics about job suspension:\n" );
+	jobAd->LookupInteger( ATTR_TOTAL_SUSPENSIONS, total_suspensions );
+	dprintf( debug_level, "%s = %d\n", ATTR_TOTAL_SUSPENSIONS, 
+			 total_suspensions );
+
+	jobAd->LookupInteger( ATTR_LAST_SUSPENSION_TIME,
+						  last_suspension_time );
+	dprintf( debug_level, "%s = %d\n", ATTR_LAST_SUSPENSION_TIME,
+			 last_suspension_time );
+
+	jobAd->LookupInteger( ATTR_CUMULATIVE_SUSPENSION_TIME, 
+						  cumulative_suspension_time );
+	dprintf( debug_level, "%s = %d\n",
+			 ATTR_CUMULATIVE_SUSPENSION_TIME,
+			 cumulative_suspension_time );
 }
 
 
@@ -656,4 +822,26 @@ RemoteResource::resourceExit( int exit_reason, int exit_status )
 	dprintf( D_FULLDEBUG, "Inside RemoteResource::resourceExit()\n" );
 	setExitReason( exit_reason );
 	setExitStatus( exit_status );
+}
+
+
+void 
+RemoteResource::setResourceState( ResourceState s )
+{
+	shadow->dprintf( D_FULLDEBUG,
+					 "Resource %s changing state from %s to %s\n",
+					 machineName ? machineName : "???", 
+					 rrStateToString(state), 
+					 rrStateToString(s) );
+	state = s;
+}
+
+
+const char*
+rrStateToString( ResourceState s )
+{
+	if( s > _RR_STATE_THRESHOLD ) {
+		return "Unknown State";
+	}
+	return Resource_State_String[s];
 }
