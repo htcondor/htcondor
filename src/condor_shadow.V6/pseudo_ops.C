@@ -532,20 +532,23 @@ pseudo_rename(char *from, char *to)
 			(void)umask( omask );
 			set_priv(priv);
 			if (rval == 0) {	// if the rename was successful
+					// Commit our usage and ckpt location before removing
+					// the checkpoint left on a checkpoint server.
+				char *PrevCkptServer = LastCkptServer;
+				LastCkptServer = NULL; // stored ckpt file on local disk
 				LastCkptTime = time(0);
 				NumCkpts++;
 				commit_rusage();
 					// We just successfully wrote a local checkpoint,
 					// so we should remove the checkpoint we left on
 					// a checkpoint server, if any.
-				if (LastCkptServer) {
-					SetCkptServerHost(LastCkptServer);
+				if (PrevCkptServer) {
+					SetCkptServerHost(PrevCkptServer);
 					RemoveRemoteFile(p->owner, scheddName, to);
 					if (JobPreCkptServerScheddNameChange()) {
 						RemoveRemoteFile(p->owner, NULL, to);
 					}
-					free(LastCkptServer);
-					LastCkptServer = NULL; // stored ckpt file on local disk
+					free(PrevCkptServer);
 				}
 			}
 		}
@@ -556,9 +559,16 @@ pseudo_rename(char *from, char *to)
 
 		if (RenameRemoteFile(p->owner, scheddName, from, to) < 0)
 			return -1;
+			// Commit our usage and ckpt location before removing
+			// our previous checkpoint.
+		char *PrevCkptServer = LastCkptServer;
+		LastCkptServer = strdup(CkptServerHost);
+		LastCkptTime = time(0);
+		NumCkpts++;
+		commit_rusage();
 			// if we just wrote a checkpoint to a new checkpoint server,
 			// we should remove any previous checkpoints we left around.
-		if (!LastCkptServer) {
+		if (!PrevCkptServer) {
 				// previous checkpoint is on the local disk
 			priv = set_condor_priv();
 			omask = umask( 022 );
@@ -566,21 +576,18 @@ pseudo_rename(char *from, char *to)
 			unlink(to);
 			(void)umask( omask );
 			set_priv(priv);
-		} else if (LastCkptServer &&
-				   same_host(LastCkptServer, CkptServerHost) == FALSE) {
-				// previous checkpoint is on a different ckpt server
-			SetCkptServerHost(LastCkptServer);
-			RemoveRemoteFile(p->owner, scheddName, to);
-			if (JobPreCkptServerScheddNameChange()) {
-				RemoveRemoteFile(p->owner, NULL, to);
+		} else {
+			if (same_host(PrevCkptServer, CkptServerHost) == FALSE) {
+					// previous checkpoint is on a different ckpt server
+				SetCkptServerHost(PrevCkptServer);
+				RemoveRemoteFile(p->owner, scheddName, to);
+				if (JobPreCkptServerScheddNameChange()) {
+					RemoveRemoteFile(p->owner, NULL, to);
+				}
+				SetCkptServerHost(CkptServerHost);
 			}
-			SetCkptServerHost(CkptServerHost);
+			free(PrevCkptServer);
 		}
-		if (LastCkptServer) free(LastCkptServer);
-		if (CkptServerHost) LastCkptServer = strdup(CkptServerHost);
-		LastCkptTime = time(0);
-		NumCkpts++;
-		commit_rusage();
 		return 0;
 
 	}
