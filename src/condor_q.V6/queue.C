@@ -194,7 +194,20 @@ int main (int argc, char **argv)
 			if (!expert) {
 				fprintf(stderr, "\n");
 				print_wrapped_text("Extra Info: You probably saw this "
-								   "error because you're running a "
+								   "error because the condor_schedd is "
+								   "not running on the machine you are "
+								   "trying to query.  If the condor_schedd "
+								   "is not running, the Condor system "
+								   "will not be able to find an address "
+								   "and port to connect to and satisfy "
+								   "this request.  Please make sure "
+								   "the Condor daemons are running and "
+								   "try again.\n", stderr );
+				print_wrapped_text("Extra Info: "
+								   "If the condor_schedd is running on the "
+								   "machine you are trying to query and "
+								   "you still see the error, the most "
+								   "likely cause is that you have setup a " 
 								   "personal Condor, you have not "
 								   "defined SCHEDD_NAME in your "
 								   "condor_config file, and something "
