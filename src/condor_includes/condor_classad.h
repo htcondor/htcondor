@@ -71,13 +71,17 @@ class ClassAd : public AttrList
         int			GetTargetTypeNumber();		// target type number returned.
 
 		// Requirement operations
+#if 0
 		int			SetRequirements(char *);
 		void        SetRequirements(ExprTree *);
+#endif
 		ExprTree	*GetRequirements(void);
 
 		// Ranking operations
+#if 0
 		int 		SetRankExpr(char *);
 		void		SetRankExpr(ExprTree *);
+#endif
 		ExprTree	*GetRankExpr(void);
 
 		// Sequence numbers
