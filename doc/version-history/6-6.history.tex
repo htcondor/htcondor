@@ -17,6 +17,14 @@
 \item The standard-universe fetch_files feature was not cleaning up
 temporary files on the execution machine.
 
+\item In rare circumstances, a Linux kernel bug results in conflicting
+information about system boot time (/proc/stat and /proc/uptime).
+Specifically, the "btime" field in /proc/stat suddenly jumps to
+the present moment and then stays at that value.  This
+was resulting in incorrect estimation of process ages, which caused
+Condor's estimation of CondorLoadAvg to be completely wrong.  A more
+robust heuristic is now being used.
+
 \end{itemize}
 
 \noindent Known Bugs:
