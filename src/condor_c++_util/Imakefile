@@ -4,7 +4,7 @@ SRC_DIR = $(SRC_TREE)/condor_c++_util
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fexternal-templates -DNEW_PROC
 TEMPLATE_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC
 #else
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fexternal-templates -DNEW_PROC
 #endif
 CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
 
