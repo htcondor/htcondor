@@ -10,7 +10,7 @@ Each release series is covered in its own section.
 \subsection{\label{sec:History-6-1}Development Release Series 6.1}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-This is the first development release.
+This is the first development release series.
 You should only install it if you really know what you are doing.
 Development releases will come out quickly, with lots of new features
 being added, many bugs fixed, etc.  
@@ -22,6 +22,65 @@ For example, the protocols used by version 6.1.6 are not compatible with the
 protocols used in version 6.1.5.  
 When you upgrade to a new development release, make certain you upgrade all
 machines in your pool to the same version.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:New-6-1-12}Version 6.1.12}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Version 6.1.12 fixes a number of bugs from version 6.1.11.
+If you linked your ``standard'' jobs with version 6.1.11, you should
+upgrade to 6.1.12 and relink your jobs (using \Condor{compile}) as soon as
+possible.
+Unless otherwise noted, all of the known bugs listed below should be fixed
+in version 6.1.13.  
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item A number of system calls that were not being trapped by the Condor
+libraries in version 6.1.11 are now being caught and sent back to the
+submit machine.
+Not having these functions being executed as remote system calls prevented
+a number of programs from not working, in particular Fortran programs, and
+many programs on IRIX and Solaris platforms.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item The \Syscall{getrusage} call does not work properly inside
+``standard'' jobs.  
+If your program uses \Syscall{getrusage}, it will not report correct values
+across a checkpoint and restart.
+If your program relies on proper reporting from \Syscall{getrusage}, you
+should either use version 6.0.3 or 6.1.10.
+
+\item While Condor now supports many networking calls such as
+\Syscall{socket} and \Syscall{connect}, (see the description below of this
+new feature added in 6.1.11), on Linux, we cannot at this time support
+\Syscall{gethostbyname} and a number of other database lookup calls.
+The reason is that on Linux, these calls are implemented by bringing in a
+shared library that defines them, based on whether the machine is using
+DNS, NIS, or some other database method.
+Condor does not support the way in which the C library tries to explicity
+bring in these shared libraries and use them.
+There are a number of possible solutions to this problem, but the Condor
+developers are not yet agreed on the best one, so this limitation might not
+be resolved by 6.1.13.
+
+\end{itemize}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:New-6-1-11}Version 6.1.11}
