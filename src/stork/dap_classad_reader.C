@@ -9,6 +9,7 @@ int getValue(classad::ClassAd *currentAd, char *attr, char *attrval)
   std::string adbuffer = "";
   classad::ClassAdUnParser unparser;
   classad::ExprTree *attrexpr = NULL;
+  char unstripped[MAXSTR];
 
   if (!(attrexpr = currentAd->Lookup(attr)) ){
     //    printf("%s not found!\n", attr);
@@ -19,10 +20,10 @@ int getValue(classad::ClassAd *currentAd, char *attr, char *attrval)
   unparser.Unparse(adbuffer,attrexpr);
   strncpy(attrval, adbuffer.c_str(), MAXSTR);
 
-  strncpy(tempattrval, attrval, MAXSTR);
+  strncpy(unstripped, attrval, MAXSTR);
 
   //look for $ macro functions
-  strncpy(tempattrval, strip_str(tempattrval), MAXSTR);  
+  strncpy(tempattrval, strip_str(unstripped), MAXSTR);  
   if (tempattrval[0] == '$'){
     char functionname[MAXSTR];
     

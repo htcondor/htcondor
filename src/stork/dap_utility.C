@@ -19,6 +19,7 @@ void parse_url(char *url, char *protocol, char *host, char *filename)
 {
 
   char temp_url[MAXSTR];
+  char unstripped[MAXSTR];
   char *p;
   
   //initialize
@@ -26,8 +27,8 @@ void parse_url(char *url, char *protocol, char *host, char *filename)
   strcpy(host, "");
   strcpy(filename, "");
   
-  strcpy(temp_url, url);
-  strcpy(temp_url, strip_str(temp_url));
+  strcpy(unstripped, url);
+  strcpy(temp_url, strip_str(unstripped));
 
   //get protocola
   if (strcmp(temp_url,"")) {

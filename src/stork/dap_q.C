@@ -56,7 +56,6 @@ int main(int argc, char **argv)
 	  for (i=0; i<result_size; i++) {
 		  unparser.Unparse (buffer, result[i]);
 		  fprintf (stdout, "\n%s\n", buffer.c_str());
-		  free (result[i]);
 	  }
 	  fprintf(stdout, "===============\n");
 	  delete [] result;

@@ -90,11 +90,10 @@ void open_daemon_core_file_pointers()
  * ==========================================================================*/
 int read_config_file()
 {
-	char max_num_jobs[MAXSTR], max_retry[MAXSTR], maxdelay_inminutes[MAXSTR];
-	char dir_buff[_POSIX_PATH_MAX];
-  
+	char unstripped[MAXSTR], stripped[MAXSTR];
 	ClassAd_Reader configreader(STORK_CONFIG_FILE);
   
+	dprintf(D_ALWAYS, "Config file: %s\n", STORK_CONFIG_FILE);
 	if ( !configreader.readAd()) {
 		dprintf(
 				D_ALWAYS,
@@ -105,58 +104,61 @@ int read_config_file()
 	}
 
 		//get value for MAX_NUM_JOBS
-	if (configreader.getValue("max_num_jobs", max_num_jobs) == DAP_SUCCESS){
-		strncpy(max_num_jobs, strip_str(max_num_jobs), MAXSTR);
-		MAX_NUM_JOBS = atol(max_num_jobs);
+	if (configreader.getValue("max_num_jobs", unstripped) == DAP_SUCCESS){
+		strncpy(stripped, strip_str(unstripped), MAXSTR);
+		MAX_NUM_JOBS = atol(stripped);
 	}
+	dprintf(D_ALWAYS, "max_num_jobs = %ld\n", MAX_NUM_JOBS);  
 
 
 		//get value for MAX_RETRY
-	if (configreader.getValue("max_retry", max_retry) == DAP_SUCCESS){
-		strncpy(max_retry, strip_str(max_retry), MAXSTR);
-		MAX_RETRY = atol(max_retry);
+	if (configreader.getValue("max_retry", unstripped) == DAP_SUCCESS){
+		strncpy(stripped, strip_str(unstripped), MAXSTR);
+		MAX_RETRY = atol(stripped);
 	}
+	dprintf(D_ALWAYS, "max_retry = %ld\n", MAX_RETRY);  
 
 		//get value for MAXDELAY_INMINUTES
-	if (configreader.getValue("maxdelay_inminutes", maxdelay_inminutes) == DAP_SUCCESS){
-		strncpy(maxdelay_inminutes, strip_str(maxdelay_inminutes), MAXSTR);
-		MAXDELAY_INMINUTES = atol(maxdelay_inminutes);
+	if (configreader.getValue("maxdelay_inminutes", unstripped) == DAP_SUCCESS){
+		strncpy(stripped, strip_str(unstripped), MAXSTR);
+		MAXDELAY_INMINUTES = atol(stripped);
 	}
+	dprintf(D_ALWAYS, "maxdelay_inminutes = %ld\n", MAXDELAY_INMINUTES);  
 
-	if (configreader.getValue ("cred_dir", cred_dir) == DAP_SUCCESS) {
-		strncpy (cred_dir, strip_str(cred_dir), MAXSTR);
+	if (configreader.getValue ("cred_dir", unstripped) == DAP_SUCCESS) {
+		strncpy (cred_dir, strip_str(unstripped), MAXSTR);
 	} else {
 		strcpy (cred_dir, "/tmp/");
 	}
+	dprintf(D_ALWAYS, "cred_dir = %s\n", cred_dir);
 
 		//get value for DAP_CATALOG
-	if (configreader.getValue("dap_catalog", dir_buff) == DAP_SUCCESS){
-		DAP_CATALOG = strip_str(dir_buff);
+	if (configreader.getValue("dap_catalog", unstripped) == DAP_SUCCESS){
+		DAP_CATALOG = strip_str(unstripped);
 	} else {
 		dprintf (D_ALWAYS, "ERROR: dap_catalog not defined in Stork config file!\n");
 		DC_Exit (1);
 	}
+	dprintf(D_ALWAYS, "dap_catalog = %s\n", DAP_CATALOG.Value());
 
-	if (configreader.getValue("log_dir", dir_buff) == DAP_SUCCESS){
-		LOG_DIR = strip_str(dir_buff);
+	if (configreader.getValue("log_dir", unstripped) == DAP_SUCCESS){
+		LOG_DIR = strip_str(unstripped);
 	} else {
 		LOG_DIR = "/tmp/";
 	}
+	dprintf(D_ALWAYS, "log_dir = %s\n", LOG_DIR.Value());
 	     
+	// TODO: This config parm should not be necessary.  Either implicitly
+	// inherit LD_LIBRARY_PATH from the environment, or use
+	// getenv("LD_LIBRARY_PATH").
 	ld_library_path="LD_LIBRARY_PATH=";
-	if (configreader.getValue("ld_library_path", dir_buff) == DAP_SUCCESS){
-		ld_library_path += strip_str(dir_buff);
+	if (configreader.getValue("ld_library_path", unstripped) == DAP_SUCCESS){
+		ld_library_path += strip_str(unstripped);
 	} else {
 		ld_library_path += "";
 	}
+	dprintf(D_ALWAYS, "%s\n", ld_library_path.Value());
 
-
-	dprintf(D_ALWAYS, "Config file: %s\n", STORK_CONFIG_FILE);
-	dprintf(D_ALWAYS, "max_num_jobs = %ld\n", MAX_NUM_JOBS);  
-	dprintf(D_ALWAYS, "max_retry = %ld\n", MAX_RETRY);  
-	dprintf(D_ALWAYS, "maxdelay_inminutes = %ld\n", MAXDELAY_INMINUTES);  
-	dprintf(D_ALWAYS, "cred_dir = %s\n", cred_dir);
-	dprintf(D_ALWAYS, "dap_catalog = %s\n", DAP_CATALOG.Value());
 	return TRUE;
 }
 
@@ -177,6 +179,7 @@ int already_logged(char *dap_id, char *status)
 	classad::ClassAd       *job_ad;
 	char                    current_status[MAXSTR];
 	std::string             key;
+	char unstripped[MAXSTR];
 
 	key = "key = ";
 	key += dap_id;
@@ -186,8 +189,8 @@ int already_logged(char *dap_id, char *status)
 		return 0; //no such job!
 	}
 	else{
-		getValue(job_ad, "status", current_status);
-		strncpy(current_status, strip_str(current_status), MAXSTR);
+		getValue(job_ad, "status", unstripped);
+		strncpy(current_status, strip_str(unstripped), MAXSTR);
 
 		if (!strcmp(current_status, status)){
 			return 1; //already logged
@@ -208,6 +211,7 @@ void get_last_dapid()
 	unsigned long           max_dapid = 0;
 	char                    dap_id[MAXSTR];
 	std::string             key;
+	char unstripped[MAXSTR];
 
 	query.Bind(dapcollection);  
 	query.Query("root", NULL);
@@ -220,8 +224,8 @@ void get_last_dapid()
 				break; //no matching classad
 			}
 			else{
-				getValue(job_ad, "dap_id", dap_id);
-				strncpy(dap_id, strip_str(dap_id), MAXSTR);
+				getValue(job_ad, "dap_id", unstripped);
+				strncpy(dap_id, strip_str(unstripped), MAXSTR);
 	
 				if ((unsigned long)atol(dap_id) > max_dapid) {
 					max_dapid = atol(dap_id);
@@ -236,8 +240,8 @@ void get_last_dapid()
 		if ( !adreader.readAd()) {
 			break;
 		}
-		adreader.getValue("dap_id", dap_id);
-		strncpy(dap_id, strip_str(dap_id), MAXSTR);
+		adreader.getValue("dap_id", unstripped);
+		strncpy(dap_id, strip_str(unstripped), MAXSTR);
 
 		if ((unsigned long)atol(dap_id) > max_dapid) {
 			max_dapid = atol(dap_id);
@@ -258,13 +262,19 @@ int transfer_dap(char *dap_id, char *src_url, char *dest_url, char *arguments, c
 	char dest_protocol[MAXSTR], dest_host[MAXSTR], dest_file[MAXSTR];
 	char command[MAXSTR], commandbody[MAXSTR], argument_str[MAXSTR];
 	int pid;
+	char unstripped[MAXSTR];
 
 	parse_url(src_url, src_protocol, src_host, src_file);
 	parse_url(dest_url, dest_protocol, dest_host, dest_file);
 
-	strncpy(src_url, strip_str(src_url), MAXSTR);  
-	strncpy(dest_url, strip_str(dest_url), MAXSTR);  
-	strncpy(arguments, strip_str(arguments), MAXSTR);  
+	strcpy(unstripped, src_url);
+	strncpy(src_url, strip_str(unstripped), MAXSTR);  
+
+	strcpy(unstripped, dest_url);
+	strncpy(dest_url, strip_str(unstripped), MAXSTR);  
+
+	strcpy(unstripped, arguments);
+	strncpy(arguments, strip_str(unstripped), MAXSTR);  
 
 	snprintf(commandbody, MAXSTR, "DaP.transfer.%s-%s", src_protocol, 
 			 dest_protocol);
@@ -381,6 +391,7 @@ void release_dap(char *dap_id, char *reserve_id, char *dest_url)
 	char                    lot_id[MAXSTR] = "", current_reserve_id[MAXSTR];
 	std::string             key, constraint;
 	classad::ClassAdParser  parser;
+	char unstripped[MAXSTR];
 
 	constraint = "other.dap_type == \"reserve\"";
 	classad::ExprTree *constraint_tree = parser.ParseExpression( constraint );
@@ -401,12 +412,12 @@ void release_dap(char *dap_id, char *reserve_id, char *dest_url)
 				return; //no matching classad
 			}
 			else{
-				getValue(job_ad, "reserve_id", current_reserve_id);
-				strncpy(current_reserve_id, strip_str(current_reserve_id), MAXSTR);
+				getValue(job_ad, "reserve_id", unstripped);
+				strncpy(current_reserve_id, strip_str(unstripped), MAXSTR);
 	
 				if (!strcmp(current_reserve_id, reserve_id)) {
-					getValue(job_ad, "lot_id", lot_id);
-					strncpy(lot_id, strip_str(lot_id), MAXSTR);
+					getValue(job_ad, "lot_id", unstripped);
+					strncpy(lot_id, strip_str(unstripped), MAXSTR);
 				}
 			}
 		}while (query.Next(key));
@@ -494,10 +505,11 @@ void requestpath_dap(char *dap_id, char *src_url, char *dest_url)
 void process_request(classad::ClassAd *currentAd)
 {
 	char dap_id[MAXSTR], dap_type[MAXSTR];
+	char unstripped[MAXSTR];
   
 		//get the dap_id of the request
-	getValue(currentAd, "dap_id", dap_id); 
-	strncpy(dap_id, strip_str(dap_id), MAXSTR);
+	getValue(currentAd, "dap_id", unstripped); 
+	strncpy(dap_id, strip_str(unstripped), MAXSTR);
 
 		//log the new status of the request
 	write_collection_log(dapcollection, dap_id, 
@@ -518,8 +530,8 @@ void process_request(classad::ClassAd *currentAd)
   
 
 		//get the dap_type
-	getValue(currentAd, "dap_type", dap_type); 
-	strncpy(dap_type, strip_str(dap_type), MAXSTR);
+	getValue(currentAd, "dap_type", unstripped); 
+	strncpy(dap_type, strip_str(unstripped), MAXSTR);
 
 
 		// Init user id for the right user
@@ -1667,6 +1679,7 @@ int dap_reaper(std::string modify_s, int pid,int exit_status)
 	FILE *f;
 	classad::ClassAd *job_ad;
 	std::string key = "key = ";
+	char unstripped[MAXSTR];
   
 	dprintf(D_ALWAYS, "Process %d terminated with exit status %d \n", 
 			pid, exit_status);
@@ -1686,8 +1699,8 @@ int dap_reaper(std::string modify_s, int pid,int exit_status)
 		return 0; //no such job!
 	}
 
-	getValue(job_ad, "dap_type", dap_type);
-	strncpy(dap_type, strip_str(dap_type), MAXSTR);
+	getValue(job_ad, "dap_type", unstripped);
+	strncpy(dap_type, strip_str(unstripped), MAXSTR);
 
 	char lognotes[MAXSTR] ;
 	getValue(job_ad, "LogNotes", lognotes);
