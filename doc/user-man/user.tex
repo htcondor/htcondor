@@ -553,7 +553,20 @@ setting the classpath.
 %%%%%%%%%%%%
 \subsubsection{Scheduler Universe}
 %%%%%%%%%%%%
-\Todo
+
+\index{universe!Java}
+The scheduler universe allows a Condor job to be submitted and
+executed with different assumptions for the execution conditions
+of the job.
+The job does not wait to be matched with a machine.
+It instead executes right away, on the machine where the job
+is submitted.
+The job will never be preempted.
+The machine requirements are not considered for scheduler universe
+jobs.
+
+This universe choice is appropriate (and used) for DAGMan,
+which is itself a scheduler universe job.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Submitting a Job}
