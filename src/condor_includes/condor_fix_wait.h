@@ -19,6 +19,8 @@
 #	else
 #		define _BSD
 #	endif
+#	define _POSIX_SOURCE
+#	include <sys/wait.h>
 #endif
 
 #if defined(AIX32)
