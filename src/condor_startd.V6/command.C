@@ -923,7 +923,7 @@ activate_claim( Resource* rip, Stream* stream )
 	remote_user[0] = '\0';
 	if( req_classad->EvalString(ATTR_USER, rip->r_classad, 
 								remote_user) == 0 ) {
-		rip->dprintf( D_ALWAYS, "WARNING: %s not defined in request "
+		rip->dprintf( D_FULLDEBUG, "WARNING: %s not defined in request "
 					  "classad!  Using old value (%s)\n", ATTR_USER,
 					  rip->r_cur->client()->user() );
 	} else {
