@@ -38,19 +38,27 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
+#include "match_prefix.h"
+#include "string_list.h"
+
 
 char	*MyName;
 
 usage()
 {
-	fprintf( stderr, "Usage: %s variable ...\n", MyName );
+	fprintf( stderr, "Usage: %s [-host hostname] variable ...\n", MyName );
+	fprintf( stderr, "  (By specifying a hostname, %s tries to display the\n", 
+			 MyName );
+	fprintf( stderr, 
+			 "  given parameter as it is configured on the requested host).\n" );
 	exit( 1 );
 }
 
 main( int argc, char* argv[] )
 {
-	char *value;
-	char	*tmp;
+	char	*value, *tmp, *host = NULL;
+	int		i;
+	StringList params;
 
 	MyName = argv[0];
 
@@ -58,14 +66,31 @@ main( int argc, char* argv[] )
 		usage();
 	}
 
-	config( 0 );
+	for( i=1; i<argc; i++ ) {
+		if( match_prefix( argv[i], "-host" ) ) {
+			if( argv[i + 1] ) {
+				host = strdup( argv[++i] );
+			} else {
+				usage();
+			}
+		} else if( match_prefix( argv[i], "-" ) ) {
+			usage();
+		} else {
+			params.append( strdup( argv[i] ) );
+		}
+	}
+
+	if( host ) {
+		config_host( 0, 0, host );
+	} else {
+		config( 0 );
+	}
 		
-	while( *++argv ) {
-		tmp = strdup( *argv );
+	params.rewind();
+	while( (tmp = params.next()) ) {
 		value = param( tmp );
-		free( tmp );
 		if( value == NULL ) {
-			fprintf(stderr, "Not defined: %s\n", *argv);
+			fprintf(stderr, "Not defined: %s\n", tmp);
 			exit( 1 );
 		} else {
 			printf("%s\n", value);
