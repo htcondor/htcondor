@@ -167,6 +167,8 @@ public:
 
 	StarterMgr starter_mgr;
 
+	time_t	now( void ) { return cur_time; };
+
 private:
 
 	Resource**	resources;		// Array of pointers to Resource objects
@@ -184,6 +186,7 @@ private:
 	int		up_tid;		// DaemonCore timer id for update timer
 	int		poll_tid;	// DaemonCore timer id for polling timer
 	time_t	startTime;		// Time that we started
+	time_t	cur_time;		// current time
 
 	StringList**	type_strings;	// Array of StringLists that
 		// define the resource types specified in the config file.  
