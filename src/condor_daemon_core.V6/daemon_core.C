@@ -2315,22 +2315,9 @@ int DaemonCore::HandleReq(int socki)
 				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s NOT FOUND...\n", sess_id);
 				// no session... we outta here!
 
-
 				// but first, we should be nice and send a message back to
 				// the people who sent us the wrong session id.
-				SafeSock s;
-				if (s.connect(return_address_ss)) {
-					s.encode();
-					s.put(DC_INVALIDATE_KEY);
-					s.code(sess_id);
-					s.eom();
-					s.close();
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: sent DC_INVALIDATE %s to %s.\n",
-						sess_id, return_address_ss);
-				} else {
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't send DC_INVALIDATE %s to %s.\n",
-						sess_id, return_address_ss);
-				}
+				sec_man->send_invalidate_packet ( return_address_ss, sess_id );
 
 				if( return_address_ss ) {
 					free( return_address_ss );
@@ -2423,21 +2410,14 @@ int DaemonCore::HandleReq(int socki)
 				// no session... we outta here!
 
 				// but first, see above behavior in MD5 code above.
+				sec_man->send_invalidate_packet( return_address_ss, sess_id );
 
-				SafeSock s;
-				if (s.connect(return_address_ss)) {
-					s.encode();
-					s.put(DC_INVALIDATE_KEY);
-					s.code(sess_id);
-					s.eom();
-					s.close();
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: sent DC_INVALIDATE %s to %s.\n",
-						sess_id, return_address_ss);
-				} else {
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't send DC_INVALIDATE %s to %s.\n",
-						sess_id, return_address_ss);
+				if( return_address_ss ) {
+					free( return_address_ss );
+					return_address_ss = NULL;
 				}
-
+				free( sess_id );
+				sess_id = NULL;
 				result = FALSE;
 				goto finalize;
 			}
@@ -2445,12 +2425,24 @@ int DaemonCore::HandleReq(int socki)
 			if (!session->key()) {
 				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
 				// uhm, there should be a key here!
+				if( return_address_ss ) {
+					free( return_address_ss );
+					return_address_ss = NULL;
+				}
+				free( sess_id );
+				sess_id = NULL;
 				result = FALSE;
 				goto finalize;
 			}
 
 			if (!stream->set_crypto_key(session->key())) {
 				dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption, failing.\n");
+				if( return_address_ss ) {
+					free( return_address_ss );
+					return_address_ss = NULL;
+				}
+				free( sess_id );
+				sess_id = NULL;
 				result = FALSE;
 				goto finalize;
 			} else {
@@ -2594,6 +2586,13 @@ int DaemonCore::HandleReq(int socki)
 
 				dprintf (D_ALWAYS, "DC_AUTHENTICATE: attempt to open "
 						   "invalid session %s, failing.\n", the_sid);
+
+				char * return_addr = NULL;
+				if( auth_info.LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, &return_addr)) {
+					sec_man->send_invalidate_packet( return_addr, the_sid );
+					free (return_addr);
+				}
+
 
 				// close the connection.
 				result = FALSE;
@@ -2997,39 +2996,45 @@ int DaemonCore::HandleReq(int socki)
 
 			dprintf (D_SECURITY, "DaemonCore received UNAUTHENTICATED command %i.\n", req);
 
-			ClassAd our_policy;
-        	if( ! sec_man->FillInSecurityPolicyAd( PermString(comTable[index].perm), &our_policy) ) {
-				dprintf( D_ALWAYS, "DC_AUTHENTICATE: "
-						 "Our security policy is invalid!\n" );
-				result = FALSE;
-				goto finalize;
-			}
+			// if the command was registered as "ALLOW", then it doesn't matter what the
+			// security policy says, we just allow it.
+			if (comTable[index].perm != ALLOW) {
 
-			// well, they didn't authenticate, turn on encryption,
-			// or turn on integrity.  check to see if any of those
-			// were required.
+				ClassAd our_policy;
+				dprintf (D_ALWAYS, "ZKM: thinking about level command %s.\n", PermString(comTable[index].perm));
+				if( ! sec_man->FillInSecurityPolicyAd( PermString(comTable[index].perm), &our_policy) ) {
+					dprintf( D_ALWAYS, "DC_AUTHENTICATE: "
+							 "Our security policy is invalid!\n" );
+					result = FALSE;
+					goto finalize;
+				}
 
-			if (  (sec_man->sec_lookup_req(our_policy, ATTR_SEC_NEGOTIATION)
-				   == SecMan::SEC_REQ_REQUIRED)
-			   || (sec_man->sec_lookup_req(our_policy, ATTR_SEC_AUTHENTICATION)
-				   == SecMan::SEC_REQ_REQUIRED)
-			   || (sec_man->sec_lookup_req(our_policy, ATTR_SEC_ENCRYPTION)
-				   == SecMan::SEC_REQ_REQUIRED)
-			   || (sec_man->sec_lookup_req(our_policy, ATTR_SEC_INTEGRITY)
-				   == SecMan::SEC_REQ_REQUIRED) ) {
+				// well, they didn't authenticate, turn on encryption,
+				// or turn on integrity.  check to see if any of those
+				// were required.
 
-				// yep, they were.  deny.
+				if (  (sec_man->sec_lookup_req(our_policy, ATTR_SEC_NEGOTIATION)
+					   == SecMan::SEC_REQ_REQUIRED)
+				   || (sec_man->sec_lookup_req(our_policy, ATTR_SEC_AUTHENTICATION)
+					   == SecMan::SEC_REQ_REQUIRED)
+				   || (sec_man->sec_lookup_req(our_policy, ATTR_SEC_ENCRYPTION)
+					   == SecMan::SEC_REQ_REQUIRED)
+				   || (sec_man->sec_lookup_req(our_policy, ATTR_SEC_INTEGRITY)
+					   == SecMan::SEC_REQ_REQUIRED) ) {
 
-				dprintf(D_ALWAYS,
-					"DaemonCore: PERMISSION DENIED for %d via %s%s%s from host %s\n",
-					req,
-					(is_tcp) ? "TCP" : "UDP",
-					(user[0] != '\0') ? " from " : "",
-					(user[0] != '\0') ? user : "",
-					sin_to_string(((Sock*)stream)->endpoint()) );
+					// yep, they were.  deny.
 
-				result = FALSE;
-				goto finalize;
+					dprintf(D_ALWAYS,
+						"DaemonCore: PERMISSION DENIED for %d via %s%s%s from host %s\n",
+						req,
+						(is_tcp) ? "TCP" : "UDP",
+						(user[0] != '\0') ? " from " : "",
+						(user[0] != '\0') ? user : "",
+						sin_to_string(((Sock*)stream)->endpoint()) );
+
+					result = FALSE;
+					goto finalize;
+				}
 			}
 		}
 	}

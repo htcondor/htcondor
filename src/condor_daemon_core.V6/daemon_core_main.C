@@ -1473,7 +1473,7 @@ int main( int argc, char** argv )
 
 	daemonCore->Register_Command( DC_INVALIDATE_KEY, "DC_INVALIDATE_KEY",
 								  (CommandHandler)handle_invalidate_key,
-								  "handle_invalidate_key()", 0, WRITE );
+								  "handle_invalidate_key()", 0, ALLOW );
 
 	// Call daemonCore's ReInit(), which clears the cached DNS info.
 	// It also initializes some stuff, which is why we call it now. 
