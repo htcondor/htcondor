@@ -40,7 +40,7 @@ calc_phys_memory()
 int
 free_fs_blocks(const char *filename)
 {
-	return sysapi_diskspace(filename);
+	return sysapi_disk_space(filename);
 }
 
 int
@@ -89,6 +89,12 @@ char*
 my_opsys()
 {
 	return sysapi_opsys();
+}
+
+int
+calc_virt_memory()
+{	
+	return sysapi_swap_space();
 }
 
 
