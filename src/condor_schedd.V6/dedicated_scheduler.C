@@ -2990,7 +2990,7 @@ clusterSortByDate( const void *ptr1, const void* ptr2 )
 		(GetAttributeInt(cluster2, 0, ATTR_Q_DATE, &qdate2) < 0) ) {
 		return -1;
 	}
-	return (qdate1 < qdate2);
+	return (qdate1 - qdate2);
 }
 
 
