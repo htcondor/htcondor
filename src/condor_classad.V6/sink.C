@@ -122,8 +122,8 @@ Unparse( string &buffer, const Value &val )
 
 					default:
 						if( !isprint( *itr ) ) {
-								// print hexadecimal representation
-							sprintf( tempBuf, "\\%x", (int)*itr );
+							// print octal representation
+							sprintf( tempBuf, "\\%o", (unsigned char)*itr );
 							buffer += tempBuf;
 						} else {
 							if (!xmlUnparse) {
