@@ -79,6 +79,6 @@ test_func()
 	exit( 0 );
 }
 extern "C"
-SetSyscalls( int mode )
+int SetSyscalls( int mode )
 {
 }
