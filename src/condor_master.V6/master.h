@@ -19,6 +19,7 @@ public:
 	int		flag;  					// whether the process runs here or not
 	int		pid;
 	int 	restarts;
+	int		newExec; 
 	time_t	timeStamp;
 	time_t	tartRunning;
 	int		recoverTimer;			// id of the recover timer

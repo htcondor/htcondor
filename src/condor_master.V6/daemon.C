@@ -154,6 +154,7 @@ daemon::daemon(char *name)
 	runs_on_this_host();
 	pid = 0;
 	restarts = 0;
+	newExec = FALSE; 
 	timeStamp = 0;
 	recoverTimer = -1;
 	port = NULL;
@@ -350,10 +351,17 @@ void Daemons::StartAllDaemons()
 int daemon::Restart()
 {
 	int		n;
+	int		timer;
 
 	if( NotFlag ) {
 		dprintf( D_ALWAYS, "NOT Starting \"%s\"\n", process_name );
 		return 0;
+	}
+	if(newExec == TRUE)
+	{
+		restarts = 0;
+		newExec = FALSE; 
+		return StartDaemon();
 	}
 	n = (int)ceil(pow(e_factor, restarts));
 	if(n > ceiling)
@@ -367,9 +375,10 @@ int daemon::Restart()
 		tMgr.CancelTimer(recoverTimer);
 		recoverTimer = -1;
 	}
-	dprintf(D_ALWAYS, "Adding timer for restarting %s\n", process_name);
-	tMgr.NewTimer(this, n, (void*)StartDaemon);
+	timer = tMgr.NewTimer(this, n, (void*)StartDaemon);
 	dprintf(D_ALWAYS, "restarting %s in %d seconds\n", process_name, n);
+	dprintf(D_FULLDEBUG, "Added timer (%d) for restarting %s\n", timer,
+		process_name);
 	return 1;
 }
 
@@ -385,8 +394,9 @@ int daemon::StartDaemon()
 	}
 
 	if( access(process_name,X_OK) != 0 ) {
-		dprintf(D_ALWAYS, "%s: Cannot execute", process_name );
-		flag = FALSE;
+		dprintf(D_ALWAYS, "%s: Cannot execute\n", process_name );
+		// flag = FALSE;
+		pid = -1; 
 		return 0;
 	}
 
@@ -405,9 +415,6 @@ int daemon::StartDaemon()
 			set_condor_euid();
 		}
 
-		//int		i = 1;		  
-		//while(i);
-		
 		pid = getpid();
 		if( setsid() == -1 ) {
 			EXCEPT( "setsid(), errno = %d\n", errno );
@@ -554,12 +561,21 @@ void Daemons::CheckForNewExecutable()
 		if (( daemon_ptr[i]->flag == TRUE ) && ( daemon_ptr[i]->pid )
 				&& NewExecutable(daemon_ptr[i]->process_name,
 									&daemon_ptr[i]->timeStamp)) {
-			dprintf(D_ALWAYS,"%s was modified.Killing %d\n", 
-					daemon_ptr[i]->name_in_config_file, daemon_ptr[i]->pid);
-			do_killpg( daemon_ptr[i]->pid, SIGKILL );
-			daemon_ptr[i]->restarts = -1;
-		}
+			daemon_ptr[i]->restarts = 0;
+			daemon_ptr[i]->newExec = TRUE;
+			if(daemon_ptr[i]->pid >= 0)
+			{
+				dprintf(D_ALWAYS,"%s was modified.Killing %d\n", 
+						daemon_ptr[i]->name_in_config_file, daemon_ptr[i]->pid);
+				do_killpg( daemon_ptr[i]->pid, SIGKILL );
+			}
+			else
+			{
+				daemon_ptr[i]->StartDaemon(); 
+			}
+		} 
 	}
+
 	dprintf(D_FULLDEBUG, "exit Daemons::CheckForNewExecutable\n");
 
 #if 0
@@ -648,5 +664,6 @@ int Daemons::IsDaemon(int pid)
 void daemon::Recover()
 {
 	restarts = 0;
+	recoverTimer = -1; 
 	dprintf(D_FULLDEBUG, "%s recovered\n", name_in_config_file);
 }
