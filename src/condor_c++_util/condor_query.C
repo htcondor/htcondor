@@ -21,13 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
-#include <iostream.h>
-#include <stdio.h>
-#include <string.h>
-#if !defined(WIN32)
-#include <netinet/in.h>
-#endif
-
 #include "condor_query.h"
 #include "condor_attributes.h"
 #include "condor_collector.h"
@@ -37,6 +30,7 @@
 #include "condor_parser.h"
 #include "condor_adtypes.h"
 #include "condor_debug.h"
+#include "get_daemon_addr.h"
 
 
 #define XDR_ASSERT(x) {if (!(x)) return Q_COMMUNICATION_ERROR;}
@@ -251,20 +245,9 @@ fetchAds (ClassAdList &adList, const char *poolName)
     QueryResult result;
     ClassAd     queryAd, *ad;
 
-	// use current pool's collector if not specified
-	if (poolName == NULL || poolName[0] == '\0')
-	{
-		if ((pool = param ("COLLECTOR_HOST")) == NULL)  {
-			return Q_NO_COLLECTOR_HOST;
-		}
-		strcpy (defaultPool, pool);
-		free (pool);
-		pool = defaultPool;
-	}
-	else {
-		// pool specified
-		pool = (char *) poolName;
-	}
+		// This will return the correct addr for the local pool's
+		// collector if poolName is NULL.
+	pool = get_collector_addr( poolName );
 
 	// make the query ad
 	result = (QueryResult) query.makeQuery (queryAd);
