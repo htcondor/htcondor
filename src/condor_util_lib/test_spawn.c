@@ -12,6 +12,12 @@ int main( int argc, const char *argv[] )
 		exit( 1 );
 	}
 
+		/* set our effective uid/gid for testing */
+	setegid( 99 );
+	seteuid( 99 );
+
+
+
 	/* Test spawnv */
 	char *const *targv = (char *const*) argv;
 	printf( "\nTesting spawnv:\n" );
