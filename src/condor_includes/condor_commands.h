@@ -133,6 +133,7 @@
 #define ACT_ON_JOBS			(SCHED_VERS+78) // have the schedd act on some jobs (rm, hold, release)
 #define STORE_CRED			(SCHED_VERS+79)		// schedd, store a credential
 #define SPOOL_JOB_FILES		(SCHED_VERS+80)	// spool all job files via filetransfer object
+#define GET_MYPROXY_PASSWORD (SCHED_VERS+81) // gmanager->schedd: Give me MyProxy password
 
 
 /*
