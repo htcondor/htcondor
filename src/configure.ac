@@ -1056,7 +1056,7 @@ case "$os" in
     AC_MSG_ERROR([Unrecognized platform: $os])
 esac
 AC_MSG_RESULT([$_cv_has_static])
-if test "$_cv_has_status" = "yes" ; then	
+if test "$_cv_has_static" = "yes" ; then
   AC_SUBST(_cv_has_static,YES)
 else
   AC_SUBST(_cv_has_static,NO)
