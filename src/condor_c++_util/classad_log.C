@@ -103,6 +103,7 @@ ClassAdLog::AppendLog(LogRecord *log)
 		log->Write(log_fd);
 		fsync(log_fd);
 		log->Play((void *)&table);
+		delete log;
 	}
 }
 
