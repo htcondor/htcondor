@@ -232,6 +232,8 @@ protected:
 	inline SOCKET get_socket (void) { return _sock; }
 	char * serialize(char *);
 	char * serialize() const;
+    char * serializeCryptoInfo(char * buf);
+    char * serializeCryptoInfo() const;
 
 	virtual void setFullyQualifiedUser(char * u);
 	///
