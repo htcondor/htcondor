@@ -84,7 +84,7 @@ main( int argc, char *argv[] ) {
 	signal( SIGQUIT, my_exit );
 	signal( SIGTERM, my_exit );
 	signal( SIGPIPE, SIG_IGN );
-
+//wait_for_debugger( 1 );
 		//atoi returns zero on error, so --help, etc. will print usage...
 		//(there shouldn't be a cluster # 0....)
 	int cluster; 
