@@ -1,3 +1,8 @@
+6/13/00 V6_1_NewAds-3-branch
+	This branch has been created to merge in trunk changes with
+	the obsolescent V6_1-NewAds-2-branch (which is now going to
+	be abandoned).
+
 6/7/00 V6_1_13-branch
 	Branch for 6.1.13, so the trunk can start to withstand
 	checkins slated for 6.1.14.
