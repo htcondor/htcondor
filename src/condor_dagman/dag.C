@@ -794,7 +794,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 #if defined(BUILD_HELPER)
 	Helper helperObj;
 #endif
-
+	bool submit_success;
 	int numSubmitsThisCycle = 0;
 	while( numSubmitsThisCycle < dm.max_submits_per_interval ) {
 
@@ -861,14 +861,25 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	debug_printf( DEBUG_QUIET, "ERROR: helper (%s) "
 		      "failed for Job %s: submit aborted\n", helper,
 		      job->GetJobName() );
-	// NOTE: this failure does not currently observe the "retry"
-	// feature (for better or worse)
-        job->_Status = Job::STATUS_ERROR;
-        _numJobsFailed++;
 	sprintf( job->error_text, "helper (%s) failed",
 		 helper );
 	free( helper );
 	helper = NULL;
+
+	// NOTE: this failure short-circuits the "retry" feature
+	job->retries = job->GetRetryMax();
+
+	if( job->_scriptPost && run_post_on_failure ) {
+	  // a POST script is specified for the job, so run it
+	  job->_Status = Job::STATUS_POSTRUN;
+	  // there's no easy way to represent helper errors as
+	  // return values or signals, so just say SIGUSR1
+	  job->_scriptPost->_retValJob = -10;
+	  _postScriptQ->Run( job->_scriptPost );
+	} else {
+	  job->_Status = Job::STATUS_ERROR;
+	  _numJobsFailed++;
+	}
 	// the problem might be specific to that job, so keep submitting...
 	continue;  // while( numSubmitsThisCycle < max_submits_per_interval )
       }
@@ -881,30 +892,36 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 #endif //BUILD_HELPER
 
     if( job->JobType() == Job::TYPE_CONDOR ) {
-      if( ! submit_submit( dm, cmd_file.Value(), condorID, job->GetJobName(),
-                           job->varNamesFromDag, job->varValsFromDag ) ) {
-	// NOTE: this failure does not observe the "retry" feature
-	// (for better or worse)
-	job->_Status = Job::STATUS_ERROR;
-	_numJobsFailed++;
-	sprintf( job->error_text, "Job submit failed" );
-	// the problem might be specific to that job, so keep submitting...
-	continue;  // while( numSubmitsThisCycle < max_submits_per_interval )
-      }
-    } //job ==  condor_job
-    
-    else if( job->JobType() == Job::TYPE_STORK ) {
-      if( ! dap_submit( dm, cmd_file.Value(), condorID, job->GetJobName() ) ) {
-	// NOTE: this failure does not observe the "retry" feature
-	// (for better or worse)
-	job->_Status = Job::STATUS_ERROR;
-	_numJobsFailed++;
-	sprintf( job->error_text, "Job submit failed" );
-	// the problem might be specific to that job, so keep submitting...
-	continue;  // while( numSubmitsThisCycle < max_submits_per_interval )
-      }
+      submit_success = condor_submit( dm, cmd_file.Value(), condorID,
+				      job->GetJobName(), job->varNamesFromDag,
+				      job->varValsFromDag );
+    } else if( job->JobType() == Job::TYPE_STORK ) {
+      submit_success = dap_submit( dm, cmd_file.Value(), condorID,
+				   job->GetJobName() );
     }
 
+    if( !submit_success ) {
+      sprintf( job->error_text, "Job submit failed" );
+
+      // NOTE: this failure short-circuits the "retry" feature
+      job->retries = job->GetRetryMax();
+
+      if( job->_scriptPost && run_post_on_failure ) {
+	// a POST script is specified for the job, so run it
+	job->_Status = Job::STATUS_POSTRUN;
+	// there's no easy way to represent condor_submit errors as
+	// return values or signals, so just say SIGUSR1
+	job->_scriptPost->_retValJob = -10;
+	_postScriptQ->Run( job->_scriptPost );
+      } else {
+	job->_Status = Job::STATUS_ERROR;
+	_numJobsFailed++;
+      }
+
+      // the problem might be specific to that job, so keep submitting...
+      continue;  // while( numSubmitsThisCycle < max_submits_per_interval )
+    }
+    
     // append job to the submit queue so we can match it with its
     // submit event once the latter appears in the Condor job log
     if( _submitQ->enqueue( job ) == -1 ) {

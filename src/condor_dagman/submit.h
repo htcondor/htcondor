@@ -52,7 +52,7 @@ const char commandLineQuoteChar = '\'';
     @return true on success, false on failure
 */
 
-bool submit_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
+bool condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	const char* DAGNodeName, List<MyString>* names, List<MyString>* vals );
 
 bool dap_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,

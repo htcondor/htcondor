@@ -99,7 +99,7 @@ submit_try( const char *exe, const char *command, CondorID &condorID )
 
 //-------------------------------------------------------------------------
 bool
-submit_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
+condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	const char* DAGNodeName, List<MyString>* names, List<MyString>* vals )
 {
 	const char * exe = "condor_submit";
