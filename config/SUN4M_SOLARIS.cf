@@ -89,7 +89,7 @@ find /usr/sup/X11/lib/libXext.a and also could be libXext.so.6.0 */
 #define StaticFlag -static
 #define UnixName /vmunix			/* pathname of the system executable */
 #define syscall_lib syscall_lib_bsd /* ask Jim */
-#define PsAllFlag /bin/ps -e				/* "Ps" flag when you want everything */
+#define PsAllFlag ps -ax				/* "Ps" flag when you want everything */
 #define PsAwkProg '{ print $1 }'	/* Pick out pid from "ps" output */
 #define CompatFlags /**/
 
