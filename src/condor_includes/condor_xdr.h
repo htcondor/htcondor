@@ -86,6 +86,8 @@ bool_t xdr_enum(XDR *, enum_t *);
 bool_t xdr_float(XDR *, float *);
 #if defined(Solaris)
 void     xdr_free(xdrproc_t, char *);
+#elif defined(OSF1)
+void xdr_free(int (*)(struct XDR *, char ** ...), char *);
 #else
 void xdr_free(XDR *, char *);
 #endif
