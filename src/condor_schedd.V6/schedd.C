@@ -1887,19 +1887,15 @@ Scheduler::preempt(int n)
 	shadowsByPid->startIterations();
 	while (shadowsByPid->iterate(rec) == 1 && n > 0) {
 		if( is_alive(rec->pid) ) {
-			if (rec->match) {
-				if( rec->preempted ) {
-					send_vacate( rec->match, KILL_FRGN_JOB );
-				} else {
+			if (rec->match) {	/* scheduler universe job check (?) */
+				if( !rec->preempted ) {
 					send_vacate( rec->match, CKPT_FRGN_JOB );
 					rec->preempted = TRUE;
 				}
 				n--;
 			} else if (preempt_all) {
 #if !defined(WIN32)		// NEED TO PORT TO WIN32
-				if ( rec->preempted ) {
-					kill( rec->pid, SIGKILL );
-				} else {
+				if ( !rec->preempted ) {
 					kill( rec->pid, SIGTERM );
 					rec->preempted = TRUE;
 				}
