@@ -1050,9 +1050,6 @@ int main( int argc, char** argv )
 	// from the front of the command line.
 	i = 0;
 	bool done = false;
-	char* target;
-	char _log [] = "-log";
-	int opt_len;
 
 	for(ptr = argv + 1; *ptr && (i < argc - 1); ptr++,i++) {
 		if(ptr[0][0] != '-') {
