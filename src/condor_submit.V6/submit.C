@@ -2126,7 +2126,7 @@ condor_param( const char* name, const char* alt_name )
 
 
 void
-set_condor_param( char *name, char *value )
+set_condor_param( const char *name, char *value )
 {
 	char *tval = strdup( value );
 
