@@ -44,6 +44,7 @@ static char *priv_state_name[] = {
 	"PRIV_CONDOR",
 	"PRIV_USER",
 	"PRIV_USER_FINAL"
+	"PRIV_FILE_OWNER"
 };
 
 
@@ -106,6 +107,9 @@ get_priv()
 	return CurrentPrivState;
 }
 
+
+
+
 /* End Common Bits */
 
 
@@ -121,6 +125,9 @@ void init_condor_ids() {}
 int set_user_ids(uid_t uid, gid_t gid) { return FALSE; }
 uid_t get_my_uid() { return 999999; }
 gid_t get_my_gid() { return 999999; }
+int set_file_owner_ids( uid_t uid, gid_t gid ) { return FALSE; }
+void uninit_file_owner_ids() {}
+
 
 // Cover our getuid...
 uid_t getuid() { return get_my_uid(); }
@@ -522,17 +529,21 @@ int setegid(gid_t);
 
 #define ROOT 0
 
-static uid_t CondorUid, UserUid, MyUid, RealCondorUid;
-static gid_t CondorGid, UserGid, MyGid, RealCondorGid;
+static uid_t CondorUid, UserUid, MyUid, RealCondorUid, OwnerUid;
+static gid_t CondorGid, UserGid, MyGid, RealCondorGid, OwnerGid;
 static int CondorIdsInited = FALSE;
 static int UserIdsInited = FALSE;
+static int OwnerIdsInited = FALSE;
 static char* UserName = NULL;
+static char* OwnerName = NULL;
 static passwd_cache pcache;
 
 static int set_condor_euid();
 static int set_condor_egid();
 static int set_user_euid();
 static int set_user_egid();
+static int set_owner_euid();
+static int set_owner_egid();
 static int set_user_ruid();
 static int set_user_rgid();
 static int set_root_euid();
@@ -900,6 +911,39 @@ uninit_user_ids()
 }
 
 
+void
+uninit_file_owner_ids() 
+{
+	OwnerIdsInited = FALSE;
+}
+
+
+int
+set_file_owner_ids( uid_t uid, gid_t gid )
+{
+	if( OwnerIdsInited && OwnerUid != uid  ) {
+		dprintf( D_ALWAYS, 
+				 "warning: setting OwnerUid to %d, was %d previosly\n",
+				 (int)uid, (int)OwnerUid );
+	}
+	OwnerUid = uid;
+	OwnerGid = gid;
+	OwnerIdsInited = TRUE;
+	return TRUE;
+
+	// find the user login name for this uid.  note we should not
+	// EXCEPT or log an error if we do not find it; it is OK for the
+	// user not to be in the passwd file...
+	if( OwnerName ) {
+		free( OwnerName );
+	}
+	if ( !pcache.get_user_name( OwnerUid, OwnerName ) ) {
+		OwnerName = NULL;
+	}
+	return TRUE;
+}
+
+
 priv_state
 _set_priv(priv_state s, char file[], int line, int dologging)
 {
@@ -935,6 +979,11 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 			set_root_euid();	/* must be root to switch */
 			set_user_egid();
 			set_user_euid();
+			break;
+		case PRIV_FILE_OWNER:
+			set_root_euid();	/* must be root to switch */
+			set_owner_egid();
+			set_owner_euid();
 			break;
 		case PRIV_USER_FINAL:
 			set_root_euid();	/* must be root to switch */
@@ -1008,6 +1057,30 @@ get_user_gid()
 	}
 
 	return UserGid;
+}
+
+
+uid_t
+get_file_owner_uid()
+{
+	if( !OwnerIdsInited ) {
+		dprintf( D_ALWAYS,
+				 "get_file_owner_uid() called when OwnerIds not inited!\n" );
+		return (uid_t)-1;
+	}
+	return OwnerUid;
+}
+
+
+gid_t
+get_file_owner_gid()
+{
+	if( !OwnerIdsInited ) {
+		dprintf( D_ALWAYS,
+				 "get_file_owner_gid() called when OwnerIds not inited!\n" );
+		return (gid_t)-1;
+	}
+	return OwnerGid;
 }
 
 
@@ -1161,6 +1234,46 @@ int
 set_root_euid()
 {
 	return SET_EFFECTIVE_UID(ROOT);
+}
+
+
+int
+set_owner_euid()
+{
+	if( !OwnerIdsInited ) {
+		dprintf( D_ALWAYS,
+				 "set_user_euid() called when OwnerIds not inited!\n" );
+		return -1;
+	}
+	return SET_EFFECTIVE_UID(OwnerUid);
+}
+
+
+int
+set_owner_egid()
+{
+	if( !OwnerIdsInited ) {
+		dprintf( D_ALWAYS,
+				 "set_owner_egid() called when OwnerIds not inited!\n" );
+		return -1;
+	}
+	
+		// Now, call our caching version of initgroups with the 
+		// right username so the user can access files belonging
+		// to any group (s)he is a member of.  If we did not call
+		// initgroups here, the user could only access files
+		// belonging to his/her default group, and might be left
+		// with access to the groups that root belongs to, which 
+		// is a serious security problem.
+	if( OwnerName ) {
+		errno = 0;
+		if(!pcache.init_groups(OwnerName) ) {
+			dprintf( D_ALWAYS, 
+					 "set_owner_egid - ERROR: initgroups(%s, %d) failed, "
+					 "errno: %s\n", OwnerName, OwnerGid, strerror(errno) );
+		}			
+	}
+	return SET_EFFECTIVE_GID(UserGid);
 }
 
 
