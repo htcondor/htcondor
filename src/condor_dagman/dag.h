@@ -44,6 +44,7 @@ extern const char* DAGManJobIdAttrName;
 // for the Condor job id of the DAGMan job
 extern char* DAGManJobId;
 
+// NOTE: must be kept in sync with _job_type_t
 enum Log_source{
   CONDORLOG,
   DAPLOG
@@ -199,7 +200,7 @@ class Dag {
         condor_rm.  This function <b>is not</b> called when the schedd
         kills Dagman.
     */
-    void RemoveRunningJobs () const;
+    void RemoveRunningJobs ( const Dagman & ) const;
 
     /** Creates a DAG file based on the DAG in memory, except all
         completed jobs are premarked as DONE.

@@ -69,6 +69,7 @@ class Job {
 
         // possible kinds of job (e.g., Condor, Stork, etc.)
         // NOTE: must be kept in sync with _job_type_strings[]
+        // NOTE: must be kept in sync with enum Log_source
 	typedef enum {
 		TYPE_CONDOR,
 		TYPE_STORK,

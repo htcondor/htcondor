@@ -612,7 +612,7 @@ bool Dag::ProcessLogEvents (const Dagman & dm, int logsource, bool recovery) {
 					char job_name[1024] = "";
 					if( sscanf( submit_event->submitEventLogNotes,
 								"DAG Node: %1023s", job_name ) == 1 ) {
-						job = GetJob( job_name );
+						job = GetJob( job_name );	// from submit cmd
 						if( job ) {
 							if( !recovery ) {
 									// as a sanity-check, compare the
@@ -623,8 +623,10 @@ bool Dag::ProcessLogEvents (const Dagman & dm, int logsource, bool recovery) {
                                     debug_printf( DEBUG_QUIET,
 												  "ERROR: job %s: job ID in userlog submit event (%d.%d) doesn't match ID reported earlier by submit command (%d.%d)!  Trusting the userlog for now., but this is scary!\n",
                                                   job_name,
+												  // userlog job id
                                                   condorID._cluster,
                                                   condorID._proc,
+												  // submit cmd job id
                                                   job->_CondorID._cluster,
                                                   job->_CondorID._proc );
                                 }
@@ -1060,7 +1062,7 @@ Dag::PrintReadyQ( debug_level_t level ) const {
 }
 
 //---------------------------------------------------------------------------
-void Dag::RemoveRunningJobs () const {
+void Dag::RemoveRunningJobs ( const Dagman &dm) const {
     char cmd[ARG_MAX];
 
 		// first, remove all Condor jobs submitted by this DAGMan
@@ -1079,11 +1081,12 @@ void Dag::RemoveRunningJobs () const {
 			// if node has a Stork job that is presently submitted,
 			// remove it individually (this is necessary because
 			// DAGMan's job ID can't currently be inserted into the
-			// Stork job ad, and thus we can't do a "dap_rm -const..." 
+			// Stork job ad, and thus we can't do a "stork_rm -const..." 
 			// like we do with Condor; this should be fixed)
 		if( job->JobType() == Job::TYPE_STORK &&
 			job->GetStatus() == Job::STATUS_SUBMITTED ) {
-			snprintf( cmd, ARG_MAX, "dap_rm %d", job->_CondorID._cluster );
+			snprintf( cmd, ARG_MAX, "stork_rm %s %d",
+					dm.stork_server, job->_CondorID._cluster );
 			debug_printf( DEBUG_VERBOSE, "Executing: %s\n", cmd );
 			util_popen( cmd );
 				// TODO: we need to check for failures here

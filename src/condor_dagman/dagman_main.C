@@ -157,7 +157,7 @@ int main_shutdown_rescue() {
 			// unrecoverable state...
 		if( dagman.dag->NumJobsSubmitted() > 0 ) {
 			debug_printf( DEBUG_NORMAL, "Removing submitted jobs...\n" );
-			dagman.dag->RemoveRunningJobs();
+			dagman.dag->RemoveRunningJobs(dagman);
 		}
 	}
 	unlink( lockFileName ); 

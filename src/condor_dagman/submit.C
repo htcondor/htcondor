@@ -224,8 +224,12 @@ dap_try( const char *exe, const char *command, CondorID &condorID )
   }
 
 
-  if (1 == sscanf(buffer, "Request accepted by the server and assigned a dap_id: %d",
+  if (1 != sscanf(buffer,
+			  "Requests accepted by the server and assigned a dap_id: %d",
                   & condorID._cluster)) {
+	  debug_printf( DEBUG_QUIET, "ERROR: stork_submit failed:\n\t%s\n",
+					buffer );
+	  return false;
   }
   
   return true;
@@ -236,46 +240,35 @@ bool
 dap_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName )
 {
-  char* command;
-  int cmdLen;
+  MyString command;
   const char * exe = "stork_submit";
 
-  cmdLen = strlen( exe ) + strlen( cmdFile ) + 512;
-  command = new char[cmdLen];
-  if (command == NULL) {
-	  debug_printf( DEBUG_SILENT, "\nERROR: out of memory (%s:%d)!\n",
-				   __FILE__, __LINE__ );
-	  return false;
-  }
-
   // we use 2>&1 to make sure we get both stdout and stderr from command
-  sprintf( command, "%s %s %s -lognotes \"DAG Node: %s\" 2>&1", 
+  command.sprintf("%s %s %s -lognotes \"DAG Node: %s\" 2>&1", 
   	   exe, dm.stork_server, cmdFile, DAGNodeName );
 
-
   //  dprintf( D_ALWAYS, "submit command is: %s\n", command );
+  debug_printf(DEBUG_VERBOSE, "submitting: %s\n", command.Value());
 
   bool success = false;
   const int tries = dm.max_submit_attempts;
   int wait = 1;
   
-  success = dap_try( exe, command, condorID );
+  success = dap_try( exe, command.Value(), condorID );
   for (int i = 1 ; i < tries && !success ; i++) {
       debug_printf( DEBUG_NORMAL, "stork_submit try %d/%d failed, "
                      "will try again in %d second%s\n", i, tries, wait,
 					 wait == 1 ? "" : "s" );
       sleep( wait );
-	  success = dap_try( exe, command, condorID );
+	  success = dap_try( exe, command.Value(), condorID );
 	  wait = wait * 2;
   }
   if (!success && DEBUG_LEVEL(DEBUG_QUIET)) {
     dprintf( D_ALWAYS, "stork_submit failed after %d tr%s.\n", tries,
 			tries == 1 ? "y" : "ies" );
-    dprintf( D_ALWAYS, "submit command was: %s\n", command );
-	delete[] command;
+    dprintf( D_ALWAYS, "submit command was: %s\n", command.Value() );
 	return false;
   }
-  delete [] command;
   return success;
 }
 //<-- DAP
