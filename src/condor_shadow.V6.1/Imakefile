@@ -3,6 +3,7 @@ all_target($(NAME))
 
 CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+
 LDFLAGS = RpcLib SocketLib
 LIB = $(STD_LIBS)
 
@@ -12,7 +13,8 @@ LIB = $(STD_LIBS)
 #define FAKE_GETMNT_OBJ
 #endif
 
-OBJ = extern_path.o pseudo_ops.o shadow.o main.o receivers.o FAKE_GETMNT_OBJ
+OBJ = main.o baseshadow.o shadow.o mpishadow.o remoteresource.o \
+	pseudo_ops.o NTreceivers.o FAKE_GETMNT_OBJ 
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
@@ -20,8 +22,16 @@ strip_target($(NAME),$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
 static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
 pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
 purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
+doc_target( baseshadow.h shadow.h mpishadow.h remoteresource.h )
 
 IMPORT_LINKS = ../../config/import_links
-import(../condor_syscall_lib,receivers.o)
-import(../condor_syscall_lib,extern_path.o)
+#import(../condor_syscall_lib,receivers.o)
+#import(../condor_syscall_lib,extern_path.o)
+#if NEEDS_FAKE_GETMNT
 import(../condor_util_lib,getmnt.o)
+#endif
+
+
+
+
+

@@ -13,3 +13,4 @@ c_plus_target(testit,test_daemon_core.o daemon_core.a,$(LIB))
 release:
 stripped:
 static:
+docs:

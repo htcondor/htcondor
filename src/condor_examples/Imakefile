@@ -25,3 +25,5 @@ $(STATIC_DIR)/etc/examples/README:
 	perl ./customize $(STATIC_DIR)
 	perl ./customize $(STATIC_CONTRIB)
 
+docs:
+

@@ -56,6 +56,7 @@ static_target($(NAME).contrib,$(CONTRIB_OBJ),$(LIB),$(STATIC_CONTRIB)/sbin)
 static_link_target($(STATIC_CONTRIB)/sbin/$(NAME).contrib,$(STATIC_CONTRIB)/sbin,$(NAME))
 
 c_plus_target(toy,$(TOY_OBJ),$(LIB))
+docs:
 
 starter_state_diagram.dot: $(NAME)
 	./$(NAME) -dot > starter_state_diagram.dot

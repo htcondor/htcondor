@@ -85,6 +85,8 @@ library_target(util_lib.a,ObjectFiles)
 
 program_target(stub_gen,y.tab.o lex.yy.o,$(NULL))
 
+docs:
+
 lex.yy.c: stub_gen_lex.l scanner.h y.tab.h
 	lex stub_gen_lex.l
 clean::

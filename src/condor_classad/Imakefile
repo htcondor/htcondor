@@ -18,3 +18,5 @@ clean::
 release:
 stripped:
 static:
+docs:
+

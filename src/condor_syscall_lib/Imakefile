@@ -389,3 +389,5 @@ clean::
 	rm -f $(COMPRESS_LIB) $(COMPRESS_OBJ)
 import(../condor_ckpt,$(STANDALONE_COMPRESS_LIB))
 #endif
+
+docs:

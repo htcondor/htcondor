@@ -18,3 +18,4 @@ pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
 strip_target($(NAME),$(STRIP_CONTRIB)/sbin,EXECUTABLE_MODE)
 static_target($(NAME),$(OBJ),$(LIB),$(STATIC_CONTRIB)/sbin)
 release:
+docs:
