@@ -250,6 +250,10 @@ java_exit_mode_t JavaProc::ClassifyExit( int status )
 	return exit_mode;
 }
 
+/* This macro creates a standard POSIX exit code. */
+
+#define MAKE_EXIT_CODE( retcode, sigcode )  ( ((retcode) << 8) | (sigcode) )
+
 /*
 If our job exited, then parse the output of the wrapper,
 and return a POSIX status that resembles exactly what
@@ -268,11 +272,11 @@ int JavaProc::JobExit(int pid, int status)
 				/* status is unchanged */
 				break;
 			case JAVA_EXIT_EXCEPTION:
-				status = W_EXITCODE(1,0);
+				status = MAKE_EXIT_CODE(1,0);
 				break;
 			default:
 			case JAVA_EXIT_SYSTEM_ERROR:
-				status = W_STOPCODE(SIGKILL);
+				status = MAKE_EXIT_CODE(0,SIGKILL);
 				Requested_Exit = TRUE;
 				break;
 		}
