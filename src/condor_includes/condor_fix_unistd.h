@@ -15,6 +15,10 @@
 extern "C" {
 #endif
 
+#if defined(SUNOS41) || defined(ULTRIX43)
+	typedef unsigned long ssize_t;
+#endif
+
 #if defined(__STDC__) || defined(__cplusplus)
 	int symlink( const char *, const char * );
 	void *sbrk( ssize_t );
