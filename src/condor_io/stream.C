@@ -90,7 +90,39 @@ int Stream::code(
 
 
 int Stream::code(
+	unsigned char	&c
+	)
+{
+	switch(_coding){
+		case stream_encode:
+			return put(c);
+		case stream_decode:
+			return get(c);
+	}
+
+	return FALSE;	/* will never get here	*/
+}
+
+
+
+int Stream::code(
 	int		&i
+	)
+{
+	switch(_coding){
+		case stream_encode:
+			return put(i);
+		case stream_decode:
+			return get(i);
+	}
+
+	return FALSE;	/* will never get here	*/
+}
+
+
+
+int Stream::code(
+	unsigned int		&i
 	)
 {
 	switch(_coding){
@@ -122,7 +154,39 @@ int Stream::code(
 
 
 int Stream::code(
+	unsigned long	&l
+	)
+{
+	switch(_coding){
+		case stream_encode:
+			return put(l);
+		case stream_decode:
+			return get(l);
+	}
+
+	return FALSE;	/* will never get here	*/
+}
+
+
+
+int Stream::code(
 	short	&s
+	)
+{
+	switch(_coding){
+		case stream_encode:
+			return put(s);
+		case stream_decode:
+			return get(s);
+	}
+
+	return FALSE;	/* will never get here	*/
+}
+
+
+
+int Stream::code(
+	unsigned short	&s
 	)
 {
 	switch(_coding){
@@ -233,10 +297,60 @@ int Stream::put(
 
 
 int Stream::put(
+	unsigned char	c
+	)
+{
+  getcount =0;
+  NETWORK_TRACE("put char " << c << " c(" << ++putcount << ") ");
+	if (!valid()) return FALSE;
+
+	switch(_code){
+		case internal:
+		case external:
+		case ascii:
+			if (put_bytes(&c, 1) != 1) return FALSE;
+			break;
+	}
+
+	return TRUE;
+}
+
+
+
+int Stream::put(
 	int		i
 	)
 {
 	int		tmp;
+  getcount =0;
+  putcount +=4;
+  NETWORK_TRACE("put int " << i << " c(" << putcount << ") ");
+	if (!valid()) return FALSE;
+
+	switch(_code){
+		case internal:
+			if (put_bytes(&i, sizeof(int)) != sizeof(int)) return FALSE;
+			break;
+
+		case external:
+			tmp = htonl(i);
+			if (put_bytes(&tmp, sizeof(int)) != sizeof(int)) return FALSE;
+			break;
+
+		case ascii:
+			return FALSE;
+	}
+
+	return TRUE;
+}
+
+
+
+int Stream::put(
+	unsigned int		i
+	)
+{
+	unsigned int		tmp;
   getcount =0;
   putcount +=4;
   NETWORK_TRACE("put int " << i << " c(" << putcount << ") ");
@@ -286,7 +400,55 @@ int Stream::put(
 
 
 int Stream::put(
+	unsigned long	l
+	)
+{
+  NETWORK_TRACE("put long " << l);
+	if (!valid()) return FALSE;
+
+	switch(_code){
+		case internal:
+			if (put_bytes(&l, sizeof(long)) != sizeof(long)) return FALSE;
+			break;
+
+		case external:
+			return put((int)l);
+
+		case ascii:
+			return FALSE;
+	}
+
+	return TRUE;
+}
+
+
+
+int Stream::put(
 	short	s
+	)
+{
+  NETWORK_TRACE("put short " << s);
+	if (!valid()) return FALSE;
+
+	switch(_code){
+		case internal:
+			if (put_bytes(&s, sizeof(short)) != sizeof(short)) return FALSE;
+			break;
+
+		case external:
+			return put((int)s);
+
+		case ascii:
+			return FALSE;
+	}
+
+	return TRUE;
+}
+
+
+
+int Stream::put(
+	unsigned short	s
 	)
 {
   NETWORK_TRACE("put short " << s);
@@ -448,10 +610,59 @@ int Stream::get(
 
 
 int Stream::get(
+	unsigned char	&c
+	)
+{
+   putcount =0;
+	if (!valid()) return FALSE;
+
+	switch(_code){
+		case internal:
+		case external:
+		case ascii:
+			if (get_bytes(&c, 1) != 1) return FALSE;
+			break;
+	}
+   NETWORK_TRACE("get char " << c << " c(" << ++getcount << ") ");    
+	return TRUE;
+}
+
+
+
+int Stream::get(
 	int		&i
 	)
 {
 	int		tmp;
+
+	if (!valid()) return FALSE;
+
+	switch(_code){
+		case internal:
+			if (get_bytes(&i, sizeof(int)) != sizeof(int)) return FALSE;
+			break;
+
+		case external:
+			if (get_bytes(&tmp, sizeof(int)) != sizeof(int)) return FALSE;
+			i = ntohl(tmp);
+			break;
+
+		case ascii:
+			return FALSE;
+	}
+   putcount =0;
+   getcount += 4;
+   NETWORK_TRACE("get int " << i<< " c(" << getcount << ") ");
+	return TRUE;
+}
+
+
+
+int Stream::get(
+	unsigned int		&i
+	)
+{
+	unsigned int		tmp;
 
 	if (!valid()) return FALSE;
 
@@ -504,6 +715,33 @@ int Stream::get(
 
 
 int Stream::get(
+	unsigned long	&l
+	)
+{
+	unsigned int		i;
+
+	if (!valid()) return FALSE;
+
+	switch(_code){
+		case internal:
+			if (get_bytes(&l, sizeof(long)) != sizeof(long)) return FALSE;
+			break;
+
+		case external:
+			if (!get(i)) return FALSE;
+			l = (long) i;
+			break;
+
+		case ascii:
+			return FALSE;
+	}
+    NETWORK_TRACE("get long " << l);
+	return TRUE;
+}
+
+
+
+int Stream::get(
 	short	&s
 	)
 {
@@ -519,6 +757,33 @@ int Stream::get(
 		case external:
 			if (!get(i)) return FALSE;
 			s = (short) i;
+			break;
+
+		case ascii:
+			return FALSE;
+	}
+        NETWORK_TRACE("get short " << s);
+	return TRUE;
+}
+
+
+
+int Stream::get(
+	unsigned short	&s
+	)
+{
+	unsigned int		i;
+
+	if (!valid()) return FALSE;
+
+	switch(_code){
+		case internal:
+			if (get_bytes(&s, sizeof(short)) != sizeof(short)) return FALSE;
+			break;
+
+		case external:
+			if (!get(i)) return FALSE;
+			s = (unsigned short) i;
 			break;
 
 		case ascii:
@@ -605,7 +870,8 @@ int Stream::get(
 			else{
 				tmp_ptr = s;
 				if (get_ptr(tmp_ptr, '\0') <= 0) return FALSE;
-				s = (char *)tmp_ptr;
+				strcpy(s, (char *)tmp_ptr);
+				/* s = (char *)tmp_ptr;	*/
 			}
 			break;
 
@@ -639,7 +905,8 @@ int Stream::get(
 			else{
 				tmp_ptr = s;
 				if ((l = get_ptr(tmp_ptr, '\0')) <= 0) return FALSE;
-				s = (char *)tmp_ptr;
+				strcpy(s, (char *)tmp_ptr);
+				/* s = (char *)tmp_ptr; */
 			}
 			break;
 
