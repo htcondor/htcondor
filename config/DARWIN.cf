@@ -1,5 +1,5 @@
 /* Darwin (a.k.a MacOSX) specific settings */
-#define PlatformFlags           -DCONDOR_DARWIN=CONDOR_DARWIN 
+
 #define PlatformLdFlags         -framework IOKit -framework Carbon
 
 #define IS_CLIPPED              YES
