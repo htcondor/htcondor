@@ -114,6 +114,23 @@ pseudo_getpid()
 	return( Proc->id.proc );
 }
 
+/* always return the owner of the job as the loginname */
+int
+pseudo_getlogin(char *loginbuf)
+{
+        int             rval;
+        char *temp;
+
+        temp = ((PROC *)Proc)->owner; 
+
+        if ( (temp != NULL) && (strlen(temp) < 30) ) {
+                strcpy(loginbuf,temp);
+                return 0;
+        } else {
+                return -1;
+        }
+}
+
 int
 pseudo_getuid()
 {
@@ -1186,6 +1203,57 @@ simp_log( const char *msg )
 	fprintf( fp, msg );
 }
 
+int pseudo_get_IOServerAddr(const int *reqtype, const char *filename,
+							char *host, int *port )
+{
+        /* Should query the collector or look in the config file for server
+           names.  Always return -1 until this can be fixed.  -Jim B. */
+
+#if 0
+  int i;
+  char *servers[5] = 
+  {
+    "vega15", 
+    "vega15", 
+    "vega15", 
+    "vega15", 
+    "vega15"
+  };
+
+  int ports[5] = 
+  {
+    5078, 5083, 5087, 5042, 5047
+  };
+
+  
+  dprintf(D_SYSCALLS,"in pseudo_get_IOserver .. req_type = %s\n", (*reqtype==OPE
+N_REQ)?"open_req":"server_down");
+  
+  switch (*reqtype)
+    {
+    case OPEN_REQ:
+      strcpy(host,servers[0]);
+      *port = ports[0];
+      dprintf(D_SYSCALLS,"server = %s, port = %d\n",host,*port); 
+      return 0;
+    case SERVER_DOWN:
+      for(i=0;i<5;i++)
+        {
+          if ((strcmp(host, servers[i]) == 0) && (*port == ports[i])) 
+            break;
+        }
+      if (i<4) 
+        {
+          strcpy(host,servers[i+1]);
+          *port = ports[i+1];
+          return 0;
+        }
+      return -1;
+    }
+#endif
+
+  return -1;
+}
 
 #if !defined(PVM_RECEIVE)
 int
