@@ -438,8 +438,13 @@ daemon::Start()
 		// user (what's defined in CONDOR_IDS, "condor", etc)...
 	bool wants_condor_priv = false;
 	if ( strcmp(name_in_config_file,"COLLECTOR") == 0 ) {
-		DCCollector d;
-		command_port = d.port();
+			// If we're spawning a collector, we can get the right
+			// port by asking the global Collector object for it,
+			// since we've already instantiated that with the info for
+			// the local pool's collector.  This also saves the
+			// trouble of instantiating a new DCCollector object,
+			// which duplicates some effort and is less efficient. 
+		command_port = Collector->port();
 		wants_condor_priv = true;
 	}
 	if ( strcmp(name_in_config_file,"NEGOTIATOR") == 0 ) {
