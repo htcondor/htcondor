@@ -29,12 +29,12 @@ class HashTable {
 
   int insert(Index &index, Value &value);
   int lookup(Index &index, Value &value);
-  int getNext(Index &index, void *current, Value &value,
-	      void *&next);
+  int getNext(Index &index, void *current, Value &value, void *&next);
   int remove(Index &index);  
   int clear();
 
   void startIterations (void);
+  int  getCurrentKey   (Index &);
   int  iterate (Value &);
     
  private:
@@ -234,6 +234,16 @@ startIterations (void)
 {
     currentBucket = -1;
 	currentItem = 0;
+}
+
+
+template <class Index, class Value>
+int HashTable<Index,Value>::
+getCurrentKey (Index &index)
+{
+	if (!currentItem) return -1;
+	index = currentItem->index;
+	return 0;
 }
 
 
