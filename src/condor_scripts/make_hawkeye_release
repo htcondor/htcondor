@@ -8,6 +8,7 @@ my $HawkeyeRelease = "hawkeye_release";
 my @BinDirs = ( "bin", "sbin" );
 my $Modules = "hawkeye_modules";
 my $ModulesTarget = "modules";
+my $Install = "install";
 my $Examples = "condor_examples";
 my $CondorRel = "condor_release";
 my $Scripts = "condor_scripts";
@@ -53,7 +54,8 @@ print "Creating the Hawkeye directory..\n";
 die "Can't make hawkeye!" if ( system( "./condor_scripts/make_hawkeye" ) );
 
 # Make the temp directory...
-die "Can't create $Temp" if ( ! mkdir( $Temp, 0755 ) );
+mkdir( $Temp, 0755 ) || die "Can't create $Temp";
+mkdir "$Temp/$Install" || die "Can't create $Temp/$Install";
 
 # Let the user know what's going on
 print "\n == Filling temp release directory ==\n\n";
@@ -65,12 +67,21 @@ foreach my $Bin ( @BinDirs )
 }
 
 # Copy the modules
-CopyAll( "$Modules", "$Temp/$ModulesTarget", "*" );
+CopyAll( $Modules, "$Temp/$ModulesTarget", "test" );
+CopyAll( $Modules, "$Temp/$ModulesTarget", "*pm" );
 
-# Copy the example configs
-CopyAll( $Examples, "$Temp", "*hawkeye*" );
-system( "mv $Temp/hawkeye_config $Temp/hawkeye_config.example" )
-    if ( -f "$Temp/hawkeye_config" );
+# Copy the module installer, configs, etc.
+CopyAll( $Scripts, "$Temp/$Install", "hawkeye_install_*" );
+CopyAll( $Examples, "$Temp/$Install", "*hawkeye*" );
+
+# Rename 'em to .example'
+foreach my $File ( split ( /\s+/, `echo $Temp/$Install/*` ) )
+{
+    if ( -f $File )
+    {
+	rename ( $File, "$File.example" );
+    }
+}
 
 # Create the release directory
 mkdir( $ReleaseDir, 0755 ) if ( ! -d $ReleaseDir );
@@ -109,6 +120,7 @@ CopyAll( $ClassAdViewer, $Temp, "h*tgz*" );
     }
     close( IN );
     close( OUT );
+    chmod( 0755, $InstallOut );
 }
 
 # Now, make the release tarball...
@@ -134,24 +146,28 @@ sub CopyAll( $$$ )
     print "Copy/Link '$FilePat' from '$SrcDir' to '$DestDir':\n";
     if ( ! -d $DestDir )
     {
-	die "Can't create $DestDir" if ( ! mkdir( "$DestDir", 0755 ) );
+	mkdir( "$DestDir", 0755 ) || die "Can't create $DestDir";
     }
     my @FileList = split( /\s+/, `cd $SrcDir; /bin/ls -1 $FilePat` );
     foreach my $File ( @FileList )
     {
 	next if ( ! -f "$SrcDir/$File" );
-	print "   $SrcDir/$File -> $DestDir:\n";
+	print "   $SrcDir/$File -> $DestDir:  ";
 
 	if ( ( -l $SrcDir ) || ( -l "$SrcDir/$File" ) )
 	{
 	    system( "/bin/cp $SrcDir/$File $DestDir" );
+	    chmod( 0755, "$DestDir/$File" ) if ( -x "$SrcDir/$File" );
+	    print "Copy done\n";
 	}
 	elsif ( -f "$SrcDir/$File" )
 	{
 	    link "$SrcDir/$File", "$DestDir/$File" || die "link: $!";
+	    print "Link done\n";
 	}
 	else
 	{
+	    print "\n";
 	    die "Don't know how to handle '$SrcDir/$File'\n";
 	}
     }
