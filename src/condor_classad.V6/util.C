@@ -269,12 +269,12 @@ void relTimeToString(double rsecs, string &buffer)
     double  secs;
     char    timebuf[128];
    
-    fractional_seconds = rsecs - trunc(rsecs);
-    
     if( rsecs < 0 ) {
         buffer += "-";
         rsecs = -rsecs;
     }
+    fractional_seconds = rsecs - floor(rsecs);
+
     days = (int) rsecs;
     hrs  = days % 86400;
     mins = hrs  % 3600;

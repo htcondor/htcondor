@@ -2342,7 +2342,7 @@ relTimeToClassAd(double rsecs, ClassAd * &splitClassAd)
     days = (int) rsecs;
     hrs  = days % 86400;
     mins = hrs  % 3600;
-    secs = (mins % 60) + (rsecs - trunc(rsecs));
+    secs = (mins % 60) + (rsecs - floor(rsecs));
     days = days / 86400;
     hrs  = hrs  / 3600;
     mins = mins / 60;
