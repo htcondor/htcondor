@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.1.2.4 2004-06-24 20:57:09 wright Exp $
+# $Id: remote_task.pl,v 1.1.2.5 2004-06-24 21:33:59 wright Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = good
@@ -120,8 +120,8 @@ chdir( "$SrcDir/$testdir/$compiler" ) ||
 
 $copy_failure = 0;
 
-safe_copy( "$testname.out", "$BaseDir/results/$compiler" );
-safe_copy( "$testname.err", "$BaseDir/results/$compiler" );
+safe_copy( "$testname.out*", "$BaseDir/results/$compiler" );
+safe_copy( "$testname.err*", "$BaseDir/results/$compiler" );
 safe_copy( "$testname.log", "$BaseDir/results/$compiler" );
 safe_copy( "$testname.run.out", "$BaseDir/results/$compiler" );
 safe_copy( "$testname.cmd.out", "$BaseDir/results/$compiler" );
