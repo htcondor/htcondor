@@ -226,6 +226,36 @@ Look for messages about priority, "no more machines", or similar.
 
 \section{Condor on Windows NT / Windows 2000}
 
+\subsection{Will Condor work on a network of mixed Unix and NT machines?}
+
+You can have a Condor pool that consists of both Unix and NT machines.
+
+Your central manager can be either Windows NT or Unix.  For example,
+even if you had a pool consisting strictly of Unix machines, you could
+use an NT box for your central manager, and vice versa.
+
+You can submit jobs destined to run on Windows NT from either an NT
+machine \Bold{or} a Unix machine.  However, at this point in time you
+cannot submit jobs destined to run on Unix from NT.  We do plan on
+adding this functionality, however.
+
+So, in summary:
+
+\begin{enumerate}
+
+\item{A single Condor pool can consist of both Windows NT and Unix
+machines.}
+
+\item{It does not matter at all if your Central Manager is Unix or NT.}
+
+\item{Unix machines can submit jobs to run on other Unix or Windows NT
+machines.}
+
+\item{Windows NT machines can only submit jobs which will run on Windows
+NT machines.}
+
+\end{enumerate}
+
 \subsection{When I run \Condor{status} I get a communication error, or the
 Condor daemon log files report a failure to bind.}
 
