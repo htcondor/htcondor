@@ -45,7 +45,6 @@ information.  Note that there's no negotiator or schedd in Hawkeye.
 The bottom of the config file contains a section like:
 MODULES = $(HAWKEYE)/modules
 STARTD_CRON_NAME = Hawkeye
-HAWKEYE_JOBS =
 HAWKEYE_JOBS = \
 	df:df_:$(MODULES)/df:5m:nokill		\
 	top:top_:$(MODULES)/top:0:continuous	\
@@ -74,21 +73,26 @@ will be "xxx_abc = xyzzy".  These should be unique, as well.
 
 path - This specifies the path to run the module itself.
 
-period - This defines the frequency with which to run the module.  0
-implies "continuous mode", in which the module runs constantly
-outputing data periodically (look at top for an example).  The
-modifiers "s", "m", and "h" for seconds, minutes, and hours
-(respectively) are recognized.  Thus 5m means run every five minutes.
+period - This defines the frequency with which to run the module.  A
+value of 0 is valid only in "continuous mode", in which the module
+runs constantly outputing data periodically (see below and look at top
+for an example).  The modifiers "s", "m", and "h" for seconds,
+minutes, and hours (respectively) are recognized.  Thus 5m means run
+every five minutes.  If no modifier is specified, seconds is assumed.
+For continuous mode, this specifies how long after the process dies
+before it's restarted.
 
 options - Several options are currently defined:
-  continuous - Specifies continuous mode (implied by period = 0).  If
-a non-zero period is specified, then the next run will start period
-time after the previous run ends.
+
+  continuous - Specifies continuous mode.  If a non-zero period is
+  specified, then the next run will start period time after the
+  previous run ends.
+
   nokill - If, when it's time to run the module the next time (in
-non-continuous mode), the job is still running, this will cause the
-startd to not kill the job, and to let it continue running, instead.
-By default, or with a "kill" option, the job will be killed and the
-next run will start when the current run dies.
+  non-continuous mode), the job is still running, this will cause the
+  startd to not kill the job, and to let it continue running, instead.
+  By default, or with a "kill" option, the job will be killed and the
+  next run will start when the current run dies.
 
 
 Set the HAWKEYE_CONFIG environment variable to point at the config:
