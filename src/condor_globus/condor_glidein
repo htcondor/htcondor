@@ -1,5 +1,4 @@
 #!/usr/bin/env perl
-#!/usr/bin/perl
 
 	##these are the files that need to be staged on the remote machine
 $config = "condor_config.glidein";
