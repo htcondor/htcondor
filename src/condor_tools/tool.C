@@ -54,7 +54,8 @@ int  printAdToFile(ClassAd *ad, char* filename);
 int cmd = 0;
 daemon_t dt = DT_NONE;
 char* pool = NULL;
-int fast = 0;
+bool fast = false;
+bool full = false;
 int all = 0;
 char* subsys = NULL;
 int takes_subsys = 0;
@@ -103,7 +104,10 @@ usage( char *str )
 		fprintf( stderr, 
 				 "    -fast\t\tquickly vacate the jobs (no checkpointing)\n" );
 	}
-
+	if( cmd == DC_RECONFIG ) {
+		fprintf( stderr, 
+				 "    -full\t\tPerform a full reconfig\n" );
+	}
 	fprintf( stderr, "where [targets] can be zero or more of:\n" );
 #if 0
 		// This isn't supported yet, so don't mention it now.
@@ -236,6 +240,8 @@ cmdToStr( int c )
 		return "Reschedule";
 	case DC_RECONFIG:
 		return "Reconfig";
+	case DC_RECONFIG_FULL:
+		return "Full-Reconfig";
 	case SQUAWK:
 		return "Squawk";
 	}
@@ -372,16 +378,44 @@ main( int argc, char *argv[] )
 			}
 			break;
 		case 'f':
-			fast = 1;
-			switch( cmd ) {
-			case DAEMONS_OFF:
-			case DC_OFF_GRACEFUL:
-			case RESTART:
-			case VACATE_CLAIM:
-				break;
-			default:
-				fprintf( stderr, "ERROR: \"-fast\" is not valid with %s\n",
-						 MyName );
+			if( (*tmp)[2] ) {
+				switch( (*tmp)[2] ) {
+				case 'u':
+					if( cmd == DC_RECONFIG ) {
+						full = true;
+					} else {
+						fprintf( stderr, "ERROR: \"-full\" "
+								 "is not valid with %s\n", MyName );
+						usage( NULL );
+					}
+					break;
+				case 'a':
+					fast = true;
+					switch( cmd ) {
+					case DAEMONS_OFF:
+					case DC_OFF_GRACEFUL:
+					case RESTART:
+					case VACATE_CLAIM:
+						break;
+					default:
+						fprintf( stderr, "ERROR: \"-fast\" "
+								 "is not valid with %s\n", MyName );
+						usage( NULL );
+					}
+					break;
+				default:
+					fprintf( stderr, 
+							 "ERROR: unknown parameter: \"%s\"\n",
+							 *tmp ); 
+					usage( NULL );
+					break;
+				}
+			} else {
+				fprintf( stderr, 
+						 "ERROR: ambiguous parameter: \"%s\"\n",
+						 *tmp ); 
+				fprintf( stderr, 
+						 "Please specify \"-full\" or \"-fast\"\n" );
 				usage( NULL );
 			}
 			break;
@@ -390,7 +424,7 @@ main( int argc, char *argv[] )
 			dprintf_config ("TOOL", 2);
 			break;
 		case 'g':
-			fast = 0;
+			fast = false;
 			break;
 		case 'a':
 			if( (*tmp)[2] ) {
@@ -791,6 +825,12 @@ doCommand( char *name )
 			// if -fast is used, we need to send a different command.
 		if( fast ) {
 			cmd = DC_OFF_FAST;
+		}
+		break;
+	case DC_RECONFIG:
+			// if -full is used, we need to send a different command.
+		if( full ) {
+			cmd = DC_RECONFIG_FULL;
 		}
 		break;
 	default:
