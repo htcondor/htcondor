@@ -4874,9 +4874,6 @@ Scheduler::invalidate_ads()
 void
 Scheduler::reschedule_negotiator(int, Stream *)
 {
-	int	  	cmd = RESCHEDULE;
-
-
 		// don't bother the negotiator if we are shutting down
 	if ( ExitWhenDone ) {
 		return;
@@ -4885,40 +4882,8 @@ Scheduler::reschedule_negotiator(int, Stream *)
 	timeout();							// update the central manager now
 
 	dprintf( D_ALWAYS, "Called reschedule_negotiator()\n" );
-	SafeSock sock;
-	sock.timeout(NEGOTIATOR_CONTACT_TIMEOUT);
 
-	if (!sock.connect(Negotiator->addr(), 0)) {
-		dprintf( D_ALWAYS, "failed to connect to negotiator %s\n",
-			 Negotiator->addr() );
-		return;
-	}
-
-	sock.encode();
-	if (!sock.code(cmd)) {
-		dprintf( D_ALWAYS,
-			"failed to send RESCHEDULE command to negotiator\n");
-		return;
-	}
-	if (!sock.eom()) {
-		dprintf( D_ALWAYS,
-			"failed to send RESCHEDULE command to negotiator\n");
-		return;
-	}
-	sock.close();
-
-	if (FlockNegotiators) {
-		FlockNegotiators->rewind();
-		char *negotiator = FlockNegotiators->next();
-		for (int i=0; negotiator && i < FlockLevel;
-			 negotiator = FlockNegotiators->next(), i++) {
-			if (!sock.connect(negotiator, NEGOTIATOR_PORT) ||
-				!sock.code(cmd) || !sock.eom()) {
-				dprintf(D_ALWAYS, "failed to send RESCHEDULE command to %s\n",
-						negotiator);
-			}
-		}
-	}
+	sendReschedule();
 
 	if (SchedUniverseJobsIdle > 0) {
 		StartSchedUniverseJobs();
@@ -4926,6 +4891,50 @@ Scheduler::reschedule_negotiator(int, Stream *)
 
 	 return;
 }
+
+
+void
+Scheduler::sendReschedule( void )
+{
+	int cmd = RESCHEDULE;
+	SafeSock sock;
+	sock.timeout(NEGOTIATOR_CONTACT_TIMEOUT);
+
+	dprintf( D_FULLDEBUG, "Sending RESCHEDULE command to negotiator(s)\n" );
+
+	if( !sock.connect(Negotiator->addr(), 0) ) {
+		dprintf( D_ALWAYS, "failed to connect to negotiator %s\n",
+				 Negotiator->addr() );
+		return;
+	}
+
+	sock.encode();
+	if( !sock.code(cmd) ) {
+		dprintf( D_ALWAYS,
+				 "failed to send RESCHEDULE command to negotiator\n" );
+		return;
+	}
+	if( !sock.eom() ) {
+		dprintf( D_ALWAYS,
+				 "failed to send RESCHEDULE command to negotiator\n" );
+		return;
+	}
+	sock.close();
+
+	if( FlockNegotiators ) {
+		FlockNegotiators->rewind();
+		char *negotiator = FlockNegotiators->next();
+		for( int i=0; negotiator && i < FlockLevel;
+			 negotiator = FlockNegotiators->next(), i++ ) {
+			if( !sock.connect(negotiator, NEGOTIATOR_PORT) ||
+				!sock.code(cmd) || !sock.eom() ) {
+				dprintf( D_ALWAYS, "failed to send RESCHEDULE command to %s\n",
+						 negotiator );
+			}
+		}
+	}
+}
+
 
 match_rec*
 Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, ClassAd* my_match_ad,
