@@ -6135,11 +6135,12 @@ fixReasonAttrs( PROC_ID job_id, int action )
 
 	case JA_HOLD_JOBS:
 		moveStrAttr( job_id, ATTR_RELEASE_REASON, 
-					 ATTR_LAST_RELEASE_REASON );
+					 ATTR_LAST_RELEASE_REASON, false );
 		break;
 
 	case JA_RELEASE_JOBS:
-		moveStrAttr( job_id, ATTR_HOLD_REASON, ATTR_LAST_HOLD_REASON );
+		moveStrAttr( job_id, ATTR_HOLD_REASON, ATTR_LAST_HOLD_REASON,
+					 true );
 		break;
 
 	default:
@@ -6149,7 +6150,8 @@ fixReasonAttrs( PROC_ID job_id, int action )
 
 
 bool
-moveStrAttr( PROC_ID job_id, const char* old_attr, const char* new_attr )
+moveStrAttr( PROC_ID job_id, const char* old_attr, const char* new_attr,
+			 bool verbose )
 {
 	char* value = NULL;
 	MyString new_value;
@@ -6157,8 +6159,10 @@ moveStrAttr( PROC_ID job_id, const char* old_attr, const char* new_attr )
 
 	if( GetAttributeStringNew(job_id.cluster, job_id.proc,
 							  old_attr, &value) < 0 ) { 
-		dprintf( D_FULLDEBUG, "No %s found for job %d.%d\n",
-				 old_attr, job_id.cluster, job_id.proc );
+		if( verbose ) {
+			dprintf( D_FULLDEBUG, "No %s found for job %d.%d\n",
+					 old_attr, job_id.cluster, job_id.proc );
+		}
 		return false;
 	}
 	
@@ -6172,8 +6176,10 @@ moveStrAttr( PROC_ID job_id, const char* old_attr, const char* new_attr )
 						 new_value.Value() ); 
 
 	if( rval < 0 ) { 
-		dprintf( D_FULLDEBUG, "Can't set %s for job %d.%d\n",
-				 new_attr, job_id.cluster, job_id.proc );
+		if( verbose ) {
+			dprintf( D_FULLDEBUG, "Can't set %s for job %d.%d\n",
+					 new_attr, job_id.cluster, job_id.proc );
+		}
 		return false;
 	}
 		// If we successfully set the new attr, we can delete the old. 
