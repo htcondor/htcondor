@@ -1,7 +1,7 @@
 all_target(libcedar.a)
 
 CFLAGS = $(STD_C_FLAGS) 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I$(OpenSSLIncludePath)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I$(OpenSSLIncludePath) -DHEADER_DES_LOCL_H
 LIB = libcedar.a $(STD_LIBS)
 
 
