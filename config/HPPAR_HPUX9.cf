@@ -5,6 +5,7 @@
 #define RpcLib /**/
 #define MldLib /**/
 #define KernLib /**/
+#define SocketLib /**/
 
 #define MallocLib /**/
 
