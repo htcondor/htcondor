@@ -1331,7 +1331,6 @@ Scheduler::WriteTerminateToUserLog( PROC_ID job_id, int status )
 		return true;
 	}
 	JobTerminatedEvent event;
-	event.coreFile[0] = '\0';
 	struct rusage r;
 	memset( &r, 0, sizeof(struct rusage) );
 

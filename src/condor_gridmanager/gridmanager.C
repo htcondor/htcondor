@@ -1019,7 +1019,6 @@ WriteTerminateToUserLog( GlobusJob *job )
 			 job->procID.cluster, job->procID.proc, job->userLogFile );
 
 	JobTerminatedEvent event;
-	event.coreFile[0] = '\0';
 	struct rusage r;
 	memset( &r, 0, sizeof( struct rusage ) );
 
