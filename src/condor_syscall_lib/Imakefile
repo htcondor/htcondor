@@ -41,7 +41,7 @@ EXTRACT = GETWD.o MMAP.o SYSCALL.o __GETEUID.o __GETEGID.o __GETPPID.o \
 		__PREV_FSTAT.o __PREV_LSTAT.o __PREV_STAT.o
 #	elif IS_ALPHA_OSF1
 EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
-		  MMAP.o PIPE.o 
+		  MMAP.o PIPE.o SYSCALL.o
 #	elif (IS_SUN4M_SOLARIS) || (IS_SUN4M_SOLARIS251) || (IS_X86_SOLARIS)
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o GETCWD.o \
@@ -198,8 +198,11 @@ uppercase_target($(SIMPLE_LIBC),__pipe.o,__PIPE.o,__pipe,__PIPE)
 uppercase_target($(SIMPLE_LIBC),____sig.o,____SIG.o,___sig_restore,___SIG_RESTORE)
 uppercase_target($(SIMPLE_LIBC),____sig.o,____SIG2.o,___masksig_restore,___MASKSIG_RESTORE)
 
-#if (IS_I386_LINUX)
+#if (IS_I386_LINUX) || (IS_ALPHA_OSF1)
 uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL.o,syscall,SYSCALL)
+#endif
+
+#if (IS_I386_LINUX)
 uppercase_target($(SIMPLE_LIBC),__prev_stat.o,__PREV_STAT.o,stat,STAT)
 uppercase_target($(SIMPLE_LIBC),__prev_lstat.o,__PREV_LSTAT.o,lstat,LSTAT)
 uppercase_target($(SIMPLE_LIBC),__prev_fstat.o,__PREV_FSTAT.o,fstat,FSTAT)
