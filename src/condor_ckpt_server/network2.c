@@ -320,7 +320,7 @@ char* getserveraddr()
 	if (server) {
 		h = gethostbyname(server);
 	} else {
-		dprintf(D_ALWAYS, "\"CKPT_SERVER\" Not defined in the config file!\n");
+		dprintf(D_ALWAYS, "CKPT_SERVER Not defined in the config file.\n");
 		return NULL;
 	}
 	if (h == NULL) {
