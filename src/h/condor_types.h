@@ -47,12 +47,7 @@ struct qelem {
 };
 #endif
 
-typedef struct bucket BUCKET;
-struct bucket {
-	char	*name;
-	char	*value;
-	BUCKET	*next;
-};
+/* struct bucket definition removed -- duplicate of definition in config.h */
 
 #if !defined(ULTRIX42) || defined(ULTRIX43)
 struct fs_data_req {
