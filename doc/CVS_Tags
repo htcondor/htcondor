@@ -8,6 +8,10 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+3/17/05 V6_6_9-doc-merge-1
+    The state of the doc directory in V6_6_9-branch before a merge
+    into the V6_6-branch.
+
 3/15/05 V6_6_9-branch
     A release branch for the 6.6.9 manual, created from the V6_6_9-root
     tag. Any changes to the 6.6.9 manual should be done here, and the
