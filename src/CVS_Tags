@@ -158,5 +158,6 @@
 	Fixes bug where recipt of a checkpoint signal during a restart
 	caused a damaged checkpoint file.  Now the process just exits,
 	as the checkpoint we already have is up to date.
-2/4/95	V5_a5_3
-	Supports Signals and Threads code.
+2/6/95	V5_a5_3
+	Supports Signals and Threads code.  Released to local Dec and Sun
+	machines on 2/7/95.
