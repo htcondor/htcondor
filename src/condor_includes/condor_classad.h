@@ -101,16 +101,16 @@ class ClassAdList : public AttrListList
 	ClassAdList() : AttrListList() {}
 
 	ClassAd*	Next() { return (ClassAd*)AttrListList::Next(); }
-	void	Insert(ClassAd* ca) { AttrListList::Insert((AttrList*)ca); }
-	int		Delete(ClassAd* ca) { return AttrListList::Delete((AttrList*)ca); }
+	void		Insert(ClassAd* ca) { AttrListList::Insert((AttrList*)ca); }
+	int			Delete(ClassAd* ca){return AttrListList::Delete((AttrList*)ca);}
 	ClassAd*	Lookup(const char* name);
 
 	// User supplied function should define the "<" relation and the list
 	// is sorted in ascending order
-	void        Sort(int(*)(ClassAd*, ClassAd*, void*), void* = NULL);
+	void   Sort(int(*)(AttrListAbstract*,AttrListAbstract*,void*),void* =NULL);
 
   private:
-	void		Sort(int(*)(ClassAd*, ClassAd*, void*), void*, AttrListAbstract*&);
+	void	Sort(int(*)(AttrListAbstract*,AttrListAbstract*,void*),void*,AttrListAbstract*&);
 };
 
 #endif

@@ -792,36 +792,54 @@ ClassAd* ClassAdList::Lookup(const char* name)
 	return (ClassAd*)list;
 }
 
-void ClassAdList::Sort(int(*SmallerThan)(ClassAd*, ClassAd*, void*), void* info)
+void ClassAdList::
+Sort(int(*SmallerThan)(AttrListAbstract*, AttrListAbstract*, void*), void* info)
 {
 	Sort(SmallerThan, info, head);
 }
 
-void ClassAdList::Sort(int(*SmallerThan)(ClassAd*, ClassAd*, void*), void* info, AttrListAbstract*& list)
+void ClassAdList::
+Sort( int(*SmallerThan)(AttrListAbstract*,AttrListAbstract*,void*), 
+		void* info, 
+		AttrListAbstract*& head)
 {
-	ClassAd*	first;
-	ClassAd*	prev;
-	ClassAd*	ad;
+	AttrListAbstract*	adPrev;
+	AttrListAbstract*	ad;
+	AttrListAbstract*	smallestPrev;
+	AttrListAbstract*	smallest;
 
-	if(list == NULL || list->next == NULL)
-	{
-		return;
-	}
+	if(head == NULL || head->next == NULL) return;
 	
-	first = (ClassAd*)list;
-	prev = first;
-	ad = (ClassAd*)list->next;
-	for(; ad; prev = ad, ad = (ClassAd*)ad->next)
+	// find the smallest ad
+	smallestPrev = NULL;
+	smallest	 = head;
+	adPrev		 = head;
+	ad 			 = head->next;
+	
+	while (ad)
 	{
-		if(SmallerThan(ad, first, info))
+		if ((ad!=smallest) && SmallerThan(ad,smallest,info)) 
 		{
-			prev->next = ad->next;
-			ad->next = first;
-			list = (AttrListAbstract*)ad;
+			smallestPrev = adPrev;
+			smallest = ad;
 		}
+		adPrev = ad;
+		ad = ad->next;
 	}
-	Sort(SmallerThan, info, list->next);
+
+	// place the smallest at the head of the list
+	if (smallestPrev != NULL)
+	{
+		smallestPrev->next = smallest->next;
+		smallest->next = head;
+		head = smallest;
+	}
+
+
+	// recursively sort the rest of the list
+	Sort(SmallerThan, info, head->next);
 }
+
 
 ClassAd* ClassAd::FindNext()
 {
