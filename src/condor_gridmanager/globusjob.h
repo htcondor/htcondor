@@ -130,6 +130,7 @@ class GlobusJob : public Service
 
 	int wantResubmit;
 	int doResubmit;
+	int wantRematch;
 	int numGlobusSubmits;
 
  protected:

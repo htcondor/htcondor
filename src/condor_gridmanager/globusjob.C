@@ -338,6 +338,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 		}
 	}
 
+	wantRematch = 0;
 	doResubmit = 0;		// set if gridmanager wants to resubmit job
 	wantResubmit = 0;	// set if user wants to resubmit job via RESUBMIT_CHECK
 	ad->EvalBool(ATTR_GLOBUS_RESUBMIT_CHECK,NULL,wantResubmit);
@@ -1424,6 +1425,13 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 			// Remove all knowledge of any previous or present job
 			// submission, in both the gridmanager and the schedd.
 
+			// If we are doing a rematch, we are simply waiting around
+			// for the schedd to be updated and subsequently this globus job
+			// object to be destroyed.  So there is nothing to do.
+			if ( wantRematch ) {
+				break;
+			}
+
 			// For now, put problem jobs on hold instead of
 			// forgetting about current submission and trying again.
 			// TODO: Let our action here be dictated by the user preference
@@ -1434,6 +1442,10 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 					 && doResubmit == 0 ) {
 				gmState = GM_HOLD;
 				break;
+			}
+			// Only allow a rematch *if* we are also going to perform a resubmit
+			if ( wantResubmit || doResubmit ) {
+				ad->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
 			}
 			if ( wantResubmit ) {
 				wantResubmit = 0;
@@ -1479,6 +1491,26 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 			if ( submitLogged ) {
 				schedd_actions |= UA_LOG_EVICT_EVENT;
 			}
+			
+			if ( wantRematch ) {
+				dprintf(D_ALWAYS,
+						"(%d.%d) Requesting schedd to rematch job because %s==TRUE\n",
+						procID.cluster, procID.proc, ATTR_REMATCH_CHECK );
+
+				// Set ad attributes so the schedd finds a new match.
+				int dummy;
+				if ( ad->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
+					UpdateJobAdBool( ATTR_JOB_MATCHED, 0 );
+					UpdateJobAdInt( ATTR_CURRENT_HOSTS, 0 );
+					schedd_actions |= UA_UPDATE_JOB_AD;
+				}
+
+				// If we are rematching, we need to forget about this job
+				// cuz we wanna pull a fresh new job ad, with a fresh new match,
+				// from the all-singing schedd.
+				schedd_actions |= UA_FORGET_JOB;
+			}
+			
 			// If there are no updates to be done when we first enter this
 			// state, addScheddUpdateAction will return done immediately
 			// and not waste time with a needless connection to the

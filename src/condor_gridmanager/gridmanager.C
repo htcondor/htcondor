@@ -700,12 +700,7 @@ doContactSchedd()
 		}
 
 		if ( curr_action->actions & UA_FORGET_JOB ) {
-			int dummy;
 			curr_job->UpdateJobAdBool( ATTR_JOB_MANAGED, 0 );
-			if ( curr_job->ad->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
-				curr_job->UpdateJobAdBool( ATTR_JOB_MATCHED, 0 );
-				curr_job->UpdateJobAdInt( ATTR_CURRENT_HOSTS, 0 );
-			}
 		}
 
 dprintf(D_FULLDEBUG,"Updating classad values for %d.%d:\n",curr_job->procID.cluster, curr_job->procID.proc);
@@ -1010,6 +1005,15 @@ dprintf(D_FULLDEBUG,"Deleting job %d.%d from schedd\n",curr_job->procID.cluster,
 				JobsByContact.remove( HashKey( curr_job->jobContact ) );
 			}
 			JobsByProcID.remove( curr_job->procID );
+				// If wantRematch is set, send a reschedule now
+			if ( curr_job->wantRematch ) {
+				static DCSchedd* schedd_obj = NULL;
+				if ( !schedd_obj ) {
+					schedd_obj = new DCSchedd(NULL,NULL);
+					ASSERT(schedd_obj);
+				}
+				schedd_obj->reschedule();
+			}
 			GlobusResource *resource = curr_job->GetResource();
 			delete curr_job;
 
