@@ -482,7 +482,7 @@ system.
   Multiple Platforms on page~\pageref{sec:Multiple-Platforms}.
 
 \item[\Macro{REQUIRE\_LOCAL\_CONFIG\_FILE}] \label{param:RequireLocalConfigFile}
-  Beginning in Condor 6.5.5, it is permissiable for the files listed as the
+  Beginning in Condor 6.5.5, it is permissible for the files listed as the
   local config file to be missing. This is most useful for sites that have 
   large numbers of machines in the pool, and a local config file that uses
   the hostname builtin macro - instead of having an empty file for every host
@@ -538,7 +538,7 @@ system.
   Condor will not start up more \Condor{shadow} processes if the
   amount of free swap space on your machine falls below this level.
   \Macro{RESERVED\_SWAP} is specified in megabytes.  The default value
-  of \Macro{RESERVED\_SWAP} is 5 magabytes.
+  of \Macro{RESERVED\_SWAP} is 5 megabytes.
 
 \item[\Macro{RESERVED\_DISK}] \label{param:ReservedDisk} Determines
   how much disk space you want to reserve for your own machine.  When
@@ -800,7 +800,7 @@ system.
   \label{param:PasswdCacheRefresh}
   Condor can cause NIS servers to become overwhelmed by queries for uid
   and group information in large pools. In order to avoid this problem,
-  Condor caches uid and group information internally. This setting allows
+  Condor caches UID and group information internally. This setting allows
   pool administrators to specify (in seconds) how long Condor should wait
   until refreshes a cache entry. The default is set to 300 seconds, or
   5 minutes. This means that if a pool administrator updates the user
@@ -1021,7 +1021,7 @@ The \Condor{startd} keeps track
 \item[\Dflag{PROCFAMILY}] \label{dflag:procfamily}
   \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_PROCFAMILY@\texttt{D\_PROCFAMILY}}
   Condor often times needs to manage an entire family of processes, i.e. a 
-  process and all descendents of that process.  This debug flag will 
+  process and all descendants of that process.  This debug flag will 
   turn on debugging output for the management of families of processes.
 
 \item[\Dflag{ACCOUNTANT}] \label{dflag:accountant}
@@ -1029,6 +1029,11 @@ The \Condor{startd} keeps track
   When this flag is set,
   the \condor{negotiator} will output debug messages relating to the computation
   of user priorities (see section~\ref{sec:UserPrio}).
+
+\item[\Dflag{PROTOCOL}] \label{dflag:protocol}
+  \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_PROTOCOL@\texttt{D\_PROTOCOL}}
+  Enable debug messages relating to the protocol for Condor's matchmaking and
+  resource claiming framework.
 	
 \end{description}
 
