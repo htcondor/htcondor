@@ -35,6 +35,7 @@
 
 
 #include <stdio.h>
+#include "_condor_fix_types.h"
 #include "sched.h"
 #include "debug.h"
 #include "except.h"
