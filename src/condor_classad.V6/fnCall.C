@@ -559,7 +559,7 @@ sumAvg(const char *name, const ArgumentList &argList,
 	Value             listElementValue, listVal;
 	const ExprTree    *listElement;
 	Value             numElements, result;
-	const ExprList          *listToSum;
+	const ExprList    *listToSum;
 	ExprListIterator  listIterator;
 	bool		      first;
 	int			      len;
