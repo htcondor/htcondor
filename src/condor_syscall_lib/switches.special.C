@@ -162,14 +162,14 @@ int creat64(const char *path, mode_t mode)
 #endif
 
 /*
-On Solaris, socket() is usually found in libsocket.so.  However, many
+On Solaris>251, socket() is usually found in libsocket.so.  However, many
 functions (such as DNS lookups) bypass this interface and go directly
 to so_socket in libc.  We need to trap so_socket.  I haven't a clue
 what each of these parameters do, and I am throwing them to the wind.
 Whee!
 */
 
-#if defined(Solaris)
+#if defined(Solaris) && !defined(Solaris251)
 
 int so_socket( int a, int b, int c, int d, int e )
 {
@@ -204,6 +204,39 @@ int __so_socket( int a, int b, int c, int d, int e )
 }
 
 #endif /* Solaris */
+
+/*
+On the other hand,
+Solaris 251 opens /dev/tcp instead of calling so_socket.
+The shadow recognizes /dev/tcp as a special file and instructs
+it to open it as special:/dev/tcp to inhibit checkpointing.
+
+But, that's not the point.
+Before any of this happens, the creation of a socket results in
+the host lookup code to open /etc/.name_service_door and call door_info
+on that fd.  A door is something like a named pipe.  So, we must
+trap door_info and cause it to return "that is not a door", and all is well.
+*/
+
+#if defined(Solaris251)
+
+int door_info( int fd, void *info )
+{
+	errno = EBADF;
+	return -1;
+}
+
+int _door_info( int fd, void *info )
+{
+	return door_info( fd, info );
+}
+
+int __door_info( int fd, void *info )
+{
+	return door_info( fd, info );
+}
+
+#endif
 
 /*
 The Linux C library uses mmap for several purposes.  The I/O

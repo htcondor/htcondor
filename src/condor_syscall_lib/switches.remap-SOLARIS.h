@@ -98,14 +98,24 @@ REMAP_ONE( plock, _plock, int , int )
 REMAP_THREE( poll, _poll, int, struct pollfd *, unsigned long, int )
 REMAP_FOUR_VOID( profil, _profil, void , unsigned short *, unsigned int , unsigned int , unsigned int )
 REMAP_FOUR( ptrace, _ptrace, int , int , long , int , int )
-REMAP_THREE( readlink, _readlink, int , const char *, char *, size_t )
+#if defined(Solaris251)
+	REMAP_THREE( readlink, _readlink, int , const char *, void *, int )
+#else
+	REMAP_THREE( readlink, _readlink, int , const char *, char *, size_t )
+#endif
+
 REMAP_THREE( readv, _readv, ssize_t, int, const struct iovec *, int )
 REMAP_TWO( rename, _rename, int, const char *, const char * )
 REMAP_ONE( rmdir, _rmdir, int , const char *)
 REMAP_ONE( setgid, _setgid, int , gid_t )
 /* REMAP_TWO( setgroups, _setgroups, int , int , const gid_t []) */
 REMAP_TWO( setgroups, _setgroups, int , int , const gid_t *)
-REMAP_THREE( setitimer, _setitimer, int , int , struct itimerval *, struct itimerval *)
+#if defined(Solaris251)
+	REMAP_THREE( setitimer, _setitimer, int , int , const struct itimerval *, struct itimerval *)
+#else
+	REMAP_THREE( setitimer, _setitimer, int , int , struct itimerval *, struct itimerval *)
+#endif
+
 REMAP_TWO( setregid, _setregid, int , long , long )
 REMAP_TWO( setreuid, _setreuid, int , long , long )
 REMAP_TWO( setrlimit, _setrlimit, int , int , const struct rlimit *)
@@ -115,7 +125,6 @@ REMAP_FOUR( statfs, _statfs, int , const char *, struct statfs *, int, int )
 REMAP_TWO( symlink, _symlink, int , const char *, const char *)
 REMAP_ONE( umask, _umask, mode_t , mode_t )
 REMAP_ONE( uname, _uname, int , struct utsname *)
-REMAP_ONE( nuname, _nuname, int , struct utsname *)
 REMAP_ONE( unlink, _unlink, int , const char *)
 REMAP_TWO( utime, _utime, int , const char *, const struct utimbuf *)
 REMAP_TWO( utimes, _utimes, int , const char *, const struct timeval *)
