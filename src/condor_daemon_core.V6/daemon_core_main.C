@@ -44,6 +44,7 @@
 
 // Externs to Globals
 extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc. 
+extern DLL_IMPORT_MAGIC char **environ;
 
 // External protos
 extern int main_init(int argc, char *argv[]);	// old main()
@@ -55,7 +56,7 @@ extern void main_pre_command_sock_init();
 
 // Internal protos
 void dc_reconfig( bool is_full );
-
+void dc_config_auth();       // Configuring GSI (and maybe other) authentication related stuff
 // Globals
 int		Foreground = 0;		// run in background by default
 char*	myName;				// set to argv[0]
@@ -836,6 +837,62 @@ dc_reconfig( bool is_full )
 	main_config( is_full );
 }
 
+// This function initialize GSI (maybe other) authentication related stuff
+void
+dc_config_auth()
+{
+    // First, if there is X509_USER_PROXY, we clear it
+    int i,j;
+    char *temp=NULL,*temp1=NULL;
+
+    for (i=0;environ[i] != NULL;i++) {
+         temp1 = (char*)strdup(environ[i]);
+         if (!temp1)
+             break;
+         temp = (char*)strtok(temp1,"=");
+         if (temp && !strcmp(temp, "X509_USER_PROXY" )) {
+             for (j = i;environ[j] != NULL;j++)
+                 environ[j] = environ[j+1];
+             break;
+         }
+    }
+    // Wouldn't unsetenv("X509_USER_PROXY") be easier? I might be
+    // missing something here.  Hao
+
+    // Next, we param the configuration file for GSI related stuff and 
+    // set the corresponding environment variables for it
+    char *pbuf = 0;
+    char buffer[1024];
+    memset(buffer, 0, 1024);
+    
+    // buffer overflow problem. Hao 
+    pbuf = param( STR_GSI_DAEMON_DIRECTORY );
+    if (pbuf) {
+        sprintf( buffer, "X509_DIRECTORY=%s", pbuf);
+        putenv( strdup( buffer ) );
+
+        sprintf( buffer, "X509_RUN_AS_SERVER=1");
+        putenv (strdup(buffer));
+
+        sprintf( buffer, "%s=%s/usercert.pem", STR_GSI_USER_CERT, pbuf);
+        putenv( strdup ( buffer ) );
+
+        sprintf(buffer,"%s=%s/userkey.pem",STR_GSI_USER_KEY,pbuf);
+        putenv( strdup ( buffer  ) );
+
+        sprintf(buffer,"%s=%s/condor_ssl.cnf", STR_SSLEAY_CONF, pbuf);
+        putenv( strdup ( buffer ) );
+
+        free(pbuf);
+    }
+
+    pbuf = param( STR_GSI_MAPFILE );
+    if (pbuf) {
+        sprintf( buffer, "%s=%s", STR_GSI_MAPFILE, pbuf);
+        putenv( strdup (buffer) );
+        free(pbuf);
+    }
+}
 
 int
 handle_dc_sighup( Service*, int )
@@ -1141,6 +1198,10 @@ int main( int argc, char** argv )
 
 		// call config so we can call param.  
 	config( wantsQuiet );
+
+    // call dc_config_GSI to set GSI related parameters so that all
+    // the daemons will know what to do.
+    dc_config_auth();
 
 		// See if we're supposed to be allowing core files or not
 	check_core_files();
