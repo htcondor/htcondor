@@ -415,7 +415,7 @@ void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, St
 	dprintf (D_ALWAYS, "(Invalidated %d ads)\n", __numAds__);
 }	
 
-#ifndef WIN32
+
 
 int CollectorDaemon::reportStartdScanFunc( ClassAd *ad )
 {
@@ -456,7 +456,7 @@ int CollectorDaemon::reportMiniStartdScanFunc( ClassAd *ad )
     return 1;
 }
 
-
+#ifndef WIN32
 void CollectorDaemon::reportToDevelopers (void)
 {
 	char	whoami[128];
