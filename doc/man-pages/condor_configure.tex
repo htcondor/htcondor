@@ -2,7 +2,9 @@
 {Configure or install Condor}
 
 \Synopsis \SynProg{\Condor{configure}}
-[\verb@--@\textbf{help}] $|$ [\verb@--@\textbf{version}]
+[\verb@--@\textbf{help}]
+% doesn't work correctly, so commented out
+% $|$ [\verb@--@\textbf{version}]
 
 \SynProg{\Condor{configure}}
 [\verb@--@\textbf{install}]
@@ -12,6 +14,9 @@
 [\verb@--@\textbf{type = $<$ submit, execute, manager $>$}]
 [\verb@--@\textbf{central-manager = $<$ hostname$>$}]
 [\verb@--@\textbf{owner = $<$ ownername $>$}]
+[\verb@--@\textbf{make-personal-stork}]
+[\verb@--@\textbf{stork}]
+[\verb@--@\textbf{credd}]
 [\verb@--@\textbf{verbose}]
 
 % 2 hyphens in a row, without any spaces inbetween poses a problem
@@ -67,7 +72,9 @@ help screen being printed.
 
 \begin{Options}
 	\OptItem{\Opt{---help}} {Print help screen and exit}
+
 	\OptItem{\Opt{---version}} {Print Condor version number and exit}
+
 	\OptItem{\Opt{---install}} {Perform installation, assuming that
 	the current working directory contains the \File{release.tar}
 	file.  Without further options, the configuration is that of
@@ -75,9 +82,11 @@ help screen being printed.
 	If used as an 
 	upgrade within an existing installation directory, existing 
 	configuration files and local directory are preserved.}
+
 	\OptItem{\Opt{---install-dir=$<$path$>$}} {Specifies the path
 	where Condor should be installed or the path where it already is
 	installed. The default is the current working directory.}
+
 	\OptItem{\Opt{---local-dir=$<$path$>$}} {Specifies the
 	location of the local directory, which is the directory that generally 
 	contains the local (machine-specific) configuration file as well as the
@@ -96,8 +105,10 @@ help screen being printed.
 	if the ---local-dir option is specified, the new directory
 	will be created and the \File{log}, \File{spool} and \File{execute} 
 	directories will be moved there from their current location.}
+
 	\OptItem{\Opt{---make-personal-condor}} {Installs and configures for 
-	  Personal Condor, a fully-functional, one-machine pool}.
+	 Personal Condor, a fully-functional, one-machine pool.}
+
 	\OptItem{\Opt{---type= $<$ submit, execute, manager $>$}} {One
 	or more of the types may be listed.
 	This determines the roles that a machine may play in a pool.
@@ -105,6 +116,7 @@ help screen being printed.
 	and there is one central manager per pool.
 	In the case of a Personal Condor,
 	the machine fulfills all three of these roles.}
+
 	\OptItem{\Opt{---central-manager=$<$hostname$>$}} {Instructs
 	the current Condor installation to use the specified machine
 	as the central manager. 
@@ -113,6 +125,7 @@ help screen being printed.
 	The central manager machine's Condor configuration needs
 	to be independently configured to 
 	act as a manager using the option ---type=manager. }
+
 	\OptItem{\Opt{---owner=$<$ownername$>$}} {Set configuration
 	such that Condor daemons will be executed as the given owner.
 	This modifies the 
@@ -125,6 +138,17 @@ help screen being printed.
 	This is only applicable when \Condor{configure} is run by root.
 	If not run as root, the owner is the user running
 	the \Condor{configure} command.  }
+
+	\OptItem{\Opt{---make-personal-stork}} {Creates a 
+	  Personal Stork, using the \Condor{credd} daemon.}
+
+	\OptItem{\Opt{---stork}} {Configures the 
+	  Stork data placement server.
+	  Use this option with the \Opt{---credd} option.}
+
+	\OptItem{\Opt{---credd}} {Configure the
+	  the \Condor{credd} daemon (credential manager daemon).}
+
 	\OptItem{\Opt{---verbose}} {Print information about changes
 	to configuration variables as they occur.}
 \end{Options}
