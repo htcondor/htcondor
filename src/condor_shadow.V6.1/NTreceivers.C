@@ -93,6 +93,26 @@ do_REMOTE_syscall()
 		return 0;
 	}
 
+	case CONDOR_register_starter_info:
+	{
+		ClassAd ad;
+		assert( ad.initFromStream(*syscall_sock) );
+		assert( syscall_sock->end_of_message() );
+
+		errno = 0;
+		rval = pseudo_register_starter_info( &ad );
+		terrno = (condor_errno_t)errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code( terrno ) );
+		}
+		assert( syscall_sock->end_of_message() );
+		return 0;
+	}
+
 	case CONDOR_get_job_info:
 	{
 		ClassAd *ad = NULL;
