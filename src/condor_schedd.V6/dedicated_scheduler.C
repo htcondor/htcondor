@@ -374,6 +374,7 @@ DedicatedScheduler::DedicatedScheduler()
 
 	ds_owner = NULL;
 	ds_name = NULL;
+	shadow_obj = NULL;
 }
 
 
@@ -386,6 +387,10 @@ DedicatedScheduler::~DedicatedScheduler()
 	if( ds_name ) { delete [] ds_name; }
 	if( unclaimed_resources ) { delete unclaimed_resources; }
 
+	if( shadow_obj ) {
+		delete shadow_obj;
+		shadow_obj = NULL;
+	}
 	if( hdjt_tid != -1 ) {
 		daemonCore->Cancel_Timer( hdjt_tid );
 	}
@@ -525,6 +530,10 @@ DedicatedScheduler::reconfig( void )
 	}
 	old_unused_timeout = unused_timeout;
 
+	if( shadow_obj ) {
+		delete shadow_obj;
+		shadow_obj = NULL;
+	}
 	return TRUE;
 }
 
@@ -1690,6 +1699,15 @@ DedicatedScheduler::handleDedicatedJobs( void )
 		// to parse when looking at log files.
 	now = 0;
 
+		// first, make sure we've got a shadow that can handle mpi
+		// jobs.  if not, we're screwed, so instead of computing a
+		// schedule, requesting resources, etc, etc, we should just
+		// put all the jobs on hold...
+	if( ! hasDedicatedShadow() ) {
+		holdAllDedicatedJobs();
+		return FALSE;
+	}
+
 		// This will gather up pointers to all the job classads we
 		// care about, and sort them by QDate.
 	if( ! sortJobs() ) {
@@ -1893,7 +1911,6 @@ DedicatedScheduler::spawnJobs( void )
 	shadow_rec* srec;
 	int pid, i, n, p;
 	PROC_ID id;
-	Shadow* shadow_obj;
 
 	if( ! allocations ) {
 			// Nothing to do
@@ -1902,7 +1919,6 @@ DedicatedScheduler::spawnJobs( void )
 
 		// TODO: handle multiple procs per cluster!
 
-	shadow_obj = scheduler.shadow_mgr.findShadow( ATTR_HAS_MPI );
 	if( ! shadow_obj ) {
 		dprintf( D_ALWAYS, "ERROR: Can't find a shadow with %s -- "
 				 "can't spawn MPI jobs, aborting\n", ATTR_HAS_MPI );
@@ -1973,7 +1989,6 @@ DedicatedScheduler::spawnJobs( void )
 			// performance optimization, not a correctness thing). 
 	}
 
-	delete( shadow_obj );
 	return true;
 }
 
@@ -2918,6 +2933,53 @@ DedicatedScheduler::isPossibleToSatisfy( ClassAd* job, int max_hosts )
 	return false;
 }
  
+
+bool
+DedicatedScheduler::hasDedicatedShadow( void ) 
+{
+	if( ! shadow_obj ) {
+		shadow_obj = scheduler.shadow_mgr.findShadow( ATTR_HAS_MPI );
+	}
+	if( ! shadow_obj ) {
+		dprintf( D_ALWAYS, "ERROR: Can't find a shadow with %s -- "
+				 "can't run MPI jobs!\n", ATTR_HAS_MPI );
+		return false;
+	} 
+	return true;
+}
+
+
+void
+DedicatedScheduler::holdAllDedicatedJobs( void ) 
+{
+	int i, last_cluster, cluster;
+
+	if( ! idle_clusters ) {
+			// No dedicated jobs found, we're done.
+		dprintf( D_FULLDEBUG,
+				 "DedicatedScheduler::holdAllDedicatedJobs: "
+				 "no jobs found\n" );
+		return;
+	}
+
+	last_cluster = idle_clusters->getlast() + 1;
+	if( ! last_cluster ) {
+			// No dedicated jobs found, we're done.
+		dprintf( D_FULLDEBUG,
+				 "DedicatedScheduler::holdAllDedicatedJobs: "
+				 "no jobs found\n" );
+		return;
+	}		
+
+	for( i=0; i<last_cluster; i++ ) {
+		cluster = (*idle_clusters)[i];
+		holdJob( cluster, 0, 
+				 "No condor_shadow installed that supports MPI jobs",
+				 true, true, true, true );
+	}
+}
+
+
 
 //////////////////////////////////////////////////////////////
 //  Utility functions

@@ -285,6 +285,10 @@ class DedicatedScheduler : public Service {
 		*/
 	bool isPossibleToSatisfy( ClassAd* job, int max_hosts );
 
+	bool hasDedicatedShadow( void );
+
+	void holdAllDedicatedJobs( void );
+
 		// // // // // // 
 		// Data members 
 		// // // // // // 
@@ -334,6 +338,8 @@ class DedicatedScheduler : public Service {
 
 	int unused_timeout;	// How many seconds are we willing to hold
 		// onto a resource without using it before we release it? 
+
+	Shadow* shadow_obj;
 };
 
 
