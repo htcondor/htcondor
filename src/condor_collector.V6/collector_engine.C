@@ -39,10 +39,10 @@ int		email (char *, char * = NULL);
 char	*strStatus (ClassAd *);
 
 // pointer values for representing master states
-static	ClassAd	*RECENTLY_DOWN  = (ClassAd *) 0x1;
-static	ClassAd *DONE_REPORTING = (ClassAd *) 0x2;
-static	ClassAd *LONG_GONE		= (ClassAd *) 0x3;
-static	ClassAd *THRESHOLD		= (ClassAd *) 0x4;
+ ClassAd *RECENTLY_DOWN  = (ClassAd *) 0x1;
+ ClassAd *DONE_REPORTING = (ClassAd *) 0x2;
+ ClassAd *LONG_GONE	  = (ClassAd *) 0x3;
+ ClassAd *THRESHOLD	  = (ClassAd *) 0x4;
 
 CollectorEngine::
 CollectorEngine () : 

@@ -262,6 +262,8 @@ query_scanFunc (ClassAd *ad)
 {
     int more = 1;
 
+	if (ad < THRESHOLD) return 1;
+
     if ((*ad) >= (*__query__))
     {
         if (!__sock__->code(more) || !ad->put(*__sock__))

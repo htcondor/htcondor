@@ -8,6 +8,12 @@
 #include "HashTable.h"
 #include "hashkey.h"
 
+// pointer values for representing master states
+extern  ClassAd *RECENTLY_DOWN;
+extern  ClassAd *DONE_REPORTING;
+extern  ClassAd *LONG_GONE;
+extern  ClassAd *THRESHOLD;
+
 class CollectorEngine : public Service
 {
   public:
