@@ -87,6 +87,8 @@ char	*malloc(), *realloc(), *calloc();
 
 #if defined(AIX31) || defined(AIX32)
 #define BIN_MAIL "/usr/bin/mail"
+#elif defined(HPUX9)
+#define BIN_MAIL "/usr/ucb/mail"
 #else
 #define BIN_MAIL "/bin/mail"
 #endif

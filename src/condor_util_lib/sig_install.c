@@ -61,3 +61,16 @@ unblock_signal( int sig)
         EXCEPT("Error in setting procmask, errno = %d\n", errno);
     }
 }	
+
+void
+block_signal( int sig)
+{
+    sigset_t    set;
+    if ( sigprocmask(SIG_SETMASK,0,&set)  == -1 ) {
+        EXCEPT("block_signal:Error in reading procmask, errno = %d\n", errno);
+    }
+    sigaddset(&set, sig);
+    if ( sigprocmask(SIG_SETMASK,&set, 0)  == -1 ) {
+        EXCEPT("block_signal:Error in setting procmask, errno = %d\n", errno);
+    }
+}	

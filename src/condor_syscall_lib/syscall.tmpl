@@ -412,7 +412,11 @@ int rename( const char *from, const char *to ) {
 		out xdr_bytes( &grouplist, gidsetsize * GID_T_SIZE, gidsetsize * GID_T_SIZE );
 		alloc( grouplist, gidsetsize * GID_T_SIZE );
 	}
+#if	defined(HPUX9)
+	int	setpgrp();
+#else
 	int setpgrp( int pid, int pgrp );
+#endif
 #	if defined(SUNOS41)
 		int getdents( map(int fd), char *buf, int nbytes ) {
 			out xdr_bytes( &buf, &nbytes, nbytes );
@@ -487,7 +491,7 @@ int rename( const char *from, const char *to ) {
 		alloc( times, TIMEVAL_ARRAY_SIZE );
 	}
 	int gethostid();
-	int setrlimit( int resource, struct rlimit *rlp ) {
+	int setrlimit( int resource, const struct rlimit *rlp ) {
 		in xdr_rlimit( rlp );
 		alloc( rlp, RLIMIT_SIZE );
 	}
@@ -496,7 +500,11 @@ int rename( const char *from, const char *to ) {
 		alloc( rlp, RLIMIT_SIZE );
 	}
 	pid_t setsid();
+#if defined(HPUX9)
+	int statfs( char *path, struct statfs *buf ) {
+#else
 	int statfs( char *path, struct statfs *buf, int len ) {
+#endif
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 		out xdr_statfs( buf );

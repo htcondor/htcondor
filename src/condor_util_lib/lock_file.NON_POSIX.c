@@ -56,6 +56,7 @@
 
 #if defined( HPUX9 )
 #define USE_FLOCK 0
+#include "fake_flock.h" /* to get the definition of LOCK_UN */
 #endif
 
 #if defined( AIX32 )
@@ -166,6 +167,7 @@ lock_file( int fd, LOCK_TYPE type, int do_block )
 		f.l_type = F_WRLCK;
 		break;
 	  case UN_LOCK:
+	  case LOCK_UN:         /* this shud be the corrct case : dhruba */
 		f.l_type = F_UNLCK;
 		break;
 	}

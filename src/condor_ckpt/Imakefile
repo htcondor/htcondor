@@ -36,6 +36,9 @@ ASSEMBLER_OBJ = _longjmp.AIX32.o
 
 #if IS_R6000_AIX32
 UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o flock.o
+#elif IS_HPPAR_HPUX9
+UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o flock.o \
+		   seteuid.o setegid.o
 #else
 UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o
 #endif
@@ -66,7 +69,7 @@ release:: all
 
 depend_target($(SRC) )
 
-program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o, )
+program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ), )
 
 
 IMPORT_LINKS = ../../config/import_links

@@ -65,7 +65,11 @@ int main( int argc, char *argv[], char **envp );
 extern int DebugFlags;
 
 int
+#if defined(HPUX9)
+_START( int argc, char *argv[], char **envp )
+#else
 MAIN( int argc, char *argv[], char **envp )
+#endif
 {
 	char	buf[_POSIX_PATH_MAX];
 	char	init_working_dir[_POSIX_PATH_MAX];
@@ -115,7 +119,11 @@ MAIN( int argc, char *argv[], char **envp )
 		init_file_table();
 #endif
 		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
+#if defined(HPUX9)
+		return(_start( argc, argv, envp ));
+#else
 		return main( argc, argv, envp );
+#endif
 	}
 
 }

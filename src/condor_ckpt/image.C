@@ -59,6 +59,8 @@ extern "C" void report_image_size( int );
 	extern "C" unsigned int ntohl( unsigned int );
 #elif defined(AIX32)
 #	include <net/nh.h>
+#elif defined(HPUX9)
+#	include <netinet/in.h>
 #else
 	extern "C" unsigned long htonl( unsigned long );
 	extern "C" unsigned long ntohl( unsigned long );

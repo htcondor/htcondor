@@ -241,7 +241,7 @@ delay( int sec )
 #elif defined(ALPHA)
 	int		lim = 300000;
 #elif defined(HPPAR)
-	int		lim = 300000;
+	int		lim = 650000;
 #endif
 
 
@@ -922,7 +922,6 @@ supervise_all()
 			break;
 		}
 	}
-
 	if( periodic_checkpointing ) {
 		dprintf( D_FULLDEBUG, "Periodic checkpointing NOT implemented yet\n" );
 	}
@@ -1322,7 +1321,7 @@ int	AvoidNFS = 0;
 
 char Condor_CWD[ _POSIX_PATH_MAX ];
 
-#if defined(ULTRIX42) || defined(ULTRIX43) || defined(SUNOS41) || defined(OSF1)
+#if defined(ULTRIX42) || defined(ULTRIX43) || defined(SUNOS41) || defined(OSF1) || defined(HPUX9)
 /*
   None of this stuff is ever used, but it must be here so that we
   can link with the remote system call library without getting

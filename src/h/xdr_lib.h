@@ -96,6 +96,18 @@
 #	define xdr_pid_t(x,v)	xdr_int(x,(int *)v)
 #	define xdr_size_t(x,v)	xdr_u_long(x,(unsigned long *)v)
 #	define xdr_ssize_t(x,v)	xdr_long(x,(long *)v)
+#elif defined(HPUX9)
+#	define xdr_dev_t(x,v)  xdr_short(x,(short *)v)
+#	define xdr_ino_t(x,v)  xdr_u_long(x,(u_long *)v)
+#	define xdr_off_t(x,v)  xdr_long(x,(long *)v)
+#	define xdr_time_t(x,v) xdr_long(x,(long *)v)
+#	define xdr_size_t(x,v) xdr_u_int(x,(unsigned int *)v)
+#	define xdr_mode_t(x,v) xdr_u_short(x,(unsigned short *)v)
+#	define xdr_nlink_t(x,v)	xdr_short(x,(short *)v)
+#	define xdr_gid_t(x,v)  xdr_long(x,(long *)v)
+#	define xdr_uid_t(x,v)  xdr_long(x,(long *)v)
+#	define xdr_pid_t(x,v)  xdr_long(x,(long *)v)
+#	define xdr_key_t(x,v)  xdr_long(x,(long *)v)
 #else
 #	error "Don't know sized of POSIX types on this platform"
 #endif

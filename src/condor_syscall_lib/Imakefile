@@ -13,6 +13,9 @@ EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 		  MMAP.o PIPE.o
 #	elif IS_R6000_AIX32
 /* Don't extract anything */
+#	elif IS_HPPAR_HPUX9
+EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o  \
+		  MMAP.o PIPE.o
 #	else
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 		  MMAP.o PIPE.o
@@ -30,8 +33,14 @@ EXTRACT = GETEUID.o GETEGID.o GETWD.o
 
 #endif	/* ===============  CHECKPOINTING CONDITIONAL ============*/
 
+#if IS_HPPAR_HPUX9
+UTIL_EXTRACT = GETWD.o
+HP_SPECIFIC_FILES = flock.o seteuid.o setegid.o
+HP_CKPT = get_reginfo.HPUX.o
+#endif
+
 STUBS = switches.o switches.special.o
-UTIL =	remote_syscall.o syscall_connect.o senders.o remote_startup.o
+UTIL =	remote_syscall.o syscall_connect.o senders.o remote_startup.o  
 NAME_TAB = syscall_numbers.o
 
 SRC = \
@@ -50,7 +59,7 @@ SRC = \
 	syscall.tmpl \
 	syscall_connect.c \
 	syscall_numbers.c \
-	xfer_file.c
+	xfer_file.c 
 
 #if IS_ALPHA_OSF1
 XDR_STATFS_OBJ = xdr_statfs.OSF1.o
@@ -77,7 +86,7 @@ LONGJMP = _longjmp.AIX32.o
 
 #if DOES_CHECKPOINTING
 CKPT_OBJ =	file_state.o image.o tmp_stack.o machdep.$(OS).o \
-			syscall_mode.o $(LONGJMP)
+			syscall_mode.o $(LONGJMP) $(HP_CKPT)
 #else
 CKPT_OBJ = syscall_mode.o
 #endif
@@ -86,11 +95,12 @@ CKPT_OBJ = syscall_mode.o
 AIX_OBJ = $(LIB_DIR)/syscall.shr.o $(LIB_DIR)/syscall.exp $(LIB_DIR)/libfort.a
 #endif
 
+
 UTIL_OBJ =  dprintf.o dprintf_config.o except.o update_rusage.o \
-			condor_errlst.o
+			condor_errlst.o $(HP_SPECIFIC_FILES)
 
 LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL) $(NAME_TAB) $(XDR_OBJ) $(UTIL_OBJ) \
-		$(CKPT_OBJ)
+		$(CKPT_OBJ) $(UTIL_EXTRACT) $(HP_UTIL)
 
 SIMPLE_OBJ = $(LIB_DIR)/condor_rt0.o extern_path.o xfer_file.o
 SYSCALL_LIB = $(LIB_DIR)/condor_syscall_lib.a
@@ -101,7 +111,6 @@ stubs: switches.c senders.c receivers.c
 uppercase_target($(SIMPLE_LIBC),geteuid.o,GETEUID.o,geteuid,GETEUID)
 uppercase_target($(SIMPLE_LIBC),getppid.o,GETPPID.o,getppid,GETPPID)
 uppercase_target($(SIMPLE_LIBC),getegid.o,GETEGID.o,getegid,GETEGID)
-uppercase_target($(SIMPLE_LIBC),getwd.o,GETWD.o,getwd,GETWD)
 uppercase_target($(SIMPLE_LIBC),fork.o,FORK.o,fork,FORK)
 uppercase_target($(SIMPLE_LIBC),kill.o,KILL.o,kill,KILL)
 uppercase_target($(SIMPLE_LIBC),sigaction.o,SIGACTION.o,sigaction,SIGACTION)
@@ -115,9 +124,9 @@ CMNT with a copy of crt0.o, and change the name of "main" to "MAIN".
 CMNT
 #if IS_HPPAR_HPUX9
 condor_rt0.o: Crt0 ToUpper
-	ToUpper Crt0 tmp1 _start  _START
-	ToUpper tmp1 tmp2 __text_START __text_start 
-	ToUpper tmp2 condor_rt0.o __data_START __data_start
+	ToUpper Crt0 tmp1 _start _START 
+	ToUpper tmp1 tmp2 _data_START _data_start
+	ToUpper tmp2 condor_rt0.o _text_START _text_start
 	rm -f tmp1 tmp2
 clean::
 	rm -f condor_rt0.o
@@ -205,6 +214,12 @@ release_target( syscall.exp, $(LIB_DIR), OBJECT_MODE)
 library_target(libfort.a,C_getenv.o)
 release_library(libfort.a,$(RELEASE_DIR)/lib)
 #endif /* AIX */
+
+#if IS_HPPAR_HPUX9
+GETWD.o: ../condor_util_lib/getwd.o
+	ToUpper ../condor_util_lib/getwd.o GETWD.o getwd GETWD
+#endif
+
 
 
 clean::

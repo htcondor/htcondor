@@ -37,6 +37,16 @@
 #	include <sys/mount.h>
 #endif
 
+#if defined(HPUX9)
+#   include <time.h>
+#   include <rpc/rpc.h>
+#   include <errno.h>
+#   include <nfs/export.h>
+#   include <nfs/nfs.h> /* for definition of fhandle_t */
+#   include <sys/vfs.h>      /* for struct statfs */
+#	include <sys/signal.h>
+#endif
+
 #if defined(OSF1)
 #	define _AES_SOURCE
 #	include <sys/poll.h>
@@ -82,5 +92,4 @@ do_REMOTE_syscall()
 		"Shadow: got request for syscall %d <%s>\n",
 		condor_sysnum, _condor_syscall_name(condor_sysnum)
 	);
-
 	switch( condor_sysnum ) {

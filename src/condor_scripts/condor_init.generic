@@ -2,7 +2,7 @@
 CSH
 
 set CHMOD=/bin/chmod
-#if IS_HPPAR_HPUX8 || IS_ALPHA_OSF1
+#if IS_HPPAR_HPUX9 || IS_ALPHA_OSF1
 set CHOWN=/bin/chown
 #else
 set CHOWN=/etc/chown

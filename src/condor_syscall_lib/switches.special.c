@@ -41,6 +41,11 @@
 #include "file_table_interf.h"
 #include <stdio.h>
 #include <limits.h>
+#if defined(HPUX9)
+#	ifdef _PROTOTYPES   /* to remove compilation errors unistd.h */
+#	undef _PROTOTYPES
+#	endif
+#endif
 #include <unistd.h>
 #include "_condor_fix_types.h"
 #include <sys/time.h>
