@@ -22,7 +22,7 @@ extern "C" {
 #endif
 
 #if defined(__STDC__) || defined(__cplusplus)
-	void config( ClassAd* classAd );
+	void config( ClassAd* classAd=NULL, char *mySubsystem=NULL );
 	void config_master( ClassAd* classAd );
 	int	 config_from_server(char*, char*, CONTEXT*);
 	char * param ( char *name );
