@@ -17,7 +17,7 @@ extern "C" {
 
 #if defined(__STDC__) || defined(__cplusplus)
 	int symlink( const char *, const char * );
-	char *sbrk( int );
+	void *sbrk( ssize_t );
 	int gethostname( char *, int );
 #else
 	int symlink();
