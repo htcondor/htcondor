@@ -541,7 +541,7 @@ by Condor.
 %\index{configuration macro!\texttt{SEC\_DEFAULT\_NEGOTIATION}}
 %\index{configuration macro!\texttt{SEC\_READ\_NEGOTIATION}}
 %\index{configuration macro!\texttt{SEC\_WRITE\_NEGOTIATION}}
-%\index{configuration macro!\texttt{SEC\_ADMIN\_NEGOTIATION}}
+%\index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_NEGOTIATION}}
 %\index{configuration macro!\texttt{SEC\_IMMEDIATE\_FAMILY\_NEGOTIATION}}
 %\index{configuration macro!\texttt{SEC\_CONFIG\_NEGOTIATION}}
 %\index{configuration macro!\texttt{SEC\_OWNER\_NEGOTIATION}}
@@ -560,7 +560,7 @@ The levels are
     DEFAULT
     READ
     WRITE
-    ADMIN
+    ADMINISTRATOR
     IMMEDIATE_FAMILY
     CONFIG
     OWNER
@@ -586,7 +586,7 @@ The communication types are
     NEGOTIATION
 \end{verbatim}
 Two examples of the complete macro names are
-\MacroNI{SEC\_ADMIN\_AUTHENTICATION}
+\MacroNI{SEC\_ADMINISTRATOR\_AUTHENTICATION}
 and
 \MacroNI{SEC\_DEFAULT\_INTEGRITY}.
 
@@ -666,8 +666,8 @@ For the daemon, there are eight macros to configure authentication:
 \index{configuration macro!\texttt{SEC\_READ\_AUTHENTICATION}}
 \index{SEC\_WRITE\_AUTHENTICATION macro@\texttt{SEC\_WRITE\_AUTHENTICATION} macro}
 \index{configuration macro!\texttt{SEC\_WRITE\_AUTHENTICATION}}
-\index{SEC\_ADMIN\_AUTHENTICATION macro@\texttt{SEC\_ADMIN\_AUTHENTICATION} macro}
-\index{configuration macro!\texttt{SEC\_ADMIN\_AUTHENTICATION}}
+\index{SEC\_ADMINISTRATOR\_AUTHENTICATION macro@\texttt{SEC\_ADMINISTRATOR\_AUTHENTICATION} macro}
+\index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_AUTHENTICATION}}
 \index{SEC\_IMMEDIATE\_FAMILY\_AUTHENTICATION macro@\texttt{SEC\_IMMEDIATE\_FAMILY\_AUTHENTICATION} macro}
 \index{configuration macro!\texttt{SEC\_IMMEDIATE\_FAMILY\_AUTHENTICATION}}
 \index{SEC\_CONFIG\_AUTHENTICATION macro@\texttt{SEC\_CONFIG\_AUTHENTICATION} macro}
@@ -680,7 +680,7 @@ For the daemon, there are eight macros to configure authentication:
     SEC_DEFAULT_AUTHENTICATION
     SEC_READ_AUTHENTICATION
     SEC_WRITE_AUTHENTICATION
-    SEC_ADMIN_AUTHENTICATION
+    SEC_ADMINISTRATOR_AUTHENTICATION
     SEC_IMMEDIATE_FAMILY_AUTHENTICATION
     SEC_CONFIG_AUTHENTICATION
     SEC_OWNER_AUTHENTICATION
@@ -726,8 +726,8 @@ macros
 \index{configuration macro!\texttt{SEC\_READ\_AUTHENTICATION\_METHODS}}
 \index{SEC\_WRITE\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_WRITE\_AUTHENTICATION\_METHODS} macro}
 \index{configuration macro!\texttt{SEC\_WRITE\_AUTHENTICATION\_METHODS}}
-\index{SEC\_ADMIN\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_ADMIN\_AUTHENTICATION\_METHODS} macro}
-\index{configuration macro!\texttt{SEC\_ADMIN\_AUTHENTICATION\_METHODS}}
+\index{SEC\_ADMINISTRATOR\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_ADMINISTRATOR\_AUTHENTICATION\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_AUTHENTICATION\_METHODS}}
 \index{SEC\_IMMEDIATE\_FAMILY\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_IMMEDIATE\_FAMILY\_AUTHENTICATION\_METHODS} macro}
 \index{configuration macro!\texttt{SEC\_IMMEDIATE\_FAMILY\_AUTHENTICATION\_METHODS}}
 \index{SEC\_CONFIG\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_CONFIG\_AUTHENTICATION\_METHODS} macro}
@@ -740,7 +740,7 @@ macros
     SEC_DEFAULT_AUTHENTICATION_METHODS
     SEC_READ_AUTHENTICATION_METHODS
     SEC_WRITE_AUTHENTICATION_METHODS
-    SEC_ADMIN_AUTHENTICATION_METHODS
+    SEC_ADMINISTRATOR_AUTHENTICATION_METHODS
     SEC_IMMEDIATE_FAMILY_AUTHENTICATION_METHODS
     SEC_CONFIG_AUTHENTICATION_METHODS
     SEC_OWNER_AUTHENTICATION_METHODS
@@ -803,8 +803,8 @@ For the daemon, there are eight macros to enable or disable encryption:
 \index{configuration macro!\texttt{SEC\_READ\_ENCRYPTION}}
 \index{SEC\_WRITE\_ENCRYPTION macro@\texttt{SEC\_WRITE\_ENCRYPTION} macro}
 \index{configuration macro!\texttt{SEC\_WRITE\_ENCRYPTION}}
-\index{SEC\_ADMIN\_ENCRYPTION macro@\texttt{SEC\_ADMIN\_ENCRYPTION} macro}
-\index{configuration macro!\texttt{SEC\_ADMIN\_ENCRYPTION}}
+\index{SEC\_ADMINISTRATOR\_ENCRYPTION macro@\texttt{SEC\_ADMINISTRATOR\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_ENCRYPTION}}
 \index{SEC\_IMMEDIATE\_FAMILY\_ENCRYPTION macro@\texttt{SEC\_IMMEDIATE\_FAMILY\_ENCRYPTION} macro}
 \index{configuration macro!\texttt{SEC\_IMMEDIATE\_FAMILY\_ENCRYPTION}}
 \index{SEC\_CONFIG\_ENCRYPTION macro@\texttt{SEC\_CONFIG\_ENCRYPTION} macro}
@@ -817,7 +817,7 @@ For the daemon, there are eight macros to enable or disable encryption:
     SEC_DEFAULT_ENCRYPTION
     SEC_READ_ENCRYPTION
     SEC_WRITE_ENCRYPTION
-    SEC_ADMIN_ENCRYPTION
+    SEC_ADMINISTRATOR_ENCRYPTION
     SEC_IMMEDIATE_FAMILY_ENCRYPTION
     SEC_CONFIG_ENCRYPTION
     SEC_OWNER_ENCRYPTION
@@ -862,8 +862,8 @@ macros
 \index{configuration macro!\texttt{SEC\_READ\_CRYPTO\_METHODS}}
 \index{SEC\_WRITE\_CRYPTO\_METHODS macro@\texttt{SEC\_WRITE\_CRYPTO\_METHODS} macro}
 \index{configuration macro!\texttt{SEC\_WRITE\_CRYPTO\_METHODS}}
-\index{SEC\_ADMIN\_CRYPTO\_METHODS macro@\texttt{SEC\_ADMIN\_CRYPTO\_METHODS} macro}
-\index{configuration macro!\texttt{SEC\_ADMIN\_CRYPTO\_METHODS}}
+\index{SEC\_ADMINISTRATOR\_CRYPTO\_METHODS macro@\texttt{SEC\_ADMINISTRATOR\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_CRYPTO\_METHODS}}
 \index{SEC\_IMMEDIATE\_FAMILY\_CRYPTO\_METHODS macro@\texttt{SEC\_IMMEDIATE\_FAMILY\_CRYPTO\_METHODS} macro}
 \index{configuration macro!\texttt{SEC\_IMMEDIATE\_FAMILY\_CRYPTO\_METHODS}}
 \index{SEC\_CONFIG\_CRYPTO\_METHODS macro@\texttt{SEC\_CONFIG\_CRYPTO\_METHODS} macro}
@@ -876,7 +876,7 @@ macros
     SEC_DEFAULT_CRYPTO_METHODS
     SEC_READ_CRYPTO_METHODS
     SEC_WRITE_CRYPTO_METHODS
-    SEC_ADMIN_CRYPTO_METHODS
+    SEC_ADMINISTRATOR_CRYPTO_METHODS
     SEC_IMMEDIATE_FAMILY_CRYPTO_METHODS
     SEC_CONFIG_CRYPTO_METHODS
     SEC_OWNER_CRYPTO_METHODS
@@ -924,8 +924,8 @@ For the daemon, there are eight macros to enable or disable an integrity check:
 \index{configuration macro!\texttt{SEC\_READ\_INTEGRITY}}
 \index{SEC\_WRITE\_INTEGRITY macro@\texttt{SEC\_WRITE\_INTEGRITY} macro}
 \index{configuration macro!\texttt{SEC\_WRITE\_INTEGRITY}}
-\index{SEC\_ADMIN\_INTEGRITY macro@\texttt{SEC\_ADMIN\_INTEGRITY} macro}
-\index{configuration macro!\texttt{SEC\_ADMIN\_INTEGRITY}}
+\index{SEC\_ADMINISTRATOR\_INTEGRITY macro@\texttt{SEC\_ADMINISTRATOR\_INTEGRITY} macro}
+\index{configuration macro!\texttt{SEC\_ADMINISTRATOR\_INTEGRITY}}
 \index{SEC\_IMMEDIATE\_FAMILY\_INTEGRITY macro@\texttt{SEC\_IMMEDIATE\_FAMILY\_INTEGRITY} macro}
 \index{configuration macro!\texttt{SEC\_IMMEDIATE\_FAMILY\_INTEGRITY}}
 \index{SEC\_CONFIG\_INTEGRITY macro@\texttt{SEC\_CONFIG\_INTEGRITY} macro}
@@ -938,7 +938,7 @@ For the daemon, there are eight macros to enable or disable an integrity check:
     SEC_DEFAULT_INTEGRITY
     SEC_READ_INTEGRITY
     SEC_WRITE_INTEGRITY
-    SEC_ADMIN_INTEGRITY
+    SEC_ADMINISTRATOR_INTEGRITY
     SEC_IMMEDIATE_FAMILY_INTEGRITY
     SEC_CONFIG_INTEGRITY
     SEC_OWNER_INTEGRITY
