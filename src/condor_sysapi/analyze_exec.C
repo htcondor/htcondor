@@ -66,8 +66,8 @@ sysapi_magic_check( char *executable )
 int
 sysapi_symbol_main_check( char *executable )
 {
-	char *version;
-	char *platform;
+	char *version = NULL;
+	char *platform = NULL;
 	CondorVersionInfo vinfo;
 
 	version = vinfo.get_version_from_file(executable);
@@ -91,6 +91,8 @@ sysapi_symbol_main_check( char *executable )
 
 	dprintf( D_ALWAYS,  "Executable '%s' is linked with \"%s\" on a \"%s\"\n",
 		executable, version, platform?platform:"(NULL)");
+
+	free(platform);
 
     return 0;
 }
