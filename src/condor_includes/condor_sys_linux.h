@@ -111,7 +111,7 @@ END_C_DECLS
 #endif /* GLIBC */
 
 
-#if defined(LINUX) && defined(GLIBC21)
+#if defined(LINUX) && defined(GLIBC22)
 #include <search.h>
 #endif
 
