@@ -308,7 +308,7 @@ bool ClassAdCollection::CheckClassAd(BaseCollection* Coll,const MyString& OID, C
     MyString AttrValue;
     char tmp[1000];
     ParentColl->Attributes.StartIterations();
-printf("Checking OID %s\n",OID.Value());
+// printf("Checking OID %s\n",OID.Value());
     while (ParentColl->Attributes.Iterate(AttrName)) {
       *tmp='\0';
       ExprTree* expr=Ad->Lookup(AttrName.Value());
@@ -319,15 +319,15 @@ printf("Checking OID %s\n",OID.Value());
       AttrValue=tmp;
       Values.Add(AttrValue);
     }
-Values.StartIterations(); while (Values.Iterate(AttrValue)) { printf("Val: AttrValue=%s\n",AttrValue.Value()); }
+// Values.StartIterations(); while (Values.Iterate(AttrValue)) { printf("Val: AttrValue=%s\n",AttrValue.Value()); }
     int CoID;
     PartitionChild* ChildColl=NULL;
     ParentColl->Children.StartIterations();
     while (ParentColl->Children.Iterate(CoID)) {
       if (Collections.lookup(CoID,Coll)==-1) continue;
       ChildColl=(PartitionChild*) Coll;
-ChildColl->Values.StartIterations(); while (ChildColl->Values.Iterate(AttrValue)) { printf("ChildVal: AttrValue=%s\n",AttrValue.Value()); }
-      if (ChildColl->Values==Values) break;
+// ChildColl->Values.StartIterations(); while (ChildColl->Values.Iterate(AttrValue)) { printf("ChildVal: AttrValue=%s\n",AttrValue.Value()); }
+      if (EqualSets(ChildColl->Values,Values)) break;
       ChildColl=NULL;
     }
 
@@ -349,6 +349,21 @@ ChildColl->Values.StartIterations(); while (ChildColl->Values.Iterate(AttrValue)
   else {
     return Coll->CheckClassAd(Ad);
   }
+}
+
+//----------------------------------------------------------------------------------
+
+bool ClassAdCollection::EqualSets(StringSet& S1, StringSet& S2) 
+{
+  S1.StartIterations();
+  S2.StartIterations();
+  MyString OID1;
+  MyString OID2;
+  while(S1.Iterate(OID1)) {
+    if (!S2.Iterate(OID2)) return false;
+    if (OID1!=OID2) return false;
+  }
+  return (!S2.Iterate(OID2));
 }
 
 //----------------------------------------------------------------------------------

@@ -299,6 +299,9 @@ private:
   static float GetClassAdRank(ClassAd* Ad, const MyString& RankExpr);
 
   ///
+  static bool EqualSets(StringSet& S1, StringSet& S2);
+
+  ///
   bool CheckClassAd(BaseCollection* Coll, const MyString& OID, ClassAd* Ad);
 
 };
