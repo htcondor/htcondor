@@ -278,6 +278,7 @@ const char ATTR_TOTAL_VIRTUAL_MEMORY	 [] = "TotalVirtualMemory";
 const char ATTR_UID						 [] = "Uid";
 const char ATTR_UID_DOMAIN               [] = "UidDomain";
 const char ATTR_ULOG_FILE				 [] = "UserLog";
+const char ATTR_ULOG_USE_XML             [] = "UserLogUseXML";
 const char ATTR_UPDATE_INTERVAL			 [] = "UpdateInterval";
 const char ATTR_UPDATE_PRIO              [] = "UpdatePrio";
 const char ATTR_UPDATE_SEQUENCE_NUMBER   [] = "UpdateSequenceNumber";
