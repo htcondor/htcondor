@@ -1,3 +1,9 @@
+04/06/04 V6_6-merge-7
+   The state of the V6_6-branch for another merge into V6_7-branch.
+   This is basically from the V6_6_3 release, but there have been a
+   few minor changes since then and it's easier to just use another
+   merge tag instead of going out of our way to avoid these diffs.
+
 04/02/04 V6_6_3
    This is the 6.6.3 release tag.  This is a retag of
    BUILD-V6_6-branch-2004-3-29 which is build 32 in NMI land.
