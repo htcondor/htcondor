@@ -139,6 +139,17 @@ host.
 Now, if you specify \Opt{-pool} and do not list any machines, these
 Condor tools will print an error message and exit.
 
+\item If you specified a file in the \Env{CONDOR\_CONFIG} environment
+variable, all Condor daemons and tools used to silently exit.
+Now, they print an error message about it and exit.
+Also, if there were any problems with the file you specified in 
+the \Env{CONDOR\_CONFIG} environment variable, Condor used to try
+other options, namely the ``condor'' user's home directory and
+\File{/etc/condor\_config}.
+Now, if you specify something in \Env{CONDOR\_CONFIG} and Condor
+cannot read it, Condor will print an error and exit, instead of
+searching the other locations.
+
 \end{itemize}
 
 \noindent Known Bugs:
