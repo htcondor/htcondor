@@ -9,8 +9,11 @@
 #include <std.h>
 #include <string.h>
 #include <assert.h>
-#include <iostream.h>
+#include <except.h>
 #include "condor_registration.h"
+
+static  char *_FileName_ = __FILE__;         // Used by EXCEPT (see except.h)
+extern  "C" int _EXCEPT_(char*, ...);
 
 //
 // Constructor of the Registration class.
@@ -22,8 +25,7 @@ Registration::Registration(int size)
     regiTable = new char*[size];
     if(regiTable == NULL)
     {
-        cerr << "Warning : you ran out of memory -- quitting !" << endl;
-        exit(1);
+        EXCEPT("Warning : you ran out of memory -- quitting !");
     }
     for(int i=0; i < size; i++)
     {
@@ -68,8 +70,7 @@ int Registration::RegisterType(char *type)
         regiTable = (char **) realloc(regiTable, tempSize*sizeof(char *));
         if(regiTable == NULL)
         {
-            cerr << "Warning : you ran out of memory -- quitting !" << endl;
-            exit(1);
+            EXCEPT("Warning : you ran out of memory -- quitting !");
         }
         for(int i=regiTableSize; i<tempSize; i++)
 	{
@@ -81,8 +82,7 @@ int Registration::RegisterType(char *type)
     regiTable[regiNumber] = new char[strlen(type)+1];
     if(regiTable[regiNumber] == NULL)
     {
-        cerr << "Warning : you ran out of memory -- quitting !" << endl;
-	exit(1);
+        EXCEPT("Warning : you ran out of memory -- quitting !");
     }
     strcpy(regiTable[regiNumber], type);
     regiNumber++;
