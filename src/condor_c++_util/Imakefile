@@ -5,7 +5,7 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC
 #else
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fno-implicit-templates -DNEW_PROC
 #endif
-CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
+CFLAGS = $(STD_C_FLAGS) $(PLATFORM_C_FLAGS) -DNEW_PROC
 
 URL_SRC = url_condor.C cbstp_url.C file_url.C http_url.C filter_url.C \
 	mailto_url.C cfilter_url.C ftp_url.C include_urls.C 
@@ -28,7 +28,8 @@ SRC = state_machine_driver.C event_handler.C name_tab.C NON_POSIX.select.C \
 	classad_hashtable.C classad_log.C log_transaction.C log.C \
 	classad_collection.C usagemon.C \
 	get_full_hostname.C format_time.C renice_self.C condor_version.C \
-	limit.C my_arch.C my_subsystem.C daemon_types.C killfamily.C
+	limit.C my_arch.C my_subsystem.C daemon_types.C killfamily.C \
+	access.C access.t.C
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	alarm.o string_set.o alloc.o \
@@ -39,16 +40,21 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	classad_hashtable.o classad_log.o log_transaction.o log.o \
 	classad_collection.o usagemon.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
-	limit.o my_arch.o my_subsystem.o daemon_types.o killfamily.o
+	limit.o my_arch.o my_subsystem.o daemon_types.o killfamily.o access.o \
+	access.t.o
 
-TEST_LIBS = cplus_lib.a ../condor_util_lib/util_lib.a
+CEDAR_LIBS = ../condor_io/libcondor.a
+CLASS_AD_LIB = ../condor_classad/expr_lib.a
+DAEMON_CORE_LIB = ../condor_daemon_core.V6/daemon_core.a
+TEST_LIBS = cplus_lib.a $(CLASS_AD_LIB) ../condor_util_lib/util_lib.a \
+	$(CEDAR_LIBS) $(DAEMON_CORE_LIB) $(AUTH2_LIB)
+	
 
 #if !HAS_FLOCK
 FLOCK_OBJ = ../condor_util_lib/flock.o
 #endif 
 
 all_target(cplus_lib.a liburl.a libapi.a)
-
 library_target( cplus_lib.a,$(OBJ))
 library_target( liburl.a,$(URL_OBJ))
 library_target( libapi.a,$(API_OBJ) file_lock.o ../condor_util_lib/dprintf.o ../condor_util_lib/except.o ../condor_util_lib/lock_file.NON_POSIX.o $(FLOCK_OBJ) ../condor_util_lib/condor_errlst.o ../condor_util_lib/setsyscalls.o ../condor_util_lib/uids.o)
@@ -61,6 +67,7 @@ libapi.tar: libapi.a
 c_plus_target(test_locks,test_locks.o,$(TEST_LIBS))
 
 c_plus_target(cat_url, cat_url.o, liburl.a SocketLib)
+c_plus_target(access.t, access.t.o, $(TEST_LIBS) $(LIB) SocketLib )
 
 test: test.o user_log.o
 	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o test test.o user_log.o $(TEST_LIBS)
