@@ -49,14 +49,16 @@ public:
 	int Read(FILE *fp);
 	int ReadHeader(int fd);
 	int ReadHeader(FILE *fp);
-	virtual int ReadBody(int fd) { return 0; }
-	virtual int ReadBody(FILE *fp) { return 0; }
+	virtual int ReadBody(int) { return 0; }
+	virtual int ReadBody(FILE *) { return 0; }
 	int ReadTail(int fd);
 	int ReadTail(FILE *fp);
 
-	virtual int Play(void *data_structure) { return 0; }
+	virtual int Play(void *) { return 0; }
 
 protected:
+	int readword(FILE*, char *&);
+	int readline(FILE*, char *&);
 	int readword(int, char *&);
 	int readline(int, char *&);
 	int op_type;	/* This is the type of operation being performed */
@@ -64,8 +66,8 @@ protected:
 private:
 	int WriteHeader(int fd);
 	int WriteHeader(FILE *fp);
-	virtual int WriteBody(int fd) { return 0; }
-	virtual int WriteBody(FILE *fp) { return 0; }
+	virtual int WriteBody(int) { return 0; }
+	virtual int WriteBody(FILE *) { return 0; }
 	int WriteTail(int fd);
 	int WriteTail(FILE *fp);
 
@@ -74,4 +76,5 @@ private:
 };
 
 LogRecord *ReadLogEntry(int fd, LogRecord* (*InstantiateLogEntry)(int fd, int type));
+LogRecord *ReadLogEntry(FILE* fp, LogRecord* (*InstantiateLogEntry)(FILE *fp, int type));
 #endif
