@@ -200,7 +200,11 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 		filename = Starter->jic->getJobStdFile( attr );
 		wants_stream = Starter->jic->streamStdFile( attr );
 		name = attr;
-			// what can we do about is_output in this case?
+		if( type == SFT_IN ) {
+			is_output = false;
+		} else {
+			is_output = true;
+		}
 	} else {
 		switch( type ) {
 		case SFT_IN:
@@ -310,18 +314,14 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 		// The regular case of a local file 
 		///////////////////////////////////////////////////////
 
-	switch( type ) {
-	case SFT_IN:
-		fd = open( filename, O_RDONLY );
-		break;
-	case SFT_OUT:
-	case SFT_ERR:
+	if( is_output ) {
 		fd = open( filename, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
 		if( fd < 0 ) {
 				// if failed, try again without O_TRUNC
 			fd = open( filename, O_WRONLY|O_CREAT, 0666 );
 		}
-		break;
+	} else {
+		fd = open( filename, O_RDONLY );
 	}
 	if( fd < 0 ) {
 		char const *errno_str = strerror( errno );
