@@ -188,6 +188,14 @@ class MyString
 	bool replaceString(const char *pszToReplace, 
 					   const char *pszReplaceWith, 
 					   int iStartFromPos=0);
+
+	/** Fills a MyString with what you would have gotten from sprintf.
+	 *  It's safe though, and it will accept whatever you print into it. 
+	 *  Assuming, of course, that you don't run out of memory. 
+	 *  The returns true if it succeeded, false otherwise.
+	 */
+	bool sprintf(const char *format, ...);
+
 	//@}
 
 	// ----------------------------------------

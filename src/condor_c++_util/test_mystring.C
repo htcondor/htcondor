@@ -171,6 +171,25 @@ int main (int argc, char **argv)
 			   __LINE__, r.Value());
 	}
 
+	// ---- Test sprintf
+	MyString test_sprintf1, test_sprintf2("replace me!");
+
+	test_sprintf1.sprintf("%s %d", "happy", 3);
+
+	if (test_sprintf1 == "happy 3") {
+		printf("OK: sprintf 1 worked in line %d\n", __LINE__);
+	} else {
+		printf("FAILED: sprintf 1 failed: it is %s instead of 'happy 3' "
+			   "in line %d\n", test_sprintf1.Value(), __LINE__);
+	}
+
+	test_sprintf2.sprintf("%s %d", "sad",   5);
+	if (test_sprintf2 == "sad 5") {
+		printf("OK: sprintf 2 worked in line %d\n", __LINE__);
+	} else {
+		printf("FAILED: sprintf 2 failed: it is %s instead of 'sad 5' "
+			   "in line %d\n", test_sprintf2.Value(), __LINE__);
+	}
 
 }
 

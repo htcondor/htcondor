@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "MyString.h"
+#include "condor_snutils.h"
 
 /*--------------------------------------------------------------------
  *
@@ -410,6 +411,38 @@ MyString::replaceString(
 	
 	return true;
 }
+
+bool 
+MyString::sprintf(
+	const char *format, 
+	...)
+{
+	int     newLen;
+	char    *newData;
+	bool    succeeded;
+	va_list args;
+
+	va_start(args, format);
+
+	newLen = vprintf_length(format, args);
+	newData = new char[newLen + 1];
+	if (NULL != newData) {
+		vsprintf(newData, format, args);
+		delete [] Data;
+		Data      = newData;
+		Len       = newLen;
+		capacity  = newLen;
+		succeeded = true;
+	} else {
+		succeeded = false;
+	}
+
+	va_end(args);
+
+	return succeeded;
+}
+
+
 
 /*--------------------------------------------------------------------
  *
