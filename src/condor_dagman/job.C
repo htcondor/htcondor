@@ -247,7 +247,55 @@ Job::SetStatus( status_t newStatus )
 bool
 Job::AddParent( Job* parent )
 {
-	ASSERT( parent != NULL );
+	bool success;
+	MyString whynot;
+	success = AddParent( parent, whynot );
+	if( !success ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: AddParent( %s ) failed for node %s: %s\n",
+					  parent ? parent->GetJobName() : "(null)",
+					  this->GetJobName(), whynot.Value() );
+	}
+	return success;
+}
+
+
+bool
+Job::AddParent( Job* parent, MyString &whynot )
+{
+	if( !this->CanAddParent( parent, whynot ) ) {
+		return false;
+	}
+	if( !Add( Q_PARENTS, parent->GetJobID() ) ) {
+		whynot = "unknown error appending to PARENTS queue";
+		return false;
+	}
+    if( parent->GetStatus() != STATUS_DONE ) {
+		if( !Add( Q_WAITING, parent->GetJobID() ) ) {
+            // this node's dependency queues are now out of sync and
+            // thus the DAG state is FUBAR, so we should bail...
+			ASSERT( false );
+			return false;
+		}
+		_waitingCount++;
+	}
+	whynot = "n/a";
+    return true;
+}
+
+
+bool
+Job::CanAddParent( Job* parent, MyString &whynot )
+{
+	if( !parent ) {
+		whynot = "parent == NULL";
+		return false;
+	}
+	if( this->HasParent( parent ) )
+	{
+		whynot = "dependency already exists";
+		return false;
+	}
 
 		// we don't currently allow a new parent to be added to a
 		// child that has already been started (unless the parent is
@@ -256,32 +304,62 @@ Job::AddParent( Job* parent )
 		// future once we figure out the right way for the DAG to
 		// respond...
 	if( _Status != STATUS_READY && parent->GetStatus() != STATUS_DONE ) {
-		debug_printf( DEBUG_QUIET, "ERROR: Job::AddParent(): can't add a new "
-					  "%s parent node (%s) to a %s child (%s)!\n",
-					  parent->GetStatusName(), parent->GetJobName(),
-					  this->GetStatusName(), this->GetJobName() );
+		whynot.sprintf( "%s child may not be given a new %s parent",
+						this->GetStatusName(), parent->GetStatusName() );
 		return false;
 	}
-
-	if( !Add( Q_PARENTS, parent->GetJobID() ) ) {
-		return false;
-	}
-    if( !Add( Q_WAITING, parent->GetJobID() ) ) {
-		return false;
-	}
-	_waitingCount++;
-    return true;
+	whynot = "n/a";
+	return true;
 }
+
 
 bool
 Job::AddChild( Job* child )
 {
-    ASSERT( child  != NULL );
-    if( !Add( Q_CHILDREN, child->GetJobID() ) ) {
+	bool success;
+	MyString whynot;
+	success = AddChild( child, whynot );
+	if( !success ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: AddChild( %s ) failed for node %s: %s\n",
+					  child ? child->GetJobName() : "(null)",
+					  this->GetJobName(), whynot.Value() );
+	}
+	return success;
+}
+
+
+bool
+Job::AddChild( Job* child, MyString &whynot )
+{
+	if( !this->CanAddChild( child, whynot ) ) {
 		return false;
 	}
+	if( !Add( Q_CHILDREN, child->GetJobID() ) ) {
+		whynot = "unknown error appending to CHILDREN queue";
+		return false;
+	}
+	whynot = "n/a";
+    return true;
+}
+
+
+bool
+Job::CanAddChild( Job* child, MyString &whynot )
+{
+	if( !child ) {
+		whynot = "child == NULL";
+		return false;
+	}
+	if( this->HasChild( child ) )
+	{
+		whynot = "dependency already exists";
+		return false;
+	}
+	whynot = "n/a";
 	return true;
 }
+
 
 bool
 Job::TerminateSuccess()
@@ -312,7 +390,7 @@ Job::Add( const queue_t queue, const JobID_t jobID )
 bool
 Job::AddPreScript( const char *cmd, MyString &whynot )
 {
-	return AddScript( false, cmd, whynot );
+return AddScript( false, cmd, whynot );
 }
 
 bool
@@ -387,6 +465,22 @@ Job::HasParent( Job* parent ) {
 
 
 bool
+Job::RemoveChild( Job* child )
+{
+	bool success;
+	MyString whynot;
+	success = RemoveChild( child, whynot );
+	if( !success ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: RemoveChild( %s ) failed for node %s: %s\n",
+                      child ? child->GetJobName() : "(null)",
+                      this->GetJobName(), whynot.Value() );
+	}
+	return success;
+}
+
+
+bool
 Job::RemoveChild( Job* child, MyString &whynot )
 {
 	if( !child ) {
@@ -395,6 +489,7 @@ Job::RemoveChild( Job* child, MyString &whynot )
 	}
 	return RemoveDependency( Q_CHILDREN, child->GetJobID(), whynot );
 }
+
 
 bool
 Job::RemoveParent( Job* parent, MyString &whynot )

@@ -226,6 +226,7 @@ class Job {
 		*/
 	bool HasParent( Job* parent );
 
+	bool RemoveChild( Job* child );
 	bool RemoveChild( Job* child, MyString &whynot );
 	bool RemoveParent( Job* parent, MyString &whynot );
 	bool RemoveDependency( queue_t queue, JobID_t job );
@@ -245,7 +246,12 @@ class Job {
 	bool SanityCheck() const;
 
 	bool AddParent( Job* parent );
+	bool AddParent( Job* parent, MyString &whynot );
+	bool CanAddParent( Job* parent, MyString &whynot );
+
 	bool AddChild( Job* child );
+	bool AddChild( Job* child, MyString &whynot );
+	bool CanAddChild( Job* child, MyString &whynot );
 
 		// should be called when the job terminates
 	bool TerminateSuccess();
