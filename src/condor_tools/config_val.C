@@ -50,7 +50,7 @@
 char	*MyName;
 char	*mySubSystem = NULL;
 StringList params;
-daemonType dt = MASTER;
+daemonType dt = DT_MASTER;
 
 // The pure-tools (PureCoverage, Purify, etc) spit out a bunch of
 // stuff to stderr, which is where we normally put our error
@@ -158,15 +158,15 @@ main( int argc, char* argv[] )
 		} else if( match_prefix( argv[i], "-tilde" ) ) {
 			pt = CONDOR_TILDE;
 		} else if( match_prefix( argv[i], "-master" ) ) {
-			dt = MASTER;
+			dt = DT_MASTER;
 		} else if( match_prefix( argv[i], "-schedd" ) ) {
-			dt = SCHEDD;
+			dt = DT_SCHEDD;
 		} else if( match_prefix( argv[i], "-startd" ) ) {
-			dt = STARTD;
+			dt = DT_STARTD;
 		} else if( match_prefix( argv[i], "-collector" ) ) {
-			dt = COLLECTOR;
+			dt = DT_COLLECTOR;
 		} else if( match_prefix( argv[i], "-negotiator" ) ) {
-			dt = NEGOTIATOR;
+			dt = DT_NEGOTIATOR;
 		} else if( match_prefix( argv[i], "-" ) ) {
 			usage();
 		} else {
