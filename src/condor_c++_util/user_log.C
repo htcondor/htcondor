@@ -489,21 +489,23 @@ readEvent (ULogEvent *& event)
 			int oldeventnumber = eventnumber;
 			eventnumber = -1;
 			retval1 = fscanf (_fp, "%d", &eventnumber);
-			if ( eventnumber != oldeventnumber ) {
-				if (event) delete event;
-				// allocate event object; check if allocated successfully
-				event = instantiateEvent ((ULogEventNumber) eventnumber);
-				if (!event) 
-				{
-					if (!is_locked)
-						lock->release();
-					return ULOG_UNK_ERROR;
+			if ( retval1 == 1 ) {
+				if ( eventnumber != oldeventnumber ) {
+					if (event) delete event;
+					// allocate event object; check if allocated successfully
+					event = instantiateEvent ((ULogEventNumber) eventnumber);
+					if (!event) 
+					{
+						if (!is_locked)
+							lock->release();
+						return ULOG_UNK_ERROR;
+					}
 				}
+				retval2 = event->getEvent (_fp);
 			}
-			retval2 = event->getEvent (_fp);
 
 			// if failed again, we have a parse error
-			if (!retval1 || !retval2)
+			if ( (retval1 != 1) || !retval2 )
 			{
 				delete event;
 				event = NULL;  // To prevent FMR: Free memory read
