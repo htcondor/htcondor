@@ -101,6 +101,11 @@ TESTCLASS(job_rsc_zero-calloc_std,quick)
  * Checkpointing
  ***************************/
 
+DESC(job_ckpt_io-async_std,"file I/O during async ckpt signals")
+CBUILD($(CC),job_ckpt_io-async_std,c)
+DEP_SYMLINK_EXT(job_ckpt_io-async_std,cmd)
+RUN(job_ckpt_io-async_std)
+
 DESC(job_ckpt_stack_std,"ckpt/restore function call stack")
 CBUILD($(CC),job_ckpt_stack_std,c)
 DEP_SYMLINK_EXT(job_ckpt_stack_std,cmd)
