@@ -61,7 +61,6 @@ class GlobusJob : public Service
 					// and two-phase commit
 	bool restartingJM;
 	time_t restartWhen;
-	bool durocRequest;
 
  protected:
 	bool callbackRegistered;

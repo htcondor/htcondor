@@ -29,7 +29,6 @@
 
 #include "globus_gram_client.h"
 #include "globus_gram_error.h"
-#include "globus_duroc_control.h"
 
 #include "gridmanager.h"
 #include "globusjob.h"
@@ -83,9 +82,6 @@ char *GMStateNames[] = {
 	"GM_CLEAR_REQUEST"
 };
 
-bool durocControlInited = false;
-globus_duroc_control_t durocControl;
-
 #define LOG_GLOBUS_ERROR(func,error) \
     dprintf(D_ALWAYS, \
 			"gmState %s, globusState %d: %s return Globus error %d\n", \
@@ -96,11 +92,6 @@ GlobusJob::GlobusJob( GlobusJob& copy )
 	dprintf(D_ALWAYS, "GlobusJob copy constructor called. This is a No-No!\n");
 	ASSERT( 0 );
 /*
-	if ( !durocControlInited ) {
-		globus_duroc_control_init( &durocControl );
-		durocControlInited = true;
-	}
-
 	removedByUser = copy.removedByUser;
 	callbackRegistered = copy.callbackRegistered;
 	ignore_callbacks = copy.ignore_callbacks;
@@ -118,7 +109,6 @@ GlobusJob::GlobusJob( GlobusJob& copy )
 	newJM = copy.newJM;
 	restartingJM = copy.restartingJM;
 	restartWhen = copy.restartWhen;
-	durocRequest = copy.durocRequest;
 	resourceDown = copy.resourceDown;
 	condorState = copy.condorState;
 	gmState = copy.gmState;
@@ -135,11 +125,6 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 {
 	char buf[4096];
 	bool full_rsl_given = false;
-
-	if ( !durocControlInited ) {
-		globus_duroc_control_init( &durocControl );
-		durocControlInited = true;
-	}
 
 	removedByUser = false;
 	callbackRegistered = false;
@@ -160,7 +145,6 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	newJM = false;
 	restartingJM = false;
 	restartWhen = 0;
-	durocRequest = false;
 	gmState = GM_INIT;
 	globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
 	jmUnreachable = false;
@@ -180,22 +164,12 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	if ( buf[0] == '&' ) {
 		full_rsl_given = true;
 		RSL = strdup( buf );
-	} else if ( buf[0] == '+' ) {
-		full_rsl_given = true;
-		durocRequest = true;
-		RSL = strdup( buf );
 	}
 
-	// Currently, no contact string is saved on the schedd for duroc jobs
-	// since the contact string is meaningless outside of the process that
-	// initiates the job. Make sure we don't get one by accident, since we
-	// can't resume a duroc job.
-	if ( !durocRequest ) {
-		buf[0] = '\0';
-		classad->LookupString( ATTR_GLOBUS_CONTACT_STRING, buf );
-		if ( strcmp( buf, NULL_JOB_CONTACT ) != 0 ) {
-			jobContact = strdup( buf );
-		}
+	buf[0] = '\0';
+	classad->LookupString( ATTR_GLOBUS_CONTACT_STRING, buf );
+	if ( strcmp( buf, NULL_JOB_CONTACT ) != 0 ) {
+		jobContact = strdup( buf );
 	}
 
 	classad->LookupInteger( ATTR_GLOBUS_STATUS, globusState );
@@ -932,16 +906,7 @@ GlobusResrouce *GlobusJob::GetResource()
 
 const char *GlobusJob::errorString()
 {
-	if ( durocRequest ) {
-		if ( globus_duroc_error_is_gram_client_error( globusError ) ) {
-			return globus_gram_client_error_string(
-					globus_duroc_error_get_gram_client_error( globusError ) );
-		} else {
-			return globus_duroc_error_string( globusError );
-		}
-	} else {
-		return globus_gram_client_error_string( globusError );
-	}
+	return globus_gram_client_error_string( globusError );
 }
 
 
