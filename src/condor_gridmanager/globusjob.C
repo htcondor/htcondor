@@ -1588,41 +1588,16 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 			} break;
 		case GM_DONE_SAVE: {
 			// Report job completion to the schedd.
-			bool exit_status_known = false;
-			bool exit_normal = true;
-			int exit_code = 0;
 
 			if(useGridShell) {
 				if( ! merge_file_into_classad(outputClassadFilename.GetCStr(), ad) ) {
 					/* TODO: put job on hold or otherwise don't let it
 					   quietly pass into the great beyond? */
 					dprintf(D_ALWAYS,"(%d.%d) Failed to add job result attributes to job's classad.  Job's history will lack run information.\n",procID.cluster,procID.proc);
-				} else {
-					// TODO This is silly. We'll pulling the exit status out
-					//   of the classad, just so that BaseJob::JobTerminated
-					//   can insert them again (overwriting the same values).
-					//   We need something more intellegent.
-					exit_status_known = true;
-					int int_val;
-					if( ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, int_val) ) {
-						if( int_val ) {
-							exit_normal = false;
-							if( ad->LookupInteger(ATTR_ON_EXIT_SIGNAL,
-													 int_val) ) {
-								exit_code = int_val;
-							}
-						} else {
-							exit_normal = true;
-							if( ad->LookupInteger(ATTR_ON_EXIT_CODE,
-													 int_val) ) {
-								exit_code = int_val;
-							}
-						}
-					}
 				}
 			}
 
-			JobTerminated( exit_status_known, exit_normal, exit_code );
+			JobTerminated();
 			if ( condorState == COMPLETED ) {
 				done = requestScheddUpdate( this );
 				if ( !done ) {

@@ -54,8 +54,7 @@ class BaseJob
 	void JobRunning();
 	void JobIdle();
 	void JobEvicted();
-	void JobTerminated( bool exit_status_known, bool normal_exit = true,
-						int code = 0 );
+	void JobTerminated();
 	void JobCompleted();
 	void DoneWithJob();
 	void JobHeld( const char *hold_reason, int hold_code = 0,
@@ -65,7 +64,7 @@ class BaseJob
 	virtual void JobAdUpdateFromSchedd( const ClassAd *new_ad );
 
 	int EvalPeriodicJobExpr();
-	int EvalOnExitJobExpr( bool normal_exit, int code );
+	int EvalOnExitJobExpr();
 
 	void UpdateJobTime( float *old_run_time );
 	void RestoreJobTime( float old_run_time );

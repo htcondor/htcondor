@@ -528,7 +528,7 @@ int OracleJob::doEvaluateState()
 			} break;
 		case GM_DONE_SAVE: {
 			if ( condorState != HELD && condorState != REMOVED ) {
-				JobTerminated( true, 0 );
+				JobTerminated();
 				if ( condorState == COMPLETED ) {
 					done = requestScheddUpdate( this );
 					if ( !done ) {

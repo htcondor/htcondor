@@ -189,13 +189,11 @@ void BaseJob::JobEvicted()
 	}
 }
 
-void BaseJob::JobTerminated( bool exit_status_known, bool normal_exit,
-							 int code )
+void BaseJob::JobTerminated()
 {
 	if ( condorState != HELD && condorState != COMPLETED &&
 		 condorState != REMOVED ) {
-		exitStatusKnown = exit_status_known;
-		EvalOnExitJobExpr( normal_exit, code );
+		EvalOnExitJobExpr();
 	}
 }
 
@@ -431,7 +429,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) Evaluating periodic job policy expressions\n",procI
 	return 0;
 }
 
-int BaseJob::EvalOnExitJobExpr( bool normal_exit, int code )
+int BaseJob::EvalOnExitJobExpr()
 {
 	float old_run_time;
 	UserPolicy user_policy;
@@ -439,12 +437,18 @@ int BaseJob::EvalOnExitJobExpr( bool normal_exit, int code )
 	user_policy.Init( ad );
 
 	// The user policy code expects an exit value to be set
-	if ( normal_exit ) {
+	// If the ON_EXIT attributes haven't been set at all, fake
+	// a normal job exit.
+	int dummy;
+	if ( !ad->LookupBool( ATTR_ON_EXIT_BY_SIGNAL, dummy ) &&
+		 !ad->LookupInteger( ATTR_ON_EXIT_SIGNAL, dummy ) &&
+		 !ad->LookupInteger( ATTR_ON_EXIT_CODE, dummy ) ) {
+
+		exitStatusKnown = false;
 		UpdateJobAdBool( ATTR_ON_EXIT_BY_SIGNAL, 0 );
-		UpdateJobAdInt( ATTR_ON_EXIT_CODE, code );
+		UpdateJobAdInt( ATTR_ON_EXIT_CODE, 0 );
 	} else {
-		UpdateJobAdBool( ATTR_ON_EXIT_BY_SIGNAL, 1 );
-		UpdateJobAdInt( ATTR_ON_EXIT_SIGNAL, code );
+		exitStatusKnown = true;
 	}
 
 	// TODO: We should just mark the job as done running

@@ -455,7 +455,14 @@ int NordugridJob::doEvaluateState()
 			} break;
 		case GM_DONE_SAVE: {
 			if ( condorState != HELD && condorState != REMOVED ) {
-				JobTerminated( normalExit, exitCode );
+				if ( normalExit ) {
+					UpdateJobAdBool( ATTR_ON_EXIT_BY_SIGNAL, 0 );
+					UpdateJobAdInt( ATTR_ON_EXIT_CODE, exitCode );
+				} else {
+					UpdateJobAdBool( ATTR_ON_EXIT_BY_SIGNAL, 1 );
+					UpdateJobAdInt( ATTR_ON_EXIT_SIGNAL, exitCode );
+				}
+				JobTerminated();
 				if ( condorState == COMPLETED ) {
 					done = requestScheddUpdate( this );
 					if ( !done ) {

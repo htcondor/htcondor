@@ -951,7 +951,7 @@ rc=0;
 			} break;
 		case GM_DONE_SAVE: {
 			// Report job completion to the schedd.
-			JobTerminated( true, 0 );
+			JobTerminated();
 			if ( condorState == COMPLETED ) {
 				done = requestScheddUpdate( this );
 				if ( !done ) {
