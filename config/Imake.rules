@@ -429,3 +429,34 @@ release::																	@@\
 	$(IMPORT_LINKS) dir obj		@@\
 ## clean::						@@\
 	rm -f obj
+
+#define canned_makefile(dir,pform)										@@\
+## dir ## /Makefile. ## pform ## :										@@\
+	cd dir; imake -I../../config -DIS_ ## pform -s Makefile. ## pform	@@\
+## canned_makefiles:: dir ## /Makefile. ## pform
+
+#define platform_canned_makefile(pform)				@@\
+canned_makefile(condor_ckpt,pform)					@@\
+canned_makefile(condor_c++_util,pform)				@@\
+canned_makefile(condor_collector,pform)				@@\
+canned_makefile(condor_globalq,pform)				@@\
+canned_makefile(condor_kbdd,pform)					@@\
+canned_makefile(condor_master,pform)				@@\
+canned_makefile(condor_negotiator,pform)			@@\
+canned_makefile(condor_off,pform)					@@\
+canned_makefile(condor_on,pform)					@@\
+canned_makefile(condor_prio,pform)					@@\
+canned_makefile(condor_q,pform)						@@\
+canned_makefile(condor_rm,pform)					@@\
+canned_makefile(condor_schedd,pform)				@@\
+canned_makefile(condor_scripts,pform)				@@\
+canned_makefile(condor_shadow.V5,pform)				@@\
+canned_makefile(condor_startd,pform)				@@\
+canned_makefile(h,pform)							@@\
+canned_makefile(condor_starter.V5,pform)			@@\
+canned_makefile(condor_submit.v3,pform)				@@\
+canned_makefile(condor_test_suite_C.V5,pform)		@@\
+canned_makefile(condor_tools,pform)					@@\
+canned_makefile(condor_util_lib,pform)				@@\
+canned_makefile(condor_xdr_lib,pform)
+
