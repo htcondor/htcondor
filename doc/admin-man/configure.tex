@@ -2747,20 +2747,61 @@ a refreshed proxy credential. The default is 3 minutes (180 seconds).
 \label{param:GridmanagerContactScheddDelay} The minimum number of
 seconds between connections to the schedd. The default is 5 seconds.
 
+\item[\Macro{GRIDMANAGER\_JOB\_PROBE\_INTERVAL}]
+\label{param:GridmanagerJobProbeInterval}
+After a job is submitted, how often (in seconds) the \Condor{gridmanager}
+should probe the remote jobmanager to ensure it is still alive and well.
+
 \item[\Macro{GRIDMANAGER\_JOB\_PROBE\_DELAY}]
 \label{param:GridmanagerJobProbeDelay} The number of seconds between
 active probes of the status of a submitted job. The default is 5
 minutes (300 seconds).
+
+\item[\Macro{GRIDMANAGER\_RESOURCE\_PROBE\_INTERVAL}]
+\label{param:GridmanagerResourceProbeInterval}
+When a resource appears to be down, how often (in seconds) the
+\Condor{gridmanager}
+should ping it to test if it is up again.
 
 \item[\Macro{GRIDMANAGER\_RESOURCE\_PROBE\_DELAY}]
 \label{param:GridmanagerResourceProbeDelay} The number of seconds
 between pings of a remote resource that is currently down. The default
 is 5 minutes (300 seconds).
 
-\item[\Macro{GRIDMANAGER\_MAX\_PENDING\_SUBMITS}]
-\label{param:GridmanagerMaxPendingSubmits} The maximum number of jobs
+\item[\Macro{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE}]
+\label{param:GridmanagerMaxSubmittedJobsPerResource}
+Limits the number of jobs
+that a \Condor{gridmanager} daemon will submit to a resource.
+This number may be exceeded if it is reduced through the use
+of \Condor{reconfig} while the \Condor{gridmanager} is running
+or if the \Condor{gridmanager} receives new
+jobs from the \Condor{schedd} that were already submitted
+(that is, their \MacroNI{GlobusContactString} is not "X").
+In these cases, submitted jobs will not be killed,
+but no new jobs can be submitted until the number of submitted
+jobs falls below the current limit.
+
+\item[\Macro{GRIDMANAGER\_MAX\_PENDING\_SUBMITS\_PER\_RESOURCE}]
+\label{param:GridmanagerMaxPendingSubmitsPerResource} The maximum
+number of jobs
 that can be in the process of being submitted at any time. The default
 is 5.
+This variable allows
+you to set different limits for each resource.
+After the first integer in the value,
+you can provide a list of resourcename/number pairs,
+where each number is the limit for that resource.
+If a resource is not in the list,
+Condor will use the first integer.
+An example usage:
+\begin{verbatim}
+GRIDMANAGER_MAX_PENDING_SUBMITS_PER_RESOURCE=20,nostos,5,beak,50
+\end{verbatim}
+
+\item[\Macro{GRIDMANAGER\_MAX\_PENDING\_SUBMITS}]
+\label{param:GridmanagerMaxPendingSubmits} Configuration variable
+still recognized, but the name has changed to be
+\MacroNI{GRIDMANAGER\_MAX\_PENDING\_SUBMITS\_PER\_RESOURCE}.
 
 \item[\Macro{GAHP}]
 \label{param:Gahp} The full path to the binary of the GAHP server.
@@ -2787,11 +2828,28 @@ The default is 3.
 periodic syncs of streamed output to disk. The default is 5 minutes
 (300 seconds).
 
-%\item[\Macro{GRIDMANAGER\_RESTART\_ON\_ANY\_DOWN\_RESOURCES}]
-%\label{param:GridmanagerRestartOnAnyDownResources} To be written...
+% configuration variable introduced into Condor due to Globus a GAHP
+% bug.  Users with Globus where this bug has been fixed should never
+% use nor even know about this configuration variable.
+% \item[\Macro{GRIDMANAGER\_RESTART\_ON\_ANY\_DOWN\_RESOURCES}]
+% \label{param:GridmanagerRestartOnAnyDownResources} 
+% The current GAHP server can transition into a state where it
+% cannot contact remote machines,
+% making the machines appear to be down.
+% Restarting the GAHP server fixes the problem.
+% This parameter controls whether one machine or
+% all machine need to appear to be down to trigger a restart of the GAHP
+% server.
 
+% configuration variable introduced into Condor due to Globus a GAHP
+% bug.  Users with Globus where this bug has been fixed should never
+% use nor even know about this configuration variable.
 %\item[\Macro{GRIDMANAGER\_MAX\_TIME\_DOWN\_RESOURCES}]
-%\label{param:GridmanagerMaxTimeDownResources} To be written...
+%\label{param:GridmanagerMaxTimeDownResources} 
+%Related to GRIDMANAGER\_RESTART\_ON\_ANY\_DOWN\_RESOURCES,
+%this configuration variable defines how long (in seconds) one or
+%more machines need to be down (or just appear to be) to trigger a restart
+%of the GAHP server.
 
 \item[\Macro{GSI\_DAEMON\_NAME}]
 \label{param:GSIDaemonName} A comma separated list of the subject
