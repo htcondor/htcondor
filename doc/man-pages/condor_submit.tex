@@ -435,6 +435,18 @@ So, if it was killed by signal 11, it will stay in the job queue.
 In any other case of the job exiting, 
 the job will leave the queue as it normally would have done.
 
+As another example,
+if your job should only leave the queue if it exited on its own with
+status 0,
+you would use this \AdAttr{on\_exit\_remove} expression: 
+
+\begin{verbatim}
+	on_exit_remove = (ExitBySignal == False) && (ExitCode == 0)
+\end{verbatim}
+
+If the job was killed by a signal or exited with a non-zero exit
+status, Condor would leave the job in the queue to run again.
+
 If left unspecified, the \AdAttr{on\_exit\_remove} expression will
 default to \Expr{True}.
  
