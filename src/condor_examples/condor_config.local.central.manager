@@ -1,0 +1,84 @@
+######################################################################
+##
+##  condor_config.local.central.manager
+##
+##  This is the default local configuration file for your central
+##  manager machine.  You should copy this file to the appropriate
+##  location and customize it for your needs.  The file is divided
+##  into two main parts:  Settings you may want to customize and
+##  settings you should probably leave alone (unless you know what
+##  you're doing). 
+##
+######################################################################
+
+######################################################################
+######################################################################
+##  Settings you may want to customize: 
+##  (it is generally safe to leave these untouched) 
+######################################################################
+######################################################################
+
+##  What daemons do you want to run on your central manager?  
+##  NOTE: For it to be the central manager, you need the NEGOTIATOR
+##  and COLLECTOR to run.  It's optional whether or not you want to
+##  run the schedd (to allow jobs to be submited) and/or the startd
+##  (to allow Condor jobs to execute) on your central manager.
+DAEMON_LIST	= MASTER, NEGOTIATOR, COLLECTOR, STARTD, SCHEDD
+
+##  Where are the binaries for these daemons?  (Note: MASTER, SCHEDD,
+##  and STARTD are already defined in the global config file).
+COLLECTOR	= $(SBIN)/condor_collector
+NEGOTIATOR	= $(SBIN)/condor_negotiator
+
+
+######################################################################
+######################################################################
+##  Settings you should probably leave alone:
+##  (unless you know what you're doing)
+######################################################################
+######################################################################
+
+##--------------------------------------------------------------------
+##  condor_collector
+##--------------------------------------------------------------------
+##  How long can a classad remain in the collector before it is
+##  discarded as stale information?  (Defaults to 15 minutes.  The 
+##  daemons send updates every 5 minutes by default).
+CLASSAD_LIFETIME	= 900
+
+##  How often should the collector check for machines that don't have
+##  classads from the condor_master and send email about it?
+MASTER_CHECK_INTERVAL	= 10800
+
+##  Network timeout when talking to daemons that are sending an
+##  update: 
+CLIENT_TIMEOUT		= 30
+
+##  Network timeout when talking to anyone doing a query:
+QUERY_TIMEOUT		= 60
+
+##  Email address of the condor-developers at UW-Madison.  
+CONDOR_DEVELOPERS	= condor-admin@cs.wisc.edu
+
+
+##--------------------------------------------------------------------
+##  condor_negotiator
+##--------------------------------------------------------------------
+##  How often should the negotiator start a negotiation cycle?
+NEGOTIATOR_INTERVAL	= 300
+
+##  What timeout should the negotiator use on it's network connections
+##  to the schedds and startds?
+NEGOTIATOR_TIMEOUT	= 30
+
+##  What is the halflife of the user priorities?
+PRIORITY_HALFLIFE	= 86400
+
+##  If the PREEMPTION_HOLD expression evaluates to true, we won't
+##  preempt the job running on a given machine even if a user with a
+##  higher priority has jobs they want to run.  This prevents
+##  thrashing.  The default is to wait 2 hours before preempting any
+##  job. 
+PREEMPTION_HOLD	: $(StateTimer) < (2 * $(HOUR))
+
+
