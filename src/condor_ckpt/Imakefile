@@ -57,13 +57,18 @@ UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o flock.o \
 UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o
 #endif
 
-SRC =	ToUpper.c image.C machdep.$(OS).C file_state.C tmp_stack.C syscall_mode.c \
-		local_startup.c fake_remote_syscall.c $(SAVE_SIGSTATE_SRC)
+URL_OBJ = url_condor.o include_urls.o cbstp_url.o file_url.o http_url.o \
+	cfilter_url.o filter_url.o mailto_url.o
+
+SRC =	ToUpper.c image.C machdep.$(OS).C file_state.C tmp_stack.C \
+	syscall_mode.c local_startup.c fake_remote_syscall.c \
+	$(SAVE_SIGSTATE_SRC)
 
 #if DOES_CHECKPOINTING
 OBJ =	image.o machdep.$(OS).o file_state.o tmp_stack.o syscall_mode.o \
-		local_startup.o fake_remote_syscall.o $(SAVE_SIGSTATE_OBJ) $(EXTRACT) \
-		$(ASSEMBLER_OBJ) $(UTIL_OBJ)
+	local_startup.o fake_remote_syscall.o \
+	$(SAVE_SIGSTATE_OBJ) $(EXTRACT) \
+	$(ASSEMBLER_OBJ) $(UTIL_OBJ) $(URL_OBJ)
 #else
 OBJ =	syscall_mode.o
 #endif
@@ -73,7 +78,7 @@ RELEASE_OBJ = $(LIB_DIR)/libckpt.a $(LIB_DIR)/c_plus_alloc.o
 #endif
 
 #if DOES_CHECKPOINTING
-	all_target(ToUpper machdep_test libckpt.a c_plus_alloc.o condor_rt0.o $(RELEASE_OBJ))
+	all_target(ToUpper machdep_test libckpt.a c_plus_alloc.o condor_rt0.o $(RELEASE_OBJ) )
 	library_target(libckpt.a,$(OBJ))
 	release_library(libckpt.a,$(RELEASE_DIR)/lib)
 	release_target(c_plus_alloc.o,$(RELEASE_DIR)/lib,OBJECT_MODE)
@@ -81,6 +86,7 @@ RELEASE_OBJ = $(LIB_DIR)/libckpt.a $(LIB_DIR)/c_plus_alloc.o
 	all_target(syscall_mode.o)
 release:: all
 #endif
+
 
 #if IS_HPPAR_HPUX9
 SIGNAL.o :  $(SIMPLE_LIBC)  ToUpper
@@ -148,6 +154,7 @@ clean::
 
 IMPORT_LINKS = ../../config/import_links
 import(../condor_util_lib,$(UTIL_OBJ))
+import(../condor_c++_util,$(URL_OBJ))
 
 clean::
 	rm -f c_plus_alloc.o syscall_mode.o
