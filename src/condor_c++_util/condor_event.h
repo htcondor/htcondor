@@ -1260,13 +1260,21 @@ class JobHeldEvent : public ULogEvent
 		/// @return pointer to our copy of the reason, or NULL if not set
 	const char* getReason() const;
 
+	int getReasonCode() const;
+	int getReasonSubCode() const;
+
 		/// makes a copy of the string in our "reason" member
 	void setReason( const char* );
+
+	void setReasonCode( const int );
+	void setReasonSubCode( const int );
 
  private:
 
 		/// why the job was held 
 	char* reason;
+	int code;
+	int subcode;
 };
 
 //------------------------------------------------------------------------
