@@ -1,3 +1,7 @@
+04/21/04 V6_7-pre_merge-V6_6-merge-9
+   The state of the V6_7-branch before merging in the V6_6-branch as
+   tagged at V6_6-merge-9.
+
 04/15/04 V6_7_0_WIN32
    The state of the V6_7-branch for the 6.7.0 release on windoze.  we
    couldn't use the same tag as for the unix build, since the build
