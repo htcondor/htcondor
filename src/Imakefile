@@ -175,7 +175,7 @@ h_all: h/Makefile h/syscall_numbers.h h/syscall_numbers.o
 
 makefiles:: h/Makefile
 
-h/Makefile: h/Imakefile
+h/Makefile: h h/Imakefile
 	cd h; imake IMAKE_FLAGS
 
 h/syscall_numbers.h: h/syscall_numbers.tmpl h/Makefile
