@@ -650,18 +650,18 @@ matchmakingAlgorithm(char *scheddName, ClassAd &request,ClassAdList &startdAds,
 					}
 
 					// have a remote user *and* worse priority ...
-					dprintf(D_FULLDEBUG,
-								"Passed preemption priority condition:\n");
-					dprintf(D_FULLDEBUG,
-								"  %s has better priority than %s (???)\n", 
-								scheddName, remoteUser );
-					dprintf(D_FULLDEBUG, 
-								"  tested: submittorPrio - remoteUserPrio "
-								"> PriorityDelta\n" );
-					dprintf(D_FULLDEBUG, "  tested: %f - %f > %f; result=%d\n", 
-								preemptPrio, accountant.GetPriority(remoteUser),
-								PriorityDelta, preemptPrio + PriorityDelta >= 
-								accountant.GetPriority(remoteUser) );
+					dprintf( D_FULLDEBUG,
+							 "Passed preemption priority condition:\n");
+					dprintf( D_FULLDEBUG,
+							 "  %s has better priority than %s (???)\n", 
+							 scheddName, remoteUser );
+					dprintf( D_FULLDEBUG, 
+							 "  tested: submittorPrio + delta >= remoteUserPrio\n" );
+					dprintf( D_FULLDEBUG, "  tested: %f + %f >= %f; result=%d\n", 
+							 preemptPrio, PriorityDelta, 
+							 accountant.GetPriority(remoteUser),
+							 preemptPrio + PriorityDelta >= 
+							 accountant.GetPriority(remoteUser) );
 				}
 
 				// if the PreemptionHold expression is true, dont preempt
