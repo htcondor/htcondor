@@ -2470,7 +2470,7 @@ Scheduler::send_alive()
 		sock = new SafeSock(rec[i]->peer, 0);
 		sock->encode();
 		if( !sock->put(ALIVE) || 
-			!sock->code(rec[i]->id) || 
+			!sock->code((char *&)(rec[i]->id)) || 
 			!sock->end_of_message() ) {
 				// UDP transport out of buffer space!
 			dprintf(D_ALWAYS, "\t(Can't send alive message to %d)\n",

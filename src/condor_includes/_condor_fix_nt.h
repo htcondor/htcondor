@@ -11,11 +11,13 @@
 #define O_CREAT _O_CREAT
 #include <sys/stat.h>
 #define stat _stat
+#define fstat _fstat
 #define MAXPATHLEN 1024
 #define MAXHOSTNAMELEN 64
 #define	_POSIX_PATH_MAX 255
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
+#define strincmp _strnicmp
 #define strdup _strdup
 #define chdir _chdir
 #define fsync _commit

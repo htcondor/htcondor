@@ -231,7 +231,10 @@ void
 display_from( from )
 struct sockaddr_in  *from;
 {
-    struct hostent  *hp, *gethostbyaddr();
+    struct hostent  *hp;
+#ifndef WIN32
+	struct hostent  *gethostbyaddr();
+#endif
 
 	if( !from ) {
 		dprintf( D_ALWAYS, "from NULL source\n" );

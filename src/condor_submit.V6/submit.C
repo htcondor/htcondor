@@ -54,6 +54,7 @@
 #include "condor_io.h"
 #include "condor_parser.h"
 #include "files.h"
+// #include "util_lib_proto.h"
 #if !defined(WIN32)
 #include <pwd.h>
 #include <sys/stat.h>

@@ -63,7 +63,7 @@ struct fs_data {
 
 #if !defined(RUSAGE_SELF)
 
-#if defined(_POSIX_SOURCE)
+#if defined(_POSIX_SOURCE) && !defined(WIN32)
 #define SAVE_POSIX_DEF _POSIX_SOURCE
 #define SAVE_POSIX_4DEF _POSIX_4SOURCE
 #undef _POSIX_SOURCE

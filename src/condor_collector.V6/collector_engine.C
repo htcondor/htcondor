@@ -493,7 +493,6 @@ checkMasterStatus (ClassAd *ad)
 {
 	HashKey 	hk;
 	ClassAd		*old;
-	ClassAd		*newStatus;
 
 	// make the master ad's hashkey
 	if (!makeMasterAdHashKey (hk, ad, NULL))
@@ -573,7 +572,6 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now,
 				bool (*makeKey) (HashKey &, ClassAd *, sockaddr_in *))
 {
 	ClassAd  *ad;
-	ExprTree *tree;
 	int   	 timeStamp;
 	HashKey  hk;
 	double   timeDiff;
@@ -616,7 +614,6 @@ masterCheck ()
 {
 	ClassAd  *ad;
 	ClassAd	 *nextStatus;
-	double	 timeDiff;
 	HashKey  hk;
 	char     hkString [128];
 	char	 whoami [128];
