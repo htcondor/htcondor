@@ -66,7 +66,6 @@ class EvalResult
    	    int i;
    	    float f;
    	    char* s;
-   	    int b;
         };
   	LexemeType type;
 };
