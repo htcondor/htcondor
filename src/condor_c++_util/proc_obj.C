@@ -84,7 +84,8 @@ static void d_string( const char *name, char *val );
 static void d_rusage( const char *name, struct rusage &val );
 static void d_exit_status( const char *name, int val );
 static void init_user_credentials();
-extern "C" BOOLEAN xdr_proc( XDR *, GENERIC_PROC * );
+extern "C" 	BOOLEAN xdr_proc( XDR *, GENERIC_PROC * );
+extern "C"	int	xdr_free_proc(PROC *proc);
 
 /*
   Create a ProcObj given an XDR stream from which to read the data.
@@ -114,8 +115,6 @@ ProcObj::create( XDR * xdrs )
 	switch( v2->version_num ) {
 	  case 2:
 		newV2 = new V2_ProcObj( v2 );
-		xdr_free_proc(xdrs, v2);
-		/*
 	    free(v2->owner);
 	    free(v2->cmd);
 	    free(v2->args);
@@ -127,12 +126,9 @@ ProcObj::create( XDR * xdrs )
 	    free(v2->iwd);
 		free(v2->requirements);
 		free(v2->preferences);
-		*/
 		return newV2;
 	  case 3:
 		newV3 = new V3_ProcObj( v3 );
-		xdr_free_proc(xdrs, v3);
-		/*
 		free(v3->owner);
 		free(v3->env);
 		for(i = 0; i < v3->n_cmds; i++)
@@ -154,7 +150,6 @@ ProcObj::create( XDR * xdrs )
 		free(v3->iwd);
 		free(v3->requirements);
 		free(v3->preferences);
-		*/
 		return newV3;
 	  default:
 		EXCEPT( "Unknown proc type" );
