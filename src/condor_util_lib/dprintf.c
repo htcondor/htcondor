@@ -49,11 +49,12 @@
 #include <sys/file.h>
 #include <sys/param.h>
 
+
 #include "condor_sys.h"
 #include "debug.h"
 #include "clib.h"
 
-#if defined(HPUX9) || defined(AIX32)
+#if defined(HPUX9) || defined(AIX32) || defined(LINUX)
 #	include <signal.h>
 #endif
 
@@ -189,14 +190,14 @@ va_dcl
 
 	fmt = va_arg(pvar, char *);
 
-#if vax || i386 || bobcat || ibm032
+#if vax || (i386 && !LINUX) || bobcat || ibm032
 	{
 		int *argaddr = &va_arg(pvar, int);
 		_doprnt( fmt, argaddr, DebugFP );
 	}
-#else vax || i386 || bobcat || ibm032
+#else vax || (i386 && !LINUX) || bobcat || ibm032
 	vfprintf( DebugFP, fmt, pvar );
-#endif vax || i386 || bobcat || ibm032
+#endif vax || (i386 && !LINUX) || bobcat || ibm032
 
 		/* Close and unlock the log file */
 	debug_unlock();
