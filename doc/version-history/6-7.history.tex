@@ -22,7 +22,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added optional \Expr{DAGMAN\_RETRY\_SUBMIT\_FIRST} configuration
+parameter that tells \Condor{dagman} whether to immediately retry
+the submit if a node submit fails, or to put that job at the end of
+the ready jobs queue.  The default is TRUE, which retries the failed
+submit before trying to submit any other jobs.
 
 \end{itemize}
 
@@ -30,7 +34,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug in \Condor{dagman} that caused it to be killed if
+the \Expr{DAGMAN\_MAX\_SUBMIT\_ATTEMPTS} parameter was set to too
+high a value.
 
 \end{itemize}
 
