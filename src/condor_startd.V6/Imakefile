@@ -4,16 +4,13 @@ SRC_DIR = $(SRC_TREE)/condor_startd.V6
 CFLAGS = $(STD_C_FLAGS) -O2 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fno-implicit-templates
 
-#if IS_R6000_AIX32
-#	define LOAD_AVG_SRC load_avg.AIX.c
-#	define LOAD_AVG_OBJ load_avg.AIX.o
-#elif IS_ALPHA_OSF1
+#if IS_ALPHA_OSF1
 #	define LOAD_AVG_SRC load_avg.OSF1.c
 #	define LOAD_AVG_OBJ load_avg.OSF1.o
-#elif IS_I386_LINUX
+#elif IS_LINUX
 #	define LOAD_AVG_SRC load_avg.LINUX.C
 #	define LOAD_AVG_OBJ load_avg.LINUX.o
-#elif IS_SUN4M_SOLARIS || IS_SUN4M_SOLARIS251 || IS_X86_SOLARIS || IS_X86_SOLARIS25
+#elif IS_SOLARIS
 #       define LOAD_AVG_SRC load_avg.Solaris.c load_avg.uptime.c
 #       define LOAD_AVG_OBJ load_avg.Solaris.o load_avg.uptime.o
 #elif IS_SGI_IRIX62 || IS_SGI_IRIX53
