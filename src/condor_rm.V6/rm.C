@@ -47,17 +47,18 @@ template class Item<PROC_ID>;
 char	*MyName;
 BOOLEAN	TroubleReported;
 BOOLEAN All = FALSE;
-int nToRemove = 0;
-List<PROC_ID> ToRemove;
+int nToProcess = 0;
+List<PROC_ID> ToProcess;
 
 	// Prototypes of local interest
 void ProcArg(const char*);
 void notify_schedd();
 void usage();
-void remove_all();
+void handle_all();
 
 char	DaemonName[512];
 
+int mode;
 
 void
 usage()
@@ -79,8 +80,21 @@ main( int argc, char *argv[] )
 	int					i;
 	Qmgr_connection*	q;
 	char*	daemonname;
+	char*	cmd_str;
 
-	MyName = argv[0];
+	MyName = strrchr( argv[0], DIR_DELIM_CHAR );
+	if( !MyName ) {
+		MyName = argv[0];
+	} else {
+		MyName++;
+	}
+
+	cmd_str = strchr( MyName, '_');
+	if (cmd_str && strcmp(cmd_str, "_hold") == MATCH) {
+		mode = HELD;
+	} else {
+		mode = REMOVED;
+	}
 
 	config( 0 );
 
@@ -134,9 +148,9 @@ main( int argc, char *argv[] )
 	}
 
 	if( All ) {
-		remove_all();
+		handle_all();
 	} else {
-			// Set status of requested jobs to REMOVED
+			// Set status of requested jobs to REMOVED/HELD
 		for(i = 0; i < nArgs; i++) {
 			ProcArg(args[i]);
 		}
@@ -145,15 +159,17 @@ main( int argc, char *argv[] )
 	// Close job queue
 	DisconnectQ(q);
 
-	// Now tell the schedd what we did.  We send the schedd the  KILL_FRGN_JOB
-	// command.  We pass the number of jobs to remove _unless_ one or more
-	// of the jobs are to be removed via cluster or via user name, in which
-	// case we say "-1" jobs to remove.  Telling the schedd there are "-1"
-	// jobs to remove forces the schedd to scan the queue looking for jobs
-	// which have a REMOVED status.  If all jobs to be removed are via
-	// a cluster.proc, we then send the schedd all the cluster.proc numbers
-	// to save the schedd from having to scan the entire queue.
-	if ( nToRemove != 0 )
+	// Now tell the schedd what we did.  We send the schedd the
+	// KILL_FRGN_JOB command.  We pass the number of jobs to
+	// remove/hold _unless_ one or more of the jobs are to be
+	// removed/held via cluster or via user name, in which case we say
+	// "-1" jobs to remove/hold.  Telling the schedd there are "-1"
+	// jobs to remove forces the schedd to scan the queue looking for
+	// jobs which have a REMOVED/HELD status.  If all jobs to be removed/held
+	// are via a cluster.proc, we then send the schedd all the
+	// cluster.proc numbers to save the schedd from having to scan the
+	// entire queue.
+	if ( nToProcess != 0 )
 		notify_schedd();
 
 #if defined(ALLOC_DEBUG)
@@ -211,16 +227,16 @@ notify_schedd()
 		return;
 	}
 
-	if( !sock->code(nToRemove) ) {
+	if( !sock->code(nToProcess) ) {
 		fprintf( stderr,
-			"Warning: can't send num jobs to remove to schedd (%d)\n",nToRemove );
+			"Warning: can't send num jobs to process to schedd (%d)\n",nToProcess );
 		delete sock;
 		return;
 	}
 
-	ToRemove.Rewind();
-	for (i=0;i<nToRemove;i++) {
-		job_id = ToRemove.Next();
+	ToProcess.Rewind();
+	for (i=0;i<nToProcess;i++) {
+		job_id = ToProcess.Next();
 		if( !sock->code(*job_id) ) {
 			fprintf( stderr,
 				"Error: can't send a proc_id to condor scheduler\n" );
@@ -262,12 +278,14 @@ void ProcArg(const char* arg)
 
 			sprintf(constraint, "%s == %d", ATTR_CLUSTER_ID, c);
 
-			if (SetAttributeIntByConstraint(constraint,ATTR_JOB_STATUS,REMOVED) < 0)
+			if (SetAttributeIntByConstraint(constraint,ATTR_JOB_STATUS,mode) < 0)
 			{
-				fprintf( stderr, "Couldn't find/delete cluster %d.\n", c);
+				fprintf( stderr, "Couldn't find/%s cluster %d.\n",
+						 (mode==REMOVED)?"remove":"hold", c);
 			} else {
-				fprintf(stderr, "Cluster %d removed.\n", c);
-				nToRemove = -1;
+				fprintf(stderr, "Cluster %d %s.\n", c,
+						(mode==REMOVED)?"removed":"held");
+				nToProcess = -1;
 			}
 			return;
 		}
@@ -282,17 +300,19 @@ void ProcArg(const char* arg)
 			if(*tmp == '\0')
 			// delete a proc
 			{
-				if(SetAttributeInt(c, p, ATTR_JOB_STATUS, REMOVED ) < 0)
+				if(SetAttributeInt(c, p, ATTR_JOB_STATUS, mode ) < 0)
 				{
-					fprintf( stderr, "Couldn't find/delete job %d.%d.\n", c, p );
+					fprintf( stderr, "Couldn't find/%s job %d.%d.\n",
+							 (mode==REMOVED)?"remove":"hold", c, p );
 				} else {
-					fprintf(stdout, "Job %d.%d removed.\n", c, p);
-					if ( nToRemove != -1 ) {
-						nToRemove++;
+					fprintf(stdout, "Job %d.%d %s.\n", c, p,
+							(mode==REMOVED)?"removed":"held");
+					if ( nToProcess != -1 ) {
+						nToProcess++;
 						id = new PROC_ID;
 						id->proc = p;
 						id->cluster = c;
-						ToRemove.Append(id);
+						ToProcess.Append(id);
 					}
 				}
 				return;
@@ -308,12 +328,14 @@ void ProcArg(const char* arg)
 		char	constraint[1000];
 
 		sprintf(constraint, "Owner == \"%s\"", arg);
-		if(SetAttributeIntByConstraint(constraint,ATTR_JOB_STATUS,REMOVED) < 0)
+		if(SetAttributeIntByConstraint(constraint,ATTR_JOB_STATUS,mode) < 0)
 		{
-			fprintf( stderr, "Couldn't find/delete user %s's job(s).\n", arg );
+			fprintf( stderr, "Couldn't find/%s user %s's job(s).\n",
+					 (mode==REMOVED)?"remove":"hold", arg );
 		} else {
-			fprintf(stdout, "User %s's job(s) removed.\n", arg);
-			nToRemove = -1;
+			fprintf(stdout, "User %s's job(s) %s.\n", arg,
+					(mode==REMOVED)?"removed":"held");
+			nToProcess = -1;
 		}
 	}
 	else 
@@ -323,17 +345,19 @@ void ProcArg(const char* arg)
 }
 
 void
-remove_all()
+handle_all()
 {
 	char	constraint[1000];
 
-		// Remove all jobs... let queue management code decide
+		// Remove/Hold all jobs... let queue management code decide
 		// which ones we can and can not remove.
 	sprintf(constraint, "%s >= %d", ATTR_CLUSTER_ID, 0 );
-	if( SetAttributeIntByConstraint(constraint,ATTR_JOB_STATUS,REMOVED) < 0 ) {
-		fprintf( stdout, "Removed all of your jobs.\n" );
+	if( SetAttributeIntByConstraint(constraint,ATTR_JOB_STATUS,mode) < 0 ) {
+		fprintf( stdout, "%s all of your jobs.\n",
+				 (mode==REMOVED)?"Removed":"Held" );
 	} else {
-		fprintf( stdout, "Removed all jobs.\n" );
+		fprintf( stdout, "%s all jobs.\n",
+				 (mode==REMOVED)?"Removed":"Held" );
 	}
-	nToRemove = -1;
+	nToProcess = -1;
 }
