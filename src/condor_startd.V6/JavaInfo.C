@@ -138,6 +138,14 @@ void JavaInfo::query_create()
 	manipulation if you are root or uid!=euid.
 	So, we go to PRIV_USER_FINAL for user nobody.
 	*/
+#ifdef WIN32
+	// Todd will remove this code soon... choosing the nobody login
+	// name belongs inside of uids.C, not everywhere we call it.
+	char nobody_login[60];
+	// sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
+	sprintf(nobody_login,"condor-run-%d",daemonCore->getpid());
+	init_user_nobody_loginname(nobody_login);
+#endif
 
 	init_user_ids("nobody");
 
