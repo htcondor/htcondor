@@ -26,12 +26,6 @@
 **
 */ 
 
-	// Define this to use well known named sockets to connect to the
-	// shadow.  This is intended for debugging, and lets us run this
-	// process directly under a debugger without needing to attach at
-	// run time.
-#define USE_PIPES
-
 
 #define _POSIX_SOURCE
 
@@ -115,6 +109,8 @@ CkptTimer	*MyTimer;			// Timer for periodic checkpointing
 char	*InitiatingHost;		// Machine where shadow is running
 char	*ThisHost;				// Machine where we are running
 
+int		UsePipes = FALSE;		// Connect to shadow via pipes for debugging
+
 extern State StateTab[];
 extern Transition TransTab[];
 extern int EventSigs[];
@@ -166,15 +162,14 @@ void
 initial_bookeeping( int argc, char *argv[] )
 {
 	struct utsname uts;
-	int		want_debugging;
 	char	my_host[ _POSIX_PATH_MAX ];
 
 		/* These items must be completed before we can print anything */
 	if( argc > 1 ) {
-		if( argv[1][0] == '-' && argv[1][1] == 'd' ) {
-			want_debugging = TRUE;
+		if( argv[1][0] == '-' && argv[1][1] == 'p' ) {
+			UsePipes = TRUE;
 		} else {
-			want_debugging = FALSE;
+			UsePipes = FALSE;
 		}
 	}
 
@@ -184,13 +179,6 @@ initial_bookeeping( int argc, char *argv[] )
 	(void)umask( 0 );
 
 	init_shadow_connections();
-	if( want_debugging ) {
-		SyscallStream = init_syscall_connection( SYS_LOCAL | SYS_MAPPED, TRUE );
-	} else {
-		(void) dup2( 1, RSC_SOCK );
-		(void) dup2( 2, CLIENT_LOG );
-		SyscallStream = init_syscall_connection( SYS_LOCAL | SYS_MAPPED, FALSE);
-	}
 
 	read_config_files( argv[0] );
 	init_logging();
@@ -207,11 +195,12 @@ initial_bookeeping( int argc, char *argv[] )
 	}
 	ThisHost = uts.nodename;
 
-	if( want_debugging ) {
+	if( UsePipes ) {
 		InitiatingHost = ThisHost;
 	} else {
 		InitiatingHost = argv[1];
 	}
+
 
 	dprintf( D_ALWAYS, "********** STARTER starting up ***********\n" );
 	dprintf( D_ALWAYS, "Submitting machine is \"%s\"\n", InitiatingHost );
@@ -305,7 +294,7 @@ susp_self()
 void
 usage( char *my_name )
 {
-	dprintf( D_ALWAYS, "Usage: %s ( -debug | initiating_host)\n", my_name );
+	dprintf( D_ALWAYS, "Usage: %s ( -pipe | initiating_host)\n", my_name );
 	exit( 0 );
 }
 
@@ -347,13 +336,13 @@ init_shadow_connections()
 	int		scm;
 
 
-#if defined( USE_PIPES )
-	SyscallStream = init_syscall_connection( SYS_LOCAL | SYS_MAPPED, TRUE );
-#else
-	(void) dup2( 1, RSC_SOCK );
-	(void) dup2( 2, CLIENT_LOG );
-	SyscallStream = init_syscall_connection( SYS_LOCAL | SYS_MAPPED, FALSE );
-#endif
+	if( UsePipes ) {
+		SyscallStream = init_syscall_connection( TRUE );
+	} else {
+		(void) dup2( 1, RSC_SOCK );
+		(void) dup2( 2, CLIENT_LOG );
+		SyscallStream = init_syscall_connection( FALSE);
+	}
 
 }
 
@@ -933,7 +922,7 @@ supervise_all()
 
 	if( periodic_checkpointing ) {
 #if defined(OSF1)
-		dprintf( D_ALWAYS, "Periodic checkpointing NOT implemented yet\n" );
+		dprintf( D_FULLDEBUG, "Periodic checkpointing NOT implemented yet\n" );
 #else
 		if( MyTimer->is_active() ) {
 			MyTimer->resume();
@@ -1382,15 +1371,21 @@ int
 needed_fd( int fd )
 {
 	switch( fd ) {
+
 	  case 2:
 	  case CLIENT_LOG:
-#if defined(USE_PIPES)	/* Using named pipes to communicate with shadow */
-	  case REQ_SOCK:
-	  case RPL_SOCK:
-#else					/* Using TCP socket to communicate with shadow */
-	  case RSC_SOCK:
-#endif
 		return TRUE;
+
+	  case REQ_SOCK:		// used for remote system calls via named pipes
+		if( UsePipes) {
+			return TRUE;
+		} else {
+			return FALSE;
+		}
+
+	  case RSC_SOCK:		// for remote system calls TCP sock OR pipes
+		return TRUE;
+
 	  default:
 		return FALSE;
 	}

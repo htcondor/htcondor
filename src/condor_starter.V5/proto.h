@@ -130,5 +130,9 @@ extern "C" {
 	void BlockAsynchEvents();
 	char *sig_name( int );
 	int  REMOTE_syscall( int, ... );
+#if 1
+	XDR	 *init_syscall_connection( int );
+#else
 	XDR	 *init_syscall_connection( int, int );
+#endif
 }
