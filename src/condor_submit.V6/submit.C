@@ -3239,7 +3239,6 @@ SetForcedAttributes()
 void
 SetGlobusParams()
 {
-	char buff[2048];
 	char *tmp;
 	char *use_gridshell;
 
@@ -3293,12 +3292,12 @@ SetGlobusParams()
 		InsertJobExpr (buffer);
 
 		if( (tmp = condor_param(GlobusResubmit,ATTR_GLOBUS_RESUBMIT_CHECK)) ) {
-			sprintf( buff, "%s = %s", ATTR_GLOBUS_RESUBMIT_CHECK, tmp );
+			sprintf( buffer, "%s = %s", ATTR_GLOBUS_RESUBMIT_CHECK, tmp );
 			free(tmp);
-			InsertJobExpr (buff, false );
+			InsertJobExpr (buffer, false );
 		} else {
-			sprintf( buff, "%s = FALSE", ATTR_GLOBUS_RESUBMIT_CHECK);
-			InsertJobExpr (buff, false );
+			sprintf( buffer, "%s = FALSE", ATTR_GLOBUS_RESUBMIT_CHECK);
+			InsertJobExpr (buffer, false );
 		}
 	}
 
@@ -3339,15 +3338,15 @@ SetGlobusParams()
 	InsertJobExpr(buffer);
 
 	if( (tmp = condor_param(GlobusRematch,ATTR_REMATCH_CHECK)) ) {
-		sprintf( buff, "%s = %s", ATTR_REMATCH_CHECK, tmp );
+		sprintf( buffer, "%s = %s", ATTR_REMATCH_CHECK, tmp );
 		free(tmp);
-		InsertJobExpr (buff, false );
+		InsertJobExpr (buffer, false );
 	}
 
 	if( (tmp = condor_param(GlobusRSL, "globus_rsl")) ) {
-		sprintf( buff, "%s = \"%s\"", ATTR_GLOBUS_RSL, tmp );
+		sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_RSL, tmp );
 		free( tmp );
-		InsertJobExpr ( buff );
+		InsertJobExpr ( buffer );
 	}
 
 	if ( stricmp ( JobGridType, "condor" ) == MATCH ) {
@@ -3365,9 +3364,9 @@ SetGlobusParams()
 		InsertJobExpr (buffer);
 
 		if( (tmp = condor_param(RemotePool, ATTR_REMOTE_POOL)) ) {
-			sprintf( buff, "%s = \"%s\"", ATTR_REMOTE_POOL, tmp );
+			sprintf( buffer, "%s = \"%s\"", ATTR_REMOTE_POOL, tmp );
 			free( tmp );
-			InsertJobExpr ( buff );
+			InsertJobExpr ( buffer );
 		}
 
 		if ( strstr(remote_schedd,"$$") ) {
@@ -3388,15 +3387,15 @@ SetGlobusParams()
 
 	//ckireyev: MyProxy-related crap
 	if ((tmp = condor_param (ATTR_MYPROXY_HOST_NAME))) {
-		sprintf (buff, "%s = \"%s\"", ATTR_MYPROXY_HOST_NAME, tmp );
+		sprintf (buffer, "%s = \"%s\"", ATTR_MYPROXY_HOST_NAME, tmp );
 		free( tmp );
-		InsertJobExpr ( buff );
+		InsertJobExpr ( buffer );
 	}
 
 	if ((tmp = condor_param (ATTR_MYPROXY_SERVER_DN))) {
-		sprintf (buff, "%s = \"%s\"", ATTR_MYPROXY_SERVER_DN, tmp );
+		sprintf (buffer, "%s = \"%s\"", ATTR_MYPROXY_SERVER_DN, tmp );
 		free( tmp );
-		InsertJobExpr ( buff );
+		InsertJobExpr ( buffer );
 	}
 
 	if ((tmp = condor_param (ATTR_MYPROXY_PASSWORD))) {
@@ -3406,26 +3405,26 @@ SetGlobusParams()
 	}
 
 	if ((tmp = condor_param (ATTR_MYPROXY_CRED_NAME))) {
-		sprintf (buff, "%s = \"%s\"", ATTR_MYPROXY_CRED_NAME, tmp );
+		sprintf (buffer, "%s = \"%s\"", ATTR_MYPROXY_CRED_NAME, tmp );
 		free( tmp );
-		InsertJobExpr ( buff );
+		InsertJobExpr ( buffer );
 	}
 
 	if (myproxy_password) {
-		sprintf (buff, "%s = %s", ATTR_MYPROXY_PASSWORD, myproxy_password);
-		InsertJobExpr (buff);
+		sprintf (buffer, "%s = %s", ATTR_MYPROXY_PASSWORD, myproxy_password);
+		InsertJobExpr (buffer);
 	}
 
 	if ((tmp = condor_param (ATTR_MYPROXY_REFRESH_THRESHOLD))) {
-		sprintf (buff, "%s = %s", ATTR_MYPROXY_REFRESH_THRESHOLD, tmp );
+		sprintf (buffer, "%s = %s", ATTR_MYPROXY_REFRESH_THRESHOLD, tmp );
 		free( tmp );
-		InsertJobExpr ( buff );
+		InsertJobExpr ( buffer );
 	}
 
 	if ((tmp = condor_param (ATTR_MYPROXY_NEW_PROXY_LIFETIME))) { 
-		sprintf (buff, "%s = %s", ATTR_MYPROXY_NEW_PROXY_LIFETIME, tmp );
+		sprintf (buffer, "%s = %s", ATTR_MYPROXY_NEW_PROXY_LIFETIME, tmp );
 		free( tmp );
-		InsertJobExpr ( buff );
+		InsertJobExpr ( buffer );
 	}
 
 	// END MyProxy-related crap
