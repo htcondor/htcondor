@@ -661,7 +661,7 @@ do_unlink( const char *name )
 {
 	while( unlink(name) < 0 ) {
 		if( errno != ETXTBSY ) {
-			dprintf( D_FAILURE|D_ALWAYS,
+			dprintf( D_ALWAYS,
 				"Can't unlink \"%s\" - errno = %d\n", name, errno
 			);
 			return;
@@ -678,7 +678,7 @@ UserProc::delete_files()
 	do_unlink( core_name );
 
 	if( rmdir(local_dir) < 0 ) {
-		dprintf( D_FAILURE|D_ALWAYS,
+		dprintf( D_ALWAYS,
 			"Can't remove directory \"%s\" - errno = %d\n", local_dir, errno
 		);
 	} else {
@@ -696,11 +696,11 @@ UserProc::handle_termination( int exit_st )
 	accumulate_cpu_time();
 
 	if( exit_requested && job_class == CONDOR_UNIVERSE_VANILLA ) { // job exited by request
-		dprintf( D_ALWAYS, "Process exited by request\n" );
+		dprintf( D_FAILURE|D_ALWAYS, "Process exited by request\n" );
 		state = NON_RUNNABLE;
 	} else if( WIFEXITED(exit_status) ) { 
                                      // exited on own accord with some status
-		dprintf( D_ALWAYS,
+		dprintf( D_FAILURE|D_ALWAYS,
 			"Process %d exited with status %d\n", pid, WEXITSTATUS(exit_status)
 		);
 		if( WEXITSTATUS(exit_status) == EXECFAILED ) {
@@ -718,12 +718,12 @@ UserProc::handle_termination( int exit_st )
 		);
 		switch( WTERMSIG(exit_status) ) {
 		  case SIGUSR2:			// ckpt and vacate exit 
-			dprintf( D_ALWAYS, "Process exited for checkpoint\n" );
+			dprintf( D_FAILURE|D_ALWAYS, "Process exited for checkpoint\n" );
 			state = CHECKPOINTING;
 			commit_cpu_time();
 			break;
 		  case SIGQUIT:			// exited for a checkpoint
-			dprintf( D_ALWAYS, "Process exited for checkpoint\n" );
+			dprintf( D_FAILURE|D_ALWAYS, "Process exited for checkpoint\n" );
 			state = CHECKPOINTING;
 			/*
 			  For bytestream checkpointing:  the only way the process exits
@@ -734,11 +734,11 @@ UserProc::handle_termination( int exit_st )
 			break;
 		  case SIGUSR1:
 		  case SIGKILL:				// exited by request - no ckpt
-			dprintf( D_ALWAYS, "Process exited by request\n" );
+			dprintf( D_FAILURE|D_ALWAYS, "Process exited by request\n" );
 			state = NON_RUNNABLE;
 			break;
 		  default:					// exited abnormally due to signal
-			dprintf( D_ALWAYS, "Process exited abnormally\n" );
+			dprintf( D_FAILURE|D_ALWAYS, "Process exited abnormally\n" );
 			state = ABNORMAL_EXIT;
 			commit_cpu_time();		// should this be here on ABNORMAL_EXIT ???? -Todd
 		}

@@ -4158,7 +4158,7 @@ Scheduler::child_exit(int pid, int status)
 					srec->job_id.cluster, srec->job_id.proc );
 		}
 		if( WIFEXITED(status) ) {			
-            dprintf( D_FAILURE|D_FULLDEBUG, "Shadow pid %d for job %d.%d exited with status %d\n",
+            dprintf( D_FULLDEBUG, "Shadow pid %d for job %d.%d exited with status %d\n",
 					 pid, srec->job_id.cluster, srec->job_id.proc, WEXITSTATUS(status) );
 
 			switch( WEXITSTATUS(status) ) {
