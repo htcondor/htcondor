@@ -36,6 +36,7 @@
 #include "condor_uid.h"
 #include "afs.h"
 #include "../condor_syscall_lib/syscall_param_sizes.h"
+#include "my_hostname.h"
 
 #ifdef CARMI_OPS
 #include <ProcList.h>
@@ -755,24 +756,7 @@ create_tcp_port( u_short *port, int *fd )
 void
 get_host_addr( unsigned int *ip_addr )
 {
-	char				this_host[MAX_STRING];
-	struct hostent      *host_ptr;
-
-		/* determine our own host name */
-	if( gethostname(this_host,MAX_STRING) < 0 ) {
-		EXCEPT( "gethostname" );
-	}
-	dprintf( D_FULLDEBUG, "\tthis_host = \"%s\"\n", this_host );
-
-		/* Look up the address of the host */
-	host_ptr = gethostbyname( this_host );
-	assert( host_ptr );
-	dprintf( D_FULLDEBUG, "\tFound host entry for \"%s\"\n", this_host );
-
-	assert( host_ptr->h_length == sizeof(unsigned int) );
-	memcpy( ip_addr, host_ptr->h_addr, (size_t)host_ptr->h_length );
-
-	*ip_addr = ntohl( *ip_addr );
+	*ip_addr = my_ip_addr();
 	display_ip_addr( *ip_addr );
 }
 
