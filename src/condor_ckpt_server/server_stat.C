@@ -179,7 +179,7 @@ service_reply_pkt ServerStat::InitHandshake()
 	int                bytes_read=0;
 	int                temp_len;
 	
-	req.service = htons((u_short) STATUS);
+	req.service = htons((u_short) SERVICE_STATUS);
 	req.ticket = htonl((unsigned int) AUTHENTICATION_TCKT);
 	bytes_written = net_write(socket_desc, (char*) &req, sizeof(req));
 	if (bytes_written != sizeof(req)) {
@@ -235,7 +235,7 @@ void ServerStat::LoadInfo()
 	free_capacity = atof(reply.capacity_free_ACD);
 	num_files = ntohl(reply.num_files);
 	reply.req_status = ntohs(reply.req_status);
-	if (reply.req_status != OK) {
+	if (reply.req_status != CKPT_OK) {
 		cerr << endl << "ERROR:" << endl;
 		cerr << "ERROR:" << endl;
 		cerr << "ERROR: server will not accept STATUS request" << endl;

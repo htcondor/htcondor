@@ -492,7 +492,7 @@ int FileStat::Hash(const char* machine_name)
 *   Return Type:                                                              *
 *        int : CANNOT_DELETE_FILE - the new checkpoint file was stored, but   *
 *                                   an older backup could not be deleted      *
-*              OK                 - the new checkpoint was stored, and an old *
+*              CKPT_OK                 - the new checkpoint was stored, and an old *
 *                                   backup checkpoint file was deleted (if    *
 *                                   one exists)                               *
 *                                                                             *
@@ -508,7 +508,7 @@ int FileStat::StoreFile(const char* machine_name,
   ownerinfo*   o;
   fileinfo*    f;
   char         temppath[MAX_PATHNAME_LENGTH];
-  int          ret_code=OK;
+  int          ret_code=CKPT_OK;
 
   m = FindOrAddMachine(machine_name);
   o = FindOrAddOwner(owner_name, m->owner_root);
@@ -659,7 +659,7 @@ int FileStat::GetVersion(const char* machine_name,
 *                                        not be deleted                       *
 *              CANNOT_DELETE_DIRECTORY - an owner or machine name directory   *
 *                                        could not be deleted                 *
-*              OK                      - all deletions (including the         *
+*              CKPT_OK                      - all deletions (including the         *
 *                                        "extended" ones for a file's owner   *
 *                                        and the owner's machine) were        *
 *                                        successfully completed               *
@@ -873,7 +873,7 @@ int FileStat::DeleteFile(const char* machine_name,
 	  delete m;
 	}
     }
-  return(OK);
+  return(CKPT_OK);
 }
 
 

@@ -43,7 +43,8 @@ typedef enum xfer_type
 {
   RECV=300,
   XMIT=301,
-  FILE_STATUS=302
+  FILE_STATUS=302,
+  REPLICATE=303
 } xfer_type;
 
 

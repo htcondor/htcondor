@@ -22,16 +22,25 @@
 #include "condor_config.h"
 #include "condor_fdset.h"
 #include "xfer_summary.h"
+#include "string_list.h"
+#include "internet.h"
+#include "do_connect.h"
 
 
-
-#define DEBUG 0
+#undef DEBUG
 
 
 XferSummary	xfer_summary;
 
 Server server;
 Alarm  rt_alarm;
+
+extern "C" {
+int set_condor_ruid ( void );
+ssize_t stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes );
+long random( void );
+int srandom( unsigned seed );
+}
 
 
 Server::Server()
@@ -63,9 +72,12 @@ Server::Server()
 	store_req_sd = -1;
 	restore_req_sd = -1;
 	service_req_sd = -1;
+	replicate_req_sd = -1;
 	max_xfers = 0;
 	max_store_xfers = 0;
 	max_restore_xfers = 0;
+	max_replicate_xfers = 0;
+	num_peers = 0;
 }
 
 
@@ -77,6 +89,8 @@ Server::~Server()
 		close(restore_req_sd);
 	if (service_req_sd >=0)
 		close(service_req_sd);
+	if (replicate_req_sd >=0)
+		close(replicate_req_sd);
 }
 
 
@@ -87,7 +101,7 @@ void Server::Init(int max_new_xfers,
 	struct stat log_stat;
 	char        log_filename[100];
 	char        old_log_filename[100];
-	char		*ckpt_server_dir;
+	char		*ckpt_server_dir, *level;
 #ifdef DEBUG
 	char        log_msg[256];
 	char        hostname[100];
@@ -97,8 +111,10 @@ void Server::Init(int max_new_xfers,
 	max_xfers = max_new_xfers;
 	max_store_xfers = max_new_store_xfers;
 	max_restore_xfers = max_new_restore_xfers;
+	max_replicate_xfers = max_store_xfers/5;
 	num_store_xfers = 0;
 	num_restore_xfers = 0;
+	num_replicate_xfers = 0;
 #if DEBUG
 	sprintf(log_filename, "%s%s", LOCAL_DRIVE_PREFIX, LOG_FILE);
 	if (stat(log_filename, &log_stat) == 0) {
@@ -129,16 +145,27 @@ void Server::Init(int max_new_xfers,
 				ckpt_server_dir);
 	}
 
+	level = param( "CKPT_SERVER_REPLICATION_LEVEL" );
+	if (level)
+		replication_level = atoi(level);
+	else
+		replication_level = 0;
+
 	store_req_sd = SetUpPort(CKPT_SVR_STORE_REQ_PORT);
 	restore_req_sd = SetUpPort(CKPT_SVR_RESTORE_REQ_PORT);
 	service_req_sd = SetUpPort(CKPT_SVR_SERVICE_REQ_PORT);
+	replicate_req_sd = SetUpPort(CKPT_SVR_REPLICATE_REQ_PORT);
 	max_req_sd_plus1 = store_req_sd;
 	if (restore_req_sd > max_req_sd_plus1)
 		max_req_sd_plus1 = restore_req_sd;
 	if (service_req_sd > max_req_sd_plus1)
 		max_req_sd_plus1 = service_req_sd;
+	if (replicate_req_sd > max_req_sd_plus1)
+		max_req_sd_plus1 = replicate_req_sd;
 	max_req_sd_plus1++;
 	InstallSigHandlers();
+	SetUpPeers();
+	xfer_summary.init();
 #ifdef DEBUG
 	Log(req_ID, "Server Initializing:");
 	Log("Server:                            ");
@@ -242,7 +269,7 @@ int Server::SetUpPort(u_short port)
   socket_addr.sin_port = htons(port);
   memcpy((char*) &socket_addr.sin_addr, (char*) &server_addr, 
 	 sizeof(struct in_addr));
-  if ((ret_code=I_bind(temp_sd, &socket_addr)) != OK) {
+  if ((ret_code=I_bind(temp_sd, &socket_addr)) != CKPT_OK) {
       cerr << endl << "ERROR:" << endl;
       cerr << "ERROR:" << endl;
       cerr << "ERROR: I_bind() returns an error (#" << ret_code << ")" << endl;
@@ -252,7 +279,7 @@ int Server::SetUpPort(u_short port)
       Log(0, log_msg);
       exit(ret_code);
   }
-  if (I_listen(temp_sd, 5) != OK) {
+  if (I_listen(temp_sd, 5) != CKPT_OK) {
       cerr << endl << "ERROR:" << endl;
       cerr << "ERROR:" << endl;
       cerr << "ERROR: cannot listen on a socket" << endl;
@@ -273,6 +300,24 @@ int Server::SetUpPort(u_short port)
   return temp_sd;
 }
 
+void Server::SetUpPeers()
+{
+	char *peers, *peer, peer_addr[256];
+	StringList peer_name_list;
+
+	if ((peers = param("CKPT_SERVER_HOSTS")) == NULL) {
+		return;
+	}
+
+	peer_name_list.initializeFromString(peers);
+	peer_name_list.rewind();
+	while ((peer = peer_name_list.next()) != NULL) {
+		if (strcmp(peer, param("CKPT_SERVER_HOST"))) {
+			sprintf(peer_addr, "<%s:%d>", peer, CKPT_SVR_REPLICATE_REQ_PORT);
+			string_to_sin(peer_addr, peer_addr_list+(num_peers++));
+		}
+	}
+}
 
 void Server::Execute()
 {
@@ -291,6 +336,7 @@ void Server::Execute()
 		FD_SET(store_req_sd, &req_sds);
 		FD_SET(restore_req_sd, &req_sds);
 		FD_SET(service_req_sd, &req_sds);
+		FD_SET(replicate_req_sd, &req_sds);
 		// Can reduce the number of calls to the reclaimer by blocking until a
 		//   request comes in (change the &poll argument to NULL).  The 
 		//   philosophy is that one does not need to reclaim a child process
@@ -308,10 +354,13 @@ void Server::Execute()
 				HandleRequest(store_req_sd, STORE_REQ);
 			if (FD_ISSET(restore_req_sd, &req_sds))
 				HandleRequest(restore_req_sd, RESTORE_REQ);
+			if (FD_ISSET(replicate_req_sd, &req_sds))
+				HandleRequest(replicate_req_sd, REPLICATE_REQ);
 			FD_ZERO(&req_sds);
 			FD_SET(store_req_sd, &req_sds);
 			FD_SET(restore_req_sd, &req_sds);
 			FD_SET(service_req_sd, &req_sds);	  
+			FD_SET(replicate_req_sd, &req_sds);
 		}
 		if (num_sds_ready < 0)
 			if (errno != EINTR) {
@@ -330,12 +379,16 @@ void Server::Execute()
 			transfers.Reclaim(current_time);
 			UnblockSignals();
 			start_interval_time = time(NULL);
+			if (replication_level)
+				Replicate();
+			Log("Sending ckpt server ad to collector...");
 			xfer_summary.time_out(current_time);
 		}
     }
 	close(service_req_sd);
 	close(store_req_sd);
 	close(restore_req_sd);
+	close(replicate_req_sd);
 #if DEBUG
 	log_file.close();
 #endif
@@ -352,6 +405,7 @@ void Server::HandleRequest(int req_sd,
 	service_req_pkt    service_req;
 	store_req_pkt      store_req;
 	restore_req_pkt    restore_req;
+	replicate_req_pkt  replicate_req;
 	store_reply_pkt    store_reply;
 	restore_reply_pkt  restore_reply;
 	char*              buf_ptr;
@@ -384,6 +438,10 @@ void Server::HandleRequest(int req_sd,
 			sprintf(log_msg, "%s%s", "Receiving restore request from ", 
 					inet_ntoa(shadow_sa.sin_addr));
 			break;
+		case REPLICATE_REQ:
+			sprintf(log_msg, "%s%s", "Receiving replicate request from ", 
+					inet_ntoa(shadow_sa.sin_addr));
+			break;
 		default:
 			cerr << endl << "ERROR:" << endl;
 			cerr << "ERROR:" << endl;
@@ -398,13 +456,15 @@ void Server::HandleRequest(int req_sd,
 			" to handle request");
 	Log(log_msg);
 	UnblockSignals();
-	if ((req == STORE_REQ) || (req == RESTORE_REQ)) {
+	if ((req == STORE_REQ) || (req == RESTORE_REQ) || (req == REPLICATE_REQ)) {
 		BlockSignals();
 		if ((num_store_xfers+num_restore_xfers == max_xfers) ||
 			((req == STORE_REQ) && (num_store_xfers == max_store_xfers)) ||
-			((req == RESTORE_REQ) && (num_restore_xfers == max_store_xfers))) {
+			((req == RESTORE_REQ) && (num_restore_xfers == max_store_xfers)) ||
+			((req == REPLICATE_REQ) &&
+			 (num_replicate_xfers == max_replicate_xfers))) {
 			UnblockSignals();
-			if (req == STORE_REQ) {
+			if (req == STORE_REQ || req == REPLICATE_REQ) {
 				store_reply.server_name.s_addr = htonl(0);
 				store_reply.port = htons(0);
 				store_reply.req_status = htons(INSUFFICIENT_BANDWIDTH);
@@ -446,6 +506,10 @@ void Server::HandleRequest(int req_sd,
 			req_len = sizeof(restore_req_pkt);
 			buf_ptr = (char*) &restore_req;
 			break;
+		case REPLICATE_REQ:
+			req_len = sizeof(replicate_req_pkt);
+			buf_ptr = (char*) &replicate_req;
+			break;
 	}
 
 	BlockSignals();
@@ -483,7 +547,20 @@ void Server::HandleRequest(int req_sd,
 		break;
     case RESTORE_REQ:
 		ProcessRestoreReq(req_ID, new_req_sd, shadow_sa.sin_addr, restore_req);
+		break;
+	case REPLICATE_REQ:
+		store_req.file_size = replicate_req.file_size;
+		store_req.ticket = replicate_req.ticket;
+		store_req.priority = replicate_req.priority;
+		store_req.time_consumed = replicate_req.time_consumed;
+		store_req.key = replicate_req.key;
+		strcpy(store_req.filename, replicate_req.filename);
+		strcpy(store_req.owner, replicate_req.owner);
+		ProcessStoreReq(req_ID, new_req_sd, replicate_req.shadow_IP,
+						store_req);
+		break;
     }  
+	
 }
 
 
@@ -523,27 +600,27 @@ void Server::ProcessServiceReq(int             req_id,
 	BlockSignals();
 #if defined(DEBUG)
 	switch (service_req.service) {
-        case STATUS:
-		    sprintf(log_msg, "Service STATUS request from %s", 
+        case SERVICE_STATUS:
+		    sprintf(log_msg, "Service SERVICE_STATUS request from %s", 
 					service_req.owner_name);
 			break;
-		case RENAME:
-			sprintf(log_msg, "Service RENAME request from %s", 
+		case SERVICE_RENAME:
+			sprintf(log_msg, "Service SERVICE_RENAME request from %s", 
 					service_req.owner_name);
 			break;
-		case DELETE:
-			sprintf(log_msg, "Service DELETE request from %s", 
+		case SERVICE_DELETE:
+			sprintf(log_msg, "Service SERVICE_DELETE request from %s", 
 					service_req.owner_name);
 			break;
-		case EXIST:
-			sprintf(log_msg, "Service EXIST request from %s", 
+		case SERVICE_EXIST:
+			sprintf(log_msg, "Service SERVICE_EXIST request from %s", 
 					service_req.owner_name);
 			break;
 		}
 	Log(req_id, log_msg);  
 #endif
 	switch (service_req.service) {
-        case STATUS:
+        case SERVICE_STATUS:
 		    num_files = imds.GetNumFiles();
 			service_reply.num_files = htonl(num_files);
 			if (num_files > 0) {
@@ -580,7 +657,7 @@ void Server::ProcessServiceReq(int             req_id,
 				server_sa.sin_family = AF_INET;
 				server_sa.sin_addr = server_addr;
 				server_sa.sin_port = htons(0);
-				if ((ret_code=I_bind(data_conn_sd, &server_sa)) != OK) {
+				if ((ret_code=I_bind(data_conn_sd, &server_sa)) != CKPT_OK) {
 					cerr << endl << "ERROR:" << endl;
 					cerr << "ERROR:" << endl;
 					cerr << "ERROR: I_bind() returns an error (#" << ret_code
@@ -592,7 +669,7 @@ void Server::ProcessServiceReq(int             req_id,
 					Log(0, log_msg);
 					exit(ret_code);
 				}
-				if (I_listen(data_conn_sd, 1) != OK) {
+				if (I_listen(data_conn_sd, 1) != CKPT_OK) {
 					cerr << endl << "ERROR:" << endl;
 					cerr << "ERROR:" << endl;
 					cerr << "ERROR: I_listen() fails to listen" << endl;
@@ -610,11 +687,11 @@ void Server::ProcessServiceReq(int             req_id,
 				service_reply.server_addr.s_addr = htonl(0);
 				service_reply.port = htons(0);
 			}
-			service_reply.req_status = htons(OK);
+			service_reply.req_status = htons(CKPT_OK);
 			strcpy(service_reply.capacity_free_ACD, "0");
 			break;
 
-		case RENAME:
+		case SERVICE_RENAME:
 			service_reply.server_addr.s_addr = htonl(0);
 			service_reply.port = htons(0);
 			service_reply.num_files = htons(0);
@@ -649,10 +726,64 @@ void Server::ProcessServiceReq(int             req_id,
 										  service_req.owner_name, 
 										  service_req.file_name,
 										  service_req.new_file_name));
+				if (replication_level) {
+					ScheduleReplication(shadow_IP,
+										service_req.owner_name,
+										service_req.new_file_name,
+										replication_level);
+				}
 			}
 			break;
 
-		case DELETE:
+		case SERVICE_COMMIT_REPLICATION:
+			service_reply.server_addr.s_addr = htonl(0);
+			service_reply.port = htons(0);
+			service_reply.num_files = htons(0);
+			if ((strlen(service_req.owner_name) == 0) || 
+				(strlen(service_req.file_name) == 0) || 
+				(strlen(service_req.new_file_name) == 0)) {
+				service_reply.req_status = htons(BAD_REQ_PKT);
+			} else {
+				service_req.key = ntohl(service_req.key);
+				if (imds.LockStatus(service_req.shadow_IP,
+									service_req.owner_name, 
+									service_req.file_name) == EXCLUSIVE_LOCK)
+					if (transfers.GetKey(service_req.shadow_IP,
+										 service_req.owner_name, 
+								 service_req.file_name) == service_req.key) {
+						transfers.SetOverride(service_req.shadow_IP, 
+											  service_req.owner_name, 
+											  service_req.file_name);
+						imds.Unlock(service_req.shadow_IP,
+									service_req.owner_name,
+									service_req.file_name);
+					}
+				if (imds.LockStatus(service_req.shadow_IP,
+									service_req.owner_name, 
+								service_req.new_file_name) == EXCLUSIVE_LOCK)
+					if (transfers.GetKey(service_req.shadow_IP,
+										 service_req.owner_name, 
+							 service_req.new_file_name) == service_req.key) {
+						transfers.SetOverride(service_req.shadow_IP, 
+											  service_req.owner_name, 
+											  service_req.new_file_name);
+						imds.Unlock(service_req.shadow_IP,
+									service_req.owner_name,
+									service_req.new_file_name);
+					}
+				service_reply.req_status = 
+					htons(imds.RenameFile(service_req.shadow_IP, 
+										  service_req.owner_name, 
+										  service_req.file_name,
+										  service_req.new_file_name));
+			}
+			break;
+
+		case SERVICE_ABORT_REPLICATION:
+			shadow_IP = service_req.shadow_IP;
+			// no break == fall through to SERVICE_DELETE
+
+		case SERVICE_DELETE:
 			service_reply.server_addr.s_addr = htonl(0);
 			service_reply.port = htons(0);
 			service_reply.num_files = htons(0);
@@ -693,7 +824,7 @@ void Server::ProcessServiceReq(int             req_id,
 						errno = 0;
 						if (stat(pathname, &chkpt_file_status) == 0) {
 							if (remove(pathname) == 0)
-								service_reply.req_status = htons(OK);
+								service_reply.req_status = htons(CKPT_OK);
 							else
 								service_reply.req_status = 
 									htons(CANNOT_DELETE_FILE);
@@ -716,7 +847,7 @@ void Server::ProcessServiceReq(int             req_id,
 			}
 			break;
 
-		case EXIST:
+		case SERVICE_EXIST:
 			service_reply.server_addr.s_addr = htonl(0);
 			service_reply.port = htons(0);
 			service_reply.num_files = htons(0);
@@ -765,7 +896,7 @@ void Server::ProcessServiceReq(int             req_id,
 		Log("Cannot sent IP/port to shadow (socket closed)");
     } else {
 		close(req_sd);
-		if (service_req.service == STATUS)
+		if (service_req.service == SERVICE_STATUS)
 			if (num_files == 0) {
 				Log(req_id, "Request for server status GRANTED:");
 				Log("No files on checkpoint server");
@@ -793,8 +924,8 @@ void Server::ProcessServiceReq(int             req_id,
 					SendStatus(data_conn_sd);
 					exit(CHILDTERM_SUCCESS);
 				}
-			} else if (service_req.service == RENAME)
-				if (service_reply.req_status == htons(OK))
+			} else if (service_req.service == SERVICE_RENAME)
+				if (service_reply.req_status == htons(CKPT_OK))
 					Log(req_id, "Rename file request successfully completed");
 				else {
 					Log(req_id, "Rename file request cannot be completed:");
@@ -802,7 +933,7 @@ void Server::ProcessServiceReq(int             req_id,
 							ntohs(service_reply.req_status));
 					Log(log_msg);
 				}
-			else if (service_reply.req_status == htons(OK))
+			else if (service_reply.req_status == htons(CKPT_OK))
 				Log(req_id, "Delete file request successfully completed");
 			else {
 				Log(req_id, "Delete file request cannot be completed:");
@@ -814,6 +945,183 @@ void Server::ProcessServiceReq(int             req_id,
 	UnblockSignals();
 }
 
+
+void Server::ScheduleReplication(struct in_addr shadow_IP, char *owner,
+								 char *filename, int level)
+{
+	char        log_msg[256];
+	static bool first_time = true;
+
+	if (first_time) {
+		first_time = false;
+		srandom(time(NULL));
+	}
+
+	int first_peer = (int)(random()%(long)num_peers);
+	for (int i=0; i < level && i < num_peers; i++) {
+		ReplicationEvent *e = new ReplicationEvent();
+		e->Prio(i);
+		e->ServerAddr(peer_addr_list[(first_peer+i)%num_peers]);
+		e->ShadowIP(shadow_IP);
+		e->Owner(owner);
+		e->File(filename);
+		sprintf(log_msg, "Scheduling Replication: Prio=%d, Serv=%s, File=%s",
+				i, sin_to_string(peer_addr_list+((first_peer+i)%num_peers)),
+				filename);
+		Log(log_msg);
+		replication_schedule.InsertReplicationEvent(e);
+	}
+}
+
+void Server::Replicate()
+{
+	int 				child_pid, bytes_recvd=0, bytes_read;
+	int					bytes_sent=0, bytes_written, bytes_left;
+	char        		log_msg[256], buf[10240];
+	char				pathname[MAX_PATHNAME_LENGTH];
+	int 				server_sd, ret_code, fd;
+	struct sockaddr_in 	server_sa;
+	struct stat 		chkpt_file_status;
+	time_t				file_timestamp;
+	replicate_req_pkt 	req;
+	replicate_reply_pkt	reply;
+
+	Log("Checking replication schedule...");
+	ReplicationEvent *e = replication_schedule.GetNextReplicationEvent();
+	if (e) {
+		sprintf(log_msg, "Replicating: Prio=%d, Serv=%s, File=%s",
+				e->Prio(), sin_to_string(&(e->ServerAddr())), e->File());
+		Log(log_msg);
+		sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX,
+				inet_ntoa(e->ShadowIP()), e->Owner(), e->File());
+		if (stat(pathname, &chkpt_file_status) < 0) {
+			exit(DOES_NOT_EXIST);
+		}
+		req.file_size = htonl(chkpt_file_status.st_size);
+#undef AVOID_FORK
+#if !defined(AVOID_FORK)
+		child_pid = fork();
+		if (child_pid < 0) {
+			Log("Unable to perform replication.  Cannot fork child process.");
+		} else if (child_pid == 0) {
+#endif
+			server_sa = e->ServerAddr();
+			req.ticket = htonl(AUTHENTICATION_TCKT);
+			req.priority = htonl(0);
+			req.time_consumed = htonl(0);
+			req.key = htonl(getpid()); // from server_interface.c
+			strcpy(req.owner, e->Owner());
+//			strcpy(req.filename, e->File());
+			sprintf(req.filename, "%s.rep", e->File());
+			req.shadow_IP = e->ShadowIP();
+			file_timestamp = chkpt_file_status.st_mtime;
+			if ((server_sd = I_socket()) < 0) {
+				exit(server_sd);
+			}
+			ret_code = net_write(server_sd, (char *)&req, sizeof(req));
+			if (ret_code != sizeof(req))
+				exit(CHILDTERM_CANNOT_WRITE);
+			if (connect(server_sd, (struct sockaddr*) &server_sa,
+						sizeof(server_sa)) < 0) {
+				exit(CONNECT_ERROR);
+			}
+			if (net_write(server_sd, (char *) &req,
+						  sizeof(req)) != sizeof(req)) {
+				exit(CHILDTERM_CANNOT_WRITE);
+			}
+			while (bytes_recvd != sizeof(reply)) {
+				errno = 0;
+				bytes_read = read(server_sd, ((char *) &reply)+bytes_recvd,
+								  sizeof(reply)-bytes_recvd);
+				assert(bytes_read >= 0);
+				if (bytes_read == 0)
+					assert(errno == EINTR);
+				else
+					bytes_recvd += bytes_read;
+			}
+			close(server_sd);
+			if ((server_sd = I_socket()) < 0) {
+				exit(server_sd);
+			}
+			memset((char*) &server_sa, 0, sizeof(server_sa));
+			server_sa.sin_family = AF_INET;
+			memcpy((char *) &server_sa.sin_addr.s_addr,
+				   (char *) &reply.server_name, sizeof(reply.server_name));
+			server_sa.sin_port = reply.port;
+			if (connect(server_sd, (struct sockaddr*) &server_sa,
+						sizeof(server_sa)) < 0) {
+				exit(CONNECT_ERROR);
+			}
+			if ((fd = open(pathname, O_RDONLY)) < 0) {
+				exit(CHILDTERM_CANNOT_OPEN_CHKPT_FILE);
+			}
+			bytes_read = 1;
+			while (bytes_sent != req.file_size && bytes_read > 0) {
+				errno = 0;
+				bytes_read = read(fd, &buf, sizeof(buf));
+				bytes_left = bytes_read;
+				while (bytes_left) {
+					bytes_written = write(server_sd, &buf, bytes_read);
+					assert(bytes_written >= 0);
+					if (bytes_written == 0)
+						assert(errno == EINTR);
+					else {
+						bytes_sent += bytes_written;
+						bytes_left -= bytes_written;
+					}
+				}
+				sleep(1);		// slow pipe
+			}
+			close(server_sd);
+			close(fd);
+			chkpt_file_status.st_mtime = 0;
+			stat(pathname, &chkpt_file_status);
+			if ((server_sd = I_socket()) < 0) {
+				exit(server_sd);
+			}
+			server_sa.sin_port = htons(CKPT_SVR_SERVICE_REQ_PORT);
+			if (connect(server_sd, (struct sockaddr*) &server_sa,
+						sizeof(server_sa)) < 0) {
+				exit(CONNECT_ERROR);
+			}
+			service_req_pkt s_req;
+			service_reply_pkt s_rep;
+			s_req.shadow_IP = e->ShadowIP();
+			s_req.ticket = htonl(AUTHENTICATION_TCKT);
+			s_req.key	= htonl(getpid());
+			strcpy(s_req.owner_name, e->Owner());
+			sprintf(s_req.file_name, "%s.rep", e->File());
+			sprintf(s_req.new_file_name, "%s", e->File());
+			if (chkpt_file_status.st_mtime == file_timestamp) {
+				s_req.service = htons(SERVICE_COMMIT_REPLICATION);
+			}
+			else {
+				s_req.service = htons(SERVICE_ABORT_REPLICATION);
+			}
+			ret_code = net_write(server_sd, (char *)&s_req, sizeof(s_req));
+			if (ret_code != sizeof(s_req))
+				exit(CHILDTERM_CANNOT_WRITE);
+			bytes_recvd = 0;
+			while (bytes_recvd != sizeof(s_rep)) {
+				errno = 0;
+				bytes_read = read(server_sd, ((char *) &s_rep)+bytes_recvd,
+								  sizeof(s_rep)-bytes_recvd);
+				assert(bytes_read >= 0);
+				if (bytes_read == 0)
+					assert(errno == EINTR);
+				else
+					bytes_recvd += bytes_read;
+			}
+#if !defined(AVOID_FORK)
+			exit(CHILDTERM_SUCCESS);
+		}
+		transfers.Insert(child_pid, -1, e->ShadowIP(), e->File(), e->Owner(),
+						 req.file_size, getpid(), 0, REPLICATE);
+#endif
+		num_replicate_xfers++;
+		delete e;
+	}
+}
 
 void Server::SendStatus(int data_conn_sd)
 {
@@ -943,7 +1251,7 @@ void Server::ProcessStoreReq(int            req_id,
 		server_sa.sin_family = AF_INET;
 		server_sa.sin_port = htons(0);
 		server_sa.sin_addr = server_addr;
-		if ((err_code=I_bind(data_conn_sd, &server_sa)) != OK) {
+		if ((err_code=I_bind(data_conn_sd, &server_sa)) != CKPT_OK) {
 			cerr << endl << "ERROR:" << endl;
 			cerr << "ERROR:" << endl;
 			cerr << "ERROR: I_bind() returns an error (#" << ret_code
@@ -956,7 +1264,7 @@ void Server::ProcessStoreReq(int            req_id,
 			exit(ret_code);
 		}
 
-		if (I_listen(data_conn_sd, 1) != OK) {
+		if (I_listen(data_conn_sd, 1) != CKPT_OK) {
 			cerr << endl << "ERROR:" << endl;
 			cerr << "ERROR:" << endl;
 			cerr << "ERROR: I_listen() fails to listen" << endl;
@@ -976,7 +1284,7 @@ void Server::ProcessStoreReq(int            req_id,
       // From the I_bind() call, the port should already be in network-byte
       //   order
 		store_reply.port = server_sa.sin_port;  
-		store_reply.req_status = htons(OK);
+		store_reply.req_status = htons(CKPT_OK);
 		if (net_write(req_sd, (char*) &store_reply, 
 					  sizeof(store_reply_pkt)) < 0) {
 			close(req_sd);
@@ -1059,7 +1367,8 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 	chkpt_addr_len = sizeof(struct sockaddr_in);
 	// May cause an ACCEPT_ERROR error
 	do {
-		xfer_sd = tcp_accept_timeout(data_conn_sd, &chkpt_addr, 
+		xfer_sd = tcp_accept_timeout(data_conn_sd,
+									 (struct sockaddr *)&chkpt_addr, 
 									 &chkpt_addr_len, CKPT_ACCEPT_TIMEOUT);
 	} while (xfer_sd == -3 || (xfer_sd == -1 && errno == EINTR));
 #if 0
@@ -1220,7 +1529,7 @@ void Server::ProcessRestoreReq(int             req_id,
       server_sa.sin_family = AF_INET;
       server_sa.sin_port = htons(0);
       server_sa.sin_addr = server_addr;
-      if ((err_code=I_bind(data_conn_sd, &server_sa)) != OK) {
+      if ((err_code=I_bind(data_conn_sd, &server_sa)) != CKPT_OK) {
 		  cerr << endl << "ERROR:" << endl;
 		  cerr << "ERROR:" << endl;
 		  cerr << "ERROR: I_bind() returns an error (#" << ret_code
@@ -1231,7 +1540,7 @@ void Server::ProcessRestoreReq(int             req_id,
 		  Log(0, log_msg);
 		  exit(ret_code);
 	  }
-      if (I_listen(data_conn_sd, 1) != OK) {
+      if (I_listen(data_conn_sd, 1) != CKPT_OK) {
 		  cerr << endl << "ERROR:" << endl;
 		  cerr << "ERROR:" << endl;
 		  cerr << "ERROR: I_listen() fails to listen" << endl;
@@ -1249,7 +1558,7 @@ void Server::ProcessRestoreReq(int             req_id,
       //   order
       restore_reply.port = server_sa.sin_port;  
       restore_reply.file_size = htonl(chkpt_file_status.st_size);
-      restore_reply.req_status = htons(OK);
+      restore_reply.req_status = htons(CKPT_OK);
       if (net_write(req_sd, (char*) &restore_reply, 
 					sizeof(restore_reply_pkt)) < 0) {
 		  close(req_sd);
@@ -1325,7 +1634,8 @@ void Server::TransmitCheckpointFile(int         data_conn_sd,
 
 	chkpt_addr_len = sizeof(struct sockaddr_in);
 	do {
-		xfer_sd = tcp_accept_timeout(data_conn_sd, &chkpt_addr, 
+		xfer_sd = tcp_accept_timeout(data_conn_sd,
+									 (struct sockaddr *)&chkpt_addr, 
 									 &chkpt_addr_len, CKPT_ACCEPT_TIMEOUT);
 	} while (xfer_sd == -3 || (xfer_sd == -1 && errno == EINTR));
 #if 0
@@ -1500,6 +1810,36 @@ void Server::ChildComplete()
 							exit_code);
 					Log(ptr->req_id, log_msg);
 					Log("occurred during status transmission");
+				}
+				break;
+			case REPLICATE:
+				num_replicate_xfers--;
+				if (exit_code == CHILDTERM_SUCCESS)
+					Log(ptr->req_id, "File successfully replicated");
+				else if ((exit_code == CHILDTERM_KILLED) && 
+						 (ptr->override == OVERRIDE)) {
+					Log(ptr->req_id,
+						"File successfully replicated; kill signal");
+					Log("overridden");
+				} else if (exit_code == CHILDTERM_SIGNALLED) {
+					sprintf(log_msg, 
+							"File replication terminated due to signal #%d",
+							WTERMSIG(exit_status));
+					Log(ptr->req_id, log_msg);
+					if (WTERMSIG(exit_status) == SIGPIPE)
+						Log("Socket on receiving end closed");
+					else if (WTERMSIG(exit_status) == SIGKILL)
+						Log("User killed the peer process");
+				} else if (exit_code == CHILDTERM_KILLED) {
+					Log(ptr->req_id, 
+						"File replication terminated by reclamation");
+					Log("process");
+				} else {
+					sprintf(log_msg, 
+							"File replication self-terminated; error #%d", 
+							exit_code);
+					Log(ptr->req_id, log_msg);
+					Log("occurred during file transmission");
 				}
 				break;
 			default:

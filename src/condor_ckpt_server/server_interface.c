@@ -256,16 +256,16 @@ int RequestService(const char*     owner,
 int FileOnServer(const char* owner,
 				 const char* filename)
 {
-	return (RequestService(owner, filename, NULL, EXIST, NULL, NULL, NULL, 
-						   NULL));
+	return (RequestService(owner, filename, NULL, SERVICE_EXIST,
+						   NULL, NULL, NULL, NULL));
 }
 
 
 int RemoveRemoteFile(const char* owner,
 					 const char* filename)
 {
-	return (RequestService(owner, filename, NULL, DELETE, NULL, NULL, NULL, 
-						   NULL));
+	return (RequestService(owner, filename, NULL, SERVICE_DELETE, NULL,
+						   NULL, NULL, NULL));
 }
 
 
@@ -273,8 +273,8 @@ int RemoveLocalOrRemoteFile(const char* owner,
 							const char* filename)
 {
 	unlink(filename);
-	return (RequestService(owner, filename, NULL, DELETE, NULL, NULL, NULL, 
-						   NULL));
+	return (RequestService(owner, filename, NULL, SERVICE_DELETE, NULL,
+						   NULL, NULL, NULL));
 }
 
 
@@ -282,6 +282,40 @@ int RenameRemoteFile(const char* owner,
 					 const char* filename,
 					 const char* new_filename)
 {
-	return (RequestService(owner, filename, new_filename, RENAME, NULL, NULL,
-						   NULL, NULL));
+	return (RequestService(owner, filename, new_filename, SERVICE_RENAME,
+						   NULL, NULL, NULL, NULL));
+}
+
+extern int ckpt_server_number;
+
+int
+set_ckpt_server_number(int new_server)
+{
+	int		rval;
+
+	rval = ckpt_server_number;
+	ckpt_server_number = new_server;
+	return rval;
+}
+
+
+int
+get_ckpt_server_count()
+{
+	int		i;
+	char	ckpt_server_config[30];
+
+	for (i = 0; ; i++) {
+		sprintf(ckpt_server_config, "CKPT_SERVER_HOST_%d", i);
+		if (param(ckpt_server_config) == 0) {
+			break;
+		}
+	}
+
+	if (i == 0) {
+		if (param("CKPT_SERVER_HOST") == 0) {
+			i = -1;
+		}
+	}
+	return i;
 }

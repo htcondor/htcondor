@@ -281,7 +281,7 @@ void TransferState::Insert(int             child_pid,
 *                                   in any node in the list                   *
 *              CANNOT_DELETE_FILE - a partially transferred file could not be *
 *                                   removed (only when receiving a file)      *
-*              OK                 - deletion was successful                   *
+*              CKPT_OK                 - deletion was successful                   *
 *                                                                             *
 ******************************************************************************/
 
@@ -296,7 +296,7 @@ int TransferState::Delete(int       child_pid,
   char          temppath[1000];
   int           ret_code;
 
-  fs_code = OK;
+  fs_code = CKPT_OK;
   Find(ptr, trail, child_pid);
   if (ptr == NULL)
     {
@@ -309,7 +309,7 @@ int TransferState::Delete(int       child_pid,
     }
   else 
     {
-      ret_code = OK;
+      ret_code = CKPT_OK;
       if (ptr->xfer_type == RECV)
 	if (status == CHILDTERM_SUCCESS)
 	  fs_code = fs.StoreFile(ptr->machine, ptr->owner, ptr->filename, 

@@ -143,7 +143,7 @@ int FileInformation::RenameFileInfo(file_info_node* r_ptr,
 		else
 			strcpy(r_ptr->data.file_name, new_file_name);
 /*	return RENAMED; */
-	return OK;
+	return CKPT_OK;
 }
 
 

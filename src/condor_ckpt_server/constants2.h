@@ -29,10 +29,11 @@
 
 #define CKPT_ACCEPT_TIMEOUT					120
 
-#define OK                                  0
+#define CKPT_OK                             0
 #define CKPT_SVR_STORE_REQ_PORT             5651
 #define CKPT_SVR_RESTORE_REQ_PORT           5652
 #define CKPT_SVR_SERVICE_REQ_PORT           5653
+#define CKPT_SVR_REPLICATE_REQ_PORT			5654
 #ifdef OSF1
 #define AUTHENTICATION_TCKT                 1637102411
 #else
@@ -43,8 +44,8 @@
 #define MAX_NAME_LENGTH                     50
 #define MAX_PATHNAME_LENGTH                 512
 #define DATA_BUFFER_SIZE                    50000
-#define RECLAIM_INTERVAL                    300
-#define MAX_ALLOWED_XFER_TIME               600
+#define RECLAIM_INTERVAL                    60
+#define MAX_ALLOWED_XFER_TIME               60*60
 #define RECLAIM_BYPASS                      100
 #define STATUS_FILENAME_LENGTH              31
 #define STATUS_MACHINE_NAME_LENGTH          16
@@ -62,6 +63,7 @@
 #define OVERRIDE                            1
 #define LOG_EVENT_WIDTH_1                   49
 #define LOG_EVENT_WIDTH_2                   47
+#define MAX_PEERS							50
 
 
 
@@ -134,6 +136,7 @@
 #define DESIRED_FILE_NOT_FOUND              73
 #define IMDS_INDEX_ERROR                    80
 #define FILE_LOCKED                         81
+#define CANNOT_RENAME_OVER_NEWER_FILE		82
 #define EXISTS                              90
 #define DOES_NOT_EXIST                      91
 #define CREATED                             92

@@ -25,6 +25,8 @@ private:
 	unsigned int		time_recving;
 	FILE	*log_file;
 
+	char	machine[256], name[256], *subnet;
+
 	void log_transfer(time_t, transferinfo *);
 };
 

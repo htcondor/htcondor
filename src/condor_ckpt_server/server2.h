@@ -8,6 +8,8 @@
 #include "network2.h"
 #include "imds2.h"
 #include "xferstat2.h"
+#include "replication.h"
+#include "list.h"
 #include <sys/types.h>
 #include <fstream.h>
 
@@ -20,17 +22,28 @@ class Server
     int            store_req_sd;
     int            restore_req_sd;
     int            service_req_sd;
+	int            replicate_req_sd;
     int            max_xfers;
     int            max_store_xfers;
     int            max_restore_xfers;
+	int            max_replicate_xfers;
     int            max_req_sd_plus1;
     IMDS           imds;
     TransferState  transfers;
     ofstream       log_file;
     int            num_store_xfers;
     int            num_restore_xfers;
+	int            num_replicate_xfers;
     struct in_addr server_addr;
+	struct sockaddr_in peer_addr_list[MAX_PEERS];
+	int            num_peers;
+	int		       replication_level;
     int SetUpPort(u_short port);
+	void SetUpPeers();
+	ReplicationSchedule replication_schedule;
+	void ScheduleReplication(struct in_addr shadow_IP, char *owner,
+							 char *filename, int level);
+	void Replicate();
     void HandleRequest(int          req_sd,
 		       request_type req);
     void ProcessServiceReq(int            req_id,

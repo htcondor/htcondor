@@ -325,7 +325,7 @@ void TransferState::Insert(int            child_pid,
 *                                   in any node in the list                   *
 *              CANNOT_DELETE_FILE - a partially transferred file could not be *
 *                                   removed (only when receiving a file)      *
-*              OK                 - deletion was successful                   *
+*              CKPT_OK                 - deletion was successful                   *
 *                                                                             *
 ******************************************************************************/
 
@@ -361,7 +361,7 @@ int TransferState::Delete(int child_pid)
 		xfer_summary.Result(ptr);
 		delete ptr;
 		num_transfers--;
-		return OK;
+		return CKPT_OK;
     }
 }
 

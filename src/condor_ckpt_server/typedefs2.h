@@ -18,8 +18,12 @@ typedef unsigned long int u_lint;
 
 
 
-#if defined(Solairs)
+#if defined(Solaris)
+#if defined(__cplusplus)
+typedef void (*SIG_HANDLER)(...);
+#else
 typedef void (*SIG_HANDLER)();
+#endif
 #else
 typedef void (*SIG_HANDLER)(int);
 #endif
@@ -38,10 +42,12 @@ typedef enum lock_status
 
 typedef enum service_type
 {
-  STATUS=190,
-  RENAME=191,
-  DELETE=192,
-  EXIST=193
+  SERVICE_STATUS=190,
+  SERVICE_RENAME=191,
+  SERVICE_DELETE=192,
+  SERVICE_EXIST=193,
+  SERVICE_COMMIT_REPLICATION=194,
+  SERVICE_ABORT_REPLICATION=195
 } service_type;
 
 
@@ -63,7 +69,8 @@ typedef enum request_type
 {
   SERVICE_REQ,
   STORE_REQ,
-  RESTORE_REQ
+  RESTORE_REQ,
+  REPLICATE_REQ
 } request_type;
 
 
@@ -161,7 +168,8 @@ typedef struct service_req_pkt
   u_lint  key;
   char    owner_name[MAX_NAME_LENGTH]; 
   char    file_name[MAX_CONDOR_FILENAME_LENGTH];
-  char    new_file_name[MAX_CONDOR_FILENAME_LENGTH];
+  char    new_file_name[MAX_CONDOR_FILENAME_LENGTH-4]; /* -4 to fit shadowIP */
+  struct in_addr shadow_IP;
 } service_req_pkt;
 
 
@@ -176,6 +184,18 @@ typedef struct service_reply_pkt
 } service_reply_pkt;
 
 
+typedef struct replicate_req_pkt
+{
+  u_lint file_size;
+  u_lint ticket;
+  u_lint priority;                                    
+  u_lint time_consumed;                             
+  u_lint key;
+  char   filename[MAX_CONDOR_FILENAME_LENGTH];
+  char   owner[MAX_NAME_LENGTH];
+  struct in_addr shadow_IP;
+} replicate_req_pkt;
+	
 
 
 typedef recv_req_pkt   store_req_pkt;
@@ -196,6 +216,7 @@ typedef xmit_req_pkt   restore_req_pkt;
 typedef xmit_reply_pkt restore_reply_pkt;
 
 
+typedef recv_reply_pkt replicate_reply_pkt;
 
 
 

@@ -4,19 +4,16 @@
 #include "dgram_io_handle.h"
 #include "xferstat2.h"
 #include "xfer_summary.h"
-
-
-#define COLLECTOR_UDP_PORT	9613	/* From sched.h which confilicts w/ local
-									   headers :( */
-#define SCHED_VERS			400
-#define SCHEDD_INFO			(SCHED_VERS+15)
+#include "safe_sock.h"
+#include "condor_network.h"
+#include "condor_classad.h"
+#include "condor_collector.h"
 
 extern "C" {
-	int udp_unconnect();
-	int send_context_to_machine();
-	int display_context();
 	char *param();
-	int fill_dgram_io_handle();
+	int gethostname(char *name, int namelen);
+	char *calc_subnet_name();
+	char *getwd(char *path);
 }
 
 
@@ -33,6 +30,11 @@ XferSummary::init()
 	bytes_recv = 0;
 	tot_recv_bandwidth = 0;
 	time_recving = 0;
+
+	gethostname(machine, 256);
+	struct hostent *hostptr = gethostbyname(machine);
+	sprintf(name, hostptr->h_name);
+	subnet = (char *)calc_subnet_name(NULL);
 }
 
 
@@ -82,73 +84,52 @@ extern "C" {
 void
 XferSummary::time_out(time_t now)
 {
-	CONTEXT	*my_context;
-	ELEM	tmp;
-	int		sock_fd;
-	DGRAM_IO_HANDLE	CollectorIOHandle;
-	char	*CollectorHost;
+	SafeSock	s(param("COLLECTOR_HOST"), COLLECTOR_UDP_COMM_PORT);
+	ClassAd	   	info;
+	char		line[128];
+	int			command = UPDATE_CKPT_SRVR_AD;
+	struct in_addr addr;
+
+	info.SetMyTypeName("CkptServer");
+	info.SetTargetTypeName("CkptFile");
+
+	sprintf(line, "Name = \"%s\"", name);
+	info.Insert(line);
+	sprintf(line, "Machine = \"%s\"", machine);
+	info.Insert(line);
+	sprintf(line, "Subnet = \"%s\"", subnet);
+	info.Insert(line);
+	sprintf(line, "NumSends = %d", num_sends);
+	info.Insert(line);
+	sprintf(line, "BytesSent = %d", bytes_sent);
+	info.Insert(line);
+	sprintf(line, "TimeSending = %d", time_sending);
+	info.Insert(line);
+	sprintf(line, "AvgSendBandwidth = %f", num_sends ?
+			tot_send_bandwidth / num_sends : 0.0);
+	info.Insert(line);
+	sprintf(line, "NumRecvs = %d", num_recvs);
+	info.Insert(line);
+	sprintf(line, "BytesReceived = %d", bytes_recv);
+	info.Insert(line);
+	sprintf(line, "TimeReceiving = %d", time_recving);
+	info.Insert(line);
+	sprintf(line, "AvgReceiveBandwidth = %f", num_recvs ?
+			tot_recv_bandwidth / num_recvs : 0.0);
+	info.Insert(line);
+	sprintf(line, "CKPT_SERVER_INTERVAL_START = %s", ctime(&start_time));
+	info.Insert(line);
+	sprintf(line, "CKPT_SERVER_INTERVAL_END = %s", ctime(&now));
+	info.Insert(line);
+	sprintf(line, "Disk = %d", free_fs_blocks(getwd(NULL)));
+	info.Insert(line);
+	
+	s.encode();
+	s.code(command);
+	info.put(s);
+	s.eom();
 
 	if (now - start_time > XFER_SUMMARY_INTERVAL) {
-		// Do something with this data
-		my_context = create_context();
-		tmp.type = INT;
-		tmp.i_val = num_sends;
-		store_stmt( build_expr("NumSends", &tmp), my_context);
-		tmp.i_val = bytes_sent;
-		store_stmt( build_expr("BytesSent", &tmp), my_context);
-		tmp.i_val = time_sending;
-		store_stmt( build_expr("TimeSending", &tmp), my_context);
-		if (num_sends != 0) {
-			tmp.i_val = tot_send_bandwidth / num_sends;
-		} else {
-			tmp.i_val = 0;
-		}
-		store_stmt( build_expr("AvgSendBandwidth", &tmp), my_context);
-
-		tmp.i_val = num_recvs;
-		store_stmt( build_expr("NumRecvs", &tmp), my_context);
-		tmp.i_val = bytes_recv;
-		store_stmt( build_expr("BytesReceived", &tmp), my_context);
-		tmp.i_val = time_recving;
-		store_stmt( build_expr("TimeReceving", &tmp), my_context);
-		if (num_recvs != 0) {
-			tmp.i_val = tot_recv_bandwidth / num_recvs;
-		} else {
-			tmp.i_val = 0;
-		}
-		store_stmt( build_expr("AvgReceiveBandwidth", &tmp), my_context);
-
-		tmp.type = STRING;
-		tmp.s_val = ctime(&start_time);
-		store_stmt( build_expr("CKPT_SERVER_INTERVAL_START", &tmp), 
-				   my_context);
-		tmp.s_val = ctime(&now);
-		store_stmt( build_expr("CKPT_SERVER_INTERVAL_END", &tmp), 
-				   my_context);
-
-		display_context( my_context );
-		sock_fd = udp_unconnect();
-		if (sock_fd >= 0) {
-			CollectorHost = param("COLLECTOR_HOST");
-			if (CollectorHost != 0) {
-				fill_dgram_io_handle(&CollectorIOHandle, CollectorHost, 
-									 sock_fd, COLLECTOR_UDP_PORT);
-				/* NOT REALLY SCHEDD_INFO */
-				send_context_to_machine(&CollectorIOHandle, SCHEDD_INFO,
-										my_context);
-			}
-			CollectorHost = param("ALTERNATE_COLLECTOR_HOST");
-			if (CollectorHost != 0) {
-				fill_dgram_io_handle(&CollectorIOHandle, CollectorHost, 
-									 sock_fd, COLLECTOR_UDP_PORT);
-				/* NOT REALLY SCHEDD_INFO */
-				send_context_to_machine(&CollectorIOHandle, SCHEDD_INFO,
-										my_context);
-			}
-			close(sock_fd);
-		}
-
-		free_context(my_context);
 		init();
 	}
 }

@@ -25,7 +25,7 @@
 
 /* Symbolic Constants */
 
-#define OK                                  0
+#define CKPT_OK                             0
 #define CKPT_SVR_STORE_REQ_PORT             5651
 #define CKPT_SVR_RESTORE_REQ_PORT           5652
 #define AUTHENTICATION_TCKT                 1637102411L

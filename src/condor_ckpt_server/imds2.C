@@ -126,6 +126,9 @@ int IMDS::RenameFile(struct in_addr machine_IP,
 								old_file_ptr);
     } else {
 		new_file_ptr = new_fn->file_data;
+		if (new_file_ptr->data.last_modified_time >
+			old_file_ptr->data.last_modified_time)
+			return CANNOT_RENAME_OVER_NEWER_FILE;
 		if (new_file_ptr->lock != UNLOCKED)
 			return FILE_LOCKED;
 		if (rename(old_pathname, new_pathname) != 0)
@@ -137,7 +140,7 @@ int IMDS::RenameFile(struct in_addr machine_IP,
     }
 	(void) Index.DeleteFile(machine_IP, owner_name, file_name);
 /*	return RENAMED; */
-	return OK;
+	return CKPT_OK;
 }
 
 

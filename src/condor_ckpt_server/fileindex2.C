@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <limits.h>
 #include <errno.h>
+#include <sys/stat.h>
+#include "_condor_fix_types.h"
 #include "gen_lib.h" 
 
 

@@ -98,8 +98,13 @@ int I_bind(int                 socket_desc,
 	    struct sockaddr_in* addr)
 {
   int temp;
+  int					on = 1;
+  struct linger		linger = {0, 0}; 
 
   temp = sizeof(struct sockaddr_in);
+  setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on));
+  setsockopt(socket_desc, SOL_SOCKET, SO_LINGER,
+			 (char*)&linger, sizeof(linger));
   if (bind(socket_desc, (struct sockaddr*)addr, temp) < 0)
     {
       fprintf(stderr, "\nERROR:\n");
@@ -132,7 +137,7 @@ int I_bind(int                 socket_desc,
       fprintf(stderr, "ERROR:\n\n");
       return NOT_TCPIP;
     }
-  return OK;
+  return CKPT_OK;
 }
 
 
@@ -244,41 +249,6 @@ char* gethostaddr(void)
 }
 
 
-static int ckpt_server_number = -1;
-
-int
-set_ckpt_server_number(int new_server)
-{
-	int		rval;
-
-	rval = ckpt_server_number;
-	ckpt_server_number = new_server;
-	return rval;
-}
-
-
-int
-get_ckpt_server_count()
-{
-	int		i;
-	char	ckpt_server_config[30];
-
-	for (i = 0; ; i++) {
-		sprintf(ckpt_server_config, "CKPT_SERVER_HOST_%d", i);
-		if (param(ckpt_server_config) == 0) {
-			break;
-		}
-	}
-
-	if (i == 0) {
-		if (param("CKPT_SERVER_HOST") == 0) {
-			i = -1;
-		}
-	}
-	return i;
-}
-
-
 /******************************************************************************
 *                                                                             *
 *   Function: getserveraddr(void)                                             *
@@ -303,6 +273,7 @@ get_ckpt_server_count()
 *                                                                             *
 ******************************************************************************/
 
+int ckpt_server_number = -1;
 
 char* getserveraddr()
 {
@@ -428,7 +399,7 @@ int I_listen(int socket_desc,
       fprintf(stderr, "ERROR:\n\n");
       return LISTEN_ERROR;
     }
-  return OK;
+  return CKPT_OK;
 }
 
 

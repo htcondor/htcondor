@@ -402,7 +402,7 @@ void Server::ProcessStoreReq()
 	      // From the bind() call in I_bind(), the port should already
 	      //   be in network byte order
 	      recv_reply_info.port = server_addr.sin_port;
-	      recv_reply_info.req_status = OK;
+	      recv_reply_info.req_status = CKPT_OK;
 	      if (net_write(req_sd, (char*)&recv_reply_info, 
 			    sizeof(recv_reply_pkt)) < 0)
 		{
@@ -674,7 +674,7 @@ void Server::ProcessRestoreReq()
 		  // From the bind() call in I_bind(), the port should already
 		  //   be in network byte order
 		  xmit_reply_info.port = server_addr.sin_port;
-		  xmit_reply_info.req_status = htons(OK);
+		  xmit_reply_info.req_status = htons(CKPT_OK);
 		  xmit_reply_info.file_size = htonl(chkpt_file_status.st_size);
 		  if (net_write(req_sd, (char*)&xmit_reply_info, 
 				sizeof(xmit_reply_pkt)) < 0)
@@ -941,7 +941,7 @@ void SigChildHandler(int)
 	      num_recv_xfers--;
 	      switch (ds_code)
 		{
-		case OK:
+		case CKPT_OK:
 		  if (exit_code != CHILDTERM_SUCCESS)
 		    log_file << "\tsuccessfully removed traces of received "
 		             << "file"  << endl;
@@ -979,7 +979,7 @@ void SigChildHandler(int)
 	      num_xmit_xfers--;
 	      switch (ds_code)
 		{
-		case OK:
+		case CKPT_OK:
 		  if (exit_code != CHILDTERM_SUCCESS)
 		    log_file << "\tfile transmission aborted" << endl;
 		  else
@@ -1007,7 +1007,7 @@ void SigChildHandler(int)
 		  exit(BAD_RETURN_CODE);
 		}
 	    }
-	  if (fs_code != OK)
+	  if (fs_code != CKPT_OK)
 	    {
 	      log_file << "\t-> In addition, while updating, errors were "
 	               << "found:" << endl;
