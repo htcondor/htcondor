@@ -214,9 +214,6 @@ extern "C"
 void
 _condor_prestart( int syscall_mode )
 {
-	struct sigaction action;
-	sigset_t		 sig_mask;
-
 	MyImage.SetMode( syscall_mode );
 
 		// Initialize open files table
@@ -1010,6 +1007,7 @@ void
 Checkpoint( int sig, int code, void *scp )
 {
 	int		scm, p_scm;
+	int		do_full_restart = 1; // set to 0 for periodic checkpoint
 
 	dprintf( D_ALWAYS, "Entering Checkpoint()\n" );
 
@@ -1110,11 +1108,12 @@ Checkpoint( int sig, int code, void *scp )
 				SetSyscalls( p_scm );
 				
 			}
+			do_full_restart = 0;
 			dprintf(D_ALWAYS, "Periodic Ckpt complete, doing a virtual restart...\n");
 			LONGJMP( Env, 1);
 		}
 	} else {					// Restart
-		if ( check_sig == SIGTSTP ) {
+		if ( do_full_restart ) {
 			scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 			patch_registers( scp );
 			MyImage.Close();
