@@ -33,8 +33,9 @@ The details of each version are described below.
 \item Added a new configuration variable,
       \Macro{DAGMAN\_MAX\_SUBMIT\_ATTEMPTS}, that controls how many
       times in a row \Condor{dagman} will attempt to execute
-      \Condor{submit} before giving up.  It cannot be set to less than
-      1 attempt, or more than 10; if left undefined, it defaults to 6.
+      \Condor{submit} for a given job before giving up.  It cannot be
+      set to less than 1 attempt, or more than 10; if left undefined,
+      it defaults to 6.
 
 \item Added a new tool \Condor{updates\_stats} to dump out the update
 statistics information from ClassAds in a human readable format.
@@ -47,6 +48,11 @@ this ouput and displays it to the user in a readable format.
       could be expensive for large DAGs.  Added a boolean
       \Attr{DAGMAN\_STARTUP\_CYCLE\_DETECT} config attribute to
       re-enable cycle-detection at startup.
+
+\item \Condor{dagman} now offers a configuration variable,
+      \Macro{DAGMAN\_MAX\_SUBMITS\_PER\_INTERVAL}, which controls how
+      many individual jobs \Condor{dagman} will submit in a row before
+      servicing other requests (such as a \Condor{rm}).
 
 \end{itemize}
 
@@ -82,6 +88,14 @@ the userlog for the same job; this can happen due to a bug in the
 \item \Condor{dagman} now works right with nodes that have an initialdir
   specified in the node submit file.  (Previously, specifiying
   an initialdir only worked if the log file path was absolute.)
+
+\item \Condor{dagman} now responds more quickly to a request to be
+      removed from the queue (via \Condor{rm}), even if it is in the
+      midst of submitting jobs.  Previously, \Condor{dagman} would
+      finish submitting all ready jobs before responding to a removal
+      request, which could take a long time, and forced it to
+      immediately remove all the jobs it had just submitted
+      unnecessarily.
 
 \end{itemize}
 
