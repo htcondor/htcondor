@@ -47,7 +47,7 @@ BEGIN_NAMESPACE( classad );
 |                     // the ``left'' match candidate goes here
 |                 ]
 |   	   ];
-|      adcr             =
+|      adcl             =
 |          [
 |              other    = .adcl.ad;
 |              my       = ad;       // for condor backwards compatibility

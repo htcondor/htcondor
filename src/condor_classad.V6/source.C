@@ -74,7 +74,7 @@ bool ClassAdParser::
 ParseClassAd( const string &buffer, ClassAd &classad, bool full )
 {
 	if( !lexer.Initialize( buffer ) || !parseClassAd( classad, full ) ) {
-		classad.Clear( );
+	        classad.Clear( );
 		return( false );
 	}
 	return( true );
@@ -84,7 +84,7 @@ ParseClassAd( const string &buffer, ClassAd &classad, bool full )
 ClassAd *ClassAdParser::
 ParseClassAd( const string &buffer, bool full )
 {
-	ClassAd *ad = new ClassAd;
+        ClassAd *ad = new ClassAd;
 	if( !ad || !lexer.Initialize( buffer ) ) {
 		return( NULL );
 	}

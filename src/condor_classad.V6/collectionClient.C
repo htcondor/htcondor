@@ -238,7 +238,6 @@ OpenTransaction( const string &transactionName )
 
 		// records for open transaction and ack from server
 	ClassAd	rec, *ack=NULL;
-
 	rec.InsertAttr( ATTR_XACTION_NAME, transactionName );
 	rec.InsertAttr( ATTR_OP_TYPE, ClassAdCollOp_OpenTransaction );
 
@@ -833,7 +832,7 @@ SendOpToServer( int opType, ClassAd *rec, int expectedOpType, ClassAd *&ack )
 		return( false );
 	}
 
-
+ 
 		// send op record to server (some commands don't have rec classads)
 	serverSock->encode( );
 	if( rec ) unparser.Unparse( buffer, rec );

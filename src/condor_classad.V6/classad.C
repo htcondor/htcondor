@@ -250,6 +250,7 @@ Insert( const string &name, ExprTree *tree )
 		delete itr->second;
 	}
 	attrList[name] = tree;
+        
 	return( true );
 }
 

@@ -25,8 +25,8 @@
 #include "condor_common.h"
 #include "common.h"
 #include "collection.h"
-
-static const char *const CollOpStrings[] = {
+ 
+static const char *const ClassAdCollectionInterface::CollOpStrings[] = {
     "no op",
 
     "create sub view",
@@ -323,9 +323,8 @@ ReadLogEntry( FILE *fp )
 bool ClassAdCollectionInterface::
 WriteLogEntry( FILE *fp, ClassAd *rec, bool synch )
 {
-		// not loggable --- no error
+   		// not loggable --- no error
 	if( !fp ) return( true );
-
 	string buffer;
 	unparser.Unparse( buffer, rec );
 	if(fprintf(fp,"%s\n",buffer.c_str())<0 || (synch && fsync(fileno(fp))<0)) {

@@ -72,7 +72,7 @@ ClearRecords( )
 
 	for( itr = opList.begin( ); itr != opList.end( ); itr++ ) {
 		if( itr->rec ) delete (itr->rec);
-		if( itr->backup ) delete (itr->rec);
+		if( itr->backup ) delete (itr->backup);
 	}
 	opList.erase( opList.begin( ), opList.end( ) );
 }
@@ -85,6 +85,7 @@ Commit( )
 	CollectionOpList::iterator	itr;
 	ClassAd						*ad;
 	
+	printf("in commit");
 		// sanity check
 	if( !server ) return( false );
 
@@ -176,7 +177,7 @@ Log( FILE *fp, ClassAdUnParser *unp )
 	string						buf;
 	char						tmp[16];
 
-	if( !fp ) return( true );
+	if( !fp ) { return( true );};
 
         // write out a "OpenTransaction" record
     if(!rec.InsertAttr(ATTR_OP_TYPE,
@@ -186,6 +187,7 @@ Log( FILE *fp, ClassAdUnParser *unp )
 		CondorErrMsg += "; FATAL ERROR: failed to log transaction";
         return( false );
     }
+       
 	unp->Unparse( buf, &rec );
 	if( fprintf( fp, "%s\n", buf.c_str( ) ) < 0 ) {
 		sprintf( tmp, "%d", errno );
@@ -214,6 +216,7 @@ Log( FILE *fp, ClassAdUnParser *unp )
 		CondorErrMsg += "; FATAL ERROR: failed to log transaction";
         return( false );
     }
+        buf = "";
 	unp->Unparse( buf, &rec );
 	if( fprintf( fp, "%s\n", buf.c_str( ) ) < 0 ) {
 		sprintf( tmp, "%d", errno );
@@ -224,7 +227,11 @@ Log( FILE *fp, ClassAdUnParser *unp )
 	}
 
 		// sync ...
-	fsync( fileno( fp ) );
+        fflush(fp);
+        /*
+	int status1=fsync( fileno( fp ) );
+        fflush(fp); 
+        */
     return( true );
 }
 

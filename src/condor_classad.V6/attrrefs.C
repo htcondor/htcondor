@@ -129,8 +129,7 @@ _Evaluate (EvalState &state, Value &val) const
 
 			// if found, return cached value
 			if( itr != state.cache.end( ) ) {
-				val.CopyFrom( itr->second );	
-				state.curAd = curAd;		// NAC (fixed a bug)
+				val.CopyFrom( itr->second );
 				return true;
 			} 
 
@@ -146,7 +145,6 @@ _Evaluate (EvalState &state, Value &val) const
 			state.cache[ tree ] = val;
 
 			state.curAd = curAd;
-
 			return rval;
 
 		default:  EXCEPT( "ClassAd:  Should not reach here" );
@@ -192,7 +190,6 @@ _Evaluate (EvalState &state, Value &val, ExprTree *&sig ) const
 			// if found in cache, return cached value
 			if( itr != state.cache.end( ) ) {
 				val.CopyFrom( itr->second );
-				state.curAd = curAd;		// NAC (fixed a bug)
 				return true;
 			} 
 

@@ -598,7 +598,6 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 				return false;
 			}
 			val.CopyFrom( val1 );
-			tree = newOp;	// NAC - BUG FIX
 			return true;
 		}
 	} else if( op == op2 ) {
@@ -615,7 +614,6 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 				tree = NULL; op = __NO_OP__;	
 				return false;
 			}
-			tree = newOp;	// NAC BUG FIX
 			val.CopyFrom( val2 );
 			return true;
 		}

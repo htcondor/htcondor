@@ -37,7 +37,6 @@ ClassAdCollectionServer( ) : viewTree( NULL )
 		// create "root" view
 	viewTree.SetViewName( "root" );
 	RegisterView( "root", &viewTree );
-
 	log_fp = NULL;
 }
 
@@ -217,6 +216,7 @@ OperateInRecoveryMode( ClassAd *logRec )
 //------------------------------------------------------------------------------
 // Remote network mode interface
 //------------------------------------------------------------------------------
+/*
 int ClassAdCollectionServer::
 HandleClientRequest( int command, Sock *clientSock )
 {
@@ -257,7 +257,6 @@ HandleClientRequest( int command, Sock *clientSock )
 		CondorErrMsg += "; failed to parse client request";
 		return( -1 );
 	}
-	
 		// handle query command
 	if( command == ClassAdCollOp_QueryView ) {
 		return( HandleQuery( rec, clientSock ) ? +1 : -1 );
@@ -279,7 +278,7 @@ OperateInNetworkMode( int opType, ClassAd *logRec, Sock *clientSock )
 	int		ackOpType;
 	bool	failed = false;
 	ClassAd	ack;
-
+               
 	switch( opType ) {
 			// acks for open and commit xaction operations
 		case ClassAdCollOp_OpenTransaction:
@@ -756,7 +755,7 @@ HandleReadOnlyCommands( int command, ClassAd *rec, Sock *clientSock )
 	return( true );
 }
 
-
+*/
 //------------------------------------------------------------------------------
 // Main execution engine --- operations in recovery mode, network mode and
 // the local interface mode usually funnel into these routines
@@ -1294,7 +1293,6 @@ AddClassAd( const string &key, ClassAd *newAd )
 
 		proxy.ad = newAd;
 		classadTable[key] = proxy;
-
 			// log if possible
 		if( log_fp ) {
 			ClassAd *rec = _AddClassAd( "", key, newAd );
@@ -1672,14 +1670,34 @@ LogState( FILE *fp )
 	}
 
 	for( itr = classadTable.begin( ); itr != classadTable.end( ); itr++ ) {
-		if( !logRec.InsertAttr( "Key", itr->first.c_str( ) )||
-				!( ad = GetClassAd( itr->first ) )			||
-				!logRec.InsertAttr( "Ad", ad ) 				||
-				!WriteLogEntry( fp, &logRec, false ) ) {
+           ClassAd *tmp;
+           string dd(itr->first);
+           tmp = GetClassAd(dd);//GetClassAd( itr->first );
+           string buff;
+           ClassAdUnParser unparser;
+           unparser.Unparse(buff,tmp);
+         
+            
+           logRec.InsertAttr( "Key", itr->first );
+           ad = GetClassAd( itr->first );
+           logRec.Insert( "Ad", ad );
+                
+	   //if( !logRec.InsertAttr( "Key", itr->first.c_str( ) )||
+	   //			!( ad = GetClassAd( itr->first ) )			||
+	   //		!logRec.InsertAttr( "Ad", ad ) 				||
+           
+           buff="";
+           unparser.Unparse(buff,&logRec);
+
+		if(		!WriteLogEntry( fp, &logRec, false ) ) {
 			CondorErrMsg += "; failed to log ad, could not log state";
 			logRec.Remove( "Ad" );
 			return( false );
 		}
+                buff="";
+            
+                unparser.Unparse(buff,&logRec);
+
 
 		logRec.Remove( "Ad" );
 	}

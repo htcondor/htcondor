@@ -30,7 +30,7 @@
 BEGIN_NAMESPACE( classad );
 
 class ServerTransaction;
-class Sock;
+//class Sock;
 
 class ClassAdProxy {
 public:
@@ -44,7 +44,7 @@ public:
 typedef hash_map<string,View*,StringHash> ViewRegistry;
 typedef hash_map<string,ClassAdProxy,StringHash> ClassAdTable;
 typedef hash_map<string,ServerTransaction*,StringHash> XactionTable;
-
+//typedef deque<string> XactID_S;
 
 class ClassAdCollectionServer : public ClassAdCollectionInterface {
 public:
@@ -104,11 +104,12 @@ public:
 
 		// handle remote request function
 		// returns +1 on success, -1 on failure, 0 on client disconnection
-	int HandleClientRequest( int command, Sock *clientSock );
+
+        //int HandleClientRequest( int command, Sock *clientSock );
 
 protected:
 	virtual bool OperateInRecoveryMode( ClassAd * );
-	virtual bool OperateInNetworkMode( int, ClassAd *, Sock * );
+	//virtual bool OperateInNetworkMode( int, ClassAd *, Sock * );
 	virtual bool LogState( FILE * );
 
 private:
@@ -118,8 +119,8 @@ private:
 	friend class LocalCollectionQuery;
 
 		// remote interrogation service function
-	bool HandleReadOnlyCommands( int, ClassAd *, Sock * );
-	bool HandleQuery( ClassAd *, Sock * );
+	//bool HandleReadOnlyCommands( int, ClassAd *, Sock * );
+	//bool HandleQuery( ClassAd *, Sock * );
 
 		// low level execution modules
 	bool PlayClassAdOp ( int, ClassAd * );
@@ -135,7 +136,7 @@ private:
 	ClassAdTable	classadTable;
 	View			viewTree;
 	XactionTable	xactionTable;
-
+        //XactID_S xactid_table; 
 	bool LogViews( FILE *log, View *view, bool subView );
 };
 
