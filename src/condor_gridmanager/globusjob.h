@@ -35,11 +35,14 @@ class GlobusJob : public Service
 
 	static int probeInterval;
 	static int submitInterval;
+	static int restartInterval;
 
 	static void setProbeInterval( int new_interval )
 		{ probeInterval = new_interval; }
 	static void setSubmitInterval( int new_interval )
 		{ submitInterval = new_interval; }
+	static void setRestartInterval( int new_interval )
+		{ restartInterval = new_interval; }
 
 	// New variables
 	bool resourceDown;
@@ -65,6 +68,9 @@ class GlobusJob : public Service
 	char *holdReason;
 	int submitFailureCode;
 	int lastRestartReason;
+	time_t lastRestartAttempt;
+	int numRestartAttempts;
+	int numRestartAttemptsThisSubmit;
 
 	GahpClient gahp;
 

@@ -101,6 +101,7 @@ char *GMStateNames[] = {
 
 int GlobusJob::probeInterval = 300;		// default value
 int GlobusJob::submitInterval = 300;	// default value
+int GlobusJob::restartInterval = 60;	// default value
 
 GlobusJob::GlobusJob( GlobusJob& copy )
 {
@@ -152,6 +153,9 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	holdReason = NULL;
 	submitFailureCode = 0;
 	lastRestartReason = 0;
+	lastRestartAttempt = 0;
+	numRestartAttempts = 0;
+	numRestartAttemptsThisSubmit = 0;
 
 	evaluateStateTid = daemonCore->Register_Timer( TIMER_NEVER,
 								(TimerHandlercpp)&GlobusJob::doEvaluateState,
@@ -645,6 +649,7 @@ int GlobusJob::doEvaluateState()
 			}
 			break;
 		case GM_RESTART:
+			now = time(NULL);
 			if ( jobContact == NULL ) {
 				gmState = GM_CLEAR_REQUEST;
 			} else if ( globusError != 0 && globusError == lastRestartReason ) {
@@ -652,6 +657,9 @@ int GlobusJob::doEvaluateState()
 						 "two times in a row: %d, aborting request\n",
 						 globusError );
 				gmState = GM_CLEAR_REQUEST;
+			} else if ( now < lastRestartAttempt + restartInterval ) {
+				daemonCore->Reset_Timer( evaluateStateTid,
+								(lastRestartAttempt + restartInterval) - now );
 			} else {
 				char *job_contact;
 				char rsl[4096];
@@ -686,6 +694,7 @@ int GlobusJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
+				lastRestartAttempt = time(NULL);
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
 					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 					connect_failure = true;
@@ -695,6 +704,10 @@ int GlobusJob::doEvaluateState()
 					gmState = GM_PROXY_EXPIRED;
 					break;
 				}
+				// TODO: What should be counted as a restart attempt and
+				// what shouldn't?
+				numRestartAttempts++;
+				numRestartAttemptsThisSubmit++;
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_OLD_JM_ALIVE ) {
 					// TODO: need to avoid an endless loop of old jm not
 					// responding, start new jm, new jm says old one still
@@ -915,6 +928,7 @@ int GlobusJob::doEvaluateState()
 			globusStateErrorCode = 0;
 			globusError = 0;
 			lastRestartReason = 0;
+			numRestartAttemptsThisSubmit = 0;
 			ClearCallbacks();
 			if ( jobContact != NULL ) {
 				rehashJobContact( this, jobContact, NULL );
