@@ -550,6 +550,8 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				break;
 			}
 			}
+		} else {
+			delete event;
 		}
 	}
 
