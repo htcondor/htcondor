@@ -63,6 +63,7 @@
 #include "basename.h"
 #include "nullfile.h"
 #include "user_job_policy.h"
+#include "condor_holdcodes.h"
 
 #define DEFAULT_SHADOW_SIZE 125
 
@@ -976,6 +977,24 @@ count( ClassAd *job )
 		if ( (job_managed == 0) && (want_service && cur_hosts == 0) ) {
 			status = HELD;
 		}
+		// if status is REMOVED, but the job contact string is not null,
+		// then consider the job IDLE for purposes of the logic here.  after all,
+		// the gridmanager needs to be around to finish the task of removing the job.
+		if ( status == REMOVED ) {
+			char contact_string[20];
+			strncpy(contact_string,NULL_JOB_CONTACT,sizeof(contact_string));
+			job->LookupString(ATTR_GLOBUS_CONTACT_STRING,contact_string,
+								sizeof(contact_string));
+			if ( strncmp(contact_string,NULL_JOB_CONTACT,
+							sizeof(contact_string)-1) )
+			{
+				// looks like the job's globus contact string is still valid,
+				// so there is still a job submitted remotely somewhere.
+				// fire up the gridmanager to try and really clean it up!
+				status = IDLE;
+			}
+		}
+
 		// Don't count HELD jobs that have ATTR_JOB_MANAGED set to false.
 		if ( (status != HELD && status != COMPLETED && status != REMOVED) 
 					|| job_managed != 0 ) 
@@ -1142,6 +1161,28 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
 			// If job_managed is true, then notify the gridmanager and return.
 			// If job_managed is false, we will fall through the code at the
 			// bottom of this function will handle the operation.
+			// Special case: if job_managed is false, but the job being removed
+			// and the jobmanager contact string is still valid, 
+			// then consider the job still "managed" so
+			// that the gridmanager will be notified.  
+			// If the job contact string is still valid, that means there is
+			// still a job remotely submitted that has not been removed.  When
+			// the gridmanager confirms a job has been removed, it will set
+			// ATTR_GLOBUS_CONTACT_STRING to be NULL_JOB_CONTACT.
+		if (!job_managed && mode==REMOVED ) {
+			char contact_string[20];
+			strncpy(contact_string,NULL_JOB_CONTACT,sizeof(contact_string));
+			job_ad->LookupString(ATTR_GLOBUS_CONTACT_STRING,contact_string,
+								sizeof(contact_string));
+			if ( strncmp(contact_string,NULL_JOB_CONTACT,
+							sizeof(contact_string)-1) )
+			{
+				// looks like the job's globus contact string is still valid,
+				// so there is still a job submitted remotely somewhere.
+				// fire up the gridmanager to try and really clean it up!
+				job_managed = 1;
+			}
+		}
 		if ( job_managed  ) {
 			char owner[_POSIX_PATH_MAX];
 			char domain[_POSIX_PATH_MAX];
@@ -2168,7 +2209,11 @@ Scheduler::actOnJobs(int, Stream* s)
 			break;
 		case JA_REMOVE_X_JOBS:
 				// only allow forced removal of previously "removed" jobs
-			sprintf( buf, "(%s==%d) && (", ATTR_JOB_STATUS, REMOVED );
+				// including jobs on hold that will go to the removed state
+				// upon release.
+			sprintf( buf, "((%s==%d) || (%s==%d && %s=?=%d)) && (", 
+				ATTR_JOB_STATUS, REMOVED, ATTR_JOB_STATUS, HELD,
+				ATTR_JOB_STATUS_ON_RELEASE,REMOVED);
 			break;
 		case JA_HOLD_JOBS:
 				// Don't hold held jobs
@@ -2237,6 +2282,12 @@ Scheduler::actOnJobs(int, Stream* s)
 			if(	ad->LookupInteger(ATTR_CLUSTER_ID,tmp_id.cluster) &&
 				ad->LookupInteger(ATTR_PROC_ID,tmp_id.proc) ) 
 			{
+				if( action == JA_RELEASE_JOBS ) {
+					int on_release_status = IDLE;
+					GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
+							ATTR_JOB_STATUS_ON_RELEASE, &on_release_status);
+					sprintf( status_str, "%d", on_release_status );
+				}
 				if( SetAttribute(tmp_id.cluster, tmp_id.proc,
 								 ATTR_JOB_STATUS, status_str) < 0 ) {
 					results.record( tmp_id, AR_PERMISSION_DENIED );
@@ -2276,6 +2327,7 @@ Scheduler::actOnJobs(int, Stream* s)
 				// Check to make sure the job's status makes sense for
 				// the command we're trying to perform
 			int status;
+			int on_release_status = IDLE;
 			if( GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
 								ATTR_JOB_STATUS, &status) < 0 ) {
 				results.record( tmp_id, AR_NOT_FOUND );
@@ -2287,6 +2339,9 @@ Scheduler::actOnJobs(int, Stream* s)
 					results.record( tmp_id, AR_BAD_STATUS );
 					continue;
 				}
+				GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
+							ATTR_JOB_STATUS_ON_RELEASE, &on_release_status);
+				sprintf( status_str, "%d", on_release_status );
 				break;
 			case JA_REMOVE_JOBS:
 				if( status == REMOVED ) {
@@ -2295,7 +2350,13 @@ Scheduler::actOnJobs(int, Stream* s)
 				}
 				break;
 			case JA_REMOVE_X_JOBS:
-				if( status != REMOVED ) {
+				if( status == HELD ) {
+					GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
+							ATTR_JOB_STATUS_ON_RELEASE, &on_release_status);
+				}
+				if( (status!=REMOVED) && 
+					(status!=HELD || on_release_status!=REMOVED) ) 
+				{
 					results.record( tmp_id, AR_BAD_STATUS );
 					continue;
 				}
@@ -7055,6 +7116,12 @@ fixReasonAttrs( PROC_ID job_id, int action )
 	case JA_RELEASE_JOBS:
 		moveStrAttr( job_id, ATTR_HOLD_REASON, ATTR_LAST_HOLD_REASON,
 					 true );
+		moveStrAttr( job_id, ATTR_HOLD_REASON_CODE, 
+					 ATTR_LAST_HOLD_REASON_CODE, true );
+		moveStrAttr( job_id, ATTR_HOLD_REASON_SUBCODE, 
+					 ATTR_LAST_HOLD_REASON_SUBCODE, true );
+		DeleteAttribute(job_id.cluster,job_id.proc,
+					 ATTR_JOB_STATUS_ON_RELEASE);
 		break;
 
 	default:
@@ -7357,9 +7424,13 @@ releaseJobRaw( int cluster, int proc, const char* reason,
 		}
 	}
 
-	if( SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, IDLE) < 0 ) {
-		dprintf( D_ALWAYS, "ERROR: Failed to set %s to IDLE for "
-				 "job %d.%d\n", ATTR_JOB_STATUS, cluster, proc );
+	int status_on_release = IDLE;
+	GetAttributeInt(cluster,proc,ATTR_JOB_STATUS_ON_RELEASE,&status_on_release);
+	if( SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, 
+			status_on_release) < 0 ) 
+	{
+		dprintf( D_ALWAYS, "ERROR: Failed to set %s to status %d for job %d.%d\n", 
+				ATTR_JOB_STATUS, status_on_release,cluster, proc );
 		return false;
 	}
 
