@@ -55,3 +55,4 @@ IMPORT_LINKS = ../../config/import_links
 import(../condor_io, $(IO_OBJ))
 
 release:
+stripped:

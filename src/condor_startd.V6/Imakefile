@@ -47,6 +47,7 @@ depend_target($(STARTD_SRC))
 
 c_plus_target(condor_startd,$(STARTD_OBJ),$(LIB))
 release_target(condor_startd,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
+strip_target(condor_startd,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
 pure_c_plus_target(condor_startd.pure, $(STARTD_OBJ), $(LIB) )
 purecov_c_plus_target(condor_startd.pc, $(STARTD_OBJ), $(LIB) )
 

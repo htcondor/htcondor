@@ -167,8 +167,8 @@ IO_OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o $(CONDOR_TYPE_OBJ)
 LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL) $(NAME_TAB) $(XDR_OBJ) $(UTIL_OBJ) \
 	$(CKPT_OBJ) $(UTIL_EXTRACT) $(HP_UTIL) $(IOS_STUBS) $(IO_OBJ)
 
-SIMPLE_OBJ = $(LIB_DIR)/condor_rt0.o extern_path.o xfer_file.o 
-SYSCALL_LIB = $(LIB_DIR)/condor_syscall_lib.a
+SIMPLE_OBJ = condor_rt0.o extern_path.o xfer_file.o 
+SYSCALL_LIB = condor_syscall_lib.a
 
 #if DOES_REMOTE_SYSCALLS
 all_target($(SYSCALL_LIB) receivers.C $(SIMPLE_OBJ) $(AIX_OBJ) syscall-list)
@@ -234,18 +234,21 @@ SYSCONF.o :  $(SIMPLE_LIBC)  ToUpper
 
 #if (DOES_CHECKPOINTING) || (DOES_REMOTE_SYSCALLS)
 release_target( condor_rt0.o, $(RELEASE_DIR)/lib, OBJECT_MODE )
+strip_copy_target( condor_rt0.o, $(STRIP_DIR)/lib, condor_rt0.o, OBJECT_MODE )
 #endif
 
 library_target(condor_syscall_lib.a,$(LIB_OBJ))
 
 #if (DOES_CHECKPOINTING) || (DOES_REMOTE_SYSCALLS)
 release_library(condor_syscall_lib.a,$(RELEASE_DIR)/lib)
+strip_library(condor_syscall_lib.a,$(STRIP_DIR)/lib)
 #endif
 
 CMNT If no remote syscalls & no checkpointing support, then no need
 CMNT to release anything into RELEASEDIR/lib, since we only do VANILLA jobs
 #if (!DOES_CHECKPOINTING) && (!DOES_REMOTE_SYSCALLS)
 release:
+stripped:
 #endif
 
 CPP = PreProcessCmd

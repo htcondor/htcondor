@@ -117,6 +117,7 @@ clean::
 c_plus_target(condor_starter,$(OBJ),$(LIB))
 #endif
 release_target(condor_starter,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
+strip_target(condor_starter,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
 
 c_plus_target(toy,$(TOY_OBJ),$(TOY_LIB))
 

@@ -108,6 +108,8 @@ RELEASE_OBJ = $(LIB_DIR)/libckpt.a $(LIB_DIR)/c_plus_alloc.o
 release:: all
 #endif
 
+stripped:: all
+
 
 #if IS_HPPAR_HPUX9
 SIGNAL.o :  $(SIMPLE_LIBC)  ToUpper
@@ -172,7 +174,6 @@ program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBL
 #endif
 
 program_target(ToUpper,ToUpper.o,$(NULL))
-release_target(ToUpper,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
 CMNT
 CMNT Create a replacement for crt0.o to be linked with condor programs.

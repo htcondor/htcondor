@@ -14,3 +14,4 @@ c_plus_target(testit,test_daemon_core.o daemon_core.a,$(LIB))
 tags_target($(SRC),$(NULL))
 depend_target($(SRC) $(LIB))
 release:
+stripped:

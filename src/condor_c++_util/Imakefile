@@ -125,6 +125,7 @@ IMPORT_LINKS = ../../config/import_links
 import(../condor_util_lib, mkargv.o)
 
 release:
+stripped:
 
 foo.o: user_log.h
 test.o: user_log.h

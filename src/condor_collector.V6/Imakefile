@@ -22,6 +22,7 @@ tags_target($(SRC),$(LIBDIRS))
 depend_target($(SRC))
 library_target(collector_engine.a, $(ENGINE_OBJ))
 release_target(condor_collector,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
+strip_target(condor_collector,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
 
 IMPORT_LINKS = ../../config/import_links
 import(../condor_status.V6,totals.o)

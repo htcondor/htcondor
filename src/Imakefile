@@ -14,7 +14,7 @@ CFLAGS = $(STD_C_FLAGS)
 
 #if WANT_PVM && HAS_PVM
    #define PvmProgs starter.jim shadow.jim 
-   #define PvmDirs release_pvm release_pvm/lib release_pvm/sbin
+   #define PvmDirs strip_pvm strip_pvm/lib strip_pvm/sbin
 #else
    #define PvmProgs
    #define PvmDirs
@@ -28,25 +28,26 @@ CFLAGS = $(STD_C_FLAGS)
 		accountant.V6 ckpt_server $(CONFIG_SERVER) \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts shadow.V6 startd.V6 starter.V5 submit.V6 status.V6 \
-		tools kbdd collector.V6
+		tools kbdd collector.V6 PvmProgs
 
 #define Libraries \
 		util_lib c++_util ckpt io classad daemon_core.V6 \
 		syscall_lib
 
-#define Directories release_dir release_dir/bin release_dir/lib \
-	release_dir/sbin release_dir/etc release_dir/etc/examples \
-	PvmDirs
+#define Directories \
+	release_dir release_dir/bin release_dir/lib release_dir/sbin \
+	strip_dir strip_dir/bin strip_dir/sbin strip_dir/lib \
+	strip_dir/etc strip_dir/etc/examples PvmDirs 
 
 all: h makefiles Directories Libraries Programs examples
 release:: all
-
-#define Tools condor_checkpoint condor_off condor_on condor_reconfig \
-	condor_reconfig_schedd condor_reschedule condor_restart \
-	condor_vacate condor_master_off
+stripped:: all
 
 #define SubmitSbinFiles sbin/condor_master sbin/condor_schedd \
-	sbin/condor_shadow sbin/condor_preen
+	sbin/condor_shadow sbin/condor_preen sbin/condor_checkpoint \
+	sbin/condor_off sbin/condor_on sbin/condor_reconfig \
+	sbin/condor_reconfig_schedd sbin/condor_reschedule \
+	sbin/condor_restart sbin/condor_vacate sbin/condor_master_off
 
 #ifndef PublicTarget
 #define PublicTarget /p/condor/scratch/V6_release
@@ -54,37 +55,33 @@ release:: all
 PUBLIC_TARGET = PublicTarget
 public: release.tar
 	rm -f $(PUBLIC_TARGET)/release.tar
-	cp release_dir/release.tar $(PUBLIC_TARGET)
+	cp strip_dir/release.tar $(PUBLIC_TARGET)
 
 release.tar: stripped
-	cd release_dir; rm -f release.tar; tar -cvf release.tar etc bin lib sbin
+	cd strip_dir; rm -f release.tar; tar -cvf release.tar etc bin lib sbin
 
 submit.tar: stripped
-	cd release_dir; rm -f submit.tar; tar -cvf submit.tar etc bin lib SubmitSbinFiles
-
-stripped: release
-	cd release_dir/bin; strip *; echo 
-	cd release_dir/sbin; rm Tools; strip *; echo 
-	cd condor_tools; make stripped
+	cd strip_dir; rm -f submit.tar; tar -cvf submit.tar etc bin lib SubmitSbinFiles
 
 #if WANT_PVM && HAS_PVM
-pvm.tar: pvm_stripped
-	cd release_pvm; rm -f pvm.tar; tar -cvf pvm.tar lib sbin
-
-pvm_stripped: PvmProgs
-	cd release_pvm/sbin; strip *; echo
+pvm.tar: stripped
+	cd strip_pvm; rm -f pvm.tar; tar -cvf pvm.tar lib sbin
 #endif
 
 simple_dir_target(release_dir)
 simple_dir_target(release_dir/bin)
 simple_dir_target(release_dir/lib)
 simple_dir_target(release_dir/sbin)
-simple_dir_target(release_dir/etc)
-simple_dir_target(release_dir/etc/examples)
+simple_dir_target(strip_dir)
+simple_dir_target(strip_dir/bin)
+simple_dir_target(strip_dir/lib)
+simple_dir_target(strip_dir/sbin)
+simple_dir_target(strip_dir/etc)
+simple_dir_target(strip_dir/etc/examples)
 #if WANT_PVM && HAS_PVM
-simple_dir_target(release_pvm)
-simple_dir_target(release_pvm/sbin)
-simple_dir_target(release_pvm/lib)
+simple_dir_target(strip_pvm)
+simple_dir_target(strip_pvm/sbin)
+simple_dir_target(strip_pvm/lib)
 #endif
 object_target(util_lib)
 object_target(c++_util)
@@ -136,4 +133,4 @@ check_platform_target
 
 clean::
 	cd h; make clean
-	rm -rf Makefile */Makefile */Makefile.*  release_dir
+	rm -rf Makefile */Makefile */Makefile.* release_dir strip_dir strip_pvm

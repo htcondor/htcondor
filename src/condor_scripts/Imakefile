@@ -10,12 +10,17 @@ all_target($(TARGETS))
 depend_target($(SRC))
 tags: ALWAYS
 
-copy_torelease_target(condor_install,sbin,condor_install,EXECUTABLE_MODE)
+release_target(condor_install,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
 release_target(condor_init,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
-
 copy_torelease_target(condor_compile,bin,condor_compile,EXECUTABLE_MODE)
 copy_torelease_target(ld,lib,ld,EXECUTABLE_MODE)
 link_torelease_target($(RELEASE_DIR)/lib/ld,lib,real-ld)
+
+strip_copy_target(condor_install,$(STRIP_DIR)/sbin,condor_install,EXECUTABLE_MODE)
+strip_copy_target(condor_init,$(STRIP_DIR)/sbin,condor_init,EXECUTABLE_MODE)
+strip_copy_target(condor_compile,$(STRIP_DIR)/bin,condor_compile,EXECUTABLE_MODE)
+strip_copy_target(ld,$(STRIP_DIR)/lib,ld,EXECUTABLE_MODE)
+link_tostrip_target($(STRIP_DIR)/lib/ld,lib,real-ld)
 
 #if IS_SGI_IRIX53 || IS_SGI_IRIX62
 link_torelease_target($(RELEASE_DIR)/lib/ld,lib,uld)
@@ -25,10 +30,19 @@ symlink_torelease_target(/usr/lib/c++/cfront,lib,cfront)
 symlink_torelease_target(/usr/lib/c++/markc++,lib,markc++)
 symlink_torelease_target(/usr/lib/c++/ptcomp,lib,ptcomp)
 symlink_torelease_target(/usr/lib/c++/ptlink,lib,ptlink)
+
+link_tostrip_target($(STRIP_DIR)/lib/ld,lib,uld)
+symlink_tostrip_target(/usr/lib/c++/c++filt,lib,c++filt)
+symlink_tostrip_target(/usr/lib/c++/c++patch,lib,c++patch)
+symlink_tostrip_target(/usr/lib/c++/cfront,lib,cfront)
+symlink_tostrip_target(/usr/lib/c++/markc++,lib,markc++)
+symlink_tostrip_target(/usr/lib/c++/ptcomp,lib,ptcomp)
+symlink_tostrip_target(/usr/lib/c++/ptlink,lib,ptlink)
 #endif
 
 #if IS_SGI_IRIX62
 link_torelease_target($(RELEASE_DIR)/lib/ld,lib,old_ld)
+link_tostrip_target($(STRIP_DIR)/lib/ld,lib,old_ld)
 #endif
 
 clean:

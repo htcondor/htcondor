@@ -1,5 +1,5 @@
-CFLAGS = $(STD_C_FLAGS) 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+CFLAGS = $(STD_C_FLAGS) -DDEBUG
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DDEBUG
 
 SRC = network2.c gen_lib.C fileinfo2.C fileindex2.C imds2.C xferstat2.C \
 	signal2.C alarm2.C server2.C xfer_summary.C replication.C
@@ -30,5 +30,6 @@ library_target(ckpt_server_api.a,$(SERVER_API_OBJ))
 program_target(condor_ckpt_server_cp, condor_ckpt_server_cp.o, ckpt_server_api.a $(LIB)) 
 
 release:
+stripped:
 
 depend_target($(SRC))
