@@ -52,6 +52,7 @@
 #include <arpa/inet.h>
 #include <sys/param.h>
 #include <values.h>
+#include <math.h>
 
 
 #endif /* System specific stuff */
