@@ -168,6 +168,7 @@ char	*CopyToSpool = "copy_to_spool";
 
 #if !defined(WIN32)
 char	*KillSig			= "kill_sig";
+char	*RmKillSig			= "remove_kill_sig";
 #endif
 
 void 	reschedule();
@@ -1902,6 +1903,10 @@ SetKillSig()
 		if (signo == 0 && isalnum(sig[0])) {
 			signo = sig_name_lookup(sig);
 		}
+		if( signo == 0 ) {
+			fprintf( stderr, "\nERROR: invalid signal %s\n", sig );
+			exit( 1 );
+		}
 		free(sig);
 	} else {
 		switch(JobUniverse) {
@@ -1916,6 +1921,22 @@ SetKillSig()
 
 	(void) sprintf (buffer, "%s = %d", ATTR_KILL_SIG, signo);
 	InsertJobExpr(buffer);
+
+	sig = condor_param(RmKillSig);
+
+	if (sig) {
+		signo = atoi(sig);
+		if (signo == 0 && isalnum(sig[0])) {
+			signo = sig_name_lookup(sig);
+		}
+		if( signo == 0 ) {
+			fprintf( stderr, "\nERROR: invalid signal %s\n", sig );
+			exit( 1 );
+		}
+		free(sig);
+		(void) sprintf (buffer, "%s = %d", ATTR_REMOVE_KILL_SIG, signo);
+		InsertJobExpr(buffer);
+	} 
 }
 #endif  // of ifndef WIN32
 
