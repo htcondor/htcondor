@@ -1013,15 +1013,11 @@ Job::GetAttribute(const char *name, char *val)
 	if (result.type != LX_STRING) {
 		return -1;
 	}
-#if 0
-	// The classad puts quotation marks around strings which we'd rather
-	// not make people look at.
-	ptr = result.s + 1;
-	ptr[strlen(ptr) - 1] = '\0';
-	strcpy(val, ptr);
-#else
-	strcpy(val, result.s);
-#endif
+	if (val) {
+		strcpy(val, result.s);
+	} else {
+		val = strdup(result.s);
+	}
 	return 0;
 }
 
