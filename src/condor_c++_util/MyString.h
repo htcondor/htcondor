@@ -132,7 +132,7 @@ public:
     buf[0] = '\0';
     if( Data ) {
       strncpy( buf, Data, sz); 
-	  Data[sz] = 0; // Make sure it's NULL terminated. strncpy won't make sure of it.
+	  buf[sz] = 0; // Make sure it's NULL terminated. strncpy won't make sure of it.
       delete [] Data;
     }
     Len = strlen( buf );
