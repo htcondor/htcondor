@@ -13,6 +13,14 @@ The details of each version are described below.
 \noindent Bugs Fixed:
 \begin{itemize}
 
+\item Fixed a major bug that caused standard universe Condor jobs to
+crash whenever they ran in a pool with the \Macro{LOWPORT} and
+\Macro{HIGHPORT} config file settings enabled.
+These settings restrict what ports Condor will use in your pool.
+To allow standard universe jobs to run in such a pool, you must relink
+your executable with \Condor{compile} after the 6.4.6 condor libraries
+are installed in your Condor \file{lib} directory.
+
 \item When more than 512 distinct users submit to Condor or Condor-G,
 the \Condor{schedd} no longer crashes. 
 
