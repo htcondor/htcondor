@@ -3,6 +3,10 @@
 \section{\label{sec:Java}Java Applications}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%%%%%
+\subsection{Background}
+%%%%%
+
 Condor allows users to access a wide variety of
 machines distributed around the world.
 The Java Virtual Machine (JVM)
@@ -17,6 +21,10 @@ two features to create a distributed, homogeneous computing environment.
 Compiled Java programs can be submitted to Condor, and Condor
 can execute the programs on any machine in the pool that will run
 the Java Virtual Machine.
+
+%%%%%
+\subsection{Finding Appropriate Machines}
+%%%%%
 
 The \Condor{status} command can be used to see a list of
 machines in the pool for which Condor can use the Java Virtual
@@ -44,6 +52,10 @@ In this case,
 contact your system administrator or see section \ref{sec:java-install}
 for more information on getting Condor to work together
 with Java.
+
+%%%%%
+\subsection{Example Java Program and Submit Files}
+%%%%%
 
 Here is a complete, if simple, example.
 Start with a simple Java program, \File{Hello.java}:
@@ -108,6 +120,10 @@ will have to use file transfer, like this:
 
 For more information about using file transfer, see
 section~\ref{sec:file-transfer}.
+
+%%%%%
+\subsection{Submit File Commands}
+%%%%%
 
 The Java universe must be explicitly selected.
 
@@ -189,12 +205,14 @@ As an example, to execute only on machines of a minimum speed:
 requirements = (JavaMFlops>4.5)
 \end{verbatim}
 
-By default, Condor moves all input files
-to each execution site before the job runs, and it moves
-all output files back when the job completes.
+%%%%%
+\subsection{Chirp I/O}
+%%%%%
 
 \index{Chirp}
-If a job has more sophisticated I/O requirements, then
+If a job has more sophisticated I/O requirements that cannot
+be met by the simple file-transfer mechanism (see
+section~\ref{sec:file-transfer}), then
 you may use a facility called Chirp.
 Chirp has two advantages over simple whole-file transfers.
 First, it permits the input files to be decided upon at run-time
