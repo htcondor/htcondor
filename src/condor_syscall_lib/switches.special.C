@@ -1668,14 +1668,13 @@ getrusage( int who, struct rusage *rusage )
 #undef gettimeofday
 #if defined( SYS_gettimeofday )
 #if defined(LINUX)
-extern "C" int REMOTE_CONDOR_gettimeofday(struct timeval *, struct timesoze *);
+extern "C" int REMOTE_CONDOR_gettimeofday(struct timeval *, struct timezone *);
 int gettimeofday (struct timeval *tp, struct timezone *tzp)
 #else
 extern "C" int REMOTE_CONDOR_gettimeofday(struct timeval *, void *);
 int gettimeofday (struct timeval *tp, void *tzp)
 #endif
 {
-	GTOD_Cache *gtodc = NULL;
 	struct timeval exe_machine_now;
 	struct timeval sub_machine_now;
 
