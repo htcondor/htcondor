@@ -14,6 +14,9 @@
 #define IS_IRIX			YES
 #define Architecture		SGI
 
+/* define mips 3 compilation, if left NO, then it will be default of compiler */
+#define IS_MIPS3				YES
+
 #define IS_V5				YES
 
 #define HAS_X_EXTENSIONS		NO
@@ -108,11 +111,18 @@
 #define RpcSvc		concat(BaseLibPath,/librpcsvc.so)
 #define RpcSun		concat(BaseLibPath,/libsun.a)
 #define MallocLib	concat(BaseLibPath,/libmalloc.so)
-#define SimpleLibC 	concat(BaseLibPath,/libc.so.1)
-#define LibC		SimpleLibC
 
-#define Crt0 concat(BaseLibPath,/crt1.o)
-#define CrtN concat(BaseLibPath,/crtn.o)
+#if defined(IS_MIPS3)
+#	define SimpleLibC 	/usr/lib32/mips3/libc.so.1
+#	define Crt0 /usr/lib32/mips3/crt1.o
+#	define CrtN /usr/lib32/mips3/crtn.o
+#else
+#	define SimpleLibC 	concat(BaseLibPath,/libc.so.1)
+#	define Crt0 concat(BaseLibPath,/crt1.o)
+#	define CrtN concat(BaseLibPath,/crtn.o)
+#endif
+
+#define LibC		SimpleLibC
 
 #define PlatformLdFlags MldLib RealMldLib 
 #define SyscallsExp /**/
