@@ -25,10 +25,11 @@
 
 #include "extArray.h"
 #include "condor_uid.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 class ProcAPI; 	// forward reference
 
-class ProcFamily {
+class ProcFamily : public Service {
 public:
 	
 	ProcFamily( pid_t pid, priv_state priv, int test_only = 0 );
@@ -40,6 +41,14 @@ public:
 	void softkill(int sig);
 	void suspend();
 	void resume();
+
+		// get cpu usage of the family in seconds
+	void get_cpu_usage(long & sys_time, long & user_time);
+
+		// get the maxmimum family image size, in kbytes, seen
+		// across all snapshots.  note this does _not_ generate
+		// a call to takesnapshot() itself.
+	void get_max_imagesize(unsigned long & max_image );
 
 	void takesnapshot();
 
@@ -72,7 +81,8 @@ private:
 	class a_pid {
 		public:
 			// Constructor - just zero out everything
-			a_pid() : pid(0),ppid(0),birthday(0L) {};
+			a_pid() : pid(0),ppid(0),birthday(0L),
+				cpu_user_time(0L),cpu_sys_time(0L) {};
 			
 			// the pid
 			pid_t pid;
@@ -80,12 +90,26 @@ private:
 			pid_t ppid;
 			// the epoch time when process was born
 			long birthday;
+			// the amount of user cpu time used in seconds
+			long cpu_user_time;
+			// the amount of system cpu time used in seconds
+			long cpu_sys_time;
 	};
 
 	ExtArray<a_pid> *old_pids;
 
 	int family_size;
 	int needs_free;
+
+	// total cpu usage for pids which have exited
+	long exited_cpu_user_time;
+	long exited_cpu_sys_time;
+
+	// total cpu usage for pids which are still alive
+	long alive_cpu_user_time;
+	long alive_cpu_sys_time;
+
+	unsigned long max_image_size;
 };
 
 #endif
