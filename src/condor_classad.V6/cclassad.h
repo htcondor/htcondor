@@ -33,18 +33,28 @@ The user is responsible for freeing it.
 */
 
 char * cclassad_unparse( struct cclassad *c );
+char * cclassad_unparse_xml( struct cclassad *c );
+
+/*
+Check to see if two ClassAds match.
+Return true if their requirements expressions are
+mutually satisfied.  Otherwise, return false.
+*/
+
+int cclassad_match( struct cclassad *a, struct cclassad *b );
 
 /*
 Four ways to insert elements into a classad.
 In each case, "attr" names the attribute to be
 inserted. In the "expr" form, the "value" must be a ClassAd
 expression which is parsed and then inserted.
-The three other forms insert atomic types without parsing.
+The remaining forms insert atomic types without parsing.
 Returns true on success, false on failure.
 */
 
 int cclassad_insert_expr( struct cclassad *c, const char *attr, const char *value );
 int cclassad_insert_string( struct cclassad *c, const char *attr, const char *value );
+int cclassad_insert_double( struct cclassad *c, const char *attr, double value );
 int cclassad_insert_int( struct cclassad *c, const char *attr, int value ); 
 int cclassad_insert_bool( struct cclassad *c, const char *attr, int value );
 
@@ -66,6 +76,7 @@ that need not be parsed.  Returns true on success, false on failure.
 
 int cclassad_evaluate_to_expr( struct cclassad *c, const char *expr, char **result );
 int cclassad_evaluate_to_string( struct cclassad *c, const char *expr, char **result );
+int cclassad_evaluate_to_double( struct cclassad *c, const char *expr, double *result );
 int cclassad_evaluate_to_int( struct cclassad *c, const char *expr, int *result );
 int cclassad_evaluate_to_bool( struct cclassad *c, const char *expr, int *result );
 

@@ -3,6 +3,7 @@
 #include "classad.h"
 #include "source.h"
 #include "sink.h"
+#include "xmlSink.h"
 
 struct cclassad {
 	ClassAd *ad;
@@ -48,6 +49,42 @@ char * cclassad_unparse( struct cclassad *c )
 	return strdup(s.c_str());
 }
 
+char * cclassad_unparse_xml( struct cclassad *c )
+{
+	ClassAdXMLUnParser unparser;
+	string s;
+
+	unparser.Unparse(s,c->ad);
+
+	return strdup(s.c_str());
+}
+
+int cclassad_match( struct cclassad *a, struct cclassad *b )
+{
+	char *expr;
+	int result;
+	
+	if(!cclassad_evaluate_to_expr(a,"requirements",&expr)) {
+		return 0;
+	}
+
+	if(!cclassad_evaluate_to_bool(b,expr,&result)) {
+		free(expr);
+		if(!result) return 0;
+	}
+
+	if(!cclassad_evaluate_to_expr(b,"requirements",&expr)) {
+		return 0;
+	}
+
+	if(!cclassad_evaluate_to_bool(a,expr,&result)) {
+		free(expr);
+		if(!result) return 0;
+	}
+
+	return 1;
+}
+
 int cclassad_insert_expr( struct cclassad *c, const char *attr, const char *value )
 {
 	ClassAdParser parser;
@@ -76,6 +113,12 @@ int cclassad_insert_string( struct cclassad *c, const char *attr, const char *va
 }
 
 int cclassad_insert_int( struct cclassad *c, const char *attr, int value )
+{
+	string strattr(attr);
+	return c->ad->InsertAttr(strattr,value);
+}
+
+int cclassad_insert_double( struct cclassad *c, const char *attr, double value )
 {
 	string strattr(attr);
 	return c->ad->InsertAttr(strattr,value);
@@ -132,6 +175,19 @@ int cclassad_evaluate_to_int( struct cclassad *c, const char *expr, int *result 
 
 	if(c->ad->EvaluateExpr(exprstring,value)) {
 		if(value.IsIntegerValue(*result)) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int cclassad_evaluate_to_double( struct cclassad *c, const char *expr, double *result )
+{
+	string exprstring(expr);
+	Value value;
+
+	if(c->ad->EvaluateExpr(exprstring,value)) {
+		if(value.IsRealValue(*result)) {
 			return 1;
 		}
 	}
