@@ -122,6 +122,8 @@ init_arch()
 		sprintf( tmp, "SUN4x" );
 	} else if( !strcmp(buf.machine, "sun4c") ) {
 		sprintf( tmp, "SUN4x" );
+	} else if( !strcmp(buf.machine, "9000/735") ) {
+		sprintf( tmp, "HPPA1" );
 	} else {
 			// Unknown, just use what uname gave:
 		sprintf( tmp, buf.machine );
@@ -150,6 +152,12 @@ init_arch()
 		}
 	} else if( !strcmp(buf.sysname, "OSF1") ) {
 		sprintf( tmp, "OSF1" );
+	} else if( !strcmp(buf.sysname, "HP-UX") ) {
+		if( !strcmp(buf.release, "B.10.20") ) {
+			sprintf( tmp, "HPUX10" );
+		} else {
+			sprintf( tmp, "HPUX%s", buf.release );
+		}
 	} else if( match_prefix(buf.sysname, "IRIX") ) {
 		if( buf.release[0] == '6' ) {
 			sprintf( tmp, "IRIX6" );
