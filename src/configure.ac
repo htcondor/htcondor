@@ -445,7 +445,12 @@ if test "$os" = "Linux" ; then
   _cv_has_vendor_f77="NO"
   _cv_has_vendor_f90="NO"
 else
-  AC_PATH_PROG([_cv_vendor_cc],[cc],[none],[$PATH:/opt/SUNWspro/bin:/usr/ucb])
+  if test "$os" = "HP-UX" ; then
+    _vendor_cc_PATH="/usr/bin:$PATH"
+  else
+    _vendor_cc_PATH="$PATH:/opt/SUNWspro/bin:/usr/ucb"
+  fi
+  AC_PATH_PROG([_cv_vendor_cc],[cc],[none],[$_vendor_cc_PATH])
   if test "$_cv_vendor_cc" = "none" ; then
     _cv_has_vendor_cc="NO"
   else
