@@ -312,13 +312,25 @@ CondorCronMgr::ParseJobList( const char *jobString )
 			}
 		}
 
-		// Verify that period==0 is only used in "continuous mode"
-		if ( ( 0 == jobPeriod ) && ( CRON_CONTINUOUS != jobMode ) ) {
-			dprintf( D_ALWAYS,
-					 "CronMgr: Job '%s', Period = 0, not continuous\n",
-					 jobName );
-			free( tmpDescr );
-			continue;
+		// we change period == 0 to period == 1 for continuous
+		// jobs, so Hawkeye doesn't busy-loop if the job fails to
+		// execute for some reason; we mark it as an error for
+		// other job modes, since it's an invalid period...
+		if( jobPeriod == 0 ) {
+		  if ( jobMode == CRON_CONTINUOUS ) {
+		    jobPeriod = 1;
+		    dprintf( D_ALWAYS, 
+			     "CronMgr: WARNING: Job '%s' period = 0, but this "
+			     "can cause busy-loops; resetting to 1.\n",
+			     jobName );
+		  }
+		  else {
+		    dprintf( D_ALWAYS,
+			     "CronMgr: ERROR: Job '%s' not continuous, but "
+			     "period = 0; ignoring Job.\n", jobName );
+		    free( tmpDescr ); 
+		    continue; 
+		  }
 		}
 
 		// Create the job & add it to the list (if it's new)
