@@ -48,6 +48,8 @@ typedef enum
   LX_DIV,
   LX_EOF,
 
+  LX_EXPR,
+
   NOT_KEYWORD
 } LexemeType;
 
