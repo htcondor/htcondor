@@ -42,7 +42,7 @@ The details of each version are described below.
   owned by this user.
   If the Condor daemons are spawned as root and \verb@CONDOR_IDS@ is
   not set, Condor searches for a ``condor'' user in the local user
-  information database (the /etc/passwd file, NIS, etc).
+  information database (the \File{/etc/passwd} file, NIS, etc).
   For more information about the \verb@CONDOR_IDS@ setting, see
   section~\ref{sec:uids} on page~\pageref{sec:uids}.
 
@@ -54,30 +54,41 @@ The details of each version are described below.
   This is useful for sites that are having trouble getting Condor to
   work because of problems with their DNS or NIS installation.
 
-\item Minor improvements for Computing On Demand (COD) support: 
-  Simplified the interface to the \Condor{cod} command-line tool
-  for managing COD claims.
-  Also, \verb@condor_status -cod -long@ now provides the ClaimID
-  string for any COD claims in your pool. 
-  This is useful in case you misplace or do not save the ClaimID
-  returned to you from \Condor{cod\_request}.
+\item Improvements for Computing On Demand (COD) support: 
+  \begin{itemize}
+    \item Simplified the interface to the \Condor{cod} command-line tool
+      for managing COD claims.
+      All commands that require a ClaimID argument no longer require
+      \Opt{-name} or \Opt{-addr}, since the ClaimID contains the
+      contact information for the \Condor{startd} that created it. 
+    \item If you request a claim from a specific virtual machine with
+      the \Opt{-name} option to \Condor{cod\_request} (for example
+      \verb$condor_cod_request -name vm3@hostname$)
+      the tool will now automatically append a requirement to your
+      request to ensure that your claim comes from the virtual machine
+      you requested.
+    \item \verb@condor_status -cod -long@ now provides the ClaimID
+      string for any COD claims in your pool. 
+      This is useful in case you misplace or do not save the ClaimID
+      returned to you from \Condor{cod\_request}.
+  \end{itemize}
 
-\item PVM: Added support for \Procedure{pvm\_export}.
-
-\item PVM: Added support for any tasks the Master spawns to also spawn other
+\item Improvements for PVM support:
+  \begin{itemize}
+  \item Added support for \Procedure{pvm\_export}.
+  \item Added support for any tasks the Master spawns to also spawn other
 	tasks. Before this fix, only the master process could spawn tasks.
-
-\item PVM: Added the ability for multiple tasks to be run on a resource
+  \item Added the ability for multiple tasks to be run on a resource
 	simultaneously. 
-
-\item PVM: Added support for Condor-PVM to run multiple tasks under a single
+  \item Added support for Condor-PVM to run multiple tasks under a single
 	Condor-PVM starter. Currently, this feature must be turned on
 	by a specific option in the submit description file.
+  \end{itemize}
 
 \item Added new option \Opt{-dagman} to \Condor{submit\_dag} which allows 
 specification of an alternate \Condor{dagman} executable. 
 
-\item Improved \Arg{-config} option to \Condor{config\_val} to print
+\item Improved \Opt{-config} option to \Condor{config\_val} to print
       descriptive lines to stderr and filenames to stdout, so that its
       output can be cleanly piped into tools like xargs.
 
@@ -133,10 +144,12 @@ specification of an alternate \Condor{dagman} executable.
   the \Prog{hawkeye\_master} program, the \Condor{master} will spawn
   everything correctly.
 
-\item PVM: Fixed the \Attr{Environment} attribute in the submit description 
+\item PVM-related bugs:
+  \begin{itemize}
+    \item Fixed the \Attr{Environment} attribute in the submit description 
 		to be honored by both the master process and the slave tasks.
-
-\item PVM: Fixed a few PVM deadlock scenarios during PVM startup.
+    \item Fixed a few PVM deadlock scenarios during PVM startup.
+  \end{itemize}
 
 \item Fixed a bug which caused the ``KFlops'' published in the
 startd's ClassAd to have a large variance on fast CPUs.
@@ -225,9 +238,9 @@ condor_status -pool your-other.collector.domain.org:7002
 \item When the Condor daemons start up, they now log the names of the
 Configuration files they are using, right after the startup banner.
 
-\item The \Condor{config\_val} program now has a \Arg{-verbose} option
+\item The \Condor{config\_val} program now has a \Opt{-verbose} option
   which will tell you in which configuration file and line number a
-  condor configuration parameter is defined, and a \Arg{-config}
+  condor configuration parameter is defined, and a \Opt{-config}
   option which will simply list all of the configuration files in use
   by Condor.
 
@@ -356,7 +369,7 @@ for more info on Stork.)
 \item Starter exceptions, such as failure to open standard input, are
 now recorded in the user log.
 
-\item Added new \Arg{-forcex} argument to \Condor{rm} to force the
+\item Added new \Opt{-forcex} argument to \Condor{rm} to force the
 immediate local removal of (typically Globus universe) jobs in the 'X'
 state, regardless of their remote state.
 
