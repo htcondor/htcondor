@@ -7,6 +7,10 @@
 #include "scanner.h"
 #include "y.tab.h"
 
+#if defined(AIX32) && !defined(OBJ_DATA)
+#	define OBJ_DATA(x) (x).obj	/* needed for gcc's toupper/tolower */
+#endif
+
 int		yyline = 1;
 extern YYSTYPE yylval;
 
