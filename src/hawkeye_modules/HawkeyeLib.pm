@@ -2,6 +2,11 @@
 package HawkeyeLib;# $pkg_name = "HawkeyeLib";
 use HawkeyePublish;
 
+# Hawkeye interface version number
+my $MyInterfaceVersion = 1;
+my $HawkeyeInterfaceVersion;
+my $InterfaceVersionString = "HAWKEYE_INTERFACE_VERSION";
+
 # Hard config from the command line
 my %HardConfigs;
 my $ModuleName = $0;
@@ -16,6 +21,11 @@ if ( $ModuleName =~ /\/([^\/]+)$/ )
 sub DoConfig( )
 {
     $ModuleName = shift( @ARGV) if ( $#ARGV >= 0 );
+    if ( $ModuleName =~ /^--ifversion/ )
+    {
+	print "$InterfaceVersionString=$MyInterfaceVersion\n";
+	exit 0;
+    }
 
     # Parameters like --module_name=value are used for configs on cmdline
     # Process these here...
@@ -33,9 +43,15 @@ sub DoConfig( )
 	    $HardConfigs{$1} = $2;
 	}
 	# Don't queury the config from the startd _at all_
-	elsif ( $Arg =~ /^--noconfig/ )
+	elsif ( $Arg =~ /^--noquery/ )
 	{
 	    $ConfigQuery = 0;
+	}
+	# Query published interface version
+	elsif ( $Arg =~ /^--ifversion/ )
+	{
+	    print "$InterfaceVersionString=$MyInterfaceVersion\n";
+	    exit 0;
 	}
 	# Normal param, just keep going..
 	elsif ( $Arg ne "" )
@@ -51,12 +67,31 @@ sub DoConfig( )
     chop( $ENV{OS_TYPE} = `uname -s` );
     chop( $ENV{OS_REV} = `uname -r` );
     chop( $ENV{HOST} = `hostname` );
+
+    # Interface version stuff...
+    $HawkeyeInterfaceVersion = 0;
+    if ( exists $ENV{$InterfaceVersionString} )
+    {
+	$HawkeyeInterfaceVersion = $ENV{$InterfaceVersionString};
+    }
 }
 
 # Get my name..
 sub GetModuleName( )
 {
     return $ModuleName;
+}
+
+# Get my interface version
+sub GetMyInterfaceVersion( )
+{
+    return $MyInterfaceVersion;
+}
+
+# Get the HAWKEYE interface version
+sub GetHawkeyeInterfaceVersion( )
+{
+    return $HawkeyeInterfaceVersion;
 }
 
 # Hard coded / command line config
@@ -300,6 +335,7 @@ sub Store
 {
     my $self = shift;
     my $Label = $self->{Label};
+    my $Count = 0;
     foreach my $Key ( keys %{$self->{Hash}} )
     {
 	my $Name = $Label . $Key;
@@ -313,7 +349,9 @@ sub Store
         {
 	    ${$self->{Hawkeye}}->Store( $Name, $Value );
         }
+	$Count++;
     }
+    return $Count;
 }
 
 1;
