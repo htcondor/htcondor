@@ -155,6 +155,7 @@ do_Q_request(AuthSock *syscall_sock)
 		assert( syscall_sock->end_of_message() );
 
 		errno = 0;
+		dprintf(D_FULLDEBUG,"InitializeConnection with owner: %s\n", owner );
 		rval = InitializeConnection( owner, tmp_file );
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
