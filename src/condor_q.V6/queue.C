@@ -67,6 +67,7 @@ static	bool show_queue_buffered (char* scheddAddr, char* scheddName,
 								  char* scheddMachine);
 
 static 	int verbose = 0, summarize = 1, global = 0, show_io = 0, dag = 0;
+static  int use_xml = 0;
 static  bool expert = false;
 static 	int malformed, unexpanded, running, idle, held;
 
@@ -317,6 +318,12 @@ processCommandLineArguments (int argc, char *argv[])
 			verbose = 1;
 			summarize = 0;
 		} 
+		else
+		if (match_prefix (arg, "xml")) {
+			use_xml = 1;
+			verbose = 1;
+			summarize = 0;
+		}
 		else
 		if (match_prefix (arg, "pool")) {
 			if( pool ) {
@@ -1312,8 +1319,8 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 			// initialize counters
 		malformed = 0; idle = 0; running = 0; unexpanded = 0, held = 0;
 		
-		if( verbose ) {
-			jobs.fPrintAttrListList( stdout );
+		if( verbose || use_xml ) {
+			jobs.fPrintAttrListList( stdout, use_xml ? true : false);
 		} else if( customFormat ) {
 			summarize = false;
 			mask.display( stdout, &jobs );
