@@ -22,12 +22,6 @@
 #	define Platform SUN4M_SOLARIS
 #	define PlatformIncludeFile <SUN4M_SOLARIS.cf>
 #	undef IS_SUN4M_SOLARIS
-#elif defined(IS_SUN4M_SOLARIS551)
-#   undef sun
-#   undef sparc
-#   define Platform SUN4M_SOLARIS551
-#   define PlatformIncludeFile <SUN4M_SOLARIS551.cf>
-#   undef IS_SUN4M_SOLARIS551
 #endif
 
 /*************

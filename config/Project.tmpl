@@ -128,6 +128,11 @@ STD_C_PLUS_FLAGS =  \
 	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) -I$(X11_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX DbmFlag SigFlag CompatFlags -g -gstabs
 STD_C_FLAGS =  $(STD_C_PLUS_FLAGS)
 STATIC = StaticFlag
+#elif (IS_SUN4M_SOLARIS551)
+STD_C_PLUS_FLAGS =  \
+	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) -I$(X11_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DSolaris551 -DNFSFIX DbmFlag SigFlag CompatFlags -g -gstabs
+STD_C_FLAGS =  $(STD_C_PLUS_FLAGS)
+STATIC = StaticFlag
 #else
 STD_C_PLUS_FLAGS =  \
 	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX DbmFlag SigFlag CompatFlags -g -gstabs
