@@ -50,7 +50,7 @@ stripped:: all
 	sbin/condor_restart sbin/condor_vacate sbin/condor_master_off
 
 #ifndef PublicTarget
-#define PublicTarget /p/condor/scratch/V6_release
+#define PublicTarget /p/condor/workspaces/release/V6_release
 #endif
 PUBLIC_TARGET = PublicTarget
 public: release.tar
