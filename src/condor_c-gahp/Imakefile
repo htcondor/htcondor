@@ -1,0 +1,25 @@
+NAME = condor_c-gahp
+
+all_target( $(NAME) )
+
+CFLAGS = $(STD_C_FLAGS)
+
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+LIB= $(DAEMONCORE_LIB) $(STD_LIBS)
+
+OBJ = FdBuffer.o io_loop.o schedd_client.o schedd_client_main.o SchedDCommands.o
+
+
+c_plus_target($(NAME),$(OBJ),$(LIB))
+release_target($(NAME),sbin,EXECUTABLE_MODE)
+strip_target($(NAME),sbin,EXECUTABLE_MODE)
+static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
+pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
+purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
+quantify_c_plus_target($(NAME).quantify,$(OBJ),$(LIB))
+c_plus_target(AvailStats.t,AvailStats.o AvailStats.t.o startd_instantiate.o,$(LIB))
+
+html:
+
+IMPORT_LINKS = ../../config/import_links
+import(../condor_util_lib, setsyscalls.o )
