@@ -3,14 +3,7 @@
 \index{directed acyclic graph}
 \index{Directed Acyclic Graph Manager (DAGMan)}
 \index{condor\_submit\_dag}
-\index{job!dependecies}
-
-\Note DAGMan is not included in the 6.2 release of Condor.
-A contrib module allows the use of the
-Condor version 6.3 DAGMan with Condor 6.2.
-This contrib module is available for download;
-see \Url{http://www.cs.wisc.edu/condor/downloads/} for the download.
-This manual section documents the contrib module.
+\index{job!dependencies}
 
 A directed acyclic graph (DAG) can be used to represent a set of programs
 where the input, output, or execution of one or more programs
@@ -39,7 +32,7 @@ The following sections specify the use of DAGMan.
 \subsection{Input File describing the DAG}
 
 \index{DAGMan!input file example}
-The input file used by DAGMan specifies three items:
+The input file used by DAGMan specifies four items:
 \begin{enumerate}
 \item
 A list of the programs in the DAG. This serves to name each program
@@ -50,6 +43,8 @@ any program in the DAG to Condor or after Condor has completed execution
 of any program in the DAG.
 \item
 Description of the dependencies in the DAG.
+\item
+Number of times to retry if a node within the DAG fails.
 \end{enumerate}
 
 Comments may be placed in the input file that describes the DAG.
@@ -74,6 +69,7 @@ An example input file for DAGMan is
 	Script PRE  D bot_pre.csh
 	PARENT A CHILD B C
 	PARENT B C CHILD D
+	Retry  C 3
 \end{verbatim}
 
 This input file describes the DAG shown in 
@@ -96,7 +92,7 @@ The syntax used for each Job Entry is
 \Arg{JOB} \Arg{JobName} \Arg{CondorSubmitDescriptionFile} \oArg{DONE}
 
 A Job Entry maps a \Arg{JobName} to a Condor submit description file.
-The \Arg{JobName} uniquely identifies programs within the
+The \Arg{JobName} uniquely identifies nodes within the
 DAGMan input file and within output messages.
 
 The keyword \Arg{JOB} and the \Arg{JobName} are not case sensitive.
@@ -142,7 +138,7 @@ The \Arg{SCRIPT} keyword identifies the type of line within
 the DAG input file.
 The \Arg{PRE} or \Arg{POST} keyword
 specifies the relative timing of when the script is to be run.
-The \Arg{JobName} specifies the job to which the script is attached.
+The \Arg{JobName} specifies the node to which the script is attached.
 The \Arg{ExecutableName}
 specifies the script to be executed, and it
 may be followed by any command line arguments to that script.
@@ -151,7 +147,7 @@ case preserved.
 
 Scripts are optional for each job, and
 any scripts are executed on the machine
-to which the DAGMan is submitted.
+to which the DAG is submitted.
 
 The PRE and POST scripts are commonly used
 when files must be placed into a staging area for the job to use,
@@ -166,19 +162,27 @@ The program produces output files.
 The POST script compresses the output files, writes them out to
 the tape, and then deletes the staged input and output files.
 
-DAGMan takes note of the exit value of the program
-as well as the exit value of its scripts.
-If the PRE script fails (exit value != 0), then neither the job nor
+DAGMan takes note of the exit value of the
+scripts as well as the program.
+If the PRE script fails (exit value != 0), then neither the program nor
 the POST script runs, and the node is marked as failed.
 
 If the PRE script succeeds, the program is submitted to Condor. 
-If the program fails, the DAG node is marked as failed.
+If the program fails and there is no POST script,
+the DAG node is marked as failed.
 An exit value not equal to 0 indicates program failure.
 It is therefore important that the program returns the exit
 value 0 to indicate the program did not fail.
 
-If the POST script fails (exit value != 0), then the node is marked as
-failed.  By default, the POST script is run regardless of the job's
+If the program fails and there is a POST script,
+node failure is determined by the exit value of the POST script.
+A failing value from the POST script marks the node as failed.
+A succeeding value from the POST script (even with a failed
+program) marks the node as successful.
+Therefore, the POST script may need to consider the return
+value from the program.
+
+By default, the POST script is run regardless of the program's
 return value.  To prevent POST scripts from running after failed jobs,
 pass the \Arg{-NoPostFail} argument to \Condor{submit\_dag}.
 
@@ -239,6 +243,27 @@ produces four dependencies:
 \item{\verb@p2@ to \verb@c1@}
 \item{\verb@p2@ to \verb@c2@}
 \end{enumerate}
+
+The fourth type of item in the DAG input file provides a
+way (optional) to retry failed nodes.
+The syntax for retry is
+
+\Arg{Retry} \Arg{JobName} \Arg{NumberOfRetries}
+
+where the \Arg{JobName} is the same as the name given in
+a Job Entry line, and \Arg{NumberOfRetries} is an integer,
+the number of times to retry the node after failure.
+The default number of retries for any node is 0,
+the same as not having a retry line in the file.
+
+In the event of retry, all parts of a node within the DAG
+are redone, following the same rules regarding node failure
+as given above.
+The PRE script is executed first,
+followed by submitting the program to Condor upon success of
+the PRE script.
+Failure of the node is then determined by the return value of
+the program, the existence and return value of a POST script.
 
 \subsection{Condor Submit Description File}
 
@@ -327,20 +352,32 @@ use
 condor_submit diamond.dag.condor.sub
 \end{verbatim}
 
-An optional argument to \Condor{submit\_dag}, \Arg{maxjobs}, 
-is used to specify the maximum number of jobs that DAGMan may
+An optional argument to \Condor{submit\_dag}, \Arg{-maxjobs}, 
+is used to specify the maximum number of Condor jobs that DAGMan may
 submit to Condor at one time.
 It is commonly used when 
 there is a limited amount of input file staging capacity.
 As a specific example, consider a case where each job will
 require 4 Mbytes of input files,
-and the jobs will run in a directory with a volume of 100 MB of free space.
+and the jobs will run in a directory with a volume of 100 Mbytes
+of free space.
 Using the argument \Arg{-maxjobs 25} guarantees that a maximum
-of 25 jobs will be submitted to Condor at one time.
+of 25 jobs, using a maximum of 100 Mbytes of space,
+will be submitted to Condor at one time.
 
-Similarly, the \Arg{maxscripts} argument is used to specify the
-maximum number of PRE and POST scripts running at one time.
+% -maxscripts has been replaced with -maxpre and -maxpost
+% Similarly, the \Arg{maxscripts} argument is used to specify the
+% maximum number of PRE and POST scripts running at one time.
+While the \Arg{-maxjobs} argument is used to limit the number
+of Condor jobs submitted at one time,
+it may be desirable to limit the number of scripts running
+at one time.
+The optional \Arg{-maxpre} argument limits the number of PRE
+scripts that may be running at one time,
+while the optional \Arg{-maxpost} argument limits the number of POST
+scripts that may be running at one time.
 
+% DONE TO HERE WITH UPDATES.
 \subsection{Job Monitoring}
 
 After submission, the progress of the DAG can be monitored
@@ -392,24 +429,27 @@ to remove any Condor jobs within the DAG that are running.
 In the case where a
 machine is scheduled to go down,
 DAGMan will clean up memory and exit.
-However, in will leave any submitted jobs
+However, it will leave any submitted jobs
 in Condor's queue.
 
 \subsection{Job Recovery:  The Rescue DAG}
 
-DAGMan does not support job resubmission on failure.
+\index{DAGMan!rescue DAG}
+DAGMan can help with the resubmission of uncompleted
+portions of a DAG when one or more nodes resulted in failure.
 If any node in the DAG fails,
-the entire DAG is aborted.
-As a substitute for resubmission,
-DAGMan offers an approach called the Rescue DAG.
+the remainder of the DAG is continued until no more forward
+progress can be made based on the DAG's dependencies.
+At this point, DAGMan produces a file
+called a Rescue DAG.
 
 The Rescue DAG is a DAG input file,
 functionally the same as the original DAG file.
 It additionally contains indication of
 successfully completed nodes using the \Arg{DONE}
 option in the input description file.
-If the DAG is resubmitted,
-the jobs marked as completed will not be resubmitted.
+If the DAG is resubmitted using this Rescue DAG input file,
+the nodes marked as completed will not be reexecuted.
 
 The Rescue DAG is automatically generated by DAGMan when a node
 within the DAG fails.
@@ -417,5 +457,11 @@ The file is named using the \Arg{DAGInputFileName}, and appending
 the suffix \File{.rescue} to it.
 Statistics about the failed DAG execution are presented as
 comments at the beginning of the Rescue DAG input file.
+
+If the Rescue DAG file is generated before all retries
+of a node are completed, 
+then the Rescue DAG file will also contain Retry entries.
+The number of retries will be set to the appropriate remaining
+number of retries. 
 
 \index{DAGMan|)}
