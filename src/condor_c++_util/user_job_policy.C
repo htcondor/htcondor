@@ -298,3 +298,190 @@ int JadKind(ClassAd *suspect)
 }
 
 
+/* NEW INTERFACE */
+
+
+UserPolicy::UserPolicy()
+{
+	m_ad = NULL;
+	m_action = STAYS_IN_QUEUE;
+	m_fire_expr = NULL;
+}
+
+UserPolicy::~UserPolicy()
+{
+	m_ad = NULL;
+	m_action = STAYS_IN_QUEUE;
+	m_fire_expr = NULL;
+}
+
+void UserPolicy::Init(ClassAd *ad)
+{
+	m_ad = ad;
+	m_action = STAYS_IN_QUEUE;
+	m_fire_expr = NULL;
+
+	this->SetDefaults();
+}
+
+void UserPolicy::SetDefaults()
+{
+	char buf[8192];
+
+	ExprTree *ph_expr = m_ad->Lookup(ATTR_PERIODIC_HOLD_CHECK);
+	ExprTree *pr_expr = m_ad->Lookup(ATTR_PERIODIC_REMOVE_CHECK);
+	ExprTree *oeh_expr = m_ad->Lookup(ATTR_ON_EXIT_HOLD_CHECK);
+	ExprTree *oer_expr = m_ad->Lookup(ATTR_ON_EXIT_REMOVE_CHECK);
+
+	/* if the default user policy expressions do not exist, then add them
+		here and now with the usual defaults */
+	if (ph_expr == NULL) {
+		sprintf(buf, "%s = FALSE", ATTR_PERIODIC_HOLD_CHECK);
+		m_ad->Insert(buf);
+	}
+
+	if (pr_expr == NULL) {
+		sprintf(buf, "%s = FALSE", ATTR_PERIODIC_REMOVE_CHECK);
+		m_ad->Insert(buf);
+	}
+
+	if (oeh_expr == NULL) {
+		sprintf(buf, "%s = FALSE", ATTR_ON_EXIT_HOLD_CHECK);
+		m_ad->Insert(buf);
+	}
+
+	if (oer_expr == NULL) {
+		sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK);
+		m_ad->Insert(buf);
+	}
+}
+
+int UserPolicy::AnalyzePolicy(int mode)
+{
+	int periodic_hold, periodic_remove;
+	int on_exit_hold, on_exit_remove;
+
+	if (m_ad == NULL)
+	{
+		EXCEPT("UserPolicy Error: Must call Init() first!");
+	}
+
+	if (mode != PERIODIC_ONLY && mode != PERIODIC_THEN_EXIT)
+	{
+		EXCEPT("UserPolicy Error: Unknown mode in AnalyzePolicy()");
+	}
+
+	/* if nothing fired, then the default is that the job stays in the queue */
+	m_action = STAYS_IN_QUEUE;
+	m_fire_expr = NULL;
+
+	/*	The user_policy is checked in this
+			order. The first one to succeed is the winner:
+	
+			ATTR_PERIODIC_HOLD_CHECK
+			ATTR_PERIODIC_REMOVE_CHECK
+			ATTR_ON_EXIT_HOLD_CHECK
+			ATTR_ON_EXIT_REMOVE_CHECK
+	*/
+
+	/* should I perform a periodic hold? */
+	if (m_ad->EvalBool(ATTR_PERIODIC_HOLD_CHECK, m_ad, periodic_hold) == 0)
+	{
+		m_action = UNDEFINED_EVAL;
+		m_fire_expr = ATTR_PERIODIC_HOLD_CHECK;
+		return m_action;
+	}
+	if (periodic_hold == 1)
+	{
+		m_action = HOLD_IN_QUEUE;
+		m_fire_expr = ATTR_PERIODIC_HOLD_CHECK;
+		return m_action;
+	}
+
+	/* Should I perform a periodic remove? */
+	if (m_ad->EvalBool(ATTR_PERIODIC_REMOVE_CHECK, m_ad, periodic_remove) == 0)
+	{
+		m_action = UNDEFINED_EVAL;
+		m_fire_expr = ATTR_PERIODIC_REMOVE_CHECK;
+		return m_action;
+	}
+	if (periodic_remove == 1)
+	{
+		m_action = REMOVE_FROM_QUEUE;
+		m_fire_expr = ATTR_PERIODIC_REMOVE_CHECK;
+		return m_action;
+	}
+
+	if (mode == PERIODIC_ONLY)
+	{
+		return m_action;
+	}
+
+	/* else it is PERIODIC_THEN_EXIT so keep going */
+
+	/* This better be in the classad because it determines how the process
+		exited, either by signal, or by exit() */
+	if (m_ad->Lookup(ATTR_ON_EXIT_BY_SIGNAL) == 0)
+	{
+		EXCEPT("UserPolicy Error: %s is not present in the classad",
+			ATTR_ON_EXIT_BY_SIGNAL);
+	}
+
+	/* Check to see if ExitSignal or ExitCode 
+		are defined, if not, then except because
+		caller should have filled this in if calling
+		this function saying to check the exit policies. */
+	if (m_ad->Lookup(ATTR_ON_EXIT_CODE) == 0 && 
+		m_ad->Lookup(ATTR_ON_EXIT_SIGNAL) == 0)
+	{
+		EXCEPT("UserPolicy Error: No signal/exit codes in job ad!");
+	}
+
+	/* Should I hold on exit? */
+	if (m_ad->EvalBool(ATTR_ON_EXIT_HOLD_CHECK, m_ad, on_exit_hold) == 0)
+	{
+		m_action = UNDEFINED_EVAL;
+		m_fire_expr = ATTR_ON_EXIT_HOLD_CHECK;
+		return m_action;
+	}
+	if (on_exit_hold == 1)
+	{
+		m_action = HOLD_IN_QUEUE;
+		m_fire_expr = ATTR_ON_EXIT_HOLD_CHECK;
+
+		return m_action;
+	}
+
+	/* Should I remove on exit? */
+	if (m_ad->EvalBool(ATTR_ON_EXIT_REMOVE_CHECK, m_ad, on_exit_remove) == 0)
+	{
+		m_action = UNDEFINED_EVAL;
+		m_fire_expr = ATTR_ON_EXIT_REMOVE_CHECK;
+		return m_action;
+	}
+	if (on_exit_remove == 1)
+	{
+		m_action = REMOVE_FROM_QUEUE;
+		m_fire_expr = ATTR_ON_EXIT_REMOVE_CHECK;
+
+		return m_action;
+	}
+
+	return m_action;
+}
+
+const char* UserPolicy::FiringExpression(void)
+{
+	return m_fire_expr;
+}
+
+
+
+
+
+
+
+
+
+
+

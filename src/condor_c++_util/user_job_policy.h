@@ -88,4 +88,103 @@ extern const char ATTR_USER_POLICY_ERROR[];
 /* an "errno" of sorts as to why the error happened. */
 extern const char ATTR_USER_ERROR_REASON[];
 
+
+/* NEW INTERFACE */
+
+enum { STAYS_IN_QUEUE = 0, REMOVE_FROM_QUEUE, HOLD_IN_QUEUE, UNDEFINED_EVAL };
+enum { PERIODIC_ONLY = 0, PERIODIC_THEN_EXIT };
+
+/* ok, here is the first set of expressions that should be available
+	in the classad when it is given to Init():
+
+	ATTR_PERIODIC_HOLD_CHECK
+	ATTR_PERIODIC_REMOVE_CHECK
+	ATTR_ON_EXIT_HOLD_CHECK
+	ATTR_ON_EXIT_REMOVE_CHECK
+
+	If any of the above attributes are not present, then they will
+	be assigned defaults and inserted into the classad.
+	The defaults are: False, False, False, True, respectively.
+
+	Now, if you are using mode PERIODIC_ONLY in AnalyzePolicy(),
+	then this is all that you need in the classad _plus_ any other
+	attributes specified by the above expressions needed during
+	their evaluation. If any of the above expressions evaluate to
+	undefined, then the UserPolicy class will return UNDEFINED_EVAL
+	in AnalyzePolicy() and the offending attribute can be seen with
+	FiringExpression().
+
+	If you are using PERIODIC_THEN_EXIT with AnalyzePolicy(),
+	then you *also* need ATTR_ON_EXIT_BY_SIGNAL in the classad. If
+	ATTR_ON_EXIT_BY_SIGNAL == True, then ATTR_ON_EXIT_SIGNAL
+	must also be present in the classad and set to the signal the
+	process had died by. If ATTR_ON_EXIT_BY_SIGNAL == False, then
+	ATTR_ON_EXIT_CODE must also be present in the classad and set
+	to the exit value of the job.
+
+	If ATTR_ON_EXIT_BY_SIGNAL is not present, AnalyzePolicy() will
+	EXCEPT. If ATTR_ON_EXIT_BY_SIGNAL is present, but ATTR_ON_EXIT_SIGNAL
+	and ATTR_ON_EXIT_CODE is not, then AnalyzePolicy() will EXCEPT.
+
+	If PERIODIC_ONLY is used with AnalyzePolicy(), then only 
+	ATTR_PERIODIC_HOLD_CHECK and ATTR_PERIODIC_REMOVE_CHECK will be
+	evaluated(in that order) to determine if anything should happen with
+	the job.
+
+	If PERIODIC_THEN_EXIT is used with AnalyzePolicy(), then
+	ATTR_PERIODIC_HOLD_CHECK, ATTR_PERIODIC_REMOVE_CHECK,
+	ATTR_ON_EXIT_HOLD_CHECK, and ATTR_ON_EXIT_REMOVE_CHECK will be
+	evaluated(in that order) to determine if anything should happen
+	with the job.
+
+	If AnalyzePolicy() says to do anything with the job, then
+	you can use FiringExpression() to get a pointer to static
+	memory (which is NOT freed by the caller) which details which
+	expression caused the action. You can use strcmp against this
+	string and the four attributes detailed at the top of the comment
+	to figure out which expressions caused the action happened to
+	the job.  If AnalyzePolicy() says the job STAYS_IN_QUEUE then
+	FiringExpression() will return NULL.
+
+*/
+
+class UserPolicy
+{
+	public: /* functions */
+		UserPolicy();
+		~UserPolicy();
+
+		/* This class NEVER owns this memory, it just has a reference to it.
+			It also makes sure the default policy expressions are set in the
+			classad if they were undefined. This must be called FIRST when you
+			initially set up one of these classes. */
+		void Init(ClassAd *ad);
+
+		/* mode is PERIODIC_ONLY or PERIODIC_THEN_EXIT */
+		/* returns STAYS_IN_QUEUE, REMOVE_FROM_QUEUE, HOLD_IN_QUEUE, 
+			UNDEFINED_EVAL */
+		int AnalyzePolicy(int mode);
+
+		/* This explains what expression caused the above action, if no 
+			firing expression occurred, then return NULL. The user does NOT
+			free this memory and it is overwritten whenever an Init() or
+			AnalyzePolicy() method is called */
+		const char* FiringExpression(void);
+	
+	private: /* functions */
+		/* This function inserts the four user job policy expressions with 
+			default values into the classad if they are not already present. */
+		void SetDefaults(void);
+
+		/* I can't be copied */
+		UserPolicy(const UserPolicy&);
+		UserPolicy& operator=(const UserPolicy&);
+
+	private: /* variables */
+		ClassAd *m_ad;
+		int m_action;
+		const char *m_fire_expr;
+};
+
+
 #endif
