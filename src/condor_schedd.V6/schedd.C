@@ -178,7 +178,7 @@ Scheduler::Scheduler()
 	rec = new Mrec*[MAXMATCHES];
 	aliveInterval = 0;
 	port = 0;
-	ExitWhenDone = 0;
+	ExitWhenDone = FALSE;
 }
 
 Scheduler::~Scheduler()
@@ -453,8 +453,9 @@ Scheduler::negotiate(int, Stream* s)
 	int		op;
 	// CONTEXT	*context = NULL;
 	PROC_ID	id;
-	char	*match= NULL;				// each match info received from cmgr
-	char*	capability;					// capability for each match made
+	char*	capability = NULL;			// capability for each match made
+	char*	host = NULL;
+	char*	tmp;
 	int		jobs;						// # of jobs that CAN be negotiated
 	int		cur_cluster = -1;
 	int		start_limit_for_swap;
@@ -547,11 +548,18 @@ Scheduler::negotiate(int, Stream* s)
 		for (host_cnt = cur_hosts; host_cnt < max_hosts;) {
 
 			/* Wait for manager to request job info */
-			if( !s->rcv_int(op,TRUE) ) {
+
+			s->decode();
+			if( !s->code(op) ) {
 				dprintf( D_ALWAYS, "Can't receive request from manager\n" );
 				return;
 			}
-			
+			if( op != PERMISSION ) {
+				if( !s->end_of_message() ) {
+					dprintf( D_ALWAYS, "Can't receive eom from manager\n" );
+				}
+			}
+
 			switch( op ) {
 			    case REJECTED:
 				    mark_cluster_rejected( cur_cluster );
@@ -646,33 +654,45 @@ Scheduler::negotiate(int, Stream* s)
 					 * one negotiation cycle. Now these limits are adopted to
 					 * apply to match records instead.
 					 */
-					if( !s->get(match) ) {
+					if( !s->get(capability) ) {
 						dprintf( D_ALWAYS,
-								"Can't receive host name from mgr\n" );
+								"Can't receive capability from mgr\n" );
 						return;
 					}
 					if( !s->end_of_message() ) {
 						dprintf( D_ALWAYS,
-								"Can't receive host name from mgr\n" );
+								"Can't receive eom from mgr\n" );
 						return;
 					}
-					// match is in the form "<xxx.xxx.xxx.xxx:xxxx> xxxxxxxx#xx"
-					dprintf(D_PROTOCOL, "## 4. Received match %s\n", match);
+						// capability is in the form
+						// "<xxx.xxx.xxx.xxx:xxxx>#xxxxxxx" 
+						// where everything upto the # is the sinful
+						// string of the startd
 
-				#if 0
-					capability = strchr(match, '#');
-					if(capability)
-					{
-						*capability = '\0';
+					dprintf( D_PROTOCOL, 
+							 "## 4. Received capability %s\n", capability );
+
+						// Pull out the sinful string.
+					host = strdup( capability );
+					tmp = strchr( host, '#');
+					if( tmp ) {
+						*tmp = '\0';
+					} else {
+						dprintf( D_ALWAYS, "Can't find '#' in capability!\n" );
+							// What else should we do here?
+						FREE( host );
+						FREE( capability );
+						host = NULL;
+						capability = NULL;
+						break;
 					}
-					capability = strchr(match, ' ');
-					*capability = '\0';
-					capability++;
-				#endif
-
-					perm_rval = permission(capability, owner, match, &id);
-					FREE( match );
-					match = NULL;
+						// host should now point to the sinful string
+						// of the startd we were matched with.
+					perm_rval = permission(capability, owner, host, &id);
+					FREE( host );
+					FREE( capability );
+					host = NULL;
+					capability = NULL;
 					JobsStarted += perm_rval;
 					host_cnt++;
 					break;
@@ -1836,6 +1856,14 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 		dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
 		kill( getpid(), SIGKILL );
 	}
+
+		// If we're not trying to shutdown, now that either an agent
+		// or a shadow (or both) have exited, we should try to
+		// activate all our claims and start jobs on them.
+	if( ! ExitWhenDone ) {
+		StartJobs();
+	}
+
 	unblock_signal(SIGALRM);
 #endif /* !defined(WIN32) */
 }
@@ -2124,7 +2152,7 @@ Scheduler::sigint_handler()
 }
 
 void
-Scheduler::sighup_handler()
+Scheduler::reconfig()
 {
     dprintf( D_ALWAYS, "Re-reading config file\n" );
 
@@ -2138,11 +2166,10 @@ Scheduler::sighup_handler()
 
 // Perform graceful shutdown.
 void
-Scheduler::sigterm_handler()
+Scheduler::shutdown_graceful()
 {
 #if !defined(WIN32)
 	block_signal(SIGCHLD);
-    dprintf( D_ALWAYS, "Performing graceful shut down.\n" );
 	if( NShadowRecs == 0 ) {
 		dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
 		kill( getpid(), SIGKILL );  
@@ -2153,7 +2180,7 @@ Scheduler::sigterm_handler()
 			   shutting down shadows.
  		    */
 		MaxJobsRunning = 0;
-		ExitWhenDone = 1;
+		ExitWhenDone = TRUE;
 		preempt( NShadowRecs );
 		unblock_signal(SIGCHLD);
 	}
@@ -2162,11 +2189,10 @@ Scheduler::sigterm_handler()
 
 // Perform fast shutdown.
 void
-Scheduler::sigquit_handler()
+Scheduler::shutdown_fast()
 {
 #if !defined(WIN32)
 	int i;
-	dprintf( D_ALWAYS, "Performing fast shut down.\n" );
 	for(i=0; i < NShadowRecs; i++) {
 		kill( ShadowRecs[i].pid, SIGKILL );
 	}
