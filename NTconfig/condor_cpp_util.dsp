@@ -382,6 +382,14 @@ SOURCE="..\src\condor_c++_util\perm.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\print_wrapped_text.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\print_wrapped_text.h"
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\h\proc.h
 # End Source File
 # Begin Source File
