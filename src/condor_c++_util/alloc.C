@@ -24,10 +24,10 @@
 
 #include "condor_common.h"
 
+#if defined(ALLOC_DEBUG)
+
 static int     CallsToNew;
 static int     CallsToDelete;
-
-#if defined(ALLOC_DEBUG)
 
 void * operator new(size_t size)
 {
