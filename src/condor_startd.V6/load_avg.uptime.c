@@ -42,7 +42,7 @@
 #include "except.h"
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
-char            *uptime_path;
+static char            *uptime_path;
 
 /*
  *  path_to_uptime
@@ -64,6 +64,11 @@ char *path_to_uptime(void)
         else if (access("/usr/bin/uptime", X_OK) == 0)
         {
                 strcpy(upt_path, "/usr/bin/uptime");
+                return upt_path;
+    }
+        else if (access("/usr/bsd/uptime", X_OK) == 0)
+        {
+                strcpy(upt_path, "/usr/bsd/uptime");
                 return upt_path;
     }
         else
