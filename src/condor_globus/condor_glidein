@@ -3,7 +3,8 @@
 
 	##these are the files that need to be staged on the remote machine
 $config = "condor_config.glidein";
-@DAEMONS = ( "condor_master", "condor_startd", "condor_starter" );
+@DAEMONS = ( "condor_master", "condor_startd", "condor_starter",
+	     "condor_pvmd", "condor_starter.pvm" );
 
 	##contact string for globus gass server...Change 'do_remote_setup()' if
 	##you change the method of file staging (e.g. gass to gsiftp)
@@ -174,14 +175,6 @@ sub gather_info() {
 	chomp( $CONDOR_HOST = `$CONFIGVAL CONDOR_HOST` );
 
 	#set CONDOR_VERSION
-#	@TMP = `$STATUS -master -format "%s" CondorVersion $CONDOR_HOST`;
-#		#if we get a blank response because the collector isn't running
-#		#a master in the same pool, try our master...
-#	if ( !/\S/ =~ @TMP ) {
-#			$HOST = $ENV{'HOST'};
-#			@TMP = `$STATUS -master -format "%s" CondorVersion $HOST`;
-#	}
-#	( $_, $CONDOR_VERSION, $_) = split( / *[$: ]+/, $TMP[0] );
 	$TMP = `$STATUS -master -format "%s" CondorVersion $CONDOR_HOST`;
 		#if we get a blank response because the collector isn't running
 		#a master in the same pool, try our master...
@@ -249,7 +242,6 @@ print STDERR "	Valid options:\n"
 . "                            [default on remote host: $(BASEDIR)/local]\n"
 . "   --contactfile <file>    Specify file from which to read Globus contacts\n"
 . "   --setuponly|--runonly	Setup and exit  |  No setup, just run\n"
-. "   --scheduler <scheduler> Globus scheduler  [default=fork]\n"
 . "   --queue <queue>         Queue to use on Globus scheduler\n"
 . "   --project <project>     Project to use on Globus resource\n"
 . "   --memory <Mbytes>       Amount of memory to request\n"
@@ -269,7 +261,6 @@ print STDERR "	Valid options:\n"
 sub parse_command_line() {
 		#parse command line options
 	($NAME = $0) =~ s/.*\///; ## strip off directory path...
-	$scheduler = "fork";
 	$idle_time = 20;
 	$cpucount = 1;
 	$vmcount = 0;
@@ -287,7 +278,6 @@ sub parse_command_line() {
 		"contactfile=s" => \$contactfile,
 		"setuponly" => \$setuponly,
 		"runonly" => \$runonly,
-		"scheduler=s" => \$scheduler,
 		"queue=s" => \$queue,
 		"project=s" => \$project,
 		"memory=i" => \$memory,
@@ -423,41 +413,86 @@ sub host_info()
 	$UID_DOMAIN = $GLOBUSHOST;
 	$UID_DOMAIN =~ s/[^\.]*\.//;
 
-	##Search MDS only if we don't have a full contact string
-	if ( $CONTACT !~ /.+:\d+\/.+:.+/ ) {
+	#Query the GRIS server on the globus machine. We're looking for two
+	#things: which jobmanager/queue will run jobs immediately (for
+	#setup), and the architecture of the jobmanager the user wants to
+	#run on (not necessarily the same as the machine we're talking to).
+	open( QUERY, "$G_SEARCH -h $GLOBUSHOST -p 2135 -b 'o=Grid' -R '|(objectclass=GlobusQueue)(objectclass=GlobusServiceJobManager)' dispatchtype cputype manufacturer osname osversion|" );
+	@QUERY = <QUERY>;
+	if ( !close( QUERY ) ) {
+	    print STDERR "Error querying GRIS on $GLOBUSHOST\n";
+	    return( 1 );
+	}
 
-		open( SEARCH, "$G_SEARCH -h $GLOBUSHOST -p 2135 -b 'o=Grid' -R '(hn=$GLOBUSHOST)'|" );
-		@SEARCH = <SEARCH>;
-		close( SEARCH );
-
-		$WHO = join( '', grep( /contact.*jobmanager-$scheduler/, @SEARCH ) );
-		$WHO =~ s/contact=//;
-		if ( !defined( $WHO ) ) {
-			undef( $CONTACT );
-			return( 1 );
-		}
-		else {
-			chomp( $CONTACT = $WHO );
-		}
-		if ( !defined( $CONTACT ) || ( $CONTACT eq "" ) ) {
-			print STDERR "Error contacting host $GLOBUSHOST\n";
-			return( 1 );
+	#Search the query results for an "Immediate" jobmanager/queue
+	@SEARCH1 = grep( /^queue=/, @QUERY );
+	@SEARCH2 = grep( /^dispatchtype=/, @QUERY );
+	my $queue = "";
+	my $service = "";
+	for ( $i = 0; $i <= $#SEARCH1; $i++ ) {
+		if ( grep( /Immediate/, $SEARCH2[$i] ) > 0 ) {
+			chomp( $queue = $SEARCH1[$i] );
+			$queue =~ s/^.*queue=([^,]*),.*$/\1/;
+			chomp( $service = $SEARCH1[$i] );
+			$service =~ s/^.*service=([^,]*),.*$/\1/;
+			last;
 		}
 	}
 
-	#This is the contact string to use for interactive jobs
-	#(e.g. querying architecture type, staging glidein files).
-	#For now, we assume it's fork. We should check if the machine
-	#actually has a fork jobmanager. Also, we should find a way to
-	#not need this for runonly invocation. The only reason we need it
-	#now is because we need to know the architecture to properly set
-	#the condor config parameter MAIL.
-	$CONTACT_SETUP = $CONTACT;
-	$CONTACT_SETUP =~ s/jobmanager-[^:]*/jobmanager-fork/;
+	if ( $queue eq "" || $service eq "" ) {
+		print STDERR "Can't find immediate jobmanager on $GLOBUSHOST\n";
+		return( 1 );
+	}
 
-	$arch = `$G_RUN -s -r '$CONTACT_SETUP' '&(executable=\$(GLOBUS_TOOLS_PATH)/bin/globus-sh-exec)(arguments=-e echo \$(GLOBUS_HOST_CPUTYPE)-\$(GLOBUS_HOST_MANUFACTURER)-\$(GLOBUS_HOST_OSNAME)-\$(GLOBUS_HOST_OSVERSION))'`;
-	chomp( $arch );
-	$arch = $CONDOR_VERSION . "-" . $arch;
+	$CONTACT_SETUP_QUEUE = $queue;
+	$CONTACT_SETUP = $CONTACT;
+	if ( grep( /jobmanager/, $CONTACT_SETUP ) ) {
+		$CONTACT_SETUP =~ s|/[^:]*|/$service|;
+	} elsif ( grep( /:/, $CONTACT_SETUP ) < 2 ) {
+		$CONTACT_SETUP .= "/$service";
+	} else {
+		$CONTACT_SETUP =~ s|(:[^:]*)|\1/$service|;
+	}
+
+	#Search the query results for the architecture of the jobmanager
+	#the user wants to glidein to.
+	my $jobmanager;
+	if ( grep( /jobmanager/, $CONTACT ) ) {
+		$jobmanager = $CONTACT;
+		$jobmanager =~ s|^[^/]*/([^:]*).*|\1|;
+	} else {
+		$jobmanager = "jobmanager";
+	}
+	@SEARCH1 = grep( /^service=/, @QUERY );
+	@SEARCH2 = grep( /^cputype=/, @QUERY );
+	@SEARCH3 = grep( /^manufacturer=/, @QUERY );
+	@SEARCH4 = grep( /^osname=/, @QUERY );
+	@SEARCH5 = grep( /^osversion=/, @QUERY );
+	my $cputype = "";
+	my $manufacturer = "";
+	my $osname = "";
+	my $osversion = "";
+	for ( $i = 0; $i <= $#SEARCH1; $i++ ) {
+		if ( grep( /$jobmanager,/, $SEARCH1[$i] ) > 0 ) {
+			chomp( $cputype = $SEARCH2[$i] );
+			$cputype =~ s/cputype=//;
+			chomp( $manufacturer = $SEARCH3[$i] );
+			$manufacturer =~ s/manufacturer=//;
+			chomp( $osname = $SEARCH4[$i] );
+			$osname =~ s/osname=//;
+			chomp( $osversion = $SEARCH5[$i] );
+			$osversion =~ s/osversion=//;
+			last;
+		}
+	}
+
+	if ( $cputype eq "" || $manufacturer eq "" || $osname eq "" ||
+	     $osversion eq "" ) {
+		print STDERR "Can't find jobmanager info on $GLOBUSHOST\n";
+		return( 1 );
+	}
+
+	$arch = "${CONDOR_VERSION}-${cputype}-${manufacturer}-${osname}-${osversion}";
 
 	if ( $? != 0 || $arch eq "" ) {
 		print STDERR "Error contacting resource $CONTACT_SETUP\n";
@@ -545,7 +580,7 @@ sub do_remote_setup() {
 
 EOF
 	close( REM_SETUP );
-	$SYSTEM = "$G_RUN -s -r '$CONTACT_SETUP' '&(executable=\$(GLOBUS_TOOLS_PATH)/bin/globus-sh-exec)(arguments=\$(GLOBUSRUN_GASS_URL)$REM_SETUP $basedir $archdir $arch $localdir \$(GLOBUS_TOOLS_PATH)/bin/globus-url-copy \$(GLOBUSRUN_GASS_URL)$remotedir)'";
+	$SYSTEM = "$G_RUN -s -r '$CONTACT_SETUP' '&(executable=\$(GLOBUS_TOOLS_PATH)/bin/globus-sh-exec)(arguments=\$(GLOBUSRUN_GASS_URL)$REM_SETUP $basedir $archdir $arch $localdir \$(GLOBUS_TOOLS_PATH)/bin/globus-url-copy \$(GLOBUSRUN_GASS_URL)$remotedir)(queue=$CONTACT_SETUP_QUEUE)'";
 
 	$err = system( $SYSTEM );
 
@@ -554,7 +589,7 @@ EOF
 	unlink( $REM_SETUP );
 
 	if ( $err ) {
-		return( "Error-- running setup script on remote machine" );
+		return( "running setup script on remote machine" );
 	}
 
 	return( 0 );
