@@ -157,6 +157,8 @@ char *ValidLogFiles[] = {
 	"W_Sched_Log",
 	"W_Start_Log.old",
 	"W_Sched_Log.old",
+	"AccountantLog",
+	"AccountantLog.old",
 	"OldFiles",		// AFS backup directory
 	0
 };
