@@ -446,7 +446,7 @@ Instructions for installing SSLeay and creating a Condor CA
 
 \item The SSL executables \Prog{ssleay} and \Prog{c\_hash} must be in the path of the administrator and any users who want to create certificate requests. If not already normally installed at your site, just symlink these files to the condor bin directory.
 
-\item Use \Prog{perl} to run the \Prog{create\_ca} script, providing the fully-qualified pathname of the install directory (e.g., perl create\_ca /usr/local/condor/ca).
+\item Use \Prog{perl} to run the \Prog{create\_ca.pl} script, providing the fully-qualified pathname of the install directory (e.g., perl create\_ca.pl /usr/local/condor/ca).
 This will create the install directory and install several needed files there.
 \Note{During installation, you will be asked to create a pass-phrase, verify it, and then enter it when your key is used to generate the CA certificate. If you mistype your passphrase, the SSL programs die in a messy manner. This script tries to at least do some graceful cleanup.}
 
@@ -481,19 +481,20 @@ Instructions for Acquiring User Certificates for X.509 Authentication
 \item
 \begin{verbatim}
 run: condor_cert <certificate directory to create> 
-	[suggested directory: $HOME/.globus]
+	[suggested directory: $HOME/.condorcerts]
 \end{verbatim}
 
-\item Upon success, mail the certificate request (<cert dir>/usercert\_request.pem) to your condor admin account (at cs.wisc.edu, it's "condorca")
+\item Upon success, mail the certificate request (<cert dir>/usercert\_request.pem) to your CA account or condor admin account (at cs.wisc.edu, it's "condorca")
 
 \item If approved, the admin will send you a signed certificate, which you must save as <cert dir>/usercert.pem
 
-\item Authenticated submissions require a variable "cert\_dir" to be specified
-in the submit file, which is set to the full path of their certificate
-directory.  Under the current configuration, the new schedd will allow
-remote submission.  Here is a sample submission file:
+\item Authenticated submissions require a variable "x509Directory" to be 
+specified in the submit file, which is set to the full path of their 
+certificate directory.  Under the current configuration, the new schedd will 
+allow remote submission if its AUTHENTICATION\_METHODS includes GSS.  Here is 
+a sample submission file:
 \begin{verbatim}
-   cert_dir = /home/yourname/.condorcerts
+   x509Directory = /home/yourname/.condorcerts
    notify_user = mikeu@cs.wisc.edu
    executable = testit
    input = in.$(Process)
