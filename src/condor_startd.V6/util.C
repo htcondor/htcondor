@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "startd.h"
 #include "directory.h"
+#include "dynuser.h"	// used in cleanup_execute_dir() for WinNT
 
 void
 check_perms()
@@ -51,13 +52,43 @@ cleanup_execute_dir(int pid)
 	char buf[2048];
 
 #if defined(WIN32)
+	dynuser nobody_login;
+
 	if( pid ) {
+		// before removing subdir, remove any nobody-user account associtated
+		// with this starter pid.  this account might have been left around
+		// if the starter did not clean up completely.
+		sprintf(buf,"condor-run-dir_%d",pid);
+		if ( nobody_login.deleteuser(buf) ) {
+			dprintf(D_FULLDEBUG,"Removed account %s left by starter\n",buf);
+		}
+
+		// now remove the subdirectory.  NOTE: we only remove the 
+		// subdirectory _after_ removing the nobody account, because the
+		// existence of the subdirectory persistantly tells us that the
+		// account may still exist [in case the startd blows up as well].
 		sprintf( buf, "rmdir /s /q %.256s\\dir_%d",
 				 exec_path, pid );
 		system( buf );
 	} else {
 		// get rid of everything in the execute directory
 		Directory dir(exec_path);
+
+		// loop through the subdirs we find, and remove any nobody
+		// accounts left laying about by the starter.
+		const char *curdir = dir.Next();
+		while (curdir) {
+			if ( dir.IsDirectory() && (strncmp(curdir,"dir_",4)==0) ) {
+				sprintf(buf,"condor-run-%s",curdir);
+				if ( nobody_login.deleteuser(buf) ) {
+					dprintf(D_FULLDEBUG,
+						"Removed account %s left by starter\n",buf);
+				}
+			}
+			curdir = dir.Next();
+		}	
+		// now that we took care of any old nobody accounts, blow away
+		// everything in the execute directory.
 		dir.Remove_Entire_Directory();
 	}
 #else
