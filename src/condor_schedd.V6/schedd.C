@@ -222,12 +222,16 @@ Scheduler::~Scheduler()
 		free(MySockName);
 	if (MyShadowSockName)
 		free(MyShadowSockName);
-	if (shadowCommandrsock && daemonCore) {
-		daemonCore->Cancel_Socket(shadowCommandrsock);
+	if ( shadowCommandrsock ) {
+		if( daemonCore ) {
+			daemonCore->Cancel_Socket(shadowCommandrsock);
+		}
 		delete shadowCommandrsock;
 	}
-	if (shadowCommandssock && daemonCore) {
-		daemonCore->Cancel_Socket(shadowCommandssock);
+	if ( shadowCommandssock ) {
+		if( daemonCore ) {
+			daemonCore->Cancel_Socket(shadowCommandssock);
+		}
 		delete shadowCommandssock;
 	}
 	if (Collector)
