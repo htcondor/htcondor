@@ -23,6 +23,12 @@
 #ifndef CONDOR_COMMON_H
 #define CONDOR_COMMON_H
 
+
+/**********************************************************************
+** autoconf/configure generated configuration header
+*********************************************************************/
+#include <config.h>
+
 /**********************************************************************
 ** Special macros and things we always want our header files to have
 *********************************************************************/
