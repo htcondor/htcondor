@@ -39,10 +39,23 @@ extern "C" char *get_env_val (const char *);
 
 UserLog::UserLog (const char *owner, const char *domain, const char *file,
 				  int c, int p, int s, bool xml)
+    :  in_block(FALSE), path(0), fp(0), lock(NULL)
 {
 	UserLog();
 	use_xml = xml;
 	initialize (owner, domain, file, c, p, s);
+}
+
+/* This constructor is just like the constructor above, except
+ * that it doesn't take a domain, and it passes NULL for the domain.
+ * It's a convenience function, requested by our friends in LCG. */
+UserLog::UserLog (const char *owner, const char *file,
+				  int c, int p, int s, bool xml)
+    :  in_block(FALSE), path(0), fp(0), lock(NULL)
+{
+	UserLog();
+	use_xml = xml;
+	initialize (owner, NULL, file, c, p, s);
 }
 
 /* --- The following two functions are taken from the shadow's ulog.c --- */
