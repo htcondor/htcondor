@@ -250,9 +250,6 @@ EXT_COMMON	-a externals/.cvsignore \
 # The common externals needed for all V6_6_* releases
 V6_6_COMMON_EXT	-a EXT_COMMON \
 		   externals/bundles/glibc/2.2.2 \
-		   externals/bundles/globus/2.2.4 \
-		   externals/bundles/globus/2.4.3 \
-		   externals/bundles/globus/2.4.3.vdt.1.1.14 \
 		   externals/bundles/gpt/3.0 \
 		   externals/bundles/krb5/1.2.5 \
 		   externals/bundles/pvm/3.4.2 \
@@ -260,10 +257,14 @@ V6_6_COMMON_EXT	-a EXT_COMMON \
 
 # Externals needed for V6_6_0
 V6_6_0_EXT	-a V6_6_COMMON_EXT \
+		   externals/bundles/globus/2.2.4 \
+		   externals/bundles/globus/2.4.3 \
 		   externals/bundles/gahp/6.5 \
 
 # Externals needed for V6_6_1
 V6_6_1_EXT	-a V6_6_COMMON_EXT \
+		   externals/bundles/globus/2.2.4 \
+		   externals/bundles/globus/2.4.3 \
 		   externals/bundles/gahp/1.0.10 \
 		   externals/bundles/glibc/2.2.93 \
 		   externals/bundles/glibc/2.3.2.27.9.7
@@ -285,6 +286,8 @@ V6_6_5_EXT	-a V6_6_4_EXT
 V6_6_6_EXT	-a V6_6_COMMON_EXT \
 		   externals/bundles/glibc/2.2.93 \
 		   externals/bundles/glibc/2.3.2.27.9.7 \
+		   externals/bundles/globus/2.2.4 \
+		   externals/bundles/globus/2.4.3.vdt.1.1.14 \
 		   externals/bundles/gahp/1.0.12
 
 # Externals needed for the head of the V6_6-branch
@@ -297,7 +300,6 @@ V6_7_COMMON_EXT	-a EXT_COMMON \
 		   externals/bundles/glibc/2.3.2.27.9.7 \
 		   externals/bundles/globus/2.2.4 \
 		   externals/bundles/globus/2.4.3 \
-		   externals/bundles/globus/2.4.3.vdt.1.1.14 \
 		   externals/bundles/gpt/3.0 \
 		   externals/bundles/gt3gahp/1.0 \
 		   externals/bundles/krb5/1.2.5 \
