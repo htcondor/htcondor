@@ -615,7 +615,8 @@ HandleSyscalls()
 
 	dprintf(D_FULLDEBUG, "HandleSyscalls: about to chdir(%s)\n", Proc->iwd);
 	if( chdir(Proc->iwd) < 0 ) {
-		sprintf( ErrBuf,  "Can't access \"%s\"", Proc->iwd );
+		sprintf( ErrBuf,  "Can't chdir() to \"%s\"! [%s(%d)]", Proc->iwd, 
+			strerror(errno), errno );
 		HadErr = TRUE;
 		return;
 	}
@@ -762,21 +763,28 @@ Wrapup( )
 
 	notification[0] = '\0';
 
+	/* This HadErr business isn't well defined. There doesn't seem
+		to be a clean way of representing the event of a
+		pre-job startup initialization failure.  So, instead of trying
+		to propogate the nonexistant JobStatus around to future
+		code paths trying to clean up a mess specified by HadErr,
+		we are simply going to EXCEPT(). HadErr only gets specified
+		when either the std file can't be opened or the shadow
+		cannot chdir() to the initialdir(often because of a
+		permission/existance problem). */
 	if( HadErr ) {
-		Proc->status = COMPLETED;
-		Proc->completion_date = time( (time_t *)0 );
-#if 0
-		dprintf( D_ALWAYS, "MsgBuf = \"%s\"\n", MsgBuf );
-#endif
-		(void)strcpy( notification, ErrBuf );
+		/* dump the specific error if it has been determined */
+		if (ErrBuf[0] != '\0') {
+			EXCEPT("%s", ErrBuf);
+		} else {
+			EXCEPT("Couldn't set up std files or chdir to initialdir--"
+				"probably a permissions error.");
+		}
 	} else {
 		/* all event logging has been moved from handle_termination() to
 		   log_termination()	--RR */
 		handle_termination( Proc, notification, &JobStatus, NULL );
 	}
-
-	if( sock_RSC1 ) {
-	} 
 
 	/* fill in the Proc structure's exit_status with JobStatus, so that when
 	 * we call update_job_status the exit status is written into the job queue,
@@ -1289,7 +1297,8 @@ open_std_files( V2_PROC *proc )
 	(void)close( 2 );
 
 	if( (fd=open(proc->in,O_RDONLY,0)) < 0 ) {
-		sprintf( ErrBuf, "Can't open \"%s\"", proc->in );
+		sprintf( ErrBuf, "Can't open std input file \"%s\"! [%s(%d)]", 
+			proc->in, strerror(errno), errno );
 		HadErr = TRUE;
 		return;
 	}
@@ -1298,7 +1307,8 @@ open_std_files( V2_PROC *proc )
 	}
 
 	if( (fd=open(proc->out,O_WRONLY,0)) < 0 ) {
-		sprintf( ErrBuf, "Can't open \"%s\"", proc->out );
+		sprintf( ErrBuf, "Can't open std output file \"%s\"! [%s(%d)]",
+			proc->out, strerror(errno), errno );
 		HadErr = TRUE;
 		return;
 	}
@@ -1309,7 +1319,8 @@ open_std_files( V2_PROC *proc )
 
 
 	if( (fd=open(proc->err,O_WRONLY,0)) < 0 ) {
-		sprintf( ErrBuf, "Can't open \"%s\"", proc->err );
+		sprintf( ErrBuf, "Can't open std error file \"%s\"! [%s(%d)]", 
+			proc->err, strerror(errno), errno );
 		HadErr = TRUE;
 		return;
 	}
