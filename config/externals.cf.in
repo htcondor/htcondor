@@ -1,4 +1,5 @@
 EXT_ROOT = @ext_root@
+EXT_TRIGGER = $(EXT_ROOT)/triggers
 EXT_CONFIG_SH = @_cv_ext_config_sh@
 
 
