@@ -36,6 +36,7 @@ find /usr/sup/X11/lib/libXext.a and also could be libXext.so.6.0 */
 
 
 #define IS_SUN4M_SOLARIS251		YES  /* Dhaval defined it */
+#define IS_SUN4M_SOLARIS		YES
 #define IS_V5					YES
 
 #define HAS_X					NO
