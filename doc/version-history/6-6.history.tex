@@ -65,11 +65,11 @@ this ouput and displays it to the user in a readable format.
 \item Removed some settings from the default configuation files
   shipped with Condor that are no longer used in the code.
 
-\item Fixed bugs in DAGMan parsing of submit files (to determine
+\item Fixed bugs in \Condor{dagman} parsing of submit files (to determine
   node log files).  Previously, a submit file line begining with
   "log" (e.g., "LogLock = True") would be interpreted as a log file
   line.  Also, if "log" was defined twice in the submit file,
-  DAGMan would incorrectly use the first definition, rather than
+  \Condor{dagman} would incorrectly use the first definition, rather than
   the last.
 
 \item Re-added PVM support for IRIX 6.5.
@@ -79,8 +79,9 @@ assertion error if it encounters both a terminate and a abort event in
 the userlog for the same job; this can happen due to a bug in the
 \Condor{schedd}, which is not yet fixed.
 
-\item 
-
+\item \Condor{dagman} now works right with nodes that have an initialdir
+  specified in the node submit file.  (Previously, specifiying
+  an initialdir only worked if the log file path was absolute.)
 
 \end{itemize}
 
