@@ -33,15 +33,15 @@
 */
 #ifndef object_target
 #define object_target(obj_name)							@@\
-## obj_name##: condor_##obj_name CheckPlatformType		@@\
+## obj_name##: condor_##obj_name						@@\
 	cd condor_##obj_name; make 							@@\
-release:: condor_##obj_name CheckPlatformType			@@\
+release:: condor_##obj_name								@@\
 	cd condor_##obj_name; make release					@@\
 clean:: condor_##obj_name								@@\
 	cd condor_##obj_name; make clean					@@\
 tags:: condor_##obj_name								@@\
 	cd condor_##obj_name; make tags						@@\
-depend:: condor_##obj_name CheckPlatformType			@@\
+depend:: condor_##obj_name								@@\
 	cd condor_##obj_name; make depend					@@\
 makefiles:: condor_##obj_name##/Makefile				@@\
 condor_##obj_name##/Makefile:							@@\
@@ -97,12 +97,12 @@ clean::												@@\
 */
 #ifndef program_target
 #define	program_target(program, objlist, libs, rel)		@@\
-program: objlist libs									@@\
+##program: objlist libs									@@\
 	$(CC) $(CFLAGS) -o program objlist libs $(LDFLAGS)	@@\
 clean:: 												@@\
 	rm -f program objlist								@@\
-rel::													@@\
-	/bin/rm -f $(RELEASE_DIR)/bin/program				@@\
+##rel::													@@\
+	/bin/rm -f $(RELEASE_DIR)/bin/##program				@@\
 	cp program $(RELEASE_DIR)/bin
 #endif
 
@@ -118,33 +118,26 @@ rel::													@@\
 	$(CPlusPlus) $(C_PLUS_FLAGS) -c $<
 
 #if IS_ALPHA_OSF1
-#define	c_plus_target(program, objlist, libs, rel)					@@\
-program: objlist libs												@@\
-	$(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(LDFLAGS) 2>&1 | demangle @@\
-clean:: 															@@\
-	rm -f program objlist											@@\
-rel::																@@\
-	/bin/rm -f $(RELEASE_DIR)/bin/program							@@\
-	cp program $(RELEASE_DIR)/bin
-#else
-#define	c_plus_target(program, objlist, libs, rel)					@@\
-program: objlist libs												@@\
-	$(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(LDFLAGS)	@@\
-clean:: 															@@\
-	rm -f program objlist											@@\
-rel::																@@\
-	/bin/rm -f $(RELEASE_DIR)/bin/program							@@\
-	cp program $(RELEASE_DIR)/bin
+DEMANGLE = 2>&1 | demangle
 #endif
+
+#define	c_plus_target(program, objlist, libs, rel)					@@\
+##program: objlist libs												@@\
+	$(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(LDFLAGS) $(DEMANGLE) @@\
+clean:: 															@@\
+	rm -f program objlist											@@\
+##rel::																@@\
+	/bin/rm -f $(RELEASE_DIR)/bin/##program							@@\
+	cp program $(RELEASE_DIR)/bin
 
 #if IS_SPARC_SUNOS41
 #define	pure_cplus_targ(program, objlist, libs, rel)	@@\
-program: objlist libs									@@\
+##program: objlist libs									@@\
 	purify -collector=$(TILDE)/bin/collect2 -linker=$(TILDE)/bin/ld $(CPlusPlus) -o program objlist libs $(LDFLAGS)						@@\
 clean:: 												@@\
 	rm -f program objlist								@@\
-rel::													@@\
-	/bin/rm -f $(RELEASE_DIR)/bin/program				@@\
+##rel::													@@\
+	/bin/rm -f $(RELEASE_DIR)/bin/##program				@@\
 	cp program $(RELEASE_DIR)/bin
 #else
 #define	pure_cplus_targ(program, objlist, libs, rel)	/* NULL MACRO */
@@ -157,8 +150,8 @@ rel::													@@\
 */
 #ifndef setgid_target
 #define setgid_target(targ)								@@\
-release:: $(RELEASE_DIR)/bin/targ						@@\
-	chmod g+s $(RELEASE_DIR)/bin/targ
+##release:: $(RELEASE_DIR)/bin/##targ					@@\
+	chmod g+s $(RELEASE_DIR)/bin/##targ
 #endif
 
 /*
@@ -217,10 +210,10 @@ sourcefile: RCS/sourcefile,v						@@\
 */
 #ifndef uppercase_target
 #define uppercase_target(libname,objname,newname,old_string,new_string)		@@\
-newname: libname ToUpper													@@\
+##newname: libname ToUpper													@@\
 	cd $(TMP_DIR); AR_EXTRACT( libname, objname	)							@@\
-	ToUpper $(TMP_DIR)/objname newname old_string new_string				@@\
-	rm -f $(TMP_DIR)/objname
+	ToUpper $(TMP_DIR)/##objname newname old_string new_string				@@\
+	rm -f $(TMP_DIR)/##objname
 #endif
 
 
@@ -343,3 +336,15 @@ release::																	@@\
 	/bin/rm -f $(RELEASE_DIR)/##dest##/##targ								@@\
 	cp targ $(RELEASE_DIR)/##dest##/##targ
 #endif
+
+/*
+** Build a file using an awk program
+*/
+#ifndef awk_target
+#define awk_target(targ,input,prog)			@@\
+##targ:	input prog							@@\
+	awk -f prog input > targ				@@\
+##clean::									@@\
+	rm -f targ
+#endif
+
