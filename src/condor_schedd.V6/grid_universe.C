@@ -405,6 +405,14 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* proxy,
 
 	ASSERT( gman_pid_table->insert(owner_key,gman_node) == 0 );
 
+	// start timer to signal gridmanager if we haven't already
+	if ( gman_node->add_timer_id == -1 ) {  // == -1 means no timer set
+		gman_node->add_timer_id = daemonCore->Register_Timer(job_added_delay,
+			(TimerHandler) &GridUniverseLogic::SendAddSignal,
+			"GridUniverseLogic::SendAddSignal");
+		daemonCore->Register_DataPtr(gman_node);
+	}
+
 	// All done
 	return gman_node;
 }
