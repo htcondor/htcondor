@@ -609,6 +609,7 @@ handle_fetch_log( Service *service, int cmd, Stream *s )
 		result = DC_FETCH_LOG_RESULT_BAD_TYPE;
 		stream->code(result);
 		stream->end_of_message();
+        free(name);
 		return FALSE;
 	}
 
@@ -622,6 +623,8 @@ handle_fetch_log( Service *service, int cmd, Stream *s )
 		result = DC_FETCH_LOG_RESULT_NO_NAME;
 		stream->code(result);
 		stream->end_of_message();
+        free(pname);
+        free(name);
 		return FALSE;
 	}
 
@@ -631,6 +634,9 @@ handle_fetch_log( Service *service, int cmd, Stream *s )
 		result = DC_FETCH_LOG_RESULT_CANT_OPEN;
 		stream->code(result);
 		stream->end_of_message();
+        free(filename);
+        free(pname);
+        free(name);
 		return FALSE;
 	}
 
