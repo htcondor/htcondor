@@ -334,7 +334,10 @@ main(int argc, char *argv[] )
 	dprintf_config( mySubSystem, SHADOW_LOG );
 	DebugId = whoami;
 
-	dprintf( D_ALWAYS, "********** Shadow starting up **********\n" );
+	dprintf( D_ALWAYS, "******* Standard Shadow starting up *******\n" );
+	dprintf( D_ALWAYS, "** %s\n", CondorVersion() );
+	dprintf( D_ALWAYS, "** %s\n", CondorPlatform() );
+	dprintf( D_ALWAYS, "*******************************************\n" );
 
 	if( (tmp=param("RESERVED_SWAP")) == NULL ) {
 		reserved_swap = 5 * 1024;			/* 5 megabytes */
