@@ -85,4 +85,4 @@ ERROR: DONT KNOW WHETHER TO USE FLOCK or FCNTL
 #include "file_lock.h"
 
 
-#endif FILE_LOCK_H
+#endif /* FILE_LOCK_H */
