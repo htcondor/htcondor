@@ -274,7 +274,6 @@ STARTD_LOG	= $(LOG)/StartLog
 STARTER_LOG	= $(LOG)/StarterLog
 
 ##  Lock files
-SCHEDD_LOCK	= $(LOCK)/SchedLock
 SHADOW_LOCK	= $(LOCK)/ShadowLock
 
 ##  In most cases, your condor_collector and condor_negotiator are 
@@ -557,5 +556,5 @@ PREEN_ADMIN		= $(CONDOR_ADMIN)
 VALID_SPOOL_FILES	= job_queue.log, job_queue.log.tmp, history, Accountant.log
 
 ##  What files should condor_preen leave in the log directory?
-VALID_LOG_FILES		= MasterLog, MasterLog.old, NegotiatorLog, NegotiatorLog.old, CollectorLog, CollectorLog.old, SchedLog, SchedLog.old, ShadowLog, ShadowLog.old, StartLog, StartLog.old, StarterLog, StarterLog.old, KbdLog, KbdLog.old, ShadowLock, SchedLock, CkptServerLog, CkptServerLog.old, .startd_address, .schedd_address, .master_address
+VALID_LOG_FILES		= MasterLog, MasterLog.old, NegotiatorLog, NegotiatorLog.old, CollectorLog, CollectorLog.old, SchedLog, SchedLog.old, ShadowLog, ShadowLog.old, StartLog, StartLog.old, StarterLog, StarterLog.old, KbdLog, KbdLog.old, ShadowLock, CkptServerLog, CkptServerLog.old, .startd_address, .schedd_address, .master_address
 
