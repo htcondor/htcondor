@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.1.2.8 2004-06-24 23:54:41 wright Exp $
+# $Id: remote_task.pl,v 1.1.2.9 2004-06-25 00:23:40 wright Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -125,8 +125,18 @@ safe_copy( "$testname.log", "$BaseDir/results/$compiler" );
 safe_copy( "$testname.run.out", "$BaseDir/results/$compiler" );
 safe_copy( "$testname.cmd.out", "$BaseDir/results/$compiler" );
 
+    
 if( $copy_failure ) {
-    c_die("Failed to copy some output to results!\n");
+    if( $teststatus == 0 ) {
+        # if the test passed but we failed to copy something, we
+	# should consider that some kind of weird error
+	c_die("Failed to copy some output to results!\n");
+    } else {
+	# if the test failed, we can still mention we failed to copy
+	# something, but we should just treat it as if the test
+	# failed, not an internal error.
+	print "Failed to copy some output to results!\n";
+    }
 }
 
 exit $teststatus;
