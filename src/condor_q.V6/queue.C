@@ -409,7 +409,10 @@ displayJobShort (ClassAd *ad)
 	}
 	
 	shorten (owner, 14);
-	if (ad->EvalString ("Args", NULL, args)) strcat (cmd, args);
+	if (ad->EvalString ("Args", NULL, args)) {
+		strcat(cmd, " ");
+		strcat (cmd, args);
+	}
 	shorten (cmd, 18);
 	short_print (cluster, proc, owner, date, (int)utime, status, prio,
 					image_size, cmd); 
