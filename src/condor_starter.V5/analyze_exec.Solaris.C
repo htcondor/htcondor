@@ -77,6 +77,8 @@ int magic_check( char *a_out )
 		dprintf( D_ALWAYS, "%d != %d\n", header.a_magic, SOLARIS_MAGIC );
 		return -1;
 	}
+
+#if !defined(X86)
 	if( header.a_machtype != 69 ) {
 		dprintf( D_ALWAYS,
 			"\"%s\": NOT COMPILED FOR SPARC ARCHITECTURE\n", a_out
@@ -84,6 +86,8 @@ int magic_check( char *a_out )
 		dprintf( D_ALWAYS, "%d != %d\n", header.a_machtype, 69 );
 		return -1;
 	}
+#endif
+
 #if (!defined Solaris)
 	if( header.a_dynamic ) {
 		dprintf( D_ALWAYS, "\"%s\": LINKED FOR DYNAMIC LOADING\n", a_out );
