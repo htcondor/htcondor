@@ -191,8 +191,7 @@ void UniShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 	}
 
 		// we're only dealing with one host, so this is trivial:
-	remRes->setExecutingHost( host );
-	remRes->setCapability( capability );
+	remRes->setStartdInfo( host, capability );
 	remRes->setMachineName( "Unknown" );
 	
 		// base init takes care of lots of stuff:
