@@ -56,6 +56,22 @@ InitializeWithSource( ByteSource *s )
 }
 
 
+bool Lexer::
+Reinitialize( )
+{
+	if( !src->GetChar( ch ) ) return( false );
+
+	// token state initialization
+	lexBuffer[0] = (char) ch;
+	lexBufferCount = 0;
+	inString = false;
+	tokenConsumed = true;
+	accumulating = false;
+
+	return true;
+}
+
+
 // FinishedParse:  This function implements the cleanup phase of a parse.
 //   String valued tokens are entered into a string space, and maintained
 //   with reference counting.  When a parse is finished, this space is flushed
@@ -378,7 +394,7 @@ tokenizeAlphaHead (void)
 int Lexer::
 tokenizeTime( )
 {
-	int secs, usecs;
+	int secs;
 
 	// mark after the quote
 	wind( );
@@ -406,12 +422,12 @@ tokenizeTime( )
 		return( tokenType );
 	} else {
 			// relative time value
-		if( !tokenizeRelativeTime( lexBuffer.getarray( ), secs, usecs ) ) {
+		if( !tokenizeRelativeTime( lexBuffer.getarray( ), secs ) ) {
 			tokenType = LEX_TOKEN_ERROR;
 			return( tokenType );
 		}
 		tokenType = LEX_RELATIVE_TIME_VALUE;
-		yylval.SetRelTimeValue( secs, usecs );
+		yylval.SetRelTimeValue( secs );
 		return( tokenType );
 	}
 
@@ -426,7 +442,7 @@ bool Lexer::
 tokenizeAbsoluteTime( char *buf, int &asecs )
 {
 	struct 	tm timeValue;
-	int		secs, usecs;
+	int		secs;
 	time_t	absTime;
 	char	*tzStr, *tzOff;
 	extern	time_t timezone;
@@ -450,7 +466,7 @@ tokenizeAbsoluteTime( char *buf, int &asecs )
 	}
 
 		// treat the timezone offSet as a relative time value
-	if( !tokenizeRelativeTime( tzOff, secs, usecs ) ) {
+	if( !tokenizeRelativeTime( tzOff, secs ) ) {
 		return( false );
 	}
 
@@ -465,12 +481,12 @@ tokenizeAbsoluteTime( char *buf, int &asecs )
 }
 
 bool Lexer::
-tokenizeRelativeTime( char *buf, int &rsecs, int &rusecs )
+tokenizeRelativeTime( char *buf, int &rsecs )
 {
 	bool negative = false;
-	int  days=0, hrs=0, mins=0, secs=0, usecs=0;
+	int  days=0, hrs=0, mins=0, secs=0;
 	char *ptr = buf, *start, *end;
-	bool secsPresent=false, usecsPresent=false;
+	bool secsPresent=false;
 
 		// initial (optional) plus or minus
 	if( *ptr == '-' ) {
@@ -548,11 +564,8 @@ tokenizeRelativeTime( char *buf, int &rsecs, int &rusecs )
 		}
 	}
 
-		// check if microseconds are specified
-	if( *ptr == '.' ) {
-		usecsPresent = true;
-		*ptr = '\0';
-	} else if( *ptr != '\0' ) {
+		// must terminate here
+	if( *ptr != '\0' ) {
 		return( false );
 	}
 
@@ -565,31 +578,8 @@ tokenizeRelativeTime( char *buf, int &rsecs, int &rusecs )
 		}
 	}
 
-		// if microsecs were also specified
-	if( usecsPresent ) {
-		*ptr = '.';
-		ptr++;
-		start = ptr;
-		while( *ptr && isdigit( *ptr ) ) {
-			ptr++;
-		}
-	}
-
-		// there should be no more
-	if( *ptr ) {
-		return( false );
-	}
-
-	if( usecsPresent ) {
-		usecs = strtol( start, &end, 10 ); // base 10
-		if( ( usecs < 0 || usecs>999999 ) || ( usecs == 0 && end == start ) ) {
-			return( false );
-		}
-	}
-
-		// convert all non-usec fields into number of secs
+		// convert all fields into number of secs
 	rsecs = ( negative ? -1 : +1 ) * ( days*86400 + hrs*3600 + mins*60 + secs );
-	rusecs = usecs;
 	return( true );
 }
 

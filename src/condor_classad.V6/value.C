@@ -16,7 +16,6 @@ Value() : strValue( )
 	listValue = NULL;
 	classadValue = NULL;
 	timeValueSecs = 0;
-	timeValueUSecs = 0;
 }
 
 
@@ -91,7 +90,7 @@ IsNumber (double &r)
 
 
 void Value::
-CopyFrom( Value &val )
+CopyFrom( Value &val ) 
 {
 	switch (val.valueType) {
 		case STRING_VALUE:
@@ -133,7 +132,7 @@ CopyFrom( Value &val )
 			return;
 
 		case RELATIVE_TIME_VALUE:
-			SetRelativeTimeValue( val.timeValueSecs, val.timeValueUSecs );
+			SetRelativeTimeValue( val.timeValueSecs );
 			return;
 
 		default:
@@ -213,7 +212,7 @@ ToSink (Sink &dest )
 					// output the offSet (use the relative time format)
 					// wierd:  POSIX says regions west of GMT have positive
 					// offSets.  We use negative offSets to not confuse users.
-				WriteRelativeTime( timeOffSetBuf, true, -timezone, 0 );
+				WriteRelativeTime( timeOffSetBuf, true, -timezone );
 
 					// assemble fields together
 				sprintf( tempBuf, "%s (%s) %s", ascTimeBuf, timeZoneBuf, 
@@ -225,7 +224,7 @@ ToSink (Sink &dest )
 			}
 
 		case RELATIVE_TIME_VALUE:
-			WriteRelativeTime( tempBuf, false, timeValueSecs, timeValueUSecs );
+			WriteRelativeTime( tempBuf, false, timeValueSecs );
 			return( ( wantQuotes ? dest.SendToSink( (void*) "\'", 1 ):true ) &&
 				dest.SendToSink( tempBuf, strlen( tempBuf ) ) &&
 				( wantQuotes ? dest.SendToSink( (void*) "\'", 1 ):true ) );
@@ -302,15 +301,11 @@ SetClassAdValue( ClassAd *ad )
 }
 
 void Value::
-SetRelativeTimeValue( int rsecs, int rusecs ) 
+SetRelativeTimeValue( int rsecs ) 
 {
 	Clear( );
 	valueType = RELATIVE_TIME_VALUE;
-	if( ( rsecs >= 0 && rusecs < 0 ) || ( rsecs < 0 && rusecs > 0 ) ) {
-		rusecs = -rusecs;
-	}
 	timeValueSecs = rsecs;
-	timeValueUSecs = rusecs;
 }
 
 
@@ -320,15 +315,14 @@ SetAbsoluteTimeValue( int asecs )
 	Clear( );
 	valueType = ABSOLUTE_TIME_VALUE;
 	timeValueSecs = asecs;
-	timeValueUSecs = 0;
 }	
 
 
 void Value::
-WriteRelativeTime( char *buf, bool sign, int timeSecs, int timeUSecs )
+WriteRelativeTime( char *buf, bool sign, int timeSecs )
 {
 	char tempBuf[64];
-	int days, hrs, mins, secs, usecs;
+	int days, hrs, mins, secs;
 
 		// write the sign if necessary
 	if( sign || timeSecs < 0 ) {
@@ -339,10 +333,8 @@ WriteRelativeTime( char *buf, bool sign, int timeSecs, int timeUSecs )
 
     if( timeSecs < 0 ) {
         days = -timeSecs;
-        usecs = -timeUSecs;
     } else {
         days = timeSecs;
-        usecs = timeUSecs;
     }
 
     hrs  = days % 86400;
@@ -364,12 +356,6 @@ WriteRelativeTime( char *buf, bool sign, int timeSecs, int timeUSecs )
         sprintf( tempBuf, ":%02d", secs );
 		strcat( buf, tempBuf );
     }
-
-    if( usecs ) {
-        sprintf( tempBuf, ".%d", usecs );
-		strcat( buf, tempBuf );
-    }
-
 }
 
 bool Value::

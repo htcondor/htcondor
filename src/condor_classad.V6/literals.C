@@ -181,9 +181,9 @@ SetAbsTimeValue( int secs )
 }
 
 void Literal::
-SetRelTimeValue( int secs, int usecs )
+SetRelTimeValue( int secs )
 {
-	value.SetRelativeTimeValue( secs, usecs );
+	value.SetRelativeTimeValue( secs );
 }
 
 END_NAMESPACE // classad

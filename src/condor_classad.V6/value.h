@@ -107,9 +107,8 @@ class Value
 
 		/** Sets a relative time value.
 			@param secs Number of seconds.
-			@param usecs Number of micro seconds
 		*/
-		void SetRelativeTimeValue( int secs, int usecs=0 );
+		void SetRelativeTimeValue( int secs );
 
 		/** Gets the type of the value.
 			@return The value type.
@@ -225,19 +224,13 @@ class Value
 			@return true iff the value is a relative time value
 		*/
 		bool IsRelativeTimeValue( int& secs );
-		/** Checks if the value is a relative time value.
-			@param secs Number of seconds.
-			@param usecs Number of microseconds
-			@return true iff the value is a relative time value
-		*/
-		bool IsRelativeTimeValue( int& secs, int& usecs );
 
 	private:
 		friend class Literal;
 		friend class ClassAd;
 		friend class ExprTree;
 
-		void WriteRelativeTime( char*, bool, int, int );
+		void WriteRelativeTime( char*, bool, int );
 		bool WriteString( const char*, Sink& );
 
 		ValueType 	valueType;		// the type of the value
@@ -248,7 +241,6 @@ class Value
 		ExprList	*listValue;
 		ClassAd		*classadValue;
 		int			timeValueSecs;
-		int			timeValueUSecs;
 
 		static		StringSpace stringSpace;
 };
@@ -378,14 +370,6 @@ inline bool Value::
 IsRelativeTimeValue( int &secs )
 {
 	secs = timeValueSecs;
-	return( valueType == RELATIVE_TIME_VALUE );
-}
-
-inline bool Value::
-IsRelativeTimeValue( int &secs, int &usecs )
-{
-	secs = timeValueSecs;
-	usecs = timeValueUSecs;
 	return( valueType == RELATIVE_TIME_VALUE );
 }
 

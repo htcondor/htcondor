@@ -75,9 +75,8 @@ class Literal : public ExprTree
 
 		/** Set the literal to a relative time value
 			@param secs Number of seconds (could be positive or negative)
-			@param usecs Number of microseconds
 		*/
-		void SetRelTimeValue( int secs, int usecs=0 );
+		void SetRelTimeValue( int secs );
 
 		/** Set the literal as an undefined value
 		*/

@@ -50,7 +50,6 @@ struct AbsTimeValue {
 
 struct RelTimeValue {
 	int				secs;
-	int				usecs;
 };
 
 class TokenValue
@@ -63,7 +62,6 @@ class TokenValue
     		realValue = 0.0;
 			boolValue = false;
 			secs = 0;
-			usecs = 0;;
 			strValue = NULL;
 		}
 
@@ -98,9 +96,8 @@ class TokenValue
 			secs = asecs;
 		}
 
-		void SetRelTimeValue( int rsecs, int rusecs=0 ) {
+		void SetRelTimeValue( int rsecs ) {
 			secs = rsecs;
-			usecs = rusecs;
 		}
 
 		TokenType GetTokenType( ) {
@@ -130,9 +127,8 @@ class TokenValue
 			asecs = secs;
 		}
 
-		void GetRelTimeValue( int& rsecs, int& rusecs ) {
+		void GetRelTimeValue( int& rsecs ) {
 			rsecs = secs;
-			rusecs= usecs;
 		}
 
 		void CopyFrom( TokenValue &tv ) {
@@ -142,7 +138,6 @@ class TokenValue
 			realValue = tv.realValue;
 			boolValue = tv.boolValue;
 			secs = tv.secs;
-			usecs = tv.usecs;
 			if( strValue ) {
 				delete [] strValue;
 			}
@@ -157,7 +152,6 @@ class TokenValue
 		bool boolValue;
     	const char *strValue;
 		int	secs;
-		int usecs;
 };
 
 
@@ -171,6 +165,8 @@ class Lexer
 
 		// initialize methods
 		bool InitializeWithSource( ByteSource *src );
+
+		bool Reinitialize( );
 
 		// cleanup function --- purges strings from string space
 		void FinishedParse();
@@ -217,7 +213,7 @@ class Lexer
 		int		tokenizeTime( void );			// time (absolute and relative)
 		int 	tokenizePunctOperator (void);	// punctuation and operators
 
-		static bool	tokenizeRelativeTime(char*,int&,int&);// relative time
+		static bool	tokenizeRelativeTime(char*,int&);// relative time
 		static bool	tokenizeAbsoluteTime(char*,int&);// absolute time
 
 		// input sources
