@@ -238,9 +238,9 @@ CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2) {
 	this->rewind();
 	Daemon * daemon;
 	while (this->next(daemon)) {
-		dprintf (D_FULLDEBUG, 
+		dprintf( D_FULLDEBUG, 
 				 "Trying to update collector %s\n", 
-				 daemon->addr());
+				 daemon->addr() );
 		if (((DCCollector*)daemon)->sendUpdate (cmd, ad1, ad2)) {
 			success_count++;
 		} 

@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.1.4.1 2004-07-19 05:28:38 wright Exp $
+# $Id: remote_pre.pl,v 1.1.4.1.20.1 2004-12-25 02:13:15 wright Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -82,21 +82,12 @@ print "RUNNING condor_configure\n";
 $conf = &verbose_system("$configure --make-personal-condor --local-dir=$BaseDir/local --install=$reltar --install-dir=$BaseDir/condor");
 ($conf == 0) || die "Problem installing Personal Condor. Return val $conf\n";
 
-# make sure ports for Personal Condor are valid  
-# high ports are a concern for irix, dux and aix. 
-my $col_port = $PID;
-if ($col_port > 65535){
-   $col_port = int($col_port / 10000) + 1024;
-} 
-if ($col_port < 1024){
-   $col_port = $col_port + 1024;
-}
-my $neg_port = $col_port + 1;
-
 rename( "$BaseDir/local/condor_config.local",
 	"$BaseDir/local/condor_config.local.orig" )
     || die "Can't rename condor_config.local: $!\n";
 
+# make sure ports for Personal Condor are valid, we'll use address
+# files and port = 0 for dynamic ports...
 open( ORIG, "<$BaseDir/local/condor_config.local.orig" ) ||
     die "Can't open $BaseDir/local/condor_config.local.orig: $!\n";
 open( FIX, ">$BaseDir/local/condor_config.local" ) ||
@@ -104,8 +95,10 @@ open( FIX, ">$BaseDir/local/condor_config.local" ) ||
 while( <ORIG> ) {
   if( /CONDOR_HOST.*/ ) {
     print FIX;
-    print FIX "COLLECTOR_HOST = \$(CONDOR_HOST):$col_port\n";
-    print FIX "NEGOTIATOR_HOST = \$(CONDOR_HOST):$neg_port\n";
+    print FIX "COLLECTOR_HOST = \$(CONDOR_HOST):0\n";
+    print FIX "NEGOTIATOR_HOST = \$(CONDOR_HOST):0\n";
+    print FIX "COLLECTOR_ADDRESS_FILE = \$(LOG)/.collector_address\n";
+    print FIX "NEGOTIATOR_ADDRESS_FILE = \$(LOG)/.negotiator_address\n";
   } else {
     print FIX;
   }

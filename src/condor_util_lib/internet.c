@@ -619,25 +619,41 @@ int bindWithin(const int fd, const int low_port, const int high_port)
 int
 getPortFromAddr( const char* addr )
 {
-	char *copy, *tmp;
-	int port = 0;
+	char *tmp; 
+	char *end; 
+	long port = -1;
 
 	if( ! addr ) {
-		return 0;
+		return -1;
 	}
-	
-	copy = strdup( addr );
-		// if it ends with '>', we want to chop that off from the
-		// string so we don't confuse atoi() 
-	if( (tmp = strrchr(copy, '>')) ) {
-		*tmp = '\0';
+
+	tmp = strchr( addr, ':' );
+	if( !tmp || !tmp[1] ) {
+			/* address didn't specify a port section */
+		return -1;
 	}
-	tmp = strchr( copy, ':' );
-	if( tmp && tmp[1] ) {
-		port = atoi( &tmp[1] );
+
+		/* clear out our errno so we know if it's set after the
+		   strtol(), that it was set from there */
+	errno = 0;
+	port = strtol( &tmp[1], &end, 10 );
+	if( errno == ERANGE ) {
+			/* port number was too big */
+		return -1;
 	}
-	free( copy );
-	return port;
+	if( end == &tmp[1] ) {
+			/* port section of the address wasn't a number */
+		return -1;
+	}
+	if( port < 0 ) {
+			/* port numbers can't be negative */
+		return -1;
+	}
+	if( port > INT_MAX ) {
+			/* port number was too big to fit in an int */
+		return -1;
+	}
+	return (int)port;
 }
 
 
