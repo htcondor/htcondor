@@ -182,10 +182,9 @@ Scheduler::Scheduler()
 	// on Windows NT, it appears you can open up zillions of sockets
 	MAX_STARTD_CONTACTS = 2000;
 #endif
-
+	checkContactQueue_tid = -1;
     storedMatches = new HashTable < int, ExtArray<match_rec*> *> 
                                                   ( 5, mpiHashFunc );
-	
 }
 
 Scheduler::~Scheduler()
@@ -239,6 +238,9 @@ Scheduler::~Scheduler()
 	}
 	if (FlockHosts) {
 		delete FlockHosts;
+	}
+	if ( checkContactQueue_tid != -1 && daemonCore ) {
+		daemonCore->Cancel_Timer(checkContactQueue_tid);
 	}
 
         // for the stored mpi matches
@@ -880,6 +882,7 @@ Scheduler::negotiate(int, Stream* s)
 	int		which_negotiator = 0; 		// >0 implies flocking
 	int		serviced_other_commands = 0;	
 	Sock*	sock = (Sock*)s;
+	contactStartdArgs * args;
 
 	dprintf( D_FULLDEBUG, "\n" );
 	dprintf( D_FULLDEBUG, "Entered negotiate\n" );
@@ -1214,33 +1217,46 @@ Scheduler::negotiate(int, Stream* s)
 						// host should now point to the sinful string
 						// of the startd we were matched with.
 
-					if ( numRegContacts < MAX_STARTD_CONTACTS ) {
-						dprintf ( D_FULLDEBUG,"Calling contactStartd directly"
-								  ", startd=%s\n", host );
-						perm_rval = contactStartd( capability, strdup(owner), 
-												   host, &id );
-							// note host,capability,owner freed in above call.
-						
-						JobsStarted += perm_rval;
-					}
-					else {
-						/* Here we don't want to call contactStartd directly
-						   because we just might register more Sockets
-						   than the system has fds.  So...we enqueue the
-						   args for a later call.  (The later call will be
-						   made from the startdContactSockHandler) */
-						contactStartdArgs * args = 
-							new contactStartdArgs;
-						dprintf (D_FULLDEBUG, "Queuing contactStartd args=%x, "
-								 "startd=%s\n", args, host );
+					// CLAIMING LOGIC
 
-						args->capability = capability;
-						args->owner = strdup( owner );
-						args->host = host;
-						args->id.cluster = id.cluster;
-						args->id.proc = id.proc;
-						startdContactQueue.enqueue( args );
+					/* Here we don't want to call contactStartd directly
+					   because we do not want to block the negotiator for 
+					   this, and because we want to minimize the possibility
+					   that the startd will have to block/wait for the 
+					   negotiation cycle to finish before it can finish
+					   the claim protocol.  So...we enqueue the
+					   args for a later call.  (The later call will be
+					   made from the startdContactSockHandler) */
+					args = 	new contactStartdArgs;
+					dprintf (D_FULLDEBUG, "Queuing contactStartd args=%x, "
+							 "startd=%s\n", args, host );
+
+					args->capability = capability;
+					args->owner = strdup( owner );
+					args->host = host;
+					args->id.cluster = id.cluster;
+					args->id.proc = id.proc;
+					if ( startdContactQueue.enqueue( args ) < 0 ) {
+						perm_rval = 0;	// failure
+						dprintf(D_ALWAYS,"Failed to enqueue contactStartd "
+							"args=%x, startd=%s\n", args, host);
+					} else {
+						perm_rval = 1;	// happiness
+						// if we havn't already done so, register a timer
+						// to go off in zero seconds to call checkContactQueue.
+						// this will start the process of claiming the startds
+						// _after_ we have completed negotiating.
+						if ( checkContactQueue_tid == -1 ) {
+							checkContactQueue_tid = 
+								daemonCore->Register_Timer(
+									0,
+									(TimerHandlercpp)&Scheduler::checkContactQueue,
+									"checkContactQueue",
+									this);
+						}
 					}
+
+					JobsStarted += perm_rval;
 					curr_num_active_shadows += 
 						(perm_rval * shadow_num_increment);
 					host_cnt++;
@@ -1513,22 +1529,26 @@ int Scheduler::startdContactSockHandler( Stream *sock )
 #undef BAILOUT
 
 void
-Scheduler::checkContactQueue() {
-	if ( !startdContactQueue.IsEmpty() ) {
+Scheduler::checkContactQueue() 
+{
+	struct contactStartdArgs * args;
+
+		// clear out the timer tid, since we made it here.
+	checkContactQueue_tid = -1;
+
+		// Contact startds as long as (a) there are still entries in our
+		// queue, and (b) we have not exceeded MAX_STARTD_CONTACTS, which
+		// ensures we do not run ourselves out of socket descriptors.
+	while ( (numRegContacts < MAX_STARTD_CONTACTS) &&
+			(!startdContactQueue.IsEmpty()) ) {
 			// there's a pending registration in the queue:
-		struct contactStartdArgs * args;
-		int rval;
+
 		startdContactQueue.dequeue ( args );
 		dprintf ( D_FULLDEBUG, "In checkContactQueue(), args = %x, host=%s\n", 
 				  args, args->host );
-		rval = contactStartd( args->capability, args->owner,
-							  args->host, &(args->id) );
-		JobsStarted += rval;
-		
+		contactStartd( args->capability, args->owner,
+							  args->host, &(args->id) );	
 		delete args;
-	}
-	else {
-		dprintf ( D_FULLDEBUG, "In checkContactQueue(), empty.\n" );
 	}
 }
 
@@ -2050,6 +2070,7 @@ Scheduler::start_mpi(match_rec* matchRec, PROC_ID *job_id)
     int maxHosts=0;     // max hosts needed for a proc.
         // a pointer to our stored matches for this cluster.
     ExtArray<match_rec*> *MpiMatches;
+	int i;
 
 	dprintf( D_FULLDEBUG, "Got permission to run job %d.%d on %s...\n",
 			job_id->cluster, job_id->proc, matchRec->peer);
@@ -2166,7 +2187,7 @@ Scheduler::start_mpi(match_rec* matchRec, PROC_ID *job_id)
         if (Shadow) free(Shadow);
         Shadow = param("SHADOW");
 
-        for ( int i=0 ; i<=MpiMatches->getlast() ; i++ ) {
+        for ( i=0 ; i<=MpiMatches->getlast() ; i++ ) {
             dprintf ( D_FULLDEBUG, "peer: %s\n", (*MpiMatches)[i]->peer );
         }
         
@@ -2185,7 +2206,7 @@ Scheduler::start_mpi(match_rec* matchRec, PROC_ID *job_id)
 
         if (pid == FALSE) {
             dprintf( D_ALWAYS, "CreateProcess() failed!\n" );
-            for ( int i=0 ; i<=MpiMatches->getlast() ; i++ ) {
+            for ( i=0 ; i<=MpiMatches->getlast() ; i++ ) {
                 DelMrec( (*MpiMatches)[i] );
             }
             return NULL;
@@ -2198,7 +2219,7 @@ Scheduler::start_mpi(match_rec* matchRec, PROC_ID *job_id)
 		mark_job_running(job_id);
 
 			// We must set all the match recs to point at this srec.
-		for ( int i=0 ; i<=MpiMatches->getlast() ; i++ ) {
+		for ( i=0 ; i<=MpiMatches->getlast() ; i++ ) {
 			(*MpiMatches)[i]->shadowRec = srec;
 		}
 
@@ -2206,7 +2227,7 @@ Scheduler::start_mpi(match_rec* matchRec, PROC_ID *job_id)
             // matches at it.
         if ( !pushMPIMatches( srec->sinfulString, MpiMatches, proc ) ) {
             dprintf( D_ALWAYS, "pushMpiMatches() failed!\n" );
-            for ( int i=0 ; i<=MpiMatches->getlast() ; i++ ) {
+            for ( i=0 ; i<=MpiMatches->getlast() ; i++ ) {
                 DelMrec( (*MpiMatches)[i] );
             }
             return NULL;
