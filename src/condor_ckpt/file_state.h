@@ -30,33 +30,15 @@
 #include <string.h>
 #include <sys/types.h>
 
-const int MAXBUF = 131072;
-const int PREFETCH = 2048;
-
 typedef unsigned int	Bit;
 typedef int				BOOL;
 typedef int				FD;
-
-struct BufElem {
-
-  friend class File;
-  friend class OpenFileTable;
-
- public:
-
- private:
-
-  int offset;
-  int len;
-  char *buf;
-  BufElem *next;
-
-};
 
 class OpenFileTable;
 
 class File {
 friend class OpenFileTable;
+friend class BufferCache;
 public:
 	void	Init();
 	void	Display();
@@ -72,6 +54,7 @@ public:
 	BOOL	isShadowSock()		{ return shadow_sock; }
 	BOOL	isReadable()		{ return readable; }
 	BOOL	isWriteable()		{ return writeable; }
+	BOOL	isBufferable()		{ return bufferable; }
 private:
 	Bit	open : 1;		// file is open
 	Bit	duplicate : 1;		// file is dup of another fd
@@ -81,6 +64,7 @@ private:
 	Bit	shadow_sock : 1;	// TCP connection to the shadow
 	Bit	readable : 1;		// File open for read or read/write
 	Bit	writeable : 1;		// File open for write or read/write
+	Bit	bufferable : 1;		// File is available for buffering
 	off_t   size;                   // File size
 	off_t	offset;			// File pointer position
 	char	*ioservername;		// The hostname of the IO server
@@ -95,7 +79,6 @@ private:
 	FD		real_fd;	// File descriptor number
 	FD		dup_of;		// File descriptor this is a dup of
 	char	*pathname;		// *FULL* pathname of the file
-	BufElem *firstBuf;              // first buffer element.
 };
 
 class OpenFileTable {
@@ -145,22 +128,11 @@ public:
 	void SetSize(int i, off_t temp)    { file[i].setSize(temp); }
 	off_t GetOffset(int i)             { return file[i].getOffset(); }
 	off_t GetSize(int i)               { return file[i].getSize(); }
-	void IncreBufCount( int i )        { bufCount += i; }
 	BOOL IsReadable(int i)             { return file[i].isReadable(); }
 	BOOL IsWriteable(int i)            { return file[i].isWriteable(); }
-	ssize_t InsertR( int, void *, int, int, int, BufElem *, BufElem * );
-	ssize_t InsertW( int, const void *, int, int, BufElem *, BufElem * );
-	ssize_t OverlapR1( int, void *, int, int, int, BufElem *, BufElem * );
-	ssize_t OverlapR2( int, void *, int, int, int, BufElem *, BufElem * );
-	ssize_t OverlapW1( int, const void *, int, int, BufElem *, BufElem * );
-	ssize_t OverlapW2( int, const void *, int, int, BufElem *, BufElem * );
-	ssize_t PreFetch( int, void *, size_t );
-	ssize_t Buffer( int, const void *, size_t );
-	void FlushBuf();
-	void DisplayBuf();
 	int find_avail( int start );
+	File *getFile( int fd )            { return &file[fd]; }
 private:
-	int     bufCount;       // running count of the used buffer. 
 	void	fix_dups( int user_fd );
 	char	cwd[ _POSIX_PATH_MAX ];
 	File	*file;		// array allocated at run time

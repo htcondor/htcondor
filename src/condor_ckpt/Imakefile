@@ -80,6 +80,7 @@ CPP_UTIL_OBJ = condor_version.o
 #if DOES_CHECKPOINTING
 OBJ =	image.o machdep.$(OS).o file_state.o tmp_stack.o syscall_mode.o \
 	local_startup.o fake_remote_syscall.o fake_hooks.o \
+	buffer_cache.o buffer_glue.o \
 	$(SAVE_SIGSTATE_OBJ) fake_util_lib.o eprintf.o $(EXTRACT) \
 	$(ASSEMBLER_OBJ) $(CPP_UTIL_OBJ)
 
@@ -87,7 +88,7 @@ OBJ =	image.o machdep.$(OS).o file_state.o tmp_stack.o syscall_mode.o \
         CPP_SUPPORT_OBJ = c_plus_alloc.o _eh.o tinfo.o tinfo2.o \
 			  exception.o frame.o __dummy.o _pure.o
 #   else 
-        CPP_SUPPORT_OBJ = c_plus_alloc.o 
+        CPP_SUPPORT_OBJ = c_plus_alloc.o pure_virtual.o
 #   endif
 
 #else /* ! DOES_CHECKPOINTING */
