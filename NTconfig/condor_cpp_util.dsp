@@ -444,5 +444,13 @@ SOURCE="..\src\condor_c++_util\user_log.C"
 
 SOURCE="..\src\condor_c++_util\user_log.c++.h"
 # End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\which.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\which.h"
+# End Source File
 # End Target
 # End Project

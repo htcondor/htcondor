@@ -88,6 +88,22 @@ LINK32=link.exe
 # Name "condor_starter - Win32 Release"
 # Begin Source File
 
+SOURCE=..\src\condor_starter.V6.1\io_proxy.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\io_proxy.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\io_proxy_handler.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\io_proxy_handler.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_starter.V6.1\mpi_comrade_proc.C
 # End Source File
 # Begin Source File
