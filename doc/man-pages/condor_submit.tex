@@ -403,44 +403,11 @@ This option should be only be used when you wish a certain file to be
 treated as a running log instead of a precise result.
 
 %%%%%%%%%%%%%%%%%%%
-%% buffer_size
-%%%%%%%%%%%%%%%%%%%
-
-\item[buffer\_size $=$ $<$bytes-in-buffer$>$]
-Condor keeps a buffer of recently-used data for each file an
-application opens.  This option specifies the maximum
-number of bytes to be buffered for each open file at the executing machine.
-
-The buffer size and its effect on throughput may be viewed with
-the \verb@-io@ option to \Condor{status}. 
-In this version of Condor, the default buffer size is 512 KB, unless
-the configuration file macro \Macro{DEFAULT\_IO\_BUFFER\_SIZE} has
-been set to a different default by your administrator on your
-submission machine.
-
-%%%%%%%%%%%%%%%%%%%
-%% buffer_block_size
-%%%%%%%%%%%%%%%%%%%
-
-\item[buffer\_block\_size $=$ $<$bytes-in-block$>$]
-When buffering is enabled, Condor will attempt to consolidate small read
-and write operations into large blocks.  This option specifies the block
-size Condor will use.  A very small block size may actually decrease I/O performance.
-The block size should definitely be larger than any of the I/O operations
-your program performs.
-
-The buffer block size and its effect on throughput may be viewed with
-the \verb@-io@ option to \Condor{status}. 
-In this version of Condor, the default buffer block size is 32 KB,
-unless the configuration file \Macro{DEFAULT\_IO\_BUFFER\_BLOCK\_SIZE}
-has been set to a different default by your administrator on your
-submission machine.
-
-%%%%%%%%%%%%%%%%%%%
 %% file_remaps
 %%%%%%%%%%%%%%%%%%%
 
 \item[file\_remaps $=$ $<$ `` name $=$ newname ; name2 $=$ newname2 ... ''$>$ ]
+
 Directs Condor to use a new filename in place of an old one.  \Arg{name}
 describes a filename that your job may attempt to open, and \Arg{newname}
 describes the filename it should be replaced with.
@@ -474,6 +441,45 @@ Several remaps can be applied at once by separating each with a semicolon.
 file_remaps = "very.big = local:/bigdisk/bigfile ; dataset.1 = other.dataset"
 \end{verbatim}
 \end{description}
+
+%%%%%%%%%%%%%%%%%%%
+%% buffer_files, buffer_size, buffer_block_size
+%%%%%%%%%%%%%%%%%%%
+
+\item[buffer\_files $=$ $<$ `` name $=$ (size,block-size) ; name2 $=$ (size,block-size) ... '' $>$ ]
+\item[buffer\_size $=$ $<$bytes-in-buffer$>$]
+\item[buffer\_block\_size $=$ $<$bytes-in-block$>$]\\
+Condor keeps a buffer of recently-used data for each file a job accesses.
+This buffer is used both to cache commonly-used data and to consolidate small
+reads and writes into larger operations that get better throughput.
+The default settings should produce reasonable results for most programs.
+
+If needed, you may set the buffer controls individually for each file using
+the buffer\_files option. For example, to set the buffer size to 1MB and
+the block size to 256KB for the file 'input.data', use this command:
+
+\begin{verbatim}
+buffer_files = "input.data=(1000000,256000)"
+\end{verbatim}
+
+Alternatively, you may use these two options to set
+the default sizes for all files used by your job:
+
+\begin{verbatim}
+buffer_size = 1000000
+buffer_block_size = 256000
+\end{verbatim}
+
+If you do not set these, Condor will use the values given by these
+two config file macros:
+
+\begin{verbatim}
+DEFAULT_IO_BUFFER_SIZE = 1000000
+DEFAULT_IO_BUFFER_BLOCK_SIZE = 256000
+\end{verbatim}
+
+Finally, if no other settings are present, Condor will use a buffer of 512KB
+and a block size of 32KB.
 
 %%%%%%%%%%%%%%%%%%%
 %% rendezvousdir
