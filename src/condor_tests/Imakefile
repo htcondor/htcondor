@@ -166,6 +166,10 @@ TESTCLASS(lib_userlog,lib)
 **RUN(job_core_rmkillsig_sched)
 **TESTCLASS(job_core_rmkillsig_sched,core)
 **
+**DESC(job_core_killsignal_sched,"Scheduler: Verify the specified input file is used")
+**RUN(job_core_killsignal_sched)
+**TESTCLASS(job_core_killsignal_sched,core)
+**
 **DESC(job_core_perhold_van,"Vanilla: verify true and false triggers for periodic hold")
 **RUN(job_core_perhold_van)
 **TESTCLASS(job_core_perhold_van,core)
@@ -272,10 +276,6 @@ TESTCLASS(job_core_input_sched,core)
 DESC(job_core_input_van,"Vanilla: Verify the specified input file is used")
 RUN(job_core_input_van)
 TESTCLASS(job_core_input_van,core)
-
-DESC(job_core_killsignal_sched,"Scheduler: Verify the specified input file is used")
-RUN(job_core_killsignal_sched)
-TESTCLASS(job_core_killsignal_sched,core)
 
 DESC(job_core_leaveinqueue_sched,"Scheduler: verify true and false classads do leave_in_queue right")
 RUN(job_core_leaveinqueue_sched)
