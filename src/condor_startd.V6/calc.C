@@ -339,11 +339,42 @@ dev_idle_time( char *path, time_t now )
 	struct stat	buf;
 	time_t answer;
 	static char pathname[100] = "/dev/";
+	static int null_major_device = -1;
 
+	if ( !path || path[0]=='\0' ||
+		 strncmp(path,"unix:",5) != 0 ) {
+		// we don't have a valid path, or it is
+		// a bullshit path setup by the X server
+		return now;
+	}
+
+	if ( null_major_device == -1 ) {
+		// get the major device number of /dev/null so
+		// we can ignore any device that shares that
+		// major device number (things like /dev/null,
+		// /dev/kmem, etc).
+		null_major_device = -2;	// so we don't try again
+		if ( stat("/dev/null",&buf) < 0 ) {
+			dprintf(D_ALWAYS,"Cannot stat /dev/null\n");
+		} else {
+			// we were able to stat /dev/null, stash dev num
+			if ( !S_ISREG(buf.st_mode) && !S_ISDIR(buf.st_mode) &&
+				 !S_ISLNK(buf.st_mode) ) {
+				null_major_device = major(buf.st_rdev);
+				dprintf(D_FULLDEBUG,"/dev/null major dev num is %d\n",
+								null_major_device);
+			}
+		}
+	}
+	
 	strcpy( &pathname[5], path );
 	if (stat(pathname,&buf) < 0) {
 		dprintf( D_FULLDEBUG, "Error on stat(%s,0x%x), errno = %d\n",
 				 pathname, &buf, errno );
+		buf.st_atime = 0;
+	}
+	if ( null_major_device > -1 && null_major_device == major(buf.st_rdev) ) {
+		// this device is related to /dev/null, it should not count
 		buf.st_atime = 0;
 	}
 	answer = now - buf.st_atime;
