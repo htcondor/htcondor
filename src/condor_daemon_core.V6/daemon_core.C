@@ -2875,8 +2875,12 @@ int DaemonCore::HandleReq(int socki)
 				ClassAd pa_ad;
 
 				// session user
-				sprintf (buf, "%s=\"%s\"", ATTR_SEC_USER, ((ReliSock*)sock)->getFullyQualifiedUser());
-				pa_ad.Insert(buf);
+				const char *fully_qualified_user = ((ReliSock*)sock)->getFullyQualifiedUser();
+				if ( fully_qualified_user ) {
+					sprintf (buf, "%s=\"%s\"", ATTR_SEC_USER, 
+							fully_qualified_user);
+					pa_ad.Insert(buf);
+				}
 
 				// session id
 				sprintf (buf, "%s=\"%s\"", ATTR_SEC_SID, the_sid);
