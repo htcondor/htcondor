@@ -121,7 +121,8 @@ char	*default_daemon_list[] = {
 	0};
 
 char	default_dc_daemon_list[] =
-"MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD";
+"MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, 
+VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR";
 
 // create an object of class daemons.
 class Daemons daemons;
