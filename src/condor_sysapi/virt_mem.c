@@ -267,6 +267,108 @@ sysapi_swap_space_raw() {
         sysctl(mib, 2, &usermem, &len, NULL, 0);   
 	return usermem / 1024;
 }
+
+#elif defined(AIX)
+
+int
+sysapi_swap_space_raw() {
+    struct pginfo p;
+    int ret;
+
+    CLASS_SYMBOL cuat;
+    struct CuAt paging_ent;
+    struct CuAt *pret = NULL;
+    unsigned long free_swap_space = 0;
+	char buf[1024];
+	char *path = NULL;
+
+    if (odm_initialize() < 0)
+    {
+		/* This is quite terrible if it happens */
+        dprintf(D_ALWAYS, 
+			"sysapi_swap_space_raw(): Could not initialize the ODM database: "
+			"%d\n", odmerrno);
+		return -1;
+    }
+
+	/* remember to free this memory just before I leave this function */
+    path = odm_set_path("/etc/objrepos");
+	if (path == (char*)-1) /* eewww */
+	{
+        dprintf(D_ALWAYS, "sysapi_swap_space_raw(): Could not set class path! "
+			"%d\n", odmerrno);
+		return -1;
+	}
+
+	/* open up a predefined class symbol found in libcfg.a */
+    cuat = odm_open_class(CuAt_CLASS);
+    if (cuat == NULL)
+    {
+        dprintf(D_ALWAYS, "sysapi_swap_space_raw(): Could not open CuAt! %d\n",
+			odmerrno);
+    	if (odm_terminate() < 0)
+    	{
+        	dprintf(D_ALWAYS, "Could not terminate using the ODM database: "
+				"%d\n", odmerrno);
+			free(path);
+			return -1;
+    	}
+		free(path);
+		return -1;
+    }
+
+    /* odm_get_list() is scary cause I can't tell if it is going to actually
+        remove the entries from the ODM when it returns them to me or not.
+        So I'm traversing the list in the safe way that I know how */
+
+    /* get me the objects that are paging devices */
+    pret = odm_get_obj(cuat, "value='paging'", &paging_ent, ODM_FIRST);
+    while(pret != NULL)
+    {
+		memset(buf, 0, 1024);
+		snprintf(buf, 1024, "%s/%s", "/dev", paging_ent.name);
+
+		ret = swapqry(buf, &p);
+        if (ret == -1)
+        {
+			/* XXX when non root, some swap partitions cannot be inspected,
+				so skip them. */
+        	pret = odm_get_obj(cuat, NULL, &paging_ent, ODM_NEXT);
+			continue;
+        }
+
+        free_swap_space += p.free;
+
+        pret = odm_get_obj(cuat, NULL, &paging_ent, ODM_NEXT);
+    }
+
+    if (odm_close_class(cuat) < 0)
+    {
+        dprintf(D_ALWAYS, "Could not close CuAt in the ODM database: %d\n",
+			odmerrno);
+		free(path);
+		return -1;
+    }
+
+    if (odm_terminate() < 0)
+    {
+        dprintf(D_ALWAYS, "Could not terminate using the ODM database: %d\n",
+			odmerrno);
+		free(path);
+		return -1;
+    }
+
+	free(path);
+
+	/* the free_swap_space unit is in PAGESIZE blocks */
+	/* so convert it into bytes, and then convert it into KB units */
+    return (free_swap_space * PAGESIZE) / 1024;
+}
+
+#else
+
+#error "Please define: sysapi_swap_space_raw()"
+
 #endif /* !defined(WIN32) */
 
 
