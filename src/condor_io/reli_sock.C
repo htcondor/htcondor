@@ -29,6 +29,10 @@
 #include "internet.h"
 #include "condor_rw.h"
 
+#ifdef WIN32
+#include <mswsock.h>	// For TransferFile()
+#endif
+
 /**************************************************************/
 
 ReliSock::ReliSock() : Sock(), ignore_next_encode_eom(FALSE),
@@ -186,10 +190,9 @@ ReliSock::accept( ReliSock	&c )
 	c._sock = c_sock;
 	c._state = sock_connect;
 	c.decode();
-	if (  c._timeout == 0 ) {
-		int on = 1;
-		c.setsockopt(SOL_SOCKET, SO_KEEPALIVE, (char*)&on, sizeof(on));
-	}
+
+	int on = 1;
+	c.setsockopt(SOL_SOCKET, SO_KEEPALIVE, (char*)&on, sizeof(on));
 
 	dprintf( D_NETWORK, "ACCEPT %s ", sock_to_string(_sock) );
 	dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string(c.endpoint()) );
@@ -335,9 +338,10 @@ ReliSock::get_bytes_nobuffer(char *buffer, int max_length, int receive_size)
 int
 ReliSock::get_file(const char *destination)
 {
-	int total=0, nbytes, written, fd;
+	int nbytes, written, fd;
 	char buf[65536];
 	unsigned int filesize;
+	unsigned int total = 0;
 
 	if ( !get(filesize) || !end_of_message() ) {
 		dprintf(D_ALWAYS, 
@@ -392,10 +396,11 @@ ReliSock::get_file(const char *destination)
 int
 ReliSock::put_file(const char *source)
 {
-	int total=0, nbytes, nrd, fd;
+	int nbytes, nrd, fd;
 	char buf[65536];
 	struct stat filestat;
 	unsigned int filesize;
+	unsigned int total = 0;
 
 #if defined(WIN32)
 	if ((fd = ::open(source, O_RDONLY | _O_BINARY | _O_SEQUENTIAL, 0)) < 0)
@@ -419,7 +424,26 @@ ReliSock::put_file(const char *source)
 		::close(fd);
 		return FALSE;
 	}
+	
+#if defined(WIN32)
+	// First drain outgoing buffers
+	if ( !prepare_for_nobuffering(stream_encode) ) {
+		dprintf(D_ALWAYS,"Relisock::put_file() failed to drain buffers!\n");
+		::close(fd);
+		return FALSE;
+	}
 
+	// Now transmit file using special optimized Winsock call
+	if ( TransmitFile(_sock,(HANDLE)_get_osfhandle(fd),
+			filesize,0,NULL,NULL,0) == FALSE ) {
+		dprintf(D_ALWAYS,"put_file: TransmitFile() failed, errno=%d\n",
+			GetLastError() );
+		total = 0;
+	} else {
+		total = filesize;
+	}
+#else
+	// On Unix, send file using put_bytes_nobuffer()
 	while (total < filestat.st_size &&
 		(nrd = ::read(fd, buf, sizeof(buf))) > 0) {
 		dprintf(D_FULLDEBUG, "read %d bytes\n", nrd);
@@ -433,6 +457,8 @@ ReliSock::put_file(const char *source)
 		total += nbytes;
 	}
 	dprintf(D_FULLDEBUG, "done with transfer, errno = %d\n", errno);
+#endif
+	
 	dprintf(D_FULLDEBUG, "sent file %s (%d bytes)\n", source, total);
 
 	if (::close(fd) < 0) {
