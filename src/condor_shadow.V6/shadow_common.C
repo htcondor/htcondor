@@ -798,6 +798,8 @@ send_cmd_to_startd(char *sin_host, char *capability, int cmd)
   dprintf( D_FULLDEBUG, "Sent command %d to startd at %s with cap %s\n",
 		   cmd, sin_host, capability );
 
+  delete sock;
+
   return 0;
 }
 
