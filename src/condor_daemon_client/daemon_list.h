@@ -82,6 +82,7 @@ public:
 
  protected:
 
+	SimpleList<Daemon*> list;
 
  private:
 
@@ -90,7 +91,6 @@ public:
 		*/
 	Daemon* buildDaemon( daemon_t type, const char* str );
 
-	SimpleList<Daemon*> list;
 
 		// I can't be copied (yet)
 	DaemonList( const DaemonList& );
