@@ -993,8 +993,10 @@ activate_claim( Resource* rip, Stream* stream )
 
 	ji.ji_hname = rip->r_cur->client()->host();
 
+	int now = (int)time( NULL );
+
 		// Actually spawn the starter
-	if( ! rip->r_starter->spawn(&ji) ) {
+	if( ! rip->spawn_starter(&ji, now) ) {
 			// Error spawning starter!
 		ABORT;
 	}
@@ -1031,7 +1033,6 @@ activate_claim( Resource* rip, Stream* stream )
 	rip->r_cur->setad( req_classad );
 	rip->r_cur->setuniverse(universe);
 
-	int now = (int)time( NULL );
 	rip->r_cur->setjobstart(now);	
 	rip->r_cur->setlastpckpt(now);	
 
