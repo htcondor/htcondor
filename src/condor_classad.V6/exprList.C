@@ -36,15 +36,17 @@ ExprList()
 }
 
 ExprList::
-ExprList(std::vector<ExprTree*>& list)
+ExprList(const vector<ExprTree*>& exprs)
 {
-    CopyFrom(list);
+	nodeKind = EXPR_LIST_NODE;
+    CopyList(exprs);
 	return;
 }
 
 ExprList::
 ExprList(const ExprList &other_list)
 {
+	nodeKind = EXPR_LIST_NODE;
     CopyFrom(other_list);
     return;
 }
@@ -172,17 +174,15 @@ _SetParentScope( const ClassAd *parent )
 ExprList *ExprList::
 MakeExprList( const vector<ExprTree*> &exprs )
 {
-	vector<ExprTree*>::const_iterator itr;
 	ExprList *el = new ExprList;
 	if( !el ) {
 		CondorErrno = ERR_MEM_ALLOC_FAILED;
 		CondorErrMsg = "";
-		return( NULL );
-	}
-	for( itr=exprs.begin( ) ; itr!=exprs.end( ); itr++ ) {	
-		el->exprList.push_back( *itr );
-	}
-	return( el );
+		el = NULL;
+	} else {
+        el->CopyList(exprs);
+    }
+    return el;
 }
 
 void ExprList::
@@ -283,6 +283,16 @@ _Flatten( EvalState &state, Value &, ExprTree *&tree, int* ) const
 	return true;
 }
 
+void ExprList::CopyList(const vector<ExprTree*> &exprs)
+{
+	vector<ExprTree*>::const_iterator itr;
+
+	for( itr=exprs.begin( ); itr!=exprs.end( ); itr++ ) {	
+		exprList.push_back( *itr );
+	}
+
+	return;
+}
 
 // Iterator implementation
 ExprListIterator::

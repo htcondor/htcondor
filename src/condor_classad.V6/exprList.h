@@ -37,7 +37,7 @@ class ExprList : public ExprTree
 {
 	public:
 		ExprList();
-		ExprList(std::vector<ExprTree*>& list);
+		ExprList(const std::vector<ExprTree*>& exprs);
 
         /// Copy Constructor
         ExprList(const ExprList &other_list);
@@ -92,6 +92,7 @@ class ExprList : public ExprTree
 		virtual bool _Evaluate (EvalState &, Value &) const;
 		virtual bool _Evaluate (EvalState &, Value &, ExprTree *&) const;
 		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;
+        void CopyList(const vector<ExprTree*> &exprs);
 };
 
 
