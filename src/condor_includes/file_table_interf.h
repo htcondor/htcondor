@@ -57,6 +57,9 @@ int _condor_file_table_map( int fd );
 /** Return true if this virtual fd refers to a local file. */
 int _condor_file_is_local( int user_fd );
 
+/** Resolve this incomplete filename into a fully-qualified url */
+void _condor_file_table_resolve( const char *incomplete_name, char *url );
+
 /** Just before the program is about to exit, perform any necessary cleanup such as buffer flushing, data reporting, etc. */
 void _condor_file_table_cleanup();
 

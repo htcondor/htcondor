@@ -109,6 +109,8 @@ STARTUP_INFO		return grab( TYPE_NAME );
 ClassAd			return grab( TYPE_NAME );
 "["{WHITE}"]"		return grab( ARRAY );
 map					return grab( MAP );
+map_name				return grab( MAP_NAME );
+map_name_two				return grab( MAP_NAME_TWO );
 file_table					return grab( FILE_TABLE );
 in					return grab( IN );
 out					return grab( OUT );

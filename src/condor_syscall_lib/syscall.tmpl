@@ -105,6 +105,18 @@
 	of redirection like :file_table does.  Not all file types will
 	support map().  In this case, the syscall will fail in EINVAL.
 
+  map_name( pathname )
+
+	When MappingFileDescriptors() is in effect, ask the file table
+	to determine where this file is stored, much as we do for open.
+	Perform the system call at that location.
+
+  map_name_two( pathname )
+	Used for the second filename in system calls that refer to two
+	filenames.  It performs exactly the same lookup as map_name(),
+	but fails with EXDEV if the second name is not stored at the
+	same server as the first.
+
   rdiscard( parameter )
 
 	This will throw out the given parameter
@@ -826,59 +838,129 @@ version.
 		map(int fd),
 		int how) : INDIRECT;
 
-#endif /* REMOTE_SYSCALLS and not CLIP */
-
 /*
-These calls are also necessary for remote syscalls, but they deal
-with file names, not fds.  Notice that file names are not looked
-up to see where they are stored -- only files that are open()ed
-do this.  This issue will eventually need to be addressed.
+Each of the following system calls deals with a pathname.
+Pathnames must all be mapped from their logical names to
+their physical locations by the file table when mapping
+is in effect.  If a syscall deals with two path names,
+it should apply map_name_two() to the second one, which
+will compares its results to that of map_name() and
+report an error if they are not the same.
 */
 
-#if defined(REMOTE_SYSCALLS) && !defined(CLIP)
-
-	int link( const char *p1, const char *p2 ) {
+	int link( map_name(const char *p1), map_name_two(const char *p2) ) {
 		SEND_PATH( p1 );
 		SEND_PATH( p2 );
 		ALLOC_PATH( p1 );
 		ALLOC_PATH( p2 );
 	}
 
-	int access( const char *path, int access_mode ) {
+	int access( map_name(const char *path), int access_mode ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
 
-	#if !defined(SWITCH)
-		char * getwd( char *path_name ) : pseudo {
-			GET_PATH( path_name );
-			ALLOC_PATH( path_name );
-		}
-	#endif
-
-	int unlink( const char *path ) {
+	int unlink( map_name(const char *path) ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
-	int rename( const char *from, const char *to ) : pseudo {
+
+	int rename( map_name(const char *from), map_name_two(const char *to) ) : pseudo {
 		SEND_PATH( from );
 		SEND_PATH( to );
 		ALLOC_PATH( from );
 		ALLOC_PATH( to );
 	}
 
-	#if defined(LINUX)
-		int mknod( const char *path, mode_t mode, dev_t device ) {
-	#else
-		int mknod( const char *path, mode_t mode, dev_t device ) {
-	#endif
-			SEND_PATH( path );
-			ALLOC_PATH( path );
-		}
-	int chmod( const char *path, mode_t mode ) {
+	int mknod( map_name(const char *path), mode_t mode, dev_t device ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
+
+	int chmod( map_name(const char *path), mode_t mode ) {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+	}
+
+	int symlink( map_name(const char *path1), map_name_two(const char *path2) ) {
+		SEND_PATH( path1 );
+		SEND_PATH( path2 );
+		ALLOC_PATH( path1 );
+		ALLOC_PATH( path2 );
+	}
+
+	#if defined(Solaris251)
+	int readlink( map_name(const char *path), void *buf, int buf_size ) {
+	#else
+	int readlink( map_name(const char *path), char *buf, size_t buf_size ) {
+	#endif
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+		out code_bytes_bool( buf, buf_size );
+		alloc( buf, buf_size );
+	}
+
+	#if !defined(LINUX)
+		int lchown( map_name(const char *path), uid_t owner, gid_t group ) {
+			SEND_PATH( path );
+			ALLOC_PATH( path );
+		}
+	#endif
+
+	int chown( map_name(const char *path), uid_t owner, gid_t group ) {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+	}
+
+	#if defined(LINUX) && !defined(GLIBC)
+		int truncate( map_name(const char *path), size_t length ) : extract {
+			SEND_PATH( path );
+			ALLOC_PATH( path );
+		}
+	#elif defined(Solaris) 
+		int truncate( map_name(const char *path), off_t length ) : extract {
+			SEND_PATH( path );
+			ALLOC_PATH( path );
+		}
+	#else
+		int truncate( map_name(const char *path), off_t length ) {
+			SEND_PATH( path );
+			ALLOC_PATH( path );
+		}
+	#endif /* LINUX */
+
+
+	int mkdir( map_name(const char *path), mode_t mode ) {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+	}
+	int rmdir( map_name(const char *path) ) {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+	}
+
+	#if defined( LINUX )
+		int utimes( map_name(char *path), struct timeval *times ) {
+	#else
+		int utimes( map_name(const char *path), const struct timeval *times ) {
+	#endif
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+		in code( times );
+		alloc( times, TIMEVAL_SIZE );
+	}
+
+	int utime( map_name(const char *path), const struct utimbuf *buf) {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+		in code( buf );
+		alloc( buf, UTIMBUF_SIZE );
+	}
+
+/*
+Miscellaneous file-related operations that do not deal with
+either file names or file descriptors.
+*/
 
 	#if !defined(Solaris) && !defined(LINUX) && !defined(IRIX) && !defined(HPUX)
 		int getfsstat( struct statfs buf[], long bufsize, int flags ) {
@@ -887,80 +969,13 @@ do this.  This issue will eventually need to be addressed.
 		}
 	#endif
 
-	int symlink( const char *path1, const char *path2 ) {
-		SEND_PATH( path1 );
-		SEND_PATH( path2 );
-		ALLOC_PATH( path1 );
-		ALLOC_PATH( path2 );
-	}
-
-	#if defined(LINUX) || (defined(Solaris26) || defined(Solaris27)) || defined(OSF1) || defined(IRIX) || defined(HPUX10)
-		int readlink( const char *path, char *buf, size_t buf_size ) {
-	#else
-		int readlink( const char *path, void *buf, int buf_size ) {
-	#endif
-			SEND_PATH( path );
-			ALLOC_PATH( path );
-			out code_bytes_bool( buf, buf_size );
-			alloc( buf, buf_size );
-		}
-
-	#if !defined(LINUX)
-		int lchown( const char *path, uid_t owner, gid_t group ) {
-			SEND_PATH( path );
-			ALLOC_PATH( path );
+	#if !defined(SWITCH)
+		char * getwd( char *path_name ) : pseudo {
+			GET_PATH( path_name );
+			ALLOC_PATH( path_name );
 		}
 	#endif
 
-	int chown( const char *path, uid_t owner, gid_t group ) {
-		SEND_PATH( path );
-		ALLOC_PATH( path );
-	}
-
-	#if defined(LINUX) && !defined(GLIBC)
-		int truncate( const char *path, size_t length ) : extract {
-			SEND_PATH( path );
-			ALLOC_PATH( path );
-		}
-	#elif defined(Solaris) 
-		int truncate( const char *path, off_t length ) : extract {
-			SEND_PATH( path );
-			ALLOC_PATH( path );
-		}
-	#else
-		int truncate( const char *path, off_t length ) {
-			SEND_PATH( path );
-			ALLOC_PATH( path );
-		}
-	#endif /* LINUX */
-
-
-	int mkdir( const char *path, mode_t mode ) {
-		SEND_PATH( path );
-		ALLOC_PATH( path );
-	}
-	int rmdir( const char *path ) {
-		SEND_PATH( path );
-		ALLOC_PATH( path );
-	}
-
-	#if defined( LINUX )
-		int utimes( char *path, struct timeval *times ) {
-	#else
-		int utimes( const char *path, const struct timeval *times ) {
-	#endif
-		SEND_PATH( path );
-		ALLOC_PATH( path );
-		in code( times );
-		alloc( times, TIMEVAL_SIZE );
-	}
-
-	int utime( const char *path, const struct utimbuf *buf) {
-		SEND_PATH( path );
-		ALLOC_PATH( path );
-		in code( buf );
-		alloc( buf, UTIMBUF_SIZE );
-	}
 #endif /* REMOTE_SYSCALLS and not CLIP */
 
 /*

@@ -50,6 +50,12 @@ int _condor_file_is_local( int user_fd )
 	}
 }
 
+void _condor_file_table_resolve( const char *incomplete_name, char *url )
+{
+	_condor_file_table_init();
+	FileTab->resolve_name( incomplete_name, url );
+}
+
 void _condor_file_table_dump()
 {
 	_condor_file_table_init();

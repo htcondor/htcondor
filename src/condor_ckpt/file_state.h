@@ -230,6 +230,9 @@ public:
 	    syscalls.  Returns false otherwise. */
 	int	local_access_hack( int fd );
 
+	/** Resolve this incomplete name into a physical url */
+	void	resolve_name( const char *incomplete_name, char *url );
+
 private:
 
 	int	resume( int fd );
@@ -238,10 +241,10 @@ private:
 	int	count_file_uses( CondorFile *f );
 	int	count_pointer_uses( CondorFilePointer *f );
 	void	check_safety( CondorFilePointer *f );
-	void	lookup_url( char *logical_name, char *url );
 	int	find_url( char *url );
 	int	find_logical_name( char *logical_name );
 	void	complete_path( const char *short_path, char *long_path );
+	void	lookup_url( char *logical_name, char *url );
 
 	CondorFile * open_url( char *url, int flags, int mode, int allow_buffer );
 	CondorFile * open_url_retry( char *url, int flags, int mode, int allow_buffer );

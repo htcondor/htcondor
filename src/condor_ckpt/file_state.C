@@ -347,7 +347,34 @@ int CondorFileTable::count_file_uses( CondorFile *f )
 }
 
 /*
-Convert a logical file name into a physical url by any and all methods available.  This function will not fail -- it will always fall back on something reasonable.
+Convert an incomplete logical name into a physical url.  This is a public function which may be used by the system call switches.  This function will not fail.
+*/
+
+void CondorFileTable::resolve_name( const char *incomplete_name, char *url )
+{
+	char logical_name[_POSIX_PATH_MAX];
+
+	// First get the incomplete name into a complete path
+
+	complete_path( incomplete_name, logical_name );
+
+	// Now look to see if the file is already open.
+	// If it is, use that url.
+
+	int match = find_logical_name( logical_name );
+	if(match!=-1) {
+		resume(match);
+		strcpy( url, pointers[match]->file->get_url() );
+		return;
+	}
+
+	// If that fails, then go through the whole resolution process.
+
+	lookup_url( logical_name, url );
+}
+
+/*
+Convert a logical file name into a physical url by any and all methods available.  This function will not fail -- it will always fall back on something reasonable.  This is a private function which expects an already compelted path name.
 */
 
 void CondorFileTable::lookup_url( char *logical_name, char *url )

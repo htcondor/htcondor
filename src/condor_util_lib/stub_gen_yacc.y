@@ -26,6 +26,8 @@
 %token RDISCARD
 %token DISCARD
 %token MAP
+%token MAP_NAME
+%token MAP_NAME_TWO
 
 %type <node> stub_spec param_list param simple_param
 %type <node> stub_body action_func_list
@@ -417,6 +419,10 @@ param
 		{ $3->rdiscard = TRUE; $$ = $3; }
 	| MAP '(' simple_param ')'
 		{ $3->is_mapped = TRUE; $$ = $3; }
+	| MAP_NAME '(' simple_param ')'
+		{ $3->is_map_name = TRUE; $$ = $3; }
+	| MAP_NAME_TWO '(' simple_param ')'
+		{ $3->is_map_name_two = TRUE; $$ = $3; }
 	| ELLIPSIS
 		{
 		$$ = mk_param_node("int","lastarg",0,0,0,0,0,0,0,1);
@@ -632,6 +638,8 @@ mk_param_node( char *type, char *name,
 	answer->is_ref = is_ref;
 	answer->is_array = is_array;
 	answer->is_mapped = 0;
+	answer->is_map_name = 0;
+	answer->is_map_name_two = 0;
 	answer->in_param = is_in;
 	answer->out_param = is_out;
 	answer->is_vararg = is_vararg;
@@ -1604,6 +1612,28 @@ output_switch( struct node *n )
 			printf("\t\tdo_local = _condor_file_is_local( %s );\n",p->id);
 			printf("\t\t%s = _condor_file_table_map( %s );\n",p->id,p->id);
 			printf("\t}\n\n");
+		}
+		if( p->is_map_name ) {
+			printf("\tchar url[_POSIX_PATH_MAX];\n");
+			printf("\tif( MappingFileDescriptors() ) {\n");
+			printf("\t\t_condor_file_table_resolve( %s, url );\n",p->id);
+			printf("\t\tif(!strncmp(url,\"local:\",6)) do_local=1;\n");
+			printf("\t\t%s = strchr(url,':')+1;\n",p->id);
+			printf("\t}\n");
+		}
+		if( p->is_map_name_two ) {
+			printf("\tint do_local_two=0;\n");
+			printf("\tchar url_two[_POSIX_PATH_MAX];\n");
+			printf("\tif( MappingFileDescriptors() ) {\n");
+			printf("\t\t_condor_file_table_resolve( %s, url_two );\n",p->id);
+			printf("\t\tif(!strncmp(url_two,\"local:\",6)) do_local_two=1;\n");
+			printf("\t\t%s = strchr(url_two,':')+1;\n",p->id);
+			printf("\t}\n");
+			printf("\tif( do_local!=do_local_two ) {\n");
+			printf("\t\terrno = EXDEV;\n");
+			printf("\t\t_condor_signals_enable();\n");
+			printf("\t\treturn -1;\n");
+			printf("\t}\n");
 		}
 	}
 
