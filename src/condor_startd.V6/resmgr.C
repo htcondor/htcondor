@@ -13,7 +13,6 @@
 #include "condor_attributes.h"
 #include "sched.h"
 
-#include "cdefs.h"
 #include "event.h"
 #include "state.h"
 #include "resource.h"
@@ -32,10 +31,10 @@ static resource_info_t *resources=NULL;
 static int nresources;
 static fd_set cur_fds;
 
-static int resmgr_vacateone	__P((resource_info_t *));
-static int resmgr_addfd		__P((resource_info_t *));
-static int resmgr_command	__P((resource_info_t *));
-void update_central_mgr __P((void));
+static int resmgr_vacateone(resource_info_t *);
+static int resmgr_addfd(resource_info_t *);
+static int resmgr_command(resource_info_t *);
+void update_central_mgr(void);
 
 extern "C" int resmgr_setsocks(fd_set* fds);
 extern "C" int resmgr_call(fd_set* fds);
@@ -73,13 +72,13 @@ int resmgr_init()
 		resources[index].r_pid = NO_PID;
 		resources[index].r_claimed = FALSE;
 		// C H A N G E -> N Anand
-		resources[index].r_context = new ClassAd();
+		resources[index].r_context = new ClassAd(*template_ClassAd);
 		resources[index].r_jobcontext = NULL;
 		resources[index].r_capab = NULL;
 		resources[index].r_interval = 0;
 		resources[index].r_receivetime = 0;
 		resources[index].r_universe = STANDARD;
-		dprintf(D_ALWAYS, "create_context returned %x\n",
+		dprintf(D_FULLDEBUG, "create_context returned %x\n",
 			resources[index].r_context);
 		resources[index].r_port = create_port(&resources[index].r_sock);
 		// CHANGE -> N Anand
