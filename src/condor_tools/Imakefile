@@ -98,9 +98,9 @@ static_link_target($(STATIC_DIR)/bin/condor,bin,condor_vacate)
 static_link_target($(STATIC_DIR)/bin/condor,bin,condor_reschedule)
 
 c_plus_target(condor_stats,stats.o,$(LIB))
-static_target(condor_stats,stats.o,$(LIB),$(STATIC_DIR)/sbin)
-strip_target(condor_stats,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
-release_target(condor_stats,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
+static_target(condor_stats,stats.o,$(LIB),$(STATIC_DIR)/bin)
+strip_target(condor_stats,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
+release_target(condor_stats,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
 c_plus_target(test_calc,test_calc.o,$(LIB))
 
