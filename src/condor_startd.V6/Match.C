@@ -487,7 +487,6 @@ Client::vacate(char* cap)
 {
 	ReliSock* sock;
 
-
 	if( ! (c_addr || c_host || c_owner ) ) {
 			// Client not really set, nothing to do.
 		return;
@@ -495,12 +494,13 @@ Client::vacate(char* cap)
 
 	dprintf(D_FULLDEBUG, "Entered vacate_client %s %s...\n", c_addr, c_host);
 
-	Daemon my_schedd (DT_SCHEDD, NULL, NULL);
-	if (!(sock = (ReliSock*)my_schedd.startCommand( RELEASE_CLAIM, Stream::reli_sock, 20 ))) {
+	Daemon my_schedd( DT_SCHEDD, c_addr, NULL);
+	sock = (ReliSock*)my_schedd.startCommand( RELEASE_CLAIM,
+											  Stream::reli_sock, 20 );
+	if( ! sock ) {
 		dprintf(D_FAILURE|D_ALWAYS, "Can't connect to schedd (%s)\n", c_addr);
 		return;
 	}
-
 	if( !sock->put( cap ) ) {
 		dprintf(D_ALWAYS, "Can't send capability to client\n");
 	} else if( !sock->eom() ) {
