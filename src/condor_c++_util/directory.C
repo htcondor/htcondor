@@ -580,7 +580,7 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 {
 
 	MyString rm_buf;
-	MyString log_msg;
+	const char* log_msg;
 	priv_state saved_priv;
 	int rval;
 
@@ -597,6 +597,7 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 		switch( priv ) {
 
 		case PRIV_UNKNOWN:
+			log_msg = priv_identifier( get_priv() );
 			break;
 
 		case PRIV_FILE_OWNER:
@@ -605,42 +606,35 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 					"with PRIV_FILE_OWNER on WIN32!" );
 #else
 			saved_priv = setOwnerPriv( path );
-			log_msg.sprintf( "file owner (%d.%d)", get_file_owner_uid(),
-							 get_file_owner_gid() );
-#endif
-			break;
-
-		case PRIV_CONDOR:
-			saved_priv = set_condor_priv();
-#ifdef WIN32
-				// On windoze, PRIV_CONDOR == PRIV_ROOT == "system"
-			log_msg = "the System user";
-#else
-			log_msg.sprintf( "the Condor daemon user (%d.%d)",
-							 get_condor_uid(), get_condor_gid() );
+			log_msg = priv_identifier( priv );
 #endif
 			break;
 
 		case PRIV_ROOT:
-			saved_priv = set_root_priv();
-#ifdef WIN32
-			log_msg = "the System user";
-#else
-			log_msg = "root";
-#endif
-
+		case PRIV_CONDOR:
+			saved_priv = set_priv( priv );
+			log_msg = priv_identifier( priv );
 			break;
+
 		default:
 			EXCEPT( "Programmer error: Directory::rmdirAttempt() called "
 					"with unexpected priv_state (%d: %s)", priv,
 					priv_to_string(priv) );
 			break;
 		}
+	} else {
+			// We not switching our priv, but we can grab the
+			// identifier for whatever state we're in now.  if we
+			// can't even switch privs, this will be PRIV_CONDOR, but
+			// that's ok, because in that case, we initialize the
+			// CondorUserName (and on UNIX, uid/gid) to be the current
+			// user, so this will be accurate in all cases.
+		log_msg = priv_identifier( get_priv() );
 	}
 
 		// Log what we're about to do
 	dprintf( D_FULLDEBUG, "Attempting to remove %s as %s\n",
-			 path, log_msg.Value() );
+			 path, log_msg );
 
 #ifdef WIN32
 		rm_buf = "rmdir /s /q \"";
@@ -653,9 +647,8 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 
 		// Finally, do the work
 #if DEBUG_DIRECTORY_CLASS
-	dprintf( D_ALWAYS,
-			 "Directory: with \"%s\" priv about to call \"%s\"\n",
-			 log_msg.Value(), rm_buf.Value() );
+	dprintf( D_ALWAYS, "Directory: about to call \"%s\" as %s\n",
+			 rm_buf.Value(), log_msg );
 #elif defined( WIN32 )
 		rval = system( rm_buf.Value() );
 #else
@@ -676,8 +669,8 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 			errmsg = "/bin/rm ";
 			statusString( rval, errmsg );
 		}
-		dprintf( D_FULLDEBUG, "Removing %s as %s failed: %s\n", path, 
-				 log_msg.Value(), errmsg.Value() );
+		dprintf( D_FULLDEBUG, "Removing \"%s\" as %s failed: %s\n", path, 
+				 log_msg, errmsg.Value() );
 		return false;
 	}
 	return true;
