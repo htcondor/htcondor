@@ -413,7 +413,6 @@ GrabText(void)
 							int number = atoi(number_string+2); // +2 to skip &#
 							if (number <= 255) {
 								current_token.text += number;
-								printf("current_token = %s\n", current_token.text.c_str());
 								replaced_entity = true;
 							}
 						} else {
