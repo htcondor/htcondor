@@ -45,6 +45,8 @@ options} may be specified.
 		information about claimed resources}
     \OptItem{\Opt{-ckptsrvr}}{(Query option) Query \Condor{ckpt\_server} ads
 		and display checkpoint server attributes}
+    \OptItem{\OptArg{-direct}{hostname}}{(Query option) Go directly to
+    the given hostname to get the ads to display}
     \OptItem{\Opt{-master}}{(Query option) Query \Condor{master} ads and display
 		daemon master attributes}
     \OptItem{\OptArg{-pool}{hostname}}{Query the specified central manager. 
@@ -97,6 +99,16 @@ options} may be specified.
 	machine.
 	In this case, everything after the ``@'' sign is treated as a
 	hostname and that is what is resolved.
+
+	\item You can use the \Opt{-direct} option in conjunction with
+	almost any other set of options.
+	However, at this time, the only daemon that will allow direct
+	queries for its ad(s) is the \Condor{startd}.
+	So, the only options currently not supported with
+	\Opt{-direct} are \Opt{-schedd} and \Opt{-master}.
+	Most other options use startd ads for their information, so
+	they work seemlessly with \Opt{-direct}.
+
 \end{itemize}
 
 \Examples
