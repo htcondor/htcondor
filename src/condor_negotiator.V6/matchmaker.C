@@ -668,6 +668,13 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		return MM_ERROR;
 	}
 
+    // 4. notifiy the accountant
+	char scheddName[64];
+    if (request.LookupString (ATTR_NAME, scheddName))
+		accountant.AddMatch(scheddName, offer);
+    else
+		dprintf(D_ALWAYS, "\t\t\tCould not lookup %s in schedd ad\n",ATTR_NAME);
+
 	// done
 	dprintf (D_ALWAYS, "\t\t\tSuccessfully matched with %s\n", startdName);
 	return MM_GOOD_MATCH;
