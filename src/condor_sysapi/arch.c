@@ -331,7 +331,10 @@ sysapi_translate_opsys( char *sysname, char *release, char *version )
 		}
 	} 
 	else if ( !strncmp(sysname, "Darwin", 6) ) {
-		if( !strcmp( release, "6.4" ) ) {
+		if( !strcmp( release, "7.4.0" ) ) {
+			sprintf( tmp, "OSX10_3");
+		}
+		else if( !strcmp( release, "6.4" ) ) {
 			sprintf( tmp, "OSX10_2");
 		}
 		else {

@@ -282,6 +282,9 @@ elif test $os = "Darwin" ; then
   elif test "$osrelease" = "7.0.0" ; then
     _cv_opsys_vers="DARWIN_7_0"
     _cv_sysname="ppc_macosx_7_0"
+  elif test "$osrelease" = "7.4.0" ; then
+    _cv_opsys_vers="DARWIN_7_4"
+    _cv_sysname="ppc_macosx_7_4"
   else
     _cv_opsys_vers="DARWIN_UNKNOWN"
     AC_MSG_WARN([Unrecognised MacOSX/Darwin version])
