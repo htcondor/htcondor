@@ -178,6 +178,9 @@ public:
 	virtual bool notifyStarterError( const char* err_msg, bool critical ) = 0;
 
 
+	void setOutputAdFile( const char* path );
+	void writeOutputAdFile( ClassAd* ad );
+
 		// // // // // // // // // // // //
 		// Misc utilities
 		// // // // // // // // // // // //
@@ -268,6 +271,8 @@ protected:
 	char* job_error_name;
 
 	char* job_iwd;
+
+	char* job_output_ad_file;
 	
 		/// The ClassAd for our job.  We control the memory for this.
 	ClassAd* job_ad;

@@ -45,6 +45,7 @@ JobInfoCommunicator::JobInfoCommunicator()
 	job_output_name = NULL;
 	job_error_name = NULL;
 	job_iwd = NULL;
+	job_output_ad_file = NULL;
 	requested_exit = false;
 	change_iwd = false;
 	user_priv_is_initialized = false;
@@ -73,6 +74,9 @@ JobInfoCommunicator::~JobInfoCommunicator()
 	}
 	if( job_iwd ) {
 		free( job_iwd);
+	}
+	if( job_output_ad_file ) {
+		free( job_output_ad_file );
 	}
 
 }
@@ -161,6 +165,60 @@ JobInfoCommunicator::gotShutdownGraceful( void )
 {
 		// Set our flag so we know we were asked to vacate.
 	requested_exit = true;
+}
+
+
+void
+JobInfoCommunicator::setOutputAdFile( const char* path )
+{
+	bool is_stdout = false;
+	if( job_output_ad_file ) {
+		free( job_output_ad_file );
+	}
+
+	job_output_ad_file = strdup( path );
+
+	if( job_output_ad_file[0] == '-' && job_output_ad_file[1] == '\0' ) {
+		is_stdout = true;
+	}
+
+	dprintf( D_ALWAYS, "Will write job output ClassAd to \"%s\"\n", 
+			 is_stdout ? "STDOUT" : job_output_ad_file );
+}
+
+
+void
+JobInfoCommunicator::writeOutputAdFile( ClassAd* ad )
+{
+	if( ! job_output_ad_file ) {
+		return;
+	}
+
+	FILE* fp;
+	bool is_stdout = false;
+
+	if( job_output_ad_file[0] == '-' && job_output_ad_file[1] == '\0' ) {
+		fp = stdout;
+		is_stdout = true;
+	} else {
+		fp = fopen( job_output_ad_file, "a" );
+		if( ! fp ) {
+			dprintf( D_ALWAYS, "Failed to open output ClassAd file \"%\": "
+					 "%s (errno %d)\n", job_output_ad_file,
+					 strerror(errno), errno );
+			return;
+		}
+	}
+
+	dprintf( D_ALWAYS, "Writing job output ClassAd to \"%s\"\n", 
+			 is_stdout ? "STDOUT" : job_output_ad_file );
+
+		// append a delimiter?
+	ad->fPrint( fp );
+
+	if( ! is_stdout ) {
+		fclose( fp );
+	}
 }
 
 
