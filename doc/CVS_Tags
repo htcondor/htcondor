@@ -7,6 +7,13 @@
 ** of that here.  (New tags should be added at the top of the file,
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
+3/16/04 V6_6-doc-merge-3
+    The state of the doc directory in V6_6-branch before a 
+    merge into the V6_7-branch.  Previous merge which could
+    have used V6_6-doc-merge-2 did NOT happen.  More files have
+    been changed, so assigning a new tag, to be used if we ever
+    merge V6_6-branch into V6_7-branch again.
+
 3/9/04 V6_6-doc-merge-2
     The state of the doc directory in V6_6-branch before a 
     merge into the V6_7-branch.
