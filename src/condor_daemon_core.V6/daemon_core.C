@@ -1575,65 +1575,66 @@ int DaemonCore::HandleReq(int socki)
         if (req == DC_AUTHENTICATE) {
 		ReliSock* sock = (ReliSock*)stream;
 
-		dprintf (D_ALWAYS, "ZKM: received DC_AUTHENTICATE\n");
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: received DC_AUTHENTICATE\n");
 
 		int saveres = result;
-		dprintf (D_ALWAYS, "ZKM: entry value of result == %i\n", result);
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: entry value of result == %i\n", result);
 
 		ClassAd auth_info;
-		result = auth_info.code(*sock);
-		if (!result) {
-			dprintf (D_ALWAYS, "ZKM: BAIL!\n");
-			assert(0);
+		if( ! auth_info.code(*sock) ||
+			! sock->end_of_message()) {
+			dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
+					   "receive auth_info!\n");
+			return FALSE;	
 		}
 
-		result = sock->end_of_message();
-		if (!result) {
-			dprintf (D_ALWAYS, "ZKM: BAIL!\n");
-			assert(0);
-		}
-
-
-		dprintf (D_ALWAYS, "ZKM: received following ClassAd:\n");
-		auth_info.dPrint (D_ALWAYS);
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: received following ClassAd:\n");
+		auth_info.dPrint (D_SECURITY);
 
 		char buf[ATTRLIST_MAX_EXPRESSION];
 		char auth_types[ATTRLIST_MAX_EXPRESSION];
 
-		result = auth_info.LookupString(ATTR_AUTH_TYPES, auth_types);
-		dprintf (D_ALWAYS, "ZKM: ca.AUTH_TYPES returned %i and '%s'\n", result, auth_types);
-		if (!result) {
-			dprintf (D_ALWAYS, "ZKM: BAIL!\n");
-			assert(0);
+		if( ! auth_info.LookupString(ATTR_AUTH_TYPES, auth_types)) {
+			dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
+					   "extract auth_info.AUTH_TYPES!\n");
+			return FALSE;
 		}
 
-		result = auth_info.LookupString(ATTR_AUTHENTICATE, buf);
-		dprintf (D_ALWAYS, "ZKM: ca.AUTHENTICATE returned %i and '%s'\n", result, buf);
-		if (!result) {
-			dprintf (D_ALWAYS, "ZKM: BAIL!\n");
-			assert(0);
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: auth_info.AUTH_TYPES == '%s'\n",
+				auth_types);
+
+		if( ! auth_info.LookupString(ATTR_AUTHENTICATE, buf)) {
+			dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
+					   "extract auth_info.AUTHENTICATE!\n");
+			return FALSE;	
 		}
+
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: auth_info.AUTHENTICATE == '%s'\n",
+				buf);
 
 		if (stricmp(buf, "YES") == 0) {
-			dprintf (D_ALWAYS, "ZKM: authenticating RIGHT NOW.\n");
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticating RIGHT NOW.\n");
 			sock->authenticate(getAuthBitmask(auth_types));
 		} else if (stricmp(buf, "NO") == 0) {
 			char *paramer;
 			paramer = param("ALWAYS_AUTHENTICATE");
 
-			if (paramer && (stricmp(paramer, "YES") == 0)) {
-				// client refused to authenticate
-				// when server required it
-				dprintf (D_ALWAYS, "ZKM: client refused to authenticate.\n");
+			if (paramer) {
+				if (stricmp(paramer, "YES") == 0) {
+					// client refused to authenticate
+					// when server required it
+					dprintf (D_ALWAYS, "DC_AUTHENTICATE: client refused to authenticate.\n");
+					free (paramer);
+					return FALSE;
+				}
 				free (paramer);
-				assert(0);
 			}
 		} else if (stricmp(buf, "ASK") == 0) {
 			ClassAd auth_response;
 			auth_response.Insert("AUTHENTICATE=\"YES\"");
 			sock->encode();
-			dprintf (D_ALWAYS, "ZKM: sending following classad telling client to authenticate: \n");
-			auth_response.dPrint (D_ALWAYS);
+			dprintf (D_SECURITY, "ZKM: sending following classad telling client to authenticate: \n");
+			auth_response.dPrint (D_SECURITY);
 			auth_response.code(*sock);
 			sock->end_of_message();
 			dprintf (D_ALWAYS, "ZKM: authenticating RIGHT NOW.\n");
@@ -1648,14 +1649,14 @@ int DaemonCore::HandleReq(int socki)
 		result = strcmp(sockip, kerbip);
 		result = !strncmp (sockip + 1, kerbip, strlen(kerbip) );
 
-		dprintf (D_ALWAYS, "ZKM: sock ip -> %s\n", sockip);
-		dprintf (D_ALWAYS, "ZKM: kerb ip -> %s\n", kerbip);
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: sock ip -> %s\n", sockip);
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: kerb ip -> %s\n", kerbip);
 
 		if (!result) {
-			dprintf (D_ALWAYS, "ZKM: IP not in agreement!!! BAILING!\n");
+			dprintf (D_ALWAYS, "ERROR: IP not in agreement!!! BAILING!\n");
 			return FALSE;
 		} else {
-			dprintf (D_ALWAYS, "ZKM: IP address verified.\n");
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: IP address verified.\n");
 		}
 
 
@@ -1665,16 +1666,16 @@ int DaemonCore::HandleReq(int socki)
 		}
 
 
-		dprintf (D_ALWAYS, "ZKM: setting sock->decode()\n");
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: setting sock->decode()\n");
 		sock->decode();
 
-		dprintf (D_ALWAYS, "ZKM: allowing an empty message for sock.\n");
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: allowing an empty message for sock.\n");
 		sock->allow_one_empty_message();
 
 		result = saveres;
-		dprintf (D_ALWAYS, "ZKM: restored result to %i\n", result);
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: restored result to %i\n", result);
 
-		dprintf (D_ALWAYS, "ZKM: continuing with command %i\n", req);
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: continuing with command %i\n", req);
 	}
 	
 	// get the handler function
