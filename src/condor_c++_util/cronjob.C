@@ -273,7 +273,7 @@ CondorCronJob::AddPath( const char *newPath )
 	if ( path.Length() ) {
 		path += ":";
 	}
-	path =+ newPath;
+	path += newPath;
 	return 0;
 }
 
@@ -284,7 +284,7 @@ CondorCronJob::AddArgs( const char *newArgs )
 	if ( args.Length() ) {
 		args += " ";
 	}
-	args =+ newArgs;
+	args += newArgs;
 	return 0;
 }
 
@@ -293,10 +293,9 @@ int
 CondorCronJob::AddEnv( const char *newEnv )
 {
 	if ( env.Length() ) {
-		env += ":";
+		env += ";";
 	}
-	env =+ newEnv;
-	dprintf( D_ALWAYS, "Env '%s' -> '%s'\n", newEnv, env.GetCStr() );
+	env += newEnv;
 	return 0;
 }
 
