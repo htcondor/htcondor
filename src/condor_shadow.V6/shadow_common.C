@@ -601,11 +601,11 @@ InitJobAd(int cluster, int proc)
 	}
 	JobAd = GetJobAd( cluster, proc );
 	DisconnectQ(NULL);
+	checkForDebugging( JobAd );
   }
   if (!JobAd) {
 	EXCEPT( "failed to get job ad" );
   }
-  checkForDebugging( JobAd );
   return 0;
 }
 
