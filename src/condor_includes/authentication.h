@@ -78,7 +78,7 @@ public:
 
 	void setAuthAny();
 	int setOwner( char *owner );
-	char *getOwner();
+	const char *getOwner();
 
 private:
 #if !defined(SKIP_AUTHENTICATION)

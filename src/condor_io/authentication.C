@@ -167,16 +167,18 @@ Authentication::setOwner( char *owner )
 #endif /* SKIP_AUTHENTICATION */
 }
 
-char *
+const char *
 Authentication::getOwner() 
 {
 #if defined(SKIP_AUTHENTICATION)
 	return NULL;
 #else
-	if ( claimToBe ) {
-		return( strnewp( claimToBe ) );
-	}
-	return( NULL );
+		// Since we never use getOwner() like it allocates memory
+		// anywhere in the code, it shouldn't actually allocate
+		// memory.  We can always just return claimToBe, since it'll
+		// either be NULL or the string we want, which is the old
+		// semantics.  -Derek Wright 3/12/99
+	return (const char*) claimToBe;
 #endif
 }
 
