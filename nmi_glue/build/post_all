@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: post_all,v 1.1.4.2 2004-07-26 06:41:26 wright Exp $
+# $Id: post_all,v 1.1.4.3 2004-10-13 20:00:17 parag Exp $
 # Submit-side NMI build system infrastructure to save results after
 # all the platform-specific jobs have completed.  In this case, all we 
 # care about is saving the platform-independent stuff.  
@@ -57,5 +57,7 @@ if( $had_error ) {
 }
 
 print "All steps completed successfully\n";
+print "Submitting test jobs ...\n";
+system("nmi_submit nmi_glue/condor_test_submit.pl --nightly");
 exit 0;
 
