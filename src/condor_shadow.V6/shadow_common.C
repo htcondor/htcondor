@@ -290,7 +290,6 @@ rm()
         }
 
         (void) unlink_local_or_ckpt_server( TmpCkptName );
-        (void) unlink_local_or_ckpt_server( CkptName );
 
         exit( JOB_KILLED );
 }
