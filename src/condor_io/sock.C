@@ -425,7 +425,13 @@ int Sock::do_connect(
 		memcpy(&_who.sin_addr, hostp->h_addr, hostp->h_length);
 	}
 
-	time_t timeout_time = time(NULL) + CONNECT_TIMEOUT;
+	int timeout_interval;
+	if (_timeout < CONNECT_TIMEOUT) {
+		timeout_interval = CONNECT_TIMEOUT;
+	} else {
+		timeout_interval = _timeout;
+	}
+	time_t timeout_time = time(NULL) + timeout_interval;
 	bool connect_failed, failed_once = false;
 
 	do {
@@ -445,7 +451,7 @@ int Sock::do_connect(
 				dprintf( D_ALWAYS, "Can't connect to %s:%d, errno = %d\n",
 						 host, port, lasterr );
 				dprintf( D_ALWAYS, "Will keep trying for %d seconds...\n",
-						 CONNECT_TIMEOUT );
+						 timeout_interval );
 				failed_once = true;
 			}
 			connect_failed = true;
@@ -456,7 +462,7 @@ int Sock::do_connect(
 				dprintf( D_ALWAYS, "Can't connect to %s:%d, errno = %d\n",
 						 host, port, errno );
 				dprintf( D_ALWAYS, "Will keep trying for %d seconds...\n",
-						 CONNECT_TIMEOUT );
+						 timeout_interval );
 				failed_once = true;
 			}
 			connect_failed = true;
@@ -499,17 +505,21 @@ int Sock::do_connect(
 					dprintf( D_ALWAYS, "select returns %d, connect failed\n",
 							 nfound );
 					dprintf( D_ALWAYS, "Will keep trying for %d seconds...\n",
-							 CONNECT_TIMEOUT );
+							 timeout_interval );
 					failed_once = true;
 				}
 				break;
 			}
 		}
 
+		// we don't want to busyloop on connect, so sleep for a second
+		// before we try again
+		sleep(1);
+
 	} while (time(NULL) < timeout_time);
 
 	dprintf( D_ALWAYS, "Connect failed for %d seconds; returning FALSE\n",
-			 CONNECT_TIMEOUT );
+			 timeout_interval );
 	return FALSE;
 }
 
