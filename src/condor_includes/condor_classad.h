@@ -108,6 +108,7 @@ class ClassAd : public AttrList
 		// misc
 		class ClassAd*	FindNext();
         virtual int	fPrint(FILE*);				// print the AttrList to a file
+		void		dPrint( int );				// dprintf to given dprintf level
 
 		// poor man's update function until ClassAd Update Protocol  --RR
 		 void ExchangeExpressions (class ClassAd *);
