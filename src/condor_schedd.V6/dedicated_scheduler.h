@@ -129,6 +129,8 @@ class DedicatedScheduler : public Service {
 		// schedule/spawn MPI jobs.
 	int handleDedicatedJobs( void );
 
+	void handleDedicatedJobTimer( int seconds );
+
 		// Let the outside world know what we're doing... how exactly
 		// this should work is still unclear
 	void displaySchedule( void );
@@ -219,6 +221,7 @@ class DedicatedScheduler : public Service {
 	void displayResourceRequests( void );
 
 	void sortResources( void );
+	void clearResources( void );
 
 	bool sortJobs( void );
 
@@ -235,6 +238,11 @@ class DedicatedScheduler : public Service {
 		*/
 	void removeAllocation( shadow_rec* srec );
 
+	void addUnclaimedResource( ClassAd* resource );
+	bool hasUnclaimedResources( void );
+	void clearUnclaimedResources( void );
+
+	void callHandleDedicatedJobs( void );
 
 		// // // // // // 
 		// Data members 
@@ -243,14 +251,20 @@ class DedicatedScheduler : public Service {
 		// Stuff for interacting w/ DaemonCore
 	int		scheduling_interval;		// How often do we schedule?
 	int		scheduling_tid;				// DC timer id
+	int		hdjt_tid;					// DC timer id
 	int		rid;						// DC reaper id
 
+		// data structures for managing dedicated jobs and resources. 
 	ExtArray<int>*		idle_clusters;	// Idle cluster ids
 
 	ClassAdList*		resources;		// All dedicated resources 
 
 		// All resources, sorted by the time they'll next be available 
 	AvailTimeList*			avail_time_list;	
+
+		// All resources that might be dedicated to us that aren't
+		// currently claimed.
+	ResTimeNode*		unclaimed_resources;
 
         // hashed on cluster, all our allocations
     HashTable <int, AllocationNode*>* allocations;
