@@ -13,12 +13,18 @@ machine, into one spot. It also cleans up program directories because only
 the files that actually preform the task are there, and not utility 
 files. Less code to view in a directory, the faster you can understand it.
 
+Also, I wrote a lot of defensive programming concerning overflow bugs
+and what not. There are a lot of places where doubles are now used to
+calculate stuff, then the answer either gets typecasted to an int, or
+INT_MAX is returned.
+
 WIERD THINGS
 
-The library is a completely C linkaged entity. This means that is you have
-c++ code in there, you must extern "C" the functions that will be seen by
-those linking against the library. This is to make it easier to use and
-link against. idle_time.C is a good example of this practice.
+The library is a completely C linkaged entity. This means that is you
+have c++ code in there, you must extern "C" the functions that will be
+seen by those linking against the library. This is to make it easier to
+use and link against. idle_time.C is a good(in the eye of the beholder)
+example of this practice.
 
 NAMING CONVENTION
 
@@ -49,7 +55,7 @@ to the library functions may be named anything, but must be declared static
 in the file they are used. For functions where that can't be the case, then
 oh well. You can externally link against them(pollution of global function
 namespace). That isn't really fixable in C. There might be some linker mojo
-that could pull it off, but I doubt portability.
+that could pull it off, but I doubt portably.
 
 NAMING GLOBAL VARIABLES STATIC TO THE LIBRARY
 
@@ -60,12 +66,13 @@ is a prime example of this naming convention.
 
 DO YOU USE param() IN YOUR FUNCTION?
 
-If so, then please make a variable in reconfig.C and store a cached value
-of that parameter in there. Use that cached value everywhere else. This is
-to help with speed improvements. A lot of these functions get called many
-times, and even a hash table gets slow. Be sure to add the initialization
-into sysapi_reconfig(), and place code into your function to understand
-when param() returns NULL.
+If so, then please make a variable in reconfig.C and store a cached
+value of that parameter in there. And add an extern of the variable to
+sysapi_extern.h) Use that cached value everywhere else. This is to help
+with speed improvements. A lot of these functions get called many times,
+and even a hash table gets slow. Be sure to add the initialization into
+sysapi_reconfig(), and place code into your function to understand when
+param() returns NULL.
 
 WHAT IS THE DEAL WITH sysapi.h AND sysapi_extern.h?
 
@@ -79,6 +86,8 @@ shared across the library modules.
 
 This was done so when someone who wants to use the library looks at sysapi.h,
 they see a clean interface to the library and not a bunch of crap.
+
+Also, comment the sysapi.h header file nicely.
 
 
 
