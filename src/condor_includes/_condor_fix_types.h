@@ -56,6 +56,10 @@ typedef int		bool_t;
 #	endif
 #endif
 
+#if defined(LINUX) && defined(GLIBC)
+#define _BSD_SOURCE
+#endif
+
 #include <sys/types.h>
 
 /*
