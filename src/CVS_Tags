@@ -1,3 +1,14 @@
+03/05/03 V6_5-pre-V6_5-MB-V6_5-cod-merge-1-MB-m-1
+    the state of the V6_5-branch before merging in the COD merge
+    branch (V6_5-MB-V6_5-cod-merge-1-branch)
+
+03/04/03 V6_5-merge-V6_5-cod-branch
+    a failed attempt at a merge-branch for merging COD into
+    V6_5-branch.  this is *NOT* the right naming scheme, so i'm
+    abandoning the branch (and no one else should use this convention
+    in the future).  unfortunately, i couldn't get CVS to just remove
+    this tag completely. :( 
+
 02/24/03 HAWKEYE_V1_0_RC1
     Release Candidate 1 of Hawkeye 1.0.
 
