@@ -26,7 +26,6 @@
 #include "condor_debug.h"
 #include "condor_io.h"
 #include "condor_syscall_mode.h"
-#include "file_table_interf.h"
 
 extern "C" {
 
@@ -80,7 +79,16 @@ init_syscall_connection( int want_debug_mode )
 		open_named_pipe( "/tmp/log", O_WRONLY, CLIENT_LOG );
 		pre_open( CLIENT_LOG, FALSE, TRUE, TRUE );
 		InDebugMode = TRUE;
+	} else {
+		pre_open( RSC_SOCK, TRUE, TRUE, TRUE );
+		pre_open( CLIENT_LOG, FALSE, TRUE, TRUE );
 	}
+
+#if 0
+	rval = errno = my_errno = 0;
+	rval = write( CLIENT_LOG, "Hello World\n", 12 );
+	assert( rval == 12 );
+#endif
 
 	answer = RSC_Init( RSC_SOCK, CLIENT_LOG );
 	dprintf_init( CLIENT_LOG );
