@@ -175,32 +175,13 @@ char	*Spool;
 char	*ExecutingHost;
 char	*MailerPgm;
 
-#if DBM_QUEUE
-char	QueueName[MAXPATHLEN];
-DBM		*QueueD = NULL, *OpenJobQueue();
-#else
 #include "condor_qmgr.h"
-#endif
 
 #include "user_log.h"
 USER_LOG	*ULog;
 /* USER_LOG *InitUserLog( PROC *p, const char *host ); */
 extern "C" void LogRusage( USER_LOG *lp, int which,
 						   struct rusage *loc, struct rusage *rem );
-
-#if DBM_QUEUE
-#define OPENJOBQUEUE(q, name, flags, mode) { \
-	if( (q) == NULL ) { \
-		(q) = OpenJobQueue(name, flags, mode); \
-		if( (q) == NULL ) { \
-			EXCEPT("OpenJobQueue(%s)", name); \
-		} \
-	} \
-}
-
-#define CLOSEJOBQUEUE(q)	{ CloseJobQueue(q); (q) = NULL; }
-
-#endif /* DBM_QUEUE */
 
 int		CondorGid;
 int		CondorUid;
@@ -456,11 +437,9 @@ main(int argc, char *argv[], char *envp[])
 	HandleSyscalls();
 	Wrapup();
 
-#ifndef DBM_QUEUE
 	ConnectQ(schedd);
 	SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_CURRENT_HOSTS, 0);
 	DisconnectQ(NULL);
-#endif
 
 	dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
 	exit( ExitReason );
@@ -1043,11 +1022,9 @@ NotifyUser( char *buf )
 	/*
 		The ClassAd of the Job also contains a variable called 'NotifyUser'
 		which is the email address of the user to be mailed.  This information
-        is not in the PROC structure.  Thus, use this information only if not
-        using DBM queues    --RR
+        is not in the PROC structure.  
 	*/
 
-#ifndef DBM_QUEUE
 	ConnectQ (schedd);
 	if (-1 == GetAttributeString (Proc->id.cluster,Proc->id.proc,
 								  "ATTR_NOTIFY_USER", notifyUser))
@@ -1055,9 +1032,6 @@ NotifyUser( char *buf )
 		strcpy (notifyUser, Proc->owner);
 	}
 	DisconnectQ (NULL);
-#else
-	strcpy (notifyUser, Proc->owner);
-#endif
 
 	sprintf(cmd, "%s -s \"Condor Job %d.%d\" %s@%s\n",
 					MailerPgm, Proc->id.cluster, Proc->id.proc, notifyUser,
@@ -1171,20 +1145,9 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 	static int tstartup_flag = 0;
 	int		status;
 
-#if DBM_QUEUE
-	OPENJOBQUEUE(QueueD, QueueName, O_RDWR, 0);
-	LockJobQueue( QueueD, WRITER );
-
-	proc->id.cluster = Proc->id.cluster;
-	proc->id.proc = Proc->id.proc;
-	if( FetchProc(QueueD,proc) < 0 ) {
-		EXCEPT( "Shadow: FetchProc(%d.%d)", proc->id.cluster, proc->id.proc );
-	}
-	status = proc->status;
-#else
 	ConnectQ(schedd);
 	GetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS, &status);
-#endif
+
 	if( status == REMOVED ) {
 		dprintf( D_ALWAYS, "Job %d.%d has been removed by condor_rm\n",
 											proc->id.cluster, proc->id.proc );
@@ -1217,12 +1180,6 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 		update_rusage( &Proc->remote_usage[0], remotep );
 		Proc->image_size = ImageSize;
 
-#if DBM_QUEUE
-		if( StoreProc(QueueD,Proc) < 0 ) {
-			CLOSEJOBQUEUE( QueueD );
-			EXCEPT( "StoreProc(%d.%d)", Proc->id.cluster, Proc->id.proc );
-		}
-#else
 		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_IMAGE_SIZE, 
 						ImageSize);
 		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS, 
@@ -1231,28 +1188,16 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 						  rusage_to_float(Proc->local_usage));
 		SetAttributeFloat(Proc->id.cluster, Proc->id.proc,ATTR_JOB_REMOTE_CPU, 
 						  rusage_to_float(Proc->remote_usage[0]));
-#endif
 		dprintf( D_ALWAYS, "Shadow: marked job status %d\n", Proc->status );
 
 		if( Proc->status == COMPLETED ) {
-#if DBM_QUEUE
-			if( TerminateProc(QueueD,&Proc->id,COMPLETED) < 0 ) {
-				EXCEPT( "TerminateProc(0x%x,%d.%d,COMPLETED)",
-									QueueD, Proc->id.cluster, Proc->id.proc );
-			}
-#else
 			if( DestroyProc(Proc->id.cluster, Proc->id.proc) < 0 ) {
 				EXCEPT("DestroyProc(%d.%d)", Proc->id.cluster, Proc->id.proc );
 			}
-#endif
 		}
 	}
 
-#if DBM_QUEUE
-	CLOSEJOBQUEUE( QueueD );
-#else
-		DisconnectQ(0);
-#endif
+	DisconnectQ(0);
 }
 
 /*
@@ -1555,14 +1500,6 @@ start_job( char *cluster_id, char *proc_id )
 	Proc->id.proc = atoi( proc_id );
 #endif
 
-#if DBM_QUEUE
-	OPENJOBQUEUE(QueueD, QueueName, O_RDWR, 0);
-	LockJobQueue( QueueD, WRITER );
-
-	if( FetchProc(QueueD,Proc) < 0 ) {
-		EXCEPT( "FetchProc(%d.%d)", Proc->id.cluster, Proc->id.proc );
-	}
-#else
 	cluster_num = atoi( cluster_id );
 	proc_num = atoi( proc_id );
 
@@ -1576,9 +1513,8 @@ start_job( char *cluster_id, char *proc_id )
 		EXCEPT("GetProc(%d.%d)", cluster_num, proc_num);
 	}
 #endif
-	DisconnectQ(0);
 
-#endif
+	DisconnectQ(0);
 
 #define TESTING
 #if !defined(HPUX9) && !defined(TESTING)
@@ -1599,9 +1535,6 @@ start_job( char *cluster_id, char *proc_id )
 #endif
 	ImageSize = Proc->proc.image_size;
 
-#if DBM_QUEUE
-	CLOSEJOBQUEUE( QueueD );
-#endif
 	get_client_ids( &(Proc->proc) );
 
 	strcpy( Proc->CkptName, CkptName );
@@ -1623,9 +1556,6 @@ start_job( char *cluster_id, char *proc_id )
 #endif
 	ImageSize = Proc->image_size;
 
-#if DBM_QUEUE
-	CLOSEJOBQUEUE( QueueD );
-#endif
 	get_client_ids( Proc );
 #endif
 }
@@ -1645,36 +1575,16 @@ DoCleanup()
 	}
 
 	if( Proc->id.cluster ) {
-#if DBM_QUEUE
-		if( QueueD == NULL ) {
-			if( (QueueD=OpenJobQueue(QueueName, O_RDWR, 0)) == NULL ) {
-				dprintf( D_ALWAYS,
-						"Shadow: OpenJobQUeue(%s) failed, errno %d\n",
-					QueueName, errno );
-				dprintf( D_ALWAYS,
-				"********** Shadow Exiting **********\n" );
-				exit( 1 );
-			}
-		}
-		LockJobQueue( QueueD, WRITER );
-		fetch_rval = FetchProc(QueueD,Proc);
-		status = Proc->status;
-#else
 		ConnectQ(schedd);
 		fetch_rval = GetAttributeInt(Proc->id.cluster, Proc->id.proc, 
 									 ATTR_JOB_STATUS, &status);
-#endif
 
 		if( fetch_rval < 0 || status == REMOVED ) {
 			dprintf(D_ALWAYS, "Job %d.%d has been removed by condor_rm\n",
 											Proc->id.cluster, Proc->id.proc );
 			dprintf(D_ALWAYS, "Shadow: unlinking Ckpt '%s'\n", CkptName);
 			(void) unlink_local_or_ckpt_server( CkptName );
-#if DBM_QUEUE
-			CLOSEJOBQUEUE( QueueD );
-#else
 			DisconnectQ(0);
-#endif
 			return 0;
 		}
 			
@@ -1693,25 +1603,12 @@ DoCleanup()
 		Proc->image_size = ImageSize;
 		Proc->status = status;
 
-#if DBM_QUEUE
-		if( StoreProc(QueueD,Proc) < 0 ) {
-			dprintf( D_ALWAYS, "Shadow: StoreProc(%d.%d) failed, errno = %d",
-									Proc->id.cluster, Proc->id.proc, errno );
-			dprintf(D_ALWAYS, "********** Shadow Exiting **********\n" );
-			exit( 1 );
-		}
-#else
 		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS,
 						status);
 		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_IMAGE_SIZE, 
 						ImageSize);
-#endif
 
-#if DBM_QUEUE
-		CLOSEJOBQUEUE( QueueD );
-#else
 		DisconnectQ(0);
-#endif
 		dprintf( D_ALWAYS, "Shadow: marked job status %d\n", Proc->status );
 	}
 
@@ -1871,9 +1768,6 @@ regular_setup( char *host, char *cluster, char *proc, char *capability )
 	if( Spool == NULL ) {
 		EXCEPT( "Spool directory not specified in config file" );
 	}
-#if DBM_QUEUE
-	(void)sprintf( QueueName, "%s/job_queue", Spool );
-#endif
 
 	ExecutingHost = host;
 	start_job( cluster, proc );
@@ -1897,10 +1791,6 @@ pipe_setup( char *cluster, char *proc, char *capability )
 	if( Spool == NULL ) {
 		EXCEPT( "Spool directory not specified in config file" );
 	}
-
-#if DBM_QUEUE
-	(void)sprintf( QueueName, "%s/job_queue", Spool );
-#endif
 
 	if( gethostname(buf,sizeof(buf)) < 0 ) {
 		EXCEPT( "gethostname()" );
