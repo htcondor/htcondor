@@ -2479,6 +2479,7 @@ int mark_idle(ClassAd *job)
 		SetAttributeInt(cluster,proc,ATTR_JOB_STATUS,IDLE);
 		SetAttributeInt( cluster, proc, ATTR_ENTERED_CURRENT_STATUS,
 						 (int)time(0) );
+		SetAttributeInt( cluster, proc, ATTR_LAST_SUSPENSION_TIME, 0);
 	}
 	else if ( status == RUNNING || hosts > 0 ) {
 		if( universeCanReconnect(universe) &&
