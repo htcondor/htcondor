@@ -319,6 +319,17 @@ Reconfig()
 	}
 	GlobusResource::setSubmitLimit( tmp_int );
 
+	tmp_int = -1;
+	tmp = param("GRIDMANAGER_GAHP_CALL_TIMEOUT");
+	if ( tmp ) {
+		tmp_int = atoi(tmp);
+		free(tmp);
+	}
+	if ( tmp_int < 0 ) {
+		tmp_int = 5 * 60; // default interval is 5 minutes
+	}
+	GlobusJob::setGahpCallTimeout( tmp_int );
+
 	checkProxy_interval = -1;
 	tmp = param("GRIDMANAGER_CHECKPROXY_INTERVAL");
 	if ( tmp ) {

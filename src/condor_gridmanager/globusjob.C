@@ -81,9 +81,6 @@ char *GMStateNames[] = {
 	"GM_PROXY_EXPIRED"
 };
 
-// GAHP call timeout
-#define GAHP_CALL_TIMEOUT	120
-
 // TODO: once we can set the jobmanager's proxy timeout, we should either
 // let this be set in the config file or set it to
 // GRIDMANAGER_MINIMUM_PROXY_TIME + 60
@@ -102,6 +99,7 @@ char *GMStateNames[] = {
 int GlobusJob::probeInterval = 300;		// default value
 int GlobusJob::submitInterval = 300;	// default value
 int GlobusJob::restartInterval = 60;	// default value
+int GlobusJob::gahpCallTimeout = 300;	// default value
 
 GlobusJob::GlobusJob( GlobusJob& copy )
 {
@@ -162,7 +160,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 								"doEvaluateState", (Service*) this );;
 	gahp.setNotificationTimerId( evaluateStateTid );
 	gahp.setMode( GahpClient::normal );
-	gahp.setTimeout( GAHP_CALL_TIMEOUT );
+	gahp.setTimeout( gahpCallTimeout );
 
 	resourceDown = false;
 	resourceStateKnown = false;
