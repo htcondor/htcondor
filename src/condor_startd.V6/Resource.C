@@ -164,6 +164,9 @@ Resource::sigkill_starter()
 		// Now that the timer has gone off, clear out the tid.
 	kill_tid = -1;
 	if( r_starter->active() ) {
+			// Kill all of the starter's children.
+		r_starter->killkids( DC_SIGKILL );
+			// Kill the starter's entire process group.
 		return r_starter->killpg( DC_SIGKILL );
 	}
 	return TRUE;
