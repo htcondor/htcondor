@@ -259,6 +259,26 @@ const char* get_condor_username()
 	return CondorUserName;
 } 
 
+
+#include "my_username.h"
+int
+is_root( void ) 
+{
+	int root = 0;
+	char* user = my_username( 0 );
+	if( ! user ) {
+		dprintf( D_ALWAYS, 
+				 "ERROR in is_root(): my_username() returned NULL\n" );
+		return 0;
+	}
+	if( !stricmp(user, "SYSTEM") ) {
+		root = 1;
+	}
+	free( user );
+	return root;
+}
+
+
 #else  // end of ifdef WIN32, now below starts Unix-specific code
 
 #include <grp.h>
@@ -757,4 +777,21 @@ set_condor_rgid()
 	return SET_REAL_GID(CondorGid);
 }
 
+
+int
+is_root( void ) 
+{
+	return (! getuid() );
+}
+
 #endif  /* #if defined(WIN32) */
+
+
+
+
+
+
+
+
+
+
