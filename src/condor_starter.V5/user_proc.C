@@ -36,6 +36,7 @@
 #include "fileno.h"
 #include "condor_rsc.h"
 #include "renice_self.h"
+#include "starter_common.h"
 
 #if defined(AIX32)
 #	include <sys/id.h>
@@ -100,7 +101,6 @@ int UserProc::proc_index = 1;
 extern NameTable JobClasses;
 extern NameTable ProcStates;
 
-int connect_to_port( int );
 
 UserProc::~UserProc()
 {
@@ -114,6 +114,7 @@ UserProc::~UserProc()
 		delete family;
 	}
 }
+
 
 void
 UserProc::display()
@@ -402,6 +403,7 @@ UserProc::execute()
 	char	buf[128];
 	int		wait_for = TRUE;
 	int		fd;
+	ReliSock	*new_reli = NULL;
 
 	pipe_fds[0] = -1;
 	pipe_fds[1] = -1;
@@ -470,7 +472,8 @@ UserProc::execute()
 		// We may run more than one of these, so each needs its own
 		// remote system call connection to the shadow
 	if( job_class == PVM || job_class == PIPE ) {
-		user_syscall_fd = NewConnection( v_pid );
+		new_reli = NewConnection( v_pid );
+		user_syscall_fd = new_reli->get_file_desc();
 	}
 
 		// print out arguments to execve
@@ -595,6 +598,10 @@ UserProc::execute()
 
 	delete [] tmp;
 	state = EXECUTING;
+
+	if( new_reli ) {
+		delete new_reli;
+	}
 
 	if ( job_class == VANILLA ) {
 		family = new ProcFamily(pid,PRIV_USER);
@@ -989,73 +996,6 @@ UserProc::make_runnable()
 	}
 	state = RUNNABLE;
 	restart = TRUE;
-}
-
-/*
-  Create a new connection to the shadow using the existing remote
-  system call stream.
-*/
-int
-NewConnection( int id )
-{
-	int 	portno;
-	int		syscall = CONDOR_new_connection;
-	int		answer;
-
-	SyscallStream->encode();
-
-		// Send the request
-	if( !SyscallStream->code(syscall) ) {
-		EXCEPT( "Can't send CONDOR_new_connection request" );
-	}
-	if( !SyscallStream->code(id) ) {
-		EXCEPT( "Can't send process id for CONDOR_new_connection request" );
-	}
-
-		// Turn the stream around
-	SyscallStream->eom();
-	SyscallStream->decode();
-
-		// Read the port number
-	if( !SyscallStream->code(portno) ) {
-		EXCEPT( "Can't read port number for new connection" );
-	}
-	if( portno < 0 ) {
-		SyscallStream->code( errno );
-		EXCEPT( "Can't get port for new connection" );
-	}
-	SyscallStream->eom();
-
-	answer = connect_to_port( portno );
-	dprintf(D_FULLDEBUG, "New Socket: %d\n", answer);
-	return answer;
-}
-
-/*
-** Make a new TCP connection with the shadow on a given port number.  Return
-** the new file descriptor.
-*/
-int
-connect_to_port( int portnum )
-{
-	struct sockaddr_in		sin;
-	int		fd;
-	int		addr_len = sizeof(sin);
-
-	if( getpeername(RSC_SOCK,(struct sockaddr *)&sin,&addr_len) < 0 ) {
-		EXCEPT( "getpeername(%d,0x%x,0x%x)", RSC_SOCK, &sin, &addr_len);
-	}
-
-	if( (fd=socket(AF_INET,SOCK_STREAM,0)) < 0 ) {
-		EXCEPT( "socket" );
-	}
-
-	sin.sin_port = htons( (u_short)portnum );
-
-	if( connect(fd,(struct sockaddr *)&sin,addr_len) < 0 ) {
-		EXCEPT( "connect(%d,0x%x,%d)", fd, &sin, addr_len );
-	}
-	return fd;
 }
 
 
