@@ -352,7 +352,7 @@ V6_7_SOAP_3_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/krb5/1.2.5 \
 		   externals/bundles/gahp/1.0.12 \
 		   externals/bundles/globus/2.4.3.vdt.1.1.14 \
-		   externals/bundles/gsoap/2.6 \
+		   externals/bundles/gsoap/2.7 \
 		   externals/bundles/gt3gahp/2.0
 
 # Externals needed for V6_7_2 (same as V6_7_1)
