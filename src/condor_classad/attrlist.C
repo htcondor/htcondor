@@ -2037,28 +2037,31 @@ int AttrListList::Delete(AttrList* attrList)
 			{
 				// this is the AttrList to be deleted
 				if(cur == ptr) ptr = ptr->next;
-				if(cur == head)
-				{
-					// AttrList to be deleted is at the head of the list
-					head = head->next;
-					if(head)
-					{
-						head->prev = NULL;
-					}
-				}
-				else if(cur == tail)
-				{
-					// AttrList to be deleted is at the tail of the list
-					tail = cur->prev;
-					if(tail)
-					{
-						tail->next = NULL;
-					}
-				}
-				else
+				
+				if ( cur != head && cur != tail ) 
 				{
 					cur->prev->next = cur->next;
 					cur->next->prev = cur->prev;
+				} else {
+					if(cur == head)
+					{
+						// AttrList to be deleted is at the head of the list
+						head = head->next;
+						if(head)
+						{
+							head->prev = NULL;
+						}
+					}
+
+					if(cur == tail)
+					{
+						// AttrList to be deleted is at the tail of the list
+						tail = cur->prev;
+						if(tail)
+						{
+							tail->next = NULL;
+						}
+					}
 				}
 
 				// delete the rep from the rep list
