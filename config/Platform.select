@@ -7,20 +7,24 @@
 #if defined(IS_ALPHA_OSF1)
 #	define Platform ALPHA_OSF1
 #	define PlatformIncludeFile <ALPHA_OSF1.cf>
+#	define GccArch alpha-dec-osf3.2
 #	undef IS_ALPHA_OSF1
 #elif defined(IS_R6000_AIX32)
 #	define Platform R6000_AIX32
 #	define PlatformIncludeFile <R6000_AIX32.cf>
+#	define GccArch rs6000-ibm-aix3.2.5
 #	undef IS_R6000_AIX32
 #elif defined(IS_SPARC_SUNOS41)
 #	define Platform SPARC_SUNOS41
 #	define PlatformIncludeFile <SPARC_SUNOS41.cf>
+#	define GccArch sparc-sun-sunos4.1.3
 #	undef IS_SPARC_SUNOS41
 #elif defined(IS_SUN4M_SOLARIS)
 #   undef sun
 #   undef sparc
 #	define Platform SUN4M_SOLARIS
 #	define PlatformIncludeFile <SUN4M_SOLARIS.cf>
+#	define GccArch sparc-sun-solaris2.4
 #	undef IS_SUN4M_SOLARIS
 #elif defined(IS_SUN4M_SOLARIS251)
 #   undef sun
@@ -28,6 +32,7 @@
 #	define Platform SUN4M_SOLARIS
 #	define SpecificPlatform SUN4M_SOLARIS251
 #	define PlatformIncludeFile <SUN4M_SOLARIS251.cf>
+#	define GccArch sparc-sun-solaris2.5.1
 #	undef IS_SUN4M_SOLARIS251
 #endif
 
@@ -48,6 +53,7 @@
 #undef RiscAIX32
 #define Platform R6000_AIX32
 #define PlatformIncludeFile <R6000_AIX32.cf>
+#define GccArch rs6000-ibm-aix3.2.5
 #endif
 
 #if defined(ultrix43a)
@@ -95,13 +101,16 @@
 #	ifndef MB_LEN_MAX
 #		define Platform SPARC_SUNOS41
 #		define PlatformIncludeFile <SPARC_SUNOS41.cf>
+#		define GccArch sparc-sun-sunos4.1.3
 #	else
 #		define Platform SUN4M_SOLARIS /* change by Dhaval */
 #		define PlatformIncludeFile <SUN4M_SOLARIS.cf>
+#		define GccArch sparc-sun-solaris2.4
 #	endif
 #else
 #	define Platform SPARC_SUNOS41
 #	define PlatformIncludeFile <SPARC_SUNOS41.cf>
+#	define GccArch sparc-sun-sunos4.1.3
 #endif
 
 #endif
@@ -151,12 +160,14 @@
 #undef hp9000s800
 #define Platform HPPAR_HPUX9
 #define PlatformIncludeFile <HPPAR_HPUX9.cf>
+#define GccArch hppa1.1-hp-hpux9.01
 #endif
 
 #if defined(__alpha)
 #undef __alpha
 #define Platform ALPHA_OSF1
 #define PlatformIncludeFile <ALPHA_OSF1.cf>
+#define GccArch alpha-dec-osf3.2
 #endif
 
 #if defined(i386) && defined(sun) || defined(IS_X86_SOLARIS25)
@@ -166,8 +177,10 @@
 #if defined(IS_X86_SOLARIS25)
 #   define PlatformIncludeFile <X86_SOLARIS25.cf>
 #   define SpecificPlatform X86_SOLARIS25
+#   define GccArch i386-unknown-solaris2.5
 #   undef IS_X86_SOLARIS25
 #else
+#   define GccArch i386-sun-solaris2.4
 #   define PlatformIncludeFile <X86_SOLARIS.cf>
 #endif
 #   undef IS_X86_SOLARIS
