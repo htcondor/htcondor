@@ -16,3 +16,9 @@ typedef struct {
 	BOOLEAN	coredump_limit_exists;	/* Whether user wants to limit core size */
 	int		coredump_limit;			/* Limit in bytes */
 } STARTUP_INFO;
+
+/*
+Should eliminate starter knowing the a.out name.  Should go to
+shadow for instructions on how to fetch the executable - e.g. local file
+with name <name> or get it from TCP port <x> on machine <y>.
+*/
