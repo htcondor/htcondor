@@ -1067,7 +1067,7 @@ void output_dl_extracted_call( struct node *n, char *rtn_type, int is_ptr, struc
 	printf( "))dlsym(handle, \"%s\")) == NULL) {\n", n->id );
 	printf( "\t\t\trval = -1;\n");
 	printf( "\t\t}\n\n" );
-	printf( "\t\trval = (int) (*fptr)(",node_type(n));
+	printf( "\t\trval = (%s) (*fptr)(",node_type(n));
 	output_param_list( list, 0, 1 );
 
 	printf( ");\n" );
