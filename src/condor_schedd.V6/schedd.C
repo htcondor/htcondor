@@ -159,6 +159,9 @@ Scheduler::Scheduler()
 	numMatches = 0;
 	numShadows = 0;
 	IdleSchedUniverseJobIDs = NULL;
+	FlockHosts = NULL;
+	FlockLevel = 0;
+	MaxFlockLevel = 0;
 	StartJobTimer=-1;
 	timeoutid = -1;
 	startjobsid = -1;
@@ -202,6 +205,9 @@ Scheduler::~Scheduler()
 	}
 	if (shadowsByProcID) {
 		delete shadowsByProcID;
+	}
+	if (FlockHosts) {
+		delete FlockHosts;
 	}
 }
 
@@ -295,7 +301,8 @@ Scheduler::count_jobs()
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_RUNNING_JOBS, JobsRunning);
 	ad->Insert (tmp);
 
-	update_central_mgr(UPDATE_SCHEDD_AD);// Send even if no owners
+	update_central_mgr(UPDATE_SCHEDD_AD, CollectorHost,
+					   COLLECTOR_UDP_COMM_PORT); // always send
 	dprintf( D_FULLDEBUG, 
 			 "Sent HEART BEAT ad to central mgr: Number of submittors=%d\n",
 			 N_Owners );
@@ -309,6 +316,8 @@ Scheduler::count_jobs()
 
 	for ( i=0; i<N_Owners; i++) {
 
+		// TODO: set running job counts with flocking in mind
+
 	  sprintf(tmp, "%s = %d", ATTR_RUNNING_JOBS, Owners[i].JobsRunning);
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
@@ -321,9 +330,47 @@ Scheduler::count_jobs()
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
-	  update_central_mgr(UPDATE_SUBMITTOR_AD);
+	  update_central_mgr(UPDATE_SUBMITTOR_AD, CollectorHost,
+						 COLLECTOR_UDP_COMM_PORT);
+	  // condor view uses the acct port - because the accountant today is not
+	  // an independant daemon. In the future condor view will be the
+	  // accountant
+	  update_central_mgr(UPDATE_SUBMITTOR_AD, CondorViewHost,
+						 CONDOR_VIEW_PORT);
 	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
 			   Owners[i].Name, UidDomain );
+
+	  static OldFlockLevel = 0;
+
+	  // Request matches from other pools if FlockLevel > 0
+	  if (FlockHosts && FlockLevel > 0) {
+		  char *host;
+		  int i;
+		  for (i=1, FlockHosts->rewind();
+			   i <= FlockLevel && (host = FlockHosts->next()); i++) {
+			  update_central_mgr(UPDATE_SUBMITTOR_AD, host,
+								 COLLECTOR_UDP_COMM_PORT);
+		  }
+	  }
+
+	  // Cancel requests when FlockLevel decreases
+	  if (OldFlockLevel > FlockLevel) {
+		  char *host;
+		  int i;
+		  sprintf(tmp, "%s = 0", ATTR_RUNNING_JOBS);
+		  ad->InsertOrUpdate(tmp);
+		  sprintf(tmp, "%s = 0", ATTR_IDLE_JOBS);
+		  ad->InsertOrUpdate(tmp);
+		  for (i=1, FlockHosts->rewind();
+			   i <= OldFlockLevel && (host = FlockHosts->next()); i++) {
+			  if (i > FlockLevel) {
+				  update_central_mgr(UPDATE_SUBMITTOR_AD, host,
+									 COLLECTOR_UDP_COMM_PORT);
+			  }
+		  }
+	  }
+	  OldFlockLevel = FlockLevel;
+
 	}
 
     // send info about deleted owners
@@ -360,7 +407,8 @@ Scheduler::count_jobs()
 	  ad->InsertOrUpdate(tmp);
 
 	  dprintf (D_ALWAYS, "Sent owner (0 jobs) ad to central manager\n");
-	  update_central_mgr(UPDATE_SUBMITTOR_AD);
+	  update_central_mgr(UPDATE_SUBMITTOR_AD, CollectorHost,
+						 COLLECTOR_UDP_COMM_PORT);
 	}
 
 	return 0;
@@ -458,28 +506,15 @@ Scheduler::insert_owner(char* owner)
 }
 
 void
-Scheduler::update_central_mgr(int command)
+Scheduler::update_central_mgr(int command, char *host, int port)
 {
-	SafeSock	sock(CollectorHost, COLLECTOR_UDP_COMM_PORT);
-
-	// Send update to collector
+	SafeSock	sock(host, port);
 	sock.encode();
 	if (!sock.put(command) ||
 		!ad->put(sock) ||
 		!sock.end_of_message())
-		dprintf(D_ALWAYS, "failed to update central manager!\n");
-
-	// Send update to condor view server
-	if (CondorViewHost && command==UPDATE_SUBMITTOR_AD) {
-		SafeSock sock(CondorViewHost, CONDOR_VIEW_PORT);  
-		// condor view uses the acct port - because the accountant today is not
-		// an independant daemon. In the future condor view will be the accountant
-		sock.encode();
-		if (!sock.put(command) ||
-			!ad->put(sock) ||
-			!sock.end_of_message())
-			dprintf(D_ALWAYS, "failed to update condor view server!\n");
-	}
+		dprintf(D_ALWAYS, "failed to update central manager (%s)!\n",
+				host);
 }
 
 static int IsSchedulerUniverse(shadow_rec* srec);
@@ -676,9 +711,58 @@ Scheduler::negotiate(int, Stream* s)
 	int		curr_num_active_shadows;
 	int		shadow_num_increment;
 	int		job_universe;
+	int		which_negotiator = 0; 		// >0 implies flocking
 
 	dprintf( D_FULLDEBUG, "\n" );
 	dprintf( D_FULLDEBUG, "Entered negotiate\n" );
+
+	if (FlockHosts) {
+		// first, check if this is our local negotiator
+		struct in_addr endpoint_addr = (s->endpoint())->sin_addr;
+		struct hostent *hent;
+		char *addr;
+		bool match = false;
+		hent = gethostbyname(NegotiatorHost);
+		if (hent->h_addrtype == AF_INET) {
+			for (int a=0; !match && (addr = hent->h_addr_list[a]); a++) {
+				if (memcmp(addr, &endpoint_addr, sizeof(struct in_addr)) == 0){
+					match = true;
+				}
+			}
+		}
+		// if it isn't our local negotiator, check the FlockHosts list
+		if (!match) {
+			char *host;
+			int n;
+			for (n=1, FlockHosts->rewind();
+				 !match && (host = FlockHosts->next());
+				 n++) {
+				hent = gethostbyname(host);
+				if (hent->h_addrtype == AF_INET) {
+					for (int a=0;
+						 !match && (addr = hent->h_addr_list[a]);
+						 a++) {
+						if (memcmp(addr, &endpoint_addr,
+								   sizeof(struct in_addr)) == 0){
+							match = true;
+							which_negotiator = n;
+						}
+					}
+				}
+			}
+		}
+		if (!match) {
+			dprintf(D_ALWAYS, "Unknown negotiator (%s).  "
+					"Aborting negotiation.\n", sin_to_string(s->endpoint()));
+			return (!(KEEP_STREAM));
+		}
+	}
+
+	if (which_negotiator > FlockLevel) {
+		dprintf( D_ALWAYS, "Aborting connection with negotiator %s due to "
+				 "insufficient flock level.\n", sin_to_string(s->endpoint()));
+		return (!(KEEP_STREAM));
+	}
 
 	dprintf (D_PROTOCOL, "## 2. Negotiating with CM\n");
 
@@ -994,10 +1078,20 @@ Scheduler::negotiate(int, Stream* s)
 		dprintf( D_ALWAYS,
 		"Out of servers - %d jobs matched, %d jobs idle\n",
 							JobsStarted, jobs - JobsStarted );
+
+		// We are unsatisfied in this pool.  Flock with less desirable pools.
+		if (FlockLevel < MaxFlockLevel && FlockLevel == which_negotiator) { 
+			FlockLevel++;
+			dprintf(D_ALWAYS, "Increasing flock level to %d.\n",
+					FlockLevel);
+		}
 	} else {
+		// We are out of jobs.  Stop flocking with less desirable pools.
+		FlockLevel = which_negotiator;
+
 		dprintf( D_ALWAYS,
-		"Out of jobs - %d jobs matched, %d jobs idle\n",
-							JobsStarted, jobs - JobsStarted );
+		"Out of jobs - %d jobs matched, %d jobs idle, flock level = %d\n",
+							JobsStarted, jobs - JobsStarted, FlockLevel );
 	}
 	return KEEP_STREAM;
 }
@@ -2548,6 +2642,16 @@ Scheduler::Init()
 	shadowsByProcID =
 		new HashTable<PROC_ID, shadow_rec *>((int)(MaxJobsRunning*1.2),
 											 procIDHash);
+	}
+
+	tmp = param( "FLOCK_HOSTS" );
+	if ( tmp && tmp[0] != '\0') {
+		if (FlockHosts) {
+			delete FlockHosts;
+		}
+		FlockHosts = new StringList( tmp );
+		MaxFlockLevel = FlockHosts->number();
+		free( tmp );
 	}
 
 	tmp = param( "RESERVED_SWAP" );

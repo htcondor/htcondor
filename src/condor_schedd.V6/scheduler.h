@@ -39,6 +39,7 @@
 #include "sched.h"
 #include "prio_rec.h"
 #include "HashTable.h"
+#include "string_list.h"
 #include "list.h"
 #include "classad_hashtable.h"	// for HashKey class
 #include "Queue.h"
@@ -195,7 +196,7 @@ class Scheduler : public Service
 	int				cluster_rejected(int);
 	void   			mark_cluster_rejected(int); 
 	int				count_jobs();
-	void			update_central_mgr(int command);
+	void			update_central_mgr(int command, char *host, int port);
 	int				insert_owner(char*);
 	void			reaper(int, int, struct sigcontext*);
 	void			clean_shadow_recs();
@@ -228,6 +229,9 @@ class Scheduler : public Service
 	int				numMatches;
 	int				numShadows;
 	List <PROC_ID>	*IdleSchedUniverseJobIDs;
+	StringList		*FlockHosts;
+	int				FlockLevel;
+	int				MaxFlockLevel;
     int         	aliveInterval;             // how often to broadcast alive
 	int				MaxExceptions;		// Max shadow exceptions before we relinquish
 };
