@@ -16,16 +16,23 @@ use HawkeyeLib;
 # Setup the hawkeye stuff
 my $Hawkeye;
 
+# Setup
+my $MasterUserList = "";
+
 # Do it
 Init();
 RunIt();
 
+# Init logic
 sub Init {
     HawkeyeLib::DoConfig( );
 
     $Hawkeye = HawkeyePublish->new;
     $Hawkeye->Quiet( 1 );
     $Hawkeye->AutoIndexSet( 1 );
+
+    my $Tmp = HawkeyeLib::ReadConfig( "_master_owners", "condor,root" );
+    $MasterUserList = $Tmp if ( $Tmp ne "" );
 }
 
 # Do the real work here...
@@ -42,15 +49,20 @@ sub RunIt {
 		      "NumRunaway"	=> 0,
 		      "Vms"		=> "",
 		     );
+
     # Table to translate "ps-command" regex to $CondorInfo key..
-    my %CondorCmdTable = (
-			  "condor_starter"	=> "NumStarters",
-			  "condor_startd"	=> "NumStartds",
-			  "condor_master"	=> "NumMasters",
-			  "condor_exec"		=> "NumExecs",
-			  "condor_shadow"	=> "NumShadows",
-			  "condor_schedd"	=> "NumSchedds",
-			 );
+    my %CondorCmdTable =
+	(
+	 condor_starter	=> { Attr => "NumStarters", UserList => "", },
+	 condor_startd	=> { Attr => "NumStartds", UserList => "", },
+	 condor_master	=> { Attr => "NumMasters", UserList => "condor,root", },
+	 condor_exec	=> { Attr => "NumExecs", UserList => "", },
+	 condor_shadow	=> { Attr => "NumShadows", UserList => "", },
+	 condor_schedd	=> { Attr => "NumSchedds", UserList => "", },
+	);
+
+    $CondorCmdTable{condor_master}{UserList} = $MasterUserList
+	if ( $MasterUserList ne "" );
 
     # Run a 'ps' and gather some info...
     if ( open( PS, "/bin/ps -eo user,pid,ppid,command|" ) )
@@ -73,18 +85,30 @@ sub RunIt {
 	    }
 
 	    # Count the processes...
-	    foreach my $Match ( keys %CondorCmdTable )
+	    foreach my $CmdPat ( keys %CondorCmdTable )
 	    {
-		if ( $CmdString =~ /$Match/ )
+		if ( $CmdString =~ /$CmdPat/ )
 		{
-		    my $Label = $CondorCmdTable{$Match};
-		    if ( ! exists $CondorInfo{$Label} )
+		    my $Attr = $CondorCmdTable{$CmdPat}->{Attr};
+		    my $UserList = $CondorCmdTable{$CmdPat}->{UserList};
+
+		    # Is it on the user match list?
+		    my $UserMatch = 0;
+		    foreach my $TmpUser ( split( /,/, $UserList ) )
 		    {
-			$CondorInfo{$Label} = 1;
+			$UserMatch++ if (  ( $TmpUser eq "" ) ||
+					   ( $TmpUser eq $User )  );
+		    }
+		    last if ( ! $UserMatch );
+
+		    # Update the count...
+		    if ( ! exists $CondorInfo{$Attr} )
+		    {
+			$CondorInfo{$Attr} = 1;
 		    }
 		    else
 		    {
-			$CondorInfo{$Label}++;
+			$CondorInfo{$Attr}++;
 		    }
 		}
 	    }
