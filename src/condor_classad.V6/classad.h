@@ -73,7 +73,7 @@ class ClassAd : public ExprTree
 		 * 	@param vec A vector of (name,expression) pairs to make a classad
 		 * 	@return The constructed classad
 		 */
-		ClassAd *MakeClassAd( std::vector< std::pair< std::string, ExprTree* > > &vec );
+		static ClassAd *MakeClassAd( std::vector< std::pair< std::string, ExprTree* > > &vec );
 
 		/** Deconstructor to get the components of a classad
 		 * 	@param vec A vector of (name,expression) pairs which are the
