@@ -227,6 +227,13 @@ DaemonCore::~DaemonCore()
 		delete []reapTable;
 	}
 
+	// Delete all entries from the pidTable, and the table itself
+	PidEntry* pid_entry;
+	pidTable->startIterations();
+	while (pidTable->iterate(pid_entry))
+	{
+		if ( pid_entry ) delete pid_entry;
+	}
 	delete pidTable;
 
 	t.CancelAllTimers();
