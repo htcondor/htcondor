@@ -7,7 +7,7 @@ OS = OperatingSystem
 
 DRIVER_SRC = driver.C driver2.C driver3.C display.C gen_test.C
 PACKAGE_SRC = image.C machdep.$(OS).C stubs.c
-FILE_STATE_SRC = file_state.C file_test.c
+FILE_STATE_SRC = file_state.C file_test.c syscall_stubs.c condor_syscalls.c
 
 #if IS_HPPAR_HPUX9
 ASSEMBLER_SRC = get_reginfo.s
@@ -25,11 +25,24 @@ ASSEMBLER_OBJ = _longjmp.AIX32.o
 
 SRC = $(DRIVER_SRC) $(PACKAGE_SRC) $(FILE_STATE_SRC)
 PACKAGE = image.o stubs.o machdep.$(OS).o $(ASSEMBLER_OBJ)
-FILE_STATE = file_state.o
+FILE_STATE = file_state.o syscall_stubs.o condor_syscalls.o $(PACKAGE)
 
-all_target(file_test)
+all_target(stub_gen)
 depend_target($(SRC) )
 
+lex.yy.c: stub_gen_lex.l scanner.h y.tab.h
+	lex stub_gen_lex.l
+
+y.tab.c: stub_gen_yacc.y scanner.h
+	yacc -d stub_gen_yacc.y
+
+clean::
+	rm -f lex.yy.c y.tab.c y.tab.h syscall_stubs.c
+
+syscall_stubs.c: stubs.tmpl stub_gen
+	stub_gen < stubs.tmpl > syscall_stubs.c
+
+program_target(stub_gen,y.tab.o lex.yy.o,$(NULL),no_realeas)
 c_plus_target(file_test,file_test.o $(FILE_STATE),$(NULL),no_release)
 program_target(noenv,noenv.o,$(NULL),no_release)
 program_target(my_printenv,my_printenv.o,$(NULL),no_release)
