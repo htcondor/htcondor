@@ -28,7 +28,7 @@ Buf::Buf(
 	_dta_maxsz = sz;
 	_dta_sz = 0;
 	_dta_pt = 0;
-
+	_next = NULL;
 	num_created++;
 }
 
