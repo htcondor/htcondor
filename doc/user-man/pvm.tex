@@ -4,10 +4,10 @@
 
 \newcommand{\func}[1]{\texttt{#1}}
 
-\index{PVM (Parallel Virtual Machines)|(}
-\index{Parallel Virtual Machines (PVM)}
+\index{PVM (Parallel Virtual Machine)|(}
+\index{Parallel Virtual Machine (PVM)}
 \index{Condor-PVM}
-Applications that use PVM (Parallel Virtual Machines) may use
+Applications that use PVM (Parallel Virtual Machine) may use
 Condor.
 PVM offers a set of message passing primitives for use in
 C and C++ language programs.
@@ -16,6 +16,8 @@ allow parallelism at the program level.
 Multiple processes
 may run on multiple machines,
 while communicating with each other.
+More information about PVM is available at 
+\Url{http://www.epm.ornl.gov/pvm/}.
 
 Condor-PVM provides a framework to run PVM applications
 in Condor's opportunistic environment.
@@ -383,4 +385,4 @@ These restrictions are caused by the fact that a user can not normally
 run more than one PVM daemon on a machine.  We are currently
 investigating to see if these restrictions can be removed.
 
-\index{PVM (Parallel Virtual Machines)|)}
+\index{PVM (Parallel Virtual Machine)|)}
