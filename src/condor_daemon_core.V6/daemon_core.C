@@ -1092,6 +1092,8 @@ void DaemonCore::Driver()
 						(*sigTable[i].handler)(sigTable[i].service,sigTable[i].num);
 					// Clear curr_dataptr
 					curr_dataptr = NULL;
+					// Make sure we didn't leak our priv state
+					CheckPrivState();
 				}
 			}
 		}
@@ -1207,7 +1209,10 @@ void DaemonCore::Driver()
 							// no handler registered, so this is a command socket.  call
 							// the DaemonCore handler which takes care of command sockets.
 							result = HandleReq(i);
-						
+
+						// Make sure we didn't leak our priv state
+						CheckPrivState();
+
 						// Clear curr_dataptr
 						curr_dataptr = NULL;
 
@@ -1229,6 +1234,32 @@ void DaemonCore::Driver()
 
 	}	// end of infinite for loop
 }
+
+
+void
+DaemonCore::CheckPrivState( void )
+{
+		// We should always be Condor, so set to it here.  If we were
+		// already in Condor priv, this is just a no-op.
+	priv_state old_priv = set_condor_priv();
+
+		// See if our old state was something else.
+	if( old_priv != PRIV_CONDOR ) {
+		dprintf( D_ALWAYS, 
+				 "DaemonCore ERROR: Handler returned with priv state %d\n", 
+				 old_priv );
+		dprintf( D_ALWAYS, "History of priv-state changes:\n" );
+		display_priv_log();
+		char* tmp = param( "EXCEPT_ON_ERROR" );
+		if( tmp ) {
+			if( tmp[0] == 'T' || tmp[0] == 't' ) {
+				EXCEPT( "Priv-state error found by DaemonCore" );
+			}
+			free( tmp );
+		}
+	}
+}	
+
 
 int DaemonCore::ServiceCommandSocket()
 {
@@ -1273,6 +1304,8 @@ int DaemonCore::ServiceCommandSocket()
 		if ( rv > 0) {		// a connection was requested
 			HandleReq( initial_command_sock );
 			commands_served++;
+				// Make sure we didn't leak our priv state
+			CheckPrivState();
 		}
 
 	} while ( rv > 0 );		// loop until no more commands waiting on socket
@@ -3785,6 +3818,9 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 			if ( reapTable[i].handlercpp )
 				// a C++ handler
 				(reapTable[i].service->*(reapTable[i].handlercpp))(pid,exit_status);
+
+				// Make sure we didn't leak our priv state
+			CheckPrivState();
 
 			// Clear curr_dataptr
 			curr_dataptr = NULL;
