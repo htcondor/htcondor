@@ -152,18 +152,20 @@ void config( char* a_out_name, CONTEXT* context )
 						ConfigTab, TABLESIZE, EXPAND_LAZY );
 	free( config_file );
 
-		/* Try to get a runtime value for our machine architecture,
-		   if we can't figure it out we default to value from config file */
-	if( (arch = get_arch()) != NULL ) {
+	/* If ARCH is not defined in config file, then try to get value
+	   using uname().  Note that the config file parameter overrides
+	   the uname() value.  -Jim B. */
+	if( (param("ARCH") == NULL) && ((arch = get_arch()) != NULL) ) {
 		insert( "ARCH", arch, ConfigTab, TABLESIZE );
 		if( context ) {
 			insert_context( "Arch", arch, context );
 		}
 	}
 
-		/* Try to get a runtime value for our operating system,
-		   if we can't figure it out we default to value from config file */
-	if( (op_sys = get_op_sys()) != NULL ) {
+	/* If OPSYS is not defined in config file, then try to get value
+	   using uname().  Note that the config file parameter overrides
+	   the uname() value.  -Jim B. */
+	if( (param("OPSYS") == NULL) && ((op_sys = get_op_sys()) != NULL) ) {
 		insert( "OPSYS", op_sys, ConfigTab, TABLESIZE );
 		if( context ) {
 			insert_context( "OpSys", op_sys, context );
@@ -290,11 +292,9 @@ char	*pattern;
 	return 0;
 }
 
-#if defined(SUNOS41) || defined(Solaris) || defined(ULTRIX43)
+/* uname() is POSIX, so this should work on all platforms.  -Jim */
 #include <sys/utsname.h>
-#endif
 
-#if defined(SUNOS41) || defined(Solaris)
 char *
 get_arch()
 {
@@ -306,15 +306,7 @@ get_arch()
 
 	return buf.machine;
 }
-#else
-char *
-get_arch()
-{
-	return NULL;
-}
-#endif
 
-#if defined(SUNOS41) || defined(Solaris) || defined(ULTRIX43)
 char *
 get_op_sys()
 {
@@ -329,13 +321,6 @@ get_op_sys()
 	strcat( answer, buf.release );
 	return answer;
 }
-#else
-char *
-get_op_sys()
-{
-	return NULL;
-}
-#endif
 
 void
 insert_context( name, value, context )
