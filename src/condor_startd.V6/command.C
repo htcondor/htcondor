@@ -36,7 +36,6 @@ extern char *PrimaryStarter;
 extern char *Starter;
 extern int polls;
 extern int capab_timeout;
-extern char* client;
 
 extern "C" int event_checkpoint(resource_id_t, job_id_t, task_id_t);
 
@@ -123,8 +122,10 @@ command_main(Sock *sock, struct sockaddr_in* from, resource_id_t rid)
 }
 
 #define ABORT \
-		if (rip->r_jobcontext)			 \
+		if (rip->r_jobcontext) {			 \
 			{delete (rip->r_jobcontext);}    \
+			rip->r_jobcontext = NULL;		\
+		}									 \
 		if (rip->r_clientmachine) {		 \
 			free(rip->r_clientmachine);	 \
 			rip->r_clientmachine = NULL;	 \
@@ -155,19 +156,21 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 	resource_name_t rname;
 	resource_info_t *rip;
 	char RemoteUser[80], JobId[80];
-	int universe;
+	int universe, job_cluster, job_proc;
 
 	dprintf(D_ALWAYS, "command_startjob called.\n");
 
 	if (!(rip = resmgr_getbyrid(rid))) {
 		dprintf(D_ALWAYS, "startjob: unknown resource.\n");
-		CondorPendingJobs::DequeueJob();
+		CondorPendingJobs::DequeueJob(); // When did we queue the job???
 		return -1;
 	}
 
 	rip->r_starter = Starter;
 	
-	check_string = (char *)malloc(SIZE_OF_CAPABILITY_STRING * sizeof(char));
+//	let ReliSock allocate the memory
+//	check_string = (char *)malloc(SIZE_OF_CAPABILITY_STRING * sizeof(char));
+
 	if(JobRecdEarlier) dprintf(D_ALWAYS,"Job Ad already recd\n");
 	else dprintf(D_ALWAYS,"Job Ad yet to be recd\n");
 	if(!JobRecdEarlier)
@@ -205,7 +208,6 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 	  else  
 	  {  
 	    rip->r_clientmachine = strdup(hp->h_name);
-		client = strdup(hp->h_name);
 	    dprintf(D_ALWAYS, "Got start_job_request from %s\n",
 		    rip->r_clientmachine);
 	  }
@@ -218,11 +220,13 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 	  if (!job_context->get(*sock)) {
 	    dprintf( D_ALWAYS, "Can't receive job classad from shadow\n");
 	    CondorPendingJobs::DequeueJob();
+		// we should delete job_context here, right?
 	    return -1;
 	  }
 	  if (!sock->eom()) {
 	    dprintf(D_ALWAYS, "Can't receive job classad from shadow\n");
 	    CondorPendingJobs::DequeueJob();
+		// we should delete job_context here, right?
 	    return -1;
 	  }
 	}
@@ -283,10 +287,12 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 	  {
 	    job_reqs = 0;
 	  }
-	  job_context->EvalString("Owner",job_context,RemoteUser);
+	  job_context->EvalString(ATTR_OWNER,job_context,RemoteUser);
 	  dprintf(D_ALWAYS, "Remote job owner is %s\n", RemoteUser);
-	  job_context->EvalString("JobId",job_context,JobId);
-	  dprintf(D_ALWAYS, "Remote job owner is %s\n", RemoteUser);
+	  job_context->EvalInteger(ATTR_CLUSTER_ID,job_context,job_cluster);
+	  job_context->EvalInteger(ATTR_PROC_ID,job_context,job_proc);
+	  sprintf(JobId, "%d.%d", job_cluster, job_proc);
+	  dprintf(D_ALWAYS, "Remote job ID is %s\n", JobId);
 	  
 	  // check whether any PrefExp satisfies this job
 	  tTier JobTier = -1;
@@ -348,8 +354,6 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 	      // Higher priority job
 	      CondorPendingJobs::StoreRespondInfo(sock,from,rid);
 	      CondorPendingJobs::RecordJob(rid,job);
-		  if (client) free(client);
-	      client = strdup(rip->r_client);
 
 	      event_vacate(rid, NO_JID, NO_TID);	    
 
@@ -637,6 +641,7 @@ MatchInfo(resource_info_t* rip, char* str)
   
   
   rip->r_capab = str;
+  rip->r_claimed = TRUE;
   dprintf(D_ALWAYS, "Received match %s\n", rip->r_capab);
   rip->r_captime = time(NULL);
   return 0;
@@ -645,9 +650,9 @@ MatchInfo(resource_info_t* rip, char* str)
 static int
 command_matchinfo(Sock *sock, struct sockaddr_in* from, resource_id_t rid)
 {
-  resource_info_t *rip;
-  char *str;
-  char* str1;
+  resource_info_t *rip = NULL;
+  char *str = NULL;
+  char* str1 = NULL;
 
   dprintf(D_ALWAYS, "command_matchinfo called\n");
   if (!(rip = resmgr_getbyrid(rid))) {
@@ -656,7 +661,8 @@ command_matchinfo(Sock *sock, struct sockaddr_in* from, resource_id_t rid)
     return -1;
   }
 
-  str = (char *)(malloc(sizeof(char)*SIZE_OF_CAPABILITY_STRING));
+//  let Sock allocate the string
+//  str = (char *)(malloc(sizeof(char)*SIZE_OF_CAPABILITY_STRING));
   
   /* receive the capability from the negotiator */
   /* XXXXXX THIS SUCKS. should check from where it's coming. */
@@ -773,7 +779,6 @@ command_reqservice(Sock *sock, struct sockaddr_in* from, resource_id_t rid)
 
 		  if(CondorPendingJobs::AreTherePendingJobs(rid))
 		  {
-		    char client[MAX_STRING];
 		    int Interval=0;
 			if (!sock->code(rip->r_client)) {
 		      dprintf(D_ALWAYS, "Can't receive schedd string.\n");
@@ -786,7 +791,7 @@ command_reqservice(Sock *sock, struct sockaddr_in* from, resource_id_t rid)
 		    }
 		    else
 		      dprintf(D_ALWAYS,"Alive interval = %d\n",Interval);
-		    CondorPendingJobs::SetClient(rid,client);
+		    CondorPendingJobs::SetClient(rid,rip->r_client);
 		    CondorPendingJobs::SetAliveInterval(rid,Interval);
 			sock->end_of_message();
 		  }
@@ -813,14 +818,15 @@ static int
 command_relservice(Sock *sock, struct sockaddr_in* from, resource_id_t rid)
 {
 	resource_info_t *rip;
-	char *recv_string;
+	char *recv_string = NULL;
 
 	dprintf(D_ALWAYS, "command_relservice called.\n");
 	if (!(rip = resmgr_getbyrid(rid)))
 		return -1;
 
 	if (rip->r_claimed == TRUE) {
-		recv_string = (char *)malloc(SIZE_OF_CAPABILITY_STRING);
+//		let Sock allocate string
+//		recv_string = (char *)malloc(SIZE_OF_CAPABILITY_STRING);
 		if (sock->code(recv_string)) {
 			dprintf(D_ALWAYS, "received %s, magic %s\n",
 				recv_string, rip->r_capab);
