@@ -1572,7 +1572,12 @@ int DaemonCore::HandleReq(int socki)
 	}
 
 
-        if (req == DC_AUTHENTICATE) {
+	if (req == DC_AUTHENTICATE) {
+
+		// For now, only TCP is authenticated.  But stay tuned,
+		// soon UDP authentication will arrive as well!
+		ASSERT( is_tcp == TRUE );
+
 		ReliSock* sock = (ReliSock*)stream;
 
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: received DC_AUTHENTICATE from %s\n", sin_to_string(sock->endpoint()));
