@@ -66,9 +66,9 @@ int     executing_as_nonroot = 1;
  *
  *  Path to the pstat program.
  */
-
+#if !defined(Solaris)
 char    *pstat_path;
-
+#endif
 /*
  *  DEFAULT_SWAPSPACE
  *
