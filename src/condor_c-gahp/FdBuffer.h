@@ -21,41 +21,45 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#ifndef GRIDMANAGER_H
-#define GRIDMANAGER_H
+#ifndef FD_BUFFER_H
+#define FD_BUFFER_H
 
 #include "condor_common.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
-#include "user_log.c++.h"
-#include "classad_hashtable.h"
-#include "list.h"
-#include "daemon.h"
-#include "dc_schedd.h"
-
-#include "basejob.h"
-
-// Special value for a daemon-core timer id which indicates that there
-// is no timer currently registered (for variables holding a timer id) or
-// that no timer should be signalled when one normally would be (for
-// functions that take as an argument a timer id to be signalled when
-// something happens).
-#define TIMER_UNSET -1
-
-extern char *ScheddAddr;
-extern char *ScheddJobConstraint;
-extern char *GridmanagerScratchDir;
-extern char *Owner;
-
-// initialization
-void Init();
-void Register();
-
-// maintainence
-void Reconfig();
-
-bool requestScheddUpdate( BaseJob *job );
-bool requestScheddVacate( BaseJob *job, action_result_t &result );
-bool requestJobStatus( BaseJob *job, int &job_status );
+#include "../condor_c++_util/MyString.h"
 
 
+/**
+ *
+ * This class encapsulates a fd and provides buffering,
+ * i.e. it allows you to hold a result read out of the pipe until
+ * a full line is read.
+ *
+ **/
+class FdBuffer;
+
+class FdBuffer {
+public:
+	FdBuffer ();
+	FdBuffer (int fd);
+
+	MyString * GetNextLine();
+
+	static int Select (FdBuffer** wait_on, int count, int timeout, int * result);
+
+	int getFd() { return fd; }
+	void setFd(const int _fd) { fd = _fd; }
+	const char * getBuffer() { return buffer.Value(); }
+	
+	int IsError() { return error; }
+
+protected:
+	int fd;
+	MyString buffer;
+	
+	int error;
+	
+	MyString * ReadNextLineFromBuffer();
+	int HasNextLineInBuffer();
+
+};
 #endif

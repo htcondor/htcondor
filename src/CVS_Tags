@@ -65,6 +65,29 @@
    will be merged directly into this one and then abandoned.  Created
    from the V6_7-mirror-2-root tag.
 
+02/19/04 V6_7-mirror-2-merge-1
+   The state of the V6_7-mirror-2-branch before merging into the 
+   V6_7-branch
+
+02/02/04 V6_7-mirror-2-CORE_snapshot1
+   The state of the V6_7-mirror-2-branch for the first snapshot
+   release given to CORE for the schedd-failover features.  The
+   version string in this release looks like this:
+   $CondorVersion: 6.7.0 Feb  2 2004 MIRROR-2-BRANCH PRE-RELEASE $
+
+02/01/04 V6_7-mirror-2-post_merge-V6_7-mirror-merge-1
+   The state of the V6_7-mirror-2-branch after merging in the
+   V6_7-mirror-branch as tagged at V6_7-mirror-merge-1.  The
+   V6_7-mirror-branch is now abandonded.
+
+02/01/04 V6_7-mirror-2-pre_merge-V6_7-mirror-merge-1
+   The state of the V6_7-mirror-2-branch before merging in the
+   V6_7-mirror-branch as tagged at V6_7-mirror-merge-1.
+
+02/01/04 V6_7-mirror-merge-1
+   The state of the V6_7-mirror-branch when it was merged into the 
+   V6_7-mirror-2-branch.  The V6_7-mirror-branch is now abandoned.
+
 02/01/04 V6_7-post_merge-V6_6-merge-4
    The state of the V6_7-branch after merging in the V6_6-branch as
    tagged at V6_6-merge-4.
@@ -84,11 +107,23 @@
    when there are many thousand nodes in the dag.  Created from the
    V6_7-dagman-root tag.
 
+01/21/04 V6_7-mirror-post_merge-V6_7-core-2-merge-1
+   The state of the V6_7-mirror-branch after merging in the
+   V6_7-core-2-branch as tagged at V6_7-core-2-merge-1.
+
+01/21/04 V6_7-mirror-pre_merge-V6_7-core-2-merge-1
+   The state of the V6_7-mirror-branch before merging in the
+   V6_7-core-2-branch as tagged at V6_7-core-2-merge-1.
+
 01/21/4 V6_7-mirror-branch
    A new branch off of V6_7-branch for adding the job mirroring stuff
    for CORE.  This is the gridmanager/Condor-C method of doing it.
    Since it's so complicated it's now living in its own branch.
    Created from the V6_7-mirror-root tag.
+
+01/21/04 V6_7-core-2-merge-1
+   The state of the V6_7-core-2-branch when it was merged into the
+   V6_7-mirror-branch.  The V6_7-core-2-branch is now abandoned.
 
 01/16/04 V6_7-core-2-branch
    A new branch off of V6_7-branch for adding the 2nd round of custom

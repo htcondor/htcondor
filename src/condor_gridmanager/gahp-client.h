@@ -35,9 +35,11 @@
 			public:
 				Gahp_Args();
 				~Gahp_Args();
-				void free_argv();
+				void reset();
+				void add_arg( char *arg );
 				char **argv;
 				int argc;
+				int argv_size;
 		};
 
 
@@ -68,10 +70,12 @@ class GahpClient;
 
 class GahpServer : public Service {
  public:
-	static GahpServer *FindOrCreateGahpServer(const char *id, const char *path);
+	static GahpServer *FindOrCreateGahpServer(const char *id,
+											  const char *path,
+											  const char *args = NULL);
 	static HashTable <HashKey, GahpServer *> GahpServersById;
 
-	GahpServer(const char *id, const char *path);
+	GahpServer(const char *id, const char *path, const char *args = NULL);
 	~GahpServer();
 
 	bool Startup();
@@ -163,6 +167,7 @@ class GahpServer : public Service {
 	GahpProxyInfo *current_proxy;
 	bool skip_next_r;
 	char *binary_path;
+	char *binary_args;
 	char *my_id;
 
 	char *globus_gass_server_url;
@@ -194,7 +199,8 @@ class GahpClient : public Service {
 	
 			/// Constructor
 		GahpClient(const char *id=GAHPCLIENT_DEFAULT_SERVER_ID,
-				   const char *path=GAHPCLIENT_DEFAULT_SERVER_PATH);
+				   const char *path=GAHPCLIENT_DEFAULT_SERVER_PATH,
+				   const char *args=NULL);
 			/// Destructor
 		~GahpClient();
 		
@@ -282,7 +288,10 @@ class GahpClient : public Service {
 
 		Proxy *getMasterProxy();
 
+		bool isStarted() { return server->m_gahp_pid != -1; }
 		bool isInitialized() { return server->is_initialized; }
+
+		const char *getErrorString();
 
 		//-----------------------------------------------------------
 		
@@ -399,6 +408,39 @@ class GahpClient : public Service {
 		int
 		gt3_gram_client_job_refresh_credentials(const char *job_contact);
 
+		int
+		condor_job_submit(const char *schedd_name, ClassAd *job_ad,
+						  char **job_id);
+
+		int
+		condor_job_update_constrained(const char *schedd_name,
+									  const char *constraint,
+									  ClassAd *update_ad);
+
+		int
+		condor_job_status_constrained(const char *schedd_name,
+									  const char *constraint,
+									  int *num_ads, ClassAd ***ads);
+
+		int
+		condor_job_remove(const char *schedd_name, PROC_ID job_id,
+						  const char *reason);
+
+		int
+		condor_job_update(const char *schedd_name, PROC_ID job_id,
+						  ClassAd *update_ad);
+
+		int
+		condor_job_hold(const char *schedd_name, PROC_ID job_id,
+						const char *reason);
+
+		int
+		condor_job_release(const char *schedd_name, PROC_ID job_id,
+						   const char *reason);
+
+		int
+		condor_job_stage_in(const char *schedd_name, ClassAd *job_ad);
+
 #ifdef CONDOR_GLOBUS_HELPER_WANT_DUROC
 	// Not yet ready for prime time...
 	globus_duroc_control_barrier_release();
@@ -438,6 +480,7 @@ class GahpClient : public Service {
 		GahpProxyInfo *normal_proxy;
 		GahpProxyInfo *deleg_proxy;
 		GahpProxyInfo *pending_proxy;
+		MyString error_string;
 
 			// These data members all deal with the GAHP
 			// server.  Since there is only one instance of the GAHP

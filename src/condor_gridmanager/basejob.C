@@ -38,6 +38,9 @@
 
 BaseJob::BaseJob( ClassAd *classad )
 {
+	calcRuntimeStats = true;
+
+	writeUserLog = true;
 	submitLogged = false;
 	executeLogged = false;
 	submitFailedLogged = false;
@@ -152,7 +155,7 @@ void BaseJob::JobRunning()
 
 		UpdateRuntimeStats();
 
-		if ( !executeLogged ) {
+		if ( writeUserLog && !executeLogged ) {
 			WriteExecuteEventToUserLog( ad );
 			executeLogged = true;
 		}
@@ -183,7 +186,7 @@ void BaseJob::JobEvicted()
 	UpdateRuntimeStats();
 
 		//  should we be updating job ad values here?
-	if ( !evictLogged ) {
+	if ( writeUserLog && !evictLogged ) {
 		WriteEvictEventToUserLog( ad );
 		evictLogged = true;
 	}
@@ -218,7 +221,7 @@ void BaseJob::DoneWithJob()
 	UpdateJobAdBool( ATTR_JOB_MANAGED, 0 );
 
 	if ( condorState == COMPLETED ) {
-		if ( !terminateLogged ) {
+		if ( writeUserLog && !terminateLogged ) {
 			WriteTerminateEventToUserLog( ad );
 			EmailTerminateEvent( ad, exitStatusKnown );
 			terminateLogged = true;
@@ -226,14 +229,14 @@ void BaseJob::DoneWithJob()
 		deleteFromSchedd = true;
 	}
 	if ( condorState == REMOVED ) {
-		if ( !abortLogged ) {
+		if ( writeUserLog && !abortLogged ) {
 			WriteAbortEventToUserLog( ad );
 			abortLogged = true;
 		}
 		deleteFromSchedd = true;
 	}
 	if ( condorState == HELD ) {
-		if ( !holdLogged ) {
+		if ( writeUserLog && !holdLogged ) {
 			WriteHoldEventToUserLog( ad );
 			holdLogged = true;
 		}
@@ -272,7 +275,7 @@ void BaseJob::JobHeld( const char *hold_reason, int hold_code,
 
 		UpdateRuntimeStats();
 
-		if ( !holdLogged ) {
+		if ( writeUserLog && !holdLogged ) {
 			WriteHoldEventToUserLog( ad );
 			holdLogged = true;
 		}
@@ -298,6 +301,10 @@ void BaseJob::JobRemoved( const char *remove_reason )
 
 void BaseJob::UpdateRuntimeStats()
 {
+	if ( calcRuntimeStats == false ) {
+		return;
+	}
+
 	// Adjust run time for condor_q
 	int shadowBirthdate = 0;
 	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadowBirthdate );
@@ -361,7 +368,7 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
 			ad->SetDirtyFlag( held_removed_update_attrs[i], false );
 		}
 
-		if ( new_condor_state == HELD && !holdLogged ) {
+		if ( new_condor_state == HELD && writeUserLog && !holdLogged ) {
 			// TODO should this log event be delayed until gridmanager is
 			//   done dealing with the job?
 			WriteHoldEventToUserLog( ad );
@@ -385,6 +392,12 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
 		// TODO do we need to call UpdateRuntimeStats() here?
 		UpdateRuntimeStats();
 		SetEvaluateState();
+
+	} else if ( new_condor_state == COMPLETED ) {
+
+		condorState = new_condor_state;
+			// TODO do we need to update any other attributes?
+		SetEvaluateState();
 	}
 
 }
@@ -392,16 +405,17 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
 int BaseJob::EvalPeriodicJobExpr()
 {
 	float old_run_time;
+	bool old_run_time_dirty;
 	UserPolicy user_policy;
 dprintf(D_FULLDEBUG,"(%d.%d) Evaluating periodic job policy expressions\n",procID.cluster,procID.proc);
 
 	user_policy.Init( ad );
 
-	UpdateJobTime( &old_run_time );
+	UpdateJobTime( &old_run_time, &old_run_time_dirty );
 
 	int action = user_policy.AnalyzePolicy( PERIODIC_ONLY );
 
-	RestoreJobTime( old_run_time );
+	RestoreJobTime( old_run_time, old_run_time_dirty );
 
 	switch( action ) {
 	case UNDEFINED_EVAL:
@@ -432,6 +446,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) Evaluating periodic job policy expressions\n",procI
 int BaseJob::EvalOnExitJobExpr()
 {
 	float old_run_time;
+	bool old_run_time_dirty;
 	UserPolicy user_policy;
 
 	user_policy.Init( ad );
@@ -451,11 +466,11 @@ int BaseJob::EvalOnExitJobExpr()
 	}
 
 	// TODO: We should just mark the job as done running
-	UpdateJobTime( &old_run_time );
+	UpdateJobTime( &old_run_time, &old_run_time_dirty );
 
 	int action = user_policy.AnalyzePolicy( PERIODIC_THEN_EXIT );
 
-	RestoreJobTime( old_run_time );
+	RestoreJobTime( old_run_time, old_run_time_dirty );
 
 	if ( action != REMOVE_FROM_QUEUE ) {
 		UpdateJobAdBool( ATTR_ON_EXIT_BY_SIGNAL, 0 );
@@ -488,7 +503,7 @@ int BaseJob::EvalOnExitJobExpr()
   any stale time values.  Currently, this is just RemoteWallClock.
 */
 void
-BaseJob::UpdateJobTime( float *old_run_time )
+BaseJob::UpdateJobTime( float *old_run_time, bool *old_run_time_dirty )
 {
   float previous_run_time = 0, total_run_time = 0;
   int shadow_bday = 0;
@@ -496,6 +511,7 @@ BaseJob::UpdateJobTime( float *old_run_time )
 
   ad->LookupInteger(ATTR_SHADOW_BIRTHDATE,shadow_bday);
   ad->LookupFloat(ATTR_JOB_REMOTE_WALL_CLOCK,previous_run_time);
+  ad->GetDirtyFlag(ATTR_JOB_REMOTE_WALL_CLOCK,NULL,old_run_time_dirty);
 
   if (old_run_time) {
 	  *old_run_time = previous_run_time;
@@ -512,10 +528,10 @@ BaseJob::UpdateJobTime( float *old_run_time )
   called to restore time values to their original state.
 */
 void
-BaseJob::RestoreJobTime( float old_run_time )
+BaseJob::RestoreJobTime( float old_run_time, bool old_run_time_dirty )
 {
   UpdateJobAdFloat( ATTR_JOB_REMOTE_WALL_CLOCK, old_run_time );
-  ad->SetDirtyFlag( ATTR_JOB_REMOTE_WALL_CLOCK, false );
+  ad->SetDirtyFlag( ATTR_JOB_REMOTE_WALL_CLOCK, old_run_time_dirty );
 }
 
 // Initialize a UserLog object for a given job and return a pointer to

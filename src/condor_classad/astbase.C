@@ -329,11 +329,14 @@ int BooleanBase::operator ==(ExprTree& tree)
 
 int BinaryOpBase::operator ==(ExprTree& tree)
 {
-    if(tree.MyType() == this->MyType())
-    {
-	return (*this->lArg == *((BinaryOpBase&)tree).LArg()) &&
-	       (*this->rArg == *((BinaryOpBase&)tree).RArg());
-    }
+	// HACK!!  No lArg implies user-directed parenthesization
+	if ( this->lArg == NULL || ((BinaryOpBase&)tree).LArg() == NULL ) {
+		return (this->lArg == ((BinaryOpBase&)tree).LArg()) &&
+			   (*this->rArg == *((BinaryOpBase&)tree).RArg());
+	} else if (tree.MyType() == this->MyType()) {
+		return (*this->lArg == *((BinaryOpBase&)tree).LArg()) &&
+			   (*this->rArg == *((BinaryOpBase&)tree).RArg());
+	}
     return FALSE;
 }
 

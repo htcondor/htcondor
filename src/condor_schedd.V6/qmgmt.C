@@ -2324,6 +2324,15 @@ int mark_idle(ClassAd *job)
 {
     int     status, cluster, proc, hosts, job_managed, universe;
 	PROC_ID	job_id;
+	static char birthdateAttr[200];
+	static time_t bDay = 0;
+
+		// Update ATTR_SCHEDD_BIRTHDATE in job ad at startup
+	if (bDay == 0) {
+		bDay = time(NULL);
+		sprintf(birthdateAttr,"%s=%d",ATTR_SCHEDD_BIRTHDATE,bDay);
+	}
+	job->Insert(birthdateAttr);
 
 	if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) < 0) {
 		universe = CONDOR_UNIVERSE_STANDARD;
@@ -2337,6 +2346,15 @@ int mark_idle(ClassAd *job)
 			// in control.  stay out of its way!  -Todd 9/13/02
 			return 1;
 		}
+	}
+
+	int mirror_active = 0;
+	job->LookupBool(ATTR_MIRROR_ACTIVE, mirror_active);
+	if ( mirror_active ) {
+		// Don't touch a job that has an active mirror.  Once we are in count jobs, we will
+		// startup a gridmanager for this job that will retrieve the current job status from
+		// our schedd mirror.
+		return 1;
 	}
 
 	job->LookupInteger(ATTR_CLUSTER_ID, cluster);

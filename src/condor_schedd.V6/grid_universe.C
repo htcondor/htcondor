@@ -146,7 +146,7 @@ GridUniverseLogic::group_per_subject()
 
 void 
 GridUniverseLogic::JobCountUpdate(const char* owner, const char* domain,
-	   	const char* proxy, const char* proxy_path, int cluster, int proc, 
+	   	const char* proxy, const char* attr_name, int cluster, int proc, 
 		int num_globus_jobs, int num_globus_unmanaged_jobs)
 {
 	// Quick sanity checks - this should never be...
@@ -158,7 +158,7 @@ GridUniverseLogic::JobCountUpdate(const char* owner, const char* domain,
 	// does not know they are in the queue. so tell it some jobs
 	// were added.
 	if ( num_globus_unmanaged_jobs > 0 ) {
-		JobAdded(owner, domain, proxy, proxy_path, cluster, proc);
+		JobAdded(owner, domain, proxy, attr_name, cluster, proc);
 		return;
 	}
 
@@ -166,7 +166,7 @@ GridUniverseLogic::JobCountUpdate(const char* owner, const char* domain,
 	// are any globus jobs at all.  if there are, make certain that there
 	// is a grid manager watching over the jobs and start one if there isn't.
 	if ( num_globus_jobs > 0 ) {
-		StartOrFindGManager(owner, domain, proxy, proxy_path, cluster, proc);
+		StartOrFindGManager(owner, domain, proxy, attr_name, cluster, proc);
 		return;
 	}
 
@@ -177,11 +177,11 @@ GridUniverseLogic::JobCountUpdate(const char* owner, const char* domain,
 
 void 
 GridUniverseLogic::JobAdded(const char* owner, const char* domain,
-	   	const char* proxy, const char* proxy_path, int cluster, int proc)
+	   	const char* proxy, const char* attr_name, int cluster, int proc)
 {
 	gman_node_t* node;
 
-	node = StartOrFindGManager(owner, domain, proxy, proxy_path, cluster, proc);
+	node = StartOrFindGManager(owner, domain, proxy, attr_name, cluster, proc);
 
 	if (!node) {
 		// if we cannot find nor start a gridmanager, there's
@@ -203,11 +203,11 @@ GridUniverseLogic::JobAdded(const char* owner, const char* domain,
 
 void 
 GridUniverseLogic::JobRemoved(const char* owner, const char* domain,
-	   	const char* proxy, const char* proxy_path,int cluster, int proc)
+	   	const char* proxy, const char* attr_name,int cluster, int proc)
 {
 	gman_node_t* node;
 
-	node = StartOrFindGManager(owner, domain, proxy, proxy_path, cluster, proc);
+	node = StartOrFindGManager(owner, domain, proxy, attr_name, cluster, proc);
 
 	if (!node) {
 		// if we cannot find nor start a gridmanager, there's
@@ -406,7 +406,7 @@ GridUniverseLogic::lookupGmanByOwner(const char* owner, const char* proxy,
 
 GridUniverseLogic::gman_node_t *
 GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
-	   	const char* proxy, const char* proxy_path, int cluster, int proc)
+	   	const char* proxy, const char* attr_name, int cluster, int proc)
 {
 	gman_node_t* gman_node;
 	int pid;
@@ -489,10 +489,17 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		} else {
 			owner_or_user = ATTR_OWNER;
 		}
-		constraint.sprintf(" -C (%s=?=\"%s\"&&%s=?=\"%s\"&&%s==%d)",
-			owner_or_user,full_owner_name.Value(),
-			ATTR_X509_USER_PROXY_SUBJECT,proxy,
-			ATTR_JOB_UNIVERSE,CONDOR_UNIVERSE_GLOBUS);
+		if ( !attr_name  ) {
+			attr_name = ATTR_X509_USER_PROXY_SUBJECT;
+			constraint.sprintf(" -C (%s=?=\"%s\"&&%s=?=\"%s\"&&%s==%d)",
+				owner_or_user,full_owner_name.Value(),
+				attr_name,proxy,
+				ATTR_JOB_UNIVERSE,CONDOR_UNIVERSE_GLOBUS);
+		} else {
+			constraint.sprintf(" -C (%s=?=\"%s\"&&%s=?=\"%s\")",
+				owner_or_user,full_owner_name.Value(),
+				attr_name,proxy);
+		}
 		strcat(gman_final_args,constraint.Value());
 	}
 

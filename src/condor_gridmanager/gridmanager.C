@@ -46,6 +46,7 @@
 #include "nordugridjob.h"
 #endif
 
+#include "mirrorjob.h"
 #include "gt3job.h"
 
 #define QMGMT_TIMEOUT 15
@@ -80,8 +81,32 @@ bool operator==( const PROC_ID a, const PROC_ID b)
 	return a.cluster == b.cluster && a.proc == b.proc;
 }
 
+struct VacateRequest {
+	BaseJob *job;
+	action_result_t result;
+};
+
+HashTable <PROC_ID, VacateRequest> pendingScheddVacates( HASH_TABLE_SIZE,
+														 procIDHash );
+HashTable <PROC_ID, VacateRequest> completedScheddVacates( HASH_TABLE_SIZE,
+														   procIDHash );
+
+struct JobStatusRequest {
+	BaseJob *job;
+	int job_status;
+};
+
+HashTable <PROC_ID, JobStatusRequest> pendingJobStatus( HASH_TABLE_SIZE,
+														procIDHash );
+HashTable <PROC_ID, JobStatusRequest> completedJobStatus( HASH_TABLE_SIZE,
+														  procIDHash );
+
 template class HashTable<PROC_ID, BaseJob *>;
 template class HashBucket<PROC_ID, BaseJob *>;
+template class HashTable<PROC_ID, VacateRequest>;
+template class HashBucket<PROC_ID, VacateRequest>;
+template class HashTable<PROC_ID, JobStatusRequest>;
+template class HashBucket<PROC_ID, JobStatusRequest>;
 template class List<BaseJob>;
 template class Item<BaseJob>;
 template class List<JobType>;
@@ -90,7 +115,6 @@ template class Item<JobType>;
 HashTable <PROC_ID, BaseJob *> pendingScheddUpdates( HASH_TABLE_SIZE,
 													 procIDHash );
 bool addJobsSignaled = false;
-bool removeJobsSignaled = false;
 int contactScheddTid = TIMER_UNSET;
 int contactScheddDelay;
 time_t lastContactSchedd = 0;
@@ -98,6 +122,7 @@ time_t lastContactSchedd = 0;
 char *ScheddAddr = NULL;
 char *ScheddJobConstraint = NULL;
 char *GridmanagerScratchDir = NULL;
+DCSchedd *ScheddObj = NULL;
 
 HashTable <PROC_ID, BaseJob *> JobsByProcID( HASH_TABLE_SIZE,
 											 procIDHash );
@@ -177,6 +202,54 @@ requestScheddUpdate( BaseJob *job )
 	return false;
 }
 
+bool
+requestScheddVacate( BaseJob *job, action_result_t &result )
+{
+	VacateRequest hashed_request;
+
+	// Check if this is an old request that's completed
+	if ( completedScheddVacates.lookup( job->procID, hashed_request ) == 0 ) {
+		// If the request is done, remove it from the hashtable and return
+		// the result
+		completedScheddVacates.remove( job->procID );
+		result = hashed_request.result;
+		return true;
+	}
+
+	if ( pendingScheddVacates.lookup( job->procID, hashed_request ) != 0 ) {
+		// A new request; add it to the hash table
+		hashed_request.job = job;
+		pendingScheddVacates.insert( job->procID, hashed_request );
+		RequestContactSchedd();
+	}
+
+	return false;
+}
+
+bool
+requestJobStatus( BaseJob *job, int &job_status )
+{
+	JobStatusRequest hashed_request;
+
+	// Check if this is an old request that's completed
+	if ( completedJobStatus.lookup( job->procID, hashed_request ) == 0 ) {
+		// If the request is done, remove it from the hashtable and return
+		// the job status
+		completedJobStatus.remove( job->procID );
+		job_status = hashed_request.job_status;
+		return true;
+	}
+
+	if ( pendingJobStatus.lookup( job->procID, hashed_request ) != 0 ) {
+		// A new request; add it to the hash table
+		hashed_request.job = job;
+		pendingJobStatus.insert( job->procID, hashed_request );
+		RequestContactSchedd();
+	}
+
+	return false;
+}
+
 void
 RequestContactSchedd()
 {
@@ -206,6 +279,14 @@ Init()
 			EXCEPT( "Failed to determine schedd's address" );
 		} else {
 			ScheddAddr = strdup( ScheddAddr );
+		}
+	}
+
+	if ( ScheddObj == NULL ) {
+		ScheddObj = new DCSchedd( ScheddAddr );
+		ASSERT( ScheddObj );
+		if ( ScheddObj->locate() == false ) {
+			EXCEPT( "Failed to locate schedd: %s", ScheddObj->error() );
 		}
 	}
 
@@ -248,6 +329,15 @@ Init()
 	new_type->CreateFunc = NordugridJobCreate;
 	jobTypes.Append( new_type );
 #endif
+
+	new_type = new JobType;
+	new_type->Name = strdup( "Mirror" );
+	new_type->InitFunc = MirrorJobInit;
+	new_type->ReconfigFunc = MirrorJobReconfig;
+	new_type->AdMatchConst = MirrorJobAdConst;
+	new_type->AdMustExpandFunc = MirrorJobAdMustExpand;
+	new_type->CreateFunc = MirrorJobCreate;
+	jobTypes.Append( new_type );
 
 	new_type = new JobType;
 	new_type->Name = strdup( "GT3" );
@@ -298,8 +388,6 @@ Reconfig()
 
 	GahpReconfig();
 
-	ReconfigProxyManager();
-
 	JobType *job_type;
 	jobTypes.Rewind();
 	while ( jobTypes.Next( job_type ) ) {
@@ -334,10 +422,7 @@ REMOVE_JOBS_signalHandler( int signal )
 {
 	dprintf(D_FULLDEBUG,"Received REMOVE_JOBS signal\n");
 
-	if ( !removeJobsSignaled ) {
-		RequestContactSchedd();
-		removeJobsSignaled = true;
-	}
+	RequestContactSchedd();
 
 	return TRUE;
 }
@@ -356,10 +441,64 @@ doContactSchedd()
 	bool commit_transaction = true;
 	List<BaseJob> successful_deletes;
 	int failure_line_num = 0;
+	bool send_reschedule = false;
 
 	dprintf(D_FULLDEBUG,"in doContactSchedd()\n");
 
 	contactScheddTid = TIMER_UNSET;
+
+	// vacateJobs
+	/////////////////////////////////////////////////////
+	if ( pendingScheddVacates.getNumElements() != 0 ) {
+		MyString buff;
+		StringList job_ids;
+		VacateRequest curr_request;
+
+		int result;
+		CondorError errstack;
+		ClassAd* rval;
+
+		pendingScheddVacates.startIterations();
+		while ( pendingScheddVacates.iterate( curr_request ) != 0 ) {
+			buff.sprintf( "%d.%d", curr_request.job->procID.cluster,
+						  curr_request.job->procID.proc );
+			job_ids.append( buff.Value() );
+		}
+
+		char *tmp = job_ids.print_to_string();
+		dprintf( D_FULLDEBUG, "Calling vacateJobs on %s\n", tmp );
+		free(tmp);
+
+		rval = ScheddObj->vacateJobs( &job_ids, VACATE_FAST, &errstack );
+		if ( rval == NULL ) {
+			dprintf( D_FULLDEBUG, "vacateJobs returned NULL, CondorError: %s\n",
+					 errstack.getFullText() );
+			lastContactSchedd = time(NULL);
+			RequestContactSchedd();
+			return TRUE;
+		} else {
+			pendingScheddVacates.startIterations();
+			while ( pendingScheddVacates.iterate( curr_request ) != 0 ) {
+				buff.sprintf( "job_%d_%d", curr_request.job->procID.cluster,
+							  curr_request.job->procID.proc );
+				if ( !rval->LookupInteger( buff.Value(), result ) ) {
+					dprintf( D_FULLDEBUG, "vacateJobs returned malformed ad\n" );
+					EXCEPT( "vacateJobs returned malformed ad" );
+				} else {
+					dprintf( D_FULLDEBUG, "   %d.%d vacate result: %d\n",
+							 curr_request.job->procID.cluster,
+							 curr_request.job->procID.proc,result);
+					pendingScheddVacates.remove( curr_request.job->procID );
+					curr_request.result = (action_result_t)result;
+					curr_request.job->SetEvaluateState();
+					completedScheddVacates.insert( curr_request.job->procID,
+												   curr_request );
+				}
+			}
+			delete rval;
+		}
+	}
+
 
 	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false );
 	if ( !schedd ) {
@@ -516,7 +655,10 @@ dprintf(D_FULLDEBUG,"***Trying job type %s\n",job_type->Name);
 
 	// RemoveJobs
 	/////////////////////////////////////////////////////
-	if ( removeJobsSignaled ) {
+
+	// We also want to perform this check. Otherwise, we may overwrite a
+	// REMOVED/HELD/COMPLETED status with something else below.
+	{
 		int num_ads = 0;
 
 		dprintf( D_FULLDEBUG, "querying for removed/held jobs\n" );
@@ -524,9 +666,10 @@ dprintf(D_FULLDEBUG,"***Trying job type %s\n",job_type->Name);
 		// Grab jobs marked as REMOVED or marked as HELD that we haven't
 		// previously indicated that we're done with (by setting JobManaged
 		// to FALSE. If JobManaged is undefined, equate it with false.
-		sprintf( expr_buf, "(%s) && (%s == %d || (%s == %d && %s =?= TRUE))",
+		sprintf( expr_buf, "(%s) && (%s == %d || %s == %d || (%s == %d && %s =?= TRUE))",
 				 ScheddJobConstraint, ATTR_JOB_STATUS, REMOVED,
-				 ATTR_JOB_STATUS, HELD, ATTR_JOB_MANAGED );
+				 ATTR_JOB_STATUS, COMPLETED, ATTR_JOB_STATUS, HELD,
+				 ATTR_JOB_MANAGED );
 
 		dprintf( D_FULLDEBUG,"Using constraint %s\n",expr_buf);
 		next_ad = GetNextJobByConstraint( expr_buf, 1 );
@@ -600,6 +743,47 @@ dprintf(D_FULLDEBUG,"***Trying job type %s\n",job_type->Name);
 		failure_line_num = __LINE__;
 		commit_transaction = false;
 		goto contact_schedd_disconnect;
+	}
+
+
+	// requestJobStatus
+	/////////////////////////////////////////////////////
+	if ( pendingJobStatus.getNumElements() != 0 ) {
+		MyString buff;
+		JobStatusRequest curr_request;
+
+		pendingJobStatus.startIterations();
+		while ( pendingJobStatus.iterate( curr_request ) != 0 ) {
+
+			int rc;
+			int status;
+
+			rc = GetAttributeInt( curr_request.job->procID.cluster,
+								  curr_request.job->procID.proc,
+								  ATTR_JOB_STATUS, &status );
+			if ( rc < 0 ) {
+				if ( errno == ETIMEDOUT ) {
+					failure_line_num = __LINE__;
+					commit_transaction = false;
+					goto contact_schedd_disconnect;
+				} else {
+						// The job is not in the schedd's job queue. This
+						// probably means that the user did a condor_rm -f,
+						// so return a job status of REMOVED.
+					status = REMOVED;
+				}
+			}
+				// return status
+			dprintf( D_FULLDEBUG, "%d.%d job status: %d\n",
+					 curr_request.job->procID.cluster,
+					 curr_request.job->procID.proc,status);
+			pendingJobStatus.remove( curr_request.job->procID );
+			curr_request.job_status = status;
+			curr_request.job->SetEvaluateState();
+			completedJobStatus.insert( curr_request.job->procID,
+									   curr_request );
+		}
+
 	}
 
 
@@ -699,7 +883,6 @@ dprintf(D_FULLDEBUG,"***Trying job type %s\n",job_type->Name);
 	if ( add_remove_jobs_complete == true ) {
 		firstScheddContact = false;
 		addJobsSignaled = false;
-		removeJobsSignaled = false;
 	} else {
 		dprintf( D_ALWAYS, "Schedd connection error during Add/RemoveJobs at line %d! Will retry\n", failure_line_num );
 		RequestContactSchedd();
@@ -735,14 +918,13 @@ dprintf(D_FULLDEBUG,"***Trying job type %s\n",job_type->Name);
 			JobsByProcID.remove( curr_job->procID );
 				// If wantRematch is set, send a reschedule now
 			if ( curr_job->wantRematch ) {
-				static DCSchedd* schedd_obj = NULL;
-				if ( !schedd_obj ) {
-					schedd_obj = new DCSchedd(NULL,NULL);
-					ASSERT(schedd_obj);
-				}
-				schedd_obj->reschedule();
+				send_reschedule = true;
 			}
 			pendingScheddUpdates.remove( curr_job->procID );
+			pendingScheddVacates.remove( curr_job->procID );
+			pendingJobStatus.remove( curr_job->procID );
+			pendingJobStatus.remove( curr_job->procID );
+			completedScheddVacates.remove( curr_job->procID );
 			delete curr_job;
 
 		} else {
@@ -751,6 +933,10 @@ dprintf(D_FULLDEBUG,"***Trying job type %s\n",job_type->Name);
 			curr_job->SetEvaluateState();
 		}
 
+	}
+
+	if ( send_reschedule == true ) {
+		ScheddObj->reschedule();
 	}
 
 	// Check if we have any jobs left to manage. If not, exit.

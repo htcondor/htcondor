@@ -1,24 +1,14 @@
-NAME = condor_startd
+NAME = condor_c-gahp
 
 all_target( $(NAME) )
 
-
 CFLAGS = $(STD_C_FLAGS)
-
-#if IS_DARWIN
-LDFLAGS = -framework IOKit -framework Carbon
-#endif
-
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LIB= $(DAEMONCORE_LIB) $(STD_LIBS)
 
-OBJ = LoadQueue.o claim.o Reqexp.o ResAttributes.o ResMgr.o ResState.o \
-	Resource.o Starter.o command.o startd_main.o util.o \
-	startd_cronmgr.o startd_cronjob.o starter_mgr.o mds.o \
-	setsyscalls.o startd_instantiate.o AvailStats.o cod_mgr.o
+OBJ = FdBuffer.o io_loop.o schedd_client.o schedd_client_main.o SchedDCommands.o
 
-template_inst( startd_instantiate.C, startd_instantiate.o )
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 release_target($(NAME),sbin,EXECUTABLE_MODE)

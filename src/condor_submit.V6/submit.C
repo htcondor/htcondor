@@ -188,6 +188,7 @@ char	*StreamError = "stream_error";
 
 char	*CopyToSpool = "copy_to_spool";
 char	*LeaveInQueue = "leave_in_queue";
+char	*MirrorSchedd = "mirror_schedd";
 
 char	*PeriodicHoldCheck = "periodic_hold";
 char	*PeriodicReleaseCheck = "periodic_release";
@@ -2133,6 +2134,35 @@ void
 SetLeaveInQueue()
 {
 	char *erc = condor_param(LeaveInQueue, ATTR_JOB_LEAVE_IN_QUEUE);
+	char *mirror_schedd = condor_param(MirrorSchedd,ATTR_MIRROR_SCHEDD);
+
+	if ( mirror_schedd ) {
+		
+		if ( erc ) {
+			fprintf( stderr, 
+				"\nERROR: %s may not be specified alongside %s - the mirroring"
+				" mechanism relies on setting %s itself\n",
+				 LeaveInQueue, MirrorSchedd, LeaveInQueue);
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+		
+			// schedd job mirroring is being used
+			// set the mirrored schedd attribute
+		sprintf(buffer,"%s = \"%s\"", ATTR_MIRROR_SCHEDD,mirror_schedd);
+		InsertJobExpr( buffer );
+		free(mirror_schedd);
+
+			// set default WantMatching for mirrored jobs
+		sprintf(buffer,"%s = %s =?= False", ATTR_WANT_MATCHING,
+			ATTR_MIRROR_RELEASED);
+		InsertJobExpr( buffer );
+
+			// set default LeaveInQueue for mirrored jobs (erc is used below)
+		sprintf(buffer,"%s =?= True",ATTR_JOB_MANAGED);
+		erc = strdup(buffer);
+	}
+
 
 	if (erc == NULL)
 	{
