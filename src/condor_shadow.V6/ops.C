@@ -27,19 +27,7 @@
 ** 
 */ 
 
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
-#include "errno.h"
-#include <sys/types.h>
-#include <sys/param.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <sys/stat.h>
-#include <sys/file.h>
-#include <signal.h>
-#include "condor_constants.h"
+#include "condor_common.h"
 
 #if defined(AIX32)
 #	include  <sys/statfs.h>
@@ -47,32 +35,10 @@
 #	include "condor_fdset.h"
 #endif
 
-#if defined(IRIX331)
-#include <sys/statfs.h>
-#elif !defined(ULTRIX42) && !defined(ULTRIX43) && !defined(OSF1) && !defined(IRIX53)
-#include <sys/vfs.h>
-#endif
-
-#if 0
-#if !defined(ultrix)
-#ifdef IRIX331
-#include <sys/statfs.h>
-#else
-#include <sys/vfs.h>
-#endif
-#endif !defined(ultrix)
-#endif
-
-#if defined(HPUX9)
-#include <sys/ustat.h>
-#endif
-
-#include <sys/wait.h>
-#include <sys/ioctl.h>
 
 #if	defined(SUNOS40) || defined(SUNOS41) || defined(CMOS)
 #include <sys/core.h>
-#endif defined(SUNOS40) || defined(SUNOS41) || defined(CMOS)
+#endif 
 
 #undef _POSIX_SOURCE
 #include "condor_types.h"

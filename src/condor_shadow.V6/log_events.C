@@ -7,13 +7,6 @@
 #	include "condor_fdset.h"
 #endif
 
-#if defined(HPUX9)
-#	include <sys/wait.h>
-#else
-#	include "condor_fix_wait.h"
-#endif
-
-#include <sys/signal.h>
 #include "user_log.c++.h"
 #include "proc.h"
 #include "_condor_fix_resource.h"

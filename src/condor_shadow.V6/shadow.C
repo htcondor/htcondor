@@ -27,12 +27,6 @@
 ** 
 */ 
 
-#define _POSIX_SOURCE
-
-#if defined(IRIX62)
-#include "condor_fdset.h"
-#endif 
-
 #include "condor_common.h"
 #include "condor_fdset.h"
 #include "condor_classad.h"
@@ -45,42 +39,10 @@
 #include "condor_attributes.h"
 #include "condor_config.h"
 
-#include <signal.h>
-#include <pwd.h>
-#include <netdb.h>
-
 #if defined(AIX31) || defined(AIX32)
 #include "syscall.aix.h"
 #endif
 
-#ifdef IRIX331
-#include <sys.s>
-#endif
-
-#if !defined(AIX31) && !defined(AIX32)  && !defined(IRIX331) && !defined(IRIX53) && !defined(Solaris)
-#include <syscall.h>
-#endif
-
-#if defined(Solaris)
-#include <sys/syscall.h>
-#include </usr/ucbinclude/sys/wait.h>
-#include <fcntl.h>
-#endif
-
-#include <sys/uio.h>
-#if !defined(LINUX)
-#include <sys/buf.h>
-#endif
-#include <sys/stat.h>
-#include <sys/errno.h>
-#include <sys/file.h>
-#include <sys/time.h>
-#include <sys/param.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <sys/resource.h>
-
-#include "condor_fix_string.h"
 #include "sched.h"
 #include "debug.h"
 #include "fileno.h"
@@ -94,15 +56,6 @@
 #	include "condor_fdset.h"
 #endif
 
-#if defined(HPUX9)
-#	include <sys/wait.h>
-#else
-#	include "condor_fix_wait.h"
-#endif
-
-#undef _POSIX_SOURCE
-#include "condor_types.h"
-
 #include "clib.h"
 #include "shadow.h"
 #include "subproc.h"
@@ -115,7 +68,6 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 typedef void (*SIG_HANDLER)();
 extern "C" {
-	char *param(char *);
 	void install_sig_handler( int sig, SIG_HANDLER handler );
 	void reaper();
 	void rm();
@@ -141,11 +93,6 @@ extern "C" {
 	int		whoami();
 	void update_job_status( struct rusage *localp, struct rusage *remotep );
 	int DoCleanup();
-#if defined(HPUX9)
-	pid_t waitpid(pid_t pid, int *statusp, int options);
-#else
-	int waitpid(int pid, int *statusp, int options);
-#endif
 }
 
 extern int part_send_job( int test_starter, char *host, int &reason,
@@ -334,6 +281,13 @@ main(int argc, char *argv[], char *envp[])
 	if( argc != 6 ) {
 		usage();
 	}
+
+#ifdef WAIT_FOR_DEBUGGER
+	int x = 1;
+	while( x ) {
+
+	}
+#endif WAIT_FOR_DEBUGGER
 
 	if( strcmp("-pipe",argv[1]) == 0 ) {
 		capability = argv[2];

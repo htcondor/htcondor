@@ -26,21 +26,13 @@
 **
 */ 
 
-#define _POSIX_SOURCE
-
 #include "condor_common.h"
-#include "condor_fix_assert.h"
 #include "condor_debug.h"
 #include "condor_jobqueue.h"
 #include "condor_io.h"
 #include "condor_file_info.h"
 #include "condor_uid.h"
 #include "afs.h"
-#include <sys/stat.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include "condor_constants.h"
 #include "../condor_syscall_lib/syscall_param_sizes.h"
 
 #ifdef CARMI_OPS

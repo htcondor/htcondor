@@ -28,13 +28,11 @@
 */ 
 
 
-#include <stdio.h>
+#include "condor_common.h"
 #include <varargs.h>
-#include <time.h>
 #include "condor_sys.h"
 #include "exit.h"
 #include "debug.h"
-
 
 extern int	errno;
 extern int	sys_nerr;
