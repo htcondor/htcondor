@@ -241,9 +241,10 @@ process( ProcObj *p )
 		user_rec = new UserRec(owner);
 		UserList->Append( user_rec );
 	};
-	// user_rec->update( p->get_local_cpu(), p->get_remote_cpu() );
-	user_rec->update( 0.0, 0.0 );
-	Totals->update( 0.0, 0.0 );
+	user_rec->update( p->get_local_cpu(), p->get_remote_cpu() );
+	Totals->update( p->get_local_cpu(), p->get_remote_cpu() );
+	// user_rec->update( 0.0, 0.0 );
+	// Totals->update( 0.0, 0.0 );
 }
 
 UserRec *
@@ -281,12 +282,38 @@ UserRec::update( float local, float remote )
 	remote_cpu += remote;
 }
 
+static
+char    *
+summary_format_time( float fp_secs )
+{
+#define SECOND 1
+#define MINUTE (60 * SECOND)
+#define HOUR (60 * MINUTE)
+#define DAY (24 * HOUR)
+    int     days;
+    int     hours;
+    int     min;
+    int     secs;
+    int     tot_secs = (int)fp_secs;
+    static char answer[25];
+ 
+    days = tot_secs / DAY;
+    tot_secs %= DAY;
+    hours = tot_secs / HOUR;
+    tot_secs %= HOUR;
+    min = tot_secs / MINUTE;
+    secs = tot_secs % MINUTE;
+ 
+    (void)sprintf( answer, "%3d+%02d:%02d:%02d", days, hours, min, secs );
+    return answer;
+}
+
 void
 UserRec::display()
 {
 	printf( "%8.8s %6d ", name, n_jobs );
-	printf( "%14s ", format_time(local_cpu) );
-	printf( "%14s   ", format_time(remote_cpu) );
+	printf( "%14s ", summary_format_time(local_cpu) );
+	printf( "%14s   ", summary_format_time(remote_cpu) );
 	if( local_cpu < 1.0 ) {
 		printf( "%12.12s\n", "(undefined)" );
 	} else {
