@@ -13,8 +13,19 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Version 6.7.6 contains all the bug fixes and improvements from
+  the 6.6 stable series upto and including version 6.6.9.
 
+\item Due to a bug in gSOAP, the SOAP support in Condor 6.7.6 does not
+  work with all SOAP toolkits.
+  Some of the responses that gSOAP generates contain unqualified tags.
+  Therefore, SOAP toolkits that are strict (such as gSOAP or .Net)
+  will not accept these poorly formed responses.
+  SOAP toolkits that are more lax in the responses they accept (such
+  as Axis, SOAP::Lite, or ZSI) will work with version 6.7.6.
+  This problem has already been fixed and the solution will be
+  released in Condor version 6.7.7.
+  
 \end{itemize}
 
 
