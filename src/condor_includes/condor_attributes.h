@@ -214,6 +214,7 @@ const char ATTR_MY_ADDRESS               [] = "MyAddress";
 const char ATTR_SCHEDD_IP_ADDR           [] = "ScheddIpAddr";
 const char ATTR_SCHEDD_NAME				 [] = "ScheddName";
 const char ATTR_SCHEDULER				 [] = "Scheduler";
+const char ATTR_SHADOW_WAIT_FOR_DEBUG    [] = "ShadowWaitForDebug";
 const char ATTR_SOURCE					 [] = "Source";
 const char ATTR_START                    [] = "Start";
 const char ATTR_STARTD_IP_ADDR           [] = "StartdIpAddr";
