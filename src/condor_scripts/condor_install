@@ -92,23 +92,8 @@ $owner = &find_owner();
 print "\n***************************************************************************\n",
     "\tSTEP 1: What type of Condor installation do you want?\n",
     "***************************************************************************\n";
-if( !($who eq "root") && !($who eq "condor") ) {
-    print "\nSince you are not running condor_install as condor or root, I'm going ",
-    "to\nperform a submit-only installation of Condor.  This means that you will\n",
-    "be able to submit Condor jobs into an existing pool, but Condor will not\n",
-    "run jobs on the machine(s) you set up.\n\n",
-    "If you want to setup this machine to run Condor jobs, exit condor_install\n",
-    "now and re-run this script either as root or as user condor.\n\n",
-    "Continue with submit-only installation? [yes] ";
-    chop( $_ = <STDIN> );
-    if( ! /^([Yy].*)|^$/ ) {
-	print "Aborting condor_install\n";
-	exit(0);
-    }
-    push( @install_type, "submit" );
-} else {
     @install_type = &prompt_install_type();
-}
+
 if( ! @install_type ) {
     print "\nI have nothing to do.  Exiting.\n";
     exit(1);
