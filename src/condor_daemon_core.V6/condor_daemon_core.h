@@ -730,10 +730,17 @@ class DaemonCore : public Service
 	priv_state Register_Priv_State( priv_state priv );
 	
   private:      
+
+	ReliSock* dc_rsock;	// tcp command socket
+	SafeSock* dc_ssock;	// udp command socket
+
+    void Inherit( void );  // called in main()
+	void InitCommandPort( int command_port );  // called in main()
+
     int HandleSigCommand(int command, Stream* stream);
     int HandleReq(int socki);
     int HandleSig(int command, int sig);
-    void Inherit( ReliSock* &rsock, SafeSock* &ssock );  // called in main()
+
     int HandleProcessExitCommand(int command, Stream* stream);
     int HandleProcessExit(pid_t pid, int exit_status);
     int HandleDC_SIGCHLD(int sig);
