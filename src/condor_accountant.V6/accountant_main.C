@@ -66,6 +66,8 @@ int main_init(int argc, char* argv[])
 
   // while(1) accountant.AddMatch("Yuval",Ad6);
 
+  exit(0);
+
 #endif
 
   return TRUE;
