@@ -136,6 +136,45 @@ static Daemon Negotiator(DT_NEGOTIATOR);
 void RequestCkptBandwidth();
 #endif
 
+/* performing a blocking call to system() */
+int
+pseudo_shell( char *command, int len )
+{
+	int rval;
+	char *tmp;
+	int terrno;
+
+	dprintf( D_SYSCALLS, "\tcommand = \"%s\"\n", command );
+
+	/* This feature of Condor is sort of a security hole, um, maybe
+		a big security hole, so by default, if this is not
+		defined by the condor admin, do NOT run the command. */
+
+	tmp = param("SHADOW_ALLOW_UNSAFE_REMOTE_EXEC");
+	if (tmp == NULL || (tmp[0] != 'T' && tmp[0] != 't')) {
+		dprintf(D_SYSCALLS, 
+			"\tThe CONDOR_shell remote system call is currently disabled.\n");
+		dprintf(D_SYSCALLS, 
+			"\tTo enable it, please use SHADOW_ALLOW_UNSAFE_REMOTE_EXEC.\n");
+		rval = -1;
+		errno = ENOSYS;
+		return rval;
+	}
+
+	rval = -1;
+	errno = ENOSYS;
+
+	if (tmp[0] == 'T' || tmp[0] == 't') {
+		rval = system(command);
+	}
+	
+	terrno = errno;
+	free(tmp);
+	errno = terrno;
+
+	return rval;
+}
+
 /*
 **	getppid normally returns the parents id, right?  Well in
 **	the CONDOR case, this job may be started and checkpointed many
