@@ -220,6 +220,17 @@ sub ReadConfigFile( )
     my @ConfigFiles = ( { Raw => $Config{BaseConfigFile},
 			  File => $Config{BaseConfigFile}, } );
 
+    # Pre-define some things:
+    if ( ! exists $ENV{HOSTNAME} )
+    {
+	$ENV{HOSTNAME} = `/bin/hostname`;
+	chomp $ENV{HOSTNAME};
+    }
+    $ConfigMacros{FULL_HOSTNAME} = $ENV{HOSTNAME};
+    $ConfigMacros{HOSTNAME} = $ConfigMacros{FULL_HOSTNAME};
+    $ConfigMacros{HOSTNAME} =~ s/\..*$//;
+    $ConfigMacros{TILDE} = $ENV{HOME};
+
     # Read all of the config files
     foreach my $Conf ( @ConfigFiles )
     {
