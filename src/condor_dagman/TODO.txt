@@ -1,4 +1,9 @@
 
+- ASSERT() calls should be removed in many places and return errors
+instead, which higher levels react to properly... so DAGMan has a
+chance to generate a rescue DAG in these circumstances, instead of
+dying...
+
 - maxjobs may be buggy (see litvin emails)
 
 - document, document, document
