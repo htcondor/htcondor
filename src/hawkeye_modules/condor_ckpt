@@ -39,7 +39,7 @@ sub Init
     my $Tmp;
     $Tmp = HawkeyeLib::ReadConfig( "_log_file", "" );
     $Config{LogFile} = $Tmp if ( $Tmp ne "" );
-    die "No log file" if ( $Config{LogFile} eq "" );
+    die "No log file configured" if ( $Config{LogFile} eq "" );
 }
 
 
@@ -106,7 +106,7 @@ sub ReadLog( $$$ )
     my $Log = shift;
     my $Last = shift;
 
-    open( LOG, $Log ) || die "Can't read log file\n";
+    open( LOG, $Log ) || die "Can't read log file '$Log'\n";
     while( <LOG> )
     {
 	if ( /(\d+\/\d+ \d+:\d+:\d+)\s+(RECV|SEND) transferred (.*)/ )
