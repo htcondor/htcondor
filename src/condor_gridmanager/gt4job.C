@@ -1128,7 +1128,8 @@ gmState=GM_SUBMIT;
 			if ( condorState == REMOVED ) {
 				gmState = GM_DELETE;
 			} else {
-				gmState = GM_CLEAR_REQUEST;
+				//gmState = GM_CLEAR_REQUEST;
+				gmState= GM_HOLD;
 			}
 			} break;
 		case GM_DELETE: {
