@@ -1701,8 +1701,6 @@ SecMan :: invalidateExpiredCache()
 
 /*
 
-   was used to remove invalid keys...
-
 			dprintf ( D_SECURITY, "SECMAN: cached key invalid (%s), removing.\n", sid);
 			// a failure here signals that the cache may be invalid.
 			// delete this entry from table and force normal auth.
