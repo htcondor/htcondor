@@ -147,7 +147,7 @@ $(TARGETDIR):
 	mkdir $(TARGETDIR)
 
 clean:
-	rm -rf ref ref.new man user admin *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log *.ind *.idx *.ilg
+	rm -rf ref ref.new man user admin *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log *.ind *.idx *.ilg timesfont.tex
 
 reallyclean: clean
 	rm -rf $(TARGETDIR)
