@@ -343,8 +343,15 @@ make the SDK.
 
 /* CC_PIC_FLAG = -fPIC */
 
+#ifdef IS_C_COMP_MAJOR_GCC_3
+GPP_VERS_FLAGS = -Wno-deprecated
+#else
+GPP_VERS_FLAGS =
+#endif
+GPP_SHARED_FLAGS = -fno-implicit-templates $(GPP_VERS_FLAGS)
+
 STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) $(CC_PIC_FLAG) PlatformFlags PlatformGccFlags $(CCOMPILER_ID)
-STD_C_PLUS_FLAGS = $(STD_C_FLAGS) -fno-implicit-templates PlatformGppFlags 
+STD_C_PLUS_FLAGS = $(STD_C_FLAGS) $(GPP_SHARED_FLAGS) PlatformGppFlags 
 INST_C_PLUS_FLAGS = $(STD_C_FLAGS)
 
 TESTSUITE_FLAGS_GCC =  $(STD_C_FLAGS)
