@@ -109,5 +109,9 @@ SOURCE=..\src\condor_mail\smtp.h
 
 SOURCE=..\src\condor_mail\StdAfx.h
 # End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_util_lib\uuid_lib.WIN32.c
+# End Source File
 # End Target
 # End Project

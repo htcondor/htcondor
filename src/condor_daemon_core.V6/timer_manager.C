@@ -311,8 +311,8 @@ TimerManager::Timeout()
 	Event			handler;
 	Eventcpp		handlercpp;
 	Service*		s; 
-	int				result;
-	time_t			now;
+	int				result, timer_check_cntr;
+	time_t			now, time_sample;
 	int				is_cpp;
 	char*			event_descrip;
 	void*			data_ptr;
@@ -334,6 +334,7 @@ TimerManager::Timeout()
 	}
 
 	time(&now);
+	timer_check_cntr = 0;
 
 	DumpTimerList(D_DAEMONCORE | D_FULLDEBUG);
 
@@ -344,6 +345,31 @@ TimerManager::Timeout()
 	// we do not sit in this loop forever.
 	while( timer_list != NULL && (timer_list->when <= now ) ) {
 		// DumpTimerList(D_DAEMONCORE | D_FULLDEBUG);
+
+		// In some cases, resuming from a suspend can cause the system
+		// clock to become temporarily skewed, causing crazy things to 
+		// happen with our timers (particularly for sending updates to
+		// the collector). So, to correct for such skews, we routinely
+		// check to make sure that 'now' is not in the future.
+
+		timer_check_cntr++; 
+
+			// since time() is somewhat expensive, we 
+			// only check every 10 times we loop 
+			
+		if ( timer_check_cntr > 10 ) {
+
+			timer_check_cntr = 0;
+
+			time(&time_sample);
+			if (now > time_sample) {
+				dprintf(D_ALWAYS, "DaemonCore: Clock skew detected "
+					"(time=%d; now=%d). Resetting TimerManager's "
+					"notion of 'now'\n", time_sample, now);
+				now = time_sample;
+			}
+		}
+
 		current_id = timer_list->id;
 		period = timer_list->period;
 		handler = timer_list->handler;
