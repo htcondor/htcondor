@@ -38,11 +38,16 @@
 char *
 my_hostname()
 {
-	static char hostname[1024] = "\0";
+	static char hostname[1024] = "";
+	char* tmp;
 	if( hostname[0] ) {
 		return hostname;
 	}
 	if( gethostname(hostname, sizeof(hostname)) == 0 ) {
+		tmp = strchr( hostname, '.' );
+		if( tmp ) {
+			*tmp = '\0';
+		}
 		return hostname;
 	} else {
 		hostname[0] = '\0';
