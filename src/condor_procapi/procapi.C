@@ -719,9 +719,11 @@ int ProcAPI::getPidFamily( pid_t pid, pid_t *pidFamily ) {
      return -1;
   }
 
-  piPTR current = procFamily->next;  // skip elder pid; just get descendents
+  piPTR current = procFamily;  // get descendents and elder pid.
   int i=0;
-  while ( current != NULL ) {
+  // we'll only return the first 127.  No self-respecting job should have
+  // more.  :-)  
+  while (( current != NULL ) && ( i<127 ) ) {
     pidFamily[i] = current->pid;
     i++;
     current = current->next;

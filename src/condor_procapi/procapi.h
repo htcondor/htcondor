@@ -265,7 +265,7 @@ class ProcAPI {
   /** This function returns a list of pids that are 'descendents' of that pid.
       I call this a 'family' of pids.  This list is put into pidFamily, which
       I assume is an already-allocated array.  This array will be terminated
-      with a 0 at its end. 
+      with a 0 at its end.  This array will never exceed 128 elemets.
 
       @param pid The 'elder' pid of the family you want a list of pids for.
       @param pidFamily An array for holding pids in the family
