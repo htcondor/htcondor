@@ -260,14 +260,13 @@ main( int argc, char *argv[] )
 		default:
 				// This is probably a daemon name, use it.
 			did_one = TRUE;
-			do_command( *argv );
-			break;
 			if( (daemonname = get_daemon_name(*argv)) == NULL ) {
 				fprintf( stderr, "%s: unknown host %s\n", MyName, 
 						 get_host_part(*argv) );
 				continue;
 			}
 			do_command( daemonname );
+			break;
 		}
 	}
 
