@@ -24,19 +24,18 @@
 #include "condor_common.h"
 #include <stdlib.h>
 #include "condor_crypt.h"
+#if defined(CONDOR_ENCRYPT)
 #include <rand.h>              // SSLeay rand function
+#endif
 #include <assert.h>
 
 Condor_Crypt_Base :: Condor_Crypt_Base(Protocol protocol, const KeyInfo& keyInfo)
-#if !defined(SKIP_AUTHENTICATION)
     : keyInfo_ (keyInfo)
 {
+#if defined(CONDOR_ENCRYPT)
     assert(keyInfo_.getProtocol() == protocol);
-}
-#else
-{}
 #endif
-
+}
 
 Condor_Crypt_Base :: Condor_Crypt_Base()
     : keyInfo_ ()
@@ -49,27 +48,27 @@ Condor_Crypt_Base :: ~Condor_Crypt_Base()
 
 int Condor_Crypt_Base :: encryptedSize(int inputLength, int blockSize)
 {
-#if !defined(SKIP_AUTHENTICATION)
+#if defined(CONDOR_ENCRYPT)
     int size = inputLength % blockSize;
     return (inputLength + ((size == 0) ? blockSize : (blockSize - size)));
 #else
-	return 0;
+    return -1;
 #endif
 }
 
 Protocol Condor_Crypt_Base :: protocol()
 {
-#if !defined(SKIP_AUTHENTICATION)
+#if defined(CONDOR_ENCRYPT)
     return keyInfo_.getProtocol();
 #else
-	return (Protocol)0;
+    return (Protocol)0;
 #endif
 }
 
 unsigned char * Condor_Crypt_Base :: randomKey(int length)
 {
-#if !defined(SKIP_AUTHENTICATION)
-    char * file = NULL;
+#if defined(CONDOR_ENCRYPT)
+    char * file = 0;
     int size = 4096;
     if (count_ == 0) {
         //#if defined(WIN32)
@@ -108,7 +107,7 @@ unsigned char * Condor_Crypt_Base :: randomKey(int length)
 
     return key;
 #else
-	return NULL;
+	return 0;
 #endif
 }
 
