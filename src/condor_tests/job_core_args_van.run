@@ -4,6 +4,53 @@ use CondorTest;
 $cmd = 'job_core_args_van.cmd';
 $testname = 'Arguments are preserved - vanilla U';
 
+# we can really expect some things not to match like some quotes
+sub exceptadjust
+{
+	my $arg = shift;
+	my $result = "";
+	#print "Testing $arg\n";
+
+	if( $arg =~ /(.)(.*)/ )
+	{
+		if( $1 eq "\\")
+		{
+			#print "Slash start: ";
+
+			my $store1 = $1;
+			my $store2 = $2;
+			if( $2 =~ /\"(.*)/ )
+			{
+				$result = "\"$1";
+			}
+			elsif( $2 =~ /\'(.*)/ )
+			{
+				$result = "\'$1";
+			}
+			elsif( $2 =~ /\?(.*)/ )
+			{
+				$result = "\?$1";
+			}
+			elsif( $2 =~ /\\(.*)/ )
+			{
+				$result = "\\$1";
+			}
+			else
+			{
+				$result = "$store1$store2\n";
+			}
+		}
+		else
+		{
+			return($arg);
+		}
+		return($result);
+	}
+	else
+	{
+		return($arg);
+	}
+};
 
 $ExitSuccess = sub {
 	my %info = @_;
@@ -34,9 +81,14 @@ $ExitSuccess = sub {
 	my $i;
 	for($i = 0; $i < scalar(@args_reqd); $i++) {
 		print "Checking $args_reqd[$i]...\n";
-		if($args_reqd[$i] ne $args_found[$i]) {
-			die "Argument " . $args_reqd[$i] . " was mangled into " .
-			    $args_found[$i] . "\n";
+		if($args_reqd[$i] ne $args_found[$i]) 
+		{
+			$adjust = exceptadjust($args_reqd[$i]); # translate escapes
+			if($adjust ne $args_found[$i])
+			{
+				die "Argument " . $args_reqd[$i] . " was mangled into " .
+			    	$args_found[$i] . "\n";
+			}
 		}
 	}
 };
@@ -50,4 +102,5 @@ if( CondorTest::RunTest($testname, $cmd, 0) ) {
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";
 }
+
 
