@@ -1558,15 +1558,27 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 		}
 			/*
 			  we used to call DestroyProc() right here, but we no
-			  longer want to do that.  we'll have just called
-			  SetAttribute() on ATTR_JOB_STATUS to put it into a
-			  "finished" job state (REMOVED), and therefore, we've got
+			  longer want to do that.  instead, we know there's no job
+			  handler and we just removed it.  therefore, we can
+			  immediately add this job to our job_is_finished_queue
+			  and call jobIsFinished() on it.  so, we've just got
 			  to wait for our jobIsFinished() thread to run and
-			  complete before we can call DestroyProc().  so, we'll
+			  complete before we can call DestroyProc().  we'll
 			  just allow that code to work its magic, and once the
 			  jobIsFinished() thread completes, it'll call
 			  DestroyProc() for us.  -- derek 2005-03-28
 			*/
+		const char* msg;
+		switch( job_universe ) {
+		case CONDOR_UNIVERSE_SCHEDULER:
+		case CONDOR_UNIVERSE_LOCAL:
+			msg = "removed while not running";
+			break;
+		default:
+			msg = "removed with no job handler running";
+			break;
+		}
+		scheduler.enqueueFinishedJob( job_id.cluster, job_id.proc, msg );
 	}
 	if( mode == HELD ) {
 		if( log_hold && !scheduler.WriteHoldToUserLog(job_id) ) {
@@ -7680,6 +7692,7 @@ Scheduler::child_exit(int pid, int status)
 	job_id.proc = srec->job_id.proc;
 
 	if (IsSchedulerUniverse(srec)) {
+		q_status = COMPLETED;
  		// scheduler universe process 
 		if ( daemonCore->Was_Not_Responding(pid) ) {
 			// this job was killed by daemon core because it was hung.
@@ -7689,6 +7702,7 @@ Scheduler::child_exit(int pid, int status)
 				"it was hung - will restart\n"
 				,pid);
 			set_job_status( job_id.cluster, job_id.proc, IDLE ); 
+			q_status = IDLE;
 		} else 
 		if(WIFEXITED(status)) {
 			dprintf( D_ALWAYS,
@@ -7711,6 +7725,7 @@ Scheduler::child_exit(int pid, int status)
 					// job's queue status will already be correct, so
 					// we don't have to change anything else...
 				WriteEvictToUserLog( job_id );
+				q_status = REMOVED;
 			}
 		} else 
 		if(WIFSIGNALED(status)) {
@@ -7734,9 +7749,14 @@ Scheduler::child_exit(int pid, int status)
 							WTERMSIG(status), COMPLETED );
 			} else {
 				WriteEvictToUserLog( job_id );
+				q_status = REMOVED;
 			}
 		}
 		delete_shadow_rec( pid );
+		if( q_status == REMOVED ) { 
+			enqueueFinishedJob( job_id.cluster, job_id.proc,
+								"exited after being removed" );
+		}
 	} else if (srec) {
 		char* name = NULL;
 		if( IsLocalUniverse(srec) ) {
@@ -7803,6 +7823,7 @@ Scheduler::child_exit(int pid, int status)
 				if( q_status != HELD ) {
 					set_job_status( srec->job_id.cluster,
 									srec->job_id.proc, REMOVED ); 
+					q_status = REMOVED;
 				}
 				break;
 			case JOB_EXITED:
@@ -7811,6 +7832,7 @@ Scheduler::child_exit(int pid, int status)
 				if( q_status != HELD ) {
 					set_job_status( srec->job_id.cluster,
 									srec->job_id.proc, COMPLETED ); 
+					q_status = COMPLETED;
 				}
 				break;
 			case JOB_SHOULD_HOLD:
@@ -7818,6 +7840,7 @@ Scheduler::child_exit(int pid, int status)
 						 srec->job_id.cluster, srec->job_id.proc );
 				set_job_status( srec->job_id.cluster, srec->job_id.proc, 
 								HELD );
+				q_status = HELD;
 				break;
 			case DPRINTF_ERROR:
 				dprintf( D_ALWAYS,
@@ -7856,6 +7879,11 @@ Scheduler::child_exit(int pid, int status)
 					 name, pid, daemonCore->GetExceptionString(status) );
 		}
 		delete_shadow_rec( pid );
+		if( q_status == REMOVED ) { 
+			MyString msg = name;
+			msg += " exited after job removed";
+			enqueueFinishedJob( job_id.cluster, job_id.proc, msg.Value() );
+		}
 	} else {
 		// mrec and srec are NULL - agent dies after deleting match
 		StartJobsFlag=FALSE;
@@ -9970,8 +9998,10 @@ Scheduler::jobIsFinishedHandler( ServiceData* data )
 
 
 bool
-Scheduler::enqueueFinishedJob( int cluster, int proc )
+Scheduler::enqueueFinishedJob( int cluster, int proc, const char* reason )
 {
+	dprintf( D_FULLDEBUG, "Job %d.%d is finished: %s\n", cluster, proc, 
+			 reason );
 	CondorID* id = new CondorID( cluster, proc, -1 );
 	return job_is_finished_queue.enqueue( id );
 }
