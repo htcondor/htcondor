@@ -823,7 +823,7 @@ doContactSchedd()
 
 		}
 
-dprintf(D_FULLDEBUG,"Updating classad values:\n");
+dprintf(D_FULLDEBUG,"Updating classad values for %d.%d:\n",curr_job->procID.cluster, curr_job->procID.proc);
 		char attr_name[1024];
 		char attr_value[1024];
 		ExprTree *expr;
