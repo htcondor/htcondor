@@ -53,9 +53,6 @@ OsProc::OsProc()
 
 OsProc::~OsProc()
 {
-	if (JobAd) {
-		delete JobAd;
-	}
 }
 
 int
