@@ -44,6 +44,9 @@
 #include "filter.h"
 #include "alloc.h"
 #else
+#if defined(Solaris)
+#include "_condor_fix_types.h"
+#endif
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_constants.h"

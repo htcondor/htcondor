@@ -33,6 +33,9 @@
 ****************************************************************/
 
 #define _POSIX_SOURCE
+#if defined(Solaris)
+#include "_condor_fix_types.h"
+#endif
 
 #include "condor_common.h"
 #include "condor_debug.h"
@@ -68,7 +71,6 @@ private:
 #pragma define_template List<UserRec>
 #pragma define_template Item<UserRec>
 #endif
-
 List<UserRec>	*UserList;
 UserRec			*Totals = new UserRec( "TOTAL" );
 

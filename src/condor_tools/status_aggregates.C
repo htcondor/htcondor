@@ -111,7 +111,7 @@ void  sub_rec_list::build_submittor_rec( MACH_REC *mach )
 		rec->users = -1;
 	}
 
-	if( ptr=index(mach->name,'.') ) {
+	if( ptr=strchr(mach->name,'.') ) {
 		*ptr = '\0';
 	}
 	rec->name = mach->name;
@@ -150,7 +150,7 @@ void sub_rec_list::hashinsert(MACH_REC *recin)
    if (evaluate_string("ClientMachine", &ptr2, recin->machine_context, NIL) < 0 ){
        ptr2 = "(?)";
    }
-   if ( ptr=index(ptr2,'.') ) {
+   if ( ptr=strchr(ptr2,'.') ) {
        *ptr = '\0';
    }
 
@@ -374,7 +374,7 @@ void serv_rec_list::build_server_rec( MACH_REC *mach )
 		rec->state = shorten(rec->state);
 	}
 
-	if( ptr=index(mach->name,'.') ) {
+	if( ptr=strchr(mach->name,'.') ) {
 		*ptr = '\0';
 	}
 	rec->name = mach->name;
@@ -679,7 +679,7 @@ void run_rec_list::build_run_rec( MACH_REC *mach )
         if (evaluate_string("ClientMachine", &rec->client, context, NIL) < 0 ){
             rec->client = "(?)";
         }
-        if ( ptr=index(rec->client,'.') ) {
+        if ( ptr=strchr(rec->client,'.') ) {
                 *ptr = '\0';
         }
 
@@ -722,7 +722,7 @@ void run_rec_list::build_run_rec( MACH_REC *mach )
         else //it was not in a runing state so return.
             return; 
 
-	if( ptr=index(mach->name,'.') ) {
+	if( ptr=strchr(mach->name,'.') ) {
 		*ptr = '\0';
 	}
 	rec->name = mach->name;
@@ -1050,7 +1050,7 @@ void job_rec_list::build_job_rec( MACH_REC *mach )
 	else //it was not in a runing state so return.
     	    return;
 
-        if( ptr=index(mach->name,'.') ) {
+        if( ptr=strchr(mach->name,'.') ) {
             *ptr = '\0';
 	}
 	rec->name = mach->name;
@@ -1059,7 +1059,7 @@ void job_rec_list::build_job_rec( MACH_REC *mach )
 	    rec->client = "(?)";
         }
 
-	if ( ptr=index(rec->client,'.') ) {
+	if ( ptr=strchr(rec->client,'.') ) {
 	    *ptr = '\0';
 	}
 

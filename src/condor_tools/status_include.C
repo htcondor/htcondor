@@ -1,10 +1,10 @@
 #define _POSIX_SOURCE
+#if defined(Solaris)
+#include "_condor_fix_types.h"
+#endif
 #include "status_include.h"
 
-     
-
-
-virtual void SERVER_REC::print_rec( FILE *fp )
+/*virtual ..dhaval 7/12 */ void SERVER_REC::print_rec( FILE *fp )
 {	
 	fprintf( fp, "%-14s", this->name );
 

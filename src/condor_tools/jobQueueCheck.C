@@ -34,6 +34,10 @@
 
 #define _POSIX_SOURCE
 
+#if defined(Solaris)
+#include "_condor_fix_types.h"
+#endif
+
 #include <time.h>
 #include <signal.h>
 #include "condor_common.h"

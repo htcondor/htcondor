@@ -36,6 +36,10 @@
 
 #define _POSIX_SOURCE
 
+#if defined(Solaris)
+#include "_condor_fix_types.h"
+#endif
+
 #include <time.h>
 #include "condor_common.h"
 #include <sys/stat.h>
@@ -622,7 +626,9 @@ do_unlink( const char *path )
 	if( status < 0 && errno == EACCES ) {
 		set_condor_euid();			// Try again as Condor
 		status = unlink( path );
+#if !defined(Solaris)
 		set_root_euid();
+#endif
 	}
 
 	if( status == 0 || errno == ENOENT ) {
@@ -652,7 +658,9 @@ do_stat( const char *path, struct stat *buf )
 			if( stat(path,buf) < 0 ) {
 				EXCEPT( "stat(%s,0x%x)", path, &buf );
 			}
+#if !defined(Solaris)
 			set_root_euid();
+#endif
 		}
 	}
 	return TRUE;
@@ -686,7 +694,9 @@ remove_directory( const char *name )
 	if( status < 0 && errno == EACCES) {
 		set_condor_euid();			// try again as Condor
 		status = rmdir(name);
+#if !defined(Solaris)
 		set_root_euid();
+#endif
 	}
 
 	if( status == 0 || errno == ENOENT ) {

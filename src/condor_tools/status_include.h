@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/time.h>
-#include <strings.h>   //char* index(char* char);
+#include <string.h>   //char* index(char* char);
 #include <stdlib.h>     //contains qsort(...)
 
 #include "condor_types.h" 

@@ -25,7 +25,7 @@
 ** 
 */ 
 
-#if !defined(STATUS_AGGREGATES_H)
+#if !defined(STATUS_AGGREGATES_H) || defined(Solaris)
 #define STATUS_AGGREGATES_H
 
 

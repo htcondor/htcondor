@@ -73,7 +73,7 @@ void      display_context ( CONTEXT *context );
 int       xdr_status_line(XDR *xdrs, STATUS_LINE *line );
 XDR*      xdr_Init( int *sock, XDR *xdrs );
 void      config( char *a_out_name, CONTEXT *context );
-void      bzero( char *, int );  
+void*     memset( void *,int, unsigned int );  
 char*     strdup();              
 void       printTimeAndColl();
 }
@@ -634,7 +634,7 @@ void get_status( int argc, char *argv[], XDR *xdrs )
 			EXCEPT("Out of memory");
 		}
 
-		bzero( (char *)rec, sizeof(MACH_REC) );
+		memset( (char *)rec,0, sizeof(MACH_REC) );
 		rec->machine_context = create_context();
 		ASSERT( xdr_mach_rec(xdrs, rec) );
 		if( !rec->name || !rec->name[0] ) {
@@ -674,7 +674,7 @@ int selected( char *name, int argc, char *argv[] )
 	}
 
 	for( i=0; i<argc; i++ ) {
-		if( ptr=index(name,'.') ) {
+		if( ptr=strchr(name,'.') ) {
 			*ptr = '\0';
 		}
 		if( strcmp(argv[i],name) == MATCH ) {
@@ -696,7 +696,7 @@ void display_virt_mem( MACH_REC *ptr )
 	arch = eval( "Arch", ptr->machine_context, (CONTEXT *)0 );
 	opsys = eval( "OpSys", ptr->machine_context, (CONTEXT *)0 );
 
-	if( p=index(ptr->name,'.') ) {
+	if( p=strchr(ptr->name,'.') ) {
 		*p = '\0';
 	}
 	fprintf( stderr, "%-14s ", ptr->name );
