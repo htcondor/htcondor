@@ -1,3 +1,6 @@
+#ifndef _FILE_STATE_H
+#define _FILE_STATE_H
+
 #include <limits.h>
 #include <sys/types.h>
 
@@ -38,15 +41,21 @@ class OpenFileTable {
 public:
 	OpenFileTable();
 	void Display();
-	int RecordOpen( int fd, const char *path, int flags, int method );
-	void RecordClose( int fd );
-	int RecordPreOpen( int fd );
-	int RecordDup( int fd );
-	int RecordDup2( int fd, int dupfd );
+	void Save();
+	void Restore();
+	int PreOpen( int fd );
+	int DoOpen( const char *path, int flags, int mode );
+	int DoClose( int fd );
+	int DoDup( int fd );
+	int DoDup2( int fd, int dupfd );
 	int	Map( int user_fd );
+	BOOL IsDup( int user_fd );
 private:
 	int		find_avail( int start );
+	void	fix_dups( int user_fd );
 	File	file[_POSIX_OPEN_MAX];
 };
 
 char *string_copy( const char *);
+
+#endif

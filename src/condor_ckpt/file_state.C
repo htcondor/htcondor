@@ -1,15 +1,43 @@
+/*************************************************************
+**
+** Manage a table of open file descriptors.
+**
+** Includes stubs for those system calls which affect the table of
+** open file descriptors such as open(), close(), dup(), dup2(), etc.
+**
+** Includes C interface routine MapFd() used by other system call
+** stubs which don't affect the open file table.
+**
+** Also included is the C routine DumpOpenFds() for debugging.
+**
+*************************************************************/
+
+#define _POSIX_SOURCE
+
 #include <stdio.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <syscall.h>
+#include <stdarg.h>
+#include <sys/types.h>
 #include "file_state.h"
-#include "c_proto.h"
+#include "condor_constants.h"
+#include "condor_syscalls.h"
+#include "file_table_interf.h"
+
+static const int FI_RSC =			0; 		/* access via remote sys calls   */
+static const int FI_OPEN =			1<<0;	/* file is open             	 */
+static const int FI_DUP =			1<<1;	/* file is a dup of 'fi_fdno'    */
+static const int FI_PREOPEN =		1<<2;	/* file was opened previously    */
+static const int FI_NFS =			1<<3;	/* access via direct sys calls   */
+static const int FI_DIRECT =		1<<3;
+static const int FI_WELL_KNOWN =	1<<4;	/* connection to shadow          */
 
 static OpenFileTable	FileTab;
 static char				Condor_CWD[ _POSIX_PATH_MAX ];
-static int				SyscallMode;
 
 char * shorten( char *path );
 
@@ -29,7 +57,13 @@ File::~File()
 
 OpenFileTable::OpenFileTable()
 {
+	SetSyscalls( SYS_UNMAPPED | SYS_LOCAL );
 	getcwd( Condor_CWD, sizeof(Condor_CWD) );
+	PreOpen( 0 );
+	PreOpen( 1 );
+	PreOpen( 2 );
+
+	SetSyscalls( SYS_MAPPED | SYS_LOCAL );
 }
 
 
@@ -73,13 +107,26 @@ File::Display()
 }
 
 int
-OpenFileTable::RecordOpen( int fd, const char *path, int flags, int method )
+OpenFileTable::DoOpen( const char *path, int flags, int mode )
 {
-	int	i;
+	int	user_fd;
+	int	real_fd;
 	char	buf[ _POSIX_PATH_MAX ];
 
+		// Try to open the file
+	if( LocalSysCalls() ) {
+		real_fd = syscall( SYS_open, path, flags, mode );
+	} else {
+		real_fd = REMOTE_syscall( SYS_open, path, flags, mode );
+	}
+
+		// Stop here if there was an error
+	if( real_fd < 0 ) {
+		return -1;
+	}
+
 		// find an unused fd
-	if( (i = find_avail(0)) < 0 ) {
+	if( (user_fd = find_avail(0)) < 0 ) {
 		errno = EMFILE;
 		return -1;
 	}
@@ -87,50 +134,56 @@ OpenFileTable::RecordOpen( int fd, const char *path, int flags, int method )
 		// set the file access mode
 	switch( flags & O_ACCMODE ) {
 	  case O_RDONLY:
-		file[i].readable = TRUE;
-		file[i].writeable = FALSE;
+		file[user_fd].readable = TRUE;
+		file[user_fd].writeable = FALSE;
 		break;
 	  case O_WRONLY:
-		file[i].readable = FALSE;
-		file[i].writeable = TRUE;
+		file[user_fd].readable = FALSE;
+		file[user_fd].writeable = TRUE;
 		break;
 	  case O_RDWR:
-		file[i].readable = TRUE;
-		file[i].writeable = TRUE;
+		file[user_fd].readable = TRUE;
+		file[user_fd].writeable = TRUE;
 		break;
 	  default:
-		errno = EINVAL;
-		return -1;
+		fprintf( stderr, "Opened file in unknown mode\n" );
+		abort();
 	}
 
-	file[i].open = TRUE;
-	file[i].duplicate = FALSE;
-	file[i].pre_opened = FALSE;
-	file[i].remote_access = method == FI_RSC;
-	file[i].shadow_sock = FALSE;
-	file[i].offset = 0;
-	file[i].fd_num = fd;
+	file[user_fd].open = TRUE;
+	file[user_fd].duplicate = FALSE;
+	file[user_fd].pre_opened = FALSE;
+	file[user_fd].remote_access = RemoteSysCalls();
+	file[user_fd].shadow_sock = FALSE;
+	file[user_fd].offset = 0;
+	file[user_fd].fd_num = real_fd;
 	if( path[0] == '/' ) {
-		file[i].pathname = string_copy( path );
+		file[user_fd].pathname = string_copy( path );
 	} else {
 		sprintf( buf, "%s/%s", Condor_CWD, path );
-		file[i].pathname = string_copy( buf );
+		file[user_fd].pathname = string_copy( buf );
 	}
-	return i;
+	return user_fd;
 }
 
-void
-OpenFileTable::RecordClose( int fd )
+int
+OpenFileTable::DoClose( int fd )
 {
 
 	BOOL	was_duped;
 	int		new_base_file;
 	int		i;
+	int		rval;
+
+	if( !file[fd].isOpen() ) {
+		errno = EBADF;
+		return -1;
+	}
 
 		// See if this file is a dup of another
 	if( file[fd].isDup() ) {
 		file[fd].open = FALSE;
-		return;
+		return 0;
 	}
 
 		// Look for another file which is a dup of this one
@@ -145,10 +198,15 @@ OpenFileTable::RecordClose( int fd )
 
 		// simple case, no dups - just clean up
 	if( !was_duped )  {
+		if( file[fd].isRemoteAccess() ) {
+			rval = REMOTE_syscall( SYS_close, file[fd].fd_num );
+		} else {
+			rval = syscall( SYS_close, file[fd].fd_num );
+		}
 		file[fd].open = FALSE;
 		delete [] file[fd].pathname;
 		file[fd].pathname = NULL;
-		return;
+		return rval;
 	}
 
 		// make this one the non-duplicate fd
@@ -162,13 +220,17 @@ OpenFileTable::RecordClose( int fd )
 		}
 	}
 
-		// close the original fd
-		// careful - don't delete the pathname
+		// Mark the original fd as closed.  Careful
+		// don't really close it or delete the pathname -
+		// those are in use by duplicates.
 	file[fd].open = FALSE;
+
+	return rval;
 }
 
+
 int
-OpenFileTable::RecordPreOpen( int fd )
+OpenFileTable::PreOpen( int fd )
 {
 		// Make sure fd not already open
 	if( file[fd].isOpen() ) {
@@ -196,7 +258,7 @@ OpenFileTable::RecordPreOpen( int fd )
 	file[fd].open = TRUE;
 	file[fd].duplicate = FALSE;
 	file[fd].pre_opened = TRUE;
-	file[fd].remote_access = TRUE;
+	file[fd].remote_access = RemoteSysCalls();
 	file[fd].shadow_sock = FALSE;
 	file[fd].offset = 0;
 	file[fd].fd_num = fd;
@@ -222,7 +284,7 @@ OpenFileTable::find_avail( int start )
 OpenFileTable::Map( int user_fd )
 {
 		// See if we are in "mapped" mode
-	if( SyscallMode == SYS_UNMAPPED ) {
+	if( ! MappingFileDescriptors() ) {
 		return user_fd;
 	}
 
@@ -235,7 +297,8 @@ OpenFileTable::Map( int user_fd )
 	return file[user_fd].fd_num;
 }
 
-OpenFileTable::RecordDup2( int orig_fd, int new_fd )
+int
+OpenFileTable::DoDup2( int orig_fd, int new_fd )
 {
 		// error if orig_fd not open
 	if( ! file[orig_fd].isOpen() ) {
@@ -250,18 +313,21 @@ OpenFileTable::RecordDup2( int orig_fd, int new_fd )
 	}
 
 		// POSIX.1 says do it this way, AIX does it differently - any
-		// AIX programs which depend on that behavior are hosed...
+		// AIX programs which depend on that behavior are now hosed...
 	if( file[new_fd].isOpen() ) {
-		close( new_fd );
+		DoClose( new_fd );
 	}
 
 		// make new fd a duplicate of the original one
 	file[new_fd] = file[orig_fd];
 	file[new_fd].duplicate = TRUE;
 	file[new_fd].dup_of = orig_fd;
+
+	return new_fd;
 }
 
-OpenFileTable::RecordDup( int user_fd )
+int
+OpenFileTable::DoDup( int user_fd )
 {
 	int		new_fd;
 
@@ -275,7 +341,103 @@ OpenFileTable::RecordDup( int user_fd )
 		return -1;
 	}
 
-	return RecordDup2( user_fd, new_fd );
+	return DoDup2( user_fd, new_fd );
+}
+
+void
+OpenFileTable::Save()
+{
+	int		i;
+	off_t	pos;
+	File	*f;
+
+	for( i=0; i<_POSIX_OPEN_MAX; i++ ) {
+		f = &file[i];
+		if( f->isOpen() && !f->isDup() ) {
+			if( f->isRemoteAccess() ) {
+				pos = REMOTE_syscall( SYS_lseek, f->fd_num, (off_t)0, SEEK_CUR);
+			} else {
+				if( isatty(f->fd_num) ) {
+					pos = off_t( 0 );
+				} else {
+					pos = syscall( SYS_lseek, f->fd_num, (off_t)0, SEEK_CUR);
+				}
+			}
+			if( pos < (off_t)0 ) {
+				perror( "lseek" );
+				abort();
+			}
+			f->offset = pos;
+		}
+	}
+}
+
+/*
+  The given user_fd has been re-opened after a checkpoint, and may have a
+  differend fd_num now than it did at the time of the checkpoint.  Here
+  we go through the open file table, and fix up the fd_num of any
+  duplicates of this file.
+*/
+void
+OpenFileTable::fix_dups( int user_fd  )
+{
+	int		i;
+
+	for( i=0; i<_POSIX_OPEN_MAX; i++ ) {
+		if( file[i].isOpen() && file[i].isDup() && file[i].dup_of == user_fd ) {
+			file[i].fd_num = file[user_fd].fd_num;
+		}
+	}
+}
+
+void
+OpenFileTable::Restore()
+{
+	int		i;
+	off_t	pos;
+	File	*f;
+	mode_t	mode;
+
+	if( RemoteSysCalls() ) {
+		SetSyscalls( SYS_REMOTE | SYS_UNMAPPED );
+	} else {
+		SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+	}
+		
+
+	for( i=0; i<_POSIX_OPEN_MAX; i++ ) {
+		f = &file[i];
+		if( f->isOpen() && !f->isDup() && !f->isPreOpened() ) {
+			if( f->isWriteable() && f->isReadable() ) {
+				mode = O_RDWR;
+			} else if( f->isWriteable() ) {
+				mode = O_WRONLY;
+			} else if( f->isReadable() ) {
+				mode = O_RDONLY;
+			} else {
+				mode = (mode_t)0;
+			}
+				// This is not quite right yet - we need to learn whether
+				// the file is opened locally or remotely this time around,
+				// and set f->remote_access accordingly.
+			f->fd_num = open( f->pathname, mode );
+			if( f->fd_num < 0 ) {
+				perror( "open" );
+				abort();
+			}
+			pos = lseek( f->fd_num, f->offset, SEEK_SET );
+			if( pos != f->offset ) {
+				perror( "lseek" );
+				abort();
+			}
+			fix_dups( i );
+		}
+	}
+	if( RemoteSysCalls() ) {
+		SetSyscalls( SYS_REMOTE | SYS_MAPPED );
+	} else {
+		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
+	}
 }
 
 
@@ -323,51 +485,108 @@ shorten( char *path )
 
 extern "C" {
 
-void DumpOpenFds()
+
+#if defined( SYS_open )
+int
+open( const char *path, int flags, ... )
+{
+	va_list ap;
+	int		creat_mode = 0;
+
+	if( flags & O_CREAT ) {
+		va_start( ap, flags );
+		creat_mode = va_arg( ap, int );
+	}
+
+	if( MappingFileDescriptors() ) {
+		return FileTab.DoOpen( path, flags, creat_mode );
+	} else {
+		if( LocalSysCalls() ) {
+			return syscall( SYS_open, path, flags, creat_mode );
+		} else {
+			return REMOTE_syscall( SYS_open, path, flags, creat_mode );
+		}
+	}
+}
+#endif
+
+#if defined( SYS_close )
+int
+close( int fd )
+{
+	if( MappingFileDescriptors() ) {
+		return FileTab.DoClose( fd );
+	} else {
+		if( LocalSysCalls() ) {
+			return syscall( SYS_close, fd );
+		} else {
+			return REMOTE_syscall( SYS_close, fd );
+		}
+	}
+}
+#endif
+
+#if defined(SYS_dup)
+int
+dup( int old )
+{
+	if( MappingFileDescriptors() ) {
+		return FileTab.DoDup( old );
+	}
+
+	if( LocalSysCalls() ) {
+		return syscall( SYS_dup, old );
+	} else {
+		return REMOTE_syscall( SYS_dup, old );
+	}
+}
+#endif
+
+#if defined(SYS_dup2)
+int
+dup2( int old, int new_fd )
+{
+	int		rval;
+
+	if( MappingFileDescriptors() ) {
+		rval =  FileTab.DoDup2( old, new_fd );
+		return rval;
+	}
+
+	if( LocalSysCalls() ) {
+		rval =  syscall( SYS_dup2, old, new_fd );
+	} else {
+		rval =  REMOTE_syscall( SYS_dup2, old, new_fd );
+	}
+
+	return rval;
+}
+#endif
+
+
+void
+DumpOpenFds()
 {
 	FileTab.Display();
 }
 
-int
-MarkFileOpen( int fd, const char *path, int flags, int method )
-{
-	return FileTab.RecordOpen( fd, path, flags, method );
-}
 
 int
-PreOpen( int fd )
-{
-	return FileTab.RecordPreOpen( fd );
-}
-
-void
-MarkFileClosed( int fd )
-{
-	FileTab.RecordClose( fd );
-}
-
-int
-SetSyscalls( int mode )
-{
-	int	answer;
-	answer = SyscallMode;
-	SyscallMode = mode;
-	return answer;
-}
-
 MapFd( int user_fd )
 {
 	return FileTab.Map( user_fd );
 }
 
-int DoDup( int user_fd )
+void
+SaveFileState()
 {
-	return FileTab.RecordDup( user_fd );
+	FileTab.Save();
 }
 
-int DoDup2( int orig_fd, int new_fd )
+void
+RestoreFileState()
 {
-	return FileTab.RecordDup2( orig_fd, new_fd );
+	FileTab.Restore();
 }
 
 } // end of extern "C"
