@@ -35,7 +35,7 @@
 
 #define PlatformFlags	-DSolaris27=Solaris27
 
-#define PlatformLdFlags -ldl -lkstat -lelf -lsocket -lnsl -lm -lc \
+#define PlatformLdFlags -ldl -lkstat -lelf -lsocket -lnsl -lm -lc -lresolv \
   -Xlinker -B -Xlinker static -lstdc++ -lgcc 
 
 #define Strip /s/binutils-2.9.1/bin/strip

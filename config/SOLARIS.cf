@@ -103,7 +103,7 @@
     libs, not all the other stuff for static linking, gcc, etc.  This
     is common to all versions of Solaris, so we can do it here.
 */
-#define TestPlatformLdFlags -lnsl -lsocket 
+#define TestPlatformLdFlags -lnsl -lsocket -lresolv
 
 /*
     When we're linking for purify, we don't want all the static crap,

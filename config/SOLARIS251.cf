@@ -35,5 +35,5 @@
    On Solaris 2.5.1, we use the GNU ld, instead of the vendor ld.  GNU
    ld expects -Bstatic, while the vendor ld expects -B static...
 */
-#define PlatformLdFlags -ldl -lkstat -lelf -lsocket -lnsl -lm -lc \
+#define PlatformLdFlags -ldl -lkstat -lelf -lsocket -lnsl -lm -lc -lresolv \
   -Xlinker -Bstatic -lstdc++ -lgcc
