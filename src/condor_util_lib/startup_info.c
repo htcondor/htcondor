@@ -22,12 +22,10 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-#include "condor_jobqueue.h"
 #include "condor_constants.h"
 #include "condor_debug.h"
 #include "startup.h"
 #include "proc.h"
-static char *_FileName_ = __FILE__;
 
 void
 display_startup_info( const STARTUP_INFO *s, int flags )
