@@ -158,6 +158,17 @@ SetViewInfo( ClassAdCollection *coll, ClassAd *ad )
 		partitionExprs = (ExprList*) tmp;
 	}
 
+	// Preserve the view name and parent view name.
+	ClassAd  *eval;
+	string view_name, parent_view_name;
+
+	eval = evalEnviron.GetLeftAd();
+	eval->EvaluateAttrString("ViewName", view_name);
+	eval->EvaluateAttrString("ParentViewName", parent_view_name);
+
+	ad->InsertAttr("ViewName", view_name);
+	ad->InsertAttr("ParentViewName", parent_view_name);
+
 	if( !evalEnviron.ReplaceLeftAd( ad ) ) {
 		CondorErrMsg+="; could not replace view info; failed to set view info";
 		return( false );
