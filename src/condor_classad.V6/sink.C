@@ -31,6 +31,7 @@ BEGIN_NAMESPACE( classad )
 ClassAdUnParser::
 ClassAdUnParser()
 {
+	oldClassAd = false;
 }
 
 
@@ -136,7 +137,16 @@ Unparse( string &buffer, Value &val )
 		case Value::BOOLEAN_VALUE: {
 			bool b;
 			val.IsBooleanValue( b );
-			buffer += b ? "true" : "false";
+//			buffer += b ? "true" : "false";
+
+				// back compatibility only - NAC
+			if( oldClassAd ){					// NAC
+				buffer += b ? "1" : "0";		// NAC
+			}									// NAC
+			else{								// NAC
+				buffer += b ? "true" : "false";	// NAC
+			}									// NAC
+
 			return;
 		}
 		case Value::UNDEFINED_VALUE: {
@@ -370,6 +380,23 @@ UnparseAux(string &buffer, Operation::OpKind op, ExprTree *t1, ExprTree *t2,
 		buffer += ']';
 		return;
 	}
+
+		// back compatibility only - NAC
+	if( oldClassAd ) {
+		Unparse( buffer, t1 );
+		if( op==Operation::META_EQUAL_OP ) {
+			buffer += " =?= ";
+		}
+		else if( op==Operation::META_NOT_EQUAL_OP ) {
+			buffer += " =!= ";
+		}
+		else {
+			buffer += opString[op];
+		}
+		Unparse( buffer, t2 );
+		return;
+	}
+
 		// all others are binary ops
 	Unparse( buffer, t1 );
 	buffer += opString[op];
@@ -415,6 +442,19 @@ UnparseAux( string &buffer, vector<ExprTree*>& exprs )
 		if( itr+1 != exprs.end( ) ) buffer += ',';
 	}
 	buffer += " }";
+}
+
+// back compatibility only - NAC
+void ClassAdUnParser::
+SetOldClassAd( bool b )
+{
+	oldClassAd = b;
+}
+
+bool ClassAdUnParser::
+GetOldClassAd()
+{
+	return oldClassAd;
 }
 
 

@@ -50,9 +50,13 @@ class ClassAdUnParser
 
 		/** Unparse an expression 
 		 * 	@param buffer The string to unparse to
-		 * 	@param val The expression to unparse
+		 * 	@param expr The expression to unparse
 		 */
 		void Unparse( string &buffer, ExprTree *expr );
+
+			//	for backcompatibility only - NAC
+		void SetOldClassAd( bool );
+		bool GetOldClassAd();
 
 		virtual void UnparseAux( string &buffer,Value&,Value::NumberFactor );	
 		virtual void UnparseAux( string &buffer, ExprTree *tree, 
@@ -67,6 +71,9 @@ class ClassAdUnParser
 
 		// table of string representation of operators
 		static char *opString[];
+
+ protected:
+		bool oldClassAd;
 };
 
 

@@ -53,24 +53,28 @@ bool getOldClassAd( Stream *sock, ClassAd& ad )
 	ad.Clear( );
 	sock->decode( );
 	if( !sock->code( numExprs ) ) {
-		return false;
+ 		return false;
 	}
 
 		// pack exprs into classad
 	buffer = "[";
 	for( int i = 0 ; i < numExprs ; i++ ) {
 		tmp = NULL;
-		if( !sock->get( inputLine ) ) return( false );
+		if( !sock->get( inputLine ) ) { 
+			return( false );	 
+		}		
+
 		buffer += string(inputLine) + ";";
 		free( tmp );
 	}
 	buffer += "]";
 
 		// get type info
-	if (!sock->get(inputLine)||!ad.InsertAttr("MyType",inputLine)) {
+	if (!sock->get(inputLine)||!ad.InsertAttr("MyType",(string)inputLine)) {
 		return false;
 	}
-	if (!sock->get(inputLine)||!ad.InsertAttr("TargetType",inputLine)) {
+	if (!sock->get(inputLine)|| !ad.InsertAttr("TargetType",
+											   (string)inputLine)) {
 		return false;
 	}
 
@@ -86,11 +90,57 @@ bool getOldClassAd( Stream *sock, ClassAd& ad )
 	return true;
 }
 
+
+bool getOldClassAdNoTypes( Stream *sock, ClassAd& ad )
+{
+	ClassAdParser	parser;
+	int 			numExprs;
+	string			buffer;
+	char			*tmp;
+	ClassAd			*upd=NULL;
+	static char		*inputLine = new char[ 10240 ];
+
+
+	ad.Clear( );
+	sock->decode( );
+	if( !sock->code( numExprs ) ) {
+ 		return false;
+	}
+
+		// pack exprs into classad
+	buffer = "[";
+	for( int i = 0 ; i < numExprs ; i++ ) {
+		tmp = NULL;
+		if( !sock->get( inputLine ) ) { 
+			return( false );	 
+		}		
+
+		buffer += string(inputLine) + ";";
+		free( tmp );
+	}
+	buffer += "]";
+
+		// parse ad
+	if( !( upd = parser.ParseClassAd( buffer ) ) ) {
+		return( false );
+	}
+
+		// put exprs into ad
+	ad.Update( *upd );
+	delete upd;
+
+	return true;
+}
+
+
+
 bool putOldClassAd ( Stream *sock, ClassAd& ad )
 {
 	ClassAdUnParser	unp;
 	string			buf;
 	ExprTree		*expr;
+
+	unp.SetOldClassAd(true);  // NAC
 
 	int numExprs=0;
 	ClassAdIterator itor(ad);
