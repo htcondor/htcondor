@@ -42,7 +42,7 @@ OpenSSL_LIB        = $(OpenSSL_LIB_PATH)/libssl.a $(OpenSSL_LIB_PATH)/libcrypto.
 /* Top should be the root of the source directory you want to use if
 you want our top-level Makefile to build the directory tree with all
 the soft links.  The links will point back to Top/src/... */
-#define Top /scratch/hbwang/63
+#define Top /scratch/hbwang/tmp
 
 #define TmpDir		/tmp
 
@@ -78,11 +78,11 @@ the soft links.  The links will point back to Top/src/... */
 
 #define WANT_NETMAN	YES
 
-#define WANT_KERBEROS   YES 
-#define CONDOR_3DES_ENCRYPTION  YES
-#define CONDOR_BLOWFISH YES
+#define WANT_KERBEROS   NO
+#define CONDOR_3DES_ENCRYPTION  NO
+#define CONDOR_BLOWFISH_ENCRYPTION NO
 
-#define WANT_X509       YES
+#define WANT_X509       NO
 /*------------------------------------------
  * Condor Credential API related
  *------------------------------------------*/
