@@ -56,6 +56,8 @@ extern void _sigreturn();
 #define NUM_SIGS 50   /* error on the high side... */
 #endif
 
+void display_sigstate( int line, const char * file );
+
 typedef struct sigstack SS_TYPE;
 
 struct signal_states_struct {
@@ -79,6 +81,7 @@ condor_save_sigstates()
 	int sig;
 
     scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
+
 
 	/* Save the user's signal mask */
 	sigprocmask(SIG_SETMASK,NULL,&(signal_states.user_mask));
@@ -191,6 +194,7 @@ condor_restore_sigstates()
 	(void) SetSyscalls( scm );
 }
 
+
 #if defined (SYS_sigvec)
 #if defined(HPUX9)
 sigvector( sig, vec, ovec )
@@ -207,7 +211,7 @@ struct sigvec *ovec;
 	if( ! MappingFileDescriptors() ) {
 #if defined(HPUX9)
 			rval = syscall( SYS_sigvector, sig, vec, ovec );
-#elif defined(SYS_sigvec)
+#elif defined(SYS_sigvec) && !defined(SUNOS41)
 			rval = syscall( SYS_sigvec, sig, vec, ovec );
 #else
 			rval = SIGVEC( sig, vec, ovec );
@@ -229,6 +233,7 @@ struct sigvec *ovec;
 				nvec.sv_mask |= sigmask( SIGTSTP );
 				nvec.sv_mask |= sigmask( SIGUSR1 );
 			}
+
 #if defined(HPUX9)
 			rval = syscall( SYS_sigvector, sig, vec ? &nvec : vec, ovec );
 #elif defined(SYS_sigvec) && !defined(SUNOS41)
@@ -249,56 +254,17 @@ struct sigvec *ovec;
 
 #if defined (SYS_sigvec)
 #if defined(HPUX9)
-_sigvector( sig, vec, ovec )
-#else
-_sigvec( sig, vec, ovec )
-#endif
-int sig;
-const struct sigvec *vec;
-struct sigvec *ovec;
+_sigvector( int sig, const struct sigvec vec, struct sigvec ovec )
 {
-	int rval;
-	struct	sigvec	nvec;
-
-	if( ! MappingFileDescriptors() ) {
-#if defined(HPUX9)
-			rval = syscall( SYS_sigvector, sig, vec, ovec );
-#elif defined(SYS_sigvec)
-			rval = syscall( SYS_sigvec, sig, vec, ovec );
+	sigvector( sig, vec, ovec );
+}
 #else
-			rval = SIGVEC( sig, vec, ovec );
-#endif
-	} else {
-		switch (sig) {
-				/* disallow the special Condor signals */
-				/* this list could be shortened */
-		case SIGUSR1:
-		case SIGTSTP:
-		case SIGCONT:
-			rval = -1;
-			errno = EINVAL;
-			break;
-		default:
-			if (vec) {
-				bcopy( (char *) vec, (char *) &nvec, sizeof nvec );
-				/* while in the handler, block checkpointing */
-				nvec.sv_mask |= sigmask( SIGTSTP );
-				nvec.sv_mask |= sigmask( SIGUSR1 );
-			}
-#if defined(HPUX9)
-			rval = syscall( SYS_sigvector, sig, vec ? &nvec : vec, ovec );
-#elif defined(SYS_sigvec) && !defined(SUNOS41)
-			rval = syscall( SYS_sigvec, sig, vec ? &nvec : vec, ovec );
-#else
-			rval = SIGVEC( sig, vec ? &nvec : vec, ovec );
-#endif
-			break;
-		}
-	}
-
-	return( rval );
+_sigvec( int sig, const struct sigvec vec, struct sigvec ovec )
+{
+	sigvec( sig, vec, ovec );
 }
 #endif
+
 
 #if defined(SYS_sigblock)
 MASK_TYPE 
@@ -372,6 +338,7 @@ MASK_TYPE mask;
 	return rval;
 }
 #endif
+
 
 #if defined(SYS_sigaction)
 int
@@ -490,3 +457,36 @@ void (*func)(int);
 }
 #endif
 
+
+#if 0
+void
+display_sigstate( int line, const char * file )
+{
+	int			scm;
+	int			i;
+	sigset_t	pending_sigs;
+	sigset_t	blocked_sigs;
+	struct sigaction	act;
+	int			pending, blocked;
+
+	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
+	sigpending( &pending_sigs );
+	sigprocmask(SIG_SETMASK,NULL,&blocked_sigs);
+
+	dprintf( D_ALWAYS, "At line %d in file %s ==============\n", line, file );
+	for( i=1; i<NSIG; i++ ) {
+		sigaction( i, NULL, &act );
+
+		pending = sigismember( &pending_sigs, i );
+		blocked = sigismember( &blocked_sigs, i );
+		dprintf( D_ALWAYS, "%d %s pending %s blocked handler = 0x%p\n",
+			i,
+			pending ? "IS " : "NOT",
+			blocked ? "IS " : "NOT",
+			act.sa_handler
+		);
+	}
+	dprintf( D_ALWAYS, "====================================\n" );
+	SetSyscalls( scm );
+}
+#endif
