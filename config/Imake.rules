@@ -19,6 +19,14 @@
 DEMANGLE = 2>&1 | Demangler
 #endif
 
+/* Since the *_target macros use the objlist and libs variables BOTH
+	for the link line AND the dependency list, we get screwed if we
+	ever need to pass special flags or something in the libs variable
+	via the *_target macro since those flags show up in the dependancy
+	line and screw up make. So, these are the things we are going
+	to allow to exist on the dependancy line for the program. */
+#define DEP_FILTER %.o %.a %.so %.la
+
 /* print out information about the function I'm translating. */
 #define func(x)[Concat(FUNC_,x):__LINE__]
 
@@ -131,7 +139,7 @@ XCOMM End translation of func(library_target)
 #ifndef program_target
 #define	program_target(program,objlist,libs)		@@\
 XCOMM Begin translation of func(program_target) @@\
-program: objlist						@@\
+program: $(filter DEP_FILTER,objlist libs)						@@\
 	$(PRELINK_C) $(PRELINK_C_FLAGS) -o __prelink__.o objlist libs @@\
 	$(C_LINK) $(CFLAGS) -o program __prelink__.o $(ALL_LDFLAGS)	@@\
 	rm -f __prelink__.o @@\
@@ -146,7 +154,7 @@ XCOMM End translation of func(program_target)
 #ifndef program_target
 #define	program_target(program,objlist,libs)		@@\
 XCOMM Begin translation of func(program_target) @@\
-program: objlist						@@\
+program: $(filter DEP_FILTER,objlist libs)						@@\
 	$(C_LINK) $(CFLAGS) -o program objlist libs $(ALL_LDFLAGS)	@@\
 clean::								@@\
 	rm -f program objlist			@@\
@@ -165,7 +173,7 @@ XCOMM End translation of func(program_target)
 #ifndef program_target_complex
 #define	program_target_complex(program,objlist,comflags,linkflags,libs)	@@\
 XCOMM Begin translation of func(program_target_complex) @@\
-program: objlist						@@\
+program: $(filter DEP_FILTER,objlist libs)						@@\
 	$(PRELINK_C) $(PRELINK_C_FLAGS) comflags -o __prelink__.o \
 		objlist libs @@\
 	$(C_LINK) comflags -o program __prelink__.o linkflags	@@\
@@ -180,7 +188,7 @@ XCOMM End translation of func(program_target_complex)
 #ifndef program_target_complex
 #define	program_target_complex(program,objlist,comflags,linkflags,libs)	@@\
 XCOMM Begin translation of func(program_target_complex) @@\
-program: objlist						@@\
+program: $(filter DEP_FILTER,objlist libs)						@@\
 	$(C_LINK) comflags -o program objlist libs linkflags	@@\
 clean::								@@\
 	rm -f program objlist			@@\
@@ -197,7 +205,7 @@ XCOMM End translation of func(program_target_complex)
 #ifndef c_plus_target
 #define	c_plus_target(program,objlist,libs)			@@\
 XCOMM Begin translation of func(c_plus_target) @@\
-program: objlist						@@\
+program: $(filter DEP_FILTER,objlist libs)						@@\
 	$(PRELINK_CPP) $(PRELINK_CPP_FLAGS) -o __prelink__.o objlist libs @@\
 	$(CC_LINK) $(C_PLUS_FLAGS) -o program __prelink__.o \
 		$(ALL_LDFLAGS) $(DEMANGLE)			@@\
@@ -212,7 +220,7 @@ XCOMM End translation of func(c_plus_target)
 #ifndef c_plus_target
 #define	c_plus_target(program,objlist,libs)			@@\
 XCOMM Begin translation of func(c_plus_target) @@\
-program: objlist						@@\
+program: $(filter DEP_FILTER,objlist libs)						@@\
 	$(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs \
 		$(ALL_LDFLAGS) $(DEMANGLE)			@@\
 clean::								@@\
@@ -231,7 +239,7 @@ XCOMM End translation of func(c_plus_target)
 #ifndef c_plus_target_complex
 #define	c_plus_target_complex(program,objlist,comflags,linkflags,libs)	@@\
 XCOMM Begin translation of func(c_plus_target_complex) @@\
-program: objlist						@@\
+program: $(filter DEP_FILTER,objlist libs)						@@\
 	$(PRELINK_CPP) $(PRELINK_CPP_FLAGS) comflags -o __prelink__.o \
 		objlist libs @@\
 	$(CC_LINK) comflags -o program __prelink__.o linkflags $(DEMANGLE)	@@\
@@ -246,7 +254,7 @@ XCOMM End translation of func(c_plus_target_complex)
 #ifndef c_plus_target_complex
 #define	c_plus_target_complex(program,objlist,comflags,linkflags,libs)	@@\
 XCOMM Begin translation of func(c_plus_target_complex) @@\
-program: objlist						@@\
+program: $(filter DEP_FILTER,objlist libs)						@@\
 	$(CC_LINK) comflags -o program objlist libs linkflags $(DEMANGLE)	@@\
 clean::								@@\
 	rm -f program objlist			@@\
@@ -576,7 +584,7 @@ dir/program: program.static				@@\
 	cp program.static dir/program			@@\
 	chmod EXECUTABLE_MODE dir/program			@@\
 	$(STRIP) dir/program				@@\
-program.static: objlist					@@\
+program.static: $(filter DEP_FILTER,objlist libs)					@@\
 	$(PRELINK_CPP) $(PRELINK_CPP_FLAGS) -o __prelink__.o objlist libs @@\
 	$(CC_LINK) $(STATIC)  $(C_PLUS_FLAGS) -o program.static __prelink__.o $(ALL_LDFLAGS) $(DEMANGLE) @@\
 	rm -f __prelink__.o @@\
@@ -603,7 +611,7 @@ dir/program: program.static				@@\
 	cp program.static dir/program			@@\
 	chmod EXECUTABLE_MODE dir/program			@@\
 	$(STRIP) dir/program				@@\
-program.static: objlist 				@@\
+program.static: $(filter DEP_FILTER,objlist libs) 				@@\
 	$(CC_LINK) $(STATIC)  $(C_PLUS_FLAGS) -o program.static objlist libs $(ALL_LDFLAGS) $(DEMANGLE) @@\
 clean:: 							@@\
 	rm -f program.static objlist				@@\
@@ -916,7 +924,7 @@ XCOMM End translation of func(static_both_tarball)
 #ifndef pure_c_plus_target
 #define	pure_c_plus_target(program,objlist,libs)	@@\
 XCOMM Begin translation of func(pure_c_plus_target)	@@\
-program: objlist					@@\
+program: $(filter DEP_FILTER,objlist libs)					@@\
 	purify -g++=yes -inuse-at-exit=yes -chain-length=50 -cache-dir=$(PURE_CACHE_DIR) purecov -g++=yes $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)	@@\
 clean::							@@\
 	rm -f program objlist		@@\
@@ -926,7 +934,7 @@ XCOMM End translation of func(pure_c_plus_target)
 #ifndef purify_c_plus_target
 #define	purify_c_plus_target(program,objlist,libs)	@@\
 XCOMM Begin translation of func(purify_c_plus_target)	@@\
-program: objlist					@@\
+program: $(filter DEP_FILTER,objlist libs)					@@\
 	purify -g++=yes -inuse-at-exit=yes -chain-length=50 PureCollector $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)	@@\
 clean::							@@\
 	rm -f program objlist		@@\
@@ -937,7 +945,7 @@ XCOMM End translation of func(purify_c_plus_target)
 #ifndef purecov_c_plus_target
 #define	purecov_c_plus_target(program,objlist,libs)	@@\
 XCOMM Begin translation of func(purecov_c_plus_target)	@@\
-program: objlist					@@\
+program: $(filter DEP_FILTER,objlist libs)					@@\
 	purecov -g++=yes -cache-dir=$(PURE_CACHE_DIR) $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)	@@\
 clean:: 						@@\
 	rm -f program objlist		@@\
@@ -948,7 +956,7 @@ XCOMM End translation of func(purecov_c_plus_target)
 #ifndef quantify_c_plus_target
 #define	quantify_c_plus_target(program,objlist,libs)	@@\
 XCOMM Begin translation of func(quantify_c_plus_target)	@@\
-program: objlist						@@\
+program: $(filter DEP_FILTER,objlist libs)						@@\
 	quantify -g++=yes -cache-dir=$(PURE_CACHE_DIR) $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)     @@\
 clean::		 						@@\
 	rm -f program objlist			@@\
