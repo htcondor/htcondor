@@ -597,7 +597,6 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	dprintf(D_FULLDEBUG,"\t\t\tSending PERMISSION with capability to schedd\n");
 	sock.encode();
 	if (!sock.put(PERMISSION) 	|| 
-		!sock.end_of_message() 	|| 		// yuck, but part of protocol
 		!sock.put(capability)	||
 		!sock.end_of_message())
 	{
