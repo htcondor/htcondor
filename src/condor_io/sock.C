@@ -321,7 +321,12 @@ int Sock::bindWithin(const int low_port, const int high_port)
 {
 	// Use hash function with pid to get the starting point
     struct timeval curTime;
+#ifndef WIN32
     (void) gettimeofday(&curTime, NULL);
+#else
+	// Win32 does not have gettimeofday, sigh.
+	curTime.tv_usec = ::GetTickCount();
+#endif
 
 	// int pid = (int) getpid();
 	int range = high_port - low_port + 1;
