@@ -1127,6 +1127,7 @@ Authentication::authenticate_server_gss()
 				 &GSSClientname,
 				 &ret_flags, NULL, /* don't need user_to_user */
 				 &token_status,
+				 NULL,             /* don't delegate credential */
 				 authsock_get, (void *) &authComms,
 				 authsock_put, (void *) mySock
 	);
