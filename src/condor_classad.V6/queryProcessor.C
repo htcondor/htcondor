@@ -449,6 +449,7 @@ DoQuery( Rectangles &window, KeySet &result, KeySet &verify )
 			} else {
 				tmpResult.fill( (unsigned)-1 );
 			}
+			/*
 			//printf( "\n\tFilter %d: ", oitr->first );
 			for( int i = 0 ; i < tmpResult.getlast()+1; i++ ) {
 				for( int j = 0 ; j < SUINT ; j++ ) {
@@ -457,6 +458,7 @@ DoQuery( Rectangles &window, KeySet &result, KeySet &verify )
 					}
 				}
 			}
+			*/
 
 
 				// patch in normal outcome
