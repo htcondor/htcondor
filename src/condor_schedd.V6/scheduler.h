@@ -95,10 +95,12 @@ class Scheduler : public Service
     int         	DelMrec(Mrec*);
     int         	MarkDel(char*);
     Mrec*       	FindMrecByPid(int);
+	shadow_rec*		FindSrecByPid(int);
 	void			RemoveShadowRecFromMrec(shadow_rec*);
 	int				AlreadyMatched(PROC_ID*);
 	void			Agent(char*, char*, char*, int);
 	void			StartJobs();
+	void			StartSchedUniverseJobs();
 	void			send_alive();
 	
   private:
@@ -121,6 +123,8 @@ class Scheduler : public Service
 	int				ReservedSwap;		// for non-condor users
 	int				JobsIdle; 
 	int				JobsRunning;
+	int				SchedUniverseJobsIdle;
+	int				SchedUniverseJobsRunning;
 	int				BadCluster;
 	int				BadProc;
 	int				RejectedClusters[1024];
@@ -165,6 +169,7 @@ class Scheduler : public Service
 	shadow_rec*		StartJob(Mrec*, PROC_ID*);
 	shadow_rec*		start_std(Mrec*, PROC_ID*);
 	shadow_rec*		start_pvm(Mrec*, PROC_ID*);
+	shadow_rec*		start_sched_universe_job(PROC_ID*);
 	void			Relinquish(Mrec*);
 	void 			swap_space_exhausted();
 	void			delete_shadow_rec(int);

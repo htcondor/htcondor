@@ -65,6 +65,7 @@ extern "C" {
 	char *sin_to_string(struct sockaddr_in *sin);
 	int get_inet_address(struct in_addr* buffer);
 	int	prio_compar(prio_rec*, prio_rec*);
+	void abort_job_myself(PROC_ID job_id);
 }
 
 extern	int		Parse(const char*, ExprTree*&);
@@ -1883,7 +1884,7 @@ void FindRunnableJob(int c, int& rp)
 int Runnable(PROC_ID* id)
 {
 	int		cur, max;					// current hosts and max hosts
-	int		status;
+	int		status, universe;
 	
 	dprintf (D_FULLDEBUG, "Job %d.%d:");
 
@@ -1901,6 +1902,19 @@ int Runnable(PROC_ID* id)
 	if(status == HELD)
 	{
 		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (HELD)\n");
+		return FALSE;
+	}
+
+	if(GetAttributeInt(id->cluster, id->proc, ATTR_JOB_UNIVERSE,
+					   &universe) < 0)
+	{
+		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",
+				ATTR_JOB_UNIVERSE);
+		return FALSE;
+	}
+	if(universe == SCHED_UNIVERSE)
+	{
+		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (SCHED_UNIVERSE)\n");
 		return FALSE;
 	}
 	

@@ -370,23 +370,21 @@ SetExecutable()
 	
 	switch(JobUniverse) 
 	{
-	  case STANDARD:
+	case STANDARD:
 		InsertJobExpr ("Remote_syscalls = 1");
 		InsertJobExpr ("Checkpoint = 1");
 		break;
-	  case PVM:
+	case PVM:
+	case PIPE:
 		InsertJobExpr ("Remote_syscalls = 1");
 		InsertJobExpr ("Checkpoint = 0");
 		break;
-	  case PIPE:
-		InsertJobExpr ("Remote_syscalls = 1");
-		InsertJobExpr ("Checkpoint = 0");
-		break;
-	  case VANILLA:
+	case VANILLA:
+	case SCHED_UNIVERSE:
 		InsertJobExpr ("Remote_syscalls = 0");
 		InsertJobExpr ("Checkpoint = 0");
 		break;
-	  default:
+	default:
 		EXCEPT( "Unknown universe (%d)", JobUniverse );
 	}
 
@@ -456,6 +454,13 @@ SetUniverse()
 		InsertJobExpr (buffer);
 		return;
 	};
+
+	if( univ && stricmp(univ,"scheduler") == MATCH ) {
+		JobUniverse = SCHED_UNIVERSE;
+		(void) sprintf (buffer, "Universe = %d", SCHED_UNIVERSE);
+		InsertJobExpr (buffer);
+		return;
+	}
 
 	JobUniverse = STANDARD;
 	(void) sprintf (buffer, "Universe = %d", STANDARD);

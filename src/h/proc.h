@@ -51,6 +51,7 @@ typedef struct {
 #define PVM			4	/* Parallel applications via Parallel Virtual Machine */
 #define VANILLA		5	/* Non- condor linked jobs (PVMD) */
 #define PVMD		6	/* Explicit, PVM daemon process */
+#define SCHED_UNIVERSE	7	/* Scheduler universe: run job locally */
 
 
 /*

@@ -57,6 +57,9 @@
 #include "condor_collector.h"
 #include "scheduler.h"
 #include "condor_attributes.h"
+#include "condor_string.h"
+#include "environ.h"
+#include "url_condor.h"
 
 #if defined(NDBM)
 #include <ndbm.h>
@@ -88,6 +91,7 @@ extern void	Init();
 
 #define MAX_PRIO_REC 2048
 #define MAX_SHADOW_RECS 512
+#define MAX_SCHED_UNIVERSE_RECS 16
 
 extern "C"
 {
@@ -147,6 +151,8 @@ shadow_rec      ShadowRecs[MAX_SHADOW_RECS];
 int             NShadowRecs;
 extern	prio_rec        PrioRec[];
 extern	int             N_PrioRecs;
+PROC_ID			IdleSchedUniverseJobIDs[MAX_SCHED_UNIVERSE_RECS];
+int				NSchedUniverseJobIDs;
 
 void	check_zombie(int, PROC_ID*);
 void	send_vacate(Mrec*, int);
@@ -241,7 +247,7 @@ void Scheduler::timeout()
 	reaper( 0, 0, 0 );
 	clean_shadow_recs();
 
-	if( NShadowRecs > MaxJobsRunning ) {
+	if( (NShadowRecs-SchedUniverseJobsRunning) > MaxJobsRunning ) {
 		preempt( NShadowRecs - MaxJobsRunning );
 	}
 	unblock_signal(SIGCHLD);
@@ -265,11 +271,17 @@ Scheduler::count_jobs()
 	N_Owners = 0;
 	JobsRunning = 0;
 	JobsIdle = 0;
+	SchedUniverseJobsIdle = 0;
+	SchedUniverseJobsRunning = 0;
 
 	WalkJobQueue((int(*)(int, int)) count );
 
 	dprintf( D_FULLDEBUG, "JobsRunning = %d\n", JobsRunning );
 	dprintf( D_FULLDEBUG, "JobsIdle = %d\n", JobsIdle );
+	dprintf( D_FULLDEBUG, "SchedUniverseJobsRunning = %d\n",
+			SchedUniverseJobsRunning );
+	dprintf( D_FULLDEBUG, "SchedUniverseJobsIdle = %d\n",
+			SchedUniverseJobsIdle );
 	dprintf( D_FULLDEBUG, "N_Owners = %d\n", N_Owners );
 	dprintf( D_FULLDEBUG, "MaxJobsRunning = %d\n", MaxJobsRunning );
 
@@ -353,30 +365,39 @@ count( int cluster, int proc )
 	char*	owner;
 	int		cur_hosts;
 	int		max_hosts;
+	int		universe;
 
-	GetAttributeInt(cluster, proc, "Status", &status);
-	GetAttributeString(cluster, proc, "Owner", buf);
+	GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &status);
+	GetAttributeString(cluster, proc, ATTR_OWNER, buf);
 	owner = buf;
-	if (GetAttributeInt(cluster, proc, "CurrentHosts", &cur_hosts) < 0) {
+	if (GetAttributeInt(cluster, proc, ATTR_CURRENT_HOSTS, &cur_hosts) < 0) {
 		cur_hosts = ((status == RUNNING) ? 1 : 0);
 	}
-	if (GetAttributeInt(cluster, proc, "MaxHosts", &max_hosts) < 0) {
+	if (GetAttributeInt(cluster, proc, ATTR_MAX_HOSTS, &max_hosts) < 0) {
 		max_hosts = ((status == IDLE || status == UNEXPANDED) ? 1 : 0);
 	}
+	if (GetAttributeInt(cluster, proc, "Universe", &universe) < 0) {
+		universe = STANDARD;
+	}
+	
+	if (universe == SCHED_UNIVERSE) {
+		sched->SchedUniverseJobsRunning += cur_hosts;
+		sched->SchedUniverseJobsIdle += (max_hosts - cur_hosts);
+	} else {
+		sched->JobsRunning += cur_hosts;
+		sched->JobsIdle += (max_hosts - cur_hosts);
 
-	sched->JobsRunning += cur_hosts;
-	sched->JobsIdle += (max_hosts - cur_hosts);
-
-	sched->insert_owner( owner );
+		sched->insert_owner( owner );
 
 #define UpDownRunning	1 /* these shud be same as up_down.h */
 #define UpDownIdle	2
 #define	Error		-1
 
-	if ( status == RUNNING ) {	/* UPDOWN */
-		upDown_UpdateUserInfo(owner,UpDownRunning);
-	} else if ( (status == IDLE)||(status == UNEXPANDED)) {
-		upDown_UpdateUserInfo(owner,UpDownIdle);
+		if ( status == RUNNING ) {	/* UPDOWN */
+			upDown_UpdateUserInfo(owner,UpDownRunning);
+		} else if ( (status == IDLE)||(status == UNEXPANDED)) {
+			upDown_UpdateUserInfo(owner,UpDownIdle);
+		}
 	}
 }
 
@@ -402,33 +423,35 @@ void Scheduler::update_central_mgr()
 extern "C" {
 void abort_job_myself(PROC_ID job_id)
 {
-        char    *host;
-        int             i;
+	char	*host;
+	int		i;
 
 
-        for( i=0; i<NShadowRecs; i++ ) {
-                if( ShadowRecs[i].job_id.cluster == job_id.cluster &&
-                        (ShadowRecs[i].job_id.proc == job_id.proc ||
-job_id.proc
- == -1)) {
-
-                        host = ShadowRecs[i].match->peer;
-                        dprintf( D_ALWAYS,
-                                "Found shadow record for job %d.%d, host =
-%s\n"
-,
-                                job_id.cluster, job_id.proc, host );
-                        /* send_kill_command( host ); */
-            /* change for condor flocking */
-            if ( kill( ShadowRecs[i].pid, SIGUSR1) == -1 )
-                dprintf(D_ALWAYS,"Error in sending SIGUSR1 to %d errno = %d\n",
-
-                            ShadowRecs[i].pid, errno);
-            else dprintf(D_ALWAYS, "Send SIGUSR1 to Shadow Pid %d\n",
-                            ShadowRecs[i].pid);
-
-                }
-        }
+	for( i=0; i<NShadowRecs; i++ ) {
+		if( ShadowRecs[i].job_id.cluster == job_id.cluster &&
+		   (ShadowRecs[i].job_id.proc == job_id.proc ||
+			job_id.proc == -1)) {
+			if (ShadowRecs[i].match) {
+				host = ShadowRecs[i].match->peer;
+				dprintf( D_ALWAYS,
+						"Found shadow record for job %d.%d, host = %s\n",
+						job_id.cluster, job_id.proc, host );
+				/* send_kill_command( host ); */
+				/* change for condor flocking */
+				if ( kill( ShadowRecs[i].pid, SIGUSR1) == -1 )
+					dprintf(D_ALWAYS,
+							"Error in sending SIGUSR1 to %d errno = %d\n",
+							ShadowRecs[i].pid, errno);
+				else dprintf(D_ALWAYS, "Send SIGUSR1 to Shadow Pid %d\n",
+							 ShadowRecs[i].pid);
+			} else {
+				dprintf( D_ALWAYS,
+						"Found record for scheduler universe job %d.%d\n",
+						job_id.cluster, job_id.proc, host );
+				kill( ShadowRecs[i].pid, SIGKILL );
+			}
+		}
+	}
 }
 }
 
@@ -747,13 +770,13 @@ CONTEXT* Scheduler::build_context(PROC_ID* id)
 	int				image_size;
 	int				disk;
 
-	GetAttributeExpr(id->cluster, id->proc, "Requirements", req_buf);
+	GetAttributeExpr(id->cluster, id->proc, ATTR_REQUIREMENTS, req_buf);
 	requirements = strchr(req_buf, '=');
 	requirements++;
 	GetAttributeExpr(id->cluster, id->proc, "Preferences", pref_buf);
 	preferences = strchr(pref_buf, '=');
 	preferences++;
-	GetAttributeString(id->cluster, id->proc, "Owner", own_buf);
+	GetAttributeString(id->cluster, id->proc, ATTR_OWNER, own_buf);
 	owner = own_buf;
 	GetAttributeInt(id->cluster, id->proc, "Image_size", &image_size);
 	/* Very bad hack! */
@@ -830,6 +853,48 @@ Scheduler::permission(char* id, char* server, PROC_ID* jobId)
 	}
 }
 
+int
+find_idle_sched_universe_jobs( int cluster, int proc )
+{
+	int	status;
+	int	cur_hosts;
+	int	max_hosts;
+	int	universe;
+	bool already_found = false;
+
+	if (GetAttributeInt(cluster, proc, "Universe", &universe) < 0) {
+		universe = STANDARD;
+	}
+
+	if (universe != SCHED_UNIVERSE) return 0;
+
+	GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &status);
+	if (GetAttributeInt(cluster, proc, ATTR_CURRENT_HOSTS, &cur_hosts) < 0) {
+		cur_hosts = ((status == RUNNING) ? 1 : 0);
+	}
+	if (GetAttributeInt(cluster, proc, ATTR_MAX_HOSTS, &max_hosts) < 0) {
+		max_hosts = ((status == IDLE || status == UNEXPANDED) ? 1 : 0);
+	}
+
+	if (max_hosts > cur_hosts) {
+		for (int i=0; i < NSchedUniverseJobIDs; i++) {
+			if (IdleSchedUniverseJobIDs[i].cluster == cluster &&
+				IdleSchedUniverseJobIDs[i].proc == proc) {
+				already_found = true;
+			}
+		}
+		if (!already_found) {
+			IdleSchedUniverseJobIDs[NSchedUniverseJobIDs].cluster = cluster;
+			IdleSchedUniverseJobIDs[NSchedUniverseJobIDs].proc = proc;
+			NSchedUniverseJobIDs++;
+		}
+	}
+
+	if (NSchedUniverseJobIDs == MAX_SCHED_UNIVERSE_RECS) return -1;
+
+	return 0;
+}
+
 /*
  * Weiru
  * This function iterate through all the match records, for every match do the
@@ -844,6 +909,8 @@ Scheduler::permission(char* id, char* server, PROC_ID* jobId)
  * have to pick a job from the same cluster and start it. In any case, if there
  * is no more job to start for a match, inform the startd and the accountant of
  * it and delete the match record.
+ *
+ * Jim B. -- Also check for SCHED_UNIVERSE jobs that need to be started.
  */
 void Scheduler::StartJobs()
 {
@@ -900,12 +967,22 @@ void Scheduler::StartJobs()
 			continue;
 		}
 	}
+	if (SchedUniverseJobsIdle > 0) {
+		StartSchedUniverseJobs();
+	}
 	dprintf(D_ALWAYS, "-------- Done starting jobs --------\n");
 }
 
+void Scheduler::StartSchedUniverseJobs()
+{
+	int i;
 
-
-
+	WalkJobQueue( (int(*)(int, int))find_idle_sched_universe_jobs );
+	for (i = 0; i < NSchedUniverseJobIDs; i++) {
+		start_sched_universe_job(IdleSchedUniverseJobIDs+i);
+	}
+	NSchedUniverseJobIDs = 0;
+}
 
 shadow_rec* Scheduler::StartJob(Mrec* mrec, PROC_ID* job_id)
 {
@@ -918,9 +995,9 @@ shadow_rec* Scheduler::StartJob(Mrec* mrec, PROC_ID* job_id)
 		return start_pvm(mrec, job_id);
 	} else {
 		if (rval < 0) {
-			dprintf(D_ALWAYS, 
-		"Couldn't find Universe Attribute for job (%d.%d) assuming stanard.\n",
-					job_id->cluster, job_id->proc);
+			dprintf(D_ALWAYS, "Couldn't find Universe Attribute for job "
+					"(%d.%d) assuming standard.\n",	job_id->cluster,
+					job_id->proc);
 		}
 		return start_std(mrec, job_id);
 	}
@@ -1119,6 +1196,136 @@ shadow_rec* Scheduler::start_pvm(Mrec* mrec, PROC_ID *job_id)
 	return srp;
 }
 
+shadow_rec* Scheduler::start_sched_universe_job(PROC_ID* job_id)
+{
+	char 	a_out_name[_POSIX_PATH_MAX];
+	char 	input[_POSIX_PATH_MAX];
+	char 	output[_POSIX_PATH_MAX];
+	char 	error[_POSIX_PATH_MAX];
+	char	env[_POSIX_PATH_MAX];		// fixed size is bad here!!
+	char   	job_args[_POSIX_PATH_MAX]; 	// fixed size is bad here!!
+	char	args[_POSIX_PATH_MAX];
+	char	owner[20], iwd[_POSIX_PATH_MAX];
+	Environ	env_obj;
+	char	**envp;
+	char	*argv[_POSIX_PATH_MAX];		// bad
+	int		i, fd, parent_id, pid, argc;
+	struct passwd	*pwd;
+
+	dprintf( D_FULLDEBUG, "Starting sched universe job %d.%d\n",
+			job_id->cluster, job_id->proc );
+
+	strcpy(a_out_name, gen_ckpt_name(Spool, job_id->cluster, ICKPT, 0));
+	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_INPUT,
+						   input) < 0) {
+		sprintf(input, "/dev/null");
+	}
+	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_OUTPUT,
+						   output) < 0) {
+		sprintf(output, "/dev/null");
+	}
+	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_ERROR,
+						   error) < 0) {
+		sprintf(error, "/dev/null");
+	}
+	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_ENVIRONMENT,
+						   env) < 0) {
+		sprintf(env, "");
+	}
+	env_obj.add_string(env);
+	envp = env_obj.get_vector();
+	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_ARGUMENTS,
+						   args) < 0) {
+		sprintf(args, "");
+	}
+	sprintf(job_args, "%s %s", a_out_name, args);
+	mkargv(&argc, argv, job_args);
+	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_OWNER,
+						   owner) < 0) {
+		sprintf(owner, "nobody");
+	}
+	if ((pwd = getpwnam(owner)) == NULL) {
+		dprintf(D_ALWAYS, "can't find user %s in /etc/passwd, "
+				"aborting job %d.%d start\n", owner, job_id->cluster,
+				job_id->proc);
+		return NULL;
+	}
+	if (pwd->pw_uid == 0 || pwd->pw_gid == 0) {
+		dprintf(D_ALWAYS, "aborting job %d.%d start as root\n",
+				job_id->cluster, job_id->proc);
+		return NULL;
+	}
+	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_IWD,
+						   iwd) < 0) {
+		sprintf(owner, "/tmp");
+	}
+
+	parent_id = getpid();
+
+	if ((pid = fork()) < 0) {
+		dprintf(D_ALWAYS, "failed for fork for sched universe job start!\n");
+		return NULL;
+	}
+
+	if (pid == 0) {		// the child
+		if (getuid() == 0) {
+			if (set_root_euid(__FILE__,__LINE__) < 0) {
+				EXCEPT("set_root_euid()");
+			}
+			if (setgid(pwd->pw_gid) < 0) {
+				EXCEPT("setgid(%d)", pwd->pw_gid);
+			}
+			if (setuid(pwd->pw_uid) < 0) {
+				EXCEPT("setuid(%d)", pwd->pw_uid);
+			}
+		}
+		if (chdir(iwd) < 0) {
+			EXCEPT("chdir(%s)", iwd);
+		}
+		if ((fd = open(input, O_RDONLY, 0)) < 0) {
+			EXCEPT("open(%s)", input);
+		}
+		if (dup2(fd, 0) < 0) {
+			EXCEPT("dup2(%d, 0)", fd);
+		}
+		if (close(fd) < 0) {
+			EXCEPT("close(%d)", fd);
+		}
+		if ((fd = open(output, O_WRONLY, 0)) < 0) {
+			EXCEPT("open(%s)", output);
+		}
+		if (dup2(fd, 1) < 0) {
+			EXCEPT("dup2(%d, 1)", fd);
+		}
+		if (close(fd) < 0) {
+			EXCEPT("close(%d)", fd);
+		}
+		if ((fd = open(error, O_WRONLY, 0)) < 0) {
+			EXCEPT("open(%s)", error);
+		}
+		if (dup2(fd, 2) < 0) {
+			EXCEPT("dup2(%d, 2)", fd);
+		}
+		if (close(fd) < 0) {
+			EXCEPT("close(%d)", fd);
+		}
+		// make sure file is executable
+		if (chmod(a_out_name, 0755) < 0) {
+			EXCEPT("chmod(%s, 0755)", a_out_name);
+		}
+
+		errno = 0;
+		execve( a_out_name, argv, envp );
+		dprintf( D_ALWAYS, "exec(%s) failed - errno = %d\n", a_out_name,
+				errno );
+		kill( parent_id, SIGUSR1 );
+		exit( JOB_NO_MEM );
+	}
+
+	SetAttributeInt(job_id->cluster, job_id->proc, "Status", RUNNING);
+	SetAttributeInt(job_id->cluster, job_id->proc, "CurrentHosts", 1);
+	return add_shadow_rec(pid, job_id, NULL, -1);
+}
 
 void Scheduler::display_shadow_recs()
 {
@@ -1130,16 +1337,10 @@ void Scheduler::display_shadow_recs()
 	dprintf( D_FULLDEBUG, ".. Shadow Recs (%d)\n", NShadowRecs );
 	for( i=0; i<NShadowRecs; i++ ) {
 		r = &ShadowRecs[i];
-		dprintf(
-			D_FULLDEBUG,
-			".. %d: %d, %d.%d, %s, %s\n",
-			i,
-			r->pid,
-			r->job_id.cluster,
-			r->job_id.proc,
-			r->preempted ? "T" : "F" ,
-			r->match->peer
-		);
+		dprintf(D_FULLDEBUG, ".. %d: %d, %d.%d, %s, %s\n",
+				i, r->pid, r->job_id.cluster, r->job_id.proc,
+				r->preempted ? "T" : "F" ,
+				r->match ? r->match->peer : "localhost");
 	}
 	dprintf( D_FULLDEBUG, "..................\n\n" );
 }
@@ -1333,11 +1534,13 @@ void Scheduler::preempt(int n)
 	dprintf( D_ALWAYS, "Called preempt( %d )\n", n );
 	for( i=NShadowRecs-1; n > 0 && i >= 0; n--, i-- ) {
 		if( is_alive(ShadowRecs[i].pid) ) {
-			if( ShadowRecs[i].preempted ) {
-				send_vacate( ShadowRecs[i].match, KILL_FRGN_JOB );
-			} else {
-				send_vacate( ShadowRecs[i].match, CKPT_FRGN_JOB );
-				ShadowRecs[i].preempted = TRUE;
+			if (ShadowRecs[i].match) {
+				if( ShadowRecs[i].preempted ) {
+					send_vacate( ShadowRecs[i].match, KILL_FRGN_JOB );
+				} else {
+					send_vacate( ShadowRecs[i].match, CKPT_FRGN_JOB );
+					ShadowRecs[i].preempted = TRUE;
+				}
 			}
 		} else {
 			dprintf( D_ALWAYS,
@@ -1503,6 +1706,81 @@ void Scheduler::mail_problem_message()
 
 }
 
+void NotifyUser(shadow_rec* srec, char* msg, int status)
+{
+	int fd, notification;
+	char owner[20], url[25], buf[80];
+	char cmd[_POSIX_PATH_MAX], args[_POSIX_PATH_MAX];
+
+	if (GetAttributeInt(srec->job_id.cluster, srec->job_id.proc,
+						"Notification", &notification) < 0) {
+		dprintf(D_ALWAYS, "GetAttributeInt() failed "
+				"-- presumably job was just removed\n");
+		return;
+	}
+
+	switch(notification) {
+	case NOTIFY_NEVER:
+		return;
+	case NOTIFY_ALWAYS:
+		break;
+	case NOTIFY_COMPLETE:
+		break;
+	case NOTIFY_ERROR:
+		if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+			return;
+		break;
+	default:
+		dprintf(D_ALWAYS, "Condor Job %d.%d has a notification of %d\n",
+				srec->job_id.cluster, srec->job_id.proc, notification );
+	}
+
+	if (GetAttributeString(srec->job_id.cluster, srec->job_id.proc,
+						   "NotifyUser", owner) < 0) {
+		if (GetAttributeString(srec->job_id.cluster, srec->job_id.proc,
+							   ATTR_OWNER, owner) < 0) {
+			EXCEPT("GetAttributeString(%d, %d, \"%s\")",
+					srec->job_id.cluster,
+					srec->job_id.proc, ATTR_OWNER);
+		}
+	}
+
+
+	if (GetAttributeString(srec->job_id.cluster, srec->job_id.proc, "cmd",
+						   cmd) < 0) {
+		EXCEPT("GetAttributeString(%d, %d, \"cmd\")", srec->job_id.cluster,
+			   srec->job_id.proc);
+	}
+	if (GetAttributeString(srec->job_id.cluster, srec->job_id.proc,
+						   ATTR_JOB_ARGUMENTS, args) < 0) {
+		EXCEPT("GetAttributeString(%d, %d, \"%s\"", srec->job_id.cluster,
+			   srec->job_id.proc, ATTR_JOB_ARGUMENTS);
+	}
+
+	sprintf(url, "mailto:%s", owner);
+	if ((fd = open_url(url, O_WRONLY, 0)) < 0) {
+		EXCEPT("condor_open_mailto_url(%s, %d, 0)", owner, O_WRONLY, 0);
+	}
+
+	sprintf(buf, "From: Condor\n");
+	write(fd, buf, strlen(buf));
+	sprintf(buf, "To: %s\n", owner);
+	write(fd, buf, strlen(buf));
+	sprintf(buf, "Subject: Condor Job %d.%d\n", srec->job_id.cluster,
+			srec->job_id.proc);
+	write(fd, buf, strlen(buf));
+	sprintf(buf, "Your condor job\n\t");
+	write(fd, buf, strlen(buf));
+	write(fd, cmd, strlen(cmd));
+	write(fd, " ", 1);
+	write(fd, args, strlen(args));
+	write(fd, "\n", 1);
+	write(fd, msg, strlen(msg));
+	sprintf(buf, "%d.\n", status);
+	write(fd, buf, strlen(buf));
+	close(fd);
+}
+
 /*
 ** Allow child processes to die a decent death, don't keep them
 ** hanging around as <defunct>.
@@ -1513,9 +1791,10 @@ void Scheduler::mail_problem_message()
 */
 void Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 {
-    pid_t   pid;
-    int     status;
-	Mrec*	mrec;
+    pid_t   	pid;
+    int     	status;
+	Mrec*		mrec;
+	shadow_rec*	srec;
 
 	block_signal(SIGALRM);
     if( sig == 0 ) {
@@ -1553,6 +1832,34 @@ void Scheduler::reaper(int sig, int code, struct sigcontext* scp)
                         pid, WTERMSIG(status));
                 DelMrec(mrec);
             }
+		}
+		else if (srec = FindSrecByPid(pid))
+		{
+			if(WIFEXITED(status))
+			{
+				dprintf(D_FULLDEBUG,
+						"scheduler universe job (%d.%d) pid %d "
+						"exited with status %d\n", srec->job_id.cluster,
+						srec->job_id.proc, pid, WEXITSTATUS(status) );
+				NotifyUser(srec, "exited with status ",
+						   WEXITSTATUS(status) );
+			}
+			else if(WIFSIGNALED(status))
+			{
+				dprintf(D_ALWAYS,
+						"scheduler universe job (%d.%d) pid %d died "
+						"with signal %d\n", srec->job_id.cluster,
+						srec->job_id.proc, pid, WTERMSIG(status));
+				NotifyUser(srec, "was killed by signal ",
+						   WTERMSIG(status));
+			}
+			if( DestroyProc(srec->job_id.cluster, srec->job_id.proc) ) {
+				dprintf(D_ALWAYS, "DestroyProc(%d.%d) failed -- "
+						"presumably job was already removed\n",
+						srec->job_id.cluster,
+						srec->job_id.proc);
+			}
+			delete_shadow_rec( pid );
 		}
         else
         {
@@ -1913,6 +2220,11 @@ void Scheduler::reschedule_negotiator(XDR*, struct sockaddr_in*)
 
     xdr_destroy( xdrs );
     (void)close( sock );
+
+	if (SchedUniverseJobsIdle > 0) {
+		StartSchedUniverseJobs();
+	}
+
     return;
 }
 
@@ -2099,6 +2411,21 @@ Mrec* Scheduler::FindMrecByPid(int pid)
 		// found the match record
 		{
 			return rec[i];
+		}
+	}
+	return NULL;
+}
+
+shadow_rec* Scheduler::FindSrecByPid(int pid)
+{
+	int		i;
+
+	for(i = 0; i < NShadowRecs; i++)
+	{
+		if(ShadowRecs[i].pid == pid)
+		// found the match record
+		{
+			return ShadowRecs+i;
 		}
 	}
 	return NULL;
