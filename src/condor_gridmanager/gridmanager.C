@@ -126,10 +126,13 @@ time_t Proxy_Expiration_Time = 0;
 int syncJobIO_tid = TIMER_UNSET;
 int syncJobIO_interval;
 
+int checkResources_tid = TIMER_UNSET;
+
 GahpClient GahpMain;
 
 void RequestContactSchedd();
 int doContactSchedd();
+int checkResources();
 
 // handlers
 int ADD_JOBS_signalHandler( int );
@@ -274,6 +277,15 @@ Reconfig()
 
 	// This method is called both at startup [from method Init()], and
 	// when we are asked to reconfig.
+
+
+	if ( checkResources_tid != TIMER_UNSET ) {
+		daemonCore->Cancel_Timer(checkResources_tid);
+		checkResources_tid = TIMER_UNSET;
+	}
+	checkResources_tid = daemonCore->Register_Timer( 1, 60,
+												(TimerHandler)&checkResources,
+												"checkResources", NULL );
 
 	contactScheddDelay = -1;
 	tmp = param("GRIDMANAGER_CONTACT_SCHEDD_DELAY");
@@ -551,6 +563,56 @@ REMOVE_JOBS_signalHandler( int signal )
 
 	return TRUE;
 }
+
+int
+checkResources()
+{
+	GlobusResource * next_resource;
+	int num_resources = 0;
+	int num_down_resources = 0;
+	time_t most_recent_time = 0;
+
+	ResourcesByName.startIterations();
+	while ( ResourcesByName.iterate( next_resource ) != 0 ) {
+		num_resources++;
+		if ( next_resource->IsDown() ) {
+			time_t downtime = next_resource->getLastStatusChangeTime();
+			if ( downtime == 0 ) {
+				// don't know when.... useless!
+				continue;
+			}
+			most_recent_time = MAX(most_recent_time,downtime);
+			num_down_resources++;
+		}
+	}
+
+	dprintf(D_FULLDEBUG,"checkResources(): %d resources, %d are down\n",
+		num_resources, num_down_resources);
+
+	if ( num_resources > 0 && num_resources == num_down_resources ) {
+			// all resources are down!  see for how long...
+		time_t downfor = time(NULL) - most_recent_time;
+		int max_downtime = param_integer(
+							"GRIDMANAGER_MAX_TIME_DOWN_RESOURCES",
+							15 * 60 );	// 15 minutes default
+		if ( downfor > max_downtime ) {
+			dprintf(D_ALWAYS,
+				"All resources down for more than %d secs -- killing GAHP\n",
+				max_downtime);
+			if ( GahpMain.getPid() > 0 ) {
+				daemonCore->Send_Signal(GahpMain.getPid(),SIGKILL);
+			} else {
+				dprintf(D_ALWAYS,"ERROR - no gahp found???\n");
+			}
+		} else {
+			dprintf(D_ALWAYS,"All resources down for %d seconds!\n",
+				downfor);
+		}
+	}
+
+	return TRUE;
+}
+
 
 int
 doContactSchedd()

@@ -19,6 +19,7 @@ GlobusResource::GlobusResource( char *resource_name )
 								(TimerHandlercpp)&GlobusResource::DoPing,
 								"GlobusResource::DoPing", (Service*)this );
 	lastPing = 0;
+	lastStatusChange = 0;
 	gahp.setNotificationTimerId( pingTimerId );
 	gahp.setMode( GahpClient::normal );
 	gahp.setTimeout( gahpCallTimeout );
@@ -157,8 +158,7 @@ int GlobusResource::DoPing()
 
 	lastPing = time(NULL);
 
-	if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
-		 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
+	if ( rc != GLOBUS_SUCCESS ) {
 		ping_failed = true;
 	}
 
@@ -182,6 +182,7 @@ int GlobusResource::DoPing()
 				ping_failed?"down":"up");
 
 		resourceDown = ping_failed;
+		lastStatusChange = lastPing;
 
 		firstPingDone = true;
 

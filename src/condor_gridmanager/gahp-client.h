@@ -88,6 +88,9 @@ class GahpClient : public Service {
 		///
 		static bool getUsePrefix() { return use_prefix; }
 
+		/// Return -1 if gahp does not exist, else returns the gahp pid
+		static int getPid() { return m_gahp_pid; }
+
 		/** @name Mode methods.
 		 * Methods to set/get the mode.
 		 */

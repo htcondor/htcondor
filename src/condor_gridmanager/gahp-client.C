@@ -448,6 +448,7 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 		free( gahp_path );
 		if (gahp_args) free(gahp_args);
 		if (newenv) free(newenv);
+		m_gahp_pid = -1;
 		return false;
 	} else {
 		dprintf(D_ALWAYS,"GAHP server pid = %d\n",m_gahp_pid);

@@ -27,6 +27,8 @@ class GlobusResource : public Service
 	bool IsDown();
 	char *ResourceName();
 
+	time_t getLastStatusChangeTime() { return lastStatusChange; }
+
 	static void setProbeInterval( int new_interval )
 		{ probeInterval = new_interval; }
 
@@ -47,6 +49,7 @@ class GlobusResource : public Service
 	bool firstPingDone;
 	int pingTimerId;
 	time_t lastPing;
+	time_t lastStatusChange;
 	List<GlobusJob> registeredJobs;
 	List<GlobusJob> pingRequesters;
 	List<GlobusJob> submitsInProgress;
