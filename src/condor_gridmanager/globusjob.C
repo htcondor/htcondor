@@ -162,7 +162,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	restartWhen = 0;
 	durocRequest = false;
 	gmState = GM_INIT;
-	globusState = G_UNSUBMITTED;
+	globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
 	jmUnreachable = false;
 	evaluateStateTid = TIMER_UNSET;
 	lastProbeTime = 0;
@@ -200,12 +200,6 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 
 	classad->LookupInteger( ATTR_GLOBUS_STATUS, globusState );
 	classad->LookupInteger( ATTR_JOB_STATUS, condorState );
-/*
-	if ( condorState == REMOVED ) {
-		globusState = G_CANCELED;
-		removedByUser = true;
-	}
-*/
 
 	globusError = GLOBUS_SUCCESS;
 
@@ -291,12 +285,15 @@ int GlobusJob::doEvaluateState()
 			if ( jobContact == NULL ) {
 				gmState = GM_UNSUBMITTED;
 			} else {
-				if ( globusState == PENDING || globusState == ACTIVE ||
-					 globusState == SUSPENDED || globusState == DONE ) {
+				if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING ||
+					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE ||
+					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED ||
+					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ) {
 					submitLogged = true;
 				}
-				if ( globusState == ACTIVE || globusState == SUSPENDED ||
-					 globusState == DONE ) {
+				if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE ||
+					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED ||
+					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ) {
 					executeLogged = true;
 				}
 
@@ -397,7 +394,7 @@ int GlobusJob::doEvaluateState()
 				gmState = GM_STOP_AND_RESTART;
 				break;
 			}
-			if ( globusState == UNSUBMITTED ) {
+			if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
 				gmState = GM_SUBMIT_COMMIT;
 			} else {
 				gmState = GM_SUBMITTED;
@@ -484,13 +481,13 @@ int GlobusJob::doEvaluateState()
 			}
 			break;
 		case GM_SUBMITTED:
-			if ( globusState == DONE ) {
+			if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ) {
 				if ( newJM ) {
 					gmState = GM_CHECK_OUTPUT;
 				} else {
 					gmState = GM_DONE_SAVE;
 				}
-			} else if ( globusState == FAILED ) {
+			} else if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 				gmState = GM_FAILED;
 			} else {
 				if ( condorState == REMOVED || condorState == HELD ) {
@@ -716,7 +713,8 @@ int GlobusJob::doEvaluateState()
 			gmState = GM_SUBMITTED;
 			break;
 		case GM_CANCEL:
-			if ( globusState != DONE && globusState != FAILED ) {
+			if ( globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE &&
+				 globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 				rc = globus_gram_client_job_cancel( jobContact );
 				if ( rc == WOULD_CALL || rc == PENDING ) {
 					break;
@@ -745,9 +743,9 @@ int GlobusJob::doEvaluateState()
 			}
 			break;
 		case GM_CANCEL_WAIT:
-			if ( globusState == DONE ) {
+			if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ) {
 				gmState = GM_DONE_COMMIT;
-			} else if ( globusState == FAILED ) {
+			} else if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 				gmState = GM_FAILED;
 			} else {
 				time_t now = time(NULL);
@@ -832,7 +830,7 @@ int GlobusJob::doEvaluateState()
 			DeleteJob( this );
 			break;
 		case GM_CLEAR_REQUEST:
-			globusState = UNSUBMITTED;
+			globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
 			free( jobContact );
 			jobContact = NULL;
 			rc = addScheddUpdateAction( this, UA_UPDATE_CONTACT_STRING,
@@ -903,7 +901,7 @@ void GlobusJob::UpdateGlobusState( int new_state, new_error_code )
 		int update_actions = UA_UPDATE_GLOBUS_STATE;
 
 		if ( !submitLogged && new_state != UNSUBMITTED ) {
-			if ( new_state == FAILED ) {
+			if ( new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 					// TODO: should SUBMIT_FAILED_EVENT be used only on
 					//   certain errors (ones we know are submit-related)?
 				update_actions |= UA_LOG_SUBMIT_FAILED_EVENT;
@@ -911,8 +909,10 @@ void GlobusJob::UpdateGlobusState( int new_state, new_error_code )
 				update_actions |= UA_LOG_SUBMIT_EVENT;
 			}
 		}
-		if ( (new_state == ACTIVE || new_state == DONE ||
-			  new_state == SUSPENDED) && !executeLogged ) {
+		if ( (new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE ||
+			  new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ||
+			  new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED)
+			 && !executeLogged ) {
 			update_actions |= UA_LOG_EXECUTE_EVENT;
 		}
 

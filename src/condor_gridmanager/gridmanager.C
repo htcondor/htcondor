@@ -630,7 +630,8 @@ doContactSchedd()
 		} else {
 			sprintf( expr_buf, "%s  && %s == %d && %s == %d",
 					 owner_buf, ATTR_JOB_UNIVERSE, GLOBUS_UNIVERSE,
-					 ATTR_GLOBUS_STATUS, G_UNSUBMITTED );
+					 ATTR_GLOBUS_STATUS,
+					 GLOBUS_GRAM_PROCOTOL_JOB_STATE_UNSUBMITTED );
 		}
 
 		next_ad = GetNextJobByConstraint( expr_buf, 1 );
