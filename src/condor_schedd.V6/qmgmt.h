@@ -40,6 +40,9 @@ void InitJobQueue(const char *job_queue_name);
 void InitQmgmt();
 void CleanJobQueue();
 int handle_q(Service *, int, Stream *sock);
+void BeginTransaction();
+void CommitTransaction();
+void AbortTransaction();
 #if defined(__cplusplus)
 }
 #endif
