@@ -104,11 +104,46 @@ NEGOTIATOR_TIMEOUT	= 30
 ##  What is the halflife of the user priorities? (1 day)
 PRIORITY_HALFLIFE	= 86400
 
-##  If the PREEMPTION_HOLD expression evaluates to true, we won't
-##  preempt the job running on a given machine even if a user with a
-##  higher priority has jobs they want to run.  This prevents
-##  thrashing.  The default is to wait 2 hours before preempting any
-##  job. 
-PREEMPTION_HOLD	: $(StateTimer) < (2 * $(HOUR))
+##  The negotiator will not preempt a job running on a given machine
+##  unless the PREEMPTION_REQUIREMENTS expression evaluates to true.
+##  This expression defaults to (RemoteUserPrio > SubmittorPrio).
+PREEMPTION_REQUIREMENTS : $(StateTimer) > (1 * $(HOUR)) && RemoteUserPrio > SubmittorPrio * 1.2
 
+##  The PREEMPTION_RANK expression is used to rank machines which the
+##  job ranks the same.  For example, if the job has no preference, it
+##  is usually preferrable to preempt a job with a small ImageSize
+##  instead of a job with a large ImageSize.  The default is to rank
+##  all preemptible matches the same.  However, the negotiator will
+##  always prefer to match the job with an idle machine over a
+##  preemptible machine, if the job has no preference between them.
+PREEMPTION_RANK : (RemoteUserPrio * 1000000) - ImageSize
 
+##  The NEGOTIATOR_TRAFFIC_LIMIT macro specifies the maximum
+##  amount of network traffic (in KB) the negotiator may initiate per
+##  NEGOTIATOR_TRAFFIC_INTERVAL} for job placement and preemption.
+##  The negotiator uses the job ImageSize and ExecutableSize
+##  parameters to track network usage.  The negotiator will try to use
+##  bandwidth up to the limit, so if starting a large ImageSize job
+##  would put the negotiator over the limit, it will try to start a
+##  small ImageSize job in its place.  Thus, using traffic limits
+##  penalizes large ImageSize jobs for the load they place on the
+##  network.  This parameter defaults to 0, which disables network
+##  usage management in the negotiator.
+#NEGOTIATOR_TRAFFIC_LIMIT = 300000
+
+##  The NEGOTIATOR_TRAFFIC_INTERVAL macro specifies the interval
+##  (in seconds) to be used in maintaining the
+##  NEGOTIATOR_TRAFFIC_LIMIT.  This parameter defaults to 0, which
+##  disables network usage management in the negotiator.  It is common
+##  to set this parameter equal to NEGOTIATOR_INTERVAL.
+#NEGOTIATOR_TRAFFIC_INTERVAL = $(NEGOTIATOR_INTERVAL)
+
+##  The NEGOTIATOR_SOCKET_CACHE_SIZE macro defines the maximum number
+##  of sockets which the negotiator should keep in its open socket
+##  cache.  Caching open sockets makes the negotiation protocol more
+##  efficient by eliminating the need for socket connection
+##  establishment for each negotiation cycle.  The default is
+##  currently 16.  To be effective, this parameter should be set to a
+##  value greater than the number of schedds submitting jobs to the
+##  negotiator at any time.
+#NEGOTIATOR_SOCKET_CACHE_SIZE = 16
