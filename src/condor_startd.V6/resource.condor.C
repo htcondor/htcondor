@@ -1,19 +1,16 @@
-#include <sys/types.h>
-#include <sys/signal.h>
+#include "condor_common.h"
+
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <utmp.h>
-#include <stdio.h>
-#include <errno.h>
-#include <string.h>
+#include <sys/param.h>
 
 #include "condor_types.h"
 #include "condor_debug.h"
 #include "condor_expressions.h"
 #include "condor_attributes.h"
-#include "condor_fix_unistd.h"
 #include "condor_mach_status.h"
 #include "sched.h"
 #include "util_lib_proto.h"
