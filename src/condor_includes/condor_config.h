@@ -49,14 +49,14 @@ extern "C" {
 	void config_fill_ad( ClassAd* );
 	int  set_persistent_config(char *admin, char *config);
 	int  set_runtime_config(char *admin, char *config);
+	char * expand_macro ( char *value, BUCKET *table[], int table_size,
+						  char *self=NULL );
 #endif
 
 #if defined(__STDC__) || defined(__cplusplus)
 	char * get_tilde();
 	char * param ( char *name );
 	void insert ( char *name, char *value, BUCKET *table[], int table_size );
-	char * expand_macro ( char *value, BUCKET *table[], int table_size,
-						  char *self=NULL );
 	char * lookup_macro ( char *name, BUCKET *table[], int table_size );
 	char * macro_expand ( char *name );
 	int param_in_pattern ( char *parameter, char *pattern);
