@@ -24,7 +24,6 @@
 #include "condor_jobqueue.h"
 #include "condor_constants.h"
 #include "startup.h"
-#include "condor_fix_assert.h"
 
 #if defined(OSF1) && defined(__GNUC__ )
 #	include "condor_fdset.h"
@@ -74,6 +73,10 @@
 #if defined(OSF1)
 #	define _AES_SOURCE
 #	include <sys/poll.h>
+	extern "C" {
+	  int statfs( char*, struct statfs*, int );
+	  int flock( int, int );
+	}
 #endif
 
 #if defined(SUNOS41)
