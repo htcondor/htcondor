@@ -200,11 +200,11 @@ sub RunIt ( )
     my $ProbeCmd;
     if ( $Config{ProbePath} ne "" )
     {
-	$ProbeCmd = "$Config{ProbePath}/test.pl ";
+	$ProbeCmd = "$Config{ProbePath}/GridProbe.pl ";
     }
     else
     {
-	$ProbeCmd = "test.pl ";
+	$ProbeCmd = "GridProbe.pl ";
     }
     $ProbeCmd .= " --non-stop ";
     foreach my $Contact ( keys %{$Config{ContactStrings}} )
@@ -285,12 +285,13 @@ sub RunIt ( )
 		}
 		$Fields{$Test."Text"} = "";
 	    }
-	    elsif ( /^\s+test:\s*(\S+)\/\[(\S+)=\"(.*)\"\]:\s*(\S+)/ )
+	    elsif ( /^\s+test:\s*(\S+)\/\[(\S+)=\"(.*)\"\]:\s*(\S+)\s+(.*)/ )
 	    {
 		my $Test = $1;
 		my $Type = $2;
 		my $Value = $3;
 		my $Status = $4;
+		my $Text = $5;
 
 		# All I know about are contacts..
 		if ( $Type ne "contact" )
@@ -305,6 +306,8 @@ sub RunIt ( )
 		    my $ContactString = $Config{ContactStrings}{$Contact};
 		    next if ( $ContactString ne $Value );
 		    $Hawkeye->Store( $Test . "_" . $Contact, $Status );
+		    $Text = "none" if ( $Text eq "" );
+		    $Hawkeye->Store( $Test . "Text" . "_" . $Contact, $Text );
 		    $GlobalFields{$Test} = $Test;
 		    $Matched = 1;
 		}
