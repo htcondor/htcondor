@@ -95,33 +95,6 @@ extern char My_UID_Domain[];
 ClassAd *JobAd = NULL;			// ClassAd which describes this job
 extern char *schedd;
 
-char *
-d_format_time( double dsecs )
-{
-        int days, hours, minutes, secs;
-        static char answer[25];
-
-#define SECONDS 1
-#define MINUTES (60 * SECONDS)
-#define HOURS   (60 * MINUTES)
-#define DAYS    (24 * HOURS)
-
-        secs = (int)dsecs;
-
-        days = secs / DAYS;
-        secs %= DAYS;
-
-        hours = secs / HOURS;
-        secs %= HOURS;
-
-        minutes = secs / MINUTES;
-        secs %= MINUTES;
-
-        (void)sprintf(answer, "%d %02d:%02d:%02d", days, hours, minutes, secs);
-
-        return( answer );
-}
-
 void
 NotifyUser( char *buf, PROC *proc, char *email_addr )
 {
