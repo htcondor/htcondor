@@ -151,7 +151,7 @@ The other optional settings are:
 \item[\Macro{DAEMON\_LIST}] (Described in
 section~\ref{sec:Master-Config-File-Entries}).  
 To have the checkpoint server managed by the \Condor{master}, the
-\Macro{DAEMON\_LIST} entry must have \Expr{MASTER} and \Expr{CKPT\_SERVER}.
+\MacroNI{DAEMON\_LIST} entry must have \Expr{MASTER} and \Expr{CKPT\_SERVER}.
 Add \Expr{STARTD} if you want to allow jobs to run on your checkpoint server.
 Similarly, add \Expr{SCHEDD} if you would like to submit jobs from your
 checkpoint server. 
@@ -164,7 +164,7 @@ section~\ref{sec:Daemon-Logging-Config-File-Entries} on
 page~\pageref{sec:Daemon-Logging-Config-File-Entries}.
 \begin{description}
 
-\item[\Macro{CKPT\_SERVER\_LOG}] The \Macro{CKPT\_SERVER\_LOG} is where the
+\item[\Macro{CKPT\_SERVER\_LOG}] The \MacroNI{CKPT\_SERVER\_LOG} is where the
 checkpoint server log is placed.
 
 \item[\Macro{MAX\_CKPT\_SERVER\_LOG}] Sets the maximum
