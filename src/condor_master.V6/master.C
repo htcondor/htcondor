@@ -163,7 +163,9 @@ int 	NewExecutable(char* file, time_t* tsp);
 int		daily_housekeeping(void);
 void 	dump_core();
 void	usage(const char* );
+#if 0
 int		hourly_housekeeping(void);
+#endif
 void	report_to_collector();
 int		GetConfig(char*, char*);
 int		IsSameHost(const char*);
@@ -434,9 +436,13 @@ main( int argc, char* argv[] )
 	// once a day at 3:30 a.m.
 	tMgr.NewTimer(NULL, 3600, (void*)daily_housekeeping, 3600 * 24);
 
+	/* hourly_housekeeping unnecessary with new qmgmt.  -Jim B. */
+#if 0
 	// 6:00 am and 3:30 pm so somebody is around to respond
 	tMgr.NewTimer( NULL, 7200, (void*)hourly_housekeeping, 3600 * 24 );
 	tMgr.NewTimer( NULL, 32400, (void*)hourly_housekeeping, 3600 * 24 );
+#endif
+
 	tMgr.NewTimer( &daemons, 100, (void*)(daemons.CheckForNewExecutable), 300);
 	tMgr.NewTimer(NULL, 100, (void*)report_to_collector, interval);
 
@@ -1052,6 +1058,8 @@ daily_housekeeping(void)
 	   */
 	dprintf(D_FULLDEBUG, "exit daily_housekeeping\n");
 }
+
+#if 0
 int
 hourly_housekeeping(void)
 {
@@ -1079,6 +1087,7 @@ hourly_housekeeping(void)
 	}
 	dprintf(D_FULLDEBUG, "exit hourly_housekeeping\n");
 }
+#endif
 
 void
 dump_core()
