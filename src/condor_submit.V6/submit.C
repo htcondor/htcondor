@@ -13,10 +13,10 @@
  *
  * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
  * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer
  * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
  * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
@@ -291,6 +291,7 @@ bool mightTransfer( int universe );
 
 char *owner = NULL;
 char *ntdomain = NULL;
+char *myproxy_password = NULL;
 
 extern DLL_IMPORT_MAGIC char **environ;
 
@@ -376,7 +377,7 @@ init_job_ad()
 		job->SetTargetTypeName (STARTD_ADTYPE);
 	}
 
-	(void) sprintf (buffer, "%s = %d", ATTR_Q_DATE, (int)time ((time_t *) 0));	
+	(void) sprintf (buffer, "%s = %d", ATTR_Q_DATE, (int)time ((time_t *) 0));
 	InsertJobExpr (buffer);
 
 	(void) sprintf (buffer, "%s = 0", ATTR_COMPLETION_DATE);
@@ -391,7 +392,7 @@ init_job_ad()
 	(void) sprintf (buffer, "%s = \"%s\"", ATTR_NT_DOMAIN, ntdomain);
 	InsertJobExpr (buffer);
 #endif
-		
+
 	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_REMOTE_WALL_CLOCK);
 	InsertJobExpr (buffer);
 
@@ -446,13 +447,13 @@ main( int argc, char *argv[] )
 	int dag_pause = 0;
 	int i;
 
-	// Initialize env_delimiter string... note that 
+	// Initialize env_delimiter string... note that
 	// const char env_delimiter is defined in condor_constants.h
 	sprintf(env_delimiter_string,"%c",env_delimiter);
 
 	setbuf( stdout, NULL );
 
-#if !defined(WIN32)	
+#if !defined(WIN32)
 		// Make sure root isn't trying to submit.
 	if( getuid() == 0 || getgid() == 0 ) {
 		fprintf( stderr, "\nERROR: Submitting jobs as user/group 0 (root) is not "
@@ -476,7 +477,7 @@ main( int argc, char *argv[] )
 		// If our effective and real gids are different (b/c the
 		// submit binary is setgid) set umask(002) so that stdout,
 		// stderr and the user log files are created writable by group
-		// condor. 
+		// condor.
 	check_umask();
 
 	DebugFlags |= D_EXPR;
@@ -488,7 +489,7 @@ main( int argc, char *argv[] )
 	for( ptr=argv+1,argc--; argc > 0; argc--,ptr++ ) {
 		if( ptr[0][0] == '-' ) {
 			switch( ptr[0][1] ) {
-			case 'v': 
+			case 'v':
 				Quiet = 0;
 				break;
 			case 'd':
@@ -508,30 +509,30 @@ main( int argc, char *argv[] )
 				Remote++;
 				DisableFileChecks = 1;
 				if( !(--argc) || !(*(++ptr)) ) {
-					fprintf( stderr, "%s: -r requires another argument\n", 
+					fprintf( stderr, "%s: -r requires another argument\n",
 							 MyName );
 					exit(1);
-				}					
+				}
 				if( ScheddName ) {
 					delete [] ScheddName;
 				}
 				if( !(ScheddName = get_daemon_name(*ptr)) ) {
-					fprintf( stderr, "%s: unknown host %s\n", 
+					fprintf( stderr, "%s: unknown host %s\n",
 							 MyName, get_host_part(*ptr) );
 					exit(1);
 				}
 				break;
 			case 'n':
 				if( !(--argc) || !(*(++ptr)) ) {
-					fprintf( stderr, "%s: -n requires another argument\n", 
+					fprintf( stderr, "%s: -n requires another argument\n",
 							 MyName );
 					exit(1);
-				}					
+				}
 				if( ScheddName ) {
 					delete [] ScheddName;
 				}
 				if( !(ScheddName = get_daemon_name(*ptr)) ) {
-					fprintf( stderr, "%s: unknown host %s\n", 
+					fprintf( stderr, "%s: unknown host %s\n",
 							 MyName, get_host_part(*ptr) );
 					exit(1);
 				}
@@ -543,6 +544,13 @@ main( int argc, char *argv[] )
 					exit( 1 );
 				}
 				extraLines.Append( *ptr );
+				break;
+			case 'p':
+				if( !(--argc) || !(*(++ptr)) ) {
+					fprintf( stderr, "%s: -p requires another argument\n",
+							 MyName );
+				}
+				myproxy_password = strdup (*ptr);
 				break;
 			default:
 				usage();
@@ -606,7 +614,7 @@ main( int argc, char *argv[] )
 		fprintf(stdout, "Submitting job(s)");
 	}
 
-	//  Parse the file and queue the jobs 
+	//  Parse the file and queue the jobs
 	if( read_condor_file(fp) < 0 ) {
 		if( ExtraLineNo == 0 ) {
 			fprintf( stderr,
@@ -2906,13 +2914,49 @@ SetGlobusParams()
 		sprintf( buff, "%s = %s", ATTR_REMATCH_CHECK, tmp );
 		free(tmp);
 		InsertJobExpr (buff, false );
-	} 
+	}
 
 	if( (tmp = condor_param(GlobusRSL)) ) {
 		sprintf( buff, "%s = \"%s\"", ATTR_GLOBUS_RSL, tmp );
 		free( tmp );
 		InsertJobExpr ( buff );
 	}
+
+
+
+	//ckireyev: MyProxy-related crap
+	if (tmp = condor_param (ATTR_MYPROXY_HOST_NAME)) {
+		sprintf (buff, "%s = \"%s\"", ATTR_MYPROXY_HOST_NAME, tmp );
+		free( tmp );
+		InsertJobExpr ( buff );
+	}
+
+	if (tmp = condor_param (ATTR_MYPROXY_SERVER_DN)) {
+		sprintf (buff, "%s = \"%s\"", ATTR_MYPROXY_SERVER_DN, tmp );
+		free( tmp );
+		InsertJobExpr ( buff );
+	}
+
+	if (tmp = condor_param (ATTR_MYPROXY_PASSWORD)) {
+		if (myproxy_password != NULL) {
+			sprintf (buff, "%s = %s", ATTR_MYPROXY_PASSWORD, tmp );
+			free( tmp );
+			InsertJobExpr ( buff );
+		}
+	}
+
+	if (tmp = condor_param (ATTR_MYPROXY_CRED_NAME)) {
+		sprintf (buff, "%s = \"%s\"", ATTR_MYPROXY_CRED_NAME, tmp );
+		free( tmp );
+		InsertJobExpr ( buff );
+	}
+
+	if (myproxy_password) {
+		sprintf (buff, "%s = %s", ATTR_MYPROXY_PASSWORD, myproxy_password);
+		InsertJobExpr (buff);
+	}
+
+	// END MyProxy-related crap
 }
 
 #if !defined(WIN32)
@@ -3078,7 +3122,7 @@ read_condor_file( FILE *fp )
 #define isop(c)		((c) == '=')
 		
 		/* Separate out the parameter name */
-/*		
+/*
 		for( ptr=name ; *ptr && !isspace(*ptr) && !isop(*ptr); ptr++ );
 */
 
@@ -3161,7 +3205,7 @@ read_condor_file( FILE *fp )
 }
 
 char *
-condor_param( const char* name) 
+condor_param( const char* name)
 {
 	return condor_param(name, NULL);
 }
@@ -3213,7 +3257,7 @@ strcmpnull(const char *str1, const char *str2)
 
 void
 connect_to_the_schedd()
-{	
+{
 	if ( ActiveQueueConnection == TRUE ) {
 		// we are already connected; do not connect again
 		return;
@@ -3351,8 +3395,8 @@ queue(int num)
 		}
 
 			/* For MPI only... we have to define $(NODE) to some string
-			   here so that we don't break the param parser.  In the 
-			   MPI shadow, we'll convert the string into an integer 
+			   here so that we don't break the param parser.  In the
+			   MPI shadow, we'll convert the string into an integer
 			   corresponding to the mpi node's number. */
 		if ( JobUniverse == CONDOR_UNIVERSE_MPI ) {
 			set_condor_param ( "NODE", "#MpInOdE#" );
@@ -3375,7 +3419,7 @@ queue(int num)
 		SetCoreSize();
 #if !defined(WIN32)
 		SetKillSig();
-#endif		
+#endif
 		SetRank();
 		SetStdFile( 0 );
 		SetStdFile( 1 );
@@ -3385,7 +3429,7 @@ queue(int num)
 		SetCompressFiles();
 		SetAppendFiles();
 		SetLocalFiles();
-		SetTransferFiles();	 // must be called _before_ SetImageSize() 
+		SetTransferFiles();	 // must be called _before_ SetImageSize()
 		SetImageSize();		// must be called _after_ SetTransferFiles()
 		SetRequirements();	// must be called _after_ SetTransferFiles()
 		SetForcedAttributes();
@@ -3395,7 +3439,7 @@ queue(int num)
 		SetExitRemoveCheck();
 		SetLeaveInQueue();
 			//SetArguments needs to be last for Globus universe args
-		SetArguments(); 
+		SetArguments();
 		SetGlobusParams();
 		SetMatchListLen();
 		SetDAGNodeName();
@@ -3855,13 +3899,14 @@ usage()
 	fprintf( stderr, "	Valid options:\n" );
 	fprintf( stderr, "	-v\t\tverbose output\n" );
 	fprintf( stderr, "	-n schedd_name\tsubmit to the specified schedd\n" );
-	fprintf( stderr, 
+	fprintf( stderr,
 			 "	-r schedd_name\tsubmit to the specified remote schedd\n" );
 	fprintf( stderr,
 			 "	-a line       \tadd line to submit file before processing\n"
 			 "                \t(overrides submit file; multiple -a lines ok)\n" );
 	fprintf( stderr, "	-d\t\tdisable file permission checks\n\n" );
 	fprintf( stderr, "	-s\t\tspool all files to the schedd\n\n" );
+	fprintf( stderr, "	-p password\tspecify password to MyProxy server\n\n" );
 	fprintf( stderr, "	If [cmdfile] is omitted, input is read from stdin\n" );
 	exit( 1 );
 }
@@ -3895,6 +3940,9 @@ DoCleanup(int,int,char*)
 	}
 	if (ntdomain) {
 		free(ntdomain);
+	}
+	if (myproxy_password) {
+		free (myproxy_password);
 	}
 
 	return 0;		// For historical reasons...
