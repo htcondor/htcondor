@@ -78,7 +78,7 @@ statically linked to avoid problems */
 #ifndef FORTRAN_HAS_RECURSION
 #  define FORTRAN_HAS_RECURSION		NO
 #endif
-#define HAS_FLOCK			YES
+#define HAS_FLOCK			NO
 #define HAS_ADJTIME			YES
 #define HAS_GETDTABLESIZE		YES
 #define HAS_GETHOSTNAME			YES
