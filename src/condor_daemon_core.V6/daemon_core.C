@@ -2980,8 +2980,10 @@ int DaemonCore::HandleReq(int socki)
             
 		} else {
 			dprintf(comTable[index].dprintf_flag,
-					"DaemonCore: Command received via %s from %s from host %s\n",
-					(user[0] == '\0') ? "unknown user" : user, (is_tcp) ? "TCP" : "UDP",
+					"DaemonCore: Command received via %s%s%s from host %s\n",
+					(is_tcp) ? "TCP" : "UDP",
+					(user[0] != '\0') ? " from " : "",
+					(user[0] != '\0') ? user : "",
 					sin_to_string(((Sock*)stream)->endpoint()) );
 			dprintf(comTable[index].dprintf_flag, 
                     "DaemonCore: received command %d (%s), calling handler (%s)\n",
@@ -2990,8 +2992,11 @@ int DaemonCore::HandleReq(int socki)
 		}
 
 	} else {
-		dprintf(D_ALWAYS, "DaemonCore: Command received via %s from %s from host %s\n",
-				(user[0] == '\0')? "unknown user" : user, (is_tcp) ? "TCP" : "UDP",
+		dprintf(comTable[index].dprintf_flag,
+				"DaemonCore: Command received via %s%s%s from host %s\n",
+				(is_tcp) ? "TCP" : "UDP",
+				(user[0] != '\0') ? " from " : "",
+				(user[0] != '\0') ? user : "",
 				sin_to_string(((Sock*)stream)->endpoint()) );
 		dprintf(D_ALWAYS,
 			"DaemonCore: received unregistered command request %d !\n",req);
