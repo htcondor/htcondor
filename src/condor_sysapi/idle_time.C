@@ -675,30 +675,42 @@ extract_idle_time(
     CFMutableDictionaryRef  properties)
 {
     time_t    idle_time = -1;
+	UInt64  nanoseconds, billion, seconds_64, remainder;
+	UInt32  seconds;
     CFTypeRef object = CFDictionaryGetValue(properties, CFSTR(kIOHIDIdleTimeKey));
-    
+	CFRetain(object);
+ 
     if (!object) {
 	dprintf(D_ALWAYS, "IDLE: Failed to make CFTypeRef\n");
     } else {
-	if (CFGetTypeID(object) != CFDataGetTypeID()) {
-            dprintf(D_ALWAYS, "IDLE: Idle time is not in expected format.\n");
-        } else {
+		CFTypeID object_type = CFGetTypeID(object);
+		if (object_type == CFNumberGetTypeID()) {
+			CFNumberGetValue((CFNumberRef)object, kCFNumberSInt64Type,
+							&nanoseconds);
+        } else if (object_type == CFDataGetTypeID()) {
             Size num_bytes;
             num_bytes = CFDataGetLength((CFDataRef) object);
             if (num_bytes != 8) {
-                dprintf(D_ALWAYS, "IDLE: Idle time is not in expected format.\n");
+                dprintf(D_ALWAYS, "IDLE: Idle time is not 8 bytes.\n");
+				CFRelease(object);
+				return idle_time;
             } else {
-                UInt64  nanoseconds, billion, seconds_64, remainder;
-                UInt32  seconds;
-                CFDataGetBytes((CFDataRef) object, CFRangeMake(0, 8), 
-                                ((UInt8 *) &nanoseconds));
-                billion = U64SetU(1000000000);
-                seconds_64 = U64Divide(nanoseconds, billion, &remainder);
-                seconds = U32SetU(seconds_64);
-                idle_time = seconds;
-            }
-        }
+				CFDataGetBytes((CFDataRef) object, CFRangeMake(0, 8), 
+				((UInt8 *) &nanoseconds));
+			}
+        } else {
+            dprintf(D_ALWAYS, "IDLE: Idle time didnt match CFDataGetTypeID.\n");
+			CFRelease(object);
+			return idle_time;
+		}	
+		billion = U64SetU(1000000000);
+		seconds_64 = U64Divide(nanoseconds, billion, &remainder);
+		seconds = U32SetU(seconds_64);
+		idle_time = seconds;
     }
+	// CFRelease seems to be hip with taking a null object. This seems
+	// strange to me, but hey, at least I thought about it
+	CFRelease(object);
     return idle_time;
 }
 
