@@ -108,6 +108,7 @@ KERBEROS_INCLUDE =
 #endif
 
 
+GAHP_DIR = /p/condor/workspaces/epaulson/gahp/bin
 #endif  /* AfterVendorCF */
 
 
