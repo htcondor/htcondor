@@ -201,7 +201,7 @@ sub RunTest
     }
     else
     {
-	Condor::RegisterExitAbort( sub {
+	Condor::RegisterAbort( sub {
 	    my %info = @_;
 	    die "$handle: FAILURE (job aborted by user)\n";
 	} );
