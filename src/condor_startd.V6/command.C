@@ -454,7 +454,7 @@ int
 accept_request_claim( Resource* rip )
 {
 	int interval;
-	char *client_addr = NULL, *client_host, *full_client_host;
+	char *client_addr = NULL, *client_host, *full_client_host, *tmp;
 	char RemoteUser[512];
 	RemoteUser[0] = '\0';
 
@@ -496,10 +496,12 @@ accept_request_claim( Resource* rip )
 	free( client_addr );
 
 		// Figure out the hostname of our client.
-	if( ! (client_host = sin_to_hostname(stream->endpoint(), NULL)) ) {
+	if( ! (tmp = sin_to_hostname(stream->endpoint(), NULL)) ) {
 		dprintf( D_ALWAYS, "Can't find hostname of client machine\n");
 		ABORT;
-	}
+	} 
+	client_host = strdup( tmp );
+
 		// Try to make sure we've got a fully-qualified hostname.
 	full_client_host = get_full_hostname( client_host );
 	if( ! full_client_host ) {
@@ -509,6 +511,7 @@ accept_request_claim( Resource* rip )
 	} else {
 		rip->r_cur->client()->sethost( full_client_host );
 	}
+	free( client_host );
 
 		// Get the owner of this claim out of the request classad.
 	if( (rip->r_cur->ad())->
