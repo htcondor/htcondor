@@ -287,21 +287,27 @@ int
 getCommandFromArgv( int argc, char* argv[] )
 {
 	char* cmd_str = NULL;
-	int size;
+	int size, baselen;
+	char* base = strdup( basename(argv[0]) ); 
 
-	my_name = strrchr( argv[0], DIR_DELIM_CHAR );
-	if( !my_name ) {
-		my_name = argv[0];
-	} else {
-		my_name++;
+		// See if there's an '-' in our name, if not, append argv[1].
+	cmd_str = strrchr( base, '_');
+
+		// now, make sure we're not looking at "condor_cod" or
+		// something.  if cmd_str is pointing at cod, we want to move
+		// beyond that...
+	if( cmd_str && !strincmp(cmd_str, "_cod", 4) ) {
+		if( cmd_str[4] ) {
+			cmd_str = &cmd_str[4];
+		} else {
+			cmd_str = NULL;
+		}
 	}
-
-		// See if there's an '-' in our name, if not, append argv[1]. 
-	cmd_str = strchr( my_name, '_');
+		// finally, see what we've got after that...
 	if( !cmd_str ) {
 
 			// If there's no argv[1], print usage.
-		if( ! argv[1] ) { usage( my_name ); }
+		if( ! argv[1] ) { usage( base ); }
 
 			// If argv[1] begins with '-', print usage, don't append.
 		if( argv[1][0] == '-' ) { 
@@ -310,15 +316,20 @@ getCommandFromArgv( int argc, char* argv[] )
 			if( argv[1][1] == 'v' ) {
 				version();
 			} else {
-				usage( my_name );
+				usage( base );
 			}
 		}
-		size = strlen( argv[1] );
-		my_name = (char*)malloc( size + 5 );
-		sprintf( my_name, "cod %s", argv[1] );
-		cmd_str = my_name+4;
+		size = strlen(argv[1]);
+		baselen = strlen(base);
+			// we also need to store the space and the '\0'.
+		my_name = (char*)malloc( size + baselen + 2 );
+		sprintf( my_name, "%s %s", base, argv[1] );
+			// skip past the basename and the space...
+		cmd_str = my_name+baselen+1;
+		free( base );
 		argv++; argc--;
 	} else {
+		my_name = base;
 		cmd_str++;
 	}
 		// Figure out what kind of tool we are.
@@ -337,7 +348,7 @@ getCommandFromArgv( int argc, char* argv[] )
 	} else if( !strcmp( cmd_str, "resume" ) ) {
 		return CA_RESUME_CLAIM;
 	} else {
-		fprintf( stderr, "ERROR: unknown command %s\n", my_name );
+		fprintf( stderr, "ERROR: unknown command \"%s\"\n", my_name );
 		usage( "cod" );
 	}
 	return -1;
