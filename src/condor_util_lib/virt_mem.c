@@ -225,9 +225,8 @@ calc_virt_memory()
 
 
 			/* Operate as root to read /dev/kmem */
-#if !defined(Solaris)
+if (getuid()==0)
 		set_root_euid(); 
-#endif
 
         /*
          * First time in this call, get the offset to the anon structure.
@@ -302,9 +301,8 @@ calc_virt_memory()
 	int freeswap;
 
 	/* Become root so we have no hassles reading /dev/kmem */
-#if !defined(Solaris) 
-	set_root_euid(); 
-#endif
+	if (getuid()==0)
+		set_root_euid(); 
 
 	if( !initialized ) {
 
@@ -364,9 +362,8 @@ calc_virt_memory()
 ** Have to be root to run pstat on some systems...
 */
 #ifdef NFSFIX
-#if !defined(Solaris)
+if (getuid()==0)
 	 set_root_euid(); 
-#endif
 #endif NFSFIX
 
 	buf[0] = '\0';
