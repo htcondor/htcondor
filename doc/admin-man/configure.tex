@@ -4175,7 +4175,9 @@ Default value = 10.
 
 \item[\Macro{STORK\_MAX\_RETRY}]
 \label{param:StorkMaxRetry}
-Limits the number of retries for a failed data placement.
+Limits the number attempts for a data placement.  For data transfers,
+this includes transfer attemps on the primary protocol and all
+alternate protocols, and all retries.
 Default value = 10.
 
 \item[\Macro{STORK\_MAXDELAY\_INMINUTES}]
