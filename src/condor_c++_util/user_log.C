@@ -29,6 +29,7 @@
 #include "user_log.c++.h"
 #include <time.h>
 #include "condor_uid.h"
+#include "condor_xml_classads.h"
 
 
 static const char SynchDelimiter[] = "...\n";
@@ -36,9 +37,11 @@ static const char SynchDelimiter[] = "...\n";
 extern "C" char *find_env (const char *, const char *);
 extern "C" char *get_env_val (const char *);
 
-UserLog::UserLog (const char *owner, const char *file, int c, int p, int s)
+UserLog::UserLog (const char *owner, const char *file,
+				  int c, int p, int s, bool xml)
 {
 	UserLog();
+	use_xml = xml;
 	initialize (owner, file, c, p, s);
 }
 
@@ -207,7 +210,7 @@ writeEvent (ULogEvent *event)
 	if (!lock) return 0;
 	if (!event) return 0;
 
-	int retval;
+	int success;
 	priv_state priv = set_user_priv();
 
 	// fill in event context
@@ -217,16 +220,40 @@ writeEvent (ULogEvent *event)
 
 	lock->obtain (WRITE_LOCK);
 	fseek (fp, 0, SEEK_END);
-	retval = event->putEvent (fp);
-	if (!retval) fputc ('\n', fp);
-	if (fprintf (fp, SynchDelimiter) < 0) retval = 0;
+
+	if( use_xml ) {
+		dprintf( D_ALWAYS, "Asked to write event of number %d.\n",
+				 event->eventNumber);
+		ClassAd* eventAd = event->toClassAd();
+		MyString adXML;
+		if (!eventAd) {
+			success = FALSE;
+		} else {
+			ClassAdXMLUnparser xmlunp;
+			xmlunp.SetUseCompactSpacing(FALSE);
+			xmlunp.SetOutputTargetType(FALSE);
+			xmlunp.Unparse(eventAd, adXML);
+			if (fprintf (fp, adXML.GetCStr()) < 0) {
+				success = FALSE;
+			} else {
+				success = TRUE;
+			}
+			delete eventAd;
+		}
+	} else {
+		success = event->putEvent (fp);
+		if (!success) {
+			fputc ('\n', fp);
+		}
+		if (fprintf (fp, SynchDelimiter) < 0) {
+			success = FALSE;
+		}
+	}
+
 	fflush(fp);
-	// Now that we have flushed the stdio stream, sync to disk
-	// *before* we release our write lock!
-	fsync( fileno(fp) );
 	lock->release ();
 	set_priv( priv );
-	return retval;
+	return success;
 }
 	
 void
@@ -371,11 +398,7 @@ ReadUserLog (const char * filename)
 bool ReadUserLog::
 initialize (const char *filename)
 {	
-		// Note:  For whatever reason, we obtain a WRITE lock
-		// in method readEvent.  On Linux, of the file is opened
-		// O_RDONLY, then a WRITE_LOCK never blocks.  Thus
-		// open the file RDWR so the WRITE_LOCK below works correctly.
-	if ((_fd = open (filename, O_RDWR, 0)) == -1) return false;
+	if ((_fd = open (filename, O_RDONLY, 0)) == -1) return false;
 	if ((_fp = fdopen (_fd, "r")) == NULL) return false;
 
     lock = new FileLock( _fd, _fp );
@@ -385,12 +408,169 @@ initialize (const char *filename)
 
 	is_locked = false;
 
+	// now determine if the log file is XML and skip over the header (if
+	// there is one) if it is XML
+
+	// we obtain a write lock here not because we want to write
+	// anything, but because we want to ensure we don't read
+	// mid-way through someone else's write
+	Lock();
+
+	// store file position so we can rewind to this location
+	long filepos = ftell(_fp);
+	if( filepos < 0 ) {
+		dprintf(D_ALWAYS, "ftell failed in ReadUserLog::initialize\n");
+		return false;
+	}
+
+	char afterangle;
+	if( fscanf(_fp, " <%c", &afterangle) ) {
+
+		setIsXMLLog(TRUE);
+
+		// now figure out if there is a header, and if so, advance _fp past
+		// it - this is really ugly
+		int nextchar = afterangle;
+		if( nextchar == '?' || nextchar == '!' ) {
+			// we're probably in the document prolog
+			while( nextchar == '?' || nextchar == '!' ) {
+				// skip until we get out of this tag
+				nextchar = fgetc(_fp);
+				while( nextchar != EOF && nextchar != '>' )
+					nextchar = fgetc(_fp);
+				if( nextchar == EOF ) {
+					Unlock();
+					return false;
+				}
+				// skip until we get to the next tag, saving our location as
+				// we go so we can skip back two chars later
+				while( nextchar != EOF && nextchar != '<' ) {
+					filepos = ftell(_fp);
+					nextchar = fgetc(_fp);
+				}
+				if( nextchar == EOF ) {
+					Unlock();
+					return false;
+				}
+				nextchar = fgetc(_fp);
+			}
+			// now we are in a tag like <[^?!]*>, so go back two chars and
+			// we're all set
+			if( fseek(_fp, filepos, SEEK_SET) )	{
+				dprintf(D_ALWAYS, "fseek failed in ReadUserLog::initialize");
+				Unlock();
+				return false;
+			}
+		} else {
+			// there was no prolog, so go back to the beginning
+			if( fseek(_fp, filepos, SEEK_SET) )	{
+				dprintf(D_ALWAYS, "fseek failed in ReadUserLog::initialize");
+				Unlock();
+				return false;
+			}
+		}			
+	} else {
+		// the first non whitespace char is not <, so this doesn't look like
+		// XML; go back to the beginning and take another look
+		if( fseek(_fp, filepos, SEEK_SET) )	{
+			dprintf(D_ALWAYS, "fseek failed in ReadUserLog::initialize");
+			Unlock();
+			return false;
+		}
+		int nothing;
+		if( fscanf(_fp, " %d", &nothing) ) {
+
+			setIsXMLLog(FALSE);
+
+			if( fseek(_fp, filepos, SEEK_SET) )	{
+				dprintf(D_ALWAYS, "fseek failed in ReadUserLog::initialize");
+				Unlock();
+				return false;
+			}
+		} else {
+			// what sort of log is this!
+			dprintf(D_ALWAYS, "Error, apparently invalid user log file\n");
+			if( fseek(_fp, filepos, SEEK_SET) )	{
+				dprintf(D_ALWAYS, "fseek failed in ReadUserLog::initialize");
+				return false;
+			}
+			Unlock();
+			return false;
+		}
+	}
+
+	Unlock();
 	return true;
 }
-	
 
 ULogEventOutcome ReadUserLog::
 readEvent (ULogEvent *& event)
+{
+	if( is_xml ) {
+		return readEventXML(event);
+	} else {
+		return readEventOld(event);
+	}
+}	
+
+ULogEventOutcome ReadUserLog::
+readEventXML(ULogEvent *& event)
+{
+	ClassAdXMLParser xmlp;
+
+	// we obtain a write lock here not because we want to write
+	// anything, but because we want to ensure we don't read
+	// mid-way through someone else's write
+	Lock();
+
+	// store file position so that if we are unable to read the event, we can
+	// rewind to this location
+  	long     filepos;
+  	if (!_fp || ((filepos = ftell(_fp)) == -1L))
+  	{
+  		Unlock();
+		event = NULL;
+  		return ULOG_UNK_ERROR;
+  	}
+
+	ClassAd* eventad;
+	eventad = xmlp.ParseClassAd(_fp);
+
+	Unlock();
+
+	if( !eventad ) {
+		// we don't have the full event in the stream yet; restore file
+		// position and return
+		if( fseek(_fp, filepos, SEEK_SET) )	{
+			dprintf(D_ALWAYS, "fseek() failed in ReadUserLog::readEvent");
+			return ULOG_UNK_ERROR;
+		}
+		clearerr(_fp);
+		event = NULL;
+		return ULOG_NO_EVENT;
+	}
+
+	int enmbr;
+	if( !eventad->LookupInteger("EventTypeNumber", enmbr) ) {
+		event = NULL;
+		delete eventad;
+		return ULOG_NO_EVENT;
+	}
+
+	if( !(event = instantiateEvent((ULogEventNumber) enmbr)) ) {
+		event = NULL;
+		delete eventad;
+		return ULOG_UNK_ERROR;
+	}
+	
+	event->initFromClassAd(eventad);	
+
+	delete eventad;
+	return ULOG_OK;
+}
+
+ULogEventOutcome ReadUserLog::
+readEventOld(ULogEvent *& event)
 {
 	long   filepos;
 	int    eventnumber;
@@ -399,7 +579,6 @@ readEvent (ULogEvent *& event)
 	// we obtain a write lock here not because we want to write
 	// anything, but because we want to ensure we don't read
 	// mid-way through someone else's write
-	// note: this seems bogus to me.  i think we want a READ_LOCK here.-Todd
 	if (!is_locked)
 		lock->obtain( WRITE_LOCK );
 
@@ -412,34 +591,11 @@ readEvent (ULogEvent *& event)
 		return ULOG_UNK_ERROR;
 	}
 
-
-#if 0
-	// TODD DEBUG
-	char smella[512];
-	if ( fgets(smella,512,_fp) ) {
-		printf("POS=%d BUFFER = '%s'\n",filepos,smella);
-	} else {
-		printf("POS=%d BUFFER = EOF\n",filepos);
-	}
-	fseek( _fp, filepos, SEEK_SET);
-	// END OF TODD DEBUG
-#endif
-
 	retval1 = fscanf (_fp, "%d", &eventnumber);
 
 	// so we don't dump core if the above fscanf failed
-	if (retval1 != 1) {
+	if (retval1 != 1) 
 		eventnumber = 1;
-			// check for end of file
-		if ( feof(_fp) ) {
-			event = NULL;  // To prevent FMR: Free memory read
-			clearerr (_fp);
-			if (!is_locked)
-				lock->release();
-			return ULOG_NO_EVENT;
-		}
-	}
-
 
 	// allocate event object; check if allocated successfully
 	event = instantiateEvent ((ULogEventNumber) eventnumber);
@@ -452,21 +608,14 @@ readEvent (ULogEvent *& event)
 
 	// read event from file; check for result
 	retval2 = event->getEvent (_fp);
+		
 	// check if error in reading event
 	if (!retval1 || !retval2)
 	{	
-		// we could end up here if file locking did not work for
-		// whatever reason (crappy NFS bugs, whatever).  so here
-		// try to wait a second until the current partially-written
-		// event has benn completely written.  the algorithm is 
 		// wait a second, rewind to our initial position (in case a
 		// buggy getEvent() slurped up more than one event), then
-		// again try to synchronize the log.
-		if (!is_locked)
-			lock->release();
+		// synchronize the log
 		sleep( 1 );
-		if (!is_locked)
-			lock->obtain( WRITE_LOCK );
 		if( fseek( _fp, filepos, SEEK_SET)) {
 			dprintf( D_ALWAYS, "fseek() failed in %s:%d", __FILE__, __LINE__ );
 			if (!is_locked)
@@ -486,26 +635,11 @@ readEvent (ULogEvent *& event)
 			
 			// ... attempt to read the event again
 			clearerr (_fp);
-			int oldeventnumber = eventnumber;
-			eventnumber = -1;
 			retval1 = fscanf (_fp, "%d", &eventnumber);
-			if ( retval1 == 1 ) {
-				if ( eventnumber != oldeventnumber ) {
-					if (event) delete event;
-					// allocate event object; check if allocated successfully
-					event = instantiateEvent ((ULogEventNumber) eventnumber);
-					if (!event) 
-					{
-						if (!is_locked)
-							lock->release();
-						return ULOG_UNK_ERROR;
-					}
-				}
-				retval2 = event->getEvent (_fp);
-			}
+			retval2 = event->getEvent (_fp);
 
 			// if failed again, we have a parse error
-			if ( (retval1 != 1) || !retval2 )
+			if (!retval1 || !retval2)
 			{
 				delete event;
 				event = NULL;  // To prevent FMR: Free memory read
@@ -516,24 +650,9 @@ readEvent (ULogEvent *& event)
 			}
 			else
 			{
-				// finally got the event successfully -- synchronize the log
-				if (synchronize ())
-				{
-					if (!is_locked)
-						lock->release();
-					return ULOG_OK;
-				}
-				else
-				{
-					// got the event, but could not synchronize!!  treat as incomplete
-					// event
-					delete event;
-					event = NULL;  // To prevent FMR: Free memory read
-					clearerr (_fp);
-					if (!is_locked)
-						lock->release();
-					return ULOG_NO_EVENT;
-				}
+				if (!is_locked)
+					lock->release();
+				return ULOG_OK;
 			}
 		}
 		else
@@ -618,3 +737,14 @@ void ReadUserLog::outputFilePos(const char *pszWhereAmI)
 	dprintf(D_ALWAYS, "Filepos: %d, context: %s\n", ftell(_fp), pszWhereAmI);
 }
 
+void ReadUserLog::
+setIsXMLLog(bool is_xml)
+{
+	this->is_xml = is_xml;
+}
+
+bool ReadUserLog::
+getIsXMLLog()
+{
+	return is_xml;
+}

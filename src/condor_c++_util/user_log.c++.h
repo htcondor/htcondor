@@ -48,6 +48,8 @@ typedef int BOOL_T;
 #include "file_lock.h"
 #include "condor_event.h"
 
+#define XML_USERLOG_DEFAULT 0
+
 /** API for writing a log file.  Since an API for reading a log file
     was not originally needed, a ReadUserLog class did not exist,
     so it was not forseen to call this class WriteUserLog. <p>
@@ -75,8 +77,8 @@ typedef int BOOL_T;
 class UserLog {
   public:
     ///
-    UserLog() : cluster(-1), proc(-1), subproc(-1),
-        in_block(FALSE), path(0), fp(0), lock(NULL) {}
+    UserLog() : cluster(-1), proc(-1), subproc(-1), in_block(FALSE), path(0),
+				fp(0), lock(NULL), use_xml(XML_USERLOG_DEFAULT) {}
     
     /** Constructor
         @param owner Username of the person whose job is being logged
@@ -84,8 +86,10 @@ class UserLog {
         @param clu  condorID cluster to put into each ULogEvent
         @param proc condorID proc    to put into each ULogEvent
         @param subp condorID subproc to put into each ULogEvent
+		@param xml  make this true to write XML logs, false to use the old form
     */
-    UserLog(const char *owner, const char *file, int clu, int proc, int subp);
+    UserLog(const char *owner, const char *file,
+			int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT);
     
     ///
     ~UserLog();
@@ -117,6 +121,8 @@ class UserLog {
 		@return true on success
     */
     bool initialize(int c, int p, int s);
+
+	void setUseXML(bool new_use_xml){ use_xml = new_use_xml; }
 
     /** Write an event to the log file.  Caution: if the log file is
         not initialized, then no event will be written, and this function
@@ -150,6 +156,7 @@ class UserLog {
     /** Copy of path to the log file */  char     * path;
     /** The log file                 */  FILE     * fp;
     /** The log file lock            */  FileLock * lock;
+	/** Whether we use XML or not    */  bool       use_xml;
 };
 
 
@@ -205,12 +212,39 @@ class ReadUserLog
 	void Lock();
 	void Unlock();
 
+	/** Set whether the log file should be treated as XML. The constructor will
+		attempt to figure this out on its own.
+		@param is_xml should be true if we have a XML log file, false otherwise
+	*/
+	void setIsXMLLog(bool is_xml);
+
+	/** Determine whether this ReadUserLog thinks its log file is XML.
+		@return true if XML, false otherwise
+	*/
+	bool getIsXMLLog();
+
     private:
+
+    /** Read the next event from the XML log file. The event pointer to
+        set to point to a newly instatiated ULogEvent object.
+        @param event pointer to be set to new object
+        @return the outcome of attempting to read the log
+    */
+    ULogEventOutcome readEventXML (ULogEvent * & event);
+
+    /** Read the next event from the old style log file. The event pointer to
+        set to point to a newly instatiated ULogEvent object.
+        @param event pointer to be set to new object
+        @return the outcome of attempting to read the log
+    */
+    ULogEventOutcome readEventOld (ULogEvent * & event);
 
     /** The log's file descriptor */  int    _fd;
     /** The log's file pointer    */  FILE * _fp;
     /** The log file lock         */  FileLock* lock;
 	/** Is the file locked?       */  bool is_locked;
+
+	/** Is this an XML log file ? */  bool is_xml;
 };
 
 #endif /* __cplusplus */

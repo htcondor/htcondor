@@ -44,6 +44,13 @@
 #endif
 #include <limits.h>             /* for _POSIX_PATH_MAX */
 
+/*
+  This is included so the objects derived from ULogEvent can produce a ClassAd
+  representation of themselves. In light of the above comment, perhaps there is
+  a better way to do this. - John Bethencourt 6/3/02
+*/
+#include "../condor_includes/condor_classad.h"
+
 //----------------------------------------------------------------------------
 /** Enumeration of all possible events.
     If you modify this enum, you must also modify ULogEventNumberNames array
@@ -156,7 +163,23 @@ class ULogEvent {
         @return 0 for failure, 1 for success
     */
     int putEvent (FILE *file);
-    
+
+	/** Return a ClassAd representation of this ULogEvent. This is implemented
+		differently in each of the known (by John Bethencourt as of 6/5/02)
+		subclasses of ULogEvent. Each implementation also calls
+		ULogEvent::toClassAd to do the things common to all implementations.
+		@return NULL for failure, or the ClassAd pointer for success
+	*/
+	virtual ClassAd* toClassAd();
+	    
+	/** Initialize from this ClassAd. This is implemented differently in each
+		of the known (by John Bethencourt as of 6/5/02) subclasses of
+		ULogEvent. Each implementation also calls ULogEvent::initFromClassAd
+		to do the things common to all implementations.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+	    
     /// The event last read, or to be written.
     ULogEventNumber    eventNumber;
 
@@ -185,6 +208,19 @@ class ULogEvent {
         @return 0 for failure, 1 for success
     */
     int writeRusage (FILE *, rusage &);
+
+    /** Make a formatted string with the resource usage information.
+        @param usage the usage to consider
+        @return NULL for failure, the string for success
+    */
+    char* rusageToStr (rusage usage);
+
+    /** Parse a formatted string with the resource usage information.
+        @param rusageStr a string like the ones made by rusageToStr.
+        @param usage the rusage buffer to modify
+        @return 0 for failure, 1 for success
+    */
+    int strToRusage (char* rusageStr, rusage & usage);
 
     /** Read the body of the next event.  This virtual function will
         be implemented differently for each specific type of event.
@@ -249,6 +285,16 @@ class SubmitEvent : public ULogEvent
     */
     virtual int writeEvent (FILE *);
 
+	/** Return a ClassAd representation of this SubmitEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+
     /// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
     char submitHost[128];
 
@@ -289,6 +335,16 @@ class GenericEvent : public ULogEvent
     */
     virtual int writeEvent (FILE *);
 
+	/** Return a ClassAd representation of this GenericEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+
     /// A string with unspecified format.
     char info[128];
 };
@@ -321,6 +377,16 @@ class ExecuteEvent : public ULogEvent
         @return 0 for failure, 1 for success
     */
     virtual int writeEvent (FILE *);
+
+	/** Return a ClassAd representation of this ExecuteEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
 
     /// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
     char executeHost[128];
@@ -355,6 +421,16 @@ class ExecutableErrorEvent : public ULogEvent
     */
     virtual int writeEvent (FILE *);
 
+	/** Return a ClassAd representation of this ExecutableErroEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+
     /// The type of error
     ExecErrorType   errType;
 };
@@ -382,6 +458,16 @@ class CheckpointedEvent : public ULogEvent
         @return 0 for failure, 1 for success
     */
     virtual int writeEvent (FILE *);
+
+	/** Return a ClassAd representation of this CheckpointedEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
 
     /** Local  Usage for the run */  rusage  run_local_rusage;
     /** Remote Usage for the run */  rusage  run_remote_rusage;
@@ -411,6 +497,16 @@ class JobAbortedEvent : public ULogEvent
         @return 0 for failure, 1 for success
     */
     virtual int writeEvent (FILE *);
+
+	/** Return a ClassAd representation of this JobAbortedEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
 
 	const char* getReason();
 	void setReason( const char* );
@@ -489,6 +585,16 @@ class JobEvictedEvent : public ULogEvent
         @return 0 for failure, 1 for success
     */
     virtual int writeEvent (FILE *);
+
+	/** Return a ClassAd representation of this JobEvictedEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
 
     /// Was the job checkpointed on eviction?
     bool    checkpointed;
@@ -637,6 +743,16 @@ class JobTerminatedEvent : public TerminatedEvent
         @return 0 for failure, 1 for success
     */
     virtual int writeEvent (FILE *);
+
+	/** Return a ClassAd representation of this JobTerminatedEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
 };
 
 
@@ -659,6 +775,16 @@ class NodeTerminatedEvent : public TerminatedEvent
         @return 0 for failure, 1 for success
     */
     virtual int writeEvent (FILE *);
+
+	/** Return a ClassAd representation of this NodeTerminatedEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
 
 		/// node identifier for this event
 	int node;
@@ -684,6 +810,16 @@ class PostScriptTerminatedEvent : public ULogEvent
         @return 0 for failure, 1 for success
     */
     int writeEvent( FILE* file );
+
+	/** Return a ClassAd representation of this PostScriptTerminatedEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
 
     /// did it exit normally
     bool normal;
@@ -723,6 +859,16 @@ class GlobusSubmitEvent : public ULogEvent
     */
     virtual int writeEvent (FILE *);
 
+	/** Return a ClassAd representation of this GlobusSubmitEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+
     /// Globus Resource Manager (Gatekeeper) Conctact String
     char* rmContact;
 
@@ -759,6 +905,16 @@ class GlobusSubmitFailedEvent : public ULogEvent
     */
     virtual int writeEvent (FILE *);
 
+	/** Return a ClassAd representation of this GlobusSubmitFailedEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+
     /// Globus Resource Manager (Gatekeeper) Conctact String
     char* reason;
 
@@ -784,6 +940,16 @@ class GlobusResourceUpEvent : public ULogEvent
     */
     virtual int writeEvent (FILE *);
 
+	/** Return a ClassAd representation of this GlobusResourceUpEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+
     /// Globus Resource Manager (Gatekeeper) Conctact String
     char* rmContact;
 
@@ -808,6 +974,16 @@ class GlobusResourceDownEvent : public ULogEvent
         @return 0 for failure, 1 for success
     */
     virtual int writeEvent (FILE *);
+
+	/** Return a ClassAd representation of this GlobusResourceDownEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
 
     /// Globus Resource Manager (Gatekeeper) Conctact String
     char* rmContact;
@@ -838,6 +1014,16 @@ class JobImageSizeEvent : public ULogEvent
     */
     virtual int writeEvent (FILE *);
 
+	/** Return a ClassAd representation of this JobImageSizeEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+
     /// The new size of the image
     int size;
 };
@@ -865,6 +1051,16 @@ class ShadowExceptionEvent : public ULogEvent
         @return 0 for failure, 1 for success
     */
     virtual int writeEvent (FILE *);
+
+	/** Return a ClassAd representation of this ShadowExceptionEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
 
 	/// exception message
 	char	message[BUFSIZ];
@@ -898,6 +1094,16 @@ class JobSuspendedEvent : public ULogEvent
     */
     virtual int writeEvent (FILE *);
 
+	/** Return a ClassAd representation of this JobSuspendedEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+
 	/// How many pids the starter suspended
 	int num_pids;
 };
@@ -925,6 +1131,16 @@ class JobUnsuspendedEvent : public ULogEvent
         @return 0 for failure, 1 for success
     */
     virtual int writeEvent (FILE *);
+
+	/** Return a ClassAd representation of this JobUnsuspendedEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
 
 	/** We don't have a number of jobs unsuspended in here because since this
 		is such a hack(the starter isn't supposed to write to the client log
@@ -956,6 +1172,16 @@ class JobHeldEvent : public ULogEvent
         @return 0 for failure, 1 for success
     */
     virtual int writeEvent (FILE *);
+
+	/** Return a ClassAd representation of this JobHeldEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
 
 		/// @return pointer to our copy of the reason, or NULL if not set
 	const char* getReason();
@@ -993,6 +1219,16 @@ class JobReleasedEvent : public ULogEvent
     */
     virtual int writeEvent (FILE *);
 
+	/** Return a ClassAd representation of this JobReleasedEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+
 		/// @return pointer to our copy of the reason, or NULL if not set
 	const char* getReason();
 
@@ -1005,7 +1241,7 @@ class JobReleasedEvent : public ULogEvent
 	char* reason;
 };
 
-/* MPI events */
+/* MPI (or parallel) events */
 class NodeExecuteEvent : public ULogEvent
 {
   public:
@@ -1025,6 +1261,16 @@ class NodeExecuteEvent : public ULogEvent
         @return 0 for failure, 1 for success
     */
     virtual int writeEvent (FILE *);
+
+	/** Return a ClassAd representation of this NodeExecuteEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
 
     /// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
     char executeHost[128];
