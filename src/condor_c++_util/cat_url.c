@@ -39,3 +39,10 @@ char	*argv[];
 		}
 	}
 }
+
+
+char *
+param(char *string)
+{
+	return 0;
+}
