@@ -894,15 +894,16 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 		if ( firstScheddContact ) {
 //			sprintf( expr_buf, "%s && %s == %d && !(%s == %d && %s =!= TRUE)",
 			sprintf( expr_buf, 
-				"%s && %s == %d && (%s =!= FALSE || %s =?= TRUE) && (%s == %d && %s =!= TRUE) == FALSE",
+				"%s && %s == %d && (%s =!= FALSE || %s =?= TRUE) && ((%s == %d || %s == %d || %s == %d) && %s =!= TRUE) == FALSE",
 					 owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS, 
 					 ATTR_JOB_MATCHED, ATTR_JOB_MANAGED, ATTR_JOB_STATUS, HELD,
-					 ATTR_JOB_MANAGED );
+					 ATTR_JOB_STATUS, COMPLETED, ATTR_JOB_STATUS, REMOVED, ATTR_JOB_MANAGED );
 		} else {
 			sprintf( expr_buf, 
-				"%s && %s == %d && %s =!= FALSE && %s != %d && %s =!= TRUE",
+				"%s && %s == %d && %s =!= FALSE && %s != %d && %s != %d && %s != %d && %s =!= TRUE",
 					 owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
-					 ATTR_JOB_MATCHED, ATTR_JOB_STATUS, HELD, ATTR_JOB_MANAGED );
+					 ATTR_JOB_MATCHED, ATTR_JOB_STATUS, HELD, 
+					 ATTR_JOB_STATUS, COMPLETED, ATTR_JOB_STATUS, REMOVED, ATTR_JOB_MANAGED );
 		}
 
 		next_ad = GetNextJobByConstraint( expr_buf, 1 );
