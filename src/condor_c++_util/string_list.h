@@ -42,7 +42,7 @@ public:
 	BOOLEAN contains_withwildcard(const char *string);
 	void print (void);
 	void rewind (void) { strings.Rewind(); }
-	void append (char* str) { strings.Append( strdup(str) ); }
+	void append (const char* str) { strings.Append( strdup(str) ); }
 	void remove (char* str);
 	char *next (void) { return strings.Next(); }
 	void deleteCurrent();
