@@ -109,7 +109,7 @@ shadow_rec*     add_shadow_rec(int, PROC_ID*, match_rec*, int);
 struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
 #endif
 
-bool operator==(const struct PROC_ID a, const struct PROC_ID b)
+bool operator==(const PROC_ID a, const PROC_ID b)
 {
 	return a.cluster == b.cluster && a.proc == b.proc;
 }
@@ -161,7 +161,6 @@ Scheduler::Scheduler()
 
 Scheduler::~Scheduler()
 {
-	int		i;
     delete ad;
     if (MySockName)
         FREE(MySockName);
@@ -370,7 +369,6 @@ Scheduler::count_jobs()
 int
 renice_shadow()
 {
-	char *ptmp;
 	int i = 0;
 
 #ifndef WIN32
@@ -594,7 +592,7 @@ Scheduler::negotiate(int, Stream* s)
  	if ( ReservedSwap != 0 ) {
  		SwapSpace = calc_virt_memory();
  	} else {
- 		SwapSpace = MAXINT;
+ 		SwapSpace = INT_MAX;
  	}
 
 	N_PrioRecs = 0;
@@ -1683,12 +1681,14 @@ Scheduler::preempt(int n)
 				}
 				n--;
 			} else if (preempt_all) {
+#if !defined(WIN32)		// NEED TO PORT TO WIN32
 				if ( rec->preempted ) {
 					kill( rec->pid, SIGKILL );
 				} else {
 					kill( rec->pid, SIGTERM );
 					rec->preempted = TRUE;
 				}
+#endif
 				n--;
 			}
 		} else {
@@ -2708,7 +2708,6 @@ Scheduler::Relinquish(match_rec* mrec)
 void
 Scheduler::RemoveShadowRecFromMrec(shadow_rec* shadow)
 {
-	int			i;
 	bool		found = false;
 	match_rec	*rec;
 
