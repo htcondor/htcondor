@@ -49,23 +49,33 @@ while( $_ = shift( @ARGV ) ) {
 
 # Now, grab the version of this release.
 if( $versarg ) {
-    $_ = $versarg;
+    $vers_string = $versarg;
 } else {
-    # If we weren't told on the command line, try to run ident
-    # directly on the condor_master binary.
-    if( -f "strip_dir/sbin/condor_master" ) {
-        $_=`strip_dir/sbin/condor_master -version`;
-    } elsif ( -f "static_dir/sbin/condor_master" ) {
-        $_=`static_dir/sbin/condor_master -version`;
+    # If we weren't told on the command line, use the condor_version
+    # binary directly to find the version string.
+    if( -f "strip_dir/bin/condor_version" ) {
+        $vers_string=`strip_dir/bin/condor_version`;
+    } elsif ( -f "static_dir/bin/condor_version" ) {
+        $vers_string=`./static_dir/sbin/condor_version`;
     } else {
-	die "ERROR: can't find a condor_master, and no -v specified";
+	die "ERROR: can't find a condor_version, and no -v specified";
+    }
+    if( ! $vers_string ) {
+	die "ERROR: Can't find version string, and no -v specified";
     }
 }
-/.*\$CondorVersion: (\d*)\.(\d*)\.(\d*).*/;
-$majorv = $1;
-$minorv = $2;
-$releasev = $3;
+
+$vers_string =~ /(.*\$CondorVersion: )?(\d+)\.(\d+)\.(\d+).*/;
+$majorv = $2;
+$minorv = $3;
+$releasev = $4;
 $version = "$majorv.$minorv.$releasev";
+
+if( $version =~ /(\d+)\.(\d+)\.(\d+)/ ) {
+    print "Making final tarballs for Condor Version $version\n";
+} else {
+    die "ERROR: Can't parse the version string!";
+}
 
 # Things you should probably leave alone:
 require 5.002;
