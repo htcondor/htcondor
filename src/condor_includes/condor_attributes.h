@@ -123,6 +123,7 @@ const char ATTR_JOB_NOTIFICATION		 [] = "JobNotification";
 const char ATTR_JOB_OUTPUT				 [] = "Out";
 const char ATTR_JOB_PRIO                 [] = "JobPrio";
 const char ATTR_JOB_COMMITTED_TIME		 [] = "CommittedTime";
+const char ATTR_JOB_LANGUAGE             [] = "JobLanguage";
 const char ATTR_JOB_REMOTE_SYS_CPU		 [] = "RemoteSysCpu";
 const char ATTR_JOB_REMOTE_USER_CPU		 [] = "RemoteUserCpu";
 const char ATTR_JOB_REMOTE_WALL_CLOCK	 [] = "RemoteWallClockTime";
