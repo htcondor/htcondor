@@ -343,10 +343,11 @@ LOCK		= $(LOG)
 ##  downloading and installing binaries for every architecture you
 ##  might want to glidein to. The default server is one maintained at
 ##  The University of Wisconsin. If you don't want to use the UW
-##  server, you can set up your own (it needs to be running a gsiftp
-##  daemon) and change the following values to point to it, instead.
-GLIDEIN_SERVER_NAME = gridftp.cs.wisc.edu
-GLIDEIN_SERVER_DIR = /p/condor/public/binaries/glidein
+##  server, you can set up your own and change the following values to
+##  point to it, instead.
+GLIDEIN_SERVER_URLS = \
+  http://www.cs.wisc.edu/condor/glidein/binaries \
+  gsiftp://gridftp.cs.wisc.edu/p/condor/public/binaries/glidein
 
 ##  If your site needs to use UID_DOMAIN settings (defined above) that
 ##  are not real Internet domains that match the hostnames, you can
