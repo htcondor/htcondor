@@ -73,8 +73,8 @@ typedef int BOOL_T;
 class UserLog {
   public:
     ///
-    UserLog() : path(0), cluster(-1), proc(-1), subproc(-1),
-        in_block(FALSE), fp(0), lock(NULL) {}
+    UserLog() : cluster(-1), proc(-1), subproc(-1),
+        in_block(FALSE), path(0), fp(0), lock(NULL) {}
     
     /** Constructor
         @param owner Username of the person whose job is being logged
