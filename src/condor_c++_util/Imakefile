@@ -1,8 +1,8 @@
 all_target(cplus_lib.a liburl.a libcondorapi.a test_libcondorapi)
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(OPENSSL_FLAGS)
-CFLAGS = $(STD_C_FLAGS) $(OPENSSL_FLAGS)
-LIB = $(STD_LIBS) $(OPENSSL_LIB)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+CFLAGS = $(STD_C_FLAGS)
+LIB = $(STD_LIBS)
 
 #if !HAS_FLOCK
 FLOCK_OBJ = ../condor_util_lib/flock.o
