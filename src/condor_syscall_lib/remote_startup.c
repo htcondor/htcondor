@@ -373,7 +373,7 @@ MAIN( int argc, char *argv[], char **envp )
    the submit file, but must be the first argument to the job.  The argv
    is compensated so that the job gets the vector it expected.  --RR
    */
-   if (strcmp (argv[0], "-_condor_debug_wait") == MATCH)
+   if ( (argc > 1) && (strcmp(argv[1], "-_condor_debug_wait") == MATCH) )
    {
        int i = 1;
        argv ++;
