@@ -1,0 +1,28 @@
+SRC_DIR = $(SRC_TREE)/condor_accountant
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -fexternal-templates -fhandle-exceptions
+
+CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
+
+CPP = PreProcessCmd
+
+LDFLAGS = $(LIBDBM)
+
+CLASS_AD_LIB = ../condor_classad/expr_lib.a
+DAEMON_CORE_LIB = ../condor_daemon_core/daemon_core.a
+
+SRC = Accountant.C accountant_main.C
+OBJ = Accountant.o accountant_main.o
+
+LIB= $(DAEMON_CORE_LIB) ../condor_c++_util/cplus_lib.a $(CLASS_AD_LIB) ../condor_util_lib/util_lib.a RpcLib KernLib SocketLib ../condor_c++_util/libapi.a
+
+LIBDIRS=../condor_util_lib ../condor_xdr_lib 
+
+all_target(condor_accountant)
+tags_target($(SRC),$(LIBDIRS))
+depend_target($(SRC))
+c_plus_target(condor_accountant,$(OBJ),$(LIB))
+pure_c_plus_target(condor_accountant.pure,$(OBJ),$(LIB))
+release_target(condor_accountant,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+
+IMPORT_LINKS = ../../config/import_links
+import(../condor_util_lib, stub_gen)
