@@ -27,99 +27,55 @@
 
 #include "env.h"
 
-bool
-AppendEnvVariableSafely( char** env, char* name, char* value )
-{
-	char *new_env;
-
-    if( env == NULL || *env == NULL || name == NULL || value == NULL ) {
-        return false;
-    }
-
-    // allocate enough room for env + delimiter + name + '=' + value + '\0'
-	new_env = (char *) malloc(  strlen(*env)
-							  + strlen(name)
-							  + strlen(value)
-							  + 3);
-	if( new_env == NULL ) {
-		return false;
-	}
-
-	// if this is the first entry in env
-	if( strlen( *env ) == 0 ) {
-		sprintf( new_env, "%s=%s", name, value );
-	} else {
-		sprintf( new_env, "%s%c%s=%s", *env, env_delimiter, name, value );
-	}
-	free( *env );
-	*env = new_env;
-    return true;
-}
-
-char*
-environToString( const char** env ) {
-	// fixed size is bad here but consistent with old code...
-	char *s = new char[ATTRLIST_MAX_EXPRESSION];
-	if( !s ) {
-		return NULL;
-	}
-	s[0] = '\0';
-	int len = 0;
-	for( int i = 0; env[i] != NULL; i++ ) {
-		len += strlen( env[i] ) + 1;
-		if ( len > ATTRLIST_MAX_EXPRESSION ) {
-			dprintf( D_ALWAYS, "ERROR: environToString(): "
-					 "ATTRLIST_MAX_EXPRESSION too small for env array!\n" );
-			delete[] s;
-			return NULL;
-		}
-		char *old = strdup( s );
-		if( !old ) {
-			delete[] s;
-			return NULL;
-		}
-		sprintf( s, "%s%c%s", old, env_delimiter, env[i] );
-		free( old );
-	}
-	return s;
-}
-
-char**
-environDup( const char** env ) {
-	if( !env ) {
-		return NULL;
-	}
-
-	char **newEnv;
-	int i;
-
-	int numElements = 0;
-    for( i = 0; env[i] != NULL; i++ ) {
-		 numElements++;
-	}
-
-	newEnv = (char **) malloc( (numElements + 1) * sizeof( char* ) );
-	if( !newEnv ) {
-		return NULL;
-	}
-	for( i = 0; i < numElements; i++ ) {
-		newEnv[i] = strdup( env[i] );
-	}
-	newEnv[i] = NULL;
-
-	return newEnv;
-}
+#ifndef WIN32
+static const char env_delimiter = ';';
+#else
+// Since ';' is the PATH delimiter in Windows, we use a different
+// delimiter for environment entries.
+static const char env_delimiter = '|';
+#endif
 
 Env::Env()
 {
 	_envTable = new HashTable<MyString, MyString>
 		( 127, &MyStringHash, updateDuplicateKeys );
 	ASSERT( _envTable );
+	generate_parse_messages = false;
 }
 
 Env::~Env()
 {
 	delete _envTable;
+}
+
+void
+Env::GenerateParseMessages(bool flag)
+{
+	generate_parse_messages=flag;
+}
+
+void
+Env::ClearParseMessages()
+{
+	parse_messages = "";
+}
+
+char const *
+Env::GetParseMessages()
+{
+	return parse_messages.Value();
+}
+void
+Env::AddParseMessage(char const *msg)
+{
+	if(!generate_parse_messages) return;
+
+	char const *existing_msg = parse_messages.Value();
+	if(existing_msg && *existing_msg) {
+		// each message is separated by a newline
+		parse_messages += "\n";
+	}
+	parse_messages += msg;
 }
 
 bool
@@ -138,36 +94,118 @@ Env::Merge( const char **stringArray )
 }
 
 bool
+Env::IsSafeEnvValue(char const *str) const {
+	// This is used to filter out stuff containing special
+	// characters from the environment in condor_submit.
+	// Once we support escaping, there will be no need for this.
+
+	if(!str) return false;
+
+	char specials[] = {'|','\n','\0'};
+	// Some compilers do not like env_delimiter to be in the
+	// initialization constant.
+	specials[0] = env_delimiter;
+
+	size_t safe_length = strcspn(str,specials);
+
+	// If safe_length goes to the end of the string, we are okay.
+	return !str[safe_length];
+}
+
+void
+Env::WriteToDelimitedString(char const *input,MyString &output) {
+	// Append input to output.
+	// Would be nice to escape special characters here, but the
+	// existing syntax does not support it, so we leave the
+	// "specials" strings blank.
+
+	char const inner_specials[] = {'\0'};
+	char const first_specials[] = {'\0'};
+
+	char const *specials = first_specials;
+	char const *end;
+	bool ret;
+
+	if(!input) return;
+
+	while(*input) {
+		end = input + strcspn(input,specials);
+		ret = output.sprintf_cat("%.*s",end-input,input);
+		ASSERT(ret);
+		input = end;
+
+		if(*input != '\0') {
+			// Escape this special character.
+			// Escaping is not yet implemented, so we will never get here.
+			ret = output.sprintf_cat("%c",*input);
+			ASSERT(ret);
+			input++;
+		}
+
+		// Switch out of first-character escaping mode.
+		specials = inner_specials;
+	}
+}
+
+bool
+Env::ReadFromDelimitedString(char const *&input, char *output) {
+	// output buffer must be big enough to hold next environment entry
+	// (to be safe, it should be same size as input buffer)
+
+	// strip leading (non-escaped) whitespace
+	while( *input==' ' || *input=='\t' || *input=='\n'  || *input=='\r') {
+		input++;
+	}
+
+	while( *input ) {
+		if(*input == '\n' || *input == env_delimiter) {
+			// for backwards compatibility with old env parsing in environ.C,
+			// we also treat '\n' as a valid delimiter
+			input++;
+			break;
+		}
+		else {
+			// all other characters are copied verbatim
+			*(output++) = *(input++);
+		}
+	}
+
+	*output = '\0';
+
+	return true;
+}
+
+bool
 Env::Merge( const char *delimitedString )
 {
-	const char *startp, *endp;
-	char *expr;
-	int exprlen, retval;
+	char const *input;
+	char *output;
+	int outputlen;
+	bool retval = true;
 
-	startp = delimitedString;
-	while( startp != NULL ) {
-		// compute length of current name=value expression
-		endp = strchr( startp, env_delimiter );
-		exprlen = endp ? (endp - startp) : strlen( startp );
-		ASSERT( exprlen >= 0 );
+	if(!delimitedString) return true;
 
-		if( exprlen > 0 ) {
-			// copy the current expr into its own string
-			expr = new char[exprlen + 1];
-			ASSERT( expr );
-			strncpy( expr, startp, exprlen );
-			expr[exprlen] = '\0';
+	// create a buffer big enough to hold any of the individual env expressions
+	outputlen = strlen(delimitedString)+1;
+	output = new char[outputlen];
+	ASSERT(output);
 
-			// add it to Env
-			retval = Put( expr );
-			delete[] expr;
-			if( retval == false ) {
-				return false;
+	input = delimitedString;
+	while( *input ) {
+		retval = ReadFromDelimitedString(input,output);
+
+		if(!retval) {
+			break; //failed to parse environment string
+		}
+
+		if(*output) {
+			retval = Put(output);
+			if(!retval) {
+				break; //failed to add environment expression
 			}
 		}
-		startp = endp ? endp + 1 : NULL;
 	}
-	return true;
+	return retval;
 }
 
 bool
@@ -220,54 +258,58 @@ Env::Put( const MyString & var, const MyString & val )
 }
 
 char *
-Env::getDelimitedString( const char delim )
+Env::getDelimitedString()
 {
-	if( delim == '\0' ) {
-		return getNullDelimitedString();
-	}
-
 	MyString var, val, string;
 
 	bool emptyString = true;
 	_envTable->startIterations();
 	while( _envTable->iterate( var, val ) ) {
-		// only insert the delimiter if there's aready an entry...
+		// only insert the delimiter if there's already an entry...
         if( !emptyString ) {
-			string += delim;
+			string += env_delimiter;
         }
-		string += var;
-		string += '=';
-		string += val;
+		WriteToDelimitedString(var.Value(),string);
+		WriteToDelimitedString("=",string);
+		WriteToDelimitedString(val.Value(),string);
 		emptyString = false;
 	}
 
-	// allocate space for and write a second trailing null char, so
-	// that it will be safe for parsing by getNullDelimitedString()
+	// return a string allocated by "new"
 
 	int slen = string.Length();
-	char *s = new char[ slen + 2 ];
+	char *s = new char[ slen + 1 ];
 	ASSERT( s );
 	strcpy( s, string.Value() );
-	s[ slen + 1 ] = '\0';
+	s[slen] = '\0';
 	return s;
 }
 
 char *
 Env::getNullDelimitedString()
 {
-	char *s;
-	int i;
+	MyString var, val;
+	char *output, *output_pos;
+	size_t length = 1; // reserve one space for final null
 
-	s = getDelimitedString();
-
-	// search and replace each env_delimiter with '\0'
-
-	for( i = 0; s[i] != '\0' && s[i+1] != '\0'; i++ ) {
-		if( s[i] == env_delimiter ) {
-			s[i] = '\0';
-		}
+	_envTable->startIterations();
+	while( _envTable->iterate( var, val ) ) {
+		// reserve space for "var=val" plus null
+		length += var.Length() + val.Length() + 2;
 	}
-	return s;
+
+	output = new char[length];
+	ASSERT( output );
+	output_pos = output;
+
+	_envTable->startIterations();
+	while( _envTable->iterate( var, val ) ) {
+		sprintf(output_pos,"%s=%s",var.Value(),val.Value());
+		output_pos += var.Length() + val.Length() + 2;
+	}
+
+	*output_pos = '\0'; //append the final null
+	return output;
 }
 
 char **
@@ -293,4 +335,11 @@ Env::getStringArray() {
 	}
 	array[i] = NULL;
 	return array;
+}
+
+bool
+Env::getenv(MyString const &var,MyString &val) const
+{
+	// lookup returns 0 on success
+	return _envTable->lookup(var,val) == 0;
 }

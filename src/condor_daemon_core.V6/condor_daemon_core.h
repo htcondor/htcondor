@@ -1139,10 +1139,8 @@ class DaemonCore : public Service
     int inServiceCommandSocket_flag;
     // end of thread local storage
         
-#ifdef WIN32
-    static char *ParseEnvArgsString(const char *env, char *inheritbuf);
-#else
-    static char **ParseEnvArgsString(const char *env, bool env);
+#ifndef WIN32
+    static char **ParseArgsString(const char *env);
 #endif
 
 	priv_state Default_Priv_State;

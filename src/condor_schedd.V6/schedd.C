@@ -4717,7 +4717,10 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	// stick a CONDOR_ID environment variable in job's environment
 	char condor_id_string[64];
 	sprintf( condor_id_string, "%d.%d", job_id->cluster, job_id->proc );
-	AppendEnvVariableSafely(&env, "CONDOR_ID", condor_id_string );
+	Env envobject;
+	envobject.Merge(env);
+	envobject.Put("CONDOR_ID",condor_id_string);
+	char *newenv = envobject.getDelimitedString();
 	
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_ARGUMENTS,
 		args) < 0) {
@@ -4733,7 +4736,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		job_id->cluster, job_id->proc, args[0] != '\0' ? " " : "", args );
 	
 	pid = daemonCore->Create_Process( a_out_name, job_args, PRIV_USER_FINAL, 
-								1, FALSE, env, iwd, FALSE, NULL, inouterr );
+								1, FALSE, newenv, iwd, FALSE, NULL, inouterr );
 	
 	// now close those open fds - we don't want them here.
 	for ( int i=0 ; i<3 ; i++ ) {
@@ -4744,6 +4747,10 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	
 	if (env) {
 		free(env);
+	}
+
+	if (newenv) {
+		delete[] newenv;
 	}
 	
 	if ( pid <= 0 ) {

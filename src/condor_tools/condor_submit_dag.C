@@ -25,6 +25,7 @@
 #include "which.h"
 #include "string_list.h"
 #include "condor_distribution.h"
+#include "env.h"
 
 struct SubmitDagOptions
 {
@@ -298,8 +299,15 @@ void writeSubmitFile(const MyString &strDagmanPath, const SubmitDagOptions &opts
     }
 
     fprintf(pSubFile, "arguments\t= %s\n", strArgs.Value());
-    fprintf(pSubFile, "environment\t= _CONDOR_DAGMAN_LOG=%s"
-		"%c_CONDOR_MAX_DAGMAN_LOG=0\n", opts.strDebugLog.Value(), env_delimiter);
+
+	Env env;
+	env.Put("_CONDOR_DAGMAN_LOG",opts.strDebugLog.Value());
+	env.Put("_CONDOR_MAX_DAGMAN_LOG=0");
+
+	char *env_str = env.getDelimitedString();
+    fprintf(pSubFile, "environment\t=%s\n",env_str);
+	delete[] env_str;
+
     if(opts.strNotification != "") 
 	{	
 		fprintf(pSubFile, "notification\t= %s\n", opts.strNotification.Value());

@@ -4863,8 +4863,10 @@ int DaemonCore::Create_Process(
 			unix_env[0] = 0;
 		}
 		else {
+			Env envobject;
 			dprintf(D_DAEMONCORE, "Create_Process: Env: %s\n", env);
-			unix_env = ParseEnvArgsString(env, true);
+			envobject.Merge(env);
+			unix_env = envobject.getStringArray();
 		}
 		
 		if( (args == NULL) || (args[0] == 0) ) {
@@ -4876,7 +4878,7 @@ int DaemonCore::Create_Process(
 		}
 		else {
 			dprintf(D_DAEMONCORE, "Create_Process: Arg: %s\n", args);
-			unix_args = ParseEnvArgsString(args, false);
+			unix_args = ParseArgsString(args);
 		}
 
 		//create a new process group if we are supposed to
@@ -6383,20 +6385,15 @@ int DaemonCore::SendAliveToParent()
 }
 	
 #ifndef WIN32
-char **DaemonCore::ParseEnvArgsString(const char *str, bool env)
+char **DaemonCore::ParseArgsString(const char *str)
 {
 	char separator1, separator2;
 	int maxlength;
 	char **argv, *arg;
 	int nargs=0;
 
-	if(env) {
-		separator1 = ';';
-		separator2 = ';';
-	} else {
-		separator1 = ' ';
-		separator2 = '\t';
-	}
+	separator1 = ' ';
+	separator2 = '\t';
 
 	/*
 	maxlength is the maximum number of args and the maximum

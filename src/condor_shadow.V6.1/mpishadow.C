@@ -591,48 +591,22 @@ MPIShadow::modifyNodeAd( ClassAd* ad )
 		  MPICH_EXTRA env var.
 		*/
 
-	bool had_env = false;
-	char buf[1024];
-
-		// Initialize env_delimiter string... note that const char
-		// env_delimiter is defined in condor_constants.h
-	char env_delim_str[3];
-    sprintf(env_delim_str,"%c",env_delimiter);
-
-		// Eventually, we're going to need to insert this as a ClassAd
-		// attribute, so we might as well initialize it with
-		// 'ATTR_JOB_ENVIRONMENT = "'...
-	sprintf( buf, "%s = \"", ATTR_JOB_ENVIRONMENT );
-	MyString env( buf );
-
-		// Now, grab the existing environment.  Do so without static
-		// buffers so we can handle really huge environments
-		// correctly.  
+	Env env;
 	char* env_str = NULL;
 	if( ad->LookupString(ATTR_JOB_ENVIRONMENT, &env_str) ) {
 		if( env_str && env_str[0] ) {
-				// There's something there!
-			had_env = true;
-			env += env_str;
+			env.Merge(env_str);
 		}
 		free( env_str );
-	}
-
-	if( had_env ) {
-			// If there's already an environment, we've got to use the
-			// delimiter before we add our first variable.  If there's
-			// no environment, we should just insert our first
-			// variable without a delimiter.  Either way, all the rest
-			// of the variables should use the delimiter...
-		env += env_delim_str;
 	}
 
 		// Now, add all the MPICH-specific variables.
 
 		// NPROC is easy, since numNodes already holds the total
 		// number of nodes we're going to spawn
-	sprintf( buf, "MPICH_NPROC=%d", numNodes );
-	env += buf;
+	char numNodesString[127];
+	sprintf(numNodesString,"%d",numNodes);
+	env.Put("MPICH_NPROC",numNodesString);
 
 		// We need the delimiter for all the rest of them... 
 
@@ -640,27 +614,22 @@ MPIShadow::modifyNodeAd( ClassAd* ad )
 		// mpich_jobid, since we want that to be constant across all
 		// nodes we spawn, and we can just compute it once when we
 		// start up and reuse it.
-	env += env_delim_str;
-	sprintf( buf, "MPICH_JOBID=%s", mpich_jobid );
-	env += buf;
+	env.Put("MPICH_JOBID",mpich_jobid);
 
 		// Conveniently, nextResourceToStart always holds the right
 		// value for IPROC, since that's what we use to keep track of
 		// what node we're spawning...
-	env += env_delim_str;
-	sprintf( buf, "MPICH_IPROC=%d", nextResourceToStart );
-	env += buf;
+	char nextResourceToStartStr[127];
+	sprintf(nextResourceToStartStr,"%d",nextResourceToStart);
+	env.Put(buf,"MPICH_IPROC",nextResourceToStartStr);
 
 		// Now, if we're a comrade (rank > 0), we also need to add
 		// MPICH_ROOT, which is what we got from our pseudo syscall. 
 	if( nextResourceToStart > 0 ) {
-		env += env_delim_str;
-		sprintf( buf, "MPICH_ROOT=%s", master_addr );
-		env += buf;
+		env.Put("MPICH_ROOT",master_addr);
 	} else {
 			// For the root node, we need to set MPICH_ROOT just to
 			// the hostname of the resource where it's executing
-		env += env_delim_str;
 		char* sinful = NULL;
 		ResourceList[0]->getStartdAddress( sinful );
 			// Now, we've got a sinful string, so, parse out the ip
@@ -676,19 +645,16 @@ MPIShadow::modifyNodeAd( ClassAd* ad )
 			delete [] sinful;
 			shutDown( JOB_NOT_STARTED );
 		}
-		sprintf( buf, "MPICH_ROOT=%s", &sinful[1] );
-		env += buf;
+		env.Put("MPICH_ROOT",&sinful[1]);
 		delete [] sinful;
 	}
 
-		// Now that we're done appending stuff, we've got to terminate
-		// the string for the ClassAd attribute we're constructing.
-	sprintf( buf, "\"" );
-	env += buf;
-
-		// Now, the env MyString contains the modified environment
+		// Now, the env contains the modified environment
 		// attribute, so we just need to re-insert that into our ad. 
-	if( ad->Insert(env.Value()) ) {
+	env_str = env.getDelimitedString();
+	int ret = ad->Assign(ATTR_JOB_ENVIRONMENT,env_str);
+	delete[] env_str;
+	if(ret) {
 		return true;
 	} 
 	return false;

@@ -25,21 +25,8 @@
 #include "condor_debug.h"
 #include "environ.h"
 #include "condor_environ.h"
+#include "env.h"
 
-
-inline int
-is_white( char ch )
-{
-	switch( ch ) {
-	  case env_delimiter:
-	  case '\n':
-	  case ' ':
-	  case '\t':
-		return 1;
-	  default:
-		return 0;
-	}
-}
 
 Environ::Environ()
 {
@@ -63,34 +50,26 @@ Environ::~Environ()
 void
 Environ::add_string( const char *str )
 {
-	const char *ptr;
-	char       *buf;
-	char       *dst;
+	Env env;
+	char *env_str;
+	char const *env_entry;
 
-	 // dprintf( D_ALWAYS, "Adding compound string \"%s\"\n", str );
+	env.Merge(str);
+	env_str = env.getNullDelimitedString();
+	ASSERT( env_str );
 
-	buf = new char [ strlen(str) + 1 ];
-
-	for( ptr=str; *ptr; ) {
-		while( *ptr && is_white(*ptr) ) {
-			ptr++;
-		}
-		if( *ptr == '\0' ) {
-			return;
-		}
-		dst = buf;
-		while( *ptr && *ptr != '\n' && *ptr != env_delimiter ) {
-			*dst++ = *ptr++;
-		}
-		*dst = '\0';
-		this->add_simple_string( buf );
+	env_entry = env_str;
+	while (*env_entry) {
+		this->add_simple_string( env_entry );
+		env_entry += strlen(env_entry)+1;
 	}
-	delete [] buf;
+
+	delete[] env_str;
 }
 
 
 void
-Environ::add_simple_string( char *str )
+Environ::add_simple_string( const char *str )
 {
 	char	**new_vec;
 	char	*copy;

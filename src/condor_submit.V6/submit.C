@@ -28,7 +28,7 @@
 #include "condor_network.h"
 #include "condor_string.h"
 #include "condor_ckpt_name.h"
-#include "environ.h"
+#include "env.h"
 #include "basename.h"
 #include <time.h>
 #include "user_log.c++.h"
@@ -114,12 +114,6 @@ bool	UserLogSpecified = false;
 bool    UseXMLInLog = false;
 ShouldTransferFiles_t should_transfer = STF_NO;
 bool job_ad_saved = false;	// should we deallocate the job ad after storing it?
-
-// environment vars in the ClassAd attribute are seperated via
-// the env_delimiter character; currently a '|' on NT and ';' on Unix
-// env_delimiter is a static const chat defined in condor_constants.h.
-// Here we define a char* env_delimiter_string for use with strcat.
-static char env_delimiter_string[5];
 
 char* LogNotesVal = NULL;
 char* UserNotesVal = NULL;
@@ -446,10 +440,6 @@ main( int argc, char *argv[] )
 	char	*cmd_file = NULL;
 	int dag_pause = 0;
 	int i;
-
-	// Initialize env_delimiter string... note that
-	// const char env_delimiter is defined in condor_constants.h
-	sprintf(env_delimiter_string,"%c",env_delimiter);
 
 	setbuf( stdout, NULL );
 
@@ -2397,78 +2387,74 @@ SetEnvironment()
 	char *shouldgetenv = condor_param( GetEnv, "get_env" );
 	char *allowscripts = condor_param( AllowStartupScript,
 									   "AllowStartupScript" );
-	Environ envobject;
+	Env envobject;
 	MyString newenv;
 	char varname[MAXVARNAME];
 	int envlen;
-	bool first = true;
 
-	newenv += ATTR_JOB_ENVIRONMENT;
-	newenv += " = \"";
+	envobject.GenerateParseMessages();
+	if(!envobject.Merge(env)) {
+		char const *err_msg = envobject.GetParseMessages();
+		if(!err_msg) err_msg = "ERROR parsing environment.";
+		fprintf(stderr,
+		  "\n%s\nThe environment you specified was: '%s'\n",err_msg,env);
+		exit(1);
+	}
 
-	if (env) {
-		MyString E(env);
-		newenv += E.EscapeChars("\"", '\\');
-		envobject.add_string(env);
-		first = false;
+	char const *warning_msg = envobject.GetParseMessages();
+	if(warning_msg && *warning_msg) {
+		fprintf(stderr,
+		  "\n%s\nThe environment you specified was %s\n",warning_msg,env);
 	}
 
 	if (allowscripts && (*allowscripts=='T' || *allowscripts=='t') ) {
-		if ( !first ) {
-			newenv += env_delimiter_string;
-		}
-		newenv += "_CONDOR_NOCHECK=1";
-		first = false;
-		free(allowscripts);
+		envobject.Put("_CONDOR_NOCHECK","1");
 	}
-
 
 	envlen = newenv.Length();
 
 	// grab user's environment if getenv == TRUE
 	if ( shouldgetenv && ( shouldgetenv[0] == 'T' || shouldgetenv[0] == 't' ) )
  	{
-
-		// escape the double quote
-		MyString CHARS_TO_ESCAPE("\"");
-		char     ESCAPE_CHAR = '\\';
-
 		for (int i=0; environ[i]; i++) {
+			if(!envobject.IsSafeEnvValue(environ[i])) {
+				// We silently filter out anything that is not expressible
+				// in the current environment string syntax.
+				continue;
+			}
 
-			// ignore env settings that contain env_delimiter to avoid 
-			// syntax problems
-
-			if (strchr(environ[i], env_delimiter) == NULL) {
-				envlen += strlen(environ[i]);
-				// don't override submit file environment settings
-				// check if environment variable is set in submit file
-				int j;
-				for (j=0; env && environ[i][j] && environ[i][j] != '='; j++) {
-					varname[j] = environ[i][j];
-				}
-				varname[j] = '\0';
-				if (env == NULL || envobject.getenv(varname) == NULL) {
-					if (first) {
-						first = false;
-					} else {
-						newenv += env_delimiter_string;
-					}
-
-					// convert to a MyString for easy manipulation
-					MyString E = environ[i];
-
-					// escape any illegal chars
-					newenv += E.EscapeChars(CHARS_TO_ESCAPE, ESCAPE_CHAR);
-				}
+			envlen += strlen(environ[i]);
+			// don't override submit file environment settings
+			// check if environment variable is set in submit file
+			int j;
+			for (j=0; env && environ[i][j] && environ[i][j] != '='; j++) {
+				varname[j] = environ[i][j];
+			}
+			varname[j] = '\0';
+			MyString existing_val;
+			if (!envobject.getenv(varname,existing_val)) {
+				envobject.Put(environ[i]);
 			}
 		}
 	}
 
+	char *newenv_unescaped = envobject.getDelimitedString();
+	MyString E(newenv_unescaped);
+	newenv += ATTR_JOB_ENVIRONMENT;
+	newenv += " = \"";
+	newenv += E.EscapeChars("\"",'\\');
 	newenv += "\"";
 
 	InsertJobExpr (newenv.Value());
+
+	if( newenv_unescaped ) {
+		delete[] newenv_unescaped;
+	}
 	if( env ) {
 		free(env);
+	}
+	if( allowscripts ) {
+		free(allowscripts);
 	}
 	if( shouldgetenv ) {
 		free(shouldgetenv);

@@ -34,13 +34,13 @@ class Environ {
 public:
 	Environ();
 	~Environ();
-	void	add_string( const char * );
+	void	add_string( const char * ); //add delimited entries
 	char	*getenv( const char * );
 	char	*getenv( CONDOR_ENVIRON logical );
 	void	display();
 	char	**get_vector();
 private:
-	void	add_simple_string( char * );
+	void    add_simple_string( const char * ); //add a single entry
 	char	**vector;	// vector of char pointers, terminated by a null ptr
 	int		count;		// number of strings currently stored in vector
 	int		max;		// max number of strings vector can hold

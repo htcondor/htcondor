@@ -82,7 +82,6 @@ static const int REQ_SOCK = 16;
 static const int RPL_SOCK = 17;
 
 #if defined(WIN32)
-static const char env_delimiter = '|';
 static const char DIR_DELIM_CHAR = '\\';
 static const char DIR_DELIM_STRING[] = "\\";
 static const char PATH_DELIM_CHAR = ';';
@@ -90,7 +89,6 @@ static const char NULL_FILE[] = "NUL";
 /* CONDOR_EXEC is name the used for the user's executable */
 static const char CONDOR_EXEC[] = "condor_exec.exe";
 #else
-static const char env_delimiter = ';';
 static const char DIR_DELIM_CHAR = '/';
 static const char DIR_DELIM_STRING[] = "/";
 static const char PATH_DELIM_CHAR = ':';

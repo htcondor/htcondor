@@ -25,19 +25,6 @@
 
 #include "HashTable.h"
 
-// ********* These are deprecated:
-
-// appends a new environment variable to env string
-bool AppendEnvVariableSafely( char** env, char* name, char* value );
-
-// converts unix environ array to a single semicolon-delimited string
-char* environToString( const char** unix_env );
-
-// makes a copy of a unix environ array
-char** environDup( const char** env );
-
-// ********* This is the new world order:
-
 class Env {
  public:
 	Env();
@@ -48,12 +35,25 @@ class Env {
 	bool Put( const char *nameValueExpr );
 	bool Put( const char *var, const char *val );
 	bool Put( const MyString &, const MyString & );
-	char *getDelimitedString( const char delim = env_delimiter );
+	char *getDelimitedString();
 	char *getNullDelimitedString();
 	char **getStringArray();
+	bool getenv(MyString const &var,MyString &val) const;
+	bool IsSafeEnvValue(char const *str) const;
+
+	void GenerateParseMessages(bool flag=true);
+	void ClearParseMessages();
+	char const *GetParseMessages();
 
  protected:
 	HashTable<MyString, MyString> *_envTable;
+	bool generate_parse_messages;
+	MyString parse_messages;
+
+	bool ReadFromDelimitedString( char const *&input, char *output );
+	bool ReadFromDelimitedString_OldSyntax( char const *&input, char *output );
+	void WriteToDelimitedString(char const *input,MyString &output);
+	void AddParseMessage(char const *msg);
 };
 
 #endif	// _ENV_H
