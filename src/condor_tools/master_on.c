@@ -53,7 +53,7 @@ main( int argc, char* argv[], char *env[] )
 	}
 
 	// Flush my environment
-	env = NULL;
+	*env = NULL;
 
 	// Here we go!
 	if( setuid(0) < 0 ) {
