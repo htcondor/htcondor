@@ -1,5 +1,5 @@
-This is version 0.9.2 of the Condor Classad library, released on
-12-Feb-2001. 
+This is version 0.9.5 of the Condor Classad library, released on
+21-Nov-2003.
 
 ===== What is it? =====
 
@@ -43,7 +43,7 @@ everyday use and experience with the original code provided much of the
 guidance and inspiration for this version.
 
 ===== Status ===== 
-Version 0.9.2 is an early release. We hope to release version 1.0 in
+Version 0.9.5 is an early release. We hope to release version 1.0 in
 the near future. Version 1.0 will be more thoroughly tested and will
 have better documentation. Please be aware that some of the public
 interfaces may change before version 1.0 is released.
@@ -77,9 +77,10 @@ condor-admin@cs.wisc.edu. Please make sure that "ClassAd" is in your
 subject line. We will do the best we can to answer questions, but
 please realize that it sometimes takes a while to do so.
 
-===== License =====
+===== License ===== 
 The Condor ClassAd library is an open source release, under the terms
-of the GNU LGPL. Please see the LICENSE file for more information.
+of the Condor Public License, which is a BSD-style license. Please see
+the LICENSE file for more information.
 
 ===== Building ===== 
 We have built the ClassAd library on Linux, Solaris and Windows. Hopefully
@@ -143,12 +144,6 @@ header files.
 
 Once the build is complete, the ClassAd library should be located
 ./Release.
-
-
-===== Installing =====
-Modify the Makefile variable INSTALL_DIR to point at the location you
-would like the ClassAd library to be installed. Then just execute
-"make install".
 
 ===== Using the ClassAd library =====
 Once the ClassAd library has been used, you can use it in your C++
