@@ -1187,9 +1187,30 @@ XCOMM End translation of func(RUN)
 #endif /* RUN */
 
 
+#ifndef TESTCLASS_DECL
+#ifdef FLAGS_MACRO_NAME
+#define TESTCLASS_DECL(testclass)		@@\
+XCOMM Begin translation of func(TESTCLASS_DECL)	@@\
+testclass::					@@\
+	@/bin/true				@@\
+XCOMM End translation of func(TESTCLASS_DECL)
+#else /* ! FLAGS_MACRO_NAME */
+#define TESTCLASS_DECL(testclass)		@@\
+XCOMM Begin translation of func(TESTCLASS_DECL)	@@\
+testclass:: compiler_list			@@\
+	for X in `cat compiler_list` ; do \	@@\
+	    make $$X/Makefile; \		@@\
+	     cd $$X; make testclass; cd ..; \	@@\
+	done					@@\
+XCOMM End translation of func(TESTCLASS_DECL)
+#endif /* FLAGS_MACRO_NAME */
+#endif /* TESTCLASS_DECL */
+
+
 #ifndef TESTCLASS
 #define TESTCLASS(name,testclass)		@@\
 XCOMM Begin translation of func(TESTCLASS)	@@\
+testclass:: name				@@\
 clean::						@@\
 	rm -f class_list Concat(testclass,_list) @@\
 class_list:: Concat(testclass,_list)		@@\
