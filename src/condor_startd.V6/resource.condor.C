@@ -444,12 +444,12 @@ resource_update_classad(resource_info_t* rip)
 		cp->Insert(line);
 	} else {
 		if( tmp ) {
-			sprintf(line,"Requirements=T");
+			sprintf(line,"Requirements=True");
 			cp->Insert(line);
 			sprintf(line,"ResourceState=condor");
 			cp->Insert(line);
 		} else {
-			sprintf(line,"Requirements=F");
+			sprintf(line,"Requirements=False");
 			cp->Insert(line);
 			sprintf(line,"ResourceState=owner");
 			cp->Insert(line);
