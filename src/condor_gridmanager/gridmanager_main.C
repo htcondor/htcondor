@@ -4,11 +4,6 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "basename.h"
 
-// Globus include files
-#include "globus_common.h"
-#include "globus_gram_client.h"
-#include "globus_gass_server_ez.h"
-
 #include "sslutils.h"	// for proxy_get_filenames
 
 #include "gridmanager.h"
@@ -46,13 +41,6 @@ main_activate_globus()
 		return false;
 	}
 
-/*
-	if ( gramCallbackContact ) {
-		free(gramCallbackContact);
-		gramCallbackContact = NULL;
-	}
-*/
-
 	GahpMain.setMode( GahpClient::blocking );
 
 	err = GahpMain.globus_gram_client_callback_allow( gramCallbackHandler,
@@ -61,37 +49,15 @@ main_activate_globus()
 	if ( err != GLOBUS_SUCCESS ) {
 		dprintf( D_ALWAYS, "Error enabling GRAM callback, err=%d - %s\n", 
 			err, GahpMain.globus_gram_client_error_string(err) );
-/*
-		globus_module_deactivate( GLOBUS_GRAM_CLIENT_MODULE );
-*/
 		return false;
 	}
 
-/*
-	err = GahpMain.globus_gass_server_ez_init( &gassServerListener,
-										NULL, NULL, NULL,
-										GLOBUS_GASS_SERVER_EZ_READ_ENABLE |
-										GLOBUS_GASS_SERVER_EZ_LINE_BUFFER |
-										GLOBUS_GASS_SERVER_EZ_WRITE_ENABLE,
-										NULL );
-*/
 	err = GahpMain.globus_gass_server_superez_init( &gassServerUrl, 0 );
 	if ( err != GLOBUS_SUCCESS ) {
 		dprintf( D_ALWAYS, "Error enabling GASS server, err=%d\n", err );
-/*
-		GahpMain.globus_gram_client_callback_disallow( gramCallbackContact );
-		globus_module_deactivate_all();
-*/
 		return false;
 	}
 
-/*
-	if ( gassServerUrl ) {
-		free(gassServerUrl);
-		gassServerUrl = NULL;
-	}
-	gassServerUrl = GahpMain.globus_gass_transfer_listener_get_base_url(gassServerListener);
-*/
 	return true;
 }
 
@@ -99,10 +65,6 @@ main_activate_globus()
 bool
 main_deactivate_globus()
 {
-/*
-	GahpMain.globus_gram_client_callback_disallow( gramCallbackContact );
-	GahpMain.globus_gass_server_ez_shutdown( gassServerListener );
-*/
 	return true;
 }
 
