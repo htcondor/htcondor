@@ -8,6 +8,8 @@
    collector.  -- Raghu 2/28/95
 */
 
+#include <netinet/in.h>
+
 typedef struct {
         struct  sockaddr_in addr;
         int     sock;
