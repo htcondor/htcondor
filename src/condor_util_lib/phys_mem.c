@@ -199,7 +199,9 @@ calc_phys_memory()
 		   seem to work pretty well.  -Derek Wright (1/29/98)
  	    */
 	hack = (pages * factor);
-	if( hack > 130000 ) {
+	if( hack > 260000 ) {
+		return (int) (hack / 1023);		
+	} else if( hack > 130000 ) {
 		return (int) (hack / 1020);
 	} else if( hack > 65000 ) {
 		return (int) (hack / 1010);
