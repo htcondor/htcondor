@@ -18,7 +18,7 @@
 #define KernLib -lkstat -lelf
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC  
-#define SocketLib -lnsl -lsocket 
+#define SocketLib -lnsl -lsocket -lgen
 
 #define SyscallsExp /**/
 
