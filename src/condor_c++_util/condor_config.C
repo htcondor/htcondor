@@ -65,7 +65,7 @@
 #	include "ntsysinfo.h"		// for WinNT getppid
 #endif
 #include "directory.h"			// for StatInfo
-#include "condor_scanner.h"		// for MAXVARNAME, etc
+//#include "condor_scanner.h"		// for MAXVARNAME, etc
 #include "condor_distribution.h"
 #include "condor_environ.h"
 #include "MyString.h"
