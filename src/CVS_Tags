@@ -1,3 +1,9 @@
+03/12/04 V6_7-tdp_2-branch
+   A new branch off of V6_7-branch created from the V6_7-tdp_2-root
+   tag.  This is the 2nd generation of the V6_7-tdp-branch.  The
+   V6_7-branch now has rh9 support and a number of other improvements
+   since the V6_7-tdp-root tag, which is why we need a new branch.
+
 03/10/04 V6_7-condorc-branch
    A new branch off of V6_7-branch created from the V6_7-condorc-root
    tag. This will hold work to implement Condor-C.
