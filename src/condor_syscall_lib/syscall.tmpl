@@ -243,6 +243,17 @@ int rename( const char *from, const char *to ) {
 		out xdr_int( kill_sig );
 		alloc( kill_sig, INT_SIZE );
 	}
+
+#if !defined (SWITCH)
+	int pvm_info( const char *response, int mytid ) : pseudo {
+		SEND_PATH( response );
+		ALLOC_PATH( response );
+	}
+
+    int pvm_task_info( int v_pid, int pvm_tid) : pseudo;
+
+    int suspended( int susp ) : pseudo;
+#endif
 		/*
 		This function is intended for setting up the transfer
 		of a whole file via a TCP stream.  This allows more
@@ -491,7 +502,7 @@ int rename( const char *from, const char *to ) {
 		alloc( times, TIMEVAL_ARRAY_SIZE );
 	}
 	int gethostid();
-	int setrlimit( int resource, const struct rlimit *rlp ) {
+	int setrlimit( int resource, /* const */ struct rlimit *rlp ) {
 		in xdr_rlimit( rlp );
 		alloc( rlp, RLIMIT_SIZE );
 	}
@@ -800,6 +811,8 @@ not_supported {
 		in xdr_bytes( &buf, &count, count );
 		alloc( buf, count );
 	}
+
+
 	not_supported {
 		int audit();
 		int auditbin();
