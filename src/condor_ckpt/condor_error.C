@@ -99,7 +99,6 @@ const char *mode_names[] = {
 
 void _condor_warning( condor_warning_kind_t kind, const char *format, ... )
 {
-	int i;
 	va_list	args;
 	char text[BUFFER_SIZE];
 	va_start(args,format);
