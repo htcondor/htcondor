@@ -221,6 +221,9 @@ JobInfoCommunicator::writeOutputAdFile( ClassAd* ad )
 void
 JobInfoCommunicator::initOutputAdFile( void )
 {
+	if( ! job_output_ad_file ) {
+		return;
+	}
 	if( job_output_ad_file[0] == '-' && job_output_ad_file[1] == '\0' ) {
 		job_output_ad_is_stdout = true;
 	} else if( ! fullpath(job_output_ad_file) ) {
