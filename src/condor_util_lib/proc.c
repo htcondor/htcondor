@@ -22,13 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
  
-
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <sys/resource.h>
+#include "condor_common.h"
 
 #if defined(OSF1)
 #	define _OSF_SOURCE
@@ -449,11 +443,7 @@ PROC	*proc_template;
 		FREE( proc );
 		return NULL;
 	}
-#if defined(Solaris)
-	proc->exit_status = (int *) MALLOC( sizeof(/*union*/ wait) * n_cmds ); 
-#else
-	proc->exit_status = (int *) MALLOC( sizeof(union wait) * n_cmds ); 
-#endif
+	proc->exit_status = (int *) MALLOC( sizeof(int) * n_cmds ); 
 
 	if ( proc->err == NULL) {
 		FREE( proc->cmd );
@@ -482,39 +472,3 @@ PROC	*proc;
 }
 #endif /* NEW_PROC */
 
-CONTEXT *
-build_job_context( proc )
-PROC	*proc;
-{
-	char	line[1024];
-	CONTEXT	*answer;
-	CONTEXT *create_context();
-
-	answer = create_context();
-
-	(void)sprintf( line,
-		"JOB_REQUIREMENTS = (%s) && (Disk >= %d) && (VirtualMemory >= %d)",
-		proc->requirements, calc_disk_needed(proc), proc->image_size  );
-	store_stmt( scan(line), answer );
-
-	if( proc->preferences && proc->preferences[0] ) {
-		(void)sprintf( line, "JOB_PREFERENCES = %s", proc->preferences );
-	} else {
-		(void)sprintf( line, "JOB_PREFERENCES = T" );
-	}
-	store_stmt( scan(line), answer );
-
-	(void)sprintf( line, "Owner = \"%s\"", proc->owner );
-	store_stmt( scan(line), answer );
-
-	(void)sprintf( line, "UNIVERSE = %d", proc->universe );
-	store_stmt( scan(line), answer );
-
-	(void)sprintf( line, "q_date = %d", proc->q_date );
-	store_stmt( scan(line), answer );
-
-	(void)sprintf( line, "image_size = %d", proc->image_size );
-	store_stmt( scan(line), answer );
-
-	return answer;
-}
