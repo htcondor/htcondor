@@ -551,7 +551,7 @@ part_send_job(
   if( test_starter ) {
 	  dprintf( D_ALWAYS, "Requesting Alternate Starter %d\n", test_starter );
   } else {
-	  dprintf( D_ALWAYS, "Requesting Primarty Starter\n" );
+	  dprintf( D_ALWAYS, "Requesting Primary Starter\n" );
   }
   if( !sock->code(test_starter) ) {
     EXCEPT( "sock->code(%d)", test_starter );
