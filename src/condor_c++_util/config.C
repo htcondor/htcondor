@@ -28,13 +28,7 @@
 ** parameter, not a seperate path and filename.
 */ 
 
-#include <stdio.h>
-#include <ctype.h>
-#if !defined(WIN32)
-#include <netdb.h>
-#endif
-#include <stdlib.h>
-#include <string.h>
+#include "condor_common.h"
 #include "expr.h"
 #include "condor_debug.h"
 #include "condor_config.h"
