@@ -108,6 +108,11 @@ get_priv()
 }
 
 
+int
+can_switch_ids( void )
+{
+	return SwitchIds;
+}
 
 
 /* End Common Bits */
