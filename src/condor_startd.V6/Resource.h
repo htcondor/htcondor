@@ -96,6 +96,9 @@ public:
 		// Called from the reaper to handle things for this rip
 	void	starter_exited( void );	
 
+		// Called by command_activate_claim() to spawn a starter
+	int		spawn_starter( start_info_t*, time_t );
+
 		// Since the preempting state is so weird, and when we want to
 		// leave it, we need to decide where we want to go, and we
 		// have to do lots of funky twiddling with our match objects,
@@ -151,7 +154,6 @@ private:
 	int		update_tid;	// DaemonCore timer id for update delay
 
 	int		fast_shutdown;	// Flag set if we're in fast shutdown mode.
-	int		r_load_num_called;	// Counter used for CondorLoadAvg
 	void	remove_pre( void );	// If r_pre is set, refuse and delete it.
 	bool	r_is_deactivating;	// Are we in the middle of deactivating a claim?
 	int		r_cpu_busy;
