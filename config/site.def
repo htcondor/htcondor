@@ -1,29 +1,6 @@
 #ifdef BeforeVendorCF
 #define HasGcc YES
 #define HasGPlusPlus YES
-#if Platform == X86_SOLARIS
-#  if SpecificPlatform == X86_SOLARIS25
-#    define GccArch i386-unknown-solaris2.5
-#  else
-#    define GccArch i386-sun-solaris2.4
-#  endif
-#elif Platform == SUN4M_SOLARIS
-#  if SpecificPlatform == SUN4M_SOLARIS251
-#    define GccArch sparc-sun-solaris2.5.1
-#  else
-#    define GccArch sparc-sun-solaris2.4
-#  endif
-#elif Platform == ALPHA_OSF1
-#  define GccArch alpha-dec-osf3.2
-#elif Platform == SPARC_SUNOS41
-#  define GccArch sparc-sun-sunos4.1.3
-#elif Platform == R6000_AIX32
-#  define GccArch rs6000-ibm-aix3.2.5
-#elif Platform == HPPAR_HPUX9
-#  define GccArch hppa1.1-hp-hpux9.01
-#endif
-
-/* Add more here */
 
 /*
  * GccVersion should be the only one that needs to be changed from time to time
