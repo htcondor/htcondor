@@ -199,7 +199,7 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 //	while( (tree = s_ad->NextExpr()) ) {
 	ClassAdUnParser unp;
 	ClassAd::iterator s;
-	string expr_string;
+	std::string expr_string;
 	for( s = s_ad->begin( ); s != s_ad->end( ); s++ ) {
 //		if( (lhs = tree->LArg()) ) {
 //			lhs->PrintToNewStr( &lhstr );

@@ -1124,7 +1124,7 @@ caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 	ReliSock* rsock = (ReliSock*)s;
 	const char* owner = rsock->getOwner();
 	ClassAdUnParser unp;
-	string bufString;
+	std::string bufString;
 
 	if( ! authorizedForCOD(owner) ) {
 		err_msg = "User '";

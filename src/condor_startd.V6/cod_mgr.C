@@ -279,7 +279,7 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 	MyString err_msg;
 	ClassAd *mach_classad = rip->r_classad;
 	ClassAdUnParser unp;
-	string bufString;
+	std::string bufString;
 
 	switch( claim->state() ) {
 	case CLAIM_IDLE:

@@ -82,7 +82,7 @@ int MdsGenerate(ClassAd *machine, const char *file )
 		if ( NULL != value ) {
 			char		*thestr;
 //			value->PrintToNewStr( &thestr );
-			string thestring;
+			std::string thestring;
 			unp.Unparse( thestring, m->second );
 			thestr = new char[thestring.length( )+1];
 			strcpy( thestr, thestring.c_str( ) );

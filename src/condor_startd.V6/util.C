@@ -281,10 +281,10 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr,
     char  buf[4096];
 	char* str = NULL;
 	const char* good_str = NULL; 
-	string modified_str;
+	std::string modified_str;
 	ExprTree* tree;
 	ClassAdUnParser unp;
-	string bufString;
+	std::string bufString;
 
 	if( !attr ) {
 		EXCEPT( "caInsert called with NULL attribute" );
@@ -302,9 +302,9 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr,
 	unp.Unparse( bufString, tree );
 	
 	if( prefix ) {
-        sprintf(buf, "%s=%s%s", attr, prefix, bufString);
+        sprintf(buf, "%s=%s%s", attr, prefix, bufString.c_str());
 	} else {
-        sprintf(buf, "%s=%s", attr, bufString);
+        sprintf(buf, "%s=%s", attr, bufString.c_str());
 	}
 
 	if( ! target->Insert( buf ) ) {
