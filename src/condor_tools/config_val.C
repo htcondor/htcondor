@@ -221,6 +221,19 @@ main( int argc, char* argv[] )
 		my_exit( 0 );
 	}
 
+		// We need to handle -tilde before we call config() for the
+		// same reasons listed above for -owner. -Derek 2/16/00
+	if( pt == CONDOR_TILDE ) {
+		if( (tmp = get_tilde()) ) {
+			printf( "%s\n", tmp );
+			my_exit( 0 );
+		} else {
+			fprintf( stderr, "Error: Specified -tilde but can't find " 
+					 "condor's home directory\n" );
+			my_exit( 1 );
+		}
+	}		
+
 		// Want to do this before we try to find the address of a
 		// remote daemon, since if there's no -pool option, we need to
 		// param() for the COLLECTOR_HOST to contact.
@@ -243,17 +256,6 @@ main( int argc, char* argv[] )
 			my_exit( 1 );
 		}
 	}
-
-	if( pt == CONDOR_TILDE ) {
-		if( (tmp = get_tilde()) ) {
-			printf( "%s\n", tmp );
-			my_exit( 0 );
-		} else {
-			fprintf( stderr, "Error: Specified -tilde but can't find " 
-					 "condor's home directory\n" );
-			my_exit( 1 );
-		}
-	}		
 
 	params.rewind();
 
