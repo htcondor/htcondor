@@ -63,13 +63,19 @@ No -standalone option is necessary.
 actually used.  If files or other needed resources cannot be found
 at restart time, the checkpointer will fail with a verbose error.
 
+\item The \Attr{RemoteHost} and \Attr{LastRemoteHost} attributes in
+the job classad now contain hostnames instead IP address and port
+numbers.  The \Opt{-run} option of older versions of \Condor{q} is not
+compatible with this change.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
-\item None.
+\item The \Condor{status} memory error introduced in version 6.1.10
+has been fixed.
 
 \end{itemize}
 
