@@ -27,6 +27,7 @@
 #include "classad.h"
 #include "source.h"
 #include "lexer.h"
+#include <assert.h>
 
 using namespace std;
 
