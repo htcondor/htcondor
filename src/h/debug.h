@@ -47,6 +47,7 @@
 #define D_NFS		(1<<13)
 #define D_UPDOWN        (1<<14)
 #define D_AFS           (1<<15)
+#define D_PREEMPT	(1<<16)
 #define D_MAXFLAGS	32
 
 #define D_ALL		(~D_NOHEADER)
