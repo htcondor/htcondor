@@ -1,70 +1,161 @@
 #ifndef __TOTALS_H__
 #define __TOTALS_H__
 
-class Totals
+#include "condor_classad.h"
+#include "HashTable.h"
+#include "MyString.h"
+#include "status_types.h"
+
+// object keeps track of totals within a single class (same key)
+// (i.e., "OpSys/Arch" for a startd, "Name" for schedd, etc.)
+class ClassTotal
 {
-  public:
-	Totals ();
-	~Totals ();
+  	public:
+		ClassTotal ();
+		virtual ~ClassTotal ();
 
-	void setSummarySize (int);
-	void *getTotals (char *, char *);
-	void *getTotals (int);
+		static ClassTotal *makeTotalObject(ppOption);
+		static int makeKey( MyString &, ClassAd *, ppOption);
 
-	enum {_descSize = 32};	// max size of string "arch/os"
-	enum {_maxDescs = 32};	// max # of different "arch/os" combos in a pool
+		virtual int update(ClassAd*) 	= 0;
+		virtual void displayHeader()   	= 0;
 
-  private:
+		// param is zero for non-final totals
+		virtual void displayInfo(int=0)	= 0;
 
-	// private internal structure
-	typedef struct {
-		char	archOs[_descSize];
-		void	*data;
-	} _totalNode;
-
-	int			dataSize;
-	int			descsUsed;	
-	_totalNode	totalNodes[_maxDescs];
+  	protected:
+		ppOption ppo;
 };
 
-// these are the structures used by the various modes for totals
-typedef struct {
-	int machines;
-	int condor;
-} NormalTotals;
+
+// object manages totals for different classes within the same ppo
+// (e.g., different "Arch/OpSys" in startd normal mode)
+class TrackTotals
+{
+	public:
+		TrackTotals (ppOption);
+		~TrackTotals();
+
+		int  update(ClassAd *);
+		void displayTotals(int keyLength);
+
+	private:
+		ppOption ppo;
+		int malformed;
+		HashTable<MyString,ClassTotal*> allTotals;
+		ClassTotal*	topLevelTotal;
+};
 
 
-typedef struct {
-	int machines;
-	int avail;
-	int condor;
-	int owner;
-	int mips;
-	int mflops;
-} ServerTotals;
+
+// startd totals
+class StartdNormalTotal : public ClassTotal
+{
+	public:
+		StartdNormalTotal();
+		virtual int update (ClassAd *);
+		virtual void displayHeader();
+		virtual void displayInfo(int);
+
+  	protected:
+		int machines;
+		int owner;
+		int unclaimed;
+		int claimed;
+		int matched;
+		int preempting;
+};
 
 
-typedef struct {
-	int machines;
-	int avail;
-} AvailTotals;
+class StartdRunTotal : public ClassTotal
+{
+	public:
+		StartdRunTotal();
+		virtual int update (ClassAd *);
+		virtual void displayHeader();
+		virtual void displayInfo(int);
+
+	protected:
+		int machines;
+		int mips;
+		int kflops;
+		float loadavg;
+};
 
 
-typedef struct {
-	int machines;
-	int mips;
-	int mflops;
-	float avgloadavg;
-} RunTotals;
+class StartdServerTotal : public ClassTotal
+{
+	public:
+		StartdServerTotal();
+		virtual int update (ClassAd *);
+		virtual void displayHeader();
+		virtual void displayInfo(int);
+
+  	protected:
+		int machines;
+		int avail;
+		int memory;
+		int disk;
+		int mips;
+		int kflops;
+};
 
 
-typedef struct {
-	int machines;
-	int totaljobs;
-	int idlejobs;
-	int runningjobs;
-	int unexpandedjobs;
-} SubmittorsTotals;
-	
+// schedd totals
+class ScheddNormalTotal : public ClassTotal
+{
+	public:
+		ScheddNormalTotal();
+		virtual int update (ClassAd *);
+		virtual void displayHeader();
+		virtual void displayInfo(int);
+
+	protected:
+		int runningJobs;
+		int idleJobs;
+};
+
+
+class ScheddSubmittorTotal : public ClassTotal
+{
+	public:
+		ScheddSubmittorTotal();
+		virtual int update (ClassAd *);
+		virtual void displayHeader();
+		virtual void displayInfo(int);
+
+	protected:
+		int runningJobs;
+		int idleJobs;
+};
+
+
+// master totals
+class MasterNormalTotal : public ClassTotal
+{
+	public:
+		MasterNormalTotal();
+		virtual int update (ClassAd *);
+		virtual void displayHeader();
+		virtual void displayInfo(int);
+
+	protected:
+		int machines;
+};
+
+
+// ckptserver totals
+class CkptSrvrNormalTotal : public ClassTotal
+{
+	public:
+		CkptSrvrNormalTotal();
+		virtual int update (ClassAd *);
+		virtual void displayHeader();
+		virtual void displayInfo(int);
+
+	protected:
+		int numServers;
+};
+
 
 #endif//__TOTALS_H__

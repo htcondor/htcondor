@@ -5,8 +5,8 @@
 extern AdTypes	type;
 extern Mode		mode;
 extern ppOption	ppStyle;
-extern int 		summarySize;
 
+int matchPrefix (const char *, const char *);
 
 char *
 getPPStyleStr ()
@@ -14,11 +14,12 @@ getPPStyleStr ()
 	switch (ppStyle)
 	{
     	case PP_NOTSET:			return "<Not set>";
-    	case PP_NORMAL:			return "Normal";
-    	case PP_SERVER:			return "Server";
-    	case PP_AVAIL:			return "Avail";
-    	case PP_RUN:			return "Run";
-    	case PP_SUBMITTORS:		return "Submittors";
+    	case PP_STARTD_NORMAL:	return "Normal (Startd)";
+    	case PP_SCHEDD_NORMAL:	return "Normal (Schedd)";
+    	case PP_MASTER_NORMAL:	return "Normal (Master)";
+    	case PP_CKPT_SRVR_NORMAL:return"Normal (CkptSrvr)";
+    	case PP_STARTD_SERVER:	return "Server";
+    	case PP_STARTD_RUN:		return "Run";
     	case PP_VERBOSE:		return "Verbose";
     	case PP_CUSTOM:			return "Custom";
 		default:				return "<Unknown!>";
@@ -92,22 +93,22 @@ setType (char *dtype, int i, char *argv)
 		return;
 
     if (setArg == NULL) {
-        if (strcmp (dtype, "STARTD") == 0) {
+        if (matchPrefix (dtype, "STARTD")) {
             type = STARTD_AD;
         } else
-        if (strcmp (dtype, "SCHEDD") == 0) {
+        if (matchPrefix (dtype, "SCHEDD")) {
             type = SCHEDD_AD;
         } else
-        if (strcmp (dtype, "MASTER") == 0) {
+        if (matchPrefix (dtype, "MASTER")) {
             type = MASTER_AD;
         } else
-        if (strcmp (dtype, "CKPT_SRVR") == 0) {
+        if (matchPrefix (dtype, "CKPT_SRVR")) {
             type = CKPT_SRVR_AD;
         } else
-        if (strcmp (dtype, "GATEWAYS") == 0) {
+        if (matchPrefix (dtype, "GATEWAYS")) {
             type = GATEWAY_AD;
         } else {
-            fprintf (stderr, "Error:  Unknown entity type: %d\n", dtype);
+            fprintf (stderr, "Error:  Unknown entity type: %s\n", dtype);
             exit (1);
         }
         setBy = i;
@@ -115,7 +116,7 @@ setType (char *dtype, int i, char *argv)
     } else {
         fprintf (stderr,
         "Error:  Daemon type implied by arg %d (%s) contradicts arg %d (%s)\n",
-        i, setBy, setArg);
+        	i, argv, setBy, setArg);
     }
 }
 
@@ -124,12 +125,13 @@ getModeStr()
 {
 	switch (mode)
 	{
-		case MODE_NOTSET:		return "Not set";
-		case MODE_NORMAL:		return "Normal";
-		case MODE_AVAIL:		return "Available";
-		case MODE_SUBMITTORS:	return "Submittors";
-		case MODE_RUN:			return "Run";
-		case MODE_CUSTOM:		return "Custom";
+		case MODE_NOTSET:				return "Not set";
+		case MODE_STARTD_NORMAL:		return "Normal (Startd)";
+		case MODE_STARTD_AVAIL:			return "Available (Startd)";
+		case MODE_STARTD_RUN:			return "Run (Startd)";
+		case MODE_SCHEDD_NORMAL:		return "Normal (Schedd)";
+		case MODE_MASTER_NORMAL:		return "Normal (Master)";
+		case MODE_CKPT_SRVR_NORMAL:		return "Normal (CkptSrvr)";
 		default:				return "<Unknown!>";
 	}
 	// should never get here
@@ -151,34 +153,40 @@ setMode (Mode mod, int i, char *argv)
     if (setBy == 0) {
         mode = mod;
         switch (mod) {
-          case MODE_SUBMITTORS:
+          case MODE_STARTD_NORMAL:
+            setType ("STARTD", i, argv);
+            setPPstyle (PP_STARTD_NORMAL, i, argv);
+            break;
+
+          case MODE_STARTD_AVAIL:
+            setType ("STARTD", i, argv);
+            setPPstyle (PP_STARTD_NORMAL, i, argv);
+            break;
+
+          case MODE_STARTD_RUN:
+            setType ("STARTD", i, argv);
+            setPPstyle (PP_STARTD_RUN, i, argv);
+            break;
+
+		  case MODE_SCHEDD_NORMAL:
             setType ("SCHEDD", i, argv);
-            setPPstyle (PP_SUBMITTORS, i, argv);
-			summarySize = sizeof(SubmittorsTotals);
+            setPPstyle (PP_SCHEDD_NORMAL, i, argv);
             break;
 
-          case MODE_NORMAL:
-            setType ("STARTD", i, argv);
-            setPPstyle (PP_NORMAL, i, argv);
-			summarySize = sizeof(NormalTotals);
+		  case MODE_SCHEDD_SUBMITTORS:
+            setType ("SCHEDD", i, argv);
+            setPPstyle (PP_SCHEDD_SUBMITTORS, i, argv);
             break;
 
-          case MODE_AVAIL:
-            setType ("STARTD", i, argv);
-            setPPstyle (PP_AVAIL, i, argv);
-			summarySize = sizeof(AvailTotals);
-            break;
+		  case MODE_MASTER_NORMAL:
+			setType ("MASTER", i, argv);
+			setPPstyle (PP_MASTER_NORMAL, i, argv);
+			break;
 
-          case MODE_RUN:
-            setType ("STARTD", i, argv);
-            setPPstyle (PP_RUN, i, argv);
-			summarySize = sizeof(RunTotals);
-            break;
-
-          case MODE_CUSTOM:
-			summarySize = 0;
-			setPPstyle (PP_VERBOSE, i, argv);
-            break;
+		  case MODE_CKPT_SRVR_NORMAL:
+			setType ("CKPT_SRVR", i, argv);
+			setPPstyle (PP_CKPT_SRVR_NORMAL, i, argv);
+			break;
 
           default:
             fprintf (stderr, "Error:  Illegal mode %d\n", mode);

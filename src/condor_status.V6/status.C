@@ -1,30 +1,33 @@
 #include "condor_common.h"
 #include "condor_config.h"
+#include "condor_state.h"
 #include "condor_api.h"
 #include "status_types.h"
 #include "totals.h"
 
 // global variables
 AttrListPrintMask pm;
+char		*DEFAULT= "<default>";
 char 		*pool 	= NULL;
 AdTypes		type 	= (AdTypes) -1;
 ppOption	ppStyle	= PP_NOTSET;
-int			wantTotals 	= 0;
+int			wantOnlyTotals 	= 0;
 int			summarySize = -1;
 Mode		mode	= MODE_NOTSET;
 int			diagnose = 0;
 CondorQuery *query;
 char		buffer[1024];
 ClassAdList result;
-Totals		totals;
 char		*myName;
 
 // function declarations
 void usage 		();
 void firstPass  (int, char *[]);
 void secondPass (int, char *[]);
-void prettyPrint(ClassAdList &);
-int  matchPrefix(char *, char *);
+void prettyPrint(ClassAdList &, TrackTotals *);
+int  matchPrefix(const char *, const char *);
+int  lessThanFunc(ClassAd*,ClassAd*,void*);
+char*compressBackSlashes(char*);
 
 extern "C" int SetSyscalls (int) {return 0;}
 extern	void setPPstyle (ppOption, int, char *);
@@ -44,9 +47,9 @@ main (int argc, char *argv[])
 	// the second pass.
 	firstPass (argc, argv);
 	
-	// if the mode has not been set, it is NORMAL
+	// if the mode has not been set, it is STARTD_NORMAL
 	if (mode == MODE_NOTSET) {
-		setMode (MODE_NORMAL, 0, "<default>");
+		setMode (MODE_STARTD_NORMAL, 0, DEFAULT);
 	}
 
 	// instantiate query object
@@ -55,35 +58,81 @@ main (int argc, char *argv[])
 		exit (1);
 	}
 
-	// set the constraint implied by the mode
+	// set pretty print style implied by the type of entity being queried
+	// but do it with default priority, so that explicitly requested options
+	// can override it
+	switch (type)
+	{
+	  case STARTD_AD:
+		setPPstyle(PP_STARTD_NORMAL, 0, DEFAULT);
+		break;
+
+	  case SCHEDD_AD:
+		setPPstyle(PP_SCHEDD_NORMAL, 0, DEFAULT);
+		break;
+
+	  case MASTER_AD:
+		setPPstyle(PP_MASTER_NORMAL, 0, DEFAULT);
+		break;
+
+	  case CKPT_SRVR_AD:
+		setPPstyle(PP_CKPT_SRVR_NORMAL, 0, DEFAULT);
+		break;
+
+	  default:
+		setPPstyle(PP_VERBOSE, 0, DEFAULT);
+	}
+
+	// set the constraints implied by the mode
 	switch (mode) {
-	  case MODE_NORMAL:
-	  case MODE_CUSTOM:
+	  case MODE_STARTD_NORMAL:
+	  case MODE_MASTER_NORMAL:
+	  case MODE_CKPT_SRVR_NORMAL:
 		break;
 
-	  case MODE_AVAIL:
-		// **** Remeber to change to evaluating Requirements ****
-		if (diagnose) {
-			printf ("Adding constraint [%s]\n", "TARGET.START == True");
-		}
-		query->addConstraint ("TARGET.START == True");
-		break;
 
-	  case MODE_SUBMITTORS: 
-		sprintf (buffer,"TARGET.%s > 0 || TARGET.%s > 0", ATTR_IDLE_JOBS,
-			ATTR_RUNNING_JOBS);
+	  case MODE_STARTD_AVAIL:
+    	sprintf (buffer, "(TARGET.%s == \"%s\") || (TARGET.%s == \"%s\")", 
+                    ATTR_STATE, state_to_string(claimed_state), 
+                    ATTR_STATE, state_to_string(unclaimed_state));
 		if (diagnose) {
 			printf ("Adding constraint [%s]\n", buffer);
 		}
 		query->addConstraint (buffer);
 		break;
 
-	  case MODE_RUN:
-		sprintf (buffer, "TARGET.%s != \"NoJob\"", ATTR_STATE);
+
+	  case MODE_SCHEDD_NORMAL: 
+		sprintf (buffer, "(TARGET.%s >= 0) || (TARGET.%s >= 0)",
+					ATTR_TOTAL_RUNNING_JOBS, ATTR_TOTAL_IDLE_JOBS);
 		if (diagnose) {
 			printf ("Adding constraint [%s]\n", buffer);
 		}
 		query->addConstraint (buffer);
+		break;
+
+
+	  case MODE_SCHEDD_SUBMITTORS:
+		sprintf (buffer, "(TARGET.%s >= 0) || (TARGET.%s >= 0)",
+					ATTR_RUNNING_JOBS, ATTR_IDLE_JOBS);
+		if (diagnose) {
+			printf ("Adding constraint [%s]\n", buffer);
+		}
+		query->addConstraint (buffer);
+		break;
+
+
+	  case MODE_STARTD_RUN:
+		sprintf (buffer, "TARGET.%s == \"%s\"", ATTR_STATE, 
+					state_to_string(claimed_state));
+		if (diagnose) {
+			printf ("Adding constraint [%s]\n", buffer);
+		}
+		query->addConstraint (buffer);
+		break;
+
+
+	  default:
 		break;
 	}	
 									
@@ -95,11 +144,7 @@ main (int argc, char *argv[])
 	secondPass (argc, argv);
 
 	// initialize the totals object
-	if (wantTotals && summarySize == -1) {
-		fprintf (stderr,"Error:  Want totals, but no total support for mode\n");
-		exit (1);
-	}
-	totals.setSummarySize (summarySize);
+	TrackTotals	totals(ppStyle);
 
 	// fetch the query
 	QueryResult q;
@@ -111,7 +156,7 @@ main (int argc, char *argv[])
 		// print diagnostic information about inferred internal state
 		setMode ((Mode) 0, 0, NULL);
 		setType (NULL, 0, NULL);
-		setPPstyle ((ppOption) 0, 0, NULL);
+		setPPstyle ((ppOption) 0, 0, DEFAULT);
 		printf ("----------\n");
 
 		q = query->getQueryAd (queryAd);
@@ -128,8 +173,11 @@ main (int argc, char *argv[])
 		exit (1);
 	}
 
+	// sort the ad by ATTR_NAME
+	result.Sort ((SortFunctionType)lessThanFunc);
+
 	// output result
-	prettyPrint (result);
+	prettyPrint (result, &totals);
 	
 	// be nice ...
 	delete query;
@@ -144,16 +192,19 @@ usage ()
 	fprintf (stderr,"Usage: %s [options]\n"
 		"    where [options] are zero or more of\n"
 		"\t[-avail]\t\tPrint information about available resources\n"
+		"\t[-claimed]\t\tPrint information about claimed resources\n"
 		"\t[-constraint <const>]\tAdd constraint on classads\n"
 		"\t[-diagnose]\t\tPrint out query ad without performing query\n"
-		"\t[-entity <type>]\tForce query on specified entity\n"
 		"\t[-format <fmt> <attr>]\tRegister display format and attribute\n"
 		"\t[-help]\t\t\tThis screen\n"
 		"\t[-long]\t\t\tDisplay entire classads\n"
-		"\t[-pool <poolname>]\tGet information from <poolname>\n"
-		"\t[-run]\t\t\tPrint information about employed resources\n"
+		"\t[-pool <name>]\t\tGet information from collector <name>\n"
+		"\t[-run]\t\t\tSame as -claimed [deprecated]\n"
 		"\t[-server]\t\tDisplay important attributes of resources\n"
-		"\t[-submittors]\t\tObtain information about submittors\n"
+		"\t[-startd]\t\tDisplay resource attributes\n"
+		"\t[-schedd]\t\tDisplay submittor attributes\n"
+		"\t[-master]\t\tDisplay daemon master attributes\n"
+		"\t[-ckptsrvr]\t\tDisplay checkpoint server attributes\n"
 		"\t[-total]\t\tDisplay totals only\n"
 		"\t[-verbose]\t\tSame as -long\n", 
 		myName);
@@ -170,7 +221,7 @@ firstPass (int argc, char *argv[])
 	//   constraints are added on the second pass
 	for (int i = 1; i < argc; i++) {
 		if (matchPrefix (argv[i], "-avail")) {
-			setMode (MODE_AVAIL, i, argv[i]);
+			setMode (MODE_STARTD_AVAIL, i, argv[i]);
 		} else
 		if (matchPrefix (argv[i], "-pool")) {
 			if (pool == NULL) {
@@ -182,11 +233,6 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix (argv[i], "-format")) {
 			setPPstyle (PP_CUSTOM, i, argv[i]);
-			pm.registerFormat (argv[i+1], argv[i+2]);
-			if (diagnose) {
-				printf ("Arg %d --- register format [%s] for [%s]\n", 
-						i, argv[i+1], argv[i+2]);
-			}
 			i += 2;
 		} else
 		if (matchPrefix (argv[i], "-constraint")) {
@@ -203,21 +249,29 @@ firstPass (int argc, char *argv[])
 		if (matchPrefix (argv[i],"-long") || matchPrefix (argv[i],"-verbose")) {
 			setPPstyle (PP_VERBOSE, i, argv[i]);
 		} else
-		if (matchPrefix (argv[i], "-run")) {
-			setMode (MODE_RUN, i, argv[i]);
+		if (matchPrefix (argv[i], "-run") || matchPrefix(argv[i], "-claimed")) {
+			setMode (MODE_STARTD_RUN, i, argv[i]);
 		} else
 		if (matchPrefix (argv[i], "-server")) {
-			setPPstyle (PP_SERVER, i, argv[i]);
+			setPPstyle (PP_STARTD_SERVER, i, argv[i]);
+		} else
+		if (matchPrefix (argv[i], "-startd")) {
+			setMode (MODE_STARTD_NORMAL,i, argv[i]);
+		} else
+		if (matchPrefix (argv[i], "-schedd")) {
+			setMode (MODE_SCHEDD_NORMAL, i, argv[i]);
 		} else
 		if (matchPrefix (argv[i], "-submittors")) {
-			setMode (MODE_SUBMITTORS, i, argv[i]);
+			setMode (MODE_SCHEDD_SUBMITTORS, i, argv[i]);
+		} else
+		if (matchPrefix (argv[i], "-master")) {
+			setMode (MODE_MASTER_NORMAL, i, argv[i]);
+		} else
+		if (matchPrefix (argv[i], "-ckptsrvr")) {
+			setMode (MODE_CKPT_SRVR_NORMAL, i, argv[i]);
 		} else
 		if (matchPrefix (argv[i], "-total")) {
-			wantTotals = 1;
-		} else
-		if (matchPrefix (argv[i], "-entity")) {
-			setMode (MODE_CUSTOM, i, argv[i]);
-			setType (argv[i+1], i, argv[i]);
+			wantOnlyTotals = 1;
 		} else
 		if (*argv[i] == '-') {
 			fprintf (stderr, "Error:  Unknown option %s\n", argv[i]);
@@ -237,11 +291,12 @@ secondPass (int argc, char *argv[])
 			i++;
 			continue;
 		}
-		if (matchPrefix (argv[i], "-entity")) {
-			i++;
-			continue;
-		} 
 		if (matchPrefix (argv[i], "-format")) {
+			pm.registerFormat (argv[i+1], argv[i+2]);
+			if (diagnose) {
+				printf ("Arg %d --- register format [%s] for [%s]\n", 
+						i, compressBackSlashes(argv[i+1]), argv[i+2]);
+			}
 			i += 2;
 			continue;
 		}
@@ -255,9 +310,11 @@ secondPass (int argc, char *argv[])
 			}
 
 			switch (mode) {
-			  case MODE_NORMAL:
-    		  case MODE_AVAIL:
-    		  case MODE_SUBMITTORS:
+			  case MODE_STARTD_NORMAL:
+			  case MODE_SCHEDD_NORMAL:
+			  case MODE_MASTER_NORMAL:
+			  case MODE_CKPT_SRVR_NORMAL:
+    		  case MODE_STARTD_AVAIL:
 				sprintf (buffer, "TARGET.%s == \"%s\"", ATTR_NAME, argv[i]);
 				if (diagnose) {
 					printf ("[%s]\n", buffer);
@@ -265,19 +322,12 @@ secondPass (int argc, char *argv[])
 				query->addConstraint (buffer);
 				break;
 
-    		  case MODE_RUN:
+    		  case MODE_STARTD_RUN:
 				sprintf (buffer,"TARGET.%s == \"%s\"",ATTR_REMOTE_USER,argv[i]);
 				if (diagnose) {
 					printf ("[%s]\n", buffer);
 				}
 				query->addConstraint (buffer);
-				break;
-
-    		  case MODE_CUSTOM:
-				if (diagnose) {
-					printf ("[%s]\n", buffer);
-				}
-				query->addConstraint (argv[i]);
 				break;
 
 			  default:
@@ -296,11 +346,62 @@ secondPass (int argc, char *argv[])
 
 
 int
-matchPrefix (char *s1, char *s2)
+matchPrefix (const char *s1, const char *s2)
 {
 	int lenS1 = strlen (s1);
 	int lenS2 = strlen (s2);
 	int len = (lenS1 < lenS2) ? lenS1 : lenS2;
 
 	return (strncmp (s1, s2, len) == 0);
+}
+
+
+int
+lessThanFunc(ClassAd *ad1, ClassAd *ad2, void *)
+{
+	char 	name1[64];
+	char	name2[64];
+
+	if (!ad1->LookupString(ATTR_NAME, name1) ||
+		!ad2->LookupString(ATTR_NAME, name2))
+			return 0;
+
+	return (strcmp (name1, name2) < 0);
+}
+
+
+char *
+compressBackSlashes (char *str)
+{
+	static char buf[512];
+	int	   i, j;
+	bool   bs;
+
+	bs = false;
+	i  = 0;
+	j  = 0;
+	while (str[j])
+	{
+		if (str[j] == '\\')
+		{
+			if (!bs) 
+			{
+				buf[i] = str[j];
+				i++;
+				bs = true;
+			}
+			else
+			{
+				bs = false;
+			}
+		}
+		else
+		{
+			buf[i] = str[j];
+			i++;
+		}
+		j++;
+	}
+
+	return buf;
 }

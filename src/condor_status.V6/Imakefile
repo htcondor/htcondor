@@ -1,5 +1,5 @@
 CFLAGS = $(STD_C_FLAGS) $(PLATFORM_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -DALLOC_DEBUG -fexternal-templates
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -Wall -fexternal-templates
 LDFLAGS = $(LIBDBM) -lm
 
 SRC = setflags.C status.C totals.C prettyPrint.C

@@ -4,11 +4,17 @@
 // pretty-printing options
 enum ppOption {
     PP_NOTSET,
-    PP_NORMAL,
-    PP_SERVER,
-    PP_AVAIL,
-    PP_RUN,
-    PP_SUBMITTORS,
+
+    PP_STARTD_NORMAL,
+    PP_STARTD_SERVER,
+    PP_STARTD_RUN,
+
+	PP_SCHEDD_NORMAL,
+	PP_SCHEDD_SUBMITTORS,	
+
+	PP_MASTER_NORMAL,
+	PP_CKPT_SRVR_NORMAL,
+
     PP_VERBOSE,
     PP_CUSTOM
 };
@@ -17,12 +23,13 @@ enum ppOption {
 // modes for condor_status
 enum Mode {
     MODE_NOTSET,
-    MODE_NORMAL,
-    MODE_AVAIL,
-    MODE_SUBMITTORS,
-    MODE_RUN,
-    MODE_CUSTOM
+    MODE_STARTD_NORMAL,
+    MODE_STARTD_AVAIL,
+    MODE_STARTD_RUN,
+	MODE_SCHEDD_NORMAL,
+	MODE_SCHEDD_SUBMITTORS,
+	MODE_MASTER_NORMAL,
+	MODE_CKPT_SRVR_NORMAL
 };
    
-
 #endif //__STATUS_TYPES_H__
