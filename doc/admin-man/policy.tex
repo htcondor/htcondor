@@ -938,17 +938,26 @@ clearly.
 \item[\Macro{MaxVacateTime}] Amount of time a job may be
   checkpointing before we give up kill it outright.
 
-\item[\Macro{KeyboardBusy}] A boolean string that evaluates to TRUE
+\item[\Macro{KeyboardBusy}] A boolean expression that evaluates to TRUE
     when the keyboard is being used.
 
-\item[\Macro{CPU\_Idle}] A boolean string that evaluates to TRUE
+\item[\Macro{CPU\_Idle}] A boolean expression that evaluates to TRUE
     when the CPU is idle.
 
-\item[\Macro{CPU\_Busy}] A boolean string that evaluates to TRUE
-    when the CPU is busy.
+\item[\Macro{CPUBusy} or \Macro{CPU\_Busy}] Boolean expressions that evaluate
+    to TRUE when the CPU is busy.
+    When \Macro{CPUBusy} does not appear in the configuration files,
+    \Macro{CPU\_Busy} is used in its place.
 
 \item[\Macro{MachineBusy}] The CPU or the Keyboard is busy.
 
+\item[\Macro{CPUIsBusy}] A boolean value set to the same value as either
+    \Macro{CPUBusy} or \Macro{CPU\_Busy}.
+
+\item[\Macro{CPUBusyTime}] The value 0 if \Macro{CPUBusy} (or 
+    \Macro{CPU\_Busy}) is False; the time in seconds since
+    \Macro{CPUBusy} (or \Macro{CPU\_Busy}) became True.
+    
 \end{description}
 
 \begin{verbatim}
