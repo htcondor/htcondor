@@ -740,8 +740,6 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 			}
 		}
 
-		curr_job->ad->ClearAllDirtyFlags();
-
 	}
 
 	if ( CloseConnection() < 0 ) {
@@ -1136,6 +1134,10 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 	while ( pendingScheddUpdates.iterate( curr_action ) != 0 ) {
 
 		curr_job = curr_action->job;
+
+		if ( schedd_updates_complete ) {
+			curr_job->ad->ClearAllDirtyFlags();
+		}
 
 		if ( curr_action->actions & UA_FORGET_JOB ) {
 
