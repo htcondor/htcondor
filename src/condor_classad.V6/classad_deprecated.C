@@ -229,93 +229,68 @@ LookupBool( const char *name, int &value )
 int ClassAd::
 EvalString( const char *name, class ClassAd *target, char *value )
 {
-	ExprTree *tree;
-	Value val;
-	ClassAd *env;
 	string strVal;
 
-	tree = Lookup( name );
-	if( !tree ) {
-		if( target ) {
-			tree = target->Lookup( name );
+	if( target == this || target == NULL ) {
+		if( EvaluateAttrString( name, strVal ) ) {
+			strcpy( value, strVal.c_str( ) );
+			return 1;
 		}
-		else {
-			evalFromEnvironment( name, val );
-			if( val.IsStringValue( strVal ) ) {
-				strcpy( value, strVal.c_str( ) );
-				return 1;
-			}
-			return 0;
-		}
+		return 0;
 	}
 
-	if( target ) {
-		env = target;
-	}
-	else {
-		env = this;
-	}
-
-	if( env->EvaluateExpr( tree, val ) && 
-		val.IsStringValue( strVal ) ) {
+	MatchClassAd mad( this, target );
+	if( EvaluateAttrString( name, strVal ) ) {
 		strcpy( value, strVal.c_str( ) );
+		mad.RemoveLeftAd( );
+		mad.RemoveRightAd( );
 		return 1;
-	}
-
+	}		
+	mad.RemoveLeftAd( );
+	mad.RemoveRightAd( );
 	return 0;
 }
 
 int ClassAd::
 EvalInteger (const char *name, class ClassAd *target, int &value) {
-	ExprTree *tree;
-	Value val;
-	ClassAd *env;
-
-	tree = Lookup( name );
-	if( !tree ) {
-		if( target ) {
-			tree = target->Lookup( name );
-		}
-		else {
-			evalFromEnvironment( name, val );
-			if( val.IsIntegerValue( value ) ) {
-				return 1;
-			}
+	if( strcmp( name, "CurrentTime" ) == 0 ) {
+		time_t	now = time (NULL);
+		if (now == (time_t) -1) {
 			return 0;
 		}
+		else {
+			value = (int)now;
+			return 1;
+		}
 	}
 
-	if( target ) {
-		env = target;
-	}
-	else {
-		env = this;
+	if( target == this || target == NULL ) {
+		if( EvaluateAttrInt( name, value ) ) { 
+			return 1;
+		}
+		return 0;
 	}
 
-	if( env->EvaluateExpr( tree, val ) && 
-		val.IsIntegerValue( value ) ) {
+	MatchClassAd mad( this, target );
+	if( EvaluateAttrInt( name, value ) ) { 
+		mad.RemoveLeftAd( );
+		mad.RemoveRightAd( );
 		return 1;
 	}
-
+	mad.RemoveLeftAd( );
+	mad.RemoveRightAd( );
 	return 0;
 }
 
 int ClassAd::
 EvalFloat (const char *name, class ClassAd *target, float &value)
 {
-	ExprTree *tree;
 	Value val;
-	ClassAd *env;
 	double doubleVal;
 	int intVal;
 
-	tree = Lookup( name );
-	if( !tree ) {
-		if( target ) {
-			tree = target->Lookup( name );
-		}
-		else {
-			evalFromEnvironment( name, val );
+	if( target == this || target == NULL ) {
+		if( EvaluateAttr( name, val ) ) {
 			if( val.IsRealValue( doubleVal ) ) {
 				value = ( float )doubleVal;
 				return 1;
@@ -324,48 +299,40 @@ EvalFloat (const char *name, class ClassAd *target, float &value)
 				value = ( float )intVal;
 				return 1;
 			}
-			return 0;
 		}
+		return 0;
 	}
 
-	if( target ) {
-		env = target;
-	}
-	else {
-		env = this;
-	}
-
-	if( env->EvaluateExpr( tree, val ) ) {
+	MatchClassAd mad( this, target );
+	if( EvaluateAttr( name, val ) ) {
 		if( val.IsRealValue( doubleVal ) ) {
 			value = ( float )doubleVal;
+			mad.RemoveLeftAd( );
+			mad.RemoveRightAd( );
 			return 1;
 		}
 		if( val.IsIntegerValue( intVal ) ) {
 			value = ( float )intVal;
+			mad.RemoveLeftAd( );
+			mad.RemoveRightAd( );
 			return 1;
 		}
 	}
-
+	mad.RemoveLeftAd( );
+	mad.RemoveRightAd( );
 	return 0;
 }
 
 int ClassAd::
 EvalBool  (const char *name, class ClassAd *target, int &value)
 {
-	ExprTree *tree;
 	Value val;
-	ClassAd *env;
 	double doubleVal;
 	int intVal;
 	bool boolVal;
 
-	tree = Lookup( name );
-	if( !tree ) {
-		if( target ) {
-			tree = target->Lookup( name );
-		}
-		else {
-			evalFromEnvironment( name, val );
+	if( target == this || target == NULL ) {
+		if( EvaluateAttr( name, val ) ) {
 			if( val.IsBooleanValue( boolVal ) ) {
 				value = boolVal ? 1 : 0;
 				return 1;
@@ -374,32 +341,38 @@ EvalBool  (const char *name, class ClassAd *target, int &value)
 				value = intVal ? 1 : 0;
 				return 1;
 			}
-			return 0;
+			if( val.IsRealValue( doubleVal ) ) {
+				value = doubleVal ? 1 : 0;
+				return 1;
+			}
 		}
+		return 0;
 	}
 
-	if( target ) {
-		env = target;
-	}
-	else {
-		env = this;
-	}
-
-	if( env->EvaluateExpr( tree, val ) ) {
+	MatchClassAd mad( this, target );
+	if( EvaluateAttr( name, val ) ) {
 		if( val.IsBooleanValue( boolVal ) ) {
 			value = boolVal ? 1 : 0;
+			mad.RemoveLeftAd( );
+			mad.RemoveRightAd( );
 			return 1;
 		}
 		if( val.IsIntegerValue( value ) ) {
 			value = intVal ? 1 : 0;
+			mad.RemoveLeftAd( );
+			mad.RemoveRightAd( );
 			return 1;
 		}
 		if( val.IsRealValue( doubleVal ) ) {
 			value = doubleVal ? 1 : 0;
+			mad.RemoveLeftAd( );
+			mad.RemoveRightAd( );
 			return 1;
 		}
 	}
 
+	mad.RemoveLeftAd( );
+	mad.RemoveRightAd( );
 	return 0;
 }
 
