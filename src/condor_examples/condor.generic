@@ -133,7 +133,7 @@ SWITCH: {
 # don't know what pool they're talking about)
 while( $_ = $ARGV[0] ) {
     shift;
-    if( /^-p/ ) { 
+    if( /^-poo/ ) { 
 	$pool = $ARGV[0];
 	shift;
 	if( $tool eq "condor_status" ) {
