@@ -21,22 +21,15 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
-#include <stdio.h>
-#include <errno.h>
-
-#include <sys/types.h>
-#include <sys/sysmp.h>
-#include <sys/sysinfo.h>
-#include <unistd.h>
-#include <fcntl.h>
-
-#include "debug.h"
-#include "except.h"
+#include "condor_common.h" 
+#include "condor_debug.h"
 #include "condor_uid.h"
 
+#include <sys/sysmp.h>
+#include <sys/sysinfo.h>
+
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
+
 static int KernelLookupFailed = 0;
 
 static float kernel_load_avg();

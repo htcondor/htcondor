@@ -36,10 +36,9 @@
 
 #define DEFAULT_LOADAVG         0.10
 
-#include <stdio.h>
-#include <unistd.h>
-#include "debug.h"
-#include "except.h"
+#include "condor_common.h"
+#include "condor_debug.h"
+
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 static char            *uptime_path;

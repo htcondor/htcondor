@@ -26,11 +26,12 @@
     For more info, see the pstat manpage and sys/pstat.h
 */
 
+#include "condor_common.h"
+#include "condor_debug.h"
+#include "condor_uid.h"
+
 #include <sys/pstat.h>
 
-#include "condor_uid.h"
-#include "debug.h"
-#include "except.h"
 static char *_FileName_ = __FILE__;   /* Used by EXCEPT (see except.h)  */
 
 float
