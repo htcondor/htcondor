@@ -919,7 +919,6 @@ UserProc::store_core()
 	if( free_disk > core_size ) {
 		sprintf( new_name, "%s/core.%d.%d", virtual_working_dir, cluster, proc);
 		dprintf( D_ALWAYS, "Transferring core file to \"%s\"\n", new_name );
-		delay( 15 );
 		priv = set_root_priv();
 		send_file( core_name, new_name, REGULAR_FILE_MODE );
 		set_priv(priv);
