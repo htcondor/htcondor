@@ -46,6 +46,7 @@
 #endif
 
 extern "C" {
+	int JobIsStandard();
 	void NotifyUser( char *buf, PROC *proc );
 	void HoldJob( const char* buf );
 	char *d_format_time( double dsecs );
@@ -226,28 +227,43 @@ NotifyUser( char *buf, PROC *proc )
         if( tltime >= 1.0 ) {
                 fprintf(mailer, "\tLeveraging Factor:   %2.1f\n", trtime / tltime);
         }
+
         fprintf(mailer, "\tVirtual Image Size:  %d Kilobytes\n", proc->image_size);
 
-		if (NumCkpts > 0) {
-			fprintf(mailer, "Checkpoints written: %d\n", NumCkpts);
-			fprintf(mailer, "Checkpoint restarts: %d\n", NumRestarts);
-		}
+	if (NumCkpts > 0) {
+		fprintf(mailer, "\nCheckpoints written: %d\n", NumCkpts);
+		fprintf(mailer, "Checkpoint restarts: %d\n", NumRestarts);
+	}
 
-		if (TotalBytesSent > 0.0) {
-			// TotalBytesSent and TotalBytesRecvd are from the shadow's
-			// perspective, and we want to display the stats from the job's
-			// perspective.
-			fprintf(mailer,"\nNetwork:\n");
-			fprintf(mailer,"\t%s read\n",metric_units((int)TotalBytesSent));
-			fprintf(mailer,"\t%s written\n",metric_units((int)TotalBytesRecvd));
-		}
+	if (TotalBytesSent > 0.0) {
+		// TotalBytesSent and TotalBytesRecvd are from the shadow's
+		// perspective, and we want to display the stats from the job's
+		// perspective.
+		fprintf(mailer,"\nNetwork:\n");
+		fprintf(mailer,"\t%s read\n",metric_units((int)TotalBytesSent));
+		fprintf(mailer,"\t%s written\n",metric_units((int)TotalBytesRecvd));
+	}
 
-	job_report_display_file_info( mailer, (int) run_time );
-	job_report_display_calls( mailer );
+	if (JobIsStandard()) {
+		job_report_display_file_info( mailer, (int) run_time );
+		job_report_display_calls( mailer );
+	}
 
 	email_close(mailer);
 
         (void)pclose( mailer );
+}
+
+int 
+JobIsStandard()
+{
+	int universe;
+
+	if(!JobAd->LookupInteger(ATTR_JOB_UNIVERSE, universe)) {
+		return 0;
+	} else {
+		return universe==STANDARD;
+	}
 }
 
 
