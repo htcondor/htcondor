@@ -240,8 +240,37 @@ MAIN( int argc, char *argv[], char **envp )
 		;
 #endif
 
-	_condor_prestart( SYS_REMOTE );
+		/*
+		We must be started by a parent providing a command stream,
+		therefore there must be at least 3 arguments.
+		So here we check and see if we have been started properly
+		with a command stream, as a condor_starter would do.  If
+		not, we set syscalls to local, disable dprintf debug messages,
+		print out a warning, and attempt to run normally "outside"
+		of condor (with no checkpointing, remote syscalls, etc).  This
+		allows users to have one condor-linked binary which can be run
+		either inside or outside of condor.  -Todd, 5/97.
+		*/
+	if ( (argc < 3) ||
+		 ( (strcmp("-_condor_cmd_fd",argv[1]) != MATCH) &&
+		   (strcmp("-_condor_cmd_file",argv[1]) != MATCH) ) ) {
+				/* Run the job "normally" outside of condor */
+				if ( strcmp("-_condor_nowarn",argv[1]) != MATCH ) {
+					fprintf(stderr,"WARNING: This binary has been linked for Condor.\nWARNING: Setting up to run outside of Condor...\n");
+				}
+				SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+				DebugFlags = 0;		/* disable dprintf messages */
+				/* Now start running user code and forget about condor */
+#if defined(HPUX9)
+				exit(_start( argc, argv, envp ));
+#else
+				exit( main( argc, argv, envp ));
+#endif
+	}
 
+	
+	/* now setup signal handlers, etc */
+	_condor_prestart( SYS_REMOTE );
 
 
 #define USE_PIPES 0
@@ -259,12 +288,6 @@ MAIN( int argc, char *argv[], char **envp )
 	dprintf( D_ALWAYS, "END\n\n" );
 	delay();
 #endif
-
-		/*
-		We must be started by a parent providing a command stream,
-		therefore there must be at least 3 arguments.
-		*/
-	assert( argc >= 3 );
 
 	if( strcmp("-_condor_cmd_fd",argv[1]) == MATCH ) {
 #if 0
