@@ -34,6 +34,8 @@
 int calc_virt_memory();
 int ctok(int clicks);
 
+int close_kmem(){};
+
 /*
  *  DEFAULT_SWAPSPACE
  *
