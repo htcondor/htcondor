@@ -102,8 +102,8 @@ Condor can be registered with:
    \DCPerm{OWNER} permission, so that anyone can issue \Condor{vacate}
    to the local machine they are logged into.
 
-\item[\DCPerm{NEGOTIATOR}] \label{dcperm:negotiator} This is a special
-   access level that means the specified command must come from the
+\item[\DCPerm{NEGOTIATOR}] \label{dcperm:negotiator} This 
+   access level means that the specified command must come from the
    Central Manager of your pool.  The commands that have this access
    level are the ones that tell the \Condor{schedd} to begin
    negotiating and that tell an available \Condor{startd} that it has
@@ -115,15 +115,13 @@ Condor can be registered with:
 \subsection{\label{sec:Config-DCPerms}Configuring your Pool}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\DCPerm{NEGOTIATOR} permission is handled automatically by Condor, and
-there is nothing special you need to configure.  The other four
-permissions, \DCPerm{READ}, \DCPerm{WRITE}, \DCPerm{ADMINISTRATOR} and
-\DCPerm{OWNER} need to be specified in the config files.  See the
+The permissions are specified in the config files.  See the
 section on Configuring Condor for details on where these files might
 be located, general information about how to set parameters, and how
 to reconfigure the Condor daemons.
 
-\DCPerm{ADMINISTRATOR} access defaults to only your central manager.
+\DCPerm{ADMINISTRATOR} and \DCPerm{NEGOTIATOR} access default to 
+your central manager machine.
 \DCPerm{OWNER} access defaults to the local machine, and any machines
 listed with \DCPerm{ADMINISTRATOR} access.  You can probably leave
 that how it is.  If you want other machines to have \DCPerm{OWNER}
