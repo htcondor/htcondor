@@ -200,14 +200,14 @@ ReliSock::accept()
 }
 
 int 
-ReliSock::connect( char	*host, int port )
+ReliSock::connect( char	*host, int port, bool non_blocking_flag )
 {
 	is_client = 1;
 	if( ! host ) {
 		return FALSE;
 	}
 	hostAddr = strdup( host );
-	return do_connect( host, port );
+	return do_connect( host, port, non_blocking_flag );
 }
 
 int 
@@ -390,7 +390,6 @@ int
 ReliSock::put_file(const char *source)
 {
 	int fd;
-	char buf[65536];
 	struct stat filestat;
 	unsigned int filesize;
 	unsigned int eom_num = 666;
@@ -399,6 +398,7 @@ ReliSock::put_file(const char *source)
 #if defined(WIN32)
 	if ((fd = ::open(source, O_RDONLY | _O_BINARY | _O_SEQUENTIAL, 0)) < 0)
 #else
+	char buf[65536];
 	int nbytes, nrd;
 	if ((fd = ::open(source, O_RDONLY, 0)) < 0)
 #endif
