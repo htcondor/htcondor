@@ -124,7 +124,7 @@ sub RunIt()
 # Scan for data files, collect info on 'em
 sub ScanFiles( )
 {
-    my $Cmd = "find . -type f -printf '%h %f %i %n %s %b %A@ %C@ %T@\n' ";
+    my $Cmd = "find . -type f -printf '%h %f %i %n %s %b %A@ %C@ %T@\\n' ";
     if ( ! open( FIND, "$Cmd|" ) )
     {
 	print STDERR "Can't run '$Cmd'\n";
@@ -288,7 +288,7 @@ sub CacheUsage( $$ )
     $Hash->Add( "Du", "n", $TotalDu );
 
     # DF
-    $Cmd = "df .";
+    $Cmd = "df -P .";
     if ( ! open( DF, "$Cmd|" ) )
     {
 	print STDERR "Can't run '$Cmd'\n";
