@@ -1787,8 +1787,11 @@ void DaemonCore::Driver()
 		// select on.
 		for (i = 0; i < nPipe; i++) {
 			if ( (*pipeTable)[i].pipefd ) {	// if a valid entry....
-				// Add the pipe fd to our read fd set
+				// One end of a pipe is either readable or writeable,
+				// but not both.  Regardless of which end we were given
+				// register both read and write for a wakeup.
 				FD_SET( (*pipeTable)[i].pipefd,&readfds);
+				FD_SET( (*pipeTable)[i].pipefd,&writefds);
 			}
         }
 
@@ -1893,6 +1896,10 @@ void DaemonCore::Driver()
 #else
 					// For Unix, check if select set the bit
 					if (FD_ISSET((*pipeTable)[i].pipefd, &readfds)) 
+					{
+						(*pipeTable)[i].call_handler = true;
+					}
+					if (FD_ISSET((*pipeTable)[i].pipefd, &writefds)) 
 					{
 						(*pipeTable)[i].call_handler = true;
 					}
