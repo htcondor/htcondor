@@ -304,7 +304,19 @@ handle_q(XDR *xdrs, struct sockaddr_in* = NULL)
 
 	// I think this has to be here because xdr_Init() (called in 
 	// qmgr_lib_support.c) does a skiprecord.
+	// HOWEVER, at least on IRIX 5.3, this endofrecord _cannot_ be
+	// here.  an XDR bug on IRIX, perhaps?  in any event, if qmgmt is
+	// broken look here first.  to save hassle tracking down a bizarre
+	// runtime bug, we flag a compile-time error for platforms we are
+	// not certain about.  hopefully this is all moot since condor v6.0
+	// ditches xdr anyway.  -Todd, 4/97
+#if defined(OSF1) || defined(Solaris) 
 	xdrrec_endofrecord(xdrs, TRUE);
+#elif defined(IRIX53)
+	/* xdrrec_endofrecord(xdrs, TRUE); */
+#else 
+#	error "Please determine if we need an xdr endofrecord here - see comment"
+#endif
 
 	InvalidateConnection();
 	do {
