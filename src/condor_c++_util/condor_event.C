@@ -263,7 +263,6 @@ readEvent(FILE *file)
     }
     return 1;
 }
-#endif
 	
 
 // ----- the ExecuteEvent class
