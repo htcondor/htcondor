@@ -30,12 +30,15 @@ int JavaInfo::compute( amask_t how_much )
 {
 	if( IS_STATIC(how_much) ) {
 		if(state==JAVA_INFO_STATE_VIRGIN) {
-			dprintf(D_ALWAYS,"JavaInfo: Starting a new Java query process.\n");
+			dprintf( D_FULLDEBUG, 
+					 "JavaInfo: Starting a new Java query process.\n" );
 			query_create();
 		} else if(state==JAVA_INFO_STATE_RUNNING) {
-			dprintf(D_ALWAYS,"JavaInfo: A query process is already running.\n");
+			dprintf( D_FULLDEBUG,
+					 "JavaInfo: A query process is already running.\n" );
 		} else {
-			dprintf(D_ALWAYS,"JavaInfo: Using cached configuration.\n");
+			dprintf( D_FULLDEBUG, 
+					 "JavaInfo: Using cached configuration.\n" );
 		}
 	}
 	return 1;
@@ -93,7 +96,7 @@ void JavaInfo::query_create()
 
 	java = param("JAVA");
 	if(!java) {
-		dprintf(D_ALWAYS,"JavaInfo: JAVA is not defined.\n");
+		dprintf(D_FULLDEBUG,"JavaInfo: JAVA is not defined.\n");
 		state = JAVA_INFO_STATE_DONE;
 		goto cleanup;
 	}
@@ -115,7 +118,7 @@ void JavaInfo::query_create()
 
 	classpath[0] = 0;
 
-	while(tmp=classpath_list.next()) {
+	while((tmp=classpath_list.next())) {
 		if(classpath[0]) strcat(classpath,classpath_separator);
 		strcat(classpath,tmp);
 	}
@@ -123,14 +126,16 @@ void JavaInfo::query_create()
 	tmpnam(output_file);
 	output_fd = open(output_file,O_CREAT|O_TRUNC|O_WRONLY,0700);
 	if(output_fd<0) {
-		dprintf(D_ALWAYS,"JavaInfo: couldn't open %s: %s\n",output_file,strerror(errno));
+		dprintf( D_ALWAYS, "JavaInfo: couldn't open %s: %s\n", 
+				 output_file, strerror(errno) );
 		goto cleanup;
 	}
 
 	tmpnam(error_file);
 	error_fd = open(error_file,O_CREAT|O_TRUNC|O_WRONLY,0700);
 	if(error_fd<0) {
-		dprintf(D_ALWAYS,"JavaInfo: couldn't open %s: %s\n",error_file,strerror(errno));
+		dprintf( D_ALWAYS, "JavaInfo: couldn't open %s: %s\n", 
+				 error_file, strerror(errno) );
 		unlink(error_file);
 		goto cleanup;
 	}
@@ -138,7 +143,7 @@ void JavaInfo::query_create()
 	if(reaper_id==-1) {
 		reaper_id = daemonCore->Register_Reaper("JavaInfo::query_reaper",(ReaperHandlercpp)(JavaInfo::query_reaper),"JavaInfo::query_reaper",this);
 		if(reaper_id==FALSE) {
-			dprintf(D_ALWAYS,"JavaInfo: Unable to register reaper!\n");
+			dprintf( D_ALWAYS, "JavaInfo: Unable to register reaper!\n" );
 			unlink(output_file);
 			unlink(error_file);
 			goto cleanup;
@@ -150,8 +155,6 @@ void JavaInfo::query_create()
 	fds[2] = error_fd;
 
 	sprintf(args,"%s %s %s CondorJavaInfo old",java,classpath_argument,classpath);
-
-	dprintf(D_ALWAYS,"JavaInfo: %s\n",args);
 
 	/*
 	We must run this as a normal user.
@@ -165,13 +168,14 @@ void JavaInfo::query_create()
 
 	query_pid = daemonCore->Create_Process(java,args,PRIV_USER_FINAL,reaper_id,FALSE,NULL,NULL,FALSE,NULL,fds);
 	if(query_pid==FALSE) {
-		dprintf(D_ALWAYS,"JavaInfo: Unable to create query process!\n");
+		dprintf( D_ALWAYS, "JavaInfo: Unable to create query process!\n" );
 		unlink(output_file);
 		unlink(error_file);
 		goto cleanup;
 	}
 
-	dprintf(D_ALWAYS,"JavaInfo: Query process %d created.\n",query_pid);
+ 	dprintf( D_FULLDEBUG, "JavaInfo: Query process %d created.\n",
+			 query_pid );  
 	state = JAVA_INFO_STATE_RUNNING;
 
 	cleanup:
@@ -202,9 +206,13 @@ int JavaInfo::query_reaper( int pid, int status )
 	int sig_num = WTERMSIG(status);
 
 	if(normal_exit) {
-		dprintf(D_ALWAYS,"JavaInfo: Query pid %d exited normally with code %d\n",pid,exit_code);
+		dprintf( D_FULLDEBUG, 
+				 "JavaInfo: Query pid %d exited normally with code %d\n",
+				 pid, exit_code );
 	} else {
-		dprintf(D_ALWAYS,"JavaInfo: Query pid %d exited abnormally with signal %d\n",pid,sig_num);
+		dprintf( D_ALWAYS, 
+				 "JavaInfo: Query pid %d exited abnormally with signal %d\n",
+				 pid, sig_num );
 	}
 
 	java_vendor[0] = 0;
@@ -217,33 +225,35 @@ int JavaInfo::query_reaper( int pid, int status )
 			int is_eof=0, is_error=0, is_empty=0;
 			ClassAd ad(file,"***",is_eof,is_error,is_empty);
 			if(is_error) {
-				dprintf(D_ALWAYS,"JavaInfo: Query result is not a valid ClassAd.\n");
+				dprintf( D_ALWAYS, 
+						 "JavaInfo: Query result is not a valid ClassAd.\n" );
 				show_error = true;
 			} else if(is_empty) {
-				dprintf(D_ALWAYS,"JavaInfo: Query result is empty.\n");
+				dprintf( D_ALWAYS, "JavaInfo: Query result is empty.\n" );
 				show_error = true;
 			} else {
 				has_java = true;
-				dprintf(D_ALWAYS,"JavaInfo: HasJava=TRUE\n");
-
 				if(ad.LookupString(ATTR_JAVA_VERSION,java_version)!=1) {
 					java_version[0] = 0;
 				} else {
-					dprintf(D_ALWAYS,"JavaInfo: JavaVersion=%s\n",java_version);
+					dprintf( D_FULLDEBUG, "JavaInfo: JavaVersion=%s\n",
+							 java_version );
 				}
 				if(ad.LookupString(ATTR_JAVA_VENDOR,java_vendor)!=1) {
 					java_vendor[0] = 0;
 				} else {
-					dprintf(D_ALWAYS,"JavaInfo: JavaVendor=%s\n",java_vendor);
+					dprintf( D_FULLDEBUG, "JavaInfo: JavaVendor=%s\n",
+							 java_vendor );
 				}
 			}
 			fclose(file);
 		} else {
-			dprintf(D_ALWAYS,"JavaInfo: Query process did not leave any output in %s\n",output_file);
+			dprintf( D_ALWAYS, "JavaInfo: Query process did not leave any "
+					 "output in %s\n", output_file );
 			show_error = true;
 		}		
 	} else  {
-		dprintf(D_ALWAYS,"JavaInfo: Java is not installed.\n");
+			// dprintf( D_ALWAYS, "JavaInfo: Java is not installed.\n" );
 		show_error = true;
 	}
 
@@ -251,20 +261,20 @@ int JavaInfo::query_reaper( int pid, int status )
 		char line[ATTRLIST_MAX_EXPRESSION];
 		FILE *file;
 
-		dprintf(D_ALWAYS,"JavaInfo: Output stream from JVM:\n");
+			// dprintf(D_ALWAYS,"JavaInfo: Output stream from JVM:\n");
 		file = fopen(output_file,"r");
 		if(file) {
 			while(fgets(line,sizeof(line),file)) {
-				dprintf(D_ALWAYS,"JavaInfo: %s",line);
+					// dprintf(D_ALWAYS,"JavaInfo: %s",line);
 			}
 			fclose(file);
 		}
 
-		dprintf(D_ALWAYS,"JavaInfo: Error stream from JVM:\n");
+			// dprintf(D_ALWAYS,"JavaInfo: Error stream from JVM:\n");
 		file = fopen(error_file,"r");
 		if(file) {
 			while(fgets(line,sizeof(line),file)) {
-				dprintf(D_ALWAYS,"JavaInfo: %s",line);
+					// dprintf(D_ALWAYS,"JavaInfo: %s",line);
 			}
 			fclose(file);
 		}
