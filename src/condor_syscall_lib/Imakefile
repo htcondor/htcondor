@@ -575,3 +575,79 @@ depend_source_target($(DEPEND_SRC))
 #if CONDOR_ENCRYPTION
 obj_extract($(OPENSSL_MD_LIB),$(OPENSSL_OBJ))
 #endif
+
+
+#if ! IS_CLIPPED && IS_GLIBC
+/*
+   glibc 2.1.3 added/renamed some libc calls that broke how we trap
+   stuff.  So in order to not have a release tar ball for EACH redhat
+   release (we once hoped *grin*), we just ship glibc with it in the
+   condor/lib directory (it will automatically get used before the
+   real libc courtesy of -L on the link line).  This will be the case
+   until we hit a set of header files that can't be used with whatever
+   glibc version we're shipping for a given release.
+
+   Futhermore, we do all this in condor_syscall_lib/Imakefile (not
+   condor_scripts, where it used to live), because we want to be able
+   to link the test suite against these libraries "in place".  We
+   don't want to have to do any copying or packaging step like "make
+   release" or "make public" before we can build the test suite.
+*/
+all_symlink_target($(GLIBC_DIR)/libc.a,libc.a)
+all_symlink_target($(GLIBC_DIR)/libnss_files.a,libnss_files.a)
+all_symlink_target($(GLIBC_DIR)/libnss_dns.a,libnss_dns.a)
+all_symlink_target($(GLIBC_DIR)/libresolv.a,libresolv.a)
+
+release_copy_target($(GLIBC_DIR)/libc.a,lib,libc.a,OBJECT_MODE)
+release_copy_target($(GLIBC_DIR)/libnss_files.a,lib,libnss_files.a,OBJECT_MODE)
+release_copy_target($(GLIBC_DIR)/libnss_dns.a,lib,libnss_dns.a,OBJECT_MODE)
+release_copy_target($(GLIBC_DIR)/libresolv.a,lib,libresolv.a,OBJECT_MODE)
+
+static_copy_target($(GLIBC_DIR)/libc.a,lib,libc.a,OBJECT_MODE)
+static_copy_target($(GLIBC_DIR)/libnss_files.a,lib,libnss_files.a,OBJECT_MODE)
+static_copy_target($(GLIBC_DIR)/libnss_dns.a,lib,libnss_dns.a,OBJECT_MODE)
+static_copy_target($(GLIBC_DIR)/libresolv.a,lib,libresolv.a,OBJECT_MODE)
+
+strip_copy_target($(GLIBC_DIR)/libc.a,lib,libc.a,OBJECT_MODE)
+strip_copy_target($(GLIBC_DIR)/libnss_files.a,lib,libnss_files.a,OBJECT_MODE)
+strip_copy_target($(GLIBC_DIR)/libnss_dns.a,lib,libnss_dns.a,OBJECT_MODE)
+strip_copy_target($(GLIBC_DIR)/libresolv.a,lib,libresolv.a,OBJECT_MODE)
+
+#endif /* ! IS_CLIPPED && IS_GLIBC */
+
+
+#if ! IS_CLIPPED && IS_C_COMP_MAJOR_GCC_3
+/*
+   Starting with gcc3, we are going to ship three internal libraries
+   that come with the compiler that we are going to use to replace
+   what libcondorc++support.a used to do. This is because C++ support
+   for gcc has gone through a serious upgrade, and these three
+   libraries and the functions we need in them to support the syscall
+   libraries are now basically inseperable from each other. No more
+   can we make our simple libcondorc++support.a do what it did
+   before. Now we just must include everything. :(
+
+   Once again, we must do this in the condor_syscall_lib/Imakefile so
+   that we can build the test suite and link against these libraries
+   in place, without anything other than "make all".
+*/
+all_symlink_target($(GCC_LIBC),libcomp_libgcc.a)
+all_symlink_target($(LIB_GCC_EH),libcomp_libgcc_eh.a)
+all_symlink_target($(LIB_STDCPP),libcomp_libstdc++.a)
+
+release_copy_target(libcomp_libgcc.a,lib,libcomp_libgcc.a,OBJECT_MODE)
+release_copy_target(libcomp_libstdc++.a,lib,libcomp_libstdc++.a,OBJECT_MODE)
+release_copy_target(libcomp_libgcc_eh.a,lib,libcomp_libgcc_eh.a,OBJECT_MODE)
+
+static_copy_target(libcomp_libgcc.a,lib,libcomp_libgcc.a,OBJECT_MODE)
+static_copy_target(libcomp_libstdc++.a,lib,libcomp_libstdc++.a,OBJECT_MODE)
+static_copy_target(libcomp_libgcc_eh.a,lib,libcomp_libgcc_eh.a,OBJECT_MODE)
+
+strip_copy_target(libcomp_libgcc.a,lib,libcomp_libgcc.a,OBJECT_MODE)
+strip_copy_target(libcomp_libstdc++.a,lib,libcomp_libstdc++.a,OBJECT_MODE)
+strip_copy_target(libcomp_libgcc_eh.a,lib,libcomp_libgcc_eh.a,OBJECT_MODE)
+
+#endif /* ! IS_CLIPPED && IS_C_COMP_MAJOR_GCC_3 */
+
+
+
