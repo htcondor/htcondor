@@ -302,7 +302,7 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 			 "Got admin command (%d) and allowing it.\n", cmd );
 	switch( cmd ) {
 	case RECONFIG:
-		daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGHUP );
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGHUP );
 		return TRUE;
 	case RESTART:
 		daemons.immediate_restart = TRUE;
@@ -318,10 +318,10 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 		daemons.DaemonsOff( 1 );
 		return TRUE;
 	case MASTER_OFF:
-		daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGTERM );
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
 		return TRUE;
 	case MASTER_OFF_FAST:
-		daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGQUIT );
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
 		return TRUE;
 
 			// These commands are special, since they all need to read

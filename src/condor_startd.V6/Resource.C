@@ -205,7 +205,7 @@ int
 Resource::request_new_proc( void )
 {
 	if( state() == claimed_state && r_starter) {
-		return r_starter->kill( DC_SIGHUP );
+		return r_starter->kill( SIGHUP );
 	} else {
 		return FALSE;
 	}
@@ -259,7 +259,7 @@ Resource::hardkill_starter( void )
 		return TRUE;
 	}
 	if( r_starter->kill( DC_SIGHARDKILL ) < 0 ) {
-		r_starter->killpg( DC_SIGKILL );
+		r_starter->killpg( SIGKILL );
 		return FALSE;
 	} else {
 		start_kill_timer();
@@ -275,9 +275,9 @@ Resource::sigkill_starter( void )
 	kill_tid = -1;
 	if( r_starter && r_starter->active() ) {
 			// Kill all of the starter's children.
-		r_starter->killkids( DC_SIGKILL );
+		r_starter->killkids( SIGKILL );
 			// Kill the starter's entire process group.
-		return r_starter->killpg( DC_SIGKILL );
+		return r_starter->killpg( SIGKILL );
 	}
 	return TRUE;
 }

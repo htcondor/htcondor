@@ -341,7 +341,7 @@ CondorCronJob::Reconfig( void )
 
 	// HUP it; if it dies it'll get the new config when it restarts
 	dprintf( D_ALWAYS, "Cron: Sending HUP to '%s' pid %d\n", name, pid );
-	return daemonCore->Send_Signal( pid, DC_SIGHUP );
+	return daemonCore->Send_Signal( pid, SIGHUP );
 }
 
 // Schdedule the job to run
@@ -711,14 +711,14 @@ CondorCronJob::KillJob( bool force )
 	if ( ( force ) || ( CRON_TERMSENT == state )  ) {
 		dprintf( D_JOB, "Cron: Killing job '%s' with SIGKILL, pid = %d\n", 
 				 name, pid );
-		daemonCore->Send_Signal( 0 - pid, DC_SIGKILL );
+		daemonCore->Send_Signal( 0 - pid, SIGKILL );
 		state = CRON_KILLSENT;
 		KillTimer( TIMER_NEVER );	// Cancel the timer
 		return 0;
 	} else if ( CRON_RUNNING == state ) {
 		dprintf( D_JOB, "Cron: Killing job '%s' with SIGTERM, pid = %d\n", 
 				 name, pid );
-		daemonCore->Send_Signal( 0 - pid, DC_SIGTERM );
+		daemonCore->Send_Signal( 0 - pid, SIGTERM );
 		state = CRON_TERMSENT;
 		KillTimer( 1 );				// Schedule hard kill in 1 sec
 		return 1;

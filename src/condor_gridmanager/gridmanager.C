@@ -263,7 +263,7 @@ DELETE_OBJS_signalHandler( Service *srvc, int signal )
 
 	if ( JobsByProcID.getNumElements() == 0 ) {
 		dprintf( D_ALWAYS, "No jobs left, shutting down\n" );
-		daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGTERM );
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
 	}
 
 	return TRUE;
@@ -469,7 +469,7 @@ checkProxy()
 		free(formated_minproxy);
 
 			// Shutdown with haste!
-		daemonCore->Send_Signal(daemonCore->getpid(),DC_SIGQUIT);  
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );  
 		return FALSE;
 	}
 
@@ -945,7 +945,7 @@ doContactSchedd()
 	// but it may be acting brain-dead.
 	if ( JobsByProcID.getNumElements() == 0 ) {
 		dprintf( D_ALWAYS, "No jobs left, shutting down\n" );
-		daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGTERM );
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
 	}
 
 dprintf(D_FULLDEBUG,"leaving doContactSchedd()\n");

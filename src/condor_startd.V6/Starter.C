@@ -235,12 +235,12 @@ Starter::reallykill( int signo, int type )
 		sprintf( signame, "DC_SIGSUSPEND" );
 		break;
 	case DC_SIGHARDKILL:
-		signo = DC_SIGQUIT;
-		sprintf( signame, "DC_SIGQUIT" );
+		signo = SIGQUIT;
+		sprintf( signame, "SIGQUIT" );
 		break;
 	case DC_SIGSOFTKILL:
-		signo = DC_SIGTERM;
-		sprintf( signame, "DC_SIGTERM" );
+		signo = SIGTERM;
+		sprintf( signame, "SIGTERM" );
 		break;
 	case DC_SIGPCKPT:
 		sprintf( signame, "DC_SIGPCKPT" );
@@ -248,11 +248,11 @@ Starter::reallykill( int signo, int type )
 	case DC_SIGCONTINUE:
 		sprintf( signame, "DC_SIGCONTINUE" );
 		break;
-	case DC_SIGHUP:
-		sprintf( signame, "DC_SIGHUP" );
+	case SIGHUP:
+		sprintf( signame, "SIGHUP" );
 		break;
-	case DC_SIGKILL:
-		sprintf( signame, "DC_SIGKILL" );
+	case SIGKILL:
+		sprintf( signame, "SIGKILL" );
 		break;
 	default:
 		EXCEPT( "Unknown signal (%d) in Starter::reallykill", signo );
@@ -265,11 +265,11 @@ Starter::reallykill( int signo, int type )
 		case DC_SIGSUSPEND:
 			sig = SIGUSR1;
 			break;
-		case DC_SIGQUIT:
+		case SIGQUIT:
 		case DC_SIGHARDKILL:
 			sig = SIGINT;
 			break;
-		case DC_SIGTERM:
+		case SIGTERM:
 		case DC_SIGSOFTKILL:
 			sig = SIGTSTP;
 			break;
@@ -279,10 +279,10 @@ Starter::reallykill( int signo, int type )
 		case DC_SIGCONTINUE:
 			sig = SIGCONT;
 			break;
-		case DC_SIGHUP:
+		case SIGHUP:
 			sig = SIGHUP;
 			break;
-		case DC_SIGKILL:
+		case SIGKILL:
 			sig = SIGKILL;
 			break;
 		default:
@@ -401,7 +401,7 @@ Starter::reallykill( int signo, int type )
 			// If we're just doing a plain kill, and the signal we're
 			// sending isn't SIGSTOP or SIGCONT, send a SIGCONT to the 
 			// starter just for good measure.
-		if( sig != DC_SIGSTOP && sig != SIGCONT && sig != DC_SIGKILL ) {
+		if( sig != SIGSTOP && sig != SIGCONT && sig != SIGKILL ) {
 			if( type == 1 ) { 
 				ret = ::kill( -(s_pid), SIGCONT );
 			} else if( type == 0 ) {
@@ -439,10 +439,10 @@ Starter::reallykill( int signo, int type )
 #endif /* ! WIN32 */
 
 	case 2:
-		if( signo != DC_SIGKILL ) {
+		if( signo != SIGKILL ) {
 			dprintf( D_ALWAYS, 
 					 "In Starter::killkids() with %s\n", signame );
-			EXCEPT( "Starter::killkids() can only handle DC_SIGKILL!" );
+			EXCEPT( "Starter::killkids() can only handle SIGKILL!" );
 		}
 		s_procfam->hardkill();  // This really sends SIGKILL
 		break;

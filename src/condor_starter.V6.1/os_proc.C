@@ -479,14 +479,14 @@ OsProc::renameCoreFile( void )
 void
 OsProc::Suspend()
 {
-	daemonCore->Send_Signal(JobPid, DC_SIGSTOP);
+	daemonCore->Send_Signal(JobPid, SIGSTOP);
 	job_suspended = TRUE;
 }
 
 void
 OsProc::Continue()
 {
-	daemonCore->Send_Signal(JobPid, DC_SIGCONT);
+	daemonCore->Send_Signal(JobPid, SIGCONT);
 	job_suspended = FALSE;
 }
 
@@ -497,7 +497,7 @@ OsProc::ShutdownGraceful()
 		Continue();
 
 	requested_exit = true;
-	daemonCore->Send_Signal(JobPid, DC_SIGTERM);
+	daemonCore->Send_Signal(JobPid, SIGTERM);
 	return false;	// return false says shutdown is pending	
 }
 
@@ -508,7 +508,7 @@ OsProc::ShutdownFast()
 	// in potentially swapping the job back into memory if our next
 	// step is to hard kill it.
 	requested_exit = true;
-	daemonCore->Send_Signal(JobPid, DC_SIGKILL);
+	daemonCore->Send_Signal(JobPid, SIGKILL);
 	return false;	// return false says shutdown is pending
 }
 

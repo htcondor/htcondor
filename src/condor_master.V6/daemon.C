@@ -461,7 +461,7 @@ daemon::Stop()
 	}
 	stop_state = GRACEFUL;
 
-	Kill( DC_SIGTERM );
+	Kill( SIGTERM );
 
 	stop_fast_tid = 
 		daemonCore->Register_Timer( shutdown_graceful_timeout, 0, 
@@ -501,7 +501,7 @@ daemon::StopFast()
 		stop_fast_tid = -1;
 	}
 
-	Kill( DC_SIGQUIT );
+	Kill( SIGQUIT );
 
 	hard_kill_tid = 
 		daemonCore->Register_Timer( shutdown_fast_timeout, 0, 
@@ -732,7 +732,7 @@ daemon::Reconfig()
 			// there's no need to reconfig it.
 		return;
 	}
-	Kill( DC_SIGHUP );
+	Kill( SIGHUP );
 }
 
 

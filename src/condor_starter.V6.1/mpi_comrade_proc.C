@@ -76,7 +76,7 @@ MPIComradeProc::Suspend() {
            we walk off the job and notify the shadow immediately! */
 	dprintf(D_FULLDEBUG,"in MPIComradeProc::Suspend()\n");
 		// must do this so that we exit...
-	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGQUIT );
+	daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
 }
 
 

@@ -185,44 +185,21 @@ const int QUERY_ANY_ADS = 48;
 /*
 *** Daemon Core Signals
 */
-// Generic Unix signals.
-// defines for signals; compatibility with traditional UNIX 
-// values maintained where possible.
-#define	DC_SIGHUP	1	/* hangup */
-#define	DC_SIGINT	2	/* interrupt (rubout) */
-#define	DC_SIGQUIT	3	/* quit (ASCII FS) */
-#define	DC_SIGILL	4	/* illegal instruction (not reset when caught) */
-#define	DC_SIGTRAP	5	/* trace trap (not reset when caught) */
-#define	DC_SIGIOT	6	/* IOT instruction */
-#define	DC_SIGABRT	6	/* used by abort, replace DC_SIGIOT in the future */
-#define	DC_SIGEMT	7	/* EMT instruction */
-#define	DC_SIGFPE	8	/* floating point exception */
-#define	DC_SIGKILL	9	/* kill (cannot be caught or ignored) */
-#define	DC_SIGBUS	10	/* bus error */
-#define	DC_SIGSEGV	11	/* segmentation violation */
-#define	DC_SIGSYS	12	/* bad argument to system call */
-#define	DC_SIGPIPE	13	/* write on a pipe with no one to read it */
-#define	DC_SIGALRM	14	/* alarm clock */
-#define	DC_SIGTERM	15	/* software termination signal from kill */
-#define	DC_SIGUSR1	16	/* user defined signal 1 */
-#define	DC_SIGUSR2	17	/* user defined signal 2 */
-#define	DC_SIGCLD	18	/* child status change */
-#define	DC_SIGCHLD	18	/* child status change alias (POSIX) */
-#define	DC_SIGPWR	19	/* power-fail restart */
-#define	DC_SIGWINCH 20	/* window size change */
-#define	DC_SIGURG	21	/* urgent socket condition */
-#define	DC_SIGPOLL 22	/* pollable event occured */
-#define	DC_SIGIO	DC_SIGPOLL	/* socket I/O possible (DC_SIGPOLL alias) */
-#define	DC_SIGSTOP 23	/* stop (cannot be caught or ignored) */
-#define	DC_SIGTSTP 24	/* user stop requested from tty */
-#define	DC_SIGCONT 25	/* stopped process has been continued */
-#define DC_SIGTTIN 26
-#define DC_SIGTTOU 27
-#define DC_SIGXCPU 28
-#define DC_SIGXFSZ 29
-#define DC_SIGVTALRM 30
-#define DC_SIGPROF 31
-#define DC_SIGINFO 32
+
+#if defined(WIN32)
+
+/*
+  windoze doesn't define these, but they have special meaning for
+  DaemonCore::Send_Signal(), so we still use them in the code.
+*/
+
+#define SIGKILL 9
+#define SIGTERM 15
+#define SIGSTOP 23
+#define SIGCONT 25
+
+#endif /* WIN32 */
+
 
 // Signals used for Startd -> Starter communication
 #define DC_SIGSUSPEND	100
@@ -307,8 +284,8 @@ const int QUERY_ANY_ADS = 48;
 */
 #define DCGRIDMANAGER_BASE 73000
 #define GRIDMAN_DELETE_OBJS (DCGRIDMANAGER_BASE+0)
-#define GRIDMAN_REMOVE_JOBS DC_SIGUSR1
-#define GRIDMAN_ADD_JOBS DC_SIGUSR2
+#define GRIDMAN_REMOVE_JOBS SIGUSR1
+#define GRIDMAN_ADD_JOBS SIGUSR2
 
 /*
 *** Replies used in various stages of various protocols

@@ -448,7 +448,7 @@ GridManager::checkProxy()
 		free(formated_minproxy);
 
 			// Shutdown with haste!
-		daemonCore->Send_Signal(daemonCore->getpid(),DC_SIGQUIT);  
+		daemonCore->Send_Signal(daemonCore->getpid(),SIGQUIT);  
 		return FALSE;
 	}
 
@@ -1633,7 +1633,7 @@ GridManager::updateSchedd()
 	// once it is done & gone.
 	if ( m_cluster && (JobsByProcID->getNumElements() == 0) ) {
 		dprintf( D_ALWAYS, "No jobs left, shutting down\n" );
-		daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGTERM );
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
 	}
 
 	dprintf(D_FULLDEBUG,"leaving updateSchedd()\n");
@@ -1673,7 +1673,7 @@ GridManager::jobProbe()
 	dprintf(D_FULLDEBUG,"in jobProbe\n");
 	if ( JobsByProcID->getNumElements() == 0 ) {
 		dprintf( D_ALWAYS, "No jobs left, shutting down\n" );
-		daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGTERM );
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
 		return TRUE;
 	}
 

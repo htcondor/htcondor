@@ -73,16 +73,16 @@ public:
 		*/
 	virtual bool PublishUpdateAd( ClassAd* ad );
 
-		/// Send a DC_SIGSTOP
+		/// Send a SIGSTOP
 	virtual void Suspend();
 
-		/// Send a DC_SIGCONT
+		/// Send a SIGCONT
 	virtual void Continue();
 
-		/// Send a DC_SIGTERM
+		/// Send a SIGTERM
 	virtual bool ShutdownGraceful();
 
-		/// Send a DC_SIGKILL
+		/// Send a SIGKILL
 	virtual bool ShutdownFast();
 
 		/// rename a core file created by this process

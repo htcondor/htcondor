@@ -25,27 +25,6 @@
 #include "killfamily.h"
 #include "../condor_procapi/procapi.h"
 
-// We do all this stuff here so that on Windoze, we use DaemonCore for
-// sending signals and such, since there's no such thing as kill().
-// This is safe b/c on Windoze, the only things that link w/
-// killfamily.o also link w/ DaemonCore....
-#ifdef WIN32
-#	ifdef SIGCONT
-#		undef SIGCONT
-#	endif
-#	define SIGCONT DC_SIGCONT
-
-#	ifdef SIGSTOP
-#		undef SIGSTOP
-#	endif
-#	define SIGSTOP DC_SIGSTOP
-
-#	ifdef SIGKILL
-#		undef SIGKILL
-#	endif
-#	define SIGKILL DC_SIGKILL
-#endif // WIN32
-
 ProcFamily::ProcFamily( pid_t pid, priv_state priv, int test_only )
 {
 	daddy_pid = pid;

@@ -135,7 +135,7 @@ int main_init (int argc, char ** const argv) {
 
 		
 	// The DCpermission (last parm) should probably be PARENT, if it existed
-    daemonCore->Register_Signal (DC_SIGUSR1, "DC_SIGUSR1",
+    daemonCore->Register_Signal( SIGUSR1, "SIGUSR1",
                                  (SignalHandler) main_shutdown_remove,
                                  "main_shutdown_remove", NULL,
                                  IMMEDIATE_FAMILY);

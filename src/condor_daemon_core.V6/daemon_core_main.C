@@ -80,7 +80,7 @@ check_parent()
 		dprintf(D_ALWAYS,
 			"Our parent process (pid %d) went away; shutting down\n",
 			daemonCore->getppid());
-		daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGTERM );
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
 	}
 }
 #endif
@@ -486,7 +486,7 @@ check_core_files()
 int
 handle_off_fast( Service*, int, Stream* )
 {
-	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGQUIT );
+	daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
 	return TRUE;
 }
 
@@ -494,7 +494,7 @@ handle_off_fast( Service*, int, Stream* )
 int
 handle_off_graceful( Service*, int, Stream* )
 {
-	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGTERM );
+	daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
 	return TRUE;
 }
 
@@ -739,35 +739,35 @@ handle_config( Service *, int cmd, Stream *stream )
 void
 unix_sighup(int)
 {
-	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGHUP );
+	daemonCore->Send_Signal( daemonCore->getpid(), SIGHUP );
 }
 
 
 void
 unix_sigterm(int)
 {
-	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGTERM );
+	daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
 }
 
 
 void
 unix_sigquit(int)
 {
-	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGQUIT );
+	daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
 }
 
 
 void
 unix_sigchld(int)
 {
-	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGCHLD );
+	daemonCore->Send_Signal( daemonCore->getpid(), SIGCHLD );
 }
 
 
 void
 unix_sigusr1(int)
 {
-	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGUSR1 );
+	daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR1 );
 }
 
 #endif /* ! WIN32 */
@@ -1290,20 +1290,20 @@ int main( int argc, char** argv )
 	daemonCore->InitCommandSocket( command_port );
 	
 		// Install DaemonCore signal handlers common to all daemons.
-	daemonCore->Register_Signal( DC_SIGHUP, "DC_SIGHUP", 
+	daemonCore->Register_Signal( SIGHUP, "SIGHUP", 
 								 (SignalHandler)handle_dc_sighup,
 								 "handle_dc_sighup()" );
-	daemonCore->Register_Signal( DC_SIGQUIT, "DC_SIGQUIT", 
+	daemonCore->Register_Signal( SIGQUIT, "SIGQUIT", 
 								 (SignalHandler)handle_dc_sigquit,
 								 "handle_dc_sigquit()" );
-	daemonCore->Register_Signal( DC_SIGTERM, "DC_SIGTERM", 
+	daemonCore->Register_Signal( SIGTERM, "SIGTERM", 
 								 (SignalHandler)handle_dc_sigterm,
 								 "handle_dc_sigterm()" );
 #ifndef WIN32
 	daemonCore->Register_Signal( DC_SERVICEWAITPIDS, "DC_SERVICEWAITPIDS",
 								(SignalHandlercpp)&DaemonCore::HandleDC_SERVICEWAITPIDS,
 								"HandleDC_SERVICEWAITPIDS()",daemonCore,IMMEDIATE_FAMILY);
-	daemonCore->Register_Signal( DC_SIGCHLD, "DC_SIGCHLD",
+	daemonCore->Register_Signal( SIGCHLD, "SIGCHLD",
 								 (SignalHandlercpp)&DaemonCore::HandleDC_SIGCHLD,
 								 "HandleDC_SIGCHLD()",daemonCore,IMMEDIATE_FAMILY);
 #endif

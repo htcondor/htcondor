@@ -81,7 +81,7 @@ class BaseShadow : public Service
 			 <li>Stores the classAd, checks its info.
 			 <li>calls config()
 			 <li>calls initUserLog()
-			 <li>registers handleJobRemoval on DC_SIGUSR1
+			 <li>registers handleJobRemoval on SIGUSR1
 			</ul>
 			It should be called right after the constructor.
 			@param jobAd The Ad for this job.

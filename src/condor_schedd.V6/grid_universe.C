@@ -78,7 +78,7 @@ GridUniverseLogic::~GridUniverseLogic()
 					daemonCore->Cancel_Timer(node->remove_timer_id);
 				}
 				if ( node->pid > 0 ) {
-					daemonCore->Send_Signal(node->pid,DC_SIGQUIT);
+					daemonCore->Send_Signal( node->pid, SIGQUIT );
 				}
 			}
 			delete node;

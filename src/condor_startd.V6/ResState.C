@@ -307,7 +307,7 @@ ResState::leave_action( State s, Activity a,
 					// mean the starter has blown up and we didn't
 					// know about it.  Send SIGKILL to the process
 					// group and go to the owner state.
-				rip->r_starter->killpg( DC_SIGKILL );
+				rip->r_starter->killpg( SIGKILL );
 				dprintf( D_ALWAYS,
 						 "State change: Error sending signals to starter\n" );
 				return change( owner_state );
@@ -361,7 +361,7 @@ ResState::enter_action( State s, Activity a,
 		if( a == suspended_act ) {
 			if( rip->r_starter &&
 				rip->r_starter->kill( DC_SIGSUSPEND ) < 0 ) {
-				rip->r_starter->killpg( DC_SIGKILL );
+				rip->r_starter->killpg( SIGKILL );
 				dprintf( D_ALWAYS,
 						 "State change: Error sending signals to starter\n" );
 				return change( owner_state );
@@ -402,7 +402,7 @@ ResState::enter_action( State s, Activity a,
 		case vacating_act:
 			if( rip->r_starter && rip->r_starter->active() ) {
 				if( rip->r_starter->kill( DC_SIGSOFTKILL ) < 0 ) {
-					rip->r_starter->killpg( DC_SIGKILL );
+					rip->r_starter->killpg( SIGKILL );
 					dprintf( D_ALWAYS,
 							 "State change: Error sending signals to starter\n" );
 					return change( owner_state );

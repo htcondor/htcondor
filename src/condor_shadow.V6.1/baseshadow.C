@@ -129,7 +129,7 @@ void BaseShadow::baseInit( ClassAd *jobAd, char schedd_addr[],
 	checkSwap();
 
 		// register SIGUSR1 (condor_rm) for shutdown...
-	daemonCore->Register_Signal(DC_SIGUSR1, "DC_SIGUSR1", 
+	daemonCore->Register_Signal( SIGUSR1, "SIGUSR1", 
 		(SignalHandlercpp)&BaseShadow::handleJobRemoval, "HandleJobRemoval", 
 		this, IMMEDIATE_FAMILY);
 
