@@ -4229,13 +4229,15 @@ int DaemonCore::Create_Process(
 			int			new_process_group,
 			Stream		*sock_inherit_list[],
 			int			std[],
-            int         nice_inc
+            int         nice_inc,
+			int			job_opt_mask
             )
 {
 	int i;
 	char *ptmp;
 	int inheritSockFds[MAX_INHERIT_SOCKS];
 	int numInheritSockFds = 0;
+	int exec_results;
 
 	char inheritbuf[_INHERITBUF_MAXSIZE];
 		// note that these are on the stack; they go away nicely
@@ -4890,9 +4892,14 @@ int DaemonCore::Create_Process(
 			sigemptyset( &emptySet );
 			sigprocmask( SIG_SETMASK, &emptySet, NULL );
 		}
-
+	
 			// and ( finally ) exec:
-		if( execv(name, unix_args) == -1 )
+		if( HAS_DCJOBOPT_NO_ENV_INHERIT(job_opt_mask) ) {
+			exec_results =  execve(name, unix_args, unix_env); 
+		} else {
+			exec_results =  execv(name, unix_args);
+		}
+		if( exec_results == -1 )
 		{
 				// We no longer have privs to dprintf. :-(.
 				// Let's exit with our errno.

@@ -111,6 +111,15 @@ int WIFSIGNALED(DWORD stat);
 #define _DC_BLOCKSIGNAL 2
 #define _DC_UNBLOCKSIGNAL 3
 
+// constants for the DaemonCore::Create_Process job_opt_mask bitmask
+
+const int DCJOBOPT_SUSPEND_ON_EXEC  = (1<<1);
+const int DCJOBOPT_NO_ENV_INHERIT   = (1<<2);
+
+#define HAS_DCJOBOPT_SUSPEND_ON_EXEC(mask)  ((mask)&DCJOBOPT_SUSPEND_ON_EXEC)
+#define HAS_DCJOBOPT_NO_ENV_INHERIT(mask)  ((mask)&DCJOBOPT_NO_ENV_INHERIT)
+
+
 /** helper function for finding available port for both 
     TCP and UDP command socket */
 int BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock);
@@ -689,6 +698,11 @@ class DaemonCore : public Service
                child.  0 < nice < 20, and greater numbers mean
                less priority.  This is an addition to the current
                nice value.
+        @param job_opt_mask A bitmask which defines other optional
+               behavior we might for this process.  The bits are
+               defined above, and always begin with "DCJOBOPT".  In
+               addition, each bit should also define a macro to test a
+               mask if a given bit is set ("HAS_DCJOBOPT_...")
         @return On success, returns the child pid.  On failure, returns FALSE.
     */
     int Create_Process (
@@ -702,7 +716,8 @@ class DaemonCore : public Service
         int         new_process_group    = FALSE,
         Stream      *sock_inherit_list[] = NULL,
         int         std[]                = NULL,
-        int         nice_inc             = 0
+        int         nice_inc             = 0,
+        int         job_opt_mask         = 0
         );
 
     //@}
