@@ -27,7 +27,7 @@
 ** 
 */ 
 
-#include "_condor_fix_resource.h"  /* dhaval 6/25 */
+#include "_condor_fix_resource.h"  /* dhaval */
 
 #ifndef CONDOR_PROC_INCLUDED
 #define CONDOR_PROC_INCLUDED
