@@ -93,9 +93,7 @@ main (int argc, char *argv[])
 
 
 	  case MODE_STARTD_AVAIL:
-    	sprintf (buffer, "(TARGET.%s == \"%s\") || (TARGET.%s == \"%s\")", 
-                    ATTR_STATE, state_to_string(claimed_state), 
-                    ATTR_STATE, state_to_string(unclaimed_state));
+    	sprintf (buffer, "(TARGET.%s =!= FALSE)", ATTR_REQUIREMENTS);
 		if (diagnose) {
 			printf ("Adding constraint [%s]\n", buffer);
 		}
