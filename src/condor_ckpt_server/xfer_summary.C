@@ -231,7 +231,7 @@ XferSummary::log_transfer(time_t now, transferinfo *tinfo, bool success_flag,
 	strcpy(peer_IP, inet_ntoa(peer));
 	fprintf( log_file, "%d/%d %02d:%02d:%02d ", tm->tm_mon + 1, tm->tm_mday,
 			tm->tm_hour, tm->tm_min, tm->tm_sec );
-	fprintf( log_file, "%s %s %u bytes %d sec %s %s@%s\n",
+	fprintf( log_file, "%s %s %d bytes %d sec %s %s@%s\n",
 			(tinfo->status == RECV ? "R" : "S"),
 			(success_flag ? "S" : "F"),
 			xfer_size,
