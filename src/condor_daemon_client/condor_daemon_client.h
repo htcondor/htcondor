@@ -26,5 +26,6 @@
 
 #include "daemon.h"
 #include "daemon_types.h"
+#include "dc_shadow.h"
 
 #endif /* _CONDOR_DAEMON_CLIENT_H */
