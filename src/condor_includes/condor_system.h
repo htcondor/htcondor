@@ -23,18 +23,25 @@
 #ifndef CONDOR_SYSTEM_H
 #define CONDOR_SYSTEM_H
 
-#if defined(WIN32)
 
 /******************************
 ** Windows specifics
 ******************************/
-#include "condor_sys_nt.h"
+#if defined(WIN32)
+# include "condor_sys_nt.h"
+#endif
 
-#else
+/********************************************************************
+** Declare base system types (currently the int64_t types, but will
+** probably grow beyond this charter).
+*********************************************************************/
+#include "condor_sys_types.h"
+
 
 /******************************
 ** Unix specifics
 ******************************/
+#if !defined( WIN32 )
 
 /* Things we want defined on all Unix systems */
 
@@ -174,6 +181,10 @@
 #if !defined(Darwin)
 #include <sys/poll.h>
 #endif
+#if defined( HAS_INTTYPES_H )
+# define __STDC_FORMAT_MACROS
+# include <inttypes.h>
+#endif
 
 #define stricmp strcasecmp		/* stricmp no longer exits in egcs, but strcasecmp does */
 #define strincmp strncasecmp	/* strincmp no longer exits in egcs, but strncasecmp does */
@@ -188,8 +199,42 @@ typedef fd_set *SELECT_FDSET_PTR;
 
 #endif /* UNIX */
 
+
+/* This stuff here is shared by all archs, *INCLUDING* NiceTry */
+
+/* Pull in some required types */
+#if defined( HAS_SYS_TYPES_H )
+# include <sys/types.h>
+#endif
+#if defined( HAS_STDINT_H )
+# include <stdint.h>
+#endif
+#if defined( HAS_INTTYPES_H )
+# include <inttypes.h>
+#endif
+
+/* Define _O_BINARY, etc. if they're not defined as zero */
+#ifndef _O_BINARY
+ #define _O_BINARY		0x0
+#endif
+#ifndef _O_SEQUENTIAL
+ #define _O_SEQUENTIAL	0x0
+#endif
+#ifndef O_LARGEFILE
+ #define O_LARGEFILE	0x0
+#endif
+
+// If no inttypes, try to define our own
+# if ! defined( HAS_INTTYPES_H )
+#  if defined( WIN32 )
+#   define PRId64 "I64d"
+#   define PRIi64 "I64i"
+#   define PRIu64 "I64u"
+#  else
+#   define PRId64 "lld"
+#   define PRIi64 "lli"
+#   define PRIu64 "llu"
+#  endif
+# endif
+
 #endif /* CONDOR_SYSTEM_H */
-
-
-
-

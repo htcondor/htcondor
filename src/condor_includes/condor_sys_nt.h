@@ -179,5 +179,13 @@ struct rusage {
 #define	SIGTSTP		20	/* Keyboard stop (POSIX).  */
 
 
-#endif /* CONDOR_SYS_NT_H */
+/* Some Win32 specifics */
+#if defined(WIN32)
+/* Win32 uses _stati64(); this should be detected by configure */
+# define HAS__STATI64
+  /* Win32 has a __int64 type defined; this should be detected by configure */
+#  define HAS___INT64
+#endif
 
+
+#endif /* CONDOR_SYS_NT_H */

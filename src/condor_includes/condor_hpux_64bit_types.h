@@ -29,8 +29,6 @@
    this directly here. */
 
 #if defined(HPUX10)
-typedef long long int64_t;
-typedef unsigned long long uint64_t;
 typedef int64_t off64_t;
 typedef uint64_t rlim64_t;
 typedef int64_t blkcnt64_t;
