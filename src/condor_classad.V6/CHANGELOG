@@ -1,3 +1,27 @@
+Changes for version 0.9.7: (released 28-Oct-2004)
+* The name of the classad library now depends on the compile time
+  options. There are four possible names:
+
+  Name               | Classad Namespace? | Shared Library Functions?
+  -------------------+--------------------+---------------------------
+  libclassad.a       |       No           |            No
+  libclassad_ns.a    |       Yes          |            Yes
+  libclassad_sh.a    |       No           |            No
+  libclassad_sh_ns.a |       Yes          |            Yes
+
+  If you don't want these names, you can use the --libname argument to
+  configure. To get the old behavior, you would have:
+
+    configure --lib-name libclassad.a
+
+* We are gradually improving the C++ API documentation. Early results
+  can be seen at:
+
+  http://www.cs.wisc.edu/condor/classad/c++doc/
+
+* The ClassAd library now defines a CLASSAD_EXCEPT macro instead of
+  using EXCEPT. This avoids a conflict with Condor. 
+
 Changes for version 0.9.6:  (released 07-Oct-2004)
 * Can optionally use PCRE for the regexp() ClassAd function. On Unix,
   specify --use-pcre <dir>. We have tested with PCRE 4.5 and 5.0. 
