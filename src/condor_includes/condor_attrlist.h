@@ -10,15 +10,9 @@
 
 #include <stdio.h>
 
-#include "condor_expressions.h"
 #include "condor_exprtype.h"
 #include "condor_astbase.h"
 
-//for the shipping functions
-#if defined(USE_XDR)
-#include <rpc/types.h>
-#include <rpc/xdr.h>
-#endif
 #include "stream.h"
 
 #define		ATTRLIST_MAX_EXPRESSION		1024
@@ -96,7 +90,7 @@ class AttrList : public AttrListAbstract
         AttrList(AttrListList*);			// Associated with AttrList list
         AttrList(FILE *, char *, int &);	// Constructor, read from file.
 //		AttrList(class ProcObj*);			// create from a proc object
-		AttrList(CONTEXT*);					// create from a CONTEXT
+//		AttrList(CONTEXT*);					// create from a CONTEXT
         AttrList(char *, char);				// Constructor, from string.
         AttrList(AttrList&);				// copy constructor
         virtual ~AttrList();				// destructor
@@ -144,7 +138,7 @@ class AttrList : public AttrListAbstract
         virtual int	fPrint(FILE*);				// print the AttrList to a file
 
 		// conversion function
-		int         MakeContext (CONTEXT *);    // create a context
+//		int         MakeContext (CONTEXT *);    // create a context
 
         // shipping functions
         int put(Stream& s);
