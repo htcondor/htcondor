@@ -10,16 +10,17 @@ eval x = (8 / 2)
 same $x, 4
 
 echo Testing extreme numbers...
-samerep real("INF"), "real(\"INF\")"
-samerep real("-INF"), "real(\"-INF\")"
-samerep real("NaN"), "real(\"NaN\")"
+same string(real("INF")), "real(\"INF\")"
+same string(real("-INF")), "real(\"-INF\")"
+same string(real("NaN")), "real(\"NaN\")"
 diff real("NaN"), real("NaN")
 same real("INF"), real("INF")
 same real("-INF"), real("-INF")
 diff real("INF"), real("-INF")
-//diff 0.0, -(0.0)
-//diff 0.0, real("-0.0")
-//same string(-0.0), "-0.0"
+same 0.0, -(0.0)
+same 0.0, real("-0.0")
+same string(0.0), "0.0"
+same string(-0.0), "-0.0"
 
 /////////////////////////////////
 echo Testing basic attributes in a ClassAd...
@@ -140,12 +141,12 @@ same substr("abcde", 5), ""
 same substr("abcde", 1, 2), "bc"
 same substr("abcde", 4, 2), "e"
 
-same strcmp("alain", "roy"), -1
-same strcmp("roy", "alain"), 1
+same strcmp("alain", "roy") < 0, true
+same strcmp("roy", "alain") > 0, true
 same strcmp("alain", "alain"), 0
 
 same stricmp("alain", "ALAIN"), 0
-same stricmp("alain", "roy"), -1
+same stricmp("alain", "roy") < 0, true
 
 same tolower("ALAIN"), "alain")
 same toupper("alain"), "ALAIN")
