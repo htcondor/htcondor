@@ -468,5 +468,32 @@ OsProc::PublishUpdateAd( ClassAd* ad )
 	sprintf( buf, "%s=%d", ATTR_NUM_PIDS, num_pids );
 	ad->Insert( buf );
 
+	if( exit_status >= 0 ) {
+			/*
+			  If we have the exit status, we want to parse it and set
+			  some attributes which describe the status in a platform
+			  independent way.  This way, we're sure we're analyzing
+			  the status integer with the platform-specific macros
+			  where it came from, instead of assuming that WIFEXITED()
+			  and friends will work correctly on a status integer we
+			  got back from a different platform.
+			*/
+		if( WIFSIGNALED(exit_status) ) {
+			sprintf( buf, "%s = TRUE", ATTR_ON_EXIT_BY_SIGNAL );
+			ad->Insert( buf );
+			sprintf( buf, "%s = %d", ATTR_ON_EXIT_SIGNAL, 
+					 WTERMSIG(exit_status) );
+			ad->Insert( buf );
+			sprintf( buf, "%s = \"%s\"", ATTR_EXIT_REASON,
+					 daemonCore->GetExceptionString(WTERMSIG(exit_status)) );
+			ad->Insert( buf );
+		} else {
+			sprintf( buf, "%s = FALSE", ATTR_ON_EXIT_BY_SIGNAL );
+			ad->Insert( buf );
+			sprintf( buf, "%s = %d", ATTR_ON_EXIT_CODE, 
+					 WEXITSTATUS(exit_status) );
+			ad->Insert( buf );
+		}
+	}
 	return true;
 }
