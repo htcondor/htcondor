@@ -281,7 +281,7 @@ static char *AltUtmpName = "/etc/utmp";
 #elif defined(LINUX)
 static char *UtmpName = "/var/run/utmp";
 static char *AltUtmpName = "/var/adm/utmp";
-#elif defined(Solaris28)
+#elif defined(Solaris28) || defined(Solaris29)
 #include <utmpx.h>
 static char *UtmpName = "/etc/utmpx";
 static char *AltUtmpName = "/var/adm/utmpx";

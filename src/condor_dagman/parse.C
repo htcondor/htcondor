@@ -180,6 +180,14 @@ parse_job(
 		return false;
 	}
 	
+	// The JobName cannot be an existing JobName
+	if( dag->NodeExists( jobName ) ) {
+		debug_printf( DEBUG_QUIET,
+			"ERROR: invalid DAG (%s:%d): node name \"%s\" "
+			"already used\n", filename, lineNumber, jobName );
+		return false;
+	}
+
 	// Next token is the condor command file
 	//
 	char *cmd = strtok(NULL, DELIMITERS);

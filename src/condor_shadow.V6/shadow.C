@@ -419,18 +419,18 @@ main(int argc, char *argv[] )
 	use_afs = param( "USE_AFS" );
 	if( use_afs && (use_afs[0] == 'T' || use_afs[0] == 't') ) {
 		UseAFS = TRUE;
-        free( use_afs );
 	} else {
 		UseAFS = FALSE;
 	}
+    if (use_afs)    free( use_afs );
 
 	use_nfs = param( "USE_NFS" );
 	if( use_nfs && (use_nfs[0] == 'T' || use_nfs[0] == 't') ) {
 		UseNFS = TRUE;
-        free( use_nfs );
 	} else {
 		UseNFS = FALSE;
 	}
+    if (use_nfs)    free( use_nfs );
 
 	// if job specifies a checkpoint server host, this overrides
 	// the config file parameters
@@ -503,7 +503,6 @@ main(int argc, char *argv[] )
 	tmp = param( "PERIODIC_MEMORY_SYNC" );
 	if (tmp && (tmp[0] == 'T' || tmp[0] == 't')) {
 		PeriodicSync = TRUE;
-        free(tmp);
 	} else {
 		PeriodicSync = FALSE;
 	}
@@ -514,7 +513,6 @@ main(int argc, char *argv[] )
 	tmp = param( "COMPRESS_VACATE_CKPT" );
 	if (tmp && (tmp[0] == 'T' || tmp[0] == 't')) {
 		CompressVacateCkpt = TRUE;
-        free(tmp);
 	} else {
 		CompressVacateCkpt = FALSE;
 	}

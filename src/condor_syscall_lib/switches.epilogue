@@ -23,6 +23,10 @@
 #include "switches.remap-SOLARIS28.h"
 #endif
 
+#ifdef Solaris29
+#include "switches.remap-SOLARIS29.h"
+#endif
+
 #ifdef IRIX65
 #include "switches.remap-IRIX65.h"
 #else 

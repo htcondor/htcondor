@@ -65,7 +65,12 @@ EXTRACT = $(SIG_EXTRACT) $(PLATFORM_EXTRACT)
 
 #if DOES_COMPRESS_CKPT
 #if IS_SUN4X_SOLARIS
+#if IS_SOLARIS29
+/* _rem.o, _div.o, umultiply.o were consolidated into hwmuldiv.o in sol 2.9 */
+COMPRESS_OBJ = malloc-condor.o zimage.o hwmuldiv.o
+#else
 COMPRESS_OBJ = malloc-condor.o zimage.o _rem.o _div.o umultiply.o
+#endif
 #else
 COMPRESS_OBJ = malloc-condor.o zimage.o
 #endif
@@ -286,12 +291,18 @@ malloc-condor.o : malloc-condor.c malloc.c
 zimage.o : image.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) $(COMPRESS_FLAGS) -o zimage.o -c image.C
 #if IS_SUN4X_SOLARIS
+#if IS_SOLARIS29
+/* hwmuldiv.o replaces _rem.o, _div.o, and umultiply.o in solaris 2.9 */
+hwmuldiv.o : $(SIMPLE_LIBC)
+	ar x $(SIMPLE_LIBC) hwmuldiv.o
+#else
 _rem.o : $(SIMPLE_LIBC)
 	ar x $(SIMPLE_LIBC) _rem.o
 _div.o : $(SIMPLE_LIBC)
 	ar x $(SIMPLE_LIBC) _div.o
 umultiply.o : $(SIMPLE_LIBC)
 	ar x $(SIMPLE_LIBC) umultiply.o
+#endif
 #endif
 $(COMPRESS_LIB): libcondorckpt.a $(COMPRESS_OBJ)
 	cp libcondorckpt.a $(COMPRESS_LIB)

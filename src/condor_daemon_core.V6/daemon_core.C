@@ -6214,7 +6214,7 @@ char **DaemonCore::ParseEnvArgsString(char *str, bool env)
 	A little waste is insignificant here.
 	*/
 
-	maxlength = strlen(str+1);
+	maxlength = strlen(str)+1;
 
 	argv = new char*[maxlength];
 

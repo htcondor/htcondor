@@ -275,6 +275,7 @@ const char ATTR_TOTAL_FLOCKED_JOBS		 [] = "TotalFlockedJobs";
 const char ATTR_TOTAL_REMOVED_JOBS		 [] = "TotalRemovedJobs";
 const char ATTR_TOTAL_HELD_JOBS			 [] = "TotalHeldJobs";
 const char ATTR_TOTAL_IDLE_JOBS			 [] = "TotalIdleJobs";
+const char ATTR_TOTAL_JOB_ADS			 [] = "TotalJobAds";
 const char ATTR_TOTAL_LOAD_AVG			 [] = "TotalLoadAvg";
 const char ATTR_TOTAL_MEMORY			 [] = "TotalMemory";
 const char ATTR_TOTAL_RUNNING_JOBS		 [] = "TotalRunningJobs";

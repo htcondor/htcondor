@@ -568,6 +568,24 @@ Job * Dag::GetJob (const char * jobName) const {
     return NULL;
 }
 
+
+bool
+Dag::NodeExists( const char* nodeName ) const
+{
+  if( !nodeName ) {
+    return false;
+  }
+  ListIterator<Job> nodeList( _jobs );
+  Job *node;
+  while( (node = nodeList.Next()) ) {
+    if( strcmp( node->GetJobName(), nodeName ) == 0 ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+
 //---------------------------------------------------------------------------
 Job * Dag::GetJob (const CondorID condorID) const {
     ListIterator<Job> iList (_jobs);

@@ -75,6 +75,7 @@ Returns true on success, false otherwise.
 bool IOProxy::init( const char *config_file )
 {
 	FILE *file=0;
+	int fd=-1;
 
 	server = new ReliSock;
 	if ( !server ) {
@@ -98,9 +99,15 @@ bool IOProxy::init( const char *config_file )
 		goto failure;
 	}
 
-	file = fopen(config_file,"w");
-	if(!file) {
+	fd = open(config_file,O_CREAT|O_TRUNC|O_WRONLY,0700);
+	if(fd<0) {
 		dprintf(D_ALWAYS,"IOProxy: couldn't write to %s: %s\n",config_file,strerror(errno));
+		goto failure;
+	}
+
+	file = fdopen(fd,"w");
+	if(!file) {
+		dprintf(D_ALWAYS,"IOProxy: couldn't create I/O stream: %s\n",strerror(errno));
 		goto failure;
 	}
 
@@ -115,10 +122,8 @@ bool IOProxy::init( const char *config_file )
 
 	failure:
 	if(cookie) free(cookie);
-	if(file) {
-		fclose(file);
-		unlink(config_file);
-	}
+	if(file) fclose(file);
+	unlink(config_file);
 	server->close();
 	return false;
 }

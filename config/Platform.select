@@ -10,7 +10,7 @@
 #	undef IS_DUX4
 #endif
 
-#if defined( IS_SOLARIS251 ) || defined( IS_SOLARIS26 ) || defined( IS_SOLARIS27 ) || defined (IS_SOLARIS28 )
+#if defined( IS_SOLARIS251 ) || defined( IS_SOLARIS26 ) || defined( IS_SOLARIS27 ) || defined (IS_SOLARIS28 ) || defined( IS_SOLARIS29 )
 #	define PlatformIncludeFile <SOLARIS.cf>
 #	if defined( IS_SUN4X ) 
 #		define ArchIncludeFile <SOLARIS_SUN4X.cf>
@@ -34,6 +34,9 @@
 #elif defined( IS_SOLARIS28 )
 #	define OSVersionIncludeFile <SOLARIS28.cf>
 #	undef IS_SOLARIS28
+#elif defined( IS_SOLARIS29 )
+#	define OSVersionIncludeFile <SOLARIS29.cf>
+#	undef IS_SOLARIS29
 #endif
 
 #if defined( IS_HPUX10 )
