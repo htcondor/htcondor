@@ -34,6 +34,7 @@ Sock::Sock() : Stream() {
 	_sock = INVALID_SOCKET;
 	_state = sock_virgin;
 	_timeout = 0;
+	connect_state.host = NULL;
 	memset(&_who, 0, sizeof(struct sockaddr_in));
 	memset(&_endpoint_ip_buf, 0, _ENDPOINT_BUF_SIZE);
 }
@@ -44,6 +45,7 @@ Sock::Sock(const Sock & orig) : Stream() {
 	_sock = INVALID_SOCKET;
 	_state = sock_virgin;
 	_timeout = 0;
+	connect_state.host = NULL;
 	memset( &_who, 0, sizeof( struct sockaddr_in ) );
 	memset(	&_endpoint_ip_buf, 0, _ENDPOINT_BUF_SIZE );
 
@@ -80,6 +82,11 @@ Sock::Sock(const Sock & orig) : Stream() {
 #endif
 }
 
+Sock::~Sock()
+{
+	if ( connect_state.host ) free(connect_state.host);
+}
+
 #if defined(WIN32)
 
 #if !defined(SKIP_AUTHENTICATION)
@@ -89,47 +96,63 @@ HINSTANCE _condor_hSecDll = NULL;
 
 	// This class has a global ctor/dtor, and loads in 
 	// WINSOCK.DLL and, if security support is compiled in, SECURITY.DLL.
-class SockInitializer
+static bool _condor_SockInitializerCalled = false;
+void SockInitializer::init() 
 {
-public:
-	SockInitializer() {
-		WORD wVersionRequested = MAKEWORD( 2, 0 );
-		WSADATA wsaData;
-		int err;
+	called_from_init = true;
+}
 
-		err = WSAStartup( wVersionRequested, &wsaData );
-		if ( err < 0 ) {
-			fprintf( stderr, "Can't find usable WinSock DLL!\n" );	
-			exit(1);
-		}
+SockInitializer::SockInitializer() 
+{
+	WORD wVersionRequested = MAKEWORD( 2, 0 );
+	WSADATA wsaData;
+	int err;
 
-		if ( LOBYTE( wsaData.wVersion ) != 2 || HIBYTE( wsaData.wVersion ) != 0 ) {
-			fprintf( stderr, "Warning: using WinSock version %d.%d, requested 1.1\n",
-				LOBYTE( wsaData.wVersion ), HIBYTE( wsaData.wVersion ) );
-		}
+	called_from_init = false;	// must set this before returning
+
+	if ( _condor_SockInitializerCalled ) {
+		// we've already been here
+		return;
+	}
+
+	err = WSAStartup( wVersionRequested, &wsaData );
+	if ( err < 0 ) {
+		fprintf( stderr, "Can't find usable WinSock DLL!\n" );	
+		exit(1);
+	}
+
+	if ( LOBYTE( wsaData.wVersion ) != 2 || HIBYTE( wsaData.wVersion ) != 0 ) {
+		fprintf( stderr, "Warning: using WinSock version %d.%d, requested 1.1\n",
+			LOBYTE( wsaData.wVersion ), HIBYTE( wsaData.wVersion ) );
+	}
 
 #if !defined(SKIP_AUTHENTICATION)
-		if ( (_condor_hSecDll = LoadLibrary( "security.dll" )) == NULL ) {
-			fprintf(stderr,"Can't find SECURITY.DLL!\n");
-			exit(1);
-		}
+	if ( (_condor_hSecDll = LoadLibrary( "security.dll" )) == NULL ) {
+		fprintf(stderr,"Can't find SECURITY.DLL!\n");
+		exit(1);
+	}
 #endif
-	}	// end of SockInitializer() ctor
+	_condor_SockInitializerCalled = true;
+}	// end of SockInitializer() ctor
 
-	~SockInitializer() {
-		if (WSACleanup() < 0) {
-			fprintf(stderr, "WSACleanup() failed, errno = %d\n", 
-					WSAGetLastError());
-		}
+SockInitializer::~SockInitializer() 
+{
+	if ( called_from_init ) {
+		return;
+	}
+	if (WSACleanup() < 0) {
+		fprintf(stderr, "WSACleanup() failed, errno = %d\n", 
+				WSAGetLastError());
+	}
 #if !defined(SKIP_AUTHENTICATION)
-		if ( _condor_hSecDll ) {
-			FreeLibrary(_condor_hSecDll);			
-		}
+	if ( _condor_hSecDll ) {
+		FreeLibrary(_condor_hSecDll);			
+	}
 #endif
-	}	// end of ~SockInitializer() dtor
-};
+}	// end of ~SockInitializer() dtor
 
 static SockInitializer _SockInitializer;
+
 #endif	// of ifdef WIN32
 
 /*
@@ -217,8 +240,8 @@ int Sock::set_inheritable( int flag )
         flag, // inheritable flag
         DUPLICATE_SAME_ACCESS)) {
 			// failed to duplicate
-			dprintf(D_ALWAYS,"ERROR: DuplicateHandle() failed
-			                  in Sock:set_inheritable(%d), error=%d\n"
+			dprintf(D_ALWAYS,"ERROR: DuplicateHandle() failed "
+			                 "in Sock:set_inheritable(%d), error=%d\n"
 				  ,flag,GetLastError());
 			closesocket(DuplicateSock);
 			return FALSE;
@@ -398,20 +421,22 @@ int Sock::setsockopt(int level, int optname, const char* optval, int optlen)
 }
 
 
-int Sock::do_connect(char *host, int port)
+int Sock::do_connect(
+	char	*host,
+	int		port,
+	bool	non_blocking_flag
+	)
 {
 	hostent		*hostp;
 	unsigned long	inaddr;
 
 	if (!host || port < 0) return FALSE;
 
-
 		/* we bind here so that a sock may be	*/
 		/* assigned to the stream if needed		*/
 	if (_state == sock_virgin || _state == sock_assigned) bind();
 
 	if (_state != sock_bound) return FALSE;
-
 
 	memset(&_who, 0, sizeof(sockaddr_in));
 	_who.sin_family = AF_INET;
@@ -431,51 +456,44 @@ int Sock::do_connect(char *host, int port)
 		memcpy(&_who.sin_addr, hostp->h_addr, hostp->h_length);
 	}
 
-	int timeout_interval;
 	if (_timeout < CONNECT_TIMEOUT) {
-		timeout_interval = CONNECT_TIMEOUT;
+		connect_state.timeout_interval = CONNECT_TIMEOUT;
 	} else {
-		timeout_interval = _timeout;
+		connect_state.timeout_interval = _timeout;
 	}
-	time_t timeout_time = time(NULL) + timeout_interval;
-	bool connect_failed, failed_once = false;
+	connect_state.timeout_time = time(NULL) + connect_state.timeout_interval;
+	connect_state.connect_failed = false;
+	connect_state.failed_once = false;
+	connect_state.non_blocking_flag = non_blocking_flag;
+	if ( connect_state.host ) free( connect_state.host );
+	connect_state.host = strdup(host);
+	connect_state.port = port;
 
 	do {
-		connect_failed = false;
+		connect_state.connect_failed = false;
 
-		if (::connect(_sock, (sockaddr *)&_who, sizeof(sockaddr_in)) == 0) {
-			_state = sock_connect;
-			dprintf( D_NETWORK, "CONNECT %s ", sock_to_string(_sock) );
-			dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string(&_who) );
+			// If non-blocking, we must be certain the code in the timeout()
+			// method which sets up the socket to be non-blocking with the 
+			// OS has happened.  So call timeout() now, and save the old
+			// value so we can set it back.
+		if ( non_blocking_flag ) {
+			connect_state.old_timeout_value = timeout(1);
+			if ( connect_state.old_timeout_value < 0 ) {
+				// failed to set socket to non-blocking
+				return FALSE;
+			}
+		}
+
+		if ( do_connect_tryit() ) {
 			return TRUE;
 		}
 
-#if defined(WIN32)
-		int lasterr = WSAGetLastError();
-		if (lasterr != WSAEINPROGRESS && lasterr != WSAEWOULDBLOCK) {
-			if (!failed_once) {
-				dprintf( D_ALWAYS, "Can't connect to %s:%d, errno = %d\n",
-						 host, port, lasterr );
-				dprintf( D_ALWAYS, "Will keep trying for %d seconds...\n",
-						 timeout_interval );
-				failed_once = true;
-			}
-			connect_failed = true;
+		if ( non_blocking_flag && !connect_state.connect_failed) {
+			_state = sock_connect_pending;
+			return CEDAR_EWOULDBLOCK; 
 		}
-#else
-		if (errno != EINPROGRESS) {
-			if (!failed_once) {
-				dprintf( D_ALWAYS, "Can't connect to %s:%d, errno = %d\n",
-						 host, port, errno );
-				dprintf( D_ALWAYS, "Will keep trying for %d seconds...\n",
-						 timeout_interval );
-				failed_once = true;
-			}
-			connect_failed = true;
-		}
-#endif
 
-		if (_timeout > 0 && !connect_failed) {
+		if (_timeout > 0 && !connect_state.connect_failed) {
 			struct timeval	timer;
 			fd_set			writefds;
 			int				nfds=0, nfound;
@@ -487,32 +505,21 @@ int Sock::do_connect(char *host, int port)
 			FD_ZERO( &writefds );
 			FD_SET( _sock, &writefds );
 
-			nfound = ::select( nfds, 0, &writefds, 0, &timer );
+			nfound = ::select( nfds, 0, &writefds, &writefds, &timer );
 
 			switch(nfound) {
 			case 1:
-				if (test_connection()) {
-					_state = sock_connect;
-					dprintf( D_NETWORK, "CONNECT %s ",
-							 sock_to_string(_sock) );
-					dprintf( D_NETWORK|D_NOHEADER, "%s\n",
-							 sin_to_string(&_who) );
+				if ( do_connect_finish() ) {
 					return TRUE;
-				} else {
-					if (!failed_once) {
-						dprintf( D_ALWAYS, 
-								 "getpeername failed so connect must have failed\n");
-						failed_once = true;
-					}
 				}
 				break;
 			default:
-				if (!failed_once) {
+				if (!connect_state.failed_once) {
 					dprintf( D_ALWAYS, "select returns %d, connect failed\n",
 							 nfound );
 					dprintf( D_ALWAYS, "Will keep trying for %d seconds...\n",
-							 timeout_interval );
-					failed_once = true;
+							 connect_state.timeout_interval );
+					connect_state.failed_once = true;
 				}
 				break;
 			}
@@ -522,11 +529,94 @@ int Sock::do_connect(char *host, int port)
 		// before we try again
 		sleep(1);
 
-	} while (time(NULL) < timeout_time);
+	} while (time(NULL) < connect_state.timeout_time);
 
 	dprintf( D_ALWAYS, "Connect failed for %d seconds; returning FALSE\n",
-			 timeout_interval );
+			 connect_state.timeout_interval );
 	return FALSE;
+}
+
+bool Sock::do_connect_finish()
+{
+	if (test_connection()) {
+		_state = sock_connect;
+		dprintf( D_NETWORK, "CONNECT %s ",
+				 sock_to_string(_sock) );
+		dprintf( D_NETWORK|D_NOHEADER, "%s\n",
+				 sin_to_string(&_who) );
+		if ( connect_state.non_blocking_flag ) {
+			timeout(connect_state.old_timeout_value);			
+		}
+		return true;
+	}
+	
+	if (!connect_state.failed_once) {
+		dprintf( D_ALWAYS, 
+				 "getpeername failed so connect must have failed\n");
+		connect_state.failed_once = true;
+	}
+
+	if ( connect_state.non_blocking_flag ) {
+
+		if ((time(NULL) < connect_state.timeout_time))
+		{
+				// we don't want to busyloop on connect, so sleep for a second
+				// before we try again
+			sleep(1);
+			if ( do_connect_tryit() )
+				return true;
+		} else {
+			// we've tried to connect until timeout_time without success.
+			// so we need to giveup.  to do this in non-blocking mode, 
+			// we must return true so our caller knows we are finished.  the
+			// caller will know we failed to connect because we're setting
+			// the sock _state apropriately.
+			_state = sock_bound;	// just bound, *not* sock_connect.
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool Sock::do_connect_tryit()
+{
+	if (::connect(_sock, (sockaddr *)&_who, sizeof(sockaddr_in)) == 0) {
+		_state = sock_connect;
+		dprintf( D_NETWORK, "CONNECT %s ", sock_to_string(_sock) );
+		dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string(&_who) );
+		if ( connect_state.non_blocking_flag ) {
+			timeout(connect_state.old_timeout_value);			
+		}
+		return true;
+	}
+
+#if defined(WIN32)
+	int lasterr = WSAGetLastError();
+	if (lasterr != WSAEINPROGRESS && lasterr != WSAEWOULDBLOCK) {
+		if (!connect_state.failed_once) {
+			dprintf( D_ALWAYS, "Can't connect to %s:%d, errno = %d\n",
+					 connect_state.host, connect_state.port, lasterr );
+			dprintf( D_ALWAYS, "Will keep trying for %d seconds...\n",
+					 connect_state.timeout_interval );
+			connect_state.failed_once = true;
+		}
+		connect_state.connect_failed = true;
+	}
+#else
+	if (errno != EINPROGRESS) {
+		if (!connect_state.failed_once) {
+			dprintf( D_ALWAYS, "Can't connect to %s:%d, errno = %d\n",
+					 connect_state.host, connect_state.port, errno );
+			dprintf( D_ALWAYS, "Will keep trying for %d seconds...\n",
+					 connect_state.timeout_interval );
+			connect_state.failed_once = true;
+		}
+		connect_state.connect_failed = true;
+	}
+#endif
+
+	return false;
 }
 
 bool Sock::test_connection()
@@ -593,7 +683,11 @@ int Sock::timeout(int sec)
 
 	/* if stream not assigned to a sock, do it now	*/
 	if (_state == sock_virgin) assign();
-	if (_state != sock_assigned) return -1;
+	if ( (_state != sock_assigned) &&  
+				(_state != sock_connect) &&
+				(_state != sock_bound) )  {
+		return -1;
+	}
 
 	if (_timeout == 0) {
 		unsigned long mode = 0;	// reset blocking mode
@@ -676,11 +770,6 @@ Sock::endpoint_ip_int()
 char *
 Sock::endpoint_ip_str()
 {
-	int             i;
-	char			*cur_byte;
-	char			tmp_buf[10];
-	unsigned char   this_byte;
-
 		// We need to recompute this each time because _who might have changed.
 	memset(&_endpoint_ip_buf, 0, _ENDPOINT_BUF_SIZE );
 	strcpy( _endpoint_ip_buf, inet_ntoa(_who.sin_addr) );
