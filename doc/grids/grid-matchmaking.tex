@@ -72,7 +72,7 @@ MyType                = "Machine"
 TargetType            = "Job"
 Name                  = "Example1_Gatekeeper"
 gatekeeper_url        = "grid.example.com/jobmanager"
-Requirements          = CurMatches < 10
+Requirements          = (CurMatches < 10) && (TARGET.JobUniverse == 9)
 Rank                  = 0.000000
 CurrentRank           = 0.000000
 WantAdRevaluate       = True
@@ -94,10 +94,11 @@ MyType                = "Machine"
 \end{verbatim}
 
 Your grid site is pretending to be a single machine, for the purpose
-of matchmaking. MyType is an attribute that the \Condor{negotiator}
+of matchmaking. \Attr{MyType} is an attribute that the \Condor{negotiator}
+daemon
 will expect to be a string. Strings must be surrounded by double-quote
 marks, as in this example. You may have surprising, unintuitive errors
-if they are not quoted. You will always want MyType to be
+if they are not quoted. You will always want \Attr{MyType} to be
 ``Machine''. 
 
 \begin{verbatim}
@@ -134,10 +135,10 @@ UpdateSequenceNumber  = 4
 
 UpdateSequenceNumber is a positive number that must increase each time
 you advertise a grid site. Normally you advertise your grid site
-every five minutes. The \Condor{collector} will discard a grid site's
+every five minutes. The \Condor{collector} daemon will discard a grid site's
 ClassAd after 15 minutes if there have been no updates. A good number
 to set this to is the current time in seconds (the epoch, as given by
-the C time() function call), but if you are worried about your clock
+the C \Procedure{time} function call), but if you are worried about your clock
 running backward, you can set it to whatever you like. If ClassAds are
 received with a sequence number older than the last ClassAd, they are
 ignored. 
@@ -160,18 +161,18 @@ a grid site.
 
 \footnotesize
 \begin{verbatim}
-Requirements          = CurMatches < 10
+Requirements          = (CurMatches < 10) && (TARGET.JobUniverse == 9)
 \end{verbatim}
 \normalsize
 
-These are the requirements that the grid site insists must be trust
+These are the requirements that the grid site insists must be true
 before it will accept a job. These could refer to features of the
-job's ClassAd. In this case, we'll take any job, as long we have less
-than 10 matches currently. This will ensure that Condor-G will only
-run 10 jobs at your site---assuming that you keep CurMatches up to
-date when jobs finish. Of course, you can edit this statement to have
-different requirements. For example, if you want to accept all jobs,
-you can have ``Requirements = True''. 
+job's ClassAd. In this case, we will take any globus-universe job, as
+long we have less than 10 matches currently. This will ensure that
+Condor-G will only run 10 jobs at your site---assuming that you keep
+CurMatches up to date when jobs finish. Of course, you can edit this
+statement to have different requirements. For example, if you want to
+accept all jobs, you can have \ShortExpr{Requirements = True}.
 
 \footnotesize
 \begin{verbatim}
@@ -187,7 +188,7 @@ it is not used, but should be set to 0.
 WantAdRevaluate       = True
 \end{verbatim}
 
-The ``WantAdRevaluate'' attribute is what distinguishes grid site
+The \Attr{WantAdRevaluate} attribute distinguishes grid site
 ClassAds from normal machine ClassAds and allows multiple matches to
 be made against a single site. It should be in your ad and should be
 true. Note that True is not in quotes, and it should not be.
@@ -195,10 +196,10 @@ true. Note that True is not in quotes, and it should not be.
 You can add other attributes to your ClassAd, to make it easy for a
 job to decide which grid site it wants to use. For instance, if you
 have pre-installed the Bamboozle software environment on your grid
-site, you could advertise, ``HaveBamboozle = True'' and
-``BamboozleVersion = 10''. Jobs can require a grid site that has
+site, you could advertise, \ShortExpr{HaveBamboozle = True} and
+\ShortExpr{BamboozleVersion = 10}. Jobs can require a grid site that has
 Bamboozle installed by extending their requirements with
-``HaveBamboozle == True''. (Note the double equal sign in the
+\ShortExpr{HaveBamboozle == True}. (Note the double equal sign in the
 requirements.) 
 
 As an aside, we recommend that jobs that need specific applications
@@ -207,16 +208,17 @@ pre-installed at a Grid site. You will have more reliable execution if
 you do. 
 
 Once you have a file that describes your site, you need to send it to
-the \Condor{collector}. For this, you can use the \Condor{advertise}
-program. We recommend that you write a script to create the file
+the \Condor{collector} daemon. For this, use \Condor{advertise}.
+We recommend that you write a script to create the file
 containing the ClassAd, then run the script every five minutes with
-cron. The script should probably update the CurMatches variable if you
+\Prog{cron}. The script should probably update the \Attr{CurMatches}
+variable, if you
 want to restrict the number of grid jobs that can be submitted at one
 time. 
 
-For \Condor{advertise} you will need to specify UPDATE\_STARTD\_AD for
+For \Condor{advertise}, specify \Arg{UPDATE\_STARTD\_AD} for
 the update command. For example, if your ClassAd is specified in a
-file named ``grid-ad'' you would do:
+file named \File{grid-ad} you would do:
 
 \footnotesize
 \begin{verbatim}
@@ -226,7 +228,7 @@ file named ``grid-ad'' you would do:
 
 \Condor{advertise} usually uses UDP to transmit your ClassAd. In
 wide-area networks, this may be insufficient. You can use TCP by
-specifying the ``-tcp'' option. 
+specifying the \Opt{-tcp} option. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Submitting Condor-G jobs that use matchmaking}
@@ -248,7 +250,7 @@ gatekeeper URL in the grid site ClassAd:
 \footnotesize
 \begin{verbatim}
 globusscheduler = $$(gatekeeper_url)
-requirements    = true
+requirements    = TARGET.gatekeeper_url =!= UNDEFINED
 \end{verbatim}
 \normalsize
 
@@ -271,7 +273,7 @@ output          = aaa.$(Cluster).out
 error           = aaa.$(Cluster).err
 log             = aaa.log
 globusscheduler = $$(gatekeeper_url)
-requirements    = HaveBamboozle == True
+requirements    = (HaveBamboozle == True) && (TARGET.gatekeeper_url =!= UNDEFINED)
 leave_in_queue  = jobstatus == 4
 queue
 \end{verbatim}
