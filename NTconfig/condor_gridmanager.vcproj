@@ -21,7 +21,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\src\h,..\src\condor_includes,..\src\condor_c++_util,..\src\condor_daemon_client"
+				AdditionalIncludeDirectories="..\src\h;..\src\condor_includes;&quot;..\src\condor_c++_util&quot;;..\src\condor_daemon_client;..\src\WinGlobus2.0_Alpha3\include\threaded;..\src\WinGlobus2.0_Alpha3\include;..\src\WinGlobus2.0_Alpha3\source\gsi\ssl_utils\win32;..\src\WinGlobus2.0_Alpha3\source\gsi\ssl_utils\library"
 				PreprocessorDefinitions="WIN32,_DEBUG,_CONSOLE"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="3"
@@ -39,10 +39,11 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
-				AdditionalDependencies="odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib ../Debug/condor_common.obj ..\Debug\condor_common_c.obj"
+				AdditionalDependencies="imagehlp.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib ../Debug/condor_common.obj ../Debug/condor_common_c.obj globus_common_MTd.lib globus_gass_copy_MTd.lib globus_gass_server_ez_MTd.lib globus_gass_transfer_MTd.lib globus_gram_client_MTd.lib globus_gram_protocol_MTd.lib globus_gridftp_client_MTd.lib globus_gridftp_control_MTd.lib globus_io_MTd.lib globus_openssl_module_MTd.lib globus_sslutils_MTd.lib globus_gss_assist_MTd.lib globus_gssapi_MTd.lib globus_oldgaa_MTd.lib ssleay32_MTd.lib rsaglue_MTd.lib libeay32_MTd.lib"
 				OutputFile=".\..\Debug/condor_gridmanager.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="TRUE"
+				AdditionalLibraryDirectories="..\src\WinGlobus2.0_Alpha3\lib"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile=".\..\Debug/condor_gridmanager.pdb"
 				SubSystem="1"/>
@@ -76,7 +77,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="1"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\src\h,..\src\condor_includes,..\src\condor_c++_util,..\src\condor_daemon_client"
+				AdditionalIncludeDirectories="..\src\h;..\src\condor_includes;&quot;..\src\condor_c++_util&quot;;..\src\condor_daemon_client;..\src\WinGlobus2.0_Alpha3\include;..\src\WinGlobus2.0_Alpha3\include\threaded;..\src\WinGlobus2.0_Alpha3\source\gsi\ssl_utils\win32;..\src\WinGlobus2.0_Alpha3\source\gsi\ssl_utils\library"
 				PreprocessorDefinitions="WIN32,NDEBUG,_CONSOLE"
 				StringPooling="TRUE"
 				RuntimeLibrary="0"
@@ -96,10 +97,11 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
-				AdditionalDependencies="odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib ../Release/condor_common.obj ../Release/condor_common_c.obj"
+				AdditionalDependencies="imagehlp.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib ../Release/condor_common.obj ../Release/condor_common_c.obj globus_common_MT.lib globus_gass_copy_MT.lib globus_gass_server_ez_MT.lib globus_gass_transfer_MT.lib globus_gram_client_MT.lib globus_gram_protocol_MT.lib globus_gridftp_client_MT.lib globus_gridftp_control_MT.lib globus_io_MT.lib globus_openssl_module_MT.lib globus_sslutils_MT.lib globus_gss_assist_MT.lib globus_gssapi_MT.lib globus_oldgaa_MT.lib ssleay32_MT.lib rsaglue_MT.lib libeay32_MT.lib"
 				OutputFile=".\../Release/condor_gridmanager.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="TRUE"
+				AdditionalLibraryDirectories="..\src\WinGlobus2.0_Alpha3\lib"
 				GenerateDebugInformation="TRUE"
 				GenerateMapFile="TRUE"
 				MapFileName=".\../Release/condor_gridmanager.map"
