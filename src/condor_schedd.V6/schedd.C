@@ -144,6 +144,9 @@ match_rec::match_rec(char* i, char* p, PROC_ID* id, ClassAd *match,
 	alive_countdown = 0;
 	num_exceptions = 0;
 	if( match ) {
+		dprintf(D_ALWAYS, "About to hit crash?\n");
+		match->dPrint(D_ALWAYS);
+		dprintf(D_ALWAYS, "Printed classad, now really about to crash?\n");
 		my_match_ad = new ClassAd( *match );
 	} else {
 		my_match_ad = NULL;
@@ -2738,7 +2741,7 @@ void Scheduler::StartJobHandler() {
 		strcat(ipc_dir,send_ad_via_file);
 		char our_ipc_filename[100];
 		sprintf(our_ipc_filename,"%cpid-%u-%d.%d",DIR_DELIM_CHAR,
-			daemonCore->getpid(),job_id->cluster,job_id->proc);
+			(unsigned int) daemonCore->getpid(),job_id->cluster,job_id->proc);
 		strcat(ipc_dir,our_ipc_filename);
 		free(send_ad_via_file);
 
@@ -3038,7 +3041,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	char	input[_POSIX_PATH_MAX];
 	char	output[_POSIX_PATH_MAX];
 	char	error[_POSIX_PATH_MAX];
-	char	env[ATTRLIST_MAX_EXPRESSION];		// fixed size is bad here!!
+	char	*env;
 	char	job_args[_POSIX_ARG_MAX];
 	char	args[_POSIX_ARG_MAX];
 	char	owner[20], iwd[_POSIX_PATH_MAX];
@@ -3147,15 +3150,15 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		return NULL;
 	}
 
-	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_ENVIRONMENT,
-							env) < 0) {
+	if (GetAttributeStringNew(job_id->cluster, job_id->proc, ATTR_JOB_ENVIRONMENT,
+							&env) < 0) {
 		env[0] = '\0';
 	}
 
 	// stick a CONDOR_ID environment variable in job's environment
 	char condor_id_string[64];
 	sprintf( condor_id_string, "%d.%d", job_id->cluster, job_id->proc );
-	AppendEnvVariable( env, "CONDOR_ID", condor_id_string );
+	AppendEnvVariableSafely(&env, "CONDOR_ID", condor_id_string );
 
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_ARGUMENTS,
 							args) < 0) {
@@ -3178,6 +3181,10 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		if ( close( inouterr[i] ) == -1 ) {
 			dprintf ( D_ALWAYS, "FD closing problem, errno = %d\n", errno );
 		}
+	}
+
+	if (env) {
+		free(env);
 	}
 
 	if ( pid <= 0 ) {

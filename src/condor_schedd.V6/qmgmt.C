@@ -1201,6 +1201,38 @@ GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
 }
 
 
+// I added this version of GetAttributeString. It is nearly identical 
+// to the other version, but it calls a different version of 
+// AttrList::LookupString() which allocates a new string. This is a good
+// thing, since it doesn't require a buffer that we could easily overflow.
+int
+GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name, 
+					   char **val )
+{
+	ClassAd	*ad;
+	char	key[_POSIX_PATH_MAX];
+	char	*attr_val;
+
+	strcpy(key, IdToStr(cluster_id,proc_id) );
+
+	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
+		*val = strdup(attr_val);
+		free( attr_val );
+		return 1;
+	}
+
+	if (!JobQueue->LookupClassAd(key, ad)) {
+		*val = (char *) calloc(1, sizeof(char));
+		return -1;
+	}
+
+	if (ad->LookupString(attr_name, val) == 1) {
+		return 0;
+	}
+	*val = (char *) calloc(1, sizeof(char));
+	return -1;
+}
+
 int
 GetAttributeExpr(int cluster_id, int proc_id, const char *attr_name, char *val)
 {
@@ -1287,8 +1319,8 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 		// if we made it here, we have the ad, but
 		// expStartdAd is true.  so we need to dig up 
 		// the startd ad which matches this job ad.
-		char *bigbuf = NULL;
 		char *bigbuf2 = NULL;
+		char *attribute_value = NULL;
 		PROC_ID job_id;
 		shadow_rec *srec;
 		ClassAd *startd_ad;
@@ -1324,31 +1356,38 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 		while ( AttrsToExpand[index] && !no_startd_ad &&
 				!attribute_not_found ) 
 		{
-			if (!bigbuf) 
-				bigbuf = new char[ATTRLIST_MAX_EXPRESSION];
-			bigbuf[0] = '\0';
-			ad->LookupString(AttrsToExpand[index],bigbuf);
+			if (attribute_value != NULL) {
+				free(attribute_value);
+				attribute_value = NULL;
+			}
+			// Note that this version of LookupString will
+			// allocate a new buffer, and we have to free() it 
+			// later. (Not delete[] it, unfortunately.)
+			ad->LookupString(AttrsToExpand[index],&attribute_value);
 
 				// Some backwards compatibility: if the
 				// user just has $$opsys.$$arch in the
 				// ATTR_JOB_CMD attribute, convert it to the
 				// new format w/ parenthesis: $$(opsys).$$(arch)
-			if ( (index == 0) && ((tvalue=strstr(bigbuf,"$$")) != NULL) ) 
+			if ( (index == 0) && ((tvalue=strstr(attribute_value,"$$")) != NULL) ) 
 			{
 				if ( stricmp("$$OPSYS.$$ARCH",tvalue) == MATCH ) 
 				{
 					// convert to the new format
 					strcpy(tvalue,"$$(OPSYS).$$(ARCH)");
-					bigbuf2 = new char[ATTRLIST_MAX_EXPRESSION];
+					bigbuf2 = (char *) malloc(strlen(AttrsToExpand[index])
+											  + 3 // for the equal and the quotes
+											  + strlen(attribute_value)
+											  + 1); // for the null terminator.
 					sprintf(bigbuf2,"%s=\"%s\"",AttrsToExpand[index],
-						bigbuf);
+						attribute_value);
 					ad->Insert(bigbuf2);
-					delete [] bigbuf2;
+					free(bigbuf2);
 				}
 			}
 
 			while( !no_startd_ad && !attribute_not_found &&
-					get_var(bigbuf,&left,&name,&right,NULL,true) )
+					get_var(attribute_value,&left,&name,&right,NULL,true) )
 			{
 				if (!startd_ad) {
 					no_startd_ad = true;
@@ -1360,7 +1399,6 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 				// leave it undefined, e.g.
 				// $$(NearestStorage:turkey)
 
-				char rebuild[ATTRLIST_MAX_EXPRESSION];
 				char *fallback;
 
 				fallback = strchr(name,':');
@@ -1376,8 +1414,10 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 				value = startd_ad->sPrintExpr(NULL,0,name);
 				if (!value) {
 					if(fallback) {
+						char *rebuild = (char *) malloc(  strlen(name) + 3 
+														+ strlen(fallback) + 1);
 						sprintf(rebuild,"%s = %s",name,fallback);
-						value = strdup(rebuild);
+						value = rebuild;
 					}
 					if(!fallback || !value) {
 						attribute_not_found = true;
@@ -1403,15 +1443,23 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 						    tvalue[endquoteindex] = '\0';
 					}
 				}
-				bigbuf2 = new char[ATTRLIST_MAX_EXPRESSION];
+				bigbuf2 = (char *) malloc(  strlen(left) 
+									      + strlen(tvalue) 
+									      + strlen(right)
+									      + 1);
 				sprintf(bigbuf2,"%s%s%s",left,tvalue,right);
-				sprintf(bigbuf,"%s=\"%s\"",AttrsToExpand[index],
+				free(attribute_value);
+				attribute_value = (char *) malloc(  strlen(AttrsToExpand[index])
+												  + 3 // = and quotes
+												  + strlen(bigbuf2)
+												  + 1);
+				sprintf(attribute_value,"%s=\"%s\"",AttrsToExpand[index],
 					bigbuf2);
-				expanded_ad->Insert(bigbuf);
-				dprintf(D_FULLDEBUG,"$$ substitution: %s\n",bigbuf);
+				expanded_ad->Insert(attribute_value);
+				dprintf(D_FULLDEBUG,"$$ substitution: %s\n",attribute_value);
 				free(value);	// must use free here, not delete[]
-				delete [] bigbuf;
-				bigbuf = bigbuf2;
+				free(attribute_value);
+			    attribute_value = bigbuf2;
 				bigbuf2 = NULL;
 			}
 			index++;
@@ -1461,14 +1509,13 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 			}
 		}
 
-		if ( bigbuf ) delete [] bigbuf;
-		if ( bigbuf2 ) delete [] bigbuf2;
+		if ( attribute_value ) free(attribute_value);
+		if ( bigbuf2 ) free (bigbuf2);
 
 		if ( no_startd_ad || attribute_not_found )
 			return NULL;
 		else 
 			return expanded_ad;
-
 	} else {
 		// we could not find this job ad
 		return NULL;
@@ -2002,7 +2049,7 @@ static void AppendHistory(ClassAd* ad)
 
   // insert completion time
   char tmp[512];
-  sprintf(tmp,"%s = %d",ATTR_COMPLETION_DATE,time(NULL));
+  sprintf(tmp,"%s = %d",ATTR_COMPLETION_DATE,(int)time(NULL));
   ad->InsertOrUpdate(tmp);
  
   // save job ad to the log
