@@ -173,11 +173,12 @@ sscanf_chirp( char const *input,char const *fmt,... )
 
 /*
 Handle an incoming line from the client.
-A valid cookie is assumedf to have been received, so decode and execute any request.
+A valid cookie is assumed to have been received, so decode and execute any request.
 */
 
 void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 {
+	char url[_POSIX_PATH_MAX];
 	char path[CHIRP_LINE_MAX];
 	char newpath[CHIRP_LINE_MAX];
 	char flags_string[CHIRP_LINE_MAX];
@@ -186,6 +187,32 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 	dprintf(D_SYSCALLS,"IOProxyHandler: request: %s\n",line);
 
 	if(sscanf_chirp(line,"open %s %s %d",path,flags_string,&mode)==3) {
+
+		/*
+		Open is a rather special case.
+		First, we attempt to look up the file name and
+		convert it into a physical url.  Then, we make
+		sure that we know how to open the url.
+		Finally, we actually open it.
+		*/
+
+		dprintf(D_SYSCALLS,"Getting mapping for file %s\n",path);
+
+		result = REMOTE_CONDOR_get_file_info_new(path,url);
+		if(result==0) {
+			dprintf(D_SYSCALLS,"Directed to use url %s\n",url);
+			if(!strncmp(url,"remote:",7)) {
+				strcpy(path,url+7);
+			} else if(!strncmp(url,"buffer:remote:",14)) {
+				strcpy(path,url+14);
+			} else {
+				EXCEPT("File %s maps to url %s, which I don't know how to open.\n",path,url);
+			}
+		} else {
+			EXCEPT("Unable to map file %s to a url: %s\n",path,strerror(errno));
+		}
+
+		dprintf(D_SYSCALLS,"Which simplifies to file %s\n",path);
 
 		flags = 0;
 
@@ -273,6 +300,19 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
+	} else if(sscanf_chirp(line,"lookup %s",path)==1) {
+
+		result = REMOTE_CONDOR_get_file_info_new(path,url);
+		if(result==0) {
+			dprintf(D_SYSCALLS,"Filename %s maps to url %s\n",path,url);
+			sprintf(line,"%d",strlen(url));
+			r->put_line_raw(line);
+			r->put_bytes_raw(url,strlen(url));
+		} else {
+			sprintf(line,"%d",convert(result,errno));
+			r->put_line_raw(line);
+		}
+
 	} else if(sscanf_chirp(line,"read %d %d",&fd,&length)==2) {
 
 		char *buffer = (char*) malloc(length);
@@ -287,7 +327,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		} else {
 			sprintf(line,"%d",CHIRP_ERROR_NO_MEMORY);
 		}
-		
+	
 	} else if(sscanf_chirp(line,"write %d %d",&fd,&length)==2) {
 
 		char *buffer = (char*) malloc(length);

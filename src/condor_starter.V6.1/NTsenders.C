@@ -709,4 +709,31 @@ REMOTE_CONDOR_fsync(int   fd)
         return rval;
 }
 
+int
+REMOTE_CONDOR_get_file_info_new(char *  logical_name , char *  actual_url)
+{
+        int     rval;
+        condor_errno_t  terrno;
+ 
+        CurrentSysCall = CONDOR_get_file_info_new;
+ 
+        syscall_sock->encode();
+        assert( syscall_sock->code(CurrentSysCall) );
+        assert( syscall_sock->code(logical_name) );
+        assert( syscall_sock->end_of_message() );
+ 
+        syscall_sock->decode();
+        assert( syscall_sock->code(rval) );
+        if( rval < 0 ) {
+                assert( syscall_sock->code(terrno) );
+                assert( syscall_sock->end_of_message() );
+                errno = (int)terrno;
+                return rval;
+        }
+        assert( syscall_sock->code(actual_url) );
+        assert( syscall_sock->end_of_message() );
+
+        return rval;
+}                                                                              
+
 } // extern "C"
