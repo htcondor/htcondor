@@ -65,6 +65,7 @@
 #include "user_job_policy.h"
 #include "condor_holdcodes.h"
 #include "sig_name.h"
+#include "../condor_procapi/procapi.h"
 
 #define DEFAULT_SHADOW_SIZE 125
 #define DEFAULT_JOB_START_COUNT 1
@@ -637,6 +638,8 @@ Scheduler::count_jobs()
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_REMOVED_JOBS, JobsRemoved);
 	ad->Insert (tmp);
 
+    daemonCore->monitor_data.ExportData(ad);
+    
 		// Tell negotiator to send us the startd ad
 	sprintf(tmp, "%s = True", ATTR_WANT_RESOURCE_AD );
 	ad->InsertOrUpdate(tmp);
