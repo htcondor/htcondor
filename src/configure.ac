@@ -296,8 +296,13 @@ elif test $os = "Darwin" ; then
   _cv_arch="PPC"
   _cv_op_sys="Darwin"
   _cv_opsys="DARWIN"
-  # we don't (yet) need to distinguish different osx/darwin versions
-  _cv_opsys_vers="OSX"
+  AC_PATH_PROG([SW_VERS],[sw_vers],[no],[$PATH])
+  if test $SW_VERS = "no" ; then   
+    _cv_opsys_vers="OSX_UNKNOWN"
+  else 
+    _cv_osx_vers=`$SW_VERS | $GREP ^ProductVersion | $PERL -pe 's/^ProductVersion\:\s+(\d+)\.(\d+).*$/$1_$2/'`
+    _cv_opsys_vers="OSX_$_cv_osx_vers"
+  fi
   _cv_sysname="ppc_macosx"
 
 else
