@@ -61,8 +61,20 @@ char*	addrFile = NULL;
 int line_where_service_stopped = 0;
 #endif
 bool	DynamicDirs = false;
+
+
+#define CONFIG_ATTRIBUTE_SECURITY 0
+/* 
+   We need to figure out how we really want to handle this.  As it
+   stands now, it's a little clumsy, not fully thought out, and unset
+   was broken.  For now, we'll just rely on HOSTALLOW_CONFIG and root
+   config files.  We should have a more complete solution at some
+   point, just not before 6.2.0.  Derek Wright 9/7/00
+*/
+#if CONFIG_ATTRIBUTE_SECURITY
 static StringList* SecureAttrList = NULL;
 static void init_secure_attr_list( void );
+#endif
 
 #ifndef WIN32
 // This function polls our parent process; if it is gone, shutdown.
@@ -528,6 +540,8 @@ handle_config_val( Service*, int, Stream* stream )
 }
 
 
+
+#if CONFIG_ATTRIBUTE_SECURITY
 bool
 check_config_security( const char* config, Sock* sock )
 {
@@ -674,7 +688,7 @@ init_secure_attr_list( void )
 		// -set change NETWORK_SECURE_ATTRIBUTES itself!
 	SecureAttrList->append( "NETWORK_SECURE_ATTRIBUTES" );
 }
-
+#endif /* CONFIG_ATTRIBUTE_SECURITY */
 
 int
 handle_config( Service *, int cmd, Stream *stream )
@@ -698,8 +712,24 @@ handle_config( Service *, int cmd, Stream *stream )
 		return FALSE;
 	}
 
-	if( check_config_security(config, (Sock*)stream) ) {
+#if CONFIG_ATTRIBUTE_SECURITY 
+	if( config && config[0] ) {
+			// They're trying to set something, so check to make sure
+			// we want to allow that
+		if( ! check_config_security(config, (Sock*)stream) ) {
+				// This config string is insecure, so don't try to do 
+				// anything with it.  We can't return yet, since we
+				// want to send back an rval indicating the error. 
+			free( admin );
+			free( config );
+			rval = -1;
+			failed = true;
+		}
+	} 
+#endif /* CONFIG_ATTRIBUTE_SECURITY */
 
+		// If we haven't hit an error yet, try to process the command  
+	if( ! failed ) {
 		switch(cmd) {
 		case DC_CONFIG_PERSIST:
 			rval = set_persistent_config(admin, config);
@@ -717,14 +747,6 @@ handle_config( Service *, int cmd, Stream *stream )
 			free( config );
 			return FALSE;
 		}
-
-	} else {
-			// This config string is insecure, so don't try to do
-			// anything with it.
-		free( admin );
-		free( config );
-		rval = -1;
-		failed = true;
 	}
 
 	stream->encode();
@@ -819,7 +841,9 @@ handle_dc_sighup( Service*, int )
 		drop_pid_file();
 	}
 
+#if CONFIG_ATTRIBUTE_SECURITY
 	init_secure_attr_list();
+#endif
 
 		// If requested to do so in the config file, do a segv now.
 		// This is to test our handling/writing of a core file.
@@ -1455,9 +1479,12 @@ int main( int argc, char** argv )
 	// periodic timer.  -Derek Wright <wright@cs.wisc.edu> 1/28/99 
 	daemonCore->ReInit();
 
+
+#if CONFIG_ATTRIBUTE_SECURITY
 		// Initialize the StringList that contains the attributes we
 		// don't want to allow anyone to set with condor_config_val. 
 	init_secure_attr_list();
+#endif
 
 	// call the daemon's main_init()
 	main_init( argc, argv );
