@@ -293,7 +293,7 @@ utmp_pty_idle_time( time_t now )
 	}
 
 	while (fread((char *)&utmp, sizeof utmp, 1, fp)) {
-#if defined(AIX31) || defined(AIX32) || defined(IRIX331) || defined(IRIX53) || defined(LINUX) || defined(OSF1)
+#if defined(AIX31) || defined(AIX32) || defined(IRIX331) || defined(IRIX53) || defined(LINUX) || defined(OSF1) || defined(IRIX62) || defined(IRIX65)
 		if (utmp.ut_type != USER_PROCESS)
 #else
 			if (utmp.ut_name[0] == '\0')

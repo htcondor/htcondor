@@ -27,7 +27,7 @@
 /* Calculate how many cpus a machine has using the various method each OS
 	allows us */
 
-#if defined(IRIX53)
+#if defined(IRIX53) || defined(IRIX62) || defined(IRIX65)
 #include <sys/sysmp.h>
 #endif
 
@@ -65,7 +65,7 @@ sysapi_ncpus_raw(void)
 #elif defined(Solaris) || defined(DUX)
 	sysapi_internal_reconfig();
 	return (int)sysconf(_SC_NPROCESSORS_ONLN);
-#elif defined(IRIX53)
+#elif defined(IRIX53) || defined(IRIX62) || defined(IRIX65)
 	sysapi_internal_reconfig();
 	return sysmp(MP_NPROCS);
 #elif defined(WIN32)
@@ -129,9 +129,8 @@ bogomips        : 299.01
 	fclose( proc );
 	return num_cpus;
 #else sequent
-	sysapi_internal_reconfig();
-	return 1;
-#endif sequent
+#error DO NOT KNOW HOW ON THIS PLATFORM
+#endif
 }
 
 /* the cooked version */
