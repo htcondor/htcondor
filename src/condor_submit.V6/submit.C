@@ -56,12 +56,12 @@
 static int hashFunction( MyString&, int );
 HashTable<MyString,MyString> forcedAttributes( 64, hashFunction ); 
 
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
+static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)	  */
 
 char* mySubSystem = "SUBMIT";	/* Used for SUBMIT_EXPRS */
 
 ClassAd job;
-char    buffer[_POSIX_ARG_MAX + 64];
+char	 buffer[_POSIX_ARG_MAX + 64];
 
 char	*OperatingSystem;
 char	*Architecture;
@@ -70,9 +70,9 @@ char	*Flavor;
 char	*ScheddName = NULL;
 char	*ScheddAddr = NULL;
 char	*My_fs_domain;
-char    JobRequirements[2048];
-char    JobRootdir[_POSIX_PATH_MAX];
-char    JobIwd[_POSIX_PATH_MAX];
+char	 JobRequirements[2048];
+char	 JobRootdir[_POSIX_PATH_MAX];
+char	 JobIwd[_POSIX_PATH_MAX];
 
 int		LineNo;
 int		GotQueueCommand;
@@ -81,9 +81,9 @@ char	IckptName[_POSIX_PATH_MAX];	/* Pathname of spooled initial ckpt file */
 
 char	*MyName;
 int		Quiet = 1;
-int     ClusterId = -1;
-int     ProcId = -1;
-int     JobUniverse;
+int	  ClusterId = -1;
+int	  ProcId = -1;
+int	  JobUniverse;
 int		Remote=0;
 int		ClusterCreated = FALSE;
 int		ActiveQueueConnection = FALSE;
@@ -99,7 +99,7 @@ BUCKET *ProcVars[ PROCVARSIZE ];
 **	Names of possible CONDOR variables.
 */
 char	*Cluster 		= "cluster";
-char	*Process   		= "process";
+char	*Process			= "process";
 char	*Priority		= "priority";
 char	*Notification	= "notification";
 char	*Executable		= "executable";
@@ -109,20 +109,21 @@ char	*Environment	= "environment";
 char	*Input			= "input";
 char	*Output			= "output";
 char	*Error			= "error";
-char	*RootDir		= "rootdir";
+char	*RootDir			= "rootdir";
 char	*InitialDir		= "initialdir";
 char	*Requirements	= "requirements";
 char	*Preferences	= "preferences";
-char	*Rank			= "rank";
+char	*Rank				= "rank";
 char	*ImageSize		= "image_size";
 char	*Universe		= "universe";
 char	*MachineCount	= "machine_count";
-char    *NotifyUser     = "notify_user";
-char    *UserLogFile    = "log";
+char	*NotifyUser		= "notify_user";
+char	*UserLogFile	= "log";
 char	*CoreSize		= "coresize";
 char	*NiceUser		= "nice_user";
+char	*CertDir			= "cert_dir";
 #if !defined(WIN32)
-char	*KillSig		= "kill_sig";
+char	*KillSig			= "kill_sig";
 #endif
 #if defined(WIN32)
 char	*NullFile		= "NUL";
@@ -154,7 +155,7 @@ void	SetKillSig();
 #endif
 void	SetForcedAttributes();
 void 	check_iwd( char *iwd );
-int 	read_condor_file( FILE *fp );
+int	read_condor_file( FILE *fp, int stopBeforeQueuing=0 );
 char * 	condor_param( char *name );
 void 	set_condor_param( char *name, char *value );
 void 	queue(int num);
@@ -170,7 +171,7 @@ void 	compress( char *str );
 void 	magic_check();
 void 	log_submit();
 void 	get_time_conv( int &hours, int &minutes );
-int     SaveClassAd (ClassAd &);
+int	  SaveClassAd (ClassAd &);
 void	InsertJobExpr (char *expr);
 void	check_umask();
 
@@ -246,12 +247,12 @@ main( int argc, char *argv[] )
 				Quiet = 0;
 				break;
 			case 'p':
-               // the -p option will cause condor_submit to pause for about
-               // 4 seconds upon completion.  this prevents 'Broken Pipe'
-               // messages when condor_submit is called from DagMan on
-               // platforms with crappy popen(), like IRIX - Todd T, 2/97
-               dag_pause = 1;
-			   break;
+					// the -p option will cause condor_submit to pause for about
+					// 4 seconds upon completion.  this prevents 'Broken Pipe'
+					// messages when condor_submit is called from DagMan on
+					// platforms with crappy popen(), like IRIX - Todd T, 2/97
+					dag_pause = 1;
+				break;
 			case 'r':
 				Remote++;
 				ptr++;
@@ -314,9 +315,55 @@ main( int argc, char *argv[] )
 		fprintf( stderr, "Failed to open command file\n");
 		exit(1);
 	}
+	//  Parse the file, stopping at "queue" command
+	if( read_condor_file( fp, 1 ) < 0 ) {
+		fprintf(stderr, "Failed to parse command file.\n");
+		exit(1);
+	}
+
+	//this section sets up env vars needed by authentication code. //mju
+	char *CondorCertDir;
+	char tmpstring[MAXPATHLEN];
+
+	//try submit file first, then default
+	if ( CondorCertDir = condor_param( CertDir ) ) {
+		dprintf( D_FULLDEBUG, "setting CONDOR_CERT_DIR from submit file\n" );
+	}
+	else {
+		dprintf( D_FULLDEBUG, "setting CONDOR_CERT_DIR to default\n" );
+		sprintf( tmpstring, "%s/.condor_certs", getenv( "HOME" ) );
+		CondorCertDir = strdup( tmpstring );
+	}
+
+	//didn't bother re-putting vars which shouldn't change
+	if ( !getenv( "CONDOR_GATEKEEPER" ) ) {
+		char tmp[MAXHOSTNAMELEN];
+
+		//this should change for remote submits to be remote machine name!
+		gethostname( tmp, MAXHOSTNAMELEN );
+		sprintf( tmpstring, "CONDOR_GATEKEEPER=/CN=%s", tmp );
+		putenv( strdup( tmpstring ) );
+	}
+
+	if ( !getenv( "X509_CERT_DIR" ) ) {
+		sprintf( tmpstring, "X509_CERT_DIR=%s/", CondorCertDir );
+		putenv( strdup( tmpstring ) );
+	}
+
+	if ( !getenv( "X509_USER_CERT" ) ) {
+		sprintf( tmpstring, "X509_USER_CERT=%s/newcert.pem", CondorCertDir );
+		putenv( strdup( tmpstring ) );
+	}
+
+	if ( !getenv( "X509_USER_KEY" ) ) {
+		sprintf(tmpstring,"X509_USER_KEY=%s/private/newreq.pem",CondorCertDir);
+		putenv( strdup( tmpstring ) );
+	}
+	free( CondorCertDir );
+	//end of authentication setup
 
 	// connect to the schedd
-	if (ConnectQ(ScheddAddr) == 0) {
+	if (ConnectQ(ScheddAddr, 1 ) == 0) { //mju
 		if( ScheddName ) {
 			fprintf( stderr, "Failed to connect to queue manager %s\n",
 					 ScheddName );
@@ -603,7 +650,7 @@ SetImageSize()
 	int		executablesize;
 	char	*tmp;
 	char	*p;
-	char    buff[2048];
+	char	 buff[2048];
 	int		mem_req = 0;
 
 	tmp = condor_param(ImageSize);
@@ -628,7 +675,7 @@ SetImageSize()
 	}
 
 	/* It's reasonable to expect the image size will be at least the
-	   physical memory requirement, so make sure it is. */
+		physical memory requirement, so make sure it is. */
 	  
 	strcpy (buff, JobRequirements);	
 	for( p=buff; *p; p++ ) {
@@ -644,7 +691,7 @@ SetImageSize()
 	}
 
 	(void)sprintf (buffer, "%s = %d", ATTR_IMAGE_SIZE,
-				   mem_req > size ? mem_req : size);
+					mem_req > size ? mem_req : size);
 	InsertJobExpr (buffer);
 	(void)sprintf (buffer, "%s = %d", ATTR_EXECUTABLE_SIZE, executablesize);
 	InsertJobExpr (buffer);
@@ -672,7 +719,7 @@ SetStdFile( int which_file )
 {
 	char	*macro_value;
 	char	*generic_name;
-	char    buffer[_POSIX_PATH_MAX + 32];
+	char	 buffer[_POSIX_PATH_MAX + 32];
 
 	switch( which_file ) 
 	{
@@ -700,7 +747,7 @@ SetStdFile( int which_file )
 	if( whitespace(macro_value) ) 
 	{
 		EXCEPT("The '%s' takes exactly one argument (%s)", generic_name, 
-			   macro_value);
+				macro_value);
 	}	
 
 	check_path_length(macro_value, generic_name);
@@ -928,7 +975,7 @@ SetRank()
 
 	if (orig_pref && orig_rank) {
 		fprintf(stderr, "%s and %s may not both be specified for a job\n",
-			   Preferences, Rank);
+				Preferences, Rank);
 		exit(1);
 	} else if (orig_rank) {
 		(void)strcpy(rank, orig_rank);
@@ -1173,8 +1220,9 @@ SetKillSig()
 }
 #endif
 
+
 int
-read_condor_file( FILE *fp )
+read_condor_file( FILE *fp, int stopBeforeQueuing=0 )
 {
 	char	*name, *value;
 	char	*ptr;
@@ -1199,8 +1247,8 @@ read_condor_file( FILE *fp )
 		if (*name == '+') {
 			force = 1;
 			name++;
-		} else
-		if (*name == '-') {
+		} 
+		else if (*name == '-') {
 			name++;
 			forcedAttributes.remove( MyString( name ) );
 			job.Delete( name );
@@ -1208,6 +1256,13 @@ read_condor_file( FILE *fp )
 		}
 
 		if( strincmp(name, "queue", strlen("queue")) == 0 ) {
+			//sleazy hack to deal with fact that queue must happen AFTER
+			//connection is authenticated, but cert_dir must be read
+			//before user or connection authentication
+			if ( stopBeforeQueuing ) {
+				rewind( fp );
+				return 0;
+			}
 			if (sscanf(name+strlen("queue"), "%d", &queue_modifier) == EOF) {
 				queue_modifier = 1;
 			}
@@ -1567,11 +1622,11 @@ void
 usage()
 {
 	fprintf( stderr, "Usage: %s [options] cmdfile\n", MyName );
-	fprintf( stderr, "   Valid options:\n" );
-	fprintf( stderr, "   -v\t\t\tverbose output\n" );
-	fprintf( stderr, "   -n schedd_name\tsubmit to the specified schedd\n" );
+	fprintf( stderr, "	Valid options:\n" );
+	fprintf( stderr, "	-v\t\t\tverbose output\n" );
+	fprintf( stderr, "	-n schedd_name\tsubmit to the specified schedd\n" );
 	fprintf( stderr, 
-			 "   -r schedd_name\tsubmit to the specified remote schedd\n" );
+			 "	-r schedd_name\tsubmit to the specified remote schedd\n" );
 	exit( 1 );
 }
 
@@ -1704,12 +1759,12 @@ int SetSyscalls( int foo ) { return foo; }
 void
 log_submit()
 {
-    char    *simple_name;
-    char    *path;
-    char    tmp[ _POSIX_PATH_MAX ];
-	char    owner[64];
-    UserLog usr_log;
-    SubmitEvent jobSubmit;
+	 char	 *simple_name;
+	 char	 *path;
+	 char	 tmp[ _POSIX_PATH_MAX ];
+	char	 owner[64];
+	 UserLog usr_log;
+	 SubmitEvent jobSubmit;
 
 	if (Quiet) fprintf(stdout, "Logging submit event(s)");
 
@@ -1776,7 +1831,7 @@ void
 InsertJobExpr (char *expr)
 {
 	ExprTree *tree, *lhs;
-	char      name[128];
+	char		name[128];
 	int retval = Parse (expr, tree);
 
 	if (retval)
@@ -1806,13 +1861,13 @@ InsertJobExpr (char *expr)
 static int 
 hashFunction (MyString &str, int numBuckets)
 {
-    int i = str.Length() - 1, hashVal = 0;
-    while (i >= 0) 
-    {
-        hashVal += tolower(str[i]);
-        i--;
-    }
-    return (hashVal % numBuckets);
+	 int i = str.Length() - 1, hashVal = 0;
+	 while (i >= 0) 
+	 {
+		  hashVal += tolower(str[i]);
+		  i--;
+	 }
+	 return (hashVal % numBuckets);
 }
 
 
