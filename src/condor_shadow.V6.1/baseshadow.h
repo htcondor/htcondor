@@ -369,6 +369,7 @@ class BaseShadow : public Service
 	char iwd[_POSIX_PATH_MAX];
 	char *scheddAddr;
 	bool jobExitedGracefully;
+	char *core_file_name;
 
 		/// Pointers to lists of attribute names we care about
 
