@@ -76,27 +76,20 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
 
  private:
 
-    int daemon_acquire_credential();
+    int init_user();
     //------------------------------------------
-    // PURPOSE : Acquire service credential on 
-    //           behalf of the user
-    // REQUIRE : NONE
-    // RETURNS: TRUE -- if success; FALSE -- if failure
-    //------------------------------------------
-
-    int client_acquire_credential();
-    //------------------------------------------
-    // PURPOSE : Acquire a credential for client
+    // PURPOSE : initiailze user info for authentication
     // REQUIRE : None
     // RETURNS : TRUE -- success; FALSE failure
     //------------------------------------------
-    
-    int server_acquire_credential();
+
+    int init_daemon();
     //------------------------------------------
-    // PURPOSE: Acquire a credential for the daemon process
-    // REQUIRE: None (probably root access)
-    // RETURNS: TRUE -- success; FALSE -- failure
+    // PURPOSE: initialize daemon info for authentication 
+    // REQUIRE: NONE
+    // RETURNS: TRUE -- if success; FALSE -- if failure
     //------------------------------------------
+
     
     int authenticate_client_kerberos();
     //------------------------------------------
@@ -112,6 +105,14 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     // RETURNS : TRUE -- success; FALSE failure
     //------------------------------------------
     
+    int common_client_authenticate();
+    //------------------------------------------
+    // PURPOSE: Client side of authentication -- used both by
+    //          daemon and user authentication
+    // REQUIRE: 
+    // RETUNRS: TRUE -- if success; FALSE -- if failure
+    //------------------------------------------
+
     int init_kerberos_context();
     //------------------------------------------
     // PURPOSE: Initialize context
@@ -193,6 +194,7 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     krb5_principal     krb_principal_;    // principal information, local
     krb5_principal     server_;           // principal, remote
     krb5_keyblock *    sessionKey_;       // Session key
+    krb5_creds    *    creds_;            // credential
     char *             ccname_;           // FILE:/krbcc_name
     char *             defaultCondor_;    // Default condor 
     char *             defaultStash_;     // Default stash location
