@@ -4,7 +4,25 @@
 
 This section contains the instructions for installing Condor at your
 Unix site.
+
+%%%%%%%%%%%%%%%%%%
+% Karen's disclaimer
+In fact, it contains two sets of instructions for installing
+Condor!
+With Condor \VersionNotice
+is included an untested, beta version of a newer, cleaner,
+better installation script.
+It might be much simpler for you to use at your site,
+but it has not been completely tested yet.
+If you want to try it out, please do so.
+Send comments and woes to  
+\Email{condor-admin@cs.wisc.edu}. 
+
 Read this entire section before starting installation.
+%%%%%%%%%%%%%%%%%%
+% Karen's new installation script comment
+All discussion prior to installation is valid whether using
+the new installation script or the older one.
 The installation will have a default configuration that can
 be customized.
 Sections of the manual that follow this one explain customization.
@@ -513,8 +531,27 @@ of any machines that are submitting jobs to Condor.  See question 5
 above for details on this.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:new-install-procedure}
+New, but Untested Installation Procedure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The Perl script \Condor{configure} installs Condor.
+Command-line arguments specify all needed information to this
+script.
+The script can be executed multiple times, to modify or further
+set the configuration.
+
+\Condor{configure} has been tested using Perl 5.
+Use this version or a more recent version of Perl.
+
+See the \Condor{configure} manual page in
+section~\ref{man-condor-configure} on
+page~\pageref{man-condor-configure} for details.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:install-procedure}
-Installation Procedure}
+Older, Tested Installation Procedure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 IF YOU HAVE DECIDED TO CREATE A condor USER AND GROUP, DO
