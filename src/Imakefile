@@ -54,7 +54,7 @@
 		accountant.V6 ckpt_server \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts shadow.V6 startd.V6 starter.V5 submit.V6 status.V6 \
-		tools kbdd collector.V6 PvmProgs dagman userlog eventd bypass
+		tools kbdd collector.V6 PvmProgs dagman userlog eventd 
 
 #define Libraries \
 		util_lib c++_util procapi sysapi io classad daemon_core.V6 \
@@ -207,7 +207,6 @@ object_target(startd.V6)
 object_target(schedd.V6)
 object_target(status.V6)
 object_target(dagman)
-object_target(bypass)
 object_target(userlog)
 #if HAS_X
    object_target(kbdd)
@@ -240,6 +239,7 @@ object_dir_target(condor_release)
 object_dir_target(condor_shadow.V6.1)
 object_dir_target(condor_starter.V6.1)
 object_dir_target(html)
+object_dir_target(condor_bypass)
 
 single_target(condor_schedd.V6, libqmgmt.a)
 single_target(condor_accountant.V6, libacct.a)
