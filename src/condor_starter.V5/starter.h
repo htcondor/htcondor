@@ -383,6 +383,7 @@ Transition TransTab[] = {
 { PROC_EXIT,		SEND_CORE,			SEND_CORE,		0					},
 { PROC_EXIT,		CKPT_EXIT,			SUPERVISE,		make_runnable		},
 { PROC_EXIT,		HAS_CORE,			SEND_CORE,		0					},
+{ PROC_EXIT,		DIE,				TERMINATE,		req_die 			},
 
 { SEND_CORE,		VACATE,				TERMINATE,		req_vacate			},
 { SEND_CORE,		DIE,				TERMINATE,		req_die				},
