@@ -1,3 +1,9 @@
+11/19/04 V6_7-unicore-3-branch
+   A new branch off of V6_7-branch created from the V6_7-unicore-3-root
+   tag. This is the 3rd generation of the V6_7-unicore-branch. The
+   V6_7-branch has new code (from the condor-c branch) that we now want
+   on the unicore branch.
+
 11/16/04 V6_7-post-merge-V6_7-condorc-3-m-1
    After merging V6_7-condorc-3-branch (at V6_7-condorc-merge-1) into
    V6_7-branch.
